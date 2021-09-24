@@ -6,7 +6,6 @@
 
 #include <fcntl.h>
 #include <lib/fidl/cpp/clone.h>
-#include <lib/fidl/cpp/optional.h>
 #include <lib/media/cpp/type_converters.h>
 #include <lib/ui/scenic/cpp/view_token_pair.h>
 #include <lib/zx/clock.h>

@@ -9,7 +9,6 @@
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
 #include <lib/fidl/cpp/clone.h>
-#include <lib/fidl/cpp/optional.h>
 #include <lib/fidl/cpp/type_converter.h>
 #include <lib/fit/function.h>
 #include <lib/media/cpp/type_converters.h>
@@ -633,8 +632,8 @@ void PlayerImpl::SendStatusUpdates() {
 }
 
 void PlayerImpl::UpdateStatus() {
-  status_.timeline_function =
-      fidl::MakeOptional(fidl::To<fuchsia::media::TimelineFunction>(core_.timeline_function()));
+  status_.timeline_function = std::make_unique<fuchsia::media::TimelineFunction>(
+      fidl::To<fuchsia::media::TimelineFunction>(core_.timeline_function()));
   status_.end_of_stream = core_.end_of_stream();
   status_.has_audio = core_.content_has_medium(StreamType::Medium::kAudio);
   status_.has_video = core_.content_has_medium(StreamType::Medium::kVideo);
@@ -646,8 +645,9 @@ void PlayerImpl::UpdateStatus() {
   status_.can_seek = core_.can_seek();
 
   auto metadata = core_.metadata();
-  status_.metadata =
-      metadata ? fidl::MakeOptional(fidl::To<fuchsia::media::Metadata>(*metadata)) : nullptr;
+  status_.metadata = metadata ? std::make_unique<fuchsia::media::Metadata>(
+                                    fidl::To<fuchsia::media::Metadata>(*metadata))
+                              : nullptr;
 
   if (video_renderer_) {
     status_.video_size = CloneOptional(video_renderer_->video_size());

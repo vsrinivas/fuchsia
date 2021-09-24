@@ -13,7 +13,6 @@
 #include <unordered_map>
 
 #include "lib/fidl/cpp/binding.h"
-#include "lib/fidl/cpp/optional.h"
 #include "src/lib/fxl/memory/weak_ptr.h"
 #include "src/media/playback/mediaplayer/test/fakes/packet_info.h"
 
@@ -40,8 +39,9 @@ class FakeImagePipe : public fuchsia::images::ImagePipe2 {
                        const fuchsia::sysmem::ImageFormat_2& format,
                        const std::vector<PacketInfo>&& expected_packets_info) {
     expected_black_image_id_ = black_image_id;
-    expected_black_image_format_ = fidl::MakeOptional(black_image_format);
-    expected_image_format_ = fidl::MakeOptional(format);
+    expected_black_image_format_ =
+        std::make_unique<fuchsia::sysmem::ImageFormat_2>(black_image_format);
+    expected_image_format_ = std::make_unique<fuchsia::sysmem::ImageFormat_2>(format);
     expected_packets_info_ = std::move(expected_packets_info);
     expected_packets_info_iter_ = expected_packets_info_.begin();
   }

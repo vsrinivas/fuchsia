@@ -9,7 +9,6 @@
 #include <vector>
 
 #include "lib/fidl/cpp/clone.h"
-#include "lib/fidl/cpp/optional.h"
 #include "src/media/playback/mediaplayer/fidl/fidl_type_conversions.h"
 #include "src/media/playback/mediaplayer/graph/formatting.h"
 #include "src/media/playback/mediaplayer/graph/types/audio_stream_type.h"
@@ -339,14 +338,13 @@ void FidlProcessor::OnInputConstraints(fuchsia::media::StreamBufferConstraints c
   FX_DCHECK(input_buffers_.has_current_set());
   BufferSet& current_set = input_buffers_.current_set();
 
-  ConfigureInputToUseSysmemVmos(
-      service_provider_, 0,  // max_aggregate_payload_size
-      VmoAllocation::kVmoPerBuffer,
-      0,  // map_flags
-      [&current_set](uint64_t size, const PayloadVmos& payload_vmos) {
-        // This callback runs on an arbitrary thread.
-        return current_set.AllocateBuffer(size, payload_vmos);
-      });
+  ConfigureInputToUseSysmemVmos(service_provider_, 0,  // max_aggregate_payload_size
+                                VmoAllocation::kVmoPerBuffer,
+                                0,  // map_flags
+                                [&current_set](uint64_t size, const PayloadVmos& payload_vmos) {
+                                  // This callback runs on an arbitrary thread.
+                                  return current_set.AllocateBuffer(size, payload_vmos);
+                                });
 
   // Call |Sync| on the sysmem token before passing it to the outboard processor as part of
   // |SetInputBufferPartialSettings|. This needs to done to ensure that sysmem recognizes the
@@ -395,10 +393,9 @@ void FidlProcessor::OnOutputConstraints(fuchsia::media::StreamOutputConstraints 
     return;
   }
 
-  ConfigureOutputToUseSysmemVmos(
-      service_provider_, 0,  // max_aggregate_payload_size
-      VmoAllocation::kVmoPerBuffer,
-      0);  // map_flags
+  ConfigureOutputToUseSysmemVmos(service_provider_, 0,  // max_aggregate_payload_size
+                                 VmoAllocation::kVmoPerBuffer,
+                                 0);  // map_flags
 
   // Call |Sync| on the sysmem token before passing it to the outboard processor as part of
   // |SetOutputBufferPartialSettings|. This needs to be done to ensure that sysmem recognizes the

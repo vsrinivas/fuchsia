@@ -5,7 +5,6 @@
 #include "src/modular/bin/sessionmgr/element_controller_impl.h"
 
 #include <fuchsia/element/cpp/fidl.h>
-#include <lib/fidl/cpp/optional.h>
 
 #include <memory>
 
@@ -74,8 +73,8 @@ TEST_F(ElementControllerImplTest, GetAnnotationsExisting) {
 
   auto annotation = fuchsia::modular::Annotation{
       .key = kTestAnnotationKey,
-      .value =
-          fidl::MakeOptional(fuchsia::modular::AnnotationValue::WithText(kTestAnnotationValue))};
+      .value = std::make_unique<fuchsia::modular::AnnotationValue>(
+          fuchsia::modular::AnnotationValue::WithText(kTestAnnotationValue))};
 
   std::vector<fuchsia::modular::Annotation> modular_annotations;
   modular_annotations.push_back(std::move(annotation));

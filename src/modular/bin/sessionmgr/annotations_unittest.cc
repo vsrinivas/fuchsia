@@ -5,7 +5,6 @@
 #include "src/modular/bin/sessionmgr/annotations.h"
 
 #include <fuchsia/modular/cpp/fidl.h>
-#include <lib/fidl/cpp/optional.h>
 
 #include <memory>
 #include <utility>
@@ -29,8 +28,9 @@ using ::testing::UnorderedElementsAre;
 Annotation MakeAnnotation(std::string key, std::string value) {
   AnnotationValue annotation_value;
   annotation_value.set_text(std::move(value));
-  return Annotation{.key = std::move(key),
-                    .value = fidl::MakeOptional(std::move(annotation_value))};
+  return Annotation{
+      .key = std::move(key),
+      .value = std::make_unique<fuchsia::modular::AnnotationValue>(std::move(annotation_value))};
 }
 
 // Merging two empty vectors of annotations produces an empty vector.
@@ -105,9 +105,9 @@ TEST(AnnotationsTest, BufferToInspect) {
   ASSERT_TRUE(fsl::VmoFromString(buffer_str, &buffer));
   AnnotationValue annotation_value_buffer;
   annotation_value_buffer.set_buffer(std::move(buffer));
-  auto annotation_buffer =
-      Annotation{.key = std::move("buffer_key"),
-                 .value = fidl::MakeOptional(std::move(annotation_value_buffer))};
+  auto annotation_buffer = Annotation{.key = std::move("buffer_key"),
+                                      .value = std::make_unique<fuchsia::modular::AnnotationValue>(
+                                          std::move(annotation_value_buffer))};
 
   EXPECT_THAT(ToInspect(*annotation_buffer.value.get()), "buffer");
 }
@@ -116,9 +116,9 @@ TEST(AnnotationsTest, BufferToInspect) {
 TEST(AnnotationsTest, BytesToInspect) {
   AnnotationValue annotation_value_bytes;
   annotation_value_bytes.set_bytes({0x01, 0x02, 0x03, 0x04});
-  auto annotation_bytes =
-      Annotation{.key = std::move("bytes_key"),
-                 .value = fidl::MakeOptional(std::move(annotation_value_bytes))};
+  auto annotation_bytes = Annotation{.key = std::move("bytes_key"),
+                                     .value = std::make_unique<fuchsia::modular::AnnotationValue>(
+                                         std::move(annotation_value_bytes))};
 
   EXPECT_THAT(ToInspect(*annotation_bytes.value.get()), "bytes");
 }
@@ -175,16 +175,17 @@ TEST(AnnotationsTest, ToSessionAnnotationBuffer) {
   fuchsia::mem::Buffer buffer{};
   ASSERT_TRUE(fsl::VmoFromString(kTestAnnotationValue, &buffer));
 
-  auto modular_annotation =
-      Annotation{.key = kTestAnnotationKey,
-                 .value = fidl::MakeOptional(AnnotationValue::WithBuffer(std::move(buffer)))};
+  auto modular_annotation = Annotation{.key = kTestAnnotationKey,
+                                       .value = std::make_unique<fuchsia::modular::AnnotationValue>(
+                                           AnnotationValue::WithBuffer(std::move(buffer)))};
 
   // Set the buffer again because it was moved into |annotation.value|.
   ASSERT_TRUE(fsl::VmoFromString(kTestAnnotationValue, &buffer));
 
-  auto expected_annotation = fuchsia::session::Annotation{
-      .key = kTestAnnotationKey,
-      .value = fidl::MakeOptional(fuchsia::session::Value::WithBuffer(std::move(buffer)))};
+  auto expected_annotation =
+      fuchsia::session::Annotation{.key = kTestAnnotationKey,
+                                   .value = std::make_unique<fuchsia::session::Value>(
+                                       fuchsia::session::Value::WithBuffer(std::move(buffer)))};
 
   EXPECT_THAT(ToSessionAnnotation(modular_annotation),
               session::annotations::AnnotationEq(ByRef(expected_annotation)));
@@ -265,9 +266,9 @@ TEST(AnnotationsTest, ToElementAnnotationBuffer) {
   fuchsia::mem::Buffer buffer{};
   ASSERT_TRUE(fsl::VmoFromString(kTestAnnotationValue, &buffer));
 
-  auto modular_annotation =
-      Annotation{.key = kTestAnnotationKey,
-                 .value = fidl::MakeOptional(AnnotationValue::WithBuffer(std::move(buffer)))};
+  auto modular_annotation = Annotation{.key = kTestAnnotationKey,
+                                       .value = std::make_unique<fuchsia::modular::AnnotationValue>(
+                                           AnnotationValue::WithBuffer(std::move(buffer)))};
 
   // Set the buffer again because it was moved into |annotation.value|.
   ASSERT_TRUE(fsl::VmoFromString(kTestAnnotationValue, &buffer));
@@ -296,13 +297,14 @@ TEST(SessionAnnotationsTest, ToModularAnnotationText) {
   static constexpr auto kTestAnnotationKey = "annotation_key";
   static constexpr auto kTestAnnotationValue = "annotation_value";
 
-  auto annotation = Annotation{.key = kTestAnnotationKey,
-                               .value = fidl::MakeOptional(Value::WithText(kTestAnnotationValue))};
+  auto annotation =
+      Annotation{.key = kTestAnnotationKey,
+                 .value = std::make_unique<Value>(Value::WithText(kTestAnnotationValue))};
 
   auto modular_annotation = fuchsia::modular::Annotation{
       .key = kTestAnnotationKey,
-      .value =
-          fidl::MakeOptional(fuchsia::modular::AnnotationValue::WithText(kTestAnnotationValue))};
+      .value = std::make_unique<fuchsia::modular::AnnotationValue>(
+          fuchsia::modular::AnnotationValue::WithText(kTestAnnotationValue))};
 
   EXPECT_THAT(ToModularAnnotation(annotation),
               modular::annotations::AnnotationEq(ByRef(modular_annotation)));
@@ -315,16 +317,17 @@ TEST(SessionAnnotationsTest, ToModularAnnotationBuffer) {
   fuchsia::mem::Buffer buffer{};
   ASSERT_TRUE(fsl::VmoFromString(kTestAnnotationValue, &buffer));
 
-  auto annotation = Annotation{.key = kTestAnnotationKey,
-                               .value = fidl::MakeOptional(Value::WithBuffer(std::move(buffer)))};
+  auto annotation =
+      Annotation{.key = kTestAnnotationKey,
+                 .value = std::make_unique<Value>(Value::WithBuffer(std::move(buffer)))};
 
   // Set the buffer again because it was moved into |annotation.value|.
   ASSERT_TRUE(fsl::VmoFromString(kTestAnnotationValue, &buffer));
 
   auto modular_annotation = fuchsia::modular::Annotation{
       .key = kTestAnnotationKey,
-      .value =
-          fidl::MakeOptional(fuchsia::modular::AnnotationValue::WithBuffer(std::move(buffer)))};
+      .value = std::make_unique<fuchsia::modular::AnnotationValue>(
+          fuchsia::modular::AnnotationValue::WithBuffer(std::move(buffer)))};
 
   EXPECT_THAT(ToModularAnnotation(annotation),
               modular::annotations::AnnotationEq(ByRef(modular_annotation)));
@@ -358,10 +361,10 @@ TEST(SessionAnnotationsTest, ToModularAnnotationsWithCustomAnnotations) {
 
   auto text_annotation =
       Annotation{.key = kTestTextAnnotationKey,
-                 .value = fidl::MakeOptional(Value::WithText(kTestTextAnnotationValue))};
+                 .value = std::make_unique<Value>(Value::WithText(kTestTextAnnotationValue))};
   auto buffer_annotation =
       Annotation{.key = kTestBufferAnnotationKey,
-                 .value = fidl::MakeOptional(Value::WithBuffer(std::move(buffer)))};
+                 .value = std::make_unique<Value>(Value::WithBuffer(std::move(buffer)))};
 
   fuchsia::session::Annotations annotations;
   annotations.mutable_custom_annotations()->push_back(std::move(text_annotation));
@@ -371,7 +374,7 @@ TEST(SessionAnnotationsTest, ToModularAnnotationsWithCustomAnnotations) {
 
   auto expected_text_annotation = fuchsia::modular::Annotation{
       .key = kTestTextAnnotationKey,
-      .value = fidl::MakeOptional(
+      .value = std::make_unique<fuchsia::modular::AnnotationValue>(
           fuchsia::modular::AnnotationValue::WithText(kTestTextAnnotationValue))};
 
   // Set the buffer again because it was moved into |buffer_annotation.value|.
@@ -379,8 +382,8 @@ TEST(SessionAnnotationsTest, ToModularAnnotationsWithCustomAnnotations) {
 
   auto expected_buffer_annotation = fuchsia::modular::Annotation{
       .key = kTestBufferAnnotationKey,
-      .value =
-          fidl::MakeOptional(fuchsia::modular::AnnotationValue::WithBuffer(std::move(buffer)))};
+      .value = std::make_unique<fuchsia::modular::AnnotationValue>(
+          fuchsia::modular::AnnotationValue::WithBuffer(std::move(buffer)))};
 
   EXPECT_THAT(
       modular_annotations,
@@ -429,8 +432,8 @@ TEST(ElementAnnotationsTest, ToModularAnnotationText) {
 
   auto modular_annotation = fuchsia::modular::Annotation{
       .key = ToModularAnnotationKey(annotation_key),
-      .value =
-          fidl::MakeOptional(fuchsia::modular::AnnotationValue::WithText(kTestAnnotationValue))};
+      .value = std::make_unique<fuchsia::modular::AnnotationValue>(
+          fuchsia::modular::AnnotationValue::WithText(kTestAnnotationValue))};
 
   EXPECT_THAT(ToModularAnnotation(annotation),
               modular::annotations::AnnotationEq(ByRef(modular_annotation)));
@@ -452,8 +455,8 @@ TEST(ElementAnnotationsTest, ToModularAnnotationBuffer) {
 
   auto modular_annotation = fuchsia::modular::Annotation{
       .key = ToModularAnnotationKey(annotation_key),
-      .value =
-          fidl::MakeOptional(fuchsia::modular::AnnotationValue::WithBuffer(std::move(buffer)))};
+      .value = std::make_unique<fuchsia::modular::AnnotationValue>(
+          fuchsia::modular::AnnotationValue::WithBuffer(std::move(buffer)))};
 
   EXPECT_THAT(ToModularAnnotation(annotation),
               modular::annotations::AnnotationEq(ByRef(modular_annotation)));
@@ -490,7 +493,7 @@ TEST(ElementAnnotationsTest, ToModularAnnotations) {
 
   auto expected_text_annotation = fuchsia::modular::Annotation{
       .key = ToModularAnnotationKey(text_annotation_key),
-      .value = fidl::MakeOptional(
+      .value = std::make_unique<fuchsia::modular::AnnotationValue>(
           fuchsia::modular::AnnotationValue::WithText(kTestTextAnnotationValue))};
 
   // Set the buffer again because it was moved into |buffer_annotation.value|.
@@ -498,8 +501,8 @@ TEST(ElementAnnotationsTest, ToModularAnnotations) {
 
   auto expected_buffer_annotation = fuchsia::modular::Annotation{
       .key = ToModularAnnotationKey(buffer_annotation_key),
-      .value =
-          fidl::MakeOptional(fuchsia::modular::AnnotationValue::WithBuffer(std::move(buffer)))};
+      .value = std::make_unique<fuchsia::modular::AnnotationValue>(
+          fuchsia::modular::AnnotationValue::WithBuffer(std::move(buffer)))};
 
   EXPECT_THAT(
       modular_annotations,

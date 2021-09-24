@@ -11,7 +11,6 @@
 #include <iomanip>
 #include <iostream>
 
-#include "lib/fidl/cpp/optional.h"
 #include "src/media/playback/mediaplayer/graph/formatting.h"
 
 namespace media_player {
@@ -59,8 +58,9 @@ void FakeSession::SetExpectations(uint32_t black_image_id,
                                  std::move(expected_packets_info));
   } else {
     expected_black_image_id_ = black_image_id;
-    expected_black_image_format_ = fidl::MakeOptional(black_image_format);
-    expected_image_format_ = fidl::MakeOptional(format);
+    expected_black_image_format_ =
+        std::make_unique<fuchsia::sysmem::ImageFormat_2>(black_image_format);
+    expected_image_format_ = std::make_unique<fuchsia::sysmem::ImageFormat_2>(format);
     expected_packets_info_ = std::move(expected_packets_info);
   }
 }
@@ -395,7 +395,7 @@ void FakeSession::HandleSetShape(uint32_t node_id, uint32_t shape_id) {
     return;
   }
 
-  node->shape_args_ = fidl::MakeOptional(fidl::Clone(shape->args_));
+  node->shape_args_ = std::make_unique<fuchsia::ui::gfx::ResourceArgs>(fidl::Clone(shape->args_));
 }
 
 void FakeSession::HandleSetTranslation(uint32_t node_id,
@@ -418,7 +418,7 @@ void FakeSession::HandleSetTranslation(uint32_t node_id,
     return;
   }
 
-  node->translation_ = fidl::MakeOptional(value);
+  node->translation_ = std::make_unique<fuchsia::ui::gfx::Vector3Value>(value);
 }
 
 void FakeSession::HandleSetScale(uint32_t node_id, const fuchsia::ui::gfx::Vector3Value& value) {
@@ -440,7 +440,7 @@ void FakeSession::HandleSetScale(uint32_t node_id, const fuchsia::ui::gfx::Vecto
     return;
   }
 
-  node->scale_ = fidl::MakeOptional(value);
+  node->scale_ = std::make_unique<fuchsia::ui::gfx::Vector3Value>(value);
 }
 
 void FakeSession::HandleSetClipPlanes(uint32_t node_id,

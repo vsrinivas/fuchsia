@@ -5,7 +5,6 @@
 #include "src/camera/drivers/controller/debug_protocol.h"
 
 #include <fuchsia/camera2/cpp/fidl.h>
-#include <lib/fidl/cpp/optional.h>
 #include <lib/fit/defer.h>
 #include <lib/syslog/cpp/macros.h>
 #include <lib/trace/event.h>

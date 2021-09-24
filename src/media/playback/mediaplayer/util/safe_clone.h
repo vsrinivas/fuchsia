@@ -5,7 +5,6 @@
 #ifndef SRC_MEDIA_PLAYBACK_MEDIAPLAYER_UTIL_SAFE_CLONE_H_
 #define SRC_MEDIA_PLAYBACK_MEDIAPLAYER_UTIL_SAFE_CLONE_H_
 
-#include <lib/fidl/cpp/optional.h>
 #include <lib/fidl/cpp/vector.h>
 
 #include <memory>
@@ -26,7 +25,7 @@ template <typename T>
 std::unique_ptr<T> CloneOptional(const T& value) {
   T new_value;
   value.Clone(&new_value);
-  return fidl::MakeOptional<T>(std::move(new_value));
+  return std::make_unique<T>(std::move(new_value));
 }
 
 template <typename T>
@@ -34,7 +33,7 @@ std::unique_ptr<T> CloneOptional(const std::unique_ptr<T>& value_ptr) {
   if (value_ptr) {
     T new_value;
     value_ptr->Clone(&new_value);
-    return fidl::MakeOptional<T>(std::move(new_value));
+    return std::make_unique<T>(std::move(new_value));
   }
   return nullptr;
 }
@@ -44,7 +43,7 @@ std::unique_ptr<T> CloneOptional(const T* value_ptr) {
   if (value_ptr) {
     T new_value;
     value_ptr->Clone(&new_value);
-    return fidl::MakeOptional<T>(std::move(new_value));
+    return std::make_unique<T>(std::move(new_value));
   }
   return nullptr;
 }

@@ -5,7 +5,6 @@
 #include "src/modular/bin/sessionmgr/element_manager_impl.h"
 
 #include <fuchsia/element/cpp/fidl.h>
-#include <lib/fidl/cpp/optional.h>
 
 #include <memory>
 
@@ -257,8 +256,8 @@ TEST_F(ElementManagerImplTest, ProposeElementAnnotatesStory) {
   // The story should have an equivalent Modular annotation.
   auto modular_annotation = fuchsia::modular::Annotation{
       .key = element::annotations::ToModularAnnotationKey(element_annotation_key),
-      .value =
-          fidl::MakeOptional(fuchsia::modular::AnnotationValue::WithText(kTestAnnotationValue))};
+      .value = std::make_unique<fuchsia::modular::AnnotationValue>(
+          fuchsia::modular::AnnotationValue::WithText(kTestAnnotationValue))};
 
   EXPECT_TRUE(story_data.story_info().has_annotations());
   EXPECT_THAT(story_data.story_info().annotations(),

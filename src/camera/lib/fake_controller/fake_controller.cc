@@ -6,7 +6,6 @@
 
 #include <lib/async-loop/default.h>
 #include <lib/async/cpp/task.h>
-#include <lib/fidl/cpp/optional.h>
 #include <lib/syslog/cpp/macros.h>
 #include <zircon/errors.h>
 
@@ -161,7 +160,9 @@ void FakeController::GetNextConfig(
     callback(nullptr, ZX_ERR_STOP);
     return;
   }
-  callback(fidl::MakeOptional(std::move(DefaultConfigs()[get_configs_call_count_++])), ZX_OK);
+  callback(std::make_unique<fuchsia::camera2::hal::Config>(
+               std::move(DefaultConfigs()[get_configs_call_count_++])),
+           ZX_OK);
 }
 
 void FakeController::CreateStream(uint32_t config_index, uint32_t stream_index,

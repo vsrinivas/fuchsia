@@ -4,7 +4,6 @@
 
 #include "src/modular/bin/sessionmgr/storage/session_storage.h"
 
-#include <lib/fidl/cpp/optional.h>
 #include <lib/gtest/real_loop_fixture.h>
 #include <zircon/errors.h>
 
@@ -40,7 +39,8 @@ TEST_F(SessionStorageTest, Create_VerifyData) {
   fuchsia::modular::AnnotationValue annotation_value;
   annotation_value.set_text("test_annotation_value");
   auto annotation = fuchsia::modular::Annotation{
-      .key = "test_annotation_key", .value = fidl::MakeOptional(std::move(annotation_value))};
+      .key = "test_annotation_key",
+      .value = std::make_unique<fuchsia::modular::AnnotationValue>(std::move(annotation_value))};
   annotations.push_back(fidl::Clone(annotation));
 
   auto story_name = storage->CreateStory("story_name", std::move(annotations));
@@ -150,7 +150,8 @@ TEST_F(SessionStorageTest, CreateSameStoryOnlyOnce) {
   fuchsia::modular::AnnotationValue annotation_value;
   annotation_value.set_text("test_annotation_value");
   auto annotation = fuchsia::modular::Annotation{
-      .key = "test_annotation_key", .value = fidl::MakeOptional(std::move(annotation_value))};
+      .key = "test_annotation_key",
+      .value = std::make_unique<fuchsia::modular::AnnotationValue>(std::move(annotation_value))};
   annotations.push_back(fidl::Clone(annotation));
 
   auto story_first_name = storage->CreateStory("story", std::move(annotations));
@@ -203,7 +204,8 @@ TEST_F(SessionStorageTest, ObserveCreateUpdateDelete) {
   fuchsia::modular::AnnotationValue annotation_value;
   annotation_value.set_text("test_annotation_value");
   auto annotation = fuchsia::modular::Annotation{
-      .key = "test_annotation_key", .value = fidl::MakeOptional(std::move(annotation_value))};
+      .key = "test_annotation_key",
+      .value = std::make_unique<fuchsia::modular::AnnotationValue>(std::move(annotation_value))};
   annotations.push_back(fidl::Clone(annotation));
 
   storage->MergeStoryAnnotations(created_story_name, std::move(annotations));
@@ -262,8 +264,8 @@ TEST_F(SessionStorageTest, AnnotationsUpdatedCallback) {
   std::vector<fuchsia::modular::Annotation> annotations;
   auto annotation = fuchsia::modular::Annotation{
       .key = "test_annotation_key",
-      .value =
-          fidl::MakeOptional(fuchsia::modular::AnnotationValue::WithText("test_annotation_value"))};
+      .value = std::make_unique<fuchsia::modular::AnnotationValue>(
+          fuchsia::modular::AnnotationValue::WithText("test_annotation_value"))};
   annotations.push_back(fidl::Clone(annotation));
 
   storage->MergeStoryAnnotations(story_name, std::move(annotations));
@@ -302,7 +304,7 @@ TEST_F(SessionStorageTest, AnnotationsUpdatedMultipleWatchers) {
   std::vector<fuchsia::modular::Annotation> annotations;
   annotations.push_back(fuchsia::modular::Annotation{
       .key = "test_annotation_key",
-      .value = fidl::MakeOptional(
+      .value = std::make_unique<fuchsia::modular::AnnotationValue>(
           fuchsia::modular::AnnotationValue::WithText("test_annotation_value"))});
 
   storage->MergeStoryAnnotations(story_name, std::move(annotations));
@@ -335,7 +337,7 @@ TEST_F(SessionStorageTest, AnnotationsUpdatedCallbackCalledOnce) {
   std::vector<fuchsia::modular::Annotation> first_annotations;
   first_annotations.push_back(fuchsia::modular::Annotation{
       .key = "first_test_annotation_key",
-      .value = fidl::MakeOptional(
+      .value = std::make_unique<fuchsia::modular::AnnotationValue>(
           fuchsia::modular::AnnotationValue::WithText("first_test_annotation_value"))});
 
   storage->MergeStoryAnnotations(story_name, std::move(first_annotations));
@@ -347,7 +349,7 @@ TEST_F(SessionStorageTest, AnnotationsUpdatedCallbackCalledOnce) {
   std::vector<fuchsia::modular::Annotation> second_annotations;
   second_annotations.push_back(fuchsia::modular::Annotation{
       .key = "second_test_annotation_key",
-      .value = fidl::MakeOptional(
+      .value = std::make_unique<fuchsia::modular::AnnotationValue>(
           fuchsia::modular::AnnotationValue::WithText("second_test_annotation_value"))});
 
   storage->MergeStoryAnnotations(story_name, std::move(second_annotations));
@@ -379,7 +381,7 @@ TEST_F(SessionStorageTest, AnnotationsUpdatedCallbackBeforeCreate) {
   std::vector<fuchsia::modular::Annotation> first_annotations;
   first_annotations.push_back(fuchsia::modular::Annotation{
       .key = "first_test_annotation_key",
-      .value = fidl::MakeOptional(
+      .value = std::make_unique<fuchsia::modular::AnnotationValue>(
           fuchsia::modular::AnnotationValue::WithText("first_test_annotation_valeu"))});
 
   storage->CreateStory(story_name, std::move(first_annotations));
@@ -392,7 +394,7 @@ TEST_F(SessionStorageTest, AnnotationsUpdatedCallbackBeforeCreate) {
   std::vector<fuchsia::modular::Annotation> second_annotations;
   second_annotations.push_back(fuchsia::modular::Annotation{
       .key = "second_test_annotation_key",
-      .value = fidl::MakeOptional(
+      .value = std::make_unique<fuchsia::modular::AnnotationValue>(
           fuchsia::modular::AnnotationValue::WithText("second_test_annotation_value"))});
 
   storage->MergeStoryAnnotations(story_name, std::move(second_annotations));
@@ -437,16 +439,16 @@ TEST_F(SessionStorageTest, AnnotationsUpdatedCallbackAddedDeleted) {
   std::vector<fuchsia::modular::Annotation> first_annotations;
   auto annotation_unchanged = fuchsia::modular::Annotation{
       .key = annotation_key_unchanged,
-      .value = fidl::MakeOptional(
+      .value = std::make_unique<fuchsia::modular::AnnotationValue>(
           fuchsia::modular::AnnotationValue::WithText(annotation_value_initial))};
   first_annotations.push_back(fidl::Clone(annotation_unchanged));
   first_annotations.push_back(fuchsia::modular::Annotation{
       .key = annotation_key_set,
-      .value = fidl::MakeOptional(
+      .value = std::make_unique<fuchsia::modular::AnnotationValue>(
           fuchsia::modular::AnnotationValue::WithText(annotation_value_initial))});
   first_annotations.push_back(fuchsia::modular::Annotation{
       .key = annotation_key_deleted,
-      .value = fidl::MakeOptional(
+      .value = std::make_unique<fuchsia::modular::AnnotationValue>(
           fuchsia::modular::AnnotationValue::WithText(annotation_value_initial))});
 
   storage->CreateStory(story_name, std::move(first_annotations));
@@ -458,12 +460,12 @@ TEST_F(SessionStorageTest, AnnotationsUpdatedCallbackAddedDeleted) {
   std::vector<fuchsia::modular::Annotation> second_annotations{};
   auto annotation_added = fuchsia::modular::Annotation{
       .key = annotation_key_added,
-      .value = fidl::MakeOptional(
+      .value = std::make_unique<fuchsia::modular::AnnotationValue>(
           fuchsia::modular::AnnotationValue::WithText(annotation_value_initial))};
   second_annotations.push_back(fidl::Clone(annotation_added));
   auto annotation_set = fuchsia::modular::Annotation{
       .key = annotation_key_set,
-      .value = fidl::MakeOptional(
+      .value = std::make_unique<fuchsia::modular::AnnotationValue>(
           fuchsia::modular::AnnotationValue::WithText(annotation_value_updated))};
   second_annotations.push_back(fidl::Clone(annotation_set));
   second_annotations.push_back(
@@ -519,7 +521,8 @@ TEST_F(SessionStorageTest, SubscribeStoryUpdatedMultipleWatchers) {
   fuchsia::modular::AnnotationValue annotation_value;
   annotation_value.set_text(kTestAnnotationValue);
   auto annotation = fuchsia::modular::Annotation{
-      .key = kTestAnnotationKey, .value = fidl::MakeOptional(std::move(annotation_value))};
+      .key = kTestAnnotationKey,
+      .value = std::make_unique<fuchsia::modular::AnnotationValue>(std::move(annotation_value))};
   annotations.push_back(fidl::Clone(annotation));
 
   storage->MergeStoryAnnotations(story_id, std::move(annotations));

@@ -10,7 +10,6 @@
 
 #include <iostream>
 
-#include "lib/fidl/cpp/optional.h"
 #include "lib/media/cpp/type_converters.h"
 #include "src/lib/fsl/io/fd.h"
 #include "src/media/playback/mediaplayer/graph/formatting.h"
@@ -35,7 +34,7 @@ CommandQueue::CommandQueue() : dispatcher_(async_get_default_dispatcher()) {
 CommandQueue::~CommandQueue() {}
 
 void CommandQueue::NotifyStatusChanged(const fuchsia::media::playback::PlayerStatus& status) {
-  status_ = fidl::MakeOptional(fidl::Clone(status));
+  status_ = std::make_unique<fuchsia::media::playback::PlayerStatus>(fidl::Clone(status));
 
   MaybeFinishWaitingForStatusCondition();
 

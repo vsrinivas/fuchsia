@@ -17,7 +17,6 @@
 #include <iomanip>
 #include <iostream>
 
-#include "lib/fidl/cpp/optional.h"
 #include "lib/media/audio/cpp/perceived_level.h"
 #include "src/lib/fsl/tasks/fd_waiter.h"
 #include "src/lib/fxl/command_line.h"

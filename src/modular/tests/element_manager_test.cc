@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 #include <fuchsia/testing/modular/cpp/fidl.h>
-#include <lib/fidl/cpp/optional.h>
 #include <lib/fit/function.h>
 #include <lib/syslog/cpp/macros.h>
 
@@ -249,7 +248,7 @@ TEST_F(ElementManagerTest, ProposeAnnotatesStory) {
 
         auto modular_annotation = fuchsia::modular::Annotation{
             .key = kTestAnnotationKey,
-            .value = fidl::MakeOptional(
+            .value = std::make_unique<fuchsia::modular::AnnotationValue>(
                 fuchsia::modular::AnnotationValue::WithText(kTestAnnotationValue))};
 
         ASSERT_TRUE(story_info.has_annotations());
@@ -367,7 +366,7 @@ TEST_F(ElementManagerTest, ElementControllerSetAnnotations) {
 
         auto modular_annotation = fuchsia::modular::Annotation{
             .key = kTestAnnotationKey,
-            .value = fidl::MakeOptional(
+            .value = std::make_unique<fuchsia::modular::AnnotationValue>(
                 fuchsia::modular::AnnotationValue::WithText(kTestAnnotationValue))};
 
         ASSERT_TRUE(story_info.has_annotations());

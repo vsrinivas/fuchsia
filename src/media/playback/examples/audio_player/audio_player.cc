@@ -16,7 +16,6 @@
 
 #include <iomanip>
 
-#include "lib/fidl/cpp/optional.h"
 #include "src/lib/fsl/io/fd.h"
 #include "src/media/playback/examples/audio_player/audio_player_params.h"
 

@@ -8,7 +8,6 @@
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
 #include <lib/fidl/cpp/clone.h>
-#include <lib/fidl/cpp/optional.h>
 #include <lib/fidl/cpp/type_converter.h>
 #include <lib/fit/function.h>
 #include <lib/media/cpp/type_converters.h>

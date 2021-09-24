@@ -12,7 +12,6 @@
 #include <utility>
 
 #include "lib/fdio/fd.h"
-#include "lib/fidl/cpp/optional.h"
 #include "src/lib/fsl/io/fd.h"
 #include "src/lib/fsl/vmo/file.h"
 #include "src/lib/fxl/strings/substitute.h"
@@ -71,13 +70,14 @@ void PackageLoader::LoadUrl(std::string url, LoadUrlCallback callback) {
   // Falling back to cached (on-disk) packages for package URLs not from fuchsia.com is probably
   // an error.
   if (fuchsia_url.host_name() != "fuchsia.com") {
-    FX_LOGS(WARNING) << "Using /pkgfs/packages/" << fuchsia_url.package_name() << " as "
-                     << fuchsia_url.ToString()
-                     << " but since this is not a fuchsia.com URL this probably isn't what you "
-                        "wanted. Consider serving the package in your package repo. See fxbug.dev/48818.";
+    FX_LOGS(WARNING)
+        << "Using /pkgfs/packages/" << fuchsia_url.package_name() << " as "
+        << fuchsia_url.ToString()
+        << " but since this is not a fuchsia.com URL this probably isn't what you "
+           "wanted. Consider serving the package in your package repo. See fxbug.dev/48818.";
   }
 
-  callback(fidl::MakeOptional(std::move(package)));
+  callback(std::make_unique<fuchsia::sys::Package>(std::move(package)));
 }
 
 void PackageLoader::AddBinding(fidl::InterfaceRequest<fuchsia::sys::Loader> request) {
@@ -97,7 +97,7 @@ bool LoadPackageResource(const std::string& path, fuchsia::sys::Package& package
   }
 
   resource.vmo().set_property(ZX_PROP_NAME, path.c_str(), path.length());
-  package.data = fidl::MakeOptional(std::move(resource).ToTransport());
+  package.data = std::make_unique<fuchsia::mem::Buffer>(std::move(resource).ToTransport());
 
   return true;
 }

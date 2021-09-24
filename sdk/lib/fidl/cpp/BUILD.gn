@@ -41,7 +41,6 @@ sdk_source_set("cpp") {
     "internal/weak_stub_controller.cc",
     "internal/weak_stub_controller.h",
     "member_connector.h",
-    "optional.h",
     "service_connector.h",
     "service_handler_base.h",
     "thread_safe_binding_set.h",

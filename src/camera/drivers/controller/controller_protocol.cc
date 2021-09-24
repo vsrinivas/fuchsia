@@ -5,7 +5,6 @@
 #include "src/camera/drivers/controller/controller_protocol.h"
 
 #include <fuchsia/camera2/cpp/fidl.h>
-#include <lib/fidl/cpp/optional.h>
 #include <lib/fit/defer.h>
 #include <lib/syslog/cpp/macros.h>
 #include <lib/trace/event.h>
@@ -54,7 +53,7 @@ void ControllerImpl::GetNextConfig(GetNextConfigCallback callback) {
     return;
   }
   config = fidl::Clone(configs_.at(config_count_));
-  callback(fidl::MakeOptional(std::move(config)), ZX_OK);
+  callback(std::make_unique<fuchsia::camera2::hal::Config>(std::move(config)), ZX_OK);
   config_count_++;
 }
 

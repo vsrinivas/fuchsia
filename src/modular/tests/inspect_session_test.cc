@@ -8,7 +8,6 @@
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
-#include <lib/fidl/cpp/optional.h>
 #include <lib/inspect/contrib/cpp/archive_reader.h>
 #include <zircon/device/vfs.h>
 
@@ -149,8 +148,10 @@ TEST_F(InspectSessionTest, CheckNodeHierarchyStartAndStopStory) {
   auto text_story_annotation_value = fuchsia::modular::AnnotationValue{};
   text_story_annotation_value.set_text("test_value");
 
-  auto text_story_annotation = fuchsia::modular::Annotation{
-      .key = "test_key", .value = fidl::MakeOptional(std::move(text_story_annotation_value))};
+  auto text_story_annotation =
+      fuchsia::modular::Annotation{.key = "test_key",
+                                   .value = std::make_unique<fuchsia::modular::AnnotationValue>(
+                                       std::move(text_story_annotation_value))};
 
   std::vector<fuchsia::modular::Annotation> story_annotations;
   story_annotations.push_back(std::move(text_story_annotation));
@@ -234,8 +235,10 @@ TEST_F(InspectSessionTest, CheckNodeHierarchyMods) {
   // Annotate the module.
   auto text_mod_annotation_value = fuchsia::modular::AnnotationValue{};
   text_mod_annotation_value.set_bytes({01});
-  auto text_mod_annotation = fuchsia::modular::Annotation{
-      .key = "text_key", .value = fidl::MakeOptional(fidl::Clone(text_mod_annotation_value))};
+  auto text_mod_annotation =
+      fuchsia::modular::Annotation{.key = "text_key",
+                                   .value = std::make_unique<fuchsia::modular::AnnotationValue>(
+                                       fidl::Clone(text_mod_annotation_value))};
   std::vector<fuchsia::modular::Annotation> mod_annotations;
   mod_annotations.push_back(fidl::Clone(text_mod_annotation));
 

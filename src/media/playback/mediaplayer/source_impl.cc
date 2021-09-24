@@ -12,7 +12,6 @@
 
 #include <sstream>
 
-#include "lib/fidl/cpp/optional.h"
 #include "lib/fidl/cpp/type_converter.h"
 #include "src/media/playback/mediaplayer/core/demux_source_segment.h"
 #include "src/media/playback/mediaplayer/fidl/fidl_type_conversions.h"
@@ -124,8 +123,9 @@ void SourceImpl::UpdateStatus() {
   status_.can_seek = source_segment_->can_seek();
 
   auto metadata = source_segment_->metadata();
-  status_.metadata =
-      metadata ? fidl::MakeOptional(fidl::To<fuchsia::media::Metadata>(*metadata)) : nullptr;
+  status_.metadata = metadata ? std::make_unique<fuchsia::media::Metadata>(
+                                    fidl::To<fuchsia::media::Metadata>(*metadata))
+                              : nullptr;
 
   status_.problem = CloneOptional(source_segment_->problem());
 }

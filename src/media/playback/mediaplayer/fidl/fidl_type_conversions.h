@@ -11,7 +11,6 @@
 
 #include <cstdint>
 
-#include "lib/fidl/cpp/optional.h"
 #include "lib/fidl/cpp/type_converter.h"
 #include "src/lib/fsl/types/type_converters.h"
 #include "src/media/playback/mediaplayer/graph/metadata.h"
@@ -123,7 +122,7 @@ struct TypeConverter<std::unique_ptr<T>, std::unique_ptr<U>> {
       return nullptr;
     }
 
-    return MakeOptional(To<T>(*input));
+    return std::make_unique<T>(To<T>(*input));
   }
 };
 

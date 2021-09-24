@@ -5,7 +5,6 @@
 #include "src/modular/bin/sessionmgr/puppet_master/puppet_master_impl.h"
 
 #include <fuchsia/modular/cpp/fidl.h>
-#include <lib/fidl/cpp/optional.h>
 #include <lib/syslog/cpp/macros.h>
 
 #include <gmock/gmock.h>
@@ -343,7 +342,8 @@ TEST_F(PuppetMasterTest, AnnotateCreatesStory) {
   annotation_value.set_text("test_value");
 
   auto annotation = fuchsia::modular::Annotation{
-      .key = "test_key", .value = fidl::MakeOptional(std::move(annotation_value))};
+      .key = "test_key",
+      .value = std::make_unique<fuchsia::modular::AnnotationValue>(std::move(annotation_value))};
 
   std::vector<fuchsia::modular::Annotation> annotations;
   annotations.push_back(std::move(annotation));
@@ -377,20 +377,26 @@ TEST_F(PuppetMasterTest, AnnotateInStoryData) {
   auto text_annotation_value = fuchsia::modular::AnnotationValue{};
   text_annotation_value.set_text("text_value");
   auto text_annotation = fuchsia::modular::Annotation{
-      .key = "text_key", .value = fidl::MakeOptional(fidl::Clone(text_annotation_value))};
+      .key = "text_key",
+      .value =
+          std::make_unique<fuchsia::modular::AnnotationValue>(fidl::Clone(text_annotation_value))};
 
   auto bytes_annotation_value = fuchsia::modular::AnnotationValue{};
   bytes_annotation_value.set_bytes({0x01, 0x02, 0x03, 0x04});
   auto bytes_annotation = fuchsia::modular::Annotation{
-      .key = "bytes_key", .value = fidl::MakeOptional(fidl::Clone(bytes_annotation_value))};
+      .key = "bytes_key",
+      .value =
+          std::make_unique<fuchsia::modular::AnnotationValue>(fidl::Clone(bytes_annotation_value))};
 
   fuchsia::mem::Buffer buffer{};
   std::string buffer_value = "buffer_value";
   ASSERT_TRUE(fsl::VmoFromString(buffer_value, &buffer));
   auto buffer_annotation_value = fuchsia::modular::AnnotationValue{};
   buffer_annotation_value.set_buffer(std::move(buffer));
-  auto buffer_annotation = fuchsia::modular::Annotation{
-      .key = "buffer_key", .value = fidl::MakeOptional(fidl::Clone(buffer_annotation_value))};
+  auto buffer_annotation =
+      fuchsia::modular::Annotation{.key = "buffer_key",
+                                   .value = std::make_unique<fuchsia::modular::AnnotationValue>(
+                                       fidl::Clone(buffer_annotation_value))};
 
   std::vector<fuchsia::modular::Annotation> annotations;
   annotations.push_back(fidl::Clone(text_annotation));
@@ -430,7 +436,9 @@ TEST_F(PuppetMasterTest, AnnotateMerge) {
   auto first_annotation_value = fuchsia::modular::AnnotationValue{};
   first_annotation_value.set_text("first_value");
   auto first_annotation = fuchsia::modular::Annotation{
-      .key = "first_key", .value = fidl::MakeOptional(fidl::Clone(first_annotation_value))};
+      .key = "first_key",
+      .value =
+          std::make_unique<fuchsia::modular::AnnotationValue>(fidl::Clone(first_annotation_value))};
 
   std::vector<fuchsia::modular::Annotation> annotations;
   annotations.push_back(fidl::Clone(first_annotation));
@@ -461,8 +469,10 @@ TEST_F(PuppetMasterTest, AnnotateMerge) {
   // Create another set of annotations that should be merged into the initial one.
   auto second_annotation_value = fuchsia::modular::AnnotationValue{};
   second_annotation_value.set_text("second_value");
-  auto second_annotation = fuchsia::modular::Annotation{
-      .key = "second_key", .value = fidl::MakeOptional(fidl::Clone(second_annotation_value))};
+  auto second_annotation =
+      fuchsia::modular::Annotation{.key = "second_key",
+                                   .value = std::make_unique<fuchsia::modular::AnnotationValue>(
+                                       fidl::Clone(second_annotation_value))};
 
   std::vector<fuchsia::modular::Annotation> annotations_2;
   annotations_2.push_back(fidl::Clone(second_annotation));
@@ -502,7 +512,8 @@ TEST_F(PuppetMasterTest, AnnotateBufferValueTooBig) {
   auto annotation_value = fuchsia::modular::AnnotationValue{};
   annotation_value.set_buffer(std::move(buffer));
   auto annotation = fuchsia::modular::Annotation{
-      .key = "buffer_key", .value = fidl::MakeOptional(std::move(annotation_value))};
+      .key = "buffer_key",
+      .value = std::make_unique<fuchsia::modular::AnnotationValue>(std::move(annotation_value))};
 
   std::vector<fuchsia::modular::Annotation> annotations;
   annotations.push_back(std::move(annotation));
@@ -542,10 +553,11 @@ TEST_F(PuppetMasterTest, AnnotateTooMany) {
          num_annotations < fuchsia::modular::MAX_ANNOTATIONS_PER_UPDATE; ++num_annotations) {
       auto annotation_value = fuchsia::modular::AnnotationValue{};
       annotation_value.set_text("test_annotation_value");
-      auto annotation =
-          fuchsia::modular::Annotation{.key = "annotation_" + std::to_string(num_annotate_calls) +
-                                              "_" + std::to_string(num_annotations),
-                                       .value = fidl::MakeOptional(std::move(annotation_value))};
+      auto annotation = fuchsia::modular::Annotation{
+          .key = "annotation_" + std::to_string(num_annotate_calls) + "_" +
+                 std::to_string(num_annotations),
+          .value =
+              std::make_unique<fuchsia::modular::AnnotationValue>(std::move(annotation_value))};
       annotations.push_back(std::move(annotation));
     }
 
@@ -572,9 +584,9 @@ TEST_F(PuppetMasterTest, AnnotateTooMany) {
        ++num_annotations) {
     auto annotation_value = fuchsia::modular::AnnotationValue{};
     annotation_value.set_text("test_annotation_value");
-    auto annotation =
-        fuchsia::modular::Annotation{.key = "excess_annotation_" + std::to_string(num_annotations),
-                                     .value = fidl::MakeOptional(std::move(annotation_value))};
+    auto annotation = fuchsia::modular::Annotation{
+        .key = "excess_annotation_" + std::to_string(num_annotations),
+        .value = std::make_unique<fuchsia::modular::AnnotationValue>(std::move(annotation_value))};
     annotations.push_back(std::move(annotation));
   }
 
@@ -615,7 +627,8 @@ TEST_F(PuppetMasterTest, WatchAnnotationsExisting) {
   auto annotation_value = fuchsia::modular::AnnotationValue{};
   annotation_value.set_text("test_value");
   auto annotation = fuchsia::modular::Annotation{
-      .key = "test_key", .value = fidl::MakeOptional(std::move(annotation_value))};
+      .key = "test_key",
+      .value = std::make_unique<fuchsia::modular::AnnotationValue>(std::move(annotation_value))};
   std::vector<fuchsia::modular::Annotation> annotations;
   annotations.push_back(std::move(annotation));
 
@@ -645,7 +658,8 @@ TEST_F(PuppetMasterTest, WatchAnnotationsExistingMultipleClients) {
   auto annotation_value = fuchsia::modular::AnnotationValue{};
   annotation_value.set_text("test_value");
   auto annotation = fuchsia::modular::Annotation{
-      .key = "test_key", .value = fidl::MakeOptional(std::move(annotation_value))};
+      .key = "test_key",
+      .value = std::make_unique<fuchsia::modular::AnnotationValue>(std::move(annotation_value))};
   std::vector<fuchsia::modular::Annotation> annotations;
   annotations.push_back(std::move(annotation));
 
@@ -691,7 +705,9 @@ TEST_F(PuppetMasterTest, WatchAnnotationsUpdates) {
   auto first_annotation_value = fuchsia::modular::AnnotationValue{};
   first_annotation_value.set_text("first_test_value");
   auto first_annotation = fuchsia::modular::Annotation{
-      .key = "first_test_key", .value = fidl::MakeOptional(std::move(first_annotation_value))};
+      .key = "first_test_key",
+      .value =
+          std::make_unique<fuchsia::modular::AnnotationValue>(std::move(first_annotation_value))};
   std::vector<fuchsia::modular::Annotation> first_annotations;
   first_annotations.push_back(fidl::Clone(first_annotation));
 
@@ -729,7 +745,9 @@ TEST_F(PuppetMasterTest, WatchAnnotationsUpdates) {
   auto second_annotation_value = fuchsia::modular::AnnotationValue{};
   second_annotation_value.set_text("second_test_value");
   auto second_annotation = fuchsia::modular::Annotation{
-      .key = "second_test_key", .value = fidl::MakeOptional(std::move(second_annotation_value))};
+      .key = "second_test_key",
+      .value =
+          std::make_unique<fuchsia::modular::AnnotationValue>(std::move(second_annotation_value))};
   std::vector<fuchsia::modular::Annotation> second_annotations;
   second_annotations.push_back(fidl::Clone(second_annotation));
 

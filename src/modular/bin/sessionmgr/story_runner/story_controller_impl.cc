@@ -13,7 +13,6 @@
 #include <lib/fidl/cpp/interface_handle.h>
 #include <lib/fidl/cpp/interface_ptr_set.h>
 #include <lib/fidl/cpp/interface_request.h>
-#include <lib/fidl/cpp/optional.h>
 #include <lib/sys/cpp/component_context.h>
 #include <lib/syslog/cpp/macros.h>
 #include <lib/ui/scenic/cpp/view_ref_pair.h>
@@ -307,7 +306,8 @@ class StoryControllerImpl::LaunchModuleCall : public Operation<> {
     service_list->provider = std::move(module_context_provider);
 
     auto running_mod_info = std::make_unique<RunningModInfo>();
-    running_mod_info->module_data = fidl::MakeOptional(CloneModuleData(module_data_));
+    running_mod_info->module_data =
+        std::make_unique<fuchsia::modular::ModuleData>(CloneModuleData(module_data_));
 
     auto [view_token, view_holder_token] = scenic::ViewTokenPair::New();
     scenic::ViewRefPair view_ref_pair = scenic::ViewRefPair::New();

@@ -381,7 +381,8 @@ void StoryProviderImpl::GetStoryInfo(std::string story_id, GetStoryInfoCallback 
       callback(nullptr);
       return;
     }
-    callback(fidl::MakeOptional(StoryInfo2ToStoryInfo(story_data->story_info())));
+    callback(std::make_unique<fuchsia::modular::StoryInfo>(
+        StoryInfo2ToStoryInfo(story_data->story_info())));
   }));
 }
 

@@ -2,13 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fidl/test/misc/cpp/fidl.h>
+
 #include <list>
 
-#include <fidl/test/misc/cpp/fidl.h>
 #include <zxtest/zxtest.h>
 
 #include "lib/fidl/cpp/clone.h"
-#include "lib/fidl/cpp/optional.h"
 
 namespace fidl {
 namespace test {
@@ -68,7 +68,7 @@ TEST(FidlTest, StructWithNullComparison) {
   std::vector<HasOptionalFieldStruct> structs;
   for (int32_t i = 0; i < 3; ++i) {
     structs.push_back(
-        HasOptionalFieldStruct{i == 0 ? nullptr : fidl::MakeOptional(Int64Struct({i}))});
+        HasOptionalFieldStruct{i == 0 ? nullptr : std::make_unique<Int64Struct>(Int64Struct({i}))});
   }
   EXPECT_TRUE(CheckComparison(structs));
 }
@@ -78,9 +78,9 @@ TEST(FidlTest, StructWithMultipleFieldsComparison) {
   std::vector<Has2OptionalFieldStruct> structs;
   for (int32_t i = 0; i < 3; i++) {
     for (int32_t j = 0; j < 3; j++) {
-      structs.push_back(
-          Has2OptionalFieldStruct{i == 0 ? nullptr : fidl::MakeOptional(Int64Struct({i})),
-                                  j == 0 ? nullptr : fidl::MakeOptional(Int64Struct({j}))});
+      structs.push_back(Has2OptionalFieldStruct{
+          i == 0 ? nullptr : std::make_unique<Int64Struct>(Int64Struct({i})),
+          j == 0 ? nullptr : std::make_unique<Int64Struct>(Int64Struct({j}))});
     }
   }
   EXPECT_TRUE(CheckComparison(structs));
@@ -165,7 +165,7 @@ TEST(FidlTest, VectorOfStructComparison) {
 TEST(FidlTest, VectorOfOptionalStructComparison) {
   // Create a vector of vectors.
   auto vectors = BuildSortedVector<Int64StructPtr>(3, [](int32_t i) {
-    return i == 0 ? Int64StructPtr() : fidl::MakeOptional(Int64Struct({i}));
+    return i == 0 ? Int64StructPtr() : std::make_unique<Int64Struct>(Int64Struct({i}));
   });
   EXPECT_TRUE(CheckComparison(vectors));
 }
@@ -202,8 +202,9 @@ TEST(FidlTest, ArrayOfStructComparison) {
 
 TEST(FidlTest, ArrayOfOptionalStructComparison) {
   // Create an vector of arrays.
-  auto arrays = BuildArray<Int64StructPtr>(
-      [](int32_t i) { return i == 0 ? Int64StructPtr() : fidl::MakeOptional(Int64Struct({i})); });
+  auto arrays = BuildArray<Int64StructPtr>([](int32_t i) {
+    return i == 0 ? Int64StructPtr() : std::make_unique<Int64Struct>(Int64Struct({i}));
+  });
   EXPECT_TRUE(CheckComparison(arrays));
 }
 

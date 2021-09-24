@@ -19,7 +19,6 @@
 #include <fbl/unique_fd.h>
 
 #include "lib/fdio/fd.h"
-#include "lib/fidl/cpp/optional.h"
 #include "lib/zx/handle.h"
 #include "src/lib/fsl/io/fd.h"
 #include "src/lib/fsl/vmo/file.h"
@@ -90,7 +89,7 @@ void PackageUpdatingLoader::LoadUrl(std::string url, LoadUrlCallback callback) {
       }
     }
 
-    callback(fidl::MakeOptional(std::move(package)));
+    callback(std::make_unique<fuchsia::sys::Package>(std::move(package)));
   };
 
   std::vector<std::string> selectors;
