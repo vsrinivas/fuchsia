@@ -5,7 +5,7 @@
 use {
     crate::fastboot::{
         client::{FastbootImpl, InterfaceFactory},
-        network::{NetworkFactory, NetworkInterface},
+        network::udp::{UdpNetworkFactory, UdpNetworkInterface},
     },
     crate::target::Target,
     crate::FASTBOOT_CHECK_INTERVAL,
@@ -58,14 +58,14 @@ const MIN_FLASH_TIMEOUT: &str = "fastboot.flash.min_timeout_secs";
 pub struct Fastboot {
     target: Rc<Target>,
     usb: FastbootImpl<Interface>,
-    udp: FastbootImpl<NetworkInterface>,
+    udp: FastbootImpl<UdpNetworkInterface>,
 }
 
 impl Fastboot {
     pub fn new(target: Rc<Target>) -> Self {
         Self {
             target: target.clone(),
-            udp: FastbootImpl::new(target.clone(), Box::new(NetworkFactory::new())),
+            udp: FastbootImpl::new(target.clone(), Box::new(UdpNetworkFactory::new())),
             usb: FastbootImpl::new(target.clone(), Box::new(UsbFactory::default())),
         }
     }

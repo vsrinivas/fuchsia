@@ -69,7 +69,8 @@ rustc_library("lib") {
   sources = [
     "src/fastboot/client.rs",
     "src/fastboot/mod.rs",
-    "src/fastboot/network.rs",
+    "src/fastboot/network/mod.rs",
+    "src/fastboot/network/udp.rs",
     "src/lib.rs",
     "src/logger/mod.rs",
     "src/logger/streamer.rs",

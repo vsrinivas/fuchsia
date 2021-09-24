@@ -3,8 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    super::InterfaceFactory,
-    crate::target::Target,
+    crate::{fastboot::InterfaceFactory, target::Target},
     anyhow::{anyhow, bail, Context as _, Result},
     async_io::Async,
     async_net::UdpSocket,
@@ -70,7 +69,7 @@ impl<B: ByteSlice> Packet<B> {
     }
 }
 
-pub struct NetworkInterface {
+pub struct UdpNetworkInterface {
     maximum_size: u16,
     sequence: Wrapping<u16>,
     socket: UdpSocket,
@@ -78,7 +77,7 @@ pub struct NetworkInterface {
     write_task: Option<Pin<Box<dyn Future<Output = std::io::Result<usize>>>>>,
 }
 
-impl NetworkInterface {
+impl UdpNetworkInterface {
     fn create_fastboot_packets(&mut self, buf: &[u8]) -> Result<Vec<Vec<u8>>> {
         // Leave four bytes for the header.
         let header_size = std::mem::size_of::<Header>() as u16;
@@ -106,7 +105,7 @@ impl NetworkInterface {
     }
 }
 
-impl AsyncRead for NetworkInterface {
+impl AsyncRead for UdpNetworkInterface {
     fn poll_read(
         mut self: Pin<&mut Self>,
         cx: &mut Context<'_>,
@@ -169,7 +168,7 @@ impl AsyncRead for NetworkInterface {
     }
 }
 
-impl AsyncWrite for NetworkInterface {
+impl AsyncWrite for UdpNetworkInterface {
     fn poll_write(
         mut self: Pin<&mut Self>,
         cx: &mut Context<'_>,
@@ -313,17 +312,17 @@ fn make_empty_fastboot_packet(sequence: u16) -> [u8; 4] {
     packet
 }
 
-pub struct NetworkFactory {}
+pub struct UdpNetworkFactory {}
 
-impl NetworkFactory {
+impl UdpNetworkFactory {
     pub fn new() -> Self {
         Self {}
     }
 }
 
 #[async_trait(?Send)]
-impl InterfaceFactory<NetworkInterface> for NetworkFactory {
-    async fn open(&mut self, target: &Target) -> Result<NetworkInterface> {
+impl InterfaceFactory<UdpNetworkInterface> for UdpNetworkFactory {
+    async fn open(&mut self, target: &Target) -> Result<UdpNetworkInterface> {
         let addr = target.fastboot_address().ok_or(anyhow!("No network address for fastboot"))?;
         let mut to_sock: SocketAddr = addr.into();
         // TODO(fxb/78977): get the port from the mdns packet
@@ -355,7 +354,7 @@ impl InterfaceFactory<NetworkInterface> for NetworkFactory {
             version,
             maximum_size
         );
-        Ok(NetworkInterface {
+        Ok(UdpNetworkInterface {
             socket,
             maximum_size,
             sequence: Wrapping(sequence + 1),
