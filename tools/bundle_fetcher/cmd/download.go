@@ -24,9 +24,15 @@ import (
 )
 
 type downloadCmd struct {
-	gcsBucket string
-	buildIDs  string
-	outDir    string
+	gcsBucket                    string
+	buildIDs                     string
+	outDir                       string
+	productBundleMappingFileName string
+}
+
+type ProductBundleMapping struct {
+	Name string
+	Path string
 }
 
 const (
@@ -51,6 +57,7 @@ func (cmd *downloadCmd) SetFlags(f *flag.FlagSet) {
 	f.StringVar(&cmd.gcsBucket, "bucket", "", "GCS bucket from which to read the files from.")
 	f.StringVar(&cmd.buildIDs, "build_ids", "", "Comma separated list of build_ids.")
 	f.StringVar(&cmd.outDir, "out_dir", "", "Directory to write outputs to.")
+	f.StringVar(&cmd.productBundleMappingFileName, "mapping_file_name", "product_bundle_mapping.json", "Name of the mapping file containing the name of product and path to product bundle.")
 }
 
 func (cmd *downloadCmd) parseFlags() error {
@@ -97,6 +104,8 @@ func (cmd *downloadCmd) execute(ctx context.Context) error {
 	}
 	defer sink.close()
 
+	var productBundleMappings []ProductBundleMapping
+
 	buildIDsList := strings.Split(cmd.buildIDs, ",")
 	for _, buildID := range buildIDsList {
 		buildsNamespaceDir := filepath.Join(buildsDirName, buildID)
@@ -123,6 +132,20 @@ func (cmd *downloadCmd) execute(ctx context.Context) error {
 		if err := ioutil.WriteFile(outputFilePath, data, 0644); err != nil {
 			return err
 		}
+		productBundleMappings = append(productBundleMappings, ProductBundleMapping{
+			Name: updatedProductBundleData.Data.Name,
+			Path: outputFilePath,
+		})
+	}
+
+	outputFilePath := filepath.Join(cmd.outDir, cmd.productBundleMappingFileName)
+	data, err := json.MarshalIndent(productBundleMappings, "", "  ")
+	if err != nil {
+		return fmt.Errorf("unable to json marshall product bundle mapping: %v", err)
+	}
+	logger.Debugf(ctx, "writing product bundle mapping to: %v", outputFilePath)
+	if err := ioutil.WriteFile(outputFilePath, data, 0644); err != nil {
+		return err
 	}
 	return nil
 }
