@@ -6,7 +6,7 @@ mod convert;
 mod windowed_stats;
 
 use {
-    crate::telemetry::{convert::convert_disconnect_source, windowed_stats::WindowedStats},
+    crate::telemetry::windowed_stats::WindowedStats,
     fidl_fuchsia_metrics::{MetricEvent, MetricEventPayload},
     fidl_fuchsia_wlan_ieee80211 as fidl_ieee80211, fidl_fuchsia_wlan_sme as fidl_sme,
     fidl_fuchsia_wlan_stats::MlmeStats,
@@ -27,7 +27,7 @@ use {
             Arc,
         },
     },
-    wlan_common::bss::{BssDescription, Protection as BssProtection},
+    wlan_common::bss::BssDescription,
     wlan_metrics_registry as metrics,
 };
 
@@ -381,6 +381,9 @@ impl Telemetry {
                 }
             }
             TelemetryEvent::ConnectResult { iface_id, result, latest_ap_state } => {
+                self.stats_logger
+                    .log_establish_connection_cobalt_metrics(result.code, &latest_ap_state)
+                    .await;
                 self.stats_logger.log_stat(StatOp::AddConnectAttemptsCount).await;
                 if result.code == fidl_ieee80211::StatusCode::Success {
                     self.stats_logger.log_stat(StatOp::AddConnectSuccessfulCount).await;
@@ -855,7 +858,8 @@ impl StatsLogger {
             payload: MetricEventPayload::Count(1),
         });
 
-        let disconnect_source_dim = convert_disconnect_source(&disconnect_info.disconnect_source);
+        let disconnect_source_dim =
+            convert::convert_disconnect_source(&disconnect_info.disconnect_source);
         metric_events.push(MetricEvent {
             metric_id: metrics::DISCONNECT_BREAKDOWN_BY_REASON_CODE_METRIC_ID,
             event_codes: vec![disconnect_info.reason_code as u32, disconnect_source_dim as u32],
@@ -875,12 +879,70 @@ impl StatsLogger {
         );
     }
 
+    async fn log_establish_connection_cobalt_metrics(
+        &mut self,
+        code: fidl_ieee80211::StatusCode,
+        latest_ap_state: &BssDescription,
+    ) {
+        let mut metric_events = vec![];
+        metric_events.push(MetricEvent {
+            metric_id: metrics::CONNECT_ATTEMPT_BREAKDOWN_BY_STATUS_CODE_METRIC_ID,
+            event_codes: vec![code as u32],
+            payload: MetricEventPayload::Count(1),
+        });
+
+        if code != fidl_ieee80211::StatusCode::Success {
+            return;
+        }
+
+        let security_type_dim = convert::convert_security_type(&latest_ap_state.protection());
+        metric_events.push(MetricEvent {
+            metric_id: metrics::SUCCESSFUL_CONNECT_BREAKDOWN_BY_SECURITY_TYPE_METRIC_ID,
+            event_codes: vec![security_type_dim as u32],
+            payload: MetricEventPayload::Count(1),
+        });
+
+        metric_events.push(MetricEvent {
+            metric_id: metrics::SUCCESSFUL_CONNECT_BREAKDOWN_BY_PRIMARY_CHANNEL_METRIC_ID,
+            event_codes: vec![latest_ap_state.channel.primary as u32],
+            payload: MetricEventPayload::Count(1),
+        });
+
+        let channel_band_dim = convert::convert_channel_band(latest_ap_state.channel.primary);
+        metric_events.push(MetricEvent {
+            metric_id: metrics::SUCCESSFUL_CONNECT_BREAKDOWN_BY_CHANNEL_BAND_METRIC_ID,
+            event_codes: vec![channel_band_dim as u32],
+            payload: MetricEventPayload::Count(1),
+        });
+
+        let rssi_bucket_dim = convert::convert_rssi_bucket(latest_ap_state.rssi_dbm);
+        metric_events.push(MetricEvent {
+            metric_id: metrics::SUCCESSFUL_CONNECT_BREAKDOWN_BY_RSSI_BUCKET_METRIC_ID,
+            event_codes: vec![rssi_bucket_dim as u32],
+            payload: MetricEventPayload::Count(1),
+        });
+
+        let snr_bucket_dim = convert::convert_snr_bucket(latest_ap_state.snr_db);
+        metric_events.push(MetricEvent {
+            metric_id: metrics::SUCCESSFUL_CONNECT_BREAKDOWN_BY_SNR_BUCKET_METRIC_ID,
+            event_codes: vec![snr_bucket_dim as u32],
+            payload: MetricEventPayload::Count(1),
+        });
+
+        log_cobalt_1dot1_batch!(
+            self.cobalt_1dot1_proxy,
+            &mut metric_events.iter_mut(),
+            "log_establish_connection_cobalt_metrics",
+        );
+    }
+
     async fn log_downtime_cobalt_metrics(
         &mut self,
         downtime: zx::Duration,
         disconnect_info: &DisconnectInfo,
     ) {
-        let disconnect_source_dim = convert_disconnect_source(&disconnect_info.disconnect_source);
+        let disconnect_source_dim =
+            convert::convert_disconnect_source(&disconnect_info.disconnect_source);
         log_cobalt_1dot1!(
             self.cobalt_1dot1_proxy,
             log_integer,
@@ -898,23 +960,7 @@ impl StatsLogger {
             payload: MetricEventPayload::Count(1),
         });
 
-        let security_type_dim = {
-            use metrics::ConnectedNetworkSecurityTypeMetricDimensionSecurityType::*;
-            match latest_ap_state.protection() {
-                BssProtection::Unknown => Unknown,
-                BssProtection::Open => Open,
-                BssProtection::Wep => Wep,
-                BssProtection::Wpa1 => Wpa1,
-                BssProtection::Wpa1Wpa2PersonalTkipOnly => Wpa1Wpa2PersonalTkipOnly,
-                BssProtection::Wpa2PersonalTkipOnly => Wpa2PersonalTkipOnly,
-                BssProtection::Wpa1Wpa2Personal => Wpa1Wpa2Personal,
-                BssProtection::Wpa2Personal => Wpa2Personal,
-                BssProtection::Wpa2Wpa3Personal => Wpa2Wpa3Personal,
-                BssProtection::Wpa3Personal => Wpa3Personal,
-                BssProtection::Wpa2Enterprise => Wpa2Enterprise,
-                BssProtection::Wpa3Enterprise => Wpa3Enterprise,
-            }
-        };
+        let security_type_dim = convert::convert_security_type(&latest_ap_state.protection());
         metric_events.push(MetricEvent {
             metric_id: metrics::CONNECTED_NETWORK_SECURITY_TYPE_METRIC_ID,
             event_codes: vec![security_type_dim as u32],
@@ -2249,6 +2295,89 @@ mod tests {
         assert_eq!(breakdowns_by_channel.len(), 1);
         assert_eq!(breakdowns_by_channel[0].event_codes, vec![channel.primary as u32]);
         assert_eq!(breakdowns_by_channel[0].payload, MetricEventPayload::Count(1));
+    }
+
+    #[fuchsia::test]
+    fn test_log_establish_connection_cobalt_metrics() {
+        let (mut test_helper, mut test_fut) = setup_test();
+
+        let primary_channel = 8;
+        let channel = fidl_common::WlanChannel {
+            primary: primary_channel,
+            cbw: fidl_common::ChannelBandwidth::Cbw20,
+            secondary80: 0,
+        };
+        let latest_ap_state = random_bss_description!(Wpa2,
+            channel: channel,
+            rssi_dbm: -50,
+            snr_db: 25,
+        );
+        let event = TelemetryEvent::ConnectResult {
+            iface_id: IFACE_ID,
+            result: fake_connect_result(fidl_ieee80211::StatusCode::Success),
+            latest_ap_state,
+        };
+        test_helper.telemetry_sender.send(event);
+        test_helper.drain_cobalt_events(&mut test_fut);
+
+        let breakdowns_by_status_code = test_helper
+            .get_logged_metrics(metrics::CONNECT_ATTEMPT_BREAKDOWN_BY_STATUS_CODE_METRIC_ID);
+        assert_eq!(breakdowns_by_status_code.len(), 1);
+        assert_eq!(
+            breakdowns_by_status_code[0].event_codes,
+            vec![fidl_ieee80211::StatusCode::Success as u32]
+        );
+        assert_eq!(breakdowns_by_status_code[0].payload, MetricEventPayload::Count(1));
+
+        let breakdowns_by_security_type = test_helper
+            .get_logged_metrics(metrics::SUCCESSFUL_CONNECT_BREAKDOWN_BY_SECURITY_TYPE_METRIC_ID);
+        assert_eq!(breakdowns_by_security_type.len(), 1);
+        assert_eq!(
+            breakdowns_by_security_type[0].event_codes,
+            vec![
+                metrics::SuccessfulConnectBreakdownBySecurityTypeMetricDimensionSecurityType::Wpa2Personal
+                    as u32
+            ]
+        );
+        assert_eq!(breakdowns_by_security_type[0].payload, MetricEventPayload::Count(1));
+
+        let breakdowns_by_channel = test_helper
+            .get_logged_metrics(metrics::SUCCESSFUL_CONNECT_BREAKDOWN_BY_PRIMARY_CHANNEL_METRIC_ID);
+        assert_eq!(breakdowns_by_channel.len(), 1);
+        assert_eq!(breakdowns_by_channel[0].event_codes, vec![primary_channel as u32]);
+        assert_eq!(breakdowns_by_channel[0].payload, MetricEventPayload::Count(1));
+
+        let breakdowns_by_channel_band = test_helper
+            .get_logged_metrics(metrics::SUCCESSFUL_CONNECT_BREAKDOWN_BY_CHANNEL_BAND_METRIC_ID);
+        assert_eq!(breakdowns_by_channel_band.len(), 1);
+        assert_eq!(breakdowns_by_channel_band[0].event_codes, vec![
+            metrics::SuccessfulConnectBreakdownByChannelBandMetricDimensionChannelBand::Band2Dot4Ghz as u32
+        ]);
+        assert_eq!(breakdowns_by_channel_band[0].payload, MetricEventPayload::Count(1));
+
+        let breakdowns_by_rssi_bucket = test_helper
+            .get_logged_metrics(metrics::SUCCESSFUL_CONNECT_BREAKDOWN_BY_RSSI_BUCKET_METRIC_ID);
+        assert_eq!(breakdowns_by_rssi_bucket.len(), 1);
+        assert_eq!(
+            breakdowns_by_rssi_bucket[0].event_codes,
+            vec![
+                metrics::SuccessfulConnectBreakdownByRssiBucketMetricDimensionRssiBucket::From50To35
+                    as u32
+            ]
+        );
+        assert_eq!(breakdowns_by_rssi_bucket[0].payload, MetricEventPayload::Count(1));
+
+        let breakdowns_by_snr_bucket = test_helper
+            .get_logged_metrics(metrics::SUCCESSFUL_CONNECT_BREAKDOWN_BY_SNR_BUCKET_METRIC_ID);
+        assert_eq!(breakdowns_by_snr_bucket.len(), 1);
+        assert_eq!(
+            breakdowns_by_snr_bucket[0].event_codes,
+            vec![
+                metrics::SuccessfulConnectBreakdownBySnrBucketMetricDimensionSnrBucket::From16To25
+                    as u32
+            ]
+        );
+        assert_eq!(breakdowns_by_snr_bucket[0].payload, MetricEventPayload::Count(1));
     }
 
     #[fuchsia::test]
