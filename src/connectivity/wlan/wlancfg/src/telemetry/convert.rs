@@ -18,6 +18,16 @@ pub fn convert_disconnect_source(
     }
 }
 
+pub fn convert_is_multi_bss(
+    multiple_bss_candidates: bool,
+) -> metrics::SuccessfulConnectBreakdownByIsMultiBssMetricDimensionIsMultiBss {
+    use metrics::SuccessfulConnectBreakdownByIsMultiBssMetricDimensionIsMultiBss::*;
+    match multiple_bss_candidates {
+        true => Yes,
+        false => No,
+    }
+}
+
 pub fn convert_security_type(
     protection: &BssProtection,
 ) -> metrics::SuccessfulConnectBreakdownBySecurityTypeMetricDimensionSecurityType {

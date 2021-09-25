@@ -320,6 +320,7 @@ struct ConnectingOptions {
 
 struct ConnectResult {
     sme_result: fidl_sme::ConnectResult,
+    multiple_bss_candidates: bool,
     connect_txn_stream: fidl_sme::ConnectTransactionEventStream,
     bss_description: Box<BssDescription>,
 }
@@ -500,9 +501,10 @@ async fn connecting_state<'a>(
                         ExitReason(Err(format_err!("Failed to send command to wlanstack: {:?}", e)))
                     })?;
                     let pending_connect_request = wait_until_connected(connect_txn.clone())
-                        .map(|res| {
+                        .map(move |res| {
                             let result = res.map(|(sme_result, stream)| ConnectResult {
                                 sme_result,
+                                multiple_bss_candidates,
                                 connect_txn_stream: stream,
                                 bss_description: parsed_bss_description,
                             });
@@ -534,6 +536,7 @@ async fn connecting_state<'a>(
                     common_options.telemetry_sender.send(TelemetryEvent::ConnectResult {
                         latest_ap_state: (*connect_result.bss_description).clone(),
                         result: sme_result,
+                        multiple_bss_candidates: connect_result.multiple_bss_candidates,
                         iface_id: common_options.iface_id,
                     });
                     match (sme_result.code, sme_result.is_credential_rejected) {
@@ -551,6 +554,7 @@ async fn connecting_state<'a>(
                                 currently_fulfilled_request: options.connect_request,
                                 connect_txn_stream: connect_result.connect_txn_stream,
                                 latest_ap_state: connect_result.bss_description,
+                                multiple_bss_candidates: connect_result.multiple_bss_candidates,
                             };
                             return Ok(
                                 connected_state(common_options, connected_options).into_state()
@@ -642,6 +646,7 @@ struct ConnectedOptions {
     // Keep track of the BSSID we are connected in order to record connection information for
     // future network selection.
     latest_ap_state: Box<BssDescription>,
+    multiple_bss_candidates: bool,
     currently_fulfilled_request: types::ConnectRequest,
     connect_txn_stream: fidl_sme::ConnectTransactionEventStream,
 }
@@ -691,6 +696,11 @@ async fn connected_state(
                             common_options.telemetry_sender.send(TelemetryEvent::ConnectResult {
                                 iface_id: common_options.iface_id,
                                 result,
+                                // It's not necessarily true that there are still multiple BSS
+                                // candidates in the network at this point in time, but we use the
+                                // heuristic that if previously there were multiple BSS's, then
+                                // it likely remains the same.
+                                multiple_bss_candidates: options.multiple_bss_candidates,
                                 latest_ap_state: (*options.latest_ap_state).clone(),
                             });
                             !connected
@@ -1280,8 +1290,9 @@ mod tests {
         // Check that connected telemetry event is sent
         assert_variant!(
             telemetry_receiver.try_next(),
-            Ok(Some(TelemetryEvent::ConnectResult { iface_id: 1, result, latest_ap_state })) => {
+            Ok(Some(TelemetryEvent::ConnectResult { iface_id: 1, result, multiple_bss_candidates, latest_ap_state })) => {
                 assert_eq!(bss_description, latest_ap_state.into());
+                assert!(!multiple_bss_candidates);
                 assert_eq!(result, fake_successful_connect_result());
             }
         );
@@ -1438,7 +1449,7 @@ mod tests {
                 credential: Credential::None,
                 observed_in_passive_scan: Some(true),
                 bss_description: Some(bss_description.clone().into()),
-                multiple_bss_candidates: Some(false),
+                multiple_bss_candidates: Some(true),
             },
             reason: types::ConnectReason::FidlConnectRequest,
         };
@@ -1505,8 +1516,9 @@ mod tests {
         // Check that connect result telemetry event is sent
         assert_variant!(
             test_values.telemetry_receiver.try_next(),
-            Ok(Some(TelemetryEvent::ConnectResult { iface_id: 1, result, latest_ap_state })) => {
+            Ok(Some(TelemetryEvent::ConnectResult { iface_id: 1, result, multiple_bss_candidates, latest_ap_state })) => {
                 assert_eq!(bss_description, latest_ap_state);
+                assert!(multiple_bss_candidates);
                 assert_eq!(result, connect_result);
             }
         );
@@ -1528,7 +1540,7 @@ mod tests {
             Poll::Ready(fidl_sme::ClientSmeRequest::Connect{ req, txn, control_handle: _ }) => {
                 assert_eq!(req.ssid, next_network_ssid.to_vec());
                 assert_eq!(req.bss_description, bss_description.clone().into());
-                assert_eq!(req.multiple_bss_candidates, false);
+                assert_eq!(req.multiple_bss_candidates, true);
                  // Send connection response.
                 let (_stream, ctrl) = txn.expect("connect txn unused")
                     .into_stream_and_control_handle().expect("error accessing control handle");
@@ -2597,6 +2609,7 @@ mod tests {
                 .expect("failed to create a connect txn channel");
         let options = ConnectedOptions {
             currently_fulfilled_request: connect_request,
+            multiple_bss_candidates: true,
             latest_ap_state: Box::new(bss_description.clone()),
             connect_txn_stream: connect_txn_proxy.take_event_stream(),
         };
@@ -2715,6 +2728,7 @@ mod tests {
         let connect_txn_handle = connect_txn_stream.control_handle();
         let options = ConnectedOptions {
             currently_fulfilled_request: connect_request.clone(),
+            multiple_bss_candidates: true,
             latest_ap_state: Box::new(bss_description.clone()),
             connect_txn_stream: connect_txn_proxy.take_event_stream(),
         };
@@ -2786,6 +2800,7 @@ mod tests {
         let options = ConnectedOptions {
             currently_fulfilled_request: connect_request,
             latest_ap_state: Box::new(bss_description),
+            multiple_bss_candidates: true,
             connect_txn_stream: connect_txn_proxy.take_event_stream(),
         };
         let initial_state = connected_state(test_values.common_options, options);
@@ -3002,6 +3017,7 @@ mod tests {
         let options = ConnectedOptions {
             currently_fulfilled_request: connect_request.clone(),
             latest_ap_state: Box::new(bss_description),
+            multiple_bss_candidates: true,
             connect_txn_stream: connect_txn_proxy.take_event_stream(),
         };
         let initial_state = connected_state(test_values.common_options, options);
@@ -3062,6 +3078,7 @@ mod tests {
         let options = ConnectedOptions {
             currently_fulfilled_request: connect_request.clone(),
             latest_ap_state: Box::new(bss_description.clone()),
+            multiple_bss_candidates: true,
             connect_txn_stream: connect_txn_proxy.take_event_stream(),
         };
         let initial_state = connected_state(test_values.common_options, options);
@@ -3287,6 +3304,7 @@ mod tests {
         let options = ConnectedOptions {
             currently_fulfilled_request: connect_request.clone(),
             latest_ap_state: Box::new(bss_description),
+            multiple_bss_candidates: true,
             connect_txn_stream: connect_txn_proxy.take_event_stream(),
         };
         let initial_state = connected_state(common_options, options);
@@ -3444,6 +3462,7 @@ mod tests {
         let options = ConnectedOptions {
             currently_fulfilled_request: connect_request.clone(),
             latest_ap_state: Box::new(bss_description),
+            multiple_bss_candidates: true,
             connect_txn_stream: connect_txn_proxy.take_event_stream(),
         };
         let initial_state = connected_state(test_values.common_options, options);
@@ -3537,6 +3556,7 @@ mod tests {
         let options = ConnectedOptions {
             currently_fulfilled_request: connect_request.clone(),
             latest_ap_state: Box::new(bss_description),
+            multiple_bss_candidates: true,
             connect_txn_stream: connect_txn_proxy.take_event_stream(),
         };
         let initial_state = connected_state(test_values.common_options, options);
@@ -3797,6 +3817,7 @@ mod tests {
         let options = ConnectedOptions {
             currently_fulfilled_request: connect_request,
             latest_ap_state: Box::new(bss_description.clone()),
+            multiple_bss_candidates: true,
             connect_txn_stream: connect_txn_proxy.take_event_stream(),
         };
         let initial_state = connected_state(common_options, options);

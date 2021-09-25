@@ -107,6 +107,7 @@ pub enum TelemetryEvent {
     ConnectResult {
         iface_id: u16,
         result: fidl_sme::ConnectResult,
+        multiple_bss_candidates: bool,
         latest_ap_state: BssDescription,
     },
     /// Notify the telemetry event loop that the client has disconnected.
@@ -380,9 +381,18 @@ impl Telemetry {
                     _ => (),
                 }
             }
-            TelemetryEvent::ConnectResult { iface_id, result, latest_ap_state } => {
+            TelemetryEvent::ConnectResult {
+                iface_id,
+                result,
+                multiple_bss_candidates,
+                latest_ap_state,
+            } => {
                 self.stats_logger
-                    .log_establish_connection_cobalt_metrics(result.code, &latest_ap_state)
+                    .log_establish_connection_cobalt_metrics(
+                        result.code,
+                        multiple_bss_candidates,
+                        &latest_ap_state,
+                    )
                     .await;
                 self.stats_logger.log_stat(StatOp::AddConnectAttemptsCount).await;
                 if result.code == fidl_ieee80211::StatusCode::Success {
@@ -882,6 +892,7 @@ impl StatsLogger {
     async fn log_establish_connection_cobalt_metrics(
         &mut self,
         code: fidl_ieee80211::StatusCode,
+        multiple_bss_candidates: bool,
         latest_ap_state: &BssDescription,
     ) {
         let mut metric_events = vec![];
@@ -894,6 +905,13 @@ impl StatsLogger {
         if code != fidl_ieee80211::StatusCode::Success {
             return;
         }
+
+        let is_multi_bss_dim = convert::convert_is_multi_bss(multiple_bss_candidates);
+        metric_events.push(MetricEvent {
+            metric_id: metrics::SUCCESSFUL_CONNECT_BREAKDOWN_BY_IS_MULTI_BSS_METRIC_ID,
+            event_codes: vec![is_multi_bss_dim as u32],
+            payload: MetricEventPayload::Count(1),
+        });
 
         let security_type_dim = convert::convert_security_type(&latest_ap_state.protection());
         metric_events.push(MetricEvent {
@@ -2082,6 +2100,7 @@ mod tests {
             let event = TelemetryEvent::ConnectResult {
                 iface_id: IFACE_ID,
                 result: fake_connect_result(fidl_ieee80211::StatusCode::RefusedReasonUnspecified),
+                multiple_bss_candidates: true,
                 latest_ap_state: random_bss_description!(Wpa1),
             };
             test_helper.telemetry_sender.send(event);
@@ -2315,6 +2334,7 @@ mod tests {
         let event = TelemetryEvent::ConnectResult {
             iface_id: IFACE_ID,
             result: fake_connect_result(fidl_ieee80211::StatusCode::Success),
+            multiple_bss_candidates: true,
             latest_ap_state,
         };
         test_helper.telemetry_sender.send(event);
@@ -2328,6 +2348,18 @@ mod tests {
             vec![fidl_ieee80211::StatusCode::Success as u32]
         );
         assert_eq!(breakdowns_by_status_code[0].payload, MetricEventPayload::Count(1));
+
+        let breakdowns_by_is_multi_bss = test_helper
+            .get_logged_metrics(metrics::SUCCESSFUL_CONNECT_BREAKDOWN_BY_IS_MULTI_BSS_METRIC_ID);
+        assert_eq!(breakdowns_by_is_multi_bss.len(), 1);
+        assert_eq!(
+            breakdowns_by_is_multi_bss[0].event_codes,
+            vec![
+                metrics::SuccessfulConnectBreakdownByIsMultiBssMetricDimensionIsMultiBss::Yes
+                    as u32
+            ]
+        );
+        assert_eq!(breakdowns_by_is_multi_bss[0].payload, MetricEventPayload::Count(1));
 
         let breakdowns_by_security_type = test_helper
             .get_logged_metrics(metrics::SUCCESSFUL_CONNECT_BREAKDOWN_BY_SECURITY_TYPE_METRIC_ID);
@@ -2666,6 +2698,7 @@ mod tests {
             let event = TelemetryEvent::ConnectResult {
                 iface_id: IFACE_ID,
                 result: fake_connect_result(fidl_ieee80211::StatusCode::Success),
+                multiple_bss_candidates: true,
                 latest_ap_state,
             };
             self.telemetry_sender.send(event);
