@@ -4,10 +4,6 @@
 #include "log_test.h"
 
 namespace wlan::drivers {
-
-// Enable all debug levels (i.e. TRACE and above) to allow for full functional testing.
-#define WLAN_DRIVER_LOG_LEVEL wlan::drivers::Log::kTRACE
-
 class HexDumpTest : public LogTest {
  public:
   void SetUp() override {
@@ -83,84 +79,6 @@ TEST_F(HexDumpTest, HexDumpTraceNotFiltered) {
   Log::SetFilter(0x2);
   lhexdump_trace(0x2, kTraceTag, data_, sizeof(data_));
   ASSERT_TRUE(LogInvoked());
-  Validate(DDK_LOG_TRACE, kTraceTag);
-}
-
-#undef WLAN_DRIVER_LOG_LEVEL
-#define WLAN_DRIVER_LOG_LEVEL wlan::drivers::Log::kERROR
-TEST_F(HexDumpTest, HexDumpLevelError) {
-  lhexdump_warn(data_, sizeof(data_));
-  lhexdump_info(data_, sizeof(data_));
-  Log::SetFilter(0x3);
-  lhexdump_debug(0x1, kDebugTag, data_, sizeof(data_));
-  lhexdump_trace(0x2, kTraceTag, data_, sizeof(data_));
-  ASSERT_FALSE(LogInvoked());
-
-  lhexdump_error(data_, sizeof(data_));
-  Validate(DDK_LOG_ERROR);
-}
-
-#undef WLAN_DRIVER_LOG_LEVEL
-#define WLAN_DRIVER_LOG_LEVEL wlan::drivers::Log::kWARNING
-TEST_F(HexDumpTest, HexDumpLevelWarn) {
-  lhexdump_info(data_, sizeof(data_));
-  Log::SetFilter(0x3);
-  lhexdump_debug(0x1, kDebugTag, data_, sizeof(data_));
-  lhexdump_trace(0x2, kTraceTag, data_, sizeof(data_));
-  ASSERT_FALSE(LogInvoked());
-
-  lhexdump_error(data_, sizeof(data_));
-  Validate(DDK_LOG_ERROR);
-  lhexdump_warn(data_, sizeof(data_));
-  Validate(DDK_LOG_WARNING);
-}
-
-#undef WLAN_DRIVER_LOG_LEVEL
-#define WLAN_DRIVER_LOG_LEVEL wlan::drivers::Log::kINFO
-TEST_F(HexDumpTest, HexDumpLevelInfo) {
-  Log::SetFilter(0x3);
-  lhexdump_debug(0x1, kDebugTag, data_, sizeof(data_));
-  lhexdump_trace(0x2, kTraceTag, data_, sizeof(data_));
-  ASSERT_FALSE(LogInvoked());
-
-  lhexdump_error(data_, sizeof(data_));
-  Validate(DDK_LOG_ERROR);
-  lhexdump_warn(data_, sizeof(data_));
-  Validate(DDK_LOG_WARNING);
-  lhexdump_info(data_, sizeof(data_));
-  Validate(DDK_LOG_INFO);
-}
-
-#undef WLAN_DRIVER_LOG_LEVEL
-#define WLAN_DRIVER_LOG_LEVEL wlan::drivers::Log::kDEBUG
-TEST_F(HexDumpTest, HexDumpLevelDebug) {
-  Log::SetFilter(0x3);
-  lhexdump_trace(0x2, kTraceTag, data_, sizeof(data_));
-  ASSERT_FALSE(LogInvoked());
-
-  lhexdump_error(data_, sizeof(data_));
-  Validate(DDK_LOG_ERROR);
-  lhexdump_warn(data_, sizeof(data_));
-  Validate(DDK_LOG_WARNING);
-  lhexdump_info(data_, sizeof(data_));
-  Validate(DDK_LOG_INFO);
-  lhexdump_debug(0x1, kDebugTag, data_, sizeof(data_));
-  Validate(DDK_LOG_DEBUG, kDebugTag);
-}
-
-#undef WLAN_DRIVER_LOG_LEVEL
-#define WLAN_DRIVER_LOG_LEVEL wlan::drivers::Log::kTRACE
-TEST_F(HexDumpTest, HexDumpLevelTrace) {
-  Log::SetFilter(0x3);
-  lhexdump_error(data_, sizeof(data_));
-  Validate(DDK_LOG_ERROR);
-  lhexdump_warn(data_, sizeof(data_));
-  Validate(DDK_LOG_WARNING);
-  lhexdump_info(data_, sizeof(data_));
-  Validate(DDK_LOG_INFO);
-  lhexdump_debug(0x1, kDebugTag, data_, sizeof(data_));
-  Validate(DDK_LOG_DEBUG, kDebugTag);
-  lhexdump_trace(0x2, kTraceTag, data_, sizeof(data_));
   Validate(DDK_LOG_TRACE, kTraceTag);
 }
 

@@ -5,9 +5,6 @@
 
 namespace wlan::drivers {
 
-// Enable all debug levels (i.e. TRACE and above) to allow for full functional testing.
-#define WLAN_DRIVER_LOG_LEVEL wlan::drivers::Log::kTRACE
-
 TEST(FilterTest, SingleBit) {
   Log::SetFilter(0x2);
   EXPECT_TRUE(Log::IsFilterOn(0x2));
@@ -82,85 +79,6 @@ TEST_F(LogTest, TraceNotFiltered) {
   Log::SetFilter(0x2);
   ltrace(0x2, kTraceTag, "trace %s", "test");
   ASSERT_TRUE(LogInvoked());
-  Validate(DDK_LOG_TRACE, kTraceTag);
-}
-
-// Tests for WLAN_DRIVER_LOG_LEVEL symbol
-#undef WLAN_DRIVER_LOG_LEVEL
-#define WLAN_DRIVER_LOG_LEVEL wlan::drivers::Log::kERROR
-TEST_F(LogTest, LevelError) {
-  lwarn("warn %s", "test");
-  linfo("info %s", "test");
-  Log::SetFilter(0x3);
-  ldebug(0x1, kDebugTag, "debug %s", "test");
-  ltrace(0x2, kTraceTag, "trace %s", "test");
-  ASSERT_FALSE(LogInvoked());
-
-  lerror("error %s", "test");
-  Validate(DDK_LOG_ERROR);
-}
-
-#undef WLAN_DRIVER_LOG_LEVEL
-#define WLAN_DRIVER_LOG_LEVEL wlan::drivers::Log::kWARNING
-TEST_F(LogTest, LevelWarn) {
-  linfo("info %s", "test");
-  Log::SetFilter(0x3);
-  ldebug(0x1, kDebugTag, "debug %s", "test");
-  ltrace(0x2, kTraceTag, "trace %s", "test");
-  ASSERT_FALSE(LogInvoked());
-
-  lerror("error %s", "test");
-  Validate(DDK_LOG_ERROR);
-  lwarn("warn %s", "test");
-  Validate(DDK_LOG_WARNING);
-}
-
-#undef WLAN_DRIVER_LOG_LEVEL
-#define WLAN_DRIVER_LOG_LEVEL wlan::drivers::Log::kINFO
-TEST_F(LogTest, LevelInfo) {
-  Log::SetFilter(0x3);
-  ldebug(0x1, kDebugTag, "debug %s", "test");
-  ltrace(0x2, kTraceTag, "trace %s", "test");
-  ASSERT_FALSE(LogInvoked());
-
-  lerror("error %s", "test");
-  Validate(DDK_LOG_ERROR);
-  lwarn("warn %s", "test");
-  Validate(DDK_LOG_WARNING);
-  linfo("info %s", "test");
-  Validate(DDK_LOG_INFO);
-}
-
-#undef WLAN_DRIVER_LOG_LEVEL
-#define WLAN_DRIVER_LOG_LEVEL wlan::drivers::Log::kDEBUG
-TEST_F(LogTest, LevelDebug) {
-  Log::SetFilter(0x3);
-  ltrace(0x2, kTraceTag, "trace %s", "test");
-  ASSERT_FALSE(LogInvoked());
-
-  lerror("error %s", "test");
-  Validate(DDK_LOG_ERROR);
-  lwarn("warn %s", "test");
-  Validate(DDK_LOG_WARNING);
-  linfo("info %s", "test");
-  Validate(DDK_LOG_INFO);
-  ldebug(0x1, kDebugTag, "debug %s", "test");
-  Validate(DDK_LOG_DEBUG, kDebugTag);
-}
-
-#undef WLAN_DRIVER_LOG_LEVEL
-#define WLAN_DRIVER_LOG_LEVEL wlan::drivers::Log::kTRACE
-TEST_F(LogTest, LevelTrace) {
-  Log::SetFilter(0x3);
-  lerror("error %s", "test");
-  Validate(DDK_LOG_ERROR);
-  lwarn("warn %s", "test");
-  Validate(DDK_LOG_WARNING);
-  linfo("info %s", "test");
-  Validate(DDK_LOG_INFO);
-  ldebug(0x1, kDebugTag, "debug %s", "test");
-  Validate(DDK_LOG_DEBUG, kDebugTag);
-  ltrace(0x2, kTraceTag, "trace %s", "test");
   Validate(DDK_LOG_TRACE, kTraceTag);
 }
 
