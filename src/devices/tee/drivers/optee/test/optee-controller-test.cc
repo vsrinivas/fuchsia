@@ -40,7 +40,14 @@ constexpr uuid_t kOpteeOsUuid = {
     0x486178E0, 0xE7F8, 0x11E3, {0xBC, 0x5E, 0x00, 0x02, 0xA5, 0xD5, 0xC5, 0x1B}};
 
 using SmcCb = std::function<void(const zx_smc_parameters_t*, zx_smc_result_t*)>;
-SmcCb call_with_arg_handler;
+static SmcCb call_with_arg_handler;
+static uint32_t call_with_args_count = 0;
+static std::mutex handler_mut;
+
+void SetSmcCallWithArgHandler(SmcCb handler) {
+  std::lock_guard<std::mutex> lock(handler_mut);
+  call_with_arg_handler = std::move(handler);
+}
 
 zx_status_t zx_smc_call(zx_handle_t handle, const zx_smc_parameters_t* parameters,
                         zx_smc_result_t* out_smc_result) {
@@ -71,13 +78,19 @@ zx_status_t zx_smc_call(zx_handle_t handle, const zx_smc_parameters_t* parameter
       out_smc_result->arg1 = gSharedMemory.address;
       out_smc_result->arg2 = gSharedMemory.size;
       break;
-    case optee::kCallWithArgFuncId:
-      if (call_with_arg_handler) {
-        call_with_arg_handler(parameters, out_smc_result);
+    case optee::kCallWithArgFuncId: {
+      call_with_args_count++;
+      SmcCb handler;
+      {
+        std::lock_guard<std::mutex> lock(handler_mut);
+        std::swap(handler, call_with_arg_handler);
+      }
+      if (handler != nullptr) {
+        handler(parameters, out_smc_result);
       } else {
         out_smc_result->arg0 = optee::kReturnOk;
       }
-      break;
+    } break;
     default:
       return ZX_ERR_NOT_SUPPORTED;
   }
@@ -175,15 +188,14 @@ class FakeDdkOptee : public zxtest::Test {
     ASSERT_OK(clients_loop_.StartThread());
     ASSERT_OK(clients_loop_.StartThread());
     ASSERT_OK(clients_loop_.StartThread());
-  };
-  void SetUp() override {
     parent_->AddProtocol(ZX_PROTOCOL_PDEV, pdev_.proto_ops(), &pdev_, "pdev");
     parent_->AddProtocol(ZX_PROTOCOL_SYSMEM, sysmem_.proto_ops(), &sysmem_, "sysmem");
     parent_->AddProtocol(ZX_PROTOCOL_RPMB, rpmb_.proto_ops(), &rpmb_, "rpmb");
 
     EXPECT_OK(OpteeController::Create(nullptr, parent_.get()));
     optee_ = parent_->GetLatestChild()->GetDeviceContext<OpteeController>();
-  }
+  };
+  void SetUp() override { call_with_args_count = 0; }
 
  protected:
   FakePDev pdev_;
@@ -229,8 +241,6 @@ TEST_F(FakeDdkOptee, MultiThreadTest) {
   sync_completion_t completion2;
   sync_completion_t smc_completion;
   sync_completion_t smc_completion1;
-  bool wait;
-  int call_count = 0;
   zx_status_t status;
 
   for (auto& i : tee_app_client) {
@@ -248,39 +258,43 @@ TEST_F(FakeDdkOptee, MultiThreadTest) {
   fidl::WireSharedClient fidl_client1(std::move(client_end1), clients_loop_.dispatcher());
   auto client_end2 = fidl::ClientEnd<fuchsia_tee::Application>(std::move(tee_app_client[1]));
   fidl::WireSharedClient fidl_client2(std::move(client_end2), clients_loop_.dispatcher());
-  call_with_arg_handler = [&](const zx_smc_parameters_t* params, zx_smc_result_t* out) {
-    if (wait) {
+
+  {
+    SetSmcCallWithArgHandler([&](const zx_smc_parameters_t* params, zx_smc_result_t* out) {
       sync_completion_signal(&smc_completion1);
       sync_completion_wait(&smc_completion, ZX_TIME_INFINITE);
-    }
-    out->arg0 = optee::kReturnOk;
-    call_count++;
-  };
+      out->arg0 = optee::kReturnOk;
+    });
+  }
   {
-    wait = true;
     fidl::VectorView<fuchsia_tee::wire::Parameter> parameter_set;
     fidl_client1->OpenSession2(
         std::move(parameter_set),
         [&](::fidl::WireResponse<::fuchsia_tee::Application::OpenSession2>* resp) {
           sync_completion_signal(&completion1);
         });
-    status = sync_completion_wait(&completion1, ZX_SEC(1));
-    EXPECT_EQ(status, ZX_ERR_TIMED_OUT);
+  }
+  status = sync_completion_wait(&completion1, ZX_SEC(1));
+  EXPECT_EQ(status, ZX_ERR_TIMED_OUT);
+  sync_completion_wait(&smc_completion1, ZX_TIME_INFINITE);
+
+  {
+    SetSmcCallWithArgHandler([&](const zx_smc_parameters_t* params, zx_smc_result_t* out) {
+      out->arg0 = optee::kReturnOk;
+    });
   }
   {
-    sync_completion_wait(&smc_completion1, ZX_TIME_INFINITE);
-    wait = false;
     fidl::VectorView<fuchsia_tee::wire::Parameter> parameter_set;
     fidl_client2->OpenSession2(
         std::move(parameter_set),
         [&](::fidl::WireResponse<::fuchsia_tee::Application::OpenSession2>* resp) {
           sync_completion_signal(&completion2);
         });
-    sync_completion_wait(&completion2, ZX_TIME_INFINITE);
   }
+  sync_completion_wait(&completion2, ZX_TIME_INFINITE);
   sync_completion_signal(&smc_completion);
   sync_completion_wait(&completion1, ZX_TIME_INFINITE);
-  EXPECT_EQ(call_count, 2);
+  EXPECT_EQ(call_with_args_count, 2);
 }
 
 TEST_F(FakeDdkOptee, TheadLimitCorrectOrder) {
@@ -288,8 +302,6 @@ TEST_F(FakeDdkOptee, TheadLimitCorrectOrder) {
   sync_completion_t completion1;
   sync_completion_t completion2;
   sync_completion_t smc_completion;
-  bool return_thread_limit;
-  int call_count = 0;
   zx_status_t status;
 
   for (auto& i : tee_app_client) {
@@ -307,41 +319,45 @@ TEST_F(FakeDdkOptee, TheadLimitCorrectOrder) {
   fidl::WireSharedClient fidl_client1(std::move(client_end1), clients_loop_.dispatcher());
   auto client_end2 = fidl::ClientEnd<fuchsia_tee::Application>(std::move(tee_app_client[1]));
   fidl::WireSharedClient fidl_client2(std::move(client_end2), clients_loop_.dispatcher());
-  call_with_arg_handler = [&](const zx_smc_parameters_t* params, zx_smc_result_t* out) {
-    call_count++;
-    if (return_thread_limit) {
+
+  {
+    SetSmcCallWithArgHandler([&](const zx_smc_parameters_t* params, zx_smc_result_t* out) {
       sync_completion_signal(&smc_completion);
       out->arg0 = optee::kReturnEThreadLimit;
-    } else {
-      out->arg0 = optee::kReturnOk;
-    }
-  };
+    });
+  }
   {
-    return_thread_limit = true;
     fidl::VectorView<fuchsia_tee::wire::Parameter> parameter_set;
     fidl_client1->OpenSession2(
         std::move(parameter_set),
         [&](::fidl::WireResponse<::fuchsia_tee::Application::OpenSession2>* resp) {
           sync_completion_signal(&completion1);
         });
-    status = sync_completion_wait(&completion1, ZX_SEC(1));
-    EXPECT_EQ(status, ZX_ERR_TIMED_OUT);
-    EXPECT_EQ(call_count, 1);
+  }
+
+  sync_completion_wait(&smc_completion, ZX_TIME_INFINITE);
+  status = sync_completion_wait(&completion1, ZX_SEC(1));
+  EXPECT_EQ(status, ZX_ERR_TIMED_OUT);
+  EXPECT_EQ(call_with_args_count, 1);
+  EXPECT_EQ(optee_->CommandQueueSize(), 1);
+
+  {
+    SetSmcCallWithArgHandler([&](const zx_smc_parameters_t* params, zx_smc_result_t* out) {
+      out->arg0 = optee::kReturnOk;
+    });
   }
   {
-    sync_completion_wait(&smc_completion, ZX_TIME_INFINITE);
-    EXPECT_EQ(optee_->CommandQueueSize(), 1);
-    return_thread_limit = false;
     fidl::VectorView<fuchsia_tee::wire::Parameter> parameter_set;
     fidl_client2->OpenSession2(
         std::move(parameter_set),
         [&](::fidl::WireResponse<::fuchsia_tee::Application::OpenSession2>* resp) {
           sync_completion_signal(&completion2);
         });
-    sync_completion_wait(&completion2, ZX_TIME_INFINITE);
   }
+
+  sync_completion_wait(&completion2, ZX_TIME_INFINITE);
   sync_completion_wait(&completion1, ZX_TIME_INFINITE);
-  EXPECT_EQ(call_count, 3);
+  EXPECT_EQ(call_with_args_count, 3);
   EXPECT_EQ(optee_->CommandQueueSize(), 0);
   EXPECT_EQ(optee_->CommandQueueWaitSize(), 0);
 }
@@ -353,9 +369,6 @@ TEST_F(FakeDdkOptee, TheadLimitWrongOrder) {
   sync_completion_t completion3;
   sync_completion_t smc_completion;
   sync_completion_t smc_sleep_completion;
-  bool return_thread_limit;
-  bool thread_sleep;
-  int call_count = 0;
 
   for (auto& i : tee_app_client) {
     zx::channel tee_app_server;
@@ -375,64 +388,64 @@ TEST_F(FakeDdkOptee, TheadLimitWrongOrder) {
   auto client_end3 = fidl::ClientEnd<fuchsia_tee::Application>(std::move(tee_app_client[2]));
   fidl::WireSharedClient fidl_client3(std::move(client_end3), clients_loop_.dispatcher());
 
-  call_with_arg_handler = [&](const zx_smc_parameters_t* params, zx_smc_result_t* out) {
-    call_count++;
-    if (return_thread_limit) {
+  {
+    SetSmcCallWithArgHandler([&](const zx_smc_parameters_t* params, zx_smc_result_t* out) {
       sync_completion_signal(&smc_completion);
-      out->arg0 = optee::kReturnEThreadLimit;
-    } else {
-      if (thread_sleep) {
-        sync_completion_signal(&smc_completion);
-        sync_completion_wait(&smc_sleep_completion, ZX_TIME_INFINITE);
-      }
+      sync_completion_wait(&smc_sleep_completion, ZX_TIME_INFINITE);
       out->arg0 = optee::kReturnOk;
-    }
-  };
+    });
+  }
   {  // first client is just sleeping for a long time (without ThreadLimit)
-    return_thread_limit = false;
-    thread_sleep = true;
     fidl::VectorView<fuchsia_tee::wire::Parameter> parameter_set;
     fidl_client1->OpenSession2(
         std::move(parameter_set),
         [&](::fidl::WireResponse<::fuchsia_tee::Application::OpenSession2>* resp) {
           sync_completion_signal(&completion1);
         });
-    EXPECT_FALSE(sync_completion_signaled(&completion1));
   }
 
   sync_completion_wait(&smc_completion, ZX_TIME_INFINITE);
-  EXPECT_EQ(call_count, 1);
+  EXPECT_FALSE(sync_completion_signaled(&completion1));
+  EXPECT_EQ(call_with_args_count, 1);
   sync_completion_reset(&smc_completion);
 
+  {
+    SetSmcCallWithArgHandler([&](const zx_smc_parameters_t* params, zx_smc_result_t* out) {
+      sync_completion_signal(&smc_completion);
+      out->arg0 = optee::kReturnEThreadLimit;
+    });
+  }
   {  // 2nd client got ThreadLimit
-    return_thread_limit = true;
     fidl::VectorView<fuchsia_tee::wire::Parameter> parameter_set;
     fidl_client2->OpenSession2(
         std::move(parameter_set),
         [&](::fidl::WireResponse<::fuchsia_tee::Application::OpenSession2>* resp) {
           sync_completion_signal(&completion2);
         });
-    EXPECT_FALSE(sync_completion_signaled(&completion2));
   }
 
   sync_completion_wait(&smc_completion, ZX_TIME_INFINITE);
-  EXPECT_EQ(call_count, 2);
+  EXPECT_FALSE(sync_completion_signaled(&completion2));
+  EXPECT_EQ(call_with_args_count, 2);
   EXPECT_EQ(optee_->CommandQueueSize(), 2);
 
   {
-    return_thread_limit = false;
-    thread_sleep = false;
+    SetSmcCallWithArgHandler([&](const zx_smc_parameters_t* params, zx_smc_result_t* out) {
+      out->arg0 = optee::kReturnOk;
+    });
+  }
+  {
     fidl::VectorView<fuchsia_tee::wire::Parameter> parameter_set;
     fidl_client3->OpenSession2(
         std::move(parameter_set),
         [&](::fidl::WireResponse<::fuchsia_tee::Application::OpenSession2>* resp) {
           sync_completion_signal(&completion3);
         });
-    sync_completion_wait(&completion3, ZX_TIME_INFINITE);
   }
 
+  sync_completion_wait(&completion3, ZX_TIME_INFINITE);
   sync_completion_wait(&completion2, ZX_TIME_INFINITE);
-  EXPECT_EQ(call_count, 4);
+  EXPECT_EQ(call_with_args_count, 4);
   sync_completion_signal(&smc_sleep_completion);
   sync_completion_wait(&completion1, ZX_TIME_INFINITE);
   EXPECT_EQ(optee_->CommandQueueSize(), 0);
@@ -447,7 +460,6 @@ TEST_F(FakeDdkOptee, TheadLimitWrongOrderCascade) {
   sync_completion_t smc_completion;
   sync_completion_t smc_sleep_completion1;
   sync_completion_t smc_sleep_completion2;
-  int call_count = 0;
 
   for (auto& i : tee_app_client) {
     zx::channel tee_app_server;
@@ -467,54 +479,54 @@ TEST_F(FakeDdkOptee, TheadLimitWrongOrderCascade) {
   auto client_end3 = fidl::ClientEnd<fuchsia_tee::Application>(std::move(tee_app_client[2]));
   fidl::WireSharedClient fidl_client3(std::move(client_end3), clients_loop_.dispatcher());
 
-  {  // first client is just sleeping for a long time (without ThreadLimit)
-    call_with_arg_handler = [&](const zx_smc_parameters_t* params, zx_smc_result_t* out) {
-      call_count++;
+  {
+    SetSmcCallWithArgHandler([&](const zx_smc_parameters_t* params, zx_smc_result_t* out) {
       sync_completion_signal(&smc_completion);
       sync_completion_wait(&smc_sleep_completion1, ZX_TIME_INFINITE);
       out->arg0 = optee::kReturnEThreadLimit;
-    };
-
+    });
+  }
+  {  // first client is just sleeping for a long time (without ThreadLimit)
     fidl::VectorView<fuchsia_tee::wire::Parameter> parameter_set;
     fidl_client1->OpenSession2(
         std::move(parameter_set),
         [&](::fidl::WireResponse<::fuchsia_tee::Application::OpenSession2>* resp) {
           sync_completion_signal(&completion1);
         });
-    EXPECT_FALSE(sync_completion_signaled(&completion1));
   }
 
   sync_completion_wait(&smc_completion, ZX_TIME_INFINITE);
-  EXPECT_EQ(call_count, 1);
+  EXPECT_FALSE(sync_completion_signaled(&completion1));
+  EXPECT_EQ(call_with_args_count, 1);
   sync_completion_reset(&smc_completion);
 
-  {  // 2nd client got ThreadLimit
-    call_with_arg_handler = [&](const zx_smc_parameters_t* params, zx_smc_result_t* out) {
-      call_count++;
+  {
+    SetSmcCallWithArgHandler([&](const zx_smc_parameters_t* params, zx_smc_result_t* out) {
       sync_completion_signal(&smc_completion);
       sync_completion_wait(&smc_sleep_completion2, ZX_TIME_INFINITE);
       out->arg0 = optee::kReturnOk;
-    };
-
+    });
+  }
+  {  // 2nd client got ThreadLimit
     fidl::VectorView<fuchsia_tee::wire::Parameter> parameter_set;
     fidl_client2->OpenSession2(
         std::move(parameter_set),
         [&](::fidl::WireResponse<::fuchsia_tee::Application::OpenSession2>* resp) {
           sync_completion_signal(&completion2);
         });
-    EXPECT_FALSE(sync_completion_signaled(&completion2));
   }
 
   sync_completion_wait(&smc_completion, ZX_TIME_INFINITE);
-  EXPECT_EQ(call_count, 2);
+  EXPECT_FALSE(sync_completion_signaled(&completion2));
+  EXPECT_EQ(call_with_args_count, 2);
   EXPECT_EQ(optee_->CommandQueueSize(), 2);
 
   {
-    call_with_arg_handler = [&](const zx_smc_parameters_t* params, zx_smc_result_t* out) {
-      call_count++;
+    SetSmcCallWithArgHandler([&](const zx_smc_parameters_t* params, zx_smc_result_t* out) {
       out->arg0 = optee::kReturnOk;
-    };
-
+    });
+  }
+  {
     fidl::VectorView<fuchsia_tee::wire::Parameter> parameter_set;
     fidl_client3->OpenSession2(
         std::move(parameter_set),
@@ -523,14 +535,14 @@ TEST_F(FakeDdkOptee, TheadLimitWrongOrderCascade) {
         });
   }
   sync_completion_wait(&completion3, ZX_TIME_INFINITE);
-  EXPECT_EQ(call_count, 3);
+  EXPECT_EQ(call_with_args_count, 3);
 
   sync_completion_signal(&smc_sleep_completion2);
   sync_completion_wait(&completion2, ZX_TIME_INFINITE);
-  EXPECT_EQ(call_count, 3);
+  EXPECT_EQ(call_with_args_count, 3);
   sync_completion_signal(&smc_sleep_completion1);
   sync_completion_wait(&completion1, ZX_TIME_INFINITE);
-  EXPECT_EQ(call_count, 4);
+  EXPECT_EQ(call_with_args_count, 4);
 
   EXPECT_EQ(optee_->CommandQueueSize(), 0);
   EXPECT_EQ(optee_->CommandQueueWaitSize(), 0);
