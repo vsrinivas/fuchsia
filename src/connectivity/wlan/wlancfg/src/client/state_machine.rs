@@ -531,6 +531,11 @@ async fn connecting_state<'a>(
                         scan_type
                     ).await;
 
+                    common_options.telemetry_sender.send(TelemetryEvent::ConnectResult {
+                        latest_ap_state: (*connect_result.bss_description).clone(),
+                        result: sme_result,
+                        iface_id: common_options.iface_id,
+                    });
                     match (sme_result.code, sme_result.is_credential_rejected) {
                         (fidl_ieee80211::StatusCode::Success, _) => {
                             info!("Successfully connected to network");
@@ -542,10 +547,6 @@ async fn connecting_state<'a>(
                                     status: None
                                 },
                             );
-                            common_options.telemetry_sender.send(TelemetryEvent::Connected {
-                                latest_ap_state: (*connect_result.bss_description).clone(),
-                                iface_id: common_options.iface_id,
-                            });
                             let connected_options = ConnectedOptions {
                                 currently_fulfilled_request: options.connect_request,
                                 connect_txn_stream: connect_result.connect_txn_stream,
@@ -682,16 +683,17 @@ async fn connected_state(
                             common_options.telemetry_sender.send(TelemetryEvent::Disconnected { track_subsequent_downtime: true, info });
                             !fidl_info.is_sme_reconnecting
                         }
-                        fidl_sme::ConnectTransactionEvent::OnConnectResult { result } => match result.code {
-                            fidl_ieee80211::StatusCode::Success => {
+                        fidl_sme::ConnectTransactionEvent::OnConnectResult { result } => {
+                            let connected = result.code == fidl_ieee80211::StatusCode::Success;
+                            if connected {
                                 connect_start_time = fasync::Time::now();
-                                common_options.telemetry_sender.send(TelemetryEvent::Connected {
-                                    iface_id: common_options.iface_id,
-                                    latest_ap_state: (*options.latest_ap_state).clone(),
-                                });
-                                false
                             }
-                            _ => true,
+                            common_options.telemetry_sender.send(TelemetryEvent::ConnectResult {
+                                iface_id: common_options.iface_id,
+                                result,
+                                latest_ap_state: (*options.latest_ap_state).clone(),
+                            });
+                            !connected
                         }
                         fidl_sme::ConnectTransactionEvent::OnSignalReport { ind } => {
                             options.latest_ap_state.rssi_dbm = ind.rssi_dbm;
@@ -1278,8 +1280,9 @@ mod tests {
         // Check that connected telemetry event is sent
         assert_variant!(
             telemetry_receiver.try_next(),
-            Ok(Some(TelemetryEvent::Connected { iface_id: 1, latest_ap_state })) => {
+            Ok(Some(TelemetryEvent::ConnectResult { iface_id: 1, result, latest_ap_state })) => {
                 assert_eq!(bss_description, latest_ap_state.into());
+                assert_eq!(result, fake_successful_connect_result());
             }
         );
 
@@ -1425,7 +1428,7 @@ mod tests {
         let mut test_values = test_setup();
 
         let next_network_ssid = types::Ssid::try_from("bar").unwrap();
-        let bss_description = random_fidl_bss_description!(Wpa2, ssid: next_network_ssid.clone());
+        let bss_description = random_bss_description!(Wpa2, ssid: next_network_ssid.clone());
         let connect_request = types::ConnectRequest {
             target: types::ConnectionCandidate {
                 network: types::NetworkIdentifier {
@@ -1434,7 +1437,7 @@ mod tests {
                 },
                 credential: Credential::None,
                 observed_in_passive_scan: Some(true),
-                bss_description: Some(bss_description.clone()),
+                bss_description: Some(bss_description.clone().into()),
                 multiple_bss_candidates: Some(false),
             },
             reason: types::ConnectReason::FidlConnectRequest,
@@ -1499,6 +1502,15 @@ mod tests {
         assert!(exec.wake_next_timer().is_some());
         assert_variant!(exec.run_until_stalled(&mut fut), Poll::Pending);
 
+        // Check that connect result telemetry event is sent
+        assert_variant!(
+            test_values.telemetry_receiver.try_next(),
+            Ok(Some(TelemetryEvent::ConnectResult { iface_id: 1, result, latest_ap_state })) => {
+                assert_eq!(bss_description, latest_ap_state);
+                assert_eq!(result, connect_result);
+            }
+        );
+
         // Ensure a disconnect request is sent to the SME
         assert_variant!(
             poll_sme_req(&mut exec, &mut sme_fut),
@@ -1515,7 +1527,7 @@ mod tests {
             poll_sme_req(&mut exec, &mut sme_fut),
             Poll::Ready(fidl_sme::ClientSmeRequest::Connect{ req, txn, control_handle: _ }) => {
                 assert_eq!(req.ssid, next_network_ssid.to_vec());
-                assert_eq!(req.bss_description, bss_description);
+                assert_eq!(req.bss_description, bss_description.clone().into());
                 assert_eq!(req.multiple_bss_candidates, false);
                  // Send connection response.
                 let (_stream, ctrl) = txn.expect("connect txn unused")
@@ -2809,7 +2821,10 @@ mod tests {
             .expect("failed to send connect result event");
         assert_variant!(exec.run_until_stalled(&mut fut), Poll::Pending);
 
-        assert_variant!(telemetry_receiver.try_next(), Ok(Some(TelemetryEvent::Connected { .. })));
+        assert_variant!(
+            telemetry_receiver.try_next(),
+            Ok(Some(TelemetryEvent::ConnectResult { .. }))
+        );
 
         // SME notifies Policy of another disconnection
         exec.set_fake_time(fasync::Time::after(2.hours()));

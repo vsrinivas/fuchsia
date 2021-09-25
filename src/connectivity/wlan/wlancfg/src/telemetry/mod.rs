@@ -8,7 +8,7 @@ mod windowed_stats;
 use {
     crate::telemetry::{convert::convert_disconnect_source, windowed_stats::WindowedStats},
     fidl_fuchsia_metrics::{MetricEvent, MetricEventPayload},
-    fidl_fuchsia_wlan_sme as fidl_sme,
+    fidl_fuchsia_wlan_ieee80211 as fidl_ieee80211, fidl_fuchsia_wlan_sme as fidl_sme,
     fidl_fuchsia_wlan_stats::MlmeStats,
     fuchsia_async as fasync,
     fuchsia_inspect::{Inspector, Node as InspectNode, NumericProperty, UintProperty},
@@ -100,10 +100,15 @@ pub enum TelemetryEvent {
         /// Whether a network has been selected. This field is currently unused.
         selected_any: bool,
     },
-    /// Notify the telemetry event loop that the client has connected.
-    /// Subsequently, the telemetry event loop will increment the `connected_duration` counter
-    /// periodically.
-    Connected { iface_id: u16, latest_ap_state: BssDescription },
+    /// Notify the telemetry event loop of connection result.
+    /// If connection result is successful, telemetry will move its internal state to
+    /// connected. Subsequently, the telemetry event loop will increment the `connected_duration`
+    /// counter periodically.
+    ConnectResult {
+        iface_id: u16,
+        result: fidl_sme::ConnectResult,
+        latest_ap_state: BssDescription,
+    },
     /// Notify the telemetry event loop that the client has disconnected.
     /// Subsequently, the telemetry event loop will increment the downtime counters periodically
     /// if TelemetrySender has requested downtime to be tracked via `track_subsequent_downtime`
@@ -375,34 +380,41 @@ impl Telemetry {
                     _ => (),
                 }
             }
-            TelemetryEvent::Connected { iface_id, latest_ap_state } => {
-                self.stats_logger.log_device_connected_cobalt_metrics(&latest_ap_state).await;
-                if let ConnectionState::Disconnected(state) = &self.connection_state {
-                    if state.latest_no_saved_neighbor_time.is_some() {
-                        warn!("'No saved neighbor' flag still set even though connected");
+            TelemetryEvent::ConnectResult { iface_id, result, latest_ap_state } => {
+                self.stats_logger.log_stat(StatOp::AddConnectAttemptsCount).await;
+                if result.code == fidl_ieee80211::StatusCode::Success {
+                    self.stats_logger.log_stat(StatOp::AddConnectSuccessfulCount).await;
+
+                    self.stats_logger.log_device_connected_cobalt_metrics(&latest_ap_state).await;
+                    if let ConnectionState::Disconnected(state) = &self.connection_state {
+                        if state.latest_no_saved_neighbor_time.is_some() {
+                            warn!("'No saved neighbor' flag still set even though connected");
+                        }
+                        self.stats_logger.queue_stat_op(StatOp::AddDowntimeDuration(
+                            now - self.last_checked_connection_state,
+                        ));
+                        let total_downtime = now - state.disconnected_since;
+                        if total_downtime < state.accounted_no_saved_neighbor_duration {
+                            warn!(
+                                "Total downtime is less than no-saved-neighbor duration. \
+                                Total downtime: {:?}, No saved neighbor duration: {:?}",
+                                total_downtime, state.accounted_no_saved_neighbor_duration
+                            )
+                        }
+                        let adjusted_downtime = max(
+                            total_downtime - state.accounted_no_saved_neighbor_duration,
+                            0.seconds(),
+                        );
+                        self.stats_logger
+                            .log_downtime_cobalt_metrics(adjusted_downtime, &state.disconnect_info)
+                            .await;
                     }
-                    self.stats_logger.queue_stat_op(StatOp::AddDowntimeDuration(
-                        now - self.last_checked_connection_state,
-                    ));
-                    let total_downtime = now - state.disconnected_since;
-                    if total_downtime < state.accounted_no_saved_neighbor_duration {
-                        warn!(
-                            "Total downtime is less than no-saved-neighbor duration. \
-                               Total downtime: {:?}, No saved neighbor duration: {:?}",
-                            total_downtime, state.accounted_no_saved_neighbor_duration
-                        )
-                    }
-                    let adjusted_downtime = max(
-                        total_downtime - state.accounted_no_saved_neighbor_duration,
-                        0.seconds(),
-                    );
-                    self.stats_logger
-                        .log_downtime_cobalt_metrics(adjusted_downtime, &state.disconnect_info)
-                        .await;
+                    self.connection_state = ConnectionState::Connected(ConnectedState {
+                        iface_id,
+                        prev_counters: None,
+                    });
+                    self.last_checked_connection_state = now;
                 }
-                self.connection_state =
-                    ConnectionState::Connected(ConnectedState { iface_id, prev_counters: None });
-                self.last_checked_connection_state = now;
             }
             TelemetryEvent::Disconnected { track_subsequent_downtime, info } => {
                 self.stats_logger.log_stat(StatOp::AddDisconnectCount).await;
@@ -457,6 +469,7 @@ const DEVICE_HIGH_DPDC_THRESHOLD: f64 = 12.0;
 const DEVICE_FREQUENT_HIGH_PACKET_DROP_RATE_THRESHOLD: f64 = 0.10;
 /// TODO(fxbug.dev/83621): Adjust this threshold when we consider unicast frames only
 const DEVICE_FREQUENT_NO_RX_THRESHOLD: f64 = 0.01;
+const DEVICE_LOW_CONNECTION_SUCCESS_RATE_THRESHOLD: f64 = 0.1;
 
 async fn diff_and_log_counters(
     stats_logger: &mut StatsLogger,
@@ -524,6 +537,10 @@ impl StatsLogger {
             }
             StatOp::AddDowntimeNoSavedNeighborDuration(duration) => {
                 StatCounters { downtime_no_saved_neighbor_duration: duration, ..zero }
+            }
+            StatOp::AddConnectAttemptsCount => StatCounters { connect_attempts_count: 1, ..zero },
+            StatOp::AddConnectSuccessfulCount => {
+                StatCounters { connect_successful_count: 1, ..zero }
             }
             StatOp::AddDisconnectCount => StatCounters { disconnect_count: 1, ..zero },
             StatOp::AddTxHighPacketDropDuration(duration) => {
@@ -685,6 +702,26 @@ impl StatsLogger {
             if no_rx_time_ratio > DEVICE_FREQUENT_NO_RX_THRESHOLD {
                 metric_events.push(MetricEvent {
                     metric_id: metrics::DEVICE_WITH_FREQUENT_NO_RX_METRIC_ID,
+                    event_codes: vec![],
+                    payload: MetricEventPayload::Count(1),
+                });
+            }
+        }
+
+        let connection_success_rate =
+            c.connect_successful_count as f64 / c.connect_attempts_count as f64;
+        if connection_success_rate.is_finite() {
+            metric_events.push(MetricEvent {
+                metric_id: metrics::CONNECTION_SUCCESS_RATE_METRIC_ID,
+                event_codes: vec![],
+                payload: MetricEventPayload::IntegerValue(float_to_ten_thousandth(
+                    connection_success_rate,
+                )),
+            });
+
+            if connection_success_rate < DEVICE_LOW_CONNECTION_SUCCESS_RATE_THRESHOLD {
+                metric_events.push(MetricEvent {
+                    metric_id: metrics::DEVICE_WITH_LOW_CONNECTION_SUCCESS_RATE_METRIC_ID,
                     event_codes: vec![],
                     payload: MetricEventPayload::Count(1),
                 });
@@ -944,6 +981,8 @@ enum StatOp {
     AddDowntimeDuration(zx::Duration),
     // Downtime with no saved network in vicinity
     AddDowntimeNoSavedNeighborDuration(zx::Duration),
+    AddConnectAttemptsCount,
+    AddConnectSuccessfulCount,
     AddDisconnectCount,
     AddTxHighPacketDropDuration(zx::Duration),
     AddRxHighPacketDropDuration(zx::Duration),
@@ -956,6 +995,8 @@ struct StatCounters {
     connected_duration: zx::Duration,
     downtime_duration: zx::Duration,
     downtime_no_saved_neighbor_duration: zx::Duration,
+    connect_attempts_count: u64,
+    connect_successful_count: u64,
     disconnect_count: u64,
     tx_high_packet_drop_duration: zx::Duration,
     rx_high_packet_drop_duration: zx::Duration,
@@ -979,6 +1020,9 @@ impl Add for StatCounters {
             downtime_duration: self.downtime_duration + other.downtime_duration,
             downtime_no_saved_neighbor_duration: self.downtime_no_saved_neighbor_duration
                 + other.downtime_no_saved_neighbor_duration,
+            connect_attempts_count: self.connect_attempts_count + other.connect_attempts_count,
+            connect_successful_count: self.connect_successful_count
+                + other.connect_successful_count,
             disconnect_count: self.disconnect_count + other.disconnect_count,
             tx_high_packet_drop_duration: self.tx_high_packet_drop_duration
                 + other.tx_high_packet_drop_duration,
@@ -1010,6 +1054,12 @@ impl SaturatingAdd for StatCounters {
                     .into_nanos()
                     .saturating_add(v.downtime_no_saved_neighbor_duration.into_nanos()),
             ),
+            connect_attempts_count: self
+                .connect_attempts_count
+                .saturating_add(v.connect_attempts_count),
+            connect_successful_count: self
+                .connect_successful_count
+                .saturating_add(v.connect_successful_count),
             disconnect_count: self.disconnect_count.saturating_add(v.disconnect_count),
             tx_high_packet_drop_duration: zx::Duration::from_nanos(
                 self.tx_high_packet_drop_duration
@@ -1978,6 +2028,35 @@ mod tests {
     }
 
     #[fuchsia::test]
+    fn test_log_daily_establish_connection_metrics() {
+        let (mut test_helper, mut test_fut) = setup_test();
+
+        // Send 10 failed connect results, then 1 successful.
+        for _ in 0..10 {
+            let event = TelemetryEvent::ConnectResult {
+                iface_id: IFACE_ID,
+                result: fake_connect_result(fidl_ieee80211::StatusCode::RefusedReasonUnspecified),
+                latest_ap_state: random_bss_description!(Wpa1),
+            };
+            test_helper.telemetry_sender.send(event);
+        }
+        test_helper.send_connected_event(random_bss_description!(Wpa2));
+
+        test_helper.advance_by(24.hours(), test_fut.as_mut());
+
+        let connection_success_rate =
+            test_helper.get_logged_metrics(metrics::CONNECTION_SUCCESS_RATE_METRIC_ID);
+        assert_eq!(connection_success_rate.len(), 1);
+        // 1 successful, 11 total attempts => 9.09% success rate
+        assert_eq!(connection_success_rate[0].payload, MetricEventPayload::IntegerValue(909));
+
+        let device_low_success = test_helper
+            .get_logged_metrics(metrics::DEVICE_WITH_LOW_CONNECTION_SUCCESS_RATE_METRIC_ID);
+        assert_eq!(device_low_success.len(), 1);
+        assert_eq!(device_low_success[0].payload, MetricEventPayload::Count(1));
+    }
+
+    #[fuchsia::test]
     fn test_log_hourly_fleetwise_uptime_cobalt_metrics() {
         let (mut test_helper, mut test_fut) = setup_test();
 
@@ -2455,8 +2534,12 @@ mod tests {
         }
 
         fn send_connected_event(&self, latest_ap_state: BssDescription) {
-            self.telemetry_sender
-                .send(TelemetryEvent::Connected { iface_id: IFACE_ID, latest_ap_state });
+            let event = TelemetryEvent::ConnectResult {
+                iface_id: IFACE_ID,
+                result: fake_connect_result(fidl_ieee80211::StatusCode::Success),
+                latest_ap_state,
+            };
+            self.telemetry_sender.send(event);
         }
     }
 
@@ -2659,5 +2742,9 @@ mod tests {
             disconnect_source: fidl_disconnect_info.disconnect_source,
             latest_ap_state: random_bss_description!(Wpa2),
         }
+    }
+
+    fn fake_connect_result(code: fidl_ieee80211::StatusCode) -> fidl_sme::ConnectResult {
+        fidl_sme::ConnectResult { code, is_credential_rejected: false, is_reconnect: false }
     }
 }
