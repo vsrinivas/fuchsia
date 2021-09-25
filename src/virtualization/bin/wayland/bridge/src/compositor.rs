@@ -479,6 +479,9 @@ impl Surface {
     ) -> Result<(), Error> {
         ftrace::duration!("wayland", "Surface::commit_self");
 
+        // Save the last buffer ID before applying updates.
+        let last_buffer_id = self.content.as_ref().map(|content| content.id());
+
         let commands = mem::replace(&mut self.pending_commands, Vec::new());
         for command in commands {
             self.apply(command)?;
@@ -510,26 +513,6 @@ impl Surface {
                 .set_content(&mut node.transform_id.clone(), &mut image_content.id.clone())
                 .expect("fidl error");
 
-            // Create and register a release fence to release this buffer when
-            // scenic is done with it.
-            let release_fence = zx::Event::create().unwrap();
-            node.flatland.add_release_fence(
-                release_fence.duplicate_handle(zx::Rights::SAME_RIGHTS).unwrap(),
-            );
-            let buffer_id = content.id();
-            let task_queue = task_queue.clone();
-            fasync::Task::local(async move {
-                let _signals = fasync::OnSignals::new(&release_fence, zx::Signals::EVENT_SIGNALED)
-                    .await
-                    .unwrap();
-                // Safe to ignore result as EVENT_SIGNALED must have
-                // been observed if we reached this.
-                task_queue.post(move |client| {
-                    client.event_queue().post(buffer_id, WlBufferEvent::Release)
-                });
-            })
-            .detach();
-
             // Set image sample region based on current crop params.
             let mut sample_region = self.crop_params.map_or(
                 RectF {
@@ -554,6 +537,33 @@ impl Surface {
                 .proxy()
                 .set_image_destination_size(&mut image_content.id.clone(), &mut destination_size)
                 .expect("fidl error");
+        }
+
+        // Create and register a release fence to release the last buffer unless
+        // it's the same as the current buffer.
+        // TODO(fxbug.dev/85402): Track multiple usages of the same buffer and only
+        // generate the release event when all usages drop to zero.
+        let buffer_id = self.content.as_ref().map(|content| content.id());
+        if last_buffer_id != buffer_id {
+            if let Some(last_buffer_id) = last_buffer_id {
+                let release_fence = zx::Event::create().unwrap();
+                node.flatland.add_release_fence(
+                    release_fence.duplicate_handle(zx::Rights::SAME_RIGHTS).unwrap(),
+                );
+                let task_queue = task_queue.clone();
+                fasync::Task::local(async move {
+                    let _signals =
+                        fasync::OnSignals::new(&release_fence, zx::Signals::EVENT_SIGNALED)
+                            .await
+                            .unwrap();
+                    // Safe to ignore result as EVENT_SIGNALED must have
+                    // been observed if we reached this.
+                    task_queue.post(move |client| {
+                        client.event_queue().post(last_buffer_id, WlBufferEvent::Release)
+                    });
+                })
+                .detach();
+            }
         }
 
         if let Some(callback) = self.frame.take() {
