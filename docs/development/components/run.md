@@ -87,7 +87,9 @@ For example, the following command creates a new component instance inside the
 
 ```none {:.devsite-disable-click-to-copy}
 $ ffx component create /core/ffx-laboratory:hello-world fuchsia-pkg://fuchsia.com/hello-world#meta/hello-world-rust.cm
-Creating component instance: hello-world
+URL: fuchsia-pkg://fuchsia.com/hello-world#meta/hello-world-rust.cm
+Moniker: /core/ffx-laboratory:hello-world
+Creating component instance...
 ```
 
 Similarly, use `ffx component destroy` to destroy a dynamic component instance
@@ -102,7 +104,8 @@ The following example destroys the `hello-world` component created above:
 
 ```none {:.devsite-disable-click-to-copy}
 $ ffx component destroy /core/ffx-laboratory:hello-world
-Destroying component instance: hello-world
+Moniker: /core/ffx-laboratory:hello-world
+Destroying component instance...
 ```
 
 ## Component execution {#execute}
@@ -124,7 +127,8 @@ The following example binds to the `hello-world` component created previously:
 
 ```none {:.devsite-disable-click-to-copy}
 $ ffx component bind /core/ffx-laboratory:hello-world
-Successfully bound to the component with moniker './core/ffx-laboratory:hello-world'
+Moniker: /core/ffx-laboratory:hello-world
+Binding to component instance...
 ```
 
 ### Stop the instance
@@ -141,8 +145,8 @@ The following example stops to the `hello-world` component started above:
 
 ```none {:.devsite-disable-click-to-copy}
 $ ffx component stop /core/ffx-laboratory:hello-world
-Stopping the component with moniker './core/ffx-laboratory:hello-world'
-Successfully stopped the component with moniker './core/ffx-laboratory:hello-world'
+Moniker: /core/ffx-laboratory:hello-world
+Stopping component instance...
 ```
 
 Note: You can add the `--recursive` flag to stop all child components.
@@ -163,7 +167,10 @@ component:
 
 ```none {:.devsite-disable-click-to-copy}
 $ ffx component run fuchsia-pkg://fuchsia.com/hello-world#meta/hello-world-rust.cm
-Creating component instance: hello-world-rust
+URL: fuchsia-pkg://fuchsia.com/hello-world#meta/hello-world-rust.cm
+Moniker: /core/ffx-laboratory:hello-world-rust
+Creating component instance...
+Binding to component instance...
 ```
 
 The `ffx component run` command automates the following steps:
@@ -211,9 +218,12 @@ When using `ffx component create` or `ffx component run` you may encounter the
 following error if component framework cannot resolve the component instance:
 
 ```none {:.devsite-disable-click-to-copy}
-$ ffx component run fuchsia-pkg://fuchsia.com/hello-world#meta/hello.cm
-Creating component instance: hello
-Error creating child: InstanceCannotResolve
+$ ffx component run fuchsia-pkg://fuchsia.com/hello-world#meta/hello-world.cm
+URL: fuchsia-pkg://fuchsia.com/hello-world#meta/hello-world.cm
+Moniker: /core/ffx-laboratory:hello-world
+Creating component instance...
+Binding to component instance...
+Lifecycle protocol could not bind to component instance: InstanceCannotResolve
 ```
 
 This occurs when the component URL does not resolve to a valid component
@@ -233,26 +243,44 @@ following error if the component instance already exists:
 
 ```none {:.devsite-disable-click-to-copy}
 $ ffx component run fuchsia-pkg://fuchsia.com/hello-world#meta/hello-world.cm
-Creating component instance: hello-world
-Error creating child: InstanceAlreadyExists
+URL: fuchsia-pkg://fuchsia.com/hello-world#meta/hello-world.cm
+Moniker: /core/ffx-laboratory:hello-world
+Creating component instance...
+Component instance already exists. Use --recreate to destroy and recreate a new instance, or --name to create a new instance with a different name.
 ```
 
 This occurs when the target moniker is already in use by another component
-instance. The developer tools do not automatically destroy an existing instance
-before attempting to create a new one.
+instance.
 
-To address this issue, manually destroy the current instance:
+To address this issue, manually destroy the instance using the `ffx component destroy` command:
 
-```posix-terminal
-ffx component destroy {{ '<var label="moniker">TARGET_MONIKER</var>' }}
+```none {:.devsite-disable-click-to-copy}
+$ ffx component destroy /core/ffx-laboratory:hello-world
+Moniker: /core/ffx-laboratory:hello-world
+Destroying component instance...
 ```
 
-If you are using `ffx component run`, the default target moniker is generated
-using the component's name inside of the [`ffx-laboratory`](#ffx-laboratory)
-collection:
+If you are using `ffx component run`, add the `--recreate` flag to destroy the instance and
+recreate it:
 
-```posix-terminal
-ffx component destroy /core/ffx-laboratory:{{ '<var label="moniker">COMPONENT_NAME</var>' }}
+```none {:.devsite-disable-click-to-copy}
+$ ffx component run fuchsia-pkg://fuchsia.com/hello-world#meta/hello-world.cm --recreate
+URL: fuchsia-pkg://fuchsia.com/hello-world#meta/hello-world.cm
+Moniker: /core/ffx-laboratory:hello-world
+Creating component instance...
+Component instance already exists. Destroying...
+Recreating component instance...
+Binding to component instance...
+```
+
+Alternatively, add the `--name` flag to create a new instance with a different name:
+
+```none {:.devsite-disable-click-to-copy}
+$ ffx component run fuchsia-pkg://fuchsia.com/hello-world#meta/hello-world.cm --name hello-world-2
+URL: fuchsia-pkg://fuchsia.com/hello-world#meta/hello-world.cm
+Moniker: /core/ffx-laboratory:hello-world-2
+Creating component instance...
+Binding to component instance...
 ```
 
 [capability-directory]: /docs/concepts/components/v2/capabilities/directory.md

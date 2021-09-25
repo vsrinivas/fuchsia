@@ -279,7 +279,9 @@ the hello-world package in your universe:
 $ fx set <product>.<board> --with //examples/hello_world/rust:hello-world-rust && fx build
 ...
 $ fx ffx component run fuchsia-pkg://fuchsia.com/hello-world#meta/hello-world-rust.cm
-Created component instance: hello-world-rust
+URL: fuchsia-pkg://fuchsia.com/hello-world#meta/hello-world-rust.cm
+Moniker: /core/ffx-laboratory:hello-world-rust
+Creating component instance...
 ...
 $ fx ffx component show hello-world-rust
 Moniker: /core/ffx-laboratory:hello-world-rust
