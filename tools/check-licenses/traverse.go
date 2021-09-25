@@ -157,7 +157,7 @@ func Run(ctx context.Context, config *Config) error {
 	if config.ExitOnProhibitedLicenseTypes {
 		filesWithProhibitedLicenses := licenses.GetFilesWithProhibitedLicenses()
 		if len(filesWithProhibitedLicenses) > 0 {
-			return fmt.Errorf("Encountered prohibited license types.\nPlease remove the offending files, or reach out to //tools/check-licenses/OWNERS for license exceptions or errors.")
+			return fmt.Errorf("Encountered prohibited license types.\nIf you believe these files should be allowlisted, see go/fuchsia-licenses-playbook or reach out to //tools/check-licenses/OWNERS.\nOtherwise, please remove the offending files.\n")
 		}
 	}
 	year, _, _ := time.Now().Date()
@@ -172,7 +172,7 @@ func Run(ctx context.Context, config *Config) error {
 	if config.ExitOnDirRestrictedLicense {
 		filesWithBadLicenseUsage := licenses.GetFilesWithBadLicenseUsage()
 		if len(filesWithBadLicenseUsage) > 0 {
-			return fmt.Errorf("Encountered files with licenses that may not be used in those directories.\nPlease remove the offending files, or reach out to //tools/check-licenses/OWNERS for license exceptions or errors.")
+			return fmt.Errorf("Encountered files with licenses that may not be used in those directories.\nIf you believe these files should be allowlisted, see go/fuchsia-licenses-playbook or reach out to //tools/check-licenses/OWNERS.\nOtherwise, please remove the offending files.\n")
 		}
 	}
 

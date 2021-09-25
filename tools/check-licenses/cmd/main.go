@@ -226,7 +226,7 @@ func mainImpl() error {
 
 func main() {
 	if err := mainImpl(); err != nil {
-		fmt.Fprintf(os.Stderr, "check-licenses: %s\n", err)
+		fmt.Fprintf(os.Stderr, "check-licenses: %s\nSee go/fuchsia-licenses-playbook for information on resolving common errors.\n", err)
 		os.Exit(1)
 	}
 }
