@@ -33,7 +33,7 @@ TEST(DebugTest, Logging) {
 // debugging is typically disabled by default, this gives us some indication that it hasn't
 // broken.
 TEST(DebugTest, DumpNoCrash) {
-  size_t buffer_size = std::max(kMaxHexDumpBytes, kMaxStringDumpBytes) + 1;
+  size_t buffer_size = kMaxStringDumpBytes + 1;
   uint8_t buffer[buffer_size];
   for (size_t i = 0; i < buffer_size; i++) {
     // Put some arbitrary bytes in the buffer, it's OK to cast to smaller type.
@@ -44,13 +44,7 @@ TEST(DebugTest, DumpNoCrash) {
   // First test all sizes from [0,100]
   size_t max_test_size = std::min<size_t>(100, buffer_size);
   for (size_t i = 0; i < max_test_size; i++) {
-    BRCMF_DBG_HEX_DUMP(true, buffer, i, "buffer size of %zu", i);
     BRCMF_DBG_STRING_DUMP(true, buffer, i, "string size of %zu", i);
-  }
-
-  // Test upper limits of hex dump
-  for (size_t i = kMaxHexDumpBytes - 1; i < kMaxHexDumpBytes + 2; i++) {
-    BRCMF_DBG_HEX_DUMP(true, buffer, i, "buffer size of %zu", i);
   }
 
   // Test upper limits of string dump

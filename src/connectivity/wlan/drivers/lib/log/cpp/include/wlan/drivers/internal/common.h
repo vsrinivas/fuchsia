@@ -50,37 +50,37 @@
 // The 'log' parameter is the macro that the user would like lhexdump_ to use to log the
 // hex values. This allows us to have a common helper API without having to duplicate it
 // for every level of logging that we support.
-#define lhexdump_(log, data, length)                                                   \
-  do {                                                                                 \
-    const void* ptr = (data);                                                          \
-    size_t len = (length);                                                             \
-    log("dumping %zu (0x%zx) bytes, data:%p\n", len, len, ptr);                        \
-    if (!ptr) {                                                                        \
-      return;                                                                          \
-    }                                                                                  \
-    for (size_t i = 0; i < len; i += Log::kHexDumpMaxBytesPerLine) {                   \
-      char buf[Log::kHexDumpMinBufSize];                                               \
-      Log::HexDump(reinterpret_cast<const char*>(ptr) + i,                             \
-                   std::min(len - i, Log::kHexDumpMaxBytesPerLine), buf, sizeof(buf)); \
-      log("%s\n", buf);                                                                \
-    }                                                                                  \
+#define lhexdump_(log, data, length)                                                    \
+  do {                                                                                  \
+    const void* ptr = (data);                                                           \
+    size_t len = (length);                                                              \
+    constexpr size_t max_per_line = wlan::drivers::Log::kHexDumpMaxBytesPerLine;        \
+    log("dumping data_ptr:%p len:%zu bytes\n", ptr, len);                               \
+    if (ptr) {                                                                          \
+      for (size_t i = 0; i < len; i += max_per_line) {                                  \
+        char buf[wlan::drivers::Log::kHexDumpMinBufSize];                               \
+        wlan::drivers::Log::HexDump(reinterpret_cast<const char*>(ptr) + i,             \
+                                    std::min(len - i, max_per_line), buf, sizeof(buf)); \
+        log("%s\n", buf);                                                               \
+      }                                                                                 \
+    }                                                                                   \
   } while (0)
 
 // Same as lhexdump_() defined above, but added capability to handle filter and tag.
-#define lhexdump_tag_(log, filter, tag, data, length)                                  \
-  do {                                                                                 \
-    const void* ptr = (data);                                                          \
-    size_t len = (length);                                                             \
-    log(filter, tag, "dumping %zu (0x%zx) bytes, data:%p\n", len, len, ptr);           \
-    if (!ptr) {                                                                        \
-      return;                                                                          \
-    }                                                                                  \
-    for (size_t i = 0; i < len; i += Log::kHexDumpMaxBytesPerLine) {                   \
-      char buf[Log::kHexDumpMinBufSize];                                               \
-      Log::HexDump(reinterpret_cast<const char*>(ptr) + i,                             \
-                   std::min(len - i, Log::kHexDumpMaxBytesPerLine), buf, sizeof(buf)); \
-      log(filter, tag, "%s\n", buf);                                                   \
-    }                                                                                  \
+#define lhexdump_tag_(log, filter, tag, data, length)                                   \
+  do {                                                                                  \
+    const void* ptr = (data);                                                           \
+    size_t len = (length);                                                              \
+    constexpr size_t max_per_line = wlan::drivers::Log::kHexDumpMaxBytesPerLine;        \
+    log(filter, tag, "dumping data_ptr:%p len:%zu bytes\n", ptr, len);                  \
+    if (ptr) {                                                                          \
+      for (size_t i = 0; i < len; i += max_per_line) {                                  \
+        char buf[wlan::drivers::Log::kHexDumpMinBufSize];                               \
+        wlan::drivers::Log::HexDump(reinterpret_cast<const char*>(ptr) + i,             \
+                                    std::min(len - i, max_per_line), buf, sizeof(buf)); \
+        log(filter, tag, "%s\n", buf);                                                  \
+      }                                                                                 \
+    }                                                                                   \
   } while (0)
 
 #endif  // SRC_CONNECTIVITY_WLAN_DRIVERS_LIB_LOG_CPP_INCLUDE_WLAN_DRIVERS_INTERNAL_COMMON_H_

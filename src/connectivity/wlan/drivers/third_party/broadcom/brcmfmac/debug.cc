@@ -22,37 +22,6 @@ namespace wlan {
 namespace brcmfmac {
 
 // static
-void Debug::PrintHexDump(uint32_t flag, const void* data, size_t length) {
-  constexpr size_t kValuesPerLine = 16;
-
-  if (zxlog_level_enabled_etc(flag)) {
-    zxlogf_etc(flag, nullptr, "%p:", data);
-
-    static constexpr char kHexTable[] = {'0', '1', '2', '3', '4', '5', '6', '7',
-                                         '8', '9', 'A', 'B', 'C', 'D', 'E', 'F'};
-    const uint8_t* const bytes = reinterpret_cast<const uint8_t*>(data);
-    const size_t max_dump_bytes = std::min<size_t>(length, kMaxHexDumpBytes);
-    for (size_t i = 0; i < max_dump_bytes; i += kValuesPerLine) {
-      char buffer[3 * kValuesPerLine];
-      char* next = buffer;
-      size_t line_width = std::min(kValuesPerLine, max_dump_bytes - i);
-      for (size_t j = 0; j < line_width; ++j) {
-        *next++ = kHexTable[bytes[i + j] >> 4];
-        *next++ = kHexTable[bytes[i + j] & 0xF];
-        if (j + 1 < line_width) {
-          *next++ = ' ';
-        }
-      }
-      *next++ = '\0';
-      zxlogf_etc(flag, nullptr, "%04zx: %s", i, buffer);
-    }
-    if (length > kMaxHexDumpBytes) {
-      zxlogf_etc(flag, nullptr, "%04zx: ...", kMaxHexDumpBytes);
-    }
-  }
-}
-
-// static
 void Debug::PrintStringDump(uint32_t flag, const void* data, size_t length) {
   constexpr size_t kValuesPerLine = 64;
 

@@ -82,13 +82,12 @@
   BRCMF_DBG(FILTER, "%s(%d): " fmt, brcmf_cfg80211_get_iface_str(ndev), ndev_to_if(ndev)->ifidx, \
             ##__VA_ARGS__);
 
-constexpr size_t kMaxHexDumpBytes = 4096;  // point at which output will be truncated
-#define BRCMF_DBG_HEX_DUMP(condition, data, length, fmt, ...)            \
-  do {                                                                   \
-    if (condition) {                                                     \
-      zxlogf(INFO, "(%s): " fmt, __func__, ##__VA_ARGS__);               \
-      ::wlan::brcmfmac::Debug::PrintHexDump(DDK_LOG_INFO, data, length); \
-    }                                                                    \
+#define BRCMF_DBG_HEX_DUMP(condition, data, length, fmt, ...) \
+  do {                                                        \
+    if (condition) {                                          \
+      linfo(fmt, ##__VA_ARGS__);                              \
+      lhexdump_info(data, length);                            \
+    }                                                         \
   } while (0)
 
 constexpr size_t kMaxStringDumpBytes = 256;  // point at which output will be truncated
@@ -174,9 +173,6 @@ class Debug {
   static constexpr bool IsFilterOn(Filter filter) {
     return (static_cast<uint32_t>(filter) & kBrcmfMsgFilter) != 0;
   }
-
-  // Print a hexdump to the debugging output.
-  static void PrintHexDump(uint32_t flag, const void* data, size_t length);
 
   // Print a string dump to the debugging output.
   static void PrintStringDump(uint32_t flag, const void* data, size_t length);
