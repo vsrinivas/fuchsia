@@ -2,6 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fuchsia/wlan/ieee80211/cpp/fidl.h>
+#include <stdio.h>
+
+#include <algorithm>
 #include <locale>
 
 #include <wlan/drivers/log.h>
@@ -9,6 +13,24 @@
 namespace wlan::drivers {
 
 static char hex_char(uint8_t ch) { return (ch >= 10) ? (ch - 10) + 'a' : ch + '0'; }
+
+// static
+std::string Log::SsidBytes2Str(uint8_t const ssid[], size_t len) {
+  constexpr size_t max_ssid_len =
+      static_cast<size_t>(::fuchsia::wlan::ieee80211::MAX_SSID_BYTE_LEN);
+  size_t ssid_len = std::min(len, max_ssid_len);
+
+  // Since each byte in the ssid will be represented by two hex char, we multiple by 2.
+  size_t buf_size = (2 * ssid_len) + 1;
+  char fmt_ssid[buf_size];
+
+  fmt_ssid[0] = '\0';
+  size_t offset = 0;
+  for (size_t i = 0; i < ssid_len; i++) {
+    offset += snprintf(fmt_ssid + offset, sizeof(fmt_ssid) - offset, "%02x", ssid[i]);
+  }
+  return fmt_ssid;
+}
 
 // static
 void Log::HexDump(const void* ptr, size_t len, char* output, size_t output_size) {

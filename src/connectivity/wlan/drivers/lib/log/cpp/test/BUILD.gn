@@ -8,11 +8,13 @@ test("wlan_drivers_log_test") {
   sources = [
     "basic_log_test.cc",
     "hexdump_log_test.cc",
+    "ssid_test.cc",
     "throttle_counter_test.cc",
     "throttle_log_test.cc",
     "token_bucket_test.cc",
   ]
   deps = [
+    "//sdk/fidl/fuchsia.wlan.ieee80211",
     "//src/connectivity/wlan/drivers/lib/log/cpp",
     "//src/devices/testing/no_ddk",
     "//src/lib/fxl/test:gtest_main",

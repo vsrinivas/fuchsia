@@ -8,5 +8,6 @@ config("wlan_drivers_log_config") {
 source_set("cpp") {
   public_configs = [ ":wlan_drivers_log_config" ]
   sources = [ "log.cc" ]
+  deps = [ "//sdk/fidl/fuchsia.wlan.ieee80211" ]
   public_deps = [ "//src/lib/ddk" ]
 }

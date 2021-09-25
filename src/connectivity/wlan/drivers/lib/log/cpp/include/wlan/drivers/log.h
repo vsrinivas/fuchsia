@@ -7,6 +7,9 @@
 #include <lib/ddk/debug.h>
 #include <stdarg.h>
 
+#include <string>
+#include <vector>
+
 #include <wlan/drivers/internal/common.h>
 
 namespace wlan::drivers {
@@ -30,6 +33,10 @@ class Log {
   static void SetFilter(uint32_t filter);
   static bool IsFilterOn(uint32_t filter) { return getInstance().filter_ & filter; }
   static void HexDump(const void* ptr, size_t len, char* output, size_t output_size);
+  static std::string SsidBytes2Str(uint8_t const ssid[], size_t len);
+  static std::string SsidVect2Str(const std::vector<uint8_t>& ssid) {
+    return SsidBytes2Str(ssid.data(), ssid.size());
+  };
 
  private:
   static Log& getInstance() {
@@ -85,5 +92,10 @@ class Log {
 #define lhexdump_info(data, length) lhexdump_(linfo, data, length)
 #define lhexdump_debug(filter, tag, data, length) lhexdump_tag_(ldebug, filter, tag, data, length)
 #define lhexdump_trace(filter, tag, data, length) lhexdump_tag_(ltrace, filter, tag, data, length)
+
+// Example usage - lerror("Failed to connect to ssid: " FMT_SSID, FMT_SSID_VECT(ssid_vect));
+#define FMT_SSID "<ssid-%s>"
+#define FMT_SSID_VECT(ssid) wlan::drivers::Log::SsidVect2Str(ssid).c_str()
+#define FMT_SSID_BYTES(ssid, len) wlan::drivers::Log::SsidBytes2Str(ssid, len).c_str()
 
 #endif  // SRC_CONNECTIVITY_WLAN_DRIVERS_LIB_LOG_CPP_INCLUDE_WLAN_DRIVERS_LOG_H_
