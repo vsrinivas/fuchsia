@@ -121,7 +121,7 @@ function format-file() {
     *.go) format-full-file "${GO_CMD}" "$1" ;;
     *.config) format-full-file "${JSON_FMT_CMD}" "$1" ;;
     *.json) format-full-file "${JSON_FMT_CMD}" "$1" ;;
-    *.json5) format-full-file "${JSON5_FMT_CMD}" "$1";;
+    *.json5) format-full-file "${JSON5_FMT_CMD}" "$1" ;;
     *.py) format-full-file "${PY_CMD}" "$1" ;;
     *.rs) format-full-file "${RUST_FMT_CMD}" "$1" ;;
     *.triage) format-full-file "${JSON5_FMT_CMD}" "$1";;
@@ -256,7 +256,7 @@ readonly FIDL_FORMAT_TOOL_ABS="${FUCHSIA_BUILD_DIR}/${FIDL_FORMAT_TOOL}"
 readonly FIDL_CMD="${FIDL_FORMAT_TOOL_ABS} -i"
 readonly GN_CMD="${PREBUILT_GN} format"
 readonly GO_CMD="${PREBUILT_GO_DIR}/bin/gofmt -s -w"
-readonly JSON_FMT_CMD="${PY_TOOL} ${FUCHSIA_DIR}/scripts/style/json-fmt.py"
+readonly JSON_FMT_CMD="${PY_TOOL} ${FUCHSIA_DIR}/scripts/style/json-fmt.py --no-sort-keys"
 readonly JSON5_FMT_CMD="${HOST_OUT_DIR}/formatjson5 --replace"
 readonly MARKDOWN_FMT_TOOL="$(fx-command-run list-build-artifacts --expect-one --name doc-checker tools)"
 readonly MARKDOWN_FMT_TOOL_ABS="${FUCHSIA_BUILD_DIR}/${MARKDOWN_FMT_TOOL}"

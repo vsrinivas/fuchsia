@@ -31,11 +31,28 @@ def sort(data):
 
 def main():
     parser = argparse.ArgumentParser()
+
     parser.add_argument(
         'file',
         type=argparse.FileType('r+'),
         nargs='+',
         help='JSON file to be pretty-printed.')
+
+    # Create a --sort-keys flag such that usage is consistent with Python 3.9's
+    # argparse.BooleanOptionalAction.
+    parser.add_argument(
+        '--sort-keys',
+        default=True,
+        action='store_true',
+        dest='sort_keys',
+        help=
+        'Indicates whether object keys should be sorted. Specify --no-sort-keys to disable.')
+    parser.add_argument(
+        '--no-sort-keys',
+        action='store_false',
+        dest='sort_keys',
+        help='See --sort-keys.')
+
     args = parser.parse_args()
     for json_file in args.file:
         try:
@@ -46,7 +63,10 @@ def main():
                 if ext == '.cmx':
                     data = sort(data)
                 formatted = json.dumps(
-                    data, indent=4, sort_keys=True, separators=(',', ': '))
+                    data,
+                    indent=4,
+                    sort_keys=args.sort_keys,
+                    separators=(',', ': '))
                 if original != formatted:
                     json_file.seek(0)
                     json_file.truncate()
