@@ -144,6 +144,7 @@ group("test_runners") {
     "legacy_test",
     "rust",
     "starnix",
+    "stress_test",
   ]
 }
 
@@ -159,6 +160,7 @@ group("tests") {
     "legacy_test:tests",
     "rust:tests",
     "starnix:tests",
+    "stress_test:tests",
   ]
 }
 

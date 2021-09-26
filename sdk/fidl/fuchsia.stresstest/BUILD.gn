@@ -1,0 +1,17 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/fidl/fidl.gni")
+import("//tools/fidl/measure-tape/measure_tape.gni")
+
+fidl("fuchsia.stresstest") {
+  sdk_category = "internal"
+  sources = [ "actor.fidl" ]
+}
+
+measure_tape("rust_measure_tape_for_action") {
+  fidls = [ ":fuchsia.stresstest" ]
+  target_types = [ "fuchsia.stresstest/Action" ]
+  target_binding = "rust"
+}

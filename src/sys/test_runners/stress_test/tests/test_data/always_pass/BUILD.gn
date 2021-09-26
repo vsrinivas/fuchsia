@@ -1,0 +1,44 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/components.gni")
+import("//build/rust/rustc_binary.gni")
+
+rustc_binary("always_pass_actor_bin") {
+  testonly = true
+  name = "always_pass_actor"
+  edition = "2018"
+  source_root = "actor/main.rs"
+  deps = [
+    "//src/lib/fuchsia",
+    "//src/sys/test_runners/stress_test/actor",
+    "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:futures",
+    "//third_party/rust_crates:log",
+    "//third_party/rust_crates:rand",
+  ]
+
+  sources = [ "actor/main.rs" ]
+}
+
+fuchsia_component("actor") {
+  testonly = true
+  manifest = "meta/always_pass_actor.cml"
+  component_name = "always_pass_actor"
+  deps = [ ":always_pass_actor_bin" ]
+}
+
+fuchsia_component("test") {
+  testonly = true
+  manifest = "meta/always_pass.cml"
+  component_name = "always_pass"
+}
+
+group("always_pass") {
+  testonly = true
+  deps = [
+    ":actor",
+    ":test",
+  ]
+}

@@ -1,0 +1,41 @@
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    include: [
+        "//src/sys/test_runners/rust/default.shard.cml",
+        "syslog/client.shard.cml",
+    ],
+    program: {
+        binary: "bin/stress_runner_integration_test",
+    },
+    children: [
+        {
+            name: "test_manager",
+            url: "fuchsia-pkg://fuchsia.com/test_manager#meta/test_manager_for_tests.cm",
+        },
+    ],
+    use: [
+        {
+            protocol: "fuchsia.sys2.Realm",
+            from: "framework",
+        },
+    ],
+    offer: [
+        {
+            protocol: "fuchsia.logger.LogSink",
+            from: "parent",
+            to: "#test_manager",
+        },
+        {
+            protocol: "fuchsia.process.Launcher",
+            from: "parent",
+            to: "#test_manager",
+        },
+        {
+            protocol: "fuchsia.sys2.EventSource",
+            from: "parent",
+            to: "#test_manager",
+        },
+    ],
+}

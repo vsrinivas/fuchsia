@@ -1,0 +1,49 @@
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+library fuchsia.stresstest;
+
+/// Human-readable name for an action.
+alias ActionName = string:512;
+
+/// Describes a single action performed by an actor.
+type Action = table {
+    /// Uniquely identifies an action within a stress test.
+    /// This member is required.
+    1: name ActionName;
+};
+
+/// Describes the types of errors that can be returned by an actor.
+type Error = flexible union {
+    /// This is an unstructured error returned by the actor
+    1: error_string string:512;
+};
+
+/// Iterator for listing available actions.
+protocol ActionIterator {
+    /// Returns the next batch of actions. When all actions have been read, an empty
+    /// vector will be returned.
+    GetNext() -> (struct {
+        actions vector<Action>:MAX;
+    });
+};
+
+/// This protocol is implemented by an actor and exposes ways to query and
+/// run actions. Actors expect exactly one connection to the Actor protocol from
+/// the test runner during the actor's lifetime.
+@discoverable
+protocol Actor {
+    /// Enumerate the actions available in this actor.
+    GetActions() -> (resource struct {
+        iterator client_end:ActionIterator;
+    });
+
+    /// Runs a single action with a given seed. Returns when the action has completed.
+    /// If the action failed, the corresponding error message is returned.
+    Run(struct {
+        action_name ActionName;
+        seed uint64;
+    }) -> (struct {
+        error Error:optional;
+    });
+};

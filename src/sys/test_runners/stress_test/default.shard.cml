@@ -1,0 +1,26 @@
+{
+    program: {
+        runner: "stress_test_runner",
+    },
+    collections: [
+        {
+            name: "actors",
+            durability: "single_run",
+        },
+    ],
+    capabilities: [
+        { protocol: "fuchsia.test.Suite" },
+    ],
+    use: [
+        {
+            protocol: "fuchsia.sys2.Realm",
+            from: "framework",
+        },
+    ],
+    expose: [
+        {
+            protocol: "fuchsia.test.Suite",
+            from: "self",
+        },
+    ],
+}

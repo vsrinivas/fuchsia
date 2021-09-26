@@ -1,0 +1,27 @@
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    include: [
+        "//src/sys/test_runners/stress_test/default.shard.cml",
+        "syslog/client.shard.cml",
+    ],
+    program: {
+        actor_url: "fuchsia-pkg://fuchsia.com/stress-runner-integration-test#meta/echo_actor.cm",
+        num_instances: "5",
+        test_duration: "10", // 10 second test duration
+    },
+    children: [
+        {
+            name: "echo_subject",
+            url: "fuchsia-pkg://fuchsia.com/stress-runner-integration-test#meta/echo_subject.cm",
+        },
+    ],
+    offer: [
+        {
+            protocol: "fidl.examples.routing.echo.Echo",
+            from: "#echo_subject",
+            to: "#actors",
+        },
+    ],
+}

@@ -45,6 +45,10 @@
             url: "fuchsia-pkg://fuchsia.com/inspect-test-runner#meta/inspect-test-runner.cm",
         },
         {
+            name: "stress_test_runner",
+            url: "fuchsia-pkg://fuchsia.com/stress-test-runner#meta/stress-test-runner.cm",
+        },
+        {
             name: "runner_memfs",
             url: "fuchsia-pkg://fuchsia.com/test_manager#meta/memfs.cm",
         },
@@ -158,6 +162,7 @@
                 "#rust_test_runner",
                 "#starnix_test_runner",
                 "#starnix_unit_test_runner",
+                "#stress_test_runner",
                 "#test_tmpfs",
             ],
         },

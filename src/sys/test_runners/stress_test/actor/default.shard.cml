@@ -1,0 +1,11 @@
+{
+    capabilities: [
+        { protocol: "fuchsia.stresstest.Actor" },
+    ],
+    expose: [
+        {
+            protocol: "fuchsia.stresstest.Actor",
+            from: "self",
+        },
+    ],
+}

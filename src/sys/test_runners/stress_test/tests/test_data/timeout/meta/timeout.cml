@@ -1,0 +1,15 @@
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    include: [
+        "//src/sys/test_runners/stress_test/default.shard.cml",
+        "syslog/client.shard.cml",
+    ],
+    program: {
+        actor_url: "fuchsia-pkg://fuchsia.com/stress-runner-integration-test#meta/timeout_actor.cm",
+        num_instances: "1",
+        action_timeout: "10", // 10 second action timeout
+        test_duration: "30", // 30 second test duration
+    },
+}
