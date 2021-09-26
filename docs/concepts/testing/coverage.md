@@ -279,7 +279,6 @@ Areas for future work:
 *   [Code Coverage Best Practices][gtb-coverage-best]{:.external}
 *   [Measuring Coverage at Google][gtb-coverage-measure]{:.external}
 *   [Understand Your Coverage Data][gtb-coverage-understand]{:.external}
-*   [Measuring Coverage at Google][gtb-coverage-measure]{:.external}
 *   [How Much Testing is Enough?][gtb-testing-enough]{:.external}
 
 [assert-no-deps]: https://gn.googlesource.com/gn/+/HEAD/docs/reference.md#var_assert_no_deps
