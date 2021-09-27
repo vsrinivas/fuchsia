@@ -47,48 +47,50 @@ use test_case::test_case;
 /// Regression test: test that Netstack.SetInterfaceStatus does not kill the channel to the client
 /// if given an invalid interface id.
 #[fuchsia_async::run_singlethreaded(test)]
-async fn set_interface_status_unknown_interface() -> Result {
+async fn set_interface_status_unknown_interface() {
     let name = "set_interface_status";
-    let sandbox = netemul::TestSandbox::new()?;
-    let (realm, netstack) =
-        sandbox.new_netstack::<Netstack2, fidl_fuchsia_netstack::NetstackMarker, _>(name)?;
+    let sandbox = netemul::TestSandbox::new().expect("create sandbox");
+    let (realm, netstack) = sandbox
+        .new_netstack::<Netstack2, fidl_fuchsia_netstack::NetstackMarker, _>(name)
+        .expect("create realm");
 
     let interface_state = realm
         .connect_to_protocol::<fidl_fuchsia_net_interfaces::StateMarker>()
-        .context("connect to fuchsia.net.interfaces/State service")?;
+        .expect("connect to protocol");
     let interfaces = fidl_fuchsia_net_interfaces_ext::existing(
-        fidl_fuchsia_net_interfaces_ext::event_stream_from_state(&interface_state)?,
+        fidl_fuchsia_net_interfaces_ext::event_stream_from_state(&interface_state)
+            .expect("create event stream"),
         HashMap::new(),
     )
     .await
-    .context("failed to get existing interfaces")?;
+    .expect("get existing interfaces");
 
-    let next_id = 1 + interfaces.keys().max().ok_or(anyhow::format_err!(
-        "failed to find any network interfaces (at least loopback should be present)"
-    ))?;
-    let next_id = next_id.try_into().with_context(|| format!("{} overflows id", next_id))?;
+    let next_id = 1 + interfaces
+        .keys()
+        .max()
+        .expect("can't find any network interfaces (at least loopback should be present)");
+    let next_id =
+        next_id.try_into().unwrap_or_else(|e| panic!("{} try_into error: {:?}", next_id, e));
 
-    let () = netstack
-        .set_interface_status(next_id, false)
-        .context("failed to call set_interface_status")?;
-    let _routes = netstack
-        .get_route_table()
-        .await
-        .context("failed to invoke netstack method after calling set_interface_status with an invalid argument")?;
-
-    Ok(())
+    let () = netstack.set_interface_status(next_id, false).expect("set_interface_status");
+    let _routes = netstack.get_route_table().await.expect(
+        "invoke netstack method after calling set_interface_status with an invalid argument",
+    );
 }
 
 #[fuchsia_async::run_singlethreaded(test)]
-async fn add_ethernet_device() -> Result {
+async fn add_ethernet_device() {
     let name = "add_ethernet_device";
-    let sandbox = netemul::TestSandbox::new().context("failed to create sandbox")?;
+    let sandbox = netemul::TestSandbox::new().expect("create sandbox");
     let (realm, netstack, device) = sandbox
         .new_netstack_and_device::<Netstack2, netemul::Ethernet, fidl_fuchsia_netstack::NetstackMarker, _>(
             name,
         )
-        .await?;
+        .await.expect("create realm");
 
+    // We're testing add_ethernet_device (netstack.fidl), which
+    // does not have a network device entry point.
+    let eth = device.get_ethernet().await.expect("connet to ethernet device");
     let id = netstack
         .add_ethernet_device(
             name,
@@ -97,24 +99,20 @@ async fn add_ethernet_device() -> Result {
                 filepath: "/fake/filepath/for_test".to_string(),
                 metric: 0,
             },
-            // We're testing add_ethernet_device (netstack.fidl), which
-            // does not have a network device entry point.
-            device
-                .get_ethernet()
-                .await
-                .context("add_ethernet_device requires an Ethernet endpoint")?,
+            eth,
         )
         .await
-        .context("add_ethernet_device FIDL error")?
+        .expect("add_ethernet_device FIDL error")
         .map_err(fuchsia_zircon::Status::from_raw)
-        .context("add_ethernet_device failed")?;
+        .expect("add_ethernet_device failed");
 
     let interface_state = realm
         .connect_to_protocol::<fidl_fuchsia_net_interfaces::StateMarker>()
-        .context("connect to fuchsia.net.interfaces/State service")?;
+        .expect("connect to protocol");
     let mut state = fidl_fuchsia_net_interfaces_ext::InterfaceState::Unknown(id.into());
     let (device_class, online) = fidl_fuchsia_net_interfaces_ext::wait_interface_with_id(
-        fidl_fuchsia_net_interfaces_ext::event_stream_from_state(&interface_state)?,
+        fidl_fuchsia_net_interfaces_ext::event_stream_from_state(&interface_state)
+            .expect("create event stream"),
         &mut state,
         |fidl_fuchsia_net_interfaces_ext::Properties {
              id: _,
@@ -127,7 +125,7 @@ async fn add_ethernet_device() -> Result {
          }| Some((*device_class, *online)),
     )
     .await
-    .context("failed to observe interface addition")?;
+    .expect("observe interface addition");
 
     assert_eq!(
         device_class,
@@ -136,38 +134,37 @@ async fn add_ethernet_device() -> Result {
         )
     );
     assert!(!online);
-
-    Ok(())
 }
 
 #[fuchsia_async::run_singlethreaded(test)]
-async fn test_no_duplicate_interface_names() -> Result {
-    let sandbox = netemul::TestSandbox::new().context("failed to create sandbox")?;
+async fn test_no_duplicate_interface_names() {
+    let sandbox = netemul::TestSandbox::new().expect("create sandbox");
     let (realm, stack) = sandbox
         .new_netstack::<Netstack2, fidl_fuchsia_net_stack::StackMarker, _>(
             "no_duplicate_interface_names",
         )
-        .context("failed to create realm")?;
+        .expect("create realm");
     let netstack = realm
         .connect_to_protocol::<fidl_fuchsia_netstack::NetstackMarker>()
-        .context("failed to connect to netstack")?;
+        .expect("connect to protocol");
     // Create one endpoint of each type so we can use all the APIs that add an
     // interface. Note that fuchsia.net.stack/Stack.AddEthernetInterface does
     // not support setting the interface name.
     let eth_ep = sandbox
         .create_endpoint::<netemul::Ethernet, _>("eth-ep")
         .await
-        .context("failed to create ethernet endpoint")?;
+        .expect("create ethernet endpoint");
     let netdev_ep = sandbox
         .create_endpoint::<netemul::NetworkDevice, _>("netdev-ep")
         .await
-        .context("failed to create netdevice endpoint")?;
+        .expect("create netdevice endpoint");
 
     const IFNAME: &'static str = "testif";
     const TOPOPATH: &'static str = "/fake/topopath";
     const FILEPATH: &'static str = "/fake/filepath";
 
     // Add the first ep to the stack so it takes over the name.
+    let eth = eth_ep.get_ethernet().await.expect("connect to ethernet device");
     let _id: u32 = netstack
         .add_ethernet_device(
             TOPOPATH,
@@ -176,14 +173,15 @@ async fn test_no_duplicate_interface_names() -> Result {
                 filepath: FILEPATH.to_string(),
                 metric: 0,
             },
-            eth_ep.get_ethernet().await.context("failed to connect to ethernet device")?,
+            eth,
         )
         .await
-        .context("add_ethernet_device FIDL error")?
+        .expect("add_ethernet_device FIDL error")
         .map_err(fuchsia_zircon::Status::from_raw)
-        .context("add_ethernet_device error")?;
+        .expect("add_ethernet_device error");
 
     // Now try to add again with the same parameters and expect an error.
+    let eth = eth_ep.get_ethernet().await.expect("connect to ethernet device");
     let result = netstack
         .add_ethernet_device(
             TOPOPATH,
@@ -192,16 +190,16 @@ async fn test_no_duplicate_interface_names() -> Result {
                 filepath: FILEPATH.to_string(),
                 metric: 0,
             },
-            eth_ep.get_ethernet().await.context("failed to connect to ethernet device")?,
+            eth,
         )
         .await
-        .context("add_ethernet_device FIDL error")?
+        .expect("add_ethernet_device FIDL error")
         .map_err(fuchsia_zircon::Status::from_raw);
     assert_eq!(result, Err(fuchsia_zircon::Status::ALREADY_EXISTS));
 
     // Same for netdevice.
     let (network_device, mac) =
-        netdev_ep.get_netdevice().await.context("failed to connect to netdevice protocols")?;
+        netdev_ep.get_netdevice().await.expect("connect to netdevice protocols");
     let result = stack
         .add_interface(
             fidl_fuchsia_net_stack::InterfaceConfig {
@@ -215,32 +213,31 @@ async fn test_no_duplicate_interface_names() -> Result {
             ),
         )
         .await
-        .context("add_interface FIDL error")?;
+        .expect("add_interface FIDL error");
     assert_eq!(result, Err(fidl_fuchsia_net_stack::Error::AlreadyExists));
-
-    Ok(())
 }
 
 // TODO(https://fxbug.dev/75553): Remove this test when fuchsia.net.interfaces is supported in N3
 // and test_add_remove_interface can be parameterized on Netstack.
 #[variants_test]
-async fn add_ethernet_interface<N: Netstack>(name: &str) -> Result {
-    let sandbox = netemul::TestSandbox::new()?;
+async fn add_ethernet_interface<N: Netstack>(name: &str) {
+    let sandbox = netemul::TestSandbox::new().expect("create sandbox");
     let (realm, stack, device) = sandbox
         .new_netstack_and_device::<N, netemul::Ethernet, fidl_fuchsia_net_stack::StackMarker, _>(
             name,
         )
-        .await?;
+        .await
+        .expect("create realm");
 
-    let id = device.add_to_stack(&realm).await.context("failed to add device")?;
+    let id = device.add_to_stack(&realm).await.expect("add device");
 
     let interface = stack
         .list_interfaces()
         .await
-        .context("failed to list interfaces")?
+        .expect("list interfaces")
         .into_iter()
         .find(|interface| interface.id == id)
-        .ok_or(anyhow::format_err!("failed to find added ethernet interface"))?;
+        .expect("find added ethernet interface");
     assert!(
         !interface.properties.features.contains(fidl_fuchsia_hardware_ethernet::Features::Loopback),
         "unexpected interface features: ({:b}).contains({:b})",
@@ -248,27 +245,26 @@ async fn add_ethernet_interface<N: Netstack>(name: &str) -> Result {
         fidl_fuchsia_hardware_ethernet::Features::Loopback
     );
     assert_eq!(interface.properties.physical_status, fidl_fuchsia_net_stack::PhysicalStatus::Down);
-    Ok(())
 }
 
 #[variants_test]
-async fn add_del_interface_address<N: Netstack>(name: &str) -> Result {
-    let sandbox = netemul::TestSandbox::new().context("failed to create sandbox")?;
+async fn add_del_interface_address<N: Netstack>(name: &str) {
+    let sandbox = netemul::TestSandbox::new().expect("create sandbox");
     let (realm, stack, device) = sandbox
         .new_netstack_and_device::<N, netemul::Ethernet, fidl_fuchsia_net_stack::StackMarker, _>(
             name,
         )
-        .await?;
+        .await
+        .expect("create realm");
 
-    let id = device.add_to_stack(&realm).await.context("failed to add device")?;
+    let id = device.add_to_stack(&realm).await.expect("add device");
 
     // Netstack3 doesn't allow addresses to be added while link is down.
-    let () =
-        stack.enable_interface(id).await.squash_result().context("failed to enable interface")?;
-    let () = device.set_link_up(true).await.context("failed to bring device up")?;
+    let () = stack.enable_interface(id).await.squash_result().expect("enable interface");
+    let () = device.set_link_up(true).await.expect("bring device up");
     loop {
         // TODO(https://fxbug.dev/75553): Remove usage of get_interface_info.
-        let info = exec_fidl!(stack.get_interface_info(id), "failed to get interface")?;
+        let info = exec_fidl!(stack.get_interface_info(id), "get interface").unwrap();
         if info.properties.physical_status == net_stack::PhysicalStatus::Up {
             break;
         }
@@ -278,20 +274,20 @@ async fn add_del_interface_address<N: Netstack>(name: &str) -> Result {
     let res = stack
         .add_interface_address(id, &mut interface_address)
         .await
-        .context("failed to call add interface address")?;
+        .expect("add_interface_address");
     assert_eq!(res, Ok(()));
 
     // Should be an error the second time.
     let res = stack
         .add_interface_address(id, &mut interface_address)
         .await
-        .context("failed to call add interface address")?;
+        .expect("add_interface_address");
     assert_eq!(res, Err(fidl_fuchsia_net_stack::Error::AlreadyExists));
 
     let res = stack
         .add_interface_address(id + 1, &mut interface_address)
         .await
-        .context("failed to call add interface address")?;
+        .expect("add_interface_address");
     assert_eq!(res, Err(fidl_fuchsia_net_stack::Error::NotFound));
 
     let error = stack
@@ -300,20 +296,20 @@ async fn add_del_interface_address<N: Netstack>(name: &str) -> Result {
             &mut fidl_fuchsia_net::Subnet { prefix_len: 43, ..interface_address },
         )
         .await
-        .context("failed to call add interface address")?
+        .expect("add_interface_address")
         .unwrap_err();
     assert_eq!(error, fidl_fuchsia_net_stack::Error::InvalidArgs);
 
     let interface_state = realm
         .connect_to_protocol::<fidl_fuchsia_net_interfaces::StateMarker>()
-        .context("connect to fuchsia.net.interfaces/State service")?;
+        .expect("connect to protocol");
     let interface = fidl_fuchsia_net_interfaces_ext::existing(
         fidl_fuchsia_net_interfaces_ext::event_stream_from_state(&interface_state)
-            .expect("failed to create fuchsia.net.interfaces/Watcher event stream"),
+            .expect("create event stream"),
         fidl_fuchsia_net_interfaces_ext::InterfaceState::Unknown(id),
     )
     .await
-    .expect("failed to retrieve existing interface");
+    .expect("retrieve existing interface");
     // We use contains here because netstack can generate link-local addresses
     // that can't be predicted.
     matches::assert_matches!(
@@ -328,16 +324,16 @@ async fn add_del_interface_address<N: Netstack>(name: &str) -> Result {
     let res = stack
         .del_interface_address(id, &mut interface_address)
         .await
-        .context("failed to call del interface address")?;
+        .expect("del_interface_address");
     assert_eq!(res, Ok(()));
 
     let interface = fidl_fuchsia_net_interfaces_ext::existing(
         fidl_fuchsia_net_interfaces_ext::event_stream_from_state(&interface_state)
-            .expect("failed to create fuchsia.net.interfaces/Watcher event stream"),
+            .expect("create watcher event stream"),
         fidl_fuchsia_net_interfaces_ext::InterfaceState::Unknown(id),
     )
     .await
-    .expect("failed to retrieve existing interface");
+    .expect("retrieve existing interface");
     // We use contains here because netstack can generate link-local addresses
     // that can't be predicted.
     matches::assert_matches!(
@@ -348,8 +344,6 @@ async fn add_del_interface_address<N: Netstack>(name: &str) -> Result {
                 valid_until: zx::sys::ZX_TIME_INFINITE,
             })
     );
-
-    Ok(())
 }
 
 #[variants_test]
@@ -359,10 +353,10 @@ async fn interfaces_watcher_existing<N: Netstack>(name: &str) {
     // case since IPv6 LL addresses are subject to DAD and hard to test with
     // Existing events only.
 
-    let sandbox = netemul::TestSandbox::new().expect("failed to create sandbox");
+    let sandbox = netemul::TestSandbox::new().expect("create sandbox");
     let (realm, stack) = sandbox
         .new_netstack::<N, fidl_fuchsia_net_stack::StackMarker, _>(name)
-        .expect("failed to create netstack");
+        .expect("create realm");
 
     #[derive(Clone, Copy, Debug, PartialEq, Eq)]
     enum Expectation {
@@ -448,21 +442,16 @@ async fn interfaces_watcher_existing<N: Netstack>(name: &str) {
         let ep = sandbox
             .create_endpoint::<netemul::Ethernet, _>(format!("test-ep-{}", idx))
             .await
-            .expect("failed to create endpoint");
+            .expect("create endpoint");
 
-        let id = ep.add_to_stack(&realm).await.expect("failed to add device to stack");
+        let id = ep.add_to_stack(&realm).await.expect("add device to stack");
 
         // Netstack3 doesn't allow addresses to be added while link is down.
-        let () =
-            stack.enable_interface(id).await.squash_result().expect("failed to enable interface");
-        let () = ep.set_link_up(true).await.expect("failed to bring device up");
+        let () = stack.enable_interface(id).await.squash_result().expect("enable interface");
+        let () = ep.set_link_up(true).await.expect("bring device up");
         loop {
             // TODO(https://fxbug.dev/75553): Remove usage of get_interface_info.
-            let info = stack
-                .get_interface_info(id)
-                .await
-                .squash_result()
-                .expect("failed to get interface");
+            let info = stack.get_interface_info(id).await.squash_result().expect("get interface");
             if info.properties.physical_status == net_stack::PhysicalStatus::Up {
                 break;
             }
@@ -483,7 +472,7 @@ async fn interfaces_watcher_existing<N: Netstack>(name: &str) {
             .add_interface_address(id, &mut addr)
             .await
             .squash_result()
-            .expect("failed to add interface address");
+            .expect("add interface address");
 
         if has_default_ipv4_route {
             stack
@@ -515,22 +504,19 @@ async fn interfaces_watcher_existing<N: Netstack>(name: &str) {
 
     let interfaces_state = realm
         .connect_to_protocol::<fidl_fuchsia_net_interfaces::StateMarker>()
-        .expect("connect to fuchsia.net.interfaces/State protocol");
+        .expect("connect to protocol");
     let mut interfaces = fidl_fuchsia_net_interfaces_ext::existing(
         fidl_fuchsia_net_interfaces_ext::event_stream_from_state(&interfaces_state)
-            .expect("failed to create fuchsia.net.interfaces/Watcher event stream"),
+            .expect("create event stream"),
         HashMap::new(),
     )
     .await
-    .expect("existing interfaces");
+    .expect("fetch existing interfaces");
 
     for (id, expected) in expectations.iter() {
         assert_eq!(
             expected,
-            interfaces
-                .remove(id)
-                .as_ref()
-                .unwrap_or_else(|| panic!("failed to get interface {}", id))
+            interfaces.remove(id).as_ref().unwrap_or_else(|| panic!("get interface {}", id))
         );
     }
 
@@ -539,27 +525,27 @@ async fn interfaces_watcher_existing<N: Netstack>(name: &str) {
 
 #[variants_test]
 async fn interfaces_watcher_after_state_closed<N: Netstack>(name: &str) {
-    let sandbox = netemul::TestSandbox::new().expect("failed to create sandbox");
-    let realm = sandbox.create_netstack_realm::<N, _>(name).expect("failed to create netstack");
+    let sandbox = netemul::TestSandbox::new().expect("create sandbox");
+    let realm = sandbox.create_netstack_realm::<N, _>(name).expect("create realm");
 
     // New scope so when we get back the WatcherProxy, the StateProxy is closed.
     let watcher = {
         let interfaces_state = realm
             .connect_to_protocol::<fidl_fuchsia_net_interfaces::StateMarker>()
-            .expect("failed to connect fuchsia.net.interfaces/State");
+            .expect("connect to protocol");
         let (watcher, server) =
             fidl::endpoints::create_proxy::<fidl_fuchsia_net_interfaces::WatcherMarker>()
-                .expect("failed to create watcher proxy");
+                .expect("create watcher proxy");
         let () = interfaces_state
             .get_watcher(fidl_fuchsia_net_interfaces::WatcherOptions::EMPTY, server)
-            .expect("failed to get watcher");
+            .expect("get watcher");
         watcher
     };
 
     let stream = fidl_fuchsia_net_interfaces_ext::event_stream(watcher);
     let interfaces = fidl_fuchsia_net_interfaces_ext::existing(stream, HashMap::new())
         .await
-        .expect("failed to collect interfaces");
+        .expect("collect interfaces");
     // TODO(https://fxbug.dev/72378): N3 doesn't support loopback devices yet.
     let expected = match N::VERSION {
         NetstackVersion::Netstack2 => std::iter::once((
@@ -592,27 +578,30 @@ async fn interfaces_watcher_after_state_closed<N: Netstack>(name: &str) {
 }
 
 #[fuchsia_async::run_singlethreaded(test)]
-async fn set_remove_interface_address_errors() -> Result {
+async fn set_remove_interface_address_errors() {
     let name = "set_remove_interface_address_errors";
 
-    let sandbox = netemul::TestSandbox::new().context("failed to create sandbox")?;
+    let sandbox = netemul::TestSandbox::new().expect("create sandbox");
     let (realm, netstack) = sandbox
         .new_netstack::<Netstack2, fidl_fuchsia_netstack::NetstackMarker, _>(name)
-        .context("failed to create realm")?;
+        .expect("create realm");
 
     let interface_state = realm
         .connect_to_protocol::<fidl_fuchsia_net_interfaces::StateMarker>()
-        .context("connect to fuchsia.net.interfaces/State service")?;
+        .expect("connect to protocol");
     let interfaces = fidl_fuchsia_net_interfaces_ext::existing(
-        fidl_fuchsia_net_interfaces_ext::event_stream_from_state(&interface_state)?,
+        fidl_fuchsia_net_interfaces_ext::event_stream_from_state(&interface_state)
+            .expect("create event stream"),
         HashMap::new(),
     )
     .await
-    .context("failed to get existing interfaces")?;
-    let next_id = 1 + interfaces.keys().max().ok_or(anyhow::format_err!(
-        "failed to find any network interfaces (at least loopback should be present)"
-    ))?;
-    let next_id = next_id.try_into().with_context(|| format!("{} overflows id", next_id))?;
+    .expect("get existing interfaces");
+    let next_id = 1 + interfaces
+        .keys()
+        .max()
+        .expect("can't find any network interfaces (at least loopback should be present)");
+    let next_id =
+        next_id.try_into().unwrap_or_else(|e| panic!("{} try_into error: {:?}", next_id, e));
 
     let mut addr = fidl_ip!("0.0.0.0");
 
@@ -621,7 +610,7 @@ async fn set_remove_interface_address_errors() -> Result {
     let error = netstack
         .set_interface_address(next_id, &mut addr, prefix_len)
         .await
-        .context("failed to call set interface address")?;
+        .expect("set_interface_address");
     assert_eq!(
         error,
         fidl_fuchsia_netstack::NetErr {
@@ -633,7 +622,7 @@ async fn set_remove_interface_address_errors() -> Result {
     let error = netstack
         .remove_interface_address(next_id, &mut addr, prefix_len)
         .await
-        .context("failed to call remove interface address")?;
+        .expect("remove_interface_address");
     assert_eq!(
         error,
         fidl_fuchsia_netstack::NetErr {
@@ -647,7 +636,7 @@ async fn set_remove_interface_address_errors() -> Result {
     let error = netstack
         .set_interface_address(next_id, &mut addr, prefix_len)
         .await
-        .context("failed to call set interface address")?;
+        .expect("set_interface_address");
     assert_eq!(
         error,
         fidl_fuchsia_netstack::NetErr {
@@ -659,7 +648,7 @@ async fn set_remove_interface_address_errors() -> Result {
     let error = netstack
         .remove_interface_address(next_id, &mut addr, prefix_len)
         .await
-        .context("failed to call remove interface address")?;
+        .expect("remove_interface_address");
     assert_eq!(
         error,
         fidl_fuchsia_netstack::NetErr {
@@ -667,14 +656,12 @@ async fn set_remove_interface_address_errors() -> Result {
             message: "prefix length exceeds address length".to_string(),
         },
     );
-
-    Ok(())
 }
 
 #[fuchsia_async::run_singlethreaded(test)]
 async fn test_log_packets() {
     let name = "test_log_packets";
-    let sandbox = netemul::TestSandbox::new().expect("failed to create sandbox");
+    let sandbox = netemul::TestSandbox::new().expect("create sandbox");
     // Modify debug netstack args so that it does not log packets.
     let (realm, stack_log) = {
         let mut netstack =
@@ -684,20 +671,19 @@ async fn test_log_packets() {
             std::mem::replace(program_args, Some(vec!["--verbosity=debug".to_string()])),
             None,
         );
-        let realm = sandbox.create_realm(name, [netstack]).expect("failed to create realm");
+        let realm = sandbox.create_realm(name, [netstack]).expect("create realm");
 
-        let netstack_proxy = realm
-            .connect_to_protocol::<net_stack::LogMarker>()
-            .expect("failed to connect to netstack");
+        let netstack_proxy =
+            realm.connect_to_protocol::<net_stack::LogMarker>().expect("connect to netstack");
         (realm, netstack_proxy)
     };
-    let () = stack_log.set_log_packets(true).await.expect("failed to enable packet logging");
+    let () = stack_log.set_log_packets(true).await.expect("enable packet logging");
 
     let sock =
         fuchsia_async::net::UdpSocket::bind_in_realm(&realm, std_socket_addr!("127.0.0.1:0"))
             .await
-            .expect("failed to create socket");
-    let addr = sock.local_addr().expect("failed to get bound socket address");
+            .expect("create socket");
+    let addr = sock.local_addr().expect("get bound socket address");
     const PAYLOAD: [u8; 4] = [1u8, 2, 3, 4];
     let sent = sock.send_to(&PAYLOAD[..], addr).await.expect("send_to failed");
     assert_eq!(sent, PAYLOAD.len());
@@ -709,11 +695,11 @@ async fn test_log_packets() {
 
     let netstack_moniker = get_component_moniker(&realm, constants::netstack::COMPONENT_NAME)
         .await
-        .expect("failed to get netstack moniker");
+        .expect("get netstack moniker");
     let stream = diagnostics_reader::ArchiveReader::new()
         .select_all_for_moniker(&netstack_moniker)
         .snapshot_then_subscribe()
-        .expect("subscribed");
+        .expect("subscribe to snapshot");
 
     let () = async_utils::fold::try_fold_while(stream, patterns, |mut patterns, data| {
         let () = patterns
@@ -725,7 +711,7 @@ async fn test_log_packets() {
         })
     })
     .await
-    .expect("failed to observe expected patterns")
+    .expect("observe expected patterns")
     .short_circuited()
     .unwrap_or_else(|patterns| {
         panic!("log stream ended while still waiting for patterns {:?}", patterns)
@@ -734,35 +720,33 @@ async fn test_log_packets() {
 
 // TODO(https://fxbug.dev/75554): Remove when {list_interfaces,get_interface_info} are removed.
 #[variants_test]
-async fn get_interface_info_not_found<N: Netstack>(name: &str) -> Result {
-    let sandbox = netemul::TestSandbox::new().context("failed to create sandbox")?;
+async fn get_interface_info_not_found<N: Netstack>(name: &str) {
+    let sandbox = netemul::TestSandbox::new().expect("create sandbox");
     let (_realm, stack) = sandbox
         .new_netstack::<N, fidl_fuchsia_net_stack::StackMarker, _>(name)
-        .context("failed to create realm")?;
+        .expect("create realm");
 
-    let interfaces = stack.list_interfaces().await.context("failed to list interfaces")?;
+    let interfaces = stack.list_interfaces().await.expect("list interfaces");
     let max_id = interfaces.iter().map(|interface| interface.id).max().unwrap_or(0);
-    let res =
-        stack.get_interface_info(max_id + 1).await.context("failed to call get interface info")?;
+    let res = stack.get_interface_info(max_id + 1).await.expect("get_interface_info");
     assert_eq!(res, Err(fidl_fuchsia_net_stack::Error::NotFound));
-    Ok(())
 }
 
 #[fuchsia_async::run_singlethreaded(test)]
-async fn disable_interface_loopback() -> Result {
+async fn disable_interface_loopback() {
     let name = "disable_interface_loopback";
 
-    let sandbox = netemul::TestSandbox::new().context("failed to create sandbox")?;
+    let sandbox = netemul::TestSandbox::new().expect("create sandbox");
     let (realm, stack) = sandbox
         .new_netstack::<Netstack2, fidl_fuchsia_net_stack::StackMarker, _>(name)
-        .context("failed to create realm")?;
+        .expect("create realm");
 
     let interface_state = realm
         .connect_to_protocol::<fidl_fuchsia_net_interfaces::StateMarker>()
-        .context("connect to fuchsia.net.interfaces/State service")?;
+        .expect("connect to protocol");
 
     let stream = fidl_fuchsia_net_interfaces_ext::event_stream_from_state(&interface_state)
-        .context("failed to get interface event stream")?;
+        .expect("get interface event stream");
     pin_utils::pin_mut!(stream);
 
     let loopback_id = match stream.try_next().await {
@@ -787,7 +771,7 @@ async fn disable_interface_loopback() -> Result {
         event => panic!("got {:?}, want idle event", event),
     };
 
-    let () = exec_fidl!(stack.disable_interface(loopback_id), "failed to disable interface")?;
+    let () = exec_fidl!(stack.disable_interface(loopback_id), "disable interface").unwrap();
 
     let () = match stream.try_next().await {
         Ok(Some(fidl_fuchsia_net_interfaces::Event::Changed(
@@ -795,18 +779,16 @@ async fn disable_interface_loopback() -> Result {
         ))) if id == loopback_id => (),
         event => panic!("got {:?}, want loopback interface offline event", event),
     };
-
-    Ok(())
 }
 
 #[fuchsia_async::run_singlethreaded(test)]
 async fn debug_interfaces_get_admin_unknown() {
     let name = "debug_interfaces_get_admin_unknown";
 
-    let sandbox = netemul::TestSandbox::new().expect("new sandbox");
+    let sandbox = netemul::TestSandbox::new().expect("create sandbox");
     let (realm, _) = sandbox
         .new_netstack::<Netstack2, fidl_fuchsia_net_stack::StackMarker, _>(name)
-        .expect("new netstack");
+        .expect("create realm");
 
     let interface_state = realm
         .connect_to_protocol::<fidl_fuchsia_net_interfaces::StateMarker>()
@@ -814,11 +796,11 @@ async fn debug_interfaces_get_admin_unknown() {
 
     let interfaces = fidl_fuchsia_net_interfaces_ext::existing(
         fidl_fuchsia_net_interfaces_ext::event_stream_from_state(&interface_state)
-            .expect("failed to create fuchsia.net.interfaces/Watcher event stream"),
+            .expect("create watcher event stream"),
         HashMap::new(),
     )
     .await
-    .expect("initial");
+    .expect("get starting state");
     assert_eq!(interfaces.len(), 1);
     let id = interfaces
         .keys()
@@ -834,7 +816,7 @@ async fn debug_interfaces_get_admin_unknown() {
         let (control, server) =
             fidl::endpoints::create_proxy::<fidl_fuchsia_net_interfaces_admin::ControlMarker>()
                 .expect("create proxy");
-        let () = debug_control.get_admin(*id + 1, server).expect("get admin");
+        let () = debug_control.get_admin(*id + 1, server).expect("get admin failed");
         matches::assert_matches!(
             control.take_event_stream().try_collect::<Vec<_>>().await.as_ref().map(Vec::as_slice),
             // TODO(https://fxbug.dev/76695): Sending epitaphs not supported in Go.
@@ -854,7 +836,7 @@ async fn add_address(
     let (address_state_provider, server) = fidl::endpoints::create_proxy::<
         fidl_fuchsia_net_interfaces_admin::AddressStateProviderMarker,
     >()
-    .expect("create AddressStateProvider proxy");
+    .expect("create proxy");
     let () = control
         .add_address(&mut address, address_parameters, server)
         .expect("Control.AddAddress FIDL error");
@@ -877,7 +859,7 @@ async fn add_address(
 async fn interfaces_admin_add_address_errors() {
     let name = "interfaces_admin_add_address_errors";
 
-    let sandbox = netemul::TestSandbox::new().expect("new sandbox");
+    let sandbox = netemul::TestSandbox::new().expect("create sandbox");
     let (realm, _) = sandbox
         .new_netstack::<Netstack2, fidl_fuchsia_net_stack::StackMarker, _>(name)
         .expect("new netstack");
@@ -888,7 +870,7 @@ async fn interfaces_admin_add_address_errors() {
 
     let interfaces = fidl_fuchsia_net_interfaces_ext::existing(
         fidl_fuchsia_net_interfaces_ext::event_stream_from_state(&interface_state)
-            .expect("failed to create fuchsia.net.interfaces/Watcher event stream"),
+            .expect("create watcher event stream"),
         HashMap::new(),
     )
     .await
@@ -945,11 +927,11 @@ async fn interfaces_admin_add_address_errors() {
                 (fidl_fuchsia_net::InterfaceAddress::Ipv4(fidl_fuchsia_net::Ipv4AddressWithPrefix {
                     addr,
                     prefix_len,
-                }), v4+1, v6)
+                }), v4 + 1, v6)
             }
             fidl_fuchsia_net::IpAddress::Ipv6(addr) => {
                 assert!(net_types::ip::Ipv6Addr::from_bytes(addr.addr).is_loopback());
-                (fidl_fuchsia_net::InterfaceAddress::Ipv6(addr), v4, v6+1)
+                (fidl_fuchsia_net::InterfaceAddress::Ipv6(addr), v4, v6 + 1)
             }
         };
         let control = &control;
@@ -1024,7 +1006,7 @@ async fn interfaces_admin_add_address_errors() {
             VALID_ADDRESS_PARAMETERS,
         )
         .await
-        .expect("failed to add address");
+        .expect("add address");
         let () = address_state_provider
             .update_address_properties(fidl_fuchsia_net_interfaces_admin::AddressProperties::EMPTY)
             .await
@@ -1046,13 +1028,12 @@ async fn interfaces_admin_add_address_removal<E: netemul::Endpoint>(name: &str) 
     let (realm, stack, device) = sandbox
         .new_netstack_and_device::<Netstack2, E, fidl_fuchsia_net_stack::StackMarker, _>(name)
         .await
-        .expect("failed to create netstack realm");
-    let interface =
-        device.into_interface_in_realm(&realm).await.expect("failed to add endpoint to Netstack");
+        .expect("create realm");
+    let interface = device.into_interface_in_realm(&realm).await.expect("add endpoint to Netstack");
     let id = interface.id();
 
-    let () = interface.enable_interface().await.expect("failed to enable interface");
-    let () = interface.set_link_up(true).await.expect("failed to bring device up");
+    let () = interface.enable_interface().await.expect("enable interface");
+    let () = interface.set_link_up(true).await.expect("bring device up");
 
     let debug_control = realm
         .connect_to_protocol::<fidl_fuchsia_net_debug::InterfacesMarker>()
@@ -1087,7 +1068,7 @@ async fn interfaces_admin_add_address_removal<E: netemul::Endpoint>(name: &str) 
             .take_event_stream()
             .try_next()
             .await
-            .expect("failed to read AddressStateProvider event")
+            .expect("read AddressStateProvider event")
             .expect("AddressStateProvider event stream ended unexpectedly");
         assert_eq!(reason, fidl_fuchsia_net_interfaces_admin::AddressRemovalReason::UserRemoved);
     }
@@ -1113,7 +1094,7 @@ async fn interfaces_admin_add_address_removal<E: netemul::Endpoint>(name: &str) 
             .take_event_stream()
             .try_next()
             .await
-            .expect("failed to read AddressStateProvider event")
+            .expect("read AddressStateProvider event")
             .expect("AddressStateProvider event stream ended unexpectedly");
         assert_eq!(
             reason,
@@ -1136,9 +1117,8 @@ async fn interfaces_admin_add_address_offline<E: netemul::Endpoint>(name: &str) 
     let (realm, _, device) = sandbox
         .new_netstack_and_device::<Netstack2, E, fidl_fuchsia_net_stack::StackMarker, _>(name)
         .await
-        .expect("failed to create netstack realm");
-    let interface =
-        device.into_interface_in_realm(&realm).await.expect("failed to add endpoint to Netstack");
+        .expect("create netstack realm");
+    let interface = device.into_interface_in_realm(&realm).await.expect("add endpoint to Netstack");
     let id = interface.id();
 
     let debug_control = realm
@@ -1174,17 +1154,17 @@ async fn interfaces_admin_add_address_offline<E: netemul::Endpoint>(name: &str) 
         fidl_fuchsia_net_interfaces_admin::AddressAssignmentState::Unavailable,
     )
     .await
-    .expect("failed to wait for UNAVAILABLE address assignment state");
+    .expect("wait for UNAVAILABLE address assignment state");
 
-    let () = interface.enable_interface().await.expect("failed to enable interface");
-    let () = interface.set_link_up(true).await.expect("failed to bring device up");
+    let () = interface.enable_interface().await.expect("enable interface");
+    let () = interface.set_link_up(true).await.expect("bring device up");
 
     let () = fidl_fuchsia_net_interfaces_ext::admin::wait_assignment_state(
         &mut state_stream,
         fidl_fuchsia_net_interfaces_admin::AddressAssignmentState::Assigned,
     )
     .await
-    .expect("failed to wait for ASSIGNED address assignment state");
+    .expect("wait for ASSIGNED address assignment state");
 }
 
 #[fuchsia_async::run_singlethreaded(test)]
@@ -1202,7 +1182,7 @@ async fn interfaces_admin_add_address_success() {
 
     let interfaces = fidl_fuchsia_net_interfaces_ext::existing(
         fidl_fuchsia_net_interfaces_ext::event_stream_from_state(&interface_state)
-            .expect("failed to create fuchsia.net.interfaces/Watcher event stream"),
+            .expect("create watcher event stream"),
         HashMap::new(),
     )
     .await
@@ -1219,7 +1199,7 @@ async fn interfaces_admin_add_address_success() {
 
     let netstack = realm
         .connect_to_protocol::<fidl_fuchsia_netstack::NetstackMarker>()
-        .expect("failed to connect to fuchsia.netstack/Netstack");
+        .expect("connect to protocol");
 
     let (control, server) =
         fidl::endpoints::create_proxy::<fidl_fuchsia_net_interfaces_admin::ControlMarker>()
@@ -1252,7 +1232,7 @@ async fn interfaces_admin_add_address_success() {
 
         let (watcher, server_endpoint) =
             ::fidl::endpoints::create_proxy::<fidl_fuchsia_net_interfaces::WatcherMarker>()
-                .expect("failed to create fuchsia.net.interfaces/Watcher proxy endpoints");
+                .expect("create watcher proxy endpoints");
         let () = interface_state
             .get_watcher(fidl_fuchsia_net_interfaces::WatcherOptions::EMPTY, server_endpoint)
             .expect("error calling fuchsia.net.interfaces/State.GetWatcher");
@@ -1278,7 +1258,7 @@ async fn interfaces_admin_add_address_success() {
             },
         )
         .await
-        .expect("failed to wait for address presence");
+        .expect("wait for address presence");
 
         // Explicitly drop the AddressStateProvider channel to cause address deletion.
         std::mem::drop(address_state_provider);
@@ -1304,7 +1284,7 @@ async fn interfaces_admin_add_address_success() {
             },
         )
         .await
-        .expect("failed to wait for address absence");
+        .expect("wait for address absence");
     }
 
     // TODO(https://fxbug.dev/81929): This test case currently tests that when
@@ -1329,7 +1309,7 @@ async fn interfaces_admin_add_address_success() {
         let mut properties = fidl_fuchsia_net_interfaces_ext::InterfaceState::Unknown(*id);
         let () = fidl_fuchsia_net_interfaces_ext::wait_interface_with_id(
             fidl_fuchsia_net_interfaces_ext::event_stream_from_state(&interface_state)
-                .expect("failed to create interface event stream"),
+                .expect("create interface event stream"),
             &mut properties,
             |fidl_fuchsia_net_interfaces_ext::Properties {
                  id: _,
@@ -1349,7 +1329,7 @@ async fn interfaces_admin_add_address_success() {
             },
         )
         .await
-        .expect("failed to wait for address presence");
+        .expect("wait for address presence");
     }
 
     // Adding a valid address and detaching does not cause the address to be removed.
@@ -1374,7 +1354,7 @@ async fn interfaces_admin_add_address_success() {
         let mut properties = fidl_fuchsia_net_interfaces_ext::InterfaceState::Unknown(*id);
         let () = fidl_fuchsia_net_interfaces_ext::wait_interface_with_id(
             fidl_fuchsia_net_interfaces_ext::event_stream_from_state(&interface_state)
-                .expect("failed to create interface event stream"),
+                .expect("create interface event stream"),
             &mut properties,
             |fidl_fuchsia_net_interfaces_ext::Properties {
                  id: _,
@@ -1398,29 +1378,30 @@ async fn interfaces_admin_add_address_success() {
             Ok(())
         })
         .await
-        .expect("failed to wait for address to not be removed");
+        .expect("wait for address to not be removed");
     }
 }
 
 /// Tests that adding an interface causes an interface changed event.
 #[variants_test]
-async fn test_add_remove_interface<E: netemul::Endpoint>(name: &str) -> Result {
-    let sandbox = netemul::TestSandbox::new().context("failed to create sandbox")?;
+async fn test_add_remove_interface<E: netemul::Endpoint>(name: &str) {
+    let sandbox = netemul::TestSandbox::new().expect("create sandbox");
     let (realm, stack, device) = sandbox
         .new_netstack_and_device::<Netstack2, E, fidl_fuchsia_net_stack::StackMarker, _>(name)
         .await
-        .context("failed to create netstack realm")?;
+        .expect("create realm");
 
-    let id = device.add_to_stack(&realm).await.context("failed to add device")?;
+    let id = device.add_to_stack(&realm).await.expect("add device");
 
     let interface_state = realm
         .connect_to_protocol::<fidl_fuchsia_net_interfaces::StateMarker>()
-        .context("connect to fuchsia.net.interfaces/State service")?;
+        .expect("connect to protocol");
     let (watcher, watcher_server) =
-        ::fidl::endpoints::create_proxy::<fidl_fuchsia_net_interfaces::WatcherMarker>()?;
+        ::fidl::endpoints::create_proxy::<fidl_fuchsia_net_interfaces::WatcherMarker>()
+            .expect("create watcher");
     let () = interface_state
         .get_watcher(fidl_fuchsia_net_interfaces::WatcherOptions::EMPTY, watcher_server)
-        .context("failed to initialize interface watcher")?;
+        .expect("initialize interface watcher");
 
     let mut if_map = HashMap::new();
     let () = fidl_fuchsia_net_interfaces_ext::wait_interface(
@@ -1430,13 +1411,9 @@ async fn test_add_remove_interface<E: netemul::Endpoint>(name: &str) -> Result {
         |if_map| if_map.contains_key(&id).then(|| ()),
     )
     .await
-    .context("failed to observe interface addition")?;
+    .expect("observe interface addition");
 
-    let () = stack
-        .del_ethernet_interface(id)
-        .await
-        .squash_result()
-        .context("failed to delete device")?;
+    let () = stack.del_ethernet_interface(id).await.squash_result().expect("delete device");
 
     let () = fidl_fuchsia_net_interfaces_ext::wait_interface(
         fidl_fuchsia_net_interfaces_ext::event_stream(watcher.clone()),
@@ -1445,39 +1422,34 @@ async fn test_add_remove_interface<E: netemul::Endpoint>(name: &str) -> Result {
         |if_map| (!if_map.contains_key(&id)).then(|| ()),
     )
     .await
-    .context("failed to observe interface addition")?;
-
-    Ok(())
+    .expect("observe interface addition");
 }
 
 /// Tests that if a device closes (is removed from the system), the
 /// corresponding Netstack interface is deleted.
 /// if `enabled` is `true`, enables the interface before closing the device.
-async fn test_close_interface<E: netemul::Endpoint>(enabled: bool, name: &str) -> Result {
-    let sandbox = netemul::TestSandbox::new().context("failed to create sandbox")?;
+async fn test_close_interface<E: netemul::Endpoint>(enabled: bool, name: &str) {
+    let sandbox = netemul::TestSandbox::new().expect("create sandbox");
     let (realm, stack, device) = sandbox
         .new_netstack_and_device::<Netstack2, E, fidl_fuchsia_net_stack::StackMarker, _>(name)
         .await
-        .context("failed to create netstack realm")?;
+        .expect("create realm");
 
-    let id = device.add_to_stack(&realm).await.context("failed to add device")?;
+    let id = device.add_to_stack(&realm).await.expect("add device");
 
     if enabled {
-        let () = stack
-            .enable_interface(id)
-            .await
-            .squash_result()
-            .context("failed to enable interface")?;
+        let () = stack.enable_interface(id).await.squash_result().expect("enable interface");
     }
 
     let interface_state = realm
         .connect_to_protocol::<fidl_fuchsia_net_interfaces::StateMarker>()
-        .context("connect to fuchsia.net.interfaces/State service")?;
+        .expect("connect to protocol");
     let (watcher, watcher_server) =
-        ::fidl::endpoints::create_proxy::<fidl_fuchsia_net_interfaces::WatcherMarker>()?;
+        ::fidl::endpoints::create_proxy::<fidl_fuchsia_net_interfaces::WatcherMarker>()
+            .expect("create watcher");
     let () = interface_state
         .get_watcher(fidl_fuchsia_net_interfaces::WatcherOptions::EMPTY, watcher_server)
-        .context("failed to initialize interface watcher")?;
+        .expect("initialize interface watcher");
     let mut if_map = HashMap::new();
     let () = fidl_fuchsia_net_interfaces_ext::wait_interface(
         fidl_fuchsia_net_interfaces_ext::event_stream(watcher.clone()),
@@ -1486,7 +1458,7 @@ async fn test_close_interface<E: netemul::Endpoint>(enabled: bool, name: &str) -
         |if_map| if_map.contains_key(&id).then(|| ()),
     )
     .await
-    .context("failed to observe interface addition")?;
+    .expect("observe interface addition");
 
     // Drop the device, that should cause the interface to be deleted.
     std::mem::drop(device);
@@ -1501,50 +1473,47 @@ async fn test_close_interface<E: netemul::Endpoint>(enabled: bool, name: &str) -
         },
     )
     .await
-    .context("failed to observe interface removal")?;
-
-    Ok(())
+    .expect("observe interface removal");
 }
 
 #[variants_test]
-async fn test_close_disabled_interface<E: netemul::Endpoint>(name: &str) -> Result {
+async fn test_close_disabled_interface<E: netemul::Endpoint>(name: &str) {
     test_close_interface::<E>(false, name).await
 }
 
 #[variants_test]
-async fn test_close_enabled_interface<E: netemul::Endpoint>(name: &str) -> Result {
+async fn test_close_enabled_interface<E: netemul::Endpoint>(name: &str) {
     test_close_interface::<E>(true, name).await
 }
 
 /// Tests races between device link down and close.
 #[variants_test]
-async fn test_down_close_race<E: netemul::Endpoint>(name: &str) -> Result {
-    let sandbox = netemul::TestSandbox::new().context("failed to create sandbox")?;
-    let realm = sandbox
-        .create_netstack_realm::<Netstack2, _>(name)
-        .context("failed to create netstack realm")?;
+async fn test_down_close_race<E: netemul::Endpoint>(name: &str) {
+    let sandbox = netemul::TestSandbox::new().expect("create sandbox");
+    let realm = sandbox.create_netstack_realm::<Netstack2, _>(name).expect("create netstack realm");
     let interface_state = realm
         .connect_to_protocol::<fidl_fuchsia_net_interfaces::StateMarker>()
-        .context("connect to fuchsia.net.interfaces/State service")?;
+        .expect("connect to protocol");
     let (watcher, watcher_server) =
-        ::fidl::endpoints::create_proxy::<fidl_fuchsia_net_interfaces::WatcherMarker>()?;
+        ::fidl::endpoints::create_proxy::<fidl_fuchsia_net_interfaces::WatcherMarker>()
+            .expect("create watcher");
     let () = interface_state
         .get_watcher(fidl_fuchsia_net_interfaces::WatcherOptions::EMPTY, watcher_server)
-        .context("failed to initialize interface watcher")?;
+        .expect("initialize interface watcher");
     let mut if_map = HashMap::new();
 
     for _ in 0..10u64 {
         let dev = sandbox
             .create_endpoint::<E, _>("ep")
             .await
-            .context("failed to create endpoint")?
+            .expect("create endpoint")
             .into_interface_in_realm(&realm)
             .await
-            .context("failed to add endpoint to Netstack")?;
+            .expect("add endpoint to Netstack");
 
-        let () = dev.enable_interface().await.context("failed to enable interface")?;
-        let () = dev.start_dhcp().await.context("failed to start DHCP")?;
-        let () = dev.set_link_up(true).await.context("failed to bring device up")?;
+        let () = dev.enable_interface().await.expect("enable interface");
+        let () = dev.start_dhcp().await.expect("start DHCP");
+        let () = dev.set_link_up(true).await.expect("bring device up");
 
         let id = dev.id();
         // Wait until the interface is installed and the link state is up.
@@ -1559,12 +1528,12 @@ async fn test_down_close_race<E: netemul::Endpoint>(name: &str) -> Result {
             },
         )
         .await
-        .context("failed to observe interface online")?;
+        .expect("observe interface online");
 
         // Here's where we cause the race. We bring the device's link down
         // and drop it right after; the two signals will race to reach
         // Netstack.
-        let () = dev.set_link_up(false).await.context("failed to bring link down")?;
+        let () = dev.set_link_up(false).await.expect("bring link down");
         std::mem::drop(dev);
 
         // Wait until the interface is removed from Netstack cleanly.
@@ -1577,20 +1546,17 @@ async fn test_down_close_race<E: netemul::Endpoint>(name: &str) -> Result {
             },
         )
         .await
-        .context("failed to observe interface removal")?;
+        .expect("observe interface removal");
     }
-    Ok(())
 }
 
 /// Tests races between data traffic and closing a device.
 #[variants_test]
-async fn test_close_data_race<E: netemul::Endpoint>(name: &str) -> Result {
-    let sandbox = netemul::TestSandbox::new().context("failed to create sandbox")?;
-    let net = sandbox.create_network("net").await.context("failed to create network")?;
-    let fake_ep = net.create_fake_endpoint().context("failed to create fake endpoint")?;
-    let realm = sandbox
-        .create_netstack_realm::<Netstack2, _>(name)
-        .context("failed to create netstack realm")?;
+async fn test_close_data_race<E: netemul::Endpoint>(name: &str) {
+    let sandbox = netemul::TestSandbox::new().expect("create sandbox");
+    let net = sandbox.create_network("net").await.expect("create network");
+    let fake_ep = net.create_fake_endpoint().expect("create fake endpoint");
+    let realm = sandbox.create_netstack_realm::<Netstack2, _>(name).expect("create netstack realm");
 
     // NOTE: We only run this test with IPv4 sockets since we only care about
     // exciting the tx path, the domain is irrelevant.
@@ -1601,25 +1567,26 @@ async fn test_close_data_race<E: netemul::Endpoint>(name: &str) -> Result {
 
     let interface_state = realm
         .connect_to_protocol::<fidl_fuchsia_net_interfaces::StateMarker>()
-        .context("connect to fuchsia.net.interfaces/State service")?;
+        .expect("connect to protocol");
     let (watcher, watcher_server) =
-        ::fidl::endpoints::create_proxy::<fidl_fuchsia_net_interfaces::WatcherMarker>()?;
+        ::fidl::endpoints::create_proxy::<fidl_fuchsia_net_interfaces::WatcherMarker>()
+            .expect("create watcher");
     let () = interface_state
         .get_watcher(fidl_fuchsia_net_interfaces::WatcherOptions::EMPTY, watcher_server)
-        .context("failed to initialize interface watcher")?;
+        .expect("initialize interface watcher");
     let mut if_map = HashMap::new();
     for _ in 0..10u64 {
         let dev = net
             .create_endpoint::<E, _>("ep")
             .await
-            .context("failed to create endpoint")?
+            .expect("create endpoint")
             .into_interface_in_realm(&realm)
             .await
-            .context("failed to add endpoint to Netstack")?;
+            .expect("add endpoint to Netstack");
 
-        let () = dev.enable_interface().await.context("failed to enable interface")?;
-        let () = dev.set_link_up(true).await.context("failed to bring device up")?;
-        let () = dev.add_ip_addr(DEVICE_ADDRESS).await.context("failed to add address")?;
+        let () = dev.enable_interface().await.expect("enable interface");
+        let () = dev.set_link_up(true).await.expect("bring device up");
+        let () = dev.add_ip_addr(DEVICE_ADDRESS).await.expect("add address");
 
         let id = dev.id();
         // Wait until the interface is installed and the link state is up.
@@ -1634,7 +1601,7 @@ async fn test_close_data_race<E: netemul::Endpoint>(name: &str) -> Result {
             },
         )
         .await
-        .context("failed to observe interface online")?;
+        .expect("observe interface online");
         // Create a socket and start sending data on it nonstop.
         let fidl_fuchsia_net_ext::IpAddress(bind_addr) = DEVICE_ADDRESS.addr.into();
         let sock = fuchsia_async::net::UdpSocket::bind_in_realm(
@@ -1642,7 +1609,7 @@ async fn test_close_data_race<E: netemul::Endpoint>(name: &str) -> Result {
             std::net::SocketAddr::new(bind_addr, 0),
         )
         .await
-        .context("failed to create socket")?;
+        .expect("create socket");
 
         // Keep sending data until writing to the socket fails.
         let io_fut = async {
@@ -1666,7 +1633,7 @@ async fn test_close_data_race<E: netemul::Endpoint>(name: &str) -> Result {
                     // the rx path.
                     .write(&[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16])
                     .await
-                    .context("failed to send frame on fake_ep")?;
+                    .expect("send frame on fake_ep");
 
                 // Wait on a short timer to avoid too much log noise when
                 // running the test.
@@ -1696,57 +1663,57 @@ async fn test_close_data_race<E: netemul::Endpoint>(name: &str) -> Result {
 
         let (io_result, iface_dropped, ()) =
             futures::future::join3(io_fut, iface_dropped, drop_fut).await;
-        let () = io_result.context("unexpected error on io future")?;
-        let () = iface_dropped.context("failed to observe interface removal")?;
+        let () = io_result.expect("unexpected error on io future");
+        let () = iface_dropped.expect("observe interface removal");
     }
-    Ok(())
 }
 
 /// Tests that competing interface change events are reported by
 /// fuchsia.net.interfaces/Watcher in the correct order.
 #[fuchsia_async::run_singlethreaded(test)]
-async fn test_interfaces_watcher_race() -> Result {
-    let sandbox = netemul::TestSandbox::new().context("failed to create sandbox")?;
+async fn test_interfaces_watcher_race() {
+    let sandbox = netemul::TestSandbox::new().expect("create sandbox");
     let realm = sandbox
         .create_netstack_realm::<Netstack2, _>("interfaces_watcher_race")
-        .context("failed to create netstack realm")?;
+        .expect("create netstack realm");
     let interface_state = realm
         .connect_to_protocol::<fidl_fuchsia_net_interfaces::StateMarker>()
-        .context("failed to connect to fuchsia.net.interfaces/State")?;
+        .expect("connect to protocol");
     for _ in 0..100 {
         let (watcher, server) =
-            fidl::endpoints::create_proxy::<fidl_fuchsia_net_interfaces::WatcherMarker>()?;
+            fidl::endpoints::create_proxy::<fidl_fuchsia_net_interfaces::WatcherMarker>()
+                .expect("create watcher");
         let () = interface_state
             .get_watcher(fidl_fuchsia_net_interfaces::WatcherOptions::EMPTY, server)
-            .context("failed to initialize interface watcher")?;
+            .expect("initialize interface watcher");
 
         let ep = sandbox
             // We don't need to run variants for this test, all we care about is
             // the Netstack race. Use NetworkDevice because it's lighter weight.
             .create_endpoint::<netemul::NetworkDevice, _>("ep")
             .await
-            .context("failed to create fixed ep")?
+            .expect("create fixed ep")
             .into_interface_in_realm(&realm)
             .await
-            .context("failed to install in realm")?;
+            .expect("install in realm");
 
         const ADDR: fidl_fuchsia_net::Subnet = fidl_subnet!("192.168.0.1/24");
 
         // Bring the link up, enable the interface, and add an IP address
         // "non-sequentially" (as much as possible) to cause races in Netstack
         // when reporting events.
-        let ((), (), ()) = futures::future::try_join3(
-            ep.set_link_up(true).map(|r| r.context("failed to bring link up")),
-            ep.enable_interface().map(|r| r.context("failed to enable interface")),
-            ep.add_ip_addr(ADDR).map(|r| r.context("failed to add address")),
+        let ((), (), ()) = futures::future::join3(
+            ep.set_link_up(true).map(|r| r.expect("bring link up")),
+            ep.enable_interface().map(|r| r.expect("enable interface")),
+            ep.add_ip_addr(ADDR).map(|r| r.expect("add address")),
         )
-        .await?;
+        .await;
 
         let id = ep.id();
-        let () = futures::stream::try_unfold(
+        let () = futures::stream::unfold(
             (watcher, false, false, false),
             |(watcher, present, up, has_addr)| async move {
-                let event = watcher.watch().await.context("failed to watch")?;
+                let event = watcher.watch().await.expect("watch");
 
                 let (mut new_present, mut new_up, mut new_has_addr) = (present, up, has_addr);
                 match event {
@@ -1810,40 +1777,41 @@ async fn test_interfaces_watcher_race() -> Result {
                     // Address should not disappear.
                     assert!(new_has_addr, "out of order events, address disappeared");
                 }
-                Result::Ok(if new_present && new_up && new_has_addr {
+                if new_present && new_up && new_has_addr {
                     // We got everything we wanted, end the stream.
                     None
                 } else {
                     // Continue folding with the new state.
                     Some(((), (watcher, new_present, new_up, new_has_addr)))
-                })
+                }
             },
         )
-        .try_collect()
-        .await?;
+        .collect()
+        .await;
     }
-    Ok(())
 }
 
 /// Test interface changes are reported through the interface watcher.
 #[fuchsia_async::run_singlethreaded(test)]
-async fn test_interfaces_watcher() -> Result {
-    let sandbox = netemul::TestSandbox::new().context("failed to create sandbox")?;
+async fn test_interfaces_watcher() {
+    let sandbox = netemul::TestSandbox::new().expect("create sandbox");
     let (realm, stack) = sandbox
-        .new_netstack::<Netstack2, fidl_fuchsia_net_stack::StackMarker, _>("interfaces_watcher")?;
+        .new_netstack::<Netstack2, fidl_fuchsia_net_stack::StackMarker, _>("interfaces_watcher")
+        .expect("create realm");
 
     let interface_state = realm
         .connect_to_protocol::<fidl_fuchsia_net_interfaces::StateMarker>()
-        .context("failed to connect to fuchsia.net.interfaces/State")?;
+        .expect("connect to protocol");
 
     let initialize_watcher = || async {
         let (watcher, server) =
-            fidl::endpoints::create_proxy::<fidl_fuchsia_net_interfaces::WatcherMarker>()?;
+            fidl::endpoints::create_proxy::<fidl_fuchsia_net_interfaces::WatcherMarker>()
+                .expect("create watcher");
         let () = interface_state
             .get_watcher(fidl_fuchsia_net_interfaces::WatcherOptions::EMPTY, server)
-            .context("failed to initialize interface watcher")?;
+            .expect("initialize interface watcher");
 
-        let event = watcher.watch().await.context("failed to watch")?;
+        let event = watcher.watch().await.expect("watch");
         if let fidl_fuchsia_net_interfaces::Event::Existing(properties) = event {
             assert_eq!(
                 properties.device_class,
@@ -1856,20 +1824,20 @@ async fn test_interfaces_watcher() -> Result {
         }
 
         assert_eq!(
-            watcher.watch().await.context("failed to watch")?,
+            watcher.watch().await.expect("watch"),
             fidl_fuchsia_net_interfaces::Event::Idle(fidl_fuchsia_net_interfaces::Empty {})
         );
         Result::Ok(watcher)
     };
 
-    let blocking_watcher = initialize_watcher().await?;
+    let blocking_watcher = initialize_watcher().await.expect("initialize blocking watcher");
     let blocking_stream = fidl_fuchsia_net_interfaces_ext::event_stream(blocking_watcher.clone());
     pin_utils::pin_mut!(blocking_stream);
-    let watcher = initialize_watcher().await?;
+    let watcher = initialize_watcher().await.expect("initialize watcher");
     let stream = fidl_fuchsia_net_interfaces_ext::event_stream(watcher.clone());
     pin_utils::pin_mut!(stream);
 
-    async fn assert_blocked<S>(stream: &mut S) -> Result
+    async fn assert_blocked<S>(stream: &mut S)
     where
         S: futures::stream::TryStream<Error = fidl::Error> + std::marker::Unpin,
         <S as futures::TryStream>::Ok: std::fmt::Debug,
@@ -1877,32 +1845,30 @@ async fn test_interfaces_watcher() -> Result {
         stream
             .try_next()
             .map(|event| {
-                let event = event.context("event stream error")?;
-                let event = event.ok_or_else(|| anyhow::anyhow!("watcher event stream ended"))?;
-                Ok(Some(event))
+                let event = event.expect("event stream error");
+                let event = event.expect("watcher event stream ended");
+                Some(event)
             })
             .on_timeout(
                 fuchsia_async::Time::after(fuchsia_zircon::Duration::from_millis(50)),
-                || Ok(None),
+                || None,
             )
-            .and_then(|e| {
-                futures::future::ready(match e {
-                    Some(e) => Err(anyhow::anyhow!("did not block but yielded {:?}", e)),
-                    None => Ok(()),
-                })
+            .map(|e| match e {
+                Some(e) => panic!("did not block but yielded {:?}", e),
+                None => (),
             })
             .await
     }
     // Add an interface.
-    let () = assert_blocked(&mut blocking_stream).await?;
+    let () = assert_blocked(&mut blocking_stream).await;
     let dev = sandbox
         .create_endpoint::<netemul::NetworkDevice, _>("ep")
         .await
-        .context("failed to create endpoint")?
+        .expect("create endpoint")
         .into_interface_in_realm(&realm)
         .await
-        .context("failed to add endpoint to Netstack")?;
-    let () = dev.set_link_up(true).await.context("failed to bring device up")?;
+        .expect("add endpoint to Netstack");
+    let () = dev.set_link_up(true).await.expect("bring device up");
     let id = dev.id();
     let want = fidl_fuchsia_net_interfaces::Event::Added(fidl_fuchsia_net_interfaces::Properties {
         id: Some(id),
@@ -1918,19 +1884,19 @@ async fn test_interfaces_watcher() -> Result {
         has_default_ipv6_route: Some(false),
         ..fidl_fuchsia_net_interfaces::Properties::EMPTY
     });
-    async fn try_next<S>(stream: &mut S) -> Result<fidl_fuchsia_net_interfaces::Event>
+    async fn next<S>(stream: &mut S) -> fidl_fuchsia_net_interfaces::Event
     where
         S: futures::stream::TryStream<Ok = fidl_fuchsia_net_interfaces::Event, Error = fidl::Error>
             + Unpin,
     {
-        stream.try_next().await?.ok_or_else(|| anyhow::anyhow!("watcher event stream ended"))
+        stream.try_next().await.expect("stream error").expect("watcher event stream ended")
     }
-    assert_eq!(try_next(&mut blocking_stream).await?, want);
-    assert_eq!(try_next(&mut stream).await?, want);
+    assert_eq!(next(&mut blocking_stream).await, want);
+    assert_eq!(next(&mut stream).await, want);
 
     // Set the link to up.
-    let () = assert_blocked(&mut blocking_stream).await?;
-    let () = dev.enable_interface().await.context("failed to bring device up")?;
+    let () = assert_blocked(&mut blocking_stream).await;
+    let () = dev.enable_interface().await.expect("bring device up");
     // NB The following fold function is necessary because IPv6 link-local addresses are configured
     // when the interface is brought up (and removed when the interface is brought down) such
     // that the ordering or the number of events that reports the changes in the online and
@@ -1960,26 +1926,19 @@ async fn test_interfaces_watcher() -> Result {
             ) if event_id == id => {
                 if let Some(got_online) = online {
                     if online_changed {
-                        return futures::future::err(anyhow::anyhow!(
-                            "duplicate online property change to new value of {}",
-                            got_online,
-                        ));
+                        panic!("duplicate online property change to new value of {}", got_online,);
                     }
                     if got_online != want_online {
-                        return futures::future::err(anyhow::anyhow!(
-                            "got online: {}, want {}",
-                            got_online,
-                            want_online
-                        ));
+                        panic!("got online: {}, want {}", got_online, want_online);
                     }
                     online_changed = true;
                 }
                 if let Some(got_addrs) = got_addrs {
                     if !online_changed {
-                        return futures::future::err(anyhow::anyhow!(
+                        panic!(
                             "addresses changed before online property change, addresses: {:?}",
                             got_addrs
-                        ));
+                        );
                     }
                     let got_addrs = got_addrs
                         .iter()
@@ -2004,63 +1963,50 @@ async fn test_interfaces_watcher() -> Result {
                         )
                         .collect::<HashSet<_>>();
                     if got_addrs.len() == want_addr_count {
-                        return futures::future::ok(async_utils::fold::FoldWhile::Done(got_addrs));
+                        return futures::future::ready(async_utils::fold::FoldWhile::Done(
+                            got_addrs,
+                        ));
                     }
                     addresses = Some(got_addrs);
                 }
-                futures::future::ok(async_utils::fold::FoldWhile::Continue((
+                futures::future::ready(async_utils::fold::FoldWhile::Continue((
                     online_changed,
                     addresses,
                 )))
             }
-            _ => futures::future::err(anyhow::anyhow!(
-                "got: {:?}, want online and/or IPv6 link-local address change event",
-                event
-            )),
+            event => {
+                panic!("got: {:?}, want online and/or IPv6 link-local address change event", event)
+            }
         }
     };
     const LL_ADDR_COUNT: usize = 1;
     let want_online = true;
-    let ll_addrs = async_utils::fold::try_fold_while(
-        blocking_stream.map(|r| r.context("blocking event stream error")),
+    let ll_addrs = async_utils::fold::fold_while(
+        blocking_stream.map(|r| r.expect("blocking event stream error")),
         (false, None),
         fold_fn(want_online, LL_ADDR_COUNT),
     )
-    .await
-    .context("error processing events")
-    .and_then(|fold_res| {
-        fold_res.short_circuited().map_err(|(online_changed, addresses)| {
-            anyhow::anyhow!(
-                "event stream ended unexpectedly, final state online_changed={} addresses={:?}",
+    .await.short_circuited().unwrap_or_else(|(online_changed, addresses)| {
+            panic!(
+                "event stream ended unexpectedly while waiting for interface online = {} and LL addr count = {}, final state online_changed = {} addresses = {:?}",
+                want_online, LL_ADDR_COUNT,
                 online_changed,
                 addresses
             )
-        })
-    })
-    .with_context(|| {
-        format!(
-            "error while waiting for interface online={} and LL addr count={}",
-            want_online, LL_ADDR_COUNT
-        )
-    })?;
-    let addrs = async_utils::fold::try_fold_while(
-        stream.map(|r| r.context("non-blocking event stream error")),
+        });
+
+    let addrs = async_utils::fold::fold_while(
+        stream.map(|r| r.expect("non-blocking event stream error")),
         (false, None),
         fold_fn(true, LL_ADDR_COUNT),
     )
-    .await
-    .context("error processing events")
-    .and_then(|fold_res| {
-        fold_res.short_circuited().map_err(|(online_changed, addresses)| {
-            anyhow::anyhow!(
-                "watcher event stream ended unexpectedly, final state online_changed={} addresses={:?}",
-                online_changed,
-                addresses
-            )
-        })
-    })
-    .with_context(|| format!("error while waiting for interface online={} and LL addr={}",
-            want_online, LL_ADDR_COUNT))?;
+    .await.short_circuited().unwrap_or_else(|(online_changed, addresses)| {
+        panic!(
+            "event stream ended unexpectedly while waiting for interface online = {} and LL addr count = {}, final state online_changed = {} addresses = {:?}",
+            want_online, LL_ADDR_COUNT,
+            online_changed,
+            addresses
+        )});
     assert_eq!(ll_addrs, addrs);
     let blocking_stream = fidl_fuchsia_net_interfaces_ext::event_stream(blocking_watcher.clone());
     pin_utils::pin_mut!(blocking_stream);
@@ -2068,13 +2014,10 @@ async fn test_interfaces_watcher() -> Result {
     pin_utils::pin_mut!(stream);
 
     // Add an address.
-    let () = assert_blocked(&mut blocking_stream).await?;
+    let () = assert_blocked(&mut blocking_stream).await;
     let mut subnet = fidl_subnet!("192.168.0.1/16");
-    let () = stack
-        .add_interface_address(id, &mut subnet)
-        .await
-        .squash_result()
-        .context("failed to add address")?;
+    let () =
+        stack.add_interface_address(id, &mut subnet).await.squash_result().expect("add address");
     let addresses_changed = |event| match event {
         fidl_fuchsia_net_interfaces::Event::Changed(fidl_fuchsia_net_interfaces::Properties {
             id: Some(event_id),
@@ -2085,21 +2028,21 @@ async fn test_interfaces_watcher() -> Result {
             has_default_ipv4_route: None,
             has_default_ipv6_route: None,
             ..
-        }) if event_id == id => Ok(addresses
+        }) if event_id == id => addresses
             .iter()
             .filter_map(|&fidl_fuchsia_net_interfaces::Address { addr, valid_until, .. }| {
                 assert_eq!(valid_until, Some(fuchsia_zircon::sys::ZX_TIME_INFINITE));
                 addr
             })
-            .collect::<HashSet<_>>()),
-        _ => Err(anyhow::anyhow!("got: {:?}, want changed event with added IPv4 address", event)),
+            .collect::<HashSet<_>>(),
+        event => panic!("got: {:?}, want changed event with added IPv4 address", event),
     };
     let want = ll_addrs.iter().cloned().chain(std::iter::once(subnet)).collect();
-    assert_eq!(addresses_changed(try_next(&mut blocking_stream).await?)?, want);
-    assert_eq!(addresses_changed(try_next(&mut stream).await?)?, want);
+    assert_eq!(addresses_changed(next(&mut blocking_stream).await), want);
+    assert_eq!(addresses_changed(next(&mut stream).await), want);
 
     // Add a default route.
-    let () = assert_blocked(&mut blocking_stream).await?;
+    let () = assert_blocked(&mut blocking_stream).await;
     let mut default_v4_subnet = fidl_subnet!("0.0.0.0/0");
     let () = stack
         .add_forwarding_entry(&mut fidl_fuchsia_net_stack::ForwardingEntry {
@@ -2110,77 +2053,65 @@ async fn test_interfaces_watcher() -> Result {
         })
         .await
         .squash_result()
-        .context("failed to add default route")?;
+        .expect("add default route");
     let want =
         fidl_fuchsia_net_interfaces::Event::Changed(fidl_fuchsia_net_interfaces::Properties {
             id: Some(id),
             has_default_ipv4_route: Some(true),
             ..fidl_fuchsia_net_interfaces::Properties::EMPTY
         });
-    assert_eq!(try_next(&mut blocking_stream).await?, want);
-    assert_eq!(try_next(&mut stream).await?, want);
+    assert_eq!(next(&mut blocking_stream).await, want);
+    assert_eq!(next(&mut stream).await, want);
 
     // Remove the default route.
-    let () = assert_blocked(&mut blocking_stream).await?;
+    let () = assert_blocked(&mut blocking_stream).await;
     let () = stack
         .del_forwarding_entry(&mut default_v4_subnet)
         .await
         .squash_result()
-        .context("failed to delete default route")?;
+        .expect("delete default route");
     let want =
         fidl_fuchsia_net_interfaces::Event::Changed(fidl_fuchsia_net_interfaces::Properties {
             id: Some(id),
             has_default_ipv4_route: Some(false),
             ..fidl_fuchsia_net_interfaces::Properties::EMPTY
         });
-    assert_eq!(try_next(&mut blocking_stream).await?, want);
-    assert_eq!(try_next(&mut stream).await?, want);
+    assert_eq!(next(&mut blocking_stream).await, want);
+    assert_eq!(next(&mut stream).await, want);
 
     // Remove the added address.
-    let () = assert_blocked(&mut blocking_stream).await?;
-    let () = stack
-        .del_interface_address(id, &mut subnet)
-        .await
-        .squash_result()
-        .context("failed to add address")?;
-    assert_eq!(addresses_changed(try_next(&mut blocking_stream).await?)?, ll_addrs);
-    assert_eq!(addresses_changed(try_next(&mut stream).await?)?, ll_addrs);
+    let () = assert_blocked(&mut blocking_stream).await;
+    let () =
+        stack.del_interface_address(id, &mut subnet).await.squash_result().expect("add address");
+    assert_eq!(addresses_changed(next(&mut blocking_stream).await), ll_addrs);
+    assert_eq!(addresses_changed(next(&mut stream).await), ll_addrs);
 
     // Set the link to down.
-    let () = assert_blocked(&mut blocking_stream).await?;
-    let () = dev.set_link_up(false).await.context("failed to bring device up")?;
+    let () = assert_blocked(&mut blocking_stream).await;
+    let () = dev.set_link_up(false).await.expect("bring device up");
     const LL_ADDR_COUNT_AFTER_LINK_DOWN: usize = 0;
     let want_online = false;
-    let addresses = async_utils::fold::try_fold_while(
-        blocking_stream.map(|r| r.context("blocking event stream error")),
+    let addresses = async_utils::fold::fold_while(
+        blocking_stream.map(|r| r.expect("blocking event stream error")),
         (false, None),
         fold_fn(want_online, LL_ADDR_COUNT_AFTER_LINK_DOWN),
     )
-    .await
-    .context("error processing events")
-    .and_then(|fold_res| {
-        fold_res.short_circuited().map_err(|(online_changed, addresses)| {
-            anyhow::anyhow!(
-                "watcher event stream ended unexpectedly, final state online_changed={} addresses={:?}",
-                online_changed,
-                addresses
-            )
-        })
-    })
-    .with_context(|| format!("error while waiting for interface online={} and LL addr count={}",
-            want_online, LL_ADDR_COUNT_AFTER_LINK_DOWN))?;
+    .await.short_circuited().unwrap_or_else(|(online_changed, addresses)| {
+        panic!(
+            "event stream ended unexpectedly while waiting for interface online = {} and LL addr count = {}, final state online_changed = {} addresses = {:?}",
+            want_online, LL_ADDR_COUNT_AFTER_LINK_DOWN,
+            online_changed,
+            addresses
+        )
+    });
     assert!(addresses.is_subset(&ll_addrs), "got {:?}, want a subset of {:?}", addresses, ll_addrs);
     assert_eq!(
-        async_utils::fold::try_fold_while(
-            stream.map(|r| r.context("non-blocking event stream error")),
+        async_utils::fold::fold_while(
+            stream.map(|r| r.expect("non-blocking event stream error")),
             (false, None),
-            fold_fn(false, LL_ADDR_COUNT_AFTER_LINK_DOWN)
+            fold_fn(false, LL_ADDR_COUNT_AFTER_LINK_DOWN),
         )
-        .await
-        .with_context(|| format!(
-            "error while waiting for interface online={} and LL addr count={}",
-            want_online, LL_ADDR_COUNT_AFTER_LINK_DOWN
-        ))?,
+        .await,
         async_utils::fold::FoldResult::ShortCircuited(addresses),
     );
     let blocking_stream = fidl_fuchsia_net_interfaces_ext::event_stream(blocking_watcher);
@@ -2189,13 +2120,11 @@ async fn test_interfaces_watcher() -> Result {
     pin_utils::pin_mut!(stream);
 
     // Remove the ethernet interface.
-    let () = assert_blocked(&mut blocking_stream).await?;
+    let () = assert_blocked(&mut blocking_stream).await;
     std::mem::drop(dev);
     let want = fidl_fuchsia_net_interfaces::Event::Removed(id);
-    assert_eq!(try_next(&mut blocking_stream).await?, want);
-    assert_eq!(try_next(&mut stream).await?, want);
-
-    Ok(())
+    assert_eq!(next(&mut blocking_stream).await, want);
+    assert_eq!(next(&mut stream).await, want);
 }
 
 enum ForwardingConfiguration {
@@ -2334,19 +2263,14 @@ async fn test_forwarding<E: netemul::Endpoint, I: IcmpIpExt>(
     let name = format!("{}_{}", test_name, sub_test_name);
     let name = name.as_str();
 
-    let sandbox = netemul::TestSandbox::new().expect("failed to create sandbox");
+    let sandbox = netemul::TestSandbox::new().expect("create sandbox");
     let sandbox = &sandbox;
-    let realm = sandbox
-        .create_netstack_realm::<Netstack2, _>(name)
-        .expect("failed to create netstack realm");
+    let realm = sandbox.create_netstack_realm::<Netstack2, _>(name).expect("create netstack realm");
     let realm = &realm;
 
     let net_ep_iface = |net_num: u8, addr: fidl_fuchsia_net::Subnet| async move {
-        let net = sandbox
-            .create_network(format!("net{}", net_num))
-            .await
-            .expect("failed to create network");
-        let fake_ep = net.create_fake_endpoint().expect("failed to create fake endpoint");
+        let net = sandbox.create_network(format!("net{}", net_num)).await.expect("create network");
+        let fake_ep = net.create_fake_endpoint().expect("create fake endpoint");
         let iface = realm
             .join_network::<E, _>(
                 &net,
@@ -2354,7 +2278,7 @@ async fn test_forwarding<E: netemul::Endpoint, I: IcmpIpExt>(
                 &netemul::InterfaceConfig::StaticIp(addr),
             )
             .await
-            .expect("failed to configure networking");
+            .expect("configure networking");
 
         (net, fake_ep, iface)
     };
@@ -2364,7 +2288,7 @@ async fn test_forwarding<E: netemul::Endpoint, I: IcmpIpExt>(
 
     let interface_state = realm
         .connect_to_protocol::<fidl_fuchsia_net_interfaces::StateMarker>()
-        .expect("failed to connect to fuchsia.net.interfaces/State");
+        .expect("connect to protocol");
 
     let ((), ()) = futures::future::join(
         wait_for_interface_up_and_address(&interface_state, iface1.id(), &iface1_addr),
@@ -2403,7 +2327,7 @@ async fn test_forwarding<E: netemul::Endpoint, I: IcmpIpExt>(
 
     let neighbor_controller = realm
         .connect_to_protocol::<fidl_fuchsia_net_neighbor::ControllerMarker>()
-        .expect("failed to connect to Controller");
+        .expect("connect to protocol");
     let dst_ip_fidl: <I::Addr as NetTypesIpAddressExt>::Fidl = dst_ip.into_ext();
     let () = neighbor_controller
         .add_entry(iface2.id(), &mut dst_ip_fidl.into_ext(), &mut MAC.clone())
@@ -2432,7 +2356,7 @@ async fn test_forwarding<E: netemul::Endpoint, I: IcmpIpExt>(
             I::ETHER_TYPE,
         ))
         .serialize_vec_outer()
-        .expect("failed to serialize ICMP packet")
+        .expect("serialize ICMP packet")
         .unwrap_b();
 
     let duration = if expect_forward {
@@ -2442,7 +2366,7 @@ async fn test_forwarding<E: netemul::Endpoint, I: IcmpIpExt>(
     };
 
     let ((), forwarded) = futures::future::join(
-        fake_ep1.write(ser.as_ref()).map(|r| r.expect("failed to write to fake endpoint #1")),
+        fake_ep1.write(ser.as_ref()).map(|r| r.expect("write to fake endpoint #1")),
         fake_ep2
             .frame_stream()
             .map(|r| r.expect("error getting OnData event"))
