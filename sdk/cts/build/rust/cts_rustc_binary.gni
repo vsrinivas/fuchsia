@@ -52,3 +52,7 @@ template("cts_rustc_binary") {
     non_rust_deps += [ ":$write_file_target" ]
   }
 }
+
+set_defaults("cts_rustc_binary") {
+  configs = default_executable_configs + default_rust_configs
+}

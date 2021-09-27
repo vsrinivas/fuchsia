@@ -49,3 +49,7 @@ template("cts_rustc_test") {
     non_rust_deps += [ ":$write_file_target" ]
   }
 }
+
+set_defaults("cts_rustc_test") {
+  configs = default_executable_configs + default_rust_configs
+}
