@@ -17,4 +17,4 @@ This repository contains vendored copies of third party code used in Fuchsia.
 
 Further documentation is available here:
 
-/docs/development/languages/rust/third_party.md
+//docs/development/languages/rust/external_crates.md
