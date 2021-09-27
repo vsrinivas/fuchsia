@@ -4,7 +4,6 @@
 
 // ignore_for_file: import_of_legacy_library_into_null_safe
 
-@Retry(2)
 @Timeout(Duration(seconds: 60))
 
 import 'dart:async';
@@ -54,6 +53,26 @@ void main() {
   final blueTabFinder = find.text('Blue Page');
   final audioTabFinder = find.text('Audio Test');
 
+  Future<bool> _browserViewMatchesPresentationStatus(bool isPresented,
+      {Duration timeout = const Duration(seconds: 30)}) async {
+    return ermine.waitFor(() async {
+      var views = await ermine.launchedViews(filterByUrl: simpleBrowserUrl);
+      if (isPresented) {
+        if (views.isNotEmpty) {
+          return true;
+        } else {
+          return false;
+        }
+      } else {
+        if (views.isEmpty) {
+          return true;
+        } else {
+          return false;
+        }
+      }
+    }, timeout: timeout);
+  }
+
   setUpAll(() async {
     sl4f = Sl4f.fromEnvironment();
     await sl4f.startServer();
@@ -70,7 +89,7 @@ void main() {
     if (skipTests.any((isSkipped) => !isSkipped)) {
       // ignore: unawaited_futures
       ermine.component.launch(testserverUrl);
-      expect(await ermine.isRunning(testserverUrl), isTrue);
+      print('Launched the test server .');
     }
   });
 
@@ -84,35 +103,25 @@ void main() {
     // TODO(fxb/69291): Remove this workaround once we can properly close hidden
     // components
     final views = await ermine.launchedViews();
-    if (views.isEmpty) {
-      print('Currently there is no running views');
-    } else {
-      print('Currently running views are...');
-      for (final view in views) {
-        print(view.url);
-      }
+    if (views.isNotEmpty) {
+      print('Close all the currently running views.');
       await ermine.driver.requestData('closeAll');
     }
 
-    if (await ermine.isRunning(testserverUrl, timeout: _timeoutTenSec)) {
+    if (skipTests.any((isSkipped) => !isSkipped)) {
       FlutterDriver browser =
           await ermine.launchAndWaitForSimpleBrowser(openNewTab: false);
       const stopUrl = 'http://127.0.0.1:8080/stop';
       await browser.requestData(stopUrl);
       await browser.waitUntilNoTransientCallbacks(timeout: _timeoutTenSec);
       await browser.waitFor(find.text(stopUrl), timeout: _timeoutTenSec);
-      print('Waiting for the test server to stop...');
-      expect(await ermine.isStopped(testserverUrl), isTrue);
-      print('Stopped the test server');
-
+      print('Shut down the test server.');
       await browser.close();
-      await ermine.driver.requestData('close');
-      await ermine.driver
-          .waitUntilNoTransientCallbacks(timeout: _timeoutTenSec);
-      await ermine.driver.waitForAbsent(find.text('simple-browser.cmx'));
-      expect(await ermine.isStopped(simpleBrowserUrl), isTrue);
-      print('Closed the browser');
     }
+    await ermine.driver.requestData('close');
+    await ermine.driver.waitUntilNoTransientCallbacks(timeout: _timeoutTenSec);
+    expect(await _browserViewMatchesPresentationStatus(false), true);
+    print('Closed the browser');
 
     await webDriverConnector.tearDown();
     await ermine.tearDown();
@@ -226,6 +235,7 @@ void main() {
     await browser.waitUntilFirstFrameRasterized();
     await browser.waitUntilNoTransientCallbacks(timeout: _timeoutTenSec);
     await browser.waitFor(indexTabFinder, timeout: _timeoutTenSec);
+    print('Index tab found.');
 
     final webdriver =
         (await webDriverConnector.webDriversForHost('127.0.0.1')).single;
@@ -331,8 +341,7 @@ void main() {
     // Close the simple browser view.
     await ermine.threeKeyShortcut(Key.leftCtrl, Key.leftShift, Key.w);
     await ermine.driver.waitUntilNoTransientCallbacks(timeout: _timeoutTenSec);
-    await ermine.driver.waitForAbsent(find.text('simple-browser.cmx'));
-    expect(await ermine.isStopped(simpleBrowserUrl), isTrue);
+    expect(await _browserViewMatchesPresentationStatus(false), true);
     print('Closed the browser');
   }, skip: skipTests[0]);
 

@@ -206,9 +206,7 @@ group("test") {
     # Chromedriver prebuilt is only available for linux-x64
     deps = [
       ":experiences_ermine_session_shell_e2e_test($host_toolchain)",
-
-      # TODO(fxb/84527): Re-enable the test once the blocking issue is fixed
-      # ":experiences_ermine_simple_browser_e2e_test($host_toolchain)",
+      ":experiences_ermine_simple_browser_e2e_test($host_toolchain)",
       ":experiences_ermine_smoke_e2e_test($host_toolchain)",
       ":experiences_ermine_terminal_e2e_test($host_toolchain)",
     ]
