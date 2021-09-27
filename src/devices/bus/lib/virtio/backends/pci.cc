@@ -62,15 +62,12 @@ zx_status_t PciBackend::ConfigureIrqMode() {
   // since we have a specific requirement to use MSI-X if and only if we have 2
   // vectors it means rolling it by hand.
   uint32_t irq_cnt = 0;
-  pci_irq_mode_t mode = PCI_IRQ_MODE_LEGACY;
+  pci_irq_mode_t mode = PCI_IRQ_MODE_MSI_X;
   zx_status_t st = pci().QueryIrqMode(mode, &irq_cnt);
-  if (st != ZX_OK || (st = pci().SetIrqMode(mode, irq_cnt)) != ZX_OK) {
-    mode = PCI_IRQ_MODE_MSI_X;
+  irq_cnt = std::min(2u, irq_cnt);
+  if ((st != ZX_OK || irq_cnt < 2) || (st = pci().SetIrqMode(mode, irq_cnt)) != ZX_OK) {
+    mode = PCI_IRQ_MODE_LEGACY;
     zx_status_t intx_st = pci().QueryIrqMode(mode, &irq_cnt);
-    irq_cnt = std::min(2u, irq_cnt);
-    if (irq_cnt < 2) {
-      return ZX_ERR_NOT_SUPPORTED;
-    }
     if (intx_st != ZX_OK || (intx_st = pci().SetIrqMode(mode, irq_cnt)) != ZX_OK) {
       zxlogf(ERROR, "Failed to configure a virtio IRQ mode (MSI-X: %s, INTx: %s)",
              zx_status_get_string(st), zx_status_get_string(intx_st));
