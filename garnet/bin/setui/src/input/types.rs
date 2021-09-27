@@ -109,8 +109,8 @@ impl InputState {
             .entry(device_name.clone())
             .or_insert_with(|| InputDevice::new(device_name, device_type));
 
-        // Replace or add the source state in the map.
-        input_device.source_states.insert(source, state);
+        // Replace or add the source state in the map. Ignore the old value.
+        let _ = input_device.source_states.insert(source, state);
         input_device.compute_input_state();
     }
 
@@ -202,7 +202,8 @@ impl From<InputConfiguration> for InputState {
             device_config.source_states.iter().for_each(|source_state| {
                 let value =
                     DeviceState::from_bits(source_state.state).unwrap_or_else(DeviceState::new);
-                device.source_states.insert(source_state.source, value);
+                // Ignore the old value.
+                let _ = device.source_states.insert(source_state.source, value);
             });
 
             // Recompute the overall state.

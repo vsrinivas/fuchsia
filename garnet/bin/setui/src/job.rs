@@ -386,14 +386,14 @@ pub(super) mod execution {
             let active_job = self.pending.pop_front();
 
             if let Some(job) = &active_job {
-                self.active.insert(job.id);
+                let _ = self.active.insert(job.id);
             }
 
             active_job
         }
 
         pub(super) fn complete(&mut self, job_info: job::Info) {
-            self.active.remove(&job_info.id);
+            let _ = self.active.remove(&job_info.id);
         }
     }
 

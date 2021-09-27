@@ -284,14 +284,13 @@ where
     T: BrightnessManager,
 {
     fn build_theme(&self, incoming_theme: Theme, display_info: &DisplayInfo) -> Option<Theme> {
-        let mut theme_builder = ThemeBuilder::new();
         let existing_theme_type = display_info.theme.and_then(|theme| theme.theme_type);
         let new_theme_type = incoming_theme.theme_type.or(existing_theme_type);
 
-        theme_builder.set_theme_type(new_theme_type);
-        theme_builder.set_theme_mode(incoming_theme.theme_mode);
-
-        theme_builder.build()
+        ThemeBuilder::new()
+            .set_theme_type(new_theme_type)
+            .set_theme_mode(incoming_theme.theme_mode)
+            .build()
     }
 }
 

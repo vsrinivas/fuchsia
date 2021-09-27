@@ -144,11 +144,12 @@ impl Manager {
     // available sources for a candidate job and then executes the first one found.
     async fn process_next_job(&mut self, nonce: TracingNonce) {
         // Iterate through sources and see if any source has a pending job
-        for (source_id, source_handler) in &mut self.sources.iter_mut() {
+        for (source_id, source_handler) in &mut self.sources {
             let source_id = *source_id;
             let execution_tx = self.execution_completion_sender.clone();
 
-            source_handler
+            // Ignore the executed status.
+            let _ = source_handler
                 .execute_next(
                     &mut self.message_hub_delegate,
                     move |job_info, details| {
@@ -177,7 +178,7 @@ impl Manager {
         let source_id = self.source_id_generator.generate();
 
         // Create a handler to manage jobs produced by this stream.
-        self.sources.insert(source_id, source::Handler::new());
+        let _ = self.sources.insert(source_id, source::Handler::new());
 
         // Add the stream to the monitored pool. associate jobs with the source id along with
         // appending an empty value to the end for indicating when the stream has completed.
@@ -245,7 +246,7 @@ impl Manager {
         let source_info = self.sources.get_mut(source_id).expect("should find source");
 
         if source_info.is_completed() {
-            self.sources.remove(source_id);
+            let _ = self.sources.remove(source_id);
         }
     }
 }

@@ -63,11 +63,6 @@
 //! [Response]: crate::handler::base::Payload::Response
 //! [Rebroadcast]: crate::handler::base::Request::Rebroadcast
 
-use anyhow::{format_err, Error};
-use fuchsia_syslog::fx_log_err;
-
-use async_trait::async_trait;
-
 use crate::audio::default_audio_info;
 use crate::audio::policy::{
     self as audio_policy, AudioPolicyConfig, PolicyId, PropertyTarget, Request as PolicyRequest,
@@ -88,6 +83,10 @@ use crate::policy::response::Error as PolicyError;
 use crate::policy::{self as policy_base, PolicyInfo, PolicyType};
 use crate::trace::TracingNonce;
 use crate::{trace, trace_guard};
+use anyhow::{format_err, Error};
+use async_trait::async_trait;
+use fuchsia_syslog::fx_log_err;
+use std::collections::hash_map::Entry;
 
 /// Used as the argument field in a ControllerError::InvalidArgument to signal the FIDL handler to
 /// signal that the policy ID was invalid.
@@ -250,9 +249,9 @@ impl AudioPolicyHandler {
 
         // Restore active policies from the persisted properties.
         for (target, persisted_property) in persisted_state.properties.into_iter() {
-            state.properties.entry(target).and_modify(|property| {
-                property.active_policies = persisted_property.active_policies
-            });
+            if let Entry::Occupied(mut entry) = state.properties.entry(target) {
+                entry.get_mut().active_policies = persisted_property.active_policies
+            }
         }
 
         self.state = state;
@@ -382,8 +381,8 @@ impl AudioPolicyHandler {
             )
         })?;
 
-        // Persist the policy state.
-        self.client_proxy.write_policy(self.state.clone().into(), false, nonce).await?;
+        // Persist the policy state. Ignore update state result.
+        let _ = self.client_proxy.write_policy(self.state.clone().into(), false, nonce).await?;
 
         // Put the transform into effect, updating internal/external volume levels as needed.
         self.apply_policy_transforms(target, audio_info, external_volume).await?;
@@ -419,16 +418,16 @@ impl AudioPolicyHandler {
         let external_volume = self.calculate_external_volume(target, stream.user_volume_level);
 
         // Attempt to remove the policy.
-        self.state.remove_policy(policy_id).ok_or_else(|| {
-            PolicyError::InvalidArgument(
+        if let None = self.state.remove_policy(policy_id) {
+            return Err(PolicyError::InvalidArgument(
                 PolicyType::Audio,
                 ARG_POLICY_ID.into(),
                 format!("{:?}", policy_id).into(),
-            )
-        })?;
+            ));
+        }
 
-        // Persist the policy state.
-        self.client_proxy.write_policy(self.state.clone().into(), false, nonce).await?;
+        // Persist the policy state. Ignore update state result.
+        let _ = self.client_proxy.write_policy(self.state.clone().into(), false, nonce).await?;
 
         // Put the transform into effect, updating internal/external volume levels as needed.
         self.apply_policy_transforms(target, audio_info, external_volume).await?;

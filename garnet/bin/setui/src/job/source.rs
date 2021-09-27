@@ -236,6 +236,7 @@ impl Handler {
         self.states.push_back((state, now()));
     }
 
+    /// Returns true if any job is executed, false otherwise.
     pub(crate) async fn execute_next<F: Fn(job::Info, job::execution::Details) + Send + 'static>(
         &mut self,
         delegate: &mut Delegate,

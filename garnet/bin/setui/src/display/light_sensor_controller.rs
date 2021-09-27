@@ -108,7 +108,7 @@ impl controller::Handle for LightSensorController {
                 if let Some((task, cancellation_tx)) = self.sensor_task.take() {
                     // If this fails to cancel, the task may already be ending since that implies
                     // the receiving end is already dropped.
-                    cancellation_tx.send(()).ok();
+                    let _ = cancellation_tx.send(());
                     // Wait for the task to cleanly exit. If we don't we could break the proxy to
                     // the light sensor and prevent any future calls from returning successfully.
                     task.await;

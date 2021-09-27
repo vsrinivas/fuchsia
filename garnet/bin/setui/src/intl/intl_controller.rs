@@ -79,21 +79,15 @@ impl IntlController {
     /// Loads the set of valid time zones from resources.
     fn load_time_zones() -> std::collections::HashSet<String> {
         let _icu_data_loader = icu_data::Loader::new().expect("icu data loaded");
-        let mut time_zone_set = HashSet::new();
-
         let time_zone_list = match uenum::open_time_zones() {
             Ok(time_zones) => time_zones,
             Err(err) => {
                 fx_log_err!("Unable to load time zones: {:?}", err);
-                return time_zone_set;
+                return HashSet::new();
             }
         };
 
-        for time_zone_id in time_zone_list.flatten() {
-            time_zone_set.insert(time_zone_id);
-        }
-
-        time_zone_set
+        time_zone_list.flatten().collect()
     }
 
     async fn set(&self, info: IntlInfo) -> SettingHandlerResult {

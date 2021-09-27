@@ -47,21 +47,15 @@ lazy_static! {
 }
 
 pub(crate) fn create_default_modified_counters() -> ModifiedCounters {
-    let mut counters = HashMap::new();
-    let stream_types = [
+    std::array::IntoIter::new([
         AudioStreamType::Background,
         AudioStreamType::Media,
         AudioStreamType::Interruption,
         AudioStreamType::SystemAgent,
         AudioStreamType::Communication,
-    ];
-
-    // The values inserted here are irrelevant. They are simply a starting
-    // point.
-    for stream_type in stream_types.iter() {
-        counters.insert(*stream_type, 0);
-    }
-    counters
+    ])
+    .map(|stream_type| (stream_type, 0))
+    .collect()
 }
 
 pub(crate) const fn create_default_audio_stream(stream_type: AudioStreamType) -> AudioStream {

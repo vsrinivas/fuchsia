@@ -79,7 +79,9 @@ impl VolumeController {
         nonce: TracingNonce,
     ) -> ControllerStateResult {
         let audio_info = self.client.read_setting::<AudioInfo>(nonce).await;
-        self.update_volume_streams(UpdateFrom::AudioInfo(audio_info), push_to_audio_core, nonce)
+        // Ingore the notification triggered result.
+        let _ = self
+            .update_volume_streams(UpdateFrom::AudioInfo(audio_info), push_to_audio_core, nonce)
             .await?;
         Ok(())
     }
@@ -106,7 +108,7 @@ impl VolumeController {
         for stream in &volume {
             // We don't care what the value of the counter is, just that it is different from the
             // previous value. We use wrapping_add to avoid eventual overflow of the counter.
-            self.modified_counters.insert(
+            let _ = self.modified_counters.insert(
                 stream.stream_type,
                 self.modified_counters
                     .get(&stream.stream_type)
@@ -283,7 +285,8 @@ impl VolumeController {
         }
 
         stream_tuples.into_iter().for_each(|(stream_type, stream_volume_control)| {
-            self.stream_volume_controls.insert(stream_type, stream_volume_control);
+            // Ignore the previous value, if any.
+            let _ = self.stream_volume_controls.insert(stream_type, stream_volume_control);
         });
         self.audio_service_connected = true;
 

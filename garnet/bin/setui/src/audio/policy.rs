@@ -49,7 +49,7 @@ impl StateBuilder {
         available_transforms: TransformFlags,
     ) -> Self {
         let property = Property::new(stream_type, available_transforms);
-        self.properties.insert(stream_type, property);
+        let _ = self.properties.insert(stream_type, property);
 
         self
     }

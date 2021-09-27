@@ -4,6 +4,10 @@
 
 // This declaration is required to support the `select!`.
 #![recursion_limit = "256"]
+// TODO(fxbug.dev/76660) Uncomment the first line when all non-test code passes the lint.
+// Uncomment the second line when all code passes the lint.
+// #![cfg_attr(not(test), deny(unused_results))]
+// #![deny(unused_results)]
 
 use crate::accessibility::accessibility_controller::AccessibilityController;
 use crate::agent::authority::Authority;
@@ -45,6 +49,7 @@ use fidl_fuchsia_settings_policy::VolumePolicyControllerRequestStream;
 use fuchsia_async as fasync;
 use fuchsia_component::server::{NestedEnvironment, ServiceFs, ServiceFsDir, ServiceObj};
 use fuchsia_inspect::component;
+use fuchsia_syslog::fx_log_warn;
 use fuchsia_zircon::{Duration, DurationNum};
 use futures::lock::Mutex;
 use futures::StreamExt;
@@ -176,12 +181,10 @@ impl ServiceConfiguration {
     fn set_fidl_interfaces(&mut self, interfaces: HashSet<fidl::Interface>) {
         self.fidl_interfaces = interfaces;
 
-        let display_subinterfaces = [
+        let display_subinterfaces = std::array::IntoIter::new([
             fidl::Interface::Display(fidl::display::InterfaceFlags::LIGHT_SENSOR),
             fidl::Interface::Display(fidl::display::InterfaceFlags::BASE),
-        ]
-        .iter()
-        .cloned()
+        ])
         .collect();
 
         // Consolidate display type.
@@ -189,9 +192,14 @@ impl ServiceConfiguration {
         // interface.
         if self.fidl_interfaces.is_superset(&display_subinterfaces) {
             self.fidl_interfaces = &self.fidl_interfaces - &display_subinterfaces;
-            self.fidl_interfaces.insert(fidl::Interface::Display(
+            let inserted = self.fidl_interfaces.insert(fidl::Interface::Display(
                 fidl::display::InterfaceFlags::BASE | fidl::display::InterfaceFlags::LIGHT_SENSOR,
             ));
+            assert!(
+                inserted,
+                "Cannot insert the display interface twice. Please check the interface \
+                configuration"
+            );
         }
     }
 
@@ -281,7 +289,8 @@ impl<T: DeviceStorageFactory + Send + Sync + 'static> EnvironmentBuilder<T> {
         setting_type: SettingType,
         generate_handler: GenerateHandler,
     ) -> EnvironmentBuilder<T> {
-        self.handlers.insert(setting_type, generate_handler);
+        // Ignore the old handler result.
+        let _ = self.handlers.insert(setting_type, generate_handler);
         self
     }
 
@@ -388,7 +397,9 @@ impl<T: DeviceStorageFactory + Send + Sync + 'static> EnvironmentBuilder<T> {
         let service_dir;
         if runtime == Runtime::Service {
             // Initialize inspect.
-            inspect_runtime::serve(component::inspector(), &mut fs).ok();
+            if let Err(e) = inspect_runtime::serve(component::inspector(), &mut fs) {
+                fx_log_warn!("Unable to serve inspect runtime: {:?}", e);
+            }
 
             service_dir = fs.dir("svc");
         } else {
@@ -417,7 +428,7 @@ impl<T: DeviceStorageFactory + Send + Sync + 'static> EnvironmentBuilder<T> {
             for dependency in registrant.get_dependencies() {
                 match dependency {
                     Dependency::Entity(Entity::Handler(setting_type)) => {
-                        settings.insert(*setting_type);
+                        let _ = settings.insert(*setting_type);
                     }
                 }
             }
@@ -508,7 +519,7 @@ impl<T: DeviceStorageFactory + Send + Sync + 'static> EnvironmentBuilder<T> {
         let (mut fs, ..) = executor
             .run_singlethreaded(self.prepare_env(Runtime::Service))
             .context("Failed to prepare env")?;
-        fs.take_and_serve_directory_handle().expect("could not service directory handle");
+        let _ = fs.take_and_serve_directory_handle().expect("could not service directory handle");
         executor.run_singlethreaded(fs.collect::<()>());
         Ok(())
     }
@@ -692,7 +703,7 @@ async fn create_environment<'a, T: DeviceStorageFactory + Send + Sync + 'static>
     // TODO(fxbug.dev/58893): make max attempts a configurable option.
     // TODO(fxbug.dev/59174): make setting proxy response timeout and retry configurable.
     for setting_type in &components {
-        SettingProxy::create(
+        let _ = SettingProxy::create(
             *setting_type,
             handler_factory.clone(),
             delegate.clone(),
@@ -703,7 +714,7 @@ async fn create_environment<'a, T: DeviceStorageFactory + Send + Sync + 'static>
         )
         .await?;
 
-        entities.insert(Entity::Handler(*setting_type));
+        let _ = entities.insert(Entity::Handler(*setting_type));
     }
 
     for policy_type in &policies {
@@ -725,7 +736,7 @@ async fn create_environment<'a, T: DeviceStorageFactory + Send + Sync + 'static>
     }
 
     // TODO(fxbug.dev/60925): allow configuration of policy API
-    service_dir.add_fidl_service(move |stream: VolumePolicyControllerRequestStream| {
+    let _ = service_dir.add_fidl_service(move |stream: VolumePolicyControllerRequestStream| {
         crate::audio::policy::volume_policy_fidl_handler::fidl_io::spawn(delegate.clone(), stream);
     });
 

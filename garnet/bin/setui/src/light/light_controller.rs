@@ -101,7 +101,7 @@ impl controller::Handle for LightController {
                 // Read all light values from underlying fuchsia.hardware.light before returning a
                 // value to ensure we have the latest light state.
                 // TODO(fxbug.dev/56319): remove once all clients are migrated.
-                self.restore().await.ok();
+                let _ = self.restore().await;
                 Some(
                     self.client
                         .read_setting_info::<LightInfo>(fuchsia_trace::generate_nonce())
@@ -295,7 +295,7 @@ impl LightController {
                 .map(|found_group| found_group.enabled)
                 .unwrap_or(true);
 
-            light_groups.insert(
+            let _ = light_groups.insert(
                 group_config.name.clone(),
                 LightGroup {
                     name: group_config.name,
@@ -342,7 +342,7 @@ impl LightController {
                 }
             };
             let (name, group) = self.light_info_to_group(i, info).await?;
-            current.light_groups.insert(name, group);
+            let _ = current.light_groups.insert(name, group);
         }
 
         self.client.write_setting(current.into(), false, nonce).await.into_handler_result()

@@ -18,7 +18,6 @@ use fidl_fuchsia_settings::{
 };
 use fuchsia_async as fasync;
 use fuchsia_syslog::fx_log_err;
-use std::collections::HashMap;
 
 fidl_hanging_get_responder!(InputMarker, InputSettings, InputWatch2Responder);
 fidl_hanging_get_responder!(InputMarker, InputDeviceSettings, InputWatchResponder);
@@ -62,9 +61,8 @@ fn to_request_2(fidl_input_states: Vec<FidlInputState>) -> Option<Request> {
             let device_type: InputDeviceType = input_state.device_type.unwrap().into();
             let device_state = input_state.state.clone().unwrap().into();
             let device_name = input_state.name.clone().unwrap_or_else(|| device_type.to_string());
-            let mut source_states = HashMap::<DeviceStateSource, DeviceState>::new();
-
-            source_states.insert(DeviceStateSource::SOFTWARE, device_state);
+            let source_states =
+                std::array::IntoIter::new([(DeviceStateSource::SOFTWARE, device_state)]).collect();
             InputDevice { name: device_name, device_type, state: device_state, source_states }
         })
         .collect();

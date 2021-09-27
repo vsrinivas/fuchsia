@@ -40,7 +40,7 @@ impl From<Response> for Scoped<FactoryResetSetResult> {
 
 impl request::Responder<Scoped<FactoryResetSetResult>> for FactoryResetSetResponder {
     fn respond(self, Scoped(mut response): Scoped<FactoryResetSetResult>) {
-        self.send(&mut response).ok();
+        let _ = self.send(&mut response);
     }
 }
 
@@ -48,7 +48,7 @@ impl watch::Responder<FactoryResetSettings, fuchsia_zircon::Status> for FactoryR
     fn respond(self, response: Result<FactoryResetSettings, fuchsia_zircon::Status>) {
         match response {
             Ok(settings) => {
-                self.send(settings).ok();
+                let _ = self.send(settings);
             }
             Err(error) => {
                 self.control_handle().shutdown_with_epitaph(error);
