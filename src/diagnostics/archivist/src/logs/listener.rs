@@ -128,7 +128,6 @@ impl Listener {
                 }
 
                 batch_size += msg_size;
-                trace!("Batching {:?}.", msg.id);
                 filtered_batch.push(legacy_msg);
             }
         }
@@ -151,7 +150,6 @@ impl Listener {
     /// Send a single log message if it should be sent according to this listener's filter settings.
     async fn send_log(&mut self, log_message: &Message) {
         if self.filter.should_send(log_message) {
-            trace!("Sending {:?}.", log_message.id);
             let mut to_send = log_message.for_listener();
             self.check_result(self.listener.log(&mut to_send).await);
         }

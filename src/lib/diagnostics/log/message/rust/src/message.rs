@@ -38,9 +38,6 @@ pub const MAX_TAG_LEN: usize = 64;
 /// Our internal representation for a log message.
 #[derive(Clone, Serialize)]
 pub struct Message {
-    #[serde(skip)]
-    pub id: MessageId,
-
     #[serde(flatten)]
     pub data: LogsData,
 }
@@ -73,29 +70,13 @@ impl Ord for Message {
 
 impl std::fmt::Debug for Message {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("Message").field("id", &self.id).field("data", &self.data).finish()
-    }
-}
-
-#[derive(Clone, Debug, PartialEq, Serialize)]
-pub struct MessageId(u64);
-
-impl MessageId {
-    pub fn new(id: u64) -> MessageId {
-        Self(id)
-    }
-
-    fn next() -> Self {
-        use std::sync::atomic::{AtomicU64, Ordering};
-        static NEXT_MESSAGE_ID: AtomicU64 = AtomicU64::new(0);
-
-        MessageId(NEXT_MESSAGE_ID.fetch_add(1, Ordering::Relaxed))
+        f.debug_struct("Message").field("data", &self.data).finish()
     }
 }
 
 impl From<LogsData> for Message {
     fn from(data: LogsData) -> Self {
-        Self { data, id: MessageId::next() }
+        Self { data }
     }
 }
 

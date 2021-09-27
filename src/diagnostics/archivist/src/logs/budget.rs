@@ -137,7 +137,7 @@ mod tests {
     use diagnostics_log_encoding::{
         encode::Encoder, Argument, Record, Severity as StreamSeverity, Value,
     };
-    use diagnostics_message::{Message, MessageId};
+    use diagnostics_message::Message;
     use fidl_fuchsia_diagnostics::StreamMode;
     use futures::{Stream, StreamExt};
     use std::{
@@ -179,7 +179,7 @@ mod tests {
         container_a.ingest_message(fake_message_bytes(2));
 
         let mut cursor = CursorWrapper(container_b.cursor(StreamMode::SnapshotThenSubscribe));
-        assert_eq!(cursor.next().await, Some(Arc::new(fake_message(1, 1))));
+        assert_eq!(cursor.next().await, Some(Arc::new(fake_message(1))));
 
         container_b.mark_stopped();
 
@@ -210,8 +210,8 @@ mod tests {
         StoredMessage::structured(encoded, Default::default()).unwrap()
     }
 
-    fn fake_message(timestamp: i64, message_id: u64) -> Message {
-        let mut message = Message::from(
+    fn fake_message(timestamp: i64) -> Message {
+        let message = Message::from(
             diagnostics_data::LogsDataBuilder::new(diagnostics_data::BuilderArgs {
                 timestamp_nanos: timestamp.into(),
                 component_url: Some(TEST_IDENTITY.url.clone()),
@@ -223,7 +223,6 @@ mod tests {
             .set_tid(456)
             .build(),
         );
-        message.id = MessageId::new(message_id);
         message
     }
 }
