@@ -8,12 +8,20 @@
 #include <filesystem>
 #include <fstream>
 #include <memory>
+#include <set>
+#include <string>
 #include <system_error>
 #include <tuple>
 #include <utility>
+#include <vector>
 
+#include <rapidjson/document.h>
+#include <rapidjson/istreamwrapper.h>
+
+#include "lib/syslog/cpp/macros.h"
 #include "src/developer/debug/zxdb/common/string_util.h"
 #include "src/lib/elflib/elflib.h"
+#include "src/lib/files/glob.h"
 #include "src/lib/fxl/strings/string_printf.h"
 #include "src/lib/fxl/strings/trim.h"
 
@@ -37,14 +45,14 @@ void BuildIDIndex::SearchBuildIdDirs(const std::string& build_id) {
 
   auto path = build_id.substr(0, 2) + "/" + build_id.substr(2);
 
-  for (const auto& [source, build_dir] : build_id_dirs_) {
+  for (const auto& build_id_dir : build_id_dirs_) {
     // There are potentially two files, one with just the build ID, one with a ".debug" suffix. The
     // ".debug" suffix one is supposed to contain either just the DWARF symbols, or the full
     // unstripped binary. The plain one is supposed to be either a stripped or unstripped binary.
     //
     // Since we're looking for DWARF information, look in the ".debug" one first.
-    IndexSourceFile(source + "/" + path + ".debug", build_dir);
-    IndexSourceFile(source + "/" + path, build_dir);
+    IndexSourceFile(build_id_dir.path + "/" + path + ".debug", build_id_dir.build_dir);
+    IndexSourceFile(build_id_dir.path + "/" + path, build_id_dir.build_dir);
   }
 }
 
@@ -61,7 +69,6 @@ void BuildIDIndex::AddBuildIDMappingForTest(const std::string& build_id,
 void BuildIDIndex::ClearAll() {
   ids_txts_.clear();
   build_id_dirs_.clear();
-  symbol_index_files_.clear();
   sources_.clear();
   ClearCache();
 }
@@ -73,20 +80,28 @@ bool BuildIDIndex::AddOneFile(const std::string& file_name) {
 void BuildIDIndex::AddIdsTxt(const std::string& ids_txt, const std::string& build_dir) {
   // If the file is already loaded, ignore it.
   if (std::find_if(ids_txts_.begin(), ids_txts_.end(),
-                   [&ids_txt](auto it) { return it.first == ids_txt; }) != ids_txts_.end())
+                   [&ids_txt](const auto& it) { return it.path == ids_txt; }) != ids_txts_.end())
     return;
 
-  ids_txts_.emplace_back(ids_txt, build_dir);
+  ids_txts_.push_back({ids_txt, build_dir});
   ClearCache();
 }
 
 void BuildIDIndex::AddBuildIdDir(const std::string& dir, const std::string& build_dir) {
   if (std::find_if(build_id_dirs_.begin(), build_id_dirs_.end(),
-                   [&dir](auto it) { return it.first == dir; }) != build_id_dirs_.end())
+                   [&dir](const auto& it) { return it.path == dir; }) != build_id_dirs_.end())
     return;
 
-  build_id_dirs_.emplace_back(dir, build_dir);
+  build_id_dirs_.push_back({dir, build_dir});
   ClearCache();
+}
+
+void BuildIDIndex::AddSymbolServer(const std::string& url, bool require_authentication) {
+  if (std::find_if(symbol_servers_.begin(), symbol_servers_.end(),
+                   [&url](const auto& it) { return it.url == url; }) != symbol_servers_.end())
+    return;
+
+  symbol_servers_.push_back({url, require_authentication});
 }
 
 void BuildIDIndex::SetCacheDir(const std::string& cache_dir) {
@@ -95,12 +110,11 @@ void BuildIDIndex::SetCacheDir(const std::string& cache_dir) {
 }
 
 void BuildIDIndex::AddSymbolIndexFile(const std::string& path) {
-  if (std::find(symbol_index_files_.begin(), symbol_index_files_.end(), path) !=
-      symbol_index_files_.end())
-    return;
-
-  symbol_index_files_.push_back(path);
-  ClearCache();
+  if (StringEndsWith(path, ".json")) {
+    LoadSymbolIndexFileJSON(path);
+  } else {
+    LoadSymbolIndexFilePlain(path);
+  }
 }
 
 void BuildIDIndex::AddPlainFileOrDir(const std::string& path) {
@@ -167,31 +181,31 @@ void BuildIDIndex::LogMessage(const std::string& msg) const {
     information_callback_(msg);
 }
 
-void BuildIDIndex::LoadIdsTxt(const std::string& file_name, const std::string& build_dir) {
+void BuildIDIndex::LoadIdsTxt(const IdsTxt& ids_txt) {
   std::error_code err;
 
-  auto path = std::filesystem::canonical(file_name, err);
+  auto path = std::filesystem::canonical(ids_txt.path, err);
 
   if (err) {
-    status_.emplace_back(file_name, 0);
-    LogMessage("Can't open build ID file: " + file_name);
+    status_.emplace_back(ids_txt.path, 0);
+    LogMessage("Can't open build ID file: " + ids_txt.path);
     return;
   }
 
   auto containing_dir = path.parent_path();
 
-  FILE* id_file = fopen(file_name.c_str(), "r");
+  FILE* id_file = fopen(ids_txt.path.c_str(), "r");
   if (!id_file) {
-    status_.emplace_back(file_name, 0);
-    LogMessage("Can't open build ID file: " + file_name);
+    status_.emplace_back(ids_txt.path, 0);
+    LogMessage("Can't open build ID file: " + ids_txt.path);
     return;
   }
 
   fseek(id_file, 0, SEEK_END);
   long length = ftell(id_file);
   if (length <= 0) {
-    status_.emplace_back(file_name, 0);
-    LogMessage("Can't load build ID file: " + file_name);
+    status_.emplace_back(ids_txt.path, 0);
+    LogMessage("Can't load build ID file: " + ids_txt.path);
     return;
   }
 
@@ -200,20 +214,20 @@ void BuildIDIndex::LoadIdsTxt(const std::string& file_name, const std::string& b
 
   fseek(id_file, 0, SEEK_SET);
   if (fread(contents.data(), 1, contents.size(), id_file) != static_cast<size_t>(length)) {
-    status_.emplace_back(file_name, 0);
-    LogMessage("Can't read build ID file: " + file_name);
+    status_.emplace_back(ids_txt.path, 0);
+    LogMessage("Can't read build ID file: " + ids_txt.path);
     return;
   }
 
   fclose(id_file);
 
-  int added = ParseIDs(contents, containing_dir, build_dir, &build_id_to_files_);
-  status_.emplace_back(file_name, added);
+  int added = ParseIDs(contents, containing_dir, ids_txt.build_dir, &build_id_to_files_);
+  status_.emplace_back(ids_txt.path, added);
   if (!added)
-    LogMessage("No mappings found in build ID file: " + file_name);
+    LogMessage("No mappings found in build ID file: " + ids_txt.path);
 }
 
-void BuildIDIndex::LoadSymbolIndexFile(const std::string& file_name) {
+void BuildIDIndex::LoadSymbolIndexFilePlain(const std::string& file_name) {
   std::ifstream file(file_name);
   if (file.fail()) {
     return LogMessage("Cannot read symbol-index file: " + file_name);
@@ -252,6 +266,97 @@ void BuildIDIndex::LoadSymbolIndexFile(const std::string& file_name) {
       AddBuildIdDir(symbol_path, build_dir);
     } else if (std::filesystem::exists(symbol_path, ec)) {
       AddIdsTxt(symbol_path, build_dir);
+    }
+  }
+}
+
+void BuildIDIndex::LoadSymbolIndexFileJSON(const std::string& file_name) {
+  std::vector<std::string> files_to_load{file_name};
+  std::set<std::string> visited;
+
+  while (!files_to_load.empty()) {
+    auto file_name = std::move(files_to_load.back());
+    files_to_load.pop_back();
+
+    // Avoid recursive includes.
+    if (visited.find(file_name) != visited.end()) {
+      continue;
+    }
+    visited.insert(file_name);
+
+    std::ifstream file(file_name);
+    if (!file) {
+      return LogMessage("Can't open " + file_name);
+    }
+
+    rapidjson::IStreamWrapper input_stream(file);
+    rapidjson::Document document;
+    document.ParseStream(input_stream);
+    if (document.HasParseError() || !document.IsObject()) {
+      return LogMessage(file_name + " is not a valid symbol-index.json");
+    }
+
+    auto resolve_path = [base = std::filesystem::path(file_name).parent_path()](const char* path) {
+      // "/abc/def/..".lexically_normal() => "/abc/", while we want "/abc"
+      auto res = (base / path).lexically_normal();
+      if (!res.has_filename()) {
+        res = res.parent_path();
+      }
+      return res;
+    };
+
+    if (document.HasMember("includes") && document["includes"].IsArray()) {
+      for (auto& value : document["includes"].GetArray()) {
+        if (value.IsString() && strlen(value.GetString())) {
+          for (auto path : files::Glob(resolve_path(value.GetString()))) {
+            files_to_load.push_back(path);
+          }
+        }
+      }
+    }
+
+    if (document.HasMember("build_id_dirs") && document["build_id_dirs"].IsArray()) {
+      for (auto& value : document["build_id_dirs"].GetArray()) {
+        if (value.IsObject() && value.HasMember("path") && value["path"].IsString() &&
+            strlen(value["path"].GetString())) {
+          std::string build_dir;
+          if (value.HasMember("build_dir") && value["build_dir"].IsString()) {
+            build_dir = resolve_path(value["build_dir"].GetString());
+          }
+          for (auto path : files::Glob(resolve_path(value["path"].GetString()))) {
+            AddBuildIdDir(path, build_dir);
+          }
+        }
+      }
+    }
+
+    if (document.HasMember("ids_txts") && document["ids_txts"].IsArray()) {
+      for (auto& value : document["ids_txts"].GetArray()) {
+        if (value.IsObject() && value.HasMember("path") && value["path"].IsString() &&
+            strlen(value["path"].GetString())) {
+          std::string build_dir;
+          if (value.HasMember("build_dir") && value["build_dir"].IsString()) {
+            build_dir = resolve_path(value["build_dir"].GetString());
+          }
+          for (auto path : files::Glob(resolve_path(value["path"].GetString()))) {
+            AddIdsTxt(path, build_dir);
+          }
+        }
+      }
+    }
+
+    if (document.HasMember("gcs_flat") && document["gcs_flat"].IsArray()) {
+      for (auto& value : document["gcs_flat"].GetArray()) {
+        if (value.IsObject() && value.HasMember("url") && value["url"].IsString() &&
+            strlen(value["url"].GetString())) {
+          bool require_authentication = false;
+          if (value.HasMember("require_authentication") &&
+              value["require_authentication"].IsBool()) {
+            require_authentication = value["require_authentication"].GetBool();
+          }
+          AddSymbolServer(value["url"].GetString(), require_authentication);
+        }
+      }
     }
   }
 }
@@ -316,17 +421,14 @@ void BuildIDIndex::EnsureCacheClean() {
   status_.clear();
   build_id_to_files_ = manual_mappings_;
 
-  for (const auto& symbol_index_file : symbol_index_files_)
-    LoadSymbolIndexFile(symbol_index_file);
-
   for (const auto& source : sources_)
     IndexSourcePath(source);
 
-  for (const auto& [ids_txt, build_dir] : ids_txts_)
-    LoadIdsTxt(ids_txt, build_dir);
+  for (const auto& ids_txt : ids_txts_)
+    LoadIdsTxt(ids_txt);
 
-  for (const auto& [path, build_dir] : build_id_dirs_)
-    status_.emplace_back(path, BuildIDIndex::kStatusIsFolder);
+  for (const auto& build_id_dir : build_id_dirs_)
+    status_.emplace_back(build_id_dir.path, BuildIDIndex::kStatusIsFolder);
 
   cache_dirty_ = false;
 }

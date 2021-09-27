@@ -1,0 +1,12 @@
+{
+  "includes": [
+    "*.symbol-index.json"
+  ],
+  "build_id_dirs": [
+    { "path": "..", "build_dir": "../build" },
+    { "path": "/" }
+  ],
+  "gcs_flat": [
+    { "url": "gs://bucket" }
+  ]
+}

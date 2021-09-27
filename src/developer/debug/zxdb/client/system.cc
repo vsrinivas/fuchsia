@@ -836,11 +836,14 @@ void System::OnSettingChanged(const SettingStore& store, const std::string& sett
       setting_name == ClientSettings::System::kSymbolPaths ||
       setting_name == ClientSettings::System::kBuildIdDirs ||
       setting_name == ClientSettings::System::kIdsTxts ||
-      setting_name == ClientSettings::System::kSymbolCache) {
+      setting_name == ClientSettings::System::kSymbolCache ||
+      setting_name == ClientSettings::System::kSymbolServers) {
     // Clear the symbol sources and add them back to sync the index with the setting.
     BuildIDIndex& build_id_index = GetSymbols()->build_id_index();
     build_id_index.ClearAll();
 
+    // Add symbol-index files first. Because they might encode extra information, e.g., build_dir
+    // and require_authentication.
     for (const std::string& path : store.GetList(ClientSettings::System::kSymbolIndexFiles)) {
       build_id_index.AddSymbolIndexFile(path);
     }
@@ -853,25 +856,31 @@ void System::OnSettingChanged(const SettingStore& store, const std::string& sett
     for (const std::string& path : store.GetList(ClientSettings::System::kIdsTxts)) {
       build_id_index.AddIdsTxt(path);
     }
+    for (const std::string& url : store.GetList(ClientSettings::System::kSymbolServers)) {
+      build_id_index.AddSymbolServer(url);
+    }
 
+    // Cache directory.
     auto symbol_cache = store.GetString(ClientSettings::System::kSymbolCache);
     if (!symbol_cache.empty()) {
       std::error_code ec;
       std::filesystem::create_directories(std::filesystem::path(symbol_cache), ec);
       build_id_index.SetCacheDir(symbol_cache);
     }
-  } else if (setting_name == ClientSettings::System::kSymbolServers) {
-    // TODO(dangyi): We don't support the removal of an existing symbol server yet.
-    auto urls = store.GetList(setting_name);
-    std::set<std::string> existing;
 
+    // Symbol servers.
+    // TODO(dangyi): We don't support the removal of an existing symbol server yet.
+    std::set<std::string> existing;
     for (const auto& symbol_server : symbol_servers_) {
       existing.insert(symbol_server->name());
     }
 
-    for (const auto& url : urls) {
-      if (existing.find(url) == existing.end()) {
-        if (auto symbol_server = SymbolServer::FromURL(session(), url)) {
+    // TODO(dangyi): Separate symbol downloading from System into a new DownloadManager which is to
+    // be owned by BuildIDIndex.
+    for (const auto& server : build_id_index.symbol_servers()) {
+      if (existing.find(server.url) == existing.end()) {
+        // TODO(dangyi): Support server.require_authentication flag.
+        if (auto symbol_server = SymbolServer::FromURL(session(), server.url)) {
           AddSymbolServer(std::move(symbol_server));
         }
       }

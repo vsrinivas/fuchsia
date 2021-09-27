@@ -17,19 +17,22 @@
 
 namespace zxdb {
 
-// This class maintains an index of build ID to local file path for files that may have symbols in
-// them.
+// This class provides symbol files from disk or remote servers.
 //
 // It can get files from different sources:
 // 1. "ids.txt", which contains the mapping from Build IDs to ELF files.
 // 2. ".build-id" directory, where an ELF file with Build ID "xxyyyy" is arranged at xx/yyyy.debug.
 // 3. use a "symbol-index" file to get a list of "ids.txt" or ".build-id" directories.
 // 4. explicitly given elf file path, or a directory of ELF files.
+// 5. A symbol server, e.g., "gs://fuchsia-artifacts/debug".
 class BuildIDIndex {
  public:
   struct Entry {
+    // Empty string indicates no such file is found.
+
     // Debug info and program bits may be in separated files, e.g. .build-id/xx/xxxxxx.debug and
-    // .build-id/xx/xxxxxx.
+    // .build-id/xx/xxxxxx. The binary file could be optional because the debug_info file usually
+    // also contains program bits.
     std::string debug_info;
     std::string binary;
     // The build directory is useful when looking up source code in e.g. "list" command.
@@ -41,6 +44,24 @@ class BuildIDIndex {
 
   // Lists symbol sources and the number of ELF files indexed at that location.
   using StatusList = std::vector<std::pair<std::string, int>>;
+
+  // GNU-style ".build-id" directories. The second string is the optional build directory.
+  struct BuildIdDir {
+    std::string path;
+    std::string build_dir;
+  };
+
+  // "ids.txt" is a text file describing the mapping from the Build ID to the ELF file.
+  struct IdsTxt {
+    std::string path;
+    std::string build_dir;
+  };
+
+  // Symbol servers.
+  struct SymbolServer {
+    std::string url;
+    bool require_authentication;
+  };
 
   static constexpr int kStatusIsFolder = -1;
 
@@ -84,6 +105,9 @@ class BuildIDIndex {
   // supplemented to help look up the source code.
   void AddBuildIdDir(const std::string& dir, const std::string& build_dir = "");
 
+  // Adds a symbol server.
+  void AddSymbolServer(const std::string& url, bool require_authentication = true);
+
   // cache_dir saves the downloaded symbol files. Its layout is the same as a build_id_dir but it
   // also features garbage collection.
   void SetCacheDir(const std::string& cache_dir);
@@ -91,8 +115,14 @@ class BuildIDIndex {
   // Returns the path to the cache directory or an empty path if it's not set.
   std::filesystem::path GetCacheDir() const { return cache_dir_ ? cache_dir_->path() : ""; }
 
-  // Populates build_id_dirs_ and ids_txts_ with the content of symbol-index file.
-  void AddSymbolIndexFile(const std::string& symbol_index);
+  // Add a symbol-index file that indexes various symbol sources.
+  //
+  // Two versions of symbol-index files are supported currently:
+  //   - A plain text file separated by newlines and tabs, usually located at
+  //     ~/.fuchsia/debug/symbol-index.
+  //   - A rich JSON format that supports includes, globbing, usually located at
+  //     ~/.fuchsia/debug/symbol-index.json.
+  void AddSymbolIndexFile(const std::string& path);
 
   // Adds a file or directory to the symbol search index. If the path is a file this class will try
   // to parse it as an ELF file and add it to the index if it is. If the path is a directory, all
@@ -108,13 +138,16 @@ class BuildIDIndex {
   // Clears all cached build IDs. They will be reloaded when required.
   void ClearCache();
 
-  // Parses a build ID mapping file (ids.txt). This is a separate static function for testing
+  // Parses a build ID mapping file (ids.txt). This is separated and public only for testing
   // purposes. The results are added to the output. Returns the number of items loaded.
   static int ParseIDs(const std::string& input, const std::filesystem::path& containing_dir,
                       const std::string& build_dir, BuildIDMap* output);
 
-  // Returns the underlying mapping.
+  // Getters, mainly used in tests.
   const BuildIDMap& build_id_to_files() const { return build_id_to_files_; }
+  const std::vector<BuildIdDir>& build_id_dirs() const { return build_id_dirs_; }
+  const std::vector<IdsTxt>& ids_txts() const { return ids_txts_; }
+  const std::vector<SymbolServer>& symbol_servers() const { return symbol_servers_; }
 
  private:
   // Updates the build_id_to_files_ cache if necessary.
@@ -124,10 +157,12 @@ class BuildIDIndex {
   void LogMessage(const std::string& msg) const;
 
   // Adds all the mappings from the given ids.txt to the index.
-  void LoadIdsTxt(const std::string& file_name, const std::string& build_dir);
+  void LoadIdsTxt(const IdsTxt& ids_txt);
 
-  // Adds "ids.txt" / ".build-id" directories in the given symbol-index file to the index.
+  // Populates build_id_dirs_, ids_txts_ and symbol_servers_ with the content of symbol-index file.
   void LoadSymbolIndexFile(const std::string& file_name);
+  void LoadSymbolIndexFilePlain(const std::string& file_name);
+  void LoadSymbolIndexFileJSON(const std::string& file_name);
 
   // Adds all the mappings from the given file or directory to the index.
   void IndexSourcePath(const std::string& path);
@@ -147,17 +182,12 @@ class BuildIDIndex {
   // Function to output informational messages. May be null. Use LogMessage().
   fit::function<void(const std::string&)> information_callback_;
 
-  // GNU-style ".build-id" directories. The second string is the optional build directory.
-  std::vector<std::pair<std::string, std::string>> build_id_dirs_;
-
-  // "ids.txt" is a text file describing the mapping from the Build ID to the ELF file.
-  std::vector<std::pair<std::string, std::string>> ids_txts_;
+  std::vector<BuildIdDir> build_id_dirs_;
+  std::vector<IdsTxt> ids_txts_;
+  std::vector<SymbolServer> symbol_servers_;
 
   // Cache directory. nullptr means no cache directory.
   std::unique_ptr<CacheDir> cache_dir_;
-
-  // "symbol-index" files are used to populate the build_id_dirs_ and ids_txts_ above.
-  std::vector<std::string> symbol_index_files_;
 
   // Plain ELF files or directories of ELF files to index.
   std::vector<std::string> sources_;

@@ -18,10 +18,7 @@ namespace {
 const char kSmallTestBuildID[] = "763feb38b0e37a89964c330c5cf7f7af2ce79e54";
 
 std::filesystem::path GetTestDataDir() {
-  std::filesystem::path path(GetSelfPath());
-  path.remove_filename();
-  path.append("test_data/zxdb/");
-  return path;
+  return std::filesystem::path(GetSelfPath()).parent_path() / "test_data/zxdb";
 }
 
 std::filesystem::path GetSmallTestFile() { return GetTestDataDir() / "small_test_file.elf"; }
@@ -70,15 +67,28 @@ TEST(BuildIDIndex, IndexBuildIdDir) {
             index.EntryForBuildID(TestSymbolModule::kCheckedInBuildId).debug_info);
 }
 
-TEST(BuildIDIndex, ReadFromSymbolIndex) {
+TEST(BuildIDIndex, ReadFromSymbolIndexPlain) {
   BuildIDIndex index;
   index.AddSymbolIndexFile(GetTestDataDir() / "symbol-index");
 
-  // It's a little bit tricky because we actually want to check that
-  //   EXPECT_EQ(1, index.build_id_dirs_.size());
-  //   EXPECT_EQ(0, index.ids_txts_.size());
-  // but both of them are private.
-  EXPECT_EQ(1UL, index.GetStatus().size());
+  EXPECT_EQ(1ul, index.build_id_dirs().size());
+  EXPECT_EQ(0ul, index.ids_txts().size());
+}
+
+TEST(BuildIDIndex, ReadFromSymbolIndexJSON) {
+  BuildIDIndex index;
+  index.AddSymbolIndexFile(GetTestDataDir() / "symbol-index.json");
+
+  EXPECT_EQ(2ul, index.build_id_dirs().size());
+  EXPECT_EQ(GetTestDataDir().parent_path(), index.build_id_dirs()[0].path);
+  EXPECT_EQ(GetTestDataDir().parent_path() / "build", index.build_id_dirs()[0].build_dir);
+  EXPECT_EQ("/", index.build_id_dirs()[1].path);
+  EXPECT_EQ("", index.build_id_dirs()[1].build_dir);
+  EXPECT_EQ(2ul, index.symbol_servers().size());
+  EXPECT_EQ("gs://bucket", index.symbol_servers()[0].url);
+  EXPECT_EQ(false, index.symbol_servers()[0].require_authentication);
+  EXPECT_EQ("gs://another-bucket", index.symbol_servers()[1].url);
+  EXPECT_EQ(true, index.symbol_servers()[1].require_authentication);
 }
 
 TEST(BuildIDIndex, ParseIDFile) {

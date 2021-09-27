@@ -6,6 +6,8 @@
 
 #include <lib/cmdline/args_parser.h>
 
+#include <filesystem>
+
 #include "src/lib/fxl/strings/string_printf.h"
 
 namespace symbolizer {
@@ -123,7 +125,13 @@ Error ParseCommandLine(int argc, const char* argv[], CommandLineOptions* options
       options->symbol_cache = home_str + "/.fuchsia/debug/symbol-cache";
     }
     if (options->symbol_index_files.empty()) {
-      options->symbol_index_files.push_back(home_str + "/.fuchsia/debug/symbol-index");
+      for (const auto& path : {home_str + "/.fuchsia/debug/symbol-index.json",
+                               home_str + "/.fuchsia/debug/symbol-index"}) {
+        std::error_code ec;
+        if (std::filesystem::exists(path, ec)) {
+          options->symbol_index_files.push_back(path);
+        }
+      }
     }
   }
 

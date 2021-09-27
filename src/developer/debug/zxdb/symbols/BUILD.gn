@@ -168,7 +168,11 @@ static_library("symbols") {
     "//third_party/googletest:gtest_prod",
   ]
 
-  deps = [ "//src/lib/elflib" ]
+  deps = [
+    "//src/lib/elflib",
+    "//src/lib/files",
+    "//third_party/rapidjson",
+  ]
 
   # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
   configs += [ "//build/config:Wno-conversion" ]
@@ -244,9 +248,13 @@ if (is_host) {
     outputs = [ "$root_out_dir/test_data/zxdb/small_test_file.elf" ]
   }
 
-  host_test_data("symbol_index_file") {
-    sources = [ "test_data/symbol-index" ]
-    outputs = [ "$root_out_dir/test_data/zxdb/symbol-index" ]
+  host_test_data("symbol_index_files") {
+    sources = [
+      "test_data/another.symbol-index.json",
+      "test_data/symbol-index",
+      "test_data/symbol-index.json",
+    ]
+    outputs = [ "$root_out_dir/test_data/zxdb/{{source_file_part}}" ]
   }
 }
 
@@ -298,7 +306,7 @@ source_set("tests") {
   if (is_host) {
     data_deps = [
       ":dot_buildid",
-      ":symbol_index_file",
+      ":symbol_index_files",
       ":test_elf_file",
       ":test_so",
     ]

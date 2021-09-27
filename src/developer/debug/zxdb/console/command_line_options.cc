@@ -6,6 +6,7 @@
 
 #include <lib/cmdline/args_parser.h>
 
+#include <filesystem>
 #include <iostream>
 
 namespace zxdb {
@@ -168,6 +169,23 @@ cmdline::Status ParseCommandLine(int argc, const char* argv[], CommandLineOption
   // Handle --help switch since we're the one that knows about the switches.
   if (requested_help)
     return cmdline::Status::Error(kHelpIntro + parser.GetHelp());
+
+  // Default values for vector types.
+  if (const char* home = std::getenv("HOME"); home) {
+    std::string home_str = home;
+    if (!options->symbol_cache) {
+      options->symbol_cache = home_str + "/.fuchsia/debug/symbol-cache";
+    }
+    if (options->symbol_index_files.empty()) {
+      for (const auto& path : {home_str + "/.fuchsia/debug/symbol-index.json",
+                               home_str + "/.fuchsia/debug/symbol-index"}) {
+        std::error_code ec;
+        if (std::filesystem::exists(path, ec)) {
+          options->symbol_index_files.push_back(path);
+        }
+      }
+    }
+  }
 
   return cmdline::Status::Ok();
 }
