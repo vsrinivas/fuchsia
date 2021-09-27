@@ -1,0 +1,13 @@
+{
+    include: [
+        "//src/sys/test_runners/stress_test/actor/default.shard.cml",
+        "syslog/client.shard.cml",
+    ],
+    program: {
+        runner: "elf",
+        binary: "bin/actor",
+    },
+    use: [
+        { protocol: "fuchsia.diagnostics.ArchiveAccessor" },
+    ],
+}

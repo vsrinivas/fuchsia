@@ -1,0 +1,72 @@
+// This manifest describes the stress test environment
+//
+// Layout:
+//                  test
+//                 /    \
+//         archivist     actors
+//                      /      \
+//                     ..........
+//
+// Events from the test realm will be routed to archivist.
+// Archivist protocols will be routed into actors.
+// test will create/destroy components in actors.
+{
+    include: [
+        "//src/sys/test_runners/stress_test/default.shard.cml",
+        "syslog/client.shard.cml",
+    ],
+    program: {
+        actor_url: "fuchsia-pkg://fuchsia.com/archivist-stress-test#meta/actor.cm",
+        num_instances: "20",
+        action_timeout: "300", // Each action should not take more than 5 minutes
+    },
+    children: [
+        {
+            name: "archivist",
+            url: "fuchsia-pkg://fuchsia.com/archivist-stress-test#meta/archivist.cm",
+        },
+    ],
+    offer: [
+        {
+            protocol: [
+                "fuchsia.logger.LogSink",
+                "fuchsia.sys2.EventSource",
+            ],
+            from: "parent",
+            to: "#archivist",
+        },
+        {
+            event: [
+                "running",
+                "started",
+                "stopped",
+            ],
+            from: "framework",
+            to: "#archivist",
+            modes: [ "async" ],
+        },
+        {
+            event: "directory_ready",
+            from: "framework",
+            to: "#archivist",
+            filter: { name: "diagnostics" },
+            modes: [ "async" ],
+        },
+        {
+            event: "capability_requested",
+            from: "framework",
+            to: "#archivist",
+            filter: { name: "fuchsia.logger.LogSink" },
+            modes: [ "async" ],
+        },
+        {
+            protocol: [
+                "fuchsia.diagnostics.ArchiveAccessor",
+                "fuchsia.logger.Log",
+                "fuchsia.logger.LogSink",
+            ],
+            from: "#archivist",
+            to: "#actors",
+        },
+    ],
+}

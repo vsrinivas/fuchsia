@@ -95,6 +95,7 @@ group("tests") {
 group("stress-tests") {
   testonly = true
   public_deps = [
+    "//src/diagnostics/archivist/tests/stress-test",
     "//src/storage/stress-tests",
     "//src/sys/component_manager/stress_tests_alt",
     "//src/ui/tests/scenic-stress-tests:tests",

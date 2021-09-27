@@ -1,0 +1,16 @@
+{
+    include: [
+        "//src/diagnostics/archivist/meta/common.shard.cml",
+        "syslog/client.shard.cml",
+    ],
+    program: {
+        binary: "bin/archivist",
+        args: [
+            "--disable-klog",
+            "--disable-log-connector",
+            "--disable-component-event-provider",
+            "--config-path",
+            "/pkg/data/archivist_config.json",
+        ],
+    },
+}
