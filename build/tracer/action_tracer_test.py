@@ -233,6 +233,50 @@ class ParseDepFileTests(unittest.TestCase):
                 "b: c \\\n",
             ])
 
+    def test_blank_line(self):
+        depfile = action_tracer.parse_depfile(
+            [
+                "a:b",
+                " ",
+                "b:",
+            ])
+        self.assertEqual(
+            depfile.deps, [
+                action_tracer.DepEdges(ins={"b"}, outs={"a"}),
+                action_tracer.DepEdges(ins=set(), outs={"b"}),
+            ])
+        self.assertEqual(depfile.all_ins, {"b"})
+        self.assertEqual(depfile.all_outs, {"a", "b"})
+
+    def test_comment(self):
+        depfile = action_tracer.parse_depfile(
+            [
+                " # a:b",
+                "b:",
+            ])
+        self.assertEqual(
+            depfile.deps, [
+                action_tracer.DepEdges(ins=set(), outs={"b"}),
+            ])
+        self.assertEqual(depfile.all_ins, set())
+        self.assertEqual(depfile.all_outs, {"b"})
+
+    def test_continuation_blank_line(self):
+        with self.assertRaises(ValueError):
+            depfile = action_tracer.parse_depfile([
+                "a: \\\n",
+                "",
+                "b",
+            ])
+
+    def test_continuation_comment(self):
+        with self.assertRaises(ValueError):
+            depfile = action_tracer.parse_depfile([
+                "a: \\\n",
+                "# comment",
+                "b",
+            ])
+
 
 class ParseFsatraceOutputTests(unittest.TestCase):
 

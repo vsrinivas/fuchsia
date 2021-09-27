@@ -299,8 +299,6 @@ def parse_depfile(depfile_lines: Iterable[str]) -> DepFile:
     See https://github.com/ninja-build/ninja/blob/master/src/depfile_parser_test.cc
     for examples of format using Ninja syntax.
 
-    TODO(fangism): ignore blank/comment lines
-
     Args:
       depfile_lines: lines from a depfile
 
@@ -313,6 +311,16 @@ def parse_depfile(depfile_lines: Iterable[str]) -> DepFile:
     lines = []
     current_line = ""
     for line in depfile_lines:
+        # Ignore empty line
+        if not line.strip():
+            if current_line:
+                raise ValueError("Line continuation followed by empty line in depfile line " + line)
+            continue
+        # Ignore comments
+        if line.strip().startswith("#"):
+            if current_line:
+                raise ValueError("Line continuation followed by comment in depfile line " + line)
+            continue
         # We currently don't allow consecutive backslashes in filenames to
         # simplify depfile parsing. Support can be added if use cases come up.
         #
