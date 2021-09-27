@@ -157,6 +157,7 @@ protocol RadarBurstReader {
 
 /// The main protocol implemented by radar drivers. Clients use this protocol to
 /// establish a `RadarBurstReader` connection with the driver.
+@discoverable
 protocol RadarBurstReaderProvider {
     /// + request `server` the `RadarBurstReader` server end for the driver to
     ///     bind to.
