@@ -150,14 +150,15 @@ class TestConnection : public magma::TestDeviceBase {
 
   bool InitJobBuffer(magma_buffer_t buffer, How how, uint64_t size, uint64_t* job_va) {
     void* vaddr;
-    if (!magma::MapCpuHelper(connection_, buffer, 0 /*offset*/, size, &vaddr) != 0)
+    if (!magma::MapCpuHelper(buffer, 0 /*offset*/, size, &vaddr) != 0)
       return DRETF(false, "couldn't map job buffer");
     *job_va = next_job_address_;
     next_job_address_ += 0x5000;
     magma_map_buffer_gpu(
         connection_, buffer, 0, 1, *job_va,
         MAGMA_GPU_MAP_FLAG_READ | MAGMA_GPU_MAP_FLAG_WRITE | kMagmaArmMaliGpuMapFlagInnerShareable);
-    magma_buffer_range_op(connection_, buffer, MAGMA_BUFFER_RANGE_OP_POPULATE_TABLES, 0, magma::page_size());
+    magma_buffer_range_op(connection_, buffer, MAGMA_BUFFER_RANGE_OP_POPULATE_TABLES, 0,
+                          magma::page_size());
     JobDescriptorHeader* header = static_cast<JobDescriptorHeader*>(vaddr);
     memset(header, 0, sizeof(*header));
     header->job_descriptor_size = 1;  // Next job address is 64-bit.

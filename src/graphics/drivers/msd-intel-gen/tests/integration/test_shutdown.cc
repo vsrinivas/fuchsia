@@ -88,7 +88,7 @@ class TestConnection : public magma::TestDeviceBase {
 
   bool InitBatchBuffer(magma_buffer_t buffer, uint64_t size) {
     void* vaddr;
-    if (!magma::MapCpuHelper(connection_, buffer, 0 /*offset*/, size, &vaddr))
+    if (!magma::MapCpuHelper(buffer, 0 /*offset*/, size, &vaddr))
       return DRETF(false, "couldn't map batch buffer");
 
     memset(vaddr, 0, size);

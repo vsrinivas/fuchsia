@@ -65,7 +65,7 @@ class TestConnection : public magma::TestDeviceBase {
     ASSERT_EQ(MAGMA_STATUS_OK,
               magma_create_buffer(connection_, PAGE_SIZE, &buffer_size, &batch_buffer));
     void* vaddr;
-    ASSERT_TRUE(magma::MapCpuHelper(connection_, batch_buffer, 0 /*offset*/, buffer_size, &vaddr));
+    ASSERT_TRUE(magma::MapCpuHelper(batch_buffer, 0 /*offset*/, buffer_size, &vaddr));
 
     ASSERT_EQ(MAGMA_STATUS_OK,
               magma_map_buffer_gpu(connection_, batch_buffer, 0, 1, gpu_addr_, kMapFlags));
@@ -210,7 +210,7 @@ class TestConnection : public magma::TestDeviceBase {
 
     ASSERT_EQ(magma_create_buffer(connection_, PAGE_SIZE, &size, &batch_buffer), 0);
     void* vaddr;
-    ASSERT_TRUE(magma::MapCpuHelper(connection_, batch_buffer, 0 /*offset*/, size, &vaddr));
+    ASSERT_TRUE(magma::MapCpuHelper(batch_buffer, 0 /*offset*/, size, &vaddr));
 
     InitBatchBuffer(vaddr, size, true, kUnmappedBufferGpuAddress);
 

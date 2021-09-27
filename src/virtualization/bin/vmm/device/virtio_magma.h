@@ -58,10 +58,6 @@ class VirtioMagma : public VirtioMagmaGeneric,
                                         virtio_magma_release_connection_resp_t* response) override;
   zx_status_t Handle_release_buffer(const virtio_magma_release_buffer_ctrl_t* request,
                                     virtio_magma_release_buffer_resp_t* response) override;
-  zx_status_t Handle_internal_map(const virtio_magma_internal_map_ctrl_t* request,
-                                  virtio_magma_internal_map_resp_t* response) override;
-  zx_status_t Handle_internal_unmap(const virtio_magma_internal_unmap_ctrl_t* request,
-                                    virtio_magma_internal_unmap_resp_t* response) override;
   zx_status_t Handle_internal_map2(const virtio_magma_internal_map2_ctrl_t* request,
                                    virtio_magma_internal_map2_resp_t* response) override;
   zx_status_t Handle_internal_unmap2(const virtio_magma_internal_unmap2_ctrl_t* request,

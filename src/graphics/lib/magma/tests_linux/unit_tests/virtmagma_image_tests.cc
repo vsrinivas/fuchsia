@@ -113,7 +113,7 @@ class MagmaImageTestFormats : public MagmaImageTest, public testing::WithParamIn
 
   void MapAndWrite(magma_buffer_t image) {
     magma_handle_t buffer_handle;
-    ASSERT_EQ(MAGMA_STATUS_OK, magma_get_buffer_handle(connection_, image, &buffer_handle));
+    ASSERT_EQ(MAGMA_STATUS_OK, magma_get_buffer_handle2(image, &buffer_handle));
 
     size_t length = magma_get_buffer_size(image);
 
@@ -129,7 +129,7 @@ class MagmaImageTestFormats : public MagmaImageTest, public testing::WithParamIn
 
   void MapAndCompare(magma_buffer_t image) {
     magma_handle_t buffer_handle;
-    ASSERT_EQ(MAGMA_STATUS_OK, magma_get_buffer_handle(connection_, image, &buffer_handle));
+    ASSERT_EQ(MAGMA_STATUS_OK, magma_get_buffer_handle2(image, &buffer_handle));
 
     size_t length = magma_get_buffer_size(image);
 

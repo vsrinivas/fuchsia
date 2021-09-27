@@ -11,8 +11,7 @@
 namespace magma {
 
 // Maps a magma buffer into the process address space using the OS specific syscall.
-bool MapCpuHelper(magma_connection_t connection, magma_buffer_t buffer, size_t offset,
-                  size_t length, void** addr_out);
+bool MapCpuHelper(magma_buffer_t buffer, size_t offset, size_t length, void** addr_out);
 
 // Unmaps a magma buffer from the process address space using the OS specific syscall.
 bool UnmapCpuHelper(void* addr, size_t length);

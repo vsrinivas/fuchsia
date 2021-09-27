@@ -1121,62 +1121,6 @@ TEST(MagmaAbi, CommitBuffer) {
   magma_release_buffer(connection.connection(), buffer);
 }
 
-TEST(MagmaAbi, MapWithBufferHandle) {
-  TestConnection connection;
-
-  magma_buffer_t buffer;
-  uint64_t actual_size;
-  constexpr uint64_t kBufferSizeInPages = 10;
-  EXPECT_EQ(MAGMA_STATUS_OK,
-            magma_create_buffer(connection.connection(), kBufferSizeInPages * page_size(),
-                                &actual_size, &buffer));
-
-  magma_handle_t handle;
-  ASSERT_EQ(MAGMA_STATUS_OK, magma_get_buffer_handle(connection.connection(), buffer, &handle));
-
-  void* full_range_ptr;
-  ASSERT_TRUE(magma::MapCpuHelper(connection.connection(), buffer, 0 /*offset*/, actual_size,
-                                  &full_range_ptr));
-
-  // Some arbitrary constants
-  constexpr uint32_t kPattern[] = {
-      0x12345678,
-      0x89abcdef,
-      0xfedcba98,
-      0x87654321,
-  };
-
-  reinterpret_cast<uint32_t*>(full_range_ptr)[0] = kPattern[0];
-  reinterpret_cast<uint32_t*>(full_range_ptr)[1] = kPattern[1];
-  reinterpret_cast<uint32_t*>(full_range_ptr)[actual_size / sizeof(uint32_t) - 2] = kPattern[2];
-  reinterpret_cast<uint32_t*>(full_range_ptr)[actual_size / sizeof(uint32_t) - 1] = kPattern[3];
-
-  EXPECT_TRUE(magma::UnmapCpuHelper(full_range_ptr, actual_size));
-
-  void* first_page_ptr;
-  EXPECT_TRUE(magma::MapCpuHelper(connection.connection(), buffer, 0 /*offset*/, page_size(),
-                                  &first_page_ptr));
-
-  void* last_page_ptr;
-  EXPECT_TRUE(magma::MapCpuHelper(connection.connection(), buffer,
-                                  (kBufferSizeInPages - 1) * page_size() /*offset*/, page_size(),
-                                  &last_page_ptr));
-
-  // Check that written values match.
-  EXPECT_EQ(reinterpret_cast<uint32_t*>(first_page_ptr)[0], kPattern[0]);
-  EXPECT_EQ(reinterpret_cast<uint32_t*>(first_page_ptr)[1], kPattern[1]);
-
-  EXPECT_EQ(reinterpret_cast<uint32_t*>(last_page_ptr)[page_size() / sizeof(uint32_t) - 2],
-            kPattern[2]);
-  EXPECT_EQ(reinterpret_cast<uint32_t*>(last_page_ptr)[page_size() / sizeof(uint32_t) - 1],
-            kPattern[3]);
-
-  EXPECT_TRUE(magma::UnmapCpuHelper(last_page_ptr, page_size()));
-  EXPECT_TRUE(magma::UnmapCpuHelper(first_page_ptr, page_size()));
-
-  magma_release_buffer(connection.connection(), buffer);
-}
-
 TEST(MagmaAbi, MapWithBufferHandle2) {
   TestConnection connection;
 
@@ -1191,8 +1135,7 @@ TEST(MagmaAbi, MapWithBufferHandle2) {
   ASSERT_EQ(MAGMA_STATUS_OK, magma_get_buffer_handle2(buffer, &handle));
 
   void* full_range_ptr;
-  ASSERT_TRUE(magma::MapCpuHelper(connection.connection(), buffer, 0 /*offset*/, actual_size,
-                                  &full_range_ptr));
+  ASSERT_TRUE(magma::MapCpuHelper(buffer, 0 /*offset*/, actual_size, &full_range_ptr));
 
   // Some arbitrary constants
   constexpr uint32_t kPattern[] = {
@@ -1210,13 +1153,11 @@ TEST(MagmaAbi, MapWithBufferHandle2) {
   EXPECT_TRUE(magma::UnmapCpuHelper(full_range_ptr, actual_size));
 
   void* first_page_ptr;
-  EXPECT_TRUE(magma::MapCpuHelper(connection.connection(), buffer, 0 /*offset*/, page_size(),
-                                  &first_page_ptr));
+  EXPECT_TRUE(magma::MapCpuHelper(buffer, 0 /*offset*/, page_size(), &first_page_ptr));
 
   void* last_page_ptr;
-  EXPECT_TRUE(magma::MapCpuHelper(connection.connection(), buffer,
-                                  (kBufferSizeInPages - 1) * page_size() /*offset*/, page_size(),
-                                  &last_page_ptr));
+  EXPECT_TRUE(magma::MapCpuHelper(buffer, (kBufferSizeInPages - 1) * page_size() /*offset*/,
+                                  page_size(), &last_page_ptr));
 
   // Check that written values match.
   EXPECT_EQ(reinterpret_cast<uint32_t*>(first_page_ptr)[0], kPattern[0]);
@@ -1229,45 +1170,6 @@ TEST(MagmaAbi, MapWithBufferHandle2) {
 
   EXPECT_TRUE(magma::UnmapCpuHelper(last_page_ptr, page_size()));
   EXPECT_TRUE(magma::UnmapCpuHelper(first_page_ptr, page_size()));
-
-  magma_release_buffer(connection.connection(), buffer);
-}
-
-TEST(MagmaAbi, MaxBufferHandle) {
-  TestConnection connection;
-
-  magma_buffer_t buffer;
-  uint64_t actual_size;
-  constexpr uint64_t kBufferSizeInPages = 1;
-  ASSERT_EQ(MAGMA_STATUS_OK,
-            magma_create_buffer(connection.connection(), kBufferSizeInPages * page_size(),
-                                &actual_size, &buffer));
-
-  std::unordered_set<magma_handle_t> handles;
-
-  // This may fail on Linux if the open file limit is too small.
-  constexpr size_t kMaxBufferHandles = 10000;
-
-  for (size_t i = 0; i < kMaxBufferHandles; i++) {
-    magma_handle_t handle;
-
-    magma_status_t status = magma_get_buffer_handle(connection.connection(), buffer, &handle);
-    if (status != MAGMA_STATUS_OK) {
-      EXPECT_EQ(status, MAGMA_STATUS_OK) << "magma_get_buffer_handle failed count: " << i;
-      break;
-    }
-    handles.insert(handle);
-  }
-
-  EXPECT_EQ(handles.size(), kMaxBufferHandles);
-
-  for (auto& handle : handles) {
-#if defined(__Fuchsia__)
-    zx_handle_close(handle);
-#elif defined(__linux__)
-    close(handle);
-#endif
-  }
 
   magma_release_buffer(connection.connection(), buffer);
 }
@@ -1292,7 +1194,7 @@ TEST(MagmaAbi, MaxBufferHandle2) {
 
     magma_status_t status = magma_get_buffer_handle2(buffer, &handle);
     if (status != MAGMA_STATUS_OK) {
-      EXPECT_EQ(status, MAGMA_STATUS_OK) << "magma_get_buffer_handle failed count: " << i;
+      EXPECT_EQ(status, MAGMA_STATUS_OK) << "magma_get_buffer_handle2 failed count: " << i;
       break;
     }
     handles.insert(handle);
@@ -1328,7 +1230,7 @@ TEST(MagmaAbi, MaxBufferMappings) {
 
   for (size_t i = 0; i < kMaxBufferMaps; i++) {
     void* ptr;
-    if (!magma::MapCpuHelper(connection.connection(), buffer, 0 /*offset*/, actual_size, &ptr)) {
+    if (!magma::MapCpuHelper(buffer, 0 /*offset*/, actual_size, &ptr)) {
       EXPECT_TRUE(false) << "MapCpuHelper failed count: " << i;
       break;
     }

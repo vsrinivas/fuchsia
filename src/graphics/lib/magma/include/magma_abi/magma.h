@@ -504,19 +504,6 @@ magma_status_t magma_buffer_get_info(
     magma_buffer_info_t* info_out);
 
 ///
-/// \brief DEPRECATED. Gets a platform handle for the given buffer. This can be used to perform a
-///        CPU mapping of the buffer using the standard syscall.  The handle may be released without
-///        invalidating such CPU mappings.
-/// \param connection An open connection.
-/// \param buffer A valid buffer.
-/// \param handle_out Pointer to the returned handle.
-///
-magma_status_t magma_get_buffer_handle(
-    magma_connection_t connection,
-    magma_buffer_t buffer,
-    magma_handle_t* handle_out);
-
-///
 /// \brief Reads a notification from the channel into the given buffer.  Message sizes may vary
 ///        depending on the MSD.  If the buffer provided is too small for the message,
 ///        MAGMA_STATUS_INVALID_ARGS will be returned and the size of message will be returned in

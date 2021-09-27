@@ -129,7 +129,7 @@ class TestConnection : public magma::TestDeviceBase {
       EXPECT_LE(time, last_possible_time);
 
       void* data;
-      EXPECT_TRUE(magma::MapCpuHelper(connection_, buffer, 0 /*offset*/, buffer_size, &data));
+      EXPECT_TRUE(magma::MapCpuHelper(buffer, 0 /*offset*/, buffer_size, &data));
       auto data_dwords =
           reinterpret_cast<uint32_t*>(reinterpret_cast<uint8_t*>(data) + buffer_offset);
       constexpr uint32_t kEnableBitsOffset = 2;

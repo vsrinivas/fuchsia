@@ -16,10 +16,9 @@
 
 namespace magma {
 
-bool MapCpuHelper(magma_connection_t connection, magma_buffer_t buffer, size_t offset,
-                  size_t length, void** addr_out) {
+bool MapCpuHelper(magma_buffer_t buffer, size_t offset, size_t length, void** addr_out) {
   magma_handle_t handle;
-  magma_status_t status = magma_get_buffer_handle(connection, buffer, &handle);
+  magma_status_t status = magma_get_buffer_handle2(buffer, &handle);
   if (status != MAGMA_STATUS_OK)
     return false;
 
