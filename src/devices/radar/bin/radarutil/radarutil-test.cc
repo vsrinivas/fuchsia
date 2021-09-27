@@ -4,6 +4,8 @@
 
 #include "radarutil.h"
 
+#include <stdio.h>
+#include <string.h>
 #include <unistd.h>
 
 #include <map>
@@ -22,6 +24,9 @@ using StatusCode = fuchsia_hardware_radar::wire::StatusCode;
 
 class FakeRadarDevice : public fidl::WireServer<BurstReader> {
  public:
+  // The burst size of our only existing radar driver.
+  static constexpr size_t kBurstSize = 23247;
+
   FakeRadarDevice() : loop_(&kAsyncLoopConfigNeverAttachToThread), provider_(*this) {
     EXPECT_OK(loop_.StartThread("radarutil-test-thread"));
     thrd_create_with_name(
@@ -34,14 +39,17 @@ class FakeRadarDevice : public fidl::WireServer<BurstReader> {
     thrd_join(worker_thread_, nullptr);
   }
 
-  zx_status_t RunRadarUtil(std::vector<std::string> args) {
+  zx_status_t RunRadarUtil(
+      std::vector<std::string> args,
+      const RadarUtil::FileProvider* file_provider = &RadarUtil::kDefaultFileProvider) {
     std::unique_ptr<char*[]> arglist(new char*[args.size()]);
     for (size_t i = 0; i < args.size(); i++) {
       arglist[i] = args[i].data();
     }
 
     optind = 1;  // Reset getopt before the next call.
-    return RadarUtil::Run(static_cast<int>(args.size()), arglist.get(), GetProvider());
+    return RadarUtil::Run(static_cast<int>(args.size()), arglist.get(), GetProvider(),
+                          file_provider);
   }
 
   size_t GetRegisteredVmoCount() const { return registered_vmo_count_; }
@@ -126,9 +134,6 @@ class FakeRadarDevice : public fidl::WireServer<BurstReader> {
   }
 
  private:
-  // The burst size of our only existing radar driver.
-  static constexpr size_t kBurstSize = 23247;
-
   class FakeBurstReaderProvider : public fidl::WireServer<BurstReaderProvider> {
    public:
     explicit FakeBurstReaderProvider(FakeRadarDevice& parent) : parent_(parent) {}
@@ -198,6 +203,7 @@ class FakeRadarDevice : public fidl::WireServer<BurstReader> {
     for (auto& pair : registered_vmos_) {
       if (!pair.second.locked) {
         pair.second.locked = true;
+        pair.second.vmo.write(&bursts_sent_, 0, sizeof(bursts_sent_));
         return pair.first;
       }
     }
@@ -252,6 +258,51 @@ TEST(RadarUtilTest, RunBurstCount) {
   EXPECT_EQ(device.GetRegisteredVmoCount(), 20);
   EXPECT_GE(device.GetBurstsSent(), 50);
   ASSERT_NO_FATAL_FAILURES(device.Ok());
+}
+
+TEST(RadarUtilTest, OutputToFile) {
+  constexpr size_t kFileBufferSize = FakeRadarDevice::kBurstSize * 20;
+
+  fbl::Array<uint8_t> file_buffer(new uint8_t[kFileBufferSize], kFileBufferSize);
+
+  FILE* mem_file = fmemopen(file_buffer.get(), file_buffer.size(), "w");
+  ASSERT_NOT_NULL(mem_file);
+
+  class FakeFileProvider : public RadarUtil::FileProvider {
+   public:
+    explicit FakeFileProvider(FILE* file) : file_(file) {}
+
+    FILE* OpenFile(const char* path) const override {
+      if (strcmp(path, "/path/to/test.txt") == 0) {
+        return file_;
+      }
+      errno = ENOENT;
+      return nullptr;
+    }
+
+   private:
+    FILE* const file_;
+  };
+
+  FakeFileProvider fake_file_provider(mem_file);
+
+  FakeRadarDevice device;
+  EXPECT_OK(device.RunRadarUtil({"radarutil", "-b", "20", "-o", "/path/to/test.txt"},
+                                &fake_file_provider));
+  EXPECT_GE(device.GetBurstsSent(), 20);
+  ASSERT_NO_FATAL_FAILURES(device.Ok());
+
+  // Each burst should have an increasing ID inserted by the fake radar device.
+  size_t last_burst_id;
+  memcpy(&last_burst_id, file_buffer.data(), sizeof(last_burst_id));
+  EXPECT_NE(last_burst_id, 0);
+
+  for (size_t i = 1; i < 20; i++) {
+    size_t burst_id;
+    memcpy(&burst_id, file_buffer.data() + (FakeRadarDevice::kBurstSize * i), sizeof(burst_id));
+    EXPECT_EQ(burst_id, last_burst_id + 1);
+    last_burst_id = burst_id;
+  }
 }
 
 TEST(RadarUtilTest, InvalidArgs) {

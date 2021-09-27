@@ -26,14 +26,8 @@ executable("radarutil-bin") {
   deps = [ ":common" ]
 }
 
-fuchsia_component("radarutil-component") {
-  component_name = "radarutil"
-  manifest = "meta/radarutil.cmx"
+fuchsia_shell_package("radarutil") {
   deps = [ ":radarutil-bin" ]
-}
-
-fuchsia_package("radarutil") {
-  deps = [ ":radarutil-component" ]
 }
 
 executable("radarutil-test-bin") {

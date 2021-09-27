@@ -7,11 +7,13 @@
 #include <lib/zircon-internal/thread_annotations.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/time.h>
+#include <stdio.h>
 #include <zircon/threads.h>
 
 #include <optional>
 #include <queue>
 
+#include <fbl/array.h>
 #include <fbl/condition_variable.h>
 #include <fbl/mutex.h>
 
@@ -19,8 +21,21 @@ namespace radarutil {
 
 class RadarUtil : public fidl::WireAsyncEventHandler<fuchsia_hardware_radar::RadarBurstReader> {
  public:
+  class FileProvider {
+   public:
+    virtual FILE* OpenFile(const char* path) const = 0;
+  };
+
+  class DefaultFileProvider : public FileProvider {
+   public:
+    FILE* OpenFile(const char* path) const override { return fopen(path, "w+"); }
+  };
+
+  static constexpr DefaultFileProvider kDefaultFileProvider;
+
   static zx_status_t Run(int argc, char** argv,
-                         fidl::ClientEnd<fuchsia_hardware_radar::RadarBurstReaderProvider> device);
+                         fidl::ClientEnd<fuchsia_hardware_radar::RadarBurstReaderProvider> device,
+                         const FileProvider* file_provider = &kDefaultFileProvider);
 
  private:
   using BurstReaderProvider = fuchsia_hardware_radar::RadarBurstReaderProvider;
@@ -37,26 +52,29 @@ class RadarUtil : public fidl::WireAsyncEventHandler<fuchsia_hardware_radar::Rad
 
   fidl::AnyTeardownObserver teardown_observer();
 
-  zx_status_t ParseArgs(int argc, char** argv);
+  zx_status_t ParseArgs(int argc, char** argv, const FileProvider* file_provider);
   zx_status_t ConnectToDevice(fidl::ClientEnd<BurstReaderProvider> device);
   zx_status_t RegisterVmos();
   zx_status_t UnregisterVmos();
   zx_status_t Run();
-  void ReadBursts();
+  zx_status_t ReadBursts();
 
   void OnBurst(fidl::WireResponse<BurstReader::OnBurst>* event) override;
   void on_fidl_error(fidl::UnbindInfo info) override {}
 
   async::Loop loop_;
   fidl::WireSharedClient<BurstReader> client_;
+  fbl::Array<uint8_t> burst_buffer_;
   sync_completion_t client_teardown_completion_;
   std::optional<zx::duration> run_time_;
   std::optional<uint64_t> burst_count_;
   size_t vmo_count_ = kDefaultVmoCount;
   zx::duration burst_process_time_ = kDefaultBurstProcessTime;
+  FILE* output_file_ = nullptr;
 
   fbl::Mutex lock_;
   fbl::ConditionVariable worker_event_;
+  std::vector<zx::vmo> burst_vmos_;
   std::queue<uint32_t> burst_vmo_ids_ TA_GUARDED(lock_);
   std::atomic_bool run_ = true;
 

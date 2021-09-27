@@ -19,6 +19,8 @@ The radarutil tool takes the following arguments:
   with the run time option.
 - VMO count (`-v`): The number of VMOs to register and use for reading bursts.
   Defaults to 10.
+- Output file (`-o`): Path of the file to write bursts to, or `-` for stdout. If
+  omitted, received bursts are not written.
 
 For example, to sleep 3 milliseconds for each burst, run for 5 minutes, and
 register 20 VMOs, run: `radarutil -p 3ms -t 5m -v 20`

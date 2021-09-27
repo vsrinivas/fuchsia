@@ -46,12 +46,14 @@ zx::status<zx::duration> ParseDuration(char* arg) {
 void Usage() {
   constexpr char kUsageString[] =
       "Usage: radarutil [-h] [-p burst process time] [-t run time|-b burst count]\n"
-      "                 [-v vmos]\n"
+      "                 [-v vmos] [-o output file]\n"
       "    burst process time: Time to sleep after each burst to simulate processing\n"
       "                        delay. Default: 0s\n"
       "    run time: Total time to read frames. Default: 1s\n"
       "    burst count: Total number of bursts to read.\n"
       "    vmos: Number of VMOs to register for receiving frames. Default: 10\n"
+      "    output file: Path of the file to write radar bursts to, or \"-\" for stdout.\n"
+      "                 If omitted, received bursts are not written.\n"
       "\n"
       "    For time arguments, add a suffix (h,m,s,ms,us,ns) to indicate units.\n"
       "    For example: radarutil -p 3ms -t 5m -v 20\n";
@@ -59,12 +61,12 @@ void Usage() {
   fprintf(stderr, "%s", kUsageString);
 }
 
-zx_status_t RadarUtil::Run(
-    int argc, char** argv,
-    fidl::ClientEnd<fuchsia_hardware_radar::RadarBurstReaderProvider> device) {
+zx_status_t RadarUtil::Run(int argc, char** argv,
+                           fidl::ClientEnd<fuchsia_hardware_radar::RadarBurstReaderProvider> device,
+                           const RadarUtil::FileProvider* file_provider) {
   RadarUtil radarutil;
 
-  zx_status_t status = radarutil.ParseArgs(argc, argv);
+  zx_status_t status = radarutil.ParseArgs(argc, argv, file_provider);
   if (status != ZX_OK || radarutil.help_) {
     return status;
   }
@@ -91,13 +93,18 @@ RadarUtil::~RadarUtil() {
     client_.AsyncTeardown();
     sync_completion_wait(&client_teardown_completion_, ZX_TIME_INFINITE);
   }
+
+  if (output_file_) {
+    fclose(output_file_);
+  }
 }
 
 fidl::AnyTeardownObserver RadarUtil::teardown_observer() {
   return fidl::ObserveTeardown([this] { sync_completion_signal(&client_teardown_completion_); });
 }
 
-zx_status_t RadarUtil::ParseArgs(int argc, char** argv) {
+zx_status_t RadarUtil::ParseArgs(int argc, char** argv,
+                                 const RadarUtil::FileProvider* file_provider) {
   if (argc <= 1) {
     Usage();
     help_ = true;
@@ -105,7 +112,7 @@ zx_status_t RadarUtil::ParseArgs(int argc, char** argv) {
   }
 
   int opt, vmos, burst_count;
-  while ((opt = getopt(argc, argv, "hp:t:b:v:")) != -1) {
+  while ((opt = getopt(argc, argv, "hp:t:b:v:o:")) != -1) {
     switch (opt) {
       case 'h':
         Usage();
@@ -155,6 +162,17 @@ zx_status_t RadarUtil::ParseArgs(int argc, char** argv) {
           return ZX_ERR_INVALID_ARGS;
         }
         vmo_count_ = vmos;
+        break;
+      case 'o':
+        if (strcmp(optarg, "-") == 0) {
+          output_file_ = stdout;
+        } else {
+          output_file_ = file_provider->OpenFile(optarg);
+          if (!output_file_) {
+            fprintf(stderr, "Failed to open %s: %s\n", optarg, strerror(errno));
+            return ZX_ERR_IO;
+          }
+        }
         break;
       default:
         Usage();
@@ -208,21 +226,23 @@ zx_status_t RadarUtil::RegisterVmos() {
     return burst_size.status();
   }
 
+  burst_buffer_ = fbl::Array(new uint8_t[burst_size->burst_size], burst_size->burst_size);
+
   fidl::Arena allocator;
 
-  std::vector<zx::vmo> vmos(vmo_count_);
+  burst_vmos_.resize(vmo_count_);
 
   fidl::VectorView<zx::vmo> vmo_dups(allocator, vmo_count_);
   fidl::VectorView<uint32_t> vmo_ids(allocator, vmo_count_);
 
   zx_status_t status;
   for (uint32_t i = 0; i < vmo_count_; i++) {
-    if ((status = zx::vmo::create(burst_size->burst_size, 0, &vmos[i])) != ZX_OK) {
+    if ((status = zx::vmo::create(burst_buffer_.size(), 0, &burst_vmos_[i])) != ZX_OK) {
       fprintf(stderr, "Failed to create VMO: %s\n", zx_status_get_string(status));
       return status;
     }
 
-    if ((status = vmos[i].duplicate(ZX_RIGHT_SAME_RIGHTS, &vmo_dups[i])) != ZX_OK) {
+    if ((status = burst_vmos_[i].duplicate(ZX_RIGHT_SAME_RIGHTS, &vmo_dups[i])) != ZX_OK) {
       fprintf(stderr, "Failed to duplicate VMO: %s\n", zx_status_get_string(status));
       return status;
     }
@@ -244,12 +264,6 @@ zx_status_t RadarUtil::RegisterVmos() {
 }
 
 zx_status_t RadarUtil::UnregisterVmos() {
-  const auto burst_size = client_->GetBurstSize_Sync();
-  if (!burst_size.ok()) {
-    fprintf(stderr, "Failed to get burst size: %s\n", zx_status_get_string(burst_size.status()));
-    return burst_size.status();
-  }
-
   fidl::Arena allocator;
 
   fidl::VectorView<uint32_t> vmo_ids(allocator, vmo_count_);
@@ -282,30 +296,31 @@ zx_status_t RadarUtil::Run() {
 
   const zx::time start = zx::clock::get_monotonic();
 
-  ReadBursts();
+  zx_status_t status = ReadBursts();
 
   const zx::duration elapsed = zx::clock::get_monotonic() - start;
 
-  {
-    const auto result = client_->StopBursts_Sync();
-    if (!result.ok()) {
-      fprintf(stderr, "Failed to stop bursts: %s\n", zx_status_get_string(result.status()));
-      return result.status();
-    }
+  const auto result = client_->StopBursts_Sync();
+  if (status != ZX_OK) {
+    return status;
+  }
+  if (!result.ok()) {
+    fprintf(stderr, "Failed to stop bursts: %s\n", zx_status_get_string(result.status()));
+    return result.status();
   }
 
   if (burst_count_.has_value()) {
-    printf("Received %lu/%lu bursts in %lu seconds\n", bursts_received_, *burst_count_,
-           elapsed.to_secs());
+    fprintf(stderr, "Received %lu/%lu bursts in %lu seconds\n", bursts_received_, *burst_count_,
+            elapsed.to_secs());
   } else {
-    printf("Received %lu bursts and %lu burst errors in %lu seconds\n", bursts_received_,
-           burst_errors_, elapsed.to_secs());
+    fprintf(stderr, "Received %lu bursts and %lu burst errors in %lu seconds\n", bursts_received_,
+            burst_errors_, elapsed.to_secs());
   }
 
   return ZX_OK;
 }
 
-void RadarUtil::ReadBursts() {
+zx_status_t RadarUtil::ReadBursts() {
   struct Task {
     async_task_t task;
     RadarUtil* object;
@@ -326,7 +341,7 @@ void RadarUtil::ReadBursts() {
     zx_status_t status = async_post_task(loop_.dispatcher(), &stop_burst_loop.task);
     if (status != ZX_OK) {
       fprintf(stderr, "Failed to post timer task: %s\n", zx_status_get_string(status));
-      return;
+      return status;
     }
   }
 
@@ -341,21 +356,36 @@ void RadarUtil::ReadBursts() {
       burst_vmo_ids_.pop();
       if (vmo_id == kInvalidVmoId) {
         burst_errors_++;
+      } else if (vmo_id >= burst_vmos_.size()) {
+        fprintf(stderr, "Received invalid burst VMO ID %u\n", vmo_id);
+        return ZX_ERR_INTERNAL;
       } else {
         bursts_received_++;
+
+        zx_status_t status = burst_vmos_[vmo_id].read(burst_buffer_.get(), 0, burst_buffer_.size());
+        if (status != ZX_OK) {
+          fprintf(stderr, "Failed to read burst VMO: %s\n", zx_status_get_string(status));
+          return status;
+        }
 
         if (burst_process_time_.to_nsecs() > 0) {
           zx::nanosleep(zx::deadline_after(burst_process_time_));
         }
 
         client_->UnlockVmo(vmo_id);
+
+        if (output_file_) {
+          fwrite(burst_buffer_.get(), 1, burst_buffer_.size(), output_file_);
+        }
       }
 
-      if (burst_count_.has_value() && (burst_errors_ + bursts_received_) >= *burst_count_) {
-        return;
+      if (burst_count_.has_value() && (burst_errors_ + bursts_received_) >= burst_count_.value()) {
+        return ZX_OK;
       }
     }
   }
+
+  return ZX_OK;
 }
 
 void RadarUtil::OnBurst(fidl::WireResponse<BurstReader::OnBurst>* event) {
