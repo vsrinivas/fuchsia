@@ -1763,17 +1763,24 @@ TEST_P(HangupTest, DuringConnect) {
           {
             pollfd pfd = {
                 .fd = connecting_client.get(),
-                .events = POLLIN,
+                .events = std::numeric_limits<decltype(pfd.events)>::max(),
             };
+#if !defined(__Fuchsia__)
+            int n = poll(&pfd, 1, 0);
+            EXPECT_GE(n, 0) << strerror(errno);
+            EXPECT_EQ(n, 1);
+            EXPECT_EQ(pfd.revents, POLLOUT | POLLWRNORM | POLLHUP | POLLERR);
+#else
+            // TODO(https://fxbug.dev/81448): Poll for POLLIN and POLLRDHUP to show their absence.
+            // Can't be polled now because these events are asserted synchronously, and they might
+            // be ready before the other expected events are asserted.
+            pfd.events ^= (POLLIN | POLLRDHUP);
+            // TODO(https://fxbug.dev/85279): Remove the poll timeout.
             int n = poll(&pfd, 1, std::chrono::milliseconds(kTimeout).count());
             EXPECT_GE(n, 0) << strerror(errno);
             EXPECT_EQ(n, 1);
-#if !defined(__Fuchsia__)
-            // TODO(https://fxbug.dev/76353): Fuchsia doesn't distinguish between
-            // connected-and-shutdown and unconnected-and-shutdown.
-            EXPECT_EQ(pfd.revents, POLLHUP | POLLERR);
-#else
-            EXPECT_EQ(pfd.revents, POLLIN);
+            // TODO(https://fxbug.dev/73258): Add POLLWRNORM to the expectations.
+            EXPECT_EQ(pfd.revents, POLLOUT | POLLHUP | POLLERR);
 #endif
           }
 
@@ -1782,7 +1789,7 @@ TEST_P(HangupTest, DuringConnect) {
           EXPECT_EQ(errno, EINPROGRESS) << strerror(errno);
 #else
           // TODO(https://fxbug.dev/61594): Fuchsia doesn't allow never-connected socket reuse.
-          EXPECT_EQ(errno, EALREADY) << strerror(errno);
+          EXPECT_EQ(errno, ECONNRESET) << strerror(errno);
 #endif
           // connect result was consumed by the connect call.
           ASSERT_NO_FATAL_FAILURE(ExpectLastError(connecting_client, 0));
@@ -1813,9 +1820,32 @@ TEST_P(HangupTest, DuringConnect) {
         case HangupMethod::kClose:
           ASSERT_EQ(close(listener.release()), 0) << strerror(errno);
           break;
-        case HangupMethod::kShutdown:
+        case HangupMethod::kShutdown: {
           ASSERT_EQ(shutdown(listener.get(), SHUT_RD), 0) << strerror(errno);
+          pollfd pfd = {
+              .fd = listener.get(),
+              .events = std::numeric_limits<decltype(pfd.events)>::max(),
+          };
+#if !defined(__Fuchsia__)
+          int n = poll(&pfd, 1, 0);
+          EXPECT_GE(n, 0) << strerror(errno);
+          EXPECT_EQ(n, 1);
+          EXPECT_EQ(pfd.revents, POLLOUT | POLLWRNORM | POLLHUP);
+#else
+          // TODO(https://fxbug.dev/81448): Poll for POLLIN and POLLRDHUP to show their absence.
+          // Can't be polled now because these events are asserted synchronously, and they might
+          // be ready before the other expected events are asserted.
+          pfd.events ^= (POLLIN | POLLRDHUP);
+          // TODO(https://fxbug.dev/85279): Remove the poll timeout.
+          int n = poll(&pfd, 1, std::chrono::milliseconds(kTimeout).count());
+          EXPECT_GE(n, 0) << strerror(errno);
+          EXPECT_EQ(n, 1);
+          // TODO(https://fxbug.dev/85283): Remove POLLERR from the expectations.
+          // TODO(https://fxbug.dev/73258): Add POLLWRNORM to the expectations.
+          EXPECT_EQ(pfd.revents, POLLOUT | POLLHUP | POLLERR);
+#endif
           break;
+        }
       }
 
       const struct {

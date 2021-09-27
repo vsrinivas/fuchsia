@@ -187,6 +187,8 @@ const (
 	// say TIME_WAIT.
 	notifyTickleWorker
 	notifyError
+	// notifyShutdown means that a connecting socket was shutdown.
+	notifyShutdown
 )
 
 // SACKInfo holds TCP SACK related information for a given endpoint.
@@ -315,7 +317,10 @@ type accepted struct {
 	// belong to one list at a time, and endpoints are already stored in the
 	// dispatcher's list.
 	endpoints list.List `state:".([]*endpoint)"`
-	cap       int
+
+	// cap is the maximum number of endpoints that can be in the accepted endpoint
+	// list.
+	cap int
 }
 
 // endpoint represents a TCP endpoint. This struct serves as the interface
@@ -333,7 +338,7 @@ type accepted struct {
 // The following three mutexes can be acquired independent of e.mu but if
 // acquired with e.mu then e.mu must be acquired first.
 //
-// e.acceptMu -> protects accepted.
+// e.acceptMu -> Protects e.accepted.
 // e.rcvQueueMu -> Protects e.rcvQueue and associated fields.
 // e.sndQueueMu -> Protects the e.sndQueue and associated fields.
 // e.lastErrorMu -> Protects the lastError field.
@@ -573,6 +578,7 @@ type endpoint struct {
 	// accepted is used by a listening endpoint protocol goroutine to
 	// send newly accepted connections to the endpoint so that they can be
 	// read by Accept() calls.
+	// +checklocks:acceptMu
 	accepted accepted
 
 	// The following are only used from the protocol goroutine, and
@@ -2380,6 +2386,18 @@ func (*endpoint) ConnectEndpoint(tcpip.Endpoint) tcpip.Error {
 func (e *endpoint) Shutdown(flags tcpip.ShutdownFlags) tcpip.Error {
 	e.LockUser()
 	defer e.UnlockUser()
+
+	if e.EndpointState().connecting() {
+		// When calling shutdown(2) on a connecting socket, the endpoint must
+		// enter the error state. But this logic cannot belong to the shutdownLocked
+		// method because that method is called during a close(2) (and closing a
+		// connecting socket is not an error).
+		e.resetConnectionLocked(&tcpip.ErrConnectionReset{})
+		e.notifyProtocolGoroutine(notifyShutdown)
+		e.waiterQueue.Notify(waiter.WritableEvents | waiter.EventHUp | waiter.EventErr)
+		return nil
+	}
+
 	return e.shutdownLocked(flags)
 }
 
