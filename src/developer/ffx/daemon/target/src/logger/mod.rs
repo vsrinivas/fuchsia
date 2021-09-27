@@ -20,7 +20,7 @@ use {
         RemoteDiagnosticsBridgeMarker,
     },
     fidl_fuchsia_diagnostics::ClientSelectorConfiguration,
-    futures::{StreamExt, TryFutureExt},
+    futures::{AsyncReadExt, StreamExt, TryFutureExt},
     selectors::parse_selector,
     std::convert::TryInto,
     std::future::Future,
@@ -138,7 +138,7 @@ fn write_logs_to_file<T: GenericDiagnosticsStreamer + 'static + ?Sized>(
             }
 
             let ts = Timestamp::from(get_timestamp()?);
-            let log_data: Vec<LogEntry> = get_next_results
+            let log_data_futs = get_next_results
                 .into_iter()
                 .filter_map(|r| {
                     if let Err(e) = r {
@@ -154,7 +154,7 @@ fn write_logs_to_file<T: GenericDiagnosticsStreamer + 'static + ?Sized>(
                     None => {
                         if let Some(data) = l.data {
                             Some(DiagnosticsData::Inline(InlineData {
-                                data: data,
+                                data,
                                 truncated_chars: l.truncated_chars.unwrap_or(0),
                             }))
                         } else {
@@ -162,18 +162,37 @@ fn write_logs_to_file<T: GenericDiagnosticsStreamer + 'static + ?Sized>(
                         }
                     }
                 })
-                .filter_map(|diagnostics_data| match diagnostics_data {
-                    DiagnosticsData::Inline(inline) => Some(inline),
-                    _ => None,
-                })
-                .map(|inline| {
-                    let data: LogData = match serde_json::from_str::<LogsData>(&inline.data) {
-                        Ok(data) => LogData::TargetLog(data),
-                        Err(_) => LogData::MalformedTargetLog(inline.data),
-                    };
+                .map(|diagnostics_data| async {
+                    // There are two types of logs: small ones that fit inline in a message and long
+                    // ones that must be transported via a socket.
+                    // We deserialize the log data directly from the inline variant or we fetch the
+                    // data by reading from the socket and then deserializing.
+                    match diagnostics_data {
+                        DiagnosticsData::Inline(inline) => {
+                            // This is the small log side, we directly receive the data in the
+                            // message.
+                            let data: LogData = match serde_json::from_str::<LogsData>(&inline.data)
+                            {
+                                Ok(data) => LogData::TargetLog(data),
+                                Err(_) => LogData::MalformedTargetLog(inline.data),
+                            };
 
-                    LogEntry { data, timestamp: ts, version: 1 }
-                })
+                            LogEntry { data, timestamp: ts, version: 1 }
+                        }
+                        DiagnosticsData::Socket(socket) => {
+                            // This is the long log side, we must read the data from the socket.
+                            let data = match read_target_log_from_socket(socket).await {
+                                Ok(data) => LogData::TargetLog(data),
+                                Err(data) => LogData::MalformedTargetLog(data),
+                            };
+                            LogEntry { data, timestamp: ts, version: 1 }
+                        }
+                    }
+                });
+
+            let log_data: Vec<LogEntry> = futures::future::join_all(log_data_futs)
+                .await
+                .into_iter()
                 .filter(|log| {
                     // TODO(jwing): use a monotonic ID instead of timestamp
                     // once fxbug.dev/61795 is resolved.
@@ -263,6 +282,18 @@ fn write_logs_to_file<T: GenericDiagnosticsStreamer + 'static + ?Sized>(
     };
 
     return Ok((server, listener_fut));
+}
+
+async fn read_target_log_from_socket(socket: fidl::Socket) -> Result<LogsData, String> {
+    let mut socket = fidl::AsyncSocket::from_socket(socket)
+        .map_err(|_| "failure to create async socket".to_owned())?;
+    let mut result = Vec::new();
+    let _ = socket
+        .read_to_end(&mut result)
+        .await
+        .map_err(|_| "failure to read log from socket".to_owned())?;
+    serde_json::from_slice::<LogsData>(&result)
+        .map_err(|_| String::from_utf8_lossy(&result).into_owned())
 }
 
 #[derive(Default)]

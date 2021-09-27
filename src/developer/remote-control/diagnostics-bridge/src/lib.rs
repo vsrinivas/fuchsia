@@ -28,8 +28,6 @@ use {
     },
     iquery::commands::connect_to_archive_accessor,
     selectors,
-    std::cmp::max,
-    std::convert::TryInto,
     std::fmt::Debug,
     std::sync::Arc,
     tracing::{error, info, warn},
@@ -129,23 +127,31 @@ pub trait ArchiveReaderManager {
                             }
                         };
 
-                        let (truncated_logs, truncated_chars) = match truncate_log_msg(logs) {
-                            Ok(t) => t,
-                            Err(err) => {
-                                warn!(?err, "failed to truncate log message");
-                                responder.send(&mut Err(ArchiveIteratorError::TruncationFailed))?;
-                                continue;
-                            }
-                        };
-
-                        let response = vec![ArchiveIteratorEntry {
-                            diagnostics_data: Some(DiagnosticsData::Inline(InlineData {
-                                data: serde_json::to_string(&truncated_logs)?,
-                                truncated_chars: truncated_chars,
-                            })),
-                            ..ArchiveIteratorEntry::EMPTY
-                        }];
-                        responder.send(&mut Ok(response))?;
+                        let send_inline = logs_data_can_be_sent_inline(&logs);
+                        let data = serde_json::to_string(&logs)?;
+                        if send_inline {
+                            // Short data => send the data within the message.
+                            let response = vec![ArchiveIteratorEntry {
+                                diagnostics_data: Some(DiagnosticsData::Inline(InlineData {
+                                    data,
+                                    truncated_chars: 0,
+                                })),
+                                ..ArchiveIteratorEntry::EMPTY
+                            }];
+                            responder.send(&mut Ok(response))?;
+                        } else {
+                            // Long data => create a socket, send the socket in the message, then
+                            // write all the data on the other side of the socket.
+                            let sock_opts = fuchsia_zircon::SocketOpts::STREAM;
+                            let (socket, tx_socket) = fuchsia_zircon::Socket::create(sock_opts)?;
+                            let mut tx_socket = fasync::Socket::from_socket(tx_socket)?;
+                            let response = vec![ArchiveIteratorEntry {
+                                diagnostics_data: Some(DiagnosticsData::Socket(socket)),
+                                ..ArchiveIteratorEntry::EMPTY
+                            }];
+                            responder.send(&mut Ok(response))?;
+                            tx_socket.write_all(data.as_bytes()).await?;
+                        }
                     }
                 }
             }
@@ -214,25 +220,10 @@ impl ArchiveReaderManager for ArchiveReaderManagerImpl {
     }
 }
 
-fn truncate_to_char_boundary(s: &str, mut max_bytes: usize) -> &str {
-    if max_bytes >= s.len() {
-        s
-    } else {
-        while !s.is_char_boundary(max_bytes) {
-            max_bytes -= 1;
-        }
-        &s[..max_bytes]
-    }
-}
-
-fn truncate_log_msg(mut logs: LogsData) -> Result<(LogsData, u32)> {
-    let msg_mut = logs.msg_mut().ok_or(anyhow!("missing log message"))?;
-    let orig_len: u32 = msg_mut.len().try_into()?;
-    let new_msg = truncate_to_char_boundary(msg_mut, MAX_DATAGRAM_LEN_BYTES as usize);
-    *msg_mut = new_msg.to_string();
-    let truncated_chars =
-        if MAX_DATAGRAM_LEN_BYTES > orig_len { 0 } else { orig_len - MAX_DATAGRAM_LEN_BYTES };
-    return Ok((logs, max(0, truncated_chars).try_into()?));
+// This checks whether the log can fit within a FIDL message to be able to use the inline variant
+// of the DiagnosticsData type.
+fn logs_data_can_be_sent_inline(logs: &LogsData) -> bool {
+    logs.msg().map(|msg| msg.len() <= MAX_DATAGRAM_LEN_BYTES as usize).unwrap_or(true)
 }
 
 pub struct RemoteDiagnosticsBridge<E, F, A, Fut>
@@ -557,16 +548,6 @@ mod test {
         )
     }
 
-    #[test]
-    fn test_truncate() {
-        let s = "eichhörnchen";
-        assert_eq!(truncate_to_char_boundary(s, 1), "e");
-        assert_eq!(truncate_to_char_boundary(s, 5), "eichh");
-        assert_eq!(truncate_to_char_boundary(s, 6), "eichh");
-        assert_eq!(truncate_to_char_boundary(s, 7), "eichhö");
-        assert_eq!(truncate_to_char_boundary(s, 100), "eichhörnchen");
-    }
-
     #[fasync::run_singlethreaded(test)]
     async fn test_empty_log_stream() {
         let proxy = setup_diagnostics_bridge_proxy(|p| async { FakeArchiveReaderManager::new(p) });
@@ -765,7 +746,7 @@ mod test {
     }
 
     #[fasync::run_singlethreaded(test)]
-    async fn test_truncates_long_message() {
+    async fn test_long_message_is_sent_with_a_socket() {
         let proxy = setup_diagnostics_bridge_proxy(|p| async {
             FakeArchiveReaderManager::new_with_data(
                 p,
@@ -783,15 +764,17 @@ mod test {
             .unwrap()
             .expect("expect Ok response");
 
-        let entries = iterator.get_next().await.unwrap().expect("get next should not error");
+        let mut entries = iterator.get_next().await.unwrap().expect("get next should not error");
         assert_eq!(entries.len(), 1);
-        let entry = entries.get(0).unwrap();
-        let diagnostics_data = entry.diagnostics_data.as_ref().unwrap();
-        assert_matches!(diagnostics_data, DiagnosticsData::Inline(_));
-        if let DiagnosticsData::Inline(inline) = diagnostics_data {
-            let data: LogsData = serde_json::from_str(inline.data.as_ref()).unwrap();
-            let expected_data = make_long_log(1, MAX_DATAGRAM_LEN_BYTES);
-            assert_eq!(inline.truncated_chars, MAX_DATAGRAM_LEN_BYTES);
+        let entry = entries.pop().unwrap();
+        let diagnostics_data = entry.diagnostics_data.unwrap();
+        assert_matches!(diagnostics_data, DiagnosticsData::Socket(_));
+        if let DiagnosticsData::Socket(socket) = diagnostics_data {
+            let mut socket = AsyncSocket::from_socket(socket).unwrap();
+            let mut result = Vec::new();
+            let _bytes = socket.read_to_end(&mut result).await.unwrap();
+            let data: LogsData = serde_json::from_slice(&result).unwrap();
+            let expected_data = make_long_log(1, LONG_LOG_LEN);
             assert_eq!(data, expected_data);
         }
 

@@ -17,7 +17,7 @@ use {
     fidl_fuchsia_developer_remotecontrol::{
         ArchiveIteratorError, ArchiveIteratorMarker, ArchiveIteratorProxy, DiagnosticsData,
     },
-    fuchsia_async::Timer,
+    fuchsia_async::{futures::AsyncReadExt, Timer},
     std::{
         iter::Iterator,
         time::{Duration, SystemTime},
@@ -152,16 +152,22 @@ pub async fn exec_log_cmd<W: std::io::Write>(
                 continue;
             }
 
-            let entries =
-                result.unwrap().into_iter().filter_map(|e| e.diagnostics_data).filter_map(
-                    |diagnostics_data| match diagnostics_data {
-                        DiagnosticsData::Inline(inline) => Some(inline),
-                        _ => None,
-                    },
-                );
+            // The real data should always be in the diagnostics_data field so we throw away all
+            // entries that have a None for that field and leave us an iterable of DiagnosticsData
+            // types.
+            let entries = result.unwrap().into_iter().filter_map(|e| e.diagnostics_data);
 
             for entry in entries {
-                let parsed: LogEntry = serde_json::from_str(&entry.data)?;
+                // There are two types of logs: small ones that fit inline in a message and long
+                // ones that must be transported via a socket.
+                // We deserialize the log entry directly from the inline variant or we fetch the
+                // data by reading from the socket and then deserializing.
+                let parsed = match entry {
+                    DiagnosticsData::Inline(inline) => {
+                        serde_json::from_str::<LogEntry>(&inline.data)?
+                    }
+                    DiagnosticsData::Socket(socket) => log_entry_from_socket(socket).await?,
+                };
                 got_disconnect = false;
 
                 match (&parsed.data, params.target_to_bound) {
@@ -252,6 +258,20 @@ async fn retry_loop<W: std::io::Write>(
             }
         }
     }
+}
+
+// This function drains the data from the passed in [socket] assuming it contains the bytes of a
+// LogEntry object serialized to JSON.
+async fn log_entry_from_socket(socket: fidl::Socket) -> Result<LogEntry> {
+    let mut socket = fidl::AsyncSocket::from_socket(socket)
+        .map_err(|e| anyhow!("failure to create async socket: {:?}", e))?;
+    let mut result = Vec::new();
+    let _ = socket
+        .read_to_end(&mut result)
+        .await
+        .map_err(|e| anyhow!("failure to read log from socket: {:?}", e))?;
+    let entry: LogEntry = serde_json::from_slice(&result)?;
+    Ok(entry)
 }
 
 ////////////////////////////////////////////////////////////////////////////////

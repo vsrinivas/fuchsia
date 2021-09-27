@@ -16,6 +16,7 @@ if (is_host) {
       "//sdk/fidl/fuchsia.developer.remotecontrol:fuchsia.developer.remotecontrol-rustc",
       "//sdk/fidl/fuchsia.diagnostics:fuchsia.diagnostics-rustc",
       "//sdk/fidl/fuchsia.hardware.power.statecontrol:fuchsia.hardware.power.statecontrol-rustc",
+      "//sdk/fidl/fuchsia.logger:fuchsia.logger-rustc",
       "//sdk/fidl/fuchsia.net:fuchsia.net-rustc",
       "//sdk/fidl/fuchsia.overnet:fuchsia.overnet-rustc",
       "//sdk/fidl/fuchsia.overnet.protocol:fuchsia.overnet.protocol-rustc",

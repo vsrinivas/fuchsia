@@ -29,13 +29,17 @@ type BridgeStreamParameters = table {
 };
 
 type ArchiveIteratorEntry = resource table {
+    @deprecated("The data is now sent using the diagnostics_data field")
     1: data string:logger.MAX_DATAGRAM_LEN_BYTES;
+    @deprecated("The data is now sent using the diagnostics_data field")
     2: truncated_chars uint32;
     3: diagnostics_data DiagnosticsData;
 };
 
 type InlineData = struct {
     data string:logger.MAX_DATAGRAM_LEN_BYTES;
+    @deprecated(
+            "Data is no longer truncated, instead large messages use the socket variant of the DiagnosticsData union")
     truncated_chars uint32;
 };
 

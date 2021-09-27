@@ -932,16 +932,49 @@ impl Daemon {
                                 let res = log_iterator.iter().await?;
                                 match res {
                                     Some(Ok(entry)) => {
-                                        // TODO(fxbug.dev/78742): migrate to the socket-based API.
-                                        responder.send(&mut Ok(vec![ArchiveIteratorEntry {
-                                            diagnostics_data: Some(DiagnosticsData::Inline(
-                                                InlineData {
-                                                    data: serde_json::to_string(&entry)?,
-                                                    truncated_chars: 0,
+                                        // If the entry is small enough to fit into a FIDL message
+                                        // we send it using the Inline variant. Otherwise, we use
+                                        // the Socket variant by sending one end of the socket as a
+                                        // response and sending the data into the other end of the
+                                        // socket.
+                                        // TODO(fxbug.dev/81310): This should be unified across the
+                                        // daemon and bridge.
+                                        let data = serde_json::to_string(&entry)?;
+                                        if data.len()
+                                            <= fidl_fuchsia_logger::MAX_DATAGRAM_LEN_BYTES as usize
+                                        {
+                                            responder.send(&mut Ok(vec![
+                                                ArchiveIteratorEntry {
+                                                    diagnostics_data: Some(
+                                                        DiagnosticsData::Inline(InlineData {
+                                                            data,
+                                                            truncated_chars: 0,
+                                                        }),
+                                                    ),
+                                                    ..ArchiveIteratorEntry::EMPTY
                                                 },
-                                            )),
-                                            ..ArchiveIteratorEntry::EMPTY
-                                        }]))?;
+                                            ]))?;
+                                        } else {
+                                            let (socket, tx_socket) =
+                                                fuchsia_async::emulated_handle::Socket::create(
+                                                    fuchsia_async::emulated_handle::SocketOpts::STREAM,
+                                                )?;
+                                            let mut tx_socket =
+                                                fuchsia_async::Socket::from_socket(tx_socket)?;
+                                            // We send one end of the socket back to the caller.
+                                            // The receiver will need to read the socket content to
+                                            // get the data.
+                                            let response = vec![ArchiveIteratorEntry {
+                                                diagnostics_data: Some(DiagnosticsData::Socket(
+                                                    socket,
+                                                )),
+                                                ..ArchiveIteratorEntry::EMPTY
+                                            }];
+                                            responder.send(&mut Ok(response))?;
+                                            // We write all the data to the other end of the
+                                            // socket.
+                                            tx_socket.write_all(data.as_bytes()).await?;
+                                        }
                                     }
                                     Some(Err(e)) => {
                                         log::warn!("got error streaming diagnostics: {}", e);
