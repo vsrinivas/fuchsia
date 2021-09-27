@@ -82,3 +82,13 @@ fvm_emmc_partition_size = 17179869184
 
 # Depthcharge does not currently support FVM compression.
 fvm_fastboot_compression = "none"
+
+firmware_prebuilts = [
+  {
+    type = "ap"
+    path = "//prebuilt/third_party/firmware/atlas/fuchsia_image.dev.bin"
+
+    # TODO(fxbug.dev/83462): support flashing firmware over fastboot.
+    #partition = "bootloader"
+  },
+]
