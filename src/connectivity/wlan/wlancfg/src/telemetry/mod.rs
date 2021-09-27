@@ -21,6 +21,7 @@ use {
     static_assertions::const_assert_eq,
     std::{
         cmp::max,
+        collections::HashMap,
         ops::Add,
         sync::{
             atomic::{AtomicBool, Ordering},
@@ -443,7 +444,7 @@ impl Telemetry {
                     }
                 };
                 self.stats_logger
-                    .log_establish_connection_cobalt_metrics(
+                    .report_connect_result(
                         result.code,
                         multiple_bss_candidates,
                         &latest_ap_state,
@@ -593,6 +594,12 @@ struct StatsLogger {
     cobalt_1dot1_proxy: fidl_fuchsia_metrics::MetricEventLoggerProxy,
     last_1d_stats: Arc<Mutex<WindowedStats<StatCounters>>>,
     last_7d_stats: Arc<Mutex<WindowedStats<StatCounters>>>,
+    /// Stats aggregated for each day and then logged into Cobalt.
+    /// As these stats are more detailed than `last_1d_stats`, we do not track per-hour
+    /// windowed stats in order to reduce space and heap allocation. Instead, these stats
+    /// are logged to Cobalt once every 24 hours and then cleared. Additionally, these
+    /// are not logged into Inspect.
+    last_1d_detailed_stats: DailyDetailedStats,
     stat_ops: Vec<StatOp>,
     hr_tick: u32,
 }
@@ -603,6 +610,7 @@ impl StatsLogger {
             cobalt_1dot1_proxy,
             last_1d_stats: Arc::new(Mutex::new(WindowedStats::new(24))),
             last_7d_stats: Arc::new(Mutex::new(WindowedStats::new(7))),
+            last_1d_detailed_stats: DailyDetailedStats::new(),
             stat_ops: vec![],
             hr_tick: 0,
         }
@@ -651,9 +659,28 @@ impl StatsLogger {
         }
     }
 
+    async fn report_connect_result(
+        &mut self,
+        code: fidl_ieee80211::StatusCode,
+        multiple_bss_candidates: bool,
+        latest_ap_state: &BssDescription,
+        connect_start_time: Option<fasync::Time>,
+    ) {
+        self.log_establish_connection_cobalt_metrics(
+            code,
+            multiple_bss_candidates,
+            latest_ap_state,
+            connect_start_time,
+        )
+        .await;
+
+        *self.last_1d_detailed_stats.connect_attempts_status.entry(code).or_insert(0) += 1;
+    }
+
     async fn log_daily_cobalt_metrics(&mut self) {
         self.log_daily_1d_cobalt_metrics().await;
         self.log_daily_7d_cobalt_metrics().await;
+        self.log_daily_detailed_cobalt_metrics().await;
     }
 
     async fn log_daily_1d_cobalt_metrics(&mut self) {
@@ -791,8 +818,7 @@ impl StatsLogger {
             }
         }
 
-        let connection_success_rate =
-            c.connect_successful_count as f64 / c.connect_attempts_count as f64;
+        let connection_success_rate = c.connection_success_rate();
         if connection_success_rate.is_finite() {
             metric_events.push(MetricEvent {
                 metric_id: metrics::CONNECTION_SUCCESS_RATE_METRIC_ID,
@@ -845,6 +871,35 @@ impl StatsLogger {
         }
     }
 
+    async fn log_daily_detailed_cobalt_metrics(&mut self) {
+        let mut metric_events = vec![];
+
+        let c = self.last_1d_stats.lock().windowed_stat(None);
+        if !c.connection_success_rate().is_finite() {
+            return;
+        }
+
+        let device_low_connection_success =
+            c.connection_success_rate() < DEVICE_LOW_CONNECTION_SUCCESS_RATE_THRESHOLD;
+        for (status_code, count) in &self.last_1d_detailed_stats.connect_attempts_status {
+            metric_events.push(MetricEvent {
+                metric_id: if device_low_connection_success {
+                    metrics::CONNECT_ATTEMPT_ON_BAD_DEVICE_BREAKDOWN_BY_STATUS_CODE_METRIC_ID
+                } else {
+                    metrics::CONNECT_ATTEMPT_ON_NORMAL_DEVICE_BREAKDOWN_BY_STATUS_CODE_METRIC_ID
+                },
+                event_codes: vec![*status_code as u32],
+                payload: MetricEventPayload::Count(*count),
+            });
+        }
+
+        log_cobalt_1dot1_batch!(
+            self.cobalt_1dot1_proxy,
+            &mut metric_events.iter_mut(),
+            "log_daily_detailed_cobalt_metrics",
+        );
+    }
+
     async fn handle_hr_passed(&mut self) {
         self.log_hourly_fleetwise_quality_cobalt_metrics().await;
 
@@ -852,6 +907,7 @@ impl StatsLogger {
         self.last_1d_stats.lock().slide_window();
         if self.hr_tick == 0 {
             self.last_7d_stats.lock().slide_window();
+            self.last_1d_detailed_stats = DailyDetailedStats::new();
         }
     }
 
@@ -1158,6 +1214,10 @@ impl StatCounters {
     fn adjusted_downtime(&self) -> zx::Duration {
         max(0.seconds(), self.downtime_duration - self.downtime_no_saved_neighbor_duration)
     }
+
+    fn connection_success_rate(&self) -> f64 {
+        self.connect_successful_count as f64 / self.connect_attempts_count as f64
+    }
 }
 
 // `Add` implementation is required to implement `SaturatingAdd` down below.
@@ -1226,6 +1286,17 @@ impl SaturatingAdd for StatCounters {
                 self.no_rx_duration.into_nanos().saturating_add(v.no_rx_duration.into_nanos()),
             ),
         }
+    }
+}
+
+#[derive(Debug)]
+struct DailyDetailedStats {
+    connect_attempts_status: HashMap<fidl_ieee80211::StatusCode, u64>,
+}
+
+impl DailyDetailedStats {
+    pub fn new() -> Self {
+        Self { connect_attempts_status: HashMap::new() }
     }
 }
 
@@ -1351,6 +1422,36 @@ mod tests {
                 },
             }
         });
+    }
+
+    #[fuchsia::test]
+    fn test_daily_detailed_stat_cycles() {
+        let (mut test_helper, mut test_fut) = setup_test();
+        for _ in 0..10 {
+            test_helper.send_connected_event(random_bss_description!(Wpa2));
+        }
+        test_helper.advance_by(24.hours(), test_fut.as_mut());
+
+        // On 1st day, 10 successful connects, so verify metric is logged with count of 10.
+        let status_codes = test_helper.get_logged_metrics(
+            metrics::CONNECT_ATTEMPT_ON_NORMAL_DEVICE_BREAKDOWN_BY_STATUS_CODE_METRIC_ID,
+        );
+        assert_eq!(status_codes.len(), 1);
+        assert_eq!(status_codes[0].event_codes, vec![fidl_ieee80211::StatusCode::Success as u32]);
+        assert_eq!(status_codes[0].payload, MetricEventPayload::Count(10));
+
+        test_helper.cobalt_events.clear();
+
+        test_helper.send_connected_event(random_bss_description!(Wpa2));
+        test_helper.advance_by(24.hours(), test_fut.as_mut());
+
+        // On 2nd day, 1 successful connect, so verify metric is logged with count of 1.
+        let status_codes = test_helper.get_logged_metrics(
+            metrics::CONNECT_ATTEMPT_ON_NORMAL_DEVICE_BREAKDOWN_BY_STATUS_CODE_METRIC_ID,
+        );
+        assert_eq!(status_codes.len(), 1);
+        assert_eq!(status_codes[0].event_codes, vec![fidl_ieee80211::StatusCode::Success as u32]);
+        assert_eq!(status_codes[0].payload, MetricEventPayload::Count(1));
     }
 
     #[fuchsia::test]
@@ -2506,6 +2607,82 @@ mod tests {
     }
 
     #[fuchsia::test]
+    fn test_log_establish_connection_status_code_cobalt_metrics_normal_device() {
+        let (mut test_helper, mut test_fut) = setup_test();
+        for _ in 0..3 {
+            let event = TelemetryEvent::ConnectResult {
+                iface_id: IFACE_ID,
+                result: fake_connect_result(fidl_ieee80211::StatusCode::RefusedReasonUnspecified),
+                multiple_bss_candidates: true,
+                latest_ap_state: random_bss_description!(Wpa1),
+            };
+            test_helper.telemetry_sender.send(event);
+        }
+        test_helper.send_connected_event(random_bss_description!(Wpa2));
+        test_helper.advance_by(24.hours(), test_fut.as_mut());
+
+        let status_codes = test_helper.get_logged_metrics(
+            metrics::CONNECT_ATTEMPT_ON_NORMAL_DEVICE_BREAKDOWN_BY_STATUS_CODE_METRIC_ID,
+        );
+        assert_eq!(status_codes.len(), 2);
+        assert_eq_cobalt_events(
+            status_codes,
+            vec![
+                MetricEvent {
+                    metric_id:
+                        metrics::CONNECT_ATTEMPT_ON_NORMAL_DEVICE_BREAKDOWN_BY_STATUS_CODE_METRIC_ID,
+                    event_codes: vec![fidl_ieee80211::StatusCode::Success as u32],
+                    payload: MetricEventPayload::Count(1),
+                },
+                MetricEvent {
+                    metric_id:
+                        metrics::CONNECT_ATTEMPT_ON_NORMAL_DEVICE_BREAKDOWN_BY_STATUS_CODE_METRIC_ID,
+                    event_codes: vec![fidl_ieee80211::StatusCode::RefusedReasonUnspecified as u32],
+                    payload: MetricEventPayload::Count(3),
+                },
+            ],
+        );
+    }
+
+    #[fuchsia::test]
+    fn test_log_establish_connection_status_code_cobalt_metrics_bad_device() {
+        let (mut test_helper, mut test_fut) = setup_test();
+        for _ in 0..10 {
+            let event = TelemetryEvent::ConnectResult {
+                iface_id: IFACE_ID,
+                result: fake_connect_result(fidl_ieee80211::StatusCode::RefusedReasonUnspecified),
+                multiple_bss_candidates: true,
+                latest_ap_state: random_bss_description!(Wpa1),
+            };
+            test_helper.telemetry_sender.send(event);
+        }
+        test_helper.send_connected_event(random_bss_description!(Wpa2));
+        test_helper.advance_by(24.hours(), test_fut.as_mut());
+
+        let status_codes = test_helper.get_logged_metrics(
+            metrics::CONNECT_ATTEMPT_ON_BAD_DEVICE_BREAKDOWN_BY_STATUS_CODE_METRIC_ID,
+        );
+        assert_eq!(status_codes.len(), 2);
+        assert_eq_cobalt_events(
+            status_codes,
+            vec![
+                MetricEvent {
+                    metric_id:
+                        metrics::CONNECT_ATTEMPT_ON_BAD_DEVICE_BREAKDOWN_BY_STATUS_CODE_METRIC_ID,
+                    event_codes: vec![fidl_ieee80211::StatusCode::Success as u32],
+                    payload: MetricEventPayload::Count(1),
+                },
+                MetricEvent {
+                    metric_id:
+                        metrics::CONNECT_ATTEMPT_ON_BAD_DEVICE_BREAKDOWN_BY_STATUS_CODE_METRIC_ID,
+                    event_codes: vec![fidl_ieee80211::StatusCode::RefusedReasonUnspecified as u32],
+                    payload: MetricEventPayload::Count(10),
+                },
+            ],
+        );
+    }
+
+    #[fuchsia::test]
     fn test_log_establish_connection_cobalt_metrics_user_wait_time_tracked_no_reset() {
         let (mut test_helper, mut test_fut) = setup_test();
 
@@ -2964,6 +3141,39 @@ mod tests {
             };
             self.telemetry_sender.send(event);
         }
+    }
+
+    /// Assert two set of Cobalt MetricEvent equal, disregarding the order
+    #[track_caller]
+    fn assert_eq_cobalt_events(
+        mut left: Vec<fidl_fuchsia_metrics::MetricEvent>,
+        mut right: Vec<fidl_fuchsia_metrics::MetricEvent>,
+    ) {
+        left.sort_by(metric_event_cmp);
+        right.sort_by(metric_event_cmp);
+        assert_eq!(left, right);
+    }
+
+    fn metric_event_cmp(
+        left: &fidl_fuchsia_metrics::MetricEvent,
+        right: &fidl_fuchsia_metrics::MetricEvent,
+    ) -> std::cmp::Ordering {
+        match left.metric_id.cmp(&right.metric_id) {
+            std::cmp::Ordering::Equal => match left.event_codes.len().cmp(&right.event_codes.len())
+            {
+                std::cmp::Ordering::Equal => (),
+                ordering => return ordering,
+            },
+            ordering => return ordering,
+        }
+
+        for i in 0..left.event_codes.len() {
+            match left.event_codes[i].cmp(&right.event_codes[i]) {
+                std::cmp::Ordering::Equal => (),
+                ordering => return ordering,
+            }
+        }
+        std::cmp::Ordering::Equal
     }
 
     trait CobaltExt {
