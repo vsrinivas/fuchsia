@@ -30,9 +30,13 @@ We'll use the `echo.test.fidl` sample that we discussed in the
 ```fidl
 library fidl.examples.echo;
 
-[Discoverable]
+@discoverable
 protocol Echo {
-    EchoString(string? value) -> (string? response);
+    EchoString(struct {
+        value string:optional;
+    }) -> (struct {
+        response string:optional;
+    });
 };
 ```
 
@@ -209,16 +213,19 @@ produces.
 | `uint64`                                       | `uint64_t`                 |
 | `float32`                                      | `float`                    |
 | `float64`                                      | `double`                   |
-| `handle`, `handle?`, `handle:T`, `handle:T?`   | `zx_handle_t`              |
-| `string`, `string?`                            | `fidl_string_t`            |
-| `vector`, `vector?`                            | `fidl_vector_t`            |
-| `array<T>:N`                                   | `T[N]`                     |
-| `protocol`, `protocol?`                        | typedef to `zx_handle_t`   |
-| `request<I>`, `request<I>?`                    | typedef to `zx_handle_t`   |
+| `handle`, `handle:optional`                    | `zx_handle_t`              |
+| `handle<T>`, `handle<T>:optional`              | `zx_handle_t`              |
+| `string`, `string:optional`                    | `fidl_string_t`            |
+| `string:<N,optional>`                          | `fidl_string_t`            |
+| `vector<T>`, `vector<T>:optional`              | `fidl_vector_t`            |
+| `vector<T>:<N,optional>`                       | `fidl_vector_t`            |
+| `array<T, N>`                                  | `T[N]`                     |
+| `client_end:P`, `client_end:<P,optional>`      | typedef to `zx_handle_t`   |
+| `client_end:P`, `server_end:<P,optional>`      | typedef to `zx_handle_t`   |
 | `struct`                                       | `struct Struct`            |
-| `struct?`                                      | `struct Struct*`           |
+| `box<struct>`                                  | `struct Struct*`           |
 | `union`                                        | `struct Union`             |
-| `union?`                                       | `struct Union*`            |
+| `union:optional`                               | `struct Union*`            |
 | `table`                                        | (not supported)            |
 | `enum`                                         | typedef to underlying type |
 
@@ -626,19 +633,18 @@ language.
 ### Simple Layout
 
 In order to generate simple C bindings for a protocol, the protocol must have
-the `[Layout="Simple"]` attribute. This attribute enforces that the protocol,
-including the types referenced by it, conform to the language subset
+the `@for_deprecated_c_bindings` attribute. This attribute enforces that the
+protocol, including the types referenced by it, conform to the language subset
 supported by FIDL.
 
 Specifically, every message in the protocol (including both requests and
 response) must not have any secondary objects except strings and vectors of
-handles or primitives (see
-[wire format][wire-format]
-for a definition of secondary objects). This invariant simplifies the memory
-ownership semantics. Additionally, all strings and vectors must have explicit
-non-maximal length bounds. `vector<int64>:64` is a vector with such a bound, while
-`vector<int64>` lacks an explicit non-maximal bound. This requirement simplifies
-buffer management for clients that receive these values.
+handles or primitives (see [wire format][wire-format] for a definition of
+secondary objects). This invariant simplifies the memory ownership semantics.
+Additionally, all strings and vectors must have explicit non-maximal length
+bounds. `vector<int64>:64` is a vector with such a bound, while `vector<int64>`
+lacks an explicit non-maximal bound. This requirement simplifies buffer
+management for clients that receive these values.
 
 For example, structs and unions can embed other structs and unions, but they
 cannot contain nullable references to other structs or unions because nullable
@@ -650,21 +656,29 @@ Below is an example of a protocol that meets these requirements:
 ```fidl
 library unn.fleet;
 
-struct SolarPosition {
-    array<int64>:3 coord;
+type SolarPosition = struct {
+    coord array<int64,3>;
 };
 
-enum Alert {
+type Alert = flexible enum {
     GREEN = 1;
     YELLOW = 2;
     RED = 3;
 };
 
-[Layout="Simple"]
+@for_deprecated_c_bindings
 protocol SpaceShip {
-    AdjustHeading(SolarPosition destination) -> (int8 result);
-    ScanForLifeforms() -> (vector<uint32>:64 life_signs);
-    SetDefenseCondition(Alert alert);
+    AdjustHeading(struct {
+        destination SolarPosition;
+    }) -> (struct {
+        result int8;
+    });
+    ScanForLifeforms() -> (struct {
+        life_signs vector<uint32>:64;
+    });
+    SetDefenseCondition(struct {
+        alert Alert;
+    });
 };
 ```
 
