@@ -10,16 +10,23 @@ import("//sdk/cts/build/cts.gni")
 import("//src/tests/fidl/conformance_suite/gidl-conformance-suite.gni")
 import("//tools/fidl/gidl/gidl.gni")
 
-gidl_hlcpp_conformance("conformance_test_sources") {
-  testonly = true
-  inputs = conformance_suite_gidl_files
-  fidl = conformance_suite_fidl_target
-  deps = [
-    ":test_util",
-    "//zircon/system/ulib/zxtest",
-  ]
-  if (is_fuchsia) {
-    deps += [ ":handle_util" ]
+gidl_output_prefix = "conformance_suite__"
+gidl_deps = []
+foreach(gidl_file, conformance_suite_gidl_files) {
+  gidl_name = get_path_info(gidl_file, "name")
+  target = "${gidl_output_prefix}${gidl_name}"
+  gidl_deps += [ ":" + target ]
+  gidl_hlcpp_conformance(target) {
+    testonly = true
+    inputs = [ gidl_file ]
+    fidl = conformance_suite_fidl_target
+    deps = [
+      ":test_util",
+      "//zircon/system/ulib/zxtest",
+    ]
+    if (is_fuchsia) {
+      deps += [ ":handle_util" ]
+    }
   }
 }
 
@@ -113,7 +120,7 @@ cts_executable("fidl_hlcpp_conformance_tests_bin") {
   ]
 
   # TODO(75000): Add GIDL to the CTS archive.
-  non_cts_deps = [ ":conformance_test_sources" ]
+  non_cts_deps = gidl_deps
 }
 
 cts_fuchsia_component("fidl_hlcpp_conformance_tests") {
@@ -179,10 +186,7 @@ if (is_host) {
     if (is_prebuilt_cts) {
       output_dir = "${root_out_dir}/host_${current_cpu}/prebuilt/cts"
     }
-    deps = [
-      ":conformance_test_sources",
-      "//zircon/system/ulib/zxtest",
-    ]
+    deps = [ "//zircon/system/ulib/zxtest" ] + gidl_deps
   }
 }
 
