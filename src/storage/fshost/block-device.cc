@@ -33,9 +33,11 @@
 #include <sys/stat.h>
 #include <unistd.h>
 #include <zircon/device/block.h>
+#include <zircon/errors.h>
 #include <zircon/processargs.h>
 #include <zircon/status.h>
 #include <zircon/syscalls.h>
+#include <zircon/types.h>
 
 #include <utility>
 
@@ -54,6 +56,7 @@
 #include "src/storage/fshost/block-device-interface.h"
 #include "src/storage/fshost/copier.h"
 #include "src/storage/fshost/fshost-fs-provider.h"
+#include "src/storage/fshost/minfs-manipulator.h"
 #include "src/storage/fvm/format.h"
 #include "src/storage/minfs/fsck.h"
 #include "src/storage/minfs/minfs.h"
@@ -62,40 +65,6 @@ namespace fshost {
 namespace {
 
 const char kAllowAuthoringFactoryConfigFile[] = "/boot/config/allow-authoring-factory";
-
-// Attempt to mount the device pointed to be the file descriptor at a known
-// location.
-//
-// Returns ZX_ERR_ALREADY_BOUND if the device could be mounted, but something
-// is already mounted at that location. Returns ZX_ERR_INVALID_ARGS if the
-// GUID of the device does not match a known valid one. Returns
-// ZX_ERR_NOT_SUPPORTED if the GUID is a system GUID. Returns ZX_OK if an
-// attempt to mount is made, without checking mount success.
-zx_status_t MountData(FilesystemMounter* mounter, zx::channel block_device, MountOptions* options) {
-  fuchsia_hardware_block_partition_GUID type_guid;
-  zx_status_t io_status, status;
-  io_status = fuchsia_hardware_block_partition_PartitionGetTypeGuid(block_device.get(), &status,
-                                                                    &type_guid);
-  if (io_status != ZX_OK) {
-    return io_status;
-  }
-  if (status != ZX_OK) {
-    return status;
-  }
-
-  if (gpt_is_sys_guid(type_guid.value, GPT_GUID_LEN)) {
-    return ZX_ERR_NOT_SUPPORTED;
-  } else if (gpt_is_data_guid(type_guid.value, GPT_GUID_LEN)) {
-    return mounter->MountData(std::move(block_device), *options);
-  } else if (gpt_is_install_guid(type_guid.value, GPT_GUID_LEN)) {
-    options->readonly = true;
-    return mounter->MountInstall(std::move(block_device), *options);
-  } else if (gpt_is_durable_guid(type_guid.value, GPT_GUID_LEN)) {
-    return mounter->MountDurable(std::move(block_device), *options);
-  }
-  FX_LOGS(ERROR) << "Unrecognized partition GUID for data partition; not mounting";
-  return ZX_ERR_WRONG_TYPE;
-}
 
 // return value is ignored
 int UnsealZxcryptThread(void* arg) {
@@ -684,7 +653,7 @@ zx_status_t BlockDevice::MountFilesystem() {
     case DISK_FORMAT_MINFS: {
       MountOptions options;
       FX_LOGS(INFO) << "BlockDevice::MountFilesystem(data partition)";
-      zx_status_t status = MountData(mounter_, std::move(block_device), &options);
+      zx_status_t status = MountData(&options);
       if (status != ZX_OK) {
         FX_LOGS(ERROR) << "Failed to mount data partition: " << zx_status_get_string(status) << ".";
         MaybeDumpMetadata(fd_.duplicate(), {.disk_format = DISK_FORMAT_MINFS});
@@ -697,6 +666,55 @@ zx_status_t BlockDevice::MountFilesystem() {
       FX_LOGS(ERROR) << "BlockDevice::MountFilesystem(unknown)";
       return ZX_ERR_NOT_SUPPORTED;
   }
+}
+
+// Attempt to mount the device at a known location.
+//
+// Returns ZX_ERR_ALREADY_BOUND if the device could be mounted, but something
+// is already mounted at that location. Returns ZX_ERR_INVALID_ARGS if the
+// GUID of the device does not match a known valid one. Returns
+// ZX_ERR_NOT_SUPPORTED if the GUID is a system GUID. Returns ZX_OK if an
+// attempt to mount is made, without checking mount success.
+zx_status_t BlockDevice::MountData(MountOptions* options) {
+  fuchsia_hardware_block_partition_GUID type_guid;
+  zx_status_t io_status, status;
+  zx::channel block_device = CloneDeviceChannel();
+  io_status = fuchsia_hardware_block_partition_PartitionGetTypeGuid(block_device.get(), &status,
+                                                                    &type_guid);
+  if (io_status != ZX_OK) {
+    return io_status;
+  }
+  if (status != ZX_OK) {
+    return status;
+  }
+
+  if (gpt_is_sys_guid(type_guid.value, GPT_GUID_LEN)) {
+    return ZX_ERR_NOT_SUPPORTED;
+  } else if (gpt_is_data_guid(type_guid.value, GPT_GUID_LEN)) {
+    uint64_t minfs_max_size = device_config_->ReadUint64OptionValue(Config::kMinfsMaxBytes, 0);
+    bool using_custom_fs = device_config_->is_set(Config::kDataFilesystemBinaryPath);
+    if (!using_custom_fs && minfs_max_size > 0) {
+      if (zx::status<> status =
+              MaybeResizeMinfs(CloneDeviceChannel(), minfs_max_size, /*required_inodes=*/4096);
+          status.is_error()) {
+        FX_LOGS(ERROR) << "Failed to resize minfs";
+        // Continue on and hope that minfs can be still be mounted.
+      }
+    }
+    return mounter_->MountData(std::move(block_device), *options);
+  } else if (gpt_is_install_guid(type_guid.value, GPT_GUID_LEN)) {
+    options->readonly = true;
+    return mounter_->MountInstall(std::move(block_device), *options);
+  } else if (gpt_is_durable_guid(type_guid.value, GPT_GUID_LEN)) {
+    return mounter_->MountDurable(std::move(block_device), *options);
+  }
+  FX_LOGS(ERROR) << "Unrecognized partition GUID for data partition; not mounting";
+  return ZX_ERR_WRONG_TYPE;
+}
+
+zx::channel BlockDevice::CloneDeviceChannel() const {
+  fdio_cpp::UnownedFdioCaller caller(fd_.get());
+  return zx::channel(fdio_service_clone(caller.borrow_channel()));
 }
 
 zx_status_t BlockDeviceInterface::Add(bool format_on_corruption) {
