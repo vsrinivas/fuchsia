@@ -256,7 +256,7 @@ void Vcpu::MigrateCpu(Thread* thread, Thread::MigrateStage stage) {
   }
 }
 
-zx_status_t Vcpu::Resume(zx_port_packet_t* packet) {
+zx_status_t Vcpu::Enter(zx_port_packet_t* packet) {
   Thread* current_thread = Thread::Current::Get();
   if (current_thread != thread_) {
     return ZX_ERR_BAD_STATE;
@@ -281,7 +281,7 @@ zx_status_t Vcpu::Resume(zx_port_packet_t* packet) {
       ktrace(TAG_VCPU_ENTER, 0, 0, 0, 0);
       GUEST_STATS_INC(vm_entries);
       running_.store(true);
-      status = arm64_el2_resume(vttbr, el2_state_.PhysicalAddress(), hcr_);
+      status = arm64_el2_enter(vttbr, el2_state_.PhysicalAddress(), hcr_);
       running_.store(false);
       GUEST_STATS_INC(vm_exits);
     }
@@ -297,7 +297,7 @@ zx_status_t Vcpu::Resume(zx_port_packet_t* packet) {
                               guest_->Traps(), packet);
     } else {
       ktrace_vcpu_exit(VCPU_FAILURE, guest_state->system_state.elr_el2);
-      dprintf(INFO, "VCPU resume failed: %d\n", status);
+      dprintf(INFO, "VCPU enter failed: %d\n", status);
     }
   } while (status == ZX_OK);
   return status == ZX_ERR_NEXT ? ZX_OK : status;

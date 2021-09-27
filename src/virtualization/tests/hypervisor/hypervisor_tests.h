@@ -48,9 +48,9 @@ struct TestCase {
 // Flags a gUnit error on failure.
 void SetupGuest(TestCase* test, const char* start, const char* end);
 
-// Resume the guest, and ensure it exits by touching the memory at EXIT_TEST_ADDR.
+// Enter the guest, and ensure it exits by touching the address EXIT_TEST_ADDR.
 //
 // Flags a gUnit error on failure.
-void ResumeAndCleanExit(TestCase* test);
+void EnterAndCleanExit(TestCase* test);
 
 #endif  // SRC_VIRTUALIZATION_TESTS_HYPERVISOR_HYPERVISOR_TESTS_H_

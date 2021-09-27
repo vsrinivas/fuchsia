@@ -28,7 +28,7 @@
   "pkg/zx/include/lib/zx/thread.h": "973f91c7367b0c041bc43ac7882a2c99",
   "pkg/zx/include/lib/zx/time.h": "2b438a538a06a95e8dcaf44f9a59f003",
   "pkg/zx/include/lib/zx/timer.h": "8f82d3859534e3eea20e8cc3abca049b",
-  "pkg/zx/include/lib/zx/vcpu.h": "e5aa76d99865c1574caafa8d2e5adadd",
+  "pkg/zx/include/lib/zx/vcpu.h": "8cd650813148bf62b627500e2a8a75fa",
   "pkg/zx/include/lib/zx/vmar.h": "79c75dfdf4e518426ae514d35aa16648",
   "pkg/zx/include/lib/zx/vmo.h": "aa951edb416ef90c8ef1925b29c3b7c5"
 }

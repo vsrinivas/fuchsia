@@ -196,8 +196,8 @@ movk \reg, #(((\literal) >> 48) & 0xffff), lsl #48
 
 .text
 
-// Test vcpu_resume.
-FUNCTION vcpu_resume
+// Test vcpu_enter.
+FUNCTION vcpu_enter
     test_complete
 END_FUNCTION
 

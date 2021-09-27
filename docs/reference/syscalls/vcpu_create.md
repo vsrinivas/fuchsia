@@ -86,16 +86,16 @@ In a future build this error will no longer occur.
 
  - [`zx_guest_create()`]
  - [`zx_guest_set_trap()`]
+ - [`zx_vcpu_enter()`]
  - [`zx_vcpu_interrupt()`]
  - [`zx_vcpu_read_state()`]
- - [`zx_vcpu_resume()`]
  - [`zx_vcpu_write_state()`]
 
 <!-- References updated by update-docs-from-fidl, do not edit. -->
 
 [`zx_guest_create()`]: guest_create.md
 [`zx_guest_set_trap()`]: guest_set_trap.md
+[`zx_vcpu_enter()`]: vcpu_enter.md
 [`zx_vcpu_interrupt()`]: vcpu_interrupt.md
 [`zx_vcpu_read_state()`]: vcpu_read_state.md
-[`zx_vcpu_resume()`]: vcpu_resume.md
 [`zx_vcpu_write_state()`]: vcpu_write_state.md

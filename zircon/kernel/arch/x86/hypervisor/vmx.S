@@ -55,14 +55,14 @@ FUNCTION(vmx_enter_asm)
 
     // Launch the guest.
     //
-    // Resumes at `vmx_exit_resume` on success, or drops through on error.
+    // Returns to `vmx_guest_exit` on success, or drops through on error.
     vmlaunch
     jmp .Lfailure
 
 .Lresume:
-    // Resume the guest.
+    // Enter the guest.
     //
-    // Resumes at `vmx_exit_resume` on success, or drops through on error.
+    // Returns to `vmx_guest_exit` on success, or drops through on error.
     vmresume
 
 .Lfailure:
@@ -72,7 +72,7 @@ FUNCTION(vmx_enter_asm)
     mov $ZX_ERR_INTERNAL, %rax
     jmp .Lrestore_host_regs
 
-    // Resume execution after a `vmlaunch` or `vmresume`.
+    // Return to the host after a `vmlaunch` or `vmresume`.
     //
     // When we return from a VM exit, vmx_state argument is stored in RSP. We
     // use this to restore the stack and registers to the state they were in

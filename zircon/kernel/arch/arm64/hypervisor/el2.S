@@ -228,7 +228,7 @@ reg_xa  .req x11
     b el2_hvc_tlbi        // HVC 2:      tlbi
     b el2_hvc_on          // HVC 3:      on
     b el2_hvc_bad_state   // HVC 4: (**) off        (disabled)
-    b el2_hvc_bad_state   // HVC 5: (**) resume     (disabled)
+    b el2_hvc_bad_state   // HVC 5: (**) enter      (disabled)
     b el2_hvc_bad_state   // HVC 6: (**) gich_state (disabled)
     b el2_hvc_bad_state   // HVC 7: (**) gich_vtr   (disabled)
     b el2_hvc_tlbi_el2    // HVC 8:      tlbi EL2
@@ -240,7 +240,7 @@ reg_xa  .req x11
     // Check VTTBR_EL2 to determine whether the exception came from the guest or
     // from the host.
     mrs reg_xs, vttbr_el2
-    cbnz reg_xs, el2_guest_exit_or_fp_resume
+    cbnz reg_xs, el2_guest_exit_or_fp_enter
 
     // The exception came from the host, so there is no guest state to preserve.
     pop_stack
@@ -254,7 +254,7 @@ reg_xa  .req x11
     b el2_hvc_tlbi        // HVC 2:      tlbi
     b el2_hvc_bad_state   // HVC 3: (**) on        (disabled)
     b el2_hvc_off         // HVC 4:      off
-    b el2_hvc_resume      // HVC 5:      resume
+    b el2_hvc_enter       // HVC 5:      enter
     b el2_hvc_gich_state  // HVC 6:      gich_state
     b el2_hvc_gich_vtr    // HVC 7:      gich_vtr
     b el2_hvc_tlbi_el2    // HVC 8:      tlbi EL2
@@ -468,12 +468,12 @@ FUNCTION_LABEL(el2_hvc_off)
 
     exception_return ZX_OK
 
-// zx_status_t arm64_el2_resume(zx_paddr_t vttbr, zx_paddr_t state, uint64_t hcr);
-FUNCTION(arm64_el2_resume)
+// zx_status_t arm64_el2_enter(zx_paddr_t vttbr, zx_paddr_t state, uint64_t hcr);
+FUNCTION(arm64_el2_enter)
     hvc 5
     ret
-END_FUNCTION(arm64_el2_resume)
-FUNCTION_LABEL(el2_hvc_resume)
+END_FUNCTION(arm64_el2_enter)
+FUNCTION_LABEL(el2_hvc_enter)
     switch_to_guest
 
     // Save El2State into tpidr_el2.
@@ -517,13 +517,13 @@ FUNCTION_LABEL(el2_hvc_resume)
     eret
     SPECULATION_POSTFENCE
 
-FUNCTION_LABEL(el2_guest_exit_or_fp_resume)
+FUNCTION_LABEL(el2_guest_exit_or_fp_enter)
     // Check ESR_EL2.EC to determine whether the exception was due to a
     // floating-point trap.
     mrs reg_xs, esr_el2
     lsr reg_xs, reg_xs, ESR_EL2_EC_SHIFT
     cmp reg_xs, ESR_EL2_EC_FP
-    b.eq el2_fp_resume
+    b.eq el2_fp_enter
 
 FUNCTION_LABEL(el2_guest_exit)
     // Load El2State from tpidr_el2.
@@ -573,7 +573,7 @@ FUNCTION_LABEL(el2_guest_exit)
     eret
     SPECULATION_POSTFENCE
 
-FUNCTION_LABEL(el2_fp_resume)
+FUNCTION_LABEL(el2_fp_enter)
     // Save reg_xt so we have an extra register to swap floating-point state.
     // We're returning to the guest so we don't need the return code in [sp, 8].
     str reg_xt, [sp, 8]

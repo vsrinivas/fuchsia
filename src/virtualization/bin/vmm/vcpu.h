@@ -22,7 +22,7 @@ class Vcpu {
   Vcpu& operator=(const Vcpu&) = delete;
   Vcpu(uint64_t id, Guest* guest, zx_gpaddr_t entry, zx_gpaddr_t boot_ptr, async::Loop* loop);
 
-  // Begins VCPU execution.
+  // Begin VCPU execution.
   zx_status_t Start();
 
   // Send virtual interrupt to the VCPU.
@@ -34,7 +34,7 @@ class Vcpu {
   static Vcpu* GetCurrent();
 
  private:
-  // Resume the VCPU and handle packets in a loop.
+  // Enter the VCPU and handle packets in a loop.
   zx_status_t Loop(std::promise<zx_status_t> barrier);
 
   // Guest packet handlers

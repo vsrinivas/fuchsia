@@ -46,9 +46,9 @@ VcpuDispatcher::VcpuDispatcher(fbl::RefPtr<GuestDispatcher> guest, ktl::unique_p
 
 VcpuDispatcher::~VcpuDispatcher() { kcounter_add(dispatcher_vcpu_destroy_count, 1); }
 
-zx_status_t VcpuDispatcher::Resume(zx_port_packet_t* packet) {
+zx_status_t VcpuDispatcher::Enter(zx_port_packet_t* packet) {
   canary_.Assert();
-  return vcpu_->Resume(packet);
+  return vcpu_->Enter(packet);
 }
 
 void VcpuDispatcher::PhysicalInterrupt(uint32_t vector) {

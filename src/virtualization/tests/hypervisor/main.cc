@@ -160,9 +160,9 @@ bool ExceptionThrown(const zx_packet_guest_mem_t& guest_mem, const zx::vcpu& vcp
 
 }  // namespace
 
-void ResumeAndCleanExit(TestCase* test) {
+void EnterAndCleanExit(TestCase* test) {
   zx_port_packet_t packet = {};
-  ASSERT_EQ(test->vcpu.resume(&packet), ZX_OK);
+  ASSERT_EQ(test->vcpu.enter(&packet), ZX_OK);
   EXPECT_EQ(packet.type, ZX_PKT_TYPE_GUEST_MEM);
   EXPECT_EQ(packet.guest_mem.addr, static_cast<zx_gpaddr_t>(EXIT_TEST_ADDR));
 #if __x86_64__

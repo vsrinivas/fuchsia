@@ -148,7 +148,7 @@ to ensure the target thread observes and processes any pending signals in a
 timely manner.  The second is when the target thread is performing a long
 running operation in the kernel, but not checking for pending signals.  These
 are rare, but do exist.  The best example would be the execution of a guest OS
-via [`zx_vcpu_resume()`].  The interrupt would cause a VMEXIT back to the host
+via [`zx_vcpu_enter()`].  The interrupt would cause a VMEXIT back to the host
 kernel where it can check for pending signals and unwind.
 
 ## Putting It All Together
@@ -356,4 +356,4 @@ The key points to take away are:
 [`zx_task_suspend()`]: /docs/reference/syscalls/task_suspend.md
 [`zx_task_kill()`]: /docs/reference/syscalls/task_kill.md
 [`zx_port_wait()`]: /docs/reference/syscalls/port_wait.md
-[`zx_vcpu_resume()`]: /docs/reference/syscalls/vcpu_resume.md
+[`zx_vcpu_enter()`]: /docs/reference/syscalls/vcpu_enter.md

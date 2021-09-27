@@ -90,12 +90,12 @@ zx_status_t Vcpu::Loop(std::promise<zx_status_t> barrier) {
 
   while (true) {
     zx_port_packet_t packet;
-    zx_status_t status = vcpu_.resume(&packet);
+    zx_status_t status = vcpu_.enter(&packet);
     switch (status) {
       case ZX_OK:
         break;
       default:
-        FX_LOGS(ERROR) << "Fatal error attempting to resume VCPU " << id_ << ": "
+        FX_LOGS(ERROR) << "Fatal error attempting to enter VCPU " << id_ << ": "
                        << zx_status_get_string(status) << ". Shutting down VM.";
         return status;
     }

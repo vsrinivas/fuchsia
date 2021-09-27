@@ -91,7 +91,7 @@ zx_status_t sys_vcpu_create(zx_handle_t guest_handle, uint32_t options, zx_vaddr
   return out->make(ktl::move(handle), rights);
 }
 
-zx_status_t sys_vcpu_resume(zx_handle_t handle, user_out_ptr<zx_port_packet_t> user_packet) {
+zx_status_t sys_vcpu_enter(zx_handle_t handle, user_out_ptr<zx_port_packet_t> user_packet) {
   auto up = ProcessDispatcher::GetCurrent();
 
   fbl::RefPtr<VcpuDispatcher> vcpu;
@@ -101,7 +101,7 @@ zx_status_t sys_vcpu_resume(zx_handle_t handle, user_out_ptr<zx_port_packet_t> u
   }
 
   zx_port_packet packet{};
-  status = vcpu->Resume(&packet);
+  status = vcpu->Enter(&packet);
   if (status != ZX_OK) {
     return status;
   }

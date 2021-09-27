@@ -17,10 +17,10 @@ protocol vcpu {
     });
 
     // See port.fidl for definition of PortPacket.
-    /// Resume execution of a VCPU.
+    /// Enter a VCPU, causing it to resume execution.
     /// Rights: handle must be of type ZX_OBJ_TYPE_VCPU and have ZX_RIGHT_EXECUTE.
     @blocking
-    vcpu_resume(resource struct {
+    vcpu_enter(resource struct {
         handle handle:VCPU;
     }) -> (struct {
         status status;

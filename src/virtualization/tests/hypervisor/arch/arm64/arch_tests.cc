@@ -69,7 +69,7 @@ TEST(Guest, VcpuReadWriteState) {
 
   ASSERT_EQ(test.vcpu.write_state(ZX_VCPU_STATE, &vcpu_state, sizeof(vcpu_state)), ZX_OK);
 
-  ASSERT_NO_FATAL_FAILURE(ResumeAndCleanExit(&test));
+  ASSERT_NO_FATAL_FAILURE(EnterAndCleanExit(&test));
 
   ASSERT_EQ(test.vcpu.read_state(ZX_VCPU_STATE, &vcpu_state, sizeof(vcpu_state)), ZX_OK);
 
@@ -114,14 +114,14 @@ TEST(Guest, VcpuInterrupt) {
   test.interrupts_enabled = true;
 
   ASSERT_EQ(test.vcpu.interrupt(kInterruptVector), ZX_OK);
-  ASSERT_NO_FATAL_FAILURE(ResumeAndCleanExit(&test));
+  ASSERT_NO_FATAL_FAILURE(EnterAndCleanExit(&test));
 }
 
 TEST(Guest, VcpuWfi) {
   TestCase test;
   ASSERT_NO_FATAL_FAILURE(SetupGuest(&test, vcpu_wfi_start, vcpu_wfi_end));
 
-  ASSERT_NO_FATAL_FAILURE(ResumeAndCleanExit(&test));
+  ASSERT_NO_FATAL_FAILURE(EnterAndCleanExit(&test));
 }
 
 TEST(Guest, VcpuWfiPendingInterrupt) {
@@ -146,7 +146,7 @@ TEST(Guest, VcpuWfiPendingInterrupt) {
   ASSERT_EQ(test.vcpu.interrupt(kInterruptVector), ZX_OK);
   ASSERT_EQ(test.vcpu.interrupt(kInterruptVector + 1), ZX_OK);
 
-  ASSERT_NO_FATAL_FAILURE(ResumeAndCleanExit(&test));
+  ASSERT_NO_FATAL_FAILURE(EnterAndCleanExit(&test));
 }
 
 TEST(Guest, VcpuWfiAarch32) {
@@ -154,7 +154,7 @@ TEST(Guest, VcpuWfiAarch32) {
   ASSERT_NO_FATAL_FAILURE(SetupGuest(&test, vcpu_wfi_aarch32_start, vcpu_wfi_aarch32_end));
 
   zx_port_packet_t packet = {};
-  ASSERT_EQ(test.vcpu.resume(&packet), ZX_OK);
+  ASSERT_EQ(test.vcpu.enter(&packet), ZX_OK);
   EXPECT_EQ(packet.type, ZX_PKT_TYPE_GUEST_MEM);
   EXPECT_EQ(packet.guest_mem.addr, static_cast<zx_gpaddr_t>(EXIT_TEST_ADDR));
   EXPECT_EQ(packet.guest_mem.read, false);
@@ -165,7 +165,7 @@ TEST(Guest, VcpuFp) {
   TestCase test;
   ASSERT_NO_FATAL_FAILURE(SetupGuest(&test, vcpu_fp_start, vcpu_fp_end));
 
-  ASSERT_NO_FATAL_FAILURE(ResumeAndCleanExit(&test));
+  ASSERT_NO_FATAL_FAILURE(EnterAndCleanExit(&test));
 }
 
 TEST(Guest, VcpuFpAarch32) {
@@ -173,7 +173,7 @@ TEST(Guest, VcpuFpAarch32) {
   ASSERT_NO_FATAL_FAILURE(SetupGuest(&test, vcpu_fp_aarch32_start, vcpu_fp_aarch32_end));
 
   zx_port_packet_t packet = {};
-  ASSERT_EQ(test.vcpu.resume(&packet), ZX_OK);
+  ASSERT_EQ(test.vcpu.enter(&packet), ZX_OK);
   EXPECT_EQ(packet.type, ZX_PKT_TYPE_GUEST_MEM);
   EXPECT_EQ(packet.guest_mem.addr, static_cast<zx_gpaddr_t>(EXIT_TEST_ADDR));
   EXPECT_EQ(packet.guest_mem.read, false);
@@ -185,7 +185,7 @@ TEST(Guest, VcpuPsciSystemOff) {
   ASSERT_NO_FATAL_FAILURE(SetupGuest(&test, vcpu_psci_system_off_start, vcpu_psci_system_off_end));
 
   zx_port_packet_t packet = {};
-  ASSERT_EQ(test.vcpu.resume(&packet), ZX_ERR_UNAVAILABLE);
+  ASSERT_EQ(test.vcpu.enter(&packet), ZX_ERR_UNAVAILABLE);
 }
 
 TEST(Guest, VcpuWriteStateIoAarch32) {
@@ -202,14 +202,14 @@ TEST(Guest, DataCacheSetWayOperations) {
   TestCase test;
   ASSERT_NO_FATAL_FAILURE(SetupGuest(&test, vcpu_dc_set_way_ops_start, vcpu_dc_set_way_ops_end));
 
-  ASSERT_NO_FATAL_FAILURE(ResumeAndCleanExit(&test));
+  ASSERT_NO_FATAL_FAILURE(EnterAndCleanExit(&test));
 }
 
 TEST(Guest, EnableMmu) {
   TestCase test;
   ASSERT_NO_FATAL_FAILURE(SetupGuest(&test, vcpu_enable_mmu_start, vcpu_enable_mmu_end));
 
-  ASSERT_NO_FATAL_FAILURE(ResumeAndCleanExit(&test));
+  ASSERT_NO_FATAL_FAILURE(EnterAndCleanExit(&test));
 }
 
 TEST(Guest, DisableMmu) {
@@ -217,7 +217,7 @@ TEST(Guest, DisableMmu) {
   ASSERT_NO_FATAL_FAILURE(
       SetupGuest(&test, vcpu_enable_disable_mmu_start, vcpu_enable_disable_mmu_end));
 
-  ASSERT_NO_FATAL_FAILURE(ResumeAndCleanExit(&test));
+  ASSERT_NO_FATAL_FAILURE(EnterAndCleanExit(&test));
 }
 
 }  // namespace

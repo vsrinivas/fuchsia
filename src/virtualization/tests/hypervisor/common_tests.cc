@@ -19,21 +19,21 @@
 
 namespace {
 
-DECLARE_TEST_FUNCTION(vcpu_resume)
+DECLARE_TEST_FUNCTION(vcpu_enter)
 DECLARE_TEST_FUNCTION(vcpu_always_exit)
 DECLARE_TEST_FUNCTION(guest_set_trap)
 
-TEST(Guest, VcpuResume) {
+TEST(Guest, VcpuEnter) {
   TestCase test;
-  ASSERT_NO_FATAL_FAILURE(SetupGuest(&test, vcpu_resume_start, vcpu_resume_end));
+  ASSERT_NO_FATAL_FAILURE(SetupGuest(&test, vcpu_enter_start, vcpu_enter_end));
 
-  ASSERT_NO_FATAL_FAILURE(ResumeAndCleanExit(&test));
+  ASSERT_NO_FATAL_FAILURE(EnterAndCleanExit(&test));
 }
 
 TEST(Guest, VcpuInvalidThreadReuse) {
   {
     TestCase test;
-    ASSERT_NO_FATAL_FAILURE(SetupGuest(&test, vcpu_resume_start, vcpu_resume_end));
+    ASSERT_NO_FATAL_FAILURE(SetupGuest(&test, vcpu_enter_start, vcpu_enter_end));
 
     zx::vcpu vcpu;
     zx_status_t status = zx::vcpu::create(test.guest, 0, 0, &vcpu);
@@ -41,7 +41,7 @@ TEST(Guest, VcpuInvalidThreadReuse) {
   }
 
   TestCase test;
-  ASSERT_NO_FATAL_FAILURE(SetupGuest(&test, vcpu_resume_start, vcpu_resume_end));
+  ASSERT_NO_FATAL_FAILURE(SetupGuest(&test, vcpu_enter_start, vcpu_enter_end));
 }
 
 TEST(Guest, GuestSetTrapWithMem) {
@@ -53,11 +53,11 @@ TEST(Guest, GuestSetTrapWithMem) {
             ZX_OK);
 
   zx_port_packet_t packet = {};
-  ASSERT_EQ(test.vcpu.resume(&packet), ZX_OK);
+  ASSERT_EQ(test.vcpu.enter(&packet), ZX_OK);
   EXPECT_EQ(packet.key, kTrapKey);
   EXPECT_EQ(packet.type, ZX_PKT_TYPE_GUEST_MEM);
 
-  ASSERT_NO_FATAL_FAILURE(ResumeAndCleanExit(&test));
+  ASSERT_NO_FATAL_FAILURE(EnterAndCleanExit(&test));
 }
 
 TEST(Guest, GuestSetTrapWithBell) {
@@ -70,7 +70,7 @@ TEST(Guest, GuestSetTrapWithBell) {
   // Trap on access of TRAP_ADDR.
   ASSERT_EQ(test.guest.set_trap(ZX_GUEST_TRAP_BELL, TRAP_ADDR, PAGE_SIZE, port, kTrapKey), ZX_OK);
 
-  ASSERT_NO_FATAL_FAILURE(ResumeAndCleanExit(&test));
+  ASSERT_NO_FATAL_FAILURE(EnterAndCleanExit(&test));
 
   zx_port_packet_t packet = {};
   ASSERT_EQ(port.wait(zx::time::infinite(), &packet), ZX_OK);
@@ -91,7 +91,7 @@ TEST(Guest, GuestSetTrapWithBellDrop) {
   // Trap on access of TRAP_ADDR.
   ASSERT_EQ(test.guest.set_trap(ZX_GUEST_TRAP_BELL, TRAP_ADDR, PAGE_SIZE, port, kTrapKey), ZX_OK);
 
-  ASSERT_NO_FATAL_FAILURE(ResumeAndCleanExit(&test));
+  ASSERT_NO_FATAL_FAILURE(EnterAndCleanExit(&test));
 
   // The guest in test is destructed with one packet still queued on the
   // port. This should work correctly.
@@ -116,7 +116,7 @@ TEST(Guest, GuestSetTrapWithBellAndUser) {
     // Trap on access of TRAP_ADDR.
     ASSERT_EQ(test.guest.set_trap(ZX_GUEST_TRAP_BELL, TRAP_ADDR, PAGE_SIZE, port, kTrapKey), ZX_OK);
 
-    ASSERT_NO_FATAL_FAILURE(ResumeAndCleanExit(&test));
+    ASSERT_NO_FATAL_FAILURE(EnterAndCleanExit(&test));
   }
 
   ASSERT_EQ(port.wait(zx::time::infinite(), &packet), ZX_OK);
@@ -124,7 +124,7 @@ TEST(Guest, GuestSetTrapWithBellAndUser) {
   EXPECT_EQ(packet.type, ZX_PKT_TYPE_USER);
 }
 
-// See that zx::vcpu::resume returns ZX_ERR_BAD_STATE if the port has been closed.
+// See that zx::vcpu::enter returns ZX_ERR_BAD_STATE if the port has been closed.
 TEST(Guest, GuestSetTrapClosePort) {
   zx::port port;
   ASSERT_EQ(zx::port::create(0, &port), ZX_OK);
@@ -137,9 +137,9 @@ TEST(Guest, GuestSetTrapClosePort) {
   port.reset();
 
   zx_port_packet_t packet = {};
-  ASSERT_EQ(test.vcpu.resume(&packet), ZX_ERR_BAD_STATE);
+  ASSERT_EQ(test.vcpu.enter(&packet), ZX_ERR_BAD_STATE);
 
-  ASSERT_NO_FATAL_FAILURE(ResumeAndCleanExit(&test));
+  ASSERT_NO_FATAL_FAILURE(EnterAndCleanExit(&test));
 }
 
 TEST(Guest, VcpuUseAfterThreadExits) {
@@ -147,7 +147,7 @@ TEST(Guest, VcpuUseAfterThreadExits) {
   zx_status_t status = ZX_ERR_NOT_SUPPORTED;
   // Do the setup on another thread so that the VCPU attaches to the other thread.
   std::thread t([&]() {
-    ASSERT_NO_FATAL_FAILURE(SetupGuest(&test, vcpu_resume_start, vcpu_resume_end));
+    ASSERT_NO_FATAL_FAILURE(SetupGuest(&test, vcpu_enter_start, vcpu_enter_end));
     status = ZX_OK;
   });
   t.join();
@@ -179,7 +179,7 @@ TEST(Guest, VcpuDeleteFromOtherThread) {
     // when we delete the VCPU below).
     for (int i = 0; i < 3; i++) {
       zx_port_packet_t packet;
-      test.vcpu.resume(&packet);
+      test.vcpu.enter(&packet);
     }
     ready_barrier.set_value();
 

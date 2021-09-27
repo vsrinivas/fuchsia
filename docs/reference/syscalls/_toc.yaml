@@ -273,12 +273,12 @@ toc:
   section:
   - title: "zx_vcpu_create"
     path: /docs/reference/syscalls/vcpu_create.md
+  - title: "zx_vcpu_enter"
+    path: /docs/reference/syscalls/vcpu_enter.md
   - title: "zx_vcpu_interrupt"
     path: /docs/reference/syscalls/vcpu_interrupt.md
   - title: "zx_vcpu_read_state"
     path: /docs/reference/syscalls/vcpu_read_state.md
-  - title: "zx_vcpu_resume"
-    path: /docs/reference/syscalls/vcpu_resume.md
   - title: "zx_vcpu_write_state"
     path: /docs/reference/syscalls/vcpu_write_state.md
 - title: "Global system information"

@@ -975,7 +975,7 @@ zx_status_t vmx_enter(VmxState* vmx_state) {
   return status;
 }
 
-zx_status_t Vcpu::Resume(zx_port_packet_t* packet) {
+zx_status_t Vcpu::Enter(zx_port_packet_t* packet) {
   Thread* current_thread = Thread::Current::Get();
   if (current_thread != thread_) {
     return ZX_ERR_BAD_STATE;
@@ -1035,7 +1035,7 @@ zx_status_t Vcpu::Resume(zx_port_packet_t* packet) {
     if (status != ZX_OK) {
       ktrace_vcpu_exit(VCPU_FAILURE, vmcs.Read(VmcsFieldXX::GUEST_RIP));
       uint64_t error = vmcs.Read(VmcsField32::INSTRUCTION_ERROR);
-      dprintf(INFO, "VCPU resume failed: %#lx\n", error);
+      dprintf(INFO, "VCPU enter failed: %#lx\n", error);
     } else {
       vmx_state_.resume = true;
       status = vmexit_handler(&vmcs, &vmx_state_.guest_state, &local_apic_state_, &pv_clock_state_,

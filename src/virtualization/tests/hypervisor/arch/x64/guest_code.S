@@ -160,8 +160,8 @@ idtr_for_\start:
 end_of_\start:
 .endm
 
-// Test vcpu_resume.
-FUNCTION vcpu_resume
+// Test vcpu_enter.
+FUNCTION vcpu_enter
     // Test that we do not exit on load/store of CR3.
     mov %cr3, %rax
     mov %rax, %cr3

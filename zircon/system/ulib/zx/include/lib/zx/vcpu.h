@@ -31,7 +31,7 @@ class vcpu final : public object<vcpu> {
 
   static zx_status_t create(const guest& guest, uint32_t options, zx_gpaddr_t entry, vcpu* result);
 
-  zx_status_t resume(zx_port_packet_t* packet) const { return zx_vcpu_resume(get(), packet); }
+  zx_status_t enter(zx_port_packet_t* packet) const { return zx_vcpu_enter(get(), packet); }
 
   zx_status_t interrupt(uint32_t interrupt) const { return zx_vcpu_interrupt(get(), interrupt); }
 

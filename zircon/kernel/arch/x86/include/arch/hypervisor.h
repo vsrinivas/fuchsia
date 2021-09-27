@@ -95,7 +95,7 @@ class Vcpu {
   ~Vcpu();
   DISALLOW_COPY_ASSIGN_AND_MOVE(Vcpu);
 
-  zx_status_t Resume(zx_port_packet_t* packet);
+  zx_status_t Enter(zx_port_packet_t* packet);
   void Interrupt(uint32_t vector, hypervisor::InterruptType type);
   zx_status_t ReadState(zx_vcpu_state_t* vcpu_state);
   zx_status_t WriteState(const zx_vcpu_state_t& vcpu_state);

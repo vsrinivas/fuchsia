@@ -59,8 +59,8 @@ invalid pointer, or *buffer_size* does not match the expected size of *kind*.
  - [`zx_guest_create()`]
  - [`zx_guest_set_trap()`]
  - [`zx_vcpu_create()`]
+ - [`zx_vcpu_enter()`]
  - [`zx_vcpu_interrupt()`]
- - [`zx_vcpu_resume()`]
  - [`zx_vcpu_write_state()`]
 
 <!-- References updated by update-docs-from-fidl, do not edit. -->
@@ -68,6 +68,6 @@ invalid pointer, or *buffer_size* does not match the expected size of *kind*.
 [`zx_guest_create()`]: guest_create.md
 [`zx_guest_set_trap()`]: guest_set_trap.md
 [`zx_vcpu_create()`]: vcpu_create.md
+[`zx_vcpu_enter()`]: vcpu_enter.md
 [`zx_vcpu_interrupt()`]: vcpu_interrupt.md
-[`zx_vcpu_resume()`]: vcpu_resume.md
 [`zx_vcpu_write_state()`]: vcpu_write_state.md

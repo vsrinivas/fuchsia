@@ -82,7 +82,7 @@ TEST(Guest, VcpuReadWriteState) {
 
   ASSERT_EQ(test.vcpu.write_state(ZX_VCPU_STATE, &vcpu_state, sizeof(vcpu_state)), ZX_OK);
 
-  ASSERT_NO_FATAL_FAILURE(ResumeAndCleanExit(&test));
+  ASSERT_NO_FATAL_FAILURE(EnterAndCleanExit(&test));
 
   ASSERT_EQ(test.vcpu.read_state(ZX_VCPU_STATE, &vcpu_state, sizeof(vcpu_state)), ZX_OK);
 
@@ -110,11 +110,11 @@ TEST(Guest, VcpuInterrupt) {
   ASSERT_NO_FATAL_FAILURE(SetupGuest(&test, vcpu_interrupt_start, vcpu_interrupt_end));
   test.interrupts_enabled = true;
 
-  // Resume once and wait for the guest to set up an IDT.
-  ASSERT_NO_FATAL_FAILURE(ResumeAndCleanExit(&test));
+  // Enter once and wait for the guest to set up an IDT.
+  ASSERT_NO_FATAL_FAILURE(EnterAndCleanExit(&test));
 
   ASSERT_EQ(test.vcpu.interrupt(kInterruptVector), ZX_OK);
-  ASSERT_NO_FATAL_FAILURE(ResumeAndCleanExit(&test));
+  ASSERT_NO_FATAL_FAILURE(EnterAndCleanExit(&test));
 
   zx_vcpu_state_t vcpu_state;
   ASSERT_EQ(test.vcpu.read_state(ZX_VCPU_STATE, &vcpu_state, sizeof(vcpu_state)), ZX_OK);
@@ -126,14 +126,14 @@ TEST(Guest, VcpuInterruptPriority) {
   ASSERT_NO_FATAL_FAILURE(SetupGuest(&test, vcpu_interrupt_start, vcpu_interrupt_end));
   test.interrupts_enabled = true;
 
-  // Resume once and wait for the guest to set up an IDT.
-  ASSERT_NO_FATAL_FAILURE(ResumeAndCleanExit(&test));
+  // Enter once and wait for the guest to set up an IDT.
+  ASSERT_NO_FATAL_FAILURE(EnterAndCleanExit(&test));
 
   // Check that interrupts have higher priority than exceptions.
   ASSERT_EQ(test.vcpu.interrupt(kExceptionVector), ZX_OK);
   ASSERT_EQ(test.vcpu.interrupt(kInterruptVector), ZX_OK);
 
-  ASSERT_NO_FATAL_FAILURE(ResumeAndCleanExit(&test));
+  ASSERT_NO_FATAL_FAILURE(EnterAndCleanExit(&test));
 
   zx_vcpu_state_t vcpu_state;
   ASSERT_EQ(test.vcpu.read_state(ZX_VCPU_STATE, &vcpu_state, sizeof(vcpu_state)), ZX_OK);
@@ -147,13 +147,13 @@ TEST(Guest, VcpuNmi) {
   ASSERT_NO_FATAL_FAILURE(SetupGuest(&test, vcpu_interrupt_start, vcpu_interrupt_end));
   test.interrupts_enabled = true;
 
-  // Resume once and wait for the guest to set up an IDT.
-  ASSERT_NO_FATAL_FAILURE(ResumeAndCleanExit(&test));
+  // Enter once and wait for the guest to set up an IDT.
+  ASSERT_NO_FATAL_FAILURE(EnterAndCleanExit(&test));
 
   // Check that NMIs are handled.
   ASSERT_EQ(test.vcpu.interrupt(kNmiVector), ZX_OK);
 
-  ASSERT_NO_FATAL_FAILURE(ResumeAndCleanExit(&test));
+  ASSERT_NO_FATAL_FAILURE(EnterAndCleanExit(&test));
 
   zx_vcpu_state_t vcpu_state;
   ASSERT_EQ(test.vcpu.read_state(ZX_VCPU_STATE, &vcpu_state, sizeof(vcpu_state)), ZX_OK);
@@ -165,14 +165,14 @@ TEST(Guest, VcpuNmiPriority) {
   ASSERT_NO_FATAL_FAILURE(SetupGuest(&test, vcpu_interrupt_start, vcpu_interrupt_end));
   test.interrupts_enabled = true;
 
-  // Resume once and wait for the guest to set up an IDT.
-  ASSERT_NO_FATAL_FAILURE(ResumeAndCleanExit(&test));
+  // Enter once and wait for the guest to set up an IDT.
+  ASSERT_NO_FATAL_FAILURE(EnterAndCleanExit(&test));
 
   // Check that NMIs have higher priority than interrupts.
   ASSERT_EQ(test.vcpu.interrupt(kInterruptVector), ZX_OK);
   ASSERT_EQ(test.vcpu.interrupt(kNmiVector), ZX_OK);
 
-  ASSERT_NO_FATAL_FAILURE(ResumeAndCleanExit(&test));
+  ASSERT_NO_FATAL_FAILURE(EnterAndCleanExit(&test));
 
   zx_vcpu_state_t vcpu_state;
   ASSERT_EQ(test.vcpu.read_state(ZX_VCPU_STATE, &vcpu_state, sizeof(vcpu_state)), ZX_OK);
@@ -186,13 +186,13 @@ TEST(Guest, VcpuException) {
   ASSERT_NO_FATAL_FAILURE(SetupGuest(&test, vcpu_interrupt_start, vcpu_interrupt_end));
   test.interrupts_enabled = true;
 
-  // Resume once and wait for the guest to set up an IDT.
-  ASSERT_NO_FATAL_FAILURE(ResumeAndCleanExit(&test));
+  // Enter once and wait for the guest to set up an IDT.
+  ASSERT_NO_FATAL_FAILURE(EnterAndCleanExit(&test));
 
   // Check that exceptions are handled.
   ASSERT_EQ(test.vcpu.interrupt(kExceptionVector), ZX_OK);
 
-  ASSERT_NO_FATAL_FAILURE(ResumeAndCleanExit(&test));
+  ASSERT_NO_FATAL_FAILURE(EnterAndCleanExit(&test));
 
   zx_vcpu_state_t vcpu_state;
   ASSERT_EQ(test.vcpu.read_state(ZX_VCPU_STATE, &vcpu_state, sizeof(vcpu_state)), ZX_OK);
@@ -238,7 +238,7 @@ TEST(Guest, VcpuIpi) {
   for (uint64_t expected_mask : expected_masks) {
     // Run the guest.
     zx_port_packet_t packet = {};
-    ASSERT_EQ(test.vcpu.resume(&packet), ZX_OK);
+    ASSERT_EQ(test.vcpu.enter(&packet), ZX_OK);
 
     // Exepct an exit indicating an IPI was sent to ourselves.
     EXPECT_EQ(packet.type, ZX_PKT_TYPE_GUEST_VCPU);
@@ -247,8 +247,8 @@ TEST(Guest, VcpuIpi) {
     EXPECT_EQ(packet.guest_vcpu.interrupt.mask & bit_mask<uint64_t>(kNumCpus), expected_mask);
   }
 
-  // Resume once and wait for the guest to send an IPI.
-  ASSERT_NO_FATAL_FAILURE(ResumeAndCleanExit(&test));
+  // Enter once and wait for the guest to send an IPI.
+  ASSERT_NO_FATAL_FAILURE(EnterAndCleanExit(&test));
 
   // Allow threads to exit.
   done.set_value();
@@ -261,21 +261,21 @@ TEST(Guest, VcpuHlt) {
   TestCase test;
   ASSERT_NO_FATAL_FAILURE(SetupAndInterrupt(&test, vcpu_hlt_start, vcpu_hlt_end));
 
-  ASSERT_NO_FATAL_FAILURE(ResumeAndCleanExit(&test));
+  ASSERT_NO_FATAL_FAILURE(EnterAndCleanExit(&test));
 }
 
 TEST(Guest, VcpuPause) {
   TestCase test;
   ASSERT_NO_FATAL_FAILURE(SetupGuest(&test, vcpu_pause_start, vcpu_pause_end));
 
-  ASSERT_NO_FATAL_FAILURE(ResumeAndCleanExit(&test));
+  ASSERT_NO_FATAL_FAILURE(EnterAndCleanExit(&test));
 }
 
 TEST(Guest, VcpuWriteCr0) {
   TestCase test;
   ASSERT_NO_FATAL_FAILURE(SetupGuest(&test, vcpu_write_cr0_start, vcpu_write_cr0_end));
 
-  ASSERT_NO_FATAL_FAILURE(ResumeAndCleanExit(&test));
+  ASSERT_NO_FATAL_FAILURE(EnterAndCleanExit(&test));
 
   zx_vcpu_state_t vcpu_state;
   ASSERT_EQ(test.vcpu.read_state(ZX_VCPU_STATE, &vcpu_state, sizeof(vcpu_state)), ZX_OK);
@@ -297,7 +297,7 @@ TEST(Guest, VcpuWriteInvalidCr0) {
 
   test.interrupts_enabled = true;
 
-  ASSERT_NO_FATAL_FAILURE(ResumeAndCleanExit(&test));
+  ASSERT_NO_FATAL_FAILURE(EnterAndCleanExit(&test));
 
   zx_vcpu_state_t vcpu_state;
   ASSERT_EQ(test.vcpu.read_state(ZX_VCPU_STATE, &vcpu_state, sizeof(vcpu_state)), ZX_OK);
@@ -308,7 +308,7 @@ TEST(Guest, VcpuCompatMode) {
   TestCase test;
   ASSERT_NO_FATAL_FAILURE(SetupGuest(&test, vcpu_compat_mode_start, vcpu_compat_mode_end));
 
-  ASSERT_NO_FATAL_FAILURE(ResumeAndCleanExit(&test));
+  ASSERT_NO_FATAL_FAILURE(EnterAndCleanExit(&test));
 
   zx_vcpu_state_t vcpu_state;
   ASSERT_EQ(test.vcpu.read_state(ZX_VCPU_STATE, &vcpu_state, sizeof(vcpu_state)), ZX_OK);
@@ -320,21 +320,21 @@ TEST(Guest, VcpuSyscall) {
   TestCase test;
   ASSERT_NO_FATAL_FAILURE(SetupGuest(&test, vcpu_syscall_start, vcpu_syscall_end));
 
-  ASSERT_NO_FATAL_FAILURE(ResumeAndCleanExit(&test));
+  ASSERT_NO_FATAL_FAILURE(EnterAndCleanExit(&test));
 }
 
 TEST(Guest, VcpuSysenter) {
   TestCase test;
   ASSERT_NO_FATAL_FAILURE(SetupGuest(&test, vcpu_sysenter_start, vcpu_sysenter_end));
 
-  ASSERT_NO_FATAL_FAILURE(ResumeAndCleanExit(&test));
+  ASSERT_NO_FATAL_FAILURE(EnterAndCleanExit(&test));
 }
 
 TEST(Guest, VcpuSysenterCompat) {
   TestCase test;
   ASSERT_NO_FATAL_FAILURE(SetupGuest(&test, vcpu_sysenter_compat_start, vcpu_sysenter_compat_end));
 
-  ASSERT_NO_FATAL_FAILURE(ResumeAndCleanExit(&test));
+  ASSERT_NO_FATAL_FAILURE(EnterAndCleanExit(&test));
 }
 
 TEST(Guest, VcpuVmcallInvalidNumber) {
@@ -342,7 +342,7 @@ TEST(Guest, VcpuVmcallInvalidNumber) {
   ASSERT_NO_FATAL_FAILURE(
       SetupGuest(&test, vcpu_vmcall_invalid_number_start, vcpu_vmcall_invalid_number_end));
 
-  ASSERT_NO_FATAL_FAILURE(ResumeAndCleanExit(&test));
+  ASSERT_NO_FATAL_FAILURE(EnterAndCleanExit(&test));
 
   zx_vcpu_state_t vcpu_state;
   ASSERT_EQ(test.vcpu.read_state(ZX_VCPU_STATE, &vcpu_state, sizeof(vcpu_state)), ZX_OK);
@@ -356,7 +356,7 @@ TEST(Guest, VcpuVmcallInvalidCpl) {
   ASSERT_NO_FATAL_FAILURE(
       SetupGuest(&test, vcpu_vmcall_invalid_cpl_start, vcpu_vmcall_invalid_cpl_end));
 
-  ASSERT_NO_FATAL_FAILURE(ResumeAndCleanExit(&test));
+  ASSERT_NO_FATAL_FAILURE(EnterAndCleanExit(&test));
 
   zx_vcpu_state_t vcpu_state;
   ASSERT_EQ(test.vcpu.read_state(ZX_VCPU_STATE, &vcpu_state, sizeof(vcpu_state)), ZX_OK);
@@ -371,13 +371,13 @@ TEST(Guest, VcpuExtendedRegisters) {
       SetupGuest(&test, vcpu_extended_registers_start, vcpu_extended_registers_end));
 
   // Guest sets xmm0.
-  ASSERT_NO_FATAL_FAILURE(ResumeAndCleanExit(&test));
+  ASSERT_NO_FATAL_FAILURE(EnterAndCleanExit(&test));
 
   // Clear host xmm0.
   __asm__("xorps %%xmm0, %%xmm0" ::: "xmm0");
 
   // Guest reads xmm0 into rax:rbx.
-  ASSERT_NO_FATAL_FAILURE(ResumeAndCleanExit(&test));
+  ASSERT_NO_FATAL_FAILURE(EnterAndCleanExit(&test));
 
   // Check that the host xmm0 is restored to zero.
   bool xmm0_is_zero;
@@ -393,9 +393,9 @@ TEST(Guest, VcpuExtendedRegisters) {
   EXPECT_EQ(vcpu_state.rbx, 0x76543210fedcba98u);
 
   // Guest disables SSE
-  ASSERT_NO_FATAL_FAILURE(ResumeAndCleanExit(&test));
+  ASSERT_NO_FATAL_FAILURE(EnterAndCleanExit(&test));
   // Guest successfully runs again
-  ASSERT_NO_FATAL_FAILURE(ResumeAndCleanExit(&test));
+  ASSERT_NO_FATAL_FAILURE(EnterAndCleanExit(&test));
 }
 
 // Verify that write_state with ZX_VCPU_IO only accepts valid access sizes.
@@ -433,12 +433,12 @@ TEST(Guest, GuestSetTrapWithIo) {
   ASSERT_EQ(test.guest.set_trap(ZX_GUEST_TRAP_IO, TRAP_PORT, 1, zx::port(), kTrapKey), ZX_OK);
 
   zx_port_packet_t packet = {};
-  ASSERT_EQ(test.vcpu.resume(&packet), ZX_OK);
+  ASSERT_EQ(test.vcpu.enter(&packet), ZX_OK);
   EXPECT_EQ(packet.key, kTrapKey);
   EXPECT_EQ(packet.type, ZX_PKT_TYPE_GUEST_IO);
   EXPECT_EQ(packet.guest_io.port, TRAP_PORT);
 
-  ASSERT_NO_FATAL_FAILURE(ResumeAndCleanExit(&test));
+  ASSERT_NO_FATAL_FAILURE(EnterAndCleanExit(&test));
 }
 
 }  // namespace
