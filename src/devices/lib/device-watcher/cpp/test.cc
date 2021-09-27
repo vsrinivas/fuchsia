@@ -50,4 +50,12 @@ TEST(DeviceWatcherTest, Smoke) {
   ASSERT_EQ(ZX_OK, device_watcher::RecursiveWaitForFile(dir, "second/third/file", &out));
 
   ASSERT_EQ(ZX_OK, device_watcher::RecursiveWaitForFileReadOnly(dir, "second/third/file", &out));
+
+  sync_completion_t shutdown;
+
+  vfs.Shutdown([&shutdown](zx_status_t status) {
+    sync_completion_signal(&shutdown);
+    ASSERT_EQ(status, ZX_OK);
+  });
+  ASSERT_EQ(sync_completion_wait(&shutdown, zx::duration::infinite().get()), ZX_OK);
 }
