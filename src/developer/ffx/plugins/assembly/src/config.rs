@@ -142,7 +142,7 @@ pub struct VBMetaConfig {
 #[derive(Deserialize, Serialize)]
 pub struct BootloaderEntry {
     /// The partition name to flash the bootloader.
-    pub partition: String,
+    pub partition: Option<String>,
 
     /// The name of the bootloader entry to add to the update manifest.
     pub name: String,
