@@ -135,6 +135,10 @@ impl<T: AsBytes + FromBytes> UserRef<T> {
         self.addr
     }
 
+    pub fn len(&self) -> usize {
+        mem::size_of::<T>()
+    }
+
     pub fn next(&self) -> UserRef<T> {
         Self::new(self.addr() + mem::size_of::<T>())
     }

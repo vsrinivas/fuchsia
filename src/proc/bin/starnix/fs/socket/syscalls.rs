@@ -30,7 +30,7 @@ pub fn sys_bind(
     ctx: &SyscallContext<'_>,
     fd: FdNumber,
     user_socket_address: UserAddress,
-    _address_length: u64,
+    address_length: usize,
 ) -> Result<SyscallResult, Errno> {
     let file = ctx.task.files.get(fd)?;
     if !file.node().is_sock() {
@@ -38,8 +38,11 @@ pub fn sys_bind(
     }
     let socket_handle = file.node().socket().ok_or_else(|| errno!(ENOTSOCK))?;
 
-    // TODO: _address_length needs to be checked once we don't assume `sockaddr_un`.
+    // TODO: We shouldn't assume `sockaddr_un`.
     let user_ref: UserRef<sockaddr_un> = UserRef::new(user_socket_address);
+    if address_length != user_ref.len() {
+        return error!(EINVAL);
+    }
     let mut address = sockaddr_un::default();
     ctx.task.mm.read_object(user_ref, &mut address)?;
 
@@ -65,15 +68,18 @@ pub fn sys_connect(
     ctx: &SyscallContext<'_>,
     fd: FdNumber,
     user_socket_address: UserAddress,
-    _address_length: u64,
+    address_length: usize,
 ) -> Result<SyscallResult, Errno> {
     let first_socket_file = ctx.task.files.get(fd)?;
     if !first_socket_file.node().is_sock() {
         return error!(ENOTSOCK);
     }
 
-    // TODO: Verify address_length.
+    // TODO: We shouldn't assume `sockaddr_un`.
     let user_ref: UserRef<sockaddr_un> = UserRef::new(user_socket_address);
+    if address_length != user_ref.len() {
+        return error!(EINVAL);
+    }
     let mut address = sockaddr_un::default();
     ctx.task.mm.read_object(user_ref, &mut address)?;
 
