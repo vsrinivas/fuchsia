@@ -85,6 +85,16 @@ pub struct DisconnectInfo {
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum TelemetryEvent {
+    /// Notify the telemetry event loop that the process of establishing connection is started
+    StartEstablishConnection {
+        /// If set to true, use the current time as the start time of the establish connection
+        /// process. If set to false, then use the start time initialized from the previous
+        /// StartEstablishConnection event, or use the current time if there isn't an existing
+        /// start time.
+        reset_start_time: bool,
+    },
+    /// Clear any existing start time of establish connection process tracked by telemetry.
+    ClearEstablishConnectionStartTime,
     /// Notify the telemetry event loop that network selection is complete.
     NetworkSelectionDecision {
         /// Type of network selection. If it's undirected and no candidate network is found,
@@ -188,14 +198,22 @@ pub fn serve_telemetry(
 #[derive(Debug, Clone)]
 enum ConnectionState {
     // Like disconnected, but no downtime is tracked.
-    Idle,
+    Idle(IdleState),
     Connected(ConnectedState),
     Disconnected(DisconnectedState),
 }
 
 #[derive(Debug, Clone)]
+struct IdleState {
+    connect_start_time: Option<fasync::Time>,
+}
+
+#[derive(Debug, Clone)]
 struct ConnectedState {
     iface_id: u16,
+    /// Time when the user manually initiates connecting to another network via the
+    /// Policy ClientController::Connect FIDL call.
+    new_connect_start_time: Option<fasync::Time>,
     prev_counters: Option<fidl_fuchsia_wlan_stats::IfaceStats>,
 }
 
@@ -203,6 +221,7 @@ struct ConnectedState {
 struct DisconnectedState {
     disconnected_since: fasync::Time,
     disconnect_info: DisconnectInfo,
+    connect_start_time: Option<fasync::Time>,
     /// The latest time when the device's no saved neighbor duration was accounted.
     /// If this has a value, then conceptually we say that "no saved neighbor" flag
     /// is set.
@@ -292,7 +311,7 @@ impl Telemetry {
         let get_iface_stats_fail_count = inspect_node.create_uint("get_iface_stats_fail_count", 0);
         Self {
             dev_svc_proxy,
-            connection_state: ConnectionState::Idle,
+            connection_state: ConnectionState::Idle(IdleState { connect_start_time: None }),
             last_checked_connection_state: fasync::Time::now(),
             stats_logger,
             _inspect_node: inspect_node,
@@ -308,7 +327,7 @@ impl Telemetry {
         self.stats_logger.log_queued_stats().await;
 
         match &mut self.connection_state {
-            ConnectionState::Idle => (),
+            ConnectionState::Idle(..) => (),
             ConnectionState::Connected(state) => {
                 self.stats_logger.log_stat(StatOp::AddConnectedDuration(duration)).await;
                 match self.dev_svc_proxy.get_iface_stats(state.iface_id).await {
@@ -348,6 +367,34 @@ impl Telemetry {
     pub async fn handle_telemetry_event(&mut self, event: TelemetryEvent) {
         let now = fasync::Time::now();
         match event {
+            TelemetryEvent::StartEstablishConnection { reset_start_time } => match &mut self
+                .connection_state
+            {
+                ConnectionState::Idle(IdleState { connect_start_time })
+                | ConnectionState::Disconnected(DisconnectedState { connect_start_time, .. }) => {
+                    if reset_start_time || connect_start_time.is_none() {
+                        let _prev = connect_start_time.replace(now);
+                    }
+                }
+                ConnectionState::Connected(state) => {
+                    // When in connected state, only set the start time if `reset_start_time` is
+                    // true because it indicates the user triggers the new connect action.
+                    if reset_start_time {
+                        let _prev = state.new_connect_start_time.replace(now);
+                    }
+                }
+            },
+            TelemetryEvent::ClearEstablishConnectionStartTime => match &mut self.connection_state {
+                ConnectionState::Idle(state) => {
+                    let _start_time = state.connect_start_time.take();
+                }
+                ConnectionState::Disconnected(state) => {
+                    let _start_time = state.connect_start_time.take();
+                }
+                ConnectionState::Connected(state) => {
+                    let _start_time = state.new_connect_start_time.take();
+                }
+            },
             TelemetryEvent::NetworkSelectionDecision {
                 network_selection_type,
                 num_candidates,
@@ -387,11 +434,20 @@ impl Telemetry {
                 multiple_bss_candidates,
                 latest_ap_state,
             } => {
+                let connect_start_time = match &self.connection_state {
+                    ConnectionState::Idle(state) => state.connect_start_time.clone(),
+                    ConnectionState::Disconnected(state) => state.connect_start_time.clone(),
+                    ConnectionState::Connected(..) => {
+                        warn!("Received ConnectResult event while still connected");
+                        None
+                    }
+                };
                 self.stats_logger
                     .log_establish_connection_cobalt_metrics(
                         result.code,
                         multiple_bss_candidates,
                         &latest_ap_state,
+                        connect_start_time,
                     )
                     .await;
                 self.stats_logger.log_stat(StatOp::AddConnectAttemptsCount).await;
@@ -424,6 +480,7 @@ impl Telemetry {
                     }
                     self.connection_state = ConnectionState::Connected(ConnectedState {
                         iface_id,
+                        new_connect_start_time: None,
                         prev_counters: None,
                     });
                     self.last_checked_connection_state = now;
@@ -437,17 +494,30 @@ impl Telemetry {
                 if let ConnectionState::Connected { .. } = self.connection_state {
                     self.stats_logger.queue_stat_op(StatOp::AddConnectedDuration(duration));
                 }
+                let connect_start_time = if info.is_sme_reconnecting {
+                    // If `is_sme_reconnecting` is true, we already know that the process of
+                    // establishing connection is already started at the moment of disconnect,
+                    // so set the connect_start_time to now.
+                    Some(now)
+                } else {
+                    match &self.connection_state {
+                        ConnectionState::Connected(state) => state.new_connect_start_time.clone(),
+                        _ => None,
+                    }
+                };
+
                 self.connection_state = if track_subsequent_downtime {
                     ConnectionState::Disconnected(DisconnectedState {
                         disconnected_since: now,
                         disconnect_info: info,
+                        connect_start_time,
                         // We assume that there's a saved neighbor in vicinity until proven
                         // otherwise from scan result.
                         latest_no_saved_neighbor_time: None,
                         accounted_no_saved_neighbor_duration: 0.seconds(),
                     })
                 } else {
-                    ConnectionState::Idle
+                    ConnectionState::Idle(IdleState { connect_start_time })
                 };
                 self.last_checked_connection_state = now;
             }
@@ -894,6 +964,7 @@ impl StatsLogger {
         code: fidl_ieee80211::StatusCode,
         multiple_bss_candidates: bool,
         latest_ap_state: &BssDescription,
+        connect_start_time: Option<fasync::Time>,
     ) {
         let mut metric_events = vec![];
         metric_events.push(MetricEvent {
@@ -904,6 +975,22 @@ impl StatsLogger {
 
         if code != fidl_ieee80211::StatusCode::Success {
             return;
+        }
+
+        match connect_start_time {
+            Some(start_time) => {
+                let user_wait_time = fasync::Time::now() - start_time;
+                let user_wait_time_dim = convert::convert_user_wait_time(user_wait_time);
+                metric_events.push(MetricEvent {
+                    metric_id: metrics::SUCCESSFUL_CONNECT_BREAKDOWN_BY_USER_WAIT_TIME_METRIC_ID,
+                    event_codes: vec![user_wait_time_dim as u32],
+                    payload: MetricEventPayload::Count(1),
+                });
+            }
+            None => warn!(
+                "Metric for user wait time on connect is not logged because \
+                 the start time is not populated"
+            ),
         }
 
         let is_multi_bss_dim = convert::convert_is_multi_bss(multiple_bss_candidates);
@@ -2349,6 +2436,12 @@ mod tests {
         );
         assert_eq!(breakdowns_by_status_code[0].payload, MetricEventPayload::Count(1));
 
+        let breakdowns_by_user_wait_time = test_helper
+            .get_logged_metrics(metrics::SUCCESSFUL_CONNECT_BREAKDOWN_BY_USER_WAIT_TIME_METRIC_ID);
+        // TelemetryEvent::StartEstablishConnection is never sent, so connect start time is never
+        // tracked, hence this metric is not logged.
+        assert_eq!(breakdowns_by_user_wait_time.len(), 0);
+
         let breakdowns_by_is_multi_bss = test_helper
             .get_logged_metrics(metrics::SUCCESSFUL_CONNECT_BREAKDOWN_BY_IS_MULTI_BSS_METRIC_ID);
         assert_eq!(breakdowns_by_is_multi_bss.len(), 1);
@@ -2410,6 +2503,174 @@ mod tests {
             ]
         );
         assert_eq!(breakdowns_by_snr_bucket[0].payload, MetricEventPayload::Count(1));
+    }
+
+    #[fuchsia::test]
+    fn test_log_establish_connection_cobalt_metrics_user_wait_time_tracked_no_reset() {
+        let (mut test_helper, mut test_fut) = setup_test();
+
+        test_helper
+            .telemetry_sender
+            .send(TelemetryEvent::StartEstablishConnection { reset_start_time: false });
+        test_helper.advance_by(2.seconds(), test_fut.as_mut());
+        test_helper
+            .telemetry_sender
+            .send(TelemetryEvent::StartEstablishConnection { reset_start_time: false });
+        test_helper.advance_by(4.seconds(), test_fut.as_mut());
+        test_helper.send_connected_event(random_bss_description!(Wpa2));
+        test_helper.drain_cobalt_events(&mut test_fut);
+
+        let breakdowns_by_user_wait_time = test_helper
+            .get_logged_metrics(metrics::SUCCESSFUL_CONNECT_BREAKDOWN_BY_USER_WAIT_TIME_METRIC_ID);
+        assert_eq!(breakdowns_by_user_wait_time.len(), 1);
+        assert_eq!(
+            breakdowns_by_user_wait_time[0].event_codes,
+            // Both the 2 seconds and 4 seconds since the first StartEstablishConnection
+            // should be counted.
+            vec![metrics::ConnectivityWlanMetricDimensionWaitTime::LessThan8Seconds as u32]
+        );
+    }
+
+    #[fuchsia::test]
+    fn test_log_establish_connection_cobalt_metrics_user_wait_time_tracked_with_reset() {
+        let (mut test_helper, mut test_fut) = setup_test();
+
+        test_helper
+            .telemetry_sender
+            .send(TelemetryEvent::StartEstablishConnection { reset_start_time: false });
+        test_helper.advance_by(2.seconds(), test_fut.as_mut());
+        test_helper
+            .telemetry_sender
+            .send(TelemetryEvent::StartEstablishConnection { reset_start_time: true });
+        test_helper.advance_by(4.seconds(), test_fut.as_mut());
+        test_helper.send_connected_event(random_bss_description!(Wpa2));
+        test_helper.drain_cobalt_events(&mut test_fut);
+
+        let breakdowns_by_user_wait_time = test_helper
+            .get_logged_metrics(metrics::SUCCESSFUL_CONNECT_BREAKDOWN_BY_USER_WAIT_TIME_METRIC_ID);
+        assert_eq!(breakdowns_by_user_wait_time.len(), 1);
+        assert_eq!(
+            breakdowns_by_user_wait_time[0].event_codes,
+            // Only the 4 seconds after the last StartEstablishConnection should be counted.
+            vec![metrics::ConnectivityWlanMetricDimensionWaitTime::LessThan5Seconds as u32]
+        );
+    }
+
+    #[fuchsia::test]
+    fn test_log_establish_connection_cobalt_metrics_user_wait_time_tracked_with_clear() {
+        let (mut test_helper, mut test_fut) = setup_test();
+
+        test_helper
+            .telemetry_sender
+            .send(TelemetryEvent::StartEstablishConnection { reset_start_time: false });
+        test_helper.advance_by(10.seconds(), test_fut.as_mut());
+        test_helper.telemetry_sender.send(TelemetryEvent::ClearEstablishConnectionStartTime);
+
+        test_helper.advance_by(30.seconds(), test_fut.as_mut());
+
+        test_helper
+            .telemetry_sender
+            .send(TelemetryEvent::StartEstablishConnection { reset_start_time: false });
+        test_helper.advance_by(2.seconds(), test_fut.as_mut());
+        test_helper.send_connected_event(random_bss_description!(Wpa2));
+        test_helper.drain_cobalt_events(&mut test_fut);
+
+        let breakdowns_by_user_wait_time = test_helper
+            .get_logged_metrics(metrics::SUCCESSFUL_CONNECT_BREAKDOWN_BY_USER_WAIT_TIME_METRIC_ID);
+        assert_eq!(breakdowns_by_user_wait_time.len(), 1);
+        assert_eq!(
+            breakdowns_by_user_wait_time[0].event_codes,
+            // Only the 2 seconds after the last StartEstablishConnection should be counted.
+            vec![metrics::ConnectivityWlanMetricDimensionWaitTime::LessThan3Seconds as u32]
+        );
+    }
+
+    #[fuchsia::test]
+    fn test_log_establish_connection_cobalt_metrics_user_wait_time_tracked_while_connected() {
+        let (mut test_helper, mut test_fut) = setup_test();
+        test_helper.send_connected_event(random_bss_description!(Wpa2));
+        test_helper.drain_cobalt_events(&mut test_fut);
+        test_helper.cobalt_events.clear();
+
+        test_helper
+            .telemetry_sender
+            .send(TelemetryEvent::StartEstablishConnection { reset_start_time: true });
+        test_helper.advance_by(2.seconds(), test_fut.as_mut());
+        let info = fake_disconnect_info();
+        test_helper
+            .telemetry_sender
+            .send(TelemetryEvent::Disconnected { track_subsequent_downtime: false, info });
+        test_helper.advance_by(4.seconds(), test_fut.as_mut());
+        test_helper.send_connected_event(random_bss_description!(Wpa2));
+        test_helper.drain_cobalt_events(&mut test_fut);
+
+        let breakdowns_by_user_wait_time = test_helper
+            .get_logged_metrics(metrics::SUCCESSFUL_CONNECT_BREAKDOWN_BY_USER_WAIT_TIME_METRIC_ID);
+        assert_eq!(breakdowns_by_user_wait_time.len(), 1);
+        assert_eq!(
+            breakdowns_by_user_wait_time[0].event_codes,
+            // Both the 2 seconds and 4 seconds since the first StartEstablishConnection
+            // should be counted.
+            vec![metrics::ConnectivityWlanMetricDimensionWaitTime::LessThan8Seconds as u32]
+        );
+    }
+
+    #[fuchsia::test]
+    fn test_log_establish_connection_cobalt_metrics_user_wait_time_tracked_with_clear_while_connected(
+    ) {
+        let (mut test_helper, mut test_fut) = setup_test();
+        test_helper.send_connected_event(random_bss_description!(Wpa2));
+        test_helper.drain_cobalt_events(&mut test_fut);
+        test_helper.cobalt_events.clear();
+
+        test_helper
+            .telemetry_sender
+            .send(TelemetryEvent::StartEstablishConnection { reset_start_time: true });
+        test_helper.telemetry_sender.send(TelemetryEvent::ClearEstablishConnectionStartTime);
+        let info = fake_disconnect_info();
+        test_helper
+            .telemetry_sender
+            .send(TelemetryEvent::Disconnected { track_subsequent_downtime: false, info });
+        test_helper.advance_by(2.seconds(), test_fut.as_mut());
+        test_helper
+            .telemetry_sender
+            .send(TelemetryEvent::StartEstablishConnection { reset_start_time: false });
+        test_helper.advance_by(4.seconds(), test_fut.as_mut());
+        test_helper.send_connected_event(random_bss_description!(Wpa2));
+        test_helper.drain_cobalt_events(&mut test_fut);
+
+        let breakdowns_by_user_wait_time = test_helper
+            .get_logged_metrics(metrics::SUCCESSFUL_CONNECT_BREAKDOWN_BY_USER_WAIT_TIME_METRIC_ID);
+        assert_eq!(breakdowns_by_user_wait_time.len(), 1);
+        assert_eq!(
+            breakdowns_by_user_wait_time[0].event_codes,
+            // Only the 4 seconds after the last StartEstablishConnection should be counted.
+            vec![metrics::ConnectivityWlanMetricDimensionWaitTime::LessThan5Seconds as u32]
+        );
+    }
+
+    #[fuchsia::test]
+    fn test_log_establish_connection_cobalt_metrics_user_wait_time_logged_for_sme_reconnecting() {
+        let (mut test_helper, mut test_fut) = setup_test();
+        test_helper.send_connected_event(random_bss_description!(Wpa2));
+        test_helper.drain_cobalt_events(&mut test_fut);
+        test_helper.cobalt_events.clear();
+
+        let info = DisconnectInfo { is_sme_reconnecting: true, ..fake_disconnect_info() };
+        test_helper
+            .telemetry_sender
+            .send(TelemetryEvent::Disconnected { track_subsequent_downtime: false, info });
+        test_helper.advance_by(2.seconds(), test_fut.as_mut());
+        test_helper.send_connected_event(random_bss_description!(Wpa2));
+        test_helper.drain_cobalt_events(&mut test_fut);
+
+        let breakdowns_by_user_wait_time = test_helper
+            .get_logged_metrics(metrics::SUCCESSFUL_CONNECT_BREAKDOWN_BY_USER_WAIT_TIME_METRIC_ID);
+        assert_eq!(breakdowns_by_user_wait_time.len(), 1);
+        assert_eq!(
+            breakdowns_by_user_wait_time[0].event_codes,
+            vec![metrics::ConnectivityWlanMetricDimensionWaitTime::LessThan3Seconds as u32]
+        );
     }
 
     #[fuchsia::test]

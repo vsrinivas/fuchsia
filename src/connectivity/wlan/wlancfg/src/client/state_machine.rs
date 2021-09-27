@@ -748,6 +748,7 @@ async fn connected_state(
                             next_network: Some(next_connecting_options),
                             reason: types::DisconnectReason::DisconnectDetectedFromSme,
                         };
+                        common_options.telemetry_sender.send(TelemetryEvent::StartEstablishConnection { reset_start_time: false });
                         info!("Detected disconnection from network, will attempt reconnection");
                         return Ok(disconnecting_state(common_options, options).into_state());
                     }
@@ -2754,8 +2755,8 @@ mod tests {
             assert_eq!(disconnect.bssid, bssid);
         });
 
-        // Disconnect telemetry event sent
         assert_variant!(telemetry_receiver.try_next(), Ok(Some(event)) => {
+            // Disconnect telemetry event sent
             assert_variant!(event, TelemetryEvent::Disconnected { track_subsequent_downtime, info } => {
                 assert!(track_subsequent_downtime);
                 assert_eq!(info, DisconnectInfo {
@@ -2766,6 +2767,11 @@ mod tests {
                     latest_ap_state: bss_description,
                 });
             });
+        });
+        assert_variant!(telemetry_receiver.try_next(), Ok(Some(event)) => {
+            // StartEstablishConnection event sent (because the state machine will attempt
+            // to reconnect)
+            assert_eq!(event, TelemetryEvent::StartEstablishConnection { reset_start_time: false });
         });
     }
 

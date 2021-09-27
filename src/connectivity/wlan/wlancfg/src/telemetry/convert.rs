@@ -3,7 +3,9 @@
 // found in the LICENSE file.
 
 use {
-    fidl_fuchsia_wlan_sme as fidl_sme, wlan_common::bss::Protection as BssProtection,
+    fidl_fuchsia_wlan_sme as fidl_sme,
+    fuchsia_zircon::{self as zx, DurationNum},
+    wlan_common::bss::Protection as BssProtection,
     wlan_metrics_registry as metrics,
 };
 
@@ -15,6 +17,20 @@ pub fn convert_disconnect_source(
         fidl_sme::DisconnectSource::Ap => Ap,
         fidl_sme::DisconnectSource::User => User,
         fidl_sme::DisconnectSource::Mlme => Mlme,
+    }
+}
+
+pub fn convert_user_wait_time(
+    duration: zx::Duration,
+) -> metrics::ConnectivityWlanMetricDimensionWaitTime {
+    use metrics::ConnectivityWlanMetricDimensionWaitTime::*;
+    match duration {
+        x if x < 1.second() => LessThan1Second,
+        x if x < 3.seconds() => LessThan3Seconds,
+        x if x < 5.seconds() => LessThan5Seconds,
+        x if x < 8.seconds() => LessThan8Seconds,
+        x if x < 15.seconds() => LessThan15Seconds,
+        _ => AtLeast15Seconds,
     }
 }
 

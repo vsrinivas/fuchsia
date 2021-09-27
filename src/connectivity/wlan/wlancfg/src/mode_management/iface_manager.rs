@@ -19,7 +19,7 @@ use {
             iface_manager_types::*,
             phy_manager::{CreateClientIfacesReason, PhyManagerApi},
         },
-        telemetry::TelemetrySender,
+        telemetry::{TelemetryEvent, TelemetrySender},
         util::{future_with_metadata, listener},
     },
     anyhow::{format_err, Error},
@@ -93,6 +93,10 @@ async fn create_client_state_machine(
     ),
     Error,
 > {
+    if connect_req.is_some() {
+        telemetry_sender.send(TelemetryEvent::StartEstablishConnection { reset_start_time: false });
+    }
+
     // Create a client state machine for the newly discovered interface.
     let (sender, receiver) = mpsc::channel(1);
     let new_client = client_fsm::Client::new(sender);
@@ -416,6 +420,9 @@ impl IfaceManagerService {
         &mut self,
         connect_req: client_types::ConnectRequest,
     ) -> Result<oneshot::Receiver<()>, Error> {
+        self.telemetry_sender
+            .send(TelemetryEvent::StartEstablishConnection { reset_start_time: true });
+
         // Get a ClientIfaceContainer.
         let mut client_iface =
             if connect_req.target.network.security_type == client_types::SecurityType::Wpa3 {
@@ -675,6 +682,8 @@ impl IfaceManagerService {
         &mut self,
         reason: client_types::DisconnectReason,
     ) -> BoxFuture<'static, Result<(), Error>> {
+        self.telemetry_sender.send(TelemetryEvent::ClearEstablishConnectionStartTime);
+
         if let Some(start_time) = self.clients_enabled_time.take() {
             let elapsed_time = zx::Time::get_monotonic() - start_time;
             self.cobalt_api.log_elapsed_time(
@@ -901,6 +910,9 @@ async fn initiate_network_selection(
         && iface_manager.saved_networks.known_network_count().await > 0
         && network_selection_futures.is_empty()
     {
+        iface_manager
+            .telemetry_sender
+            .send(TelemetryEvent::StartEstablishConnection { reset_start_time: false });
         info!("Initiating network selection for idle client interface.");
         let fut = async move {
             let ignore_list = vec![];
@@ -1911,7 +1923,7 @@ mod tests {
         let other_test_ssid = ap_types::Ssid::try_from("other_ssid_connecting").unwrap();
 
         // Create a configured ClientIfaceContainer.
-        let test_values = test_setup(&mut exec);
+        let mut test_values = test_setup(&mut exec);
         let (mut iface_manager, _) = create_iface_manager_with_client(&test_values, true);
 
         // Configure the mock CSM with the expected connect request
@@ -1940,6 +1952,10 @@ mod tests {
 
         // Start running the client state machine.
         run_state_machine_futures(&mut exec, &mut iface_manager);
+
+        // Verify that telemetry event has been sent.
+        let event = assert_variant!(test_values.telemetry_receiver.try_next(), Ok(Some(ev)) => ev);
+        assert_eq!(event, TelemetryEvent::StartEstablishConnection { reset_start_time: true });
 
         // Verify that the oneshot has been acked.
         pin_mut!(connect_response_fut);
@@ -2732,6 +2748,10 @@ mod tests {
             pin_mut!(stop_fut);
             assert_variant!(exec.run_until_stalled(&mut stop_fut), Poll::Ready(Ok(_)));
         }
+
+        // Verify that telemetry event has been sent
+        let event = assert_variant!(test_values.telemetry_receiver.try_next(), Ok(Some(ev)) => ev);
+        assert_eq!(event, TelemetryEvent::ClearEstablishConnectionStartTime);
 
         // Ensure no metric was logged.
         assert_variant!(test_values.cobalt_receiver.try_next(), Err(_));
@@ -4802,6 +4822,10 @@ mod tests {
         // Start running the new state machine.
         run_state_machine_futures(&mut exec, &mut iface_manager);
 
+        // Verify telemetry event has been sent.
+        let event = assert_variant!(test_values.telemetry_receiver.try_next(), Ok(Some(ev)) => ev);
+        assert_eq!(event, TelemetryEvent::StartEstablishConnection { reset_start_time: false });
+
         // Acknowledge the disconnection attempt.
         assert_variant!(
             poll_sme_req(&mut exec, &mut sme_stream),
@@ -5024,6 +5048,21 @@ mod tests {
             );
             pin_mut!(fut);
             assert_variant!(exec.run_until_stalled(&mut fut), Poll::Ready(()));
+        }
+
+        // Verify telemetry event if the condition is right
+        match test_type {
+            NetworkSelectionMissingAttribute::AllAttributesPresent => {
+                let event =
+                    assert_variant!(test_values.telemetry_receiver.try_next(), Ok(Some(ev)) => ev);
+                assert_eq!(
+                    event,
+                    TelemetryEvent::StartEstablishConnection { reset_start_time: false }
+                );
+            }
+            _ => {
+                assert_variant!(test_values.telemetry_receiver.try_next(), Err(_));
+            }
         }
 
         // Run all network_selection futures to completion.
