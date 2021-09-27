@@ -279,9 +279,9 @@ impl TestStack {
         let (stack, rs) = fidl::endpoints::create_proxy_and_stream::<
             fidl_fuchsia_posix_socket::ProviderMarker,
         >()?;
-        fasync::Task::spawn(rs.serve_with(|rs| {
-            crate::bindings::socket::SocketProviderWorker::serve(self.ctx.clone(), rs)
-        }))
+        fasync::Task::spawn(
+            rs.serve_with(|rs| crate::bindings::socket::serve(self.ctx.clone(), rs)),
+        )
         .detach();
         Ok(stack)
     }

@@ -22,7 +22,7 @@ use fuchsia_async as fasync;
 use fuchsia_zircon::{self as zx, prelude::HandleBased as _, Peered as _};
 use futures::{StreamExt as _, TryFutureExt as _};
 use log::{error, trace};
-use net_types::ip::{Ip, IpVersion, Ipv4, Ipv6};
+use net_types::ip::{Ip, Ipv4, Ipv6};
 use netstack3_core::{
     connect_udp, get_udp_conn_info, get_udp_listener_info, listen_udp, remove_udp_conn,
     remove_udp_listener, send_udp, send_udp_conn, send_udp_listener, BufferUdpContext, IdMap,
@@ -238,7 +238,8 @@ where
 }
 
 pub(super) fn spawn_worker<C>(
-    version: IpVersion,
+    domain: psocket::Domain,
+    proto: psocket::DatagramSocketProtocol,
     ctx: C,
     events: psocket::DatagramSocketRequestStream,
     properties: SocketWorkerProperties,
@@ -250,9 +251,17 @@ where
         + BindingsUdpContext<Ipv4>
         + BindingsUdpContext<Ipv6>,
 {
-    match version {
-        IpVersion::V4 => UdpSocketWorker::<Ipv4, C>::spawn(ctx, properties, events),
-        IpVersion::V6 => UdpSocketWorker::<Ipv6, C>::spawn(ctx, properties, events),
+    match (domain, proto) {
+        (psocket::Domain::Ipv4, psocket::DatagramSocketProtocol::Udp) => {
+            UdpSocketWorker::<Ipv4, C>::spawn(ctx, properties, events)
+        }
+        (psocket::Domain::Ipv6, psocket::DatagramSocketProtocol::Udp) => {
+            UdpSocketWorker::<Ipv6, C>::spawn(ctx, properties, events)
+        }
+        (
+            psocket::Domain::Ipv4 | psocket::Domain::Ipv6,
+            psocket::DatagramSocketProtocol::IcmpEcho,
+        ) => Err(Errno::Eprotonosupport),
     }
 }
 

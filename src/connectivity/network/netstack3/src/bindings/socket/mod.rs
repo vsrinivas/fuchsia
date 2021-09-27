@@ -6,17 +6,14 @@
 
 pub(crate) mod udp;
 
-use std::convert::{TryFrom, TryInto};
 use std::num::NonZeroU16;
 
-use fidl::endpoints::{ClientEnd, RequestStream};
 use fidl_fuchsia_net as fnet;
 use fidl_fuchsia_posix::Errno;
 use fidl_fuchsia_posix_socket as psocket;
-use fuchsia_async as fasync;
 use fuchsia_zircon as zx;
 use futures::{TryFutureExt as _, TryStreamExt as _};
-use net_types::ip::{Ip, IpAddress, IpVersion, Ipv4, Ipv4Addr, Ipv6, Ipv6Addr};
+use net_types::ip::{Ip, IpAddress, Ipv4, Ipv4Addr, Ipv6, Ipv6Addr};
 use net_types::SpecifiedAddr;
 use netstack3_core::{
     LocalAddressError, NetstackError, RemoteAddressError, SocketError, UdpSendError,
@@ -32,34 +29,6 @@ use crate::bindings::StackContext;
 // public header from FDIO somehow so we don't need to redefine.
 const ZXSIO_SIGNAL_INCOMING: zx::Signals = zx::Signals::USER_0;
 const ZXSIO_SIGNAL_OUTGOING: zx::Signals = zx::Signals::USER_1;
-
-/// Supported transport protocols.
-#[derive(Debug)]
-pub enum TransProto {
-    Udp,
-    Tcp,
-}
-
-impl TryFrom<psocket::DatagramSocketProtocol> for TransProto {
-    type Error = Errno;
-
-    fn try_from(value: psocket::DatagramSocketProtocol) -> Result<Self, Self::Error> {
-        match value {
-            psocket::DatagramSocketProtocol::Udp => Ok(TransProto::Udp),
-            psocket::DatagramSocketProtocol::IcmpEcho => Err(Errno::Eprotonosupport),
-        }
-    }
-}
-
-impl TryFrom<psocket::StreamSocketProtocol> for TransProto {
-    type Error = Errno;
-
-    fn try_from(value: psocket::StreamSocketProtocol) -> Result<Self, Self::Error> {
-        match value {
-            psocket::StreamSocketProtocol::Tcp => Ok(TransProto::Tcp),
-        }
-    }
-}
 
 /// Common properties for socket workers.
 #[derive(Debug)]
@@ -94,98 +63,56 @@ where
 {
 }
 
-pub(crate) struct SocketProviderWorker<C> {
+pub(crate) async fn serve<C>(
     ctx: C,
-}
-
-impl<C> SocketProviderWorker<C>
+    stream: psocket::ProviderRequestStream,
+) -> Result<(), fidl::Error>
 where
     C: SocketStackContext,
     C::Dispatcher: SocketStackDispatcher,
 {
-    /// Spawns a socket worker for the given `transport`.
-    ///
-    /// The created worker will serve the appropriate FIDL protocol over
-    /// `channel` and send [`Event::SocketEvent`] variants to the `event_loop`'s
-    /// main mpsc channel.
-    fn spawn_worker(
-        &self,
-        net_proto: IpVersion,
-        transport: TransProto,
-        channel: fasync::Channel,
-        properties: SocketWorkerProperties,
-    ) -> Result<(), Errno> {
-        match transport {
-            TransProto::Udp => udp::spawn_worker(
-                net_proto,
-                self.ctx.clone(),
-                psocket::DatagramSocketRequestStream::from_channel(channel),
-                properties,
-            ),
-            _ => Err(Errno::Eafnosupport),
-        }
-    }
-
-    pub(crate) async fn serve(
-        ctx: C,
-        stream: psocket::ProviderRequestStream,
-    ) -> Result<(), fidl::Error> {
-        stream
-            .try_fold(Self { ctx }, |worker, req| async {
-                match req {
-                    psocket::ProviderRequest::InterfaceIndexToName { index: _, responder } => {
-                        // TODO(https://fxbug.dev/48969): implement this method.
-                        responder_send!(responder, &mut Err(zx::Status::NOT_FOUND.into_raw()));
-                    }
-                    psocket::ProviderRequest::InterfaceNameToIndex { name: _, responder } => {
-                        // TODO(https://fxbug.dev/48969): implement this method.
-                        responder_send!(responder, &mut Err(zx::Status::NOT_FOUND.into_raw()));
-                    }
-                    psocket::ProviderRequest::InterfaceNameToFlags { name: _, responder } => {
-                        // TODO(https://fxbug.dev/48969): implement this method.
-                        responder_send!(responder, &mut Err(zx::Status::NOT_FOUND.into_raw()));
-                    }
-                    psocket::ProviderRequest::StreamSocket { domain: _, proto: _, responder } => {
-                        responder_send!(responder, &mut Err(Errno::Eprotonosupport));
-                    }
-                    psocket::ProviderRequest::DatagramSocket { domain, proto, responder } => {
-                        responder_send!(
-                            responder,
-                            &mut worker.socket::<psocket::DatagramSocketMarker, _>(domain, proto)
-                        );
-                    }
-                    psocket::ProviderRequest::GetInterfaceAddresses { responder } => {
-                        // TODO(https://fxbug.dev/54162): implement this method.
-                        responder_send!(responder, &mut std::iter::empty());
-                    }
+    stream
+        .try_fold(ctx, |ctx, req| async {
+            match req {
+                psocket::ProviderRequest::InterfaceIndexToName { index: _, responder } => {
+                    // TODO(https://fxbug.dev/48969): implement this method.
+                    responder_send!(responder, &mut Err(zx::Status::NOT_FOUND.into_raw()));
                 }
-                Ok(worker)
-            })
-            .map_ok(|Self { ctx: _ }| ())
-            .await
-    }
-
-    fn socket<T, P: TryInto<TransProto, Error = Errno>>(
-        &self,
-        domain: psocket::Domain,
-        proto: P,
-    ) -> Result<ClientEnd<T>, Errno> {
-        let net_proto = match domain {
-            psocket::Domain::Ipv4 => IpVersion::V4,
-            psocket::Domain::Ipv6 => IpVersion::V6,
-        };
-
-        let (server, client) = zx::Channel::create().map_err(|_: zx::Status| Errno::Enobufs)?;
-        self.spawn_worker(
-            net_proto,
-            proto.try_into()?,
-            // we can safely unwrap here because we just created
-            // this channel above.
-            fasync::Channel::from_channel(server).unwrap(),
-            SocketWorkerProperties {},
-        )
-        .map(|()| ClientEnd::<T>::new(client))
-    }
+                psocket::ProviderRequest::InterfaceNameToIndex { name: _, responder } => {
+                    // TODO(https://fxbug.dev/48969): implement this method.
+                    responder_send!(responder, &mut Err(zx::Status::NOT_FOUND.into_raw()));
+                }
+                psocket::ProviderRequest::InterfaceNameToFlags { name: _, responder } => {
+                    // TODO(https://fxbug.dev/48969): implement this method.
+                    responder_send!(responder, &mut Err(zx::Status::NOT_FOUND.into_raw()));
+                }
+                psocket::ProviderRequest::StreamSocket { domain: _, proto: _, responder } => {
+                    responder_send!(responder, &mut Err(Errno::Eprotonosupport));
+                }
+                psocket::ProviderRequest::DatagramSocket { domain, proto, responder } => {
+                    let mut response = (|| {
+                        let (client, request_stream) = fidl::endpoints::create_request_stream()
+                            .map_err(|_: fidl::Error| Errno::Enobufs)?;
+                        let () = udp::spawn_worker(
+                            domain,
+                            proto,
+                            ctx.clone(),
+                            request_stream,
+                            SocketWorkerProperties {},
+                        )?;
+                        Ok(client)
+                    })();
+                    responder_send!(responder, &mut response);
+                }
+                psocket::ProviderRequest::GetInterfaceAddresses { responder } => {
+                    // TODO(https://fxbug.dev/54162): implement this method.
+                    responder_send!(responder, &mut std::iter::empty());
+                }
+            }
+            Ok(ctx)
+        })
+        .map_ok(|_: C| ())
+        .await
 }
 
 /// A trait generalizing the data structures passed as arguments to POSIX socket

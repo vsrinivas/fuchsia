@@ -523,9 +523,7 @@ impl Netstack {
                             .await
                     }
                     WorkItem::Incoming(Service::Socket(socket)) => {
-                        socket
-                            .serve_with(|rs| socket::SocketProviderWorker::serve(self.clone(), rs))
-                            .await
+                        socket.serve_with(|rs| socket::serve(self.clone(), rs)).await
                     }
                     WorkItem::Incoming(Service::Interfaces(interfaces)) => {
                         interfaces
