@@ -335,6 +335,7 @@ class AppStateImpl with Disposable implements AppState {
     if (views.isEmpty || oobeVisible) {
       return;
     }
+    appIsLaunching.value = false;
     topView.close();
   }.asAction();
 
