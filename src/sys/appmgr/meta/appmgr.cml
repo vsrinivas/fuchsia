@@ -155,6 +155,56 @@
         // Services used by appmgr with the svc_for_sys prefix are passed through to
         // the sys realm
 
+        // From setui service
+        {
+            protocol: "fuchsia.settings.Accessibility",
+            path: "/svc_for_sys/fuchsia.settings.Accessibility",
+        },
+        {
+            protocol: "fuchsia.settings.Audio",
+            path: "/svc_for_sys/fuchsia.settings.Audio",
+        },
+        {
+            protocol: "fuchsia.settings.Display",
+            path: "/svc_for_sys/fuchsia.settings.Display",
+        },
+        {
+            protocol: "fuchsia.settings.DoNotDisturb",
+            path: "/svc_for_sys/fuchsia.settings.DoNotDisturb",
+        },
+        {
+            protocol: "fuchsia.settings.FactoryReset",
+            path: "/svc_for_sys/fuchsia.settings.FactoryReset",
+        },
+        {
+            protocol: "fuchsia.settings.Input",
+            path: "/svc_for_sys/fuchsia.settings.Input",
+        },
+        {
+            protocol: "fuchsia.settings.Intl",
+            path: "/svc_for_sys/fuchsia.settings.Intl",
+        },
+        {
+            protocol: "fuchsia.settings.Light",
+            path: "/svc_for_sys/fuchsia.settings.Light",
+        },
+        {
+            protocol: "fuchsia.settings.NightMode",
+            path: "/svc_for_sys/fuchsia.settings.NightMode",
+        },
+        {
+            protocol: "fuchsia.settings.policy.VolumePolicyController",
+            path: "/svc_for_sys/fuchsia.settings.policy.VolumePolicyController",
+        },
+        {
+            protocol: "fuchsia.settings.Privacy",
+            path: "/svc_for_sys/fuchsia.settings.Privacy",
+        },
+        {
+            protocol: "fuchsia.settings.Setup",
+            path: "/svc_for_sys/fuchsia.settings.Setup",
+        },
+
         // From bootsvc
         {
             protocol: "fuchsia.boot.Arguments",

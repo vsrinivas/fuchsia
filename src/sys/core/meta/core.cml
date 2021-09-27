@@ -25,6 +25,11 @@
             name: "last_reboot",
             url: "fuchsia-pkg://fuchsia.com/forensics#meta/last_reboot.cm",
         },
+        {
+            name: "setui_service",
+            url: "fuchsia-pkg://fuchsia.com/setui_service#meta/setui_service.cm",
+            on_terminate: "reboot",
+        },
 
         // Children below this line may be present on some but not all product configurations.
         // Children above this line are expected to be present on all configs that include
@@ -167,6 +172,57 @@
     offer: [
         {
             protocol: [
+                "fuchsia.settings.Accessibility",
+                "fuchsia.settings.Audio",
+                "fuchsia.settings.Display",
+                "fuchsia.settings.DoNotDisturb",
+                "fuchsia.settings.FactoryReset",
+                "fuchsia.settings.Input",
+                "fuchsia.settings.Intl",
+                "fuchsia.settings.Light",
+                "fuchsia.settings.NightMode",
+                "fuchsia.settings.policy.VolumePolicyController",
+                "fuchsia.settings.Privacy",
+                "fuchsia.settings.Setup",
+            ],
+            from: "#setui_service",
+            to: [ "#appmgr" ],
+        },
+        {
+            storage: "data",
+            from: "self",
+            to: "#setui_service",
+        },
+        {
+            directory: "config-data",
+            from: "parent",
+            to: [ "#setui_service" ],
+            subdir: "setui_service",
+        },
+        {
+            protocol: [
+                "fuchsia.camera3.DeviceWatcher",
+                "fuchsia.deprecatedtimezone.Timezone",
+                "fuchsia.media.AudioCore",
+                "fuchsia.media.sessions2.Discovery",
+                "fuchsia.media.UsageReporter",
+                "fuchsia.recovery.policy.Device",
+                "fuchsia.tracing.provider.Registry",
+                "fuchsia.ui.policy.DeviceListenerRegistry",
+            ],
+            from: "#appmgr",
+            to: "#setui_service",
+            dependency: "weak_for_migration",
+        },
+        {
+            directory: "dev",
+            from: "parent",
+            as: "dev-light",
+            to: "#setui_service",
+            subdir: "class/light",
+        },
+        {
+            protocol: [
                 "fuchsia.location.position.EmergencyProvider",
                 "fuchsia.location.sensor.WlanBaseStationWatcher",
             ],
@@ -243,7 +299,10 @@
         {
             protocol: "fuchsia.ui.brightness.Control",
             from: "#brightness_manager",
-            to: "#appmgr",
+            to: [
+                "#appmgr",
+                "#setui_service",
+            ],
         },
         {
             protocol: "fuchsia.hardware.serial.NewDeviceProxy",
@@ -268,7 +327,10 @@
         {
             protocol: "fuchsia.stash.Store",
             from: "#stash",
-            to: "#appmgr",
+            to: [
+                "#appmgr",
+                "#setui_service",
+            ],
         },
         {
             protocol: "fuchsia.stash.Store2",
@@ -519,6 +581,7 @@
                 "#remote-control",
                 "#sampler",
                 "#session-manager",
+                "#setui_service",
                 "#soundplayer",
                 "#ssh-key-manager",
                 "#starnix_manager",
@@ -669,7 +732,11 @@
             directory: "dev",
             from: "parent",
             as: "dev-input-report",
-            to: "#brightness_manager",
+            to: [
+                "#brightness_manager",
+                "#session-manager",
+                "#setui_service",
+            ],
             subdir: "class/input-report",
         },
         {
@@ -778,16 +845,12 @@
             to: "#session-manager",
         },
         {
-            directory: "dev",
-            from: "parent",
-            as: "dev-input-report",
-            to: "#session-manager",
-            subdir: "class/input-report",
-        },
-        {
             protocol: "fuchsia.hardware.power.statecontrol.Admin",
             from: "parent",
-            to: "#session-manager",
+            to: [
+                "#session-manager",
+                "#setui_service",
+            ],
         },
         {
             protocol: [
@@ -859,7 +922,10 @@
         {
             protocol: "fuchsia.media.sounds.Player",
             from: "#soundplayer",
-            to: "#appmgr",
+            to: [
+                "#appmgr",
+                "#setui_service",
+            ],
         },
         {
             storage: "cache",

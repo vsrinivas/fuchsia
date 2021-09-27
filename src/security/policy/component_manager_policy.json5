@@ -364,6 +364,7 @@
                 "/core/appmgr",
                 "/core/network/netstack",
                 "/core/omaha-client-service",
+                "/core/setui_service",
                 "/core/system-update-checker",
                 "/core/system-update-committer",
                 "/core/wlancfg",

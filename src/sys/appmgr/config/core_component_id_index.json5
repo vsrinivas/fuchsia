@@ -23,13 +23,7 @@
         },
         {
             instance_id: "f1a52f7b4d7081060a3295fd36df7b68fb0518f80aae0eae8a3fc1d55231375f",
-            appmgr_moniker: {
-                url: "fuchsia-pkg://fuchsia.com/setui_service#meta/setui_service.cmx",
-                realm_path: [
-                    "app",
-                    "sys",
-                ],
-            },
+            moniker: "/core/setui_service",
         },
         {
             instance_id: "2e3e35640b0f45265e268204779f7314cf5acae5883ac0d028232859672a7152",

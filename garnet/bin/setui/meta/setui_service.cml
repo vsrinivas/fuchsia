@@ -22,15 +22,12 @@
                 "fuchsia.settings.policy.VolumePolicyController",
                 "fuchsia.settings.Privacy",
                 "fuchsia.settings.Setup",
-                "fuchsia.settings.System",
             ],
         },
     ],
     use: [
         {
             protocol: [
-                // TODO(fxb/84709): Remove this once fxb/77094 is done.
-                "fuchsia.buildinfo.Provider",
                 "fuchsia.camera3.DeviceWatcher",
                 "fuchsia.deprecatedtimezone.Timezone",
                 "fuchsia.hardware.power.statecontrol.Admin",
@@ -86,7 +83,6 @@
                 "fuchsia.settings.policy.VolumePolicyController",
                 "fuchsia.settings.Privacy",
                 "fuchsia.settings.Setup",
-                "fuchsia.settings.System",
             ],
             from: "self",
         },
