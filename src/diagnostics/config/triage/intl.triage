@@ -11,6 +11,11 @@
             trigger: "SyslogHas('/config/data/tzdata/icu/44/le')",
             print: "INTL: A component can not find the tzdata configuration. See: https://fuchsia.dev/fuchsia-src/development/internationalization/icu_data",
         },
+        icu_error: {
+            type: "Warning",
+            trigger: "SyslogHas('ICU error:.*')",
+            print: "INTL: Internal ICU error.",
+        }
     },
     test: {
         test_tzdata_config_absent: {
@@ -30,6 +35,18 @@
                 "icu_config_absent",
             ],
             syslog: "1/30/2020, 2:31:19 PM [55718][55720][web_engine_exe] ERROR: icu_util.cc(227) Could not open: '', proceeding without loading the timezone database: No such file or directory (2)",
+        },
+        icu_error: {
+            yes: [
+                "icu_error",
+            ],
+            syslog: "1/30/2020, 2:31:19 PM [55718][55720][time_zone_info_service] ERROR: time_zone_info_service.cc(466) ICU error: U_FILE_ACCESS_ERROR",
+        },
+        icu_error: {
+            no: [
+                "icu_error",
+            ],
+            syslog: "1/30/2020, 2:31:19 PM [55718][55720][news_reader] INFO: reader.cc(466) Article: Hospital ICU errors -- Can they happen to you?",
         },
     },
 }
