@@ -10,6 +10,7 @@
 
 static bcm_hci_t* dev;
 static zx_status_t load_firmware_result;
+static uint32_t read_short_bytes;
 
 // Stub out the firmware loading from the devhost API.
 zx_status_t load_firmware_from_driver(zx_driver_t* driver, zx_device_t* dev, const char* path,
@@ -34,6 +35,7 @@ typedef struct {
 zx_status_t zx_channel_read(zx_handle_t handle, uint32_t options, void* bytes, zx_handle_t* handles,
                             uint32_t num_bytes, uint32_t num_handles, uint32_t* actual_bytes,
                             uint32_t* actual_handles) {
+  uint32_t actual_read_bytes = sizeof(hci_read_test_command_complete_t);
   hci_read_test_command_complete_t read_result = {
       .header =
           {
@@ -48,8 +50,18 @@ zx_status_t zx_channel_read(zx_handle_t handle, uint32_t options, void* bytes, z
       .test_param_2 = 0xbb,
   };
 
-  memcpy(bytes, &read_result, sizeof(hci_read_test_command_complete_t));
+  if (read_short_bytes != 0) {
+    actual_read_bytes = read_short_bytes;
+  }
 
+  if (num_bytes < actual_read_bytes) {
+    actual_read_bytes = num_bytes;
+  }
+
+  memcpy(bytes, &read_result, actual_read_bytes);
+  if (actual_bytes) {
+    *actual_bytes = actual_read_bytes;
+  }
   return ZX_OK;
 }
 
@@ -65,6 +77,7 @@ static void create_bcm_hci_device(void) {
   dev = calloc(1, sizeof(bcm_hci_t));
   // TODO: Adding tests around the uart functionality requires a mock uart device.
   dev->is_uart = false;
+  read_short_bytes = 0;
 }
 
 static void release_bcm_hci_device(void) { free(dev); }
@@ -97,6 +110,32 @@ TEST(BtHciBroadcomTest, GetFeatures) {
   ASSERT_NE(vendor_proto.ops, NULL);
   // Don't expect exact features to avoid test fragility.
   EXPECT_NE(vendor_proto.ops->get_features(dev), 0u);
+  teardown();
+}
+
+TEST(BtHciBroadcomTest, ControllerReturnsShortCommandResult) {
+  setup();
+  read_short_bytes = 1;
+  hci_read_bdaddr_command_complete_t event;
+  memset(&event, 0, sizeof(event));
+  zx_status_t status = bcm_hci_send_command(dev, &READ_BDADDR_CMD, sizeof(READ_BDADDR_CMD),
+                                            (void*)(&event), sizeof(event));
+  ASSERT_NE(status, ZX_OK);
+
+  // Large enough for the event header, but not large enough for a command complete.
+  read_short_bytes = sizeof(hci_event_header_t);
+  status = bcm_hci_send_command(dev, &READ_BDADDR_CMD, sizeof(READ_BDADDR_CMD), (void*)(&event),
+                                sizeof(event));
+  ASSERT_NE(status, ZX_OK);
+
+  // Large enough for the event header and command complete, but not as large as requested
+  // event should be a truncated read.
+  read_short_bytes = sizeof(hci_command_complete_t);
+  memset(&event, 0, sizeof(event));
+  status = bcm_hci_send_command(dev, &READ_BDADDR_CMD, sizeof(READ_BDADDR_CMD), (void*)(&event),
+                                sizeof(event));
+  ASSERT_EQ(status, ZX_OK);
+  ASSERT_EQ(0, event.bdaddr[0]);
   teardown();
 }
 

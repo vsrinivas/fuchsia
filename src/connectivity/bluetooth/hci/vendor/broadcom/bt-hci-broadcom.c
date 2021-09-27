@@ -11,6 +11,7 @@
 #include <lib/ddk/debug.h>
 #include <lib/ddk/device.h>
 #include <lib/ddk/driver.h>
+#include <lib/ddk/metadata.h>
 #include <lib/ddk/platform-defs.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -20,8 +21,6 @@
 #include <zircon/assert.h>
 #include <zircon/status.h>
 #include <zircon/threads.h>
-
-#include <lib/ddk/metadata.h>
 
 #include "src/connectivity/bluetooth/hci/vendor/broadcom/bcm_hci_bind.h"
 
@@ -301,7 +300,7 @@ static zx_status_t bcm_hci_send_command(bcm_hci_t* hci, const hci_command_header
   }
 
   // wait for an HCI Command Complete event
-  uint32_t actual;
+  uint32_t actual = 0;
 
   do {
     status = zx_channel_read(hci->command_channel, 0, read_buf, NULL, CHAN_READ_BUF_LEN, 0, &actual,
@@ -317,10 +316,16 @@ static zx_status_t bcm_hci_send_command(bcm_hci_t* hci, const hci_command_header
     return status;
   }
 
+  if (actual < sizeof(hci_command_complete_t)) {
+    zxlogf(ERROR, "btm_hci_send_command zx_channel_read too short: %d < %lu", actual,
+           sizeof(hci_command_complete_t));
+    return ZX_ERR_INTERNAL;
+  }
+
   hci_event_header_t* header = (hci_event_header_t*)read_buf;
   if (header->event_code != HCI_EVT_COMMAND_COMPLETE ||
       header->parameter_total_size < MIN_EVT_PARAM_SIZE) {
-    zxlogf(ERROR, "bcm_hci_send_command did not receive command complete\n");
+    zxlogf(ERROR, "bcm_hci_send_command did not receive command complete or params too small\n");
     return ZX_ERR_INTERNAL;
   }
 
@@ -331,6 +336,10 @@ static zx_status_t bcm_hci_send_command(bcm_hci_t* hci, const hci_command_header
   }
 
   if (out_buf) {
+    if (actual < out_buf_len) {
+      zxlogf(WARNING, "bcm_hci_send_command response is small: %u < %zu\n", actual, out_buf_len);
+      out_buf_len = actual;
+    }
     memcpy(out_buf, read_buf, out_buf_len);
   }
 
@@ -515,9 +524,9 @@ static int bcm_hci_start_thread(void* arg) {
     }
   } else {
     // log error and fallback mac address
+    char fallback_addr[18] = "<unknown>";
     hci_read_bdaddr_command_complete_t event;
     memset(&event, 0, sizeof(event));
-    char fallback_addr[18] = "<unknown>";
     zx_status_t read_cmd_status = bcm_hci_send_command(
         hci, &READ_BDADDR_CMD, sizeof(READ_BDADDR_CMD), (void*)(&event), sizeof(event));
     if (read_cmd_status == ZX_OK) {
