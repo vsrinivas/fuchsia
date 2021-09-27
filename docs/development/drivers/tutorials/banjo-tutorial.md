@@ -829,6 +829,38 @@ used as buffers. In practice, it only affects the names of the generated paramet
 When applied to a protocol method output parameter of type `vector`, the attribute conveys the fact
 that the contents of the vector should be allocated by the receiver of the method call.
 
+### The DeriveDebug attribute (C bindings only)
+
+When applied to an enum declaration, a helper `*_to_str()` function
+will be generated for C bindings which returns a `const char*` for each
+value of the enum. For example, an enum declared with this attribute such
+as
+
+```banjo
+[DeriveDebug]
+enum ExampleEnum {
+    VAL_ONE = 1;
+    VAL_TWO = 2;
+};
+```
+
+will result in the following generated definition.
+
+```c
+#ifndef FUNC_EXAMPLE_ENUM_TO_STR_
+#define FUNC_EXAMPLE_ENUM_TO_STR_
+static inline const char* example_enum_to_str(example_enum_t value) {
+  switch (value) {
+    case EXAMPLE_ENUM_VAL_ONE:
+      return "EXAMPLE_ENUM_VAL_ONE";
+    case EXAMPLE_ENUM_VAL_TWO:
+      return "EXAMPLE_ENUM_VAL_TWO";
+  }
+  return "UNKNOWN";
+}
+#endif
+```
+
 ### The InnerPointer attribute
 
 In the context of a protocol input parameter of type `vector`, this attribute turns the contents of

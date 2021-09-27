@@ -9,6 +9,7 @@ use {
     std::iter,
 };
 
+static ATTR_NAME_DERIVE_DEBUG: &'static str = "derive_debug";
 static ATTR_NAME_DOC: &'static str = "doc";
 static ATTR_NAME_NAMESPACED: &'static str = "namespaced";
 static ATTR_NAME_TRANSPORT: &'static str = "transport";
@@ -201,6 +202,33 @@ pub fn is_namespaced(maybe_attrs: &Option<Vec<Attribute>>) -> Result<bool, Error
     apply_to_attr(maybe_attrs, ATTR_NAME_NAMESPACED, |_, attr_value| {
         if attr_value != "" {
             return Err(anyhow!("{} attribute cannot have a value.", ATTR_NAME_NAMESPACED));
+        }
+        Ok(true)
+    })
+    .unwrap_or(Ok(false))
+}
+
+/// Returns `Ok(true)` if `maybe_attrs` contains an attribute with the name
+/// "DeriveDebug" (or any case-insensitive equivalent) and no associated value.
+/// If an attribute with that name does not exist, returns `Ok(false)`. If an
+/// attribute with that name exists and has a value, returns `Err`.
+///
+/// # Arguments
+///
+/// * `maybe_attrs` - `Option<Vec<Attribute>>` containing the attributes
+///                   associated with a FIDL IR token.
+///
+/// # EXAMPLES
+///
+/// ```
+/// let maybe_attrs_with_derive_debug =
+///     Some(vec![Attribute { name: String::from("DeriveDebug"), value: String::from("") }]);
+/// assert!(is_derive_debug(&maybe_attrs_with_derive_debug).expect("is_derive_debug should not fail"));
+/// ```
+pub fn is_derive_debug(maybe_attrs: &Option<Vec<Attribute>>) -> Result<bool, Error> {
+    apply_to_attr(maybe_attrs, ATTR_NAME_DERIVE_DEBUG, |_, attr_value| {
+        if attr_value != "" {
+            return Err(anyhow!("{} attribute cannot have a value.", ATTR_NAME_DERIVE_DEBUG));
         }
         Ok(true)
     })

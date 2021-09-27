@@ -37,6 +37,28 @@ typedef uint32_t uint32_enum_t;
 #define UINT32_ENUM_KFIVE UINT32_C(5)
 #define UINT32_ENUM_KSIX UINT32_C(6)
 #define UINT32_ENUM_KSEVEN UINT32_C(7)
+#ifndef FUNC_UINT32_ENUM_TO_STR_
+#define FUNC_UINT32_ENUM_TO_STR_
+static inline const char* uint32_enum_to_str(uint32_enum_t value) {
+  switch (value) {
+    case UINT32_ENUM_KONE:
+      return "UINT32_ENUM_KONE";
+    case UINT32_ENUM_KTWO:
+      return "UINT32_ENUM_KTWO";
+    case UINT32_ENUM_KTHREE:
+      return "UINT32_ENUM_KTHREE";
+    case UINT32_ENUM_KFOUR:
+      return "UINT32_ENUM_KFOUR";
+    case UINT32_ENUM_KFIVE:
+      return "UINT32_ENUM_KFIVE";
+    case UINT32_ENUM_KSIX:
+      return "UINT32_ENUM_KSIX";
+    case UINT32_ENUM_KSEVEN:
+      return "UINT32_ENUM_KSEVEN";
+  }
+  return "UNKNOWN";
+}
+#endif
 typedef uint16_t uint16_enum_t;
 #define UINT16_ENUM_KONE UINT16_C(1)
 #define UINT16_ENUM_KTWO UINT16_C(2)

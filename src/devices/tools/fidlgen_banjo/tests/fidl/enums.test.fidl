@@ -46,6 +46,7 @@ type uint16_enum = strict enum : uint16 {
     kSix = 6;
 };
 
+@derive_debug
 type uint32_enum = strict enum : uint32 {
     kOne = 1;
     kTwo = 2;

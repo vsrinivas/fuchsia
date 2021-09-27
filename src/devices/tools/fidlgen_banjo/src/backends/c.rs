@@ -6,8 +6,8 @@ use {
     super::{
         util::{
             array_bounds, for_banjo_transport, get_base_type_from_alias, get_declarations,
-            get_doc_comment, is_namespaced, is_table_or_bits, name_buffer, name_size, not_callback,
-            primitive_type_to_c_str, to_c_name, Decl, ProtocolType,
+            get_doc_comment, is_derive_debug, is_namespaced, is_table_or_bits, name_buffer,
+            name_size, not_callback, primitive_type_to_c_str, to_c_name, Decl, ProtocolType,
         },
         Backend,
     },
@@ -455,25 +455,84 @@ fn get_out_args(m: &Method, ir: &FidlIr) -> Result<(Vec<String>, bool), Error> {
 impl<'a, W: io::Write> CBackend<'a, W> {
     fn codegen_enum_decl(&self, data: &Enum, ir: &FidlIr) -> Result<String, Error> {
         let name = &data.name.get_name();
-        let enum_defines = data
+        let c_name_lowercase = to_c_name(&name);
+        let c_name_uppercase = to_c_name(&name).to_uppercase();
+
+        struct EnumParts {
+            v_name: String,
+            c_size: String,
+        }
+        let enum_parts_list = data
             .members
             .iter()
             .map(|v| {
+                Ok(EnumParts {
+                    v_name: v.name.0.to_uppercase().trim().to_string(),
+                    c_size: integer_constant_to_c_str(&data._type, &v.value, ir)?,
+                })
+            })
+            .collect::<Result<Vec<_>, Error>>()?;
+
+        // #define each enum value
+        let enum_defines = enum_parts_list
+            .iter()
+            .map(|enum_parts| {
                 Ok(format!(
                     "#define {c_name}_{v_name} {c_size}",
-                    c_name = to_c_name(&name).to_uppercase(),
-                    v_name = v.name.0.to_uppercase().trim(),
-                    c_size = integer_constant_to_c_str(&data._type, &v.value, ir)?
+                    c_name = c_name_uppercase,
+                    v_name = enum_parts.v_name,
+                    c_size = enum_parts.c_size,
                 ))
             })
             .collect::<Result<Vec<_>, Error>>()?
             .join("\n");
-        Ok(format!(
+
+        let declarations = format!(
             "typedef {ty} {c_name}_t;\n{enum_defines}",
-            c_name = to_c_name(&name),
+            c_name = c_name_lowercase,
             ty = integer_type_to_c_str(&data._type)?,
-            enum_defines = enum_defines
-        ))
+            enum_defines = enum_defines,
+        );
+
+        if !is_derive_debug(&data.maybe_attributes)? {
+            return Ok(declarations);
+        }
+
+        // Define {c_name}_to_str() helper function to translate enum values
+        // into strings.
+        let enum_to_str_prologue = vec![
+            // #ifndef used since fidlgen_banjo does not strictly generate code
+            // once for each declaration.
+            format!("#ifndef FUNC_{c_name}_TO_STR_", c_name = c_name_uppercase),
+            format!("#define FUNC_{c_name}_TO_STR_", c_name = c_name_uppercase),
+            format!(
+                "static inline const char* {c_name}_to_str({c_name}_t value) {{",
+                c_name = c_name_lowercase
+            ),
+            format!("  switch (value) {{"),
+        ];
+        let mut enum_to_str_body = enum_parts_list
+            .iter()
+            .map(|enum_parts| {
+                Ok(format!(
+                    "    case {c_name}_{v_name}:\n      return \"{c_name}_{v_name}\";",
+                    c_name = c_name_uppercase,
+                    v_name = enum_parts.v_name,
+                ))
+            })
+            .collect::<Result<Vec<_>, Error>>()?;
+        let mut enum_to_str_epilogue = vec![
+            format!("  }}"),
+            format!("  return \"UNKNOWN\";"),
+            format!("}}"),
+            format!("#endif"),
+        ];
+        let mut enum_to_str = enum_to_str_prologue;
+        enum_to_str.append(&mut enum_to_str_body);
+        enum_to_str.append(&mut enum_to_str_epilogue);
+        let enum_to_str = enum_to_str.join("\n");
+
+        Ok(format!("{}\n{}", declarations, enum_to_str))
     }
 
     fn codegen_constant_decl(&self, data: &Const, ir: &FidlIr) -> Result<String, Error> {
