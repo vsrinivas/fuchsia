@@ -1655,3 +1655,16 @@
   reviewers: ['aaronwood@google.com', 'abarth@google.com', 'adamperry@google.com', 'ampearce@google.com', 'crjohns@google.com', 'curtisgalloway@google.com', 'ddorwin@google.com', 'ejia@google.com', 'geb@google.com', 'shayba@google.com', 'surajmalhotra@google.com', 'wittrock@google.com']
   submitted: '2021-07-08'
   reviewed: '2021-09-22'
+
+- name: 'RFC-0128'
+  title: 'Introduce `zx_vcpu_kick`'
+  short_description: 'A new syscall, `zx_vcpu_kick`, that can cause a running VCPU to exit to the host and return to user-space.'
+  authors: ['abdulla@google.com']
+  file: '0128_vcpu_kick.md'
+  area: ['Zircon']
+  issue: ['']
+  gerrit_change_id: ['573781']
+  status: 'Accepted'
+  reviewers: ['adanis@google.com', 'cpu@google.com', 'dgreenaway@google.com', 'mvanotti@google.com', 'tamird@google.com']
+  submitted: '2021-08-26'
+  reviewed: '2021-09-25'
