@@ -71,9 +71,6 @@ zx_status_t BusTransactionInitiatorDispatcher::Pin(
   }
 
   Guard<Mutex> guard{get_lock()};
-  // TODO(fxbug.dev/56205): When the time has come to switch this over from a warning
-  // to enforcement, come back here and delete the #else half of this #ifdef.
-#if 0
   // User may not pin new memory if either our BTI has hit zero handles, or if
   // we currently have quarantined pages.  In the case that there are active
   // quarantined pages, driver code is expected to take the steps to stop their
@@ -81,51 +78,6 @@ zx_status_t BusTransactionInitiatorDispatcher::Pin(
   if (zero_handles_ || !quarantine_.is_empty()) {
     return ZX_ERR_BAD_STATE;
   }
-#else
-  if (zero_handles_) {
-    return ZX_ERR_BAD_STATE;
-  }
-
-  if (!quarantine_.is_empty()) {
-    char proc_name[ZX_MAX_NAME_LEN] = {0};
-    char thread_name[ZX_MAX_NAME_LEN] = {0};
-    char bti_name[ZX_MAX_NAME_LEN] = {0};
-
-    // If we have no current thread dispatcher, then this is a kernel thread.  We
-    // have no process to report, just report that the action was taken by a
-    // kernel thread and leave it at that.
-    ThreadDispatcher* thread_disp = ThreadDispatcher::GetCurrent();
-    if (thread_disp == nullptr) {
-      snprintf(proc_name, sizeof(proc_name), "<kernel>");
-      snprintf(thread_name, sizeof(thread_name), "<kernel>");
-    } else {
-      // Get the name of the user mode process and thread which closed the handle
-      // to the object which eventually resulted in the leak.
-      ProcessDispatcher::GetCurrent()->get_name(proc_name);
-      thread_disp->get_name(thread_name);
-    }
-
-    // Fetch the BTI name (if any).
-    this->get_name(bti_name);
-
-    // If any of these strings are empty, replace them with just "<unknown>".
-    if (!proc_name[0]) {
-      snprintf(proc_name, sizeof(proc_name), "<unknown>");
-    }
-    if (!thread_name[0]) {
-      snprintf(thread_name, sizeof(thread_name), "<unknown>");
-    }
-    if (!bti_name[0]) {
-      snprintf(bti_name, sizeof(bti_name), "<unknown>");
-    }
-
-    printf(
-        "KERN: Bus Transaction Initiator (ID 0x%lx, name \"%s\") was asked to pin a VMO while "
-        "there were still pages in the quarantine list. Requesting process/thread was \"%s\", "
-        "thread \"%s\". User mode code needs to be updated to follow the quarantine protocol.\n",
-        bti_id_, bti_name, proc_name, thread_name);
-  }
-#endif
 
   return PinnedMemoryTokenDispatcher::Create(fbl::RefPtr(this), ktl::move(pinned_vmo), perms,
                                              pmt_handle, pmt_rights);
