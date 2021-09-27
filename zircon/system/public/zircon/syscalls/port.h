@@ -32,8 +32,6 @@ __BEGIN_CDECLS
 // For options passed to port_create
 #define ZX_PORT_BIND_TO_INTERRUPT   ((uint32_t)(0x1u << 0))
 
-#define ZX_PKT_TYPE_MASK            ((uint32_t)0x000000FFu)
-
 #define ZX_PKT_IS_USER(type)          ((type) == ZX_PKT_TYPE_USER)
 #define ZX_PKT_IS_SIGNAL_ONE(type)    ((type) == ZX_PKT_TYPE_SIGNAL_ONE)
 #define ZX_PKT_IS_GUEST_BELL(type)    ((type) == ZX_PKT_TYPE_GUEST_BELL)
