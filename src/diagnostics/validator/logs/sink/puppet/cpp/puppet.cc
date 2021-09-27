@@ -116,7 +116,7 @@ class Puppet : public fuchsia::validate::logs::LogSinkPuppet {
     }
     for (auto& arg : spec.record.arguments) {
       switch (arg.value.Which()) {
-        case fuchsia::diagnostics::stream::Value::Empty:
+        case fuchsia::diagnostics::stream::Value::kUnknown:
         case fuchsia::diagnostics::stream::Value::Invalid:
           break;
         case fuchsia::diagnostics::stream::Value::kFloating:

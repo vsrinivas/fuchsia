@@ -43,9 +43,8 @@ class {{ .Name }} final {
 
     * If the ordinal is zero, which is only ever the case when the xunion is first constructed and
       not yet set:
-      * tag_, which is a fidl_xunion_tag_t, will be kEmpty (which is kFidlXUnionEmptyTag, or 0).
-        kEmpty is intended for internal use only; clients should use ::Tag instead.
-      * Ordinal() will return kEmpty.
+      * tag_, which is a fidl_xunion_tag_t, will be 0.
+      * Ordinal() will return tag_,
       * Which() will return Tag::kUnknown.
     * if the xunion is non-strict (flexible) and has been de-serialized from a xunion with an
       ordinal that's unknown to the client's schema:
@@ -60,8 +59,6 @@ class {{ .Name }} final {
   enum __attribute__((enum_extensibility(closed))) {{ .TagEnum.Self }} : fidl_xunion_tag_t {
   {{ if .IsFlexible -}}
     {{ .TagUnknown.Self }} = 0,
-    {{- /* TODO(fxbug.dev/8050): Remove the Empty tag below. */}}
-    Empty = {{ .TagUnknown.Self }},  // DEPRECATED: use kUnknown instead.
   {{ end -}}
   {{- range .Members }}
     {{ .TagName.Self }} = {{ .Ordinal }},  // {{ .Ordinal | printf "%#x" }}

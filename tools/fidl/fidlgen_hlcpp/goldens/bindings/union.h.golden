@@ -84,7 +84,6 @@ class UnionWithAttributes final {
 
   enum __attribute__((enum_extensibility(closed))) Tag : fidl_xunion_tag_t {
     kUnknown = 0,
-    Empty = kUnknown,  // DEPRECATED: use kUnknown instead.
 
     kX = 1,  // 0x1
     Invalid = ::std::numeric_limits<::fidl_union_tag_t>::max(),
@@ -1035,7 +1034,6 @@ class FlexiblePizzaOrPasta final {
 
   enum __attribute__((enum_extensibility(closed))) Tag : fidl_xunion_tag_t {
     kUnknown = 0,
-    Empty = kUnknown,  // DEPRECATED: use kUnknown instead.
 
     kPizza = 1,  // 0x1
     kPasta = 2,  // 0x2
@@ -1243,7 +1241,6 @@ class OlderSimpleUnion final {
 
   enum __attribute__((enum_extensibility(closed))) Tag : fidl_xunion_tag_t {
     kUnknown = 0,
-    Empty = kUnknown,  // DEPRECATED: use kUnknown instead.
 
     kI = 1,  // 0x1
     kF = 2,  // 0x2
@@ -1513,7 +1510,6 @@ class NewerSimpleUnion final {
 
   enum __attribute__((enum_extensibility(closed))) Tag : fidl_xunion_tag_t {
     kUnknown = 0,
-    Empty = kUnknown,  // DEPRECATED: use kUnknown instead.
 
     kI = 1,  // 0x1
     kS = 2,  // 0x2
@@ -1643,7 +1639,6 @@ class FlexibleUnion final {
 
   enum __attribute__((enum_extensibility(closed))) Tag : fidl_xunion_tag_t {
     kUnknown = 0,
-    Empty = kUnknown,  // DEPRECATED: use kUnknown instead.
 
     kPrimitive = 1,                         // 0x1
     kStringNeedsConstructor = 2,            // 0x2
@@ -1778,7 +1773,6 @@ class FlexibleFoo final {
 
   enum __attribute__((enum_extensibility(closed))) Tag : fidl_xunion_tag_t {
     kUnknown = 0,
-    Empty = kUnknown,  // DEPRECATED: use kUnknown instead.
 
     kS = 1,  // 0x1
     kI = 2,  // 0x2
@@ -1964,7 +1958,6 @@ class ExplicitXUnion final {
 
   enum __attribute__((enum_extensibility(closed))) Tag : fidl_xunion_tag_t {
     kUnknown = 0,
-    Empty = kUnknown,  // DEPRECATED: use kUnknown instead.
 
     kI = 1,  // 0x1
     kF = 4,  // 0x4
@@ -2290,7 +2283,6 @@ class ExplicitFoo final {
 
   enum __attribute__((enum_extensibility(closed))) Tag : fidl_xunion_tag_t {
     kUnknown = 0,
-    Empty = kUnknown,  // DEPRECATED: use kUnknown instead.
 
     kS = 2,  // 0x2
     kI = 1,  // 0x1
@@ -2423,7 +2415,6 @@ class XUnionContainingEmptyStruct final {
 
   enum __attribute__((enum_extensibility(closed))) Tag : fidl_xunion_tag_t {
     kUnknown = 0,
-    Empty = kUnknown,  // DEPRECATED: use kUnknown instead.
 
     kEmpty = 1,  // 0x1
     Invalid = ::std::numeric_limits<::fidl_union_tag_t>::max(),

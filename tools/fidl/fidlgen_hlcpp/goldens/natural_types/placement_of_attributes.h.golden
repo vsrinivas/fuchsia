@@ -116,7 +116,6 @@ class ExampleXUnion final {
 
   enum __attribute__((enum_extensibility(closed))) Tag : fidl_xunion_tag_t {
     kUnknown = 0,
-    Empty = kUnknown,  // DEPRECATED: use kUnknown instead.
 
     kVariant = 1,  // 0x1
     Invalid = ::std::numeric_limits<::fidl_union_tag_t>::max(),
