@@ -18,6 +18,11 @@ using zx;
 /// If a port is destroyed from the underlying device, it is automatically
 /// detached from the session.
 ///
+/// Inbound traffic is dispatched to all open sessions. Devices typically
+/// operate with a single primary session, see [`SessionFlags.PRIMARY`]. Each
+/// additional open session to the same device causes data copy overhead on the
+/// device's data path.
+///
 /// The session is closed with an error epitaph if an invalid buffer descriptor
 /// is sent over either the tx or rx FIFOs. Invalid descriptors include:
 ///    - Descriptor index larger than [`SessionInfo.descriptor_count`].
