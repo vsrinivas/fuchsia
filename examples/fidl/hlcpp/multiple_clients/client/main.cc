@@ -40,6 +40,7 @@ int main(int argc, const char** argv) {
     });
   }
 
+  loop.Run();
   return responses == kNumClients ? 0 : 1;
 }
 // [END main]

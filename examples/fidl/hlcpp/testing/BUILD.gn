@@ -18,7 +18,6 @@ executable("bin") {
 }
 
 fuchsia_unittest_package("example-hlcpp-protocol-test") {
-  manifest = "test.cmx"
   deps = [ ":bin" ]
 }
 

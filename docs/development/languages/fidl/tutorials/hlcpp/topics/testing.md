@@ -15,7 +15,7 @@ available for testing FIDL protocols implemented in HLCPP:
 
 If you want to write the code yourself, delete the following directories:
 
-```
+```posix-terminal
 rm -r examples/fidl/hlcpp/testing/*
 ```
 
@@ -94,13 +94,13 @@ To run the test:
 
 1. Configure your GN build to include the test:
 
-   ```
+   ```posix-terminal
    fx set core.x64 --with //examples/fidl/hlcpp/testing
 
    ```
 1. Run the test:
 
-   ```
+   ```posix-terminal
    fx test -vo example-hlcpp-protocol-test
    ```
 

@@ -3,10 +3,10 @@
 ## Prerequisites
 
 This tutorial expects that you have completed the [Getting Started][getting-started]
-guide and are able to build and run Fuchsia (whether using `fx qemu` or on actual
-hardware). You should be familiar with running components on Fuchsia using
-`fx serve` and `fx shell run`, which are covered in [Run an example component][component].
-This tutorial is the first of the sequence of FIDL tutorials listed in the [overview][overview].
+guide and are able to build and run Fuchsia (using [FEMU][femu] or a physical device).
+You should be familiar with running components on Fuchsia, which is covered in
+[Run an example component][run-examples]. This tutorial is the first of the
+sequence of FIDL tutorials listed in the [overview][overview].
 
 ## Overview
 
@@ -93,6 +93,7 @@ Fuchsia copyright notice at the top of each file.
 [sdk]: /sdk/fidl
 [fidl-template]: /build/fidl/fidl.gni
 [overview]: /docs/development/languages/fidl/tutorials/overview.md
+[femu]: /docs/get-started/set_up_femu.md
 [getting-started]: /docs/get-started/README.md
-[component]: /docs/development/run/run-examples.md
+[run-examples]: /docs/development/run/run-examples.md
 [fidl-fuzzing]: /docs/development/testing/fuzzing/fidl-fuzzing.md

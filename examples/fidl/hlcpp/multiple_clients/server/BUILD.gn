@@ -17,11 +17,7 @@ executable("bin") {
 }
 
 fuchsia_component("echo-server") {
-  manifest = "server.cmx"
+  component_name = "echo_server"
+  manifest = "meta/server.cml"
   deps = [ ":bin" ]
-}
-
-fuchsia_package("server") {
-  package_name = "echo-hlcpp-multi-server"
-  deps = [ ":echo-server" ]
 }

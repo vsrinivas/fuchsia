@@ -2,7 +2,10 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+# [START imports]
 import("//build/components.gni")
+
+# [END imports]
 
 executable("bin") {
   output_name = "fidl_echo_hlcpp_client"
@@ -19,12 +22,10 @@ executable("bin") {
   # [END deps]
 }
 
+# [START rest]
 fuchsia_component("echo-client") {
-  manifest = "client.cmx"
+  component_name = "echo_client"
+  manifest = "meta/client.cml"
   deps = [ ":bin" ]
 }
-
-fuchsia_package("client") {
-  package_name = "echo-hlcpp-client"
-  deps = [ ":echo-client" ]
-}
+# [END rest]

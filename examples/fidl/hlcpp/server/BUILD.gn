@@ -2,7 +2,10 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+# [START imports]
 import("//build/components.gni")
+
+# [END imports]
 
 # Declare an executable for the server. This produces a binary with the
 # specified output name that can run on Fuchsia.
@@ -25,12 +28,13 @@ executable("bin") {
 # Declare a component for the server, which consists of the manifest and the
 # binary that the component will run.
 fuchsia_component("echo-server") {
-  manifest = "server.cmx"
+  component_name = "echo_server"
+  manifest = "meta/server.cml"
   deps = [ ":bin" ]
 }
 
 # Declare a package that contains a single component, our server.
-fuchsia_package("server") {
+fuchsia_package("echo-hlcpp-server") {
   package_name = "echo-hlcpp-server"
   deps = [ ":echo-server" ]
 }

@@ -37,7 +37,11 @@ group("tests") {
   testonly = true
   deps = [
     ":echo-go-client-test",
+    ":echo-hlcpp-client-sync-test",
+    ":echo-hlcpp-client-test",
+    ":echo-hlcpp-multi-client-test",
     ":echo-launcher-go-client-test",
+    ":echo-launcher-hlcpp-client-test",
     ":echo-launcher-llcpp-client-test",
     ":echo-launcher-rust-client-test",
     ":echo-llcpp-client-async-test",
@@ -46,6 +50,7 @@ group("tests") {
     ":echo-llcpp-client-test",
     ":echo-rust-client-sync-test",
     ":echo-rust-client-test",
+    ":echo-service-hlcpp-client-test",
     ":echo-service-llcpp-client-test",
     ":echo-service-rust-client-test",
   ]
@@ -157,5 +162,50 @@ fuchsia_test_package("echo-launcher-go-client-test") {
     "//examples/fidl/echo-realm:echo_realm",
     "//examples/fidl/go/request_pipelining/client:echo-client",
     "//examples/fidl/go/request_pipelining/server:echo-server",
+  ]
+}
+
+fuchsia_test_package("echo-hlcpp-client-test") {
+  test_components = [ ":fidl_examples_test" ]
+  deps = [
+    "//examples/fidl/echo-realm:echo_realm",
+    "//examples/fidl/hlcpp/client:echo-client",
+    "//examples/fidl/hlcpp/server:echo-server",
+  ]
+}
+
+fuchsia_test_package("echo-hlcpp-client-sync-test") {
+  test_components = [ ":fidl_examples_test" ]
+  deps = [
+    "//examples/fidl/echo-realm:echo_realm",
+    "//examples/fidl/hlcpp/client_sync:echo-client",
+    "//examples/fidl/hlcpp/server:echo-server",
+  ]
+}
+
+fuchsia_test_package("echo-hlcpp-multi-client-test") {
+  test_components = [ ":fidl_examples_test" ]
+  deps = [
+    "//examples/fidl/echo-realm:echo_realm",
+    "//examples/fidl/hlcpp/multiple_clients/client:echo-client",
+    "//examples/fidl/hlcpp/multiple_clients/server:echo-server",
+  ]
+}
+
+fuchsia_test_package("echo-launcher-hlcpp-client-test") {
+  test_components = [ ":fidl_examples_test" ]
+  deps = [
+    "//examples/fidl/echo-realm:echo_realm",
+    "//examples/fidl/hlcpp/request_pipelining/client:echo-client",
+    "//examples/fidl/hlcpp/request_pipelining/server:echo-server",
+  ]
+}
+
+fuchsia_test_package("echo-service-hlcpp-client-test") {
+  test_components = [ ":fidl_examples_test" ]
+  deps = [
+    "//examples/fidl/echo-realm:echo_realm",
+    "//examples/fidl/hlcpp/services/client:echo-client",
+    "//examples/fidl/hlcpp/services/server:echo-server",
   ]
 }

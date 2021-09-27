@@ -7,47 +7,64 @@ full set of FIDL tutorials, refer to the [overview][overview].
 
 ## Overview
 
-This tutorial implements a client for a FIDL protocol and runs it
-against the server created in the [previous tutorial][server-tut]. The client in this
+This tutorial implements a client for a FIDL protocol and runs it against the
+server created in the [previous tutorial][server-tut]. The client in this
 tutorial is asynchronous. There is an [alternate tutorial][sync-client] for
 synchronous clients.
 
 If you want to write the code yourself, delete the following directories:
 
-```
+```posix-terminal
 rm -r examples/fidl/hlcpp/client/*
 ```
 
-## Create a stub component
+## Create the component
 
-Note: If necessary, refer back to the [previous tutorial][server-tut-component].
+Create a new component project at `examples/fidl/hlcpp/client`:
 
-1. Set up a hello world component in `examples/fidl/hlcpp/client`.
-   You can name the component `echo-client`, and give the package a name of
-   `echo-hlcpp-client`.
+1. Add a `main()` function to `examples/fidl/hlcpp/client/main.cc`:
 
-1. Once you have created your component, ensure that the following works:
-
+   ```cpp
+   int main(int argc, const char** argv) {
+     printf("Hello, world!\n");
+     return 0;
+   }
    ```
-   fx set core.x64 --with //examples/fidl/hlcpp/client
+
+1. Declare a target for the client in `examples/fidl/hlcpp/client/BUILD.gn`:
+
+   ```gn
+   {%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/hlcpp/client/BUILD.gn" region_tag="imports" %}
+
+   # Declare an executable for the client.
+   executable("bin") {
+     output_name = "fidl_echo_hlcpp_client"
+     sources = [ "main.cc" ]
+   }
+
+   {%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/hlcpp/client/BUILD.gn" region_tag="rest" %}
+   ```
+
+1. Add a component manifest in `examples/fidl/hlcpp/client/meta/client.cml`:
+
+   Note: The binary name in the manifest must match the output name of the
+   `executable` defined in the previous step.
+
+   ```json5
+   {%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/hlcpp/client/meta/client.cml" region_tag="example_snippet" %}
+   ```
+
+1. Once you have created your component, ensure that you can add it to the
+   build configuration:
+
+   ```posix-terminal
+   fx set core.qemu-x64 --with //examples/fidl/hlcpp/client:echo-client
    ```
 
 1. Build the Fuchsia image:
 
-   ```
+   ```posix-terminal
    fx build
-   ```
-
-1. In a separate terminal, run:
-
-   ```
-   fx serve
-   ```
-
-1. In a separate terminal, run:
-
-   ```
-   fx shell run fuchsia-pkg://fuchsia.com/echo-hlcpp-client#meta/echo-client.cmx
    ```
 
 ## Edit GN dependencies
@@ -66,15 +83,6 @@ Note: If necessary, refer back to the [previous tutorial][server-tut-component].
 
    The reason for including these dependencies is explained in the
    [server tutorial][server-tut-deps].
-
-## Edit component manifest
-
-1. Include the `Echo` protocol in the client component's sandbox by
-   editing the component manifest in `client.cmx`.
-
-   ```cmx
-   {%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/hlcpp/client/client.cmx" %}
-   ```
 
 ## Connect to the server {#main}
 
@@ -168,40 +176,58 @@ code only if it receives both a response and an event:
 
 ## Run the client
 
-If you run the client directly, the error handler gets called because the
-client does not automatically get the `Echo` protocol provided in its
-sandbox (in `/svc`). To get this to work, a launcher tool is provided
-that launches the server, creates a new [`Environment`][environment] for
-the client that provides the server's protocol, then launches the client in it.
+In order for the client and server to communicate using the `Echo` protocol,
+component framework must route the `fuchsia.examples.Echo` capability from the
+server to the client. For this tutorial, a [realm][glossary.realm] component is
+provided to declare the appropriate capabilities and routes.
 
-1. Configure your GN build as follows:
+Note: You can explore the full source for the realm component at
+[`//examples/fidl/echo-realm`](/examples/fidl/echo-realm)
 
+1. Configure your build to include the provided package that includes the
+   echo realm, server, and client:
+
+    ```posix-terminal
+    fx set core.qemu-x64 --with //examples/fidl/hlcpp:echo-hlcpp-client
     ```
-    fx set core.x64 --with //examples/fidl/hlcpp/server --with //examples/fidl/hlcpp/client --with //examples/fidl/test:echo-launcher
-    ```
 
-2. Build the Fuchsia image:
+1. Build the Fuchsia image:
 
-   ```
+   ```posix-terminal
    fx build
    ```
 
-3. Run the launcher by passing it the client URL, the server URL, and
-   the protocol that the server provides to the client:
+1. Run the `echo_realm` component. This creates the client and server component
+   instances and routes the capabilities:
 
+    ```posix-terminal
+    ffx component run fuchsia-pkg://fuchsia.com/echo-hlcpp-client#meta/echo_realm.cm
     ```
-    fx shell run fuchsia-pkg://fuchsia.com/echo-launcher#meta/launcher.cmx fuchsia-pkg://fuchsia.com/echo-hlcpp-client#meta/echo-client.cmx fuchsia-pkg://fuchsia.com/echo-hlcpp-server#meta/echo-server.cmx fuchsia.examples.Echo
+
+1. Start the `echo_client` instance:
+
+    ```posix-terminal
+    ffx component bind /core/ffx-laboratory:echo_realm/echo_client
     ```
 
-You should see the client print output in the QEMU console (or using `fx log`).
+The server component starts when the client attempts to connect to the `Echo`
+protocol. You should see the following output using `fx log`:
 
+```none {:.devsite-disable-click-to-copy}
+[echo_server] INFO: Running echo server
+[echo_client] INFO: Got event hi
+[echo_client] INFO: Got response hello
 ```
-[117659.968] 754089:754091> Running echo server
-[117659.978] 754194:754196> Got event hi
-[117659.978] 754194:754196> Got response hello
+
+Terminate the realm component to stop execution and clean up the component
+instances:
+
+```posix-terminal
+ffx component stop /core/ffx-laboratory:echo_realm
 ```
 
 <!-- xrefs -->
+[glossary.realm]: /docs/glossary/README.md#realm
 [server-tut]: /docs/development/languages/fidl/tutorials/hlcpp/basics/server.md
 [server-tut-component]: /docs/development/languages/fidl/tutorials/hlcpp/basics/server.md#component
 [server-tut-impl]: /docs/development/languages/fidl/tutorials/hlcpp/basics/server.md#impl

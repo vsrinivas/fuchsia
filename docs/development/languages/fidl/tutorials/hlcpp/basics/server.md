@@ -26,19 +26,17 @@ and run. Then, it gradually adds functionality to get the server up and running.
 
 If you want to write the code yourself, delete the following directories:
 
-```
+```posix-terminal
 rm -r examples/fidl/hlcpp/server/*
 ```
 
-## Create and run a component {#component}
-
-### Create the component
+## Create the component {#component}
 
 To create a component:
 
 1. Add a `main()` function to `examples/fidl/hlcpp/server/main.cc`:
 
-   ```c++
+   ```cpp
    #include <stdio.h>
 
    int main(int argc, const char** argv) {
@@ -50,7 +48,7 @@ To create a component:
 1. Declare a target for the server in `examples/fidl/hlcpp/server/BUILD.gn`:
 
    ```gn
-   import("//build/components.gni")
+   {%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/hlcpp/server/BUILD.gn" region_tag="imports" %}
 
    # Declare an executable for the server. This produces a binary with the
    # specified output name that can run on Fuchsia.
@@ -75,42 +73,27 @@ To create a component:
   For more details on packages, components, and how to build them, refer to
   the [Building components](/docs/development/components/build.md) page.
 
-1. Add a component manifest in `examples/fidl/hlcpp/server/server.cmx`:
+1. Add a component manifest in `examples/fidl/hlcpp/server/meta/server.cml`:
 
    Note: The binary name in the manifest must match the output name of the `executable`
    defined in the previous step.
 
-   ```cmx
-   {%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/hlcpp/server/server.cmx" %}
+   ```json5
+   {%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/hlcpp/server/meta/server.cml" region_tag="example_snippet" %}
    ```
 
-### Run the component
+<!-- TODO(fxbug.dev/58758) <<../../common/server/qemu.md>> -->
 
-Note: The instructions in this section are geared towards running the component
-on QEMU, as this is the simplest way to get started with running Fuchsia, but
-it is also possible to pick a different [product configuration][products] and
-run on actual hardware if you are familiar with running components on
-other product configurations.
+1. Add the server to your build configuration and build:
 
-1. Add the server to your configuration and build:
-
-   ```
-   fx set core.x64 --with //examples/fidl/hlcpp/server && fx build
+   ```posix-terminal
+   fx set core.qemu-x64 --with //examples/fidl/hlcpp/server:echo-hlcpp-server
+   fx build
    ```
 
-1. Ensure `fx serve` is running in a separate tab and connected to an instance of
-   Fuchsia (e.g. running in QEMU using `fx qemu`), then run the server:
-
-   Note: The component should be referenced by its
-   [URL][glossary.component url], which
-   is determined with the `[fuchsia-pkg://][glossary.fuchsia-pkg URL]` scheme. The
-   package name in the URL matches the `package_name` field in the `fuchsia_package`
-   declaration, and the manifest path in `meta/` matches the target name of the
-   `fuchsia_component`.
-
-   ```
-   fx shell run fuchsia-pkg://fuchsia.com/echo-hlcpp-server#meta/echo-server.cmx
-   ```
+   Note: This build configuration assumes your device target is the emulator.
+   To run the example on a physical device, select the appropriate
+   [product configuration][products] for your hardware.
 
 ## Implement the server
 
@@ -121,7 +104,7 @@ other product configurations.
 
 The full `bin` target declaration should now look like this:
 
-```
+```gn
 executable("bin") {
   output_name = "fidl_echo_hlcpp_server"
   sources = [ "main.cc" ]
@@ -145,13 +128,13 @@ The implementation contains the following elements:
   callback on it.
 * The method for `SendString` does not take a callback since this method does
   not have a response. Instead, the implementation sends an `OnString` event
-  using the an `Echo_EventSender`.
+  using an `Echo_EventSender`.
 * The class contains a pointer to an `Echo_EventSender`. This will be set
   later in the `main()` function.
 
 You can verify that the implementation is correct by running:
 
-```
+```posix-terminal
 fx build
 ```
 
@@ -253,7 +236,7 @@ should be registered to. By default, this parameter is the name of the protocol
 being passed in, which is generated because of the presence [`[Discoverable]`
 attribute][discoverable] on the `Echo` protocol. In other words, after executing
 this line you should be able to call `ls` on the component's `/out` directory
-and see an entry called `"fuchsia.examples.Echo`.
+and see an entry called `fuchsia.examples.Echo`.
 
 ### Add new dependencies {#deps}
 
@@ -267,7 +250,7 @@ This new code requires the following additional dependencies:
 
 The full `bin` target declaration should now look like this:
 
-```
+```gn
 {%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/hlcpp/server/BUILD.gn" region_tag="bin" %}
 ```
 
@@ -277,24 +260,48 @@ Import the dependencies by including them at the top of `examples/fidl/hlcpp/ser
 {%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/hlcpp/server/main.cc" region_tag="includes" %}
 ```
 
-## Run the server
+## Test the server
 
-Run the server:
+Rebuild:
 
+```posix-terminal
+fx build
 ```
-fx shell run fuchsia-pkg://fuchsia.com/echo-hlcpp-server#meta/echo-server.cmx
+
+Then run the server component:
+
+```posix-terminal
+ffx component run fuchsia-pkg://fuchsia.com/echo-hlcpp-server#meta/echo_server.cm
 ```
 
-You should see the `printf` output from the `main()` function followed by the
-server hanging. This is expected. Instead of exiting right away, the server
-keeps waiting for incoming requests. The next step will be to write a client for
-the server.
+Note: Components are resolved using their [component URL][glossary.component-url],
+which is determined with the [`fuchsia-pkg://`][glossary.fuchsia-pkg-url] scheme.
+
+You should see the following output coming from `fx log`:
+
+```none {:.devsite-disable-click-to-copy}
+[ffx-laboratory:echo_server] INFO: Running echo server
+```
+
+The server is now running and waiting for incoming requests.
+The next step will be to write a client that sends `Echo` protocol requests.
+For now, you can simply terminate the server component:
+
+```posix-terminal
+ffx component stop /core/ffx-laboratory:echo_server
+```
+
+Note: Component instances are referenced by their
+[component moniker][glossary.moniker], which is determined by their location in
+the [component instance tree][glossary.component-instance-tree]
 
 <!-- xrefs -->
-[glossary.component URL]: /docs/glossary/README.md#component-url
-[glossary.fuchsia-pkg URL]: /docs/glossary/README.md#fuchsia-pkg-url
+[glossary.component-instance-tree]: /docs/glossary/README.md#component-instance-tree
+[glossary.component-url]: /docs/glossary/README.md#component-url
+[glossary.fuchsia-pkg-url]: /docs/glossary/README.md#fuchsia-pkg-url
+[glossary.moniker]: /docs/glossary/README.md#moniker
 [fidl-intro]: /docs/development/languages/fidl/tutorials/hlcpp/basics/using-fidl.md
-[products]: /docs/concepts/build_system/boards_and_products.md
+[run-examples]: /docs/development/run/run-examples.md
 [getting-started]: /docs/get-started/index.md
 [declaring-fidl]: /docs/development/languages/fidl/tutorials/fidl.md
 [depending-fidl]: /docs/development/languages/fidl/tutorials/hlcpp/basics/using-fidl.md

@@ -52,10 +52,15 @@ rm -r examples/fidl/hlcpp/unittests/*
    }
    ```
 
+1. Add the test suite to your configuration:
+
+<pre class="prettyprint">
+<code class="devsite-terminal">fx set <var>product</var>.<var>board</var> --with //examples/fidl/hlcpp/unittests</code>
+</pre>
+
 1. Run the empty test suite:
 
-   ```
-   fx set core.x64 --with //examples/fidl/hlcpp/unittests
+   ```posix-terminal
    fx test -vo example-cpp-host-test
    ```
 
@@ -78,7 +83,7 @@ directly. The new `test` target should look like:
    `out/default/fidling/gen/examples/fidl/fuchsia.examples/fuchsia/examples`, where
    the generated files are located.
    You may need to change `out/default` if you have set a different build output
-   directory. You can check your build output directory with `cat .fx-build-dir`.
+   directory. You can check your build output directory with `fx get-build-dir`.
 
 For more information on how to find generated bindings code, see
 [Viewing generated bindings code][generated-code].
@@ -114,7 +119,7 @@ anonymous namespace in `main.cc`:
 
 To rebuild and rerun the tests, run:
 
-```
+```posix-terminal
 fx test -vo example-cpp-host-test
 ```
 

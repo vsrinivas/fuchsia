@@ -43,7 +43,7 @@ int main(int argc, const char** argv) {
   // Example of serving an instance of "EchoService".
   context->outgoing()->AddService<fuchsia::examples::EchoService>(std::move(handler));
 
-  std::cout << "Running server" << std::endl;
+  std::cout << "Running echo server" << std::endl;
   loop.Run();
   return 0;
 }

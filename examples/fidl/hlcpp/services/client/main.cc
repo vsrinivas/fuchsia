@@ -13,30 +13,12 @@
 
 #include <iostream>
 
-fidl::InterfaceHandle<fuchsia::io::Directory> StartEchoServer(
-    sys::ComponentContext* context,
-    fidl::InterfaceRequest<fuchsia::sys::ComponentController> controller) {
-  fidl::InterfaceHandle<fuchsia::io::Directory> svc;
-  fuchsia::sys::LaunchInfo info{
-      .url = "fuchsia-pkg://fuchsia.com/echo-hlcpp-service-server#meta/echo-server.cmx",
-      .directory_request = svc.NewRequest().TakeChannel(),
-  };
-
-  auto launcher = context->svc()->Connect<fuchsia::sys::Launcher>();
-  launcher->CreateComponent(std::move(info), std::move(controller));
-  return svc;
-}
-
 int main(int argc, const char** argv) {
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
   auto context = sys::ComponentContext::CreateAndServeOutgoingDirectory();
 
-  // Start the echo service.
-  //
-  // In a real system, the service would be offered to the client instead of
-  // being started by the client.
-  fuchsia::sys::ComponentControllerPtr controller;
-  auto svc = StartEchoServer(context.get(), controller.NewRequest());
+  // Return a channel connected to the /svc directory.
+  auto svc = context->svc()->CloneChannel();
 
   // Example of connecting to a member of a service instance.
   auto default_service = sys::OpenServiceAt<fuchsia::examples::EchoService>(svc);
@@ -49,9 +31,11 @@ int main(int argc, const char** argv) {
   auto service = sys::OpenServiceAt<fuchsia::examples::EchoService>(svc, instance_names[0]);
   auto reversed = service.reversed_echo().Connect().Bind();
 
-  regular->EchoString("ping", [](fidl::StringPtr value) { std::cout << value << std::endl; });
+  regular->EchoString("ping", [](fidl::StringPtr value) {
+    std::cout << "Regular response: " << value << std::endl;
+  });
   reversed->EchoString("pong", [&loop](fidl::StringPtr value) {
-    std::cout << value << std::endl;
+    std::cout << "Reversed response: " << value << std::endl;
     loop.Quit();
   });
 
