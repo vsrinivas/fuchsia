@@ -12,6 +12,12 @@ type RealmArgs = resource table {
     /// This is what DriverManager will see as its boot directory.
     /// Default: DriverTestRealm's package directory
     1: boot client_end:fuchsia.io.Directory;
+
+    /// The URL for the driver that will be bound to root.
+    /// Default: fuchsia-boot:///#driver/test-parent-sys.so
+    /// NOTE: The test parent driver is not included by default. This must
+    ///  be included in your package to work correctly.
+    2: root_driver string:MAX;
 };
 
 /// This protocol is for the DriverTestRealm. It is an integration test

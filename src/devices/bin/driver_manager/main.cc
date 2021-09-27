@@ -63,6 +63,7 @@ struct DriverManagerParams {
   bool suspend_timeout_fallback;
   bool verbose;
   DriverHostCrashPolicy crash_policy;
+  std::string root_driver;
 };
 
 DriverManagerParams GetDriverManagerParams(fidl::WireSyncClient<fuchsia_boot::Arguments>& client) {
@@ -96,6 +97,14 @@ DriverManagerParams GetDriverManagerParams(fidl::WireSyncClient<fuchsia_boot::Ar
     }
   }
 
+  std::string root_driver = "";
+  {
+    auto response = client.GetString("driver_manager.root-driver");
+    if (response.ok() && !response->value.is_null() && !response->value.empty()) {
+      root_driver = std::string(response->value.data(), response->value.size());
+    }
+  }
+
   return {
       .enable_ephemeral = bool_resp->values[0],
       .log_to_debuglog = bool_resp->values[1],
@@ -103,6 +112,7 @@ DriverManagerParams GetDriverManagerParams(fidl::WireSyncClient<fuchsia_boot::Ar
       .suspend_timeout_fallback = bool_resp->values[3],
       .verbose = bool_resp->values[4],
       .crash_policy = crash_policy,
+      .root_driver = std::move(root_driver),
   };
 }
 
@@ -252,6 +262,9 @@ int main(int argc, char** argv) {
       LOGF(ERROR, "Failed to reconfigure logger to use debuglog: %s", zx_status_get_string(status));
       return status;
     }
+  }
+  if (!driver_manager_params.root_driver.empty()) {
+    driver_manager_args.sys_device_driver = driver_manager_params.root_driver;
   }
   // Set up the default values for our arguments if they weren't given.
   if (driver_manager_args.driver_search_paths.size() == 0 &&

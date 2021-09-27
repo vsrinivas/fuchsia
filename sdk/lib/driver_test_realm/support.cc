@@ -222,6 +222,12 @@ class DriverTestRealm final : public fidl::WireServer<fuchsia_driver_test::Realm
 
     std::map<std::string, std::string> boot_args;
     boot_args["devmgr.require-system"] = "true";
+    if (request->args.has_root_driver()) {
+      boot_args["driver_manager.root-driver"] =
+          std::string(request->args.root_driver().data(), request->args.root_driver().size());
+    } else {
+      boot_args["driver_manager.root-driver"] = "fuchsia-boot:///#driver/test-parent-sys.so";
+    }
     boot_arguments_ = mock_boot_arguments::Server(std::move(boot_args));
 
     fidl::ClientEnd<fuchsia_io::Directory> boot_dir;

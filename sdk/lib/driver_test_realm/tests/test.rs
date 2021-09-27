@@ -48,7 +48,6 @@ async fn test_empty_args() -> Result<()> {
         instance.root.connect_to_protocol_at_exposed_dir::<fdd::DriverDevelopmentMarker>()?;
 
     let info = get_driver_info(&driver_dev, &mut std::iter::empty()).await?;
-    assert!(info.len() == 2);
     assert!(info
         .iter()
         .any(|d| d.url == Some("fuchsia-boot:///#driver/test-parent-sys.so".to_string())));
@@ -84,7 +83,6 @@ async fn test_pkg_dir() -> Result<()> {
         instance.root.connect_to_protocol_at_exposed_dir::<fdd::DriverDevelopmentMarker>()?;
 
     let info = get_driver_info(&driver_dev, &mut std::iter::empty()).await?;
-    assert!(info.len() == 2);
     assert!(info
         .iter()
         .any(|d| d.url == Some("fuchsia-boot:///#driver/test-parent-sys.so".to_string())));
@@ -92,6 +90,25 @@ async fn test_pkg_dir() -> Result<()> {
 
     let dev = instance.driver_test_realm_connect_to_dev()?;
     device_watcher::recursive_wait_and_open_node(&dev, "sys/test/test").await?;
+
+    Ok(())
+}
+
+#[fasync::run_singlethreaded(test)]
+async fn test_root_driver() -> Result<()> {
+    let mut realm = RealmBuilder::new().await?;
+    realm.driver_test_realm_setup().await?;
+
+    let instance = realm.build().create().await?;
+    let args = fdt::RealmArgs {
+        root_driver: Some("fuchsia-boot:///#driver/platform-bus.so".to_string()),
+        ..fdt::RealmArgs::EMPTY
+    };
+
+    instance.driver_test_realm_start(args).await?;
+
+    let dev = instance.driver_test_realm_connect_to_dev()?;
+    device_watcher::recursive_wait_and_open_node(&dev, "sys/platform").await?;
 
     Ok(())
 }

@@ -9,11 +9,7 @@
     program: {
         runner: "elf",
         binary: "bin/driver_manager",
-        args: [
-            "--use-driver-index",
-            "--sys-device-driver",
-            "fuchsia-boot:///#driver/test-parent-sys.so",
-        ],
+        args: [ "--use-driver-index" ],
     },
     capabilities: [
         {
