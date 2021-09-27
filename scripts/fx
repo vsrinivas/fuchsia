@@ -173,6 +173,20 @@ function fullhelp {
   help_list_commands "$@"
 }
 
+function find_tree_root {
+  local parent="$1"
+  if [[ ! -d "$parent" ]]; then
+    return 1
+  fi
+  while [[ ! -d "${parent}/.jiri_root" ]]; do
+    parent="$(dirname "${parent}")"
+    if [[ "$parent" == "/" ]]; then
+      return 1
+    fi
+  done
+  echo "$parent"
+}
+
 # We walk the parent directories looking for .jiri_root rather than using
 # BASH_SOURCE so that we find the fuchsia_dir enclosing the current working
 # directory instead of the one containing this file in case the user has
@@ -184,14 +198,25 @@ function fullhelp {
 # This logic is replicated in //scripts/fx, //scripts/hermetic_env,
 # //scripts/zsh_completion/_fx, and //src/developer/ffx/scripts. For
 # consistency, copy any changes here to those files as well.
-fuchsia_dir="$(pwd)"
-while [[ ! -d "${fuchsia_dir}/.jiri_root" ]]; do
-  fuchsia_dir="$(dirname "${fuchsia_dir}")"
-  if [[ "${fuchsia_dir}" == "/" ]]; then
-    echo "Cannot find the Platform Source Tree in a parent of directory: $(pwd)"
-    exit 1
-  fi
-done
+if ! fuchsia_dir="$(find_tree_root "$(pwd)")"; then
+  echo >&2 "ERROR: Cannot find the Platform Source Tree in a parent of the current directory: $(pwd)"
+  exit 1
+fi
+
+_this_script="$0"
+if [[ "$_this_script" != "${fuchsia_dir}/.jiri_root/bin/fx" &&
+    "$_this_script" != "${fuchsia_dir}/scripts/fx" ]]; then
+   _this_fuchsia_dir="$(find_tree_root "$(dirname "$_this_script")")"
+   if [[ $? -ne 0 || "$_this_fuchsia_dir" != "$fuchsia_dir" ]]; then
+     if ! cmp -s "$_this_script" "${fuchsia_dir}/.jiri_root/bin/fx"; then
+       echo >&2 "WARNING: You are executing fx from outside of the current"
+       echo >&2 "source tree, and it is a different version."
+       echo >&2 "This can cause inconsistencies. Please update your PATH."
+       echo >&2 "    'fx' was executed from: ${_this_script}"
+       exit 1
+     fi
+   fi
+fi
 
 declare -r vars_sh="${fuchsia_dir}/tools/devshell/lib/vars.sh"
 source "${vars_sh}" || exit $?
