@@ -29,7 +29,7 @@
 static paddr_t bootstrap_phys_addr = UINT64_MAX;
 static Mutex bootstrap_lock;
 // The bootstrap address space is kept as a global variable in order to maintain ownership of low
-// mem PLM4. If this aspace were released then the physical pages it holds would be returned to the
+// mem PML4. If this aspace were released then the physical pages it holds would be returned to the
 // PMM and may be reallocated for other uses. Normally that's fine because we could always ask for
 // more pages from the PMM when we need them, but these pages are special in that are "low mem"
 // pages that exist in the first 4GB of the physical address space. If we were to release them they
