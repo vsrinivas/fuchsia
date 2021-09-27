@@ -6,19 +6,21 @@ library fuchsia.hardware.network.mac;
 /// The length of an IEEE 802 MAC Address, in bytes.
 const MAC_SIZE uint64 = 6;
 /// The maximum number of multicast MAC addresses set to filter.
-// NOTE(brunodalbo) this number derived from common defaults for maximum multicast membership
-// allowances in established OSes (20-40) rounded up for some leeway. It should be noted that
-// typical hardware implementations don't keep perfect filtering lists, but rather use a special
-// hash function to perform the filtering, where collisions are tolerated since the filtering is
+// NOTE(brunodalbo) this number derived from common defaults for maximum
+// multicast membership allowances in established OSes (20-40) rounded up for
+// some leeway. It should be noted that typical hardware implementations don't
+// keep perfect filtering lists, but rather use a special hash function to
+// perform the filtering, where collisions are tolerated since the filtering is
 // just a performance feature.
 const MAX_MAC_FILTER uint64 = 64;
 
 /// Device MAC filtering modes supported.
 type Mode = strict enum : uint32 {
-    /// Device accepts only unicast frames addressed to its own unicast address, or multicast frames
-    /// that are part of the multicast address filter list.
+    /// Device accepts only unicast frames addressed to its own unicast address,
+    /// or multicast frames that are part of the multicast address filter list.
     MULTICAST_FILTER = 1;
-    /// Device accepts unicast frames addressed to its own unicast address, or any multicast frames.
+    /// Device accepts unicast frames addressed to its own unicast address, or
+    /// any multicast frames.
     MULTICAST_PROMISCUOUS = 2;
     /// Device accepts all frames.
     PROMISCUOUS = 4;
@@ -26,14 +28,16 @@ type Mode = strict enum : uint32 {
 
 /// Device features reported by [`MacAddr.GetFeatures`].
 type Features = struct {
-    /// The maximum number of multicast filtering entries available on this device.
+    /// The maximum number of multicast filtering entries available on this
+    /// device.
     ///
-    /// Implementations must set 0 if multicast filtering is not supported. Values will always be
-    /// saturated to [`MAX_MAC_FILTER`].
+    /// Implementations must set 0 if multicast filtering is not supported.
+    /// Values will always be saturated to [`MAX_MAC_FILTER`].
     multicast_filter_count uint32;
     /// The filtering operating modes supported by this device.
     ///
-    /// Bitfield of possible [`Mode`] values that can be passed to [`MacAddr.SetMode`].
+    /// Bitfield of possible [`Mode`] values that can be passed to
+    /// [`MacAddr.SetMode`].
     supported_modes uint32;
 };
 
@@ -41,9 +45,10 @@ type Features = struct {
 @banjo_layout("ddk-interface")
 protocol MacAddr {
     /// Gets this device's MAC address.
-    // TODO(fxbug.dev/44065) we need an address changed event (in lockstep with FIDL definition).
-    // TODO(brunodalbo) use fuchsia.net.MacAddress here and in SetMode when we can use FIDL types in
-    // Banjo.
+    // TODO(https://fxbug.dev/44065) we need an address changed event (in
+    // lockstep with FIDL definition).
+    // TODO(brunodalbo) use fuchsia.net.MacAddress here and in SetMode when we
+    // can use FIDL types in Banjo.
     GetAddress() -> (struct {
         mac array<uint8, MAC_SIZE>;
     });
@@ -53,10 +58,11 @@ protocol MacAddr {
     });
     /// Sets this device's operating mode.
     ///
-    /// `mode` is one of the variants in [`Mode`], it's guaranteed to be one of the reported modes
-    /// in this device's reported features. `multicast_macs` is only provided (though it can still
-    /// be empty) when `mode` is `MULTICAST_FILTER`. `multicast_macs` is always guaranteed to be at
-    /// most `multicast_filter_count` entries.
+    /// `mode` is one of the variants in [`Mode`], it's guaranteed to be one of
+    /// the reported modes in this device's reported features. `multicast_macs`
+    /// is only provided (though it can still be empty) when `mode` is
+    /// `MULTICAST_FILTER`. `multicast_macs` is always guaranteed to be at most
+    /// `multicast_filter_count` entries.
     SetMode(struct {
         mode Mode;
         multicast_macs vector<array<uint8, MAC_SIZE>>:MAX_MAC_FILTER;

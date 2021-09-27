@@ -8,10 +8,11 @@ using fuchsia.net;
 
 /// The address filtering mode supported by MAC devices.
 type MacFilterMode = strict enum {
-    /// Device accepts only unicast frames addressed to its own unicast address, or multicast frames
-    /// that are part of the multicast address filter list.
+    /// Device accepts only unicast frames addressed to its own unicast address,
+    /// or multicast frames that are part of the multicast address filter list.
     MULTICAST_FILTER = 0;
-    /// Device accepts unicast frames addressed to its own unicast address, or any multicast frames.
+    /// Device accepts unicast frames addressed to its own unicast address, or
+    /// any multicast frames.
     MULTICAST_PROMISCUOUS = 1;
     /// Device accepts all frames.
     PROMISCUOUS = 2;
@@ -20,38 +21,41 @@ type MacFilterMode = strict enum {
 protocol MacAddressing {
     /// Gets the Device's current unicast MAC address.
     ///
-    /// Implementers of this API do not need to return a uniquely identifiable MAC; the unicast
-    /// address returned is the one that is *currently* in use to filter unicast frames, or that
-    /// identifies the device on a link it's *currently* on. Users of this API must not rely on the
-    /// stability or uniqueness of the returned value to identify or disambiguate device instances.
+    /// Implementers of this API do not need to return a uniquely identifiable
+    /// MAC; the unicast address returned is the one that is *currently* in use
+    /// to filter unicast frames, or that identifies the device on a link it's
+    /// *currently* on. Users of this API must not rely on the stability or
+    /// uniqueness of the returned value to identify or disambiguate device
+    /// instances.
     ///
     /// - response `address` device's unicast MAC address.
     GetUnicastAddress() -> (struct {
         address fuchsia.net.MacAddress;
     });
 
-    // TODO(https://fxbug.dev/44065) enable an API like the one below to be notified of changes to
-    // the Unicast MAC once plumbed through the banjo protocol as well.
-    // WatchUnicastAddress() -> (Mac address);
+    // TODO(https://fxbug.dev/44065) enable an API like the one below to be
+    // notified of changes to the Unicast MAC once plumbed through the banjo
+    // protocol as well. WatchUnicastAddress() -> (Mac address);
 
     /// Sets requested operating mode of this device to `mode`.
     ///
-    /// The requested mode is attached to the current client connection to the device. Because
-    /// multiple clients can be attached to the same device at once, the mode with the least
-    /// restrictions is the one actively put into effect into the underlying device implementation.
+    /// The requested mode is attached to the current client connection to the
+    /// device. Because multiple clients can be attached to the same device at
+    /// once, the mode with the least restrictions is the one actively put into
+    /// effect into the underlying device implementation.
     ///
-    /// If the device does not support the requested mode, but supports a mode that is more open
-    /// than the requested one, `SetMode` succeeds regardless. Otherwise, if the device only
-    /// supports *more restrictive* modes than the one requested, `SetMode` returns
-    /// `ZX_ERR_NOT_SUPPORTED`.
+    /// If the device does not support the requested mode, but supports a mode
+    /// that is more open than the requested one, `SetMode` succeeds regardless.
+    /// Otherwise, if the device only supports *more restrictive* modes than the
+    /// one requested, `SetMode` returns `ZX_ERR_NOT_SUPPORTED`.
     ///
-    /// Clients must be aware that the resource being accessed is shared, and that the device may be
-    /// effectively operating at a more open level than the one that was requested (although never
-    /// at one more restrictive).
+    /// Clients must be aware that the resource being accessed is shared, and
+    /// that the device may be effectively operating at a more open level than
+    /// the one that was requested (although never at one more restrictive).
     ///
     /// + request `mode` request mode to attach to.
-    /// - response `status` `ZX_ERR_NOT_SUPPORTED` it the device only supports mode more restrictive
-    /// than the one requested.
+    /// - response `status` `ZX_ERR_NOT_SUPPORTED` it the device only supports
+    /// mode more restrictive than the one requested.
     SetMode(struct {
         mode MacFilterMode;
     }) -> (struct {
@@ -60,11 +64,13 @@ protocol MacAddressing {
 
     /// Adds multicast address to the list of multicast groups.
     ///
-    /// The list of multicast addresses kept is untouched by calls to `SetMode`. If the device's
-    /// mode is not `MULTICAST_FILTER`, the list of multicast addresses is ignored.
+    /// The list of multicast addresses kept is untouched by calls to `SetMode`.
+    /// If the device's mode is not `MULTICAST_FILTER`, the list of multicast
+    /// addresses is ignored.
     ///
     /// + request `address` multicast address to add to the list.
-    /// - response `status` `ZX_ERR_INVALID_ARGS` if `address` is not a multicast address.
+    /// - response `status` `ZX_ERR_INVALID_ARGS` if `address` is not a
+    /// multicast address.
     AddMulticastAddress(struct {
         address fuchsia.net.MacAddress;
     }) -> (struct {
@@ -73,7 +79,8 @@ protocol MacAddressing {
     /// Removes multicast address from the list of multicast groups.
     ///
     /// + request `address` multicast address to remove from the list.
-    /// - response `status` `ZX_ERR_INVALID_ARGS` if `address` is not a multicast address.
+    /// - response `status` `ZX_ERR_INVALID_ARGS` if `address` is not a
+    /// multicast address.
     RemoveMulticastAddress(struct {
         address fuchsia.net.MacAddress;
     }) -> (struct {

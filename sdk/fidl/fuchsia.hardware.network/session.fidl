@@ -7,33 +7,36 @@ using zx;
 
 /// Represents a session with a Network device.
 ///
-/// A session has a data plane and a control plane. The `Session` protocol represents the control
-/// plane of the session and the FIFOs and VMOs exchanged during the [`Device.OpenSession`] call are
-/// the data plane. Lifetime of the session is controlled by a `Session` protocol handle.
+/// A session has a data plane and a control plane. The `Session` protocol
+/// represents the control plane of the session and the FIFOs and VMOs exchanged
+/// during the [`Device.OpenSession`] call are the data plane. Lifetime of the
+/// session is controlled by a `Session` protocol handle.
 ///
-/// Sessions must attach to ports of interest to start receiving and sending data. Sessions are
-/// always created with no ports attached.
+/// Sessions must attach to ports of interest to start receiving and sending
+/// data. Sessions are always created with no ports attached.
 ///
-/// If a port is destroyed from the underlying device, it is automatically detached from the
-/// session.
+/// If a port is destroyed from the underlying device, it is automatically
+/// detached from the session.
 ///
-/// The session is closed with an error epitaph if an invalid buffer descriptor is sent over either
-/// the tx or rx FIFOs. Invalid descriptors include:
+/// The session is closed with an error epitaph if an invalid buffer descriptor
+/// is sent over either the tx or rx FIFOs. Invalid descriptors include:
 ///    - Descriptor index larger than [`SessionInfo.descriptor_count`].
 ///    - Descriptor chains larger than [`MAX_DESCRIPTOR_CHAIN`].
 ///    - rx buffers smaller than [`Info.min_rx_buffer_length`].
 ///    - tx buffers smaller than [`Info.min_tx_buffer_length`].
-///    - tx buffers not respecting [`Info.min_tx_buffer_head`] or [`Info.min_tx_buffer_tail`].
+///    - tx buffers not respecting [`Info.min_tx_buffer_head`] or
+///      [`Info.min_tx_buffer_tail`].
 protocol Session {
     /// Attaches the session to `port`.
     ///
-    /// Once attached, the session starts to receive the subscribed frames over the data FIFOs and
-    /// it may send frames destined to the specified `port`.
+    /// Once attached, the session starts to receive the subscribed frames over
+    /// the data FIFOs and it may send frames destined to the specified `port`.
     ///
     /// + request `port` port to subscribe to.
     /// + request `fx_frames` Frame types of interest on the port.
     /// * error `ZX_ERR_NOT_FOUND` if `port` is not valid.
-    /// * error `ZX_ERR_INVALID_ARGS` if `rx_frames` is not a subset of the port's supported frames.
+    /// * error `ZX_ERR_INVALID_ARGS` if `rx_frames` is not a subset of the
+    /// port's supported frames.
     /// * error `ZX_ERR_ALREADY_BOUND` if `port` is already attached.
     Attach(struct {
         port port_id;
@@ -41,21 +44,24 @@ protocol Session {
     }) -> (struct {}) error zx.status;
     /// Detaches the session from `port`.
     ///
-    /// Once detached, the session stops receiving frames from `port`. Frames sent to a detached
-    /// port may be returned with an error. It is not necessary to call `Detach` on ports that are
-    /// removed from the device, doing so causes `ZX_ERR_NOT_FOUND` to be returned.
+    /// Once detached, the session stops receiving frames from `port`. Frames
+    /// sent to a detached port may be returned with an error. It is not
+    /// necessary to call `Detach` on ports that are removed from the device,
+    /// doing so causes `ZX_ERR_NOT_FOUND` to be returned.
     ///
     /// + request `port` port to subscribe to.
-    /// * error `ZX_ERR_NOT_FOUND` if the session is not currently attached to the port.
+    /// * error `ZX_ERR_NOT_FOUND` if the session is not currently attached to
+    /// the port.
     Detach(struct {
         port port_id;
     }) -> (struct {}) error zx.status;
     /// Cleanly closes a session.
     ///
-    /// This will cause the session to send a `ZX_ERR_CANCELLED` epitaph and proceed to close the
-    /// Session channel. Clients may only assume that they own all the buffers that are currently
-    /// owned by the session (sent over either the rx or tx FIFOs) once the epitaph is received.
-    /// Closing the rx or tx FIFO is equivalent to calling `Close`.
+    /// This will cause the session to send a `ZX_ERR_CANCELLED` epitaph and
+    /// proceed to close the Session channel. Clients may only assume that they
+    /// own all the buffers that are currently owned by the session (sent over
+    /// either the rx or tx FIFOs) once the epitaph is received. Closing the rx
+    /// or tx FIFO is equivalent to calling `Close`.
     Close();
 };
 
@@ -63,27 +69,32 @@ protocol Session {
 type SessionFlags = strict bits : uint16 {
     /// Attach as primary session.
     ///
-    /// Sessions marked with the `PRIMARY` bit get the following different treatment:
-    /// - If no PRIMARY sessions are attached, the device will *not* serve rx frames to non-PRIMARY
-    ///   sessions.
-    /// - If there's only one PRIMARY session active, it may get a zero-copy data path from the
-    ///   the backing hardware, if the underlying implementation supports it.
+    /// Sessions marked with the `PRIMARY` bit get the following different
+    /// treatment:
+    /// - If no PRIMARY sessions are attached, the device will *not* serve rx
+    ///   frames to non-PRIMARY sessions.
+    /// - If there's only one PRIMARY session active, it may get a zero-copy
+    ///   data path from the the backing hardware, if the underlying
+    ///   implementation supports it.
     PRIMARY = 0x0001;
     /// Listen for outgoing frames.
     ///
-    /// `LISTEN_TX` sessions receive any outgoing frames (from all sessions) on its rx path. Can be
-    /// used for snooping traffic. Sessions marked with `LISTEN_TX` may also send frames, but they
-    /// should keep in mind that they'll ALWAYS receive those frames back on their rx path (no
-    /// origin session filtering is performed).
+    /// `LISTEN_TX` sessions receive any outgoing frames (from all sessions) on
+    /// its rx path. Can be used for snooping traffic. Sessions marked with
+    /// `LISTEN_TX` may also send frames, but they should keep in mind that
+    /// they'll ALWAYS receive those frames back on their rx path (no origin
+    /// session filtering is performed).
     LISTEN_TX = 0x0002;
     /// Receive invalid rx frames.
     ///
-    /// Sessions marked with `REPORT_INVALID_RX` are interested in receiving frames that were
-    /// rejected by internal device checks or payload validation performed by hardware. Due to the
-    /// nature of some hardware platforms, sessions marked with `REPORT_INVALID_RX` may still not
-    /// receive frames that fail validation if the hardware implementation simply drops the frame
-    /// and doesn't expose it to the software stack. Sessions NOT marked with `REPORT_INVALID_RX`,
-    /// in contrast, will NEVER receive an rx frame with the `RX_VALIDATION_ERROR` flag set.
+    /// Sessions marked with `REPORT_INVALID_RX` are interested in receiving
+    /// frames that were rejected by internal device checks or payload
+    /// validation performed by hardware. Due to the nature of some hardware
+    /// platforms, sessions marked with `REPORT_INVALID_RX` may still not
+    /// receive frames that fail validation if the hardware implementation
+    /// simply drops the frame and doesn't expose it to the software stack.
+    /// Sessions NOT marked with `REPORT_INVALID_RX`, in contrast, will NEVER
+    /// receive an rx frame with the `RX_VALIDATION_ERROR` flag set.
     REPORT_INVALID_RX = 0x0004;
 };
 
@@ -91,12 +102,13 @@ type SessionFlags = strict bits : uint16 {
 type Fifos = resource struct {
     /// Handle for the rx FIFO.
     ///
-    /// Clients must write 16-bit descriptor indexes to this FIFO to be able to receive
-    /// frames.
+    /// Clients must write 16-bit descriptor indexes to this FIFO to be able to
+    /// receive frames.
     rx zx.handle:FIFO;
     /// Handle for the tx FIFO.
     ///
-    /// Clients write 16-bit descriptor indexes to this FIFO to enqueue outgoing frames.
+    /// Clients write 16-bit descriptor indexes to this FIFO to enqueue outgoing
+    /// frames.
     tx zx.handle:FIFO;
 };
 
@@ -104,12 +116,13 @@ type Fifos = resource struct {
 type SessionInfo = resource table {
     /// VMO containing the descriptors. Required.
     ///
-    /// 16-bit indices transmitted over the FIFOs index a descriptor in this VMO (byte offset =
-    /// descriptor_length * 8 * index).
+    /// 16-bit indices transmitted over the FIFOs index a descriptor in this VMO
+    /// (byte offset = descriptor_length * 8 * index).
     1: descriptors zx.handle:VMO;
     /// VMO containing frame data. Required.
     ///
-    /// Descriptors contain byte-offsets that are used to index arbitrary regions in `data`.
+    /// Descriptors contain byte-offsets that are used to index arbitrary
+    /// regions in `data`.
     2: data zx.handle:VMO;
     /// Requested descriptor version. Required.
     ///
@@ -118,13 +131,14 @@ type SessionInfo = resource table {
     3: descriptor_version uint8;
     /// Descriptor length, in 64-bit words. Required.
     ///
-    /// The length of each descriptor in the `descriptors` VMO. This is used as a multiplier to find
-    /// byte offsets in `descriptors` given a descriptor index passed through the rx or tx FIFOs.
+    /// The length of each descriptor in the `descriptors` VMO. This is used as
+    /// a multiplier to find byte offsets in `descriptors` given a descriptor
+    /// index passed through the rx or tx FIFOs.
     4: descriptor_length uint8;
     /// Total number of descriptors that can be used by this session. Required.
     ///
-    /// Descriptor indices transferred through either the rx or tx FIFO must be in the range [0,
-    /// `descriptor_count`).
+    /// Descriptor indices transferred through either the rx or tx FIFO must be
+    /// in the range [0, `descriptor_count`).
     5: descriptor_count uint16;
     /// Extra options. Interpreted as empty bitmask if absent.
     6: options SessionFlags;

@@ -3,67 +3,77 @@
 // found in the LICENSE file.
 /// Generic Network Device interface.
 ///
-/// The definitions herein provide the API surface to expose a hardware device as a network device
-/// interface to the system through the FIDL protocol [`fuchsia.hardware.network/Device`]. A network
-/// device interface is the data-plane contract that allows the networking stack to send and receive
-/// frames on a physical or virtual network. A device exposes this capability by implementing the
-/// `NetworkDeviceImpl` protocol, which allows a middleware implementation to bind to it and offer
-/// the FIDL protocol to applications.
+/// The definitions herein provide the API surface to expose a hardware device
+/// as a network device interface to the system through the FIDL protocol
+/// [`fuchsia.hardware.network/Device`]. A network device interface is the
+/// data-plane contract that allows the networking stack to send and receive
+/// frames on a physical or virtual network. A device exposes this capability by
+/// implementing the `NetworkDeviceImpl` protocol, which allows a middleware
+/// implementation to bind to it and offer the FIDL protocol to applications.
 ///
 /// The API contract is based on three key concepts:
 /// - Frame Types
 /// - Receive and Transmit buffers
 /// - Memory layout
 ///
-/// Frame Types are the defined contract that is exposed to applications, which convey the data type
-/// contained in a tx or rx buffer. The supported frame types are defined in
-/// [`fuchsia.hardware.network/FrameType`]. Upon initialization, the middleware implementation will
-/// fetch the supported frame types from the device through the `GetInfo` call.
+/// Frame Types are the defined contract that is exposed to applications, which
+/// convey the data type contained in a tx or rx buffer. The supported frame
+/// types are defined in [`fuchsia.hardware.network/FrameType`]. Upon
+/// initialization, the middleware implementation will fetch the supported frame
+/// types from the device through the `GetInfo` call.
 ///
-/// Receive and Transmit buffers are buffers that are headed to different directions: a receive
-/// buffer is a piece of data that is received from the network, and makes its way to the
-/// application layer. A transmit buffer travels in the opposite direction: it originates in the
-/// application layer and makes its way out into the network. The device implementation receives
-/// buffers from the [`NetworkDeviceIfc`], which is offered by the middleware implementation.
+/// Receive and Transmit buffers are buffers that are headed to different
+/// directions: a receive buffer is a piece of data that is received from the
+/// network, and makes its way to the application layer. A transmit buffer
+/// travels in the opposite direction: it originates in the application layer
+/// and makes its way out into the network. The device implementation receives
+/// buffers from the [`NetworkDeviceIfc`], which is offered by the middleware
+/// implementation.
 ///
-/// A receive buffer flows from [`NetworkDeviceIfc`] into [`NetworkDeviceImpl`] through the
-/// [`NetworkDeviceImpl.QueueRxSpace`] method, which gives access to receive buffers. The diagram
-/// below illustrates the mechanism:
+/// A receive buffer flows from [`NetworkDeviceIfc`] into [`NetworkDeviceImpl`]
+/// through the [`NetworkDeviceImpl.QueueRxSpace`] method, which gives access to
+/// receive buffers. The diagram below illustrates the mechanism:
 /// ```text
-///  ++++++++++++++++++++++++++++                      +++++++++++++++++++++++
-///  |                     (1)  |  => RxSpaceBuffer => |        (2)          |
-///  | NetworkDeviceIfc         |                      |  NetworkDeviceImpl  |
-///  |                     (4)  |  <=    RxBuffer   <= |        (3)          |  <= Network data
-///  ++++++++++++++++++++++++++++                      +++++++++++++++++++++++
+///  ++++++++++++++++++++                      +++++++++++++++++++++
+///  |       (1)        |  => RxSpaceBuffer => |       (2)         |
+///  | NetworkDeviceIfc |                      | NetworkDeviceImpl |
+///  |       (4)        |  <=    RxBuffer   <= |       (3)         |  <= Network data
+///  ++++++++++++++++++++                      +++++++++++++++++++++
 /// ```
 ///
-/// - (1) `NetworkDeviceIfc` pushes available rx buffer space to `NetworkDeviceImpl` through
-/// [`NetworkDeviceImpl.QueueRxSpace`].
-/// - (2) `NetworkDeviceImpl` retains the available space buffers until network data comes in.
-/// - (3) `NetworkDeviceImpl` receives data from the network, stores it in one of its available
-/// [`RxSpaceBuffers`], making it a [`NetworkDeviceImpl.RxBuffer`].
-/// - (4) `NetworkDeviceImpl` sends the fulfilled `RxBuffer` to `NetworkDeviceIfc` through
-/// [`NetworkDeviceIfc.CompleteRx`], which, in turn, sends that data over to applications.
+/// - (1) `NetworkDeviceIfc` pushes available rx buffer space to
+/// `NetworkDeviceImpl` through [`NetworkDeviceImpl.QueueRxSpace`].
+/// - (2) `NetworkDeviceImpl` retains the available space buffers until network
+/// data comes in.
+/// - (3) `NetworkDeviceImpl` receives data from the network, stores it in one
+/// of its available [`RxSpaceBuffers`], making it a
+/// [`NetworkDeviceImpl.RxBuffer`].
+/// - (4) `NetworkDeviceImpl` sends the fulfilled `RxBuffer` to
+/// `NetworkDeviceIfc` through [`NetworkDeviceIfc.CompleteRx`], which, in turn,
+/// sends that data over to applications.
 ///
-/// A receive buffer flows from `NetworkDeviceIfc` into `NetworkDeviceImpl` through the
-/// [`NetworkDeviceImpl.QueueTx`] method, and it's returned to [`NetworkDeviceIfc`] as a
-/// [`TxResult`]. The diagram below illustrates the mechanism:
+/// A receive buffer flows from `NetworkDeviceIfc` into `NetworkDeviceImpl`
+/// through the [`NetworkDeviceImpl.QueueTx`] method, and it's returned to
+/// [`NetworkDeviceIfc`] as a [`TxResult`]. The diagram below illustrates the
+/// mechanism:
 ///
 /// ```text
-///  ++++++++++++++++++++++++++++                      +++++++++++++++++++++++
-///  |                      (1) |   =>  TxBuffer =>    |        (2)          |
-///  | NetworkDeviceIfc         |                      |  NetworkDeviceImpl  |
-///  |                      (4) |  <=    TxResult   <= |        (3)          |  => Network data
-///  ++++++++++++++++++++++++++++                      +++++++++++++++++++++++
+///  ++++++++++++++++++++                 +++++++++++++++++++++
+///  |       (1)        |  => TxBuffer => |       (2)         |
+///  | NetworkDeviceIfc |                 | NetworkDeviceImpl |
+///  |       (4)        |  <= TxResult <= |       (3)         |  => Network data
+///  ++++++++++++++++++++                 +++++++++++++++++++++
 /// ```
 ///
-/// - (1) `NetworkDeviceIfc` receives a transmit buffer from applications filled with data intended
-/// to be delivered to the network.
-/// - (2) `NetworkDeviceIfc` pushes the buffer into `NetworkDeviceImpl` through the
-/// [`NetworkDeviceImpl.QueueTx`] call.
-/// - (3) `NetworkDeviceImpl` sends the data contained in the buffer out into the network.
-/// - (4) When the data is successfully transmitted, `NetworkDeviceImpl` marks the transmission as
-/// complete referencing the buffer's identifier to [`NetworkDeviceIfc.CompleteTx`].
+/// - (1) `NetworkDeviceIfc` receives a transmit buffer from applications filled
+/// with data intended to be delivered to the network.
+/// - (2) `NetworkDeviceIfc` pushes the buffer into `NetworkDeviceImpl` through
+/// the [`NetworkDeviceImpl.QueueTx`] call.
+/// - (3) `NetworkDeviceImpl` sends the data contained in the buffer out into
+/// the network.
+/// - (4) When the data is successfully transmitted, `NetworkDeviceImpl` marks
+/// the transmission as complete referencing the buffer's identifier to
+/// [`NetworkDeviceIfc.CompleteTx`].
 library fuchsia.hardware.network.device;
 
 using zx;
@@ -71,42 +81,46 @@ using fuchsia.hardware.network.mac;
 
 /// Disables automatic snooping for the device.
 ///
-/// The generic NetworkDevice layer typically automatically copies all tx traffic to any snooping
-/// clients. Devices may turn off that behavior by setting the `FEATURE_NO_AUTO_SNOOP` flag.
+/// The generic NetworkDevice layer typically automatically copies all tx
+/// traffic to any snooping clients. Devices may turn off that behavior by
+/// setting the `FEATURE_NO_AUTO_SNOOP` flag.
 ///
-/// Devices that disable auto-snooping SHOULD use the [`NetworkDeviceIfc.Snoop`] interface method to
-/// expose any tx frames they receive.
+/// Devices that disable auto-snooping SHOULD use the [`NetworkDeviceIfc.Snoop`]
+/// interface method to expose any tx frames they receive.
 const FEATURE_NO_AUTO_SNOOP uint32 = 0x01;
 
 /// Maximum number of disjoint parts a buffer may have.
-// NOTE: the number 4 should cover the most common use case for split buffers: 1 contiguous buffer
-// for header, 1 contiguous buffer for data, 0 or 1 contiguous buffer for trailer. Rounded up to
-// nearest power of two.
+// NOTE: the number 4 should cover the most common use case for split buffers: 1
+// contiguous buffer for header, 1 contiguous buffer for data, 0 or 1 contiguous
+// buffer for trailer. Rounded up to nearest power of two.
 const MAX_BUFFER_PARTS uint32 = 4;
 
 /// The maximum number of concurrent shared VMOs that may exist.
-// NOTE: The expected number of VMOs in use is going to be between 1 and 3 with common client usage.
-// This value is chosen to be larger than that to account for possible transitions between clients
-// (there may be an overlap of one client shutting of a data session as one comes online) and also
-// not limit too harshly the number of clients.
+// NOTE: The expected number of VMOs in use is going to be between 1 and 3 with
+// common client usage. This value is chosen to be larger than that to account
+// for possible transitions between clients (there may be an overlap of one
+// client shutting of a data session as one comes online) and also not limit too
+// harshly the number of clients.
 const MAX_VMOS uint8 = 32;
 
 /// The maximum number of ports a device can have at once.
-// NOTE: Chosen arbitrarily to allow for static memory allocation for port information. Expectation
-// is that devices are not going to have more than 4 ports in typical use cases.
+// NOTE: Chosen arbitrarily to allow for static memory allocation for port
+// information. Expectation is that devices are not going to have more than 4
+// ports in typical use cases.
 const MAX_PORTS uint8 = 32;
 
 /// VMO identifier.
 ///
 /// VMO identifiers are always in the range [0, [`MAX_VMOS`]).
 ///
-/// VMO identifiers are reported to devices through [`NetworkDeviceImpl.PrepareVmo`].
+/// VMO identifiers are reported to devices through
+/// [`NetworkDeviceImpl.PrepareVmo`].
 alias vmo_id = uint8;
 
 /// Buffer identifier.
 ///
-/// Rx space buffers and tx buffers are identified by these when exchanged between interface and
-/// implementation.
+/// Rx space buffers and tx buffers are identified by these when exchanged
+/// between interface and implementation.
 alias buffer_id = uint32;
 
 /// Port identifier.
@@ -116,8 +130,9 @@ alias port_id = uint8;
 
 /// A contiguous memory region in a VMO.
 ///
-/// Note that a `BufferRegion` is only contiguous in terms of the VMO it references, it does not
-/// necessarily translate into contiguous physical memory.
+/// Note that a `BufferRegion` is only contiguous in terms of the VMO it
+/// references, it does not necessarily translate into contiguous physical
+/// memory.
 type BufferRegion = struct {
     /// VMO backing this region.
     vmo vmo_id;
@@ -130,8 +145,9 @@ type BufferRegion = struct {
 /// No extra frame metadata, [`FrameInfo.info_type`] must be
 /// [`fuchsia.hardware.network/InfoType.NO_INFO`].
 type NoInfo = struct {
-    // TODO(brunodalbo) remove this dummy field once banjo supports it. Currently banjo uses empty
-    // structs to allow forward-declaration from FIDL.
+    // TODO(brunodalbo) remove this dummy field once banjo supports it.
+    // Currently banjo uses empty structs to allow forward-declaration from
+    // FIDL.
     nothing uint8;
 };
 
@@ -148,10 +164,13 @@ type BufferMetadata = struct {
     /// Extra frame metadata information. The type of the
     /// [`FrameInfo`] union is defined by the value in `info_type`.
     info FrameInfo;
-    /// Type of data in `info`, as defined in [`fuchsia.hardware.network/InfoType`].
+    /// Type of data in `info`, as defined in
+    /// [`fuchsia.hardware.network/InfoType`].
     info_type uint32;
-    /// Frame tx or rx flags, as defined in [`fuchsia.hardware.network/RxFlags`],
-    /// [`fuchsia.hardware.network/TxFlags`], and [`fuchsia.hardware.network/TxReturnFlags`].
+    /// Frame tx or rx flags, as defined in
+    /// [`fuchsia.hardware.network/RxFlags`],
+    /// [`fuchsia.hardware.network/TxFlags`], and
+    /// [`fuchsia.hardware.network/TxReturnFlags`].
     flags uint32;
     /// Type of frame contained in this buffer, as defined in
     /// [`fuchsia.hardware.network/FrameType`].
@@ -166,18 +185,20 @@ type TxBuffer = struct {
     data vector<BufferRegion>:MAX_BUFFER_PARTS;
     /// Metadata associated with this buffer.
     meta BufferMetadata;
-    /// Length of header bytes in the data contained in this buffer. Will always be either 0 or the
-    /// requested [`DeviceInfo.tx_head_length`] value. The head bytes are always at the beginning of
-    /// the buffer.
+    /// Length of header bytes in the data contained in this buffer.
+    ///
+    /// Will always be either 0 or the requested [`DeviceInfo.tx_head_length`]
+    /// value. The head bytes are always at the beginning of the buffer.
     head_length uint16;
-    /// Length of tail bytes in the data contained in this buffer. Will always be either 0 or the
-    /// requested [`DeviceInfo.tx_tail_length`] value. The tail bytes are always at the end of the
-    /// buffer.
+    /// Length of tail bytes in the data contained in this buffer.
+    ///
+    /// Will always be either 0 or the requested [`DeviceInfo.tx_tail_length`]
+    /// value. The tail bytes are always at the end of the buffer.
     tail_length uint16;
 };
 
-/// A buffer with allocated space to receive frames in. An `RxSpaceBuffer` must always be returned
-/// as an [`RxBufferPart`] within an [`RxBuffer`].
+/// A buffer with allocated space to receive frames in. An `RxSpaceBuffer` must
+/// always be returned as an [`RxBufferPart`] within an [`RxBuffer`].
 type RxSpaceBuffer = struct {
     /// Unique buffer identifier.
     id buffer_id;
@@ -185,17 +206,20 @@ type RxSpaceBuffer = struct {
     region BufferRegion;
 };
 
-/// A single contiguous part of an [`RxBuffer`], created from an [`RxSpaceBuffer`].
+/// A single contiguous part of an [`RxBuffer`], created from an
+/// [`RxSpaceBuffer`].
 type RxBufferPart = struct {
-    /// The buffer identifier informed in the [`RxSpaceBuffer`] that originated this `RxBuffer`.
+    /// The buffer identifier informed in the [`RxSpaceBuffer`] that originated
+    /// this `RxBuffer`.
     id buffer_id;
-    /// Offset in bytes from [`RxSpaceBuffer`]'s start where inbound data begins.
+    /// Offset in bytes from [`RxSpaceBuffer`]'s start where inbound data
+    /// begins.
     ///
-    /// This is a relative offset within the region defined by the originating space, not an
-    /// absolute offset in the space's VMO.
+    /// This is a relative offset within the region defined by the originating
+    /// space, not an absolute offset in the space's VMO.
     offset uint32;
-    /// The total length in bytes written in the [`RxSpaceBuffer`] referenced by `id`, excluding any
-    /// `offset` bytes.
+    /// The total length in bytes written in the [`RxSpaceBuffer`] referenced by
+    /// `id`, excluding any `offset` bytes.
     length uint32;
 };
 
@@ -212,20 +236,22 @@ type RxBuffer = struct {
 /// The result of a tx operation, reported to [`NetworkDeviceIfc`] through
 /// [`NetworkDeviceIfc.CompleteTx`].
 type TxResult = struct {
-    /// The buffer identifier informed in the [`TxBuffer`] that originated this `TxResult`.
+    /// The buffer identifier informed in the [`TxBuffer`] that originated this
+    /// `TxResult`.
     id buffer_id;
     /// The result status to report.
     ///
-    /// Error results map to their equivalents in [`fuchsia.hardware.network/TxReturnFlags`].
+    /// Error results map to their equivalents in
+    /// [`fuchsia.hardware.network/TxReturnFlags`].
     ///
     /// - `ZX_OK` if the frame was sent successfully.
     /// - `ZX_ERR_NOT_SUPPORTED` if any of the frame's flags are not supported.
-    /// - `ZX_ERR_NO_RESOURCES` if the transmit failed to allocate space in its output queue for the
-    /// frame.
-    /// - `ZX_ERR_UNAVAILABLE` if the device is offline (or went offline before getting a
-    /// confirmation that the frame was sent) or stopped.
-    /// - `ZX_ERR_INTERNAL` or any other unlisted errors will be reported as a generic
-    /// [`fuchsia.hardware.network/TxReturnFlags.TX_RET_ERROR`].
+    /// - `ZX_ERR_NO_RESOURCES` if the transmit failed to allocate space in its
+    /// output queue for the frame.
+    /// - `ZX_ERR_UNAVAILABLE` if the device is offline (or went offline before
+    /// getting a confirmation that the frame was sent) or stopped.
+    /// - `ZX_ERR_INTERNAL` or any other unlisted errors will be reported as a
+    /// generic [`fuchsia.hardware.network/TxReturnFlags.TX_RET_ERROR`].
     status zx.status;
 };
 
@@ -242,7 +268,8 @@ protocol NetworkPort {
     });
     /// Gets operational status of the port.
     ///
-    /// Changes to operational status must be reported via [`NetworkDeviceIfc.StatusChanged`]
+    /// Changes to operational status must be reported via
+    /// [`NetworkDeviceIfc.StatusChanged`]
     ///
     /// - response `status` snapshot of port's operational status.
     GetStatus() -> (struct {
@@ -250,30 +277,35 @@ protocol NetworkPort {
     });
     /// Notifies the port that there are sessions interested in it.
     ///
-    /// An active port has sessions attached to it. Implementations may employ power saving or other
-    /// strategies on disabled ports. Implementations that do employ such strategies:
+    /// An active port has sessions attached to it. Implementations may employ
+    /// power saving or other strategies on disabled ports. Implementations that
+    /// do employ such strategies:
     ///   - should not report inbound frames for inactive ports;
     ///   - must return errors for outbound frames destined to inactive ports.
     ///
     /// All ports are inactive on creation.
     ///
-    /// + request `active` `true` if port has sessions attached to it, `false` otherwise.
+    /// + request `active` `true` if port has sessions attached to it, `false`
+    /// otherwise.
     SetActive(struct {
         active bool;
     });
     /// Gets an interface to the MAC addressing layer of the port.
     ///
-    /// Ports that do not support MAC addressing must return an empty interface. That means the
-    /// generated-banjo bindings `ctx` and `ops` fields must both be null.
+    /// Ports that do not support MAC addressing must return an empty interface.
+    /// That means the generated-banjo bindings `ctx` and `ops` fields must both
+    /// be null.
     ///
     /// - response `mac_ifc` mac addressing handle.
-    // TODO(https://fxbug.dev/67196): Make this an optional interface return once this is FIDL.
+    // TODO(https://fxbug.dev/67196): Make this an optional interface return
+    // once this is FIDL.
     GetMac() -> (resource struct {
         mac_ifc client_end:fuchsia.hardware.network.mac.MacAddr;
     });
     /// Notifies this port has been removed from the interface.
     ///
-    /// Resources associated with the port must only be freed upon receiving the `Removed` call.
+    /// Resources associated with the port must only be freed upon receiving the
+    /// `Removed` call.
     Removed();
 };
 
@@ -282,8 +314,8 @@ protocol NetworkPort {
 protocol NetworkDeviceIfc {
     /// Notifies the interface of status changes on port with `id`.
     ///
-    /// Port status changes must always be notified through `StatusChanged`. The interface will not
-    /// poll ports for status via [`NetworkPort.GetStatus`].
+    /// Port status changes must always be notified through `StatusChanged`. The
+    /// interface will not poll ports for status via [`NetworkPort.GetStatus`].
     ///
     /// + request `id` port identifier.
     /// + request `new_status` new port's status.
@@ -293,11 +325,12 @@ protocol NetworkDeviceIfc {
     });
     /// Instantiates a new port with `id`.
     ///
-    /// `id` must not be currently in use by any other ports. `id`s may be reused once the provided
-    /// port is destroyed by [`NetworkPort.Removed`].
+    /// `id` must not be currently in use by any other ports. `id`s may be
+    /// reused once the provided port is destroyed by [`NetworkPort.Removed`].
     ///
-    /// Port identifiers do not need to be stable across instantiations or reboots. Port identifiers
-    /// don't need to be allocated in any specific order as long as [`MAX_PORTS`] is not exceeded.
+    /// Port identifiers do not need to be stable across instantiations or
+    /// reboots. Port identifiers don't need to be allocated in any specific
+    /// order as long as [`MAX_PORTS`] is not exceeded.
     ///
     /// + request `id` new port identifier.
     /// + request `port` handle to network port implementation.
@@ -307,8 +340,8 @@ protocol NetworkDeviceIfc {
     });
     /// Destroys port with `id`.
     ///
-    /// NOTE: Resources associated with the port must not be freed until [`NetworkPort.Removed`] is
-    /// called.
+    /// NOTE: Resources associated with the port must not be freed until
+    /// [`NetworkPort.Removed`] is called.
     ///
     /// + request `id` removed port identifier.
     RemovePort(struct {
@@ -316,16 +349,18 @@ protocol NetworkDeviceIfc {
     });
     /// Notifies interface of incoming rx data, contained in [`RxBuffer`].
     ///
-    /// Callers should attempt to batch as many buffers as possible in a single call. Number of
-    /// buffers in a single call must be limited to the [`DeviceInfo.rx_depth`] reported by the
-    /// `NetworkDeviceImpl` that is returning the buffers.
+    /// Callers should attempt to batch as many buffers as possible in a single
+    /// call. Number of buffers in a single call must be limited to the
+    /// [`DeviceInfo.rx_depth`] reported by the `NetworkDeviceImpl` that is
+    /// returning the buffers.
     ///
-    /// Buffers with zero length are considered "unfulfilled". They're not reported to any sessions
-    /// and the buffer space comprising them may be reused. Devices should return any outstanding
-    /// buffer space as unfulfilled on stop. See [`NetworkDeviceImpl.Stop`].
+    /// Buffers with zero length are considered "unfulfilled". They're not
+    /// reported to any sessions and the buffer space comprising them may be
+    /// reused. Devices should return any outstanding buffer space as
+    /// unfulfilled on stop. See [`NetworkDeviceImpl.Stop`].
     ///
-    /// By calling `CompleteRx` the caller relinquishes ownership of all buffers that are being
-    /// marked as complete.
+    /// By calling `CompleteRx` the caller relinquishes ownership of all buffers
+    /// that are being marked as complete.
     ///
     /// + request `rx` buffers containing incoming data.
     CompleteRx(struct {
@@ -333,13 +368,15 @@ protocol NetworkDeviceIfc {
     });
     /// Notifies interface of complete transmit buffers.
     ///
-    /// Callers should attempt to batch as many buffers as possible in a single call.
+    /// Callers should attempt to batch as many buffers as possible in a single
+    /// call.
     ///
-    /// Number of buffers in a single call must be limited to the [`DeviceInfo.tx_depth`] reported
-    /// by the `NetworkDeviceImpl` that is returning the buffers.
+    /// Number of buffers in a single call must be limited to the
+    /// [`DeviceInfo.tx_depth`] reported by the `NetworkDeviceImpl` that is
+    /// returning the buffers.
     ///
-    /// By calling `CompleteTx` the caller relinquishes ownership of all buffers that are being
-    /// returned.
+    /// By calling `CompleteTx` the caller relinquishes ownership of all buffers
+    /// that are being returned.
     ///
     /// + request `tx` transmit results.
     CompleteTx(struct {
@@ -347,16 +384,19 @@ protocol NetworkDeviceIfc {
     });
     /// Notifies interface of a snooped tx frame.
     ///
-    /// Typically used by implementations that have the [`FEATURE_NO_AUTO_SNOOP`] bit set in
-    /// [`DeviceInfo.device_features`]. Implementations that generate transmit traffic internally
-    /// should use `Snoop` regardless of `FEATURE_NO_AUTO_SNOOP` being set.
+    /// Typically used by implementations that have the
+    /// [`FEATURE_NO_AUTO_SNOOP`] bit set in [`DeviceInfo.device_features`].
+    /// Implementations that generate transmit traffic internally should use
+    /// `Snoop` regardless of `FEATURE_NO_AUTO_SNOOP` being set.
     ///
-    /// Snooped frames are *ALWAYS* outbound frames that are being fed back into the interface for
-    /// traffic snooping. Device implementations need to call [`NetworkDeviceIfc.Snoop`] ONLY if
-    /// [`NetworkDeviceImpl.SetSnoop`] was set to `true` by the interface, otherwise any buffers in
-    /// `Snoop` will be ignored.
+    /// Snooped frames are *ALWAYS* outbound frames that are being fed back into
+    /// the interface for traffic snooping. Device implementations need to call
+    /// [`NetworkDeviceIfc.Snoop`] ONLY if [`NetworkDeviceImpl.SetSnoop`] was
+    /// set to `true` by the interface, otherwise any buffers in `Snoop` will be
+    /// ignored.
     ///
-    /// + request `rx` snooped transmit frames to be looped back as incoming data.
+    /// + request `rx` snooped transmit frames to be looped back as incoming
+    /// data.
     Snoop(struct {
         rx vector<RxBuffer>:MAX;
     });
@@ -364,8 +404,8 @@ protocol NetworkDeviceIfc {
 
 /// Supported tx frame types.
 // NOTE(brunodalbo): TxSupport has exactly the same structure as
-// `fuchsia.hardware.network.FrameTypeSupport`, but importing FIDL types into banjo is not yet
-// supported.
+// `fuchsia.hardware.network.FrameTypeSupport`, but importing FIDL types into
+// banjo is not yet supported.
 type TxSupport = struct {
     /// The frame type this support entry refers to.
     type uint8;
@@ -379,7 +419,8 @@ type TxSupport = struct {
 type PortInfo = struct {
     /// Port class, as defined in [`fuchsia.hardware.network/PortClass`].
     port_class uint8;
-    /// Supported rx frame types, as defined by [`fuchsia.hardware.network/FrameType`].
+    /// Supported rx frame types, as defined by
+    /// [`fuchsia.hardware.network/FrameType`].
     rx_types vector<uint8>:MAX;
     /// Supported tx frame types.
     tx_types vector<TxSupport>:MAX;
@@ -396,25 +437,28 @@ type DeviceInfo = struct {
     rx_depth uint16;
     /// Rx depth threshold at which the device should be fed new rx buffers.
     ///
-    /// New buffer notifications from [`NetworkDeviceIfc`] may be skipped while the number of rx
-    /// buffers held by the implementation is larger than `rx_threshold`. It is invalid to provide a
-    /// value larger than `rx_depth`. `rx_threshold = rx_depth` is functionally equivalent to
-    /// `rx_threshold = rx_depth - 1`.
+    /// New buffer notifications from [`NetworkDeviceIfc`] may be skipped while
+    /// the number of rx buffers held by the implementation is larger than
+    /// `rx_threshold`. It is invalid to provide a value larger than `rx_depth`.
+    /// `rx_threshold = rx_depth` is functionally equivalent to `rx_threshold =
+    /// rx_depth - 1`.
     ///
-    /// A large value (close to `rx_depth`) may cause considerable CPU thrash for small rx
-    /// completion transaction sizes, while a small value may cause the implementation to be starved
-    /// of buffers. The typical choice of value is `rx_depth / 2`.
+    /// A large value (close to `rx_depth`) may cause considerable CPU thrash
+    /// for small rx completion transaction sizes, while a small value may cause
+    /// the implementation to be starved of buffers. The typical choice of value
+    /// is `rx_depth / 2`.
     rx_threshold uint16;
     /// Maximum virtual discontiguous buffer parts accepted by the device.
     ///
-    /// Devices that can't perform scatter-gather operations must set `max_buffer_parts` to 1.
+    /// Devices that can't perform scatter-gather operations must set
+    /// `max_buffer_parts` to 1.
     ///
     /// Must be in the range [1, `MAX_BUFFER_PARTS`].
     max_buffer_parts uint8;
     /// Maximum total length of buffers. May be set to zero for no maximum.
     ///
-    /// Devices that do not support scatter-gather DMA may set this to a value smaller than a
-    /// page size to guarantee compatibility.
+    /// Devices that do not support scatter-gather DMA may set this to a value
+    /// smaller than a page size to guarantee compatibility.
     ///
     /// Can't be larger than `MAX_PHYSICAL_PARTS` pages.
     max_buffer_length uint32;
@@ -426,32 +470,34 @@ type DeviceInfo = struct {
     min_rx_buffer_length uint32;
     /// The minimum tx buffer length for correct operation, in bytes.
     ///
-    /// This length accounts only for the buffer's body, and should not account for `tx_head_length`
-    /// or `tx_tail_length`.
+    /// This length accounts only for the buffer's body, and should not account
+    /// for `tx_head_length` or `tx_tail_length`.
     min_tx_buffer_length uint32;
     /// Number of bytes requested as header bytes on tx buffers.
     ///
-    /// If set to zero, tx buffers will never contain header space. Otherwise, tx buffers will start
-    /// at the beginning of the header space, and the header region will be informed.
+    /// If set to zero, tx buffers will never contain header space. Otherwise,
+    /// tx buffers will start at the beginning of the header space, and the
+    /// header region will be informed.
     tx_head_length uint16;
     /// Number of bytes requested as tail bytes on tx buffers.
     ///
-    /// If set to zero, tx buffers will never contain tail space. Otherwise, tx buffers will end at
-    /// the end of the tail space, and the tail region will be informed.
+    /// If set to zero, tx buffers will never contain tail space. Otherwise, tx
+    /// buffers will end at the end of the tail space, and the tail region will
+    /// be informed.
     tx_tail_length uint16;
     /// Available Rx acceleration flags for this device, as defined in
     /// [`fuchsia.hardware.network/RxAcceleration`].
     ///
-    /// `rx_accel` maps the `RX_ACCEL_*` flags in the frame descriptors with semantic acceleration
-    /// features described by `RxAcceleration`. Position `n` of `rx_accel` conveys the meaning of
-    /// the `RX_ACCEL_n` flag.
+    /// `rx_accel` maps the `RX_ACCEL_*` flags in the frame descriptors with
+    /// semantic acceleration features described by `RxAcceleration`. Position
+    /// `n` of `rx_accel` conveys the meaning of the `RX_ACCEL_n` flag.
     rx_accel vector<uint8>:MAX;
     /// Available tx acceleration flags for this device, as defined in
     /// [`fuchsia.hardware.network/TxAcceleration`].
     ///
-    /// `tx_accel` maps the `TX_ACCEL_*` flags in the frame descriptors with semantic acceleration
-    /// features described by `TxAcceleration`. Position `n` of `tx_accel` conveys the meaning of
-    /// the `TX_ACCEL_n` flag.
+    /// `tx_accel` maps the `TX_ACCEL_*` flags in the frame descriptors with
+    /// semantic acceleration features described by `TxAcceleration`. Position
+    /// `n` of `tx_accel` conveys the meaning of the `TX_ACCEL_n` flag.
     tx_accel vector<uint8>:MAX;
 };
 
@@ -473,15 +519,16 @@ type PortStatus = struct {
 protocol NetworkDeviceImpl {
     /// Initializes the network device.
     ///
-    /// `Init` is only called once during the lifetime of the device to register `iface` as the
-    /// callback target for the Network Device implementation.
+    /// `Init` is only called once during the lifetime of the device to register
+    /// `iface` as the callback target for the Network Device implementation.
     ///
-    /// Upon initialization, the device is expected to be in the "Stopped" state, the `Start` method
-    /// will be called once the data path needs to be opened.
+    /// Upon initialization, the device is expected to be in the "Stopped"
+    /// state, the `Start` method will be called once the data path needs to be
+    /// opened.
     ///
     /// + request `iface` handle to the device interface.
-    /// - response `s` initialization status. A value other than `ZX_OK` will cause the device
-    /// to unbind.
+    /// - response `s` initialization status. A value other than `ZX_OK` will
+    /// cause the device to unbind.
     Init(resource struct {
         iface client_end:NetworkDeviceIfc;
     }) -> (struct {
@@ -489,34 +536,40 @@ protocol NetworkDeviceImpl {
     });
     /// Starts the device's data path.
     ///
-    /// `start` signals to the device implementation that it should bring up its data path and be
-    /// ready to receive tx frames and `iface` will start accepting rx frames.
+    /// `start` signals to the device implementation that it should bring up its
+    /// data path and be ready to receive tx frames and `iface` will start
+    /// accepting rx frames.
     ///
-    /// The device is only considered started once `Start` returns successfully. Until then, the
-    /// contract guarantees that no other data-path calls will be made to the device (`QueueTx`,
-    /// `RxAvailable`, `Stop`, or a second call to `Start`), so implementers can safely assume or
-    /// assert that this contract is upheld.
+    /// The device is only considered started once `Start` returns successfully.
+    /// Until then, the contract guarantees that no other data-path calls will
+    /// be made to the device (`QueueTx`, `RxAvailable`, `Stop`, or a second
+    /// call to `Start`), so implementers can safely assume or assert that this
+    /// contract is upheld.
     ///
     /// - response `s` start status. `ZX_OK` indicates a successful start.
-    ///     `ZX_ERR_ALREADY_BOUND` indicates that the device has already been successfully started.
-    ///     Any other status value indicates an implementation specific error.
+    /// `ZX_ERR_ALREADY_BOUND` indicates that the device has already been
+    /// successfully started. Any other status value indicates an implementation
+    /// specific error.
     @async
     Start() -> (struct {
         s zx.status;
     });
     /// Stops the network device.
     ///
-    /// The device implementation must return all outstanding Tx and Rx buffers upon receiving this
-    /// call. Any new buffers received in the stopped state must be returned with an appropriate
-    /// error (tx) or unfulfilled (rx). See [`NetworkDeviceIfc.CompleteTx`] and
-    /// [`NetworkDeviceIfc.CompleteRx`] for details.
+    /// The device implementation must return all outstanding Tx and Rx buffers
+    /// upon receiving this call. Any new buffers received in the stopped state
+    /// must be returned with an appropriate error (tx) or unfulfilled (rx). See
+    /// [`NetworkDeviceIfc.CompleteTx`] and [`NetworkDeviceIfc.CompleteRx`] for
+    /// details.
     ///
-    /// The device implementation may perform any power saving measures after observing stop.
+    /// The device implementation may perform any power saving measures after
+    /// observing stop.
     @async
     Stop() -> ();
     /// Gets information about the device.
     ///
-    /// Device information must not change over the course of the lifetime of the device.
+    /// Device information must not change over the course of the lifetime of
+    /// the device.
     ///
     /// - response `info` device information.
     GetInfo() -> (struct {
@@ -524,16 +577,17 @@ protocol NetworkDeviceImpl {
     });
     /// Enqueues a list of buffers for transmission on the network device.
     ///
-    /// The driver takes ownership of the buffer and must complete the tx transaction by using
-    /// [`NetworkDeviceIfc.CompleteTx`] operations once it is done
-    /// with each buffer in `buffers`.
+    /// The driver takes ownership of the buffer and must complete the tx
+    /// transaction by using [`NetworkDeviceIfc.CompleteTx`] operations once it
+    /// is done with each buffer in `buffers`.
     ///
-    /// The total number of outstanding tx buffers given to a device will never exceed the reported
-    /// [`DeviceInfo.tx_depth`] value. Which also means that no more
-    /// than `tx_depth` buffers are going to be informed at once in a single call to `QueueTx`.
+    /// The total number of outstanding tx buffers given to a device will never
+    /// exceed the reported [`DeviceInfo.tx_depth`] value. Which also means that
+    /// no more than `tx_depth` buffers are going to be informed at once in a
+    /// single call to `QueueTx`.
     ///
-    /// Buffers enqueued while the device in is the stopped state must be returned with an
-    /// appropriate error. See [`TxResult.status`] for specific
+    /// Buffers enqueued while the device in is the stopped state must be
+    /// returned with an appropriate error. See [`TxResult.status`] for specific
     /// error codes.
     ///
     /// + request `buffers` tx buffers to enqueue for sending.
@@ -542,17 +596,20 @@ protocol NetworkDeviceImpl {
     });
     /// Enqueues a list of rx buffer space on the network device.
     ///
-    /// The driver takes ownership of the buffer and must complete the transaction (once network
-    /// data arrives) using [`NetworkDeviceIfc.CompleteRx`].
+    /// The driver takes ownership of the buffer and must complete the
+    /// transaction (once network data arrives) using
+    /// [`NetworkDeviceIfc.CompleteRx`].
     ///
-    /// The total number of outstanding rx buffers given to a device will never exceed the reported
-    /// [`DeviceInfo.rx_depth`] value. Which also means that no more
-    /// than `rx_depth` buffers are going to be informed at once in a single call to `QueueRxSpace`.
+    /// The total number of outstanding rx buffers given to a device will never
+    /// exceed the reported [`DeviceInfo.rx_depth`] value. Which also means that
+    /// no more than `rx_depth` buffers are going to be informed at once in a
+    /// single call to `QueueRxSpace`.
     ///
-    /// Buffers enqueued while the device in is the stopped state must be returned with a zero
-    /// length.
+    /// Buffers enqueued while the device in is the stopped state must be
+    /// returned with a zero length.
     ///
-    /// + request `buffers` rx space buffers to be filled with network data when it arrives.
+    /// + request `buffers` rx space buffers to be filled with network data when
+    /// it arrives.
     QueueRxSpace(struct {
         buffers vector<RxSpaceBuffer>:MAX;
     });
@@ -571,18 +628,19 @@ protocol NetworkDeviceImpl {
     ///
     /// No more buffers will be sent with this `id`.
     ///
-    /// `ReleaseVmo` is guaranteed to only be called when the implementation holds no buffers that
-    /// reference that `id`.
+    /// `ReleaseVmo` is guaranteed to only be called when the implementation
+    /// holds no buffers that reference that `id`.
     ///
     /// + request `id` VMO identifier.
     ReleaseVmo(struct {
         id vmo_id;
     });
-    /// Informs the device that it should start or stop reporting snooped transmit frames through
-    /// [`NetworkDeviceIfc.Snoop`].
+    /// Informs the device that it should start or stop reporting snooped
+    /// transmit frames through [`NetworkDeviceIfc.Snoop`].
     ///
-    /// + request `snoop` if `true` device should start reporting snooping frames. If `false` device
-    /// should stop reporting snooped frames. Upon initialization, device assumes `snop` is `false`.
+    /// + request `snoop` if `true` device should start reporting snooping
+    /// frames. If `false` device should stop reporting snooped frames. Upon
+    /// initialization, device assumes `snop` is `false`.
     SetSnoop(struct {
         snoop bool;
     });

@@ -12,16 +12,16 @@ type FrameType = strict enum : uint8 {
 
 /// Blanket definition for raw frames.
 ///
-/// Devices that do not perform any sort of parsing of outbound traffic should define
-/// `FRAME_FEATURES_RAW` in the [`FrameTypeSupport`] entry.
+/// Devices that do not perform any sort of parsing of outbound traffic should
+/// define `FRAME_FEATURES_RAW` in the [`FrameTypeSupport`] entry.
 const FRAME_FEATURES_RAW uint32 = 1;
 
 /// Ethernet frame sub-types and features.
 type EthernetFeatures = strict bits : uint32 {
     /// Device supports any type of ethernet frame.
     ///
-    /// Same as specifying all other flags. Used by devices that do not inspect or parse outbound
-    /// traffic.
+    /// Same as specifying all other flags. Used by devices that do not inspect
+    /// or parse outbound traffic.
     RAW = 1;
     /// Device supports EthernetII frames.
     ETHERNET_II = 2;
@@ -35,16 +35,19 @@ type EthernetFeatures = strict bits : uint32 {
     E_802_3_LLC_SNAP = 16;
 };
 
-/// Specifies a frame type and features and supported flags associated with that type.
+/// Specifies a frame type and features and supported flags associated with that
+/// type.
 ///
-/// This is used by clients to read the supported frames on the tx path for a given
-/// Network Device.
+/// This is used by clients to read the supported frames on the tx path for a
+/// given Network Device.
 ///
-/// Some Network Devices may parse outgoing frames to perform frame transformation or specific
-/// hardware support. Each frame type has an associated [`FrameTypeSupport.features`] bits
-/// enumeration that lists FrameType-specific features that may or may not be supported. Devices
-/// that do not perform parsing are encouraged to just use the [`FRAME_FEATURES_RAW`] bit in
-/// `features`, which informs the client that all frame features are allowed.
+/// Some Network Devices may parse outgoing frames to perform frame
+/// transformation or specific hardware support. Each frame type has an
+/// associated [`FrameTypeSupport.features`] bits enumeration that lists
+/// FrameType-specific features that may or may not be supported. Devices that
+/// do not perform parsing are encouraged to just use the [`FRAME_FEATURES_RAW`]
+/// bit in `features`, which informs the client that all frame features are
+/// allowed.
 type FrameTypeSupport = struct {
     /// The frame type this support entry refers to.
     type FrameType;
@@ -65,8 +68,8 @@ type InfoType = strict enum : uint32 {
 
 /// Available rx acceleration features.
 ///
-/// Features are mapped to the `RX_ACCEL_*` bits in descriptors by the available values reported in
-/// [`Info.rx_accel`].
+/// Features are mapped to the `RX_ACCEL_*` bits in descriptors by the available
+/// values reported in [`Info.rx_accel`].
 type RxAcceleration = strict enum : uint8 {
     /// Inbound rx frame validated the Ethernet Frame Check Sequence.
     VALIDATED_ETHERNET_FCS = 0;
@@ -80,16 +83,20 @@ type RxAcceleration = strict enum : uint8 {
 
 /// Available tx acceleration features.
 ///
-/// Features are mapped to the `TX_ACCEL_*` bits in descriptors by the available values reported in
-/// [`Info.tx_accel`].
+/// Features are mapped to the `TX_ACCEL_*` bits in descriptors by the available
+/// values reported in [`Info.tx_accel`].
 type TxAcceleration = strict enum : uint8 {
-    /// Request that device calculate the Ethernet Frame Check Sequence and write it in place.
+    /// Request that device calculate the Ethernet Frame Check Sequence and
+    /// write it in place.
     COMPUTE_ETHERNET_FCS = 0;
-    /// Request that the device calculate the IPv4 checksum and write it in place.
+    /// Request that the device calculate the IPv4 checksum and write it in
+    /// place.
     COMPUTE_IPV4_CHECKSUM = 1;
-    /// Request that the device calculate the TCP checksum and write it in place.
+    /// Request that the device calculate the TCP checksum and write it in
+    /// place.
     COMPUTE_TCP_CHECKSUM = 2;
-    /// Request that the device calculate the UDP checksum and write it in place.
+    /// Request that the device calculate the UDP checksum and write it in
+    /// place.
     COMPUTE_UDP_CHECKSUM = 3;
 // Future expansions: TCP segmentation acceleration
 };
@@ -100,8 +107,9 @@ type TxAcceleration = strict enum : uint8 {
 type RxFlags = strict bits : uint32 {
     /// Acceleration flag 0.
     ///
-    /// Acceleration flags are mapped to the acceleration features reported by the [`Device`] in
-    /// [`Info.rx_accel`]. The n-th feature in `rx_accel` maps to the `RX_ACCEL_n` `RxFlag`.
+    /// Acceleration flags are mapped to the acceleration features reported by
+    /// the [`Device`] in [`Info.rx_accel`]. The n-th feature in `rx_accel` maps
+    /// to the `RX_ACCEL_n` `RxFlag`.
     RX_ACCEL_0 = 0x00000001;
     RX_ACCEL_1 = 0x00000002;
     RX_ACCEL_2 = 0x00000004;
@@ -123,16 +131,18 @@ type RxFlags = strict bits : uint32 {
 
     /// Device experienced a hardware rx overrun.
     ///
-    /// Rx overruns are typically set by hardware controllers when a frame event was detected but
-    /// the frame data couldn't be captured. Devices should clear the controller flag once this is
-    /// set on an inbound frame, so future overruns can be detected and reported.
+    /// Rx overruns are typically set by hardware controllers when a frame event
+    /// was detected but the frame data couldn't be captured. Devices should
+    /// clear the controller flag once this is set on an inbound frame, so
+    /// future overruns can be detected and reported.
     RX_OVERRUN = 0x20000000;
-    /// This bit is set if frame validation is performed (such as by hardware acceleration features)
-    /// and fails.
+    /// This bit is set if frame validation is performed (such as by hardware
+    /// acceleration features) and fails.
     ///
-    /// It's important to note that some devices may simply discard frames for which validation
-    /// fails and never notify the client. Rx frames that failed validation are only transmitted to
-    /// the client if the `SessionFlags::REPORT_INVALID_RX` option is selected when creating a
+    /// It's important to note that some devices may simply discard frames for
+    /// which validation fails and never notify the client. Rx frames that
+    /// failed validation are only transmitted to the client if the
+    /// `SessionFlags::REPORT_INVALID_RX` option is selected when creating a
     /// session.
     RX_VALIDATION_ERROR = 0x40000000;
     /// This is an echoed tx frame, created by a tx request.
@@ -147,8 +157,9 @@ type RxFlags = strict bits : uint32 {
 type TxFlags = strict bits : uint32 {
     /// Acceleration flag 0.
     ///
-    /// Acceleration flags are mapped to the acceleration features reported by the [`Device`] in
-    /// [`Info.tx_accel`]. The n-th feature in `tx_accel` maps to the `TX_ACCEL_n` `TxFlag`.
+    /// Acceleration flags are mapped to the acceleration features reported by
+    /// the [`Device`] in [`Info.tx_accel`]. The n-th feature in `tx_accel` maps
+    /// to the `TX_ACCEL_n` `TxFlag`.
     TX_ACCEL_0 = 0x00000001;
     TX_ACCEL_1 = 0x00000002;
     TX_ACCEL_2 = 0x00000004;
@@ -171,7 +182,8 @@ type TxFlags = strict bits : uint32 {
 ///
 /// Set by Devices on the `return_flags` field of a tx descriptor.
 type TxReturnFlags = strict bits : uint32 {
-    /// Requested operation in `inbound_flags` is not supported; the frame was not sent.
+    /// Requested operation in `inbound_flags` is not supported; the frame was
+    /// not sent.
     ///
     /// Always set in conjunction with `TX_RET_ERROR`.
     TX_RET_NOT_SUPPORTED = 1;
@@ -179,7 +191,8 @@ type TxReturnFlags = strict bits : uint32 {
     ///
     /// Always set in conjunction with `TX_RET_ERROR`.
     TX_RET_OUT_OF_RESOURCES = 2;
-    /// Device is not available (offline or disconnected); the frame was not sent.
+    /// Device is not available (offline or disconnected); the frame was not
+    /// sent.
     ///
     /// Always set in conjunction with `TX_RET_ERROR`.
     TX_RET_NOT_AVAILABLE = 4;

@@ -3,7 +3,8 @@
 // found in the LICENSE file.
 library fuchsia.hardware.network;
 
-/// The maximum number of status samples that can be buffered by a [`StatusWatcher`].
+/// The maximum number of status samples that can be buffered by a
+/// [`StatusWatcher`].
 const MAX_STATUS_BUFFER uint32 = 50;
 
 /// The maximum number of ports attached to a device at a given time.
@@ -14,15 +15,18 @@ alias port_id = uint8;
 
 /// Network device class.
 ///
-/// *Note*: Device implementers are encouraged to propose additions to this enumeration to avoid
-/// using ill-fitting variants if there's not a good match available.
-// TODO(https://fxbug.dev/76232): Rename to PortClass once we can easily soft transition through
-// aliasing to prevent source breakages.
-// TODO(https://fxbug.dev/77697): Make this a flexible enum once HLCPP flexible enums don't break
-// chromium.
+/// *Note*: Device implementers are encouraged to propose additions to this
+/// enumeration to avoid using ill-fitting variants if there's not a good match
+/// available.
+// TODO(https://fxbug.dev/76232): Rename to PortClass once we can easily soft
+// transition through aliasing to prevent source breakages.
+// TODO(https://fxbug.dev/77697): Make this a flexible enum once HLCPP flexible
+// enums don't break chromium.
 type DeviceClass = strict enum : uint16 {
-    // TODO(https://fxbug.dev/77697): Transition this variant out of zero per recommendation in
-    // https://fuchsia.dev/fuchsia-src/concepts/api/fidl?hl=en#enum once this is a flexible enum.
+    // TODO(https://fxbug.dev/77697): Transition this variant out of zero per
+    // recommendation in
+    // https://fuchsia.dev/fuchsia-src/concepts/api/fidl?hl=en#enum once this is
+    // a flexible enum.
     VIRTUAL = 0;
     ETHERNET = 1;
     WLAN = 2;
@@ -36,8 +40,8 @@ alias PortClass = DeviceClass;
 
 /// Port status bits, reported in [`PortStatus.flags`].
 type StatusFlags = strict bits : uint32 {
-    /// Port is online, i.e., data path is open and any ongoing sessions may send and receive
-    /// frames.
+    /// Port is online, i.e., data path is open and any ongoing sessions may
+    /// send and receive frames.
     ONLINE = 0x01;
 };
 
@@ -47,8 +51,8 @@ type PortStatus = table {
     1: flags StatusFlags;
     /// Maximum transmit unit for this port, in bytes.
     ///
-    /// The reported MTU is the size of an entire frame, including any header and trailer bytes for
-    /// whatever protocols this port supports.
+    /// The reported MTU is the size of an entire frame, including any header
+    /// and trailer bytes for whatever protocols this port supports.
     2: mtu uint32;
 };
 
@@ -56,13 +60,13 @@ type PortStatus = table {
 protocol StatusWatcher {
     /// `WatchStatus` blocks until the port's status has changed.
     ///
-    /// The first call to `WatchStatus` returns immediately with the current port status, subsequent
-    /// calls complete when the port status differs from the last one that was returned through this
-    /// `StatusWatcher`.
+    /// The first call to `WatchStatus` returns immediately with the current
+    /// port status, subsequent calls complete when the port status differs from
+    /// the last one that was returned through this `StatusWatcher`.
     ///
-    /// If `StatusWatcher` was created with a buffer value larger than 1, `WatchStatus` may return a
-    /// queued status change, depending on how many status changed happened since the last call to
-    /// `WatchStatus`.
+    /// If `StatusWatcher` was created with a buffer value larger than 1,
+    /// `WatchStatus` may return a queued status change, depending on how many
+    /// status changed happened since the last call to `WatchStatus`.
     ///
     /// - response `device_status` the most recent port status.
     WatchStatus() -> (struct {
@@ -78,18 +82,20 @@ type PortInfo = table {
     2: class PortClass;
     /// Supported rx frame types on this port. Required.
     ///
-    /// Clients may open sessions subscribing to a subset of `rx_types` frame types on this port.
+    /// Clients may open sessions subscribing to a subset of `rx_types` frame
+    /// types on this port.
     3: rx_types vector<FrameType>:MAX_FRAME_TYPES;
     /// Supported tx frame types on this port. Required.
     ///
-    /// Frames destined to this port whose frame type is not in `tx_types` are returned with an
-    /// error.
+    /// Frames destined to this port whose frame type is not in `tx_types` are
+    /// returned with an error.
     ///
-    /// Some network devices may need to perform partial frame parsing and serialization and, for
-    /// that reason, `tx_types` is a vector of [`FrameTypeSupport`] which includes specific features
-    /// per frame type. For example, a device that supports Ethernet frames but needs to convert the
-    /// Ethernet header may only support standard Ethernet II frames, and not any "raw" Ethernet
-    /// frame.
+    /// Some network devices may need to perform partial frame parsing and
+    /// serialization and, for that reason, `tx_types` is a vector of
+    /// [`FrameTypeSupport`] which includes specific features per frame type.
+    /// For example, a device that supports Ethernet frames but needs to convert
+    /// the Ethernet header may only support standard Ethernet II frames, and
+    /// not any "raw" Ethernet frame.
     4: tx_types vector<FrameTypeSupport>:MAX_FRAME_TYPES;
 };
 
@@ -110,21 +116,22 @@ protocol Port {
     /// Connects to a [`StatusWatcher`] to observe port status changes.
     ///
     /// + request `watcher` handle to the status watcher.
-    /// + request `buffer` the number of status changes that the client requests to be stored by
-    /// `StatusWatcher`. Values are capped at [`MAX_STATUS_BUFFER`]. A value of 0 or 1 causes the
-    /// `StatusWatcher` to not keep any buffers on status changed. Clients that need to observe all
-    /// changes to status (as opposed to only the current state) are encouraged to set a buffer
-    /// value larger than 1, so that all edges can be observed. If `StatusWatcher`'s internal queue
-    /// is filled and new status changes occur, the oldest samples will be dropped to make room for
-    /// new ones.
+    /// + request `buffer` the number of status changes that the client requests
+    /// to be stored by `StatusWatcher`. Values are capped at
+    /// [`MAX_STATUS_BUFFER`]. A value of 0 or 1 causes the `StatusWatcher` to
+    /// not keep any buffers on status changed. Clients that need to observe all
+    /// changes to status (as opposed to only the current state) are encouraged
+    /// to set a buffer value larger than 1, so that all edges can be observed.
+    /// If `StatusWatcher`'s internal queue is filled and new status changes
+    /// occur, the oldest samples will be dropped to make room for new ones.
     GetStatusWatcher(resource struct {
         watcher server_end:StatusWatcher;
         buffer uint32;
     });
     /// Connects to a [`MacAddressing`] associated with the port.
     ///
-    /// + request `mac` mac handle. Closed with `ZX_ERR_NOT_SUPPORTED` if this port does not support
-    /// mac addressing.
+    /// + request `mac` mac handle. Closed with `ZX_ERR_NOT_SUPPORTED` if this
+    /// port does not support mac addressing.
     GetMac(resource struct {
         mac server_end:MacAddressing;
     });

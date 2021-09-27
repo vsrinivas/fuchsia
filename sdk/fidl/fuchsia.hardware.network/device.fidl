@@ -6,9 +6,9 @@ library fuchsia.hardware.network;
 using zx;
 
 /// Maximum numbers of supported frame types for rx or tx.
-// NOTE(brunodalbo) 4 seems a sensible number for maximum number of frame types supported by a
-// single device. Most common use cases are going to use 1 or 2 types (1 if device operates at L2, 2
-// if at L3).
+// NOTE(brunodalbo) 4 seems a sensible number for maximum number of frame types
+// supported by a single device. Most common use cases are going to use 1 or 2
+// types (1 if device operates at L2, 2 if at L3).
 const MAX_FRAME_TYPES uint32 = 4;
 
 /// Maximum length of session label.
@@ -16,35 +16,40 @@ const MAX_SESSION_NAME uint32 = 64;
 
 /// Maximum number of acceleration flags.
 ///
-/// Each descriptor has 16 bits of space for acceleration flags ([`RxFlags`] and [`TxFlags`]) thus
-/// the maximum number of reported accelerations is 16. Each descriptor reports which accelerations
-/// were applied (`RxFlags`) or are requested (`TxFlags`) by mapping indexes in the vector of
-/// supported accelerations ([`Info.rx_accel`] and ([`Info.tx_accel`]) to bits in the respective
-/// acceleration flags bitfield.
+/// Each descriptor has 16 bits of space for acceleration flags ([`RxFlags`] and
+/// [`TxFlags`]) thus the maximum number of reported accelerations is 16. Each
+/// descriptor reports which accelerations were applied (`RxFlags`) or are
+/// requested (`TxFlags`) by mapping indexes in the vector of supported
+/// accelerations ([`Info.rx_accel`] and ([`Info.tx_accel`]) to bits in the
+/// respective acceleration flags bitfield.
 const MAX_ACCEL_FLAGS uint32 = 16;
 
 /// Network device information.
 type DeviceInfo = table {
     /// Minimum descriptor length, in 64-bit words. Required.
     ///
-    /// The minimum length that each buffer descriptor must have for correct operation with this
-    /// device. Devices that support extra frame metadata inform larger minimum descriptor lengths
-    /// that reflect the minimum space needed to be able to store frame metadata.
+    /// The minimum length that each buffer descriptor must have for correct
+    /// operation with this device. Devices that support extra frame metadata
+    /// inform larger minimum descriptor lengths that reflect the minimum space
+    /// needed to be able to store frame metadata.
     1: min_descriptor_length uint8;
     /// Accepted descriptor version. Required.
     2: descriptor_version uint8;
     /// Maximum number of items in rx FIFO (per session). Required.
     ///
-    /// `rx_depth` is calculated based on the size of the actual backing hardware rx queue.
+    /// `rx_depth` is calculated based on the size of the actual backing
+    /// hardware rx queue.
     3: rx_depth uint16;
     /// Maximum number of items in tx FIFO (per session). Required.
     ///
-    /// `tx_depth` is calculated based on the size of the actual backing hardware tx queue.
+    /// `tx_depth` is calculated based on the size of the actual backing
+    /// hardware tx queue.
     4: tx_depth uint16;
     /// Alignment requirement for buffers in the data VMO.
     ///
-    /// All buffers in the data VMO *must* be aligned to `buffer_alignment` relative to the start of
-    /// the VMO. `buffer_alignment == 0` is never reported. Required.
+    /// All buffers in the data VMO *must* be aligned to `buffer_alignment`
+    /// relative to the start of the VMO. `buffer_alignment == 0` is never
+    /// reported. Required.
     5: buffer_alignment uint32;
     /// Maximum supported length of buffers in the data VMO, in bytes. Required.
     6: max_buffer_length uint32;
@@ -55,27 +60,30 @@ type DeviceInfo = table {
     /// This value accounts only for tx payload length, `min_tx_buffer_head` and
     /// `min_tx_buffer_tail` are not part of this value.
     ///
-    /// Clients must zero pad outgoing frames to meet the required minimum length.
+    /// Clients must zero pad outgoing frames to meet the required minimum
+    /// length.
     8: min_tx_buffer_length uint32;
-    /// The number of bytes the device requests be free as `head` space in a tx buffer. Required.
+    /// The number of bytes the device requests be free as `head` space in a tx
+    /// buffer. Required.
     9: min_tx_buffer_head uint16;
-    /// The amount of bytes the device requests be free as `tail` space in a tx buffer. Required.
+    /// The amount of bytes the device requests be free as `tail` space in a tx
+    /// buffer. Required.
    10: min_tx_buffer_tail uint16;
     /// Maximum descriptor chain length accepted by the device. Required.
    11: max_buffer_parts uint8;
     /// Available rx acceleration flags for this device.
     ///
-    /// `rx_accel` maps the `RX_ACCEL_*` flags in the frame descriptors with semantic acceleration
-    /// features described by [`RxAcceleration`]. Position `n` of `rx_accel` conveys the meaning of
-    /// the `RX_ACCEL_n` flag.
+    /// `rx_accel` maps the `RX_ACCEL_*` flags in the frame descriptors with
+    /// semantic acceleration features described by [`RxAcceleration`]. Position
+    /// `n` of `rx_accel` conveys the meaning of the `RX_ACCEL_n` flag.
     ///
     /// Interpreted as empty if not provided.
    12: rx_accel vector<RxAcceleration>:MAX_ACCEL_FLAGS;
     /// Available tx acceleration flags for this device.
     ///
-    /// `tx_accel` maps the `TX_ACCEL_*` flags in the frame descriptors with semantic acceleration
-    /// features described by [`TxAcceleration`]. Position `n` of `tx_accel` conveys the meaning of
-    /// the `TX_ACCEL_n` flag.
+    /// `tx_accel` maps the `TX_ACCEL_*` flags in the frame descriptors with
+    /// semantic acceleration features described by [`TxAcceleration`]. Position
+    /// `n` of `tx_accel` conveys the meaning of the `TX_ACCEL_n` flag.
     ///
     /// Interpreted as empty if not provided.
    13: tx_accel vector<TxAcceleration>:MAX_ACCEL_FLAGS;
@@ -91,15 +99,16 @@ protocol Device {
     });
     /// Opens a new session with the network device.
     ///
-    /// + request `session_name` is used as a debugging label attached to this session.
-    /// + request `session_info` contains the necessary information to setup the session's data
-    /// exchange.
+    /// + request `session_name` is used as a debugging label attached to this
+    /// session.
+    /// + request `session_info` contains the necessary information to setup the
+    /// session's data exchange.
     /// - response `session` a handle to control the session.
     /// - response `fifos` data-plane FIFOs attached to the session.
-    /// * error `ZX_ERR_NOT_SUPPORTED` if `session_info` contains not supported frame types or
-    /// descriptors set up.
-    /// * error `ZX_ERR_INVALID_ARGS` if `session_info` is missing fields or contains invalid
-    /// information.
+    /// * error `ZX_ERR_NOT_SUPPORTED` if `session_info` contains not supported
+    /// frame types or descriptors set up.
+    /// * error `ZX_ERR_INVALID_ARGS` if `session_info` is missing fields or
+    /// contains invalid information.
     OpenSession(resource struct {
         session_name string:MAX_SESSION_NAME;
         session_info SessionInfo;
@@ -112,7 +121,8 @@ protocol Device {
     /// + request `id` port to connect to.
     /// + request `port` server end of port channel.
     ///
-    /// `port` is closed with a `ZX_ERR_NOT_FOUND` epitaph if no port with `id` exists.
+    /// `port` is closed with a `ZX_ERR_NOT_FOUND` epitaph if no port with `id`
+    /// exists.
     GetPort(resource struct {
         id port_id;
         port server_end:Port;
@@ -129,15 +139,16 @@ protocol Device {
 protocol PortWatcher {
     /// Get the next port event.
     ///
-    /// The first N calls return [`DevicePortEvent.existing`] where N is the number of ports present
-    /// on the device at the time of the watcher's creation. The next call returns
-    /// [`DevicePortEvent.idle`] to indicate the end of existing ports. Subsequent calls block until
-    /// a port is added ([`DevicePortEvent.added`]) or removed ([`DevicePortEvent.removed`]).
+    /// The first N calls return [`DevicePortEvent.existing`] where N is the
+    /// number of ports present on the device at the time of the watcher's
+    /// creation. The next call returns [`DevicePortEvent.idle`] to indicate the
+    /// end of existing ports. Subsequent calls block until a port is added
+    /// ([`DevicePortEvent.added`]) or removed ([`DevicePortEvent.removed`]).
     ///
-    /// The server closes the `PortWatcher` channel with `ZX_ERR_CANCELED` if the number of unread
-    /// events reaches a server-selected limit that is at least two times [`MAX_PORTS`]. Clients are
-    /// encouraged to maintain a hanging call to `Watch` at all times to avoid triggering this
-    /// condition.
+    /// The server closes the `PortWatcher` channel with `ZX_ERR_CANCELED` if
+    /// the number of unread events reaches a server-selected limit that is at
+    /// least two times [`MAX_PORTS`]. Clients are encouraged to maintain a
+    /// hanging call to `Watch` at all times to avoid triggering this condition.
     ///
     /// - response `event` next port event.
     Watch() -> (struct {
@@ -148,8 +159,8 @@ protocol PortWatcher {
 type Empty = struct {};
 
 /// Port creation and destruction events.
-// TODO(https://fxbug.dev/66767): `PortEvent` is probably a better name here, but it causes rust
-// binding errors.
+// TODO(https://fxbug.dev/66767): `PortEvent` is probably a better name here,
+// but it causes rust binding errors.
 type DevicePortEvent = strict union {
     /// Port existed when watcher was created.
     1: existing port_id;

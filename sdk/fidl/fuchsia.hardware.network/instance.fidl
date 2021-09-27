@@ -4,13 +4,14 @@
 library fuchsia.hardware.network;
 
 /// An instance of a network device exposed on devfs.
-// NOTE(brunodalbo) This protocol exists to sidestep the fact that the DDK doesn't allow devices to
-// own their channels. The Device framework implicitly composes fuchsia.device/Controller on
-// channels obtained through devfs, and the "composed" implementation is always provided by the
-// framework itself. At the time of this writing it is unclear what is going to replace that or
-// when, only that there is a desire to improve the pattern. The expectation is that pattern will be
-// improved with Unified Services (https://fxbug.dev/8035) and Drivers as Components
-// (https://fxbug.dev/33183).
+// NOTE(brunodalbo) This protocol exists to sidestep the fact that the DDK
+// doesn't allow devices to own their channels. The Device framework implicitly
+// composes fuchsia.device/Controller on channels obtained through devfs, and
+// the "composed" implementation is always provided by the framework itself. At
+// the time of this writing it is unclear what is going to replace that or when,
+// only that there is a desire to improve the pattern. The expectation is that
+// pattern will be improved with Unified Services (https://fxbug.dev/8035) and
+// Drivers as Components (https://fxbug.dev/33183).
 protocol DeviceInstance {
     /// Connects to the [`Device`] implementation.
     ///
