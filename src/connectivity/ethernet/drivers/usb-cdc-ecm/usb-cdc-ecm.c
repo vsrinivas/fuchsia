@@ -432,7 +432,7 @@ static void ecm_interrupt_complete(void* cookie, usb_request_t* request) {
 
 static void ecm_handle_interrupt(ecm_ctx_t* ctx, usb_request_t* request) {
   if (request->response.actual < sizeof(usb_cdc_notification_t)) {
-    zxlogf(ERROR, "%s: ignored interrupt (size = %ld)", module_name,
+    zxlogf(DEBUG, "%s: ignored interrupt (size = %ld)", module_name,
            (long)request->response.actual);
     return;
   }
