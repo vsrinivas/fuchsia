@@ -33,8 +33,8 @@ use {
         capability_source::BuiltinCapabilities,
         component_id_index::{ComponentIdIndex, ComponentInstanceId},
         component_instance::{
-            ComponentInstanceInterface, ExtendedInstanceInterface, TopInstanceInterface,
-            WeakComponentInstanceInterface, WeakExtendedInstanceInterface,
+            ComponentInstanceInterface, ExtendedInstanceInterface, ResolvedInstanceInterface,
+            TopInstanceInterface, WeakComponentInstanceInterface, WeakExtendedInstanceInterface,
         },
         environment::EnvironmentInterface,
         error::ComponentInstanceError,
@@ -1024,25 +1024,11 @@ impl ComponentInstanceInterface for ComponentInstance {
         self.parent.upgrade()
     }
 
-    async fn decl<'a>(self: &'a Arc<Self>) -> Result<ComponentDecl, ComponentInstanceError> {
-        let state = self.lock_resolved_state().await?;
-        Ok(state.decl().clone())
-    }
-
-    async fn get_live_child<'a>(
+    async fn lock_resolved_state<'a>(
         self: &'a Arc<Self>,
-        moniker: &PartialChildMoniker,
-    ) -> Result<Option<Arc<Self>>, ComponentInstanceError> {
-        let state = self.lock_resolved_state().await?;
-        Ok(state.get_live_child(moniker))
-    }
-
-    async fn live_children_in_collection<'a>(
-        self: &'a Arc<Self>,
-        collection: &'a str,
-    ) -> Result<Vec<(PartialChildMoniker, Arc<ComponentInstance>)>, ComponentInstanceError> {
-        let state = self.lock_resolved_state().await?;
-        Ok(state.live_children_in_collection(collection))
+    ) -> Result<Box<dyn ResolvedInstanceInterface<Component = Self> + 'a>, ComponentInstanceError>
+    {
+        Ok(Box::new(ComponentInstance::lock_resolved_state(self).await?))
     }
 
     fn new_route_mapper() -> NoopRouteMapper {
@@ -1418,6 +1404,41 @@ impl ResolvedInstanceState {
         for child in decl.children.iter() {
             let _ = self.add_child(component, child, None, fsys::CreateChildArgs::EMPTY).await;
         }
+    }
+}
+
+impl ResolvedInstanceInterface for ResolvedInstanceState {
+    type Component = ComponentInstance;
+
+    fn uses(&self) -> Vec<UseDecl> {
+        self.decl.uses.clone()
+    }
+
+    fn exposes(&self) -> Vec<cm_rust::ExposeDecl> {
+        self.decl.exposes.clone()
+    }
+
+    fn offers(&self) -> Vec<cm_rust::OfferDecl> {
+        self.decl.offers.clone()
+    }
+
+    fn capabilities(&self) -> Vec<cm_rust::CapabilityDecl> {
+        self.decl.capabilities.clone()
+    }
+
+    fn collections(&self) -> Vec<cm_rust::CollectionDecl> {
+        self.decl.collections.clone()
+    }
+
+    fn get_live_child(&self, moniker: &PartialChildMoniker) -> Option<Arc<ComponentInstance>> {
+        ResolvedInstanceState::get_live_child(self, moniker)
+    }
+
+    fn live_children_in_collection(
+        &self,
+        collection: &str,
+    ) -> Vec<(PartialChildMoniker, Arc<ComponentInstance>)> {
+        ResolvedInstanceState::live_children_in_collection(self, collection)
     }
 }
 

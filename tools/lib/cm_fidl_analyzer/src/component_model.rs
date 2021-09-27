@@ -9,8 +9,8 @@ use {
     },
     async_trait::async_trait,
     cm_rust::{
-        CapabilityDecl, CapabilityName, CapabilityPath, ComponentDecl, ExposeDecl, OfferDecl,
-        ProgramDecl, UseDecl,
+        CapabilityDecl, CapabilityName, CapabilityPath, CollectionDecl, ComponentDecl, ExposeDecl,
+        OfferDecl, ProgramDecl, UseDecl,
     },
     fidl::endpoints::ProtocolMarker,
     fidl_fuchsia_sys2 as fsys, fuchsia_zircon_status as zx_status,
@@ -24,8 +24,8 @@ use {
         },
         component_id_index::ComponentIdIndex,
         component_instance::{
-            ComponentInstanceInterface, ExtendedInstanceInterface, TopInstanceInterface,
-            WeakExtendedInstanceInterface,
+            ComponentInstanceInterface, ExtendedInstanceInterface, ResolvedInstanceInterface,
+            TopInstanceInterface, WeakExtendedInstanceInterface,
         },
         config::RuntimeConfig,
         environment::{DebugRegistry, EnvironmentExtends, EnvironmentInterface, RunnerRegistry},
@@ -207,7 +207,7 @@ impl ComponentModelForAnalyzer {
                 (source, vec![route])
             }
             UseDecl::Event(use_event_decl) => {
-                if !self.uses_event_source_protocol(&target.decl().await?) {
+                if !self.uses_event_source_protocol(&target.decl) {
                     return Err(AnalyzerModelError::MissingEventSourceProtocol(
                         use_event_decl.target_name.to_string(),
                     ));
@@ -347,7 +347,7 @@ impl ComponentModelForAnalyzer {
 
         match source_capability.source_name().map(|name| name.to_string()).as_deref() {
             Some(fsys::StorageAdminMarker::NAME) => {
-                match source_component.decl().await?.find_storage_source(source_capability_name) {
+                match source_component.decl.find_storage_source(source_capability_name) {
                     Some(_) => Ok(()),
                     None => Err(AnalyzerModelError::InvalidSourceCapability(
                         source_capability_name.to_string(),
@@ -414,7 +414,7 @@ impl ComponentModelForAnalyzer {
         &self,
         component: &Arc<ComponentInstanceForAnalyzer>,
     ) -> Result<(), AnalyzerModelError> {
-        match component.decl().await?.program {
+        match component.decl.program {
             Some(_) => Ok(()),
             None => Err(AnalyzerModelError::SourceInstanceNotExecutable(
                 component.abs_moniker().to_string(),
@@ -446,6 +446,14 @@ pub struct ComponentInstanceForAnalyzer {
     environment: Arc<EnvironmentForAnalyzer>,
     policy_checker: GlobalPolicyChecker,
     component_id_index: Arc<ComponentIdIndex>,
+}
+
+impl ComponentInstanceForAnalyzer {
+    /// Exposes the component's ComponentDecl. This is referenced directly in
+    /// tests.
+    pub fn decl_for_testing(&self) -> &ComponentDecl {
+        &self.decl
+    }
 }
 
 /// A representation of `ComponentManager`'s instance, providing a set of capabilities to
@@ -569,30 +577,56 @@ impl ComponentInstanceInterface for ComponentInstanceForAnalyzer {
         Ok(Arc::clone(&self.component_id_index))
     }
 
-    async fn decl<'a>(self: &'a Arc<Self>) -> Result<ComponentDecl, ComponentInstanceError> {
-        Ok(self.decl.clone())
-    }
-
-    async fn get_live_child<'a>(
+    async fn lock_resolved_state<'a>(
         self: &'a Arc<Self>,
-        moniker: &PartialChildMoniker,
-    ) -> Result<Option<Arc<Self>>, ComponentInstanceError> {
-        match self.children.read().expect("failed to acquire read lock").get(moniker) {
-            Some(child) => Ok(Some(Arc::clone(child))),
-            None => Ok(None),
-        }
-    }
-
-    // This is a static model with no notion of a collection.
-    async fn live_children_in_collection<'a>(
-        self: &'a Arc<Self>,
-        _collection: &'a str,
-    ) -> Result<Vec<(PartialChildMoniker, Arc<Self>)>, ComponentInstanceError> {
-        Ok(vec![])
+    ) -> Result<
+        Box<dyn ResolvedInstanceInterface<Component = ComponentInstanceForAnalyzer> + 'a>,
+        ComponentInstanceError,
+    > {
+        Ok(Box::new(&**self))
     }
 
     fn new_route_mapper() -> RouteMapper {
         RouteMapper { route: RouteMap::new() }
+    }
+}
+
+impl ResolvedInstanceInterface for ComponentInstanceForAnalyzer {
+    type Component = ComponentInstanceForAnalyzer;
+
+    fn uses(&self) -> Vec<UseDecl> {
+        self.decl.uses.clone()
+    }
+
+    fn exposes(&self) -> Vec<ExposeDecl> {
+        self.decl.exposes.clone()
+    }
+
+    fn offers(&self) -> Vec<OfferDecl> {
+        self.decl.offers.clone()
+    }
+
+    fn capabilities(&self) -> Vec<CapabilityDecl> {
+        self.decl.capabilities.clone()
+    }
+
+    fn collections(&self) -> Vec<CollectionDecl> {
+        self.decl.collections.clone()
+    }
+
+    fn get_live_child(
+        &self,
+        moniker: &PartialChildMoniker,
+    ) -> Option<Arc<ComponentInstanceForAnalyzer>> {
+        self.children.read().expect("failed to acquire read lock").get(moniker).map(Arc::clone)
+    }
+
+    // This is a static model with no notion of a collection.
+    fn live_children_in_collection(
+        &self,
+        _collection: &str,
+    ) -> Vec<(PartialChildMoniker, Arc<ComponentInstanceForAnalyzer>)> {
+        vec![]
     }
 }
 
@@ -708,7 +742,12 @@ mod tests {
             _ => panic!("child instance's parent should be root component"),
         }
 
-        let get_child = block_on(async { root_instance.get_live_child(&child_moniker).await })?;
+        let get_child = block_on(async {
+            root_instance
+                .lock_resolved_state()
+                .await
+                .map(|locked| locked.get_live_child(&child_moniker))
+        })?;
         assert!(get_child.is_some());
         assert_eq!(get_child.unwrap().abs_moniker(), child_instance.abs_moniker());
 
@@ -736,8 +775,8 @@ mod tests {
         child_instance.try_get_component_id_index()?;
 
         block_on(async {
-            assert!(root_instance.decl().await.is_ok());
-            assert!(child_instance.decl().await.is_ok());
+            assert!(root_instance.lock_resolved_state().await.is_ok());
+            assert!(child_instance.lock_resolved_state().await.is_ok());
         });
 
         Ok(())

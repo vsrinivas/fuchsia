@@ -266,9 +266,8 @@ impl RoutingTestModel for RoutingTestForAnalyzer {
     async fn check_use(&self, moniker: PartialAbsoluteMoniker, check: CheckUse) {
         let target_id = NodePath::new(moniker.path().clone());
         let target = self.model.get_instance(&target_id).expect("target instance not found");
-        let target_decl = target.decl().await.expect("target ComponentDecl not found");
 
-        let (find_decl, expected) = self.find_matching_use(check, &target_decl);
+        let (find_decl, expected) = self.find_matching_use(check, target.decl_for_testing());
 
         // If `find_decl` is not OK, check that `expected` has a matching error.
         // Otherwise, route the capability and compare the result to `expected`.
@@ -302,9 +301,8 @@ impl RoutingTestModel for RoutingTestForAnalyzer {
     async fn check_use_exposed_dir(&self, moniker: PartialAbsoluteMoniker, check: CheckUse) {
         let target =
             self.model.get_instance(&NodePath::from(moniker)).expect("target instance not found");
-        let target_decl = target.decl().await.expect("target ComponentDecl not found");
 
-        let (find_decl, expected) = self.find_matching_expose(check, &target_decl);
+        let (find_decl, expected) = self.find_matching_expose(check, target.decl_for_testing());
 
         // If `find_decl` is not OK, check that `expected` has a matching error.
         // Otherwise, route the capability and compare the result to `expected`.
@@ -650,12 +648,7 @@ mod tests {
         assert!(test
             .model
             .check_program_runner(
-                &c_component
-                    .decl()
-                    .await
-                    .expect("failed to get component decl")
-                    .program
-                    .expect("missing program decl"),
+                c_component.decl_for_testing().program.as_ref().expect("missing program decl"),
                 &c_component
             )
             .await
@@ -701,12 +694,7 @@ mod tests {
         let check_result = test
             .model
             .check_program_runner(
-                &b_component
-                    .decl()
-                    .await
-                    .expect("failed to get component decl")
-                    .program
-                    .expect("missing program decl"),
+                &b_component.decl_for_testing().program.as_ref().expect("missing program decl"),
                 &b_component,
             )
             .await;
@@ -1033,10 +1021,9 @@ mod tests {
             .model
             .check_program_runner(
                 &b_component
-                    .decl()
-                    .await
-                    .expect("expected ComponentDecl for b")
+                    .decl_for_testing()
                     .program
+                    .as_ref()
                     .expect("expected ProgramDecl for b"),
                 &b_component,
             )

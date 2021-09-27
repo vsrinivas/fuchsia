@@ -7,15 +7,16 @@ use {
         capability_source::{CapabilitySourceInterface, ComponentCapability, InternalCapability},
         collection::CollectionServiceProvider,
         component_instance::{
-            ComponentInstanceInterface, ExtendedInstanceInterface, TopInstanceInterface,
+            ComponentInstanceInterface, ExtendedInstanceInterface, ResolvedInstanceInterface,
+            TopInstanceInterface,
         },
         error::RoutingError,
         DebugRouteMapper, RegistrationDecl,
     },
     cm_rust::{
-        CapabilityDecl, CapabilityDeclCommon, CapabilityName, ComponentDecl, ExposeDecl,
-        ExposeDeclCommon, ExposeSource, ExposeTarget, OfferDecl, OfferDeclCommon, OfferSource,
-        OfferTarget, RegistrationDeclCommon, RegistrationSource, UseDecl, UseDeclCommon, UseSource,
+        CapabilityDecl, CapabilityDeclCommon, CapabilityName, ExposeDecl, ExposeDeclCommon,
+        ExposeSource, ExposeTarget, OfferDecl, OfferDeclCommon, OfferSource, OfferTarget,
+        RegistrationDeclCommon, RegistrationSource, UseDecl, UseDeclCommon, UseSource,
     },
     derivative::Derivative,
     from_enum::FromEnum,
@@ -97,12 +98,12 @@ where
         M: DebugRouteMapper + 'static,
     {
         mapper.add_use(target.abs_moniker().clone(), use_decl.clone().into());
-        let decl = target.decl().await?;
+        let target_capabilities = target.lock_resolved_state().await?.capabilities();
         Ok(CapabilitySourceInterface::<C>::Component {
             capability: sources.find_component_source(
                 use_decl.source_name(),
                 target.abs_moniker(),
-                &decl.capabilities,
+                &target_capabilities,
                 visitor,
                 mapper,
             )?,
@@ -255,8 +256,8 @@ where
                 self.route_from_offer(offer, component, sources, visitor, mapper).await
             }
             UseResult::FromChild(use_decl, child_component) => {
-                let child_decl = child_component.decl().await?;
-                let expose_decl = find_matching_expose(use_decl.source_name(), &child_decl)
+                let child_exposes = child_component.lock_resolved_state().await?.exposes();
+                let expose_decl = find_matching_expose(use_decl.source_name(), &child_exposes)
                     .cloned()
                     .ok_or_else(|| {
                         let child_moniker = child_component
@@ -833,10 +834,10 @@ where
                 }
                 ExtendedInstanceInterface::<C>::Component(parent_component) => {
                     let parent_offer: O = {
-                        let parent_decl = parent_component.decl().await?;
+                        let parent_offers = parent_component.lock_resolved_state().await?.offers();
                         let child_moniker =
                             target.child_moniker().cloned().expect("ChildMoniker should exist");
-                        find_matching_offer(use_.source_name(), &child_moniker, &parent_decl)
+                        find_matching_offer(use_.source_name(), &child_moniker, &parent_offers)
                             .cloned()
                             .ok_or_else(|| {
                                 <U as ErrorNotFoundFromParent>::error_not_found_from_parent(
@@ -852,13 +853,15 @@ where
                 let moniker = target.abs_moniker().to_partial();
                 let child_component = {
                     let partial = PartialChildMoniker::new(name.clone(), None);
-                    target.get_live_child(&partial).await?.ok_or_else(|| {
-                        RoutingError::use_from_child_not_found(
-                            &moniker,
-                            use_.source_name().clone(),
-                            name.clone(),
-                        )
-                    })?
+                    target.lock_resolved_state().await?.get_live_child(&partial).ok_or_else(
+                        || {
+                            RoutingError::use_from_child_not_found(
+                                &moniker,
+                                use_.source_name().clone(),
+                                name.clone(),
+                            )
+                        },
+                    )?
                 };
 
                 Ok(UseResult::FromChild(use_, child_component))
@@ -917,12 +920,12 @@ where
         mapper.add_registration(target.abs_moniker().clone(), registration.clone().into());
         match registration.source() {
             RegistrationSource::Self_ => {
-                let decl = target.decl().await?;
+                let target_capabilities = target.lock_resolved_state().await?.capabilities();
                 Ok(RegistrationResult::Source(CapabilitySourceInterface::<C>::Component {
                     capability: sources.find_component_source(
                         registration.source_name(),
                         target.abs_moniker(),
-                        &decl.capabilities,
+                        &target_capabilities,
                         visitor,
                         mapper,
                     )?,
@@ -965,13 +968,13 @@ where
                 }
                 ExtendedInstanceInterface::<C>::Component(parent_component) => {
                     let parent_offer: O = {
-                        let parent_decl = parent_component.decl().await?;
+                        let parent_offers = parent_component.lock_resolved_state().await?.offers();
                         let child_moniker =
                             target.child_moniker().cloned().expect("ChildMoniker should exist");
                         find_matching_offer(
                             registration.source_name(),
                             &child_moniker,
-                            &parent_decl,
+                            &parent_offers,
                         )
                         .cloned()
                         .ok_or_else(|| {
@@ -987,19 +990,19 @@ where
             RegistrationSource::Child(child) => {
                 let child_component = {
                     let partial = PartialChildMoniker::new(child.clone(), None);
-                    target.get_live_child(&partial).await?.ok_or_else(|| {
-                        RoutingError::EnvironmentFromChildInstanceNotFound {
+                    target.lock_resolved_state().await?.get_live_child(&partial).ok_or_else(
+                        || RoutingError::EnvironmentFromChildInstanceNotFound {
                             child_moniker: partial,
                             moniker: target.abs_moniker().to_partial(),
                             capability_name: registration.source_name().clone(),
                             capability_type: R::TYPE.to_string(),
-                        }
-                    })?
+                        },
+                    )?
                 };
 
                 let child_expose: E = {
-                    let child_decl = child_component.decl().await?;
-                    find_matching_expose(registration.source_name(), &child_decl)
+                    let child_exposes = child_component.lock_resolved_state().await?.exposes();
+                    find_matching_expose(registration.source_name(), &child_exposes)
                         .cloned()
                         .ok_or_else(|| {
                             let child_moniker = child_component
@@ -1059,12 +1062,12 @@ where
 
             match offer.source() {
                 OfferSource::Self_ => {
-                    let decl = target.decl().await?;
+                    let target_capabilities = target.lock_resolved_state().await?.capabilities();
                     return Ok(OfferResult::Source(CapabilitySourceInterface::<C>::Component {
                         capability: sources.find_component_source(
                             offer.source_name(),
                             target.abs_moniker(),
-                            &decl.capabilities,
+                            &target_capabilities,
                             visitor,
                             mapper,
                         )?,
@@ -1125,8 +1128,8 @@ where
                     let child_moniker =
                         target.child_moniker().cloned().expect("ChildMoniker should exist");
                     let parent_offer = {
-                        let parent_decl = parent_component.decl().await?;
-                        find_matching_offer(offer.source_name(), &child_moniker, &parent_decl)
+                        let parent_offers = parent_component.lock_resolved_state().await?.offers();
+                        find_matching_offer(offer.source_name(), &child_moniker, &parent_offers)
                             .cloned()
                             .ok_or_else(|| {
                                 <O as ErrorNotFoundFromParent>::error_not_found_from_parent(
@@ -1144,8 +1147,8 @@ where
                 OfferSource::Collection(name) => {
                     sources.collection_source()?;
                     {
-                        let decl = target.decl().await?;
-                        decl.collections.iter().find(|c| &c.name == name).ok_or_else(|| {
+                        let target_collections = target.lock_resolved_state().await?.collections();
+                        target_collections.iter().find(|c| &c.name == name).ok_or_else(|| {
                             RoutingError::OfferFromCollectionNotFound {
                                 collection: name.clone(),
                                 moniker: target.abs_moniker().to_partial(),
@@ -1180,17 +1183,17 @@ where
                 let child = &child.name;
 
                 let partial = PartialChildMoniker::new(child.clone(), None);
-                component.get_live_child(&partial).await?.ok_or_else(|| {
-                    RoutingError::OfferFromChildInstanceNotFound {
+                component.lock_resolved_state().await?.get_live_child(&partial).ok_or_else(
+                    || RoutingError::OfferFromChildInstanceNotFound {
                         child_moniker: partial,
                         moniker: component.abs_moniker().to_partial(),
                         capability_id: offer.source_name().clone().into(),
-                    }
-                })?
+                    },
+                )?
             };
             let expose = {
-                let child_decl = child_component.decl().await?;
-                find_matching_expose(offer.source_name(), &child_decl).cloned().ok_or_else(
+                let child_exposes = child_component.lock_resolved_state().await?.exposes();
+                find_matching_expose(offer.source_name(), &child_exposes).cloned().ok_or_else(
                     || {
                         let child_moniker = child_component
                             .child_moniker()
@@ -1247,12 +1250,12 @@ where
 
             match expose.source() {
                 ExposeSource::Self_ => {
-                    let decl = target.decl().await?;
+                    let target_capabilities = target.lock_resolved_state().await?.capabilities();
                     return Ok(ExposeResult::Source(CapabilitySourceInterface::<C>::Component {
                         capability: sources.find_component_source(
                             expose.source_name(),
                             target.abs_moniker(),
-                            &decl.capabilities,
+                            &target_capabilities,
                             visitor,
                             mapper,
                         )?,
@@ -1276,17 +1279,19 @@ where
                 ExposeSource::Child(child) => {
                     let child_component = {
                         let child_moniker = PartialChildMoniker::new(child.clone(), None);
-                        target.get_live_child(&child_moniker).await?.ok_or_else(|| {
-                            RoutingError::ExposeFromChildInstanceNotFound {
+                        target
+                            .lock_resolved_state()
+                            .await?
+                            .get_live_child(&child_moniker)
+                            .ok_or_else(|| RoutingError::ExposeFromChildInstanceNotFound {
                                 child_moniker,
                                 moniker: target.abs_moniker().to_partial(),
                                 capability_id: expose.source_name().clone().into(),
-                            }
-                        })?
+                            })?
                     };
                     let child_expose = {
-                        let child_decl = child_component.decl().await?;
-                        find_matching_expose(expose.source_name(), &child_decl)
+                        let child_exposes = child_component.lock_resolved_state().await?.exposes();
+                        find_matching_expose(expose.source_name(), &child_exposes)
                             .cloned()
                             .ok_or_else(|| {
                                 let child_moniker = child_component
@@ -1306,8 +1311,8 @@ where
                 ExposeSource::Collection(name) => {
                     sources.collection_source()?;
                     {
-                        let decl = target.decl().await?;
-                        decl.collections.iter().find(|c| &c.name == name).ok_or_else(|| {
+                        let target_collections = target.lock_resolved_state().await?.collections();
+                        target_collections.iter().find(|c| &c.name == name).ok_or_else(|| {
                             RoutingError::ExposeFromCollectionNotFound {
                                 collection: name.clone(),
                                 moniker: target.abs_moniker().to_partial(),
@@ -1374,12 +1379,12 @@ pub trait CapabilityVisitor {
 pub fn find_matching_offer<'a, O>(
     source_name: &CapabilityName,
     child_moniker: &ChildMoniker,
-    decl: &'a ComponentDecl,
+    offers: &'a Vec<OfferDecl>,
 ) -> Option<&'a O>
 where
     O: OfferDeclCommon + FromEnum<OfferDecl>,
 {
-    decl.offers.iter().flat_map(FromEnum::<OfferDecl>::from_enum).find(|offer: &&O| {
+    offers.iter().flat_map(FromEnum::<OfferDecl>::from_enum).find(|offer: &&O| {
         *offer.target_name() == *source_name
             && target_matches_moniker(offer.target(), &child_moniker)
     })
@@ -1387,12 +1392,12 @@ where
 
 pub fn find_matching_expose<'a, E>(
     source_name: &CapabilityName,
-    decl: &'a ComponentDecl,
+    exposes: &'a Vec<ExposeDecl>,
 ) -> Option<&'a E>
 where
     E: ExposeDeclCommon + FromEnum<ExposeDecl>,
 {
-    decl.exposes.iter().flat_map(FromEnum::<ExposeDecl>::from_enum).find(|expose: &&E| {
+    exposes.iter().flat_map(FromEnum::<ExposeDecl>::from_enum).find(|expose: &&E| {
         *expose.target_name() == *source_name && *expose.target() == ExposeTarget::Parent
     })
 }

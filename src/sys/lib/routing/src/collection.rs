@@ -5,7 +5,9 @@
 use {
     crate::{
         capability_source::{CapabilitySourceInterface, CollectionCapabilityProvider},
-        component_instance::{ComponentInstanceInterface, WeakComponentInstanceInterface},
+        component_instance::{
+            ComponentInstanceInterface, ResolvedInstanceInterface, WeakComponentInstanceInterface,
+        },
         error::RoutingError,
         router::{
             find_matching_expose, CapabilityVisitor, ErrorNotFoundInChild, Expose, ExposeVisitor,
@@ -96,8 +98,9 @@ where
         let collection_component = self.collection_component.upgrade()?;
         let (child_moniker, child_component): (PartialChildMoniker, Arc<C>) = {
             collection_component
-                .live_children_in_collection(&self.collection_name)
+                .lock_resolved_state()
                 .await?
+                .live_children_in_collection(&self.collection_name)
                 .into_iter()
                 .find_map(move |(m, c)| if m.name() == instance { Some((m, c)) } else { None })
                 .ok_or_else(|| RoutingError::OfferFromChildInstanceNotFound {
@@ -111,16 +114,16 @@ where
         };
 
         let expose_decl: E = {
-            let child_decl = child_component.decl().await?;
-            find_matching_expose(self.target_decl.source_name(), &child_decl).cloned().ok_or_else(
-                || {
+            let child_exposes = child_component.lock_resolved_state().await?.exposes();
+            find_matching_expose(self.target_decl.source_name(), &child_exposes)
+                .cloned()
+                .ok_or_else(|| {
                     E::error_not_found_in_child(
                         collection_component.abs_moniker().to_partial(),
                         child_moniker,
                         self.target_decl.source_name().clone(),
                     )
-                },
-            )?
+                })?
         };
         self.router
             .route_from_expose(
@@ -152,11 +155,12 @@ where
     let mut instances = Vec::new();
     let component = component.upgrade()?;
     let components: Vec<(PartialChildMoniker, Arc<C>)> =
-        component.live_children_in_collection(collection_name).await?;
-    for (partial_moniker, component) in components {
-        match component.decl().await {
-            Ok(decl) => {
-                if find_matching_expose::<E>(capability_name, &decl).is_some() {
+        component.lock_resolved_state().await?.live_children_in_collection(collection_name);
+    for (partial_moniker, child_component) in components {
+        let child_exposes = child_component.lock_resolved_state().await.map(|c| c.exposes());
+        match child_exposes {
+            Ok(child_exposes) => {
+                if find_matching_expose::<E>(capability_name, &child_exposes).is_some() {
                     instances.push(partial_moniker.name().to_string())
                 }
             }

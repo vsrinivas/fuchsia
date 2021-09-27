@@ -12,7 +12,7 @@ use {
         DebugRouteMapper,
     },
     async_trait::async_trait,
-    cm_rust::ComponentDecl,
+    cm_rust::{CapabilityDecl, CollectionDecl, ExposeDecl, OfferDecl, UseDecl},
     derivative::Derivative,
     moniker::{AbsoluteMoniker, AbsoluteMonikerBase, ChildMoniker, PartialChildMoniker},
     std::{
@@ -52,23 +52,94 @@ pub trait ComponentInstanceInterface: Sized + Send + Sync {
     /// Gets the parent, if it still exists, or returns an `InstanceNotFound` error.
     fn try_get_parent(&self) -> Result<ExtendedInstanceInterface<Self>, ComponentInstanceError>;
 
-    /// Returns a copy of this instance's `ComponentDecl`.
-    async fn decl<'a>(self: &'a Arc<Self>) -> Result<ComponentDecl, ComponentInstanceError>;
-
-    /// Returns a live child of this instance.
-    async fn get_live_child<'a>(
+    /// Locks and returns a lazily-resolved and populated
+    /// `ResolvedInstanceInterface`.  Returns an `InstanceNotFound` error if the
+    /// instance is destroyed. The instance will remain locked until the result
+    /// is dropped.
+    ///
+    /// NOTE: The `Box<dyn>` in the return type is necessary, because the type
+    /// of the result depends on the lifetime of the `self` reference. The
+    /// proposed "generic associated types" feature would let us define this
+    /// statically.
+    async fn lock_resolved_state<'a>(
         self: &'a Arc<Self>,
-        moniker: &PartialChildMoniker,
-    ) -> Result<Option<Arc<Self>>, ComponentInstanceError>;
-
-    /// Returns a vector of the live children in `collection`.
-    async fn live_children_in_collection<'a>(
-        self: &'a Arc<Self>,
-        collection: &'a str,
-    ) -> Result<Vec<(PartialChildMoniker, Arc<Self>)>, ComponentInstanceError>;
+    ) -> Result<Box<dyn ResolvedInstanceInterface<Component = Self> + 'a>, ComponentInstanceError>;
 
     /// Returns a new mapper for recording a capability route during routing.
     fn new_route_mapper() -> Self::DebugRouteMapper;
+}
+
+/// A trait providing a representation of a resolved component instance.
+pub trait ResolvedInstanceInterface: Send + Sync {
+    /// Type representing a (unlocked and potentially unresolved) component instance.
+    type Component;
+
+    /// Current view of this component's `uses` declarations.
+    fn uses(&self) -> Vec<UseDecl>;
+
+    /// Current view of this component's `exposes` declarations.
+    fn exposes(&self) -> Vec<ExposeDecl>;
+
+    /// Current view of this component's `offers` declarations.
+    fn offers(&self) -> Vec<OfferDecl>;
+
+    /// Current view of this component's `capabilities` declarations.
+    fn capabilities(&self) -> Vec<CapabilityDecl>;
+
+    /// Current view of this component's `collections` declarations.
+    fn collections(&self) -> Vec<CollectionDecl>;
+
+    /// Returns a live child of this instance.
+    fn get_live_child(&self, moniker: &PartialChildMoniker) -> Option<Arc<Self::Component>>;
+
+    /// Returns a vector of the live children in `collection`.
+    fn live_children_in_collection(
+        &self,
+        collection: &str,
+    ) -> Vec<(PartialChildMoniker, Arc<Self::Component>)>;
+}
+
+// Elsewhere we need to implement `ResolvedInstanceInterface` for `&T` and
+// `MappedMutexGuard<_, _, T>`, where `T : ResolvedComponentInstance`. We can't
+// implement the latter outside of this crate because of the "orphan rule". So
+// here we implement it for all `Deref`s.
+impl<T> ResolvedInstanceInterface for T
+where
+    T: std::ops::Deref + Send + Sync,
+    T::Target: ResolvedInstanceInterface,
+{
+    type Component = <T::Target as ResolvedInstanceInterface>::Component;
+
+    fn uses(&self) -> Vec<UseDecl> {
+        T::Target::uses(&*self)
+    }
+
+    fn exposes(&self) -> Vec<ExposeDecl> {
+        T::Target::exposes(&*self)
+    }
+
+    fn offers(&self) -> Vec<cm_rust::OfferDecl> {
+        T::Target::offers(&*self)
+    }
+
+    fn capabilities(&self) -> Vec<cm_rust::CapabilityDecl> {
+        T::Target::capabilities(&*self)
+    }
+
+    fn collections(&self) -> Vec<cm_rust::CollectionDecl> {
+        T::Target::collections(&*self)
+    }
+
+    fn get_live_child(&self, moniker: &PartialChildMoniker) -> Option<Arc<Self::Component>> {
+        T::Target::get_live_child(&*self, moniker)
+    }
+
+    fn live_children_in_collection(
+        &self,
+        collection: &str,
+    ) -> Vec<(PartialChildMoniker, Arc<Self::Component>)> {
+        T::Target::live_children_in_collection(&*self, collection)
+    }
 }
 
 /// A wrapper for a weak reference to a type implementing `ComponentInstanceInterface`. Provides the
