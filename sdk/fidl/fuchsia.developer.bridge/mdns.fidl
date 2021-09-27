@@ -1,12 +1,6 @@
 // Copyright 2021 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-//! A simple mDNS service for the daemon. Includes an API for subscribing to
-//! events, as well as inspecting cached info.
-//!
-//! Some more context on how targets are cached: when receiving an mDNS packet,
-//! there is an additional record section that contains the nodename of the
-//! target, its TTL (in seconds), and some additional metadata.
 library fuchsia.developer.bridge;
 
 /// Contains information about the socket bound during mDNS setup.

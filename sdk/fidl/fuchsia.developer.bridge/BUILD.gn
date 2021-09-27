@@ -12,6 +12,7 @@ fidl("fuchsia.developer.bridge") {
     "echo.fidl",
     "fastboot.fidl",
     "mdns.fidl",
+    "overview.fidl",
     "repo.fidl",
     "target.fidl",
     "tracing.fidl",
