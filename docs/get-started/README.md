@@ -21,7 +21,11 @@ The steps are:
 
 ### Learn more about Fuchsia
 
-If you want to further explore Fuchsia, check out the following resources:
+If you are new to Fuchsia, explore [Fuchsia fundamentals][fuchsia-fundamentals]
+to gain a better understanding of the platform and developer tools.
+
+If you're ready to go deeper into Fuchsia concepts and start contributing,
+check out the following resources:
 
 *   [Fuchsia's software model][software-model]
 *   [Components][components]
@@ -37,7 +41,7 @@ that powers Fuchsia.
 If you're interested in working on Zircon, see
 [Getting started with Zircon][get-started-with-zircon].
 
-<!-- Refernce links -->
+<!-- Reference links -->
 
 [install-fuchsia-on-a-device]: /docs/development/hardware/paving.md
 [download-fuchsia]: /docs/get-started/get_fuchsia_source.md
@@ -51,3 +55,4 @@ If you're interested in working on Zircon, see
 [find-a-starter-project]: /docs/contribute/open_projects/
 [zircon]: /docs/concepts/kernel/README.md
 [get-started-with-zircon]: /docs/development/kernel/getting_started.md
+[fuchsia-fundamentals]: /docs/get-started/learn/README.md

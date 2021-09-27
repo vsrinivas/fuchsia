@@ -6,9 +6,9 @@
 # before making changes to this file, and add a member of the fuchsia.dev
 # team as reviewer.
 toc:
+- heading: "Quickstart"
 - title: "Overview"
   path: /docs/get-started/README.md
-- heading: "Get started with Fuchsia"
 - title: "1. Download the Fuchsia source code"
   path: /docs/get-started/get_fuchsia_source.md
 - title: "2. Configure and build Fuchsia"
@@ -17,3 +17,18 @@ toc:
   path: /docs/get-started/set_up_femu.md
 - title: "4. Explore Fuchsia"
   path: /docs/get-started/explore_fuchsia.md
+- heading: "Fuchsia fundamentals"
+- title: "Overview"
+  path: /docs/get-started/learn/README.md
+- title: "Introduction to Fuchsia"
+  section:
+  - include: /docs/get-started/learn/intro/_toc.yaml
+- title: "Building Fuchsia"
+  section:
+  - include: /docs/get-started/learn/build/_toc.yaml
+- title: "Fuchsia components"
+  section:
+  - include: /docs/get-started/learn/components/_toc.yaml
+- title: "Fuchsia interfaces"
+  section:
+  - include: /docs/get-started/learn/fidl/_toc.yaml
