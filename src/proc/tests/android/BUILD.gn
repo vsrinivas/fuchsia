@@ -93,8 +93,7 @@ gvisor_tests = [
   # "accept_bind_stream_test",
   # "accept_bind_test",
   "access_test",
-
-  # "bind_test",
+  "bind_test",
   "brk_test",
   "chdir_test",
   "chmod_test",
