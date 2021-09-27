@@ -27,11 +27,18 @@ protocol Input {
     }) -> (struct {}) error Error;
 
     /// Gets the current |InputSettings|. Returns immediately on first call;
-    /// subsequent calls return when the value changes. To find the state of a
-    /// specific device, the devices vector contained in settings can be iterated
-    /// through to find a specific [DeviceType]. If there are multiple devices of
-    /// the same [DeviceType] the [InputDevice]'s device_name can be examined to
-    /// find the specific device.
+    /// subsequent calls return when the value changes.
+    ///
+    /// When any of the input devices' states change, this will return the
+    /// full [InputSettings] object, containing the states for all the
+    /// available input devices on the target device.
+    ///
+    /// To find the state of a specific input device, the devices vector
+    /// contained in settings can be iterated through to find a specific
+    /// [DeviceType]. If there are multiple devices of the same [DeviceType],
+    /// the [InputDevice]'s device_name can be examined in conjunction with
+    /// the [DeviceType] to find the desired input device. Together, the
+    /// device_name and [DeviceType] uniquely identify an [InputDevice].
     ///
     /// If this call fails, it is considered a fatal error and the channel
     /// will be closed.
