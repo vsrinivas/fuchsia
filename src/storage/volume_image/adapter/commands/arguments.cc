@@ -183,18 +183,35 @@ fpromise::result<std::vector<PartitionParams>, std::string> PartitionParams::Fro
     partitions.push_back(params);
   }
 
-  // One-off empty minfs partition.
+  // One-off empty partition with a label of "data". This will later be reformatted.
+  // TODO(fxbug.dev/85165): Have assembly pass in an empty file and remove this flag.
   if (auto index = FindArgumentByName(arguments, "--with-empty-minfs"); index.has_value()) {
-    PartitionParams empty_minfs_partition;
-    empty_minfs_partition.format = PartitionImageFormat::kEmptyPartition;
-    empty_minfs_partition.label = "data";
-    empty_minfs_partition.type_guid = GUID_DATA_VALUE;
-    // Doesnt need to be encrypted, by GUID and label, it will be reformated.
-    empty_minfs_partition.encrypted = false;
-    // Need 2 slices.
-    empty_minfs_partition.options.max_bytes = options.slice_size + 1;
+    PartitionParams empty_data_partition;
+    empty_data_partition.format = PartitionImageFormat::kEmptyPartition;
+    empty_data_partition.label = "data";
+    empty_data_partition.type_guid = GUID_DATA_VALUE;
+    // Doesn't need to be encrypted, it will be found by GUID and label and reformated.
+    empty_data_partition.encrypted = false;
+    // Need 2 slices - one for zxcrypt and one for minfs.
+    empty_data_partition.options.max_bytes = options.slice_size + 1;
 
-    partitions.push_back(empty_minfs_partition);
+    partitions.push_back(empty_data_partition);
+  }
+
+  // One-off empty partition with a label of "account". This will later be reformatted.
+  // TODO(fxbug.dev/85165): Have assembly pass in an empty file and remove this flag.
+  if (auto index = FindArgumentByName(arguments, "--with-empty-account-partition");
+      index.has_value()) {
+    PartitionParams empty_account_partition;
+    empty_account_partition.format = PartitionImageFormat::kEmptyPartition;
+    empty_account_partition.label = "account";
+    empty_account_partition.type_guid = GUID_DATA_VALUE;
+    // Doesn't need to be encrypted, it will be found by GUID and label and reformated.
+    empty_account_partition.encrypted = false;
+    // Need 2 slices - one for zxcrypt and one for minfs.
+    empty_account_partition.options.max_bytes = options.slice_size + 1;
+
+    partitions.push_back(empty_account_partition);
   }
 
   // One off reserved partition.

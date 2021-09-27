@@ -23,10 +23,10 @@
 namespace storage::volume_image {
 namespace {
 
-// Expected label for blobfs volume
+// Expected label for minfs volume
 constexpr std::string_view kMinfsLabel = "data";
 
-// Expected GUID for blobfs instance.
+// Expected GUID for minfs instance.
 constexpr std::array<uint8_t, kGuidLength> kMinfsTypeGuid = GUID_DATA_VALUE;
 
 // For minfs we need to replace contents from the superblock, to make it look like its fvm based
@@ -101,7 +101,7 @@ fpromise::result<Partition, std::string> CreateMinfsFvmPartition(
     return sb_read_result.take_error_result();
   }
 
-  // Minor validation that we are actually dealing with a blobfs superblock.
+  // Minor validation that we are actually dealing with a minfs superblock.
   if (superblock.magic0 != minfs::kMinfsMagic0) {
     return fpromise::error(
         "Found bad magic0(" + std::to_string(superblock.magic0) +

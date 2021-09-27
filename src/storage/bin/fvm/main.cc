@@ -147,6 +147,10 @@ int usage(void) {
   fprintf(stderr,
           " --with-empty-minfs    - Adds a placeholder partition that will be formatted on boot,\n"
           "                         to minfs. The partition will be the 'data' partition.\n");
+  fprintf(stderr,
+          " --with-empty-account-partition - Adds a placeholder partition with a label of \n"
+          "                                  'account'. This will be formatted on account \n"
+          "                                  creation to minfs.\n");
   fprintf(
       stderr,
       "   --nand-page-size : Sets the hardware page size in bytes used by the targetted device.\n");

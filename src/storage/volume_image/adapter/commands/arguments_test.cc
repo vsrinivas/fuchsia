@@ -30,7 +30,7 @@ TEST(ArgumentTest, CommandFromStringIsOk) {
 }
 
 TEST(ArgumentTest, PartitionParamsFromArgsIsok) {
-  std::array<std::string_view, 43> kArgs = {
+  std::array<std::string_view, 44> kArgs = {
       "--blob",
       "path",
       "--minimum-inodes",
@@ -48,6 +48,7 @@ TEST(ArgumentTest, PartitionParamsFromArgsIsok) {
       "--maximum-bytes",
       "11M",
       "--with-empty-minfs",
+      "--with-empty-account-partition",
       "--data-unsafe",
       "path3",
       "--minimum-inodes",
@@ -82,7 +83,7 @@ TEST(ArgumentTest, PartitionParamsFromArgsIsok) {
   ASSERT_TRUE(params_or.is_ok()) << params_or.error();
   std::vector<PartitionParams> params = params_or.take_value();
 
-  ASSERT_EQ(params.size(), 7u);
+  ASSERT_EQ(params.size(), 8u);
 
   auto blob_params = params[0];
   EXPECT_EQ(blob_params.label, "");
@@ -134,16 +135,24 @@ TEST(ArgumentTest, PartitionParamsFromArgsIsok) {
   EXPECT_EQ(default_params.options.min_data_bytes.value(), 11u * kKilo);
   EXPECT_EQ(default_params.options.min_inode_count.value(), 1 * kKilo);
 
-  auto empty_minfs_params = params[5];
-  EXPECT_EQ(empty_minfs_params.label, "data");
-  EXPECT_EQ(empty_minfs_params.source_image_path, "");
-  EXPECT_EQ(empty_minfs_params.format, PartitionImageFormat::kEmptyPartition);
+  auto empty_data_params = params[5];
+  EXPECT_EQ(empty_data_params.label, "data");
+  EXPECT_EQ(empty_data_params.source_image_path, "");
+  EXPECT_EQ(empty_data_params.format, PartitionImageFormat::kEmptyPartition);
   uint8_t kDataGuid[] = GUID_DATA_VALUE;
-  EXPECT_TRUE(memcmp(empty_minfs_params.type_guid->data(), kDataGuid, kGuidLength) == 0);
-  EXPECT_FALSE(empty_minfs_params.encrypted);
-  EXPECT_EQ(empty_minfs_params.options.max_bytes.value(), options.slice_size + 1);
+  EXPECT_TRUE(memcmp(empty_data_params.type_guid->data(), kDataGuid, kGuidLength) == 0);
+  EXPECT_FALSE(empty_data_params.encrypted);
+  EXPECT_EQ(empty_data_params.options.max_bytes.value(), options.slice_size + 1);
 
-  auto reserved_partition_params = params[6];
+  auto empty_account_params = params[6];
+  EXPECT_EQ(empty_account_params.label, "account");
+  EXPECT_EQ(empty_account_params.source_image_path, "");
+  EXPECT_EQ(empty_account_params.format, PartitionImageFormat::kEmptyPartition);
+  EXPECT_TRUE(memcmp(empty_account_params.type_guid->data(), kDataGuid, kGuidLength) == 0);
+  EXPECT_FALSE(empty_account_params.encrypted);
+  EXPECT_EQ(empty_account_params.options.max_bytes.value(), options.slice_size + 1);
+
+  auto reserved_partition_params = params[7];
   EXPECT_EQ(reserved_partition_params.label, "internal");
   EXPECT_EQ(reserved_partition_params.source_image_path, "");
   EXPECT_EQ(reserved_partition_params.format, PartitionImageFormat::kEmptyPartition);
