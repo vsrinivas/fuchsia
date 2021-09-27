@@ -72,21 +72,6 @@ TEST(IntegrationTest, HlcppPipelining) {
       0);
 }
 
-TEST(IntegrationTest, GoSync) {
-  ASSERT_EQ(LaunchComponents("fuchsia-pkg://fuchsia.com/echo-go-client#meta/echo-client.cmx",
-                             "fuchsia-pkg://fuchsia.com/echo-go-server#meta/echo-server.cmx",
-                             {"fuchsia.examples.Echo"}),
-            0);
-}
-
-TEST(IntegrationTest, GoPipelining) {
-  ASSERT_EQ(
-      LaunchComponents("fuchsia-pkg://fuchsia.com/echo-launcher-go-client#meta/echo-client.cmx",
-                       "fuchsia-pkg://fuchsia.com/echo-launcher-go-server#meta/echo-server.cmx",
-                       {"fuchsia.examples.EchoLauncher"}),
-      0);
-}
-
 TEST(IntegrationTest, DartAsync) {
   ASSERT_EQ(LaunchComponents("fuchsia-pkg://fuchsia.com/echo-dart-client#meta/echo-dart-client.cmx",
                              "fuchsia-pkg://fuchsia.com/echo-dart-server#meta/echo-dart-server.cmx",

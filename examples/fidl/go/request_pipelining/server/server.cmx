@@ -1,5 +1,0 @@
-{
-    "program": {
-        "binary": "bin/fidl_echo_launcher_go_server"
-    }
-}

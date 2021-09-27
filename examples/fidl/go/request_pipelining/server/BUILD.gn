@@ -23,9 +23,8 @@ go_library("lib") {
   sources = [ "main.go" ]
 }
 
-fuchsia_package_with_single_component("server") {
-  package_name = "echo-launcher-go-server"
-  component_name = "echo-server"
-  manifest = "server.cmx"
+fuchsia_component("echo-server") {
+  component_name = "echo_server"
+  manifest = "meta/server.cml"
   deps = [ ":bin" ]
 }

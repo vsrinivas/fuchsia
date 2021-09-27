@@ -23,9 +23,8 @@ go_library("lib") {
   sources = [ "main.go" ]
 }
 
-fuchsia_package_with_single_component("client") {
-  package_name = "echo-go-client"
-  component_name = "echo-client"
-  manifest = "client.cmx"
+fuchsia_component("echo-client") {
+  component_name = "echo_client"
+  manifest = "meta/client.cml"
   deps = [ ":bin" ]
 }
