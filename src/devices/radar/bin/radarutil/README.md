@@ -13,7 +13,10 @@ The radarutil tool takes the following arguments:
   simulate processing delay. Requires a suffix (`h`, `m`, `s`, `ms`, `us`, `ns`)
   indicating the units. Defaults to no delay.
 - Run time (`-t`): The amount of time spend reading bursts before exiting.
-  Requires a suffix indicating the units. Defaults to 1 second.
+  Requires a suffix indicating the units. Incompatible with the burst count
+  option. Defaults to 1 second.
+- Burst count (`-b`): The number of bursts to read before exiting. Incompatible
+  with the run time option.
 - VMO count (`-v`): The number of VMOs to register and use for reading bursts.
   Defaults to 10.
 

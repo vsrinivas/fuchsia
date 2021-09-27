@@ -7,6 +7,7 @@
 #include <fidl/fuchsia.hardware.radar/cpp/wire.h>
 #include <lib/async/time.h>
 #include <lib/fidl/llcpp/arena.h>
+#include <lib/zx/clock.h>
 #include <lib/zx/status.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -44,13 +45,13 @@ zx::status<zx::duration> ParseDuration(char* arg) {
 
 void Usage() {
   constexpr char kUsageString[] =
-      "Usage: radarutil [-h] [-p burst process time] [-t run time] [-v vmos]\n"
-      "    burst process time: Time to sleep after each burst to simulate processing delay."
-      " Default: 0s\n"
-      "    run time: Total time to read frames."
-      " Default: 1s\n"
-      "    vmos: Number of VMOs to register for receiving frames."
-      " Default: 10\n"
+      "Usage: radarutil [-h] [-p burst process time] [-t run time|-b burst count]\n"
+      "                 [-v vmos]\n"
+      "    burst process time: Time to sleep after each burst to simulate processing\n"
+      "                        delay. Default: 0s\n"
+      "    run time: Total time to read frames. Default: 1s\n"
+      "    burst count: Total number of bursts to read.\n"
+      "    vmos: Number of VMOs to register for receiving frames. Default: 10\n"
       "\n"
       "    For time arguments, add a suffix (h,m,s,ms,us,ns) to indicate units.\n"
       "    For example: radarutil -p 3ms -t 5m -v 20\n";
@@ -97,8 +98,14 @@ fidl::AnyTeardownObserver RadarUtil::teardown_observer() {
 }
 
 zx_status_t RadarUtil::ParseArgs(int argc, char** argv) {
-  int opt, vmos;
-  while ((opt = getopt(argc, argv, "hp:t:v:")) != -1) {
+  if (argc <= 1) {
+    Usage();
+    help_ = true;
+    return ZX_OK;
+  }
+
+  int opt, vmos, burst_count;
+  while ((opt = getopt(argc, argv, "hp:t:b:v:")) != -1) {
     switch (opt) {
       case 'h':
         Usage();
@@ -114,12 +121,31 @@ zx_status_t RadarUtil::ParseArgs(int argc, char** argv) {
         break;
       }
       case 't': {
+        if (burst_count_.has_value()) {
+          Usage();
+          return ZX_ERR_INVALID_ARGS;
+        }
+
         zx::status<zx::duration> run_time = ParseDuration(optarg);
         if (run_time.is_error()) {
           Usage();
           return run_time.error_value();
         }
-        run_time_ = run_time.value();
+        run_time_.emplace(run_time.value());
+        break;
+      }
+      case 'b': {
+        if (run_time_.has_value()) {
+          Usage();
+          return ZX_ERR_INVALID_ARGS;
+        }
+
+        burst_count = atoi(optarg);
+        if (burst_count <= 0) {
+          Usage();
+          return ZX_ERR_INVALID_ARGS;
+        }
+        burst_count_.emplace(burst_count);
         break;
       }
       case 'v':
@@ -134,6 +160,10 @@ zx_status_t RadarUtil::ParseArgs(int argc, char** argv) {
         Usage();
         return ZX_ERR_INVALID_ARGS;
     }
+  }
+
+  if (!run_time_.has_value() && !burst_count_.has_value()) {
+    run_time_.emplace(kDefaultRunTime);
   }
 
   return ZX_OK;
@@ -242,17 +272,6 @@ zx_status_t RadarUtil::UnregisterVmos() {
 }
 
 zx_status_t RadarUtil::Run() {
-  thrd_t worker_thread;
-  int thread_status = thrd_create_with_name(
-      &worker_thread,
-      [](void* ctx) -> int { return reinterpret_cast<RadarUtil*>(ctx)->WorkerThread(); }, this,
-      "radarutil-worker-thread");
-  if (thread_status != thrd_success) {
-    zx_status_t status = thrd_status_to_zx_status(thread_status);
-    fprintf(stderr, "Failed to start worker thread: %s\n", zx_status_get_string(status));
-    return status;
-  }
-
   {
     const auto result = client_->StartBursts();
     if (!result.ok()) {
@@ -261,7 +280,11 @@ zx_status_t RadarUtil::Run() {
     }
   }
 
-  zx::nanosleep(zx::deadline_after(run_time_));
+  const zx::time start = zx::clock::get_monotonic();
+
+  ReadBursts();
+
+  const zx::duration elapsed = zx::clock::get_monotonic() - start;
 
   {
     const auto result = client_->StopBursts_Sync();
@@ -271,17 +294,42 @@ zx_status_t RadarUtil::Run() {
     }
   }
 
-  run_ = false;
-  worker_event_.Broadcast();
-
-  thrd_join(worker_thread, nullptr);
-
-  printf("Received %lu bursts and %lu burst errors\n", bursts_received_, burst_errors_);
+  if (burst_count_.has_value()) {
+    printf("Received %lu/%lu bursts in %lu seconds\n", bursts_received_, *burst_count_,
+           elapsed.to_secs());
+  } else {
+    printf("Received %lu bursts and %lu burst errors in %lu seconds\n", bursts_received_,
+           burst_errors_, elapsed.to_secs());
+  }
 
   return ZX_OK;
 }
 
-int RadarUtil::WorkerThread() {
+void RadarUtil::ReadBursts() {
+  struct Task {
+    async_task_t task;
+    RadarUtil* object;
+  } stop_burst_loop;
+
+  stop_burst_loop.object = this;
+  stop_burst_loop.task.state = ASYNC_STATE_INIT;
+  stop_burst_loop.task.handler = [](async_dispatcher_t* dispatcher, async_task_t* task,
+                                    zx_status_t status) {
+    RadarUtil* const object = reinterpret_cast<Task*>(task)->object;
+    object->run_ = false;
+    object->worker_event_.Broadcast();
+  };
+
+  // Post a task to stop the burst reading loop, set to run after the amount of time requested.
+  if (run_time_.has_value()) {
+    stop_burst_loop.task.deadline = async_now(loop_.dispatcher()) + run_time_->get();
+    zx_status_t status = async_post_task(loop_.dispatcher(), &stop_burst_loop.task);
+    if (status != ZX_OK) {
+      fprintf(stderr, "Failed to post timer task: %s\n", zx_status_get_string(status));
+      return;
+    }
+  }
+
   while (run_) {
     fbl::AutoLock lock(&lock_);
     while (burst_vmo_ids_.empty() && run_) {
@@ -291,30 +339,36 @@ int RadarUtil::WorkerThread() {
     while (!burst_vmo_ids_.empty()) {
       const uint32_t vmo_id = burst_vmo_ids_.front();
       burst_vmo_ids_.pop();
-      bursts_received_++;
+      if (vmo_id == kInvalidVmoId) {
+        burst_errors_++;
+      } else {
+        bursts_received_++;
 
-      if (burst_process_time_.to_nsecs() > 0) {
-        zx::nanosleep(zx::deadline_after(burst_process_time_));
+        if (burst_process_time_.to_nsecs() > 0) {
+          zx::nanosleep(zx::deadline_after(burst_process_time_));
+        }
+
+        client_->UnlockVmo(vmo_id);
       }
 
-      client_->UnlockVmo(vmo_id);
+      if (burst_count_.has_value() && (burst_errors_ + bursts_received_) >= *burst_count_) {
+        return;
+      }
     }
   }
-
-  return thrd_success;
 }
 
 void RadarUtil::OnBurst(fidl::WireResponse<BurstReader::OnBurst>* event) {
-  if (event->result.is_response()) {
-    {
-      fbl::AutoLock lock(&lock_);
+  {
+    fbl::AutoLock lock(&lock_);
+    if (event->result.is_response()) {
       burst_vmo_ids_.push(event->result.response().burst.vmo_id);
+    } else if (event->result.is_err()) {
+      burst_vmo_ids_.push(kInvalidVmoId);
     }
-    worker_event_.Broadcast();
   }
-  if (event->result.is_err()) {
-    burst_errors_++;
-  }
+
+  worker_event_.Broadcast();
 }
 
 }  // namespace radarutil

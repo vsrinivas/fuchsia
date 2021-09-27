@@ -9,6 +9,7 @@
 #include <lib/zx/time.h>
 #include <zircon/threads.h>
 
+#include <optional>
 #include <queue>
 
 #include <fbl/condition_variable.h>
@@ -28,6 +29,8 @@ class RadarUtil : public fidl::WireAsyncEventHandler<fuchsia_hardware_radar::Rad
   static constexpr zx::duration kDefaultRunTime = zx::sec(1);
   static constexpr size_t kDefaultVmoCount = 10;
   static constexpr zx::duration kDefaultBurstProcessTime = zx::nsec(0);
+  // Indicates a burst error from the callback filling the queue to the worker draining it.
+  static constexpr uint32_t kInvalidVmoId = UINT32_MAX;
 
   RadarUtil() : loop_(&kAsyncLoopConfigNeverAttachToThread) {}
   ~RadarUtil() override;
@@ -39,8 +42,7 @@ class RadarUtil : public fidl::WireAsyncEventHandler<fuchsia_hardware_radar::Rad
   zx_status_t RegisterVmos();
   zx_status_t UnregisterVmos();
   zx_status_t Run();
-
-  int WorkerThread();
+  void ReadBursts();
 
   void OnBurst(fidl::WireResponse<BurstReader::OnBurst>* event) override;
   void on_fidl_error(fidl::UnbindInfo info) override {}
@@ -48,7 +50,8 @@ class RadarUtil : public fidl::WireAsyncEventHandler<fuchsia_hardware_radar::Rad
   async::Loop loop_;
   fidl::WireSharedClient<BurstReader> client_;
   sync_completion_t client_teardown_completion_;
-  zx::duration run_time_ = kDefaultRunTime;
+  std::optional<zx::duration> run_time_;
+  std::optional<uint64_t> burst_count_;
   size_t vmo_count_ = kDefaultVmoCount;
   zx::duration burst_process_time_ = kDefaultBurstProcessTime;
 

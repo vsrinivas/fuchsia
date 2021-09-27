@@ -45,6 +45,7 @@ class FakeRadarDevice : public fidl::WireServer<BurstReader> {
   }
 
   size_t GetRegisteredVmoCount() const { return registered_vmo_count_; }
+  size_t GetBurstsSent() const { return bursts_sent_; }
 
   void Ok() const {
     EXPECT_EQ(registered_vmo_count_, unregistered_vmo_count_);
@@ -166,7 +167,6 @@ class FakeRadarDevice : public fidl::WireServer<BurstReader> {
   int WorkerThread() {
     fuchsia_hardware_radar::wire::RadarBurstReaderOnBurstResult result;
     bool sent_error = false;
-    size_t bursts_sent = 0;
 
     while (run_) {
       zx::nanosleep(zx::deadline_after(zx::usec(33'333)));
@@ -175,7 +175,7 @@ class FakeRadarDevice : public fidl::WireServer<BurstReader> {
         continue;
       }
 
-      if (bursts_sent++ == error_burst_) {
+      if (bursts_sent_++ == error_burst_) {
         SendBurstError(StatusCode::kSensorTimeout);
         sent_error = true;
       }
@@ -234,14 +234,23 @@ class FakeRadarDevice : public fidl::WireServer<BurstReader> {
 
   size_t registered_vmo_count_ = 0;
   size_t unregistered_vmo_count_ = 0;
+  size_t bursts_sent_ = 0;
   bool bursts_started_ = false;
   bool bursts_stopped_ = false;
 };
 
-TEST(RadarUtilTest, Run) {
+TEST(RadarUtilTest, RunTimed) {
   FakeRadarDevice device;
-  EXPECT_OK(device.RunRadarUtil({"radarutil", "-t", "1s", "-v", "20", "-p", "1ms"}));
+  EXPECT_OK(device.RunRadarUtil({"radarutil", "-t", "10s", "-v", "20", "-p", "1ms"}));
   EXPECT_EQ(device.GetRegisteredVmoCount(), 20);
+  ASSERT_NO_FATAL_FAILURES(device.Ok());
+}
+
+TEST(RadarUtilTest, RunBurstCount) {
+  FakeRadarDevice device;
+  EXPECT_OK(device.RunRadarUtil({"radarutil", "-b", "50", "-v", "20", "-p", "1ms"}));
+  EXPECT_EQ(device.GetRegisteredVmoCount(), 20);
+  EXPECT_GE(device.GetBurstsSent(), 50);
   ASSERT_NO_FATAL_FAILURES(device.Ok());
 }
 
@@ -250,13 +259,14 @@ TEST(RadarUtilTest, InvalidArgs) {
   EXPECT_NOT_OK(device.RunRadarUtil({"radarutil", "-t", "1s", "-v", "20", "-p", "999"}));
   EXPECT_NOT_OK(device.RunRadarUtil({"radarutil", "-t", "1s", "-v", "zzz", "-p", "1ms"}));
   EXPECT_NOT_OK(device.RunRadarUtil({"radarutil", "-t", "1s", "-v", "-3", "-p", "1ms"}));
+  EXPECT_NOT_OK(device.RunRadarUtil({"radarutil", "-t", "1s", "-b", "20"}));
 }
 
 TEST(RadarUtilTest, InjectError) {
   FakeRadarDevice device;
   device.SetErrorOnBurst(10);
 
-  EXPECT_OK(device.RunRadarUtil({"radarutil", "-t", "1s", "-v", "20", "-p", "1ms"}));
+  EXPECT_OK(device.RunRadarUtil({"radarutil", "-t", "10s", "-v", "20", "-p", "1ms"}));
   EXPECT_EQ(device.GetRegisteredVmoCount(), 20);
   ASSERT_NO_FATAL_FAILURES(device.Ok());
 }
