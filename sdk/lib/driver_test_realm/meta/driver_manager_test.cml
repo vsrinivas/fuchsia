@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 {
     include: [
+        "//src/devices/bin/driver_manager/meta/driver-manager-base.shard.cml",
         "inspect/client.shard.cml",
         "syslog/client.shard.cml",
     ],
@@ -10,64 +11,6 @@
         runner: "elf",
         binary: "bin/driver_manager",
         args: [ "--use-driver-index" ],
+        lifecycle: { stop_event: "notify" },
     },
-    capabilities: [
-        {
-            directory: "dev",
-            rights: [ "rw*" ],
-            path: "/dev",
-        },
-        {
-            protocol: [
-                "fuchsia.device.manager.Administrator",
-                "fuchsia.driver.development.DriverDevelopment",
-                "fuchsia.hardware.pci.DeviceWatcher",
-                "fuchsia.hardware.usb.DeviceWatcher",
-            ],
-        },
-    ],
-    use: [
-        {
-            directory: "system-delayed",
-            rights: [ "rx*" ],
-            path: "/system",
-        },
-        {
-            directory: "pkgfs-delayed",
-            rights: [ "rx*" ],
-            path: "/pkgfs",
-        },
-        {
-            directory: "boot",
-            rights: [ "rx*" ],
-            path: "/boot",
-        },
-        {
-            protocol: [
-                "fuchsia.boot.Arguments",
-                "fuchsia.boot.Items",
-                "fuchsia.driver.development.DriverIndex",
-                "fuchsia.driver.framework.DriverIndex",
-                "fuchsia.kernel.RootJob",
-                "fuchsia.power.manager.DriverManagerRegistration",
-                "fuchsia.process.Launcher",
-                "fuchsia.sys.Launcher",
-            ],
-        },
-    ],
-    expose: [
-        {
-            directory: "dev",
-            from: "self",
-        },
-        {
-            protocol: [
-                "fuchsia.device.manager.Administrator",
-                "fuchsia.driver.development.DriverDevelopment",
-                "fuchsia.hardware.pci.DeviceWatcher",
-                "fuchsia.hardware.usb.DeviceWatcher",
-            ],
-            from: "self",
-        },
-    ],
 }

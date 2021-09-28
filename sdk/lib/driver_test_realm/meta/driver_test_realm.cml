@@ -88,10 +88,19 @@
         },
         {
             protocol: [
+                "fuchsia.device.fs.Exporter",
+                "fuchsia.device.manager.Administrator",
+                "fuchsia.device.manager.DebugDumper",
+                "fuchsia.device.manager.SystemStateTransition",
                 "fuchsia.driver.development.DriverDevelopment",
+                "fuchsia.driver.registrar.DriverRegistrar",
                 "fuchsia.hardware.pci.DeviceWatcher",
                 "fuchsia.hardware.usb.DeviceWatcher",
             ],
+            from: "#driver-manager-test",
+        },
+        {
+            runner: "driver",
             from: "#driver-manager-test",
         },
         {
