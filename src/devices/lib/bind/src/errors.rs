@@ -559,6 +559,9 @@ impl From<BytecodeError> for UserError {
             BytecodeError::MissingDeviceNameInSymbolTable => {
                 UserError::new("E820", "Missing device name ID in the symbol table", None, false)
             }
+            BytecodeError::MissingNodeIdInSymbolTable => {
+                UserError::new("E821", "Missing node name ID in the symbol table", None, false)
+            }
         }
     }
 }

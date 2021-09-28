@@ -12,7 +12,7 @@ const HEADER_SZ: usize = 8;
 
 // Each node section header contains a u8 node type and a uint32 section
 // size.
-const NODE_TYPE_HEADER_SZ: usize = 5;
+const NODE_TYPE_HEADER_SZ: usize = 9;
 
 // At minimum, the bytecode would contain the bind header, symbol table
 // header and instruction header.
@@ -52,16 +52,21 @@ fn get_symbol_table_and_instruction_bytecode(
 fn split_off_node(
     mut bytecode: Vec<u8>,
     node_type: RawNodeType,
-) -> Result<(Vec<u8>, Vec<u8>), BytecodeError> {
+    symbol_table: &HashMap<u32, String>,
+) -> Result<(Node, Vec<u8>), BytecodeError> {
     // Verify the node type and retrieve the node section size.
-    let node_inst_sz = verify_and_read_node_header(&bytecode, node_type)? as usize;
-    if bytecode.len() < NODE_TYPE_HEADER_SZ + node_inst_sz {
+    let (node_id, node_inst_sz) = verify_and_read_node_header(&bytecode, node_type)?;
+    if bytecode.len() < NODE_TYPE_HEADER_SZ + node_inst_sz as usize {
         return Err(BytecodeError::IncorrectNodeSectionSize);
     }
 
+    if !symbol_table.contains_key(&node_id) {
+        return Err(BytecodeError::MissingNodeIdInSymbolTable);
+    }
+
     let mut node_instructions = bytecode.split_off(NODE_TYPE_HEADER_SZ);
-    let remaining_bytecode = node_instructions.split_off(node_inst_sz);
-    Ok((node_instructions, remaining_bytecode))
+    let remaining_bytecode = node_instructions.split_off(node_inst_sz as usize);
+    Ok((Node { name_id: node_id, instructions: node_instructions }, remaining_bytecode))
 }
 
 // This struct decodes and unwraps the given bytecode into a symbol table
@@ -88,14 +93,21 @@ impl DecodedBindRules {
     }
 }
 
+#[derive(Debug, PartialEq, Clone)]
+pub struct Node {
+    // Symbol table ID for the node name.
+    pub name_id: u32,
+    pub instructions: Vec<u8>,
+}
+
 // This struct decodes and unwraps the given bytecode into a symbol table
 // and list of instructions.
 #[derive(Debug, PartialEq, Clone)]
 pub struct DecodedCompositeBindRules {
     pub symbol_table: HashMap<u32, String>,
     pub device_name_id: u32,
-    pub primary_node_instructions: Vec<u8>,
-    pub additional_node_instructions: Vec<Vec<u8>>,
+    pub primary_node: Node,
+    pub additional_nodes: Vec<Node>,
 }
 
 impl DecodedCompositeBindRules {
@@ -121,22 +133,23 @@ impl DecodedCompositeBindRules {
         let node_bytecode = composite_inst_bytecode.split_off(4);
 
         // Extract the primary node instructions.
-        let (primary_node_inst, mut node_bytecode) =
-            split_off_node(node_bytecode, RawNodeType::Primary)?;
+        let (primary_node, mut node_bytecode) =
+            split_off_node(node_bytecode, RawNodeType::Primary, &symbol_table)?;
 
         // Extract additional nodes from the remaining bytecode until there's none left.
-        let mut additional_node_instructions: Vec<Vec<u8>> = vec![];
+        let mut additional_nodes: Vec<Node> = vec![];
         while !node_bytecode.is_empty() {
-            let (node_inst, remaining) = split_off_node(node_bytecode, RawNodeType::Additional)?;
+            let (node, remaining) =
+                split_off_node(node_bytecode, RawNodeType::Additional, &symbol_table)?;
             node_bytecode = remaining;
-            additional_node_instructions.push(node_inst);
+            additional_nodes.push(node);
         }
 
         Ok(DecodedCompositeBindRules {
             symbol_table: symbol_table,
             device_name_id: device_name_id,
-            primary_node_instructions: primary_node_inst,
-            additional_node_instructions: additional_node_instructions,
+            primary_node: primary_node,
+            additional_nodes: additional_nodes,
         })
     }
 }
@@ -167,11 +180,11 @@ fn read_and_remove_header(
     Ok((val, bytecode.split_off(HEADER_SZ)))
 }
 
-// Verify the node type and return the number of bytes in the node instructions.
+// Verify the node type and return the node ID and the number of bytes in the node instructions.
 fn verify_and_read_node_header(
     bytecode: &Vec<u8>,
     expected_node_type: RawNodeType,
-) -> Result<u32, BytecodeError> {
+) -> Result<(u32, u32), BytecodeError> {
     if bytecode.len() < NODE_TYPE_HEADER_SZ {
         return Err(BytecodeError::UnexpectedEnd);
     }
@@ -192,7 +205,9 @@ fn verify_and_read_node_header(
         }
     };
 
-    Ok(u32::from_le_bytes(get_u32_bytes(bytecode, 1)?))
+    let node_id = u32::from_le_bytes(get_u32_bytes(bytecode, 1)?);
+    let inst_sz = u32::from_le_bytes(get_u32_bytes(bytecode, 5)?);
+    Ok((node_id, inst_sz))
 }
 
 fn read_string(iter: &mut BytecodeIter) -> Result<String, BytecodeError> {
@@ -252,8 +267,9 @@ mod test {
         bytecode.extend_from_slice(&sz.to_le_bytes());
     }
 
-    fn append_node_header(bytecode: &mut Vec<u8>, node_type: RawNodeType, sz: u32) {
+    fn append_node_header(bytecode: &mut Vec<u8>, node_type: RawNodeType, node_id: u32, sz: u32) {
         bytecode.push(node_type as u8);
+        bytecode.extend_from_slice(&node_id.to_le_bytes());
         bytecode.extend_from_slice(&sz.to_le_bytes());
     }
 
@@ -469,11 +485,23 @@ mod test {
     #[test]
     fn test_valid_composite_bind() {
         let mut bytecode: Vec<u8> = BIND_HEADER.to_vec();
-        append_section_header(&mut bytecode, SYMB_MAGIC_NUM, 9);
+        append_section_header(&mut bytecode, SYMB_MAGIC_NUM, 38);
 
-        let str_1: [u8; 5] = [0x49, 0x42, 0x49, 0x53, 0]; // "IBIS"
+        let device_name: [u8; 5] = [0x49, 0x42, 0x49, 0x53, 0]; // "IBIS"
         bytecode.extend_from_slice(&[1, 0, 0, 0]);
-        bytecode.extend_from_slice(&str_1);
+        bytecode.extend_from_slice(&device_name);
+
+        let primary_node_name: [u8; 5] = [0x52, 0x41, 0x49, 0x4C, 0]; // "RAIL"
+        bytecode.extend_from_slice(&[2, 0, 0, 0]);
+        bytecode.extend_from_slice(&primary_node_name);
+
+        let node_name_1: [u8; 5] = [0x43, 0x4F, 0x4F, 0x54, 0]; // "COOT"
+        bytecode.extend_from_slice(&[3, 0, 0, 0]);
+        bytecode.extend_from_slice(&node_name_1);
+
+        let node_name_2: [u8; 7] = [0x50, 0x4C, 0x4F, 0x56, 0x45, 0x52, 0]; // "PLOVER"
+        bytecode.extend_from_slice(&[4, 0, 0, 0]);
+        bytecode.extend_from_slice(&node_name_2);
 
         let primary_node_inst = [0x30, 0x01, 0x01, 0, 0, 0, 0x05, 0x01, 0x10, 0, 0x20, 0];
         let additional_node_inst_1 = [0x02, 0x01, 0, 0, 0, 0x02, 0x02, 0, 0, 0x10];
@@ -490,33 +518,38 @@ mod test {
         bytecode.extend_from_slice(&[1, 0, 0, 0]);
 
         // Add the node instructions.
-        append_node_header(&mut bytecode, RawNodeType::Primary, primary_node_inst.len() as u32);
+        append_node_header(&mut bytecode, RawNodeType::Primary, 2, primary_node_inst.len() as u32);
         bytecode.extend_from_slice(&primary_node_inst);
         append_node_header(
             &mut bytecode,
             RawNodeType::Additional,
+            3,
             additional_node_inst_1.len() as u32,
         );
         bytecode.extend_from_slice(&additional_node_inst_1);
         append_node_header(
             &mut bytecode,
             RawNodeType::Additional,
+            4,
             additional_node_inst_2.len() as u32,
         );
         bytecode.extend_from_slice(&additional_node_inst_2);
 
         let mut expected_symbol_table: HashMap<u32, String> = HashMap::new();
         expected_symbol_table.insert(1, "IBIS".to_string());
+        expected_symbol_table.insert(2, "RAIL".to_string());
+        expected_symbol_table.insert(3, "COOT".to_string());
+        expected_symbol_table.insert(4, "PLOVER".to_string());
 
         assert_eq!(
             DecodedCompositeBindRules {
                 symbol_table: expected_symbol_table,
                 device_name_id: 1,
-                primary_node_instructions: primary_node_inst.to_vec(),
-                additional_node_instructions: vec![
-                    additional_node_inst_1.to_vec(),
-                    additional_node_inst_2.to_vec()
-                ]
+                primary_node: Node { name_id: 2, instructions: primary_node_inst.to_vec() },
+                additional_nodes: vec![
+                    Node { name_id: 3, instructions: additional_node_inst_1.to_vec() },
+                    Node { name_id: 4, instructions: additional_node_inst_2.to_vec() }
+                ],
             },
             DecodedCompositeBindRules::new(bytecode).unwrap()
         );
@@ -525,11 +558,15 @@ mod test {
     #[test]
     fn test_primary_node_only() {
         let mut bytecode: Vec<u8> = BIND_HEADER.to_vec();
-        append_section_header(&mut bytecode, SYMB_MAGIC_NUM, 9);
+        append_section_header(&mut bytecode, SYMB_MAGIC_NUM, 18);
 
-        let str_1: [u8; 5] = [0x49, 0x42, 0x49, 0x53, 0]; // "IBIS"
+        let device_name: [u8; 5] = [0x49, 0x42, 0x49, 0x53, 0]; // "IBIS"
         bytecode.extend_from_slice(&[1, 0, 0, 0]);
-        bytecode.extend_from_slice(&str_1);
+        bytecode.extend_from_slice(&device_name);
+
+        let primary_node_name: [u8; 5] = [0x43, 0x4F, 0x4F, 0x54, 0]; // "RAIL"
+        bytecode.extend_from_slice(&[2, 0, 0, 0]);
+        bytecode.extend_from_slice(&primary_node_name);
 
         let primary_node_inst = [0x30, 0x01, 0x01, 0, 0, 0, 0x05, 0x01, 0x10, 0, 0x20, 0];
 
@@ -541,18 +578,19 @@ mod test {
         bytecode.extend_from_slice(&[1, 0, 0, 0]);
 
         // Add the node instructions.
-        append_node_header(&mut bytecode, RawNodeType::Primary, primary_node_inst.len() as u32);
+        append_node_header(&mut bytecode, RawNodeType::Primary, 2, primary_node_inst.len() as u32);
         bytecode.extend_from_slice(&primary_node_inst);
 
         let mut expected_symbol_table: HashMap<u32, String> = HashMap::new();
         expected_symbol_table.insert(1, "IBIS".to_string());
+        expected_symbol_table.insert(2, "COOT".to_string());
 
         assert_eq!(
             DecodedCompositeBindRules {
                 symbol_table: expected_symbol_table,
                 device_name_id: 1,
-                primary_node_instructions: primary_node_inst.to_vec(),
-                additional_node_instructions: vec![]
+                primary_node: Node { name_id: 2, instructions: primary_node_inst.to_vec() },
+                additional_nodes: vec![]
             },
             DecodedCompositeBindRules::new(bytecode).unwrap()
         );
@@ -561,15 +599,19 @@ mod test {
     #[test]
     fn test_missing_device_name() {
         let mut bytecode: Vec<u8> = BIND_HEADER.to_vec();
-        append_section_header(&mut bytecode, SYMB_MAGIC_NUM, 0);
+        append_section_header(&mut bytecode, SYMB_MAGIC_NUM, 9);
+
+        let primary_node_name: [u8; 5] = [0x43, 0x4F, 0x4F, 0x54, 0]; // "RAIL"
+        bytecode.extend_from_slice(&[1, 0, 0, 0]);
+        bytecode.extend_from_slice(&primary_node_name);
 
         let primary_node_inst = [0x30];
         let composite_insts_sz =
             COMPOSITE_NAME_ID_BYTES + (NODE_TYPE_HEADER_SZ + primary_node_inst.len()) as u32;
         append_section_header(&mut bytecode, COMPOSITE_MAGIC_NUM, composite_insts_sz);
-        bytecode.extend_from_slice(&[1, 0, 0, 0]);
+        bytecode.extend_from_slice(&[2, 0, 0, 0]);
 
-        append_node_header(&mut bytecode, RawNodeType::Primary, primary_node_inst.len() as u32);
+        append_node_header(&mut bytecode, RawNodeType::Primary, 1, primary_node_inst.len() as u32);
         bytecode.extend_from_slice(&primary_node_inst);
 
         assert_eq!(
@@ -579,13 +621,45 @@ mod test {
     }
 
     #[test]
-    fn test_missing_primary_node() {
+    fn test_missing_node_name() {
         let mut bytecode: Vec<u8> = BIND_HEADER.to_vec();
         append_section_header(&mut bytecode, SYMB_MAGIC_NUM, 9);
 
-        let str_1: [u8; 5] = [0x4C, 0x4F, 0x4F, 0x4E, 0]; // "LOON"
+        let primary_node_name: [u8; 5] = [0x43, 0x4F, 0x4F, 0x54, 0]; // "RAIL"
         bytecode.extend_from_slice(&[1, 0, 0, 0]);
-        bytecode.extend_from_slice(&str_1);
+        bytecode.extend_from_slice(&primary_node_name);
+
+        let primary_node_inst = [0x30];
+        let composite_insts_sz =
+            COMPOSITE_NAME_ID_BYTES + (NODE_TYPE_HEADER_SZ + primary_node_inst.len()) as u32;
+        append_section_header(&mut bytecode, COMPOSITE_MAGIC_NUM, composite_insts_sz);
+        bytecode.extend_from_slice(&[1, 0, 0, 0]);
+
+        append_node_header(&mut bytecode, RawNodeType::Primary, 2, primary_node_inst.len() as u32);
+        bytecode.extend_from_slice(&primary_node_inst);
+
+        assert_eq!(
+            Err(BytecodeError::MissingNodeIdInSymbolTable),
+            DecodedCompositeBindRules::new(bytecode)
+        );
+    }
+
+    #[test]
+    fn test_missing_primary_node() {
+        let mut bytecode: Vec<u8> = BIND_HEADER.to_vec();
+        append_section_header(&mut bytecode, SYMB_MAGIC_NUM, 29);
+
+        let device_name: [u8; 5] = [0x4C, 0x4F, 0x4F, 0x4E, 0]; // "LOON"
+        bytecode.extend_from_slice(&[1, 0, 0, 0]);
+        bytecode.extend_from_slice(&device_name);
+
+        let primary_node_name: [u8; 6] = [0x47, 0x52, 0x45, 0x42, 0x45, 0]; // "GREBE"
+        bytecode.extend_from_slice(&[2, 0, 0, 0]);
+        bytecode.extend_from_slice(&primary_node_name);
+
+        let additional_node_name: [u8; 6] = [0x53, 0x43, 0x41, 0x55, 0x50, 0]; // "SCAUP"
+        bytecode.extend_from_slice(&[3, 0, 0, 0]);
+        bytecode.extend_from_slice(&additional_node_name);
 
         let additional_node_inst_1 = [0x02, 0x01, 0, 0, 0, 0x02, 0x02, 0, 0, 0x10];
         let additional_node_inst_2 = [0x30];
@@ -603,12 +677,14 @@ mod test {
         append_node_header(
             &mut bytecode,
             RawNodeType::Additional,
+            2,
             additional_node_inst_1.len() as u32,
         );
         bytecode.extend_from_slice(&additional_node_inst_1);
         append_node_header(
             &mut bytecode,
             RawNodeType::Additional,
+            3,
             additional_node_inst_2.len() as u32,
         );
         bytecode.extend_from_slice(&additional_node_inst_2);
@@ -622,11 +698,19 @@ mod test {
     #[test]
     fn test_primary_node_incorrect_order() {
         let mut bytecode: Vec<u8> = BIND_HEADER.to_vec();
-        append_section_header(&mut bytecode, SYMB_MAGIC_NUM, 9);
+        append_section_header(&mut bytecode, SYMB_MAGIC_NUM, 29);
 
-        let str_1: [u8; 5] = [0x4C, 0x4F, 0x4F, 0x4E, 0]; // "LOON"
+        let device_name: [u8; 5] = [0x4C, 0x4F, 0x4F, 0x4E, 0]; // "LOON"
         bytecode.extend_from_slice(&[1, 0, 0, 0]);
-        bytecode.extend_from_slice(&str_1);
+        bytecode.extend_from_slice(&device_name);
+
+        let primary_node_name: [u8; 6] = [0x47, 0x52, 0x45, 0x42, 0x45, 0]; // "GREBE"
+        bytecode.extend_from_slice(&[2, 0, 0, 0]);
+        bytecode.extend_from_slice(&primary_node_name);
+
+        let additional_node_name: [u8; 6] = [0x53, 0x43, 0x41, 0x55, 0x50, 0]; // "SCAUP"
+        bytecode.extend_from_slice(&[3, 0, 0, 0]);
+        bytecode.extend_from_slice(&additional_node_name);
 
         let primary_node_inst = [0x02, 0x01, 0, 0, 0, 0x02, 0x02, 0, 0, 0x10];
         let additional_node_inst = [0x30];
@@ -643,10 +727,11 @@ mod test {
         append_node_header(
             &mut bytecode,
             RawNodeType::Additional,
+            3,
             additional_node_inst.len() as u32,
         );
         bytecode.extend_from_slice(&additional_node_inst);
-        append_node_header(&mut bytecode, RawNodeType::Primary, primary_node_inst.len() as u32);
+        append_node_header(&mut bytecode, RawNodeType::Primary, 2, primary_node_inst.len() as u32);
         bytecode.extend_from_slice(&primary_node_inst);
 
         assert_eq!(
@@ -658,11 +743,19 @@ mod test {
     #[test]
     fn test_multiple_primary_nodes() {
         let mut bytecode: Vec<u8> = BIND_HEADER.to_vec();
-        append_section_header(&mut bytecode, SYMB_MAGIC_NUM, 9);
+        append_section_header(&mut bytecode, SYMB_MAGIC_NUM, 29);
 
-        let str_1: [u8; 5] = [0x4C, 0x4F, 0x4F, 0x4E, 0]; // "LOON"
+        let device_name: [u8; 5] = [0x4C, 0x4F, 0x4F, 0x4E, 0]; // "LOON"
         bytecode.extend_from_slice(&[1, 0, 0, 0]);
-        bytecode.extend_from_slice(&str_1);
+        bytecode.extend_from_slice(&device_name);
+
+        let primary_node_name: [u8; 6] = [0x47, 0x52, 0x45, 0x42, 0x45, 0]; // "GREBE"
+        bytecode.extend_from_slice(&[2, 0, 0, 0]);
+        bytecode.extend_from_slice(&primary_node_name);
+
+        let primary_node_name_2: [u8; 6] = [0x53, 0x43, 0x41, 0x55, 0x50, 0]; // "SCAUP"
+        bytecode.extend_from_slice(&[3, 0, 0, 0]);
+        bytecode.extend_from_slice(&primary_node_name_2);
 
         let primary_node_inst = [0x02, 0x01, 0, 0, 0, 0x02, 0x02, 0, 0, 0x10];
         let primary_node_inst_2 = [0x30];
@@ -676,9 +769,14 @@ mod test {
         bytecode.extend_from_slice(&[1, 0, 0, 0]);
 
         // Add the node instructions.
-        append_node_header(&mut bytecode, RawNodeType::Primary, primary_node_inst.len() as u32);
+        append_node_header(&mut bytecode, RawNodeType::Primary, 2, primary_node_inst.len() as u32);
         bytecode.extend_from_slice(&primary_node_inst);
-        append_node_header(&mut bytecode, RawNodeType::Primary, primary_node_inst_2.len() as u32);
+        append_node_header(
+            &mut bytecode,
+            RawNodeType::Primary,
+            3,
+            primary_node_inst_2.len() as u32,
+        );
         bytecode.extend_from_slice(&primary_node_inst_2);
 
         assert_eq!(
@@ -690,11 +788,15 @@ mod test {
     #[test]
     fn test_invalid_node_type() {
         let mut bytecode: Vec<u8> = BIND_HEADER.to_vec();
-        append_section_header(&mut bytecode, SYMB_MAGIC_NUM, 9);
+        append_section_header(&mut bytecode, SYMB_MAGIC_NUM, 18);
 
-        let str_1: [u8; 5] = [0x49, 0x42, 0x49, 0x53, 0]; // "IBIS"
+        let device_name: [u8; 5] = [0x49, 0x42, 0x49, 0x53, 0]; // "IBIS"
         bytecode.extend_from_slice(&[1, 0, 0, 0]);
-        bytecode.extend_from_slice(&str_1);
+        bytecode.extend_from_slice(&device_name);
+
+        let primary_node_name: [u8; 5] = [0x52, 0x41, 0x49, 0x4C, 0]; // "RAIL"
+        bytecode.extend_from_slice(&[2, 0, 0, 0]);
+        bytecode.extend_from_slice(&primary_node_name);
 
         let primary_node_inst = [0x30];
 
@@ -707,6 +809,7 @@ mod test {
 
         // Add the node instructions with an invalid node type.
         bytecode.push(0x52);
+        bytecode.extend_from_slice(&[2, 0, 0, 0]);
         bytecode.extend_from_slice(&(primary_node_inst.len() as u32).to_le_bytes());
         bytecode.extend_from_slice(&primary_node_inst);
 
@@ -719,11 +822,19 @@ mod test {
     #[test]
     fn test_incorrect_node_section_sz_overlap() {
         let mut bytecode: Vec<u8> = BIND_HEADER.to_vec();
-        append_section_header(&mut bytecode, SYMB_MAGIC_NUM, 9);
+        append_section_header(&mut bytecode, SYMB_MAGIC_NUM, 27);
 
-        let str_1: [u8; 5] = [0x49, 0x42, 0x49, 0x53, 0]; // "IBIS"
+        let device_name: [u8; 5] = [0x49, 0x42, 0x49, 0x53, 0]; // "IBIS"
         bytecode.extend_from_slice(&[1, 0, 0, 0]);
-        bytecode.extend_from_slice(&str_1);
+        bytecode.extend_from_slice(&device_name);
+
+        let primary_node_name: [u8; 5] = [0x52, 0x41, 0x49, 0x4C, 0]; // "RAIL"
+        bytecode.extend_from_slice(&[2, 0, 0, 0]);
+        bytecode.extend_from_slice(&primary_node_name);
+
+        let node_name_1: [u8; 5] = [0x43, 0x4F, 0x4F, 0x54, 0]; // "COOT"
+        bytecode.extend_from_slice(&[3, 0, 0, 0]);
+        bytecode.extend_from_slice(&node_name_1);
 
         let primary_node_inst = [0x30];
         let additional_node_inst = [0x02, 0x01, 0, 0, 0, 0x02, 0x02, 0, 0, 0x10];
@@ -738,18 +849,19 @@ mod test {
 
         // Add the primary node instructions with a size that overlaps to the next
         // node.
-        append_node_header(&mut bytecode, RawNodeType::Primary, 7);
+        append_node_header(&mut bytecode, RawNodeType::Primary, 2, 7);
         bytecode.extend_from_slice(&primary_node_inst);
 
         append_node_header(
             &mut bytecode,
             RawNodeType::Additional,
+            3,
             additional_node_inst.len() as u32,
         );
         bytecode.extend_from_slice(&additional_node_inst);
 
         assert_eq!(
-            Err(BytecodeError::InvalidNodeType(0x01)),
+            Err(BytecodeError::InvalidNodeType(0)),
             DecodedCompositeBindRules::new(bytecode)
         );
     }
@@ -757,11 +869,19 @@ mod test {
     #[test]
     fn test_incorrect_node_section_sz_undersize() {
         let mut bytecode: Vec<u8> = BIND_HEADER.to_vec();
-        append_section_header(&mut bytecode, SYMB_MAGIC_NUM, 9);
+        append_section_header(&mut bytecode, SYMB_MAGIC_NUM, 27);
 
-        let str_1: [u8; 5] = [0x49, 0x42, 0x49, 0x53, 0]; // "IBIS"
+        let device_name: [u8; 5] = [0x49, 0x42, 0x49, 0x53, 0]; // "IBIS"
         bytecode.extend_from_slice(&[1, 0, 0, 0]);
-        bytecode.extend_from_slice(&str_1);
+        bytecode.extend_from_slice(&device_name);
+
+        let primary_node_name: [u8; 5] = [0x52, 0x41, 0x49, 0x4C, 0]; // "RAIL"
+        bytecode.extend_from_slice(&[2, 0, 0, 0]);
+        bytecode.extend_from_slice(&primary_node_name);
+
+        let node_name_1: [u8; 5] = [0x43, 0x4F, 0x4F, 0x54, 0]; // "COOT"
+        bytecode.extend_from_slice(&[3, 0, 0, 0]);
+        bytecode.extend_from_slice(&node_name_1);
 
         let primary_node_inst = [0x30];
         let additional_node_inst = [0x02, 0x01, 0, 0, 0, 0x02, 0x02, 0, 0, 0x10];
@@ -774,15 +894,14 @@ mod test {
         // Add device name ID.
         bytecode.extend_from_slice(&[1, 0, 0, 0]);
 
-        append_node_header(&mut bytecode, RawNodeType::Primary, primary_node_inst.len() as u32);
+        append_node_header(&mut bytecode, RawNodeType::Primary, 2, primary_node_inst.len() as u32);
         bytecode.extend_from_slice(&primary_node_inst);
 
         // Add the additional node with a size that's too small.
-        append_node_header(&mut bytecode, RawNodeType::Additional, 2);
+        append_node_header(&mut bytecode, RawNodeType::Additional, 3, 1);
         bytecode.extend_from_slice(&additional_node_inst);
-
         assert_eq!(
-            Err(BytecodeError::InvalidNodeType(0)),
+            Err(BytecodeError::InvalidNodeType(1)),
             DecodedCompositeBindRules::new(bytecode)
         );
     }
@@ -790,11 +909,15 @@ mod test {
     #[test]
     fn test_incorrect_node_section_sz_oversize() {
         let mut bytecode: Vec<u8> = BIND_HEADER.to_vec();
-        append_section_header(&mut bytecode, SYMB_MAGIC_NUM, 9);
+        append_section_header(&mut bytecode, SYMB_MAGIC_NUM, 18);
 
-        let str_1: [u8; 5] = [0x49, 0x42, 0x49, 0x53, 0]; // "IBIS"
+        let device_name: [u8; 5] = [0x49, 0x42, 0x49, 0x53, 0]; // "IBIS"
         bytecode.extend_from_slice(&[1, 0, 0, 0]);
-        bytecode.extend_from_slice(&str_1);
+        bytecode.extend_from_slice(&device_name);
+
+        let primary_node_name: [u8; 5] = [0x43, 0x4F, 0x4F, 0x54, 0]; // "RAIL"
+        bytecode.extend_from_slice(&[2, 0, 0, 0]);
+        bytecode.extend_from_slice(&primary_node_name);
 
         let primary_node_inst = [0x30, 0x01, 0x01, 0, 0, 0, 0x05, 0x01, 0x10, 0, 0x20, 0];
 
@@ -806,7 +929,7 @@ mod test {
         bytecode.extend_from_slice(&[1, 0, 0, 0]);
 
         // Add primary node instructions with a size that exceed the entire instruction size.
-        append_node_header(&mut bytecode, RawNodeType::Primary, 50);
+        append_node_header(&mut bytecode, RawNodeType::Primary, 2, 50);
         bytecode.extend_from_slice(&primary_node_inst);
 
         assert_eq!(
@@ -818,11 +941,15 @@ mod test {
     #[test]
     fn test_composite_header_in_noncomposite_bytecode() {
         let mut bytecode: Vec<u8> = BIND_HEADER.to_vec();
-        append_section_header(&mut bytecode, SYMB_MAGIC_NUM, 9);
+        append_section_header(&mut bytecode, SYMB_MAGIC_NUM, 18);
 
         let str_1: [u8; 5] = [0x49, 0x42, 0x49, 0x53, 0]; // "IBIS"
         bytecode.extend_from_slice(&[1, 0, 0, 0]);
         bytecode.extend_from_slice(&str_1);
+
+        let primary_node_name: [u8; 5] = [0x52, 0x41, 0x49, 0x4C, 0]; // "RAIL"
+        bytecode.extend_from_slice(&[2, 0, 0, 0]);
+        bytecode.extend_from_slice(&primary_node_name);
 
         let primary_node_inst = [0x30, 0x01, 0x01, 0, 0, 0, 0x05, 0x01, 0x10, 0, 0x20, 0];
 
@@ -834,7 +961,7 @@ mod test {
         bytecode.extend_from_slice(&[1, 0, 0, 0]);
 
         // Add the node instructions.
-        append_node_header(&mut bytecode, RawNodeType::Primary, primary_node_inst.len() as u32);
+        append_node_header(&mut bytecode, RawNodeType::Primary, 2, primary_node_inst.len() as u32);
         bytecode.extend_from_slice(&primary_node_inst);
 
         assert_eq!(
@@ -855,6 +982,78 @@ mod test {
         assert_eq!(
             Err(BytecodeError::InvalidHeader(COMPOSITE_MAGIC_NUM, INSTRUCTION_MAGIC_NUM)),
             DecodedCompositeBindRules::new(bytecode)
+        );
+    }
+
+    #[test]
+    fn test_composite_with_compiler() {
+        use crate::compiler::{
+            CompiledBindRules, CompositeBindRules, CompositeNode, Symbol, SymbolicInstruction,
+            SymbolicInstructionInfo,
+        };
+        use crate::parser::bind_library::ValueType;
+
+        let primary_node_inst = vec![SymbolicInstructionInfo {
+            location: None,
+            instruction: SymbolicInstruction::UnconditionalAbort,
+        }];
+
+        let additional_node_inst = vec![
+            SymbolicInstructionInfo {
+                location: None,
+                instruction: SymbolicInstruction::AbortIfEqual {
+                    lhs: Symbol::Key("bobolink".to_string(), ValueType::Bool),
+                    rhs: Symbol::BoolValue(false),
+                },
+            },
+            SymbolicInstructionInfo {
+                location: None,
+                instruction: SymbolicInstruction::AbortIfNotEqual {
+                    lhs: Symbol::Key("grackle".to_string(), ValueType::Number),
+                    rhs: Symbol::NumberValue(1),
+                },
+            },
+        ];
+
+        let bytecode = CompiledBindRules::CompositeBind(CompositeBindRules {
+            device_name: "blackbird".to_string(),
+            symbol_table: HashMap::new(),
+            primary_node: CompositeNode {
+                name: "meadowlark".to_string(),
+                instructions: primary_node_inst,
+            },
+            additional_nodes: vec![CompositeNode {
+                name: "cowbird".to_string(),
+                instructions: additional_node_inst,
+            }],
+        })
+        .encode_to_bytecode()
+        .unwrap();
+
+        let mut expected_symbol_table: HashMap<u32, String> = HashMap::new();
+        expected_symbol_table.insert(1, "blackbird".to_string());
+        expected_symbol_table.insert(2, "meadowlark".to_string());
+        expected_symbol_table.insert(3, "cowbird".to_string());
+        expected_symbol_table.insert(4, "bobolink".to_string());
+        expected_symbol_table.insert(5, "grackle".to_string());
+
+        let primary_node_inst = [0x30];
+        let additional_node_inst = [
+            0x02, 0x0, 0x04, 0x0, 0x0, 0x0, 0x03, 0x0, 0x0, 0x0, 0x0, // bobolink != false
+            0x01, 0x0, 0x05, 0x0, 0x0, 0x0, 0x01, 0x1, 0x0, 0x0, 0x0, // grackle == 1
+        ];
+
+        assert_eq!(
+            DecodedCompositeBindRules {
+                symbol_table: expected_symbol_table,
+                device_name_id: 1,
+                primary_node: Node { name_id: 2, instructions: primary_node_inst.to_vec() },
+                additional_nodes: vec![Node {
+                    name_id: 3,
+                    instructions: additional_node_inst.to_vec()
+                }],
+            },
+            DecodedCompositeBindRules::new(bytecode).unwrap()
         );
     }
 }

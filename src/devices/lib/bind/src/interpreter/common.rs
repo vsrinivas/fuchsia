@@ -31,6 +31,7 @@ pub enum BytecodeError {
     InvalidNodeType(u8),
     IncorrectNodeSectionSize,
     MissingDeviceNameInSymbolTable,
+    MissingNodeIdInSymbolTable,
 }
 
 impl fmt::Display for BytecodeError {
