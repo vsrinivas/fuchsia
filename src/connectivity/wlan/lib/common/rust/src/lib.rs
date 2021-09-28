@@ -26,6 +26,7 @@ pub mod mac;
 pub mod mgmt_writer;
 pub mod organization;
 pub mod scan;
+pub mod security;
 pub mod sequence;
 #[allow(unused)]
 pub mod stats;

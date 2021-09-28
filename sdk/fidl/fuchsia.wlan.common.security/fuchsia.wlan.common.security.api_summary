@@ -1,0 +1,20 @@
+struct/member fuchsia.wlan.common.security/Authentication.credentials fuchsia.wlan.common.security/Credentials:optional
+struct/member fuchsia.wlan.common.security/Authentication.protocol fuchsia.wlan.common.security/Protocol
+struct fuchsia.wlan.common.security/Authentication
+union/member fuchsia.wlan.common.security/Credentials.wep fuchsia.wlan.common.security/WepCredentials
+union/member fuchsia.wlan.common.security/Credentials.wpa fuchsia.wlan.common.security/WpaCredentials
+flexible union fuchsia.wlan.common.security/Credentials
+enum/member fuchsia.wlan.common.security/Protocol.OPEN 1
+enum/member fuchsia.wlan.common.security/Protocol.WEP 2
+enum/member fuchsia.wlan.common.security/Protocol.WPA1 3
+enum/member fuchsia.wlan.common.security/Protocol.WPA2_ENTERPRISE 5
+enum/member fuchsia.wlan.common.security/Protocol.WPA2_PERSONAL 4
+enum/member fuchsia.wlan.common.security/Protocol.WPA3_ENTERPRISE 7
+enum/member fuchsia.wlan.common.security/Protocol.WPA3_PERSONAL 6
+flexible enum fuchsia.wlan.common.security/Protocol uint32
+struct/member fuchsia.wlan.common.security/WepCredentials.key vector<uint8>
+struct fuchsia.wlan.common.security/WepCredentials
+union/member fuchsia.wlan.common.security/WpaCredentials.passphrase vector<uint8>:63
+union/member fuchsia.wlan.common.security/WpaCredentials.psk array<uint8,32>
+flexible union fuchsia.wlan.common.security/WpaCredentials
+library fuchsia.wlan.common.security

@@ -1,0 +1,14 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/fidl/fidl.gni")
+
+fidl("fuchsia.wlan.common.security") {
+  # TODO(fxbug.dev/35879): Remove lint exclusions by fixing known FIDL lint violations in this target
+  excluded_checks = [ "disallowed-library-name-component" ]
+
+  sdk_category = "partner"
+
+  sources = [ "security.fidl" ]
+}

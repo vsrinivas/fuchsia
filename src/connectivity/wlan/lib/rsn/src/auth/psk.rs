@@ -2,12 +2,40 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use {crate::Error, anyhow::ensure, ieee80211::Ssid, std::str};
+use {
+    crate::Error,
+    anyhow::ensure,
+    ieee80211::Ssid,
+    std::{convert::TryInto, str},
+    wlan_common::security::wpa,
+};
 
 // PBKDF2-HMAC-SHA1 is considered insecure but required for PSK computation.
 #[allow(deprecated)]
 use mundane::insecure::insecure_pbkdf2_hmac_sha1;
 use nonzero_ext::nonzero;
+
+pub trait ToPsk {
+    fn to_psk(&self, ssid: &Ssid) -> wpa::Psk;
+}
+
+impl ToPsk for wpa::PersonalCredentials {
+    fn to_psk(&self, ssid: &Ssid) -> wpa::Psk {
+        match self {
+            wpa::PersonalCredentials::Psk(ref psk) => psk.clone(),
+            wpa::PersonalCredentials::Passphrase(ref passphrase) => {
+                // TODO(seanolson): Unify the representation of PSKs. There can only be one...!
+                wpa::Psk(
+                    compute(passphrase.as_ref(), ssid)
+                        .expect("invalid WPA passphrase data")
+                        .as_ref()
+                        .try_into()
+                        .expect("invalid derived PSK data"),
+                )
+            }
+        }
+    }
+}
 
 /// Keys derived from a passphrase provide comparably low levels of security.
 /// Passphrases should have a minimum length of 20 characters since shorter passphrases

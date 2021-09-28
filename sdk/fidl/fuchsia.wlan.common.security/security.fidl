@@ -1,0 +1,67 @@
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.wlan.common.security;
+
+// This package defines types used to describe WLAN security protocols and
+// authenticate.
+
+/// WEP credentials.
+type WepCredentials = struct {
+    /// Unencoded WEP key.
+    ///
+    /// This field is always a binary key; ASCII hexadecimal encoding should not
+    /// be used here.
+    key bytes;
+};
+
+/// WPA credentials.
+type WpaCredentials = flexible union {
+    /// Unencoded pre-shared key (PSK).
+    ///
+    /// This field is always a binary PSK; ASCII hexadecimal encoding should not
+    /// be used here.
+    1: psk array<byte, 32>;
+    /// UTF-8 encoded passphrase.
+    ///
+    /// This field is expected to use UTF-8 or compatible encoding. This is more
+    /// permissive than the passphrase to PSK mapping specified in IEEE Std
+    /// 802.11-2016 Appendix J.4, but UTF-8 is typically used in practice.
+    2: passphrase bytes:63;
+};
+
+/// Credentials used to authenticate with a WLAN.
+///
+/// The variants of this union describe the credentials supported by a protocol
+/// or protocol suite (i.e., WEP and WPA).
+type Credentials = flexible union {
+    1: wep WepCredentials;
+    2: wpa WpaCredentials;
+};
+
+/// WLAN security protocols.
+///
+/// WPA protocols are additionally enumerated by their authentication suite
+/// (i.e., Personal vs. Enterprise).
+type Protocol = flexible enum {
+    /// Open network security.
+    ///
+    /// This indicates that no security protocol or suite is used by a WLAN; it
+    /// is not to be confused with "open authentication".
+    OPEN = 1;
+    WEP = 2;
+    WPA1 = 3;
+    WPA2_PERSONAL = 4;
+    WPA2_ENTERPRISE = 5;
+    WPA3_PERSONAL = 6;
+    WPA3_ENTERPRISE = 7;
+};
+
+/// Pairs credentials with a particular security protocol. This type requires
+/// validation, as `Protocol` and `Credentials` may disagree. FIDL APIs that use
+/// this type generally restrict authentication to `protocol`.
+type Authentication = struct {
+    protocol Protocol;
+    credentials Credentials:optional;
+};
