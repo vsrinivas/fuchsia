@@ -15,6 +15,16 @@ void MockSession::Bind(fidl::InterfaceRequest<::fuchsia::ui::scenic::Session> re
                        ::fuchsia::ui::scenic::SessionListenerPtr listener) {
   binding_.Bind(std::move(request));
   listener_ = std::move(listener);
+  Reset();
+}
+
+void MockSession::Reset() {
+  cmd_queue_.clear();
+  view_holders_.clear();
+  views_.clear();
+  entity_nodes_.clear();
+  rectangle_nodes_.clear();
+  rectangles_.clear();
 }
 
 void MockSession::ApplyCreateResourceCommand(const fuchsia::ui::gfx::CreateResourceCmd& command) {

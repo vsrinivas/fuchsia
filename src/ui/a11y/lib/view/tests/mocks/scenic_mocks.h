@@ -160,6 +160,9 @@ class MockSession : public fuchsia::ui::scenic::testing::Session_TestBase {
 
 class MockScenic : public fuchsia::ui::scenic::testing::Scenic_TestBase {
  public:
+  // TODO(fxb.dev/85349): Instantiate mock_session_ in CreateSession() instead
+  // of taking a constructor argument, and offer a method to retrieve the
+  // MockSession*.
   explicit MockScenic(std::unique_ptr<MockSession> mock_session)
       : mock_session_(std::move(mock_session)) {}
   ~MockScenic() override = default;

@@ -237,8 +237,20 @@ TEST_F(AccessibilityViewTest, TestViewHolderDisconnected) {
   fuchsia::ui::views::ViewRef first_a11y_view_ref;
   first_a11y_view_ref = a11y::Clone(views.begin()->second.view_ref);
 
-  // Simulate a ViewHolderDisconnected scenic event.
+  // Simluate events required for the view to be "initialized".
   const auto a11y_view_id = views.begin()->second.id;
+  mock_session_->SendViewPropertiesChangedEvent(a11y_view_id, {});
+
+  const auto& view_holders = mock_session_->view_holders();
+  ASSERT_EQ(view_holders.size(), 1u);
+  const auto proxy_view_holder_id = view_holders.begin()->second.id;
+  mock_session_->SendViewConnectedEvent(proxy_view_holder_id);
+
+  RunLoopUntilIdle();
+
+  EXPECT_TRUE(a11y_view.is_initialized());
+
+  // Simulate a ViewHolderDisconnected scenic event.
   mock_session_->SendViewHolderDisconnectedEvent(a11y_view_id);
 
   RunLoopUntilIdle();
@@ -246,6 +258,38 @@ TEST_F(AccessibilityViewTest, TestViewHolderDisconnected) {
   // Verify that a11y view was re-initialized with a new viewref.
   ASSERT_EQ(views.size(), 1u);
   EXPECT_NE(a11y::GetKoid(views.begin()->second.view_ref), a11y::GetKoid(first_a11y_view_ref));
+}
+
+TEST_F(AccessibilityViewTest, ViewHolderDisconnectedUninitializedView) {
+  a11y::AccessibilityView a11y_view(context_provider_.context());
+
+  RunLoopUntilIdle();
+
+  // Save the a11y view viewref.
+  const auto& views = mock_session_->views();
+  ASSERT_EQ(views.size(), 1u);
+  fuchsia::ui::views::ViewRef first_a11y_view_ref;
+  first_a11y_view_ref = a11y::Clone(views.begin()->second.view_ref);
+
+  RunLoopUntilIdle();
+
+  EXPECT_FALSE(a11y_view.is_initialized());
+
+  // At this point, the a11y view is not considered "initialized", because it
+  // has not received its view properties and the proxy view has not been
+  // connected. Send a ViewHolderDisconnectedEvent, and verify that the a11y view
+  // did NOT try to reinitialize itself.
+  ASSERT_EQ(views.size(), 1u);
+  const auto a11y_view_id = views.begin()->second.id;
+  mock_session_->SendViewHolderDisconnectedEvent(a11y_view_id);
+
+  RunLoopUntilIdle();
+
+  // If the a11y view tried to reinitialize itself, then it would have created a
+  // new a11y view with a different ViewRef. Verify that no such attempt was
+  // made.
+  EXPECT_EQ(views.size(), 1u);
+  EXPECT_EQ(a11y::GetKoid(views.begin()->second.view_ref), a11y::GetKoid(first_a11y_view_ref));
 }
 
 }  // namespace

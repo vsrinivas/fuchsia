@@ -202,7 +202,12 @@ void AccessibilityView::OnScenicEvent(std::vector<fuchsia::ui::scenic::Event> ev
         }
       } else if (gfx_event.Which() == fuchsia::ui::gfx::Event::Tag::kViewHolderDisconnected) {
         const auto& view_holder_disconnected_event = gfx_event.view_holder_disconnected();
-        if (view_holder_disconnected_event.view_id == a11y_view_->id()) {
+        // If the a11y view is disconnected, try to reinitialize it.
+        // We may get a ViewHolderDisconnected event if the call to
+        // CreateAccessibilityViewHolder() fails, so we need to check that the
+        // a11y view was previously initialized. Otherwise, we'll get stuck in
+        // an infinite loop.
+        if (view_holder_disconnected_event.view_id == a11y_view_->id() && is_initialized()) {
           Initialize();
         }
       }
