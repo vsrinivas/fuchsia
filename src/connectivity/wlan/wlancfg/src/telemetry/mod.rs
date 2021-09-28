@@ -22,14 +22,14 @@ use {
     static_assertions::const_assert_eq,
     std::{
         cmp::max,
-        collections::HashMap,
+        collections::{HashMap, HashSet},
         ops::Add,
         sync::{
             atomic::{AtomicBool, Ordering},
             Arc,
         },
     },
-    wlan_common::bss::BssDescription,
+    wlan_common::{bss::BssDescription, format::MacFmt},
     wlan_metrics_registry as metrics,
 };
 
@@ -962,78 +962,111 @@ impl StatsLogger {
         let mut metric_events = vec![];
 
         let c = self.last_1d_stats.lock().windowed_stat(None);
-        if !c.connection_success_rate().is_finite() {
-            return;
+        if c.connection_success_rate().is_finite() {
+            let device_low_connection_success =
+                c.connection_success_rate() < DEVICE_LOW_CONNECTION_SUCCESS_RATE_THRESHOLD;
+            for (status_code, count) in &self.last_1d_detailed_stats.connect_attempts_status {
+                metric_events.push(MetricEvent {
+                    metric_id: if device_low_connection_success {
+                        metrics::CONNECT_ATTEMPT_ON_BAD_DEVICE_BREAKDOWN_BY_STATUS_CODE_METRIC_ID
+                    } else {
+                        metrics::CONNECT_ATTEMPT_ON_NORMAL_DEVICE_BREAKDOWN_BY_STATUS_CODE_METRIC_ID
+                    },
+                    event_codes: vec![*status_code as u32],
+                    payload: MetricEventPayload::Count(*count),
+                });
+            }
+
+            for (is_multi_bss_dim, counters) in
+                &self.last_1d_detailed_stats.connect_per_is_multi_bss
+            {
+                let success_rate = counters.success as f64 / counters.total as f64;
+                metric_events.push(MetricEvent {
+                    metric_id:
+                        metrics::DAILY_CONNECT_SUCCESS_RATE_BREAKDOWN_BY_IS_MULTI_BSS_METRIC_ID,
+                    event_codes: vec![*is_multi_bss_dim as u32],
+                    payload: MetricEventPayload::IntegerValue(float_to_ten_thousandth(
+                        success_rate,
+                    )),
+                });
+            }
+
+            for (security_type_dim, counters) in
+                &self.last_1d_detailed_stats.connect_per_security_type
+            {
+                let success_rate = counters.success as f64 / counters.total as f64;
+                metric_events.push(MetricEvent {
+                    metric_id:
+                        metrics::DAILY_CONNECT_SUCCESS_RATE_BREAKDOWN_BY_SECURITY_TYPE_METRIC_ID,
+                    event_codes: vec![*security_type_dim as u32],
+                    payload: MetricEventPayload::IntegerValue(float_to_ten_thousandth(
+                        success_rate,
+                    )),
+                });
+            }
+
+            for (primary_channel, counters) in
+                &self.last_1d_detailed_stats.connect_per_primary_channel
+            {
+                let success_rate = counters.success as f64 / counters.total as f64;
+                metric_events.push(MetricEvent {
+                    metric_id:
+                        metrics::DAILY_CONNECT_SUCCESS_RATE_BREAKDOWN_BY_PRIMARY_CHANNEL_METRIC_ID,
+                    event_codes: vec![*primary_channel as u32],
+                    payload: MetricEventPayload::IntegerValue(float_to_ten_thousandth(
+                        success_rate,
+                    )),
+                });
+            }
+
+            for (channel_band_dim, counters) in
+                &self.last_1d_detailed_stats.connect_per_channel_band
+            {
+                let success_rate = counters.success as f64 / counters.total as f64;
+                metric_events.push(MetricEvent {
+                    metric_id:
+                        metrics::DAILY_CONNECT_SUCCESS_RATE_BREAKDOWN_BY_CHANNEL_BAND_METRIC_ID,
+                    event_codes: vec![*channel_band_dim as u32],
+                    payload: MetricEventPayload::IntegerValue(float_to_ten_thousandth(
+                        success_rate,
+                    )),
+                });
+            }
+
+            for (rssi_bucket_dim, counters) in &self.last_1d_detailed_stats.connect_per_rssi_bucket
+            {
+                let success_rate = counters.success as f64 / counters.total as f64;
+                metric_events.push(MetricEvent {
+                    metric_id:
+                        metrics::DAILY_CONNECT_SUCCESS_RATE_BREAKDOWN_BY_RSSI_BUCKET_METRIC_ID,
+                    event_codes: vec![*rssi_bucket_dim as u32],
+                    payload: MetricEventPayload::IntegerValue(float_to_ten_thousandth(
+                        success_rate,
+                    )),
+                });
+            }
+
+            for (snr_bucket_dim, counters) in &self.last_1d_detailed_stats.connect_per_snr_bucket {
+                let success_rate = counters.success as f64 / counters.total as f64;
+                metric_events.push(MetricEvent {
+                    metric_id:
+                        metrics::DAILY_CONNECT_SUCCESS_RATE_BREAKDOWN_BY_SNR_BUCKET_METRIC_ID,
+                    event_codes: vec![*snr_bucket_dim as u32],
+                    payload: MetricEventPayload::IntegerValue(float_to_ten_thousandth(
+                        success_rate,
+                    )),
+                });
+            }
         }
 
-        let device_low_connection_success =
-            c.connection_success_rate() < DEVICE_LOW_CONNECTION_SUCCESS_RATE_THRESHOLD;
-        for (status_code, count) in &self.last_1d_detailed_stats.connect_attempts_status {
+        // Cobalt STRING metrics don't have AT_LEAST_ONCE local aggregation. So in order to
+        // imitate the metric "how many devices connect to APs from an OUI", we build a set
+        // seen OUIs and make sure we only log them once each day.
+        for oui in &self.last_1d_detailed_stats.connected_ouis {
             metric_events.push(MetricEvent {
-                metric_id: if device_low_connection_success {
-                    metrics::CONNECT_ATTEMPT_ON_BAD_DEVICE_BREAKDOWN_BY_STATUS_CODE_METRIC_ID
-                } else {
-                    metrics::CONNECT_ATTEMPT_ON_NORMAL_DEVICE_BREAKDOWN_BY_STATUS_CODE_METRIC_ID
-                },
-                event_codes: vec![*status_code as u32],
-                payload: MetricEventPayload::Count(*count),
-            });
-        }
-
-        for (is_multi_bss_dim, counters) in &self.last_1d_detailed_stats.connect_per_is_multi_bss {
-            let success_rate = counters.success as f64 / counters.total as f64;
-            metric_events.push(MetricEvent {
-                metric_id: metrics::DAILY_CONNECT_SUCCESS_RATE_BREAKDOWN_BY_IS_MULTI_BSS_METRIC_ID,
-                event_codes: vec![*is_multi_bss_dim as u32],
-                payload: MetricEventPayload::IntegerValue(float_to_ten_thousandth(success_rate)),
-            });
-        }
-
-        for (security_type_dim, counters) in &self.last_1d_detailed_stats.connect_per_security_type
-        {
-            let success_rate = counters.success as f64 / counters.total as f64;
-            metric_events.push(MetricEvent {
-                metric_id: metrics::DAILY_CONNECT_SUCCESS_RATE_BREAKDOWN_BY_SECURITY_TYPE_METRIC_ID,
-                event_codes: vec![*security_type_dim as u32],
-                payload: MetricEventPayload::IntegerValue(float_to_ten_thousandth(success_rate)),
-            });
-        }
-
-        for (primary_channel, counters) in &self.last_1d_detailed_stats.connect_per_primary_channel
-        {
-            let success_rate = counters.success as f64 / counters.total as f64;
-            metric_events.push(MetricEvent {
-                metric_id:
-                    metrics::DAILY_CONNECT_SUCCESS_RATE_BREAKDOWN_BY_PRIMARY_CHANNEL_METRIC_ID,
-                event_codes: vec![*primary_channel as u32],
-                payload: MetricEventPayload::IntegerValue(float_to_ten_thousandth(success_rate)),
-            });
-        }
-
-        for (channel_band_dim, counters) in &self.last_1d_detailed_stats.connect_per_channel_band {
-            let success_rate = counters.success as f64 / counters.total as f64;
-            metric_events.push(MetricEvent {
-                metric_id: metrics::DAILY_CONNECT_SUCCESS_RATE_BREAKDOWN_BY_CHANNEL_BAND_METRIC_ID,
-                event_codes: vec![*channel_band_dim as u32],
-                payload: MetricEventPayload::IntegerValue(float_to_ten_thousandth(success_rate)),
-            });
-        }
-
-        for (rssi_bucket_dim, counters) in &self.last_1d_detailed_stats.connect_per_rssi_bucket {
-            let success_rate = counters.success as f64 / counters.total as f64;
-            metric_events.push(MetricEvent {
-                metric_id: metrics::DAILY_CONNECT_SUCCESS_RATE_BREAKDOWN_BY_RSSI_BUCKET_METRIC_ID,
-                event_codes: vec![*rssi_bucket_dim as u32],
-                payload: MetricEventPayload::IntegerValue(float_to_ten_thousandth(success_rate)),
-            });
-        }
-
-        for (snr_bucket_dim, counters) in &self.last_1d_detailed_stats.connect_per_snr_bucket {
-            let success_rate = counters.success as f64 / counters.total as f64;
-            metric_events.push(MetricEvent {
-                metric_id: metrics::DAILY_CONNECT_SUCCESS_RATE_BREAKDOWN_BY_SNR_BUCKET_METRIC_ID,
-                event_codes: vec![*snr_bucket_dim as u32],
-                payload: MetricEventPayload::IntegerValue(float_to_ten_thousandth(success_rate)),
+                metric_id: metrics::DEVICE_CONNECTED_TO_AP_OUI_METRIC_ID,
+                event_codes: vec![],
+                payload: MetricEventPayload::StringValue(oui.clone()),
             });
         }
 
@@ -1234,6 +1267,13 @@ impl StatsLogger {
             payload: MetricEventPayload::Count(1),
         });
 
+        let oui = latest_ap_state.bssid.0.to_oui_uppercase("");
+        metric_events.push(MetricEvent {
+            metric_id: metrics::SUCCESSFUL_CONNECT_PER_OUI_METRIC_ID,
+            event_codes: vec![],
+            payload: MetricEventPayload::StringValue(oui),
+        });
+
         log_cobalt_1dot1_batch!(
             self.cobalt_1dot1_proxy,
             &mut metric_events.iter_mut(),
@@ -1335,6 +1375,12 @@ impl StatsLogger {
             &mut metric_events,
             latest_ap_state.channel.primary,
         );
+
+        // Cobalt STRING metrics don't have AT_LEAST_ONCE local aggregation. So in order to
+        // imitate the metric "how many devices connect to APs from an OUI", we build a set
+        // seen OUIs now and then make sure we only log them once each day.
+        let oui = latest_ap_state.bssid.0.to_oui_uppercase("");
+        let _new = self.last_1d_detailed_stats.connected_ouis.insert(oui);
 
         log_cobalt_1dot1_batch!(
             self.cobalt_1dot1_proxy,
@@ -1505,6 +1551,7 @@ struct DailyDetailedStats {
         metrics::SuccessfulConnectBreakdownBySnrBucketMetricDimensionSnrBucket,
         ConnectAttemptsCounter,
     >,
+    connected_ouis: HashSet<String>,
 }
 
 impl DailyDetailedStats {
@@ -1517,6 +1564,7 @@ impl DailyDetailedStats {
             connect_per_channel_band: HashMap::new(),
             connect_per_rssi_bucket: HashMap::new(),
             connect_per_snr_bucket: HashMap::new(),
+            connected_ouis: HashSet::new(),
         }
     }
 }
@@ -2752,6 +2800,7 @@ mod tests {
             secondary80: 0,
         };
         let latest_ap_state = random_bss_description!(Wpa2,
+            bssid: [0x00, 0xf6, 0x20, 0x03, 0x04, 0x05],
             channel: channel,
             rssi_dbm: -50,
             snr_db: 25,
@@ -2841,6 +2890,10 @@ mod tests {
             ]
         );
         assert_eq!(breakdowns_by_snr_bucket[0].payload, MetricEventPayload::Count(1));
+
+        let per_oui = test_helper.get_logged_metrics(metrics::SUCCESSFUL_CONNECT_PER_OUI_METRIC_ID);
+        assert_eq!(per_oui.len(), 1);
+        assert_eq!(per_oui[0].payload, MetricEventPayload::StringValue("00F620".to_string()));
     }
 
     #[fuchsia::test]
@@ -3495,6 +3548,80 @@ mod tests {
         assert_eq!(breakdown_by_channel_band[0].payload, MetricEventPayload::Count(1));
     }
 
+    #[fuchsia::test]
+    fn test_log_device_connected_to_ap_oui_cobalt_metrics() {
+        let (mut test_helper, mut test_fut) = setup_test();
+        let latest_ap_state = random_bss_description!(Wpa2,
+            bssid: [0x00, 0xf6, 0x20, 0x03, 0x04, 0x05],
+        );
+        test_helper.send_connected_event(latest_ap_state);
+        let latest_ap_state = random_bss_description!(Wpa2,
+            bssid: [0x33, 0xf1, 0xed, 0x02, 0x03, 0x04],
+        );
+        test_helper.send_connected_event(latest_ap_state);
+        test_helper.advance_by(24.hours(), test_fut.as_mut());
+
+        let metrics = test_helper.get_logged_metrics(metrics::DEVICE_CONNECTED_TO_AP_OUI_METRIC_ID);
+        assert_eq_cobalt_events(
+            metrics,
+            vec![
+                MetricEvent {
+                    metric_id: metrics::DEVICE_CONNECTED_TO_AP_OUI_METRIC_ID,
+                    event_codes: vec![],
+                    payload: MetricEventPayload::StringValue("00F620".to_string()),
+                },
+                MetricEvent {
+                    metric_id: metrics::DEVICE_CONNECTED_TO_AP_OUI_METRIC_ID,
+                    event_codes: vec![],
+                    payload: MetricEventPayload::StringValue("33F1ED".to_string()),
+                },
+            ],
+        )
+    }
+
+    #[fuchsia::test]
+    fn test_log_device_connected_to_ap_oui_cobalt_metrics_periodically() {
+        let (mut test_helper, mut test_fut) = setup_test();
+
+        let latest_ap_state = random_bss_description!(Wpa2,
+            bssid: [0x00, 0xf6, 0x20, 0x03, 0x04, 0x05],
+        );
+        test_helper.send_connected_event(latest_ap_state);
+        test_helper.drain_cobalt_events(&mut test_fut);
+        test_helper.cobalt_events.clear();
+
+        test_helper.advance_by(24.hours(), test_fut.as_mut());
+
+        // Verify that after 24 hours has passed, device connected to AP OUI metric
+        // is logged once.
+        let metrics = test_helper.get_logged_metrics(metrics::DEVICE_CONNECTED_TO_AP_OUI_METRIC_ID);
+        assert_eq!(metrics.len(), 1);
+        assert_eq!(metrics[0].payload, MetricEventPayload::StringValue("00F620".to_string()));
+
+        test_helper.cobalt_events.clear();
+
+        // Device disconnects on the second day, but metric is still logged because
+        // it was connected to this OUI during this day, even though the connection
+        // was established on a previous day.
+        test_helper.advance_by(2.hours(), test_fut.as_mut());
+        let info = fake_disconnect_info();
+        test_helper
+            .telemetry_sender
+            .send(TelemetryEvent::Disconnected { track_subsequent_downtime: true, info });
+        test_helper.advance_by(22.hours(), test_fut.as_mut());
+
+        let metrics = test_helper.get_logged_metrics(metrics::DEVICE_CONNECTED_TO_AP_OUI_METRIC_ID);
+        assert_eq!(metrics.len(), 1);
+        assert_eq!(metrics[0].payload, MetricEventPayload::StringValue("00F620".to_string()));
+
+        test_helper.cobalt_events.clear();
+
+        // On the third day, device connected OUI metric should no longer be logged.
+        test_helper.advance_by(24.hours(), test_fut.as_mut());
+        let metrics = test_helper.get_logged_metrics(metrics::DEVICE_CONNECTED_TO_AP_OUI_METRIC_ID);
+        assert_eq!(metrics.len(), 0);
+    }
+
     struct TestHelper {
         telemetry_sender: TelemetrySender,
         inspector: Inspector,
@@ -3654,7 +3781,20 @@ mod tests {
                 ordering => return ordering,
             }
         }
-        std::cmp::Ordering::Equal
+
+        match (&left.payload, &right.payload) {
+            (MetricEventPayload::Count(v1), MetricEventPayload::Count(v2)) => v1.cmp(&v2),
+            (MetricEventPayload::IntegerValue(v1), MetricEventPayload::IntegerValue(v2)) => {
+                v1.cmp(&v2)
+            }
+            (MetricEventPayload::StringValue(v1), MetricEventPayload::StringValue(v2)) => {
+                v1.cmp(&v2)
+            }
+            (MetricEventPayload::Histogram(_), MetricEventPayload::Histogram(_)) => {
+                unimplemented!()
+            }
+            _ => unimplemented!(),
+        }
     }
 
     trait CobaltExt {
