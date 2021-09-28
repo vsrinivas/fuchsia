@@ -19,7 +19,7 @@ use {
             OptionalTask,
         },
         channel,
-        framework::REALM_SERVICE,
+        framework::INTERNAL_REALM_SERVICE,
         model::{
             actions::{
                 ActionSet, DestroyChildAction, PurgeAction, PurgeChildAction, ShutdownAction,
@@ -171,7 +171,7 @@ async fn use_framework_service() {
         ) -> Result<Option<Box<dyn CapabilityProvider>>, ModelError> {
             // If some other capability has already been installed, then there's nothing to
             // do here.
-            if capability.matches_protocol(&REALM_SERVICE) {
+            if capability.matches_protocol(&INTERNAL_REALM_SERVICE) {
                 Ok(Some(Box::new(MockRealmCapabilityProvider::new(
                     scope_moniker.clone(),
                     self.clone(),

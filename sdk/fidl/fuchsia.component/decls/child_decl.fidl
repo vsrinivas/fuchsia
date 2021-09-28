@@ -1,0 +1,62 @@
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+library fuchsia.component;
+
+using fuchsia.url;
+
+/// Statically declares a child component instance.
+type ChildDecl = table {
+    /// The name assigned to the child by its parent.
+    ///
+    /// Must be non-empty, unique among all siblings, and contain only the
+    /// following characters: [a-z0-9-_.].
+    1: name name;
+
+    /// The child component's URL.
+    ///
+    /// Must be non-empty and a well-formed URL.
+    2: url fuchsia.url.Url;
+
+    /// The startup mode for the component instance.
+    3: startup StartupMode;
+
+    /// The environment assigned to this child.
+    ///
+    /// Must be non-empty, reference an environment defined in the containing
+    /// `ComponentDecl`, and contain only the following characters:
+    /// [a-z0-9-_.].
+    4: environment name;
+
+    /// The action to take if this component instance terminates unexpectedly.
+    ///
+    /// May be unset, in which case defaults to `NONE`.
+    5: on_terminate OnTerminate;
+
+// TODO(fxbug.dev/4051): Provide a way to supply parameters to the child, possibly
+// as command-line arguments, by URL, or maybe in some other way which is
+// orthogonal to other inputs to mitigate confused deputy issues.  Perhaps
+// as a dictionary like we do for runners?
+};
+
+/// Describes under what conditions the component may be started.
+type StartupMode = strict enum {
+    /// Start component instance only when another instance binds to it.
+    LAZY = 0;
+    /// Start component instance as soon as parent starts. This mode is only
+    /// supported for statically declared children -- a dynamic instance may only be
+    /// started by binding to it.
+    EAGER = 1;
+};
+
+/// Describes the action to take if this component instance terminates
+/// unexpectedly.
+type OnTerminate = strict enum {
+    /// No action, the default
+    NONE = 0;
+
+    /// Trigger a graceful system reboot if the component terminates for any
+    /// reason. This is a specialized feature gated by Component Framework
+    /// security policy.
+    REBOOT = 1;
+};

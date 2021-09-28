@@ -1,0 +1,189 @@
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+library fuchsia.component;
+
+using fuchsia.io2;
+using fuchsia.data;
+
+/// Declares a capability offered by a component to one of its children, which
+/// may have been offered by the component's containing realm, the component
+/// itself, or one of its other children.
+type OfferDecl = flexible union {
+    1: service OfferServiceDecl;
+    2: protocol OfferProtocolDecl;
+    3: directory OfferDirectoryDecl;
+    4: storage OfferStorageDecl;
+    5: runner OfferRunnerDecl;
+    6: resolver OfferResolverDecl;
+    7: event OfferEventDecl;
+};
+
+/// Describes the type of dependency implied by the capability.
+type DependencyType = strict enum {
+    /// A strong dependency which may be required by components that use it.
+    STRONG = 1;
+    /// A weak dependency which is allowed to form a cycle. Components that use
+    /// a weak dependency must support the dependency being unavailable at
+    /// arbitrary times.
+    WEAK = 2;
+    /// A weak dependency specifically used to mark cyclic dependencies from
+    /// migrated v1 components.
+    WEAK_FOR_MIGRATION = 3;
+};
+
+/// Declares a service offered by a component to one of its children, which may
+/// have been offered by the component's containing realm, the component itself,
+/// or one of its other children.
+///
+/// To learn more about services, see:
+/// https://fuchsia.dev/fuchsia-src/glossary#service
+type OfferServiceDecl = table {
+    /// The provider of the capability relative to the component itself. Must be
+    /// `parent`, `self`, or `child`.
+    1: source Ref;
+
+    /// Name identifying the service being offered.
+    2: source_name name;
+
+    /// Reference to the target. Must be `child` or `collection`.
+    3: target Ref;
+
+    /// The name under which the capability is being offered.
+    4: target_name name;
+};
+
+/// Declares a protocol offered by a component to one of its children,
+/// which may have been offered by the component's containing realm, the
+/// component itself, or one of its other children.
+///
+/// To learn more about protocols, see:
+/// https://fuchsia.dev/fuchsia-src/glossary#protocol
+type OfferProtocolDecl = table {
+    /// The provider of the capability relative to the component itself. Must be
+    /// `parent`, `self`, or `child`.
+    1: source Ref;
+
+    /// Name identifying the protocol being offered.
+    2: source_name name;
+
+    /// Reference to the target. Must be `child` or `collection`.
+    3: target Ref;
+
+    /// The name by which the capability is being offered.
+    4: target_name name;
+
+    /// The dependency type this offer represents. A component which recieves a
+    /// weak offer must support the offered capability being unavailable at any
+    /// point.
+    5: dependency_type DependencyType;
+};
+
+/// Declares a directory offered by a component to one of its children, which
+/// may have been offered by the component's containing realm, the component
+/// itself, or one of its other children.
+type OfferDirectoryDecl = table {
+    /// The provider of the capability relative to the component itself. Must be
+    /// `parent`, `self`, or `child`.
+    1: source Ref;
+
+    /// Name identifying the directory being offered.
+    2: source_name name;
+
+    /// Reference to the target of the capability. Must be `child` or
+    /// `collection`.
+    3: target Ref;
+
+    /// The name by which the capability is being offered.
+    4: target_name name;
+
+    /// The maximum rights that can be set by a component using this directory,
+    /// required iff `source == self`.
+    5: rights fuchsia.io2.Rights;
+
+    /// The subdirectory of this directory to offer instead of the root. Optional.
+    6: subdir string:MAX_PATH_LENGTH;
+
+    /// The dependency type this offer represents. A component which recieves a
+    /// weak offer must support the offered capability being unavailable at any
+    /// point.
+    7: dependency_type DependencyType;
+};
+
+/// Declares a storage capability offered by a component to one of its children,
+/// such as meta storage offered by the component's containing realm or cache
+/// storage offered by the component itself.
+type OfferStorageDecl = table {
+    /// The name of the storage capability being offered
+    1: source_name name;
+
+    /// The source of the storage capability. Must be `parent` or `storage`.
+    2: source Ref;
+
+    /// Reference to the target of the capability. Must be `child` or
+    /// `collection`.
+    3: target Ref;
+
+    /// The name the storage capability is being offered as
+    4: target_name name;
+};
+
+/// Declares a runner offered by a component to one of its children, which may
+/// have been offered by the component's containing realm, the component itself,
+/// or one of its other children.
+type OfferRunnerDecl = table {
+    /// The provider of the capability relative to the component itself. Must be
+    /// `parent`, `self`, or `child`.
+    1: source Ref;
+
+    /// Name of the runner being offered.
+    2: source_name name;
+
+    /// Reference to the target of the capability. Must be `child` or
+    /// `collection`.
+    3: target Ref;
+
+    /// Name under which the capability is being offered.
+    4: target_name name;
+};
+
+/// Declares a resolver capability offered by a component to one of its children, which
+/// may have been offered by the component's containing realm, the component itself,
+/// or one of its other children.
+type OfferResolverDecl = table {
+    /// The provider of the capability relative to the component itself. Must be
+    /// `parent`, `self`, or `child`.
+    1: source Ref;
+
+    /// Name of the resolver being offered.
+    2: source_name name;
+
+    /// Reference to the target of the capability. Must be `child` or
+    /// `collection`.
+    3: target Ref;
+
+    /// Name under which the capability is being offered.
+    4: target_name name;
+};
+
+/// Declares an event offered by a component.
+type OfferEventDecl = table {
+    /// The provider of the event. Must be `parent`.
+    1: source Ref;
+
+    /// Name of the event being offered.
+    2: source_name name;
+
+    /// Reference to the target of the event. Must be `child` or `collection`.
+    3: target Ref;
+
+    /// Name under which the event is being offered.
+    4: target_name name;
+
+    /// The mode offered for the event.
+    5: mode EventMode;
+
+    /// Filter for the event. The structure of the filter depends on the event type. May be absent
+    /// for some events.
+    6: filter fuchsia.data.Dictionary;
+};

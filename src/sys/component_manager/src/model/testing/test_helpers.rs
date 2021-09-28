@@ -410,7 +410,7 @@ impl ActionsTest {
                     .lock()
                     .await
                     .realm_capability_host
-                    .serve(component, stream)
+                    .serve_for_internal_namespace(component, stream)
                     .await
                     .expect("failed serving realm service");
             })

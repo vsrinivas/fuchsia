@@ -8,7 +8,7 @@ use {
     fidl::HandleBased,
     fidl_fidl_test_components as ftest, fidl_fuchsia_component as fcomponent,
     fidl_fuchsia_io::{DirectoryMarker, DirectoryProxy, MODE_TYPE_SERVICE},
-    fidl_fuchsia_process as fprocess, fidl_fuchsia_sys2 as fsys, fuchsia_async as fasync,
+    fidl_fuchsia_process as fprocess, fuchsia_async as fasync,
     fuchsia_component::client,
     fuchsia_zircon as zx,
     io_util::{self, OPEN_RIGHT_READABLE},
@@ -17,24 +17,24 @@ use {
 
 #[fasync::run_singlethreaded(test)]
 async fn collections() {
-    let realm = client::connect_to_protocol::<fsys::RealmMarker>()
+    let realm = client::connect_to_protocol::<fcomponent::RealmMarker>()
         .expect("could not connect to Realm service");
 
     // Create a couple child components.
     for name in vec!["a", "b"] {
-        let mut collection_ref = fsys::CollectionRef { name: "coll".to_string() };
-        let child_decl = fsys::ChildDecl {
+        let mut collection_ref = fcomponent::CollectionRef { name: "coll".to_string() };
+        let child_decl = fcomponent::ChildDecl {
             name: Some(name.to_string()),
             url: Some(format!(
                 "fuchsia-pkg://fuchsia.com/collections_integration_test#meta/trigger_{}.cm",
                 name
             )),
-            startup: Some(fsys::StartupMode::Lazy),
+            startup: Some(fcomponent::StartupMode::Lazy),
             environment: None,
-            ..fsys::ChildDecl::EMPTY
+            ..fcomponent::ChildDecl::EMPTY
         };
         realm
-            .create_child(&mut collection_ref, child_decl, fsys::CreateChildArgs::EMPTY)
+            .create_child(&mut collection_ref, child_decl, fcomponent::CreateChildArgs::EMPTY)
             .await
             .expect(&format!("create_child {} failed", name))
             .expect(&format!("failed to create child {}", name));
@@ -84,19 +84,19 @@ async fn collections() {
 
     // Recreate child (with different URL), and bind to it. Should work.
     {
-        let mut collection_ref = fsys::CollectionRef { name: "coll".to_string() };
-        let child_decl = fsys::ChildDecl {
+        let mut collection_ref = fcomponent::CollectionRef { name: "coll".to_string() };
+        let child_decl = fcomponent::ChildDecl {
             name: Some("a".to_string()),
             url: Some(
                 "fuchsia-pkg://fuchsia.com/collections_integration_test#meta/trigger_realm.cm"
                     .to_string(),
             ),
-            startup: Some(fsys::StartupMode::Lazy),
+            startup: Some(fcomponent::StartupMode::Lazy),
             environment: None,
-            ..fsys::ChildDecl::EMPTY
+            ..fcomponent::ChildDecl::EMPTY
         };
         realm
-            .create_child(&mut collection_ref, child_decl, fsys::CreateChildArgs::EMPTY)
+            .create_child(&mut collection_ref, child_decl, fcomponent::CreateChildArgs::EMPTY)
             .await
             .expect("second create_child a failed")
             .expect("failed to create second child a");
@@ -120,29 +120,29 @@ async fn collections() {
 
 #[fasync::run_singlethreaded(test)]
 async fn child_args() {
-    let realm = client::connect_to_protocol::<fsys::RealmMarker>()
+    let realm = client::connect_to_protocol::<fcomponent::RealmMarker>()
         .expect("could not connect to Realm service");
 
     // Providing numbered handles to a component that is not in a single run collection should fail.
     {
         let name = "a";
-        let mut collection_ref = fsys::CollectionRef { name: "not_single_run".to_string() };
-        let child_decl = fsys::ChildDecl {
+        let mut collection_ref = fcomponent::CollectionRef { name: "not_single_run".to_string() };
+        let child_decl = fcomponent::ChildDecl {
             name: Some(name.to_string()),
             url: Some(format!(
                 "fuchsia-pkg://fuchsia.com/collections_integration_test#meta/trigger_{}.cm",
                 name
             )),
-            startup: Some(fsys::StartupMode::Lazy),
+            startup: Some(fcomponent::StartupMode::Lazy),
             environment: None,
-            ..fsys::ChildDecl::EMPTY
+            ..fcomponent::ChildDecl::EMPTY
         };
         let (_, socket) =
             zx::Socket::create(zx::SocketOpts::STREAM).expect("Couldn't create socket");
         let numbered_handles = vec![fprocess::HandleInfo { handle: socket.into_handle(), id: 0 }];
-        let child_args = fsys::CreateChildArgs {
+        let child_args = fcomponent::CreateChildArgs {
             numbered_handles: Some(numbered_handles),
-            ..fsys::CreateChildArgs::EMPTY
+            ..fcomponent::CreateChildArgs::EMPTY
         };
         let res = realm
             .create_child(&mut collection_ref, child_decl, child_args)
@@ -154,23 +154,23 @@ async fn child_args() {
     // Providing numbered handles to a component that is in a single run collection should succeed.
     {
         let name = "a";
-        let mut collection_ref = fsys::CollectionRef { name: "single_run".to_string() };
-        let child_decl = fsys::ChildDecl {
+        let mut collection_ref = fcomponent::CollectionRef { name: "single_run".to_string() };
+        let child_decl = fcomponent::ChildDecl {
             name: Some(name.to_string()),
             url: Some(format!(
                 "fuchsia-pkg://fuchsia.com/collections_integration_test#meta/trigger_{}.cm",
                 name
             )),
-            startup: Some(fsys::StartupMode::Lazy),
+            startup: Some(fcomponent::StartupMode::Lazy),
             environment: None,
-            ..fsys::ChildDecl::EMPTY
+            ..fcomponent::ChildDecl::EMPTY
         };
         let (_, socket) =
             zx::Socket::create(zx::SocketOpts::STREAM).expect("Couldn't create socket");
         let numbered_handles = vec![fprocess::HandleInfo { handle: socket.into_handle(), id: 0 }];
-        let child_args = fsys::CreateChildArgs {
+        let child_args = fcomponent::CreateChildArgs {
             numbered_handles: Some(numbered_handles),
-            ..fsys::CreateChildArgs::EMPTY
+            ..fcomponent::CreateChildArgs::EMPTY
         };
         realm
             .create_child(&mut collection_ref, child_decl, child_args)
@@ -180,13 +180,13 @@ async fn child_args() {
     }
 }
 
-fn new_child_ref(name: &str, collection: &str) -> fsys::ChildRef {
-    fsys::ChildRef { name: name.to_string(), collection: Some(collection.to_string()) }
+fn new_child_ref(name: &str, collection: &str) -> fcomponent::ChildRef {
+    fcomponent::ChildRef { name: name.to_string(), collection: Some(collection.to_string()) }
 }
 
-async fn list_children(realm: &fsys::RealmProxy) -> Result<String, Error> {
+async fn list_children(realm: &fcomponent::RealmProxy) -> Result<String, Error> {
     let (iterator_proxy, server_end) = endpoints::create_proxy().unwrap();
-    let mut collection_ref = fsys::CollectionRef { name: "coll".to_string() };
+    let mut collection_ref = fcomponent::CollectionRef { name: "coll".to_string() };
     realm
         .list_children(&mut collection_ref, server_end)
         .await

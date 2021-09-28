@@ -1,0 +1,156 @@
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+library fuchsia.component;
+
+using fuchsia.io;
+using fuchsia.process;
+
+/// The maximum number of handles that can be passed to a created component.
+const MAX_HANDLE_COUNT uint32 = 128;
+
+/// The maximum number of dynamic offers that can target a created component.
+const MAX_DYNAMIC_OFFER_COUNT uint32 = 128;
+
+/// The maximum number of children that the a call `ChildIterator.Next`
+/// can return.
+/// Note, this is not a limit on the number of children that can be added
+/// to a component. This is merely a limit for a single invocation of the
+/// `Next` method.
+const MAX_CHILD_COUNT uint32 = 128;
+
+/// A protocol used by a component instance to manage its own realm, such as for
+/// binding to its children.
+///
+/// Requests to this protocol are processed in the order they are received.
+/// Clients that wish to send requests in parallel should open multiple
+/// connections.
+///
+/// The component framework provides this service to components that use
+/// `fuchsia.component.Realm`.
+@discoverable
+protocol Realm {
+    /// Opens the exposed directory of a child component instance. When this
+    /// function successfully returns, `exposed_dir` is bound to a directory
+    /// that contains the capabilities which the child exposed to its realm
+    /// via `ComponentDecl.exposes` (specified via "expose" declarations in
+    /// the component's manifest). The child component will not start as a
+    /// result of this call. Instead, starting will occur iff the parent binds
+    /// to one of the capabilities contained within `exposed_dir`.
+    ///
+    /// `exposed_dir` is open as long as `child` exists.
+    ///
+    /// Errors:
+    /// - `INVALID_ARGUMENTS`: `child` is not a valid child reference.
+    /// - `INSTANCE_NOT_FOUND`: `child` does not exist.
+    /// - `INSTANCE_CANNOT_RESOLVE`: `child`'s component declaration failed to resolve.
+    /// - `INSTANCE_DIED`: This realm no longer exists.
+    OpenExposedDir(resource struct {
+        child ChildRef;
+        exposed_dir server_end:fuchsia.io.Directory;
+    }) -> (struct {}) error Error;
+
+    /// Creates a child component instance dynamically. When this function
+    /// returns successfully, the instance exists, but it may not be running.
+    ///
+    /// The environment of the child instance is determined by the environment
+    /// of the collection. `decl` must not set `environment`.
+    ///
+    /// Errors:
+    /// - `INVALID_ARGUMENTS`: `collection` is not a valid reference or `child`
+    ///   is not a valid declaration.
+    /// - `COLLECTION_NOT_FOUND`: `collection` does not exist.
+    /// - `INSTANCE_ALREADY_EXISTS`: `decl.name` already exists in `collection`.
+    /// - `INSTANCE_CANNOT_RESOLVE`: `child`'s component declaration failed to resolve
+    ///   in a `SingleRun` collection.
+    /// - `NO_SPACE`: Could not allocate storage for the new instance.
+    /// - `INSTANCE_DIED`: This realm no longer exists.
+    CreateChild(resource struct {
+        collection CollectionRef;
+        decl ChildDecl;
+        args CreateChildArgs;
+    }) -> (struct {}) error Error;
+
+    /// Destroys a dynamically-created component instance. When this function
+    /// returns, the instance is destroyed and has stopped running.  However,
+    /// cleanup of the component's resources (such as its isolated storage) may
+    /// happen in the background after this function returns.
+    ///
+    /// Errors:
+    /// - `INVALID_ARGUMENTS`: `child` is not a valid reference or does not refer
+    ///   to a dynamic instance.
+    /// - `INSTANCE_NOT_FOUND`: `child` does not exist.
+    /// - `COLLECTION_NOT_FOUND`: `collection` does not exist.
+    /// - `INSTANCE_DIED`: This realm no longer exists.
+    DestroyChild(struct {
+        child ChildRef;
+    }) -> (struct {}) error Error;
+
+    /// Returns an iterator that lists all instances in a collection.
+    ///
+    /// NOTE: The results are not guaranteed to be consistent. Instances may be
+    /// created or destroyed while the iterator is live, but those changes
+    /// won't be observed by the iterator after this method returns.
+    ///
+    /// Errors:
+    /// - `INVALID_ARGUMENTS`: `collection` is not a valid reference or `iter`
+    /// does not have `ZX_RIGHT_WAIT`.
+    /// - `COLLECTION_NOT_FOUND`: `collection` does not exist.
+    /// - `INSTANCE_DIED`: This realm no longer exists.
+    /// - If `iter` does not have standard channel rights, this function may
+    ///   return `ACCESS_DENIED` or component manager may close `iter`.
+    ListChildren(resource struct {
+        collection CollectionRef;
+        iter server_end:ChildIterator;
+    }) -> (struct {}) error Error;
+};
+
+type CreateChildArgs = resource table {
+    /// The numbered handles to pass to the component instance.
+    ///
+    /// Only PA_FD and PA_USER* handles are valid arguments, and inclusion of any other
+    /// handles will result in an error. This argument is only supported for components
+    /// in a collection with `SingleRun` durability.
+    ///
+    /// If the runner for the component does not support the numbered handles it is
+    /// expected to close the handles.
+    1: numbered_handles vector<fuchsia.process.HandleInfo>:MAX_HANDLE_COUNT;
+
+    /// Dynamic offers that will target the component instance.
+    ///
+    /// Including `OfferDecl`s in this vector will cause additional capabilities
+    /// to be offered to the newly created child, beyond the `OfferDecl`s in the
+    /// parent's `ComponentDecl` that target the collection.
+    ///
+    /// Any kind of offer (e.g., protocol, directory) can be used as a dynamic
+    /// offer. Any source that would be valid for a static offer is also valid
+    /// for a dynamic offer. Additionally, unlike static offers, dynamic offers
+    /// can use a "sibling" dynamic child component as a source by setting the
+    /// source to a `ChildRef` that sets the `collection` field.
+    ///
+    /// Dynamic offers always target the newly created child component. As a
+    /// result, `OfferDecl`s in `dynamic_offers` must not set the `target`
+    /// field, as its value is implied.
+    ///
+    /// If either the source (that is, the component named in the `source` field
+    /// of the `OfferDecl`) or the target of a dynamic offer is destroyed, the
+    /// offer itself is destroyed simultaneously.
+    ///
+    /// In order to set this field to a non-empty value, the collection in which
+    /// the child component is being created must specify
+    /// `ComponentDecl.allowed_offers = STATIC_AND_DYNAMIC`.
+    ///
+    /// TODO(fxbug.dev/81109): Implementation is in progress.
+    2: dynamic_offers vector<OfferDecl>:MAX_DYNAMIC_OFFER_COUNT;
+};
+
+/// A protocol to iterate over the list of children in a realm.
+protocol ChildIterator {
+    /// Advance the iterator and return the next batch of children.
+    ///
+    /// Returns a vector of `ChildRef`. Returns an empty vector when there are
+    /// no more children.
+    Next() -> (struct {
+        children vector<ChildRef>:MAX_CHILD_COUNT;
+    });
+};

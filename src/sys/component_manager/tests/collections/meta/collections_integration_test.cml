@@ -1,8 +1,8 @@
 // Realm for integration test that creates and binds to component instances in a collection.
 {
     include: [
-        "syslog/client.shard.cml",
         "//src/sys/test_runners/rust/default.shard.cml",
+        "syslog/client.shard.cml",
     ],
     program: {
         binary: "bin/collections_integration_test",
@@ -30,7 +30,7 @@
     use: [
         // Needed to bind to and create children
         {
-            protocol: "fuchsia.sys2.Realm",
+            protocol: "fuchsia.component.Realm",
             from: "framework",
         },
     ],

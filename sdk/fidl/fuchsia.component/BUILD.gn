@@ -10,7 +10,20 @@ fidl("fuchsia.component") {
   sources = [
     "binder.fidl",
     "constants.fidl",
+    "decls/child_decl.fidl",
+    "decls/collection_decl.fidl",
+    "decls/offer_decl.fidl",
+    "decls/relative_refs.fidl",
     "error.fidl",
+    "events.fidl",
+    "realm.fidl",
     "types.fidl",
+  ]
+  public_deps = [
+    "//sdk/fidl/fuchsia.data",
+    "//sdk/fidl/fuchsia.io",
+    "//sdk/fidl/fuchsia.io2",
+    "//sdk/fidl/fuchsia.process",
+    "//sdk/fidl/fuchsia.url",
   ]
 }

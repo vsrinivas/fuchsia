@@ -1,4 +1,39 @@
+enum/member fuchsia.component/AllowedOffers.STATIC_AND_DYNAMIC 2
+enum/member fuchsia.component/AllowedOffers.STATIC_ONLY 1
+strict enum fuchsia.component/AllowedOffers uint32
 protocol fuchsia.component/Binder
+struct/member fuchsia.component/CapabilityRef.name string:100
+struct fuchsia.component/CapabilityRef
+table/member fuchsia.component/ChildDecl.environment string:100
+table/member fuchsia.component/ChildDecl.name string:100
+table/member fuchsia.component/ChildDecl.on_terminate fuchsia.component/OnTerminate
+table/member fuchsia.component/ChildDecl.startup fuchsia.component/StartupMode
+table/member fuchsia.component/ChildDecl.url string:4096
+table fuchsia.component/ChildDecl
+protocol/member fuchsia.component/ChildIterator.Next() -> (vector<fuchsia.component/ChildRef>:128 children)
+protocol fuchsia.component/ChildIterator
+struct/member fuchsia.component/ChildRef.collection string:<100,optional>
+struct/member fuchsia.component/ChildRef.name string:100
+struct fuchsia.component/ChildRef
+table/member fuchsia.component/CollectionDecl.allowed_offers fuchsia.component/AllowedOffers
+table/member fuchsia.component/CollectionDecl.durability fuchsia.component/Durability
+table/member fuchsia.component/CollectionDecl.environment string:100
+table/member fuchsia.component/CollectionDecl.name string:100
+table fuchsia.component/CollectionDecl
+struct/member fuchsia.component/CollectionRef.name string:100
+struct fuchsia.component/CollectionRef
+table/member fuchsia.component/CreateChildArgs.dynamic_offers vector<fuchsia.component/OfferDecl>:128
+table/member fuchsia.component/CreateChildArgs.numbered_handles vector<fuchsia.process/HandleInfo>:128
+resource table fuchsia.component/CreateChildArgs
+struct fuchsia.component/DebugRef
+enum/member fuchsia.component/DependencyType.STRONG 1
+enum/member fuchsia.component/DependencyType.WEAK 2
+enum/member fuchsia.component/DependencyType.WEAK_FOR_MIGRATION 3
+strict enum fuchsia.component/DependencyType uint32
+enum/member fuchsia.component/Durability.PERSISTENT 1
+enum/member fuchsia.component/Durability.SINGLE_RUN 3
+enum/member fuchsia.component/Durability.TRANSIENT 2
+strict enum fuchsia.component/Durability uint32
 enum/member fuchsia.component/Error.ACCESS_DENIED 4
 enum/member fuchsia.component/Error.COLLECTION_NOT_FOUND 9
 enum/member fuchsia.component/Error.INSTANCE_ALREADY_EXISTS 6
@@ -12,10 +47,103 @@ enum/member fuchsia.component/Error.RESOURCE_NOT_FOUND 12
 enum/member fuchsia.component/Error.RESOURCE_UNAVAILABLE 10
 enum/member fuchsia.component/Error.UNSUPPORTED 3
 strict enum fuchsia.component/Error uint32
+enum/member fuchsia.component/EventMode.ASYNC 0
+enum/member fuchsia.component/EventMode.SYNC 1
+strict enum fuchsia.component/EventMode uint32
+struct fuchsia.component/FrameworkRef
+const fuchsia.component/MAX_CHILD_COUNT uint32 128
+const fuchsia.component/MAX_DYNAMIC_OFFER_COUNT uint32 128
+const fuchsia.component/MAX_HANDLE_COUNT uint32 128
 const fuchsia.component/MAX_MONIKER_LENGTH uint32 4096
 const fuchsia.component/MAX_NAME_LENGTH uint32 100
 const fuchsia.component/MAX_NUM_EVENTS_RECEIVED uint64 100
 const fuchsia.component/MAX_PATH_LENGTH uint32 1024
 const fuchsia.component/MAX_SUBSCRIPTION_REQUESTS uint32 2
 const fuchsia.component/MAX_URL_SCHEME_LENGTH uint32 100
+union/member fuchsia.component/OfferDecl.directory fuchsia.component/OfferDirectoryDecl
+union/member fuchsia.component/OfferDecl.event fuchsia.component/OfferEventDecl
+union/member fuchsia.component/OfferDecl.protocol fuchsia.component/OfferProtocolDecl
+union/member fuchsia.component/OfferDecl.resolver fuchsia.component/OfferResolverDecl
+union/member fuchsia.component/OfferDecl.runner fuchsia.component/OfferRunnerDecl
+union/member fuchsia.component/OfferDecl.service fuchsia.component/OfferServiceDecl
+union/member fuchsia.component/OfferDecl.storage fuchsia.component/OfferStorageDecl
+flexible union fuchsia.component/OfferDecl
+table/member fuchsia.component/OfferDirectoryDecl.dependency_type fuchsia.component/DependencyType
+table/member fuchsia.component/OfferDirectoryDecl.rights fuchsia.io2/Operations
+table/member fuchsia.component/OfferDirectoryDecl.source fuchsia.component/Ref
+table/member fuchsia.component/OfferDirectoryDecl.source_name string:100
+table/member fuchsia.component/OfferDirectoryDecl.subdir string:1024
+table/member fuchsia.component/OfferDirectoryDecl.target fuchsia.component/Ref
+table/member fuchsia.component/OfferDirectoryDecl.target_name string:100
+table fuchsia.component/OfferDirectoryDecl
+table/member fuchsia.component/OfferEventDecl.filter fuchsia.data/Dictionary
+table/member fuchsia.component/OfferEventDecl.mode fuchsia.component/EventMode
+table/member fuchsia.component/OfferEventDecl.source fuchsia.component/Ref
+table/member fuchsia.component/OfferEventDecl.source_name string:100
+table/member fuchsia.component/OfferEventDecl.target fuchsia.component/Ref
+table/member fuchsia.component/OfferEventDecl.target_name string:100
+table fuchsia.component/OfferEventDecl
+table/member fuchsia.component/OfferProtocolDecl.dependency_type fuchsia.component/DependencyType
+table/member fuchsia.component/OfferProtocolDecl.source fuchsia.component/Ref
+table/member fuchsia.component/OfferProtocolDecl.source_name string:100
+table/member fuchsia.component/OfferProtocolDecl.target fuchsia.component/Ref
+table/member fuchsia.component/OfferProtocolDecl.target_name string:100
+table fuchsia.component/OfferProtocolDecl
+table/member fuchsia.component/OfferResolverDecl.source fuchsia.component/Ref
+table/member fuchsia.component/OfferResolverDecl.source_name string:100
+table/member fuchsia.component/OfferResolverDecl.target fuchsia.component/Ref
+table/member fuchsia.component/OfferResolverDecl.target_name string:100
+table fuchsia.component/OfferResolverDecl
+table/member fuchsia.component/OfferRunnerDecl.source fuchsia.component/Ref
+table/member fuchsia.component/OfferRunnerDecl.source_name string:100
+table/member fuchsia.component/OfferRunnerDecl.target fuchsia.component/Ref
+table/member fuchsia.component/OfferRunnerDecl.target_name string:100
+table fuchsia.component/OfferRunnerDecl
+table/member fuchsia.component/OfferServiceDecl.source fuchsia.component/Ref
+table/member fuchsia.component/OfferServiceDecl.source_name string:100
+table/member fuchsia.component/OfferServiceDecl.target fuchsia.component/Ref
+table/member fuchsia.component/OfferServiceDecl.target_name string:100
+table fuchsia.component/OfferServiceDecl
+table/member fuchsia.component/OfferStorageDecl.source fuchsia.component/Ref
+table/member fuchsia.component/OfferStorageDecl.source_name string:100
+table/member fuchsia.component/OfferStorageDecl.target fuchsia.component/Ref
+table/member fuchsia.component/OfferStorageDecl.target_name string:100
+table fuchsia.component/OfferStorageDecl
+enum/member fuchsia.component/OnTerminate.NONE 0
+enum/member fuchsia.component/OnTerminate.REBOOT 1
+strict enum fuchsia.component/OnTerminate uint32
+struct fuchsia.component/ParentRef
+protocol/member fuchsia.component/Realm.CreateChild(fuchsia.component/CollectionRef collection,fuchsia.component/ChildDecl decl,fuchsia.component/CreateChildArgs args) -> (fuchsia.component/Realm_CreateChild_Result result)
+protocol/member fuchsia.component/Realm.DestroyChild(fuchsia.component/ChildRef child) -> (fuchsia.component/Realm_DestroyChild_Result result)
+protocol/member fuchsia.component/Realm.ListChildren(fuchsia.component/CollectionRef collection,server_end:fuchsia.component/ChildIterator iter) -> (fuchsia.component/Realm_ListChildren_Result result)
+protocol/member fuchsia.component/Realm.OpenExposedDir(fuchsia.component/ChildRef child,server_end:fuchsia.io/Directory exposed_dir) -> (fuchsia.component/Realm_OpenExposedDir_Result result)
+protocol fuchsia.component/Realm
+struct fuchsia.component/Realm_CreateChild_Response
+union/member fuchsia.component/Realm_CreateChild_Result.err fuchsia.component/Error
+union/member fuchsia.component/Realm_CreateChild_Result.response fuchsia.component/Realm_CreateChild_Response
+strict union fuchsia.component/Realm_CreateChild_Result
+struct fuchsia.component/Realm_DestroyChild_Response
+union/member fuchsia.component/Realm_DestroyChild_Result.err fuchsia.component/Error
+union/member fuchsia.component/Realm_DestroyChild_Result.response fuchsia.component/Realm_DestroyChild_Response
+strict union fuchsia.component/Realm_DestroyChild_Result
+struct fuchsia.component/Realm_ListChildren_Response
+union/member fuchsia.component/Realm_ListChildren_Result.err fuchsia.component/Error
+union/member fuchsia.component/Realm_ListChildren_Result.response fuchsia.component/Realm_ListChildren_Response
+strict union fuchsia.component/Realm_ListChildren_Result
+struct fuchsia.component/Realm_OpenExposedDir_Response
+union/member fuchsia.component/Realm_OpenExposedDir_Result.err fuchsia.component/Error
+union/member fuchsia.component/Realm_OpenExposedDir_Result.response fuchsia.component/Realm_OpenExposedDir_Response
+strict union fuchsia.component/Realm_OpenExposedDir_Result
+union/member fuchsia.component/Ref.capability fuchsia.component/CapabilityRef
+union/member fuchsia.component/Ref.child fuchsia.component/ChildRef
+union/member fuchsia.component/Ref.collection fuchsia.component/CollectionRef
+union/member fuchsia.component/Ref.debug fuchsia.component/DebugRef
+union/member fuchsia.component/Ref.framework fuchsia.component/FrameworkRef
+union/member fuchsia.component/Ref.parent fuchsia.component/ParentRef
+union/member fuchsia.component/Ref.self fuchsia.component/SelfRef
+flexible union fuchsia.component/Ref
+struct fuchsia.component/SelfRef
+enum/member fuchsia.component/StartupMode.EAGER 1
+enum/member fuchsia.component/StartupMode.LAZY 0
+strict enum fuchsia.component/StartupMode uint32
 library fuchsia.component

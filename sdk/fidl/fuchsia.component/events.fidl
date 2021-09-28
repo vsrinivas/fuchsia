@@ -1,0 +1,14 @@
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+library fuchsia.component;
+
+/// Describes the consumption mode of an event.
+type EventMode = strict enum {
+    /// The event source dispatches the event and doesn't wait for the listener
+    /// to handle it.
+    ASYNC = 0;
+
+    /// The event source awaits the listener to notify it that it's done handling the event.
+    SYNC = 1;
+};

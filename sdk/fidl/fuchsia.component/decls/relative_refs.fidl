@@ -1,0 +1,50 @@
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+library fuchsia.component;
+
+/// A reference to a capability source or destination relative to this
+/// component.
+type Ref = flexible union {
+    1: parent ParentRef;
+    2: self SelfRef;
+    3: child ChildRef;
+    4: collection CollectionRef;
+    5: framework FrameworkRef;
+    6: capability CapabilityRef;
+    7: debug DebugRef;
+};
+
+/// A reference to a component's parent instance.
+type ParentRef = struct {};
+
+/// A reference to the component itself.
+type SelfRef = struct {};
+
+/// A reference to the environment's debug capabilities.
+type DebugRef = struct {};
+
+/// A reference to one of the component's child instances.
+type ChildRef = struct {
+    /// The name assigned to the child by its parent. If `collection` is set,
+    /// `name` is scoped to `collection` and the child is a dynamic instance.
+    /// Required.
+    name name;
+    /// The collection `name` belongs to. If omitted, `name` references a static
+    /// instance. This field must be omitted if the `ChildRef` is being used in
+    /// a component declaration. Optional.
+    collection name:optional;
+};
+
+/// A reference to one of the component's collections.
+type CollectionRef = struct {
+    name name;
+};
+
+/// A reference to the component framework itself.
+type FrameworkRef = struct {};
+
+/// A reference to a capability declared in this component.
+type CapabilityRef = struct {
+    name string:MAX_NAME_LENGTH;
+};
