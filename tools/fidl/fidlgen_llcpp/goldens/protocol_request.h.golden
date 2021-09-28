@@ -99,9 +99,13 @@ struct ::fidl::internal::WireServerDispatcher<
   static ::fidl::DispatchResult TryDispatch(
       ::fidl::WireServer<::fidl_test_protocolrequest::Parent>* impl,
       ::fidl::IncomingMessage& msg, ::fidl::Transaction* txn);
-  static ::fidl::DispatchResult Dispatch(
+  static void Dispatch(
       ::fidl::WireServer<::fidl_test_protocolrequest::Parent>* impl,
       ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn);
+
+ private:
+  static const ::fidl::internal::MethodEntry entries_[];
+  static const ::fidl::internal::MethodEntry* entries_end_;
 };
 #endif  // __Fuchsia__
 
@@ -1997,8 +2001,8 @@ class ::fidl::WireServer<::fidl_test_protocolrequest::Parent>
       TakeChildRequestCompleter::Sync& _completer) = 0;
 
  private:
-  ::fidl::DispatchResult dispatch_message(::fidl::IncomingMessage&& msg,
-                                          ::fidl::Transaction* txn) final;
+  void dispatch_message(::fidl::IncomingMessage&& msg,
+                        ::fidl::Transaction* txn) final;
 };
 #endif  // __Fuchsia__
 
@@ -2025,9 +2029,13 @@ struct ::fidl::internal::WireServerDispatcher<
   static ::fidl::DispatchResult TryDispatch(
       ::fidl::WireServer<::fidl_test_protocolrequest::Child>* impl,
       ::fidl::IncomingMessage& msg, ::fidl::Transaction* txn);
-  static ::fidl::DispatchResult Dispatch(
+  static void Dispatch(
       ::fidl::WireServer<::fidl_test_protocolrequest::Child>* impl,
       ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn);
+
+ private:
+  static const ::fidl::internal::MethodEntry entries_[];
+  static const ::fidl::internal::MethodEntry* entries_end_;
 };
 #endif  // __Fuchsia__
 
@@ -2122,8 +2130,8 @@ class ::fidl::WireServer<::fidl_test_protocolrequest::Child>
   using _EnclosingProtocol = ::fidl_test_protocolrequest::Child;
 
  private:
-  ::fidl::DispatchResult dispatch_message(::fidl::IncomingMessage&& msg,
-                                          ::fidl::Transaction* txn) final;
+  void dispatch_message(::fidl::IncomingMessage&& msg,
+                        ::fidl::Transaction* txn) final;
 };
 #endif  // __Fuchsia__
 

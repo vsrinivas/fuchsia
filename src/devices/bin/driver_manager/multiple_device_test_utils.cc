@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <lib/fidl/cpp/message.h>
+#include <lib/fidl/llcpp/transaction.h>
 #include <lib/fidl/txn_header.h>
 #include <lib/stdcompat/span.h>
 #include <zircon/fidl.h>
@@ -32,11 +33,16 @@ class FidlTransaction : public fidl::Transaction {
 
   void Close(zx_status_t epitaph) override {}
 
+  void InternalError(fidl::UnbindInfo info) override { detected_error_ = info; }
+
   ~FidlTransaction() override = default;
+
+  const std::optional<fidl::UnbindInfo>& detected_error() const { return detected_error_; }
 
  private:
   zx_txid_t txid_;
   zx::unowned_channel channel_;
+  std::optional<fidl::UnbindInfo> detected_error_;
 };
 
 class FakeDevhost : public fidl::WireServer<fdm::DriverHostController> {
@@ -88,7 +94,8 @@ void MultipleDeviceTestCase::CheckCreateDeviceReceived(
   FidlTransaction txn(header->txid, zx::unowned(devhost_controller.channel()));
 
   FakeDevhost fake(expected_driver, device_coordinator_client, device_controller_server);
-  ASSERT_EQ(fidl::WireDispatch(&fake, std::move(msg), &txn), fidl::DispatchResult::kFound);
+  fidl::WireDispatch(&fake, std::move(msg), &txn);
+  ASSERT_FALSE(txn.detected_error());
   ASSERT_TRUE(device_coordinator_client->is_valid());
   ASSERT_TRUE(device_controller_server->is_valid());
 }
@@ -108,8 +115,8 @@ void DeviceState::Dispatch() {
   auto* header = msg.header();
   FidlTransaction txn(header->txid, zx::unowned(controller_server.channel()));
 
-  ASSERT_EQ(fidl::WireDispatch<fdm::DeviceController>(this, std::move(msg), &txn),
-            fidl::DispatchResult::kFound);
+  fidl::WireDispatch<fdm::DeviceController>(this, std::move(msg), &txn);
+  ASSERT_FALSE(txn.detected_error());
 }
 
 void DeviceState::CheckBindDriverReceivedAndReply(std::string_view expected_driver_name) {

@@ -329,9 +329,13 @@ struct ::fidl::internal::WireServerDispatcher<
   static ::fidl::DispatchResult TryDispatch(
       ::fidl::WireServer<::fidl_test_requestflexibleenvelope::Protocol>* impl,
       ::fidl::IncomingMessage& msg, ::fidl::Transaction* txn);
-  static ::fidl::DispatchResult Dispatch(
+  static void Dispatch(
       ::fidl::WireServer<::fidl_test_requestflexibleenvelope::Protocol>* impl,
       ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn);
+
+ private:
+  static const ::fidl::internal::MethodEntry entries_[];
+  static const ::fidl::internal::MethodEntry* entries_end_;
 };
 #endif  // __Fuchsia__
 
@@ -1763,8 +1767,8 @@ class ::fidl::WireServer<::fidl_test_requestflexibleenvelope::Protocol>
       RequestFlexibleResponseStrictCompleter::Sync& _completer) = 0;
 
  private:
-  ::fidl::DispatchResult dispatch_message(::fidl::IncomingMessage&& msg,
-                                          ::fidl::Transaction* txn) final;
+  void dispatch_message(::fidl::IncomingMessage&& msg,
+                        ::fidl::Transaction* txn) final;
 };
 #endif  // __Fuchsia__
 

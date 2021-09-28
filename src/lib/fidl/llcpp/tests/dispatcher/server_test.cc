@@ -59,9 +59,9 @@ class ::fidl::WireServer<fidl_test::TestProtocol>
   using _EnclosingProtocol = fidl_test::TestProtocol;
 
  private:
-  ::fidl::DispatchResult dispatch_message(::fidl::IncomingMessage&& msg,
-                                          ::fidl::Transaction* txn) final {
-    return ::fidl::DispatchResult::kNotFound;
+  void dispatch_message(::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn) final {
+    std::move(msg).CloseHandles();
+    txn->InternalError(::fidl::UnbindInfo::UnknownOrdinal());
   }
 };
 

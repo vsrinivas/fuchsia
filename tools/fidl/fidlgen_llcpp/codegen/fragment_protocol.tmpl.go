@@ -15,7 +15,7 @@ const fragmentProtocolTmpl = `
   {{- if SyncCallTotalStackSizeV2 . -}}
     Allocates {{ SyncCallTotalStackSizeV2 . }} bytes of {{ "" -}}
     {{- if not .Request.ClientAllocationV2.IsStack -}}
-      response 
+      response
     {{- else -}}
       {{- if not .Response.ClientAllocationV2.IsStack -}}
         request

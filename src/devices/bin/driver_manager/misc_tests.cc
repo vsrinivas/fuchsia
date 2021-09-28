@@ -61,11 +61,16 @@ class FidlTransaction : public fidl::Transaction {
 
   void Close(zx_status_t epitaph) override { ZX_ASSERT(false); }
 
+  void InternalError(fidl::UnbindInfo info) override { detected_error_ = info; }
+
   ~FidlTransaction() override = default;
+
+  const std::optional<fidl::UnbindInfo>& detected_error() const { return detected_error_; }
 
  private:
   zx_txid_t txid_;
   zx::unowned_channel channel_;
+  std::optional<fidl::UnbindInfo> detected_error_;
 };
 
 class FakeDevice : public fidl::WireServer<fuchsia_device_manager::DeviceController> {
@@ -116,10 +121,10 @@ void BindDriverTestOutput(
   FidlTransaction txn(header->txid, zx::unowned(controller.channel()));
 
   FakeDevice fake(std::move(test_output));
-  ASSERT_EQ(fidl::WireDispatch(
-                static_cast<fidl::WireServer<fuchsia_device_manager::DeviceController>*>(&fake),
-                std::move(msg), &txn),
-            fidl::DispatchResult::kFound);
+  fidl::WireDispatch(
+      static_cast<fidl::WireServer<fuchsia_device_manager::DeviceController>*>(&fake),
+      std::move(msg), &txn);
+  ASSERT_FALSE(txn.detected_error());
   ASSERT_TRUE(fake.bind_called());
 }
 
@@ -139,10 +144,10 @@ void CheckBindDriverReceived(
   FidlTransaction txn(header->txid, zx::unowned(controller.channel()));
 
   FakeDevice fake(fidl::ServerEnd<fuchsia_driver_test::Logger>(), expected_driver);
-  ASSERT_EQ(fidl::WireDispatch(
-                static_cast<fidl::WireServer<fuchsia_device_manager::DeviceController>*>(&fake),
-                std::move(msg), &txn),
-            fidl::DispatchResult::kFound);
+  fidl::WireDispatch(
+      static_cast<fidl::WireServer<fuchsia_device_manager::DeviceController>*>(&fake),
+      std::move(msg), &txn);
+  ASSERT_FALSE(txn.detected_error());
   ASSERT_TRUE(fake.bind_called());
 }
 

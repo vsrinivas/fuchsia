@@ -29,6 +29,19 @@ namespace internal {
   return ::fidl::DispatchResult::kNotFound;
 }
 
+void Dispatch(void* impl, ::fidl::IncomingMessage& msg, ::fidl::Transaction* txn,
+              const MethodEntry* begin, const MethodEntry* end) {
+  ::fidl::DispatchResult result = TryDispatch(impl, msg, txn, begin, end);
+  switch (result) {
+    case ::fidl::DispatchResult::kNotFound:
+      std::move(msg).CloseHandles();
+      txn->InternalError(::fidl::UnbindInfo::UnknownOrdinal());
+      break;
+    case ::fidl::DispatchResult::kFound:
+      break;
+  }
+}
+
 ::fidl::Result WeakEventSenderInner::SendEvent(::fidl::OutgoingMessage& message) const {
   if (auto binding = binding_.lock()) {
     message.set_txid(0);

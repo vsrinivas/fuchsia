@@ -43,8 +43,7 @@ class {{ .WireServer }} : public ::fidl::internal::IncomingMessageDispatcher {
 
   private:
   {{- /* Note that this implementation is snake_case to avoid name conflicts. */}}
-  ::fidl::DispatchResult dispatch_message(::fidl::IncomingMessage&& msg,
-                                          ::fidl::Transaction* txn) final;
+  void dispatch_message(::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn) final;
 };
 {{- end }}
 `

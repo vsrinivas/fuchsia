@@ -114,6 +114,25 @@ TEST(BindTestCase, CallbackDestroyOnServerClose) {
   ASSERT_OK(local.wait_one(ZX_CHANNEL_PEER_CLOSED, zx::time{}, nullptr));
 }
 
+TEST(BindTestCase, UnknownMethod) {
+  sync_completion_t destroyed;
+  auto server = std::make_unique<Server>(&destroyed);
+  async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
+
+  zx::channel local, remote;
+  ASSERT_OK(zx::channel::create(0, &local, &remote));
+
+  ASSERT_OK(fidl::BindSingleInFlightOnly(loop.dispatcher(), std::move(remote), std::move(server)));
+  loop.RunUntilIdle();
+  ASSERT_FALSE(sync_completion_signaled(&destroyed));
+
+  // An epitaph is never a valid message to a server.
+  fidl_epitaph_write(local.get(), ZX_OK);
+
+  loop.RunUntilIdle();
+  ASSERT_OK(sync_completion_wait(&destroyed, ZX_TIME_INFINITE));
+}
+
 // These classes are used to create a server implementation with multiple
 // inheritance.
 class PlaceholderBase1 {

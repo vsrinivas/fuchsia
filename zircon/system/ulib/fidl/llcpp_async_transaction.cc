@@ -18,17 +18,8 @@ namespace internal {
 
 std::optional<UnbindInfo> SyncTransaction::Dispatch(fidl::IncomingMessage&& msg) {
   ZX_ASSERT(binding_);
-  fidl::DispatchResult dispatch_result =
-      binding_->interface()->dispatch_message(std::move(msg), this);
-
-  switch (dispatch_result) {
-    case fidl::DispatchResult::kFound:
-      // Propagate any error that happened during the message handling.
-      return unbind_info_;
-    case fidl::DispatchResult::kNotFound:
-      // The message was not recognized by the |interface|.
-      return fidl::UnbindInfo::UnknownOrdinal();
-  }
+  binding_->interface()->dispatch_message(std::move(msg), this);
+  return unbind_info_;
 }
 
 zx_status_t SyncTransaction::Reply(fidl::OutgoingMessage* message) {

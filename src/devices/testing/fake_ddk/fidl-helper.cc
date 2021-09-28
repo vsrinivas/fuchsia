@@ -55,8 +55,7 @@ std::variant<::fidl::Transaction*, std::unique_ptr<::fidl::Transaction>> FromDdk
   return ptr;
 }
 
-::fidl::DispatchResult FidlMessenger::Dispatch(fidl::IncomingMessage&& msg,
-                                               ::fidl::Transaction* txn) {
+void FidlMessenger::Dispatch(fidl::IncomingMessage&& msg, ::fidl::Transaction* txn) {
   auto ddk_txn = MakeDdkInternalTransaction(txn);
   fidl_incoming_msg_t c_msg = std::move(msg).ReleaseToEncodedCMessage();
   auto status = message_op_(op_ctx_, &c_msg, ddk_txn.Txn());
@@ -65,7 +64,6 @@ std::variant<::fidl::Transaction*, std::unique_ptr<::fidl::Transaction>> FromDdk
     FidlHandleInfoCloseMany(c_msg.handles, c_msg.num_handles);
     txn->Close(status);
   }
-  return found ? ::fidl::DispatchResult::kFound : ::fidl::DispatchResult::kNotFound;
 }
 
 zx_status_t FidlMessenger::SetMessageOp(void* op_ctx, MessageOp* op,

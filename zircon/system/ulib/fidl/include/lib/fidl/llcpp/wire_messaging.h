@@ -135,17 +135,17 @@ enum class DispatchResult;
 // This function should only be used in very low-level code, such as when manually
 // dispatching a message to a server implementation.
 //
-// If there is no matching handler, it closes all the handles in |msg| and closes the channel with
-// a |ZX_ERR_NOT_SUPPORTED| epitaph, before returning |fidl::DispatchResult::kNotFound|.
+// If there is no matching handler, it closes all the handles in |msg| and notifies
+// |txn| of the error.
 //
 // Ownership of handles in |msg| are always transferred to the callee.
 //
 // The caller does not have to ensure |msg| has a |ZX_OK| status. It is idiomatic to pass a |msg|
 // with potential errors; any error would be funneled through |InternalError| on the |txn|.
 template <typename FidlProtocol>
-fidl::DispatchResult WireDispatch(fidl::WireServer<FidlProtocol>* impl, fidl::IncomingMessage&& msg,
-                                  fidl::Transaction* txn) {
-  return fidl::internal::WireServerDispatcher<FidlProtocol>::Dispatch(impl, std::move(msg), txn);
+void WireDispatch(fidl::WireServer<FidlProtocol>* impl, fidl::IncomingMessage&& msg,
+                  fidl::Transaction* txn) {
+  fidl::internal::WireServerDispatcher<FidlProtocol>::Dispatch(impl, std::move(msg), txn);
 }
 
 // Attempts to dispatch the incoming message to a handler function in the server implementation.

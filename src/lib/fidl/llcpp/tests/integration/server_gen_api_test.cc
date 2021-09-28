@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <fidl/fidl.test.coding.fuchsia/cpp/wire.h>
+#include <fidl/fidl.test.coding.fuchsia/cpp/wire_test_base.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/async/cpp/task.h>
@@ -20,6 +21,7 @@
 namespace {
 
 using ::fidl_test_coding_fuchsia::Simple;
+using ::fidl_test_coding_fuchsia::testing::Simple_TestBase;
 
 constexpr uint32_t kNumberOfAsyncs = 10;
 constexpr int32_t kExpectedReply = 7;
@@ -1067,6 +1069,37 @@ TEST(BindServerTestCase, UnbindInfoDispatcherError) {
   // No epitaph should have been sent.
   EXPECT_EQ(ZX_ERR_TIMED_OUT,
             local.channel().wait_one(ZX_CHANNEL_READABLE, zx::time::infinite_past(), nullptr));
+}
+
+TEST(BindServerTestCase, UnbindInfoUnknownMethod) {
+  class TestServer : public Simple_TestBase {
+    void NotImplemented_(const std::string& name, ::fidl::CompleterBase& completer) final {
+      ZX_PANIC("Unreachable");
+    }
+  };
+  auto server = std::make_unique<TestServer>();
+  async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
+
+  auto endpoints = fidl::CreateEndpoints<Simple>();
+  ASSERT_OK(endpoints.status_value());
+  auto [local, remote] = std::move(*endpoints);
+
+  bool unbound = false;
+  fidl::OnUnboundFn<TestServer> on_unbound = [&unbound](TestServer* server, fidl::UnbindInfo info,
+                                                        fidl::ServerEnd<Simple> server_end) {
+    EXPECT_EQ(fidl::Reason::kUnexpectedMessage, info.reason());
+    EXPECT_EQ(ZX_ERR_NOT_SUPPORTED, info.status());
+    unbound = true;
+  };
+  fidl::BindServer(loop.dispatcher(), std::move(remote), std::move(server), std::move(on_unbound));
+  loop.RunUntilIdle();
+  ASSERT_FALSE(unbound);
+
+  // An epitaph is never a valid message to a server.
+  fidl_epitaph_write(local.channel().get(), ZX_OK);
+
+  loop.RunUntilIdle();
+  ASSERT_TRUE(unbound);
 }
 
 TEST(BindServerTestCase, ReplyNotRequiredAfterUnbound) {

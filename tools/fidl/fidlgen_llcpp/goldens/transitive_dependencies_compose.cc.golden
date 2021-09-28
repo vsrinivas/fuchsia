@@ -218,50 +218,48 @@ fidl::internal::WireClientImpl<::fidl_test_transitivedependenciescompose::Top>::
 
 #ifdef __Fuchsia__
 
+constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<
+    ::fidl_test_transitivedependenciescompose::Top>::entries_[] = {
+    {
+        ::fidl_test_transitivedependenciescompose::kTop_GetFoo_Ordinal,
+        [](void* interface, ::fidl::IncomingMessage&& msg,
+           ::fidl::Transaction* txn) {
+          auto* primary = reinterpret_cast<::fidl::WireRequest<
+              ::fidl_test_transitivedependenciescompose::Top::GetFoo>*>(
+              msg.bytes());
+          ::fidl::internal::WireCompleter<
+              ::fidl_test_transitivedependenciescompose::Top::GetFoo>::Sync
+              completer(txn);
+          reinterpret_cast<::fidl::WireServer<
+              ::fidl_test_transitivedependenciescompose::Top>*>(interface)
+              ->GetFoo(primary, completer);
+          return ZX_OK;
+        },
+    },
+};
+
+const ::fidl::internal::MethodEntry* fidl::internal::WireServerDispatcher<
+    ::fidl_test_transitivedependenciescompose::Top>::entries_end_ =
+    &entries_[1];
+
 ::fidl::DispatchResult fidl::internal::WireServerDispatcher<
     ::fidl_test_transitivedependenciescompose::Top>::
     TryDispatch(::fidl::WireServer<
                     ::fidl_test_transitivedependenciescompose::Top>* impl,
                 ::fidl::IncomingMessage& msg, ::fidl::Transaction* txn) {
-  static const ::fidl::internal::MethodEntry entries[] = {
-      {
-          ::fidl_test_transitivedependenciescompose::kTop_GetFoo_Ordinal,
-          [](void* interface, ::fidl::IncomingMessage&& msg,
-             ::fidl::Transaction* txn) {
-            auto* primary = reinterpret_cast<::fidl::WireRequest<
-                ::fidl_test_transitivedependenciescompose::Top::GetFoo>*>(
-                msg.bytes());
-            ::fidl::internal::WireCompleter<
-                ::fidl_test_transitivedependenciescompose::Top::GetFoo>::Sync
-                completer(txn);
-            reinterpret_cast<::fidl::WireServer<
-                ::fidl_test_transitivedependenciescompose::Top>*>(interface)
-                ->GetFoo(primary, completer);
-            return ZX_OK;
-          },
-      },
-  };
-  return ::fidl::internal::TryDispatch(
-      impl, msg, txn, entries,
-      entries + sizeof(entries) / sizeof(::fidl::internal::MethodEntry));
+  return ::fidl::internal::TryDispatch(impl, msg, txn, entries_, entries_end_);
 }
 
-::fidl::DispatchResult fidl::internal::WireServerDispatcher<
+void fidl::internal::WireServerDispatcher<
     ::fidl_test_transitivedependenciescompose::Top>::
     Dispatch(::fidl::WireServer<::fidl_test_transitivedependenciescompose::Top>*
                  impl,
              ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn) {
-  ::fidl::DispatchResult dispatch_result = TryDispatch(impl, msg, txn);
-  if (unlikely(dispatch_result == ::fidl::DispatchResult::kNotFound)) {
-    std::move(msg).CloseHandles();
-    txn->InternalError(::fidl::UnbindInfo::UnknownOrdinal());
-  }
-  return dispatch_result;
+  ::fidl::internal::Dispatch(impl, msg, txn, entries_, entries_end_);
 }
-::fidl::DispatchResult
-fidl::WireServer<::fidl_test_transitivedependenciescompose::Top>::
+void fidl::WireServer<::fidl_test_transitivedependenciescompose::Top>::
     dispatch_message(fidl::IncomingMessage&& msg, ::fidl::Transaction* txn) {
-  return ::fidl::internal::WireServerDispatcher<
+  ::fidl::internal::WireServerDispatcher<
       ::fidl_test_transitivedependenciescompose::Top>::Dispatch(this,
                                                                 std::move(msg),
                                                                 txn);

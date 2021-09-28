@@ -282,53 +282,49 @@ std::optional<::fidl::UnbindInfo> fidl::internal::
 
 #ifdef __Fuchsia__
 
+constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<
+    ::fidl_test_anonymous::SomeProtocol>::entries_[] = {
+    {
+        ::fidl_test_anonymous::kSomeProtocol_SomeMethod_Ordinal,
+        [](void* interface, ::fidl::IncomingMessage&& msg,
+           ::fidl::Transaction* txn) {
+          ::fidl::DecodedMessage<::fidl::WireRequest<
+              ::fidl_test_anonymous::SomeProtocol::SomeMethod>>
+              decoded{std::move(msg)};
+          if (unlikely(!decoded.ok())) {
+            return decoded.status();
+          }
+          auto* primary = decoded.PrimaryObject();
+          ::fidl::internal::WireCompleter<
+              ::fidl_test_anonymous::SomeProtocol::SomeMethod>::Sync
+              completer(txn);
+          reinterpret_cast<
+              ::fidl::WireServer<::fidl_test_anonymous::SomeProtocol>*>(
+              interface)
+              ->SomeMethod(primary, completer);
+          return ZX_OK;
+        },
+    },
+};
+
+const ::fidl::internal::MethodEntry* fidl::internal::WireServerDispatcher<
+    ::fidl_test_anonymous::SomeProtocol>::entries_end_ = &entries_[1];
+
 ::fidl::DispatchResult fidl::internal::
     WireServerDispatcher<::fidl_test_anonymous::SomeProtocol>::TryDispatch(
         ::fidl::WireServer<::fidl_test_anonymous::SomeProtocol>* impl,
         ::fidl::IncomingMessage& msg, ::fidl::Transaction* txn) {
-  static const ::fidl::internal::MethodEntry entries[] = {
-      {
-          ::fidl_test_anonymous::kSomeProtocol_SomeMethod_Ordinal,
-          [](void* interface, ::fidl::IncomingMessage&& msg,
-             ::fidl::Transaction* txn) {
-            ::fidl::DecodedMessage<::fidl::WireRequest<
-                ::fidl_test_anonymous::SomeProtocol::SomeMethod>>
-                decoded{std::move(msg)};
-            if (unlikely(!decoded.ok())) {
-              return decoded.status();
-            }
-            auto* primary = decoded.PrimaryObject();
-            ::fidl::internal::WireCompleter<
-                ::fidl_test_anonymous::SomeProtocol::SomeMethod>::Sync
-                completer(txn);
-            reinterpret_cast<
-                ::fidl::WireServer<::fidl_test_anonymous::SomeProtocol>*>(
-                interface)
-                ->SomeMethod(primary, completer);
-            return ZX_OK;
-          },
-      },
-  };
-  return ::fidl::internal::TryDispatch(
-      impl, msg, txn, entries,
-      entries + sizeof(entries) / sizeof(::fidl::internal::MethodEntry));
+  return ::fidl::internal::TryDispatch(impl, msg, txn, entries_, entries_end_);
 }
 
-::fidl::DispatchResult fidl::internal::
-    WireServerDispatcher<::fidl_test_anonymous::SomeProtocol>::Dispatch(
-        ::fidl::WireServer<::fidl_test_anonymous::SomeProtocol>* impl,
-        ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn) {
-  ::fidl::DispatchResult dispatch_result = TryDispatch(impl, msg, txn);
-  if (unlikely(dispatch_result == ::fidl::DispatchResult::kNotFound)) {
-    std::move(msg).CloseHandles();
-    txn->InternalError(::fidl::UnbindInfo::UnknownOrdinal());
-  }
-  return dispatch_result;
+void fidl::internal::WireServerDispatcher<::fidl_test_anonymous::SomeProtocol>::
+    Dispatch(::fidl::WireServer<::fidl_test_anonymous::SomeProtocol>* impl,
+             ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn) {
+  ::fidl::internal::Dispatch(impl, msg, txn, entries_, entries_end_);
 }
-::fidl::DispatchResult
-fidl::WireServer<::fidl_test_anonymous::SomeProtocol>::dispatch_message(
+void fidl::WireServer<::fidl_test_anonymous::SomeProtocol>::dispatch_message(
     fidl::IncomingMessage&& msg, ::fidl::Transaction* txn) {
-  return ::fidl::internal::WireServerDispatcher<
+  ::fidl::internal::WireServerDispatcher<
       ::fidl_test_anonymous::SomeProtocol>::Dispatch(this, std::move(msg), txn);
 }
 #endif  // __Fuchsia__

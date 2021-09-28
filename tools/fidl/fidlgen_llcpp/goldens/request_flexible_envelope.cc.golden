@@ -520,78 +520,75 @@ fidl::internal::WireClientImpl<::fidl_test_requestflexibleenvelope::Protocol>::
 
 #ifdef __Fuchsia__
 
+constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<
+    ::fidl_test_requestflexibleenvelope::Protocol>::entries_[] = {
+    {
+        ::fidl_test_requestflexibleenvelope::
+            kProtocol_RequestStrictResponseFlexible_Ordinal,
+        [](void* interface, ::fidl::IncomingMessage&& msg,
+           ::fidl::Transaction* txn) {
+          ::fidl::DecodedMessage<
+              ::fidl::WireRequest<::fidl_test_requestflexibleenvelope::
+                                      Protocol::RequestStrictResponseFlexible>>
+              decoded{std::move(msg)};
+          if (unlikely(!decoded.ok())) {
+            return decoded.status();
+          }
+          auto* primary = decoded.PrimaryObject();
+          ::fidl::internal::WireCompleter<
+              ::fidl_test_requestflexibleenvelope::Protocol::
+                  RequestStrictResponseFlexible>::Sync completer(txn);
+          reinterpret_cast<::fidl::WireServer<
+              ::fidl_test_requestflexibleenvelope::Protocol>*>(interface)
+              ->RequestStrictResponseFlexible(primary, completer);
+          return ZX_OK;
+        },
+    },
+    {
+        ::fidl_test_requestflexibleenvelope::
+            kProtocol_RequestFlexibleResponseStrict_Ordinal,
+        [](void* interface, ::fidl::IncomingMessage&& msg,
+           ::fidl::Transaction* txn) {
+          ::fidl::DecodedMessage<
+              ::fidl::WireRequest<::fidl_test_requestflexibleenvelope::
+                                      Protocol::RequestFlexibleResponseStrict>>
+              decoded{std::move(msg)};
+          if (unlikely(!decoded.ok())) {
+            return decoded.status();
+          }
+          auto* primary = decoded.PrimaryObject();
+          ::fidl::internal::WireCompleter<
+              ::fidl_test_requestflexibleenvelope::Protocol::
+                  RequestFlexibleResponseStrict>::Sync completer(txn);
+          reinterpret_cast<::fidl::WireServer<
+              ::fidl_test_requestflexibleenvelope::Protocol>*>(interface)
+              ->RequestFlexibleResponseStrict(primary, completer);
+          return ZX_OK;
+        },
+    },
+};
+
+const ::fidl::internal::MethodEntry* fidl::internal::WireServerDispatcher<
+    ::fidl_test_requestflexibleenvelope::Protocol>::entries_end_ = &entries_[2];
+
 ::fidl::DispatchResult fidl::internal::WireServerDispatcher<
     ::fidl_test_requestflexibleenvelope::Protocol>::
     TryDispatch(
         ::fidl::WireServer<::fidl_test_requestflexibleenvelope::Protocol>* impl,
         ::fidl::IncomingMessage& msg, ::fidl::Transaction* txn) {
-  static const ::fidl::internal::MethodEntry entries[] = {
-      {
-          ::fidl_test_requestflexibleenvelope::
-              kProtocol_RequestStrictResponseFlexible_Ordinal,
-          [](void* interface, ::fidl::IncomingMessage&& msg,
-             ::fidl::Transaction* txn) {
-            ::fidl::DecodedMessage<::fidl::WireRequest<
-                ::fidl_test_requestflexibleenvelope::Protocol::
-                    RequestStrictResponseFlexible>>
-                decoded{std::move(msg)};
-            if (unlikely(!decoded.ok())) {
-              return decoded.status();
-            }
-            auto* primary = decoded.PrimaryObject();
-            ::fidl::internal::WireCompleter<
-                ::fidl_test_requestflexibleenvelope::Protocol::
-                    RequestStrictResponseFlexible>::Sync completer(txn);
-            reinterpret_cast<::fidl::WireServer<
-                ::fidl_test_requestflexibleenvelope::Protocol>*>(interface)
-                ->RequestStrictResponseFlexible(primary, completer);
-            return ZX_OK;
-          },
-      },
-      {
-          ::fidl_test_requestflexibleenvelope::
-              kProtocol_RequestFlexibleResponseStrict_Ordinal,
-          [](void* interface, ::fidl::IncomingMessage&& msg,
-             ::fidl::Transaction* txn) {
-            ::fidl::DecodedMessage<::fidl::WireRequest<
-                ::fidl_test_requestflexibleenvelope::Protocol::
-                    RequestFlexibleResponseStrict>>
-                decoded{std::move(msg)};
-            if (unlikely(!decoded.ok())) {
-              return decoded.status();
-            }
-            auto* primary = decoded.PrimaryObject();
-            ::fidl::internal::WireCompleter<
-                ::fidl_test_requestflexibleenvelope::Protocol::
-                    RequestFlexibleResponseStrict>::Sync completer(txn);
-            reinterpret_cast<::fidl::WireServer<
-                ::fidl_test_requestflexibleenvelope::Protocol>*>(interface)
-                ->RequestFlexibleResponseStrict(primary, completer);
-            return ZX_OK;
-          },
-      },
-  };
-  return ::fidl::internal::TryDispatch(
-      impl, msg, txn, entries,
-      entries + sizeof(entries) / sizeof(::fidl::internal::MethodEntry));
+  return ::fidl::internal::TryDispatch(impl, msg, txn, entries_, entries_end_);
 }
 
-::fidl::DispatchResult fidl::internal::WireServerDispatcher<
+void fidl::internal::WireServerDispatcher<
     ::fidl_test_requestflexibleenvelope::Protocol>::
     Dispatch(
         ::fidl::WireServer<::fidl_test_requestflexibleenvelope::Protocol>* impl,
         ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn) {
-  ::fidl::DispatchResult dispatch_result = TryDispatch(impl, msg, txn);
-  if (unlikely(dispatch_result == ::fidl::DispatchResult::kNotFound)) {
-    std::move(msg).CloseHandles();
-    txn->InternalError(::fidl::UnbindInfo::UnknownOrdinal());
-  }
-  return dispatch_result;
+  ::fidl::internal::Dispatch(impl, msg, txn, entries_, entries_end_);
 }
-::fidl::DispatchResult fidl::
-    WireServer<::fidl_test_requestflexibleenvelope::Protocol>::dispatch_message(
-        fidl::IncomingMessage&& msg, ::fidl::Transaction* txn) {
-  return ::fidl::internal::WireServerDispatcher<
+void fidl::WireServer<::fidl_test_requestflexibleenvelope::Protocol>::
+    dispatch_message(fidl::IncomingMessage&& msg, ::fidl::Transaction* txn) {
+  ::fidl::internal::WireServerDispatcher<
       ::fidl_test_requestflexibleenvelope::Protocol>::Dispatch(this,
                                                                std::move(msg),
                                                                txn);

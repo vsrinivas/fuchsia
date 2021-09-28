@@ -1299,9 +1299,13 @@ struct ::fidl::internal::WireServerDispatcher<
   static ::fidl::DispatchResult TryDispatch(
       ::fidl::WireServer<::fidl_test_protocols::HandleRightsProtocol>* impl,
       ::fidl::IncomingMessage& msg, ::fidl::Transaction* txn);
-  static ::fidl::DispatchResult Dispatch(
+  static void Dispatch(
       ::fidl::WireServer<::fidl_test_protocols::HandleRightsProtocol>* impl,
       ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn);
+
+ private:
+  static const ::fidl::internal::MethodEntry entries_[];
+  static const ::fidl::internal::MethodEntry* entries_end_;
 };
 #endif  // __Fuchsia__
 
@@ -2552,8 +2556,8 @@ class ::fidl::WireServer<::fidl_test_protocols::HandleRightsProtocol>
                               ResponseMethodCompleter::Sync& _completer) = 0;
 
  private:
-  ::fidl::DispatchResult dispatch_message(::fidl::IncomingMessage&& msg,
-                                          ::fidl::Transaction* txn) final;
+  void dispatch_message(::fidl::IncomingMessage&& msg,
+                        ::fidl::Transaction* txn) final;
 };
 #endif  // __Fuchsia__
 
@@ -2801,10 +2805,14 @@ struct ::fidl::internal::WireServerDispatcher<
       ::fidl::WireServer<::fidl_test_protocols::WithAndWithoutRequestResponse>*
           impl,
       ::fidl::IncomingMessage& msg, ::fidl::Transaction* txn);
-  static ::fidl::DispatchResult Dispatch(
+  static void Dispatch(
       ::fidl::WireServer<::fidl_test_protocols::WithAndWithoutRequestResponse>*
           impl,
       ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn);
+
+ private:
+  static const ::fidl::internal::MethodEntry entries_[];
+  static const ::fidl::internal::MethodEntry* entries_end_;
 };
 #endif  // __Fuchsia__
 
@@ -6386,8 +6394,8 @@ class ::fidl::WireServer<::fidl_test_protocols::WithAndWithoutRequestResponse>
       WithRequestWithResponseCompleter::Sync& _completer) = 0;
 
  private:
-  ::fidl::DispatchResult dispatch_message(::fidl::IncomingMessage&& msg,
-                                          ::fidl::Transaction* txn) final;
+  void dispatch_message(::fidl::IncomingMessage&& msg,
+                        ::fidl::Transaction* txn) final;
 };
 #endif  // __Fuchsia__
 
@@ -6442,9 +6450,13 @@ struct ::fidl::internal::WireServerDispatcher<
   static ::fidl::DispatchResult TryDispatch(
       ::fidl::WireServer<::fidl_test_protocols::Transitional>* impl,
       ::fidl::IncomingMessage& msg, ::fidl::Transaction* txn);
-  static ::fidl::DispatchResult Dispatch(
+  static void Dispatch(
       ::fidl::WireServer<::fidl_test_protocols::Transitional>* impl,
       ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn);
+
+ private:
+  static const ::fidl::internal::MethodEntry entries_[];
+  static const ::fidl::internal::MethodEntry* entries_end_;
 };
 #endif  // __Fuchsia__
 
@@ -7561,8 +7573,8 @@ class ::fidl::WireServer<::fidl_test_protocols::Transitional>
   }
 
  private:
-  ::fidl::DispatchResult dispatch_message(::fidl::IncomingMessage&& msg,
-                                          ::fidl::Transaction* txn) final;
+  void dispatch_message(::fidl::IncomingMessage&& msg,
+                        ::fidl::Transaction* txn) final;
 };
 #endif  // __Fuchsia__
 
@@ -7599,9 +7611,13 @@ struct ::fidl::internal::WireServerDispatcher<
   static ::fidl::DispatchResult TryDispatch(
       ::fidl::WireServer<::fidl_test_protocols::MethodWithUnion>* impl,
       ::fidl::IncomingMessage& msg, ::fidl::Transaction* txn);
-  static ::fidl::DispatchResult Dispatch(
+  static void Dispatch(
       ::fidl::WireServer<::fidl_test_protocols::MethodWithUnion>* impl,
       ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn);
+
+ private:
+  static const ::fidl::internal::MethodEntry entries_[];
+  static const ::fidl::internal::MethodEntry* entries_end_;
 };
 #endif  // __Fuchsia__
 
@@ -7971,8 +7987,8 @@ class ::fidl::WireServer<::fidl_test_protocols::MethodWithUnion>
                            UnionMethodCompleter::Sync& _completer) = 0;
 
  private:
-  ::fidl::DispatchResult dispatch_message(::fidl::IncomingMessage&& msg,
-                                          ::fidl::Transaction* txn) final;
+  void dispatch_message(::fidl::IncomingMessage&& msg,
+                        ::fidl::Transaction* txn) final;
 };
 #endif  // __Fuchsia__
 
@@ -8184,9 +8200,13 @@ struct ::fidl::internal::WireServerDispatcher<
   static ::fidl::DispatchResult TryDispatch(
       ::fidl::WireServer<::fidl_test_protocols::WithProtocolEnds>* impl,
       ::fidl::IncomingMessage& msg, ::fidl::Transaction* txn);
-  static ::fidl::DispatchResult Dispatch(
+  static void Dispatch(
       ::fidl::WireServer<::fidl_test_protocols::WithProtocolEnds>* impl,
       ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn);
+
+ private:
+  static const ::fidl::internal::MethodEntry entries_[];
+  static const ::fidl::internal::MethodEntry* entries_end_;
 };
 #endif  // __Fuchsia__
 
@@ -10273,8 +10293,8 @@ class ::fidl::WireServer<::fidl_test_protocols::WithProtocolEnds>
       StructContainingEndsCompleter::Sync& _completer) = 0;
 
  private:
-  ::fidl::DispatchResult dispatch_message(::fidl::IncomingMessage&& msg,
-                                          ::fidl::Transaction* txn) final;
+  void dispatch_message(::fidl::IncomingMessage&& msg,
+                        ::fidl::Transaction* txn) final;
 };
 #endif  // __Fuchsia__
 
@@ -10311,9 +10331,13 @@ struct ::fidl::internal::WireServerDispatcher<
   static ::fidl::DispatchResult TryDispatch(
       ::fidl::WireServer<::fidl_test_protocols::ManyParameters>* impl,
       ::fidl::IncomingMessage& msg, ::fidl::Transaction* txn);
-  static ::fidl::DispatchResult Dispatch(
+  static void Dispatch(
       ::fidl::WireServer<::fidl_test_protocols::ManyParameters>* impl,
       ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn);
+
+ private:
+  static const ::fidl::internal::MethodEntry entries_[];
+  static const ::fidl::internal::MethodEntry* entries_end_;
 };
 #endif  // __Fuchsia__
 
@@ -10740,8 +10764,8 @@ class ::fidl::WireServer<::fidl_test_protocols::ManyParameters>
                        FifteenCompleter::Sync& _completer) = 0;
 
  private:
-  ::fidl::DispatchResult dispatch_message(::fidl::IncomingMessage&& msg,
-                                          ::fidl::Transaction* txn) final;
+  void dispatch_message(::fidl::IncomingMessage&& msg,
+                        ::fidl::Transaction* txn) final;
 };
 #endif  // __Fuchsia__
 
@@ -10805,9 +10829,13 @@ struct ::fidl::internal::WireServerDispatcher<
   static ::fidl::DispatchResult TryDispatch(
       ::fidl::WireServer<::fidl_test_protocols::WithErrorSyntax>* impl,
       ::fidl::IncomingMessage& msg, ::fidl::Transaction* txn);
-  static ::fidl::DispatchResult Dispatch(
+  static void Dispatch(
       ::fidl::WireServer<::fidl_test_protocols::WithErrorSyntax>* impl,
       ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn);
+
+ private:
+  static const ::fidl::internal::MethodEntry entries_[];
+  static const ::fidl::internal::MethodEntry* entries_end_;
 };
 #endif  // __Fuchsia__
 
@@ -13340,8 +13368,8 @@ class ::fidl::WireServer<::fidl_test_protocols::WithErrorSyntax>
                               HandleInResultCompleter::Sync& _completer) = 0;
 
  private:
-  ::fidl::DispatchResult dispatch_message(::fidl::IncomingMessage&& msg,
-                                          ::fidl::Transaction* txn) final;
+  void dispatch_message(::fidl::IncomingMessage&& msg,
+                        ::fidl::Transaction* txn) final;
 };
 #endif  // __Fuchsia__
 
@@ -13381,9 +13409,13 @@ struct ::fidl::internal::WireServerDispatcher<
   static ::fidl::DispatchResult TryDispatch(
       ::fidl::WireServer<::fidl_test_protocols::DiscoverableProtocol>* impl,
       ::fidl::IncomingMessage& msg, ::fidl::Transaction* txn);
-  static ::fidl::DispatchResult Dispatch(
+  static void Dispatch(
       ::fidl::WireServer<::fidl_test_protocols::DiscoverableProtocol>* impl,
       ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn);
+
+ private:
+  static const ::fidl::internal::MethodEntry entries_[];
+  static const ::fidl::internal::MethodEntry* entries_end_;
 };
 #endif  // __Fuchsia__
 
@@ -13713,8 +13745,8 @@ class ::fidl::WireServer<::fidl_test_protocols::DiscoverableProtocol>
                       MethodCompleter::Sync& _completer) = 0;
 
  private:
-  ::fidl::DispatchResult dispatch_message(::fidl::IncomingMessage&& msg,
-                                          ::fidl::Transaction* txn) final;
+  void dispatch_message(::fidl::IncomingMessage&& msg,
+                        ::fidl::Transaction* txn) final;
 };
 #endif  // __Fuchsia__
 
@@ -13787,9 +13819,13 @@ struct ::fidl::internal::WireServerDispatcher<
   static ::fidl::DispatchResult TryDispatch(
       ::fidl::WireServer<::fidl_test_protocols::ChannelProtocol>* impl,
       ::fidl::IncomingMessage& msg, ::fidl::Transaction* txn);
-  static ::fidl::DispatchResult Dispatch(
+  static void Dispatch(
       ::fidl::WireServer<::fidl_test_protocols::ChannelProtocol>* impl,
       ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn);
+
+ private:
+  static const ::fidl::internal::MethodEntry entries_[];
+  static const ::fidl::internal::MethodEntry* entries_end_;
 };
 #endif  // __Fuchsia__
 
@@ -16144,8 +16180,8 @@ class ::fidl::WireServer<::fidl_test_protocols::ChannelProtocol>
                             MutateSocketCompleter::Sync& _completer) = 0;
 
  private:
-  ::fidl::DispatchResult dispatch_message(::fidl::IncomingMessage&& msg,
-                                          ::fidl::Transaction* txn) final;
+  void dispatch_message(::fidl::IncomingMessage&& msg,
+                        ::fidl::Transaction* txn) final;
 };
 #endif  // __Fuchsia__
 

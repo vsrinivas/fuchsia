@@ -69,9 +69,12 @@ struct ::fidl::internal::WireServerDispatcher<::fidl_test_inheritance::Super>
   static ::fidl::DispatchResult TryDispatch(
       ::fidl::WireServer<::fidl_test_inheritance::Super>* impl,
       ::fidl::IncomingMessage& msg, ::fidl::Transaction* txn);
-  static ::fidl::DispatchResult Dispatch(
-      ::fidl::WireServer<::fidl_test_inheritance::Super>* impl,
-      ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn);
+  static void Dispatch(::fidl::WireServer<::fidl_test_inheritance::Super>* impl,
+                       ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn);
+
+ private:
+  static const ::fidl::internal::MethodEntry entries_[];
+  static const ::fidl::internal::MethodEntry* entries_end_;
 };
 #endif  // __Fuchsia__
 
@@ -715,8 +718,8 @@ class ::fidl::WireServer<::fidl_test_inheritance::Super>
   virtual void Foo(FooRequestView request, FooCompleter::Sync& _completer) = 0;
 
  private:
-  ::fidl::DispatchResult dispatch_message(::fidl::IncomingMessage&& msg,
-                                          ::fidl::Transaction* txn) final;
+  void dispatch_message(::fidl::IncomingMessage&& msg,
+                        ::fidl::Transaction* txn) final;
 };
 #endif  // __Fuchsia__
 
@@ -749,9 +752,12 @@ struct ::fidl::internal::WireServerDispatcher<::fidl_test_inheritance::Sub>
   static ::fidl::DispatchResult TryDispatch(
       ::fidl::WireServer<::fidl_test_inheritance::Sub>* impl,
       ::fidl::IncomingMessage& msg, ::fidl::Transaction* txn);
-  static ::fidl::DispatchResult Dispatch(
-      ::fidl::WireServer<::fidl_test_inheritance::Sub>* impl,
-      ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn);
+  static void Dispatch(::fidl::WireServer<::fidl_test_inheritance::Sub>* impl,
+                       ::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn);
+
+ private:
+  static const ::fidl::internal::MethodEntry entries_[];
+  static const ::fidl::internal::MethodEntry* entries_end_;
 };
 #endif  // __Fuchsia__
 
@@ -1391,8 +1397,8 @@ class ::fidl::WireServer<::fidl_test_inheritance::Sub>
   virtual void Foo(FooRequestView request, FooCompleter::Sync& _completer) = 0;
 
  private:
-  ::fidl::DispatchResult dispatch_message(::fidl::IncomingMessage&& msg,
-                                          ::fidl::Transaction* txn) final;
+  void dispatch_message(::fidl::IncomingMessage&& msg,
+                        ::fidl::Transaction* txn) final;
 };
 #endif  // __Fuchsia__
 

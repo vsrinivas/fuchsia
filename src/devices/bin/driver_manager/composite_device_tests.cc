@@ -38,11 +38,16 @@ class FidlTransaction : public fidl::Transaction {
 
   void Close(zx_status_t epitaph) override { ZX_ASSERT(false); }
 
+  void InternalError(fidl::UnbindInfo info) override { detected_error_ = info; }
+
   ~FidlTransaction() override = default;
+
+  const std::optional<fidl::UnbindInfo>& detected_error() const { return detected_error_; }
 
  private:
   zx_txid_t txid_;
   zx::unowned_channel channel_;
+  std::optional<fidl::UnbindInfo> detected_error_;
 };
 
 class FakeDevhost : public fidl::WireServer<fuchsia_device_manager::DriverHostController> {
@@ -99,10 +104,10 @@ void CheckCreateCompositeDeviceReceived(
 
   FakeDevhost fake(expected_name, expected_fragments_count, &composite->coordinator_client,
                    &composite->controller_server);
-  ASSERT_EQ(fidl::WireDispatch(
-                static_cast<fidl::WireServer<fuchsia_device_manager::DriverHostController>*>(&fake),
-                std::move(msg), &txn),
-            fidl::DispatchResult::kFound);
+  fidl::WireDispatch(
+      static_cast<fidl::WireServer<fuchsia_device_manager::DriverHostController>*>(&fake),
+      std::move(msg), &txn);
+  ASSERT_FALSE(txn.detected_error());
   ASSERT_TRUE(composite->coordinator_client.is_valid());
   ASSERT_TRUE(composite->controller_server.is_valid());
 }

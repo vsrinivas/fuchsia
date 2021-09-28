@@ -41,15 +41,13 @@ class IncomingMessageDispatcher {
 
   // Dispatches an incoming message to one of the handlers functions in the
   // protocol. If there is no matching handler, closes all the handles in
-  // |msg| and closes the channel with a |ZX_ERR_NOT_SUPPORTED| epitaph, before
-  // returning |fidl::DispatchResult::kNotFound|.
+  // |msg| and initiates binding teardown.
   //
   // Note that the |dispatch_message| name avoids conflicts with FIDL method
   // names which would appear on the subclasses.
   //
   // Always consumes the handles in |msg|.
-  virtual ::fidl::DispatchResult dispatch_message(::fidl::IncomingMessage&& msg,
-                                                  ::fidl::Transaction* txn) = 0;
+  virtual void dispatch_message(::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn) = 0;
 };
 
 // Defines an incoming method entry. Used by a server to dispatch an incoming message.
@@ -70,6 +68,11 @@ struct MethodEntry {
 ::fidl::DispatchResult TryDispatch(void* impl, ::fidl::IncomingMessage& msg,
                                    ::fidl::Transaction* txn, const MethodEntry* begin,
                                    const MethodEntry* end);
+
+// Similar to |TryDispatch|, but closes all the handles in |msg| and notifies
+// |txn| of an error in case of an unknown FIDL method.
+void Dispatch(void* impl, ::fidl::IncomingMessage& msg, ::fidl::Transaction* txn,
+              const MethodEntry* begin, const MethodEntry* end);
 
 // The common bits in a weak event sender, i.e. an event sender that allows the
 // transport to be destroyed from underneath it.
