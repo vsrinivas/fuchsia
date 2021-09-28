@@ -492,6 +492,7 @@ impl Telemetry {
                         self.stats_logger
                             .log_downtime_cobalt_metrics(adjusted_downtime, &state.disconnect_info)
                             .await;
+                        self.stats_logger.log_reconnect_cobalt_metrics(total_downtime).await;
                     }
                     self.connection_state = ConnectionState::Connected(ConnectedState {
                         iface_id,
@@ -1294,6 +1295,26 @@ impl StatsLogger {
             metrics::DOWNTIME_BREAKDOWN_BY_DISCONNECT_REASON_METRIC_ID,
             downtime.into_micros(),
             &[disconnect_info.reason_code as u32, disconnect_source_dim as u32],
+        );
+    }
+
+    async fn log_reconnect_cobalt_metrics(&mut self, reconnect_duration: zx::Duration) {
+        let reconnect_duration_dim = {
+            use metrics::ConnectivityWlanMetricDimensionReconnectDuration::*;
+            match reconnect_duration {
+                x if x < 100.millis() => LessThan100Milliseconds,
+                x if x < 1.second() => LessThan1Second,
+                x if x < 5.seconds() => LessThan5Seconds,
+                x if x < 30.seconds() => LessThan30Seconds,
+                _ => AtLeast30Seconds,
+            }
+        };
+        log_cobalt_1dot1!(
+            self.cobalt_1dot1_proxy,
+            log_occurrence,
+            metrics::RECONNECT_BREAKDOWN_BY_DURATION_METRIC_ID,
+            1,
+            &[reconnect_duration_dim as u32],
         );
     }
 
@@ -3298,6 +3319,39 @@ mod tests {
             breakdowns_by_reason[0].payload,
             MetricEventPayload::IntegerValue(49.minutes().into_micros())
         );
+    }
+
+    #[fuchsia::test]
+    fn test_log_reconnect_cobalt_metrics() {
+        let (mut test_helper, mut test_fut) = setup_test();
+        test_helper.send_connected_event(random_bss_description!(Wpa2));
+        test_helper.drain_cobalt_events(&mut test_fut);
+
+        let info = DisconnectInfo {
+            reason_code: 3,
+            disconnect_source: fidl_sme::DisconnectSource::Mlme,
+            ..fake_disconnect_info()
+        };
+        test_helper
+            .telemetry_sender
+            .send(TelemetryEvent::Disconnected { track_subsequent_downtime: true, info });
+        assert_eq!(test_helper.exec.run_until_stalled(&mut test_fut), Poll::Pending);
+
+        test_helper.advance_by(3.seconds(), test_fut.as_mut());
+        // Reconnect
+        test_helper.send_connected_event(random_bss_description!(Wpa2));
+        test_helper.drain_cobalt_events(&mut test_fut);
+
+        let metrics =
+            test_helper.get_logged_metrics(metrics::RECONNECT_BREAKDOWN_BY_DURATION_METRIC_ID);
+        assert_eq!(metrics.len(), 1);
+        assert_eq!(
+            metrics[0].event_codes,
+            vec![
+                metrics::ConnectivityWlanMetricDimensionReconnectDuration::LessThan5Seconds as u32
+            ]
+        );
+        assert_eq!(metrics[0].payload, MetricEventPayload::Count(1));
     }
 
     #[fuchsia::test]
