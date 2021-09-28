@@ -58,7 +58,19 @@ type Config = resource table {
     /// Range of horizontal scroll values issued by the device.
     8: scroll_h_range fuchsia.input.report.Axis;
 
-    /// Mouse button identifiers issued by the device.
+    /// Mouse button identifiers issued by the device, in priority order.
+    ///
+    /// The priority order of mouse buttons is a policy choice enacted by the injector.
+    /// This priority order is conveyed verbatim to UI clients via
+    /// [`fuchsia.ui.pointer.MouseDeviceInfo.buttons`], so button priority is shared consistently
+    /// between multiple UI clients. For example, to swap the left-side (0x1) and right-side (0x2)
+    /// physical buttons from their traditional roles of primary and secondary mouse buttons, the
+    /// injector can specify [0x2, 0x1, ... ] in this [`buttons`] vector.
+    ///
+    /// Note that preserving the physical button ID is also a policy choice. If preserved, a
+    /// discerning UI client can distinguish between the ground truth (which physical button was
+    /// pressed) versus the desired interpretation (what priority does that physical button have, on
+    /// the current system).
     9: buttons vector<uint8>:fuchsia.input.report.MOUSE_MAX_NUM_BUTTONS;
 };
 

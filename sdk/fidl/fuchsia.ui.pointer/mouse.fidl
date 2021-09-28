@@ -101,7 +101,7 @@ type MouseDeviceInfo = table {
     /// Range of horizontal scroll values issued by the device.
     3: scroll_h_range device.Axis;
 
-    /// Button identifiers issued by the device.
+    /// Button identifiers issued by the device, in priority order.
     4: buttons vector<uint8>:device.MOUSE_MAX_NUM_BUTTONS;
 };
 
