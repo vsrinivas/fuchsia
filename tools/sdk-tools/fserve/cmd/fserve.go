@@ -63,6 +63,7 @@ type sdkProvider interface {
 	GetSDKDataPath() string
 	GetToolsDir() (string, error)
 	GetAvailableImages(version string, bucket string) ([]sdkcommon.GCSImage, error)
+	RunFFX(args []string, interactive bool) (string, error)
 	RunSSHCommand(targetAddress string, sshConfig string, privateKey string, sshPort string,
 		verbose bool, sshArgs []string) (string, error)
 }
@@ -95,6 +96,7 @@ func main() {
 	deviceIPFlag := flag.String("device-ip", "", `Serves packages to a device with the given device ip address. Cannot be used with --device-name."
 	  If neither --device-name nor --device-ip are specified, the device-name configured using fconfig is used.`)
 	sshConfigFlag := flag.String("sshconfig", "", "Use the specified sshconfig file instead of fssh's version.")
+	serverMode := flag.String("server-mode", "pm", "Specify the server mode 'pm' or 'ffx'")
 
 	flag.Parse()
 
@@ -135,11 +137,12 @@ func main() {
 		flag.Set("image", deviceConfig.Image)
 	}
 
-	if *repoPortFlag == "" {
-		flag.Set("server-port", deviceConfig.PackagePort)
-	}
 	if *versionFlag == "" {
 		flag.Set("version", sdk.GetSDKVersion())
+	}
+
+	if *versionFlag == "" && *packageArchiveFlag == "" {
+		log.Fatalf("SDK version not known. Use --version to specify it manually.\n")
 	}
 
 	// if no deviceIPFlag was given, then get the SSH Port from the configuration.
@@ -157,18 +160,78 @@ func main() {
 		}
 	}
 
-	if *versionFlag == "" && *packageArchiveFlag == "" {
-		log.Fatalf("SDK version not known. Use --version to specify it manually.\n")
-	}
+	var server packageServer
+	switch *serverMode {
+	case "pm":
+		if *repoPortFlag == "" {
+			flag.Set("server-port", deviceConfig.PackagePort)
+		}
+		if err = killPMServers(ctx, *repoPortFlag); err != nil {
+			log.Fatalf("Could not kill existing package servers: %v\n", err)
+		}
+		if *killFlag {
+			osExit(0)
+			// this return is needed for tests that overload osExit to not exit.
+			return
+		}
 
-	// Kill any server on the same port
-	if err = killServers(ctx, *repoPortFlag); err != nil {
-		log.Fatalf("Could not kill existing package servers: %v\n", err)
-	}
-	if *killFlag {
-		osExit(0)
-		// this return is needed for tests that overload osExit to not exit.
-		return
+		server = &pmServer{
+			repoPath:      *repoFlag,
+			repoPort:      *repoPortFlag,
+			name:          *nameFlag,
+			targetAddress: deviceConfig.DeviceIP,
+			sshConfig:     *sshConfigFlag,
+			persist:       *persistFlag,
+			privateKey:    *privateKeyFlag,
+			sshPort:       sshPort,
+		}
+	case "ffx":
+		if *repoPortFlag != "" {
+			log.Errorf(
+				"`-server-mode ffx` does not support `-server-port`. "+
+					"Instead, to change the repository server port, run: "+
+					"`ffx config set repository.server.listen '[::1]:%s' && ffx doctor --restart-daemon`", *repoPortFlag)
+			osExit(1)
+			// this return is needed for tests that overload osExit to not exit.
+			return
+		}
+
+		if *killFlag {
+			log.Errorf(
+				"`-server-mode ffx` does not support `-kill`. " +
+					"Instead, to turn off the repository server, run: " +
+					"`ffx config set repository.server.listen '' && ffx doctor --restart-daemon`")
+			osExit(1)
+			// this return is needed for tests that overload osExit to not exit.
+			return
+		}
+
+		if *privateKeyFlag != "" {
+			log.Errorf(
+				"`-server-mode ffx` does not support `-private-key` "+
+					"Instead, if a specific private key is needed for ffx to communicate with the device, run: "+
+					"`ffx config add ssh.priv %s && ffx doctor --restart-daemon`", *privateKeyFlag)
+			osExit(1)
+			// this return is needed for tests that overload osExit to not exit.
+			return
+		}
+
+		if *sshConfigFlag != "" {
+			log.Errorf("`server-mode ffx` does not support customizing the SSH config settings with `-sshconfig`")
+			osExit(1)
+			// this return is needed for tests that overload osExit to not exit.
+			return
+		}
+
+		server = &ffxServer{
+			repoPath:      *repoFlag,
+			name:          *nameFlag,
+			targetAddress: deviceConfig.DeviceIP,
+			persist:       *persistFlag,
+			sshPort:       sshPort,
+		}
+	default:
+		log.Fatalf("Unknown server mode %v", *serverMode)
 	}
 
 	if *cleanFlag {
@@ -196,20 +259,102 @@ func main() {
 		return
 	}
 
-	log.Debugf("Starting package server")
-	_, err = startServer(sdk, *repoFlag, *repoPortFlag)
-	if err != nil {
-		log.Fatalf("Could start package server: %v\n", err)
+	if err := server.startServer(ctx, sdk); err != nil {
+		log.Fatalf("Failed to serve packages: %v\n", err)
 	}
 
-	// connect the device to the package server
-	if err := setPackageSource(ctx, sdk, *repoPortFlag, *nameFlag, deviceConfig.DeviceIP, *sshConfigFlag, *privateKeyFlag, *persistFlag, sshPort); err != nil {
-		log.Fatalf("Could set package server source on device: %v\n", err)
+	if err := server.registerRepository(ctx, sdk); err != nil {
+		log.Fatalf("failed to register repository with device: %v", err)
 	}
 
 	log.Infof("Successfully started the package server! It is running the background.")
 
 	osExit(0)
+}
+
+type packageServer interface {
+	startServer(ctx context.Context, sdk sdkProvider) error
+	registerRepository(ctx context.Context, sdk sdkProvider) error
+}
+
+type pmServer struct {
+	repoPath      string
+	repoPort      string
+	name          string
+	targetAddress string
+	sshConfig     string
+	privateKey    string
+	persist       bool
+	sshPort       string
+}
+
+// startServer starts the `pm serve` command and returns the command object.
+func (s *pmServer) startServer(ctx context.Context, sdk sdkProvider) error {
+	log := logger.LoggerFromContext(ctx)
+	log.Debugf("Starting package server")
+
+	if _, err := startPMServer(sdk, s.repoPath, s.repoPort); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (s *pmServer) registerRepository(ctx context.Context, sdk sdkProvider) error {
+	return registerPMRepository(ctx, sdk, s.repoPort, s.name, s.targetAddress, s.sshConfig, s.privateKey, s.persist, s.sshPort)
+}
+
+type ffxServer struct {
+	repoPath      string
+	name          string
+	targetAddress string
+	persist       bool
+	sshPort       string
+}
+
+func (s *ffxServer) startServer(ctx context.Context, sdk sdkProvider) error {
+	// TODO(http://fxbug.dev/83720): We need `ffx_repository=true` until
+	// ffx repository has graduated from experimental.
+	args := []string{"--config", "ffx_repository=true", "repository",
+		"add-from-pm", s.name, s.repoPath}
+	logger.Debugf(ctx, "running %v", args)
+	if _, err := sdk.RunFFX(args, false); err != nil {
+		var exitError *exec.ExitError
+		if errors.As(err, &exitError) {
+			return fmt.Errorf("Error adding repository %v: %w", string(exitError.Stderr), err)
+		}
+		return err
+	}
+	return nil
+}
+
+func (s *ffxServer) registerRepository(ctx context.Context, sdk sdkProvider) error {
+	targetAddress := s.targetAddress
+	if s.sshPort != "" {
+		targetAddress = fmt.Sprintf("[%s]:%s", targetAddress, s.sshPort)
+	}
+
+	// TODO(http://fxbug.dev/83720): We need `ffx_repository=true` until
+	// ffx repository has graduated from experimental.
+	args := []string{
+		"--config", "ffx_repository=true",
+		"--target", targetAddress,
+		"target", "repository", "register",
+		"--repository", s.name,
+		"--alias", "fuchsia.com",
+	}
+	if s.persist {
+		args = append(args, "--storage-type", "persistent")
+	}
+	logger.Debugf(ctx, "running %v", args)
+	if _, err := sdk.RunFFX(args, false); err != nil {
+		var exitError *exec.ExitError
+		if errors.As(err, &exitError) {
+			return fmt.Errorf("Error adding repository %v: %w", string(exitError.Stderr), err)
+		}
+		return err
+	}
+	return nil
 }
 
 func usage() {
@@ -289,7 +434,7 @@ func cleanPmRepo(ctx context.Context, repoDir string) error {
 	return nil
 }
 
-func killServers(ctx context.Context, portNum string) error {
+func killPMServers(ctx context.Context, portNum string) error {
 	log := logger.LoggerFromContext(ctx)
 	log.Debugf("Killing existing servers")
 	// First get all the pm commands for the user
@@ -367,13 +512,13 @@ func killServers(ctx context.Context, portNum string) error {
 		}
 	}
 
-	logger.Infof(context.Background(), "No running package servers found.\n")
+	logger.Infof(context.Background(), "No running pm package servers found.\n")
 	return nil
 }
 
 // startServer starts the `pm serve` command and returns the command object.
 // The server is started in the background.
-func startServer(sdk sdkProvider, repoPath string, repoPort string) (*exec.Cmd, error) {
+func startPMServer(sdk sdkProvider, repoPath string, repoPort string) (*exec.Cmd, error) {
 	toolsDir, err := sdk.GetToolsDir()
 	if err != nil {
 		return nil, fmt.Errorf("Could not determine tools directory %v", err)
@@ -516,8 +661,8 @@ func processArchiveTarball(ctx context.Context, packageDir string, archiveFile s
 	return err
 }
 
-// setPackageSource sets the URL for the package server on the target device.
-func setPackageSource(ctx context.Context, sdk sdkProvider, repoPort string, name string,
+// registerPMRepository sets the URL for the package server on the target device.
+func registerPMRepository(ctx context.Context, sdk sdkProvider, repoPort string, name string,
 	targetAddress string, sshConfig string, privateKey string, persist bool, sshPort string) error {
 
 	var (

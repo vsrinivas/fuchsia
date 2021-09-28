@@ -38,6 +38,7 @@ type testSDKProperties struct {
 	expectCustomSSHConfig bool
 	expectPrivateKey      bool
 	expectSSHPort         bool
+	expectedFFXArgs       [][]string
 	expectedSSHArgs       [][]string
 }
 
@@ -54,6 +55,37 @@ func (testSDK testSDKProperties) GetAvailableImages(version string, bucket strin
 }
 func (testSDK testSDKProperties) GetDefaultPackageRepoDir() (string, error) {
 	return filepath.Join(testSDK.dataPath, "default-target-name", "packages", "amber-files"), nil
+}
+func (testSDK testSDKProperties) RunFFX(ffxArgs []string, interactive bool) (string, error) {
+	expectedArgs := []string{}
+
+	for _, args := range testSDK.expectedFFXArgs {
+		if args[0] == args[0] {
+			expectedArgs = args
+			break
+		}
+	}
+
+	ok := len(expectedArgs) == len(ffxArgs)
+	if ok {
+		for i, expected := range expectedArgs {
+			if !ok {
+				return "", fmt.Errorf("unexpected ffx args[%v]  %v expected[%v] %v",
+					len(ffxArgs), ffxArgs, len(expectedArgs), expectedArgs)
+			}
+			if strings.Contains(expected, "*") {
+				expectedPattern := regexp.MustCompile(expected)
+				ok = expectedPattern.MatchString(ffxArgs[i])
+			} else {
+				ok = expected == ffxArgs[i]
+			}
+		}
+		if !ok {
+			return "", fmt.Errorf("unexpected  ffx args[%v]  %v expected[%v] %v",
+				len(ffxArgs), ffxArgs, len(expectedArgs), expectedArgs)
+		}
+	}
+	return "", nil
 }
 func (testSDK testSDKProperties) RunSSHCommand(targetAddress string, sshConfig string,
 	privateKey string, sshPort string, verbose bool, sshArgs []string) (string, error) {
@@ -169,7 +201,7 @@ func TestCleanPmRepo(t *testing.T) {
 	}
 }
 
-func TestKillServers(t *testing.T) {
+func TestKillPMServers(t *testing.T) {
 	ctx := testingContext()
 	ExecCommand = helperCommandForFServe
 	findProcess = mockedFindProcess
@@ -181,27 +213,27 @@ func TestKillServers(t *testing.T) {
 	// Test no existing servers
 	os.Setenv("FSERVE_TEST_NO_SERVERS", "1")
 	os.Setenv("FSERVE_TEST_NO_SERVERS_IS_ERROR", "0")
-	if err := killServers(ctx, ""); err != nil {
+	if err := killPMServers(ctx, ""); err != nil {
 		t.Fatal(err)
 	}
 
 	// Test no existing servers
 	os.Setenv("FSERVE_TEST_NO_SERVERS", "1")
 	os.Setenv("FSERVE_TEST_NO_SERVERS_IS_ERROR", "1")
-	if err := killServers(ctx, ""); err != nil {
+	if err := killPMServers(ctx, ""); err != nil {
 		t.Fatal(err)
 	}
 	// Test existing servers
 	os.Setenv("FSERVE_TEST_NO_SERVERS", "0")
 	os.Setenv("FSERVE_TEST_NO_SERVERS_IS_ERROR", "0")
-	if err := killServers(ctx, ""); err != nil {
+	if err := killPMServers(ctx, ""); err != nil {
 		t.Fatal(err)
 	}
-	if err := killServers(ctx, "8083"); err != nil {
+	if err := killPMServers(ctx, "8083"); err != nil {
 		t.Fatal(err)
 	}
 	os.Setenv("FSERVE_TEST_PGREP_ERROR", "1")
-	err := killServers(ctx, "")
+	err := killPMServers(ctx, "")
 	if err == nil {
 		t.Fatal("Expected error running pgrep, got no error.")
 	}
@@ -213,7 +245,7 @@ func TestKillServers(t *testing.T) {
 
 	os.Setenv("FSERVE_TEST_PGREP_ERROR", "0")
 	os.Setenv("FSERVE_TEST_PS_ERROR", "1")
-	err = killServers(ctx, "")
+	err = killPMServers(ctx, "")
 	if err == nil {
 		t.Fatal("Expected error running ps, got no error.")
 	}
@@ -224,7 +256,7 @@ func TestKillServers(t *testing.T) {
 	}
 }
 
-func TestStartServer(t *testing.T) {
+func TestStartPMServer(t *testing.T) {
 	testSDK := testSDKProperties{
 		dataPath: "/fake",
 	}
@@ -266,7 +298,7 @@ func TestStartServer(t *testing.T) {
 			syscallWait4 = test.syscallWait4
 			level = test.logLevel
 			os.Setenv("TEST_LOGLEVEL", level.String())
-			cmd, err := startServer(testSDK, repoPath, repoPort)
+			cmd, err := startPMServer(testSDK, repoPath, repoPort)
 			if err != nil {
 				actual := fmt.Sprintf("%v", err)
 				if test.expectedError != actual {
@@ -373,7 +405,7 @@ func TestDownloadImageIfNeededCopiedFails(t *testing.T) {
 
 const resolvedAddr = "fe80::c0ff:eee:fe00:4444%en0"
 
-func TestSetPackageSource(t *testing.T) {
+func TestRegisterPMRepository(t *testing.T) {
 	testSDK := testSDKProperties{
 		dataPath: t.TempDir(),
 	}
@@ -476,7 +508,7 @@ func TestSetPackageSource(t *testing.T) {
 			expectPrivateKey:      test.privateKey != "",
 			expectSSHPort:         test.sshPort != ""}
 
-		if err := setPackageSource(ctx, testSDK, test.repoPort, test.name, test.targetAddress, test.sshConfig, test.privateKey, test.persist, test.sshPort); err != nil {
+		if err := registerPMRepository(ctx, testSDK, test.repoPort, test.name, test.targetAddress, test.sshConfig, test.privateKey, test.persist, test.sshPort); err != nil {
 			t.Fatal(err)
 		}
 	}
@@ -693,18 +725,22 @@ func TestMain(t *testing.T) {
 		t.Fail()
 	}
 	tests := []struct {
-		args                    []string
-		deviceConfiguration     string
-		defaultConfigDevice     string
-		ffxDefaultDevice        string
-		ffxTargetList           string
-		ffxTargetDefault        string
-		expectedPMArgs          string
-		expectedAddSrcArgs      string
-		expectedRuleReplaceArgs string
+		testName                          string
+		args                              []string
+		deviceConfiguration               string
+		defaultConfigDevice               string
+		ffxDefaultDevice                  string
+		ffxTargetList                     string
+		ffxTargetDefault                  string
+		expectedPMArgs                    string
+		expectedAddSrcArgs                string
+		expectedRuleReplaceArgs           string
+		expectedFFXRepositoryAddArgs      string
+		expectedFFXRepositoryRegisterArgs string
+		expectedExitCode                  int
 	}{
-		// Test case for no configuration, but 1 device discoverable.
 		{
+			testName:                "server mode default, no configuration, with 1 device discoverable",
 			args:                    []string{os.Args[0], "-data-path", dataDir, "--image", "test-image", "--version", "1.0.0", "--level", "debug"},
 			expectedPMArgs:          "serve -repo " + filepath.Join(dataDir, "<unknown>/packages/amber-files") + " -c 2 -l :8083",
 			ffxTargetList:           `[{"nodename":"<unknown>","rcs_state":"N","serial":"<unknown>","target_type":"Unknown","target_state":"Product","addresses":["::1f"]}]`,
@@ -712,6 +748,7 @@ func TestMain(t *testing.T) {
 			expectedRuleReplaceArgs: fmt.Sprintf(`-F %s/sshconfig -v ::1f pkgctl rule replace json '{"version":"1","content":[{"host_match":"fuchsia.com","host_replacement":"devhost","path_prefix_match":"/","path_prefix_replacement":"/"}]}'`, dataDir),
 		},
 		{
+			testName:                "server mode default, no configuration, fetching from a custom bucket",
 			args:                    []string{os.Args[0], "-data-path", dataDir, "--bucket", "test-bucket", "--image", "test-image", "--version", "1.0.0"},
 			expectedPMArgs:          "serve -repo " + filepath.Join(dataDir, "<unknown>/packages/amber-files") + " -c 2 -l :8083",
 			ffxTargetList:           `[{"nodename":"<unknown>","rcs_state":"N","serial":"<unknown>","target_type":"Unknown","target_state":"Product","addresses":["::1f"]}]`,
@@ -719,6 +756,7 @@ func TestMain(t *testing.T) {
 			expectedRuleReplaceArgs: fmt.Sprintf(`-F %s/sshconfig -v ::1f pkgctl rule replace json '{"version":"1","content":[{"host_match":"fuchsia.com","host_replacement":"devhost","path_prefix_match":"/","path_prefix_replacement":"/"}]}'`, dataDir),
 		},
 		{
+			testName:                "server mode default, stopping after clean",
 			args:                    []string{os.Args[0], "-data-path", dataDir, "--clean", "--image", "test-image", "--version", "1.0.0"},
 			expectedPMArgs:          "serve -repo " + filepath.Join(dataDir, "<unknown>/packages/amber-files") + " -c 2 -l :8083",
 			ffxTargetList:           `[{"nodename":"<unknown>","rcs_state":"N","serial":"<unknown>","target_type":"Unknown","target_state":"Product","addresses":["::1f"]}]`,
@@ -726,6 +764,7 @@ func TestMain(t *testing.T) {
 			expectedRuleReplaceArgs: fmt.Sprintf(`-F %s/sshconfig -v ::1f pkgctl rule replace json '{"version":"1","content":[{"host_match":"fuchsia.com","host_replacement":"devhost","path_prefix_match":"/","path_prefix_replacement":"/"}]}'`, dataDir),
 		},
 		{
+			testName:                "server mode default, custom device ip address and repo dir",
 			args:                    []string{os.Args[0], "-data-path", dataDir, "--device-ip", "::2", "--image", "test-image", "--version", "1.0.0", "--repo-dir", dataDir + "/custom/packages/amber-files"},
 			expectedPMArgs:          "serve -repo " + dataDir + "/custom/packages/amber-files -c 2 -l :8083",
 			ffxTargetList:           `[{"nodename":"<unknown>","rcs_state":"N","serial":"<unknown>","target_type":"Unknown","target_state":"Product","addresses":["::1f"]}]`,
@@ -733,10 +772,12 @@ func TestMain(t *testing.T) {
 			expectedRuleReplaceArgs: fmt.Sprintf(`-F %s/sshconfig -v ::2 pkgctl rule replace json '{"version":"1","content":[{"host_match":"fuchsia.com","host_replacement":"devhost","path_prefix_match":"/","path_prefix_replacement":"/"}]}'`, dataDir),
 		},
 		{
+			testName:      "server mode default, stopping after kill",
 			args:          []string{os.Args[0], "-data-path", dataDir, "--kill", "--version", "1.0.0"},
 			ffxTargetList: `[{"nodename":"<unknown>","rcs_state":"N","serial":"<unknown>","target_type":"Unknown","target_state":"Product","addresses":["::1f"]}]`,
 		},
 		{
+			testName:                "server mode default, custom repo name",
 			args:                    []string{os.Args[0], "-data-path", dataDir, "--name", "test-devhost", "--image", "test-image", "--version", "1.0.0"},
 			expectedPMArgs:          "serve -repo " + filepath.Join(dataDir, "<unknown>/packages/amber-files") + " -c 2 -l :8083",
 			ffxTargetList:           `[{"nodename":"<unknown>","rcs_state":"N","serial":"<unknown>","target_type":"Unknown","target_state":"Product","addresses":["::1f"]}]`,
@@ -744,6 +785,7 @@ func TestMain(t *testing.T) {
 			expectedRuleReplaceArgs: fmt.Sprintf(`-F %s/sshconfig -v ::1f pkgctl rule replace json '{"version":"1","content":[{"host_match":"fuchsia.com","host_replacement":"test-devhost","path_prefix_match":"/","path_prefix_replacement":"/"}]}'`, dataDir),
 		},
 		{
+			testName:                "server mode default, custom package archive",
 			args:                    []string{os.Args[0], "-data-path", dataDir, "--package-archive", dataDir + "/path/to/archive"},
 			expectedPMArgs:          "serve -repo " + filepath.Join(dataDir, "<unknown>/packages/amber-files") + " -c 2 -l :8083",
 			ffxTargetList:           `[{"nodename":"<unknown>","rcs_state":"N","serial":"<unknown>","target_type":"Unknown","target_state":"Product","addresses":["::1f"]}]`,
@@ -751,6 +793,7 @@ func TestMain(t *testing.T) {
 			expectedRuleReplaceArgs: fmt.Sprintf(`-F %s/sshconfig -v ::1f pkgctl rule replace json '{"version":"1","content":[{"host_match":"fuchsia.com","host_replacement":"devhost","path_prefix_match":"/","path_prefix_replacement":"/"}]}'`, dataDir),
 		},
 		{
+			testName:                "server mode default, persisted metadata",
 			args:                    []string{os.Args[0], "-data-path", dataDir, "--package-archive", dataDir + "/path/to/archive", "--persist"},
 			expectedPMArgs:          "serve -repo " + filepath.Join(dataDir, "<unknown>/packages/amber-files") + " -c 2 -l :8083",
 			ffxTargetList:           `[{"nodename":"<unknown>","rcs_state":"N","serial":"<unknown>","target_type":"Unknown","target_state":"Product","addresses":["::1f"]}]`,
@@ -758,10 +801,12 @@ func TestMain(t *testing.T) {
 			expectedRuleReplaceArgs: fmt.Sprintf(`-F %s/sshconfig -v ::1f pkgctl rule replace json '{"version":"1","content":[{"host_match":"fuchsia.com","host_replacement":"devhost","path_prefix_match":"/","path_prefix_replacement":"/"}]}'`, dataDir),
 		},
 		{
+			testName:      "server mode default, stopping after prepare",
 			args:          []string{os.Args[0], "-data-path", dataDir, "--package-archive", dataDir + "/path/to/archive", "--prepare"},
 			ffxTargetList: `[{"nodename":"<unknown>","rcs_state":"N","serial":"<unknown>","target_type":"Unknown","target_state":"Product","addresses":["::1f"]}]`,
 		},
 		{
+			testName:                "server mode default, custom private key",
 			args:                    []string{os.Args[0], "-data-path", dataDir, "--package-archive", dataDir + "/path/to/archive", "--private-key", "/path/to/key"},
 			expectedPMArgs:          "serve -repo " + filepath.Join(dataDir, "<unknown>/packages/amber-files") + " -c 2 -l :8083",
 			ffxTargetList:           `[{"nodename":"<unknown>","rcs_state":"N","serial":"<unknown>","target_type":"Unknown","target_state":"Product","addresses":["::1f"]}]`,
@@ -769,6 +814,7 @@ func TestMain(t *testing.T) {
 			expectedRuleReplaceArgs: fmt.Sprintf(`-F %s/sshconfig -i /path/to/key -v ::1f pkgctl rule replace json '{"version":"1","content":[{"host_match":"fuchsia.com","host_replacement":"devhost","path_prefix_match":"/","path_prefix_replacement":"/"}]}'`, dataDir),
 		},
 		{
+			testName:                "server mode default, custom sshconfig",
 			args:                    []string{os.Args[0], "-data-path", dataDir, "--package-archive", dataDir + "/path/to/archive", "--sshconfig", "/path/to/custom/sshconfig"},
 			expectedPMArgs:          "serve -repo " + filepath.Join(dataDir, "<unknown>/packages/amber-files") + " -c 2 -l :8083",
 			ffxTargetList:           `[{"nodename":"<unknown>","rcs_state":"N","serial":"<unknown>","target_type":"Unknown","target_state":"Product","addresses":["::1f"]}]`,
@@ -776,6 +822,7 @@ func TestMain(t *testing.T) {
 			expectedRuleReplaceArgs: `-F /path/to/custom/sshconfig -v ::1f pkgctl rule replace json '{"version":"1","content":[{"host_match":"fuchsia.com","host_replacement":"devhost","path_prefix_match":"/","path_prefix_replacement":"/"}]}'`,
 		},
 		{
+			testName:                "server mode default, custom server port",
 			args:                    []string{os.Args[0], "-data-path", dataDir, "--package-archive", dataDir + "/path/to/archive", "--server-port", "8999"},
 			expectedPMArgs:          "serve -repo " + filepath.Join(dataDir, "<unknown>/packages/amber-files") + " -c 2 -l :8999",
 			ffxTargetList:           `[{"nodename":"<unknown>","rcs_state":"N","serial":"<unknown>","target_type":"Unknown","target_state":"Product","addresses":["::1f"]}]`,
@@ -783,6 +830,7 @@ func TestMain(t *testing.T) {
 			expectedRuleReplaceArgs: fmt.Sprintf(`-F %s/sshconfig -v ::1f pkgctl rule replace json '{"version":"1","content":[{"host_match":"fuchsia.com","host_replacement":"devhost","path_prefix_match":"/","path_prefix_replacement":"/"}]}'`, dataDir),
 		},
 		{
+			testName:                "server mode default, custom device name",
 			args:                    []string{os.Args[0], "-data-path", dataDir, "--device-name", "test-device", "--image", "test-image", "--version", "1.0.0"},
 			expectedPMArgs:          "serve -repo " + filepath.Join(dataDir, "test-device/packages/amber-files") + " -c 2 -l :8083",
 			ffxTargetList:           `[{"nodename":"test-device","rcs_state":"N","serial":"N","target_type":"Unknown","target_state":"Product","addresses":["::1f"]}]`,
@@ -790,19 +838,23 @@ func TestMain(t *testing.T) {
 			expectedRuleReplaceArgs: fmt.Sprintf(`-F %s/sshconfig -v ::1f pkgctl rule replace json '{"version":"1","content":[{"host_match":"fuchsia.com","host_replacement":"devhost","path_prefix_match":"/","path_prefix_replacement":"/"}]}'`, dataDir),
 		},
 		{
+			testName:       "server mode default, with device configuration",
 			args:           []string{os.Args[0], "-data-path", dataDir, "--package-archive", dataDir + "/path/to/archive"},
 			expectedPMArgs: "serve -repo " + filepath.Join(dataDir, "remote-target-name/packages/amber-files") + " -c 2 -l :8083",
 			ffxTargetList:  `[{"nodename":"<unknown>","rcs_state":"N","serial":"<unknown>","target_type":"Unknown","target_state":"Product","addresses":["::1f"]}]`,
-			deviceConfiguration: `{ "_DEFAULT_DEVICE_":"remote-target-name",
-			"remote-target-name":{
-				"bucket":"fuchsia-bucket",
-				"device-ip":"::1f",
-				"device-name":"remote-target-name",
-				"image":"release",
-				"package-port":"",
-				"package-repo":"",
-				"ssh-port":"2202",
-				"default": "true"},
+			deviceConfiguration: `
+			{
+				"_DEFAULT_DEVICE_":"remote-target-name",
+				"remote-target-name": {
+					"bucket":"fuchsia-bucket",
+					"device-ip":"::1f",
+					"device-name":"remote-target-name",
+					"image":"release",
+					"package-port":"",
+					"package-repo":"",
+					"ssh-port":"2202",
+					"default": "true"
+				},
 				"test-device":{
 					"bucket":"fuchsia-bucket",
 					"device-ip":"::ff",
@@ -811,25 +863,30 @@ func TestMain(t *testing.T) {
 					"package-port":"",
 					"package-repo":"",
 					"ssh-port":"",
-					"default": "false"}
+					"default": "false"
+				}
 			}`,
 			defaultConfigDevice:     "\"remote-target-name\"",
 			expectedAddSrcArgs:      fmt.Sprintf("-F %s/sshconfig  -p 2202 -v ::1f pkgctl repo add url -n devhost http://[fe80::c0ff:eeee:fefe:c000%%25eth1]:8083/config.json", dataDir),
 			expectedRuleReplaceArgs: fmt.Sprintf(`-F %s/sshconfig -p 2202 -v ::1f pkgctl rule replace json '{"version":"1","content":[{"host_match":"fuchsia.com","host_replacement":"devhost","path_prefix_match":"/","path_prefix_replacement":"/"}]}'`, dataDir),
 		}, {
+			testName:       "server mode default, with device configuration, selecting non-default device",
 			args:           []string{os.Args[0], "-data-path", dataDir, "--package-archive", dataDir + "/path/to/archive", "--device-name", "test-device"},
 			expectedPMArgs: "serve -repo " + filepath.Join(dataDir, "test-device/packages/amber-files") + " -c 2 -l :8083",
 			ffxTargetList:  `[{"nodename":"<unknown>","rcs_state":"N","serial":"<unknown>","target_type":"Unknown","target_state":"Product","addresses":["::1f"]}]`,
-			deviceConfiguration: `{ "_DEFAULT_DEVICE_":"remote-target-name",
-			"remote-target-name":{
-				"bucket":"fuchsia-bucket",
-				"device-ip":"::1f",
-				"device-name":"remote-target-name",
-				"image":"release",
-				"package-port":"",
-				"package-repo":"",
-				"ssh-port":"2202",
-				"default": "true"},
+			deviceConfiguration: `
+			{
+				"_DEFAULT_DEVICE_":"remote-target-name",
+				"remote-target-name":{
+					"bucket":"fuchsia-bucket",
+					"device-ip":"::1f",
+					"device-name":"remote-target-name",
+					"image":"release",
+					"package-port":"",
+					"package-repo":"",
+					"ssh-port":"2202",
+					"default": "true"
+				},
 				"test-device":{
 					"bucket":"fuchsia-bucket",
 					"device-ip":"::ff",
@@ -838,19 +895,122 @@ func TestMain(t *testing.T) {
 					"package-port":"",
 					"package-repo":"",
 					"ssh-port":"",
-					"default": "false"}
+					"default": "false"
+				}
 			}`,
 			defaultConfigDevice:     "\"remote-target-name\"",
 			expectedAddSrcArgs:      fmt.Sprintf("-F %s/sshconfig -v ::ff pkgctl repo add url -n devhost http://[fe80::c0ff:eeee:fefe:c000%%25eth1]:8083/config.json", dataDir),
 			expectedRuleReplaceArgs: fmt.Sprintf(`-F %s/sshconfig -v ::ff pkgctl rule replace json '{"version":"1","content":[{"host_match":"fuchsia.com","host_replacement":"devhost","path_prefix_match":"/","path_prefix_replacement":"/"}]}'`, dataDir),
 		},
+		{
+			testName:                "server mode pm works",
+			args:                    []string{os.Args[0], "-server-mode", "pm", "-data-path", dataDir, "--image", "test-image", "--version", "1.0.0", "--level", "debug"},
+			expectedPMArgs:          "serve -repo " + filepath.Join(dataDir, "<unknown>/packages/amber-files") + " -c 2 -l :8083",
+			ffxTargetList:           `[{"nodename":"<unknown>","rcs_state":"N","serial":"<unknown>","target_type":"Unknown","target_state":"Product","addresses":["::1f"]}]`,
+			expectedAddSrcArgs:      fmt.Sprintf("-F %s/sshconfig -v ::1f pkgctl repo add url -n devhost http://[fe80::c0ff:eeee:fefe:c000%%25eth1]:8083/config.json", dataDir),
+			expectedRuleReplaceArgs: fmt.Sprintf(`-F %s/sshconfig -v ::1f pkgctl rule replace json '{"version":"1","content":[{"host_match":"fuchsia.com","host_replacement":"devhost","path_prefix_match":"/","path_prefix_replacement":"/"}]}'`, dataDir),
+		},
+		{
+			testName:                          "server mode ffx works",
+			args:                              []string{os.Args[0], "-server-mode", "ffx", "-data-path", dataDir, "--image", "test-image", "--version", "1.0.0", "--level", "debug"},
+			ffxTargetList:                     `[{"nodename":"<unknown>","rcs_state":"N","serial":"<unknown>","target_type":"Unknown","target_state":"Product","addresses":["::1f"]}]`,
+			expectedFFXRepositoryAddArgs:      "--config ffx_repository=true repository add-from-pm devhost " + filepath.Join(dataDir, "<unknown>/packages/amber-files"),
+			expectedFFXRepositoryRegisterArgs: "--config ffx_repository=true --target ::1f target repository register --repository devhost --alias fuchsia.com",
+		},
+		{
+			testName:                          "server mode ffx supports custom repository names",
+			args:                              []string{os.Args[0], "-server-mode", "ffx", "-data-path", dataDir, "--name", "test-devhost", "--image", "test-image", "--version", "1.0.0"},
+			ffxTargetList:                     `[{"nodename":"<unknown>","rcs_state":"N","serial":"<unknown>","target_type":"Unknown","target_state":"Product","addresses":["::1f"]}]`,
+			expectedFFXRepositoryAddArgs:      "--config ffx_repository=true repository add-from-pm test-devhost " + filepath.Join(dataDir, "<unknown>/packages/amber-files"),
+			expectedFFXRepositoryRegisterArgs: "--config ffx_repository=true --target ::1f target repository register --repository test-devhost --alias fuchsia.com",
+		},
+		{
+			testName:                          "server mode ffx supports custom device ip addresses and repository paths",
+			args:                              []string{os.Args[0], "-server-mode", "ffx", "-data-path", dataDir, "--device-ip", "::2", "--image", "test-image", "--version", "1.0.0", "--repo-dir", dataDir + "/custom/packages/amber-files"},
+			ffxTargetList:                     `[{"nodename":"<unknown>","rcs_state":"N","serial":"<unknown>","target_type":"Unknown","target_state":"Product","addresses":["::1f"]}]`,
+			expectedFFXRepositoryAddArgs:      "--config ffx_repository=true repository add-from-pm devhost " + filepath.Join(dataDir, "custom/packages/amber-files"),
+			expectedFFXRepositoryRegisterArgs: "--config ffx_repository=true --target ::2 target repository register --repository devhost --alias fuchsia.com",
+		},
+		{
+			testName:      "server mode ffx supports using device config",
+			args:          []string{os.Args[0], "-server-mode", "ffx", "-data-path", dataDir, "--package-archive", dataDir + "/path/to/archive"},
+			ffxTargetList: `[{"nodename":"<unknown>","rcs_state":"N","serial":"<unknown>","target_type":"Unknown","target_state":"Product","addresses":["::1f"]}]`,
+			deviceConfiguration: `
+			{
+				"_DEFAULT_DEVICE_":"remote-target-name",
+				"remote-target-name":{
+					"bucket":"fuchsia-bucket",
+					"device-ip":"::1f",
+					"device-name":"remote-target-name",
+					"image":"release",
+					"package-port":"",
+					"package-repo":"",
+					"ssh-port":"2202",
+					"default": "true"
+				},
+				"test-device":{
+					"bucket":"fuchsia-bucket",
+					"device-ip":"::ff",
+					"device-name":"test-device",
+					"image":"release",
+					"package-port":"",
+					"package-repo":"",
+					"ssh-port":"",
+					"default": "false"
+				}
+			}`,
+			defaultConfigDevice:               "\"remote-target-name\"",
+			expectedFFXRepositoryAddArgs:      "--config ffx_repository=true repository add-from-pm devhost " + filepath.Join(dataDir, "remote-target-name/packages/amber-files"),
+			expectedFFXRepositoryRegisterArgs: "--config ffx_repository=true --target [::1f]:2202 target repository register --repository devhost --alias fuchsia.com",
+		},
+		{
+			testName:                          "server mode ffx does not support `-server-port`",
+			args:                              []string{os.Args[0], "-server-mode", "ffx", "-data-path", dataDir, "--server-port", "8899", "--version", "1.0.0"},
+			ffxTargetList:                     `[{"nodename":"<unknown>","rcs_state":"N","serial":"<unknown>","target_type":"Unknown","target_state":"Product","addresses":["::1f"]}]`,
+			expectedFFXRepositoryAddArgs:      "--config ffx_repository=true repository add-from-pm devhost " + filepath.Join(dataDir, "<unknown>/packages/amber-files"),
+			expectedFFXRepositoryRegisterArgs: "--config ffx_repository=true --target ::1f target repository register --repository devhost --alias fuchsia.com",
+			expectedExitCode:                  1,
+		},
+		{
+			testName:                          "server mode ffx does not support `-kill`",
+			args:                              []string{os.Args[0], "-server-mode", "ffx", "-data-path", dataDir, "--kill", "--version", "1.0.0"},
+			ffxTargetList:                     `[{"nodename":"<unknown>","rcs_state":"N","serial":"<unknown>","target_type":"Unknown","target_state":"Product","addresses":["::1f"]}]`,
+			expectedFFXRepositoryAddArgs:      "--config ffx_repository=true repository add-from-pm devhost " + filepath.Join(dataDir, "<unknown>/packages/amber-files"),
+			expectedFFXRepositoryRegisterArgs: "--config ffx_repository=true --target ::1f target repository register --repository devhost --alias fuchsia.com",
+			expectedExitCode:                  1,
+		},
+		{
+			testName:                          "server mode ffx does not support `-private-key`",
+			args:                              []string{os.Args[0], "-server-mode", "ffx", "-data-path", dataDir, "--private-key", "/path/to/custom/private-key", "--version", "1.0.0"},
+			ffxTargetList:                     `[{"nodename":"<unknown>","rcs_state":"N","serial":"<unknown>","target_type":"Unknown","target_state":"Product","addresses":["::1f"]}]`,
+			expectedFFXRepositoryAddArgs:      "--config ffx_repository=true repository add-from-pm devhost " + filepath.Join(dataDir, "<unknown>/packages/amber-files"),
+			expectedFFXRepositoryRegisterArgs: "--config ffx_repository=true --target ::1f target repository register --repository devhost --alias fuchsia.com",
+			expectedExitCode:                  1,
+		},
+		{
+			testName:                          "server mode ffx does not support `--sshconfig`",
+			args:                              []string{os.Args[0], "-server-mode", "ffx", "-data-path", dataDir, "--sshconfig", "/path/to/custom/sshconfig", "--version", "1.0.0"},
+			ffxTargetList:                     `[{"nodename":"<unknown>","rcs_state":"N","serial":"<unknown>","target_type":"Unknown","target_state":"Product","addresses":["::1f"]}]`,
+			expectedFFXRepositoryAddArgs:      "--config ffx_repository=true repository add-from-pm devhost " + filepath.Join(dataDir, "<unknown>/packages/amber-files"),
+			expectedFFXRepositoryRegisterArgs: "--config ffx_repository=true --target ::1f target repository register --repository devhost --alias fuchsia.com",
+			expectedExitCode:                  1,
+		},
+		{
+			testName:                          "server mode ffx supports persisting metadata",
+			args:                              []string{os.Args[0], "-server-mode", "ffx", "-data-path", dataDir, "--package-archive", dataDir + "/path/to/archive", "--persist"},
+			ffxTargetList:                     `[{"nodename":"<unknown>","rcs_state":"N","serial":"<unknown>","target_type":"Unknown","target_state":"Product","addresses":["::1f"]}]`,
+			expectedFFXRepositoryAddArgs:      "--config ffx_repository=true repository add-from-pm devhost " + filepath.Join(dataDir, "<unknown>/packages/amber-files"),
+			expectedFFXRepositoryRegisterArgs: "--config ffx_repository=true --target ::1f target repository register --repository devhost --alias fuchsia.com --storage-type persistent",
+		},
 	}
 
-	for testcase, test := range tests {
-		t.Run(fmt.Sprintf("testcase_%d", testcase), func(t *testing.T) {
+	for _, test := range tests {
+		t.Run(test.testName, func(t *testing.T) {
 			os.Args = test.args
 			os.Setenv("_EXPECTED_ADD_SRC_ARGS", test.expectedAddSrcArgs)
 			os.Setenv("_EXPECTED_RULE_REPLACE_ARGS", test.expectedRuleReplaceArgs)
+			os.Setenv("_EXPECTED_FFX_REPOSITORY_ADD_ARGS", test.expectedFFXRepositoryAddArgs)
+			os.Setenv("_EXPECTED_FFX_REPOSITORY_REGISTER_ARGS", test.expectedFFXRepositoryRegisterArgs)
 			os.Setenv("FSERVE_EXPECTED_ARGS", test.expectedPMArgs)
 			os.Setenv("_FAKE_FFX_DEVICE_CONFIG_DATA", test.deviceConfiguration)
 			os.Setenv("_FAKE_FFX_DEVICE_CONFIG_DEFAULT_DEVICE", test.defaultConfigDevice)
@@ -858,8 +1018,8 @@ func TestMain(t *testing.T) {
 			os.Setenv("_FAKE_FFX_TARGET_LIST", test.ffxTargetList)
 			flag.CommandLine = flag.NewFlagSet(os.Args[0], flag.ExitOnError)
 			osExit = func(code int) {
-				if code != 0 {
-					t.Fatalf("Non-zero error code %d", code)
+				if code != test.expectedExitCode {
+					t.Fatalf("Expected exit code [%v], got [%v]", test.expectedExitCode, code)
 				}
 			}
 			main()
@@ -937,30 +1097,29 @@ func fakeKeygen(args []string) {
 	os.Exit(0)
 }
 
+func checkLen(expected, actual []string) {
+	if len(actual) != len(expected) {
+		fmt.Fprintf(os.Stderr, "Argument count mismatch. Expected %v, actual: %v\n", len(expected), len(actual))
+		fmt.Fprintf(os.Stderr, "Expected: %v\n", expected)
+		fmt.Fprintf(os.Stderr, "Actual  : %v\n", actual)
+		os.Exit(1)
+	}
+}
+
+func checkFields(expected, actual []string) {
+	for i := range actual {
+		if actual[i] != expected[i] {
+			fmt.Fprintf(os.Stderr,
+				"Mismatched args index %v. Expected: %v actual: %v\n",
+				i, expected[i], actual[i])
+			fmt.Fprintf(os.Stderr, "Full args Expected: %v actual: %v",
+				expected, actual)
+			os.Exit(3)
+		}
+	}
+}
+
 func fakeSSH(args []string) {
-
-	checkLen := func(expected, actual []string) {
-		if len(actual) != len(expected) {
-			fmt.Fprintf(os.Stderr, "Argument count mismatch. Expected %v, actual: %v\n", len(expected), len(actual))
-			fmt.Fprintf(os.Stderr, "Expected: %v\n", expected)
-			fmt.Fprintf(os.Stderr, "Actual  : %v\n", actual)
-			os.Exit(1)
-		}
-	}
-
-	checkFields := func(expected, actual []string) {
-		for i := range actual {
-			if actual[i] != expected[i] {
-				fmt.Fprintf(os.Stderr,
-					"Mismatched args index %v. Expected: %v actual: %v\n",
-					i, expected[i], actual[i])
-				fmt.Fprintf(os.Stderr, "Full args Expected: %v actual: %v",
-					expected, actual)
-				os.Exit(3)
-			}
-		}
-	}
-
 	if args[len(args)-1] == "$SSH_CONNECTION" {
 		fmt.Printf("%v 54545 fe80::c00f:f0f0:eeee:cccc 22\n", hostaddr)
 		os.Exit(0)
@@ -1019,6 +1178,21 @@ func fakeFFX(args []string) {
 		fmt.Printf("%v\n", os.Getenv("_FAKE_FFX_TARGET_LIST"))
 		os.Exit(0)
 	}
+
+	if args[0] == "--config" && args[1] == "ffx_repository=true" && args[2] == "--target" && args[4] == "target" && args[5] == "repository" && args[6] == "register" {
+		expected := strings.Fields(os.Getenv("_EXPECTED_FFX_REPOSITORY_REGISTER_ARGS"))
+		checkLen(expected, args)
+		checkFields(expected, args)
+		os.Exit(0)
+	}
+
+	if args[0] == "--config" && args[1] == "ffx_repository=true" && args[2] == "repository" && args[3] == "add-from-pm" {
+		expected := strings.Fields(os.Getenv("_EXPECTED_FFX_REPOSITORY_ADD_ARGS"))
+		checkLen(expected, args)
+		checkFields(expected, args)
+		os.Exit(0)
+	}
+
 	fmt.Fprintf(os.Stderr, "Unexpected ffx sub command: %v", args)
 	os.Exit(2)
 }
