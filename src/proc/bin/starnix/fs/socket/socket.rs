@@ -185,14 +185,18 @@ impl Socket {
     /// # Parameters
     /// - `task`: The task to read memory from.
     /// - `user_buffers`: The `UserBufferIterator` to read the data from.
+    /// - `ancillary_data`: Any ancillary data to write to the socket. Note that the ancillary data
+    ///                     will only be written if the entirety of the requested write completes.
+    ///                     The ancillary data will be set to `None` if it was written.
     ///
     /// Returns the number of bytes that were written to the socket.
     pub fn write(
         &mut self,
         task: &Task,
         user_buffers: &mut UserBufferIterator<'_>,
+        ancillary_data: &mut Option<AncillaryData>,
     ) -> Result<usize, Errno> {
-        self.incoming_messages.write(task, user_buffers)
+        self.incoming_messages.write(task, user_buffers, ancillary_data)
     }
 
     /// Reads the the contents of this socket into `UserBufferIterator`.
@@ -201,21 +205,14 @@ impl Socket {
     /// - `task`: The task to read memory from.
     /// - `user_buffers`: The `UserBufferIterator` to write the data to.
     ///
-    /// Returns the number of bytes that were read into the buffer, and a control message if one was
+    /// Returns the number of bytes that were read into the buffer, and any ancillary data that was
     /// read from the socket.
     pub fn read(
         &mut self,
         task: &Task,
         user_buffers: &mut UserBufferIterator<'_>,
-    ) -> Result<(usize, Option<Control>), Errno> {
-        let bytes_read = self.incoming_messages.read(task, user_buffers)?;
-        Ok((bytes_read, self.incoming_messages.read_if_control()))
-    }
-
-    /// Writes a `Message::Control` containing the provided bytes to the socket.
-    pub fn write_control(&mut self, bytes: Vec<u8>) {
-        if bytes.len() > 0 {
-            self.incoming_messages.write_message(Message::control(bytes));
-        }
+    ) -> Result<(usize, Option<AncillaryData>), Errno> {
+        let (bytes_read, ancillary_data) = self.incoming_messages.read(task, user_buffers)?;
+        Ok((bytes_read, ancillary_data))
     }
 }

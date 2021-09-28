@@ -4,63 +4,54 @@
 
 /// A `Message` represents a typed segment of bytes within a `MessageBuffer`.
 #[derive(Clone, PartialEq, Debug)]
-pub enum Message {
-    /// A packet containing arbitrary bytes.
-    Packet(Packet),
+pub struct Message {
+    /// The data contained in the message.
+    pub data: MessageData,
 
-    /// A control message.
-    Control(Control),
-}
-
-impl From<Control> for Message {
-    fn from(control: Control) -> Self {
-        Message::Control(control)
-    }
-}
-
-impl From<Packet> for Message {
-    fn from(packet: Packet) -> Self {
-        Message::Packet(packet)
-    }
+    /// The ancillary data that is associated with this message.
+    pub ancillary_data: Option<AncillaryData>,
 }
 
 impl Message {
-    /// Returns a `Message::Control` with the given bytes.
-    pub fn control(bytes: Vec<u8>) -> Message {
-        Message::Control(Control { bytes })
-    }
-
-    /// Returns a `Message::Packet` with the given bytes.
-    pub fn packet(bytes: Vec<u8>) -> Message {
-        Message::Packet(Packet { bytes })
+    /// Creates a a new message with the provided message and ancillary data.
+    pub fn new(data: MessageData, ancillary_data: Option<AncillaryData>) -> Self {
+        Message { data, ancillary_data }
     }
 
     /// Returns the length of the message in bytes.
     ///
-    /// Note that control messages are considered to be 0-length messages, but if the control
-    /// message is asked for its length it returns the number of bytes in the message.
+    /// Note that ancillary data does not contribute to the length of the message.
     pub fn len(&self) -> usize {
-        match self {
-            Message::Packet(p) => p.len(),
-            Message::Control(_c) => 0,
-        }
+        self.data.len()
+    }
+}
+
+impl From<MessageData> for Message {
+    fn from(data: MessageData) -> Self {
+        Message { data, ancillary_data: None }
+    }
+}
+
+impl From<Vec<u8>> for Message {
+    fn from(data: Vec<u8>) -> Self {
+        Self { data: data.into(), ancillary_data: None }
     }
 }
 
 #[derive(Clone, PartialEq, Debug)]
-pub struct Control {
+pub struct AncillaryData {
     /// The bytes associated with this control message.
     bytes: Vec<u8>,
 }
 
-impl From<Vec<u8>> for Control {
+impl From<Vec<u8>> for AncillaryData {
     fn from(bytes: Vec<u8>) -> Self {
         Self { bytes }
     }
 }
 
-impl Control {
-    /// Returns the number of bytes in the control message.
+impl AncillaryData {
+    /// Returns the number of bytes in the ancillary data.
     pub fn len(&self) -> usize {
         self.bytes.len()
     }
@@ -73,36 +64,42 @@ impl Control {
 
 /// A `Packet` stores an arbitrary sequence of bytes.
 #[derive(Clone, PartialEq, Debug, Default)]
-pub struct Packet {
+pub struct MessageData {
     /// The bytes in this packet.
     bytes: Vec<u8>,
 }
 
-impl Packet {
-    /// Returns true if the packet is empty.
+impl MessageData {
+    /// Returns true if data is empty.
     pub fn is_empty(&self) -> bool {
         self.bytes.is_empty()
     }
 
-    /// Returns the length of the packet.
+    /// Returns the number of bytes in the message.
     pub fn len(&self) -> usize {
         self.bytes.len()
     }
 
-    /// Splits the packet at `index`.
+    /// Splits the message data at `index`.
     ///
-    /// After this call returns, at most `at` bytes will be stored in this `Packet`, and any
-    /// remaining bytes will be moved to the returned `Packet`.
+    /// After this call returns, at most `at` bytes will be stored in this `MessageData`, and any
+    /// remaining bytes will be moved to the returned `MessageData`.
     pub fn split_off(&mut self, index: usize) -> Self {
-        let mut packet = Packet::default();
+        let mut message_data = MessageData::default();
         if index < self.len() {
-            packet.bytes = self.bytes.split_off(index);
+            message_data.bytes = self.bytes.split_off(index);
         }
-        packet
+        message_data
     }
 
     /// Returns a reference to the bytes in the packet.
     pub fn bytes(&self) -> &[u8] {
         &self.bytes
+    }
+}
+
+impl From<Vec<u8>> for MessageData {
+    fn from(bytes: Vec<u8>) -> Self {
+        Self { bytes }
     }
 }

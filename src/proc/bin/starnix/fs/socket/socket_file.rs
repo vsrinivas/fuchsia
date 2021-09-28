@@ -62,26 +62,28 @@ impl SocketFile {
         task: &Task,
         file: &FileObject,
         data: &[UserBuffer],
-        mut control_bytes: Option<Vec<u8>>,
+        control_bytes: Option<Vec<u8>>,
     ) -> Result<usize, Errno> {
         let requested = UserBuffer::get_total_length(data);
         let mut actual = 0;
         let mut user_buffers = UserBufferIterator::new(data);
+        let mut control_message: Option<AncillaryData> = control_bytes.map(|bytes| bytes.into());
         file.blocking_op(
             task,
             || {
                 let socket = self.get_socket_for_writing(task)?;
                 let mut socket = socket.lock();
 
-                let bytes_written = match socket.write(task, &mut user_buffers) {
-                    Err(e) if e == EPIPE && actual > 0 => {
-                        // If the error is EPIPE (that is, the write failed because the socket was
-                        // disconnected), then return the amount of bytes that were written before
-                        // the disconnect.
-                        return Ok(actual);
-                    }
-                    result => result,
-                }?;
+                let bytes_written =
+                    match socket.write(task, &mut user_buffers, &mut control_message) {
+                        Err(e) if e == EPIPE && actual > 0 => {
+                            // If the error is EPIPE (that is, the write failed because the socket was
+                            // disconnected), then return the amount of bytes that were written before
+                            // the disconnect.
+                            return Ok(actual);
+                        }
+                        result => result,
+                    }?;
 
                 if bytes_written > 0 {
                     socket.notify_write();
@@ -90,10 +92,6 @@ impl SocketFile {
                 actual += bytes_written;
                 if actual < requested {
                     return error!(EAGAIN);
-                }
-
-                if let Some(control_bytes) = control_bytes.take() {
-                    socket.write_control(control_bytes);
                 }
 
                 Ok(actual)
@@ -115,13 +113,13 @@ impl SocketFile {
         task: &Task,
         file: &FileObject,
         data: &[UserBuffer],
-    ) -> Result<(usize, Option<Control>), Errno> {
+    ) -> Result<(usize, Option<AncillaryData>), Errno> {
         file.blocking_op(
             task,
             || {
                 let mut socket = self.socket.lock();
                 let mut user_buffers = UserBufferIterator::new(data);
-                let (bytes_read, control) = socket.read(task, &mut user_buffers)?;
+                let (bytes_read, ancillary_data) = socket.read(task, &mut user_buffers)?;
 
                 if bytes_read == 0 && socket.is_connected() && user_buffers.remaining() > 0 {
                     // If no bytes were read, but the socket is connected, return an error indicating that
@@ -136,7 +134,7 @@ impl SocketFile {
                     });
                 }
 
-                Ok((bytes_read, control))
+                Ok((bytes_read, ancillary_data))
             },
             FdEvents::POLLIN | FdEvents::POLLHUP,
         )
