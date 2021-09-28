@@ -66,6 +66,25 @@ pub fn check_package_name(input: &str) -> Result<&str, PackageNameError> {
     Ok(input)
 }
 
+/// A Fuchsia Package Name. Package names are the first segment of the path.
+/// https://fuchsia.dev/fuchsia-src/concepts/packages/package_url#package-name
+#[derive(PartialEq, Eq, Debug, Clone, Hash)]
+pub struct PackageName(String);
+
+impl std::str::FromStr for PackageName {
+    type Err = PackageNameError;
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        check_package_name(s)?;
+        Ok(Self(s.into()))
+    }
+}
+
+impl std::fmt::Display for PackageName {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.0)
+    }
+}
+
 /// Checks if `input` is a valid Fuchsia package variant.
 /// Passes `input` through if valid.
 pub fn check_package_variant(input: &str) -> Result<&str, PackageVariantError> {
@@ -255,7 +274,7 @@ mod check_resource_path_tests {
 }
 
 #[cfg(test)]
-mod check_package_name_tests {
+mod package_name_tests {
     use super::*;
     use crate::test::random_package_name;
     use proptest::prelude::*;
@@ -292,6 +311,12 @@ mod check_package_name_tests {
                 Ok(s.as_str())
             );
         }
+    }
+
+    #[test]
+    fn display() {
+        let path: PackageName = "package-name".parse().unwrap();
+        assert_eq!(format!("{}", path), "package-name");
     }
 }
 
@@ -337,7 +362,7 @@ mod check_package_variant_tests {
 }
 
 #[cfg(test)]
-mod check_package_path_tests {
+mod package_path_tests {
     use {super::*, crate::test::random_package_path, proptest::prelude::*};
 
     #[test]
