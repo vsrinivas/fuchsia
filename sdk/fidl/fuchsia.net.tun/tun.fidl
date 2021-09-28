@@ -9,17 +9,19 @@ using fuchsia.net;
 
 /// Maximum number of multicast filters that a device holds in `MacState`.
 // NOTE: this number mirrors the number in the low level banjo definition in
-// [`fuchsia.hardware.network.mac/MAX_MAC_FILTER`] which was chosen, in turn, based on common maximum
-// number of multicast groups supported in established OSes.
+// [`fuchsia.hardware.network.mac/MAX_MAC_FILTER`] which was chosen, in turn,
+// based on common maximum number of multicast groups supported in established
+// OSes.
 const MAX_MULTICAST_FILTERS uint32 = 64;
 
 /// Maximum number of pending [`fuchsia.net.tun/Device.WriteFrame`] or
 /// [`fuchsia.net.tun/Device.ReadFrame`] that are allowed.
-// NOTE: This number is chosen arbitrarily to maintain a determined upper bound on memory
-// consumption for a `Device` instance.
+// NOTE: This number is chosen arbitrarily to maintain a determined upper bound
+// on memory consumption for a `Device` instance.
 const MAX_PENDING_OPERATIONS uint32 = 32;
 
-/// Signals set in the `eventpair` returned by [`fuchsia.net.tun/Device.GetSignals`].
+/// Signals set in the `eventpair` returned by
+/// [`fuchsia.net.tun/Device.GetSignals`].
 type Signals = strict bits : uint32 {
     /// Indicates that write buffers are available to be used through
     /// [`fuchsia.net.tun/Device.WriteFrame`].
@@ -30,10 +32,12 @@ type Signals = strict bits : uint32 {
 };
 
 /// Maximum supported MTU.
-// NOTE: Selected as the smallest power of 2 that will fit conventional jumbo frame sizes of 9KB.
-// Source: https://en.wikipedia.org/wiki/Jumbo_frame. The value is chosen arbitrarily low (while
-// abiding by the conventional jumbo frame sizes) to encourage sensible memory usage for clients of
-// the NetworkDevice interface, as receive buffers must be at least MTU-sized for valid operation.
+// NOTE: Selected as the smallest power of 2 that will fit conventional jumbo
+// frame sizes of 9KB.
+// Source: https://en.wikipedia.org/wiki/Jumbo_frame. The value is chosen
+// arbitrarily low (while abiding by the conventional jumbo frame sizes) to
+// encourage sensible memory usage for clients of the NetworkDevice interface,
+// as receive buffers must be at least MTU-sized for valid operation.
 const MAX_MTU uint32 = 16384;
 
 /// Logical device port configuration.
@@ -75,8 +79,8 @@ type DevicePortConfig = table {
     2: online bool;
     /// MAC address to report.
     ///
-    /// If set, the port provides a [`fuchsia.hardware.network/MacAddressing`] implementation
-    /// through [`fuchsia.hardware.network/Port.GetMac`].
+    /// If set, the port provides a [`fuchsia.hardware.network/MacAddressing`]
+    /// implementation through [`fuchsia.hardware.network/Port.GetMac`].
     3: mac fuchsia.net.MacAddress;
 };
 
@@ -88,13 +92,13 @@ type DevicePairPortConfig = table {
     1: base BasePortConfig;
     /// MAC address to report.
     ///
-    /// If set, left port provides a [`fuchsia.hardware.network/MacAddressing`] implementation
-    /// through [`fuchsia.hardware.network/Port.GetMac`].
+    /// If set, left port provides a [`fuchsia.hardware.network/MacAddressing`]
+    /// implementation through [`fuchsia.hardware.network/Port.GetMac`].
     2: mac_left fuchsia.net.MacAddress;
     /// MAC address to report.
     ///
-    /// If set, right port provides a [`fuchsia.hardware.network/MacAddressing`] implementation
-    /// through [`fuchsia.hardware.network/Port.GetMac`].
+    /// If set, right port provides a [`fuchsia.hardware.network/MacAddressing`]
+    /// implementation through [`fuchsia.hardware.network/Port.GetMac`].
     3: mac_right fuchsia.net.MacAddress;
 };
 
@@ -120,8 +124,9 @@ type DeviceConfig = table {
     ///
     /// It not set, interpreted as an empty table.
     1: base BaseDeviceConfig;
-    /// If `true`, [`fuchsia.net.tun/Device.WriteFrame`] and [`fuchsia.net.tun/Device.ReadFrame`]
-    /// blocks returning until the corresponding buffers are available to complete the call.
+    /// If `true`, [`fuchsia.net.tun/Device.WriteFrame`] and
+    /// [`fuchsia.net.tun/Device.ReadFrame`] blocks returning until the
+    /// corresponding buffers are available to complete the call.
     ///
     /// It not set, interpreted as `false`.
     2: blocking bool;
@@ -133,13 +138,15 @@ type DevicePairConfig = table {
     ///
     /// It not set, interpreted as an empty table.
     1: base BaseDeviceConfig;
-    /// If `true`, transmit buffers on the left end are dropped if no receive buffers are available
-    /// on the right end to receive it. Otherwise, transmit buffers wait until a receive buffer is
-    /// available to copy them to.
+    /// If `true`, transmit buffers on the left end are dropped if no receive
+    /// buffers are available on the right end to receive it. Otherwise,
+    /// transmit buffers wait until a receive buffer is available to copy them
+    /// to.
     ///
     /// It not set, interpreted as `false`.
     2: fallible_transmit_left bool;
-    /// Like `fallible_transmit_left` but allows writes to the right end to be fallible.
+    /// Like `fallible_transmit_left` but allows writes to the right end to be
+    /// fallible.
     ///
     /// It not set, interpreted as `false`.
     3: fallible_transmit_right bool;
@@ -148,8 +155,8 @@ type DevicePairConfig = table {
 /// State associated with Mac Address filtering.
 ///
 /// Devices never perform any MAC address filtering, but they implement the
-/// [`fuchsia.hardware.network/MacAddressing`] interface and store the values to be retrieved
-/// through the [`fuchsia.net.tun/InternalState`] structure.
+/// [`fuchsia.hardware.network/MacAddressing`] interface and store the values to
+/// be retrieved through the [`fuchsia.net.tun/InternalState`] structure.
 type MacState = table {
     /// The currently configured MAC Address filtering mode.
     ///
@@ -165,8 +172,8 @@ type MacState = table {
 type InternalState = table {
     /// Mac addressing state.
     ///
-    /// Set iff `mac` is provided in the [`DevicePortConfig`] or [`DevicePairPortConfig`]
-    /// structures upon creation of the port.
+    /// Set iff `mac` is provided in the [`DevicePortConfig`] or
+    /// [`DevicePairPortConfig`] structures upon creation of the port.
     1: mac MacState;
     /// Whether there is a session currently opened and running with the `Port`.
     ///
@@ -176,15 +183,17 @@ type InternalState = table {
 
 /// Extra frame metadata.
 ///
-/// This is an opaque holder for extra information that is associated with Network Device data
-/// frames.
-// NOTE(brunodalbo): NetworkDevice's `InfoType` definition is still in its infancy. This solution
-// allows access to the raw bytes in the sidecar metadata. We expect that this will evolve into a
-// more type-safe solution which will be more transparent.
+/// This is an opaque holder for extra information that is associated with
+/// Network Device data frames.
+// NOTE(brunodalbo): NetworkDevice's `InfoType` definition is still in its
+// infancy. This solution allows access to the raw bytes in the sidecar
+// metadata. We expect that this will evolve into a more type-safe solution
+// which will be more transparent.
 type FrameMetadata = struct {
     /// Additional frame information type.
     ///
-    /// If not set, interpreted as [`fuchsia.hardware.network/InfoType.NO_INFO`].
+    /// If not set, interpreted as
+    /// [`fuchsia.hardware.network/InfoType.NO_INFO`].
     info_type fuchsia.hardware.network.InfoType;
     /// Additional frame information value.
     ///
@@ -198,8 +207,9 @@ type FrameMetadata = struct {
 
 /// A frame written to or read from a [`fuchsia.net.tun/Device`].
 ///
-/// Required fields must always be provided to [`fuchsia.net.tun/Port.WriteFrame`] and are always
-/// present when returned by [`fuchsia.net.tun/Port.ReadFrame`].
+/// Required fields must always be provided to
+/// [`fuchsia.net.tun/Port.WriteFrame`] and are always present when returned by
+/// [`fuchsia.net.tun/Port.ReadFrame`].
 type Frame = table {
     /// The type identifying this frame's payload.
     ///
@@ -223,11 +233,13 @@ type Frame = table {
 
 /// A logical port attached to a [`fuchsia.net.tun/Device`].
 ///
-/// This protocol encodes the underlying object's lifetime in both directions; the underlying object
-/// is alive iff both ends of the protocol are open. That is:
+/// This protocol encodes the underlying object's lifetime in both directions;
+/// the underlying object is alive iff both ends of the protocol are open. That
+/// is:
 ///
 /// - Closing the client end causes the object to be destroyed.
-/// - Observing a closure of the server end indicates the object no longer exists.
+/// - Observing a closure of the server end indicates the object no longer
+/// exists.
 protocol Port {
     /// Gets the port internal state.
     ///
@@ -237,11 +249,13 @@ protocol Port {
     });
     /// Observes changes to internal state.
     ///
-    /// The first call always returns the current internal state, subsequent calls block until the
-    /// internal state differs from the last one returned from a `WatchState` call.
+    /// The first call always returns the current internal state, subsequent
+    /// calls block until the internal state differs from the last one returned
+    /// from a `WatchState` call.
     ///
-    /// `WatchState` does not provide full history of internal state changes. It is possible that
-    /// intermediary internal state changes are missed in between `WatchState` calls.
+    /// `WatchState` does not provide full history of internal state changes. It
+    /// is possible that intermediary internal state changes are missed in
+    /// between `WatchState` calls.
     ///
     /// - response `state` the latest observed port internal state.
     WatchState() -> (struct {
@@ -249,8 +263,9 @@ protocol Port {
     });
     /// Sets the port's online status.
     ///
-    /// The online status is visible through [`fuchsia.hardware.network/Port.GetStatus`]. Once
-    /// `SetOnline` returns, the status reported through `GetStatus` is guaranteed to be the one
+    /// The online status is visible through
+    /// [`fuchsia.hardware.network/Port.GetStatus`]. Once `SetOnline` returns,
+    /// the status reported through `GetStatus` is guaranteed to be the one
     /// passed to `SetOnline`.
     ///
     /// + request `online` desired port online state.
@@ -261,16 +276,19 @@ protocol Port {
 
 /// Provides control over the created device.
 ///
-/// This protocol encodes the underlying object's lifetime in both directions; the underlying object
-/// is alive iff both ends of the protocol are open. That is:
+/// This protocol encodes the underlying object's lifetime in both directions;
+/// the underlying object is alive iff both ends of the protocol are open. That
+/// is:
 ///
 /// - Closing the client end causes the object to be destroyed.
-/// - Observing a closure of the server end indicates the object no longer exists.
+/// - Observing a closure of the server end indicates the object no longer
+/// exists.
 protocol Device {
     /// Writes a frame to the device (data coming from network-end).
     ///
-    /// If the device was created with the [`fuchsia.net.tun/DeviceConfig.blocking`] option set to
-    /// `true`, calls to `WriteFrame` block until there is one buffer available to fulfill the
+    /// If the device was created with the
+    /// [`fuchsia.net.tun/DeviceConfig.blocking`] option set to `true`, calls to
+    /// `WriteFrame` block until there is one buffer available to fulfill the
     /// request.
     ///
     /// + request `frame` inbound frame data and metadata.
@@ -278,38 +296,42 @@ protocol Device {
     /// * error `ZX_ERR_INVALID_ARGS` if `frame` is invalid.
     /// * error `ZX_ERR_BAD_STATE` if the device is offline.
     /// * error `ZX_ERR_BAD_STATE` if the device is offline.
-    /// * error `ZX_ERR_NO_RESOURCES` if more than [`fuchsia.net.tun/MAX_PENDING_OPERATIONS`] calls
-    ///     to `WriteFrame` are pending.
-    /// * error `ZX_ERR_SHOULD_WAIT` if `blocking` is set to `false` and there are no buffers
-    ///     available to fulfill the request.
+    /// * error `ZX_ERR_NO_RESOURCES` if more than
+    /// [`fuchsia.net.tun/MAX_PENDING_OPERATIONS`] calls to `WriteFrame` are
+    /// pending.
+    /// * error `ZX_ERR_SHOULD_WAIT` if `blocking` is set to `false` and there
+    /// are no buffers available to fulfill the request.
     WriteFrame(struct {
         frame Frame;
     }) -> (struct {}) error zx.status;
     /// Gets the next frame from the device (data coming from host-end).
     ///
-    /// If the device was created with the [`fuchsia.net.tun/DeviceConfig.blocking`] option set to
-    /// `true`, calls to `ReadFrame` block until there is a frame available to be read.
+    /// If the device was created with the
+    /// [`fuchsia.net.tun/DeviceConfig.blocking`] option set to `true`, calls to
+    /// `ReadFrame` block until there is a frame available to be read.
     ///
     /// - response `frame` outbound frame data and metadata.
-    /// * error `ZX_ERR_NO_RESOURCES` if more than [`fuchsia.net.tun/MAX_PENDING_OPERATIONS`] calls
-    ///     to `ReadFrame` are pending.
-    /// * error `ZX_ERR_SHOULD_WAIT` if `blocking` is set to `false` and there are no frames to be
-    ///     read.
+    /// * error `ZX_ERR_NO_RESOURCES` if more than
+    /// [`fuchsia.net.tun/MAX_PENDING_OPERATIONS`] calls to `ReadFrame` are
+    /// pending.
+    /// * error `ZX_ERR_SHOULD_WAIT` if `blocking` is set to `false` and there
+    /// are no frames to be read.
     ReadFrame() -> (struct {
         frame Frame;
     }) error zx.status;
     /// Retrieves signals eventpair.
     ///
-    /// - response `signals` an eventpair that is signalled with `SIGNAL_READABLE` and
-    ///     `SIGNAL_WRITABLE` when read and write buffers are available, respectively.
+    /// - response `signals` an eventpair that is signalled with
+    /// `SIGNAL_READABLE` and `SIGNAL_WRITABLE` when read and write buffers are
+    /// available, respectively.
     GetSignals() -> (resource struct {
         signals zx.handle:EVENTPAIR;
     });
     /// Creates a new port on this device.
     ///
     /// + request `config` new port configuration.
-    /// + request `port` grants control over the port. Closed with an epitaph if `config` is not
-    ///     valid.
+    /// + request `port` grants control over the port. Closed with an epitaph if
+    /// `config` is not valid.
     AddPort(resource struct {
         config DevicePortConfig;
         port server_end:Port;
@@ -324,30 +346,36 @@ protocol Device {
 
 /// Provides control over a pair of network devices.
 ///
-/// A `DevicePair` is a simpler version of `Device` that "shorts" two network device interfaces,
-/// named its "left" and "right" ends. The internal state of a `DevicePair` is not accessible, like
-/// it is for `Device` and it provides a more streamlined (and considerably faster) pair of
-/// [`fuchsia.hardware.network/Device`]s. The transmit side of each port of the left end is
-/// connected to the receive side of the port with the same identifier on the right end, and
-/// vice-versa. A `DevicePair`'s port online signal is handled internally (online if any of the ends
-/// has an active data session). If MAC addresses are provided on creation, the only supported MAC
+/// A `DevicePair` is a simpler version of `Device` that "shorts" two network
+/// device interfaces, named its "left" and "right" ends. The internal state of
+/// a `DevicePair` is not accessible, like it is for `Device` and it provides a
+/// more streamlined (and considerably faster) pair of
+/// [`fuchsia.hardware.network/Device`]s. The transmit side of each port of the
+/// left end is connected to the receive side of the port with the same
+/// identifier on the right end, and vice-versa. A `DevicePair`'s port online
+/// signal is handled internally (online if any of the ends has an active data
+/// session). If MAC addresses are provided on creation, the only supported MAC
 /// filtering mode is `PROMISCUOUS`.
 ///
-/// This protocol encodes the underlying object's lifetime in both directions; the underlying object
-/// is alive iff both ends of the protocol are open. That is:
+/// This protocol encodes the underlying object's lifetime in both directions;
+/// the underlying object is alive iff both ends of the protocol are open. That
+/// is:
 ///
 /// - Closing the client end causes the object to be destroyed.
-/// - Observing a closure of the server end indicates the object no longer exists.
+/// - Observing a closure of the server end indicates the object no longer
+/// exists.
 protocol DevicePair {
     /// Adds a logical port to this device pair.
     ///
     /// + request `config` port configuration.
     /// * error `ZX_ERR_INVALID_ARGS` if `config` is invalid.
-    /// * error `ZX_ERR_ALREADY_EXISTS` if the provided port identifier is already in use.
+    /// * error `ZX_ERR_ALREADY_EXISTS` if the provided port identifier is
+    /// already in use.
     AddPort(struct {
         config DevicePairPortConfig;
     }) -> (struct {}) error zx.status;
-    /// Removes a logical port created by [`fuchsia.net.tun/DevicePair.AddPort`].
+    /// Removes a logical port created by
+    /// [`fuchsia.net.tun/DevicePair.AddPort`].
     ///
     /// + request `id` identifier of the port to remove.
     /// * error `ZX_ERR_NOT_FOUND` if `id` does not map to an existing port.
@@ -369,24 +397,28 @@ protocol DevicePair {
 };
 
 /// Control interface.
-/// `Control` allows creating an arbitrary number of `Device`s and `DevicePair`s.
+///
+/// `Control` allows creating an arbitrary number of `Device`s and
+/// `DevicePair`s.
 @discoverable
 protocol Control {
     /// Creates a `Device` with given `config`.
     ///
     /// + request `config` new device configuration.
-    /// + request `device` grants control over the device. Closed with an epitaph if `config` is not
-    ///     valid.
+    /// + request `device` grants control over the device. Closed with an
+    /// epitaph if `config` is not valid.
     CreateDevice(resource struct {
         config DeviceConfig;
         device server_end:Device;
     });
     /// Creates a `DevicePair` with given `config`.
-    /// If `config` is not valid or the device could not be created, `device_pair` is closed
-    /// with an error epitaph.
+    ///
+    /// If `config` is not valid or the device could not be created,
+    /// `device_pair` is closed with an error epitaph.
+    ///
     /// + request `config` new device pair configuration.
-    /// + request `device_pair` grants control over the device pair. Closed with an epitaph if
-    ///     `config` is not valid.
+    /// + request `device_pair` grants control over the device pair. Closed with
+    /// an epitaph if `config` is not valid.
     CreatePair(resource struct {
         config DevicePairConfig;
         device_pair server_end:DevicePair;
