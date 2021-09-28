@@ -416,6 +416,7 @@ async fn run(
 fn init_logging(verbosity: u16) {
     fuchsia_syslog::init_with_tags(&["bt-snoop"]).expect("Can't init logger");
     if verbosity > 1 {
+        fuchsia_trace_provider::trace_provider_create_with_fdio();
         fuchsia_syslog::set_severity(fuchsia_syslog::levels::TRACE);
     } else if verbosity > 0 {
         fuchsia_syslog::set_severity(fuchsia_syslog::levels::DEBUG);
@@ -428,7 +429,6 @@ fn init_logging(verbosity: u16) {
 async fn main() {
     let args: Args = argh::from_env();
 
-    fuchsia_trace_provider::trace_provider_create_with_fdio();
     init_logging(args.verbosity);
 
     let mut fs = ServiceFs::new();

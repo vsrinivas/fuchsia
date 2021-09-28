@@ -27,8 +27,9 @@ mod profile;
 mod sco_connector;
 mod service_definitions;
 
-#[fuchsia::component]
+#[fuchsia_async::run_singlethreaded]
 async fn main() -> Result<(), Error> {
+    fuchsia_syslog::init_with_tags(&["bt-hfp-audio-gateway"]).expect("unable to initialize logger");
     let feature_support = AudioGatewayFeatureSupport::load()?;
     debug!(?feature_support, "Starting HFP Audio Gateway");
     let (profile_client, profile_svc) = register_audio_gateway(feature_support)?;

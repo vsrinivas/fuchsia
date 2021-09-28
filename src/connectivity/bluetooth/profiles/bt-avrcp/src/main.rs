@@ -32,8 +32,10 @@ use crate::{
     profile::AvrcpService,
 };
 
-#[fuchsia::component(logging_tags = ["avrcp"])]
+#[fuchsia_async::run_singlethreaded]
 async fn main() -> Result<(), Error> {
+    fuchsia_syslog::init_with_tags(&["avrcp"]).expect("unable to initialize logger");
+
     // Begin searching for AVRCP target/controller SDP records on newly connected remote peers
     // and register our AVRCP service with the `bredr.Profile` service.
     let (profile_proxy, mut profile_client) =

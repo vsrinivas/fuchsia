@@ -20,8 +20,9 @@ mod types;
 use crate::fidl_service::run_services;
 use crate::profile_registrar::ProfileRegistrar;
 
-#[fuchsia::component]
+#[fuchsia_async::run_singlethreaded]
 pub async fn main() -> Result<(), Error> {
+    fuchsia_syslog::init_with_tags(&["bt-rfcomm"]).expect("unable to initialize logger");
     let profile_svc = fuchsia_component::client::connect_to_protocol::<ProfileMarker>()
         .context("Failed to connect to Bluetooth Profile service")?;
 
