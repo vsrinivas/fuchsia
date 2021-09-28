@@ -382,11 +382,45 @@ fn generate_daemon_service_proxy(
                     ).map_ok_or_else(|e| anyhow::Result::<()>::Err(anyhow::anyhow!(e)), move |fidl_result| {
                         fidl_result
                         .map(|_| ())
-                        .map_err(|_| errors::ffx_error!(format!(
-"The daemon service '{}' did not match any services on the daemon.
-If you are not developing this plugin or the service it connects to, then this is a bug.
+                        .map_err(|e| match e {
+                            fidl_fuchsia_developer_bridge::DaemonError::ServiceNotFound =>
+                                errors::ffx_error!(
+                                    format!(
+"The daemon service '{}' did not match any services on the daemon
+If you are not developing this plugin or the service it connects to, then this is a bug
 
-Please report it at http://fxbug.dev/new?template=ffx+User+Bug.", svc_name)).into())
+Please report it at http://fxbug.dev/new/ffx+User+Bug.",
+                                        svc_name)
+                                    ).into(),
+                            fidl_fuchsia_developer_bridge::DaemonError::ServiceOpenError =>
+                                errors::ffx_error!(
+                                    format!(
+"The daemon service '{}' failed to open on the daemon.
+
+If you are developing the service, there may be an internal failure when invoking the start
+function. See the ffx.daemon.log for details at `ffx config get log.dir -p sub`.
+
+If you are NOT developing this plugin or the service it connects to, then this is a bug.
+
+Please report it at http://fxbug.dev/new/ffx+User+Bug.",
+                                        svc_name
+                                    )
+                                ).into(),
+                            unexpected =>
+                                errors::ffx_error!(
+                                    format!(
+"While attempting to open the daemon service '{}', received an unexpected error:
+
+{:?}
+
+This is not intended behavior and is a bug.
+Please report it at http://fxbug.dev/new/ffx+User+Bug.",
+
+                                        svc_name,
+                                        unexpected,
+                                    )
+                                ).into(),
+                        })
                     });
                 }
             };
