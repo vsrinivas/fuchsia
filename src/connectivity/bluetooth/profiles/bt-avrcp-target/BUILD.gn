@@ -19,7 +19,6 @@ rustc_binary("bin") {
     "//src/connectivity/bluetooth/lib/fuchsia-bluetooth",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fidl_table_validation",
-    "//src/lib/fuchsia",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
     "//src/lib/syslog/rust:syslog",
@@ -42,6 +41,8 @@ rustc_binary("bin") {
     "src/types/bounded_queue.rs",
     "src/types/mod.rs",
   ]
+
+  test_deps = [ "//src/lib/fuchsia" ]
 
   configs -= [ "//build/config/rust:allow_unused_results" ]
 }
