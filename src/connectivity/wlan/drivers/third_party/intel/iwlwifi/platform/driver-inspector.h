@@ -19,12 +19,15 @@ namespace wlan::iwlwifi {
 
 // Options object for the DriverInspector.
 struct DriverInspectorOptions final {
+  // Name of the root node of this DriverInspector.
+  const char* root_name = "driver_inspector";
+
   // Total size of the Inspect VMO to allocate.  The total usable size will be slightly smaller than
   // this, due to Inspect file format overhead.
-  size_t vmo_size = 4 * 1024 * 1024;
+  size_t vmo_size = 8 * 1024 * 1024;
 
   // Size reserved in the VMO for core dumps.
-  size_t core_dump_capacity = 2 * 1024 * 1024;
+  size_t core_dump_capacity = 4 * 1024 * 1024;
 };
 
 // DriverInspector manages the Inspect tree hierarchy for a driver.
@@ -38,7 +41,8 @@ class DriverInspector {
   zx_status_t PublishCoreDump(const char* core_dump_name, cpp20::span<const char> core_dump);
 
   // Get the root of this drivers' Inspect tree hierarchy.
-  ::inspect::Node& GetRoot() const;
+  ::inspect::Node& GetRoot();
+  const ::inspect::Node& GetRoot() const;
 
   // Get a read-only copy of this Inspect tree's backing VMO.
   ::zx::vmo DuplicateVmo() const;
@@ -50,6 +54,7 @@ class DriverInspector {
   };
 
   std::unique_ptr<::inspect::Inspector> inspector_;
+  ::inspect::Node root_node_;
 
   std::mutex core_dump_mutex_;
   const size_t core_dump_capacity_ = 0;

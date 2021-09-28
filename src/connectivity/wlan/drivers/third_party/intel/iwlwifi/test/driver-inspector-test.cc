@@ -35,8 +35,8 @@ TEST(DriverInspectorTest, CreationOptions) {
 
 // Test DriverInspector core dump functionality.
 TEST(DriverInspectorTest, PublishCoreDump) {
-  auto inspector = wlan::iwlwifi::DriverInspector(
-      wlan::iwlwifi::DriverInspectorOptions{.vmo_size = 8 * 1024, .core_dump_capacity = 2 * 1024});
+  auto inspector = wlan::iwlwifi::DriverInspector(wlan::iwlwifi::DriverInspectorOptions{
+      .root_name = "test_inspector", .vmo_size = 8 * 1024, .core_dump_capacity = 2 * 1024});
   ASSERT_TRUE(inspector.GetRoot());
 
   auto large_buffer = std::vector<char>(2 * 1024 + 1);
@@ -55,10 +55,40 @@ TEST(DriverInspectorTest, PublishCoreDump) {
     std::snprintf(buffer_name, sizeof(buffer_name), "buffer%zu", i);
     EXPECT_OK(inspector.PublishCoreDump(buffer_name, buffers[i]));
 
-    auto hierarchy = ::inspect::ReadFromVmo(inspector.DuplicateVmo()).take_value();
-    auto& node = hierarchy.node();
-    EXPECT_EQ(i + 1, node.properties().size());
-    for (size_t j = 0; j < node.properties().size(); ++j) {
+    auto root_hierarchy = ::inspect::ReadFromVmo(inspector.DuplicateVmo()).take_value();
+    EXPECT_EQ(1, root_hierarchy.children().size());
+    auto hierarchy = root_hierarchy.GetByPath({"test_inspector"});
+    EXPECT_NOT_NULL(hierarchy);
+
+    if (hierarchy != nullptr) {
+      auto& node = hierarchy->node();
+      EXPECT_EQ(i + 1, node.properties().size());
+      for (size_t j = 0; j < node.properties().size(); ++j) {
+        char property_name[16];
+        std::snprintf(property_name, sizeof(property_name), "buffer%zu", j);
+        auto prop = node.get_property<inspect::ByteVectorPropertyValue>(property_name);
+        EXPECT_NOT_NULL(prop);
+        if (prop != nullptr) {
+          EXPECT_EQ(512, prop->value().size());
+          EXPECT_EQ(0, std::memcmp(buffers[j].data(), prop->value().data(),
+                                   std::min(buffers[j].size(), prop->value().size())));
+        }
+      }
+    }
+  }
+
+  // Adding the fifth buffer should cause the oldest crash dump to be replaced.
+  EXPECT_OK(inspector.PublishCoreDump("buffer4", buffers[4]));
+
+  auto root_hierarchy = ::inspect::ReadFromVmo(inspector.DuplicateVmo()).take_value();
+  EXPECT_EQ(1, root_hierarchy.children().size());
+  auto hierarchy = root_hierarchy.GetByPath({"test_inspector"});
+  EXPECT_NOT_NULL(hierarchy);
+
+  if (hierarchy != nullptr) {
+    auto& node = hierarchy->node();
+    EXPECT_EQ(4, node.properties().size());
+    for (size_t j = 1; j < 5; ++j) {
       char property_name[16];
       std::snprintf(property_name, sizeof(property_name), "buffer%zu", j);
       auto prop = node.get_property<inspect::ByteVectorPropertyValue>(property_name);
@@ -68,23 +98,6 @@ TEST(DriverInspectorTest, PublishCoreDump) {
         EXPECT_EQ(0, std::memcmp(buffers[j].data(), prop->value().data(),
                                  std::min(buffers[j].size(), prop->value().size())));
       }
-    }
-  }
-
-  // Adding the fifth buffer should cause the oldest crash dump to be replaced.
-  EXPECT_OK(inspector.PublishCoreDump("buffer4", buffers[4]));
-  auto hierarchy = ::inspect::ReadFromVmo(inspector.DuplicateVmo()).take_value();
-  auto& node = hierarchy.node();
-  EXPECT_EQ(4, node.properties().size());
-  for (size_t j = 1; j < 5; ++j) {
-    char property_name[16];
-    std::snprintf(property_name, sizeof(property_name), "buffer%zu", j);
-    auto prop = node.get_property<inspect::ByteVectorPropertyValue>(property_name);
-    EXPECT_NOT_NULL(prop);
-    if (prop != nullptr) {
-      EXPECT_EQ(512, prop->value().size());
-      EXPECT_EQ(0, std::memcmp(buffers[j].data(), prop->value().data(),
-                               std::min(buffers[j].size(), prop->value().size())));
     }
   }
 }

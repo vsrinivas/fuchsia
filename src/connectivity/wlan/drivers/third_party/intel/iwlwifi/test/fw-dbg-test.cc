@@ -31,7 +31,8 @@ class FwDbgTest : public SingleApTest {
 };
 
 FwDbgTest::FwDbgTest() {
-  inspector_ = std::make_unique<::wlan::iwlwifi::DriverInspector>();
+  inspector_ = std::make_unique<::wlan::iwlwifi::DriverInspector>(
+      wlan::iwlwifi::DriverInspectorOptions{.root_name = "fw_dbg_test" });
   sim_trans_.iwl_trans()->dev->inspector = static_cast<struct driver_inspector*>(inspector_.get());
   fwrt_.trans = sim_trans_.iwl_trans();
   fwrt_.fw = &fw_;
@@ -43,17 +44,23 @@ TEST_F(FwDbgTest, TestUserTrigger) {
   iwl_fw_dbg_collect(&fwrt_, FW_DBG_TRIGGER_USER, kFwErrorDumpName, sizeof(kFwErrorDumpName));
 
   // Check that the dump exists.
-  auto hierarchy = ::inspect::ReadFromVmo(inspector_->DuplicateVmo()).take_value();
-  EXPECT_EQ(1, hierarchy.node().properties().size());
-  auto prop = hierarchy.node().get_property<inspect::ByteVectorPropertyValue>(kFwErrorDumpName);
-  EXPECT_NOT_NULL(prop);
+  auto root_hierarchy = ::inspect::ReadFromVmo(inspector_->DuplicateVmo()).take_value();
+  EXPECT_EQ(1, root_hierarchy.children().size());
+  auto hierarchy = root_hierarchy.GetByPath({"fw_dbg_test"});
+  EXPECT_NOT_NULL(hierarchy);
 
-  // Sanity check the header of the dump.
-  if (prop != nullptr) {
-    const uint32_t barker = cpu_to_le32(IWL_FW_ERROR_DUMP_BARKER);
-    EXPECT_LE(sizeof(barker), prop->value().size());
-    EXPECT_EQ(0, std::memcmp(&barker, prop->value().data(),
-                             std::min(sizeof(barker), prop->value().size())));
+  if (hierarchy != nullptr) {
+    EXPECT_EQ(1, hierarchy->node().properties().size());
+    auto prop = hierarchy->node().get_property<inspect::ByteVectorPropertyValue>(kFwErrorDumpName);
+    EXPECT_NOT_NULL(prop);
+
+    // Sanity check the header of the dump.
+    if (prop != nullptr) {
+      const uint32_t barker = cpu_to_le32(IWL_FW_ERROR_DUMP_BARKER);
+      EXPECT_LE(sizeof(barker), prop->value().size());
+      EXPECT_EQ(0, std::memcmp(&barker, prop->value().data(),
+                               std::min(sizeof(barker), prop->value().size())));
+    }
   }
 }
 

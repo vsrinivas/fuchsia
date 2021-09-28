@@ -37,6 +37,7 @@
 #include <lib/zircon-internal/thread_annotations.h>
 #include <stdbool.h>
 #include <threads.h>
+#include <zircon/syscalls.h>
 
 #include <ddk/hw/wlan/ieee80211/c/banjo.h>
 
@@ -46,6 +47,7 @@
 #endif  // NEEDS_PORTING
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/fw/api/nan.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/fw/api/scan.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/fw/dbg.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/fw/img.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/fw/notif-wait.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-csr.h"
@@ -1493,6 +1495,12 @@ static void iwl_mvm_nic_error(struct iwl_op_mode* op_mode) {
   if (!test_bit(STATUS_TRANS_DEAD, &mvm->trans->status)) {
     iwl_mvm_dump_nic_error_log(mvm);
   }
+
+  zx_time_t dump_time_usec = (zx_clock_get_monotonic() + 500) / 1000;
+  char dump_name[64];
+  snprintf(dump_name, sizeof(dump_name), "nic_error_dump-%05u.%06u",
+           (unsigned int)(dump_time_usec / 1000000), (unsigned int)(dump_time_usec % 1000000));
+  iwl_fw_dbg_collect(&mvm->fwrt, FW_DBG_TRIGGER_USER, dump_name, strlen(dump_name));
 
   iwl_mvm_nic_restart(mvm, true);
 }

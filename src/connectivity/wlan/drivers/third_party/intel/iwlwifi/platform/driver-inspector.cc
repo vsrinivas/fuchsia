@@ -14,7 +14,12 @@ namespace wlan::iwlwifi {
 DriverInspector::DriverInspector(DriverInspectorOptions options)
     : inspector_(std::make_unique<::inspect::Inspector>(
           ::inspect::InspectSettings{.maximum_size = options.vmo_size})),
-      core_dump_capacity_(options.core_dump_capacity) {}
+      core_dump_capacity_(options.core_dump_capacity) {
+  auto& inspector_root = inspector_->GetRoot();
+  if (inspector_root) {
+    root_node_ = inspector_root.CreateChild(options.root_name);
+  }
+}
 
 DriverInspector::~DriverInspector() = default;
 
@@ -47,9 +52,14 @@ zx_status_t DriverInspector::PublishCoreDump(const char* core_dump_name,
   return status;
 }
 
-::inspect::Node& DriverInspector::GetRoot() const {
+::inspect::Node& DriverInspector::GetRoot() {
   // ::inspect::Node is thread-safe.
-  return inspector_->GetRoot();
+  return root_node_;
+}
+
+const ::inspect::Node& DriverInspector::GetRoot() const {
+  // ::inspect::Node is thread-safe.
+  return root_node_;
 }
 
 ::zx::vmo DriverInspector::DuplicateVmo() const { return inspector_->DuplicateVmo(); }

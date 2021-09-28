@@ -42,7 +42,8 @@ zx_status_t PcieDevice::Create(zx_device_t* parent_device) {
     return ZX_ERR_NO_MEMORY;
   }
 
-  device->driver_inspector_ = std::make_unique<DriverInspector>();
+  device->driver_inspector_ =
+      std::make_unique<DriverInspector>(DriverInspectorOptions{.root_name = "iwlwifi"});
   if ((status = device->DdkAdd(::ddk::DeviceAddArgs("iwlwifi-wlanphyimpl")
                                    .set_inspect_vmo(device->driver_inspector_->DuplicateVmo()))) !=
       ZX_OK) {
