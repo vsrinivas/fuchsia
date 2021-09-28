@@ -194,7 +194,7 @@ Driver-level input events may be transformed into:
 
 Typically each event is dispatched as follows:
 
-```
+```none
 Driver -> Input Pipeline -> UI System Component -> UI Framework-> UI View
 ```
 
@@ -228,7 +228,7 @@ dispatched through the input pipeline.
 
 The input pipeline sends pointer events to Scenic, which is responsible for
 dispatching the event to the correct runtime instance. This allows Scenic to
-maintain a globally consistent understanding of where things are on 55screen,
+maintain a globally consistent understanding of where things are on screen,
 and avoid race conditions during animations. (See [Routing Graphical
 Events](#routing-graphical-events) below.)
 
@@ -472,9 +472,10 @@ For user events that correspond to a particular on screen location (e.g. touch,
 mouse, stylus), input events are routed through Scenic before dispatch to the
 runtime instance associated with each view. Advantages of this approach include
 
-* _Scene graph isolation_: Scenic is the only component with a complete view of
-  which view is where on screen. We do not allow other components to look up
-  what is on screen at a given point (also called "hit testing").
+* _Scene graph isolation_: Scenic is the only component with a complete
+  understanding of which view is where on screen. We do not allow other
+  components to look up what is on screen at a given point (also called
+  "hit testing").
 * _Global consistency_: Because Scenic is the source of truth for where a given
   view is on screen at a certain time, having Scenic dispatch events avoids
   problems where a view changes size, location or disappears between the time
