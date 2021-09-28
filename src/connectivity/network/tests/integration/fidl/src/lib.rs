@@ -43,9 +43,11 @@ use test_case::test_case;
 async fn set_interface_status_unknown_interface() {
     let name = "set_interface_status";
     let sandbox = netemul::TestSandbox::new().expect("create sandbox");
-    let (realm, netstack) = sandbox
-        .new_netstack::<Netstack2, fidl_fuchsia_netstack::NetstackMarker, _>(name)
-        .expect("create realm");
+
+    let realm = sandbox.create_netstack_realm::<Netstack2, _>(name).expect("create realm");
+    let netstack = realm
+        .connect_to_protocol::<fidl_fuchsia_netstack::NetstackMarker>()
+        .expect("connect to protocol");
 
     let interface_state = realm
         .connect_to_protocol::<fidl_fuchsia_net_interfaces::StateMarker>()
@@ -75,11 +77,12 @@ async fn set_interface_status_unknown_interface() {
 async fn add_ethernet_device() {
     let name = "add_ethernet_device";
     let sandbox = netemul::TestSandbox::new().expect("create sandbox");
-    let (realm, netstack, device) = sandbox
-        .new_netstack_and_device::<Netstack2, netemul::Ethernet, fidl_fuchsia_netstack::NetstackMarker, _>(
-            name,
-        )
-        .await.expect("create realm");
+    let realm = sandbox.create_netstack_realm::<Netstack2, _>(name).expect("create realm");
+    let netstack = realm
+        .connect_to_protocol::<fidl_fuchsia_netstack::NetstackMarker>()
+        .expect("connect to protocol");
+    let device =
+        sandbox.create_endpoint::<netemul::Ethernet, _>(name).await.expect("create endpoint");
 
     // We're testing add_ethernet_device (netstack.fidl), which
     // does not have a network device entry point.
@@ -132,11 +135,12 @@ async fn add_ethernet_device() {
 #[fuchsia_async::run_singlethreaded(test)]
 async fn test_no_duplicate_interface_names() {
     let sandbox = netemul::TestSandbox::new().expect("create sandbox");
-    let (realm, stack) = sandbox
-        .new_netstack::<Netstack2, fidl_fuchsia_net_stack::StackMarker, _>(
-            "no_duplicate_interface_names",
-        )
+    let realm = sandbox
+        .create_netstack_realm::<Netstack2, _>("no_duplicate_interface_names")
         .expect("create realm");
+    let stack = realm
+        .connect_to_protocol::<fidl_fuchsia_net_stack::StackMarker>()
+        .expect("connect to protocol");
     let netstack = realm
         .connect_to_protocol::<fidl_fuchsia_netstack::NetstackMarker>()
         .expect("connect to protocol");
@@ -215,12 +219,12 @@ async fn test_no_duplicate_interface_names() {
 #[variants_test]
 async fn add_ethernet_interface<N: Netstack>(name: &str) {
     let sandbox = netemul::TestSandbox::new().expect("create sandbox");
-    let (realm, stack, device) = sandbox
-        .new_netstack_and_device::<N, netemul::Ethernet, fidl_fuchsia_net_stack::StackMarker, _>(
-            name,
-        )
-        .await
-        .expect("create realm");
+    let realm = sandbox.create_netstack_realm::<N, _>(name).expect("create realm");
+    let stack = realm
+        .connect_to_protocol::<fidl_fuchsia_net_stack::StackMarker>()
+        .expect("connect to protocol");
+    let device =
+        sandbox.create_endpoint::<netemul::Ethernet, _>(name).await.expect("create endpoint");
 
     let id = device.add_to_stack(&realm).await.expect("add device");
 
@@ -243,12 +247,12 @@ async fn add_ethernet_interface<N: Netstack>(name: &str) {
 #[variants_test]
 async fn add_del_interface_address<N: Netstack>(name: &str) {
     let sandbox = netemul::TestSandbox::new().expect("create sandbox");
-    let (realm, stack, device) = sandbox
-        .new_netstack_and_device::<N, netemul::Ethernet, fidl_fuchsia_net_stack::StackMarker, _>(
-            name,
-        )
-        .await
-        .expect("create realm");
+    let realm = sandbox.create_netstack_realm::<N, _>(name).expect("create realm");
+    let stack = realm
+        .connect_to_protocol::<fidl_fuchsia_net_stack::StackMarker>()
+        .expect("connect to protocol");
+    let device =
+        sandbox.create_endpoint::<netemul::Ethernet, _>(name).await.expect("create endpoint");
 
     let id = device.add_to_stack(&realm).await.expect("add device");
 
@@ -344,9 +348,10 @@ async fn set_remove_interface_address_errors() {
     let name = "set_remove_interface_address_errors";
 
     let sandbox = netemul::TestSandbox::new().expect("create sandbox");
-    let (realm, netstack) = sandbox
-        .new_netstack::<Netstack2, fidl_fuchsia_netstack::NetstackMarker, _>(name)
-        .expect("create realm");
+    let realm = sandbox.create_netstack_realm::<Netstack2, _>(name).expect("create realm");
+    let netstack = realm
+        .connect_to_protocol::<fidl_fuchsia_netstack::NetstackMarker>()
+        .expect("connect to protocol");
 
     let interface_state = realm
         .connect_to_protocol::<fidl_fuchsia_net_interfaces::StateMarker>()
@@ -484,9 +489,10 @@ async fn test_log_packets() {
 #[variants_test]
 async fn get_interface_info_not_found<N: Netstack>(name: &str) {
     let sandbox = netemul::TestSandbox::new().expect("create sandbox");
-    let (_realm, stack) = sandbox
-        .new_netstack::<N, fidl_fuchsia_net_stack::StackMarker, _>(name)
-        .expect("create realm");
+    let realm = sandbox.create_netstack_realm::<N, _>(name).expect("create realm");
+    let stack = realm
+        .connect_to_protocol::<fidl_fuchsia_net_stack::StackMarker>()
+        .expect("connect to protocol");
 
     let interfaces = stack.list_interfaces().await.expect("list interfaces");
     let max_id = interfaces.iter().map(|interface| interface.id).max().unwrap_or(0);
@@ -499,9 +505,10 @@ async fn disable_interface_loopback() {
     let name = "disable_interface_loopback";
 
     let sandbox = netemul::TestSandbox::new().expect("create sandbox");
-    let (realm, stack) = sandbox
-        .new_netstack::<Netstack2, fidl_fuchsia_net_stack::StackMarker, _>(name)
-        .expect("create realm");
+    let realm = sandbox.create_netstack_realm::<Netstack2, _>(name).expect("create realm");
+    let stack = realm
+        .connect_to_protocol::<fidl_fuchsia_net_stack::StackMarker>()
+        .expect("connect to protocol");
 
     let interface_state = realm
         .connect_to_protocol::<fidl_fuchsia_net_interfaces::StateMarker>()

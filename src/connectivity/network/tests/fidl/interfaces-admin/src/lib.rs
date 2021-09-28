@@ -49,9 +49,7 @@ async fn add_address_errors() {
     let name = "interfaces_admin_add_address_errors";
 
     let sandbox = netemul::TestSandbox::new().expect("create sandbox");
-    let (realm, _) = sandbox
-        .new_netstack::<Netstack2, fidl_fuchsia_net_stack::StackMarker, _>(name)
-        .expect("new netstack");
+    let realm = sandbox.create_netstack_realm::<Netstack2, _>(name).expect("create realm");
 
     let interface_state = realm
         .connect_to_protocol::<fidl_fuchsia_net_interfaces::StateMarker>()
@@ -214,10 +212,11 @@ async fn add_address_errors() {
 #[variants_test]
 async fn add_address_removal<E: netemul::Endpoint>(name: &str) {
     let sandbox = netemul::TestSandbox::new().expect("new sandbox");
-    let (realm, stack, device) = sandbox
-        .new_netstack_and_device::<Netstack2, E, fidl_fuchsia_net_stack::StackMarker, _>(name)
-        .await
-        .expect("create realm");
+    let realm = sandbox.create_netstack_realm::<Netstack2, _>(name).expect("create realm");
+    let stack = realm
+        .connect_to_protocol::<fidl_fuchsia_net_stack::StackMarker>()
+        .expect("connect to protocol");
+    let device = sandbox.create_endpoint::<E, _>(name).await.expect("create endpoint");
     let interface = device.into_interface_in_realm(&realm).await.expect("add endpoint to Netstack");
     let id = interface.id();
 
@@ -303,10 +302,8 @@ async fn add_address_removal<E: netemul::Endpoint>(name: &str) {
 #[variants_test]
 async fn add_address_offline<E: netemul::Endpoint>(name: &str) {
     let sandbox = netemul::TestSandbox::new().expect("new sandbox");
-    let (realm, _, device) = sandbox
-        .new_netstack_and_device::<Netstack2, E, fidl_fuchsia_net_stack::StackMarker, _>(name)
-        .await
-        .expect("create netstack realm");
+    let realm = sandbox.create_netstack_realm::<Netstack2, _>(name).expect("create realm");
+    let device = sandbox.create_endpoint::<E, _>(name).await.expect("create endpoint");
     let interface = device.into_interface_in_realm(&realm).await.expect("add endpoint to Netstack");
     let id = interface.id();
 
@@ -361,9 +358,7 @@ async fn add_address_success() {
     let name = "interfaces_admin_add_address_success";
 
     let sandbox = netemul::TestSandbox::new().expect("new sandbox");
-    let (realm, _) = sandbox
-        .new_netstack::<Netstack2, fidl_fuchsia_net_stack::StackMarker, _>(name)
-        .expect("new netstack");
+    let realm = sandbox.create_netstack_realm::<Netstack2, _>(name).expect("create realm");
 
     let interface_state = realm
         .connect_to_protocol::<fidl_fuchsia_net_interfaces::StateMarker>()

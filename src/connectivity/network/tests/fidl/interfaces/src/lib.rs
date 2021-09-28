@@ -27,9 +27,10 @@ async fn watcher_existing<N: Netstack>(name: &str) {
     // Existing events only.
 
     let sandbox = netemul::TestSandbox::new().expect("create sandbox");
-    let (realm, stack) = sandbox
-        .new_netstack::<N, fidl_fuchsia_net_stack::StackMarker, _>(name)
-        .expect("create realm");
+    let realm = sandbox.create_netstack_realm::<N, _>(name).expect("create realm");
+    let stack = realm
+        .connect_to_protocol::<fidl_fuchsia_net_stack::StackMarker>()
+        .expect("connect to protocol");
 
     #[derive(Clone, Copy, Debug, PartialEq, Eq)]
     enum Expectation {
@@ -254,10 +255,11 @@ async fn watcher_after_state_closed<N: Netstack>(name: &str) {
 #[variants_test]
 async fn test_add_remove_interface<E: netemul::Endpoint>(name: &str) {
     let sandbox = netemul::TestSandbox::new().expect("create sandbox");
-    let (realm, stack, device) = sandbox
-        .new_netstack_and_device::<Netstack2, E, fidl_fuchsia_net_stack::StackMarker, _>(name)
-        .await
-        .expect("create realm");
+    let realm = sandbox.create_netstack_realm::<Netstack2, _>(name).expect("create realm");
+    let stack = realm
+        .connect_to_protocol::<fidl_fuchsia_net_stack::StackMarker>()
+        .expect("connect to protocol");
+    let device = sandbox.create_endpoint::<E, _>(name).await.expect("create endpoint");
 
     let id = device.add_to_stack(&realm).await.expect("add device");
 
@@ -298,10 +300,11 @@ async fn test_add_remove_interface<E: netemul::Endpoint>(name: &str) {
 /// if `enabled` is `true`, enables the interface before closing the device.
 async fn test_close_interface<E: netemul::Endpoint>(enabled: bool, name: &str) {
     let sandbox = netemul::TestSandbox::new().expect("create sandbox");
-    let (realm, stack, device) = sandbox
-        .new_netstack_and_device::<Netstack2, E, fidl_fuchsia_net_stack::StackMarker, _>(name)
-        .await
-        .expect("create realm");
+    let realm = sandbox.create_netstack_realm::<Netstack2, _>(name).expect("create realm");
+    let stack = realm
+        .connect_to_protocol::<fidl_fuchsia_net_stack::StackMarker>()
+        .expect("connect to protocol");
+    let device = sandbox.create_endpoint::<E, _>(name).await.expect("create endpoint");
 
     let id = device.add_to_stack(&realm).await.expect("add device");
 
@@ -663,9 +666,11 @@ async fn test_watcher_race() {
 #[fuchsia_async::run_singlethreaded(test)]
 async fn test_watcher() {
     let sandbox = netemul::TestSandbox::new().expect("create sandbox");
-    let (realm, stack) = sandbox
-        .new_netstack::<Netstack2, fidl_fuchsia_net_stack::StackMarker, _>("interfaces_watcher")
-        .expect("create realm");
+    let realm =
+        sandbox.create_netstack_realm::<Netstack2, _>("test_watcher").expect("create realm");
+    let stack = realm
+        .connect_to_protocol::<fidl_fuchsia_net_stack::StackMarker>()
+        .expect("connect to protocol");
 
     let interface_state = realm
         .connect_to_protocol::<fidl_fuchsia_net_interfaces::StateMarker>()

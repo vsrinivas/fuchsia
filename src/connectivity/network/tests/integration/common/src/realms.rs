@@ -5,14 +5,14 @@
 //! Provides utilities for test realms.
 
 use {
-    anyhow::Context as _, async_trait::async_trait,
-    fidl::endpoints::DiscoverableProtocolMarker as _, fidl_fuchsia_net_debug as fnet_debug,
-    fidl_fuchsia_net_dhcp as fnet_dhcp, fidl_fuchsia_net_dhcpv6 as fnet_dhcpv6,
-    fidl_fuchsia_net_filter as fnet_filter, fidl_fuchsia_net_interfaces as fnet_interfaces,
-    fidl_fuchsia_net_name as fnet_name, fidl_fuchsia_net_neighbor as fnet_neighbor,
-    fidl_fuchsia_net_routes as fnet_routes, fidl_fuchsia_net_stack as fnet_stack,
-    fidl_fuchsia_netemul as fnetemul, fidl_fuchsia_netstack as fnetstack,
-    fidl_fuchsia_posix_socket as fposix_socket, fidl_fuchsia_stash as fstash,
+    async_trait::async_trait, fidl::endpoints::DiscoverableProtocolMarker as _,
+    fidl_fuchsia_net_debug as fnet_debug, fidl_fuchsia_net_dhcp as fnet_dhcp,
+    fidl_fuchsia_net_dhcpv6 as fnet_dhcpv6, fidl_fuchsia_net_filter as fnet_filter,
+    fidl_fuchsia_net_interfaces as fnet_interfaces, fidl_fuchsia_net_name as fnet_name,
+    fidl_fuchsia_net_neighbor as fnet_neighbor, fidl_fuchsia_net_routes as fnet_routes,
+    fidl_fuchsia_net_stack as fnet_stack, fidl_fuchsia_netemul as fnetemul,
+    fidl_fuchsia_netstack as fnetstack, fidl_fuchsia_posix_socket as fposix_socket,
+    fidl_fuchsia_stash as fstash,
 };
 
 use crate::Result;
@@ -370,26 +370,6 @@ pub trait TestSandboxExt {
         N: Netstack,
         I: IntoIterator,
         I::Item: Into<fnetemul::ChildDef>;
-
-    /// Helper function to create a new Netstack realm and connect to a
-    /// netstack service on it.
-    fn new_netstack<N, P, S>(&self, name: S) -> Result<(netemul::TestRealm<'_>, P::Proxy)>
-    where
-        N: Netstack,
-        P: fidl::endpoints::DiscoverableProtocolMarker,
-        S: Into<String>;
-
-    /// Helper function to create a new Netstack realm and a new unattached
-    /// endpoint.
-    async fn new_netstack_and_device<N, E, P, S>(
-        &self,
-        name: S,
-    ) -> Result<(netemul::TestRealm<'_>, P::Proxy, netemul::TestEndpoint<'_>)>
-    where
-        N: Netstack,
-        E: netemul::Endpoint,
-        P: fidl::endpoints::DiscoverableProtocolMarker,
-        S: Into<String> + Copy + Send;
 }
 
 #[async_trait]
@@ -423,38 +403,5 @@ impl TestSandboxExt for netemul::TestSandbox {
                 .map(fnetemul::ChildDef::from)
                 .chain(children.into_iter().map(Into::into)),
         )
-    }
-
-    /// Helper function to create a new Netstack realm and connect to a netstack
-    /// service on it.
-    fn new_netstack<N, P, S>(&self, name: S) -> Result<(netemul::TestRealm<'_>, P::Proxy)>
-    where
-        N: Netstack,
-        P: fidl::endpoints::DiscoverableProtocolMarker,
-        S: Into<String>,
-    {
-        let realm =
-            self.create_netstack_realm::<N, _>(name).context("failed to create test realm")?;
-        let netstack_proxy =
-            realm.connect_to_protocol::<P>().context("failed to connect to netstack")?;
-        Ok((realm, netstack_proxy))
-    }
-
-    /// Helper function to create a new Netstack realm and a new unattached
-    /// endpoint.
-    async fn new_netstack_and_device<N, E, P, S>(
-        &self,
-        name: S,
-    ) -> Result<(netemul::TestRealm<'_>, P::Proxy, netemul::TestEndpoint<'_>)>
-    where
-        N: Netstack,
-        E: netemul::Endpoint,
-        P: fidl::endpoints::DiscoverableProtocolMarker,
-        S: Into<String> + Copy + Send,
-    {
-        let (realm, stack) = self.new_netstack::<N, P, _>(name)?;
-        let endpoint =
-            self.create_endpoint::<E, _>(name).await.context("failed to create endpoint")?;
-        Ok((realm, stack, endpoint))
     }
 }

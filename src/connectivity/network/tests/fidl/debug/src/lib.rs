@@ -13,9 +13,7 @@ async fn get_admin_unknown() {
     let name = "debug_interfaces_get_admin_unknown";
 
     let sandbox = netemul::TestSandbox::new().expect("create sandbox");
-    let (realm, _) = sandbox
-        .new_netstack::<Netstack2, fidl_fuchsia_net_stack::StackMarker, _>(name)
-        .expect("create realm");
+    let realm = sandbox.create_netstack_realm::<Netstack2, _>(name).expect("create realm");
 
     let interface_state = realm
         .connect_to_protocol::<fidl_fuchsia_net_interfaces::StateMarker>()
