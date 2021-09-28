@@ -188,33 +188,33 @@ log3 for Example.Test3
         "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/passing-test-example.cm",
         directory::Outcome::Passed,
     )
-    .with_artifact("syslog.txt", directory::ArtifactType::Syslog, "")
+    .with_artifact(directory::ArtifactType::Syslog, "syslog.txt".into(), "")
     .with_case(
         ExpectedTestCase::new("Example.Test1", directory::Outcome::Passed)
             .with_artifact(
-                "stdout.txt",
                 directory::ArtifactType::Stdout,
+                "stdout.txt".into(),
                 "log1 for Example.Test1\nlog2 for Example.Test1\nlog3 for Example.Test1\n",
             )
-            .with_artifact("stderr.txt", directory::ArtifactType::Stderr, ""),
+            .with_artifact(directory::ArtifactType::Stderr, "stderr.txt".into(), ""),
     )
     .with_case(
         ExpectedTestCase::new("Example.Test2", directory::Outcome::Passed)
             .with_artifact(
-                "stdout.txt",
                 directory::ArtifactType::Stdout,
+                "stdout.txt".into(),
                 "log1 for Example.Test2\nlog2 for Example.Test2\nlog3 for Example.Test2\n",
             )
-            .with_artifact("stderr.txt", directory::ArtifactType::Stderr, ""),
+            .with_artifact(directory::ArtifactType::Stderr, "stderr.txt".into(), ""),
     )
     .with_case(
         ExpectedTestCase::new("Example.Test3", directory::Outcome::Passed)
             .with_artifact(
-                "stdout.txt",
                 directory::ArtifactType::Stdout,
+                "stdout.txt".into(),
                 "log1 for Example.Test3\nlog2 for Example.Test3\nlog3 for Example.Test3\n",
             )
-            .with_artifact("stderr.txt", directory::ArtifactType::Stderr, ""),
+            .with_artifact(directory::ArtifactType::Stderr, "stderr.txt".into(), ""),
     )];
 
     let (_run_result, suite_results) = directory::testing::parse_json_in_output(output_dir.path());
@@ -276,39 +276,39 @@ stderr msg2 for Example.Test3
         "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/test-with-stderr.cm",
         directory::Outcome::Passed,
     )
-    .with_artifact("syslog.txt", directory::ArtifactType::Syslog, "")
+    .with_artifact(directory::ArtifactType::Syslog, "syslog.txt".into(), "")
     .with_case(
         ExpectedTestCase::new("Example.Test1", directory::Outcome::Passed)
             .with_artifact(
-                "stdout.txt",
                 directory::ArtifactType::Stdout,
+                "stdout.txt".into(),
                 "log1 for Example.Test1\nlog2 for Example.Test1\nlog3 for Example.Test1\n",
             )
             .with_artifact(
-                "stderr.txt",
                 directory::ArtifactType::Stderr,
+                "stderr.txt".into(),
                 "stderr msg1 for Example.Test1\nstderr msg2 for Example.Test1\n",
             ),
     )
     .with_case(
         ExpectedTestCase::new("Example.Test2", directory::Outcome::Passed)
             .with_artifact(
-                "stdout.txt",
                 directory::ArtifactType::Stdout,
+                "stdout.txt".into(),
                 "log1 for Example.Test2\nlog2 for Example.Test2\nlog3 for Example.Test2\n",
             )
-            .with_artifact("stderr.txt", directory::ArtifactType::Stderr, ""),
+            .with_artifact(directory::ArtifactType::Stderr, "stderr.txt".into(), ""),
     )
     .with_case(
         ExpectedTestCase::new("Example.Test3", directory::Outcome::Passed)
             .with_artifact(
-                "stdout.txt",
                 directory::ArtifactType::Stdout,
+                "stdout.txt".into(),
                 "log1 for Example.Test3\nlog2 for Example.Test3\nlog3 for Example.Test3\n",
             )
             .with_artifact(
-                "stderr.txt",
                 directory::ArtifactType::Stderr,
+                "stderr.txt".into(),
                 "stderr msg1 for Example.Test3\nstderr msg2 for Example.Test3\n",
             ),
     )];
@@ -992,7 +992,7 @@ async fn test_stdout_to_directory() {
         "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/stdout_ansi_test.cm",
         directory::Outcome::Passed,
     )
-    .with_matching_artifact("syslog.txt", directory::ArtifactType::Syslog, |logs| {
+    .with_matching_artifact(directory::ArtifactType::Syslog, "syslog.txt".into(), |logs| {
         assert_output!(
             logs.as_bytes(),
             "\n[TIMESTAMP][PID][TID][<root>][log_ansi_test] INFO: \u{1b}[31mred log\u{1b}[0m"
@@ -1001,8 +1001,8 @@ async fn test_stdout_to_directory() {
     .with_case(
         ExpectedTestCase::new("stdout_ansi_test", directory::Outcome::Passed)
             .with_artifact(
-                "stdout.txt",
                 directory::ArtifactType::Stdout,
+                "stdout.txt".into(),
                 "\u{1b}[31mred stdout\u{1b}[0m\n",
             )
             .with_no_run_duration()
@@ -1010,7 +1010,7 @@ async fn test_stdout_to_directory() {
     )
     .with_case(
         ExpectedTestCase::new("log_ansi_test", directory::Outcome::Passed)
-            .with_artifact("stdout.txt", directory::ArtifactType::Stdout, "")
+            .with_artifact(directory::ArtifactType::Stdout, "stdout.txt".into(), "")
             .with_no_run_duration()
             .with_any_start_time(),
     )
@@ -1063,11 +1063,11 @@ async fn test_syslog_to_directory() {
     )
     .with_case(
         ExpectedTestCase::new("log_and_exit", directory::Outcome::Passed)
-            .with_artifact("stdout.txt", directory::ArtifactType::Stdout, "")
+            .with_artifact(directory::ArtifactType::Stdout, "stdout.txt".into(), "")
             .with_any_start_time()
             .with_no_run_duration(),
     )
-    .with_matching_artifact("syslog.txt", directory::ArtifactType::Syslog, |actual| {
+    .with_matching_artifact(directory::ArtifactType::Syslog, "syslog.txt".into(), |actual| {
         assert_output!(actual.as_bytes(), EXPECTED_SYSLOG);
     })
     .with_any_start_time()

@@ -88,7 +88,7 @@ pub struct TestCaseResultV0 {
 }
 
 /// Metadata associated with an artifact.
-#[derive(Deserialize, Serialize, PartialEq, Eq, Debug)]
+#[derive(Deserialize, Serialize, PartialEq, Eq, Debug, Clone, Hash)]
 pub struct ArtifactMetadataV0 {
     /// The type of the artifact.
     pub artifact_type: ArtifactType,
@@ -98,7 +98,7 @@ pub struct ArtifactMetadataV0 {
 }
 
 /// Types of artifacts known to the test framework.
-#[derive(Deserialize, Serialize, PartialEq, Eq, Debug)]
+#[derive(Deserialize, Serialize, PartialEq, Eq, Debug, Clone, Hash)]
 #[serde(rename_all = "UPPERCASE")]
 pub enum ArtifactType {
     Syslog,

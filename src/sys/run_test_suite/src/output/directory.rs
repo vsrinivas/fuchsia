@@ -459,8 +459,8 @@ mod test {
             dir.path(),
             &run_result,
             &ExpectedTestRun::new(directory::Outcome::Passed).with_artifact(
-                STDOUT_FILE,
                 directory::ArtifactType::Stdout,
+                STDOUT_FILE.into(),
                 "stdout from run\n",
             ),
         );
@@ -470,28 +470,28 @@ mod test {
             &vec![ExpectedSuite::new("suite-1", directory::Outcome::Passed)
                 .with_case(
                     ExpectedTestCase::new("case-1-0", directory::Outcome::Passed).with_artifact(
-                        STDOUT_FILE,
                         directory::ArtifactType::Stdout,
+                        STDOUT_FILE.into(),
                         "stdout from case 0\n",
                     ),
                 )
                 .with_case(
                     ExpectedTestCase::new("case-1-1", directory::Outcome::Passed).with_artifact(
-                        STDOUT_FILE,
                         directory::ArtifactType::Stdout,
+                        STDOUT_FILE.into(),
                         "stdout from case 1\n",
                     ),
                 )
                 .with_case(
                     ExpectedTestCase::new("case-1-2", directory::Outcome::Passed).with_artifact(
-                        STDOUT_FILE,
                         directory::ArtifactType::Stdout,
+                        STDOUT_FILE.into(),
                         "stdout from case 2\n",
                     ),
                 )
                 .with_artifact(
-                    STDOUT_FILE,
                     directory::ArtifactType::Stdout,
+                    STDOUT_FILE.into(),
                     "stdout from suite\n",
                 )],
         );
@@ -537,8 +537,8 @@ mod test {
         // names of the suites are identical, so we rely on the outcome to differentiate them.
         let expected_success_suite = ExpectedSuite::new("suite", directory::Outcome::Passed)
             .with_artifact(
-                STDOUT_FILE,
                 directory::ArtifactType::Stdout,
+                STDOUT_FILE.into(),
                 "stdout from passed suite\n",
             );
         let expected_failed_suite = ExpectedSuite::new("suite", directory::Outcome::Failed);
