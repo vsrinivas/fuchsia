@@ -20,6 +20,7 @@
 #include <set>
 #include <unordered_map>
 
+#include "lib/async/dispatcher.h"
 #include "src/camera/bin/device_watcher/device_instance.h"
 
 using ClientId = uint64_t;
@@ -35,10 +36,8 @@ using DevicesMap = std::unordered_map<PersistentDeviceId, UniqueDevice>;
 
 class DeviceWatcherImpl {
  public:
-  DeviceWatcherImpl();
-  ~DeviceWatcherImpl();
   static fpromise::result<std::unique_ptr<DeviceWatcherImpl>, zx_status_t> Create(
-      fuchsia::sys::LauncherHandle launcher);
+      fuchsia::sys::LauncherHandle launcher, async_dispatcher_t* dispatcher);
   fpromise::result<PersistentDeviceId, zx_status_t> AddDevice(
       fuchsia::hardware::camera::DeviceHandle camera);
   void UpdateClients();
@@ -73,7 +72,7 @@ class DeviceWatcherImpl {
     std::optional<std::set<TransientDeviceId>> last_sent_ids_;
   };
 
-  async::Loop loop_;
+  async_dispatcher_t* dispatcher_;
   fuchsia::sys::LauncherPtr launcher_;
   TransientDeviceId device_id_next_ = 1;
   DevicesMap devices_;

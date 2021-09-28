@@ -134,8 +134,8 @@ TEST_F(DeviceWatcherTest, InstanceLaunches) {
   fuchsia::sys::LauncherPtr launcher;
   fake_launcher.GetHandler()(launcher.NewRequest());
   bool component_unavailable_received = false;
-  auto result =
-      DeviceInstance::Create(launcher, nullptr, [&]() { component_unavailable_received = true; });
+  auto result = DeviceInstance::Create(
+      launcher, nullptr, [&]() { component_unavailable_received = true; }, dispatcher());
   ASSERT_TRUE(result.is_ok());
   auto instance = result.take_value();
   // The instance should attempt to launch the component. Then, upon seeing the controller request

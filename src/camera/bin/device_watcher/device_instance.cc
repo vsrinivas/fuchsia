@@ -20,16 +20,15 @@ constexpr auto kCameraDeviceUrl = "fuchsia-pkg://fuchsia.com/camera_device#meta/
 // because it is not marked as [Discoverable].
 constexpr auto kCameraPublishedServiceName = "PublishedCameraService";
 
-DeviceInstance::DeviceInstance() : loop_(&kAsyncLoopConfigNoAttachToCurrentThread) {}
-
 fpromise::result<std::unique_ptr<DeviceInstance>, zx_status_t> DeviceInstance::Create(
     const fuchsia::sys::LauncherPtr& launcher,
     fidl::InterfaceHandle<fuchsia::hardware::camera::Device> camera,
-    fit::closure on_component_unavailable) {
+    fit::closure on_component_unavailable, async_dispatcher_t* dispatcher) {
   auto instance = std::make_unique<DeviceInstance>();
+  instance->dispatcher_ = dispatcher;
 
   // Bind the camera channel.
-  zx_status_t status = instance->camera_.Bind(std::move(camera), instance->loop_.dispatcher());
+  zx_status_t status = instance->camera_.Bind(std::move(camera), instance->dispatcher_);
   if (status != ZX_OK) {
     FX_PLOGS(ERROR, status);
     return fpromise::error(status);
@@ -68,8 +67,8 @@ fpromise::result<std::unique_ptr<DeviceInstance>, zx_status_t> DeviceInstance::C
   launch_info.directory_request = std::move(directory_request);
   launch_info.additional_services = std::move(additional_services);
   launch_info.additional_services->host_directory = injected_services_dir_channel.TakeChannel();
-  launcher->CreateComponent(std::move(launch_info), instance->component_controller_.NewRequest(
-                                                        instance->loop_.dispatcher()));
+  launcher->CreateComponent(std::move(launch_info),
+                            instance->component_controller_.NewRequest(instance->dispatcher_));
 
   // Bind component event handlers.
   instance->component_controller_.events().OnDirectoryReady =
@@ -93,9 +92,6 @@ fpromise::result<std::unique_ptr<DeviceInstance>, zx_status_t> DeviceInstance::C
     FX_PLOGS(WARNING, status) << "Camera device server disconnected.";
     instance->camera_ = nullptr;
   });
-
-  // Start the loop.
-  ZX_ASSERT(instance->loop_.StartThread("Camera Device Instance") == ZX_OK);
 
   return fpromise::ok(std::move(instance));
 }

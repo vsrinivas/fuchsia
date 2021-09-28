@@ -22,17 +22,16 @@
 // Represents a launched device process.
 class DeviceInstance {
  public:
-  DeviceInstance();
   static fpromise::result<std::unique_ptr<DeviceInstance>, zx_status_t> Create(
       const fuchsia::sys::LauncherPtr& launcher, fuchsia::hardware::camera::DeviceHandle camera,
-      fit::closure on_component_unavailable);
+      fit::closure on_component_unavailable, async_dispatcher_t* dispatcher);
   void OnCameraRequested(fidl::InterfaceRequest<fuchsia::camera3::Device> request);
 
  private:
   void OnServicesReady();
   void OnControllerRequested(fidl::InterfaceRequest<fuchsia::camera2::hal::Controller> request);
 
-  async::Loop loop_;
+  async_dispatcher_t* dispatcher_;
   fuchsia::hardware::camera::DevicePtr camera_;
   vfs::PseudoDir injected_services_dir_;
   std::shared_ptr<sys::ServiceDirectory> published_services_;

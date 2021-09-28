@@ -70,7 +70,7 @@ int main(int argc, char* argv[]) {
     return EXIT_FAILURE;
   }
 
-  auto result = DeviceWatcherImpl::Create(std::move(launcher));
+  auto result = DeviceWatcherImpl::Create(std::move(launcher), loop.dispatcher());
   if (result.is_error()) {
     FX_PLOGS(FATAL, result.error());
     return EXIT_FAILURE;

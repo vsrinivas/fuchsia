@@ -16,21 +16,13 @@
 #include <algorithm>
 #include <limits>
 
-DeviceWatcherImpl::DeviceWatcherImpl() : loop_(&kAsyncLoopConfigNoAttachToCurrentThread) {}
-
-DeviceWatcherImpl::~DeviceWatcherImpl() { loop_.Shutdown(); }
-
 fpromise::result<std::unique_ptr<DeviceWatcherImpl>, zx_status_t> DeviceWatcherImpl::Create(
-    fuchsia::sys::LauncherHandle launcher) {
+    fuchsia::sys::LauncherHandle launcher, async_dispatcher_t* dispatcher) {
   auto server = std::make_unique<DeviceWatcherImpl>();
 
-  ZX_ASSERT(server->launcher_.Bind(std::move(launcher), server->loop_.dispatcher()) == ZX_OK);
+  server->dispatcher_ = dispatcher;
 
-  zx_status_t status = server->loop_.StartThread("DeviceWatcherImpl");
-  if (status != ZX_OK) {
-    FX_PLOGS(ERROR, status);
-    return fpromise::error(status);
-  }
+  ZX_ASSERT(server->launcher_.Bind(std::move(launcher), server->dispatcher_) == ZX_OK);
 
   return fpromise::ok(std::move(server));
 }
@@ -40,43 +32,11 @@ fpromise::result<PersistentDeviceId, zx_status_t> DeviceWatcherImpl::AddDevice(
   FX_LOGS(DEBUG) << "AddDevice(...)";
   fuchsia::hardware::camera::DeviceSyncPtr dev;
   dev.Bind(std::move(camera));
-  fuchsia::camera2::hal::ControllerPtr ctrl;
-  ZX_ASSERT(dev->GetChannel2(ctrl.NewRequest(loop_.dispatcher())) == ZX_OK);
-
-  // Try to get the device info, waiting for either the info to be returned, or for an error.
-  zx::event event;
-  ZX_ASSERT(zx::event::create(0, &event) == ZX_OK);
-  constexpr auto kErrorSignal = ZX_USER_SIGNAL_0;
-  constexpr auto kInfoSignal = ZX_USER_SIGNAL_1;
-
-  zx_status_t status_return;
-  ctrl.set_error_handler([&](zx_status_t status) {
-    FX_PLOGS(WARNING, status);
-    status_return = status;
-    event.signal(0, kErrorSignal);
-  });
+  fuchsia::camera2::hal::ControllerSyncPtr ctrl;
+  ZX_ASSERT(dev->GetChannel2(ctrl.NewRequest()) == ZX_OK);
 
   fuchsia::camera2::DeviceInfo info_return;
-  async::PostTask(loop_.dispatcher(), [&] {
-    ctrl->GetDeviceInfo([&](fuchsia::camera2::DeviceInfo info) {
-      info_return = std::move(info);
-      event.signal(0, kInfoSignal);
-    });
-  });
-
-  zx_signals_t signaled{};
-  zx_status_t status = event.wait_one(kErrorSignal | kInfoSignal, zx::time::infinite(), &signaled);
-  if (status != ZX_OK) {
-    FX_PLOGS(ERROR, status);
-    return fpromise::error(status);
-  }
-
-  if (signaled & kErrorSignal) {
-    FX_PLOGS(WARNING, status_return);
-    return fpromise::error(status_return);
-  }
-
-  ZX_ASSERT(signaled & kInfoSignal);
+  ZX_ASSERT(ctrl->GetDeviceInfo(&info_return) == ZX_OK);
 
   if (!info_return.has_vendor_id() || !info_return.has_product_id()) {
     FX_LOGS(INFO) << "Controller missing vendor or product ID.";
@@ -91,21 +51,18 @@ fpromise::result<PersistentDeviceId, zx_status_t> DeviceWatcherImpl::AddDevice(
 
   // Close the controller handle and launch the instance.
   ctrl = nullptr;
-  auto result = DeviceInstance::Create(launcher_, dev.Unbind(), [this, persistent_id]() {
-    async::PostTask(loop_.dispatcher(), [this, persistent_id]() { devices_.erase(persistent_id); });
-  });
+  auto result = DeviceInstance::Create(
+      launcher_, dev.Unbind(), [this, persistent_id]() { devices_.erase(persistent_id); },
+      dispatcher_);
   if (result.is_error()) {
     FX_PLOGS(ERROR, result.error()) << "Failed to launch device instance.";
     return fpromise::error(result.error());
   }
   auto instance = result.take_value();
 
-  async::PostTask(
-      loop_.dispatcher(), [this, persistent_id, instance = std::move(instance)]() mutable {
-        devices_[persistent_id] = {.id = device_id_next_, .instance = std::move(instance)};
-        FX_LOGS(DEBUG) << "Added device " << persistent_id << " as device ID " << device_id_next_;
-        ++device_id_next_;
-      });
+  devices_[persistent_id] = {.id = device_id_next_, .instance = std::move(instance)};
+  FX_LOGS(DEBUG) << "Added device " << persistent_id << " as device ID " << device_id_next_;
+  ++device_id_next_;
 
   return fpromise::ok(persistent_id);
 }
@@ -118,11 +75,9 @@ void DeviceWatcherImpl::UpdateClients() {
       requests_.pop();
     }
   }
-  async::PostTask(loop_.dispatcher(), [this]() {
-    for (auto& client : clients_) {
-      client.second->UpdateDevices(devices_);
-    }
-  });
+  for (auto& client : clients_) {
+    client.second->UpdateDevices(devices_);
+  }
 }
 
 fidl::InterfaceRequestHandler<fuchsia::camera3::DeviceWatcher> DeviceWatcherImpl::GetHandler() {
@@ -135,16 +90,13 @@ void DeviceWatcherImpl::OnNewRequest(
     requests_.push(std::move(request));
     return;
   }
-  auto result = Client::Create(*this, client_id_next_, std::move(request), loop_.dispatcher());
+  auto result = Client::Create(*this, client_id_next_, std::move(request), dispatcher_);
   if (result.is_error()) {
     FX_PLOGS(ERROR, result.error());
     return;
   }
   auto client = result.take_value();
-  async::PostTask(loop_.dispatcher(),
-                  [this, client = std::move(client), id = client_id_next_]() mutable {
-                    clients_[id] = std::move(client);
-                  });
+  clients_[client_id_next_] = std::move(client);
   FX_LOGS(DEBUG) << "DeviceWatcher client " << client_id_next_ << " connected.";
   ++client_id_next_;
 }
@@ -168,9 +120,7 @@ DeviceWatcherImpl::Client::Create(DeviceWatcherImpl& watcher, ClientId id,
 
   client->binding_.set_error_handler([client = client.get()](zx_status_t status) {
     FX_PLOGS(DEBUG, status) << "DeviceWatcher client " << client->id_ << " disconnected.";
-    status = async::PostTask(client->watcher_.loop_.dispatcher(),
-                             [client] { client->watcher_.clients_.erase(client->id_); });
-    ZX_ASSERT(status == ZX_OK);
+    client->watcher_.clients_.erase(client->id_);
   });
 
   return fpromise::ok(std::move(client));
