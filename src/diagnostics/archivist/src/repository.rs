@@ -81,7 +81,7 @@ impl DataRepo {
                 return;
             }
         };
-        messages.sort_by_key(|m| m.metadata.timestamp);
+        messages.sort_by_key(|m| m.timestamp());
         for message in messages {
             container.ingest_message(message);
         }
@@ -577,9 +577,15 @@ impl MultiplexerBroker {
 #[cfg(test)]
 mod tests {
     use {
-        super::*, crate::events::types::ComponentIdentifier,
-        diagnostics_hierarchy::trie::TrieIterableNode, fidl_fuchsia_io::DirectoryMarker,
+        super::*,
+        crate::{events::types::ComponentIdentifier, logs::stored_message::StoredMessage},
+        diagnostics_hierarchy::trie::TrieIterableNode,
+        diagnostics_log_encoding::{
+            encode::Encoder, Argument, Record, Severity as StreamSeverity, Value,
+        },
+        fidl_fuchsia_io::DirectoryMarker,
         fuchsia_zircon as zx,
+        std::io::Cursor,
     };
 
     const TEST_URL: &'static str = "fuchsia-pkg://test";
@@ -836,5 +842,56 @@ mod tests {
             selectors::parse_selector("foo.cmx:root").expect("parse selector"),
         )]);
         assert_eq!(0, data_repo.read().fetch_inspect_data(&selectors, None).len());
+    }
+
+    #[fuchsia::test]
+    async fn data_repo_filters_logs_by_selectors() {
+        let repo = DataRepo::default();
+        let foo_container =
+            repo.write().get_log_container(ComponentIdentity::from_identifier_and_url(
+                &ComponentIdentifier::parse_from_moniker("./foo:0").unwrap(),
+                "fuchsia-pkg://foo",
+            ));
+        let bar_container =
+            repo.write().get_log_container(ComponentIdentity::from_identifier_and_url(
+                &ComponentIdentifier::parse_from_moniker("./bar:0").unwrap(),
+                "fuchsia-pkg://bar",
+            ));
+
+        foo_container.ingest_message(make_message("a", 1));
+        bar_container.ingest_message(make_message("b", 2));
+        foo_container.ingest_message(make_message("c", 3));
+
+        let stream = repo.logs_cursor(StreamMode::Snapshot, None);
+
+        let results =
+            stream.map(|value| value.msg().unwrap().to_string()).collect::<Vec<_>>().await;
+        assert_eq!(results, vec!["a".to_string(), "b".to_string(), "c".to_string()]);
+
+        let filtered_stream = repo.logs_cursor(
+            StreamMode::Snapshot,
+            Some(vec![selectors::parse_selector("foo:root").unwrap()]),
+        );
+
+        let results =
+            filtered_stream.map(|value| value.msg().unwrap().to_string()).collect::<Vec<_>>().await;
+        assert_eq!(results, vec!["a".to_string(), "c".to_string()]);
+    }
+
+    fn make_message(msg: &str, timestamp: i64) -> StoredMessage {
+        let record = Record {
+            timestamp,
+            severity: StreamSeverity::Debug,
+            arguments: vec![
+                Argument { name: "pid".to_string(), value: Value::UnsignedInt(1) },
+                Argument { name: "tid".to_string(), value: Value::UnsignedInt(2) },
+                Argument { name: "message".to_string(), value: Value::Text(msg.to_string()) },
+            ],
+        };
+        let mut buffer = Cursor::new(vec![0u8; 1024]);
+        let mut encoder = Encoder::new(&mut buffer);
+        encoder.write_record(&record).unwrap();
+        let encoded = &buffer.get_ref()[..buffer.position() as usize];
+        StoredMessage::structured(encoded, Default::default()).unwrap()
     }
 }

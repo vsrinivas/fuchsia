@@ -1,5 +1,3 @@
-use diagnostics_message::message::{Message, MonikerWithUrl};
-
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
@@ -24,6 +22,7 @@ use {
     cm_rust::{CapabilityName, ChildDecl, ComponentDecl, EventMode, NativeIntoFidl},
     cm_types::Url,
     fidl::endpoints::{self, Proxy, ServiceMarker},
+    diagnostics_message::message::{LoggerMessage, Message, MonikerWithUrl},
     fidl_fidl_examples_echo as echo, fidl_fuchsia_component_runner as fcrunner,
     fidl_fuchsia_io::{
         DirectoryMarker, DirectoryProxy, CLONE_FLAG_SAME_RIGHTS, MODE_TYPE_SERVICE,
@@ -36,6 +35,7 @@ use {
     futures::{channel::mpsc::Receiver, lock::Mutex, StreamExt, TryStreamExt},
     moniker::{AbsoluteMoniker, PartialChildMoniker},
     std::collections::HashSet,
+    std::convert::TryFrom,
     std::default::Default,
     std::path::Path,
     std::sync::Arc,
@@ -495,9 +495,9 @@ pub fn get_message_logged_to_socket(socket: zx::Socket) -> Option<String> {
                     moniker: "test-pkg/test-component.cmx".to_string(),
                     url: "fuchsia-pkg://fuchsia.com/test-pkg#meta/test-component.cm".to_string(),
                 },
-                &buffer[..read_len],
-            )
-            .expect("Couldn't decode message from buffer.");
+                LoggerMessage::try_from(&buffer[..read_len])
+                    .expect("Couldn't decode message from buffer."),
+            );
 
             (*msg).msg().map(String::from)
         }

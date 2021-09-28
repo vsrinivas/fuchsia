@@ -7,7 +7,7 @@
 use crate::{
     container::ComponentIdentity,
     events::types::ComponentIdentifier,
-    logs::{error::LogsError, message::MessageWithStats},
+    logs::{error::LogsError, message::MessageWithStats, stored_message::StoredMessage},
 };
 use async_trait::async_trait;
 use diagnostics_data::{BuilderArgs, LogsDataBuilder, Severity};
@@ -77,16 +77,16 @@ impl<K: DebugLog> DebugLogBridge<K> {
         DebugLogBridge { debug_log }
     }
 
-    async fn read_log(&mut self) -> Result<MessageWithStats, zx::Status> {
+    async fn read_log(&mut self) -> Result<StoredMessage, zx::Status> {
         loop {
             let record = self.debug_log.read().await?;
-            if let Some(message) = convert_debuglog_to_log_message(&record) {
-                return Ok(message);
+            if let Some(bytes) = StoredMessage::debuglog(record) {
+                return Ok(bytes);
             }
         }
     }
 
-    pub async fn existing_logs<'a>(&'a mut self) -> Result<Vec<MessageWithStats>, zx::Status> {
+    pub async fn existing_logs<'a>(&'a mut self) -> Result<Vec<StoredMessage>, zx::Status> {
         unfold(self, move |klogger| async move {
             match klogger.read_log().await {
                 Err(zx::Status::SHOULD_WAIT) => None,
@@ -97,7 +97,7 @@ impl<K: DebugLog> DebugLogBridge<K> {
         .await
     }
 
-    pub fn listen(self) -> impl Stream<Item = Result<MessageWithStats, zx::Status>> {
+    pub fn listen(self) -> impl Stream<Item = Result<StoredMessage, zx::Status>> {
         unfold((true, self), move |(mut is_readable, mut klogger)| async move {
             loop {
                 if !is_readable {
@@ -180,7 +180,7 @@ mod tests {
     use crate::logs::testing::*;
 
     use fidl_fuchsia_logger::LogMessage;
-    use futures::stream::TryStreamExt;
+    use futures::stream::{StreamExt, TryStreamExt};
 
     #[test]
     fn convert_debuglog_to_log_message_test() {
@@ -275,7 +275,13 @@ mod tests {
         let mut log_bridge = DebugLogBridge::create(debug_log);
 
         assert_eq!(
-            log_bridge.existing_logs().await.unwrap(),
+            log_bridge
+                .existing_logs()
+                .await
+                .unwrap()
+                .into_iter()
+                .map(|m| m.parse(&*KERNEL_IDENTITY).unwrap())
+                .collect::<Vec<_>>(),
             vec![MessageWithStats::from(
                 LogsDataBuilder::new(BuilderArgs {
                     timestamp_nanos: klog.record.timestamp.into(),
@@ -310,7 +316,8 @@ mod tests {
         debug_log.enqueue_read_fail(zx::Status::SHOULD_WAIT);
         debug_log.enqueue_read_entry(&TestDebugEntry::new("second test log".as_bytes()));
         let log_bridge = DebugLogBridge::create(debug_log);
-        let mut log_stream = Box::pin(log_bridge.listen());
+        let mut log_stream =
+            Box::pin(log_bridge.listen()).map(|r| r.unwrap().parse(&*KERNEL_IDENTITY));
         let log_message = log_stream.try_next().await.unwrap().unwrap();
         assert_eq!(log_message.msg().unwrap(), "test log");
         let log_message = log_stream.try_next().await.unwrap().unwrap();
@@ -325,7 +332,8 @@ mod tests {
         debug_log.enqueue_read_entry(&TestDebugEntry::new("test log".as_bytes()));
         let log_bridge = DebugLogBridge::create(debug_log);
         let mut log_stream = Box::pin(log_bridge.listen());
-        let log_message = log_stream.try_next().await.unwrap().unwrap();
+        let log_message =
+            log_stream.try_next().await.unwrap().unwrap().parse(&*KERNEL_IDENTITY).unwrap();
         assert_eq!(log_message.msg().unwrap(), "test log");
     }
 
@@ -349,7 +357,8 @@ mod tests {
         debug_log.enqueue_read_entry(&TestDebugEntry::new(long_log.as_bytes()));
 
         let log_bridge = DebugLogBridge::create(debug_log);
-        let mut log_stream = Box::pin(log_bridge.listen());
+        let mut log_stream =
+            Box::pin(log_bridge.listen()).map(|r| r.unwrap().parse(&*KERNEL_IDENTITY));
 
         let log_message = log_stream.try_next().await.unwrap().unwrap();
         assert_eq!(log_message.msg().unwrap(), "ERROR: first log");

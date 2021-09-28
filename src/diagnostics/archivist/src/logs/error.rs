@@ -40,11 +40,10 @@ pub enum StreamError {
     },
     #[error("socket was closed and no messages remain")]
     Closed,
-    #[error("{source:?}")]
-    Message {
-        #[from]
-        source: MessageError,
-    },
+    #[error(transparent)]
+    Message(#[from] MessageError),
+    #[error("couldn't convert debuglog message")]
+    DebugLogMessage,
 }
 
 #[cfg(test)]

@@ -3,13 +3,8 @@
 // found in the LICENSE file.
 
 use crate::{container::ComponentIdentity, events::types::ComponentIdentifier};
-
-use super::stats::LogStreamStats;
 use diagnostics_data::{BuilderArgs, LogsData, LogsDataBuilder};
-use diagnostics_message::{
-    error::MessageError,
-    message::{Message, MonikerWithUrl},
-};
+use diagnostics_message::{error::MessageError, message::{LoggerMessage, Message, MonikerWithUrl}};
 use lazy_static::lazy_static;
 use serde::{Serialize, Serializer};
 use std::{
@@ -20,8 +15,7 @@ use std::{
 
 #[derive(Clone)]
 pub struct MessageWithStats {
-    msg: diagnostics_message::message::Message,
-    stats: Arc<LogStreamStats>,
+    msg: Message,
 }
 
 impl MessageWithStats {
@@ -42,25 +36,32 @@ impl MessageWithStats {
         )
     }
 
-    pub(crate) fn with_stats(mut self, stats: &Arc<LogStreamStats>) -> Self {
-        self.stats = stats.clone();
-        self
+    /// Returns a new Message which encodes a count of dropped messages in its metadata.
+    pub fn failed_to_parse<E>(source: MonikerWithUrl, timestamp: i64, err: E) -> Self
+    where
+        E: std::error::Error,
+    {
+        MessageWithStats::from(
+            LogsDataBuilder::new(BuilderArgs {
+                moniker: source.moniker,
+                timestamp_nanos: timestamp.into(),
+                component_url: Some(source.url.clone()),
+                severity: diagnostics_data::Severity::Warn,
+                size_bytes: 0,
+            })
+            .add_error(diagnostics_data::LogError::FailedToParseRecord(format!("{:?}", err)))
+            .build(),
+        )
     }
 
-    pub fn from_logger(source: &ComponentIdentity, bytes: &[u8]) -> Result<Self, MessageError> {
-        let msg = Message::from_logger(MonikerWithUrl::from(source), &bytes)?;
-        Ok(MessageWithStats::from(msg))
+    pub fn from_logger(source: &ComponentIdentity, msg: LoggerMessage) -> Self {
+        let msg = Message::from_logger(MonikerWithUrl::from(source), msg);
+        MessageWithStats::from(msg)
     }
 
     pub fn from_structured(source: &ComponentIdentity, bytes: &[u8]) -> Result<Self, MessageError> {
         let msg = Message::from_structured(MonikerWithUrl::from(source), &bytes)?;
         Ok(MessageWithStats::from(msg))
-    }
-}
-
-impl Drop for MessageWithStats {
-    fn drop(&mut self) {
-        self.stats.increment_dropped(&*self);
     }
 }
 
@@ -93,13 +94,13 @@ impl Serialize for MessageWithStats {
 
 impl From<LogsData> for MessageWithStats {
     fn from(data: LogsData) -> Self {
-        Self { msg: diagnostics_message::message::Message::from(data), stats: Default::default() }
+        Self { msg: Message::from(data) }
     }
 }
 
-impl From<diagnostics_message::message::Message> for MessageWithStats {
-    fn from(msg: diagnostics_message::message::Message) -> Self {
-        Self { msg, stats: Default::default() }
+impl From<Message> for MessageWithStats {
+    fn from(msg: Message) -> Self {
+        Self { msg }
     }
 }
 
@@ -137,7 +138,7 @@ impl PartialOrd for MessageWithStats {
 impl Eq for MessageWithStats {}
 
 impl Deref for MessageWithStats {
-    type Target = diagnostics_message::message::Message;
+    type Target = Message;
     fn deref(&self) -> &Self::Target {
         &self.msg
     }
