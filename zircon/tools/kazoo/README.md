@@ -40,9 +40,14 @@ includes:
 There are unittests in `kazoo-test` which are in the source tree next to the rest of the
 implementation.
 
-These can be run using `./runtests` which will also run fidlc and kazoo and generate all the outputs
-into /tmp for inspection. It should be run with a cwd of `//zircon/tools/kazoo` as `./runtests`.
+To run these tests, use `--with-host=zircon/tools/kazoo:tests` with your `fx set` command, and then
+use `fx test` to run the tests, e.g.:
 
-There is also a "golden"-style run, which compares the output of running kazoo on the current real
-syscalls, and diffs vs. //zircon/tools/kazoo/golden.txt. Instructions will be printed on how to
-update this if output changes.
+```
+$ fx set core.x64 --with-host=//zircon/tools/kazoo:tests
+$ fx test //zircon/tools/kazoo
+```
+
+This also includes a "golden"-style run, which compares the output of running kazoo on any current
+syscalls changes with `//zircon/tools/kazoo/golden.txt`. Instructions will be printed on how to
+update `golden.txt` if output differs.
