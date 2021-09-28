@@ -75,6 +75,7 @@ group("tests") {
     "lib/gfx/tests:mock_pose_buffer_provider",
     "lib/gfx/tests/rotated_square_test",
     "lib/scenic/util/tests",
+    "lib/view_tree:observer_registry",
     "lib/view_tree/tests",
 
     # These are included in //src/ui/bin:tests, but I don't see that included anywhere.

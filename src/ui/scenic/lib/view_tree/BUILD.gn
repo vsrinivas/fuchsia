@@ -33,3 +33,13 @@ source_set("view_tree_snapshot") {
     "//zircon/system/ulib/async-loop:async-loop-cpp",
   ]
 }
+
+source_set("observer_registry") {
+  testonly = true
+
+  sources = [
+    "observer_registry.cc",
+    "observer_registry.h",
+  ]
+  public_deps = [ "//sdk/fidl/fuchsia.ui.observation.test" ]
+}
