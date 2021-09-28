@@ -84,6 +84,6 @@ impl<T: DeviceStorageFactory + Send + Sync> PolicyHandlerFactoryImpl<T> {
         policy_type: PolicyType,
         generate_function: GenerateHandler<T>,
     ) {
-        self.generators.insert(policy_type, generate_function);
+        let _ = self.generators.insert(policy_type, generate_function);
     }
 }

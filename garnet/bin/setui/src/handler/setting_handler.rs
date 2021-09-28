@@ -153,7 +153,11 @@ pub(crate) mod controller {
 
     #[async_trait]
     pub(crate) trait Handle: Send {
+        /// Handles an incoming request and returns its result. If the request is not supported
+        /// by this implementation, then None is returned.
         async fn handle(&self, request: Request) -> Option<SettingHandlerResult>;
+
+        /// Handles a state change, and returns the new state if it was updated, else returns None.
         async fn change_state(&mut self, _state: State) -> Option<ControllerStateResult> {
             None
         }
@@ -273,7 +277,9 @@ impl ClientImpl {
                                 continue;
                             }
                         }
-                        controller.change_state(state).await;
+
+                        // Ignore whether the state change had any effect.
+                        let _ = controller.change_state(state).await;
                     }
                 }
             }
@@ -290,7 +296,9 @@ impl ClientImpl {
     pub(crate) async fn notify(&self, event: Event) {
         let notify = self.notify.lock().await;
         if *notify {
-            self.messenger
+            // Ignore the receptor result.
+            let _ = self
+                .messenger
                 .message(Payload::Event(event).into(), Audience::Messenger(self.notifier_signature))
                 .send();
         }

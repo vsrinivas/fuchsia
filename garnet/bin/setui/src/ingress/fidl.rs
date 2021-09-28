@@ -180,58 +180,67 @@ impl Interface {
                 let delegate = delegate.clone();
                 match self {
                     Interface::Audio => {
-                        service_dir.add_fidl_service(move |stream: AudioRequestStream| {
+                        let _ = service_dir.add_fidl_service(move |stream: AudioRequestStream| {
                             crate::audio::fidl_io::spawn(delegate.clone(), stream);
                         });
                     }
                     Interface::Accessibility => {
-                        service_dir.add_fidl_service(move |stream: AccessibilityRequestStream| {
-                            crate::accessibility::fidl_io::spawn(delegate.clone(), stream);
-                        });
+                        let _ = service_dir.add_fidl_service(
+                            move |stream: AccessibilityRequestStream| {
+                                crate::accessibility::fidl_io::spawn(delegate.clone(), stream);
+                            },
+                        );
                     }
                     Interface::Display(_) => {
-                        service_dir.add_fidl_service(move |stream: DisplayRequestStream| {
-                            crate::display::fidl_io::spawn(delegate.clone(), stream);
-                        });
+                        let _ =
+                            service_dir.add_fidl_service(move |stream: DisplayRequestStream| {
+                                crate::display::fidl_io::spawn(delegate.clone(), stream);
+                            });
                     }
                     Interface::DoNotDisturb => {
-                        service_dir.add_fidl_service(move |stream: DoNotDisturbRequestStream| {
-                            crate::do_not_disturb::fidl_io::spawn(delegate.clone(), stream);
-                        });
+                        let _ = service_dir.add_fidl_service(
+                            move |stream: DoNotDisturbRequestStream| {
+                                crate::do_not_disturb::fidl_io::spawn(delegate.clone(), stream);
+                            },
+                        );
                     }
                     Interface::FactoryReset => {
                         let seeder = seeder.clone();
-                        service_dir.add_fidl_service(move |stream: FactoryResetRequestStream| {
-                            seeder.seed(stream);
-                        });
+                        let _ = service_dir.add_fidl_service(
+                            move |stream: FactoryResetRequestStream| {
+                                seeder.seed(stream);
+                            },
+                        );
                     }
                     Interface::Input => {
-                        service_dir.add_fidl_service(move |stream: InputRequestStream| {
+                        let _ = service_dir.add_fidl_service(move |stream: InputRequestStream| {
                             crate::input::fidl_io::spawn(delegate.clone(), stream);
                         });
                     }
                     Interface::Intl => {
-                        service_dir.add_fidl_service(move |stream: IntlRequestStream| {
+                        let _ = service_dir.add_fidl_service(move |stream: IntlRequestStream| {
                             crate::intl::fidl_io::spawn(delegate.clone(), stream);
                         });
                     }
                     Interface::Light => {
-                        service_dir.add_fidl_service(move |stream: LightRequestStream| {
+                        let _ = service_dir.add_fidl_service(move |stream: LightRequestStream| {
                             crate::light::fidl_io::spawn(delegate.clone(), stream);
                         });
                     }
                     Interface::NightMode => {
-                        service_dir.add_fidl_service(move |stream: NightModeRequestStream| {
-                            crate::night_mode::fidl_io::spawn(delegate.clone(), stream);
-                        });
+                        let _ =
+                            service_dir.add_fidl_service(move |stream: NightModeRequestStream| {
+                                crate::night_mode::fidl_io::spawn(delegate.clone(), stream);
+                            });
                     }
                     Interface::Privacy => {
-                        service_dir.add_fidl_service(move |stream: PrivacyRequestStream| {
-                            crate::privacy::fidl_io::spawn(delegate.clone(), stream);
-                        });
+                        let _ =
+                            service_dir.add_fidl_service(move |stream: PrivacyRequestStream| {
+                                crate::privacy::fidl_io::spawn(delegate.clone(), stream);
+                            });
                     }
                     Interface::Setup => {
-                        service_dir.add_fidl_service(move |stream: SetupRequestStream| {
+                        let _ = service_dir.add_fidl_service(move |stream: SetupRequestStream| {
                             crate::setup::fidl_io::spawn(delegate.clone(), stream);
                         });
                     }
