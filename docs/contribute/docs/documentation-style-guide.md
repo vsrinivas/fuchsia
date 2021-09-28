@@ -18,8 +18,8 @@ In the Fuchsia project, the maximum line length for documentation and code is
 
 ### Mark external links
 
-Use `{:.external}` to mark any links that are not within `fuchsia.dev` or
-`fuchsia.googlesource.com`:
+Use `{:.external}` to mark any links that are not within `fuchsia.dev`,
+`fuchsia.googlesource.com`, or `fuchsia-review.googlesource.com`:
 
 ```none
 This is an [external](http://example.com){:.external} link.
