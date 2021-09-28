@@ -13,8 +13,8 @@ use {
         CapabilityDecl, CapabilityName, ChildRef, ComponentDecl, DependencyType, OfferDecl,
         OfferDeclCommon, OfferDirectoryDecl, OfferProtocolDecl, OfferResolverDecl, OfferRunnerDecl,
         OfferServiceDecl, OfferSource, OfferStorageDecl, OfferTarget, RegistrationSource,
-        StorageDirectorySource, UseDecl, UseDirectoryDecl, UseEventDecl, UseProtocolDecl,
-        UseServiceDecl, UseSource,
+        SourceName, StorageDirectorySource, UseDecl, UseDirectoryDecl, UseEventDecl,
+        UseProtocolDecl, UseServiceDecl, UseSource,
     },
     futures::future::select_all,
     maplit::hashset,
@@ -508,22 +508,11 @@ fn get_dependencies_from_uses(decl: &ComponentDecl, dependency_map: &mut Depende
                     OfferSource::Capability(name) => {
                         // The only valid use for an OfferSource::Capability today is for a storage
                         // capability declaration, and its presence should be enforced by manifest
-                        // validation. If we can't find it, that's a bug.
-                        let storage_decl = decl
-                            .find_storage_source(name)
-                            .expect("missing storage declaration in manifest");
-                        match &storage_decl.source {
-                            StorageDirectorySource::Parent => {
-                                // See comment for OfferSource::Parent
-                                continue;
-                            }
-                            StorageDirectorySource::Self_ => {
-                                // See comment for OfferSource::Self_
-                                panic!("dependency cycle detected when processing transitive child dependencies");
-                            }
-                            StorageDirectorySource::Child(name) => {
-                                DependencyNode::Child(name.clone())
-                            }
+                        // validation.
+                        if let Some(s) = find_storage_source(decl, name) {
+                            s
+                        } else {
+                            continue;
                         }
                     }
                     OfferSource::Framework => {
@@ -538,10 +527,14 @@ fn get_dependencies_from_uses(decl: &ComponentDecl, dependency_map: &mut Depende
                         continue;
                     }
                     OfferSource::Self_ => {
-                        // We have a strong transitive dependency on ourself, which means a
-                        // dependency cycle. This should be prevented by manifest validation,
-                        // so if we see this it's a bug
-                        panic!("dependency cycle detected when processing transitive child dependencies");
+                        if let Some(s) = find_storage_source(decl, offer.source_name()) {
+                            s
+                        } else {
+                            // We have a strong transitive dependency on ourself, which means a
+                            // dependency cycle. This should be prevented by manifest validation,
+                            // so if we see this it's a bug
+                            panic!("dependency cycle detected when processing transitive child dependencies");
+                        }
                     }
                 };
                 last_loop_added_dependencies |=
@@ -564,6 +557,22 @@ fn get_dependencies_from_uses(decl: &ComponentDecl, dependency_map: &mut Depende
         }
     }
     dependency_map.insert(DependencyNode::Parent, parent_dependents);
+}
+
+fn find_storage_source(decl: &ComponentDecl, name: &CapabilityName) -> Option<DependencyNode> {
+    decl.find_storage_source(name)
+        .map(|s| match &s.source {
+            StorageDirectorySource::Parent => {
+                // See comment for OfferSource::Parent
+                None
+            }
+            StorageDirectorySource::Self_ => {
+                // See comment for OfferSource::Self_
+                panic!("dependency cycle detected when processing transitive child dependencies");
+            }
+            StorageDirectorySource::Child(name) => Some(DependencyNode::Child(name.clone())),
+        })
+        .flatten()
 }
 
 /// Loops through all the offer declarations to determine which siblings
@@ -776,7 +785,8 @@ mod tests {
         cm_rust::{
             CapabilityName, CapabilityPath, ChildDecl, DependencyType, ExposeDecl,
             ExposeProtocolDecl, ExposeSource, ExposeTarget, OfferDecl, OfferProtocolDecl,
-            OfferResolverDecl, OfferSource, OfferTarget, ProtocolDecl, UseDecl, UseSource,
+            OfferResolverDecl, OfferSource, OfferStorageDecl, OfferTarget, ProtocolDecl,
+            StorageDecl, StorageDirectorySource, UseDecl, UseSource,
         },
         cm_rust_testing::{
             ChildDeclBuilder, CollectionDeclBuilder, ComponentDeclBuilder, EnvironmentDeclBuilder,
@@ -1710,6 +1720,57 @@ mod tests {
         expected.push((DependencyNode::Parent, vec![DependencyNode::Child("childB".to_string())]));
         expected.push((DependencyNode::Child("childA".to_string()), vec![DependencyNode::Parent]));
         expected.push((DependencyNode::Child("childB".to_string()), vec![]));
+        validate_results(expected, process_component_dependencies(&decl));
+    }
+
+    #[test]
+    fn test_use_from_child_offer_storage() {
+        let decl = ComponentDecl {
+            capabilities: vec![CapabilityDecl::Storage(StorageDecl {
+                name: "data".into(),
+                source: StorageDirectorySource::Child("childB".to_string()),
+                backing_dir: "directory".into(),
+                subdir: None,
+                storage_id: fsys::StorageId::StaticInstanceIdOrMoniker,
+            })],
+            offers: vec![OfferDecl::Storage(OfferStorageDecl {
+                source: OfferSource::Self_,
+                source_name: "data".into(),
+                target_name: "data".into(),
+                target: OfferTarget::static_child("childA".to_string()),
+            })],
+            children: vec![
+                ChildDecl {
+                    name: "childA".to_string(),
+                    url: "ignored:///child".to_string(),
+                    startup: fsys::StartupMode::Lazy,
+                    environment: None,
+                    on_terminate: None,
+                },
+                ChildDecl {
+                    name: "childB".to_string(),
+                    url: "ignored:///child".to_string(),
+                    startup: fsys::StartupMode::Lazy,
+                    environment: None,
+                    on_terminate: None,
+                },
+            ],
+            uses: vec![UseDecl::Protocol(UseProtocolDecl {
+                source: UseSource::Child("childA".to_string()),
+                source_name: "test.protocol".into(),
+                target_path: CapabilityPath::try_from("/svc/test.protocol").unwrap(),
+                dependency_type: DependencyType::Strong,
+            })],
+            ..default_component_decl()
+        };
+
+        let mut expected: Vec<(DependencyNode, Vec<DependencyNode>)> = Vec::new();
+        expected.push((DependencyNode::Parent, vec![]));
+        expected.push((DependencyNode::Child("childA".to_string()), vec![DependencyNode::Parent]));
+        expected.push((
+            DependencyNode::Child("childB".to_string()),
+            vec![DependencyNode::Child("childA".to_string())],
+        ));
         validate_results(expected, process_component_dependencies(&decl));
     }
 

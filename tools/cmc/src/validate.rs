@@ -5,6 +5,7 @@
 use {
     crate::{
         cml,
+        cml::CapabilityClause,
         error::Error,
         features::{Feature, FeatureSet},
         one_or_many::OneOrMany,
@@ -224,7 +225,7 @@ impl<'a> ValidationContext<'a> {
         // Validate "collections".
         if let Some(collections) = &self.document.collections {
             for collection in collections {
-                self.validate_collection(&collection)?;
+                self.validate_collection(&collection, &mut strong_dependencies)?;
             }
         }
 
@@ -240,7 +241,7 @@ impl<'a> ValidationContext<'a> {
         if let Some(uses) = self.document.r#use.as_ref() {
             let mut used_ids = HashMap::new();
             for use_ in uses.iter() {
-                self.validate_use(&use_, &mut used_ids)?;
+                self.validate_use(&use_, &mut used_ids, &mut strong_dependencies)?;
             }
         }
 
@@ -296,20 +297,23 @@ impl<'a> ValidationContext<'a> {
                             &environment_name
                         )));
                     }
-                    let source = DependencyNode::Environment(environment_name.as_str());
-                    let target = DependencyNode::Child(child.name.as_str());
-                    strong_dependencies.add_edge(source, target);
+                    let source = DependencyNode::Named(&environment_name);
+                    let target = DependencyNode::Named(&child.name);
+                    self.add_strong_dep(None, source, target, strong_dependencies);
                 }
             }
         }
         Ok(())
     }
 
-    fn validate_collection(&self, collection: &'a cml::Collection) -> Result<(), Error> {
+    fn validate_collection(
+        &self,
+        collection: &'a cml::Collection,
+        strong_dependencies: &mut DirectedGraph<DependencyNode<'a>>,
+    ) -> Result<(), Error> {
         if collection.allowed_offers.is_some() {
             self.features.check(Feature::DynamicOffers)?;
         }
-
         if let Some(environment_ref) = &collection.environment {
             match environment_ref {
                 cml::EnvironmentRef::Named(environment_name) => {
@@ -319,8 +323,9 @@ impl<'a> ValidationContext<'a> {
                             &environment_name
                         )));
                     }
-                    // If there is an environment, we don't need to account for it in the dependency
-                    // graph because a collection is always a sink node.
+                    let source = DependencyNode::Named(&environment_name);
+                    let target = DependencyNode::Named(&collection.name);
+                    self.add_strong_dep(None, source, target, strong_dependencies);
                 }
             }
         }
@@ -391,6 +396,7 @@ impl<'a> ValidationContext<'a> {
         &self,
         use_: &'a cml::Use,
         used_ids: &mut HashMap<String, cml::CapabilityId>,
+        strong_dependencies: &mut DirectedGraph<DependencyNode<'a>>,
     ) -> Result<(), Error> {
         if use_.service.is_some() {
             self.features.check(Feature::Services)?;
@@ -421,6 +427,17 @@ impl<'a> ValidationContext<'a> {
         }
         if use_.from == Some(cml::UseFromRef::Self_) && use_.event.is_some() {
             return Err(Error::validate("\"from: self\" cannot be used with \"event\""));
+        }
+
+        if let Some(source) = DependencyNode::use_from_ref(use_.from.as_ref()) {
+            for name in &use_.names() {
+                let target = DependencyNode::Self_;
+                if use_.dependency.as_ref().unwrap_or(&cml::DependencyType::Strong)
+                    == &cml::DependencyType::Strong
+                {
+                    self.add_strong_dep(Some(name), source, target, strong_dependencies);
+                }
+            }
         }
 
         match (use_.event_stream.as_ref(), use_.subscriptions.as_ref()) {
@@ -524,62 +541,20 @@ impl<'a> ValidationContext<'a> {
             };
         }
 
-        // disallow (use from #child dependency=strong) && (offer to #child from self)
-        // - err: `use` must have dependency=weak to prevent cycle
-        // disallow (use from <not-#child> dependency=weak)
-        // - err: a `use` dependency=`weak` is only valid if from children
-        match &use_.from {
-            Some(cml::UseFromRef::Named(name)) => {
+        match (&use_.from, &use_.dependency) {
+            (Some(cml::UseFromRef::Named(name)), _) => {
                 self.validate_component_child_or_capability_ref(
                     "\"use\" source",
                     cml::AnyRef::Named(name),
                 )?;
-                let offer_to_ref = cml::OfferToRef::Named(name.clone());
-                let has_offers_from_self_to_child = if let Some(offers) = &self.document.offer {
-                    offers
-                        .iter()
-                        .filter(|offer| {
-                            offer.to.iter().filter(|to| to == &&offer_to_ref).next().is_some()
-                        })
-                        .filter(|offer| {
-                            offer
-                                .from
-                                .iter()
-                                .filter(|from| from == &&cml::OfferFromRef::Self_)
-                                .next()
-                                .is_some()
-                        })
-                        .next()
-                        .is_some()
-                } else {
-                    false
-                };
-                match (
-                    self.all_children.get(name),
-                    use_.dependency.as_ref(),
-                    has_offers_from_self_to_child,
-                ) {
-                    (Some(_), None | Some(&cml::DependencyType::Strong), true) => {
-                        return Err(Error::validate(format!(
-                            "use from #{} and offer to #{} from self introduce a dependency cycle. Consider marking use from #{} with dependency: \"weak\"",
-                            name,
-                            name,
-                            name
-                        )));
-                    }
-                    _ => {}
-                }
             }
-            _ => match &use_.dependency {
-                Some(cml::DependencyType::Weak) | Some(cml::DependencyType::WeakForMigration) => {
-                    return Err(Error::validate(format!(
-                        "Only `use` from children can have dependency: \"weak\""
-                    )));
-                }
-                _ => {}
-            },
+            (_, Some(cml::DependencyType::Weak) | Some(cml::DependencyType::WeakForMigration)) => {
+                return Err(Error::validate(format!(
+                    "Only `use` from children can have dependency: \"weak\""
+                )));
+            }
+            _ => {}
         }
-
         Ok(())
     }
 
@@ -907,12 +882,25 @@ impl<'a> ValidationContext<'a> {
                     true
                 };
                 if is_strong {
+                    if let Some(source) = DependencyNode::offer_from_ref(from) {
+                        for name in &offer.names() {
+                            let target = DependencyNode::offer_to_ref(to);
+                            self.add_strong_dep(Some(name), source, target, strong_dependencies);
+                        }
+                    }
                     if let cml::OfferFromRef::Named(from) = from {
                         match to {
                             cml::OfferToRef::Named(to) => {
-                                let source = DependencyNode::Child(from.as_str());
-                                let target = DependencyNode::Child(to.as_str());
-                                strong_dependencies.add_edge(source, target);
+                                let source = DependencyNode::Named(from);
+                                let target = DependencyNode::Named(to);
+                                for name in &offer.names() {
+                                    self.add_strong_dep(
+                                        Some(name),
+                                        source,
+                                        target,
+                                        strong_dependencies,
+                                    );
+                                }
                             }
                         }
                     }
@@ -925,6 +913,37 @@ impl<'a> ValidationContext<'a> {
         self.validate_from_clause("offer", offer)?;
 
         Ok(())
+    }
+
+    /// Adds a strong dependency between two nodes in the dependency graph between `source` and
+    /// `target`.
+    ///
+    /// `name` is the name of the capability being routed (if applicable).
+    fn add_strong_dep(
+        &self,
+        name: Option<&cml::Name>,
+        source: DependencyNode<'a>,
+        target: DependencyNode<'a>,
+        strong_dependencies: &mut DirectedGraph<DependencyNode<'a>>,
+    ) {
+        let possible_storage_name = match (source, name) {
+            (DependencyNode::Named(name), _) => Some(name),
+            (DependencyNode::Self_, Some(name)) => Some(name),
+            _ => None,
+        };
+        // A dependency on a storage capability is really a dependency on the backing dir. Perform
+        // that translation here.
+        let source = possible_storage_name
+            .map(|name| self.all_storage_and_sources.get(&name))
+            .flatten()
+            .map(|r| DependencyNode::capability_from_ref(r))
+            .flatten()
+            .unwrap_or(source);
+        if source == DependencyNode::Self_ && target == DependencyNode::Self_ {
+            // `self` dependencies (e.g. `use from self`) are allowed.
+        } else {
+            strong_dependencies.add_edge(source, target);
+        }
     }
 
     /// Validates that the from clause:
@@ -1150,10 +1169,9 @@ impl<'a> ValidationContext<'a> {
 
                 // Ensure there are no cycles, such as a resolver in an environment being assigned
                 // to a child which the resolver depends on.
-                if let cml::RegistrationRef::Named(child_name) = &registration.from {
-                    let source = DependencyNode::Child(child_name.as_str());
-                    let target = DependencyNode::Environment(environment.name.as_str());
-                    strong_dependencies.add_edge(source, target);
+                if let Some(source) = DependencyNode::registration_ref(&registration.from) {
+                    let target = DependencyNode::Named(&environment.name);
+                    self.add_strong_dep(None, source, target, strong_dependencies);
                 }
             }
         }
@@ -1178,10 +1196,9 @@ impl<'a> ValidationContext<'a> {
                 )?;
                 // Ensure there are no cycles, such as a resolver in an environment being assigned
                 // to a child which the resolver depends on.
-                if let cml::RegistrationRef::Named(child_name) = &registration.from {
-                    let source = DependencyNode::Child(child_name.as_str());
-                    let target = DependencyNode::Environment(environment.name.as_str());
-                    strong_dependencies.add_edge(source, target);
+                if let Some(source) = DependencyNode::registration_ref(&registration.from) {
+                    let target = DependencyNode::Named(&environment.name);
+                    self.add_strong_dep(None, source, target, strong_dependencies);
                 }
             }
         }
@@ -1201,6 +1218,12 @@ impl<'a> ValidationContext<'a> {
                     }
                 }
                 self.validate_from_clause("debug", debug)?;
+                // Ensure there are no cycles, such as a debug capability in an environment being
+                // assigned to the child which is providing the capability.
+                if let Some(source) = DependencyNode::offer_from_ref(&debug.from) {
+                    let target = DependencyNode::Named(&environment.name);
+                    self.add_strong_dep(None, source, target, strong_dependencies);
+                }
             }
         }
         Ok(())
@@ -1243,15 +1266,80 @@ where
 /// A node in the DependencyGraph. This enum is used to differentiate between node types.
 #[derive(Copy, Clone, Hash, Ord, Debug, PartialOrd, PartialEq, Eq)]
 enum DependencyNode<'a> {
-    Child(&'a str),
-    Environment(&'a str),
+    Named(&'a cml::Name),
+    Self_,
+}
+
+impl<'a> DependencyNode<'a> {
+    fn capability_from_ref(ref_: &'a cml::CapabilityFromRef) -> Option<DependencyNode<'a>> {
+        match ref_ {
+            cml::CapabilityFromRef::Named(name) => Some(DependencyNode::Named(name)),
+            cml::CapabilityFromRef::Self_ => Some(DependencyNode::Self_),
+            // We don't care about cycles with the parent, because those will be resolved when the
+            // parent manifest is validated.
+            cml::CapabilityFromRef::Parent => None,
+        }
+    }
+
+    fn use_from_ref(ref_: Option<&'a cml::UseFromRef>) -> Option<DependencyNode<'a>> {
+        match ref_ {
+            Some(cml::UseFromRef::Named(name)) => Some(DependencyNode::Named(name)),
+            Some(cml::UseFromRef::Self_) => Some(DependencyNode::Self_),
+
+            // We don't care about cycles with the parent, because those will be resolved when the
+            // parent manifest is validated.
+            Some(cml::UseFromRef::Parent) => None,
+
+            // We don't care about cycles with the framework, because the framework always outlives
+            // a component
+            Some(cml::UseFromRef::Framework) => None,
+
+            // We don't care about cycles with debug, because our environment is controlled by our
+            // parent
+            Some(cml::UseFromRef::Debug) => None,
+
+            None => None,
+        }
+    }
+
+    fn offer_from_ref(ref_: &'a cml::OfferFromRef) -> Option<DependencyNode<'a>> {
+        match ref_ {
+            cml::OfferFromRef::Named(name) => Some(DependencyNode::Named(name)),
+            cml::OfferFromRef::Self_ => Some(DependencyNode::Self_),
+
+            // We don't care about cycles with the parent, because those will be resolved when the
+            // parent manifest is validated.
+            cml::OfferFromRef::Parent => None,
+
+            // We don't care about cycles with the framework, because the framework always outlives
+            // a component
+            cml::OfferFromRef::Framework => None,
+        }
+    }
+
+    fn offer_to_ref(ref_: &'a cml::OfferToRef) -> DependencyNode<'a> {
+        match ref_ {
+            cml::OfferToRef::Named(name) => DependencyNode::Named(name),
+        }
+    }
+
+    fn registration_ref(ref_: &'a cml::RegistrationRef) -> Option<DependencyNode<'a>> {
+        match ref_ {
+            cml::RegistrationRef::Named(name) => Some(DependencyNode::Named(name)),
+            cml::RegistrationRef::Self_ => Some(DependencyNode::Self_),
+
+            // We don't care about cycles with the parent, because those will be resolved when the
+            // parent manifest is validated.
+            cml::RegistrationRef::Parent => None,
+        }
+    }
 }
 
 impl<'a> fmt::Display for DependencyNode<'a> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            DependencyNode::Child(name) => write!(f, "child {}", name),
-            DependencyNode::Environment(name) => write!(f, "environment {}", name),
+            DependencyNode::Self_ => write!(f, "self"),
+            DependencyNode::Named(name) => write!(f, "#{}", name),
         }
     }
 }
@@ -1847,7 +1935,10 @@ mod tests {
                     },
                 ],
             }),
-            Err(Error::Validate { schema_name: None, err, .. }) if &err == "use from #child and offer to #child from self introduce a dependency cycle. Consider marking use from #child with dependency: \"weak\""
+            Err(Error::Validate { schema_name: None, err, .. })
+                if &err == "Strong dependency cycles were found. Break the cycle by removing a \
+                            dependency or marking an offer as weak. Cycles: \
+                            {{#child -> self -> #child}}"
         ),
         test_cml_use_from_parent_weak(
             json!({
@@ -1884,6 +1975,42 @@ mod tests {
                         "protocol": "fuchsia.example.Protocol",
                         "from": "self",
                         "to": [ "#child" ],
+                    },
+                ],
+            }),
+            Ok(())
+        ),
+        test_cml_use_from_child_offer_storage_no_cycle(
+            json!({
+                "capabilities": [
+                    {
+                        "storage": "data",
+                        "from": "#backend",
+                        "backing_dir": "blobfs",
+                        "storage_id": "static_instance_id_or_moniker",
+                    },
+                ],
+                "children": [
+                    {
+                        "name": "child",
+                        "url": "#meta/child.cm",
+                    },
+                    {
+                        "name": "backend",
+                        "url": "#meta/backend.cm",
+                    },
+                ],
+                "use": [
+                    {
+                        "protocol": "fuchsia.example.Protocol",
+                        "from": "#child",
+                    },
+                ],
+                "offer": [
+                    {
+                        "storage": "data",
+                        "from": "self",
+                        "to": "#child",
                     },
                 ],
             }),
@@ -3093,7 +3220,49 @@ mod tests {
             }) if &err ==
                 "Strong dependency cycles were found. Break the cycle by removing a \
                 dependency or marking an offer as weak. Cycles: \
-                {{child a -> child b -> child c -> child a}, {child b -> child d -> child b}}"
+                {{#a -> #b -> #c -> #a}, {#b -> #d -> #b}}"
+        ),
+        test_cml_offer_dependency_cycle_storage(
+            json!({
+                "capabilities": [
+                    {
+                        "storage": "data",
+                        "from": "#backend",
+                        "backing_dir": "blobfs",
+                        "storage_id": "static_instance_id_or_moniker",
+                    },
+                ],
+                "children": [
+                    {
+                        "name": "child",
+                        "url": "#meta/child.cm",
+                    },
+                    {
+                        "name": "backend",
+                        "url": "#meta/backend.cm",
+                    },
+                ],
+                "offer": [
+                    {
+                        "protocol": "fuchsia.example.Protocol",
+                        "from": "#child",
+                        "to": "#backend",
+                    },
+                    {
+                        "storage": "data",
+                        "from": "self",
+                        "to": "#child",
+                    },
+                ],
+            }),
+            Err(Error::Validate {
+                schema_name: None,
+                err,
+                ..
+            }) if &err ==
+                "Strong dependency cycles were found. Break the cycle by removing a \
+                dependency or marking an offer as weak. Cycles: \
+                {{#backend -> #child -> #backend}}"
         ),
         test_cml_offer_weak_dependency_cycle(
             json!({
@@ -3946,7 +4115,7 @@ mod tests {
             Err(Error::Validate { err, schema_name: None, .. }) if &err ==
                     "Strong dependency cycles were found. Break the cycle by removing a \
                     dependency or marking an offer as weak. Cycles: \
-                    {{child child -> environment my_env -> child child}}"
+                    {{#child -> #my_env -> #child}}"
         ),
         test_cml_environment_with_resolvers(
             json!({
@@ -4051,7 +4220,7 @@ mod tests {
             Err(Error::Validate { schema_name: None, err, .. }) if &err ==
                     "Strong dependency cycles were found. Break the cycle by removing a \
                     dependency or marking an offer as weak. \
-                    Cycles: {{child child -> environment my_env -> child child}}"
+                    Cycles: {{#child -> #my_env -> #child}}"
         ),
         test_cml_environment_with_cycle_multiple_components(
             json!({
@@ -4091,7 +4260,7 @@ mod tests {
             Err(Error::Validate { schema_name: None, err, .. }) if &err ==
                 "Strong dependency cycles were found. Break the cycle by removing a dependency \
                 or marking an offer as weak. \
-                Cycles: {{child a -> child b -> environment my_env -> child a}}"
+                Cycles: {{#a -> #b -> #my_env -> #a}}"
         ),
 
         // facets

@@ -313,7 +313,7 @@ struct ValidationContext<'a> {
     all_children: HashMap<&'a str, &'a fsys::ChildDecl>,
     all_collections: HashSet<&'a str>,
     all_capability_ids: HashSet<&'a str>,
-    all_storage_and_sources: HashMap<&'a str, Option<&'a str>>,
+    all_storage_and_sources: HashMap<&'a str, Option<&'a fsys::Ref>>,
     all_services: HashSet<&'a str>,
     all_protocols: HashSet<&'a str>,
     all_directories: HashSet<&'a str>,
@@ -335,6 +335,9 @@ enum DependencyNode<'a> {
     Child(&'a str),
     Collection(&'a str),
     Environment(&'a str),
+    /// This variant is automatically translated to the source backing the capability by
+    /// `add_strong_dep`, it does not appear in the dependency graph.
+    Capability(&'a str),
 }
 
 impl<'a> DependencyNode<'a> {
@@ -349,10 +352,8 @@ impl<'a> DependencyNode<'a> {
             fsys::Ref::Collection(fsys::CollectionRef { name, .. }) => {
                 Some(DependencyNode::Collection(name.as_str()))
             }
-            fsys::Ref::Capability(fsys::CapabilityRef { .. }) => {
-                // Any references to a declared capability come from self, because we declared the
-                // capability.
-                Some(DependencyNode::Self_)
+            fsys::Ref::Capability(fsys::CapabilityRef { name, .. }) => {
+                Some(DependencyNode::Capability(name.as_str()))
             }
             fsys::Ref::Self_(_) => Some(DependencyNode::Self_),
             fsys::Ref::Parent(_) => {
@@ -386,6 +387,7 @@ impl<'a> fmt::Display for DependencyNode<'a> {
             DependencyNode::Child(name) => write!(f, "child {}", name),
             DependencyNode::Collection(name) => write!(f, "collection {}", name),
             DependencyNode::Environment(name) => write!(f, "environment {}", name),
+            DependencyNode::Capability(name) => write!(f, "capability {}", name),
         }
     }
 }
@@ -574,6 +576,7 @@ impl<'a> ValidationContext<'a> {
             fsys::UseDecl::Service(u) => {
                 self.validate_use_source(
                     u.source.as_ref(),
+                    u.source_name.as_ref(),
                     u.dependency_type.as_ref(),
                     "UseServiceDecl",
                     "source",
@@ -594,6 +597,7 @@ impl<'a> ValidationContext<'a> {
             fsys::UseDecl::Protocol(u) => {
                 self.validate_use_source(
                     u.source.as_ref(),
+                    u.source_name.as_ref(),
                     u.dependency_type.as_ref(),
                     "UseProtocolDecl",
                     "source",
@@ -614,6 +618,7 @@ impl<'a> ValidationContext<'a> {
             fsys::UseDecl::Directory(u) => {
                 self.validate_use_source(
                     u.source.as_ref(),
+                    u.source_name.as_ref(),
                     u.dependency_type.as_ref(),
                     "UseDirectoryDecl",
                     "source",
@@ -766,6 +771,7 @@ impl<'a> ValidationContext<'a> {
     fn validate_event(&mut self, event: &'a fsys::UseEventDecl) {
         self.validate_use_source(
             event.source.as_ref(),
+            event.source_name.as_ref(),
             event.dependency_type.as_ref(),
             "UseEventDecl",
             "source",
@@ -846,6 +852,7 @@ impl<'a> ValidationContext<'a> {
     fn validate_use_source(
         &mut self,
         source: Option<&'a fsys::Ref>,
+        source_name: Option<&'a String>,
         dependency_type: Option<&fsys::DependencyType>,
         decl: &str,
         field: &str,
@@ -856,18 +863,25 @@ impl<'a> ValidationContext<'a> {
             Some(fsys::Ref::Debug(_)) => {}
             Some(fsys::Ref::Self_(_)) => {}
             Some(fsys::Ref::Capability(capability)) => {
-                // TODO: find the capability source, and add an edge
                 if !self.all_capability_ids.contains(capability.name.as_str()) {
                     self.errors.push(Error::invalid_capability(decl, field, &capability.name));
+                } else if dependency_type == Some(&fsys::DependencyType::Strong) {
+                    self.add_strong_dep(
+                        source_name,
+                        DependencyNode::try_from_ref(source),
+                        Some(DependencyNode::Self_),
+                    );
                 }
             }
             Some(fsys::Ref::Child(child)) => {
                 if !self.all_children.contains_key(&child.name as &str) {
                     self.errors.push(Error::invalid_child(decl, field, &child.name));
                 } else if dependency_type == Some(&fsys::DependencyType::Strong) {
-                    let source = DependencyNode::Child(child.name.as_str());
-                    let target = DependencyNode::Self_;
-                    self.strong_dependencies.add_edge(source, target);
+                    self.add_strong_dep(
+                        source_name,
+                        DependencyNode::try_from_ref(source),
+                        Some(DependencyNode::Self_),
+                    );
                 }
             }
             Some(_) => {
@@ -905,7 +919,7 @@ impl<'a> ValidationContext<'a> {
             if let Some(env) = child.environment.as_ref() {
                 let source = DependencyNode::Environment(env.as_str());
                 let target = DependencyNode::Child(name);
-                self.strong_dependencies.add_edge(source, target);
+                self.add_strong_dep(None, Some(source), Some(target));
             }
         }
         if let Some(environment) = child.environment.as_ref() {
@@ -942,7 +956,7 @@ impl<'a> ValidationContext<'a> {
             if let Some(name) = collection.name.as_ref() {
                 let source = DependencyNode::Environment(environment.as_str());
                 let target = DependencyNode::Collection(name.as_str());
-                self.strong_dependencies.add_edge(source, target);
+                self.add_strong_dep(None, Some(source), Some(target));
             }
         }
     }
@@ -1164,20 +1178,17 @@ impl<'a> ValidationContext<'a> {
     }
 
     fn validate_storage_decl(&mut self, storage: &'a fsys::StorageDecl) {
-        let source_child_name = match storage.source.as_ref() {
-            Some(fsys::Ref::Parent(_)) => None,
-            Some(fsys::Ref::Self_(_)) => None,
+        match storage.source.as_ref() {
+            Some(fsys::Ref::Parent(_)) => {}
+            Some(fsys::Ref::Self_(_)) => {}
             Some(fsys::Ref::Child(child)) => {
                 self.validate_source_child(child, "StorageDecl");
-                Some(&child.name as &str)
             }
             Some(_) => {
                 self.errors.push(Error::invalid_field("StorageDecl", "source"));
-                None
             }
             None => {
                 self.errors.push(Error::missing_field("StorageDecl", "source"));
-                None
             }
         };
         if check_name(storage.name.as_ref(), "StorageDecl", "name", &mut self.errors) {
@@ -1185,15 +1196,7 @@ impl<'a> ValidationContext<'a> {
             if !self.all_capability_ids.insert(name) {
                 self.errors.push(Error::duplicate_field("StorageDecl", "name", name.as_str()));
             }
-            self.all_storage_and_sources.insert(name, source_child_name);
-
-            let source = DependencyNode::try_from_ref(storage.source.as_ref());
-            if let Some(source) = source {
-                if source != DependencyNode::Self_ {
-                    let target = DependencyNode::Self_;
-                    self.strong_dependencies.add_edge(source, target);
-                }
-            }
+            self.all_storage_and_sources.insert(name, storage.source.as_ref());
         }
         if storage.storage_id.is_none() {
             self.errors.push(Error::missing_field("StorageDecl", "storage_id"));
@@ -1272,12 +1275,10 @@ impl<'a> ValidationContext<'a> {
                     }
                 }
 
-                let source = DependencyNode::try_from_ref(o.source.as_ref());
-                if let Some(source) = source {
-                    if let Some(env_name) = &environment_name {
-                        let target = DependencyNode::Environment(env_name);
-                        self.strong_dependencies.add_edge(source, target);
-                    }
+                if let Some(env_name) = &environment_name {
+                    let source = DependencyNode::try_from_ref(o.source.as_ref());
+                    let target = Some(DependencyNode::Environment(env_name));
+                    self.add_strong_dep(None, source, target);
                 }
             }
             fsys::DebugRegistrationUnknown!() => {
@@ -1558,19 +1559,41 @@ impl<'a> ValidationContext<'a> {
         }
     }
 
-    fn add_strong_dep(&mut self, from: Option<&'a fsys::Ref>, to: Option<&'a fsys::Ref>) {
-        let source = DependencyNode::try_from_ref(from);
-        if source.is_none() {
+    /// Adds a strong dependency between two nodes in the dependency graph between `source` and
+    /// `target`.
+    ///
+    /// `source_name` is the name of the capability being routed (if applicable). The function is
+    /// a no-op if `source` or `target` is `None`; this behavior is a convenience so that the
+    /// caller can directly pass the result of `DependencyNode::try_from_ref`.
+    fn add_strong_dep(
+        &mut self,
+        source_name: Option<&'a String>,
+        source: Option<DependencyNode<'a>>,
+        target: Option<DependencyNode<'a>>,
+    ) {
+        if source.is_none() || target.is_none() {
             return;
         }
-        let target = DependencyNode::try_from_ref(to);
-        if target.is_none() {
-            return;
-        }
+        let source = source.unwrap();
+        let target = target.unwrap();
+        let possible_storage_name = match (source, source_name) {
+            (DependencyNode::Capability(name), _) => Some(name),
+            (DependencyNode::Self_, Some(name)) => Some(name.as_str()),
+            _ => None,
+        };
+        // A dependency on a storage capability is really a dependency on the backing dir. Perform
+        // that translation here.
+        let source = possible_storage_name
+            .map(|name| self.all_storage_and_sources.get(name))
+            .flatten()
+            .map(|r| DependencyNode::try_from_ref(*r))
+            .flatten()
+            .unwrap_or(source);
         if source == target {
-            // This is already its own error, don't report this as a cycle.
+            // This is already its own error, or is a valid `use from self`, don't report this as a
+            // cycle.
         } else {
-            self.strong_dependencies.add_edge(source.unwrap(), target.unwrap());
+            self.strong_dependencies.add_edge(source, target);
         }
     }
 
@@ -1594,7 +1617,11 @@ impl<'a> ValidationContext<'a> {
                         self.errors.push(Error::invalid_field(decl, "source"));
                     }
                 }
-                self.add_strong_dep(o.source.as_ref(), o.target.as_ref());
+                self.add_strong_dep(
+                    o.source_name.as_ref(),
+                    DependencyNode::try_from_ref(o.source.as_ref()),
+                    DependencyNode::try_from_ref(o.target.as_ref()),
+                );
             }
             fsys::OfferDecl::Protocol(o) => {
                 let decl = "OfferProtocolDecl";
@@ -1610,7 +1637,11 @@ impl<'a> ValidationContext<'a> {
                 if o.dependency_type.is_none() {
                     self.errors.push(Error::missing_field(decl, "dependency_type"));
                 } else if o.dependency_type == Some(fsys::DependencyType::Strong) {
-                    self.add_strong_dep(o.source.as_ref(), o.target.as_ref());
+                    self.add_strong_dep(
+                        o.source_name.as_ref(),
+                        DependencyNode::try_from_ref(o.source.as_ref()),
+                        DependencyNode::try_from_ref(o.target.as_ref()),
+                    );
                 }
                 // If the offer source is `self`, ensure we have a corresponding ProtocolDecl.
                 // TODO: Consider bringing this bit into validate_offer_fields.
@@ -1634,7 +1665,11 @@ impl<'a> ValidationContext<'a> {
                 if o.dependency_type.is_none() {
                     self.errors.push(Error::missing_field(decl, "dependency_type"));
                 } else if o.dependency_type == Some(fsys::DependencyType::Strong) {
-                    self.add_strong_dep(o.source.as_ref(), o.target.as_ref());
+                    self.add_strong_dep(
+                        o.source_name.as_ref(),
+                        DependencyNode::try_from_ref(o.source.as_ref()),
+                        DependencyNode::try_from_ref(o.target.as_ref()),
+                    );
                 }
                 // If the offer source is `self`, ensure we have a corresponding DirectoryDecl.
                 // TODO: Consider bringing this bit into validate_offer_fields.
@@ -1659,7 +1694,29 @@ impl<'a> ValidationContext<'a> {
                     o.source.as_ref(),
                     o.target.as_ref(),
                 );
-                self.add_strong_dep(o.source.as_ref(), o.target.as_ref());
+                // Storage capabilities with a source of `Ref::Self_` don't interact with the
+                // component's runtime in any way, they're actually synthesized by the framework
+                // out of a pre-existing directory capability. Thus, its actual source is the
+                // backing directory capability.
+                match (o.source.as_ref(), o.source_name.as_ref()) {
+                    (Some(fsys::Ref::Self_ { .. }), Some(source_name)) => {
+                        if let Some(source) = DependencyNode::try_from_ref(
+                            *self
+                                .all_storage_and_sources
+                                .get(source_name.as_str())
+                                .unwrap_or(&None),
+                        ) {
+                            if let Some(target) = DependencyNode::try_from_ref(o.target.as_ref()) {
+                                self.strong_dependencies.add_edge(source, target);
+                            }
+                        }
+                    }
+                    _ => self.add_strong_dep(
+                        o.source_name.as_ref(),
+                        DependencyNode::try_from_ref(o.source.as_ref()),
+                        DependencyNode::try_from_ref(o.target.as_ref()),
+                    ),
+                }
             }
             fsys::OfferDecl::Runner(o) => {
                 let decl = "OfferRunnerDecl";
@@ -1678,7 +1735,11 @@ impl<'a> ValidationContext<'a> {
                         self.errors.push(Error::invalid_capability(decl, "source", name));
                     }
                 }
-                self.add_strong_dep(o.source.as_ref(), o.target.as_ref());
+                self.add_strong_dep(
+                    o.source_name.as_ref(),
+                    DependencyNode::try_from_ref(o.source.as_ref()),
+                    DependencyNode::try_from_ref(o.target.as_ref()),
+                );
             }
             fsys::OfferDecl::Resolver(o) => {
                 let decl = "OfferResolverDecl";
@@ -1697,7 +1758,11 @@ impl<'a> ValidationContext<'a> {
                         self.errors.push(Error::invalid_capability(decl, "source", name));
                     }
                 }
-                self.add_strong_dep(o.source.as_ref(), o.target.as_ref());
+                self.add_strong_dep(
+                    o.source_name.as_ref(),
+                    DependencyNode::try_from_ref(o.source.as_ref()),
+                    DependencyNode::try_from_ref(o.target.as_ref()),
+                );
             }
             fsys::OfferDecl::Event(e) => {
                 self.validate_event_offer_fields(e);
@@ -3037,13 +3102,64 @@ mod tests {
                 Error::dependency_cycle("{{self -> child child -> self}}".to_string()),
             ])),
         },
+        test_validate_use_from_child_storage_no_cycle => {
+            input = {
+                ComponentDecl {
+                    capabilities: Some(vec![
+                        CapabilityDecl::Storage(StorageDecl {
+                            name: Some("data".to_string()),
+                            source: Some(fsys::Ref::Child(fsys::ChildRef { name: "child2".to_string(), collection: None } )),
+                            backing_dir: Some("minfs".to_string()),
+                            storage_id: Some(StorageId::StaticInstanceIdOrMoniker),
+                            ..StorageDecl::EMPTY
+                        })
+                    ]),
+                    uses: Some(vec![
+                        UseDecl::Protocol(UseProtocolDecl {
+                            dependency_type: Some(DependencyType::Strong),
+                            source: Some(fsys::Ref::Child(fsys::ChildRef{ name: "child1".to_string(), collection: None})),
+                            source_name: Some("a".to_string()),
+                            target_path: Some("/svc/a".to_string()),
+                            ..UseProtocolDecl::EMPTY
+                        }),
+                    ]),
+                    offers: Some(vec![
+                        OfferDecl::Storage(OfferStorageDecl {
+                            source: Some(Ref::Self_(SelfRef{})),
+                            source_name: Some("data".to_string()),
+                            target: Some(Ref::Child(ChildRef { name: "child1".to_string(), collection: None })),
+                            target_name: Some("data".to_string()),
+                            ..OfferStorageDecl::EMPTY
+                        }),
+                    ]),
+                    children: Some(vec![
+                        ChildDecl {
+                            name: Some("child1".to_string()),
+                            url: Some("fuchsia-pkg://fuchsia.com/foo".to_string()),
+                            startup: Some(StartupMode::Lazy),
+                            on_terminate: None,
+                            ..ChildDecl::EMPTY
+                        },
+                        ChildDecl {
+                            name: Some("child2".to_string()),
+                            url: Some("fuchsia-pkg://fuchsia.com/foo2".to_string()),
+                            startup: Some(StartupMode::Lazy),
+                            on_terminate: None,
+                            ..ChildDecl::EMPTY
+                        }
+                    ]),
+                    ..new_component_decl()
+                }
+            },
+            result = Ok(()),
+        },
         test_validate_storage_strong_cycle_between_children => {
             input = {
                 ComponentDecl {
                     capabilities: Some(vec![
                         CapabilityDecl::Storage(StorageDecl {
                             name: Some("data".to_string()),
-                            source: Some(fsys::Ref::Child(fsys::ChildRef { name: "child1".to_string(), collection: None} )),
+                            source: Some(fsys::Ref::Child(fsys::ChildRef { name: "child1".to_string(), collection: None } )),
                             backing_dir: Some("minfs".to_string()),
                             storage_id: Some(StorageId::StaticInstanceIdOrMoniker),
                             ..StorageDecl::EMPTY
@@ -3085,7 +3201,7 @@ mod tests {
                 }
             },
             result = Err(ErrorList::new(vec![
-                Error::dependency_cycle("{{self -> child child2 -> child child1 -> self}}".to_string()),
+                Error::dependency_cycle("{{child child1 -> child child2 -> child child1}}".to_string()),
             ])),
         },
         test_validate_strong_cycle_between_children_through_environment_debug => {
@@ -5074,7 +5190,7 @@ mod tests {
                 ..new_component_decl()
             },
             result = Err(ErrorList::new(vec![
-                Error::dependency_cycle("{{self -> child logger -> self}}".to_string()),
+                Error::dependency_cycle("{{child logger -> child logger}}".to_string()),
             ])),
         },
         test_validate_offers_invalid_child => {
