@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use self::task::PeerTask;
-use crate::{audio::AudioControl, config::AudioGatewayFeatureSupport, error::Error};
+use crate::{audio::AudioControl, config::AudioGatewayFeatureSupport, error::Error, hfp};
 use {
     async_trait::async_trait,
     async_utils::channel::TrySend,
@@ -40,6 +40,7 @@ pub mod update;
 pub enum PeerRequest {
     Profile(ProfileEvent),
     Handle(PeerHandlerProxy),
+    ManagerConnected { id: hfp::ManagerConnectionId },
     BatteryLevel(u8),
     Behavior(ConnectionBehavior),
 }
@@ -71,6 +72,10 @@ pub trait Peer: Future<Output = PeerId> + Unpin + Send {
     /// fit. This method will return once the peer accepts the event.
     async fn profile_event(&mut self, event: ProfileEvent) -> Result<(), Error>;
 
+    /// Notify the `Peer` of a newly connected call manager.
+    /// `id` is the unique identifier for the connection to this call manager.
+    async fn call_manager_connected(&mut self, id: hfp::ManagerConnectionId) -> Result<(), Error>;
+
     /// Create a FIDL channel that can be used to manage this Peer and return the server end.
     ///
     /// Returns an error if the fidl endpoints cannot be built or the request cannot be processed
@@ -99,6 +104,7 @@ pub struct PeerImpl {
     queue: mpsc::Sender<PeerRequest>,
     /// A handle to the audio control interface.
     audio_control: Arc<Mutex<Box<dyn AudioControl>>>,
+    hfp_sender: mpsc::Sender<hfp::Event>,
 }
 
 impl PeerImpl {
@@ -108,6 +114,7 @@ impl PeerImpl {
         audio_control: Arc<Mutex<Box<dyn AudioControl>>>,
         local_config: AudioGatewayFeatureSupport,
         connection_behavior: ConnectionBehavior,
+        hfp_sender: mpsc::Sender<hfp::Event>,
     ) -> Result<Self, Error> {
         let (task, queue) = PeerTask::spawn(
             id,
@@ -115,6 +122,7 @@ impl PeerImpl {
             audio_control.clone(),
             local_config,
             connection_behavior,
+            hfp_sender.clone(),
         )?;
         Ok(Self {
             id,
@@ -124,6 +132,7 @@ impl PeerImpl {
             audio_control,
             queue,
             connection_behavior,
+            hfp_sender,
         })
     }
 
@@ -135,6 +144,7 @@ impl PeerImpl {
             self.audio_control.clone(),
             self.local_config,
             self.connection_behavior,
+            self.hfp_sender.clone(),
         )?;
         self.task = task;
         self.queue = queue;
@@ -173,6 +183,17 @@ impl Peer for PeerImpl {
         Ok(())
     }
 
+    /// This method will panic if the peer cannot accept a call manager connected event. This is
+    /// not expected to happen under normal operation and likely indicates a bug or unrecoverable
+    /// failure condition in the system.
+    async fn call_manager_connected(&mut self, id: hfp::ManagerConnectionId) -> Result<(), Error> {
+        if let Err(request) = self.queue.try_send_fut(PeerRequest::ManagerConnected { id }).await {
+            // Task ended, so let's spin it back up since somebody wants it.
+            self.spawn_task()?;
+            self.expect_send_request(request).await;
+        }
+        Ok(())
+    }
     async fn build_handler(&mut self) -> Result<ServerEnd<PeerHandlerMarker>, Error> {
         let (proxy, server_end) = fidl::endpoints::create_proxy()
             .map_err(|e| Error::system("Could not create call manager fidl endpoints", e))?;
@@ -251,6 +272,13 @@ pub(crate) mod fake {
             unimplemented!("Not needed for any currently written tests");
         }
 
+        async fn call_manager_connected(
+            &mut self,
+            _: hfp::ManagerConnectionId,
+        ) -> Result<(), Error> {
+            unimplemented!("Not needed for any currently written tests");
+        }
+
         async fn battery_level(&mut self, level: u8) {
             self.expect_send_request(PeerRequest::BatteryLevel(level)).await;
         }
@@ -295,6 +323,7 @@ mod tests {
             new_audio_control(),
             AudioGatewayFeatureSupport::default(),
             ConnectionBehavior::default(),
+            mpsc::channel(1).0,
         )
         .unwrap();
         assert_eq!(peer.id(), id);
@@ -312,6 +341,7 @@ mod tests {
             new_audio_control(),
             AudioGatewayFeatureSupport::default(),
             ConnectionBehavior::default(),
+            mpsc::channel(1).0,
         )
         .unwrap();
 
@@ -351,6 +381,7 @@ mod tests {
             new_audio_control(),
             AudioGatewayFeatureSupport::default(),
             ConnectionBehavior::default(),
+            mpsc::channel(1).0,
         )
         .unwrap();
 

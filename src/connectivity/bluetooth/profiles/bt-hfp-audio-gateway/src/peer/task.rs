@@ -15,11 +15,11 @@ use {
     },
     fuchsia_zircon as zx,
     futures::{
-        channel::mpsc,
+        channel::mpsc::{self, Sender},
         future::{self, Either, Fuse, Future},
         select,
         stream::{empty, Empty},
-        FutureExt, StreamExt,
+        FutureExt, SinkExt, StreamExt,
     },
     parking_lot::Mutex,
     profile_client::ProfileEvent,
@@ -46,8 +46,11 @@ use crate::{
     config::AudioGatewayFeatureSupport,
     error::{Error, ScoConnectError},
     features::CodecId,
+    hfp,
     sco_connector::{ScoConnection, ScoConnector},
 };
+
+const CONNECTION_INIT_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(10);
 
 #[derive(Debug)]
 struct ScoActive {
@@ -114,6 +117,8 @@ pub(super) struct PeerTask {
     sco_state: ScoState,
     ringer: Ringer,
     audio_control: Arc<Mutex<Box<dyn AudioControl>>>,
+    hfp_sender: Sender<hfp::Event>,
+    manager_id: Option<hfp::ManagerConnectionId>,
 }
 
 impl PeerTask {
@@ -123,7 +128,11 @@ impl PeerTask {
         audio_control: Arc<Mutex<Box<dyn AudioControl>>>,
         local_config: AudioGatewayFeatureSupport,
         connection_behavior: ConnectionBehavior,
+        hfp_sender: Sender<hfp::Event>,
     ) -> Result<Self, Error> {
+        let connection = ServiceLevelConnection::with_init_timeout(fuchsia_async::Timer::new(
+            CONNECTION_INIT_TIMEOUT,
+        ));
         let sco_connector = ScoConnector::build(profile_proxy.clone());
         let a2dp_control = a2dp::Control::connect();
         Ok(Self {
@@ -138,12 +147,14 @@ impl PeerTask {
             battery_level: 5,
             calls: Calls::new(None),
             gain_control: GainControl::new()?,
-            connection: ServiceLevelConnection::new(),
+            connection,
             a2dp_control,
             sco_connector,
             sco_state: ScoState::Inactive,
             ringer: Ringer::default(),
             audio_control,
+            hfp_sender,
+            manager_id: None,
         })
     }
 
@@ -153,25 +164,38 @@ impl PeerTask {
         audio_control: Arc<Mutex<Box<dyn AudioControl>>>,
         local_config: AudioGatewayFeatureSupport,
         connection_behavior: ConnectionBehavior,
-    ) -> Result<(Task<()>, mpsc::Sender<PeerRequest>), Error> {
+        hfp_sender: Sender<hfp::Event>,
+    ) -> Result<(Task<()>, Sender<PeerRequest>), Error> {
         let (sender, receiver) = mpsc::channel(0);
-        let peer = Self::new(id, profile_proxy, audio_control, local_config, connection_behavior)?;
+        let peer = Self::new(
+            id,
+            profile_proxy,
+            audio_control,
+            local_config,
+            connection_behavior,
+            hfp_sender,
+        )?;
         let task = Task::local(peer.run(receiver).map(|_| ()));
         Ok((task, sender))
     }
 
     /// Always give preference to connection requests received from the peer device.
-    fn on_connection_request(
+    async fn on_connection_request(
         &mut self,
         _protocol: Vec<ProtocolDescriptor>,
         channel: fuchsia_bluetooth::types::Channel,
-    ) {
+    ) -> Result<(), Error> {
         if self.connection.connected() {
             info!("Overwriting existing connection to {}", self.id);
         } else {
             info!("Connection request from {}", self.id);
         }
         self.connection.connect(channel);
+        if let Some(id) = self.manager_id {
+            self.notify_peer_connected(id).await;
+            self.setup_handler().await?;
+        }
+        Ok(())
     }
 
     /// Make a connection to the peer only if there is not an existing connection.
@@ -187,6 +211,12 @@ impl PeerTask {
             .await?
             .map_err(|e| format_err!("Profile connection request error: {:?}", e))?;
         self.connection.connect(channel.try_into()?);
+        if let Some(id) = self.manager_id {
+            self.notify_peer_connected(id).await;
+            self.setup_handler()
+                .await
+                .map_err(|e| format_err!("Error setting up peer handler: {}", e))?;
+        }
         Ok(())
     }
 
@@ -214,6 +244,62 @@ impl PeerTask {
                 info!("Error inititating connecting to peer {}: {:?}", self.id, e);
             }
         }
+    }
+
+    async fn notify_peer_connected(&mut self, manager_id: hfp::ManagerConnectionId) {
+        let (proxy, handle) =
+            fidl::endpoints::create_proxy().expect("Cannot create required fidl handle");
+        self.hfp_sender
+            .send(hfp::Event::PeerConnected { peer_id: self.id, manager_id, handle })
+            .await
+            .expect("Cannot communicate with main Hfp task");
+        self.handler = Some(proxy);
+    }
+
+    async fn setup_handler(&mut self) -> Result<(), Error> {
+        info!("Got request to handle peer {} headset using handler", self.id);
+        if let Some(handler) = self.handler.clone() {
+            // Getting the network information the first time should always return a complete table.
+            // If the call returns an error, do not set up the handler.
+            let info = match handler.watch_network_information().await {
+                Ok(info) => info,
+                Err(fidl::Error::ClientChannelClosed {
+                    status: zx::Status::PEER_CLOSED, ..
+                }) => {
+                    return Ok(());
+                }
+                Err(e) => {
+                    warn!("Error handling peer request: {}", e);
+                    return Ok(());
+                }
+            };
+
+            self.handle_network_update(info).await;
+
+            let client_end = self.gain_control.get_client_end()?;
+            if let Err(e) = handler.gain_control(client_end) {
+                warn!("Error setting gain control for peer {}: {}", self.id, e);
+                return Ok(());
+            }
+
+            self.calls = Calls::new(Some(handler.clone()));
+
+            self.create_network_updates_stream(handler);
+        }
+        Ok(())
+    }
+
+    /// A new call manager is connected. The PeerTask should
+    async fn on_manager_connected(&mut self, id: hfp::ManagerConnectionId) -> Result<(), Error> {
+        self.manager_id = Some(id);
+        if !self.connection.connected() {
+            // If there is no peer connection, there should not be a handler.
+            self.handler = None;
+            return Ok(());
+        }
+        self.notify_peer_connected(id).await;
+        self.setup_handler().await?;
+        Ok(())
     }
 
     /// When a new handler is received, the state is not known. It might be stale because the
@@ -261,13 +347,14 @@ impl PeerTask {
         match request {
             PeerRequest::Profile(ProfileEvent::PeerConnected { protocol, channel, id: _ }) => {
                 let protocol = protocol.iter().map(ProtocolDescriptor::from).collect();
-                self.on_connection_request(protocol, channel)
+                self.on_connection_request(protocol, channel).await?;
             }
             PeerRequest::Profile(ProfileEvent::SearchResult { protocol, attributes, id: _ }) => {
                 let protocol = protocol.map(|p| p.iter().map(ProtocolDescriptor::from).collect());
                 let attributes = attributes.iter().map(Attribute::from).collect();
-                self.on_search_result(protocol, attributes).await
+                self.on_search_result(protocol, attributes).await;
             }
+            PeerRequest::ManagerConnected { id } => self.on_manager_connected(id).await?,
             PeerRequest::Handle(handler) => self.on_peer_handler(handler).await?,
             PeerRequest::BatteryLevel(level) => {
                 self.battery_level = level;
@@ -817,8 +904,7 @@ mod tests {
 
     fn setup_peer_task(
         connection: Option<ServiceLevelConnection>,
-    ) -> (PeerTask, mpsc::Sender<PeerRequest>, mpsc::Receiver<PeerRequest>, ProfileRequestStream)
-    {
+    ) -> (PeerTask, Sender<PeerRequest>, mpsc::Receiver<PeerRequest>, ProfileRequestStream) {
         let (sender, receiver) = mpsc::channel(1);
         let (proxy, stream) = fidl::endpoints::create_proxy_and_stream::<ProfileMarker>().unwrap();
         let audio: Arc<Mutex<Box<dyn AudioControl>>> =
@@ -829,6 +915,7 @@ mod tests {
             audio,
             AudioGatewayFeatureSupport::default(),
             ConnectionBehavior::default(),
+            mpsc::channel(1).0,
         )
         .expect("Could not create PeerTask");
         if let Some(conn) = connection {
@@ -947,7 +1034,8 @@ mod tests {
 
         // Set up the RFCOMM connection.
         let (local, mut remote) = Channel::create();
-        peer.on_connection_request(vec![], local);
+        exec.run_singlethreaded(peer.on_connection_request(vec![], local))
+            .expect("Connection request handling to succeed");
 
         let mut peer_task_fut = Box::pin(peer.run(receiver));
         assert!(exec.run_until_stalled(&mut peer_task_fut).is_pending());

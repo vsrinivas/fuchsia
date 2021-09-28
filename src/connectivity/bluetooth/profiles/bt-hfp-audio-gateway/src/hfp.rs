@@ -10,7 +10,11 @@ use {
     fidl_fuchsia_bluetooth_hfp_test as hfp_test,
     fuchsia_bluetooth::profile::find_service_classes,
     fuchsia_bluetooth::types::PeerId,
-    futures::{channel::mpsc::Receiver, select, stream::StreamExt},
+    futures::{
+        channel::mpsc::{self, Receiver, Sender},
+        select,
+        stream::StreamExt,
+    },
     parking_lot::Mutex,
     profile_client::{ProfileClient, ProfileEvent},
     std::{collections::hash_map::Entry, matches, sync::Arc},
@@ -24,6 +28,14 @@ use crate::{
     peer::{ConnectionBehavior, Peer, PeerImpl},
 };
 
+pub enum Event {
+    PeerConnected {
+        peer_id: PeerId,
+        manager_id: ManagerConnectionId,
+        handle: ServerEnd<PeerHandlerMarker>,
+    },
+}
+
 /// Manages operation of the HFP functionality.
 pub struct Hfp {
     config: AudioGatewayFeatureSupport,
@@ -33,7 +45,7 @@ pub struct Hfp {
     profile_svc: bredr::ProfileProxy,
     /// The `call_manager` provides Hfp with a means to interact with clients of the
     /// fuchsia.bluetooth.hfp.Hfp and fuchsia.bluetooth.hfp.CallManager protocols.
-    call_manager: Option<CallManagerProxy>,
+    call_manager: CallManager,
     call_manager_registration: Receiver<CallManagerProxy>,
     /// A collection of Bluetooth peers that support the HFP profile.
     peers: FutureMap<PeerId, Box<dyn Peer>>,
@@ -41,6 +53,8 @@ pub struct Hfp {
     connection_behavior: ConnectionBehavior,
     /// A shared audio controller, to start and route audio devices for peers.
     audio: Arc<Mutex<Box<dyn AudioControl>>>,
+    internal_events_rx: Receiver<Event>,
+    internal_events_tx: Sender<Event>,
 }
 
 impl Hfp {
@@ -53,16 +67,20 @@ impl Hfp {
         config: AudioGatewayFeatureSupport,
         test_requests: Receiver<hfp_test::HfpTestRequest>,
     ) -> Self {
+        let (internal_events_tx, internal_events_rx) = mpsc::channel(1);
+
         Self {
             profile_client,
             profile_svc,
             call_manager_registration,
-            call_manager: None,
+            call_manager: CallManager::default(),
             peers: FutureMap::new(),
             config,
             test_requests,
             connection_behavior: ConnectionBehavior::default(),
             audio: Arc::new(Mutex::new(Box::new(audio))),
+            internal_events_rx,
+            internal_events_tx,
         }
     }
 
@@ -88,12 +106,37 @@ impl Hfp {
                 removed = self.peers.next() => {
                     let _ = removed.map(|id| debug!("Peer removed: {}", id));
                 }
+                event = self.internal_events_rx.select_next_some() => {
+                    self.handle_internal_event(event).await;
+                }
                 complete => {
                     break;
                 }
             }
         }
         Ok(())
+    }
+
+    async fn handle_internal_event(&mut self, event: Event) {
+        match event {
+            Event::PeerConnected { peer_id, manager_id, handle } => {
+                let current_id = self.call_manager.connection_id();
+                if let Some(proxy) = self.call_manager.proxy() {
+                    if manager_id != current_id {
+                        // This message is for an old manager connection.
+                        // It should be ignored.
+                        return;
+                    }
+                    if let Err(e) = proxy.peer_connected(&mut peer_id.into(), handle).await {
+                        if e.is_closed() {
+                            info!("CallManager channel closed.");
+                        } else {
+                            info!("CallManager channel closed with error: {}", e);
+                        }
+                    }
+                }
+            }
+        }
     }
 
     async fn handle_test_request(
@@ -122,8 +165,7 @@ impl Hfp {
     /// Handle a single `ProfileEvent` from `profile`.
     async fn handle_profile_event(&mut self, event: ProfileEvent) -> Result<(), Error> {
         let id = event.peer_id();
-        // TODO(fxbug.dev/82575): We shouldn't call Self::send_peer_connected if we can't connect.
-        // For now, check if the search result is really a HandsFree before adding the peer.
+        // Check if the search result is really a HandsFree before adding the peer.
         if let ProfileEvent::SearchResult { attributes, .. } = &event {
             let classes = find_service_classes(attributes);
             if classes
@@ -137,6 +179,7 @@ impl Hfp {
                 return Ok(());
             }
         }
+
         let peer = match self.peers.inner().entry(id) {
             Entry::Vacant(entry) => {
                 let mut peer = Box::new(PeerImpl::new(
@@ -145,12 +188,12 @@ impl Hfp {
                     self.audio.clone(),
                     self.config,
                     self.connection_behavior,
+                    self.internal_events_tx.clone(),
                 )?);
-                if let Some(proxy) = self.call_manager.clone() {
-                    let server_end = peer.build_handler().await?;
-                    if Self::send_peer_connected(&proxy, peer.id(), server_end).await.is_err() {
-                        self.call_manager = None;
-                    }
+                if self.call_manager.connected() {
+                    // Peer should be able to accept call_manager_connected request immediately
+                    // after the Peer was constructed.
+                    peer.call_manager_connected(self.call_manager.connection_id()).await?;
                 }
                 entry.insert(Box::pin(peer))
             }
@@ -162,39 +205,50 @@ impl Hfp {
 
     /// Handle a single `CallManagerEvent` from `call_manager`.
     async fn handle_new_call_manager(&mut self, proxy: CallManagerProxy) -> Result<(), Error> {
-        if matches!(&self.call_manager, Some(manager) if !manager.is_closed()) {
+        if self.call_manager.connected() {
             info!("Call manager already set. Closing new connection");
             return Ok(());
         }
 
-        let mut server_ends = Vec::with_capacity(self.peers.inner().len());
-        for (id, peer) in self.peers.inner().iter_mut() {
-            server_ends.push((*id, peer.build_handler().await?));
-        }
+        self.call_manager.new_connection(proxy);
 
-        for (id, server) in server_ends {
-            if Self::send_peer_connected(&proxy, id, server).await.is_err() {
-                return Ok(());
-            }
+        // Propagate new connection id to peers.
+        for (_, peer) in self.peers.inner().iter_mut() {
+            let _ = peer.call_manager_connected(self.call_manager.connection_id()).await;
         }
-
-        self.call_manager = Some(proxy.clone());
 
         Ok(())
     }
+}
 
-    async fn send_peer_connected(
-        proxy: &CallManagerProxy,
-        id: PeerId,
-        server_end: ServerEnd<PeerHandlerMarker>,
-    ) -> Result<(), ()> {
-        proxy.peer_connected(&mut id.into(), server_end).await.map_err(|e| {
-            if e.is_closed() {
-                info!("CallManager channel closed.");
-            } else {
-                info!("CallManager channel closed with error: {}", e);
-            }
-        })
+/// Unique identifier for a given connection between the CallManager and the HFP component.
+#[derive(Copy, Clone, PartialEq, Default, Debug)]
+pub struct ManagerConnectionId(usize);
+
+#[derive(Default)]
+pub struct CallManager {
+    id: ManagerConnectionId,
+    proxy: Option<CallManagerProxy>,
+}
+
+impl CallManager {
+    /// Assign a new proxy to the CallManager.
+    pub fn new_connection(&mut self, proxy: CallManagerProxy) {
+        self.id.0 = self.id.0.wrapping_add(1);
+        self.proxy = Some(proxy);
+    }
+
+    /// Returns true if the proxy is present and connected.
+    pub fn connected(&self) -> bool {
+        matches!(&self.proxy, Some(proxy) if !proxy.is_closed())
+    }
+
+    pub fn proxy(&self) -> Option<&CallManagerProxy> {
+        self.proxy.as_ref()
+    }
+
+    pub fn connection_id(&self) -> ManagerConnectionId {
+        self.id
     }
 }
 
@@ -217,6 +271,9 @@ mod tests {
     };
 
     use crate::audio::TestAudioControl;
+    use fidl_fuchsia_bluetooth_bredr as bredr;
+    use fuchsia_bluetooth::types::Uuid;
+    use fuchsia_zircon as zx;
 
     #[fuchsia::test(allow_stalls = false)]
     async fn profile_error_propagates_error_from_hfp_run() {
@@ -243,7 +300,7 @@ mod tests {
     /// sent and received by the services that Hfp interacts with: A bredr profile server and
     /// a call manager.
     #[fuchsia::test(allow_stalls = false)]
-    async fn new_profile_event_initiates_connections_to_profile_and_call_manager_() {
+    async fn new_profile_event_initiates_connections_to_profile_and_call_manager() {
         let (profile, profile_svc, server) = setup_profile_and_test_server();
         let (proxy, stream) =
             fidl::endpoints::create_proxy_and_stream::<CallManagerMarker>().unwrap();
@@ -265,15 +322,154 @@ mod tests {
         );
         let _hfp_task = fasync::Task::local(hfp.run());
 
-        // Drive both services to expected steady states without any errors.
-        let result = futures::future::join(
-            profile_server_init_and_peer_handling(server),
-            call_manager_init_and_peer_handling(stream),
-        )
-        .await;
-        assert!(result.0.is_ok());
-        assert!(result.1.is_ok());
+        // Setup profile, then connect RFCOMM channel.
+        let _server = profile_server_init_and_peer_handling(server, true)
+            .await
+            .expect("peer setup to complete");
+
+        // Peer Connected notification occurs after channel is connected.
+        assert!(
+            call_manager_init_and_peer_handling(stream).await.is_ok(),
+            "call manager to be notified"
+        );
     }
+
+    /// Tests the HFP main run loop from a blackbox perspective by asserting on the FIDL messages
+    /// sent and received by the services that Hfp interacts with: A bredr profile server and
+    /// a call manager.
+    #[fuchsia::test]
+    fn peer_connected_only_after_connection_success() {
+        let mut exec = fuchsia_async::TestExecutor::new().unwrap();
+        let (profile, profile_svc, server) = setup_profile_and_test_server();
+        let (proxy, stream) =
+            fidl::endpoints::create_proxy_and_stream::<CallManagerMarker>().unwrap();
+
+        let (mut sender, receiver) = mpsc::channel(1);
+        exec.run_singlethreaded(sender.send(proxy)).expect("Hfp to receive the proxy");
+
+        let (_, rx) = mpsc::channel(1);
+
+        // Run hfp in a background task since we are testing that the profile server observes the
+        // expected behavior when interacting with hfp.
+        let hfp = Hfp::new(
+            profile,
+            profile_svc,
+            TestAudioControl::default(),
+            receiver,
+            AudioGatewayFeatureSupport::default(),
+            rx,
+        );
+        let _hfp_task = fasync::Task::local(hfp.run());
+
+        // Setup profile, then connect RFCOMM channel.
+        let server =
+            exec.run_singlethreaded(profile_server_init_and_peer_handling(server, false)).unwrap();
+
+        // Peer Connected notification occurs after channel is connected.
+        let call_manager = call_manager_init_and_peer_handling(stream);
+        futures::pin_mut!(call_manager);
+        assert!(exec.run_until_stalled(&mut call_manager).is_pending());
+
+        let (remote, _local) = zx::Socket::create(zx::SocketOpts::DATAGRAM).unwrap();
+        let chan = bredr::Channel {
+            socket: Some(remote),
+            channel_mode: Some(bredr::ChannelMode::Basic),
+            max_tx_sdu_size: Some(1004),
+            flush_timeout: None,
+            ..bredr::Channel::EMPTY
+        };
+
+        let mut proto = rfcomm_protocol();
+        server
+            .receiver
+            .as_ref()
+            .unwrap()
+            .connected(&mut bt::PeerId { value: 1 }, chan, &mut proto.iter_mut())
+            .expect("succeed");
+        assert!(exec.run_until_stalled(&mut call_manager).is_ready());
+    }
+
+    #[fuchsia::test]
+    async fn peer_then_first_manager_connected_works() {
+        let (profile, profile_svc, server) = setup_profile_and_test_server();
+        let (proxy, stream) =
+            fidl::endpoints::create_proxy_and_stream::<CallManagerMarker>().unwrap();
+
+        let (mut sender, receiver) = mpsc::channel(1);
+
+        let (_, rx) = mpsc::channel(1);
+
+        // Run hfp in a background task since we are testing that the profile server observes the
+        // expected behavior when interacting with hfp.
+        let hfp = Hfp::new(
+            profile,
+            profile_svc,
+            TestAudioControl::default(),
+            receiver,
+            AudioGatewayFeatureSupport::default(),
+            rx,
+        );
+        let _hfp_task = fasync::Task::local(hfp.run());
+
+        // Setup profile, then connect RFCOMM channel.
+        let _server = profile_server_init_and_peer_handling(server, true)
+            .await
+            .expect("peer setup to complete");
+
+        sender.send(proxy).await.expect("Hfp to receive the proxy");
+        // Peer Connected notification occurs after channel is connected.
+        assert!(
+            call_manager_init_and_peer_handling(stream).await.is_ok(),
+            "call manager to be notified"
+        );
+    }
+
+    // TODO: This test can be enabled once the test synchronizes the call manager channels such that
+    // the first call manager is seen as closed by both ends before the second call manager channel
+    // is sent into the Hfp task.
+    // #[fuchsia::test]
+    // async fn manager_disconnect_and_new_connection_works() {
+    //     let (profile, profile_svc, server) = setup_profile_and_test_server();
+    //     let (proxy, stream) =
+    //         fidl::endpoints::create_proxy_and_stream::<CallManagerMarker>().unwrap();
+
+    //     let (mut sender, receiver) = mpsc::channel(1);
+    //     sender.send(proxy).await.expect("Hfp to receive the proxy");
+
+    //     let (_, rx) = mpsc::channel(1);
+
+    //     // Run hfp in a background task since we are testing that the profile server observes the
+    //     // expected behavior when interacting with hfp.
+    //     let hfp = Hfp::new(
+    //         profile,
+    //         profile_svc,
+    //         TestAudioControl::default(),
+    //         receiver,
+    //         AudioGatewayFeatureSupport::default(),
+    //         rx,
+    //     );
+    //     let _hfp_task = fasync::Task::local(hfp.run());
+
+    //     // Setup profile, then connect RFCOMM channel.
+    //     let _server = profile_server_init_and_peer_handling(server, true).await.expect("peer setup to complete");
+
+    //     // Peer Connected notification occurs after channel is connected.
+    //     let mut stream = call_manager_init_and_peer_handling(stream).await.expect("call manager to be notified");
+
+    //     // Close call manager stream end
+    //     use fidl::endpoints::RequestStream;
+    //     stream.control_handle().shutdown();
+    //     let _ = stream.next().await;
+
+    //     // Setup a new call manager.
+    //     let (proxy, stream) =
+    //         fidl::endpoints::create_proxy_and_stream::<CallManagerMarker>().unwrap();
+    //     sender.send(proxy).await.expect("Hfp to receive the proxy");
+
+    //     // The new call manager should receive a peer connected notification for the peer that is
+    //     // connected.
+    //     let _ = call_manager_init_and_peer_handling(stream).await.expect("call manager to be notified");
+    // }
 
     /// Tests the HFP main run loop from a blackbox perspective by asserting on the FIDL messages
     /// sent and received by the services that Hfp interacts with: A bredr profile server and
@@ -307,7 +503,6 @@ mod tests {
         let ((), hfp_fut) = run_while(&mut exec, hfp_fut, server.complete_registration());
 
         // Send an AudioGateway service found
-        use fuchsia_bluetooth::types::Uuid;
         let mut audio_gateway_service_class_attrs = vec![bredr::Attribute {
             id: bredr::ATTR_SERVICE_CLASS_ID_LIST,
             element: bredr::DataElement::Sequence(vec![
@@ -352,23 +547,66 @@ mod tests {
         Ok(stream)
     }
 
+    fn rfcomm_protocol() -> Vec<bredr::ProtocolDescriptor> {
+        let sc = 10;
+        vec![
+            bredr::ProtocolDescriptor {
+                protocol: bredr::ProtocolIdentifier::L2Cap,
+                params: vec![],
+            },
+            bredr::ProtocolDescriptor {
+                protocol: bredr::ProtocolIdentifier::Rfcomm,
+                params: vec![bredr::DataElement::Uint8(sc)],
+            },
+        ]
+    }
+
     /// Respond to all FIDL messages expected during the initialization of the Hfp main run loop and
     /// during the simulation of a new `Peer` search result event.
     ///
     /// Returns Ok(()) when all expected messages have been handled normally.
     async fn profile_server_init_and_peer_handling(
         mut server: LocalProfileTestServer,
+        connect_from_search: bool,
     ) -> Result<LocalProfileTestServer, anyhow::Error> {
         server.complete_registration().await;
+        let mut proto = rfcomm_protocol();
 
         // Send search result
         server
             .results
             .as_ref()
             .unwrap()
-            .service_found(&mut bt::PeerId { value: 1 }, None, &mut vec![].iter_mut())
+            .service_found(
+                &mut bt::PeerId { value: 1 },
+                Some(&mut proto.iter_mut()),
+                &mut vec![].iter_mut(),
+            )
             .await?;
 
+        match server.stream.next().await {
+            Some(Ok(bredr::ProfileRequest::Connect { peer_id, connection: _, responder })) => {
+                assert_eq!(peer_id, bt::PeerId { value: 1 });
+                if connect_from_search {
+                    let (remote, local) = zx::Socket::create(zx::SocketOpts::DATAGRAM).unwrap();
+                    server.connections.push(local);
+                    let chan = bredr::Channel {
+                        socket: Some(remote),
+                        channel_mode: Some(bredr::ChannelMode::Basic),
+                        max_tx_sdu_size: Some(1004),
+                        flush_timeout: None,
+                        ..bredr::Channel::EMPTY
+                    };
+
+                    responder.send(&mut Ok(chan)).expect("successfully send connection response");
+                } else {
+                    responder
+                        .send(&mut Err(fidl_fuchsia_bluetooth::ErrorCode::Failed))
+                        .expect("successfully send connection failure");
+                }
+            }
+            r => panic!("{:?}", r),
+        }
         info!("profile server done");
         Ok(server)
     }

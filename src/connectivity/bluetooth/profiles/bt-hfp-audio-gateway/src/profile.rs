@@ -58,11 +58,12 @@ pub(crate) mod test_server {
         pub responder: Option<bredr::ProfileAdvertiseResponder>,
         pub receiver: Option<bredr::ConnectionReceiverProxy>,
         pub results: Option<bredr::SearchResultsProxy>,
+        pub connections: Vec<fuchsia_zircon::Socket>,
     }
 
     impl From<bredr::ProfileRequestStream> for LocalProfileTestServer {
         fn from(stream: bredr::ProfileRequestStream) -> Self {
-            Self { stream, responder: None, receiver: None, results: None }
+            Self { stream, responder: None, receiver: None, results: None, connections: vec![] }
         }
     }
 

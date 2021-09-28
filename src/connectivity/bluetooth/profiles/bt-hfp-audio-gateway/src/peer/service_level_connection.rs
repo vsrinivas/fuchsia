@@ -9,12 +9,13 @@ use {
         pin::Pin,
         task::{Context, Poll},
     },
+    fuchsia_async::Timer,
     fuchsia_bluetooth::types::Channel,
     fuchsia_zircon as zx,
     futures::{
         channel::mpsc::{self, Receiver, Sender},
         stream::{FusedStream, Stream, StreamExt},
-        AsyncWrite, AsyncWriteExt,
+        AsyncWrite, AsyncWriteExt, FutureExt,
     },
     std::{collections::HashMap, collections::VecDeque, io::Cursor},
     tracing::{debug, info, warn},
@@ -257,6 +258,7 @@ pub struct ServiceLevelConnection {
     unparsed_bytes: DeserializeBytes,
     /// The SlcRequests that have not yet been processed.
     unprocessed_slc_requests: VecDeque<SlcRequest>,
+    initialization_timeout: Option<Timer>,
 }
 
 impl ServiceLevelConnection {
@@ -272,7 +274,15 @@ impl ServiceLevelConnection {
             receiver,
             unparsed_bytes: DeserializeBytes::new(),
             unprocessed_slc_requests: VecDeque::new(),
+            // Timeout is set to `None` until explicitly assigned.
+            initialization_timeout: None,
         }
+    }
+
+    pub fn with_init_timeout(timeout: Timer) -> Self {
+        let mut conn = Self::new();
+        conn.initialization_timeout = Some(timeout);
+        conn
     }
 
     /// Returns `true` if an active connection exists between the peers.
@@ -688,6 +698,22 @@ impl Stream for ServiceLevelConnection {
     fn poll_next(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
         if self.is_terminated() {
             panic!("Cannot poll a terminated stream");
+        }
+
+        // A timeout will only be `Some` before the connection is
+        // initialized.
+        if let Some(timeout) = &mut self.initialization_timeout {
+            match timeout.poll_unpin(cx) {
+                Poll::Pending => {}
+                // Return `None` on initialization timeout, signaling that the stream
+                // has ended.
+                Poll::Ready(()) => {
+                    // Ensure that the connection is `None` if the initialization timeout is
+                    // reached.
+                    self.connection = None;
+                    return Poll::Ready(None);
+                }
+            }
         }
 
         // Try to send any queued data in the RFCOMM channel.
