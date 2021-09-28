@@ -19,39 +19,33 @@ template("sdk_copy_product_bundle") {
 
   file_base = "product_bundle"
   sdk_atom_id = "sdk://${file_base}/${target_name}"
-  if (product_bundle_paths == []) {
-    # Don't generate a product bundle if product_bundle_paths is empty.
+  if (product_bundle_mapping_file_path == "") {
+    # Don't generate a product bundle if product_bundle_mapping_file_path is empty.
     sdk_noop_atom(target_name) {
       id = sdk_atom_id
       category = invoker.category
       type = "product_bundle"
     }
   } else {
-    # Used to make sure the product exists in the product bundle paths provided.
+    # Used to make sure the product exists in the mapping file.
     occured = false
 
     product_bundle_files = []
     product_bundle_path = ""
     meta_dest = "${file_base}/${target_name}.json"
 
-    # Find the product bundle that matches the product. The value of 'name'
-    # in the product bundle data must match the product name.
-    foreach(path, product_bundle_paths) {
-      # Reset the json and product_bundle_data values after every iteration.
-      json = {
-      }
-      product_bundle_data = {
-      }
-      json = read_file(path, "json")
-      product_bundle_data = json.data
+    product_bundle_mappings =
+        read_file(product_bundle_mapping_file_path, "json")
 
-      product_bundle_name = product_bundle_data.name
-      if (product_bundle_name == target_name) {
+    # Find the product in the mapping file. The value of 'Name' in the
+    # mapping file must match the product name.
+    foreach(mapping, product_bundle_mappings) {
+      if (mapping.Name == target_name) {
         occured = true
-        product_bundle_path = path
+        product_bundle_path = mapping.Path
         product_bundle_files += [
           {
-            source = path
+            source = mapping.Path
             dest = meta_dest
           },
         ]

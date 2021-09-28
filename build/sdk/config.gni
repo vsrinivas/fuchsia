@@ -10,8 +10,13 @@ declare_args() {
   # If false, any unacknowledged SDK change will cause a build failure.
   warn_on_sdk_changes = false
 
-  # Path to the product bundles that will be copied to the SDK.
-  # If empty, will create an empty product bundle. Requires all
-  # product bundles under plasa to be present if non-empty.
-  product_bundle_paths = []
+  # Path to the product bundle mapping file that contains a JSON with:
+  # [{
+  #    Name: Name of the product.
+  #    Path: Path to the product bundle for the product.
+  # }]
+  # If set, all products under the platform surface area must be present in the
+  # JSON with a valid product bundle path.
+  # If empty, will create an empty product bundle.
+  product_bundle_mapping_file_path = ""
 }

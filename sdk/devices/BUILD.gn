@@ -25,7 +25,7 @@ product_bundle_deps = []
 # by the //build/images:product_metadata target.
 foreach(bundle_name, bundle_name_identifiers) {
   sdk_copy_product_bundle(bundle_name) {
-    category = "public"
+    category = "partner"
   }
   product_bundle_deps += [ ":${bundle_name}" ]
 }
