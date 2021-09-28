@@ -4,6 +4,8 @@
 
 # This file defines base configs used on multiple x64-based targets.
 
+import("//build/board.gni")
+
 _imports = {  # Import into hidden scope, to avoid importing into args.gn.
   import("//boards/emulation/virtio_drivers.gni")
 }
@@ -58,17 +60,17 @@ _bootfs_deps =
       "//src/power/power-manager:base_config",
       "//src/security/policy/zxcrypt:null",
     ]
-board_bootfs_labels = _bootfs_deps
-board_recovery_bootfs_labels = _bootfs_deps
-board_zedboot_bootfs_labels = _bootfs_deps
+board_bootfs_labels += _bootfs_deps
+board_recovery_bootfs_labels += _bootfs_deps
+board_zedboot_bootfs_labels += _bootfs_deps
 
-board_system_image_deps = [
+board_system_image_deps += [
   "//garnet/packages/prod:drivers-system",
   "//src/graphics/lib/magma/gnbuild/magma-intel-gen:msd-intel-gen",
   "//src/media/audio/bundles:virtual_audio_driver",
 ]
 
-board_package_labels = [
+board_package_labels += [
   "//src/power/thermd",
   "//src/power/thermd:config",
   "//garnet/packages/prod:drivers-support",
