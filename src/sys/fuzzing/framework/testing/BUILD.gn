@@ -6,23 +6,26 @@ source_set("testing") {
   visibility = [ "../*" ]
   testonly = true
   sources = [
+    "adapter.cc",
+    "adapter.h",
     "module.cc",
     "module.h",
     "process-proxy.cc",
     "process-proxy.h",
+    "process.cc",
+    "process.h",
     "target.cc",
     "target.h",
   ]
   public_deps = [
-    "../target:no_hooks",
-    "//zircon/system/ulib/zx",
-  ]
-  deps = [
     "../engine",
-    "//sdk/lib/fdio",
+    "../target:no_hooks",
+    "//src/sys/fuzzing/common",
     "//src/sys/fuzzing/common/testing",
     "//zircon/system/ulib/sync",
+    "//zircon/system/ulib/zx",
   ]
+  deps = [ "//sdk/lib/fdio" ]
 }
 
 executable("target") {

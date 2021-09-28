@@ -155,7 +155,7 @@ TEST_F(ProcessProxyTest, GetStats) {
   EXPECT_EQ(stats.mem_scaled_shared_bytes, task_stats.mem_scaled_shared_bytes);
   EXPECT_GE(stats.cpu_time, task_runtime.cpu_time);
   EXPECT_GE(stats.page_fault_time, task_runtime.page_fault_time);
-  EXPECT_EQ(stats.lock_contention_time, task_runtime.lock_contention_time);
+  EXPECT_GE(stats.lock_contention_time, task_runtime.lock_contention_time);
 }
 
 TEST_F(ProcessProxyTest, DefaultBadMalloc) {

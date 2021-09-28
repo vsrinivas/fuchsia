@@ -13,6 +13,8 @@ source_set("common") {
     "input.h",
     "options.cc",
     "options.h",
+    "runner.cc",
+    "runner.h",
     "shared-memory.cc",
     "shared-memory.h",
     "signal-coordinator.cc",
@@ -29,6 +31,34 @@ source_set("common") {
     "//zircon/system/ulib/zx",
   ]
   deps = [ "//sdk/lib/syslog/cpp" ]
+}
+
+source_set("runner-unittests-common") {
+  visibility = [ "../*" ]
+  testonly = true
+  sources = [
+    "runner-unittest.cc",
+    "runner-unittest.h",
+  ]
+  public_deps = [
+    ":common",
+    "//third_party/googletest:gtest",
+  ]
+  deps = [ "testing" ]
+}
+
+source_set("runner-unittests") {
+  visibility = [ "../*" ]
+  testonly = true
+  sources = [ "runner-unittest.inc" ]
+  deps = [ ":runner-unittests-common" ]
+}
+
+source_set("runner-fatal-unittests") {
+  visibility = [ "../*" ]
+  testonly = true
+  sources = [ "runner-fatal-unittest.inc" ]
+  deps = [ ":runner-unittests-common" ]
 }
 
 test("unittests") {

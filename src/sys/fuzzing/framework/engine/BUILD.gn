@@ -18,13 +18,19 @@ source_set("engine") {
     "mutagen.h",
     "process-proxy.cc",
     "process-proxy.h",
+    "runner.cc",
+    "runner.h",
   ]
   public_deps = [
     "//sdk/fidl/fuchsia.mem",
+    "//sdk/lib/fidl/cpp",
+    "//sdk/lib/fit",
     "//src/lib/fxl",
     "//src/sys/fuzzing/common",
     "//src/sys/fuzzing/fidl:fuchsia.fuzzer",
+    "//zircon/system/ulib/sync",
   ]
+
   deps = [
     "//sdk/lib/syslog/cpp",
     "//zircon/system/ulib/inspector",
@@ -37,11 +43,14 @@ source_set("testing") {
   sources = [
     "process-proxy-test.cc",
     "process-proxy-test.h",
+    "runner-test.cc",
+    "runner-test.h",
   ]
   public_deps = [
     ":engine",
     "../target:no_hooks",
     "../testing",
+    "//src/sys/fuzzing/common:runner-unittests-common",
     "//src/sys/fuzzing/common/testing",
     "//src/sys/fuzzing/fidl:fuchsia.fuzzer",
     "//third_party/googletest:gtest",
@@ -58,10 +67,12 @@ source_set("unittests") {
     "module-proxy-unittest.cc",
     "mutagen-unittest.cc",
     "process-proxy-unittest.cc",
+    "runner-unittest.cc",
   ]
   deps = [
     ":testing",
     "../testing:target",
+    "//src/sys/fuzzing/common:runner-unittests",
   ]
 }
 
@@ -69,9 +80,13 @@ source_set("unittests") {
 source_set("fatal-unittests") {
   visibility = [ "../*" ]
   testonly = true
-  sources = [ "process-proxy-fatal-unittest.cc" ]
+  sources = [
+    "process-proxy-fatal-unittest.cc",
+    "runner-fatal-unittest.cc",
+  ]
   deps = [
     ":testing",
     "../testing:target",
+    "//src/sys/fuzzing/common:runner-fatal-unittests",
   ]
 }

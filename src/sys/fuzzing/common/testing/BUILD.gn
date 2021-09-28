@@ -6,8 +6,11 @@ source_set("testing") {
   visibility = [ "//src/sys/fuzzing/*" ]
   testonly = true
   sources = [
+    "coverage.h",
     "dispatcher.cc",
     "dispatcher.h",
+    "monitor.cc",
+    "monitor.h",
     "signal-coordinator.cc",
     "signal-coordinator.h",
   ]

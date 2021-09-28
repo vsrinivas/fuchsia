@@ -11,11 +11,10 @@
 #include <memory>
 
 #include "src/lib/fxl/macros.h"
+#include "src/sys/fuzzing/common/testing/coverage.h"
 #include "src/sys/fuzzing/framework/target/module.h"
 
 namespace fuzzing {
-
-using Coverage = std::vector<std::pair<size_t, uint8_t>>;
 
 // Wraps a |Module| and automatically provides fake counters and PC tables based on a seed value.
 class FakeModule final {
