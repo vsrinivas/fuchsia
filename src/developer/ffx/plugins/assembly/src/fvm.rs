@@ -34,9 +34,8 @@ pub fn construct_fvm(
     fvm_config: &FvmConfig,
     blobfs_path: Option<impl AsRef<Path>>,
 ) -> Result<Fvms> {
-    // Gather blobfs and minfs details.
-    let mut blobfs: Option<Filesystem> = None;
-    let mut minfs: Option<Filesystem> = None;
+    // Gather details for each partition.
+    let mut filesystems: Vec<Filesystem> = Vec::new();
     for entry in &fvm_config.filesystems {
         match entry {
             FvmFilesystemEntry::BlobFS { attributes } => {
@@ -46,24 +45,20 @@ pub fn construct_fvm(
                         anyhow::bail!("BlobFS configuration exists, but BlobFS was not generated");
                     }
                 };
-                blobfs =
-                    Some(Filesystem { path: path.to_path_buf(), attributes: attributes.clone() });
+                filesystems
+                    .push(Filesystem { path: path.to_path_buf(), attributes: attributes.clone() });
             }
             FvmFilesystemEntry::MinFS { attributes } => {
                 let minfs_path = outdir.as_ref().join("data.blk");
                 let builder = MinFSBuilder::new(&minfs_tool);
                 builder.build(&minfs_path)?;
-                minfs = Some(Filesystem {
+                filesystems.push(Filesystem {
                     path: minfs_path.to_path_buf(),
                     attributes: attributes.clone(),
                 });
             }
         };
     }
-    let (blobfs, minfs) = match (blobfs, minfs) {
-        (Some(blobfs), Some(minfs)) => (blobfs, minfs),
-        _ => anyhow::bail!("Both blobfs and minfs must be supplied in the configuration"),
-    };
 
     // Build a default FVM that is non-sparse.
     let default_path = outdir.as_ref().join("fvm.blk");
@@ -75,8 +70,9 @@ pub fn construct_fvm(
         None,
         FvmType::Default,
     );
-    fvm_builder.filesystem(blobfs.clone());
-    fvm_builder.filesystem(minfs.clone());
+    for fs in &filesystems {
+        fvm_builder.filesystem(fs.clone());
+    }
     fvm_builder.build()?;
 
     // Build a sparse FVM for paving.
@@ -89,8 +85,9 @@ pub fn construct_fvm(
         fvm_config.max_disk_size,
         FvmType::Sparse { empty_minfs: false },
     );
-    sparse_fvm_builder.filesystem(blobfs.clone());
-    sparse_fvm_builder.filesystem(minfs.clone());
+    for fs in &filesystems {
+        sparse_fvm_builder.filesystem(fs.clone());
+    }
     sparse_fvm_builder.build()?;
 
     // Build a sparse FVM with an empty minfs.
@@ -103,7 +100,18 @@ pub fn construct_fvm(
         fvm_config.max_disk_size,
         FvmType::Sparse { empty_minfs: true },
     );
-    sparse_blob_fvm_builder.filesystem(blobfs.clone());
+    // In this case we have set the "empty_minfs" flag above which causes FVM to create an empty
+    // minfs partition named "data". We must strip that partition out of the filesystems we pass
+    // through such that FVM does not attempt to create two partitions with the same name.
+    //
+    // TODO(fxbug.dev/85165): Generate an empty image instead of a standard minfs image for this
+    // case. This empty image could be passed through directly as a filesystem and the special
+    // "with-empty-minfs" could be removed.
+    for fs in &filesystems {
+        if fs.attributes.name != "data" {
+            sparse_blob_fvm_builder.filesystem(fs.clone());
+        }
+    }
     sparse_blob_fvm_builder.build()?;
 
     // Build a sparse fastboot-supported FVM if needed.
@@ -119,8 +127,9 @@ pub fn construct_fvm(
                 fvm_config.max_disk_size,
                 FvmType::Emmc { compression: compression.clone(), length: *length },
             );
-            emmc_fvm_builder.filesystem(blobfs.clone());
-            emmc_fvm_builder.filesystem(minfs.clone());
+            for fs in &filesystems {
+                emmc_fvm_builder.filesystem(fs.clone());
+            }
             emmc_fvm_builder.build()?;
             Some(emmc_path)
         }
@@ -171,7 +180,7 @@ mod tests {
     use tempfile::tempdir;
 
     // These tests must be ran serially, because otherwise they will affect each
-    // other through process spawming. If a test spawns a process while the
+    // other through process spawning. If a test spawns a process while the
     // other test has an open file, then the spawned process will get a copy of
     // the open file descriptor, preventing the other test from executing it.
     #[test]
@@ -293,6 +302,14 @@ mod tests {
             FvmFilesystemEntry::MinFS {
                 attributes: FilesystemAttributes {
                     name: "minfs".to_string(),
+                    minimum_inodes: None,
+                    minimum_data_bytes: None,
+                    maximum_bytes: None,
+                },
+            },
+            FvmFilesystemEntry::MinFS {
+                attributes: FilesystemAttributes {
+                    name: "second_minfs".to_string(),
                     minimum_inodes: None,
                     minimum_data_bytes: None,
                     maximum_bytes: None,
