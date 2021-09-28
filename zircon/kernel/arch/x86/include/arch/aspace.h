@@ -106,6 +106,8 @@ class X86ArchVmAspace final : public ArchVmAspaceInterface {
 
   zx_status_t HarvestAccessed(vaddr_t vaddr, size_t count, NonTerminalAction action) override;
 
+  bool ActiveSinceLastCheck() override;
+
   paddr_t arch_table_phys() const override { return pt_->phys(); }
   paddr_t pt_phys() const { return pt_->phys(); }
   size_t pt_pages() const { return pt_->pages(); }
@@ -154,6 +156,9 @@ class X86ArchVmAspace final : public ArchVmAspaceInterface {
   // CPUs that are currently executing in this aspace.
   // Actually an mp_cpu_mask_t, but header dependencies.
   ktl::atomic<int> active_cpus_{0};
+
+  // Whether not this has been active since |ActiveSinceLastCheck| was called.
+  ktl::atomic<bool> active_since_last_check_ = false;
 };
 
 class X86VmICacheConsistencyManager final : public ArchVmICacheConsistencyManagerInterface {

@@ -54,6 +54,8 @@ namespace {
 
 KCOUNTER(vm_aspace_marked_latency_sensitive, "vm.aspace.latency_sensitive.marked")
 KCOUNTER(vm_aspace_latency_sensitive_destroyed, "vm.aspace.latency_sensitive.destroyed")
+KCOUNTER(vm_aspace_accessed_harvests_performed, "vm.aspace.accessed_harvest.performed")
+KCOUNTER(vm_aspace_accessed_harvests_skipped, "vm.aspace.accessed_harvest.skipped")
 
 // the singleton kernel address space
 lazy_init::LazyInit<VmAspace, lazy_init::CheckType::None, lazy_init::Destructor::Disabled>
@@ -776,9 +778,25 @@ void VmAspace::HarvestAllUserAccessedBits(NonTerminalAction action) {
       // destructor has not completed, and so the arch_aspace has not been destroyed. Even if the
       // actual VmAspace has been destroyed, it is still completely safe to walk to the hardware
       // page tables, there just will not be anything there.
-      zx_status_t __UNUSED result =
-          a.arch_aspace().HarvestAccessed(a.base(), a.size() / PAGE_SIZE, apply_action);
-      DEBUG_ASSERT(result == ZX_OK);
+      // The harvest itself needs to be performed in one of two scenarios
+      // 1. The aspace has been active since any kind of harvest previously happened. Since there
+      //    may be new information, a new harvest must be done.
+      // 2. The last harvest retained page tables, and now we want to free page tables. Even if the
+      //    aspace has not been active since last harvest, the last harvest might have left page
+      //    tables around that should now be reclaimed.
+      // Even in the case of (2) where a harvest always happens, we still want to make sure to call
+      // ActiveSinceLastCheck to clear the state.
+      if (a.arch_aspace().ActiveSinceLastCheck() ||
+          (apply_action == NonTerminalAction::FreeUnaccessed &&
+           a.last_harvest_type_ == NonTerminalAction::Retain)) {
+        zx_status_t __UNUSED result =
+            a.arch_aspace().HarvestAccessed(a.base(), a.size() / PAGE_SIZE, apply_action);
+        DEBUG_ASSERT(result == ZX_OK);
+        a.last_harvest_type_ = apply_action;
+        vm_aspace_accessed_harvests_performed.Add(1);
+      } else {
+        vm_aspace_accessed_harvests_skipped.Add(1);
+      }
     }
   }
 }

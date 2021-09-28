@@ -1581,6 +1581,22 @@ zx_status_t ArmArchVmAspace::MarkAccessed(vaddr_t vaddr, size_t count) {
   return ZX_OK;
 }
 
+bool ArmArchVmAspace::ActiveSinceLastCheck() {
+  // Read whether any CPUs are presently executing.
+  bool currently_active = num_active_cpus_.load(ktl::memory_order_relaxed) != 0;
+  // Exchange the current notion of active, with the previously active information. This is the only
+  // time a |false| value can potentially be written to active_since_last_check_, and doing an
+  // exchange means we can never 'lose' a |true| value.
+  bool previously_active =
+      active_since_last_check_.exchange(currently_active, ktl::memory_order_relaxed);
+  // Return whether we had previously been active. It is not necessary to also consider whether we
+  // are currently active, since activating would also have active_since_last_check_ to true. In the
+  // scenario where we race and currently_active is true, but we observe previously_active to be
+  // false, this means that as of the start of this function ::ContextSwitch had not completed, and
+  // so this aspace is still not actually active.
+  return previously_active;
+}
+
 zx_status_t ArmArchVmAspace::Init() {
   canary_.Assert();
   LTRACEF("aspace %p, base %#" PRIxPTR ", size 0x%zx, type %*s\n", this, base_, size_,
@@ -1708,7 +1724,13 @@ void ArmArchVmAspace::ContextSwitch(ArmArchVmAspace* old_aspace, ArmArchVmAspace
     if (unlikely(!old_aspace)) {
       __arm_wsr64("tcr_el1", tcr);
       __isb(ARM_MB_SY);
+    } else {
+      __UNUSED uint32_t prev = old_aspace->num_active_cpus_.fetch_sub(1, ktl::memory_order_relaxed);
+      DEBUG_ASSERT(prev > 0);
     }
+    __UNUSED uint32_t prev = aspace->num_active_cpus_.fetch_add(1, ktl::memory_order_relaxed);
+    DEBUG_ASSERT(prev < SMP_MAX_CPUS);
+    aspace->active_since_last_check_.store(true, ktl::memory_order_relaxed);
 
   } else {
     // Switching to the null aspace, which means kernel address space only.
@@ -1720,6 +1742,11 @@ void ArmArchVmAspace::ContextSwitch(ArmArchVmAspace* old_aspace, ArmArchVmAspace
     ttbr = 0;  // MMU_ARM64_UNUSED_ASID
     __arm_wsr64("ttbr0_el1", ttbr);
     __isb(ARM_MB_SY);
+
+    if (likely(old_aspace != nullptr)) {
+      __UNUSED uint32_t prev = old_aspace->num_active_cpus_.fetch_sub(1, ktl::memory_order_relaxed);
+      DEBUG_ASSERT(prev > 0);
+    }
   }
   if (TRACE_CONTEXT_SWITCH) {
     TRACEF("old aspace %p aspace %p ttbr %#" PRIx64 ", tcr %#" PRIx64 "\n", old_aspace, aspace,

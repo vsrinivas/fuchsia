@@ -101,6 +101,13 @@ class ArchVmAspaceInterface {
   // Marks any pages in the given virtual address range as being accessed.
   virtual zx_status_t MarkAccessed(vaddr_t vaddr, size_t count) = 0;
 
+  // Returns whether or not this aspace has been active since the last time this method was called.
+  //
+  // This is intended for use by the harvester to avoid scanning for any accessed or dirty bits if
+  // the aspace has not been active in the mmu, since an aspace that has not been active cannot
+  // generate new information.
+  virtual bool ActiveSinceLastCheck() = 0;
+
   // Physical address of the backing data structure used for translation.
   //
   // This should be treated as an opaque value outside of

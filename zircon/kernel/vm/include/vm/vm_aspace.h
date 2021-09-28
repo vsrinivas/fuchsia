@@ -286,6 +286,10 @@ class VmAspace : public fbl::DoublyLinkedListable<VmAspace*>, public fbl::RefCou
 
   fbl::RefPtr<VmMapping> vdso_code_mapping_;
 
+  // The kind of accessed harvest that was last performed.
+  ArchVmAspace::NonTerminalAction last_harvest_type_ TA_GUARDED(AspaceListLock::Get()) =
+      ArchVmAspace::NonTerminalAction::Retain;
+
   DECLARE_SINGLETON_MUTEX(AspaceListLock);
   static fbl::DoublyLinkedList<VmAspace*> aspaces_list_ TA_GUARDED(AspaceListLock::Get());
 

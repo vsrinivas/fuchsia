@@ -54,6 +54,8 @@ class ArmArchVmAspace final : public ArchVmAspaceInterface {
 
   zx_status_t HarvestAccessed(vaddr_t vaddr, size_t count, NonTerminalAction action) override;
 
+  bool ActiveSinceLastCheck() override;
+
   paddr_t arch_table_phys() const override { return tt_phys_; }
   uint16_t arch_asid() const { return asid_; }
   void arch_set_asid(uint16_t asid) { asid_ = asid; }
@@ -161,6 +163,12 @@ class ArmArchVmAspace final : public ArchVmAspaceInterface {
   // Range of address space.
   const vaddr_t base_ = 0;
   const size_t size_ = 0;
+
+  // Number of CPUs this aspace is currently active on.
+  ktl::atomic<uint32_t> num_active_cpus_ = 0;
+
+  // Whether not this has been active since |ActiveSinceLastCheck| was called.
+  ktl::atomic<bool> active_since_last_check_ = false;
 };
 
 // TODO: Take advantage of information in the CTR to determine if icache is PIPT and whether

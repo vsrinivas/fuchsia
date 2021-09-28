@@ -688,14 +688,21 @@ void X86ArchVmAspace::ContextSwitch(X86ArchVmAspace* old_aspace, X86ArchVmAspace
     LTRACEF_LEVEL(3, "switching to aspace %p, pt %#" PRIXPTR "\n", aspace, phys);
     arch::X86Cr3::Write(phys);
     if (old_aspace != nullptr) {
-      old_aspace->active_cpus_.fetch_and(~cpu_bit);
+      __UNUSED uint32_t prev = old_aspace->active_cpus_.fetch_and(~cpu_bit);
+      // Make sure we were actually previously running on this CPU
+      DEBUG_ASSERT(prev & cpu_bit);
     }
-    aspace->active_cpus_.fetch_or(cpu_bit);
+    __UNUSED uint32_t prev = aspace->active_cpus_.fetch_or(cpu_bit);
+    // Should not already be running on this CPU.
+    DEBUG_ASSERT(!(prev & cpu_bit));
+    aspace->active_since_last_check_.store(true, ktl::memory_order_relaxed);
   } else {
     LTRACEF_LEVEL(3, "switching to kernel aspace, pt %#" PRIxPTR "\n", kernel_pt_phys);
     arch::X86Cr3::Write(kernel_pt_phys);
     if (old_aspace != nullptr) {
-      old_aspace->active_cpus_.fetch_and(~cpu_bit);
+      __UNUSED uint32_t prev = old_aspace->active_cpus_.fetch_and(~cpu_bit);
+      // Make sure we were actually previously running on this CPU
+      DEBUG_ASSERT(prev & cpu_bit);
     }
   }
 
@@ -721,6 +728,22 @@ zx_status_t X86ArchVmAspace::HarvestAccessed(vaddr_t vaddr, size_t count,
     return ZX_ERR_INVALID_ARGS;
   }
   return pt_->HarvestAccessed(vaddr, count, action);
+}
+
+bool X86ArchVmAspace::ActiveSinceLastCheck() {
+  // Read whether any CPUs are presently executing.
+  bool currently_active = active_cpus_.load(ktl::memory_order_relaxed) != 0;
+  // Exchange the current notion of active, with the previously active information. This is the only
+  // time a |false| value can potentially be written to active_since_last_check_, and doing an
+  // exchange means we can never 'lose' a |true| value.
+  bool previously_active =
+      active_since_last_check_.exchange(currently_active, ktl::memory_order_relaxed);
+  // Return whether we had previously been active. It is not necessary to also consider whether we
+  // are currently active, since activating would also have active_since_last_check_ to true. In the
+  // scenario where we race and currently_active is true, but we observe previously_active to be
+  // false, this means that as of the start of this function ::ContextSwitch had not completed, and
+  // so this aspace is still not actually active.
+  return previously_active;
 }
 
 void x86_mmu_percpu_init(void) {
