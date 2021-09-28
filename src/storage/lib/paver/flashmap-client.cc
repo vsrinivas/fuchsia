@@ -273,14 +273,14 @@ zx::status<> FlashmapPartitionClient::Write(const zx::vmo& vmo, size_t vmo_size)
         "Skipping firmware upgrade.\n",
         GetHWID(cur_gbb), GetHWID(new_gbb));
     // Refuse to install the incompatible firmware image.
-    return zx::error(ZX_ERR_NOT_SUPPORTED);
+    return zx::ok();
   }
 
   // Determine if we need to perform a "full" update (including the RO section), or just update a
   // single slot.
   bool needs_full_update = NeedsFullUpdate(cur_gbb, new_gbb);
   if (needs_full_update) {
-    ERROR("Full update. is not yet implemented. https://fxbug.dev/81685\n");
+    ERROR("Full update is not yet implemented. https://fxbug.dev/81685\n");
     return FullUpdate(new_image);
   }
 
@@ -419,7 +419,7 @@ zx::status<> FlashmapPartitionClient::ABUpdate(fzl::VmoMapper& new_image) {
 
 zx::status<> FlashmapPartitionClient::FullUpdate(fzl::VmoMapper& new_image) {
   // TODO(fxbug.dev/81685): implement this.
-  return zx::error(ZX_ERR_NOT_SUPPORTED);
+  return zx::ok();
 }
 
 bool FlashmapPartitionClient::NeedsFullUpdate(GoogleBinaryBlockHeader* cur_gbb,

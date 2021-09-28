@@ -428,7 +428,7 @@ TEST_F(FlashmapClientTest, TestFirmwareUpdateWrongBoardID) {
 
   // Firmware update should succeed but not touch the firmware.
   auto status = client_->Write(new_image, kFakeFlashSize);
-  ASSERT_STATUS(status.status_value(), ZX_ERR_NOT_SUPPORTED);
+  ASSERT_OK(status.status_value());
   ASSERT_EQ(flashmap_.write_calls(), 0);
 }
 
@@ -447,7 +447,7 @@ TEST_F(FlashmapClientTest, TestFirmwareUpdateWrongKey) {
   flashmap_.SetAreaContents("GBB", MakeGbb("FUCHSIA TEST 1412", 0xbb));
 
   auto status = client_->Write(new_image, kFakeFlashSize);
-  ASSERT_STATUS(status.status_value(), ZX_ERR_NOT_SUPPORTED);
+  ASSERT_OK(status.status_value());
   ASSERT_EQ(flashmap_.write_calls(), 0);
 }
 
