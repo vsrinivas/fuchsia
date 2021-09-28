@@ -48,6 +48,19 @@ impl ComponentIdIndexError {
     }
 }
 
+// Custom implementation of PartialEq in which two ComponentIdIndexError::IndexUnreadable errors are
+// never equal.
+impl PartialEq for ComponentIdIndexError {
+    fn eq(&self, other: &Self) -> bool {
+        match (self, other) {
+            (Self::IndexError(self_err), Self::IndexError(other_err)) => self_err.eq(other_err),
+            (Self::MonikerError(self_err), Self::MonikerError(other_err)) => self_err.eq(other_err),
+            (Self::IndexUnreadable { .. }, Self::IndexUnreadable { .. }) => false,
+            _ => false,
+        }
+    }
+}
+
 /// ComponentIdIndex parses a given index and provides methods to look up instance IDs.
 #[derive(Debug, Default)]
 pub struct ComponentIdIndex {

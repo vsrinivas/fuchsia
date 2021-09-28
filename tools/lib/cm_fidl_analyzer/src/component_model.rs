@@ -42,7 +42,7 @@ use {
     thiserror::Error,
 };
 
-#[derive(Debug, Error, Deserialize, Serialize)]
+#[derive(Debug, Error, Deserialize, Serialize, PartialEq)]
 #[serde(rename_all = "snake_case")]
 pub enum AnalyzerModelError {
     #[error("the source instance `{0}` is not executable")]

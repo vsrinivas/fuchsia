@@ -59,9 +59,36 @@ impl ComponentInstanceError {
     }
 }
 
+// Custom implementation of PartialEq in which two ComponentInstanceError::ResolveFailed errors are
+// never equal.
+impl PartialEq for ComponentInstanceError {
+    fn eq(&self, other: &Self) -> bool {
+        match (self, other) {
+            (
+                Self::InstanceNotFound { moniker: self_moniker },
+                Self::InstanceNotFound { moniker: other_moniker },
+            ) => self_moniker.eq(other_moniker),
+            (
+                Self::ComponentManagerInstanceUnavailable {},
+                Self::ComponentManagerInstanceUnavailable {},
+            ) => true,
+            (
+                Self::PolicyCheckerNotFound { moniker: self_moniker },
+                Self::PolicyCheckerNotFound { moniker: other_moniker },
+            ) => self_moniker.eq(other_moniker),
+            (
+                Self::ComponentIdIndexNotFound { moniker: self_moniker },
+                Self::ComponentIdIndexNotFound { moniker: other_moniker },
+            ) => self_moniker.eq(other_moniker),
+            (Self::ResolveFailed { .. }, Self::ResolveFailed { .. }) => false,
+            _ => false,
+        }
+    }
+}
+
 /// Errors produced during routing.
 #[cfg_attr(feature = "serde", derive(Deserialize, Serialize), serde(rename_all = "snake_case"))]
-#[derive(Debug, Error, Clone)]
+#[derive(Debug, Error, Clone, PartialEq)]
 pub enum RoutingError {
     #[error("Instance identified as source of capability is not running: `{}`", moniker)]
     SourceInstanceStopped { moniker: PartialAbsoluteMoniker },
@@ -605,7 +632,7 @@ impl RoutingError {
 
 /// Errors produced during routing specific to events.
 #[cfg_attr(feature = "serde", derive(Deserialize, Serialize), serde(rename_all = "snake_case"))]
-#[derive(Error, Debug, Clone)]
+#[derive(Error, Debug, Clone, PartialEq)]
 pub enum EventsRoutingError {
     #[error("Filter is not a subset")]
     InvalidFilter,
@@ -621,7 +648,7 @@ pub enum EventsRoutingError {
 }
 
 #[cfg_attr(feature = "serde", derive(Deserialize, Serialize), serde(rename_all = "snake_case"))]
-#[derive(Debug, Error, Clone)]
+#[derive(Debug, Error, Clone, PartialEq)]
 pub enum RightsRoutingError {
     #[error("Requested rights greater than provided rights")]
     Invalid,
