@@ -1,0 +1,27 @@
+library dependent;
+
+alias aliased_string = string;
+
+const MY_STRING string = "foo";
+const MY_ALIASED_STRING aliased_string = "bar";
+const MY_TRUE bool = true;
+const MY_FALSE bool = false;
+const MY_FLOAT32 float32 = 1.2;
+const MY_FLOAT64 float64 = -3.4;
+const MY_INT8 int8 = -1;
+const MY_INT16 int16 = -2;
+const MY_INT32 int32 = -3;
+const MY_INT64 int64 = -4;
+const MY_UINT8 uint8 = 1;
+const MY_UINT16 uint16 = 2;
+const MY_UINT32 uint32 = 3;
+const MY_UINT64 uint64 = 4;
+const MY_BYTE byte = 5;
+
+type MyBits = flexible bits {
+    MEMBER = 1;
+};
+
+type MyEnum = strict enum : byte {
+    MEMBER = 1;
+};

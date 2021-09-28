@@ -34,6 +34,8 @@ handles.json.golden
 handles.tables.c.golden
 handles_in_types.json.golden
 handles_in_types.tables.c.golden
+imported_const_values.json.golden
+imported_const_values.tables.c.golden
 inheritance.json.golden
 inheritance.tables.c.golden
 inheritance_with_recursive_decl.json.golden

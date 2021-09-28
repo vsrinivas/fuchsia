@@ -39,6 +39,8 @@ toc:
     path: /fidl.test.handles
   - title: fidl.test.handlesintypes
     path: /fidl.test.handlesintypes
+  - title: fidl.test.importedconstvalues
+    path: /fidl.test.importedconstvalues
   - title: fidl.test.inheritance
     path: /fidl.test.inheritance
   - title: fidl.test.inheritancewithrecursivedecl

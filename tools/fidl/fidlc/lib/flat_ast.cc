@@ -1375,10 +1375,12 @@ bool AttributeSchema::ResolveArgs(Library* library, std::unique_ptr<Attribute>& 
     switch (want_type) {
       case ConstantValue::Kind::kDocComment:
       case ConstantValue::Kind::kString: {
-        static const auto max_size = Size::Max();
-        static const StringType kUnboundedStringType = StringType(
+        const auto max_size = Size::Max();
+        auto unbounded_string_type = std::make_unique<StringType>(
             Name::CreateIntrinsic("string"), &max_size, types::Nullability::kNonnullable);
-        if (!library->ResolveConstant(arg->value.get(), &kUnboundedStringType)) {
+        if (library->ResolveConstant(arg->value.get(), unbounded_string_type.get())) {
+          arg->type = std::move(unbounded_string_type);
+        } else {
           ok = false;
         }
         break;
@@ -1399,9 +1401,11 @@ bool AttributeSchema::ResolveArgs(Library* library, std::unique_ptr<Attribute>& 
             ConstantValue::KindToPrimitiveSubtype(want_type);
         assert(primitive_subtype.has_value());
 
-        const auto primitive_type =
-            PrimitiveType(Name::CreateIntrinsic(primitive_name), primitive_subtype.value());
-        if (!library->ResolveConstant(arg->value.get(), &primitive_type)) {
+        auto primitive_type = std::make_unique<PrimitiveType>(Name::CreateIntrinsic(primitive_name),
+                                                              primitive_subtype.value());
+        if (library->ResolveConstant(arg->value.get(), primitive_type.get())) {
+          arg->type = std::move(primitive_type);
+        } else {
           ok = false;
         }
         break;
@@ -3383,7 +3387,7 @@ bool Library::CompileAttributeList(AttributeList* attributes) {
 
       // Check for duplicate args, and return early if we find them.
       std::set<std::string> seen;
-      for (const auto& arg : attribute->args) {
+      for (auto& arg : attribute->args) {
         if (arg->name.has_value() && !seen.insert(utils::canonicalize(arg->name.value())).second) {
           ok =
               Fail(ErrDuplicateAttributeArg, attribute->span(), attribute.get(), arg->name.value());
@@ -3402,18 +3406,22 @@ bool Library::CompileAttributeList(AttributeList* attributes) {
       // their arguments, making sure to error on numerics (since those cannot be resolved to the
       // appropriate fidelity).
       for (const auto& arg : attribute->args) {
-        static const auto max_size = Size::Max();
-        static const StringType kUnboundedStringType = StringType(
-            Name::CreateIntrinsic("string"), &max_size, types::Nullability::kNonnullable);
-        static const auto kBoolType =
-            PrimitiveType(Name::CreateIntrinsic("bool"), types::PrimitiveSubtype::kBool);
         assert(arg->value->kind != Constant::Kind::kBinaryOperator &&
                "attribute arg starting with a binary operator is a parse error");
 
         // Try first as a string...
-        if (!TryResolveConstant(arg->value.get(), &kUnboundedStringType)) {
+        const auto max_size = Size::Max();
+        auto unbounded_string_type = std::make_unique<StringType>(
+            Name::CreateIntrinsic("string"), &max_size, types::Nullability::kNonnullable);
+        if (TryResolveConstant(arg->value.get(), unbounded_string_type.get())) {
+          arg->type = std::move(unbounded_string_type);
+        } else {
           // ...then as a bool if that doesn't work.
-          if (!TryResolveConstant(arg->value.get(), &kBoolType)) {
+          auto bool_type = std::make_unique<PrimitiveType>(Name::CreateIntrinsic("bool"),
+                                                           types::PrimitiveSubtype::kBool);
+          if (TryResolveConstant(arg->value.get(), bool_type.get())) {
+            arg->type = std::move(bool_type);
+          } else {
             // Since we cannot have an IdentifierConstant resolving to a kDocComment-kinded value,
             // we know that it must resolve to a numeric instead.
             ok = Fail(ErrCannotUseNumericArgsOnCustomAttributes, attribute->span(), arg.get(),

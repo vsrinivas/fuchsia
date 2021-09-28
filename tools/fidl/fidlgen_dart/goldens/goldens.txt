@@ -32,6 +32,8 @@ handles_async.dart.golden
 handles_in_types_async.dart.golden
 handles_in_types_test.dart.golden
 handles_test.dart.golden
+imported_const_values_async.dart.golden
+imported_const_values_test.dart.golden
 inheritance_async.dart.golden
 inheritance_test.dart.golden
 inheritance_with_recursive_decl_async.dart.golden

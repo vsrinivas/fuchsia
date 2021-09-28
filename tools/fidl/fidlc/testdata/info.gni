@@ -278,6 +278,10 @@ fidl_testdata_info = [
     ]
   },
   {
+    name = "imported_const_values"
+    target = "//tools/fidl/fidlc/testdata/imported_const_values:fidl.test.importedconstvalues"
+  },
+  {
     name = "inheritance"
     target = "//tools/fidl/fidlc/testdata:fidl.test.inheritance"
     host_build_denylist = [

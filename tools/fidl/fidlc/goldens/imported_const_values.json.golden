@@ -1,0 +1,225 @@
+{
+  "version": "0.0.1",
+  "name": "fidl.test.importedconstvalues",
+  "library_dependencies": [
+    {
+      "name": "dependent",
+      "declarations": {
+        "dependent/MyBits": {
+          "kind": "bits"
+        },
+        "dependent/MY_STRING": {
+          "kind": "const"
+        },
+        "dependent/MY_ALIASED_STRING": {
+          "kind": "const"
+        },
+        "dependent/MY_TRUE": {
+          "kind": "const"
+        },
+        "dependent/MY_FALSE": {
+          "kind": "const"
+        },
+        "dependent/MY_FLOAT32": {
+          "kind": "const"
+        },
+        "dependent/MY_FLOAT64": {
+          "kind": "const"
+        },
+        "dependent/MY_INT8": {
+          "kind": "const"
+        },
+        "dependent/MY_INT16": {
+          "kind": "const"
+        },
+        "dependent/MY_INT32": {
+          "kind": "const"
+        },
+        "dependent/MY_INT64": {
+          "kind": "const"
+        },
+        "dependent/MY_UINT8": {
+          "kind": "const"
+        },
+        "dependent/MY_UINT16": {
+          "kind": "const"
+        },
+        "dependent/MY_UINT32": {
+          "kind": "const"
+        },
+        "dependent/MY_UINT64": {
+          "kind": "const"
+        },
+        "dependent/MY_BYTE": {
+          "kind": "const"
+        },
+        "dependent/MyEnum": {
+          "kind": "enum"
+        },
+        "dependent/aliased_string": {
+          "kind": "type_alias"
+        }
+      }
+    }
+  ],
+  "bits_declarations": [],
+  "const_declarations": [],
+  "enum_declarations": [],
+  "experimental_resource_declarations": [],
+  "interface_declarations": [],
+  "service_declarations": [],
+  "struct_declarations": [
+    {
+      "name": "fidl.test.importedconstvalues/MyStruct",
+      "naming_context": [
+        "MyStruct"
+      ],
+      "location": {
+        "filename": "../../tools/fidl/fidlc/testdata/imported_const_values/example.test.fidl",
+        "line": 9,
+        "column": 6,
+        "length": 8
+      },
+      "is_request_or_response": false,
+      "maybe_attributes": [
+        {
+          "name": "attr1",
+          "arguments": [
+            {
+              "name": "value",
+              "type": "string",
+              "value": {
+                "kind": "identifier",
+                "value": "foo",
+                "expression": "dependent.MY_STRING",
+                "identifier": "dependent/MY_STRING"
+              },
+              "location": {
+                "filename": "../../tools/fidl/fidlc/testdata/imported_const_values/example.test.fidl",
+                "line": 5,
+                "column": 8,
+                "length": 19
+              }
+            }
+          ],
+          "location": {
+            "filename": "../../tools/fidl/fidlc/testdata/imported_const_values/example.test.fidl",
+            "line": 5,
+            "column": 1,
+            "length": 27
+          }
+        },
+        {
+          "name": "attr2",
+          "arguments": [
+            {
+              "name": "value",
+              "type": "string",
+              "value": {
+                "kind": "identifier",
+                "value": "bar",
+                "expression": "dependent.MY_ALIASED_STRING",
+                "identifier": "dependent/MY_ALIASED_STRING"
+              },
+              "location": {
+                "filename": "../../tools/fidl/fidlc/testdata/imported_const_values/example.test.fidl",
+                "line": 6,
+                "column": 8,
+                "length": 27
+              }
+            }
+          ],
+          "location": {
+            "filename": "../../tools/fidl/fidlc/testdata/imported_const_values/example.test.fidl",
+            "line": 6,
+            "column": 1,
+            "length": 35
+          }
+        },
+        {
+          "name": "attr3",
+          "arguments": [
+            {
+              "name": "value",
+              "type": "bool",
+              "value": {
+                "kind": "identifier",
+                "value": "true",
+                "expression": "dependent.MY_TRUE",
+                "identifier": "dependent/MY_TRUE"
+              },
+              "location": {
+                "filename": "../../tools/fidl/fidlc/testdata/imported_const_values/example.test.fidl",
+                "line": 7,
+                "column": 8,
+                "length": 17
+              }
+            }
+          ],
+          "location": {
+            "filename": "../../tools/fidl/fidlc/testdata/imported_const_values/example.test.fidl",
+            "line": 7,
+            "column": 1,
+            "length": 25
+          }
+        },
+        {
+          "name": "attr4",
+          "arguments": [
+            {
+              "name": "value",
+              "type": "bool",
+              "value": {
+                "kind": "identifier",
+                "value": "false",
+                "expression": "dependent.MY_FALSE",
+                "identifier": "dependent/MY_FALSE"
+              },
+              "location": {
+                "filename": "../../tools/fidl/fidlc/testdata/imported_const_values/example.test.fidl",
+                "line": 8,
+                "column": 8,
+                "length": 18
+              }
+            }
+          ],
+          "location": {
+            "filename": "../../tools/fidl/fidlc/testdata/imported_const_values/example.test.fidl",
+            "line": 8,
+            "column": 1,
+            "length": 26
+          }
+        }
+      ],
+      "members": [],
+      "resource": false,
+      "type_shape_v1": {
+        "inline_size": 1,
+        "alignment": 1,
+        "depth": 0,
+        "max_handles": 0,
+        "max_out_of_line": 0,
+        "has_padding": false,
+        "has_flexible_envelope": false
+      },
+      "type_shape_v2": {
+        "inline_size": 1,
+        "alignment": 1,
+        "depth": 0,
+        "max_handles": 0,
+        "max_out_of_line": 0,
+        "has_padding": false,
+        "has_flexible_envelope": false
+      }
+    }
+  ],
+  "table_declarations": [],
+  "union_declarations": [],
+  "type_alias_declarations": [],
+  "declaration_order": [
+    "fidl.test.importedconstvalues/MyStruct"
+  ],
+  "declarations": {
+    "fidl.test.importedconstvalues/MyStruct": "struct"
+  }
+}

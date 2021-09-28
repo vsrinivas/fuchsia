@@ -219,6 +219,7 @@ void JSONGenerator::Generate(const flat::AttributeArg& value) {
     assert(value.name.has_value() &&
            "anonymous attribute argument names should always be inferred during compilation");
     GenerateObjectMember("name", value.name.value(), Position::kFirst);
+    GenerateObjectMember("type", value.type->name);
     GenerateObjectMember("value", value.value);
 
     // TODO(fxbug.dev/7660): Be consistent in emitting location fields.

@@ -30,6 +30,8 @@ handles.cc.golden
 handles.h.golden
 handles_in_types.cc.golden
 handles_in_types.h.golden
+imported_const_values.cc.golden
+imported_const_values.h.golden
 inheritance.cc.golden
 inheritance.h.golden
 inheritance_with_recursive_decl.cc.golden

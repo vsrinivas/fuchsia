@@ -71,6 +71,10 @@ struct AttributeArg final {
 
   std::optional<std::string> name;
   std::unique_ptr<Constant> value;
+
+  // Set during compilation - type is derived during attribute resolution, and thus must represent
+  // either an intrinsic primitive or string type.
+  std::unique_ptr<Type> type = nullptr;
   SourceSpan span_;
 };
 

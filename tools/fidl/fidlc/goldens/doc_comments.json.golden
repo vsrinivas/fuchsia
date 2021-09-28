@@ -7,6 +7,7 @@
       "arguments": [
         {
           "name": "value",
+          "type": "string",
           "value": {
             "kind": "literal",
             "value": " library comment #1\n\n library comment #2\n",
@@ -52,6 +53,7 @@
           "arguments": [
             {
               "name": "value",
+              "type": "string",
               "value": {
                 "kind": "literal",
                 "value": " strict bits comment #1\n\n strict bits comment #2\n",
@@ -126,6 +128,7 @@
               "arguments": [
                 {
                   "name": "value",
+                  "type": "string",
                   "value": {
                     "kind": "literal",
                     "value": " MY_FIRST_BIT member comment #1\n\n MY_FIRST_BIT member comment #3\n",
@@ -177,6 +180,7 @@
               "arguments": [
                 {
                   "name": "value",
+                  "type": "string",
                   "value": {
                     "kind": "literal",
                     "value": " MY_OTHER_BIT member comment #1\n\n MY_OTHER_BIT member comment #3\n",
@@ -224,6 +228,7 @@
           "arguments": [
             {
               "name": "value",
+              "type": "string",
               "value": {
                 "kind": "literal",
                 "value": " flexible bits comment #1\n\n flexible bits comment #2\n",
@@ -298,6 +303,7 @@
               "arguments": [
                 {
                   "name": "value",
+                  "type": "string",
                   "value": {
                     "kind": "literal",
                     "value": " MY_FIRST_BIT member comment #1\n\n MY_FIRST_BIT member comment #3\n",
@@ -349,6 +355,7 @@
               "arguments": [
                 {
                   "name": "value",
+                  "type": "string",
                   "value": {
                     "kind": "literal",
                     "value": " MY_OTHER_BIT member comment #1\n\n MY_OTHER_BIT member comment #3\n",
@@ -395,6 +402,7 @@
           "arguments": [
             {
               "name": "value",
+              "type": "string",
               "value": {
                 "kind": "literal",
                 "value": " const comment #1\n\n const comment #3\n",
@@ -473,6 +481,7 @@
           "arguments": [
             {
               "name": "value",
+              "type": "string",
               "value": {
                 "kind": "literal",
                 "value": " strict enum comment #1.\n\n strict enum comment #2.\n",
@@ -525,6 +534,7 @@
               "arguments": [
                 {
                   "name": "value",
+                  "type": "string",
                   "value": {
                     "kind": "literal",
                     "value": " FOO member comment #1\n\n FOO member comment #3\n",
@@ -576,6 +586,7 @@
               "arguments": [
                 {
                   "name": "value",
+                  "type": "string",
                   "value": {
                     "kind": "literal",
                     "value": " BAR member comment #1\n\n BAR member comment #3\n",
@@ -623,6 +634,7 @@
           "arguments": [
             {
               "name": "value",
+              "type": "string",
               "value": {
                 "kind": "literal",
                 "value": " flexible enum comment #1.\n\n flexible enum comment #2.\n",
@@ -675,6 +687,7 @@
               "arguments": [
                 {
                   "name": "value",
+                  "type": "string",
                   "value": {
                     "kind": "literal",
                     "value": " FOO member comment #1\n\n FOO member comment #3\n",
@@ -726,6 +739,7 @@
               "arguments": [
                 {
                   "name": "value",
+                  "type": "string",
                   "value": {
                     "kind": "literal",
                     "value": " BAR member comment #1\n\n BAR member comment #3\n",
@@ -774,6 +788,7 @@
           "arguments": [
             {
               "name": "value",
+              "type": "string",
               "value": {
                 "kind": "literal",
                 "value": " interface comment #1\n\n interface comment #3\n",
@@ -818,6 +833,7 @@
               "arguments": [
                 {
                   "name": "value",
+                  "type": "string",
                   "value": {
                     "kind": "literal",
                     "value": " method comment #1\n\n method comment #3\n",
@@ -882,6 +898,7 @@
               "arguments": [
                 {
                   "name": "value",
+                  "type": "string",
                   "value": {
                     "kind": "literal",
                     "value": " event comment #1\n\n event comment #3\n",
@@ -948,6 +965,7 @@
           "arguments": [
             {
               "name": "value",
+              "type": "string",
               "value": {
                 "kind": "literal",
                 "value": " service comment #1\n\n service comment #3\n",
@@ -1012,6 +1030,7 @@
               "arguments": [
                 {
                   "name": "value",
+                  "type": "string",
                   "value": {
                     "kind": "literal",
                     "value": " member comment #1\n\n member comment #3\n",
@@ -1061,6 +1080,7 @@
           "arguments": [
             {
               "name": "value",
+              "type": "string",
               "value": {
                 "kind": "literal",
                 "value": " struct comment #1\n\n struct comment #3\n",
@@ -1124,6 +1144,7 @@
               "arguments": [
                 {
                   "name": "value",
+                  "type": "string",
                   "value": {
                     "kind": "literal",
                     "value": " struct member comment #1\n\n struct member comment #3\n",
@@ -1199,6 +1220,7 @@
           "arguments": [
             {
               "name": "value",
+              "type": "string",
               "value": {
                 "kind": "literal",
                 "value": " table comment #1\n\n table comment #3\n",
@@ -1264,6 +1286,7 @@
               "arguments": [
                 {
                   "name": "value",
+                  "type": "string",
                   "value": {
                     "kind": "literal",
                     "value": " table field comment #1\n\n table field comment #3\n",
@@ -1332,6 +1355,7 @@
           "arguments": [
             {
               "name": "value",
+              "type": "string",
               "value": {
                 "kind": "literal",
                 "value": " strict union comment #1\n\n strict union comment #3\n",
@@ -1397,6 +1421,7 @@
               "arguments": [
                 {
                   "name": "value",
+                  "type": "string",
                   "value": {
                     "kind": "literal",
                     "value": " union member comment #1\n\n union member comment #3\n",
@@ -1463,6 +1488,7 @@
           "arguments": [
             {
               "name": "value",
+              "type": "string",
               "value": {
                 "kind": "literal",
                 "value": " flexible union comment #1\n\n flexible union comment #3\n",
@@ -1528,6 +1554,7 @@
               "arguments": [
                 {
                   "name": "value",
+                  "type": "string",
                   "value": {
                     "kind": "literal",
                     "value": " union member comment #1\n\n union member comment #3\n",

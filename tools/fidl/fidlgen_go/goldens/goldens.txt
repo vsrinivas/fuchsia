@@ -15,6 +15,7 @@ experimental_maybe_from_type_alias.go.golden
 foreign_type_in_response_used_through_compose.go.golden
 handles.go.golden
 handles_in_types.go.golden
+imported_const_values.go.golden
 inheritance.go.golden
 inheritance_with_recursive_decl.go.golden
 nullable.go.golden

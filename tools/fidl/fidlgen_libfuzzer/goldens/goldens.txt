@@ -26,6 +26,10 @@ foreign_type_in_response_used_through_compose.cc.golden
 foreign_type_in_response_used_through_compose.h.golden
 foreign_type_in_response_used_through_compose_decode_encode.cc.golden
 foreign_type_in_response_used_through_compose_decode_encode.h.golden
+imported_const_values.cc.golden
+imported_const_values.h.golden
+imported_const_values_decode_encode.cc.golden
+imported_const_values_decode_encode.h.golden
 inheritance.cc.golden
 inheritance.h.golden
 inheritance_decode_encode.cc.golden

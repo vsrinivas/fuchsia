@@ -46,6 +46,9 @@ handles_in_types.cc.golden
 handles_in_types.h.golden
 handles_in_types_test_base.h.golden
 handles_test_base.h.golden
+imported_const_values.cc.golden
+imported_const_values.h.golden
+imported_const_values_test_base.h.golden
 inheritance.cc.golden
 inheritance.h.golden
 inheritance_test_base.h.golden

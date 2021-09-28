@@ -82,6 +82,10 @@
     <td></td>
 </tr>
 <tr>
+    <td><a href="fidl.test.importedconstvalues/index">fidl.test.importedconstvalues</a></td>
+    <td></td>
+</tr>
+<tr>
     <td><a href="fidl.test.inheritance/index">fidl.test.inheritance</a></td>
     <td></td>
 </tr>

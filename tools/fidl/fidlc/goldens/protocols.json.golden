@@ -1279,6 +1279,7 @@
           "arguments": [
             {
               "name": "value",
+              "type": "string",
               "value": {
                 "kind": "literal",
                 "value": "Channel",
@@ -1953,6 +1954,7 @@
           "arguments": [
             {
               "name": "value",
+              "type": "string",
               "value": {
                 "kind": "literal",
                 "value": "Syscall",
@@ -3224,6 +3226,7 @@
               "arguments": [
                 {
                   "name": "value",
+                  "type": "string",
                   "value": {
                     "kind": "literal",
                     "value": "rust",

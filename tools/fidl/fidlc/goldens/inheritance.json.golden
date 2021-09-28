@@ -169,6 +169,7 @@
               "arguments": [
                 {
                   "name": "value",
+                  "type": "string",
                   "value": {
                     "kind": "literal",
                     "value": " doc comment on compose\n",

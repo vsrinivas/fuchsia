@@ -864,6 +864,7 @@
           "arguments": [
             {
               "name": "value",
+              "type": "string",
               "value": {
                 "kind": "literal",
                 "value": "OverrideTest",

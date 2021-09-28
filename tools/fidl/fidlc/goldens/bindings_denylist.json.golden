@@ -20,6 +20,7 @@
           "arguments": [
             {
               "name": "value",
+              "type": "string",
               "value": {
                 "kind": "literal",
                 "value": "cpp, dart, go, hlcpp, libfuzzer, llcpp, rust",
@@ -108,6 +109,7 @@
           "arguments": [
             {
               "name": "value",
+              "type": "string",
               "value": {
                 "kind": "literal",
                 "value": "there_are_no_bindings_with_this_name",
@@ -186,6 +188,7 @@
           "arguments": [
             {
               "name": "value",
+              "type": "string",
               "value": {
                 "kind": "literal",
                 "value": "cpp, go, hlcpp, libfuzzer, llcpp, rust, syzkaller",
@@ -253,6 +256,7 @@
           "arguments": [
             {
               "name": "value",
+              "type": "string",
               "value": {
                 "kind": "literal",
                 "value": "cpp, dart, go, rust, syzkaller",
@@ -348,6 +352,7 @@
           "arguments": [
             {
               "name": "value",
+              "type": "string",
               "value": {
                 "kind": "literal",
                 "value": "dart, go, libfuzzer, rust, syzkaller",
@@ -393,6 +398,7 @@
           "arguments": [
             {
               "name": "value",
+              "type": "string",
               "value": {
                 "kind": "literal",
                 "value": "cpp, dart, go, libfuzzer, llcpp, rust, syzkaller",
@@ -441,6 +447,7 @@
           "arguments": [
             {
               "name": "value",
+              "type": "string",
               "value": {
                 "kind": "literal",
                 "value": "cpp, dart, hlcpp, libfuzzer, llcpp, rust, syzkaller",
@@ -507,6 +514,7 @@
           "arguments": [
             {
               "name": "value",
+              "type": "string",
               "value": {
                 "kind": "literal",
                 "value": "cpp, dart, go, hlcpp, libfuzzer, llcpp, syzkaller",
@@ -574,6 +582,7 @@
           "arguments": [
             {
               "name": "value",
+              "type": "string",
               "value": {
                 "kind": "literal",
                 "value": "cpp, dart, go, hlcpp, libfuzzer, rust, syzkaller",

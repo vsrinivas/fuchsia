@@ -18,6 +18,7 @@ experimental_maybe_from_type_alias.md.golden
 foreign_type_in_response_used_through_compose.md.golden
 handles.md.golden
 handles_in_types.md.golden
+imported_const_values.md.golden
 inheritance.md.golden
 inheritance_with_recursive_decl.md.golden
 nullable.md.golden

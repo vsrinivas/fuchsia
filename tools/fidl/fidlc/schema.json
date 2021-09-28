@@ -83,16 +83,35 @@
                     "description": "Name of the attribute argument",
                     "type": "string"
                 },
+                "type": {
+                    "$ref": "#/definitions/attribute-arg-type",
+                    "description": "Attribute argument type"
+                },
                 "value": {
-                    "$ref": "#/definitions/literal-constant",
+                    "$ref": "#/definitions/constant",
                     "description": "Value of the attribute argument"
                 }
             },
             "required": [
                 "name",
+                "type",
                 "value"
             ],
             "type": "object"
+        },
+        "attribute-arg-type": {
+            "description": "Definition of an attribute argument type",
+            "oneOf": [
+                {
+                    "$ref": "#/definitions/primitive-subtype"
+                },
+                {
+                    "enum": [
+                        "string"
+                    ],
+                    "type": "string"
+                }
+            ]
         },
         "attribute-args-list": {
             "additionalProperties": false,
