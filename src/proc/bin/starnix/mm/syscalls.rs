@@ -51,6 +51,7 @@ pub fn sys_mmap(
             | MAP_SHARED
             | MAP_ANONYMOUS
             | MAP_FIXED
+            | MAP_FIXED_NOREPLACE
             | MAP_POPULATE
             | MAP_NORESERVE
             | MAP_STACK)
@@ -82,7 +83,7 @@ pub fn sys_mmap(
     if addr.ptr() != 0 {
         zx_flags |= zx::VmarFlags::SPECIFIC;
     }
-    if flags & MAP_FIXED != 0 {
+    if flags & MAP_FIXED != 0 && flags & MAP_FIXED_NOREPLACE == 0 {
         // SAFETY: We are operating on another process, so it's safe to use SPECIFIC_OVERWRITE
         zx_flags |= unsafe {
             zx::VmarFlags::from_bits_unchecked(zx::VmarFlagsExtended::SPECIFIC_OVERWRITE.bits())
@@ -141,11 +142,16 @@ pub fn sys_mmap(
         )
     };
     let addr = match try_map(addr, zx_flags) {
-        Err(errno)
-            if errno == EINVAL
-                && zx_flags.contains(zx::VmarFlags::SPECIFIC)
-                && (flags & MAP_FIXED == 0) =>
-        {
+        Err(errno) if zx_flags.contains(zx::VmarFlags::SPECIFIC) => {
+            if flags & MAP_FIXED_NOREPLACE != 0 {
+                if errno == ENOMEM {
+                    return error!(EEXIST);
+                }
+                return Err(errno);
+            }
+            if flags & MAP_FIXED != 0 {
+                return Err(errno);
+            }
             try_map(UserAddress::default(), zx_flags - zx::VmarFlags::SPECIFIC)
         }
         result => result,
@@ -235,6 +241,81 @@ mod tests {
     use fuchsia_async as fasync;
 
     use crate::testing::*;
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_mmap_with_colliding_hint() {
+        let (_kernel, task_owner) = create_kernel_and_task();
+        let ctx = SyscallContext::new(&task_owner.task);
+        let page_size = *PAGE_SIZE;
+
+        let mapped_address = map_memory(&ctx, UserAddress::default(), page_size);
+        match sys_mmap(
+            &ctx,
+            mapped_address,
+            page_size as usize,
+            PROT_READ,
+            MAP_PRIVATE | MAP_ANONYMOUS,
+            FdNumber::from_raw(-1),
+            0,
+        ) {
+            Ok(SyscallResult::Success(address)) => {
+                assert_ne!(UserAddress::from(address), mapped_address);
+            }
+            result => {
+                assert!(false, "mmap with colliding hint failed: {:?}", result);
+            }
+        }
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_mmap_with_fixed_collision() {
+        let (_kernel, task_owner) = create_kernel_and_task();
+        let ctx = SyscallContext::new(&task_owner.task);
+        let page_size = *PAGE_SIZE;
+
+        let mapped_address = map_memory(&ctx, UserAddress::default(), page_size);
+        match sys_mmap(
+            &ctx,
+            mapped_address,
+            page_size as usize,
+            PROT_READ,
+            MAP_PRIVATE | MAP_ANONYMOUS | MAP_FIXED,
+            FdNumber::from_raw(-1),
+            0,
+        ) {
+            Ok(SyscallResult::Success(address)) => {
+                assert_eq!(UserAddress::from(address), mapped_address);
+            }
+            result => {
+                assert!(false, "mmap with fixed collision failed: {:?}", result);
+            }
+        }
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_mmap_with_fixed_noreplace_collision() {
+        let (_kernel, task_owner) = create_kernel_and_task();
+        let ctx = SyscallContext::new(&task_owner.task);
+        let page_size = *PAGE_SIZE;
+
+        let mapped_address = map_memory(&ctx, UserAddress::default(), page_size);
+        match sys_mmap(
+            &ctx,
+            mapped_address,
+            page_size as usize,
+            PROT_READ,
+            MAP_PRIVATE | MAP_ANONYMOUS | MAP_FIXED_NOREPLACE,
+            FdNumber::from_raw(-1),
+            0,
+        ) {
+            Err(errno) => {
+                assert_eq!(errno, EEXIST);
+            }
+            result => {
+                assert!(false, "mmap with fixed_noreplace collision failed: {:?}", result);
+            }
+        }
+    }
 
     /// It is ok to call munmap with an address that is a multiple of the page size, and
     /// a non-zero length.
