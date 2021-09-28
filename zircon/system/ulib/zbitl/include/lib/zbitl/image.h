@@ -177,9 +177,10 @@ class Image : public View<Storage> {
       return fitx::error{ErrorType{"cannot extend by iterator range starting at a view's end."}};
     }
 
-    uint32_t size = this->size_bytes();
+    uint32_t size = static_cast<uint32_t>(this->size_bytes());
     uint32_t tail_size =
-        (last == view.end() ? view.size_bytes() : last.item_offset()) - first.item_offset();
+        (last == view.end() ? static_cast<uint32_t>(view.size_bytes()) : last.item_offset()) -
+        first.item_offset();
     uint32_t new_size = size + tail_size;
     if (auto result = ResetContainer(new_size); result.is_error()) {
       auto error = std::move(result).error_value();
