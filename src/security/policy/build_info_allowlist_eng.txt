@@ -1,6 +1,5 @@
 fuchsia-pkg://fuchsia.com/amber#meta/system_updater.cmx
 fuchsia-pkg://fuchsia.com/build-info-service#meta/build-info.cmx
-fuchsia-pkg://fuchsia.com/component_manager_sfw#meta/component_manager_sfw.cmx
 fuchsia-pkg://fuchsia.com/copy-forensics#meta/feedback.cmx
 fuchsia-pkg://fuchsia.com/feedback-data-tests#meta/datastore_unittest.cmx
 fuchsia-pkg://fuchsia.com/feedback-data-tests#meta/main_service_unittest.cmx
