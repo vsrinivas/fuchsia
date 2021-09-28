@@ -294,6 +294,14 @@ From //boards/x64.gni:20
 
 From //build/board.gni:25
 
+### board_core_realm_shards
+Core realm shards specific to this board. See //src/sys/core for more
+context.
+
+**Current value (from the default):** `[]`
+
+From //build/board.gni:43
+
 ### board_description
 Human readable board description corresponding to the board name.
 
@@ -397,7 +405,7 @@ From //build/board.gni:18
 
 **Current value for `target_cpu = "x64"`:** `["//src/power/thermd", "//src/power/thermd:config", "//garnet/packages/prod:drivers-support", "//src/hwinfo:default_board_config", "//src/graphics/lib/magma/gnbuild/magma-intel-gen:libvulkan_intel_gen", "//src/graphics/lib/goldfish-vulkan/gnbuild:goldfish-vulkan"]`
 
-From //boards/common/x64-common.gni:71
+From //boards/common/x64-common.gni:73
 
 **Overridden from the default:** `[]`
 
@@ -443,7 +451,7 @@ From //build/board.gni:39
 
 **Current value for `target_cpu = "x64"`:** `["//garnet/packages/prod:drivers-system", "//src/graphics/lib/magma/gnbuild/magma-intel-gen:msd-intel-gen", "//src/media/audio/bundles:virtual_audio_driver"]`
 
-From //boards/common/x64-common.gni:65
+From //boards/common/x64-common.gni:67
 
 **Overridden from the default:** `[]`
 
@@ -3101,14 +3109,19 @@ From //products/bringup.gni:40
 
 From //build/product.gni:7
 
-### product_bundle_paths
-Path to the product bundles that will be copied to the SDK.
-If empty, will create an empty product bundle. Requires all
-product bundles under plasa to be present if non-empty.
+### product_bundle_mapping_file_path
+Path to the product bundle mapping file that contains a JSON with:
+[{
+   Name: Name of the product.
+   Path: Path to the product bundle for the product.
+}]
+If set, all products under the platform surface area must be present in the
+JSON with a valid product bundle path.
+If empty, will create an empty product bundle.
 
-**Current value (from the default):** `[]`
+**Current value (from the default):** `""`
 
-From //build/sdk/config.gni:16
+From //build/sdk/config.gni:21
 
 ### product_description
 A human readable product description.
