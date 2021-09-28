@@ -223,6 +223,7 @@ struct ConnectedState {
     /// Policy ClientController::Connect FIDL call.
     new_connect_start_time: Option<fasync::Time>,
     prev_counters: Option<fidl_fuchsia_wlan_stats::IfaceStats>,
+    multiple_bss_candidates: bool,
     latest_ap_state: BssDescription,
 }
 
@@ -463,7 +464,12 @@ impl Telemetry {
                 if result.code == fidl_ieee80211::StatusCode::Success {
                     self.stats_logger.log_stat(StatOp::AddConnectSuccessfulCount).await;
 
-                    self.stats_logger.log_device_connected_cobalt_metrics(&latest_ap_state).await;
+                    self.stats_logger
+                        .log_device_connected_cobalt_metrics(
+                            multiple_bss_candidates,
+                            &latest_ap_state,
+                        )
+                        .await;
                     if let ConnectionState::Disconnected(state) = &self.connection_state {
                         if state.latest_no_saved_neighbor_time.is_some() {
                             warn!("'No saved neighbor' flag still set even though connected");
@@ -491,6 +497,7 @@ impl Telemetry {
                         iface_id,
                         new_connect_start_time: None,
                         prev_counters: None,
+                        multiple_bss_candidates,
                         latest_ap_state,
                     });
                     self.last_checked_connection_state = now;
@@ -506,7 +513,10 @@ impl Telemetry {
                     // Log device connected to AP metrics right now in case we have not logged it
                     // to Cobalt yet today.
                     self.stats_logger
-                        .log_device_connected_cobalt_metrics(&state.latest_ap_state)
+                        .log_device_connected_cobalt_metrics(
+                            state.multiple_bss_candidates,
+                            &state.latest_ap_state,
+                        )
                         .await;
                 }
                 let connect_start_time = if info.is_sme_reconnecting {
@@ -545,6 +555,9 @@ impl Telemetry {
             TelemetryEvent::OnChannelSwitched { info } => {
                 if let ConnectionState::Connected(state) = &mut self.connection_state {
                     state.latest_ap_state.channel.primary = info.new_channel;
+                    self.stats_logger
+                        .log_device_connected_channel_cobalt_metrics(info.new_channel)
+                        .await;
                 }
             }
         }
@@ -553,7 +566,12 @@ impl Telemetry {
     pub async fn log_daily_cobalt_metrics(&mut self) {
         self.stats_logger.log_daily_cobalt_metrics().await;
         if let ConnectionState::Connected(state) = &self.connection_state {
-            self.stats_logger.log_device_connected_cobalt_metrics(&state.latest_ap_state).await;
+            self.stats_logger
+                .log_device_connected_cobalt_metrics(
+                    state.multiple_bss_candidates,
+                    &state.latest_ap_state,
+                )
+                .await;
         }
     }
 
@@ -1241,7 +1259,11 @@ impl StatsLogger {
 
     /// Metrics to log when device first connects to an AP, and periodically afterward
     /// (at least once a day) if the device is still connected to the AP.
-    async fn log_device_connected_cobalt_metrics(&mut self, latest_ap_state: &BssDescription) {
+    async fn log_device_connected_cobalt_metrics(
+        &mut self,
+        multiple_bss_candidates: bool,
+        latest_ap_state: &BssDescription,
+    ) {
         let mut metric_events = vec![];
         metric_events.push(MetricEvent {
             metric_id: metrics::NUMBER_OF_CONNECTED_DEVICES_METRIC_ID,
@@ -1302,12 +1324,54 @@ impl StatsLogger {
             }
         }
 
+        let is_multi_bss_dim = convert::convert_is_multi_bss(multiple_bss_candidates);
+        metric_events.push(MetricEvent {
+            metric_id: metrics::DEVICE_CONNECTED_TO_AP_BREAKDOWN_BY_IS_MULTI_BSS_METRIC_ID,
+            event_codes: vec![is_multi_bss_dim as u32],
+            payload: MetricEventPayload::Count(1),
+        });
+
+        append_device_connected_channel_cobalt_metrics(
+            &mut metric_events,
+            latest_ap_state.channel.primary,
+        );
+
         log_cobalt_1dot1_batch!(
             self.cobalt_1dot1_proxy,
             &mut metric_events.iter_mut(),
             "log_device_connected_cobalt_metrics",
         );
     }
+
+    async fn log_device_connected_channel_cobalt_metrics(&mut self, primary_channel: u8) {
+        let mut metric_events = vec![];
+
+        append_device_connected_channel_cobalt_metrics(&mut metric_events, primary_channel);
+
+        log_cobalt_1dot1_batch!(
+            self.cobalt_1dot1_proxy,
+            &mut metric_events.iter_mut(),
+            "log_device_connected_channel_cobalt_metrics",
+        );
+    }
+}
+
+fn append_device_connected_channel_cobalt_metrics(
+    metric_events: &mut Vec<MetricEvent>,
+    primary_channel: u8,
+) {
+    metric_events.push(MetricEvent {
+        metric_id: metrics::DEVICE_CONNECTED_TO_AP_BREAKDOWN_BY_PRIMARY_CHANNEL_METRIC_ID,
+        event_codes: vec![primary_channel as u32],
+        payload: MetricEventPayload::Count(1),
+    });
+
+    let channel_band_dim = convert::convert_channel_band(primary_channel);
+    metric_events.push(MetricEvent {
+        metric_id: metrics::DEVICE_CONNECTED_TO_AP_BREAKDOWN_BY_CHANNEL_BAND_METRIC_ID,
+        event_codes: vec![channel_band_dim as u32],
+        payload: MetricEventPayload::Count(1),
+    });
 }
 
 enum StatOp {
@@ -3200,6 +3264,11 @@ mod tests {
             0x00, 0x00, 0x00, 0x00, 0x40
         ];
         let bss_description = random_bss_description!(Wpa2,
+            channel: fidl_common::WlanChannel {
+                primary: 157,
+                cbw: fidl_common::ChannelBandwidth::Cbw40,
+                secondary80: 0,
+            },
             ies_overrides: IesOverrides::new()
                 .remove(IeType::WMM_PARAM)
                 .set(IeType::WMM_INFO, wmm_info)
@@ -3254,6 +3323,39 @@ mod tests {
         );
         assert_eq!(connected_bss_transition_mgmt.len(), 1);
         assert_eq!(connected_bss_transition_mgmt[0].payload, MetricEventPayload::Count(1));
+
+        let breakdown_by_is_multi_bss = test_helper.get_logged_metrics(
+            metrics::DEVICE_CONNECTED_TO_AP_BREAKDOWN_BY_IS_MULTI_BSS_METRIC_ID,
+        );
+        assert_eq!(breakdown_by_is_multi_bss.len(), 1);
+        assert_eq!(
+            breakdown_by_is_multi_bss[0].event_codes,
+            vec![
+                metrics::SuccessfulConnectBreakdownByIsMultiBssMetricDimensionIsMultiBss::Yes
+                    as u32
+            ]
+        );
+        assert_eq!(breakdown_by_is_multi_bss[0].payload, MetricEventPayload::Count(1));
+
+        let breakdown_by_primary_channel = test_helper.get_logged_metrics(
+            metrics::DEVICE_CONNECTED_TO_AP_BREAKDOWN_BY_PRIMARY_CHANNEL_METRIC_ID,
+        );
+        assert_eq!(breakdown_by_primary_channel.len(), 1);
+        assert_eq!(breakdown_by_primary_channel[0].event_codes, vec![157]);
+        assert_eq!(breakdown_by_primary_channel[0].payload, MetricEventPayload::Count(1));
+
+        let breakdown_by_channel_band = test_helper.get_logged_metrics(
+            metrics::DEVICE_CONNECTED_TO_AP_BREAKDOWN_BY_CHANNEL_BAND_METRIC_ID,
+        );
+        assert_eq!(breakdown_by_channel_band.len(), 1);
+        assert_eq!(
+            breakdown_by_channel_band[0].event_codes,
+            vec![
+                metrics::SuccessfulConnectBreakdownByChannelBandMetricDimensionChannelBand::Band5Ghz
+                    as u32
+            ]
+        );
+        assert_eq!(breakdown_by_channel_band[0].payload, MetricEventPayload::Count(1));
     }
 
     #[fuchsia::test]
@@ -3297,6 +3399,9 @@ mod tests {
 
     #[test_case(metrics::NUMBER_OF_CONNECTED_DEVICES_METRIC_ID; "number_of_connected_devices")]
     #[test_case(metrics::CONNECTED_NETWORK_SECURITY_TYPE_METRIC_ID; "breakdown_by_security_type")]
+    #[test_case(metrics::DEVICE_CONNECTED_TO_AP_BREAKDOWN_BY_IS_MULTI_BSS_METRIC_ID; "breakdown_by_is_multi_bss")]
+    #[test_case(metrics::DEVICE_CONNECTED_TO_AP_BREAKDOWN_BY_PRIMARY_CHANNEL_METRIC_ID; "breakdown_by_primary_channel")]
+    #[test_case(metrics::DEVICE_CONNECTED_TO_AP_BREAKDOWN_BY_CHANNEL_BAND_METRIC_ID; "breakdown_by_channel_band")]
     #[fuchsia::test(add_test_attr = false)]
     fn test_log_device_connected_cobalt_metrics_on_disconnect_and_periodically(metric_id: u32) {
         let (mut test_helper, mut test_fut) = setup_test();
@@ -3324,6 +3429,70 @@ mod tests {
         // Verify that on disconnect, device connected metric is also logged.
         let metrics = test_helper.get_logged_metrics(metric_id);
         assert_eq!(metrics.len(), 1);
+    }
+
+    #[fuchsia::test]
+    fn test_log_device_connected_cobalt_metrics_on_channel_switched() {
+        let (mut test_helper, mut test_fut) = setup_test();
+        let bss_description = random_bss_description!(Wpa2,
+            channel: fidl_common::WlanChannel {
+                primary: 4,
+                cbw: fidl_common::ChannelBandwidth::Cbw20,
+                secondary80: 0,
+            },
+        );
+        test_helper.send_connected_event(bss_description);
+        test_helper.drain_cobalt_events(&mut test_fut);
+
+        let breakdown_by_primary_channel = test_helper.get_logged_metrics(
+            metrics::DEVICE_CONNECTED_TO_AP_BREAKDOWN_BY_PRIMARY_CHANNEL_METRIC_ID,
+        );
+        assert_eq!(breakdown_by_primary_channel.len(), 1);
+        assert_eq!(breakdown_by_primary_channel[0].event_codes, vec![4]);
+        assert_eq!(breakdown_by_primary_channel[0].payload, MetricEventPayload::Count(1));
+
+        let breakdown_by_channel_band = test_helper.get_logged_metrics(
+            metrics::DEVICE_CONNECTED_TO_AP_BREAKDOWN_BY_CHANNEL_BAND_METRIC_ID,
+        );
+        assert_eq!(breakdown_by_channel_band.len(), 1);
+        assert_eq!(
+            breakdown_by_channel_band[0].event_codes,
+            vec![
+                metrics::SuccessfulConnectBreakdownByChannelBandMetricDimensionChannelBand::Band2Dot4Ghz
+                    as u32
+            ]
+        );
+        assert_eq!(breakdown_by_channel_band[0].payload, MetricEventPayload::Count(1));
+
+        // Clear out existing Cobalt metrics
+        test_helper.cobalt_events.clear();
+
+        test_helper.telemetry_sender.send(TelemetryEvent::OnChannelSwitched {
+            info: fidl_internal::ChannelSwitchInfo { new_channel: 157 },
+        });
+        test_helper.drain_cobalt_events(&mut test_fut);
+
+        // On channel switched, device connected metrics for the new channel and channel band
+        // are logged.
+        let breakdown_by_primary_channel = test_helper.get_logged_metrics(
+            metrics::DEVICE_CONNECTED_TO_AP_BREAKDOWN_BY_PRIMARY_CHANNEL_METRIC_ID,
+        );
+        assert_eq!(breakdown_by_primary_channel.len(), 1);
+        assert_eq!(breakdown_by_primary_channel[0].event_codes, vec![157]);
+        assert_eq!(breakdown_by_primary_channel[0].payload, MetricEventPayload::Count(1));
+
+        let breakdown_by_channel_band = test_helper.get_logged_metrics(
+            metrics::DEVICE_CONNECTED_TO_AP_BREAKDOWN_BY_CHANNEL_BAND_METRIC_ID,
+        );
+        assert_eq!(breakdown_by_channel_band.len(), 1);
+        assert_eq!(
+            breakdown_by_channel_band[0].event_codes,
+            vec![
+                metrics::SuccessfulConnectBreakdownByChannelBandMetricDimensionChannelBand::Band5Ghz
+                    as u32
+            ]
+        );
+        assert_eq!(breakdown_by_channel_band[0].payload, MetricEventPayload::Count(1));
     }
 
     struct TestHelper {
