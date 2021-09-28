@@ -10,19 +10,13 @@ use std::{
 /// This is the generator for StringReference ID's.
 static NEXT_STRING_REFERENCE_ID: AtomicUsize = AtomicUsize::new(0);
 
-#[derive(Clone)]
-enum StringReferenceData<'a> {
-    Owned(String),
-    Borrowed(&'a str),
-}
-
 /// StringReference is a type that can be constructed and passed into
 /// the Inspect API as a name of a Node. If this is done, only one
 /// reference counted instance of the string will be allocated per
 /// Inspector. They can be safely used with LazyNodes.
 pub struct StringReference<'a> {
     // The canonical data referred to by this instance.
-    data: StringReferenceData<'a>,
+    data: Cow<'a, str>,
 
     // The identifier used by state to locate this reference.
     reference_id: usize,
@@ -32,7 +26,7 @@ impl<'a> StringReference<'a> {
     /// Construct a StringReference with non-owned data.
     pub fn new(data: &'a str) -> Self {
         Self {
-            data: StringReferenceData::Borrowed(data),
+            data: Cow::Borrowed(data),
             reference_id: NEXT_STRING_REFERENCE_ID.fetch_add(1, Ordering::SeqCst),
         }
     }
@@ -41,17 +35,14 @@ impl<'a> StringReference<'a> {
     /// an owning StringReference with the public API, use from(String).
     fn new_owned(data: String) -> Self {
         Self {
-            data: StringReferenceData::Owned(data),
+            data: Cow::Owned(data),
             reference_id: NEXT_STRING_REFERENCE_ID.fetch_add(1, Ordering::SeqCst),
         }
     }
 
     /// Access a read-only reference to the data in a StringReference.
     pub(crate) fn data(&self) -> &str {
-        match self.data {
-            StringReferenceData::Owned(ref s) => s,
-            StringReferenceData::Borrowed(s) => s,
-        }
+        &self.data
     }
 
     /// Get the ID of this StringReference for State. Note that this is not
@@ -63,7 +54,7 @@ impl<'a> StringReference<'a> {
 
 impl<'a> From<&'a StringReference<'a>> for StringReference<'a> {
     fn from(sf: &'a StringReference<'a>) -> Self {
-        Self { data: StringReferenceData::Borrowed(sf.data()), reference_id: sf.reference_id }
+        Self { data: Cow::Borrowed(sf.data()), reference_id: sf.reference_id }
     }
 }
 
