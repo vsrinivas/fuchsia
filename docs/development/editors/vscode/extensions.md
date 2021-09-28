@@ -42,6 +42,16 @@ assists with browsing Fuchsia artifacts, such as by linking from component URLs 
      alt="This figure shows hyperlinks to fuchsia-pkg urls in VS Code."
      src="images/extensions/fuchsiaware.png"/>
 
+### zxdb for VS Code
+
+[The VS Code zxdb extension](https://marketplace.visualstudio.com/items?itemName=fuchsia-authors.zxdb){: .external}
+provides IDE based [zxdb](/docs/development/debugger/README.md)
+debugger support.
+
+<img class="vscode-image vscode-image-center"
+     alt="This gif shows a demo of the features."
+     src="images/extensions/zxdb-demo.gif"/>
+
 ## General workflow extensions
 
 General workflow extensions provide an overall productive workflow when working with Fuchsia.
