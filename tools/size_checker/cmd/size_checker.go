@@ -25,16 +25,21 @@ import (
 type FileSystemSizes []FileSystemSize
 
 type FileSystemSize struct {
-	Name  string      `json:"name"`
-	Value json.Number `json:"value"`
-	Limit json.Number `json:"limit"`
+	Name       string      `json:"name"`
+	Value      json.Number `json:"value"`
+	Limit      json.Number `json:"limit"`
+	CreepLimit json.Number `json:"creep_limit"`
 }
 
 type SizeLimits struct {
 	// Specifies a size limit in bytes for ICU data files.
 	ICUDataLimit json.Number `json:"icu_data_limit"`
+	// Specifies a size creep limit in bytes for ICU data files.
+	ICUDataCreepLimit json.Number `json:"icu_data_creep_limit"`
 	// Specifies a size limit in bytes for uncategorized packages.
 	CoreLimit json.Number `json:"core_limit"`
+	// Specifies a size creep limit in bytes for uncategorized packages.
+	CoreCreepLimit json.Number `json:"core_creep_limit"`
 	// Specifies the files that contribute to the ICU data limit.
 	ICUData []string `json:"icu_data"`
 	// Specifies the files that contributed to the distributed shared library
@@ -42,6 +47,8 @@ type SizeLimits struct {
 	DistributedShlibs []string `json:"distributed_shlibs"`
 	// Specifies the distributed shared library size limit in bytes.
 	DistributedShlibsLimit json.Number `json:"distributed_shlibs_limit"`
+	// Specifies the distributed shared library size creep limit in bytes.
+	DistributedShlibsCreepLimit json.Number `json:"distributed_shlibs_creep_limit"`
 	// Specifies a series of size components/categories with a struct describing each.
 	Components []Component `json:"components"`
 	// Specifies a list of size components for blobs not added to blobfs.
@@ -66,20 +73,23 @@ type Node struct {
 }
 
 type Component struct {
-	Component string      `json:"component"`
-	Limit     json.Number `json:"limit"`
-	Src       []string    `json:"src"`
+	Component  string      `json:"component"`
+	Limit      json.Number `json:"limit"`
+	CreepLimit json.Number `json:"creep_limit"`
+	Src        []string    `json:"src"`
 }
 
 type NonBlobFSComponent struct {
 	Component           string      `json:"component"`
 	Limit               json.Number `json:"limit"`
+	CreepLimit          json.Number `json:"creep_limit"`
 	PackageManifestPath string      `json:"blobs_json_path"`
 }
 
 type ComponentSize struct {
 	Size             int64 `json:"size"`
 	Budget           int64 `json:"budget"`
+	CreepBudget      int64 `json:"creep_budget"`
 	IncludedInBlobFS bool
 	nodes            []*Node
 }
@@ -715,6 +725,10 @@ func parseSizeLimits(sizeLimits *SizeLimits, buildDir string, blobManifest strin
 		if err != nil {
 			return nil, parseError("component.Limit", err)
 		}
+		creepBudget, err := component.CreepLimit.Int64()
+		if err != nil {
+			return nil, parseError("component.CreepLimit", err)
+		}
 
 		// There is only ever one copy of Update ZBIs.
 		// TODO(fxbug.dev/58645): Delete once clients have removed the update
@@ -726,6 +740,7 @@ func parseSizeLimits(sizeLimits *SizeLimits, buildDir string, blobManifest strin
 		outputSizes[component.Component] = &ComponentSize{
 			Size:             size,
 			Budget:           budget,
+			CreepBudget:      creepBudget,
 			IncludedInBlobFS: true,
 			nodes:            nodes,
 		}
@@ -760,11 +775,16 @@ func parseSizeLimits(sizeLimits *SizeLimits, buildDir string, blobManifest strin
 		if err != nil {
 			return nil, parseError("component.Limit", err)
 		}
+		creepBudget, err := component.CreepLimit.Int64()
+		if err != nil {
+			return nil, parseError("component.CreepLimit", err)
+		}
 
 		// Add the sizes and budgets to the output.
 		outputSizes[component.Component] = &ComponentSize{
 			Size:             size,
 			Budget:           budget,
+			CreepBudget:      creepBudget,
 			IncludedInBlobFS: false,
 			nodes:            nodes,
 		}
@@ -774,10 +794,15 @@ func parseSizeLimits(sizeLimits *SizeLimits, buildDir string, blobManifest strin
 	if err != nil {
 		return nil, parseError("ICUDataLimit", err)
 	}
+	ICUDataCreepLimit, err := sizeLimits.ICUDataCreepLimit.Int64()
+	if err != nil {
+		return nil, parseError("ICUDataCreepLimit", err)
+	}
 	const icuDataName = "ICU Data"
 	outputSizes[icuDataName] = &ComponentSize{
 		Size:             totalIcuDataSize,
 		Budget:           ICUDataLimit,
+		CreepBudget:      ICUDataCreepLimit,
 		IncludedInBlobFS: true,
 		nodes:            icuDataNodes,
 	}
@@ -785,6 +810,10 @@ func parseSizeLimits(sizeLimits *SizeLimits, buildDir string, blobManifest strin
 	CoreSizeLimit, err := sizeLimits.CoreLimit.Int64()
 	if err != nil {
 		return nil, parseError("CoreLimit", err)
+	}
+	CoreSizeCreepLimit, err := sizeLimits.CoreCreepLimit.Int64()
+	if err != nil {
+		return nil, parseError("CoreCreepLimit", err)
 	}
 	const coreName = "Core system+services"
 	coreNodes := make([]*Node, 0)
@@ -794,6 +823,7 @@ func parseSizeLimits(sizeLimits *SizeLimits, buildDir string, blobManifest strin
 	outputSizes[coreName] = &ComponentSize{
 		Size:             root.size,
 		Budget:           CoreSizeLimit,
+		CreepBudget:      CoreSizeCreepLimit,
 		IncludedInBlobFS: true,
 		nodes:            coreNodes,
 	}
@@ -803,11 +833,16 @@ func parseSizeLimits(sizeLimits *SizeLimits, buildDir string, blobManifest strin
 		if err != nil {
 			return nil, parseError("DistributedShlibsLimit", err)
 		}
+		DistributedShlibsSizeCreepLimit, err := sizeLimits.DistributedShlibsCreepLimit.Int64()
+		if err != nil {
+			return nil, parseError("DistributedShlibsCreepLimit", err)
+		}
 
 		const distributedShlibsName = "Distributed shared libraries"
 		outputSizes[distributedShlibsName] = &ComponentSize{
 			Size:             totalDistributedShlibsSize,
 			Budget:           DistributedShlibsSizeLimit,
+			CreepBudget:      DistributedShlibsSizeCreepLimit,
 			IncludedInBlobFS: true,
 			nodes:            distributedShlibsNodes,
 		}
@@ -830,11 +865,13 @@ func writeOutputSizes(sizes OutputReport, outPath string) error {
 	encoder.SetIndent("", "  ")
 	simpleSizes := make(map[string]interface{})
 	budgetSuffix := ".budget"
+	creepBudgetSuffix := ".creepBudget"
 	// Owner/context links to provide shortcut to component specific size stats.
 	ownerSuffix := ".owner"
 	for name, cs := range sizes {
 		simpleSizes[name] = cs.Size
 		simpleSizes[name+budgetSuffix] = cs.Budget
+		simpleSizes[name+creepBudgetSuffix] = cs.CreepBudget
 		simpleSizes[name+ownerSuffix] = "http://go/fuchsia-size-stats/single_component/?f=component:in:" + url.QueryEscape(name)
 	}
 	if err := encoder.Encode(&simpleSizes); err != nil {
@@ -857,13 +894,13 @@ func generateComponentListOutput(outputSizes OutputReport, showBudgetOnly bool, 
 	sort.Strings(componentNames)
 	report.WriteString("\n")
 	if includedInBlobFS {
-		report.WriteString(fmt.Sprintf("%-80s | %-10s | %-10s | %-10s\n", "Components included during assembly", "Size", "Budget", "Remaining"))
+		report.WriteString(fmt.Sprintf("%-80s | %-10s | %-10s | %-10s | %-10s\n", "Components included during assembly", "Size", "Budget", "Remaining", "Creep Budget"))
 	} else {
-		report.WriteString(fmt.Sprintf("%-80s | %-10s | %-10s | %-10s\n", "Components included post-assembly", "Size", "Budget", "Remaining"))
+		report.WriteString(fmt.Sprintf("%-80s | %-10s | %-10s | %-10s | %-10s\n", "Components included post-assembly", "Size", "Budget", "Remaining", "Creep Budget"))
 
 	}
 
-	report.WriteString(strings.Repeat("-", 119) + "\n")
+	report.WriteString(strings.Repeat("-", 134) + "\n")
 	for _, componentName := range componentNames {
 		var componentSize = outputSizes[componentName]
 		if componentSize.IncludedInBlobFS != includedInBlobFS {
@@ -895,7 +932,7 @@ func generateComponentListOutput(outputSizes OutputReport, showBudgetOnly bool, 
 		totalRemaining += remainingBudget
 
 		report.WriteString(
-			fmt.Sprintf("%-80s | %10s | %10s | %s%10s%s\n", componentName, formatSize(componentSize.Size), formatSize(componentSize.Budget), startColorCharacter, formatSize(remainingBudget), endColorCharacter))
+			fmt.Sprintf("%-80s | %10s | %10s | %s%10s%s | %10s\n", componentName, formatSize(componentSize.Size), formatSize(componentSize.Budget), startColorCharacter, formatSize(remainingBudget), endColorCharacter, formatSize(componentSize.CreepBudget)))
 		if !showBudgetOnly {
 			for _, n := range componentSize.nodes {
 				report.WriteString(n.storageBreakdown(1))
@@ -904,7 +941,7 @@ func generateComponentListOutput(outputSizes OutputReport, showBudgetOnly bool, 
 		}
 
 	}
-	report.WriteString(strings.Repeat("-", 119) + "\n")
+	report.WriteString(strings.Repeat("-", 134) + "\n")
 
 	return ComponentListReport{
 		TotalConsumed:  totalConsumed,

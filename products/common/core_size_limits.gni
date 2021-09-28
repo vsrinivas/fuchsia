@@ -12,27 +12,33 @@ blobfs_capacity = "10485760000"  # 10000 MiB
 size_checker_input = {
   icu_data = [ "icudtl.dat" ]
   icu_data_limit = 104857600  # 100 MiB
+  icu_data_creep_limit = 1048576  # 1 MiB
   core_limit = 104857600
+  core_creep_limit = 1048576
   components = [
     {
       component = "/system (drivers and early boot)"
       src = [ "build/images/fuchsia/fuchsia" ]
       limit = 104857600
+      creep_limit = 1048576
     },
     {
       component = "Software Delivery"
       src = [ "src/sys/pkg" ]
       limit = 104857600
+      creep_limit = 1048576
     },
     {
       component = "Connectivity"
       src = [ "src/connectivity" ]
       limit = 104857600
+      creep_limit = 1048576
     },
     {
       component = "Time"
       src = [ "src/sys/time" ]
       limit = 104857600
+      creep_limit = 1048576
     },
     {
       component = "Diagnostics"
@@ -41,6 +47,7 @@ size_checker_input = {
         "src/diagnostics",
       ]
       limit = 104857600
+      creep_limit = 1048576
     },
     {
       component = "Component Framework"
@@ -52,11 +59,13 @@ size_checker_input = {
         "src/sys/component_index",
       ]
       limit = 104857600
+      creep_limit = 1048576
     },
     {
       component = "Graphics"
       src = [ "src/graphics" ]
       limit = 104857600
+      creep_limit = 1048576
     },
     {
       component = "I18N"
@@ -65,21 +74,25 @@ size_checker_input = {
         "garnet/bin/timezone",
       ]
       limit = 104857600
+      creep_limit = 1048576
     },
     {
       component = "Cobalt"
       src = [ "src/cobalt" ]
       limit = 104857600
+      creep_limit = 1048576
     },
     {
       component = "Config Data"
       src = [ "build/images/fuchsia/fuchsia_config-data" ]
       limit = 104857600
+      creep_limit = 1048576
     },
     {
       component = "SetUI"
       src = [ "garnet/bin/setui" ]
       limit = 104857600
+      creep_limit = 1048576
     },
   ]
 }
