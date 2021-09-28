@@ -6,8 +6,8 @@ use {
         inspect::container::UnpopulatedInspectDataContainer,
         lifecycle::container::LifecycleDataContainer,
         logs::{
+            message::MessageWithStats,
             redact::{RedactedItem, Redactor},
-            Message,
         },
         repository::DataRepo,
     },
@@ -59,7 +59,7 @@ impl Pipeline {
         }
     }
 
-    pub fn logs(&self, mode: StreamMode) -> impl Stream<Item = RedactedItem<Message>> {
+    pub fn logs(&self, mode: StreamMode) -> impl Stream<Item = RedactedItem<MessageWithStats>> {
         self.log_redactor.clone().redact_stream(self.data_repo.logs_cursor(mode))
     }
 

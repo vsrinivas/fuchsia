@@ -5,8 +5,7 @@
 //! This module contains fuzzing targets for Archivist.
 
 use arbitrary::{Arbitrary, Result, Unstructured};
-use archivist_lib::logs;
-use archivist_lib::logs::Message;
+use archivist_lib::logs::{self, message::MessageWithStats};
 use fuchsia_zircon as zx;
 use fuzz::fuzz;
 
@@ -15,7 +14,7 @@ struct RandomLogRecord(zx::sys::zx_log_record_t);
 
 /// Fuzzer for kernel debuglog parser.
 #[fuzz]
-fn convert_debuglog_to_log_message_fuzzer(record: RandomLogRecord) -> Option<Message> {
+fn convert_debuglog_to_log_message_fuzzer(record: RandomLogRecord) -> Option<MessageWithStats> {
     logs::convert_debuglog_to_log_message(&record.0)
 }
 

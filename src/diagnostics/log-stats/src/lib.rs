@@ -2,7 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use archivist_lib::logs::debuglog::KERNEL_URL;
 use argh::FromArgs;
 use diagnostics_reader::{ArchiveReader, Logs};
 use fidl_fuchsia_diagnostics::{ArchiveAccessorMarker, ArchiveAccessorProxy};
@@ -98,6 +97,8 @@ async fn create_metric_logger() -> Option<MetricLogger> {
         }
     }
 }
+
+pub const KERNEL_URL: &str = "fuchsia-boot://kernel";
 
 async fn maintain(
     mut stats: LogManagerStats,

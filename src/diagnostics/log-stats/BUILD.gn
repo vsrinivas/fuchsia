@@ -36,12 +36,12 @@ rustc_library("lib") {
   deps = [
     "//sdk/fidl/fuchsia.diagnostics:fuchsia.diagnostics-rustc",
     "//sdk/fidl/fuchsia.metrics:fuchsia.metrics-rustc",
-    "//src/diagnostics/archivist:lib",
     "//src/diagnostics/control:controller-rustc",
     "//src/lib/diagnostics/data/rust",
     "//src/lib/diagnostics/inspect/derive",
     "//src/lib/diagnostics/inspect/runtime/rust",
     "//src/lib/diagnostics/inspect/rust",
+    "//src/lib/diagnostics/log/message/rust",
     "//src/lib/diagnostics/reader/rust",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia",

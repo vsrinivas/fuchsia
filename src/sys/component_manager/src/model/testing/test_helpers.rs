@@ -1,3 +1,5 @@
+use diagnostics_message::message::{Message, MonikerWithUrl};
+
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
@@ -19,9 +21,6 @@ use {
         },
     },
     anyhow::{Context, Error},
-    archivist_lib::{
-        container::ComponentIdentity, events::types::ComponentIdentifier, logs::Message,
-    },
     cm_rust::{CapabilityName, ChildDecl, ComponentDecl, EventMode, NativeIntoFidl},
     cm_types::Url,
     fidl::endpoints::{self, Proxy, ServiceMarker},
@@ -492,13 +491,10 @@ pub fn get_message_logged_to_socket(socket: zx::Socket) -> Option<String> {
     match socket.read(&mut buffer) {
         Ok(read_len) => {
             let msg = Message::from_logger(
-                &ComponentIdentity::from_identifier_and_url(
-                    &ComponentIdentifier::Legacy {
-                        moniker: vec!["test-pkg", "test-component.cmx"].into(),
-                        instance_id: "".into(),
-                    },
-                    "fuchsia-pkg://fuchsia.com/test-pkg#meta/test-component.cm",
-                ),
+                MonikerWithUrl {
+                    moniker: "test-pkg/test-component.cmx".to_string(),
+                    url: "fuchsia-pkg://fuchsia.com/test-pkg#meta/test-component.cm".to_string(),
+                },
                 &buffer[..read_len],
             )
             .expect("Couldn't decode message from buffer.");

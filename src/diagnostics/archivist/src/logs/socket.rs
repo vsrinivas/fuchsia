@@ -1,10 +1,10 @@
 // Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be found in the LICENSE file.
 
-use super::error::StreamError;
-use super::message::{Message, MAX_DATAGRAM_LEN};
-use super::stats::LogStreamStats;
+use super::{message::MessageWithStats, stats::LogStreamStats};
 use crate::container::ComponentIdentity;
+use crate::logs::error::StreamError;
+use diagnostics_message::message::MAX_DATAGRAM_LEN;
 use fuchsia_async as fasync;
 use fuchsia_zircon as zx;
 use futures::io::{self, AsyncReadExt};
@@ -13,7 +13,10 @@ use std::{marker::PhantomData, sync::Arc};
 /// An `Encoding` is able to parse a `Message` from raw bytes.
 pub trait Encoding {
     /// Attempt to parse a message from the given buffer
-    fn parse_message(source: &ComponentIdentity, buf: &[u8]) -> Result<Message, StreamError>;
+    fn parse_message(
+        source: &ComponentIdentity,
+        buf: &[u8],
+    ) -> Result<MessageWithStats, StreamError>;
 }
 
 /// An encoding that can parse the legacy [logger/syslog wire format]
@@ -29,14 +32,20 @@ pub struct LegacyEncoding;
 pub struct StructuredEncoding;
 
 impl Encoding for LegacyEncoding {
-    fn parse_message(source: &ComponentIdentity, buf: &[u8]) -> Result<Message, StreamError> {
-        Message::from_logger(source, buf)
+    fn parse_message(
+        source: &ComponentIdentity,
+        buf: &[u8],
+    ) -> Result<MessageWithStats, StreamError> {
+        MessageWithStats::from_logger(source, buf).map_err(|er| er.into())
     }
 }
 
 impl Encoding for StructuredEncoding {
-    fn parse_message(source: &ComponentIdentity, buf: &[u8]) -> Result<Message, StreamError> {
-        Message::from_structured(source, buf)
+    fn parse_message(
+        source: &ComponentIdentity,
+        buf: &[u8],
+    ) -> Result<MessageWithStats, StreamError> {
+        MessageWithStats::from_structured(source, buf).map_err(|er| er.into())
     }
 }
 
@@ -88,7 +97,7 @@ impl<E> LogMessageSocket<E>
 where
     E: Encoding + Unpin,
 {
-    pub async fn next(&mut self) -> Result<Message, StreamError> {
+    pub async fn next(&mut self) -> Result<MessageWithStats, StreamError> {
         let len = self.socket.read(&mut self.buffer).await?;
 
         if len == 0 {
@@ -103,13 +112,12 @@ where
 
 #[cfg(test)]
 mod tests {
-    use super::super::message::{
-        fx_log_packet_t, LogsField, Message, Severity, METADATA_SIZE, TEST_IDENTITY,
-    };
     use super::*;
+    use crate::logs::message::TEST_IDENTITY;
     use diagnostics_log_encoding::{
         encode::Encoder, Argument, Record, Severity as StreamSeverity, Value,
     };
+    use diagnostics_message::message::{fx_log_packet_t, LogsField, Severity, METADATA_SIZE};
     use std::io::Cursor;
 
     #[fasync::run_until_stalled(test)]
@@ -125,7 +133,7 @@ mod tests {
         let mut ls =
             LogMessageSocket::new(sout, TEST_IDENTITY.clone(), Default::default()).unwrap();
         sin.write(packet.as_bytes()).unwrap();
-        let expected_p = Message::from(
+        let expected_p = MessageWithStats::from(
             diagnostics_data::LogsDataBuilder::new(diagnostics_data::BuilderArgs {
                 timestamp_nanos: zx::Time::from_nanos(packet.metadata.time).into(),
                 component_url: Some(TEST_IDENTITY.url.clone()),
@@ -167,7 +175,7 @@ mod tests {
         encoder.write_record(&record).unwrap();
         let encoded = &buffer.get_ref()[..buffer.position() as usize];
 
-        let expected_p = Message::from(
+        let expected_p = MessageWithStats::from(
             diagnostics_data::LogsDataBuilder::new(diagnostics_data::BuilderArgs {
                 timestamp_nanos: timestamp.into(),
                 component_url: Some(TEST_IDENTITY.url.clone()),

@@ -21,6 +21,8 @@ rustc_library("sampler-config") {
     "//third_party/rust_crates:serde_json5",
   ]
 
+  test_deps = [ "//third_party/rust_crates:tempfile" ]
+
   sources = [ "src/lib.rs" ]
 }
 

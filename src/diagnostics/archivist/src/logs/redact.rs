@@ -262,13 +262,14 @@ impl Redactor {
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::logs::message::{Message, Severity, TEST_IDENTITY};
+    use crate::logs::message::{MessageWithStats, TEST_IDENTITY};
+    use diagnostics_data::Severity;
     use futures::stream::iter as iter2stream;
     use pretty_assertions::assert_eq;
     use std::sync::Arc;
 
-    fn test_message(contents: &str) -> Message {
-        Message::from(
+    fn test_message(contents: &str) -> MessageWithStats {
+        MessageWithStats::from(
             diagnostics_data::LogsDataBuilder::new(diagnostics_data::BuilderArgs {
                 timestamp_nanos: 0.into(),
                 component_url: Some(TEST_IDENTITY.url.clone()),

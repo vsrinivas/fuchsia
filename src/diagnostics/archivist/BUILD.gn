@@ -24,6 +24,11 @@ rustc_library("lib") {
   with_unit_tests = true
   edition = "2018"
 
+  visibility = [
+    "//src/diagnostics/archivist/*",
+    "//src/diagnostics/launcher/*",
+  ]
+
   deps = [
     ":logmessage_measure_tape",
     "fidl:controller-rustc",
@@ -51,6 +56,7 @@ rustc_library("lib") {
     "//src/lib/diagnostics/inspect/runtime/rust",
     "//src/lib/diagnostics/inspect/rust",
     "//src/lib/diagnostics/log/encoding/rust",
+    "//src/lib/diagnostics/log/message/rust",
     "//src/lib/fdio/rust:fdio",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fidl_table_validation",

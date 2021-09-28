@@ -2,12 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use archivist_lib::{
-    configs::parse_config,
-    logs::message::{fx_log_packet_t, METADATA_SIZE},
-};
+use crate::{constants::*, test_topology, utils};
+use anyhow::Error;
+use archivist_lib::configs::parse_config;
+use component_events::{events::*, matcher::ExitStatusMatcher};
 use diagnostics_data::{Data, LogError, Logs, Severity};
 use diagnostics_hierarchy::trie::TrieIterableNode;
+use diagnostics_message::message::{fx_log_packet_t, METADATA_SIZE};
 use diagnostics_reader::{ArchiveReader, Inspect, SubscriptionResultsStream};
 use fidl::endpoints::ServiceMarker;
 use fidl_fuchsia_diagnostics::ArchiveAccessorMarker;
