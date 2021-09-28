@@ -21,6 +21,8 @@ source_set("common") {
     "signal-coordinator.h",
     "status.cc",
     "status.h",
+    "transceiver.cc",
+    "transceiver.h",
   ]
   public_deps = [
     "../fidl:fuchsia.fuzzer",
@@ -70,6 +72,7 @@ test("unittests") {
     "options-unittest.cc",
     "shared-memory-unittest.cc",
     "signal-coordinator-unittest.cc",
+    "transceiver-unittest.cc",
   ]
   deps = [
     ":common",
