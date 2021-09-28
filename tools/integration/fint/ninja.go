@@ -498,6 +498,8 @@ func affectedTestsNoWork(
 			// Look for actions that reference host test path. Different types
 			// of host tests have different actions, but they all mention the
 			// final executable path.
+			// fxbug.dev(85524): tokenize with shlex in case test paths include
+			// whitespace.
 			for _, maybeTestPath := range strings.Split(line, " ") {
 				maybeTestPath = strings.Trim(maybeTestPath, `"`)
 				testName, ok := testsByPath[maybeTestPath]
