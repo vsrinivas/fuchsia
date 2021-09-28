@@ -22,6 +22,8 @@
 #include <wifi/wifi-config.h>
 
 #include "sherlock.h"
+#include "src/devices/board/drivers/sherlock/sherlock-sdio-bind.h"
+#include "src/devices/board/drivers/sherlock/sherlock-wifi-bind.h"
 
 namespace sherlock {
 
@@ -149,55 +151,6 @@ const pbus_dev_t sdio_dev = []() {
   return dev;
 }();
 
-// Composite binding rules for wifi driver.
-constexpr zx_bind_inst_t sdio_fn1_match[] = {
-    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_SDIO), BI_ABORT_IF(NE, BIND_SDIO_VID, 0x02d0),
-    BI_ABORT_IF(NE, BIND_SDIO_FUNCTION, 1),           BI_MATCH_IF(EQ, BIND_SDIO_PID, 0x4345),
-    BI_MATCH_IF(EQ, BIND_SDIO_PID, 0x4359),
-};
-constexpr zx_bind_inst_t sdio_fn2_match[] = {
-    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_SDIO), BI_ABORT_IF(NE, BIND_SDIO_VID, 0x02d0),
-    BI_ABORT_IF(NE, BIND_SDIO_FUNCTION, 2),           BI_MATCH_IF(EQ, BIND_SDIO_PID, 0x4345),
-    BI_MATCH_IF(EQ, BIND_SDIO_PID, 0x4359),
-};
-constexpr zx_bind_inst_t oob_gpio_match[] = {
-    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_GPIO),
-    BI_MATCH_IF(EQ, BIND_GPIO_PIN, T931_WIFI_HOST_WAKE),
-};
-constexpr device_fragment_part_t sdio_fn1_fragment[] = {
-    {std::size(sdio_fn1_match), sdio_fn1_match},
-};
-constexpr device_fragment_part_t sdio_fn2_fragment[] = {
-    {std::size(sdio_fn2_match), sdio_fn2_match},
-};
-constexpr device_fragment_part_t oob_gpio_fragment[] = {
-    {std::size(oob_gpio_match), oob_gpio_match},
-};
-constexpr device_fragment_t wifi_composite[] = {
-    {"sdio-function-1", std::size(sdio_fn1_fragment), sdio_fn1_fragment},
-    {"sdio-function-2", std::size(sdio_fn2_fragment), sdio_fn2_fragment},
-    {"gpio-oob", std::size(oob_gpio_fragment), oob_gpio_fragment},
-};
-
-// Composite binding rules for SDIO.
-constexpr zx_bind_inst_t wifi_pwren_gpio_match[] = {
-    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_GPIO),
-    BI_MATCH_IF(EQ, BIND_GPIO_PIN, T931_WIFI_REG_ON),
-};
-constexpr zx_bind_inst_t pwm_e_match[] = {
-    BI_MATCH_IF(EQ, BIND_INIT_STEP, BIND_INIT_STEP_PWM),
-};
-constexpr device_fragment_part_t wifi_pwren_gpio_fragment[] = {
-    {std::size(wifi_pwren_gpio_match), wifi_pwren_gpio_match},
-};
-constexpr device_fragment_part_t pwm_e_fragment[] = {
-    {std::size(pwm_e_match), pwm_e_match},
-};
-constexpr device_fragment_t sdio_fragments[] = {
-    {"gpio-wifi-power-on", std::size(wifi_pwren_gpio_fragment), wifi_pwren_gpio_fragment},
-    {"pwm", std::size(pwm_e_fragment), pwm_e_fragment},
-};
-
 }  // namespace
 
 zx_status_t Sherlock::SdioInit() {
@@ -243,8 +196,8 @@ zx_status_t Sherlock::SdioInit() {
     return status;
   }
 
-  status = pbus_.CompositeDeviceAdd(&sdio_dev, reinterpret_cast<uint64_t>(sdio_fragments),
-                                    std::size(sdio_fragments), nullptr);
+  status = pbus_.AddComposite(&sdio_dev, reinterpret_cast<uint64_t>(sherlock_sd_emmc_fragments),
+                              std::size(sherlock_sd_emmc_fragments), "pdev");
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s: CompositeDeviceAdd() error: %d", __func__, status);
     return status;
@@ -260,8 +213,8 @@ zx_status_t Sherlock::SdioInit() {
   const composite_device_desc_t comp_desc = {
       .props = props,
       .props_count = countof(props),
-      .fragments = wifi_composite,
-      .fragments_count = countof(wifi_composite),
+      .fragments = wifi_fragments,
+      .fragments_count = countof(wifi_fragments),
       .primary_fragment = "sdio-function-1",  // ???
       .spawn_colocated = true,
       .metadata_list = nullptr,

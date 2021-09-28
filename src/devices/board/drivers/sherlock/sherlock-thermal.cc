@@ -19,6 +19,7 @@
 #include <soc/aml-t931/t931-pwm.h>
 
 #include "sherlock.h"
+#include "src/devices/board/drivers/sherlock/sherlock-thermal-bind.h"
 
 namespace sherlock {
 
@@ -272,58 +273,6 @@ constexpr pbus_dev_t thermal_dev_ddr = []() {
   return dev;
 }();
 
-const zx_bind_inst_t pwm_ao_d_match[] = {
-    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_PWM),
-    BI_MATCH_IF(EQ, BIND_PWM_ID, T931_PWM_AO_D),
-};
-const zx_bind_inst_t pwm_a_match[] = {
-    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_PWM),
-    BI_MATCH_IF(EQ, BIND_PWM_ID, T931_PWM_A),
-};
-const zx_bind_inst_t clk1_match[] = {
-    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_CLOCK),
-    BI_MATCH_IF(EQ, BIND_CLOCK_ID, g12b_clk::G12B_CLK_SYS_PLL_DIV16),
-};
-const zx_bind_inst_t clk2_match[] = {
-    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_CLOCK),
-    BI_MATCH_IF(EQ, BIND_CLOCK_ID, g12b_clk::G12B_CLK_SYS_CPU_CLK_DIV16),
-};
-const zx_bind_inst_t clk3_match[] = {
-    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_CLOCK),
-    BI_MATCH_IF(EQ, BIND_CLOCK_ID, g12b_clk::G12B_CLK_SYS_PLLB_DIV16),
-};
-const zx_bind_inst_t clk4_match[] = {
-    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_CLOCK),
-    BI_MATCH_IF(EQ, BIND_CLOCK_ID, g12b_clk::G12B_CLK_SYS_CPUB_CLK_DIV16),
-};
-const device_fragment_part_t pwm_ao_d_fragment[] = {
-    {countof(pwm_ao_d_match), pwm_ao_d_match},
-};
-const device_fragment_part_t pwm_a_fragment[] = {
-    {countof(pwm_a_match), pwm_a_match},
-};
-const device_fragment_part_t clk1_fragment[] = {
-    {countof(clk1_match), clk1_match},
-};
-const device_fragment_part_t clk2_fragment[] = {
-    {countof(clk2_match), clk2_match},
-};
-const device_fragment_part_t clk3_fragment[] = {
-    {countof(clk3_match), clk3_match},
-};
-const device_fragment_part_t clk4_fragment[] = {
-    {countof(clk4_match), clk4_match},
-};
-const device_fragment_t fragments[] = {
-    // First fragment must be big cluster PWM, second must be little cluster PWM.
-    {"pwm-a", countof(pwm_a_fragment), pwm_a_fragment},
-    {"pwm-ao-d", countof(pwm_ao_d_fragment), pwm_ao_d_fragment},
-    {"clock-1", countof(clk1_fragment), clk1_fragment},
-    {"clock-2", countof(clk2_fragment), clk2_fragment},
-    {"clock-3", countof(clk3_fragment), clk3_fragment},
-    {"clock-4", countof(clk4_fragment), clk4_fragment},
-};
-
 }  // namespace
 
 zx_status_t Sherlock::SherlockThermalInit() {
@@ -348,10 +297,11 @@ zx_status_t Sherlock::SherlockThermalInit() {
   }
 
   // The PLL sensor is controlled by a legacy thermal device, which performs DVFS.
-  status = pbus_.CompositeDeviceAdd(&thermal_dev_pll, reinterpret_cast<uint64_t>(fragments),
-                                    countof(fragments), nullptr);
+  status =
+      pbus_.AddComposite(&thermal_dev_pll, reinterpret_cast<uint64_t>(aml_thermal_pll_fragments),
+                         countof(aml_thermal_pll_fragments), "pdev");
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: DeviceAdd failed %d", __func__, status);
+    zxlogf(ERROR, "%s: AddComposite failed %d", __func__, status);
     return status;
   }
 

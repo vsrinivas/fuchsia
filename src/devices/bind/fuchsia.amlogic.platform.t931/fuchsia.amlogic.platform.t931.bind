@@ -25,6 +25,7 @@ extend uint fuchsia.BIND_POWER_DOMAIN {
 };
 
 uint GPIOZ_PIN_ID {
+    PIN_0 = 0,
     PIN_1 = 1,
     PIN_2 = 2,
     PIN_3 = 3,
@@ -40,10 +41,10 @@ uint GPIOZ_PIN_ID {
     PIN_13 = 13,
     PIN_14 = 14,
     PIN_15 = 15,
-    PIN_16 = 16,
 };
 
 uint GPIOA_PIN_ID {
+    PIN_0 = 16,
     PIN_1 = 17,
     PIN_2 = 18,
     PIN_3 = 19,
@@ -59,10 +60,10 @@ uint GPIOA_PIN_ID {
     PIN_13 = 29,
     PIN_14 = 30,
     PIN_15 = 31,
-    PIN_16 = 32,
 };
 
 uint GPIOBOOT_PIN_ID {
+    PIN_0 = 32,
     PIN_1 = 33,
     PIN_2 = 34,
     PIN_3 = 35,
@@ -78,10 +79,10 @@ uint GPIOBOOT_PIN_ID {
     PIN_13 = 45,
     PIN_14 = 46,
     PIN_15 = 47,
-    PIN_16 = 48,
 };
 
 uint GPIOC_PIN_ID {
+    PIN_0 = 48,
     PIN_1 = 49,
     PIN_2 = 50,
     PIN_3 = 51,
@@ -89,10 +90,10 @@ uint GPIOC_PIN_ID {
     PIN_5 = 53,
     PIN_6 = 54,
     PIN_7 = 55,
-    PIN_8 = 56,
 };
 
 uint GPIOX_PIN_ID {
+    PIN_0 = 56,
     PIN_1 = 57,
     PIN_2 = 58,
     PIN_3 = 59,
@@ -112,10 +113,10 @@ uint GPIOX_PIN_ID {
     PIN_17 = 73,
     PIN_18 = 74,
     PIN_19 = 75,
-    PIN_20 = 76,
 };
 
 uint GPIOH_PIN_ID {
+    PIN_0 = 76,
     PIN_1 = 77,
     PIN_2 = 78,
     PIN_3 = 79,
@@ -124,10 +125,10 @@ uint GPIOH_PIN_ID {
     PIN_6 = 82,
     PIN_7 = 83,
     PIN_8 = 84,
-    PIN_9 = 85,
 };
 
 uint GPIOAO_PIN_ID {
+    PIN_0 = 85,
     PIN_1 = 86,
     PIN_2 = 87,
     PIN_3 = 88,
@@ -139,11 +140,10 @@ uint GPIOAO_PIN_ID {
     PIN_9 = 94,
     PIN_10 = 95,
     PIN_11 = 96,
-    PIN_12 = 97,
 };
 
 uint GPIOE_PIN_ID {
+    PIN_0 = 97,
     PIN_1 = 98,
     PIN_2 = 99,
-    PIN_3 = 100,
 };

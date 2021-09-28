@@ -1,0 +1,51 @@
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+composite aml_thermal_pll;
+
+using fuchsia.pwm;
+using fuchsia.amlogic.platform;
+using fuchsia.amlogic.platform.meson;
+using fuchsia.amlogic.platform.t931;
+using fuchsia.platform;
+using fuchsia.clock;
+
+primary node "pdev" {
+  fuchsia.BIND_PROTOCOL == fuchsia.platform.BIND_PROTOCOL.DEVICE;
+  fuchsia.BIND_PLATFORM_DEV_VID == fuchsia.amlogic.platform.BIND_PLATFORM_DEV_VID.AMLOGIC;
+  fuchsia.BIND_PLATFORM_DEV_PID == fuchsia.amlogic.platform.BIND_PLATFORM_DEV_PID.T931;
+  fuchsia.BIND_PLATFORM_DEV_DID == fuchsia.amlogic.platform.BIND_PLATFORM_DEV_DID.THERMAL_PLL;
+  fuchsia.BIND_PLATFORM_DEV_INSTANCE_ID == 0;
+}
+
+// First fragment must be big cluster PWM, second must be little cluster PWM.
+node "pwm-a" {
+  fuchsia.BIND_PROTOCOL == fuchsia.pwm.BIND_PROTOCOL.PWM;
+  fuchsia.BIND_PWM_ID == fuchsia.amlogic.platform.t931.BIND_PWM_ID.PWM_A;
+}
+
+node "pwm-ao-d" {
+  fuchsia.BIND_PROTOCOL == fuchsia.pwm.BIND_PROTOCOL.PWM;
+  fuchsia.BIND_PWM_ID == fuchsia.amlogic.platform.t931.BIND_PWM_ID.PWM_AO_D;
+}
+
+node "clock-1" {
+  fuchsia.BIND_PROTOCOL == fuchsia.clock.BIND_PROTOCOL.DEVICE;
+  fuchsia.BIND_CLOCK_ID == fuchsia.amlogic.platform.meson.G12B_CLK_ID.CLK_SYS_PLL_DIV16;
+}
+
+node "clock-2" {
+  fuchsia.BIND_PROTOCOL == fuchsia.clock.BIND_PROTOCOL.DEVICE;
+  fuchsia.BIND_CLOCK_ID == fuchsia.amlogic.platform.meson.G12B_CLK_ID.CLK_SYS_CPU_CLK_DIV16;
+}
+
+node "clock-3" {
+  fuchsia.BIND_PROTOCOL == fuchsia.clock.BIND_PROTOCOL.DEVICE;
+  fuchsia.BIND_CLOCK_ID == fuchsia.amlogic.platform.meson.G12B_CLK_ID.CLK_SYS_PLLB_DIV16;
+}
+
+node "clock-4" {
+  fuchsia.BIND_PROTOCOL == fuchsia.clock.BIND_PROTOCOL.DEVICE;
+  fuchsia.BIND_CLOCK_ID == fuchsia.amlogic.platform.meson.G12B_CLK_ID.CLK_SYS_CPUB_CLK_DIV16;
+}
