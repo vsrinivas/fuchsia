@@ -45,8 +45,8 @@ zx_status_t HLCPPIncomingMessage::Decode(const fidl_type_t* type, const char** e
 zx_status_t HLCPPIncomingMessage::DecodeWithExternalHeader_InternalMayBreak(
     const fidl_message_header_t& header, const fidl_type_t* type, const char** error_msg_out) {
   if ((header.flags[0] & FIDL_MESSAGE_HEADER_FLAGS_0_USE_VERSION_V2) == 0) {
-    zx_status_t status =
-        fidl_validate(type, bytes_.data(), bytes_.actual(), handles_.actual(), error_msg_out);
+    zx_status_t status = internal__fidl_validate__v1__may_break(
+        type, bytes_.data(), bytes_.actual(), handles_.actual(), error_msg_out);
     if (status != ZX_OK) {
       return status;
     }
@@ -155,8 +155,8 @@ zx_status_t HLCPPOutgoingMessage::ValidateWithVersion_InternalMayBreak(
   zx_status_t status;
   switch (wire_format_version) {
     case internal::WireFormatVersion::kV1:
-      status =
-          fidl_validate(type, bytes_.data(), bytes_.actual(), handles_.actual(), error_msg_out);
+      status = internal__fidl_validate__v1__may_break(type, bytes_.data(), bytes_.actual(),
+                                                      handles_.actual(), error_msg_out);
       break;
     case internal::WireFormatVersion::kV2:
       status = internal__fidl_validate__v2__may_break(type, bytes_.data(), bytes_.actual(),

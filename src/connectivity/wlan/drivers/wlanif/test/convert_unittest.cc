@@ -41,7 +41,9 @@ zx_status_t ValidateMessage(T* msg) {
   auto encoded = enc.GetMessage();
   auto msg_body = encoded.payload();
   const char* err_msg = nullptr;
-  return fidl_validate(T::FidlType, msg_body.data(), msg_body.size(), 0, &err_msg);
+
+  // fidl_decode_etc performs validation as part of decode.
+  return fidl_decode_etc(T::FidlType, msg_body.data(), msg_body.size(), nullptr, 0, &err_msg);
 }
 
 TEST(ConvertTest, ToFidlBssDescription) {

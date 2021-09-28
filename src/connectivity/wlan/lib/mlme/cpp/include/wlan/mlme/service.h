@@ -36,7 +36,8 @@ zx_status_t SerializeServiceMsg(fidl::Encoder* enc, T* msg, zx_txid_t txid = 0) 
 
   auto msg_body = encoded.payload();
   const char* err_msg = nullptr;
-  zx_status_t status = fidl_validate(T::FidlType, msg_body.data(), msg_body.size(), 0, &err_msg);
+  zx_status_t status = internal__fidl_validate__v1__may_break(T::FidlType, msg_body.data(),
+                                                              msg_body.size(), 0, &err_msg);
   if (status != ZX_OK) {
     errorf("could not validate encoded message: %s\n", err_msg);
   }

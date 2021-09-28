@@ -310,8 +310,8 @@ void IncomingMessage::Decode(internal::WireFormatVersion wire_format_version,
                              const fidl_type_t* message_type,
                              std::unique_ptr<uint8_t[]>* out_transformed_buffer) {
   if (wire_format_version == internal::WireFormatVersion::kV1) {
-    zx_status_t status =
-        fidl_validate(message_type, bytes(), byte_actual(), handle_actual(), error_address());
+    zx_status_t status = internal__fidl_validate__v1__may_break(
+        message_type, bytes(), byte_actual(), handle_actual(), error_address());
     if (status != ZX_OK) {
       SetResult(fidl::Result::DecodeError(status, *error_address()));
       return;

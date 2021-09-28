@@ -597,8 +597,9 @@ zx_status_t fidl_validate_impl(const fidl_type_t* type, const void* bytes, uint3
   return validator.status();
 }
 
-zx_status_t fidl_validate(const fidl_type_t* type, const void* bytes, uint32_t num_bytes,
-                          uint32_t num_handles, const char** out_error_msg) {
+zx_status_t internal__fidl_validate__v1__may_break(const fidl_type_t* type, const void* bytes,
+                                                   uint32_t num_bytes, uint32_t num_handles,
+                                                   const char** out_error_msg) {
   return fidl_validate_impl<FIDL_WIRE_FORMAT_VERSION_V1>(type, bytes, num_bytes, num_handles,
                                                          out_error_msg);
 }
@@ -608,9 +609,4 @@ zx_status_t internal__fidl_validate__v2__may_break(const fidl_type_t* type, cons
                                                    const char** out_error_msg) {
   return fidl_validate_impl<FIDL_WIRE_FORMAT_VERSION_V2>(type, bytes, num_bytes, num_handles,
                                                          out_error_msg);
-}
-
-zx_status_t fidl_validate_msg(const fidl_type_t* type, const fidl_outgoing_msg_byte_t* msg,
-                              const char** out_error_msg) {
-  return fidl_validate(type, msg->bytes, msg->num_bytes, msg->num_handles, out_error_msg);
 }

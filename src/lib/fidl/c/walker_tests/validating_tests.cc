@@ -71,8 +71,8 @@ TEST(NullParameters, validate_null_validate_parameters) {
     nonnullable_handle_message_layout message = {};
     message.inline_struct.handle = FIDL_HANDLE_PRESENT;
     const char* error = nullptr;
-    auto status = fidl_validate(nullptr, &message, sizeof(nonnullable_handle_message_layout),
-                                ArrayCount(handles), &error);
+    auto status = internal__fidl_validate__v1__may_break(
+        nullptr, &message, sizeof(nonnullable_handle_message_layout), ArrayCount(handles), &error);
     EXPECT_EQ(status, ZX_ERR_INVALID_ARGS);
     EXPECT_NOT_NULL(error);
   }
@@ -80,9 +80,9 @@ TEST(NullParameters, validate_null_validate_parameters) {
   // Null message.
   {
     const char* error = nullptr;
-    auto status =
-        fidl_validate(&nonnullable_handle_message_type, nullptr,
-                      sizeof(nonnullable_handle_message_layout), ArrayCount(handles), &error);
+    auto status = internal__fidl_validate__v1__may_break(&nonnullable_handle_message_type, nullptr,
+                                                         sizeof(nonnullable_handle_message_layout),
+                                                         ArrayCount(handles), &error);
     EXPECT_EQ(status, ZX_ERR_INVALID_ARGS);
     EXPECT_NOT_NULL(error);
   }
@@ -92,15 +92,16 @@ TEST(NullParameters, validate_null_validate_parameters) {
     nonnullable_handle_message_layout message = {};
     message.inline_struct.handle = FIDL_HANDLE_PRESENT;
     const char* error = nullptr;
-    auto status = fidl_validate(&nonnullable_handle_message_type, &message,
-                                sizeof(nonnullable_handle_message_layout), 0, &error);
+    auto status = internal__fidl_validate__v1__may_break(&nonnullable_handle_message_type, &message,
+                                                         sizeof(nonnullable_handle_message_layout),
+                                                         0, &error);
     EXPECT_EQ(status, ZX_ERR_INVALID_ARGS);
     EXPECT_NOT_NULL(error);
   }
 
   // A null error string pointer is ok, though.
   {
-    auto status = fidl_validate(nullptr, nullptr, 0u, 0u, nullptr);
+    auto status = internal__fidl_validate__v1__may_break(nullptr, nullptr, 0u, 0u, nullptr);
     EXPECT_NE(status, ZX_OK);
   }
 
@@ -108,9 +109,9 @@ TEST(NullParameters, validate_null_validate_parameters) {
   {
     nonnullable_handle_message_layout message = {};
     message.inline_struct.handle = FIDL_HANDLE_PRESENT;
-    auto status =
-        fidl_validate(&nonnullable_handle_message_type, &message,
-                      sizeof(nonnullable_handle_message_layout), ArrayCount(handles), nullptr);
+    auto status = internal__fidl_validate__v1__may_break(&nonnullable_handle_message_type, &message,
+                                                         sizeof(nonnullable_handle_message_layout),
+                                                         ArrayCount(handles), nullptr);
     EXPECT_EQ(status, ZX_OK);
   }
 }
@@ -129,14 +130,15 @@ TEST(Walker, validate_walker_recursive_struct_max_out_of_line_depth) {
   message[33] = 0;
 
   const char* error = nullptr;
-  auto status = fidl_validate(&fidl_test_coding_RecursiveOptionalTable, &message[0],
-                              sizeof(message), 0, &error);
+  auto status = internal__fidl_validate__v1__may_break(&fidl_test_coding_RecursiveOptionalTable,
+                                                       &message[0], sizeof(message), 0, &error);
   EXPECT_EQ(status, ZX_ERR_INVALID_ARGS);
   EXPECT_STR_EQ(error, "recursion depth exceeded");
 
   // Reduce the max recursion depth by 1.
-  status = fidl_validate(&fidl_test_coding_RecursiveOptionalTable, &message[1],
-                         sizeof(message) - sizeof(uintptr_t), 0, &error);
+  status =
+      internal__fidl_validate__v1__may_break(&fidl_test_coding_RecursiveOptionalTable, &message[1],
+                                             sizeof(message) - sizeof(uintptr_t), 0, &error);
   EXPECT_EQ(status, ZX_OK);
 }
 #endif
@@ -161,8 +163,8 @@ TEST(Walker, validate_walker_table_max_out_of_line_depth_exceeded) {
   opt_structs[31] = 0;
 
   const char* error = nullptr;
-  auto status =
-      fidl_validate(&fidl_test_coding_RecursiveTableTable, &message[0], sizeof(message), 0, &error);
+  auto status = internal__fidl_validate__v1__may_break(&fidl_test_coding_RecursiveTableTable,
+                                                       &message[0], sizeof(message), 0, &error);
   EXPECT_EQ(status, ZX_ERR_INVALID_ARGS);
   EXPECT_STR_EQ(error, "recursion depth exceeded");
 }
@@ -186,8 +188,8 @@ TEST(Walker, validate_walker_table_max_out_of_line_depth_matched) {
   opt_structs[30] = 0;
 
   const char* error = nullptr;
-  auto status =
-      fidl_validate(&fidl_test_coding_RecursiveTableTable, &message[0], sizeof(message), 0, &error);
+  auto status = internal__fidl_validate__v1__may_break(&fidl_test_coding_RecursiveTableTable,
+                                                       &message[0], sizeof(message), 0, &error);
   EXPECT_EQ(status, ZX_OK);
 }
 #endif
@@ -227,7 +229,7 @@ TEST(BufferTooSmall, validate_overflow_buffer_on_FidlAlign) {
   const char* error = nullptr;
 
   // Message intended to contain 1 byte (though more bytes prepared/0-padded).
-  auto status = fidl_validate(&type, &message, 1, 0, &error);
+  auto status = internal__fidl_validate__v1__may_break(&type, &message, 1, 0, &error);
 
   // Expect error to be something about buffer too small (for for properly padded message).
   EXPECT_EQ(status, ZX_ERR_BUFFER_TOO_SMALL);
@@ -244,8 +246,8 @@ TEST(Handles, validate_single_present_handle) {
   };
 
   const char* error = nullptr;
-  auto status = fidl_validate(&nonnullable_handle_message_type, &message, sizeof(message),
-                              ArrayCount(handles), &error);
+  auto status = internal__fidl_validate__v1__may_break(
+      &nonnullable_handle_message_type, &message, sizeof(message), ArrayCount(handles), &error);
 
   EXPECT_EQ(status, ZX_OK);
   EXPECT_NULL(error, "%s", error);
@@ -265,8 +267,8 @@ TEST(Handles, validate_single_present_handle_check_trailing_padding) {
     buffer[kBufferSize - 4 + i] = 0xAA;
 
     const char* error = nullptr;
-    auto status =
-        fidl_validate(&nonnullable_handle_message_type, &message, kBufferSize, kNumHandles, &error);
+    auto status = internal__fidl_validate__v1__may_break(&nonnullable_handle_message_type, &message,
+                                                         kBufferSize, kNumHandles, &error);
 
     EXPECT_EQ(status, ZX_ERR_INVALID_ARGS);
     EXPECT_STR_EQ(error, "non-zero padding bytes detected");
@@ -283,8 +285,8 @@ TEST(Handles, validate_too_many_handles_specified_error) {
   };
 
   const char* error = nullptr;
-  auto status = fidl_validate(&nonnullable_handle_message_type, &message, sizeof(message),
-                              ArrayCount(handles), &error);
+  auto status = internal__fidl_validate__v1__may_break(
+      &nonnullable_handle_message_type, &message, sizeof(message), ArrayCount(handles), &error);
 
   EXPECT_EQ(status, ZX_ERR_INVALID_ARGS);
   EXPECT_NOT_NULL(error);
@@ -319,8 +321,8 @@ TEST(Handles, validate_single_present_handle_unaligned_error) {
 
   // Validating the unaligned version of the struct should fail.
   const char* error = nullptr;
-  auto status = fidl_validate(&nonnullable_handle_message_type, &message, sizeof(message),
-                              ArrayCount(handles), &error);
+  auto status = internal__fidl_validate__v1__may_break(
+      &nonnullable_handle_message_type, &message, sizeof(message), ArrayCount(handles), &error);
 
   EXPECT_EQ(status, ZX_ERR_INVALID_ARGS);
   EXPECT_NOT_NULL(error);
@@ -339,8 +341,9 @@ TEST(Handles, validate_multiple_present_handles) {
   };
 
   const char* error = nullptr;
-  auto status = fidl_validate(&multiple_nonnullable_handles_message_type, &message, sizeof(message),
-                              ArrayCount(handles), &error);
+  auto status =
+      internal__fidl_validate__v1__may_break(&multiple_nonnullable_handles_message_type, &message,
+                                             sizeof(message), ArrayCount(handles), &error);
 
   EXPECT_EQ(status, ZX_OK);
   EXPECT_NULL(error, "%s", error);
@@ -357,7 +360,8 @@ TEST(Handles, validate_single_absent_handle) {
   message.inline_struct.handle = FIDL_HANDLE_ABSENT;
 
   const char* error = nullptr;
-  auto status = fidl_validate(&nullable_handle_message_type, &message, sizeof(message), 0, &error);
+  auto status = internal__fidl_validate__v1__may_break(&nullable_handle_message_type, &message,
+                                                       sizeof(message), 0, &error);
 
   EXPECT_EQ(status, ZX_OK);
   EXPECT_NULL(error, "%s", error);
@@ -371,8 +375,8 @@ TEST(Handles, validate_multiple_absent_handles) {
   message.inline_struct.handle_2 = FIDL_HANDLE_ABSENT;
 
   const char* error = nullptr;
-  auto status =
-      fidl_validate(&multiple_nullable_handles_message_type, &message, sizeof(message), 0, &error);
+  auto status = internal__fidl_validate__v1__may_break(&multiple_nullable_handles_message_type,
+                                                       &message, sizeof(message), 0, &error);
 
   EXPECT_EQ(status, ZX_OK);
   EXPECT_NULL(error, "%s", error);
@@ -399,8 +403,9 @@ TEST(Arrays, validate_array_of_present_handles) {
   };
 
   const char* error = nullptr;
-  auto status = fidl_validate(&array_of_nonnullable_handles_message_type, &message, sizeof(message),
-                              ArrayCount(handles), &error);
+  auto status =
+      internal__fidl_validate__v1__may_break(&array_of_nonnullable_handles_message_type, &message,
+                                             sizeof(message), ArrayCount(handles), &error);
 
   EXPECT_EQ(status, ZX_OK);
   EXPECT_NULL(error, "%s", error);
@@ -425,8 +430,9 @@ TEST(Arrays, validate_array_of_nonnullable_handles_some_absent_error) {
   };
 
   const char* error = nullptr;
-  auto status = fidl_validate(&array_of_nonnullable_handles_message_type, &message, sizeof(message),
-                              ArrayCount(handles), &error);
+  auto status =
+      internal__fidl_validate__v1__may_break(&array_of_nonnullable_handles_message_type, &message,
+                                             sizeof(message), ArrayCount(handles), &error);
 
   EXPECT_EQ(status, ZX_ERR_INVALID_ARGS);
   EXPECT_NOT_NULL(error);
@@ -447,8 +453,9 @@ TEST(Arrays, validate_array_of_nullable_handles) {
   };
 
   const char* error = nullptr;
-  auto status = fidl_validate(&array_of_nullable_handles_message_type, &message, sizeof(message),
-                              ArrayCount(handles), &error);
+  auto status =
+      internal__fidl_validate__v1__may_break(&array_of_nullable_handles_message_type, &message,
+                                             sizeof(message), ArrayCount(handles), &error);
 
   EXPECT_EQ(status, ZX_OK);
   EXPECT_NULL(error, "%s", error);
@@ -473,8 +480,9 @@ TEST(Arrays, validate_array_of_nullable_handles_with_insufficient_handles_error)
   };
 
   const char* error = nullptr;
-  auto status = fidl_validate(&array_of_nullable_handles_message_type, &message, sizeof(message),
-                              ArrayCount(handles), &error);
+  auto status =
+      internal__fidl_validate__v1__may_break(&array_of_nullable_handles_message_type, &message,
+                                             sizeof(message), ArrayCount(handles), &error);
 
   EXPECT_EQ(status, ZX_ERR_INVALID_ARGS);
   EXPECT_NOT_NULL(error);
@@ -502,8 +510,9 @@ TEST(Arrays, validate_array_of_array_of_present_handles) {
   };
 
   const char* error = nullptr;
-  auto status = fidl_validate(&array_of_array_of_nonnullable_handles_message_type, &message,
-                              sizeof(message), ArrayCount(handles), &error);
+  auto status = internal__fidl_validate__v1__may_break(
+      &array_of_array_of_nonnullable_handles_message_type, &message, sizeof(message),
+      ArrayCount(handles), &error);
 
   EXPECT_EQ(status, ZX_OK);
   EXPECT_NULL(error, "%s", error);
@@ -538,8 +547,9 @@ TEST(Arrays, validate_out_of_line_array) {
   };
 
   const char* error = nullptr;
-  auto status = fidl_validate(&out_of_line_array_of_nonnullable_handles_message_type, &message,
-                              sizeof(message), ArrayCount(handles), &error);
+  auto status = internal__fidl_validate__v1__may_break(
+      &out_of_line_array_of_nonnullable_handles_message_type, &message, sizeof(message),
+      ArrayCount(handles), &error);
 
   EXPECT_EQ(status, ZX_OK);
   EXPECT_NULL(error, "%s", error);
@@ -551,8 +561,8 @@ TEST(Strings, validate_present_nonnullable_string) {
   memcpy(message.data, "hello!", 6);
 
   const char* error = nullptr;
-  auto status = fidl_validate(&unbounded_nonnullable_string_message_type, &message, sizeof(message),
-                              0, &error);
+  auto status = internal__fidl_validate__v1__may_break(&unbounded_nonnullable_string_message_type,
+                                                       &message, sizeof(message), 0, &error);
 
   EXPECT_EQ(status, ZX_OK);
   EXPECT_NULL(error, "%s", error);
@@ -564,8 +574,8 @@ TEST(Strings, validate_present_nullable_string) {
   memcpy(message.data, "hello!", 6);
 
   const char* error = nullptr;
-  auto status =
-      fidl_validate(&unbounded_nullable_string_message_type, &message, sizeof(message), 0, &error);
+  auto status = internal__fidl_validate__v1__may_break(&unbounded_nullable_string_message_type,
+                                                       &message, sizeof(message), 0, &error);
 
   EXPECT_EQ(status, ZX_OK);
   EXPECT_NULL(error, "%s", error);
@@ -583,8 +593,8 @@ TEST(Strings, validate_multiple_present_nullable_string) {
   memcpy(message.data2, "world!!! ", 8);
 
   const char* error = nullptr;
-  auto status =
-      fidl_validate(&multiple_nullable_strings_message_type, &message, sizeof(message), 0, &error);
+  auto status = internal__fidl_validate__v1__may_break(&multiple_nullable_strings_message_type,
+                                                       &message, sizeof(message), 0, &error);
 
   EXPECT_EQ(status, ZX_OK);
   EXPECT_NULL(error, "%s", error);
@@ -595,8 +605,8 @@ TEST(Strings, validate_absent_nonnullable_string_error) {
   message.inline_struct.string = fidl_string_t{6, reinterpret_cast<char*>(FIDL_ALLOC_ABSENT)};
 
   const char* error = nullptr;
-  auto status = fidl_validate(&unbounded_nonnullable_string_message_type, &message, sizeof(message),
-                              0, &error);
+  auto status = internal__fidl_validate__v1__may_break(&unbounded_nonnullable_string_message_type,
+                                                       &message, sizeof(message), 0, &error);
 
   EXPECT_EQ(status, ZX_ERR_INVALID_ARGS);
   EXPECT_NOT_NULL(error);
@@ -607,8 +617,8 @@ TEST(Strings, validate_absent_nullable_string) {
   message.inline_struct.string = fidl_string_t{0, reinterpret_cast<char*>(FIDL_ALLOC_ABSENT)};
 
   const char* error = nullptr;
-  auto status = fidl_validate(&unbounded_nullable_string_message_type, &message,
-                              sizeof(message.inline_struct), 0, &error);
+  auto status = internal__fidl_validate__v1__may_break(
+      &unbounded_nullable_string_message_type, &message, sizeof(message.inline_struct), 0, &error);
 
   EXPECT_EQ(status, ZX_OK);
   EXPECT_NULL(error, "%s", error);
@@ -620,8 +630,8 @@ TEST(Strings, validate_present_nonnullable_bounded_string) {
   memcpy(message.data, "hello!", 6);
 
   const char* error = nullptr;
-  auto status = fidl_validate(&bounded_32_nonnullable_string_message_type, &message,
-                              sizeof(message), 0, &error);
+  auto status = internal__fidl_validate__v1__may_break(&bounded_32_nonnullable_string_message_type,
+                                                       &message, sizeof(message), 0, &error);
 
   EXPECT_EQ(status, ZX_OK);
   EXPECT_NULL(error, "%s", error);
@@ -633,8 +643,8 @@ TEST(Strings, validate_present_nullable_bounded_string) {
   memcpy(message.data, "hello!", 6);
 
   const char* error = nullptr;
-  auto status =
-      fidl_validate(&bounded_32_nullable_string_message_type, &message, sizeof(message), 0, &error);
+  auto status = internal__fidl_validate__v1__may_break(&bounded_32_nullable_string_message_type,
+                                                       &message, sizeof(message), 0, &error);
 
   EXPECT_EQ(status, ZX_OK);
   EXPECT_NULL(error, "%s", error);
@@ -645,8 +655,8 @@ TEST(Strings, validate_absent_nonnullable_bounded_string_error) {
   message.inline_struct.string = fidl_string_t{6, reinterpret_cast<char*>(FIDL_ALLOC_ABSENT)};
 
   const char* error = nullptr;
-  auto status = fidl_validate(&bounded_32_nonnullable_string_message_type, &message,
-                              sizeof(message), 0, &error);
+  auto status = internal__fidl_validate__v1__may_break(&bounded_32_nonnullable_string_message_type,
+                                                       &message, sizeof(message), 0, &error);
 
   EXPECT_EQ(status, ZX_ERR_INVALID_ARGS);
   EXPECT_NOT_NULL(error);
@@ -657,8 +667,8 @@ TEST(Strings, validate_absent_nullable_bounded_string) {
   message.inline_struct.string = fidl_string_t{0, reinterpret_cast<char*>(FIDL_ALLOC_ABSENT)};
 
   const char* error = nullptr;
-  auto status = fidl_validate(&bounded_32_nullable_string_message_type, &message,
-                              sizeof(message.inline_struct), 0, &error);
+  auto status = internal__fidl_validate__v1__may_break(
+      &bounded_32_nullable_string_message_type, &message, sizeof(message.inline_struct), 0, &error);
 
   EXPECT_EQ(status, ZX_OK);
   EXPECT_NULL(error, "%s", error);
@@ -672,8 +682,8 @@ TEST(Strings, validate_present_nonnullable_bounded_string_short_error) {
   memcpy(message.data2, "world! ", 6);
 
   const char* error = nullptr;
-  auto status = fidl_validate(&multiple_short_nonnullable_strings_message_type, &message,
-                              sizeof(message), 0, &error);
+  auto status = internal__fidl_validate__v1__may_break(
+      &multiple_short_nonnullable_strings_message_type, &message, sizeof(message), 0, &error);
 
   EXPECT_EQ(status, ZX_ERR_INVALID_ARGS);
   EXPECT_NOT_NULL(error);
@@ -687,8 +697,8 @@ TEST(Strings, validate_present_nullable_bounded_string_short_error) {
   memcpy(message.data2, "world! ", 6);
 
   const char* error = nullptr;
-  auto status = fidl_validate(&multiple_short_nullable_strings_message_type, &message,
-                              sizeof(message), 0, &error);
+  auto status = internal__fidl_validate__v1__may_break(
+      &multiple_short_nullable_strings_message_type, &message, sizeof(message), 0, &error);
 
   EXPECT_EQ(status, ZX_ERR_INVALID_ARGS);
   EXPECT_NOT_NULL(error);
@@ -704,8 +714,8 @@ TEST(Vectors, validate_vector_with_huge_count) {
       fidl_vector_t{(1ull << 30) + 4, reinterpret_cast<void*>(FIDL_ALLOC_PRESENT)};
 
   const char* error = nullptr;
-  auto status = fidl_validate(&unbounded_nonnullable_vector_of_uint32_message_type, &message,
-                              sizeof(message), 0, &error);
+  auto status = internal__fidl_validate__v1__may_break(
+      &unbounded_nonnullable_vector_of_uint32_message_type, &message, sizeof(message), 0, &error);
 
   EXPECT_EQ(status, ZX_ERR_INVALID_ARGS);
   EXPECT_NOT_NULL(error);
@@ -729,8 +739,9 @@ TEST(Vectors, validate_present_nonnullable_vector_of_handles) {
   };
 
   const char* error = nullptr;
-  auto status = fidl_validate(&unbounded_nonnullable_vector_of_handles_message_type, &message,
-                              sizeof(message), ArrayCount(handles), &error);
+  auto status = internal__fidl_validate__v1__may_break(
+      &unbounded_nonnullable_vector_of_handles_message_type, &message, sizeof(message),
+      ArrayCount(handles), &error);
 
   EXPECT_EQ(status, ZX_OK);
   EXPECT_NULL(error, "%s", error);
@@ -752,8 +763,9 @@ TEST(Vectors, validate_present_nullable_vector_of_handles) {
   };
 
   const char* error = nullptr;
-  auto status = fidl_validate(&unbounded_nullable_vector_of_handles_message_type, &message,
-                              sizeof(message), ArrayCount(handles), &error);
+  auto status = internal__fidl_validate__v1__may_break(
+      &unbounded_nullable_vector_of_handles_message_type, &message, sizeof(message),
+      ArrayCount(handles), &error);
 
   EXPECT_EQ(status, ZX_OK);
   EXPECT_NULL(error, "%s", error);
@@ -771,8 +783,9 @@ TEST(Vectors, validate_absent_nonnullable_vector_of_handles_error) {
   };
 
   const char* error = nullptr;
-  auto status = fidl_validate(&unbounded_nonnullable_vector_of_handles_message_type, &message,
-                              sizeof(message), ArrayCount(handles), &error);
+  auto status = internal__fidl_validate__v1__may_break(
+      &unbounded_nonnullable_vector_of_handles_message_type, &message, sizeof(message),
+      ArrayCount(handles), &error);
 
   EXPECT_EQ(status, ZX_ERR_INVALID_ARGS);
   EXPECT_NOT_NULL(error);
@@ -783,8 +796,9 @@ TEST(Vectors, validate_absent_nullable_vector_of_handles) {
   message.inline_struct.vector = fidl_vector_t{0, reinterpret_cast<void*>(FIDL_ALLOC_ABSENT)};
 
   const char* error = nullptr;
-  auto status = fidl_validate(&unbounded_nullable_vector_of_handles_message_type, &message,
-                              sizeof(message.inline_struct), 0u, &error);
+  auto status =
+      internal__fidl_validate__v1__may_break(&unbounded_nullable_vector_of_handles_message_type,
+                                             &message, sizeof(message.inline_struct), 0u, &error);
 
   EXPECT_EQ(status, ZX_OK);
   EXPECT_NULL(error, "%s", error);
@@ -806,8 +820,9 @@ TEST(Vectors, validate_present_nonnullable_bounded_vector_of_handles) {
   };
 
   const char* error = nullptr;
-  auto status = fidl_validate(&bounded_32_nonnullable_vector_of_handles_message_type, &message,
-                              sizeof(message), ArrayCount(handles), &error);
+  auto status = internal__fidl_validate__v1__may_break(
+      &bounded_32_nonnullable_vector_of_handles_message_type, &message, sizeof(message),
+      ArrayCount(handles), &error);
 
   EXPECT_EQ(status, ZX_OK);
   EXPECT_NULL(error, "%s", error);
@@ -829,8 +844,9 @@ TEST(Vectors, validate_present_nullable_bounded_vector_of_handles) {
   };
 
   const char* error = nullptr;
-  auto status = fidl_validate(&bounded_32_nullable_vector_of_handles_message_type, &message,
-                              sizeof(message), ArrayCount(handles), &error);
+  auto status = internal__fidl_validate__v1__may_break(
+      &bounded_32_nullable_vector_of_handles_message_type, &message, sizeof(message),
+      ArrayCount(handles), &error);
 
   EXPECT_EQ(status, ZX_OK);
   EXPECT_NULL(error, "%s", error);
@@ -841,8 +857,9 @@ TEST(Vectors, validate_absent_nonnullable_bounded_vector_of_handles) {
   message.inline_struct.vector = fidl_vector_t{4, reinterpret_cast<void*>(FIDL_ALLOC_ABSENT)};
 
   const char* error = nullptr;
-  auto status = fidl_validate(&bounded_32_nonnullable_vector_of_handles_message_type, &message,
-                              sizeof(message.inline_struct), 0u, &error);
+  auto status =
+      internal__fidl_validate__v1__may_break(&bounded_32_nonnullable_vector_of_handles_message_type,
+                                             &message, sizeof(message.inline_struct), 0u, &error);
 
   EXPECT_EQ(status, ZX_ERR_INVALID_ARGS);
   EXPECT_NOT_NULL(error);
@@ -853,8 +870,9 @@ TEST(Vectors, validate_absent_nullable_bounded_vector_of_handles) {
   message.inline_struct.vector = fidl_vector_t{0, reinterpret_cast<void*>(FIDL_ALLOC_ABSENT)};
 
   const char* error = nullptr;
-  auto status = fidl_validate(&bounded_32_nullable_vector_of_handles_message_type, &message,
-                              sizeof(message.inline_struct), 0u, &error);
+  auto status =
+      internal__fidl_validate__v1__may_break(&bounded_32_nullable_vector_of_handles_message_type,
+                                             &message, sizeof(message.inline_struct), 0u, &error);
 
   EXPECT_EQ(status, ZX_OK);
   EXPECT_NULL(error, "%s", error);
@@ -879,8 +897,9 @@ TEST(Vectors, validate_present_nonnullable_bounded_vector_of_handles_short_error
   };
 
   const char* error = nullptr;
-  auto status = fidl_validate(&multiple_nonnullable_vectors_of_handles_message_type, &message,
-                              sizeof(message), ArrayCount(handles), &error);
+  auto status = internal__fidl_validate__v1__may_break(
+      &multiple_nonnullable_vectors_of_handles_message_type, &message, sizeof(message),
+      ArrayCount(handles), &error);
 
   EXPECT_EQ(status, ZX_ERR_INVALID_ARGS);
   EXPECT_NOT_NULL(error);
@@ -905,8 +924,9 @@ TEST(Vectors, validate_present_nullable_bounded_vector_of_handles_short_error) {
   };
 
   const char* error = nullptr;
-  auto status = fidl_validate(&multiple_nullable_vectors_of_handles_message_type, &message,
-                              sizeof(message), ArrayCount(handles), &error);
+  auto status = internal__fidl_validate__v1__may_break(
+      &multiple_nullable_vectors_of_handles_message_type, &message, sizeof(message),
+      ArrayCount(handles), &error);
 
   EXPECT_EQ(status, ZX_ERR_INVALID_ARGS);
   EXPECT_NOT_NULL(error);
@@ -917,8 +937,8 @@ TEST(Vectors, validate_present_nonnullable_vector_of_uint32) {
   message.inline_struct.vector = fidl_vector_t{4, reinterpret_cast<void*>(FIDL_ALLOC_PRESENT)};
 
   const char* error = nullptr;
-  auto status = fidl_validate(&unbounded_nonnullable_vector_of_uint32_message_type, &message,
-                              sizeof(message), 0, &error);
+  auto status = internal__fidl_validate__v1__may_break(
+      &unbounded_nonnullable_vector_of_uint32_message_type, &message, sizeof(message), 0, &error);
 
   EXPECT_EQ(status, ZX_OK);
   EXPECT_NULL(error, "%s", error);
@@ -932,8 +952,8 @@ TEST(Vectors, validate_present_nullable_vector_of_uint32) {
   message.inline_struct.vector = fidl_vector_t{4, reinterpret_cast<void*>(FIDL_ALLOC_PRESENT)};
 
   const char* error = nullptr;
-  auto status = fidl_validate(&unbounded_nullable_vector_of_uint32_message_type, &message,
-                              sizeof(message), 0, &error);
+  auto status = internal__fidl_validate__v1__may_break(
+      &unbounded_nullable_vector_of_uint32_message_type, &message, sizeof(message), 0, &error);
 
   EXPECT_EQ(status, ZX_OK);
   EXPECT_NULL(error, "%s", error);
@@ -947,8 +967,8 @@ TEST(Vectors, validate_absent_nonnullable_vector_of_uint32_error) {
   message.inline_struct.vector = fidl_vector_t{4, reinterpret_cast<void*>(FIDL_ALLOC_ABSENT)};
 
   const char* error = nullptr;
-  auto status = fidl_validate(&unbounded_nonnullable_vector_of_uint32_message_type, &message,
-                              sizeof(message), 0, &error);
+  auto status = internal__fidl_validate__v1__may_break(
+      &unbounded_nonnullable_vector_of_uint32_message_type, &message, sizeof(message), 0, &error);
 
   EXPECT_EQ(status, ZX_ERR_INVALID_ARGS);
   EXPECT_NOT_NULL(error);
@@ -959,8 +979,9 @@ TEST(Vectors, validate_absent_nullable_vector_of_uint32) {
   message.inline_struct.vector = fidl_vector_t{0, reinterpret_cast<void*>(FIDL_ALLOC_ABSENT)};
 
   const char* error = nullptr;
-  auto status = fidl_validate(&unbounded_nullable_vector_of_uint32_message_type, &message,
-                              sizeof(message.inline_struct), 0u, &error);
+  auto status =
+      internal__fidl_validate__v1__may_break(&unbounded_nullable_vector_of_uint32_message_type,
+                                             &message, sizeof(message.inline_struct), 0u, &error);
 
   EXPECT_EQ(status, ZX_OK);
   EXPECT_NULL(error, "%s", error);
@@ -974,8 +995,8 @@ TEST(Vectors, validate_present_nonnullable_bounded_vector_of_uint32) {
   message.inline_struct.vector = fidl_vector_t{4, reinterpret_cast<void*>(FIDL_ALLOC_PRESENT)};
 
   const char* error = nullptr;
-  auto status = fidl_validate(&bounded_32_nonnullable_vector_of_uint32_message_type, &message,
-                              sizeof(message), 0, &error);
+  auto status = internal__fidl_validate__v1__may_break(
+      &bounded_32_nonnullable_vector_of_uint32_message_type, &message, sizeof(message), 0, &error);
 
   EXPECT_EQ(status, ZX_OK);
   EXPECT_NULL(error, "%s", error);
@@ -989,8 +1010,8 @@ TEST(Vectors, validate_present_nullable_bounded_vector_of_uint32) {
   message.inline_struct.vector = fidl_vector_t{4, reinterpret_cast<void*>(FIDL_ALLOC_PRESENT)};
 
   const char* error = nullptr;
-  auto status = fidl_validate(&bounded_32_nullable_vector_of_uint32_message_type, &message,
-                              sizeof(message), 0, &error);
+  auto status = internal__fidl_validate__v1__may_break(
+      &bounded_32_nullable_vector_of_uint32_message_type, &message, sizeof(message), 0, &error);
 
   EXPECT_EQ(status, ZX_OK);
   EXPECT_NULL(error, "%s", error);
@@ -1004,8 +1025,9 @@ TEST(Vectors, validate_absent_nonnullable_bounded_vector_of_uint32) {
   message.inline_struct.vector = fidl_vector_t{4, reinterpret_cast<void*>(FIDL_ALLOC_ABSENT)};
 
   const char* error = nullptr;
-  auto status = fidl_validate(&bounded_32_nonnullable_vector_of_uint32_message_type, &message,
-                              sizeof(message.inline_struct), 0u, &error);
+  auto status =
+      internal__fidl_validate__v1__may_break(&bounded_32_nonnullable_vector_of_uint32_message_type,
+                                             &message, sizeof(message.inline_struct), 0u, &error);
 
   EXPECT_EQ(status, ZX_ERR_INVALID_ARGS);
   EXPECT_NOT_NULL(error);
@@ -1019,8 +1041,9 @@ TEST(Vectors, validate_absent_nullable_bounded_vector_of_uint32) {
   message.inline_struct.vector = fidl_vector_t{0, reinterpret_cast<void*>(FIDL_ALLOC_ABSENT)};
 
   const char* error = nullptr;
-  auto status = fidl_validate(&bounded_32_nullable_vector_of_uint32_message_type, &message,
-                              sizeof(message.inline_struct), 0u, &error);
+  auto status =
+      internal__fidl_validate__v1__may_break(&bounded_32_nullable_vector_of_uint32_message_type,
+                                             &message, sizeof(message.inline_struct), 0u, &error);
 
   EXPECT_EQ(status, ZX_OK);
   EXPECT_NULL(error, "%s", error);
@@ -1035,8 +1058,8 @@ TEST(Vectors, validate_present_nonnullable_bounded_vector_of_uint32_short_error)
   message.inline_struct.vector2 = fidl_vector_t{4, reinterpret_cast<void*>(FIDL_ALLOC_PRESENT)};
 
   const char* error = nullptr;
-  auto status = fidl_validate(&multiple_nonnullable_vectors_of_uint32_message_type, &message,
-                              sizeof(message), 0, &error);
+  auto status = internal__fidl_validate__v1__may_break(
+      &multiple_nonnullable_vectors_of_uint32_message_type, &message, sizeof(message), 0, &error);
 
   EXPECT_EQ(status, ZX_ERR_INVALID_ARGS);
   EXPECT_NOT_NULL(error);
@@ -1048,8 +1071,8 @@ TEST(Vectors, validate_present_nullable_bounded_vector_of_uint32_short_error) {
   message.inline_struct.vector2 = fidl_vector_t{4, reinterpret_cast<void*>(FIDL_ALLOC_PRESENT)};
 
   const char* error = nullptr;
-  auto status = fidl_validate(&multiple_nullable_vectors_of_uint32_message_type, &message,
-                              sizeof(message), 0, &error);
+  auto status = internal__fidl_validate__v1__may_break(
+      &multiple_nullable_vectors_of_uint32_message_type, &message, sizeof(message), 0, &error);
 
   EXPECT_EQ(status, ZX_ERR_INVALID_ARGS);
   EXPECT_NOT_NULL(error);
@@ -1070,8 +1093,8 @@ TEST(Structs, validate_nested_nonnullable_structs) {
   };
 
   const char* error = nullptr;
-  auto status = fidl_validate(&nested_structs_message_type, &message, sizeof(message),
-                              ArrayCount(handles), &error);
+  auto status = internal__fidl_validate__v1__may_break(
+      &nested_structs_message_type, &message, sizeof(message), ArrayCount(handles), &error);
 
   EXPECT_EQ(status, ZX_OK);
   EXPECT_NULL(error, "%s", error);
@@ -1122,8 +1145,8 @@ TEST(Structs, validate_nested_nonnullable_structs_check_padding) {
     buffer[padding_offset] = 0xAA;
 
     const char* error = nullptr;
-    auto status =
-        fidl_validate(&nested_structs_message_type, &message, kBufferSize, kNumHandles, &error);
+    auto status = internal__fidl_validate__v1__may_break(&nested_structs_message_type, &message,
+                                                         kBufferSize, kNumHandles, &error);
 
     EXPECT_EQ(status, ZX_ERR_INVALID_ARGS);
     ASSERT_NOT_NULL(error);
@@ -1217,8 +1240,8 @@ TEST(Structs, validate_nested_nullable_structs) {
   };
 
   const char* error = nullptr;
-  auto status = fidl_validate(&nested_struct_ptrs_message_type, &message, sizeof(message),
-                              ArrayCount(handles), &error);
+  auto status = internal__fidl_validate__v1__may_break(
+      &nested_struct_ptrs_message_type, &message, sizeof(message), ArrayCount(handles), &error);
 
   EXPECT_EQ(status, ZX_OK);
   EXPECT_NULL(error, "%s", error);
@@ -1228,8 +1251,9 @@ TEST(Xunions, validate_valid_empty_nullable_xunion) {
   SampleNullableXUnionStruct message = {};
 
   const char* error = nullptr;
-  auto status = fidl_validate(&fidl_test_coding_SampleNullableXUnionStructTable, &message,
-                              sizeof(fidl_xunion_t), 0, &error);
+  auto status =
+      internal__fidl_validate__v1__may_break(&fidl_test_coding_SampleNullableXUnionStructTable,
+                                             &message, sizeof(fidl_xunion_t), 0, &error);
   EXPECT_EQ(status, ZX_OK);
   EXPECT_NULL(error, "%s", error);
 }
@@ -1238,8 +1262,8 @@ TEST(Xunions, validate_empty_nonnullable_xunion) {
   SampleXUnionStruct message = {};
 
   const char* error = nullptr;
-  auto status = fidl_validate(&fidl_test_coding_SampleXUnionStructTable, &message,
-                              sizeof(fidl_xunion_t), 0, &error);
+  auto status = internal__fidl_validate__v1__may_break(&fidl_test_coding_SampleXUnionStructTable,
+                                                       &message, sizeof(fidl_xunion_t), 0, &error);
   EXPECT_EQ(status, ZX_ERR_INVALID_ARGS);
   EXPECT_NOT_NULL(error);
   EXPECT_STR_EQ(error, "non-nullable xunion is absent");
@@ -1250,8 +1274,9 @@ TEST(Xunions, validate_empty_nullable_xunion_nonzero_ordinal) {
   message.opt_xu.header.tag = kSampleXUnionIntStructOrdinal;
 
   const char* error = nullptr;
-  auto status = fidl_validate(&fidl_test_coding_SampleNullableXUnionStructTable, &message,
-                              sizeof(fidl_xunion_t), 0, &error);
+  auto status =
+      internal__fidl_validate__v1__may_break(&fidl_test_coding_SampleNullableXUnionStructTable,
+                                             &message, sizeof(fidl_xunion_t), 0, &error);
   EXPECT_EQ(status, ZX_ERR_INVALID_ARGS);
   EXPECT_NOT_NULL(error);
   EXPECT_STR_EQ(error, "empty xunion must have zero as ordinal");
@@ -1263,8 +1288,8 @@ TEST(Xunions, validate_nonempty_xunion_zero_ordinal) {
       (fidl_envelope_t){.num_bytes = 8, .num_handles = 0, .presence = FIDL_ALLOC_PRESENT};
 
   const char* error = nullptr;
-  auto status = fidl_validate(&fidl_test_coding_SampleXUnionStructTable, &message,
-                              sizeof(SampleXUnionStruct), 0, &error);
+  auto status = internal__fidl_validate__v1__may_break(
+      &fidl_test_coding_SampleXUnionStructTable, &message, sizeof(SampleXUnionStruct), 0, &error);
   EXPECT_EQ(status, ZX_ERR_INVALID_ARGS);
   EXPECT_NOT_NULL(error);
   EXPECT_STR_EQ(error, "xunion with zero as ordinal must be empty");
@@ -1276,8 +1301,9 @@ TEST(Xunions, validate_nonempty_nullable_xunion_zero_ordinal) {
       (fidl_envelope_t){.num_bytes = 8, .num_handles = 0, .presence = FIDL_ALLOC_PRESENT};
 
   const char* error = nullptr;
-  auto status = fidl_validate(&fidl_test_coding_SampleNullableXUnionStructTable, &message,
-                              sizeof(SampleNullableXUnionStruct), 0, &error);
+  auto status = internal__fidl_validate__v1__may_break(
+      &fidl_test_coding_SampleNullableXUnionStructTable, &message,
+      sizeof(SampleNullableXUnionStruct), 0, &error);
   EXPECT_EQ(status, ZX_ERR_INVALID_ARGS);
   EXPECT_NOT_NULL(error);
   EXPECT_STR_EQ(error, "xunion with zero as ordinal must be empty");
@@ -1295,8 +1321,8 @@ TEST(Xunions, validate_strict_xunion_unknown_ordinal) {
   };
 
   const char* error = nullptr;
-  auto status = fidl_validate(&fidl_test_coding_SampleStrictXUnionStructTable, bytes, sizeof(bytes),
-                              0, &error);
+  auto status = internal__fidl_validate__v1__may_break(
+      &fidl_test_coding_SampleStrictXUnionStructTable, bytes, sizeof(bytes), 0, &error);
   EXPECT_EQ(status, ZX_ERR_INVALID_ARGS);
   EXPECT_NOT_NULL(error);
   EXPECT_STR_EQ(error, "strict xunion has unknown ordinal");
@@ -1314,8 +1340,8 @@ TEST(Xunions, validate_flexible_xunion_unknown_ordinal) {
   };
 
   const char* error = nullptr;
-  auto status =
-      fidl_validate(&fidl_test_coding_SampleXUnionStructTable, bytes, sizeof(bytes), 0, &error);
+  auto status = internal__fidl_validate__v1__may_break(&fidl_test_coding_SampleXUnionStructTable,
+                                                       bytes, sizeof(bytes), 0, &error);
   EXPECT_EQ(status, ZX_OK);
   EXPECT_NULL(error);
 }
@@ -1328,7 +1354,8 @@ TEST(Primitives, validate_invalid_bool) {
 
   const char* error = nullptr;
   fflush(stdout);
-  auto status = fidl_validate(&fidl_test_coding_BoolStructTable, data, sizeof(data), 0, &error);
+  auto status = internal__fidl_validate__v1__may_break(&fidl_test_coding_BoolStructTable, data,
+                                                       sizeof(data), 0, &error);
   EXPECT_EQ(status, ZX_ERR_INVALID_ARGS);
   EXPECT_STR_EQ(error, "not a valid bool value");
 }
@@ -1339,8 +1366,8 @@ TEST(Bits, validate_zero_16bit_bits) {
   message.bits = 0;
 
   const char* error = nullptr;
-  auto status =
-      fidl_validate(&fidl_test_coding_Int16BitsStructTable, &message, sizeof(message), 0, &error);
+  auto status = internal__fidl_validate__v1__may_break(&fidl_test_coding_Int16BitsStructTable,
+                                                       &message, sizeof(message), 0, &error);
   EXPECT_EQ(status, ZX_OK);
   EXPECT_NULL(error, "%s", error);
 }
@@ -1351,8 +1378,8 @@ TEST(Bits, validate_valid_16bit_bits) {
   message.bits = 1u | 16u;
 
   const char* error = nullptr;
-  auto status =
-      fidl_validate(&fidl_test_coding_Int16BitsStructTable, &message, sizeof(message), 0, &error);
+  auto status = internal__fidl_validate__v1__may_break(&fidl_test_coding_Int16BitsStructTable,
+                                                       &message, sizeof(message), 0, &error);
   EXPECT_EQ(status, ZX_OK);
   EXPECT_NULL(error, "%s", error);
 }
@@ -1363,8 +1390,8 @@ TEST(Bits, validate_invalid_16bit_bits) {
   message.bits = 1u << 7u;
 
   const char* error = nullptr;
-  auto status =
-      fidl_validate(&fidl_test_coding_Int16BitsStructTable, &message, sizeof(message), 0, &error);
+  auto status = internal__fidl_validate__v1__may_break(&fidl_test_coding_Int16BitsStructTable,
+                                                       &message, sizeof(message), 0, &error);
   EXPECT_EQ(status, ZX_ERR_INVALID_ARGS);
   EXPECT_STR_EQ(error, "not a valid bits member");
 }
@@ -1375,8 +1402,8 @@ TEST(Bits, validate_zero_32bit_bits) {
   message.bits = 0;
 
   const char* error = nullptr;
-  auto status =
-      fidl_validate(&fidl_test_coding_Int32BitsStructTable, &message, sizeof(message), 0, &error);
+  auto status = internal__fidl_validate__v1__may_break(&fidl_test_coding_Int32BitsStructTable,
+                                                       &message, sizeof(message), 0, &error);
   EXPECT_EQ(status, ZX_OK);
   EXPECT_NULL(error, "%s", error);
 }
@@ -1388,8 +1415,8 @@ TEST(Bits, validate_valid_32bit_bits) {
   message.bits = (1u << 6u) | (1u << 11u) | (1u << 26u);
 
   const char* error = nullptr;
-  auto status =
-      fidl_validate(&fidl_test_coding_Int32BitsStructTable, &message, sizeof(message), 0, &error);
+  auto status = internal__fidl_validate__v1__may_break(&fidl_test_coding_Int32BitsStructTable,
+                                                       &message, sizeof(message), 0, &error);
   EXPECT_EQ(status, ZX_OK);
   EXPECT_NULL(error, "%s", error);
 }
@@ -1401,8 +1428,8 @@ TEST(Bits, validate_invalid_32bit_bits) {
   message.bits = 1u;
 
   const char* error = nullptr;
-  auto status =
-      fidl_validate(&fidl_test_coding_Int32BitsStructTable, &message, sizeof(message), 0, &error);
+  auto status = internal__fidl_validate__v1__may_break(&fidl_test_coding_Int32BitsStructTable,
+                                                       &message, sizeof(message), 0, &error);
   EXPECT_EQ(status, ZX_ERR_INVALID_ARGS);
   EXPECT_STR_EQ(error, "not a valid bits member");
 }
@@ -1420,7 +1447,8 @@ void TestValidEnum(const fidl_type_t* coding_table) {
     memset(std::launder(&message), 0, sizeof(message));
     message.e = valid_value;
     const char* error = nullptr;
-    auto status = fidl_validate(coding_table, &message, sizeof(message), 0, &error);
+    auto status =
+        internal__fidl_validate__v1__may_break(coding_table, &message, sizeof(message), 0, &error);
     EXPECT_EQ(status, ZX_OK);
     EXPECT_NULL(error);
   }
@@ -1440,7 +1468,8 @@ void TestInvalidEnum(const fidl_type_t* coding_table) {
     memset(std::launder(&message), 0, sizeof(message));
     message.e = invalid_value;
     const char* error = nullptr;
-    auto status = fidl_validate(coding_table, &message, sizeof(message), 0, &error);
+    auto status =
+        internal__fidl_validate__v1__may_break(coding_table, &message, sizeof(message), 0, &error);
     EXPECT_EQ(status, ZX_ERR_INVALID_ARGS);
     EXPECT_STR_EQ(error, "not a valid enum member");
   }
@@ -1575,25 +1604,10 @@ TEST(Primitives, validate_primitives_struct) {
   memset(data, 0, sizeof(data));
 
   const char* error = nullptr;
-  auto status = fidl_validate(&kPrimitiveStructCodingTable, data,
-                              static_cast<uint32_t>(sizeof(data)), 0, &error);
+  auto status = internal__fidl_validate__v1__may_break(
+      &kPrimitiveStructCodingTable, data, static_cast<uint32_t>(sizeof(data)), 0, &error);
   EXPECT_EQ(status, ZX_OK);
   EXPECT_NULL(error);
-}
-
-TEST(Msg, ValidateOutgoingByteMsg) {
-  SampleNullableXUnionStruct message = {};
-
-  const char* error = nullptr;
-  fidl_outgoing_msg_byte_t msg = {
-      .bytes = &message,
-      .handles = nullptr,
-      .num_bytes = sizeof(fidl_xunion_t),
-      .num_handles = 0,
-  };
-  auto status = fidl_validate_msg(&fidl_test_coding_SampleNullableXUnionStructTable, &msg, &error);
-  EXPECT_EQ(status, ZX_OK);
-  EXPECT_NULL(error, "%s", error);
 }
 
 }  // namespace

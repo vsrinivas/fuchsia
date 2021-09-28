@@ -60,10 +60,12 @@ zx_status_t fidl_decode_msg(const fidl_type_t* type, fidl_incoming_msg_t* msg,
 // Validates an encoded message against the given |type|.
 //
 // The |bytes| are not modified.
-zx_status_t fidl_validate(const fidl_type_t* type, const void* bytes, uint32_t num_bytes,
-                          uint32_t num_handles, const char** out_error_msg);
-zx_status_t fidl_validate_msg(const fidl_type_t* type, const fidl_outgoing_msg_byte_t* msg,
-                              const char** out_error_msg);
+//
+// This is a version of the FIDL validator that validates against the v1 wire format.
+// IT MAY BREAK AT ANY TIME OR BE REMOVED WITHOUT NOTICE.
+zx_status_t internal__fidl_validate__v1__may_break(const fidl_type_t* type, const void* bytes,
+                                                   uint32_t num_bytes, uint32_t num_handles,
+                                                   const char** out_error_msg);
 
 // Validates an encoded message against the given |type|.
 //

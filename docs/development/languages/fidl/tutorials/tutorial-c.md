@@ -519,36 +519,6 @@ type. Unless the object encoding includes internal references that
 must be fixed up, the only work amounts to checking the object size and the
 ranges of data types such as enums and union tags.
 
-### fidl_validate
-
-```c
-zx_status_t fidl_validate(const fidl_type_t* type, const void* bytes, uint32_t num_bytes,
-                          uint32_t num_handles, const char** error_msg_out);
-zx_status_t fidl_validate_msg(const fidl_type_t* type, const fidl_outgoing_msg_t* msg,
-                              const char** out_error_msg);
-```
-
-Declared in
-[system/ulib/fidl/include/lib/fidl/coding.h](/zircon/system/ulib/fidl/include/lib/fidl/coding.h),
-defined in
-[system/ulib/fidl/decoding_and_validating.cc](/zircon/system/ulib/fidl/decoding_and_validating.cc).
-
-Validates the object in **bytes** in-place by performing a depth-first
-traversal of the encoding data from **type** to fix up internal
-references. This performs the same validation as **fidl_decode()**, but
-does not modify any passed-in data.
-
-The **bytes** buffer is not modified by the operation.
-
-If anything other than `ZX_OK` is returned, **error_msg_out** will be set.
-
-Result is the same as for **fidl_encode()** above.
-
-This function is effectively a simple interpreter of the contents of the
-type. Unless the object encoding includes internal references that
-must be fixed up, the only work amounts to checking the object size and the
-ranges of data types such as enums and union tags.
-
 ### fidl_epitaph_write
 
 ```c
