@@ -256,6 +256,8 @@ fn record_inspect_counters(
                     connected_duration: counters.connected_duration.into_nanos(),
                     downtime_duration: counters.downtime_duration.into_nanos(),
                     downtime_no_saved_neighbor_duration: counters.downtime_no_saved_neighbor_duration.into_nanos(),
+                    connect_attempts_count: counters.connect_attempts_count,
+                    connect_successful_count: counters.connect_successful_count,
                     disconnect_count: counters.disconnect_count,
                     tx_high_packet_drop_duration: counters.tx_high_packet_drop_duration.into_nanos(),
                     rx_high_packet_drop_duration: counters.rx_high_packet_drop_duration.into_nanos(),
@@ -2091,6 +2093,37 @@ mod tests {
                     connected_duration: 0i64,
                     downtime_duration: (TELEMETRY_QUERY_INTERVAL * 3).into_nanos(),
                     downtime_no_saved_neighbor_duration: (TELEMETRY_QUERY_INTERVAL * 2).into_nanos(),
+                },
+            }
+        });
+    }
+
+    #[fuchsia::test]
+    fn test_log_connect_attempt_counters() {
+        let (mut test_helper, mut test_fut) = setup_test();
+
+        // Send 10 failed connect results, then 1 successful.
+        for _ in 0..10 {
+            let event = TelemetryEvent::ConnectResult {
+                iface_id: IFACE_ID,
+                result: fake_connect_result(fidl_ieee80211::StatusCode::RefusedReasonUnspecified),
+                multiple_bss_candidates: true,
+                latest_ap_state: random_bss_description!(Wpa1),
+            };
+            test_helper.telemetry_sender.send(event);
+        }
+        test_helper.send_connected_event(random_bss_description!(Wpa2));
+        test_helper.drain_cobalt_events(&mut test_fut);
+
+        assert_data_tree!(test_helper.inspector, root: {
+            stats: contains {
+                "1d_counters": contains {
+                    connect_attempts_count: 11u64,
+                    connect_successful_count: 1u64,
+                },
+                "7d_counters": contains {
+                    connect_attempts_count: 11u64,
+                    connect_successful_count: 1u64,
                 },
             }
         });
