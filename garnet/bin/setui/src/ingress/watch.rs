@@ -5,7 +5,7 @@
 //! Watch request handling.
 //!
 //! This mod defines the components for handling hanging-get, or "watch", [Requests](Request). These
-//! requests return a value to the requestor when a value different from the previously returned /
+//! requests return a value to the requester when a value different from the previously returned /
 //! value is available. This pattern is common across the various setting service interfaces.
 //! Since there is context involved between watch requests, these job workloads are [Sequential].
 //!
@@ -37,6 +37,10 @@ use std::marker::PhantomData;
 /// [Job's Signature](Signature).
 const LAST_VALUE_KEY: &str = "LAST_VALUE";
 
+/// A custom function used to compare an existing setting value with a new one to determine if
+/// listeners should be notified. If true is returned, listeners will be notified.
+type ChangeFunction = Box<dyn Fn(&SettingInfo, &SettingInfo) -> bool + Send + Sync + 'static>;
+
 /// [Responder] is a trait for handing back results of a watch request. It is unique from other
 /// work responders, since [Work] consumers expect a value to be present on success. The Responder
 /// specifies the conversions for [Response](crate::handler::base::Response).
@@ -56,6 +60,7 @@ pub struct Work<
     setting_type: SettingType,
     signature: Signature,
     responder: T,
+    change_function: Option<ChangeFunction>,
     _response_type: PhantomData<R>,
     _error_type: PhantomData<E>,
 }
@@ -71,6 +76,25 @@ impl<
             setting_type,
             signature,
             responder,
+            change_function: None,
+            _response_type: PhantomData,
+            _error_type: PhantomData,
+        }
+    }
+
+    // TODO(fxbug.dev/79044): remove allow dead_code once used
+    #[allow(dead_code)]
+    pub(crate) fn with_change_function(
+        setting_type: SettingType,
+        signature: Signature,
+        responder: T,
+        change_function: ChangeFunction,
+    ) -> Self {
+        Self {
+            setting_type,
+            signature,
+            responder,
+            change_function: Some(change_function),
             _response_type: PhantomData,
             _error_type: PhantomData,
         }
@@ -87,8 +111,15 @@ impl<
             Ok(Payload::Response(Ok(Some(setting_info)))) => {
                 let key = Key::Identifier(LAST_VALUE_KEY);
 
-                let return_val = match store.get(&key) {
-                    Some(Data::SettingInfo(info)) if *info == setting_info => None,
+                let return_val = match (store.get(&key), self.change_function.as_ref()) {
+                    // Apply the change function to determine if we should notify listeners.
+                    (Some(Data::SettingInfo(info)), Some(change_function))
+                        if !(change_function)(info, &setting_info) =>
+                    {
+                        None
+                    }
+                    // No change function used, compare the new info with the old.
+                    (Some(Data::SettingInfo(info)), None) if *info == setting_info => None,
                     _ => Some(Ok(setting_info)),
                 };
 
@@ -226,8 +257,14 @@ mod tests {
         let listen_info = SettingInfo::Unknown(UnknownInfo(false));
 
         // Make sure the first job execution returns the initial value (retrieved through get).
-        verify_watch(store_handle.clone(), listen_info.clone(), get_info.clone(), get_info.clone())
-            .await;
+        verify_watch(
+            store_handle.clone(),
+            listen_info.clone(),
+            get_info.clone(),
+            get_info.clone(),
+            None,
+        )
+        .await;
         // Make sure the second job execution returns the value returned through watching (listen
         // value).
         verify_watch(
@@ -235,6 +272,7 @@ mod tests {
             listen_info.clone(),
             get_info.clone(),
             listen_info.clone(),
+            None,
         )
         .await;
     }
@@ -244,6 +282,7 @@ mod tests {
         listen_info: SettingInfo,
         get_info: SettingInfo,
         expected_info: SettingInfo,
+        change_function: Option<ChangeFunction>,
     ) {
         // Create MessageHub for communication between components.
         let message_hub_delegate = MessageHub::create_hub();
@@ -258,11 +297,19 @@ mod tests {
         let (response_tx, response_rx) =
             futures::channel::oneshot::channel::<Result<SettingInfo, Error>>();
 
-        let work = Box::new(Work::new(
-            SettingType::Unknown,
-            Signature::new(0),
-            TestResponder::new(response_tx),
-        ));
+        let work = match change_function {
+            None => Box::new(Work::new(
+                SettingType::Unknown,
+                Signature::new(0),
+                TestResponder::new(response_tx),
+            )),
+            Some(change_function) => Box::new(Work::with_change_function(
+                SettingType::Unknown,
+                Signature::new(0),
+                TestResponder::new(response_tx),
+                change_function,
+            )),
+        };
 
         // Execute work on async task.
         let work_messenger = message_hub_delegate
@@ -296,6 +343,33 @@ mod tests {
 
         assert_matches!(response_rx.await.expect("should receive successful response"),
                 Ok(x) if x == expected_info);
+    }
+
+    // This test verifies that custom change functions work by using a custom change function that
+    // always says a new value is different, even if the actual value is unchanged.
+    #[fuchsia_async::run_until_stalled(test)]
+    async fn test_custom_change_function() {
+        // Create store for job.
+        let store_handle = Arc::new(Mutex::new(HashMap::new()));
+
+        // Pre-fill the storage with the value so that the initial get will not trigger a response.
+        let unchanged_info = SettingInfo::Unknown(UnknownInfo(true));
+        store_handle
+            .lock()
+            .await
+            .insert(Key::Identifier(LAST_VALUE_KEY), Data::SettingInfo(unchanged_info.clone()));
+
+        verify_watch(
+            store_handle,
+            // Send the same value on both the get and listen requests so that the default change
+            // function would not trigger a response to the client.
+            unchanged_info.clone(),
+            unchanged_info.clone(),
+            unchanged_info,
+            // Use a custom change function that always reports a change.
+            Some(Box::new(move |_old: &SettingInfo, _new: &SettingInfo| true)),
+        )
+        .await;
     }
 
     #[fuchsia_async::run_until_stalled(test)]
