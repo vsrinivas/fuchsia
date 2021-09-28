@@ -383,10 +383,7 @@ fn handle_err(source: &str, err: ResolveError) -> fname::LookupError {
     if let Some(ioerr) = ioerr {
         match ioerr.raw_os_error() {
             Some(libc::EHOSTUNREACH) => debug!("{} error: {}; (IO error {:?})", source, err, ioerr),
-            // TODO(fxbug.dev/55621): We should log at WARN below, but trust-dns is
-            // erasing raw_os_error for us. Logging to debug for now to reduce
-            // log spam.
-            _ => debug!("{} error: {}; (IO error {:?})", source, err, ioerr),
+            _ => warn!("{} error: {}; (IO error {:?})", source, err, ioerr),
         }
     } else {
         warn!("{} error: {}", source, err)
