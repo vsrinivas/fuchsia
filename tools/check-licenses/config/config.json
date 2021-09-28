@@ -79,6 +79,10 @@
       "licenseLocation": "lss/linux_syscall_support.h"
     },
     {
+      "projectRoot": "third_party/lss",
+      "licenseLocation": "linux_syscall_support.h"
+    },
+    {
       "projectRoot": "prebuilt/third_party/ffmpeg/pkg",
       "licenseLocation": "ffmpeg/docs/LICENSE.md"
     },
