@@ -36,9 +36,9 @@ test("uart-unittests") {
     "pl011-tests.cc",
   ]
   deps = [
-    "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/uart",
     "//zircon/system/ulib/uart:uart-mock",
+    "//zircon/system/ulib/zxtest",
   ]
   if (is_fuchsia) {
     deps += [ "//sdk/lib/fdio" ]

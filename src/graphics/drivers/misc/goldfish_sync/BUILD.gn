@@ -75,9 +75,9 @@ test("goldfish-sync-device-test") {
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",
-    "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/fzl",
     "//zircon/system/ulib/mmio-ptr:mmio-ptr-fake",
+    "//zircon/system/ulib/zxtest",
   ]
 
   configs += [ "//build/config:all_source" ]

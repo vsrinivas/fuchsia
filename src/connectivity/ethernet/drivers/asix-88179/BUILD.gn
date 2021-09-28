@@ -110,12 +110,12 @@ test("asix-88179-integration") {
     "//sdk/lib/fdio",
     "//src/lib/ddk",
     "//zircon/public/lib/zx",
-    "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/fdio-caller",
     "//zircon/system/ulib/fzl",
     "//zircon/system/ulib/hid",
     "//zircon/system/ulib/usb-virtual-bus-launcher",
+    "//zircon/system/ulib/zxtest",
   ]
 }
 

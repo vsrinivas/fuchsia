@@ -28,8 +28,8 @@ test("firmware_zircon_boot_test") {
     "//src/lib/digest",
     "//third_party/android/platform/external/avb",
     "//zircon/public/lib/zxc",
-    "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/fbl",
+    "//zircon/system/ulib/zxtest",
     "//zircon/third_party/ulib/cksum",
   ]
 }

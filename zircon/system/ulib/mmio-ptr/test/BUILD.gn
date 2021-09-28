@@ -17,8 +17,8 @@ test("unittest") {
   deps = [
     "//sdk/lib/fdio",
     "//src/devices/lib/mmio",
-    "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/mmio-ptr:mmio-ptr-fake",
+    "//zircon/system/ulib/zxtest",
   ]
 }
 

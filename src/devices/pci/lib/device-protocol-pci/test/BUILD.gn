@@ -14,7 +14,7 @@ test("device-protocol-pci") {
     "//src/devices/lib/mmio",
     "//src/devices/pci/lib/device-protocol-pci",
     "//zircon/public/lib/zx",
-    "//zircon/public/lib/zxtest",
+    "//zircon/system/ulib/zxtest",
   ]
 }
 

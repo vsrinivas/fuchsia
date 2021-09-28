@@ -32,12 +32,12 @@ test("service-proxy-dir") {
     "//src/lib/storage/vfs/cpp",
     "//zircon/public/lib/fidl",
     "//zircon/public/lib/zx",
-    "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/fidl-async:fidl-async-cpp",
     "//zircon/system/ulib/fidl-utils",
     "//zircon/system/ulib/runtests-utils",
+    "//zircon/system/ulib/zxtest",
   ]
 }
 

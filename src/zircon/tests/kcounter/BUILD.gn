@@ -23,9 +23,9 @@ test("kcounter") {
     "//zircon/kernel/lib/counters",
     "//zircon/public/lib/pretty",
     "//zircon/public/lib/zx",
-    "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/fzl",
+    "//zircon/system/ulib/zxtest",
   ]
 }
 

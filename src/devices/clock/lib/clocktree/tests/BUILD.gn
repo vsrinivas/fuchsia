@@ -19,8 +19,8 @@ executable("test") {
     "//sdk/lib/fdio",
     "//src/devices/clock/lib/clocktree",
     "//zircon/public/lib/zx",
-    "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/fbl",
+    "//zircon/system/ulib/zxtest",
   ]
 }
 

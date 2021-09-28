@@ -13,7 +13,7 @@ test("kernel-unittests") {
     "//sdk/fidl/fuchsia.kernel:fuchsia.kernel_c",
     "//sdk/lib/fdio",
     "//zircon/public/lib/zx",
-    "//zircon/public/lib/zxtest",
+    "//zircon/system/ulib/zxtest",
   ]
 }
 

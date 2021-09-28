@@ -30,9 +30,9 @@ test("libhwreg-i2c-test") {
     "//src/lib/ddk",
     "//src/lib/ddktl",
     "//zircon/public/lib/zx",
-    "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/hwreg-i2c",
+    "//zircon/system/ulib/zxtest",
   ]
 }
 

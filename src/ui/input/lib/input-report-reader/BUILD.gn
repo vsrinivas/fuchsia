@@ -29,7 +29,7 @@ test("input-report-test") {
   deps = [
     ":input-report-reader",
     "//zircon/public/lib/zx",
-    "//zircon/public/lib/zxtest",
+    "//zircon/system/ulib/zxtest",
   ]
 }
 

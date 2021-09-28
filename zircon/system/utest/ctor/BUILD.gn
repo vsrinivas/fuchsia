@@ -12,7 +12,7 @@ test("ctor") {
   deps = [
     ":dso-ctor",
     "//sdk/lib/fdio",
-    "//zircon/public/lib/zxtest",
+    "//zircon/system/ulib/zxtest",
   ]
 }
 

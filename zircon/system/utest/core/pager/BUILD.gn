@@ -18,10 +18,10 @@ source_set("pager") {
     "//sdk/lib/fdio",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zx",
-    "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/elf-search",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/fzl",
     "//zircon/system/ulib/inspector",
+    "//zircon/system/ulib/zxtest",
   ]
 }

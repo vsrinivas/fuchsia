@@ -28,7 +28,7 @@ test("pci-protocol-fake-test") {
     "//src/devices/lib/mmio",
     "//src/devices/pci/lib/device-protocol-pci",
     "//src/devices/pci/testing:pci-protocol-fake",
-    "//zircon/public/lib/zxtest",
+    "//zircon/system/ulib/zxtest",
   ]
 
   # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings

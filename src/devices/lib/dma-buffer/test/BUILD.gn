@@ -13,8 +13,8 @@ test("dma-buffer-test-bin") {
     "//src/devices/lib/dma-buffer",
     "//src/devices/testing/fake-object",
     "//zircon/public/lib/zx",
-    "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/fbl",
+    "//zircon/system/ulib/zxtest",
   ]
 }
 

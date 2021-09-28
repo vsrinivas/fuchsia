@@ -13,9 +13,9 @@ test("perftest") {
     "runner-test.cc",
   ]
   deps = [
-    "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/perftest",
+    "//zircon/system/ulib/zxtest",
   ]
 }
 

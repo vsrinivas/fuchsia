@@ -19,8 +19,8 @@ test("futex-ownership") {
     "//sdk/lib/fdio",
     "//src/zircon/lib/zircon",
     "//zircon/public/lib/zx",
-    "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/fbl",
+    "//zircon/system/ulib/zxtest",
   ]
 }
 

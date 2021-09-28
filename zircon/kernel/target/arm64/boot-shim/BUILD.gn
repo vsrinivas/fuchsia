@@ -20,7 +20,7 @@ test("arm64-boot-shim-tests") {
     "zbi.c",
     "zbi_test.cc",
   ]
-  deps = [ "//zircon/public/lib/zxtest" ]
+  deps = [ "//zircon/system/ulib/zxtest" ]
 }
 
 # The boot shims need to be compiled in the special environment for running

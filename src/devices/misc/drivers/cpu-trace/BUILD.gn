@@ -97,7 +97,7 @@ test("perf-mon-tests-bin") {
     "//src/devices/testing/fake-bti",
     "//src/devices/testing/no_ddk",
     "//zircon/public/lib/zircon-internal",
-    "//zircon/public/lib/zxtest",
+    "//zircon/system/ulib/zxtest",
   ]
 }
 

@@ -68,12 +68,12 @@ test("virtio-input-test") {
     "//src/devices/testing/fake-bti",
     "//src/devices/testing/no_ddk",
     "//src/ui/input/lib/hid-input-report",
-    "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/fidl-async:fidl-async-cpp",
     "//zircon/system/ulib/hid-parser",
+    "//zircon/system/ulib/zxtest",
   ]
 }
 

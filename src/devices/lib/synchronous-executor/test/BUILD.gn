@@ -15,8 +15,8 @@ test("synchronous-executor-test") {
     "//src/devices/lib/synchronous-executor",
     "//src/devices/testing/fake-object",
     "//zircon/public/lib/zx",
-    "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/fbl",
+    "//zircon/system/ulib/zxtest",
   ]
 }
 

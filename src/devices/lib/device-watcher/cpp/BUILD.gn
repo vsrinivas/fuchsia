@@ -30,9 +30,9 @@ test("test") {
   deps = [
     ":cpp",
     "//src/lib/storage/vfs/cpp",
-    "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
+    "//zircon/system/ulib/zxtest",
   ]
 }
 

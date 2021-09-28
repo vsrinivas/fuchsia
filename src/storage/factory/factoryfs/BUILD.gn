@@ -62,7 +62,6 @@ test("factoryfs_unit") {
     "//src/lib/storage/fs_management",
     "//zircon/public/lib/safemath",
     "//zircon/public/lib/sync",
-    "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/async-loop",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
@@ -70,6 +69,7 @@ test("factoryfs_unit") {
     "//zircon/system/ulib/fidl-utils",
     "//zircon/system/ulib/storage/buffer",
     "//zircon/system/ulib/storage/operation",
+    "//zircon/system/ulib/zxtest",
   ]
 }
 

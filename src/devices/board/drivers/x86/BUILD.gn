@@ -140,12 +140,12 @@ driver_module("platform-bus-x86-driver") {
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxc",
-    "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/driver-unit-test",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/hid",
     "//zircon/system/ulib/lazy_init",
     "//zircon/system/ulib/region-alloc",
+    "//zircon/system/ulib/zxtest",
     "//zircon/third_party/ulib/chromiumos-platform-ec",
   ]
 
@@ -179,10 +179,10 @@ test("x86-battery-test") {
     "//src/lib/ddk",
     "//src/lib/ddktl",
     "//third_party/acpica",
-    "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/hid",
     "//zircon/system/ulib/region-alloc",
+    "//zircon/system/ulib/zxtest",
     "//zircon/third_party/ulib/chromiumos-platform-ec",
   ]
 }
@@ -204,9 +204,9 @@ test("x86-lid-test") {
     "//third_party/acpica",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zircon-internal",
-    "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/hid",
+    "//zircon/system/ulib/zxtest",
   ]
 }
 
@@ -232,8 +232,8 @@ test("x86-pwrsrc-test") {
     "//src/lib/ddk",
     "//src/lib/ddktl",
     "//third_party/acpica",
-    "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/hid",
+    "//zircon/system/ulib/zxtest",
   ]
 }
 
@@ -248,7 +248,7 @@ test("x86-board-test") {
   deps = [
     ":smbios",
     "//src/devices/testing/fake_ddk",
-    "//zircon/public/lib/zxtest",
+    "//zircon/system/ulib/zxtest",
   ]
 }
 
@@ -272,11 +272,11 @@ test("x86-thermal-test") {
     "//src/lib/ddk",
     "//src/lib/ddktl",
     "//third_party/acpica",
-    "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/async-loop",
     "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/fidl-async",
+    "//zircon/system/ulib/zxtest",
   ]
 }
 
@@ -310,13 +310,13 @@ test("x86-cros-ec-test") {
     "//third_party/acpica",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zircon-internal",
-    "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/async-loop",
     "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/hid",
     "//zircon/system/ulib/hid-parser",
     "//zircon/system/ulib/service:service-llcpp",
+    "//zircon/system/ulib/zxtest",
     "//zircon/third_party/ulib/chromiumos-platform-ec",
   ]
 }

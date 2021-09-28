@@ -27,9 +27,9 @@ test("mipidsi") {
     "//sdk/fidl/fuchsia.hardware.dsi:fuchsia.hardware.dsi_llcpp",
     "//sdk/lib/fdio",
     "//zircon/public/lib/zx",
-    "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/mipi-dsi",
+    "//zircon/system/ulib/zxtest",
   ]
 }
 

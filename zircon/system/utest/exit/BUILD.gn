@@ -15,7 +15,7 @@ test("exit") {
   deps = [
     "//sdk/lib/fdio",
     "//zircon/public/lib/zircon-internal",
-    "//zircon/public/lib/zxtest",
+    "//zircon/system/ulib/zxtest",
   ]
 }
 

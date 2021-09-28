@@ -12,9 +12,9 @@ test("vdso") {
   deps = [
     "//sdk/lib/fdio",
     "//zircon/public/lib/zx",
-    "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/elfload",
     "//zircon/system/ulib/fbl",
+    "//zircon/system/ulib/zxtest",
   ]
 }
 
@@ -25,7 +25,7 @@ test("vdso-base") {
   deps = [
     "//sdk/lib/fdio",
     "//src/zircon/lib/zircon",
-    "//zircon/public/lib/zxtest",
+    "//zircon/system/ulib/zxtest",
   ]
 }
 
@@ -47,7 +47,7 @@ executable("vdso-variant-helper") {
   sources = [ "helper/vdso-variant-helper.c" ]
   deps = [
     "//sdk/lib/fdio",
-    "//zircon/public/lib/zxtest",
+    "//zircon/system/ulib/zxtest",
   ]
 }
 

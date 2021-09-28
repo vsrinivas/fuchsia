@@ -27,7 +27,7 @@ test("listnode-tests") {
   ]
   deps = [
     ":listnode",
-    "//zircon/public/lib/zxtest",
+    "//zircon/system/ulib/zxtest",
   ]
 
   # TODO(fxbug.dev/58162): delete the below and fix compiler warnings

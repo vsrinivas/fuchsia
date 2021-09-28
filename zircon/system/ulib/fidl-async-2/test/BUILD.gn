@@ -17,8 +17,8 @@ test("fidl-struct-test") {
     ":fidl.types.test_c",
     ":fidl.types.test_llcpp",
     "//zircon/public/lib/zx",
-    "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/fidl-async-2",
+    "//zircon/system/ulib/zxtest",
   ]
 }
 

@@ -34,8 +34,8 @@ test("fcrypto") {
   deps = [
     "//sdk/lib/fdio",
     "//src/security/fcrypto",
-    "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/fbl",
+    "//zircon/system/ulib/zxtest",
   ]
 }
 

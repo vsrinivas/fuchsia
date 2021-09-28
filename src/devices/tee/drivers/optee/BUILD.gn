@@ -93,7 +93,7 @@ test("optee-message-test-bin") {
   sources = [ "test/optee-message-test.cc" ]
   deps = [
     ":optee_lib",
-    "//zircon/public/lib/zxtest",
+    "//zircon/system/ulib/zxtest",
   ]
 
   # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
@@ -110,8 +110,8 @@ test("optee-controller-test-bin") {
     "//src/devices/testing/fake-bti",
     "//src/devices/testing/fake-resource",
     "//src/devices/testing/mock-ddk",
-    "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/async-loop:async-loop-default",
+    "//zircon/system/ulib/zxtest",
   ]
 
   # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
@@ -129,8 +129,8 @@ test("optee-client-test-bin") {
     "//src/devices/testing/fake-bti",
     "//src/devices/testing/fake-resource",
     "//src/devices/testing/mock-ddk",
-    "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/async-loop:async-loop-default",
+    "//zircon/system/ulib/zxtest",
   ]
 
   # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
@@ -145,7 +145,7 @@ test("optee-uuid-test-bin") {
     ":optee_lib",
     "//sdk/banjo/fuchsia.hardware.tee:fuchsia.hardware.tee_banjo_cpp",
     "//sdk/fidl/fuchsia.tee:fuchsia.tee_llcpp",
-    "//zircon/public/lib/zxtest",
+    "//zircon/system/ulib/zxtest",
   ]
 }
 

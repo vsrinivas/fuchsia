@@ -19,7 +19,7 @@ source_set("fcs-test") {
 
   deps = [
     ":fcs",
-    "//zircon/public/lib/zxtest",
+    "//zircon/system/ulib/zxtest",
   ]
 }
 
@@ -49,6 +49,6 @@ source_set("frame-test") {
 
   deps = [
     ":frame",
-    "//zircon/public/lib/zxtest",
+    "//zircon/system/ulib/zxtest",
   ]
 }

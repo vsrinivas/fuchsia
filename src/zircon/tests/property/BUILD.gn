@@ -11,8 +11,8 @@ test("property") {
   sources = [ "property.cc" ]
   deps = [
     "//sdk/lib/fdio",
-    "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/test-utils",
+    "//zircon/system/ulib/zxtest",
   ]
 
   # TODO(fxbug.dev/76395): This test contains an infinite loop, which is

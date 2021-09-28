@@ -48,8 +48,8 @@ test("mock-ddk-test-bin") {
     "//src/lib/ddktl",
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxc",
-    "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/fbl",
+    "//zircon/system/ulib/zxtest",
   ]
 }
 

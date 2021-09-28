@@ -40,8 +40,8 @@ test("zxtest") {
   ]
   deps = [
     "//src/zircon/lib/zircon:zircon-headers",
-    "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/fbl",
+    "//zircon/system/ulib/zxtest",
     "//zircon/system/ulib/zxtest:prod",
   ]
   if (is_fuchsia) {

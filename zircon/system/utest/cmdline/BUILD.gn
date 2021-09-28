@@ -14,8 +14,8 @@ test("cmdline") {
   ]
 
   deps = [
-    "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/cmdline",
+    "//zircon/system/ulib/zxtest",
   ]
 }
 

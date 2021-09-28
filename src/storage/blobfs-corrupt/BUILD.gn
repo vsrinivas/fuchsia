@@ -27,9 +27,9 @@ executable("blobfs-corrupt-test") {
     "//sdk/fidl/fuchsia.hardware.block:fuchsia.hardware.block_c",
     "//src/lib/digest",
     "//src/storage/blobfs",
-    "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/block-client:fake-device",
     "//zircon/system/ulib/fbl",
+    "//zircon/system/ulib/zxtest",
   ]
 }
 

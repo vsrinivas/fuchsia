@@ -26,7 +26,7 @@ test("ddktl-test") {
     "//src/lib/ddk",
     "//src/lib/ddktl",
     "//zircon/public/lib/zx",
-    "//zircon/public/lib/zxtest",
+    "//zircon/system/ulib/zxtest",
   ]
 }
 

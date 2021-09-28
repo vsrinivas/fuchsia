@@ -14,7 +14,7 @@ source_set("process") {
     "//sdk/lib/fdio",
     "//sdk/lib/fit",
     "//zircon/public/lib/zx",
-    "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/mini-process",
+    "//zircon/system/ulib/zxtest",
   ]
 }

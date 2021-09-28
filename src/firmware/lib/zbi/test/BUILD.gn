@@ -14,7 +14,7 @@ test("firmware_zbi_test") {
   deps = [
     "//src/firmware/lib/zbi:in_tree",
     "//zircon/public/lib/pretty",
-    "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/fbl",
+    "//zircon/system/ulib/zxtest",
   ]
 }

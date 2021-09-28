@@ -68,7 +68,7 @@ test("chromeos-acpi-tests-bin") {
            "//sdk/lib/inspect/testing/cpp:zxtest",
            "//src/devices/testing/mock-ddk",
            "//src/devices/lib/acpi/mock:mock-acpi",
-           "//zircon/public/lib/zxtest",
+           "//zircon/system/ulib/zxtest",
            "//zircon/system/ulib/async-loop:async-loop-cpp",
          ]
 }

@@ -23,8 +23,8 @@ test("inet6-test") {
   }
   sources = [ "inet6_test.cc" ]
   deps = [
-    "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/inet6",
+    "//zircon/system/ulib/zxtest",
   ]
 }
 

@@ -11,6 +11,6 @@ source_set("syscall-generation") {
   deps = [
     "//sdk/lib/fdio",
     "//sdk/lib/stdcompat",
-    "//zircon/public/lib/zxtest",
+    "//zircon/system/ulib/zxtest",
   ]
 }

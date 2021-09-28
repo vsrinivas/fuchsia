@@ -23,8 +23,8 @@ test("nand-volume-driver") {
   sources = [ "nand-volume-driver-tests.cc" ]
   deps = [
     ":common",
-    "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/ftl-mtd",
     "//zircon/system/ulib/mtd",
+    "//zircon/system/ulib/zxtest",
   ]
 }

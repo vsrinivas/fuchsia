@@ -11,7 +11,7 @@ test("status") {
   sources = [ "status.cc" ]
   deps = [
     "//sdk/lib/fdio",
-    "//zircon/public/lib/zxtest",
+    "//zircon/system/ulib/zxtest",
   ]
 }
 

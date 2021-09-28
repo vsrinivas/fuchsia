@@ -65,7 +65,7 @@ if (current_toolchain != default_toolchain) {
     deps = [
       "//third_party/boringssl",
       "//tools/fidl/fidlc:fidl",
-      "//zircon/public/lib/zxtest",
+      "//zircon/system/ulib/zxtest",
     ]
   }
 }

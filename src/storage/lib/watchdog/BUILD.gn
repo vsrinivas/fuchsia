@@ -20,9 +20,9 @@ test("watchdog_unittest") {
     "//src/storage/lib/watchdog",
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxc",
-    "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/syslog",
+    "//zircon/system/ulib/zxtest",
   ]
 
   include_dirs = [ ".." ]

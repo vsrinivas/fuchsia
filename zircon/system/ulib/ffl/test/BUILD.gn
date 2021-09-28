@@ -26,8 +26,8 @@ test("ffl") {
   }
   sources = [ "ffl_tests.cc" ]
   deps = [
-    "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/ffl",
+    "//zircon/system/ulib/zxtest",
   ]
 
   if (is_fuchsia) {

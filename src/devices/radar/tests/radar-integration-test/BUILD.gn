@@ -12,9 +12,9 @@ executable("bin") {
     "//sdk/fidl/fuchsia.hardware.radar:fuchsia.hardware.radar_llcpp",
     "//sdk/lib/fdio",
     "//sdk/lib/fit",
-    "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/fbl",
+    "//zircon/system/ulib/zxtest",
   ]
 
   # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings

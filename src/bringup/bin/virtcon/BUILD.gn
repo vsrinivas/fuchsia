@@ -94,9 +94,9 @@ test("vc-display-test") {
   ]
   deps = [
     ":common",
-    "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
+    "//zircon/system/ulib/zxtest",
   ]
 }
 
@@ -115,7 +115,7 @@ test("vc-text-test") {
 
   deps = [
     ":common",
-    "//zircon/public/lib/zxtest",
+    "//zircon/system/ulib/zxtest",
   ]
 }
 
@@ -137,7 +137,7 @@ test("vc-session-manager-test") {
   deps = [
     ":common",
     "//zircon/public/lib/zxc",
-    "//zircon/public/lib/zxtest",
+    "//zircon/system/ulib/zxtest",
   ]
 }
 
@@ -153,7 +153,7 @@ test("vc-integration-test") {
     "//sdk/fidl/fuchsia.virtualconsole:fuchsia.virtualconsole_c",
     "//sdk/lib/fdio",
     "//zircon/public/lib/zx",
-    "//zircon/public/lib/zxtest",
+    "//zircon/system/ulib/zxtest",
   ]
 }
 
@@ -170,13 +170,13 @@ test("vc-args-test") {
   deps = [
     ":common",
     "//sdk/fidl/fuchsia.hardware.pty:fuchsia.hardware.pty_llcpp",
-    "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/async-default",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/fidl-async",
     "//zircon/system/ulib/fidl-async:fidl-async-cpp",
     "//zircon/system/ulib/mock-boot-arguments",
+    "//zircon/system/ulib/zxtest",
   ]
 }
 

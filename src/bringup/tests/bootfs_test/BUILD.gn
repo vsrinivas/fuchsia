@@ -11,7 +11,7 @@ test("running_on_bootfs_test") {
   sources = [ "running_on_bootfs_test.cc" ]
   deps = [
     "//sdk/lib/fdio",
-    "//zircon/public/lib/zxtest",
+    "//zircon/system/ulib/zxtest",
   ]
 }
 

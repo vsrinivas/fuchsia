@@ -16,8 +16,8 @@ test("devfs") {
     "//sdk/lib/fdio",
     "//src/lib/storage/vfs/cpp",
     "//zircon/public/lib/zx",
-    "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/fbl",
+    "//zircon/system/ulib/zxtest",
   ]
 
   # TODO(fxbug.dev/69585): This target uses raw zx::channel with LLCPP which is deprecated.

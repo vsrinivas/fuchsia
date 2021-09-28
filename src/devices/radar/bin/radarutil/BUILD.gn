@@ -39,7 +39,7 @@ executable("radarutil-test-bin") {
   ]
   deps = [
     ":common",
-    "//zircon/public/lib/zxtest",
+    "//zircon/system/ulib/zxtest",
   ]
 }
 

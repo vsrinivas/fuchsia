@@ -15,7 +15,7 @@ import("//sdk/cts/build/write_cts_file.gni")
 # Example:
 # ```
 # cts_executable("my-test") {
-#   deps = [ "//zircon/public/lib/zxtest" ]
+#   deps = [ "//zircon/system/ulib/zxtest" ]
 #   sources = [ "//sdk/cts/tests/my_test/my_test.cc" ]
 #   testonly = true
 # }

@@ -8,5 +8,5 @@ source_set("bad-segsel") {
 
   configs += [ "//build/config:all_source" ]
   sources = [ "bad-segsel.cc" ]
-  deps = [ "//zircon/public/lib/zxtest" ]
+  deps = [ "//zircon/system/ulib/zxtest" ]
 }

@@ -22,7 +22,7 @@ test("devicetree-tests") {
   sources = [ "devicetree_tests.cc" ]
   deps = [
     "//zircon/kernel/lib/devicetree",
-    "//zircon/public/lib/zxtest",
+    "//zircon/system/ulib/zxtest",
   ]
   if (is_host) {
     data_deps = [ ":host-test-data" ]

@@ -120,7 +120,7 @@ test("standalone") {
     "libc-and-io-stubs.c",
     "test-main-with-filter.c",
   ]
-  deps += [ "//zircon/public/lib/zxtest" ]
+  deps += [ "//zircon/system/ulib/zxtest" ]
 }
 
 # Make that into a bootable ZBI with just the kernel.

@@ -67,7 +67,7 @@ test("fusb302-test-bin") {
     "//src/devices/i2c/testing/mock-i2c",
     "//src/devices/testing/no_ddk",
     "//zircon/public/lib/mock-function",
-    "//zircon/public/lib/zxtest",
+    "//zircon/system/ulib/zxtest",
   ]
 
   # TODO: delete the below and fix compiler errors.

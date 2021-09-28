@@ -73,12 +73,12 @@ test("i2c-hid-test") {
     "//src/lib/ddk",
     "//src/ui/input/testing/fake-hidbus-ifc",
     "//zircon/public/lib/sync",
-    "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/fidl-async:fidl-async-cpp",
     "//zircon/system/ulib/hid",
     "//zircon/system/ulib/trace:trace-driver",
+    "//zircon/system/ulib/zxtest",
   ]
 }
 

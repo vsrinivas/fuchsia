@@ -11,8 +11,8 @@ test("x86-umip") {
   deps = [
     "//sdk/lib/fdio",
     "//zircon/public/lib/zx",
-    "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/test-exceptions",
+    "//zircon/system/ulib/zxtest",
   ]
 }
 

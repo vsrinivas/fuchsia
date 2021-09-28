@@ -15,9 +15,9 @@ test("id_allocator-test") {
   sources = [ "id_allocator.cc" ]
   deps = [
     "//sdk/lib/fdio",
-    "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/id_allocator",
+    "//zircon/system/ulib/zxtest",
   ]
 }
 

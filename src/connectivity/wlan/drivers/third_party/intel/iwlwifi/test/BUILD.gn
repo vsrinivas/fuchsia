@@ -54,8 +54,8 @@ source_set("sim_library") {
     "//src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform",
     "//src/devices/pci/testing:pci-protocol-fake",
     "//src/devices/testing/mock-ddk",
-    "//zircon/public/lib/zxtest",
     "//zircon/system/public",
+    "//zircon/system/ulib/zxtest",
   ]
   public_configs = [ ":test_config" ]
 
@@ -80,8 +80,8 @@ executable("driver_inspector_test") {
   sources = [ "driver-inspector-test.cc" ]
   deps = [
     "//src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform:driver_inspector",
-    "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/inspect",
+    "//zircon/system/ulib/zxtest",
   ]
 }
 
@@ -92,7 +92,7 @@ executable("dummy_test") {
   sources = [ "dummy-test.cc" ]
   deps = [
     ":sim_library",
-    "//zircon/public/lib/zxtest",
+    "//zircon/system/ulib/zxtest",
   ]
 
   # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
@@ -107,7 +107,7 @@ executable("fw_test") {
     ":sim_library",
     "//src/connectivity/wlan/drivers/third_party/intel/iwlwifi:core",
     "//src/connectivity/wlan/drivers/third_party/intel/iwlwifi/mvm",
-    "//zircon/public/lib/zxtest",
+    "//zircon/system/ulib/zxtest",
   ]
 
   # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
@@ -122,8 +122,8 @@ executable("fw_dbg_test") {
     ":sim_library",
     "//src/connectivity/wlan/drivers/third_party/intel/iwlwifi/fw",
     "//src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform:driver_inspector",
-    "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/inspect",
+    "//zircon/system/ulib/zxtest",
   ]
 
   # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
@@ -138,7 +138,7 @@ executable("iwl_phy_db_test") {
     ":stub_mvm",
     "//src/connectivity/wlan/drivers/third_party/intel/iwlwifi:core",
     "//src/devices/testing/no_ddk",
-    "//zircon/public/lib/zxtest",
+    "//zircon/system/ulib/zxtest",
   ]
 }
 
@@ -150,8 +150,8 @@ executable("mac80211_test") {
     ":sim_library",
     "//src/connectivity/wlan/drivers/third_party/intel/iwlwifi/mvm",
     "//zircon/public/lib/mock-function",
-    "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/fbl",
+    "//zircon/system/ulib/zxtest",
   ]
 
   # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
@@ -166,7 +166,7 @@ executable("mac_ctxt_test") {
     ":sim_library",
     "//src/connectivity/wlan/drivers/third_party/intel/iwlwifi/mvm",
     "//zircon/public/lib/zircon-internal",
-    "//zircon/public/lib/zxtest",
+    "//zircon/system/ulib/zxtest",
   ]
 
   # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
@@ -184,8 +184,8 @@ executable("mvm_mlme_test") {
     "//src/connectivity/wlan/drivers/third_party/intel/iwlwifi/mvm",
     "//src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform:fuchsia_device",
     "//zircon/public/lib/mock-function",
-    "//zircon/public/lib/zxtest",
     "//zircon/system/public",
+    "//zircon/system/ulib/zxtest",
   ]
 
   # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
@@ -203,9 +203,9 @@ executable("mvm_test") {
     "//src/devices/testing/fake-bti",
     "//zircon/public/lib/mock-function",
     "//zircon/public/lib/zircon-internal",
-    "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
+    "//zircon/system/ulib/zxtest",
   ]
 
   # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
@@ -220,7 +220,7 @@ executable("notif_wait_test") {
     ":stub_mvm",
     "//src/connectivity/wlan/drivers/third_party/intel/iwlwifi/fw",
     "//src/devices/testing/no_ddk",
-    "//zircon/public/lib/zxtest",
+    "//zircon/system/ulib/zxtest",
   ]
 }
 
@@ -232,7 +232,7 @@ executable("nvm_test") {
     ":sim_library",
     "//src/connectivity/wlan/drivers/third_party/intel/iwlwifi:core",
     "//src/connectivity/wlan/drivers/third_party/intel/iwlwifi/mvm",
-    "//zircon/public/lib/zxtest",
+    "//zircon/system/ulib/zxtest",
   ]
 
   # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
@@ -254,12 +254,12 @@ executable("pcie_test") {
     "//src/devices/testing/mock-ddk",
     "//zircon/public/lib/mock-function",
     "//zircon/public/lib/zircon-internal",
-    "//zircon/public/lib/zxtest",
     "//zircon/system/public",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/sync",
     "//zircon/system/ulib/zx",
+    "//zircon/system/ulib/zxtest",
   ]
 
   # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
@@ -274,7 +274,7 @@ executable("phy_ctxt_test") {
     ":sim_library",
     "//src/connectivity/wlan/drivers/third_party/intel/iwlwifi/mvm",
     "//zircon/public/lib/zircon-internal",
-    "//zircon/public/lib/zxtest",
+    "//zircon/system/ulib/zxtest",
   ]
 
   # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
@@ -289,7 +289,7 @@ executable("platform_test") {
     ":stub_mvm",
     "//src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform",
     "//src/devices/testing/no_ddk",
-    "//zircon/public/lib/zxtest",
+    "//zircon/system/ulib/zxtest",
   ]
 }
 
@@ -301,7 +301,7 @@ executable("sta_test") {
     ":sim_library",
     "//src/connectivity/wlan/drivers/third_party/intel/iwlwifi/mvm",
     "//zircon/public/lib/mock-function",
-    "//zircon/public/lib/zxtest",
+    "//zircon/system/ulib/zxtest",
   ]
 
   # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
@@ -315,7 +315,7 @@ executable("utils_test") {
   deps = [
     "//src/connectivity/wlan/drivers/third_party/intel/iwlwifi/mvm",
     "//src/devices/testing/no_ddk",
-    "//zircon/public/lib/zxtest",
+    "//zircon/system/ulib/zxtest",
   ]
 
   # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings

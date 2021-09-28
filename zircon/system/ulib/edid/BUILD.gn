@@ -29,8 +29,8 @@ zx_library("edid") {
 test("edid-test") {
   sources = [ "unit-tests.cc" ]
   deps = [
-    "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/edid",
+    "//zircon/system/ulib/zxtest",
   ]
 }
 

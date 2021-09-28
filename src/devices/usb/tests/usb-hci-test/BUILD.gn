@@ -61,9 +61,9 @@ test("usb-hci-test") {
     "//src/lib/fxl",
     "//src/lib/ui/base_view",
     "//zircon/public/lib/zx",
-    "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
+    "//zircon/system/ulib/zxtest",
   ]
 }
 

@@ -67,10 +67,10 @@ test("ethertap-unittest") {
     "//src/lib/ddktl",
     "//zircon/public/lib/pretty",
     "//zircon/public/lib/sync",
-    "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/fidl:fidl_base",
     "//zircon/system/ulib/fidl-utils",
     "//zircon/system/ulib/fzl",
+    "//zircon/system/ulib/zxtest",
   ]
 }
 

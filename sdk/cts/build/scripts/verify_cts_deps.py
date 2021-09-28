@@ -94,10 +94,10 @@ class VerifyCtsDeps:
 
         # Get the target_name from the label.
         if ':' in dep:
-            # zircon/public/lib/zxtest:zxtest
+            # zircon/system/ulib/zxtest:zxtest
             dep, target_name = dep.split(':')
         elif '/' in dep:
-            # zircon/public/lib/zxtest
+            # zircon/system/ulib/zxtest
             _, target_name = dep.rsplit('/', 1)
         else:
             # sdk

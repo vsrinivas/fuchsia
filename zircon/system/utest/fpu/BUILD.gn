@@ -14,7 +14,7 @@ test("fpu") {
   sources = [ "fputest.c" ]
   deps = [
     "//sdk/lib/fdio",
-    "//zircon/public/lib/zxtest",
+    "//zircon/system/ulib/zxtest",
   ]
 }
 

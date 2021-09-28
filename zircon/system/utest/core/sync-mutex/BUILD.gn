@@ -12,6 +12,6 @@ source_set("sync-mutex") {
     "//sdk/lib/fdio",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zircon-internal",
-    "//zircon/public/lib/zxtest",
+    "//zircon/system/ulib/zxtest",
   ]
 }

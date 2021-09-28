@@ -52,7 +52,6 @@ source_set("lib") {
     "//zircon/public/lib/async-cpp",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zx",
-    "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/fbl",
@@ -63,6 +62,7 @@ source_set("lib") {
     "//zircon/system/ulib/syslog",
     "//zircon/system/ulib/trace",
     "//zircon/system/ulib/trace:trace-driver",
+    "//zircon/system/ulib/zxtest",
   ]
 }
 
@@ -98,7 +98,7 @@ executable("gdc_task_unittest_bin") {
     "//src/devices/testing/mock-mmio-reg",
     "//src/devices/testing/no_ddk",
     "//zircon/public/lib/zx",
-    "//zircon/public/lib/zxtest",
+    "//zircon/system/ulib/zxtest",
   ]
 
   # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings

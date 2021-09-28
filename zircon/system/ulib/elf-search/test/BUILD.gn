@@ -41,11 +41,11 @@ test("elf-search") {
   deps = [
     "//sdk/lib/fdio",
     "//zircon/public/lib/zx",
-    "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/elf-search",
     "//zircon/system/ulib/elfload",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/test-utils",
+    "//zircon/system/ulib/zxtest",
   ]
   data_deps = [ ":elf-search-test-helper" ]
   include_dirs = [ "include" ]

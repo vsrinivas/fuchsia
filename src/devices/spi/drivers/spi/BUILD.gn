@@ -87,7 +87,6 @@ test("spi-test-bin") {
     "//src/lib/ddktl",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zx",
-    "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/fbl",
@@ -95,6 +94,7 @@ test("spi-test-bin") {
     "//zircon/system/ulib/fidl-utils",
     "//zircon/system/ulib/spi",
     "//zircon/system/ulib/trace:trace-driver",
+    "//zircon/system/ulib/zxtest",
   ]
 
   # TODO(fxbug.dev/69585): This target uses raw zx::channel with LLCPP which is deprecated.

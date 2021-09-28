@@ -19,8 +19,8 @@ test("fake-resource-test-bin") {
     "//src/devices/testing/fake-resource",
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxc",
-    "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/fbl",
+    "//zircon/system/ulib/zxtest",
   ]
 }
 

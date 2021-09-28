@@ -68,9 +68,9 @@ test("skip-block-test-bin") {
     "//sdk/lib/fdio",
     "//src/devices/testing/fake_ddk",
     "//src/devices/testing/mock-ddk",
-    "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/fzl",
+    "//zircon/system/ulib/zxtest",
   ]
 }
 

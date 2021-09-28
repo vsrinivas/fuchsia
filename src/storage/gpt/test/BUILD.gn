@@ -21,8 +21,8 @@ test("gpt-unit-test") {
     "//sdk/lib/fdio",
     "//src/storage/gpt",
     "//zircon/public/lib/zx",
-    "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/fbl",
+    "//zircon/system/ulib/zxtest",
 
     # TODO(https://fxbug.dev/74373) replace once `RecursiveWaitForFile` is
     # extracted to a library.

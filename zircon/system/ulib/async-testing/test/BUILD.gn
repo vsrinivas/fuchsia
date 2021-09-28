@@ -22,9 +22,9 @@ test("async-testing") {
     "//zircon/public/lib/async",
     "//zircon/public/lib/async-cpp",
     "//zircon/public/lib/zx",
-    "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/async-default",
     "//zircon/system/ulib/async-testing",
+    "//zircon/system/ulib/zxtest",
   ]
 }
 

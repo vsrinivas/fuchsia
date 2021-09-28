@@ -31,8 +31,8 @@ test("intel-hda-utils-test") {
     "//src/media/audio/drivers/lib/intel-hda",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zx",
-    "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/fbl",
+    "//zircon/system/ulib/zxtest",
   ]
 }
 

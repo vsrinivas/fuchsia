@@ -28,10 +28,10 @@ test("libfs-pty-test") {
     "//src/lib/storage/vfs/cpp",
     "//zircon/public/lib/async-cpp",
     "//zircon/public/lib/sync",
-    "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/fs-pty",
+    "//zircon/system/ulib/zxtest",
   ]
 }
 

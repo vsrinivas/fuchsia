@@ -35,7 +35,7 @@ test("fit-promise-tests") {
   ]
   deps = [
     "//sdk/lib/fit-promise",
-    "//zircon/public/lib/zxtest",
+    "//zircon/system/ulib/zxtest",
   ]
   configs += [ ":shadow" ]
   if (is_fuchsia) {

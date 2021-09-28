@@ -27,10 +27,10 @@ test("ktrace-test") {
     "//zircon/public/lib/async",
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",
-    "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/ktrace",
+    "//zircon/system/ulib/zxtest",
   ]
 }
 

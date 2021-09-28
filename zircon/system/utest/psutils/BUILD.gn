@@ -22,8 +22,8 @@ test("ps") {
     "//sdk/lib/fdio",
     "//src/sys/bin/psutils:ps_internal",
     "//zircon/public/lib/pretty",
-    "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/task-utils",
+    "//zircon/system/ulib/zxtest",
   ]
 }
 
@@ -35,8 +35,8 @@ test("handles") {
     "//sdk/lib/fdio",
     "//src/sys/bin/psutils:handles_internal",
     "//zircon/public/lib/pretty",
-    "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/task-utils",
+    "//zircon/system/ulib/zxtest",
   ]
 }
 

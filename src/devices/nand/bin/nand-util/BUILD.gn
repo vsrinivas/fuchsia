@@ -72,7 +72,7 @@ test("nand-util-test-bin") {
   deps = [
     ":common",
     "//sdk/lib/fdio",
-    "//zircon/public/lib/zxtest",
+    "//zircon/system/ulib/zxtest",
   ]
 }
 

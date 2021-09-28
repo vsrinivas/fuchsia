@@ -33,10 +33,10 @@ test("simplehid") {
     "//src/lib/ddktl",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zx",
-    "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/fzl",
     "//zircon/system/ulib/simplehid",
+    "//zircon/system/ulib/zxtest",
   ]
 }
 

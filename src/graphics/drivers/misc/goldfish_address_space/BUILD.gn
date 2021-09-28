@@ -72,7 +72,7 @@ test("goldfish-address-space-test") {
         "//zircon/public/lib/sync",
         "//zircon/public/lib/zircon-internal",
         "//zircon/public/lib/zx",
-        "//zircon/public/lib/zxtest",
+        "//zircon/system/ulib/zxtest",
       ]
 
   # TODO(fxbug.dev/58162): delete the below and fix compiler warnings

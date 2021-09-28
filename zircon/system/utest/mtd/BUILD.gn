@@ -16,7 +16,7 @@ test("mtd") {
   }
   sources = [ "mtd-interface-tests.cc" ]
 
-  deps = [ "//zircon/public/lib/zxtest" ]
+  deps = [ "//zircon/system/ulib/zxtest" ]
 
   if (current_os == "linux") {
     # This library requires an environment with mtd/mtd-user.h and MTD support.

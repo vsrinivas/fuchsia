@@ -23,7 +23,6 @@ source_set("test-common") {
     "//zircon/public/lib/async",
     "//zircon/public/lib/async-cpp",
     "//zircon/public/lib/zx",
-    "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/async-default",
     "//zircon/system/ulib/async-loop",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
@@ -34,6 +33,7 @@ source_set("test-common") {
     "//zircon/system/ulib/trace-reader",
     "//zircon/system/ulib/trace-test-utils",
     "//zircon/system/ulib/trace-vthread",
+    "//zircon/system/ulib/zxtest",
   ]
 }
 

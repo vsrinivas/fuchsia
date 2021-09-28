@@ -37,8 +37,8 @@ test("pci-unit") {
     "//src/devices/testing/fake-msi",
     "//src/devices/testing/fake-resource",
     "//src/devices/testing/fake_ddk",
-    "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/inspect",
+    "//zircon/system/ulib/zxtest",
   ]
 
   # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
@@ -54,10 +54,10 @@ test("pci-driver") {
     "//sdk/lib/fdio",
     "//src/lib/ddk",
     "//src/lib/ddktl",
-    "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/devmgr-integration-test",
     "//zircon/system/ulib/driver-integration-test",
     "//zircon/system/ulib/fbl",
+    "//zircon/system/ulib/zxtest",
   ]
 }
 
@@ -84,7 +84,7 @@ driver_module("pci_fake-driver") {
     "//src/lib/ddk",
     "//src/lib/ddktl",
     "//zircon/public/lib/pretty",
-    "//zircon/public/lib/zxtest",
+    "//zircon/system/ulib/zxtest",
   ]
 }
 
@@ -116,7 +116,7 @@ driver_module("pci_protocol_test_driver-driver") {
     "//src/devices/lib/driver",
     "//src/lib/ddk",
     "//src/lib/ddktl",
-    "//zircon/public/lib/zxtest",
+    "//zircon/system/ulib/zxtest",
   ]
 }
 

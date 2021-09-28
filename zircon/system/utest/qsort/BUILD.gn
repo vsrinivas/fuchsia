@@ -11,7 +11,7 @@ test("qsort") {
   sources = [ "qsort.c" ]
   deps = [
     "//sdk/lib/fdio",
-    "//zircon/public/lib/zxtest",
+    "//zircon/system/ulib/zxtest",
   ]
 }
 

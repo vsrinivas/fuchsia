@@ -22,7 +22,6 @@ source_set("collector-test") {
     "//sdk/lib/fit",
     "//zircon/public/lib/async-cpp",
     "//zircon/public/lib/sync",
-    "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/async-default",
     "//zircon/system/ulib/async-loop",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
@@ -30,6 +29,7 @@ source_set("collector-test") {
     "//zircon/system/ulib/cobalt-client:cobalt-collector",
     "//zircon/system/ulib/cobalt-client:in-memory-logger",
     "//zircon/system/ulib/fidl-async:fidl-async-cpp",
+    "//zircon/system/ulib/zxtest",
   ]
 }
 
@@ -45,11 +45,11 @@ source_set("metrics-test") {
   deps = [
     "//sdk/lib/fit",
     "//zircon/public/lib/sync",
-    "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/cobalt-client:cobalt-collector",
     "//zircon/system/ulib/cobalt-client:cobalt-metrics",
     "//zircon/system/ulib/cobalt-client:cobalt-types-internal",
     "//zircon/system/ulib/cobalt-client:in-memory-logger",
+    "//zircon/system/ulib/zxtest",
   ]
 }
 
@@ -58,9 +58,9 @@ source_set("in-memory-logger-test") {
   sources = [ "in_memory_logger_test.cc" ]
   include_dirs = [ "../include/" ]
   deps = [
-    "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/cobalt-client:cobalt-metrics",
     "//zircon/system/ulib/cobalt-client:in-memory-logger",
+    "//zircon/system/ulib/zxtest",
   ]
 }
 

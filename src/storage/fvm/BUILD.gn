@@ -89,12 +89,12 @@ static_library("test_support") {
     "//src/storage/fvm",
     "//zircon/public/lib/fidl",
     "//zircon/public/lib/zx",
-    "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/devmgr-integration-test",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/fdio-caller",
     "//zircon/system/ulib/fzl",
     "//zircon/system/ulib/ramdevice-client",
+    "//zircon/system/ulib/zxtest",
   ]
 
   # TODO(fxbug.dev/69585): This target uses raw zx::channel with LLCPP which is deprecated.
@@ -116,7 +116,7 @@ test("fvm_unit") {
   deps = [
     "//src/lib/uuid",
     "//src/storage/fvm",
-    "//zircon/public/lib/zxtest",
+    "//zircon/system/ulib/zxtest",
   ]
 
   if (is_fuchsia) {
@@ -176,7 +176,6 @@ test("fvm-integration") {
     "//src/storage/minfs",
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",
-    "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/block-client",
@@ -184,6 +183,7 @@ test("fvm-integration") {
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/fdio-caller",
     "//zircon/system/ulib/ramdevice-client",
+    "//zircon/system/ulib/zxtest",
   ]
 }
 

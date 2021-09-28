@@ -18,8 +18,8 @@ test("nand-redundant-storage") {
   visibility = [ ":tests" ]
   sources = [ "nand-rs-tests.cc" ]
   deps = [
-    "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/nand-redundant-storage",
+    "//zircon/system/ulib/zxtest",
   ]
 
   # Used by the test to point to the correct simulated MTD storage.

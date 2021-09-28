@@ -31,9 +31,9 @@ test("tftp-test") {
   ]
   deps = [
     "//sdk/lib/fdio",
-    "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/tftp",
+    "//zircon/system/ulib/zxtest",
   ]
   include_dirs = [ ".." ]
 }

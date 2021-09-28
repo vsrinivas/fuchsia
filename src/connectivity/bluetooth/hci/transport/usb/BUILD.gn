@@ -57,7 +57,7 @@ test("bt-transport-usb-test") {
     "//sdk/lib/fdio",
     "//src/devices/testing/fake_ddk",
     "//src/devices/usb/testing/descriptor-builder",
-    "//zircon/public/lib/zxtest",
+    "//zircon/system/ulib/zxtest",
   ]
 }
 

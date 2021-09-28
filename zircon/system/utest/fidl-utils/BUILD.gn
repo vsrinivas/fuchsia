@@ -21,8 +21,8 @@ test("fidl-utils") {
   deps = [
     ":fidl.test.fidlutils_c",
     "//sdk/lib/fdio",
-    "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/fidl-utils",
+    "//zircon/system/ulib/zxtest",
   ]
 }
 

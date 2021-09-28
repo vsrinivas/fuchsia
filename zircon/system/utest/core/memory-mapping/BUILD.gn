@@ -9,6 +9,6 @@ source_set("memory-mapping") {
   sources = [ "memory-mapping.cc" ]
   deps = [
     "//sdk/lib/fdio",
-    "//zircon/public/lib/zxtest",
+    "//zircon/system/ulib/zxtest",
   ]
 }

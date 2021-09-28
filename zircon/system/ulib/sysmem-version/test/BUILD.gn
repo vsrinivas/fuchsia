@@ -10,8 +10,8 @@ executable("sysmem-version-test") {
   deps = [
     "//sdk/lib/fdio",
     "//sdk/lib/fidl/cpp:cpp_base",
-    "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/sysmem-version",
+    "//zircon/system/ulib/zxtest",
   ]
   testonly = true
 

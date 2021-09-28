@@ -12,10 +12,10 @@ test("thread-safe-deleter") {
   deps = [
     "//sdk/lib/fdio",
     "//sdk/lib/fit",
-    "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/thread-safe-deleter",
+    "//zircon/system/ulib/zxtest",
   ]
 }
 

@@ -24,13 +24,13 @@ test("service-llcpp-test") {
     ":fidl.service.test_llcpp",
     "//sdk/lib/fdio",
     "//src/lib/storage/vfs/cpp",
-    "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/fidl-async",
     "//zircon/system/ulib/fidl-async:fidl-async-cpp",
     "//zircon/system/ulib/service:service-llcpp",
     "//zircon/system/ulib/sync",
+    "//zircon/system/ulib/zxtest",
   ]
 
   # TODO(fxbug.dev/69585): This target uses raw zx::channel with LLCPP which is deprecated.

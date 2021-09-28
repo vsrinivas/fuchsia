@@ -10,8 +10,8 @@ source_set("handle-dup") {
   deps = [
     "//sdk/lib/fdio",
     "//zircon/public/lib/zx",
-    "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/fbl",
+    "//zircon/system/ulib/zxtest",
   ]
 
   # Need to disable null checks as we are going to pass nullptrs to functions that say they don't

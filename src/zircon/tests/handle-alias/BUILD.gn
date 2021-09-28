@@ -12,7 +12,7 @@ test("handle-alias") {
   deps = [
     "//sdk/lib/fdio",
     "//src/zircon/lib/zircon",
-    "//zircon/public/lib/zxtest",
+    "//zircon/system/ulib/zxtest",
   ]
 }
 

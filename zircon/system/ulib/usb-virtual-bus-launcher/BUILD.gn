@@ -18,8 +18,8 @@ zx_library("usb-virtual-bus-launcher") {
   public_deps = [
     "//sdk/fidl/fuchsia.hardware.usb.peripheral:fuchsia.hardware.usb.peripheral_llcpp",
     "//sdk/fidl/fuchsia.hardware.usb.virtual.bus:fuchsia.hardware.usb.virtual.bus_llcpp",
-    "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/driver-integration-test",
+    "//zircon/system/ulib/zxtest",
   ]
   deps = [
     "//sdk/fidl/fuchsia.hardware.usb.peripheral:fuchsia.hardware.usb.peripheral_llcpp",
@@ -27,12 +27,12 @@ zx_library("usb-virtual-bus-launcher") {
     "//sdk/lib/fdio",
     "//src/lib/ddk",
     "//zircon/public/lib/zx",
-    "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/driver-integration-test",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/fidl-async:fidl-async-cpp",
     "//zircon/system/ulib/usb-peripheral-utils",
+    "//zircon/system/ulib/zxtest",
   ]
 
   # TODO(fxbug.dev/69585): This target uses raw zx::channel with LLCPP which is deprecated.

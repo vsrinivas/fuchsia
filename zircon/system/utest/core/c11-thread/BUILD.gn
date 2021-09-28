@@ -12,6 +12,6 @@ source_set("c11-thread") {
     "//sdk/lib/fdio",
     "//sdk/lib/fit",
     "//zircon/public/lib/zx",
-    "//zircon/public/lib/zxtest",
+    "//zircon/system/ulib/zxtest",
   ]
 }

@@ -20,7 +20,7 @@ test("cxxabi-dynamic-init-tests") {
   deps = [
     "//sdk/lib/fit",
     "//zircon/kernel/lib/cxxabi-dynamic-init:headers",
-    "//zircon/public/lib/zxtest",
+    "//zircon/system/ulib/zxtest",
   ]
 }
 

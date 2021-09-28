@@ -15,7 +15,7 @@ if (is_host) {
     ]
     deps = [
       "//zircon/kernel/lib/heap/cmpctmalloc",
-      "//zircon/public/lib/zxtest",
+      "//zircon/system/ulib/zxtest",
     ]
     include_dirs = [
       "//zircon/kernel/lib/heap/cmpctmalloc/include/lib",

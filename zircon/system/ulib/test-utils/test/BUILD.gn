@@ -17,8 +17,8 @@ test("test-utils") {
   deps = [
     "//sdk/lib/fdio",
     "//zircon/public/lib/zx",
-    "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/test-utils",
+    "//zircon/system/ulib/zxtest",
   ]
 }
 

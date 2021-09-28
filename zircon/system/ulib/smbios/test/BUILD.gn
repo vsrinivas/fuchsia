@@ -24,8 +24,8 @@ test("smbios-test") {
   sources = [ "smbios-test.cc" ]
   deps = [
     "//sdk/lib/fdio",
-    "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/smbios",
+    "//zircon/system/ulib/zxtest",
   ]
 }
 

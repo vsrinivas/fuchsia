@@ -31,11 +31,11 @@ test("fidl_llcpp_dispatcher_handle_ownership_tests_bin") {
   sources = [ "dispatcher_handle_ownership_test.cc" ]
   deps = [
     ":llcpptest.dispatcher.handle.ownership.test_llcpp",
-    "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/async:async-cpp",
     "//zircon/system/ulib/async-loop",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
+    "//zircon/system/ulib/zxtest",
   ]
 }
 
@@ -52,12 +52,12 @@ test("fidl_llcpp_gen_api_tests_bin") {
   ]
   deps = [
     ":fidl.test.coding.fuchsia_llcpp",
-    "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/async:async-cpp",
     "//zircon/system/ulib/async-loop",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/sync:sync-cpp",
+    "//zircon/system/ulib/zxtest",
   ]
 }
 

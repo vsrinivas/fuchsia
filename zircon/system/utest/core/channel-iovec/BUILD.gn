@@ -9,7 +9,7 @@ source_set("channel-iovec") {
   sources = [ "iovec.cc" ]
   deps = [
     "//zircon/public/lib/zx",
-    "//zircon/public/lib/zxtest",
     "//zircon/system/public",
+    "//zircon/system/ulib/zxtest",
   ]
 }

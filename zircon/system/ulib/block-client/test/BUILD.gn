@@ -28,7 +28,6 @@ test("block-client-unit-test") {
   deps = [
     "//sdk/fidl/fuchsia.io:fuchsia.io_llcpp",
     "//src/storage/fvm",
-    "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/async-loop",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
@@ -38,6 +37,7 @@ test("block-client-unit-test") {
     "//zircon/system/ulib/fzl",
     "//zircon/system/ulib/range",
     "//zircon/system/ulib/storage-metrics",
+    "//zircon/system/ulib/zxtest",
   ]
 }
 

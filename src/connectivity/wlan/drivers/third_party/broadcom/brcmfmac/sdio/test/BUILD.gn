@@ -29,8 +29,8 @@ executable("sdio_test") {
     "//src/devices/lib/broadcom",
     "//src/devices/testing/no_ddk",
     "//src/lib/ddk",
-    "//zircon/public/lib/zxtest",
     "//zircon/system/public",
+    "//zircon/system/ulib/zxtest",
   ]
 
   # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings

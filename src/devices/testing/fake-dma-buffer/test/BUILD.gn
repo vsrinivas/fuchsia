@@ -24,7 +24,7 @@ test("fake-dma-buffer-test-bin") {
     "//src/devices/testing/fake-dma-buffer",
     "//src/lib/ddk",
     "//zircon/public/lib/zx",
-    "//zircon/public/lib/zxtest",
+    "//zircon/system/ulib/zxtest",
   ]
 }
 

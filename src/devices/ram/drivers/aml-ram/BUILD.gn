@@ -57,7 +57,7 @@ test("aml-ram-test-bin") {
     "//src/devices/testing/fake-mmio-reg",
     "//src/devices/testing/fake_ddk",
     "//zircon/public/lib/mock-function",
-    "//zircon/public/lib/zxtest",
+    "//zircon/system/ulib/zxtest",
   ]
 
   # TODO(fxbug.dev/69585): This target uses raw zx::channel with LLCPP which is deprecated.

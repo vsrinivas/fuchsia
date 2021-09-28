@@ -71,9 +71,9 @@ test("lp50xx-light-test") {
     "//zircon/public/lib/fidl",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zx",
-    "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/hwreg-i2c",
+    "//zircon/system/ulib/zxtest",
   ]
 }
 

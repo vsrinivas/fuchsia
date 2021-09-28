@@ -19,7 +19,7 @@ foreach(gidl_file, conformance_suite_gidl_files) {
     fidl = conformance_suite_fidl_target
     deps = [
       "//zircon/public/lib/fidl_base",
-      "//zircon/public/lib/zxtest",
+      "//zircon/system/ulib/zxtest",
     ]
   }
 }

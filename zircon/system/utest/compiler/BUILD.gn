@@ -23,7 +23,7 @@ test("compiler") {
   configs += [ ":integer-paranoia" ]
   deps = [
     "//sdk/lib/fdio",
-    "//zircon/public/lib/zxtest",
+    "//zircon/system/ulib/zxtest",
   ]
 }
 

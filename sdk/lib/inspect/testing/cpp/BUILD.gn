@@ -23,7 +23,7 @@ source_set("zxtest") {
   ]
   deps = [
     "//sdk/lib/fit-promise",
-    "//zircon/public/lib/zxtest",
+    "//zircon/system/ulib/zxtest",
   ]
   public_deps = [ "//zircon/system/ulib/inspect" ]
 }

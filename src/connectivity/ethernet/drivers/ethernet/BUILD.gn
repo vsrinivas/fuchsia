@@ -77,7 +77,7 @@ test("ethernet-unittest") {
     ":test_util",
     "//sdk/lib/fidl/cpp:cpp_base",
     "//zircon/public/lib/sync",
-    "//zircon/public/lib/zxtest",
+    "//zircon/system/ulib/zxtest",
   ]
 }
 
@@ -98,10 +98,10 @@ test("ethernet-integration") {
     "//src/lib/ddk",
     "//zircon/public/lib/fidl",
     "//zircon/public/lib/zx",
-    "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/devmgr-integration-test",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/fzl",
+    "//zircon/system/ulib/zxtest",
   ]
 }
 

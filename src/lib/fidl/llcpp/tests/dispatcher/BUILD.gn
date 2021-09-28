@@ -23,8 +23,8 @@ source_set("client_test_helpers") {
   testonly = true
   visibility = [ ":*" ]
   public_deps = [
-    "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/fidl:fidl-llcpp",
+    "//zircon/system/ulib/zxtest",
   ]
 }
 
@@ -46,10 +46,10 @@ test("fidl_llcpp_dispatcher_tests_bin") {
     "//sdk/lib/stdcompat",
     "//src/lib/fidl/llcpp/tests/integration:fidl.test.coding.fuchsia_llcpp",
     "//zircon/public/lib/async-cpp",
-    "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/async-loop",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
+    "//zircon/system/ulib/zxtest",
   ]
 }
 
@@ -62,9 +62,9 @@ test("fidl_llcpp_private_intrusive_wavl_tree_tests_bin") {
   output_name = "fidl_llcpp_private_intrusive_wavl_tree_tests"
   sources = [ "intrusive_wavl_tree_tests.cc" ]
   deps = [
-    "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/fidl:fidl-llcpp",
+    "//zircon/system/ulib/zxtest",
   ]
 }
 

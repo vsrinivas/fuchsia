@@ -13,11 +13,11 @@ test("devmgr-integration") {
     "//sdk/lib/fdio",
     "//sdk/lib/sys/cpp",
     "//src/lib/files",
-    "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/devmgr-integration-test",
     "//zircon/system/ulib/devmgr-launcher",
     "//zircon/system/ulib/service:service-llcpp",
+    "//zircon/system/ulib/zxtest",
   ]
 }
 

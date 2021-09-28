@@ -13,7 +13,7 @@ executable("usb-audio-test-bin") {
     "../:shared",
     "//src/devices/testing/fake_ddk",
     "//src/devices/usb/lib/usb",
-    "//zircon/public/lib/zxtest",
+    "//zircon/system/ulib/zxtest",
   ]
 
   # TODO(fxbug.dev/69585): This target uses raw zx::channel with LLCPP which is deprecated.

@@ -22,7 +22,7 @@ executable("axi_backplane_test") {
     ":fake_register_window_provider_interface",
     "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/chipset",
     "//src/devices/testing/no_ddk",
-    "//zircon/public/lib/zxtest",
+    "//zircon/system/ulib/zxtest",
   ]
 }
 
@@ -34,7 +34,7 @@ executable("cr4_chipset_test") {
     ":fake_register_window_provider_interface",
     "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/chipset",
     "//src/devices/testing/no_ddk",
-    "//zircon/public/lib/zxtest",
+    "//zircon/system/ulib/zxtest",
   ]
 }
 
@@ -45,7 +45,7 @@ executable("firmware_test") {
   deps = [
     "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/chipset",
     "//src/devices/testing/no_ddk",
-    "//zircon/public/lib/zxtest",
+    "//zircon/system/ulib/zxtest",
   ]
 }
 

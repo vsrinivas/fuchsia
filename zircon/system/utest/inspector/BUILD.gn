@@ -15,9 +15,9 @@ test("inspector") {
 
   deps = [
     "//sdk/lib/fdio",
-    "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/backtrace-request",
     "//zircon/system/ulib/inspector",
+    "//zircon/system/ulib/zxtest",
   ]
 }
 

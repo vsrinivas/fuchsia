@@ -186,8 +186,8 @@ test("driver_manager_test") {
     "//sdk/lib/inspect/testing/cpp:zxtest",
     "//src/devices/lib/bind:bind-lib",
     "//src/lib/storage/vfs/cpp:test_support",
-    "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/mock-boot-arguments",
+    "//zircon/system/ulib/zxtest",
   ]
 
   # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
@@ -249,7 +249,7 @@ executable("manifest_parser_test") {
 
   deps = [
     ":manifest_parser",
-    "//zircon/public/lib/zxtest",
+    "//zircon/system/ulib/zxtest",
   ]
 }
 

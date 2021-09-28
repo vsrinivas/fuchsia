@@ -9,6 +9,6 @@ source_set("event-pair") {
   sources = [ "event-pair.cc" ]
   deps = [
     "//sdk/lib/fdio",
-    "//zircon/public/lib/zxtest",
+    "//zircon/system/ulib/zxtest",
   ]
 }

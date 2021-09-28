@@ -20,7 +20,7 @@ test("alc5663-test") {
     "//src/devices/i2c/testing/mock-i2c",
     "//src/devices/testing/fake_ddk",
     "//src/media/audio/drivers/codecs/alc5663:shared",
-    "//zircon/public/lib/zxtest",
+    "//zircon/system/ulib/zxtest",
   ]
 }
 

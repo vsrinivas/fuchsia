@@ -90,13 +90,13 @@ executable("unittests") {
 
   deps = [
     ":lib",
-    "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/async-default",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/fidl-async",
     "//zircon/system/ulib/fidl-async:fidl-async-cpp",
     "//zircon/system/ulib/mock-boot-arguments",
+    "//zircon/system/ulib/zxtest",
   ]
 }
 
@@ -110,7 +110,7 @@ test("shell-permissions-test") {
 
   deps = [
     "//zircon/public/lib/zx",
-    "//zircon/public/lib/zxtest",
+    "//zircon/system/ulib/zxtest",
   ]
 }
 
@@ -123,11 +123,11 @@ test("virtcon-setup-unittests") {
   sources = [ "virtcon-setup-unittests.cc" ]
   deps = [
     ":lib",
-    "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/async-default",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/mock-boot-arguments",
+    "//zircon/system/ulib/zxtest",
   ]
 }
 

@@ -29,8 +29,8 @@ test("kernel-cmdline") {
   deps = [
     "//sdk/lib/fdio",
     "//zircon/kernel/lib/cmdline",
-    "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/fbl",
+    "//zircon/system/ulib/zxtest",
   ]
 }
 

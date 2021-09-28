@@ -26,10 +26,10 @@ test("syslog") {
     "//sdk/fidl/fuchsia.logger:fuchsia.logger_llcpp",
     "//sdk/lib/fdio",
     "//zircon/public/lib/zx",
-    "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/syslog",
     "//zircon/system/ulib/syslog:helpers",
+    "//zircon/system/ulib/zxtest",
   ]
 }
 
@@ -44,10 +44,10 @@ test("syslog-static") {
     "//sdk/fidl/fuchsia.logger:fuchsia.logger_llcpp",
     "//sdk/lib/fdio",
     "//zircon/public/lib/zx",
-    "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/syslog:helpers",
     "//zircon/system/ulib/syslog:syslog-static",
+    "//zircon/system/ulib/zxtest",
   ]
   defines = [ "SYSLOG_STATIC" ]
 }

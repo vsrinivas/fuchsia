@@ -28,7 +28,7 @@ test("iommu-test") {
     "//src/devices/testing/no_ddk",
     "//src/lib/ddk",
     "//third_party/acpica",
-    "//zircon/public/lib/zxtest",
+    "//zircon/system/ulib/zxtest",
   ]
 }
 

@@ -69,8 +69,8 @@ test("dw-i2c-test-bin") {
     "//zircon/public/lib/mock-function",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zx",
-    "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/hwreg",
+    "//zircon/system/ulib/zxtest",
   ]
 }
 

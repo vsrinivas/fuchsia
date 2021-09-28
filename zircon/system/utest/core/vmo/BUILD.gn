@@ -21,9 +21,9 @@ source_set("vmo") {
     "//sdk/lib/fdio",
     "//sdk/lib/fit",
     "//zircon/public/lib/zxc",
-    "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/explicit-memory",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/fzl",
+    "//zircon/system/ulib/zxtest",
   ]
 }

@@ -29,7 +29,7 @@ test("fit-unittest") {
   sources = [ "thread_checker_tests.cc" ]
   deps = [
     "//sdk/lib/fit",
-    "//zircon/public/lib/zxtest",
+    "//zircon/system/ulib/zxtest",
   ]
   configs += [ ":shadow" ]
   if (is_fuchsia) {
@@ -62,7 +62,7 @@ test("fit") {
   ]
   deps = [
     "//sdk/lib/fit",
-    "//zircon/public/lib/zxtest",
+    "//zircon/system/ulib/zxtest",
   ]
   configs += [ ":shadow" ]
   if (is_fuchsia) {

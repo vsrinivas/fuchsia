@@ -21,9 +21,9 @@ test("storage-metrics") {
     "//sdk/fidl/fuchsia.storage.metrics:fuchsia.storage.metrics_c",
     "//sdk/lib/fdio",
     "//zircon/public/lib/zx",
-    "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/storage-metrics",
+    "//zircon/system/ulib/zxtest",
   ]
 }
 

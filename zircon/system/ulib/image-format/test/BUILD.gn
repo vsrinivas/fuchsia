@@ -16,10 +16,10 @@ test("image-format-test") {
   sources = [ "image-format-test.cc" ]
   deps = [
     "//sdk/lib/fdio",
-    "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/image-format",
     "//zircon/system/ulib/image-format:image-format-llcpp",
     "//zircon/system/ulib/sysmem-version",
+    "//zircon/system/ulib/zxtest",
   ]
 }
 

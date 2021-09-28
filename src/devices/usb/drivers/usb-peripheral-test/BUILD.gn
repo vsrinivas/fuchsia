@@ -69,8 +69,8 @@ if (is_fuchsia) {
     output_name = "usb-peripheral-test"
     sources = [ "test.cc" ]
     deps = [
-      "//zircon/public/lib/zxtest",
       "//zircon/system/ulib/fbl",
+      "//zircon/system/ulib/zxtest",
       "//zircon/third_party/ulib/usbhost",
     ]
   }

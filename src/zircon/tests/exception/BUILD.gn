@@ -17,10 +17,10 @@ test("exception") {
   ]
   deps = [
     "//zircon/public/lib/zx",
-    "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/test-exceptions",
     "//zircon/system/ulib/test-utils",
+    "//zircon/system/ulib/zxtest",
   ]
 }
 

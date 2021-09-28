@@ -17,12 +17,12 @@ test("framebuffer-test") {
     "//sdk/fidl/fuchsia.sysmem:fuchsia.sysmem_llcpp",
     "//src/lib/framebuffer",
     "//src/lib/fsl",
-    "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/fidl-async:fidl-async-cpp",
     "//zircon/system/ulib/image-format:image-format-llcpp",
     "//zircon/system/ulib/service:service-llcpp",
+    "//zircon/system/ulib/zxtest",
   ]
   sources = [ "framebuffer-test.cc" ]
 }

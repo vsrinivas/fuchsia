@@ -13,7 +13,7 @@ test("serial-unittest-bin") {
   deps = [
     "..:common",
     "//src/devices/testing/mock-ddk",
-    "//zircon/public/lib/zxtest",
+    "//zircon/system/ulib/zxtest",
   ]
 }
 

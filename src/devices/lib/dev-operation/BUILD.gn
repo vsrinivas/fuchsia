@@ -46,7 +46,7 @@ test("operation-test-bin") {
     "//sdk/lib/fdio",
     "//src/devices/testing/no_ddk",
     "//src/lib/ddk",
-    "//zircon/public/lib/zxtest",
+    "//zircon/system/ulib/zxtest",
   ]
 }
 

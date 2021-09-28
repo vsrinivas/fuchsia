@@ -79,9 +79,9 @@ test("ptysvc-test") {
     ":common",
     "//sdk/fidl/fuchsia.io:fuchsia.io_llcpp",
     "//zircon/public/lib/sync",
-    "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
+    "//zircon/system/ulib/zxtest",
   ]
 }
 

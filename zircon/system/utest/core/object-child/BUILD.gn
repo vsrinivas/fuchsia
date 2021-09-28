@@ -9,6 +9,6 @@ source_set("object-child") {
   sources = [ "object-child.cc" ]
   deps = [
     "//sdk/lib/fdio",
-    "//zircon/public/lib/zxtest",
+    "//zircon/system/ulib/zxtest",
   ]
 }

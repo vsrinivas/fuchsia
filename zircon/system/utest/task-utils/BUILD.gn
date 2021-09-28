@@ -12,8 +12,8 @@ test("task-utils") {
   deps = [
     "//sdk/fidl/fuchsia.sysinfo:fuchsia.sysinfo_c",
     "//sdk/lib/fdio",
-    "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/task-utils",
+    "//zircon/system/ulib/zxtest",
   ]
 }
 

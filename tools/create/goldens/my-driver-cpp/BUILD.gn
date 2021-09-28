@@ -72,9 +72,9 @@ test("unit-tests") {
     "//src/devices/testing/fake_ddk",
     "//src/lib/ddktl",
     "//zircon/public/lib/zx",
-    "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/inspect",
+    "//zircon/system/ulib/zxtest",
   ]
 }
 

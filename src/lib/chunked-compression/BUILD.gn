@@ -80,7 +80,7 @@ test("chunked-compression-unittests") {
   deps = [
     ":chunked-compression",
     ":chunked-compression-testutils",
-    "//zircon/public/lib/zxtest",
+    "//zircon/system/ulib/zxtest",
     "//zircon/third_party/ulib/cksum",
   ]
 

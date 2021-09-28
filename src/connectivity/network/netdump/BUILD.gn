@@ -44,7 +44,7 @@ test("unit_tests") {
   deps = [
     ":common",
     "//zircon/public/lib/mock-function",
-    "//zircon/public/lib/zxtest",
+    "//zircon/system/ulib/zxtest",
   ]
 }
 

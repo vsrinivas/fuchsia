@@ -13,8 +13,8 @@ test("profile") {
     "//sdk/fidl/fuchsia.scheduler:fuchsia.scheduler_c",
     "//sdk/lib/fdio",
     "//zircon/public/lib/zx",
-    "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/profile",
+    "//zircon/system/ulib/zxtest",
   ]
 }
 

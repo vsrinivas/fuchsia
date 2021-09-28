@@ -56,8 +56,8 @@ test("fbl") {
   ]
 
   deps = [
-    "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/fbl",
+    "//zircon/system/ulib/zxtest",
   ]
 
   if (!is_fuchsia) {

@@ -38,7 +38,7 @@ test("geometry-test") {
   sources = [ "geometry-tests.cc" ]
   deps = [
     ":geometry",
-    "//zircon/public/lib/zxtest",
+    "//zircon/system/ulib/zxtest",
   ]
 }
 
@@ -64,10 +64,10 @@ test("sealer-test") {
     ":sealer",
     "//src/lib/digest",
     "//zircon/public/lib/zx",
-    "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/fbl",
+    "//zircon/system/ulib/zxtest",
   ]
 }
 
@@ -90,10 +90,10 @@ test("block-verifier-test") {
     ":geometry",
     "//src/lib/digest",
     "//zircon/public/lib/zx",
-    "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/fbl",
+    "//zircon/system/ulib/zxtest",
   ]
 }
 
@@ -116,7 +116,7 @@ test("config-test") {
     "//sdk/fidl/fuchsia.hardware.block.verified:fuchsia.hardware.block.verified_llcpp",
     "//src/devices/testing/no_ddk",
     "//src/lib/ddk",
-    "//zircon/public/lib/zxtest",
+    "//zircon/system/ulib/zxtest",
   ]
 }
 
@@ -181,10 +181,10 @@ test("block-verity-test") {
     "//sdk/fidl/fuchsia.io:fuchsia.io_llcpp",
     "//src/lib/digest",
     "//src/storage/fvm:test_support",
-    "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/driver-integration-test",
     "//zircon/system/ulib/fdio-caller",
     "//zircon/system/ulib/ramdevice-client",
+    "//zircon/system/ulib/zxtest",
   ]
 
   # TODO(fxbug.dev/69585): This target uses raw zx::channel with LLCPP which is deprecated.

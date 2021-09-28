@@ -135,9 +135,9 @@ test("controller_test") {
     "//sdk/lib/fdio",
     "//src/media/audio/drivers/lib/intel-hda",
     "//zircon/public/lib/zx",
-    "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/mmio-ptr:mmio-ptr-fake",
+    "//zircon/system/ulib/zxtest",
   ]
 }
 
@@ -155,7 +155,7 @@ executable("intel-hda-stream-test-bin") {
   deps = [
     ":src",
     "//src/devices/testing/fake_ddk",
-    "//zircon/public/lib/zxtest",
+    "//zircon/system/ulib/zxtest",
   ]
 
   # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings

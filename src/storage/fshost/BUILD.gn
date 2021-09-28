@@ -305,12 +305,12 @@ test("fshost_test") {
     "//sdk/fidl/fuchsia.boot:fuchsia.boot_llcpp",
     "//sdk/fidl/fuchsia.io:fuchsia.io_llcpp",
     "//sdk/lib/fit-promise",
-    "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/cobalt-client",
     "//zircon/system/ulib/cobalt-client:in-memory-logger",
     "//zircon/system/ulib/fidl-async",
     "//zircon/system/ulib/fidl-async:fidl-async-cpp",
     "//zircon/system/ulib/mock-boot-arguments",
+    "//zircon/system/ulib/zxtest",
   ]
 
   # TODO(fxbug.dev/69585): This target uses raw zx::channel with LLCPP which is deprecated.
@@ -359,10 +359,10 @@ test("fshost_inspect_test") {
   deps = [
     ":inspect",
     "//zircon/public/lib/async",
-    "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/inspect",
+    "//zircon/system/ulib/zxtest",
   ]
 }
 
@@ -378,9 +378,9 @@ test("fshost_metrics_test") {
     "//sdk/lib/fdio",
     "//src/lib/storage/vfs/cpp/metrics:metrics-cobalt",
     "//src/lib/storage/vfs/cpp/metrics:metrics-inspect",
-    "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/async-testing",
     "//zircon/system/ulib/cobalt-client:in-memory-logger",
+    "//zircon/system/ulib/zxtest",
   ]
 }
 

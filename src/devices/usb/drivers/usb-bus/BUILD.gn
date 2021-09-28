@@ -87,8 +87,8 @@ test("usb-device") {
     ":common",
     "//src/devices/testing/fake-bti",
     "//src/devices/testing/fake_ddk",
-    "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/utf_conversion",
+    "//zircon/system/ulib/zxtest",
   ]
 
   # TODO(fxbug.dev/69585): This target uses raw zx::channel with LLCPP which is deprecated.

@@ -52,9 +52,9 @@ test("core-unittest-bin") {
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",
-    "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/fzl",
     "//zircon/system/ulib/io-scheduler",
+    "//zircon/system/ulib/zxtest",
   ]
 }
 

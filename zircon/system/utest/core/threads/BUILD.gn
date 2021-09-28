@@ -14,10 +14,10 @@ source_set("threads") {
     ":thread-functions",
     "//sdk/lib/fdio",
     "//zircon/public/lib/zx",
-    "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/mini-process",
     "//zircon/system/ulib/runtime",
     "//zircon/system/ulib/test-exceptions",
+    "//zircon/system/ulib/zxtest",
   ]
 }
 

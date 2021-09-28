@@ -44,8 +44,8 @@ test("pci-roothost") {
     "//src/devices/testing/fake-msi",
     "//src/devices/testing/fake-resource",
     "//src/devices/testing/no_ddk",
-    "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/region-alloc",
+    "//zircon/system/ulib/zxtest",
   ]
 }
 

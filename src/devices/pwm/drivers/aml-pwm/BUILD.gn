@@ -53,7 +53,7 @@ test("aml-pwm-test-bin") {
     "//src/devices/testing/mock-mmio-reg",
     "//src/devices/testing/no_ddk",
     "//zircon/public/lib/zx",
-    "//zircon/public/lib/zxtest",
+    "//zircon/system/ulib/zxtest",
   ]
 
   # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings

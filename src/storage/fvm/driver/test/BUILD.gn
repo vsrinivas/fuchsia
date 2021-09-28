@@ -20,9 +20,9 @@ test("fvm-driver-integration") {
     "//src/lib/storage/fs_management",
     "//src/storage/fvm:test_support",
     "//src/storage/fvm/driver:shared",
-    "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/driver-integration-test",
     "//zircon/system/ulib/fdio-caller",
+    "//zircon/system/ulib/zxtest",
   ]
 
   # TODO(fxbug.dev/69585): This target uses raw zx::channel with LLCPP which is deprecated.

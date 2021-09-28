@@ -12,7 +12,7 @@ group("tests") {
 
 test("zxtest-large-test-suite-test") {
   sources = [ "large_test_suite.cc" ]
-  deps = [ "//zircon/public/lib/zxtest" ]
+  deps = [ "//zircon/system/ulib/zxtest" ]
   if (is_fuchsia) {
     fdio_config = [ "//build/config/fuchsia:fdio_config" ]
     if (configs + fdio_config - fdio_config != configs) {

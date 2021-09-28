@@ -103,7 +103,7 @@ test("fvm-driver-unittests") {
   deps = [
     ":shared",
     "//src/devices/testing/no_ddk",
-    "//zircon/public/lib/zxtest",
+    "//zircon/system/ulib/zxtest",
   ]
 
   # TODO: delete the below and fix compiler errors.

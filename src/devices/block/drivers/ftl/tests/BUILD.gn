@@ -55,7 +55,7 @@ test("ftl-test-bin") {
   include_dirs = [ "//src/devices/block/drivers/ftl" ]
   deps = [
     ":shared",
-    "//zircon/public/lib/zxtest",
+    "//zircon/system/ulib/zxtest",
   ]
 }
 
@@ -89,11 +89,11 @@ test("ftl-integration") {
     "//src/lib/storage/ramdevice_client/cpp:ramdevice-client-test",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zx",
-    "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/devmgr-integration-test",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/fdio-caller",
     "//zircon/system/ulib/inspect",
+    "//zircon/system/ulib/zxtest",
   ]
 
   # TODO(fxbug.dev/69585): This target uses raw zx::channel with LLCPP which is deprecated.

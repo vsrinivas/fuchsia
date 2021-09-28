@@ -32,8 +32,8 @@ test("nix") {
     "//sdk/lib/fdio",
     "//src/lib/nix",
     "//zircon/public/lib/zx",
-    "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/fbl",
+    "//zircon/system/ulib/zxtest",
   ]
 }
 
@@ -52,7 +52,7 @@ test("nix_hosttests") {
   }
 
   deps = [
-    "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/fbl",
+    "//zircon/system/ulib/zxtest",
   ]
 }

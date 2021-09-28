@@ -52,8 +52,8 @@ test("aml-spi-test-bin") {
     "//src/devices/bus/testing/fake-pdev",
     "//src/devices/registers/testing/mock-registers",
     "//src/devices/testing/fake_ddk",
-    "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/zxtest",
   ]
 
   # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings

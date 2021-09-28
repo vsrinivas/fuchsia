@@ -41,7 +41,7 @@ test("test") {
   include_dirs = [ "." ]
   deps = [
     ":src",
-    "//zircon/public/lib/zxtest",
+    "//zircon/system/ulib/zxtest",
   ]
 }
 

@@ -109,7 +109,7 @@ test("gt6853-test") {
     "//src/devices/i2c/testing/fake-i2c",
     "//src/devices/testing/fake_ddk",
     "//zircon/public/lib/mock-function",
-    "//zircon/public/lib/zxtest",
+    "//zircon/system/ulib/zxtest",
   ]
   defines = [
     "GT6853_CONFIG_9364_PATH=\"$config_9364_path\"",

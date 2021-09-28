@@ -22,10 +22,10 @@ test("fidl_cpp_dispatcher_tests_bin") {
     "//sdk/lib/stdcompat",
     "//src/lib/fidl/cpp",
     "//zircon/public/lib/async-cpp",
-    "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/async-loop",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
+    "//zircon/system/ulib/zxtest",
   ]
 
   # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings

@@ -83,9 +83,9 @@ executable("aml-gpu-test-bin") {
   deps = [
     ":sources",
     "//src/devices/registers/testing/mock-registers",
-    "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
+    "//zircon/system/ulib/zxtest",
   ]
 
   # TODO(fxbug.dev/69585): This target uses raw zx::channel with LLCPP which is deprecated.

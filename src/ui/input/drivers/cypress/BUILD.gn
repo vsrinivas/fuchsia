@@ -67,10 +67,10 @@ test("cypress-touch-test") {
     "//zircon/public/lib/mock-function",
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",
-    "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/hid",
     "//zircon/system/ulib/hwreg-i2c",
+    "//zircon/system/ulib/zxtest",
   ]
 }
 

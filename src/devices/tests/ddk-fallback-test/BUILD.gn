@@ -70,8 +70,8 @@ test("ddk-fallback") {
     "//sdk/lib/fdio",
     "//src/lib/ddk",
     "//zircon/public/lib/zx",
-    "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/driver-integration-test",
+    "//zircon/system/ulib/zxtest",
   ]
 }
 

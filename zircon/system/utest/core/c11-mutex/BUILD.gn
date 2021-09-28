@@ -11,6 +11,6 @@ source_set("c11-mutex") {
   deps = [
     "//sdk/lib/fdio",
     "//zircon/public/lib/zircon-internal",
-    "//zircon/public/lib/zxtest",
+    "//zircon/system/ulib/zxtest",
   ]
 }

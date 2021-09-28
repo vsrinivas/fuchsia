@@ -81,10 +81,10 @@ test("ltr-578als-test-bin") {
     "//src/ui/input/testing/mock-hidbus-ifc",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zx",
-    "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/hid",
     "//zircon/system/ulib/simplehid",
+    "//zircon/system/ulib/zxtest",
   ]
 }
 

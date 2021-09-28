@@ -23,7 +23,7 @@ test("rtc-lib-test-bin") {
     "//src/devices/lib/driver",
     "//src/devices/rtc/lib/rtc",
     "//src/lib/ddk",
-    "//zircon/public/lib/zxtest",
+    "//zircon/system/ulib/zxtest",
   ]
 }
 
@@ -38,7 +38,7 @@ test("rtc-lib-llcpp-test-bin") {
   deps = [
     "//sdk/fidl/fuchsia.hardware.rtc:fuchsia.hardware.rtc_llcpp",
     "//src/devices/rtc/lib/rtc:rtc_llcpp",
-    "//zircon/public/lib/zxtest",
+    "//zircon/system/ulib/zxtest",
   ]
 }
 

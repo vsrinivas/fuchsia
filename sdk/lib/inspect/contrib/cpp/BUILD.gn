@@ -53,7 +53,7 @@ executable("read_visitor_test") {
   sources = [ "read_visitor_unittest.cc" ]
   deps = [
     ":read_visitor",
-    "//zircon/public/lib/zxtest",
+    "//zircon/system/ulib/zxtest",
   ]
 }
 
@@ -63,7 +63,7 @@ executable("archive_reader_test") {
   sources = [ "archive_reader_unittest.cc" ]
   deps = [
     ":archive_reader",
-    "//zircon/public/lib/zxtest",
+    "//zircon/system/ulib/zxtest",
   ]
 }
 

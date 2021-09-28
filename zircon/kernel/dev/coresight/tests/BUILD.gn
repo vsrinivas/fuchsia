@@ -12,8 +12,8 @@ if (is_host) {
     sources = [ "rom_table_tests.cc" ]
     deps = [
       "//zircon/kernel/dev/coresight",
-      "//zircon/public/lib/zxtest",
       "//zircon/system/ulib/hwreg:hwreg-mock",
+      "//zircon/system/ulib/zxtest",
     ]
 
     # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings

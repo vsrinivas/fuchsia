@@ -54,7 +54,7 @@ test("aml-pwm-regulator-test-bin") {
     "//src/devices/lib/metadata:llcpp",
     "//src/devices/testing/no_ddk",
     "//zircon/public/lib/zx",
-    "//zircon/public/lib/zxtest",
+    "//zircon/system/ulib/zxtest",
   ]
 }
 

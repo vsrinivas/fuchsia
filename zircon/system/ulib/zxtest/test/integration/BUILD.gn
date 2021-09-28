@@ -18,7 +18,7 @@ if (is_host) {
   test("zxtest-context") {
     output_name = "zxtest-context-test"
     sources = [ "context_test.cc" ]
-    deps = [ "//zircon/public/lib/zxtest" ]
+    deps = [ "//zircon/system/ulib/zxtest" ]
   }
 }
 
@@ -45,8 +45,8 @@ test("zxtest-integration") {
     "register_test.cc",
   ]
   deps = [
-    "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/fbl",
+    "//zircon/system/ulib/zxtest",
   ]
   if (is_fuchsia) {
     deps += [

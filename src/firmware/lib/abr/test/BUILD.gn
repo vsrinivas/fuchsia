@@ -13,7 +13,7 @@ test("firmware_abr_test") {
   sources = [ "libabr_test.cc" ]
   deps = [
     "//src/firmware/lib/abr:in_tree",
-    "//zircon/public/lib/zxtest",
+    "//zircon/system/ulib/zxtest",
     "//zircon/third_party/ulib/cksum",
   ]
 }

@@ -27,7 +27,7 @@ class CtsVerifyDepsTests(unittest.TestCase):
     def test_init(self):
         cts_file = 'test.this_is_cts'
         invoker_label = "//sdk/cts/build:verify_cts_deps_test"
-        deps = ['//zircon/public/lib/zxtest:zxtest']
+        deps = ['//zircon/system/ulib/zxtest:zxtest']
         allowed_cts_dirs = ['//sdk/*']
 
         with TemporaryDirectory() as root_build_dir:
@@ -77,7 +77,7 @@ class CtsVerifyDepsTests(unittest.TestCase):
     def test_get_file_path(self):
         cts_file = 'test.this_is_cts'
         invoker_label = "//sdk/cts/build:verify_cts_deps_test"
-        deps = ['//zircon/public/lib/zxtest:zxtest']
+        deps = ['//zircon/system/ulib/zxtest:zxtest']
         allowed_cts_dirs = ['//sdk/*']
         with TemporaryDirectory() as root_build_dir:
             sdk_manifests = [
@@ -87,16 +87,16 @@ class CtsVerifyDepsTests(unittest.TestCase):
                 root_build_dir, cts_file, invoker_label, deps, deps,
                 allowed_cts_dirs, sdk_manifests)
 
-            dep = '//zircon/public/lib/zxtest:zxtest'
+            dep = '//zircon/system/ulib/zxtest:zxtest'
             self.assertEqual(
                 root_build_dir +
-                '/cts/zircon/public/lib/zxtest/zxtest.this_is_cts',
+                '/cts/zircon/system/ulib/zxtest/zxtest.this_is_cts',
                 cts_element.get_file_path(dep))
 
-            dep = '//zircon/public/lib/zxtest'
+            dep = '//zircon/system/ulib/zxtest'
             self.assertEqual(
                 root_build_dir +
-                '/cts/zircon/public/lib/zxtest/zxtest.this_is_cts',
+                '/cts/zircon/system/ulib/zxtest/zxtest.this_is_cts',
                 cts_element.get_file_path(dep))
 
             dep = '//sdk'
@@ -107,45 +107,56 @@ class CtsVerifyDepsTests(unittest.TestCase):
     def test_verify_dep_in_sdk(self):
         cts_file = 'test.this_is_cts'
         invoker_label = "//sdk/cts/build:verify_cts_deps_test"
-        allowed_cts_deps = ['//zircon/public/lib/zxtest:zxtest']
+        allowed_cts_deps = ['//zircon/system/ulib/zxtest:zxtest']
         allowed_cts_dirs = ['//third_party/dart-pkg/pub/*']
         deps = [
-            '//sdk/fidl/fuchsia.io',
-            '//sdk/lib/fdio:fdio',
+            '//sdk/fidl/fuchsia.io', '//sdk/lib/fdio:fdio',
             '//sdk/lib/private_atom:private_atom'
         ]
 
         fdio_atom = {
-            "category": "partner",
+            "category":
+                "partner",
             "deps": [],
             "files": [],
-            "gn-label": "//sdk/lib/fdio:fdio_sdk_manifest(//build/toolchain/fuchsia:x64)",
-            "id": "sdk://pkg/fdio",
-            "meta": "pkg/fdio/meta.json",
-            "type": "cc_prebuilt_library"
+            "gn-label":
+                "//sdk/lib/fdio:fdio_sdk_manifest(//build/toolchain/fuchsia:x64)",
+            "id":
+                "sdk://pkg/fdio",
+            "meta":
+                "pkg/fdio/meta.json",
+            "type":
+                "cc_prebuilt_library"
         }
         fuchsia_io_atom = {
-            "category": "partner",
+            "category":
+                "partner",
             "deps": [],
             "files": [],
-            "gn-label": "//sdk/fidl/fuchsia.io:fuchsia.io_sdk(//build/fidl:fidling)",
-            "id": "sdk://fidl/fuchsia.io",
-            "meta": "fidl/fuchsia.io/meta.json",
-            "type": "fidl_library"
+            "gn-label":
+                "//sdk/fidl/fuchsia.io:fuchsia.io_sdk(//build/fidl:fidling)",
+            "id":
+                "sdk://fidl/fuchsia.io",
+            "meta":
+                "fidl/fuchsia.io/meta.json",
+            "type":
+                "fidl_library"
         }
         fuchsia_git_atom = {
-            "category": "internal",
+            "category":
+                "internal",
             "deps": [],
             "files": [],
-            "gn-label": "//sdk/lib/private_atom:private_atom(//build/toolchain:fuchsia:x64)",
-            "id": "sdk://fidl/fuchsia.io",
-            "meta": "fidl/fuchsia.io/meta.json",
-            "type": "fidl_library"
+            "gn-label":
+                "//sdk/lib/private_atom:private_atom(//build/toolchain:fuchsia:x64)",
+            "id":
+                "sdk://fidl/fuchsia.io",
+            "meta":
+                "fidl/fuchsia.io/meta.json",
+            "type":
+                "fidl_library"
         }
-        manifest = {
-            "atoms": [],
-            "ids": []
-        }
+        manifest = {"atoms": [], "ids": []}
 
         with TemporaryDirectory() as root_build_dir:
             sdk_manifest = self.create_empty_sdk_manifest(
@@ -224,7 +235,7 @@ class CtsVerifyDepsTests(unittest.TestCase):
     def test_verify_deps(self):
         cts_file = 'test.this_is_cts'
         invoker_label = "//sdk/cts/build:verify_cts_deps_test"
-        allowed_cts_deps = ['//zircon/public/lib/zxtest:zxtest']
+        allowed_cts_deps = ['//zircon/system/ulib/zxtest:zxtest']
         allowed_cts_dirs = ['//sdk/*']
 
         with TemporaryDirectory() as root_build_dir:
@@ -259,7 +270,7 @@ class CtsVerifyDepsTests(unittest.TestCase):
 
             deps = [
                 '//sdk/this/is/a/real:target',
-                '//zircon/public/lib/zxtest:zxtest',
+                '//zircon/system/ulib/zxtest:zxtest',
             ]
             cts_element = VerifyCtsDeps(
                 root_build_dir, cts_file, invoker_label, deps, allowed_cts_deps,
@@ -269,18 +280,26 @@ class CtsVerifyDepsTests(unittest.TestCase):
             deps = [
                 '//sdk/lib/fdio:fdio',
                 '//third_party/dart-pkg/pub/some-dart-pkg',
-                '//zircon/public/lib/zxtest:zxtest',
+                '//zircon/system/ulib/zxtest:zxtest',
             ]
             manifest = {
-                "atoms": [{
-                    "category": "partner",
-                    "deps": [],
-                    "files": [],
-                    "gn-label": "//sdk/lib/fdio:fdio_sdk_manifest(//build/toolchain/fuchsia:x64)",
-                    "id": "sdk://pkg/fdio",
-                    "meta": "pkg/fdio/meta.json",
-                    "type": "cc_prebuilt_library"
-                }],
+                "atoms":
+                    [
+                        {
+                            "category":
+                                "partner",
+                            "deps": [],
+                            "files": [],
+                            "gn-label":
+                                "//sdk/lib/fdio:fdio_sdk_manifest(//build/toolchain/fuchsia:x64)",
+                            "id":
+                                "sdk://pkg/fdio",
+                            "meta":
+                                "pkg/fdio/meta.json",
+                            "type":
+                                "cc_prebuilt_library"
+                        }
+                    ],
                 "ids": []
             }
             with open(sdk_manifests[0], 'w') as sdk_manifest:
@@ -293,8 +312,8 @@ class CtsVerifyDepsTests(unittest.TestCase):
 
     def test_create_cts_dep_file(self):
         invoker_label = "//sdk/cts/build:verify_cts_deps_test"
-        deps = ['//sdk:sdk', '//zircon/public/lib/zxtest:zxtest']
-        allowed_cts_deps = ['//zircon/public/lib/zxtest:zxtest']
+        deps = ['//sdk:sdk', '//zircon/system/ulib/zxtest:zxtest']
+        allowed_cts_deps = ['//zircon/system/ulib/zxtest:zxtest']
         allowed_cts_dirs = ['//sdk/*']
 
         with TemporaryDirectory() as root_build_dir:

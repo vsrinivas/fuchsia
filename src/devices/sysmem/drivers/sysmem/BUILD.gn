@@ -142,7 +142,6 @@ test("sysmem-unittest-bin") {
     "//zircon/public/lib/fidl",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zx",
-    "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/async-default",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
@@ -153,6 +152,7 @@ test("sysmem-unittest-bin") {
     "//zircon/system/ulib/image-format",
     "//zircon/system/ulib/region-alloc",
     "//zircon/system/ulib/sysmem-version",
+    "//zircon/system/ulib/zxtest",
   ]
 
   # TODO(fxbug.dev/69585): This target uses raw zx::channel with LLCPP which is deprecated.

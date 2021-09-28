@@ -8,6 +8,6 @@ test("minfs_host") {
   sources = [ "bcache_test.cc" ]
   deps = [
     "//src/storage/minfs",
-    "//zircon/public/lib/zxtest",
+    "//zircon/system/ulib/zxtest",
   ]
 }

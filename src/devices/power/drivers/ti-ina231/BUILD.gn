@@ -67,7 +67,7 @@ test("ti-ina231-test-bin") {
     ":common",
     "//src/devices/i2c/testing/fake-i2c",
     "//src/devices/testing/fake_ddk",
-    "//zircon/public/lib/zxtest",
+    "//zircon/system/ulib/zxtest",
   ]
 
   # TODO(fxbug.dev/69585): This target uses raw zx::channel with LLCPP which is deprecated.

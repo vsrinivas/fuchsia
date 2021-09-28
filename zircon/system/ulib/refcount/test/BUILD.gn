@@ -25,9 +25,9 @@ test("refcount-test") {
   deps = [
     "//sdk/lib/fdio",
     "//zircon/public/lib/zx",
-    "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/refcount",
+    "//zircon/system/ulib/zxtest",
   ]
 }
 
