@@ -27,6 +27,22 @@ func newClientWithPorts(sPort, aPort int) *Client {
 	}
 }
 
+func newConnWithPort(reusable bool) (*net.UDPConn, int, error) {
+	conn, err := UDPConnWithReusablePort(0, "", reusable)
+	if err != nil {
+		return nil, 0, err
+	}
+	_, portStr, err := net.SplitHostPort(conn.LocalAddr().String())
+	if err != nil {
+		return nil, 0, err
+	}
+	port, err := strconv.Atoi(portStr)
+	if err != nil {
+		return nil, 0, err
+	}
+	return conn, port, err
+}
+
 // startFakeNetbootServers Listens using len(nodenames) number of servers that
 // respond with each respective nodename. Returns the server port on which the
 // fake servers are listening.
@@ -236,15 +252,14 @@ func TestParseBeacon(t *testing.T) {
 }
 
 func TestBeacon(t *testing.T) {
-	c := NewClient(time.Second)
-	conn, err := net.ListenUDP("udp6", &net.UDPAddr{
-		IP:   net.IPv6zero,
-		Port: c.AdvertPort,
-	})
+	// Get connection with non-reusable port to find a port to use as the advert port.
+	conn, port, err := newConnWithPort(false)
 	if err != nil {
-		t.Fatalf("unable to listen UDP: %v", err)
+		t.Fatal(err)
 	}
 	defer conn.Close()
+
+	c := newClientWithPorts(port+1, port)
 
 	_, err = c.Beacon()
 	if err == nil {
@@ -314,19 +329,11 @@ func TestBeaconForDevice(t *testing.T) {
 				maxAdverts = 5
 			}
 			// Get connection with reusable port to find a port to use as the advert port.
-			conn, err := UDPConnWithReusablePort(0, "", true)
+			conn, port, err := newConnWithPort(true)
 			if err != nil {
 				t.Fatal(err)
 			}
 			defer conn.Close()
-			_, portStr, err := net.SplitHostPort(conn.LocalAddr().String())
-			if err != nil {
-				t.Fatal(err)
-			}
-			port, err := strconv.Atoi(portStr)
-			if err != nil {
-				t.Fatal(err)
-			}
 			serverAddr, cleanup := startFakeAdvertServers(t, tc.servers, port, maxAdverts)
 			defer cleanup()
 
