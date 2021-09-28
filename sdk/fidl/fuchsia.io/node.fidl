@@ -59,18 +59,19 @@ type NodeInfo = strict resource union {
     /// The connection composes [`fuchsia.posix.socket/DatagramSocket`].
     9: datagram_socket resource struct {
         /// See [`fuchsia.posix.socket.DatagramSocket`] for details.
-        event zx.handle:EVENTPAIR;
+        event zx.handle:<EVENTPAIR, zx.rights.TRANSFER | zx.rights.WAIT>;
     };
 
     /// The connection composes [`fuchsia.posix.socket/StreamSocket`].
    10: stream_socket resource struct {
-        socket zx.handle:SOCKET;
+        socket
+                zx.handle:<SOCKET, zx.rights.TRANSFER | zx.RIGHTS_IO | zx.rights.WAIT | zx.rights.INSPECT>;
     };
 
     /// The connection composes [`fuchsia.posix.socket.raw/Socket`].
    11: raw_socket resource struct {
         /// See [`fuchsia.posix.socket.raw.Socket`] for details.
-        event zx.handle:EVENTPAIR;
+        event zx.handle:<EVENTPAIR, zx.rights.TRANSFER | zx.rights.WAIT>;
     };
 };
 

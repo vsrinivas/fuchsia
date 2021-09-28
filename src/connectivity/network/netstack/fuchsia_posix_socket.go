@@ -1083,7 +1083,7 @@ type endpointWithEvent struct {
 }
 
 func (epe *endpointWithEvent) describe() (zx.Handle, error) {
-	event, err := epe.peer.Duplicate(zx.RightsBasic)
+	event, err := epe.peer.Duplicate(zx.RightTransfer | zx.RightWait)
 	_ = syslog.DebugTf("Describe", "%p: err=%v", epe, err)
 	return event, err
 }
@@ -2002,7 +2002,7 @@ func (s *streamSocketImpl) Clone(ctx fidl.Context, flags uint32, object fidlio.N
 
 func (s *streamSocketImpl) Describe(fidl.Context) (fidlio.NodeInfo, error) {
 	var info fidlio.NodeInfo
-	h, err := s.endpointWithSocket.peer.Handle().Duplicate(zx.RightsBasic | zx.RightRead | zx.RightWrite)
+	h, err := s.endpointWithSocket.peer.Handle().Duplicate(zx.RightTransfer | zx.RightsIO | zx.RightWait | zx.RightInspect)
 	_ = syslog.DebugTf("Describe", "%p: err=%v", s.endpointWithSocket, err)
 	if err != nil {
 		return info, err

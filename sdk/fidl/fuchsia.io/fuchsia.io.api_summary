@@ -28,7 +28,7 @@ const fuchsia.io/DIRENT_TYPE_FILE uint8 8
 const fuchsia.io/DIRENT_TYPE_SERVICE uint8 16
 const fuchsia.io/DIRENT_TYPE_SOCKET uint8 12
 const fuchsia.io/DIRENT_TYPE_UNKNOWN uint8 0
-struct/member fuchsia.io/DatagramSocket.event zx/handle:EVENTPAIR
+struct/member fuchsia.io/DatagramSocket.event zx/handle:<EVENTPAIR,zx.TRANSFER,zx.WAIT>
 resource struct fuchsia.io/DatagramSocket
 table/member fuchsia.io/DatagramSocketInfo.event zx/handle:EVENTPAIR
 resource table fuchsia.io/DatagramSocketInfo
@@ -291,7 +291,7 @@ resource table fuchsia.io/PipeInfo
 const fuchsia.io/RW_STAR_DIR fuchsia.io/Operations 503
 const fuchsia.io/RX_STAR_DIR fuchsia.io/Operations 219
 const fuchsia.io/R_STAR_DIR fuchsia.io/Operations 211
-struct/member fuchsia.io/RawSocket.event zx/handle:EVENTPAIR
+struct/member fuchsia.io/RawSocket.event zx/handle:<EVENTPAIR,zx.TRANSFER,zx.WAIT>
 resource struct fuchsia.io/RawSocket
 table/member fuchsia.io/RawSocketInfo.event zx/handle:EVENTPAIR
 resource table fuchsia.io/RawSocketInfo
@@ -318,7 +318,7 @@ enum/member fuchsia.io/SeekOrigin.END 2
 enum/member fuchsia.io/SeekOrigin.START 0
 strict enum fuchsia.io/SeekOrigin uint32
 struct fuchsia.io/Service
-struct/member fuchsia.io/StreamSocket.socket zx/handle:SOCKET
+struct/member fuchsia.io/StreamSocket.socket zx/handle:<SOCKET,zx.TRANSFER,zx.READ,zx.WRITE,zx.WAIT,zx.INSPECT>
 resource struct fuchsia.io/StreamSocket
 table/member fuchsia.io/StreamSocketInfo.socket zx/handle:SOCKET
 resource table fuchsia.io/StreamSocketInfo
