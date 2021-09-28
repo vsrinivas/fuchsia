@@ -36,8 +36,7 @@ use {
     },
     anyhow::{bail, format_err, Context as _},
     fidl_fuchsia_wlan_ieee80211 as fidl_ieee80211, fidl_fuchsia_wlan_internal as fidl_internal,
-    fidl_fuchsia_wlan_mlme::{self as fidl_mlme, DeviceInfo, MlmeEvent, ScanRequest},
-    fidl_fuchsia_wlan_sme as fidl_sme, fuchsia_zircon as zx,
+    fidl_fuchsia_wlan_mlme as fidl_mlme, fidl_fuchsia_wlan_sme as fidl_sme, fuchsia_zircon as zx,
     futures::channel::{mpsc, oneshot},
     ieee80211::{Bssid, Ssid},
     log::{error, info, warn},
@@ -68,12 +67,12 @@ mod internal {
             sink::MlmeSink,
             timer::Timer,
         },
-        fidl_fuchsia_wlan_mlme::DeviceInfo,
+        fidl_fuchsia_wlan_mlme as fidl_mlme,
         std::sync::Arc,
     };
 
     pub struct Context {
-        pub device_info: Arc<DeviceInfo>,
+        pub device_info: Arc<fidl_mlme::DeviceInfo>,
         pub mlme_sink: MlmeSink,
         pub(crate) timer: Timer<Event>,
         pub att_id: ConnectionAttemptId,
@@ -446,7 +445,7 @@ impl From<ClientSmeStatus> for fidl_sme::ClientStatusResponse {
 impl ClientSme {
     pub fn new(
         cfg: ClientConfig,
-        info: DeviceInfo,
+        info: fidl_mlme::DeviceInfo,
         iface_tree_holder: Arc<wlan_inspect::iface_mgr::IfaceTreeHolder>,
         hasher: WlanHasher,
         is_softmac: bool,
@@ -592,7 +591,7 @@ impl ClientSme {
         receiver
     }
 
-    fn send_scan_request(&mut self, req: Option<ScanRequest>) {
+    fn send_scan_request(&mut self, req: Option<fidl_mlme::ScanRequest>) {
         if let Some(req) = req {
             self.context
                 .info
@@ -605,13 +604,13 @@ impl ClientSme {
 impl super::Station for ClientSme {
     type Event = Event;
 
-    fn on_mlme_event(&mut self, event: MlmeEvent) {
+    fn on_mlme_event(&mut self, event: fidl_mlme::MlmeEvent) {
         match event {
-            MlmeEvent::OnScanResult { result } => self
+            fidl_mlme::MlmeEvent::OnScanResult { result } => self
                 .scan_sched
                 .on_mlme_scan_result(result, &self.context.inspect)
                 .unwrap_or_else(|e| error!("scan result error: {:?}", e)),
-            MlmeEvent::OnScanEnd { end } => {
+            fidl_mlme::MlmeEvent::OnScanEnd { end } => {
                 match self.scan_sched.on_mlme_scan_end(end, &self.context.inspect) {
                     Err(e) => error!("scan end error: {:?}", e),
                     Ok((scan_end, next_request)) => {
@@ -651,13 +650,13 @@ impl super::Station for ClientSme {
                     }
                 }
             }
-            MlmeEvent::OnWmmStatusResp { status, resp } => {
+            fidl_mlme::MlmeEvent::OnWmmStatusResp { status, resp } => {
                 for responder in self.wmm_status_responders.drain(..) {
                     let result =
                         if status == zx::sys::ZX_OK { Ok(resp.clone()) } else { Err(status) };
                     responder.respond(result);
                 }
-                let event = MlmeEvent::OnWmmStatusResp { status, resp };
+                let event = fidl_mlme::MlmeEvent::OnWmmStatusResp { status, resp };
                 self.state =
                     self.state.take().map(|state| state.on_mlme_event(event, &mut self.context));
             }
@@ -711,7 +710,7 @@ enum SelectedAssocType {
 }
 
 fn get_protection(
-    device_info: &DeviceInfo,
+    device_info: &fidl_mlme::DeviceInfo,
     client_config: &ClientConfig,
     credential: &fidl_sme::Credential,
     bss: &BssDescription,
@@ -825,10 +824,10 @@ mod tests {
         timestamp_nanos: i64,
         bss: fidl_internal::BssDescription,
     ) {
-        sme.on_mlme_event(MlmeEvent::OnScanResult {
+        sme.on_mlme_event(fidl_mlme::MlmeEvent::OnScanResult {
             result: fidl_mlme::ScanResult { txn_id: 1, timestamp_nanos, bss },
         });
-        sme.on_mlme_event(MlmeEvent::OnScanEnd {
+        sme.on_mlme_event(fidl_mlme::MlmeEvent::OnScanEnd {
             end: fidl_mlme::ScanEnd { txn_id: 1, code: fidl_mlme::ScanResultCode::Success },
         });
     }
@@ -1574,7 +1573,7 @@ mod tests {
 
         let mut bss = fake_fidl_bss_description!(Open, ssid: Ssid::try_from("foo").unwrap());
         bss.bssid = [3; 6];
-        sme.on_mlme_event(MlmeEvent::OnScanResult {
+        sme.on_mlme_event(fidl_mlme::MlmeEvent::OnScanResult {
             result: fidl_mlme::ScanResult {
                 txn_id: 1,
                 timestamp_nanos: zx::Time::get_monotonic().into_nanos(),
@@ -1583,14 +1582,14 @@ mod tests {
         });
         let mut bss = fake_fidl_bss_description!(Open, ssid: Ssid::try_from("foo").unwrap());
         bss.bssid = [4; 6];
-        sme.on_mlme_event(MlmeEvent::OnScanResult {
+        sme.on_mlme_event(fidl_mlme::MlmeEvent::OnScanResult {
             result: fidl_mlme::ScanResult {
                 txn_id: 1,
                 timestamp_nanos: zx::Time::get_monotonic().into_nanos(),
                 bss,
             },
         });
-        sme.on_mlme_event(MlmeEvent::OnScanEnd {
+        sme.on_mlme_event(fidl_mlme::MlmeEvent::OnScanEnd {
             end: fidl_mlme::ScanEnd { txn_id: 1, code: fidl_mlme::ScanResultCode::Success },
         });
 
@@ -1636,7 +1635,7 @@ mod tests {
         let mut recv =
             sme.on_scan_command(fidl_sme::ScanRequest::Passive(fidl_sme::PassiveScanRequest {}));
 
-        sme.on_mlme_event(MlmeEvent::OnScanEnd {
+        sme.on_mlme_event(fidl_mlme::MlmeEvent::OnScanEnd {
             end: fidl_mlme::ScanEnd {
                 txn_id: 1,
                 code: fidl_mlme::ScanResultCode::CanceledByDriverOrFirmware,
@@ -1657,7 +1656,7 @@ mod tests {
 
         let mut bss = fake_fidl_bss_description!(Open, ssid: Ssid::try_from("foo").unwrap());
         bss.bssid = [3; 6];
-        sme.on_mlme_event(MlmeEvent::OnScanResult {
+        sme.on_mlme_event(fidl_mlme::MlmeEvent::OnScanResult {
             result: fidl_mlme::ScanResult {
                 txn_id: 1,
                 timestamp_nanos: zx::Time::get_monotonic().into_nanos(),
@@ -1666,7 +1665,7 @@ mod tests {
         });
         let mut bss = fake_fidl_bss_description!(Open, ssid: Ssid::try_from("foo").unwrap());
         bss.bssid = [4; 6];
-        sme.on_mlme_event(MlmeEvent::OnScanResult {
+        sme.on_mlme_event(fidl_mlme::MlmeEvent::OnScanResult {
             result: fidl_mlme::ScanResult {
                 txn_id: 1,
                 timestamp_nanos: zx::Time::get_monotonic().into_nanos(),
@@ -1674,7 +1673,7 @@ mod tests {
             },
         });
 
-        sme.on_mlme_event(MlmeEvent::OnScanEnd {
+        sme.on_mlme_event(fidl_mlme::MlmeEvent::OnScanEnd {
             end: fidl_mlme::ScanEnd {
                 txn_id: 1,
                 code: fidl_mlme::ScanResultCode::CanceledByDriverOrFirmware,
@@ -1696,7 +1695,7 @@ mod tests {
         assert_variant!(mlme_stream.try_next(), Ok(Some(MlmeRequest::WmmStatusReq)));
 
         let resp = fake_wmm_status_resp();
-        sme.on_mlme_event(MlmeEvent::OnWmmStatusResp {
+        sme.on_mlme_event(fidl_mlme::MlmeEvent::OnWmmStatusResp {
             status: zx::sys::ZX_OK,
             resp: resp.clone(),
         });

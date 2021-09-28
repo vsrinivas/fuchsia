@@ -3,10 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    crate::{
-        client::{inspect, DeviceInfo},
-        Error,
-    },
+    crate::{client::inspect, Error},
     fidl_fuchsia_wlan_common as fidl_common, fidl_fuchsia_wlan_internal as fidl_internal,
     fidl_fuchsia_wlan_mlme as fidl_mlme, fidl_fuchsia_wlan_sme as fidl_sme,
     fuchsia_inspect::NumericProperty,
@@ -56,7 +53,7 @@ pub struct ScanScheduler<T> {
     current: ScanState<T>,
     // Pending discovery requests from the user
     pending_discovery: Vec<DiscoveryScan<T>>,
-    device_info: Arc<DeviceInfo>,
+    device_info: Arc<fidl_mlme::DeviceInfo>,
     last_mlme_txn_id: u64,
 }
 
@@ -78,7 +75,7 @@ pub struct ScanEnd<T> {
 }
 
 impl<T> ScanScheduler<T> {
-    pub fn new(device_info: Arc<DeviceInfo>) -> Self {
+    pub fn new(device_info: Arc<fidl_mlme::DeviceInfo>) -> Self {
         ScanScheduler {
             current: ScanState::NotScanning,
             pending_discovery: Vec::new(),
@@ -222,7 +219,7 @@ fn new_scan_request(
     mlme_txn_id: u64,
     scan_request: fidl_sme::ScanRequest,
     ssid: Ssid,
-    device_info: &DeviceInfo,
+    device_info: &fidl_mlme::DeviceInfo,
 ) -> fidl_mlme::ScanRequest {
     let scan_req = fidl_mlme::ScanRequest {
         txn_id: mlme_txn_id,
@@ -257,7 +254,7 @@ fn new_scan_request(
 fn new_discovery_scan_request<T>(
     mlme_txn_id: u64,
     discovery_scan: &DiscoveryScan<T>,
-    device_info: &DeviceInfo,
+    device_info: &fidl_mlme::DeviceInfo,
 ) -> fidl_mlme::ScanRequest {
     new_scan_request(mlme_txn_id, discovery_scan.scan_request.clone(), Ssid::empty(), device_info)
 }
@@ -272,7 +269,7 @@ fn new_discovery_scan_request<T>(
 ///
 /// Suppose that Fuchsia supported channels are [1, 2, 52], and 1, 2 are non-DFS channels while
 /// 112 is DFS channel. Also suppose that device's supported channels are [1, 52] as parameter
-/// to DeviceInfo below.
+/// to fidl_mlme::DeviceInfo below.
 ///
 /// ScanType | Device handles DFS | Return values
 /// ---------+--------------------+-----------------
@@ -280,7 +277,10 @@ fn new_discovery_scan_request<T>(
 /// Passive  | N                  | [1, 52]
 /// Active   | Y                  | [1, 52]
 /// Active   | N                  | [1]
-fn get_channels_to_scan(device_info: &DeviceInfo, scan_request: &fidl_sme::ScanRequest) -> Vec<u8> {
+fn get_channels_to_scan(
+    device_info: &fidl_mlme::DeviceInfo,
+    scan_request: &fidl_sme::ScanRequest,
+) -> Vec<u8> {
     let mut device_supported_channels: HashSet<u8> = HashSet::new();
     for band in &device_info.bands {
         device_supported_channels.extend(&band.channels);
@@ -857,8 +857,8 @@ mod tests {
         ScanScheduler::new(Arc::new(test_utils::fake_device_info(CLIENT_ADDR)))
     }
 
-    fn device_info_with_channel(channels: Vec<u8>) -> DeviceInfo {
-        DeviceInfo {
+    fn device_info_with_channel(channels: Vec<u8>) -> fidl_mlme::DeviceInfo {
+        fidl_mlme::DeviceInfo {
             bands: vec![fidl_mlme::BandCapabilities {
                 channels,
                 ..test_utils::fake_5ghz_band_capabilities()
