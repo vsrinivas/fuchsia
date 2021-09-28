@@ -30,7 +30,7 @@ namespace {
       std::move(packet),
       [complete_cb = std::move(complete_cb), cb = std::move(cb)](
           ::bt::hci::CommandChannel::TransactionId id, const ::bt::hci::EventPacket& event) {
-        if (event.event_code() == ::bt::hci::kCommandStatusEventCode) {
+        if (event.event_code() == ::bt::hci_spec::kCommandStatusEventCode) {
           auto status = event.ToStatus();
           std::cout << "  Command Status: " << status.ToString() << " (id=" << id << ")"
                     << std::endl;
@@ -43,7 +43,7 @@ namespace {
       });
 }
 
-void LogCommandResult(::bt::hci::StatusCode status, ::bt::hci::CommandChannel::TransactionId id,
+void LogCommandResult(bt::hci_spec::StatusCode status, ::bt::hci::CommandChannel::TransactionId id,
                       const std::string& event_name = "Command Complete") {
   std::cout << fxl::StringPrintf("  %s - status: 0x%02x (id=%lu)\n", event_name.c_str(), status,
                                  id);
@@ -54,7 +54,7 @@ void LogCommandResult(::bt::hci::StatusCode status, ::bt::hci::CommandChannel::T
     fit::closure complete_cb) {
   auto cb = [complete_cb = complete_cb.share()](::bt::hci::CommandChannel::TransactionId id,
                                                 const ::bt::hci::EventPacket& event) {
-    auto return_params = event.return_params<::bt::hci::SimpleReturnParams>();
+    auto return_params = event.return_params<::bt::hci_spec::SimpleReturnParams>();
     LogCommandResult(return_params->status, id);
     complete_cb();
   };
@@ -63,17 +63,17 @@ void LogCommandResult(::bt::hci::StatusCode status, ::bt::hci::CommandChannel::T
 
 // TODO(armansito): Move this to a library header as it will be useful
 // elsewhere.
-std::string AdvEventTypeToString(::bt::hci::LEAdvertisingEventType type) {
+std::string AdvEventTypeToString(bt::hci_spec::LEAdvertisingEventType type) {
   switch (type) {
-    case ::bt::hci::LEAdvertisingEventType::kAdvInd:
+    case ::bt::hci_spec::LEAdvertisingEventType::kAdvInd:
       return "ADV_IND";
-    case ::bt::hci::LEAdvertisingEventType::kAdvDirectInd:
+    case ::bt::hci_spec::LEAdvertisingEventType::kAdvDirectInd:
       return "ADV_DIRECT_IND";
-    case ::bt::hci::LEAdvertisingEventType::kAdvScanInd:
+    case ::bt::hci_spec::LEAdvertisingEventType::kAdvScanInd:
       return "ADV_SCAN_IND";
-    case ::bt::hci::LEAdvertisingEventType::kAdvNonConnInd:
+    case ::bt::hci_spec::LEAdvertisingEventType::kAdvNonConnInd:
       return "ADV_NONCONN_IND";
-    case ::bt::hci::LEAdvertisingEventType::kScanRsp:
+    case ::bt::hci_spec::LEAdvertisingEventType::kScanRsp:
       return "SCAN_RSP";
     default:
       break;
@@ -83,15 +83,15 @@ std::string AdvEventTypeToString(::bt::hci::LEAdvertisingEventType type) {
 
 // TODO(armansito): Move this to a library header as it will be useful
 // elsewhere.
-std::string BdAddrTypeToString(::bt::hci::LEAddressType type) {
+std::string BdAddrTypeToString(bt::hci_spec::LEAddressType type) {
   switch (type) {
-    case ::bt::hci::LEAddressType::kPublic:
+    case ::bt::hci_spec::LEAddressType::kPublic:
       return "public";
-    case ::bt::hci::LEAddressType::kRandom:
+    case ::bt::hci_spec::LEAddressType::kRandom:
       return "random";
-    case ::bt::hci::LEAddressType::kPublicIdentity:
+    case ::bt::hci_spec::LEAddressType::kPublicIdentity:
       return "public-identity (resolved private)";
-    case ::bt::hci::LEAddressType::kRandomIdentity:
+    case ::bt::hci_spec::LEAddressType::kRandomIdentity:
       return "random-identity (resolved private)";
     default:
       break;
@@ -116,7 +116,7 @@ std::vector<std::string> AdvFlagsToStrings(uint8_t flags) {
   return flags_list;
 }
 
-void DisplayAdvertisingReport(const ::bt::hci::LEAdvertisingReportData& data, int8_t rssi,
+void DisplayAdvertisingReport(const bt::hci_spec::LEAdvertisingReportData& data, int8_t rssi,
                               const std::string& name_filter, const std::string& addr_type_filter) {
   ::bt::SupplementDataReader reader(::bt::BufferView(data.data, data.length_data));
 
@@ -157,11 +157,12 @@ void DisplayAdvertisingReport(const ::bt::hci::LEAdvertisingReportData& data, in
   // Apply the address type filter.
   if (!addr_type_filter.empty()) {
     FX_DCHECK(addr_type_filter == "public" || addr_type_filter == "random");
-    if (addr_type_filter == "public" && data.address_type != ::bt::hci::LEAddressType::kPublic &&
-        data.address_type != ::bt::hci::LEAddressType::kPublicIdentity)
+    if (addr_type_filter == "public" && data.address_type != bt::hci_spec::LEAddressType::kPublic &&
+        data.address_type != ::bt::hci_spec::LEAddressType::kPublicIdentity)
       return;
-    if (addr_type_filter == "random" && data.address_type != ::bt::hci::LEAddressType::kRandom &&
-        data.address_type != ::bt::hci::LEAddressType::kRandomIdentity)
+    if (addr_type_filter == "random" &&
+        data.address_type != ::bt::hci_spec::LEAddressType::kRandom &&
+        data.address_type != ::bt::hci_spec::LEAddressType::kRandomIdentity)
       return;
   }
 
@@ -185,7 +186,7 @@ void DisplayAdvertisingReport(const ::bt::hci::LEAdvertisingReportData& data, in
   }
 }
 
-void DisplayInquiryResult(const ::bt::hci::InquiryResult& result) {
+void DisplayInquiryResult(const bt::hci_spec::InquiryResult& result) {
   std::cout << "  Result: " << result.bd_addr.ToString() << " ("
             << result.class_of_device.ToString() << ")" << std::endl;
 }
@@ -199,23 +200,23 @@ bool HandleVersionInfo(const CommandData* cmd_data, const fxl::CommandLine& cmd_
 
   auto cb = [complete_cb = complete_cb.share()](::bt::hci::CommandChannel::TransactionId id,
                                                 const ::bt::hci::EventPacket& event) {
-    auto params = event.return_params<::bt::hci::ReadLocalVersionInfoReturnParams>();
+    auto params = event.return_params<::bt::hci_spec::ReadLocalVersionInfoReturnParams>();
     LogCommandResult(params->status, id);
-    if (params->status != ::bt::hci::StatusCode::kSuccess) {
+    if (params->status != bt::hci_spec::StatusCode::kSuccess) {
       complete_cb();
       return;
     }
 
     std::cout << "  Version Info:" << std::endl;
-    std::cout << "    HCI Version: Core Spec " << ::bt::hci::HCIVersionToString(params->hci_version)
-              << std::endl;
+    std::cout << "    HCI Version: Core Spec "
+              << bt::hci_spec::HCIVersionToString(params->hci_version) << std::endl;
     std::cout << "    Manufacturer Name: "
               << ::bt::GetManufacturerName(le16toh(params->manufacturer_name)) << std::endl;
 
     complete_cb();
   };
 
-  auto packet = ::bt::hci::CommandPacket::New(::bt::hci::kReadLocalVersionInfo);
+  auto packet = ::bt::hci::CommandPacket::New(::bt::hci_spec::kReadLocalVersionInfo);
   auto id = SendCommand(cmd_data, std::move(packet), std::move(cb), std::move(complete_cb));
 
   std::cout << "  Sent HCI_Read_Local_Version_Information (id=" << id << ")" << std::endl;
@@ -229,7 +230,7 @@ bool HandleReset(const CommandData* cmd_data, const fxl::CommandLine& cmd_line,
     return false;
   }
 
-  auto packet = ::bt::hci::CommandPacket::New(::bt::hci::kReset);
+  auto packet = ::bt::hci::CommandPacket::New(::bt::hci_spec::kReset);
   auto id = SendCompleteCommand(cmd_data, std::move(packet), std::move(complete_cb));
 
   std::cout << "  Sent HCI_Reset (id=" << id << ")" << std::endl;
@@ -246,9 +247,9 @@ bool HandleReadBDADDR(const CommandData* cmd_data, const fxl::CommandLine& cmd_l
 
   auto cb = [complete_cb = complete_cb.share()](::bt::hci::CommandChannel::TransactionId id,
                                                 const ::bt::hci::EventPacket& event) {
-    auto return_params = event.return_params<::bt::hci::ReadBDADDRReturnParams>();
+    auto return_params = event.return_params<::bt::hci_spec::ReadBDADDRReturnParams>();
     LogCommandResult(return_params->status, id);
-    if (return_params->status != ::bt::hci::StatusCode::kSuccess) {
+    if (return_params->status != bt::hci_spec::StatusCode::kSuccess) {
       complete_cb();
       return;
     }
@@ -257,7 +258,7 @@ bool HandleReadBDADDR(const CommandData* cmd_data, const fxl::CommandLine& cmd_l
     complete_cb();
   };
 
-  auto packet = ::bt::hci::CommandPacket::New(::bt::hci::kReadBDADDR);
+  auto packet = ::bt::hci::CommandPacket::New(::bt::hci_spec::kReadBDADDR);
   auto id = SendCommand(cmd_data, std::move(packet), std::move(cb), std::move(complete_cb));
 
   std::cout << "  Sent HCI_Read_BDADDR (id=" << id << ")" << std::endl;
@@ -274,9 +275,9 @@ bool HandleReadLocalName(const CommandData* cmd_data, const fxl::CommandLine& cm
 
   auto cb = [complete_cb = complete_cb.share()](::bt::hci::CommandChannel::TransactionId id,
                                                 const ::bt::hci::EventPacket& event) {
-    auto return_params = event.return_params<::bt::hci::ReadLocalNameReturnParams>();
+    auto return_params = event.return_params<::bt::hci_spec::ReadLocalNameReturnParams>();
     LogCommandResult(return_params->status, id);
-    if (return_params->status != ::bt::hci::StatusCode::kSuccess) {
+    if (return_params->status != ::bt::hci_spec::StatusCode::kSuccess) {
       complete_cb();
       return;
     }
@@ -286,7 +287,7 @@ bool HandleReadLocalName(const CommandData* cmd_data, const fxl::CommandLine& cm
     complete_cb();
   };
 
-  auto packet = ::bt::hci::CommandPacket::New(::bt::hci::kReadLocalName);
+  auto packet = ::bt::hci::CommandPacket::New(::bt::hci_spec::kReadLocalName);
   auto id = SendCommand(cmd_data, std::move(packet), std::move(cb), std::move(complete_cb));
   std::cout << "  Sent HCI_Read_Local_Name (id=" << id << ")" << std::endl;
 
@@ -301,9 +302,10 @@ bool HandleWriteLocalName(const CommandData* cmd_data, const fxl::CommandLine& c
   }
 
   const std::string& name = cmd_line.positional_args()[0];
-  auto packet = ::bt::hci::CommandPacket::New(::bt::hci::kWriteLocalName, name.length() + 1);
-  std::strcpy((char*)packet->mutable_payload<::bt::hci::WriteLocalNameCommandParams>()->local_name,
-              name.c_str());
+  auto packet = ::bt::hci::CommandPacket::New(::bt::hci_spec::kWriteLocalName, name.length() + 1);
+  std::strcpy(
+      (char*)packet->mutable_payload<::bt::hci_spec::WriteLocalNameCommandParams>()->local_name,
+      name.c_str());
 
   auto id = SendCompleteCommand(cmd_data, std::move(packet), std::move(complete_cb));
   std::cout << "  Sent HCI_Write_Local_Name (id=" << id << ")" << std::endl;
@@ -329,9 +331,9 @@ bool HandleSetEventMask(const CommandData* cmd_data, const fxl::CommandLine& cmd
     return false;
   }
 
-  constexpr size_t kPayloadSize = sizeof(::bt::hci::SetEventMaskCommandParams);
-  auto packet = ::bt::hci::CommandPacket::New(::bt::hci::kSetEventMask, kPayloadSize);
-  packet->mutable_payload<::bt::hci::SetEventMaskCommandParams>()->event_mask = htole64(mask);
+  constexpr size_t kPayloadSize = sizeof(::bt::hci_spec::SetEventMaskCommandParams);
+  auto packet = ::bt::hci::CommandPacket::New(::bt::hci_spec::kSetEventMask, kPayloadSize);
+  packet->mutable_payload<::bt::hci_spec::SetEventMaskCommandParams>()->event_mask = htole64(mask);
 
   auto id = SendCompleteCommand(cmd_data, std::move(packet), std::move(complete_cb));
 
@@ -347,23 +349,24 @@ bool HandleLESetAdvEnable(const CommandData* cmd_data, const fxl::CommandLine& c
     return false;
   }
 
-  ::bt::hci::GenericEnableParam value;
+  ::bt::hci_spec::GenericEnableParam value;
   std::string cmd_arg = cmd_line.positional_args()[0];
   if (cmd_arg == "enable") {
-    value = ::bt::hci::GenericEnableParam::kEnable;
+    value = ::bt::hci_spec::GenericEnableParam::kEnable;
   } else if (cmd_arg == "disable") {
-    value = ::bt::hci::GenericEnableParam::kDisable;
+    value = ::bt::hci_spec::GenericEnableParam::kDisable;
   } else {
     std::cout << "  Unrecognized parameter: " << cmd_arg << std::endl;
     std::cout << "  Usage: set-adv-enable [enable|disable]" << std::endl;
     return false;
   }
 
-  constexpr size_t kPayloadSize = sizeof(::bt::hci::LESetAdvertisingEnableCommandParams);
+  constexpr size_t kPayloadSize = sizeof(::bt::hci_spec::LESetAdvertisingEnableCommandParams);
 
-  auto packet = ::bt::hci::CommandPacket::New(::bt::hci::kLESetAdvertisingEnable, kPayloadSize);
-  packet->mutable_payload<::bt::hci::LESetAdvertisingEnableCommandParams>()->advertising_enable =
-      value;
+  auto packet =
+      ::bt::hci::CommandPacket::New(::bt::hci_spec::kLESetAdvertisingEnable, kPayloadSize);
+  packet->mutable_payload<::bt::hci_spec::LESetAdvertisingEnableCommandParams>()
+      ->advertising_enable = value;
 
   auto id = SendCompleteCommand(cmd_data, std::move(packet), std::move(complete_cb));
 
@@ -391,36 +394,37 @@ bool HandleLESetAdvParams(const CommandData* cmd_data, const fxl::CommandLine& c
     return false;
   }
 
-  ::bt::hci::LEAdvertisingType adv_type = ::bt::hci::LEAdvertisingType::kAdvNonConnInd;
+  ::bt::hci_spec::LEAdvertisingType adv_type = ::bt::hci_spec::LEAdvertisingType::kAdvNonConnInd;
   std::string type;
   if (cmd_line.GetOptionValue("type", &type)) {
     if (type == "adv-ind") {
-      adv_type = ::bt::hci::LEAdvertisingType::kAdvInd;
+      adv_type = ::bt::hci_spec::LEAdvertisingType::kAdvInd;
     } else if (type == "direct-low") {
-      adv_type = ::bt::hci::LEAdvertisingType::kAdvDirectIndLowDutyCycle;
+      adv_type = ::bt::hci_spec::LEAdvertisingType::kAdvDirectIndLowDutyCycle;
     } else if (type == "direct-high") {
-      adv_type = ::bt::hci::LEAdvertisingType::kAdvDirectIndHighDutyCycle;
+      adv_type = ::bt::hci_spec::LEAdvertisingType::kAdvDirectIndHighDutyCycle;
     } else if (type == "scan") {
-      adv_type = ::bt::hci::LEAdvertisingType::kAdvScanInd;
+      adv_type = ::bt::hci_spec::LEAdvertisingType::kAdvScanInd;
     } else if (type == "nonconn") {
-      adv_type = ::bt::hci::LEAdvertisingType::kAdvNonConnInd;
+      adv_type = ::bt::hci_spec::LEAdvertisingType::kAdvNonConnInd;
     } else {
       std::cout << "  Unrecognized advertising type: " << type << std::endl;
       return false;
     }
   }
 
-  constexpr size_t kPayloadSize = sizeof(::bt::hci::LESetAdvertisingParametersCommandParams);
-  auto packet = ::bt::hci::CommandPacket::New(::bt::hci::kLESetAdvertisingParameters, kPayloadSize);
-  auto params = packet->mutable_payload<::bt::hci::LESetAdvertisingParametersCommandParams>();
-  params->adv_interval_min = htole16(::bt::hci::kLEAdvertisingIntervalDefault);
-  params->adv_interval_max = htole16(::bt::hci::kLEAdvertisingIntervalDefault);
+  constexpr size_t kPayloadSize = sizeof(::bt::hci_spec::LESetAdvertisingParametersCommandParams);
+  auto packet =
+      ::bt::hci::CommandPacket::New(::bt::hci_spec::kLESetAdvertisingParameters, kPayloadSize);
+  auto params = packet->mutable_payload<::bt::hci_spec::LESetAdvertisingParametersCommandParams>();
+  params->adv_interval_min = htole16(::bt::hci_spec::kLEAdvertisingIntervalDefault);
+  params->adv_interval_max = htole16(::bt::hci_spec::kLEAdvertisingIntervalDefault);
   params->adv_type = adv_type;
-  params->own_address_type = ::bt::hci::LEOwnAddressType::kPublic;
-  params->peer_address_type = ::bt::hci::LEPeerAddressType::kPublic;
+  params->own_address_type = ::bt::hci_spec::LEOwnAddressType::kPublic;
+  params->peer_address_type = ::bt::hci_spec::LEPeerAddressType::kPublic;
   params->peer_address.SetToZero();
-  params->adv_channel_map = ::bt::hci::kLEAdvertisingChannelAll;
-  params->adv_filter_policy = ::bt::hci::LEAdvFilterPolicy::kAllowAll;
+  params->adv_channel_map = ::bt::hci_spec::kLEAdvertisingChannelAll;
+  params->adv_filter_policy = ::bt::hci_spec::LEAdvFilterPolicy::kAllowAll;
 
   auto id = SendCompleteCommand(cmd_data, std::move(packet), std::move(complete_cb));
 
@@ -444,8 +448,8 @@ bool HandleLESetAdvData(const CommandData* cmd_data, const fxl::CommandLine& cmd
     return false;
   }
 
-  constexpr size_t kPayloadSize = sizeof(::bt::hci::LESetAdvertisingDataCommandParams);
-  auto packet = ::bt::hci::CommandPacket::New(::bt::hci::kLESetAdvertisingData, kPayloadSize);
+  constexpr size_t kPayloadSize = sizeof(::bt::hci_spec::LESetAdvertisingDataCommandParams);
+  auto packet = ::bt::hci::CommandPacket::New(::bt::hci_spec::kLESetAdvertisingData, kPayloadSize);
   packet->mutable_view()->mutable_payload_data().SetToZeros();
 
   std::string name;
@@ -453,18 +457,19 @@ bool HandleLESetAdvData(const CommandData* cmd_data, const fxl::CommandLine& cmd
     // Each advertising data structure consists of a 1 octet length field, 1
     // octet type field.
     size_t adv_data_len = 2 + name.length();
-    if (adv_data_len > ::bt::hci::kMaxLEAdvertisingDataLength) {
+    if (adv_data_len > ::bt::hci_spec::kMaxLEAdvertisingDataLength) {
       std::cout << "  Given name is too long" << std::endl;
       return false;
     }
 
-    auto params = packet->mutable_payload<::bt::hci::LESetAdvertisingDataCommandParams>();
+    auto params = packet->mutable_payload<::bt::hci_spec::LESetAdvertisingDataCommandParams>();
     params->adv_data_length = adv_data_len;
     params->adv_data[0] = adv_data_len - 1;
     params->adv_data[1] = 0x09;  // Complete Local Name
     std::strncpy((char*)params->adv_data + 2, name.c_str(), name.length());
   } else {
-    packet->mutable_payload<::bt::hci::LESetAdvertisingDataCommandParams>()->adv_data_length = 0;
+    packet->mutable_payload<::bt::hci_spec::LESetAdvertisingDataCommandParams>()->adv_data_length =
+        0;
   }
 
   auto id = SendCompleteCommand(cmd_data, std::move(packet), std::move(complete_cb));
@@ -491,28 +496,28 @@ bool HandleLESetScanParams(const CommandData* cmd_data, const fxl::CommandLine& 
     return false;
   }
 
-  ::bt::hci::LEScanType scan_type = ::bt::hci::LEScanType::kPassive;
+  ::bt::hci_spec::LEScanType scan_type = ::bt::hci_spec::LEScanType::kPassive;
   std::string type;
   if (cmd_line.GetOptionValue("type", &type)) {
     if (type == "passive") {
-      scan_type = ::bt::hci::LEScanType::kPassive;
+      scan_type = ::bt::hci_spec::LEScanType::kPassive;
     } else if (type == "active") {
-      scan_type = ::bt::hci::LEScanType::kActive;
+      scan_type = ::bt::hci_spec::LEScanType::kActive;
     } else {
       std::cout << "  Unrecognized scan type: " << type << std::endl;
       return false;
     }
   }
 
-  constexpr size_t kPayloadSize = sizeof(::bt::hci::LESetScanParametersCommandParams);
-  auto packet = ::bt::hci::CommandPacket::New(::bt::hci::kLESetScanParameters, kPayloadSize);
+  constexpr size_t kPayloadSize = sizeof(::bt::hci_spec::LESetScanParametersCommandParams);
+  auto packet = ::bt::hci::CommandPacket::New(::bt::hci_spec::kLESetScanParameters, kPayloadSize);
 
-  auto params = packet->mutable_payload<::bt::hci::LESetScanParametersCommandParams>();
+  auto params = packet->mutable_payload<::bt::hci_spec::LESetScanParametersCommandParams>();
   params->scan_type = scan_type;
-  params->scan_interval = htole16(::bt::hci::kLEScanIntervalDefault);
-  params->scan_window = htole16(::bt::hci::kLEScanIntervalDefault);
-  params->own_address_type = ::bt::hci::LEOwnAddressType::kPublic;
-  params->filter_policy = ::bt::hci::LEScanFilterPolicy::kNoWhiteList;
+  params->scan_interval = htole16(::bt::hci_spec::kLEScanIntervalDefault);
+  params->scan_window = htole16(::bt::hci_spec::kLEScanIntervalDefault);
+  params->own_address_type = ::bt::hci_spec::LEOwnAddressType::kPublic;
+  params->filter_policy = ::bt::hci_spec::LEScanFilterPolicy::kNoWhiteList;
 
   auto id = SendCompleteCommand(cmd_data, std::move(packet), std::move(complete_cb));
 
@@ -566,26 +571,27 @@ bool HandleLEScan(const CommandData* cmd_data, const fxl::CommandLine& cmd_line,
     return false;
   }
 
-  ::bt::hci::GenericEnableParam filter_duplicates = ::bt::hci::GenericEnableParam::kEnable;
+  ::bt::hci_spec::GenericEnableParam filter_duplicates =
+      ::bt::hci_spec::GenericEnableParam::kEnable;
   if (cmd_line.HasOption("no-dedup")) {
-    filter_duplicates = ::bt::hci::GenericEnableParam::kDisable;
+    filter_duplicates = ::bt::hci_spec::GenericEnableParam::kDisable;
   }
 
-  constexpr size_t kPayloadSize = sizeof(::bt::hci::LESetScanEnableCommandParams);
-  auto packet = ::bt::hci::CommandPacket::New(::bt::hci::kLESetScanEnable, kPayloadSize);
+  constexpr size_t kPayloadSize = sizeof(::bt::hci_spec::LESetScanEnableCommandParams);
+  auto packet = ::bt::hci::CommandPacket::New(::bt::hci_spec::kLESetScanEnable, kPayloadSize);
 
-  auto params = packet->mutable_payload<::bt::hci::LESetScanEnableCommandParams>();
-  params->scanning_enabled = ::bt::hci::GenericEnableParam::kEnable;
+  auto params = packet->mutable_payload<::bt::hci_spec::LESetScanEnableCommandParams>();
+  params->scanning_enabled = ::bt::hci_spec::GenericEnableParam::kEnable;
   params->filter_duplicates = filter_duplicates;
 
   // Event handler to log when we receive advertising reports
   auto le_adv_report_cb = [name_filter, addr_type_filter](const ::bt::hci::EventPacket& event) {
-    FX_DCHECK(event.event_code() == ::bt::hci::kLEMetaEventCode);
-    FX_DCHECK(event.params<::bt::hci::LEMetaEventParams>().subevent_code ==
-              ::bt::hci::kLEAdvertisingReportSubeventCode);
+    FX_DCHECK(event.event_code() == ::bt::hci_spec::kLEMetaEventCode);
+    FX_DCHECK(event.params<::bt::hci_spec::LEMetaEventParams>().subevent_code ==
+              ::bt::hci_spec::kLEAdvertisingReportSubeventCode);
 
     ::bt::hci::AdvertisingReportParser parser(event);
-    const ::bt::hci::LEAdvertisingReportData* data;
+    const ::bt::hci_spec::LEAdvertisingReportData* data;
     int8_t rssi;
     while (parser.GetNextReport(&data, &rssi)) {
       DisplayAdvertisingReport(*data, rssi, name_filter, addr_type_filter);
@@ -593,7 +599,7 @@ bool HandleLEScan(const CommandData* cmd_data, const fxl::CommandLine& cmd_line,
     return ::bt::hci::CommandChannel::EventCallbackResult::kContinue;
   };
   auto event_handler_id = cmd_data->cmd_channel()->AddLEMetaEventHandler(
-      ::bt::hci::kLEAdvertisingReportSubeventCode, le_adv_report_cb);
+      ::bt::hci_spec::kLEAdvertisingReportSubeventCode, le_adv_report_cb);
 
   fit::closure cleanup_cb = [complete_cb = complete_cb.share(), event_handler_id,
                              cmd_channel = cmd_data->cmd_channel()] {
@@ -604,7 +610,7 @@ bool HandleLEScan(const CommandData* cmd_data, const fxl::CommandLine& cmd_line,
   // The callback invoked after scanning is stopped.
   auto final_cb = [cleanup_cb = cleanup_cb.share()](::bt::hci::CommandChannel::TransactionId id,
                                                     const ::bt::hci::EventPacket& event) {
-    auto return_params = event.return_params<::bt::hci::SimpleReturnParams>();
+    auto return_params = event.return_params<::bt::hci_spec::SimpleReturnParams>();
     LogCommandResult(return_params->status, id);
     cleanup_cb();
   };
@@ -612,10 +618,10 @@ bool HandleLEScan(const CommandData* cmd_data, const fxl::CommandLine& cmd_line,
   // Delayed task that stops scanning.
   auto scan_disable_cb = [cleanup_cb = cleanup_cb.share(), final_cb = std::move(final_cb),
                           cmd_data]() mutable {
-    auto packet = ::bt::hci::CommandPacket::New(::bt::hci::kLESetScanEnable, kPayloadSize);
-    auto params = packet->mutable_payload<::bt::hci::LESetScanEnableCommandParams>();
-    params->scanning_enabled = ::bt::hci::GenericEnableParam::kDisable;
-    params->filter_duplicates = ::bt::hci::GenericEnableParam::kDisable;
+    auto packet = ::bt::hci::CommandPacket::New(::bt::hci_spec::kLESetScanEnable, kPayloadSize);
+    auto params = packet->mutable_payload<::bt::hci_spec::LESetScanEnableCommandParams>();
+    params->scanning_enabled = ::bt::hci_spec::GenericEnableParam::kDisable;
+    params->filter_duplicates = ::bt::hci_spec::GenericEnableParam::kDisable;
 
     auto id = SendCommand(cmd_data, std::move(packet), std::move(final_cb), std::move(cleanup_cb));
 
@@ -625,9 +631,9 @@ bool HandleLEScan(const CommandData* cmd_data, const fxl::CommandLine& cmd_line,
   auto cb = [scan_disable_cb = std::move(scan_disable_cb), cleanup_cb = cleanup_cb.share(), timeout,
              dispatcher = cmd_data->dispatcher()](::bt::hci::CommandChannel::TransactionId id,
                                                   const ::bt::hci::EventPacket& event) mutable {
-    auto return_params = event.return_params<::bt::hci::SimpleReturnParams>();
+    auto return_params = event.return_params<::bt::hci_spec::SimpleReturnParams>();
     LogCommandResult(return_params->status, id);
-    if (return_params->status != ::bt::hci::StatusCode::kSuccess) {
+    if (return_params->status != ::bt::hci_spec::StatusCode::kSuccess) {
       cleanup_cb();
       return;
     }
@@ -699,13 +705,13 @@ bool HandleBRScan(const CommandData* cmd_data, const fxl::CommandLine& cmd_line,
     max_responses = uint8_t(responses);
   }
 
-  constexpr size_t kPayloadSize = sizeof(::bt::hci::InquiryCommandParams);
-  auto packet = ::bt::hci::CommandPacket::New(::bt::hci::kInquiry, kPayloadSize);
-  auto params = packet->mutable_payload<::bt::hci::InquiryCommandParams>();
+  constexpr size_t kPayloadSize = sizeof(::bt::hci_spec::InquiryCommandParams);
+  auto packet = ::bt::hci::CommandPacket::New(::bt::hci_spec::kInquiry, kPayloadSize);
+  auto params = packet->mutable_payload<::bt::hci_spec::InquiryCommandParams>();
 
-  params->lap = ::bt::hci::kGIAC;
+  params->lap = ::bt::hci_spec::kGIAC;
   // Always use the maximum inquiry length, we will time it more accurately.
-  params->inquiry_length = ::bt::hci::kInquiryLengthMax;
+  params->inquiry_length = ::bt::hci_spec::kInquiryLengthMax;
   params->num_responses = max_responses;
 
   auto event_handler_ids = std::make_shared<std::vector<bt::hci::CommandChannel::EventHandlerId>>();
@@ -719,9 +725,9 @@ bool HandleBRScan(const CommandData* cmd_data, const fxl::CommandLine& cmd_line,
 
   // Event handler to log when we receive advertising reports
   auto inquiry_result_cb = [filter](const ::bt::hci::EventPacket& event) {
-    FX_DCHECK(event.event_code() == ::bt::hci::kInquiryResultEventCode);
+    FX_DCHECK(event.event_code() == ::bt::hci_spec::kInquiryResultEventCode);
 
-    const auto& result = event.params<::bt::hci::InquiryResultEventParams>();
+    const auto& result = event.params<::bt::hci_spec::InquiryResultEventParams>();
 
     for (int i = 0; i < result.num_responses; i++) {
       if (!filter.empty() &&
@@ -734,23 +740,23 @@ bool HandleBRScan(const CommandData* cmd_data, const fxl::CommandLine& cmd_line,
   };
 
   event_handler_ids->push_back(cmd_data->cmd_channel()->AddEventHandler(
-      ::bt::hci::kInquiryResultEventCode, std::move(inquiry_result_cb)));
+      ::bt::hci_spec::kInquiryResultEventCode, std::move(inquiry_result_cb)));
 
   // The callback invoked for an Inquiry Complete response.
   auto inquiry_complete_cb = [cleanup_cb =
                                   cleanup_cb.share()](const ::bt::hci::EventPacket& event) mutable {
-    auto params = event.params<::bt::hci::InquiryCompleteEventParams>();
+    auto params = event.params<::bt::hci_spec::InquiryCompleteEventParams>();
     std::cout << fxl::StringPrintf("  Inquiry Complete - status: 0x%02x\n", params.status);
     cleanup_cb();
     return ::bt::hci::CommandChannel::EventCallbackResult::kContinue;
   };
 
   event_handler_ids->push_back(cmd_data->cmd_channel()->AddEventHandler(
-      ::bt::hci::kInquiryCompleteEventCode, std::move(inquiry_complete_cb)));
+      ::bt::hci_spec::kInquiryCompleteEventCode, std::move(inquiry_complete_cb)));
 
   // Delayed task that stops scanning.
   auto inquiry_cancel_cb = [cleanup_cb = cleanup_cb.share(), cmd_data]() mutable {
-    auto packet = ::bt::hci::CommandPacket::New(::bt::hci::kInquiryCancel, 0);
+    auto packet = ::bt::hci::CommandPacket::New(::bt::hci_spec::kInquiryCancel, 0);
     auto id = SendCompleteCommand(cmd_data, std::move(packet), std::move(cleanup_cb));
     std::cout << "  Sent HCI_Inquiry_Cancel (id=" << id << ")" << std::endl;
   };
@@ -759,9 +765,9 @@ bool HandleBRScan(const CommandData* cmd_data, const fxl::CommandLine& cmd_line,
              timeout,
              dispatcher = cmd_data->dispatcher()](::bt::hci::CommandChannel::TransactionId id,
                                                   const ::bt::hci::EventPacket& event) mutable {
-    auto return_params = event.params<::bt::hci::CommandStatusEventParams>();
+    auto return_params = event.params<::bt::hci_spec::CommandStatusEventParams>();
     LogCommandResult(return_params.status, id, "Command Status");
-    if (return_params.status != ::bt::hci::StatusCode::kSuccess) {
+    if (return_params.status != ::bt::hci_spec::StatusCode::kSuccess) {
       cleanup_cb();
       return;
     }
@@ -772,7 +778,7 @@ bool HandleBRScan(const CommandData* cmd_data, const fxl::CommandLine& cmd_line,
   // or the timer to run out, for a long time. Count this as "complete" when the
   // Status comes in.
   auto id = cmd_data->cmd_channel()->SendCommand(std::move(packet), std::move(cb),
-                                                 ::bt::hci::kCommandStatusEventCode);
+                                                 ::bt::hci_spec::kCommandStatusEventCode);
   std::cout << "  Sent HCI_Inquiry (id=" << id << ")" << std::endl;
 
   return true;
@@ -798,20 +804,20 @@ bool HandleWritePageScanActivity(const CommandData* cmd_data, const fxl::Command
     return false;
   }
 
-  uint16_t page_scan_interval = ::bt::hci::kPageScanR1Interval;
-  uint16_t page_scan_window = ::bt::hci::kPageScanR1Window;
+  uint16_t page_scan_interval = ::bt::hci_spec::kPageScanR1Interval;
+  uint16_t page_scan_window = ::bt::hci_spec::kPageScanR1Window;
 
   std::string mode_str;
   if (cmd_line.GetOptionValue("mode", &mode_str)) {
     if (mode_str == "R0") {
-      page_scan_interval = ::bt::hci::kPageScanR0Interval;
-      page_scan_window = ::bt::hci::kPageScanR0Window;
+      page_scan_interval = ::bt::hci_spec::kPageScanR0Interval;
+      page_scan_window = ::bt::hci_spec::kPageScanR0Window;
     } else if (mode_str == "R1") {
-      page_scan_interval = ::bt::hci::kPageScanR1Interval;
-      page_scan_window = ::bt::hci::kPageScanR1Window;
+      page_scan_interval = ::bt::hci_spec::kPageScanR1Interval;
+      page_scan_window = ::bt::hci_spec::kPageScanR1Window;
     } else if (mode_str == "R2") {
-      page_scan_interval = ::bt::hci::kPageScanR2Interval;
-      page_scan_window = ::bt::hci::kPageScanR2Window;
+      page_scan_interval = ::bt::hci_spec::kPageScanR2Interval;
+      page_scan_window = ::bt::hci_spec::kPageScanR2Window;
     } else {
       std::cout << "  Unrecognized mode value: " << mode_str << std::endl;
       return false;
@@ -826,8 +832,8 @@ bool HandleWritePageScanActivity(const CommandData* cmd_data, const fxl::Command
       std::cout << "  Malformed interval value: " << interval_str << std::endl;
       return false;
     }
-    if (parsed_interval < ::bt::hci::kPageScanIntervalMin ||
-        parsed_interval > ::bt::hci::kPageScanIntervalMax) {
+    if (parsed_interval < ::bt::hci_spec::kPageScanIntervalMin ||
+        parsed_interval > ::bt::hci_spec::kPageScanIntervalMax) {
       std::cout << "  Interval value is out of the allowed range." << std::endl;
       return false;
     }
@@ -846,8 +852,8 @@ bool HandleWritePageScanActivity(const CommandData* cmd_data, const fxl::Command
       std::cout << "  Malformed window value: " << window_str << std::endl;
       return false;
     }
-    if (parsed_window < ::bt::hci::kPageScanWindowMin ||
-        parsed_window > ::bt::hci::kPageScanWindowMax) {
+    if (parsed_window < ::bt::hci_spec::kPageScanWindowMin ||
+        parsed_window > ::bt::hci_spec::kPageScanWindowMax) {
       std::cout << "  Window value is out of the allowed range." << std::endl;
       return false;
     }
@@ -859,9 +865,9 @@ bool HandleWritePageScanActivity(const CommandData* cmd_data, const fxl::Command
     page_scan_window = parsed_window;
   }
 
-  constexpr size_t kPayloadSize = sizeof(::bt::hci::WritePageScanActivityCommandParams);
-  auto packet = ::bt::hci::CommandPacket::New(::bt::hci::kWritePageScanActivity, kPayloadSize);
-  auto params = packet->mutable_payload<::bt::hci::WritePageScanActivityCommandParams>();
+  constexpr size_t kPayloadSize = sizeof(::bt::hci_spec::WritePageScanActivityCommandParams);
+  auto packet = ::bt::hci::CommandPacket::New(::bt::hci_spec::kWritePageScanActivity, kPayloadSize);
+  auto params = packet->mutable_payload<::bt::hci_spec::WritePageScanActivityCommandParams>();
   params->page_scan_interval = page_scan_interval;
   params->page_scan_window = page_scan_window;
 
@@ -881,9 +887,9 @@ bool HandleReadPageScanActivity(const CommandData* cmd_data, const fxl::CommandL
 
   auto cb = [complete_cb = complete_cb.share()](::bt::hci::CommandChannel::TransactionId id,
                                                 const ::bt::hci::EventPacket& event) {
-    auto return_params = event.return_params<::bt::hci::ReadPageScanActivityReturnParams>();
+    auto return_params = event.return_params<::bt::hci_spec::ReadPageScanActivityReturnParams>();
     LogCommandResult(return_params->status, id);
-    if (return_params->status != ::bt::hci::StatusCode::kSuccess) {
+    if (return_params->status != ::bt::hci_spec::StatusCode::kSuccess) {
       complete_cb();
       return;
     }
@@ -894,7 +900,7 @@ bool HandleReadPageScanActivity(const CommandData* cmd_data, const fxl::CommandL
     complete_cb();
   };
 
-  auto packet = ::bt::hci::CommandPacket::New(::bt::hci::kReadPageScanActivity);
+  auto packet = ::bt::hci::CommandPacket::New(::bt::hci_spec::kReadPageScanActivity);
   auto id = SendCommand(cmd_data, std::move(packet), std::move(cb), std::move(complete_cb));
   std::cout << "  Sent HCI_Read_Page_Scan_Activity (id=" << id << ")" << std::endl;
 
@@ -916,22 +922,22 @@ bool HandleWritePageScanType(const CommandData* cmd_data, const fxl::CommandLine
     return false;
   }
 
-  ::bt::hci::PageScanType page_scan_type = ::bt::hci::PageScanType::kStandardScan;
+  ::bt::hci_spec::PageScanType page_scan_type = ::bt::hci_spec::PageScanType::kStandardScan;
   std::string type_str;
   if (cmd_line.GetOptionValue("type", &type_str)) {
     if (type_str == "standard") {
-      page_scan_type = ::bt::hci::PageScanType::kStandardScan;
+      page_scan_type = ::bt::hci_spec::PageScanType::kStandardScan;
     } else if (type_str == "interlaced") {
-      page_scan_type = ::bt::hci::PageScanType::kInterlacedScan;
+      page_scan_type = ::bt::hci_spec::PageScanType::kInterlacedScan;
     } else {
       std::cout << "  Unrecognized type: " << type_str << std::endl;
     }
   }
 
-  constexpr size_t kPayloadSize = sizeof(::bt::hci::WritePageScanTypeCommandParams);
-  auto packet = ::bt::hci::CommandPacket::New(::bt::hci::kWritePageScanType, kPayloadSize);
+  constexpr size_t kPayloadSize = sizeof(::bt::hci_spec::WritePageScanTypeCommandParams);
+  auto packet = ::bt::hci::CommandPacket::New(::bt::hci_spec::kWritePageScanType, kPayloadSize);
 
-  packet->mutable_payload<::bt::hci::WritePageScanTypeCommandParams>()->page_scan_type =
+  packet->mutable_payload<::bt::hci_spec::WritePageScanTypeCommandParams>()->page_scan_type =
       page_scan_type;
 
   auto id = SendCompleteCommand(cmd_data, std::move(packet), std::move(complete_cb));
@@ -950,16 +956,16 @@ bool HandleReadPageScanType(const CommandData* cmd_data, const fxl::CommandLine&
 
   auto cb = [complete_cb = complete_cb.share()](::bt::hci::CommandChannel::TransactionId id,
                                                 const ::bt::hci::EventPacket& event) {
-    auto return_params = event.return_params<::bt::hci::ReadPageScanTypeReturnParams>();
+    auto return_params = event.return_params<::bt::hci_spec::ReadPageScanTypeReturnParams>();
     LogCommandResult(return_params->status, id);
-    if (return_params->status != ::bt::hci::StatusCode::kSuccess) {
+    if (return_params->status != ::bt::hci_spec::StatusCode::kSuccess) {
       complete_cb();
       return;
     }
 
-    if (return_params->page_scan_type == ::bt::hci::PageScanType::kStandardScan) {
+    if (return_params->page_scan_type == ::bt::hci_spec::PageScanType::kStandardScan) {
       std::cout << "  Type: standard" << std::endl;
-    } else if (return_params->page_scan_type == ::bt::hci::PageScanType::kInterlacedScan) {
+    } else if (return_params->page_scan_type == ::bt::hci_spec::PageScanType::kInterlacedScan) {
       std::cout << "  Type: interlaced" << std::endl;
     } else {
       std::cout << "  Type: unknown" << std::endl;
@@ -968,7 +974,7 @@ bool HandleReadPageScanType(const CommandData* cmd_data, const fxl::CommandLine&
     complete_cb();
   };
 
-  auto packet = ::bt::hci::CommandPacket::New(::bt::hci::kReadPageScanType);
+  auto packet = ::bt::hci::CommandPacket::New(::bt::hci_spec::kReadPageScanType);
   auto id = SendCommand(cmd_data, std::move(packet), std::move(cb), std::move(complete_cb));
   std::cout << "  Sent HCI_Read_Page_Scan_Type (id=" << id << ")" << std::endl;
 
@@ -992,22 +998,23 @@ bool HandleWriteScanEnable(const CommandData* cmd_data, const fxl::CommandLine& 
     return false;
   }
 
-  ::bt::hci::ScanEnableType scan_enable = 0x00;
+  ::bt::hci_spec::ScanEnableType scan_enable = 0x00;
   for (std::string positional_arg : cmd_line.positional_args()) {
     if (positional_arg == "inquiry") {
-      scan_enable |= (::bt::hci::ScanEnableType)::bt::hci::ScanEnableBit::kInquiry;
+      scan_enable |= (::bt::hci_spec::ScanEnableType)::bt::hci_spec::ScanEnableBit::kInquiry;
     } else if (positional_arg == "page") {
-      scan_enable |= (::bt::hci::ScanEnableType)::bt::hci::ScanEnableBit::kPage;
+      scan_enable |= (::bt::hci_spec::ScanEnableType)::bt::hci_spec::ScanEnableBit::kPage;
     } else {
       std::cout << "  Unrecognized positional argument: " << positional_arg << std::endl;
       return false;
     }
   }
 
-  constexpr size_t kPayloadSize = sizeof(::bt::hci::WriteScanEnableCommandParams);
-  auto packet = ::bt::hci::CommandPacket::New(::bt::hci::kWriteScanEnable, kPayloadSize);
+  constexpr size_t kPayloadSize = sizeof(::bt::hci_spec::WriteScanEnableCommandParams);
+  auto packet = ::bt::hci::CommandPacket::New(::bt::hci_spec::kWriteScanEnable, kPayloadSize);
 
-  packet->mutable_payload<::bt::hci::WriteScanEnableCommandParams>()->scan_enable = scan_enable;
+  packet->mutable_payload<::bt::hci_spec::WriteScanEnableCommandParams>()->scan_enable =
+      scan_enable;
 
   auto id = SendCompleteCommand(cmd_data, std::move(packet), std::move(complete_cb));
 
@@ -1025,21 +1032,22 @@ bool HandleReadScanEnable(const CommandData* cmd_data, const fxl::CommandLine& c
 
   auto cb = [complete_cb = complete_cb.share()](::bt::hci::CommandChannel::TransactionId id,
                                                 const ::bt::hci::EventPacket& event) {
-    auto return_params = event.return_params<::bt::hci::ReadScanEnableReturnParams>();
+    auto return_params = event.return_params<::bt::hci_spec::ReadScanEnableReturnParams>();
     LogCommandResult(return_params->status, id);
-    if (return_params->status != ::bt::hci::StatusCode::kSuccess) {
+    if (return_params->status != ::bt::hci_spec::StatusCode::kSuccess) {
       complete_cb();
       return;
     }
 
     if (return_params->scan_enable &
-        (::bt::hci::ScanEnableType)::bt::hci::ScanEnableBit::kInquiry) {
+        (::bt::hci_spec::ScanEnableType)::bt::hci_spec::ScanEnableBit::kInquiry) {
       std::cout << "  Inquiry scan: enabled" << std::endl;
     } else {
       std::cout << "  Inquiry scan: disabled" << std::endl;
     }
 
-    if (return_params->scan_enable & (::bt::hci::ScanEnableType)::bt::hci::ScanEnableBit::kPage) {
+    if (return_params->scan_enable &
+        (::bt::hci_spec::ScanEnableType)::bt::hci_spec::ScanEnableBit::kPage) {
       std::cout << "  Page scan: enabled" << std::endl;
     } else {
       std::cout << "  Page scan: disabled" << std::endl;
@@ -1048,7 +1056,7 @@ bool HandleReadScanEnable(const CommandData* cmd_data, const fxl::CommandLine& c
     complete_cb();
   };
 
-  auto packet = ::bt::hci::CommandPacket::New(::bt::hci::kReadScanEnable);
+  auto packet = ::bt::hci::CommandPacket::New(::bt::hci_spec::kReadScanEnable);
   auto id = SendCommand(cmd_data, std::move(packet), std::move(cb), std::move(complete_cb));
   std::cout << "  Sent HCI_Read_Scan_Enable (id=" << id << ")" << std::endl;
 

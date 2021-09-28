@@ -23,8 +23,8 @@
 
 using bt::hci::CommandPacket;
 using bt::hci::EventPacket;
-using bt::hci::GenericEnableParam;
-using bt::hci::StatusCode;
+using bt::hci_spec::GenericEnableParam;
+using bt::hci_spec::StatusCode;
 
 using std::placeholders::_1;
 using std::placeholders::_2;

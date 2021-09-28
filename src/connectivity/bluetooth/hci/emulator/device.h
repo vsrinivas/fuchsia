@@ -79,7 +79,7 @@ class Device : public fuchsia::bluetooth::test::HciEmulator {
   void UnpublishHci();
 
   void OnPeerConnectionStateChanged(const bt::DeviceAddress& address,
-                                    bt::hci::ConnectionHandle handle, bool connected,
+                                    bt::hci_spec::ConnectionHandle handle, bool connected,
                                     bool canceled);
 
   static constexpr fuchsia_hardware_bluetooth_Hci_ops_t hci_fidl_ops_ = {

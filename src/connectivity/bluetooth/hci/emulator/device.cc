@@ -53,13 +53,13 @@ FakeController::Settings SettingsFromFidl(const ftest::EmulatorSettings& input) 
   return settings;
 }
 
-fuchsia::bluetooth::AddressType LeOwnAddressTypeToFidl(bt::hci::LEOwnAddressType type) {
+fuchsia::bluetooth::AddressType LeOwnAddressTypeToFidl(bt::hci_spec::LEOwnAddressType type) {
   switch (type) {
-    case bt::hci::LEOwnAddressType::kPublic:
-    case bt::hci::LEOwnAddressType::kPrivateDefaultToPublic:
+    case bt::hci_spec::LEOwnAddressType::kPublic:
+    case bt::hci_spec::LEOwnAddressType::kPrivateDefaultToPublic:
       return fuchsia::bluetooth::AddressType::PUBLIC;
-    case bt::hci::LEOwnAddressType::kRandom:
-    case bt::hci::LEOwnAddressType::kPrivateDefaultToRandom:
+    case bt::hci_spec::LEOwnAddressType::kRandom:
+    case bt::hci_spec::LEOwnAddressType::kPrivateDefaultToRandom:
       return fuchsia::bluetooth::AddressType::RANDOM;
   }
 
@@ -396,7 +396,7 @@ void Device::UnpublishHci() {
 }
 
 void Device::OnPeerConnectionStateChanged(const bt::DeviceAddress& address,
-                                          bt::hci::ConnectionHandle handle, bool connected,
+                                          bt::hci_spec::ConnectionHandle handle, bool connected,
                                           bool canceled) {
   logf(TRACE, "Peer connection state changed: %s (handle: %#.4x) (connected: %s) (canceled: %s):\n",
        address.ToString().c_str(), handle, (connected ? "true" : "false"),

@@ -111,7 +111,7 @@ void CommandChannel::SetEventCallback(EventCallback callback) {
   event_callback_ = std::move(callback);
 }
 
-void CommandChannel::SendCommand(const ::bt::PacketView<::bt::hci::CommandHeader>& command) {
+void CommandChannel::SendCommand(const ::bt::PacketView<::bt::hci_spec::CommandHeader>& command) {
   zx::channel* channel = &cmd_channel_;
   // Bootloader Secure Send commands are sent and responded to via the bulk
   // endpoint (ACL channel)
@@ -126,7 +126,7 @@ void CommandChannel::SendCommand(const ::bt::PacketView<::bt::hci::CommandHeader
   }
 }
 
-void CommandChannel::SendCommandSync(const ::bt::PacketView<::bt::hci::CommandHeader>& command,
+void CommandChannel::SendCommandSync(const ::bt::PacketView<::bt::hci_spec::CommandHeader>& command,
                                      EventCallback callback) {
   bool received = false;
   auto previous_cb = std::move(event_callback_);
@@ -200,15 +200,15 @@ void CommandChannel::HandleChannelReady(const zx::channel& channel, async_dispat
       return;
     }
 
-    if (read_size < sizeof(::bt::hci::EventHeader)) {
+    if (read_size < sizeof(::bt::hci_spec::EventHeader)) {
       std::cerr << "CommandChannel: Malformed event packet - "
-                << "expected at least " << sizeof(::bt::hci::EventHeader) << " bytes, got "
+                << "expected at least " << sizeof(::bt::hci_spec::EventHeader) << " bytes, got "
                 << read_size << std::endl;
       continue;
     }
 
     // Compare the received payload size to what is in the header.
-    const size_t rx_payload_size = read_size - sizeof(::bt::hci::EventHeader);
+    const size_t rx_payload_size = read_size - sizeof(::bt::hci_spec::EventHeader);
     const size_t size_from_header = packet->view().header().parameter_total_size;
     if (size_from_header != rx_payload_size) {
       std::cerr << "CommandChannel: Malformed event packet - "

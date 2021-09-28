@@ -23,16 +23,16 @@ bt::DeviceAddress LeAddressFromFidl(const fbt::Address& address) {
   return bt::DeviceAddress(LeAddressTypeFromFidl(address.type), address.bytes);
 }
 
-bt::hci::ConnectionRole ConnectionRoleFromFidl(fbt::ConnectionRole role) {
+bt::hci_spec::ConnectionRole ConnectionRoleFromFidl(fbt::ConnectionRole role) {
   switch (role) {
     case fbt::ConnectionRole::LEADER:
-      return bt::hci::ConnectionRole::kMaster;
+      return bt::hci_spec::ConnectionRole::kMaster;
     case fbt::ConnectionRole::FOLLOWER:
       [[fallthrough]];
     default:
       break;
   }
-  return bt::hci::ConnectionRole::kSlave;
+  return bt::hci_spec::ConnectionRole::kSlave;
 }
 
 }  // namespace
@@ -139,7 +139,7 @@ void Peer::AssignConnectionStatus(ftest::HciError status, AssignConnectionStatus
 
   auto peer = fake_controller_->FindPeer(address_);
   if (peer) {
-    peer->set_connect_response(static_cast<bt::hci::StatusCode>(status));
+    peer->set_connect_response(static_cast<bt::hci_spec::StatusCode>(status));
   }
 
   callback();
