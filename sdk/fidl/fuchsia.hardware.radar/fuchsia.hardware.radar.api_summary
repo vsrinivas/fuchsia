@@ -1,0 +1,47 @@
+struct/member fuchsia.hardware.radar/Burst.timestamp int64
+struct/member fuchsia.hardware.radar/Burst.vmo_id uint32
+struct fuchsia.hardware.radar/Burst
+protocol/member fuchsia.hardware.radar/RadarBurstReader.GetBurstSize() -> (uint32 burst_size)
+protocol/member fuchsia.hardware.radar/RadarBurstReader.OnBurst -> (fuchsia.hardware.radar/RadarBurstReader_OnBurst_Result result)
+protocol/member fuchsia.hardware.radar/RadarBurstReader.RegisterVmos(vector<uint32>:300 vmo_ids,vector<zx/handle:VMO>:300 vmos) -> (fuchsia.hardware.radar/RadarBurstReader_RegisterVmos_Result result)
+protocol/member fuchsia.hardware.radar/RadarBurstReader.StartBursts()
+protocol/member fuchsia.hardware.radar/RadarBurstReader.StopBursts() -> ()
+protocol/member fuchsia.hardware.radar/RadarBurstReader.UnlockVmo(uint32 vmo_id)
+protocol/member fuchsia.hardware.radar/RadarBurstReader.UnregisterVmos(vector<uint32>:300 vmo_ids) -> (fuchsia.hardware.radar/RadarBurstReader_UnregisterVmos_Result result)
+protocol fuchsia.hardware.radar/RadarBurstReader
+protocol/member fuchsia.hardware.radar/RadarBurstReaderProvider.Connect(server_end:fuchsia.hardware.radar/RadarBurstReader server) -> (fuchsia.hardware.radar/RadarBurstReaderProvider_Connect_Result result)
+protocol fuchsia.hardware.radar/RadarBurstReaderProvider
+struct fuchsia.hardware.radar/RadarBurstReaderProvider_Connect_Response
+union/member fuchsia.hardware.radar/RadarBurstReaderProvider_Connect_Result.err fuchsia.hardware.radar/StatusCode
+union/member fuchsia.hardware.radar/RadarBurstReaderProvider_Connect_Result.response fuchsia.hardware.radar/RadarBurstReaderProvider_Connect_Response
+strict union fuchsia.hardware.radar/RadarBurstReaderProvider_Connect_Result
+struct/member fuchsia.hardware.radar/RadarBurstReader_OnBurst_Response.burst fuchsia.hardware.radar/Burst
+struct fuchsia.hardware.radar/RadarBurstReader_OnBurst_Response
+union/member fuchsia.hardware.radar/RadarBurstReader_OnBurst_Result.err fuchsia.hardware.radar/StatusCode
+union/member fuchsia.hardware.radar/RadarBurstReader_OnBurst_Result.response fuchsia.hardware.radar/RadarBurstReader_OnBurst_Response
+strict union fuchsia.hardware.radar/RadarBurstReader_OnBurst_Result
+struct fuchsia.hardware.radar/RadarBurstReader_RegisterVmos_Response
+union/member fuchsia.hardware.radar/RadarBurstReader_RegisterVmos_Result.err fuchsia.hardware.radar/StatusCode
+union/member fuchsia.hardware.radar/RadarBurstReader_RegisterVmos_Result.response fuchsia.hardware.radar/RadarBurstReader_RegisterVmos_Response
+strict union fuchsia.hardware.radar/RadarBurstReader_RegisterVmos_Result
+struct/member fuchsia.hardware.radar/RadarBurstReader_UnregisterVmos_Response.vmos vector<zx/handle:VMO>:300
+resource struct fuchsia.hardware.radar/RadarBurstReader_UnregisterVmos_Response
+union/member fuchsia.hardware.radar/RadarBurstReader_UnregisterVmos_Result.err fuchsia.hardware.radar/StatusCode
+union/member fuchsia.hardware.radar/RadarBurstReader_UnregisterVmos_Result.response fuchsia.hardware.radar/RadarBurstReader_UnregisterVmos_Response
+resource strict union fuchsia.hardware.radar/RadarBurstReader_UnregisterVmos_Result
+enum/member fuchsia.hardware.radar/StatusCode.ALREADY_BOUND 2
+enum/member fuchsia.hardware.radar/StatusCode.BIND_ERROR 3
+enum/member fuchsia.hardware.radar/StatusCode.INVALID_ARGS 4
+enum/member fuchsia.hardware.radar/StatusCode.OUT_OF_VMOS 10
+enum/member fuchsia.hardware.radar/StatusCode.SENSOR_ERROR 12
+enum/member fuchsia.hardware.radar/StatusCode.SENSOR_TIMEOUT 11
+enum/member fuchsia.hardware.radar/StatusCode.SUCCESS 1
+enum/member fuchsia.hardware.radar/StatusCode.UNSPECIFIED 0
+enum/member fuchsia.hardware.radar/StatusCode.VMO_ACCESS_DENIED 8
+enum/member fuchsia.hardware.radar/StatusCode.VMO_ALREADY_REGISTERED 6
+enum/member fuchsia.hardware.radar/StatusCode.VMO_BAD_HANDLE 5
+enum/member fuchsia.hardware.radar/StatusCode.VMO_NOT_FOUND 7
+enum/member fuchsia.hardware.radar/StatusCode.VMO_TOO_SMALL 9
+strict enum fuchsia.hardware.radar/StatusCode uint32
+const fuchsia.hardware.radar/VMO_VECTOR_MAX_COUNT uint32 300
+library fuchsia.hardware.radar
