@@ -91,6 +91,8 @@ class VmAspace : public fbl::DoublyLinkedListable<VmAspace*>, public fbl::RefCou
   static void DropAllUserPageTables();
   void DropUserPageTables();
 
+  static void DumpAllAspaces(bool verbose);
+
   // Harvests all accessed information across all user mappings and updates any page age information
   // for terminal mappings, and potentially harvests page tables depending on the passed in action.
   // This requires holding the aspaces_list_lock_ over the entire duration and whilst not a commonly
@@ -284,13 +286,14 @@ class VmAspace : public fbl::DoublyLinkedListable<VmAspace*>, public fbl::RefCou
 
   fbl::RefPtr<VmMapping> vdso_code_mapping_;
 
+  DECLARE_SINGLETON_MUTEX(AspaceListLock);
+  static fbl::DoublyLinkedList<VmAspace*> aspaces_list_ TA_GUARDED(AspaceListLock::Get());
+
   // initialization routines need to construct the singleton kernel address space
   // at a particular points in the bootup process
   static void KernelAspaceInitPreHeap();
   static VmAspace* kernel_aspace_;
   friend void vm_init_preheap();
 };
-
-void DumpAllAspaces(bool verbose);
 
 #endif  // ZIRCON_KERNEL_VM_INCLUDE_VM_VM_ASPACE_H_

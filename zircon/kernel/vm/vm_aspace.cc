@@ -47,10 +47,8 @@
 // pointer to a singleton kernel address space
 VmAspace* VmAspace::kernel_aspace_ = nullptr;
 
-// list of all address spaces
-struct VmAspaceListGlobal {};
-static DECLARE_MUTEX(VmAspaceListGlobal) aspace_list_lock;
-static fbl::DoublyLinkedList<VmAspace*> aspaces TA_GUARDED(aspace_list_lock);
+// singleton list of all aspaces in the system.
+fbl::DoublyLinkedList<VmAspace*> VmAspace::aspaces_list_ = {};
 
 namespace {
 
@@ -83,7 +81,7 @@ void VmAspace::KernelAspaceInitPreHeap() TA_NO_THREAD_SAFETY_ANALYSIS {
 
   // save a pointer to the singleton kernel address space
   VmAspace::kernel_aspace_ = &g_kernel_aspace.Get();
-  aspaces.push_front(kernel_aspace_);
+  aspaces_list_.push_front(kernel_aspace_);
 }
 
 // simple test routines
@@ -194,8 +192,8 @@ fbl::RefPtr<VmAspace> VmAspace::Create(uint32_t flags, const char* name) {
 
   // add it to the global list
   {
-    Guard<Mutex> guard{&aspace_list_lock};
-    aspaces.push_back(aspace.get());
+    Guard<Mutex> guard{AspaceListLock::Get()};
+    aspaces_list_.push_back(aspace.get());
   }
 
   // return a ref pointer to the aspace
@@ -216,9 +214,9 @@ VmAspace::~VmAspace() {
 
   // pop it out of the global aspace list
   {
-    Guard<Mutex> guard{&aspace_list_lock};
+    Guard<Mutex> guard{AspaceListLock::Get()};
     if (this->InContainer()) {
-      aspaces.erase(*this);
+      aspaces_list_.erase(*this);
     }
   }
 
@@ -649,10 +647,10 @@ bool VmAspace::EnumerateChildren(VmEnumerator* ve) {
   return root_vmar_->EnumerateChildrenLocked(ve);
 }
 
-void DumpAllAspaces(bool verbose) {
-  Guard<Mutex> guard{&aspace_list_lock};
+void VmAspace::DumpAllAspaces(bool verbose) {
+  Guard<Mutex> guard{AspaceListLock::Get()};
 
-  for (const auto& a : aspaces) {
+  for (const auto& a : aspaces_list_) {
     a.Dump(verbose);
   }
 }
@@ -704,9 +702,9 @@ uintptr_t VmAspace::vdso_code_address() const {
 }
 
 void VmAspace::DropAllUserPageTables() {
-  Guard<Mutex> guard{&aspace_list_lock};
+  Guard<Mutex> guard{AspaceListLock::Get()};
 
-  for (auto& a : aspaces) {
+  for (auto& a : aspaces_list_) {
     a.DropUserPageTables();
   }
 }
@@ -766,15 +764,15 @@ void VmAspace::MarkAsLatencySensitive() {
 
 void VmAspace::HarvestAllUserAccessedBits(NonTerminalAction action) {
   VM_KTRACE_DURATION(2, "VmAspace::HarvestAllUserAccessedBits");
-  Guard<Mutex> guard{&aspace_list_lock};
+  Guard<Mutex> guard{AspaceListLock::Get()};
 
-  for (auto& a : aspaces) {
+  for (auto& a : aspaces_list_) {
     if (a.is_user()) {
       // TODO(fxb/85056): Formalize this.
       // Forbid PT reclamation on latency sensitive aspaces.
       NonTerminalAction apply_action = a.IsLatencySensitive() ? NonTerminalAction::Retain : action;
       // The arch_aspace is only destroyed in the VmAspace destructor *after* the aspace is removed
-      // from the aspaces list. As we presently hold the aspace_list_lock we know that this
+      // from the aspaces list. As we presently hold the AspaceListLock::Get() we know that this
       // destructor has not completed, and so the arch_aspace has not been destroyed. Even if the
       // actual VmAspace has been destroyed, it is still completely safe to walk to the hardware
       // page tables, there just will not be anything there.

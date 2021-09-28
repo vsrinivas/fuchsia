@@ -164,7 +164,7 @@ static int cmd_vmm(int argc, const cmd_args* argv, uint32_t flags) {
   }
 
   if (!strcmp(argv[1].str, "aspaces")) {
-    DumpAllAspaces(true);
+    VmAspace::DumpAllAspaces(true);
   } else if (!strcmp(argv[1].str, "kaspace")) {
     VmAspace::kernel_aspace()->Dump(true);
   } else if (!strcmp(argv[1].str, "alloc")) {

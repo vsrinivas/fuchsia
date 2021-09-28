@@ -1304,7 +1304,7 @@ static bool dump_all_aspaces() {
   END_TEST;
 
   unittest_printf("verify there are no test aspaces left around\n");
-  DumpAllAspaces(/*verbose*/ true);
+  VmAspace::DumpAllAspaces(/*verbose*/ true);
   END_TEST;
 }
 
