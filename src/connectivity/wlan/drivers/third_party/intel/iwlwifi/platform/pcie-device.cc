@@ -44,7 +44,7 @@ zx_status_t PcieDevice::Create(zx_device_t* parent_device) {
 
   device->driver_inspector_ = std::make_unique<DriverInspector>();
   if ((status = device->DdkAdd(::ddk::DeviceAddArgs("iwlwifi-wlanphyimpl")
-                                   .set_inspect_vmo(device->driver_inspector_->GetVmoView()))) !=
+                                   .set_inspect_vmo(device->driver_inspector_->DuplicateVmo()))) !=
       ZX_OK) {
     IWL_ERR(device->drvdata(), "%s() failed device add: %s", __func__,
             zx_status_get_string(status));

@@ -42,6 +42,7 @@ source_set("sim_library") {
     "//src/connectivity/wlan/drivers/third_party/intel/iwlwifi:core",
     "//src/connectivity/wlan/drivers/third_party/intel/iwlwifi/fw:api",
     "//src/connectivity/wlan/drivers/third_party/intel/iwlwifi/mvm",
+    "//src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform:fuchsia_device",
     "//src/devices/testing/fake-bti",
     "//zircon/system/ulib/fbl",
   ]
@@ -51,7 +52,6 @@ source_set("sim_library") {
     "//src/connectivity/wlan/drivers/testing/lib/sim-fake-ap",
     "//src/connectivity/wlan/drivers/third_party/intel/iwlwifi:core",
     "//src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform",
-    "//src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform:fuchsia_device",
     "//src/devices/pci/testing:pci-protocol-fake",
     "//src/devices/testing/mock-ddk",
     "//zircon/public/lib/zxtest",
@@ -108,6 +108,22 @@ executable("fw_test") {
     "//src/connectivity/wlan/drivers/third_party/intel/iwlwifi:core",
     "//src/connectivity/wlan/drivers/third_party/intel/iwlwifi/mvm",
     "//zircon/public/lib/zxtest",
+  ]
+
+  # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
+  configs += [ "//build/config:Wno-conversion" ]
+}
+
+executable("fw_dbg_test") {
+  output_name = "fw_dbg_test"
+  testonly = true
+  sources = [ "fw-dbg-test.cc" ]
+  deps = [
+    ":sim_library",
+    "//src/connectivity/wlan/drivers/third_party/intel/iwlwifi/fw",
+    "//src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform:driver_inspector",
+    "//zircon/public/lib/zxtest",
+    "//zircon/system/ulib/inspect",
   ]
 
   # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
@@ -310,6 +326,7 @@ _tests = [
   "driver_inspector_test",
   "dummy_test",
   "fw_test",
+  "fw_dbg_test",
   "iwl_phy_db_test",
   "mac80211_test",
   "mac_ctxt_test",

@@ -57,6 +57,7 @@ source_set("api") {
 
 source_set("fw") {
   sources = [
+    "dbg.c",
     "init.c",
     "notif-wait.c",
     "paging.c",

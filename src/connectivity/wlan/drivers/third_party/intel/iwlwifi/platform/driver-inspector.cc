@@ -4,7 +4,6 @@
 
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform/driver-inspector.h"
 
-#include <lib/fpromise/single_threaded_executor.h>
 #include <lib/inspect/cpp/reader.h>
 #include <zircon/errors.h>
 
@@ -53,10 +52,6 @@ zx_status_t DriverInspector::PublishCoreDump(const char* core_dump_name,
   return inspector_->GetRoot();
 }
 
-::inspect::Hierarchy DriverInspector::GetHierarchy() const {
-  return ::fpromise::run_single_threaded(::inspect::ReadFromInspector(*inspector_)).take_value();
-}
-
-::zx::vmo DriverInspector::GetVmoView() const { return inspector_->DuplicateVmo(); }
+::zx::vmo DriverInspector::DuplicateVmo() const { return inspector_->DuplicateVmo(); }
 
 }  // namespace wlan::iwlwifi

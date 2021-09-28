@@ -48,7 +48,6 @@ source_set("platform") {
 source_set("driver_inspector") {
   sources = [ "driver-inspector.cc" ]
   public = [ "driver-inspector.h" ]
-  deps = [ "//sdk/lib/fit-promise" ]
   public_deps = [
     "//sdk/lib/stdcompat",
     "//zircon/system/public",

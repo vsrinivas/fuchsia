@@ -5,7 +5,6 @@
 #ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_PLATFORM_DRIVER_INSPECTOR_H_
 #define SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_PLATFORM_DRIVER_INSPECTOR_H_
 
-#include <lib/inspect/cpp/hierarchy.h>
 #include <lib/inspect/cpp/inspector.h>
 #include <lib/inspect/cpp/vmo/types.h>
 #include <lib/stdcompat/span.h>
@@ -41,11 +40,8 @@ class DriverInspector {
   // Get the root of this drivers' Inspect tree hierarchy.
   ::inspect::Node& GetRoot() const;
 
-  // Get the Inspect tree's parsed hierarchy.
-  ::inspect::Hierarchy GetHierarchy() const;
-
-  // Get a read-only view of this Inspect tree's backing VMO.
-  ::zx::vmo GetVmoView() const;
+  // Get a read-only copy of this Inspect tree's backing VMO.
+  ::zx::vmo DuplicateVmo() const;
 
  private:
   struct CoreDumpEntry {

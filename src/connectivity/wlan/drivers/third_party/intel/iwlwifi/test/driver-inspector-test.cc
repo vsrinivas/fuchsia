@@ -5,6 +5,7 @@
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform/driver-inspector.h"
 
 #include <lib/inspect/cpp/hierarchy.h>
+#include <lib/inspect/cpp/reader.h>
 
 #include <cstring>
 #include <vector>
@@ -54,7 +55,7 @@ TEST(DriverInspectorTest, PublishCoreDump) {
     std::snprintf(buffer_name, sizeof(buffer_name), "buffer%zu", i);
     EXPECT_OK(inspector.PublishCoreDump(buffer_name, buffers[i]));
 
-    auto hierarchy = inspector.GetHierarchy();
+    auto hierarchy = ::inspect::ReadFromVmo(inspector.DuplicateVmo()).take_value();
     auto& node = hierarchy.node();
     EXPECT_EQ(i + 1, node.properties().size());
     for (size_t j = 0; j < node.properties().size(); ++j) {
@@ -72,7 +73,7 @@ TEST(DriverInspectorTest, PublishCoreDump) {
 
   // Adding the fifth buffer should cause the oldest crash dump to be replaced.
   EXPECT_OK(inspector.PublishCoreDump("buffer4", buffers[4]));
-  auto hierarchy = inspector.GetHierarchy();
+  auto hierarchy = ::inspect::ReadFromVmo(inspector.DuplicateVmo()).take_value();
   auto& node = hierarchy.node();
   EXPECT_EQ(4, node.properties().size());
   for (size_t j = 1; j < 5; ++j) {

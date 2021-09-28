@@ -1821,6 +1821,7 @@ static void iwl_trans_pcie_configure(struct iwl_trans* trans,
            trans_pcie->n_no_reclaim_cmds * sizeof(uint8_t));
 
   trans_pcie->rx_buf_size = trans_cfg->rx_buf_size;
+  trans_pcie->rx_page_order = iwl_trans_get_rb_size_order(trans_pcie->rx_buf_size);
 
   trans_pcie->bc_table_dword = trans_cfg->bc_table_dword;
   trans_pcie->scd_set_active = trans_cfg->scd_set_active;
@@ -2058,9 +2059,9 @@ out:
 }
 
 static zx_status_t iwl_trans_pcie_read_mem(struct iwl_trans* trans, uint32_t addr, void* buf,
-                                           int dwords) {
+                                           size_t dwords) {
   unsigned long flags;
-  int offs;
+  size_t offs;
   zx_status_t ret = ZX_OK;
   uint32_t* vals = buf;
 
@@ -2077,9 +2078,9 @@ static zx_status_t iwl_trans_pcie_read_mem(struct iwl_trans* trans, uint32_t add
 }
 
 static zx_status_t iwl_trans_pcie_write_mem(struct iwl_trans* trans, uint32_t addr, const void* buf,
-                                            int dwords) {
+                                            size_t dwords) {
   unsigned long flags;
-  int offs;
+  size_t offs;
   zx_status_t ret = ZX_OK;
   const uint32_t* vals = buf;
 
@@ -2736,7 +2737,6 @@ static void iwl_trans_pcie_debugfs_cleanup(struct iwl_trans* trans) {
 #endif  /*CPTCFG_IWLWIFI_DEBUGFS */
 #endif  // NEEDS_PORTING
 
-#if 0  // NEEDS_PORTING
 static uint32_t iwl_trans_pcie_get_cmdlen(struct iwl_trans* trans, void* tfd) {
     struct iwl_trans_pcie* trans_pcie = IWL_TRANS_GET_PCIE_TRANS(trans);
     uint32_t cmdlen = 0;
@@ -2751,39 +2751,35 @@ static uint32_t iwl_trans_pcie_get_cmdlen(struct iwl_trans* trans, void* tfd) {
 
 static uint32_t iwl_trans_pcie_dump_rbs(struct iwl_trans* trans,
                                         struct iwl_fw_error_dump_data** data,
-                                        int allocated_rb_nums) {
-    struct iwl_trans_pcie* trans_pcie = IWL_TRANS_GET_PCIE_TRANS(trans);
-    int max_len = PAGE_SIZE << trans_pcie->rx_page_order;
-    /* Dump RBs is supported only for pre-9000 devices (1 queue) */
-    struct iwl_rxq* rxq = &trans_pcie->rxq[0];
-    uint32_t i, r, j, rb_len = 0;
+                                        uint32_t allocated_rb_nums) {
+  struct iwl_trans_pcie* trans_pcie = IWL_TRANS_GET_PCIE_TRANS(trans);
+  int max_len = PAGE_SIZE << trans_pcie->rx_page_order;
+  /* Dump RBs is supported only for pre-9000 devices (1 queue) */
+  struct iwl_rxq* rxq = &trans_pcie->rxq[0];
+  uint32_t i, r, j, rb_len = 0;
 
-    spin_lock(&rxq->lock);
+  mtx_lock(&rxq->lock);
 
-    r = le16_to_cpu(iwl_get_closed_rb_stts(trans, rxq)) & 0x0FFF;
+  r = le16_to_cpu(iwl_get_closed_rb_stts(trans, rxq)) & 0x0FFF;
 
-    for (i = rxq->read, j = 0; i != r && j < allocated_rb_nums; i = (i + 1) & RX_QUEUE_MASK, j++) {
-        struct iwl_rx_mem_buffer* rxb = rxq->queue[i];
-        struct iwl_fw_error_dump_rb* rb;
+  for (i = rxq->read, j = 0; i != r && j < allocated_rb_nums; i = (i + 1) & RX_QUEUE_MASK, j++) {
+    struct iwl_rx_mem_buffer* rxb = rxq->queue[i];
+    struct iwl_fw_error_dump_rb* rb;
 
-        dma_unmap_page(trans->dev, rxb->page_dma, max_len, DMA_FROM_DEVICE);
+    rb_len += sizeof(**data) + sizeof(*rb) + max_len;
 
-        rb_len += sizeof(**data) + sizeof(*rb) + max_len;
+    (*data)->type = cpu_to_le32(IWL_FW_ERROR_DUMP_RB);
+    (*data)->len = cpu_to_le32(sizeof(*rb) + max_len);
+    rb = (void*)(*data)->data;
+    rb->index = cpu_to_le32(i);
+    memcpy(rb->data, iwl_iobuf_virtual(rxb->io_buf), max_len);
 
-        (*data)->type = cpu_to_le32(IWL_FW_ERROR_DUMP_RB);
-        (*data)->len = cpu_to_le32(sizeof(*rb) + max_len);
-        rb = (void*)(*data)->data;
-        rb->index = cpu_to_le32(i);
-        memcpy(rb->data, page_address(rxb->page), max_len);
-        /* remap the page for the free benefit */
-        rxb->page_dma = dma_map_page(trans->dev, rxb->page, 0, max_len, DMA_FROM_DEVICE);
+    *data = iwl_fw_error_next_data(*data);
+  }
 
-        *data = iwl_fw_error_next_data(*data);
-    }
+  mtx_unlock(&rxq->lock);
 
-    spin_unlock(&rxq->lock);
-
-    return rb_len;
+  return rb_len;
 }
 #define IWL_CSR_TO_DUMP (0x250)
 
@@ -2928,48 +2924,46 @@ static uint32_t iwl_trans_pcie_dump_monitor(struct iwl_trans* trans,
     return len;
 }
 
-static int iwl_trans_get_fw_monitor_len(struct iwl_trans* trans, int* len) {
-    if (trans->num_blocks) {
-        *len += sizeof(struct iwl_fw_error_dump_data) + sizeof(struct iwl_fw_error_dump_fw_mon) +
-                trans->fw_mon[0].size;
-        return trans->fw_mon[0].size;
-    } else if (trans->dbg_dest_tlv) {
-        uint32_t base, end, cfg_reg, monitor_len;
+static int iwl_trans_get_fw_monitor_len(struct iwl_trans* trans, uint32_t* len) {
+  if (trans->num_blocks) {
+    *len += sizeof(struct iwl_fw_error_dump_data) + sizeof(struct iwl_fw_error_dump_fw_mon) +
+            trans->fw_mon[0].size;
+    return trans->fw_mon[0].size;
+  } else if (trans->dbg_dest_tlv) {
+    uint32_t base, end, cfg_reg, monitor_len;
 
-        if (trans->dbg_dest_tlv->version == 1) {
-            cfg_reg = le32_to_cpu(trans->dbg_dest_tlv->base_reg);
-            cfg_reg = iwl_read_prph(trans, cfg_reg);
-            base = (cfg_reg & IWL_LDBG_M2S_BUF_BA_MSK) << trans->dbg_dest_tlv->base_shift;
-            base *= IWL_M2S_UNIT_SIZE;
-            base += trans->cfg->smem_offset;
+    if (trans->dbg_dest_tlv->version == 1) {
+      cfg_reg = le32_to_cpu(trans->dbg_dest_tlv->base_reg);
+      cfg_reg = iwl_read_prph(trans, cfg_reg);
+      base = (cfg_reg & IWL_LDBG_M2S_BUF_BA_MSK) << trans->dbg_dest_tlv->base_shift;
+      base *= IWL_M2S_UNIT_SIZE;
+      base += trans->cfg->smem_offset;
 
-            monitor_len = (cfg_reg & IWL_LDBG_M2S_BUF_SIZE_MSK) >> trans->dbg_dest_tlv->end_shift;
-            monitor_len *= IWL_M2S_UNIT_SIZE;
-        } else {
-            base = le32_to_cpu(trans->dbg_dest_tlv->base_reg);
-            end = le32_to_cpu(trans->dbg_dest_tlv->end_reg);
+      monitor_len = (cfg_reg & IWL_LDBG_M2S_BUF_SIZE_MSK) >> trans->dbg_dest_tlv->end_shift;
+      monitor_len *= IWL_M2S_UNIT_SIZE;
+    } else {
+      base = le32_to_cpu(trans->dbg_dest_tlv->base_reg);
+      end = le32_to_cpu(trans->dbg_dest_tlv->end_reg);
 
-            base = iwl_read_prph(trans, base) << trans->dbg_dest_tlv->base_shift;
-            end = iwl_read_prph(trans, end) << trans->dbg_dest_tlv->end_shift;
+      base = iwl_read_prph(trans, base) << trans->dbg_dest_tlv->base_shift;
+      end = iwl_read_prph(trans, end) << trans->dbg_dest_tlv->end_shift;
 
-            /* Make "end" point to the actual end */
-            if (trans->cfg->device_family >= IWL_DEVICE_FAMILY_8000 ||
-                trans->dbg_dest_tlv->monitor_mode == MARBH_MODE) {
-                end += (1 << trans->dbg_dest_tlv->end_shift);
-            }
-            monitor_len = end - base;
-        }
-        *len += sizeof(struct iwl_fw_error_dump_data) + sizeof(struct iwl_fw_error_dump_fw_mon) +
-                monitor_len;
-        return monitor_len;
+      /* Make "end" point to the actual end */
+      if (trans->cfg->device_family >= IWL_DEVICE_FAMILY_8000 ||
+          trans->dbg_dest_tlv->monitor_mode == MARBH_MODE) {
+        end += (1 << trans->dbg_dest_tlv->end_shift);
+      }
+      monitor_len = end - base;
     }
-    return 0;
+    *len += sizeof(struct iwl_fw_error_dump_data) + sizeof(struct iwl_fw_error_dump_fw_mon) +
+            monitor_len;
+    return monitor_len;
+  }
+  return 0;
 }
-#endif  // NEEDS_PORTING
 
 static struct iwl_trans_dump_data* iwl_trans_pcie_dump_data(struct iwl_trans* trans,
                                                             uint32_t dump_mask) {
-#if 0   // NEEDS_PORTING
     struct iwl_trans_pcie* trans_pcie = IWL_TRANS_GET_PCIE_TRANS(trans);
     struct iwl_fw_error_dump_data* data;
     struct iwl_txq* cmdq = trans_pcie->txq[trans_pcie->cmd_queue];
@@ -2993,8 +2987,10 @@ static struct iwl_trans_dump_data* iwl_trans_pcie_dump_data(struct iwl_trans* tr
     monitor_len = iwl_trans_get_fw_monitor_len(trans, &len);
 
     if (dump_mask == BIT(IWL_FW_ERROR_DUMP_FW_MONITOR)) {
-        dump_data = vzalloc(len);
-        if (!dump_data) { return NULL; }
+      dump_data = malloc(len);
+      if (!dump_data) {
+        return NULL;
+      }
 
         data = (void*)dump_data->data;
         len = iwl_trans_pcie_dump_monitor(trans, &data, monitor_len);
@@ -3031,7 +3027,7 @@ static struct iwl_trans_dump_data* iwl_trans_pcie_dump_data(struct iwl_trans* tr
             len += sizeof(*data) + sizeof(struct iwl_fw_error_dump_paging) +
                    trans_pcie->init_dram.paging[i].size;
 
-    dump_data = vzalloc(len);
+    dump_data = malloc(len);
     if (!dump_data) { return NULL; }
 
     len = 0;
@@ -3042,13 +3038,14 @@ static struct iwl_trans_dump_data* iwl_trans_pcie_dump_data(struct iwl_trans* tr
 
         data->type = cpu_to_le32(IWL_FW_ERROR_DUMP_TXCMD);
         txcmd = (void*)data->data;
-        spin_lock_bh(&cmdq->lock);
+        mtx_lock(&cmdq->lock);
         ptr = cmdq->write_ptr;
         for (i = 0; i < cmdq->n_window; i++) {
             uint8_t idx = iwl_pcie_get_cmd_index(cmdq, ptr);
             uint32_t caplen, cmdlen;
 
-            cmdlen = iwl_trans_pcie_get_cmdlen(trans, cmdq->tfds + tfd_size * ptr);
+            cmdlen =
+                iwl_trans_pcie_get_cmdlen(trans, iwl_iobuf_virtual(cmdq->tfds) + tfd_size * ptr);
             caplen = min_t(uint32_t, TFD_MAX_PAYLOAD_SIZE, cmdlen);
 
             if (cmdlen) {
@@ -3061,7 +3058,7 @@ static struct iwl_trans_dump_data* iwl_trans_pcie_dump_data(struct iwl_trans* tr
 
             ptr = iwl_queue_dec_wrap(trans, ptr);
         }
-        spin_unlock_bh(&cmdq->lock);
+        mtx_unlock(&cmdq->lock);
 
         data->len = cpu_to_le32(len);
         len += sizeof(*data);
@@ -3078,14 +3075,12 @@ static struct iwl_trans_dump_data* iwl_trans_pcie_dump_data(struct iwl_trans* tr
     if (trans->cfg->gen2 && dump_mask & BIT(IWL_FW_ERROR_DUMP_PAGING)) {
         for (i = 0; i < trans_pcie->init_dram.paging_cnt; i++) {
             struct iwl_fw_error_dump_paging* paging;
-            dma_addr_t addr = trans_pcie->init_dram.paging[i].physical;
             uint32_t page_len = trans_pcie->init_dram.paging[i].size;
 
             data->type = cpu_to_le32(IWL_FW_ERROR_DUMP_PAGING);
             data->len = cpu_to_le32(sizeof(*paging) + page_len);
             paging = (void*)data->data;
             paging->index = cpu_to_le32(i);
-            dma_sync_single_for_cpu(trans->dev, addr, page_len, DMA_BIDIRECTIONAL);
             memcpy(paging->data, trans_pcie->init_dram.paging[i].block, page_len);
             data = iwl_fw_error_next_data(data);
 
@@ -3099,9 +3094,6 @@ static struct iwl_trans_dump_data* iwl_trans_pcie_dump_data(struct iwl_trans* tr
     dump_data->len = len;
 
     return dump_data;
-#endif  // NEEDS_PORTING
-  IWL_ERR(trans, "%s needs porting\n", __FUNCTION__);
-  return NULL;
 }
 
 #ifdef CONFIG_PM_SLEEP

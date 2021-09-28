@@ -325,16 +325,17 @@ enum iwl_trans_status {
   STATUS_TRANS_DEAD,
 };
 
-static inline size_t iwl_trans_get_rb_size(enum iwl_amsdu_size rb_size) {
+static inline size_t iwl_trans_get_rb_size_order(enum iwl_amsdu_size rb_size) {
+  // Returns the equivalent of get_order(SIZE).
   switch (rb_size) {
     case IWL_AMSDU_2K:
-      return 2 * 1024;
+      return 0;
     case IWL_AMSDU_4K:
-      return 4 * 1024;
+      return 0;
     case IWL_AMSDU_8K:
-      return 8 * 1024;
+      return 1;
     case IWL_AMSDU_12K:
-      return 12 * 1024;
+      return 2;
     default:
       WARN_ON(1);
       return 0;
@@ -562,8 +563,8 @@ struct iwl_trans_ops {
   uint32_t (*read32)(struct iwl_trans* trans, uint32_t ofs);
   uint32_t (*read_prph)(struct iwl_trans* trans, uint32_t ofs);
   void (*write_prph)(struct iwl_trans* trans, uint32_t ofs, uint32_t val);
-  zx_status_t (*read_mem)(struct iwl_trans* trans, uint32_t addr, void* buf, int dwords);
-  zx_status_t (*write_mem)(struct iwl_trans* trans, uint32_t addr, const void* buf, int dwords);
+  zx_status_t (*read_mem)(struct iwl_trans* trans, uint32_t addr, void* buf, size_t dwords);
+  zx_status_t (*write_mem)(struct iwl_trans* trans, uint32_t addr, const void* buf, size_t dwords);
   void (*configure)(struct iwl_trans* trans, const struct iwl_trans_config* trans_cfg);
   void (*set_pmi)(struct iwl_trans* trans, bool state);
   void (*sw_reset)(struct iwl_trans* trans);
@@ -1088,7 +1089,7 @@ static inline void iwl_trans_write_prph(struct iwl_trans* trans, uint32_t ofs, u
 }
 
 static inline zx_status_t iwl_trans_read_mem(struct iwl_trans* trans, uint32_t addr, void* buf,
-                                             int dwords) {
+                                             size_t dwords) {
   return trans->ops->read_mem(trans, addr, buf, dwords);
 }
 
@@ -1110,7 +1111,7 @@ static inline uint32_t iwl_trans_read_mem32(struct iwl_trans* trans, uint32_t ad
 }
 
 static inline zx_status_t iwl_trans_write_mem(struct iwl_trans* trans, uint32_t addr,
-                                              const void* buf, int dwords) {
+                                              const void* buf, size_t dwords) {
   return trans->ops->write_mem(trans, addr, buf, dwords);
 }
 

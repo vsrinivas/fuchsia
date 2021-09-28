@@ -9,6 +9,7 @@
 // routines that are typically provided by the Linux kernel API.
 
 #include <fuchsia/hardware/pci/c/banjo.h>
+#include <limits.h>
 #include <netinet/if_ether.h>
 #include <stdint.h>
 #include <stdlib.h>
@@ -136,8 +137,13 @@ struct wiphy;
 // NEEDS_TYPES: Below structures are used in code but not ported yet.
 // A dummy byte is required to suppress the C++ warning message for empty
 // struct.
-struct delayed_work {
+
+struct work_struct {
   char dummy;
+};
+
+struct delayed_work {
+  struct work_struct work;
 };
 
 struct ewma_rate {
@@ -167,10 +173,6 @@ struct timer_list {
 };
 
 struct wait_queue_head {
-  char dummy;
-};
-
-struct work_struct {
   char dummy;
 };
 

@@ -237,9 +237,9 @@ class PcieTest : public zxtest::Test {
     }
   }
 
-  mock_function::MockFunction<zx_status_t, uint32_t, void*, int> mock_read_mem_;
+  mock_function::MockFunction<zx_status_t, uint32_t, void*, size_t> mock_read_mem_;
   static zx_status_t read_mem_wrapper(struct iwl_trans* trans, uint32_t addr, void* buf,
-                                      int dwords) {
+                                      size_t dwords) {
     auto wrapper = reinterpret_cast<iwl_trans_pcie_wrapper*>(IWL_TRANS_GET_PCIE_TRANS(trans));
     if (wrapper->test->mock_read_mem_.HasExpectations()) {
       return wrapper->test->mock_read_mem_.Call(addr, buf, dwords);
@@ -248,9 +248,9 @@ class PcieTest : public zxtest::Test {
     }
   }
 
-  mock_function::MockFunction<zx_status_t, uint32_t, const void*, int> mock_write_mem_;
+  mock_function::MockFunction<zx_status_t, uint32_t, const void*, size_t> mock_write_mem_;
   static zx_status_t write_mem_wrapper(struct iwl_trans* trans, uint32_t addr, const void* buf,
-                                       int dwords) {
+                                       size_t dwords) {
     auto wrapper = reinterpret_cast<iwl_trans_pcie_wrapper*>(IWL_TRANS_GET_PCIE_TRANS(trans));
     if (wrapper->test->mock_write_mem_.HasExpectations()) {
       return wrapper->test->mock_write_mem_.Call(addr, buf, dwords);
@@ -396,7 +396,8 @@ TEST_F(PcieTest, RxInit) {
   struct iwl_rx_mem_buffer* rxb;
   list_for_every_entry (&trans_pcie_->rxq->rx_free, rxb, struct iwl_rx_mem_buffer, list) {
     EXPECT_NOT_NULL(rxb->io_buf);
-    EXPECT_EQ(iwl_iobuf_size(rxb->io_buf), 2 * 1024);
+    // rx_buf_size is IWL_AMSDU_2K, but the minimum allocatd buffer size is 1 page.
+    EXPECT_EQ(iwl_iobuf_size(rxb->io_buf), 4 * 1024);
   }
 
   iwl_pcie_rx_free(trans_);

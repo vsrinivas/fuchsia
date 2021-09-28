@@ -241,7 +241,7 @@ static inline int iwl_queue_inc_wrap(struct iwl_trans* trans, int index) {
  * iwl_get_closed_rb_stts - get closed rb stts from different structs
  * @rxq - the rxq to get the rb stts from
  */
-static inline __le16 iwl_get_closed_rb_status(struct iwl_trans* trans, struct iwl_rxq* rxq) {
+static inline __le16 iwl_get_closed_rb_stts(struct iwl_trans* trans, struct iwl_rxq* rxq) {
   if (trans->cfg->device_family >= IWL_DEVICE_FAMILY_22560) {
     __le16* rb_status = (__le16*)iwl_iobuf_virtual(rxq->rb_status);
 
@@ -498,6 +498,7 @@ struct cont_rec {
  * @scd_set_active: should the transport configure the SCD for HCMD queue
  * @sw_csum_tx: if true, then the transport will compute the csum of the TXed
  *  frame.
+ * @rx_page_order: page order for receive buffer size
  * @reg_lock: protect hw register access
  * @mutex: to protect stop_device / start_fw / start_hw
  * @cmd_in_flight: true when we have a host command in flight
@@ -590,6 +591,7 @@ struct iwl_trans_pcie {
   bool scd_set_active;
   bool sw_csum_tx;
   bool pcie_dbg_dumped_once;
+  uint32_t rx_page_order;
 
   /*protect hw register */
   mtx_t reg_lock;
@@ -700,18 +702,17 @@ void iwl_trans_pcie_tx_reset(struct iwl_trans* trans);
 void iwl_pcie_gen2_update_byte_tbl(struct iwl_trans_pcie* trans_pcie, struct iwl_txq* txq,
                                    uint16_t byte_cnt, int num_tbs);
 
-#if 0   // NEEDS_PORTING
 static inline uint16_t iwl_pcie_tfd_tb_get_len(struct iwl_trans* trans, void* _tfd, uint8_t idx) {
     if (trans->cfg->use_tfh) {
-        struct iwl_tfh_tfd* tfd = _tfd;
-        struct iwl_tfh_tb* tb = &tfd->tbs[idx];
+      struct iwl_tfh_tfd* tfd = (struct iwl_tfh_tfd*)_tfd;
+      struct iwl_tfh_tb* tb = &tfd->tbs[idx];
 
-        return le16_to_cpu(tb->tb_len);
+      return le16_to_cpu(tb->tb_len);
     } else {
-        struct iwl_tfd* tfd = _tfd;
-        struct iwl_tfd_tb* tb = &tfd->tbs[idx];
+      struct iwl_tfd* tfd = (struct iwl_tfd*)_tfd;
+      struct iwl_tfd_tb* tb = &tfd->tbs[idx];
 
-        return le16_to_cpu(tb->hi_n_len) >> 4;
+      return le16_to_cpu(tb->hi_n_len) >> 4;
     }
 }
 
@@ -723,7 +724,6 @@ void iwl_pcie_dump_csr(struct iwl_trans* trans);
 /*****************************************************
  * Helpers
  ******************************************************/
-#endif  // NEEDS_PORTING
 static inline void _iwl_disable_interrupts(struct iwl_trans* trans) {
   struct iwl_trans_pcie* trans_pcie = IWL_TRANS_GET_PCIE_TRANS(trans);
 

@@ -110,6 +110,7 @@ static inline uint16_t be16_to_cpup(const uint16_t* x) {
 // NEEDS_TYPES: Need to check if 'x' is static array.
 #define ARRAY_SIZE(x) (countof(x))
 
+#define container_of(value, type, member) ((type*)((char*)(value)-offsetof(type, member)))
 #define offsetofend(type, member) (offsetof(type, member) + sizeof(((type*)NULL)->member))
 
 // NEEDS_TYPES: need to be generic

@@ -15,10 +15,15 @@
 
 #include "src/connectivity/wlan/drivers/testing/lib/sim-env/sim-env.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform/kernel.h"
-#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform/wlanphy-impl-device.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/test/sim-mvm.h"
 
 namespace wlan {
+namespace iwlwifi {
+
+class WlanphyImplDevice;
+
+}  // namespace iwlwifi
+
 namespace testing {
 
 // The struct to store the internal state of the simulated firmware.

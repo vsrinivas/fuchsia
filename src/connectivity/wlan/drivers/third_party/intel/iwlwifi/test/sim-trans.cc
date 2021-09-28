@@ -23,6 +23,8 @@
 #include <lib/fake-bti/bti.h>
 #include <zircon/status.h>
 
+#include <memory>
+
 extern "C" {
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/fw/api/alive.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/fw/api/commands.h"
@@ -33,6 +35,7 @@ extern "C" {
 }
 
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform/mvm-mlme.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform/wlanphy-impl-device.h"
 #include "src/devices/testing/mock-ddk/mock-device.h"
 
 using wlan::testing::IWL_TRANS_GET_SIM_TRANS;
@@ -151,12 +154,12 @@ static uint32_t iwl_sim_trans_read_prph(struct iwl_trans* trans, uint32_t ofs) {
 static void iwl_sim_trans_write_prph(struct iwl_trans* trans, uint32_t ofs, uint32_t val) {}
 
 static zx_status_t iwl_sim_trans_read_mem(struct iwl_trans* trans, uint32_t addr, void* buf,
-                                          int dwords) {
+                                          size_t dwords) {
   return ZX_ERR_NOT_SUPPORTED;
 }
 
 static zx_status_t iwl_sim_trans_write_mem(struct iwl_trans* trans, uint32_t addr, const void* buf,
-                                           int dwords) {
+                                           size_t dwords) {
   return ZX_ERR_NOT_SUPPORTED;
 }
 
@@ -260,10 +263,10 @@ static struct iwl_trans* iwl_sim_trans_transport_alloc(struct device* dev,
 static zx_status_t sim_transport_bind(SimMvm* fw, struct device* dev,
                                       struct iwl_trans** out_iwl_trans,
                                       wlan::iwlwifi::WlanphyImplDevice** out_device) {
+  zx_status_t status = ZX_OK;
   const struct iwl_cfg* cfg = &iwl7265_2ac_cfg;
-  struct iwl_trans* iwl_trans = iwl_sim_trans_transport_alloc(dev, cfg, fw);
-  zx_status_t status;
 
+  struct iwl_trans* iwl_trans = iwl_sim_trans_transport_alloc(dev, cfg, fw);
   if (!iwl_trans) {
     return ZX_ERR_INTERNAL;
   }
@@ -307,10 +310,6 @@ remove_dev:
 
 namespace wlan::testing {
 
-struct iwl_trans* SimTransport::iwl_trans() {
-  return iwl_trans_;
-}
-
 SimTransport::SimTransport(::wlan::simulation::Environment* env, zx_device_t* parent)
     : SimMvm(env), device_{}, iwl_trans_(nullptr) {
   device_.zxdev = parent;
@@ -327,6 +326,10 @@ SimTransport::~SimTransport() {
 
 zx_status_t SimTransport::Init() {
   return sim_transport_bind(this, &device_, &iwl_trans_, &sim_device_);
+}
+
+struct iwl_trans* SimTransport::iwl_trans() {
+  return iwl_trans_;
 }
 
 const struct iwl_trans* SimTransport::iwl_trans() const { return iwl_trans_; }

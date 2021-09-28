@@ -51,8 +51,8 @@ struct iwl_fw_runtime_ops {
 
 #define MAX_NUM_LMAC 2
 struct iwl_fwrt_shared_mem_cfg {
-  int num_lmacs;
-  int num_txfifo_entries;
+  uint32_t num_lmacs;
+  uint32_t num_txfifo_entries;
   struct {
     uint32_t txfifo_size[TX_FIFO_MAX_NUM];
     uint32_t rxfifo1_size;

@@ -737,7 +737,7 @@ zx_status_t _iwl_pcie_rx_init(struct iwl_trans* trans) {
     mtx_unlock(&rxq->lock);
   }
 
-  size_t buffer_size = iwl_trans_get_rb_size(trans_pcie->rx_buf_size);
+  const size_t buffer_size = PAGE_SIZE * (1 << trans_pcie->rx_page_order);
   queue_size = trans->cfg->mq_rx_supported ? MQ_RX_NUM_RBDS : RX_QUEUE_SIZE;
   BUILD_BUG_ON(ARRAY_SIZE(trans_pcie->global_table) != ARRAY_SIZE(trans_pcie->rx_pool));
 
@@ -993,7 +993,7 @@ static void iwl_pcie_rx_handle(struct iwl_trans* trans, int queue) {
   mtx_lock(&rxq->lock);
   /* uCode's read index (stored in shared DRAM) indicates the last Rx
    * buffer that the driver may process (last buffer filled by ucode). */
-  r = le16_to_cpu(iwl_get_closed_rb_status(trans, rxq)) & 0x0FFF;
+  r = le16_to_cpu(iwl_get_closed_rb_stts(trans, rxq)) & 0x0FFF;
   i = rxq->read;
 
   /* W/A 9000 device step A0 wrap-around bug */
