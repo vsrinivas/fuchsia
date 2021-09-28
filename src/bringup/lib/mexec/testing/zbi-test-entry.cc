@@ -53,13 +53,19 @@ int main() {
     printf("failed to start message loop: %s\n", zx_status_get_string(status));
     return ZX_ERR_INTERNAL;
   }
-  zx::channel devmgr_channel, remote;
-  if (zx_status_t status = zx::channel::create(0, &devmgr_channel, &remote); status != ZX_OK) {
-    printf("failed to create a channel: %s\n", zx_status_get_string(status));
-    return ZX_ERR_INTERNAL;
-  }
+
   FakeDeviceAdmin admin;
-  fidl::BindServer(loop.dispatcher(), std::move(remote), &admin);
+  fidl::ClientEnd<devmgr::Administrator> client;
+  {
+    zx::status result = fidl::CreateEndpoints<devmgr::Administrator>();
+    if (result.is_error()) {
+      printf("failed to create %s endpoints: %s\n",
+             fidl::DiscoverableProtocolName<devmgr::Administrator>, result.status_string());
+      return ZX_ERR_INTERNAL;
+    }
+    fidl::BindServer(loop.dispatcher(), std::move(result->server), &admin);
+    client = std::move(result->client);
+  }
 
   fbl::unique_fd fd{open(kMexecZbi, O_RDONLY)};
   if (!fd) {
@@ -105,7 +111,7 @@ int main() {
     return ZX_ERR_INTERNAL;
   }
 
-  if (zx_status_t status = mexec::Boot(std::move(root_resource), std::move(devmgr_channel),
+  if (zx_status_t status = mexec::Boot(std::move(root_resource), std::move(client),
                                        std::move(kernel_zbi), std::move(data_zbi));
       status != ZX_OK) {
     printf("failed to mexec: %s\n", zx_status_get_string(status));

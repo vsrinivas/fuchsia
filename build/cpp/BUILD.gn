@@ -32,8 +32,6 @@ config("fidl-llcpp-deprecated-raw-channels") {
     "//src/bringup/bin/sysinfo:sysinfo",
     "//src/bringup/bin/sysinfo:test",
     "//src/bringup/bin/waitfor:waitfor",
-    "//src/bringup/lib/mexec:mexec",
-    "//src/bringup/lib/mexec/testing:zbi-test-entry",
     "//src/cobalt/bin/system-metrics:system_metrics_daemon_lib",
     "//src/connectivity/telephony/drivers/qmi-fake-transport:fake_qmi_driver-driver",
     "//src/connectivity/telephony/tests/driver-integration:telephony-qmi-usb-integration-test",
