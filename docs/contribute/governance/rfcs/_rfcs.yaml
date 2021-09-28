@@ -1668,3 +1668,16 @@
   reviewers: ['adanis@google.com', 'cpu@google.com', 'dgreenaway@google.com', 'mvanotti@google.com', 'tamird@google.com']
   submitted: '2021-08-26'
   reviewed: '2021-09-25'
+
+- name: 'RFC-0129'
+  title: 'Python Support in Fuchsia'
+  short_description: 'Define the versioning and script requirements for Python sources within the Fuchsia project.'
+  authors: ['hansens@google.com']
+  file: '0129_python_in_fuchsia.md'
+  area: ['governance']
+  issue: ['77963']
+  gerrit_change_id: ['538447', '538448', '538449', '538450', '538451', '538452', '538453', '538454', '538455', '538456', '538457', '538459', '538460', '538561', '539023']
+  status: 'Accepted'
+  reviewers: ['abarth@google.com', 'cpu@google.com', 'dschuyler@google.com', 'jamesr@google.com', 'nathaniel@google.com', 'shayba@google.com']
+  submitted: '2021-06-15'
+  reviewed: '2021-09-24'

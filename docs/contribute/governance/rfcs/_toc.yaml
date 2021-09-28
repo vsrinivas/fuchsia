@@ -269,3 +269,5 @@ toc:
   path: /docs/contribute/governance/rfcs/0127_structured_configuration.md
 - title: "RFC-0128: Introduce `zx_vcpu_kick`"
   path: /docs/contribute/governance/rfcs/0128_vcpu_kick.md
+- title: "RFC-0129: Python in Fuchsia"
+  path: /docs/contribute/governance/rfcs/0129_python_in_fuchsia.md
