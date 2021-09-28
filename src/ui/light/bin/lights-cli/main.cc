@@ -14,6 +14,7 @@
 
 #include "lights-cli.h"
 
+constexpr char kLightsDevicePath[] = "/dev/class/light/000";
 constexpr char kUsageMessage[] = R"""(Usage: lights-cli <command> <index> <value>
     Example:
     lights-cli print 0
@@ -37,8 +38,15 @@ zx_status_t GetDeviceHandle(const char* path, zx::channel* handle) {
 
 int main(int argc, char** argv) {
   zx::channel channel;
-  zx_status_t status = GetDeviceHandle("/dev/class/light/000", &channel);
+  zx_status_t status = GetDeviceHandle(kLightsDevicePath, &channel);
   if (status != ZX_OK) {
+    printf("Failed to open lights device at '%s'\n", kLightsDevicePath);
+    return 1;
+  }
+
+  if (argc <= 1) {
+    printf("%s expects at least 1 argument\n", argv[0]);
+    printf(kUsageMessage);
     return 1;
   }
 
