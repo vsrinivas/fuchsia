@@ -19,6 +19,7 @@
 
 #include <array>
 #include <memory>
+#include <string>
 #include <utility>
 
 #include <zxtest/zxtest.h>
@@ -42,6 +43,21 @@ TEST(TestLoopTest, DefaultDispatcherIsSetAndUnset) {
     EXPECT_EQ(loop.dispatcher(), async_get_default_dispatcher());
   }
   EXPECT_NULL(async_get_default_dispatcher());
+}
+
+TEST(TestLoopTest, RandomSeedFromEnv) {
+  const char* kTestRandomSeed = "1234";
+  char* old_random_seed = getenv("TEST_LOOP_RANDOM_SEED");
+  setenv("TEST_LOOP_RANDOM_SEED", kTestRandomSeed, /*overwrite=*/true);
+
+  async::TestLoop loop;
+  EXPECT_EQ(loop.initial_state(), 1234u);
+
+  if (old_random_seed) {
+    setenv("TEST_LOOP_RANDOM_SEED", old_random_seed, /*overwrite=*/true);
+  } else {
+    unsetenv("TEST_LOOP_RANDOM_SEED");
+  }
 }
 
 TEST(TestLoopDispatcher, FakeClockTimeIsCorrect) {
@@ -94,6 +110,46 @@ TEST(TestLoopTest, TasksAreDispatched) {
   async::PostTask(loop.dispatcher(), [&called] { called = true; });
   loop.RunUntilIdle();
   EXPECT_TRUE(called);
+}
+
+TEST(TestLoopTest, QuitAndReset) {
+  async::TestLoop loop;
+  async::PostDelayedTask(
+      loop.dispatcher(), [] {}, zx::sec(1));
+  loop.Quit();
+
+  // Loop has quit, so time does not advance and no work is done.
+  EXPECT_FALSE(loop.RunFor(zx::sec(1)));
+  EXPECT_EQ(loop.Now(), zx::time(0));
+
+  // Loop has reset, so time does advance and work is done.
+  EXPECT_TRUE(loop.RunFor(zx::sec(1)));
+  EXPECT_EQ(loop.Now(), zx::time(0) + zx::sec(1));
+
+  // Quit task is posted, followed by another task. The quit task is
+  // dispatched and work is reported.
+  async::PostTask(loop.dispatcher(), [&loop] { loop.Quit(); });
+  async::PostTask(loop.dispatcher(), [] {});
+  EXPECT_TRUE(loop.RunUntilIdle());
+
+  // Loop was quit, but it is now reset  the remaining task will be dispatched
+  // on the next run.
+  EXPECT_TRUE(loop.RunUntilIdle());
+}
+
+TEST(TestLoopTest, RunRepeatedly) {
+  async::TestLoop loop;
+  for (int i = 0; i <= 60; ++i) {
+    async::PostDelayedTask(
+        loop.dispatcher(), [] {}, zx::sec(i));
+  }
+  // Run the loop repeatedly at ten second intervals until the delayed tasks
+  // are all dispatched.
+  loop.RunRepeatedlyFor(zx::sec(10));
+  EXPECT_GE(loop.Now(), zx::time(0) + zx::min(1));
+
+  // There should be nothing further to dispatch.
+  EXPECT_FALSE(loop.RunUntilIdle());
 }
 
 TEST(TestLoopTest, SameDeadlinesDispatchInPostingOrder) {

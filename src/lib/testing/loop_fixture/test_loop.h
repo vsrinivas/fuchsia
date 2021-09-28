@@ -43,7 +43,7 @@ class TestLoop {
 
   // Repeatedly runs the loop by |increment| until nothing further is left to
   // dispatch.
-  void RunLoopRepeatedlyFor(zx::duration increment);
+  void RunLoopRepeatedlyFor(zx::duration increment) { return loop_.RunRepeatedlyFor(increment); }
 
   // Quits the message loop. If called while running, it will immediately
   // exit and dispatch no further tasks or waits; if called before running,

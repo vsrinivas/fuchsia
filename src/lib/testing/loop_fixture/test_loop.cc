@@ -10,9 +10,4 @@ TestLoop::TestLoop() = default;
 
 TestLoop::~TestLoop() = default;
 
-void TestLoop::RunLoopRepeatedlyFor(zx::duration increment) {
-  while (RunLoopFor(increment)) {
-  }
-}
-
 }  // namespace loop_fixture

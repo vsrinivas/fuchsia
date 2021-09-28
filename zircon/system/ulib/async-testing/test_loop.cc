@@ -193,6 +193,11 @@ bool TestLoop::RunUntil(zx::time deadline) {
 
 bool TestLoop::RunFor(zx::duration duration) { return RunUntil(Now() + duration); }
 
+void TestLoop::RunRepeatedlyFor(zx::duration increment) {
+  while (RunFor(increment)) {
+  }
+}
+
 bool TestLoop::RunUntilIdle() { return RunUntil(Now()); }
 
 bool TestLoop::HasPendingWork() {

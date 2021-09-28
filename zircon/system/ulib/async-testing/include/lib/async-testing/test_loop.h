@@ -89,6 +89,10 @@ class TestLoop final {
   // Returns true iff any tasks or waits were invoked during the run.
   bool RunFor(zx::duration duration);
 
+  // Repeatedly runs the loop by |increment| until nothing further is left to
+  // dispatch.
+  void RunRepeatedlyFor(zx::duration increment);
+
   // Dispatches all waits and all tasks with deadlines up until the current
   // time, progressively advancing the fake clock.
   // Returns true iff any tasks or waits were invoked during the run.
