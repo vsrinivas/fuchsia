@@ -126,7 +126,7 @@ impl Partition {
         if label.starts_with("zircon-") && label.len() == "zircon-x".len() {
             let configuration = Partition::letter_to_configuration(label.chars().last().unwrap());
             Some(PartitionPaveType::Asset { r#type: Asset::Kernel, config: configuration })
-        } else if label.starts_with("efi") {
+        } else if label.starts_with("efi") || label.starts_with("fuchsia.esp") {
             Some(PartitionPaveType::Bootloader)
         } else {
             None

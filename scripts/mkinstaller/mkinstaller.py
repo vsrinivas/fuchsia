@@ -67,7 +67,7 @@ IMAGES = [
     # This is the zedboot image, which is actually booted.
     ManifestImage('zedboot-efi', ['efi'], 'blk'),
     # This is the EFI system partition that will be installed to the target.
-    ManifestImage('efi', [WORKSTATION_INSTALLER_GPT_GUID], 'blk'),
+    ManifestImage('fuchsia.esp', [WORKSTATION_INSTALLER_GPT_GUID], 'blk'),
     ManifestImage('zircon-a', [WORKSTATION_INSTALLER_GPT_GUID], 'zbi'),
     ManifestImage('zircon-r', [WORKSTATION_INSTALLER_GPT_GUID], 'zbi'),
 
@@ -401,7 +401,6 @@ def Main(args):
           ('Path {} does not exist, use --create to create a disk image.\n'
            'Detected USB devices:\n'
            '{}').format(path, '\n'.join(GetUsbDisks())),
-          end='',
           file=sys.stderr)
       return 1
     if not IsUsbDisk(path):
@@ -409,7 +408,6 @@ def Main(args):
           ('Path {} is not a USB device. Use -f to force.\n'
            'Detected USB devices:\n'
            '{}').format(path, '\n'.join(GetUsbDisks())),
-          end='',
           file=sys.stderr)
       return 1
 
