@@ -8,7 +8,8 @@ mod windowed_stats;
 use {
     crate::telemetry::windowed_stats::WindowedStats,
     fidl_fuchsia_metrics::{MetricEvent, MetricEventPayload},
-    fidl_fuchsia_wlan_ieee80211 as fidl_ieee80211, fidl_fuchsia_wlan_sme as fidl_sme,
+    fidl_fuchsia_wlan_ieee80211 as fidl_ieee80211, fidl_fuchsia_wlan_internal as fidl_internal,
+    fidl_fuchsia_wlan_sme as fidl_sme,
     fidl_fuchsia_wlan_stats::MlmeStats,
     fuchsia_async as fasync,
     fuchsia_inspect::{Inspector, Node as InspectNode, NumericProperty, UintProperty},
@@ -130,6 +131,12 @@ pub enum TelemetryEvent {
         track_subsequent_downtime: bool,
         info: DisconnectInfo,
     },
+    OnSignalReport {
+        ind: fidl_internal::SignalReportIndication,
+    },
+    OnChannelSwitched {
+        info: fidl_internal::ChannelSwitchInfo,
+    },
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -216,6 +223,7 @@ struct ConnectedState {
     /// Policy ClientController::Connect FIDL call.
     new_connect_start_time: Option<fasync::Time>,
     prev_counters: Option<fidl_fuchsia_wlan_stats::IfaceStats>,
+    latest_ap_state: BssDescription,
 }
 
 #[derive(Debug, Clone)]
@@ -483,6 +491,7 @@ impl Telemetry {
                         iface_id,
                         new_connect_start_time: None,
                         prev_counters: None,
+                        latest_ap_state,
                     });
                     self.last_checked_connection_state = now;
                 }
@@ -492,8 +501,13 @@ impl Telemetry {
                 self.stats_logger.log_disconnect_cobalt_metrics(&info).await;
 
                 let duration = now - self.last_checked_connection_state;
-                if let ConnectionState::Connected { .. } = self.connection_state {
+                if let ConnectionState::Connected(state) = &self.connection_state {
                     self.stats_logger.queue_stat_op(StatOp::AddConnectedDuration(duration));
+                    // Log device connected to AP metrics right now in case we have not logged it
+                    // to Cobalt yet today.
+                    self.stats_logger
+                        .log_device_connected_cobalt_metrics(&state.latest_ap_state)
+                        .await;
                 }
                 let connect_start_time = if info.is_sme_reconnecting {
                     // If `is_sme_reconnecting` is true, we already know that the process of
@@ -522,11 +536,25 @@ impl Telemetry {
                 };
                 self.last_checked_connection_state = now;
             }
+            TelemetryEvent::OnSignalReport { ind } => {
+                if let ConnectionState::Connected(state) = &mut self.connection_state {
+                    state.latest_ap_state.rssi_dbm = ind.rssi_dbm;
+                    state.latest_ap_state.snr_db = ind.snr_db;
+                }
+            }
+            TelemetryEvent::OnChannelSwitched { info } => {
+                if let ConnectionState::Connected(state) = &mut self.connection_state {
+                    state.latest_ap_state.channel.primary = info.new_channel;
+                }
+            }
         }
     }
 
     pub async fn log_daily_cobalt_metrics(&mut self) {
         self.stats_logger.log_daily_cobalt_metrics().await;
+        if let ConnectionState::Connected(state) = &self.connection_state {
+            self.stats_logger.log_device_connected_cobalt_metrics(&state.latest_ap_state).await;
+        }
     }
 
     pub async fn signal_hr_passed(&mut self) {
@@ -1211,6 +1239,8 @@ impl StatsLogger {
         );
     }
 
+    /// Metrics to log when device first connects to an AP, and periodically afterward
+    /// (at least once a day) if the device is still connected to the AP.
     async fn log_device_connected_cobalt_metrics(&mut self, latest_ap_state: &BssDescription) {
         let mut metric_events = vec![];
         metric_events.push(MetricEvent {
@@ -3263,6 +3293,37 @@ mod tests {
             metrics::DEVICE_CONNECTED_TO_AP_THAT_SUPPORTS_BSS_TRANSITION_MANAGEMENT_METRIC_ID,
         );
         assert_eq!(connected_bss_transition_mgmt.len(), 0);
+    }
+
+    #[test_case(metrics::NUMBER_OF_CONNECTED_DEVICES_METRIC_ID; "number_of_connected_devices")]
+    #[test_case(metrics::CONNECTED_NETWORK_SECURITY_TYPE_METRIC_ID; "breakdown_by_security_type")]
+    #[fuchsia::test(add_test_attr = false)]
+    fn test_log_device_connected_cobalt_metrics_on_disconnect_and_periodically(metric_id: u32) {
+        let (mut test_helper, mut test_fut) = setup_test();
+
+        let bss_description = random_bss_description!(Wpa2);
+        test_helper.send_connected_event(bss_description);
+        test_helper.drain_cobalt_events(&mut test_fut);
+        test_helper.cobalt_events.clear();
+
+        test_helper.advance_by(24.hours(), test_fut.as_mut());
+
+        // Verify that after 24 hours has passed, metric is logged at least once because
+        // device is still connected
+        let metrics = test_helper.get_logged_metrics(metric_id);
+        assert!(!metrics.is_empty());
+
+        test_helper.cobalt_events.clear();
+
+        let info = fake_disconnect_info();
+        test_helper
+            .telemetry_sender
+            .send(TelemetryEvent::Disconnected { track_subsequent_downtime: false, info });
+        test_helper.drain_cobalt_events(&mut test_fut);
+
+        // Verify that on disconnect, device connected metric is also logged.
+        let metrics = test_helper.get_logged_metrics(metric_id);
+        assert_eq!(metrics.len(), 1);
     }
 
     struct TestHelper {

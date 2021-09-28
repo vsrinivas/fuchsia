@@ -709,10 +709,12 @@ async fn connected_state(
                             options.latest_ap_state.rssi_dbm = ind.rssi_dbm;
                             options.latest_ap_state.snr_db = ind.snr_db;
                             handle_connection_stats(&mut common_options.stats_sender, options.currently_fulfilled_request.target.network.clone().into(), ind.rssi_dbm);
+                            common_options.telemetry_sender.send(TelemetryEvent::OnSignalReport { ind });
                             false
                         }
                         fidl_sme::ConnectTransactionEvent::OnChannelSwitched { info } => {
                             options.latest_ap_state.channel.primary = info.new_channel;
+                            common_options.telemetry_sender.send(TelemetryEvent::OnChannelSwitched { info });
                             false
                         }
                     };
@@ -3711,7 +3713,7 @@ mod tests {
         exec.set_fake_time(fasync::Time::from_nanos(0));
 
         let mut test_values = test_setup();
-        let mut _telemetry_receiver = test_values.telemetry_receiver;
+        let mut telemetry_receiver = test_values.telemetry_receiver;
 
         let network_ssid = types::Ssid::try_from("test").unwrap();
         let bss_description = random_bss_description!(Wpa2, ssid: network_ssid.clone());
@@ -3731,10 +3733,14 @@ mod tests {
             .expect("failed to send signal report");
         assert_variant!(exec.run_until_stalled(&mut fut), Poll::Pending);
 
-        // We don't have to way to view updated BssDescription, so this is just a quick
-        // check that state machine does not exit and there's no disconnect.
+        // Verify telemetry event
+        assert_variant!(telemetry_receiver.try_next(), Ok(Some(event)) => {
+            assert_variant!(event, TelemetryEvent::OnSignalReport { ind } => {
+                assert_eq!(ind, fidl_signal_report);
+            });
+        });
 
-        // Check that no disconnect request is sent to SME
+        // Do a quick check that state machine does not exist and there's no disconnect to SME
         assert_variant!(poll_sme_req(&mut exec, &mut sme_fut), Poll::Pending);
 
         // Verify that connection stats are sent out
@@ -3772,6 +3778,13 @@ mod tests {
             .send_on_channel_switched(&mut channel_switch_info)
             .expect("failed to send signal report");
         assert_variant!(exec.run_until_stalled(&mut fut), Poll::Pending);
+
+        // Verify telemetry event
+        assert_variant!(telemetry_receiver.try_next(), Ok(Some(event)) => {
+            assert_variant!(event, TelemetryEvent::OnChannelSwitched { info } => {
+                assert_eq!(info, channel_switch_info);
+            });
+        });
 
         // Have SME notify Policy of disconnection so we can see whether the channel in the
         // BssDescription has changed.
