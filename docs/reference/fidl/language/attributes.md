@@ -154,7 +154,7 @@ table TeardownConfig {
 
 ## `@max_bytes` {#maxbytes}
 
-<!-- TODO(fxbug.dev/81390): Remove double quotes around numeric arguments. -->
+<!-- TODO(fxbug.dev/85301): Remove double quotes around numeric arguments. -->
 
 **USAGE**: `@max_bytes("`_number_`")`
 
