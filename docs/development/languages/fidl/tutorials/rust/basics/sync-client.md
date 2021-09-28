@@ -216,7 +216,7 @@ Terminate the realm component to stop execution and clean up the component
 instances:
 
 ```posix-terminal
-ffx component stop /core/ffx-laboratory:echo_realm
+ffx component destroy /core/ffx-laboratory:echo_realm
 ```
 
 <!-- xrefs -->

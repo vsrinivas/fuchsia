@@ -70,7 +70,7 @@ To create a component:
     The dependencies will used later when implementing the FIDL server, and are not needed yet
     at this step.
 
-1. Add a component manifest in `examples/fidl/rust/server/server.cmx`:
+1. Add a component manifest in `examples/fidl/dart/server/server.cmx`:
 
    Note: The binary name in the manifest must match the name of the `dart_app`, which is used
    to define the Dart executable.
@@ -106,7 +106,7 @@ other product configurations.
    `fuchsia_component`.
 
    ```
-   fx shell run fuchsia-pkg://fuchsia.com/echo-rust-dart#meta/echo-server.cmx
+   fx shell run fuchsia-pkg://fuchsia.com/echo-dart-server#meta/echo-server.cmx
    ```
 
 ## Implement the server

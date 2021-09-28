@@ -60,7 +60,7 @@ rm -r examples/fidl/dart/client/*
 
 1. Then, import them in `lib/main.dart`:
 
-   ```rust
+   ```dart
    {%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/dart/client/lib/main.dart" region_tag="imports" %}
    ```
 
@@ -72,7 +72,7 @@ These dependencies are explained in the [server tutorial][server-tut].
    editing the component manifest in `client.cmx`.
 
    ```cmx
-   {%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/rust/client/client.cmx" %}
+   {%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/dart/client/meta/client.cmx" %}
    ```
 
 ## Connect to the server {#main}

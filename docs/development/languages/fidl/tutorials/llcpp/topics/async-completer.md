@@ -91,7 +91,7 @@ Note: You can explore the full source for the realm component at
    echo realm, server, and client:
 
     ```posix-terminal
-    fx set core.qemu-x64 --with //examples/fidl/llcpp:echo-llcpp-client-async
+    fx set core.qemu-x64 --with //examples/fidl/llcpp:echo-llcpp-async
     ```
 
 1. Build the Fuchsia image:
@@ -104,7 +104,7 @@ Note: You can explore the full source for the realm component at
    instances and routes the capabilities:
 
     ```posix-terminal
-    ffx component run fuchsia-pkg://fuchsia.com/echo-llcpp-client-async#meta/echo_realm.cm
+    ffx component run fuchsia-pkg://fuchsia.com/echo-llcpp-async#meta/echo_realm.cm
     ```
 
 1. Start the `echo_client` instance:
@@ -132,7 +132,7 @@ Terminate the realm component to stop execution and clean up the component
 instances:
 
 ```posix-terminal
-ffx component stop /core/ffx-laboratory:echo_realm
+ffx component destroy /core/ffx-laboratory:echo_realm
 ```
 
 <!-- xrefs -->

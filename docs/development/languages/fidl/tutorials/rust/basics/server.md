@@ -68,20 +68,20 @@ To create a component:
    {%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/rust/server/BUILD.gn" region_tag="rest" %}
    ```
 
-  <!-- TODO(fxbug.dev/58758) <<../../common/server/packages.md>> -->
+   <!-- TODO(fxbug.dev/58758) <<../../common/server/packages.md>> -->
 
-  To get the server component up and running, there are three targets that are
-  defined:
+   To get the server component up and running, there are three targets that are
+   defined:
 
-  * The raw executable file for the server that is built to run on Fuchsia.
-  * A component that is set up to simply run the server executable,
-    which is described using the component's manifest file.
-  * The component is then put into a package, which is the unit of software
-    distribution on Fuchsia. In this case, the package just contains a
-    single component.
+   * The raw executable file for the server that is built to run on Fuchsia.
+   * A component that is set up to simply run the server executable,
+     which is described using the component's manifest file.
+   * The component is then put into a package, which is the unit of software
+     distribution on Fuchsia. In this case, the package just contains a
+     single component.
 
-  For more details on packages, components, and how to build them, refer to
-  the [Building components](/docs/development/components/build.md) page.
+   For more details on packages, components, and how to build them, refer to
+   the [Building components][building-components] page.
 
 1. Add a component manifest in `examples/fidl/rust/server/meta/server.cml`:
 
@@ -92,18 +92,23 @@ To create a component:
    {%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/rust/server/meta/server.cml" region_tag="example_snippet" %}
    ```
 
-<!-- TODO(fxbug.dev/58758) <<../../common/server/qemu.md>> -->
+   <!-- TODO(fxbug.dev/58758) <<../../common/server/qemu.md>> -->
 
-1. Add the server to your build configuration and build:
+1. Add the server to your build configuration:
 
    ```posix-terminal
    fx set core.qemu-x64 --with //examples/fidl/rust/server:echo-rust-server
-   fx build
    ```
 
    Note: This build configuration assumes your device target is the emulator.
    To run the example on a physical device, select the appropriate
    [product configuration][products] for your hardware.
+
+1. Build the Fuchsia image:
+
+   ```posix-terminal
+   fx build
+   ```
 
 ## Implement the server
 
@@ -351,7 +356,7 @@ The next step will be to write a client that sends `Echo` protocol requests.
 For now, you can simply terminate the server component:
 
 ```posix-terminal
-ffx component stop /core/ffx-laboratory:echo_server
+ffx component destroy /core/ffx-laboratory:echo_server
 ```
 
 Note: Component instances are referenced by their
@@ -368,7 +373,6 @@ the [component instance tree][glossary.component-instance-tree]
 [building-components]: /docs/development/components/build.md
 [products]: /docs/concepts/build_system/boards_and_products.md
 [control-handle]: /docs/reference/fidl/bindings/rust-bindings.md#protocol-control-handle
-[getting-started]: /docs/get-started/index.md
 [declaring-fidl]: /docs/development/languages/fidl/tutorials/fidl.md
 [component-manager]: /docs/concepts/components/v2/component_manager.md
 [protocol-open]: /docs/concepts/components/v2/capabilities/life_of_a_protocol_open.md#binding_to_a_component_and_sending_a_protocol_channel

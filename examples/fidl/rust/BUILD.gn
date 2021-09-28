@@ -7,10 +7,10 @@ import("//build/components.gni")
 group("all") {
   testonly = true
   deps = [
-    ":echo-launcher-rust-client",
+    ":echo-launcher-rust",
     ":echo-rust-client",
     ":echo-rust-client-sync",
-    ":echo-service-rust-client",
+    ":echo-service-rust",
     "fidl_crates",
     "persistence",
     "server:echo-rust-server",
@@ -36,7 +36,7 @@ fuchsia_package("echo-rust-client-sync") {
 }
 
 # //docs/development/languages/fidl/tutorials/rust/topics/request-pipelining.md
-fuchsia_package("echo-launcher-rust-client") {
+fuchsia_package("echo-launcher-rust") {
   deps = [
     "request_pipelining/client:echo-client",
     "request_pipelining/server:echo-server",
@@ -45,7 +45,7 @@ fuchsia_package("echo-launcher-rust-client") {
 }
 
 # //docs/development/languages/fidl/tutorials/rust/topics/services.md
-fuchsia_package("echo-service-rust-client") {
+fuchsia_package("echo-service-rust") {
   deps = [
     "services/client:echo-client",
     "services/server:echo-server",

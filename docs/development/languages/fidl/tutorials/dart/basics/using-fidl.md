@@ -69,13 +69,6 @@ Relative paths in the rest of the tutorial will be relative to this directory.
    {%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/dart/fidl_packages/pubspec.yaml" %}
    ```
 
-1. (Optional) Create an analysis configuration file at `analysis_options.yaml`. You can reuse the common Fuchsia analysis
-   configuration:
-
-   ```yaml
-   {%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/dart/fidl_packages/analysis_options.yaml" %}
-   ```
-
 1. Run the empty test suite:
 
    ```

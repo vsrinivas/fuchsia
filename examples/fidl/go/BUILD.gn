@@ -8,7 +8,7 @@ group("all") {
   testonly = true
   deps = [
     ":echo-go-client",
-    ":echo-launcher-go-client",
+    ":echo-launcher-go",
   ]
 }
 
@@ -27,7 +27,7 @@ fuchsia_package("echo-go-client") {
 }
 
 # //docs/reference/fidl/bindings/go-bindings.md
-fuchsia_package("echo-launcher-go-client") {
+fuchsia_package("echo-launcher-go") {
   deps = [
     "request_pipelining/client:echo-client",
     "request_pipelining/server:echo-server",

@@ -7,12 +7,12 @@ import("//build/components.gni")
 group("all") {
   testonly = true
   deps = [
-    ":echo-launcher-llcpp-client",
+    ":echo-launcher-llcpp",
+    ":echo-llcpp-async",
     ":echo-llcpp-client",
-    ":echo-llcpp-client-async",
     ":echo-llcpp-client-shared",
     ":echo-llcpp-client-sync",
-    ":echo-service-llcpp-client",
+    ":echo-service-llcpp",
     "server:echo-llcpp-server",
   ]
 }
@@ -50,7 +50,7 @@ fuchsia_package("echo-llcpp-client-shared") {
 }
 
 # //docs/development/languages/fidl/tutorials/llcpp/topics/async-completer.md
-fuchsia_package("echo-llcpp-client-async") {
+fuchsia_package("echo-llcpp-async") {
   deps = [
     "async_completer/client:echo-client",
     "async_completer/server:echo-server",
@@ -59,7 +59,7 @@ fuchsia_package("echo-llcpp-client-async") {
 }
 
 # //docs/development/languages/fidl/tutorials/llcpp/topics/request-pipelining.md
-fuchsia_package("echo-launcher-llcpp-client") {
+fuchsia_package("echo-launcher-llcpp") {
   deps = [
     "request_pipelining/client:echo-client",
     "request_pipelining/server:echo-server",
@@ -68,7 +68,7 @@ fuchsia_package("echo-launcher-llcpp-client") {
 }
 
 # //docs/development/languages/fidl/tutorials/llcpp/topics/services.md
-fuchsia_package("echo-service-llcpp-client") {
+fuchsia_package("echo-service-llcpp") {
   deps = [
     "services/client:echo-client",
     "services/server:echo-server",
