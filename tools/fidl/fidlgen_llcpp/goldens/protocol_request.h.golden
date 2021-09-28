@@ -2413,18 +2413,14 @@ template <>
 class ::fidl::internal::WireWeakEventSender<
     ::fidl_test_protocolrequest::Parent> {
  public:
+  WireWeakEventSender(
+      std::weak_ptr<::fidl::internal::AsyncServerBinding>&& binding)
+      : inner_(std::move(binding)) {}
+
  private:
-  friend class ::fidl::ServerBindingRef<::fidl_test_protocolrequest::Parent>;
+  friend ServerBindingRef<::fidl_test_protocolrequest::Parent>;
 
-  explicit WireWeakEventSender(
-      std::weak_ptr<::fidl::internal::AsyncServerBinding<
-          ::fidl_test_protocolrequest::Parent>>
-          binding)
-      : binding_(std::move(binding)) {}
-
-  std::weak_ptr<
-      ::fidl::internal::AsyncServerBinding<::fidl_test_protocolrequest::Parent>>
-      binding_;
+  ::fidl::internal::WeakEventSenderInner inner_;
 };
 #endif  // __Fuchsia__
 
@@ -2479,17 +2475,13 @@ template <>
 class ::fidl::internal::WireWeakEventSender<
     ::fidl_test_protocolrequest::Child> {
  public:
+  WireWeakEventSender(
+      std::weak_ptr<::fidl::internal::AsyncServerBinding>&& binding)
+      : inner_(std::move(binding)) {}
+
  private:
-  friend class ::fidl::ServerBindingRef<::fidl_test_protocolrequest::Child>;
+  friend ServerBindingRef<::fidl_test_protocolrequest::Child>;
 
-  explicit WireWeakEventSender(
-      std::weak_ptr<::fidl::internal::AsyncServerBinding<
-          ::fidl_test_protocolrequest::Child>>
-          binding)
-      : binding_(std::move(binding)) {}
-
-  std::weak_ptr<
-      ::fidl::internal::AsyncServerBinding<::fidl_test_protocolrequest::Child>>
-      binding_;
+  ::fidl::internal::WeakEventSenderInner inner_;
 };
 #endif  // __Fuchsia__

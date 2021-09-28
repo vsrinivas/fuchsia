@@ -1155,17 +1155,13 @@ class ::fidl::WireEventSender<::fidl_test_error::Example> {
 template <>
 class ::fidl::internal::WireWeakEventSender<::fidl_test_error::Example> {
  public:
+  WireWeakEventSender(
+      std::weak_ptr<::fidl::internal::AsyncServerBinding>&& binding)
+      : inner_(std::move(binding)) {}
+
  private:
-  friend class ::fidl::ServerBindingRef<::fidl_test_error::Example>;
+  friend ServerBindingRef<::fidl_test_error::Example>;
 
-  explicit WireWeakEventSender(
-      std::weak_ptr<
-          ::fidl::internal::AsyncServerBinding<::fidl_test_error::Example>>
-          binding)
-      : binding_(std::move(binding)) {}
-
-  std::weak_ptr<
-      ::fidl::internal::AsyncServerBinding<::fidl_test_error::Example>>
-      binding_;
+  ::fidl::internal::WeakEventSenderInner inner_;
 };
 #endif  // __Fuchsia__

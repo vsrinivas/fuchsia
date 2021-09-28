@@ -1728,27 +1728,18 @@ template <>
 class ::fidl::internal::WireWeakEventSender<
     ::fidl_test_doccomments::Interface> {
  public:
+  WireWeakEventSender(
+      std::weak_ptr<::fidl::internal::AsyncServerBinding>&& binding)
+      : inner_(std::move(binding)) {}
+
   /// event comment #1
   ///
   /// event comment #3
-  fidl::Result OnEvent() const {
-    if (auto _binding = binding_.lock()) {
-      return _binding->event_sender().OnEvent();
-    }
-    return fidl::Result::Unbound();
-  }
+  fidl::Result OnEvent() const;
 
  private:
-  friend class ::fidl::ServerBindingRef<::fidl_test_doccomments::Interface>;
+  friend ServerBindingRef<::fidl_test_doccomments::Interface>;
 
-  explicit WireWeakEventSender(
-      std::weak_ptr<::fidl::internal::AsyncServerBinding<
-          ::fidl_test_doccomments::Interface>>
-          binding)
-      : binding_(std::move(binding)) {}
-
-  std::weak_ptr<
-      ::fidl::internal::AsyncServerBinding<::fidl_test_doccomments::Interface>>
-      binding_;
+  ::fidl::internal::WeakEventSenderInner inner_;
 };
 #endif  // __Fuchsia__

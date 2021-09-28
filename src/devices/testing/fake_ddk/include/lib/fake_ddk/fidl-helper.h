@@ -27,9 +27,9 @@ class FidlMessenger;
 template <>
 class fidl::internal::WireWeakEventSender<fake_ddk::FidlMessenger> {
  public:
-  explicit WireWeakEventSender(std::weak_ptr<fidl::internal::AsyncBinding> binding)
-      : binding_(std::move(binding)) {}
-  std::weak_ptr<fidl::internal::AsyncBinding> binding_;
+  explicit WireWeakEventSender(std::weak_ptr<fidl::internal::AsyncServerBinding> binding)
+      : inner_(std::move(binding)) {}
+  fidl::internal::WeakEventSenderInner inner_;
 };
 
 template <>

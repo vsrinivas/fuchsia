@@ -916,18 +916,13 @@ template <>
 class ::fidl::internal::WireWeakEventSender<
     ::fidl_test_transitivedependenciescompose::Top> {
  public:
+  WireWeakEventSender(
+      std::weak_ptr<::fidl::internal::AsyncServerBinding>&& binding)
+      : inner_(std::move(binding)) {}
+
  private:
-  friend class ::fidl::ServerBindingRef<
-      ::fidl_test_transitivedependenciescompose::Top>;
+  friend ServerBindingRef<::fidl_test_transitivedependenciescompose::Top>;
 
-  explicit WireWeakEventSender(
-      std::weak_ptr<::fidl::internal::AsyncServerBinding<
-          ::fidl_test_transitivedependenciescompose::Top>>
-          binding)
-      : binding_(std::move(binding)) {}
-
-  std::weak_ptr<::fidl::internal::AsyncServerBinding<
-      ::fidl_test_transitivedependenciescompose::Top>>
-      binding_;
+  ::fidl::internal::WeakEventSenderInner inner_;
 };
 #endif  // __Fuchsia__

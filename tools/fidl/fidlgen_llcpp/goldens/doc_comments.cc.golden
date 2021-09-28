@@ -212,6 +212,14 @@ fidl::WireEventSender<::fidl_test_doccomments::Interface>::OnEvent() const {
   return ::fidl::Result{_message};
 }
 
+fidl::Result fidl::internal::WireWeakEventSender<
+    ::fidl_test_doccomments::Interface>::OnEvent() const {
+  FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
+  ::fidl::OwnedEncodedMessage<
+      ::fidl::WireResponse<::fidl_test_doccomments::Interface::OnEvent>>
+      _response{::fidl::internal::AllowUnownedInputRef{}};
+  return inner_.SendEvent(_response.GetOutgoingMessage());
+}
 #endif  // __Fuchsia__
 
 auto ::fidl_test_doccomments::wire::FlexibleUnion::which() const

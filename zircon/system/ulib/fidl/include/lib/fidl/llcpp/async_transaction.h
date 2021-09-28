@@ -56,7 +56,7 @@ class AsyncTransaction final : public Transaction {
   bool IsUnbound() final;
 
  private:
-  friend fidl::internal::AnyAsyncServerBinding;
+  friend fidl::internal::AsyncServerBinding;
 
   std::optional<UnbindInfo> Dispatch(std::shared_ptr<AsyncBinding>&& binding,
                                      fidl::IncomingMessage&& msg);

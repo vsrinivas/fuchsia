@@ -71,6 +71,30 @@ struct MethodEntry {
                                    ::fidl::Transaction* txn, const MethodEntry* begin,
                                    const MethodEntry* end);
 
+// The common bits in a weak event sender, i.e. an event sender that allows the
+// transport to be destroyed from underneath it.
+//
+// This class is related to |AsyncTransaction|, but the latter has an special
+// optimization for synchronous server method handlers, where it keeps a strong
+// reference to the binding by default and does not need weak pointer promotion.
+class WeakEventSenderInner {
+ public:
+  explicit WeakEventSenderInner(std::weak_ptr<::fidl::internal::AsyncServerBinding>&& binding)
+      : binding_(std::move(binding)) {}
+
+  // Sends an event.
+  //
+  // |message| will have its transaction ID set to zero.
+  //
+  // Errors are returned to the caller.
+  fidl::Result SendEvent(::fidl::OutgoingMessage& message) const;
+
+  const std::weak_ptr<::fidl::internal::AsyncServerBinding>& binding() const { return binding_; }
+
+ private:
+  std::weak_ptr<::fidl::internal::AsyncServerBinding> binding_;
+};
+
 //
 // Definitions related to binding a connection to a dispatcher
 //
@@ -93,8 +117,8 @@ ServerBindingRef<Protocol> BindServerTypeErased(async_dispatcher_t* dispatcher,
                                                 fidl::ServerEnd<Protocol> server_end,
                                                 IncomingMessageDispatcher* interface,
                                                 internal::AnyOnUnboundFn on_unbound) {
-  auto internal_binding = internal::AsyncServerBinding<Protocol>::Create(
-      dispatcher, std::move(server_end), interface, std::move(on_unbound));
+  auto internal_binding = internal::AsyncServerBinding::Create(dispatcher, server_end.TakeChannel(),
+                                                               interface, std::move(on_unbound));
   auto binding_ref = fidl::ServerBindingRef<Protocol>(internal_binding);
   auto* binding_ptr = internal_binding.get();
   // The binding object keeps itself alive until unbinding, so dropping the

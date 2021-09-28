@@ -958,18 +958,14 @@ template <>
 class ::fidl::internal::WireWeakEventSender<
     ::fidl_test_foreigntypeinresponseusedthroughcompose::Top> {
  public:
+  WireWeakEventSender(
+      std::weak_ptr<::fidl::internal::AsyncServerBinding>&& binding)
+      : inner_(std::move(binding)) {}
+
  private:
-  friend class ::fidl::ServerBindingRef<
+  friend ServerBindingRef<
       ::fidl_test_foreigntypeinresponseusedthroughcompose::Top>;
 
-  explicit WireWeakEventSender(
-      std::weak_ptr<::fidl::internal::AsyncServerBinding<
-          ::fidl_test_foreigntypeinresponseusedthroughcompose::Top>>
-          binding)
-      : binding_(std::move(binding)) {}
-
-  std::weak_ptr<::fidl::internal::AsyncServerBinding<
-      ::fidl_test_foreigntypeinresponseusedthroughcompose::Top>>
-      binding_;
+  ::fidl::internal::WeakEventSenderInner inner_;
 };
 #endif  // __Fuchsia__

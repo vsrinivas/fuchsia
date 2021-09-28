@@ -22,7 +22,7 @@ std::optional<UnbindInfo> AsyncTransaction::Dispatch(std::shared_ptr<AsyncBindin
   // in this scope releases ownership, no other thread may access the binding via keep_alive_.
   owned_binding_ = std::move(binding);
   // Avoid static_pointer_cast for now since it results in atomic inc/dec.
-  auto* binding_raw = static_cast<AnyAsyncServerBinding*>(owned_binding_.get());
+  auto* binding_raw = static_cast<AsyncServerBinding*>(owned_binding_.get());
   fidl::DispatchResult dispatch_result =
       binding_raw->interface_->dispatch_message(std::move(msg), this);
   if (moved)
@@ -62,7 +62,7 @@ zx_status_t AsyncTransaction::Reply(fidl::OutgoingMessage* message) {
 void AsyncTransaction::EnableNextDispatch() {
   if (!owned_binding_)
     return;  // Has no effect if the Transaction does not own the binding.
-  auto* binding_raw = static_cast<AnyAsyncServerBinding*>(owned_binding_.get());
+  auto* binding_raw = static_cast<AsyncServerBinding*>(owned_binding_.get());
   unowned_binding_ = owned_binding_;  // Preserve a weak reference to the binding.
   binding_raw->keep_alive_ = std::move(owned_binding_);
   if (binding_raw->CheckForTeardownAndBeginNextWait() == ZX_OK) {
@@ -77,28 +77,28 @@ void AsyncTransaction::EnableNextDispatch() {
 void AsyncTransaction::Close(zx_status_t epitaph) {
   if (!owned_binding_) {
     if (auto binding = unowned_binding_.lock()) {
-      auto* binding_raw = static_cast<AnyAsyncServerBinding*>(binding.get());
+      auto* binding_raw = static_cast<AsyncServerBinding*>(binding.get());
       binding_raw->Close(std::move(binding), epitaph);
     }
     return;
   }
   unbind_info_ = UnbindInfo::Close(epitaph);
   // Return ownership of the binding to the dispatcher.
-  auto* binding_raw = static_cast<AnyAsyncServerBinding*>(owned_binding_.get());
+  auto* binding_raw = static_cast<AsyncServerBinding*>(owned_binding_.get());
   binding_raw->keep_alive_ = std::move(owned_binding_);
 }
 
 void AsyncTransaction::InternalError(UnbindInfo error) {
   if (!owned_binding_) {
     if (auto binding = unowned_binding_.lock()) {
-      auto* binding_raw = static_cast<AnyAsyncServerBinding*>(binding.get());
+      auto* binding_raw = static_cast<AsyncServerBinding*>(binding.get());
       binding_raw->StartTeardownWithInfo(std::move(binding), error);
     }
     return;
   }
   unbind_info_ = error;
   // Return ownership of the binding to the dispatcher.
-  auto* binding_raw = static_cast<AnyAsyncServerBinding*>(owned_binding_.get());
+  auto* binding_raw = static_cast<AsyncServerBinding*>(owned_binding_.get());
   binding_raw->keep_alive_ = std::move(owned_binding_);
 }
 
@@ -108,7 +108,7 @@ std::unique_ptr<Transaction> AsyncTransaction::TakeOwnership() {
   *moved_ = true;
   moved_ = nullptr;                   // This should only ever be called once.
   unowned_binding_ = owned_binding_;  // Preserve a weak reference to the binding.
-  auto* binding_raw = static_cast<AnyAsyncServerBinding*>(owned_binding_.get());
+  auto* binding_raw = static_cast<AsyncServerBinding*>(owned_binding_.get());
   binding_raw->keep_alive_ = std::move(owned_binding_);
   return std::make_unique<AsyncTransaction>(std::move(*this));
 }

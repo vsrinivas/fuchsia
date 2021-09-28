@@ -1607,33 +1607,19 @@ template <>
 class ::fidl::internal::WireWeakEventSender<
     ::fidl_test_emptystruct::EmptyProtocol> {
  public:
-  fidl::Result Receive(const ::fidl_test_emptystruct::wire::Empty& e) const {
-    if (auto _binding = binding_.lock()) {
-      return _binding->event_sender().Receive(e);
-    }
-    return fidl::Result::Unbound();
-  }
+  WireWeakEventSender(
+      std::weak_ptr<::fidl::internal::AsyncServerBinding>&& binding)
+      : inner_(std::move(binding)) {}
+
+  fidl::Result Receive(const ::fidl_test_emptystruct::wire::Empty& e) const;
 
   // Caller provides the backing storage for FIDL message via response buffers.
   fidl::Result Receive(::fidl::BufferSpan _buffer,
-                       const ::fidl_test_emptystruct::wire::Empty& e) const {
-    if (auto _binding = binding_.lock()) {
-      return _binding->event_sender().Receive(std::move(_buffer), e);
-    }
-    return fidl::Result::Unbound();
-  }
+                       const ::fidl_test_emptystruct::wire::Empty& e) const;
 
  private:
-  friend class ::fidl::ServerBindingRef<::fidl_test_emptystruct::EmptyProtocol>;
+  friend ServerBindingRef<::fidl_test_emptystruct::EmptyProtocol>;
 
-  explicit WireWeakEventSender(
-      std::weak_ptr<::fidl::internal::AsyncServerBinding<
-          ::fidl_test_emptystruct::EmptyProtocol>>
-          binding)
-      : binding_(std::move(binding)) {}
-
-  std::weak_ptr<::fidl::internal::AsyncServerBinding<
-      ::fidl_test_emptystruct::EmptyProtocol>>
-      binding_;
+  ::fidl::internal::WeakEventSenderInner inner_;
 };
 #endif  // __Fuchsia__

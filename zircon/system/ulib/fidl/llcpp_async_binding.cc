@@ -303,11 +303,41 @@ fidl::UnbindInfo AsyncBinding::Lifecycle::TransitionToTorndown() {
 // Server binding specifics
 //
 
-std::optional<UnbindInfo> AnyAsyncServerBinding::Dispatch(fidl::IncomingMessage& msg,
-                                                          bool* binding_released) {
+std::optional<UnbindInfo> AsyncServerBinding::Dispatch(fidl::IncomingMessage& msg,
+                                                       bool* binding_released) {
   auto* hdr = msg.header();
   AsyncTransaction txn(hdr->txid, binding_released);
   return txn.Dispatch(std::move(keep_alive_), std::move(msg));
+}
+
+void AsyncServerBinding::FinishTeardown(std::shared_ptr<AsyncBinding>&& calling_ref,
+                                        UnbindInfo info) {
+  // Stash required state after deleting the binding, since the binding
+  // will be destroyed as part of this function.
+  auto* the_interface = interface();
+  auto on_unbound_fn = std::move(on_unbound_fn_);
+
+  // Downcast to our class.
+  std::shared_ptr<AsyncServerBinding> server_binding =
+      std::static_pointer_cast<AsyncServerBinding>(calling_ref);
+  calling_ref.reset();
+
+  // Delete the calling reference.
+  // Wait for any transient references to be released.
+  DestroyAndExtract(std::move(server_binding), &AsyncServerBinding::server_end_,
+                    [&info, the_interface, &on_unbound_fn](zx::channel server_end) {
+                      // `this` is no longer valid.
+
+                      // If required, send the epitaph.
+                      if (info.reason() == Reason::kClose) {
+                        info =
+                            UnbindInfo::Close(fidl_epitaph_write(server_end.get(), info.status()));
+                      }
+
+                      // Execute the unbound hook if specified.
+                      if (on_unbound_fn)
+                        on_unbound_fn(the_interface, info, std::move(server_end));
+                    });
 }
 
 //

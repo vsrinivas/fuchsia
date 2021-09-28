@@ -125,6 +125,7 @@ _zx_futex_wake
 zx_channel_call_etc
 zx_channel_create
 zx_channel_read_etc
+zx_channel_write
 zx_channel_write_etc
 zx_deadline_after
 zx_debuglog_write

@@ -29,6 +29,18 @@ namespace internal {
   return ::fidl::DispatchResult::kNotFound;
 }
 
+::fidl::Result WeakEventSenderInner::SendEvent(::fidl::OutgoingMessage& message) const {
+  if (auto binding = binding_.lock()) {
+    message.set_txid(0);
+    message.Write(binding->channel());
+    if (!message.ok()) {
+      return message.error();
+    }
+    return fidl::Result::Ok();
+  }
+  return fidl::Result::Unbound();
+}
+
 }  // namespace internal
 
 }  // namespace fidl

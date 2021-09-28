@@ -288,42 +288,14 @@ class AsyncTransaction;
 // that is |fidl::OnUnboundFn<ServerImpl>|.
 using AnyOnUnboundFn = fit::callback<void(IncomingMessageDispatcher*, UnbindInfo, zx::channel)>;
 
-// Base implementation shared by various specializations of
-// |AsyncServerBinding<Protocol>|.
-class AnyAsyncServerBinding : public AsyncBinding {
- public:
-  std::optional<UnbindInfo> Dispatch(fidl::IncomingMessage& msg, bool* binding_released) override;
-
-  void Close(std::shared_ptr<AsyncBinding>&& calling_ref, zx_status_t epitaph) {
-    StartTeardownWithInfo(std::move(calling_ref), fidl::UnbindInfo::Close(epitaph));
-  }
-
- protected:
-  AnyAsyncServerBinding(async_dispatcher_t* dispatcher, const zx::unowned_channel& borrowed_channel,
-                        IncomingMessageDispatcher* interface)
-      : AsyncBinding(dispatcher, borrowed_channel,
-                     ThreadingPolicy::kCreateAndTeardownFromAnyThread),
-        interface_(interface) {}
-
-  IncomingMessageDispatcher* interface() const { return interface_; }
-
+// The async server binding. It directly owns the channel.
+class AsyncServerBinding : public AsyncBinding {
  private:
-  friend fidl::internal::AsyncTransaction;
-
-  IncomingMessageDispatcher* interface_ = nullptr;
-};
-
-// The async server binding for |Protocol|.
-// Contains an event sender for that protocol, which directly owns the channel.
-template <typename Protocol>
-class AsyncServerBinding final : public AnyAsyncServerBinding {
   struct ConstructionKey {};
 
  public:
-  using EventSender = typename fidl::WireEventSender<Protocol>;
-
   static std::shared_ptr<AsyncServerBinding> Create(async_dispatcher_t* dispatcher,
-                                                    fidl::ServerEnd<Protocol>&& server_end,
+                                                    zx::channel&& server_end,
                                                     IncomingMessageDispatcher* interface,
                                                     AnyOnUnboundFn&& on_unbound_fn) {
     auto ret = std::make_shared<AsyncServerBinding>(dispatcher, std::move(server_end), interface,
@@ -335,54 +307,40 @@ class AsyncServerBinding final : public AnyAsyncServerBinding {
 
   virtual ~AsyncServerBinding() = default;
 
-  const EventSender& event_sender() const { return event_sender_.get(); }
+  zx::unowned_channel channel() const { return server_end_.get().borrow(); }
 
-  zx::unowned_channel channel() const { return zx::unowned_channel(event_sender_.get().channel()); }
+  std::optional<UnbindInfo> Dispatch(fidl::IncomingMessage& msg, bool* binding_released) override;
 
-  // Do not construct this object outside of this class. This constructor takes
-  // a private type following the pass-key idiom.
-  AsyncServerBinding(async_dispatcher_t* dispatcher, fidl::ServerEnd<Protocol>&& server_end,
-                     IncomingMessageDispatcher* interface, AnyOnUnboundFn&& on_unbound_fn,
-                     ConstructionKey key)
-      : AnyAsyncServerBinding(dispatcher, server_end.channel().borrow(), interface),
-        event_sender_(EventSender(std::move(server_end))),
-        on_unbound_fn_(std::move(on_unbound_fn)) {}
-
- private:
-  // Waits for all references to the binding to be released.
-  // Sends epitaph and invokes |on_unbound_fn_| as required.
-  void FinishTeardown(std::shared_ptr<AsyncBinding>&& calling_ref, UnbindInfo info) override {
-    // Stash required state after deleting the binding, since the binding
-    // will be destroyed as part of this function.
-    auto* the_interface = interface();
-    auto on_unbound_fn = std::move(on_unbound_fn_);
-
-    // Downcast to our class.
-    std::shared_ptr<AsyncServerBinding> server_binding =
-        std::static_pointer_cast<AsyncServerBinding>(calling_ref);
-    calling_ref.reset();
-
-    // Delete the calling reference.
-    // Wait for any transient references to be released.
-    DestroyAndExtract(std::move(server_binding), &AsyncServerBinding::event_sender_,
-                      [&info, the_interface, &on_unbound_fn](EventSender event_sender) {
-                        // `this` is no longer valid.
-
-                        // If required, send the epitaph.
-                        zx::channel channel = std::move(event_sender.channel());
-                        if (info.reason() == Reason::kClose) {
-                          info =
-                              UnbindInfo::Close(fidl_epitaph_write(channel.get(), info.status()));
-                        }
-
-                        // Execute the unbound hook if specified.
-                        if (on_unbound_fn)
-                          on_unbound_fn(the_interface, info, std::move(channel));
-                      });
+  // Start closing the server connection with an |epitaph|.
+  void Close(std::shared_ptr<AsyncBinding>&& calling_ref, zx_status_t epitaph) {
+    StartTeardownWithInfo(std::move(calling_ref), fidl::UnbindInfo::Close(epitaph));
   }
 
+  // Do not construct this object outside of this class. This constructor takes
+  // a private type following the pass-key idiom to support |make_shared|.
+  AsyncServerBinding(async_dispatcher_t* dispatcher, zx::channel&& server_end,
+                     IncomingMessageDispatcher* interface, AnyOnUnboundFn&& on_unbound_fn,
+                     ConstructionKey key)
+      : AsyncBinding(dispatcher, server_end.borrow(),
+                     ThreadingPolicy::kCreateAndTeardownFromAnyThread),
+        interface_(interface),
+        server_end_(std::move(server_end)),
+        on_unbound_fn_(std::move(on_unbound_fn)) {}
+
+  IncomingMessageDispatcher* interface() const { return interface_; }
+
+ private:
+  friend fidl::internal::AsyncTransaction;
+
+  // Waits for all references to the binding to be released.
+  // Sends epitaph and invokes |on_unbound_fn_| as required.
+  void FinishTeardown(std::shared_ptr<AsyncBinding>&& calling_ref, UnbindInfo info) override;
+
+  // The server interface that handles FIDL method calls.
+  IncomingMessageDispatcher* interface_ = nullptr;
+
   // The channel is owned by AsyncServerBinding.
-  ExtractedOnDestruction<EventSender> event_sender_;
+  ExtractedOnDestruction<zx::channel> server_end_;
 
   // The user callback to invoke after teardown has completed.
   AnyOnUnboundFn on_unbound_fn_ = {};

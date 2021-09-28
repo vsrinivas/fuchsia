@@ -36,10 +36,10 @@ namespace fidl {
 //
 // The returned |ServerBindingRef| is a reference to the binding; it does not
 // own the binding. In particular, the binding is kept alive by the dispatcher
-// even if the returned |fpromise::result<ServerBindingRef>| is dropped. If the
-// binding reference is ignored, the server operates in a "self-managed" mode,
-// where it will continue listening for messages until an error occurs or if the
-// user tears down the connection using a |Completer|.
+// even if the returned |ServerBindingRef| is dropped. If the binding reference
+// is ignored, the server operates in a "self-managed" mode, where it will
+// continue listening for messages until an error occurs or if the user tears
+// down the connection using a |Completer|.
 //
 // It is a logic error to invoke |BindServer| on a dispatcher that is
 // shutting down or already shut down. Doing so will result in a panic.
@@ -229,7 +229,7 @@ class ServerBindingRef {
   // WARNING: While it is safe to invoke Unbind() from any thread, it is unsafe to wait on the
   // OnUnboundFn from a dispatcher thread, as that will likely deadlock.
   void Unbind() {
-    if (auto binding = event_sender_.binding_.lock())
+    if (auto binding = event_sender_.inner_.binding().lock())
       binding->StartTeardown(std::move(binding));
   }
 
@@ -239,7 +239,7 @@ class ServerBindingRef {
   //
   // This may be called from any thread.
   void Close(zx_status_t epitaph) {
-    if (auto binding = event_sender_.binding_.lock())
+    if (auto binding = event_sender_.inner_.binding().lock())
       binding->Close(std::move(binding), epitaph);
   }
 
@@ -259,7 +259,7 @@ class ServerBindingRef {
       async_dispatcher_t* dispatcher, fidl::ServerEnd<Protocol> server_end,
       internal::IncomingMessageDispatcher* interface, internal::AnyOnUnboundFn on_unbound);
 
-  explicit ServerBindingRef(std::weak_ptr<internal::AsyncServerBinding<Protocol>> internal_binding)
+  explicit ServerBindingRef(std::weak_ptr<internal::AsyncServerBinding> internal_binding)
       : event_sender_(std::move(internal_binding)) {}
 
   fidl::internal::WireWeakEventSender<Protocol> event_sender_;

@@ -639,6 +639,25 @@ fidl::WireEventSender<::fidl_test_protocols::HandleRightsProtocol>::AnEvent(
   return ::fidl::Result{_message};
 }
 
+fidl::Result fidl::internal::WireWeakEventSender<
+    ::fidl_test_protocols::HandleRightsProtocol>::AnEvent(::zx::socket&& h)
+    const {
+  FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
+  ::fidl::OwnedEncodedMessage<::fidl::WireResponse<
+      ::fidl_test_protocols::HandleRightsProtocol::AnEvent>>
+      _response{::fidl::internal::AllowUnownedInputRef{}, std::move(h)};
+  return inner_.SendEvent(_response.GetOutgoingMessage());
+}
+
+fidl::Result fidl::internal::
+    WireWeakEventSender<::fidl_test_protocols::HandleRightsProtocol>::AnEvent(
+        ::fidl::BufferSpan _buffer, ::zx::socket&& h) const {
+  ::fidl::UnownedEncodedMessage<::fidl::WireResponse<
+      ::fidl_test_protocols::HandleRightsProtocol::AnEvent>>
+      _response(_buffer.data, _buffer.capacity, std::move(h));
+  return inner_.SendEvent(_response.GetOutgoingMessage());
+}
+
 #endif  // __Fuchsia__
 
 void ::fidl_test_protocols::wire::WithErrorSyntaxResponseAsStructResult::
@@ -2170,6 +2189,15 @@ fidl::Result fidl::WireEventSender<
   return ::fidl::Result{_message};
 }
 
+fidl::Result fidl::internal::WireWeakEventSender<
+    ::fidl_test_protocols::WithAndWithoutRequestResponse>::OnEmptyResponse()
+    const {
+  FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
+  ::fidl::OwnedEncodedMessage<::fidl::WireResponse<
+      ::fidl_test_protocols::WithAndWithoutRequestResponse::OnEmptyResponse>>
+      _response{::fidl::internal::AllowUnownedInputRef{}};
+  return inner_.SendEvent(_response.GetOutgoingMessage());
+}
 fidl::Result
 fidl::WireEventSender<::fidl_test_protocols::WithAndWithoutRequestResponse>::
     OnWithResponse(::fidl::StringView ret) const {
@@ -2191,6 +2219,25 @@ fidl::WireEventSender<::fidl_test_protocols::WithAndWithoutRequestResponse>::
   auto& _message = _response.GetOutgoingMessage();
   _message.Write(server_end_);
   return ::fidl::Result{_message};
+}
+
+fidl::Result fidl::internal::WireWeakEventSender<
+    ::fidl_test_protocols::WithAndWithoutRequestResponse>::
+    OnWithResponse(::fidl::StringView ret) const {
+  FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
+  ::fidl::OwnedEncodedMessage<::fidl::WireResponse<
+      ::fidl_test_protocols::WithAndWithoutRequestResponse::OnWithResponse>>
+      _response{::fidl::internal::AllowUnownedInputRef{}, ret};
+  return inner_.SendEvent(_response.GetOutgoingMessage());
+}
+
+fidl::Result fidl::internal::WireWeakEventSender<
+    ::fidl_test_protocols::WithAndWithoutRequestResponse>::
+    OnWithResponse(::fidl::BufferSpan _buffer, ::fidl::StringView ret) const {
+  ::fidl::UnownedEncodedMessage<::fidl::WireResponse<
+      ::fidl_test_protocols::WithAndWithoutRequestResponse::OnWithResponse>>
+      _response(_buffer.data, _buffer.capacity, ret);
+  return inner_.SendEvent(_response.GetOutgoingMessage());
 }
 
 #endif  // __Fuchsia__
@@ -2682,6 +2729,24 @@ fidl::Result fidl::WireEventSender<::fidl_test_protocols::Transitional>::Event(
   auto& _message = _response.GetOutgoingMessage();
   _message.Write(server_end_);
   return ::fidl::Result{_message};
+}
+
+fidl::Result fidl::internal::WireWeakEventSender<
+    ::fidl_test_protocols::Transitional>::Event(int64_t x) const {
+  FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
+  ::fidl::OwnedEncodedMessage<
+      ::fidl::WireResponse<::fidl_test_protocols::Transitional::Event>>
+      _response{::fidl::internal::AllowUnownedInputRef{}, x};
+  return inner_.SendEvent(_response.GetOutgoingMessage());
+}
+
+fidl::Result
+fidl::internal::WireWeakEventSender<::fidl_test_protocols::Transitional>::Event(
+    ::fidl::BufferSpan _buffer, int64_t x) const {
+  ::fidl::UnownedEncodedMessage<
+      ::fidl::WireResponse<::fidl_test_protocols::Transitional::Event>>
+      _response(_buffer.data, _buffer.capacity, x);
+  return inner_.SendEvent(_response.GetOutgoingMessage());
 }
 
 #endif  // __Fuchsia__
@@ -6250,6 +6315,26 @@ fidl::WireEventSender<::fidl_test_protocols::ChannelProtocol>::EventA(
   auto& _message = _response.GetOutgoingMessage();
   _message.Write(server_end_);
   return ::fidl::Result{_message};
+}
+
+fidl::Result fidl::internal::WireWeakEventSender<
+    ::fidl_test_protocols::ChannelProtocol>::EventA(int64_t a,
+                                                    int64_t b) const {
+  FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
+  ::fidl::OwnedEncodedMessage<
+      ::fidl::WireResponse<::fidl_test_protocols::ChannelProtocol::EventA>>
+      _response{::fidl::internal::AllowUnownedInputRef{}, a, b};
+  return inner_.SendEvent(_response.GetOutgoingMessage());
+}
+
+fidl::Result fidl::internal::WireWeakEventSender<
+    ::fidl_test_protocols::ChannelProtocol>::EventA(::fidl::BufferSpan _buffer,
+                                                    int64_t a,
+                                                    int64_t b) const {
+  ::fidl::UnownedEncodedMessage<
+      ::fidl::WireResponse<::fidl_test_protocols::ChannelProtocol::EventA>>
+      _response(_buffer.data, _buffer.capacity, a, b);
+  return inner_.SendEvent(_response.GetOutgoingMessage());
 }
 
 #endif  // __Fuchsia__
