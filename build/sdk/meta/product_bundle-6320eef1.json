@@ -79,7 +79,7 @@
         "bundle_uri": {
             "description": "Allowed system image and package bundle URIs.",
             "format": "uri",
-            "pattern": "^(?:http|https|gs|file)://",
+            "pattern": "^((http(s)?|gs):/|file:)/",
             "type": "string"
         },
         "image_bundle": {
