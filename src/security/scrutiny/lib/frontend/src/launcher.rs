@@ -17,6 +17,8 @@ use {
 /// want to launch custom configurations of the Scrutiny framework with select features enabled.
 pub fn launch_from_config(config: Config) -> Result<String> {
     let mut scrutiny = Scrutiny::new(config)?;
+    scrutiny.plugin(DevmgrConfigPlugin::new())?;
+    scrutiny.plugin(StaticPkgsPlugin::new())?;
     scrutiny.plugin(CorePlugin::new())?;
     scrutiny.plugin(SearchPlugin::new())?;
     scrutiny.plugin(EnginePlugin::new(
@@ -27,8 +29,6 @@ pub fn launch_from_config(config: Config) -> Result<String> {
     scrutiny.plugin(ToolkitPlugin::new())?;
     scrutiny.plugin(VerifyPlugin::new())?;
     scrutiny.plugin(SysRealmPlugin::new())?;
-    scrutiny.plugin(DevmgrConfigPlugin::new())?;
-    scrutiny.plugin(StaticPkgsPlugin::new())?;
     scrutiny.run()
 }
 

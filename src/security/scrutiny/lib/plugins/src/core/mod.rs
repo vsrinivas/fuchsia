@@ -42,5 +42,5 @@ plugin!(
             "/update/zbi/cmdline" => ZbiCmdlineController::default(),
         }
     ),
-    vec![]
+    vec![PluginDescriptor::new("StaticPkgsPlugin")]
 );

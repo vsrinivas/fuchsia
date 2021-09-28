@@ -47,7 +47,7 @@ impl VerifyRoutes {
                 .param("capability_types", "directory protocol")
                 .param("response_level", "error")
                 .build(),
-            vec!["CorePlugin", "VerifyPlugin"],
+            vec!["DevmgrConfigPlugin", "StaticPkgsPlugin", "CorePlugin", "VerifyPlugin"],
         );
         let current_dir = env::current_dir().context("Failed to get current directory")?;
         config.runtime.model.build_path = current_dir.clone();

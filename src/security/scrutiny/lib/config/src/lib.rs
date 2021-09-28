@@ -311,6 +311,8 @@ impl PluginConfig {
     pub fn default() -> PluginConfig {
         PluginConfig {
             plugins: vec![
+                "DevmgrConfigPlugin".to_string(),
+                "StaticPkgsPlugin".to_string(),
                 "CorePlugin".to_string(),
                 "SearchPlugin".to_string(),
                 "EnginePlugin".to_string(),

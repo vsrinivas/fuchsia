@@ -22,6 +22,9 @@ pub enum ComponentSource {
     ZbiBootfs,
     /// Component was loaded from a package with the given merkle hash.
     Package(String),
+    /// Component was loaded from a package with the given merkle hash. The
+    /// package is listed in the static packages index.
+    StaticPackage(String),
 }
 
 /// Defines a component. Each component has a unique id which is used to link

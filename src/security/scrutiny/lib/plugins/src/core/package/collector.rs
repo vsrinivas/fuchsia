@@ -3,14 +3,17 @@
 // found in the LICENSE file.
 
 use {
-    crate::core::{
-        collection::{
-            Capability, Component, ComponentSource, Components, CoreDataDeps, Manifest,
-            ManifestData, Manifests, Package, Packages, ProtocolCapability, Route, Routes, Sysmgr,
-            Zbi,
+    crate::{
+        core::{
+            collection::{
+                Capability, Component, ComponentSource, Components, CoreDataDeps, Manifest,
+                ManifestData, Manifests, Package, Packages, ProtocolCapability, Route, Routes,
+                Sysmgr, Zbi,
+            },
+            package::reader::{PackageReader, PackageServerReader},
+            util::types::{ComponentManifest, PackageDefinition, ServiceMapping, SysManagerConfig},
         },
-        package::reader::{PackageReader, PackageServerReader},
-        util::types::{ComponentManifest, PackageDefinition, ServiceMapping, SysManagerConfig},
+        static_pkgs::StaticPkgsCollection,
     },
     anyhow::{anyhow, Result},
     cm_fidl_validator,
@@ -38,9 +41,42 @@ use {
 // Constants/Statics
 lazy_static! {
     static ref SERVICE_CONFIG_RE: Regex = Regex::new(r"data/sysmgr/.+\.config").unwrap();
+    static ref PKG_URL_RE: Regex =
+        Regex::new(r"^fuchsia-pkg://fuchsia.com/([a-zA-Z0-9_-]+)$").unwrap();
+    static ref STATIC_PKG_URL_RE: Regex = Regex::new(r"^([a-zA-Z0-9_-]+)/0$").unwrap();
 }
 // The root v2 component manifest.
 pub const ROOT_RESOURCE: &str = "meta/root.cm";
+
+struct StaticPackageDescription<'a> {
+    url: &'a str,
+    merkle: &'a str,
+}
+
+impl<'a> StaticPackageDescription<'a> {
+    fn new(url: &'a str, merkle: &'a str) -> Self {
+        Self { url, merkle }
+    }
+
+    fn matches(&self, pkg: &PackageDefinition) -> bool {
+        if !PKG_URL_RE.is_match(&pkg.url) || &pkg.merkle != self.merkle {
+            return false;
+        }
+
+        let pkg_cap = PKG_URL_RE
+            .captures(&pkg.url)
+            .map(|caps| caps.get(1).map(|cap| cap.as_str()))
+            .unwrap_or(None);
+        let static_pkg_cap = STATIC_PKG_URL_RE
+            .captures(self.url)
+            .map(|caps| caps.get(1).map(|cap| cap.as_str()))
+            .unwrap_or(None);
+
+        // Match when both regular expression had a matching group that contains the same `&str`
+        // content.
+        return pkg_cap.is_some() && pkg_cap == static_pkg_cap;
+    }
+}
 
 /// The PackageDataResponse contains all of the core model information extracted
 /// from the Fuchsia Archive (.far) packages from the current build.
@@ -205,14 +241,64 @@ impl PackageDataCollector {
         return Err(anyhow!("Unable to find a zbi file in the package."));
     }
 
+    fn get_pkg_source<'a>(
+        pkg: &'a PackageDefinition,
+        static_pkgs: &'a Option<Vec<StaticPackageDescription<'a>>>,
+    ) -> ComponentSource {
+        if static_pkgs.is_none() {
+            return ComponentSource::Package(pkg.merkle.clone());
+        }
+
+        for static_pkg in static_pkgs.as_ref().unwrap().iter() {
+            if static_pkg.matches(pkg) {
+                return ComponentSource::StaticPackage(static_pkg.merkle.to_string());
+            }
+        }
+
+        ComponentSource::Package(pkg.merkle.clone())
+    }
+
+    fn get_static_pkgs<'a>(
+        static_pkgs_result: &'a Result<Arc<StaticPkgsCollection>>,
+    ) -> Option<Vec<StaticPackageDescription<'a>>> {
+        static_pkgs_result
+            .as_ref()
+            .ok()
+            .map(|result| {
+                // Collection is only meaningful if there are static packages and no errors.
+                if result.static_pkgs.is_some() && result.errors.len() == 0 {
+                    Some(
+                        result
+                            .static_pkgs
+                            .as_ref()
+                            .unwrap()
+                            .iter()
+                            .map(|(url, merkle)| StaticPackageDescription::new(url, merkle))
+                            .collect(),
+                    )
+                } else {
+                    None
+                }
+            })
+            .unwrap_or(None)
+    }
+
+    fn get_static_pkg_deps(
+        static_pkgs_result: &Result<Arc<StaticPkgsCollection>>,
+    ) -> HashSet<String> {
+        static_pkgs_result.as_ref().ok().map(|result| result.deps.clone()).unwrap_or(HashSet::new())
+    }
+
     /// Extracts all of the components and manifests from a package.
-    fn extract_package_data(
+    fn extract_package_data<'a>(
         component_id: &mut i32,
         service_map: &mut ServiceMapping,
         components: &mut HashMap<String, Component>,
         manifests: &mut Vec<Manifest>,
         pkg: &PackageDefinition,
+        static_pkgs: &'a Option<Vec<StaticPackageDescription<'a>>>,
     ) -> Result<()> {
+        let source = Self::get_pkg_source(pkg, static_pkgs);
         // Extract V1 and V2 components from the packages.
         for (path, cm) in &pkg.cms {
             // Component Framework Version 2.
@@ -225,7 +311,7 @@ impl PackageDataCollector {
                         id: *component_id,
                         url: url.clone(),
                         version: 2,
-                        source: ComponentSource::Package(pkg.merkle.clone()),
+                        source: source.clone(),
                     },
                 );
 
@@ -301,7 +387,7 @@ impl PackageDataCollector {
                         id: *component_id,
                         url: url.clone(),
                         version: 1,
-                        source: ComponentSource::Package(pkg.merkle.clone()),
+                        source: source.clone(),
                     },
                 );
 
@@ -513,11 +599,12 @@ impl PackageDataCollector {
 
     /// Function to build the component graph model out of the packages and services retrieved
     /// by this collector.
-    fn extract(
+    fn extract<'a>(
         update_package_url: String,
         mut artifact_reader: &mut Box<dyn ArtifactReader>,
         fuchsia_packages: Vec<PackageDefinition>,
         mut service_map: ServiceMapping,
+        static_pkgs: &'a Option<Vec<StaticPackageDescription<'a>>>,
     ) -> Result<PackageDataResponse> {
         let mut components: HashMap<String, Component> = HashMap::new();
         let mut packages: Vec<Package> = Vec::new();
@@ -557,6 +644,7 @@ impl PackageDataCollector {
                 &mut components,
                 &mut manifests,
                 &pkg,
+                &static_pkgs,
             )?;
         }
 
@@ -612,11 +700,14 @@ impl PackageDataCollector {
             served_packages.len(),
         );
 
+        let static_pkgs_result = model.get();
+        let static_pkgs = Self::get_static_pkgs(&static_pkgs_result);
         let response = PackageDataCollector::extract(
             config.update_package_url(),
             &mut artifact_loader,
             served_packages,
             sysmgr_config.services.clone(),
+            &static_pkgs,
         )?;
 
         let mut model_comps = vec![];
@@ -636,7 +727,7 @@ impl PackageDataCollector {
             model.remove::<Zbi>()?;
         }
 
-        let mut deps = HashSet::new();
+        let mut deps = Self::get_static_pkg_deps(&static_pkgs_result);
         for dep in package_reader.get_deps().into_iter() {
             deps.insert(dep);
         }
@@ -670,7 +761,7 @@ impl DataCollector for PackageDataCollector {
 #[cfg(test)]
 pub mod tests {
     use {
-        super::PackageDataCollector,
+        super::{PackageDataCollector, StaticPackageDescription},
         crate::core::{
             collection::{
                 testing::fake_component_src_pkg, Capability, Component, ComponentSource,
@@ -697,10 +788,111 @@ pub mod tests {
         std::{collections::HashMap, sync::Arc},
     };
 
-    fn count_sources(components: HashMap<String, Component>) -> (usize, usize, usize) {
+    fn default_pkg() -> PackageDefinition {
+        PackageDefinition {
+            url: "".to_string(),
+            meta: HashMap::new(),
+            merkle: "".to_string(),
+            contents: HashMap::new(),
+            cms: HashMap::new(),
+        }
+    }
+
+    #[test]
+    fn test_static_pkgs_matches() {
+        // Match.
+        assert!(StaticPackageDescription::new("alpha-beta_gamma9/0", "0").matches(
+            &PackageDefinition {
+                url: "fuchsia-pkg://fuchsia.com/alpha-beta_gamma9".to_string(),
+                merkle: "0".to_string(),
+                ..default_pkg()
+            }
+        ));
+        // No punctuation in package name.
+        assert!(
+            StaticPackageDescription::new("alpha+/0", "0").matches(&PackageDefinition {
+                url: "fuchsia-pkg://fuchsia.com/alpha+".to_string(),
+                merkle: "0".to_string(),
+                ..default_pkg()
+            }) == false
+        );
+        // `/0` cannot be just any number.
+        assert!(
+            StaticPackageDescription::new("alpha/0123456", "0").matches(&PackageDefinition {
+                url: "fuchsia-pkg://fuchsia.com/alpha".to_string(),
+                merkle: "0".to_string(),
+                ..default_pkg()
+            }) == false
+        );
+        // `/0` is not hex.
+        assert!(
+            StaticPackageDescription::new("alpha/0a1b2c3d", "0").matches(&PackageDefinition {
+                url: "fuchsia-pkg://fuchsia.com/alpha".to_string(),
+                merkle: "0".to_string(),
+                ..default_pkg()
+            }) == false
+        );
+        // Merkle mismatch.
+        assert!(
+            StaticPackageDescription::new("alpha/0", "0").matches(&PackageDefinition {
+                url: "fuchsia-pkg://fuchsia.com/alpha".to_string(),
+                merkle: "1".to_string(),
+                ..default_pkg()
+            }) == false
+        );
+        // `/0` suffix in static pkg description not part of matched path.
+        assert!(
+            StaticPackageDescription::new("alpha/0", "0").matches(&PackageDefinition {
+                url: "fuchsia-pkg://fuchsia.com/alpha/0".to_string(),
+                merkle: "0".to_string(),
+                ..default_pkg()
+            }) == false
+        );
+        // Matched path not expected to contain `[name1]/[name2]`.
+        assert!(
+            StaticPackageDescription::new("alpha/beta", "0").matches(&PackageDefinition {
+                url: "fuchsia-pkg://fuchsia.com/alpha".to_string(),
+                merkle: "0".to_string(),
+                ..default_pkg()
+            }) == false
+        );
+        assert!(
+            StaticPackageDescription::new("alpha/beta/0", "0").matches(&PackageDefinition {
+                url: "fuchsia-pkg://fuchsia.com/alpha".to_string(),
+                merkle: "0".to_string(),
+                ..default_pkg()
+            }) == false
+        );
+        assert!(
+            StaticPackageDescription::new("alpha/beta", "0").matches(&PackageDefinition {
+                url: "fuchsia-pkg://fuchsia.com/alpha/beta".to_string(),
+                merkle: "0".to_string(),
+                ..default_pkg()
+            }) == false
+        );
+        // Expected pkg definition scheme: `fuchsia-pkg`.
+        assert!(
+            StaticPackageDescription::new("alpha/0", "0").matches(&PackageDefinition {
+                url: "fuchsia-boot://fuchsia.com/alpha".to_string(),
+                merkle: "0".to_string(),
+                ..default_pkg()
+            }) == false
+        );
+        // Expected pkg definition domain: `fuchsia.com`.
+        assert!(
+            StaticPackageDescription::new("alpha/0", "0").matches(&PackageDefinition {
+                url: "fuchsia-pkg://fuchsia.dev/alpha".to_string(),
+                merkle: "0".to_string(),
+                ..default_pkg()
+            }) == false
+        );
+    }
+
+    fn count_sources(components: HashMap<String, Component>) -> (usize, usize, usize, usize) {
         let mut inferred_count = 0;
         let mut zbi_bootfs_count = 0;
         let mut package_count = 0;
+        let mut static_package_count = 0;
         for (_, comp) in components {
             match comp.source {
                 ComponentSource::Inferred => {
@@ -712,9 +904,12 @@ pub mod tests {
                 ComponentSource::Package(_) => {
                     package_count += 1;
                 }
+                ComponentSource::StaticPackage(_) => {
+                    static_package_count += 1;
+                }
             }
         }
-        (inferred_count, zbi_bootfs_count, package_count)
+        (inferred_count, zbi_bootfs_count, package_count, static_package_count)
     }
 
     #[test]
@@ -891,6 +1086,7 @@ pub mod tests {
             &mut artifact_loader,
             served,
             services,
+            &None,
         )
         .unwrap();
 
@@ -899,7 +1095,37 @@ pub mod tests {
         assert_eq!(1, response.routes.len());
         assert_eq!(1, response.packages.len());
         assert_eq!(None, response.zbi);
-        assert_eq!((1, 0, 1), count_sources(response.components)); // 1 inferred, 0 zbi/bootfs, 1 package
+        // 1 inferred, 0 zbi/bootfs, 1 (non-static) package, 0 static packages.
+        assert_eq!((1, 0, 1, 0), count_sources(response.components));
+    }
+
+    #[test]
+    fn test_extract_with_static_pkg() {
+        // Create a single test package with a single unknown service dependency
+        let sb = create_test_sandbox(vec![String::from("fuchsia.test.foo.bar")]);
+        let cms = create_test_cmx_map(vec![(String::from("meta/baz.cmx"), sb)]);
+        let pkg = create_test_package_with_cms(String::from("fuchsia-pkg://fuchsia.com/foo"), cms);
+        let served = vec![pkg];
+
+        let services = HashMap::new();
+        let mut package_getter: Box<dyn ArtifactReader> = Box::new(MockArtifactReader::new());
+        let static_pkgs = Some(vec![StaticPackageDescription::new("foo/0", "0")]);
+        let response = PackageDataCollector::extract(
+            fake_model_config().update_package_url(),
+            &mut package_getter,
+            served,
+            services,
+            &static_pkgs,
+        )
+        .unwrap();
+
+        assert_eq!(2, response.components.len());
+        assert_eq!(1, response.manifests.len());
+        assert_eq!(1, response.routes.len());
+        assert_eq!(1, response.packages.len());
+        assert_eq!(None, response.zbi);
+        // 1 inferred, 0 zbi/bootfs, 0 (non-static) packages, 1 static package.
+        assert_eq!((1, 0, 0, 1), count_sources(response.components));
     }
 
     #[test]
@@ -923,6 +1149,7 @@ pub mod tests {
             &mut artifact_loader,
             served,
             services,
+            &None,
         )
         .unwrap();
 
@@ -931,7 +1158,8 @@ pub mod tests {
         assert_eq!(1, response.routes.len());
         assert_eq!(1, response.packages.len());
         assert_eq!(None, response.zbi);
-        assert_eq!((1, 0, 1), count_sources(response.components)); // 1 inferred, 0 zbi/bootfs, 1 package
+        // 1 inferred, 0 zbi/bootfs, 1 (non-static) package, 0 static packages.
+        assert_eq!((1, 0, 1, 0), count_sources(response.components));
     }
 
     #[test]
@@ -954,6 +1182,7 @@ pub mod tests {
             &mut artifact_loader,
             served,
             services,
+            &None,
         )
         .unwrap();
 
@@ -962,7 +1191,8 @@ pub mod tests {
         assert_eq!(0, response.routes.len());
         assert_eq!(1, response.packages.len());
         assert_eq!(None, response.zbi);
-        assert_eq!((0, 0, 0), count_sources(response.components)); // 0 inferred, 0 zbi/bootfs, 0 package
+        // 0 inferred, 0 zbi/bootfs, 0 (non-static) package, 0 static packages.
+        assert_eq!((0, 0, 0, 0), count_sources(response.components));
     }
 
     #[test]
@@ -979,6 +1209,7 @@ pub mod tests {
             &mut artifact_loader,
             served,
             services,
+            &None,
         )
         .unwrap();
 
@@ -1011,6 +1242,7 @@ pub mod tests {
             &mut artifact_loader,
             served,
             services,
+            &None,
         )
         .unwrap();
 
@@ -1019,7 +1251,8 @@ pub mod tests {
         assert_eq!(2, response.routes.len());
         assert_eq!(2, response.packages.len());
         assert_eq!(None, response.zbi);
-        assert_eq!((1, 0, 2), count_sources(response.components)); // 1 inferred, 0 zbi/bootfs, 2 package
+        // 1 inferred, 0 zbi/bootfs, 2 (non-static) packages, 0 static packages.
+        assert_eq!((1, 0, 2, 0), count_sources(response.components));
     }
 
     #[test]
@@ -1048,6 +1281,7 @@ pub mod tests {
             &mut artifact_loader,
             served,
             services,
+            &None,
         )
         .unwrap();
 
@@ -1056,7 +1290,8 @@ pub mod tests {
         assert_eq!(1, response.routes.len());
         assert_eq!(2, response.packages.len());
         assert_eq!(None, response.zbi);
-        assert_eq!((0, 0, 2), count_sources(response.components)); // 0 inferred, 0 zbi/bootfs, 2 package
+        // 0 inferred, 0 zbi/bootfs, 2 (non-static) packages, 0 static packages.
+        assert_eq!((0, 0, 2, 0), count_sources(response.components));
     }
 
     #[test]
@@ -1152,6 +1387,7 @@ pub mod tests {
             &mut artifact_loader,
             served,
             services,
+            &None,
         )
         .unwrap();
         assert_eq!(None, response.zbi);

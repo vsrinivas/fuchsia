@@ -7,6 +7,7 @@ mod collector;
 mod controller;
 
 pub use collection::StaticPkgsCollection;
+pub use collection::StaticPkgsContents;
 
 use {
     collector::StaticPkgsCollector, controller::ExtractStaticPkgsController, scrutiny::prelude::*,
