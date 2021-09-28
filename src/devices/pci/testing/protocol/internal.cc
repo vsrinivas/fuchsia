@@ -32,7 +32,7 @@ zx_status_t FakePciProtocolInternal::FakePciProtocolInternal::PciGetBar(uint32_t
   out_res->id = bar_id;
   out_res->size = bar.size;
   out_res->type = bar.type;
-  out_res->address = 0xBADBAD00;
+  out_res->address = 0;  // PIO bars use the address, MMIO uses the VMO.
   out_res->handle = bar.vmo->get();
   return ZX_OK;
 }

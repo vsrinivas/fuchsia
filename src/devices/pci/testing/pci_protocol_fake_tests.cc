@@ -9,11 +9,13 @@
 #include <lib/zx/object.h>
 #include <lib/zx/vmo.h>
 #include <zircon/errors.h>
+#include <zircon/syscalls/pci.h>
 
 #include <zxtest/zxtest.h>
 
 #include "fuchsia/hardware/pci/c/banjo.h"
 #include "src/devices/pci/testing/pci_protocol_fake.h"
+#include "zircon/system/public/zircon/syscalls.h"
 
 class FakePciProtocolTests : public zxtest::Test {
  protected:
@@ -29,17 +31,14 @@ class FakePciProtocolTests : public zxtest::Test {
   ddk::PciProtocolClient pci_;
 };
 
-TEST_F(FakePciProtocolTests, SetCreateBar) {
+TEST_F(FakePciProtocolTests, CreateBar) {
   zx::vmo vmo;
   size_t size = 8193;
   ASSERT_OK(zx::vmo::create(size, 0, &vmo));
-  fake_pci().SetBar(0, size, std::move(vmo));
-  fake_pci().CreateBar(1, size);
+  fake_pci().CreateBar(0, size, true);
 
   pci_bar_t bar;
   pci().GetBar(0, &bar);
-  EXPECT_EQ(size, bar.size);
-  pci().GetBar(1, &bar);
   EXPECT_EQ(size, bar.size);
 }
 
@@ -407,38 +406,39 @@ TEST_F(FakePciProtocolTests, ConfigRW) {
 }
 
 TEST_F(FakePciProtocolTests, GetBar) {
-  uint32_t page_size = zx_system_get_page_size();
-  zx::vmo vmo{};
-  // Verify the bar_id and bounds asserts.
-  ASSERT_OK(zx::vmo::create(page_size, 0, &vmo));
-  ASSERT_DEATH([&]() { fake_pci().SetBar(6, page_size, std::move(vmo)); });
-  ASSERT_OK(zx::vmo::create(page_size, 0, &vmo));
-  ASSERT_DEATH([&]() { fake_pci().SetBar(0, page_size + 1, std::move(vmo)); });
-
   pci_bar_t bar{};
   ASSERT_EQ(ZX_ERR_NOT_FOUND, pci().GetBar(0, &bar));
   ASSERT_EQ(ZX_ERR_INVALID_ARGS, pci().GetBar(6, &bar));
 
-  uint32_t valid_bar = 3;
-  uint64_t bar_size = 256;
-  ASSERT_OK(zx::vmo::create(page_size, 0, &vmo));
-  ASSERT_NO_DEATH([&]() { fake_pci().SetBar(valid_bar, bar_size, std::move(vmo)); });
+  uint32_t bar_id = 3;
+  size_t size = 256;
+  ASSERT_NO_DEATH([&]() { fake_pci().CreateBar(bar_id, size, true); });
   // Verify that the VMO we got back via the protocol method matches the setup
   // and that the other fields are correct.
-  ASSERT_OK(pci().GetBar(valid_bar, &bar));
+  ASSERT_OK(pci().GetBar(bar_id, &bar));
   zx::vmo proto(bar.handle);
-  zx::vmo& borrowed = fake_pci().GetBar(valid_bar);
+  zx::vmo& borrowed = fake_pci().GetBar(bar_id);
   ASSERT_TRUE(MatchKoids(borrowed, proto));
-  ASSERT_EQ(valid_bar, bar.id);
-  ASSERT_EQ(bar_size, bar.size);
+  ASSERT_EQ(bar_id, bar.id);
+  ASSERT_EQ(size, bar.size);
+}
+
+TEST_F(FakePciProtocolTests, BarTypes) {
+  size_t page_size = zx_system_get_page_size();
+  fake_pci().CreateBar(0, page_size, true);
+  fake_pci().CreateBar(1, page_size, false);
+
+  pci_bar_t bar;
+  ASSERT_OK(pci().GetBar(0, &bar));
+  ASSERT_EQ(bar.type, ZX_PCI_BAR_TYPE_MMIO);
+  ASSERT_OK(pci().GetBar(1, &bar));
+  ASSERT_EQ(bar.type, ZX_PCI_BAR_TYPE_PIO);
 }
 
 TEST_F(FakePciProtocolTests, MapMmio) {
   const uint32_t bar_id = 0;
   const uint64_t bar_size = 256;
-  zx::vmo vmo{};
-  ASSERT_OK(zx::vmo::create(bar_size, 0, &vmo));
-  fake_pci().SetBar(bar_id, bar_size, std::move(vmo));
+  fake_pci().CreateBar(bar_id, bar_size, true);
   zx::vmo& borrowed = fake_pci().GetBar(bar_id);
 
   // Ensure that our fake implementation / backend for the BAR methods still works with

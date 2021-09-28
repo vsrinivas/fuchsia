@@ -85,7 +85,7 @@ class VirtioTests : public fake_ddk::Bind, public zxtest::Test {
   void SetUpBars() {
     size_t bar_size = 0x3000 + 0x1000;  // 0x3000 is the offset of the last capability in the bar,
                                         // and 0x1000 is the length.
-    fake_pci_.CreateBar(4, bar_size);
+    fake_pci_.CreateBar(4, bar_size, true);
   }
 
   void SetUpCapabilities() {

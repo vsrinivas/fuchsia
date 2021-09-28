@@ -65,30 +65,19 @@ class FakePciProtocol : public FakePciProtocolInternal {
   }
 
   // Creates a BAR corresponding to the provided |bar_id| of the requested |size| and returns
-  // a reference to the VMO backing its mapped region.
-  zx::vmo& CreateBar(uint32_t bar_id, size_t size) {
+  // a reference to the VMO backing its mapped region. |is_mmio| determines whether the bar
+  // is MMIO or IO backed. The caller is responsible for mocking/faking the IO access in their
+  // driver.
+  zx::vmo& CreateBar(uint32_t bar_id, size_t size, bool is_mmio) {
     zx::vmo vmo;
     zx_status_t status = zx::vmo::create(size, /*options=*/0, &vmo);
     ZX_ASSERT_MSG(status == ZX_OK,
                   "FakePciProtocol Error: failed to create VMO for bar (bar_id = %u, size = %#zx, "
                   "status = %d)",
                   bar_id, size, status);
-    return SetBar(bar_id, size, std::move(vmo));
-  }
-
-  // Similar to CreateBar, but allows the caller to provide a VMO to use.
-  // FakePciProtocol will take ownership of the VMO.
-  zx::vmo& SetBar(uint32_t bar_id, size_t size, zx::vmo&& vmo) {
     ZX_ASSERT_MSG(bar_id < PCI_DEVICE_BAR_COUNT,
                   "FakePciProtocol Error: valid BAR ids are [0, 5] (bar_id = %u)", bar_id);
-    uint64_t vmo_size = 0;
-    zx_status_t status = vmo.get_size(&vmo_size);
-    ZX_ASSERT_MSG(status == ZX_OK, kFakePciInternalError);
-    ZX_ASSERT_MSG(vmo_size >= size,
-                  "FakePciProtocol Error: vmo is not large enough for BAR size (BAR size = %#lx, "
-                  "vmo size = %#lx)",
-                  size, vmo_size);
-
+    bars()[bar_id].type = (is_mmio) ? ZX_PCI_BAR_TYPE_MMIO : ZX_PCI_BAR_TYPE_PIO;
     bars()[bar_id].size = size;
     bars()[bar_id].vmo = std::move(vmo);
     return GetBar(bar_id);

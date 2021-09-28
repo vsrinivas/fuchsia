@@ -55,7 +55,7 @@ TEST(MockDdkTesterPci, DeviceLifeCycle) {
   // Set up a fake pci:
   pci::FakePciProtocol fake_pci;
   // Set up the first BAR.
-  fake_pci.CreateBar(/*bar_id=*/0, /*size=*/4096);
+  fake_pci.CreateBar(/*bar_id=*/0, /*size=*/4096, /*is_mmio=*/true);
 
   // Identify as the correct device.
   fake_pci.SetDeviceInfo({.device_id = kTestDeviceId});
