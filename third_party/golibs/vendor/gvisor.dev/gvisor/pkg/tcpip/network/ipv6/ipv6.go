@@ -748,7 +748,7 @@ func (e *endpoint) WritePacket(r *stack.Route, params stack.NetworkHeaderParams,
 	// iptables filtering. All packets that reach here are locally
 	// generated.
 	outNicName := e.protocol.stack.FindNICNameFromID(e.nic.ID())
-	if ok := e.protocol.stack.IPTables().Check(stack.Output, pkt, r, "" /* preroutingAddr */, "" /* inNicName */, outNicName); !ok {
+	if ok := e.protocol.stack.IPTables().CheckOutput(pkt, r, outNicName); !ok {
 		// iptables is telling us to drop the packet.
 		e.stats.ip.IPTablesOutputDropped.Increment()
 		return nil
@@ -788,7 +788,7 @@ func (e *endpoint) writePacket(r *stack.Route, pkt *stack.PacketBuffer, protocol
 	// Postrouting NAT can only change the source address, and does not alter the
 	// route or outgoing interface of the packet.
 	outNicName := e.protocol.stack.FindNICNameFromID(e.nic.ID())
-	if ok := e.protocol.stack.IPTables().Check(stack.Postrouting, pkt, r, "" /* preroutingAddr */, "" /* inNicName */, outNicName); !ok {
+	if ok := e.protocol.stack.IPTables().CheckPostrouting(pkt, r, outNicName); !ok {
 		// iptables is telling us to drop the packet.
 		e.stats.ip.IPTablesPostroutingDropped.Increment()
 		return nil
@@ -871,7 +871,7 @@ func (e *endpoint) WritePackets(r *stack.Route, pkts stack.PacketBufferList, par
 	// iptables filtering. All packets that reach here are locally
 	// generated.
 	outNicName := e.protocol.stack.FindNICNameFromID(e.nic.ID())
-	outputDropped, natPkts := e.protocol.stack.IPTables().CheckPackets(stack.Output, pkts, r, "" /* inNicName */, outNicName)
+	outputDropped, natPkts := e.protocol.stack.IPTables().CheckOutputPackets(pkts, r, outNicName)
 	stats.IPTablesOutputDropped.IncrementBy(uint64(len(outputDropped)))
 	for pkt := range outputDropped {
 		pkts.Remove(pkt)
@@ -897,7 +897,7 @@ func (e *endpoint) WritePackets(r *stack.Route, pkts stack.PacketBufferList, par
 	// We ignore the list of NAT-ed packets here because Postrouting NAT can only
 	// change the source address, and does not alter the route or outgoing
 	// interface of the packet.
-	postroutingDropped, _ := e.protocol.stack.IPTables().CheckPackets(stack.Postrouting, pkts, r, "" /* inNicName */, outNicName)
+	postroutingDropped, _ := e.protocol.stack.IPTables().CheckPostroutingPackets(pkts, r, outNicName)
 	stats.IPTablesPostroutingDropped.IncrementBy(uint64(len(postroutingDropped)))
 	for pkt := range postroutingDropped {
 		pkts.Remove(pkt)
@@ -984,7 +984,7 @@ func (e *endpoint) forwardPacket(pkt *stack.PacketBuffer) ip.ForwardingError {
 	if ep := e.protocol.findEndpointWithAddress(dstAddr); ep != nil {
 		inNicName := stk.FindNICNameFromID(e.nic.ID())
 		outNicName := stk.FindNICNameFromID(ep.nic.ID())
-		if ok := stk.IPTables().Check(stack.Forward, pkt, nil, "" /* preroutingAddr */, inNicName, outNicName); !ok {
+		if ok := stk.IPTables().CheckForward(pkt, inNicName, outNicName); !ok {
 			// iptables is telling us to drop the packet.
 			e.stats.ip.IPTablesForwardDropped.Increment()
 			return nil
@@ -1015,7 +1015,7 @@ func (e *endpoint) forwardPacket(pkt *stack.PacketBuffer) ip.ForwardingError {
 
 	inNicName := stk.FindNICNameFromID(e.nic.ID())
 	outNicName := stk.FindNICNameFromID(r.NICID())
-	if ok := stk.IPTables().Check(stack.Forward, pkt, nil, "" /* preroutingAddr */, inNicName, outNicName); !ok {
+	if ok := stk.IPTables().CheckForward(pkt, inNicName, outNicName); !ok {
 		// iptables is telling us to drop the packet.
 		e.stats.ip.IPTablesForwardDropped.Increment()
 		return nil
@@ -1024,7 +1024,8 @@ func (e *endpoint) forwardPacket(pkt *stack.PacketBuffer) ip.ForwardingError {
 	// We need to do a deep copy of the IP packet because
 	// WriteHeaderIncludedPacket takes ownership of the packet buffer, but we do
 	// not own it.
-	newHdr := header.IPv6(stack.PayloadSince(pkt.NetworkHeader()))
+	newPkt := pkt.DeepCopyForForwarding(int(r.MaxHeaderLength()))
+	newHdr := header.IPv6(newPkt.NetworkHeader().View())
 
 	// As per RFC 8200 section 3,
 	//
@@ -1032,11 +1033,13 @@ func (e *endpoint) forwardPacket(pkt *stack.PacketBuffer) ip.ForwardingError {
 	//                       each node that forwards the packet.
 	newHdr.SetHopLimit(hopLimit - 1)
 
-	switch err := r.WriteHeaderIncludedPacket(stack.NewPacketBuffer(stack.PacketBufferOptions{
-		ReserveHeaderBytes: int(r.MaxHeaderLength()),
-		Data:               buffer.View(newHdr).ToVectorisedView(),
-		IsForwardedPacket:  true,
-	})); err.(type) {
+	forwardToEp, ok := e.protocol.getEndpointForNIC(r.NICID())
+	if !ok {
+		// The interface was removed after we obtained the route.
+		return &ip.ErrOther{Err: &tcpip.ErrUnknownDevice{}}
+	}
+
+	switch err := forwardToEp.writePacket(r, newPkt, newPkt.TransportProtocolNumber, true /* headerIncluded */); err.(type) {
 	case nil:
 		return nil
 	case *tcpip.ErrMessageTooLong:
@@ -1097,7 +1100,7 @@ func (e *endpoint) HandlePacket(pkt *stack.PacketBuffer) {
 
 		// Loopback traffic skips the prerouting chain.
 		inNicName := e.protocol.stack.FindNICNameFromID(e.nic.ID())
-		if ok := e.protocol.stack.IPTables().Check(stack.Prerouting, pkt, nil, e.MainAddress().Address, inNicName, "" /* outNicName */); !ok {
+		if ok := e.protocol.stack.IPTables().CheckPrerouting(pkt, e, inNicName); !ok {
 			// iptables is telling us to drop the packet.
 			stats.IPTablesPreroutingDropped.Increment()
 			return
@@ -1180,7 +1183,7 @@ func (e *endpoint) handleValidatedPacket(h header.IPv6, pkt *stack.PacketBuffer,
 
 	// iptables filtering. All packets that reach here are intended for
 	// this machine and need not be forwarded.
-	if ok := e.protocol.stack.IPTables().Check(stack.Input, pkt, nil, "" /* preroutingAddr */, inNICName, "" /* outNicName */); !ok {
+	if ok := e.protocol.stack.IPTables().CheckInput(pkt, inNICName); !ok {
 		// iptables is telling us to drop the packet.
 		stats.IPTablesInputDropped.Increment()
 		return
@@ -1534,19 +1537,22 @@ func (e *endpoint) processExtensionHeaders(h header.IPv6, pkt *stack.PacketBuffe
 			// If the last header in the payload isn't a known IPv6 extension header,
 			// handle it as if it is transport layer data.
 
-			// Calculate the number of octets parsed from data. We want to remove all
-			// the data except the unparsed portion located at the end, which its size
-			// is extHdr.Buf.Size().
+			// Calculate the number of octets parsed from data. We want to consume all
+			// the data except the unparsed portion located at the end, whose size is
+			// extHdr.Buf.Size().
 			trim := pkt.Data().Size() - extHdr.Buf.Size()
 
 			// For unfragmented packets, extHdr still contains the transport header.
-			// Get rid of it.
+			// Consume that too.
 			//
 			// For reassembled fragments, pkt.TransportHeader is unset, so this is a
 			// no-op and pkt.Data begins with the transport header.
 			trim += pkt.TransportHeader().View().Size()
 
-			pkt.Data().DeleteFront(trim)
+			if _, ok := pkt.Data().Consume(trim); !ok {
+				stats.MalformedPacketsReceived.Increment()
+				return fmt.Errorf("could not consume %d bytes", trim)
+			}
 
 			stats.PacketsDelivered.Increment()
 			if p := tcpip.TransportProtocolNumber(extHdr.Identifier); p == header.ICMPv6ProtocolNumber {
@@ -1987,6 +1993,9 @@ type protocol struct {
 		// eps is keyed by NICID to allow protocol methods to retrieve an endpoint
 		// when handling a packet, by looking at which NIC handled the packet.
 		eps map[tcpip.NICID]*endpoint
+
+		// ICMP types for which the stack's global rate limiting must apply.
+		icmpRateLimitedTypes map[header.ICMPv6Type]struct{}
 	}
 
 	ids    []uint32
@@ -1998,7 +2007,8 @@ type protocol struct {
 	// Must be accessed using atomic operations.
 	defaultTTL uint32
 
-	fragmentation *fragmentation.Fragmentation
+	fragmentation   *fragmentation.Fragmentation
+	icmpRateLimiter *stack.ICMPRateLimiter
 }
 
 // Number returns the ipv6 protocol number.
@@ -2080,6 +2090,13 @@ func (p *protocol) findEndpointWithAddress(addr tcpip.Address) *endpoint {
 	}
 
 	return nil
+}
+
+func (p *protocol) getEndpointForNIC(id tcpip.NICID) (*endpoint, bool) {
+	p.mu.RLock()
+	defer p.mu.RUnlock()
+	ep, ok := p.mu.eps[id]
+	return ep, ok
 }
 
 func (p *protocol) forgetEndpoint(nicID tcpip.NICID) {
@@ -2165,6 +2182,18 @@ func (*protocol) Parse(pkt *stack.PacketBuffer) (proto tcpip.TransportProtocolNu
 	}
 
 	return proto, !fragMore && fragOffset == 0, true
+}
+
+// allowICMPReply reports whether an ICMP reply with provided type may
+// be sent following the rate mask options and global ICMP rate limiter.
+func (p *protocol) allowICMPReply(icmpType header.ICMPv6Type) bool {
+	p.mu.RLock()
+	defer p.mu.RUnlock()
+
+	if _, ok := p.mu.icmpRateLimitedTypes[icmpType]; ok {
+		return p.stack.AllowICMPMessage()
+	}
+	return true
 }
 
 // calculateNetworkMTU calculates the network-layer payload MTU based on the
@@ -2263,6 +2292,21 @@ func NewProtocolWithOptions(opts Options) stack.NetworkProtocolFactory {
 		p.fragmentation = fragmentation.NewFragmentation(header.IPv6FragmentExtHdrFragmentOffsetBytesPerUnit, fragmentation.HighFragThreshold, fragmentation.LowFragThreshold, ReassembleTimeout, s.Clock(), p)
 		p.mu.eps = make(map[tcpip.NICID]*endpoint)
 		p.SetDefaultTTL(DefaultTTL)
+		// Set default ICMP rate limiting to Linux defaults.
+		//
+		// Default: 0-1,3-127 (rate limit ICMPv6 errors except Packet Too Big)
+		// See https://www.kernel.org/doc/Documentation/networking/ip-sysctl.txt.
+		defaultIcmpTypes := make(map[header.ICMPv6Type]struct{})
+		for i := header.ICMPv6Type(0); i < header.ICMPv6EchoRequest; i++ {
+			switch i {
+			case header.ICMPv6PacketTooBig:
+				// Do not rate limit packet too big by default.
+			default:
+				defaultIcmpTypes[i] = struct{}{}
+			}
+		}
+		p.mu.icmpRateLimitedTypes = defaultIcmpTypes
+
 		return p
 	}
 }

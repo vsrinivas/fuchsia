@@ -187,7 +187,9 @@ func (e *endpoint) handleControl(transErr stack.TransportError, pkt *stack.Packe
 
 	// Skip the IP header, then handle the fragmentation header if there
 	// is one.
-	pkt.Data().DeleteFront(header.IPv6MinimumSize)
+	if _, ok := pkt.Data().Consume(header.IPv6MinimumSize); !ok {
+		panic("could not consume IPv6MinimumSize bytes")
+	}
 	if p == header.IPv6FragmentHeader {
 		f, ok := pkt.Data().PullUp(header.IPv6FragmentHeaderSize)
 		if !ok {
@@ -203,7 +205,9 @@ func (e *endpoint) handleControl(transErr stack.TransportError, pkt *stack.Packe
 
 		// Skip fragmentation header and find out the actual protocol
 		// number.
-		pkt.Data().DeleteFront(header.IPv6FragmentHeaderSize)
+		if _, ok := pkt.Data().Consume(header.IPv6FragmentHeaderSize); !ok {
+			panic("could not consume IPv6FragmentHeaderSize bytes")
+		}
 	}
 
 	e.dispatcher.DeliverTransportError(srcAddr, dstAddr, ProtocolNumber, p, transErr, pkt)
@@ -325,7 +329,7 @@ func (e *endpoint) handleICMP(pkt *stack.PacketBuffer, hasFragmentHeader bool, r
 	switch icmpType := h.Type(); icmpType {
 	case header.ICMPv6PacketTooBig:
 		received.packetTooBig.Increment()
-		hdr, ok := pkt.Data().PullUp(header.ICMPv6PacketTooBigMinimumSize)
+		hdr, ok := pkt.Data().Consume(header.ICMPv6PacketTooBigMinimumSize)
 		if !ok {
 			received.invalid.Increment()
 			return
@@ -334,18 +338,16 @@ func (e *endpoint) handleICMP(pkt *stack.PacketBuffer, hasFragmentHeader bool, r
 		if err != nil {
 			networkMTU = 0
 		}
-		pkt.Data().DeleteFront(header.ICMPv6PacketTooBigMinimumSize)
 		e.handleControl(&icmpv6PacketTooBigSockError{mtu: networkMTU}, pkt)
 
 	case header.ICMPv6DstUnreachable:
 		received.dstUnreachable.Increment()
-		hdr, ok := pkt.Data().PullUp(header.ICMPv6DstUnreachableMinimumSize)
+		hdr, ok := pkt.Data().Consume(header.ICMPv6DstUnreachableMinimumSize)
 		if !ok {
 			received.invalid.Increment()
 			return
 		}
 		code := header.ICMPv6(hdr).Code()
-		pkt.Data().DeleteFront(header.ICMPv6DstUnreachableMinimumSize)
 		switch code {
 		case header.ICMPv6NetworkUnreachable:
 			e.handleControl(&icmpv6DestinationNetworkUnreachableSockError{}, pkt)
@@ -691,6 +693,11 @@ func (e *endpoint) handleICMP(pkt *stack.PacketBuffer, hasFragmentHeader bool, r
 			return
 		}
 		defer r.Release()
+
+		if !e.protocol.allowICMPReply(header.ICMPv6EchoReply) {
+			sent.rateLimited.Increment()
+			return
+		}
 
 		replyPkt := stack.NewPacketBuffer(stack.PacketBufferOptions{
 			ReserveHeaderBytes: int(r.MaxHeaderLength()) + header.ICMPv6EchoMinimumSize,
@@ -1174,13 +1181,6 @@ func (p *protocol) returnError(reason icmpReason, pkt *stack.PacketBuffer) tcpip
 		return &tcpip.ErrNotConnected{}
 	}
 
-	sent := netEP.stats.icmp.packetsSent
-
-	if !p.stack.AllowICMPMessage() {
-		sent.rateLimited.Increment()
-		return nil
-	}
-
 	if pkt.TransportProtocolNumber == header.ICMPv6ProtocolNumber {
 		// TODO(gvisor.dev/issues/3810): Sort this out when ICMP headers are stored.
 		// Unfortunately at this time ICMP Packets do not have a transport
@@ -1196,6 +1196,33 @@ func (p *protocol) returnError(reason icmpReason, pkt *stack.PacketBuffer) tcpip
 		if typ.IsErrorType() || typ == header.ICMPv6RedirectMsg {
 			return nil
 		}
+	}
+
+	sent := netEP.stats.icmp.packetsSent
+	icmpType, icmpCode, counter, typeSpecific := func() (header.ICMPv6Type, header.ICMPv6Code, tcpip.MultiCounterStat, uint32) {
+		switch reason := reason.(type) {
+		case *icmpReasonParameterProblem:
+			return header.ICMPv6ParamProblem, reason.code, sent.paramProblem, reason.pointer
+		case *icmpReasonPortUnreachable:
+			return header.ICMPv6DstUnreachable, header.ICMPv6PortUnreachable, sent.dstUnreachable, 0
+		case *icmpReasonNetUnreachable:
+			return header.ICMPv6DstUnreachable, header.ICMPv6NetworkUnreachable, sent.dstUnreachable, 0
+		case *icmpReasonHostUnreachable:
+			return header.ICMPv6DstUnreachable, header.ICMPv6AddressUnreachable, sent.dstUnreachable, 0
+		case *icmpReasonPacketTooBig:
+			return header.ICMPv6PacketTooBig, header.ICMPv6UnusedCode, sent.packetTooBig, 0
+		case *icmpReasonHopLimitExceeded:
+			return header.ICMPv6TimeExceeded, header.ICMPv6HopLimitExceeded, sent.timeExceeded, 0
+		case *icmpReasonReassemblyTimeout:
+			return header.ICMPv6TimeExceeded, header.ICMPv6ReassemblyTimeout, sent.timeExceeded, 0
+		default:
+			panic(fmt.Sprintf("unsupported ICMP type %T", reason))
+		}
+	}()
+
+	if !p.allowICMPReply(icmpType) {
+		sent.rateLimited.Increment()
+		return nil
 	}
 
 	network, transport := pkt.NetworkHeader().View(), pkt.TransportHeader().View()
@@ -1232,40 +1259,10 @@ func (p *protocol) returnError(reason icmpReason, pkt *stack.PacketBuffer) tcpip
 	newPkt.TransportProtocolNumber = header.ICMPv6ProtocolNumber
 
 	icmpHdr := header.ICMPv6(newPkt.TransportHeader().Push(header.ICMPv6DstUnreachableMinimumSize))
-	var counter tcpip.MultiCounterStat
-	switch reason := reason.(type) {
-	case *icmpReasonParameterProblem:
-		icmpHdr.SetType(header.ICMPv6ParamProblem)
-		icmpHdr.SetCode(reason.code)
-		icmpHdr.SetTypeSpecific(reason.pointer)
-		counter = sent.paramProblem
-	case *icmpReasonPortUnreachable:
-		icmpHdr.SetType(header.ICMPv6DstUnreachable)
-		icmpHdr.SetCode(header.ICMPv6PortUnreachable)
-		counter = sent.dstUnreachable
-	case *icmpReasonNetUnreachable:
-		icmpHdr.SetType(header.ICMPv6DstUnreachable)
-		icmpHdr.SetCode(header.ICMPv6NetworkUnreachable)
-		counter = sent.dstUnreachable
-	case *icmpReasonHostUnreachable:
-		icmpHdr.SetType(header.ICMPv6DstUnreachable)
-		icmpHdr.SetCode(header.ICMPv6AddressUnreachable)
-		counter = sent.dstUnreachable
-	case *icmpReasonPacketTooBig:
-		icmpHdr.SetType(header.ICMPv6PacketTooBig)
-		icmpHdr.SetCode(header.ICMPv6UnusedCode)
-		counter = sent.packetTooBig
-	case *icmpReasonHopLimitExceeded:
-		icmpHdr.SetType(header.ICMPv6TimeExceeded)
-		icmpHdr.SetCode(header.ICMPv6HopLimitExceeded)
-		counter = sent.timeExceeded
-	case *icmpReasonReassemblyTimeout:
-		icmpHdr.SetType(header.ICMPv6TimeExceeded)
-		icmpHdr.SetCode(header.ICMPv6ReassemblyTimeout)
-		counter = sent.timeExceeded
-	default:
-		panic(fmt.Sprintf("unsupported ICMP type %T", reason))
-	}
+	icmpHdr.SetType(icmpType)
+	icmpHdr.SetCode(icmpCode)
+	icmpHdr.SetTypeSpecific(typeSpecific)
+
 	dataRange := newPkt.Data().AsRange()
 	icmpHdr.SetChecksum(header.ICMPv6Checksum(header.ICMPv6ChecksumParams{
 		Header:      icmpHdr,

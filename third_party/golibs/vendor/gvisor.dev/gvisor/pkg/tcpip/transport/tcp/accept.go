@@ -109,9 +109,9 @@ type listenContext struct {
 	// pending is used to wait for all pendingEndpoints to finish when
 	// a socket is closed.
 	pending sync.WaitGroup
-	// pendingEndpoints is a map of all endpoints for which a handshake is
+	// pendingEndpoints is a set of all endpoints for which a handshake is
 	// in progress.
-	pendingEndpoints map[stack.TransportEndpointID]*endpoint
+	pendingEndpoints map[*endpoint]struct{}
 }
 
 // timeStamp returns an 8-bit timestamp with a granularity of 64 seconds.
@@ -129,7 +129,7 @@ func newListenContext(stk *stack.Stack, protocol *protocol, listenEP *endpoint, 
 		v6Only:           v6Only,
 		netProto:         netProto,
 		listenEP:         listenEP,
-		pendingEndpoints: make(map[stack.TransportEndpointID]*endpoint),
+		pendingEndpoints: make(map[*endpoint]struct{}),
 	}
 
 	for i := range l.nonce {
@@ -191,14 +191,6 @@ func (l *listenContext) isCookieValid(id stack.TransportEndpointID, cookie seqnu
 	}
 
 	return (v - l.cookieHash(id, cookieTS, 1)) & hashMask, true
-}
-
-func (l *listenContext) useSynCookies() bool {
-	var alwaysUseSynCookies tcpip.TCPAlwaysUseSynCookies
-	if err := l.stack.TransportProtocolOption(header.TCPProtocolNumber, &alwaysUseSynCookies); err != nil {
-		panic(fmt.Sprintf("TransportProtocolOption(%d, %T) = %s", header.TCPProtocolNumber, alwaysUseSynCookies, err))
-	}
-	return bool(alwaysUseSynCookies) || (l.listenEP != nil && l.listenEP.synRcvdBacklogFull())
 }
 
 // createConnectingEndpoint creates a new endpoint in a connecting state, with
@@ -277,7 +269,7 @@ func (l *listenContext) startHandshake(s *segment, opts header.TCPSynOptions, qu
 
 		// Propagate any inheritable options from the listening endpoint
 		// to the newly created endpoint.
-		l.listenEP.propagateInheritableOptionsLocked(ep)
+		l.listenEP.propagateInheritableOptionsLocked(ep) // +checklocksforce
 
 		if !ep.reserveTupleLocked() {
 			ep.mu.Unlock()
@@ -346,28 +338,27 @@ func (l *listenContext) performHandshake(s *segment, opts header.TCPSynOptions, 
 
 func (l *listenContext) addPendingEndpoint(n *endpoint) {
 	l.pendingMu.Lock()
-	l.pendingEndpoints[n.TransportEndpointInfo.ID] = n
+	l.pendingEndpoints[n] = struct{}{}
 	l.pending.Add(1)
 	l.pendingMu.Unlock()
 }
 
 func (l *listenContext) removePendingEndpoint(n *endpoint) {
 	l.pendingMu.Lock()
-	delete(l.pendingEndpoints, n.TransportEndpointInfo.ID)
+	delete(l.pendingEndpoints, n)
 	l.pending.Done()
 	l.pendingMu.Unlock()
 }
 
 func (l *listenContext) closeAllPendingEndpoints() {
 	l.pendingMu.Lock()
-	for _, n := range l.pendingEndpoints {
+	for n := range l.pendingEndpoints {
 		n.notifyProtocolGoroutine(notifyClose)
 	}
 	l.pendingMu.Unlock()
 	l.pending.Wait()
 }
 
-// Precondition: h.ep.mu must be held.
 // +checklocks:h.ep.mu
 func (l *listenContext) cleanupFailedHandshake(h *handshake) {
 	e := h.ep
@@ -384,7 +375,7 @@ func (l *listenContext) cleanupFailedHandshake(h *handshake) {
 // cleanupCompletedHandshake transfers any state from the completed handshake to
 // the new endpoint.
 //
-// Precondition: h.ep.mu must be held.
+// +checklocks:h.ep.mu
 func (l *listenContext) cleanupCompletedHandshake(h *handshake) {
 	e := h.ep
 	if l.listenEP != nil {
@@ -404,7 +395,8 @@ func (l *listenContext) cleanupCompletedHandshake(h *handshake) {
 // propagateInheritableOptionsLocked propagates any options set on the listening
 // endpoint to the newly created endpoint.
 //
-// Precondition: e.mu and n.mu must be held.
+// +checklocks:e.mu
+// +checklocks:n.mu
 func (e *endpoint) propagateInheritableOptionsLocked(n *endpoint) {
 	n.userTimeout = e.userTimeout
 	n.portFlags = e.portFlags
@@ -415,9 +407,9 @@ func (e *endpoint) propagateInheritableOptionsLocked(n *endpoint) {
 
 // reserveTupleLocked reserves an accepted endpoint's tuple.
 //
-// Preconditions:
-// * propagateInheritableOptionsLocked has been called.
-// * e.mu is held.
+// Precondition: e.propagateInheritableOptionsLocked has been called.
+//
+// +checklocks:e.mu
 func (e *endpoint) reserveTupleLocked() bool {
 	dest := tcpip.FullAddress{
 		Addr: e.TransportEndpointInfo.ID.RemoteAddress,
@@ -459,7 +451,7 @@ func (e *endpoint) notifyAborted() {
 // A limited number of these goroutines are allowed before TCP starts using SYN
 // cookies to accept connections.
 //
-// Precondition: if ctx.listenEP != nil, ctx.listenEP.mu must be locked.
+// +checklocks:e.mu
 func (e *endpoint) handleSynSegment(ctx *listenContext, s *segment, opts header.TCPSynOptions) tcpip.Error {
 	defer s.decRef()
 
@@ -552,7 +544,7 @@ func (a *accepted) acceptQueueIsFullLocked() bool {
 // handleListenSegment is called when a listening endpoint receives a segment
 // and needs to handle it.
 //
-// Precondition: if ctx.listenEP != nil, ctx.listenEP.mu must be locked.
+// +checklocks:e.mu
 func (e *endpoint) handleListenSegment(ctx *listenContext, s *segment) tcpip.Error {
 	e.rcvQueueInfo.rcvQueueMu.Lock()
 	rcvClosed := e.rcvQueueInfo.RcvClosed
@@ -579,8 +571,16 @@ func (e *endpoint) handleListenSegment(ctx *listenContext, s *segment) tcpip.Err
 			return nil
 		}
 
+		alwaysUseSynCookies := func() bool {
+			var alwaysUseSynCookies tcpip.TCPAlwaysUseSynCookies
+			if err := e.stack.TransportProtocolOption(header.TCPProtocolNumber, &alwaysUseSynCookies); err != nil {
+				panic(fmt.Sprintf("TransportProtocolOption(%d, %T) = %s", header.TCPProtocolNumber, alwaysUseSynCookies, err))
+			}
+			return bool(alwaysUseSynCookies)
+		}()
+
 		opts := parseSynSegmentOptions(s)
-		if !ctx.useSynCookies() {
+		if !alwaysUseSynCookies && !e.synRcvdBacklogFull() {
 			s.incRef()
 			atomic.AddInt32(&e.synRcvdCount, 1)
 			return e.handleSynSegment(ctx, s, opts)
