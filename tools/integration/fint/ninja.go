@@ -430,7 +430,7 @@ func affectedTestsNoWork(
 		logs: map[string]string{},
 	}
 
-	testsByStamp := map[string][]string{}
+	testsByDirtyLine := map[string][]string{}
 	testsByPath := map[string]string{}
 
 	for _, test := range allTests {
@@ -446,18 +446,13 @@ func affectedTestsNoWork(
 			testsByPath[path] = test.Name
 			continue
 		}
-		// For Fuchsia tests we derive the stamp path from the GN label.
-		// We try using the `package_label` if available since the `label`
-		// may point to the test component instead of the test package.
-		label := test.PackageLabel
-		if label == "" {
-			label = test.Label
+		if test.PackageLabel != "" {
+			dirtyLine, err := dirtyLineForPackageLabel(test.PackageLabel)
+			if err != nil {
+				return result, err
+			}
+			testsByDirtyLine[dirtyLine] = append(testsByDirtyLine[dirtyLine], test.Name)
 		}
-		stamp, err := stampFileForTest(label)
-		if err != nil {
-			return result, err
-		}
-		testsByStamp[stamp] = append(testsByStamp[stamp], test.Name)
 	}
 
 	var gnFiles, nonGNFiles []string
@@ -487,21 +482,15 @@ func affectedTestsNoWork(
 
 	var affectedTests []string
 	for _, line := range strings.Split(ninjaOutput, "\n") {
-		// Trim the bracketed progress number from the beginning of the line.
-		split := strings.Split(line, "] ")
-		if len(split) < 2 {
-			continue
-		}
-		action := split[1]
-		if strings.HasPrefix(action, "touch ") && strings.Contains(action, "obj/") {
-			// Matches actions like "touch baz/obj/foo/bar.stamp".
-			stampFile := action[strings.Index(action, "obj/"):]
-			affectedTests = append(affectedTests, testsByStamp[stampFile]...)
+		match, ok := testsByDirtyLine[line]
+		if ok {
+			// Matched an expected line
+			affectedTests = append(affectedTests, match...)
 		} else {
 			// Look for actions that reference host test path. Different types
 			// of host tests have different actions, but they all mention the
 			// final executable path.
-			for _, maybeTestPath := range strings.Split(action, " ") {
+			for _, maybeTestPath := range strings.Split(line, " ") {
 				maybeTestPath = strings.Trim(maybeTestPath, `"`)
 				testName, ok := testsByPath[maybeTestPath]
 				if !ok {
@@ -540,7 +529,7 @@ func affectedTestsNoWork(
 	return result, nil
 }
 
-func stampFileForTest(label string) (string, error) {
+func dirtyLineForPackageLabel(label string) (string, error) {
 	// Remove the "//" prefix and parenthesized toolchain suffix from the label.
 	trimmedLabel := strings.TrimPrefix(strings.Split(label, "(")[0], "//")
 
@@ -560,16 +549,15 @@ func stampFileForTest(label string) (string, error) {
 		return "", fmt.Errorf("failed to parse test label %q", label)
 	}
 
-	var stampPath string
+	var packagePath string
 	if targetName == path.Base(directory) {
-		stampPath = directory
+		packagePath = directory
 	} else {
-		stampPath = path.Join(directory, targetName)
+		packagePath = path.Join(directory, targetName)
 	}
 
-	// GN labels always use forward slashes, so make sure to convert to
-	// platform-specific file path format when returning the stamp file path.
-	return filepath.Join("obj", filepath.FromSlash(stampPath)+".stamp"), nil
+	// `meta/contents` is sensitive to any of the package's contents changing
+	return "ninja explain: " + filepath.Join("obj", filepath.FromSlash(packagePath), "meta", "contents") + " is dirty", nil
 }
 
 // ninjaGraph runs the ninja graph tool and pipes its stdout to a temporary

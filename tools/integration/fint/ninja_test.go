@@ -342,7 +342,7 @@ func TestCheckNinjaNoop(t *testing.T) {
 	}
 }
 
-func TestStampFileForTest(t *testing.T) {
+func TestDirtyLineForPackage(t *testing.T) {
 	testCases := []struct {
 		name      string
 		input     string
@@ -352,27 +352,27 @@ func TestStampFileForTest(t *testing.T) {
 		{
 			name:  "implicit basename",
 			input: "//foo/bar",
-			want:  "obj/foo/bar.stamp",
+			want:  "ninja explain: obj/foo/bar/meta/contents is dirty",
 		},
 		{
 			name:  "toolchain suffix",
 			input: "//foo/bar(//toolchain)",
-			want:  "obj/foo/bar.stamp",
+			want:  "ninja explain: obj/foo/bar/meta/contents is dirty",
 		},
 		{
 			name:  "explicit basename",
 			input: "//foo/bar:baz",
-			want:  "obj/foo/bar/baz.stamp",
+			want:  "ninja explain: obj/foo/bar/baz/meta/contents is dirty",
 		},
 		{
 			name:  "explicit basename with toolchain",
 			input: "//foo/bar:baz(//toolchain)",
-			want:  "obj/foo/bar/baz.stamp",
+			want:  "ninja explain: obj/foo/bar/baz/meta/contents is dirty",
 		},
 		{
 			name:  "explicit basename same as directory",
 			input: "//foo/bar:bar",
-			want:  "obj/foo/bar.stamp",
+			want:  "ninja explain: obj/foo/bar/meta/contents is dirty",
 		},
 		{
 			// This can happen if there's a bug in the tests.json generation
@@ -384,7 +384,7 @@ func TestStampFileForTest(t *testing.T) {
 	}
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			got, err := stampFileForTest(tc.input)
+			got, err := dirtyLineForPackageLabel(tc.input)
 			if err != nil && !tc.expectErr {
 				t.Fatal(err)
 			} else if tc.expectErr {
@@ -394,7 +394,7 @@ func TestStampFileForTest(t *testing.T) {
 				return
 			}
 			if diff := cmp.Diff(tc.want, got); diff != "" {
-				t.Errorf("Wrong stamp file for test (-want +got):\n%s", diff)
+				t.Errorf("Wrong dirty line for test (-want +got):\n%s", diff)
 			}
 		})
 	}
@@ -403,9 +403,9 @@ func TestStampFileForTest(t *testing.T) {
 func TestAffectedTestsNoWork(t *testing.T) {
 	mockTestManifest := []build.Test{
 		{Name: "host_test", Path: "host/run.sh"},
-		{Name: "fuchsia_test", Label: "//src/path/to:fuchsia_test(//toolchain)"},
-		{Name: "unaffected_test", Label: "//src/path/to:unaffected_test(//toolchain)"},
-		{Name: "never_affected_test", Label: neverAffectedTestLabels[0] + "(//toolchain)"},
+		{Name: "fuchsia_test", PackageLabel: "//src/path/to:fuchsia_test(//toolchain)"},
+		{Name: "unaffected_test", PackageLabel: "//src/path/to:unaffected_test(//toolchain)"},
+		{Name: "never_affected_test", PackageLabel: neverAffectedTestLabels[0] + "(//toolchain)"},
 	}
 
 	testCases := []struct {
@@ -426,10 +426,10 @@ func TestAffectedTestsNoWork(t *testing.T) {
 		{
 			name: "affected tests",
 			ninjaOutput: `
-                ninja: entering directory /foo
-                [1/3] touch tests/obj/src/path/to/fuchsia_test.stamp
-                [2/3] touch tests/obj/another_test.stamp
-                [3/3] python build.py host/run.sh
+ninja: entering directory /foo
+ninja explain: obj/src/path/to/fuchsia_test/meta/contents is dirty
+ninja explain: obj/another_test/meta/contents is dirty
+[3/3] python build.py host/run.sh
             `,
 			expectedAffectedTests: []string{"host_test", "fuchsia_test"},
 			expectedNoWork:        false,
@@ -437,10 +437,10 @@ func TestAffectedTestsNoWork(t *testing.T) {
 		{
 			name: "affected GN files",
 			ninjaOutput: `
-                ninja: entering directory /foo
-                [1/3] touch tests/obj/src/path/to/fuchsia_test.stamp
-                [2/3] touch tests/obj/another_test.stamp
-                [3/3] python build.py host/run.sh
+ninja: entering directory /foo
+ninja explain: obj/src/path/to/fuchsia_test/meta/contents is dirty
+ninja explain: obj/another_test/meta/contents is dirty
+[3/3] python build.py host/run.sh
 			`,
 			affectedFiles:         []string{"foo.gn", "bar.gni", "foo.go"},
 			expectedAffectedTests: []string{"host_test", "fuchsia_test"},
