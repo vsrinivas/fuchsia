@@ -14,6 +14,17 @@
         {
             name: "element_manager",
             url: "fuchsia-pkg://fuchsia.com/element_manager#meta/element_manager.cm",
+            environment: "#elements_env",
+        },
+        {
+            name: "dart_jit_runner",
+            url: "fuchsia-pkg://fuchsia.com/dart_jit_runner#meta/dart_jit_runner.cm",
+            startup: "lazy",
+        },
+        {
+            name: "dart_aot_runner",
+            url: "fuchsia-pkg://fuchsia.com/dart_aot_runner#meta/dart_aot_runner.cm",
+            startup: "lazy",
         },
     ],
     capabilities: [
@@ -101,6 +112,29 @@
             from: "parent",
             to: [ "#element_manager" ],
         },
+        {
+            protocol: [
+                "fuchsia.deprecatedtimezone.Timezone",
+                "fuchsia.feedback.CrashReporter",
+                "fuchsia.intl.PropertyProvider",
+                "fuchsia.logger.LogSink",
+                "fuchsia.posix.socket.Provider",
+                "fuchsia.tracing.provider.Registry",
+            ],
+            from: "parent",
+            to: [
+                "#dart_aot_runner",
+                "#dart_jit_runner",
+            ],
+        },
+        {
+            directory: "config-data",
+            from: "parent",
+            to: [
+                "#dart_aot_runner",
+                "#dart_jit_runner",
+            ],
+        },
 
         // The session manually proxies protocols between #element_manager and the shell.
         // TODO(fxbug.dev/83819) This will be unnecessary once the shell is a V2 component.
@@ -142,6 +176,22 @@
         {
             protocol: "fuchsia.component.Binder",
             from: "framework",
+        },
+    ],
+    environments: [
+        {
+            name: "elements_env",
+            extends: "realm",
+            runners: [
+                {
+                    runner: "dart_jit_runner",
+                    from: "#dart_jit_runner",
+                },
+                {
+                    runner: "dart_aot_runner",
+                    from: "#dart_aot_runner",
+                },
+            ],
         },
     ],
 }
