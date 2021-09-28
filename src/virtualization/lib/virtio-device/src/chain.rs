@@ -133,7 +133,7 @@ impl<'a, 'b, N: DriverNotify, M: DriverMem, const E: bool> State<'a, 'b, N, M, E
         };
         let mut total = 0;
         while let Some(v) = state.next_with_limit(usize::MAX) {
-            total = v?.len();
+            total += v?.len();
         }
         Ok(total)
     }
@@ -490,10 +490,15 @@ mod tests {
             .is_some());
         {
             let mut readable = ReadableChain::new(state.queue.next_chain().unwrap(), &driver_mem);
+            assert_eq!(readable.remaining(), Ok(12));
             check_read(readable.next(), &[1, 2, 3, 4]);
+            assert_eq!(readable.remaining(), Ok(8));
             check_read(readable.next_with_limit(2), &[5, 6]);
+            assert_eq!(readable.remaining(), Ok(6));
             check_read(readable.next_with_limit(200), &[7, 8]);
+            assert_eq!(readable.remaining(), Ok(4));
             check_read(readable.next_with_limit(4), &[9, 10, 11, 12]);
+            assert_eq!(readable.remaining(), Ok(0));
             assert!(readable.next().is_none());
 
             let mut writable = WritableChain::from_readable(readable).unwrap();
