@@ -17,7 +17,7 @@ Implement client-side argument validation using client-cached network state.
 
 Increase datagram socket throughput and reduce CPU utilization.
 
-Prior to https://fxbug.dev/21123 datagram network sockets were implemented
+Prior to <https://fxbug.dev/21123> datagram network sockets were implemented
 using zircon sockets; clients would `zx_socket_write` to send data and
 `zx_socket_read` to receive data. A minimal protocol was used to carry metadata
 such as the destination address, if one was provided by the calling
@@ -175,11 +175,11 @@ table SendMsgPayload {
 ```
 
 These structures would be encoded and decoded using FIDL-at-rest, which is not
-yet fully specified (see https://fxbug.dev/45252).
+yet fully specified (see <https://fxbug.dev/45252>).
 
 Note that this representation does not eliminate the extra data copy incurred
 in the FIDL deserialization path even in the presence of the vectorized socket
-I/O operations proposed in https://fxrev.dev/526346. This overhead is not
+I/O operations proposed in <https://fxrev.dev/526346>. This overhead is not
 addressed in this proposal, and may be the focus of future work, should the
 need arise.
 
@@ -262,7 +262,7 @@ The initial implementation is expected to supply two elements in each
 
 Throughput of `SOCK_DGRAM` sockets is expected to approximately double; this
 estimate is based on the performance regression seen after
-https://fxbug.dev/21123.
+<https://fxbug.dev/21123>.
 
 CPU utilization is expected to decrease by a meaningful but unknown magnitude.
 
