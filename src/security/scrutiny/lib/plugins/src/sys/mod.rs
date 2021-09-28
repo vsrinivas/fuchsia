@@ -132,8 +132,7 @@ mod tests {
         crate::core::{
             package::{
                 collector::PackageDataCollector,
-                getter::PackageGetter,
-                test_utils::{self, MockPackageGetter, MockPackageReader},
+                test_utils::{self, MockPackageReader},
             },
             util::{
                 jsons::{Custom, FarPackageDefinition, Signed, TargetsJson},
@@ -141,7 +140,8 @@ mod tests {
             },
         },
         scrutiny::model::controller::DataController,
-        scrutiny_testing::fake::fake_model_config,
+        scrutiny_testing::{artifact::MockArtifactReader, fake::fake_model_config},
+        scrutiny_utils::artifact::ArtifactReader,
         serde_json,
         std::{
             collections::{HashMap, HashSet},
@@ -427,7 +427,7 @@ mod tests {
         // With all the data created, send it to the PackageDataCollector
         let (_unknown, model) = test_utils::create_model();
         let pkg_collector = PackageDataCollector::default();
-        let pkg_getter: Box<dyn PackageGetter> = Box::new(MockPackageGetter::new());
+        let pkg_getter: Box<dyn ArtifactReader> = Box::new(MockArtifactReader::new());
         pkg_collector
             .collect_with_reader(
                 fake_model_config(),
@@ -512,7 +512,7 @@ mod tests {
 
         let (_unused, model) = test_utils::create_model();
         let pkg_collector = PackageDataCollector::default();
-        let pkg_getter: Box<dyn PackageGetter> = Box::new(MockPackageGetter::new());
+        let pkg_getter: Box<dyn ArtifactReader> = Box::new(MockArtifactReader::new());
         pkg_collector
             .collect_with_reader(
                 fake_model_config(),

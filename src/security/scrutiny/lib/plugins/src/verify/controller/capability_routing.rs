@@ -4,8 +4,8 @@
 
 use {
     crate::verify::{
-        collection::V2ComponentTree, ErrorResult, OkResult, ResultsBySeverity,
-        ResultsForCapabilityType, WarningResult,
+        collection::V2ComponentTree, CapabilityRouteResults, ErrorResult, OkResult,
+        ResultsBySeverity, ResultsForCapabilityType, WarningResult,
     },
     anyhow::{anyhow, Context, Result},
     cm_fidl_analyzer::capability_routing::{
@@ -322,18 +322,19 @@ impl DataController for CapabilityRouteController {
     fn query(&self, model: Arc<DataModel>, request: Value) -> Result<Value> {
         let (capability_types, response_level) = Self::parse_request(request)
             .context("Failed to parse CapabilityRouteController request")?;
-        let tree = &model
+        let tree_data = model
             .get::<V2ComponentTree>()
-            .context("Failed to get V2ComponentTree from CapabilityRouteController model")?
-            .tree;
-        let mut walker = BreadthFirstWalker::new(&tree)
+            .context("Failed to get V2ComponentTree from CapabilityRouteController model")?;
+        let tree = &tree_data.tree;
+        let deps = tree_data.deps.clone();
+        let mut walker = BreadthFirstWalker::new(tree)
             .context("Failed to initialize BreadthFirstWalker from V2ComponentTree")?;
-        let mut visitor = CapabilityRouteVisitor::new(&tree, &capability_types);
+        let mut visitor = CapabilityRouteVisitor::new(tree, &capability_types);
         walker.walk(&tree, &mut visitor).context(
             "Failed to walk V2ComponentTree with BreadthFirstWalker and CapabilityRouteVisitor",
         )?;
         let results = visitor.report_results(&response_level);
-        Ok(json!(results))
+        Ok(json!(CapabilityRouteResults { deps, results }))
     }
 
     fn description(&self) -> String {

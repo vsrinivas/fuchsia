@@ -9,11 +9,7 @@ use {
             ManifestData, Manifests, Package, Packages, ProtocolCapability, Route, Routes, Sysmgr,
             Zbi,
         },
-        package::{
-            artifact::ArtifactGetter,
-            getter::PackageGetter,
-            reader::{PackageReader, PackageServerReader},
-        },
+        package::reader::{PackageReader, PackageServerReader},
         util::types::{ComponentManifest, PackageDefinition, ServiceMapping, SysManagerConfig},
     },
     anyhow::{anyhow, Result},
@@ -27,6 +23,7 @@ use {
     scrutiny::model::{collector::DataCollector, model::DataModel},
     scrutiny_config::ModelConfig,
     scrutiny_utils::{
+        artifact::{ArtifactReader, FileArtifactReader},
         bootfs::BootfsReader,
         zbi::{ZbiReader, ZbiType},
     },
@@ -171,13 +168,13 @@ impl PackageDataCollector {
     /// Extracts the ZBI from the update package and parses it into the ZBI
     /// model.
     fn extract_zbi_from_update_package(
-        getter: &mut Box<dyn PackageGetter>,
+        reader: &mut Box<dyn ArtifactReader>,
         package: &PackageDefinition,
     ) -> Result<Zbi> {
         info!("Extracting the ZBI from {}", package.url);
         for (path, merkle) in package.contents.iter() {
             if path == "zbi" || path == "zbi.signed" {
-                let zbi_data = getter.read_raw(&format!("blobs/{}", merkle))?;
+                let zbi_data = reader.read_raw(&format!("blobs/{}", merkle))?;
                 let mut reader = ZbiReader::new(zbi_data);
                 let sections = reader.parse()?;
                 let mut bootfs = HashMap::new();
@@ -518,7 +515,7 @@ impl PackageDataCollector {
     /// by this collector.
     fn extract(
         update_package_url: String,
-        mut artifact_getter: &mut Box<dyn PackageGetter>,
+        mut artifact_reader: &mut Box<dyn ArtifactReader>,
         fuchsia_packages: Vec<PackageDefinition>,
         mut service_map: ServiceMapping,
     ) -> Result<PackageDataResponse> {
@@ -544,7 +541,7 @@ impl PackageDataCollector {
             // If the package is the update package attempt to extract the ZBI.
             if pkg.url == update_package_url {
                 let zbi_result = PackageDataCollector::extract_zbi_from_update_package(
-                    &mut artifact_getter,
+                    &mut artifact_reader,
                     &pkg,
                 );
                 if let Err(err) = zbi_result {
@@ -597,7 +594,7 @@ impl PackageDataCollector {
         &self,
         config: ModelConfig,
         mut package_reader: Box<dyn PackageReader>,
-        mut artifact_reader: Box<dyn PackageGetter>,
+        mut artifact_loader: Box<dyn ArtifactReader>,
         model: Arc<DataModel>,
     ) -> Result<()> {
         let package_reader = &mut package_reader;
@@ -617,7 +614,7 @@ impl PackageDataCollector {
 
         let response = PackageDataCollector::extract(
             config.update_package_url(),
-            &mut artifact_reader,
+            &mut artifact_loader,
             served_packages,
             sysmgr_config.services.clone(),
         )?;
@@ -643,7 +640,7 @@ impl PackageDataCollector {
         for dep in package_reader.get_deps().into_iter() {
             deps.insert(dep);
         }
-        for dep in artifact_reader.get_deps().into_iter() {
+        for dep in artifact_loader.get_deps().into_iter() {
             deps.insert(dep);
         }
         model.set(CoreDataDeps::new(deps))?;
@@ -656,13 +653,15 @@ impl DataCollector for PackageDataCollector {
     /// Collects and builds a DAG of component nodes (with manifests) and routes that
     /// connect the nodes.
     fn collect(&self, model: Arc<DataModel>) -> Result<()> {
+        let build_path = model.config().build_path();
         let repository_path = model.config().repository_path();
-        let package_reader: Box<dyn PackageReader> =
-            Box::new(PackageServerReader::new(Box::new(ArtifactGetter::new(&repository_path))));
-        let artifact_reader: Box<dyn PackageGetter> =
-            Box::new(ArtifactGetter::new(&repository_path));
+        let package_reader: Box<dyn PackageReader> = Box::new(PackageServerReader::new(Box::new(
+            FileArtifactReader::new(&build_path, &repository_path),
+        )));
+        let artifact_loader: Box<dyn ArtifactReader> =
+            Box::new(FileArtifactReader::new(&build_path, &repository_path));
 
-        self.collect_with_reader(model.config().clone(), package_reader, artifact_reader, model)?;
+        self.collect_with_reader(model.config().clone(), package_reader, artifact_loader, model)?;
 
         Ok(())
     }
@@ -679,13 +678,12 @@ pub mod tests {
                 Route, Routes,
             },
             package::{
-                getter::PackageGetter,
                 reader::PackageReader,
                 test_utils::{
                     create_model, create_svc_pkg_def, create_svc_pkg_def_with_array,
                     create_test_cm_map, create_test_cmx_map, create_test_package_with_cms,
                     create_test_package_with_contents, create_test_package_with_meta,
-                    create_test_sandbox, MockPackageGetter, MockPackageReader,
+                    create_test_sandbox, MockPackageReader,
                 },
             },
             util::{
@@ -694,7 +692,8 @@ pub mod tests {
             },
         },
         maplit::{hashmap, hashset},
-        scrutiny_testing::fake::fake_model_config,
+        scrutiny_testing::{artifact::MockArtifactReader, fake::fake_model_config},
+        scrutiny_utils::artifact::ArtifactReader,
         std::{collections::HashMap, sync::Arc},
     };
 
@@ -886,10 +885,10 @@ pub mod tests {
         let served = vec![pkg];
 
         let services = HashMap::new();
-        let mut package_getter: Box<dyn PackageGetter> = Box::new(MockPackageGetter::new());
+        let mut artifact_loader: Box<dyn ArtifactReader> = Box::new(MockArtifactReader::new());
         let response = PackageDataCollector::extract(
             fake_model_config().update_package_url(),
-            &mut package_getter,
+            &mut artifact_loader,
             served,
             services,
         )
@@ -918,10 +917,10 @@ pub mod tests {
             String::from("fuchsia-pkg://fuchsia.com/aries#meta/taurus.cmx"),
         );
 
-        let mut package_getter: Box<dyn PackageGetter> = Box::new(MockPackageGetter::new());
+        let mut artifact_loader: Box<dyn ArtifactReader> = Box::new(MockArtifactReader::new());
         let response = PackageDataCollector::extract(
             fake_model_config().update_package_url(),
-            &mut package_getter,
+            &mut artifact_loader,
             served,
             services,
         )
@@ -949,10 +948,10 @@ pub mod tests {
 
         let services = HashMap::new();
 
-        let mut package_getter: Box<dyn PackageGetter> = Box::new(MockPackageGetter::new());
+        let mut artifact_loader: Box<dyn ArtifactReader> = Box::new(MockArtifactReader::new());
         let response = PackageDataCollector::extract(
             fake_model_config().update_package_url(),
-            &mut package_getter,
+            &mut artifact_loader,
             served,
             services,
         )
@@ -974,10 +973,10 @@ pub mod tests {
 
         let services = HashMap::new();
 
-        let mut package_getter: Box<dyn PackageGetter> = Box::new(MockPackageGetter::new());
+        let mut artifact_loader: Box<dyn ArtifactReader> = Box::new(MockArtifactReader::new());
         let response = PackageDataCollector::extract(
             fake_model_config().update_package_url(),
-            &mut package_getter,
+            &mut artifact_loader,
             served,
             services,
         )
@@ -1006,10 +1005,10 @@ pub mod tests {
 
         let services = HashMap::new();
 
-        let mut package_getter: Box<dyn PackageGetter> = Box::new(MockPackageGetter::new());
+        let mut artifact_loader: Box<dyn ArtifactReader> = Box::new(MockArtifactReader::new());
         let response = PackageDataCollector::extract(
             fake_model_config().update_package_url(),
-            &mut package_getter,
+            &mut artifact_loader,
             served,
             services,
         )
@@ -1043,10 +1042,10 @@ pub mod tests {
             String::from("fuchsia-pkg://fuchsia.com/aries#meta/taurus.cmx"),
         );
 
-        let mut package_getter: Box<dyn PackageGetter> = Box::new(MockPackageGetter::new());
+        let mut artifact_loader: Box<dyn ArtifactReader> = Box::new(MockArtifactReader::new());
         let response = PackageDataCollector::extract(
             fake_model_config().update_package_url(),
-            &mut package_getter,
+            &mut artifact_loader,
             served,
             services,
         )
@@ -1119,7 +1118,7 @@ pub mod tests {
         mock_reader.append_pkg_def(pkg);
 
         let reader: Box<dyn PackageReader> = mock_reader;
-        let getter: Box<dyn PackageGetter> = Box::new(MockPackageGetter::new());
+        let getter: Box<dyn ArtifactReader> = Box::new(MockArtifactReader::new());
         let collector = PackageDataCollector::default();
         collector
             .collect_with_reader(fake_model_config(), reader, getter, Arc::clone(&model))
@@ -1147,10 +1146,10 @@ pub mod tests {
         let served = vec![pkg];
         let services = HashMap::new();
 
-        let mut package_getter: Box<dyn PackageGetter> = Box::new(MockPackageGetter::new());
+        let mut artifact_loader: Box<dyn ArtifactReader> = Box::new(MockArtifactReader::new());
         let response = PackageDataCollector::extract(
             fake_model_config().update_package_url(),
-            &mut package_getter,
+            &mut artifact_loader,
             served,
             services,
         )
@@ -1189,12 +1188,12 @@ pub mod tests {
 
         let collector = PackageDataCollector::default();
         let package_reader: Box<dyn PackageReader> = mock_reader;
-        let package_getter: Box<dyn PackageGetter> = Box::new(MockPackageGetter::new());
+        let artifact_loader: Box<dyn ArtifactReader> = Box::new(MockArtifactReader::new());
         collector
             .collect_with_reader(
                 fake_model_config(),
                 package_reader,
-                package_getter,
+                artifact_loader,
                 Arc::clone(&model),
             )
             .unwrap();
@@ -1252,12 +1251,12 @@ pub mod tests {
 
         let collector = PackageDataCollector::default();
         let package_reader: Box<dyn PackageReader> = mock_reader;
-        let package_getter: Box<dyn PackageGetter> = Box::new(MockPackageGetter::new());
+        let artifact_loader: Box<dyn ArtifactReader> = Box::new(MockArtifactReader::new());
         collector
             .collect_with_reader(
                 fake_model_config(),
                 package_reader,
-                package_getter,
+                artifact_loader,
                 Arc::clone(&model),
             )
             .unwrap();

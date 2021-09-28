@@ -3,13 +3,15 @@
 // found in the LICENSE file.
 
 use {
-    crate::core::{package::artifact::ArtifactGetter, package::getter::PackageGetter},
     anyhow::Result,
     scrutiny::{
         model::controller::{DataController, HintDataType},
         model::model::DataModel,
     },
-    scrutiny_utils::usage::UsageBuilder,
+    scrutiny_utils::{
+        artifact::{ArtifactReader, FileArtifactReader},
+        usage::UsageBuilder,
+    },
     serde::{Deserialize, Serialize},
     serde_json::{self, value::Value},
     std::sync::Arc,
@@ -32,11 +34,12 @@ pub struct BlobController {}
 
 impl DataController for BlobController {
     fn query(&self, model: Arc<DataModel>, query: Value) -> Result<Value> {
+        let build_path = model.config().build_path();
         let repository_path = model.config().repository_path();
-        let mut blob_getter = ArtifactGetter::new(&repository_path);
+        let mut blob_loader = FileArtifactReader::new(&build_path, &repository_path);
 
         let req: BlobRequest = serde_json::from_value(query)?;
-        let data = blob_getter.read_raw(&format!("blobs/{}", req.merkle))?;
+        let data = blob_loader.read_raw(&format!("blobs/{}", req.merkle))?;
         let resp = BlobResponse {
             merkle: req.merkle.clone(),
             encoding: "base64".to_string(),

@@ -15,7 +15,7 @@ use {
 pub enum DevmgrConfigError {
     #[error("Failed to open ZBI file from path {zbi_path}\n{io_error}")]
     FailedToOpenZbi { zbi_path: String, io_error: String },
-    #[error("Failed to read ZBI file at {zbi_path}\n{io_error:#?}")]
+    #[error("Failed to read ZBI file at {zbi_path}\n{io_error}")]
     FailedToReadZbi { zbi_path: String, io_error: String },
     #[error("Failed to parse ZBI file at {zbi_path}\n{zbi_error}")]
     FailedToParseZbi { zbi_path: String, zbi_error: String },

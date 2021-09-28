@@ -7,9 +7,11 @@ use {
     clap::{App, Arg},
     scrutiny_config::Config,
     scrutiny_frontend::{command_builder::CommandBuilder, launcher},
-    scrutiny_plugins::verify::{ResultsBySeverity, ResultsForCapabilityType},
+    scrutiny_plugins::verify::{
+        CapabilityRouteResults, ResultsBySeverity, ResultsForCapabilityType,
+    },
     serde_json,
-    std::{env, fs},
+    std::{env, fs, io::Write},
 };
 
 pub struct VerifyRoutes {
@@ -21,8 +23,6 @@ pub struct VerifyRoutes {
 /// Paths required for depfile generation. Both these locations are touched
 /// by the core DataCollector.
 const AMBER_PATH: &str = "amber-files/repository";
-const AMBER_BLOB_PATH: &str = "amber-files/repository/blobs";
-const AMBER_TARGETS_PATH: &str = "amber-files/repository/targets.json";
 
 impl VerifyRoutes {
     /// Creates a new VerifyRoute instance with a `stamp_path` that is written
@@ -42,8 +42,6 @@ impl VerifyRoutes {
     /// errors that are not allowlisted cause the verification to fail listing
     /// all non-allowlisted errors.
     fn verify(&self) -> Result<()> {
-        VerifyRoutes::generate_depfile(&self.stamp_path, &self.depfile_path)
-            .context("Failed to generate depfile")?;
         let mut config = Config::run_command_with_plugins(
             CommandBuilder::new("verify.capability_routes")
                 .param("capability_types", "directory protocol")
@@ -57,13 +55,13 @@ impl VerifyRoutes {
         config.runtime.logging.silent_mode = true;
 
         let results = launcher::launch_from_config(config).context("Failed to launch scrutiny")?;
-        let route_analysis: Vec<ResultsForCapabilityType> = serde_json5::from_str(&results)
+        let route_analysis: CapabilityRouteResults = serde_json5::from_str(&results)
             .context(format!("Failed to deserialize verify routes results: {}", results))?;
         let allowlist: Vec<ResultsForCapabilityType> = serde_json5::from_str(
             &fs::read_to_string(&self.allowlist_path).context("Failed to read allowlist")?,
         )
         .context("Failed to deserialize allowlist")?;
-        let filtered_analysis = VerifyRoutes::filter_analysis(route_analysis, allowlist);
+        let filtered_analysis = VerifyRoutes::filter_analysis(route_analysis.results, allowlist);
         for entry in filtered_analysis.iter() {
             if !entry.results.errors.is_empty() {
                 bail!(
@@ -83,6 +81,13 @@ Verification Errors:
                 );
             }
         }
+
+        // Write out the depfile.
+        let deps: Vec<String> = route_analysis.deps.into_iter().collect();
+        let mut depfile =
+            fs::File::create(&self.depfile_path).context("Failed to create dep file")?;
+        write!(depfile, "{}: {}", self.stamp_path, deps.join(" "))
+            .context("Failed to write to dep file")?;
 
         fs::write(&self.stamp_path, "Verified\n").context("failed to write stamp file")?;
         Ok(())
@@ -139,22 +144,6 @@ Verification Errors:
                 }
             })
             .collect()
-    }
-
-    /// Generates a list of all files that this compiled_action touches. This is
-    /// required to be a hermetic action.
-    fn generate_depfile(stamp_path: &str, depfile_path: &str) -> Result<()> {
-        let mut stamp = String::from(stamp_path);
-        stamp.push_str(": ");
-        stamp.push_str(AMBER_TARGETS_PATH);
-        stamp.push_str(" ");
-        let blob_paths = fs::read_dir(AMBER_BLOB_PATH).context("failed to read amber blob path")?;
-        for blob_path in blob_paths {
-            stamp.push_str(&blob_path.unwrap().path().into_os_string().into_string().unwrap());
-            stamp.push_str(" ");
-        }
-        fs::write(depfile_path, stamp).context("failed to write to depfile")?;
-        Ok(())
     }
 }
 

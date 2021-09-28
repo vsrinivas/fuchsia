@@ -7,19 +7,21 @@ use {
         devmgr_config::{DevmgrConfigCollection, DevmgrConfigContents},
         static_pkgs::collection::{StaticPkgsCollection, StaticPkgsContents, StaticPkgsError},
     },
-    anyhow::{Context, Result},
+    anyhow::{anyhow, Context, Result},
     fuchsia_archive::Reader as FarReader,
     fuchsia_hash::Hash,
     fuchsia_merkle::MerkleTree,
     maplit::hashset,
     scrutiny::model::{collector::DataCollector, model::DataModel},
     scrutiny_config::ModelConfig,
-    scrutiny_utils::key_value::parse_key_value,
+    scrutiny_utils::{
+        artifact::{ArtifactReader, FileArtifactReader},
+        key_value::parse_key_value,
+    },
     std::{
         collections::HashSet,
-        fs::{read_to_string, File},
-        io::{Cursor, Read},
-        path::Path,
+        io::Cursor,
+        path::{Path, PathBuf},
         str::{from_utf8, FromStr},
         sync::Arc,
     },
@@ -35,6 +37,11 @@ struct StaticPkgsData {
     static_pkgs: StaticPkgsContents,
 }
 
+struct ErrorWithDeps {
+    pub deps: HashSet<String>,
+    pub error: StaticPkgsError,
+}
+
 fn path_string<P>(path: &P) -> String
 where
     P: AsRef<Path>,
@@ -42,186 +49,252 @@ where
     format!("{}", path.as_ref().display())
 }
 
+fn path_buf_to_str<'a>(path_buf: &'a PathBuf) -> Result<&'a str> {
+    path_buf.to_str().ok_or(anyhow!("Failed to convert path to string: {:#?}", path_buf))
+}
+
 fn collect_static_pkgs(
     devmgr_config: DevmgrConfigContents,
     model_config: &ModelConfig,
-) -> Result<StaticPkgsData, StaticPkgsError> {
+) -> Result<StaticPkgsData, ErrorWithDeps> {
+    let build_path = model_config.build_path();
+    let mut artifact_loader = FileArtifactReader::new(&build_path, &build_path);
     // Get system image path from ["bin/pkgsvr", <system-image-hash>] cmd.
-    let pkgfs_cmd = devmgr_config
-        .get(PKGFS_CMD_DEVMGR_CONFIG_KEY)
-        .ok_or(StaticPkgsError::MissingPkgfsCmdEntry)?;
+    let pkgfs_cmd = devmgr_config.get(PKGFS_CMD_DEVMGR_CONFIG_KEY).ok_or(ErrorWithDeps {
+        deps: artifact_loader.get_deps(),
+        error: StaticPkgsError::MissingPkgfsCmdEntry,
+    })?;
     if pkgfs_cmd.len() != 2 {
-        return Err(StaticPkgsError::UnexpectedPkgfsCmdLen {
-            expected_len: 2,
-            actual_len: pkgfs_cmd.len(),
+        return Err(ErrorWithDeps {
+            deps: artifact_loader.get_deps(),
+            error: StaticPkgsError::UnexpectedPkgfsCmdLen {
+                expected_len: 2,
+                actual_len: pkgfs_cmd.len(),
+            },
         });
     }
     if &pkgfs_cmd[0] != PKGFS_BINARY_PATH {
-        return Err(StaticPkgsError::UnexpectedPkgfsCmd {
-            expected_cmd: PKGFS_BINARY_PATH.to_string(),
-            actual_cmd: pkgfs_cmd[0].clone(),
+        return Err(ErrorWithDeps {
+            deps: artifact_loader.get_deps(),
+            error: StaticPkgsError::UnexpectedPkgfsCmd {
+                expected_cmd: PKGFS_BINARY_PATH.to_string(),
+                actual_cmd: pkgfs_cmd[0].clone(),
+            },
         });
     }
     if Hash::from_str(&pkgfs_cmd[1]).is_err() {
-        return Err(StaticPkgsError::MalformedSystemImageHash {
-            actual_hash: pkgfs_cmd[1].clone(),
+        return Err(ErrorWithDeps {
+            deps: artifact_loader.get_deps(),
+            error: StaticPkgsError::MalformedSystemImageHash { actual_hash: pkgfs_cmd[1].clone() },
         });
     }
 
     // Load blob manifest for subsequent blob-loading operations.
     let blob_manifest_path = model_config.blob_manifest_path();
-    let blob_manifest_path_for_err = path_string(&blob_manifest_path);
-    let blob_manifest_path = blob_manifest_path.into_os_string().into_string().map_err(|_| {
-        StaticPkgsError::BlobManifestPathInvalid { blob_manifest_path: blob_manifest_path_for_err }
-    })?;
-    let blob_manifest_contents = read_to_string(&blob_manifest_path).map_err(|err| {
-        StaticPkgsError::FailedToReadBlobManifest {
-            blob_manifest_path: path_string(&blob_manifest_path),
-            io_error: err.to_string(),
-        }
-    })?;
-    let blob_manifest = parse_key_value(blob_manifest_contents).map_err(|err| {
-        StaticPkgsError::FailedToParseBlobManifest {
+    let blob_manifest_buffer = artifact_loader
+        .read_raw(path_buf_to_str(&blob_manifest_path).map_err(|_| ErrorWithDeps {
+            deps: artifact_loader.get_deps(),
+            error: StaticPkgsError::BlobManifestPathInvalid {
+                blob_manifest_path: path_string(&blob_manifest_path),
+            },
+        })?)
+        .map_err(|err| ErrorWithDeps {
+            deps: artifact_loader.get_deps(),
+            error: StaticPkgsError::FailedToReadBlobManifest {
+                blob_manifest_path: path_string(&blob_manifest_path),
+                io_error: err.to_string(),
+            },
+        })?;
+    let blob_manifest_contents = from_utf8(&blob_manifest_buffer).map_err(|err| ErrorWithDeps {
+        deps: artifact_loader.get_deps(),
+        error: StaticPkgsError::FailedToParseBlobManifest {
             blob_manifest_path: path_string(&blob_manifest_path),
             parse_error: err.to_string(),
-        }
+        },
     })?;
-    let blob_directory = Path::new(&blob_manifest_path).parent().ok_or_else(|| {
-        StaticPkgsError::BlobManifestNotInDirectory {
+    let blob_manifest =
+        parse_key_value(blob_manifest_contents.to_string()).map_err(|err| ErrorWithDeps {
+            deps: artifact_loader.get_deps(),
+            error: StaticPkgsError::FailedToParseBlobManifest {
+                blob_manifest_path: path_string(&blob_manifest_path),
+                parse_error: err.to_string(),
+            },
+        })?;
+    let blob_directory = Path::new(&blob_manifest_path).parent().ok_or_else(|| ErrorWithDeps {
+        deps: artifact_loader.get_deps(),
+        error: StaticPkgsError::BlobManifestNotInDirectory {
             blob_manifest_path: path_string(&blob_manifest_path),
-        }
+        },
     })?;
 
     // Locate system image package.
     let system_image_merkle = &pkgfs_cmd[1];
-    let system_image_file = blob_manifest.get(system_image_merkle).ok_or_else(|| {
-        StaticPkgsError::SystemImageNotFoundInManifest {
-            system_image_merkle: system_image_merkle.clone(),
-            blob_manifest_path: path_string(&blob_manifest_path),
-        }
-    })?;
-    let system_image_path = blob_directory.join(system_image_file);
-    let system_image_path_for_err = path_string(&system_image_path);
-    let system_image_path = system_image_path.into_os_string().into_string().map_err(|_| {
-        StaticPkgsError::SystemImagePathInvalid { system_image_path: system_image_path_for_err }
-    })?;
-
-    // Extract and verify system image package.
-    let mut system_image_pkg_file =
-        File::open(&system_image_path).map_err(|err| StaticPkgsError::FailedToOpenSystemImage {
-            system_image_path: system_image_path.clone(),
-            io_error: err.to_string(),
+    let system_image_file =
+        blob_manifest.get(system_image_merkle).ok_or_else(|| ErrorWithDeps {
+            deps: artifact_loader.get_deps(),
+            error: StaticPkgsError::SystemImageNotFoundInManifest {
+                system_image_merkle: system_image_merkle.clone(),
+                blob_manifest_path: path_string(&blob_manifest_path),
+            },
         })?;
-    let mut system_image_pkg_buffer = Vec::new();
-    system_image_pkg_file.read_to_end(&mut system_image_pkg_buffer).map_err(|err| {
-        StaticPkgsError::FailedToReadSystemImage {
-            system_image_path: system_image_path.clone(),
-            io_error: err.to_string(),
-        }
-    })?;
+    let system_image_path = blob_directory.join(system_image_file);
+
+    // Read system image package and verify its merkle.
+    let system_image_pkg_buffer = artifact_loader
+        .read_raw(path_buf_to_str(&system_image_path).map_err(|_| ErrorWithDeps {
+            deps: artifact_loader.get_deps(),
+            error: StaticPkgsError::SystemImagePathInvalid {
+                system_image_path: path_string(&system_image_path),
+            },
+        })?)
+        .map_err(|err| ErrorWithDeps {
+            deps: artifact_loader.get_deps(),
+            error: StaticPkgsError::FailedToReadSystemImage {
+                system_image_path: path_string(&system_image_path),
+                io_error: err.to_string(),
+            },
+        })?;
     let computed_system_image_merkle =
         MerkleTree::from_reader(Cursor::new(&system_image_pkg_buffer))
-            .map_err(|err| StaticPkgsError::FailedToReadSystemImage {
-                system_image_path: system_image_path.clone(),
-                io_error: err.to_string(),
+            .map_err(|err| ErrorWithDeps {
+                deps: artifact_loader.get_deps(),
+                error: StaticPkgsError::FailedToReadSystemImage {
+                    system_image_path: path_string(&system_image_path),
+                    io_error: err.to_string(),
+                },
             })?
             .root()
             .to_string();
     if &computed_system_image_merkle != system_image_merkle {
-        return Err(StaticPkgsError::FailedToVerifySystemImage {
-            expected_merkle_root: system_image_merkle.clone(),
-            computed_merkle_root: computed_system_image_merkle,
+        return Err(ErrorWithDeps {
+            deps: artifact_loader.get_deps(),
+            error: StaticPkgsError::FailedToVerifySystemImage {
+                expected_merkle_root: system_image_merkle.clone(),
+                computed_merkle_root: computed_system_image_merkle,
+            },
         });
     }
+
+    // Parse system image.
     let mut system_image_far =
-        FarReader::new(Cursor::new(&system_image_pkg_buffer)).map_err(|err| {
-            StaticPkgsError::FailedToParseSystemImage {
-                system_image_path: system_image_path.clone(),
+        FarReader::new(Cursor::new(&system_image_pkg_buffer)).map_err(|err| ErrorWithDeps {
+            deps: artifact_loader.get_deps(),
+            error: StaticPkgsError::FailedToParseSystemImage {
+                system_image_path: path_string(&system_image_path),
                 parse_error: err.to_string(),
-            }
+            },
         })?;
 
     // Extract "data/static_packages" hash from "meta/contents" file.
     let system_image_data_contents = parse_key_value(
         from_utf8(&system_image_far.read_file(META_FAR_CONTENTS_LISTING_PATH).map_err(|err| {
-            StaticPkgsError::FailedToReadSystemImageMetaFile {
-                system_image_path: system_image_path.clone(),
-                file_name: META_FAR_CONTENTS_LISTING_PATH.to_string(),
-                far_error: err.to_string(),
+            ErrorWithDeps {
+                deps: artifact_loader.get_deps(),
+                error: StaticPkgsError::FailedToReadSystemImageMetaFile {
+                    system_image_path: path_string(&system_image_path),
+                    file_name: META_FAR_CONTENTS_LISTING_PATH.to_string(),
+                    far_error: err.to_string(),
+                },
             }
         })?)
-        .map_err(|err| StaticPkgsError::FailedToDecodeSystemImageMetaFile {
-            system_image_path: system_image_path.clone(),
-            file_name: META_FAR_CONTENTS_LISTING_PATH.to_string(),
-            utf8_error: err.to_string(),
+        .map_err(|err| ErrorWithDeps {
+            deps: artifact_loader.get_deps(),
+            error: StaticPkgsError::FailedToDecodeSystemImageMetaFile {
+                system_image_path: path_string(&system_image_path),
+                file_name: META_FAR_CONTENTS_LISTING_PATH.to_string(),
+                utf8_error: err.to_string(),
+            },
         })?
         .to_string(),
     )
-    .map_err(|err| StaticPkgsError::FailedToParseSystemImageMetaFile {
-        system_image_path: system_image_path.clone(),
-        file_name: META_FAR_CONTENTS_LISTING_PATH.to_string(),
-        parse_error: err.to_string(),
+    .map_err(|err| ErrorWithDeps {
+        deps: artifact_loader.get_deps(),
+        error: StaticPkgsError::FailedToParseSystemImageMetaFile {
+            system_image_path: path_string(&system_image_path),
+            file_name: META_FAR_CONTENTS_LISTING_PATH.to_string(),
+            parse_error: err.to_string(),
+        },
     })?;
     let static_pkgs_merkle =
-        system_image_data_contents.get(STATIC_PKGS_LISTING_PATH).ok_or_else(|| {
-            StaticPkgsError::MissingStaticPkgsEntry {
-                system_image_path: system_image_path.clone(),
+        system_image_data_contents.get(STATIC_PKGS_LISTING_PATH).ok_or_else(|| ErrorWithDeps {
+            deps: artifact_loader.get_deps(),
+            error: StaticPkgsError::MissingStaticPkgsEntry {
+                system_image_path: path_string(&system_image_path),
                 file_name: STATIC_PKGS_LISTING_PATH.to_string(),
-            }
+            },
         })?;
 
     // Check static pkgs merkle format; determine path to static pkgs file.
     if Hash::from_str(static_pkgs_merkle).is_err() {
-        return Err(StaticPkgsError::MalformedStaticPkgsHash {
-            actual_hash: static_pkgs_merkle.clone(),
+        return Err(ErrorWithDeps {
+            deps: artifact_loader.get_deps(),
+            error: StaticPkgsError::MalformedStaticPkgsHash {
+                actual_hash: static_pkgs_merkle.clone(),
+            },
         });
     }
-    let static_pkgs_blob_path =
+    let static_pkgs_path =
         blob_directory.join(&blob_manifest.get(static_pkgs_merkle).ok_or_else(|| {
-            StaticPkgsError::StaticPkgsNotFoundInManifest {
-                static_pkgs_merkle: static_pkgs_merkle.clone(),
-                blob_manifest_path: path_string(&blob_manifest_path),
+            ErrorWithDeps {
+                deps: artifact_loader.get_deps(),
+                error: StaticPkgsError::StaticPkgsNotFoundInManifest {
+                    static_pkgs_merkle: static_pkgs_merkle.clone(),
+                    blob_manifest_path: path_string(&blob_manifest_path),
+                },
             }
         })?);
-    let static_pkgs_blob_path_for_err = path_string(&static_pkgs_blob_path);
-    let static_pkgs_blob_path =
-        static_pkgs_blob_path.into_os_string().into_string().map_err(|_| {
-            StaticPkgsError::StaticPkgsPathInvalid {
-                static_pkgs_path: static_pkgs_blob_path_for_err,
-            }
-        })?;
 
-    // Load static pkgs from file, verify and parse it.
-    let static_pkgs_contents = read_to_string(&static_pkgs_blob_path).map_err(|err| {
-        StaticPkgsError::FailedToReadStaticPkgs {
-            static_pkgs_path: static_pkgs_blob_path.clone(),
-            io_error: err.to_string(),
-        }
-    })?;
-    let computed_static_pkgs_merkle = MerkleTree::from_reader(static_pkgs_contents.as_bytes())
-        .map_err(|err| StaticPkgsError::FailedToReadStaticPkgs {
-            static_pkgs_path: static_pkgs_blob_path.clone(),
-            io_error: err.to_string(),
+    // Read static packages index, check its merkle, and parse it.
+    let static_pkgs_buffer = artifact_loader
+        .read_raw(path_buf_to_str(&static_pkgs_path).map_err(|_| ErrorWithDeps {
+            deps: artifact_loader.get_deps(),
+            error: StaticPkgsError::StaticPkgsPathInvalid {
+                static_pkgs_path: path_string(&static_pkgs_path),
+            },
+        })?)
+        .map_err(|err| ErrorWithDeps {
+            deps: artifact_loader.get_deps(),
+            error: StaticPkgsError::FailedToReadStaticPkgs {
+                static_pkgs_path: path_string(&static_pkgs_path),
+                io_error: err.to_string(),
+            },
+        })?;
+    let computed_static_pkgs_merkle = MerkleTree::from_reader(Cursor::new(&static_pkgs_buffer))
+        .map_err(|err| ErrorWithDeps {
+            deps: artifact_loader.get_deps(),
+            error: StaticPkgsError::FailedToReadStaticPkgs {
+                static_pkgs_path: path_string(&static_pkgs_path),
+                io_error: err.to_string(),
+            },
         })?
         .root()
         .to_string();
     if &computed_static_pkgs_merkle != static_pkgs_merkle {
-        return Err(StaticPkgsError::FailedToVerifyStaticPkgs {
-            expected_merkle_root: static_pkgs_merkle.clone(),
-            computed_merkle_root: computed_static_pkgs_merkle,
+        return Err(ErrorWithDeps {
+            deps: artifact_loader.get_deps(),
+            error: StaticPkgsError::FailedToVerifyStaticPkgs {
+                expected_merkle_root: path_string(&static_pkgs_path),
+                computed_merkle_root: computed_static_pkgs_merkle,
+            },
         });
     }
-    let static_pkgs = parse_key_value(static_pkgs_contents).map_err(|err| {
-        StaticPkgsError::FailedToParseStaticPkgs {
-            static_pkgs_path: static_pkgs_blob_path.clone(),
+    let static_pkgs_contents = from_utf8(&static_pkgs_buffer).map_err(|err| ErrorWithDeps {
+        deps: artifact_loader.get_deps(),
+        error: StaticPkgsError::FailedToParseStaticPkgs {
+            static_pkgs_path: path_string(&static_pkgs_path),
             parse_error: err.to_string(),
-        }
+        },
     })?;
+    let static_pkgs =
+        parse_key_value(static_pkgs_contents.to_string()).map_err(|err| ErrorWithDeps {
+            deps: artifact_loader.get_deps(),
+            error: StaticPkgsError::FailedToParseStaticPkgs {
+                static_pkgs_path: path_string(&static_pkgs_path),
+                parse_error: err.to_string(),
+            },
+        })?;
 
-    Ok(StaticPkgsData {
-        deps: hashset! {blob_manifest_path, system_image_path, static_pkgs_blob_path},
-        static_pkgs,
-    })
+    Ok(StaticPkgsData { deps: artifact_loader.get_deps(), static_pkgs })
 }
 
 #[derive(Default)]
@@ -271,7 +344,9 @@ impl DataCollector for StaticPkgsCollector {
                     errors: vec![],
                 }
             }
-            Err(err) => StaticPkgsCollection { static_pkgs: None, deps, errors: vec![err] },
+            Err(err) => {
+                StaticPkgsCollection { static_pkgs: None, deps: err.deps, errors: vec![err.error] }
+            }
         };
         model.set(data).context("Static packages collector failed to store result in model")
     }

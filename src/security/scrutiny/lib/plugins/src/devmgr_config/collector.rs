@@ -7,31 +7,25 @@ use {
         DevmgrConfigCollection, DevmgrConfigContents, DevmgrConfigError, DevmgrConfigParseError,
     },
     anyhow::{Context, Result},
-    maplit::hashset,
     scrutiny::model::{collector::DataCollector, model::DataModel},
     scrutiny_utils::{
+        artifact::{ArtifactReader, FileArtifactReader},
         bootfs::BootfsReader,
         zbi::{ZbiReader, ZbiType},
     },
-    std::{collections::HashMap, fs::File, io::Read, str::from_utf8, sync::Arc},
+    std::{collections::HashMap, str::from_utf8, sync::Arc},
 };
 
 fn load_devmgr_config<'a>(
+    artifact_reader: &'a mut dyn ArtifactReader,
     zbi_path: &'a str,
     devmgr_config_path: &'a str,
 ) -> Result<DevmgrConfigContents, DevmgrConfigError> {
-    let mut zbi_file =
-        File::open(zbi_path).map_err(|io_error| DevmgrConfigError::FailedToOpenZbi {
+    let zbi_buffer =
+        artifact_reader.read_raw(zbi_path).map_err(|err| DevmgrConfigError::FailedToReadZbi {
             zbi_path: zbi_path.to_string(),
-            io_error: io_error.to_string(),
+            io_error: format!("{:?}", err),
         })?;
-    let mut zbi_buffer = Vec::new();
-    zbi_file.read_to_end(&mut zbi_buffer).map_err(|io_error| {
-        DevmgrConfigError::FailedToReadZbi {
-            zbi_path: zbi_path.to_string(),
-            io_error: io_error.to_string(),
-        }
-    })?;
     let mut reader = ZbiReader::new(zbi_buffer);
     let zbi_sections = reader.parse().map_err(|zbi_error| DevmgrConfigError::FailedToParseZbi {
         zbi_path: zbi_path.to_string(),
@@ -107,25 +101,29 @@ pub struct DevmgrConfigCollector;
 
 impl DataCollector for DevmgrConfigCollector {
     fn collect(&self, model: Arc<DataModel>) -> Result<()> {
-        let zbi_path = model.config().zbi_path();
+        let build_path = model.config().build_path();
+        let zbi_path_string = model.config().zbi_path();
         let devmgr_config_path = model.config().devmgr_config_path();
-        let result = load_devmgr_config(&zbi_path, &devmgr_config_path);
+        let mut artifact_loader = FileArtifactReader::new(&build_path, &build_path);
+        let result =
+            load_devmgr_config(&mut artifact_loader, &zbi_path_string, &devmgr_config_path);
+
         model
             .set(match result {
                 Ok(devmgr_config) => DevmgrConfigCollection {
                     devmgr_config: Some(devmgr_config),
-                    deps: hashset! {zbi_path.clone()},
+                    deps: artifact_loader.get_deps(),
                     errors: vec![],
                 },
                 Err(err) => DevmgrConfigCollection {
                     devmgr_config: None,
-                    deps: hashset! {},
+                    deps: artifact_loader.get_deps(),
                     errors: vec![err],
                 },
             })
             .context(format!(
                 "Failed to collect data from devmgr config bootfs:{} in ZBI at {}",
-                devmgr_config_path, zbi_path
+                devmgr_config_path, zbi_path_string
             ))?;
         Ok(())
     }

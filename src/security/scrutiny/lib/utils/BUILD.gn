@@ -19,11 +19,15 @@ if (is_host) {
       "//third_party/rust_crates:hex",
       "//third_party/rust_crates:libc",
       "//third_party/rust_crates:log",
+      "//third_party/rust_crates:pathdiff",
       "//third_party/rust_crates:serde",
       "//third_party/rust_crates:thiserror",
     ]
 
-    test_deps = [ "//third_party/rust_crates:tempfile" ]
+    test_deps = [
+      "//third_party/rust_crates:maplit",
+      "//third_party/rust_crates:tempfile",
+    ]
 
     non_rust_deps = [
       "//src/lib/chunked-compression",
@@ -32,6 +36,7 @@ if (is_host) {
     ]
 
     sources = [
+      "src/artifact.rs",
       "src/blobfs.rs",
       "src/bootfs.rs",
       "src/env.rs",

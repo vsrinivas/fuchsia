@@ -23,7 +23,7 @@ use {
     cm_rust::{CapabilityName, CapabilityTypeName},
     scrutiny::prelude::*,
     serde::{Deserialize, Serialize},
-    std::sync::Arc,
+    std::{collections::HashSet, sync::Arc},
 };
 
 plugin!(
@@ -42,8 +42,14 @@ plugin!(
     vec![PluginDescriptor::new("CorePlugin")]
 );
 
-/// Top-level result type for `CapabilityRouteController` query result. Details
-/// query results grouped by severity.
+/// Top-level result type for `CapabilityRouteController` query result.
+#[derive(Deserialize, Serialize)]
+pub struct CapabilityRouteResults {
+    pub deps: HashSet<String>,
+    pub results: Vec<ResultsForCapabilityType>,
+}
+
+/// `CapabilityRouteController` query results grouped by severity.
 #[derive(Deserialize, Serialize)]
 pub struct ResultsForCapabilityType {
     pub capability_type: CapabilityTypeName,
@@ -330,7 +336,7 @@ mod tests {
         );
         assert!(build_tree_result.tree.is_some());
         let tree = build_tree_result.tree.unwrap();
-        let deps = hashset! {};
+        let deps = hashset! { "v2_component_tree_dep".to_string() };
 
         model.set(V2ComponentTree::new(deps, tree, build_tree_result.errors))?;
         Ok(model)
@@ -409,53 +415,56 @@ mod tests {
                      "response_level": "all"}),
         )?;
 
-        let expected = json!([
-          {
-            "capability_type": "directory",
-            "results": {
-              "errors": [
-                {
-                  "capability": "bad_dir",
-                  "error": {
+        let expected = json!({
+          "deps": ["v2_component_tree_dep"],
+          "results": [
+            {
+              "capability_type": "directory",
+              "results": {
+                "errors": [
+                  {
+                    "capability": "bad_dir",
                     "error": {
-                      "offer_decl_not_found": [
-                        "/",
-                        "bad_dir"
-                      ]
+                      "error": {
+                        "offer_decl_not_found": [
+                          "/",
+                          "bad_dir"
+                        ]
+                      },
+                      "message": "no offer declaration for `/` with name `bad_dir`"
                     },
-                    "message": "no offer declaration for `/` with name `bad_dir`"
-                  },
-                  "using_node": "/child"
-                }
-              ],
-              "ok": [
-                {
-                  "capability": "good_dir",
-                  "using_node": "/child"
-                }
-              ]
-            }
-          },
-          {
-            "capability_type": "protocol",
-            "results": {
-              "warnings": [
-                {
-                  "capability": "protocol",
-                  "using_node": "/child",
-                  "warning": {
-                    "error": {
-                      "component_not_found": {
-                        "component_node_not_found": "/missing_child"
-                      }
-                    },
-                    "message": "failed to find component: `no node found with path `/missing_child``"
+                    "using_node": "/child"
                   }
-                }
-              ]
+                ],
+                "ok": [
+                  {
+                    "capability": "good_dir",
+                    "using_node": "/child"
+                  }
+                ]
+              }
+            },
+            {
+              "capability_type": "protocol",
+              "results": {
+                "warnings": [
+                  {
+                    "capability": "protocol",
+                    "using_node": "/child",
+                    "warning": {
+                      "error": {
+                        "component_not_found": {
+                          "component_node_not_found": "/missing_child"
+                        }
+                      },
+                      "message": "failed to find component: `no node found with path `/missing_child``"
+                    }
+                  }
+                ]
+              }
             }
-          }
-        ]);
+          ]
+        });
 
         assert_eq!(response, expected);
 
@@ -473,97 +482,100 @@ mod tests {
                      "response_level": "verbose"}),
         )?;
 
-        let expected = json!([
-          {
-            "capability_type": "directory",
-            "results": {
-              "errors": [
-                {
-                  "capability": "bad_dir",
-                  "error": {
+        let expected = json!({
+          "deps": ["v2_component_tree_dep"],
+          "results": [
+            {
+              "capability_type": "directory",
+              "results": {
+                "errors": [
+                  {
+                    "capability": "bad_dir",
                     "error": {
-                      "offer_decl_not_found": [
-                        "/",
-                        "bad_dir"
-                      ]
-                    },
-                    "message": "no offer declaration for `/` with name `bad_dir`"
-                  },
-                  "using_node": "/child"
-                }
-              ],
-              "ok": [
-                {
-                  "capability": "good_dir",
-                  "route": [
-                    {
-                      "action": "use_by",
-                      "capability": {
-                        "dependency_type": "strong",
-                        "rights": 1,
-                        "source": "parent",
-                        "source_name": "good_dir",
-                        "subdir": null,
-                        "target_path": "/",
-                        "type": "directory"
+                      "error": {
+                        "offer_decl_not_found": [
+                          "/",
+                          "bad_dir"
+                        ]
                       },
-                      "node_path": "/child"
+                      "message": "no offer declaration for `/` with name `bad_dir`"
                     },
-                    {
-                      "action": "offer_by",
-                      "capability": {
-                        "dependency_type": "strong",
-                        "rights": 1,
-                        "source": "self_",
-                        "source_name": "good_dir",
-                        "subdir": null,
-                        "target": {
-                          "child": {
-                            "name": "child",
-                            "collection": null,
-                          }
-                        },
-                        "target_name": "good_dir",
-                        "type": "directory"
-                      },
-                      "node_path": "/"
-                    },
-                    {
-                      "action": "declare_by",
-                      "capability": {
-                        "name": "good_dir",
-                        "rights": 1,
-                        "source_path": null,
-                        "type": "directory"
-                      },
-                      "node_path": "/"
-                    }
-                  ],
-                  "using_node": "/child"
-                }
-              ]
-            }
-          },
-          {
-            "capability_type": "protocol",
-            "results": {
-              "warnings": [
-                {
-                  "capability": "protocol",
-                  "using_node": "/child",
-                  "warning": {
-                    "error": {
-                      "component_not_found": {
-                        "component_node_not_found": "/missing_child"
-                      }
-                    },
-                    "message": "failed to find component: `no node found with path `/missing_child``"
+                    "using_node": "/child"
                   }
-                }
-              ]
+                ],
+                "ok": [
+                  {
+                    "capability": "good_dir",
+                    "route": [
+                      {
+                        "action": "use_by",
+                        "capability": {
+                          "dependency_type": "strong",
+                          "rights": 1,
+                          "source": "parent",
+                          "source_name": "good_dir",
+                          "subdir": null,
+                          "target_path": "/",
+                          "type": "directory"
+                        },
+                        "node_path": "/child"
+                      },
+                      {
+                        "action": "offer_by",
+                        "capability": {
+                          "dependency_type": "strong",
+                          "rights": 1,
+                          "source": "self_",
+                          "source_name": "good_dir",
+                          "subdir": null,
+                          "target": {
+                            "child": {
+                              "name": "child",
+                              "collection": null,
+                            }
+                          },
+                          "target_name": "good_dir",
+                          "type": "directory"
+                        },
+                        "node_path": "/"
+                      },
+                      {
+                        "action": "declare_by",
+                        "capability": {
+                          "name": "good_dir",
+                          "rights": 1,
+                          "source_path": null,
+                          "type": "directory"
+                        },
+                        "node_path": "/"
+                      }
+                    ],
+                    "using_node": "/child"
+                  }
+                ]
+              }
+            },
+            {
+              "capability_type": "protocol",
+              "results": {
+                "warnings": [
+                  {
+                    "capability": "protocol",
+                    "using_node": "/child",
+                    "warning": {
+                      "error": {
+                        "component_not_found": {
+                          "component_node_not_found": "/missing_child"
+                        }
+                      },
+                      "message": "failed to find component: `no node found with path `/missing_child``"
+                    }
+                  }
+                ]
+              }
             }
-          }
-        ]);
+          ]
+        });
 
         assert_eq!(response, expected);
 
@@ -581,47 +593,50 @@ mod tests {
                      "response_level": "warn"}),
         )?;
 
-        let expected = json!([
-          {
-            "capability_type": "directory",
-            "results": {
-              "errors": [
-                {
-                  "capability": "bad_dir",
-                  "error": {
+        let expected = json!({
+          "deps": ["v2_component_tree_dep"],
+          "results": [
+            {
+              "capability_type": "directory",
+              "results": {
+                "errors": [
+                  {
+                    "capability": "bad_dir",
                     "error": {
-                      "offer_decl_not_found": [
-                        "/",
-                        "bad_dir"
-                      ]
+                      "error": {
+                        "offer_decl_not_found": [
+                          "/",
+                          "bad_dir"
+                        ]
+                      },
+                      "message": "no offer declaration for `/` with name `bad_dir`"
                     },
-                    "message": "no offer declaration for `/` with name `bad_dir`"
-                  },
-                  "using_node": "/child"
-                }
-              ]
-            }
-          },
-          {
-            "capability_type": "protocol",
-            "results": {
-              "warnings": [
-                {
-                  "capability": "protocol",
-                  "using_node": "/child",
-                  "warning": {
-                    "error": {
-                      "component_not_found": {
-                        "component_node_not_found": "/missing_child"
-                      }
-                    },
-                    "message": "failed to find component: `no node found with path `/missing_child``"
+                    "using_node": "/child"
                   }
-                }
-              ]
+                ]
+              }
+            },
+            {
+              "capability_type": "protocol",
+              "results": {
+                "warnings": [
+                  {
+                    "capability": "protocol",
+                    "using_node": "/child",
+                    "warning": {
+                      "error": {
+                        "component_not_found": {
+                          "component_node_not_found": "/missing_child"
+                        }
+                      },
+                      "message": "failed to find component: `no node found with path `/missing_child``"
+                    }
+                  }
+                ]
+              }
             }
-          }
-        ]);
+          ]
+        });
 
         assert_eq!(response, expected);
 
@@ -639,32 +654,35 @@ mod tests {
                      "response_level": "error"}),
         )?;
 
-        let expected = json!([
-          {
-            "capability_type": "directory",
-            "results": {
-              "errors": [
-                {
-                  "capability": "bad_dir",
-                  "error": {
+        let expected = json!({
+          "deps": ["v2_component_tree_dep"],
+          "results": [
+            {
+              "capability_type": "directory",
+              "results": {
+                "errors": [
+                  {
+                    "capability": "bad_dir",
                     "error": {
-                      "offer_decl_not_found": [
-                        "/",
-                        "bad_dir"
-                      ]
+                      "error": {
+                        "offer_decl_not_found": [
+                          "/",
+                          "bad_dir"
+                        ]
+                      },
+                      "message": "no offer declaration for `/` with name `bad_dir`"
                     },
-                    "message": "no offer declaration for `/` with name `bad_dir`"
-                  },
-                  "using_node": "/child"
-                }
-              ]
+                    "using_node": "/child"
+                  }
+                ]
+              }
+            },
+            {
+              "capability_type": "protocol",
+              "results": {}
             }
-          },
-          {
-            "capability_type": "protocol",
-            "results": {}
-          }
-        ]);
+          ]
+        });
 
         assert_eq!(response, expected);
 

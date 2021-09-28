@@ -4,7 +4,6 @@
 
 use {
     crate::core::{
-        package::getter::PackageGetter,
         package::reader::PackageReader,
         util::{
             jsons::{ServicePackageDefinition, TargetsJson},
@@ -14,47 +13,11 @@ use {
     anyhow::{anyhow, Result},
     scrutiny::model::model::DataModel,
     scrutiny_testing::fake::fake_model_config,
-    std::io::{Error, ErrorKind},
     std::{
         collections::{HashMap, HashSet},
         sync::{Arc, RwLock},
     },
 };
-
-pub struct MockPackageGetter {
-    bytes: RwLock<Vec<Vec<u8>>>,
-    deps: HashSet<String>,
-}
-
-impl MockPackageGetter {
-    pub fn new() -> Self {
-        Self { bytes: RwLock::new(Vec::new()), deps: HashSet::new() }
-    }
-
-    pub fn append_bytes(&self, byte_vec: Vec<u8>) {
-        self.bytes.write().unwrap().push(byte_vec);
-    }
-}
-
-impl PackageGetter for MockPackageGetter {
-    fn read_raw(&mut self, path: &str) -> std::io::Result<Vec<u8>> {
-        let mut borrow = self.bytes.write().unwrap();
-        {
-            if borrow.len() == 0 {
-                return Err(Error::new(
-                    ErrorKind::Other,
-                    "No more byte vectors left to return. Maybe append more?",
-                ));
-            }
-            self.deps.insert(path.to_string());
-            Ok(borrow.remove(0))
-        }
-    }
-
-    fn get_deps(&self) -> HashSet<String> {
-        self.deps.clone()
-    }
-}
 
 pub struct MockPackageReader {
     targets: RwLock<Vec<TargetsJson>>,

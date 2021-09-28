@@ -14,12 +14,15 @@ if (is_host) {
     deps = [
       "//src/security/scrutiny/lib/config",
       "//src/security/scrutiny/lib/framework",
+      "//src/security/scrutiny/lib/utils",
+      "//third_party/rust_crates:anyhow",
       "//third_party/rust_crates:tempfile",
       "//third_party/rust_crates:uuid",
     ]
     non_rust_deps = [ "//src/lib/chunked-compression" ]
 
     sources = [
+      "src/artifact.rs",
       "src/fake/mod.rs",
       "src/lib.rs",
     ]

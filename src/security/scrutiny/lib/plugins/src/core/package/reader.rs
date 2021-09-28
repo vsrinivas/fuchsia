@@ -3,9 +3,14 @@
 // found in the LICENSE file.
 
 use {
-    crate::core::{package::getter::*, util, util::jsons::*, util::types::*},
+    crate::core::util::{
+        jsons::{CmxJson, ServicePackageDefinition, TargetsJson},
+        to_meta_contents_dict, to_package_url,
+        types::{ComponentManifest, PackageDefinition},
+    },
     anyhow::Result,
     fuchsia_archive::Reader as FarReader,
+    scrutiny_utils::artifact::ArtifactReader,
     serde_json::Value,
     std::{
         collections::{HashMap, HashSet},
@@ -42,22 +47,22 @@ pub trait PackageReader: Send + Sync {
 }
 
 pub struct PackageServerReader {
-    pkg_getter: Box<dyn PackageGetter>,
+    pkg_reader_tracker: Box<dyn ArtifactReader>,
 }
 
 impl PackageServerReader {
-    pub fn new(pkg_getter: Box<dyn PackageGetter>) -> Self {
-        Self { pkg_getter }
+    pub fn new(pkg_reader_tracker: Box<dyn ArtifactReader>) -> Self {
+        Self { pkg_reader_tracker }
     }
 
     fn read_blob_raw(&mut self, merkle: &str) -> Result<Vec<u8>> {
-        Ok(self.pkg_getter.read_raw(&format!("blobs/{}", merkle)[..])?)
+        Ok(self.pkg_reader_tracker.read_raw(&format!("blobs/{}", merkle)[..])?)
     }
 }
 
 impl PackageReader for PackageServerReader {
     fn read_targets(&mut self) -> Result<TargetsJson> {
-        let resp_b = self.pkg_getter.read_raw("targets.json")?;
+        let resp_b = self.pkg_reader_tracker.read_raw("targets.json")?;
         let resp = str::from_utf8(&resp_b)?;
 
         Ok(serde_json::from_str(&resp)?)
@@ -74,7 +79,7 @@ impl PackageReader for PackageServerReader {
         let mut far = FarReader::new(&mut cursor)?;
 
         let mut pkg_def = PackageDefinition {
-            url: util::to_package_url(pkg_name)?,
+            url: to_package_url(pkg_name)?,
             merkle: String::from(merkle), // FIXME: Do we need to copy? Or maybe we can just move it here?
             meta: HashMap::new(),
             contents: HashMap::new(), // How do I do this better? Maybe I need to change PackageDefinition into a builder pattern
@@ -114,7 +119,7 @@ impl PackageReader for PackageServerReader {
         if contains_meta_contents {
             let content_b = far.read_file(&"meta/contents")?;
             let content_str = str::from_utf8(&content_b)?;
-            pkg_def.contents = util::to_meta_contents_dict(content_str);
+            pkg_def.contents = to_meta_contents_dict(content_str);
         }
 
         // Read the parseable files from the far archive and parse into json structs.
@@ -169,23 +174,24 @@ impl PackageReader for PackageServerReader {
     }
 
     fn get_deps(&self) -> HashSet<String> {
-        self.pkg_getter.get_deps()
+        self.pkg_reader_tracker.get_deps()
     }
 }
 
 #[cfg(test)]
 mod tests {
     use {
-        super::*,
-        crate::core::package::test_utils::MockPackageGetter,
+        super::{PackageReader, PackageServerReader},
+        crate::core::util::types::ComponentManifest,
         fuchsia_archive::write,
+        scrutiny_testing::artifact::MockArtifactReader,
         std::collections::BTreeMap,
         std::io::{Cursor, Read},
     };
 
     #[test]
     fn read_package_service_definition() {
-        let mock_getter = MockPackageGetter::new();
+        let mock_getter = MockArtifactReader::new();
 
         let service_def = "{
             \"apps\": [
@@ -236,7 +242,7 @@ mod tests {
         let mut target = Cursor::new(Vec::new());
         write(&mut target, path_content_map).unwrap();
 
-        let mock_getter = MockPackageGetter::new();
+        let mock_getter = MockArtifactReader::new();
         mock_getter.append_bytes(target.into_inner());
 
         let mut pkg_reader = PackageServerReader::new(Box::new(mock_getter));

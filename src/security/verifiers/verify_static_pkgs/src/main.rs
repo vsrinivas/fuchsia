@@ -8,7 +8,10 @@ use {
     scrutiny_config::{Config, LoggingConfig, ModelConfig, PluginConfig, RuntimeConfig},
     scrutiny_frontend::{command_builder::CommandBuilder, launcher},
     scrutiny_plugins::static_pkgs::StaticPkgsCollection,
-    scrutiny_utils::golden::{CompareResult, GoldenFile},
+    scrutiny_utils::{
+        artifact::{ArtifactReader, FileArtifactReader},
+        golden::{CompareResult, GoldenFile},
+    },
     serde_json,
     std::{
         fs::{self, File},
@@ -27,6 +30,7 @@ If you are making a change in fuchsia.git that causes this, you need to perform 
 ";
 
 struct VerifyStaticPkgs {
+    build_path: String,
     golden_path: String,
     zbi_path: String,
     depfile_path: String,
@@ -36,23 +40,33 @@ struct VerifyStaticPkgs {
 
 impl VerifyStaticPkgs {
     pub fn new(
+        build_path: String,
         golden_path: String,
         zbi_path: impl Into<String>,
         depfile_path: String,
         manifest_path: String,
         stamp_path: String,
     ) -> Self {
-        Self { golden_path, zbi_path: zbi_path.into(), depfile_path, manifest_path, stamp_path }
+        Self {
+            build_path,
+            golden_path,
+            zbi_path: zbi_path.into(),
+            depfile_path,
+            manifest_path,
+            stamp_path,
+        }
     }
 
     /// The static package verifier extracts the system_image_hash from the devmgr config
     /// inside the ZBI. It uses this to extract the static_packages_hash which contains
     /// the list of static_packages. This list is compared against the golden file.
     pub fn verify(&self) -> Result<()> {
+        let build_path = PathBuf::from(self.build_path.clone());
         let config = Config::run_command_with_runtime(
             CommandBuilder::new("static.pkgs").build(),
             RuntimeConfig {
                 model: ModelConfig {
+                    build_path: build_path.clone(),
                     zbi_path: self.zbi_path.clone(),
                     blob_manifest_path: PathBuf::from(self.manifest_path.clone()),
                     ..ModelConfig::minimal()
@@ -93,16 +107,25 @@ impl VerifyStaticPkgs {
             })
             .collect();
 
-        // Write out the depfile.
-        let deps: Vec<String> = static_pkgs_result.deps.into_iter().collect();
-        let mut depfile = File::create(&self.depfile_path).context("Failed to read dep file")?;
-        write!(depfile, "{}: {}", self.stamp_path, deps.join(" "))
-            .context("Failed to write to dep file")?;
-
-        let golden_file =
-            GoldenFile::open(self.golden_path.clone()).context("Failed to read golden file")?;
+        let mut golden_reader = FileArtifactReader::new(&build_path, &build_path);
+        let golden_contents =
+            golden_reader.read_raw(&self.golden_path).context("Failed to read golden file")?;
+        let golden_file = GoldenFile::from_contents(self.golden_path.clone(), golden_contents)
+            .context("Failed to parse golden file")?;
         match golden_file.compare(static_package_urls) {
-            CompareResult::Matches => Ok(()),
+            CompareResult::Matches => {
+                // Write out the depfile.
+                let deps: Vec<String> = static_pkgs_result
+                    .deps
+                    .union(&golden_reader.get_deps())
+                    .map(String::from)
+                    .collect();
+                let mut depfile = File::create(&self.depfile_path)
+                    .context(format!("Failed to create dep file: {}", &self.depfile_path))?;
+                write!(depfile, "{}: {}", self.stamp_path, deps.join(" "))
+                    .context(format!("Failed to write dep file: {}", &self.depfile_path))?;
+                Ok(())
+            }
             CompareResult::Mismatch { errors } => {
                 println!("Static package file mismatch");
                 println!("");
@@ -124,6 +147,14 @@ fn main() -> Result<()> {
         .version("1.0")
         .author("Fuchsia Authors")
         .about("Check the static packages extracted from the ZBI against a golden file.")
+        .arg(
+            Arg::with_name("build-path")
+                .long("build-path")
+                .required(true)
+                .help("The root build directory for all build artifacts.")
+                .value_name("build-path")
+                .takes_value(true),
+        )
         .arg(
             Arg::with_name("stamp")
                 .long("stamp")
@@ -178,6 +209,7 @@ fn main() -> Result<()> {
         .expect("failed to find goldens")
         .map(ToString::to_string)
         .collect();
+    let build_path = args.value_of("build-path").expect("failed to find build path");
     let zbi_path = args.value_of("zbi").expect("failed to find the zbi path");
     let depfile_path = args.value_of("depfile").expect("failed to find the depfile path");
     let manifest_path = args.value_of("manifest").expect("failed to find the blobfs manifest path");
@@ -186,6 +218,7 @@ fn main() -> Result<()> {
     let mut last_error: Result<()> = Ok(());
     for golden_file in golden_files.iter() {
         let verifier = VerifyStaticPkgs::new(
+            build_path.to_string(),
             golden_file.clone(),
             zbi_path.clone(),
             depfile_path.to_string(),

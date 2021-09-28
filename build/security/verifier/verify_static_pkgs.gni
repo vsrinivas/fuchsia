@@ -63,6 +63,8 @@ template("verify_static_pkgs") {
     outputs = [ stamp_file ]
 
     args = [
+             "--build-path",
+             rebase_path(root_build_dir),
              "--zbi",
              rebase_path(invoker.zbi, root_build_dir),
              "--manifest",

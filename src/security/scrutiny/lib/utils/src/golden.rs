@@ -7,7 +7,7 @@ use {
     std::{
         collections::HashSet,
         fs::File,
-        io::{BufRead, BufReader},
+        io::{BufRead, BufReader, Cursor, Read},
     },
 };
 
@@ -30,8 +30,14 @@ pub struct GoldenFile {
 impl GoldenFile {
     pub fn open(path: String) -> Result<Self> {
         let golden_file = File::open(&path).context("failed to open golden file")?;
-        let reader = BufReader::new(golden_file);
+        Self::parse(path, BufReader::new(golden_file))
+    }
 
+    pub fn from_contents(path: String, contents: Vec<u8>) -> Result<Self> {
+        Self::parse(path, BufReader::new(Cursor::new(contents)))
+    }
+
+    fn parse<R: Read>(path: String, reader: BufReader<R>) -> Result<Self> {
         let mut required: HashSet<String> = HashSet::new();
         let mut optional: HashSet<String> = HashSet::new();
 
