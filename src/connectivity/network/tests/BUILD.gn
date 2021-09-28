@@ -12,6 +12,7 @@ group("tests") {
     ":netstack-c-api-tests",
     "benchmarks:tests",
     "dhcp_interop:dhcp_integration_tests",
+    "fidl:tests",
     "getifaddrs:tests",
     "integration:tests",
   ]

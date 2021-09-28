@@ -8,6 +8,6 @@
         "syslog/client.shard.cml",
     ],
     program: {
-        binary: "bin/netstack_fidl_error_integration_test",
+        binary: "bin/netstack_interfaces_fidl_test",
     },
 }

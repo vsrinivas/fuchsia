@@ -8,7 +8,6 @@ import("//build/config.gni")
 group("tests") {
   testonly = true
   deps = [
-    ":netstack-error-integration-tests",
     ":netstack-integration-tests",
     "ip_forward:netemul-ip-forward-tests",
   ]
@@ -18,14 +17,11 @@ tests = [
   "dhcp",
   "dns",
   "fidl",
-  "filter",
   "inspect",
   "ipv4",
   "ipv6",
   "management",
-  "neighbor",
   "reachability",
-  "routes",
   "socket",
   "sys",
 ]
@@ -75,32 +71,6 @@ fuchsia_test_package("netstack-integration-tests") {
     # netcfg integration with netstack is tested.
     ":netcfg-netemul-config",
     "//src/connectivity/network/netcfg:component",
-  ]
-}
-
-fuchsia_test_component("netstack-fidl-error-integration-test") {
-  manifest = "meta/netstack-fidl-error-integration-test.cml"
-  deps = [ "fidl:error" ]
-}
-
-# TODO(https://fxbug.dev/74868): Merge this with the above package once it is
-# supported to configure acceptable error log lines.
-fuchsia_test_package("netstack-error-integration-tests") {
-  test_components = [ ":netstack-fidl-error-integration-test" ]
-  test_specs = {
-    log_settings = {
-      max_severity = "ERROR"
-    }
-  }
-  deps = [
-    # netemul-sandbox-v2 is used to create hermetic test realms.
-    "//src/connectivity/network/testing/netemul-v2/service:netemul-sandbox",
-
-    # netstack is under test.
-    "//src/connectivity/network/netstack:component-debug",
-
-    # netstack3 is under test.
-    "//src/connectivity/network/netstack3:component",
   ]
 }
 
