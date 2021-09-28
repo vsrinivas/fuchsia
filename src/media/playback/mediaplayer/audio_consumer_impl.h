@@ -120,6 +120,8 @@ class AudioConsumerImpl : public fuchsia::media::AudioConsumer,
   // Callback handler for after |core_| is done updating timeline
   void OnTimelineUpdated(float rate);
 
+  int64_t CurrentReferenceTime() const;
+
   fidl::Binding<fuchsia::media::AudioConsumer> binding_;
   fit::closure quit_callback_;
 
@@ -142,6 +144,8 @@ class AudioConsumerImpl : public fuchsia::media::AudioConsumer,
   bool timeline_started_;
   float rate_;
   bool status_dirty_;
+  // Difference between client provided reference and the CLOCK_MONOTONIC value when set
+  int64_t reference_time_offset_;
 };
 
 }  // namespace media_player

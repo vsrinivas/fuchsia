@@ -273,16 +273,33 @@ TEST_F(AudioConsumerTests, SetRate) {
   RunLoopUntil([this]() { return got_status_; });
   got_status_ = false;
 
-  audio_consumer_->Start(fuchsia::media::AudioConsumerStartFlags::SUPPLY_DRIVEN, 0,
-                         fuchsia::media::NO_TIMESTAMP);
+  audio_consumer_->Start(fuchsia::media::AudioConsumerStartFlags::SUPPLY_DRIVEN,
+                         /* reference_time= */ 0,
+                         /* media_time= */ 0);
   RunLoopUntil([this]() { return got_status_ && last_status_.has_presentation_timeline(); });
   // default rate should be 1
   EXPECT_EQ(last_status_.presentation_timeline().subject_delta, 1u);
   got_status_ = false;
 
+  // Send a packet through to test subject time updating
+  auto packet = fuchsia::media::StreamPacket::New();
+  packet->payload_buffer_id = 0;
+  packet->payload_size = 1;
+  packet->payload_offset = 0;
+  packet->pts = 0;
+  bool sent_packet = false;
+  sink->SendPacket(*packet, [&sent_packet]() { sent_packet = true; });
+
+  RunLoopUntil([&sent_packet]() { return sent_packet; });
+  EXPECT_TRUE(sent_packet);
+
   audio_consumer_->SetRate(0.0f);
   RunLoopUntil([this]() { return got_status_ && last_status_.has_presentation_timeline(); });
   EXPECT_EQ(last_status_.presentation_timeline().subject_delta, 0u);
+
+  // Time should be moved forward from initial
+  EXPECT_GT(last_status_.presentation_timeline().subject_time, 0);
+  EXPECT_GT(last_status_.presentation_timeline().reference_time, 0);
   got_status_ = false;
 
   audio_consumer_->SetRate(1.0f);

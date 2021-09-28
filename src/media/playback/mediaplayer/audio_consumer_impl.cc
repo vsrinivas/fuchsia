@@ -268,11 +268,13 @@ void AudioConsumerImpl::SetTimelineFunction(float rate, int64_t subject_time,
 void AudioConsumerImpl::Start(fuchsia::media::AudioConsumerStartFlags flags, int64_t reference_time,
                               int64_t media_time) {
   timeline_started_ = true;
+  auto now = zx::clock::get_monotonic().get();
 
-  if (reference_time == 0) {
+  if (reference_time == fuchsia::media::NO_TIMESTAMP) {
     // TODO(afoxley) set lead time based on flags?
-    reference_time = zx::clock::get_monotonic().get() + kMinimumLeadTime;
+    reference_time = now + kMinimumLeadTime;
   }
+  reference_time_offset_ = now - reference_time;
 
   if (media_time == fuchsia::media::NO_TIMESTAMP) {
     media_time = 0;
@@ -288,8 +290,15 @@ void AudioConsumerImpl::SetRate(float rate) {
   }
   rate_ = rate;
 
-  SetTimelineFunction(rate_, core_.timeline_function().subject_time(),
-                      zx::clock::get_monotonic().get() + kMinimumLeadTime, []() {});
+  int64_t subject_time = core_.timeline_function().subject_time();
+  int64_t now = CurrentReferenceTime();
+
+  if (rate_ == 0.0f) {
+    // If we are pausing, update timeline to pause point.
+    subject_time = core_.timeline_function()(now);
+  }
+
+  SetTimelineFunction(rate_, subject_time, now, []() {});
 }
 
 void AudioConsumerImpl::BindVolumeControl(
@@ -298,8 +307,9 @@ void AudioConsumerImpl::BindVolumeControl(
 }
 
 void AudioConsumerImpl::Stop() {
-  SetTimelineFunction(0.0f, core_.timeline_function().subject_time(),
-                      core_.timeline_function().reference_time(), []() {});
+  int64_t now = CurrentReferenceTime();
+  int64_t subject_time = core_.timeline_function()(now);
+  SetTimelineFunction(0.0f, subject_time, now, []() {});
 }
 
 void AudioConsumerImpl::WatchStatus(fuchsia::media::AudioConsumer::WatchStatusCallback callback) {
@@ -336,6 +346,10 @@ void AudioConsumerImpl::SendStatusUpdate() {
 
   watch_status_callback_(std::move(status));
   watch_status_callback_ = nullptr;
+}
+
+int64_t AudioConsumerImpl::CurrentReferenceTime() const {
+  return zx::clock::get_monotonic().get() - reference_time_offset_;
 }
 
 }  // namespace media_player
