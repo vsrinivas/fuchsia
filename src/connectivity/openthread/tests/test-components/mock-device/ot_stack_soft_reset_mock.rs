@@ -12,6 +12,7 @@ use {
 const OT_PROTOCOL_PATH: &str = "class/ot-radio";
 
 #[fuchsia_async::run_singlethreaded(test)]
+#[ignore] // Disable temporarily per fxb/85315
 async fn ot_stack_soft_reset_mock() {
     syslog::init_with_tags(&["ot_stack_soft_reset_mock"]).expect("Can't init logger");
     fx_log_info!("test start");
