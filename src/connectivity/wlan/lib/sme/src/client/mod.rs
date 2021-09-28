@@ -567,7 +567,13 @@ impl ClientSme {
         scan_request: fidl_sme::ScanRequest,
     ) -> oneshot::Receiver<Result<Vec<wlan_common::scan::ScanResult>, fidl_mlme::ScanResultCode>>
     {
-        info!("SME received a scan command, initiating a discovery scan");
+        info!(
+            "SME received a scan command, initiating a{} discovery scan",
+            match scan_request {
+                fidl_sme::ScanRequest::Active(_) => "n active",
+                fidl_sme::ScanRequest::Passive(_) => " passive",
+            }
+        );
         let (responder, receiver) = Responder::new();
         let scan = DiscoveryScan::new(responder, scan_request);
         let req = self.scan_sched.enqueue_scan_to_discover(scan);
