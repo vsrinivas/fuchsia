@@ -8,6 +8,7 @@ import("//build/config.gni")
 import("//build/dist/generated_resource.gni")
 import("//build/drivers/driver_manifest.gni")
 import("//build/images/assembly/generated_board_config.gni")
+import("//build/images/assembly/generated_partitions_config.gni")
 import("//build/images/assembly/generated_product_config.gni")
 import("//build/images/fvm.gni")
 import("//build/images/pkgfs.gni")
@@ -190,6 +191,7 @@ template("assemble_system") {
   labels = {
     product_config = "${image_name}_product_config"
     board_config = "${image_name}_board_config"
+    partitions_config = "${image_name}_partitions_config"
     image_assembler = "${image_name}_image_assembler"
     copy_vbmeta = "${image_name}_copy_vbmeta"
     copy_zbi = "${image_name}_copy_zbi"
@@ -204,6 +206,7 @@ template("assemble_system") {
   files = {
     product_config = "$target_out_dir/${image_name}_product_config.json"
     board_config = "$target_out_dir/${image_name}_board_config.json"
+    partitions_config = "$target_out_dir/${image_name}_partitions.json"
 
     outdir = "$target_out_dir/$image_name"
     gendir = "$outdir/gen"
@@ -457,6 +460,10 @@ template("assemble_system") {
         compress_blobs = invoker.assembly_compress_blobs
       }
     }
+  }
+
+  generated_partitions_config(labels.partitions_config) {
+    output_path = files.partitions_config
   }
 
   check_production_tag = false

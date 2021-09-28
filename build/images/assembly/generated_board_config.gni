@@ -19,7 +19,7 @@ import("//build/zbi/zbi.gni")
 #
 #   output_path (required)
 #     [path] Board config output location.
-
+#
 #   recovery (optional)
 #     [label] Recovery label to include in the update package.
 #

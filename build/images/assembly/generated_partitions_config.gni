@@ -1,0 +1,114 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/images/args.gni")
+
+# Generates a partitions config to be consued by the Image Assembler.
+#
+# Arguments:
+#   output_path (required)
+#     [path] Board config output location.
+#
+#   esp_image_path (optional)
+#     [string] The path on host to the ESP bootloader.
+#
+template("generated_partitions_config") {
+  assert(defined(invoker.output_path), "Need to define output_path")
+
+  generated_file(target_name) {
+    forward_variables_from(invoker,
+                           [
+                             "testonly",
+                             "visibility",
+                           ])
+
+    outputs = [ invoker.output_path ]
+    output_conversion = "json"
+
+    # Aggregate all the bootloader partitions.
+    _bootloader_partitions = []
+    foreach(firmware, firmware_prebuilts) {
+      assert(defined(firmware.type), "Firmware type must be specified")
+      assert(defined(firmware.path), "Firmware path must be specified")
+
+      firmware_path =
+          rebase_path("${firmware.path}${firmware_prebuilts_path_suffix}",
+                      root_build_dir)
+      partition = {
+      }
+      partition.type = firmware.type
+      partition.image = firmware_path
+
+      # If a partition is specified, then the flash manifest will include the bootloader.
+      if (defined(firmware.partition)) {
+        partition.name = firmware.partition
+      }
+      _bootloader_partitions += [ partition ]
+    }
+
+    # Add the ESP partition if necessary.
+    if (defined(invoker.esp_image_path)) {
+      _bootloader_partitions += [
+        {
+          name = "bootloader"
+          type = "esp"
+          source = rebase_path("${invoker.esp_image_path}", root_build_dir)
+        },
+      ]
+    }
+
+    # Aggregate all the non-bootloader partitions.
+    _partitions = []
+    if (zircon_a_partition != "") {
+      _partitions += [
+        {
+          name = zircon_a_partition
+          type = "ZBI"
+          slot = "SystemA"
+        },
+      ]
+    }
+    if (zircon_b_partition != "") {
+      _partitions += [
+        {
+          name = zircon_b_partition
+          type = "ZBI"
+          slot = "SystemB"
+        },
+      ]
+    }
+    if (vbmeta_a_partition != "") {
+      _partitions += [
+        {
+          name = vbmeta_a_partition
+          type = "VBMeta"
+          slot = "SystemA"
+        },
+      ]
+    }
+    if (vbmeta_b_partition != "") {
+      _partitions += [
+        {
+          name = vbmeta_b_partition
+          type = "VBMeta"
+          slot = "SystemB"
+        },
+      ]
+    }
+    if (fvm_partition != "") {
+      _partitions += [
+        {
+          name = fvm_partition
+          type = "FVM"
+          slot = "SystemA"
+        },
+      ]
+    }
+
+    contents = {
+      bootloader_partitions = _bootloader_partitions
+      partitions = _partitions
+    }
+  }
+}
