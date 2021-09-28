@@ -584,5 +584,118 @@ TEST_F(TestImporter, Counter) {
   }
 }
 
+TEST_F(TestImporter, SkipPlaceholder) {
+  // This record should be output
+  EmitKernelCounterRecord(99,              // ts
+                          0,               // cpu_id
+                          KTRACE_GRP_IPC,  // group
+                          5,               // string_ref
+                          10,              // value
+                          8                // counter_id
+  );
+  // This record has a group of 0, and should be skipped as a placeholder.
+  EmitKernelCounterRecord(100,  // ts
+                          0,    // cpu_id
+                          0,    // group
+                          6,    // string_ref
+                          20,   // value
+                          9     // counter_id
+  );
+  // This record should be output
+  EmitKernelCounterRecord(101,             // ts
+                          0,               // cpu_id
+                          KTRACE_GRP_IRQ,  // group
+                          7,               // string_ref
+                          30,              // value
+                          10               // counter_id
+  );
+
+  static const char* const expected[] = {
+      // Records generated for us to identify the "cpu-0" thread.
+      "String(index: 52, \"process\")",
+      "KernelObject(koid: 1895825408, type: thread, name: \"cpu-0\", {process: koid(0)})",
+      "Thread(index: 1, 0/1895825408)",
+
+      // The first expected record.
+      "String(index: 53, \"probe 0x5\")",
+      "Event(ts: 99, pt: 0/1895825408, category: \"kernel:ipc\", name: \"probe 0x5\", Counter(id: "
+      "8), {arg0: int64(10)})",
+
+      // The second record will be skipped.
+      /*
+      "String(index: 54, \"probe 0x6\")",
+      "Event(ts: 100, pt: 0/1895825408, category: \"\", name: \"probe 0x6\", "
+      "9), {arg0: int64(20)})",
+      */
+
+      // The final record.
+      "String(index: 54, \"probe 0x7\")",
+      "Event(ts: 101, pt: 0/1895825408, category: \"kernel:irq\", name: \"probe 0x7\", Counter(id: "
+      "10), {arg0: int64(30)})",
+  };
+
+  fbl::Vector<trace::Record> records;
+  ASSERT_TRUE(StopTracingAndImportRecords(&records));
+  ASSERT_EQ(records.size(), std::size(expected));
+  for (size_t i = 0; i < records.size(); ++i) {
+    COMPARE_RECORD(records[i], expected[i]);
+  }
+}
+
+TEST_F(TestImporter, ZeroLenRecords) {
+  // Attempt to output 3 counter records, but encode a length of 0 in the tag
+  // for the second record. This should cause the importer to terminate
+  // processing early, and produce a trace with only the first record in it.
+  EmitKernelCounterRecord(99,              // ts
+                          0,               // cpu_id
+                          KTRACE_GRP_IPC,  // group
+                          5,               // string_ref
+                          10,              // value
+                          8                // counter_id
+  );
+
+  // Construct a tag identical to the previous record, but force the length to
+  // be 0.
+  constexpr uint32_t kValidTag = KTRACE_TAG_FLAGS(TAG_COUNTER(5, KTRACE_GRP_IPC), KTRACE_FLAGS_CPU);
+  constexpr uint32_t kZeroLenTag =
+      KTRACE_TAG_EX(KTRACE_EVENT(kValidTag), KTRACE_GROUP(kValidTag), 0, KTRACE_FLAGS(kValidTag));
+  EmitKtrace32Record(kZeroLenTag,
+                     0,                         // cpu_id
+                     100,                       // ts
+                     static_cast<uint64_t>(9),  // counter_id
+                     static_cast<uint64_t>(20)  // value
+  );
+
+  // This record will never make it to the output.
+  EmitKernelCounterRecord(101,             // ts
+                          0,               // cpu_id
+                          KTRACE_GRP_IRQ,  // group
+                          7,               // string_ref
+                          30,              // value
+                          10               // counter_id
+  );
+
+  static const char* const expected[] = {
+      // Records generated for us to identify the "cpu-0" thread.
+      "String(index: 52, \"process\")",
+      "KernelObject(koid: 1895825408, type: thread, name: \"cpu-0\", {process: koid(0)})",
+      "Thread(index: 1, 0/1895825408)",
+
+      // The first expected record.
+      "String(index: 53, \"probe 0x5\")",
+      ("Event(ts: 99, pt: 0/1895825408, category: \"kernel:ipc\", name: \"probe 0x5\", Counter(id: "
+       "8), {arg0: int64(10)})"),
+
+      // No other records should be output.
+  };
+
+  fbl::Vector<trace::Record> records;
+  ASSERT_TRUE(StopTracingAndImportRecords(&records));
+  ASSERT_EQ(records.size(), std::size(expected));
+  for (size_t i = 0; i < records.size(); ++i) {
+    COMPARE_RECORD(records[i], expected[i]);
+  }
+}
+
 }  // namespace
 }  // namespace ktrace_provider

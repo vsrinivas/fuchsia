@@ -125,10 +125,12 @@ enum {
                                                 group,32,KTRACE_FLAGS_COUNTER)
 
 // Actions for ktrace control
-#define KTRACE_ACTION_START     1 // options = grpmask, 0 = all
-#define KTRACE_ACTION_STOP      2 // options ignored
-#define KTRACE_ACTION_REWIND    3 // options ignored
-#define KTRACE_ACTION_NEW_PROBE 4 // options ignored, ptr = name
+#define KTRACE_ACTION_START          1 // options = grpmask, 0 = all
+#define KTRACE_ACTION_STOP           2 // options ignored
+#define KTRACE_ACTION_REWIND         3 // options ignored
+#define KTRACE_ACTION_NEW_PROBE      4 // options ignored, ptr = name
+#define KTRACE_ACTION_START_CIRCULAR 5 // options = grpmask, 0 = all
+
 
 // Flags defined for the INHERIT_PRIORITY ktrace event.  See ktrace-def.h for details.
 #define KTRACE_FLAGS_INHERIT_PRIORITY_CPUID_MASK ((uint32_t)0xFF)
