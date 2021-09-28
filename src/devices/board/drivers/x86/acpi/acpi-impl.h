@@ -23,6 +23,8 @@ class AcpiImpl : public Acpi {
                                NamespaceCallable cbk) override;
   acpi::status<> WalkResources(ACPI_HANDLE object, const char* resource_name,
                                ResourcesCallable cbk) override;
+  acpi::status<acpi::UniquePtr<ACPI_RESOURCE>> BufferToResource(
+      cpp20::span<uint8_t> buffer) override;
 
   acpi::status<> GetDevices(const char* hid, DeviceCallable cbk) override;
 

@@ -6,6 +6,7 @@
 #define SRC_DEVICES_BOARD_DRIVERS_X86_ACPI_FIDL_H_
 
 #include <fidl/fuchsia.hardware.acpi/cpp/wire.h>
+#include <lib/ddk/driver.h>
 
 #include <forward_list>
 
@@ -20,11 +21,15 @@ class EvaluateObjectFidlHelper {
   using EvaluateObjectRequestView =
       fidl::WireServer<fuchsia_hardware_acpi::Device>::EvaluateObjectRequestView;
   EvaluateObjectFidlHelper(acpi::Acpi* acpi, ACPI_HANDLE device, std::string request_path,
+                           fuchsia_hardware_acpi::wire::EvaluateObjectMode mode,
                            fidl::VectorView<fuchsia_hardware_acpi::wire::Object> params)
       : acpi_(acpi),
         device_handle_(device),
         request_path_(std::move(request_path)),
-        request_params_(params) {}
+        mode_(mode),
+        request_params_(params),
+        // Please do not use get_root_resource() in new code. See fxbug.dev/31358.
+        mmio_resource_(get_root_resource()) {}
 
   static EvaluateObjectFidlHelper FromRequest(acpi::Acpi* acpi, ACPI_HANDLE device,
                                               EvaluateObjectRequestView& request);
@@ -49,16 +54,27 @@ class EvaluateObjectFidlHelper {
   acpi::status<fuchsia_hardware_acpi::wire::DeviceEvaluateObjectResult> EncodeReturnValue(
       fidl::AnyArena& alloc, ACPI_OBJECT* value);
 
+  acpi::status<fuchsia_hardware_acpi::wire::DeviceEvaluateObjectResult> EncodeResourcesReturnValue(
+      fidl::AnyArena& alloc, ACPI_OBJECT* value);
+
+  acpi::status<fuchsia_hardware_acpi::wire::Resource> EncodeMmioResource(fidl::AnyArena& alloc,
+                                                                         ACPI_RESOURCE* resource);
+
   acpi::status<fuchsia_hardware_acpi::wire::Object> EncodeObject(fidl::AnyArena& alloc,
                                                                  ACPI_OBJECT* value);
   acpi::status<> DecodeObject(const fuchsia_hardware_acpi::wire::Object& obj, ACPI_OBJECT* out);
+
+  // For unit testing.
+  void SetMmioResource(zx_handle_t rsrc) { mmio_resource_ = rsrc; }
 
  private:
   // State that comes from outside.
   acpi::Acpi* acpi_;
   ACPI_HANDLE device_handle_;
   std::string request_path_;
+  fuchsia_hardware_acpi::wire::EvaluateObjectMode mode_;
   fidl::VectorView<fuchsia_hardware_acpi::wire::Object> request_params_;
+  zx_handle_t mmio_resource_;
 
   std::forward_list<std::vector<ACPI_OBJECT>> allocated_packages_;
   std::forward_list<std::string> allocated_strings_;

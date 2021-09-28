@@ -6,8 +6,9 @@
 
 #include <fidl/fuchsia.hardware.acpi/cpp/wire.h>
 #include <lib/ddk/debug.h>
+#include <lib/zircon-internal/align.h>
 
-#include "lib/fidl/llcpp/message.h"
+#include "device.h"
 
 namespace acpi {
 
@@ -94,7 +95,8 @@ fuchsia_hardware_acpi::wire::ObjectType AcpiTypeToFidlType(ACPI_OBJECT_TYPE type
 EvaluateObjectFidlHelper EvaluateObjectFidlHelper::FromRequest(acpi::Acpi* acpi, ACPI_HANDLE device,
                                                                EvaluateObjectRequestView& request) {
   std::string path(request->path.data(), request->path.size());
-  return EvaluateObjectFidlHelper(acpi, device, std::move(path), request->parameters);
+  return EvaluateObjectFidlHelper(acpi, device, std::move(path), request->mode,
+                                  request->parameters);
 }
 
 acpi::status<fuchsia_hardware_acpi::wire::DeviceEvaluateObjectResult>
@@ -114,7 +116,23 @@ EvaluateObjectFidlHelper::Evaluate(fidl::AnyArena& alloc) {
     return value.take_error();
   }
 
-  auto fidl_val = EncodeReturnValue(alloc, value.value().get());
+  acpi::status<fuchsia_hardware_acpi::wire::DeviceEvaluateObjectResult> fidl_val;
+  switch (mode_) {
+    using fuchsia_hardware_acpi::wire::EvaluateObjectMode;
+    case EvaluateObjectMode::kPlainObject: {
+      fidl_val = EncodeReturnValue(alloc, value.value().get());
+      break;
+    }
+    case EvaluateObjectMode::kParseResources: {
+      fidl_val = EncodeResourcesReturnValue(alloc, value.value().get());
+      break;
+    }
+    default: {
+      fidl_val = acpi::error(AE_NOT_IMPLEMENTED);
+      break;
+    }
+  }
+
   if (fidl_val.is_error()) {
     return fidl_val.take_error();
   }
@@ -162,6 +180,96 @@ acpi::status<std::vector<ACPI_OBJECT>> EvaluateObjectFidlHelper::DecodeParameter
     i++;
   }
   return acpi::ok(std::move(result));
+}
+
+acpi::status<fuchsia_hardware_acpi::wire::DeviceEvaluateObjectResult>
+EvaluateObjectFidlHelper::EncodeResourcesReturnValue(fidl::AnyArena& alloc, ACPI_OBJECT* value) {
+  if (value->Type != ACPI_TYPE_BUFFER) {
+    return acpi::error(AE_BAD_VALUE);
+  }
+
+  std::vector<fuchsia_hardware_acpi::wire::Resource> resources;
+  auto resource = acpi_->BufferToResource(cpp20::span(value->Buffer.Pointer, value->Buffer.Length));
+  if (resource.is_error()) {
+    return resource.take_error();
+  }
+
+  ACPI_RESOURCE* cur = resource.value().get();
+  while (true) {
+    if (cur->Type > ACPI_RESOURCE_TYPE_MAX || cur->Length == 0) {
+      return acpi::error(AE_AML_BAD_RESOURCE_LENGTH);
+    }
+    if (cur->Type == ACPI_RESOURCE_TYPE_END_TAG) {
+      break;
+    }
+
+    acpi::status<fuchsia_hardware_acpi::wire::Resource> resource;
+    switch (cur->Type) {
+      case ACPI_RESOURCE_TYPE_ADDRESS64:
+        resource = EncodeMmioResource(alloc, cur);
+        break;
+      default:
+        resource = acpi::error(AE_NOT_IMPLEMENTED);
+        break;
+    }
+    if (resource.is_ok()) {
+      resources.emplace_back(std::move(resource.value()));
+    } else {
+      zxlogf(WARNING, "Error encoding resource (type 0x%x) to FIDL: 0x%x, ignoring.", cur->Type,
+             resource.error_value());
+    }
+
+    // Advance to the next resource in the list.
+    cur = reinterpret_cast<ACPI_RESOURCE*>(reinterpret_cast<uint8_t*>(cur) + cur->Length);
+  }
+
+  fidl::VectorView<fuchsia_hardware_acpi::wire::Resource> result(alloc, resources.size());
+  for (size_t i = 0; i < resources.size(); i++) {
+    result[i] = std::move(resources[i]);
+  }
+  fuchsia_hardware_acpi::wire::EncodedObject encoded;
+  encoded.set_resources(alloc, result);
+  fuchsia_hardware_acpi::wire::DeviceEvaluateObjectResponse response;
+  response.result = std::move(encoded);
+  fuchsia_hardware_acpi::wire::DeviceEvaluateObjectResult ret;
+  ret.set_response(alloc, std::move(response));
+  return acpi::ok(std::move(ret));
+}
+
+acpi::status<fuchsia_hardware_acpi::wire::Resource> EvaluateObjectFidlHelper::EncodeMmioResource(
+    fidl::AnyArena& alloc, ACPI_RESOURCE* resource) {
+  fuchsia_hardware_acpi::wire::Resource res;
+  zx_paddr_t paddr;
+  size_t size;
+  switch (resource->Type) {
+    case ACPI_RESOURCE_TYPE_ADDRESS64:
+      paddr = resource->Data.Address64.Address.Minimum;
+      size = resource->Data.Address64.Address.AddressLength;
+      break;
+    default:
+      return acpi::error(AE_NOT_IMPLEMENTED);
+  }
+
+  zx::vmo vmo;
+  zx_paddr_t page_start = ZX_ROUNDDOWN(paddr, zx_system_get_page_size());
+  size_t page_offset = (paddr & (zx_system_get_page_size() - 1));
+  size_t page_size = ZX_ROUNDUP(page_offset + size, zx_system_get_page_size());
+
+  zx_status_t st =
+      zx_vmo_create_physical(mmio_resource_, page_start, page_size, vmo.reset_and_get_address());
+  if (st != ZX_OK) {
+    zxlogf(ERROR, "vmo_create_physical failed (0x%lx len=0x%lx): %s", page_start, page_size,
+           zx_status_get_string(st));
+    return acpi::error(AE_ERROR);
+  }
+  fuchsia_mem::wire::Range range{
+      .vmo = std::move(vmo),
+      .offset = page_offset,
+      .size = size,
+  };
+
+  res.set_mmio(alloc, std::move(range));
+  return acpi::ok(std::move(res));
 }
 
 acpi::status<fuchsia_hardware_acpi::wire::DeviceEvaluateObjectResult>

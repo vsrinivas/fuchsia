@@ -260,10 +260,22 @@ type Object = flexible union {
     7: power_resource_val PowerResource;
 };
 
-/// This type will eventually include resource types returned by passing
-/// EvaluteObjectMode.PARSE_RESOURCES to Device.EvaluteObject().
+/// Represents a resource.
+type Resource = flexible resource union {
+    /// A region of physical memory.
+    1: mmio fuchsia.mem.Range;
+    /// An interrupt.
+    2: irq zx.handle:INTERRUPT;
+    /// An I/O port.
+    3: pio zx.handle:RESOURCE;
+};
+
+/// Result of evaluating an object, returned by Device.EvaluateObject().
 type EncodedObject = flexible resource union {
+    /// Always returned for EvaluateObjectMode.PLAIN_OBJECT.
     1: object Object;
+    /// Always returned for EvaluateObjectMode.PARSE_RESOURCES.
+    2: resources vector<Resource>:MAX;
 };
 
 /// Maximum number of arguments that can be passed to a method.

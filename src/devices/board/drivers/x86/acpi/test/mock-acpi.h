@@ -24,6 +24,14 @@ class MockAcpi : public Acpi {
   acpi::status<> WalkResources(ACPI_HANDLE object, const char* resource_name,
                                ResourcesCallable cbk) override;
 
+  // Set the value returned by |BufferToResource|.
+  void SetResource(acpi::UniquePtr<ACPI_RESOURCE> ptr) { resource_ = std::move(ptr); }
+  acpi::status<acpi::UniquePtr<ACPI_RESOURCE>> BufferToResource(
+      cpp20::span<uint8_t> buffer) override {
+    ZX_ASSERT_MSG(resource_.get() != nullptr, "Unexpected call to BufferToResource");
+    return acpi::ok(std::move(resource_));
+  }
+
   using DeviceCallable = std::function<acpi::status<>(ACPI_HANDLE device, uint32_t depth)>;
   acpi::status<> GetDevices(const char* hid, DeviceCallable cbk) override {
     return acpi::error(AE_NOT_IMPLEMENTED);
@@ -55,6 +63,7 @@ class MockAcpi : public Acpi {
                                        uint32_t max_depth, uint32_t cur_depth,
                                        NamespaceCallable& cbk);
   std::unique_ptr<Device> root_;
+  acpi::UniquePtr<ACPI_RESOURCE> resource_;
 };
 
 }  // namespace acpi::test

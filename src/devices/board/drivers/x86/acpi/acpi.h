@@ -5,6 +5,8 @@
 #ifndef SRC_DEVICES_BOARD_DRIVERS_X86_ACPI_ACPI_H_
 #define SRC_DEVICES_BOARD_DRIVERS_X86_ACPI_ACPI_H_
 
+#include <lib/stdcompat/span.h>
+
 #include <functional>
 #include <optional>
 #include <vector>
@@ -42,6 +44,8 @@ class Acpi {
   using ResourcesCallable = std::function<acpi::status<>(ACPI_RESOURCE* res)>;
   virtual acpi::status<> WalkResources(ACPI_HANDLE object, const char* resource_name,
                                        ResourcesCallable cbk) = 0;
+  virtual acpi::status<acpi::UniquePtr<ACPI_RESOURCE>> BufferToResource(
+      cpp20::span<uint8_t> buffer) = 0;
 
   using DeviceCallable = std::function<acpi::status<>(ACPI_HANDLE device, uint32_t depth)>;
   virtual acpi::status<> GetDevices(const char* hid, DeviceCallable cbk) = 0;

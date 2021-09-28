@@ -34,6 +34,17 @@ acpi::status<> AcpiImpl::WalkResources(ACPI_HANDLE object, const char* resource_
       ::AcpiWalkResources(object, const_cast<char*>(resource_name), Thunk, &cbk));
 }
 
+acpi::status<acpi::UniquePtr<ACPI_RESOURCE>> AcpiImpl::BufferToResource(
+    cpp20::span<uint8_t> buffer) {
+  ACPI_RESOURCE* res;
+  ACPI_STATUS status = AcpiBufferToResource(buffer.data(), buffer.size(), &res);
+  if (status != AE_OK) {
+    return acpi::error(status);
+  }
+
+  return acpi::ok(acpi::UniquePtr<ACPI_RESOURCE>(res));
+}
+
 acpi::status<> AcpiImpl::GetDevices(const char* hid, DeviceCallable cbk) {
   auto Thunk = [](ACPI_HANDLE object, uint32_t level, void* ctx, void**) -> ACPI_STATUS {
     return (*static_cast<DeviceCallable*>(ctx))(object, level).status_value();
