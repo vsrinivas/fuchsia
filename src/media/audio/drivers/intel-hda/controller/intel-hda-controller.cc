@@ -23,6 +23,7 @@
 #include "debug-logging.h"
 #include "device-ids.h"
 #include "hda-codec-connection.h"
+#include "src/devices/lib/acpi/client.h"
 #include "src/media/audio/drivers/intel-hda/controller/intel_hda-bind.h"
 #include "utils.h"
 
@@ -65,10 +66,11 @@ ihda_codec_protocol_ops_t IntelHDAController::CODEC_PROTO_THUNKS = {
         },
 };
 
-IntelHDAController::IntelHDAController()
+IntelHDAController::IntelHDAController(acpi::Client acpi)
     : state_(State::STARTING),
       id_(device_id_gen_.fetch_add(1u)),
-      loop_(&kAsyncLoopConfigNeverAttachToThread) {
+      loop_(&kAsyncLoopConfigNeverAttachToThread),
+      acpi_(std::move(acpi)) {
   snprintf(log_prefix_, sizeof(log_prefix_), "IHDA Controller (unknown BDF)");
   loop_->StartThread("intel-hda-controller-loop");
 }
@@ -378,8 +380,13 @@ zx_protocol_device_t IntelHDAController::ROOT_DEVICE_THUNKS = []() {
 }();
 
 zx_status_t IntelHDAController::DriverBind(void* ctx, zx_device_t* device) {
+  auto acpi = acpi::Client::Create(device);
+  if (acpi.is_error()) {
+    return acpi.error_value();
+  }
   fbl::AllocChecker ac;
-  fbl::RefPtr<IntelHDAController> controller(fbl::AdoptRef(new (&ac) IntelHDAController()));
+  fbl::RefPtr<IntelHDAController> controller(
+      fbl::AdoptRef(new (&ac) IntelHDAController(std::move(acpi.value()))));
 
   if (!ac.check()) {
     return ZX_ERR_NO_MEMORY;

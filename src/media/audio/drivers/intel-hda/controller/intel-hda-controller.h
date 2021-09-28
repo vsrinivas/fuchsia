@@ -35,6 +35,7 @@
 #include "debug-logging.h"
 #include "hda-codec-connection.h"
 #include "intel-dsp.h"
+#include "src/devices/lib/acpi/client.h"
 #include "utils.h"
 
 namespace audio {
@@ -42,7 +43,7 @@ namespace intel_hda {
 
 class IntelHDAController : public fbl::RefCounted<IntelHDAController> {
  public:
-  IntelHDAController();
+  explicit IntelHDAController(acpi::Client client);
   ~IntelHDAController();
 
   zx_status_t Init(zx_device_t* pci_dev);
@@ -56,6 +57,7 @@ class IntelHDAController : public fbl::RefCounted<IntelHDAController> {
   const pci_protocol_t* pci() const { return &pci_; }
   const fbl::RefPtr<RefCountedBti>& pci_bti() const { return pci_bti_; }
   async_dispatcher_t* dispatcher() const { return loop_->dispatcher(); }
+  acpi::Client& acpi() { return acpi_; }
 
   // CORB/RIRB
   zx_status_t QueueCodecCmd(std::unique_ptr<CodecCmdJob>&& job) TA_EXCL(corb_lock_);
@@ -215,6 +217,7 @@ class IntelHDAController : public fbl::RefCounted<IntelHDAController> {
   fbl::Mutex channel_lock_;
   fbl::RefPtr<Channel> channel_ TA_GUARDED(channel_lock_);
   std::optional<async::Loop> loop_;
+  acpi::Client acpi_;
 };
 
 }  // namespace intel_hda

@@ -4,9 +4,11 @@
 
 #include "intel-dsp.h"
 
+#include <fidl/fuchsia.hardware.acpi/cpp/wire.h>
 #include <lib/ddk/metadata.h>
 #include <lib/device-protocol/pci.h>
 #include <lib/fit/defer.h>
+#include <lib/fzl/vmo-mapper.h>
 #include <string.h>
 #include <zircon/errors.h>
 
@@ -23,6 +25,7 @@
 #include "intel-dsp-code-loader.h"
 #include "intel-dsp-modules.h"
 #include "intel-hda-controller.h"
+#include "src/devices/lib/acpi/util.h"
 
 namespace audio {
 namespace intel_hda {
@@ -70,14 +73,41 @@ IntelDsp::~IntelDsp() {
 }
 
 Status IntelDsp::ParseNhlt() {
-  // Get NHLT size.
-  constexpr uint32_t signature = DEVICE_METADATA_ACPI_HDA_NHLT;
-  size_t size;
-  zx_status_t res = device_get_metadata_size(codec_device(), signature, &size);
-  if (res != ZX_OK) {
-    return Status(res, fbl::StringPrintf("Failed to fetch NHLT size."));
-  }
+  std::array<fuchsia_hardware_acpi::wire::Object, 3> args;
+  // Reference:
+  // Intel Smart Sound Technology NHLT Specification
+  // Architecture Guide/Overview
+  // Revision 1.0
+  // June 2018
+  //
+  // 595976-intel-sst-nhlt-archguide-rev1p0.pdf
+  acpi::Uuid nhlt_query_uuid =
+      acpi::Uuid::Create(0xa69f886e, 0x6ceb, 0x4594, 0xa41f, 0x7b5dce24c553);
+  uint64_t nhlt_query_revid = 1;
+  uint64_t nhlt_query_func_index = 1;
 
+  auto uuid_buf = fidl::VectorView<uint8_t>::FromExternal(nhlt_query_uuid.bytes, acpi::kUuidBytes);
+  args[0].set_buffer_val(fidl::ObjectView<fidl::VectorView<uint8_t>>::FromExternal(&uuid_buf));
+  args[1].set_integer_val(fidl::ObjectView<uint64_t>::FromExternal(&nhlt_query_revid));
+  args[2].set_integer_val(fidl::ObjectView<uint64_t>::FromExternal(&nhlt_query_func_index));
+  auto& acpi = controller_->acpi().borrow();
+  auto result = acpi.EvaluateObject(
+      "_DSM", fuchsia_hardware_acpi::wire::EvaluateObjectMode::kParseResources,
+      fidl::VectorView<fuchsia_hardware_acpi::wire::Object>::FromExternal(args));
+  if (!result.ok()) {
+    return Status(result.status(), result.FormatDescription());
+  }
+  if (result->result.is_err()) {
+    return Status(ZX_ERR_INTERNAL,
+                  fbl::StringPrintf("NHLT query failed: %d", int(result->result.err())));
+  }
+  if (!result->result.response().result.is_resources() ||
+      result->result.response().result.resources().empty() ||
+      !result->result.response().result.resources()[0].is_mmio()) {
+    return Status(ZX_ERR_INTERNAL, "ACPI did not return NHLT resource");
+  }
+  auto& resource = result->result.response().result.resources()[0].mmio();
+  size_t size = resource.size;
   // Allocate buffer.
   fbl::AllocChecker ac;
   auto* buff = new (&ac) uint8_t[size];
@@ -86,16 +116,14 @@ Status IntelDsp::ParseNhlt() {
   }
   fbl::Array<uint8_t> buffer = fbl::Array<uint8_t>(buff, size);
 
-  // Fetch actual NHLT data.
-  size_t actual_size;
-  res = device_get_metadata(codec_device(), signature, buffer.begin(), buffer.size(), &actual_size);
+  // We have to map in a physical VMO to read from it.
+  fzl::VmoMapper mapper;
+  zx_status_t res = mapper.Map(resource.vmo, 0, 0, ZX_VM_PERM_READ);
   if (res != ZX_OK) {
-    return Status(res, "Failed to fetch NHLT");
+    return Status(res, "Failed to map NHLT");
   }
-  if (actual_size != buffer.size()) {
-    return Status(ZX_ERR_INTERNAL, "NHLT size different than reported.");
-  }
-
+  // Fetch actual NHLT data.
+  memcpy(buffer.begin(), static_cast<uint8_t*>(mapper.start()) + resource.offset, buffer.size());
   // Parse NHLT.
   StatusOr<std::unique_ptr<Nhlt>> nhlt =
       Nhlt::FromBuffer(fbl::Span<const uint8_t>(buffer.begin(), buffer.end()));
