@@ -6,7 +6,7 @@
 
 #include <asm.h>
 
-#include <arch/x86/vmx_state.h>
+#include <arch/x86/hypervisor/vmx_state.h>
 #include <zircon/errors.h>
 
 .text

@@ -7,7 +7,7 @@
 #include <lib/unittest/unittest.h>
 
 #include <arch/hypervisor.h>
-#include <arch/x86/vmx_state.h>
+#include <arch/x86/hypervisor/vmx_state.h>
 
 #include "vcpu_priv.h"
 #include "vmx_cpu_state_priv.h"

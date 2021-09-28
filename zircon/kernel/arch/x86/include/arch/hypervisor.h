@@ -12,8 +12,8 @@
 #include <zircon/types.h>
 
 #include <arch/x86/apic.h>
+#include <arch/x86/hypervisor/vmx_state.h>
 #include <arch/x86/interrupts.h>
-#include <arch/x86/vmx_state.h>
 #include <fbl/ref_ptr.h>
 #include <hypervisor/guest_physical_address_space.h>
 #include <hypervisor/id_allocator.h>
