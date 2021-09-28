@@ -19,6 +19,7 @@ import("//build/images/vboot/vboot.gni")
 import("//build/info/info.gni")
 import("//build/packages/package_metadata.gni")
 import("//build/product.gni")
+import("//build/sdk/config.gni")
 import("//build/sdk/physical_device.gni")
 import("//build/sdk/product_metadata.gni")
 import("//build/security.gni")
@@ -1325,7 +1326,8 @@ compiled_action("uefi-disk") {
   }
 }
 
-if (!bootfs_only) {
+# We shouldn't generate a product metadata if we are building an SDK.
+if (!bootfs_only && !build_sdk_archives) {
   # 'add_qemu_to_build_archives' is used to infer whether this build is targeting
   # a physical device or an emulator.
   if (!add_qemu_to_build_archives) {
@@ -1403,11 +1405,14 @@ group("default-images") {
   # reaching fuchsia.zbi must be excluded from the build graph.
   if (!bootfs_only) {
     deps += [
-      ":product_metadata",
       ":record_filesystem_sizes",
       ":root_component_index_metadata",
       ":updates",
     ]
+
+    if (!build_sdk_archives) {
+      deps += [ ":product_metadata" ]
+    }
   }
 
   if (check_vtables_in_rodata) {
