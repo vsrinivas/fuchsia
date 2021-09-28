@@ -582,6 +582,50 @@ func TestTouchFiles(t *testing.T) {
 	}
 }
 
+func TestNinjaDryRun(t *testing.T) {
+	testCases := []struct {
+		name string
+		fail bool
+	}{
+		{
+			name: "success",
+		},
+		{
+			name: "fail",
+			fail: true,
+		},
+	}
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			ctx := context.Background()
+			mockStdout := "ninja\nstdout\n"
+			subprocessRunner := &fakeSubprocessRunner{
+				mockStdout: []byte(mockStdout),
+				fail:       tc.fail,
+			}
+			r := ninjaRunner{
+				runner:    subprocessRunner,
+				ninjaPath: "ninja",
+				buildDir:  t.TempDir(),
+			}
+			stdout, stderr, err := ninjaDryRun(ctx, r, []string{"foo"})
+			if err != nil {
+				if !tc.fail {
+					t.Errorf("Unexpected error: %s", err)
+				}
+			} else if tc.fail {
+				t.Errorf("Expected error but got none")
+			}
+			if diff := cmp.Diff(mockStdout, stdout); diff != "" {
+				t.Errorf("stdout differs from expected (-want +got): %s", diff)
+			}
+			if stderr != "" {
+				t.Errorf("stderr is unexpectedly non-empty: %s", stderr)
+			}
+		})
+	}
+}
+
 func TestNinjaGraph(t *testing.T) {
 	ctx := context.Background()
 	stdout := "ninja\ngraph\nstdout"

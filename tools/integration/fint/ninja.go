@@ -318,7 +318,16 @@ func ninjaDryRun(ctx context.Context, r ninjaRunner, targets []string) (string, 
 
 	var stdout, stderr strings.Builder
 	err := r.run(ctx, args, &stdout, &stderr)
-	return stdout.String(), stderr.String(), err
+	stdoutStr := stdout.String()
+	stderrStr := stderr.String()
+	if err != nil {
+		// stdout and stderr are normally not emitted because they're very
+		// noisy, but if the dry run fails then they'll likely contain the
+		// information necessary to understand the failure.
+		os.Stdout.WriteString(stdoutStr)
+		os.Stderr.WriteString(stderrStr)
+	}
+	return stdoutStr, stderrStr, err
 }
 
 // checkNinjaNoop runs `ninja explain` against a build directory to determine
@@ -377,9 +386,8 @@ func touchFiles(paths []string) (map[string]time.Time, error) {
 			// the change under test.
 			if os.IsNotExist(err) {
 				continue
-			} else {
-				return nil, err
 			}
+			return nil, err
 		}
 		// Note that we can't get access time in a platform-agnostic way.
 		// We end up coupling mtime with atime, even after a reset.
@@ -510,11 +518,11 @@ func affectedTestsNoWork(
 
 		// Since we only did a Ninja dry run, the non-GN files will still be
 		// considered dirty, so we need only touch the GN files.
-		touchGnResult, err := touchFiles(gnFiles)
+		touchGNResult, err := touchFiles(gnFiles)
 		if err != nil {
 			return result, err
 		}
-		defer resetTouchFiles(touchGnResult)
+		defer resetTouchFiles(touchGNResult)
 		var stdout, stderr string
 		stdout, stderr, err = ninjaDryRun(ctx, runner, targets)
 		if err != nil {
