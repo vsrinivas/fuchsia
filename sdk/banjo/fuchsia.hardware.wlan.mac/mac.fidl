@@ -189,6 +189,7 @@ type WlanIndication = strict enum : uint8 {
     HW_SCAN_ABORTED = 4;
 };
 
+@derive_debug
 type WlanHwScanType = strict enum : uint8 {
     ACTIVE = 1;
     PASSIVE = 2;

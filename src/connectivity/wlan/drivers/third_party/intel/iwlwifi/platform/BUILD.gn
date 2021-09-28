@@ -36,6 +36,7 @@ source_set("platform") {
     "//garnet/lib/wlan/protocol:protocol",
     "//sdk/banjo/ddk.hw.wlan.wlaninfo:ddk.hw.wlan.wlaninfo_banjo_c",
     "//sdk/banjo/fuchsia.hardware.pci:fuchsia.hardware.pci_banjo_c",
+    "//sdk/banjo/fuchsia.hardware.wlan.mac:fuchsia.hardware.wlan.mac_banjo_c",
     "//src/lib/ddk",
     "//zircon/system/public",
   ]

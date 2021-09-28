@@ -49,6 +49,7 @@
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform/mvm-mlme.h"
 
 #include <fidl/fuchsia.wlan.ieee80211/cpp/wire.h>
+#include <fuchsia/hardware/wlan/mac/c/banjo.h>
 #include <fuchsia/wlan/ieee80211/c/banjo.h>
 #include <fuchsia/wlan/internal/c/banjo.h>
 #include <lib/ddk/device.h>
@@ -642,7 +643,7 @@ zx_status_t mac_start_hw_scan(void* ctx, const wlan_hw_scan_config_t* scan_confi
   const auto mvmvif = reinterpret_cast<struct iwl_mvm_vif*>(ctx);
 
   if (scan_config->scan_type != WLAN_HW_SCAN_TYPE_PASSIVE) {
-    IWL_ERR(ctx, "Unsupported scan type: %d\n", scan_config->scan_type);
+    IWL_ERR(ctx, "Unsupported scan type: %s\n", wlan_hw_scan_type_to_str(scan_config->scan_type));
     return ZX_ERR_NOT_SUPPORTED;
   }
 
