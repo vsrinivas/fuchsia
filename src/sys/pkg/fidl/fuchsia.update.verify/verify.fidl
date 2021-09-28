@@ -19,7 +19,7 @@ protocol Verifier {
     /// + request `options` the configuration to use when verifying.
     /// * response a [`VerifyError`] describing why the verification failed.
     Verify(struct {
-        options VerifyOptions;
+        options @generated_name("VerifyOptions") table {};
     }) -> (struct {}) error VerifyError;
 };
 
@@ -28,9 +28,6 @@ protocol Verifier {
 protocol BlobfsVerifier {
     compose Verifier;
 };
-
-/// A configuration for an update verification.
-type VerifyOptions = table {};
 
 /// A problem occured when doing an update verification.
 type VerifyError = flexible enum {
