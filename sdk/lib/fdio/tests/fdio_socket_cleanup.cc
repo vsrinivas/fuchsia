@@ -73,8 +73,7 @@ TEST(SocketCleanup, Datagram) {
 
   fuchsia_io::wire::DatagramSocket dgram_info{.event = std::move(client_event)};
   fuchsia_io::wire::NodeInfo node_info;
-  node_info.set_datagram_socket(
-      fidl::ObjectView<fuchsia_io::wire::DatagramSocket>::FromExternal(&dgram_info));
+  node_info.set_datagram_socket(std::move(dgram_info));
 
   ASSERT_NO_FATAL_FAILURE(
       ServeAndExerciseFileDescriptionTeardown(std::move(node_info), std::move(endpoints.value())));
@@ -95,8 +94,7 @@ TEST(SocketCleanup, Stream) {
 
   fuchsia_io::wire::StreamSocket stream_info{.socket = std::move(client_socket)};
   fuchsia_io::wire::NodeInfo node_info;
-  node_info.set_stream_socket(
-      fidl::ObjectView<fuchsia_io::wire::StreamSocket>::FromExternal(&stream_info));
+  node_info.set_stream_socket(std::move(stream_info));
 
   ASSERT_NO_FATAL_FAILURE(
       ServeAndExerciseFileDescriptionTeardown(std::move(node_info), std::move(endpoints.value())));

@@ -72,7 +72,6 @@ class StrictFoo {
     return ordinal_ ==
            ::fidl_test_requestflexibleenvelope::wire::StrictFoo::Ordinal::kS;
   }
-
   static StrictFoo WithS(::fidl::ObjectView<::fidl::StringView> val) {
     StrictFoo result;
     result.set_s(val);
@@ -124,37 +123,10 @@ class StrictFoo {
     return result;
   }
 
-  static StrictFoo WithI(::fidl::ObjectView<int32_t> val) {
-    StrictFoo result;
-    result.set_i(val);
-    return result;
-  }
-
-  template <typename... Args>
-  static StrictFoo WithI(::fidl::AnyArena& allocator, Args&&... args) {
-    StrictFoo result;
-    result.set_i(
-        ::fidl::ObjectView<int32_t>(allocator, std::forward<Args>(args)...));
-    return result;
-  }
-
   void set_i(int32_t elem) {
     ordinal_ =
         ::fidl_test_requestflexibleenvelope::wire::StrictFoo::Ordinal::kI;
     envelope_.As<int32_t>().set_data(std::move(elem));
-  }
-
-  void set_i(::fidl::ObjectView<int32_t> elem) {
-    ordinal_ =
-        ::fidl_test_requestflexibleenvelope::wire::StrictFoo::Ordinal::kI;
-    envelope_.As<int32_t>().set_data(std::move(elem));
-  }
-
-  template <typename... Args>
-  void set_i(::fidl::AnyArena& allocator, Args&&... args) {
-    ordinal_ =
-        ::fidl_test_requestflexibleenvelope::wire::StrictFoo::Ordinal::kI;
-    set_i(::fidl::ObjectView<int32_t>(allocator, std::forward<Args>(args)...));
   }
 
   int32_t& mutable_i() {
@@ -224,7 +196,6 @@ class FlexibleFoo {
     return ordinal_ ==
            ::fidl_test_requestflexibleenvelope::wire::FlexibleFoo::Ordinal::kS;
   }
-
   static FlexibleFoo WithS(::fidl::ObjectView<::fidl::StringView> val) {
     FlexibleFoo result;
     result.set_s(val);
@@ -276,37 +247,10 @@ class FlexibleFoo {
     return result;
   }
 
-  static FlexibleFoo WithI(::fidl::ObjectView<int32_t> val) {
-    FlexibleFoo result;
-    result.set_i(val);
-    return result;
-  }
-
-  template <typename... Args>
-  static FlexibleFoo WithI(::fidl::AnyArena& allocator, Args&&... args) {
-    FlexibleFoo result;
-    result.set_i(
-        ::fidl::ObjectView<int32_t>(allocator, std::forward<Args>(args)...));
-    return result;
-  }
-
   void set_i(int32_t elem) {
     ordinal_ =
         ::fidl_test_requestflexibleenvelope::wire::FlexibleFoo::Ordinal::kI;
     envelope_.As<int32_t>().set_data(std::move(elem));
-  }
-
-  void set_i(::fidl::ObjectView<int32_t> elem) {
-    ordinal_ =
-        ::fidl_test_requestflexibleenvelope::wire::FlexibleFoo::Ordinal::kI;
-    envelope_.As<int32_t>().set_data(std::move(elem));
-  }
-
-  template <typename... Args>
-  void set_i(::fidl::AnyArena& allocator, Args&&... args) {
-    ordinal_ =
-        ::fidl_test_requestflexibleenvelope::wire::FlexibleFoo::Ordinal::kI;
-    set_i(::fidl::ObjectView<int32_t>(allocator, std::forward<Args>(args)...));
   }
 
   int32_t& mutable_i() {

@@ -94,8 +94,8 @@ zx_status_t Device::Add(device_add_args_t* zx_args, zx_device_t** out) {
   props.reserve(zx_args->prop_count);
   for (auto [id, _, value] : cpp20::span(zx_args->props, zx_args->prop_count)) {
     props.emplace_back(arena)
-        .set_key(arena, fdf::wire::NodePropertyKey::WithIntValue(arena, id))
-        .set_value(arena, fdf::wire::NodePropertyValue::WithIntValue(arena, value));
+        .set_key(arena, fdf::wire::NodePropertyKey::WithIntValue(id))
+        .set_value(arena, fdf::wire::NodePropertyValue::WithIntValue(value));
   }
   fdf::wire::NodeAddArgs args(arena);
   auto valid_name = MakeValidName(zx_args->name);

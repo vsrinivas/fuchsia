@@ -228,8 +228,7 @@ zx_status_t Control::InitSyncDeviceLocked() {
   }
 
   // Initialize sync timeline client.
-  zx::status endpoints =
-      fidl::CreateEndpoints<fuchsia_hardware_goldfish::SyncTimeline>();
+  zx::status endpoints = fidl::CreateEndpoints<fuchsia_hardware_goldfish::SyncTimeline>();
   if (!endpoints.is_ok()) {
     zxlogf(ERROR, "%s: FIDL endpoints failed: %d", kTag, endpoints.status_value());
     return endpoints.status_value();
@@ -440,14 +439,14 @@ Control::CreateBuffer2Result Control::CreateBuffer2(
   if (!create_params.has_size() || !create_params.has_memory_property()) {
     zxlogf(ERROR, "%s: invalid arguments: size? %d memory property? %d\n", kTag,
            create_params.has_size(), create_params.has_memory_property());
-    return fpromise::ok(ControlDeviceCreateBuffer2Result::WithErr(allocator, ZX_ERR_INVALID_ARGS));
+    return fpromise::ok(ControlDeviceCreateBuffer2Result::WithErr(ZX_ERR_INVALID_ARGS));
   }
   if ((create_params.memory_property() &
        fuchsia_hardware_goldfish::wire::kMemoryPropertyHostVisible) &&
       !create_params.has_physical_address()) {
     zxlogf(ERROR, "%s: invalid arguments: memory_property %d, no physical address\n", kTag,
            create_params.memory_property());
-    return fpromise::ok(ControlDeviceCreateBuffer2Result::WithErr(allocator, ZX_ERR_INVALID_ARGS));
+    return fpromise::ok(ControlDeviceCreateBuffer2Result::WithErr(ZX_ERR_INVALID_ARGS));
   }
 
   TRACE_DURATION("gfx", "Control::CreateBuffer2", "size", create_params.size(), "memory_property",
@@ -463,12 +462,11 @@ Control::CreateBuffer2Result Control::CreateBuffer2(
 
   auto it = buffer_handles_.find(koid);
   if (it == buffer_handles_.end()) {
-    return fpromise::ok(ControlDeviceCreateBuffer2Result::WithErr(allocator, ZX_ERR_INVALID_ARGS));
+    return fpromise::ok(ControlDeviceCreateBuffer2Result::WithErr(ZX_ERR_INVALID_ARGS));
   }
 
   if (it->second != kInvalidBufferHandle) {
-    return fpromise::ok(
-        ControlDeviceCreateBuffer2Result::WithErr(allocator, ZX_ERR_ALREADY_EXISTS));
+    return fpromise::ok(ControlDeviceCreateBuffer2Result::WithErr(ZX_ERR_ALREADY_EXISTS));
   }
 
   uint32_t id;
@@ -508,7 +506,6 @@ Control::CreateBuffer2Result Control::CreateBuffer2(
                              .memory_property = create_params.memory_property()};
 
   return fpromise::ok(ControlDeviceCreateBuffer2Result::WithResponse(
-      allocator,
       ControlDeviceCreateBuffer2Response{.hw_address_page_offset = hw_address_page_offset}));
 }
 

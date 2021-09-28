@@ -164,7 +164,7 @@ void ConvertToIoV1NodeInfo(VnodeRepresentation representation,
     fio::wire::NodeInfo info;
     if constexpr (std::is_same_v<T, fs::VnodeRepresentation::Connector>) {
       fio::wire::Service service;
-      info.set_service(fidl::ObjectView<fio::wire::Service>::FromExternal(&service));
+      info.set_service(service);
       callback(std::move(info));
     } else if constexpr (std::is_same_v<T, fs::VnodeRepresentation::File>) {
       fio::wire::FileObject file = {.event = std::move(repr.observer)};
@@ -172,11 +172,10 @@ void ConvertToIoV1NodeInfo(VnodeRepresentation representation,
       callback(std::move(info));
     } else if constexpr (std::is_same_v<T, fs::VnodeRepresentation::Directory>) {
       fio::wire::DirectoryObject directory;
-      info.set_directory(fidl::ObjectView<fio::wire::DirectoryObject>::FromExternal(&directory));
+      info.set_directory(directory);
       callback(std::move(info));
     } else if constexpr (std::is_same_v<T, fs::VnodeRepresentation::Pipe>) {
-      fio::wire::Pipe pipe = {.socket = std::move(repr.socket)};
-      info.set_pipe(fidl::ObjectView<fio::wire::Pipe>::FromExternal(&pipe));
+      info.set_pipe({.socket = std::move(repr.socket)});
       callback(std::move(info));
     } else if constexpr (std::is_same_v<T, fs::VnodeRepresentation::Memory>) {
       fio::wire::Vmofile vmofile = {
@@ -184,22 +183,16 @@ void ConvertToIoV1NodeInfo(VnodeRepresentation representation,
       info.set_vmofile(fidl::ObjectView<fio::wire::Vmofile>::FromExternal(&vmofile));
       callback(std::move(info));
     } else if constexpr (std::is_same_v<T, fs::VnodeRepresentation::Device>) {
-      fio::wire::Device device = {.event = std::move(repr.event)};
-      info.set_device(fidl::ObjectView<fio::wire::Device>::FromExternal(&device));
+      info.set_device({.event = std::move(repr.event)});
       callback(std::move(info));
     } else if constexpr (std::is_same_v<T, fs::VnodeRepresentation::Tty>) {
-      fio::wire::Tty tty = {.event = std::move(repr.event)};
-      info.set_tty(fidl::ObjectView<fio::wire::Tty>::FromExternal(&tty));
+      info.set_tty({.event = std::move(repr.event)});
       callback(std::move(info));
     } else if constexpr (std::is_same_v<T, fs::VnodeRepresentation::DatagramSocket>) {
-      fio::wire::DatagramSocket datagram_socket = {.event = std::move(repr.event)};
-      info.set_datagram_socket(
-          fidl::ObjectView<fio::wire::DatagramSocket>::FromExternal(&datagram_socket));
+      info.set_datagram_socket({.event = std::move(repr.event)});
       callback(std::move(info));
     } else if constexpr (std::is_same_v<T, fs::VnodeRepresentation::StreamSocket>) {
-      fio::wire::StreamSocket stream_socket = {.socket = std::move(repr.socket)};
-      info.set_stream_socket(
-          fidl::ObjectView<fio::wire::StreamSocket>::FromExternal(&stream_socket));
+      info.set_stream_socket({.socket = std::move(repr.socket)});
       callback(std::move(info));
     } else {
       ZX_PANIC("Representation variant is not initialized");

@@ -77,34 +77,9 @@ class OnlyLlcpp {
     return result;
   }
 
-  static OnlyLlcpp WithX(::fidl::ObjectView<uint32_t> val) {
-    OnlyLlcpp result;
-    result.set_x(val);
-    return result;
-  }
-
-  template <typename... Args>
-  static OnlyLlcpp WithX(::fidl::AnyArena& allocator, Args&&... args) {
-    OnlyLlcpp result;
-    result.set_x(
-        ::fidl::ObjectView<uint32_t>(allocator, std::forward<Args>(args)...));
-    return result;
-  }
-
   void set_x(uint32_t elem) {
     ordinal_ = ::fidl_test_bindingsdenylist::wire::OnlyLlcpp::Ordinal::kX;
     envelope_.As<uint32_t>().set_data(std::move(elem));
-  }
-
-  void set_x(::fidl::ObjectView<uint32_t> elem) {
-    ordinal_ = ::fidl_test_bindingsdenylist::wire::OnlyLlcpp::Ordinal::kX;
-    envelope_.As<uint32_t>().set_data(std::move(elem));
-  }
-
-  template <typename... Args>
-  void set_x(::fidl::AnyArena& allocator, Args&&... args) {
-    ordinal_ = ::fidl_test_bindingsdenylist::wire::OnlyLlcpp::Ordinal::kX;
-    set_x(::fidl::ObjectView<uint32_t>(allocator, std::forward<Args>(args)...));
   }
 
   uint32_t& mutable_x() {

@@ -670,34 +670,9 @@ class SimpleUnion {
     return result;
   }
 
-  static SimpleUnion WithA(::fidl::ObjectView<int32_t> val) {
-    SimpleUnion result;
-    result.set_a(val);
-    return result;
-  }
-
-  template <typename... Args>
-  static SimpleUnion WithA(::fidl::AnyArena& allocator, Args&&... args) {
-    SimpleUnion result;
-    result.set_a(
-        ::fidl::ObjectView<int32_t>(allocator, std::forward<Args>(args)...));
-    return result;
-  }
-
   void set_a(int32_t elem) {
     ordinal_ = ::fidl_test_nullable::wire::SimpleUnion::Ordinal::kA;
     envelope_.As<int32_t>().set_data(std::move(elem));
-  }
-
-  void set_a(::fidl::ObjectView<int32_t> elem) {
-    ordinal_ = ::fidl_test_nullable::wire::SimpleUnion::Ordinal::kA;
-    envelope_.As<int32_t>().set_data(std::move(elem));
-  }
-
-  template <typename... Args>
-  void set_a(::fidl::AnyArena& allocator, Args&&... args) {
-    ordinal_ = ::fidl_test_nullable::wire::SimpleUnion::Ordinal::kA;
-    set_a(::fidl::ObjectView<int32_t>(allocator, std::forward<Args>(args)...));
   }
 
   int32_t& mutable_a() {
@@ -718,34 +693,9 @@ class SimpleUnion {
     return result;
   }
 
-  static SimpleUnion WithB(::fidl::ObjectView<float> val) {
-    SimpleUnion result;
-    result.set_b(val);
-    return result;
-  }
-
-  template <typename... Args>
-  static SimpleUnion WithB(::fidl::AnyArena& allocator, Args&&... args) {
-    SimpleUnion result;
-    result.set_b(
-        ::fidl::ObjectView<float>(allocator, std::forward<Args>(args)...));
-    return result;
-  }
-
   void set_b(float elem) {
     ordinal_ = ::fidl_test_nullable::wire::SimpleUnion::Ordinal::kB;
     envelope_.As<float>().set_data(std::move(elem));
-  }
-
-  void set_b(::fidl::ObjectView<float> elem) {
-    ordinal_ = ::fidl_test_nullable::wire::SimpleUnion::Ordinal::kB;
-    envelope_.As<float>().set_data(std::move(elem));
-  }
-
-  template <typename... Args>
-  void set_b(::fidl::AnyArena& allocator, Args&&... args) {
-    ordinal_ = ::fidl_test_nullable::wire::SimpleUnion::Ordinal::kB;
-    set_b(::fidl::ObjectView<float>(allocator, std::forward<Args>(args)...));
   }
 
   float& mutable_b() {

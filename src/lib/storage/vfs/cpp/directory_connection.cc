@@ -120,8 +120,7 @@ void DirectoryConnection::Close2(Close2RequestView request, Close2Completer::Syn
     //    completer.ReplyError(result.error());
     // when the bug is fixed. This applies to other error replies in this file.
     zx_status_t error = result.error();
-    completer.Reply(::fuchsia_io::wire::NodeClose2Result::WithErr(
-        fidl::ObjectView<zx_status_t>::FromExternal(&error)));
+    completer.Reply(::fuchsia_io::wire::NodeClose2Result::WithErr(error));
   } else {
     completer.Reply({});
   }
@@ -268,21 +267,18 @@ void DirectoryConnection::Unlink(UnlinkRequestView request, UnlinkCompleter::Syn
   zx_status_t status;
   if (options().flags.node_reference) {
     status = ZX_ERR_BAD_HANDLE;
-    completer.Reply(::fuchsia_io::wire::DirectoryUnlinkResult::WithErr(
-        fidl::ObjectView<zx_status_t>::FromExternal(&status)));
+    completer.Reply(::fuchsia_io::wire::DirectoryUnlinkResult::WithErr(status));
     return;
   }
   if (!options().rights.write) {
     status = ZX_ERR_BAD_HANDLE;
-    completer.Reply(::fuchsia_io::wire::DirectoryUnlinkResult::WithErr(
-        fidl::ObjectView<zx_status_t>::FromExternal(&status)));
+    completer.Reply(::fuchsia_io::wire::DirectoryUnlinkResult::WithErr(status));
     return;
   }
   std::string_view name_str(request->name.data(), request->name.size());
   if (!IsValidName(name_str)) {
     status = ZX_ERR_INVALID_ARGS;
-    completer.Reply(::fuchsia_io::wire::DirectoryUnlinkResult::WithErr(
-        fidl::ObjectView<zx_status_t>::FromExternal(&status)));
+    completer.Reply(::fuchsia_io::wire::DirectoryUnlinkResult::WithErr(status));
     return;
   }
   status = vfs()->Unlink(vnode(), name_str,
@@ -295,11 +291,9 @@ void DirectoryConnection::Unlink(UnlinkRequestView request, UnlinkCompleter::Syn
     //    completer.ReplySuccess();
     // when the bug is fixed. This applies to other success replies in this file.
     ::fuchsia_io::wire::DirectoryUnlinkResponse response;
-    completer.Reply(::fuchsia_io::wire::DirectoryUnlinkResult::WithResponse(
-        fidl::ObjectView<::fuchsia_io::wire::DirectoryUnlinkResponse>::FromExternal(&response)));
+    completer.Reply(::fuchsia_io::wire::DirectoryUnlinkResult::WithResponse(std::move(response)));
   } else {
-    completer.Reply(::fuchsia_io::wire::DirectoryUnlinkResult::WithErr(
-        fidl::ObjectView<zx_status_t>::FromExternal(&status)));
+    completer.Reply(::fuchsia_io::wire::DirectoryUnlinkResult::WithErr(status));
   }
 }
 
@@ -378,20 +372,17 @@ void DirectoryConnection::Rename2(Rename2RequestView request, Rename2Completer::
   zx_status_t status;
   if (request->src.empty() || request->dst.empty()) {
     status = ZX_ERR_INVALID_ARGS;
-    completer.Reply(::fuchsia_io::wire::DirectoryRename2Result::WithErr(
-        fidl::ObjectView<zx_status_t>::FromExternal(&status)));
+    completer.Reply(::fuchsia_io::wire::DirectoryRename2Result::WithErr(status));
     return;
   }
   if (options().flags.node_reference) {
     status = ZX_ERR_BAD_HANDLE;
-    completer.Reply(::fuchsia_io::wire::DirectoryRename2Result::WithErr(
-        fidl::ObjectView<zx_status_t>::FromExternal(&status)));
+    completer.Reply(::fuchsia_io::wire::DirectoryRename2Result::WithErr(status));
     return;
   }
   if (!options().rights.write) {
     status = ZX_ERR_BAD_HANDLE;
-    completer.Reply(::fuchsia_io::wire::DirectoryRename2Result::WithErr(
-        fidl::ObjectView<zx_status_t>::FromExternal(&status)));
+    completer.Reply(::fuchsia_io::wire::DirectoryRename2Result::WithErr(status));
     return;
   }
   status = vfs()->Rename(std::move(request->dst_parent_token), vnode(),
@@ -399,11 +390,9 @@ void DirectoryConnection::Rename2(Rename2RequestView request, Rename2Completer::
                          std::string_view(request->dst.data(), request->dst.size()));
   if (status == ZX_OK) {
     ::fuchsia_io::wire::DirectoryRename2Response response;
-    completer.Reply(::fuchsia_io::wire::DirectoryRename2Result::WithResponse(
-        fidl::ObjectView<::fuchsia_io::wire::DirectoryRename2Response>::FromExternal(&response)));
+    completer.Reply(::fuchsia_io::wire::DirectoryRename2Result::WithResponse(std::move(response)));
   } else {
-    completer.Reply(::fuchsia_io::wire::DirectoryRename2Result::WithErr(
-        fidl::ObjectView<zx_status_t>::FromExternal(&status)));
+    completer.Reply(::fuchsia_io::wire::DirectoryRename2Result::WithErr(status));
   }
 }
 
@@ -539,8 +528,7 @@ void DirectoryConnection::AdvisoryLock(AdvisoryLockRequestView request,
   auto async_completer = completer.ToAsync();
   fit::callback<void(zx_status_t)> callback = file_lock::lock_completer_t(
       [lock_completer = std::move(async_completer)](zx_status_t status) mutable {
-        auto reply = fidl::ObjectView<int32_t>::FromExternal(&status);
-        auto result = fuchsia_io2::wire::AdvisoryLockingAdvisoryLockResult::WithErr(reply);
+        auto result = fuchsia_io2::wire::AdvisoryLockingAdvisoryLockResult::WithErr(status);
         lock_completer.Reply(std::move(result));
       });
 

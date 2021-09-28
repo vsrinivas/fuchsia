@@ -42,8 +42,7 @@ class Server final : public fuchsia_io::testing::Directory_TestBase {
 
   void Describe(DescribeRequestView request, DescribeCompleter::Sync& completer) override {
     fuchsia_io::wire::DirectoryObject directory;
-    completer.Reply(fuchsia_io::wire::NodeInfo::WithDirectory(
-        fidl::ObjectView<fuchsia_io::wire::DirectoryObject>::FromExternal(&directory)));
+    completer.Reply(fuchsia_io::wire::NodeInfo::WithDirectory(std::move(directory)));
   }
 
   void Watch(WatchRequestView request, WatchCompleter::Sync& completer) override {

@@ -32,8 +32,7 @@ class Server final : public fuchsia_posix_socket::testing::StreamSocket_TestBase
       return completer.Close(status);
     }
     fuchsia_io::wire::NodeInfo info;
-    info.set_stream_socket(
-        fidl::ObjectView<fuchsia_io::wire::StreamSocket>::FromExternal(&stream_socket));
+    info.set_stream_socket(std::move(stream_socket));
     completer.Reply(std::move(info));
   }
 

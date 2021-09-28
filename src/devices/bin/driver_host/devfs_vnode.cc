@@ -322,9 +322,8 @@ void DevfsVnode::UpdatePowerStateMapping(UpdatePowerStateMappingRequestView requ
   }
 
   fuchsia_device::wire::ControllerUpdatePowerStateMappingResponse response;
-  completer.Reply(fuchsia_device::wire::ControllerUpdatePowerStateMappingResult::WithResponse(
-      fidl::ObjectView<fuchsia_device::wire::ControllerUpdatePowerStateMappingResponse>::
-          FromExternal(&response)));
+  completer.Reply(
+      fuchsia_device::wire::ControllerUpdatePowerStateMappingResult::WithResponse(response));
 }
 
 void DevfsVnode::GetPowerStateMapping(GetPowerStateMappingRequestView request,

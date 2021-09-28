@@ -79,14 +79,14 @@ fuchsia_device_manager::wire::DeviceStrProperty convert_device_str_prop(
 
   if (prop.property_value.value_type == ZX_DEVICE_PROPERTY_VALUE_INT) {
     str_property.value = fuchsia_device_manager::wire::PropertyValue::WithIntValue(
-        fidl::ObjectView<uint32_t>(allocator, prop.property_value.value.int_val));
+        prop.property_value.value.int_val);
   } else if (prop.property_value.value_type == ZX_DEVICE_PROPERTY_VALUE_STRING) {
     str_property.value = fuchsia_device_manager::wire::PropertyValue::WithStrValue(
-        fidl::ObjectView<fidl::StringView>(
-            allocator, fidl::StringView(allocator, prop.property_value.value.str_val)));
+        fidl::ObjectView<fidl::StringView>(allocator, allocator,
+                                           prop.property_value.value.str_val));
   } else if (prop.property_value.value_type == ZX_DEVICE_PROPERTY_VALUE_BOOL) {
     str_property.value = fuchsia_device_manager::wire::PropertyValue::WithBoolValue(
-        fidl::ObjectView<bool>(allocator, prop.property_value.value.bool_val));
+        prop.property_value.value.bool_val);
   }
 
   return str_property;

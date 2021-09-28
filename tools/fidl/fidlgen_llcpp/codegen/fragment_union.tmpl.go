@@ -66,8 +66,7 @@ class {{ .Name }} {
     result.set_{{ .Name }}(std::move(val));
     return result;
   }
-  {{- end }}
-
+  {{- else }}
   static {{ $.Name }} With{{ .UpperCamelCaseName }}(::fidl::ObjectView<{{ .Type }}> val) {
     {{ $.Name }} result;
     result.set_{{ .Name }}(val);
@@ -81,6 +80,7 @@ class {{ .Name }} {
                            std::forward<Args>(args)...));
     return result;
   }
+  {{- end }}
 
   {{- if .Type.InlineInEnvelope }}
 {{ "" }}
@@ -89,8 +89,7 @@ class {{ .Name }} {
     ordinal_ = {{ .WireOrdinalName }};
     envelope_.As<{{ .Type }}>().set_data(std::move(elem));
   }
-  {{- end }}
-
+  {{- else }}
 {{ "" }}
   {{- .Docs }}
   void set_{{ .Name }}(::fidl::ObjectView<{{ .Type }}> elem) {
@@ -103,6 +102,8 @@ class {{ .Name }} {
     ordinal_ = {{ .WireOrdinalName }};
     set_{{ .Name }}(::fidl::ObjectView<{{ .Type }}>(allocator, std::forward<Args>(args)...));
   }
+  {{- end }}
+
 {{ "" }}
   {{- .Docs }}
   {{ .Type }}& mutable_{{ .Name }}() {

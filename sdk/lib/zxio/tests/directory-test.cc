@@ -24,8 +24,7 @@ class TestDirectoryServer : public zxio_tests::TestDirectoryServerBase {
   explicit TestDirectoryServer(async_dispatcher_t* dispatcher) : dispatcher_(dispatcher) {}
 
   void Describe(DescribeRequestView request, DescribeCompleter::Sync& completer) final {
-    fidl::Arena fidl_allocator;
-    auto node_info = fuchsia_io::wire::NodeInfo::WithDirectory(fidl_allocator);
+    auto node_info = fuchsia_io::wire::NodeInfo::WithDirectory({});
     completer.Reply(std::move(node_info));
   }
 

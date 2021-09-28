@@ -194,7 +194,7 @@ zx_status_t Message::CreateOutputParameterSet(
 
     switch (optee_param.attribute) {
       case MessageParam::kAttributeTypeNone: {
-        (*out_parameter_set)[i].set_none(allocator);
+        (*out_parameter_set)[i].set_none({});
         break;
       }
       case MessageParam::kAttributeTypeValueInput:

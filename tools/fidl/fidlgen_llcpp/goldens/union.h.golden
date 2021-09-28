@@ -255,7 +255,6 @@ class UnionWithAttributes {
     return ordinal_ ==
            ::fidl_test_union::wire::UnionWithAttributes::Ordinal::kX;
   }
-
   static UnionWithAttributes WithX(::fidl::ObjectView<int64_t> val) {
     UnionWithAttributes result;
     result.set_x(val);
@@ -345,35 +344,9 @@ class Union {
     return result;
   }
 
-  static Union WithPrimitive(::fidl::ObjectView<int32_t> val) {
-    Union result;
-    result.set_primitive(val);
-    return result;
-  }
-
-  template <typename... Args>
-  static Union WithPrimitive(::fidl::AnyArena& allocator, Args&&... args) {
-    Union result;
-    result.set_primitive(
-        ::fidl::ObjectView<int32_t>(allocator, std::forward<Args>(args)...));
-    return result;
-  }
-
   void set_primitive(int32_t elem) {
     ordinal_ = ::fidl_test_union::wire::Union::Ordinal::kPrimitive;
     envelope_.As<int32_t>().set_data(std::move(elem));
-  }
-
-  void set_primitive(::fidl::ObjectView<int32_t> elem) {
-    ordinal_ = ::fidl_test_union::wire::Union::Ordinal::kPrimitive;
-    envelope_.As<int32_t>().set_data(std::move(elem));
-  }
-
-  template <typename... Args>
-  void set_primitive(::fidl::AnyArena& allocator, Args&&... args) {
-    ordinal_ = ::fidl_test_union::wire::Union::Ordinal::kPrimitive;
-    set_primitive(
-        ::fidl::ObjectView<int32_t>(allocator, std::forward<Args>(args)...));
   }
 
   int32_t& mutable_primitive() {
@@ -389,7 +362,6 @@ class Union {
     return ordinal_ ==
            ::fidl_test_union::wire::Union::Ordinal::kStringNeedsConstructor;
   }
-
   static Union WithStringNeedsConstructor(
       ::fidl::ObjectView<::fidl::StringView> val) {
     Union result;
@@ -435,7 +407,6 @@ class Union {
     return ordinal_ == ::fidl_test_union::wire::Union::Ordinal::
                            kVectorStringAlsoNeedsConstructor;
   }
-
   static Union WithVectorStringAlsoNeedsConstructor(
       ::fidl::ObjectView<::fidl::VectorView<::fidl::StringView>> val) {
     Union result;
@@ -541,36 +512,9 @@ class StrictUnion {
     return result;
   }
 
-  static StrictUnion WithPrimitive(::fidl::ObjectView<int32_t> val) {
-    StrictUnion result;
-    result.set_primitive(val);
-    return result;
-  }
-
-  template <typename... Args>
-  static StrictUnion WithPrimitive(::fidl::AnyArena& allocator,
-                                   Args&&... args) {
-    StrictUnion result;
-    result.set_primitive(
-        ::fidl::ObjectView<int32_t>(allocator, std::forward<Args>(args)...));
-    return result;
-  }
-
   void set_primitive(int32_t elem) {
     ordinal_ = ::fidl_test_union::wire::StrictUnion::Ordinal::kPrimitive;
     envelope_.As<int32_t>().set_data(std::move(elem));
-  }
-
-  void set_primitive(::fidl::ObjectView<int32_t> elem) {
-    ordinal_ = ::fidl_test_union::wire::StrictUnion::Ordinal::kPrimitive;
-    envelope_.As<int32_t>().set_data(std::move(elem));
-  }
-
-  template <typename... Args>
-  void set_primitive(::fidl::AnyArena& allocator, Args&&... args) {
-    ordinal_ = ::fidl_test_union::wire::StrictUnion::Ordinal::kPrimitive;
-    set_primitive(
-        ::fidl::ObjectView<int32_t>(allocator, std::forward<Args>(args)...));
   }
 
   int32_t& mutable_primitive() {
@@ -588,7 +532,6 @@ class StrictUnion {
     return ordinal_ == ::fidl_test_union::wire::StrictUnion::Ordinal::
                            kStringNeedsConstructor;
   }
-
   static StrictUnion WithStringNeedsConstructor(
       ::fidl::ObjectView<::fidl::StringView> val) {
     StrictUnion result;
@@ -638,7 +581,6 @@ class StrictUnion {
     return ordinal_ == ::fidl_test_union::wire::StrictUnion::Ordinal::
                            kVectorStringAlsoNeedsConstructor;
   }
-
   static StrictUnion WithVectorStringAlsoNeedsConstructor(
       ::fidl::ObjectView<::fidl::VectorView<::fidl::StringView>> val) {
     StrictUnion result;
@@ -744,34 +686,9 @@ class StrictSimpleXUnion {
     return result;
   }
 
-  static StrictSimpleXUnion WithI(::fidl::ObjectView<int32_t> val) {
-    StrictSimpleXUnion result;
-    result.set_i(val);
-    return result;
-  }
-
-  template <typename... Args>
-  static StrictSimpleXUnion WithI(::fidl::AnyArena& allocator, Args&&... args) {
-    StrictSimpleXUnion result;
-    result.set_i(
-        ::fidl::ObjectView<int32_t>(allocator, std::forward<Args>(args)...));
-    return result;
-  }
-
   void set_i(int32_t elem) {
     ordinal_ = ::fidl_test_union::wire::StrictSimpleXUnion::Ordinal::kI;
     envelope_.As<int32_t>().set_data(std::move(elem));
-  }
-
-  void set_i(::fidl::ObjectView<int32_t> elem) {
-    ordinal_ = ::fidl_test_union::wire::StrictSimpleXUnion::Ordinal::kI;
-    envelope_.As<int32_t>().set_data(std::move(elem));
-  }
-
-  template <typename... Args>
-  void set_i(::fidl::AnyArena& allocator, Args&&... args) {
-    ordinal_ = ::fidl_test_union::wire::StrictSimpleXUnion::Ordinal::kI;
-    set_i(::fidl::ObjectView<int32_t>(allocator, std::forward<Args>(args)...));
   }
 
   int32_t& mutable_i() {
@@ -794,34 +711,9 @@ class StrictSimpleXUnion {
     return result;
   }
 
-  static StrictSimpleXUnion WithF(::fidl::ObjectView<float> val) {
-    StrictSimpleXUnion result;
-    result.set_f(val);
-    return result;
-  }
-
-  template <typename... Args>
-  static StrictSimpleXUnion WithF(::fidl::AnyArena& allocator, Args&&... args) {
-    StrictSimpleXUnion result;
-    result.set_f(
-        ::fidl::ObjectView<float>(allocator, std::forward<Args>(args)...));
-    return result;
-  }
-
   void set_f(float elem) {
     ordinal_ = ::fidl_test_union::wire::StrictSimpleXUnion::Ordinal::kF;
     envelope_.As<float>().set_data(std::move(elem));
-  }
-
-  void set_f(::fidl::ObjectView<float> elem) {
-    ordinal_ = ::fidl_test_union::wire::StrictSimpleXUnion::Ordinal::kF;
-    envelope_.As<float>().set_data(std::move(elem));
-  }
-
-  template <typename... Args>
-  void set_f(::fidl::AnyArena& allocator, Args&&... args) {
-    ordinal_ = ::fidl_test_union::wire::StrictSimpleXUnion::Ordinal::kF;
-    set_f(::fidl::ObjectView<float>(allocator, std::forward<Args>(args)...));
   }
 
   float& mutable_f() {
@@ -838,7 +730,6 @@ class StrictSimpleXUnion {
   bool is_s() const {
     return ordinal_ == ::fidl_test_union::wire::StrictSimpleXUnion::Ordinal::kS;
   }
-
   static StrictSimpleXUnion WithS(::fidl::ObjectView<::fidl::StringView> val) {
     StrictSimpleXUnion result;
     result.set_s(val);
@@ -927,7 +818,6 @@ class StrictFoo {
   bool is_s() const {
     return ordinal_ == ::fidl_test_union::wire::StrictFoo::Ordinal::kS;
   }
-
   static StrictFoo WithS(::fidl::ObjectView<::fidl::StringView> val) {
     StrictFoo result;
     result.set_s(val);
@@ -972,34 +862,9 @@ class StrictFoo {
     return result;
   }
 
-  static StrictFoo WithI(::fidl::ObjectView<int32_t> val) {
-    StrictFoo result;
-    result.set_i(val);
-    return result;
-  }
-
-  template <typename... Args>
-  static StrictFoo WithI(::fidl::AnyArena& allocator, Args&&... args) {
-    StrictFoo result;
-    result.set_i(
-        ::fidl::ObjectView<int32_t>(allocator, std::forward<Args>(args)...));
-    return result;
-  }
-
   void set_i(int32_t elem) {
     ordinal_ = ::fidl_test_union::wire::StrictFoo::Ordinal::kI;
     envelope_.As<int32_t>().set_data(std::move(elem));
-  }
-
-  void set_i(::fidl::ObjectView<int32_t> elem) {
-    ordinal_ = ::fidl_test_union::wire::StrictFoo::Ordinal::kI;
-    envelope_.As<int32_t>().set_data(std::move(elem));
-  }
-
-  template <typename... Args>
-  void set_i(::fidl::AnyArena& allocator, Args&&... args) {
-    ordinal_ = ::fidl_test_union::wire::StrictFoo::Ordinal::kI;
-    set_i(::fidl::ObjectView<int32_t>(allocator, std::forward<Args>(args)...));
   }
 
   int32_t& mutable_i() {
@@ -1061,7 +926,6 @@ class StrictBoundedXUnion {
     return ordinal_ ==
            ::fidl_test_union::wire::StrictBoundedXUnion::Ordinal::kV;
   }
-
   static StrictBoundedXUnion WithV(
       ::fidl::ObjectView<::fidl::VectorView<uint8_t>> val) {
     StrictBoundedXUnion result;
@@ -1159,36 +1023,9 @@ class ReverseOrdinalUnion {
     return result;
   }
 
-  static ReverseOrdinalUnion WithSecond(::fidl::ObjectView<uint32_t> val) {
-    ReverseOrdinalUnion result;
-    result.set_second(val);
-    return result;
-  }
-
-  template <typename... Args>
-  static ReverseOrdinalUnion WithSecond(::fidl::AnyArena& allocator,
-                                        Args&&... args) {
-    ReverseOrdinalUnion result;
-    result.set_second(
-        ::fidl::ObjectView<uint32_t>(allocator, std::forward<Args>(args)...));
-    return result;
-  }
-
   void set_second(uint32_t elem) {
     ordinal_ = ::fidl_test_union::wire::ReverseOrdinalUnion::Ordinal::kSecond;
     envelope_.As<uint32_t>().set_data(std::move(elem));
-  }
-
-  void set_second(::fidl::ObjectView<uint32_t> elem) {
-    ordinal_ = ::fidl_test_union::wire::ReverseOrdinalUnion::Ordinal::kSecond;
-    envelope_.As<uint32_t>().set_data(std::move(elem));
-  }
-
-  template <typename... Args>
-  void set_second(::fidl::AnyArena& allocator, Args&&... args) {
-    ordinal_ = ::fidl_test_union::wire::ReverseOrdinalUnion::Ordinal::kSecond;
-    set_second(
-        ::fidl::ObjectView<uint32_t>(allocator, std::forward<Args>(args)...));
   }
 
   uint32_t& mutable_second() {
@@ -1212,36 +1049,9 @@ class ReverseOrdinalUnion {
     return result;
   }
 
-  static ReverseOrdinalUnion WithFirst(::fidl::ObjectView<uint32_t> val) {
-    ReverseOrdinalUnion result;
-    result.set_first(val);
-    return result;
-  }
-
-  template <typename... Args>
-  static ReverseOrdinalUnion WithFirst(::fidl::AnyArena& allocator,
-                                       Args&&... args) {
-    ReverseOrdinalUnion result;
-    result.set_first(
-        ::fidl::ObjectView<uint32_t>(allocator, std::forward<Args>(args)...));
-    return result;
-  }
-
   void set_first(uint32_t elem) {
     ordinal_ = ::fidl_test_union::wire::ReverseOrdinalUnion::Ordinal::kFirst;
     envelope_.As<uint32_t>().set_data(std::move(elem));
-  }
-
-  void set_first(::fidl::ObjectView<uint32_t> elem) {
-    ordinal_ = ::fidl_test_union::wire::ReverseOrdinalUnion::Ordinal::kFirst;
-    envelope_.As<uint32_t>().set_data(std::move(elem));
-  }
-
-  template <typename... Args>
-  void set_first(::fidl::AnyArena& allocator, Args&&... args) {
-    ordinal_ = ::fidl_test_union::wire::ReverseOrdinalUnion::Ordinal::kFirst;
-    set_first(
-        ::fidl::ObjectView<uint32_t>(allocator, std::forward<Args>(args)...));
   }
 
   uint32_t& mutable_first() {
@@ -1307,7 +1117,6 @@ class StrictPizzaOrPasta {
     return ordinal_ ==
            ::fidl_test_union::wire::StrictPizzaOrPasta::Ordinal::kPizza;
   }
-
   static StrictPizzaOrPasta WithPizza(
       ::fidl::ObjectView<::fidl_test_union::wire::Pizza> val) {
     StrictPizzaOrPasta result;
@@ -1351,7 +1160,6 @@ class StrictPizzaOrPasta {
     return ordinal_ ==
            ::fidl_test_union::wire::StrictPizzaOrPasta::Ordinal::kPasta;
   }
-
   static StrictPizzaOrPasta WithPasta(
       ::fidl::ObjectView<::fidl_test_union::wire::Pasta> val) {
     StrictPizzaOrPasta result;
@@ -1441,7 +1249,6 @@ class PizzaOrPasta {
   bool is_pizza() const {
     return ordinal_ == ::fidl_test_union::wire::PizzaOrPasta::Ordinal::kPizza;
   }
-
   static PizzaOrPasta WithPizza(
       ::fidl::ObjectView<::fidl_test_union::wire::Pizza> val) {
     PizzaOrPasta result;
@@ -1483,7 +1290,6 @@ class PizzaOrPasta {
   bool is_pasta() const {
     return ordinal_ == ::fidl_test_union::wire::PizzaOrPasta::Ordinal::kPasta;
   }
-
   static PizzaOrPasta WithPasta(
       ::fidl::ObjectView<::fidl_test_union::wire::Pasta> val) {
     PizzaOrPasta result;
@@ -1574,7 +1380,6 @@ class FlexiblePizzaOrPasta {
     return ordinal_ ==
            ::fidl_test_union::wire::FlexiblePizzaOrPasta::Ordinal::kPizza;
   }
-
   static FlexiblePizzaOrPasta WithPizza(
       ::fidl::ObjectView<::fidl_test_union::wire::Pizza> val) {
     FlexiblePizzaOrPasta result;
@@ -1618,7 +1423,6 @@ class FlexiblePizzaOrPasta {
     return ordinal_ ==
            ::fidl_test_union::wire::FlexiblePizzaOrPasta::Ordinal::kPasta;
   }
-
   static FlexiblePizzaOrPasta WithPasta(
       ::fidl::ObjectView<::fidl_test_union::wire::Pasta> val) {
     FlexiblePizzaOrPasta result;
@@ -1707,7 +1511,6 @@ class ExplicitPizzaOrPasta {
     return ordinal_ ==
            ::fidl_test_union::wire::ExplicitPizzaOrPasta::Ordinal::kPizza;
   }
-
   static ExplicitPizzaOrPasta WithPizza(
       ::fidl::ObjectView<::fidl_test_union::wire::Pizza> val) {
     ExplicitPizzaOrPasta result;
@@ -1751,7 +1554,6 @@ class ExplicitPizzaOrPasta {
     return ordinal_ ==
            ::fidl_test_union::wire::ExplicitPizzaOrPasta::Ordinal::kPasta;
   }
-
   static ExplicitPizzaOrPasta WithPasta(
       ::fidl::ObjectView<::fidl_test_union::wire::Pasta> val) {
     ExplicitPizzaOrPasta result;
@@ -1843,7 +1645,6 @@ class OlderSimpleUnion {
   bool is_i() const {
     return ordinal_ == ::fidl_test_union::wire::OlderSimpleUnion::Ordinal::kI;
   }
-
   static OlderSimpleUnion WithI(::fidl::ObjectView<int64_t> val) {
     OlderSimpleUnion result;
     result.set_i(val);
@@ -1889,34 +1690,9 @@ class OlderSimpleUnion {
     return result;
   }
 
-  static OlderSimpleUnion WithF(::fidl::ObjectView<float> val) {
-    OlderSimpleUnion result;
-    result.set_f(val);
-    return result;
-  }
-
-  template <typename... Args>
-  static OlderSimpleUnion WithF(::fidl::AnyArena& allocator, Args&&... args) {
-    OlderSimpleUnion result;
-    result.set_f(
-        ::fidl::ObjectView<float>(allocator, std::forward<Args>(args)...));
-    return result;
-  }
-
   void set_f(float elem) {
     ordinal_ = ::fidl_test_union::wire::OlderSimpleUnion::Ordinal::kF;
     envelope_.As<float>().set_data(std::move(elem));
-  }
-
-  void set_f(::fidl::ObjectView<float> elem) {
-    ordinal_ = ::fidl_test_union::wire::OlderSimpleUnion::Ordinal::kF;
-    envelope_.As<float>().set_data(std::move(elem));
-  }
-
-  template <typename... Args>
-  void set_f(::fidl::AnyArena& allocator, Args&&... args) {
-    ordinal_ = ::fidl_test_union::wire::OlderSimpleUnion::Ordinal::kF;
-    set_f(::fidl::ObjectView<float>(allocator, std::forward<Args>(args)...));
   }
 
   float& mutable_f() {
@@ -1979,7 +1755,6 @@ class NewerSimpleUnion {
   bool is_i() const {
     return ordinal_ == ::fidl_test_union::wire::NewerSimpleUnion::Ordinal::kI;
   }
-
   static NewerSimpleUnion WithI(::fidl::ObjectView<int64_t> val) {
     NewerSimpleUnion result;
     result.set_i(val);
@@ -2019,7 +1794,6 @@ class NewerSimpleUnion {
   bool is_s() const {
     return ordinal_ == ::fidl_test_union::wire::NewerSimpleUnion::Ordinal::kS;
   }
-
   static NewerSimpleUnion WithS(::fidl::ObjectView<::fidl::StringView> val) {
     NewerSimpleUnion result;
     result.set_s(val);
@@ -2060,7 +1834,6 @@ class NewerSimpleUnion {
   bool is_v() const {
     return ordinal_ == ::fidl_test_union::wire::NewerSimpleUnion::Ordinal::kV;
   }
-
   static NewerSimpleUnion WithV(
       ::fidl::ObjectView<::fidl::VectorView<::fidl::StringView>> val) {
     NewerSimpleUnion result;
@@ -2156,36 +1929,9 @@ class FlexibleUnion {
     return result;
   }
 
-  static FlexibleUnion WithPrimitive(::fidl::ObjectView<int32_t> val) {
-    FlexibleUnion result;
-    result.set_primitive(val);
-    return result;
-  }
-
-  template <typename... Args>
-  static FlexibleUnion WithPrimitive(::fidl::AnyArena& allocator,
-                                     Args&&... args) {
-    FlexibleUnion result;
-    result.set_primitive(
-        ::fidl::ObjectView<int32_t>(allocator, std::forward<Args>(args)...));
-    return result;
-  }
-
   void set_primitive(int32_t elem) {
     ordinal_ = ::fidl_test_union::wire::FlexibleUnion::Ordinal::kPrimitive;
     envelope_.As<int32_t>().set_data(std::move(elem));
-  }
-
-  void set_primitive(::fidl::ObjectView<int32_t> elem) {
-    ordinal_ = ::fidl_test_union::wire::FlexibleUnion::Ordinal::kPrimitive;
-    envelope_.As<int32_t>().set_data(std::move(elem));
-  }
-
-  template <typename... Args>
-  void set_primitive(::fidl::AnyArena& allocator, Args&&... args) {
-    ordinal_ = ::fidl_test_union::wire::FlexibleUnion::Ordinal::kPrimitive;
-    set_primitive(
-        ::fidl::ObjectView<int32_t>(allocator, std::forward<Args>(args)...));
   }
 
   int32_t& mutable_primitive() {
@@ -2203,7 +1949,6 @@ class FlexibleUnion {
     return ordinal_ == ::fidl_test_union::wire::FlexibleUnion::Ordinal::
                            kStringNeedsConstructor;
   }
-
   static FlexibleUnion WithStringNeedsConstructor(
       ::fidl::ObjectView<::fidl::StringView> val) {
     FlexibleUnion result;
@@ -2251,7 +1996,6 @@ class FlexibleUnion {
     return ordinal_ == ::fidl_test_union::wire::FlexibleUnion::Ordinal::
                            kVectorStringAlsoNeedsConstructor;
   }
-
   static FlexibleUnion WithVectorStringAlsoNeedsConstructor(
       ::fidl::ObjectView<::fidl::VectorView<::fidl::StringView>> val) {
     FlexibleUnion result;
@@ -2348,7 +2092,6 @@ class FlexibleFoo {
   bool is_s() const {
     return ordinal_ == ::fidl_test_union::wire::FlexibleFoo::Ordinal::kS;
   }
-
   static FlexibleFoo WithS(::fidl::ObjectView<::fidl::StringView> val) {
     FlexibleFoo result;
     result.set_s(val);
@@ -2393,34 +2136,9 @@ class FlexibleFoo {
     return result;
   }
 
-  static FlexibleFoo WithI(::fidl::ObjectView<int32_t> val) {
-    FlexibleFoo result;
-    result.set_i(val);
-    return result;
-  }
-
-  template <typename... Args>
-  static FlexibleFoo WithI(::fidl::AnyArena& allocator, Args&&... args) {
-    FlexibleFoo result;
-    result.set_i(
-        ::fidl::ObjectView<int32_t>(allocator, std::forward<Args>(args)...));
-    return result;
-  }
-
   void set_i(int32_t elem) {
     ordinal_ = ::fidl_test_union::wire::FlexibleFoo::Ordinal::kI;
     envelope_.As<int32_t>().set_data(std::move(elem));
-  }
-
-  void set_i(::fidl::ObjectView<int32_t> elem) {
-    ordinal_ = ::fidl_test_union::wire::FlexibleFoo::Ordinal::kI;
-    envelope_.As<int32_t>().set_data(std::move(elem));
-  }
-
-  template <typename... Args>
-  void set_i(::fidl::AnyArena& allocator, Args&&... args) {
-    ordinal_ = ::fidl_test_union::wire::FlexibleFoo::Ordinal::kI;
-    set_i(::fidl::ObjectView<int32_t>(allocator, std::forward<Args>(args)...));
   }
 
   int32_t& mutable_i() {
@@ -2484,39 +2202,10 @@ class FieldCollision {
     return result;
   }
 
-  static FieldCollision WithFieldCollisionTag(::fidl::ObjectView<int32_t> val) {
-    FieldCollision result;
-    result.set_field_collision_tag(val);
-    return result;
-  }
-
-  template <typename... Args>
-  static FieldCollision WithFieldCollisionTag(::fidl::AnyArena& allocator,
-                                              Args&&... args) {
-    FieldCollision result;
-    result.set_field_collision_tag(
-        ::fidl::ObjectView<int32_t>(allocator, std::forward<Args>(args)...));
-    return result;
-  }
-
   void set_field_collision_tag(int32_t elem) {
     ordinal_ =
         ::fidl_test_union::wire::FieldCollision::Ordinal::kFieldCollisionTag;
     envelope_.As<int32_t>().set_data(std::move(elem));
-  }
-
-  void set_field_collision_tag(::fidl::ObjectView<int32_t> elem) {
-    ordinal_ =
-        ::fidl_test_union::wire::FieldCollision::Ordinal::kFieldCollisionTag;
-    envelope_.As<int32_t>().set_data(std::move(elem));
-  }
-
-  template <typename... Args>
-  void set_field_collision_tag(::fidl::AnyArena& allocator, Args&&... args) {
-    ordinal_ =
-        ::fidl_test_union::wire::FieldCollision::Ordinal::kFieldCollisionTag;
-    set_field_collision_tag(
-        ::fidl::ObjectView<int32_t>(allocator, std::forward<Args>(args)...));
   }
 
   int32_t& mutable_field_collision_tag() {
@@ -2582,7 +2271,6 @@ class ExplicitXUnion {
   bool is_i() const {
     return ordinal_ == ::fidl_test_union::wire::ExplicitXUnion::Ordinal::kI;
   }
-
   static ExplicitXUnion WithI(::fidl::ObjectView<int64_t> val) {
     ExplicitXUnion result;
     result.set_i(val);
@@ -2626,34 +2314,9 @@ class ExplicitXUnion {
     return result;
   }
 
-  static ExplicitXUnion WithF(::fidl::ObjectView<float> val) {
-    ExplicitXUnion result;
-    result.set_f(val);
-    return result;
-  }
-
-  template <typename... Args>
-  static ExplicitXUnion WithF(::fidl::AnyArena& allocator, Args&&... args) {
-    ExplicitXUnion result;
-    result.set_f(
-        ::fidl::ObjectView<float>(allocator, std::forward<Args>(args)...));
-    return result;
-  }
-
   void set_f(float elem) {
     ordinal_ = ::fidl_test_union::wire::ExplicitXUnion::Ordinal::kF;
     envelope_.As<float>().set_data(std::move(elem));
-  }
-
-  void set_f(::fidl::ObjectView<float> elem) {
-    ordinal_ = ::fidl_test_union::wire::ExplicitXUnion::Ordinal::kF;
-    envelope_.As<float>().set_data(std::move(elem));
-  }
-
-  template <typename... Args>
-  void set_f(::fidl::AnyArena& allocator, Args&&... args) {
-    ordinal_ = ::fidl_test_union::wire::ExplicitXUnion::Ordinal::kF;
-    set_f(::fidl::ObjectView<float>(allocator, std::forward<Args>(args)...));
   }
 
   float& mutable_f() {
@@ -2718,36 +2381,9 @@ class ExplicitUnion {
     return result;
   }
 
-  static ExplicitUnion WithPrimitive(::fidl::ObjectView<int32_t> val) {
-    ExplicitUnion result;
-    result.set_primitive(val);
-    return result;
-  }
-
-  template <typename... Args>
-  static ExplicitUnion WithPrimitive(::fidl::AnyArena& allocator,
-                                     Args&&... args) {
-    ExplicitUnion result;
-    result.set_primitive(
-        ::fidl::ObjectView<int32_t>(allocator, std::forward<Args>(args)...));
-    return result;
-  }
-
   void set_primitive(int32_t elem) {
     ordinal_ = ::fidl_test_union::wire::ExplicitUnion::Ordinal::kPrimitive;
     envelope_.As<int32_t>().set_data(std::move(elem));
-  }
-
-  void set_primitive(::fidl::ObjectView<int32_t> elem) {
-    ordinal_ = ::fidl_test_union::wire::ExplicitUnion::Ordinal::kPrimitive;
-    envelope_.As<int32_t>().set_data(std::move(elem));
-  }
-
-  template <typename... Args>
-  void set_primitive(::fidl::AnyArena& allocator, Args&&... args) {
-    ordinal_ = ::fidl_test_union::wire::ExplicitUnion::Ordinal::kPrimitive;
-    set_primitive(
-        ::fidl::ObjectView<int32_t>(allocator, std::forward<Args>(args)...));
   }
 
   int32_t& mutable_primitive() {
@@ -2765,7 +2401,6 @@ class ExplicitUnion {
     return ordinal_ == ::fidl_test_union::wire::ExplicitUnion::Ordinal::
                            kStringNeedsConstructor;
   }
-
   static ExplicitUnion WithStringNeedsConstructor(
       ::fidl::ObjectView<::fidl::StringView> val) {
     ExplicitUnion result;
@@ -2859,7 +2494,6 @@ class ExplicitStrictFoo {
   bool is_s() const {
     return ordinal_ == ::fidl_test_union::wire::ExplicitStrictFoo::Ordinal::kS;
   }
-
   static ExplicitStrictFoo WithS(::fidl::ObjectView<::fidl::StringView> val) {
     ExplicitStrictFoo result;
     result.set_s(val);
@@ -2906,34 +2540,9 @@ class ExplicitStrictFoo {
     return result;
   }
 
-  static ExplicitStrictFoo WithI(::fidl::ObjectView<int32_t> val) {
-    ExplicitStrictFoo result;
-    result.set_i(val);
-    return result;
-  }
-
-  template <typename... Args>
-  static ExplicitStrictFoo WithI(::fidl::AnyArena& allocator, Args&&... args) {
-    ExplicitStrictFoo result;
-    result.set_i(
-        ::fidl::ObjectView<int32_t>(allocator, std::forward<Args>(args)...));
-    return result;
-  }
-
   void set_i(int32_t elem) {
     ordinal_ = ::fidl_test_union::wire::ExplicitStrictFoo::Ordinal::kI;
     envelope_.As<int32_t>().set_data(std::move(elem));
-  }
-
-  void set_i(::fidl::ObjectView<int32_t> elem) {
-    ordinal_ = ::fidl_test_union::wire::ExplicitStrictFoo::Ordinal::kI;
-    envelope_.As<int32_t>().set_data(std::move(elem));
-  }
-
-  template <typename... Args>
-  void set_i(::fidl::AnyArena& allocator, Args&&... args) {
-    ordinal_ = ::fidl_test_union::wire::ExplicitStrictFoo::Ordinal::kI;
-    set_i(::fidl::ObjectView<int32_t>(allocator, std::forward<Args>(args)...));
   }
 
   int32_t& mutable_i() {
@@ -2998,7 +2607,6 @@ class ExplicitFoo {
   bool is_s() const {
     return ordinal_ == ::fidl_test_union::wire::ExplicitFoo::Ordinal::kS;
   }
-
   static ExplicitFoo WithS(::fidl::ObjectView<::fidl::StringView> val) {
     ExplicitFoo result;
     result.set_s(val);
@@ -3043,34 +2651,9 @@ class ExplicitFoo {
     return result;
   }
 
-  static ExplicitFoo WithI(::fidl::ObjectView<int32_t> val) {
-    ExplicitFoo result;
-    result.set_i(val);
-    return result;
-  }
-
-  template <typename... Args>
-  static ExplicitFoo WithI(::fidl::AnyArena& allocator, Args&&... args) {
-    ExplicitFoo result;
-    result.set_i(
-        ::fidl::ObjectView<int32_t>(allocator, std::forward<Args>(args)...));
-    return result;
-  }
-
   void set_i(int32_t elem) {
     ordinal_ = ::fidl_test_union::wire::ExplicitFoo::Ordinal::kI;
     envelope_.As<int32_t>().set_data(std::move(elem));
-  }
-
-  void set_i(::fidl::ObjectView<int32_t> elem) {
-    ordinal_ = ::fidl_test_union::wire::ExplicitFoo::Ordinal::kI;
-    envelope_.As<int32_t>().set_data(std::move(elem));
-  }
-
-  template <typename... Args>
-  void set_i(::fidl::AnyArena& allocator, Args&&... args) {
-    ordinal_ = ::fidl_test_union::wire::ExplicitFoo::Ordinal::kI;
-    set_i(::fidl::ObjectView<int32_t>(allocator, std::forward<Args>(args)...));
   }
 
   int32_t& mutable_i() {
@@ -3139,40 +2722,10 @@ class XUnionContainingEmptyStruct {
     return result;
   }
 
-  static XUnionContainingEmptyStruct WithEmpty(
-      ::fidl::ObjectView<::fidl_test_union::wire::Empty> val) {
-    XUnionContainingEmptyStruct result;
-    result.set_empty(val);
-    return result;
-  }
-
-  template <typename... Args>
-  static XUnionContainingEmptyStruct WithEmpty(::fidl::AnyArena& allocator,
-                                               Args&&... args) {
-    XUnionContainingEmptyStruct result;
-    result.set_empty(::fidl::ObjectView<::fidl_test_union::wire::Empty>(
-        allocator, std::forward<Args>(args)...));
-    return result;
-  }
-
   void set_empty(::fidl_test_union::wire::Empty elem) {
     ordinal_ =
         ::fidl_test_union::wire::XUnionContainingEmptyStruct::Ordinal::kEmpty;
     envelope_.As<::fidl_test_union::wire::Empty>().set_data(std::move(elem));
-  }
-
-  void set_empty(::fidl::ObjectView<::fidl_test_union::wire::Empty> elem) {
-    ordinal_ =
-        ::fidl_test_union::wire::XUnionContainingEmptyStruct::Ordinal::kEmpty;
-    envelope_.As<::fidl_test_union::wire::Empty>().set_data(std::move(elem));
-  }
-
-  template <typename... Args>
-  void set_empty(::fidl::AnyArena& allocator, Args&&... args) {
-    ordinal_ =
-        ::fidl_test_union::wire::XUnionContainingEmptyStruct::Ordinal::kEmpty;
-    set_empty(::fidl::ObjectView<::fidl_test_union::wire::Empty>(
-        allocator, std::forward<Args>(args)...));
   }
 
   ::fidl_test_union::wire::Empty& mutable_empty() {

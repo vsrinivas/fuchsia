@@ -73,7 +73,6 @@ class ExampleFooResult {
     return ordinal_ ==
            ::fidl_test_error::wire::ExampleFooResult::Ordinal::kResponse;
   }
-
   static ExampleFooResult WithResponse(
       ::fidl::ObjectView<::fidl_test_error::wire::ExampleFooResponse> val) {
     ExampleFooResult result;
@@ -128,35 +127,9 @@ class ExampleFooResult {
     return result;
   }
 
-  static ExampleFooResult WithErr(::fidl::ObjectView<uint32_t> val) {
-    ExampleFooResult result;
-    result.set_err(val);
-    return result;
-  }
-
-  template <typename... Args>
-  static ExampleFooResult WithErr(::fidl::AnyArena& allocator, Args&&... args) {
-    ExampleFooResult result;
-    result.set_err(
-        ::fidl::ObjectView<uint32_t>(allocator, std::forward<Args>(args)...));
-    return result;
-  }
-
   void set_err(uint32_t elem) {
     ordinal_ = ::fidl_test_error::wire::ExampleFooResult::Ordinal::kErr;
     envelope_.As<uint32_t>().set_data(std::move(elem));
-  }
-
-  void set_err(::fidl::ObjectView<uint32_t> elem) {
-    ordinal_ = ::fidl_test_error::wire::ExampleFooResult::Ordinal::kErr;
-    envelope_.As<uint32_t>().set_data(std::move(elem));
-  }
-
-  template <typename... Args>
-  void set_err(::fidl::AnyArena& allocator, Args&&... args) {
-    ordinal_ = ::fidl_test_error::wire::ExampleFooResult::Ordinal::kErr;
-    set_err(
-        ::fidl::ObjectView<uint32_t>(allocator, std::forward<Args>(args)...));
   }
 
   uint32_t& mutable_err() {

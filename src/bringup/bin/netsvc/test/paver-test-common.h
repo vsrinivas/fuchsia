@@ -253,12 +253,9 @@ class FakePaver : public fidl::WireServer<fuchsia_paver::Paver>,
     // Reply varies depending on whether we support |type| or not.
     if (supported_firmware_type_ == std::string_view(request->type.data(), request->type.size())) {
       auto status = request->payload.size == expected_payload_size_ ? ZX_OK : ZX_ERR_INVALID_ARGS;
-      completer.Reply(
-          WriteFirmwareResult::WithStatus(fidl::ObjectView<zx_status_t>::FromExternal(&status)));
+      completer.Reply(WriteFirmwareResult::WithStatus(status));
     } else {
-      bool unsupported = true;
-      completer.Reply(
-          WriteFirmwareResult::WithUnsupported(fidl::ObjectView<bool>::FromExternal(&unsupported)));
+      completer.Reply(WriteFirmwareResult::WithUnsupported(true));
     }
   }
 

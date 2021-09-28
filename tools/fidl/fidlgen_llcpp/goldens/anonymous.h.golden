@@ -639,36 +639,9 @@ class UnionMember {
     return result;
   }
 
-  static UnionMember WithUnionData(::fidl::ObjectView<uint8_t> val) {
-    UnionMember result;
-    result.set_union_data(val);
-    return result;
-  }
-
-  template <typename... Args>
-  static UnionMember WithUnionData(::fidl::AnyArena& allocator,
-                                   Args&&... args) {
-    UnionMember result;
-    result.set_union_data(
-        ::fidl::ObjectView<uint8_t>(allocator, std::forward<Args>(args)...));
-    return result;
-  }
-
   void set_union_data(uint8_t elem) {
     ordinal_ = ::fidl_test_anonymous::wire::UnionMember::Ordinal::kUnionData;
     envelope_.As<uint8_t>().set_data(std::move(elem));
-  }
-
-  void set_union_data(::fidl::ObjectView<uint8_t> elem) {
-    ordinal_ = ::fidl_test_anonymous::wire::UnionMember::Ordinal::kUnionData;
-    envelope_.As<uint8_t>().set_data(std::move(elem));
-  }
-
-  template <typename... Args>
-  void set_union_data(::fidl::AnyArena& allocator, Args&&... args) {
-    ordinal_ = ::fidl_test_anonymous::wire::UnionMember::Ordinal::kUnionData;
-    set_union_data(
-        ::fidl::ObjectView<uint8_t>(allocator, std::forward<Args>(args)...));
   }
 
   uint8_t& mutable_union_data() {
@@ -1291,7 +1264,6 @@ class Expression {
   bool is_value() const {
     return ordinal_ == ::fidl_test_anonymous::wire::Expression::Ordinal::kValue;
   }
-
   static Expression WithValue(::fidl::ObjectView<uint64_t> val) {
     Expression result;
     result.set_value(val);
@@ -1332,7 +1304,6 @@ class Expression {
   bool is_bin_op() const {
     return ordinal_ == ::fidl_test_anonymous::wire::Expression::Ordinal::kBinOp;
   }
-
   static Expression WithBinOp(
       ::fidl::ObjectView<::fidl_test_anonymous::wire::OverrideTest> val) {
     Expression result;
@@ -1378,7 +1349,6 @@ class Expression {
     return ordinal_ == ::fidl_test_anonymous::wire::Expression::Ordinal::
                            kFunctionApplication;
   }
-
   static Expression WithFunctionApplication(
       ::fidl::ObjectView<::fidl_test_anonymous::wire::FunctionApplication>
           val) {
@@ -1495,50 +1465,12 @@ class SomeProtocolSomeMethodResult {
     return result;
   }
 
-  static SomeProtocolSomeMethodResult WithResponse(
-      ::fidl::ObjectView<
-          ::fidl_test_anonymous::wire::SomeProtocolSomeMethodResponse>
-          val) {
-    SomeProtocolSomeMethodResult result;
-    result.set_response(val);
-    return result;
-  }
-
-  template <typename... Args>
-  static SomeProtocolSomeMethodResult WithResponse(::fidl::AnyArena& allocator,
-                                                   Args&&... args) {
-    SomeProtocolSomeMethodResult result;
-    result.set_response(
-        ::fidl::ObjectView<
-            ::fidl_test_anonymous::wire::SomeProtocolSomeMethodResponse>(
-            allocator, std::forward<Args>(args)...));
-    return result;
-  }
-
   void set_response(
       ::fidl_test_anonymous::wire::SomeProtocolSomeMethodResponse elem) {
     ordinal_ = ::fidl_test_anonymous::wire::SomeProtocolSomeMethodResult::
         Ordinal::kResponse;
     envelope_.As<::fidl_test_anonymous::wire::SomeProtocolSomeMethodResponse>()
         .set_data(std::move(elem));
-  }
-
-  void set_response(::fidl::ObjectView<
-                    ::fidl_test_anonymous::wire::SomeProtocolSomeMethodResponse>
-                        elem) {
-    ordinal_ = ::fidl_test_anonymous::wire::SomeProtocolSomeMethodResult::
-        Ordinal::kResponse;
-    envelope_.As<::fidl_test_anonymous::wire::SomeProtocolSomeMethodResponse>()
-        .set_data(std::move(elem));
-  }
-
-  template <typename... Args>
-  void set_response(::fidl::AnyArena& allocator, Args&&... args) {
-    ordinal_ = ::fidl_test_anonymous::wire::SomeProtocolSomeMethodResult::
-        Ordinal::kResponse;
-    set_response(::fidl::ObjectView<
-                 ::fidl_test_anonymous::wire::SomeProtocolSomeMethodResponse>(
-        allocator, std::forward<Args>(args)...));
   }
 
   ::fidl_test_anonymous::wire::SomeProtocolSomeMethodResponse&
@@ -1569,48 +1501,11 @@ class SomeProtocolSomeMethodResult {
     return result;
   }
 
-  static SomeProtocolSomeMethodResult WithErr(
-      ::fidl::ObjectView<
-          ::fidl_test_anonymous::wire::SomeProtocolSomeMethodError>
-          val) {
-    SomeProtocolSomeMethodResult result;
-    result.set_err(val);
-    return result;
-  }
-
-  template <typename... Args>
-  static SomeProtocolSomeMethodResult WithErr(::fidl::AnyArena& allocator,
-                                              Args&&... args) {
-    SomeProtocolSomeMethodResult result;
-    result.set_err(::fidl::ObjectView<
-                   ::fidl_test_anonymous::wire::SomeProtocolSomeMethodError>(
-        allocator, std::forward<Args>(args)...));
-    return result;
-  }
-
   void set_err(::fidl_test_anonymous::wire::SomeProtocolSomeMethodError elem) {
     ordinal_ = ::fidl_test_anonymous::wire::SomeProtocolSomeMethodResult::
         Ordinal::kErr;
     envelope_.As<::fidl_test_anonymous::wire::SomeProtocolSomeMethodError>()
         .set_data(std::move(elem));
-  }
-
-  void set_err(::fidl::ObjectView<
-               ::fidl_test_anonymous::wire::SomeProtocolSomeMethodError>
-                   elem) {
-    ordinal_ = ::fidl_test_anonymous::wire::SomeProtocolSomeMethodResult::
-        Ordinal::kErr;
-    envelope_.As<::fidl_test_anonymous::wire::SomeProtocolSomeMethodError>()
-        .set_data(std::move(elem));
-  }
-
-  template <typename... Args>
-  void set_err(::fidl::AnyArena& allocator, Args&&... args) {
-    ordinal_ = ::fidl_test_anonymous::wire::SomeProtocolSomeMethodResult::
-        Ordinal::kErr;
-    set_err(::fidl::ObjectView<
-            ::fidl_test_anonymous::wire::SomeProtocolSomeMethodError>(
-        allocator, std::forward<Args>(args)...));
   }
 
   ::fidl_test_anonymous::wire::SomeProtocolSomeMethodError& mutable_err() {

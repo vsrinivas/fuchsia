@@ -80,9 +80,8 @@ class TestMounter : public FilesystemMounter {
     }
 
     void Describe(DescribeRequestView request, DescribeCompleter::Sync& completer) override {
-      fuchsia_io::wire::DirectoryObject dir;
-      completer.Reply(fuchsia_io::wire::NodeInfo::WithDirectory(
-          fidl::ObjectView<fuchsia_io::wire::DirectoryObject>::FromExternal(&dir)));
+      completer.Reply(
+          fuchsia_io::wire::NodeInfo::WithDirectory(fuchsia_io::wire::DirectoryObject()));
     }
   };
 

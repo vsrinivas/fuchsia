@@ -729,41 +729,12 @@ class StrictUnion {
     return result;
   }
 
-  static StrictUnion WithField(::fidl::ObjectView<int32_t> val) {
-    StrictUnion result;
-    result.set_field(val);
-    return result;
-  }
-
-  template <typename... Args>
-  static StrictUnion WithField(::fidl::AnyArena& allocator, Args&&... args) {
-    StrictUnion result;
-    result.set_field(
-        ::fidl::ObjectView<int32_t>(allocator, std::forward<Args>(args)...));
-    return result;
-  }
-
   /// union member comment #1
   ///
   /// union member comment #3
   void set_field(int32_t elem) {
     ordinal_ = ::fidl_test_doccomments::wire::StrictUnion::Ordinal::kField;
     envelope_.As<int32_t>().set_data(std::move(elem));
-  }
-
-  /// union member comment #1
-  ///
-  /// union member comment #3
-  void set_field(::fidl::ObjectView<int32_t> elem) {
-    ordinal_ = ::fidl_test_doccomments::wire::StrictUnion::Ordinal::kField;
-    envelope_.As<int32_t>().set_data(std::move(elem));
-  }
-
-  template <typename... Args>
-  void set_field(::fidl::AnyArena& allocator, Args&&... args) {
-    ordinal_ = ::fidl_test_doccomments::wire::StrictUnion::Ordinal::kField;
-    set_field(
-        ::fidl::ObjectView<int32_t>(allocator, std::forward<Args>(args)...));
   }
 
   /// union member comment #1
@@ -841,41 +812,12 @@ class FlexibleUnion {
     return result;
   }
 
-  static FlexibleUnion WithField(::fidl::ObjectView<int32_t> val) {
-    FlexibleUnion result;
-    result.set_field(val);
-    return result;
-  }
-
-  template <typename... Args>
-  static FlexibleUnion WithField(::fidl::AnyArena& allocator, Args&&... args) {
-    FlexibleUnion result;
-    result.set_field(
-        ::fidl::ObjectView<int32_t>(allocator, std::forward<Args>(args)...));
-    return result;
-  }
-
   /// union member comment #1
   ///
   /// union member comment #3
   void set_field(int32_t elem) {
     ordinal_ = ::fidl_test_doccomments::wire::FlexibleUnion::Ordinal::kField;
     envelope_.As<int32_t>().set_data(std::move(elem));
-  }
-
-  /// union member comment #1
-  ///
-  /// union member comment #3
-  void set_field(::fidl::ObjectView<int32_t> elem) {
-    ordinal_ = ::fidl_test_doccomments::wire::FlexibleUnion::Ordinal::kField;
-    envelope_.As<int32_t>().set_data(std::move(elem));
-  }
-
-  template <typename... Args>
-  void set_field(::fidl::AnyArena& allocator, Args&&... args) {
-    ordinal_ = ::fidl_test_doccomments::wire::FlexibleUnion::Ordinal::kField;
-    set_field(
-        ::fidl::ObjectView<int32_t>(allocator, std::forward<Args>(args)...));
   }
 
   /// union member comment #1

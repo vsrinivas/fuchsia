@@ -15,13 +15,13 @@ using fuchsia_hardware_registers::wire::Mask;
 template <typename T>
 Mask BuildMask(fidl::AnyArena& allocator, T mask) {
   if constexpr (std::is_same_v<T, uint8_t>) {
-    return Mask::WithR8(allocator, mask);
+    return Mask::WithR8(mask);
   }
   if constexpr (std::is_same_v<T, uint16_t>) {
-    return Mask::WithR16(allocator, mask);
+    return Mask::WithR16(mask);
   }
   if constexpr (std::is_same_v<T, uint32_t>) {
-    return Mask::WithR32(allocator, mask);
+    return Mask::WithR32(mask);
   }
   if constexpr (std::is_same_v<T, uint64_t>) {
     return Mask::WithR64(allocator, mask);

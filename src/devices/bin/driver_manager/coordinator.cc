@@ -1889,14 +1889,14 @@ zx::status<std::vector<fdd::wire::DeviceInfo>> Coordinator::GetDeviceInfo(
 
       if (std::holds_alternative<uint32_t>(str_prop.value)) {
         auto* prop_val = std::get_if<uint32_t>(&str_prop.value);
-        fidl_str_prop.value = fdm::wire::PropertyValue::WithIntValue(allocator, *prop_val);
+        fidl_str_prop.value = fdm::wire::PropertyValue::WithIntValue(*prop_val);
       } else if (std::holds_alternative<std::string>(str_prop.value)) {
         auto* prop_val = std::get_if<std::string>(&str_prop.value);
         fidl_str_prop.value = fdm::wire::PropertyValue::WithStrValue(
             allocator, fidl::StringView(allocator, *prop_val));
       } else if (std::holds_alternative<bool>(str_prop.value)) {
         auto* prop_val = std::get_if<bool>(&str_prop.value);
-        fidl_str_prop.value = fdm::wire::PropertyValue::WithBoolValue(allocator, *prop_val);
+        fidl_str_prop.value = fdm::wire::PropertyValue::WithBoolValue(*prop_val);
       }
 
       str_props[i] = fidl_str_prop;

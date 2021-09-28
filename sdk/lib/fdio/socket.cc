@@ -491,20 +491,9 @@ template <typename T, typename V>
 struct OptionalStorage {
   T opt;
 
-  void set_unset() {
-    // The value is being copied into the inline envelope, such that the
-    // address of the temporary does not outlive its scope.
-    // TODO(fxbug.dev/79578) Use the upcoming LLCPP inline envelope API.
-    fsocket::wire::Empty empty;
-    opt.set_unset(fidl::ObjectView<fsocket::wire::Empty>::FromExternal(&empty));
-  }
+  void set_unset() { opt.set_unset({}); }
 
-  void set_value(V value) {
-    // The value is being copied into the inline envelope, such that the
-    // address of the temporary does not outlive its scope.
-    // TODO(fxbug.dev/79578) Use the upcoming LLCPP inline envelope API.
-    opt.set_value(fidl::ObjectView<V>::FromExternal(&value));
-  }
+  void set_value(V value) { opt.set_value(std::move(value)); }
 };
 
 using OptionalUint8 = OptionalStorage<fsocket::wire::OptionalUint8, uint8_t>;

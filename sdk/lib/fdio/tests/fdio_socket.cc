@@ -52,10 +52,7 @@ class Server final : public fuchsia_posix_socket::testing::StreamSocket_TestBase
   }
 
   void Shutdown(ShutdownRequestView request, ShutdownCompleter::Sync& completer) override {
-    auto response = fuchsia_posix_socket::wire::BaseNetworkSocketShutdownResponse();
-    auto result = fuchsia_posix_socket::wire::BaseNetworkSocketShutdownResult::WithResponse(
-        fidl::ObjectView<fuchsia_posix_socket::wire::BaseNetworkSocketShutdownResponse>::
-            FromExternal(&response));
+    auto result = fuchsia_posix_socket::wire::BaseNetworkSocketShutdownResult::WithResponse({});
 
     shutdown_count_++;
     completer.Reply(result);
@@ -69,8 +66,7 @@ class Server final : public fuchsia_posix_socket::testing::StreamSocket_TestBase
       return completer.Close(status);
     }
     fuchsia_io::wire::NodeInfo info;
-    info.set_stream_socket(
-        fidl::ObjectView<fuchsia_io::wire::StreamSocket>::FromExternal(&stream_socket));
+    info.set_stream_socket(std::move(stream_socket));
     completer.Reply(std::move(info));
   }
 

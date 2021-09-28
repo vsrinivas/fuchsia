@@ -49,13 +49,12 @@ void PayloadStreamer::RegisterVmo(RegisterVmoRequestView request,
 void PayloadStreamer::ReadData(ReadDataRequestView request, ReadDataCompleter::Sync& completer) {
   fuchsia_paver::wire::ReadResult result = {};
   if (!vmo_) {
-    zx_status_t status = ZX_ERR_BAD_STATE;
-    result.set_err(fidl::ObjectView<zx_status_t>::FromExternal(&status));
+    result.set_err(ZX_ERR_BAD_STATE);
     completer.Reply(std::move(result));
     return;
   }
   if (eof_reached_) {
-    result.set_eof(fidl::ObjectView<bool>::FromExternal(&eof_reached_));
+    result.set_eof(eof_reached_);
     completer.Reply(std::move(result));
     return;
   }
@@ -63,11 +62,10 @@ void PayloadStreamer::ReadData(ReadDataRequestView request, ReadDataCompleter::S
   ssize_t n = read(payload_.get(), mapper_.start(), mapper_.size());
   if (n == 0) {
     eof_reached_ = true;
-    result.set_eof(fidl::ObjectView<bool>::FromExternal(&eof_reached_));
+    result.set_eof(eof_reached_);
     completer.Reply(std::move(result));
   } else if (n < 0) {
-    zx_status_t status = ZX_ERR_IO;
-    result.set_err(fidl::ObjectView<zx_status_t>::FromExternal(&status));
+    result.set_err(ZX_ERR_IO);
     completer.Reply(std::move(result));
   } else {
     // completer.Reply must be called from within this else block since otherwise

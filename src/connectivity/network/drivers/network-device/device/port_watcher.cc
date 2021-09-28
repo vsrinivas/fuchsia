@@ -139,25 +139,19 @@ PortWatcher::Event::Event(const PortWatcher::Event& other) {
 
 void PortWatcher::Event::SetExisting(uint8_t port_id) {
   port_id_ = port_id;
-  event_ = netdev::wire::DevicePortEvent::WithExisting(
-      fidl::ObjectView<uint8_t>::FromExternal(&port_id_));
+  event_ = netdev::wire::DevicePortEvent::WithExisting(port_id_);
 }
 
 void PortWatcher::Event::SetAdded(uint8_t port_id) {
   port_id_ = port_id;
-  event_ =
-      netdev::wire::DevicePortEvent::WithAdded(fidl::ObjectView<uint8_t>::FromExternal(&port_id_));
+  event_ = netdev::wire::DevicePortEvent::WithAdded(port_id_);
 }
 
 void PortWatcher::Event::SetRemoved(uint8_t port_id) {
   port_id_ = port_id;
-  event_ = netdev::wire::DevicePortEvent::WithRemoved(
-      fidl::ObjectView<uint8_t>::FromExternal(&port_id_));
+  event_ = netdev::wire::DevicePortEvent::WithRemoved(port_id_);
 }
 
-void PortWatcher::Event::SetIdle() {
-  event_ = netdev::wire::DevicePortEvent::WithIdle(
-      fidl::ObjectView<netdev::wire::Empty>::FromExternal(&empty_));
-}
+void PortWatcher::Event::SetIdle() { event_ = netdev::wire::DevicePortEvent::WithIdle(empty_); }
 
 }  // namespace network::internal

@@ -142,7 +142,7 @@ zx::status<CodecFormatInfo> SimpleCodecClient::SetDaiFormat(DaiFormat format) {
       static_cast<fuchsia_hardware_audio::wire::DaiSampleFormat>(format.sample_format);
   const auto standard =
       static_cast<fuchsia_hardware_audio::wire::DaiFrameFormatStandard>(format.frame_format);
-  format2.frame_format.set_frame_format_standard(allocator, standard);
+  format2.frame_format.set_frame_format_standard(standard);
   format2.frame_rate = format.frame_rate;
   format2.bits_per_slot = format.bits_per_slot;
   format2.bits_per_sample = format.bits_per_sample;

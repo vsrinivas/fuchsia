@@ -223,7 +223,7 @@ class FakeRadarDevice : public fidl::WireServer<BurstReader> {
 
   void SendBurstError(StatusCode status) {
     fuchsia_hardware_radar::wire::RadarBurstReaderOnBurstResult result;
-    result.set_err(fidl::ObjectView<StatusCode>::FromExternal(&status));
+    result.set_err(status);
     (*server_)->OnBurst(result);
   }
 

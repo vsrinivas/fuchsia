@@ -215,8 +215,7 @@ TEST_F(CreateTest, Device) {
       [event1 = std::move(event1)](DescribeRequestView request,
                                    DescribeCompleter::Sync& completer) mutable {
         fuchsia_io::wire::Device device = {.event = std::move(event1)};
-        fidl::Arena fidl_allocator;
-        auto node_info = fuchsia_io::wire::NodeInfo::WithDevice(fidl_allocator, std::move(device));
+        auto node_info = fuchsia_io::wire::NodeInfo::WithDevice(std::move(device));
         completer.Reply(std::move(node_info));
       });
 
@@ -240,8 +239,7 @@ TEST_F(CreateWithOnOpenTest, Device) {
 
   ASSERT_OK(zx::eventpair::create(0, &event0, &event1));
   fuchsia_io::wire::Device device = {.event = std::move(event1)};
-  fidl::Arena fidl_allocator;
-  auto node_info = fuchsia_io::wire::NodeInfo::WithDevice(fidl_allocator, std::move(device));
+  auto node_info = fuchsia_io::wire::NodeInfo::WithDevice(std::move(device));
 
   SendOnOpenEvent(std::move(node_info));
 
@@ -272,8 +270,7 @@ using CreateDirectoryTest = CreateTestBase<SyncNodeServer>;
 TEST_F(CreateDirectoryTest, Directory) {
   node_server().set_describe_function(
       [](DescribeRequestView request, DescribeCompleter::Sync& completer) mutable {
-        fidl::Arena fidl_allocator;
-        auto node_info = fuchsia_io::wire::NodeInfo::WithDirectory(fidl_allocator);
+        auto node_info = fuchsia_io::wire::NodeInfo::WithDirectory({});
         completer.Reply(std::move(node_info));
       });
 
@@ -310,8 +307,7 @@ TEST_F(CreateDirectoryTest, DirectoryWithTypeWrapper) {
 using CreateDirectoryWithOnOpenTest = CreateTestBase<SyncNodeServer>;
 
 TEST_F(CreateDirectoryWithOnOpenTest, Directory) {
-  fidl::Arena fidl_allocator;
-  auto node_info = fuchsia_io::wire::NodeInfo::WithDirectory(fidl_allocator);
+  auto node_info = fuchsia_io::wire::NodeInfo::WithDirectory({});
 
   SendOnOpenEvent(std::move(node_info));
 
@@ -399,8 +395,7 @@ TEST_F(CreateTest, Pipe) {
   node_server().set_describe_function(
       [pipe = std::move(pipe)](DescribeRequestView request,
                                DescribeCompleter::Sync& completer) mutable {
-        fidl::Arena fidl_allocator;
-        auto node_info = fuchsia_io::wire::NodeInfo::WithPipe(fidl_allocator, std::move(pipe));
+        auto node_info = fuchsia_io::wire::NodeInfo::WithPipe(std::move(pipe));
         completer.Reply(std::move(node_info));
       });
 
@@ -479,8 +474,7 @@ TEST_F(CreateWithOnOpenTest, Pipe) {
   zx::socket socket0, socket1;
   ASSERT_OK(zx::socket::create(0u, &socket0, &socket1));
   fuchsia_io::wire::Pipe pipe = {.socket = std::move(socket0)};
-  fidl::Arena fidl_allocator;
-  auto node_info = fuchsia_io::wire::NodeInfo::WithPipe(fidl_allocator, std::move(pipe));
+  auto node_info = fuchsia_io::wire::NodeInfo::WithPipe(std::move(pipe));
 
   SendOnOpenEvent(std::move(node_info));
 
@@ -506,8 +500,7 @@ TEST_F(CreateWithOnOpenTest, Pipe) {
 TEST_F(CreateTest, Service) {
   node_server().set_describe_function(
       [](DescribeRequestView request, DescribeCompleter::Sync& completer) mutable {
-        fidl::Arena fidl_allocator;
-        auto node_info = fuchsia_io::wire::NodeInfo::WithService(fidl_allocator);
+        auto node_info = fuchsia_io::wire::NodeInfo::WithService({});
         completer.Reply(std::move(node_info));
       });
 
@@ -519,8 +512,7 @@ TEST_F(CreateTest, Service) {
 }
 
 TEST_F(CreateWithOnOpenTest, Service) {
-  fidl::Arena fidl_allocator;
-  auto node_info = fuchsia_io::wire::NodeInfo::WithService(fidl_allocator);
+  auto node_info = fuchsia_io::wire::NodeInfo::WithService({});
 
   SendOnOpenEvent(std::move(node_info));
 
@@ -538,8 +530,7 @@ TEST_F(CreateTest, Tty) {
       [event1 = std::move(event1)](DescribeRequestView request,
                                    DescribeCompleter::Sync& completer) mutable {
         fuchsia_io::wire::Tty device = {.event = std::move(event1)};
-        fidl::Arena fidl_allocator;
-        auto node_info = fuchsia_io::wire::NodeInfo::WithTty(fidl_allocator, std::move(device));
+        auto node_info = fuchsia_io::wire::NodeInfo::WithTty(std::move(device));
         completer.Reply(std::move(node_info));
       });
 
@@ -563,8 +554,7 @@ TEST_F(CreateWithOnOpenTest, Tty) {
 
   ASSERT_OK(zx::eventpair::create(0, &event0, &event1));
   fuchsia_io::wire::Tty device = {.event = std::move(event1)};
-  fidl::Arena fidl_allocator;
-  auto node_info = fuchsia_io::wire::NodeInfo::WithTty(fidl_allocator, std::move(device));
+  auto node_info = fuchsia_io::wire::NodeInfo::WithTty(std::move(device));
 
   SendOnOpenEvent(std::move(node_info));
 

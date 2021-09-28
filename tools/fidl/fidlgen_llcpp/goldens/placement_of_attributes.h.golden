@@ -324,39 +324,10 @@ class ExampleXUnion {
     return result;
   }
 
-  static ExampleXUnion WithVariant(::fidl::ObjectView<uint32_t> val) {
-    ExampleXUnion result;
-    result.set_variant(val);
-    return result;
-  }
-
-  template <typename... Args>
-  static ExampleXUnion WithVariant(::fidl::AnyArena& allocator,
-                                   Args&&... args) {
-    ExampleXUnion result;
-    result.set_variant(
-        ::fidl::ObjectView<uint32_t>(allocator, std::forward<Args>(args)...));
-    return result;
-  }
-
   void set_variant(uint32_t elem) {
     ordinal_ = ::fidl_test_placementofattributes::wire::ExampleXUnion::Ordinal::
         kVariant;
     envelope_.As<uint32_t>().set_data(std::move(elem));
-  }
-
-  void set_variant(::fidl::ObjectView<uint32_t> elem) {
-    ordinal_ = ::fidl_test_placementofattributes::wire::ExampleXUnion::Ordinal::
-        kVariant;
-    envelope_.As<uint32_t>().set_data(std::move(elem));
-  }
-
-  template <typename... Args>
-  void set_variant(::fidl::AnyArena& allocator, Args&&... args) {
-    ordinal_ = ::fidl_test_placementofattributes::wire::ExampleXUnion::Ordinal::
-        kVariant;
-    set_variant(
-        ::fidl::ObjectView<uint32_t>(allocator, std::forward<Args>(args)...));
   }
 
   uint32_t& mutable_variant() {
@@ -423,38 +394,10 @@ class ExampleUnion {
     return result;
   }
 
-  static ExampleUnion WithVariant(::fidl::ObjectView<uint32_t> val) {
-    ExampleUnion result;
-    result.set_variant(val);
-    return result;
-  }
-
-  template <typename... Args>
-  static ExampleUnion WithVariant(::fidl::AnyArena& allocator, Args&&... args) {
-    ExampleUnion result;
-    result.set_variant(
-        ::fidl::ObjectView<uint32_t>(allocator, std::forward<Args>(args)...));
-    return result;
-  }
-
   void set_variant(uint32_t elem) {
     ordinal_ = ::fidl_test_placementofattributes::wire::ExampleUnion::Ordinal::
         kVariant;
     envelope_.As<uint32_t>().set_data(std::move(elem));
-  }
-
-  void set_variant(::fidl::ObjectView<uint32_t> elem) {
-    ordinal_ = ::fidl_test_placementofattributes::wire::ExampleUnion::Ordinal::
-        kVariant;
-    envelope_.As<uint32_t>().set_data(std::move(elem));
-  }
-
-  template <typename... Args>
-  void set_variant(::fidl::AnyArena& allocator, Args&&... args) {
-    ordinal_ = ::fidl_test_placementofattributes::wire::ExampleUnion::Ordinal::
-        kVariant;
-    set_variant(
-        ::fidl::ObjectView<uint32_t>(allocator, std::forward<Args>(args)...));
   }
 
   uint32_t& mutable_variant() {

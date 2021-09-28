@@ -141,9 +141,9 @@ class NodeASTVisitor : public parser::ast::NodeVisitor<IdAndType> {
 
   IdAndType VisitInteger(const parser::ast::Integer& node) override {
     AstBuilder::NodeId id = builder_->AddIntegerLiteral(node.value());
-    fidl::ObjectView<fuchsia_shell::wire::BuiltinType> builtin_type(
-        builder_->allocator(), fuchsia_shell::wire::BuiltinType::kInteger);
-    return {.id = id, .type = fuchsia_shell::wire::ShellType::WithBuiltinType(builtin_type)};
+    return {.id = id,
+            .type = fuchsia_shell::wire::ShellType::WithBuiltinType(
+                fuchsia_shell::wire::BuiltinType::kInteger)};
   }
 
   IdAndType VisitIdentifier(const parser::ast::Identifier& node) override {
@@ -175,7 +175,7 @@ class NodeASTVisitor : public parser::ast::NodeVisitor<IdAndType> {
     AstBuilder::NodeId id = builder_->AddStringLiteral(node.value());
     return {.id = id,
             .type = fuchsia_shell::wire::ShellType::WithBuiltinType(
-                builder_->allocator(), fuchsia_shell::wire::BuiltinType::kString)};
+                fuchsia_shell::wire::BuiltinType::kString)};
   }
 
   IdAndType VisitObject(const parser::ast::Object& node) override {

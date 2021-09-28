@@ -99,7 +99,7 @@ TEST(PrimitiveInXUnionInStruct, Success) {
   {
     llcpp_misc::wire::InlineXUnionInStruct input;
     input.before = fidl::StringView::FromExternal(before);
-    input.xu.set_i(fidl::ObjectView<int32_t>::FromExternal(&integer));
+    input.xu.set_i(integer);
     input.after = fidl::StringView::FromExternal(after);
     fidl::OwnedEncodedMessage<llcpp_misc::wire::InlineXUnionInStruct> encoded(&input);
     ASSERT_TRUE(encoded.ok());
@@ -318,7 +318,7 @@ TEST(ComplexTable, Success) {
     llcpp_misc::wire::SimpleTable simple_table(allocator);
     simple_table.set_x(allocator, table_x).set_y(allocator, table_y);
     llcpp_misc::wire::SampleXUnion xu;
-    xu.set_i(fidl::ObjectView<int32_t>::FromExternal(&xunion_i));
+    xu.set_i(xunion_i);
     fidl::StringView strings_vector[]{
         fidl::StringView::FromExternal(before),
         fidl::StringView::FromExternal(after),

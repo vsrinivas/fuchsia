@@ -199,9 +199,7 @@ void DeviceControllerConnection::Unbind(UnbindRequestView request,
         unbind_children_conn(status);
       }
     }
-    result.set_response(
-        fidl::ObjectView<
-            fuchsia_device_manager::wire::DeviceControllerUnbindResponse>::FromExternal(&response));
+    result.set_response(response);
     completer.Reply(std::move(result));
   };
   fbl::AutoLock lock(&driver_host_context_->api_lock());
@@ -214,9 +212,7 @@ void DeviceControllerConnection::CompleteRemoval(CompleteRemovalRequestView requ
   this->dev()->removal_cb = [completer = completer.ToAsync()](zx_status_t status) mutable {
     fuchsia_device_manager::wire::DeviceControllerCompleteRemovalResult result;
     fuchsia_device_manager::wire::DeviceControllerCompleteRemovalResponse response;
-    result.set_response(
-        fidl::ObjectView<fuchsia_device_manager::wire::DeviceControllerCompleteRemovalResponse>::
-            FromExternal(&response));
+    result.set_response(std::move(response));
     completer.Reply(std::move(result));
   };
   fbl::AutoLock lock(&driver_host_context_->api_lock());

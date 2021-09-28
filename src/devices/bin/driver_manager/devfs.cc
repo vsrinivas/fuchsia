@@ -113,8 +113,7 @@ class DcIostate : public fbl::DoublyLinkedListable<DcIostate*>,
                         AddInotifyFilterCompleter::Sync& completer) override {}
   void Unlink(UnlinkRequestView request, UnlinkCompleter::Sync& completer) override {
     zx_status_t status = ZX_ERR_NOT_SUPPORTED;
-    completer.Reply(::fuchsia_io::wire::DirectoryUnlinkResult::WithErr(
-        fidl::ObjectView<zx_status_t>::FromExternal(&status)));
+    completer.Reply(::fuchsia_io::wire::DirectoryUnlinkResult::WithErr(status));
   }
   void ReadDirents(ReadDirentsRequestView request, ReadDirentsCompleter::Sync& completer) override;
   void Rewind(RewindRequestView request, RewindCompleter::Sync& completer) override;
@@ -123,8 +122,7 @@ class DcIostate : public fbl::DoublyLinkedListable<DcIostate*>,
   }
   void Rename2(Rename2RequestView request, Rename2Completer::Sync& completer) override {
     zx_status_t status = ZX_ERR_NOT_SUPPORTED;
-    completer.Reply(::fuchsia_io::wire::DirectoryRename2Result::WithErr(
-        fidl::ObjectView<zx_status_t>::FromExternal(&status)));
+    completer.Reply(::fuchsia_io::wire::DirectoryRename2Result::WithErr(status));
   }
   void Link(LinkRequestView request, LinkCompleter::Sync& completer) override {
     completer.Reply(ZX_ERR_NOT_SUPPORTED);
@@ -482,8 +480,7 @@ void devfs_open(Devnode* dirdn, async_dispatcher_t* dispatcher, fidl::ServerEnd<
       }
       fio::wire::NodeInfo node_info;
       fio::wire::DirectoryObject directory;
-      node_info.set_directory(
-          fidl::ObjectView<fio::wire::DirectoryObject>::FromExternal(&directory));
+      node_info.set_directory(directory);
       describe(zx::ok(std::move(node_info)));
       DcIostate::Bind(std::move(ios), std::move(ipc));
     } else if (dn->service_node) {
@@ -759,7 +756,7 @@ void DcIostate::GetAttr(GetAttrRequestView request, GetAttrCompleter::Sync& comp
 void DcIostate::Describe(DescribeRequestView request, DescribeCompleter::Sync& completer) {
   fio::wire::NodeInfo node_info;
   fio::wire::DirectoryObject directory;
-  node_info.set_directory(fidl::ObjectView<fio::wire::DirectoryObject>::FromExternal(&directory));
+  node_info.set_directory(directory);
   completer.Reply(std::move(node_info));
 }
 

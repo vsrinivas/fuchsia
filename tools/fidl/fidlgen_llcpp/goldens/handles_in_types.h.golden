@@ -91,35 +91,9 @@ class UnionWithHandle {
     return result;
   }
 
-  static UnionWithHandle WithH(::fidl::ObjectView<::zx::vmo> val) {
-    UnionWithHandle result;
-    result.set_h(val);
-    return result;
-  }
-
-  template <typename... Args>
-  static UnionWithHandle WithH(::fidl::AnyArena& allocator, Args&&... args) {
-    UnionWithHandle result;
-    result.set_h(
-        ::fidl::ObjectView<::zx::vmo>(allocator, std::forward<Args>(args)...));
-    return result;
-  }
-
   void set_h(::zx::vmo elem) {
     ordinal_ = ::fidl_test_handlesintypes::wire::UnionWithHandle::Ordinal::kH;
     envelope_.As<::zx::vmo>().set_data(std::move(elem));
-  }
-
-  void set_h(::fidl::ObjectView<::zx::vmo> elem) {
-    ordinal_ = ::fidl_test_handlesintypes::wire::UnionWithHandle::Ordinal::kH;
-    envelope_.As<::zx::vmo>().set_data(std::move(elem));
-  }
-
-  template <typename... Args>
-  void set_h(::fidl::AnyArena& allocator, Args&&... args) {
-    ordinal_ = ::fidl_test_handlesintypes::wire::UnionWithHandle::Ordinal::kH;
-    set_h(
-        ::fidl::ObjectView<::zx::vmo>(allocator, std::forward<Args>(args)...));
   }
 
   ::zx::vmo& mutable_h() {

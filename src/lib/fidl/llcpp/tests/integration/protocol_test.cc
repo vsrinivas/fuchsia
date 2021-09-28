@@ -292,8 +292,7 @@ class HandleProviderServer : public fidl::WireServer<test::HandleProvider> {
                       GetHandleUnionCompleter::Sync& completer) override {
     zx::event h;
     zx::event::create(0, &h);
-    test::wire::HandleUnionStruct s = {
-        .u = test::wire::HandleUnion::WithH(fidl::ObjectView<zx::event>::FromExternal(&h))};
+    test::wire::HandleUnionStruct s = {.u = test::wire::HandleUnion::WithH(std::move(h))};
     completer.Reply(std::move(s));
   }
 };

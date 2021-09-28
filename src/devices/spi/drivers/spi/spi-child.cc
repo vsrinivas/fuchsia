@@ -65,11 +65,9 @@ void SpiChild::RegisterVmo(RegisterVmoRequestView request, RegisterVmoCompleter:
       spi_.RegisterVmo(cs_, request->vmo_id, std::move(request->vmo.vmo), request->vmo.offset,
                        request->vmo.size, static_cast<uint32_t>(request->rights));
   if (status == ZX_OK) {
-    result.set_response(
-        fidl::ObjectView<sharedmemory::wire::SharedVmoRegisterRegisterVmoResponse>::FromExternal(
-            &response));
+    result.set_response(std::move(response));
   } else {
-    result.set_err(fidl::ObjectView<zx_status_t>::FromExternal(&status));
+    result.set_err(status);
   }
   completer.Reply(std::move(result));
 }
@@ -80,11 +78,9 @@ void SpiChild::UnregisterVmo(UnregisterVmoRequestView request,
   sharedmemory::wire::SharedVmoRegisterUnregisterVmoResponse response = {};
   zx_status_t status = spi_.UnregisterVmo(cs_, request->vmo_id, &response.vmo);
   if (status == ZX_OK) {
-    result.set_response(
-        fidl::ObjectView<sharedmemory::wire::SharedVmoRegisterUnregisterVmoResponse>::FromExternal(
-            &response));
+    result.set_response(std::move(response));
   } else {
-    result.set_err(fidl::ObjectView<zx_status_t>::FromExternal(&status));
+    result.set_err(status);
   }
   completer.Reply(std::move(result));
 }
@@ -99,10 +95,9 @@ void SpiChild::Transmit(TransmitRequestView request, TransmitCompleter::Sync& co
         spi_.TransmitVmo(cs_, request->buffer.vmo_id, request->buffer.offset, request->buffer.size);
   }
   if (status == ZX_OK) {
-    result.set_response(
-        fidl::ObjectView<sharedmemory::wire::SharedVmoIoTransmitResponse>::FromExternal(&response));
+    result.set_response(std::move(response));
   } else {
-    result.set_err(fidl::ObjectView<zx_status_t>::FromExternal(&status));
+    result.set_err(status);
   }
   completer.Reply(std::move(result));
 }
@@ -117,10 +112,9 @@ void SpiChild::Receive(ReceiveRequestView request, ReceiveCompleter::Sync& compl
         spi_.ReceiveVmo(cs_, request->buffer.vmo_id, request->buffer.offset, request->buffer.size);
   }
   if (status == ZX_OK) {
-    result.set_response(
-        fidl::ObjectView<sharedmemory::wire::SharedVmoIoReceiveResponse>::FromExternal(&response));
+    result.set_response(std::move(response));
   } else {
-    result.set_err(fidl::ObjectView<zx_status_t>::FromExternal(&status));
+    result.set_err(status);
   }
   completer.Reply(std::move(result));
 }
@@ -140,10 +134,9 @@ void SpiChild::Exchange(ExchangeRequestView request, ExchangeCompleter::Sync& co
   }
 
   if (status == ZX_OK) {
-    result.set_response(
-        fidl::ObjectView<sharedmemory::wire::SharedVmoIoExchangeResponse>::FromExternal(&response));
+    result.set_response(std::move(response));
   } else {
-    result.set_err(fidl::ObjectView<zx_status_t>::FromExternal(&status));
+    result.set_err(status);
   }
   completer.Reply(std::move(result));
 }

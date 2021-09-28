@@ -134,10 +134,9 @@ int socket(int domain, int type, int protocol) {
       //   send any IP protocol that is specified in the passed header. Receiving
       //   of all IP protocols via IPPROTO_RAW is not possible using raw sockets.
       if (protocol == IPPROTO_RAW) {
-        proto_assoc.set_unassociated(
-            fidl::ObjectView<frawsocket::wire::Empty>::FromExternal(&empty));
+        proto_assoc.set_unassociated(empty);
       } else {
-        proto_assoc.set_associated(fidl::ObjectView<uint8_t>::FromExternal(&sock_protocol));
+        proto_assoc.set_associated(sock_protocol);
       }
       auto result = provider->Socket(sock_domain, proto_assoc);
       auto status = result.status();

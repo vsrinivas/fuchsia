@@ -87,39 +87,10 @@ class UnionSize8Alignment4 {
     return result;
   }
 
-  static UnionSize8Alignment4 WithVariant(::fidl::ObjectView<uint32_t> val) {
-    UnionSize8Alignment4 result;
-    result.set_variant(val);
-    return result;
-  }
-
-  template <typename... Args>
-  static UnionSize8Alignment4 WithVariant(::fidl::AnyArena& allocator,
-                                          Args&&... args) {
-    UnionSize8Alignment4 result;
-    result.set_variant(
-        ::fidl::ObjectView<uint32_t>(allocator, std::forward<Args>(args)...));
-    return result;
-  }
-
   void set_variant(uint32_t elem) {
     ordinal_ = ::fidl_test_unionsandwich::wire::UnionSize8Alignment4::Ordinal::
         kVariant;
     envelope_.As<uint32_t>().set_data(std::move(elem));
-  }
-
-  void set_variant(::fidl::ObjectView<uint32_t> elem) {
-    ordinal_ = ::fidl_test_unionsandwich::wire::UnionSize8Alignment4::Ordinal::
-        kVariant;
-    envelope_.As<uint32_t>().set_data(std::move(elem));
-  }
-
-  template <typename... Args>
-  void set_variant(::fidl::AnyArena& allocator, Args&&... args) {
-    ordinal_ = ::fidl_test_unionsandwich::wire::UnionSize8Alignment4::Ordinal::
-        kVariant;
-    set_variant(
-        ::fidl::ObjectView<uint32_t>(allocator, std::forward<Args>(args)...));
   }
 
   uint32_t& mutable_variant() {
@@ -184,7 +155,6 @@ class UnionSize36Alignment4 {
     return ordinal_ == ::fidl_test_unionsandwich::wire::UnionSize36Alignment4::
                            Ordinal::kVariant;
   }
-
   static UnionSize36Alignment4 WithVariant(
       ::fidl::ObjectView<::fidl::Array<uint8_t, 32>> val) {
     UnionSize36Alignment4 result;
@@ -277,7 +247,6 @@ class UnionSize12Alignment4 {
     return ordinal_ == ::fidl_test_unionsandwich::wire::UnionSize12Alignment4::
                            Ordinal::kVariant;
   }
-
   static UnionSize12Alignment4 WithVariant(
       ::fidl::ObjectView<::fidl::Array<uint8_t, 6>> val) {
     UnionSize12Alignment4 result;
@@ -370,7 +339,6 @@ class UnionSize24Alignment8 {
     return ordinal_ == ::fidl_test_unionsandwich::wire::UnionSize24Alignment8::
                            Ordinal::kVariant;
   }
-
   static UnionSize24Alignment8 WithVariant(
       ::fidl::ObjectView<
           ::fidl_test_unionsandwich::wire::StructSize16Alignment8>

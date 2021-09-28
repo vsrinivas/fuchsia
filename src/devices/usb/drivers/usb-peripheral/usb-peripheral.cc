@@ -838,23 +838,21 @@ void UsbPeripheral::SetConfiguration(SetConfigurationRequestView request,
       fbl::AutoLock lock(&lock_);
       if (shutting_down_) {
         zxlogf(ERROR, "%s: cannot set configuration while clearing functions", __func__);
-        zx_status_t status = ZX_ERR_BAD_STATE;
-        response.set_err(fidl::ObjectView<zx_status_t>::FromExternal(&status));
+        response.set_err(ZX_ERR_BAD_STATE);
         completer.Reply(std::move(response));
         return;
       }
     }
 
     if (func_descs.count() == 0) {
-      zx_status_t status = ZX_ERR_INVALID_ARGS;
-      response.set_err(fidl::ObjectView<zx_status_t>::FromExternal(&status));
+      response.set_err(ZX_ERR_INVALID_ARGS);
       completer.Reply(std::move(response));
       return;
     }
 
     zx_status_t status = SetDeviceDescriptor(std::move(request->device_desc));
     if (status != ZX_OK) {
-      response.set_err(fidl::ObjectView<zx_status_t>::FromExternal(&status));
+      response.set_err(status);
       completer.Reply(std::move(response));
       return;
     }
@@ -865,13 +863,12 @@ void UsbPeripheral::SetConfiguration(SetConfigurationRequestView request,
   }
   zx_status_t status = BindFunctions();
   if (status != ZX_OK) {
-    response.set_err(fidl::ObjectView<zx_status_t>::FromExternal(&status));
+    response.set_err(status);
     completer.Reply(std::move(response));
     return;
   }
   peripheral::wire::DeviceSetConfigurationResponse resp;
-  response.set_response(
-      fidl::ObjectView<peripheral::wire::DeviceSetConfigurationResponse>::FromExternal(&resp));
+  response.set_response(std::move(resp));
   completer.Reply(std::move(response));
 }
 

@@ -388,7 +388,7 @@ TEEC_Result PreprocessOperation(fidl::AnyArena& allocator, const TEEC_Operation*
 
     switch (param_type) {
       case TEEC_NONE:
-        parameter.set_none(allocator);
+        parameter.set_none({});
         break;
       case TEEC_VALUE_INPUT:
       case TEEC_VALUE_OUTPUT:

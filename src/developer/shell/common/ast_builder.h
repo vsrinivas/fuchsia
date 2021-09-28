@@ -102,13 +102,12 @@ class AstBuilder {
   }
 
   fuchsia_shell::wire::ShellType TypeBuiltin(fuchsia_shell::wire::BuiltinType type) {
-    return fuchsia_shell::wire::ShellType::WithBuiltinType(allocator_, type);
+    return fuchsia_shell::wire::ShellType::WithBuiltinType(type);
   }
 
   // The following methods generate a ShellType object for the given type.
   fuchsia_shell::wire::ShellType TypeUndef() {
-    fidl::ObjectView<bool> undef(allocator_, false);
-    return fuchsia_shell::wire::ShellType::WithUndef(undef);
+    return fuchsia_shell::wire::ShellType::WithUndef(false);
   }
 
   fuchsia_shell::wire::ShellType TypeBool() {

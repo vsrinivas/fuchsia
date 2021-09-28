@@ -39,25 +39,20 @@ class FakePayloadStream : public fidl::WireServer<fuchsia_paver::PayloadStream> 
 
   void ReadError(ReadDataCompleter::Sync& completer) {
     fuchsia_paver::wire::ReadResult result;
-    zx_status_t status = ZX_ERR_INTERNAL;
-    result.set_err(fidl::ObjectView<zx_status_t>::FromExternal(&status));
-
+    result.set_err(ZX_ERR_INTERNAL);
     completer.Reply(std::move(result));
   }
 
   void ReadEof(ReadDataCompleter::Sync& completer) {
     fuchsia_paver::wire::ReadResult result;
-    bool eof = true;
-    result.set_eof(fidl::ObjectView<bool>::FromExternal(&eof));
-
+    result.set_eof(true);
     completer.Reply(std::move(result));
   }
 
   void ReadData(ReadDataRequestView request, ReadDataCompleter::Sync& completer) override {
     if (!vmo_) {
       fuchsia_paver::wire::ReadResult result;
-      zx_status_t status = ZX_ERR_BAD_STATE;
-      result.set_err(fidl::ObjectView<zx_status_t>::FromExternal(&status));
+      result.set_err(ZX_ERR_BAD_STATE);
       completer.Reply(std::move(result));
       return;
     }

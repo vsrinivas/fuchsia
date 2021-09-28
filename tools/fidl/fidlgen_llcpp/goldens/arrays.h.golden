@@ -73,7 +73,6 @@ class UnionSmallArray {
   bool is_a() const {
     return ordinal_ == ::fidl_test_arrays::wire::UnionSmallArray::Ordinal::kA;
   }
-
   static UnionSmallArray WithA(
       ::fidl::ObjectView<::fidl::Array<uint32_t, 2>> val) {
     UnionSmallArray result;
@@ -161,7 +160,6 @@ class UnionLargeArray {
   bool is_a() const {
     return ordinal_ == ::fidl_test_arrays::wire::UnionLargeArray::Ordinal::kA;
   }
-
   static UnionLargeArray WithA(
       ::fidl::ObjectView<::fidl::Array<uint32_t, 100>> val) {
     UnionLargeArray result;

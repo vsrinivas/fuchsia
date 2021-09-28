@@ -41,7 +41,7 @@ TEST(FidlExamples, Structs) {
 // [START unions]
 TEST(FidlExamples, Unions) {
   fidl::Arena allocator;
-  auto int_val = fuchsia_examples::wire::JsonValue::WithIntValue(allocator, 1);
+  auto int_val = fuchsia_examples::wire::JsonValue::WithIntValue(1);
   auto str_val = fuchsia_examples::wire::JsonValue::WithStringValue(allocator, "1");
   ASSERT_TRUE(int_val.is_int_value());
   ASSERT_TRUE(str_val.is_string_value());
@@ -62,8 +62,7 @@ TEST(FidlExamples, Tables) {
 // [START external-object]
 TEST(AllocationExamples, ExternalObject) {
   fuchsia_examples::wire::JsonValue val;
-  int32_t i = 1;
-  val.set_int_value(fidl::ObjectView<int32_t>::FromExternal(&i));
+  val.set_int_value(1);
 }
 // [END external-object]
 

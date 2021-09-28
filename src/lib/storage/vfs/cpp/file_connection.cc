@@ -175,8 +175,7 @@ void FileConnection::AdvisoryLock(
   auto async_completer = completer.ToAsync();
   fit::callback<void(zx_status_t)> callback = file_lock::lock_completer_t(
       [lock_completer = std::move(async_completer)](zx_status_t status) mutable {
-        auto reply = fidl::ObjectView<int32_t>::FromExternal(&status);
-        auto result = fuchsia_io2::wire::AdvisoryLockingAdvisoryLockResult::WithErr(reply);
+        auto result = fuchsia_io2::wire::AdvisoryLockingAdvisoryLockResult::WithErr(status);
         lock_completer.Reply(std::move(result));
       });
 

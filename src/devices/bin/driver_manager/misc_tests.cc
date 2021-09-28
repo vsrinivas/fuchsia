@@ -545,8 +545,7 @@ TEST(MiscTestCase, DeviceProperties) {
           "snipe", fuchsia_device_manager::wire::PropertyValue::WithStrValue(
                        fidl::ObjectView<fidl::StringView>::FromExternal(&str_val))},
       fuchsia_device_manager::wire::DeviceStrProperty{
-          "sandpiper", fuchsia_device_manager::wire::PropertyValue::WithIntValue(
-                           fidl::ObjectView<uint32_t>::FromExternal(&int_val))},
+          "sandpiper", fuchsia_device_manager::wire::PropertyValue::WithIntValue(int_val)},
   };
   AddDeviceWithProperties(nullptr, 0, str_props, std::size(str_props));
 

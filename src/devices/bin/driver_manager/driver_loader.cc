@@ -156,20 +156,18 @@ std::vector<const Driver*> DriverLoader::MatchDeviceDriverIndex(const fbl::RefPt
   size_t index = 0;
   fidl_props[index++] =
       fdf::wire::NodeProperty(allocator)
-          .set_key(allocator, fdf::wire::NodePropertyKey::WithIntValue(allocator, BIND_PROTOCOL))
-          .set_value(allocator,
-                     fdf::wire::NodePropertyValue::WithIntValue(allocator, dev->protocol_id()));
+          .set_key(allocator, fdf::wire::NodePropertyKey::WithIntValue(BIND_PROTOCOL))
+          .set_value(allocator, fdf::wire::NodePropertyValue::WithIntValue(dev->protocol_id()));
   fidl_props[index++] =
       fdf::wire::NodeProperty(allocator)
-          .set_key(allocator, fdf::wire::NodePropertyKey::WithIntValue(allocator, BIND_AUTOBIND))
-          .set_value(allocator, fdf::wire::NodePropertyValue::WithIntValue(allocator, autobind));
+          .set_key(allocator, fdf::wire::NodePropertyKey::WithIntValue(BIND_AUTOBIND))
+          .set_value(allocator, fdf::wire::NodePropertyValue::WithIntValue(autobind));
 
   for (size_t i = 0; i < props.size(); i++) {
     fidl_props[index++] =
         fdf::wire::NodeProperty(allocator)
-            .set_key(allocator, fdf::wire::NodePropertyKey::WithIntValue(allocator, props[i].id))
-            .set_value(allocator,
-                       fdf::wire::NodePropertyValue::WithIntValue(allocator, props[i].value));
+            .set_key(allocator, fdf::wire::NodePropertyKey::WithIntValue(props[i].id))
+            .set_value(allocator, fdf::wire::NodePropertyValue::WithIntValue(props[i].value));
   }
 
   for (size_t i = 0; i < str_props.size(); i++) {
@@ -178,14 +176,14 @@ std::vector<const Driver*> DriverLoader::MatchDeviceDriverIndex(const fbl::RefPt
         fdf::wire::NodePropertyKey::WithStringValue(allocator, allocator, str_props[i].key));
     if (std::holds_alternative<uint32_t>(str_props[i].value)) {
       prop.set_value(allocator, fdf::wire::NodePropertyValue::WithIntValue(
-                                    allocator, std::get<uint32_t>(str_props[i].value)));
+                                    std::get<uint32_t>(str_props[i].value)));
     } else if (std::holds_alternative<std::string>(str_props[i].value)) {
       prop.set_value(allocator,
                      fdf::wire::NodePropertyValue::WithStringValue(
                          allocator, allocator, std::get<std::string>(str_props[i].value)));
     } else if (std::holds_alternative<bool>(str_props[i].value)) {
       prop.set_value(allocator, fdf::wire::NodePropertyValue::WithBoolValue(
-                                    allocator, std::get<bool>(str_props[i].value)));
+                                    std::get<bool>(str_props[i].value)));
     }
     fidl_props[index++] = std::move(prop);
   }

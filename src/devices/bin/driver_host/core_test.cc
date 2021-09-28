@@ -29,8 +29,7 @@ class FakeCoordinator : public fidl::WireServer<fuchsia_device_manager::Coordina
 
   void AddDevice(AddDeviceRequestView request, AddDeviceCompleter::Sync& completer) override {
     fuchsia_device_manager::wire::CoordinatorAddDeviceResult response;
-    zx_status_t status = ZX_ERR_NOT_SUPPORTED;
-    response.set_err(fidl::ObjectView<zx_status_t>::FromExternal(&status));
+    response.set_err(ZX_ERR_NOT_SUPPORTED);
     completer.Reply(std::move(response));
   }
   void ScheduleRemove(ScheduleRemoveRequestView request,
@@ -38,55 +37,47 @@ class FakeCoordinator : public fidl::WireServer<fuchsia_device_manager::Coordina
   void AddCompositeDevice(AddCompositeDeviceRequestView request,
                           AddCompositeDeviceCompleter::Sync& completer) override {
     fuchsia_device_manager::wire::CoordinatorAddCompositeDeviceResult response;
-    zx_status_t status = ZX_ERR_NOT_SUPPORTED;
-    response.set_err(fidl::ObjectView<zx_status_t>::FromExternal(&status));
+    response.set_err(ZX_ERR_NOT_SUPPORTED);
     completer.Reply(std::move(response));
   }
   void PublishMetadata(PublishMetadataRequestView request,
                        PublishMetadataCompleter::Sync& completer) override {
     fuchsia_device_manager::wire::CoordinatorPublishMetadataResult response;
-    zx_status_t status = ZX_ERR_NOT_SUPPORTED;
-    response.set_err(fidl::ObjectView<zx_status_t>::FromExternal(&status));
+    response.set_err(ZX_ERR_NOT_SUPPORTED);
     completer.Reply(std::move(response));
   }
   void BindDevice(BindDeviceRequestView request, BindDeviceCompleter::Sync& completer) override {
     bind_count_++;
     fuchsia_device_manager::wire::CoordinatorBindDeviceResult response;
-    zx_status_t status = ZX_OK;
-    response.set_err(fidl::ObjectView<zx_status_t>::FromExternal(&status));
+    response.set_err(ZX_OK);
     completer.Reply(std::move(response));
   }
   void GetTopologicalPath(GetTopologicalPathRequestView request,
                           GetTopologicalPathCompleter::Sync& completer) override {
     fuchsia_device_manager::wire::CoordinatorGetTopologicalPathResult response;
-    zx_status_t status = ZX_ERR_NOT_SUPPORTED;
-    response.set_err(fidl::ObjectView<zx_status_t>::FromExternal(&status));
+    response.set_err(ZX_ERR_NOT_SUPPORTED);
     completer.Reply(std::move(response));
   }
   void LoadFirmware(LoadFirmwareRequestView request,
                     LoadFirmwareCompleter::Sync& completer) override {
     fuchsia_device_manager::wire::CoordinatorLoadFirmwareResult response;
-    zx_status_t status = ZX_ERR_NOT_SUPPORTED;
-    response.set_err(fidl::ObjectView<zx_status_t>::FromExternal(&status));
+    response.set_err(ZX_ERR_NOT_SUPPORTED);
     completer.Reply(std::move(response));
   }
   void GetMetadata(GetMetadataRequestView request, GetMetadataCompleter::Sync& completer) override {
     fuchsia_device_manager::wire::CoordinatorGetMetadataResult response;
-    zx_status_t status = ZX_ERR_NOT_SUPPORTED;
-    response.set_err(fidl::ObjectView<zx_status_t>::FromExternal(&status));
+    response.set_err(ZX_ERR_NOT_SUPPORTED);
     completer.Reply(std::move(response));
   }
   void GetMetadataSize(GetMetadataSizeRequestView request,
                        GetMetadataSizeCompleter::Sync& completer) override {
     fuchsia_device_manager::wire::CoordinatorGetMetadataSizeResult response;
-    zx_status_t status = ZX_ERR_NOT_SUPPORTED;
-    response.set_err(fidl::ObjectView<zx_status_t>::FromExternal(&status));
+    response.set_err(ZX_ERR_NOT_SUPPORTED);
     completer.Reply(std::move(response));
   }
   void AddMetadata(AddMetadataRequestView request, AddMetadataCompleter::Sync& completer) override {
     fuchsia_device_manager::wire::CoordinatorAddMetadataResult response;
-    zx_status_t status = ZX_ERR_NOT_SUPPORTED;
-    response.set_err(fidl::ObjectView<zx_status_t>::FromExternal(&status));
+    response.set_err(ZX_ERR_NOT_SUPPORTED);
     completer.Reply(std::move(response));
   }
   void ScheduleUnbindChildren(ScheduleUnbindChildrenRequestView request,
@@ -94,8 +85,7 @@ class FakeCoordinator : public fidl::WireServer<fuchsia_device_manager::Coordina
   void RunCompatibilityTests(RunCompatibilityTestsRequestView request,
                              RunCompatibilityTestsCompleter::Sync& completer) override {
     fuchsia_device_manager::wire::CoordinatorRunCompatibilityTestsResult response;
-    zx_status_t status = ZX_ERR_NOT_SUPPORTED;
-    response.set_err(fidl::ObjectView<zx_status_t>::FromExternal(&status));
+    response.set_err(ZX_ERR_NOT_SUPPORTED);
     completer.Reply(std::move(response));
   }
 
