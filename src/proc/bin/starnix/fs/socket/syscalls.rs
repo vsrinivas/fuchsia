@@ -2,6 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use std::convert::TryInto;
+use zerocopy::AsBytes;
+
 use super::*;
 use crate::errno;
 use crate::error;
@@ -9,6 +12,7 @@ use crate::fs::*;
 use crate::mode;
 use crate::not_implemented;
 use crate::syscalls::*;
+use crate::task::*;
 use crate::types::*;
 
 pub fn sys_socket(
@@ -36,7 +40,7 @@ pub fn sys_bind(
     if !file.node().is_sock() {
         return error!(ENOTSOCK);
     }
-    let socket_handle = file.node().socket().ok_or_else(|| errno!(ENOTSOCK))?;
+    let socket = file.node().socket().ok_or_else(|| errno!(ENOTSOCK))?;
 
     // TODO: We shouldn't assume `sockaddr_un`.
     let user_ref: UserRef<sockaddr_un> = UserRef::new(user_socket_address);
@@ -49,17 +53,14 @@ pub fn sys_bind(
     let path_len =
         address.sun_path.iter().position(|&r| r == b'\0').ok_or_else(|| errno!(EINVAL))?;
     let mode = ctx.task.fs.apply_umask(mode!(IFSOCK, 0o765));
+    let path = &address.sun_path[..path_len];
 
-    let (parent, basename) =
-        ctx.task.lookup_parent_at(FdNumber::AT_FDCWD, &address.sun_path[..path_len])?;
+    let (parent, basename) = ctx.task.lookup_parent_at(FdNumber::AT_FDCWD, path)?;
 
-    parent.entry.create_socket(basename, mode, socket_handle.clone()).map_err(|errno| {
-        if errno == EEXIST {
-            errno!(EADDRINUSE)
-        } else {
-            errno
-        }
-    })?;
+    parent
+        .entry
+        .bind_socket(basename, mode, SocketAddress::Unix(path.to_owned()), socket.clone())
+        .map_err(|errno| if errno == EEXIST { errno!(EADDRINUSE) } else { errno })?;
 
     Ok(SUCCESS)
 }
@@ -105,9 +106,78 @@ pub fn sys_connect(
     Ok(SUCCESS)
 }
 
+fn get_socket_address(socket: &SocketHandle) -> Vec<u8> {
+    let socket = socket.lock();
+    if let Some(bound_address) = socket.bound_address() {
+        match bound_address {
+            SocketAddress::Unix(path) => {
+                let mut address = sockaddr_un::default();
+                let path_len = std::cmp::min(address.sun_path.len() - 1, path.len());
+                address.sun_family = AF_UNIX;
+                address.sun_path[..path_len].copy_from_slice(&path[..path_len]);
+                address.as_bytes().to_vec()
+            }
+        }
+    } else {
+        match socket.domain() {
+            SocketDomain::Unspecified => AF_UNSPEC,
+            SocketDomain::Unix => AF_UNIX,
+        }
+        .to_ne_bytes()
+        .to_vec()
+    }
+}
+
+fn write_socket_address(
+    task: &Task,
+    user_socket_address: UserAddress,
+    user_address_length: UserRef<usize>,
+    address_bytes: &[u8],
+) -> Result<(), Errno> {
+    let mut address_length = 0;
+    task.mm.read_object(user_address_length, &mut address_length)?;
+    let byte_count = std::cmp::min(address_bytes.len(), address_length);
+    task.mm.write_memory(user_socket_address, &address_bytes[..byte_count])?;
+    task.mm.write_object(user_address_length, &address_bytes.len())?;
+    Ok(())
+}
+
+pub fn sys_getsockname(
+    ctx: &SyscallContext<'_>,
+    fd: FdNumber,
+    user_socket_address: UserAddress,
+    user_address_length: UserRef<usize>,
+) -> Result<SyscallResult, Errno> {
+    let file = ctx.task.files.get(fd)?;
+    if !file.node().is_sock() {
+        return error!(ENOTSOCK);
+    }
+    let socket = file.node().socket().ok_or_else(|| errno!(ENOTSOCK))?;
+    let address_bytes = get_socket_address(&socket);
+    write_socket_address(&ctx.task, user_socket_address, user_address_length, &address_bytes)?;
+    Ok(SUCCESS)
+}
+
+pub fn sys_getpeername(
+    ctx: &SyscallContext<'_>,
+    fd: FdNumber,
+    user_socket_address: UserAddress,
+    user_address_length: UserRef<usize>,
+) -> Result<SyscallResult, Errno> {
+    let file = ctx.task.files.get(fd)?;
+    if !file.node().is_sock() {
+        return error!(ENOTSOCK);
+    }
+    let socket = file.node().socket().ok_or_else(|| errno!(ENOTSOCK))?;
+    let peer_socket = socket.lock().connected_socket().ok_or_else(|| errno!(ENOTCONN))?;
+    let address_bytes = get_socket_address(&peer_socket);
+    write_socket_address(&ctx.task, user_socket_address, user_address_length, &address_bytes)?;
+    Ok(SUCCESS)
+}
+
 pub fn sys_socketpair(
     ctx: &SyscallContext<'_>,
-    domain: u32,
+    raw_domain: u32,
     socket_type: u32,
     protocol: u32,
     user_sockets: UserRef<[FdNumber; 2]>,
@@ -116,8 +186,8 @@ pub fn sys_socketpair(
     // fail. Put another way, there's no way the second socket file creation can error, if the first
     // succeeds, since they are created with the same options.
     let flags = socket_type & (SOCK_NONBLOCK | SOCK_CLOEXEC);
-    let first_socket_file = create_socket(ctx, domain, socket_type, protocol, flags)?;
-    let second_socket_file = create_socket(ctx, domain, socket_type, protocol, flags)?;
+    let first_socket_file = create_socket(ctx, raw_domain, socket_type, protocol, flags)?;
+    let second_socket_file = create_socket(ctx, raw_domain, socket_type, protocol, flags)?;
 
     Socket::connect(first_socket_file.node(), second_socket_file.node())
         .expect("socket connect failed, even after sockets were checked.");
@@ -226,15 +296,18 @@ pub fn sys_shutdown(
 /// - `flags`: The socket flags that are used to determine the `OpenFlags` for the file.
 fn create_socket(
     ctx: &SyscallContext<'_>,
-    domain: u32,
+    raw_domain: u32,
     socket_type: u32,
     _protocol: u32,
     flags: u32,
 ) -> Result<FileHandle, Errno> {
-    if domain != AF_UNIX {
-        not_implemented!("unsupported socket domain {}", domain);
-        return error!(EAFNOSUPPORT);
-    }
+    let domain = match raw_domain.try_into().map_err(|_| errno!(EAFNOSUPPORT))? {
+        AF_UNIX => SocketDomain::Unix,
+        _ => {
+            not_implemented!("unsupported socket domain {}", raw_domain);
+            return error!(EAFNOSUPPORT);
+        }
+    };
 
     let socket_type = socket_type & 0xf;
     if !(socket_type == SOCK_STREAM || socket_type == SOCK_DGRAM || socket_type == SOCK_SEQPACKET) {
@@ -242,9 +315,11 @@ fn create_socket(
         return error!(EPROTONOSUPPORT);
     }
 
+    let socket = Socket::new(domain);
+
     let open_flags = OpenFlags::RDWR
         | if flags & SOCK_NONBLOCK != 0 { OpenFlags::NONBLOCK } else { OpenFlags::empty() };
-    Ok(new_socket(ctx.kernel(), open_flags))
+    Ok(new_socket(ctx.kernel(), socket, open_flags))
 }
 
 #[cfg(test)]
@@ -264,7 +339,7 @@ mod tests {
         let mut socket_pair = [FdNumber::from_raw(0); 2];
         ctx.task.mm.write_object(socket_ref, &socket_pair).expect("");
 
-        assert_eq!(sys_socketpair(&ctx, AF_UNIX, SOCK_STREAM, 0, socket_ref), Ok(SUCCESS));
+        assert_eq!(sys_socketpair(&ctx, AF_UNIX as u32, SOCK_STREAM, 0, socket_ref), Ok(SUCCESS));
         ctx.task.mm.read_object(socket_ref, &mut socket_pair).expect("");
 
         let first_file = ctx.task.files.get(socket_pair[0])?;
@@ -296,15 +371,27 @@ mod tests {
         let (_kernel, task_owner) = create_kernel_and_task();
         let ctx = SyscallContext::new(&task_owner.task);
         assert_eq!(
-            sys_socketpair(&ctx, AF_INET, SOCK_STREAM, 0, UserRef::new(UserAddress::default())),
+            sys_socketpair(
+                &ctx,
+                AF_INET as u32,
+                SOCK_STREAM,
+                0,
+                UserRef::new(UserAddress::default())
+            ),
             Err(EAFNOSUPPORT)
         );
         assert_eq!(
-            sys_socketpair(&ctx, AF_UNIX, SOCK_RAW, 0, UserRef::new(UserAddress::default())),
+            sys_socketpair(&ctx, AF_UNIX as u32, SOCK_RAW, 0, UserRef::new(UserAddress::default())),
             Err(EPROTONOSUPPORT)
         );
         assert_eq!(
-            sys_socketpair(&ctx, AF_UNIX, SOCK_STREAM, 0, UserRef::new(UserAddress::default())),
+            sys_socketpair(
+                &ctx,
+                AF_UNIX as u32,
+                SOCK_STREAM,
+                0,
+                UserRef::new(UserAddress::default())
+            ),
             Err(EFAULT)
         );
     }
@@ -313,7 +400,7 @@ mod tests {
     fn test_connect_same_socket() {
         let (_kernel, task_owner) = create_kernel_and_task();
         let ctx = SyscallContext::new(&task_owner.task);
-        let fd1 = match sys_socket(&ctx, AF_UNIX, SOCK_STREAM, 0) {
+        let fd1 = match sys_socket(&ctx, AF_UNIX as u32, SOCK_STREAM, 0) {
             Ok(SyscallResult::Success(fd)) => fd,
             _ => panic!("Failed to create first socket"),
         };

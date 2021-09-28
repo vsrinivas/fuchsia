@@ -2,6 +2,6 @@
     include: [ "//src/proc/tests/android/gvisor.shard.cml" ],
     program: {
         binary: "/data/tests/bind_test",
-        args: [ "--gunit_filter=-*.GetLocalAddr/*:*.GetLocalAddrWithoutBind/*:*.GetRemoteAddressWithoutConnect/*:*/6:*/7:*/8:*/9:*/10:*/11" ],
+        args: [ "--gunit_filter=-*/6:*/7:*/8:*/9:*/10:*/11" ],
     },
 }

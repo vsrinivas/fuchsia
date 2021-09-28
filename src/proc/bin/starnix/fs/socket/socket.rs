@@ -20,18 +20,31 @@ use std::sync::{Arc, Weak};
 /// # Parameters
 /// - `kernel`: The kernel that is used to fetch `SocketFs`, to store the created socket node.
 /// - `open_flags`: The `OpenFlags` which are used to create the `FileObject`.
-pub fn new_socket(kernel: &Kernel, open_flags: OpenFlags) -> FileHandle {
+pub fn new_socket(kernel: &Kernel, socket: SocketHandle, open_flags: OpenFlags) -> FileHandle {
     let fs = socket_fs(kernel);
     let mode = mode!(IFSOCK, 0o777);
-    let socket = Socket::new();
     let node = fs.create_node(Box::new(Anon), mode);
     node.set_socket(socket.clone());
 
     FileObject::new_anonymous(SocketFile::new(socket), Arc::clone(&node), open_flags)
 }
 
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
+pub enum SocketDomain {
+    Unspecified,
+    Unix,
+}
+
+#[derive(Debug, Clone)]
+pub enum SocketAddress {
+    Unix(FsString),
+}
+
 // TODO: Sockets should have a maximum capacity.
 pub struct Socket {
+    /// The domain of this socket.
+    domain: SocketDomain,
+
     /// The `FsNode` that contains the socket that is connected to this socket, if such a node
     /// has set via `Socket::connect`.
     connected_node: Weak<FsNode>,
@@ -41,21 +54,8 @@ pub struct Socket {
     /// A socket writes to `connected_node`'s `incoming_messages`.
     incoming_messages: MessageBuffer,
 
-    /// Whether or not the socket has been bound to an address.
-    // TODO: Set this correctly when the socket is bound to an address/infer this from connection
-    // state.
-    is_bound: bool,
-}
-
-impl Default for Socket {
-    fn default() -> Self {
-        Socket {
-            connected_node: Weak::default(),
-            // TODO: Set the capacity to a more accurate value.
-            incoming_messages: MessageBuffer::new(usize::MAX),
-            is_bound: false,
-        }
-    }
+    /// The address to which this socket has been bound, if any.
+    bound_address: Option<SocketAddress>,
 }
 
 /// A `SocketHandle` is a `Socket` wrapped in a `Arc<Mutex<..>>`. This is used to share sockets
@@ -63,8 +63,18 @@ impl Default for Socket {
 pub type SocketHandle = Arc<Mutex<Socket>>;
 
 impl Socket {
-    pub fn new() -> SocketHandle {
-        Arc::new(Mutex::new(Socket::default()))
+    pub fn new(domain: SocketDomain) -> SocketHandle {
+        Arc::new(Mutex::new(Socket {
+            domain,
+            connected_node: Weak::default(),
+            // TODO: Set the capacity to a more accurate value.
+            incoming_messages: MessageBuffer::new(usize::MAX),
+            bound_address: None,
+        }))
+    }
+
+    pub fn domain(&self) -> SocketDomain {
+        self.domain
     }
 
     /// Connects the sockets in the provided `FsNodeHandle`s together.
@@ -133,6 +143,14 @@ impl Socket {
         second_node.notify(FdEvents::POLLHUP);
     }
 
+    pub fn set_bound_address(&mut self, address: SocketAddress) {
+        self.bound_address = Some(address);
+    }
+
+    pub fn bound_address(&self) -> &Option<SocketAddress> {
+        &self.bound_address
+    }
+
     /// Returns the node that contains the socket that is connected to this socket, if such a node
     /// exists.
     pub fn connected_node(&self) -> Option<FsNodeHandle> {
@@ -146,7 +164,7 @@ impl Socket {
 
     /// Returns true if this socket has been bound to an address.
     pub fn is_bound(&self) -> bool {
-        self.is_bound
+        self.bound_address.is_some()
     }
 
     /// Returns true if this socket is connected to another socket.

@@ -343,7 +343,7 @@ impl FsNode {
     /// Returns the socket associated with this node, if such a socket exists.
     pub fn socket(&self) -> Option<&SocketHandle> {
         if self.info().mode.is_sock() {
-            Some(self.socket.get_or_init(|| Socket::new()))
+            Some(self.socket.get_or_init(|| Socket::new(SocketDomain::Unspecified)))
         } else {
             None
         }

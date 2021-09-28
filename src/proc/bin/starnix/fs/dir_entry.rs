@@ -190,18 +190,20 @@ impl DirEntry {
         })
     }
 
-    pub fn create_socket(
+    pub fn bind_socket(
         self: &DirEntryHandle,
         name: &FsStr,
         mode: FileMode,
-        socket_handle: SocketHandle,
+        socket_address: SocketAddress,
+        socket: SocketHandle,
     ) -> Result<DirEntryHandle, Errno> {
         self.create_entry(name, mode, DeviceType::NONE, || {
             // Make the node in the parent...
             let node = self.node.mknod(name, mode)?;
             // ... and make sure to initialize the socket before the callback returns, so the socket
             // is guaranteed to be initialized by the time it is named.
-            node.set_socket(socket_handle);
+            socket.lock().set_bound_address(socket_address);
+            node.set_socket(socket);
             Ok(node)
         })
     }
