@@ -33,6 +33,7 @@
 #include <lib/zx/channel.h>
 
 #endif  // __Fuchsia__
+#include <fidl/fidl.test.service/cpp/markers.h>
 #include <zircon/fidl.h>
 
 namespace fidl_test_service {
@@ -132,14 +133,6 @@ __LOCAL extern "C" const fidl_type_t
 __LOCAL extern "C" const fidl_type_t
     fidl_test_service_SecondProtocolMethodOnSecondResponseTable;
 
-class SecondProtocol final {
-  SecondProtocol() = delete;
-
- public:
-  class MethodOnSecond final {
-    MethodOnSecond() = delete;
-  };
-};
 }  // namespace fidl_test_service
 #ifdef __Fuchsia__
 
@@ -747,14 +740,6 @@ __LOCAL extern "C" const fidl_type_t
 __LOCAL extern "C" const fidl_type_t
     fidl_test_service_FirstProtocolMethodOnFirstResponseTable;
 
-class FirstProtocol final {
-  FirstProtocol() = delete;
-
- public:
-  class MethodOnFirst final {
-    MethodOnFirst() = delete;
-  };
-};
 }  // namespace fidl_test_service
 #ifdef __Fuchsia__
 

@@ -33,6 +33,7 @@
 #include <lib/zx/channel.h>
 
 #endif  // __Fuchsia__
+#include <fidl/fidl.test.bindingsdenylist/cpp/markers.h>
 #include <zircon/fidl.h>
 
 namespace fidl_test_bindingsdenylist {
@@ -124,14 +125,6 @@ __LOCAL extern "C" const fidl_type_t
 __LOCAL extern "C" const fidl_type_t
     fidl_test_bindingsdenylist_OnlyLibfuzzerAndDepsLibfuzzerNeedsNonemptyProtocolResponseTable;
 
-class OnlyLibfuzzerAndDeps final {
-  OnlyLibfuzzerAndDeps() = delete;
-
- public:
-  class LibfuzzerNeedsNonemptyProtocol final {
-    LibfuzzerNeedsNonemptyProtocol() = delete;
-  };
-};
 }  // namespace fidl_test_bindingsdenylist
 #ifdef __Fuchsia__
 
@@ -862,13 +855,7 @@ class ::fidl::WireServer<::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps>
 };
 #endif  // __Fuchsia__
 
-namespace fidl_test_bindingsdenylist {
-class OnlyCppAndDeps final {
-  OnlyCppAndDeps() = delete;
-
- public:
-};
-}  // namespace fidl_test_bindingsdenylist
+namespace fidl_test_bindingsdenylist {}  // namespace fidl_test_bindingsdenylist
 #ifdef __Fuchsia__
 
 template <>

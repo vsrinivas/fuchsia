@@ -33,6 +33,7 @@
 #include <lib/zx/vmo.h>
 
 #endif  // __Fuchsia__
+#include <fidl/fidl.test.handlesintypes/cpp/markers.h>
 #include <zircon/fidl.h>
 
 namespace fidl_test_handlesintypes {

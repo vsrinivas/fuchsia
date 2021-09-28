@@ -668,6 +668,7 @@ template("fidl_cpp_family") {
     llcpp_options = {
       bindings_flavor = "llcpp"
       generated_headers = [
+        "fidl/$library_name/cpp/markers.h",
         "fidl/$library_name/cpp/wire.h",
         "fidl/$library_name/cpp/wire_test_base.h",
       ]

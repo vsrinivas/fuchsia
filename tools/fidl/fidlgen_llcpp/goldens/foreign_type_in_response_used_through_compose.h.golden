@@ -34,6 +34,7 @@
 
 #endif  // __Fuchsia__
 #include <fidl/bottom/cpp/wire.h>
+#include <fidl/fidl.test.foreigntypeinresponseusedthroughcompose/cpp/markers.h>
 #include <fidl/middle/cpp/wire.h>
 #include <zircon/fidl.h>
 
@@ -46,14 +47,6 @@ __LOCAL extern "C" const fidl_type_t
 __LOCAL extern "C" const fidl_type_t
     fidl_test_foreigntypeinresponseusedthroughcompose_TopGetFooResponseTable;
 
-class Top final {
-  Top() = delete;
-
- public:
-  class GetFoo final {
-    GetFoo() = delete;
-  };
-};
 }  // namespace fidl_test_foreigntypeinresponseusedthroughcompose
 #ifdef __Fuchsia__
 

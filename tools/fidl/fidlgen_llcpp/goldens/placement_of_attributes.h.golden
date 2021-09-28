@@ -34,6 +34,7 @@
 
 #endif  // __Fuchsia__
 #include <fidl/exampleusing/cpp/wire.h>
+#include <fidl/fidl.test.placementofattributes/cpp/markers.h>
 #include <zircon/fidl.h>
 
 namespace fidl_test_placementofattributes {
@@ -668,14 +669,6 @@ __LOCAL extern "C" const fidl_type_t
 __LOCAL extern "C" const fidl_type_t
     fidl_test_placementofattributes_ExampleProtocolMethodResponseTable;
 
-class ExampleProtocol final {
-  ExampleProtocol() = delete;
-
- public:
-  class Method final {
-    Method() = delete;
-  };
-};
 }  // namespace fidl_test_placementofattributes
 #ifdef __Fuchsia__
 

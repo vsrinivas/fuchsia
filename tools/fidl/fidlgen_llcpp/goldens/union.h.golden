@@ -33,6 +33,7 @@
 #include <lib/zx/channel.h>
 
 #endif  // __Fuchsia__
+#include <fidl/fidl.test.union/cpp/markers.h>
 #include <zircon/fidl.h>
 
 namespace fidl_test_union {
@@ -3180,17 +3181,6 @@ __LOCAL extern "C" const fidl_type_t
 __LOCAL extern "C" const fidl_type_t
     fidl_test_union_TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedResponseTable;
 
-class TestProtocol final {
-  TestProtocol() = delete;
-
- public:
-  class StrictXUnionHenceResponseMayBeStackAllocated final {
-    StrictXUnionHenceResponseMayBeStackAllocated() = delete;
-  };
-  class FlexibleXUnionHenceResponseMustBeHeapAllocated final {
-    FlexibleXUnionHenceResponseMustBeHeapAllocated() = delete;
-  };
-};
 }  // namespace fidl_test_union
 #ifdef __Fuchsia__
 

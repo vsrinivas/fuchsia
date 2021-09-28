@@ -34,6 +34,7 @@
 #include <lib/zx/vmo.h>
 
 #endif  // __Fuchsia__
+#include <fidl/fidl.test.nullable/cpp/markers.h>
 #include <fidl/zx/cpp/wire.h>
 #include <zircon/fidl.h>
 
@@ -1288,14 +1289,6 @@ __LOCAL extern "C" const fidl_type_t
 __LOCAL extern "C" const fidl_type_t
     fidl_test_nullable_SimpleProtocolAddResponseTable;
 
-class SimpleProtocol final {
-  SimpleProtocol() = delete;
-
- public:
-  class Add final {
-    Add() = delete;
-  };
-};
 }  // namespace fidl_test_nullable
 #ifdef __Fuchsia__
 

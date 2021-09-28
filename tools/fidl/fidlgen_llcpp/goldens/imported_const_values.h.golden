@@ -33,6 +33,7 @@
 
 #endif  // __Fuchsia__
 #include <fidl/dependent/cpp/wire.h>
+#include <fidl/fidl.test.importedconstvalues/cpp/markers.h>
 #include <zircon/fidl.h>
 
 namespace fidl_test_importedconstvalues {

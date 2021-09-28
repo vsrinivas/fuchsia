@@ -33,6 +33,7 @@
 #include <lib/zx/channel.h>
 
 #endif  // __Fuchsia__
+#include <fidl/fidl.test.inheritance/cpp/markers.h>
 #include <zircon/fidl.h>
 
 namespace fidl_test_inheritance {
@@ -45,14 +46,6 @@ __LOCAL extern "C" const fidl_type_t fidl_test_inheritance_superfooRequestTable;
 __LOCAL extern "C" const fidl_type_t
     fidl_test_inheritance_superfooResponseTable;
 
-class Super final {
-  Super() = delete;
-
- public:
-  class Foo final {
-    Foo() = delete;
-  };
-};
 }  // namespace fidl_test_inheritance
 #ifdef __Fuchsia__
 
@@ -728,14 +721,6 @@ __LOCAL extern "C" const fidl_type_t fidl_test_inheritance_subfooRequestTable;
 
 __LOCAL extern "C" const fidl_type_t fidl_test_inheritance_subfooResponseTable;
 
-class Sub final {
-  Sub() = delete;
-
- public:
-  class Foo final {
-    Foo() = delete;
-  };
-};
 }  // namespace fidl_test_inheritance
 #ifdef __Fuchsia__
 

@@ -35,6 +35,7 @@
 #include <lib/zx/socket.h>
 
 #endif  // __Fuchsia__
+#include <fidl/fidl.test.protocols/cpp/markers.h>
 #include <zircon/fidl.h>
 
 namespace fidl_test_protocols {
@@ -1267,20 +1268,6 @@ __LOCAL extern "C" const fidl_type_t
 __LOCAL extern "C" const fidl_type_t
     fidl_test_protocols_HandleRightsProtocolAnEventEventTable;
 
-class HandleRightsProtocol final {
-  HandleRightsProtocol() = delete;
-
- public:
-  class NoResponseMethod final {
-    NoResponseMethod() = delete;
-  };
-  class ResponseMethod final {
-    ResponseMethod() = delete;
-  };
-  class AnEvent final {
-    AnEvent() = delete;
-  };
-};
 }  // namespace fidl_test_protocols
 #ifdef __Fuchsia__
 
@@ -2757,35 +2744,6 @@ __LOCAL extern "C" const fidl_type_t
 __LOCAL extern "C" const fidl_type_t
     fidl_test_protocols_WithAndWithoutRequestResponseOnWithResponseEventTable;
 
-class WithAndWithoutRequestResponse final {
-  WithAndWithoutRequestResponse() = delete;
-
- public:
-  class NoRequestNoResponse final {
-    NoRequestNoResponse() = delete;
-  };
-  class NoRequestEmptyResponse final {
-    NoRequestEmptyResponse() = delete;
-  };
-  class NoRequestWithResponse final {
-    NoRequestWithResponse() = delete;
-  };
-  class WithRequestNoResponse final {
-    WithRequestNoResponse() = delete;
-  };
-  class WithRequestEmptyResponse final {
-    WithRequestEmptyResponse() = delete;
-  };
-  class WithRequestWithResponse final {
-    WithRequestWithResponse() = delete;
-  };
-  class OnEmptyResponse final {
-    OnEmptyResponse() = delete;
-  };
-  class OnWithResponse final {
-    OnWithResponse() = delete;
-  };
-};
 }  // namespace fidl_test_protocols
 #ifdef __Fuchsia__
 
@@ -6418,20 +6376,6 @@ __LOCAL extern "C" const fidl_type_t
 __LOCAL extern "C" const fidl_type_t
     fidl_test_protocols_TransitionalEventEventTable;
 
-class Transitional final {
-  Transitional() = delete;
-
- public:
-  class Request final {
-    Request() = delete;
-  };
-  class OneWay final {
-    OneWay() = delete;
-  };
-  class Event final {
-    Event() = delete;
-  };
-};
 }  // namespace fidl_test_protocols
 #ifdef __Fuchsia__
 
@@ -7585,14 +7529,6 @@ __LOCAL extern "C" const fidl_type_t
 __LOCAL extern "C" const fidl_type_t
     fidl_test_protocols_MethodWithUnionUnionMethodResponseTable;
 
-class MethodWithUnion final {
-  MethodWithUnion() = delete;
-
- public:
-  class UnionMethod final {
-    UnionMethod() = delete;
-  };
-};
 }  // namespace fidl_test_protocols
 #ifdef __Fuchsia__
 
@@ -8168,20 +8104,6 @@ __LOCAL extern "C" const fidl_type_t
 __LOCAL extern "C" const fidl_type_t
     fidl_test_protocols_WithProtocolEndsStructContainingEndsResponseTable;
 
-class WithProtocolEnds final {
-  WithProtocolEnds() = delete;
-
- public:
-  class ClientEnds final {
-    ClientEnds() = delete;
-  };
-  class ServerEnds final {
-    ServerEnds() = delete;
-  };
-  class StructContainingEnds final {
-    StructContainingEnds() = delete;
-  };
-};
 }  // namespace fidl_test_protocols
 #ifdef __Fuchsia__
 
@@ -10305,14 +10227,6 @@ __LOCAL extern "C" const fidl_type_t
 __LOCAL extern "C" const fidl_type_t
     fidl_test_protocols_ManyParametersFifteenResponseTable;
 
-class ManyParameters final {
-  ManyParameters() = delete;
-
- public:
-  class Fifteen final {
-    Fifteen() = delete;
-  };
-};
 }  // namespace fidl_test_protocols
 #ifdef __Fuchsia__
 
@@ -10794,23 +10708,6 @@ __LOCAL extern "C" const fidl_type_t
 __LOCAL extern "C" const fidl_type_t
     fidl_test_protocols_WithErrorSyntaxHandleInResultResponseTable;
 
-class WithErrorSyntax final {
-  WithErrorSyntax() = delete;
-
- public:
-  class ResponseAsStruct final {
-    ResponseAsStruct() = delete;
-  };
-  class ErrorAsPrimitive final {
-    ErrorAsPrimitive() = delete;
-  };
-  class ErrorAsEnum final {
-    ErrorAsEnum() = delete;
-  };
-  class HandleInResult final {
-    HandleInResult() = delete;
-  };
-};
 }  // namespace fidl_test_protocols
 #ifdef __Fuchsia__
 
@@ -13380,14 +13277,6 @@ __LOCAL extern "C" const fidl_type_t
 __LOCAL extern "C" const fidl_type_t
     fidl_test_protocols_DiscoverableProtocolMethodResponseTable;
 
-class DiscoverableProtocol final {
-  DiscoverableProtocol() = delete;
-
- public:
-  class Method final {
-    Method() = delete;
-  };
-};
 }  // namespace fidl_test_protocols
 #ifdef __Fuchsia__
 
@@ -13781,26 +13670,6 @@ __LOCAL extern "C" const fidl_type_t
 __LOCAL extern "C" const fidl_type_t
     fidl_test_protocols_ChannelProtocolMutateSocketResponseTable;
 
-class ChannelProtocol final {
-  ChannelProtocol() = delete;
-
- public:
-  class MethodA final {
-    MethodA() = delete;
-  };
-  class EventA final {
-    EventA() = delete;
-  };
-  class MethodB final {
-    MethodB() = delete;
-  };
-  class TakeHandle final {
-    TakeHandle() = delete;
-  };
-  class MutateSocket final {
-    MutateSocket() = delete;
-  };
-};
 }  // namespace fidl_test_protocols
 #ifdef __Fuchsia__
 

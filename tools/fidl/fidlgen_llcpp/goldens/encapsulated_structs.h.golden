@@ -33,6 +33,7 @@
 #include <lib/zx/handle.h>
 
 #endif  // __Fuchsia__
+#include <fidl/fidl.test.encapsulatedstructs/cpp/markers.h>
 #include <fidl/zx/cpp/wire.h>
 #include <zircon/fidl.h>
 

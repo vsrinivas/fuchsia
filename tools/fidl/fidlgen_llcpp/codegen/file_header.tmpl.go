@@ -48,6 +48,7 @@ fidl/{{ .LibraryDots }}/cpp/wire.h
 #include <lib/zx/{{ . }}.h>
 {{ end -}}
 {{- EndifFuchsia -}}
+#include <{{ .Library | Filename "Markers" }}>
 #include <zircon/fidl.h>
 {{ range .Dependencies -}}
 #include <{{ . | Filename "Header" }}>

@@ -32,6 +32,7 @@
 #include <lib/fidl/txn_header.h>
 
 #endif  // __Fuchsia__
+#include <fidl/fidl.test.unionsandwich/cpp/markers.h>
 #include <zircon/fidl.h>
 
 namespace fidl_test_unionsandwich {

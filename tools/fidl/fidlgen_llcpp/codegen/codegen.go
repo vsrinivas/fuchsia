@@ -216,6 +216,7 @@ func NewGenerator(flags *cpp.CmdlineFlags) *cpp.Generator {
 		fileHeaderTmpl,
 		fileSourceTmpl,
 		fileTestBaseTmpl,
+		fileMarkersTmpl,
 		fragmentBitsTmpl,
 		fragmentConstTmpl,
 		fragmentEnumTmpl,

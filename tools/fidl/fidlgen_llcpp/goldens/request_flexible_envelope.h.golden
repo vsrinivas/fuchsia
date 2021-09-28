@@ -33,6 +33,7 @@
 #include <lib/zx/channel.h>
 
 #endif  // __Fuchsia__
+#include <fidl/fidl.test.requestflexibleenvelope/cpp/markers.h>
 #include <zircon/fidl.h>
 
 namespace fidl_test_requestflexibleenvelope {
@@ -300,17 +301,6 @@ __LOCAL extern "C" const fidl_type_t
 __LOCAL extern "C" const fidl_type_t
     fidl_test_requestflexibleenvelope_ProtocolRequestFlexibleResponseStrictResponseTable;
 
-class Protocol final {
-  Protocol() = delete;
-
- public:
-  class RequestStrictResponseFlexible final {
-    RequestStrictResponseFlexible() = delete;
-  };
-  class RequestFlexibleResponseStrict final {
-    RequestFlexibleResponseStrict() = delete;
-  };
-};
 }  // namespace fidl_test_requestflexibleenvelope
 #ifdef __Fuchsia__
 

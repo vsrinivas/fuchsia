@@ -33,6 +33,7 @@
 #include <lib/zx/channel.h>
 
 #endif  // __Fuchsia__
+#include <fidl/fidl.test.protocolrequest/cpp/markers.h>
 #include <zircon/fidl.h>
 
 namespace fidl_test_protocolrequest {
@@ -64,23 +65,6 @@ __LOCAL extern "C" const fidl_type_t
 __LOCAL extern "C" const fidl_type_t
     fidl_test_protocolrequest_ParentTakeChildRequestResponseTable;
 
-class Parent final {
-  Parent() = delete;
-
- public:
-  class GetChild final {
-    GetChild() = delete;
-  };
-  class GetChildRequest final {
-    GetChildRequest() = delete;
-  };
-  class TakeChild final {
-    TakeChild() = delete;
-  };
-  class TakeChildRequest final {
-    TakeChildRequest() = delete;
-  };
-};
 }  // namespace fidl_test_protocolrequest
 #ifdef __Fuchsia__
 
@@ -2006,13 +1990,7 @@ class ::fidl::WireServer<::fidl_test_protocolrequest::Parent>
 };
 #endif  // __Fuchsia__
 
-namespace fidl_test_protocolrequest {
-class Child final {
-  Child() = delete;
-
- public:
-};
-}  // namespace fidl_test_protocolrequest
+namespace fidl_test_protocolrequest {}  // namespace fidl_test_protocolrequest
 #ifdef __Fuchsia__
 
 template <>

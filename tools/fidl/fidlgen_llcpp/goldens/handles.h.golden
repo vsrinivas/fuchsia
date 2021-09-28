@@ -59,6 +59,7 @@
 #include <lib/zx/vmo.h>
 
 #endif  // __Fuchsia__
+#include <fidl/fidl.test.handles/cpp/markers.h>
 #include <fidl/zx/cpp/wire.h>
 #include <zircon/fidl.h>
 
@@ -344,11 +345,6 @@ class Handles::DecodedMessage final
 #endif  // __Fuchsia__
 
 }  // namespace wire
-class SomeProtocol final {
-  SomeProtocol() = delete;
-
- public:
-};
 }  // namespace fidl_test_handles
 #ifdef __Fuchsia__
 

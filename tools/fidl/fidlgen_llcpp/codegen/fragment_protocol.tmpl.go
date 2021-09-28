@@ -44,18 +44,6 @@ __LOCAL extern "C" const fidl_type_t {{ .Response.WireCodingTable.Name }};
 {{ "" }}
 {{ EnsureNamespace . }}
 
-{{- .Docs }}
-class {{ .Name }} final {
-  {{ .Name }}() = delete;
- public:
-  {{- range .Methods }}
-    {{- .Docs }}
-    class {{ .Marker.Self }} final {
-      {{ .Marker.Self }}() = delete;
-    };
-  {{- end }}
-};
-
 {{- template "Protocol:Details:Header" . }}
 {{- template "Protocol:Dispatcher:Header" . }}
 
