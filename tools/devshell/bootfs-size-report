@@ -1,0 +1,56 @@
+#!/bin/bash
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+#### CATEGORY=Run, inspect and debug
+### produce an uncompressed size report from a ZBI
+
+## usage: fx zbi-size-report [--zbi <file>] [--output-json <file>]
+##   --zbi <file> path to ZBI to analyze; defaults to out/default/fuchsia.zbi
+##   --output-json <file> where to save report of uncompressed file sizes
+##                        in a d3js-friendly format; defaults to a temporary file
+
+set -e
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"
+readonly SCRIPT_DIR
+source "$SCRIPT_DIR"/lib/vars.sh || exit $?
+fx-config-read
+
+ZBI=
+OUTPUT=
+
+while [[ $# -ge 1 ]]; do
+  case "$1" in
+  -h|--help)
+    fx-command-help
+    exit 0
+    ;;
+  --zbi)
+    shift
+    ZBI="$1"
+    ;;
+  --output-json)
+    shift
+    OUTPUT="$1"
+    ;;
+  esac
+  shift
+done
+
+if [[ -z "${ZBI}" ]]; then
+  ZBI="${FUCHSIA_BUILD_DIR}/fuchsia.zbi"
+  fx-info "--zbi not specified, will build and analyze fuchsia.zbi"
+  fx-command-run build fuchsia.zbi
+fi
+
+if [[ -z "${OUTPUT}" ]]; then
+  OUTPUT="$(mktemp --suffix=.json)"
+  fx-info "--output-json not set, Outputting to ${OUTPUT}"
+fi
+
+ZBI_JSON="$(mktemp)"
+readonly ZBI_JSON
+fx-command-run host-tool zbi --list --json-output="${ZBI_JSON}" "${ZBI}"
+"${SCRIPT_DIR}/contrib/zbi_json_to_d3js.py" --input "${ZBI_JSON}" --output "${OUTPUT}"
