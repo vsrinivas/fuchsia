@@ -18,7 +18,7 @@
 class FakePciProtocolTests : public zxtest::Test {
  protected:
   void SetUp() final {
-    fake_pci_.reset();
+    fake_pci_.Reset();
     pci_ = ddk::PciProtocolClient(&fake_pci_.get_protocol());
   }
   pci::FakePciProtocol& fake_pci() { return fake_pci_; }
@@ -238,10 +238,9 @@ namespace {
 // returned for comparison by tests later. Its koid should match the koid of the
 // duplicated handle returned by MapInterrupt.
 template <typename T>
-bool MatchKoids(const zx::unowned<T>& first, const zx::object<T>& second) {
+bool MatchKoids(const zx::object<T>& first, const zx::object<T>& second) {
   zx_info_handle_basic finfo{}, sinfo{};
-  ZX_ASSERT(first->get_info(ZX_INFO_HANDLE_BASIC, &finfo, sizeof(finfo), nullptr, nullptr) ==
-            ZX_OK);
+  ZX_ASSERT(first.get_info(ZX_INFO_HANDLE_BASIC, &finfo, sizeof(finfo), nullptr, nullptr) == ZX_OK);
   ZX_ASSERT(second.get_info(ZX_INFO_HANDLE_BASIC, &sinfo, sizeof(sinfo), nullptr, nullptr) ==
             ZX_OK);
 
@@ -255,12 +254,12 @@ TEST_F(FakePciProtocolTests, MapInterrupt) {
   // mapped still. In the fake though, it's fine to do so. Switching IRQ modes
   // is not something drivers do in practice, so it's fine if they encounter
   // ZX_ERR_BAD_STATE at runtime if documentation details it.
-  zx::unowned_interrupt legacy = fake_pci().AddLegacyInterrupt();
-  zx::unowned_interrupt msi0 = fake_pci().AddMsiInterrupt();
-  zx::unowned_interrupt msi1 = fake_pci().AddMsiInterrupt();
-  zx::unowned_interrupt msix0 = fake_pci().AddMsixInterrupt();
-  zx::unowned_interrupt msix1 = fake_pci().AddMsixInterrupt();
-  zx::unowned_interrupt msix2 = fake_pci().AddMsixInterrupt();
+  zx::interrupt& legacy = fake_pci().AddLegacyInterrupt();
+  zx::interrupt& msi0 = fake_pci().AddMsiInterrupt();
+  zx::interrupt& msi1 = fake_pci().AddMsiInterrupt();
+  zx::interrupt& msix0 = fake_pci().AddMsixInterrupt();
+  zx::interrupt& msix1 = fake_pci().AddMsixInterrupt();
+  zx::interrupt& msix2 = fake_pci().AddMsixInterrupt();
 
   zx::interrupt interrupt{};
   uint32_t irq_cnt = 1;
@@ -424,11 +423,12 @@ TEST_F(FakePciProtocolTests, GetBar) {
   uint64_t bar_size = 256;
   ASSERT_OK(zx::vmo::create(page_size, 0, &vmo));
   ASSERT_NO_DEATH([&]() { fake_pci().SetBar(valid_bar, bar_size, std::move(vmo)); });
-  zx::unowned_vmo borrowed = fake_pci().GetBar(valid_bar);
-  ASSERT_OK(pci().GetBar(valid_bar, &bar));
-  // Verify that the VMO we got back wit hthe protocol method matches the setup
+  // Verify that the VMO we got back via the protocol method matches the setup
   // and that the other fields are correct.
-  ASSERT_TRUE(MatchKoids(borrowed, *zx::unowned_vmo(bar.handle)));
+  ASSERT_OK(pci().GetBar(valid_bar, &bar));
+  zx::vmo proto(bar.handle);
+  zx::vmo& borrowed = fake_pci().GetBar(valid_bar);
+  ASSERT_TRUE(MatchKoids(borrowed, proto));
   ASSERT_EQ(valid_bar, bar.id);
   ASSERT_EQ(bar_size, bar.size);
 }
@@ -439,14 +439,14 @@ TEST_F(FakePciProtocolTests, MapMmio) {
   zx::vmo vmo{};
   ASSERT_OK(zx::vmo::create(bar_size, 0, &vmo));
   fake_pci().SetBar(bar_id, bar_size, std::move(vmo));
-  zx::unowned_vmo borrow = fake_pci().GetBar(bar_id);
+  zx::vmo& borrowed = fake_pci().GetBar(bar_id);
 
   // Ensure that our fake implementation / backend for the BAR methods still works with
   // the MapMmio helper method added to device-protocol.
   ddk::Pci dp_pci(fake_pci().get_protocol());
   std::optional<ddk::MmioBuffer> mmio = std::nullopt;
   ASSERT_OK(dp_pci.MapMmio(bar_id, ZX_CACHE_POLICY_UNCACHED_DEVICE, &mmio));
-  ASSERT_TRUE(MatchKoids(borrow, *mmio->get_vmo()));
+  ASSERT_TRUE(MatchKoids(borrowed, *mmio->get_vmo()));
 }
 
 TEST_F(FakePciProtocolTests, Capabilities) {

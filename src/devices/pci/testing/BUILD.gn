@@ -6,12 +6,18 @@ import("//build/components.gni")
 import("//build/cpp/library_headers.gni")
 import("//build/test.gni")
 
-library_headers("pci-protocol-fake") {
+library_headers("pci-protocol-fake-headers") {
   include_dir = "."
   headers = [ "pci_protocol_fake.h" ]
+}
+
+source_set("pci-protocol-fake") {
+  sources = [ "protocol/internal.cc" ]
   public_deps = [
+    ":pci-protocol-fake-headers",
     "//sdk/banjo/fuchsia.hardware.pci:fuchsia.hardware.pci_banjo_cpp",
     "//src/devices/testing/fake-bti",
+    "//zircon/system/ulib/fbl",
   ]
   testonly = true
 }

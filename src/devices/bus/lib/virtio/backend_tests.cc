@@ -75,7 +75,7 @@ class VirtioTests : public fake_ddk::Bind, public zxtest::Test {
  protected:
   void SetUp() final { fake_ddk::kMinLogSeverity = kTestLogLevel; }
 
-  void TearDown() final { fake_pci_.reset(); }
+  void TearDown() final { fake_pci_.Reset(); }
   pci::FakePciProtocol& fake_pci() { return fake_pci_; }
   void CleanUp() {
     DeviceAsyncRemove(fake_ddk::kFakeDevice);
@@ -101,10 +101,10 @@ class VirtioTests : public fake_ddk::Bind, public zxtest::Test {
 
   void SetUpQueue() {
     auto& common_cfg_cap = kCapabilities[4];
-    zx::unowned_vmo bar = fake_pci().GetBar(common_cfg_cap.bar);
+    zx::vmo& bar = fake_pci().GetBar(common_cfg_cap.bar);
     uint16_t queue_size = 0x2;
     uint32_t queue_offset = offsetof(virtio_pci_common_cfg_t, queue_size);
-    bar->write(&queue_size, common_cfg_cap.offset + queue_offset, sizeof(queue_size));
+    bar.write(&queue_size, common_cfg_cap.offset + queue_offset, sizeof(queue_size));
   }
 
   void SetUpMsiX() {
@@ -115,10 +115,10 @@ class VirtioTests : public fake_ddk::Bind, public zxtest::Test {
     // configuration capability. We use the structures above to figure out what
     // bar that is in, and what offset it's at.
     auto& common_cfg_cap = kCapabilities[4];
-    zx::unowned_vmo bar = fake_pci().GetBar(common_cfg_cap.bar);
+    zx::vmo& bar = fake_pci().GetBar(common_cfg_cap.bar);
     uint16_t msix_config_val = 0xFFFF;  // Set to no MSI-X vector allocated.
     uint32_t msix_offset = offsetof(virtio_pci_common_cfg_t, config_msix_vector);
-    bar->write(&msix_config_val, common_cfg_cap.offset + msix_offset, sizeof(msix_config_val));
+    bar.write(&msix_config_val, common_cfg_cap.offset + msix_offset, sizeof(msix_config_val));
   }
 
  private:
