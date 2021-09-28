@@ -3,7 +3,9 @@
 // found in the LICENSE file.
 library fuchsia.examples;
 
+// [START max]
 const MAX_STRING_LENGTH uint64 = 32;
+// [END max]
 
 // [START echo]
 @discoverable
