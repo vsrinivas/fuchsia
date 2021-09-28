@@ -1,0 +1,44 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "allOf": [
+        {
+            "$ref": "common.json#/definitions/versioned_sdk_element"
+        },
+        {
+            "properties": {
+                "data": {
+                    "allOf": [
+                        {
+                            "properties": {
+                                "type": {
+                                    "allOf": [
+                                        {
+                                            "$ref": "common.json#/definitions/kind"
+                                        },
+                                        {
+                                            "enum": [
+                                                "virtual_device"
+                                            ]
+                                        }
+                                    ]
+                                }
+                            }
+                        },
+                        {
+                            "$ref": "hardware-f6f47515.json#/definitions/requirements"
+                        }
+                    ],
+                    "required": [
+                        "hardware",
+                        "type",
+                        "name"
+                    ]
+                }
+            },
+            "type": "object"
+        }
+    ],
+    "description": "A virtual device specification.",
+    "id": "http://fuchsia.com/schemas/sdk/virtual_device-93A41932.json",
+    "type": "object"
+}

@@ -25,6 +25,7 @@ schemas = [
   "product_bundle-6320eef1.json",
   "sysroot.json",
   "version_history.json",
+  "virtual_device-93A41932.json",
 ]
 
 sdk_documentation("meta") {
@@ -87,6 +88,7 @@ if (is_host) {
       "src/product_bundle.rs",
       "src/sysroot.rs",
       "src/testing.rs",
+      "src/virtual_device.rs",
     ]
 
     inputs = [
@@ -107,6 +109,7 @@ if (is_host) {
       "physical_device-0bd5d21f.json",
       "product_bundle-6320eef1.json",
       "sysroot.json",
+      "virtual_device-93A41932.json",
     ]
   }
 

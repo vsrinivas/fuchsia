@@ -35,6 +35,7 @@ pub enum ElementType {
     PhysicalDevice,
     ProductBundle,
     Sysroot,
+    VirtualDevice,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]

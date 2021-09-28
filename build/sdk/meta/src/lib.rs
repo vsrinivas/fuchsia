@@ -23,6 +23,7 @@ mod metadata;
 mod physical_device;
 mod product_bundle;
 mod sysroot;
+mod virtual_device;
 
 pub use crate::banjo_library::*;
 pub use crate::cc_prebuilt_library::*;
@@ -40,3 +41,4 @@ pub use crate::metadata::*;
 pub use crate::physical_device::*;
 pub use crate::product_bundle::*;
 pub use crate::sysroot::*;
+pub use crate::virtual_device::*;

@@ -8,6 +8,7 @@ use crate::common::{ElementType, Envelope};
 use crate::json::JsonObject;
 use crate::physical_device::PhysicalDeviceV1;
 use crate::product_bundle::ProductBundleV1;
+use crate::virtual_device::VirtualDeviceV1;
 use anyhow::{anyhow, Result};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -18,6 +19,7 @@ use std::io::Read;
 enum SchemaId {
     PhysicalDeviceV1,
     ProductBundleV1,
+    VirtualDeviceV1,
 }
 
 lazy_static! {
@@ -30,6 +32,10 @@ lazy_static! {
             SchemaId::PhysicalDeviceV1,
         );
         m.insert(Envelope::<ProductBundleV1>::get_schema_id().unwrap(), SchemaId::ProductBundleV1);
+        m.insert(
+            Envelope::<VirtualDeviceV1>::get_schema_id().unwrap(),
+            SchemaId::VirtualDeviceV1,
+        );
         m
     };
 }
@@ -46,6 +52,7 @@ impl SchemaId {
 pub enum Metadata {
     PhysicalDeviceV1(PhysicalDeviceV1),
     ProductBundleV1(ProductBundleV1),
+    VirtualDeviceV1(VirtualDeviceV1),
 }
 
 impl Metadata {
@@ -54,6 +61,7 @@ impl Metadata {
         match self {
             Self::PhysicalDeviceV1(data) => &data.name[..],
             Self::ProductBundleV1(data) => &data.name[..],
+            Self::VirtualDeviceV1(data) => &data.name[..],
         }
     }
 }
@@ -94,6 +102,11 @@ pub fn from_reader<R: Read>(mut source: R) -> Result<Metadata> {
                     e.validate()?;
                     Metadata::ProductBundleV1(e.data)
                 }
+                SchemaId::VirtualDeviceV1 => {
+                    let e = Envelope::<VirtualDeviceV1>::new(buf.as_bytes())?;
+                    e.validate()?;
+                    Metadata::VirtualDeviceV1(e.data)
+                }
             };
             Ok(metadata)
         }
@@ -116,7 +129,7 @@ mod tests {
             "schema_id": "http://fuchsia.com/schemas/sdk/physical_device-0bd5d21f.json",
             "data": {
                 "name": "generic-x64",
-                "type": "physical_device" ,
+                "type": "physical_device",
                 "hardware": {
                    "cpu": {
                        "arch": "x64"
@@ -140,7 +153,7 @@ mod tests {
             "schema_id": "http://fuchsia.com/schemas/sdk/physical_device-0bd5d21f.json",
             "data": {
                 "name": "generic-x64",
-                "type": "physical_device" ,
+                "type": "physical_device",
                 "hardware": {
                 }
             }
@@ -187,6 +200,47 @@ mod tests {
                 "name": "generic-x64",
                 "type": "product_bundle",
                 "device_refs": ["generic-x64"],
+            }
+        }
+        "#;
+        let result = from_reader(json.as_bytes());
+        assert!(result.is_err(), "Expected to fail validation.");
+    }
+
+    #[test]
+    fn test_read_virtual_device_v1() {
+        let json = r#"
+        {
+            "schema_id": "http://fuchsia.com/schemas/sdk/virtual_device-93A41932.json",
+            "data": {
+                "name": "generic-x64",
+                "type": "virtual_device",
+                "hardware": {
+                   "cpu": {
+                       "arch": "x64"
+                   }
+                }
+            }
+        }
+        "#;
+        let metadata = from_reader(json.as_bytes()).unwrap();
+        match metadata {
+            Metadata::VirtualDeviceV1(data) => assert_eq!(data.name.as_str(), "generic-x64"),
+            _ => assert!(false, "Unexpected metadata type {:?}", metadata),
+        };
+    }
+
+    #[test]
+    fn test_read_invalid_virtual_device_v1() {
+        // Missing required CPU arch.
+        let json = r#"
+        {
+            "schema_id": "http://fuchsia.com/schemas/sdk/virtual_device-93A41932.json",
+            "data": {
+                "name": "generic-x64",
+                "type": "virtual_device",
+                "hardware": {
+                }
             }
         }
         "#;

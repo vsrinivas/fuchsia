@@ -18,3 +18,11 @@ Such changes include:
 - renaming a property;
 - changing a property's type;
 - adding a schema for a new SDK element type.
+
+## Testing
+
+Run unit tests with:
+
+```
+fx test host_x64/sdk_metadata_lib_test
+```

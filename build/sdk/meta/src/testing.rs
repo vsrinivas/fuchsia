@@ -52,7 +52,7 @@ macro_rules! test_validation {
             use serde_json::to_value;
 
             let object =
-                <$kind>::new($data.as_bytes()).expect("Expected deserialzation to succeed");
+                <$kind>::new($data.as_bytes()).expect("Expected deserialization to succeed");
             if $valid {
                 object.validate().expect(
                     format!("Expected validation to succeed for {:?}", to_value(&object)).as_str(),
