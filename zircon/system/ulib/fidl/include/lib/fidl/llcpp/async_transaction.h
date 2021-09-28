@@ -17,31 +17,23 @@ namespace fidl {
 
 namespace internal {
 
-// An implementation of |fidl::Transaction|. Designed to work with |fidl::BindServer|, which allows
-// message dispatching of multiple in-flight asynchronous transactions from a multi-threaded
-// |dispatcher|. Note that |AsyncTransaction| itself assumes that only one thread at a time will act
-// on it.
-// The channel is owned by |AsyncBinding|, not the transaction.
-class AsyncTransaction final : public Transaction {
+// An implementation of |fidl::Transaction|. Designed to work with
+// |fidl::BindServer|, which allows message dispatching of multiple in-flight
+// asynchronous transactions from a multi-threaded async dispatcher. Note that
+// |SyncTransaction| itself is only thread-compatible.
+//
+// This transaction must always be constructed on the stack and used
+// synchronously by the server method handler. As such, its implementation is
+// optimized for synchronous use.
+class SyncTransaction final : public Transaction {
  public:
-  explicit AsyncTransaction(zx_txid_t txid, bool* binding_released)
-      : txid_(txid), binding_released_(binding_released) {}
+  SyncTransaction(zx_txid_t txid, AsyncServerBinding* binding, bool* next_wait_begun_early)
+      : txid_(txid), binding_(binding), next_wait_begun_early_(next_wait_begun_early) {}
 
-  AsyncTransaction(AsyncTransaction&& other) noexcept : Transaction(std::move(other)) {
-    if (this != &other) {
-      MoveImpl(std::move(other));
-    }
-  }
+  SyncTransaction(SyncTransaction&& other) noexcept = delete;
+  SyncTransaction& operator=(SyncTransaction&& other) noexcept = delete;
 
-  AsyncTransaction& operator=(AsyncTransaction&& other) noexcept {
-    Transaction::operator=(std::move(other));
-    if (this != &other) {
-      MoveImpl(std::move(other));
-    }
-    return *this;
-  }
-
-  virtual ~AsyncTransaction() { ZX_ASSERT(!owned_binding_); }
+  std::optional<UnbindInfo> Dispatch(fidl::IncomingMessage&& msg);
 
   zx_status_t Reply(fidl::OutgoingMessage* message) final;
 
@@ -56,32 +48,48 @@ class AsyncTransaction final : public Transaction {
   bool IsUnbound() final;
 
  private:
-  friend fidl::internal::AsyncServerBinding;
-
-  std::optional<UnbindInfo> Dispatch(std::shared_ptr<AsyncBinding>&& binding,
-                                     fidl::IncomingMessage&& msg);
-
-  void MoveImpl(AsyncTransaction&& other) noexcept {
-    txid_ = other.txid_;
-    other.txid_ = 0;
-    owned_binding_ = std::move(other.owned_binding_);
-    unowned_binding_ = std::move(other.unowned_binding_);
-    binding_released_ = other.binding_released_;
-    other.binding_released_ = nullptr;
-  }
+  friend class AsyncTransaction;
 
   zx_txid_t txid_ = 0;
-  // An AsyncTransaction may only access the AsyncBinding via one of owned_binding_ or
-  // unowned_binding_. On Dispatch(), the AsyncTransaction takes ownership of the internal reference
-  // used by the dispatcher (keep_alive_) in owned_binding_. Calls to EnableNextDispatch(), Close(),
-  // or TakeOwnership() within the scope of Dispatch() move the reference back into keep_alive_,
-  // setting unowned_binding_. Otherwise, keep_alive_ is restored from owned_binding_ prior to
-  // Dispatch() returning.
-  std::shared_ptr<AsyncBinding> owned_binding_ = {};
-  std::weak_ptr<AsyncBinding> unowned_binding_ = {};
-  bool* binding_released_ = nullptr;
+  AsyncServerBinding* binding_ = nullptr;
+  bool* next_wait_begun_early_ = nullptr;
   std::optional<UnbindInfo> unbind_info_;
-  bool* moved_ = nullptr;
+
+  std::shared_ptr<AsyncServerBinding> binding_lifetime_extender_ = {};
+};
+
+// An implementation of |fidl::Transaction|. Designed to work with
+// |fidl::BindServer|, which allows message dispatching of multiple in-flight
+// asynchronous transactions from a multi-threaded async dispatcher. Note that
+// |AsyncTransaction| itself is only thread-compatible.
+//
+// This transaction must always be constructed on the heap and used
+// asynchronously by the server method handler (via an asynchronous completer).
+// As such, its implementation is specialized to allow binding teardown to
+// happen at any point in the background.
+class AsyncTransaction final : public Transaction {
+ public:
+  explicit AsyncTransaction(SyncTransaction&& transaction)
+      : txid_(transaction.txid_), binding_(transaction.binding_->shared_from_this()) {}
+
+  AsyncTransaction(AsyncTransaction&& other) noexcept = default;
+  AsyncTransaction& operator=(AsyncTransaction&& other) noexcept = default;
+
+  zx_status_t Reply(fidl::OutgoingMessage* message) final;
+
+  void EnableNextDispatch() final;
+
+  void Close(zx_status_t epitaph) final;
+
+  void InternalError(UnbindInfo error) final;
+
+  std::unique_ptr<Transaction> TakeOwnership() final;
+
+  bool IsUnbound() final;
+
+ private:
+  zx_txid_t txid_ = 0;
+  std::weak_ptr<AsyncServerBinding> binding_ = {};
 };
 
 }  // namespace internal

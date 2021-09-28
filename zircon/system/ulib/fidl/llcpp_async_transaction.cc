@@ -12,45 +12,105 @@ namespace fidl {
 
 namespace internal {
 
-std::optional<UnbindInfo> AsyncTransaction::Dispatch(std::shared_ptr<AsyncBinding>&& binding,
-                                                     fidl::IncomingMessage&& msg) {
-  ZX_ASSERT(!owned_binding_);
-  ZX_ASSERT(!moved_);
-  bool moved = false;
-  moved_ = &moved;
-  // Take ownership of the internal (dispatcher) reference to the AsyncBinding. Until code executed
-  // in this scope releases ownership, no other thread may access the binding via keep_alive_.
-  owned_binding_ = std::move(binding);
-  // Avoid static_pointer_cast for now since it results in atomic inc/dec.
-  auto* binding_raw = static_cast<AsyncServerBinding*>(owned_binding_.get());
+//
+// Synchronous transaction methods
+//
+
+std::optional<UnbindInfo> SyncTransaction::Dispatch(fidl::IncomingMessage&& msg) {
+  ZX_ASSERT(binding_);
   fidl::DispatchResult dispatch_result =
-      binding_raw->interface_->dispatch_message(std::move(msg), this);
-  if (moved)
-    return {};  // Return if `this` is no longer valid.
-  moved_ = nullptr;
-  // Transfer ownership of the binding back to the dispatcher if we still have it.
-  if (owned_binding_)
-    binding_raw->keep_alive_ = std::move(owned_binding_);
+      binding_->interface()->dispatch_message(std::move(msg), this);
 
   switch (dispatch_result) {
     case fidl::DispatchResult::kFound:
       // Propagate any error that happened during the message handling.
       return unbind_info_;
     case fidl::DispatchResult::kNotFound:
-      // The message was not recognized by the |dispatch_fn_|.
+      // The message was not recognized by the |interface|.
       return fidl::UnbindInfo::UnknownOrdinal();
   }
 }
+
+zx_status_t SyncTransaction::Reply(fidl::OutgoingMessage* message) {
+  ZX_ASSERT(txid_ != 0);
+  auto txid = txid_;
+  txid_ = 0;
+
+  ZX_ASSERT(binding_);
+  message->set_txid(txid);
+  message->Write(binding_->channel());
+  return message->status();
+}
+
+void SyncTransaction::EnableNextDispatch() {
+  if (!binding_)
+    return;
+  // Only allow one |EnableNextDispatch| call per transaction instance.
+  if (binding_lifetime_extender_)
+    return;
+
+  // Keeping another strong reference to the binding ensures that binding
+  // teardown will not complete until this |SyncTransaction| destructs, i.e.
+  // until the server method handler returns.
+  binding_lifetime_extender_ = binding_->shared_from_this();
+  if (binding_->CheckForTeardownAndBeginNextWait() == ZX_OK) {
+    *next_wait_begun_early_ = true;
+  } else {
+    // Propagate a placeholder error, such that the message handler will
+    // terminate dispatch right after the processing of this transaction.
+    unbind_info_ = UnbindInfo::Unbind();
+  }
+}
+
+void SyncTransaction::Close(zx_status_t epitaph) {
+  if (!binding_)
+    return;
+  binding_ = nullptr;
+
+  // If |EnableNextDispatch| was called, the dispatcher will not monitor
+  // our |unbind_info_|; we should asynchronously request teardown.
+  if (binding_lifetime_extender_) {
+    binding_lifetime_extender_->Close(std::move(binding_lifetime_extender_), epitaph);
+    return;
+  }
+
+  unbind_info_ = UnbindInfo::Close(epitaph);
+}
+
+void SyncTransaction::InternalError(UnbindInfo error) {
+  if (!binding_)
+    return;
+  binding_ = nullptr;
+
+  // If |EnableNextDispatch| was called, the dispatcher will not monitor
+  // our |unbind_info_|; we should asynchronously request teardown.
+  if (binding_lifetime_extender_) {
+    binding_lifetime_extender_->StartTeardownWithInfo(std::move(binding_lifetime_extender_), error);
+    return;
+  }
+
+  unbind_info_ = error;
+}
+
+std::unique_ptr<Transaction> SyncTransaction::TakeOwnership() {
+  ZX_ASSERT(binding_);
+  auto transaction = std::make_unique<AsyncTransaction>(std::move(*this));
+  binding_ = nullptr;
+  return transaction;
+}
+
+bool SyncTransaction::IsUnbound() { return false; }
+
+//
+// Asynchronous transaction methods
+//
 
 zx_status_t AsyncTransaction::Reply(fidl::OutgoingMessage* message) {
   ZX_ASSERT(txid_ != 0);
   auto txid = txid_;
   txid_ = 0;
 
-  // Get a strong reference to the binding. Avoid unnecessarily copying the reference if
-  // owned_binding_ is valid. On error, the reference will be consumed by Close().
-  std::shared_ptr<AsyncBinding> tmp = owned_binding_ ? nullptr : unowned_binding_.lock();
-  auto& binding = owned_binding_ ? owned_binding_ : tmp;
+  std::shared_ptr<AsyncServerBinding> binding = binding_.lock();
   if (!binding)
     return ZX_ERR_CANCELED;
 
@@ -60,64 +120,28 @@ zx_status_t AsyncTransaction::Reply(fidl::OutgoingMessage* message) {
 }
 
 void AsyncTransaction::EnableNextDispatch() {
-  if (!owned_binding_)
-    return;  // Has no effect if the Transaction does not own the binding.
-  auto* binding_raw = static_cast<AsyncServerBinding*>(owned_binding_.get());
-  unowned_binding_ = owned_binding_;  // Preserve a weak reference to the binding.
-  binding_raw->keep_alive_ = std::move(owned_binding_);
-  if (binding_raw->CheckForTeardownAndBeginNextWait() == ZX_OK) {
-    *binding_released_ = true;
-  } else {
-    // Propagate a placeholder error, such that the message handler will
-    // terminate dispatch right after the processing of this transaction.
-    unbind_info_ = UnbindInfo::Unbind();
-  }
+  // Unreachable. Async completers don't expose |EnableNextDispatch|.
+  __builtin_abort();
 }
 
 void AsyncTransaction::Close(zx_status_t epitaph) {
-  if (!owned_binding_) {
-    if (auto binding = unowned_binding_.lock()) {
-      auto* binding_raw = static_cast<AsyncServerBinding*>(binding.get());
-      binding_raw->Close(std::move(binding), epitaph);
-    }
-    return;
+  if (auto binding = binding_.lock()) {
+    binding->Close(std::move(binding), epitaph);
   }
-  unbind_info_ = UnbindInfo::Close(epitaph);
-  // Return ownership of the binding to the dispatcher.
-  auto* binding_raw = static_cast<AsyncServerBinding*>(owned_binding_.get());
-  binding_raw->keep_alive_ = std::move(owned_binding_);
 }
 
 void AsyncTransaction::InternalError(UnbindInfo error) {
-  if (!owned_binding_) {
-    if (auto binding = unowned_binding_.lock()) {
-      auto* binding_raw = static_cast<AsyncServerBinding*>(binding.get());
-      binding_raw->StartTeardownWithInfo(std::move(binding), error);
-    }
-    return;
+  if (auto binding = binding_.lock()) {
+    binding->StartTeardownWithInfo(std::move(binding), error);
   }
-  unbind_info_ = error;
-  // Return ownership of the binding to the dispatcher.
-  auto* binding_raw = static_cast<AsyncServerBinding*>(owned_binding_.get());
-  binding_raw->keep_alive_ = std::move(owned_binding_);
 }
 
 std::unique_ptr<Transaction> AsyncTransaction::TakeOwnership() {
-  ZX_ASSERT(owned_binding_);
-  ZX_ASSERT(moved_);
-  *moved_ = true;
-  moved_ = nullptr;                   // This should only ever be called once.
-  unowned_binding_ = owned_binding_;  // Preserve a weak reference to the binding.
-  auto* binding_raw = static_cast<AsyncServerBinding*>(owned_binding_.get());
-  binding_raw->keep_alive_ = std::move(owned_binding_);
-  return std::make_unique<AsyncTransaction>(std::move(*this));
+  // Unreachable. Async completers don't expose |ToAsync|.
+  __builtin_abort();
 }
 
-bool AsyncTransaction::IsUnbound() {
-  // The channel is unbound if this transaction neither owns the binding nor can get a strong
-  // reference to it.
-  return !owned_binding_ && !unowned_binding_.lock();
-}
+bool AsyncTransaction::IsUnbound() { return binding_.expired(); }
 
 }  // namespace internal
 

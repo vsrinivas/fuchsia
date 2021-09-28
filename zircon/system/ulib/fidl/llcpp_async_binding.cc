@@ -51,15 +51,16 @@ void AsyncBinding::MessageHandler(zx_status_t dispatcher_status, const zx_packet
                  msg.handle_actual());
 
       // Flag indicating whether this thread still has access to the binding.
-      bool binding_released = false;
+      bool next_wait_begun_early = false;
       // Dispatch the message.
-      cpp17::optional<fidl::UnbindInfo> maybe_error = Dispatch(msg, &binding_released);
-
-      // If binding_released is not set, keep_alive_ is still valid and this thread will continue to
-      // read messages on this binding.
-      if (binding_released)
+      cpp17::optional<fidl::UnbindInfo> maybe_error = Dispatch(msg, &next_wait_begun_early);
+      // If |next_wait_begun_early| is true, then the interest for the next
+      // message had been eagerly registered in the method handler, and another
+      // thread may already be running |MessageHandler|. We should exit without
+      // attempting to register yet another wait or attempting to modify the
+      // binding state here.
+      if (next_wait_begun_early)
         return;
-      ZX_ASSERT(keep_alive_);
 
       // If there was any error enabling dispatch or an unexpected message, destroy the binding.
       if (maybe_error)
@@ -303,11 +304,21 @@ fidl::UnbindInfo AsyncBinding::Lifecycle::TransitionToTorndown() {
 // Server binding specifics
 //
 
+std::shared_ptr<AsyncServerBinding> AsyncServerBinding::Create(async_dispatcher_t* dispatcher,
+                                                               zx::channel&& server_end,
+                                                               IncomingMessageDispatcher* interface,
+                                                               AnyOnUnboundFn&& on_unbound_fn) {
+  auto binding = std::make_shared<AsyncServerBinding>(dispatcher, std::move(server_end), interface,
+                                                      std::move(on_unbound_fn), ConstructionKey{});
+  binding->InitKeepAlive();
+  return binding;
+}
+
 std::optional<UnbindInfo> AsyncServerBinding::Dispatch(fidl::IncomingMessage& msg,
-                                                       bool* binding_released) {
+                                                       bool* next_wait_begun_early) {
   auto* hdr = msg.header();
-  AsyncTransaction txn(hdr->txid, binding_released);
-  return txn.Dispatch(std::move(keep_alive_), std::move(msg));
+  SyncTransaction txn(hdr->txid, this, next_wait_begun_early);
+  return txn.Dispatch(std::move(msg));
 }
 
 void AsyncServerBinding::FinishTeardown(std::shared_ptr<AsyncBinding>&& calling_ref,
@@ -348,11 +359,11 @@ std::shared_ptr<AsyncClientBinding> AsyncClientBinding::Create(
     async_dispatcher_t* dispatcher, std::shared_ptr<zx::channel> channel,
     std::shared_ptr<ClientBase> client, AsyncEventHandler* event_handler,
     AnyTeardownObserver&& teardown_observer, ThreadingPolicy threading_policy) {
-  auto ret = std::shared_ptr<AsyncClientBinding>(
+  auto binding = std::shared_ptr<AsyncClientBinding>(
       new AsyncClientBinding(dispatcher, std::move(channel), std::move(client), event_handler,
                              std::move(teardown_observer), threading_policy));
-  ret->keep_alive_ = ret;  // Keep the binding alive until teardown.
-  return ret;
+  binding->InitKeepAlive();
+  return binding;
 }
 
 AsyncClientBinding::AsyncClientBinding(async_dispatcher_t* dispatcher,

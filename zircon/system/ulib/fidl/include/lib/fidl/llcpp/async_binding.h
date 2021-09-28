@@ -53,7 +53,7 @@ namespace internal {
 // APIs typically promote a corresponding |std::weak_ptr| briefly when they need
 // to write to the transport, and gracefully report an *unbound* error if the
 // binding has been destroyed.
-class AsyncBinding : private async_wait_t {
+class AsyncBinding : private async_wait_t, public std::enable_shared_from_this<AsyncBinding> {
  public:
   ~AsyncBinding() __TA_EXCLUDES(lock_) = default;
 
@@ -113,6 +113,13 @@ class AsyncBinding : private async_wait_t {
   AsyncBinding(async_dispatcher_t* dispatcher, const zx::unowned_channel& borrowed_channel,
                ThreadingPolicy threading_policy);
 
+  // |InitKeepAlive| must be called after a concrete subclass is constructed
+  // in a shared pointer, to set up the initial circular keep-alive reference.
+  void InitKeepAlive() {
+    ZX_DEBUG_ASSERT(!keep_alive_.get());
+    keep_alive_ = shared_from_this();
+  }
+
   static void OnMessage(async_dispatcher_t* dispatcher, async_wait_t* wait, zx_status_t status,
                         const zx_packet_signal_t* signal) {
     static_cast<AsyncBinding*>(wait)->MessageHandler(status, signal);
@@ -144,17 +151,13 @@ class AsyncBinding : private async_wait_t {
   // |UnbindInfo| describing the error. Otherwise, it will return
   // |std::nullopt|.
   //
-  // If `*binding_released` is set, the calling code no longer has ownership of
+  // If `*next_wait_begun_early` is set, the calling code no longer has ownership of
   // this |AsyncBinding| object and so must not access its state.
-  virtual std::optional<UnbindInfo> Dispatch(fidl::IncomingMessage& msg, bool* binding_released)
+  virtual std::optional<UnbindInfo> Dispatch(fidl::IncomingMessage& msg,
+                                             bool* next_wait_begun_early)
       __TA_REQUIRES(thread_checker_) = 0;
 
-  async_dispatcher_t* dispatcher_ = nullptr;
-
-  // A circular reference that represents the dispatcher ownership of the
-  // |AsyncBinding|. When |lifecycle_| is |Lifecycle::Bound|, all mutations of
-  // |keep_alive_| must happen on a dispatcher thread.
-  std::shared_ptr<AsyncBinding> keep_alive_ = {};
+  async_dispatcher_t* dispatcher() const { return dispatcher_; }
 
  private:
   // Synchronously perform teardown in the context of a dispatcher thread with
@@ -194,6 +197,13 @@ class AsyncBinding : private async_wait_t {
   // dispatcher is shutting down.
   virtual void FinishTeardown(std::shared_ptr<AsyncBinding>&& calling_ref, UnbindInfo info)
       __TA_REQUIRES(thread_checker_) = 0;
+
+  async_dispatcher_t* dispatcher_ = nullptr;
+
+  // A circular reference that represents the dispatcher ownership of the
+  // |AsyncBinding|. When |lifecycle_| is |Lifecycle::Bound|, all mutations of
+  // |keep_alive_| must happen on a dispatcher thread.
+  std::shared_ptr<AsyncBinding> keep_alive_ = {};
 
   // |thread_checker_| records the thread ID of constructing thread and checks
   // that required operations run on that thread when the threading policy calls
@@ -276,7 +286,6 @@ class AsyncBinding : private async_wait_t {
 //
 
 class IncomingMessageDispatcher;
-class AsyncTransaction;
 
 // A generic callback type handling the completion of server unbinding.
 // Note that the first parameter is a pointer to |IncomingMessageDispatcher|,
@@ -297,19 +306,18 @@ class AsyncServerBinding : public AsyncBinding {
   static std::shared_ptr<AsyncServerBinding> Create(async_dispatcher_t* dispatcher,
                                                     zx::channel&& server_end,
                                                     IncomingMessageDispatcher* interface,
-                                                    AnyOnUnboundFn&& on_unbound_fn) {
-    auto ret = std::make_shared<AsyncServerBinding>(dispatcher, std::move(server_end), interface,
-                                                    std::move(on_unbound_fn), ConstructionKey{});
-    // We keep the binding alive until somebody decides to close the channel.
-    ret->keep_alive_ = ret;
-    return ret;
-  }
+                                                    AnyOnUnboundFn&& on_unbound_fn);
 
   virtual ~AsyncServerBinding() = default;
 
   zx::unowned_channel channel() const { return server_end_.get().borrow(); }
 
-  std::optional<UnbindInfo> Dispatch(fidl::IncomingMessage& msg, bool* binding_released) override;
+  std::shared_ptr<AsyncServerBinding> shared_from_this() {
+    return std::static_pointer_cast<AsyncServerBinding>(AsyncBinding::shared_from_this());
+  }
+
+  std::optional<UnbindInfo> Dispatch(fidl::IncomingMessage& msg,
+                                     bool* next_wait_begun_early) override;
 
   // Start closing the server connection with an |epitaph|.
   void Close(std::shared_ptr<AsyncBinding>&& calling_ref, zx_status_t epitaph) {
@@ -330,8 +338,6 @@ class AsyncServerBinding : public AsyncBinding {
   IncomingMessageDispatcher* interface() const { return interface_; }
 
  private:
-  friend fidl::internal::AsyncTransaction;
-
   // Waits for all references to the binding to be released.
   // Sends epitaph and invokes |on_unbound_fn_| as required.
   void FinishTeardown(std::shared_ptr<AsyncBinding>&& calling_ref, UnbindInfo info) override;

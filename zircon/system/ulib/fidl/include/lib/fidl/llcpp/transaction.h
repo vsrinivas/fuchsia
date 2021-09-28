@@ -80,7 +80,7 @@ class Transaction {
   // Called exactly once when a sync completer is converted to an async completer.
   // Implementation may pause message dispatching here, in which case there will be
   // at most one in-flight transaction.
-  // |Complete| and |Close| are never called on a transaction that has lost its ownership.
+  // |Reply| and |Close| are never called on a transaction that has been moved from.
   virtual std::unique_ptr<Transaction> TakeOwnership() = 0;
 
   // Called at most once for a two-way FIDL method, to reply to a two-way call.

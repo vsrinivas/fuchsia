@@ -8,6 +8,7 @@
 #include <lib/async/cpp/task.h>
 #include <lib/fidl/llcpp/server.h>
 #include <lib/sync/completion.h>
+#include <lib/sync/cpp/completion.h>
 #include <zircon/fidl.h>
 #include <zircon/syscalls.h>
 
@@ -841,7 +842,7 @@ TEST(BindServerTestCase, ConcurrentIdempotentClose) {
   fidl::BindServer(server_loop.dispatcher(), std::move(remote), server.get(),
                    std::move(on_unbound));
 
-  // Launch 10 client threads to make two-way Echo() calls.
+  // Launch 10 client threads to make two-way Close() calls.
   std::vector<std::thread> threads;
   for (int i = 0; i < kMaxReqs; ++i) {
     threads.emplace_back([local = local.borrow()] {
@@ -856,6 +857,65 @@ TEST(BindServerTestCase, ConcurrentIdempotentClose) {
 
   // Wait for the unbound handler before letting the loop be destroyed.
   ASSERT_OK(sync_completion_wait(&unbound, ZX_TIME_INFINITE));
+}
+
+// Tests the following corner case:
+// - A server method handler is expecting to execute long-running work.
+// - Hence it calls |EnableNextDispatch| to allow another dispatcher thread
+//   to dispatch the next message while the current handler is still running.
+// - Something goes wrong in the next message leading to binding teardown.
+// - Teardown should not complete until the initial method handler returns.
+//   This is important to avoid use-after-free if the user destroys the server
+//   at the point of teardown completion.
+TEST(BindServerTestCase, EnableNextDispatchInLongRunningHandler) {
+  struct LongOperationServer : fidl::WireServer<Simple> {
+    explicit LongOperationServer(sync::Completion* long_operation)
+        : long_operation_(long_operation) {}
+    void Close(CloseRequestView request, CloseCompleter::Sync& completer) override {
+      if (!first_request_.test_and_set()) {
+        completer.EnableNextDispatch();
+        long_operation_->Wait();
+        completer.Close(ZX_OK);
+      } else {
+        completer.Close(ZX_OK);
+      }
+    }
+    void Echo(EchoRequestView, EchoCompleter::Sync&) override { ADD_FAILURE("Must not call echo"); }
+
+   private:
+    std::atomic_flag first_request_ = ATOMIC_FLAG_INIT;
+    sync::Completion* long_operation_;
+  };
+
+  zx::status endpoints = fidl::CreateEndpoints<Simple>();
+  ASSERT_OK(endpoints.status_value());
+  auto [local, remote] = std::move(*endpoints);
+
+  // Launch server with 2 threads.
+  sync::Completion long_operation;
+  auto server = std::make_unique<LongOperationServer>(&long_operation);
+  async::Loop server_loop(&kAsyncLoopConfigNoAttachToCurrentThread);
+  ASSERT_OK(server_loop.StartThread());
+  ASSERT_OK(server_loop.StartThread());
+
+  sync::Completion unbound;
+  fidl::BindServer(server_loop.dispatcher(), std::move(remote), server.get(),
+                   [&unbound](LongOperationServer*, fidl::UnbindInfo, fidl::ServerEnd<Simple>) {
+                     unbound.Signal();
+                   });
+
+  // Issue two requests. The second request should initiate binding teardown.
+  std::vector<std::thread> threads;
+  threads.emplace_back([local = local.borrow()] { WireCall(local).Close(); });
+  threads.emplace_back([local = local.borrow()] { WireCall(local).Close(); });
+
+  // Teardown should not complete unless |long_operation| completes.
+  ASSERT_STATUS(ZX_ERR_TIMED_OUT, unbound.Wait(zx::msec(100)));
+  long_operation.Signal();
+  ASSERT_OK(unbound.Wait());
+
+  for (auto& thread : threads)
+    thread.join();
 }
 
 TEST(BindServerTestCase, ServerUnbind) {
