@@ -61,7 +61,9 @@ class FidlTransaction : public fidl::Transaction {
 
   void Close(zx_status_t epitaph) override { ZX_ASSERT(false); }
 
-  void InternalError(fidl::UnbindInfo info) override { detected_error_ = info; }
+  void InternalError(fidl::UnbindInfo info, fidl::ErrorOrigin origin) override {
+    detected_error_ = info;
+  }
 
   ~FidlTransaction() override = default;
 

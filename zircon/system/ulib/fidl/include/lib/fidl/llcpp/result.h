@@ -93,6 +93,16 @@ enum class Reason {
   kUnexpectedMessage,
 };
 
+// |ErrorOrigin| indicates in which part of request/response processing did a
+// particular error occur.
+enum class ErrorOrigin {
+  // Reading from the transport, decoding, running business logic, etc.
+  kReceive,
+
+  // Writing to the transport, encoding, etc.
+  kSend,
+};
+
 namespace internal {
 
 // A sentinel value that indicates an uninitialized reason. It should never be

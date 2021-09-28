@@ -61,7 +61,7 @@ class ::fidl::WireServer<fidl_test::TestProtocol>
  private:
   void dispatch_message(::fidl::IncomingMessage&& msg, ::fidl::Transaction* txn) final {
     std::move(msg).CloseHandles();
-    txn->InternalError(::fidl::UnbindInfo::UnknownOrdinal());
+    txn->InternalError(::fidl::UnbindInfo::UnknownOrdinal(), ::fidl::ErrorOrigin::kReceive);
   }
 };
 

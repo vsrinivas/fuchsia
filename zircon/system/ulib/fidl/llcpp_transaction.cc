@@ -76,24 +76,16 @@ fidl::Result CompleterBase::SendReply(::fidl::OutgoingMessage* message) {
   // further replies.
   needs_to_reply_ = false;
   if (!message->ok()) {
-    transaction_->InternalError(fidl::UnbindInfo{*message});
+    transaction_->InternalError(fidl::UnbindInfo{*message}, fidl::ErrorOrigin::kSend);
     return *message;
   }
   zx_status_t status = transaction_->Reply(message);
   if (status != ZX_OK) {
     auto error = fidl::Result::TransportError(status);
-    transaction_->InternalError(fidl::UnbindInfo{error});
+    transaction_->InternalError(fidl::UnbindInfo{error}, fidl::ErrorOrigin::kSend);
     return error;
   }
   return fidl::Result::Ok();
-}
-
-void CompleterBase::InternalError(UnbindInfo error) {
-  ScopedLock lock(lock_);
-  EnsureHasTransaction(&lock);
-  transaction_->InternalError(error);
-  // NOTE: The transaction is not dropped as the user has not explicitly Close()d the completer.
-  // As such, Drop() would panic if invoked here.
 }
 
 void CompleterBase::EnsureHasTransaction(ScopedLock* lock) {

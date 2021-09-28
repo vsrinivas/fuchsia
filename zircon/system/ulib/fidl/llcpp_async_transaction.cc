@@ -16,10 +16,10 @@ namespace internal {
 // Synchronous transaction methods
 //
 
-std::optional<UnbindInfo> SyncTransaction::Dispatch(fidl::IncomingMessage&& msg) {
+std::optional<DispatchError> SyncTransaction::Dispatch(fidl::IncomingMessage&& msg) {
   ZX_ASSERT(binding_);
   binding_->interface()->dispatch_message(std::move(msg), this);
-  return unbind_info_;
+  return error_;
 }
 
 zx_status_t SyncTransaction::Reply(fidl::OutgoingMessage* message) {
@@ -49,7 +49,7 @@ void SyncTransaction::EnableNextDispatch() {
   } else {
     // Propagate a placeholder error, such that the message handler will
     // terminate dispatch right after the processing of this transaction.
-    unbind_info_ = UnbindInfo::Unbind();
+    error_ = DispatchError{UnbindInfo::Unbind(), ErrorOrigin::kReceive};
   }
 }
 
@@ -65,10 +65,10 @@ void SyncTransaction::Close(zx_status_t epitaph) {
     return;
   }
 
-  unbind_info_ = UnbindInfo::Close(epitaph);
+  error_ = DispatchError{UnbindInfo::Close(epitaph), ErrorOrigin::kReceive};
 }
 
-void SyncTransaction::InternalError(UnbindInfo error) {
+void SyncTransaction::InternalError(UnbindInfo error, ErrorOrigin origin) {
   if (!binding_)
     return;
   binding_ = nullptr;
@@ -76,11 +76,12 @@ void SyncTransaction::InternalError(UnbindInfo error) {
   // If |EnableNextDispatch| was called, the dispatcher will not monitor
   // our |unbind_info_|; we should asynchronously request teardown.
   if (binding_lifetime_extender_) {
-    binding_lifetime_extender_->StartTeardownWithInfo(std::move(binding_lifetime_extender_), error);
+    binding_lifetime_extender_->HandleError(std::move(binding_lifetime_extender_),
+                                            DispatchError{error, origin});
     return;
   }
 
-  unbind_info_ = error;
+  error_ = DispatchError{error, origin};
 }
 
 std::unique_ptr<Transaction> SyncTransaction::TakeOwnership() {
@@ -121,9 +122,9 @@ void AsyncTransaction::Close(zx_status_t epitaph) {
   }
 }
 
-void AsyncTransaction::InternalError(UnbindInfo error) {
+void AsyncTransaction::InternalError(UnbindInfo error, ErrorOrigin origin) {
   if (auto binding = binding_.lock()) {
-    binding->StartTeardownWithInfo(std::move(binding), error);
+    binding->HandleError(std::move(binding), {error, origin});
   }
 }
 

@@ -20,7 +20,9 @@
 
 namespace {
 
+using ::fidl_test_coding_fuchsia::Example;
 using ::fidl_test_coding_fuchsia::Simple;
+using ::fidl_test_coding_fuchsia::testing::Example_TestBase;
 using ::fidl_test_coding_fuchsia::testing::Simple_TestBase;
 
 constexpr uint32_t kNumberOfAsyncs = 10;
@@ -997,14 +999,65 @@ TEST(BindServerTestCase, ServerClose) {
   EXPECT_EQ(ZX_OK, epitaph.error);
 }
 
-TEST(BindServerTestCase, UnbindInfoChannelError) {
-  struct WorkingServer : fidl::WireServer<Simple> {
+fidl::Endpoints<Example> CreateEndpointsWithoutServerWriteRight() {
+  zx::status endpoints = fidl::CreateEndpoints<Example>();
+  EXPECT_OK(endpoints.status_value());
+  if (!endpoints.is_ok())
+    return {};
+
+  auto [client_end, server_end] = std::move(*endpoints);
+  {
+    zx::channel server_channel_non_writable;
+    EXPECT_OK(
+        server_end.channel().replace(ZX_RIGHT_READ | ZX_RIGHT_WAIT, &server_channel_non_writable));
+    server_end.channel() = std::move(server_channel_non_writable);
+  }
+
+  return fidl::Endpoints<Example>{std::move(client_end), std::move(server_end)};
+}
+
+// A mock server that panics upon receiving any message.
+class NotImplementedServer : public Example_TestBase {
+  void NotImplemented_(const std::string& name, ::fidl::CompleterBase& completer) final {
+    ZX_PANIC("Unreachable");
+  }
+};
+
+template <typename Protocol>
+class UnbindObserver {
+ public:
+  UnbindObserver(fidl::Reason expected_reason, zx_status_t expected_status)
+      : expected_reason_(expected_reason), expected_status_(expected_status) {}
+
+  fidl::OnUnboundFn<fidl::WireServer<Protocol>> GetCallback() {
+    fidl::OnUnboundFn<fidl::WireServer<Protocol>> on_unbound =
+        [this](fidl::WireServer<Protocol>*, fidl::UnbindInfo info, fidl::ServerEnd<Protocol>) {
+          EXPECT_EQ(expected_reason_, info.reason());
+          EXPECT_EQ(expected_status_, info.status());
+          completion_.Signal();
+        };
+    return on_unbound;
+  }
+
+  sync::Completion& completion() { return completion_; }
+
+  bool DidUnbind() const { return completion_.signaled(); }
+
+ private:
+  fidl::Reason expected_reason_;
+  zx_status_t expected_status_;
+  sync::Completion completion_;
+};
+
+// Error sending reply should trigger binding teardown.
+TEST(BindServerTestCase, UnbindInfoErrorSendingReply) {
+  struct WorkingServer : fidl::WireServer<Example> {
     WorkingServer() = default;
-    void Echo(EchoRequestView request, EchoCompleter::Sync& completer) override {
-      EXPECT_EQ(ZX_ERR_ACCESS_DENIED, completer.Reply(request->request).status());
+    void TwoWay(TwoWayRequestView request, TwoWayCompleter::Sync& completer) override {
+      EXPECT_EQ(ZX_ERR_ACCESS_DENIED, completer.Reply(request->in).status());
     }
-    void Close(CloseRequestView request, CloseCompleter::Sync& completer) override {
-      ADD_FAILURE("Must not call close");
+    void OneWay(OneWayRequestView request, OneWayCompleter::Sync& completer) override {
+      ADD_FAILURE("Must not call OneWay");
     }
   };
 
@@ -1013,26 +1066,141 @@ TEST(BindServerTestCase, UnbindInfoChannelError) {
   async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
   ASSERT_OK(loop.StartThread());
 
-  auto endpoints = fidl::CreateEndpoints<Simple>();
-  ASSERT_OK(endpoints.status_value());
-  auto [local, remote] = std::move(*endpoints);
-  ASSERT_OK(
-      remote.channel().replace(ZX_DEFAULT_CHANNEL_RIGHTS & ~ZX_RIGHT_WRITE, &remote.channel()));
+  fidl::Endpoints<Example> endpoints;
+  ASSERT_NO_FAILURES(endpoints = CreateEndpointsWithoutServerWriteRight());
+  auto [local, remote] = std::move(endpoints);
 
-  sync_completion_t closed;
-  fidl::OnUnboundFn<WorkingServer> on_unbound = [&closed](WorkingServer*, fidl::UnbindInfo info,
-                                                          fidl::ServerEnd<Simple>) {
-    EXPECT_EQ(fidl::Reason::kTransportError, info.reason());
-    EXPECT_EQ(ZX_ERR_ACCESS_DENIED, info.status());
-    sync_completion_signal(&closed);
-  };
-  fidl::BindServer(loop.dispatcher(), std::move(remote), server.get(), std::move(on_unbound));
+  UnbindObserver<Example> observer(fidl::Reason::kTransportError, ZX_ERR_ACCESS_DENIED);
+  fidl::BindServer(loop.dispatcher(), std::move(remote), server.get(), observer.GetCallback());
 
-  auto result = WireCall(local).Echo(kExpectedReply);
+  fidl::WireResult result = WireCall(local).TwoWay("");
   EXPECT_EQ(ZX_ERR_PEER_CLOSED, result.status());
 
-  // Wait for the closed callback to be called.
-  ASSERT_OK(sync_completion_wait(&closed, ZX_TIME_INFINITE));
+  ASSERT_OK(observer.completion().Wait());
+}
+
+// Error sending events should trigger binding teardown.
+TEST(BindServerTestCase, UnbindInfoErrorSendingEvent) {
+  auto server = std::make_unique<NotImplementedServer>();
+  async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
+
+  fidl::Endpoints<Example> endpoints;
+  ASSERT_NO_FAILURES(endpoints = CreateEndpointsWithoutServerWriteRight());
+  auto [local, remote] = std::move(endpoints);
+
+  UnbindObserver<Example> observer(fidl::Reason::kTransportError, ZX_ERR_ACCESS_DENIED);
+  fidl::ServerBindingRef<Example> binding =
+      fidl::BindServer(loop.dispatcher(), std::move(remote), server.get(), observer.GetCallback());
+
+  fidl::Result result = binding->OnEvent("");
+  ASSERT_STATUS(ZX_ERR_ACCESS_DENIED, result.status());
+
+  ASSERT_FALSE(observer.DidUnbind());
+  ASSERT_OK(loop.RunUntilIdle());
+  ASSERT_TRUE(observer.DidUnbind());
+}
+
+// If a reply or event fails due to a peer closed error, the server bindings
+// should still process any remaining messages received on the endpoint before
+// tearing down.
+TEST(BindServerTestCase, DrainAllMessageInPeerClosedSendErrorEvent) {
+  constexpr static char kData[] = "test";
+  struct MockServer : fidl::WireServer<Example> {
+    MockServer() = default;
+    void TwoWay(TwoWayRequestView request, TwoWayCompleter::Sync& completer) override {
+      ADD_FAILURE("Must not call TwoWay");
+    }
+    void OneWay(OneWayRequestView request, OneWayCompleter::Sync& completer) override {
+      EXPECT_EQ(request->in.get(), kData);
+      called_ = true;
+    }
+
+    bool called() const { return called_; }
+
+   private:
+    bool called_ = false;
+  };
+
+  auto server = std::make_unique<MockServer>();
+  async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
+
+  zx::status endpoints = fidl::CreateEndpoints<Example>();
+  ASSERT_OK(endpoints.status_value());
+  auto [local, remote] = std::move(*endpoints);
+
+  UnbindObserver<Example> observer(fidl::Reason::kPeerClosed, ZX_ERR_PEER_CLOSED);
+  fidl::ServerBindingRef<Example> binding =
+      fidl::BindServer(loop.dispatcher(), std::move(remote), server.get(), observer.GetCallback());
+
+  // Make a call and close the client endpoint.
+  ASSERT_OK(fidl::WireCall(local).OneWay(kData).status());
+  local.reset();
+
+  // Sending event fails due to client endpoint closing.
+  fidl::Result result = binding->OnEvent("");
+  ASSERT_STATUS(ZX_ERR_PEER_CLOSED, result.status());
+
+  // The initial call should still be processed.
+  ASSERT_FALSE(observer.DidUnbind());
+  ASSERT_FALSE(server->called());
+  ASSERT_OK(loop.RunUntilIdle());
+  ASSERT_TRUE(observer.DidUnbind());
+  ASSERT_TRUE(server->called());
+}
+
+TEST(BindServerTestCase, DrainAllMessageInPeerClosedSendErrorReply) {
+  constexpr static char kData[] = "test";
+  struct MockServer : fidl::WireServer<Example> {
+    MockServer() = default;
+    void TwoWay(TwoWayRequestView request, TwoWayCompleter::Sync& completer) override {
+      // Sending reply fails due to client endpoint closing.
+      EXPECT_EQ(request->in.get(), kData);
+      fidl::Result result = completer.Reply(kData);
+      EXPECT_STATUS(ZX_ERR_PEER_CLOSED, result.status());
+      two_way_called_ = true;
+    }
+    void OneWay(OneWayRequestView request, OneWayCompleter::Sync& completer) override {
+      EXPECT_EQ(request->in.get(), kData);
+      one_way_called_ = true;
+    }
+
+    bool two_way_called() const { return two_way_called_; }
+    bool one_way_called() const { return one_way_called_; }
+
+   private:
+    bool two_way_called_ = false;
+    bool one_way_called_ = false;
+  };
+
+  auto server = std::make_unique<MockServer>();
+  async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
+
+  zx::status endpoints = fidl::CreateEndpoints<Example>();
+  ASSERT_OK(endpoints.status_value());
+  auto [local, remote] = std::move(*endpoints);
+
+  UnbindObserver<Example> observer(fidl::Reason::kPeerClosed, ZX_ERR_PEER_CLOSED);
+  fidl::ServerBindingRef<Example> binding =
+      fidl::BindServer(loop.dispatcher(), std::move(remote), server.get(), observer.GetCallback());
+
+  // Make a two-way call followed by a one-way call and close the client
+  // endpoint without monitoring the reply.
+  {
+    async::Loop client_loop(&kAsyncLoopConfigNoAttachToCurrentThread);
+    fidl::WireClient client(std::move(local), client_loop.dispatcher());
+    client->TwoWay(kData, [](fidl::WireResponse<Example::TwoWay>*) {});
+    ASSERT_OK(client->OneWay(kData).status());
+    ASSERT_OK(client_loop.RunUntilIdle());
+  }
+
+  // The one-way call should still be processed.
+  ASSERT_FALSE(observer.DidUnbind());
+  ASSERT_FALSE(server->two_way_called());
+  ASSERT_FALSE(server->one_way_called());
+  ASSERT_OK(loop.RunUntilIdle());
+  ASSERT_TRUE(observer.DidUnbind());
+  ASSERT_TRUE(server->two_way_called());
+  ASSERT_TRUE(server->one_way_called());
 }
 
 TEST(BindServerTestCase, UnbindInfoDispatcherError) {
@@ -1072,34 +1240,23 @@ TEST(BindServerTestCase, UnbindInfoDispatcherError) {
 }
 
 TEST(BindServerTestCase, UnbindInfoUnknownMethod) {
-  class TestServer : public Simple_TestBase {
-    void NotImplemented_(const std::string& name, ::fidl::CompleterBase& completer) final {
-      ZX_PANIC("Unreachable");
-    }
-  };
-  auto server = std::make_unique<TestServer>();
+  auto server = std::make_unique<NotImplementedServer>();
   async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
 
-  auto endpoints = fidl::CreateEndpoints<Simple>();
+  auto endpoints = fidl::CreateEndpoints<Example>();
   ASSERT_OK(endpoints.status_value());
   auto [local, remote] = std::move(*endpoints);
 
-  bool unbound = false;
-  fidl::OnUnboundFn<TestServer> on_unbound = [&unbound](TestServer* server, fidl::UnbindInfo info,
-                                                        fidl::ServerEnd<Simple> server_end) {
-    EXPECT_EQ(fidl::Reason::kUnexpectedMessage, info.reason());
-    EXPECT_EQ(ZX_ERR_NOT_SUPPORTED, info.status());
-    unbound = true;
-  };
-  fidl::BindServer(loop.dispatcher(), std::move(remote), std::move(server), std::move(on_unbound));
+  UnbindObserver<Example> observer(fidl::Reason::kUnexpectedMessage, ZX_ERR_NOT_SUPPORTED);
+  fidl::BindServer(loop.dispatcher(), std::move(remote), std::move(server), observer.GetCallback());
   loop.RunUntilIdle();
-  ASSERT_FALSE(unbound);
+  ASSERT_FALSE(observer.DidUnbind());
 
   // An epitaph is never a valid message to a server.
   fidl_epitaph_write(local.channel().get(), ZX_OK);
 
   loop.RunUntilIdle();
-  ASSERT_TRUE(unbound);
+  ASSERT_TRUE(observer.DidUnbind());
 }
 
 TEST(BindServerTestCase, ReplyNotRequiredAfterUnbound) {

@@ -95,6 +95,9 @@ class WeakEventSenderInner {
   const std::weak_ptr<::fidl::internal::AsyncServerBinding>& binding() const { return binding_; }
 
  private:
+  // Handles errors in sending events. This may lead to binding teardown.
+  void HandleSendError(fidl::Result error) const;
+
   std::weak_ptr<::fidl::internal::AsyncServerBinding> binding_;
 };
 

@@ -43,6 +43,15 @@ enum class __attribute__((enum_extensibility(closed))) DispatchResult {
 
 namespace internal {
 
+struct DispatchError {
+  UnbindInfo info;
+  ErrorOrigin origin;
+
+  // Whether the bindings should disregard any unread messages in the transport
+  // and directly teardown upon encountering this error.
+  bool RequiresImmediateTeardown();
+};
+
 // |AsyncBinding| objects implement the common logic for registering waits
 // on channels, and teardown. |AsyncBinding| itself composes |async_wait_t|
 // which borrows the channel to wait for messages. The actual responsibilities
@@ -96,9 +105,9 @@ class AsyncBinding : private async_wait_t, public std::enable_shared_from_this<A
     kDispatcherError,
   };
 
-  // Initiates teardown with the provided |info| as reason.
-  TeardownTaskPostingResult StartTeardownWithInfo(std::shared_ptr<AsyncBinding>&& calling_ref,
-                                                  UnbindInfo info) __TA_EXCLUDES(thread_checker_)
+  // Notifies the binding of an |error| while servicing messages.
+  // This may lead to binding teardown.
+  void HandleError(std::shared_ptr<AsyncBinding>&& calling_ref, DispatchError error)
       __TA_EXCLUDES(lock_);
 
   void StartTeardown(std::shared_ptr<AsyncBinding>&& calling_ref) __TA_EXCLUDES(thread_checker_)
@@ -148,16 +157,22 @@ class AsyncBinding : private async_wait_t, public std::enable_shared_from_this<A
   // ## Return value
   //
   // If errors occur during dispatching, the function will return an
-  // |UnbindInfo| describing the error. Otherwise, it will return
+  // |DispatchError| describing the error. Otherwise, it will return
   // |std::nullopt|.
   //
   // If `*next_wait_begun_early` is set, the calling code no longer has ownership of
   // this |AsyncBinding| object and so must not access its state.
-  virtual std::optional<UnbindInfo> Dispatch(fidl::IncomingMessage& msg,
-                                             bool* next_wait_begun_early)
+  virtual std::optional<DispatchError> Dispatch(fidl::IncomingMessage& msg,
+                                                bool* next_wait_begun_early)
       __TA_REQUIRES(thread_checker_) = 0;
 
   async_dispatcher_t* dispatcher() const { return dispatcher_; }
+
+  // Initiates teardown with the provided |info| as reason.
+  // This does not have to happen in the context of a dispatcher thread.
+  TeardownTaskPostingResult StartTeardownWithInfo(std::shared_ptr<AsyncBinding>&& calling_ref,
+                                                  UnbindInfo info) __TA_EXCLUDES(thread_checker_)
+      __TA_EXCLUDES(lock_);
 
  private:
   // Synchronously perform teardown in the context of a dispatcher thread with
@@ -316,8 +331,8 @@ class AsyncServerBinding : public AsyncBinding {
     return std::static_pointer_cast<AsyncServerBinding>(AsyncBinding::shared_from_this());
   }
 
-  std::optional<UnbindInfo> Dispatch(fidl::IncomingMessage& msg,
-                                     bool* next_wait_begun_early) override;
+  std::optional<DispatchError> Dispatch(fidl::IncomingMessage& msg,
+                                        bool* next_wait_begun_early) override;
 
   // Start closing the server connection with an |epitaph|.
   void Close(std::shared_ptr<AsyncBinding>&& calling_ref, zx_status_t epitaph) {
@@ -382,7 +397,8 @@ class AsyncClientBinding final : public AsyncBinding {
                      std::shared_ptr<ClientBase> client, AsyncEventHandler* event_handler,
                      AnyTeardownObserver&& teardown_observer, ThreadingPolicy threading_policy);
 
-  std::optional<UnbindInfo> Dispatch(fidl::IncomingMessage& msg, bool* binding_released) override;
+  std::optional<DispatchError> Dispatch(fidl::IncomingMessage& msg,
+                                        bool* binding_released) override;
 
   void FinishTeardown(std::shared_ptr<AsyncBinding>&& calling_ref, UnbindInfo info) override;
 

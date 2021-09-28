@@ -33,7 +33,7 @@ class SyncTransaction final : public Transaction {
   SyncTransaction(SyncTransaction&& other) noexcept = delete;
   SyncTransaction& operator=(SyncTransaction&& other) noexcept = delete;
 
-  std::optional<UnbindInfo> Dispatch(fidl::IncomingMessage&& msg);
+  std::optional<DispatchError> Dispatch(fidl::IncomingMessage&& msg);
 
   zx_status_t Reply(fidl::OutgoingMessage* message) final;
 
@@ -41,7 +41,7 @@ class SyncTransaction final : public Transaction {
 
   void Close(zx_status_t epitaph) final;
 
-  void InternalError(UnbindInfo error) final;
+  void InternalError(UnbindInfo error, ErrorOrigin origin) final;
 
   std::unique_ptr<Transaction> TakeOwnership() final;
 
@@ -53,7 +53,7 @@ class SyncTransaction final : public Transaction {
   zx_txid_t txid_ = 0;
   AsyncServerBinding* binding_ = nullptr;
   bool* next_wait_begun_early_ = nullptr;
-  std::optional<UnbindInfo> unbind_info_;
+  std::optional<DispatchError> error_;
 
   std::shared_ptr<AsyncServerBinding> binding_lifetime_extender_ = {};
 };
@@ -81,7 +81,7 @@ class AsyncTransaction final : public Transaction {
 
   void Close(zx_status_t epitaph) final;
 
-  void InternalError(UnbindInfo error) final;
+  void InternalError(UnbindInfo error, ErrorOrigin origin) final;
 
   std::unique_ptr<Transaction> TakeOwnership() final;
 

@@ -12,7 +12,7 @@ namespace internal {
                                    ::fidl::Transaction* txn, const MethodEntry* begin,
                                    const MethodEntry* end) {
   if (!msg.ok()) {
-    txn->InternalError(fidl::UnbindInfo{msg});
+    txn->InternalError(fidl::UnbindInfo{msg}, fidl::ErrorOrigin::kReceive);
     return ::fidl::DispatchResult::kNotFound;
   }
   auto* hdr = msg.header();
@@ -20,7 +20,8 @@ namespace internal {
     if (hdr->ordinal == begin->ordinal) {
       zx_status_t decode_status = begin->dispatch(impl, std::move(msg), txn);
       if (unlikely(decode_status != ZX_OK)) {
-        txn->InternalError(UnbindInfo{fidl::Result::DecodeError(decode_status)});
+        txn->InternalError(UnbindInfo{fidl::Result::DecodeError(decode_status)},
+                           fidl::ErrorOrigin::kReceive);
       }
       return ::fidl::DispatchResult::kFound;
     }
@@ -35,7 +36,7 @@ void Dispatch(void* impl, ::fidl::IncomingMessage& msg, ::fidl::Transaction* txn
   switch (result) {
     case ::fidl::DispatchResult::kNotFound:
       std::move(msg).CloseHandles();
-      txn->InternalError(::fidl::UnbindInfo::UnknownOrdinal());
+      txn->InternalError(::fidl::UnbindInfo::UnknownOrdinal(), ::fidl::ErrorOrigin::kReceive);
       break;
     case ::fidl::DispatchResult::kFound:
       break;
@@ -47,11 +48,18 @@ void Dispatch(void* impl, ::fidl::IncomingMessage& msg, ::fidl::Transaction* txn
     message.set_txid(0);
     message.Write(binding->channel());
     if (!message.ok()) {
+      HandleSendError(message.error());
       return message.error();
     }
     return fidl::Result::Ok();
   }
   return fidl::Result::Unbound();
+}
+
+void WeakEventSenderInner::HandleSendError(fidl::Result error) const {
+  if (auto binding = binding_.lock()) {
+    binding->HandleError(std::move(binding), {UnbindInfo{error}, ErrorOrigin::kSend});
+  }
 }
 
 }  // namespace internal

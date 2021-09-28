@@ -95,7 +95,7 @@ class Transaction {
 
   // Implementations which support a user-specified unbound hook should propagate `error` to that
   // hook. Otherwise, by default, InternalError() just closes the connection to the client.
-  virtual void InternalError(UnbindInfo error) { Close(ZX_ERR_PEER_CLOSED); }
+  virtual void InternalError(UnbindInfo error, ErrorOrigin origin) { Close(ZX_ERR_PEER_CLOSED); }
 
   // Resumes the asynchronous wait on the underlying channel. This allows at least one more
   // dispatcher thread to enter the message handler for this binding in parallel.
@@ -166,9 +166,6 @@ class CompleterBase {
   ~CompleterBase();
 
   fidl::Result SendReply(::fidl::OutgoingMessage* message);
-
-  // Invokes transaction_.InternalError().
-  void InternalError(UnbindInfo error);
 
   // Move the contents of |transaction_| to heap and return it.
   std::unique_ptr<Transaction> TakeOwnership();

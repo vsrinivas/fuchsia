@@ -18,6 +18,30 @@
 namespace fidl {
 namespace internal {
 
+bool DispatchError::RequiresImmediateTeardown() {
+  // Do not immediately teardown the bindings if some FIDL method failed to
+  // write to the transport due to peer closed. The message handler in
+  // |AsyncBinding| will eventually discover that the transport is in the peer
+  // closed state and begin teardown, so we are not ignoring this error just
+  // deferring it.
+  //
+  // To see why this is necessary, consider a FIDL method that is supposed to
+  // shutdown the server connection. Upon processing this FIDL method, the
+  // server may send a reply or a terminal event, and then close their endpoint.
+  // The server might have also sent other replies or events that are waiting to
+  // be read by the client. If the client immediately unbinds on the first call
+  // hitting peer closed, we would be dropping any unread messages that the
+  // server have sent. In other words, whether the terminal events etc. are
+  // surfaced to the user or discarded would depend on whether the user just
+  // happened to make another call after the server closed their endpoint, which
+  // is an undesirable race condition. By deferring the handling of peer closed
+  // errors, we ensure that any messages the server sent prior to closing the
+  // endpoint will be reliably drained by the client and exposed to the user. An
+  // equivalent situation applies in the server bindings in ensuring that client
+  // messages are reliably drained after peer closed.
+  return !(origin == fidl::ErrorOrigin::kSend && info.reason() == fidl::Reason::kPeerClosed);
+}
+
 AsyncBinding::AsyncBinding(async_dispatcher_t* dispatcher, const zx::unowned_channel& channel,
                            ThreadingPolicy threading_policy)
     : async_wait_t({{ASYNC_STATE_INIT},
@@ -53,7 +77,7 @@ void AsyncBinding::MessageHandler(zx_status_t dispatcher_status, const zx_packet
       // Flag indicating whether this thread still has access to the binding.
       bool next_wait_begun_early = false;
       // Dispatch the message.
-      cpp17::optional<fidl::UnbindInfo> maybe_error = Dispatch(msg, &next_wait_begun_early);
+      cpp17::optional<DispatchError> maybe_error = Dispatch(msg, &next_wait_begun_early);
       // If |next_wait_begun_early| is true, then the interest for the next
       // message had been eagerly registered in the method handler, and another
       // thread may already be running |MessageHandler|. We should exit without
@@ -63,8 +87,11 @@ void AsyncBinding::MessageHandler(zx_status_t dispatcher_status, const zx_packet
         return;
 
       // If there was any error enabling dispatch or an unexpected message, destroy the binding.
-      if (maybe_error)
-        return PerformTeardown(*maybe_error);
+      if (maybe_error) {
+        if (maybe_error->RequiresImmediateTeardown()) {
+          return PerformTeardown(maybe_error->info);
+        }
+      }
     }
 
     if (CheckForTeardownAndBeginNextWait() != ZX_OK)
@@ -139,6 +166,12 @@ zx_status_t AsyncBinding::CheckForTeardownAndBeginNextWait() {
     default:
       // Other lifecycle states are illegal.
       __builtin_abort();
+  }
+}
+
+void AsyncBinding::HandleError(std::shared_ptr<AsyncBinding>&& calling_ref, DispatchError error) {
+  if (error.RequiresImmediateTeardown()) {
+    StartTeardownWithInfo(std::move(calling_ref), error.info);
   }
 }
 
@@ -314,8 +347,8 @@ std::shared_ptr<AsyncServerBinding> AsyncServerBinding::Create(async_dispatcher_
   return binding;
 }
 
-std::optional<UnbindInfo> AsyncServerBinding::Dispatch(fidl::IncomingMessage& msg,
-                                                       bool* next_wait_begun_early) {
+std::optional<DispatchError> AsyncServerBinding::Dispatch(fidl::IncomingMessage& msg,
+                                                          bool* next_wait_begun_early) {
   auto* hdr = msg.header();
   SyncTransaction txn(hdr->txid, this, next_wait_begun_early);
   return txn.Dispatch(std::move(msg));
@@ -378,8 +411,14 @@ AsyncClientBinding::AsyncClientBinding(async_dispatcher_t* dispatcher,
       event_handler_(event_handler),
       teardown_observer_(std::move(teardown_observer)) {}
 
-std::optional<UnbindInfo> AsyncClientBinding::Dispatch(fidl::IncomingMessage& msg, bool*) {
-  return client_->Dispatch(msg, event_handler_);
+std::optional<DispatchError> AsyncClientBinding::Dispatch(fidl::IncomingMessage& msg, bool*) {
+  std::optional<UnbindInfo> info = client_->Dispatch(msg, event_handler_);
+  if (info.has_value()) {
+    // A client binding does not propagate synchronous sending errors as part of
+    // handling a message. All client callbacks return `void`.
+    return DispatchError{*info, fidl::ErrorOrigin::kReceive};
+  }
+  return std::nullopt;
 }
 
 void AsyncClientBinding::FinishTeardown(std::shared_ptr<AsyncBinding>&& calling_ref,
