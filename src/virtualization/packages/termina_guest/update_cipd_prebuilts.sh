@@ -241,11 +241,11 @@ main() {
   build_termina_image "${arch}" "${work_dir}/cros"
 
   echo "*** Copy Termina image"
-  cp -av "${work_dir}"/cros/chroot/home/${USER}/termina-*-image "${work_dir}"
+  cp -av "${work_dir}/cros/chroot/home/${USER}/termina-${board}-image" "${work_dir}"
 
   options=()
   options+=("create")
-  options+=("-in" "${work_dir}/cros/chroot/home/${USER}/${board}/output")
+  options+=("-in" "${work_dir}/termina-${board}-image")
   options+=("-name" "fuchsia_internal/linux/termina-${arch}")
   options+=("-install-mode" "copy")
   options+=("-tag" "termina-custom:${termina_revision}")
