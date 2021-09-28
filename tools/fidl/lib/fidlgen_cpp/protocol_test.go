@@ -39,7 +39,7 @@ protocol P {
 	TwoWay() -> ();
 	-> Event();
 };
-`), HeaderOptions{})
+`))
 			p = onlyProtocol(t, root)
 		})
 		return p
@@ -216,8 +216,7 @@ func TestWireBindingsAllocation(t *testing.T) {
 	}
 	for _, ex := range cases {
 		t.Run(ex.desc, func(t *testing.T) {
-			root := compile(fidlgentest.EndToEndTest{T: t}.Single("library example; "+ex.fidl),
-				HeaderOptions{})
+			root := compile(fidlgentest.EndToEndTest{T: t}.Single("library example; " + ex.fidl))
 			var protocols []Protocol
 			for _, decl := range root.Decls {
 				if p, ok := decl.(Protocol); ok {
@@ -247,7 +246,7 @@ library fuchsia.foobar;
 // Regular protocol
 protocol P {};
 `
-	root := compile(fidlgentest.EndToEndTest{T: t}.Single(fidl), HeaderOptions{})
+	root := compile(fidlgentest.EndToEndTest{T: t}.Single(fidl))
 
 	messaging := root.Decls[0].(Protocol).hlMessaging
 	assertEqual(t, messaging.ProtocolMarker.String(), "::fuchsia::foobar::P")
@@ -270,7 +269,7 @@ library fuchsia.foobar;
 // Regular protocol
 protocol P {};
 `
-	root := compile(fidlgentest.EndToEndTest{T: t}.Single(fidl), HeaderOptions{})
+	root := compile(fidlgentest.EndToEndTest{T: t}.Single(fidl))
 
 	messaging := root.Decls[0].(Protocol).wireTypeNames
 	assertEqual(t, messaging.WireProtocolMarker.String(), "::fuchsia_foobar::P")

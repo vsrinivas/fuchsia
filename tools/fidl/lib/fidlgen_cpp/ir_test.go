@@ -22,7 +22,7 @@ type U = union {
 protocol P {
 	M(resource struct { a array<U:optional, 3>; b vector<client_end:<P, optional>>; });
 };
-`), HeaderOptions{})
+`))
 	p := onlyProtocol(t, root)
 	assertEqual(t, len(p.Methods), 1)
 	m := p.Methods[0]
@@ -143,8 +143,7 @@ func TestAnonymousLayoutAliases(t *testing.T) {
 	}
 	for _, ex := range cases {
 		t.Run(ex.desc, func(t *testing.T) {
-			root := compile(fidlgentest.EndToEndTest{T: t}.Single("library example; "+ex.fidl),
-				HeaderOptions{})
+			root := compile(fidlgentest.EndToEndTest{T: t}.Single("library example; " + ex.fidl))
 
 			layoutToChildren := make(map[namingContextKey][]ScopedLayout)
 			for _, decl := range root.Decls {

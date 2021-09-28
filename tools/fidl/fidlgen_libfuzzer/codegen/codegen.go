@@ -5,20 +5,14 @@
 package codegen
 
 import (
-	"log"
 	"strings"
 	"text/template"
 
-	fidlgen "go.fuchsia.dev/fuchsia/tools/fidl/lib/fidlgen"
 	cpp "go.fuchsia.dev/fuchsia/tools/fidl/lib/fidlgen_cpp"
 )
 
-type Generator struct {
-	*cpp.Generator
-}
-
-func NewGenerator(clangFormatPath string) Generator {
-	return Generator{cpp.NewGenerator("LibFuzzer", clangFormatPath, template.FuncMap{
+func NewGenerator(flags *cpp.CmdlineFlags) *cpp.Generator {
+	return cpp.NewGenerator(flags, template.FuncMap{
 		"DoubleColonToUnderscore": func(s string) string {
 			s2 := strings.ReplaceAll(s, "::", "_")
 			// Drop any leading "::" => "_".
@@ -41,47 +35,7 @@ func NewGenerator(clangFormatPath string) Generator {
 		tmplStruct,
 		tmplTable,
 		tmplUnion,
-	})}
-}
-
-// Config is the configuration data passed to the libfuzzer generator.
-type Config interface {
-	cpp.CodegenOptions
-	Source() string
-	DecoderEncoderHeader() string
-	DecoderEncoderSource() string
-	HlcppBindingsIncludeStem() string
-	WireBindingsIncludeStem() string
-}
-
-// Generate generates all files required for the C++ libfuzzer code.
-func (gen Generator) Generate(fidl fidlgen.Root, c Config) {
-	tree := cpp.CompileLibFuzzer(fidl, headerOptions(fidl.Name, c))
-
-	gen.GenerateFiles("", tree, []cpp.GeneratedFile{
-		{c.Header(), "Header"},
-		{c.Source(), "Source"},
 	})
-
-	tree.HeaderOptions = headerOptions(fidl.Name, decoderEncoderCodegenOptions{c})
-
-	gen.GenerateFiles("", tree, []cpp.GeneratedFile{
-		{c.DecoderEncoderHeader(), "DecoderEncoderHeader"},
-		{c.DecoderEncoderSource(), "DecoderEncoderSource"},
-	})
-}
-
-func headerOptions(name fidlgen.EncodedLibraryIdentifier, c Config) cpp.HeaderOptions {
-	primaryHeader, err := cpp.CalcPrimaryHeader(c, name.Parts())
-	if err != nil {
-		log.Fatalf("CalcPrimaryHeader failed: %v", err)
-	}
-	return cpp.HeaderOptions{
-		PrimaryHeader:            primaryHeader,
-		IncludeStem:              c.IncludeStem(),
-		HlcppBindingsIncludeStem: c.HlcppBindingsIncludeStem(),
-		WireBindingsIncludeStem:  c.WireBindingsIncludeStem(),
-	}
 }
 
 func protocols(decls []cpp.Kinded) []cpp.Protocol {
@@ -115,17 +69,4 @@ func countDecoderEncoders(decls []cpp.Kinded) int {
 		}
 	}
 	return count
-}
-
-// decoderEncoderCodegenOptions is a forwarding CodegenOptions that changes the
-// primary header to the decoder-encoder header.
-type decoderEncoderCodegenOptions struct {
-	Config
-}
-
-var _ cpp.CodegenOptions = (*decoderEncoderCodegenOptions)(nil)
-
-func (o decoderEncoderCodegenOptions) Header() string {
-	// When generating decoder-encoders, the primary header is the decoder-encoder header.
-	return o.Config.DecoderEncoderHeader()
 }

@@ -10,7 +10,6 @@ import (
 	"reflect"
 	"text/template"
 
-	"go.fuchsia.dev/fuchsia/tools/fidl/lib/fidlgen"
 	cpp "go.fuchsia.dev/fuchsia/tools/fidl/lib/fidlgen_cpp"
 )
 
@@ -210,52 +209,38 @@ var utilityFuncs = template.FuncMap{
 	"List": func(items ...interface{}) []interface{} {
 		return items
 	},
-	"GeneratedPath": func(name string, library fidlgen.LibraryIdentifier) string {
-		return fmt.Sprintf("fidl/%s/%s", library.Encode(), name)
-	},
 }
 
-func NewGenerator(clangFormatPath string) Generator {
-	return Generator{
-		cpp.NewGenerator("LLCPPTemplates", clangFormatPath, utilityFuncs, []string{
-			fileHeaderTmpl,
-			fileSourceTmpl,
-			fileTestBaseTmpl,
-			fragmentBitsTmpl,
-			fragmentConstTmpl,
-			fragmentEnumTmpl,
-			fragmentMethodClientImplAsyncTmpl,
-			fragmentMethodClientImplOnewayTmpl,
-			fragmentMethodClientImplSyncTmpl,
-			fragmentMethodClientImplTmpl,
-			fragmentMethodCompleterBaseTmpl,
-			fragmentMethodRequestTmpl,
-			fragmentMethodResponseContextTmpl,
-			fragmentMethodResponseTmpl,
-			fragmentMethodResultTmpl,
-			fragmentMethodUnownedResultTmpl,
-			fragmentProtocolCallerTmpl,
-			fragmentProtocolClientImplTmpl,
-			fragmentProtocolDetailsTmpl,
-			fragmentProtocolDispatcherTmpl,
-			fragmentProtocolEventHandlerTmpl,
-			fragmentProtocolEventSenderTmpl,
-			fragmentProtocolInterfaceTmpl,
-			fragmentProtocolSyncClientTmpl,
-			fragmentProtocolTmpl,
-			fragmentServiceTmpl,
-			fragmentStructTmpl,
-			fragmentTableTmpl,
-			fragmentUnionTmpl,
-		}),
-	}
-}
-
-func (gen Generator) Generate(root string, tree cpp.Root) {
-	base := fmt.Sprintf("%s/fidl/%s/cpp", root, tree.Library.Encode())
-	gen.GenerateFiles(base, tree, []cpp.GeneratedFile{
-		{"wire.h", "File:Header"},
-		{"wire.cc", "File:Source"},
-		{"wire_test_base.h", "File:TestBase"},
+func NewGenerator(flags *cpp.CmdlineFlags) *cpp.Generator {
+	return cpp.NewGenerator(flags, utilityFuncs, []string{
+		fileHeaderTmpl,
+		fileSourceTmpl,
+		fileTestBaseTmpl,
+		fragmentBitsTmpl,
+		fragmentConstTmpl,
+		fragmentEnumTmpl,
+		fragmentMethodClientImplAsyncTmpl,
+		fragmentMethodClientImplOnewayTmpl,
+		fragmentMethodClientImplSyncTmpl,
+		fragmentMethodClientImplTmpl,
+		fragmentMethodCompleterBaseTmpl,
+		fragmentMethodRequestTmpl,
+		fragmentMethodResponseContextTmpl,
+		fragmentMethodResponseTmpl,
+		fragmentMethodResultTmpl,
+		fragmentMethodUnownedResultTmpl,
+		fragmentProtocolCallerTmpl,
+		fragmentProtocolClientImplTmpl,
+		fragmentProtocolDetailsTmpl,
+		fragmentProtocolDispatcherTmpl,
+		fragmentProtocolEventHandlerTmpl,
+		fragmentProtocolEventSenderTmpl,
+		fragmentProtocolInterfaceTmpl,
+		fragmentProtocolSyncClientTmpl,
+		fragmentProtocolTmpl,
+		fragmentServiceTmpl,
+		fragmentStructTmpl,
+		fragmentTableTmpl,
+		fragmentUnionTmpl,
 	})
 }

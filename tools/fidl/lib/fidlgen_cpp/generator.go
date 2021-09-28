@@ -12,30 +12,42 @@ import (
 	"path"
 	"path/filepath"
 	"runtime"
+	"strings"
 	"text/template"
 
 	"go.fuchsia.dev/fuchsia/tools/fidl/lib/fidlgen"
 )
 
-type GeneratedFile struct {
-	Filename string
-	Template string
-}
-
 type Generator struct {
-	tmpls           *template.Template
-	clangFormatPath string
+	tmpls *template.Template
+	flags *CmdlineFlags
 }
 
-func NewGenerator(name string, clangFormatPath string, extraFuncs template.FuncMap, templates []string) *Generator {
-	tmpls := template.New(name).Funcs(mergeFuncMaps(commonTemplateFuncs, extraFuncs))
-	for _, t := range templates {
-		template.Must(tmpls.Parse(t))
+func NewGenerator(flags *CmdlineFlags, extraFuncs template.FuncMap, templates []string) *Generator {
+	gen := &Generator{
+		template.New(flags.name), flags,
 	}
 
-	return &Generator{
-		tmpls, clangFormatPath,
+	funcs := mergeFuncMaps(commonTemplateFuncs, extraFuncs)
+	funcs = mergeFuncMaps(funcs, template.FuncMap{
+		"Filename": func(name string, library fidlgen.LibraryIdentifier) string {
+			return gen.generateFilename(name, library)
+		},
+		"ExperimentEnabled": func(experiment string) bool {
+			return gen.ExperimentEnabled(experiment)
+		},
+	})
+
+	gen.tmpls.Funcs(funcs)
+	for _, t := range templates {
+		template.Must(gen.tmpls.Parse(t))
 	}
+
+	return gen
+}
+
+func (gen *Generator) ExperimentEnabled(experiment string) bool {
+	return gen.flags.ExperimentEnabled(experiment)
 }
 
 func (gen *Generator) generateFile(filename string, tmpl string, tree Root) error {
@@ -53,7 +65,7 @@ func (gen *Generator) generateFile(filename string, tmpl string, tree Root) erro
 		return fmt.Errorf("Error generating content: %w", err)
 	}
 	// TODO(fxbug.dev/78303): Investigate clang-format memory usage on large files.
-	maybeFormatter := gen.clangFormatPath
+	maybeFormatter := gen.flags.clangFormatPath
 	if bufferedContent.Len() > 1024*1024 && runtime.GOOS == "darwin" {
 		maybeFormatter = ""
 	}
@@ -73,22 +85,37 @@ func (gen *Generator) generateFile(filename string, tmpl string, tree Root) erro
 	return nil
 }
 
-func (gen *Generator) GenerateFiles(base string, tree Root, files []GeneratedFile) {
-	if !path.IsAbs(base) {
-		cwd, err := os.Getwd()
-		if err != nil {
-			log.Fatalf("Getwd failed: %v", err)
-		}
-		base = path.Join(cwd, base)
+type filenameData struct {
+	Library fidlgen.LibraryIdentifier
+}
+
+func (fd *filenameData) joinLibraryParts(separator string) string {
+	ss := make([]string, len(fd.Library))
+	for i, s := range fd.Library {
+		ss[i] = string(s)
 	}
+	return strings.Join(ss, separator)
+}
+
+func (fd *filenameData) LibraryDots() string {
+	return fd.joinLibraryParts(".")
+}
+
+func (fd *filenameData) LibrarySlashes() string {
+	return fd.joinLibraryParts("/")
+}
+
+func (gen *Generator) generateFilename(file string, library fidlgen.LibraryIdentifier) string {
+	buf := new(bytes.Buffer)
+	gen.tmpls.ExecuteTemplate(buf, "Filename:"+file, &filenameData{library})
+	return buf.String()
+}
+
+func (gen *Generator) GenerateFiles(tree Root, files []string) {
+
 	for _, f := range files {
-		var fn string
-		if path.IsAbs(f.Filename) {
-			fn = f.Filename
-		} else {
-			fn = path.Join(base, f.Filename)
-		}
-		err := gen.generateFile(fn, f.Template, tree)
+		fn := path.Join(gen.flags.root, gen.generateFilename(f, tree.Library))
+		err := gen.generateFile(fn, "File:"+f, tree)
 		if err != nil {
 			log.Fatalf("Error generating %s: %v", fn, err)
 		}

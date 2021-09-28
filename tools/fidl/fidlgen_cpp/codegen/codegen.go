@@ -14,18 +14,11 @@ type Generator struct {
 	*cpp.Generator
 }
 
-func NewGenerator(clangFormatPath string) Generator {
-	return Generator{cpp.NewGenerator("UnifiedCPPTemplates", clangFormatPath, template.FuncMap{}, []string{
+func NewGenerator(flags *cpp.CmdlineFlags) *cpp.Generator {
+	return cpp.NewGenerator(flags, template.FuncMap{}, []string{
 		fragmentConstTmpl,
 		fragmentTypeAliasTmpl,
 		fileHeaderTmpl,
 		fileSourceTmpl,
-	})}
-}
-
-func (gen Generator) Generate(tree cpp.Root, header string, source string) {
-	gen.GenerateFiles("", tree, []cpp.GeneratedFile{
-		{header, "Header"},
-		{source, "Source"},
 	})
 }

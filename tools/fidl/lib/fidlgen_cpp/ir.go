@@ -209,66 +209,14 @@ type Root struct {
 	Library      fidlgen.LibraryIdentifier
 	Decls        []Kinded
 	Dependencies []fidlgen.LibraryIdentifier
-	HeaderOptions
 }
 
-// Headers returns the list of dependency headers without the final path component.
-func (r Root) Headers() []string {
-	headers := []string{}
-	for _, l := range r.Dependencies {
-		headers = append(headers, formatLibraryPath(l))
-	}
-	return headers
+func (r Root) LegacyIncludeDir() string {
+	return formatLibraryLegacyPath(r.Library) + "/cpp"
 }
 
-// NaturalDomainObjectsHeader computes the path to #include the natural domain
-// object header.
-func (r Root) NaturalDomainObjectsHeader() string {
-	if r.NaturalDomainObjectsIncludeStem == "" {
-		fidlgen.TemplateFatalf("Natural domain objects include stem was missing")
-	}
-	return fmt.Sprintf("%s/%s.h", formatLibraryPath(r.Library), r.NaturalDomainObjectsIncludeStem)
-}
-
-// HlcppBindingsHeader computes the path to #include the high-level C++ bindings
-// header.
-func (r Root) HlcppBindingsHeader() string {
-	if r.HlcppBindingsIncludeStem == "" {
-		fidlgen.TemplateFatalf("High-level C++ bindings include stem was missing")
-	}
-	return fmt.Sprintf("%s/%s.h", formatLibraryLegacyPath(r.Library), r.HlcppBindingsIncludeStem)
-}
-
-// WireBindingsHeader computes the path to #include the wire bindings header.
-func (r Root) WireBindingsHeader() string {
-	if r.WireBindingsIncludeStem == "" {
-		fidlgen.TemplateFatalf("Wire bindings include stem was missing")
-	}
-	return fmt.Sprintf("%s/%s.h", formatLibraryUnifiedPath(r.Library), r.WireBindingsIncludeStem)
-}
-
-// HeaderOptions are independent from the FIDL library IR, but used in the generated
-// code to properly #include their dependencies.
-type HeaderOptions struct {
-	// PrimaryHeader will be used as the path to #include the generated header.
-	PrimaryHeader string
-
-	// IncludeStem is the suffix after library path when referencing includes.
-	// Includes will be of the form
-	//     #include <fidl/library/name/{include-stem}.h>
-	IncludeStem string
-
-	// NaturalDomainObjectsIncludeStem is the file stem of the natural
-	// domain object header, if it needs to be included by the generated code.
-	NaturalDomainObjectsIncludeStem string
-
-	// HlcppBindingsIncludeStem is the file stem of the high-level C++ bindings
-	// header, if it needs to be included by the generated code.
-	HlcppBindingsIncludeStem string
-
-	// WireBindingsIncludeStem is the file stem of the wire bindings (LLCPP)
-	// header, if it needs to be included by the generated code.
-	WireBindingsIncludeStem string
+func (r Root) UnifiedIncludeDir() string {
+	return formatLibraryUnifiedPath(r.Library) + "/cpp"
 }
 
 // SingleComponentLibraryName returns if the FIDL library name only consists of
@@ -572,10 +520,9 @@ func (c *compiler) getAnonymousChildren(layout fidlgen.Layout) []ScopedLayout {
 	return c.anonymousChildren[toKey(layout.NamingContext)]
 }
 
-func compile(r fidlgen.Root, h HeaderOptions) Root {
+func compile(r fidlgen.Root) Root {
 	root := Root{
-		HeaderOptions: h,
-		Library:       fidlgen.ParseLibraryName(r.Name),
+		Library: fidlgen.ParseLibraryName(r.Name),
 	}
 
 	c := compiler{
@@ -690,18 +637,6 @@ func compile(r fidlgen.Root, h HeaderOptions) Root {
 	return root
 }
 
-func CompileHL(r fidlgen.Root, h HeaderOptions) Root {
-	return compile(r.ForBindings("hlcpp"), h)
-}
-
-func CompileLL(r fidlgen.Root, h HeaderOptions) Root {
-	return compile(r.ForBindings("llcpp"), h)
-}
-
-func CompileUnified(r fidlgen.Root, h HeaderOptions) Root {
-	return compile(r.ForBindings("cpp"), h)
-}
-
-func CompileLibFuzzer(r fidlgen.Root, h HeaderOptions) Root {
-	return compile(r.ForBindings("libfuzzer"), h)
+func compileFor(r fidlgen.Root, n string) Root {
+	return compile(r.ForBindings(n))
 }
