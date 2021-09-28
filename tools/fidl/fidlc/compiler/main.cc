@@ -267,6 +267,22 @@ bool Parse(const fidl::SourceFile& source_file, fidl::Reporter* reporter,
 }
 
 void Write(const std::ostringstream& output_stream, const std::string file_path) {
+  std::string contents = output_stream.str();
+  struct stat st;
+  if (!stat(file_path.c_str(), &st)) {
+    // File exists.
+    size_t current_size = st.st_size;
+    if (current_size == contents.size()) {
+      // Lengths match.
+      std::string current_contents(current_size, '\0');
+      std::fstream current_file = Open(file_path, std::ios::in);
+      current_file.read(current_contents.data(), current_size);
+      if (current_contents == contents) {
+        // Contents match, no need to write the file.
+        return;
+      }
+    }
+  }
   std::fstream file = Open(file_path, std::ios::out);
   file << output_stream.str();
   file.flush();
