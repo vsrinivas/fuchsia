@@ -13,15 +13,13 @@ import (
 	"fidl/fuchsia/hardware/network"
 )
 
-// A factory of session configurations from device information.
-// A default implementation is provided by SimpleSessionConfigFactory.
+// SessionConfigFactory creates session configurations from device information.
 type SessionConfigFactory interface {
-	// Creates a SessionConfig for a given network device based on the provided
-	// deviceInfo and portStatus.
-	MakeSessionConfig(deviceInfo network.DeviceInfo, portStatus network.PortStatus) (SessionConfig, error)
+	MakeSessionConfig(deviceInfo network.DeviceInfo) (SessionConfig, error)
 }
 
-// Configuration used to open a session with a network device.
+// SessionConfig holds configuration used to open a session with a network
+// device.
 type SessionConfig struct {
 	// Length of each buffer.
 	BufferLength uint32
@@ -39,48 +37,22 @@ type SessionConfig struct {
 	TxDescriptorCount uint16
 	// Session flags.
 	Options network.SessionFlags
-	// Types of rx frames to subscribe to.
-	RxFrames []network.FrameType
 }
 
-// The buffer length used by SimpleSessionConfigFactory.
+// DefaultBufferLength is the buffer length used by SimpleSessionConfigFactory.
 const DefaultBufferLength uint32 = 2048
 
-// A simple session configuration factory.
-type SimpleSessionConfigFactory struct {
-	// The frame types to subscribe to. Will subscribe to all frame types if
-	// empty.
-	FrameTypes []network.FrameType
-}
-
-type InsufficientBufferLengthError struct {
-	BufferLength uint32
-	BufferHeader uint16
-	BufferTail   uint16
-	MTU          uint32
-}
-
-func (e *InsufficientBufferLengthError) Error() string {
-	return fmt.Sprintf("buffer length=%d < header=%d + tail=%d + mtu=%d", e.BufferLength, e.BufferHeader, e.BufferTail, e.MTU)
-}
+// SimpleSessionConfigFactory is the default configuration factory.
+type SimpleSessionConfigFactory struct{}
 
 // MakeSessionConfig implements SessionConfigFactory.
-func (c *SimpleSessionConfigFactory) MakeSessionConfig(deviceInfo network.DeviceInfo, portStatus network.PortStatus) (SessionConfig, error) {
+func (c *SimpleSessionConfigFactory) MakeSessionConfig(deviceInfo network.DeviceInfo) (SessionConfig, error) {
 	bufferLength := DefaultBufferLength
 	if bufferLength > deviceInfo.MaxBufferLength {
 		bufferLength = deviceInfo.MaxBufferLength
 	}
 	if bufferLength < deviceInfo.MinRxBufferLength {
 		bufferLength = deviceInfo.MinRxBufferLength
-	}
-
-	if bufferLength < uint32(deviceInfo.MinTxBufferHead)+uint32(deviceInfo.MinTxBufferTail)+portStatus.GetMtu() {
-		return SessionConfig{}, &InsufficientBufferLengthError{
-			BufferLength: bufferLength,
-			BufferHeader: deviceInfo.MinTxBufferHead,
-			BufferTail:   deviceInfo.MinTxBufferTail,
-			MTU:          portStatus.GetMtu(),
-		}
 	}
 
 	config := SessionConfig{
@@ -92,7 +64,6 @@ func (c *SimpleSessionConfigFactory) MakeSessionConfig(deviceInfo network.Device
 		RxDescriptorCount: deviceInfo.RxDepth,
 		TxDescriptorCount: deviceInfo.TxDepth,
 		Options:           network.SessionFlagsPrimary,
-		RxFrames:          c.FrameTypes,
 	}
 	align := deviceInfo.BufferAlignment
 	if config.BufferStride%align != 0 {
@@ -104,4 +75,28 @@ func (c *SimpleSessionConfigFactory) MakeSessionConfig(deviceInfo network.Device
 		}
 	}
 	return config, nil
+}
+
+type insufficientBufferLengthError struct {
+	bufferLength uint32
+	bufferHeader uint16
+	bufferTail   uint16
+	mtu          uint32
+}
+
+func (e *insufficientBufferLengthError) Error() string {
+	return fmt.Sprintf("buffer=%d < header=%d + tail=%d + mtu=%d", e.bufferLength, e.bufferHeader, e.bufferTail, e.mtu)
+}
+
+func (c *SessionConfig) checkValidityForPort(portStatus network.PortStatus) error {
+	mtu := portStatus.GetMtu()
+	if c.BufferLength < uint32(c.TxHeaderLength)+uint32(c.TxTailLength)+mtu {
+		return &insufficientBufferLengthError{
+			bufferLength: c.BufferLength,
+			bufferHeader: c.TxHeaderLength,
+			bufferTail:   c.TxTailLength,
+			mtu:          mtu,
+		}
+	}
+	return nil
 }

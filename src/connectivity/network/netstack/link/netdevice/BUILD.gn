@@ -28,7 +28,6 @@ go_library("netdevice") {
   sources = [
     "client.go",
     "client_test.go",
-    "mac_client.go",
     "session_config.go",
     "session_config_test.go",
   ]

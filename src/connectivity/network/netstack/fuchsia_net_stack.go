@@ -114,50 +114,87 @@ func (ns *Netstack) getNetInterfaces() []stack.InterfaceInfo {
 	return out
 }
 
-func (ns *Netstack) addInterface(config stack.InterfaceConfig, device stack.DeviceDefinition) stack.StackAddInterfaceResult {
+var _ link.Observer = (*cancellingObserver)(nil)
 
+// TODO(https://fxbug.dev/85061): Remove this type once AddInterface is removed. It exists to
+// support the legacy API only.
+type cancellingObserver struct {
+	link.Observer
+	cancel context.CancelFunc
+}
+
+func (c *cancellingObserver) SetOnLinkClosed(f func()) {
+	c.Observer.SetOnLinkClosed(func() {
+		c.cancel()
+		f()
+	})
+}
+
+// TODO(https://fxbug.dev/85061): Delete this API once fuchsia.net.interfaces.admin can install
+// netdevices.
+func (ns *Netstack) addInterface(config stack.InterfaceConfig, device stack.DeviceDefinition) stack.StackAddInterfaceResult {
 	var (
 		namePrefix string
-		ep         tcpipstack.LinkEndpoint
-		controller link.Controller
-		observer   link.Observer
+		dev        *network.DeviceWithCtxInterface
 	)
 
 	switch device.Which() {
 	case stack.DeviceDefinitionEthernet:
-		client, err := netdevice.NewMacAddressingClient(context.Background(), &device.Ethernet.NetworkDevice, &device.Ethernet.Mac, &netdevice.SimpleSessionConfigFactory{
-			FrameTypes: []network.FrameType{network.FrameTypeEthernet},
-		})
-		if err != nil {
-			_ = syslog.Warnf("failed to create network device client for Ethernet interface: %s", err)
-			return stack.StackAddInterfaceResultWithErr(stack.ErrorInternal)
-		}
-		ep = ethernet.New(client)
-		controller = client
-		observer = client
 		namePrefix = "eth"
+		dev = &device.Ethernet.NetworkDevice
+		// NB: Users are no longer required to provide a connection to MacAddressing, it's retrievable
+		// through the netdevice API. We can just dispose of it here, netdevice.Client will take care
+		// of connecting to it if needed.
+		_ = device.Ethernet.Mac.Close()
 	case stack.DeviceDefinitionIp:
-		client, err := netdevice.NewClient(context.Background(), &device.Ip, &netdevice.SimpleSessionConfigFactory{
-			FrameTypes: []network.FrameType{network.FrameTypeIpv4, network.FrameTypeIpv6},
-		})
-		if err != nil {
-			_ = syslog.Warnf("failed to create network device client for IP interface: %s", err)
-			return stack.StackAddInterfaceResultWithErr(stack.ErrorInternal)
-		}
-		ep = client
-		controller = client
-		observer = client
 		namePrefix = "ip"
+		dev = &device.Ip
 	default:
 		_ = syslog.Errorf("unsupported device definition: %d", device.Which())
 		return stack.StackAddInterfaceResultWithErr(stack.ErrorInvalidArgs)
 	}
 
+	client, err := netdevice.NewClient(context.Background(), dev, &netdevice.SimpleSessionConfigFactory{})
+	if err != nil {
+		_ = syslog.Warnf("failed to create network device client: %s", err)
+		return stack.StackAddInterfaceResultWithErr(stack.ErrorInternal)
+	}
+
+	defer func() {
+		if client != nil {
+			_ = client.Close()
+		}
+	}()
+
+	// Always connect to port zero here to fulfill the deprecated API.
+	port, err := client.NewPort(context.Background(), netdevice.PortId(0))
+	if err != nil {
+		_ = syslog.Warnf("failed to create network device port: %s", err)
+		return stack.StackAddInterfaceResultWithErr(stack.ErrorInternal)
+	}
+
+	defer func() {
+		if port != nil {
+			_ = port.Close()
+		}
+	}()
+
+	var ep tcpipstack.LinkEndpoint
+	switch mode := port.Mode(); mode {
+	case netdevice.PortModeEthernet:
+		ep = ethernet.New(port)
+	case netdevice.PortModeIp:
+		ep = port
+	default:
+		panic(fmt.Sprintf("unknown port mode: %d", mode))
+	}
+
+	ctx, cancel := context.WithCancel(context.Background())
 	ifs, err := ns.addEndpoint(
 		makeEndpointName(namePrefix, config.GetNameWithDefault("")),
 		ep,
-		controller,
-		observer,
+		port,
+		&cancellingObserver{Observer: port, cancel: cancel},
 		routes.Metric(config.GetMetricWithDefault(0)),
 	)
 	if err != nil {
@@ -168,6 +205,15 @@ func (ns *Netstack) addInterface(config stack.InterfaceConfig, device stack.Devi
 			return stack.StackAddInterfaceResultWithErr(stack.ErrorInternal)
 		}
 	}
+
+	// Run the device in a goroutine, cancellingObserver will cancel the context
+	// when the port reports a link down.
+	go client.Run(ctx)
+
+	// Prevent deferred functions from cleaning up.
+	client = nil
+	port = nil
+
 	return stack.StackAddInterfaceResultWithResponse(stack.StackAddInterfaceResponse{Id: uint64(ifs.nicid)})
 }
 

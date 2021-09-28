@@ -38,51 +38,62 @@ const descriptorLength uint64 = C.sizeof_buffer_descriptor_t
 const tag = "netdevice"
 const emptyLinkAddress tcpip.LinkAddress = ""
 
-// TODO(https://fxbug.dev/64310): Remove port 0 assumptions once netstack FIDL
-// supports ports.
-const port0 = 0
-
 type bufferDescriptor = C.buffer_descriptor_t
+type PortId = uint8
 
-var _ link.Controller = (*Client)(nil)
-var _ link.Observer = (*Client)(nil)
+type PortMode int
 
-var _ stack.LinkEndpoint = (*Client)(nil)
-var _ stack.GSOEndpoint = (*Client)(nil)
+const (
+	_ PortMode = iota
+	PortModeEthernet
+	PortModeIp
+)
 
-// InfoProvider abstracts a common information interface for different Clients.
-type InfoProvider interface {
-	RxStats() *fifo.RxStats
-	TxStats() *fifo.TxStats
-	Class() network.DeviceClass
-}
-
-var _ InfoProvider = (*Client)(nil)
-
-// A client for a network device that implements the
+// Client is a client for a network device that implements the
 // fuchsia.hardware.network.Device protocol.
 type Client struct {
-	dispatcher stack.NetworkDispatcher
-	// WaitGroup on all the go routines associated with the Client. See Attach
-	// and Wait.
-	dispatcherWg sync.WaitGroup
-
 	device     *network.DeviceWithCtxInterface
-	port       *network.PortWithCtxInterface
 	session    *network.SessionWithCtxInterface
 	deviceInfo network.DeviceInfo
-	portInfo   network.PortInfo
 	config     SessionConfig
-	watcher    *network.StatusWatcherWithCtxInterface
 
 	data        fifo.MappedVMO
 	descriptors fifo.MappedVMO
 
 	handler netdevice.Handler
 
+	mu struct {
+		sync.RWMutex
+		closed bool
+		ports  map[PortId]*Port
+	}
+}
+
+var _ link.Controller = (*Port)(nil)
+var _ link.Observer = (*Port)(nil)
+
+var _ stack.LinkEndpoint = (*Port)(nil)
+var _ stack.GSOEndpoint = (*Port)(nil)
+
+// Port is the instantiation of a network interface backed by a
+// netdevice port.
+type Port struct {
+	// Used to wait for goroutine teardown. See Attach and Wait.
+	dispatcherWg   sync.WaitGroup
+	cancelDispatch context.CancelFunc
+
+	client        *Client
+	port          *network.PortWithCtxInterface
+	portInfo      network.PortInfo
+	watcher       *network.StatusWatcherWithCtxInterface
+	linkAddress   tcpip.LinkAddress
+	macAddressing *network.MacAddressingWithCtxInterface
+	mode          PortMode
+
 	state struct {
 		mu struct {
 			sync.Mutex
+			dispatcher          stack.NetworkDispatcher
 			closed              bool
 			onLinkClosed        func()
 			onLinkOnlineChanged func(bool)
@@ -97,29 +108,32 @@ type Client struct {
 	}
 }
 
-func (c *Client) MTU() uint32 {
-	c.mtu.mu.Lock()
-	mtu := c.mtu.mu.value
-	c.mtu.mu.Unlock()
+func (p *Port) MTU() uint32 {
+	p.mtu.mu.Lock()
+	mtu := p.mtu.mu.value
+	p.mtu.mu.Unlock()
 	return mtu
 }
 
-func (*Client) Capabilities() stack.LinkEndpointCapabilities {
+func (*Port) Capabilities() stack.LinkEndpointCapabilities {
 	return 0
 }
 
-func (c *Client) MaxHeaderLength() uint16 {
+func (*Port) MaxHeaderLength() uint16 {
 	return 0
 }
 
-func (c *Client) LinkAddress() tcpip.LinkAddress {
-	// NOTE: Plain Client does not have a link address. Only MacAddressingClient
-	// does.
-	return emptyLinkAddress
+func (p *Port) LinkAddress() tcpip.LinkAddress {
+	return p.linkAddress
 }
 
 // write writes a list of packets to the device.
-func (c *Client) write(pkts stack.PacketBufferList, protocol tcpip.NetworkProtocolNumber) (int, tcpip.Error) {
+func (c *Client) write(port PortId, pkts stack.PacketBufferList, protocol tcpip.NetworkProtocolNumber) (int, tcpip.Error) {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+	if c.mu.closed {
+		return 0, &tcpip.ErrClosedForSend{}
+	}
 	return c.handler.ProcessWrite(pkts, func(descriptorIndex *uint16, pkt *stack.PacketBuffer) {
 		descriptor := c.getDescriptor(*descriptorIndex)
 		// Reset descriptor to default values before filling it.
@@ -152,37 +166,109 @@ func (c *Client) write(pkts stack.PacketBufferList, protocol tcpip.NetworkProtoc
 		for ; n < int(c.deviceInfo.MinTxBufferLength); n++ {
 			data[n] = 0
 		}
-
+		descriptor.port_id = C.uchar(port)
 		descriptor.info_type = C.uint(network.InfoTypeNoInfo)
 		descriptor.frame_type = C.uchar(frameType)
 		descriptor.data_length = C.uint(n)
 	})
 }
 
-func (c *Client) WritePacket(_ stack.RouteInfo, proto tcpip.NetworkProtocolNumber, pkt *stack.PacketBuffer) tcpip.Error {
+func (p *Port) WritePacket(_ stack.RouteInfo, proto tcpip.NetworkProtocolNumber, pkt *stack.PacketBuffer) tcpip.Error {
 	var pkts stack.PacketBufferList
 	pkts.PushBack(pkt)
-	_, err := c.write(pkts, proto)
+	_, err := p.client.write(p.portInfo.Id, pkts, proto)
 	return err
 }
 
-func (c *Client) WritePackets(_ stack.RouteInfo, pkts stack.PacketBufferList, proto tcpip.NetworkProtocolNumber) (int, tcpip.Error) {
-	return c.write(pkts, proto)
+func (p *Port) WritePackets(_ stack.RouteInfo, pkts stack.PacketBufferList, proto tcpip.NetworkProtocolNumber) (int, tcpip.Error) {
+	return p.client.write(p.portInfo.Id, pkts, proto)
 }
 
-func (*Client) WriteRawPacket(*stack.PacketBuffer) tcpip.Error { return &tcpip.ErrNotSupported{} }
+func (*Port) WriteRawPacket(*stack.PacketBuffer) tcpip.Error { return &tcpip.ErrNotSupported{} }
 
-func (c *Client) Attach(dispatcher stack.NetworkDispatcher) {
-	c.dispatcher = dispatcher
+func (p *Port) Attach(dispatcher stack.NetworkDispatcher) {
+	p.state.mu.Lock()
+	p.state.mu.dispatcher = dispatcher
+	onLinkClosed := p.state.mu.onLinkClosed
+	p.state.mu.Unlock()
 
-	detachWithError := func(reason error) {
-		c.state.mu.Lock()
-		closed := c.state.mu.closed
-		c.state.mu.Unlock()
-		if closed {
-			return
+	closeWithError := func(reason error) {
+		if err := p.Close(); err != nil {
+			_ = syslog.WarnTf(tag, "error closing port endpoint on detach (%s): %s", reason, err)
+		} else {
+			_ = syslog.WarnTf(tag, "closed port endpoint: %s", reason)
 		}
+	}
 
+	// dispatcher may be nil when the NIC in stack.Stack is being removed.
+	if dispatcher == nil {
+		closeWithError(fmt.Errorf("RemoveNIC"))
+		return
+	}
+	ctx, cancel := context.WithCancel(context.Background())
+	p.cancelDispatch = cancel
+
+	p.dispatcherWg.Add(1)
+	go func() {
+		defer p.dispatcherWg.Done()
+		if err := func() error {
+			for {
+				status, err := p.watcher.WatchStatus(ctx)
+				if err != nil {
+					return fmt.Errorf("WatchStatus failed: %w", err)
+				}
+				if err := p.client.config.checkValidityForPort(status); err != nil {
+					return fmt.Errorf("invalid port status for session: %w", err)
+				}
+
+				if status.HasMtu() {
+					p.mtu.mu.Lock()
+					p.mtu.mu.value = status.GetMtu()
+					p.mtu.mu.Unlock()
+				}
+				p.state.mu.Lock()
+				fn := p.state.mu.onLinkOnlineChanged
+				p.state.mu.Unlock()
+				fn(status.HasFlags() && status.GetFlags()&network.StatusFlagsOnline != 0)
+			}
+		}(); err != nil {
+			closeWithError(err)
+		}
+	}()
+
+	// Spawn a goroutine to notify link closure once all the routines are done.
+	go func() {
+		p.dispatcherWg.Wait()
+		onLinkClosed()
+	}()
+}
+
+func (p *Port) Close() error {
+	p.client.mu.Lock()
+	// Remove from parent.
+	delete(p.client.mu.ports, p.portInfo.GetId())
+	p.client.mu.Unlock()
+
+	p.state.mu.Lock()
+	defer p.state.mu.Unlock()
+	if p.state.mu.closed {
+		return nil
+	}
+	p.state.mu.closed = true
+	if p.cancelDispatch != nil {
+		p.cancelDispatch()
+	}
+	var err error
+	if p.macAddressing != nil {
+		err = p.macAddressing.Close()
+	}
+	return multierr.Combine(p.port.Close(), p.watcher.Close(), err)
+}
+
+func (c *Client) Run(ctx context.Context) {
+	ctx, cancel := context.WithCancel(ctx)
+	detachWithError := func(reason error) {
+		cancel()
 		c.handler.DetachTx()
 		if err := c.Close(); err != nil {
 			_ = syslog.WarnTf(tag, "error closing device on detach (%s): %s", reason, err)
@@ -191,36 +277,17 @@ func (c *Client) Attach(dispatcher stack.NetworkDispatcher) {
 		}
 	}
 
-	// dispatcher may be nil when the NIC in stack.Stack is being removed.
-	if dispatcher == nil {
-		detachWithError(fmt.Errorf("RemoveNIC"))
-		return
-	}
-
-	c.dispatcherWg.Add(1)
+	var wg sync.WaitGroup
+	wg.Add(1)
 	go func() {
-		defer c.dispatcherWg.Done()
-		for {
-			status, err := c.watcher.WatchStatus(context.Background())
-			if err != nil {
-				detachWithError(fmt.Errorf("watcher loop: %w", err))
-				return
-			}
-			if status.HasMtu() {
-				c.mtu.mu.Lock()
-				c.mtu.mu.value = status.GetMtu()
-				c.mtu.mu.Unlock()
-			}
-			c.state.mu.Lock()
-			fn := c.state.mu.onLinkOnlineChanged
-			c.state.mu.Unlock()
-			fn(status.HasFlags() && status.GetFlags()&network.StatusFlagsOnline != 0)
-		}
+		defer wg.Done()
+		<-ctx.Done()
+		detachWithError(fmt.Errorf("context done %w", ctx.Err()))
 	}()
 
-	c.dispatcherWg.Add(1)
+	wg.Add(1)
 	go func() {
-		defer c.dispatcherWg.Done()
+		defer wg.Done()
 		if err := c.handler.TxReceiverLoop(func(descriptorIndex *uint16) bool {
 			descriptor := c.getDescriptor(*descriptorIndex)
 			return network.TxReturnFlags(descriptor.return_flags)&network.TxReturnFlagsTxRetError == 0
@@ -230,18 +297,18 @@ func (c *Client) Attach(dispatcher stack.NetworkDispatcher) {
 		_ = syslog.VLogTf(syslog.DebugVerbosity, tag, "TX read loop finished")
 	}()
 
-	c.dispatcherWg.Add(1)
+	wg.Add(1)
 	go func() {
-		defer c.dispatcherWg.Done()
+		wg.Done()
 		if err := c.handler.TxSenderLoop(); err != nil {
 			detachWithError(fmt.Errorf("TX write loop: %w", err))
 		}
 		_ = syslog.VLogTf(syslog.DebugVerbosity, tag, "TX write loop finished")
 	}()
 
-	c.dispatcherWg.Add(1)
+	wg.Add(1)
 	go func() {
-		defer c.dispatcherWg.Done()
+		defer wg.Done()
 		if err := c.handler.RxLoop(func(descriptorIndex *uint16) {
 			descriptor := c.getDescriptor(*descriptorIndex)
 			data := c.getDescriptorData(descriptor)
@@ -255,10 +322,25 @@ func (c *Client) Attach(dispatcher stack.NetworkDispatcher) {
 			case network.FrameTypeIpv6:
 				protocolNumber = header.IPv6ProtocolNumber
 			}
+			portId := PortId(descriptor.port_id)
 
-			dispatcher.DeliverNetworkPacket(emptyLinkAddress, emptyLinkAddress, protocolNumber, stack.NewPacketBuffer(stack.PacketBufferOptions{
-				Data: view.ToVectorisedView(),
-			}))
+			c.mu.RLock()
+			port, ok := c.mu.ports[portId]
+			c.mu.RUnlock()
+			if ok {
+				port.state.mu.Lock()
+				dispatcher := port.state.mu.dispatcher
+				port.state.mu.Unlock()
+				if dispatcher != nil {
+					dispatcher.DeliverNetworkPacket(emptyLinkAddress, emptyLinkAddress, protocolNumber, stack.NewPacketBuffer(stack.PacketBufferOptions{
+						Data: view.ToVectorisedView(),
+					}))
+				}
+			} else {
+				// This can happen if the port is detached from the client while frames
+				// are propagating in the FIFO.
+				_ = syslog.WarnTf(tag, "received frame for unknown port: %d", portId)
+			}
 
 			// This entry is going back to the driver; it can be reused.
 			c.resetRxDescriptor(descriptor)
@@ -268,49 +350,41 @@ func (c *Client) Attach(dispatcher stack.NetworkDispatcher) {
 		_ = syslog.VLogTf(syslog.DebugVerbosity, tag, "Rx loop finished")
 	}()
 
-	// Spawn a goroutine to clean up the mapped memory once all the handler
-	// loops are done.
-	go func() {
-		c.dispatcherWg.Wait()
-		if err := multierr.Combine(c.data.Close(), c.descriptors.Close()); err != nil {
-			_ = syslog.WarnTf(tag, "failed to close mapped VMOs: %s", err)
-		}
-		c.state.mu.Lock()
-		fn := c.state.mu.onLinkClosed
-		c.state.mu.Unlock()
-		fn()
-	}()
+	wg.Wait()
 }
 
-func (c *Client) IsAttached() bool {
-	return c.dispatcher != nil
+func (p *Port) IsAttached() bool {
+	p.state.mu.Lock()
+	attached := p.state.mu.dispatcher != nil
+	p.state.mu.Unlock()
+	return attached
 }
 
-func (c *Client) Wait() {
-	c.dispatcherWg.Wait()
+func (p *Port) Wait() {
+	p.dispatcherWg.Wait()
 }
 
-func (*Client) ARPHardwareType() header.ARPHardwareType {
+func (*Port) ARPHardwareType() header.ARPHardwareType {
 	return header.ARPHardwareNone
 }
 
-func (*Client) AddHeader(_, _ tcpip.LinkAddress, _ tcpip.NetworkProtocolNumber, _ *stack.PacketBuffer) {
+func (*Port) AddHeader(_, _ tcpip.LinkAddress, _ tcpip.NetworkProtocolNumber, _ *stack.PacketBuffer) {
 }
 
 // GSOMaxSize implements stack.GSOEndpoint.
-func (*Client) GSOMaxSize() uint32 {
+func (*Port) GSOMaxSize() uint32 {
 	// There's no limit on how much data we can take in a single software GSO write.
 	return math.MaxUint32
 }
 
 // SupportedGSO implements stack.GSOEndpoint.
-func (*Client) SupportedGSO() stack.SupportedGSO {
+func (*Port) SupportedGSO() stack.SupportedGSO {
 	// TODO(https://fxbug.dev/76010): expose hardware offloading capabilities.
 	return stack.SWGSOSupported
 }
 
-func (c *Client) Up() error {
-	result, err := c.session.Attach(context.Background(), port0, c.config.RxFrames)
+func (p *Port) Up() error {
+	result, err := p.client.session.Attach(context.Background(), p.portInfo.GetId(), p.subscriptionFrameTypes())
 	if err != nil {
 		return err
 	}
@@ -327,8 +401,8 @@ func (c *Client) Up() error {
 	}
 }
 
-func (c *Client) Down() error {
-	result, err := c.session.Detach(context.Background(), port0)
+func (p *Port) Down() error {
+	result, err := p.client.session.Detach(context.Background(), p.portInfo.GetId())
 	if err != nil {
 		return err
 	}
@@ -345,47 +419,74 @@ func (c *Client) Down() error {
 	}
 }
 
-func (c *Client) SetOnLinkClosed(f func()) {
-	c.state.mu.Lock()
-	c.state.mu.onLinkClosed = f
-	c.state.mu.Unlock()
+func (p *Port) SetOnLinkClosed(f func()) {
+	p.state.mu.Lock()
+	p.state.mu.onLinkClosed = f
+	p.state.mu.Unlock()
 }
 
-func (c *Client) SetOnLinkOnlineChanged(f func(bool)) {
-	c.state.mu.Lock()
-	c.state.mu.onLinkOnlineChanged = f
-	c.state.mu.Unlock()
+func (p *Port) SetOnLinkOnlineChanged(f func(bool)) {
+	p.state.mu.Lock()
+	p.state.mu.onLinkOnlineChanged = f
+	p.state.mu.Unlock()
 }
 
-func (c *Client) SetPromiscuousMode(bool) error {
-	return fmt.Errorf("promiscuous mode not supported on device")
-}
-
-func (c *Client) DeviceClass() network.DeviceClass {
-	return c.portInfo.Class
-}
-
-// Closes the client and disposes of all its resources.
-func (c *Client) Close() error {
-	c.state.mu.Lock()
-	defer c.state.mu.Unlock()
-	if c.state.mu.closed {
-		return nil
+func (p *Port) SetPromiscuousMode(enabled bool) error {
+	if p.macAddressing == nil {
+		return fmt.Errorf("promiscuous mode not supported on device")
 	}
-	c.state.mu.closed = true
-	c.handler.DetachTx()
 
-	return multierr.Combine(
-		c.device.Close(),
-		// Session also has a Close method, make sure we're calling the ChannelProxy
-		// one.
-		((*fidl.ChannelProxy)(c.session)).Close(),
-		c.handler.RxFifo.Close(),
-		c.handler.TxFifo.Close(),
-		c.watcher.Close(),
-		// Additional cleanup is performed by the watcher goroutine spawned in
-		// Attach once all the io loops are done.
-	)
+	var mode network.MacFilterMode
+	if enabled {
+		mode = network.MacFilterModePromiscuous
+	} else {
+		// NOTE: Netstack currently is not capable of handling multicast
+		// filters, promiscuous mode = false means receive all multicasts still.
+		mode = network.MacFilterModeMulticastPromiscuous
+	}
+	if status, err := p.macAddressing.SetMode(context.Background(), mode); err != nil {
+		return err
+	} else if zx.Status(status) != zx.ErrOk {
+		return &zx.Error{
+			Status: zx.Status(status),
+			Text:   "fuchsia.hardware.network/MacAddressing.SetMode",
+		}
+	}
+	return nil
+}
+
+func (p *Port) DeviceClass() network.DeviceClass {
+	return p.portInfo.Class
+}
+
+// Close closes the client and disposes of all its resources.
+func (c *Client) Close() error {
+	ports, err := func() (map[PortId]*Port, error) {
+		c.mu.Lock()
+		defer c.mu.Unlock()
+		if c.mu.closed {
+			return nil, nil
+		}
+		c.mu.closed = true
+		ports := c.mu.ports
+		c.mu.ports = nil
+		return ports, multierr.Combine(
+			c.device.Close(),
+			// Session also has a Close method, make sure we're calling the ChannelProxy
+			// one.
+			((*fidl.ChannelProxy)(c.session)).Close(),
+			c.handler.RxFifo.Close(),
+			c.handler.TxFifo.Close(),
+			c.data.Close(),
+			c.descriptors.Close(),
+		)
+	}()
+
+	for _, port := range ports {
+		err = multierr.Append(err, port.Close())
+	}
+
+	return err
 }
 
 // getDescriptor returns the shared memory representing the descriptor indexed
@@ -431,9 +532,150 @@ func (c *Client) resetRxDescriptor(descriptor *bufferDescriptor) {
 	}
 }
 
+// NewPort creates a new port client for this device.
+func (c *Client) NewPort(ctx context.Context, portId PortId) (*Port, error) {
+	portRequest, port, err := network.NewPortWithCtxInterfaceRequest()
+	if err != nil {
+		return nil, fmt.Errorf("failed to create port request: %w", err)
+	}
+	defer func() {
+		if port != nil {
+			_ = port.Close()
+		}
+	}()
+
+	if err := c.device.GetPort(ctx, portId, portRequest); err != nil {
+		return nil, fmt.Errorf("failed to get port %d: %w", portId, err)
+	}
+
+	portInfo, err := port.GetInfo(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get port info: %w", err)
+	}
+	if !(portInfo.HasId() && portInfo.HasClass() && portInfo.HasRxTypes() && portInfo.HasTxTypes()) {
+		return nil, fmt.Errorf("incomplete PortInfo: %#v", portInfo)
+	}
+
+	portMode, err := selectPortOperatingMode(portInfo.GetRxTypes())
+	if err != nil {
+		return nil, err
+	}
+
+	macRequest, mac, err := network.NewMacAddressingWithCtxInterfaceRequest()
+	if err != nil {
+		return nil, fmt.Errorf("failed to create mac request: %w", err)
+	}
+	defer func() {
+		if mac != nil {
+			_ = mac.Close()
+		}
+	}()
+	if err := port.GetMac(ctx, macRequest); err != nil {
+		return nil, fmt.Errorf("failed to get mac: %w", err)
+	}
+
+	linkAddress, mac := func() (tcpip.LinkAddress, *network.MacAddressingWithCtxInterface) {
+		macAddr, err := mac.GetUnicastAddress(ctx)
+		if err != nil {
+			// MAC is not supported.
+			_ = mac.Close()
+			return emptyLinkAddress, nil
+		} else {
+			return tcpip.LinkAddress(macAddr.Octets[:]), mac
+		}
+	}()
+
+	if mac != nil {
+		// Set device to multicast promiscuous to match current behavior. When
+		// Netstack controls multicast filters this can be removed.
+		if status, err := mac.SetMode(ctx, network.MacFilterModeMulticastPromiscuous); err != nil {
+			return nil, fmt.Errorf("failed to set multicast promiscuous: %w", err)
+		} else if zx.Status(status) != zx.ErrOk {
+			return nil, &zx.Error{
+				Status: zx.Status(status),
+				Text:   "fuchsia.hardware.network/MacAddressing.SetMode",
+			}
+		}
+	}
+
+	portStatus, err := port.GetStatus(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create get port status: %w", err)
+	}
+	if !portStatus.HasMtu() {
+		return nil, fmt.Errorf("missing MTU in port status")
+	}
+
+	if err := c.config.checkValidityForPort(portStatus); err != nil {
+		return nil, err
+	}
+
+	watcherRequest, watcher, err := network.NewStatusWatcherWithCtxInterfaceRequest()
+	if err != nil {
+		return nil, fmt.Errorf("failed to create status watcher request: %w", err)
+	}
+	defer func() {
+		if watcher != nil {
+			_ = watcher.Close()
+		}
+	}()
+	if err := port.GetStatusWatcher(ctx, watcherRequest, network.MaxStatusBuffer); err != nil {
+		return nil, fmt.Errorf("failed to create get status watcher: %w", err)
+	}
+
+	portEndpoint := &Port{
+		client:        c,
+		port:          port,
+		portInfo:      portInfo,
+		watcher:       watcher,
+		linkAddress:   linkAddress,
+		macAddressing: mac,
+		mode:          portMode,
+	}
+	portEndpoint.mtu.mu.value = portStatus.GetMtu()
+
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	if _, ok := c.mu.ports[portId]; ok {
+		return nil, fmt.Errorf("port %d already bound", portId)
+	}
+	c.mu.ports[portId] = portEndpoint
+
+	// Prevent deferred functions from cleaning up.
+	mac = nil
+	port = nil
+	watcher = nil
+
+	return portEndpoint, nil
+}
+
+// Mode returns the port's operating mode.
+func (p *Port) Mode() PortMode {
+	return p.mode
+}
+
+// subscriptionFrameTypes returns the frame types to use when attaching this
+// port to a session, based on the port's operating mode.
+func (p *Port) subscriptionFrameTypes() []network.FrameType {
+	switch mode := p.mode; mode {
+	case PortModeEthernet:
+		return []network.FrameType{network.FrameTypeEthernet}
+	case PortModeIp:
+		return []network.FrameType{network.FrameTypeIpv4, network.FrameTypeIpv6}
+	default:
+		panic(fmt.Sprintf("invalid port mode %d", mode))
+	}
+}
+
 // NewClient creates a new client from a provided network device interface.
 func NewClient(ctx context.Context, dev *network.DeviceWithCtxInterface, sessionConfigFactory SessionConfigFactory) (*Client, error) {
 	_ = syslog.VLogTf(syslog.DebugVerbosity, tag, "creating network device client")
+	defer func() {
+		// We always take ownership of the device, close it in case of errors.
+		if dev != nil {
+			_ = dev.Close()
+		}
+	}()
 
 	deviceInfo, err := dev.GetInfo(ctx)
 	if err != nil {
@@ -453,53 +695,9 @@ func NewClient(ctx context.Context, dev *network.DeviceWithCtxInterface, session
 		return nil, fmt.Errorf("incomplete DeviceInfo: %#v", deviceInfo)
 	}
 
-	portRequest, port, err := network.NewPortWithCtxInterfaceRequest()
-	if err != nil {
-		return nil, fmt.Errorf("failed to create port request: %w", err)
-	}
-	if err := dev.GetPort(ctx, port0, portRequest); err != nil {
-		return nil, fmt.Errorf("failed to get port %d: %w", port0, err)
-	}
-
-	portInfo, err := port.GetInfo(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get port info: %w", err)
-	}
-	if !(portInfo.HasId() && portInfo.HasClass() && portInfo.HasRxTypes() && portInfo.HasTxTypes()) {
-		return nil, fmt.Errorf("incomplete PortInfo: %#v", portInfo)
-	}
-
-	portStatus, err := port.GetStatus(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create get port status: %w", err)
-	}
-
-	config, err := sessionConfigFactory.MakeSessionConfig(deviceInfo, portStatus)
+	config, err := sessionConfigFactory.MakeSessionConfig(deviceInfo)
 	if err != nil {
 		return nil, fmt.Errorf("session configuration factory failed: %w", err)
-	}
-
-	if len(config.RxFrames) == 0 {
-		config.RxFrames = portInfo.RxTypes
-	} else {
-		// Verify that requested frame types are valid.
-		isValidRxFrame := func(frameType network.FrameType) bool {
-			for _, f := range portInfo.RxTypes {
-				if f == frameType {
-					return true
-				}
-			}
-			return false
-		}
-		for _, requested := range config.RxFrames {
-			if !isValidRxFrame(requested) {
-				// NB: Rx types is formatted with %v below so it's printed as a slice of
-				// frame types correctly. %s compiles correctly but is interpreted as
-				// []uint8, which is itself printed as a string backed by that slice
-				// when using %s.
-				return nil, fmt.Errorf("requested unsupported frame type: %s. (should be in %v)", requested, portInfo.RxTypes)
-			}
-		}
 	}
 
 	// Descriptor count must be a power of 2.
@@ -538,27 +736,11 @@ func NewClient(ctx context.Context, dev *network.DeviceWithCtxInterface, session
 		return nil, &zx.Error{Status: zx.Status(sessionResult.Err), Text: "fuchsia.hardware.network/Device.OpenSession"}
 	}
 
-	req, watcher, err := network.NewStatusWatcherWithCtxInterfaceRequest()
-	if err != nil {
-		_ = mappedDataVmo.Close()
-		_ = mappedDescVmo.Close()
-		return nil, fmt.Errorf("failed to create status watcher request: %w", err)
-	}
-	if err := port.GetStatusWatcher(ctx, req, network.MaxStatusBuffer); err != nil {
-		_ = mappedDataVmo.Close()
-		_ = mappedDescVmo.Close()
-		_ = watcher.Close()
-		return nil, fmt.Errorf("failed to create get status watcher: %w", err)
-	}
-
 	c := &Client{
 		device:      dev,
-		port:        port,
 		session:     &sessionResult.Response.Session,
 		deviceInfo:  deviceInfo,
-		portInfo:    portInfo,
 		config:      config,
-		watcher:     watcher,
 		data:        mappedDataVmo,
 		descriptors: mappedDescVmo,
 		handler: netdevice.Handler{
@@ -568,12 +750,13 @@ func NewClient(ctx context.Context, dev *network.DeviceWithCtxInterface, session
 			TxFifo:  sessionResult.Response.Fifos.Tx,
 		},
 	}
+	c.mu.ports = make(map[PortId]*Port)
 
 	if entries := c.handler.InitRx(c.config.RxDescriptorCount); entries != c.config.RxDescriptorCount {
-		panic(fmt.Sprintf("Bad handler rx queue size: %d, expected %d", entries, c.config.RxDescriptorCount))
+		panic(fmt.Sprintf("bad handler rx queue size: %d, expected %d", entries, c.config.RxDescriptorCount))
 	}
 	if entries := c.handler.InitTx(c.config.TxDescriptorCount); entries != c.config.TxDescriptorCount {
-		panic(fmt.Sprintf("Bad handler tx queue size: %d, expected %d", entries, c.config.RxDescriptorCount))
+		panic(fmt.Sprintf("bad handler tx queue size: %d, expected %d", entries, c.config.RxDescriptorCount))
 	}
 
 	c.handler.Stats.Tx.FifoStats = fifo.MakeFifoStats(uint32(c.deviceInfo.TxDepth))
@@ -602,20 +785,50 @@ func NewClient(ctx context.Context, dev *network.DeviceWithCtxInterface, session
 		descriptorIndex++
 	}
 
+	// Prevent defer function from closing the device.
+	dev = nil
+
 	return c, nil
 }
 
-// RxStats implements InfoProvider.
-func (c *Client) RxStats() *fifo.RxStats {
-	return &c.handler.Stats.Rx
+func (p *Port) RxStats() *fifo.RxStats {
+	return &p.client.handler.Stats.Rx
 }
 
-// TxStats implements InfoProvider.
-func (c *Client) TxStats() *fifo.TxStats {
-	return &c.handler.Stats.Tx
+func (p *Port) TxStats() *fifo.TxStats {
+	return &p.client.handler.Stats.Tx
 }
 
-// Class implements InfoProvider.
-func (c *Client) Class() network.DeviceClass {
-	return c.portInfo.Class
+func (p *Port) Class() network.DeviceClass {
+	return p.portInfo.Class
+}
+
+type invalidPortOperatingModeError struct {
+	rxTypes []network.FrameType
+}
+
+func (e *invalidPortOperatingModeError) Error() string {
+	return fmt.Sprintf("can't determine port operating mode for types '%v'", e.rxTypes)
+}
+
+func selectPortOperatingMode(rxTypes []network.FrameType) (PortMode, error) {
+	seenIpv4 := false
+	seenIpv6 := false
+	for _, frameType := range rxTypes {
+		switch frameType {
+		case network.FrameTypeEthernet:
+			return PortModeEthernet, nil
+		case network.FrameTypeIpv4:
+			seenIpv4 = true
+		case network.FrameTypeIpv6:
+			seenIpv6 = true
+		default:
+			panic(fmt.Sprintf("unrecognized frame type %s", frameType))
+		}
+	}
+	// We only support devices with dual IP mode for now.
+	if seenIpv4 && seenIpv6 {
+		return PortModeIp, nil
+	}
+	return 0, &invalidPortOperatingModeError{rxTypes: rxTypes}
 }

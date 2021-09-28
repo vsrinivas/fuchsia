@@ -528,7 +528,7 @@ func (impl *nicInfoInspectImpl) ListChildren() []string {
 	switch impl.value.controller.(type) {
 	case *eth.Client:
 		children = append(children, ethInfo)
-	case netdevice.InfoProvider:
+	case *netdevice.Port:
 		children = append(children, netdeviceInfo)
 	}
 
@@ -567,7 +567,7 @@ func (impl *nicInfoInspectImpl) GetChild(childName string) inspectInner {
 	case netdeviceInfo:
 		return &netdevInspectImpl{
 			name:  childName,
-			value: impl.value.controller.(netdevice.InfoProvider),
+			value: impl.value.controller.(*netdevice.Port),
 		}
 	default:
 		return nil
@@ -773,7 +773,7 @@ var _ inspectInner = (*netdevInspectImpl)(nil)
 
 type netdevInspectImpl struct {
 	name  string
-	value netdevice.InfoProvider
+	value *netdevice.Port
 }
 
 func (impl *netdevInspectImpl) ReadData() inspect.Object {

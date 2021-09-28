@@ -8,6 +8,7 @@
 package netdevice
 
 import (
+	"errors"
 	"testing"
 
 	"fidl/fuchsia/hardware/network"
@@ -27,16 +28,12 @@ func TestMakeSessionConfig(t *testing.T) {
 	baseInfo.SetMinTxBufferHead(txBufferHead)
 	baseInfo.SetMinTxBufferTail(txBufferTail)
 
-	factory := SimpleSessionConfigFactory{
-		FrameTypes: []network.FrameType{network.FrameTypeEthernet},
-	}
+	factory := SimpleSessionConfigFactory{}
 
 	tests := []struct {
-		name             string
-		updateInfo       func(*network.DeviceInfo)
-		updatePortStatus func(*network.PortStatus)
-		expectedConfig   SessionConfig
-		expectedErr      *InsufficientBufferLengthError
+		name           string
+		updateInfo     func(*network.DeviceInfo)
+		expectedConfig SessionConfig
 	}{
 		{
 			name: "defaults",
@@ -49,7 +46,6 @@ func TestMakeSessionConfig(t *testing.T) {
 				RxDescriptorCount: baseInfo.TxDepth,
 				TxDescriptorCount: baseInfo.RxDepth,
 				Options:           network.SessionFlagsPrimary,
-				RxFrames:          factory.FrameTypes,
 			},
 		},
 		{
@@ -66,7 +62,6 @@ func TestMakeSessionConfig(t *testing.T) {
 				RxDescriptorCount: baseInfo.TxDepth,
 				TxDescriptorCount: baseInfo.RxDepth,
 				Options:           network.SessionFlagsPrimary,
-				RxFrames:          factory.FrameTypes,
 			},
 		},
 		{
@@ -83,7 +78,6 @@ func TestMakeSessionConfig(t *testing.T) {
 				RxDescriptorCount: baseInfo.TxDepth,
 				TxDescriptorCount: baseInfo.RxDepth,
 				Options:           network.SessionFlagsPrimary,
-				RxFrames:          factory.FrameTypes,
 			},
 		},
 		{
@@ -101,19 +95,6 @@ func TestMakeSessionConfig(t *testing.T) {
 				RxDescriptorCount: baseInfo.TxDepth,
 				TxDescriptorCount: baseInfo.RxDepth,
 				Options:           network.SessionFlagsPrimary,
-				RxFrames:          factory.FrameTypes,
-			},
-		},
-		{
-			name: "insufficient buffer length",
-			updatePortStatus: func(portStatus *network.PortStatus) {
-				portStatus.SetMtu(DefaultBufferLength)
-			},
-			expectedErr: &InsufficientBufferLengthError{
-				BufferLength: DefaultBufferLength,
-				BufferHeader: txBufferHead,
-				BufferTail:   txBufferTail,
-				MTU:          DefaultBufferLength,
 			},
 		},
 	}
@@ -124,27 +105,63 @@ func TestMakeSessionConfig(t *testing.T) {
 			if test.updateInfo != nil {
 				test.updateInfo(&info)
 			}
-			var portStatus network.PortStatus
-			if test.updatePortStatus != nil {
-				test.updatePortStatus(&portStatus)
+			sessionConfig, err := factory.MakeSessionConfig(info)
+			if err != nil {
+				t.Fatalf("MakeSessionConfig(%+v): %s", info, err)
 			}
-			sessionConfig, err := factory.MakeSessionConfig(info, portStatus)
-			if test.expectedErr != nil {
-				if concreteErr, ok := err.(*InsufficientBufferLengthError); ok {
-					if diff := cmp.Diff(concreteErr, test.expectedErr); diff != "" {
-						t.Errorf("MakeSessionConfig(%+v, %+v) error diff: (-want +got)\n%s", info, portStatus, diff)
-					}
-				} else {
-					t.Fatalf("got MakeSessionConfig(%+v, %+v) error = %+v, want %s", info, portStatus, err, test.expectedErr)
-				}
-			} else {
+			if diff := cmp.Diff(test.expectedConfig, sessionConfig); diff != "" {
+				t.Errorf("MakeSessionConfig(%+v): (-want +got)\n%s", info, diff)
+			}
+		})
+	}
+}
+
+func TestCheckSessionConfig(t *testing.T) {
+	config := SessionConfig{
+		BufferLength:   DefaultBufferLength,
+		TxHeaderLength: 16,
+		TxTailLength:   8,
+	}
+
+	tests := []struct {
+		name  string
+		mtu   uint32
+		check func(t *testing.T, portStatus network.PortStatus, err error)
+	}{
+		{
+			name: "success",
+			mtu:  config.BufferLength - uint32(config.TxHeaderLength+config.TxTailLength),
+			check: func(t *testing.T, portStatus network.PortStatus, err error) {
 				if err != nil {
-					t.Fatalf("MakeSessionConfig(%+v, %+v): %s", info, portStatus, err)
+					t.Fatalf("config.checkValidityForPort(%+v) = %s", portStatus, err)
 				}
-				if diff := cmp.Diff(test.expectedConfig, sessionConfig); diff != "" {
-					t.Errorf("MakeSessionConfig(%+v, %+v): (-want +got)\n%s", info, portStatus, diff)
+			},
+		},
+		{
+			name: "failure",
+			mtu:  config.BufferLength,
+			check: func(t *testing.T, portStatus network.PortStatus, err error) {
+				var got *insufficientBufferLengthError
+				if !errors.As(err, &got) {
+					t.Fatalf("checkValidityForPort(%+v) = %s, expected %T", portStatus, err, got)
 				}
-			}
+				if diff := cmp.Diff(got, &insufficientBufferLengthError{
+					bufferLength: config.BufferLength,
+					bufferHeader: config.TxHeaderLength,
+					bufferTail:   config.TxTailLength,
+					mtu:          config.BufferLength,
+				}, cmp.AllowUnexported(*got)); diff != "" {
+					t.Errorf("checkValidityForPort(%+v) error diff: (-want +got)\n%s", portStatus, diff)
+				}
+			},
+		},
+	}
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
+			var portStatus network.PortStatus
+			portStatus.SetMtu(testCase.mtu)
+			err := config.checkValidityForPort(portStatus)
+			testCase.check(t, portStatus, err)
 		})
 	}
 }
