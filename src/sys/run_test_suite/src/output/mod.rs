@@ -4,7 +4,6 @@
 
 use std::io::{Error, Write};
 use std::path::PathBuf;
-use std::sync::Arc;
 
 mod directory;
 mod line;
@@ -16,9 +15,8 @@ use fidl_fuchsia_test_manager as ftest_manager;
 use noop::NoopReporter;
 
 type DynReporter = dyn 'static + Reporter + Send + Sync;
-type DynArtifact = dyn 'static + Write + Send + Sync;
-type NewArtifactFn =
-    dyn Fn(&EntityId, &ArtifactType) -> Result<Box<DynArtifact>, Error> + Send + Sync;
+pub type DynArtifact = dyn 'static + Write + Send + Sync;
+type ArtifactWrapperFn = dyn Fn(&ArtifactType, Box<DynArtifact>) -> Box<DynArtifact>;
 
 /// A reporter for structured results scoped to a test run.
 /// To report results and artifacts for a test run, a user should create a `RunReporter`,
@@ -27,17 +25,17 @@ type NewArtifactFn =
 /// `record` to ensure the results are persisted.
 pub struct RunReporter {
     /// Inner `Reporter` implementation used to record results.
-    reporter: Arc<DynReporter>,
-    /// Function used to produce a new artifact. This handles wrapping writers in any
-    /// filters as necessary.
-    artifact_fn: Box<NewArtifactFn>,
+    reporter: Box<DynReporter>,
+    /// Method used to wrap artifact Writers. For example, this may add ANSI filtering
+    /// to an artifact.
+    artifact_wrapper: Box<ArtifactWrapperFn>,
 }
 
 /// A reporter for structured results scoped to a test suite. Note this may not outlive
 /// the `RunReporter` from which it is created.
 pub struct SuiteReporter<'a> {
     reporter: &'a DynReporter,
-    artifact_fn: &'a NewArtifactFn,
+    artifact_wrapper: &'a ArtifactWrapperFn,
     suite_id: SuiteId,
 }
 
@@ -45,54 +43,49 @@ pub struct SuiteReporter<'a> {
 /// the `SuiteReporter` from which it is created.
 pub struct CaseReporter<'a> {
     reporter: &'a DynReporter,
-    artifact_fn: &'a NewArtifactFn,
+    artifact_wrapper: &'a ArtifactWrapperFn,
     entity_id: EntityId,
 }
 
 impl RunReporter {
     /// Create a `RunReporter` that simply discards any artifacts or results it is given.
     pub fn new_noop() -> Self {
-        let reporter: Arc<NoopReporter> = Arc::new(NoopReporter);
-        let reporter_dyn = reporter.clone() as Arc<DynReporter>;
-        let artifact_fn = Box::new(move |entity: &EntityId, artifact_type: &ArtifactType| {
-            let inner = reporter.new_artifact(entity, artifact_type)?;
-            Ok(Box::new(inner) as Box<DynArtifact>)
-        });
-        Self { reporter: reporter_dyn, artifact_fn }
+        let reporter = Box::new(NoopReporter);
+        let artifact_wrapper =
+            Box::new(|_type: &ArtifactType, artifact: Box<DynArtifact>| artifact);
+        Self { reporter, artifact_wrapper }
     }
 
     /// Create a `RunReporter` that saves artifacts and results to the given directory.
     /// Any stdout artifacts are filtered for ANSI escape sequences before saving.
     pub fn new_ansi_filtered(root: PathBuf) -> Result<Self, Error> {
-        let reporter: Arc<DirectoryReporter> = Arc::new(DirectoryReporter::new(root)?);
-        let reporter_dyn = reporter.clone() as Arc<DynReporter>;
-        let artifact_fn = Box::new(move |entity: &EntityId, artifact_type: &ArtifactType| {
-            let unfiltered = reporter.new_artifact(entity, artifact_type)?;
-            Ok(match artifact_type {
-                // All the artifact types are enumerated here as we expect future artifacts
-                // should not be filtered.
-                ArtifactType::Stdout | ArtifactType::Stderr | ArtifactType::Syslog => {
-                    Box::new(AnsiFilterWriter::new(unfiltered)) as Box<DynArtifact>
+        let reporter = Box::new(DirectoryReporter::new(root)?);
+        let artifact_wrapper =
+            Box::new(|artifact_type: &ArtifactType, artifact: Box<DynArtifact>| {
+                match artifact_type {
+                    // All the artifact types are enumerated here as we expect future artifacts
+                    // should not be filtered.
+                    ArtifactType::Stdout | ArtifactType::Stderr | ArtifactType::Syslog => {
+                        Box::new(AnsiFilterWriter::new(artifact)) as Box<DynArtifact>
+                    }
                 }
-            })
-        });
-        Ok(Self { reporter: reporter_dyn, artifact_fn })
+            });
+        Ok(Self { reporter, artifact_wrapper })
     }
 
     /// Create a `RunReporter` that saves artifacts and results to the given directory.
     pub fn new(root: PathBuf) -> Result<Self, Error> {
-        let reporter: Arc<DirectoryReporter> = Arc::new(DirectoryReporter::new(root)?);
-        let reporter_dyn = reporter.clone() as Arc<DynReporter>;
-        let artifact_fn = Box::new(move |entity: &EntityId, artifact_type: &ArtifactType| {
-            let inner = reporter.new_artifact(entity, artifact_type)?;
-            Ok(Box::new(inner) as Box<DynArtifact>)
-        });
-        Ok(Self { reporter: reporter_dyn, artifact_fn })
+        let reporter = Box::new(DirectoryReporter::new(root)?);
+        let artifact_wrapper =
+            Box::new(|_type: &ArtifactType, artifact: Box<DynArtifact>| artifact);
+        Ok(Self { reporter, artifact_wrapper })
     }
 
     /// Create a new artifact scoped to the test run.
     pub fn new_artifact(&self, artifact_type: &ArtifactType) -> Result<Box<DynArtifact>, Error> {
-        (self.artifact_fn)(&EntityId::TestRun, artifact_type)
+        self.reporter
+            .new_artifact(&EntityId::TestRun, artifact_type)
+            .map(|artifact| (self.artifact_wrapper)(artifact_type, artifact))
     }
 
     /// Record that the test run has started.
@@ -110,7 +103,7 @@ impl RunReporter {
         self.reporter.new_entity(&EntityId::Suite(*suite_id), url)?;
         Ok(SuiteReporter {
             reporter: self.reporter.as_ref(),
-            artifact_fn: self.artifact_fn.as_ref(),
+            artifact_wrapper: self.artifact_wrapper.as_ref(),
             suite_id: *suite_id,
         })
     }
@@ -124,7 +117,9 @@ impl RunReporter {
 impl<'a> SuiteReporter<'a> {
     /// Create a new artifact scoped to the suite.
     pub fn new_artifact(&self, artifact_type: &ArtifactType) -> Result<Box<DynArtifact>, Error> {
-        (self.artifact_fn)(&EntityId::Suite(self.suite_id), artifact_type)
+        self.reporter
+            .new_artifact(&EntityId::Suite(self.suite_id), artifact_type)
+            .map(|artifact| (self.artifact_wrapper)(artifact_type, artifact))
     }
 
     /// Record that the suite has started.
@@ -141,7 +136,11 @@ impl<'a> SuiteReporter<'a> {
     pub fn new_case(&self, name: &str, case_id: &CaseId) -> Result<CaseReporter<'_>, Error> {
         let entity_id = EntityId::Case { suite: self.suite_id, case: *case_id };
         self.reporter.new_entity(&entity_id, name)?;
-        Ok(CaseReporter { reporter: self.reporter, artifact_fn: self.artifact_fn, entity_id })
+        Ok(CaseReporter {
+            reporter: self.reporter,
+            artifact_wrapper: self.artifact_wrapper,
+            entity_id,
+        })
     }
 
     /// Finalize and persist the test run.
@@ -153,7 +152,9 @@ impl<'a> SuiteReporter<'a> {
 impl<'a> CaseReporter<'a> {
     /// Create a new artifact scoped to the test case.
     pub fn new_artifact(&self, artifact_type: &ArtifactType) -> Result<Box<DynArtifact>, Error> {
-        (self.artifact_fn)(&self.entity_id, artifact_type)
+        self.reporter
+            .new_artifact(&self.entity_id, artifact_type)
+            .map(|artifact| (self.artifact_wrapper)(artifact_type, artifact))
     }
 
     /// Record that the case has started.
@@ -260,21 +261,13 @@ trait Reporter {
     /// Record that a test run, suite, or case has stopped. After this method is called for
     /// an entity, no additional events or artifacts may be added to the entity.
     fn entity_finished(&self, entity: &EntityId) -> Result<(), Error>;
-}
-
-/// A trait for structs that produce writers to which artifacts may be streamed.
-/// Implementations of `ArtifactReporter` serve as the backend powering `RunReporter` alongside
-/// `Reporter`. Note this trait is defined separately to avoid issues with trait objects needing to
-/// concrete associated types.
-trait ArtifactReporter {
-    type Writer: 'static + Write + Send + Sync;
 
     /// Create a new artifact scoped to the referenced entity.
     fn new_artifact(
         &self,
         entity: &EntityId,
         artifact_type: &ArtifactType,
-    ) -> Result<Self::Writer, Error>;
+    ) -> Result<Box<DynArtifact>, Error>;
 }
 
 /// A wrapper around Fuchsia's representation of time.

@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use crate::output::{
-    ArtifactReporter, ArtifactType, EntityId, ReportedOutcome, Reporter, Timestamp, ZxTime,
+    ArtifactType, DynArtifact, EntityId, ReportedOutcome, Reporter, Timestamp, ZxTime,
 };
 use parking_lot::Mutex;
 use std::collections::HashMap;
@@ -106,36 +106,6 @@ impl DirectoryReporter {
             true => Ok(()),
             false => DirBuilder::new().recursive(true).create(&absolute),
         }
-    }
-}
-
-impl ArtifactReporter for DirectoryReporter {
-    type Writer = File;
-
-    fn new_artifact(
-        &self,
-        entity: &EntityId,
-        artifact_type: &ArtifactType,
-    ) -> Result<Self::Writer, Error> {
-        let mut lock = self.entries.lock();
-        let entry = lock
-            .get_mut(entity)
-            .expect("Attempting to create an artifact for an entity that does not exist");
-        let name = filename_for_type(artifact_type);
-
-        let artifact_dir = self.root.join(&entry.artifact_dir);
-        Self::ensure_directory_exists(&artifact_dir)?;
-
-        let artifact = File::create(artifact_dir.join(name))?;
-
-        entry.artifacts.push((
-            name.to_string(),
-            directory::ArtifactMetadataV0 {
-                artifact_type: (*artifact_type).into(),
-                component_moniker: None,
-            },
-        ));
-        Ok(artifact)
     }
 }
 
@@ -243,6 +213,32 @@ impl Reporter for DirectoryReporter {
             // Cases are saved as part of suites.
             EntityId::Case { .. } => Ok(()),
         }
+    }
+
+    fn new_artifact(
+        &self,
+        entity: &EntityId,
+        artifact_type: &ArtifactType,
+    ) -> Result<Box<DynArtifact>, Error> {
+        let mut lock = self.entries.lock();
+        let entry = lock
+            .get_mut(entity)
+            .expect("Attempting to create an artifact for an entity that does not exist");
+        let name = filename_for_type(artifact_type);
+
+        let artifact_dir = self.root.join(&entry.artifact_dir);
+        Self::ensure_directory_exists(&artifact_dir)?;
+
+        let artifact = File::create(artifact_dir.join(name))?;
+
+        entry.artifacts.push((
+            name.to_string(),
+            directory::ArtifactMetadataV0 {
+                artifact_type: (*artifact_type).into(),
+                component_moniker: None,
+            },
+        ));
+        Ok(Box::new(artifact))
     }
 }
 
