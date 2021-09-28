@@ -9,10 +9,10 @@
 
 #include <sys/types.h>
 
-#include <dev/iommu.h>
 #include <kernel/lockdep.h>
 #include <object/dispatcher.h>
 #include <object/handle.h>
+#include <object/iommu_dispatcher.h>
 #include <object/pinned_memory_token_dispatcher.h>
 
 class Iommu;
@@ -20,7 +20,7 @@ class Iommu;
 class BusTransactionInitiatorDispatcher final
     : public SoloDispatcher<BusTransactionInitiatorDispatcher, ZX_DEFAULT_BTI_RIGHTS> {
  public:
-  static zx_status_t Create(fbl::RefPtr<Iommu> iommu, uint64_t bti_id,
+  static zx_status_t Create(fbl::RefPtr<IommuDispatcher> iommu, uint64_t bti_id,
                             KernelHandle<BusTransactionInitiatorDispatcher>* handle,
                             zx_rights_t* rights);
 
@@ -53,17 +53,17 @@ class BusTransactionInitiatorDispatcher final
   zx_status_t set_name(const char* name, size_t len) final __NONNULL((2));
   void get_name(char (&out_name)[ZX_MAX_NAME_LEN]) const final;
 
-  fbl::RefPtr<Iommu> iommu() const { return iommu_; }
+  Iommu& iommu() const { return iommu_->iommu(); }
   uint64_t bti_id() const { return bti_id_; }
 
   // Pin will always be able to return addresses that are contiguous for at
   // least this many bytes.  E.g. if this returns 1MB, then a call to Pin()
   // with a size of 2MB will return at most two physically-contiguous runs.  If the size
   // were 2.5MB, it will return at most three physically-contiguous runs.
-  uint64_t minimum_contiguity() const { return iommu_->minimum_contiguity(bti_id_); }
+  uint64_t minimum_contiguity() const { return iommu().minimum_contiguity(bti_id_); }
 
   // The number of bytes in the address space (UINT64_MAX if 2^64).
-  uint64_t aspace_size() const { return iommu_->aspace_size(bti_id_); }
+  uint64_t aspace_size() const { return iommu().aspace_size(bti_id_); }
 
   // The count of the pinned memory object tokens.
   uint64_t pmo_count() const;
@@ -90,10 +90,10 @@ class BusTransactionInitiatorDispatcher final
     PmtClose,
   };
 
-  BusTransactionInitiatorDispatcher(fbl::RefPtr<Iommu> iommu, uint64_t bti_id);
+  BusTransactionInitiatorDispatcher(fbl::RefPtr<IommuDispatcher> iommu, uint64_t bti_id);
   void PrintQuarantineWarningLocked(BtiPageLeakReason reason) TA_REQ(get_lock());
 
-  const fbl::RefPtr<Iommu> iommu_;
+  const fbl::RefPtr<IommuDispatcher> iommu_;
   const uint64_t bti_id_;
 
   using PmoList = fbl::TaggedDoublyLinkedList<PinnedMemoryTokenDispatcher*, PmtListTag>;

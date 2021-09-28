@@ -92,8 +92,8 @@ zx_status_t PinnedMemoryTokenDispatcher::MapIntoIommu(uint32_t perms) TA_NO_THRE
     // memory, then the physical addresses will be contiguous.  Return an
     // error if we can't actually map the address contiguously.
     zx_status_t status =
-        bti_->iommu()->MapContiguous(bti_id, pinned_vmo_.vmo(), pinned_vmo_.offset(),
-                                     pinned_vmo_.size(), perms, &vaddr, &mapped_len);
+        bti_->iommu().MapContiguous(bti_id, pinned_vmo_.vmo(), pinned_vmo_.offset(),
+                                    pinned_vmo_.size(), perms, &vaddr, &mapped_len);
     if (status != ZX_OK) {
       return status;
     }
@@ -110,8 +110,8 @@ zx_status_t PinnedMemoryTokenDispatcher::MapIntoIommu(uint32_t perms) TA_NO_THRE
   while (remaining > 0) {
     dev_vaddr_t vaddr;
     size_t mapped_len;
-    zx_status_t status = bti_->iommu()->Map(bti_id, pinned_vmo_.vmo(), curr_offset, remaining,
-                                            perms, &vaddr, &mapped_len);
+    zx_status_t status = bti_->iommu().Map(bti_id, pinned_vmo_.vmo(), curr_offset, remaining, perms,
+                                           &vaddr, &mapped_len);
     if (status != ZX_OK) {
       // We'll revert any partial mappings in on_zero_handles().
       return status;
@@ -140,7 +140,7 @@ zx_status_t PinnedMemoryTokenDispatcher::MapIntoIommu(uint32_t perms) TA_NO_THRE
 }
 
 zx_status_t PinnedMemoryTokenDispatcher::UnmapFromIommuLocked() {
-  auto iommu = bti_->iommu();
+  auto& iommu = bti_->iommu();
   const uint64_t bus_txn_id = bti_->bti_id();
 
   if (mapped_addrs_[0] == UINT64_MAX) {
@@ -150,7 +150,7 @@ zx_status_t PinnedMemoryTokenDispatcher::UnmapFromIommuLocked() {
 
   zx_status_t status = ZX_OK;
   if (pinned_vmo_.vmo()->is_contiguous()) {
-    status = iommu->Unmap(bus_txn_id, mapped_addrs_[0], pinned_vmo_.size());
+    status = iommu.Unmap(bus_txn_id, mapped_addrs_[0], pinned_vmo_.size());
   } else {
     const size_t min_contig = bti_->minimum_contiguity();
     size_t remaining = pinned_vmo_.size();
@@ -164,7 +164,7 @@ zx_status_t PinnedMemoryTokenDispatcher::UnmapFromIommuLocked() {
       DEBUG_ASSERT(size == min_contig || i == mapped_addrs_.size() - 1);
       // Try to unmap all pages even if we get an error, and return the
       // first error encountered.
-      zx_status_t err = iommu->Unmap(bus_txn_id, addr, size);
+      zx_status_t err = iommu.Unmap(bus_txn_id, addr, size);
       DEBUG_ASSERT(err == ZX_OK);
       if (err != ZX_OK && status == ZX_OK) {
         status = err;

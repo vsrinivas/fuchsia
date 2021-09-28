@@ -22,7 +22,7 @@ class IommuDispatcher final : public SoloDispatcher<IommuDispatcher, ZX_DEFAULT_
   ~IommuDispatcher() final;
   zx_obj_type_t get_type() const final { return ZX_OBJ_TYPE_IOMMU; }
 
-  fbl::RefPtr<Iommu> iommu() const { return iommu_; }
+  Iommu& iommu() const { return *iommu_; }
 
  private:
   explicit IommuDispatcher(fbl::RefPtr<Iommu> iommu);

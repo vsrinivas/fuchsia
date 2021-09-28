@@ -389,9 +389,7 @@ zx_status_t sys_bti_create(zx_handle_t iommu, uint32_t options, uint64_t bti_id,
 
   KernelHandle<BusTransactionInitiatorDispatcher> handle;
   zx_rights_t rights;
-  // TODO(teisenbe): Migrate BusTransactionInitiatorDispatcher::Create to
-  // taking the iommu_dispatcher
-  status = BusTransactionInitiatorDispatcher::Create(iommu_dispatcher->iommu(), bti_id, &handle,
+  status = BusTransactionInitiatorDispatcher::Create(ktl::move(iommu_dispatcher), bti_id, &handle,
                                                      &rights);
   if (status != ZX_OK) {
     return status;

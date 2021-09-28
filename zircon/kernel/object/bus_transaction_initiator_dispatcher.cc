@@ -25,9 +25,9 @@ KCOUNTER(dispatcher_bti_create_count, "dispatcher.bti.create")
 KCOUNTER(dispatcher_bti_destroy_count, "dispatcher.bti.destroy")
 
 zx_status_t BusTransactionInitiatorDispatcher::Create(
-    fbl::RefPtr<Iommu> iommu, uint64_t bti_id,
+    fbl::RefPtr<IommuDispatcher> iommu, uint64_t bti_id,
     KernelHandle<BusTransactionInitiatorDispatcher>* handle, zx_rights_t* rights) {
-  if (!iommu->IsValidBusTxnId(bti_id)) {
+  if (!iommu->iommu().IsValidBusTxnId(bti_id)) {
     return ZX_ERR_INVALID_ARGS;
   }
 
@@ -43,9 +43,10 @@ zx_status_t BusTransactionInitiatorDispatcher::Create(
   return ZX_OK;
 }
 
-BusTransactionInitiatorDispatcher::BusTransactionInitiatorDispatcher(fbl::RefPtr<Iommu> iommu,
-                                                                     uint64_t bti_id)
+BusTransactionInitiatorDispatcher::BusTransactionInitiatorDispatcher(
+    fbl::RefPtr<IommuDispatcher> iommu, uint64_t bti_id)
     : iommu_(ktl::move(iommu)), bti_id_(bti_id), zero_handles_(false) {
+  DEBUG_ASSERT(iommu_);
   kcounter_add(dispatcher_bti_create_count, 1);
 }
 
