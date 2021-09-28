@@ -415,6 +415,11 @@ bool FidlAudioRenderer::NeedMorePackets() {
     return false;
   }
 
+  if (!payload_buffer_size_) {
+    // No buffers added means no input connection yet.
+    return false;
+  }
+
   if (packet_bytes_outstanding_ + expected_packet_size_ >= payload_buffer_size_) {
     // Packets aren't getting retired quickly enough, and the next packet is likely to exceed
     // the capacity of the payload VMO. We'll refrain from requesting another packet at the
