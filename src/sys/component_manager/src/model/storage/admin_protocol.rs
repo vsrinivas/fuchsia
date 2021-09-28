@@ -29,7 +29,7 @@ use {
     cm_rust::{CapabilityName, ExposeDecl, OfferDecl, StorageDecl, UseDecl},
     fidl::endpoints::{ProtocolMarker, ServerEnd},
     fidl_fuchsia_component as fcomponent,
-    fidl_fuchsia_io::{OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE},
+    fidl_fuchsia_io::{CLONE_FLAG_SAME_RIGHTS, OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE},
     fidl_fuchsia_sys2 as fsys, fuchsia_async as fasync, fuchsia_zircon as zx,
     futures::{TryFutureExt, TryStreamExt},
     lazy_static::lazy_static,
@@ -261,6 +261,30 @@ impl StorageAdmin {
                         Err(e) => {
                             responder.send(&mut Err(e))?;
                         }
+                    }
+                }
+                fsys::StorageAdminRequest::OpenComponentStorageById { id, object, responder } => {
+                    let instance_id_index = component.try_get_component_id_index()?;
+                    if !instance_id_index.look_up_instance_id(&id) {
+                        responder.send(&mut Err(fcomponent::Error::ResourceNotFound))?;
+                        continue;
+                    }
+                    match storage::open_isolated_storage_by_id(
+                        storage_capability_source_info.clone(),
+                        id,
+                        &BindReason::AccessCapability {
+                            target: ExtendedMoniker::ComponentInstance(storage_moniker.clone()),
+                            path: storage_capability_source_info.backing_directory_path.clone(),
+                        },
+                    )
+                    .await
+                    {
+                        Ok(dir) => responder.send(
+                            &mut dir
+                                .clone(CLONE_FLAG_SAME_RIGHTS, object)
+                                .map_err(|_| fcomponent::Error::Internal),
+                        )?,
+                        Err(_) => responder.send(&mut Err(fcomponent::Error::Internal))?,
                     }
                 }
                 fsys::StorageAdminRequest::DeleteComponentStorage {

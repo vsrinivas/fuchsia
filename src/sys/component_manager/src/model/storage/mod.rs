@@ -4,12 +4,9 @@
 
 pub mod admin_protocol;
 use {
-    crate::{
-        channel,
-        model::{
-            component::{BindReason, ComponentInstance},
-            error::ModelError,
-        },
+    crate::model::{
+        component::{BindReason, ComponentInstance},
+        error::ModelError,
     },
     anyhow::Error,
     clonable_error::ClonableError,
@@ -25,6 +22,8 @@ use {
     thiserror::Error,
 };
 
+// TODO: The `use` declaration for storage implicitly carries these rights. While this is
+// correct, it would be more consistent to get the rights from `CapabilityState`.
 const FLAGS: u32 = OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE;
 
 pub type StorageCapabilitySource =
@@ -33,6 +32,13 @@ pub type StorageCapabilitySource =
 /// Errors related to isolated storage.
 #[derive(Debug, Error, Clone)]
 pub enum StorageError {
+    #[error("failed to open {:?}'s directory {}: {} ", dir_source_moniker, dir_source_path, err)]
+    OpenRoot {
+        dir_source_moniker: Option<AbsoluteMoniker>,
+        dir_source_path: CapabilityPath,
+        #[source]
+        err: ClonableError,
+    },
     #[error(
         "failed to open isolated storage from {:?}'s directory {} for {} (instance_id={:?}): {} ",
         dir_source_moniker,
@@ -46,6 +52,20 @@ pub enum StorageError {
         dir_source_path: CapabilityPath,
         relative_moniker: RelativeMoniker,
         instance_id: Option<ComponentInstanceId>,
+        #[source]
+        err: ClonableError,
+    },
+    #[error(
+        "failed to open isolated storage from {:?}'s directory {} for {:?}: {} ",
+        dir_source_moniker,
+        dir_source_path,
+        instance_id,
+        err
+    )]
+    OpenById {
+        dir_source_moniker: Option<AbsoluteMoniker>,
+        dir_source_path: CapabilityPath,
+        instance_id: ComponentInstanceId,
         #[source]
         err: ClonableError,
     },
@@ -77,6 +97,14 @@ pub enum StorageError {
 }
 
 impl StorageError {
+    pub fn open_root(
+        dir_source_moniker: Option<AbsoluteMoniker>,
+        dir_source_path: CapabilityPath,
+        err: impl Into<Error>,
+    ) -> Self {
+        Self::OpenRoot { dir_source_moniker, dir_source_path, err: err.into().into() }
+    }
+
     pub fn open(
         dir_source_moniker: Option<AbsoluteMoniker>,
         dir_source_path: CapabilityPath,
@@ -91,6 +119,15 @@ impl StorageError {
             instance_id,
             err: err.into().into(),
         }
+    }
+
+    pub fn open_by_id(
+        dir_source_moniker: Option<AbsoluteMoniker>,
+        dir_source_path: CapabilityPath,
+        instance_id: ComponentInstanceId,
+        err: impl Into<Error>,
+    ) -> Self {
+        Self::OpenById { dir_source_moniker, dir_source_path, instance_id, err: err.into().into() }
     }
 
     pub fn remove(
@@ -117,23 +154,11 @@ impl StorageError {
     }
 }
 
-/// Open the isolated storage sub-directory for the given component, creating it if necessary.
-/// `dir_source_component` and `dir_source_path` are the component hosting the directory and its
-/// capability path.
-///
-/// The storage sub-directory is based on provided instance ID if present, otherwise it is based on
-/// the provided relative moniker.
-pub async fn open_isolated_storage(
-    storage_source_info: StorageCapabilitySource,
-    relative_moniker: RelativeMoniker,
-    instance_id: Option<&ComponentInstanceId>,
+async fn open_storage_root(
+    storage_source_info: &StorageCapabilitySource,
     open_mode: u32,
     bind_reason: &BindReason,
 ) -> Result<DirectoryProxy, ModelError> {
-    // TODO: The `use` declaration for storage implicitly carries these rights. While this is
-    // correct, it would be more consistent to get the rights from `CapabilityState` and pass them
-    // here.
-    const FLAGS: u32 = OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE;
     let (mut dir_proxy, local_server_end) =
         endpoints::create_proxy::<DirectoryMarker>().expect("failed to create proxy");
     let mut local_server_end = local_server_end.into_channel();
@@ -154,41 +179,71 @@ pub async fn open_isolated_storage(
             .await?;
     } else {
         // If storage_source_info.storage_provider is None, the directory comes from component_manager's namespace
-        let local_server_end = channel::take_channel(&mut local_server_end);
         let path = full_backing_directory_path
             .to_str()
             .ok_or_else(|| ModelError::path_is_not_utf8(full_backing_directory_path.clone()))?;
         io_util::connect_in_namespace(path, local_server_end, FLAGS).map_err(|e| {
-            ModelError::from(StorageError::open(
+            ModelError::from(StorageError::open_root(
                 None,
                 storage_source_info.backing_directory_path.clone(),
-                relative_moniker.clone(),
-                instance_id.cloned(),
                 e,
             ))
         })?;
     }
     if let Some(subdir) = storage_source_info.storage_subdir.as_ref() {
         dir_proxy = io_util::create_sub_directories(&dir_proxy, subdir.as_path()).map_err(|e| {
-            ModelError::from(StorageError::open(
+            ModelError::from(StorageError::open_root(
                 storage_source_info.storage_provider.as_ref().map(|r| r.abs_moniker.clone()),
                 storage_source_info.backing_directory_path.clone(),
-                relative_moniker.clone(),
-                instance_id.cloned(),
                 e,
             ))
         })?;
     }
+    Ok(dir_proxy)
+}
+
+/// Open the isolated storage sub-directory from the given storage capability source, creating it
+/// if necessary. The storage sub-directory is based on provided instance ID if present, otherwise
+/// it is based on the provided relative moniker.
+pub async fn open_isolated_storage(
+    storage_source_info: StorageCapabilitySource,
+    relative_moniker: RelativeMoniker,
+    instance_id: Option<&ComponentInstanceId>,
+    open_mode: u32,
+    bind_reason: &BindReason,
+) -> Result<DirectoryProxy, ModelError> {
+    let root_dir = open_storage_root(&storage_source_info, open_mode, bind_reason).await?;
     let storage_path = instance_id
         .map(|id| generate_instance_id_based_storage_path(id))
         .unwrap_or_else(|| generate_moniker_based_storage_path(&relative_moniker));
 
-    io_util::create_sub_directories(&dir_proxy, &storage_path).map_err(|e| {
+    io_util::create_sub_directories(&root_dir, &storage_path).map_err(|e| {
         ModelError::from(StorageError::open(
             storage_source_info.storage_provider.as_ref().map(|r| r.abs_moniker.clone()),
             storage_source_info.backing_directory_path.clone(),
             relative_moniker.clone(),
             instance_id.cloned(),
+            e,
+        ))
+    })
+}
+
+/// Open the isolated storage sub-directory from the given storage capability source, creating it
+/// if necessary. The storage sub-directory is based on provided instance ID.
+pub async fn open_isolated_storage_by_id(
+    storage_source_info: StorageCapabilitySource,
+    instance_id: ComponentInstanceId,
+    bind_reason: &BindReason,
+) -> Result<DirectoryProxy, ModelError> {
+    let root_dir =
+        open_storage_root(&storage_source_info, MODE_TYPE_DIRECTORY, bind_reason).await?;
+    let storage_path = generate_instance_id_based_storage_path(&instance_id);
+
+    io_util::create_sub_directories(&root_dir, &storage_path).map_err(|e| {
+        ModelError::from(StorageError::open_by_id(
+            storage_source_info.storage_provider.as_ref().map(|r| r.abs_moniker.clone()),
+            storage_source_info.backing_directory_path.clone(),
+            instance_id,
             e,
         ))
     })
@@ -201,41 +256,11 @@ pub async fn delete_isolated_storage(
     relative_moniker: RelativeMoniker,
     instance_id: Option<&ComponentInstanceId>,
 ) -> Result<(), ModelError> {
-    let (root_dir, local_server_end) =
-        endpoints::create_proxy::<DirectoryMarker>().expect("failed to create proxy");
-    let mut local_server_end = local_server_end.into_channel();
-    let full_backing_directory_path = match storage_source_info.backing_directory_subdir.as_ref() {
-        Some(subdir) => storage_source_info.backing_directory_path.to_path_buf().join(subdir),
-        None => storage_source_info.backing_directory_path.to_path_buf(),
-    };
-    if let Some(dir_source_component) = storage_source_info.storage_provider.as_ref() {
-        // TODO(fxbug.dev/50716): This BindReason is wrong. We need to refactor the Storage
-        // capability to plumb through the correct BindReason.
-        dir_source_component
-            .bind(&BindReason::Unsupported)
-            .await?
-            .open_outgoing(
-                FLAGS,
-                MODE_TYPE_DIRECTORY,
-                full_backing_directory_path,
-                &mut local_server_end,
-            )
+    // TODO(fxbug.dev/50716): This BindReason is wrong. We need to refactor the Storage
+    // capability to plumb through the correct BindReason.
+    let root_dir =
+        open_storage_root(&storage_source_info, MODE_TYPE_DIRECTORY, &BindReason::Unsupported)
             .await?;
-    } else {
-        let local_server_end = channel::take_channel(&mut local_server_end);
-        let path = full_backing_directory_path
-            .to_str()
-            .ok_or_else(|| ModelError::path_is_not_utf8(full_backing_directory_path.clone()))?;
-        io_util::connect_in_namespace(path, local_server_end, FLAGS).map_err(|e| {
-            StorageError::open(
-                None,
-                storage_source_info.backing_directory_path.clone(),
-                relative_moniker.clone(),
-                None,
-                e,
-            )
-        })?;
-    }
 
     let (dir, name) = if let Some(instance_id) = instance_id {
         let storage_path = generate_instance_id_based_storage_path(instance_id);
@@ -279,15 +304,12 @@ pub async fn delete_isolated_storage(
         if storage_path.parent().and_then(|p| p.parent()).is_none() {
             return Err(StorageError::invalid_storage_path(relative_moniker.clone(), None).into());
         }
-        let mut dir_path = storage_path.parent().unwrap().parent().unwrap().to_path_buf();
+        let dir_path = storage_path.parent().unwrap().parent().unwrap().to_path_buf();
         let name = storage_path.parent().unwrap().file_name().ok_or_else(|| {
             ModelError::from(StorageError::invalid_storage_path(relative_moniker.clone(), None))
         })?;
         let name =
             name.to_str().ok_or_else(|| ModelError::name_is_not_utf8(name.to_os_string()))?;
-        if let Some(subdir) = storage_source_info.storage_subdir.as_ref() {
-            dir_path = subdir.join(dir_path);
-        }
 
         let dir = if dir_path.parent().is_none() {
             root_dir

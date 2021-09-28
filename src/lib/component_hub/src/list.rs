@@ -60,9 +60,9 @@ impl Component {
 
             // Recurse on the CML children
             let mut future_children = vec![];
-            let children_dir = hub_dir.open_dir("children")?;
+            let children_dir = hub_dir.open_dir_readable("children")?;
             for child_name in children_dir.entries().await? {
-                let hub_dir = children_dir.open_dir(&child_name)?;
+                let hub_dir = children_dir.open_dir_readable(&child_name)?;
                 let future_child = Component::parse(child_name, hub_dir);
                 future_children.push(future_child);
             }
@@ -76,7 +76,7 @@ impl Component {
 
             if name == "appmgr" {
                 // Get all CMX components + realms
-                let realm_dir = hub_dir.open_dir("exec/out/hub")?;
+                let realm_dir = hub_dir.open_dir_readable("exec/out/hub")?;
                 let component = Component::parse_cmx_realm("".to_string(), realm_dir).await?;
                 children.extend(component.children);
             }
@@ -90,7 +90,7 @@ impl Component {
         async move {
             // Runner CMX components may have child components
             let children = if dir.exists("c").await? {
-                let children_dir = dir.open_dir("c")?;
+                let children_dir = dir.open_dir_readable("c")?;
                 Component::parse_cmx_components_in_c_dir(children_dir).await?
             } else {
                 vec![]
@@ -107,8 +107,8 @@ impl Component {
         realm_dir: Directory,
     ) -> BoxFuture<'static, Result<Component>> {
         async move {
-            let children_dir = realm_dir.open_dir("c")?;
-            let realms_dir = realm_dir.open_dir("r")?;
+            let children_dir = realm_dir.open_dir_readable("c")?;
+            let realms_dir = realm_dir.open_dir_readable("r")?;
 
             let future_children = Component::parse_cmx_components_in_c_dir(children_dir);
             let future_realms = Component::parse_cmx_realms_in_r_dir(realms_dir);
@@ -131,7 +131,7 @@ impl Component {
         let child_component_names = children_dir.entries().await?;
         let mut future_children = vec![];
         for child_component_name in child_component_names {
-            let job_ids_dir = children_dir.open_dir(&child_component_name)?;
+            let job_ids_dir = children_dir.open_dir_readable(&child_component_name)?;
             let child_dirs = Component::open_all_job_ids(job_ids_dir).await?;
             for child_dir in child_dirs {
                 let future_child =
@@ -148,7 +148,7 @@ impl Component {
         // Get all CMX child realms
         let mut future_realms = vec![];
         for child_realm_name in realms_dir.entries().await? {
-            let job_ids_dir = realms_dir.open_dir(&child_realm_name)?;
+            let job_ids_dir = realms_dir.open_dir_readable(&child_realm_name)?;
             let child_realm_dirs = Component::open_all_job_ids(job_ids_dir).await?;
             for child_realm_dir in child_realm_dirs {
                 let future_realm =
@@ -164,7 +164,7 @@ impl Component {
         // Recurse on the job_ids
         let mut dirs = vec![];
         for job_id in job_ids_dir.entries().await? {
-            let dir = job_ids_dir.open_dir(&job_id)?;
+            let dir = job_ids_dir.open_dir_readable(&job_id)?;
             dirs.push(dir);
         }
         Ok(dirs)

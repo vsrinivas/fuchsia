@@ -9,7 +9,7 @@ use {
     fidl::encoding::decode_persistent,
     fidl_fuchsia_component_internal as fcomponent_internal,
     moniker::{MonikerError, PartialAbsoluteMoniker},
-    std::collections::HashMap,
+    std::collections::{HashMap, HashSet},
     thiserror::Error,
 };
 
@@ -55,7 +55,15 @@ pub struct ComponentIdIndex {
     ///
     /// The moniker does not contain instances, i.e. all of the ChildMonikers in the
     /// path have the (moniker, not index) instance ID set to zero.
-    _moniker_to_instance_id: HashMap<PartialAbsoluteMoniker, ComponentInstanceId>,
+    moniker_to_instance_id: HashMap<PartialAbsoluteMoniker, ComponentInstanceId>,
+
+    /// Stores all instance IDs from the index.
+    /// This is used by StorageAdmin for methods that operate directly on instance IDs.
+    ///
+    /// This set will currently contain all storage IDs, even of components registered with appmgr
+    /// instead of component_manager. This is desired because it allows the StorageAdmin protocol
+    /// to handle all storage on the system.
+    all_instance_ids: HashSet<ComponentInstanceId>,
 }
 
 impl ComponentIdIndex {
@@ -71,34 +79,39 @@ impl ComponentIdIndex {
 
         let mut moniker_to_instance_id =
             HashMap::<PartialAbsoluteMoniker, ComponentInstanceId>::new();
-        for entry in &index.instances {
-            if let Some(absolute_moniker) = &entry.moniker {
-                moniker_to_instance_id.insert(
-                    absolute_moniker.clone(),
-                    entry
-                        .instance_id
-                        .as_ref()
-                        .ok_or_else(|| {
-                            ComponentIdIndexError::IndexError(
-                                component_id_index::IndexError::ValidationError(
-                                    component_id_index::ValidationError::MissingInstanceIds {
-                                        entries: vec![entry.clone()],
-                                    },
-                                ),
-                            )
-                        })?
-                        .clone(),
-                );
+        let mut all_instance_ids = HashSet::new();
+        for entry in index.instances {
+            let instance_id = entry
+                .instance_id
+                .as_ref()
+                .ok_or_else(|| {
+                    ComponentIdIndexError::IndexError(
+                        component_id_index::IndexError::ValidationError(
+                            component_id_index::ValidationError::MissingInstanceIds {
+                                entries: vec![entry.clone()],
+                            },
+                        ),
+                    )
+                })?
+                .clone();
+
+            all_instance_ids.insert(instance_id.clone());
+            if let Some(absolute_moniker) = entry.moniker {
+                moniker_to_instance_id.insert(absolute_moniker, instance_id);
             }
         }
-        Ok(Self { _moniker_to_instance_id: moniker_to_instance_id })
+        Ok(Self { moniker_to_instance_id, all_instance_ids })
     }
 
     pub fn look_up_moniker(
         &self,
         moniker: &PartialAbsoluteMoniker,
     ) -> Option<&ComponentInstanceId> {
-        self._moniker_to_instance_id.get(&moniker)
+        self.moniker_to_instance_id.get(&moniker)
+    }
+
+    pub fn look_up_instance_id(&self, id: &ComponentInstanceId) -> bool {
+        self.all_instance_ids.contains(id)
     }
 }
 

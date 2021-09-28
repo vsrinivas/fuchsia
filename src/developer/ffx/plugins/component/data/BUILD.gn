@@ -1,0 +1,26 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//src/developer/ffx/build/ffx_plugin.gni")
+
+ffx_plugin("ffx_component_data") {
+  version = "0.1.0"
+  edition = "2018"
+  plugin_deps = [
+    "copy:ffx_component_data_copy",
+    "list:ffx_component_data_list",
+    "make-directory:ffx_component_data_make_directory",
+  ]
+
+  sources = [ "src/args.rs" ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [
+    "copy:ffx_component_data_copy_tests",
+    "list:ffx_component_data_list_tests",
+    "make-directory:ffx_component_data_make_directory_tests",
+  ]
+}

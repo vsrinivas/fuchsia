@@ -6,6 +6,11 @@ library fuchsia.sys2;
 using fuchsia.component;
 using fuchsia.io;
 
+/// The maximum length of a storage instance ID.
+/// A storage instance ID is a 128-bit UUID, which when encoded
+/// in hex notation is 32 characters long.
+const MAX_STORAGE_ID_LENGTH uint32 = 32;
+
 @discoverable
 protocol StorageAdmin {
     /// Opens the isolated directory for the given component. The open request will provision
@@ -24,6 +29,13 @@ protocol StorageAdmin {
     ListStorageInRealm(resource struct {
         relative_moniker string:fuchsia.component.MAX_MONIKER_LENGTH;
         iterator server_end:StorageIterator;
+    }) -> (struct {}) error fuchsia.component.Error;
+
+    /// Opens the isolated directory for the given storage ID. The open request will provision
+    /// the storage if it hasn't been already.
+    OpenComponentStorageById(resource struct {
+        id string:MAX_STORAGE_ID_LENGTH;
+        object server_end:fuchsia.io.Node;
     }) -> (struct {}) error fuchsia.component.Error;
 
     /// Deletes the contents of the storage for this component. Does not delete the component's

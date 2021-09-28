@@ -159,12 +159,15 @@ impl RemoteControlService {
         let svc_match = paths.get(0).unwrap();
         let hub_path = svc_match.hub_path.to_str().unwrap();
         info!(hub_path, "attempting to connect");
-        io_util::connect_in_namespace(hub_path, service_chan, io::OPEN_RIGHT_READABLE).map_err(
-            |err| {
-                error!(?selector, %err, "error connecting to selector");
-                rcs::ConnectError::ServiceConnectFailed
-            },
-        )?;
+        io_util::connect_in_namespace(
+            hub_path,
+            service_chan,
+            io::OPEN_RIGHT_READABLE | io::OPEN_RIGHT_WRITABLE,
+        )
+        .map_err(|err| {
+            error!(?selector, %err, "error connecting to selector");
+            rcs::ConnectError::ServiceConnectFailed
+        })?;
 
         Ok(svc_match.into())
     }

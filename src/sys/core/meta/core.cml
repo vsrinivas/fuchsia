@@ -1050,6 +1050,11 @@
     ],
     expose: [
         {
+            // This is needed for the `ffx component data` command
+            protocol: "fuchsia.sys2.StorageAdmin",
+            from: "#data",
+        },
+        {
             protocol: [ "fuchsia.sessionmanager.Startup" ],
             from: "#session-manager",
         },

@@ -33,19 +33,19 @@ fn find_components_internal(
 ) -> BoxFuture<'static, Result<Vec<Component>>> {
     async move {
         let mut futures = vec![];
-        let children_dir = hub_dir.open_dir("children")?;
+        let children_dir = hub_dir.open_dir_readable("children")?;
 
         for child_name in children_dir.entries().await? {
             let child_moniker = PartialChildMoniker::parse(&child_name)?;
             let child_moniker = moniker.child(child_moniker);
-            let child_hub_dir = children_dir.open_dir(&child_name)?;
+            let child_hub_dir = children_dir.open_dir_readable(&child_name)?;
             let child_future =
                 find_components_internal(query.clone(), child_name, child_moniker, child_hub_dir);
             futures.push(child_future);
         }
 
         if name == "appmgr" {
-            let realm_dir = hub_dir.open_dir("exec/out/hub")?;
+            let realm_dir = hub_dir.open_dir_readable("exec/out/hub")?;
             let appmgr_future = find_cmx_realms(query.clone(), moniker.clone(), realm_dir);
             futures.push(appmgr_future);
         }
@@ -76,10 +76,10 @@ fn find_cmx_realms(
     hub_dir: Directory,
 ) -> BoxFuture<'static, Result<Vec<Component>>> {
     async move {
-        let c_dir = hub_dir.open_dir("c")?;
+        let c_dir = hub_dir.open_dir_readable("c")?;
         let c_future = find_cmx_components_in_c_dir(query.clone(), moniker.clone(), c_dir);
 
-        let r_dir = hub_dir.open_dir("r")?;
+        let r_dir = hub_dir.open_dir_readable("r")?;
         let r_future = find_cmx_realms_in_r_dir(query, moniker, r_dir);
 
         let (matching_components_c, matching_components_r) = join(c_future, r_future).await;
@@ -107,7 +107,7 @@ fn find_cmx_components(
 
         // Component runners can have a `c` dir with child components
         if hub_dir.exists("c").await? {
-            let c_dir = hub_dir.open_dir("c")?;
+            let c_dir = hub_dir.open_dir_readable("c")?;
             let mut child_components =
                 find_cmx_components_in_c_dir(query.clone(), moniker.clone(), c_dir).await?;
             matching_components.append(&mut child_components);
@@ -135,7 +135,7 @@ async fn find_cmx_components_in_c_dir(
     for child_component_name in child_component_names {
         let child_moniker = PartialChildMoniker::parse(&child_component_name)?;
         let child_moniker = moniker.child(child_moniker);
-        let job_ids_dir = c_dir.open_dir(&child_component_name)?;
+        let job_ids_dir = c_dir.open_dir_readable(&child_component_name)?;
         let hub_dirs = open_all_job_ids(job_ids_dir).await?;
         for hub_dir in hub_dirs {
             let future_child = find_cmx_components(
@@ -167,7 +167,7 @@ async fn find_cmx_realms_in_r_dir(
     for child_realm_name in r_dir.entries().await? {
         let child_moniker = PartialChildMoniker::parse(&child_realm_name)?;
         let child_moniker = moniker.child(child_moniker);
-        let job_ids_dir = r_dir.open_dir(&child_realm_name)?;
+        let job_ids_dir = r_dir.open_dir_readable(&child_realm_name)?;
         let hub_dirs = open_all_job_ids(job_ids_dir).await?;
         for hub_dir in hub_dirs {
             let future_realm = find_cmx_realms(query.clone(), child_moniker.clone(), hub_dir);
@@ -187,7 +187,7 @@ async fn open_all_job_ids(job_ids_dir: Directory) -> Result<Vec<Directory>> {
     // Recurse on the job_ids
     let mut dirs = vec![];
     for job_id in job_ids_dir.entries().await? {
-        let dir = job_ids_dir.open_dir(&job_id)?;
+        let dir = job_ids_dir.open_dir_readable(&job_id)?;
         dirs.push(dir);
     }
     Ok(dirs)
@@ -201,7 +201,7 @@ async fn get_capabilities(capability_dir: Directory) -> Result<Vec<String>> {
     for (index, name) in entries.iter().enumerate() {
         if name == "svc" {
             entries.remove(index);
-            let svc_dir = capability_dir.open_dir("svc")?;
+            let svc_dir = capability_dir.open_dir_readable("svc")?;
             let mut svc_entries = svc_dir.entries().await?;
             entries.append(&mut svc_entries);
             break;
@@ -297,10 +297,10 @@ pub struct Execution {
 
 impl Execution {
     async fn parse(exec_dir: Directory) -> Result<Self> {
-        let in_dir = exec_dir.open_dir("in")?;
+        let in_dir = exec_dir.open_dir_readable("in")?;
 
         let merkle_root = if in_dir.exists("pkg").await? {
-            let pkg_dir = in_dir.open_dir("pkg")?;
+            let pkg_dir = in_dir.open_dir_readable("pkg")?;
             if pkg_dir.exists("meta").await? {
                 pkg_dir.read_file("meta").await.ok()
             } else {
@@ -311,12 +311,12 @@ impl Execution {
         };
 
         let elf_runtime = if exec_dir.exists("runtime").await? {
-            let runtime_dir = exec_dir.open_dir("runtime")?;
+            let runtime_dir = exec_dir.open_dir_readable("runtime")?;
 
             // Some runners may not serve the runtime directory, so attempting to get the entries
             // may fail. This is normal and should be treated as no ELF runtime.
             if let Ok(true) = runtime_dir.exists("elf").await {
-                let elf_dir = runtime_dir.open_dir("elf")?;
+                let elf_dir = runtime_dir.open_dir_readable("elf")?;
                 Some(ElfRuntime::parse(elf_dir).await?)
             } else {
                 None
@@ -326,7 +326,7 @@ impl Execution {
         };
 
         let outgoing_capabilities = if exec_dir.exists("out").await? {
-            let out_dir = exec_dir.open_dir("out")?;
+            let out_dir = exec_dir.open_dir_readable("out")?;
             get_capabilities(out_dir)
                 .on_timeout(CAPABILITY_TIMEOUT, || {
                     Err(format_err!("Timeout occurred opening `out` dir"))
@@ -343,10 +343,10 @@ impl Execution {
     }
 
     async fn parse_cmx(hub_dir: &Directory) -> Result<Self> {
-        let in_dir = hub_dir.open_dir("in")?;
+        let in_dir = hub_dir.open_dir_readable("in")?;
 
         let merkle_root = if in_dir.exists("pkg").await? {
-            let pkg_dir = in_dir.open_dir("pkg")?;
+            let pkg_dir = in_dir.open_dir_readable("pkg")?;
             if pkg_dir.exists("meta").await? {
                 pkg_dir.read_file("meta").await.ok()
             } else {
@@ -359,7 +359,7 @@ impl Execution {
         let elf_runtime = Some(ElfRuntime::parse_cmx(hub_dir).await?);
 
         let outgoing_capabilities = if hub_dir.exists("out").await? {
-            let out_dir = hub_dir.open_dir("out")?;
+            let out_dir = hub_dir.open_dir_readable("out")?;
             get_capabilities(out_dir)
                 .on_timeout(CAPABILITY_TIMEOUT, || {
                     Err(format_err!("Timeout occurred opening `out` dir"))
@@ -406,12 +406,12 @@ pub struct Resolved {
 impl Resolved {
     async fn parse(resolved_dir: Directory) -> Result<Self> {
         let incoming_capabilities = {
-            let use_dir = resolved_dir.open_dir("use")?;
+            let use_dir = resolved_dir.open_dir_readable("use")?;
             get_capabilities(use_dir).await?
         };
 
         let exposed_capabilities = {
-            let expose_dir = resolved_dir.open_dir("expose")?;
+            let expose_dir = resolved_dir.open_dir_readable("expose")?;
             get_capabilities(expose_dir).await?
         };
 
@@ -420,7 +420,7 @@ impl Resolved {
 
     async fn parse_cmx(hub_dir: &Directory) -> Result<Self> {
         let incoming_capabilities = {
-            let in_dir = hub_dir.open_dir("in")?;
+            let in_dir = hub_dir.open_dir_readable("in")?;
             get_capabilities(in_dir).await?
         };
 
@@ -455,14 +455,14 @@ pub struct Component {
 impl Component {
     async fn parse(moniker: PartialAbsoluteMoniker, hub_dir: &Directory) -> Result<Component> {
         let resolved = if hub_dir.exists("resolved").await? {
-            let resolved_dir = hub_dir.open_dir("resolved")?;
+            let resolved_dir = hub_dir.open_dir_readable("resolved")?;
             Some(Resolved::parse(resolved_dir).await?)
         } else {
             None
         };
 
         let execution = if hub_dir.exists("exec").await? {
-            let exec_dir = hub_dir.open_dir("exec")?;
+            let exec_dir = hub_dir.open_dir_readable("exec")?;
             Some(Execution::parse(exec_dir).await?)
         } else {
             None

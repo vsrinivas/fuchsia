@@ -10,6 +10,7 @@ ffx_plugin("ffx_component") {
   plugin_deps = [
     "bind:ffx_component_bind",
     "create:ffx_component_create",
+    "data:ffx_component_data",
     "destroy:ffx_component_destroy",
     "knock:ffx_knock",
     "list:ffx_component_list",
@@ -31,6 +32,7 @@ group("tests") {
     "add:ffx_component_add_tests",
     "bind:ffx_component_bind_tests",
     "create:ffx_component_create_tests",
+    "data:tests",
     "destroy:ffx_component_destroy_tests",
     "knock:ffx_knock_tests",
     "list:ffx_component_list_tests",

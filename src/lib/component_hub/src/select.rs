@@ -31,12 +31,12 @@ fn find_components_internal(
 ) -> BoxFuture<'static, Result<Vec<PartialAbsoluteMoniker>>> {
     async move {
         let mut futures = vec![];
-        let children_dir = hub_dir.open_dir("children")?;
+        let children_dir = hub_dir.open_dir_readable("children")?;
 
         for child_name in children_dir.entries().await? {
             let child_moniker = PartialChildMoniker::parse(&child_name)?;
             let child_moniker = moniker.child(child_moniker);
-            let child_hub_dir = children_dir.open_dir(&child_name)?;
+            let child_hub_dir = children_dir.open_dir_readable(&child_name)?;
             let child_future = find_components_internal(
                 capability.clone(),
                 child_name,
@@ -47,7 +47,7 @@ fn find_components_internal(
         }
 
         if name == "appmgr" {
-            let realm_dir = hub_dir.open_dir("exec/out/hub")?;
+            let realm_dir = hub_dir.open_dir_readable("exec/out/hub")?;
             let appmgr_future = find_cmx_realms(capability.clone(), moniker.clone(), realm_dir);
             futures.push(appmgr_future);
         }
@@ -76,10 +76,10 @@ fn find_cmx_realms(
     hub_dir: Directory,
 ) -> BoxFuture<'static, Result<Vec<PartialAbsoluteMoniker>>> {
     async move {
-        let c_dir = hub_dir.open_dir("c")?;
+        let c_dir = hub_dir.open_dir_readable("c")?;
         let c_future = find_cmx_components_in_c_dir(capability.clone(), moniker.clone(), c_dir);
 
-        let r_dir = hub_dir.open_dir("r")?;
+        let r_dir = hub_dir.open_dir_readable("r")?;
         let r_future = find_cmx_realms_in_r_dir(capability, moniker, r_dir);
 
         let (matching_components_c, matching_components_r) = join(c_future, r_future).await;
@@ -106,7 +106,7 @@ fn find_cmx_components(
 
         // Component runners can have a `c` dir with child components
         if hub_dir.exists("c").await? {
-            let c_dir = hub_dir.open_dir("c")?;
+            let c_dir = hub_dir.open_dir_readable("c")?;
             let mut child_components =
                 find_cmx_components_in_c_dir(capability.clone(), moniker.clone(), c_dir).await?;
             matching_components.append(&mut child_components);
@@ -132,7 +132,7 @@ async fn find_cmx_components_in_c_dir(
     for child_component_name in child_component_names {
         let child_moniker = PartialChildMoniker::parse(&child_component_name)?;
         let child_moniker = moniker.child(child_moniker);
-        let job_ids_dir = c_dir.open_dir(&child_component_name)?;
+        let job_ids_dir = c_dir.open_dir_readable(&child_component_name)?;
         let hub_dirs = open_all_job_ids(job_ids_dir).await?;
         for hub_dir in hub_dirs {
             let future_child =
@@ -160,7 +160,7 @@ async fn find_cmx_realms_in_r_dir(
     for child_realm_name in r_dir.entries().await? {
         let child_moniker = PartialChildMoniker::parse(&child_realm_name)?;
         let child_moniker = moniker.child(child_moniker);
-        let job_ids_dir = r_dir.open_dir(&child_realm_name)?;
+        let job_ids_dir = r_dir.open_dir_readable(&child_realm_name)?;
         let hub_dirs = open_all_job_ids(job_ids_dir).await?;
         for hub_dir in hub_dirs {
             let future_realm = find_cmx_realms(capability.clone(), child_moniker.clone(), hub_dir);
@@ -180,7 +180,7 @@ async fn open_all_job_ids(job_ids_dir: Directory) -> Result<Vec<Directory>> {
     // Recurse on the job_ids
     let mut dirs = vec![];
     for job_id in job_ids_dir.entries().await? {
-        let dir = job_ids_dir.open_dir(&job_id)?;
+        let dir = job_ids_dir.open_dir_readable(&job_id)?;
         dirs.push(dir);
     }
     Ok(dirs)
@@ -193,7 +193,7 @@ async fn exposed_capability_exists_v2(hub_dir: Directory, capability: String) ->
         return Ok(false);
     }
 
-    let exec_dir = hub_dir.open_dir("resolved/expose")?;
+    let exec_dir = hub_dir.open_dir_readable("resolved/expose")?;
     let capabilities = get_capabilities(exec_dir).await?;
     Ok(capabilities.iter().any(|c| c.as_str() == capability))
 }
@@ -205,7 +205,7 @@ async fn exposed_capability_exists_v1(hub_dir: Directory, capability: String) ->
         return Ok(false);
     }
 
-    let out_dir = hub_dir.open_dir("out")?;
+    let out_dir = hub_dir.open_dir_readable("out")?;
     let capabilities =
         get_capabilities(out_dir).on_timeout(CAPABILITY_TIMEOUT, || Ok(vec![])).await?;
     Ok(capabilities.iter().any(|c| c.as_str() == capability))
@@ -219,7 +219,7 @@ async fn get_capabilities(capability_dir: Directory) -> Result<Vec<String>> {
     for (index, name) in entries.iter().enumerate() {
         if name == "svc" {
             entries.remove(index);
-            let svc_dir = capability_dir.open_dir("svc")?;
+            let svc_dir = capability_dir.open_dir_readable("svc")?;
             let mut svc_entries = svc_dir.entries().await?;
             entries.append(&mut svc_entries);
             break;
