@@ -282,7 +282,7 @@ driver_bind_rules("aml-sdio-bind") {
   header_output = "aml-sdio-bind.h"
   bind_output = "aml-sdio-bind.bc"
   deps = [
-    "//src/devices/bind/amlogic.platform",
+    "//src/devices/bind/fuchsia.amlogic.platform",
     "//src/devices/bind/fuchsia.amlogic.platform.s905d2",
     "//src/devices/bind/fuchsia.gpio",
     "//src/devices/bind/fuchsia.platform",
