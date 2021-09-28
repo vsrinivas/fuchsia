@@ -14,6 +14,7 @@ import (
 	"sort"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/google/go-cmp/cmp"
 
@@ -449,6 +450,8 @@ func TestAffectedTestsNoWork(t *testing.T) {
 			expectedDryRuns: 2,
 		},
 	}
+
+	oneMinuteAgo := time.Now().Add(-1 * time.Minute)
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			// Apply default values and otherwise transform the test parameters
@@ -472,6 +475,14 @@ func TestAffectedTestsNoWork(t *testing.T) {
 			for _, path := range tc.affectedFiles {
 				affectedFilesAbs = append(affectedFilesAbs, filepath.Join(checkoutDir, path))
 			}
+			for _, path := range affectedFilesAbs {
+				if _, err := os.Create(path); err != nil {
+					t.Fatal(err)
+				}
+				if err := os.Chtimes(path, oneMinuteAgo, oneMinuteAgo); err != nil {
+					t.Fatal(err)
+				}
+			}
 
 			targets := []string{"foo", "bar"}
 			result, err := affectedTestsNoWork(context.Background(), r, mockTestManifest, affectedFilesAbs, targets)
@@ -492,7 +503,82 @@ func TestAffectedTestsNoWork(t *testing.T) {
 			if tc.expectedNoWork != result.noWork {
 				t.Errorf("Wrong no work result, wanted %v, got %v", tc.expectedNoWork, result.noWork)
 			}
+
+			// Ensure file timestamps weren't modified
+			for _, path := range affectedFilesAbs {
+				stat, err := os.Stat(path)
+				if err != nil {
+					t.Fatal(err)
+				}
+				if !stat.ModTime().Equal(oneMinuteAgo) {
+					t.Errorf("Unexpected %v modified time, wanted %v, got %v", path, oneMinuteAgo, stat.ModTime())
+				}
+			}
 		})
+	}
+}
+
+func TestTouchFiles(t *testing.T) {
+	oneMinuteAgo := time.Now().Add(-1 * time.Minute)
+	dir := t.TempDir()
+	exists1 := filepath.Join(dir, "exists1")
+	if _, err := os.Create(exists1); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Chtimes(exists1, oneMinuteAgo, oneMinuteAgo); err != nil {
+		t.Fatal(err)
+	}
+	exists2 := filepath.Join(dir, "exists2")
+	if _, err := os.Create(exists2); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Chtimes(exists2, oneMinuteAgo, oneMinuteAgo); err != nil {
+		t.Fatal(err)
+	}
+	doesntExist := filepath.Join(dir, "doesntExist")
+
+	resetMap, err := touchFiles([]string{exists1, exists2, doesntExist})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	stat, err := os.Stat(exists1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !stat.ModTime().After(oneMinuteAgo) {
+		t.Errorf("Did not touch exists1, ModTime was %v", stat.ModTime())
+	}
+	stat, err = os.Stat(exists2)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !stat.ModTime().After(oneMinuteAgo) {
+		t.Errorf("Did not touch exists2, ModTime was %v", stat.ModTime())
+	}
+	if _, err := os.Stat(doesntExist); !os.IsNotExist(err) {
+		t.Errorf("Touched non-existent file doesntExist or other error %v", err)
+	}
+
+	if err := resetTouchFiles(resetMap); err != nil {
+		t.Fatal(err)
+	}
+	stat, err = os.Stat(exists1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !stat.ModTime().Equal(oneMinuteAgo) {
+		t.Errorf("Did not reset exists1, ModTime was %v, wanted %v", stat.ModTime(), oneMinuteAgo)
+	}
+	stat, err = os.Stat(exists2)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !stat.ModTime().Equal(oneMinuteAgo) {
+		t.Errorf("Did not reset exists2, ModTime was %v, wanted %v", stat.ModTime(), oneMinuteAgo)
+	}
+	if _, err := os.Stat(doesntExist); !os.IsNotExist(err) {
+		t.Errorf("Reset non-existent file doesntExist or other error %v", err)
 	}
 }
 

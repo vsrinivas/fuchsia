@@ -365,13 +365,36 @@ func checkNinjaNoop(
 
 // touchFiles updates the modified time on all the specified files to the
 // current timestamp, skipping any nonexistent files.
-func touchFiles(ctx context.Context, paths []string) error {
+// Returns a map of paths touched to their previous stats.
+// This map can be passed to resetTouchedFiles to revert the operation.
+func touchFiles(paths []string) (map[string]time.Time, error) {
+	reset := make(map[string]time.Time)
 	now := time.Now()
 	for _, path := range paths {
-		err := os.Chtimes(path, now, now)
-		// Skip any paths that don't exist, e.g. because the file was deleted in
-		// the change under test.
-		if err != nil && !os.IsNotExist(err) {
+		stat, err := os.Stat(path)
+		if err != nil {
+			// Skip any paths that don't exist, e.g. because the file was deleted in
+			// the change under test.
+			if os.IsNotExist(err) {
+				continue
+			} else {
+				return nil, err
+			}
+		}
+		// Note that we can't get access time in a platform-agnostic way.
+		// We end up coupling mtime with atime, even after a reset.
+		reset[path] = stat.ModTime()
+		if err := os.Chtimes(path, now, now); err != nil {
+			return nil, err
+		}
+	}
+	return reset, nil
+}
+
+// Rolls back changes made by a previous call to touchFiles.
+func resetTouchFiles(touchFilesResult map[string]time.Time) error {
+	for path, mtime := range touchFilesResult {
+		if err := os.Chtimes(path, mtime, mtime); err != nil {
 			return err
 		}
 	}
@@ -451,9 +474,11 @@ func affectedTestsNoWork(
 	// triggers an action to regenerate the entire graph. So if GN files were
 	// modified and we touched them then the following dry run results are not
 	// useful for determining affected tests.
-	if err := touchFiles(ctx, nonGNFiles); err != nil {
+	touchNonGNResult, err := touchFiles(nonGNFiles)
+	if err != nil {
 		return result, err
 	}
+	defer resetTouchFiles(touchNonGNResult)
 	stdout, stderr, err := ninjaDryRun(ctx, runner, targets)
 	if err != nil {
 		return result, err
@@ -496,9 +521,11 @@ func affectedTestsNoWork(
 
 		// Since we only did a Ninja dry run, the non-GN files will still be
 		// considered dirty, so we need only touch the GN files.
-		if err = touchFiles(ctx, gnFiles); err != nil {
+		touchGnResult, err := touchFiles(gnFiles)
+		if err != nil {
 			return result, err
 		}
+		defer resetTouchFiles(touchGnResult)
 		var stdout, stderr string
 		stdout, stderr, err = ninjaDryRun(ctx, runner, targets)
 		if err != nil {
