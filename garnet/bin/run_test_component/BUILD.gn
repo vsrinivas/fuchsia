@@ -89,6 +89,9 @@ group("run-test-component") {
   deps = [
     ":run-test-component-pkg",
     "//src/diagnostics/archivist:archivist-for-embedding",
+
+    # required for flutter out-of-tree tests
+    "//src/ui/bin/hardware_display_controller_provider",
   ]
 }
 
