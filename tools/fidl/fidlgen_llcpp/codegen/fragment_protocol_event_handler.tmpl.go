@@ -9,7 +9,7 @@ package codegen
 //  * fidl::WireAsyncEventHandler<Protocol>
 //  * fidl::WireSyncEventHandler<Protocol>
 const fragmentProtocolEventHandlerTmpl = `
-{{- define "Protocol:EventHandler:Header" }}
+{{- define "Protocol:EventHandler:MessagingHeader" }}
 {{- EnsureNamespace "" }}
 {{- IfdefFuchsia }}
 template<>
@@ -49,7 +49,7 @@ public:
 {{- end }}
 
 
-{{- define "Protocol:EventHandler:Source" }}
+{{- define "Protocol:EventHandler:MessagingSource" }}
 {{ EnsureNamespace "" }}
 ::fidl::Result {{ .WireSyncEventHandler.NoLeading }}::HandleOneEvent(
     ::fidl::UnownedClientEnd<{{ . }}> client_end) {

@@ -214,9 +214,12 @@ var utilityFuncs = template.FuncMap{
 func NewGenerator(flags *cpp.CmdlineFlags) *cpp.Generator {
 	return cpp.NewGenerator(flags, utilityFuncs, []string{
 		fileHeaderTmpl,
+		fileMarkersTmpl,
+		fileMessagingHeaderTmpl,
 		fileSourceTmpl,
 		fileTestBaseTmpl,
-		fileMarkersTmpl,
+		fileTypesHeaderTmpl,
+		fileTypesSourceTmpl,
 		fragmentBitsTmpl,
 		fragmentConstTmpl,
 		fragmentEnumTmpl,

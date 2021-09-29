@@ -16,105 +16,13 @@ fidl/{{ .LibraryDots }}/cpp/wire.h
 
 #pragma once
 
-#include <algorithm>
-#include <cstddef>
-#include <variant>
-
-#include <lib/fidl/internal.h>
-#include <lib/fidl/llcpp/array.h>
-#include <lib/fidl/llcpp/coding.h>
-#include <lib/fidl/llcpp/envelope.h>
-#include <lib/fidl/llcpp/message.h>
-#include <lib/fidl/llcpp/message_storage.h>
-#include <lib/fidl/llcpp/object_view.h>
-#include <lib/fidl/llcpp/result.h>
-#include <lib/fidl/llcpp/string_view.h>
-#include <lib/fidl/llcpp/traits.h>
-#include <lib/fidl/llcpp/vector_view.h>
-#include <lib/fidl/llcpp/wire_messaging.h>
-#include <lib/fit/function.h>
-#include <lib/stdcompat/optional.h>
-{{- IfdefFuchsia -}}
-#include <lib/fidl/llcpp/client_end.h>
-#include <lib/fidl/llcpp/client.h>
-#include <lib/fidl/llcpp/connect_service.h>
-#include <lib/fidl/llcpp/server_end.h>
-#include <lib/fidl/llcpp/server.h>
-#include <lib/fidl/llcpp/service_handler_interface.h>
-#include <lib/fidl/llcpp/sync_call.h>
-#include <lib/fidl/llcpp/transaction.h>
-#include <lib/fidl/txn_header.h>
-{{ range .HandleTypes -}}
-#include <lib/zx/{{ . }}.h>
-{{ end -}}
-{{- EndifFuchsia -}}
 #include <{{ .Library | Filename "Markers" }}>
-#include <zircon/fidl.h>
+#include <{{ .Library | Filename "TypesHeader" }}>
+#include <{{ .Library | Filename "MessagingHeader" }}>
 {{ range .Dependencies -}}
 #include <{{ . | Filename "Header" }}>
 {{ end -}}
 
-{{- range .Decls }}
-{{- if Eq .Kind Kinds.Bits }}{{ template "Bits:ForwardDeclaration:Header" . }}{{- end }}
-{{- if Eq .Kind Kinds.Enum }}{{ template "Enum:ForwardDeclaration:Header" . }}{{- end }}
-{{- if Eq .Kind Kinds.Protocol -}}{{ $protocol := . }}
-{{- range $transport, $_ := .Transports }}{{- if eq $transport "Channel" -}}
-{{ template "Protocol:ForwardDeclaration:Header" $protocol }}
-{{- end }}{{ end }}{{- end }}
-{{- if Eq .Kind Kinds.Service }}{{ template "Service:ForwardDeclaration:Header" . }}{{- end }}
-{{- if Eq .Kind Kinds.Struct }}{{ template "Struct:ForwardDeclaration:Header" . }}{{- end }}
-{{- if Eq .Kind Kinds.Table }}{{ template "Table:ForwardDeclaration:Header" . }}{{- end }}
-{{- if Eq .Kind Kinds.Union }}{{ template "Union:ForwardDeclaration:Header" . }}{{- end }}
-{{- end }}
-
-{{- /* Resolve inline object declaration order by defining small inline structs first
-       (size <= 4 so can't contain a table or a union), then tables and unions, then
-       the remaining types. */}}
-{{- range .Decls }}
-{{- if Eq .Kind Kinds.Struct }}{{ if le .TypeShapeV2.InlineSize 4 }}{{ template "Struct:Header" . }}{{ end }}{{- end }}
-{{- end }}
-{{- range .Decls }}
-{{- if Eq .Kind Kinds.Table }}{{ template "Table:Header" . }}{{- end }}
-{{- if Eq .Kind Kinds.Union }}{{ template "Union:Header" . }}{{- end }}
-{{- end }}
-
-{{- range .Decls }}
-{{- if Eq .Kind Kinds.Const }}{{ template "Const:Header" . }}{{- end }}
-{{- if Eq .Kind Kinds.Protocol -}}{{ $protocol := . }}
-{{- range $transport, $_ := .Transports }}{{- if eq $transport "Channel" -}}
-{{ template "Protocol:Header" $protocol }}
-{{- end }}{{ end }}{{- end }}
-{{- if Eq .Kind Kinds.Service }}{{ template "Service:Header" . }}{{- end }}
-{{- if Eq .Kind Kinds.Struct }}{{ if gt .TypeShapeV2.InlineSize 4 }}{{ template "Struct:Header" . }}{{ end }}{{- end }}
-{{- end }}
-{{ "" }}
-
-{{ EnsureNamespace "fidl" }}
-
-{{- range .Decls }}
-{{- if Eq .Kind Kinds.Bits }}{{ template "Bits:Traits:Header" . }}{{- end }}
-{{- if Eq .Kind Kinds.Protocol -}}{{ $protocol := . }}
-{{- range $transport, $_ := .Transports }}{{- if eq $transport "Channel" -}}
-{{ template "Protocol:Traits:Header" $protocol }}
-{{- end }}{{ end }}{{- end }}
-{{- if Eq .Kind Kinds.Struct }}{{ template "Struct:Traits:Header" . }}{{- end }}
-{{- if Eq .Kind Kinds.Table }}{{ template "Table:Traits:Header" . }}{{- end }}
-{{- if Eq .Kind Kinds.Union }}{{ template "Union:Traits:Header" . }}{{- end }}
-{{- if Eq .Kind Kinds.Enum }}{{ template "Enum:Traits:Header" . }}{{- end }}
-{{- end }}
-
-{{- range .Decls }}
-    {{- if Eq .Kind Kinds.Protocol }}{{ $protocol := . }}
-    {{- range $transport, $_ := .Transports }}{{- if eq $transport "Channel" -}}
-        {{- range $protocol.TwoWayMethods }}
-            {{ template "Method:ResponseContext:Header" . }}
-        {{- end }}
-        {{ template "Protocol:ClientImpl:Header" $protocol }}
-        {{ "" }}
-        {{ template "Protocol:EventSender:Header" $protocol }}
-        {{ "" }}
-    {{- end }}{{ end }}{{ end }}
-{{- end }}
 {{ "" }}
 
 {{ EndOfFile }}

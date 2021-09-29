@@ -7,7 +7,7 @@ package codegen
 // fragmentProtocolInterfaceTmpl contains the definition for
 // fidl::WireSyncClient<Protocol>.
 const fragmentProtocolSyncClientTmpl = `
-{{- define "Protocol:SyncClient:Header" }}
+{{- define "Protocol:SyncClient:MessagingHeader" }}
 {{- EnsureNamespace "" }}
 template<>
 class {{ .WireSyncClient }} final {

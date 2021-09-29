@@ -7,7 +7,7 @@ package codegen
 // fragmentMethodResponseContextTmpl contains the definition for
 // fidl::WireResponseContext<Method>.
 const fragmentMethodResponseContextTmpl = `
-{{- define "Method:ResponseContext:Header" }}
+{{- define "Method:ResponseContext:MessagingHeader" }}
 {{- EnsureNamespace "" }}
 {{- IfdefFuchsia }}
 template<>
@@ -25,7 +25,7 @@ class {{ .WireResponseContext }} : public ::fidl::internal::ResponseContext {
 
 
 
-{{- define "Method:ResponseContext:Source" }}
+{{- define "Method:ResponseContext:MessagingSource" }}
 {{- EnsureNamespace "" }}
 {{- IfdefFuchsia }}
 {{ .WireResponseContext }}::{{ .WireResponseContext.Self }}()

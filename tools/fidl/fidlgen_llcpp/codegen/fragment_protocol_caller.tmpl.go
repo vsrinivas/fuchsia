@@ -7,7 +7,7 @@ package codegen
 // fragmentProtocolCallerTmpl contains the definition for
 // fidl::internal::WireCaller<Protocol>.
 const fragmentProtocolCallerTmpl = `
-{{- define "Protocol:Caller:Header" }}
+{{- define "Protocol:Caller:MessagingHeader" }}
 {{- EnsureNamespace "" }}
 
 // Methods to make a sync FIDL call directly on an unowned channel or a

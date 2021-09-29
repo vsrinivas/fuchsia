@@ -7,7 +7,7 @@ package codegen
 // fragmentMethodRequestTmpl contains the definition for
 // fidl::WireRequest<Method>.
 const fragmentMethodRequestTmpl = `
-{{- define "Method:Request:Header" }}
+{{- define "Method:Request:MessagingHeader" }}
 {{- EnsureNamespace "" }}
 {{- if .Request.IsResource }}
 {{- IfdefFuchsia -}}
@@ -211,7 +211,7 @@ class {{ .WireRequest }}::DecodedMessage final :
 
 
 
-{{- define "Method:Request:Source" }}
+{{- define "Method:Request:MessagingSource" }}
   {{- EnsureNamespace "" }}
 
 {{- if .Request.IsResource }}

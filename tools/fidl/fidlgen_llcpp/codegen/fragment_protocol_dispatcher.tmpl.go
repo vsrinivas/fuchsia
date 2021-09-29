@@ -7,7 +7,7 @@ package codegen
 // fragmentProtocolDispatcherTmpl contains the definition for
 // fidl::internal::WireDispatcher<Protocol>.
 const fragmentProtocolDispatcherTmpl = `
-{{- define "Protocol:Dispatcher:Header" }}
+{{- define "Protocol:Dispatcher:MessagingHeader" }}
 {{- IfdefFuchsia }}
 {{- EnsureNamespace "" }}
 template<>
@@ -25,7 +25,7 @@ struct {{ .WireServerDispatcher }} final {
 {{- EndifFuchsia }}
 {{- end }}
 
-{{- define "Protocol:Dispatcher:Source" }}
+{{- define "Protocol:Dispatcher:MessagingSource" }}
 {{- IfdefFuchsia -}}
 {{ EnsureNamespace "" }}
 

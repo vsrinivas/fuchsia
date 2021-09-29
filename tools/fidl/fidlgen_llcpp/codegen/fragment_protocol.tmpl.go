@@ -5,7 +5,7 @@
 package codegen
 
 const fragmentProtocolTmpl = `
-{{- define "Protocol:ForwardDeclaration:Header" }}
+{{- define "Protocol:ForwardDeclaration:MessagingHeader" }}
   {{ EnsureNamespace . }}
   class {{ .Name }};
 {{- end }}
@@ -32,7 +32,7 @@ const fragmentProtocolTmpl = `
   {{- end }}
 {{- end }}
 
-{{- define "Protocol:Header" }}
+{{- define "Protocol:MessagingHeader" }}
 {{- $protocol := . }}
 {{ "" }}
   {{- range .Methods }}
@@ -44,33 +44,33 @@ __LOCAL extern "C" const fidl_type_t {{ .Response.WireCodingTable.Name }};
 {{ "" }}
 {{ EnsureNamespace . }}
 
-{{- template "Protocol:Details:Header" . }}
-{{- template "Protocol:Dispatcher:Header" . }}
+{{- template "Protocol:Details:MessagingHeader" . }}
+{{- template "Protocol:Dispatcher:MessagingHeader" . }}
 
 {{- range .Methods }}
   {{- if .HasRequest }}
-    {{- template "Method:Request:Header" . }}
+    {{- template "Method:Request:MessagingHeader" . }}
   {{- end }}
   {{- if .HasResponse }}
-    {{- template "Method:Response:Header" . }}
+    {{- template "Method:Response:MessagingHeader" . }}
   {{- end }}
 {{- end }}
 
 {{- IfdefFuchsia -}}
 {{- range .ClientMethods -}}
-  {{- template "Method:Result:Header" . }}
-  {{- template "Method:UnownedResult:Header" . }}
+  {{- template "Method:Result:MessagingHeader" . }}
+  {{- template "Method:UnownedResult:MessagingHeader" . }}
 {{- end }}
 
-{{- template "Protocol:Caller:Header" . }}
-{{- template "Protocol:EventHandler:Header" . }}
-{{- template "Protocol:SyncClient:Header" . }}
-{{- template "Protocol:Interface:Header" . }}
+{{- template "Protocol:Caller:MessagingHeader" . }}
+{{- template "Protocol:EventHandler:MessagingHeader" . }}
+{{- template "Protocol:SyncClient:MessagingHeader" . }}
+{{- template "Protocol:Interface:MessagingHeader" . }}
 {{- EndifFuchsia -}}
 
 {{- end }}
 
-{{- define "Protocol:Traits:Header" -}}
+{{- define "Protocol:Traits:MessagingHeader" -}}
 {{ $protocol := . -}}
 {{ range .Methods -}}
 {{ $method := . -}}
@@ -113,7 +113,7 @@ static_assert(offsetof({{ $method.WireResponse }}, {{ $param.Name }}) == {{ $par
 {{- end }}
 {{- end }}
 
-{{- define "Protocol:Source" }}
+{{- define "Protocol:MessagingSource" }}
 {{ $protocol := . -}}
 
 {{- range .Methods }}
@@ -129,39 +129,39 @@ extern "C" const fidl_type_t {{ .Response.WireCodingTable.Name }};
 {{- /* Client-calling functions do not apply to events. */}}
 {{- range .ClientMethods -}}
 {{ "" }}
-    {{- template "Method:Result:Source" . }}
+    {{- template "Method:Result:MessagingSource" . }}
   {{- if or .RequestArgs .ResponseArgs }}
 {{ "" }}
-    {{- template "Method:UnownedResult:Source" . }}
+    {{- template "Method:UnownedResult:MessagingSource" . }}
   {{- end }}
 {{ "" }}
 {{- end }}
 
 {{- range .ClientMethods }}
   {{- if .HasResponse }}
-    {{- template "Method:ResponseContext:Source" . }}
+    {{- template "Method:ResponseContext:MessagingSource" . }}
   {{- end }}
 {{- end }}
-{{ template "Protocol:ClientImpl:Source" . }}
+{{ template "Protocol:ClientImpl:MessagingSource" . }}
 
 {{- if .Events }}
-  {{- template "Protocol:EventHandler:Source" . }}
+  {{- template "Protocol:EventHandler:MessagingSource" . }}
 {{- end }}
 
 {{- /* Server implementation */}}
-{{ template "Protocol:Dispatcher:Source" . }}
+{{ template "Protocol:Dispatcher:MessagingSource" . }}
 
 {{- if .Methods }}
   {{- range .TwoWayMethods -}}
-    {{- template "Method:CompleterBase:Source" . }}
+    {{- template "Method:CompleterBase:MessagingSource" . }}
   {{- end }}
 
   {{- range .Methods }}
 
-    {{- if .HasRequest }}{{ template "Method:Request:Source" . }}{{ end }}
+    {{- if .HasRequest }}{{ template "Method:Request:MessagingSource" . }}{{ end }}
     {{ "" }}
 
-    {{- if .HasResponse }}{{ template "Method:Response:Source" . }}{{ end }}
+    {{- if .HasResponse }}{{ template "Method:Response:MessagingSource" . }}{{ end }}
     {{ "" }}
 
   {{- end }}

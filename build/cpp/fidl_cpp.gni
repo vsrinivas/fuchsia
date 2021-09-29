@@ -670,9 +670,14 @@ template("fidl_cpp_family") {
       generated_headers = [
         "fidl/$library_name/cpp/markers.h",
         "fidl/$library_name/cpp/wire.h",
+        "fidl/$library_name/cpp/wire_messaging.h",
+        "fidl/$library_name/cpp/wire_types.h",
         "fidl/$library_name/cpp/wire_test_base.h",
       ]
-      generated_sources = [ "fidl/$library_name/cpp/wire.cc" ]
+      generated_sources = [
+        "fidl/$library_name/cpp/wire_messaging.cc",
+        "fidl/$library_name/cpp/wire_types.cc",
+      ]
     }
     fidl_cpp_codegen("${target_name}_llcpp") {
       forward_variables_from(common_options, "*")

@@ -5,35 +5,35 @@
 package codegen
 
 const fragmentMethodClientImplTmpl = `
-{{- define "Method:ClientImpl:Header" }}
+{{- define "Method:ClientImpl:MessagingHeader" }}
   {{- if .HasResponse }}
     {{- /* two-way method */}}
 
-    {{- template "Method:ClientImplAsync:Header" . }}
-    {{- template "Method:ClientImplSync:Header" . }}
+    {{- template "Method:ClientImplAsync:MessagingHeader" . }}
+    {{- template "Method:ClientImplSync:MessagingHeader" . }}
 
   {{- else }}
     {{- /* one-way method */}}
 
     {{- /* There is no distinction between sync vs async for one-way methods . */}}
-    {{- template "Method:ClientImplOneway:Header" . }}
+    {{- template "Method:ClientImplOneway:MessagingHeader" . }}
 
   {{- end }}
 {{- end }}
 
 
-{{- define "Method:ClientImpl:Source" }}
+{{- define "Method:ClientImpl:MessagingSource" }}
   {{- if .HasResponse }}
     {{- /* two-way method */}}
 
-    {{- template "Method:ClientImplAsync:Source" . }}
-    {{- template "Method:ClientImplSync:Source" . }}
+    {{- template "Method:ClientImplAsync:MessagingSource" . }}
+    {{- template "Method:ClientImplSync:MessagingSource" . }}
 
   {{- else }}
     {{- /* one-way method */}}
 
     {{- /* There is no distinction between sync vs async for one-way methods . */}}
-    {{- template "Method:ClientImplOneway:Source" . }}
+    {{- template "Method:ClientImplOneway:MessagingSource" . }}
   {{- end }}
 {{- end }}
 `

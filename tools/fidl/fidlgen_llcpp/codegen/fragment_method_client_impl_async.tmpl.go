@@ -5,7 +5,7 @@
 package codegen
 
 const fragmentMethodClientImplAsyncTmpl = `
-{{- define "Method:ClientImplAsync:Header" }}
+{{- define "Method:ClientImplAsync:MessagingHeader" }}
   {{- IfdefFuchsia -}}
   {{- /* Async managed flavor */}}
   {{- .Docs }}
@@ -46,7 +46,7 @@ const fragmentMethodClientImplAsyncTmpl = `
 {{- end }}
 
 
-{{- define "Method:ClientImplAsync:Source" }}
+{{- define "Method:ClientImplAsync:MessagingSource" }}
   {{- IfdefFuchsia -}}
 
   {{- /* Async managed flavor */}}

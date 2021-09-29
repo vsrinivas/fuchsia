@@ -5,7 +5,7 @@
 package codegen
 
 const fragmentProtocolEventSenderTmpl = `
-{{- define "Protocol:EventSender:Header" }}
+{{- define "Protocol:EventSender:MessagingHeader" }}
 {{ EnsureNamespace "" }}
 {{- IfdefFuchsia -}}
 // |EventSender| owns a server endpoint of a channel speaking
@@ -73,7 +73,7 @@ class {{ .WireWeakEventSender }} {
 {{- EndifFuchsia -}}
 {{- end }}
 
-{{- define "Protocol:EventSender:Source" }}
+{{- define "Protocol:EventSender:MessagingSource" }}
 {{ EnsureNamespace "" }}
 {{- IfdefFuchsia -}}
   {{- range .Events }}

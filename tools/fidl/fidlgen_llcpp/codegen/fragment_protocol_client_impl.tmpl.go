@@ -5,14 +5,14 @@
 package codegen
 
 const fragmentProtocolClientImplTmpl = `
-{{- define "Protocol:ClientImpl:Header" }}
+{{- define "Protocol:ClientImpl:MessagingHeader" }}
 {{- IfdefFuchsia -}}
 {{- EnsureNamespace "" }}
 template<>
 class {{ .WireClientImpl }} final : public ::fidl::internal::ClientBase {
  public:
   {{- range .ClientMethods }}
-    {{- template "Method:ClientImpl:Header" . }}
+    {{- template "Method:ClientImpl:MessagingHeader" . }}
   {{- end }}
   {{ .WireClientImpl.Self }}() = default;
 
@@ -26,12 +26,12 @@ class {{ .WireClientImpl }} final : public ::fidl::internal::ClientBase {
 
 
 
-{{- define "Protocol:ClientImpl:Source" }}
+{{- define "Protocol:ClientImpl:MessagingSource" }}
   {{ EnsureNamespace ""}}
   {{- IfdefFuchsia -}}
 
   {{- range .ClientMethods }}
-    {{- template "Method:ClientImpl:Source" . }}
+    {{- template "Method:ClientImpl:MessagingSource" . }}
   {{- end }}
 
   std::optional<::fidl::UnbindInfo>

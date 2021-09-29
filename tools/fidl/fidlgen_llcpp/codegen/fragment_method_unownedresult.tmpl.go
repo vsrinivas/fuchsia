@@ -7,7 +7,7 @@ package codegen
 // fragmentMethodUnownedResultTmpl contains the definition for
 // fidl::WireUnownedResult<Method>.
 const fragmentMethodUnownedResultTmpl = `
-{{- define "Method:UnownedResult:Header" }}
+{{- define "Method:UnownedResult:MessagingHeader" }}
 {{- EnsureNamespace "" }}
 template<>
 class {{ .WireUnownedResult }} final : public ::fidl::Result {
@@ -79,7 +79,7 @@ class {{ .WireUnownedResult }} final : public ::fidl::Result {
 
 
 
-{{- define "Method:UnownedResult:Source" }}
+{{- define "Method:UnownedResult:MessagingSource" }}
 {{- IfdefFuchsia -}}
 {{- EnsureNamespace "" }}
 {{ $args := (printf "::fidl::UnownedClientEnd<%s> _client" .Protocol) }}

@@ -5,7 +5,7 @@
 package codegen
 
 const fragmentBitsTmpl = `
-{{- define "Bits:ForwardDeclaration:Header" }}
+{{- define "Bits:ForwardDeclaration:TypesHeader" }}
 {{ EnsureNamespace . }}
 {{- .Docs }}
 {{- if .IsStrict }}
@@ -110,7 +110,7 @@ constexpr inline void {{ .Name }}::operator^=(
 
 {{ end }}
 
-{{- define "Bits:Traits:Header" }}
+{{- define "Bits:Traits:TypesHeader" }}
 
 template <>
 struct IsFidlType<{{ . }}> : public std::true_type {};

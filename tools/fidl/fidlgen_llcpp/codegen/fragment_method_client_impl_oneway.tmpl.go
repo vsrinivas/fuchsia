@@ -5,7 +5,7 @@
 package codegen
 
 const fragmentMethodClientImplOnewayTmpl = `
-{{- define "Method:ClientImplOneway:Header" }}
+{{- define "Method:ClientImplOneway:MessagingHeader" }}
   {{- /* Managed flavor */}}
   {{ .Docs }}
   {{- if .DocComments }}
@@ -26,7 +26,7 @@ const fragmentMethodClientImplOnewayTmpl = `
 {{- end }}
 
 
-{{- define "Method:ClientImplOneway:Source" }}
+{{- define "Method:ClientImplOneway:MessagingSource" }}
   {{- IfdefFuchsia -}}
 
   {{- /* Managed flavor */}}

@@ -5,7 +5,7 @@
 package codegen
 
 const fragmentConstTmpl = `
-{{- define "Const:Header" }}
+{{- define "Const:TypesHeader" }}
 {{ EnsureNamespace . }}
 {{ .Docs }}
 {{- if .Extern }}
@@ -15,7 +15,7 @@ extern {{ .Decorator }} {{ .Type }} {{ .Name }};
 {{- end }}
 {{- end }}
 
-{{- define "Const:Source" }}
+{{- define "Const:TypesSource" }}
 {{- if .Extern }}
 {{ EnsureNamespace "" }}
 {{ .Decorator }} {{ .Type }} {{ . }} = {{ .Value }};

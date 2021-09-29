@@ -6,7 +6,7 @@ package codegen
 
 const fragmentMethodCompleterBaseTmpl = `
 
-{{- define "Method:CompleterBase:Header" }}
+{{- define "Method:CompleterBase:MessagingHeader" }}
 {{ EnsureNamespace "" }}
 {{- if .HasResponse }}
   template<>
@@ -44,7 +44,7 @@ const fragmentMethodCompleterBaseTmpl = `
 {{- end }}
 {{- end }}
 
-{{- define "Method:CompleterBase:Source" }}
+{{- define "Method:CompleterBase:MessagingSource" }}
 {{ EnsureNamespace "" }}
 {{- IfdefFuchsia -}}
 ::fidl::Result

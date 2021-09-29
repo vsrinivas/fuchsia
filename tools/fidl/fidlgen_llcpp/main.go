@@ -13,5 +13,9 @@ func main() {
 	flags := cpp.NewCmdlineFlags("llcpp", nil, false)
 	fidl := flags.ParseAndLoadIR()
 	generator := codegen.NewGenerator(flags)
-	generator.GenerateFiles(fidl, []string{"Header", "Source", "TestBase", "Markers"})
+	generator.GenerateFiles(fidl, []string{
+		"Header", "TestBase", "Markers",
+		"TypesHeader", "TypesSource",
+		"MessagingHeader", "MessagingSource",
+	})
 }

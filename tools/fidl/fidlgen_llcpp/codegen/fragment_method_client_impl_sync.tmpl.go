@@ -18,7 +18,7 @@ const fragmentMethodClientImplSyncTmpl = `
 
 
 
-{{- define "Method:ClientImplSync:Header" }}
+{{- define "Method:ClientImplSync:MessagingHeader" }}
   {{- /* Sync managed flavor */}}
   {{- .Docs }}
   {{ if .DocComments }}
@@ -44,7 +44,7 @@ const fragmentMethodClientImplSyncTmpl = `
 
 
 
-{{- define "Method:ClientImplSyncCallerAllocate:Source" }}
+{{- define "Method:ClientImplSyncCallerAllocate:MessagingSource" }}
   {{ EnsureNamespace "" }}
 
   {{- $base_args := (printf "::fidl::UnownedClientEnd<%s>(_channel->get())" .Protocol) }}
@@ -69,7 +69,7 @@ const fragmentMethodClientImplSyncTmpl = `
 
 
 
-{{- define "Method:ClientImplSyncManaged:Source" }}
+{{- define "Method:ClientImplSyncManaged:MessagingSource" }}
   {{ EnsureNamespace "" }}
 
   {{- IfdefFuchsia -}}
@@ -88,10 +88,10 @@ const fragmentMethodClientImplSyncTmpl = `
 
 
 
-{{- define "Method:ClientImplSync:Source" }}
-  {{- template "Method:ClientImplSyncManaged:Source" . }}
+{{- define "Method:ClientImplSync:MessagingSource" }}
+  {{- template "Method:ClientImplSyncManaged:MessagingSource" . }}
   {{- if or .RequestArgs .ResponseArgs }}
-    {{- template "Method:ClientImplSyncCallerAllocate:Source" . }}
+    {{- template "Method:ClientImplSyncCallerAllocate:MessagingSource" . }}
   {{- end }}
 {{- end }}
 `
