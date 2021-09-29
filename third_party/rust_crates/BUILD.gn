@@ -842,13 +842,13 @@ group("tracing-subscriber") {
 
 if (current_os == "fuchsia") {
   group("trust-dns-proto") {
-    deps = [ ":trust-dns-proto-v0_21_0-alpha_2" ]
+    deps = [ ":trust-dns-proto-v0_21_0-alpha_3" ]
   }
 }
 
 if (current_os == "fuchsia") {
   group("trust-dns-resolver") {
-    deps = [ ":trust-dns-resolver-v0_21_0-alpha_2" ]
+    deps = [ ":trust-dns-resolver-v0_21_0-alpha_3" ]
   }
 }
 
@@ -10251,10 +10251,10 @@ rust_library("treeline-v0_1_0") {
   ]
 }
 
-rust_library("trust-dns-proto-v0_21_0-alpha_2") {
+rust_library("trust-dns-proto-v0_21_0-alpha_3") {
   crate_name = "trust_dns_proto"
   crate_root = "//third_party/rust_crates/vendor/trust-dns-proto/src/lib.rs"
-  output_name = "trust_dns_proto-351157d9f37966b5"
+  output_name = "trust_dns_proto-7354b64badd14506"
   configs -= [
     "//build/config/rust:edition_2018",
     "//build/config/rust:2018_idioms",
@@ -10283,16 +10283,16 @@ rust_library("trust-dns-proto-v0_21_0-alpha_2") {
   rustflags = [
     "--cap-lints=allow",
     "--edition=2018",
-    "-Cmetadata=351157d9f37966b5",
-    "-Cextra-filename=-351157d9f37966b5",
+    "-Cmetadata=7354b64badd14506",
+    "-Cextra-filename=-7354b64badd14506",
     "--cfg=feature=\"testing\"",
   ]
 }
 
-rust_library("trust-dns-resolver-v0_21_0-alpha_2") {
+rust_library("trust-dns-resolver-v0_21_0-alpha_3") {
   crate_name = "trust_dns_resolver"
   crate_root = "//third_party/rust_crates/vendor/trust-dns-resolver/src/lib.rs"
-  output_name = "trust_dns_resolver-1e2d4d827c0af263"
+  output_name = "trust_dns_resolver-5c438e4b1a1568d2"
   configs -= [
     "//build/config/rust:edition_2018",
     "//build/config/rust:2018_idioms",
@@ -10307,15 +10307,15 @@ rust_library("trust-dns-resolver-v0_21_0-alpha_2") {
   deps += [ ":parking_lot-v0_11_1" ]
   deps += [ ":smallvec-v1_6_1" ]
   deps += [ ":thiserror-v1_0_23" ]
-  deps += [ ":trust-dns-proto-v0_21_0-alpha_2" ]
+  deps += [ ":trust-dns-proto-v0_21_0-alpha_3" ]
 
-  rustenv = [ "CARGO_PKG_VERSION=\"0.21.0-alpha.2\"" ]
+  rustenv = [ "CARGO_PKG_VERSION=\"0.21.0-alpha.3\"" ]
 
   rustflags = [
     "--cap-lints=allow",
     "--edition=2018",
-    "-Cmetadata=1e2d4d827c0af263",
-    "-Cextra-filename=-1e2d4d827c0af263",
+    "-Cmetadata=5c438e4b1a1568d2",
+    "-Cextra-filename=-5c438e4b1a1568d2",
     "--cfg=feature=\"testing\"",
   ]
 }

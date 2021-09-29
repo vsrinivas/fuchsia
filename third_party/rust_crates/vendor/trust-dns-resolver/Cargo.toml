@@ -3,17 +3,16 @@
 # When uploading crates to the registry Cargo will automatically
 # "normalize" Cargo.toml files for maximal compatibility
 # with all versions of Cargo and also rewrite `path` dependencies
-# to registry (e.g., crates.io) dependencies
+# to registry (e.g., crates.io) dependencies.
 #
-# If you believe there's an error in this file please file an
-# issue against the rust-lang/cargo repository. If you're
-# editing this file be aware that the upstream Cargo.toml
-# will likely look very different (and much more reasonable)
+# If you are reading this file be aware that the original Cargo.toml
+# will likely look very different (and much more reasonable).
+# See Cargo.toml.orig for the original contents.
 
 [package]
 edition = "2018"
 name = "trust-dns-resolver"
-version = "0.21.0-alpha.2"
+version = "0.21.0-alpha.3"
 authors = ["Benjamin Fry <benjaminfry@me.com>"]
 description = "Trust-DNS is a safe and secure DNS library. This Resolver library  uses the Client library to perform all DNS queries. The Resolver is intended to be a high-level library for any DNS record resolution see Resolver and AsyncResolver for supported resolution types. The Client can be used for other queries.\n"
 homepage = "http://www.trust-dns.org/index.html"
@@ -26,7 +25,7 @@ repository = "https://github.com/bluejekyll/trust-dns"
 [package.metadata.docs.rs]
 all-features = true
 default-target = "x86_64-unknown-linux-gnu"
-rustc-args = ["--cfg", "docsrs"]
+rustdoc-args = ["--cfg", "docsrs"]
 targets = ["x86_64-apple-darwin", "x86_64-pc-windows-msvc"]
 
 [lib]
@@ -89,7 +88,7 @@ version = "0.22"
 optional = true
 
 [dependencies.trust-dns-proto]
-version = "0.21.0-alpha.2"
+version = "0.21.0-alpha.3"
 default-features = false
 
 [dependencies.webpki-roots]
