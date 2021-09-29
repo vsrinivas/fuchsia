@@ -1,6 +1,6 @@
-# Shorlink rubric
+# Shortlink rubric
 
-Short links (fuchsia.dev/go) are intended to be durable, have a meaningful
+Shortlinks (fuchsia.dev/go) are intended to be durable, have a meaningful
 name, and be of general interest. The links are durable and use a
 flat namespace, so it is desirable to carefully consider each proposal
 to limit the number of created short links.
