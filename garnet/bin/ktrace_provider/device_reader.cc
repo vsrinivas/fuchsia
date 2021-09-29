@@ -47,7 +47,7 @@ std::tuple<zx_status_t, zx::channel> DeviceReader::OpenKtraceReader() {
 }
 
 void DeviceReader::ReadMoreData() {
-  memmove(buffer_, current_, AvailableBytes());
+  memcpy(buffer_, current_, AvailableBytes());
   char* new_marker = buffer_ + AvailableBytes();
 
   while (new_marker < end_) {

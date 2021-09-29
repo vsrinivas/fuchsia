@@ -38,21 +38,9 @@ const ktrace_header_t* Reader::ReadNextRecord() {
   }
 
   record = reinterpret_cast<const ktrace_header_t*>(current_);
+  current_ += KTRACE_LEN(record->tag);
 
-  uint32_t len = KTRACE_LEN(record->tag);
-
-  // A record with a length of zero is illegal.  If we encounter such a thing,
-  // we are in trouble. Either the buffer coming from the kernel is corrupt, or
-  // we have lost sync with the record stream somehow.  Either way, we cannot
-  // make any more progress if we don't know how far to advance.  Report a
-  // warning and get out.
-  if (!len) {
-    FX_LOGS(WARNING) << "Found 0-length record.  Reading cannot continue.";
-    return nullptr;
-  }
-
-  current_ += len;
-  number_bytes_read_ += len;
+  number_bytes_read_ += KTRACE_LEN(record->tag);
   number_records_read_ += 1;
 
   FX_VLOGS(10) << "Importing ktrace event 0x" << std::hex << KTRACE_EVENT(record->tag) << ", size "
