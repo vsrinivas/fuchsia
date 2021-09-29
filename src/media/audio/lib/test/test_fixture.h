@@ -7,6 +7,7 @@
 #include <lib/fidl/cpp/binding.h>
 #include <lib/fidl/cpp/interface_ptr.h>
 #include <lib/fit/function.h>
+#include <lib/syslog/cpp/macros.h>
 #include <zircon/errors.h>
 
 #include <deque>
@@ -144,6 +145,13 @@ class TestFixture : public ::gtest::RealLoopFixture {
 
   // Reports whether any ErrorHandlers have triggered.
   bool ErrorOccurred();
+
+  // Override this method to crash if the condition is not reached within 1 minute.
+  // This helps debug test flakes that surface as deadlocks. New tests should use
+  // RunLoopWithTimeoutOrUntil instead of this method.
+  void RunLoopUntil(fit::function<bool()> condition, zx::duration step = zx::msec(10)) {
+    FX_CHECK(RunLoopWithTimeoutOrUntil(std::move(condition), zx::sec(60), step));
+  }
 
   // Promote to public so that non-subclasses can advance through time.
   using ::gtest::RealLoopFixture::RunLoop;
