@@ -16,11 +16,20 @@ fidl/{{ .LibraryDots }}/cpp/wire_types.cc
 
   #include <{{ .Library | Filename "TypesHeader" }}>
 
-  {{- range .Decls }}
-    {{- if Eq .Kind Kinds.Const }}{{ template "Const:TypesSource" . }}{{- end }}
-    {{- if Eq .Kind Kinds.Struct }}{{ template "Struct:TypesSource" . }}{{- end }}
-    {{- if Eq .Kind Kinds.Union }}{{ template "Union:TypesSource" . }}{{- end }}
-    {{- if Eq .Kind Kinds.Table }}{{ template "Table:TypesSource" . }}{{- end }}
+  {{- range .Consts }}
+    {{ template "Const:TypesSource" . }}
+  {{- end }}
+
+  {{- range .Structs }}
+    {{ template "Struct:TypesSource" . }}
+  {{- end }}
+
+  {{- range .Unions }}
+    {{ template "Union:TypesSource" . }}
+  {{- end }}
+
+  {{- range .Tables }}
+    {{ template "Table:TypesSource" . }}
   {{- end }}
 
   {{ EndOfFile }}

@@ -10,6 +10,15 @@ void ::fidl_test_protocols::wire::WithErrorSyntaxHandleInResultResponse::
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
+void ::fidl_test_protocols::wire::ProtocolEnds::_CloseHandles() {
+  client.reset();
+  server.reset();
+  client_opt.reset();
+  server_opt.reset();
+}
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
 
 void ::fidl_test_protocols::wire::WithErrorSyntaxHandleInResultResult::
     SizeAndOffsetAssertionHelper() {
@@ -112,15 +121,6 @@ void ::fidl_test_protocols::wire::TheUnion::SizeAndOffsetAssertionHelper() {
   static_assert(offsetof(TheUnion, envelope_) ==
                 offsetof(fidl_xunion_v2_t, envelope));
 }
-
-#ifdef __Fuchsia__
-void ::fidl_test_protocols::wire::ProtocolEnds::_CloseHandles() {
-  client.reset();
-  server.reset();
-  client_opt.reset();
-  server_opt.reset();
-}
-#endif  // __Fuchsia__
 
 void ::fidl_test_protocols::wire::WithErrorSyntaxErrorAsEnumResult::
     SizeAndOffsetAssertionHelper() {

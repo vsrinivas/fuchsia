@@ -38,9 +38,9 @@ struct StructWithNullableProtocol;
 
 struct StructWithNullableHandle;
 
-class SimpleUnion;
-
 struct Int32Wrapper;
+
+class SimpleUnion;
 
 #ifdef __Fuchsia__
 
@@ -1375,15 +1375,6 @@ static_assert(
 #endif  // __Fuchsia__
 
 template <>
-struct IsFidlType<::fidl_test_nullable::wire::SimpleUnion>
-    : public std::true_type {};
-template <>
-struct IsUnion<::fidl_test_nullable::wire::SimpleUnion>
-    : public std::true_type {};
-static_assert(
-    std::is_standard_layout_v<::fidl_test_nullable::wire::SimpleUnion>);
-
-template <>
 struct IsFidlType<::fidl_test_nullable::wire::Int32Wrapper>
     : public std::true_type {};
 template <>
@@ -1394,5 +1385,14 @@ static_assert(
 static_assert(offsetof(::fidl_test_nullable::wire::Int32Wrapper, val) == 0);
 static_assert(sizeof(::fidl_test_nullable::wire::Int32Wrapper) ==
               ::fidl_test_nullable::wire::Int32Wrapper::PrimarySize);
+
+template <>
+struct IsFidlType<::fidl_test_nullable::wire::SimpleUnion>
+    : public std::true_type {};
+template <>
+struct IsUnion<::fidl_test_nullable::wire::SimpleUnion>
+    : public std::true_type {};
+static_assert(
+    std::is_standard_layout_v<::fidl_test_nullable::wire::SimpleUnion>);
 
 }  // namespace fidl

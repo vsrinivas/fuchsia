@@ -30,91 +30,11 @@ enum class ObjType : uint32_t {
   kVmo = 3u,
 };
 
-class UnionWithHandle;
+struct HandlesInTypes;
 
 class TableWithHandle;
 
-struct HandlesInTypes;
-
-#ifdef __Fuchsia__
-
-extern "C" const fidl_type_t fidl_test_handlesintypes_UnionWithHandleTable;
-
-class UnionWithHandle {
- public:
-  UnionWithHandle()
-      : ordinal_(::fidl_test_handlesintypes::wire::UnionWithHandle::Ordinal::
-                     Invalid),
-        envelope_{} {}
-
-  ~UnionWithHandle();
-  UnionWithHandle(UnionWithHandle&& other) { _Move(std::move(other)); }
-  UnionWithHandle& operator=(UnionWithHandle&& other) {
-    if (this != &other) {
-      _Move(std::move(other));
-    }
-    return *this;
-  }
-
-  enum class Tag : fidl_xunion_tag_t {
-    kH = 1,  // 0x1
-    kUnknown = ::std::numeric_limits<::fidl_union_tag_t>::max(),
-  };
-
-  bool has_invalid_tag() const {
-    return ordinal_ ==
-           ::fidl_test_handlesintypes::wire::UnionWithHandle::Ordinal::Invalid;
-  }
-
-  bool is_h() const {
-    return ordinal_ ==
-           ::fidl_test_handlesintypes::wire::UnionWithHandle::Ordinal::kH;
-  }
-  static UnionWithHandle WithH(::zx::vmo val) {
-    UnionWithHandle result;
-    result.set_h(std::move(val));
-    return result;
-  }
-
-  void set_h(::zx::vmo elem) {
-    ordinal_ = ::fidl_test_handlesintypes::wire::UnionWithHandle::Ordinal::kH;
-    envelope_.As<::zx::vmo>().set_data(std::move(elem));
-  }
-
-  ::zx::vmo& mutable_h() {
-    ZX_ASSERT(ordinal_ ==
-              ::fidl_test_handlesintypes::wire::UnionWithHandle::Ordinal::kH);
-    return envelope_.As<::zx::vmo>().get_data();
-  }
-  const ::zx::vmo& h() const {
-    ZX_ASSERT(ordinal_ ==
-              ::fidl_test_handlesintypes::wire::UnionWithHandle::Ordinal::kH);
-    return envelope_.As<::zx::vmo>().get_data();
-  }
-  ::fidl_test_handlesintypes::wire::UnionWithHandle::Tag which() const;
-
-  static constexpr const fidl_type_t* Type =
-      &fidl_test_handlesintypes_UnionWithHandleTable;
-  static constexpr uint32_t MaxNumHandles = 1;
-  static constexpr uint32_t PrimarySize = 16;
-  [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 0;
-  static constexpr bool HasPointer = true;
-
-  void _CloseHandles();
-
- private:
-  enum class Ordinal : fidl_xunion_tag_t {
-    Invalid = 0,
-    kH = 1,  // 0x1
-  };
-  void _Move(UnionWithHandle&& other);
-
-  static void SizeAndOffsetAssertionHelper();
-  ::fidl_test_handlesintypes::wire::UnionWithHandle::Ordinal ordinal_;
-  FIDL_ALIGNDECL
-  ::fidl::UntypedEnvelope envelope_;
-};
-#endif  // __Fuchsia__
+class UnionWithHandle;
 
 #ifdef __Fuchsia__
 
@@ -352,6 +272,86 @@ class TableWithHandle::DecodedMessage final
 
 #ifdef __Fuchsia__
 
+extern "C" const fidl_type_t fidl_test_handlesintypes_UnionWithHandleTable;
+
+class UnionWithHandle {
+ public:
+  UnionWithHandle()
+      : ordinal_(::fidl_test_handlesintypes::wire::UnionWithHandle::Ordinal::
+                     Invalid),
+        envelope_{} {}
+
+  ~UnionWithHandle();
+  UnionWithHandle(UnionWithHandle&& other) { _Move(std::move(other)); }
+  UnionWithHandle& operator=(UnionWithHandle&& other) {
+    if (this != &other) {
+      _Move(std::move(other));
+    }
+    return *this;
+  }
+
+  enum class Tag : fidl_xunion_tag_t {
+    kH = 1,  // 0x1
+    kUnknown = ::std::numeric_limits<::fidl_union_tag_t>::max(),
+  };
+
+  bool has_invalid_tag() const {
+    return ordinal_ ==
+           ::fidl_test_handlesintypes::wire::UnionWithHandle::Ordinal::Invalid;
+  }
+
+  bool is_h() const {
+    return ordinal_ ==
+           ::fidl_test_handlesintypes::wire::UnionWithHandle::Ordinal::kH;
+  }
+  static UnionWithHandle WithH(::zx::vmo val) {
+    UnionWithHandle result;
+    result.set_h(std::move(val));
+    return result;
+  }
+
+  void set_h(::zx::vmo elem) {
+    ordinal_ = ::fidl_test_handlesintypes::wire::UnionWithHandle::Ordinal::kH;
+    envelope_.As<::zx::vmo>().set_data(std::move(elem));
+  }
+
+  ::zx::vmo& mutable_h() {
+    ZX_ASSERT(ordinal_ ==
+              ::fidl_test_handlesintypes::wire::UnionWithHandle::Ordinal::kH);
+    return envelope_.As<::zx::vmo>().get_data();
+  }
+  const ::zx::vmo& h() const {
+    ZX_ASSERT(ordinal_ ==
+              ::fidl_test_handlesintypes::wire::UnionWithHandle::Ordinal::kH);
+    return envelope_.As<::zx::vmo>().get_data();
+  }
+  ::fidl_test_handlesintypes::wire::UnionWithHandle::Tag which() const;
+
+  static constexpr const fidl_type_t* Type =
+      &fidl_test_handlesintypes_UnionWithHandleTable;
+  static constexpr uint32_t MaxNumHandles = 1;
+  static constexpr uint32_t PrimarySize = 16;
+  [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 0;
+  static constexpr bool HasPointer = true;
+
+  void _CloseHandles();
+
+ private:
+  enum class Ordinal : fidl_xunion_tag_t {
+    Invalid = 0,
+    kH = 1,  // 0x1
+  };
+  void _Move(UnionWithHandle&& other);
+
+  static void SizeAndOffsetAssertionHelper();
+  ::fidl_test_handlesintypes::wire::UnionWithHandle::Ordinal ordinal_;
+  FIDL_ALIGNDECL
+  ::fidl::UntypedEnvelope envelope_;
+};
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
 extern "C" const fidl_type_t fidl_test_handlesintypes_HandlesInTypesTable;
 
 struct HandlesInTypes {
@@ -513,34 +513,6 @@ class HandlesInTypes::DecodedMessage final
 }  // namespace fidl_test_handlesintypes
 namespace fidl {
 
-template <>
-struct IsFidlType<::fidl_test_handlesintypes::wire::ObjType>
-    : public std::true_type {};
-
-#ifdef __Fuchsia__
-
-template <>
-struct IsFidlType<::fidl_test_handlesintypes::wire::UnionWithHandle>
-    : public std::true_type {};
-template <>
-struct IsUnion<::fidl_test_handlesintypes::wire::UnionWithHandle>
-    : public std::true_type {};
-static_assert(std::is_standard_layout_v<
-              ::fidl_test_handlesintypes::wire::UnionWithHandle>);
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
-
-template <>
-struct IsFidlType<::fidl_test_handlesintypes::wire::TableWithHandle>
-    : public std::true_type {};
-template <>
-struct IsTable<::fidl_test_handlesintypes::wire::TableWithHandle>
-    : public std::true_type {};
-static_assert(std::is_standard_layout_v<
-              ::fidl_test_handlesintypes::wire::TableWithHandle>);
-#endif  // __Fuchsia__
-
 #ifdef __Fuchsia__
 
 template <>
@@ -566,5 +538,33 @@ static_assert(offsetof(::fidl_test_handlesintypes::wire::HandlesInTypes,
 static_assert(sizeof(::fidl_test_handlesintypes::wire::HandlesInTypes) ==
               ::fidl_test_handlesintypes::wire::HandlesInTypes::PrimarySize);
 #endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
+template <>
+struct IsFidlType<::fidl_test_handlesintypes::wire::TableWithHandle>
+    : public std::true_type {};
+template <>
+struct IsTable<::fidl_test_handlesintypes::wire::TableWithHandle>
+    : public std::true_type {};
+static_assert(std::is_standard_layout_v<
+              ::fidl_test_handlesintypes::wire::TableWithHandle>);
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+
+template <>
+struct IsFidlType<::fidl_test_handlesintypes::wire::UnionWithHandle>
+    : public std::true_type {};
+template <>
+struct IsUnion<::fidl_test_handlesintypes::wire::UnionWithHandle>
+    : public std::true_type {};
+static_assert(std::is_standard_layout_v<
+              ::fidl_test_handlesintypes::wire::UnionWithHandle>);
+#endif  // __Fuchsia__
+
+template <>
+struct IsFidlType<::fidl_test_handlesintypes::wire::ObjType>
+    : public std::true_type {};
 
 }  // namespace fidl

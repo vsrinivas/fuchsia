@@ -10,6 +10,7 @@ void ::fidl_test_doccomments::wire::StrictUnion::
   static_assert(offsetof(StrictUnion, envelope_) ==
                 offsetof(fidl_xunion_v2_t, envelope));
 }
+
 auto ::fidl_test_doccomments::wire::FlexibleUnion::which() const
     -> ::fidl_test_doccomments::wire::FlexibleUnion::Tag {
   ZX_ASSERT(!has_invalid_tag());

@@ -22,28 +22,6 @@
 
 namespace fidl_test_doccomments {
 namespace wire {
-class Table;
-
-struct Struct;
-
-class StrictUnion;
-
-/// strict enum comment #1.
-///
-/// strict enum comment #2.
-enum class MyStrictEnum : uint32_t {
-
-  /// FOO member comment #1
-  ///
-  /// FOO member comment #3
-  kFoo = 1u,
-
-  /// BAR member comment #1
-  ///
-  /// BAR member comment #3
-  kBar = 2u,
-};
-
 /// strict bits comment #1
 ///
 /// strict bits comment #2
@@ -147,49 +125,6 @@ constexpr inline void MyStrictBits::operator^=(
     const ::fidl_test_doccomments::wire::MyStrictBits& other) {
   this->value_ ^= other.value_;
 }
-
-/// flexible enum comment #1.
-///
-/// flexible enum comment #2.
-class MyFlexibleEnum final {
- public:
-  constexpr MyFlexibleEnum() : value_(0) {}
-  constexpr explicit MyFlexibleEnum(uint32_t value) : value_(value) {}
-  constexpr operator uint32_t() const { return value_; }
-
-  constexpr bool IsUnknown() const {
-    switch (value_) {
-      case 1u:
-
-      case 2u:
-
-        return false;
-      default:
-        return true;
-    }
-  }
-
-  constexpr static MyFlexibleEnum Unknown() {
-    return MyFlexibleEnum(0xffffffff);
-  }
-
-  /// FOO member comment #1
-  ///
-  /// FOO member comment #3
-  static const MyFlexibleEnum kFoo;
-
-  /// BAR member comment #1
-  ///
-  /// BAR member comment #3
-  static const MyFlexibleEnum kBar;
-
- private:
-  uint32_t value_;
-};
-constexpr const ::fidl_test_doccomments::wire::MyFlexibleEnum
-    MyFlexibleEnum::kFoo = ::fidl_test_doccomments::wire::MyFlexibleEnum(1u);
-constexpr const ::fidl_test_doccomments::wire::MyFlexibleEnum
-    MyFlexibleEnum::kBar = ::fidl_test_doccomments::wire::MyFlexibleEnum(2u);
 
 /// flexible bits comment #1
 ///
@@ -301,6 +236,71 @@ constexpr inline void MyFlexibleBits::operator^=(
     const ::fidl_test_doccomments::wire::MyFlexibleBits& other) {
   this->value_ ^= other.value_;
 }
+
+/// strict enum comment #1.
+///
+/// strict enum comment #2.
+enum class MyStrictEnum : uint32_t {
+
+  /// FOO member comment #1
+  ///
+  /// FOO member comment #3
+  kFoo = 1u,
+
+  /// BAR member comment #1
+  ///
+  /// BAR member comment #3
+  kBar = 2u,
+};
+
+/// flexible enum comment #1.
+///
+/// flexible enum comment #2.
+class MyFlexibleEnum final {
+ public:
+  constexpr MyFlexibleEnum() : value_(0) {}
+  constexpr explicit MyFlexibleEnum(uint32_t value) : value_(value) {}
+  constexpr operator uint32_t() const { return value_; }
+
+  constexpr bool IsUnknown() const {
+    switch (value_) {
+      case 1u:
+
+      case 2u:
+
+        return false;
+      default:
+        return true;
+    }
+  }
+
+  constexpr static MyFlexibleEnum Unknown() {
+    return MyFlexibleEnum(0xffffffff);
+  }
+
+  /// FOO member comment #1
+  ///
+  /// FOO member comment #3
+  static const MyFlexibleEnum kFoo;
+
+  /// BAR member comment #1
+  ///
+  /// BAR member comment #3
+  static const MyFlexibleEnum kBar;
+
+ private:
+  uint32_t value_;
+};
+constexpr const ::fidl_test_doccomments::wire::MyFlexibleEnum
+    MyFlexibleEnum::kFoo = ::fidl_test_doccomments::wire::MyFlexibleEnum(1u);
+constexpr const ::fidl_test_doccomments::wire::MyFlexibleEnum
+    MyFlexibleEnum::kBar = ::fidl_test_doccomments::wire::MyFlexibleEnum(2u);
+
+struct Struct;
+
+class Table;
+
+class StrictUnion;
 
 class FlexibleUnion;
 
@@ -843,11 +843,20 @@ constexpr int32_t kC = 4u;
 namespace fidl {
 
 template <>
-struct IsFidlType<::fidl_test_doccomments::wire::Table>
+struct IsFidlType<::fidl_test_doccomments::wire::MyStrictBits>
     : public std::true_type {};
+static_assert(
+    std::is_standard_layout_v<::fidl_test_doccomments::wire::MyStrictBits>);
+static_assert(sizeof(::fidl_test_doccomments::wire::MyStrictBits) ==
+              sizeof(uint32_t));
+
 template <>
-struct IsTable<::fidl_test_doccomments::wire::Table> : public std::true_type {};
-static_assert(std::is_standard_layout_v<::fidl_test_doccomments::wire::Table>);
+struct IsFidlType<::fidl_test_doccomments::wire::MyFlexibleBits>
+    : public std::true_type {};
+static_assert(
+    std::is_standard_layout_v<::fidl_test_doccomments::wire::MyFlexibleBits>);
+static_assert(sizeof(::fidl_test_doccomments::wire::MyFlexibleBits) ==
+              sizeof(uint32_t));
 
 template <>
 struct IsFidlType<::fidl_test_doccomments::wire::Struct>
@@ -861,6 +870,13 @@ static_assert(sizeof(::fidl_test_doccomments::wire::Struct) ==
               ::fidl_test_doccomments::wire::Struct::PrimarySize);
 
 template <>
+struct IsFidlType<::fidl_test_doccomments::wire::Table>
+    : public std::true_type {};
+template <>
+struct IsTable<::fidl_test_doccomments::wire::Table> : public std::true_type {};
+static_assert(std::is_standard_layout_v<::fidl_test_doccomments::wire::Table>);
+
+template <>
 struct IsFidlType<::fidl_test_doccomments::wire::StrictUnion>
     : public std::true_type {};
 template <>
@@ -870,30 +886,6 @@ static_assert(
     std::is_standard_layout_v<::fidl_test_doccomments::wire::StrictUnion>);
 
 template <>
-struct IsFidlType<::fidl_test_doccomments::wire::MyStrictEnum>
-    : public std::true_type {};
-
-template <>
-struct IsFidlType<::fidl_test_doccomments::wire::MyStrictBits>
-    : public std::true_type {};
-static_assert(
-    std::is_standard_layout_v<::fidl_test_doccomments::wire::MyStrictBits>);
-static_assert(sizeof(::fidl_test_doccomments::wire::MyStrictBits) ==
-              sizeof(uint32_t));
-
-template <>
-struct IsFidlType<::fidl_test_doccomments::wire::MyFlexibleEnum>
-    : public std::true_type {};
-
-template <>
-struct IsFidlType<::fidl_test_doccomments::wire::MyFlexibleBits>
-    : public std::true_type {};
-static_assert(
-    std::is_standard_layout_v<::fidl_test_doccomments::wire::MyFlexibleBits>);
-static_assert(sizeof(::fidl_test_doccomments::wire::MyFlexibleBits) ==
-              sizeof(uint32_t));
-
-template <>
 struct IsFidlType<::fidl_test_doccomments::wire::FlexibleUnion>
     : public std::true_type {};
 template <>
@@ -901,5 +893,13 @@ struct IsUnion<::fidl_test_doccomments::wire::FlexibleUnion>
     : public std::true_type {};
 static_assert(
     std::is_standard_layout_v<::fidl_test_doccomments::wire::FlexibleUnion>);
+
+template <>
+struct IsFidlType<::fidl_test_doccomments::wire::MyStrictEnum>
+    : public std::true_type {};
+
+template <>
+struct IsFidlType<::fidl_test_doccomments::wire::MyFlexibleEnum>
+    : public std::true_type {};
 
 }  // namespace fidl

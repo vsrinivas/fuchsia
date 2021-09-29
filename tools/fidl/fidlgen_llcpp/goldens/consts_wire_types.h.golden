@@ -21,14 +21,6 @@
 
 namespace fidl_test_consts {
 namespace wire {
-
-enum class EnumType : int32_t {
-
-  kValue = 1u,
-
-  kTrue = 2u,
-};
-
 // |BitsType| is strict, hence is guaranteed to only contain
 // members defined in the FIDL schema when receiving it in a message.
 // Sending unknown members will fail at runtime.
@@ -126,6 +118,13 @@ constexpr inline void BitsType::operator^=(
   this->value_ ^= other.value_;
 }
 
+enum class EnumType : int32_t {
+
+  kValue = 1u,
+
+  kTrue = 2u,
+};
+
 extern const char* kUsername;
 
 constexpr uint32_t kPopulationUsa2018 = 330000000u;
@@ -175,13 +174,13 @@ constexpr uint16_t kAnswer = 42u;
 namespace fidl {
 
 template <>
-struct IsFidlType<::fidl_test_consts::wire::EnumType> : public std::true_type {
-};
-
-template <>
 struct IsFidlType<::fidl_test_consts::wire::BitsType> : public std::true_type {
 };
 static_assert(std::is_standard_layout_v<::fidl_test_consts::wire::BitsType>);
 static_assert(sizeof(::fidl_test_consts::wire::BitsType) == sizeof(uint32_t));
+
+template <>
+struct IsFidlType<::fidl_test_consts::wire::EnumType> : public std::true_type {
+};
 
 }  // namespace fidl

@@ -21,191 +21,17 @@
 
 namespace fidl_test_arrays {
 namespace wire {
-class UnionSmallArray;
+struct StructSmallArray;
 
-class UnionLargeArray;
+struct StructLargeArray;
 
 class TableSmallArray;
 
 class TableLargeArray;
 
-struct StructSmallArray;
+class UnionSmallArray;
 
-struct StructLargeArray;
-
-extern "C" const fidl_type_t fidl_test_arrays_UnionSmallArrayTable;
-
-class UnionSmallArray {
- public:
-  UnionSmallArray()
-      : ordinal_(::fidl_test_arrays::wire::UnionSmallArray::Ordinal::Invalid),
-        envelope_{} {}
-
-  UnionSmallArray(const UnionSmallArray&) = default;
-  UnionSmallArray& operator=(const UnionSmallArray&) = default;
-  UnionSmallArray(UnionSmallArray&&) = default;
-  UnionSmallArray& operator=(UnionSmallArray&&) = default;
-
-  enum class Tag : fidl_xunion_tag_t {
-    kA = 1,  // 0x1
-  };
-
-  bool has_invalid_tag() const {
-    return ordinal_ ==
-           ::fidl_test_arrays::wire::UnionSmallArray::Ordinal::Invalid;
-  }
-
-  bool is_a() const {
-    return ordinal_ == ::fidl_test_arrays::wire::UnionSmallArray::Ordinal::kA;
-  }
-  static UnionSmallArray WithA(
-      ::fidl::ObjectView<::fidl::Array<uint32_t, 2>> val) {
-    UnionSmallArray result;
-    result.set_a(val);
-    return result;
-  }
-
-  template <typename... Args>
-  static UnionSmallArray WithA(::fidl::AnyArena& allocator, Args&&... args) {
-    UnionSmallArray result;
-    result.set_a(::fidl::ObjectView<::fidl::Array<uint32_t, 2>>(
-        allocator, std::forward<Args>(args)...));
-    return result;
-  }
-
-  void set_a(::fidl::ObjectView<::fidl::Array<uint32_t, 2>> elem) {
-    ordinal_ = ::fidl_test_arrays::wire::UnionSmallArray::Ordinal::kA;
-    envelope_.As<::fidl::Array<uint32_t, 2>>().set_data(std::move(elem));
-  }
-
-  template <typename... Args>
-  void set_a(::fidl::AnyArena& allocator, Args&&... args) {
-    ordinal_ = ::fidl_test_arrays::wire::UnionSmallArray::Ordinal::kA;
-    set_a(::fidl::ObjectView<::fidl::Array<uint32_t, 2>>(
-        allocator, std::forward<Args>(args)...));
-  }
-
-  ::fidl::Array<uint32_t, 2>& mutable_a() {
-    ZX_ASSERT(ordinal_ ==
-              ::fidl_test_arrays::wire::UnionSmallArray::Ordinal::kA);
-    return envelope_.As<::fidl::Array<uint32_t, 2>>().get_data();
-  }
-  const ::fidl::Array<uint32_t, 2>& a() const {
-    ZX_ASSERT(ordinal_ ==
-              ::fidl_test_arrays::wire::UnionSmallArray::Ordinal::kA);
-    return envelope_.As<::fidl::Array<uint32_t, 2>>().get_data();
-  }
-  ::fidl_test_arrays::wire::UnionSmallArray::Tag which() const {
-    ZX_ASSERT(!has_invalid_tag());
-    return static_cast<::fidl_test_arrays::wire::UnionSmallArray::Tag>(
-        ordinal_);
-  }
-
-  static constexpr const fidl_type_t* Type =
-      &fidl_test_arrays_UnionSmallArrayTable;
-  static constexpr uint32_t MaxNumHandles = 0;
-  static constexpr uint32_t PrimarySize = 16;
-  [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 8;
-  static constexpr bool HasPointer = true;
-
- private:
-  enum class Ordinal : fidl_xunion_tag_t {
-    Invalid = 0,
-    kA = 1,  // 0x1
-  };
-
-  static void SizeAndOffsetAssertionHelper();
-  ::fidl_test_arrays::wire::UnionSmallArray::Ordinal ordinal_;
-  FIDL_ALIGNDECL
-  ::fidl::UntypedEnvelope envelope_;
-};
-
-extern "C" const fidl_type_t fidl_test_arrays_UnionLargeArrayTable;
-
-class UnionLargeArray {
- public:
-  UnionLargeArray()
-      : ordinal_(::fidl_test_arrays::wire::UnionLargeArray::Ordinal::Invalid),
-        envelope_{} {}
-
-  UnionLargeArray(const UnionLargeArray&) = default;
-  UnionLargeArray& operator=(const UnionLargeArray&) = default;
-  UnionLargeArray(UnionLargeArray&&) = default;
-  UnionLargeArray& operator=(UnionLargeArray&&) = default;
-
-  enum class Tag : fidl_xunion_tag_t {
-    kA = 1,  // 0x1
-  };
-
-  bool has_invalid_tag() const {
-    return ordinal_ ==
-           ::fidl_test_arrays::wire::UnionLargeArray::Ordinal::Invalid;
-  }
-
-  bool is_a() const {
-    return ordinal_ == ::fidl_test_arrays::wire::UnionLargeArray::Ordinal::kA;
-  }
-  static UnionLargeArray WithA(
-      ::fidl::ObjectView<::fidl::Array<uint32_t, 100>> val) {
-    UnionLargeArray result;
-    result.set_a(val);
-    return result;
-  }
-
-  template <typename... Args>
-  static UnionLargeArray WithA(::fidl::AnyArena& allocator, Args&&... args) {
-    UnionLargeArray result;
-    result.set_a(::fidl::ObjectView<::fidl::Array<uint32_t, 100>>(
-        allocator, std::forward<Args>(args)...));
-    return result;
-  }
-
-  void set_a(::fidl::ObjectView<::fidl::Array<uint32_t, 100>> elem) {
-    ordinal_ = ::fidl_test_arrays::wire::UnionLargeArray::Ordinal::kA;
-    envelope_.As<::fidl::Array<uint32_t, 100>>().set_data(std::move(elem));
-  }
-
-  template <typename... Args>
-  void set_a(::fidl::AnyArena& allocator, Args&&... args) {
-    ordinal_ = ::fidl_test_arrays::wire::UnionLargeArray::Ordinal::kA;
-    set_a(::fidl::ObjectView<::fidl::Array<uint32_t, 100>>(
-        allocator, std::forward<Args>(args)...));
-  }
-
-  ::fidl::Array<uint32_t, 100>& mutable_a() {
-    ZX_ASSERT(ordinal_ ==
-              ::fidl_test_arrays::wire::UnionLargeArray::Ordinal::kA);
-    return envelope_.As<::fidl::Array<uint32_t, 100>>().get_data();
-  }
-  const ::fidl::Array<uint32_t, 100>& a() const {
-    ZX_ASSERT(ordinal_ ==
-              ::fidl_test_arrays::wire::UnionLargeArray::Ordinal::kA);
-    return envelope_.As<::fidl::Array<uint32_t, 100>>().get_data();
-  }
-  ::fidl_test_arrays::wire::UnionLargeArray::Tag which() const {
-    ZX_ASSERT(!has_invalid_tag());
-    return static_cast<::fidl_test_arrays::wire::UnionLargeArray::Tag>(
-        ordinal_);
-  }
-
-  static constexpr const fidl_type_t* Type =
-      &fidl_test_arrays_UnionLargeArrayTable;
-  static constexpr uint32_t MaxNumHandles = 0;
-  static constexpr uint32_t PrimarySize = 16;
-  [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 400;
-  static constexpr bool HasPointer = true;
-
- private:
-  enum class Ordinal : fidl_xunion_tag_t {
-    Invalid = 0,
-    kA = 1,  // 0x1
-  };
-
-  static void SizeAndOffsetAssertionHelper();
-  ::fidl_test_arrays::wire::UnionLargeArray::Ordinal ordinal_;
-  FIDL_ALIGNDECL
-  ::fidl::UntypedEnvelope envelope_;
-};
+class UnionLargeArray;
 
 extern "C" const fidl_type_t fidl_test_arrays_TableSmallArrayTable;
 
@@ -664,6 +490,180 @@ class TableLargeArray::DecodedMessage final
   void ReleasePrimaryObject() { ResetBytes(); }
 };
 
+extern "C" const fidl_type_t fidl_test_arrays_UnionSmallArrayTable;
+
+class UnionSmallArray {
+ public:
+  UnionSmallArray()
+      : ordinal_(::fidl_test_arrays::wire::UnionSmallArray::Ordinal::Invalid),
+        envelope_{} {}
+
+  UnionSmallArray(const UnionSmallArray&) = default;
+  UnionSmallArray& operator=(const UnionSmallArray&) = default;
+  UnionSmallArray(UnionSmallArray&&) = default;
+  UnionSmallArray& operator=(UnionSmallArray&&) = default;
+
+  enum class Tag : fidl_xunion_tag_t {
+    kA = 1,  // 0x1
+  };
+
+  bool has_invalid_tag() const {
+    return ordinal_ ==
+           ::fidl_test_arrays::wire::UnionSmallArray::Ordinal::Invalid;
+  }
+
+  bool is_a() const {
+    return ordinal_ == ::fidl_test_arrays::wire::UnionSmallArray::Ordinal::kA;
+  }
+  static UnionSmallArray WithA(
+      ::fidl::ObjectView<::fidl::Array<uint32_t, 2>> val) {
+    UnionSmallArray result;
+    result.set_a(val);
+    return result;
+  }
+
+  template <typename... Args>
+  static UnionSmallArray WithA(::fidl::AnyArena& allocator, Args&&... args) {
+    UnionSmallArray result;
+    result.set_a(::fidl::ObjectView<::fidl::Array<uint32_t, 2>>(
+        allocator, std::forward<Args>(args)...));
+    return result;
+  }
+
+  void set_a(::fidl::ObjectView<::fidl::Array<uint32_t, 2>> elem) {
+    ordinal_ = ::fidl_test_arrays::wire::UnionSmallArray::Ordinal::kA;
+    envelope_.As<::fidl::Array<uint32_t, 2>>().set_data(std::move(elem));
+  }
+
+  template <typename... Args>
+  void set_a(::fidl::AnyArena& allocator, Args&&... args) {
+    ordinal_ = ::fidl_test_arrays::wire::UnionSmallArray::Ordinal::kA;
+    set_a(::fidl::ObjectView<::fidl::Array<uint32_t, 2>>(
+        allocator, std::forward<Args>(args)...));
+  }
+
+  ::fidl::Array<uint32_t, 2>& mutable_a() {
+    ZX_ASSERT(ordinal_ ==
+              ::fidl_test_arrays::wire::UnionSmallArray::Ordinal::kA);
+    return envelope_.As<::fidl::Array<uint32_t, 2>>().get_data();
+  }
+  const ::fidl::Array<uint32_t, 2>& a() const {
+    ZX_ASSERT(ordinal_ ==
+              ::fidl_test_arrays::wire::UnionSmallArray::Ordinal::kA);
+    return envelope_.As<::fidl::Array<uint32_t, 2>>().get_data();
+  }
+  ::fidl_test_arrays::wire::UnionSmallArray::Tag which() const {
+    ZX_ASSERT(!has_invalid_tag());
+    return static_cast<::fidl_test_arrays::wire::UnionSmallArray::Tag>(
+        ordinal_);
+  }
+
+  static constexpr const fidl_type_t* Type =
+      &fidl_test_arrays_UnionSmallArrayTable;
+  static constexpr uint32_t MaxNumHandles = 0;
+  static constexpr uint32_t PrimarySize = 16;
+  [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 8;
+  static constexpr bool HasPointer = true;
+
+ private:
+  enum class Ordinal : fidl_xunion_tag_t {
+    Invalid = 0,
+    kA = 1,  // 0x1
+  };
+
+  static void SizeAndOffsetAssertionHelper();
+  ::fidl_test_arrays::wire::UnionSmallArray::Ordinal ordinal_;
+  FIDL_ALIGNDECL
+  ::fidl::UntypedEnvelope envelope_;
+};
+
+extern "C" const fidl_type_t fidl_test_arrays_UnionLargeArrayTable;
+
+class UnionLargeArray {
+ public:
+  UnionLargeArray()
+      : ordinal_(::fidl_test_arrays::wire::UnionLargeArray::Ordinal::Invalid),
+        envelope_{} {}
+
+  UnionLargeArray(const UnionLargeArray&) = default;
+  UnionLargeArray& operator=(const UnionLargeArray&) = default;
+  UnionLargeArray(UnionLargeArray&&) = default;
+  UnionLargeArray& operator=(UnionLargeArray&&) = default;
+
+  enum class Tag : fidl_xunion_tag_t {
+    kA = 1,  // 0x1
+  };
+
+  bool has_invalid_tag() const {
+    return ordinal_ ==
+           ::fidl_test_arrays::wire::UnionLargeArray::Ordinal::Invalid;
+  }
+
+  bool is_a() const {
+    return ordinal_ == ::fidl_test_arrays::wire::UnionLargeArray::Ordinal::kA;
+  }
+  static UnionLargeArray WithA(
+      ::fidl::ObjectView<::fidl::Array<uint32_t, 100>> val) {
+    UnionLargeArray result;
+    result.set_a(val);
+    return result;
+  }
+
+  template <typename... Args>
+  static UnionLargeArray WithA(::fidl::AnyArena& allocator, Args&&... args) {
+    UnionLargeArray result;
+    result.set_a(::fidl::ObjectView<::fidl::Array<uint32_t, 100>>(
+        allocator, std::forward<Args>(args)...));
+    return result;
+  }
+
+  void set_a(::fidl::ObjectView<::fidl::Array<uint32_t, 100>> elem) {
+    ordinal_ = ::fidl_test_arrays::wire::UnionLargeArray::Ordinal::kA;
+    envelope_.As<::fidl::Array<uint32_t, 100>>().set_data(std::move(elem));
+  }
+
+  template <typename... Args>
+  void set_a(::fidl::AnyArena& allocator, Args&&... args) {
+    ordinal_ = ::fidl_test_arrays::wire::UnionLargeArray::Ordinal::kA;
+    set_a(::fidl::ObjectView<::fidl::Array<uint32_t, 100>>(
+        allocator, std::forward<Args>(args)...));
+  }
+
+  ::fidl::Array<uint32_t, 100>& mutable_a() {
+    ZX_ASSERT(ordinal_ ==
+              ::fidl_test_arrays::wire::UnionLargeArray::Ordinal::kA);
+    return envelope_.As<::fidl::Array<uint32_t, 100>>().get_data();
+  }
+  const ::fidl::Array<uint32_t, 100>& a() const {
+    ZX_ASSERT(ordinal_ ==
+              ::fidl_test_arrays::wire::UnionLargeArray::Ordinal::kA);
+    return envelope_.As<::fidl::Array<uint32_t, 100>>().get_data();
+  }
+  ::fidl_test_arrays::wire::UnionLargeArray::Tag which() const {
+    ZX_ASSERT(!has_invalid_tag());
+    return static_cast<::fidl_test_arrays::wire::UnionLargeArray::Tag>(
+        ordinal_);
+  }
+
+  static constexpr const fidl_type_t* Type =
+      &fidl_test_arrays_UnionLargeArrayTable;
+  static constexpr uint32_t MaxNumHandles = 0;
+  static constexpr uint32_t PrimarySize = 16;
+  [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 400;
+  static constexpr bool HasPointer = true;
+
+ private:
+  enum class Ordinal : fidl_xunion_tag_t {
+    Invalid = 0,
+    kA = 1,  // 0x1
+  };
+
+  static void SizeAndOffsetAssertionHelper();
+  ::fidl_test_arrays::wire::UnionLargeArray::Ordinal ordinal_;
+  FIDL_ALIGNDECL
+  ::fidl::UntypedEnvelope envelope_;
+};
+
 extern "C" const fidl_type_t fidl_test_arrays_StructSmallArrayTable;
 
 struct StructSmallArray {
@@ -941,42 +941,6 @@ class StructLargeArray::DecodedMessage final
 namespace fidl {
 
 template <>
-struct IsFidlType<::fidl_test_arrays::wire::UnionSmallArray>
-    : public std::true_type {};
-template <>
-struct IsUnion<::fidl_test_arrays::wire::UnionSmallArray>
-    : public std::true_type {};
-static_assert(
-    std::is_standard_layout_v<::fidl_test_arrays::wire::UnionSmallArray>);
-
-template <>
-struct IsFidlType<::fidl_test_arrays::wire::UnionLargeArray>
-    : public std::true_type {};
-template <>
-struct IsUnion<::fidl_test_arrays::wire::UnionLargeArray>
-    : public std::true_type {};
-static_assert(
-    std::is_standard_layout_v<::fidl_test_arrays::wire::UnionLargeArray>);
-
-template <>
-struct IsFidlType<::fidl_test_arrays::wire::TableSmallArray>
-    : public std::true_type {};
-template <>
-struct IsTable<::fidl_test_arrays::wire::TableSmallArray>
-    : public std::true_type {};
-static_assert(
-    std::is_standard_layout_v<::fidl_test_arrays::wire::TableSmallArray>);
-
-template <>
-struct IsFidlType<::fidl_test_arrays::wire::TableLargeArray>
-    : public std::true_type {};
-template <>
-struct IsTable<::fidl_test_arrays::wire::TableLargeArray>
-    : public std::true_type {};
-static_assert(
-    std::is_standard_layout_v<::fidl_test_arrays::wire::TableLargeArray>);
-
-template <>
 struct IsFidlType<::fidl_test_arrays::wire::StructSmallArray>
     : public std::true_type {};
 template <>
@@ -999,5 +963,41 @@ static_assert(
 static_assert(offsetof(::fidl_test_arrays::wire::StructLargeArray, a) == 0);
 static_assert(sizeof(::fidl_test_arrays::wire::StructLargeArray) ==
               ::fidl_test_arrays::wire::StructLargeArray::PrimarySize);
+
+template <>
+struct IsFidlType<::fidl_test_arrays::wire::TableSmallArray>
+    : public std::true_type {};
+template <>
+struct IsTable<::fidl_test_arrays::wire::TableSmallArray>
+    : public std::true_type {};
+static_assert(
+    std::is_standard_layout_v<::fidl_test_arrays::wire::TableSmallArray>);
+
+template <>
+struct IsFidlType<::fidl_test_arrays::wire::TableLargeArray>
+    : public std::true_type {};
+template <>
+struct IsTable<::fidl_test_arrays::wire::TableLargeArray>
+    : public std::true_type {};
+static_assert(
+    std::is_standard_layout_v<::fidl_test_arrays::wire::TableLargeArray>);
+
+template <>
+struct IsFidlType<::fidl_test_arrays::wire::UnionSmallArray>
+    : public std::true_type {};
+template <>
+struct IsUnion<::fidl_test_arrays::wire::UnionSmallArray>
+    : public std::true_type {};
+static_assert(
+    std::is_standard_layout_v<::fidl_test_arrays::wire::UnionSmallArray>);
+
+template <>
+struct IsFidlType<::fidl_test_arrays::wire::UnionLargeArray>
+    : public std::true_type {};
+template <>
+struct IsUnion<::fidl_test_arrays::wire::UnionLargeArray>
+    : public std::true_type {};
+static_assert(
+    std::is_standard_layout_v<::fidl_test_arrays::wire::UnionLargeArray>);
 
 }  // namespace fidl

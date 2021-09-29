@@ -202,10 +202,6 @@ class ExampleOfUseOfAliases::DecodedMessage final
 }  // namespace fidl_test_typealiases
 namespace fidl {
 
-template <>
-struct IsFidlType<::fidl_test_typealiases::wire::ObjType>
-    : public std::true_type {};
-
 #ifdef __Fuchsia__
 
 template <>
@@ -236,5 +232,9 @@ static_assert(
     sizeof(::fidl_test_typealiases::wire::ExampleOfUseOfAliases) ==
     ::fidl_test_typealiases::wire::ExampleOfUseOfAliases::PrimarySize);
 #endif  // __Fuchsia__
+
+template <>
+struct IsFidlType<::fidl_test_typealiases::wire::ObjType>
+    : public std::true_type {};
 
 }  // namespace fidl

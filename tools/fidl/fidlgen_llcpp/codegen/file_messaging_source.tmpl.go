@@ -22,13 +22,10 @@ fidl/{{ .LibraryDots }}/cpp/wire_messaging.cc
 
 
 
-{{- range .Decls }}
-{{- if Eq .Kind Kinds.Protocol }}{{ $protocol := . }}
-{{- range $transport, $_ := .Transports }}{{- if eq $transport "Channel" -}}
-{{ template "Protocol:MessagingSource" $protocol }}
-{{ template "Protocol:EventSender:MessagingSource" $protocol }}
-{{- end }}{{ end }}{{ end }}
-{{- end }}
+{{- range (call .ProtocolsForTransport "Channel") }}
+  {{ template "Protocol:MessagingSource" . }}
+  {{ template "Protocol:EventSender:MessagingSource" . }}
+{{ end }}
 {{ "" }}
 
 {{ EndOfFile }}

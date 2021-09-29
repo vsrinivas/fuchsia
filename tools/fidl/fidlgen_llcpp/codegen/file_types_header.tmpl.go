@@ -38,39 +38,32 @@ fidl/{{ .LibraryDots }}/cpp/wire_types.h
     #include <{{ . | Filename "TypesHeader" }}>
   {{ end }}
 
-  {{ range .Decls }}
-    {{- if Eq .Kind Kinds.Bits }}{{ template "Bits:ForwardDeclaration:TypesHeader" . }}{{- end }}
-    {{- if Eq .Kind Kinds.Enum }}{{ template "Enum:ForwardDeclaration:TypesHeader" . }}{{- end }}
-    {{- if Eq .Kind Kinds.Struct }}{{ template "Struct:ForwardDeclaration:TypesHeader" . }}{{- end }}
-    {{- if Eq .Kind Kinds.Table }}{{ template "Table:ForwardDeclaration:TypesHeader" . }}{{- end }}
-    {{- if Eq .Kind Kinds.Union }}{{ template "Union:ForwardDeclaration:TypesHeader" . }}{{- end }}
-  {{- end }}
+  {{ range .Bits }}{{ template "Bits:ForwardDeclaration:TypesHeader" . }}{{ end }}
+  {{ range .Enums }}{{ template "Enum:ForwardDeclaration:TypesHeader" . }}{{ end }}
+  {{ range .Structs }}{{ template "Struct:ForwardDeclaration:TypesHeader" . }}{{ end }}
+  {{ range .Tables }}{{ template "Table:ForwardDeclaration:TypesHeader" . }}{{ end }}
+  {{ range .Unions }}{{ template "Union:ForwardDeclaration:TypesHeader" . }}{{ end }}
 
   {{- /* Resolve inline object declaration order by defining small inline structs first
     (size <= 4 so can't contain a table or a union), then tables and unions, then
     the remaining types. */}}
-  {{- range .Decls }}
-    {{- if Eq .Kind Kinds.Struct }}{{ if le .TypeShapeV2.InlineSize 4 }}{{ template "Struct:TypesHeader" . }}{{ end }}{{- end }}
+  {{- range .Structs }}
+    {{ if le .TypeShapeV2.InlineSize 4 }}{{ template "Struct:TypesHeader" . }}{{ end }}
   {{- end }}
-  {{- range .Decls }}
-    {{- if Eq .Kind Kinds.Table }}{{ template "Table:TypesHeader" . }}{{- end }}
-    {{- if Eq .Kind Kinds.Union }}{{ template "Union:TypesHeader" . }}{{- end }}
-  {{- end }}
-
-  {{- range .Decls }}
-    {{- if Eq .Kind Kinds.Const }}{{ template "Const:TypesHeader" . }}{{- end }}
-    {{- if Eq .Kind Kinds.Struct }}{{ if gt .TypeShapeV2.InlineSize 4 }}{{ template "Struct:TypesHeader" . }}{{ end }}{{- end }}
+  {{ range .Tables }}{{ template "Table:TypesHeader" . }}{{ end }}
+  {{ range .Unions }}{{ template "Union:TypesHeader" . }}{{ end }}
+  {{ range .Consts }}{{ template "Const:TypesHeader" . }}{{ end }}
+  {{ range .Structs }}
+    {{ if gt .TypeShapeV2.InlineSize 4 }}{{ template "Struct:TypesHeader" . }}{{ end }}
   {{- end }}
 
   {{ EnsureNamespace "fidl" }}
 
-  {{- range .Decls }}
-    {{- if Eq .Kind Kinds.Bits }}{{ template "Bits:Traits:TypesHeader" . }}{{- end }}
-    {{- if Eq .Kind Kinds.Struct }}{{ template "Struct:Traits:TypesHeader" . }}{{- end }}
-    {{- if Eq .Kind Kinds.Table }}{{ template "Table:Traits:TypesHeader" . }}{{- end }}
-    {{- if Eq .Kind Kinds.Union }}{{ template "Union:Traits:TypesHeader" . }}{{- end }}
-    {{- if Eq .Kind Kinds.Enum }}{{ template "Enum:Traits:TypesHeader" . }}{{- end }}
-  {{- end }}
+  {{ range .Bits }}{{ template "Bits:Traits:TypesHeader" . }}{{ end }}
+  {{ range .Structs }}{{ template "Struct:Traits:TypesHeader" . }}{{ end }}
+  {{ range .Tables }}{{ template "Table:Traits:TypesHeader" . }}{{ end }}
+  {{ range .Unions }}{{ template "Union:Traits:TypesHeader" . }}{{ end }}
+  {{ range .Enums }}{{ template "Enum:Traits:TypesHeader" . }}{{ end }}
 
   {{ EndOfFile }}
 {{ end }}

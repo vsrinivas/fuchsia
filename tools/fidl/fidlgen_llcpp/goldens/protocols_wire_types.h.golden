@@ -127,30 +127,30 @@ enum class ObjType : uint32_t {
   kSocket = 14u,
 };
 
-struct WithErrorSyntaxHandleInResultResponse;
-
-class WithErrorSyntaxHandleInResultResult;
-
-struct WithErrorSyntaxResponseAsStructResponse;
-
-class WithErrorSyntaxResponseAsStructResult;
-
-struct WithErrorSyntaxErrorAsPrimitiveResponse;
-
-class WithErrorSyntaxErrorAsPrimitiveResult;
-
-struct WithErrorSyntaxErrorAsEnumResponse;
-
-class TheUnion;
-
-struct ProtocolEnds;
-
 enum class ErrorEnum : uint32_t {
 
   kErrFoo = 1u,
 
   kErrBar = 2u,
 };
+
+struct WithErrorSyntaxHandleInResultResponse;
+
+struct WithErrorSyntaxResponseAsStructResponse;
+
+struct WithErrorSyntaxErrorAsPrimitiveResponse;
+
+struct WithErrorSyntaxErrorAsEnumResponse;
+
+struct ProtocolEnds;
+
+class WithErrorSyntaxHandleInResultResult;
+
+class WithErrorSyntaxResponseAsStructResult;
+
+class WithErrorSyntaxErrorAsPrimitiveResult;
+
+class TheUnion;
 
 class WithErrorSyntaxErrorAsEnumResult;
 
@@ -1521,10 +1521,6 @@ struct IsFidlType<::fidl_test_protocols::wire::Rights> : public std::true_type {
 static_assert(std::is_standard_layout_v<::fidl_test_protocols::wire::Rights>);
 static_assert(sizeof(::fidl_test_protocols::wire::Rights) == sizeof(uint32_t));
 
-template <>
-struct IsFidlType<::fidl_test_protocols::wire::ObjType>
-    : public std::true_type {};
-
 #ifdef __Fuchsia__
 
 template <>
@@ -1546,20 +1542,6 @@ static_assert(
         ::fidl_test_protocols::wire::WithErrorSyntaxHandleInResultResponse) ==
     ::fidl_test_protocols::wire::WithErrorSyntaxHandleInResultResponse::
         PrimarySize);
-#endif  // __Fuchsia__
-
-#ifdef __Fuchsia__
-
-template <>
-struct IsFidlType<
-    ::fidl_test_protocols::wire::WithErrorSyntaxHandleInResultResult>
-    : public std::true_type {};
-template <>
-struct IsUnion<::fidl_test_protocols::wire::WithErrorSyntaxHandleInResultResult>
-    : public std::true_type {};
-static_assert(
-    std::is_standard_layout_v<
-        ::fidl_test_protocols::wire::WithErrorSyntaxHandleInResultResult>);
 #endif  // __Fuchsia__
 
 template <>
@@ -1593,18 +1575,6 @@ static_assert(
 
 template <>
 struct IsFidlType<
-    ::fidl_test_protocols::wire::WithErrorSyntaxResponseAsStructResult>
-    : public std::true_type {};
-template <>
-struct IsUnion<
-    ::fidl_test_protocols::wire::WithErrorSyntaxResponseAsStructResult>
-    : public std::true_type {};
-static_assert(
-    std::is_standard_layout_v<
-        ::fidl_test_protocols::wire::WithErrorSyntaxResponseAsStructResult>);
-
-template <>
-struct IsFidlType<
     ::fidl_test_protocols::wire::WithErrorSyntaxErrorAsPrimitiveResponse>
     : public std::true_type {};
 template <>
@@ -1626,18 +1596,6 @@ static_assert(
 
 template <>
 struct IsFidlType<
-    ::fidl_test_protocols::wire::WithErrorSyntaxErrorAsPrimitiveResult>
-    : public std::true_type {};
-template <>
-struct IsUnion<
-    ::fidl_test_protocols::wire::WithErrorSyntaxErrorAsPrimitiveResult>
-    : public std::true_type {};
-static_assert(
-    std::is_standard_layout_v<
-        ::fidl_test_protocols::wire::WithErrorSyntaxErrorAsPrimitiveResult>);
-
-template <>
-struct IsFidlType<
     ::fidl_test_protocols::wire::WithErrorSyntaxErrorAsEnumResponse>
     : public std::true_type {};
 template <>
@@ -1652,14 +1610,6 @@ static_assert(
     sizeof(::fidl_test_protocols::wire::WithErrorSyntaxErrorAsEnumResponse) ==
     ::fidl_test_protocols::wire::WithErrorSyntaxErrorAsEnumResponse::
         PrimarySize);
-
-template <>
-struct IsFidlType<::fidl_test_protocols::wire::TheUnion>
-    : public std::true_type {};
-template <>
-struct IsUnion<::fidl_test_protocols::wire::TheUnion> : public std::true_type {
-};
-static_assert(std::is_standard_layout_v<::fidl_test_protocols::wire::TheUnion>);
 
 #ifdef __Fuchsia__
 
@@ -1681,9 +1631,51 @@ static_assert(sizeof(::fidl_test_protocols::wire::ProtocolEnds) ==
               ::fidl_test_protocols::wire::ProtocolEnds::PrimarySize);
 #endif  // __Fuchsia__
 
+#ifdef __Fuchsia__
+
 template <>
-struct IsFidlType<::fidl_test_protocols::wire::ErrorEnum>
+struct IsFidlType<
+    ::fidl_test_protocols::wire::WithErrorSyntaxHandleInResultResult>
     : public std::true_type {};
+template <>
+struct IsUnion<::fidl_test_protocols::wire::WithErrorSyntaxHandleInResultResult>
+    : public std::true_type {};
+static_assert(
+    std::is_standard_layout_v<
+        ::fidl_test_protocols::wire::WithErrorSyntaxHandleInResultResult>);
+#endif  // __Fuchsia__
+
+template <>
+struct IsFidlType<
+    ::fidl_test_protocols::wire::WithErrorSyntaxResponseAsStructResult>
+    : public std::true_type {};
+template <>
+struct IsUnion<
+    ::fidl_test_protocols::wire::WithErrorSyntaxResponseAsStructResult>
+    : public std::true_type {};
+static_assert(
+    std::is_standard_layout_v<
+        ::fidl_test_protocols::wire::WithErrorSyntaxResponseAsStructResult>);
+
+template <>
+struct IsFidlType<
+    ::fidl_test_protocols::wire::WithErrorSyntaxErrorAsPrimitiveResult>
+    : public std::true_type {};
+template <>
+struct IsUnion<
+    ::fidl_test_protocols::wire::WithErrorSyntaxErrorAsPrimitiveResult>
+    : public std::true_type {};
+static_assert(
+    std::is_standard_layout_v<
+        ::fidl_test_protocols::wire::WithErrorSyntaxErrorAsPrimitiveResult>);
+
+template <>
+struct IsFidlType<::fidl_test_protocols::wire::TheUnion>
+    : public std::true_type {};
+template <>
+struct IsUnion<::fidl_test_protocols::wire::TheUnion> : public std::true_type {
+};
+static_assert(std::is_standard_layout_v<::fidl_test_protocols::wire::TheUnion>);
 
 template <>
 struct IsFidlType<::fidl_test_protocols::wire::WithErrorSyntaxErrorAsEnumResult>
@@ -1693,5 +1685,13 @@ struct IsUnion<::fidl_test_protocols::wire::WithErrorSyntaxErrorAsEnumResult>
     : public std::true_type {};
 static_assert(std::is_standard_layout_v<
               ::fidl_test_protocols::wire::WithErrorSyntaxErrorAsEnumResult>);
+
+template <>
+struct IsFidlType<::fidl_test_protocols::wire::ObjType>
+    : public std::true_type {};
+
+template <>
+struct IsFidlType<::fidl_test_protocols::wire::ErrorEnum>
+    : public std::true_type {};
 
 }  // namespace fidl

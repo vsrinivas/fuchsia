@@ -329,10 +329,6 @@ class Handles::DecodedMessage final
 }  // namespace fidl_test_handles
 namespace fidl {
 
-template <>
-struct IsFidlType<::fidl_test_handles::wire::ObjType> : public std::true_type {
-};
-
 #ifdef __Fuchsia__
 
 template <>
@@ -395,5 +391,9 @@ static_assert(offsetof(::fidl_test_handles::wire::Handles,
 static_assert(sizeof(::fidl_test_handles::wire::Handles) ==
               ::fidl_test_handles::wire::Handles::PrimarySize);
 #endif  // __Fuchsia__
+
+template <>
+struct IsFidlType<::fidl_test_handles::wire::ObjType> : public std::true_type {
+};
 
 }  // namespace fidl

@@ -16,21 +16,19 @@ fidl/{{ .LibraryDots }}/cpp/markers.h
 
   #pragma once
 
-  {{ range .Decls }}
-    {{- if Eq .Kind Kinds.Protocol }}
-      {{ EnsureNamespace . }}
-      {{ .Docs }}
-      class {{ .Name }} final {
-        {{ .Name }}() = delete;
-      public:
-        {{- range .Methods }}
-          {{- .Docs }}
-          class {{ .Marker.Self }} final {
-            {{ .Marker.Self }}() = delete;
-          };
-        {{- end }}
-      };
-    {{- end }}
+  {{ range .Protocols }}
+    {{ EnsureNamespace . }}
+    {{ .Docs }}
+    class {{ .Name }} final {
+      {{ .Name }}() = delete;
+    public:
+      {{- range .Methods }}
+        {{- .Docs }}
+        class {{ .Marker.Self }} final {
+          {{ .Marker.Self }}() = delete;
+        };
+      {{- end }}
+    };
   {{- end }}
   {{ EndOfFile }}
 {{ end }}

@@ -34,49 +34,37 @@ fidl/{{ .LibraryDots }}/cpp/wire_messaging.h
   {{ end -}}
 
 
-  {{- range .Decls }}
-    {{ if Eq .Kind Kinds.Protocol -}}
-      {{ $protocol := . }}
-      {{- range $transport, $_ := .Transports }}
-        {{- if eq $transport "Channel" -}}
-          {{ template "Protocol:ForwardDeclaration:MessagingHeader" $protocol }}
-        {{- end }}
-      {{- end }}
-    {{ end }}
-    {{ if Eq .Kind Kinds.Service }}
-      {{ template "Service:ForwardDeclaration:MessagingHeader" . }}
-    {{- end }}
+  {{- range (call .ProtocolsForTransport "Channel") }}
+    {{ template "Protocol:ForwardDeclaration:MessagingHeader" . }}
+  {{- end }}
+  {{- range .Services }}
+    {{ template "Service:ForwardDeclaration:MessagingHeader" . }}
   {{- end }}
 
-  {{- range .Decls }}
-    {{- if Eq .Kind Kinds.Protocol -}}{{ $protocol := . }}
-    {{- range $transport, $_ := .Transports }}{{- if eq $transport "Channel" -}}
-    {{ template "Protocol:MessagingHeader" $protocol }}
-    {{- end }}{{ end }}{{- end }}
-    {{- if Eq .Kind Kinds.Service }}{{ template "Service:MessagingHeader" . }}{{- end }}
+  {{- range (call .ProtocolsForTransport "Channel") }}
+    {{ template "Protocol:MessagingHeader" . }}
+  {{- end }}
+  {{- range .Services }}
+    {{ template "Service:MessagingHeader" . }}
   {{- end }}
 
   {{ EnsureNamespace "fidl" }}
 
-  {{- range .Decls }}
-  {{- if Eq .Kind Kinds.Protocol -}}{{ $protocol := . }}
-  {{- range $transport, $_ := .Transports }}{{- if eq $transport "Channel" -}}
-  {{ template "Protocol:Traits:MessagingHeader" $protocol }}
-  {{- end }}{{ end }}{{- end }}
+  {{- range (call .ProtocolsForTransport "Channel") }}
+    {{ template "Protocol:Traits:MessagingHeader" . }}
   {{- end }}
 
-  {{- range .Decls }}
-      {{- if Eq .Kind Kinds.Protocol }}{{ $protocol := . }}
-      {{- range $transport, $_ := .Transports }}{{- if eq $transport "Channel" -}}
-          {{- range $protocol.TwoWayMethods }}
-              {{ template "Method:ResponseContext:MessagingHeader" . }}
-          {{- end }}
-          {{ template "Protocol:ClientImpl:MessagingHeader" $protocol }}
-          {{ "" }}
-          {{ template "Protocol:EventSender:MessagingHeader" $protocol }}
-          {{ "" }}
-      {{- end }}{{ end }}{{ end }}
-  {{- end }}
+  {{- range (call .ProtocolsForTransport "Channel") }}
+    {{- range .TwoWayMethods }}
+      {{ template "Method:ResponseContext:MessagingHeader" . }}
+    {{- end }}
+
+    {{ template "Protocol:ClientImpl:MessagingHeader" . }}
+
+    {{ template "Protocol:EventSender:MessagingHeader" . }}
+
+    {{- end }}
+
   {{ EndOfFile }}
 {{ end }}
 

@@ -211,6 +211,62 @@ type Root struct {
 	Dependencies []fidlgen.LibraryIdentifier
 }
 
+func (r Root) declsOfKind(kind declKind) []Kinded {
+	ds := []Kinded{}
+	for _, d := range r.Decls {
+		if d.Kind() == kind {
+			ds = append(ds, d)
+		}
+	}
+	return ds
+}
+
+func (r Root) Bits() []Kinded {
+	return r.declsOfKind(Kinds.Bits)
+}
+
+func (r Root) Consts() []Kinded {
+	return r.declsOfKind(Kinds.Const)
+}
+
+func (r Root) Enums() []Kinded {
+	return r.declsOfKind(Kinds.Enum)
+}
+
+func (r Root) Protocols() []Kinded {
+	return r.declsOfKind(Kinds.Protocol)
+}
+
+func (r Root) Services() []Kinded {
+	return r.declsOfKind(Kinds.Service)
+}
+
+func (r Root) Structs() []Kinded {
+	return r.declsOfKind(Kinds.Struct)
+}
+
+func (r Root) Tables() []Kinded {
+	return r.declsOfKind(Kinds.Table)
+}
+
+func (r Root) Unions() []Kinded {
+	return r.declsOfKind(Kinds.Union)
+}
+
+func (r Root) ProtocolsForTransport() func(string) []Protocol {
+	return func(t string) []Protocol {
+		ps := []Protocol{}
+		for _, k := range r.Protocols() {
+			p := k.(Protocol)
+			_, ok := p.Transports()[t]
+			if ok {
+				ps = append(ps, p)
+			}
+		}
+		return ps
+	}
+}
+
 func (r Root) LegacyIncludeDir() string {
 	return formatLibraryLegacyPath(r.Library) + "/cpp"
 }

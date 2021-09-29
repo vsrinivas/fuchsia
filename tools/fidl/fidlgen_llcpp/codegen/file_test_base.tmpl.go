@@ -18,27 +18,23 @@ fidl/{{ .LibraryDots }}/cpp/wire_test_base.h
 
 #include <{{ .Library | Filename "Header" }}>
 
-{{- range .Decls }}
-  {{- if Eq .Kind Kinds.Protocol }}{{ $protocol := .}}
-  {{- range $transport, $_ := .Transports }}{{- if eq $transport "Channel" }}
-{{ EnsureNamespace $protocol.TestBase }}
+{{- range (call .ProtocolsForTransport "Channel") }}
+  {{ EnsureNamespace .TestBase }}
 
+  class {{ .TestBase.Name }} : public {{ .WireServer }} {
+    public:
+    virtual ~{{ .TestBase.Name }}() { }
+    virtual void NotImplemented_(const std::string& name, ::fidl::CompleterBase& completer) = 0;
 
-class {{ $protocol.TestBase.Name }} : public {{ $protocol.WireServer }} {
-  public:
-  virtual ~{{ $protocol.TestBase.Name }}() { }
-  virtual void NotImplemented_(const std::string& name, ::fidl::CompleterBase& completer) = 0;
-
-  {{- range $protocol.Methods }}
-    {{- if .HasRequest }}
-    virtual void {{ .Name }}(
-        {{ .WireRequestViewArg }} request, {{ .WireCompleterArg }}& _completer) override {
-          NotImplemented_("{{ .Name }}", _completer); }
+    {{- range .Methods }}
+      {{- if .HasRequest }}
+      virtual void {{ .Name }}(
+          {{ .WireRequestViewArg }} request, {{ .WireCompleterArg }}& _completer) override {
+            NotImplemented_("{{ .Name }}", _completer); }
+      {{- end }}
     {{- end }}
-  {{- end }}
-};
-  {{- end }}
-{{- end }}{{ end }}{{ end -}}
+  };
+{{ end -}}
 
 {{ EndOfFile }}
 {{ end }}

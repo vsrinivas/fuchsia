@@ -925,6 +925,7 @@ static_assert(
                LibfuzzerNeedsNonemptyProtocol>) ==
     ::fidl::WireResponse<::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps::
                              LibfuzzerNeedsNonemptyProtocol>::PrimarySize);
+
 }  // namespace fidl
 #ifdef __Fuchsia__
 

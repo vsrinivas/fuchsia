@@ -23,19 +23,6 @@
 
 namespace fidl_test_placementofattributes {
 namespace wire {
-class ExampleXUnion;
-
-class ExampleUnion;
-
-class ExampleTable;
-
-struct ExampleStruct;
-
-enum class ExampleEnum : uint32_t {
-
-  kMember = 1u,
-};
-
 // |ExampleBits| is strict, hence is guaranteed to only contain
 // members defined in the FIDL schema when receiving it in a message.
 // Sending unknown members will fail at runtime.
@@ -134,6 +121,19 @@ constexpr inline void ExampleBits::operator^=(
     const ::fidl_test_placementofattributes::wire::ExampleBits& other) {
   this->value_ ^= other.value_;
 }
+
+enum class ExampleEnum : uint32_t {
+
+  kMember = 1u,
+};
+
+struct ExampleStruct;
+
+class ExampleTable;
+
+class ExampleXUnion;
+
+class ExampleUnion;
 
 extern "C" const fidl_type_t fidl_test_placementofattributes_ExampleStructTable;
 
@@ -269,151 +269,6 @@ class ExampleStruct::DecodedMessage final
   // won't be closed When the object is destroyed. After calling this method,
   // the |DecodedMessage| object should not be used anymore.
   void ReleasePrimaryObject() { ResetBytes(); }
-};
-
-extern "C" const fidl_type_t fidl_test_placementofattributes_ExampleXUnionTable;
-
-class ExampleXUnion {
- public:
-  ExampleXUnion()
-      : ordinal_(::fidl_test_placementofattributes::wire::ExampleXUnion::
-                     Ordinal::Invalid),
-        envelope_{} {}
-
-  ExampleXUnion(const ExampleXUnion&) = default;
-  ExampleXUnion& operator=(const ExampleXUnion&) = default;
-  ExampleXUnion(ExampleXUnion&&) = default;
-  ExampleXUnion& operator=(ExampleXUnion&&) = default;
-
-  enum class Tag : fidl_xunion_tag_t {
-    kVariant = 1,  // 0x1
-    kUnknown = ::std::numeric_limits<::fidl_union_tag_t>::max(),
-  };
-
-  bool has_invalid_tag() const {
-    return ordinal_ == ::fidl_test_placementofattributes::wire::ExampleXUnion::
-                           Ordinal::Invalid;
-  }
-
-  bool is_variant() const {
-    return ordinal_ == ::fidl_test_placementofattributes::wire::ExampleXUnion::
-                           Ordinal::kVariant;
-  }
-  static ExampleXUnion WithVariant(uint32_t val) {
-    ExampleXUnion result;
-    result.set_variant(std::move(val));
-    return result;
-  }
-
-  void set_variant(uint32_t elem) {
-    ordinal_ = ::fidl_test_placementofattributes::wire::ExampleXUnion::Ordinal::
-        kVariant;
-    envelope_.As<uint32_t>().set_data(std::move(elem));
-  }
-
-  uint32_t& mutable_variant() {
-    ZX_ASSERT(ordinal_ == ::fidl_test_placementofattributes::wire::
-                              ExampleXUnion::Ordinal::kVariant);
-    return envelope_.As<uint32_t>().get_data();
-  }
-  const uint32_t& variant() const {
-    ZX_ASSERT(ordinal_ == ::fidl_test_placementofattributes::wire::
-                              ExampleXUnion::Ordinal::kVariant);
-    return envelope_.As<uint32_t>().get_data();
-  }
-  ::fidl_test_placementofattributes::wire::ExampleXUnion::Tag which() const;
-
-  static constexpr const fidl_type_t* Type =
-      &fidl_test_placementofattributes_ExampleXUnionTable;
-  static constexpr uint32_t MaxNumHandles = 0;
-  static constexpr uint32_t PrimarySize = 16;
-  [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 0;
-  static constexpr bool HasPointer = true;
-
- private:
-  enum class Ordinal : fidl_xunion_tag_t {
-    Invalid = 0,
-    kVariant = 1,  // 0x1
-  };
-
-  static void SizeAndOffsetAssertionHelper();
-  ::fidl_test_placementofattributes::wire::ExampleXUnion::Ordinal ordinal_;
-  FIDL_ALIGNDECL
-  ::fidl::UntypedEnvelope envelope_;
-};
-
-extern "C" const fidl_type_t fidl_test_placementofattributes_ExampleUnionTable;
-
-class ExampleUnion {
- public:
-  ExampleUnion()
-      : ordinal_(::fidl_test_placementofattributes::wire::ExampleUnion::
-                     Ordinal::Invalid),
-        envelope_{} {}
-
-  ExampleUnion(const ExampleUnion&) = default;
-  ExampleUnion& operator=(const ExampleUnion&) = default;
-  ExampleUnion(ExampleUnion&&) = default;
-  ExampleUnion& operator=(ExampleUnion&&) = default;
-
-  enum class Tag : fidl_xunion_tag_t {
-    kVariant = 1,  // 0x1
-  };
-
-  bool has_invalid_tag() const {
-    return ordinal_ == ::fidl_test_placementofattributes::wire::ExampleUnion::
-                           Ordinal::Invalid;
-  }
-
-  bool is_variant() const {
-    return ordinal_ == ::fidl_test_placementofattributes::wire::ExampleUnion::
-                           Ordinal::kVariant;
-  }
-  static ExampleUnion WithVariant(uint32_t val) {
-    ExampleUnion result;
-    result.set_variant(std::move(val));
-    return result;
-  }
-
-  void set_variant(uint32_t elem) {
-    ordinal_ = ::fidl_test_placementofattributes::wire::ExampleUnion::Ordinal::
-        kVariant;
-    envelope_.As<uint32_t>().set_data(std::move(elem));
-  }
-
-  uint32_t& mutable_variant() {
-    ZX_ASSERT(ordinal_ == ::fidl_test_placementofattributes::wire::
-                              ExampleUnion::Ordinal::kVariant);
-    return envelope_.As<uint32_t>().get_data();
-  }
-  const uint32_t& variant() const {
-    ZX_ASSERT(ordinal_ == ::fidl_test_placementofattributes::wire::
-                              ExampleUnion::Ordinal::kVariant);
-    return envelope_.As<uint32_t>().get_data();
-  }
-  ::fidl_test_placementofattributes::wire::ExampleUnion::Tag which() const {
-    ZX_ASSERT(!has_invalid_tag());
-    return static_cast<
-        ::fidl_test_placementofattributes::wire::ExampleUnion::Tag>(ordinal_);
-  }
-
-  static constexpr const fidl_type_t* Type =
-      &fidl_test_placementofattributes_ExampleUnionTable;
-  static constexpr uint32_t MaxNumHandles = 0;
-  static constexpr uint32_t PrimarySize = 16;
-  [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 0;
-  static constexpr bool HasPointer = true;
-
- private:
-  enum class Ordinal : fidl_xunion_tag_t {
-    Invalid = 0,
-    kVariant = 1,  // 0x1
-  };
-
-  static void SizeAndOffsetAssertionHelper();
-  ::fidl_test_placementofattributes::wire::ExampleUnion::Ordinal ordinal_;
-  FIDL_ALIGNDECL
-  ::fidl::UntypedEnvelope envelope_;
 };
 
 extern "C" const fidl_type_t fidl_test_placementofattributes_ExampleTableTable;
@@ -640,11 +495,187 @@ class ExampleTable::DecodedMessage final
   void ReleasePrimaryObject() { ResetBytes(); }
 };
 
+extern "C" const fidl_type_t fidl_test_placementofattributes_ExampleXUnionTable;
+
+class ExampleXUnion {
+ public:
+  ExampleXUnion()
+      : ordinal_(::fidl_test_placementofattributes::wire::ExampleXUnion::
+                     Ordinal::Invalid),
+        envelope_{} {}
+
+  ExampleXUnion(const ExampleXUnion&) = default;
+  ExampleXUnion& operator=(const ExampleXUnion&) = default;
+  ExampleXUnion(ExampleXUnion&&) = default;
+  ExampleXUnion& operator=(ExampleXUnion&&) = default;
+
+  enum class Tag : fidl_xunion_tag_t {
+    kVariant = 1,  // 0x1
+    kUnknown = ::std::numeric_limits<::fidl_union_tag_t>::max(),
+  };
+
+  bool has_invalid_tag() const {
+    return ordinal_ == ::fidl_test_placementofattributes::wire::ExampleXUnion::
+                           Ordinal::Invalid;
+  }
+
+  bool is_variant() const {
+    return ordinal_ == ::fidl_test_placementofattributes::wire::ExampleXUnion::
+                           Ordinal::kVariant;
+  }
+  static ExampleXUnion WithVariant(uint32_t val) {
+    ExampleXUnion result;
+    result.set_variant(std::move(val));
+    return result;
+  }
+
+  void set_variant(uint32_t elem) {
+    ordinal_ = ::fidl_test_placementofattributes::wire::ExampleXUnion::Ordinal::
+        kVariant;
+    envelope_.As<uint32_t>().set_data(std::move(elem));
+  }
+
+  uint32_t& mutable_variant() {
+    ZX_ASSERT(ordinal_ == ::fidl_test_placementofattributes::wire::
+                              ExampleXUnion::Ordinal::kVariant);
+    return envelope_.As<uint32_t>().get_data();
+  }
+  const uint32_t& variant() const {
+    ZX_ASSERT(ordinal_ == ::fidl_test_placementofattributes::wire::
+                              ExampleXUnion::Ordinal::kVariant);
+    return envelope_.As<uint32_t>().get_data();
+  }
+  ::fidl_test_placementofattributes::wire::ExampleXUnion::Tag which() const;
+
+  static constexpr const fidl_type_t* Type =
+      &fidl_test_placementofattributes_ExampleXUnionTable;
+  static constexpr uint32_t MaxNumHandles = 0;
+  static constexpr uint32_t PrimarySize = 16;
+  [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 0;
+  static constexpr bool HasPointer = true;
+
+ private:
+  enum class Ordinal : fidl_xunion_tag_t {
+    Invalid = 0,
+    kVariant = 1,  // 0x1
+  };
+
+  static void SizeAndOffsetAssertionHelper();
+  ::fidl_test_placementofattributes::wire::ExampleXUnion::Ordinal ordinal_;
+  FIDL_ALIGNDECL
+  ::fidl::UntypedEnvelope envelope_;
+};
+
+extern "C" const fidl_type_t fidl_test_placementofattributes_ExampleUnionTable;
+
+class ExampleUnion {
+ public:
+  ExampleUnion()
+      : ordinal_(::fidl_test_placementofattributes::wire::ExampleUnion::
+                     Ordinal::Invalid),
+        envelope_{} {}
+
+  ExampleUnion(const ExampleUnion&) = default;
+  ExampleUnion& operator=(const ExampleUnion&) = default;
+  ExampleUnion(ExampleUnion&&) = default;
+  ExampleUnion& operator=(ExampleUnion&&) = default;
+
+  enum class Tag : fidl_xunion_tag_t {
+    kVariant = 1,  // 0x1
+  };
+
+  bool has_invalid_tag() const {
+    return ordinal_ == ::fidl_test_placementofattributes::wire::ExampleUnion::
+                           Ordinal::Invalid;
+  }
+
+  bool is_variant() const {
+    return ordinal_ == ::fidl_test_placementofattributes::wire::ExampleUnion::
+                           Ordinal::kVariant;
+  }
+  static ExampleUnion WithVariant(uint32_t val) {
+    ExampleUnion result;
+    result.set_variant(std::move(val));
+    return result;
+  }
+
+  void set_variant(uint32_t elem) {
+    ordinal_ = ::fidl_test_placementofattributes::wire::ExampleUnion::Ordinal::
+        kVariant;
+    envelope_.As<uint32_t>().set_data(std::move(elem));
+  }
+
+  uint32_t& mutable_variant() {
+    ZX_ASSERT(ordinal_ == ::fidl_test_placementofattributes::wire::
+                              ExampleUnion::Ordinal::kVariant);
+    return envelope_.As<uint32_t>().get_data();
+  }
+  const uint32_t& variant() const {
+    ZX_ASSERT(ordinal_ == ::fidl_test_placementofattributes::wire::
+                              ExampleUnion::Ordinal::kVariant);
+    return envelope_.As<uint32_t>().get_data();
+  }
+  ::fidl_test_placementofattributes::wire::ExampleUnion::Tag which() const {
+    ZX_ASSERT(!has_invalid_tag());
+    return static_cast<
+        ::fidl_test_placementofattributes::wire::ExampleUnion::Tag>(ordinal_);
+  }
+
+  static constexpr const fidl_type_t* Type =
+      &fidl_test_placementofattributes_ExampleUnionTable;
+  static constexpr uint32_t MaxNumHandles = 0;
+  static constexpr uint32_t PrimarySize = 16;
+  [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 0;
+  static constexpr bool HasPointer = true;
+
+ private:
+  enum class Ordinal : fidl_xunion_tag_t {
+    Invalid = 0,
+    kVariant = 1,  // 0x1
+  };
+
+  static void SizeAndOffsetAssertionHelper();
+  ::fidl_test_placementofattributes::wire::ExampleUnion::Ordinal ordinal_;
+  FIDL_ALIGNDECL
+  ::fidl::UntypedEnvelope envelope_;
+};
+
 constexpr uint32_t kExampleConst = 0u;
 
 }  // namespace wire
 }  // namespace fidl_test_placementofattributes
 namespace fidl {
+
+template <>
+struct IsFidlType<::fidl_test_placementofattributes::wire::ExampleBits>
+    : public std::true_type {};
+static_assert(std::is_standard_layout_v<
+              ::fidl_test_placementofattributes::wire::ExampleBits>);
+static_assert(sizeof(::fidl_test_placementofattributes::wire::ExampleBits) ==
+              sizeof(uint32_t));
+
+template <>
+struct IsFidlType<::fidl_test_placementofattributes::wire::ExampleStruct>
+    : public std::true_type {};
+template <>
+struct IsStruct<::fidl_test_placementofattributes::wire::ExampleStruct>
+    : public std::true_type {};
+static_assert(std::is_standard_layout_v<
+              ::fidl_test_placementofattributes::wire::ExampleStruct>);
+static_assert(offsetof(::fidl_test_placementofattributes::wire::ExampleStruct,
+                       member) == 0);
+static_assert(
+    sizeof(::fidl_test_placementofattributes::wire::ExampleStruct) ==
+    ::fidl_test_placementofattributes::wire::ExampleStruct::PrimarySize);
+
+template <>
+struct IsFidlType<::fidl_test_placementofattributes::wire::ExampleTable>
+    : public std::true_type {};
+template <>
+struct IsTable<::fidl_test_placementofattributes::wire::ExampleTable>
+    : public std::true_type {};
+static_assert(std::is_standard_layout_v<
+              ::fidl_test_placementofattributes::wire::ExampleTable>);
 
 template <>
 struct IsFidlType<::fidl_test_placementofattributes::wire::ExampleXUnion>
@@ -665,38 +696,7 @@ static_assert(std::is_standard_layout_v<
               ::fidl_test_placementofattributes::wire::ExampleUnion>);
 
 template <>
-struct IsFidlType<::fidl_test_placementofattributes::wire::ExampleTable>
-    : public std::true_type {};
-template <>
-struct IsTable<::fidl_test_placementofattributes::wire::ExampleTable>
-    : public std::true_type {};
-static_assert(std::is_standard_layout_v<
-              ::fidl_test_placementofattributes::wire::ExampleTable>);
-
-template <>
-struct IsFidlType<::fidl_test_placementofattributes::wire::ExampleStruct>
-    : public std::true_type {};
-template <>
-struct IsStruct<::fidl_test_placementofattributes::wire::ExampleStruct>
-    : public std::true_type {};
-static_assert(std::is_standard_layout_v<
-              ::fidl_test_placementofattributes::wire::ExampleStruct>);
-static_assert(offsetof(::fidl_test_placementofattributes::wire::ExampleStruct,
-                       member) == 0);
-static_assert(
-    sizeof(::fidl_test_placementofattributes::wire::ExampleStruct) ==
-    ::fidl_test_placementofattributes::wire::ExampleStruct::PrimarySize);
-
-template <>
 struct IsFidlType<::fidl_test_placementofattributes::wire::ExampleEnum>
     : public std::true_type {};
-
-template <>
-struct IsFidlType<::fidl_test_placementofattributes::wire::ExampleBits>
-    : public std::true_type {};
-static_assert(std::is_standard_layout_v<
-              ::fidl_test_placementofattributes::wire::ExampleBits>);
-static_assert(sizeof(::fidl_test_placementofattributes::wire::ExampleBits) ==
-              sizeof(uint32_t));
 
 }  // namespace fidl
