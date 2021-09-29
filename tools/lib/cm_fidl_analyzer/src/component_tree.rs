@@ -213,7 +213,7 @@ impl NodeEnvironment {
     }
 
     // Defines an environment for the root node with the given `runner_registry` and `debug_registry`.
-    fn new_root(runner_registry: RunnerRegistry, debug_registry: DebugRegistry) -> Self {
+    pub fn new_root(runner_registry: RunnerRegistry, debug_registry: DebugRegistry) -> Self {
         Self { name: None, extends: EnvironmentExtends::None, runner_registry, debug_registry }
     }
 
@@ -388,21 +388,18 @@ impl ComponentTreeBuilder {
     /// consuming the builder. Returns an error if `root_url` or the url of any subsequent
     /// child is not present in the builder's `decls_by_url` map, or if any `ComponentDecl`
     /// in `decls_by_url` contains an invalid `ChildDecl`.
-    pub fn build<T: Into<String>>(mut self, root_url: T) -> BuildTreeResult {
+    pub fn build<T: Into<String>>(
+        mut self,
+        root_url: T,
+        root_environment: NodeEnvironment,
+    ) -> BuildTreeResult {
         let mut tree = ComponentTree { nodes: HashMap::new() };
 
         let root_url = root_url.into();
         match self.decls_by_url.get(&root_url) {
             Some(root_decl) => {
-                let mut root_node = ComponentNode::new(
-                    root_decl.clone(),
-                    root_url,
-                    None,
-                    None,
-                    // TODO(pesk): probably runner_registry and debug_registry should be args
-                    // to this method. What are they derived from?
-                    NodeEnvironment::new_root(RunnerRegistry::default(), DebugRegistry::default()),
-                );
+                let mut root_node =
+                    ComponentNode::new(root_decl.clone(), root_url, None, None, root_environment);
                 self.add_descendants(&mut tree, &mut root_node);
                 tree.nodes.insert(root_node.node_path.clone(), root_node);
                 self.result.tree = Some(tree)
@@ -537,13 +534,17 @@ mod tests {
         }
     }
 
+    fn default_root_environment() -> NodeEnvironment {
+        NodeEnvironment::new_root(RunnerRegistry::default(), DebugRegistry::default())
+    }
+
     // Builds a `ComponentTree` with a single node.
     fn build_single_node_tree() -> BuildTreeResult {
         let root_url = "root_url".to_string();
         let root_decl = new_component_decl(vec![], vec![]);
         let mut decls = HashMap::new();
         decls.insert(root_url.clone(), root_decl.clone());
-        ComponentTreeBuilder::new(decls).build(root_url)
+        ComponentTreeBuilder::new(decls).build(root_url, default_root_environment())
     }
 
     // Builds a `ComponentTree` with 4 nodes and the following structure:
@@ -582,7 +583,7 @@ mod tests {
         decls.insert(bar_url.to_string(), bar_decl.clone());
         decls.insert(baz_url.to_string(), baz_decl.clone());
 
-        ComponentTreeBuilder::new(decls).build(root_url)
+        ComponentTreeBuilder::new(decls).build(root_url, default_root_environment())
     }
 
     // A test ComponentNodeVisitor which just records the path string of each ComponentNode visited.
@@ -674,7 +675,8 @@ mod tests {
         let other_url = "other_url".to_string();
         let mut decls = HashMap::new();
         decls.insert(root_url.clone(), new_component_decl(vec![], vec![]));
-        let build_result = ComponentTreeBuilder::new(decls).build(other_url.clone());
+        let build_result =
+            ComponentTreeBuilder::new(decls).build(other_url.clone(), default_root_environment());
         assert!(build_result.tree.is_none());
         assert_eq!(build_result.errors.len(), 1);
         assert_eq!(
@@ -732,10 +734,28 @@ mod tests {
     }
 
     // Builds a tree with a child node that inherits a named environment from
-    // its parent. Checks that the child node's environment is correctly populated.
+    // its parent. Checks that the root and child nodes' environments are correctly
+    // populated.
     #[test]
     fn build_tree_with_environment() -> Result<(), ComponentTreeError> {
         let root_url = "root_url".to_string();
+        let builtin_runner_name = CapabilityName("builtin_runner".to_string());
+        let builtin_debug_name = CapabilityName("builtin_debug".to_string());
+        let builtin_runner = RunnerRegistration {
+            source_name: builtin_runner_name.clone(),
+            target_name: builtin_runner_name.clone(),
+            source: RegistrationSource::Parent,
+        };
+        let builtin_debug = DebugRegistration::Protocol(DebugProtocolRegistration {
+            source_name: builtin_debug_name.clone(),
+            source: RegistrationSource::Parent,
+            target_name: builtin_debug_name.clone(),
+        });
+        let root_environment = NodeEnvironment::new_root(
+            RunnerRegistry::from_decl(&vec![builtin_runner.clone()]),
+            vec![builtin_debug.clone()].into(),
+        );
+
         let foo_url = "foo_url".to_string();
         let foo_name = "foo".to_string();
         let foo_env_name = "foo_env".to_string();
@@ -768,12 +788,25 @@ mod tests {
         decls.insert(root_url.to_string(), root_decl);
         decls.insert(foo_url.to_string(), foo_decl);
 
-        let build_result = ComponentTreeBuilder::new(decls).build(root_url);
+        let build_result = ComponentTreeBuilder::new(decls).build(root_url, root_environment);
         assert!(build_result.errors.is_empty());
         let tree = build_result.tree.unwrap();
 
-        let foo_node =
-            tree.get_node(&NodePath::new(vec![PartialChildMoniker::new(foo_name, None)]))?;
+        let root_node = tree.get_node(&NodePath::absolute_from_vec(vec![]))?;
+        assert_eq!(root_node.environment().name(), None);
+        assert_eq!(root_node.environment().extends(), &EnvironmentExtends::None);
+        assert!(root_node
+            .environment()
+            .runner_registry()
+            .get_runner(&builtin_runner_name)
+            .is_some());
+        assert!(root_node
+            .environment()
+            .debug_registry()
+            .get_capability(&builtin_debug_name)
+            .is_some());
+
+        let foo_node = tree.get_node(&NodePath::absolute_from_vec(vec![&foo_name]))?;
         assert_eq!(foo_node.environment().name(), Some(foo_env_name).as_deref());
         assert_eq!(foo_node.environment().extends(), &foo_extends.into());
         assert!(foo_node.environment().runner_registry().get_runner(&foo_runner_name).is_some());
@@ -801,7 +834,8 @@ mod tests {
         decls.insert(root_url.to_string(), root_decl);
         decls.insert(foo_url.to_string(), foo_decl);
 
-        let build_result = ComponentTreeBuilder::new(decls).build(root_url);
+        let build_result =
+            ComponentTreeBuilder::new(decls).build(root_url, default_root_environment());
         assert_eq!(build_result.errors.len(), 1);
         assert_eq!(
             build_result.errors[0],

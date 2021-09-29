@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    crate::component_tree::{BuildTreeResult, ComponentTreeBuilder, NodePath},
+    crate::component_tree::{BuildTreeResult, ComponentTreeBuilder, NodeEnvironment, NodePath},
     cm_rust::{
         CapabilityDecl, CapabilityPath, ChildDecl, ComponentDecl, DependencyType, DirectoryDecl,
         ExposeDecl, ExposeDirectoryDecl, ExposeProtocolDecl, ExposeSource, ExposeTarget, OfferDecl,
@@ -13,6 +13,7 @@ use {
     fidl_fuchsia_io2 as fio2,
     fidl_fuchsia_sys2::StartupMode,
     moniker::PartialChildMoniker,
+    routing::environment::{DebugRegistry, RunnerRegistry},
     std::collections::HashMap,
 };
 
@@ -75,7 +76,10 @@ pub fn build_two_node_tree(
     decls.insert(root_url.clone(), root_decl.clone());
     decls.insert(child_url, child_decl.clone());
 
-    ComponentTreeBuilder::new(decls).build(root_url)
+    ComponentTreeBuilder::new(decls).build(
+        root_url,
+        NodeEnvironment::new_root(RunnerRegistry::default(), DebugRegistry::default()),
+    )
 }
 
 pub fn node_path(parts: Vec<&str>) -> NodePath {

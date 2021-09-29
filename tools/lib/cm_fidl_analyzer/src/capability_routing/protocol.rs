@@ -214,10 +214,11 @@ mod tests {
         super::*,
         crate::{
             capability_routing::{route::RouteSegment, testing::*},
-            component_tree::{BuildTreeResult, ComponentTreeBuilder, NodePath},
+            component_tree::{BuildTreeResult, ComponentTreeBuilder, NodeEnvironment, NodePath},
         },
         cm_rust::{CapabilityPath, DependencyType, ExposeSource, OfferSource, UseSource},
         moniker::PartialChildMoniker,
+        routing::environment::{DebugRegistry, RunnerRegistry},
         std::collections::HashMap,
     };
 
@@ -334,7 +335,10 @@ mod tests {
         decls.insert(bar_url.to_string(), bar_decl.clone());
         decls.insert(baz_url.to_string(), baz_decl.clone());
 
-        ComponentTreeBuilder::new(decls).build(root_url)
+        ComponentTreeBuilder::new(decls).build(
+            root_url,
+            NodeEnvironment::new_root(RunnerRegistry::default(), DebugRegistry::default()),
+        )
     }
 
     // Checks that `ProtocolCapabilityRouteVerifier::verify_route()` accepts a valid 2-node route.

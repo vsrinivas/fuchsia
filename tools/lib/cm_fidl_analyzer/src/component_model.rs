@@ -5,8 +5,11 @@
 use {
     crate::{
         capability_routing::route::RouteSegment,
-        component_tree::{ComponentNode, ComponentTree, NodeEnvironment, NodePath},
+        component_tree::{
+            ComponentNode, ComponentTree, ComponentTreeBuilder, NodeEnvironment, NodePath,
+        },
     },
+    anyhow::anyhow,
     async_trait::async_trait,
     cm_rust::{
         CapabilityDecl, CapabilityName, CapabilityPath, CollectionDecl, ComponentDecl, ExposeDecl,
@@ -74,33 +77,86 @@ impl AnalyzerModelError {
 }
 
 /// Builds a `ComponentModelForAnalyzer` from a `ComponentTree` and a `RuntimeConfig`.
-pub struct ModelBuilderForAnalyzer {}
+pub struct ModelBuilderForAnalyzer {
+    default_root_url: String,
+}
+
+pub struct BuildModelResult {
+    pub model: Option<Arc<ComponentModelForAnalyzer>>,
+    pub errors: Vec<anyhow::Error>,
+}
+
+impl BuildModelResult {
+    fn new() -> Self {
+        Self { model: None, errors: Vec::new() }
+    }
+}
 
 impl ModelBuilderForAnalyzer {
-    pub fn new() -> Self {
-        Self {}
+    pub fn new(default_root_url: impl Into<String>) -> Self {
+        Self { default_root_url: default_root_url.into() }
     }
 
     pub async fn build(
         self,
-        tree: ComponentTree,
+        decls_by_url: HashMap<String, ComponentDecl>,
         runtime_config: Arc<RuntimeConfig>,
-    ) -> anyhow::Result<Arc<ComponentModelForAnalyzer>> {
-        let mut model = ComponentModelForAnalyzer {
-            top_instance: TopInstanceForAnalyzer::new(
-                runtime_config.namespace_capabilities.clone(),
-                runtime_config.builtin_capabilities.clone(),
-            ),
-            instances: HashMap::new(),
-            policy_checker: GlobalPolicyChecker::new(Arc::clone(&runtime_config)),
-            component_id_index: Arc::new(ComponentIdIndex::default()),
+        component_id_index: Arc<ComponentIdIndex>,
+    ) -> BuildModelResult {
+        let mut result = BuildModelResult::new();
+
+        let root_url: String = match &runtime_config.root_component_url {
+            Some(url) => url.clone().into(),
+            None => self.default_root_url.clone().into(),
         };
-        if let Some(ref index_path) = runtime_config.component_id_index_path {
-            model.component_id_index = Arc::new(ComponentIdIndex::new(index_path).await?);
+        let build_tree_result = ComponentTreeBuilder::new(decls_by_url)
+            .build(root_url, self.build_root_environment(&runtime_config));
+
+        result.errors = build_tree_result
+            .errors
+            .into_iter()
+            .map(|err| anyhow!("error building component instance tree: {}", err))
+            .collect();
+
+        if let Some(tree) = build_tree_result.tree {
+            let mut model = ComponentModelForAnalyzer {
+                top_instance: TopInstanceForAnalyzer::new(
+                    runtime_config.namespace_capabilities.clone(),
+                    runtime_config.builtin_capabilities.clone(),
+                ),
+                instances: HashMap::new(),
+                policy_checker: GlobalPolicyChecker::new(Arc::clone(&runtime_config)),
+                component_id_index,
+            };
+
+            match tree.get_root_node() {
+                Ok(root) => {
+                    if let Err(err) = self.build_realm(root, &tree, &mut model) {
+                        result.errors.push(anyhow!(
+                            "failed to build component model from instance tree: {}",
+                            err
+                        ));
+                        return result;
+                    }
+                    result.model = Some(Arc::new(model));
+                }
+                Err(err) => {
+                    result.errors.push(anyhow!(
+                        "failed to retrieve root node from component instance tree: {}",
+                        err
+                    ));
+                    return result;
+                }
+            }
         }
-        let root = tree.get_root_node()?;
-        self.build_realm(root, &tree, &mut model)?;
-        Ok(Arc::new(model))
+
+        result
+    }
+
+    fn build_root_environment(&self, _runtime_config: &Arc<RuntimeConfig>) -> NodeEnvironment {
+        // TODO(https://fxbug.dev/61861): Populate the root environment with appropriate runners,
+        // resolvers, and debug capabilities based on the runtime config.
+        NodeEnvironment::new_root(RunnerRegistry::default(), DebugRegistry::default())
     }
 
     fn build_realm(
@@ -691,7 +747,7 @@ impl EnvironmentInterface<ComponentInstanceForAnalyzer> for EnvironmentForAnalyz
 #[cfg(test)]
 mod tests {
     use {
-        super::*, crate::capability_routing::testing::build_two_node_tree, anyhow::Result,
+        super::*, crate::capability_routing::testing::*, anyhow::Result,
         futures::executor::block_on,
     };
 
@@ -699,10 +755,32 @@ mod tests {
     // each of the 2 resulting component instances, and tests their public methods.
     #[test]
     fn build_model() -> Result<()> {
-        let tree =
-            build_two_node_tree(vec![], vec![], vec![], vec![], vec![], vec![]).tree.unwrap();
+        let root_url = "root_url".to_string();
+        let child_url = "child_url".to_string();
+        let child_name = "child".to_string();
+
+        let root_decl = new_component_decl(
+            vec![],
+            vec![],
+            vec![],
+            vec![],
+            vec![new_child_decl(&child_name, &child_url)],
+        );
+        let child_decl = new_component_decl(vec![], vec![], vec![], vec![], vec![]);
+
+        let mut decls = HashMap::new();
+        decls.insert(root_url.clone(), root_decl.clone());
+        decls.insert(child_url, child_decl.clone());
+
         let config = Arc::new(RuntimeConfig::default());
-        let model = block_on(async { ModelBuilderForAnalyzer::new().build(tree, config).await })?;
+        let build_model_result = block_on(async {
+            ModelBuilderForAnalyzer::new(root_url.clone())
+                .build(decls, config, Arc::new(ComponentIdIndex::default()))
+                .await
+        });
+        assert_eq!(build_model_result.errors.len(), 0);
+        assert!(build_model_result.model.is_some());
+        let model = build_model_result.model.unwrap();
         assert_eq!(model.len(), 2);
 
         let child_moniker = PartialChildMoniker::new("child".to_string(), None);

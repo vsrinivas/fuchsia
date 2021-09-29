@@ -11,7 +11,7 @@ use {
             AnalyzerModelError, ComponentInstanceForAnalyzer, ComponentModelForAnalyzer,
             ModelBuilderForAnalyzer, RouteMap,
         },
-        component_tree::{ComponentTreeBuilder, NodePath},
+        component_tree::NodePath,
     },
     cm_rust::{
         CapabilityDecl, CapabilityName, CapabilityPath, ChildRef, ComponentDecl, DependencyType,
@@ -31,6 +31,7 @@ use {
     matches::assert_matches,
     moniker::{AbsoluteMoniker, AbsoluteMonikerBase, PartialAbsoluteMoniker},
     routing::{
+        component_id_index::ComponentIdIndex,
         component_instance::ComponentInstanceInterface,
         config::{AllowlistEntry, CapabilityAllowlistKey, RuntimeConfig, SecurityPolicy},
         error::RoutingError,
@@ -127,16 +128,17 @@ impl RoutingTestModelBuilder for RoutingTestBuilderForAnalyzer {
         config.security_policy = security_policy;
 
         config.component_id_index_path = self.component_id_index_path;
+        let component_id_index = match config.component_id_index_path {
+            Some(ref index_path) => ComponentIdIndex::new(index_path)
+                .await
+                .expect(&format!("failed to create component ID index with path {}", index_path)),
+            None => ComponentIdIndex::default(),
+        };
 
-        let tree = ComponentTreeBuilder::new(self.decls_by_url)
-            .build(self.root_url)
-            .tree
-            .expect("failed to build ComponentTree");
-
-        let model = ModelBuilderForAnalyzer::new()
-            .build(tree, Arc::new(config))
-            .await
-            .expect("failed to build ComponentModelForAnalyzer");
+        let build_model_result = ModelBuilderForAnalyzer::new(self.root_url)
+            .build(self.decls_by_url, Arc::new(config), Arc::new(component_id_index))
+            .await;
+        let model = build_model_result.model.expect("failed to build ComponentModelForAnalyzer");
         RoutingTestForAnalyzer { model }
     }
 }

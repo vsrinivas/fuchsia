@@ -11,7 +11,7 @@ use {
         verify::collection::V2ComponentTree,
     },
     anyhow::{anyhow, Context, Result},
-    cm_fidl_analyzer::component_tree::ComponentTreeBuilder,
+    cm_fidl_analyzer::component_tree::{ComponentTreeBuilder, NodeEnvironment},
     cm_rust::{ComponentDecl, FidlIntoNative},
     cm_types::Url,
     fidl::encoding::decode_persistent,
@@ -19,7 +19,10 @@ use {
     fuchsia_url::boot_url::BootUrl,
     lazy_static::lazy_static,
     log::{error, info, warn},
-    routing::config::RuntimeConfig,
+    routing::{
+        config::RuntimeConfig,
+        environment::{DebugRegistry, RunnerRegistry},
+    },
     scrutiny::model::{collector::DataCollector, model::DataModel},
     std::{collections::HashMap, convert::TryFrom, sync::Arc},
 };
@@ -119,7 +122,10 @@ impl DataCollector for V2ComponentTreeDataCollector {
             root_url.as_str(),
         );
 
-        let build_result = ComponentTreeBuilder::new(decls_by_url).build(root_url);
+        let build_result = ComponentTreeBuilder::new(decls_by_url).build(
+            root_url,
+            NodeEnvironment::new_root(RunnerRegistry::default(), DebugRegistry::default()),
+        );
 
         for error in build_result.errors.iter() {
             warn!("V2ComponentTreeDataCollector: {}", error);

@@ -638,7 +638,7 @@ mod tests {
         anyhow::{anyhow, Result},
         cm_fidl_analyzer::{
             capability_routing::route::RouteSegment,
-            component_tree::{ComponentTreeBuilder, NodePath},
+            component_tree::{ComponentTreeBuilder, NodeEnvironment, NodePath},
         },
         cm_rust::{
             CapabilityName, CapabilityPath, CapabilityTypeName, ChildDecl, ComponentDecl,
@@ -648,6 +648,7 @@ mod tests {
         },
         fidl_fuchsia_io2 as fio2, fidl_fuchsia_sys2 as fsys,
         maplit::{hashmap, hashset},
+        routing::environment::{DebugRegistry, RunnerRegistry},
         scrutiny::prelude::{DataController, DataModel},
         scrutiny_testing::fake::fake_data_model,
         serde_json::json,
@@ -873,7 +874,10 @@ mod tests {
                 ..ComponentDecl::default()
             },
         })
-        .build("root_url".to_string());
+        .build(
+            "root_url".to_string(),
+            NodeEnvironment::new_root(RunnerRegistry::default(), DebugRegistry::default()),
+        );
         let tree = build_tree_result.tree.ok_or(anyhow!("Failed to build component tree"))?;
         let deps = hashset! {};
         model.set(V2ComponentTree::new(deps, tree, build_tree_result.errors))?;
