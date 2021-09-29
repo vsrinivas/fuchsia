@@ -53,5 +53,5 @@ as a member by editing the [OWNERS] file of the `/docs/go/` directory.
 [redirects-file]: https://cs.opensource.google/fuchsia/fuchsia/+/main:docs/go/_redirects.yaml
 [RFC-0125]: /docs/contribute/governance/rfcs/0125_shortlink_fuchsia_dev.md
 [rubric]: /docs/contribute/docs/shortlinks/rubric.md
-[OWNERS]: https://ci.android.com/edit?repo=fuchsia/fuchsia/main&file=/docs/go/OWNERS
+[OWNERS]: https://ci.android.com/edit?repo=fuchsia/fuchsia/main&file=docs/go/OWNERS
 [OWNERS-cs]: https://cs.opensource.google/fuchsia/fuchsia/+/main:docs/go/OWNERS
