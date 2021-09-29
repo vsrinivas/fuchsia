@@ -13,6 +13,7 @@ use crate::fs::fuchsia::RemoteFs;
 use crate::fs::tmpfs::TmpFs;
 use crate::fs::*;
 use crate::mm::syscalls::sys_mmap;
+use crate::signals::SignalActions;
 use crate::syscalls::SyscallContext;
 use crate::syscalls::SyscallResult;
 use crate::task::*;
@@ -58,6 +59,7 @@ pub fn create_kernel_and_task_with_fs(fs: Arc<FsContext>) -> (Arc<Kernel>, TaskO
         0,
         FdTable::new(),
         fs,
+        SignalActions::default(),
         Credentials::default(),
         None,
     )
@@ -76,6 +78,7 @@ pub fn create_task(kernel: &Arc<Kernel>, task_name: &str) -> TaskOwner {
         0,
         FdTable::new(),
         create_pkgfs(),
+        SignalActions::default(),
         Credentials::default(),
         None,
     )

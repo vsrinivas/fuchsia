@@ -76,6 +76,9 @@ pub struct Task {
     // See https://man7.org/linux/man-pages/man2/set_tid_address.2.html
     pub clear_child_tid: Mutex<UserRef<pid_t>>,
 
+    /// The signal actions that are registered for this task.
+    pub signal_actions: Arc<SignalActions>,
+
     // See https://man7.org/linux/man-pages/man2/sigaltstack.2.html
     pub signal_stack: Mutex<Option<sigaltstack_t>>,
 
@@ -135,6 +138,7 @@ impl Task {
         files: Arc<FdTable>,
         mm: Arc<MemoryManager>,
         fs: Arc<FsContext>,
+        signal_actions: Arc<SignalActions>,
         creds: Credentials,
         sjc: ShellJobControl,
         exit_signal: Option<Signal>,
@@ -154,6 +158,7 @@ impl Task {
                 creds: RwLock::new(creds),
                 shell_job_control: sjc,
                 clear_child_tid: Mutex::new(UserRef::default()),
+                signal_actions,
                 signal_stack: Mutex::new(None),
                 signal_mask: Mutex::new(sigset_t::default()),
                 saved_signal_mask: Mutex::new(None),
@@ -175,6 +180,7 @@ impl Task {
         parent: pid_t,
         files: Arc<FdTable>,
         fs: Arc<FsContext>,
+        signal_actions: Arc<SignalActions>,
         creds: Credentials,
         exit_signal: Option<Signal>,
     ) -> Result<TaskOwner, Errno> {
@@ -207,6 +213,7 @@ impl Task {
                     .map_err(|status| from_status_like_fdio!(status))?,
             ),
             fs,
+            signal_actions,
             creds,
             ShellJobControl::new(id),
             exit_signal,
@@ -227,6 +234,7 @@ impl Task {
         &self,
         files: Arc<FdTable>,
         fs: Arc<FsContext>,
+        signal_actions: Arc<SignalActions>,
         creds: Credentials,
     ) -> Result<TaskOwner, Errno> {
         let thread = self
@@ -247,6 +255,7 @@ impl Task {
             files,
             Arc::clone(&self.mm),
             fs,
+            signal_actions,
             creds,
             ShellJobControl::new(self.shell_job_control.sid),
             None,
@@ -287,10 +296,15 @@ impl Task {
         let clone_vm = flags & (CLONE_VM as u64) != 0;
         let clone_sighand = flags & (CLONE_SIGHAND as u64) != 0;
 
-        if clone_thread != clone_vm || clone_thread != clone_sighand {
-            not_implemented!(
-                "clone requires CLONE_THREAD, CLONE_VM, and CLONE_SIGHAND to all be set or unset"
-            );
+        if clone_sighand && !clone_vm {
+            return error!(EINVAL);
+        }
+        if clone_thread && !clone_sighand {
+            return error!(EINVAL);
+        }
+
+        if clone_thread != clone_vm {
+            not_implemented!("CLONE_VM without CLONE_THRAED is not implemented");
             return error!(ENOSYS);
         }
 
@@ -307,15 +321,18 @@ impl Task {
         };
 
         let fs = if flags & (CLONE_FS as u64) != 0 { self.fs.clone() } else { self.fs.fork() };
-
         let files =
             if flags & (CLONE_FILES as u64) != 0 { self.files.clone() } else { self.files.fork() };
-
+        let signal_actions = if flags & (CLONE_SIGHAND as u64) != 0 {
+            self.signal_actions.clone()
+        } else {
+            self.signal_actions.fork()
+        };
         let creds = self.creds.read().clone();
 
         let child;
         if clone_thread {
-            child = self.create_thread(files, fs, creds)?;
+            child = self.create_thread(files, fs, signal_actions, creds)?;
         } else {
             child = Self::create_process(
                 &self.thread_group.kernel,
@@ -323,6 +340,7 @@ impl Task {
                 self.id,
                 files,
                 fs,
+                signal_actions,
                 creds,
                 child_exit_signal,
             )?;

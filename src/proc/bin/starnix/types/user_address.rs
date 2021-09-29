@@ -18,7 +18,7 @@ pub struct UserAddress(u64);
 impl UserAddress {
     const NULL_PTR: u64 = 0;
 
-    pub fn from(value: u64) -> Self {
+    pub const fn from(value: u64) -> Self {
         UserAddress(value)
     }
 

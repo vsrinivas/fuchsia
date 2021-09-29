@@ -9,7 +9,7 @@ use crate::types::Errno;
 #[macro_export]
 macro_rules! not_implemented {
     ($($arg:tt)+) => (
-        log::warn!(target: "not_implemented", $($arg)+);
+        log::warn!(target: "not_implemented", $($arg)+)
     )
 }
 

@@ -37,6 +37,7 @@ use crate::fs::fuchsia::{create_file_from_handle, RemoteFs};
 use crate::fs::tmpfs::TmpFs;
 use crate::fs::*;
 use crate::signals::signal_handling::*;
+use crate::signals::SignalActions;
 use crate::strace;
 use crate::syscalls::decls::SyscallDecl;
 use crate::syscalls::table::dispatch_syscall;
@@ -336,8 +337,16 @@ fn start_component(
     let files = startup_handles.files;
     let shell_controller = startup_handles.shell_controller;
 
-    let task_owner =
-        Task::create_process(&kernel, &binary_path, 0, files, fs.clone(), credentials, None)?;
+    let task_owner = Task::create_process(
+        &kernel,
+        &binary_path,
+        0,
+        files,
+        fs.clone(),
+        SignalActions::default(),
+        credentials,
+        None,
+    )?;
 
     for mount_spec in mounts_iter {
         let (mount_point, child_fs) =

@@ -7,10 +7,11 @@
 use crate::errno;
 use crate::error;
 use crate::types::*;
-use std::collections::HashMap;
+use parking_lot::RwLock;
 use std::convert::TryFrom;
 use std::fmt;
 use std::hash::{Hash, Hasher};
+use std::sync::Arc;
 use zerocopy::{AsBytes, FromBytes};
 
 /// An unchecked signal represents a signal that has not been through verification, and may
@@ -37,11 +38,7 @@ impl From<u32> for UncheckedSignal {
 /// The `Signal` struct represents a valid signal.
 #[derive(Debug, Copy, Clone)]
 pub struct Signal {
-    /// The signal number, guaranteed to be a value between 1..=NUM_SIGNALS.
-    pub number: u32,
-
-    /// The name of the signal, if one was supplied when the signal was constructed.
-    name: &'static str,
+    number: u32,
 }
 
 impl Hash for Signal {
@@ -59,6 +56,11 @@ impl PartialEq for Signal {
 impl Eq for Signal {}
 
 impl Signal {
+    /// The signal number, guaranteed to be a value between 1..=NUM_SIGNALS.
+    pub fn number(&self) -> u32 {
+        self.number
+    }
+
     /// Returns the bitmask for this signal number.
     pub fn mask(&self) -> u64 {
         1 << (self.number - 1)
@@ -74,44 +76,47 @@ impl Signal {
         self.number >= SIGRTMIN
     }
 
+    /// Returns true if this signal can't be blocked. This means either SIGKILL or SIGSTOP.
+    pub fn is_unblockable(&self) -> bool {
+        self.number == uapi::SIGKILL || self.number == uapi::SIGSTOP
+    }
+
     /// The number of signals, also the highest valid signal number.
     pub const NUM_SIGNALS: u32 = 64;
 
-    pub const SIGHUP: Signal = Signal { number: uapi::SIGHUP, name: "SIGHUP" };
-    pub const SIGINT: Signal = Signal { number: uapi::SIGINT, name: "SIGINT" };
-    pub const SIGQUIT: Signal = Signal { number: uapi::SIGQUIT, name: "SIGQUIT" };
-    pub const SIGILL: Signal = Signal { number: uapi::SIGILL, name: "SIGILL" };
-    pub const SIGTRAP: Signal = Signal { number: uapi::SIGTRAP, name: "SIGTRAP" };
-    pub const SIGABRT: Signal = Signal { number: uapi::SIGABRT, name: "SIGABRT" };
-    pub const SIGIOT: Signal = Signal { number: uapi::SIGIOT, name: "SIGIOT" };
-    pub const SIGBUS: Signal = Signal { number: uapi::SIGBUS, name: "SIGBUS" };
-    pub const SIGFPE: Signal = Signal { number: uapi::SIGFPE, name: "SIGFPE" };
-    pub const SIGKILL: Signal = Signal { number: uapi::SIGKILL, name: "SIGKILL" };
-    pub const SIGUSR1: Signal = Signal { number: uapi::SIGUSR1, name: "SIGUSR1" };
-    pub const SIGSEGV: Signal = Signal { number: uapi::SIGSEGV, name: "SIGSEGV" };
-    pub const SIGUSR2: Signal = Signal { number: uapi::SIGUSR2, name: "SIGUSR2" };
-    pub const SIGPIPE: Signal = Signal { number: uapi::SIGPIPE, name: "SIGPIPE" };
-    pub const SIGALRM: Signal = Signal { number: uapi::SIGALRM, name: "SIGALRM" };
-    pub const SIGTERM: Signal = Signal { number: uapi::SIGTERM, name: "SIGTERM" };
-    pub const SIGSTKFLT: Signal = Signal { number: uapi::SIGSTKFLT, name: "SIGSTKFLT" };
-    pub const SIGCHLD: Signal = Signal { number: uapi::SIGCHLD, name: "SIGCHLD" };
-    pub const SIGCONT: Signal = Signal { number: uapi::SIGCONT, name: "SIGCONT" };
-    pub const SIGSTOP: Signal = Signal { number: uapi::SIGSTOP, name: "SIGSTOP" };
-    pub const SIGTSTP: Signal = Signal { number: uapi::SIGTSTP, name: "SIGTSTP" };
-    pub const SIGTTIN: Signal = Signal { number: uapi::SIGTTIN, name: "SIGTTIN" };
-    pub const SIGTTOU: Signal = Signal { number: uapi::SIGTTOU, name: "SIGTTOU" };
-    pub const SIGURG: Signal = Signal { number: uapi::SIGURG, name: "SIGURG" };
-    pub const SIGXCPU: Signal = Signal { number: uapi::SIGXCPU, name: "SIGXCPU" };
-    pub const SIGXFSZ: Signal = Signal { number: uapi::SIGXFSZ, name: "SIGXFSZ" };
-    pub const SIGVTALRM: Signal = Signal { number: uapi::SIGVTALRM, name: "SIGVTALRM" };
-    pub const SIGPROF: Signal = Signal { number: uapi::SIGPROF, name: "SIGPROF" };
-    pub const SIGWINCH: Signal = Signal { number: uapi::SIGWINCH, name: "SIGWINCH" };
-    pub const SIGIO: Signal = Signal { number: uapi::SIGIO, name: "SIGIO" };
-    pub const SIGPOLL: Signal = Signal { number: uapi::SIGPOLL, name: "SIGPOLL" };
-    pub const SIGPWR: Signal = Signal { number: uapi::SIGPWR, name: "SIGPWR" };
-    pub const SIGSYS: Signal = Signal { number: uapi::SIGSYS, name: "SIGSYS" };
-    pub const SIGUNUSED: Signal = Signal { number: uapi::SIGUNUSED, name: "SIGUNUSED" };
-    pub const SIGRTMIN: Signal = Signal { number: uapi::SIGRTMIN, name: "SIGRTMIN" };
+    pub const SIGHUP: Signal = Signal { number: uapi::SIGHUP };
+    pub const SIGINT: Signal = Signal { number: uapi::SIGINT };
+    pub const SIGQUIT: Signal = Signal { number: uapi::SIGQUIT };
+    pub const SIGILL: Signal = Signal { number: uapi::SIGILL };
+    pub const SIGTRAP: Signal = Signal { number: uapi::SIGTRAP };
+    pub const SIGABRT: Signal = Signal { number: uapi::SIGABRT };
+    pub const SIGIOT: Signal = Signal { number: uapi::SIGIOT };
+    pub const SIGBUS: Signal = Signal { number: uapi::SIGBUS };
+    pub const SIGFPE: Signal = Signal { number: uapi::SIGFPE };
+    pub const SIGKILL: Signal = Signal { number: uapi::SIGKILL };
+    pub const SIGUSR1: Signal = Signal { number: uapi::SIGUSR1 };
+    pub const SIGSEGV: Signal = Signal { number: uapi::SIGSEGV };
+    pub const SIGUSR2: Signal = Signal { number: uapi::SIGUSR2 };
+    pub const SIGPIPE: Signal = Signal { number: uapi::SIGPIPE };
+    pub const SIGALRM: Signal = Signal { number: uapi::SIGALRM };
+    pub const SIGTERM: Signal = Signal { number: uapi::SIGTERM };
+    pub const SIGSTKFLT: Signal = Signal { number: uapi::SIGSTKFLT };
+    pub const SIGCHLD: Signal = Signal { number: uapi::SIGCHLD };
+    pub const SIGCONT: Signal = Signal { number: uapi::SIGCONT };
+    pub const SIGSTOP: Signal = Signal { number: uapi::SIGSTOP };
+    pub const SIGTSTP: Signal = Signal { number: uapi::SIGTSTP };
+    pub const SIGTTIN: Signal = Signal { number: uapi::SIGTTIN };
+    pub const SIGTTOU: Signal = Signal { number: uapi::SIGTTOU };
+    pub const SIGURG: Signal = Signal { number: uapi::SIGURG };
+    pub const SIGXCPU: Signal = Signal { number: uapi::SIGXCPU };
+    pub const SIGXFSZ: Signal = Signal { number: uapi::SIGXFSZ };
+    pub const SIGVTALRM: Signal = Signal { number: uapi::SIGVTALRM };
+    pub const SIGPROF: Signal = Signal { number: uapi::SIGPROF };
+    pub const SIGWINCH: Signal = Signal { number: uapi::SIGWINCH };
+    pub const SIGIO: Signal = Signal { number: uapi::SIGIO };
+    pub const SIGPWR: Signal = Signal { number: uapi::SIGPWR };
+    pub const SIGSYS: Signal = Signal { number: uapi::SIGSYS };
+    pub const SIGRTMIN: Signal = Signal { number: uapi::SIGRTMIN };
 }
 
 impl TryFrom<UncheckedSignal> for Signal {
@@ -119,46 +124,10 @@ impl TryFrom<UncheckedSignal> for Signal {
 
     fn try_from(value: UncheckedSignal) -> Result<Self, Self::Error> {
         let value = u32::try_from(value.0).map_err(|_| errno!(EINVAL))?;
-        match value {
-            uapi::SIGHUP => Ok(Signal::SIGHUP),
-            uapi::SIGINT => Ok(Signal::SIGINT),
-            uapi::SIGQUIT => Ok(Signal::SIGQUIT),
-            uapi::SIGILL => Ok(Signal::SIGILL),
-            uapi::SIGTRAP => Ok(Signal::SIGTRAP),
-            uapi::SIGABRT => Ok(Signal::SIGABRT),
-            // SIGIOT shares the same number as SIGABRT.
-            // uapi::SIGIOT => Ok(Signal::SIGIOT),
-            uapi::SIGBUS => Ok(Signal::SIGBUS),
-            uapi::SIGFPE => Ok(Signal::SIGFPE),
-            uapi::SIGKILL => Ok(Signal::SIGKILL),
-            uapi::SIGUSR1 => Ok(Signal::SIGUSR1),
-            uapi::SIGSEGV => Ok(Signal::SIGSEGV),
-            uapi::SIGUSR2 => Ok(Signal::SIGUSR2),
-            uapi::SIGPIPE => Ok(Signal::SIGPIPE),
-            uapi::SIGALRM => Ok(Signal::SIGALRM),
-            uapi::SIGTERM => Ok(Signal::SIGTERM),
-            uapi::SIGSTKFLT => Ok(Signal::SIGSTKFLT),
-            uapi::SIGCHLD => Ok(Signal::SIGCHLD),
-            uapi::SIGCONT => Ok(Signal::SIGCONT),
-            uapi::SIGSTOP => Ok(Signal::SIGSTOP),
-            uapi::SIGTSTP => Ok(Signal::SIGTSTP),
-            uapi::SIGTTIN => Ok(Signal::SIGTTIN),
-            uapi::SIGTTOU => Ok(Signal::SIGTTOU),
-            uapi::SIGURG => Ok(Signal::SIGURG),
-            uapi::SIGXCPU => Ok(Signal::SIGXCPU),
-            uapi::SIGXFSZ => Ok(Signal::SIGXFSZ),
-            uapi::SIGVTALRM => Ok(Signal::SIGVTALRM),
-            uapi::SIGPROF => Ok(Signal::SIGPROF),
-            uapi::SIGWINCH => Ok(Signal::SIGWINCH),
-            uapi::SIGPOLL => Ok(Signal::SIGPOLL),
-            // SIGIO shares the same number as SIGPOLL
-            // uapi::SIGIO => Ok(Signal::SIGIO),
-            uapi::SIGPWR => Ok(Signal::SIGPWR),
-            uapi::SIGSYS => Ok(Signal::SIGSYS),
-            uapi::SIGRTMIN..=Signal::NUM_SIGNALS => {
-                Ok(Signal { number: u32::from(value), name: "" })
-            }
-            _ => error!(EINVAL),
+        if value >= 1 && value <= Signal::NUM_SIGNALS {
+            Ok(Signal { number: u32::from(value) })
+        } else {
+            error!(EINVAL)
         }
     }
 }
@@ -173,116 +142,78 @@ impl TryFrom<&UncheckedSignal> for Signal {
 
 impl fmt::Display for Signal {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "signal {}: {}", self.number, self.name)
+        if !self.is_real_time() {
+            let name = match self.number {
+                uapi::SIGHUP => "SIGHUP",
+                uapi::SIGINT => "SIGINT",
+                uapi::SIGQUIT => "SIGQUIT",
+                uapi::SIGILL => "SIGILL",
+                uapi::SIGTRAP => "SIGTRAP",
+                uapi::SIGABRT => "SIGABRT",
+                uapi::SIGBUS => "SIGBUS",
+                uapi::SIGFPE => "SIGFPE",
+                uapi::SIGKILL => "SIGKILL",
+                uapi::SIGUSR1 => "SIGUSR1",
+                uapi::SIGSEGV => "SIGSEGV",
+                uapi::SIGUSR2 => "SIGUSR2",
+                uapi::SIGPIPE => "SIGPIPE",
+                uapi::SIGALRM => "SIGALRM",
+                uapi::SIGTERM => "SIGTERM",
+                uapi::SIGSTKFLT => "SIGSTKFLT",
+                uapi::SIGCHLD => "SIGCHLD",
+                uapi::SIGCONT => "SIGCONT",
+                uapi::SIGSTOP => "SIGSTOP",
+                uapi::SIGTSTP => "SIGTSTP",
+                uapi::SIGTTIN => "SIGTTIN",
+                uapi::SIGTTOU => "SIGTTOU",
+                uapi::SIGURG => "SIGURG",
+                uapi::SIGXCPU => "SIGXCPU",
+                uapi::SIGXFSZ => "SIGXFSZ",
+                uapi::SIGVTALRM => "SIGVTALRM",
+                uapi::SIGPROF => "SIGPROF",
+                uapi::SIGWINCH => "SIGWINCH",
+                uapi::SIGIO => "SIGIO",
+                uapi::SIGPWR => "SIGPWR",
+                uapi::SIGSYS => "SIGSYS",
+                _ => panic!("invalid signal number!"),
+            };
+            write!(f, "signal {}: {}", self.number, name)
+        } else {
+            write!(f, "signal {}: SIGRTMIN+{}", self.number, self.number - uapi::SIGRTMIN)
+        }
     }
-}
-
-/// A SignalAction represents the action to take when signal is delivered.
-///
-/// See https://man7.org/linux/man-pages/man7/signal.7.html.
-#[derive(PartialEq, Debug)]
-pub enum SignalAction {
-    /// Execution is resumed if the process is currently stopped.
-    Cont,
-    /// The process is terminated after generating a core dump file.
-    Core,
-    /// The handler in `sigaction_t` is invoked.
-    Custom(sigaction_t),
-    /// The signal is ignored.
-    Ignore,
-    /// The process is suspended.
-    Stop,
-    /// The process is terminated.
-    Term,
 }
 
 /// `SignalActions` contains a `sigaction_t` for each valid signal.
-///
-/// The current action can be retrieved, and signal actions can be updated as follows:
-///   - A signal action can be ignored by calling `ignore`.
-///   - A signal action can be set to a custom handler via `set_handler`.
-///   - A signal action can be restored to its default via `reset`.
 #[derive(Debug)]
 pub struct SignalActions {
-    actions: HashMap<Signal, SignalAction>,
-}
-
-impl Default for SignalActions {
-    /// Returns a collection of `sigaction_t`s that contains default values for each signal.
-    fn default() -> SignalActions {
-        let actions = (SIGHUP..Signal::NUM_SIGNALS).map(|sig_num| {
-            let unchecked = UncheckedSignal::from(sig_num);
-            // This unwrap is safe since all values between SIGHUP and SIGRTMIN are valid signals.
-            let signal = Signal::try_from(unchecked).unwrap();
-            let default_action = default_signal_action(&signal);
-            (signal, default_action)
-        });
-
-        SignalActions { actions: actions.collect() }
-    }
+    actions: RwLock<[sigaction_t; Signal::NUM_SIGNALS as usize + 1]>,
 }
 
 impl SignalActions {
-    /// Returns the `SignalAction` that is currently set for `signal`.
-    pub fn get(&self, signal: &Signal) -> &SignalAction {
+    /// Returns a collection of `sigaction_t`s that contains default values for each signal.
+    pub fn default() -> Arc<SignalActions> {
+        Arc::new(SignalActions {
+            actions: RwLock::new([sigaction_t::default(); Signal::NUM_SIGNALS as usize + 1]),
+        })
+    }
+
+    /// Returns the `sigaction_t` that is currently set for `signal`.
+    pub fn get(&self, signal: Signal) -> sigaction_t {
         // This is safe, since the actions always contain a value for each signal.
-        self.actions.get(signal).unwrap()
+        self.actions.read()[signal.number() as usize]
     }
 
-    /// Resets the action for `signal` to the default for that signal.
-    pub fn reset(&mut self, signal: &Signal) {
-        *self.actions.get_mut(signal).unwrap() = default_signal_action(signal);
+    /// Update the action for `signal`. Returns the previously configured action.
+    pub fn set(&self, signal: Signal, new_action: sigaction_t) -> sigaction_t {
+        let mut actions = self.actions.write();
+        let old_action = actions[signal.number() as usize];
+        actions[signal.number() as usize] = new_action;
+        old_action
     }
 
-    /// Sets the action of `signal` to be `SignalAction::Ignore`.
-    pub fn ignore(&mut self, signal: &Signal) {
-        *self.actions.get_mut(signal).unwrap() = SignalAction::Ignore;
-    }
-
-    /// Sets the action of `signal` to be the provided `handler`.
-    pub fn set_handler(&mut self, signal: &Signal, handler: sigaction_t) {
-        *self.actions.get_mut(signal).unwrap() = SignalAction::Custom(handler);
-    }
-}
-
-// Returns the default action for `signal`.
-//
-// See https://man7.org/linux/man-pages/man7/signal.7.html.
-pub fn default_signal_action(signal: &Signal) -> SignalAction {
-    match signal.number {
-        SIGHUP => SignalAction::Term,
-        SIGINT => SignalAction::Term,
-        SIGQUIT => SignalAction::Core,
-        SIGILL => SignalAction::Core,
-        SIGABRT => SignalAction::Core,
-        SIGFPE => SignalAction::Core,
-        SIGKILL => SignalAction::Term,
-        SIGSEGV => SignalAction::Core,
-        SIGPIPE => SignalAction::Term,
-        SIGALRM => SignalAction::Term,
-        SIGTERM => SignalAction::Term,
-        SIGUSR1 => SignalAction::Term,
-        SIGUSR2 => SignalAction::Term,
-        SIGCHLD => SignalAction::Ignore,
-        SIGCONT => SignalAction::Cont,
-        SIGSTOP => SignalAction::Stop,
-        SIGTSTP => SignalAction::Stop,
-        SIGTTIN => SignalAction::Stop,
-        SIGTTOU => SignalAction::Stop,
-        SIGBUS => SignalAction::Core,
-        SIGPROF => SignalAction::Term,
-        SIGSYS => SignalAction::Core,
-        SIGTRAP => SignalAction::Core,
-        SIGURG => SignalAction::Ignore,
-        SIGVTALRM => SignalAction::Term,
-        SIGXCPU => SignalAction::Core,
-        SIGXFSZ => SignalAction::Core,
-        SIGSTKFLT => SignalAction::Term,
-        SIGIO => SignalAction::Term,
-        SIGPWR => SignalAction::Term,
-        SIGWINCH => SignalAction::Ignore,
-        SIGRTMIN..=Signal::NUM_SIGNALS => SignalAction::Ignore,
-        _ => panic!("Getting default value for invalid signal"),
+    pub fn fork(&self) -> Arc<SignalActions> {
+        Arc::new(SignalActions { actions: RwLock::new(self.actions.read().clone()) })
     }
 }
 
@@ -305,18 +236,23 @@ pub struct siginfo_t {
 }
 
 #[cfg(test)]
-mod tests {
+mod test {
     use super::*;
 
     #[test]
-    fn test_defaults() {
-        assert_eq!(default_signal_action(&Signal::SIGABRT), SignalAction::Core);
-        assert_eq!(default_signal_action(&Signal::SIGPWR), SignalAction::Term);
-        assert_eq!(default_signal_action(&Signal::SIGSEGV), SignalAction::Core);
-        assert_eq!(default_signal_action(&Signal::SIGCONT), SignalAction::Cont);
-        assert_eq!(default_signal_action(&Signal::SIGPOLL), SignalAction::Term);
-        assert_eq!(default_signal_action(&Signal::SIGTTIN), SignalAction::Stop);
-        assert_eq!(default_signal_action(&Signal::SIGCHLD), SignalAction::Ignore);
-        assert_eq!(default_signal_action(&Signal::SIGURG), SignalAction::Ignore);
+    fn test_signal() {
+        assert!(Signal::try_from(UncheckedSignal::from(0)).is_err());
+        assert!(Signal::try_from(UncheckedSignal::from(1)).is_ok());
+        assert!(Signal::try_from(UncheckedSignal::from(Signal::NUM_SIGNALS)).is_ok());
+        assert!(Signal::try_from(UncheckedSignal::from(Signal::NUM_SIGNALS + 1)).is_err());
+        assert!(!Signal::SIGCHLD.is_real_time());
+        assert!(Signal::try_from(UncheckedSignal::from(uapi::SIGRTMIN + 12))
+            .unwrap()
+            .is_real_time());
+        assert_eq!(format!("{}", Signal::SIGPWR), "signal 30: SIGPWR");
+        assert_eq!(
+            format!("{}", Signal::try_from(UncheckedSignal::from(uapi::SIGRTMIN + 10)).unwrap()),
+            "signal 42: SIGRTMIN+10"
+        );
     }
 }

@@ -205,16 +205,16 @@ pub fn sys_getitimer(
     which: u32,
     user_curr_value: UserRef<itimerval>,
 ) -> Result<SyscallResult, Errno> {
-    let signal_state = ctx.task.thread_group.signal_state.read();
+    let itimers = ctx.task.thread_group.itimers.read();
     match which {
         ITIMER_REAL => {
-            ctx.task.mm.write_object(user_curr_value, &signal_state.itimer_real)?;
+            ctx.task.mm.write_object(user_curr_value, &itimers.itimer_real)?;
         }
         ITIMER_VIRTUAL => {
-            ctx.task.mm.write_object(user_curr_value, &signal_state.itimer_virtual)?;
+            ctx.task.mm.write_object(user_curr_value, &itimers.itimer_virtual)?;
         }
         ITIMER_PROF => {
-            ctx.task.mm.write_object(user_curr_value, &signal_state.itimer_prof)?;
+            ctx.task.mm.write_object(user_curr_value, &itimers.itimer_prof)?;
         }
         _ => {
             return error!(EINVAL);
@@ -233,7 +233,7 @@ pub fn sys_setitimer(
     ctx.task.mm.read_object(user_new_value, &mut new_value)?;
 
     let old_value;
-    let mut signal_state = ctx.task.thread_group.signal_state.write();
+    let mut signal_state = ctx.task.thread_group.itimers.write();
 
     match which {
         ITIMER_REAL => {

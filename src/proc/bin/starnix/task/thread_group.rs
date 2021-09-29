@@ -17,7 +17,7 @@ use crate::task::*;
 use crate::types::*;
 
 #[derive(Debug, Default)]
-pub struct SignalState {
+pub struct Itimers {
     /// The ITIMER_REAL timer.
     ///
     /// See <https://linux.die.net/man/2/setitimer>/
@@ -59,13 +59,8 @@ pub struct ThreadGroup {
     /// The tasks in the thread group.
     pub tasks: RwLock<HashSet<pid_t>>,
 
-    /// The signal state for this thread group.
-    pub signal_state: RwLock<SignalState>,
-
-    /// The signal actions that are registered for `tasks`. All `tasks` share the same `sigaction`
-    /// for a given signal.
-    // TODO: Move into signal_state.
-    pub signal_actions: RwLock<SignalActions>,
+    /// The itimers for this thread group.
+    pub itimers: RwLock<Itimers>,
 
     zombie_leader: Mutex<Option<ZombieTask>>,
 
@@ -89,8 +84,7 @@ impl ThreadGroup {
             process,
             leader,
             tasks: RwLock::new(tasks),
-            signal_state: RwLock::new(SignalState::default()),
-            signal_actions: RwLock::new(SignalActions::default()),
+            itimers: RwLock::new(Itimers::default()),
             zombie_leader: Mutex::new(None),
             child_exit_observers: Mutex::default(),
         }

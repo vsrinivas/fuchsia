@@ -32,7 +32,7 @@ pub fn sys_rt_sigaction(
         // Actions can't be set for SIGKILL and SIGSTOP, but the actions for these signals can
         // still be returned in `user_old_action`, so only return early if the intention is to
         // set an action (i.e., the user_action is non-null).
-        if signal == Signal::SIGKILL || signal == Signal::SIGSTOP {
+        if signal.is_unblockable() {
             return error!(EINVAL);
         }
 
@@ -43,17 +43,15 @@ pub fn sys_rt_sigaction(
         None
     };
 
-    let mut signal_actions = ctx.task.thread_group.signal_actions.write();
-    if !user_old_action.is_null() {
-        let existing_signal_action = match signal_actions.get(&signal) {
-            SignalAction::Custom(action) => *action,
-            _ => sigaction_t::default(),
-        };
-        ctx.task.mm.write_object(user_old_action, &existing_signal_action)?;
-    }
+    let signal_actions = &ctx.task.signal_actions;
+    let old_action = if let Some(new_signal_action) = new_signal_action {
+        signal_actions.set(signal, new_signal_action)
+    } else {
+        signal_actions.get(signal)
+    };
 
-    if let Some(new_signal_action) = new_signal_action {
-        signal_actions.set_handler(&signal, new_signal_action);
+    if !user_old_action.is_null() {
+        ctx.task.mm.write_object(user_old_action, &old_action)?;
     }
 
     Ok(SUCCESS)
@@ -577,7 +575,7 @@ mod tests {
             *ctx.task.signal_mask.lock() = original_mask;
         }
 
-        let new_mask: sigset_t = Signal::SIGPOLL.mask();
+        let new_mask: sigset_t = Signal::SIGIO.mask();
         let set = UserRef::<sigset_t>::new(addr);
         ctx.task.mm.write_object(set, &new_mask).expect("failed to set mask");
 
@@ -611,7 +609,7 @@ mod tests {
             *ctx.task.signal_mask.lock() = original_mask;
         }
 
-        let new_mask: sigset_t = Signal::SIGPOLL.mask();
+        let new_mask: sigset_t = Signal::SIGIO.mask();
         let set = UserRef::<sigset_t>::new(addr);
         ctx.task.mm.write_object(set, &new_mask).expect("failed to set mask");
 
@@ -640,7 +638,7 @@ mod tests {
             .write_memory(addr, &[0u8; std::mem::size_of::<sigset_t>() * 2])
             .expect("failed to clear struct");
 
-        let original_mask = Signal::SIGTRAP.mask() | Signal::SIGPOLL.mask();
+        let original_mask = Signal::SIGTRAP.mask() | Signal::SIGIO.mask();
         {
             *ctx.task.signal_mask.lock() = original_mask;
         }
@@ -660,7 +658,7 @@ mod tests {
         let mut old_mask = sigset_t::default();
         ctx.task.mm.read_object(old_set, &mut old_mask).expect("failed to read mask");
         assert_eq!(old_mask, original_mask);
-        assert_eq!(*ctx.task.signal_mask.lock(), Signal::SIGPOLL.mask());
+        assert_eq!(*ctx.task.signal_mask.lock(), Signal::SIGIO.mask());
     }
 
     /// It's ok to call sigprocmask to unblock a signal that is not set.
@@ -674,7 +672,7 @@ mod tests {
             .write_memory(addr, &[0u8; std::mem::size_of::<sigset_t>() * 2])
             .expect("failed to clear struct");
 
-        let original_mask = Signal::SIGPOLL.mask();
+        let original_mask = Signal::SIGIO.mask();
         {
             *ctx.task.signal_mask.lock() = original_mask;
         }
@@ -708,7 +706,7 @@ mod tests {
             .write_memory(addr, &[0u8; std::mem::size_of::<sigset_t>() * 2])
             .expect("failed to clear struct");
 
-        let original_mask = Signal::SIGPOLL.mask();
+        let original_mask = Signal::SIGIO.mask();
         {
             *ctx.task.signal_mask.lock() = original_mask;
         }
@@ -784,11 +782,7 @@ mod tests {
         original_action.sa_mask = 3;
 
         {
-            ctx.task
-                .thread_group
-                .signal_actions
-                .write()
-                .set_handler(&Signal::SIGHUP, original_action.clone());
+            ctx.task.signal_actions.set(Signal::SIGHUP, original_action.clone());
         }
 
         let old_action_ref = UserRef::<sigaction_t>::new(addr);
@@ -834,10 +828,7 @@ mod tests {
             Ok(SUCCESS)
         );
 
-        assert_eq!(
-            ctx.task.thread_group.signal_actions.read().get(&Signal::SIGINT),
-            &SignalAction::Custom(original_action),
-        );
+        assert_eq!(ctx.task.signal_actions.get(Signal::SIGINT), original_action,);
     }
 
     /// A task should be able to signal itself.
@@ -878,7 +869,7 @@ mod tests {
             .write_memory(addr, &[0u8; std::mem::size_of::<sigset_t>() * 2])
             .expect("failed to clear struct");
 
-        let new_mask: sigset_t = Signal::SIGPOLL.mask();
+        let new_mask: sigset_t = Signal::SIGIO.mask();
         let set = UserRef::<sigset_t>::new(addr);
         ctx.task.mm.write_object(set, &new_mask).expect("failed to set mask");
 
@@ -892,21 +883,21 @@ mod tests {
             ),
             Ok(SUCCESS)
         );
-        assert_eq!(sys_kill(&ctx, task_owner.task.id, SIGPOLL.into()), Ok(SUCCESS));
+        assert_eq!(sys_kill(&ctx, task_owner.task.id, SIGIO.into()), Ok(SUCCESS));
 
         {
             let mut scheduler = kernel.scheduler.write();
             let pending_signals = scheduler.get_pending_signals(task_owner.task.id);
-            assert_eq!(pending_signals[&Signal::SIGPOLL], 1);
+            assert_eq!(pending_signals[&Signal::SIGIO], 1);
         }
 
         // A second signal should not increment the number of pending signals.
-        assert_eq!(sys_kill(&ctx, task_owner.task.id, SIGPOLL.into()), Ok(SUCCESS));
+        assert_eq!(sys_kill(&ctx, task_owner.task.id, SIGIO.into()), Ok(SUCCESS));
 
         {
             let mut scheduler = kernel.scheduler.write();
             let pending_signals = scheduler.get_pending_signals(task_owner.task.id);
-            assert_eq!(pending_signals[&Signal::SIGPOLL], 1);
+            assert_eq!(pending_signals[&Signal::SIGIO], 1);
         }
     }
 
@@ -983,7 +974,7 @@ mod tests {
             std::thread::sleep(std::time::Duration::from_millis(10));
         }
 
-        // Signal the suspended task with a signal that is not blocked (only SIGPOLL in this test).
+        // Signal the suspended task with a signal that is not blocked (only SIGIO in this test).
         let _ = sys_kill(&ctx, first_task_id, UncheckedSignal::from(SIGCONT));
 
         // Wait for the sigsuspend to complete.

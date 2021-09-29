@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use crate::not_implemented;
-use crate::signals::{Signal, SignalAction, UncheckedSignal};
+use crate::signals::{Signal, UncheckedSignal};
 use crate::syscalls::SyscallContext;
 use crate::task::{Scheduler, Task};
 use crate::types::*;
@@ -70,7 +70,7 @@ fn misalign_stack_pointer(pointer: u64) -> u64 {
 /// This function stores the state required to restore after the signal handler on the stack.
 // TODO(lindkvist): Honor the flags in `sa_flags`.
 // TODO(lindkvist): Apply `sa_mask` to block signals during the execution of the signal handler.
-pub fn dispatch_signal_handler(ctx: &mut SyscallContext<'_>, signal: &Signal, action: sigaction_t) {
+pub fn dispatch_signal_handler(ctx: &mut SyscallContext<'_>, signal: Signal, action: sigaction_t) {
     let signal_stack_frame = SignalStackFrame::new(ctx.registers, action.sa_restorer.ptr() as u64);
 
     // Determine which stack pointer to use for the signal handler.
@@ -99,7 +99,7 @@ pub fn dispatch_signal_handler(ctx: &mut SyscallContext<'_>, signal: &Signal, ac
         .unwrap();
 
     ctx.registers.rsp = stack_pointer;
-    ctx.registers.rdi = signal.number as u64;
+    ctx.registers.rdi = signal.number() as u64;
     ctx.registers.rip = action.sa_handler.ptr() as u64;
 }
 
@@ -154,7 +154,7 @@ pub fn dequeue_signal(ctx: &mut SyscallContext<'_>) {
     let mut scheduler = task.thread_group.kernel.scheduler.write();
     let signals = scheduler.get_pending_signals(task.id);
 
-    if let Some(unblocked_signal) = signals
+    if let Some(&unblocked_signal) = signals
         .iter()
         // Filter out signals that are blocked.
         .filter(|&(signal, num_signals)| {
@@ -162,29 +162,45 @@ pub fn dequeue_signal(ctx: &mut SyscallContext<'_>) {
         })
         .flat_map(
             // Filter out signals that are present in the map but have a 0 count.
-            |(signal, num_signals)| if *num_signals > 0 { Some(signal.clone()) } else { None },
+            |(signal, num_signals)| if *num_signals > 0 { Some(signal) } else { None },
         )
         .next()
     {
-        let signal_actions = task.thread_group.signal_actions.read();
-        // TODO(lindkvist): Handle default actions correctly.
-        match signal_actions.get(&unblocked_signal) {
-            SignalAction::Cont => {
-                not_implemented!("Haven't implemented signal action Cont");
+        /// Represents the action to take when signal is delivered.
+        ///
+        /// See https://man7.org/linux/man-pages/man7/signal.7.html.
+        #[derive(Debug)]
+        enum SigAct {
+            Ignore,
+            CallHandler,
+            Terminate,
+            CoreDump,
+            Stop,
+            Continue,
+        }
+
+        let sigaction = task.signal_actions.get(unblocked_signal);
+        let action = match sigaction.sa_handler {
+            SIG_DFL => match unblocked_signal.number() {
+                SIGCHLD | SIGURG | SIGWINCH | SIGRTMIN..=Signal::NUM_SIGNALS => SigAct::Ignore,
+                SIGHUP | SIGINT | SIGKILL | SIGPIPE | SIGALRM | SIGTERM | SIGUSR1 | SIGUSR2
+                | SIGPROF | SIGVTALRM | SIGSTKFLT | SIGIO | SIGPWR => SigAct::Terminate,
+                SIGQUIT | SIGILL | SIGABRT | SIGFPE | SIGSEGV | SIGBUS | SIGSYS | SIGTRAP
+                | SIGXCPU | SIGXFSZ => SigAct::CoreDump,
+                SIGSTOP | SIGTSTP | SIGTTIN | SIGTTOU => SigAct::Stop,
+                SIGCONT => SigAct::Continue,
+                _ => panic!("Unknown signal"),
+            },
+            SIG_IGN => SigAct::Ignore,
+            _ => SigAct::CallHandler,
+        };
+        match action {
+            SigAct::CallHandler => {
+                dispatch_signal_handler(ctx, unblocked_signal, sigaction);
             }
-            SignalAction::Core => {
-                not_implemented!("Haven't implemented signal action Core");
-            }
-            SignalAction::Ignore => {}
-            SignalAction::Stop => {
-                not_implemented!("Haven't implemented signal action Stop");
-            }
-            SignalAction::Term => {
-                not_implemented!("Haven't implemented signal action Term");
-            }
-            SignalAction::Custom(action) => {
-                dispatch_signal_handler(ctx, &unblocked_signal, action.clone());
-            }
+
+            SigAct::Ignore => {}
+            _ => not_implemented!("Unimplemented signal action {:?}", action),
         };
         // This unwrap is safe since we checked the signal comes from the signals collection.
         *signals.get_mut(&unblocked_signal).unwrap() -= 1;
