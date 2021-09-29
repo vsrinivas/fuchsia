@@ -41,35 +41,30 @@ impl std::str::FromStr for TimeFormat {
     subcommand,
     name = "log",
     description = "Display logs from a target device",
-    note = "\
-The `--moniker` argument expects a component selector. See this page for
-documentation:
-https://fuchsia.dev/reference/fidl/fuchsia.diagnostics#ComponentSelector.
-
-You may find the `component select moniker` command useful for exploring the topology
-and identifying the selector that matches the component(s) of interest.",
     example = "\
 Dump the most recent logs and stream new ones as they happen:
   $ ffx log
 
 Stream new logs starting from the current time, filtering for severity of at least \"WARN\":
-  $ ffx log --severity warn --from-now
+  $ ffx log --severity warn --since now
 
-Dump all logs from components with a moniker, url, or message containing \"remote-control\" logged
-in the last 5 minutes:
-  $ ffx log --filter remote-control --dump --since \"5m ago\"
-
-Dump all logs from the last 30 minutes logged before 5 minutes ago:
-  $ ffx log --dump --since \"30m ago\" --until \"5m ago\"
-
-Stream logs from components with moniker, url or message that do not include \"sys\":
+Stream logs where the source moniker, component url and message do not include \"sys\":
   $ ffx log --exclude sys
 
-Dump ERROR logs with moniker, url or message containing either \"netstack\" or \"remote-control.cm\",
-but which do not contain \"sys\":
-  $ ffx log --severity error --filter netstack --filter remote-control.cm --exclude sys --dump"
+Stream ERROR logs with source moniker, component url or message containing either
+\"netstack\" or \"remote-control.cm\", but not containing \"sys\":
+  $ ffx log --severity error --filter netstack --filter remote-control.cm --exclude sys
+
+Dump all available logs where the source moniker, component url, or message contains \"remote-control\"
+  $ ffx log --filter remote-control dump
+
+Dump all logs from the last 30 minutes logged before 5 minutes ago:
+  $ ffx log --since \"30m ago\" --until \"5m ago\" dump"
 )]
 pub struct LogCommand {
+    #[argh(subcommand)]
+    pub sub_command: Option<LogSubCommand>,
+
     /// filter for a string in either the message, component or url.
     /// May be repeated.
     #[argh(option)]
@@ -101,29 +96,21 @@ pub struct LogCommand {
     #[argh(switch)]
     pub from_now: bool,
 
-    /// dump a snapshot of logs instead of streaming new ones
-    #[argh(switch)]
-    pub dump: bool,
-
     /// show only logs after a certain time
-    /// valid only with --dump
     #[argh(option, from_str_fn(parse_time))]
     pub since: Option<DateTime<Local>>,
 
     /// show only logs after a certain time (as a monotonic
-    /// timestamp in seconds from the target).
-    /// valid only with --dump
+    /// timestamp: seconds from the target's boot time).
     #[argh(option, from_str_fn(parse_duration))]
     pub since_monotonic: Option<Duration>,
 
     /// show only logs until a certain time
-    /// valid only with --dump
     #[argh(option, from_str_fn(parse_time))]
     pub until: Option<DateTime<Local>>,
 
     /// show only logs until a certain time (as a monotonic
-    /// timestamp in seconds from the target).
-    /// valid only with --dump
+    /// timestamp: seconds since the target's boot time).
     #[argh(option, from_str_fn(parse_duration))]
     pub until_monotonic: Option<Duration>,
 
@@ -151,6 +138,23 @@ pub struct LogCommand {
     #[argh(switch)]
     pub no_symbols: bool,
 }
+
+#[derive(FromArgs, Clone, PartialEq, Debug)]
+#[argh(subcommand)]
+pub enum LogSubCommand {
+    Watch(WatchCommand),
+    Dump(DumpCommand),
+}
+
+#[derive(FromArgs, Clone, PartialEq, Debug)]
+/// Watches for and prints logs from a target. Default if no sub-command is specified.
+#[argh(subcommand, name = "watch")]
+pub struct WatchCommand {}
+
+#[derive(FromArgs, Clone, PartialEq, Debug)]
+/// Dumps all log from a given target's session.
+#[argh(subcommand, name = "dump")]
+pub struct DumpCommand {}
 
 pub fn parse_time(value: &str) -> Result<DateTime<Local>, String> {
     let d = parse_date_string(value, Local::now(), Dialect::Us)

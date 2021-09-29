@@ -11,7 +11,7 @@ use {
     errors::ffx_bail,
     ffx_config::{get, get_sdk},
     ffx_core::ffx_plugin,
-    ffx_log_args::{LogCommand, TimeFormat},
+    ffx_log_args::{LogCommand, LogSubCommand, TimeFormat, WatchCommand},
     ffx_log_data::{EventType, LogData, LogEntry},
     ffx_log_frontend::{exec_log_cmd, LogCommandParameters, LogFormatter},
     ffx_log_utils::symbolizer::is_current_sdk_root_registered,
@@ -417,16 +417,17 @@ pub async fn log_cmd<W: std::io::Write>(
     cmd: LogCommand,
     writer: &mut W,
 ) -> Result<()> {
-    let stream_mode = if cmd.dump {
-        if cmd.from_now {
-            ffx_bail!("--no-dump-recent may not be used in combination with --dump");
-        }
-
+    let sub_command = cmd.sub_command.unwrap_or(LogSubCommand::Watch(WatchCommand {}));
+    let stream_mode = if matches!(sub_command, LogSubCommand::Dump(..)) {
         StreamMode::SnapshotAll
     } else if cmd.from_now {
         StreamMode::Subscribe
     } else {
-        StreamMode::SnapshotRecentThenSubscribe
+        if cmd.since.is_some() {
+            StreamMode::SnapshotAllThenSubscribe
+        } else {
+            StreamMode::SnapshotRecentThenSubscribe
+        }
     };
     let target_info_result = rcs.identify_host().await?;
     let target_info =
@@ -440,38 +441,28 @@ pub async fn log_cmd<W: std::io::Write>(
     };
 
     let nodename = target_info.nodename.context("missing nodename")?;
-    let (from_bound, to_bound) = if cmd.dump {
-        if !(cmd.since.is_none() || cmd.since_monotonic.is_none()) {
-            ffx_bail!("only one of --from or --from-monotonic may be provided at once.");
-        }
-        if !(cmd.until.is_none() || cmd.until_monotonic.is_none()) {
-            ffx_bail!("only one of --to or --to-monotonic may be provided at once.");
-        }
+    if !(cmd.since.is_none() || cmd.since_monotonic.is_none()) {
+        ffx_bail!("only one of --from or --from-monotonic may be provided at once.");
+    }
+    if !(cmd.until.is_none() || cmd.until_monotonic.is_none()) {
+        ffx_bail!("only one of --to or --to-monotonic may be provided at once.");
+    }
 
-        if target_info.boot_timestamp_nanos.is_none()
-            && (cmd.since.is_some() || cmd.until.is_some())
-        {
-            writeln!(
-                writer,
-                "{}target timestamp not available - since/until filters will not be applied.{}",
-                color::Fg(color::Red),
-                style::Reset
-            )?;
-            (None, None)
-        } else {
-            (
-                calculate_monotonic_time(target_boot_time_nanos, cmd.since, cmd.since_monotonic),
-                calculate_monotonic_time(target_boot_time_nanos, cmd.until, cmd.until_monotonic),
-            )
-        }
-    } else if cmd.since.is_some()
-        || cmd.since_monotonic.is_some()
-        || cmd.until.is_some()
-        || cmd.until_monotonic.is_some()
+    let (from_bound, to_bound) = if target_info.boot_timestamp_nanos.is_none()
+        && (cmd.since.is_some() || cmd.until.is_some())
     {
-        ffx_bail!("--since and --until may only be used in combination with --dump.");
-    } else {
+        writeln!(
+            writer,
+            "{}target timestamp not available - since/until filters will not be applied.{}",
+            color::Fg(color::Red),
+            style::Reset
+        )?;
         (None, None)
+    } else {
+        (
+            calculate_monotonic_time(target_boot_time_nanos, cmd.since, cmd.since_monotonic),
+            calculate_monotonic_time(target_boot_time_nanos, cmd.until, cmd.until_monotonic),
+        )
     };
     exec_log_cmd(
         LogCommandParameters {
@@ -497,6 +488,7 @@ mod test {
         super::*,
         diagnostics_data::{LogsDataBuilder, Timestamp},
         errors::ResultExt as _,
+        ffx_log_args::DumpCommand,
         ffx_log_test_utils::{setup_fake_archive_iterator, FakeArchiveIteratorResponse},
         fidl_fuchsia_developer_bridge::{DaemonDiagnosticsStreamParameters, DaemonRequest},
         fidl_fuchsia_developer_remotecontrol::{
@@ -606,16 +598,16 @@ mod test {
             show_metadata: false,
             from_now: false,
             no_symbols: false,
-            dump: false,
             since: None,
             since_monotonic: None,
             until: None,
             until_monotonic: None,
+            sub_command: None,
         }
     }
 
     fn empty_dump_command() -> LogCommand {
-        LogCommand { dump: true, ..empty_log_command() }
+        LogCommand { sub_command: Some(LogSubCommand::Dump(DumpCommand {})), ..empty_log_command() }
     }
 
     fn logs_data_builder() -> LogsDataBuilder {
