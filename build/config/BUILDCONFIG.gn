@@ -2794,3 +2794,38 @@ if (is_fuchsia && zircon_toolchain == false) {
     }
   }
 }
+
+# Clippy needs access to all the direct and transitive dependencies of a target.
+# To assemble these, we record the path to each library and proc_macro's output,
+# which will later get picked up by the clippy targets.
+template("rust_library") {
+  rust_library(target_name) {
+    forward_variables_from(invoker, "*")
+    if (!defined(output_dir)) {
+      output_dir = get_label_info(":$target_name", "target_out_dir")
+    }
+    _rlib = rebase_path("$output_dir/lib${output_name}.rlib", root_build_dir)
+    _searchdir = rebase_path(output_dir, root_build_dir)
+    metadata = {
+      rlib = [ "--extern=$crate_name=$_rlib" ]
+      searchdir = [ "-Ldependency=$_searchdir" ]
+      rust_barrier = []
+    }
+  }
+}
+template("rust_proc_macro") {
+  rust_proc_macro(target_name) {
+    forward_variables_from(invoker, "*", [ "crate_name" ])
+    forward_variables_from(invoker, [ "crate_name" ])
+    if (!defined(output_dir)) {
+      output_dir = get_label_info(":$target_name", "target_out_dir")
+    }
+    _rlib = rebase_path("$output_dir/lib${output_name}.so", root_build_dir)
+    _searchdir = rebase_path(output_dir, root_build_dir)
+    metadata = {
+      rlib = [ "--extern=$crate_name=$_rlib" ]
+      searchdir = [ "-Ldependency=$_searchdir" ]
+      rust_barrier = []
+    }
+  }
+}

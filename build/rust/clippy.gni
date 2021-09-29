@@ -1,0 +1,83 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+import("//build/rust/config.gni")
+
+# Defines a clippy target corresponding to a given `rustc_{library/binary/test}` target.
+# This will emit json lints to the target's gen directory in a `target_name.clippy` file.
+template("clippy") {
+  _output = "$target_gen_dir/$target_name"
+
+  # These generated files collect the rlibs of this targets direct and transitive dependencies
+  generated_file("$target_name.depsfile") {
+    forward_variables_from(invoker, [ "deps" ])
+
+    testonly = true
+    outputs = [ "$_output.deps" ]
+    data_keys = [ "rlib" ]
+    walk_keys = [ "rust_barrier" ]
+  }
+  generated_file("$target_name.transdepsfile") {
+    forward_variables_from(invoker, [ "deps" ])
+
+    testonly = true
+    outputs = [ "$_output.transdeps" ]
+    data_keys = [ "searchdir" ]
+  }
+
+  action(target_name) {
+    forward_variables_from(invoker,
+                           [
+                             "crate_type",
+                             "source_root",
+                             "deps",
+                             "sources",
+                           ])
+
+    testonly = true
+
+    if (!defined(deps)) {
+      deps = []
+    }
+    deps += [
+      ":${invoker.target_name}.depsfile",
+      ":${invoker.target_name}.transdepsfile",
+    ]
+    if (defined(invoker.non_rust_deps)) {
+      deps += invoker.non_rust_deps
+    }
+
+    inputs = [
+      "$_output.deps",
+      "$_output.transdeps",
+    ]
+    script = "//build/rust/clippy_wrapper.sh"
+    output = _output
+    outputs = [ output ]
+    depfile = "$output.d"
+
+    edition = "2018"
+    if (defined(invoker.edition)) {
+      edition = "${invoker.edition}"
+    }
+
+    level = "A"
+    if (clippy_warn) {
+      level = "W"
+    }
+
+    args = [
+      rebase_path(_output, root_build_dir),
+      "$rebased_rustc_prefix/clippy-driver",
+      rebase_path(source_root, root_build_dir),
+      "-${level}clippy::all",
+      "--target=$rust_target",
+      "--edition=$edition",
+      "--cfg=rust_panic=\"${rust_panic}\"",
+      "--sysroot=$rebased_rustc_prefix/../",
+      "--crate-type=$crate_type",
+      "-Ldependency=host_x64",  # Needed for proc macros
+    ]
+    args += invoker.rustflags
+  }
+}

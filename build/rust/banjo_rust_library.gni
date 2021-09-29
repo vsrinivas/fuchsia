@@ -30,6 +30,7 @@ template("banjo_rust_library") {
     name = underscore_name
     version = "0.1.0"
     edition = "2018"
+    disable_clippy = true
     forward_variables_from(invoker, [ "testonly" ])
     deps = [
       "//src/lib/fuchsia-async",

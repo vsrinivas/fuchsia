@@ -26,7 +26,7 @@ rustc_binary("bin") {
 
 rustc_library("lib") {
   visibility = [
-    ":bin",
+    ":*",
     "//src/sys/pkg/lib/fuchsia-pkg-testing:*",
   ]
   name = "pkg_local_mirror"

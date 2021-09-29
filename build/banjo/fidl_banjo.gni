@@ -292,6 +292,7 @@ template("_fidl_banjo_rust") {
     name = rust_library_name
     version = "0.1.0"
     edition = "2018"
+    disable_clippy = true
 
     source_root = rust_source_file
     sources = [ rust_source_file ]

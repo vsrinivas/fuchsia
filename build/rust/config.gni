@@ -59,6 +59,14 @@ declare_args() {
   # debug/release flags.
   # Valid values are "none", "thin", and "fat".
   rust_override_lto = ""
+
+  # Enables generation of corresponding clippy targets for all `rustc_binary`,
+  # `rustc_library`, and `rustc_test` targets.
+  generate_clippy = true
+
+  # By default clippy is set to allow all lints, this flag will change it to
+  # warn on all. Note: setting lint levels in source takes precedence over this.
+  clippy_warn = false
 }
 
 if (rustc_prefix == default_rustc_prefix &&

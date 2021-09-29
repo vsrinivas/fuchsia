@@ -31,6 +31,7 @@ template("fidl_rust_library") {
     output_dir = target_out_dir + "/" + target_name
     version = "0.1.0"
     edition = "2018"
+    disable_clippy = true
     forward_variables_from(invoker,
                            [
                              "testonly",

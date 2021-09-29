@@ -2,6 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/rust/clippy.gni")
 import("//build/testing/host_test.gni")
 import("//build/toolchain/rbe.gni")
 import("//build/toolchain/restat.gni")
@@ -118,6 +119,27 @@ template("rustc_test_internal") {
       python_exe_src,
       restat_wrapper,
     ]
+  }
+
+  disable_clippy = defined(invoker.disable_clippy) && invoker.disable_clippy
+  if (generate_clippy && !disable_clippy) {
+    clippy("$target_name.clippy") {
+      forward_variables_from(invoker,
+                             [
+                               "edition",
+                               "deps",
+                               "non_rust_deps",
+                               "sources",
+                             ])
+      crate_type = "lib"
+      rustflags = features + [ "--test" ]
+      if (defined(invoker.test_deps)) {
+        if (!defined(deps)) {
+          deps = []
+        }
+        deps += invoker.test_deps
+      }
+    }
   }
 
   executable(exe_target_name) {
@@ -276,6 +298,9 @@ template("rustc_test_internal") {
 #
 #   disable_rbe (optional)
 #     Set to true to force this target to build locally, overriding the global `enable_rbe`.
+#
+#   disable_clippy (optional)
+#     Don't run clippy on this target.
 #
 # Example of usage:
 #
