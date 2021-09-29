@@ -38,7 +38,7 @@ protocol Session {
     /// the data FIFOs and it may send frames destined to the specified `port`.
     ///
     /// + request `port` port to subscribe to.
-    /// + request `fx_frames` Frame types of interest on the port.
+    /// + request `rx_frames` Frame types of interest on the port.
     /// * error `ZX_ERR_NOT_FOUND` if `port` is not valid.
     /// * error `ZX_ERR_INVALID_ARGS` if `rx_frames` is not a subset of the
     /// port's supported frames.
