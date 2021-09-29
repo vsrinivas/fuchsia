@@ -152,8 +152,7 @@ impl PolicyProxy {
         message_client: service::message::MessageClient,
     ) {
         let response = self.policy_handler.handle_policy_request(request).await;
-        // Ignore the receptor result.
-        let _ = message_client
+        message_client
             .reply(service::Payload::Policy(policy_base::Payload::Response(response)))
             .send();
     }
@@ -185,15 +184,13 @@ impl PolicyProxy {
         let handler_result = self.policy_handler.handle_setting_request(request).await;
         match handler_result {
             Some(RequestTransform::Request(modified_request)) => {
-                // Ignore the receptor result.
-                let _ = message_client.propagate(Payload::Request(modified_request).into()).send();
+                message_client.propagate(Payload::Request(modified_request).into()).send();
             }
             Some(RequestTransform::Result(result)) => {
                 // Handler provided a result to return directly to the client, respond to the
                 // intercepted message with the result. By replying through the MessageClient, the
                 // message doesn't continue to be propagated to the setting handler.
-                // Ignore the receptor result.
-                let _ = message_client
+                message_client
                     .reply(Payload::Response(result.map_err(HandlerError::from)).into())
                     .send();
             }
@@ -217,8 +214,8 @@ impl PolicyProxy {
         let handler_result = self.policy_handler.handle_setting_response(response).await;
         if let Some(ResponseTransform::Response(response)) = handler_result {
             // Handler provided a modified setting event to forward to the requestor in place
-            // of the original. Ignore the receptor result.
-            let _ = client.propagate(Payload::Response(response).into()).send();
+            // of the original.
+            client.propagate(Payload::Response(response).into()).send();
         }
     }
 }

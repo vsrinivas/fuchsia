@@ -250,7 +250,7 @@ impl InspectPolicyAgent {
                 let node = self.inspect_node.create_child(policy_name);
                 let value_prop = node.create_string("value", inspect_str);
                 let timestamp_prop = node.create_string("timestamp", timestamp);
-                let _ = self.policy_values.insert(
+                self.policy_values.insert(
                     policy_name,
                     InspectPolicyInfo { _node: node, value: value_prop, timestamp: timestamp_prop },
                 );

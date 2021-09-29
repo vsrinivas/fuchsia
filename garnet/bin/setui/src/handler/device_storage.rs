@@ -489,7 +489,7 @@ impl StashDeviceStorageFactory {
         match &mut *self.device_storage_cache.lock().await {
             InitializationState::Initializing(initial_keys) => {
                 for &key in keys {
-                    let _ = initial_keys.insert(key);
+                    initial_keys.insert(key);
                 }
                 Ok(())
             }

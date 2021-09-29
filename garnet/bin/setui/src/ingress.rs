@@ -104,7 +104,7 @@ pub(crate) mod registration {
         }
 
         pub(crate) fn add_dependency(mut self, dependency: Dependency) -> Self {
-            let _ = self.dependencies.insert(dependency);
+            self.dependencies.insert(dependency);
 
             self
         }

@@ -81,7 +81,7 @@ impl InspectConfigLogger {
                 );
                 let timestamp_prop = node.create_string("timestamp", timestamp.clone());
                 let count_prop = node.create_int("count", 1);
-                let _ = self.config_load_values.insert(
+                self.config_load_values.insert(
                     path,
                     ConfigInspectInfo {
                         _node: node,

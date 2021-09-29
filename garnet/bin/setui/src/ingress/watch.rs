@@ -124,7 +124,7 @@ impl<
                 };
 
                 if let Some(Ok(ref info)) = return_val {
-                    let _ = store.insert(key, Data::SettingInfo(info.clone()));
+                    store.insert(key, Data::SettingInfo(info.clone()));
                 }
 
                 return_val

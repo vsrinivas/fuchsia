@@ -136,10 +136,8 @@ where
                         unordered.push(receptor.into_future());
                     }
 
-                    // Always reply with an Ok for invocations. Ignore the receptor result.
-                    let _ = client
-                        .reply(service::Payload::Agent(agent::Payload::Complete(Ok(()))))
-                        .send();
+                    // Always reply with an Ok for invocations.
+                    client.reply(service::Payload::Agent(agent::Payload::Complete(Ok(())))).send();
                 }
                 MessageEvent::Message(
                     service::Payload::Storage(Payload::Request(storage_request)),
@@ -210,10 +208,7 @@ where
         drop(guard);
 
         let guard = trace_guard!(nonce, "reply");
-        // Ignore the receptor result.
-        let _ = responder
-            .reply(Payload::Response(StorageResponse::Read(storable.into())).into())
-            .send();
+        responder.reply(Payload::Response(StorageResponse::Read(storable.into())).into()).send();
         drop(guard);
     }
 
@@ -235,8 +230,7 @@ where
             }
         };
 
-        // Ignore the receptor result.
-        let _ = responder
+        responder
             .reply(service::Payload::Storage(Payload::Response(StorageResponse::Write(
                 update_result,
             ))))

@@ -140,9 +140,7 @@ impl EventHandler {
 
         // Send the event to all the interested setting types that are also available.
         for setting_type in self.recipient_settings.iter() {
-            // Ignore the receptor result.
-            let _ = self
-                .messenger
+            self.messenger
                 .message(
                     HandlerPayload::Request(setting_request.clone()).into(),
                     Audience::Address(service::Address::Handler(*setting_type)),

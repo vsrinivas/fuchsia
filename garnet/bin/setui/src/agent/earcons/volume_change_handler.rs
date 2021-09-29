@@ -13,9 +13,10 @@ use crate::handler::base::{Payload, Request};
 use crate::message::base::Audience;
 use crate::message::receptor::extract_payload;
 use crate::service;
+
 use anyhow::Error;
 use fuchsia_async as fasync;
-use fuchsia_syslog::{fx_log_debug, fx_log_warn};
+use fuchsia_syslog::fx_log_debug;
 use futures::StreamExt;
 use std::collections::{HashMap, HashSet};
 
@@ -115,13 +116,15 @@ impl VolumeChangeHandler {
         let mut changed_stream_types = HashSet::new();
         for (stream_type, timestamp) in new_modified_counters {
             if self.modified_counters.get(&stream_type) != Some(&timestamp) {
-                let _ = changed_stream_types.insert(stream_type);
-                let _ = self.modified_counters.insert(stream_type, timestamp);
+                changed_stream_types.insert(stream_type);
+                self.modified_counters.insert(stream_type, timestamp);
             }
         }
 
-        std::array::IntoIter::new(all_streams)
+        all_streams
+            .iter()
             .filter(|stream| changed_stream_types.contains(&stream.stream_type))
+            .cloned()
             .collect()
     }
 
@@ -160,8 +163,7 @@ impl VolumeChangeHandler {
                 // the earcons sound on that set.
                 self.play_volume_sound(new_user_volume);
             }
-
-            let _ = self.last_user_volumes.insert(stream_type, new_user_volume);
+            self.last_user_volumes.insert(stream_type, new_user_volume);
         }
     }
 
@@ -209,7 +211,7 @@ impl VolumeChangeHandler {
             if let (Some(sound_player_proxy), volume_level) =
                 (sound_player_connection.as_ref(), volume)
             {
-                let play_sound_result = if volume_level >= 1.0 {
+                if volume_level >= 1.0 {
                     play_sound(
                         &sound_player_proxy,
                         VOLUME_MAX_FILE_PATH,
@@ -217,6 +219,7 @@ impl VolumeChangeHandler {
                         sound_player_added_files.clone(),
                     )
                     .await
+                    .ok();
                 } else if volume_level > 0.0 {
                     play_sound(
                         &sound_player_proxy,
@@ -225,11 +228,7 @@ impl VolumeChangeHandler {
                         sound_player_added_files.clone(),
                     )
                     .await
-                } else {
-                    Ok(())
-                };
-                if let Err(e) = play_sound_result {
-                    fx_log_warn!("Failed to play sound: {:?}", e);
+                    .ok();
                 }
             }
         })

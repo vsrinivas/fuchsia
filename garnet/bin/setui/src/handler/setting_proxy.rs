@@ -61,8 +61,7 @@ impl RequestInfo {
         match &self.client {
             Client::Service(client) => {
                 // TODO(fxbug.dev/70985): return HandlerErrors directly
-                // Ignore the receptor result.
-                let _ = client
+                client
                     .reply(HandlerPayload::Response(result.map_err(HandlerError::from)).into())
                     .send();
             }
@@ -529,7 +528,7 @@ impl SettingProxy {
         let was_listening = self.is_listening();
 
         if let Some(pos) = self.listen_requests.iter().position(|target| *target == request) {
-            let _ = self.listen_requests.remove(pos);
+            self.listen_requests.remove(pos);
         } else {
             return;
         }

@@ -8,7 +8,6 @@ use crate::message::message_client::MessageClient;
 use crate::message::messenger::MessengerClient;
 use crate::message::receptor::Receptor;
 use crate::message::Timestamp;
-use fuchsia_syslog::fx_log_warn;
 use futures::channel::mpsc::UnboundedSender;
 use futures::channel::oneshot::Sender;
 use std::collections::HashSet;
@@ -252,7 +251,11 @@ impl<A: Address + 'static, R: Role + 'static> Audience<A, R> {
             Audience::Group(group) => {
                 group.audiences.iter().map(|audience| audience.flatten()).flatten().collect()
             }
-            _ => std::array::IntoIter::new([self.clone()]).collect(),
+            _ => {
+                let mut hash_set = HashSet::new();
+                hash_set.insert(self.clone());
+                hash_set
+            }
         }
     }
 }
@@ -574,11 +577,7 @@ impl<P: Payload + 'static, A: Address + 'static, R: Role + 'static> Message<P, A
     /// Delivers the supplied status to all participants in the return path.
     pub(super) async fn report_status(&self, status: Status) {
         for beacon in &self.return_path {
-            let status_result = beacon.status(status).await;
-            if let Err(e) = status_result {
-                // TODO(fxbug.dev/85529) Track whether this is common, if so, bubble the error up.
-                fx_log_warn!("Failed to update beacon status: {:?}", e);
-            }
+            beacon.status(status).await.ok();
         }
     }
 }

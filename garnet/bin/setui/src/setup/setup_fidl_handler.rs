@@ -2,16 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::base::{SettingInfo, SettingType};
 use crate::fidl_hanging_get_responder;
 use crate::fidl_process;
+
+use crate::base::{SettingInfo, SettingType};
 use crate::fidl_processor::settings::RequestContext;
 use crate::handler::base::Request;
 use crate::setup::types::{
     ConfigurationInterfaceFlags, SetConfigurationInterfacesParams, SetupInfo,
 };
 use fidl_fuchsia_settings::{Error, SetupMarker, SetupRequest, SetupSettings, SetupWatchResponder};
-use fuchsia_syslog::fx_log_warn;
 
 fidl_hanging_get_responder!(SetupMarker, SetupSettings, SetupWatchResponder);
 
@@ -91,8 +91,9 @@ async fn set(
     context
         .request(SettingType::Setup, request)
         .await
-        .map(|_| ())
-        .map_err(|_| fidl_fuchsia_settings::Error::Failed)
+        .map_err(|_| fidl_fuchsia_settings::Error::Failed)?;
+
+    Ok(())
 }
 
 async fn process_request(
@@ -104,22 +105,16 @@ async fn process_request(
     match req {
         // TODO(fxb/79644): Clean up Set interface.
         SetupRequest::Set { settings, responder } => {
-            let send_result = match set(context, settings, true).await {
-                Ok(_) => responder.send(&mut Ok(())),
-                Err(e) => responder.send(&mut Err(e)),
+            match set(context, settings, true).await {
+                Ok(_) => responder.send(&mut Ok(())).ok(),
+                Err(e) => responder.send(&mut Err(e)).ok(),
             };
-            if let Err(e) = send_result {
-                fx_log_warn!("Failed to send response to SetupRequest::Set: {:?}", e);
-            }
         }
         SetupRequest::Set2 { settings, reboot_device, responder } => {
-            let send_result = match set(context, settings, reboot_device).await {
-                Ok(_) => responder.send(&mut Ok(())),
-                Err(e) => responder.send(&mut Err(e)),
+            match set(context, settings, reboot_device).await {
+                Ok(_) => responder.send(&mut Ok(())).ok(),
+                Err(e) => responder.send(&mut Err(e)).ok(),
             };
-            if let Err(e) = send_result {
-                fx_log_warn!("Failed to send response to SetupRequest::Set2: {:?}", e);
-            }
         }
         SetupRequest::Watch { responder } => {
             context.watch(responder, true).await;

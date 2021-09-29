@@ -214,7 +214,7 @@ impl InspectSettingAgent {
                 let node = self.inspect_node.create_child(key);
                 let value_prop = node.create_string("value", value);
                 let timestamp_prop = node.create_string("timestamp", timestamp);
-                let _ = self.setting_values.insert(
+                self.setting_values.insert(
                     key,
                     InspectSettingInfo {
                         _node: node,

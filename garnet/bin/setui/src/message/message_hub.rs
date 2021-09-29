@@ -418,7 +418,7 @@ impl<P: Payload + 'static, A: Address + 'static, R: Role + 'static> MessageHub<P
             Audience::Address(address) => {
                 delivery_required = true;
                 if let Some(&messenger_id) = self.addresses.get(&address) {
-                    let _ = return_set.insert(messenger_id);
+                    return_set.insert(messenger_id);
                 } else {
                     return Err(format_err!("could not resolve address"));
                 }
@@ -440,13 +440,13 @@ impl<P: Payload + 'static, A: Address + 'static, R: Role + 'static> MessageHub<P
                 match signature {
                     Signature::Address(address) => {
                         if let Some(&messenger_id) = self.addresses.get(&address) {
-                            let _ = return_set.insert(messenger_id);
+                            return_set.insert(messenger_id);
                         } else {
                             return Err(format_err!("could not resolve signature"));
                         }
                     }
                     Signature::Anonymous(id) => {
-                        let _ = return_set.insert(*id);
+                        return_set.insert(*id);
                     }
                 }
             }
@@ -454,7 +454,7 @@ impl<P: Payload + 'static, A: Address + 'static, R: Role + 'static> MessageHub<P
                 // Gather all messengers
                 for &id in self.beacons.keys() {
                     if id != sender_id && !self.is_broker(id) {
-                        let _ = return_set.insert(id);
+                        return_set.insert(id);
                     }
                 }
             }
@@ -480,9 +480,7 @@ impl<P: Payload + 'static, A: Address + 'static, R: Role + 'static> MessageHub<P
                 let mut optional_address = None;
                 if let MessengerType::Addressable(address) = messenger_descriptor.messenger_type {
                     if self.addresses.contains_key(&address) {
-                        // Ignore the result since an error would imply the other side is already
-                        // closed.
-                        let _ = responder.send(Err(MessageError::AddressConflict { address }));
+                        responder.send(Err(MessageError::AddressConflict { address })).ok();
                         return;
                     }
                     optional_address = Some(address);
@@ -521,14 +519,14 @@ impl<P: Payload + 'static, A: Address + 'static, R: Role + 'static> MessageHub<P
                 self.next_id += 1;
                 let (beacon, receptor) =
                     BeaconBuilder::new(messenger.clone()).add_fuse(Arc::clone(&fuse)).build();
-                let _ = self.beacons.insert(id, beacon);
+                self.beacons.insert(id, beacon);
 
                 match messenger_descriptor.messenger_type {
                     MessengerType::Broker(filter) => {
                         self.brokers.push(Broker { messenger_id: id, filter });
                     }
                     MessengerType::Addressable(address) => {
-                        let _ = self.addresses.insert(address, id);
+                        self.addresses.insert(address, id);
                     }
                     MessengerType::Unbound => {
                         // We do not track Unbounded messengers.
@@ -537,23 +535,13 @@ impl<P: Payload + 'static, A: Address + 'static, R: Role + 'static> MessageHub<P
 
                 // Track roles
                 for role in &messenger_descriptor.roles {
-                    let _ = self.roles.entry(*role).or_insert_with(HashSet::new).insert(id);
+                    self.roles.entry(*role).or_insert_with(HashSet::new).insert(id);
                 }
 
                 // Update descriptor mapping and role records
-                let _ = self.messengers.insert(id, messenger_descriptor.roles);
+                self.messengers.insert(id, messenger_descriptor.roles);
 
-                let response_result =
-                    responder.send(Ok((MessengerClient::new(messenger, fuse), receptor)));
-                if let Err(_) = response_result {
-                    // TODO(fxbug.dev/85529) Track whether this is common, if so, bubble the error
-                    // up.
-                    fx_log_warn!(
-                        "Receiving end of oneshot closed while trying to create messenger client \
-                            for client with id: {}",
-                        id,
-                    );
-                }
+                responder.send(Ok((MessengerClient::new(messenger, fuse), receptor))).ok();
             }
             #[cfg(test)]
             MessengerAction::CheckPresence(signature, responder) => {
@@ -576,20 +564,20 @@ impl<P: Payload + 'static, A: Address + 'static, R: Role + 'static> MessageHub<P
                 // Remove messenger from each role it belongs to. Remove the
                 // role as well if it no longer has any members.
                 if let Some(messengers) = self.roles.get_mut(&role) {
-                    let _ = messengers.remove(&id);
+                    messengers.remove(&id);
 
                     if messengers.is_empty() {
-                        let _ = self.roles.remove(&role);
+                        self.roles.remove(&role);
                     }
                 }
             }
         }
 
         // These are all safe if the containers don't contain any items matching `id`.
-        let _ = self.beacons.remove(&id);
+        self.beacons.remove(&id);
         self.brokers.retain(|broker| id != broker.messenger_id);
         if let Signature::Address(address) = signature {
-            let _ = self.addresses.remove(&address);
+            self.addresses.remove(&address);
         }
 
         self.check_exit();

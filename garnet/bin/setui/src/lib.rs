@@ -4,8 +4,9 @@
 
 // This declaration is required to support the `select!`.
 #![recursion_limit = "256"]
-#![cfg_attr(not(test), deny(unused_results))]
-// TODO(fxbug.dev/76660) Uncomment when all test code passes the lint.
+// TODO(fxbug.dev/76660) Uncomment the first line when all non-test code passes the lint.
+// Uncomment the second line when all code passes the lint.
+// #![cfg_attr(not(test), deny(unused_results))]
 // #![deny(unused_results)]
 
 use crate::accessibility::accessibility_controller::AccessibilityController;
