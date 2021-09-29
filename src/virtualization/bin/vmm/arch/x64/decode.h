@@ -70,7 +70,6 @@ DEFINE_INST_WRITE(16);
 DEFINE_INST_WRITE(8);
 #undef DEFINE_INST_WRITE
 
-#if __x86_64__
 // Returns the flags that are assigned to the x86 flags register by an
 // 8-bit TEST instruction for the given two operand values.
 static inline uint16_t x86_flags_for_test8(uint8_t value1, uint8_t value2) {
@@ -85,19 +84,14 @@ static inline uint16_t x86_flags_for_test8(uint8_t value1, uint8_t value2) {
   // Extract the value of the %ah register from the %ax register.
   return (uint16_t)(ax_reg >> 8);
 }
-#endif
 
 static inline zx_status_t inst_test8(const Instruction* inst, uint8_t inst_val, uint8_t value) {
   if (inst->type != INST_TEST || inst->access_size != 1u || inst_val8(inst) != inst_val) {
     return ZX_ERR_NOT_SUPPORTED;
   }
-#if __x86_64__
   *inst->flags &= ~X86_FLAGS_STATUS;
   *inst->flags |= x86_flags_for_test8(inst_val, value);
   return ZX_OK;
-#else   // __x86_64__
-  return ZX_ERR_NOT_SUPPORTED;
-#endif  // __x86_64__
 }
 
 #endif  // SRC_VIRTUALIZATION_BIN_VMM_ARCH_X64_DECODE_H_
