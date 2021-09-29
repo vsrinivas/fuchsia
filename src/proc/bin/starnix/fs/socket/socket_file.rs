@@ -2,19 +2,17 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use super::*;
-
 use crate::errno;
 use crate::error;
 use crate::fd_impl_nonseekable;
 use crate::fs::buffers::*;
+use crate::fs::socket::Socket;
+use crate::fs::socket::*;
 use crate::fs::{FdEvents, FileObject, FileOps, SeekOrigin};
-use crate::signals::{signal_handling::send_checked_signal, *};
 use crate::task::Task;
 use crate::types::*;
 
 pub struct SocketFile {
-    /// The socket associated with this file, used to read and write data.
     socket: SocketHandle,
 }
 
@@ -33,19 +31,6 @@ impl FileOps for SocketFile {
 impl SocketFile {
     pub fn new(socket: SocketHandle) -> Box<Self> {
         Box::new(SocketFile { socket })
-    }
-
-    /// Returns the file's socket after verifying that it is still connected.
-    ///
-    /// If the socket is not connected, signals a SIGPIPE to `task` and returns EPIPE.
-    pub fn get_socket_for_writing(&self, task: &Task) -> Result<SocketHandle, Errno> {
-        match self.socket.lock().connected_socket() {
-            Some(socket) => Ok(socket),
-            None => {
-                send_checked_signal(task, Signal::SIGPIPE)?;
-                error!(EPIPE)
-            }
-        }
     }
 
     /// Writes the provided data into the socket in this file.
@@ -71,8 +56,7 @@ impl SocketFile {
         file.blocking_op(
             task,
             || {
-                let socket = self.get_socket_for_writing(task)?;
-                let mut socket = socket.lock();
+                let socket = self.socket.lock();
 
                 let bytes_written =
                     match socket.write(task, &mut user_buffers, &mut control_message) {
@@ -84,10 +68,6 @@ impl SocketFile {
                         }
                         result => result,
                     }?;
-
-                if bytes_written > 0 {
-                    socket.notify_write();
-                }
 
                 actual += bytes_written;
                 if actual < requested {
@@ -117,21 +97,17 @@ impl SocketFile {
         file.blocking_op(
             task,
             || {
-                let mut socket = self.socket.lock();
+                let socket = self.socket.lock();
                 let mut user_buffers = UserBufferIterator::new(data);
                 let (bytes_read, ancillary_data) = socket.read(task, &mut user_buffers)?;
 
-                if bytes_read == 0 && socket.is_connected() && user_buffers.remaining() > 0 {
-                    // If no bytes were read, but the socket is connected, return an error indicating that
-                    // the reader can wait.
-                    return error!(EAGAIN);
-                }
-
-                if bytes_read > 0 {
-                    // If bytes were read, notify the connected node that there are bytes to read.
-                    socket.connected_node().map(|connected_node| {
-                        connected_node.notify(FdEvents::POLLOUT);
-                    });
+                if bytes_read == 0 && user_buffers.remaining() > 0 {
+                    match &*socket {
+                        // If no bytes were read, but the socket is connected, return an error indicating that
+                        // the reader can wait.
+                        Socket::Active(_) | Socket::Passive(_) => return error!(EAGAIN),
+                        _ => {}
+                    };
                 }
 
                 Ok((bytes_read, ancillary_data))

@@ -185,7 +185,11 @@ impl DirEntry {
             if mode.is_dir() {
                 self.node.mkdir(name)
             } else {
-                self.node.mknod(name, mode)
+                let node = self.node.mknod(name, mode)?;
+                if mode.is_sock() {
+                    node.set_socket(Socket::new(Arc::downgrade(&node), SocketDomain::Unix));
+                }
+                Ok(node)
             }
         })
     }
@@ -193,18 +197,23 @@ impl DirEntry {
     pub fn bind_socket(
         self: &DirEntryHandle,
         name: &FsStr,
-        mode: FileMode,
-        socket_address: SocketAddress,
         socket: SocketHandle,
+        socket_address: SocketAddress,
+        mode: FileMode,
     ) -> Result<DirEntryHandle, Errno> {
         self.create_entry(name, mode, DeviceType::NONE, || {
-            // Make the node in the parent...
-            let node = self.node.mknod(name, mode)?;
-            // ... and make sure to initialize the socket before the callback returns, so the socket
-            // is guaranteed to be initialized by the time it is named.
-            socket.lock().set_bound_address(socket_address);
-            node.set_socket(socket);
-            Ok(node)
+            let mut locked_socket = socket.lock();
+            locked_socket.bind(socket_address)?;
+            match self.node.mknod(name, mode) {
+                Ok(node) => {
+                    node.set_socket(socket.clone());
+                    Ok(node)
+                }
+                Err(error) => {
+                    locked_socket.unbind();
+                    Err(error)
+                }
+            }
         })
     }
 

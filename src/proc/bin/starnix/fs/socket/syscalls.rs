@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 use std::convert::TryInto;
-use zerocopy::AsBytes;
 
 use super::*;
 use crate::errno;
@@ -13,6 +12,7 @@ use crate::mode;
 use crate::not_implemented;
 use crate::syscalls::*;
 use crate::task::*;
+use crate::types::locking::*;
 use crate::types::*;
 
 pub fn sys_socket(
@@ -57,9 +57,9 @@ pub fn sys_bind(
 
     let (parent, basename) = ctx.task.lookup_parent_at(FdNumber::AT_FDCWD, path)?;
 
-    parent
+    let _dir_entry = parent
         .entry
-        .bind_socket(basename, mode, SocketAddress::Unix(path.to_owned()), socket.clone())
+        .bind_socket(basename, socket.clone(), SocketAddress::Unix(path.to_owned()), mode)
         .map_err(|errno| if errno == EEXIST { errno!(EADDRINUSE) } else { errno })?;
 
     Ok(SUCCESS)
@@ -71,8 +71,9 @@ pub fn sys_connect(
     user_socket_address: UserAddress,
     address_length: usize,
 ) -> Result<SyscallResult, Errno> {
-    let first_socket_file = ctx.task.files.get(fd)?;
-    if !first_socket_file.node().is_sock() {
+    // The "active" socket is the one performing the connection.
+    let active_socket_file = ctx.task.files.get(fd)?;
+    if !active_socket_file.node().is_sock() {
         return error!(ENOTSOCK);
     }
 
@@ -90,42 +91,10 @@ pub fn sys_connect(
     let (parent, basename) =
         ctx.task.lookup_parent_at(FdNumber::AT_FDCWD, &address.sun_path[..path_len])?;
     let node = parent.lookup_child(&mut LookupContext::default(), ctx.task, basename)?;
-    let second_socket_node = node.entry.node.clone();
 
-    if let Some(socket) = second_socket_node.socket() {
-        if !socket.lock().is_bound() {
-            return error!(ECONNREFUSED);
-        }
-    } else {
-        return error!(ECONNREFUSED);
-    }
-
-    Socket::connect(first_socket_file.node(), &second_socket_node)
-        .expect("socket connect failed, even after sockets were checked.");
+    connect_sockets(&node.entry.node, active_socket_file.node())?;
 
     Ok(SUCCESS)
-}
-
-fn get_socket_address(socket: &SocketHandle) -> Vec<u8> {
-    let socket = socket.lock();
-    if let Some(bound_address) = socket.bound_address() {
-        match bound_address {
-            SocketAddress::Unix(path) => {
-                let mut address = sockaddr_un::default();
-                let path_len = std::cmp::min(address.sun_path.len() - 1, path.len());
-                address.sun_family = AF_UNIX;
-                address.sun_path[..path_len].copy_from_slice(&path[..path_len]);
-                address.as_bytes().to_vec()
-            }
-        }
-    } else {
-        match socket.domain() {
-            SocketDomain::Unspecified => AF_UNSPEC,
-            SocketDomain::Unix => AF_UNIX,
-        }
-        .to_ne_bytes()
-        .to_vec()
-    }
 }
 
 fn write_socket_address(
@@ -153,8 +122,11 @@ pub fn sys_getsockname(
         return error!(ENOTSOCK);
     }
     let socket = file.node().socket().ok_or_else(|| errno!(ENOTSOCK))?;
-    let address_bytes = get_socket_address(&socket);
+    let locked_socket = socket.lock();
+    let address_bytes = locked_socket.getsockname();
+
     write_socket_address(&ctx.task, user_socket_address, user_address_length, &address_bytes)?;
+
     Ok(SUCCESS)
 }
 
@@ -169,9 +141,10 @@ pub fn sys_getpeername(
         return error!(ENOTSOCK);
     }
     let socket = file.node().socket().ok_or_else(|| errno!(ENOTSOCK))?;
-    let peer_socket = socket.lock().connected_socket().ok_or_else(|| errno!(ENOTCONN))?;
-    let address_bytes = get_socket_address(&peer_socket);
+    let address_bytes = socket.lock().getpeername()?;
+
     write_socket_address(&ctx.task, user_socket_address, user_address_length, &address_bytes)?;
+
     Ok(SUCCESS)
 }
 
@@ -189,8 +162,12 @@ pub fn sys_socketpair(
     let first_socket_file = create_socket(ctx, raw_domain, socket_type, protocol, flags)?;
     let second_socket_file = create_socket(ctx, raw_domain, socket_type, protocol, flags)?;
 
-    Socket::connect(first_socket_file.node(), second_socket_file.node())
-        .expect("socket connect failed, even after sockets were checked.");
+    {
+        let mut first_socket = first_socket_file.node().socket().unwrap().lock();
+        let mut second_socket = second_socket_file.node().socket().unwrap().lock();
+        first_socket.bind(SocketAddress::Unspecified)?;
+        second_socket.connect(&mut first_socket)?;
+    }
 
     let fd_flags = if flags & SOCK_CLOEXEC != 0 { FdFlags::CLOEXEC } else { FdFlags::empty() };
     // TODO: Eventually this will need to allocate two inode numbers (each of which could
@@ -277,9 +254,8 @@ pub fn sys_shutdown(
     // TODO: Respect the `how` argument.
 
     let socket = file.node().socket().ok_or(errno!(ENOTSOCK))?;
-    let connected_node = socket.lock().connected_node().ok_or(errno!(ENOTSOCK))?;
-
-    Socket::disconnect(file.node(), &connected_node);
+    let connected_node = socket.lock().shutdown()?;
+    let _ = connected_node.map(|node| node.socket().unwrap().lock().shutdown());
 
     Ok(SUCCESS)
 }
@@ -315,56 +291,57 @@ fn create_socket(
         return error!(EPROTONOSUPPORT);
     }
 
-    let socket = Socket::new(domain);
-
     let open_flags = OpenFlags::RDWR
         | if flags & SOCK_NONBLOCK != 0 { OpenFlags::NONBLOCK } else { OpenFlags::empty() };
-    Ok(new_socket(ctx.kernel(), socket, open_flags))
+
+    Ok(Socket::new_file(ctx.kernel(), domain, open_flags))
+}
+
+/// Connects the sockets in the provided `FsNodeHandle`s together.
+///
+/// After the connection has been established, the sockets in each node will read/write from
+/// each other.
+///
+/// WARNING: It's an error to call `connect` with nodes that do not contain sockets.
+///
+/// # Parameters
+/// - `passive_node`: The node that is being connected *to*.
+/// - `active_node`: The node that is performing the connection.
+///
+/// Returns an error if any of the sockets could not be connected.
+pub fn connect_sockets(
+    passive_node: &FsNodeHandle,
+    active_node: &FsNodeHandle,
+) -> Result<(), Errno> {
+    assert!(passive_node.socket().is_some());
+    assert!(active_node.socket().is_some());
+    if std::ptr::eq(passive_node, active_node) {
+        return error!(ECONNREFUSED);
+    }
+
+    // Sort the nodes to determine which order to lock them in.
+    let mut ordered_nodes: [&FsNodeHandle; 2] = [active_node, passive_node];
+    sort_for_locking(&mut ordered_nodes, |node| node.socket().unwrap());
+
+    let first_node = ordered_nodes[0];
+    let second_node = ordered_nodes[1];
+
+    let mut first_socket = first_node.socket().unwrap().lock();
+    let mut second_socket = second_node.socket().unwrap().lock();
+
+    if std::ptr::eq(passive_node, first_node) {
+        // The first socket is the passive node, so connect *to* it.
+        second_socket.connect(&mut first_socket)
+    } else {
+        first_socket.connect(&mut second_socket)
+    }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::mm::PAGE_SIZE;
     use crate::testing::*;
     use std::convert::TryInto;
-    use std::sync::Arc;
-
-    /// Creates a pair of connected sockets and returns the files associated with those sockets.
-    ///
-    /// The sockets are created as AF_UNIX/SOCK_STREAM sockets.
-    fn create_socket_pair(ctx: &SyscallContext<'_>) -> Result<(FileHandle, FileHandle), Errno> {
-        let socket_addr = map_memory(&ctx, UserAddress::default(), *PAGE_SIZE);
-        let socket_ref: UserRef<[FdNumber; 2]> = UserRef::new(socket_addr);
-        let mut socket_pair = [FdNumber::from_raw(0); 2];
-        ctx.task.mm.write_object(socket_ref, &socket_pair).expect("");
-
-        assert_eq!(sys_socketpair(&ctx, AF_UNIX as u32, SOCK_STREAM, 0, socket_ref), Ok(SUCCESS));
-        ctx.task.mm.read_object(socket_ref, &mut socket_pair).expect("");
-
-        let first_file = ctx.task.files.get(socket_pair[0])?;
-        let second_file = ctx.task.files.get(socket_pair[1])?;
-
-        Ok((first_file, second_file))
-    }
-
-    /// Tests that two sockets created using `sys_socketpair` are indeed connected to each other.
-    #[test]
-    fn test_socketpair_connects_sockets() {
-        let (_kernel, task_owner) = create_kernel_and_task();
-        let ctx = SyscallContext::new(&task_owner.task);
-
-        let (first_file, second_file) =
-            create_socket_pair(&ctx).expect("failed to create sockets.");
-
-        let first_socket = first_file.node().socket().unwrap();
-        let second_socket = second_file.node().socket().unwrap();
-        let first_connected_socket = first_socket.lock().connected_socket().unwrap();
-        let second_connected_socket = second_socket.lock().connected_socket().unwrap();
-
-        assert!(Arc::ptr_eq(first_socket, &second_connected_socket));
-        assert!(Arc::ptr_eq(second_socket, &first_connected_socket));
-    }
 
     #[test]
     fn test_socketpair_invalid_arguments() {
@@ -410,6 +387,6 @@ mod tests {
             .files
             .get(FdNumber::from_raw(fd1.try_into().unwrap()))
             .expect("Failed to fetch socket file.");
-        assert!(Socket::connect(file.node(), file.node()).is_ok());
+        assert_eq!(connect_sockets(file.node(), file.node()), Err(ECONNREFUSED));
     }
 }
