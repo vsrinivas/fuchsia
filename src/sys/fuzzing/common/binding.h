@@ -29,6 +29,9 @@ class Binding final {
 
   async_dispatcher_t* dispatcher() const { return dispatcher_; }
   void set_dispatcher(async_dispatcher_t* dispatcher) { dispatcher_ = dispatcher; }
+  void set_error_handler(fit::function<void(zx_status_t)> error_handler) {
+    binding_.set_error_handler(std::move(error_handler));
+  }
 
   bool is_bound() const { return binding_.is_bound(); }
 

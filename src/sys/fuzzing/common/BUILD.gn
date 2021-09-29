@@ -9,10 +9,14 @@ source_set("common") {
   testonly = true
   sources = [
     "binding.h",
+    "controller.cc",
+    "controller.h",
     "input.cc",
     "input.h",
     "options.cc",
     "options.h",
+    "response.cc",
+    "response.h",
     "runner.cc",
     "runner.h",
     "shared-memory.cc",
@@ -68,6 +72,7 @@ test("unittests") {
   visibility = [ "../*" ]
   testonly = true
   sources = [
+    "controller-unittest.cc",
     "input-unittest.cc",
     "options-unittest.cc",
     "shared-memory-unittest.cc",
