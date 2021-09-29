@@ -26,6 +26,8 @@ Options:
   --local: disable remote execution and run the original command locally.
   --verbose|-v: print debug information, including details about uploads.
   --dry-run: print remote execution command without executing (remote only).
+  --log: capture stdout/stderr to log file.  Log file is named the same as
+      the primary output (e.g. .rlib) with a ".log" extension.
 
   --project-root: location of source tree which also encompasses outputs
       and prebuilt tools, forwarded to --exec-root in the reclient tools.
@@ -38,9 +40,12 @@ Options:
       [default: this is inferred from --emit=dep-info=FILE]
 
 If the rust-command contains --remote-inputs=..., those will be interpreted
-as extra --inputs to upload, and removed prior to local and remote execution.
+as extra --inputs to upload, and removed from the command prior to local and
+remote execution.
 The option argument is a comma-separated list of files, relative to
 \$project_root.
+Analogously, --remote-outputs=... will be interpreted as extra --output_files
+to download, and removed from the command prior to local and remote execution.
 
 Detected parameters:
   project_root: $project_root
@@ -50,6 +55,7 @@ EOF
 local_only=0
 dry_run=0
 verbose=0
+log=0
 
 # Extract script options before --
 for opt
@@ -72,6 +78,7 @@ do
     --dry-run) dry_run=1 ;;
     --local) local_only=1 ;;
     --verbose|-v) verbose=1 ;;
+    --log) log=1 ;;
     --project-root=*) project_root="$optarg" ;;
     --project-root) prev_opt=project_root ;;
     --source=*) top_source="$optarg" ;;
@@ -132,6 +139,7 @@ debug_var() {
 
 # Examine the rustc compile command
 comma_remote_inputs=
+comma_remote_outputs=
 
 # Compute a rustc command suitable for local and remote execution.
 # Prefix command with `env` in case it starts with local environment variables.
@@ -154,6 +162,7 @@ do
     eval "$prev_opt"=\$opt
     case "$prev_opt" in
       comma_remote_inputs) ;;  # Remove this optarg.
+      comma_remote_outputs) ;;  # Remove this optarg.
       # Copy this opt, but also append its value to extern_paths.
       extern)
         extern_path=$(expr "X$opt" : '[^=]*=\(.*\)')
@@ -204,6 +213,20 @@ EOF
       continue
       ;;
     --remote-inputs) prev_opt=comma_remote_inputs
+      # Remove this from the actual command to be executed.
+      shift
+      continue
+      ;;
+
+    # --remote-outputs signals to the remote action wrapper,
+    # and not the actual rustc command.
+    --remote-outputs=*)
+      comma_remote_outputs="$optarg"
+      # Remove this from the actual command to be executed.
+      shift
+      continue
+      ;;
+    --remote-outputs) prev_opt=comma_remote_outputs
       # Remove this from the actual command to be executed.
       shift
       continue
@@ -351,6 +374,10 @@ rustc_relative="$(realpath --relative-to="$project_root" "$rustc")"
 extra_inputs=()
 IFS=, read -ra extra_inputs <<< "$comma_remote_inputs"
 
+# Collect extra outputs to download after remote execution.
+extra_outputs=()
+IFS=, read -ra extra_outputs <<< "$comma_remote_outputs"
+
 # TODO(fangism): if possible, determine these shlibs statically to avoid `ldd`-ing.
 # TODO(fangism): for host-independence, use llvm-otool and `llvm-readelf -d`,
 #   which requires uploading more tools.
@@ -416,6 +443,15 @@ mapfile -t depfile_inputs < <(depfile_inputs_by_line "$depfile.nolink" | \
 # Done with temporary depfile, remove it.
 rm -f "$depfile.nolink"
 
+log_wrapper=()
+logfile="$output.log"
+if [[ "$log" == 1 ]]
+then
+  log_wrapper+=("$script_dir"/log-it.sh --log "$logfile" -- )
+  extra_inputs+=("$script_dir"/log-it.sh)
+  extra_outputs+=($(realpath --relative-to="$project_root" "$logfile"))
+fi
+
 # Inputs to upload include (all relative to $project_root):
 #   * rust tool(s) [$rustc_relative]
 #   * rust tool shared libraries [$rustc_shlibs]
@@ -458,6 +494,7 @@ remote_inputs_joined="$(IFS=, ; echo "${remote_inputs[*]}")"
 # Outputs include the declared output file and a depfile.
 outputs=("$(realpath --relative-to="$project_root" "$output")")
 test -z "$depfile" || outputs+=("$(realpath --relative-to="$project_root" "$depfile")")
+outputs+=("${extra_outputs[@]}")
 # Removing outputs these avoids any unintended reuse of them.
 rm -f "${outputs[@]}"
 outputs_joined="$(IFS=, ; echo "${outputs[*]}")"
@@ -479,6 +516,7 @@ dump_vars() {
   debug_var "extern paths" "${extern_paths[@]}"
   debug_var "tools dir" "${tools_dir[@]}"
   debug_var "extra inputs" "${extra_inputs[@]}"
+  debug_var "extra outputs" "${extra_outputs[@]}"
 }
 
 dump_vars
@@ -489,11 +527,14 @@ dump_vars
 #  --bindir=$HOME/re-client/install-bin
 # and pass options available in the new version, e.g.:
 #  --preserve_symlink
-remote_rustc_command=("$script_dir"/fuchsia-rbe-action.sh \
-  --exec_root="$project_root" \
-  --inputs="$remote_inputs_joined" \
-  --output_files="$outputs_joined" -- \
-  "${rustc_command[@]}")
+remote_rustc_command=(
+  "$script_dir"/fuchsia-rbe-action.sh
+  --exec_root="$project_root"
+  --inputs="$remote_inputs_joined"
+  --output_files="$outputs_joined" --
+  "${log_wrapper[@]}"
+  "${rustc_command[@]}"
+)
 
 if test "$dry_run" = 1
 then
