@@ -271,3 +271,5 @@ toc:
   path: /docs/contribute/governance/rfcs/0128_vcpu_kick.md
 - title: "RFC-0129: Python in Fuchsia"
   path: /docs/contribute/governance/rfcs/0129_python_in_fuchsia.md
+- title: "RFC-0130: Supported hardware"
+  path: /docs/contribute/governance/rfcs/0130_supported_hardware.md

@@ -1681,3 +1681,16 @@
   reviewers: ['abarth@google.com', 'cpu@google.com', 'dschuyler@google.com', 'jamesr@google.com', 'nathaniel@google.com', 'shayba@google.com']
   submitted: '2021-06-15'
   reviewed: '2021-09-24'
+
+- name: 'RFC-0130'
+  title: 'Supported Hardware'
+  short_description: 'List of hardware supported by the Fuchsia project.'
+  authors: ['andresoportus@google.com']
+  file: '0130_supported_hardware.md'
+  area: ['Governance']
+  issue: ['']
+  gerrit_change_id: ['572597']
+  status: 'Accepted'
+  reviewers: ['nicoh@google.com', 'nmulcahey@goole.com', 'smithdave@google.com', 'nickvander@google.com', 'curtisgalloway@google.com']
+  submitted: '2021-08-24'
+  reviewed: '2021-09-28'
