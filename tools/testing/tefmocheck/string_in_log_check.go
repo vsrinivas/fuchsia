@@ -190,6 +190,8 @@ func StringInLogsChecks() []FailureModeCheck {
 		},
 		// For fxbug.dev/43188.
 		&stringInLogCheck{String: "/dev/net/tun (qemu): Device or resource busy", Type: swarmingOutputType},
+		// For fxbug.dev/85596
+		&stringInLogCheck{String: "connect: no route to host", Type: swarmingOutputType},
 		// For fxbug.dev/53854.
 		driverHostCrash("composite-device", ""),
 		driverHostCrash("pci", ""),
