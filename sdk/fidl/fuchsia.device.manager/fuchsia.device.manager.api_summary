@@ -32,7 +32,6 @@ protocol/member fuchsia.device.manager/Coordinator.GetMetadata(uint32 key) -> (f
 protocol/member fuchsia.device.manager/Coordinator.GetMetadataSize(uint32 key) -> (fuchsia.device.manager/Coordinator_GetMetadataSize_Result result)
 protocol/member fuchsia.device.manager/Coordinator.GetTopologicalPath() -> (fuchsia.device.manager/Coordinator_GetTopologicalPath_Result result)
 protocol/member fuchsia.device.manager/Coordinator.LoadFirmware(string:1024 driver_path,string:1024 fw_path) -> (fuchsia.device.manager/Coordinator_LoadFirmware_Result result)
-protocol/member fuchsia.device.manager/Coordinator.PublishMetadata(string:1024 device_path,uint32 key,vector<uint8>:<8192,optional> data) -> (fuchsia.device.manager/Coordinator_PublishMetadata_Result result)
 protocol/member fuchsia.device.manager/Coordinator.RunCompatibilityTests(int64 hook_wait_time) -> (fuchsia.device.manager/Coordinator_RunCompatibilityTests_Result result)
 protocol/member fuchsia.device.manager/Coordinator.ScheduleRemove(bool unbind_self)
 protocol/member fuchsia.device.manager/Coordinator.ScheduleUnbindChildren()
@@ -75,10 +74,6 @@ resource struct fuchsia.device.manager/Coordinator_LoadFirmware_Response
 union/member fuchsia.device.manager/Coordinator_LoadFirmware_Result.err int32
 union/member fuchsia.device.manager/Coordinator_LoadFirmware_Result.response fuchsia.device.manager/Coordinator_LoadFirmware_Response
 resource strict union fuchsia.device.manager/Coordinator_LoadFirmware_Result
-struct fuchsia.device.manager/Coordinator_PublishMetadata_Response
-union/member fuchsia.device.manager/Coordinator_PublishMetadata_Result.err int32
-union/member fuchsia.device.manager/Coordinator_PublishMetadata_Result.response fuchsia.device.manager/Coordinator_PublishMetadata_Response
-strict union fuchsia.device.manager/Coordinator_PublishMetadata_Result
 struct/member fuchsia.device.manager/Coordinator_RunCompatibilityTests_Response.status fuchsia.device.manager/CompatibilityTestStatus
 struct fuchsia.device.manager/Coordinator_RunCompatibilityTests_Response
 union/member fuchsia.device.manager/Coordinator_RunCompatibilityTests_Result.err int32

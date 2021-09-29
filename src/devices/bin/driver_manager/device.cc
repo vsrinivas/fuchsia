@@ -63,16 +63,6 @@ Device::~Device() {
   // Drop our reference to our driver_host if we still have it
   set_host(nullptr);
 
-  std::unique_ptr<Metadata> md;
-  while ((md = metadata_.pop_front()) != nullptr) {
-    if (md->has_path) {
-      // return to published_metadata list
-      coordinator->AppendPublishedMetadata(std::move(md));
-    } else {
-      // metadata was attached directly to this device, so we release it now
-    }
-  }
-
   // TODO: cancel any pending rpc responses
   // TODO: Have dtor assert that DEV_CTX_IMMORTAL set on flags
   VLOGF(1, "Destroyed device %p '%s'", this, name_.data());
@@ -806,22 +796,6 @@ void Device::AddDevice(AddDeviceRequestView request, AddDeviceCompleter::Sync& c
     completer.ReplyError(status);
   } else {
     completer.ReplySuccess(local_id);
-  }
-}
-
-void Device::PublishMetadata(PublishMetadataRequestView request,
-                             PublishMetadataCompleter::Sync& completer) {
-  auto dev = fbl::RefPtr(this);
-  char path[fuchsia_device_manager::wire::kDevicePathMax + 1];
-  ZX_ASSERT(request->device_path.size() <= fuchsia_device_manager::wire::kDevicePathMax);
-  memcpy(path, request->device_path.data(), request->device_path.size());
-  path[request->device_path.size()] = 0;
-  zx_status_t status = dev->coordinator->PublishMetadata(
-      dev, path, request->key, request->data.data(), static_cast<uint32_t>(request->data.count()));
-  if (status != ZX_OK) {
-    completer.ReplyError(status);
-  } else {
-    completer.ReplySuccess();
   }
 }
 

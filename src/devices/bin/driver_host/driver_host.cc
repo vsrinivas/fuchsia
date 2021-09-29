@@ -1020,29 +1020,6 @@ zx_status_t DriverHostContext::AddMetadata(const fbl::RefPtr<zx_device_t>& dev, 
   return log_rpc_result(dev, "add-metadata", status, call_status);
 }
 
-zx_status_t DriverHostContext::PublishMetadata(const fbl::RefPtr<zx_device_t>& dev,
-                                               const char* path, uint32_t type, const void* data,
-                                               size_t length) {
-  if (!path || (!data && length)) {
-    return ZX_ERR_INVALID_ARGS;
-  }
-  const auto& client = dev->coordinator_client;
-  if (!client) {
-    return ZX_ERR_IO_REFUSED;
-  }
-  VLOGD(1, *dev, "publish-metadata");
-  auto response = client->PublishMetadata_Sync(
-      ::fidl::StringView::FromExternal(path), type,
-      ::fidl::VectorView<uint8_t>::FromExternal(reinterpret_cast<uint8_t*>(const_cast<void*>(data)),
-                                                length));
-  zx_status_t status = response.status();
-  zx_status_t call_status = ZX_OK;
-  if (status == ZX_OK && response->result.is_err()) {
-    call_status = response->result.err();
-  }
-  return log_rpc_result(dev, "publish-metadata", status, call_status);
-}
-
 zx_status_t DriverHostContext::DeviceAddComposite(const fbl::RefPtr<zx_device_t>& dev,
                                                   const char* name,
                                                   const composite_device_desc_t* comp_desc) {

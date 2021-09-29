@@ -113,9 +113,6 @@ class DriverHostContext {
   zx_status_t AddMetadata(const fbl::RefPtr<zx_device_t>& dev, uint32_t type, const void* data,
                           size_t length) TA_REQ(api_lock_);
 
-  zx_status_t PublishMetadata(const fbl::RefPtr<zx_device_t>& dev, const char* path, uint32_t type,
-                              const void* data, size_t length) TA_REQ(api_lock_);
-
   zx_status_t DeviceAddComposite(const fbl::RefPtr<zx_device_t>& dev, const char* name,
                                  const composite_device_desc_t* comp_desc) TA_REQ(api_lock_);
 

@@ -14,7 +14,6 @@
 struct Metadata : public fbl::DoublyLinkedListable<std::unique_ptr<Metadata>> {
   uint32_t type;
   uint32_t length;
-  bool has_path;  // zero terminated string starts at data[length]
 
   char* Data() { return reinterpret_cast<char*>(this + 1); }
 

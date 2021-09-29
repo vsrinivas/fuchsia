@@ -444,13 +444,6 @@ zx_status_t device_get_metadata_size(zx_device_t* dev, uint32_t type, size_t* ou
 // Adds metadata to a specific device.
 zx_status_t device_add_metadata(zx_device_t* dev, uint32_t type, const void* data, size_t length);
 
-// Adds metadata to be provided to future devices matching the specified topo path.
-// Drivers may use this to publish metadata to a driver with a topo path that matches
-// itself or one of its children. Only drivers running in the "sys" devhost may publish
-// metadata to arbitrary topo paths.
-zx_status_t device_publish_metadata(zx_device_t* dev, const char* path, uint32_t type,
-                                    const void* data, size_t length);
-
 // The true type of the fidl_txn_t* given by the message() operation.  Represents the necessary
 // information to construct a reply.
 typedef struct device_fidl_txn {

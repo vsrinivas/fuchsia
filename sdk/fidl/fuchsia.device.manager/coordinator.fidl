@@ -339,17 +339,6 @@ protocol Coordinator {
         data vector<uint8>:<METADATA_BYTES_MAX, optional>;
     }) -> (struct {}) error zx.status;
 
-    /// Behaves like AddMetadata, but instead of associating it with the
-    /// requesting device, associates it with the device at `device_path`.  If
-    /// the device at `device_path` is not a child of the requesting device AND
-    /// the requesting device is not running in the sys devhost, then this will
-    /// fail.
-    PublishMetadata(struct {
-        device_path string:DEVICE_PATH_MAX;
-        key uint32;
-        data vector<uint8>:<METADATA_BYTES_MAX, optional>;
-    }) -> (struct {}) error zx.status;
-
     /// Adds the given composite device.  This causes the devcoordinator to try to match the
     /// fragments against the existing device tree, and to monitor all new device additions
     /// in order to find the fragments as they are created.

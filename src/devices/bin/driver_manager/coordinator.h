@@ -255,8 +255,6 @@ class Coordinator : public fidl::WireServer<fuchsia_driver_development::DriverDe
   }
   zx_status_t AddMetadata(const fbl::RefPtr<Device>& dev, uint32_t type, const void* data,
                           uint32_t length);
-  zx_status_t PublishMetadata(const fbl::RefPtr<Device>& dev, const char* path, uint32_t type,
-                              const void* data, uint32_t length);
   zx_status_t AddCompositeDevice(const fbl::RefPtr<Device>& dev, std::string_view name,
                                  fuchsia_device_manager::wire::CompositeDeviceDescriptor comp_desc);
 
@@ -299,10 +297,6 @@ class Coordinator : public fidl::WireServer<fuchsia_driver_development::DriverDe
   const fbl::TaggedDoublyLinkedList<fbl::RefPtr<Device>, Device::AllDevicesListTag>& devices()
       const {
     return devices_;
-  }
-
-  void AppendPublishedMetadata(std::unique_ptr<Metadata> metadata) {
-    published_metadata_.push_back(std::move(metadata));
   }
 
   const fbl::RefPtr<Device>& root_device() { return root_device_; }
@@ -433,8 +427,6 @@ class Coordinator : public fidl::WireServer<fuchsia_driver_development::DriverDe
                   const zx_packet_signal_t* signal);
   async::WaitMethod<Coordinator, &Coordinator::OnOOMEvent> wait_on_oom_event_{this};
 
-  fbl::DoublyLinkedList<std::unique_ptr<Metadata>> published_metadata_;
-
   // Once the special fragment driver is loaded, this will refer to it.  This
   // driver is used for binding against fragments of composite devices
   const Driver* fragment_driver_ = nullptr;
@@ -457,9 +449,6 @@ class Coordinator : public fidl::WireServer<fuchsia_driver_development::DriverDe
     return BindDriver(drv, fit::bind_member(this, &Coordinator::AttemptBind));
   }
   zx_status_t AttemptBind(const Driver* drv, const fbl::RefPtr<Device>& dev);
-
-  zx_status_t GetMetadataRecurse(const fbl::RefPtr<Device>& dev, uint32_t type, void* buffer,
-                                 size_t buflen, size_t* size);
 
   // Schedule unbind and remove tasks for all devices in |driver_host|.
   // Used as part of RestartDriverHosts().

@@ -46,47 +46,12 @@ TEST(MetadataTest, AddMetadataLargeInput) {
   EXPECT_EQ(status, ZX_ERR_INVALID_ARGS, "device_add_metadata should return ZX_ERR_INVALID_ARGS");
 }
 
-TEST(MetadataTest, PublishMetadata) {
-  char buffer[32] = {};
-  zx_status_t status;
-  size_t actual;
-
-  // This should pass since the path we are running in the sys driver host.
-  status = device_publish_metadata(ddk_test_dev, "/dev/sys/other/null", 2, TEST_STRING,
-                                   strlen(TEST_STRING) + 1);
-  ASSERT_EQ(status, ZX_OK, "");
-
-  // We are allowed to add metadata to own path.
-  status = device_publish_metadata(ddk_test_dev, "/dev/sys/test/test", 2, TEST_STRING,
-                                   strlen(TEST_STRING) + 1);
-  ASSERT_EQ(status, ZX_OK, "");
-
-  status = device_get_metadata(ddk_test_dev, 2, buffer, sizeof(buffer), &actual);
-  ASSERT_EQ(status, ZX_OK, "device_get_metadata failed");
-  ASSERT_EQ(actual, strlen(TEST_STRING) + 1, "");
-  ASSERT_EQ(strcmp(buffer, TEST_STRING), 0, "");
-
-  // We are allowed to add metadata to our potential children.
-  status = device_publish_metadata(ddk_test_dev, "/dev/sys/test/test/child", 2, TEST_STRING,
-                                   strlen(TEST_STRING) + 1);
-  ASSERT_EQ(status, ZX_OK, "");
-}
-
-TEST(MetadataTest, PublishMetadataLargeInput) {
-  size_t large_len = 1024u * 16;
-  auto large = std::make_unique<char[]>(large_len);
-  zx_status_t status =
-      device_publish_metadata(ddk_test_dev, "/dev/sys/test/test/child", 2, large.get(), large_len);
-  EXPECT_EQ(status, ZX_ERR_INVALID_ARGS, "device_add_metadata shoud return ZX_ERR_INVALID_ARGS");
-}
-
 TEST(MetadataTest, GetMetadataWouldOverflow) {
   char buffer[32] = {};
   zx_status_t status;
   size_t actual;
 
-  status = device_publish_metadata(ddk_test_dev, "/dev/sys/test/test", 2, TEST_STRING,
-                                   strlen(TEST_STRING) + 1);
+  status = device_add_metadata(ddk_test_dev, 2, TEST_STRING, strlen(TEST_STRING) + 1);
   ASSERT_EQ(status, ZX_OK, "");
 
   status = device_get_metadata(ddk_test_dev, 2, buffer, 1, &actual);

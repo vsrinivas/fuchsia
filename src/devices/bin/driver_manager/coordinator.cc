@@ -863,15 +863,11 @@ zx_status_t Coordinator::LoadFirmware(const fbl::RefPtr<Device>& dev, const char
   return LoadFirmwareAt(driver->package_dir.get(), package_path.c_str(), vmo, size);
 }
 
-// Returns true if the parent path is equal to or specifies a child device of the parent.
-static bool path_is_child(const char* parent_path, const char* child_path) {
-  size_t parent_length = strlen(parent_path);
-  return (!strncmp(parent_path, child_path, parent_length) &&
-          (child_path[parent_length] == 0 || child_path[parent_length] == '/'));
-}
-
-zx_status_t Coordinator::GetMetadataRecurse(const fbl::RefPtr<Device>& dev, uint32_t type,
-                                            void* buffer, size_t buflen, size_t* size) {
+// Traverse up the device tree to find the metadata with the matching |type|.
+// |buffer| can be nullptr, in which case only the size of the metadata is
+// returned. This is used by GetMetadataSize method.
+zx_status_t Coordinator::GetMetadata(const fbl::RefPtr<Device>& dev, uint32_t type, void* buffer,
+                                     size_t buflen, size_t* size) {
   // search dev and its parent devices for a match
   fbl::RefPtr<Device> test = dev;
   while (true) {
@@ -898,47 +894,10 @@ zx_status_t Coordinator::GetMetadataRecurse(const fbl::RefPtr<Device>& dev, uint
     for (auto& fragment : test->composite()->bound_fragments()) {
       auto dev = fragment.bound_device();
       if (dev != nullptr) {
-        if (GetMetadataRecurse(dev, type, buffer, buflen, size) == ZX_OK) {
+        if (GetMetadata(dev, type, buffer, buflen, size) == ZX_OK) {
           return ZX_OK;
         }
       }
-    }
-  }
-
-  return ZX_ERR_NOT_FOUND;
-}
-
-// Traverse up the device tree to find the metadata with the matching |type|.
-// If not found, check the published metadata list for metadata with matching
-// topological path.
-// |buffer| can be nullptr, in which case only the size of the metadata is
-// returned. This is used by GetMetadataSize method.
-zx_status_t Coordinator::GetMetadata(const fbl::RefPtr<Device>& dev, uint32_t type, void* buffer,
-                                     size_t buflen, size_t* size) {
-  ZX_ASSERT(size != nullptr);
-  auto status = GetMetadataRecurse(dev, type, buffer, buflen, size);
-  if (status == ZX_OK) {
-    return ZX_OK;
-  }
-
-  // if no metadata is found, check list of metadata added via device_publish_metadata()
-  char path[fdm::wire::kDevicePathMax];
-  status = GetTopologicalPath(dev, path, sizeof(path));
-  if (status != ZX_OK) {
-    return status;
-  }
-
-  for (const auto& md : published_metadata_) {
-    const char* md_path = md.Data() + md.length;
-    if (md.type == type && path_is_child(md_path, path)) {
-      if (buffer != nullptr) {
-        if (md.length > buflen) {
-          return ZX_ERR_BUFFER_TOO_SMALL;
-        }
-        memcpy(buffer, md.Data(), md.length);
-      }
-      *size = md.length;
-      return ZX_OK;
     }
   }
 
@@ -957,47 +916,6 @@ zx_status_t Coordinator::AddMetadata(const fbl::RefPtr<Device>& dev, uint32_t ty
   md->length = length;
   memcpy(md->Data(), data, length);
   dev->AddMetadata(std::move(md));
-  return ZX_OK;
-}
-
-zx_status_t Coordinator::PublishMetadata(const fbl::RefPtr<Device>& dev, const char* path,
-                                         uint32_t type, const void* data, uint32_t length) {
-  char caller_path[fdm::wire::kDevicePathMax];
-  zx_status_t status = GetTopologicalPath(dev, caller_path, sizeof(caller_path));
-  if (status != ZX_OK) {
-    return status;
-  }
-
-  // Check to see if the specified path is a child of the caller's path
-  if (path_is_child(caller_path, path)) {
-    // Caller is adding a path that matches itself or one of its children, which is allowed.
-  } else {
-    fbl::RefPtr<Device> itr = dev;
-    // Adding metadata to arbitrary paths is restricted to drivers running in the sys driver_host.
-    while (itr && itr != sys_device_) {
-      if (itr->proxy()) {
-        // this device is in a child driver_host
-        return ZX_ERR_ACCESS_DENIED;
-      }
-      itr = itr->parent();
-    }
-    if (!itr) {
-      return ZX_ERR_ACCESS_DENIED;
-    }
-  }
-
-  std::unique_ptr<Metadata> md;
-  status = Metadata::Create(length + strlen(path) + 1, &md);
-  if (status != ZX_OK) {
-    return status;
-  }
-
-  md->type = type;
-  md->length = length;
-  md->has_path = true;
-  memcpy(md->Data(), data, length);
-  strcpy(md->Data() + length, path);
-  published_metadata_.push_front(std::move(md));
   return ZX_OK;
 }
 

@@ -527,10 +527,6 @@ class Device : public ::ddk::internal::base_device<D, Mixins...> {
     return device_add_metadata(zxdev(), type, data, length);
   }
 
-  zx_status_t DdkPublishMetadata(const char* path, uint32_t type, const void* data, size_t length) {
-    return device_publish_metadata(zxdev(), path, type, data, length);
-  }
-
   uint32_t DdkGetFragmentCount() { return device_get_fragment_count(parent()); }
 
   void DdkGetFragments(composite_device_fragment_t* comp_list, size_t comp_count,

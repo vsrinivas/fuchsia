@@ -106,8 +106,6 @@ class Device
                       ScheduleRemoveCompleter::Sync& _completer) override;
   void AddCompositeDevice(AddCompositeDeviceRequestView request,
                           AddCompositeDeviceCompleter::Sync& _completer) override;
-  void PublishMetadata(PublishMetadataRequestView request,
-                       PublishMetadataCompleter::Sync& _completer) override;
   void BindDevice(BindDeviceRequestView request, BindDeviceCompleter::Sync& _completer) override;
   void GetTopologicalPath(GetTopologicalPathRequestView request,
                           GetTopologicalPathCompleter::Sync& _completer) override;

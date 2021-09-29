@@ -985,28 +985,6 @@ TEST_F(CompositeMetadataTestCase, DefineInBetweenDevices) {
   VerifyMetadata(buf, len);
 }
 
-TEST_F(CompositeMetadataTestCase, PublishToSelf) {
-  char path[256] = "";
-  size_t len = 0;
-  ASSERT_NO_FATAL_FAILURES(AddCompositeDevice());
-  ASSERT_OK(platform_bus()->device->coordinator->GetTopologicalPath(composite_device, path, 256));
-  ASSERT_EQ(platform_bus()->device->coordinator->GetMetadata(composite_device, kMetadataKey + 1,
-                                                             nullptr, 0, &len),
-            ZX_ERR_NOT_FOUND);
-  ASSERT_OK(platform_bus()->device->coordinator->PublishMetadata(composite_device, path,
-                                                                 kMetadataKey + 1, nullptr, 0));
-
-  ASSERT_OK(platform_bus()->device->coordinator->GetMetadata(composite_device, kMetadataKey + 1,
-                                                             nullptr, 0, &len));
-}
-
-TEST_F(CompositeMetadataTestCase, FailPublishToRestricted) {
-  char path[256] = "/sys/";
-  ASSERT_NO_FATAL_FAILURES(AddCompositeDevice());
-  ASSERT_NOT_OK(platform_bus()->device->coordinator->PublishMetadata(composite_device, path,
-                                                                     kMetadataKey + 1, nullptr, 0));
-}
-
 TEST_F(CompositeMetadataTestCase, GetMetadataFromChild) {
   char buf[32] = "";
   size_t len = 0;
