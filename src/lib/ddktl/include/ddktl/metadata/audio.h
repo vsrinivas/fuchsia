@@ -63,7 +63,7 @@ struct Codecs {
   uint32_t number_of_external_delays;
   ExternalDelay external_delays[kMaxNumberOfExternalDelays];
   // Channels to enable in each codec as a bitmask of the channels in the DAI.
-  // The least significant bit correspond to the right most channel in the DAI.
+  // The least significant bit correspond to the left most channel in the DAI.
   uint8_t channels_to_use_bitmask[kMaxNumberOfCodecs];
   // Defines mapping between ring buffer channels and codecs using them.
   // Used for stopping codecs corresponding to the ring buffer channels to use bitmask.

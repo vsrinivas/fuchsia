@@ -291,13 +291,7 @@ zx_status_t Tas5720::WriteReg(uint8_t reg, uint8_t value) {
 #ifdef TRACE_I2C
   printf("Writing to instance/slot %u/%u register 0x%02X to value 0x%02X\n", instance_count_,
          tdm_slot_, reg, value);
-  auto status = i2c_.WriteSync(write_buffer, countof(write_buffer));
-  if (status != ZX_OK) {
-    printf("Could not I2C write %d\n", status);
-    return status;
-  }
-  return ZX_OK;
-#else
+#endif
   constexpr uint8_t kNumberOfRetries = 2;
   constexpr zx::duration kRetryDelay = zx::msec(1);
   auto ret =
@@ -307,7 +301,6 @@ zx_status_t Tas5720::WriteReg(uint8_t reg, uint8_t value) {
            ret.retries);
   }
   return ret.status;
-#endif
 }
 
 zx_status_t Tas5720::ReadReg(uint8_t reg, uint8_t* value) {

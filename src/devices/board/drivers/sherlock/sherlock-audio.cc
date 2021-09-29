@@ -440,7 +440,7 @@ zx_status_t Sherlock::AudioInit() {
     // The samples in the fourth channel are expected to come from the right channel of stereo audio
     // and are used for the right tweeter.
     metadata.ring_buffer.number_of_channels = 4;
-    metadata.swaps = 0x1032;
+    metadata.swaps = 0x0123;
     metadata.lanes_enable_mask[0] = 3;
     metadata.lanes_enable_mask[1] = 3;
 #ifndef FACTORY_BUILD
@@ -449,9 +449,9 @@ zx_status_t Sherlock::AudioInit() {
     metadata.codecs.delta_gains[1] = -6.4f;
     metadata.codecs.delta_gains[2] = -6.4f;
 #endif                                                 // FACTORY_BUILD
-    metadata.codecs.channels_to_use_bitmask[0] = 0x1;  // Woofer uses DAI right I2S channel.
-    metadata.codecs.channels_to_use_bitmask[1] = 0x2;  // L tweeter uses DAI left I2S channel.
-    metadata.codecs.channels_to_use_bitmask[2] = 0x1;  // R tweeter uses DAI right I2S channel.
+    metadata.codecs.channels_to_use_bitmask[0] = 0x2;  // Woofer uses DAI right I2S channel.
+    metadata.codecs.channels_to_use_bitmask[1] = 0x1;  // L tweeter uses DAI left I2S channel.
+    metadata.codecs.channels_to_use_bitmask[2] = 0x2;  // R tweeter uses DAI right I2S channel.
     // The woofer samples are expected in the second position out of four channels.
     // In a 4-bit bitmask, counting from least-significant bit, this is index 1: value 2^1 = 2.
     metadata.codecs.ring_buffer_channels_to_use_bitmask[0] = 0x2;  // Woofer uses index 1.

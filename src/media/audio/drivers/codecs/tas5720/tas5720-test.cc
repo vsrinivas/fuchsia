@@ -19,7 +19,7 @@ namespace audio {
 audio::DaiFormat GetDefaultDaiFormat() {
   return {
       .number_of_channels = 2,
-      .channels_to_use_bitmask = 1,  // Use one channel in this mono codec.
+      .channels_to_use_bitmask = 1,  // Use left channel in this mono codec.
       .sample_format = SampleFormat::PCM_SIGNED,
       .frame_format = FrameFormat::STEREO_LEFT,
       .frame_rate = 24'000,
@@ -212,6 +212,10 @@ TEST_F(Tas5720Test, CodecDaiFormat) {
   mock_i2c_.ExpectWriteStop({0x02, 0x45});  // Set rate to 48kHz.
 
   mock_i2c_.ExpectWrite({0x03}).ExpectReadStop({0xff});
+  mock_i2c_.ExpectWriteStop({0x03, 0xfd});  // Set slot to 1.
+  mock_i2c_.ExpectWriteStop({0x02, 0x45});  // Set rate to 48kHz.
+
+  mock_i2c_.ExpectWrite({0x03}).ExpectReadStop({0xff});
   mock_i2c_.ExpectWriteStop({0x03, 0xfc});  // Set slot to 0.
   mock_i2c_.ExpectWriteStop({0x02, 0x4d});  // Set rate to 96kHz.
 
@@ -243,6 +247,17 @@ TEST_F(Tas5720Test, CodecDaiFormat) {
   {
     DaiFormat format = GetDefaultDaiFormat();
     format.frame_rate = 48'000;
+    auto formats = client.GetDaiFormats();
+    ASSERT_TRUE(IsDaiFormatSupported(format, formats.value()));
+    zx::status<CodecFormatInfo> codec_format_info = client.SetDaiFormat(std::move(format));
+    ASSERT_OK(codec_format_info.status_value());
+    EXPECT_EQ(zx::msec(25).get() + zx::usec(33'300).get(), codec_format_info->turn_on_delay());
+    EXPECT_EQ(zx::msec(25).get() + zx::usec(33'300).get(), codec_format_info->turn_off_delay());
+  }
+  {
+    DaiFormat format = GetDefaultDaiFormat();
+    format.frame_rate = 48'000;
+    format.channels_to_use_bitmask = 2;  // Use right channel in this mono codec.
     auto formats = client.GetDaiFormats();
     ASSERT_TRUE(IsDaiFormatSupported(format, formats.value()));
     zx::status<CodecFormatInfo> codec_format_info = client.SetDaiFormat(std::move(format));

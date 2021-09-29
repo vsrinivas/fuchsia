@@ -254,7 +254,7 @@ zx_status_t Tas27xx::SetTdmSlots(uint64_t channels_to_use_bitmask) {
     return ZX_ERR_NOT_SUPPORTED;
   }
   channels_to_use_bitmask_ = channels_to_use_bitmask;
-  uint8_t rx_scfg = channels_to_use_bitmask_ == 1 ? 0x02 : 0x01;
+  uint8_t rx_scfg = static_cast<uint8_t>(channels_to_use_bitmask_);
   return WriteReg(TDM_CFG2, (rx_scfg << 4) | (0x00 << 2) | 0x02);
 }
 
@@ -453,13 +453,7 @@ zx_status_t Tas27xx::WriteReg(uint8_t reg, uint8_t value) {
 //#define TRACE_I2C
 #ifdef TRACE_I2C
   printf("Writing register 0x%02X to value 0x%02X\n", reg, value);
-  auto status = i2c_.WriteSync(write_buffer, countof(write_buffer));
-  if (status != ZX_OK) {
-    printf("Could not I2C write %d\n", status);
-    return status;
-  }
-  return ZX_OK;
-#else
+#endif
   constexpr uint8_t kNumberOfRetries = 2;
   constexpr zx::duration kRetryDelay = zx::msec(1);
   auto ret =
@@ -469,7 +463,6 @@ zx_status_t Tas27xx::WriteReg(uint8_t reg, uint8_t value) {
            ret.retries);
   }
   return ret.status;
-#endif
 }
 
 zx_status_t Tas27xx::ReadReg(uint8_t reg, uint8_t* value) {

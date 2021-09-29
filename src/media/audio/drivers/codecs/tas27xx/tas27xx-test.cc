@@ -20,7 +20,7 @@ namespace audio {
 audio::DaiFormat GetDefaultDaiFormat() {
   return {
       .number_of_channels = 2,
-      .channels_to_use_bitmask = 1,  // Use one channel (right) in this mono codec.
+      .channels_to_use_bitmask = 2,  // Use one channel (right) in this mono codec.
       .sample_format = SampleFormat::PCM_SIGNED,
       .frame_format = FrameFormat::I2S,
       .frame_rate = 24'000,
@@ -417,7 +417,7 @@ TEST_F(Tas27xxTest, CodecDaiFormat) {
   {
     DaiFormat format = GetDefaultDaiFormat();
     format.frame_rate = 96'000;
-    format.channels_to_use_bitmask = 2;  // Use one channel (left) in this mono codec.
+    format.channels_to_use_bitmask = 1;  // Use one channel (left) in this mono codec.
     auto formats = client.GetDaiFormats();
     ASSERT_TRUE(IsDaiFormatSupported(format, formats.value()));
     zx::status<CodecFormatInfo> codec_format_info = client.SetDaiFormat(std::move(format));

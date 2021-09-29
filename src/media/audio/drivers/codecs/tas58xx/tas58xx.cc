@@ -226,7 +226,7 @@ zx::status<CodecFormatInfo> Tas58xx::SetDaiFormat(const DaiFormat& format) {
   // In bridged, only the left is channel supported, from the datasheet:
   // "the input signal to the PBTL amplifier is left frame of I2S or TDM data".
   if (metadata_.bridged &&
-      (format.number_of_channels != 2 || (format.channels_to_use_bitmask != 2))) {
+      (format.number_of_channels != 2 || (format.channels_to_use_bitmask != 1))) {
     zxlogf(ERROR, "DAI format channels to use not supported in bridged mode %u 0x%lX",
            format.number_of_channels, format.channels_to_use_bitmask);
     return zx::error(ZX_ERR_NOT_SUPPORTED);

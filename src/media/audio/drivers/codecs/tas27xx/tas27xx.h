@@ -133,7 +133,7 @@ class Tas27xx : public SimpleCodecServer {
   metadata::ti::TasConfig metadata_ = {};
   async::IrqMethod<Tas27xx, &Tas27xx::HandleIrq> irq_handler_{this};
 
-  uint8_t channels_to_use_bitmask_ = 1;  // Right channel if I2S.
+  uint8_t channels_to_use_bitmask_ = 2;  // Right channel if I2S.
   inspect::Node driver_inspect_;
   inspect::IntProperty first_error_secs_;
   inspect::UintProperty resets_count_;

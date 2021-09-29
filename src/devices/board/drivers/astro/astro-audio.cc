@@ -320,7 +320,7 @@ zx_status_t Astro::AudioInit() {
     metadata.ring_buffer.number_of_channels = 1;
     metadata.lanes_enable_mask[0] = 1;  // One ring buffer channel goes into the right I2S slot.
     metadata.codecs.number_of_codecs = 1;
-    metadata.codecs.channels_to_use_bitmask[0] = 1;  // Codec must use the right I2S slot.
+    metadata.codecs.channels_to_use_bitmask[0] = 2;  // Codec must use the right I2S slot.
 
     metadata.codecs.types[0] = metadata::CodecType::Tas27xx;
     // Report our external delay based on the chosen frame rate.  Note that these
@@ -335,7 +335,6 @@ zx_status_t Astro::AudioInit() {
     metadata.codecs.external_delays[0].nsecs = ZX_USEC(125);
     metadata.codecs.external_delays[1].frequency = 96'000;
     metadata.codecs.external_delays[1].nsecs = ZX_NSEC(83333);
-    metadata.codecs.channels_to_use_bitmask[0] = 0x1;              // Single DAI right I2S channel.
     metadata.codecs.ring_buffer_channels_to_use_bitmask[0] = 0x1;  // Single speaker uses index 0.
     metadata.codecs.delta_gains[0] = -1.5f;
     pbus_metadata_t tdm_metadata[] = {
