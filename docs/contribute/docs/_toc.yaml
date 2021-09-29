@@ -20,3 +20,6 @@ toc:
   path: /docs/contribute/docs/glossary-entries.md
 - title: "Modifying non-inclusive words in mdlint"
   path: /docs/contribute/docs/modify-mdlint-inclusive-language.md
+- title: Shortlinks
+  section:
+  - include: /docs/contribute/docs/shortlinks/_toc.yaml

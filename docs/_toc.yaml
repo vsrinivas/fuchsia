@@ -37,3 +37,5 @@ toc:
   path: /docs/contribute/governance/deprecated-ftp-process.md
 - title: "Deprecated: FTP template"
   path: /docs/contribute/governance/deprecated-ftp-template.md
+- title: "Fuchsia.dev shortlinks"
+  path: /docs/go/README.md
