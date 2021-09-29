@@ -5,6 +5,7 @@
 #ifndef SRC_STORAGE_FSHOST_MINFS_MANIPULATOR_H_
 #define SRC_STORAGE_FSHOST_MINFS_MANIPULATOR_H_
 
+#include <fidl/fuchsia.hardware.block/cpp/wire.h>
 #include <fidl/fuchsia.io.admin/cpp/wire.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/status.h>
@@ -17,10 +18,9 @@
 
 namespace fshost {
 
-// Gets the number of bytes in the block |device|.
-//
-// For minfs on zxcrypt on fvm this is the number of bytes allocated in fvm by minfs.
-zx::status<uint64_t> GetBlockDeviceSize(const zx::unowned_channel& device);
+// Gets the BlockInfo from |device|.
+zx::status<fuchsia_hardware_block::wire::BlockInfo> GetBlockDeviceInfo(
+    const zx::unowned_channel& device);
 
 // For a given block |device| formatted with minfs, resizes minfs if it's not the correct size.
 //
@@ -54,6 +54,13 @@ class MountedMinfs {
 
   // Populates minfs with the contents of |copier|.
   zx::status<> PopulateFilesystem(Copier copier) const;
+
+  // Creates a file at the root of minfs to indicate that |PopulateFilesystem| was started.
+  zx::status<> SetResizeInProgress() const;
+  // Removes the file created by |SetResizeInProgress|.
+  zx::status<> ClearResizeInProgress() const;
+  // Returns true if the file created by |SetResizeInProgress| exists.
+  zx::status<bool> IsResizeInProgress() const;
 
   // Gets a file descriptor to the root directory of minfs.
   zx::status<fbl::unique_fd> GetRootFd() const;

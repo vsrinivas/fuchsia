@@ -4,6 +4,7 @@
 
 #include "src/storage/fshost/minfs-manipulator.h"
 
+#include <fcntl.h>
 #include <fidl/fuchsia.hardware.block/cpp/wire.h>
 #include <fidl/fuchsia.io.admin/cpp/wire.h>
 #include <lib/fdio/directory.h>
@@ -14,6 +15,7 @@
 #include <lib/syslog/cpp/macros.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/status.h>
+#include <unistd.h>
 #include <zircon/errors.h>
 #include <zircon/types.h>
 
@@ -26,11 +28,14 @@
 #include <fs-management/launch.h>
 #include <fs-management/mount.h>
 
+#include "src/lib/files/file_descriptor.h"
 #include "src/storage/fshost/copier.h"
 #include "src/storage/fvm/client.h"
 
 namespace fshost {
 namespace {
+
+constexpr char kMinfsResizeInProgressFilename[] = "minfs-resize-in-progress";
 
 zx::channel CloneDeviceChannel(const zx::channel& device) {
   return zx::channel(fdio_service_clone(device.get()));
@@ -54,9 +59,41 @@ zx::status<> FormatMinfs(zx::channel device) {
   return zx::make_status(launch_stdio_sync(/*argc=*/2, argv, handles, ids, /*len=*/1));
 }
 
+zx::status<> ClearPartition(zx::channel device, uint32_t device_block_size) {
+  // Overwrite the start of the block device which should contain the minfs magic. If freeing the
+  // slices partially fails or mkfs fails after this then without the correct magic minfs won't be
+  // mounted in a corrupted state.
+  fbl::unique_fd device_fd;
+  if (zx_status_t status =
+          fdio_fd_create(CloneDeviceChannel(device).release(), device_fd.reset_and_get_address());
+      status != ZX_OK) {
+    return zx::error(status);
+  }
+  if (lseek(device_fd.get(), 0, SEEK_SET) != 0) {
+    return zx::error(ZX_ERR_IO);
+  }
+  std::vector<char> zeros(device_block_size, 0);
+  if (!fxl::WriteFileDescriptor(device_fd.get(), zeros.data(), device_block_size)) {
+    return zx::error(ZX_ERR_IO);
+  }
+
+  auto remoteblock_device = GetRemoteBlockDevice(std::move(device));
+  if (remoteblock_device.is_error()) {
+    return remoteblock_device.take_error();
+  }
+  FX_LOGS(INFO) << "Resizing minfs";
+  if (zx_status_t status = fvm::ResetAllSlices((*remoteblock_device).get()); status != ZX_OK) {
+    FX_LOGS(ERROR) << "Failed to reset all of the slices in minfs: "
+                   << zx_status_get_string(status);
+    return zx::error(status);
+  }
+  return zx::ok();
+}
+
 }  // namespace
 
-zx::status<uint64_t> GetBlockDeviceSize(const zx::unowned_channel& device) {
+zx::status<fuchsia_hardware_block::wire::BlockInfo> GetBlockDeviceInfo(
+    const zx::unowned_channel& device) {
   fidl::UnownedClientEnd<fuchsia_hardware_block::Block> client(device);
   auto result = fidl::WireCall(client).GetInfo();
   if (result.status() != ZX_OK) {
@@ -65,27 +102,47 @@ zx::status<uint64_t> GetBlockDeviceSize(const zx::unowned_channel& device) {
   if (result->status != ZX_OK) {
     return zx::error(result->status);
   }
-  return zx::ok(result->info->block_size * result->info->block_count);
+  return zx::ok(*result->info);
 }
 
 zx::status<> MaybeResizeMinfs(zx::channel device, uint64_t size_limit, uint64_t required_inodes) {
-  zx::status<uint64_t> block_device_size = GetBlockDeviceSize(device.borrow());
-  if (block_device_size.is_error()) {
-    return block_device_size.take_error();
-  }
-
   zx::status<MountedMinfs> minfs = MountedMinfs::Mount(CloneDeviceChannel(device));
   if (minfs.is_error()) {
     FX_LOGS(ERROR) << "Failed to mount minfs: " << minfs.status_string();
     return minfs.take_error();
   }
+
+  // Check if minfs was already resized but failed while writing the data to the new minfs instance.
+  auto previously_failed_while_writing = minfs->IsResizeInProgress();
+  // If the check for "resize in progress" fails then continue on as if the file didn't exist. This
+  // check happens before checking if minfs is mis-sized and will run at every boot. We don't want a
+  // transient error to cause a device to get wiped.
+  if (!previously_failed_while_writing.is_error() && *previously_failed_while_writing) {
+    FX_LOGS(INFO)
+        << "Minfs was previously resized and failed while writing data, reformatting minfs now";
+    // Unmount the currently mounted minfs and reformat minfs again. Although we lose data it's
+    // safer to start from an empty minfs than to have partially written data and potentially put
+    // components in unknown and untested states.
+    if (zx::status<> status = MountedMinfs::Unmount(*std::move(minfs)); status.is_error()) {
+      FX_LOGS(ERROR) << "Failed to unmount minfs: " << status.status_string();
+      return status;
+    }
+    return FormatMinfs(std::move(device));
+  }
+
   auto minfs_info = minfs->GetFilesystemInfo();
   if (minfs_info.is_error()) {
     FX_LOGS(ERROR) << "Failed to get minfs filesystem info: " << minfs_info.status_string();
     return minfs_info.take_error();
   }
 
-  if (*block_device_size <= size_limit && minfs_info->total_nodes == required_inodes) {
+  auto block_device_info = GetBlockDeviceInfo(device.borrow());
+  if (block_device_info.is_error()) {
+    return block_device_info.take_error();
+  }
+  uint64_t block_device_size = block_device_info->block_size * block_device_info->block_count;
+
+  if (block_device_size <= size_limit && minfs_info->total_nodes == required_inodes) {
     // Minfs is already sized correctly.
     return zx::ok();
   }
@@ -106,23 +163,12 @@ zx::status<> MaybeResizeMinfs(zx::channel device, uint64_t size_limit, uint64_t 
     return status;
   }
 
-  {
-    auto remoteblock_device = GetRemoteBlockDevice(CloneDeviceChannel(device));
-    if (remoteblock_device.is_error()) {
-      // Minfs wasn't modified yet. Try again on next boot.
-      return remoteblock_device.take_error();
-    }
-
-    // No turning back point.
-    FX_LOGS(INFO) << "Resizing minfs";
-    if (zx_status_t status = fvm::ResetAllSlices((*remoteblock_device).get()); status != ZX_OK) {
-      FX_LOGS(ERROR) << "Failed to reset all of the slices in minfs: "
-                     << zx_status_get_string(status);
-      // If some but not all of the slices were reset then hopefully fsck will fail on the next boot
-      // and minfs will be reformatted. Depending on which slices were still allocated we may
-      // attempt to resize minfs again. All files are likely lost.
-      return zx::error(status);
-    }
+  // No turning back point.
+  if (zx::status<> status =
+          ClearPartition(CloneDeviceChannel(device), block_device_info->block_size);
+      status.is_error()) {
+    // All files are likely lost.
+    return status;
   }
 
   // Recreate minfs.
@@ -209,11 +255,24 @@ zx::status<fuchsia_io_admin::wire::FilesystemInfo> MountedMinfs::GetFilesystemIn
 }
 
 zx::status<> MountedMinfs::PopulateFilesystem(Copier copier) const {
+  if (zx::status<> status = SetResizeInProgress(); status.is_error()) {
+    return status;
+  }
   zx::status<fbl::unique_fd> root = GetRootFd();
   if (root.is_error()) {
     return root.take_error();
   }
-  return zx::make_status(copier.Write(*std::move(root)));
+  if (zx_status_t status = copier.Write(*std::move(root)); status != ZX_OK) {
+    return zx::error(status);
+  }
+  root = GetRootFd();
+  if (root.is_error()) {
+    return root.take_error();
+  }
+  if (syncfs(root->get()) != 0) {
+    return zx::error(ZX_ERR_IO);
+  }
+  return ClearResizeInProgress();
 }
 
 zx::status<Copier> MountedMinfs::ReadFilesystem() const {
@@ -247,6 +306,49 @@ zx::status<fbl::unique_fd> MountedMinfs::GetRootFd() const {
     return zx::error(status);
   }
   return zx::ok(std::move(root_fd));
+}
+
+zx::status<> MountedMinfs::SetResizeInProgress() const {
+  auto root_fd = GetRootFd();
+  if (!root_fd->is_valid()) {
+    return root_fd.take_error();
+  }
+  fbl::unique_fd fd(openat(root_fd->get(), kMinfsResizeInProgressFilename, O_CREAT, 0666));
+  if (!fd.is_valid()) {
+    return zx::error(ZX_ERR_IO);
+  }
+  if (fsync(fd.get()) != 0) {
+    return zx::error(ZX_ERR_IO);
+  }
+  return zx::ok();
+}
+
+zx::status<> MountedMinfs::ClearResizeInProgress() const {
+  auto root_fd = GetRootFd();
+  if (!root_fd->is_valid()) {
+    return root_fd.take_error();
+  }
+  if (unlinkat(root_fd->get(), kMinfsResizeInProgressFilename, /*flags=*/0) != 0) {
+    return zx::error(ZX_ERR_IO);
+  }
+  if (syncfs(root_fd->get()) != 0) {
+    return zx::error(ZX_ERR_IO);
+  }
+  return zx::ok();
+}
+
+zx::status<bool> MountedMinfs::IsResizeInProgress() const {
+  auto root_fd = GetRootFd();
+  if (!root_fd->is_valid()) {
+    return root_fd.take_error();
+  }
+  if (faccessat(root_fd->get(), kMinfsResizeInProgressFilename, F_OK, /*flags=*/0) != 0) {
+    if (errno == ENOENT) {
+      return zx::ok(false);
+    }
+    return zx::error(ZX_ERR_IO);
+  }
+  return zx::ok(true);
 }
 
 }  // namespace fshost

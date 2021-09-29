@@ -7,6 +7,7 @@
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fdio.h>
 #include <lib/zx/channel.h>
+#include <unistd.h>
 
 #include <cstdint>
 #include <filesystem>
@@ -66,6 +67,14 @@ class FsManipulatorTest : public testing::Test {
 
   zx::channel device() { return zx::channel(fdio_service_clone(device_.get())); }
 
+  zx::status<uint64_t> GetBlockDeviceSize() {
+    auto block_device_info = GetBlockDeviceInfo(device_.borrow());
+    if (block_device_info.is_error()) {
+      return block_device_info.take_error();
+    }
+    return zx::ok(block_device_info->block_size * block_device_info->block_count);
+  }
+
  private:
   storage::RamDisk ram_disk_;
   zx::channel device_;
@@ -91,7 +100,7 @@ bool CreateSizedFileAt(int dir, const char* filename, ssize_t file_size) {
 
 TEST_F(FsManipulatorTest, MaybeResizeMinfsWithAcceptableSizeDoesNothing) {
   constexpr char kFilename[] = "1MiBfile";
-  zx::status<uint64_t> initialize_size = GetBlockDeviceSize(device().borrow());
+  zx::status<uint64_t> initialize_size = GetBlockDeviceSize();
   ASSERT_OK(initialize_size.status_value());
 
   // Write a 1MiB file to minfs to cause it to allocate slices from fvm which will increase the size
@@ -107,7 +116,7 @@ TEST_F(FsManipulatorTest, MaybeResizeMinfsWithAcceptableSizeDoesNothing) {
   }
 
   // Verify that slices were allocated.
-  zx::status<uint64_t> filled_size = GetBlockDeviceSize(device().borrow());
+  zx::status<uint64_t> filled_size = GetBlockDeviceSize();
   ASSERT_OK(filled_size.status_value());
   ASSERT_GT(*filled_size, *initialize_size);
 
@@ -120,7 +129,7 @@ TEST_F(FsManipulatorTest, MaybeResizeMinfsWithAcceptableSizeDoesNothing) {
   // device would be back to the initial size.
   zx::status<MountedMinfs> minfs = MountedMinfs::Mount(device());
   ASSERT_OK(minfs.status_value());
-  zx::status<uint64_t> final_size = GetBlockDeviceSize(device().borrow());
+  zx::status<uint64_t> final_size = GetBlockDeviceSize();
   ASSERT_OK(final_size.status_value());
   EXPECT_EQ(*final_size, *filled_size);
 }
@@ -165,7 +174,7 @@ TEST_F(FsManipulatorTest, MaybeResizeMinfsWithTooManyInodesResizes) {
 
 TEST_F(FsManipulatorTest, MaybeResizeMinfsWithTooManySlicesResizes) {
   constexpr char kFilename[] = "1MiBfile";
-  zx::status<uint64_t> initialize_size = GetBlockDeviceSize(device().borrow());
+  zx::status<uint64_t> initialize_size = GetBlockDeviceSize();
   ASSERT_OK(initialize_size.status_value());
 
   // Write a 1MiB file to minfs to cause it to allocate slices from fvm which will increase the size
@@ -181,7 +190,7 @@ TEST_F(FsManipulatorTest, MaybeResizeMinfsWithTooManySlicesResizes) {
   }
 
   // Verify that slices were allocated.
-  zx::status<uint64_t> filled_size = GetBlockDeviceSize(device().borrow());
+  zx::status<uint64_t> filled_size = GetBlockDeviceSize();
   ASSERT_OK(filled_size.status_value());
   ASSERT_GT(*filled_size, *initialize_size);
 
@@ -192,7 +201,7 @@ TEST_F(FsManipulatorTest, MaybeResizeMinfsWithTooManySlicesResizes) {
   // If minfs was resized then it should be back to the initial size.
   zx::status<MountedMinfs> minfs = MountedMinfs::Mount(device());
   ASSERT_OK(minfs.status_value());
-  zx::status<uint64_t> final_size = GetBlockDeviceSize(device().borrow());
+  zx::status<uint64_t> final_size = GetBlockDeviceSize();
   ASSERT_OK(final_size.status_value());
   EXPECT_EQ(*final_size, *initialize_size);
 }
@@ -237,6 +246,75 @@ TEST_F(FsManipulatorTest, MaybeResizeMinfsResizingPreservesAllFiles) {
   std::string file2NewContents;
   EXPECT_TRUE(files::ReadFileToStringAt(root->get(), kDirectory1 / kFile2, &file2NewContents));
   EXPECT_EQ(file2NewContents, kFile2Contents);
+
+  // Verify that the resize is no longer in progress.
+  auto is_resize_in_progress = minfs->IsResizeInProgress();
+  ASSERT_OK(is_resize_in_progress.status_value());
+  EXPECT_FALSE(*is_resize_in_progress);
+}
+
+TEST_F(FsManipulatorTest, MaybeResizeMinfsWithResizeInProgressReformatsMinfs) {
+  const std::filesystem::path kFile = "file.txt";
+  const std::string kFileContents = "contents";
+  {
+    zx::status<MountedMinfs> minfs = MountedMinfs::Mount(device());
+    ASSERT_OK(minfs.status_value());
+    // Set writing in progress and add a file.
+    ASSERT_OK(minfs->SetResizeInProgress().status_value());
+    zx::status<fbl::unique_fd> root = minfs->GetRootFd();
+    ASSERT_OK(root.status_value());
+    ASSERT_TRUE(files::WriteFileAt(root->get(), kFile, kFileContents.data(), kFileContents.size()));
+  }
+
+  zx::status<> status =
+      MaybeResizeMinfs(device(), kMinfsPartitionSizeLimit, kMinfsDefaultInodeCount);
+  ASSERT_OK(status.status_value());
+
+  zx::status<MountedMinfs> minfs = MountedMinfs::Mount(device());
+  ASSERT_OK(minfs.status_value());
+  zx::status<fbl::unique_fd> root = minfs->GetRootFd();
+  ASSERT_OK(root.status_value());
+  // Since writing was already in progress minfs was wiped and the file was lost.
+  EXPECT_NE(faccessat(root->get(), kFile.c_str(), F_OK, /*flags=*/0), 0);
+  EXPECT_EQ(errno, ENOENT);
+  auto is_resize_in_progress = minfs->IsResizeInProgress();
+  ASSERT_OK(is_resize_in_progress.status_value());
+  EXPECT_FALSE(*is_resize_in_progress);
+}
+
+TEST_F(FsManipulatorTest, MaybeResizeMinfsResizeInProgressIsCorrectlyDetected) {
+  {
+    zx::status<MountedMinfs> minfs = MountedMinfs::Mount(device());
+    ASSERT_OK(minfs.status_value());
+
+    // The file doesn't exist in an empty minfs.
+    auto is_resize_in_progress = minfs->IsResizeInProgress();
+    ASSERT_OK(is_resize_in_progress.status_value());
+    EXPECT_FALSE(*is_resize_in_progress);
+
+    // Create the file.
+    ASSERT_OK(minfs->SetResizeInProgress().status_value());
+  }
+  {
+    zx::status<MountedMinfs> minfs = MountedMinfs::Mount(device());
+    ASSERT_OK(minfs.status_value());
+
+    // Ensure that the file exists.
+    auto is_resize_in_progress = minfs->IsResizeInProgress();
+    ASSERT_OK(is_resize_in_progress.status_value());
+    EXPECT_TRUE(*is_resize_in_progress);
+
+    // Remove the file.
+    ASSERT_OK(minfs->ClearResizeInProgress().status_value());
+  }
+
+  zx::status<MountedMinfs> minfs = MountedMinfs::Mount(device());
+  ASSERT_OK(minfs.status_value());
+
+  // Ensure that the file no longer exists.
+  auto is_resize_in_progress = minfs->IsResizeInProgress();
+  ASSERT_OK(is_resize_in_progress.status_value());
+  EXPECT_FALSE(*is_resize_in_progress);
 }
 
 }  // namespace
