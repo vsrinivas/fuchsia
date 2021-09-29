@@ -49,7 +49,7 @@ If you meet the review criteria, you can create a change to propose yourself
 as a member by editing the [OWNERS] file of the `/docs/go/` directory.
 
 
-[git-source-editor]: https://ci.android.com/edit?repo=fuchsia/fuchsia/main&file=docs/concepts/index.md
+[git-source-editor]: https://ci.android.com/edit?repo=fuchsia/fuchsia/main&file=/docs/go/_redirects.yaml
 [redirects-file]: https://cs.opensource.google/fuchsia/fuchsia/+/main:docs/go/_redirects.yaml
 [RFC-0125]: /docs/contribute/governance/rfcs/0125_shortlink_fuchsia_dev.md
 [rubric]: /docs/contribute/docs/shortlinks/rubric.md
