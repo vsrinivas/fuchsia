@@ -17,6 +17,7 @@ import("//build/info/info.gni")
 import("//build/packages/package_metadata.gni")
 import("//build/security/verifier/verify_bootfs.gni")
 import("//build/security/verifier/verify_kernel_cmdline.gni")
+import("//build/security/verifier/verify_route_sources.gni")
 import("//build/security/verifier/verify_static_pkgs.gni")
 import("//build/zbi/zbi_input.gni")
 import("//build/zircon/tools.gni")
@@ -60,6 +61,12 @@ import("//src/sys/pkg/bin/pm/pm.gni")
 #     against. Verified if matches one of the goldens. At most two entries are
 #     supported for soft migration, if the content matches either of the entries,
 #     it is consider a match. Only one entry should be used for normal case.
+#
+#   route_sources_config
+#     [string] A path to the config file to be used when invoking the
+#     route_sources verifier on the assembled system. This parameter is,
+#     temporarily, only available for the `fuchsia` image. For details, see
+#     fxbug.dev/85664.
 #
 #   testonly (optional)
 #     [bool] Usual GN meanings.
@@ -719,6 +726,27 @@ template("assemble_system") {
       goldens = invoker.static_pkgs_goldens
     }
   }
+  if (defined(invoker.route_sources_config)) {
+    assert(
+        image_name == "fuchsia",
+        "assemble_system() { route_sources_config } is temporarily only available for the `fuchsia` image")
+    verify_route_sources("${image_name}_route_sources_verify_files") {
+      # TODO(fxbug.dev/85664): The testonly and the dependency on pm publish
+      # are both temporary; they will be fixed after all collectors use
+      # blobfs_manifest as the source of truth for loading blobs.
+      #
+      # Unlike other verifiers that rely on assembly metadata, the route_sources
+      # verifier depends on pm publish and is integrated into the build via the
+      # testonly //build/images:updates target.
+      testonly = true
+      forward_variables_from(invoker, [ "visibility" ])
+      zbi = files.zbi_final
+      zbi_target = ":${labels.image_assembler}"
+      blobfs_manifest = files.blobfs_manifest
+      blobfs_manifest_target = ":${labels.image_assembler}"
+      config_path = invoker.route_sources_config
+    }
+  }
 
   group(target_name) {
     forward_variables_from(invoker,
@@ -744,5 +772,9 @@ template("assemble_system") {
     if (defined(invoker.static_pkgs_goldens)) {
       deps += [ ":${image_name}_static_pkgs_verify_files" ]
     }
+
+    # Note: "${image_name}_route_sources_verify_files" dependency on pm-publish
+    # would create a dependency cycle if it were included here. Instead, it is
+    # integrated into the build via //build/images:updates.
   }
 }

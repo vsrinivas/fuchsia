@@ -10,6 +10,7 @@ group("verifiers") {
   deps = [
     "//src/security/verifiers/verify_bootfs($host_toolchain)",
     "//src/security/verifiers/verify_kernel_cmdline($host_toolchain)",
+    "//src/security/verifiers/verify_route_sources($host_toolchain)",
     "//src/security/verifiers/verify_routes($host_toolchain)",
     "//src/security/verifiers/verify_static_pkgs($host_toolchain)",
   ]

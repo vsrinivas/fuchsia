@@ -80,6 +80,10 @@ declare_args() {
   # 5. delete 'product.txt.orig' and remove it from this list.
   fuchsia_static_pkgs_goldens = []
 
+  # An optional file path to the route_sources verifier configuration to be used
+  # on the assembled fuchsia system.
+  fuchsia_route_sources_config = ""
+
   # An optional list of (capability, moniker) pairs that determine exceptions
   # to the verify_route.gni build rule that prevents v2 components from
   # attempting to use capabilities they were not offered. Generally new entries

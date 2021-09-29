@@ -1,0 +1,87 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/compiled_action.gni")
+
+# Check the route sources specified in a config file.
+#
+# The target that generates 'zbi' needs to be added to deps.
+#
+# Parameters
+#
+#   zbi
+#     Required: Path to the ZBI image.
+#   zbi_target
+#     Required: The target to build the 'zbi'.
+#   blobfs_manifest
+#     Required: Path to the blobfs manifest file.
+#   blobfs_manifest_target:
+#     Required: The target to build the 'blobfs_manifest'.
+#   config_path
+#     Required: Path to a configuration file that specifies the full set of
+#       routes of zero or more component instances to verify.
+#   deps, public_deps, data_deps (optional)
+#     Usual GN meaning.
+
+template("verify_route_sources") {
+  assert(defined(invoker.zbi), "verify_route_sources() must specify zbi")
+  assert(defined(invoker.zbi_target),
+         "verify_route_sources() must specify zbi_target")
+  assert(defined(invoker.blobfs_manifest),
+         "verify_route_sources() must specify blobfs_manifest")
+  assert(defined(invoker.blobfs_manifest_target),
+         "verify_route_sources() must specify blobfs_manifest_target")
+  assert(defined(invoker.config_path),
+         "verify_route_sources() must specify config_path")
+
+  compiled_action("${target_name}") {
+    forward_variables_from(invoker,
+                           [
+                             "testonly",
+                             "deps",
+                             "public_deps",
+                             "data_deps",
+                             "visibility",
+                           ])
+
+    tool = "//src/security/verifiers/verify_route_sources:bin"
+    tool_output_name = "scrutiny_verify_route_sources"
+    stamp_file = "$target_gen_dir/$target_name.verified"
+    depfile = "$target_gen_dir/$target_name.d"
+    published_packages = "//build/images:publish"
+
+    inputs = [
+      invoker.zbi,
+      invoker.blobfs_manifest,
+      invoker.config_path,
+    ]
+
+    outputs = [ stamp_file ]
+
+    args = [
+      "--build-path",
+      root_build_dir,
+      "--zbi",
+      rebase_path(invoker.zbi, root_build_dir),
+      "--manifest",
+      rebase_path(invoker.blobfs_manifest, root_build_dir),
+      "--stamp",
+      rebase_path(stamp_file, root_build_dir),
+      "--depfile",
+      rebase_path(depfile, root_build_dir),
+      "--config",
+      rebase_path(invoker.config_path, root_build_dir),
+    ]
+
+    if (!defined(invoker.deps)) {
+      deps = []
+    }
+
+    deps += [
+      invoker.zbi_target,
+      invoker.blobfs_manifest_target,
+      published_packages,
+    ]
+  }
+}

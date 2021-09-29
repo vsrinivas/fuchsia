@@ -26,6 +26,10 @@ use {
     std::{collections::HashSet, sync::Arc},
 };
 
+pub use controller::route_sources::{
+    RouteSourceError, Source, VerifyRouteSourcesResult, VerifyRouteSourcesResults,
+};
+
 plugin!(
     VerifyPlugin,
     PluginHooks::new(

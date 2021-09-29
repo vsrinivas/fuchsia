@@ -1195,6 +1195,9 @@ group("updates") {
 
   if (!is_coverage) {
     deps += [ ":verify_capability_routes" ]
+    if (fuchsia_route_sources_config != "") {
+      deps += [ "//build/images/fuchsia:fuchsia_route_sources_verify_files" ]
+    }
   }
 }
 

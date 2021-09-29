@@ -193,6 +193,9 @@ assemble_system("fuchsia_assembly") {
   if (fuchsia_static_pkgs_goldens != []) {
     static_pkgs_goldens = fuchsia_static_pkgs_goldens
   }
+  if (fuchsia_route_sources_config != "") {
+    route_sources_config = fuchsia_route_sources_config
+  }
 
   # Calculate the paths of the generated images.
   files = {
