@@ -933,7 +933,8 @@ Non-product JIT
   is_product = false
   platform_name = "dart_runner"
   runner_dep = "//src/dart:dart_jit_runner"
-  runtime_meta = "//build/dart/meta/jit_runtime"
+  runtime_meta = "//build/dart/meta/jit_runtime.cmx"
+  runtime_meta_v2 = "//build/dart/meta/jit_runtime.cml"
 }
 ```
 
@@ -3136,6 +3137,14 @@ A human readable product description.
 **Current value (from the default):** `""`
 
 From //build/product.gni:13
+
+### product_name_override
+Overrides the default name value in the product bundle. Used to distinguish
+between similar builds with different packages.
+
+**Current value (from the default):** `""`
+
+From //build/sdk/config.gni:25
 
 ### product_system_image_deps
 A list of binary labels to include in the system_image package.
