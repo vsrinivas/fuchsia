@@ -74,7 +74,8 @@ type DaiFrameFormatCustom = struct {
 type DaiFormat = struct {
     /// Number of channels.
     number_of_channels uint32;
-    /// Which channels to use.
+    /// Sets which channels are active via a bitmask.
+    /// The least significant bit corresponds to channel index 0.
     channels_to_use_bitmask uint64;
     /// The sample format of all samples.
     sample_format DaiSampleFormat;
