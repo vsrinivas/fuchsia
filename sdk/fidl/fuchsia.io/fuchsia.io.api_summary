@@ -89,8 +89,8 @@ protocol/member fuchsia.io/File.Describe() -> (fuchsia.io/NodeInfo info)
 protocol/member fuchsia.io/File.Describe2(fuchsia.io/ConnectionInfoQuery query) -> (fuchsia.io/ConnectionInfo info)
 protocol/member fuchsia.io/File.GetAttr() -> (int32 s,fuchsia.io/NodeAttributes attributes)
 protocol/member fuchsia.io/File.GetAttributes(fuchsia.io/NodeAttributesQuery query) -> (fuchsia.io/Node_GetAttributes_Result result)
+protocol/member fuchsia.io/File.GetBackingMemory(fuchsia.io/VmoFlags flags) -> (fuchsia.io/File_GetBackingMemory_Result result)
 protocol/member fuchsia.io/File.GetBuffer(uint32 flags) -> (int32 s,fuchsia.mem/Buffer:optional buffer)
-protocol/member fuchsia.io/File.GetBuffer2(fuchsia.io/VmoFlags flags) -> (fuchsia.io/File_GetBuffer2_Result result)
 protocol/member fuchsia.io/File.GetFlags() -> (int32 s,uint32 flags)
 protocol/member fuchsia.io/File.IoToIo2Placeholder()
 protocol/member fuchsia.io/File.NodeGetFlags() -> (int32 s,uint32 flags)
@@ -123,11 +123,11 @@ resource table fuchsia.io/FileInfo
 struct/member fuchsia.io/FileObject.event zx/handle:<EVENT,optional>
 struct/member fuchsia.io/FileObject.stream zx/handle:<STREAM,optional>
 resource struct fuchsia.io/FileObject
-struct/member fuchsia.io/File_GetBuffer2_Response.buffer fuchsia.mem/Buffer
-resource struct fuchsia.io/File_GetBuffer2_Response
-union/member fuchsia.io/File_GetBuffer2_Result.err int32
-union/member fuchsia.io/File_GetBuffer2_Result.response fuchsia.io/File_GetBuffer2_Response
-resource strict union fuchsia.io/File_GetBuffer2_Result
+struct/member fuchsia.io/File_GetBackingMemory_Response.vmo zx/handle:VMO
+resource struct fuchsia.io/File_GetBackingMemory_Response
+union/member fuchsia.io/File_GetBackingMemory_Result.err int32
+union/member fuchsia.io/File_GetBackingMemory_Result.response fuchsia.io/File_GetBackingMemory_Response
+resource strict union fuchsia.io/File_GetBackingMemory_Result
 struct/member fuchsia.io/File_Read2_Response.data vector<uint8>:8192
 struct fuchsia.io/File_Read2_Response
 union/member fuchsia.io/File_Read2_Result.err int32

@@ -363,11 +363,11 @@ protocol File {
         buffer box<fuchsia.mem.Buffer>;
     });
 
-    /// Acquires a [`fuchsia.mem/Buffer`] representing this file, if
+    /// Acquires a [`zx.handle:VMO`] representing this file, if
     /// there is one, with the requested access rights.
     ///
     /// + request `flags` a [`VmoFlags`] indicating the desired mode of access.
-    /// - response `buffer` the requested [`fuchsia.mem/Buffer`].
+    /// - response `vmo` the requested [`zx.handle:VMO`].
     /// * error a [`zx.status`] value indicating the failure.
     ///
     /// This method requires the following rights:
@@ -376,10 +376,10 @@ protocol File {
     /// * [`Rights.WRITE_BYTES`] if `flags` includes [`VmoFlags.WRITE`].
     /// * [`Rights.EXECUTE`] if `flags` includes [`VmoFlags.EXECUTE`].
     @transitional
-    @selector("fuchsia.io/File.GetBuffer")
-    GetBuffer2(struct {
+    @selector("fuchsia.io/File.GetBackingMemory")
+    GetBackingMemory(struct {
         flags VmoFlags;
     }) -> (resource struct {
-        buffer fuchsia.mem.Buffer;
+        vmo zx.handle:VMO;
     }) error zx.status;
 };

@@ -51,7 +51,7 @@ class FileConnection final : public Connection, public fuchsia::io::File {
   void GetFlags(GetFlagsCallback callback) override;
   void SetFlags(uint32_t flags, SetFlagsCallback callback) override;
   void GetBuffer(uint32_t flags, GetBufferCallback callback) override;
-  void GetBuffer2(fuchsia::io::VmoFlags flags, GetBuffer2Callback callback) override;
+  void GetBackingMemory(fuchsia::io::VmoFlags flags, GetBackingMemoryCallback callback) override;
   void NodeGetFlags(NodeGetFlagsCallback callback) override;
   void NodeSetFlags(uint32_t flags, NodeSetFlagsCallback callback) override;
 

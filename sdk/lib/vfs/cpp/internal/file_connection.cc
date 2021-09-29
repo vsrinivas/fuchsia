@@ -220,7 +220,8 @@ void FileConnection::GetBuffer(uint32_t flags, GetBufferCallback callback) {
   callback(ZX_ERR_NOT_SUPPORTED, nullptr);
 }
 
-void FileConnection::GetBuffer2(fuchsia::io::VmoFlags flags, GetBuffer2Callback callback) {
+void FileConnection::GetBackingMemory(fuchsia::io::VmoFlags flags,
+                                      GetBackingMemoryCallback callback) {
   callback(fpromise::error(ZX_ERR_NOT_SUPPORTED));
 }
 
