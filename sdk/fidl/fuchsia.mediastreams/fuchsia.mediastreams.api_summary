@@ -1,0 +1,91 @@
+const fuchsia.mediastreams/AUDIO_COMPRESSION_AAC string "fuchsia.streams.aac"
+const fuchsia.mediastreams/AUDIO_COMPRESSION_AACLATM string "fuchsia.streams.aaclatm"
+const fuchsia.mediastreams/AUDIO_COMPRESSION_AMRNB string "fuchsia.streams.amrnb"
+const fuchsia.mediastreams/AUDIO_COMPRESSION_AMRWB string "fuchsia.streams.amrwb"
+const fuchsia.mediastreams/AUDIO_COMPRESSION_APTX string "fuchsia.streams.aptx"
+const fuchsia.mediastreams/AUDIO_COMPRESSION_FLAC string "fuchsia.streams.flac"
+const fuchsia.mediastreams/AUDIO_COMPRESSION_GSMMS string "fuchsia.streams.gsmms"
+const fuchsia.mediastreams/AUDIO_COMPRESSION_MP3 string "fuchsia.streams.mp3"
+const fuchsia.mediastreams/AUDIO_COMPRESSION_OPUS string "fuchsia.streams.opus"
+const fuchsia.mediastreams/AUDIO_COMPRESSION_PCMALAW string "fuchsia.streams.pcmalaw"
+const fuchsia.mediastreams/AUDIO_COMPRESSION_PCMMULAW string "fuchsia.streams.pcmmulaw"
+const fuchsia.mediastreams/AUDIO_COMPRESSION_SBC string "fuchsia.streams.sbc"
+const fuchsia.mediastreams/AUDIO_COMPRESSION_VORBIS string "fuchsia.streams.vorbis"
+union/member fuchsia.mediastreams/AudioChannelLayout.placeholder uint8
+strict union fuchsia.mediastreams/AudioChannelLayout
+struct/member fuchsia.mediastreams/AudioFormat.channel_count uint32
+struct/member fuchsia.mediastreams/AudioFormat.channel_layout fuchsia.mediastreams/AudioChannelLayout
+struct/member fuchsia.mediastreams/AudioFormat.frames_per_second uint32
+struct/member fuchsia.mediastreams/AudioFormat.sample_format fuchsia.mediastreams/AudioSampleFormat
+struct fuchsia.mediastreams/AudioFormat
+enum/member fuchsia.mediastreams/AudioSampleFormat.FLOAT 5
+enum/member fuchsia.mediastreams/AudioSampleFormat.SIGNED_16 2
+enum/member fuchsia.mediastreams/AudioSampleFormat.SIGNED_24_IN_32 3
+enum/member fuchsia.mediastreams/AudioSampleFormat.SIGNED_32 4
+enum/member fuchsia.mediastreams/AudioSampleFormat.UNSIGNED_8 1
+strict enum fuchsia.mediastreams/AudioSampleFormat uint32
+enum/member fuchsia.mediastreams/ColorSpace.INVALID 0
+enum/member fuchsia.mediastreams/ColorSpace.REC2020 7
+enum/member fuchsia.mediastreams/ColorSpace.REC2100 8
+enum/member fuchsia.mediastreams/ColorSpace.REC601_NTSC 2
+enum/member fuchsia.mediastreams/ColorSpace.REC601_NTSC_FULL_RANGE 3
+enum/member fuchsia.mediastreams/ColorSpace.REC601_PAL 4
+enum/member fuchsia.mediastreams/ColorSpace.REC601_PAL_FULL_RANGE 5
+enum/member fuchsia.mediastreams/ColorSpace.REC709 6
+enum/member fuchsia.mediastreams/ColorSpace.SRGB 1
+strict enum fuchsia.mediastreams/ColorSpace uint32
+struct/member fuchsia.mediastreams/Compression.parameters vector<uint8>:optional
+struct/member fuchsia.mediastreams/Compression.type string:256
+struct fuchsia.mediastreams/Compression
+const fuchsia.mediastreams/ENCRYPTION_SCHEME_CBC1 string "cbc1"
+const fuchsia.mediastreams/ENCRYPTION_SCHEME_CBCS string "cbcs"
+const fuchsia.mediastreams/ENCRYPTION_SCHEME_CENC string "cenc"
+const fuchsia.mediastreams/ENCRYPTION_SCHEME_CENS string "cens"
+struct/member fuchsia.mediastreams/Encryption.default_init_vector vector<uint8>:<16,optional>
+struct/member fuchsia.mediastreams/Encryption.default_key_id vector<uint8>:<16,optional>
+struct/member fuchsia.mediastreams/Encryption.default_pattern box<fuchsia.mediastreams/EncryptionPattern>
+struct/member fuchsia.mediastreams/Encryption.scheme string:4
+struct fuchsia.mediastreams/Encryption
+struct/member fuchsia.mediastreams/EncryptionPattern.clear_blocks uint32
+struct/member fuchsia.mediastreams/EncryptionPattern.encrypted_blocks uint32
+struct fuchsia.mediastreams/EncryptionPattern
+struct/member fuchsia.mediastreams/EncryptionSubsampleEntry.clear_bytes uint32
+struct/member fuchsia.mediastreams/EncryptionSubsampleEntry.encrypted_bytes uint32
+struct fuchsia.mediastreams/EncryptionSubsampleEntry
+const fuchsia.mediastreams/MAX_ENCRYPTION_SCHEME_SIZE int64 4
+const fuchsia.mediastreams/MAX_INIT_VECTOR_SIZE int64 16
+const fuchsia.mediastreams/MAX_KEY_ID_SIZE int64 16
+union/member fuchsia.mediastreams/MediaFormat.audio fuchsia.mediastreams/AudioFormat
+union/member fuchsia.mediastreams/MediaFormat.video fuchsia.mediastreams/VideoFormat
+flexible union fuchsia.mediastreams/MediaFormat
+enum/member fuchsia.mediastreams/PixelFormat.BGR24 108
+enum/member fuchsia.mediastreams/PixelFormat.BGRA32 101
+enum/member fuchsia.mediastreams/PixelFormat.I420 102
+enum/member fuchsia.mediastreams/PixelFormat.INVALID 0
+enum/member fuchsia.mediastreams/PixelFormat.L8 112
+enum/member fuchsia.mediastreams/PixelFormat.M420 103
+enum/member fuchsia.mediastreams/PixelFormat.MJPEG 106
+enum/member fuchsia.mediastreams/PixelFormat.NV12 104
+enum/member fuchsia.mediastreams/PixelFormat.R8 113
+enum/member fuchsia.mediastreams/PixelFormat.R8G8 114
+enum/member fuchsia.mediastreams/PixelFormat.R8G8B8A8 1
+enum/member fuchsia.mediastreams/PixelFormat.RGB2220 111
+enum/member fuchsia.mediastreams/PixelFormat.RGB332 110
+enum/member fuchsia.mediastreams/PixelFormat.RGB565 109
+enum/member fuchsia.mediastreams/PixelFormat.YUY2 105
+enum/member fuchsia.mediastreams/PixelFormat.YV12 107
+strict enum fuchsia.mediastreams/PixelFormat uint32
+const fuchsia.mediastreams/VIDEO_COMPRESSION_H263 string "fuchsia.streams.h263"
+const fuchsia.mediastreams/VIDEO_COMPRESSION_H264 string "fuchsia.streams.h264"
+const fuchsia.mediastreams/VIDEO_COMPRESSION_MPEG4 string "fuchsia.streams.mpeg4"
+const fuchsia.mediastreams/VIDEO_COMPRESSION_THEORA string "fuchsia.streams.theora"
+const fuchsia.mediastreams/VIDEO_COMPRESSION_VP3 string "fuchsia.streams.vp3"
+const fuchsia.mediastreams/VIDEO_COMPRESSION_VP8 string "fuchsia.streams.vp8"
+const fuchsia.mediastreams/VIDEO_COMPRESSION_VP9 string "fuchsia.streams.vp9"
+struct/member fuchsia.mediastreams/VideoFormat.aspect_ratio fuchsia.math/Size:optional
+struct/member fuchsia.mediastreams/VideoFormat.coded_size fuchsia.math/Size
+struct/member fuchsia.mediastreams/VideoFormat.color_space fuchsia.mediastreams/ColorSpace
+struct/member fuchsia.mediastreams/VideoFormat.display_size fuchsia.math/Size
+struct/member fuchsia.mediastreams/VideoFormat.pixel_format fuchsia.mediastreams/PixelFormat
+struct fuchsia.mediastreams/VideoFormat
+library fuchsia.mediastreams

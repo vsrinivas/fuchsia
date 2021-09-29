@@ -13,6 +13,8 @@ fidl("fuchsia.mediastreams") {
     "video_format.fidl",
   ]
 
+  sdk_category = "partner"
+
   public_deps = [
     "//sdk/fidl/fuchsia.math",
     "//zircon/vdso/zx",

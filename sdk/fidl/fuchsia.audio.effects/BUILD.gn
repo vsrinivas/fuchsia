@@ -7,6 +7,8 @@ import("//build/fidl/fidl.gni")
 fidl("fuchsia.audio.effects") {
   sources = [ "processor.fidl" ]
 
+  sdk_category = "partner"
+
   public_deps = [
     "//sdk/fidl/fuchsia.mediastreams",
     "//sdk/fidl/fuchsia.mem",

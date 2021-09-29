@@ -1,0 +1,25 @@
+table/member fuchsia.audio.effects/InputConfiguration.buffer fuchsia.mem/Range
+table/member fuchsia.audio.effects/InputConfiguration.format fuchsia.mediastreams/AudioFormat
+resource table fuchsia.audio.effects/InputConfiguration
+const fuchsia.audio.effects/MAX_INPUT_STREAMS uint32 8
+const fuchsia.audio.effects/MAX_OUTPUT_STREAMS uint32 8
+table/member fuchsia.audio.effects/OutputConfiguration.buffer fuchsia.mem/Range
+table/member fuchsia.audio.effects/OutputConfiguration.format fuchsia.mediastreams/AudioFormat
+table/member fuchsia.audio.effects/OutputConfiguration.latency_frames uint64
+table/member fuchsia.audio.effects/OutputConfiguration.ring_out_frames uint64
+resource table fuchsia.audio.effects/OutputConfiguration
+table/member fuchsia.audio.effects/ProcessOptions.total_applied_gain_db_per_input vector<float32>:8
+table fuchsia.audio.effects/ProcessOptions
+protocol/member fuchsia.audio.effects/Processor.Process(uint64 num_frames,fuchsia.audio.effects/ProcessOptions options) -> (fuchsia.audio.effects/Processor_Process_Result result)
+protocol fuchsia.audio.effects/Processor
+table/member fuchsia.audio.effects/ProcessorConfiguration.block_size_frames uint64
+table/member fuchsia.audio.effects/ProcessorConfiguration.inputs vector<fuchsia.audio.effects/InputConfiguration>:8
+table/member fuchsia.audio.effects/ProcessorConfiguration.max_frames_per_call uint64
+table/member fuchsia.audio.effects/ProcessorConfiguration.outputs vector<fuchsia.audio.effects/OutputConfiguration>:8
+table/member fuchsia.audio.effects/ProcessorConfiguration.processor client_end:fuchsia.audio.effects/Processor
+resource table fuchsia.audio.effects/ProcessorConfiguration
+struct fuchsia.audio.effects/Processor_Process_Response
+union/member fuchsia.audio.effects/Processor_Process_Result.err int32
+union/member fuchsia.audio.effects/Processor_Process_Result.response fuchsia.audio.effects/Processor_Process_Response
+strict union fuchsia.audio.effects/Processor_Process_Result
+library fuchsia.audio.effects
