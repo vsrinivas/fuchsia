@@ -374,7 +374,12 @@ class _FileConnection extends File {
 
   @override
   Future<File$GetBuffer$Response> getBuffer(int flags) async {
-    return File$GetBuffer$Response(ZX.OK, null);
+    return File$GetBuffer$Response(ZX.ERR_NOT_SUPPORTED, null);
+  }
+
+  @override
+  Future<Vmo> getBackingMemory(VmoFlags flags) async {
+    throw fidl.MethodException(ZX.ERR_NOT_SUPPORTED);
   }
 
   @override
@@ -387,15 +392,47 @@ class _FileConnection extends File {
   }
 
   @override
+  Future<Uint8List> read2(int count) async {
+    var response = _handleRead(count, seekPos);
+    if (response.s != ZX.OK) {
+      throw fidl.MethodException(response.s);
+    }
+    seekPos += response.data.length;
+    return response.data;
+  }
+
+  @override
   Future<File$ReadAt$Response> readAt(int count, int offset) async {
     var response = _handleRead(count, offset);
     return File$ReadAt$Response(response.s, response.data);
   }
 
   @override
+  Future<Uint8List> readAt2(int count, int offset) async {
+    var response = _handleRead(count, offset);
+    if (response.s != ZX.OK) {
+      throw fidl.MethodException(response.s);
+    }
+    return response.data;
+  }
+
+  @override
   Future<File$Seek$Response> seek(int offset, SeekOrigin seek) async {
+    return _handleSeek(seek, offset);
+  }
+
+  @override
+  Future<int> seek2(SeekOrigin seek, int offset) async {
+    var response = _handleSeek(seek, offset);
+    if (response.s != ZX.OK) {
+      throw fidl.MethodException(response.s);
+    }
+    return response.offset;
+  }
+
+  File$Seek$Response _handleSeek(SeekOrigin origin, int offset) {
     var calculatedOffset = offset;
-    switch (seek) {
+    switch (origin) {
       case SeekOrigin.start:
         calculatedOffset = offset;
         break;
@@ -432,6 +469,18 @@ class _FileConnection extends File {
 
   @override
   Future<int> truncate(int length) async {
+    return _handleResize(length);
+  }
+
+  @override
+  Future<void> resize(int length) async {
+    int status = _handleResize(length);
+    if (status != ZX.OK) {
+      throw fidl.MethodException(status);
+    }
+  }
+
+  int _handleResize(int length) {
     if ((flags & openRightWritable) == 0) {
       return ZX.ERR_ACCESS_DENIED;
     }
@@ -458,9 +507,28 @@ class _FileConnection extends File {
   }
 
   @override
+  Future<int> write2(Uint8List data) async {
+    var response = _handleWrite(seekPos, data);
+    if (response.s != ZX.OK) {
+      throw fidl.MethodException(response.s);
+    }
+    seekPos += response.actual;
+    return response.actual;
+  }
+
+  @override
   Future<File$WriteAt$Response> writeAt(Uint8List data, int offset) async {
     var response = _handleWrite(offset, data);
     return File$WriteAt$Response(response.s, response.actual);
+  }
+
+  @override
+  Future<int> writeAt2(Uint8List data, int offset) async {
+    var response = _handleWrite(offset, data);
+    if (response.s != ZX.OK) {
+      throw fidl.MethodException(response.s);
+    }
+    return response.actual;
   }
 
   NodeInfo _describe() {
