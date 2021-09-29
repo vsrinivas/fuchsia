@@ -173,6 +173,8 @@ pub struct StressTest {
     num_instances: u64,
     realm_proxy: RealmProxy,
     rng: SmallRng,
+    // TODO(fxbug.dev/84729)
+    #[allow(unused)]
     num_retries: u64,
     action_timeout: Duration,
     test_duration: Duration,
