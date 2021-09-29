@@ -79,6 +79,29 @@ zx_status_t PerformMemAccess(const zx_packet_guest_mem_t& mem, IoMapping* device
           return ZX_ERR_NOT_SUPPORTED;
       }
 
+    case INST_OR:
+      status = device_mapping->Read(mem.addr, &mmio);
+      if (status != ZX_OK) {
+        return status;
+      }
+      switch (inst->access_size) {
+        case 1:
+          status = inst_or<uint8_t>(inst, static_cast<uint8_t>(inst->imm), &mmio.u8);
+          break;
+        case 2:
+          status = inst_or<uint16_t>(inst, static_cast<uint16_t>(inst->imm), &mmio.u16);
+          break;
+        case 4:
+          status = inst_or<uint32_t>(inst, inst->imm, &mmio.u32);
+          break;
+        default:
+          return ZX_ERR_NOT_SUPPORTED;
+      }
+      if (status != ZX_OK) {
+        return status;
+      }
+      return device_mapping->Write(mem.addr, mmio);
+
     default:
       return ZX_ERR_INVALID_ARGS;
   }
@@ -111,12 +134,13 @@ zx_status_t Vcpu::ArchHandleMem(const zx_packet_guest_mem_t& mem, IoMapping* dev
     return status;
   }
 
-  // If there was an attempt to read or test memory, update the guest's GPRs.
-  if (inst.type == INST_MOV_READ || inst.type == INST_TEST) {
-    return vcpu_.write_state(ZX_VCPU_STATE, &vcpu_state, sizeof(vcpu_state));
+  // If the operation was write-only and didn't change registers or flags, we are done.
+  if (inst.type == INST_MOV_WRITE) {
+    return ZX_OK;
   }
 
-  return ZX_OK;
+  // Otherwise, update the guest's registers.
+  return vcpu_.write_state(ZX_VCPU_STATE, &vcpu_state, sizeof(vcpu_state));
 }
 
 zx_status_t Vcpu::ArchHandleInput(const zx_packet_guest_io_t& io, IoMapping* device_mapping) {

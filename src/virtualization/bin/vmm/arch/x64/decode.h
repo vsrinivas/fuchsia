@@ -9,12 +9,14 @@
 
 // clang-format off
 
-#define X86_FLAGS_STATUS    ((1u << 11 /* OF */) |                  \
-                             (1u << 7 /* SF */) |                   \
-                             (1u << 6 /* ZF */) |                   \
-                             (1u << 2 /* PF */) |                   \
-                             (1u << 1 /* Reserved (must be 1) */) | \
-                             (1u << 0 /* CF */))
+#define FLAG_OF             (1u << 11)
+#define FLAG_SF             (1u << 7)
+#define FLAG_ZF             (1u << 6)
+#define FLAG_PF             (1u << 2)
+#define FLAG_RESERVED       (1u << 1)
+#define FLAG_CF             (1u << 0)
+
+#define X86_FLAGS_STATUS    (FLAG_OF | FLAG_SF | FLAG_ZF | FLAG_PF | FLAG_RESERVED | FLAG_CF)
 
 #define INST_MOV_READ       0u
 #define INST_MOV_WRITE      1u
@@ -45,6 +47,11 @@ DEFINE_INST_VAL(32);
 DEFINE_INST_VAL(16);
 DEFINE_INST_VAL(8);
 #undef DEFINE_INST_VAL
+
+template <typename T>
+static inline T get_inst_val(const Instruction* inst) {
+  return static_cast<T>(inst->reg != nullptr ? *inst->reg : inst->imm);
+}
 
 #define DEFINE_INST_READ(size)                                                               \
   static inline zx_status_t inst_read##size(const Instruction* inst, uint##size##_t value) { \
@@ -91,6 +98,31 @@ static inline zx_status_t inst_test8(const Instruction* inst, uint8_t inst_val, 
   }
   *inst->flags &= ~X86_FLAGS_STATUS;
   *inst->flags |= x86_flags_for_test8(inst_val, value);
+  return ZX_OK;
+}
+
+// Instead of trying to define the x86 "or" operation in C (and, in particular, trying to calculate
+// the various output flags), we simply run the "or" instruction directly and capture the flags.
+template <typename T>
+static inline uint16_t x86_simulate_or(T immediate, T* memory) {
+  uint16_t ax_reg;
+  __asm__(
+      "or %[i1], %[i2];"
+      "lahf"
+      : "=a"(ax_reg), [i2] "+r"(*memory)
+      : [i1] "r"(immediate)
+      : "cc");
+  return static_cast<uint16_t>(ax_reg >> 8);
+}
+
+template <typename T>
+static inline zx_status_t inst_or(const Instruction* inst, T inst_val, T* value) {
+  if (inst->type != INST_OR || inst->access_size != sizeof(T) ||
+      get_inst_val<T>(inst) != inst_val) {
+    return ZX_ERR_NOT_SUPPORTED;
+  }
+  *inst->flags &= ~X86_FLAGS_STATUS;
+  *inst->flags |= x86_simulate_or(inst_val, value);
   return ZX_OK;
 }
 

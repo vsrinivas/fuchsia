@@ -832,4 +832,42 @@ TEST(InstDecodeTest, or_80) {
   EXPECT_EQ(inst.flags, &vcpu_state.rflags);
 }
 
+TEST(InstDecodeTest, x86_simulate_or) {
+  uint8_t test_8bit = 0b1000'0001;
+  EXPECT_EQ(x86_simulate_or<uint8_t>(0b11, &test_8bit), FLAG_RESERVED | FLAG_SF);
+  EXPECT_EQ(test_8bit, 0b1000'0011);
+
+  uint16_t test_16bit = 0b1000'0000'0000'0001;
+  EXPECT_EQ(x86_simulate_or<uint16_t>(0b11, &test_16bit), FLAG_RESERVED | FLAG_PF | FLAG_SF);
+  EXPECT_EQ(test_16bit, 0b1000'0000'0000'0011);
+
+  uint32_t test_32bit = 0b1000'0000'0000'0000'0000'0000'0000'0001;
+  EXPECT_EQ(x86_simulate_or<uint32_t>(0b11, &test_32bit), FLAG_RESERVED | FLAG_PF | FLAG_SF);
+  EXPECT_EQ(test_32bit, 0b1000'0000'0000'0000'0000'0000'0000'0011);
+
+  // Test sign flag when negative
+  uint8_t test_negative = 0b1000'0000;
+  EXPECT_TRUE(x86_simulate_or<uint8_t>(1u, &test_negative) & FLAG_SF);
+
+  // Test sign flag when positive
+  uint8_t test_positive = 0b0000'0000;
+  EXPECT_FALSE(x86_simulate_or<uint8_t>(1u, &test_positive) & FLAG_SF);
+
+  // Test zero flag when zero
+  uint8_t test_zero = 0b0000'0000;
+  EXPECT_TRUE(x86_simulate_or<uint8_t>(0u, &test_zero) & FLAG_ZF);
+
+  // Test zero flag when not zero
+  uint8_t test_not_zero = 0b0000'0001;
+  EXPECT_FALSE(x86_simulate_or<uint8_t>(0u, &test_not_zero) & FLAG_ZF);
+
+  // Test parity flag when even
+  uint8_t test_even_parity = 0b1111'0000;
+  EXPECT_TRUE(x86_simulate_or<uint8_t>(0u, &test_even_parity) & FLAG_PF);
+
+  // Test parity flag when odd
+  uint8_t test_odd_parity = 0b1110'0000;
+  EXPECT_FALSE(x86_simulate_or<uint8_t>(0u, &test_odd_parity) & FLAG_PF);
+}
+
 }  // namespace
