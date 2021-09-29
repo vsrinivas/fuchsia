@@ -822,7 +822,9 @@ static bool pq_move_self_queue() {
 static bool pq_rotate_queue() {
   BEGIN_TEST;
 
-  PageQueues pq;
+  PageQueues pq(0, ZX_TIME_INFINITE);
+
+  pq.StartThreads();
 
   // Pretend we have a couple of allocated pages.
   vm_page_t wired_page = {};

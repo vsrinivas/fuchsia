@@ -15,6 +15,7 @@
 #include <kernel/event.h>
 #include <kernel/lockdep.h>
 #include <kernel/mutex.h>
+#include <kernel/semaphore.h>
 #include <ktl/array.h>
 #include <ktl/optional.h>
 #include <vm/page.h>
@@ -47,7 +48,13 @@ class PageQueues {
 
   static_assert(kNumPagerBacked > kNumActiveQueues, "Needs to be at least one non-active queue");
 
-  PageQueues();
+  static constexpr zx_time_t kDefaultMinMruRotateTime = ZX_SEC(10);
+  static constexpr zx_time_t kDefaultMaxMruRotateTime = ZX_SEC(10);
+
+  // Initializes the page queues with custom values for the options. This is intended for testing to
+  // construct a PageQueues that has infinite rotation time outs.
+  PageQueues(zx_duration_t min_mru_rotate_time, zx_duration_t max_mru_rotate_time);
+  PageQueues() : PageQueues(kDefaultMinMruRotateTime, kDefaultMaxMruRotateTime) {}
   ~PageQueues();
 
   DISALLOW_COPY_ASSIGN_AND_MOVE(PageQueues);
@@ -127,13 +134,26 @@ class PageQueues {
   // when needed.
   Lock<CriticalMutex>* get_lock() TA_RET_CAP(lock_) { return &lock_; }
 
+  // Used to identify the reason that aging is triggered, mostly for debugging and informational
+  // purposes.
+  enum class AgeReason {
+    // There is no current age reason.
+    None,
+    // Aging occurred due to the maximum timeout being reached before any other reason could trigger
+    Timeout,
+    // An explicit call to RotatePagerBackedQueues caused aging. This would typically occur due to
+    // test code or via the kernel debug console.
+    Manual,
+  };
+  static const char* string_from_age_reason(PageQueues::AgeReason reason);
+
   // Rotates the pager backed queues to perform aging. Every existing queue is now considered to be
   // one epoch older. To achieve these two things are done:
   //   1. A new queue, representing the current epoch, needs to be allocated to put pages that get
   //      accessed from here into. This just involves incrementing the MRU generation.
   //   2. As there is a limited number of page queues 'allocating' one might involve cleaning up an
   //      old queue. See the description of ProcessLruQueue for how this process works.
-  void RotatePagerBackedQueues();
+  void RotatePagerBackedQueues(AgeReason reason = AgeReason::Manual);
 
   // Used to represent and return page backlink information acquired whilst holding the page queue
   // lock. The contained vmo could be null if the refptr could not be upgraded, indicating that the
@@ -233,8 +253,17 @@ class PageQueues {
   // These methods are public so that the scanner can call. Once the scanner is an object that can
   // be friended, and not a collection of anonymous functions, these can be made private.
 
-  // Creates any threads for queue management.
+  // Creates any threads for queue management. This needs to be done separately to construction as
+  // there is a recursive dependency where creating threads will need to manipulate pages, which
+  // will call back into the page queues.
+  // Delaying thread creation is fine as these threads are purely for aging and eviction management,
+  // which is not needed during early kernel boot.
+  // Failure to start the threads may cause operations such as RotatePagerBackedQueues to block
+  // indefinitely as they might attempt to offload work to a nonexistent thread. This issue is only
+  // relevant for unittests that may wish to avoid starting the threads for some tests.
+  // It is the responsibility of the caller to only call this once, otherwise it will panic.
   void StartThreads();
+
   // Controls to enable and disable the active aging system. These must be called alternately and
   // not in parallel. That is, it is an error to call DisableAging twice without calling EnableAging
   // in between. Similar for EnableAging.
@@ -374,23 +403,40 @@ class PageQueues {
   // Internal locked version of GetActiveInactiveCounts.
   ActiveInactiveCounts GetActiveInactiveCountsLocked() const TA_REQ(lock_);
 
+  // Internal helper for shutting down any threads created in |StartThreads|.
+  void StopThreads();
+
   // Entry point for the thread that will performing aging and increment the mru generation.
   void MruThread();
+  void MaybeTriggerAging() TA_EXCL(lock_);
+  void MaybeTriggerAgingLocked() TA_REQ(lock_);
+  AgeReason GetAgeReason() const TA_EXCL(lock_);
+  AgeReason GetAgeReasonLocked() const TA_REQ(lock_);
+
+  void LruThread();
+  void MaybeTriggerLruProcessing();
+  bool NeedsLruProcessing() const;
 
   // The lock_ is needed to protect the linked lists queues as these cannot be implemented with
   // atomics.
   DECLARE_CRITICAL_MUTEX(PageQueues) mutable lock_;
 
-  // Shared variable with the aging thread used to indicate that we are attempting to disable aging.
-  // When the aging thread sees this it will signal aging_disabled_event_ and cease performing any
-  // aging until it observes disable_aging_ to be false again.
-  ktl::atomic<bool> disable_aging_ = false;
-  AutounsignalEvent aging_disabled_event_;
+  // This Event is a binary semaphore and is used to control aging. Is acquired by the aging thread
+  // when it performs aging, and can be acquired separately to block aging. For this purpose it
+  // needs to start as being initially signalled.
+  AutounsignalEvent aging_token_ = AutounsignalEvent(true);
+  // Flag used to catch programming errors related to double enabling or disabling aging.
+  ktl::atomic<bool> aging_disabled_ = false;
 
   // Time at which the mru_gen_ was last incremented.
   ktl::atomic<zx_time_t> last_age_time_ = ZX_TIME_INFINITE_PAST;
+  // Reason the last aging event happened, this is purely for informational/debugging purposes.
+  AgeReason last_age_reason_ TA_GUARDED(lock_) = AgeReason::None;
   // Used to signal the aging thread that it should wake up and see if it needs to do anything.
   AutounsignalEvent aging_event_;
+  // Used to signal the lru thread that it should wake up and check if the lru queue needs
+  // processing.
+  AutounsignalEvent lru_event_;
 
   // The page queues are placed into an array, indexed by page queue, for consistency and uniformity
   // of access. This does mean that the list for PageQueueNone does not actually have any pages in
@@ -450,6 +496,16 @@ class PageQueues {
   ktl::atomic<uint64_t> lru_gen_ = 0;
   ktl::atomic<uint64_t> mru_gen_ = kNumPagerBacked - 1;
 
+  // This semaphore counts the amount of space remaining for the mru to grow before it would overlap
+  // with the lru. Having this as a semaphore (even though it can always be calculated from lru_gen_
+  // and mru_gen_ above) provides a way for the aging thread to block when it needs to wait for
+  // eviction/lru processing to happen. This allows eviction/lru processing to be happening
+  // concurrently in a different thread, without requiring it to happen in-line in the aging thread.
+  // Without this the aging thread would need to process the LRU queue directly if it needed to make
+  // space. Initially, with the lru_gen_ and mru_gen_ definitions above, we start with no space for
+  // the mru to grow, so initialize this to 0.
+  Semaphore mru_semaphore_ = Semaphore(0);
+
   // Tracks the counts of pages in each queue in O(1) time complexity. As pages are moved between
   // queues, the corresponding source and destination counts are decremented and incremented,
   // respectively.
@@ -477,6 +533,15 @@ class PageQueues {
   // so that MarkAccessedDeferredCount can reference it in a DEBUG_ASSERT without triggering
   // memory safety issues.
   ktl::atomic<bool> use_cached_queue_counts_ = false;
+
+  // Track the mru and lru threads and have a signalling mechanism to shut them down.
+  ktl::atomic<bool> shutdown_threads_ = false;
+  Thread* mru_thread_ TA_GUARDED(lock_) = nullptr;
+  Thread* lru_thread_ TA_GUARDED(lock_) = nullptr;
+
+  // Queue rotation parameters set at construction.
+  const zx_duration_t min_mru_rotate_time_;
+  const zx_duration_t max_mru_rotate_time_;
 };
 
 #endif  // ZIRCON_KERNEL_VM_INCLUDE_VM_PAGE_QUEUES_H_
