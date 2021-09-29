@@ -32,13 +32,18 @@ We have a really-long-word exemption:
 Sometimeswordsarejustreallylongandcannotbebrokenuplikesupercalifragilisticexpiali
 Sometimeswordsarejustreallylongandcannotbebrokenuplikesupercalifragilisticexpialidocious
 
-It also applies to headings:
+It also applies to lists:
 
-############# This-long-word-is-allowed-even-though-it-starts-on-column-15-not-on-column-1
+ * indent
+   * indent
+     * indent
+       * indent
+         * indent
+           * indent
+             * This-long-word-is-allowed-even-though-it-starts-on-column-16-not-on-column-1
+             * But in this sentence we do NOT subtract 16, so it must not go «past» 80
 
-############# But in this sentence we do NOT subtract 15, so it must not go past «80»
-
-And list items:
+Or here:
 
 1234567890. This-long-word-is-allowed-even-though-it-starts-on-column-13-not-on-column-1
 
@@ -130,6 +135,19 @@ See [foo] and [bar] for details.
 
 [foo]: https://example.com/00000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 [bar]: /docs/path/path/path/path/path/path/path/path/path/path/path/path/path/path/path/path/path/path/to/file.md`,
+		},
+	}.runOverTokens(t, newRespectColLength)
+}
+
+func TestRespectColLength_longTitles(t *testing.T) {
+	ruleTestCase{
+		files: map[string]string{
+			"example.md": `
+when we have titles
+
+### Alternative: Remember if unknown fields were discarded {#alternative-remember}
+
+we cannot complain about length. We should complain again later, like here «because» we're over.`,
 		},
 	}.runOverTokens(t, newRespectColLength)
 }

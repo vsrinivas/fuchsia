@@ -23,6 +23,7 @@ type respectColLength struct {
 	countStartingAtCol int
 	lastReportedLine   int
 	linkDefState       linkDefState
+	isHeaderLine       bool
 }
 
 type linkDefState int
@@ -74,15 +75,18 @@ func (rule *respectColLength) OnNext(tok core.Token) {
 	case core.Newline:
 		rule.countStartingAtCol = 1
 		rule.linkDefState = linkDefNone
-	case core.Space, core.Header, core.List:
+		rule.isHeaderLine = false
+	case core.Space, core.List:
 		if tok.Col == rule.countStartingAtCol {
 			rule.countStartingAtCol += len(tok.Content)
 		}
+	case core.Header:
+		rule.isHeaderLine = true
 	// TODO(fxbug.dev/76574): Remove this temporary heuristic.
 	case core.URL:
 		// Do nothing.
 	default:
-		if tok.Ln == rule.lastReportedLine || tok.Col == rule.countStartingAtCol {
+		if rule.isHeaderLine || tok.Ln == rule.lastReportedLine || tok.Col == rule.countStartingAtCol {
 			break
 		}
 		var length int
