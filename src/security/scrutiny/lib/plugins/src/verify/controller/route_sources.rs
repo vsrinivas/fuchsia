@@ -77,8 +77,8 @@ impl Matches<UseDecl> for UseSpec {
 
     fn matches(&self, other: &UseDecl) -> Result<bool> {
         Ok(self.type_name == other.into()
-            && self.path.as_ref() == other.path()
-            && self.name.as_ref() == other.name())
+            && (self.path.is_none() || self.path.as_ref() == other.path())
+            && (self.name.is_none() || self.name.as_ref() == other.name()))
     }
 }
 
@@ -571,7 +571,7 @@ impl DataController for RouteSourcesController {
 mod tests {
     use {
         super::{
-            ComponentRouteError, RouteMatch, RouteSourcesController, RouteSourcesRequest,
+            ComponentRouteError, Matches, RouteMatch, RouteSourcesController, RouteSourcesRequest,
             RouteSourcesSpec, Source, SourceDeclSpec, SourceSpec, UseSpec,
             VerifyComponentRouteResult, BAD_REQUEST_CTX, MATCH_ONE_FAILED, MISSING_TARGET_NODE,
             ROUTE_LISTS_INCOMPLETE, ROUTE_LISTS_OVERLAP, USE_DECL_NAME, USE_SPEC_NAME,
@@ -589,6 +589,7 @@ mod tests {
             CapabilityName, CapabilityPath, CapabilityTypeName, ChildDecl, ComponentDecl,
             DependencyType, DirectoryDecl, ExposeDirectoryDecl, ExposeSource, ExposeTarget,
             OfferDirectoryDecl, OfferSource, OfferTarget, UseDirectoryDecl, UseSource,
+            UseStorageDecl,
         },
         fidl_fuchsia_io2 as fio2, fidl_fuchsia_sys2 as fsys,
         maplit::{hashmap, hashset},
@@ -597,6 +598,44 @@ mod tests {
         serde_json::json,
         std::{path::PathBuf, str::FromStr, sync::Arc},
     };
+
+    #[test]
+    fn test_match_some_only() {
+        // Match Some(path), ignoring None name.
+        assert!(
+            UseSpec {
+                type_name: CapabilityTypeName::Storage,
+                path: Some(CapabilityPath::from_str("/path").unwrap()),
+                name: None,
+            }
+            .matches(
+                &UseStorageDecl {
+                    source_name: CapabilityName("name".to_string()),
+                    target_path: CapabilityPath::from_str("/path").unwrap(),
+                }
+                .into()
+            )
+            .unwrap()
+                == true
+        );
+        // Match Some(name), ignoring None path.
+        assert!(
+            UseSpec {
+                type_name: CapabilityTypeName::Storage,
+                path: None,
+                name: Some(CapabilityName("name".to_string())),
+            }
+            .matches(
+                &UseStorageDecl {
+                    source_name: CapabilityName("name".to_string()),
+                    target_path: CapabilityPath::from_str("/path").unwrap(),
+                }
+                .into()
+            )
+            .unwrap()
+                == true
+        );
+    }
 
     macro_rules! ok_unwrap {
         ($actual_result:expr) => {{
