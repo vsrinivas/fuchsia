@@ -198,12 +198,13 @@ impl StressTest {
 
         let num_retries = get_and_parse::<u64>("num_retries", &dictionary).unwrap_or(0);
 
+        // Default for test_duration is 22 hours
         let test_duration =
-            get_and_parse::<u64>("test_duration", &dictionary).unwrap_or(24 * 60 * 60);
+            get_and_parse::<u64>("test_duration", &dictionary).unwrap_or(22 * 60 * 60);
         let test_duration = Duration::from_secs(test_duration);
 
-        let action_timeout =
-            get_and_parse::<u64>("action_timeout", &dictionary).unwrap_or(24 * 60 * 60);
+        // Default for action_timeout is 10 minutes
+        let action_timeout = get_and_parse::<u64>("action_timeout", &dictionary).unwrap_or(10 * 60);
         let action_timeout = Duration::from_secs(action_timeout);
 
         Ok(Self {
