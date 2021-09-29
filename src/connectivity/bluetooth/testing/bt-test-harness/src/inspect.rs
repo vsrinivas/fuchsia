@@ -74,7 +74,7 @@ pub async fn handle_inspect_updates(harness: InspectHarness) -> Result<(), Error
     loop {
         if harness.read().moniker.len() > 0 {
             let mut reader = ArchiveReader::new();
-            reader.add_selector(ComponentSelector::new(harness.read().moniker.clone()));
+            let _ = reader.add_selector(ComponentSelector::new(harness.read().moniker.clone()));
             harness.write_state().hierarchies = reader
                 .snapshot::<Inspect>()
                 .await?

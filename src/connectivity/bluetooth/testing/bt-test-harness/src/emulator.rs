@@ -241,10 +241,7 @@ where
         {
             let mut s = harness.write_state();
             let state_map = &mut s.as_mut().connection_states;
-            if !state_map.contains_key(&address) {
-                state_map.insert(address, vec![]);
-            }
-            let states = state_map.get_mut(&address).unwrap();
+            let states = state_map.entry(address).or_insert(vec![]);
             states.append(&mut result);
         }
         harness.notify_state_changed();

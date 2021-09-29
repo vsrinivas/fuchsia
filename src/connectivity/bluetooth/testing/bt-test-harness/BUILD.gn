@@ -41,11 +41,11 @@ rustc_library("bt-test-harness") {
     "//src/lib/zircon/rust:fuchsia-zircon",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:futures",
-    "//third_party/rust_crates:log",
     "//third_party/rust_crates:parking_lot",
     "//third_party/rust_crates:pin-utils",
     "//third_party/rust_crates:proptest",
     "//third_party/rust_crates:thiserror",
+    "//third_party/rust_crates:tracing",
   ]
 
   # Add components used by core_realm to the library
@@ -69,6 +69,8 @@ rustc_library("bt-test-harness") {
     "src/low_energy_peripheral.rs",
     "src/profile.rs",
   ]
+
+  configs -= [ "//build/config/rust:allow_unused_results" ]
 }
 
 isolated_devmgr_v2_component("isolated-devmgr-component") {

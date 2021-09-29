@@ -17,6 +17,7 @@ use {
         sync::Arc,
     },
     test_harness::{SharedState, TestHarness},
+    tracing::warn,
 };
 
 #[derive(Clone, Default)]
@@ -49,10 +50,12 @@ async fn watch_peers(harness: AccessHarness) -> Result<(), Error> {
             proxy.watch_peers().await.context("Error calling Access.watch_peers()")?;
         for peer in updated.into_iter() {
             let peer: Peer = peer.try_into().context("Invalid peer received from WatchPeers()")?;
-            harness.write_state().peers.insert(peer.id, peer);
+            let _ = harness.write_state().peers.insert(peer.id, peer);
         }
         for id in removed.into_iter() {
-            harness.write_state().peers.remove(&id.into());
+            if harness.write_state().peers.remove(&id.into()).is_none() {
+                warn!(?id, "Unknown peer removed from peer state");
+            }
         }
         harness.notify_state_changed();
     }

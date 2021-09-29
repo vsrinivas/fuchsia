@@ -11,10 +11,12 @@ rustc_library("test-harness") {
     "//src/lib/syslog/rust:syslog",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:futures",
-    "//third_party/rust_crates:log",
     "//third_party/rust_crates:parking_lot",
     "//third_party/rust_crates:pin-utils",
+    "//third_party/rust_crates:tracing",
   ]
 
   sources = [ "src/lib.rs" ]
+
+  configs -= [ "//build/config/rust:allow_unused_results" ]
 }

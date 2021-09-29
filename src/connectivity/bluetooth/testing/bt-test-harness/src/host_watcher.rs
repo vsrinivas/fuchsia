@@ -16,7 +16,6 @@ use {
     fuchsia_zircon as zx,
     futures::future::{self, BoxFuture, FutureExt, TryFutureExt},
     hci_emulator_client::Emulator,
-    log::error,
     std::{
         collections::HashMap,
         convert::TryFrom,
@@ -24,6 +23,7 @@ use {
         sync::Arc,
     },
     test_harness::{SharedState, TestHarness},
+    tracing::error,
 };
 
 use crate::timeout_duration;
@@ -146,7 +146,7 @@ pub async fn activate_fake_host(
         .or_else(zx::Status::ok)
         .map_err(|e| format_err!("failed to set active host to emulator: {}", e))?;
 
-    host_watcher
+    let _ = host_watcher
         .when_satisfied(expectation::active_host_is(host.clone()), timeout_duration())
         .await?;
     Ok((host, hci))
@@ -172,7 +172,8 @@ impl ActivatedFakeHost {
         self.hci = None;
 
         // Wait for BT-GAP to unregister the associated fake host
-        self.host_watcher
+        let _ = self
+            .host_watcher
             .when_satisfied(expectation::host_not_present(self.host.clone()), timeout_duration())
             .await?;
         Ok(())

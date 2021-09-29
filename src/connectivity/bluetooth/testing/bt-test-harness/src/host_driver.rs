@@ -20,7 +20,7 @@ use {
         types::{HostInfo, Peer, PeerId},
     },
     futures::{
-        future::{self, BoxFuture},
+        future::{self, BoxFuture, Future},
         FutureExt, TryFutureExt,
     },
     hci_emulator_client::Emulator,
@@ -32,6 +32,7 @@ use {
         sync::Arc,
     },
     test_harness::{SharedState, TestHarness},
+    tracing::warn,
 };
 
 use crate::{
@@ -183,11 +184,13 @@ async fn watch_peers(harness: HostDriverHarness) -> Result<(), Error> {
         let (updated, removed) = proxy.watch_peers().await?;
         for peer in updated.into_iter() {
             let peer: Peer = peer.try_into()?;
-            harness.write_state().peers.insert(peer.id.clone(), peer);
+            let _ = harness.write_state().peers.insert(peer.id.clone(), peer);
             harness.notify_state_changed();
         }
         for id in removed.into_iter() {
-            harness.write_state().peers.remove(&id.into());
+            if harness.write_state().peers.remove(&id.into()).is_none() {
+                warn!(?id, "HostDriver: removed id that wasn't present");
+            }
         }
     }
 }
@@ -205,7 +208,10 @@ pub mod expectation {
     use super::*;
 
     /// Returns a Future that resolves when the state of any RemoteDevice matches `target`.
-    pub async fn peer(host: &HostDriverHarness, p: Predicate<Peer>) -> Result<HostState, Error> {
+    pub fn peer(
+        host: &HostDriverHarness,
+        p: Predicate<Peer>,
+    ) -> impl Future<Output = Result<HostState, Error>> + '_ {
         host.when_satisfied(
             Predicate::any(p).over_value(
                 |host: &HostState| host.peers.values().cloned().collect::<Vec<_>>(),
@@ -213,31 +219,31 @@ pub mod expectation {
             ),
             timeout_duration(),
         )
-        .await
     }
 
     /// Returns a Future that resolves when the HostInfo matches `target`.
-    pub async fn host_state(
+    pub fn host_state(
         host: &HostDriverHarness,
         p: Predicate<HostInfo>,
-    ) -> Result<HostState, Error> {
+    ) -> impl Future<Output = Result<HostState, Error>> + '_ {
         host.when_satisfied(
             p.over(|host: &HostState| &host.host_info, ".host_info"),
             timeout_duration(),
         )
-        .await
     }
 
     /// Returns a Future that resolves when a peer matching `id` is not present on the host.
-    pub async fn no_peer(host: &HostDriverHarness, id: PeerId) -> Result<(), Error> {
-        let fut = host.when_satisfied(
+    pub fn no_peer(
+        host: &HostDriverHarness,
+        id: PeerId,
+    ) -> impl Future<Output = Result<(), Error>> + '_ {
+        host.when_satisfied(
             Predicate::all(Predicate::not_equal(id)).over_value(
                 |host: &HostState| host.peers.keys().cloned().collect::<Vec<_>>(),
                 ".peers.keys()",
             ),
             timeout_duration(),
-        );
-        fut.await?;
-        Ok(())
+        )
+        .map_ok(|_| ())
     }
 }

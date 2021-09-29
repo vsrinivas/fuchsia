@@ -7,12 +7,12 @@ use {
     fuchsia_async as fasync,
     futures::future::BoxFuture,
     futures::{future, select, stream::TryStreamExt, Future, FutureExt},
-    log::{error, info},
     parking_lot::Mutex,
     pin_utils::pin_mut,
     std::any::{Any, TypeId},
     std::collections::{hash_map::Entry, HashMap},
     std::sync::Arc,
+    tracing::{error, info},
 };
 
 /// SharedState is a string-indexed map used to share state across multiple TestHarnesses that are
@@ -45,7 +45,7 @@ impl SharedState {
             Entry::Occupied(existing) => Err(existing.get().clone()),
             Entry::Vacant(empty) => {
                 let entry = Arc::new(val);
-                empty.insert(entry.clone());
+                let _ = empty.insert(entry.clone());
                 Ok(entry)
             }
         }

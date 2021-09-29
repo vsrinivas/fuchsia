@@ -55,7 +55,7 @@ pub struct CoreRealm {
 impl CoreRealm {
     pub async fn create() -> Result<Self, Error> {
         let mut builder = RealmBuilder::new().await?;
-        builder
+        let _ = builder
             .add_component(
                 constants::bt_init::MONIKER,
                 ComponentSource::url(constants::bt_init::URL),
@@ -100,7 +100,7 @@ impl CoreRealm {
                 }),
             )
             .await?;
-        builder
+        let _ = builder
             // Route required capabilities from AboveRoot to realm components.
             .add_protocol_route::<LogSinkMarker>(
                 RouteEndpoint::AboveRoot,
