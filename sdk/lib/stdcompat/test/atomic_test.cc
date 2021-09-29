@@ -6,6 +6,7 @@
 
 #include <lib/stdcompat/atomic.h>
 #include <lib/stdcompat/type_traits.h>
+#include <unistd.h>
 
 #include <array>
 #include <limits>
@@ -124,7 +125,9 @@ struct CheckAtomicOpsCompareExchange<T, std::enable_if_t<cpp20::atomic_internal:
 
     obj = zero;
     exp = zero;
-    EXPECT_TRUE(ref.compare_exchange_weak(exp, one));
+    // This might fail for any reason, but should eventually succeed.
+    while (!ref.compare_exchange_weak(exp, one)) {
+    }
     EXPECT_EQ(obj, one);
 
     obj = zero;
