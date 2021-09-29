@@ -1056,7 +1056,7 @@
   reviewed: '2021-03-25'
 
 - name: 'RFC-0082'
-  title: 'Runnning unmodified Linux programs on Fuchsia'
+  title: 'Running unmodified Linux programs on Fuchsia'
   short_description: 'This document proposes a mechanism for running unmodified Linux programs on Fuchsia.'
   authors: ['abarth@google.com']
   file: '0082_starnix.md'
