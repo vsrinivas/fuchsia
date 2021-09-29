@@ -83,6 +83,9 @@ import("//build/flutter/internal/flutter_dart_component.gni")
 #     Specifies the parameters for building the component.
 #     See //build/flutter/flutter_build_config.gni for predefined configs.
 #
+#   null_safe (optional)
+#    If true, this component will be compiled with --sound-null-safety
+#
 #  deps
 #  testonly
 #  visibility
@@ -126,6 +129,7 @@ template("flutter_component") {
                              "deps",
                              "main_dart",
                              "main_package",
+                             "null_safe",
                            ])
     deps = _component_deps
 

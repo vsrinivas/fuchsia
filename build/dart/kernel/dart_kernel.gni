@@ -112,6 +112,9 @@ template("_convert_kernel_manifest") {
 #    Whether the kernel compiler should link the current platform.dill into
 #    the build. If false, the --no-link-platform flag will be passed to the
 #    compiler. Defaults to false
+#
+#   null_safe (optional)
+#    If true, this program will be compiled with --sound-null-safety
 template("dart_kernel") {
   assert(defined(invoker.platform_name), "dart_kernel() requires platform_name")
   assert(defined(invoker.packages_path),
@@ -229,9 +232,15 @@ template("dart_kernel") {
     if (defined(invoker.args)) {
       args += invoker.args
     }
+    args += [ "--verbosity=warning" ]
+
+    if (defined(invoker.null_safe) && invoker.null_safe) {
+      args += [ "--sound-null-safety" ]
+    } else {
+      args += [ "--no-sound-null-safety" ]
+    }
+
     args += [
-      "--verbosity=warning",
-      "--no-sound-null-safety",
       "--target",
       invoker.platform_name,
       "--platform",

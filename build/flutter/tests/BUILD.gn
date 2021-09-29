@@ -13,6 +13,7 @@ group("tests") {
 
 dart_library("lib") {
   package_name = "build_flutter_test"
+  null_safe = true
   sources = [
     "main.dart",
     "test_main.dart",
@@ -32,6 +33,7 @@ flutter_component("flutter-component-with-flutter-driver") {
   manifest = "meta/flutter-component-with-flutter-driver.cmx"
   main_dart = "test_main.dart"
   main_package = "build_flutter_test"
+  null_safe = true
   deps = [
     ":lib",
     ":text-file",

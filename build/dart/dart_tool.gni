@@ -257,7 +257,15 @@ template("dart_tool") {
       "--",
       rebase_path(dart_binary, root_build_dir),
       "--verbosity=warning",
-      "--no-sound-null-safety",
+    ]
+
+    if (defined(invoker.null_safe) && invoker.null_safe) {
+      args += [ "--sound-null-safety" ]
+    } else {
+      args += [ "--no-sound-null-safety" ]
+    }
+
+    args += [
       "--snapshot=" + rebase_path(snapshot_path, root_build_dir),
       "--snapshot-depfile=" + rebase_path(depfile, root_build_dir),
       "--packages=" + rebase_path(_dart_package_config_output, root_build_dir),

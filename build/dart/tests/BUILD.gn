@@ -14,6 +14,7 @@ group("tests") {
 
 dart_library("lib") {
   package_name = "build_dart_test"
+  null_safe = true
   sources = [ "main.dart" ]
   deps = [ "//sdk/dart/fuchsia" ]
 }
@@ -26,6 +27,7 @@ resource("text-file") {
 dart_component("dart-component") {
   manifest = "meta/dart-component.cmx"
   main_package = "build_dart_test"
+  null_safe = true
   deps = [
     ":lib",
     ":text-file",

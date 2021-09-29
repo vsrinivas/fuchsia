@@ -141,6 +141,9 @@ template("_flutter_asset_manifest") {
 #     Type: boolean
 #     Default: false
 #
+#   null_safe (optional)
+#    If true, this component will be compiled with --sound-null-safety
+#
 #  deps
 #  testonly
 #  visibility
@@ -238,6 +241,7 @@ template("flutter_dart_component") {
                              "visibility",
                              "main_dart",
                              "main_package",
+                             "null_safe",
                            ])
 
     deps = [ ":$_dart_package_config_target_name" ]
