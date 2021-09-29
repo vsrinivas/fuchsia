@@ -39,6 +39,7 @@ if (is_host) {
       "//third_party/rust_crates:regex",
       "//third_party/rust_crates:serde",
       "//third_party/rust_crates:serde_json",
+      "//third_party/rust_crates:serde_json5",
       "//third_party/rust_crates:thiserror",
       "//third_party/rust_crates:uuid",
       "//tools/lib/cm_fidl_analyzer",
