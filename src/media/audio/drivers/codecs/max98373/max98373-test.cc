@@ -30,7 +30,7 @@ class Max98373Test : public zxtest::Test {
         .ExpectWriteStop({0x20, 0x3d, 0x28})   // Set gain to -20dB.
         .ExpectWriteStop({0x20, 0x2b, 0x01})   // Data in enable.
         .ExpectWriteStop({0x20, 0x26, 0x08})   // 256 ratio.
-        .ExpectWriteStop({0x20, 0x24, 0xd8})   // TDM.
+        .ExpectWriteStop({0x20, 0x24, 0x58})   // TDM 16 bits.
         .ExpectWriteStop({0x20, 0x27, 0x08});  // 48KHz.
   }
   mock_i2c::MockI2c mock_i2c_;
@@ -80,7 +80,7 @@ TEST_F(Max98373Test, Reset) {
       .ExpectWriteStop({0x20, 0x3d, 0x28})   // Set gain to -20dB.
       .ExpectWriteStop({0x20, 0x2b, 0x01})   // Data in enable.
       .ExpectWriteStop({0x20, 0x26, 0x08})   // 256 ratio.
-      .ExpectWriteStop({0x20, 0x24, 0xd8})   // TDM.
+      .ExpectWriteStop({0x20, 0x24, 0x58})   // TDM 16 bits.
       .ExpectWriteStop({0x20, 0x27, 0x08});  // 48KHz.
 
   ddk::MockGpio mock_gpio;
@@ -97,6 +97,104 @@ TEST_F(Max98373Test, Reset) {
   client.SetProtocol(&codec_proto);
 
   ASSERT_OK(client.Reset());
+
+  mock_i2c_.VerifyAndClear();
+  mock_gpio.VerifyAndClear();
+}
+
+TEST_F(Max98373Test, GoodSetDai) {
+  std::shared_ptr<MockDevice> fake_parent = MockDevice::FakeRootParent();
+
+  ddk::MockGpio mock_gpio;
+  mock_gpio.ExpectWrite(ZX_OK, 0).ExpectWrite(ZX_OK, 1);  // Reset, set to 0 and then to 1.
+  ddk::GpioProtocolClient gpio(mock_gpio.GetProto());
+  auto codec = SimpleCodecServer::Create<Max98373Codec>(mock_i2c_.GetProto(), std::move(gpio),
+                                                        fake_parent.get());
+  ASSERT_NOT_NULL(codec);
+  auto codec_ptr = codec.release();
+  auto codec_proto = codec_ptr->GetProto();
+  SimpleCodecClient client;
+  client.SetProtocol(&codec_proto);
+
+  // Slot 0 ok.
+  {
+    audio::DaiFormat format = {};
+    format.number_of_channels = 8;
+    format.channels_to_use_bitmask = 1;
+    format.sample_format = SampleFormat::PCM_SIGNED;
+    format.frame_format = FrameFormat::TDM1;
+    format.frame_rate = 48000;
+    format.bits_per_slot = 16;
+    format.bits_per_sample = 16;
+    mock_i2c_.ExpectWriteStop({0x20, 0x29, 0x00});  // Slot 0.
+    auto formats = client.GetDaiFormats();
+    ASSERT_TRUE(IsDaiFormatSupported(format, formats.value()));
+    ASSERT_OK(client.SetDaiFormat(std::move(format)));
+  }
+
+  // Slot 1 ok.
+  {
+    audio::DaiFormat format = {};
+    format.number_of_channels = 8;
+    format.channels_to_use_bitmask = 2;
+    format.sample_format = SampleFormat::PCM_SIGNED;
+    format.frame_format = FrameFormat::TDM1;
+    format.frame_rate = 48000;
+    format.bits_per_slot = 16;
+    format.bits_per_sample = 16;
+    mock_i2c_.ExpectWriteStop({0x20, 0x29, 0x01});  // Slot 1.
+    auto formats = client.GetDaiFormats();
+    ASSERT_TRUE(IsDaiFormatSupported(format, formats.value()));
+    ASSERT_OK(client.SetDaiFormat(std::move(format)));
+  }
+
+  // Slot 15 ok.
+  {
+    audio::DaiFormat format = {};
+    format.number_of_channels = 8;
+    format.channels_to_use_bitmask = 0x8000;
+    format.sample_format = SampleFormat::PCM_SIGNED;
+    format.frame_format = FrameFormat::TDM1;
+    format.frame_rate = 48000;
+    format.bits_per_slot = 16;
+    format.bits_per_sample = 16;
+    mock_i2c_.ExpectWriteStop({0x20, 0x29, 0x0f});  // Slot 15.
+    auto formats = client.GetDaiFormats();
+    ASSERT_TRUE(IsDaiFormatSupported(format, formats.value()));
+    ASSERT_OK(client.SetDaiFormat(std::move(format)));
+  }
+
+  // Multiple slots not supported.
+  {
+    audio::DaiFormat format = {};
+    format.number_of_channels = 8;
+    format.channels_to_use_bitmask = 0x8080;
+    format.sample_format = SampleFormat::PCM_SIGNED;
+    format.frame_format = FrameFormat::TDM1;
+    format.frame_rate = 48000;
+    format.bits_per_slot = 16;
+    format.bits_per_sample = 16;
+    auto formats = client.GetDaiFormats();
+    ASSERT_TRUE(IsDaiFormatSupported(format, formats.value()));
+    zx::status<CodecFormatInfo> format_info = client.SetDaiFormat(std::move(format));
+    EXPECT_EQ(ZX_ERR_NOT_SUPPORTED, format_info.status_value());
+  }
+
+  // Slot 16 not supported.
+  {
+    audio::DaiFormat format = {};
+    format.number_of_channels = 8;
+    format.channels_to_use_bitmask = 0x1'0000;
+    format.sample_format = SampleFormat::PCM_SIGNED;
+    format.frame_format = FrameFormat::TDM1;
+    format.frame_rate = 48000;
+    format.bits_per_slot = 16;
+    format.bits_per_sample = 16;
+    auto formats = client.GetDaiFormats();
+    ASSERT_TRUE(IsDaiFormatSupported(format, formats.value()));
+    zx::status<CodecFormatInfo> format_info = client.SetDaiFormat(std::move(format));
+    EXPECT_EQ(ZX_ERR_NOT_SUPPORTED, format_info.status_value());
+  }
 
   mock_i2c_.VerifyAndClear();
   mock_gpio.VerifyAndClear();

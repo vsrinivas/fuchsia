@@ -20,19 +20,20 @@
 namespace {
 
 // clang-format off
-constexpr uint16_t kRegReset                   = 0x2000;
-constexpr uint16_t kRegGlobalEnable            = 0x20ff;
-constexpr uint16_t kRegPcmInterfaceFormat      = 0x2024;
-constexpr uint16_t kRegPcmInterfaceClockRatio  = 0x2026;
-constexpr uint16_t kRegPcmInterfaceSampleRate  = 0x2027;
-constexpr uint16_t kRegPcmInterfaceInput       = 0x202b;
-constexpr uint16_t kRegDigitalVol              = 0x203d;
-constexpr uint16_t kRegSpkPathAndDspEnable     = 0x2043;
-constexpr uint16_t kRegRevId                   = 0x21ff;
+constexpr uint16_t kRegReset                        = 0x2000;
+constexpr uint16_t kRegGlobalEnable                 = 0x20ff;
+constexpr uint16_t kRegPcmInterfaceFormat           = 0x2024;
+constexpr uint16_t kRegPcmInterfaceClockRatio       = 0x2026;
+constexpr uint16_t kRegPcmInterfaceSampleRate       = 0x2027;
+constexpr uint16_t kRegPcmInterfaceDigitalMonoMixer = 0x2029;
+constexpr uint16_t kRegPcmInterfaceInput            = 0x202b;
+constexpr uint16_t kRegDigitalVol                   = 0x203d;
+constexpr uint16_t kRegSpkPathAndDspEnable          = 0x2043;
+constexpr uint16_t kRegRevId                        = 0x21ff;
 
-constexpr uint8_t kRegSpkPathAndDspEnableSpkOn = 0x01;
-constexpr uint8_t kRegGlobalEnableOn           = 0x01;
-constexpr uint8_t kRegResetReset               = 0x01;
+constexpr uint8_t kRegSpkPathAndDspEnableSpkOn      = 0x01;
+constexpr uint8_t kRegGlobalEnableOn                = 0x01;
+constexpr uint8_t kRegResetReset                    = 0x01;
 // clang-format on
 
 }  // namespace
@@ -40,12 +41,12 @@ constexpr uint8_t kRegResetReset               = 0x01;
 namespace audio {
 
 // TODO(andresoportus): Add handling for the other formats supported by this codec.
-static const std::vector<uint32_t> kSupportedNumberOfChannels = {2};
+static const std::vector<uint32_t> kSupportedNumberOfChannels = {8};
 static const std::vector<SampleFormat> kSupportedSampleFormats = {SampleFormat::PCM_SIGNED};
-static const std::vector<FrameFormat> kSupportedFrameFormats = {FrameFormat::I2S};
+static const std::vector<FrameFormat> kSupportedFrameFormats = {FrameFormat::TDM1};
 static const std::vector<uint32_t> kSupportedRates = {48'000};
-static const std::vector<uint8_t> kSupportedBitsPerSlot = {32};
-static const std::vector<uint8_t> kSupportedBitsPerSample = {32};
+static const std::vector<uint8_t> kSupportedBitsPerSlot = {16};
+static const std::vector<uint8_t> kSupportedBitsPerSample = {16};
 static const audio::DaiSupportedFormats kSupportedDaiFormats = {
     .number_of_channels = kSupportedNumberOfChannels,
     .sample_formats = kSupportedSampleFormats,
@@ -93,7 +94,7 @@ zx_status_t Max98373::Reset() {
       {kRegDigitalVol, static_cast<uint8_t>(-initial_gain * 2.f)},
       {kRegPcmInterfaceInput, 0x01},       // PCM DIN enable.
       {kRegPcmInterfaceClockRatio, 0x08},  // TDM 8 channels, 256 BCLK to LRCLK.
-      {kRegPcmInterfaceFormat, 0xd8},      // TDM0 mode, 32 bits words.
+      {kRegPcmInterfaceFormat, 0x58},      // TDM0 mode, 16 bits words.
       {kRegPcmInterfaceSampleRate, 0x08},  // 48KHz.
   };
   for (auto& i : kDefaults) {
@@ -175,6 +176,25 @@ void Max98373::SetBridgedMode(bool enable_bridged_mode) {
 DaiSupportedFormats Max98373::GetDaiFormats() { return kSupportedDaiFormats; }
 
 zx::status<CodecFormatInfo> Max98373::SetDaiFormat(const DaiFormat& format) {
+  if (__builtin_popcountl(format.channels_to_use_bitmask) != 1) {  // only one bit can be set.
+    zxlogf(ERROR, "unsupported bits to use bitmask, more than one bit set 0x%016lX",
+           format.channels_to_use_bitmask);
+    return zx::error(ZX_ERR_NOT_SUPPORTED);
+  }
+  // Find the first bit set starting at the least significant bit position by counting 0s.
+  int slot_to_use = __builtin_ctzl(format.channels_to_use_bitmask);
+  constexpr int kMaxNumberOfTdmChannelsSupported = 16;
+  if (slot_to_use >= kMaxNumberOfTdmChannelsSupported) {
+    zxlogf(ERROR, "unsupported bits to use bitmask, slot (%d) to high", slot_to_use);
+    return zx::error(ZX_ERR_NOT_SUPPORTED);
+  }
+
+  // Use "Mono Mixer Channel 0 Source Select" to pick the slot.
+  zx_status_t status =
+      WriteReg(kRegPcmInterfaceDigitalMonoMixer, static_cast<uint8_t>(slot_to_use));
+  if (status != ZX_OK) {
+    return zx::error(ZX_ERR_INTERNAL);
+  }
   if (!IsDaiFormatSupported(format, kSupportedDaiFormats)) {
     zxlogf(ERROR, "unsupported format");
     return zx::error(ZX_ERR_NOT_SUPPORTED);
@@ -216,20 +236,7 @@ zx_status_t Max98373::WriteReg(uint16_t reg, uint8_t value) {
 //#define TRACE_I2C
 #ifdef TRACE_I2C
   printf("Writing register 0x%02X to value 0x%02X\n", reg, value);
-  auto status = i2c_.WriteSync(write_buffer, countof(write_buffer));
-  if (status != ZX_OK) {
-    printf("Could not I2C write %d\n", status);
-    return status;
-  }
-  uint8_t buffer = 0;
-  i2c_.WriteReadSync(write_buffer, countof(write_buffer) - 1, &buffer, 1);
-  if (status != ZX_OK) {
-    printf("Could not I2C read %d\n", status);
-    return status;
-  }
-  printf("Read register just written 0x%04X, value 0x%02X\n", reg, buffer);
-  return ZX_OK;
-#else
+#endif
   constexpr uint8_t kNumberOfRetries = 2;
   constexpr zx::duration kRetryDelay = zx::msec(1);
   auto ret =
@@ -238,7 +245,6 @@ zx_status_t Max98373::WriteReg(uint16_t reg, uint8_t value) {
     zxlogf(ERROR, "I2C write reg 0x%02X error %d, %d retries", reg, ret.status, ret.retries);
   }
   return ret.status;
-#endif
 }
 
 zx_status_t Max98373::ReadReg(uint16_t reg, uint8_t* value) {
