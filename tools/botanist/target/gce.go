@@ -264,12 +264,7 @@ func (g *GCETarget) provisionSSHKey(ctx context.Context) error {
 	if g.serial == nil {
 		return fmt.Errorf("serial is not connected")
 	}
-	// TODO(https://fxbug.dev/72872): Remove this delay once pkgfs startup
-	// time is reduced.
-	for i := 0; i < 14; i++ {
-		logger.Infof(g.loggerCtx, "waiting 30 more seconds for instance to boot")
-		time.Sleep(30 * time.Second)
-	}
+	time.Sleep(2 * time.Minute)
 	logger.Infof(g.loggerCtx, "provisioning SSH key over serial")
 	p, err := ioutil.ReadFile(g.pubkeyPath)
 	if err != nil {
