@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_GRAPHICS_LIB_MAGMA_INCLUDE_MSD_ABI_MSD_H_
-#define SRC_GRAPHICS_LIB_MAGMA_INCLUDE_MSD_ABI_MSD_H_
+#ifndef SRC_GRAPHICS_LIB_MAGMA_INCLUDE_MSD_MSD_H_
+#define SRC_GRAPHICS_LIB_MAGMA_INCLUDE_MSD_MSD_H_
 
 #include "msd_defs.h"
 
@@ -151,4 +151,4 @@ magma_status_t msd_connection_clear_performance_counters(struct msd_connection_t
 }
 #endif
 
-#endif  // SRC_GRAPHICS_LIB_MAGMA_INCLUDE_MSD_ABI_MSD_H_
+#endif  // SRC_GRAPHICS_LIB_MAGMA_INCLUDE_MSD_MSD_H_

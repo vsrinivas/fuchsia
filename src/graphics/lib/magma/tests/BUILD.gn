@@ -9,9 +9,9 @@ import("//src/graphics/lib/magma/gnbuild/magma.gni")
 group("tests") {
   testonly = true
   public_deps = [
-    ":magma-abi-conformance-tests",
-    ":magma-abi-conformance-tests-arm",
-    ":magma-abi-conformance-tests-vsi",
+    ":magma-conformance-tests",
+    ":magma-conformance-tests-arm",
+    ":magma-conformance-tests-vsi",
     ":magma_nonhardware_tests",
     "codegen",
     "icd_strip",
@@ -97,8 +97,8 @@ fuchsia_unittest_package("magma_nonhardware_tests") {
 
 # Runs on any GPU if the only device present; if multiple
 # GPUs are present the vendor must be specified.
-fuchsia_unittest_package("magma-abi-conformance-tests") {
-  manifest = "meta/magma-abi-conformance-tests.cmx"
+fuchsia_unittest_package("magma-conformance-tests") {
+  manifest = "meta/magma-conformance-tests.cmx"
   deps = [ "integration" ]
   test_specs = {
     environments = magma_hardware_envs - [ arm_gpu_envs ]
@@ -109,8 +109,8 @@ fuchsia_unittest_package("magma-abi-conformance-tests") {
 }
 
 # Runs only on ARM devices
-fuchsia_unittest_package("magma-abi-conformance-tests-arm") {
-  manifest = "meta/magma-abi-conformance-tests-arm.cmx"
+fuchsia_unittest_package("magma-conformance-tests-arm") {
+  manifest = "meta/magma-conformance-tests-arm.cmx"
   deps = [ "integration" ]
   test_specs = {
     environments = arm_gpu_envs
@@ -121,8 +121,8 @@ fuchsia_unittest_package("magma-abi-conformance-tests-arm") {
 }
 
 # Runs only on VSI devices
-fuchsia_unittest_package("magma-abi-conformance-tests-vsi") {
-  manifest = "meta/magma-abi-conformance-tests-vsi.cmx"
+fuchsia_unittest_package("magma-conformance-tests-vsi") {
+  manifest = "meta/magma-conformance-tests-vsi.cmx"
   deps = [ "integration" ]
   test_specs = {
     environments = [

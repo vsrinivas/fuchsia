@@ -20,8 +20,8 @@ void __attribute__((weak))
 msd_device_set_memory_pressure_level(struct msd_device_t* dev, MagmaMemoryPressureLevel level) {}
 
 magma_status_t __attribute__((weak))
-msd_connection_enable_performance_counters(msd_connection_t* abi_connection,
-                                           const uint64_t* counters, uint64_t counter_count) {
+msd_connection_enable_performance_counters(msd_connection_t* connection, const uint64_t* counters,
+                                           uint64_t counter_count) {
   return MAGMA_STATUS_UNIMPLEMENTED;
 }
 
@@ -39,7 +39,7 @@ msd_connection_release_performance_counter_buffer_pool(struct msd_connection_t* 
 }
 
 magma_status_t __attribute__((weak))
-msd_connection_dump_performance_counters(struct msd_connection_t* abi_connection,
+msd_connection_dump_performance_counters(struct msd_connection_t* connection,
                                          struct msd_perf_count_pool* pool, uint32_t trigger_id) {
   return MAGMA_STATUS_UNIMPLEMENTED;
 }
@@ -51,7 +51,7 @@ msd_connection_clear_performance_counters(struct msd_connection_t* connection,
 }
 
 magma_status_t __attribute__((weak)) msd_connection_add_performance_counter_buffer_offset_to_pool(
-    struct msd_connection_t*, struct msd_perf_count_pool* abi_pool, struct msd_buffer_t* abi_buffer,
+    struct msd_connection_t*, struct msd_perf_count_pool* pool, struct msd_buffer_t* buffer,
     uint64_t buffer_id, uint64_t buffer_offset, uint64_t buffer_size) {
   return MAGMA_STATUS_UNIMPLEMENTED;
 }

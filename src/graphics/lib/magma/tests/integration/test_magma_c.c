@@ -12,7 +12,7 @@
 #endif
 
 #include "magma.h"
-#include "test_magma_abi.h"
+#include "test_magma.h"
 
 __attribute__((format(printf, 3, 4))) static inline bool printf_return_false(const char* file,
                                                                              int line,
@@ -28,7 +28,7 @@ __attribute__((format(printf, 3, 4))) static inline bool printf_return_false(con
 
 #define DRETF(ret, ...) (ret ? true : printf_return_false(__FILE__, __LINE__, __VA_ARGS__))
 
-bool test_magma_abi_from_c(const char* device_name) {
+bool test_magma_from_c(const char* device_name) {
 #if defined(__Fuchsia__)
   zx_handle_t client_end, server_end;
   zx_channel_create(0, &client_end, &server_end);

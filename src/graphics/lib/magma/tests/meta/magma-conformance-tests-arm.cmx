@@ -11,9 +11,9 @@
     ],
     "program": {
         "args": [
-            "--vendor-id=0x10001"
+            "--vendor-id=0x13B5"
         ],
-        "binary": "bin/magma_abi_conformance_tests"
+        "binary": "bin/magma_conformance_tests"
     },
     "sandbox": {
         "dev": [

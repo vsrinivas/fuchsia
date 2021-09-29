@@ -14,10 +14,10 @@ TEST(MsdSemaphore, ImportAndDestroy) {
   uint32_t duplicate_handle;
   ASSERT_TRUE(semaphore->duplicate_handle(&duplicate_handle));
 
-  msd_semaphore_t* abi_sem = nullptr;
-  EXPECT_EQ(MAGMA_STATUS_OK, msd_semaphore_import(duplicate_handle, &abi_sem));
+  msd_semaphore_t* msd_sem = nullptr;
+  EXPECT_EQ(MAGMA_STATUS_OK, msd_semaphore_import(duplicate_handle, &msd_sem));
 
-  ASSERT_NE(abi_sem, nullptr);
+  ASSERT_NE(msd_sem, nullptr);
 
-  msd_semaphore_release(abi_sem);
+  msd_semaphore_release(msd_sem);
 }

@@ -12,7 +12,7 @@
 #include <src/lib/fsl/handles/object_info.h>
 #include <src/lib/testing/loop_fixture/real_loop_fixture.h>
 
-#include "test_magma_abi.h"
+#include "test_magma.h"
 
 namespace {
 

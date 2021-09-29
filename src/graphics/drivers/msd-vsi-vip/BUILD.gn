@@ -77,7 +77,7 @@ magma_pdev_entry("msd_vsi_test_entry") {
     ":msd_vsi_test_bind",
     "tests/unit_tests:hardware_tests",
     "//src/graphics/lib/magma/tests/unit_tests:magma_platform_hardware_tests",
-    "//src/graphics/lib/magma/tests/unit_tests:msd_abi_conformance_tests",
+    "//src/graphics/lib/magma/tests/unit_tests:msd_conformance_tests",
   ]
 }
 

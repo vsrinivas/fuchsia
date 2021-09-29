@@ -109,8 +109,7 @@ magma_status_t magma_create_buffer(magma_connection_t connection, uint64_t size,
     return DRET_MSG(result, "ImportObject failed");
 
   *size_out = platform_buffer->size();
-  *buffer_out =
-      reinterpret_cast<magma_buffer_t>(platform_buffer.release());  // Ownership passed across abi
+  *buffer_out = reinterpret_cast<magma_buffer_t>(platform_buffer.release());  // Ownership passed
 
   return MAGMA_STATUS_OK;
 }

@@ -4,40 +4,43 @@
 
 import("//src/graphics/lib/magma/gnbuild/magma.gni")
 
-# Magma ABI
-config("magma_abi_config") {
-  include_dirs = [ "magma_abi" ]
+config("magma_config") {
+  include_dirs = [ "magma" ]
 }
 
-source_set("magma_abi") {
-  public_configs = [ ":magma_abi_config" ]
+source_set("magma") {
+  public_configs = [ ":magma_config" ]
 
   sources = [
-    "magma_abi/magma.h",
-    "magma_abi/magma_sysmem.h",
+    "magma/magma.h",
+    "magma/magma_sysmem.h",
   ]
 
-  public_deps = [ ":magma_abi_common" ]
+  public_deps = [ ":magma_common" ]
 }
 
-source_set("magma_abi_common") {
-  public_configs = [ ":magma_abi_config" ]
+source_set("magma_common") {
+  public_configs = [ ":magma_config" ]
 
-  sources = [ "magma_abi/magma_common_defs.h" ]
+  sources = [ "magma/magma_common_defs.h" ]
 }
 
-# Magma System Driver ABI
-config("msd_abi_config") {
-  include_dirs = [ "msd_abi" ]
+config("msd_config") {
+  include_dirs = [ "msd" ]
 }
 
-source_set("msd_abi") {
-  public_configs = [ ":msd_abi_config" ]
+source_set("msd") {
+  public_configs = [ ":msd_config" ]
 
   sources = [
-    "msd_abi/msd.h",
-    "msd_abi/msd_defs.h",
+    "msd/msd.h",
+    "msd/msd_defs.h",
   ]
 
-  public_deps = [ ":magma_abi_common" ]
+  public_deps = [ ":magma_common" ]
+}
+
+# TODO(fxbug.dev/85557) - remove
+group("magma_abi") {
+  public_deps = [ ":magma" ]
 }

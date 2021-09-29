@@ -11,7 +11,3 @@ action("magma_header_gen") {
   inputs = [ "magma.json" ]
   outputs = [ "$target_gen_dir/magma.h" ]
 }
-
-group("magma_abi") {
-  public_deps = [ ":magma_header_gen" ]
-}

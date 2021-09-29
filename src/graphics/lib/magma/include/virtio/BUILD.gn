@@ -8,11 +8,11 @@ action("headers") {
   script = "virtio_magma_h_gen.py"
   args = [
     "fuchsia",
-    rebase_path("../magma_abi/magma.json", root_build_dir),
+    rebase_path("../magma/magma.json", root_build_dir),
     rebase_path(out_file, root_build_dir),
   ]
   sources = [ "$script" ]
-  inputs = [ "../magma_abi/magma.json" ]
+  inputs = [ "../magma/magma.json" ]
   outputs = [ "$out_file" ]
 }
 

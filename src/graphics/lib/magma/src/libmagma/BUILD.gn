@@ -9,7 +9,7 @@ group("libmagma") {
 }
 
 static_library("libmagma_static") {
-  public_deps = [ "$magma_build_root/include:magma_abi" ]
+  public_deps = [ "$magma_build_root/include:magma" ]
 
   sources = [ "magma.cc" ]
 

@@ -60,7 +60,7 @@ source_set("status") {
 
   sources = [ "status.h" ]
 
-  public_deps = [ "$magma_build_root/include:magma_abi_common" ]
+  public_deps = [ "$magma_build_root/include:magma_common" ]
 }
 
 source_set("mapped_batch") {

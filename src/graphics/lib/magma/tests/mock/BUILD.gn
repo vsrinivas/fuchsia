@@ -8,7 +8,7 @@ source_set("msd") {
   public_configs = [ "$magma_build_root:magma_tests_include_config" ]
 
   public_deps = [
-    "$magma_build_root/include:msd_abi",
+    "$magma_build_root/include:msd",
     "$magma_build_root/src/magma_util:macros",
     "$magma_build_root/src/magma_util/platform:buffer",
     "$magma_build_root/src/magma_util/platform:semaphore",
@@ -43,7 +43,7 @@ source_set("bus_mapper") {
 source_set("magma_system") {
   sources = [ "mock_magma_system.cc" ]
   deps = [
-    "$magma_build_root/include:magma_abi",
+    "$magma_build_root/include:magma",
     "$magma_build_root/src/magma_util:macros",
     "$magma_build_root/src/magma_util/platform:buffer",
     "$magma_build_root/src/magma_util/platform:logger_impl",

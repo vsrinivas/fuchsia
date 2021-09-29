@@ -63,7 +63,7 @@ For details on the process of building these two components, see the
 The Magma interface is a service interface provided by the Magma system driver.
 The interface is designed to be useful for implementing an accelerated graphics
 api.  It consists of
-[magma.h](/src/graphics/lib/magma/include/magma_abi/magma.h) plus gpu specific
+[magma.h](/src/graphics/lib/magma/include/magma/magma.h) plus gpu specific
 headers (example:
 [intel](/src/graphics/drivers/msd-intel-gen/include/magma_intel_gen_defs.h)).
 

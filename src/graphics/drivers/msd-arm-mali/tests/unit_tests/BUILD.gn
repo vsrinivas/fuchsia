@@ -69,7 +69,7 @@ group("test_deps") {
   public_deps = [
     "../../include",
     "//src/graphics/drivers/msd-arm-mali/src",
-    "//src/graphics/lib/magma/include:msd_abi",
+    "//src/graphics/lib/magma/include:msd",
     "//src/graphics/lib/magma/src/magma_util:macros",
     "//src/graphics/lib/magma/src/magma_util:registers",
     "//src/graphics/lib/magma/src/magma_util/platform:port",

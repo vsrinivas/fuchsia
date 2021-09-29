@@ -56,7 +56,7 @@ executable("magma-info-bin") {
   output_name = "magma-info"
 
   deps = [
-    "$magma_build_root/include:magma_abi",
+    "$magma_build_root/include:magma",
     "//sdk/fidl/fuchsia.gpu.magma:fuchsia.gpu.magma_llcpp",
     "//sdk/lib/fdio",
     "//src/devices/lib/driver",

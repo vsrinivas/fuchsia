@@ -8,9 +8,9 @@ Magma Test Strategy
 Four major interfaces
 
 * [Vulkan](https://www.khronos.org/vulkan)
-* [magma](/src/graphics/lib/magma/include/magma_abi/magma.h)
+* [magma](/src/graphics/lib/magma/include/magma/magma.h)
 * [magma system](/src/graphics/lib/magma/src/magma_util/platform/platform_connection.h)
-* [msd](/src/graphics/lib/magma/include/msd_abi/msd.h)
+* [msd](/src/graphics/lib/magma/include/msd/msd.h)
 
 Four major components
 
@@ -64,9 +64,9 @@ test harness then unbinds the test driver and rebinds the production driver.
 The interaction between app, libvulkan, msd, and gpu is complex.  Generally speaking the app generates Vulkan command buffers and shader programs, which are created in a gpu specific binary format by libvulkan.
 Those command buffers as well as other resources are shared with the magma system driver, which maps resources into the gpu's address space and schedules command buffers on the gpu's execution units.
 
-* magma_abi_conformance_tests
+* magma_conformance_tests
     * Does not execute command buffers; rely on Vulkan CTS for command buffer coverage
-* msd_abi_conformance_tests
+* msd_conformance_tests
     * Validates a vendor's msd implementation
     * Coverage goal 100%, currently ~50% (fxbug.dev/13060 for implementing vendor specifics)
 * vendor specific

@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_GRAPHICS_LIB_MAGMA_INCLUDE_MSD_ABI_MSD_DEFS_H_
-#define SRC_GRAPHICS_LIB_MAGMA_INCLUDE_MSD_ABI_MSD_DEFS_H_
+#ifndef SRC_GRAPHICS_LIB_MAGMA_INCLUDE_MSD_MSD_DEFS_H_
+#define SRC_GRAPHICS_LIB_MAGMA_INCLUDE_MSD_MSD_DEFS_H_
 
 #include <stdint.h>
 

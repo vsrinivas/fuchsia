@@ -10,7 +10,7 @@
 
 #include <cstdint>
 
-#include "src/graphics/lib/magma/include/magma_abi/magma_common_defs.h"
+#include "src/graphics/lib/magma/include/magma/magma_common_defs.h"
 
 namespace magma_image {
 

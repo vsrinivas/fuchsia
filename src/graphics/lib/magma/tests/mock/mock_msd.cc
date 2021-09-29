@@ -145,7 +145,7 @@ void msd_connection_set_notification_callback(struct msd_connection_t* connectio
                                               msd_connection_notification_callback_t callback,
                                               void* token) {}
 
-magma_status_t msd_connection_enable_performance_counters(msd_connection_t* abi_connection,
+magma_status_t msd_connection_enable_performance_counters(msd_connection_t* connection,
                                                           const uint64_t* counters,
                                                           uint64_t counter_count) {
   return MAGMA_STATUS_OK;
@@ -165,7 +165,7 @@ magma_status_t msd_connection_release_performance_counter_buffer_pool(
   return MAGMA_STATUS_OK;
 }
 
-magma_status_t msd_connection_dump_performance_counters(struct msd_connection_t* abi_connection,
+magma_status_t msd_connection_dump_performance_counters(struct msd_connection_t* connection,
                                                         struct msd_perf_count_pool* pool,
                                                         uint32_t trigger_id) {
   return MAGMA_STATUS_OK;
@@ -178,7 +178,7 @@ magma_status_t msd_connection_clear_performance_counters(struct msd_connection_t
 }
 
 magma_status_t msd_connection_add_performance_counter_buffer_offset_to_pool(
-    struct msd_connection_t*, struct msd_perf_count_pool* abi_pool, struct msd_buffer_t* abi_buffer,
+    struct msd_connection_t*, struct msd_perf_count_pool* pool, struct msd_buffer_t* buffer,
     uint64_t buffer_id, uint64_t buffer_offset, uint64_t buffer_size) {
   return MAGMA_STATUS_OK;
 }

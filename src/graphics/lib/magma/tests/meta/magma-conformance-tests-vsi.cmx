@@ -10,7 +10,10 @@
         "syslog/client.shard.cmx"
     ],
     "program": {
-        "binary": "bin/magma_abi_conformance_tests"
+        "args": [
+            "--vendor-id=0x10001"
+        ],
+        "binary": "bin/magma_conformance_tests"
     },
     "sandbox": {
         "dev": [

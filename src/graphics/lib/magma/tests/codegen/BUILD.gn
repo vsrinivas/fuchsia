@@ -7,19 +7,18 @@
 
 action("magma_header_compare") {
   testonly = true
-  deps = [ "//src/graphics/lib/magma/include/magma_abi" ]
+  deps = [ "//src/graphics/lib/magma/include/magma:magma_header_gen" ]
   script = "verify_identical.sh"
   args = [
-    rebase_path(
-        "$root_gen_dir/src/graphics/lib/magma/include/magma_abi/magma.h",
-        root_build_dir),
-    rebase_path("//src/graphics/lib/magma/include/magma_abi/magma.h",
+    rebase_path("$root_gen_dir/src/graphics/lib/magma/include/magma/magma.h",
+                root_build_dir),
+    rebase_path("//src/graphics/lib/magma/include/magma/magma.h",
                 root_build_dir),
     rebase_path("$target_gen_dir/magma.h.compare_out", root_build_dir),
   ]
   inputs = [
-    "$root_gen_dir/src/graphics/lib/magma/include/magma_abi/magma.h",
-    "//src/graphics/lib/magma/include/magma_abi/magma.h",
+    "$root_gen_dir/src/graphics/lib/magma/include/magma/magma.h",
+    "//src/graphics/lib/magma/include/magma/magma.h",
   ]
   outputs = [ "$target_gen_dir/magma.h.compare_out" ]
 }

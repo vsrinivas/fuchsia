@@ -16,7 +16,7 @@
 #include <string>
 #include <unordered_map>
 
-#include "src/graphics/lib/magma/include/magma_abi/magma.h"
+#include "src/graphics/lib/magma/include/magma/magma.h"
 #include "src/graphics/lib/magma/include/virtio/virtio_magma.h"
 #include "src/lib/fxl/macros.h"
 #include "src/virtualization/bin/vmm/device/device_base.h"

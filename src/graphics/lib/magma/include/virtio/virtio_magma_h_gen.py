@@ -14,7 +14,7 @@ def usage():
         '    FORMAT   either \"fuchsia\" or \"linux\"\n'
         '    INPUT    json file containing the magma interface definition\n'
         '    OUTPUT   destination path for the virtio header file to generate\n'
-        '  Example: ./virtio_magma_h_gen.py fuchsia ../magma_abi/magma.json ./virtio_magma.h\n'
+        '  Example: ./virtio_magma_h_gen.py fuchsia ../magma/magma.json ./virtio_magma.h\n'
         '  Generates the virtio magma header based on a provided json definition,\n'
         '  for either fuchsia or the linux kernel.')
 

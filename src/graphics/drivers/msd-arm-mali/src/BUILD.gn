@@ -79,7 +79,7 @@ source_set("src") {
   deps = [
     "../include",
     "//sdk/lib/fit",
-    "//src/graphics/lib/magma/include:msd_abi",
+    "//src/graphics/lib/magma/include:msd",
     "//src/graphics/lib/magma/src/magma_util:allocator",
     "//src/graphics/lib/magma/src/magma_util:macros",
     "//src/graphics/lib/magma/src/magma_util:registers",

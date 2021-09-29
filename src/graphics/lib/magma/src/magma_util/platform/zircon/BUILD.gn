@@ -71,7 +71,7 @@ source_set("dependency_injection_device") {
     "$magma_build_root/src/magma_util:macros",
     "//sdk/fidl/fuchsia.gpu.magma:fuchsia.gpu.magma_llcpp",
     "//src/devices/lib/driver",
-    "//src/graphics/lib/magma/include:msd_abi",
+    "//src/graphics/lib/magma/include:msd",
     "//src/lib/ddk",
     "//src/lib/ddktl",
     "//zircon/public/lib/zx",
@@ -155,7 +155,7 @@ source_set("connection_client") {
 
   public_deps = [
     ":handle",
-    "$magma_build_root/include:msd_abi",
+    "$magma_build_root/include:msd",
     "$magma_build_root/src/magma_util:macros",
     "$zircon_build_root/public/lib/zx",
     "..:connection_client_header",
@@ -182,7 +182,7 @@ source_set("connection") {
   ]
 
   public_deps = [
-    "$magma_build_root/include:msd_abi",
+    "$magma_build_root/include:msd",
     "$magma_build_root/src/magma_util:macros",
     "$zircon_build_root/public/lib/zx",
     "$zircon_build_root/system/ulib/async-loop:async-loop-cpp",
@@ -209,7 +209,7 @@ source_set("device_client") {
   deps = [
     "..:device_client_header",
     "//sdk/fidl/fuchsia.gpu.magma:fuchsia.gpu.magma_llcpp",
-    "//src/graphics/lib/magma/include:msd_abi",
+    "//src/graphics/lib/magma/include:msd",
     "//src/graphics/lib/magma/src/magma_util:macros",
     "//zircon/public/lib/zx",
   ]

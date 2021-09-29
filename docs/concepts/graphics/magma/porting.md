@@ -177,7 +177,7 @@ Testing at this stage:
   should exercise the GPU in a minimal way, such as writing to a register or
   causing the GPU to modify a memory location.
 * driver-specific integration tests that use the Magma interface.
-* magma-abi-conformance-tests (part of [Magma L0][l0]).
+* magma-conformance-tests (part of [Magma L0][l0]).
 * magma-info-test (part of [Magma L0][l0]).
 
 ## Building the ICD
@@ -328,8 +328,8 @@ the system driver using the Zircon DDK.
 [allowlist]: /src/graphics/lib/magma/gnbuild/imported_symbols.allowlist
 [magma_pdev_entry]: /src/graphics/lib/magma/src/magma_util/platform/zircon/driver_entry.gni
 [vmo]: /docs/reference/kernel_objects/vm_object.md
-[msdheader]: /src/graphics/lib/magma/include/msd_abi/msd.h
-[magmaheader]: /src/graphics/lib/magma/include/magma_abi/magma.h
+[msdheader]: /src/graphics/lib/magma/include/msd/msd.h
+[magmaheader]: /src/graphics/lib/magma/include/magma/magma.h
 [l0]: /docs/concepts/graphics/magma/contributing.md#l0
 [l1]: /docs/concepts/graphics/magma/contributing.md#l1
 [teststrategy]: /docs/concepts/graphics/magma/test_strategy.md

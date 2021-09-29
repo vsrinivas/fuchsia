@@ -14,7 +14,7 @@ source_set("virtmagma_headers") {
 }
 
 static_library("libmagma_linux") {
-  public_deps = [ "$magma_build_root/include:magma_abi" ]
+  public_deps = [ "$magma_build_root/include:magma" ]
 
   deps = [
     ":magma_generic($shlib_toolchain)",
@@ -45,7 +45,7 @@ action("magma_generic") {
   out_file = "$target_gen_dir/magma_generic.cc"
   script = "magma_generic_cc_gen.py"
   args = [
-    rebase_path("//src/graphics/lib/magma/include/magma_abi/magma.json",
+    rebase_path("//src/graphics/lib/magma/include/magma/magma.json",
                 root_build_dir),
     rebase_path("//src/graphics/lib/magma/src/libmagma_linux/magma.cc",
                 root_build_dir),
@@ -55,7 +55,7 @@ action("magma_generic") {
     args += [ "--debug" ]
   }
   inputs = [
-    "//src/graphics/lib/magma/include/magma_abi/magma.json",
+    "//src/graphics/lib/magma/include/magma/magma.json",
     "//src/graphics/lib/magma/src/libmagma_linux/magma.cc",
   ]
   outputs = [ "$out_file" ]

@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_GRAPHICS_LIB_MAGMA_INCLUDE_MAGMA_ABI_MAGMA_SYSMEM_H_
-#define SRC_GRAPHICS_LIB_MAGMA_INCLUDE_MAGMA_ABI_MAGMA_SYSMEM_H_
+#ifndef SRC_GRAPHICS_LIB_MAGMA_INCLUDE_MAGMA_MAGMA_SYSMEM_H_
+#define SRC_GRAPHICS_LIB_MAGMA_INCLUDE_MAGMA_MAGMA_SYSMEM_H_
 
 #include <stdint.h>
 
@@ -124,4 +124,4 @@ magma_status_t magma_get_description_format_index(magma_sysmem_connection_t conn
 }
 #endif
 
-#endif  // SRC_GRAPHICS_LIB_MAGMA_INCLUDE_MAGMA_ABI_MAGMA_SYSMEM_H_
+#endif  // SRC_GRAPHICS_LIB_MAGMA_INCLUDE_MAGMA_MAGMA_SYSMEM_H_

@@ -5,7 +5,7 @@
 #include <gtest/gtest.h>
 #include <src/lib/fxl/command_line.h>
 
-#include "test_magma_abi.h"
+#include "test_magma.h"
 
 uint32_t gVendorId;
 

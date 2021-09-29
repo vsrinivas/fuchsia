@@ -35,6 +35,6 @@ msd_device_t* msd_driver_create_device(msd_driver_t* drv, void* device_handle) {
   if (!device)
     return DRETP(nullptr, "failed to create device");
 
-  // Transfer ownership across the ABI
+  // Transfer ownership
   return device.release();
 }

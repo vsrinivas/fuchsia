@@ -74,7 +74,7 @@ group("test_deps") {
   testonly = true
 
   public_deps = [
-    "$magma_build_root/include:msd_abi",
+    "$magma_build_root/include:msd",
     "$magma_build_root/src/magma_util:macros",
     "$magma_build_root/src/magma_util:registers",
     "$magma_build_root/src/magma_util/platform:semaphore",

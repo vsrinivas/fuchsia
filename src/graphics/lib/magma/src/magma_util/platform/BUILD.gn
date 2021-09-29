@@ -28,7 +28,7 @@ source_set("buffer_header") {
   public_configs = [ ":platform_include_config" ]
   public_deps = [
     ":handle",
-    "//src/graphics/lib/magma/include:magma_abi",
+    "//src/graphics/lib/magma/include:magma",
     "//src/graphics/lib/magma/src/magma_util:macros",
     "//src/graphics/lib/magma/src/magma_util:status",
   ]
@@ -188,7 +188,7 @@ source_set("connection_client_header") {
     ":thread",
     "$magma_build_root/src/magma_util:macros",
     "$magma_build_root/src/magma_util:status",
-    "//src/graphics/lib/magma/include:magma_abi",
+    "//src/graphics/lib/magma/include:magma",
   ]
 }
 
@@ -215,8 +215,8 @@ source_set("connection_header") {
     ":semaphore",
     ":thread",
     "$magma_build_root/src/magma_util:macros",
-    "//src/graphics/lib/magma/include:magma_abi",
-    "//src/graphics/lib/magma/include:msd_abi",
+    "//src/graphics/lib/magma/include:magma",
+    "//src/graphics/lib/magma/include:msd",
   ]
 }
 
@@ -468,7 +468,7 @@ source_set("sysmem_connection_header") {
     ":buffer",
     "$magma_build_root/src/magma_util:macros",
     "$magma_build_root/src/magma_util:status",
-    "//src/graphics/lib/magma/include:magma_abi",
+    "//src/graphics/lib/magma/include:magma",
   ]
 }
 

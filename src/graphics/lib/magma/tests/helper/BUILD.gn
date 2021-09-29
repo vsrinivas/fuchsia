@@ -35,7 +35,7 @@ source_set("test_device_helper") {
   public_deps = [
     "//sdk/fidl/fuchsia.device:fuchsia.device_llcpp",
     "//sdk/lib/fdio",
-    "//src/graphics/lib/magma/include:magma_abi",
+    "//src/graphics/lib/magma/include:magma",
     "//third_party/googletest:gtest",
     "//zircon/public/lib/zx",
     "//zircon/system/ulib/service:service-llcpp",
@@ -67,7 +67,7 @@ source_set("inflight_list") {
   sources = [ "inflight_list.h" ]
 
   public_deps = [
-    "$magma_build_root/include:magma_abi",
+    "$magma_build_root/include:magma",
     "$magma_build_root/src/magma_util:macros",
     "$magma_build_root/src/magma_util:status",
   ]
@@ -86,7 +86,7 @@ source_set("magma_map_cpu") {
     "magma_map_cpu.h",
   ]
 
-  public_deps = [ "$magma_build_root/include:magma_abi" ]
+  public_deps = [ "$magma_build_root/include:magma" ]
 
   if (is_fuchsia) {
     deps = [ "//zircon/system/ulib/zx" ]

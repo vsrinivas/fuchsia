@@ -14,7 +14,7 @@ intel)
     magma_nonhardware_tests \
     msd_intel_gen_nonhardware_tests \
     mesa_unit_tests \
-    magma-abi-conformance-tests \
+    magma-conformance-tests \
     msd_intel_gen_integration_tests \
     icd_load \
     vkreadback \
@@ -26,7 +26,7 @@ mali)
   fx-command-run test --no-build --simple -o \
     magma_nonhardware_tests \
     msd_arm_mali_nonhardware_tests \
-    magma-abi-conformance-tests-arm \
+    magma-conformance-tests-arm \
     icd_load \
     vkreadback \
     vkloop \
@@ -39,7 +39,7 @@ pvr)
   fx-command-run test --no-build --simple -o \
     magma_nonhardware_tests \
     msd_img_rgx_nonhardware_tests \
-    magma-abi-conformance-tests \
+    magma-conformance-tests \
     msd_img_rgx_integration_tests \
     msd_img_rgx_no_hardware_integration_tests
   ;;
@@ -47,7 +47,7 @@ vsi)
   fx-command-run test --simple -o \
     magma_nonhardware_tests \
     msd_vsi_vip_nonhardware_tests \
-    magma-abi-conformance-tests-vsi \
+    magma-conformance-tests-vsi \
     msd-vsi-vip-integration-tests \
     test-magma-vsi-exec \
   ;;

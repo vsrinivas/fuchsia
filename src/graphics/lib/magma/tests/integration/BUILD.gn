@@ -7,21 +7,21 @@ import("//src/graphics/lib/magma/gnbuild/magma.gni")
 group("integration") {
   testonly = true
 
-  public_deps = [ ":magma_abi_conformance_tests" ]
+  public_deps = [ ":magma_conformance_tests" ]
 }
 
-executable("magma_abi_conformance_tests") {
+executable("magma_conformance_tests") {
   testonly = true
 
   sources = [
     "main.cc",
-    "test_magma_abi.cc",
-    "test_magma_abi_c.c",
+    "test_magma.cc",
+    "test_magma_c.c",
     "test_magma_fidl.cc",
   ]
 
   deps = [
-    "$magma_build_root/include:magma_abi",
+    "$magma_build_root/include:magma",
     "$magma_build_root/src/libmagma",
     "$magma_build_root/tests/helper:magma_map_cpu",
     "//src/graphics/drivers/msd-intel-gen/include",
@@ -52,19 +52,19 @@ executable("magma_abi_conformance_tests") {
   configs += [ "//build/config:Wno-conversion" ]
 }
 
-executable("virtmagma_abi_conformance_tests") {
+executable("virtmagma_conformance_tests") {
   testonly = true
 
   defines = [ "VIRTMAGMA=1" ]
 
   sources = [
     "main.cc",
-    "test_magma_abi.cc",
-    "test_magma_abi_c.c",
+    "test_magma.cc",
+    "test_magma_c.c",
   ]
 
   deps = [
-    "$magma_build_root/include:magma_abi",
+    "$magma_build_root/include:magma",
     "$magma_build_root/src/libmagma_linux",
     "$magma_build_root/tests/helper:magma_map_cpu",
     "//src/graphics/drivers/msd-intel-gen/include",

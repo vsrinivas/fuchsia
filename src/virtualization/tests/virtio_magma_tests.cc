@@ -22,9 +22,9 @@ TEST_F(VirtioMagmaGuestTest, DeviceProperties) {
 TEST_F(VirtioMagmaGuestTest, MagmaConformance) {
   std::string text;
   int32_t return_code = 0;
-  ASSERT_EQ(this->Execute({"/tmp/extras/virtmagma_abi_conformance_tests"}, kMagmaEnv, &text,
-                          &return_code),
-            ZX_OK);
+  ASSERT_EQ(
+      this->Execute({"/tmp/extras/virtmagma_conformance_tests"}, kMagmaEnv, &text, &return_code),
+      ZX_OK);
   ASSERT_EQ(return_code, 0) << "[BEGIN GUEST TEXT]" << text << "[END GUEST TEXT]";
 }
 

@@ -172,7 +172,7 @@ source_set("magma_image") {
   deps = [
     "//sdk/fidl/fuchsia.sysmem",
     "//sdk/fidl/fuchsia.ui.composition:fuchsia.ui.composition_llcpp",
-    "//src/graphics/lib/magma/include:magma_abi",
+    "//src/graphics/lib/magma/include:magma",
     "//src/lib/fsl",
     "//src/lib/vulkan",
     "//third_party/mesa/include:drm-uapi",
@@ -195,7 +195,7 @@ source_set("virtio_magma_lib") {
   deps = [
     ":magma_image",
     ":virtio",
-    "//src/graphics/lib/magma/include:magma_abi",
+    "//src/graphics/lib/magma/include:magma",
     "//src/graphics/lib/magma/include/virtio",
     "//zircon/system/ulib/syslog",
   ]
@@ -327,7 +327,7 @@ executable("device_tests") {
     "//sdk/fidl/fuchsia.virtualization.hardware",
     "//sdk/lib/sys/cpp/testing:integration_fixture",
     "//src/graphics/drivers/msd-intel-gen/include:include",
-    "//src/graphics/lib/magma/include:magma_abi",
+    "//src/graphics/lib/magma/include:magma",
     "//src/graphics/lib/magma/include/virtio:headers",
     "//src/lib/fsl",
     "//src/lib/fxl/test:gtest_main",
@@ -367,11 +367,11 @@ action("virtio_magma_generic") {
   out_file = "$target_gen_dir/virtio_magma_generic.h"
   script = "virtio_magma_generic_h_gen.py"
   args = [
-    rebase_path("//src/graphics/lib/magma/include/magma_abi/magma.json",
+    rebase_path("//src/graphics/lib/magma/include/magma/magma.json",
                 root_build_dir),
     rebase_path(out_file, root_build_dir),
   ]
   sources = [ "$script" ]
-  inputs = [ "//src/graphics/lib/magma/include/magma_abi/magma.json" ]
+  inputs = [ "//src/graphics/lib/magma/include/magma/magma.json" ]
   outputs = [ "$out_file" ]
 }

@@ -12,5 +12,5 @@ source_set("include") {
     "magma_vendor_queries.h",
     "magma_vsi_vip_types.h",
   ]
-  public_deps = [ "//src/graphics/lib/magma/include:magma_abi_common" ]
+  public_deps = [ "//src/graphics/lib/magma/include:magma_common" ]
 }

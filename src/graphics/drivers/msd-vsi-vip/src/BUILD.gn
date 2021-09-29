@@ -35,7 +35,7 @@ source_set("src") {
   ]
   public_deps = [
     "../include",
-    "//src/graphics/lib/magma/include:msd_abi",
+    "//src/graphics/lib/magma/include:msd",
   ]
   deps = [
     "//src/graphics/lib/magma/src/magma_util:address_space",

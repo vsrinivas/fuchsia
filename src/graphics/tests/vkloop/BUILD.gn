@@ -17,7 +17,7 @@ executable("vkloop_bin") {
   deps = [
     "//sdk/fidl/fuchsia.gpu.magma:fuchsia.gpu.magma_llcpp",
     "//sdk/lib/fdio",
-    "//src/graphics/lib/magma/include:magma_abi",
+    "//src/graphics/lib/magma/include:magma",
     "//src/graphics/lib/magma/src/libmagma",
     "//src/graphics/lib/magma/tests/helper:test_device_helper",
     "//src/graphics/tests/common",

@@ -188,7 +188,7 @@ source_set("magma_platform_hardware_tests") {
 
   deps = [
     ":magma_platform_device_test",
-    "$magma_build_root/include:magma_abi",
+    "$magma_build_root/include:magma",
     "$magma_build_root/src/magma_util:macros",
     "$magma_build_root/src/magma_util/platform:buffer",
     "$magma_build_root/src/magma_util/platform:bus_mapper",
@@ -204,7 +204,7 @@ source_set("magma_platform_hardware_tests") {
 }
 
 # Requires hardware
-source_set("msd_abi_conformance_tests") {
+source_set("msd_conformance_tests") {
   testonly = true
 
   sources = [
@@ -217,7 +217,7 @@ source_set("msd_abi_conformance_tests") {
   ]
 
   deps = [
-    "$magma_build_root/include:msd_abi",
+    "$magma_build_root/include:msd",
     "$magma_build_root/src/magma_util/platform:buffer",
     "$magma_build_root/src/magma_util/platform:semaphore",
     "$magma_build_root/src/sys_driver",

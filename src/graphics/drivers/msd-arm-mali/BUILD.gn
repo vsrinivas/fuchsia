@@ -32,7 +32,7 @@ driver_module("msd_arm_test-driver") {
     "tests:gtest",
     "//src/graphics/lib/magma/src/magma_util/platform:logger_for_system_drivers",
     "//src/graphics/lib/magma/tests/unit_tests:magma_platform_hardware_tests",
-    "//src/graphics/lib/magma/tests/unit_tests:msd_abi_conformance_tests",
+    "//src/graphics/lib/magma/tests/unit_tests:msd_conformance_tests",
   ]
 }
 

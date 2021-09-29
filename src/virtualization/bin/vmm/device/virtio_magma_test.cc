@@ -15,7 +15,7 @@
 #include <fbl/algorithm.h>
 
 #include "src/graphics/drivers/msd-intel-gen/include/magma_intel_gen_defs.h"
-#include "src/graphics/lib/magma/include/magma_abi/magma.h"
+#include "src/graphics/lib/magma/include/magma/magma.h"
 #include "src/lib/fsl/handles/object_info.h"
 #include "src/virtualization/bin/vmm/device/test_with_device.h"
 #include "src/virtualization/bin/vmm/device/virtio_queue_fake.h"

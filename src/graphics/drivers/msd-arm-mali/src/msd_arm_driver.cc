@@ -60,6 +60,6 @@ uint32_t msd_driver_duplicate_inspect_handle(struct msd_driver_t* drv) {
 msd_device_t* msd_driver_create_device(msd_driver_t* drv, void* device_handle) {
   auto arm_drv = MsdArmDriver::cast(drv);
   auto device = arm_drv->CreateDevice(device_handle);
-  // Transfer ownership across the ABI
+  // Transfer ownership
   return device.release();
 }
