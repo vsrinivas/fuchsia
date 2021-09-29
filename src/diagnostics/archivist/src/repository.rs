@@ -862,7 +862,7 @@ mod tests {
         bar_container.ingest_message(make_message("b", 2));
         foo_container.ingest_message(make_message("c", 3));
 
-        let stream = repo.logs_cursor(StreamMode::Snapshot, None);
+        let stream = repo.logs_cursor(StreamMode::Snapshot);
 
         let results =
             stream.map(|value| value.msg().unwrap().to_string()).collect::<Vec<_>>().await;
@@ -870,7 +870,6 @@ mod tests {
 
         let filtered_stream = repo.logs_cursor(
             StreamMode::Snapshot,
-            Some(vec![selectors::parse_selector("foo:root").unwrap()]),
         );
 
         let results =

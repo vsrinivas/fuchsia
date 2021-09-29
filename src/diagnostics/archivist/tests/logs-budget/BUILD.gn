@@ -23,6 +23,7 @@ rustc_binary("test") {
     "//src/diagnostics/archivist:lib",
     "//src/lib/diagnostics/data/rust",
     "//src/lib/diagnostics/hierarchy/rust",
+    "//src/lib/diagnostics/log/message/rust",
     "//src/lib/diagnostics/reader/rust",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",

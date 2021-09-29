@@ -203,7 +203,7 @@ mod tests {
     use super::*;
     use crate::{container::ComponentIdentity, events::types::ComponentIdentifier};
 
-    use diagnostics_message::{fx_log_packet_t, LoggerMessage, METADATA_SIZE};
+    use diagnostics_message::message::{fx_log_packet_t, LoggerMessage, METADATA_SIZE};
     use fidl::endpoints::ServerEnd;
     use fidl_fuchsia_logger::LogLevelFilter;
     use fidl_fuchsia_logger::LogListenerSafeRequest;
