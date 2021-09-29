@@ -39,9 +39,9 @@ import("//build/zbi/zbi.gni")
 #     should be "system_image_prime", so that the package does not override the
 #     non-prime package during publishing.
 #
-# MinFS arguments
+# MinFS data partition arguments
 #   minfs_minimum_inodes, minfs_minimum_data_bytes, minfs_maximum_bytes (optional)
-#     [int] Size options for minfs to pass to the fvm tool.
+#     [int] Size options for minfs to pass to the fvm tool for the data partition.
 #
 # BlobFS arguments
 #   blob_layout_format (required)
@@ -56,6 +56,9 @@ import("//build/zbi/zbi.gni")
 # FVM arguments
 #   generate_fvm (optional; default: true)
 #     [bool] Whether to generate a FVM image.
+#
+#   assembly_include_account_in_fvm (optional; default: false)
+#     [bool] Whether to include an (empty) account partition in the FVM image.
 #
 #   embed_fvm_in_zbi (optional)
 #     [bool] Whether the FVM should be embedded into the ZBI as a ramdisk.
@@ -104,6 +107,13 @@ template("generated_board_config") {
   generate_fvm = true
   if (defined(invoker.generate_fvm)) {
     generate_fvm = invoker.generate_fvm
+  }
+
+  if (generate_fvm) {
+    assembly_include_account_in_fvm = true
+    if (defined(invoker.assembly_include_account_in_fvm)) {
+      assembly_include_account_in_fvm = invoker.assembly_include_account_in_fvm
+    }
   }
 
   if (include_version_and_epoch) {
@@ -162,7 +172,7 @@ template("generated_board_config") {
     }
 
     if (generate_fvm) {
-      minfs_parameters = {
+      data_volume_parameters = {
         MinFS = {
           name = "data"
 
@@ -177,7 +187,7 @@ template("generated_board_config") {
           }
         }
       }
-      blobfs_parameters = {
+      blobfs_volume_parameters = {
         BlobFS = {
           name = "blob"
 
@@ -279,9 +289,18 @@ template("generated_board_config") {
           }
 
           filesystems = [
-            minfs_parameters,
-            blobfs_parameters,
+            data_volume_parameters,
+            blobfs_volume_parameters,
           ]
+
+          if (assembly_include_account_in_fvm) {
+            account_volume_parameters = {
+              MinFS = {
+                name = "account"
+              }
+            }
+            filesystems += [ account_volume_parameters ]
+          }
         }
       }
 

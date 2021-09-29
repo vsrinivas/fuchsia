@@ -79,7 +79,7 @@ pub struct Filesystem {
 /// Attributes common to all filesystems.
 #[derive(Clone, Deserialize, Serialize)]
 pub struct FilesystemAttributes {
-    /// The name of the filesystem. Typically "blob" or "data".
+    /// The name of the partition. Typically "blob" or "data".
     pub name: String,
     /// The minimum number of inodes to add to the filesystem.
     pub minimum_inodes: Option<u64>,
@@ -180,10 +180,30 @@ impl FvmBuilder {
 
         // Append the filesystem args.
         for fs in &self.filesystems {
-            maybe_append_value(&mut args, &fs.attributes.name, Some(&fs.path.path_to_string()?));
-            maybe_append_value(&mut args, "minimum-inodes", fs.attributes.minimum_inodes);
-            maybe_append_value(&mut args, "minimum-data-bytes", fs.attributes.minimum_data_bytes);
-            maybe_append_value(&mut args, "maximum-bytes", fs.attributes.maximum_bytes);
+            // The 'account' partition is a special case in that the standard image for the
+            // filesystem type is not appropriate. Handle this by setting a special flag
+            // instead of passing through the supplied path and attributes.
+            //
+            // TODO(fxbug.dev/85165): Generate an empty image instead of a standard minfs image
+            // for this case and the similar case of the 'data' partition in encrypted
+            // environments. This empty image could be passed through directly and the special flags
+            // could be removed from FVM.
+            if &fs.attributes.name == "account" {
+                args.push("--with-empty-account-partition".to_string());
+            } else {
+                maybe_append_value(
+                    &mut args,
+                    &fs.attributes.name,
+                    Some(&fs.path.path_to_string()?),
+                );
+                maybe_append_value(&mut args, "minimum-inodes", fs.attributes.minimum_inodes);
+                maybe_append_value(
+                    &mut args,
+                    "minimum-data-bytes",
+                    fs.attributes.minimum_data_bytes,
+                );
+                maybe_append_value(&mut args, "maximum-bytes", fs.attributes.maximum_bytes);
+            }
         }
 
         Ok(args)
@@ -232,6 +252,51 @@ mod tests {
                 "200",
                 "--maximum-bytes",
                 "300",
+            ]
+        );
+    }
+
+    #[test]
+    fn default_args_with_data_and_account_filesystem() {
+        let mut builder = FvmBuilder::new("fvm", "mypath", 1, 2, None, FvmType::Default);
+        builder.filesystem(Filesystem {
+            path: PathBuf::from("path/to/file.blk"),
+            attributes: FilesystemAttributes {
+                name: "data".to_string(),
+                minimum_inodes: Some(100),
+                minimum_data_bytes: Some(200),
+                maximum_bytes: Some(300),
+            },
+        });
+        builder.filesystem(Filesystem {
+            path: PathBuf::from("path/to/file.blk"),
+            attributes: FilesystemAttributes {
+                name: "account".to_string(),
+                minimum_inodes: None,
+                minimum_data_bytes: None,
+                maximum_bytes: None,
+            },
+        });
+        let args = builder.build_args().unwrap();
+
+        assert_eq!(
+            args,
+            [
+                "mypath",
+                "create",
+                "--slice",
+                "1",
+                "--reserve-slices",
+                "2",
+                "--data",
+                "path/to/file.blk",
+                "--minimum-inodes",
+                "100",
+                "--minimum-data-bytes",
+                "200",
+                "--maximum-bytes",
+                "300",
+                "--with-empty-account-partition",
             ]
         );
     }

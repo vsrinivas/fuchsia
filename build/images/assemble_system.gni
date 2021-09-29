@@ -159,6 +159,9 @@ import("//src/sys/pkg/bin/pm/pm.gni")
 #   generate_fvm (optional; default: true)
 #     [bool] Whether to generate a FVM image.
 #
+#   assembly_include_account_in_fvm (optional; default: false)
+#     [bool] Whether to include an account partition in the FVM image.
+#
 #   ramdisk_fvm_in_zbi (optional)
 #     [bool] Whether the FVM should be embedded into the ZBI as a ramdisk.
 #
@@ -458,6 +461,12 @@ template("assemble_system") {
       compress_blobs = true
       if (defined(invoker.assembly_compress_blobs)) {
         compress_blobs = invoker.assembly_compress_blobs
+      }
+
+      assembly_include_account_in_fvm = false
+      if (defined(invoker.assembly_include_account_in_fvm)) {
+        assembly_include_account_in_fvm =
+            invoker.assembly_include_account_in_fvm
       }
     }
   }

@@ -96,6 +96,7 @@ fuchsia_base = {
     }
 
     # fvm arguments
+    assembly_include_account_in_fvm = include_account_in_fvm
     assembly_fvm_slice_size = fvm_slice_size
   }
 
