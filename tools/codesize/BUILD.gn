@@ -12,8 +12,6 @@ dart_tool("codesize") {
   package_name = "codesize"
   main_dart = "bin/main.dart"
 
-  null_safe = true
-
   sources = [
     "bloaty.dart",
     "build.dart",
