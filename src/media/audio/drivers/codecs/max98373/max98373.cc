@@ -55,16 +55,7 @@ static const audio::DaiSupportedFormats kSupportedDaiFormats = {
     .bits_per_sample = kSupportedBitsPerSample,
 };
 
-int Max98373::Thread() {
-  auto status = HardwareReset();
-  if (status != ZX_OK && status != ZX_ERR_NOT_SUPPORTED) {  // Ok if not supported.
-    return thrd_error;
-  }
-  return thrd_success;
-}
-
 zx_status_t Max98373::HardwareReset() {
-  fbl::AutoLock lock(&lock_);
   if (codec_reset_.is_valid()) {
     codec_reset_.Write(0);
     zx_nanosleep(zx_deadline_after(ZX_MSEC(5)));
@@ -77,7 +68,6 @@ zx_status_t Max98373::HardwareReset() {
 }
 
 zx_status_t Max98373::Reset() {
-  fbl::AutoLock lock(&lock_);
   auto status = WriteReg(kRegReset, kRegResetReset);
   if (status != ZX_OK) {
     return status;
@@ -123,12 +113,12 @@ zx::status<DriverIds> Max98373::Initialize() {
       .vendor_id = PDEV_VID_MAXIM,
       .device_id = PDEV_DID_MAXIM_MAX98373,
   };
-  auto thunk = [](void* arg) -> int { return reinterpret_cast<Max98373*>(arg)->Thread(); };
-  int rc = thrd_create_with_name(&thread_, thunk, this, "max98373-thread");
-  if (rc != thrd_success) {
-    return zx::error(rc);
+
+  zx_status_t status = HardwareReset();
+  if (status != ZX_OK && status != ZX_ERR_NOT_SUPPORTED) {  // Ok if not supported.
+    return zx::error(status);
   }
-  zx_status_t status = Reset();
+  status = Reset();
   if (status != ZX_OK) {
     return zx::error(status);
   }
@@ -136,10 +126,7 @@ zx::status<DriverIds> Max98373::Initialize() {
   return zx::ok(ids);
 }
 
-zx_status_t Max98373::Shutdown() {
-  thrd_join(thread_, NULL);
-  return ZX_OK;
-}
+zx_status_t Max98373::Shutdown() { return ZX_OK; }
 
 zx_status_t Max98373::Create(zx_device_t* parent) {
   auto client = acpi::Client::Create(parent);
@@ -206,7 +193,6 @@ GainFormat Max98373::GetGainFormat() {
 }
 
 void Max98373::SetGainState(GainState gain_state) {
-  fbl::AutoLock lock(&lock_);
   float gain = std::clamp(gain_state.gain, kMinGain, kMaxGain);
   uint8_t gain_reg = static_cast<uint8_t>(-gain * 2.f);
   zx_status_t status = WriteReg(kRegDigitalVol, gain_reg);

@@ -96,8 +96,6 @@ TEST_F(Max98373Test, Reset) {
   SimpleCodecClient client;
   client.SetProtocol(&codec_proto);
 
-  // Delay to test we don't do other init I2C writes in another thread.
-  zx::nanosleep(zx::deadline_after(zx::msec(100)));
   ASSERT_OK(client.Reset());
 
   mock_i2c_.VerifyAndClear();

@@ -57,15 +57,12 @@ class Max98373 : public SimpleCodecServer {
   static constexpr float kMinGain = -63.5;
   static constexpr float kGainStep = 0.5;
 
-  zx_status_t WriteReg(uint16_t reg, uint8_t value) TA_REQ(lock_);
-  zx_status_t ReadReg(uint16_t reg, uint8_t* value) TA_REQ(lock_);
-  int Thread();
+  zx_status_t WriteReg(uint16_t reg, uint8_t value);
+  zx_status_t ReadReg(uint16_t reg, uint8_t* value);
 
   GainState gain_state_ = {};
   ddk::I2cChannel i2c_;
   ddk::GpioProtocolClient codec_reset_;
-  thrd_t thread_;
-  fbl::Mutex lock_;
 };
 }  // namespace audio
 
