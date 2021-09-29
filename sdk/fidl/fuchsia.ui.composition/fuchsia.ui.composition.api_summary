@@ -65,6 +65,7 @@ table/member fuchsia.ui.composition/LayoutInfo.pixel_scale fuchsia.math/SizeU
 table fuchsia.ui.composition/LayoutInfo
 const fuchsia.ui.composition/MAX_ACQUIRE_RELEASE_FENCE_COUNT int32 16
 const fuchsia.ui.composition/MAX_HIT_REGION_COUNT int32 64
+const fuchsia.ui.composition/MAX_PRESENT_ARGS_FENCE_COUNT int32 16
 table/member fuchsia.ui.composition/OnNextFrameBeginValues.additional_present_credits uint32
 table/member fuchsia.ui.composition/OnNextFrameBeginValues.future_presentation_infos vector<fuchsia.scenic.scheduling/PresentationInfo>:8
 table fuchsia.ui.composition/OnNextFrameBeginValues
@@ -82,6 +83,8 @@ protocol fuchsia.ui.composition/ParentViewportWatcher
 table/member fuchsia.ui.composition/PresentArgs.acquire_fences vector<zx/handle:EVENT>:16
 table/member fuchsia.ui.composition/PresentArgs.release_fences vector<zx/handle:EVENT>:16
 table/member fuchsia.ui.composition/PresentArgs.requested_presentation_time int64
+table/member fuchsia.ui.composition/PresentArgs.server_signal_fences vector<zx/handle:EVENT>:16
+table/member fuchsia.ui.composition/PresentArgs.server_wait_fences vector<zx/handle:EVENT>:16
 table/member fuchsia.ui.composition/PresentArgs.unsquashable bool
 resource table fuchsia.ui.composition/PresentArgs
 table/member fuchsia.ui.composition/RegisterBufferCollectionArgs.buffer_collection_token fuchsia.sysmem/BufferCollectionToken

@@ -141,6 +141,8 @@ type ContentId = struct {
 };
 
 // A maximum of 16 fences is enough for the current usage of these APIs.
+const MAX_PRESENT_ARGS_FENCE_COUNT int32 = 16;
+// TODO(fxbug.dev/85551): delete.
 const MAX_ACQUIRE_RELEASE_FENCE_COUNT int32 = 16;
 
 /// Arguments passed into [`Present`]. All arguments are optional, and if an
@@ -170,17 +172,19 @@ type PresentArgs = resource table {
     /// [`Present`] as well as the following ones even if their `acquire_fences` are signaled.
     ///
     /// The default `acquire_fences` value is the empty vector.
-    2: acquire_fences vector<zx.handle:EVENT>:MAX_ACQUIRE_RELEASE_FENCE_COUNT;
+    // TODO(fxbug.dev/85551): delete.
+    2: acquire_fences vector<zx.handle:EVENT>:MAX_PRESENT_ARGS_FENCE_COUNT;
 
     /// Flatland will signal all `release_fences` when the resources and shared buffers from this
     /// [`Present`] are no longer in use. Callers should not modify shared resources, such as
     /// BufferCollections, until after these fences are signaled.
     ///
-    /// If an error occurrs, release fences are not necessarily fired as Flatland can close the
+    /// If an error occurs, release fences are not necessarily fired as Flatland can close the
     /// client's instance at any point.
     ///
     /// The default `release_fences` value is the empty vector.
-    3: release_fences vector<zx.handle:EVENT>:MAX_ACQUIRE_RELEASE_FENCE_COUNT;
+    // TODO(fxbug.dev/85551): delete.
+    3: release_fences vector<zx.handle:EVENT>:MAX_PRESENT_ARGS_FENCE_COUNT;
 
     /// If `unsquashable` is true, then the update is guaranteed to be uniquely shown for at
     /// least one vsync interval.
@@ -190,6 +194,41 @@ type PresentArgs = resource table {
     ///
     /// If absent, `unsquashable` is false.
     4: unsquashable bool;
+
+    /// Flatland will wait until all of a Flatland instance's `server_wait_fences` are ready before
+    /// it will execute the presented commands. Not signaling `server_wait_fences` will block the
+    /// current [`Present`] as well as the following ones even if their `server_wait_fences` are
+    /// signaled.
+    ///
+    /// The default `server_wait_fences` value is the empty vector.
+    // TODO(fxbug.dev/85551): change ordinal to 2.
+    5: server_wait_fences vector<zx.handle:EVENT>:MAX_PRESENT_ARGS_FENCE_COUNT;
+
+    /// (read this one carefully, it may be counter-intuitive)
+    ///
+    /// Flatland will signal all `server_signal_fences` when the resources and shared buffers from
+    /// *the previous* [`Present`] are no longer in use. Callers should not modify shared resources,
+    /// such as BufferCollections, until after these fences are signaled. Otherwise, there may be
+    /// graphical artifacts such as tearing, caused by the client modifying content which is still
+    /// visible on screen.
+    ///
+    /// The following example explains why the fences correspond to the previous frame's resources,
+    /// not the current frame.  Consider an app which uses a separate image for a pop-up dialog,
+    /// which will disappear immediately if the user taps elsewhere.  The app cannot tell whether
+    /// the image will be removed next frame because, if this happens, it will be due to user input
+    /// which has not yet occurred.  Since the image will probably continue to be presented next
+    /// frame, it wouldn't make sense to provide a fence this frame.
+    ///
+    /// If an error occurs, Flatland may close the channel without signaling these fences.  Clients
+    /// may immediately release shared buffers, but they should not immediately modify such buffers,
+    /// because they may still be displayed on screen.  There is currently no good signal available
+    /// to the client about when it is safe to reuse shared buffers.
+    ///
+    /// The default `server_signal_fences` value is the empty vector.
+    // TODO(fxbug.dev/85551): change ordinal to 3.
+    // TODO(fxbug.dev/85563): when fixed, update documentation re: when it is safe to modify buffers
+    //                        upon channel closure.
+    6: server_signal_fences vector<zx.handle:EVENT>:MAX_PRESENT_ARGS_FENCE_COUNT;
 };
 
 /// A user-defined identifier for future presentation info. A maximum of 8
