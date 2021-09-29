@@ -31,7 +31,6 @@
 #include "dev.h"
 #include "errors.h"
 #include "methods.h"
-#include "nhlt.h"
 #include "pci.h"
 #include "power.h"
 #include "src/devices/board/drivers/x86/acpi/resources.h"
@@ -102,72 +101,6 @@ void acpi_apply_workarounds(acpi::Acpi* acpi, ACPI_HANDLE object, ACPI_DEVICE_IN
   }
 }
 
-// A small helper class we can use to track the BBN (either "Base Bus
-// Number" or "Bios Bus Number") of the last PCI bus node we encountered while
-// walking the ACPI namespace.
-class LastPciBbnTracker {
- public:
-  explicit LastPciBbnTracker(acpi::Acpi* acpi) : acpi_(acpi) {}
-
-  // If we are ascending through the level where we noticed a valid PCI BBN,
-  // then we are no longer valid.
-  void Ascend(uint32_t level) {
-    if (valid_ && (level == level_)) {
-      valid_ = false;
-    }
-  }
-
-  zx_status_t Descend(uint32_t level, ACPI_HANDLE object, const ACPI_DEVICE_INFO& obj_info) {
-    // Are we descending into a device node which has a hardware ID, and does
-    // that hardware ID indicate a PCI/PCIe bus?  If so, try to extract the base
-    // bus number and stash it as our last seen PCI bus number.
-    const std::string_view hid = hid_from_acpi_devinfo(obj_info);
-    if ((hid == PCI_EXPRESS_ROOT_HID_STRING) || (hid == PCI_ROOT_HID_STRING)) {
-      auto bbn_ret = acpi_->CallBbn(object);
-      uint8_t bbn;
-
-      if (acpi_to_zx_status(bbn_ret.status_value()) == ZX_ERR_NOT_FOUND) {
-        zxlogf(WARNING, "acpi: PCI/PCIe device \"%s\" missing _BBN entry, defaulting to 0",
-               fourcc_to_string(obj_info.Name).str);
-        bbn = 0;
-      } else if (bbn_ret.is_error()) {
-        zxlogf(ERROR, "acpi: failed to fetch BBN for PCI/PCIe device \"%s\"",
-               fourcc_to_string(obj_info.Name).str);
-        return ZX_ERR_BAD_STATE;
-      } else {
-        bbn = bbn_ret.value();
-      }
-
-      if (valid_) {
-        zxlogf(ERROR,
-               "acpi: Nested PCI roots detected when descending into PCI/PCIe device \"%s\" (prev "
-               "bbn %u at level %u, child bbn %u at "
-               "level %u",
-               fourcc_to_string(obj_info.Name).str, bbn_, level_, bbn, level);
-        return ZX_ERR_BAD_STATE;
-      }
-
-      valid_ = true;
-      level_ = level;
-      bbn_ = bbn;
-    }
-
-    return ZX_OK;
-  }
-
-  bool has_value() const { return valid_; }
-  uint8_t bbn() const {
-    ZX_DEBUG_ASSERT(valid_);
-    return bbn_;
-  }
-
- private:
-  bool valid_ = false;
-  uint32_t level_ = 0;
-  uint8_t bbn_ = 0;
-  acpi::Acpi* acpi_;
-};
-
 }  // namespace
 
 namespace acpi {
@@ -221,24 +154,12 @@ zx_status_t publish_acpi_devices(acpi::Acpi* acpi, zx_device_t* platform_bus,
     zxlogf(ERROR, "acpi: failed to initialize pwrbtn device: %d", status);
   }
 
-  // Walk the devices in the ACPI tree, handling any device specific quirks as
-  // we go, and publishing any static metadata we need to publish before
-  // publishing any devices.
-  //
-  // TODO(fxbug.dev/56832): Remove this pass when we have a better way to manage
-  // driver dependencies on ACPI.  Once drivers can access their metadata
-  // directly via a connection to the ACPI driver, we will not need to bother
-  // with publishing static metadata before we publish devices.
-  LastPciBbnTracker last_pci_bbn(acpi);
-
+  // TODO(fxbug.dev/81684): remove this once we have a proper solution for managing power of ACPI
+  // devices.
   acpi::status<> acpi_status = acpi->WalkNamespace(
       ACPI_TYPE_DEVICE, ACPI_ROOT_OBJECT, MAX_NAMESPACE_DEPTH,
-      [acpi_root, acpi, &last_pci_bbn](ACPI_HANDLE object, uint32_t level,
-                                       acpi::WalkDirection dir) -> acpi::status<> {
-        // If we are ascending, tell our PciBbn tracker so that it can properly
-        // invalidate our last BBN when needed.
+      [acpi](ACPI_HANDLE object, uint32_t level, acpi::WalkDirection dir) -> acpi::status<> {
         if (dir == acpi::WalkDirection::Ascending) {
-          last_pci_bbn.Ascend(level);
           return acpi::ok();
         }
 
@@ -252,44 +173,6 @@ zx_status_t publish_acpi_devices(acpi::Acpi* acpi, zx_device_t* platform_bus,
 
         // Apply any workarounds for quirks.
         acpi_apply_workarounds(acpi, object, info.get());
-
-        // If this is a PCI node we are passing through, track it's BBN.  We
-        // will need it in order to publish metadata for the devices we
-        // encounter.  If we encounter a fatal condition, terminate the walk.
-        if (last_pci_bbn.Descend(level, object, *info) != ZX_OK) {
-          return acpi::error(AE_ERROR);
-        }
-
-        // Is this an HDAS (Intel HDA audio controller)?
-        // If so, attempt to publish their relevant metadata so that the
-        // device driver can access it when the PCI device itself is finally
-        // published.
-        //
-        // TODO(fxbug.dev/56832): Remove this when we have a better way to manage driver
-        // dependencies on ACPI.
-        constexpr uint32_t kHDAS_Id = make_fourcc('H', 'D', 'A', 'S');
-
-        if (info->Name == kHDAS_Id) {
-          // We must have already seen at least one PCI root due to traversal order.
-          if (!last_pci_bbn.has_value()) {
-            zxlogf(WARNING,
-                   "acpi: Found HDAS/I2Cx node (\"%s\"), but no prior PCI root was discovered!",
-                   fourcc_to_string(info->Name).str);
-          } else if (!(info->Valid & ACPI_VALID_ADR)) {
-            zxlogf(WARNING, "acpi: no valid ADR found for device \"%s\"",
-                   fourcc_to_string(info->Name).str);
-          } else {
-            if (info->Name == kHDAS_Id) {
-              // Attaching metadata to the HDAS device /dev/sys/platform/pci/...
-              zx_status_t status =
-                  nhlt_publish_metadata(acpi, acpi_root, last_pci_bbn.bbn(),
-                                        static_cast<uint64_t>(info->Address), object);
-              if ((status != ZX_OK) && (status != ZX_ERR_NOT_FOUND)) {
-                zxlogf(ERROR, "acpi: failed to publish NHLT metadata");
-              }
-            }
-          }
-        }
 
         return acpi::ok();
       });

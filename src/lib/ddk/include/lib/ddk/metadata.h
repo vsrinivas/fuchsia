@@ -127,25 +127,9 @@ static_assert(DEVICE_METADATA_BOARD_PRIVATE == ZBI_TYPE_DRV_BOARD_PRIVATE, "");
 // list of linearized bytes as in fidl_outgoing_msg_t
 #define DEVICE_METADATA_REGISTERS 0x53474552  // REGS
 
-// Device metadata fetched from ACPI for Intel HDA audio drivers.  This is an
-// opaque blob of data which us used to configure the Intel SST DSP.
-//
-// TODO(fxbug.dev/56832): Remove this when we have a better way to manage driver
-// dependencies on ACPI and no longer need to proactively publish ACPI metadata
-// to drivers.
-#define DEVICE_METADATA_ACPI_HDA_NHLT 0x544C484E  // NHLT
-
 // Encodings of Metadata for fuchsia::hardware::vreg::Metadata
 // list of linearized bytes as in fidl_outgoing_msg_t
 #define DEVICE_METADATA_VREG 0x47455256  // VREG
-
-// Device metadata fetched from ACPI for I2C bus drivers.  This signals a list
-// of acpi_i2c_device_t structures.
-//
-// TODO(fxbug.dev/56832): Remove this when we have a better way to manage driver
-// dependencies on ACPI and no longer need to proactively publish ACPI metadata
-// to drivers.
-#define DEVICE_METADATA_ACPI_I2C_DEVICES 0x43324941  // AI2C
 
 // Metadata types that have least significant byte set to lowercase 'd'
 // signify private driver data.
