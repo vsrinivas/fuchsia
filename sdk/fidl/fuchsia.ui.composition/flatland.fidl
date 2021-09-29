@@ -111,6 +111,25 @@ protocol ChildViewWatcher {
     GetStatus() -> (struct {
         status ChildViewStatus;
     });
+
+    /// Hanging get to receive the ViewRef of the child view. This will only fire when the view ref
+    /// is different from the previously-returned view ref. Note: currently the view ref will not
+    /// change after it is first received, but this will change if/when the API changes to allow
+    /// relinking of views.
+    ///
+    /// It is invalid to call `GetViewRef` while a previous call is still pending. Doing so will
+    /// cause both this channel and the Flatland channel that handed out ChildViewWatcher to be
+    /// closed.
+    ///
+    /// Note: it is planned that this method will obviate the need for [`GetStatus`], by not
+    /// returning the view ref until the view is reflected in the view tree (i.e. not only is the
+    /// view connected to the viewport, the view must also have presented content).  For now, it is
+    /// returned earlier (as soon as the connection is made to the viewport), therefore it is
+    /// necessary for clients to continue to listen to the result of [`GetStatus`] before e.g.
+    /// focusing or injecting input events to the view ref.  See fxbug.dev/81850.
+    GetViewRef() -> (resource struct {
+        view_ref fuchsia.ui.views.ViewRef;
+    });
 };
 
 /// The properties of a Viewport as defined by the parent. This data, along with the set of attached

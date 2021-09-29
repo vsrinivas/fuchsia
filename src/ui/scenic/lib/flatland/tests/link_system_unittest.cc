@@ -293,6 +293,50 @@ TEST_F(LinkSystemTest, OverwrittenHangingGetsReturnError) {
   }
 }
 
+TEST_F(LinkSystemTest, ViewRefPropagatedToParent) {
+  auto link_system = CreateViewportSystem();
+  auto child_graph = CreateTransformGraph();
+  auto parent_graph = CreateTransformGraph();
+
+  ViewportCreationToken parent_token;
+  ViewCreationToken child_token;
+  ASSERT_EQ(ZX_OK, zx::channel::create(0, &parent_token.value, &child_token.value));
+
+  auto view_identity = scenic::NewViewIdentityOnCreation();
+  zx_koid_t view_koid = utils::ExtractKoid(view_identity.view_ref);
+  EXPECT_NE(view_koid, ZX_KOID_INVALID);
+
+  fidl::InterfacePtr<ParentViewportWatcher> parent_viewport_watcher;
+  bool parent_link_returned_error = false;
+  ParentLink parent_link = link_system->CreateParentLink(
+      dispatcher_holder_, std::move(child_token), std::move(view_identity),
+      parent_viewport_watcher.NewRequest(), child_graph.CreateTransform(),
+      [&](const std::string& error_log) { parent_link_returned_error = true; });
+
+  fidl::InterfacePtr<ChildViewWatcher> child_view_watcher;
+  bool child_link_returned_error = false;
+  ViewportProperties properties;
+  properties.set_logical_size(SizeU{1, 2});
+  ChildLink child_link = link_system->CreateChildLink(
+      dispatcher_holder_, std::move(parent_token), std::move(properties),
+      child_view_watcher.NewRequest(), parent_graph.CreateTransform(),
+      [&](const std::string& error_log) { child_link_returned_error = true; });
+
+  {
+    zx_koid_t propagated_view_koid = ZX_KOID_INVALID;
+
+    child_view_watcher->GetViewRef([&](fuchsia::ui::views::ViewRef view_ref) {
+      propagated_view_koid = utils::ExtractKoid(view_ref);
+    });
+
+    EXPECT_EQ(propagated_view_koid, ZX_KOID_INVALID);
+    RunLoopUntilIdle();
+    EXPECT_FALSE(child_link_returned_error);
+    EXPECT_FALSE(parent_link_returned_error);
+    EXPECT_EQ(view_koid, propagated_view_koid);
+  }
+}
+
 // LinkSystem::UpdateLinks() requires substantial setup to unit test:
 // ParentViewportWatcher/ChildViewWatcher protocols attached to the correct TransformHandles in a
 // correctly constructed global topology. As a result, LinkSystem::UpdateLinks() is effectively

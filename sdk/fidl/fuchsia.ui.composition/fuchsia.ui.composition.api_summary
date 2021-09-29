@@ -11,6 +11,7 @@ resource struct fuchsia.ui.composition/BufferCollectionImportToken
 enum/member fuchsia.ui.composition/ChildViewStatus.CONTENT_HAS_PRESENTED 1
 strict enum fuchsia.ui.composition/ChildViewStatus uint32
 protocol/member fuchsia.ui.composition/ChildViewWatcher.GetStatus() -> (fuchsia.ui.composition/ChildViewStatus status)
+protocol/member fuchsia.ui.composition/ChildViewWatcher.GetViewRef() -> (fuchsia.ui.views/ViewRef view_ref)
 protocol fuchsia.ui.composition/ChildViewWatcher
 struct/member fuchsia.ui.composition/ContentId.value uint64
 struct fuchsia.ui.composition/ContentId

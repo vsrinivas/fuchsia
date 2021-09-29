@@ -43,18 +43,19 @@ LinkSystem::ChildLink LinkSystem::CreateChildLink(
                                                      std::move(child_view_watcher), error_callback);
   const TransformHandle link_handle = link_graph_.CreateTransform();
 
-  ObjectLinker::ImportLink importer =
-      linker_->CreateImport({.parent_viewport_watcher_handle = parent_viewport_watcher_handle,
-                             .link_handle = link_handle,
-                             .initial_logical_size = initial_properties.logical_size()},
-                            std::move(token.value),
-                            /* error_reporter */ nullptr);
+  ObjectLinker::ImportLink importer = linker_->CreateImport(
+      ChildLinkInfo{.parent_viewport_watcher_handle = parent_viewport_watcher_handle,
+                    .link_handle = link_handle,
+                    .initial_logical_size = initial_properties.logical_size()},
+      std::move(token.value),
+      /* error_reporter */ nullptr);
 
   auto child_view_watcher_map_key = std::make_shared<TransformHandle>();
   importer.Initialize(
       /* link_resolved = */
       [ref = shared_from_this(), impl, child_view_watcher_map_key](ParentLinkInfo info) mutable {
         *child_view_watcher_map_key = info.child_view_watcher_handle;
+        impl->SetViewRef({.reference = utils::CopyEventpair(info.view_ref->reference)});
 
         std::scoped_lock lock(ref->map_mutex_);
         ref->child_view_watcher_map_[*child_view_watcher_map_key] = impl;
@@ -83,11 +84,14 @@ LinkSystem::ParentLink LinkSystem::CreateParentLink(
     TransformHandle child_view_watcher_handle, LinkProtocolErrorCallback error_callback) {
   FX_DCHECK(token.value.is_valid());
 
+  auto view_ref = std::make_shared<fuchsia::ui::views::ViewRef>(std::move(view_identity.view_ref));
+
   auto impl = std::make_shared<ParentViewportWatcherImpl>(
       dispatcher_holder, std::move(parent_viewport_watcher), error_callback);
 
   ObjectLinker::ExportLink exporter = linker_->CreateExport(
-      {.child_view_watcher_handle = child_view_watcher_handle}, std::move(token.value),
+      ParentLinkInfo{.child_view_watcher_handle = child_view_watcher_handle, .view_ref = view_ref},
+      std::move(token.value),
       /* error_reporter */ nullptr);
 
   auto parent_viewport_watcher_map_key = std::make_shared<TransformHandle>();
@@ -134,7 +138,7 @@ LinkSystem::ParentLink LinkSystem::CreateParentLink(
   return ParentLink({
       .child_view_watcher_handle = child_view_watcher_handle,
       .exporter = std::move(exporter),
-      .view_ref = std::make_shared<fuchsia::ui::views::ViewRef>(std::move(view_identity.view_ref)),
+      .view_ref = std::move(view_ref),
       .view_ref_control = std::move(view_identity.view_ref_control),
   });
 }

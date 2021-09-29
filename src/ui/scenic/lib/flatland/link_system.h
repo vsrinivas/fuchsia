@@ -94,10 +94,15 @@ class ChildViewWatcherImpl : public fuchsia::ui::composition::ChildViewWatcher {
                                 LinkProtocolErrorCallback error_callback)
       : binding_(this, std::move(request), dispatcher_holder->dispatcher()),
         error_callback_(std::move(error_callback)),
-        status_helper_(std::move(dispatcher_holder)) {}
+        status_helper_(dispatcher_holder),
+        viewref_helper_(std::move(dispatcher_holder)) {}
 
   void UpdateLinkStatus(fuchsia::ui::composition::ChildViewStatus status) {
     status_helper_.Update(std::move(status));
+  }
+
+  void SetViewRef(fuchsia::ui::views::ViewRef viewref) {
+    viewref_helper_.Update(std::move(viewref));
   }
 
   // |fuchsia::ui::composition::ChildViewWatcher|
@@ -113,10 +118,24 @@ class ChildViewWatcherImpl : public fuchsia::ui::composition::ChildViewWatcher {
     status_helper_.SetCallback(std::move(callback));
   }
 
+  // |fuchsia::ui::composition::ChildViewWatcher|
+  void GetViewRef(GetViewRefCallback callback) override {
+    if (viewref_helper_.HasPendingCallback()) {
+      FX_DCHECK(error_callback_);
+      error_callback_(
+          "GetViewRef() called when there is a pending GetViewRef() call. Flatland connection "
+          "will be closed because of broken flow control.");
+      return;
+    }
+
+    viewref_helper_.SetCallback(std::move(callback));
+  }
+
  private:
   fidl::Binding<fuchsia::ui::composition::ChildViewWatcher> binding_;
   LinkProtocolErrorCallback error_callback_;
   HangingGetHelper<fuchsia::ui::composition::ChildViewStatus> status_helper_;
+  HangingGetHelper<fuchsia::ui::views::ViewRef> viewref_helper_;
 };
 
 // A system for managing links between Flatland instances. Each Flatland instance creates Links
@@ -152,6 +171,7 @@ class LinkSystem : public std::enable_shared_from_this<LinkSystem> {
 
   struct ParentLinkInfo {
     TransformHandle child_view_watcher_handle;
+    std::shared_ptr<const fuchsia::ui::views::ViewRef> view_ref;
   };
 
   // Linked Flatland instances only implement a small piece of link functionality. For now, directly

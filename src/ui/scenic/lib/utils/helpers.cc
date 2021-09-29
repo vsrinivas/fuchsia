@@ -46,12 +46,19 @@ zx_koid_t ExtractKoid(const fuchsia::ui::views::ViewRef& view_ref) {
   return ExtractKoid(view_ref.reference);
 }
 
-zx::event CopyEvent(const zx::event& event) {
-  zx::event event_copy;
-  if (event.duplicate(ZX_RIGHT_SAME_RIGHTS, &event_copy) != ZX_OK)
-    FX_LOGS(ERROR) << "Copying zx::event failed.";
-  return event_copy;
+template <typename ZX_T>
+static auto CopyZxHandle(const ZX_T& handle) -> ZX_T {
+  ZX_T handle_copy;
+  if (handle.duplicate(ZX_RIGHT_SAME_RIGHTS, &handle_copy) != ZX_OK) {
+    FX_LOGS(ERROR) << "Copying zx object handle failed.";
+    FX_DCHECK(false);
+  }
+  return handle_copy;
 }
+
+zx::event CopyEvent(const zx::event& event) { return CopyZxHandle(event); }
+
+zx::eventpair CopyEventpair(const zx::eventpair& eventpair) { return CopyZxHandle(eventpair); }
 
 std::vector<zx::event> CopyEventArray(const std::vector<zx::event>& events) {
   std::vector<zx::event> result;
