@@ -20,6 +20,12 @@
 #include "astro.h"
 #include "src/devices/board/drivers/astro/audio-codec-tas27xx-bind.h"
 
+// Enables BT PCM audio.
+#define ENABLE_BT
+// Enable DAI mode for BT PCM audio.
+#define ENABLE_DAI_MODE
+// Enable DAI test.
+//#define ENABLE_DAI_TEST
 
 #ifdef ENABLE_BT
 #ifdef ENABLE_DAI_MODE
@@ -31,13 +37,6 @@
 static const device_fragment_t tdm_pcm_fragments[] = {};
 #endif
 #endif
-
-// Enables BT PCM audio.
-#define ENABLE_BT
-// Enable DAI mode for BT PCM audio.
-#define ENABLE_DAI_MODE
-// Enable DAI test.
-//#define ENABLE_DAI_TEST
 
 #ifdef TAS2770_CONFIG_PATH
 #include TAS2770_CONFIG_PATH
