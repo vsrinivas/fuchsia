@@ -7,6 +7,7 @@ use {
     std::time::Duration,
 };
 
+mod config;
 mod daemon;
 mod experiment;
 mod target;
@@ -16,6 +17,10 @@ mod test;
 pub async fn selftest(cmd: SelftestCommand) -> Result<()> {
     let default_tests = tests![
         test_isolated,
+        config::test_env,
+        config::test_env_get_global,
+        config::test_get_unknown_key,
+        config::test_set_then_get,
         experiment::test_not_enabled,
         experiment::test_enabled,
         daemon::test_echo,
