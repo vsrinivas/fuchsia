@@ -720,4 +720,27 @@ TEST(ZxTestCase, GetChild) {
   }
 }
 
+TEST(ZxTestCase, VmoContentSize) {
+  zx::vmo vmo;
+  constexpr uint32_t options = 0;
+  constexpr uint64_t initial_size = 8 * 1024;
+  ASSERT_OK(zx::vmo::create(initial_size, options, &vmo));
+
+  uint64_t retrieved_size = 0;
+  ASSERT_OK(vmo.get_prop_content_size(&retrieved_size));
+  EXPECT_EQ(retrieved_size, initial_size);
+  retrieved_size = 0;
+
+  constexpr uint64_t new_size = 500;
+  EXPECT_OK(vmo.set_prop_content_size(new_size));
+
+  ASSERT_OK(vmo.get_prop_content_size(&retrieved_size));
+  EXPECT_EQ(retrieved_size, new_size);
+  retrieved_size = 0;
+
+  ASSERT_OK(zx_object_get_property(vmo.get(), ZX_PROP_VMO_CONTENT_SIZE, &retrieved_size,
+                                   sizeof(retrieved_size)));
+  EXPECT_EQ(retrieved_size, new_size);
+}
+
 }  // namespace

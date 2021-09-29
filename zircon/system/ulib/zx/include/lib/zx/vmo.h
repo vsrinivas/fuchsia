@@ -48,6 +48,14 @@ class vmo final : public object<vmo> {
 
   zx_status_t set_size(uint64_t size) const { return zx_vmo_set_size(get(), size); }
 
+  zx_status_t set_prop_content_size(uint64_t size) const {
+    return set_property(ZX_PROP_VMO_CONTENT_SIZE, &size, sizeof(size));
+  }
+
+  zx_status_t get_prop_content_size(uint64_t* size) const {
+    return get_property(ZX_PROP_VMO_CONTENT_SIZE, size, sizeof(*size));
+  }
+
   zx_status_t create_child(uint32_t options, uint64_t offset, uint64_t size, vmo* result) const {
     // Allow for the caller aliasing |result| to |this|.
     vmo h;
