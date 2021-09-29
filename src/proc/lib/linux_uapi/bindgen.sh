@@ -31,9 +31,12 @@ PATH="$PWD/prebuilt/third_party/rust/linux-x64/bin:$PATH" \
   -o src/proc/lib/linux_uapi/src/x86_64.rs \
   src/proc/lib/linux_uapi/wrapper.h \
   -- \
+  -target x86_64-pc-linux-gnu \
   -I third_party/android/platform/bionic/libc/kernel/uapi \
+  -I third_party/android/platform/bionic/libc/kernel/uapi/asm-x86 \
   -I third_party/android/platform/bionic/libc/kernel/android/uapi \
-  -I src/proc/lib/linux_uapi/stub
+  -I src/proc/lib/linux_uapi/stub \
+  -nostdlibinc
 
 # TODO: Figure out how to get bindgen to derive AsBytes and FromBytes.
 #       See https://github.com/rust-lang/rust-bindgen/issues/1089

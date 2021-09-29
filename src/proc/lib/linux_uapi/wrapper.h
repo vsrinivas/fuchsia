@@ -11,14 +11,11 @@
 
 #include <stddef.h>
 
-#include <asm-generic/errno.h>
-#include <asm-generic/ioctls.h>
-#include <asm-generic/mman-common.h>
-#include <asm-generic/termbits.h>
-#include <asm-x86/asm/prctl.h>
-#include <asm-x86/asm/unistd_64.h>
+#include <asm/ioctls.h>
+#include <asm/prctl.h>
 #include <linux/auxvec.h>
 #include <linux/capability.h>
+#include <linux/errno.h>
 #include <linux/eventpoll.h>
 #include <linux/fcntl.h>
 #include <linux/fs.h>
@@ -37,6 +34,7 @@
 #include <linux/time.h>
 #include <linux/timerfd.h>
 #include <linux/uio.h>
+#include <linux/unistd.h>
 #include <linux/wait.h>
 #include <linux/xattr.h>
 
