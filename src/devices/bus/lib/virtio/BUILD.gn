@@ -18,6 +18,7 @@ test("virtio-backend-test") {
   deps = [
     ":virtio",
     "//src/devices/pci/testing:pci-protocol-fake",
+    "//src/devices/testing/fake-bti",
     "//src/devices/testing/fake_ddk",
     "//zircon/system/ulib/zxtest",
   ]

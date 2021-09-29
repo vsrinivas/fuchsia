@@ -43,6 +43,7 @@ zx_status_t PciBackend::Bind() {
   }
 
   if ((st = ConfigureIrqMode()) != ZX_OK) {
+    zxlogf(ERROR, "%s: cannot configure IRQs %d", tag(), st);
     return st;
   }
 

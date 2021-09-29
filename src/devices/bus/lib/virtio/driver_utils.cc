@@ -12,6 +12,8 @@
 #include <zircon/compiler.h>
 #include <zircon/types.h>
 
+#include <memory>
+
 #include "include/lib/virtio/backends/pci.h"
 
 namespace virtio {
@@ -46,16 +48,15 @@ zx::status<std::pair<zx::bti, std::unique_ptr<virtio::Backend>>> GetBtiAndBacken
   // If no vendor capabilities are found then we will default to the legacy
   // interface.
   std::unique_ptr<virtio::Backend> backend = nullptr;
-  uint8_t offset;
-  if (pci.GetFirstCapability(PCI_CAP_ID_VENDOR, &offset) == ZX_OK) {
-    zxlogf(TRACE, "virtio %02x:%02x.%1x using modern PCI backend", info.bus_id, info.dev_id,
-           info.func_id);
-    backend.reset(new virtio::PciModernBackend(std::move(pci), info));
+  uint8_t offset = 0;
+  bool is_modern = (pci.GetFirstCapability(PCI_CAP_ID_VENDOR, &offset) == ZX_OK);
+  if (is_modern) {
+    backend = std::make_unique<virtio::PciModernBackend>(pci, info);
   } else {
-    zxlogf(TRACE, "virtio %02x:%02x.%1x using legacy PCI backend", info.bus_id, info.dev_id,
-           info.func_id);
-    backend.reset(new virtio::PciLegacyBackend(std::move(pci), info));
+    backend = std::make_unique<virtio::PciLegacyBackend>(pci, info);
   }
+  zxlogf(TRACE, "virtio %02x:%02x.%1x using %s PCI backend", info.bus_id, info.dev_id, info.func_id,
+         (is_modern) ? "modern" : "legacy");
 
   status = backend->Bind();
   if (status != ZX_OK) {

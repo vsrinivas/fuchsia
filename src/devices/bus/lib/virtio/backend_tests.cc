@@ -2,10 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <lib/fake-bti/bti.h>
 #include <lib/fake_ddk/fake_ddk.h>
+#include <lib/virtio/backends/pci.h>
 #include <lib/virtio/driver_utils.h>
 #include <lib/virtio/ring.h>
 #include <lib/zx/bti.h>
+#include <lib/zx/vmo.h>
 #include <zircon/errors.h>
 #include <zircon/hw/pci.h>
 
@@ -13,7 +16,6 @@
 #include <zxtest/zxtest.h>
 
 #include "src/devices/pci/testing/pci_protocol_fake.h"
-#include "src/devices/testing/fake_ddk/include/lib/fake_ddk/fake_ddk.h"
 
 // This capability configuration comes straight from a Virtio
 // device running inside FEMU.
@@ -70,6 +72,28 @@ constexpr virtio_pci_cap_t kCapabilities[5] = {
 };
 // clang-format on
 
+class TestLegacyIoInterface : public virtio::PciLegacyIoInterface {
+ public:
+  TestLegacyIoInterface() {
+    size_t page_size = zx_system_get_page_size();
+    zx_status_t status = zx::vmo::create(page_size, 0, &vmo_);
+    ZX_ASSERT(status == ZX_OK);
+  }
+
+  ~TestLegacyIoInterface() override = default;
+  zx::unowned_vmo vmo() { return vmo_.borrow(); }
+
+  void Read(uint16_t offset, uint8_t* val) const final { vmo_.read(val, offset, sizeof(*val)); }
+  void Read(uint16_t offset, uint16_t* val) const final { vmo_.read(val, offset, sizeof(*val)); }
+  void Read(uint16_t offset, uint32_t* val) const final { vmo_.read(val, offset, sizeof(*val)); }
+  void Write(uint16_t offset, uint8_t val) const final { vmo_.write(&val, offset, sizeof(val)); }
+  void Write(uint16_t offset, uint16_t val) const final { vmo_.write(&val, offset, sizeof(val)); }
+  void Write(uint16_t offset, uint32_t val) const final { vmo_.write(&val, offset, sizeof(val)); }
+
+ private:
+  zx::vmo vmo_;
+};
+
 fx_log_severity_t kTestLogLevel = FX_LOG_INFO;
 class VirtioTests : public fake_ddk::Bind, public zxtest::Test {
  protected:
@@ -85,7 +109,8 @@ class VirtioTests : public fake_ddk::Bind, public zxtest::Test {
   void SetUpBars() {
     size_t bar_size = 0x3000 + 0x1000;  // 0x3000 is the offset of the last capability in the bar,
                                         // and 0x1000 is the length.
-    fake_pci_.CreateBar(4, bar_size, true);
+    fake_pci_.CreateBar(0, bar_size, /*is_mmio=*/false);
+    fake_pci_.CreateBar(4, bar_size, /*is_mmio=*/true);
   }
 
   void SetUpCapabilities() {
@@ -129,10 +154,14 @@ class TestVirtioDevice;
 using DeviceType = ddk::Device<TestVirtioDevice, ddk::Unbindable>;
 class TestVirtioDevice : public virtio::Device, public DeviceType {
  public:
+  static const uint16_t kVirtqueueSize = 1u;
+
   explicit TestVirtioDevice(zx_device_t* bus_device, zx::bti bti,
                             std::unique_ptr<virtio::Backend> backend)
       : virtio::Device(bus_device, std::move(bti), std::move(backend)), DeviceType(bus_device){};
+
   zx_status_t Init() final {
+    // Initialize the first virtqueue.
     zx_status_t status = ring_.Init(0);
     if (status != ZX_OK) {
       return status;
@@ -146,6 +175,10 @@ class TestVirtioDevice : public virtio::Device, public DeviceType {
     txn.Reply();
     DdkRelease();
   }
+  // For our fake device we only support one virtqueue since we are not mocking
+  // the side effects of writing a value to the virtqueue select register.
+  uint16_t GetRingSize(uint16_t index) const { return 1; }
+
   void DdkRelease() { delete this; }
 
  private:
@@ -200,6 +233,50 @@ TEST_F(VirtioTests, TwoMsixBindSuccess) {
   // With everything set up this should succeed.
   ASSERT_OK(virtio::CreateAndBind<TestVirtioDevice>(nullptr, fake_ddk::kFakeParent));
   CleanUp();
+}
+
+// Ensure that the Legacy interface looks for IO Bar 0 and succeeds up until it
+// tries to make IO writes using in/out instructions.
+TEST_F(VirtioTests, LegacyIoBackendError) {
+  fake_pci().AddLegacyInterrupt();
+  SetUpProtocol();
+  SetUpBars();
+  SetUpQueue();
+  auto backend_result = virtio::GetBtiAndBackend(fake_ddk::kFakeParent);
+  ASSERT_OK(backend_result.status_value());
+  // This should fail on x64 because of failure to access IO ports.
+#ifdef __x86_64__
+  {
+    TestVirtioDevice device(fake_ddk::kFakeParent, std::move(backend_result->first),
+                            std::move(backend_result->second));
+    ASSERT_DEATH([&device] { device.Init(); });
+  }
+#endif
+}
+
+TEST_F(VirtioTests, LegacyIoBackendSuccess) {
+  fake_pci().AddLegacyInterrupt();
+  SetUpProtocol();
+  SetUpBars();
+  SetUpQueue();
+
+  // With a manually crafted backend using the test interface it should succeed.
+  {
+    ddk::PciProtocolClient pci(fake_ddk::kFakeParent);
+    ASSERT_TRUE(pci.is_valid());
+    pcie_device_info_t info{};
+    ASSERT_OK(pci.GetDeviceInfo(&info));
+    zx::bti bti{};
+    ASSERT_OK(fake_bti_create(bti.reset_and_get_address()));
+
+    TestLegacyIoInterface interface {};
+    interface.Write(VIRTIO_PCI_QUEUE_SIZE, TestVirtioDevice::kVirtqueueSize);
+    auto backend = std::make_unique<virtio::PciLegacyBackend>(pci, info, &interface);
+    ASSERT_OK(backend->Bind());
+
+    TestVirtioDevice device(fake_ddk::kFakeParent, std::move(bti), std::move(backend));
+    ASSERT_OK(device.Init());
+  }
 }
 
 int main(int argc, char* argv[]) {

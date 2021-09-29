@@ -6,6 +6,7 @@
 #define SRC_DEVICES_BUS_LIB_VIRTIO_INCLUDE_LIB_VIRTIO_BACKENDS_PCI_H_
 
 #include <fuchsia/hardware/pci/cpp/banjo.h>
+#include <lib/ddk/hw/inout.h>
 #include <lib/mmio/mmio.h>
 #include <lib/virtio/backends/backend.h>
 #include <lib/zx/port.h>
@@ -46,12 +47,67 @@ class PciBackend : public Backend {
   DISALLOW_COPY_ASSIGN_AND_MOVE(PciBackend);
 };
 
-// PciLegacyBackend corresponds to the Virtio Legacy interface utilizing port IO and
-// the IO Bar 0. It has complications with address offsets when MSI-X is enabled.
+// The interface for accessing IO is abstracted out to allow for test mocking.
+// Otherwise, dealing with IO instructions is difficult.
+class LegacyIoInterface {
+ public:
+  LegacyIoInterface() = default;
+  virtual ~LegacyIoInterface() = default;
+
+  virtual void Read(uint16_t offset, uint8_t* val) const = 0;
+  virtual void Read(uint16_t offset, uint16_t* val) const = 0;
+  virtual void Read(uint16_t offset, uint32_t* val) const = 0;
+  virtual void Write(uint16_t offset, uint8_t val) const = 0;
+  virtual void Write(uint16_t offset, uint16_t val) const = 0;
+  virtual void Write(uint16_t offset, uint32_t val) const = 0;
+};
+
+// "Real" virtual hardware will use this interface to access Virtio
+// over IO bar 0.
+class PciLegacyIoInterface : public LegacyIoInterface {
+ public:
+  PciLegacyIoInterface() = default;
+  ~PciLegacyIoInterface() override = default;
+
+  void Read(uint16_t offset, uint8_t* val) const override {
+    *val = inp(static_cast<uint16_t>(offset));
+  }
+  void Read(uint16_t offset, uint16_t* val) const override {
+    *val = inpw(static_cast<uint16_t>(offset));
+  }
+  void Read(uint16_t offset, uint32_t* val) const override {
+    *val = inpd(static_cast<uint16_t>(offset));
+  }
+  void Write(uint16_t offset, uint8_t val) const override {
+    outp(static_cast<uint16_t>(offset), val);
+  }
+  void Write(uint16_t offset, uint16_t val) const override {
+    outpw(static_cast<uint16_t>(offset), val);
+  }
+  void Write(uint16_t offset, uint32_t val) const override {
+    outpd(static_cast<uint16_t>(offset), val);
+  }
+
+  static PciLegacyIoInterface* Get() {
+    static PciLegacyIoInterface interface {};
+    return &interface;
+  }
+};
+
+// PciLegacyBackend corresponds to the Virtio Legacy interface utilizing port IO
+// and the IO Bar 0. It has additional complications around offsets and
+// configuration structures when MSI-X is enabled.
 class PciLegacyBackend : public PciBackend {
  public:
-  PciLegacyBackend(ddk::PciProtocolClient pci, pcie_device_info_t info) : PciBackend(pci, info) {}
-  ~PciLegacyBackend() override;
+  PciLegacyBackend(ddk::PciProtocolClient pci, pcie_device_info_t info)
+      : PciBackend(pci, info), legacy_io_(PciLegacyIoInterface::Get()) {}
+  PciLegacyBackend(ddk::PciProtocolClient pci, pcie_device_info_t info,
+                   LegacyIoInterface* interface)
+      : PciBackend(pci, info), legacy_io_(interface) {}
+  PciLegacyBackend(const PciLegacyBackend&) = delete;
+  PciLegacyBackend& operator=(const PciLegacyBackend&) = delete;
+  ~PciLegacyBackend() override = default;
+
   zx_status_t Init() final;
 
   void DriverStatusOk() final;
@@ -84,17 +140,10 @@ class PciLegacyBackend : public PciBackend {
   void RingKick(uint16_t ring_index) final;
 
  private:
-  void IoReadLocked(uint16_t offset, uint8_t* val) __TA_REQUIRES(lock());
-  void IoReadLocked(uint16_t offset, uint16_t* val) __TA_REQUIRES(lock());
-  void IoReadLocked(uint16_t offset, uint32_t* val) __TA_REQUIRES(lock());
-  void IoWriteLocked(uint16_t offset, uint8_t val) __TA_REQUIRES(lock());
-  void IoWriteLocked(uint16_t offset, uint16_t val) __TA_REQUIRES(lock());
-  void IoWriteLocked(uint16_t offset, uint32_t val) __TA_REQUIRES(lock());
   void SetStatusBits(uint8_t bits);
   uint16_t bar0_base_ __TA_GUARDED(lock());
   uint16_t device_cfg_offset_ __TA_GUARDED(lock());
-
-  DISALLOW_COPY_AND_ASSIGN_ALLOW_MOVE(PciLegacyBackend);
+  const LegacyIoInterface* legacy_io_ __TA_GUARDED(lock());
 };
 
 // PciModernBackend is for v1.0+ Virtio using MMIO mapped bars and PCI capabilities.
