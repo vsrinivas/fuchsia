@@ -1218,7 +1218,6 @@ void thread_construct_first(Thread* t, const char* name) {
   cpu_num_t cpu = arch_curr_cpu_num();
 
   init_thread_struct(t, name);
-  t->set_running();
   t->set_detached(true);
 
   // Setup the scheduler state before directly manipulating its members.
