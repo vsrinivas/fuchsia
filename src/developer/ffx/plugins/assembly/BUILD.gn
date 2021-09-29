@@ -17,6 +17,7 @@ ffx_plugin("ffx_assembly") {
     "src/config.rs",
     "src/extra_hash_descriptor.rs",
     "src/fvm.rs",
+    "src/images_manifest.rs",
     "src/lib.rs",
     "src/operations.rs",
     "src/operations/config_data.rs",

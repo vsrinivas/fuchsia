@@ -6,6 +6,7 @@ use crate::base_package::{construct_base_package, BasePackage};
 use crate::blobfs::construct_blobfs;
 use crate::config::{from_reader, BoardConfig, ProductConfig};
 use crate::fvm::{construct_fvm, Fvms};
+use crate::images_manifest::construct_images_manifest;
 use crate::update_package::{construct_update, UpdatePackage};
 use crate::vbmeta::construct_vbmeta;
 use crate::zbi::{construct_zbi, vendor_sign_zbi};
@@ -95,6 +96,16 @@ pub fn assemble(args: ImageArgs) -> Result<()> {
         info!("Skipping vbmeta creation");
         None
     };
+
+    info!("Creating images manifest");
+    construct_images_manifest(
+        &zbi_path,
+        &outdir,
+        base_package.as_ref(),
+        blobfs_path.as_ref(),
+        fvms.as_ref(),
+        vbmeta_path.as_ref(),
+    )?;
 
     // If the board specifies a vendor-specific signing script, use that to
     // post-process the ZBI, and then use the post-processed ZBI in the update
