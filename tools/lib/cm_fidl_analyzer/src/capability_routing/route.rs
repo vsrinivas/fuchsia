@@ -75,3 +75,20 @@ pub enum RouteSegment {
     // Deprecated. Use one of `ProvideAsBuiltin` or `ProvideFromNamespace` instead.
     RouteFromRootParent,
 }
+
+impl RouteSegment {
+    pub fn node_path<'a>(&'a self) -> Option<&'a NodePath> {
+        match self {
+            Self::UseBy { node_path, .. }
+            | Self::OfferBy { node_path, .. }
+            | Self::ExposeBy { node_path, .. }
+            | Self::DeclareBy { node_path, .. }
+            | Self::RegisterBy { node_path, .. } => Some(node_path),
+            Self::ProvideFromFramework { .. }
+            | Self::ProvideAsBuiltin { .. }
+            | Self::ProvideFromNamespace { .. }
+            | Self::RouteFromFramework
+            | Self::RouteFromRootParent => None,
+        }
+    }
+}
