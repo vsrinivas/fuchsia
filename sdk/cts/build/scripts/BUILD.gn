@@ -4,9 +4,31 @@
 
 import("//build/python/python_host_test.gni")
 
+_testdata_path = "$target_gen_dir/testdata"
+host_test_data("testdata_snapshot") {
+  sources = [ "testdata/fidl.h" ]
+  outputs = [ "${_testdata_path}/snapshot/{{source_file_part}}" ]
+}
+
+host_test_data("testdata_generated") {
+  # This is an arbitrary FIDL API that we use for testing.
+  # The requirement for the FIDL API is that there exists at least 1 FIDL method in the header.
+  sources = [ "$root_build_dir/fidling/gen/sdk/fidl/fuchsia.diagnostics/fuchsia.diagnostics/hlcpp/fuchsia/diagnostics/cpp/fidl.h" ]
+  outputs = [ "${_testdata_path}/generated/{{source_file_part}}" ]
+  deps = [ "//sdk/fidl/fuchsia.diagnostics" ]
+}
+
 python_host_test("fidl_api_mapper_test") {
   main_source = "fidl_api_mapper_test.py"
   sources = [ "fidl_api_mapper.py" ]
+  extra_args = [
+    "--test_dir_path",
+    rebase_path(_testdata_path, root_build_dir),
+  ]
+  deps = [
+    ":testdata_generated",
+    ":testdata_snapshot",
+  ]
   libraries = [ "//third_party/parameterized" ]
 }
 

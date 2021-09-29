@@ -15,6 +15,9 @@ import re
 import subprocess
 import sys
 
+# FIDL method name annotation exists 1-line before declaration.
+ANNOTATION_OFFSET = 1
+
 
 class DwarfdumpStreamingParser:
     """Helper class to parse streaming output from `llvm-dwarfdump`."""
@@ -125,15 +128,17 @@ class FidlApiResolver:
             to the `mangled_name`.
           line_num (int): The line number in the FIDL binding file where the function is declared.
         """
-        fidl_api_name = ''
-        # TODO(chok): Read N lines before `line_num` when FQ FIDL name annotation is added.
-        annotation_offset = 0
+        fidl_api_annotation = ''
         cur_line = 0
         with open(filepath) as f:
-            while cur_line != line_num - annotation_offset:
-                fidl_api_name = f.readline().strip()
+            while cur_line != line_num - ANNOTATION_OFFSET:
+                fidl_api_annotation = f.readline().strip()
                 cur_line += 1
-        self._api_mapping_dict[mangled_name] = fidl_api_name
+        if 'cts-coverage-fidl-name' not in fidl_api_annotation:
+            # This is not a FIDL API of interest.
+            return
+        # Annotation format: "// cts-coverage-fidl-name:<API_NAME>"
+        self._api_mapping_dict[mangled_name] = fidl_api_annotation.split(':')[1]
 
     def get_mapping(self):
         """Returns the mangled-name-to-FIDL-API mapping.
@@ -157,9 +162,13 @@ def main():
         help='Path to the output file containing FIDL to mangled name mapping.',
         required=True)
     parser.add_argument(
-        '--depfile', help='Path to the depfile generated for GN.', required=True)
+        '--depfile',
+        help='Path to the depfile generated for GN.',
+        required=True)
     parser.add_argument(
-        '--dwarfdump', help='Path to `llvm-dwarfdump` executable.', required=True)
+        '--dwarfdump',
+        help='Path to `llvm-dwarfdump` executable.',
+        required=True)
     args = parser.parse_args()
 
     depfile_inputs = []
