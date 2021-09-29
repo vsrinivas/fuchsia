@@ -237,7 +237,7 @@ void RtcDevice::DdkMessage(fidl::IncomingMessage&& msg, DdkTransaction& txn) {
   if (fidl::WireTryDispatch<FidlRtc::Device>(this, msg, &txn) == fidl::DispatchResult::kFound) {
     return;
   }
-  fidl::WireTryDispatch<fuchsia_hardware_nvram::Device>(this, msg, &txn);
+  fidl::WireDispatch<fuchsia_hardware_nvram::Device>(this, std::move(msg), &txn);
 }
 
 zx_status_t Bind(void* ctx, zx_device_t* parent) {

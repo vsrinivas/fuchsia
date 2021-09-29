@@ -28,18 +28,24 @@
 
 namespace fidl {
 
-// The return value of various Dispatch, TryDispatch, or
+// TODO(fxbug.dev/85474): A formatter bug causes this enum to be formatted with
+// 4 byte indent otherwise.
+// clang-format off
+
+// The return value of various TryDispatch and
 // |IncomingMessageDispatcher::dispatch_message| functions, which call into the
 // appropriate server message handlers based on the method ordinal.
-enum class __attribute__((enum_extensibility(closed))) DispatchResult {
+enum class __attribute__((enum_extensibility(closed))) [[nodiscard]] DispatchResult {
   // The FIDL method ordinal was not recognized by the dispatch function.
   kNotFound = false,
 
   // The FIDL method ordinal matched one of the handlers.
   // Note that this does not necessarily mean the message was handled successfully.
   // For example, the message could fail to decode.
-  kFound = true
+  kFound = true,
 };
+
+// clang-format on
 
 namespace internal {
 

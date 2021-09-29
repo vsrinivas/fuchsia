@@ -135,4 +135,42 @@ TEST(BindServerTestCase, PeerAlreadyClosed) {
   ASSERT_OK(sync_completion_wait(&unbound, ZX_TIME_INFINITE));
 }
 
+// Test the behavior of |fidl::internal::[Try]Dispatch| in case of a message
+// with an error.
+TEST(TryDispatchTestCase, MessageStatusNotOk) {
+  class MockTransaction : public fidl::Transaction {
+   public:
+    bool errored() const { return errored_; }
+
+   private:
+    std::unique_ptr<Transaction> TakeOwnership() final { ZX_PANIC("Not used"); }
+    zx_status_t Reply(fidl::OutgoingMessage* message) final { ZX_PANIC("Not used"); }
+    void Close(zx_status_t epitaph) final { ZX_PANIC("Not used"); }
+    void InternalError(fidl::UnbindInfo error, fidl::ErrorOrigin origin) final {
+      EXPECT_FALSE(errored_);
+      EXPECT_EQ(fidl::ErrorOrigin::kReceive, origin);
+      EXPECT_EQ(fidl::Reason::kTransportError, error.reason());
+      EXPECT_STATUS(ZX_ERR_BAD_HANDLE, error.status());
+      errored_ = true;
+    }
+
+    bool errored_ = false;
+  };
+
+  {
+    fidl::IncomingMessage msg{fidl::Result::TransportError(ZX_ERR_BAD_HANDLE)};
+    MockTransaction txn;
+    fidl::DispatchResult result = fidl::internal::TryDispatch(nullptr, msg, &txn, nullptr, nullptr);
+    EXPECT_EQ(fidl::DispatchResult::kFound, result);
+    EXPECT_TRUE(txn.errored());
+  }
+
+  {
+    fidl::IncomingMessage msg{fidl::Result::TransportError(ZX_ERR_BAD_HANDLE)};
+    MockTransaction txn;
+    fidl::internal::Dispatch(nullptr, msg, &txn, nullptr, nullptr);
+    EXPECT_TRUE(txn.errored());
+  }
+}
+
 }  // namespace

@@ -13,7 +13,10 @@ namespace internal {
                                    const MethodEntry* end) {
   if (!msg.ok()) {
     txn->InternalError(fidl::UnbindInfo{msg}, fidl::ErrorOrigin::kReceive);
-    return ::fidl::DispatchResult::kNotFound;
+    // |TryDispatch| is used to ad-hoc compose protocols by trying a series of
+    // |TryDispatch|. If the message has an error, exit the cascade of dispatch
+    // attempts early since it is meaningless to keep trying otherwise.
+    return ::fidl::DispatchResult::kFound;
   }
   auto* hdr = msg.header();
   while (begin < end) {

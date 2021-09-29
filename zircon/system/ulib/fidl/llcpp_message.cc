@@ -309,6 +309,8 @@ void IncomingMessage::Decode(const fidl_type_t* message_type,
 void IncomingMessage::Decode(internal::WireFormatVersion wire_format_version,
                              const fidl_type_t* message_type,
                              std::unique_ptr<uint8_t[]>* out_transformed_buffer) {
+  ZX_DEBUG_ASSERT(status() == ZX_OK);
+
   if (wire_format_version == internal::WireFormatVersion::kV1) {
     zx_status_t status = internal__fidl_validate__v1__may_break(
         message_type, bytes(), byte_actual(), handle_actual(), error_address());
@@ -333,7 +335,6 @@ void IncomingMessage::Decode(internal::WireFormatVersion wire_format_version,
     message_.num_bytes = actual_num_bytes;
   }
 
-  ZX_DEBUG_ASSERT(status() == ZX_OK);
   fidl_trace(WillLLCPPDecode, message_type, bytes(), byte_actual(), handle_actual());
   zx_status_t status = internal_fidl_decode_etc__v2__may_break(
       message_type, message_.bytes, message_.num_bytes, message_.handles, message_.num_handles,
