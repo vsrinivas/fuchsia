@@ -74,5 +74,5 @@ void main() {
         'rust_inspect': _rustInspectBenchmarksMetricsProcessor,
       },
     );
-  }, timeout: Timeout(Duration(minutes: 2)));
+  }, timeout: Timeout.none);
 }

@@ -90,10 +90,15 @@ void main() {
         '100khz',
         '1mhz',
       ]) {
-        metricsSpecs.add(MetricsSpec(name: 'duration', extraArgs: {
-          'eventName': 'Snapshot/$size/$frequency',
-          'outputTestName': 'Snapshot/$size/$frequency',
-        }));
+        metricsSpecs
+          ..add(MetricsSpec(name: 'duration', extraArgs: {
+            'eventName': 'Snapshot/$size/$frequency',
+            'outputTestName': 'Snapshot/$size/$frequency',
+          }))
+          ..add(MetricsSpec(name: 'duration', extraArgs: {
+            'eventName': 'SnapshotTree/$size/$frequency',
+            'outputTestName': 'SnapshotTree/$size/$frequency',
+          }));
       }
     }
 
@@ -103,5 +108,5 @@ void main() {
       converterPath: _catapultConverterPath,
       registry: {'duration': _metricsProcessor},
     );
-  }, timeout: Timeout(Duration(minutes: 2)));
+  }, timeout: Timeout.none);
 }

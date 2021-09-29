@@ -5,13 +5,20 @@
 use {
     anyhow::Error,
     argh::{FromArgValue, FromArgs},
+    fidl,
+    fidl_fuchsia_inspect::{TreeMarker, TreeProxy},
     fuchsia_async as fasync,
     fuchsia_inspect::{
-        heap::Heap, reader::snapshot::Snapshot, ArrayProperty, ExponentialHistogramParams,
-        HistogramProperty, Inspector, LinearHistogramParams, Node, NumericProperty, Property,
+        heap::Heap,
+        reader::snapshot::{Snapshot, SnapshotTree},
+        reader::ReadableTree,
+        ArrayProperty, ExponentialHistogramParams, HistogramProperty, Inspector,
+        LinearHistogramParams, Node, NumericProperty, Property,
     },
     fuchsia_trace as ftrace,
     fuchsia_trace_provider::trace_provider_create_with_fdio,
+    futures::FutureExt,
+    inspect_runtime::service::{spawn_tree_server, TreeServerSettings},
     mapped_vmo::Mapping,
     num::{pow, One},
     num_traits::FromPrimitive,
@@ -321,6 +328,26 @@ fn bench_heap_extend() {
     }
 }
 
+// Benchmark the write-speed of a local inspector after it has been copy-on-write
+// served over FIDL
+fn single_iteration_fuchsia_inspect_tree() {
+    let inspector = create_inspector();
+
+    let mut nodes = vec![];
+
+    for i in 0..1015 {
+        nodes.push(inspector.root().create_int("i", i));
+    }
+
+    let proxy = spawn_server(inspector.clone()).unwrap();
+    // Force TLB shootdown for following writes on the local inspector
+    let _ = proxy.vmo();
+
+    for i in nodes {
+        i.add(1);
+    }
+}
+
 macro_rules! single_iteration_fn {
     (array_sizes: [$($array_size:expr),*], property_sizes: [$($prop_size:expr),*]) => {
         paste::paste! {
@@ -380,7 +407,7 @@ fn start_inspector_update_thread(inspector: Inspector, changes_per_second: usize
             {
                 ftrace::duration!("benchmark", "Sleep");
                 let sleep_time =
-                    std::time::Duration::from_nanos(1000000000u64 / changes_per_second as u64);
+                    std::time::Duration::from_nanos(1_000_000_000u64 / changes_per_second as u64);
                 std::thread::sleep(sleep_time);
                 match *state.lock() {
                     InspectorState::Done => {
@@ -403,6 +430,52 @@ fn start_inspector_update_thread(inspector: Inspector, changes_per_second: usize
         thread.join().expect("join thread");
     };
 }
+
+fn add_lazies(inspector: Inspector, num_nodes: usize) {
+    let node = inspector.root().create_child("node");
+
+    for i in 0..num_nodes {
+        ftrace::duration!("benchmark", "Update");
+        node.record_lazy_child(format!("child-{}", i), move || {
+            let insp = Inspector::new();
+            insp.root().record_int("int", 1);
+            async move { Ok(insp) }.boxed()
+        });
+    }
+}
+
+fn spawn_server(inspector: Inspector) -> Result<TreeProxy, Error> {
+    let (tree, request_stream) = fidl::endpoints::create_proxy_and_stream::<TreeMarker>()?;
+    spawn_tree_server(inspector, TreeServerSettings::default(), request_stream);
+    Ok(tree)
+}
+
+// Generates a function for benchmarking reads of a TreeProxy.
+macro_rules! reader_snapshot_tree_bench_fn {
+    ($name:ident, $size:expr, $freq:expr, $label:expr) => {
+        async fn $name(iterations: usize) {
+            let inspector = Inspector::new_with_size($size);
+            // inspector clones all refer to same VMO
+            let proxy = spawn_server(inspector.clone()).unwrap();
+            let done_fn = start_inspector_update_thread(inspector.clone(), $freq);
+            add_lazies(inspector, 4);
+
+            for _ in 0..iterations {
+                ftrace::duration!("benchmark", $label);
+
+                loop {
+                    ftrace::duration!("benchmark", "TryFromTreeProxy");
+                    if let Ok(_) = SnapshotTree::try_from(&proxy).await {
+                        break;
+                    }
+                }
+            }
+
+            done_fn();
+        }
+    };
+}
+
 macro_rules! reader_bench_fn {
     ($name:ident, $size:expr, $freq:expr, $label:expr) => {
         fn $name(iterations: usize) {
@@ -426,6 +499,22 @@ macro_rules! reader_bench_fn {
     };
 }
 
+reader_snapshot_tree_bench_fn!(snapshot_tree_4k_1hz, 4096, 1, "SnapshotTree/4K/1hz");
+reader_snapshot_tree_bench_fn!(snapshot_tree_4k_10hz, 4096, 10, "SnapshotTree/4K/10hz");
+reader_snapshot_tree_bench_fn!(snapshot_tree_4k_100hz, 4096, 100, "SnapshotTree/4K/100hz");
+reader_snapshot_tree_bench_fn!(snapshot_tree_4k_1khz, 4096, 1000, "SnapshotTree/4K/1khz");
+reader_snapshot_tree_bench_fn!(snapshot_tree_4k_10khz, 4096, 10000, "SnapshotTree/4K/10khz");
+reader_snapshot_tree_bench_fn!(snapshot_tree_4k_100khz, 4096, 100000, "SnapshotTree/4K/100khz");
+reader_snapshot_tree_bench_fn!(snapshot_tree_4k_1mhz, 4096, 1000000, "SnapshotTree/4K/1mhz");
+reader_snapshot_tree_bench_fn!(snapshot_tree_256k_1hz, 4096 * 64, 1, "SnapshotTree/256K/1hz");
+reader_snapshot_tree_bench_fn!(snapshot_tree_256k_10hz, 4096 * 64, 10, "SnapshotTree/256K/10hz");
+reader_snapshot_tree_bench_fn!(snapshot_tree_256k_100hz, 4096 * 64, 100, "SnapshotTree/256K/100hz");
+reader_snapshot_tree_bench_fn!(snapshot_tree_256k_1khz, 4096 * 64, 1000, "SnapshotTree/256K/1khz");
+reader_snapshot_tree_bench_fn!(snapshot_tree_1m_1hz, 4096 * 256, 1, "SnapshotTree/1M/1hz");
+reader_snapshot_tree_bench_fn!(snapshot_tree_1m_10hz, 4096 * 256, 10, "SnapshotTree/1M/10hz");
+reader_snapshot_tree_bench_fn!(snapshot_tree_1m_100hz, 4096 * 256, 100, "SnapshotTree/1M/100hz");
+reader_snapshot_tree_bench_fn!(snapshot_tree_1m_1khz, 4096 * 256, 1000, "SnapshotTree/1M/1khz");
+
 reader_bench_fn!(bench_4k_1hz, 4096, 1, "Snapshot/4K/1hz");
 reader_bench_fn!(bench_4k_10hz, 4096, 10, "Snapshot/4K/10hz");
 reader_bench_fn!(bench_4k_100hz, 4096, 100, "Snapshot/4K/100hz");
@@ -442,7 +531,7 @@ reader_bench_fn!(bench_1m_10hz, 4096 * 256, 10, "Snapshot/1M/10hz");
 reader_bench_fn!(bench_1m_100hz, 4096 * 256, 100, "Snapshot/1M/100hz");
 reader_bench_fn!(bench_1m_1khz, 4096 * 256, 1000, "Snapshot/1M/1khz");
 
-fn reader_benchmark(iterations: usize) {
+async fn reader_benchmark(iterations: usize) {
     // TODO(fxbug.dev/43505): Implement benchmarks where the real size doesn't match the inspector size.
     // TODO(fxbug.dev/43505): Enforce threads starting before benches run.
 
@@ -461,11 +550,28 @@ fn reader_benchmark(iterations: usize) {
     bench_1m_10hz(iterations);
     bench_1m_100hz(iterations);
     bench_1m_1khz(iterations);
+
+    snapshot_tree_4k_1hz(iterations).await;
+    snapshot_tree_4k_10hz(iterations).await;
+    snapshot_tree_4k_100hz(iterations).await;
+    snapshot_tree_4k_1khz(iterations).await;
+    snapshot_tree_4k_10khz(iterations).await;
+    snapshot_tree_4k_100khz(iterations).await;
+    snapshot_tree_4k_1mhz(iterations).await;
+    snapshot_tree_256k_1hz(iterations).await;
+    snapshot_tree_256k_10hz(iterations).await;
+    snapshot_tree_256k_100hz(iterations).await;
+    snapshot_tree_256k_1khz(iterations).await;
+    snapshot_tree_1m_1hz(iterations).await;
+    snapshot_tree_1m_10hz(iterations).await;
+    snapshot_tree_1m_100hz(iterations).await;
+    snapshot_tree_1m_1khz(iterations).await;
 }
 
 fn writer_benchmark(iterations: usize) {
     for i in 0..iterations {
         single_iteration(i);
+        single_iteration_fuchsia_inspect_tree();
     }
 }
 
@@ -479,7 +585,7 @@ async fn main() -> Result<(), Error> {
             writer_benchmark(args.iterations);
         }
         BenchmarkOption::Reader => {
-            reader_benchmark(args.iterations);
+            reader_benchmark(args.iterations).await;
         }
     }
 
