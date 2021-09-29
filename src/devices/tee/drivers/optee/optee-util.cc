@@ -63,4 +63,26 @@ fbl::StringBuffer<Uuid::kUuidStringLength> Uuid::ToString() const {
   return str;
 }
 
+bool operator==(const Uuid& l, const Uuid& r) {
+  return ((l.time_low_ == r.time_low_) && (l.time_mid_ == r.time_mid_) &&
+          (l.time_hi_and_version_ == r.time_hi_and_version_) &&
+          (l.clock_seq_and_node_ == r.clock_seq_and_node_));
+}
+
+bool operator<(const Uuid& l, const Uuid& r) {
+  if (l.time_low_ != r.time_low_) {
+    return l.time_low_ < r.time_low_;
+  }
+
+  if (l.time_mid_ != r.time_mid_) {
+    return l.time_mid_ < r.time_mid_;
+  }
+
+  if (l.time_hi_and_version_ != r.time_hi_and_version_) {
+    return l.time_hi_and_version_ < r.time_hi_and_version_;
+  }
+
+  return l.clock_seq_and_node_ < r.clock_seq_and_node_;
+}
+
 }  // namespace optee

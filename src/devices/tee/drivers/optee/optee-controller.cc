@@ -8,6 +8,7 @@
 #include <lib/ddk/debug.h>
 #include <lib/ddk/device.h>
 #include <lib/ddk/io-buffer.h>
+#include <lib/ddk/metadata.h>
 #include <lib/ddk/platform-defs.h>
 #include <lib/fidl-utils/bind.h>
 #include <lib/fit/defer.h>
@@ -35,6 +36,9 @@
 #include "src/devices/tee/drivers/optee/tee-smc.h"
 
 namespace optee {
+
+constexpr int kDefaultNumThreads = 3;
+constexpr char kDefaultRoleName[] = "fuchsia.tee.default";
 
 static bool IsOpteeApi(const tee_smc::TrustedOsCallUidResult& returned_uid) {
   return returned_uid.uid_0_3 == kOpteeApiUid_0 && returned_uid.uid_4_7 == kOpteeApiUid_1 &&
@@ -351,8 +355,152 @@ zx_status_t OpteeController::Create(void* ctx, zx_device_t* parent) {
   return status;
 }
 
+zx_status_t OpteeController::SetProfileByRole(thrd_t& thr, const std::string& role) {
+  zx_status_t status;
+
+  // TODO(https://fxbug.dev/40858): SetProfileByRole has to be uset do set thread profile by the
+  // rule when corresponding API will be ready to use. Use workaround for now: only
+  // fuchsia.default and fuchsia.tee.deadline are hardcoded and supported.
+  if (role == kDefaultRoleName) {
+    // do nothing.
+  } else if (role == "fuchsia.tee.media") {
+    zx::profile profile;
+    status = device_get_deadline_profile(parent(), ZX_USEC(2000), ZX_USEC(2500), ZX_USEC(2500),
+                                         "optee", profile.reset_and_get_address());
+    if (status != ZX_OK) {
+      LOG(WARNING, "could not get deadline profile");
+    } else {
+      status = zx::unowned_thread(thrd_get_zx_handle(thr))->set_profile(std::move(profile), 0);
+      if (status != ZX_OK) {
+        LOG(WARNING, "could not set profile %d", status);
+      }
+    }
+  } else {
+    LOG(ERROR, "Unsupported thread profile role %s", role.c_str());
+    return ZX_ERR_INTERNAL;
+  }
+  return ZX_OK;
+}
+
+zx_status_t OpteeController::CreateThreadPool(async::Loop* loop, uint32_t thread_count,
+                                              const std::string& role) {
+  zx_status_t status;
+
+  for (uint32_t i = 0; i < thread_count; ++i) {
+    thrd_t optee_thread;
+    char name[192];
+    snprintf(name, sizeof(name), "optee-thread-%s-%d", role.c_str(), i);
+    LOG(DEBUG, "Starting OPTEE thread %s for role %s...", name, role.c_str());
+    status = loop->StartThread(name, &optee_thread);
+    if (status != ZX_OK) {
+      LOG(ERROR, "could not start optee thread %d of %d", i, thread_count);
+      return status;
+    }
+
+    status = SetProfileByRole(optee_thread, role);
+    if (status != ZX_OK) {
+      LOG(ERROR, "could not set role to %s thread: %d", name, status);
+      return status;
+    }
+  }
+
+  return ZX_OK;
+}
+
+async_dispatcher_t* OpteeController::GetDispatcherForTa(const Uuid& ta_uuid) {
+  auto it = uuid_config_.find(ta_uuid);
+  if (it != uuid_config_.end()) {
+    LOG(DEBUG, "Assign request to %s to custom pool.", ta_uuid.ToString().c_str());
+    return it->second->dispatcher();
+  }
+
+  LOG(DEBUG, "Assign request to %s to default pool.", ta_uuid.ToString().c_str());
+  return loop_.dispatcher();
+}
+
+zx_status_t OpteeController::InitThreadPools() {
+  zx_status_t status = ZX_ERR_INTERNAL;
+  uint32_t default_pool_size = kDefaultNumThreads;
+  size_t metadata_size;
+  size_t actual;
+
+  status = device_get_metadata_size(parent(), DEVICE_METADATA_TEE_THREAD_CONFIG, &metadata_size);
+  if (status != ZX_OK || metadata_size == 0) {
+    LOG(INFO, "No metadata for driver. Use default thread configuration.");
+    return CreateThreadPool(&loop_, default_pool_size, kDefaultRoleName);
+  }
+
+  auto buffer = std::make_unique<uint8_t[]>(metadata_size);
+
+  status = device_get_metadata(parent(), DEVICE_METADATA_TEE_THREAD_CONFIG, buffer.get(),
+                               metadata_size, &actual);
+  if (status != ZX_OK && actual != metadata_size) {
+    LOG(ERROR, "device_get_metadata failed %d", status);
+    return ZX_ERR_INTERNAL;
+  }
+
+  fidl::DecodedMessage<fuchsia_hardware_tee::wire::TeeMetadata> decoded(buffer.get(),
+                                                                        metadata_size);
+  if (!decoded.ok()) {
+    LOG(ERROR, "Failed to deserialize metadata.");
+    return ZX_ERR_INTERNAL;
+  }
+
+  fuchsia_hardware_tee::wire::TeeMetadata* metadata = decoded.PrimaryObject();
+
+  LOG(INFO, "Default thread pool size %d, %zu custom thread pools supplied.",
+      metadata->default_thread_count(), metadata->custom_threads().count());
+
+  if (metadata->has_default_thread_count() && metadata->default_thread_count() != 0) {
+    default_pool_size = metadata->default_thread_count();
+  }
+
+  status = CreateThreadPool(&loop_, default_pool_size, kDefaultRoleName);
+  if (status != ZX_OK) {
+    LOG(ERROR, "Failed to create default thread pool: %d", status);
+  }
+
+  if (metadata->has_custom_threads()) {
+    std::map<std::string, std::list<async::Loop>::iterator> roles;
+    for (auto& custom_thread : metadata->custom_threads()) {
+      if (!custom_thread.has_count() || custom_thread.count() == 0 || !custom_thread.has_role() ||
+          custom_thread.role().empty() || !custom_thread.has_trusted_apps() ||
+          custom_thread.trusted_apps().empty()) {
+        LOG(WARNING, "Not complete custom thread configuration(some fields are missed).");
+        continue;
+      }
+
+      std::list<async::Loop>::iterator loop_it;
+      std::string role(custom_thread.role().get());
+      auto it = roles.find(role);
+      if (it != roles.end()) {
+        LOG(WARNING, "Multiple declaration of %s thread pool. Appending...", role.c_str());
+        loop_it = it->second;
+      } else {
+        loop_it = custom_loops_.emplace(custom_loops_.end(), &kAsyncLoopConfigNeverAttachToThread);
+        roles.emplace(role, loop_it);
+      }
+
+      status = CreateThreadPool(&(*loop_it), custom_thread.count(),
+                                std::string(custom_thread.role().get()));
+      if (status != ZX_OK) {
+        LOG(ERROR, "Failed to create thread pool %s: %d", custom_thread.role().get().data(),
+            status);
+        return status;
+      }
+
+      for (auto& app : custom_thread.trusted_apps()) {
+        uuid_config_.emplace(app, loop_it);
+      }
+    }
+  }
+
+  return ZX_OK;
+}
+
 zx_status_t OpteeController::Bind() {
   zx_status_t status = ZX_ERR_INTERNAL;
+
   pdev_ = ddk::PDev::FromFragment(parent());
   if (!pdev_.is_valid()) {
     LOG(ERROR, "unable to get pdev protocol");
@@ -363,6 +511,11 @@ zx_status_t OpteeController::Bind() {
   if (!sysmem_.is_valid()) {
     LOG(ERROR, "unable to get sysmem protocol");
     return ZX_ERR_NO_RESOURCES;
+  }
+
+  status = InitThreadPools();
+  if (status != ZX_OK) {
+    return status;
   }
 
   // Optional protocol
@@ -404,35 +557,6 @@ zx_status_t OpteeController::Bind() {
   if (status != ZX_OK) {
     LOG(ERROR, "could not initialize shared memory");
     return status;
-  }
-
-  for (uint32_t i = 0; i < thread_count_; ++i) {
-    thrd_t optee_thread;
-    char name[32];
-    snprintf(name, sizeof(name), "optee-thread-%d", i);
-    status = loop_.StartThread(name, &optee_thread);
-    LOG(INFO, "Starting OPTEE thread %s...", name);
-    if (status != ZX_OK) {
-      LOG(ERROR, "could not start optee thread %d of %d", i, thread_count_);
-      return status;
-    }
-
-    // TODO(http://fxbug.dev/13562): The below deadline profile is currently defined by the
-    // strictest latency requirements of the trusted app workloads (media decryption). This is
-    // intended to be temporary, as it is not ideal for all trusted applications and we should
-    // revisit once the TA calls are dispatched on a separate thread pool.
-    zx::profile profile;
-    status = device_get_deadline_profile(parent(), ZX_USEC(2000), ZX_USEC(2500), ZX_USEC(2500),
-                                         "optee", profile.reset_and_get_address());
-    if (status != ZX_OK) {
-      LOG(WARNING, "could not get deadline profile");
-    } else {
-      status =
-          zx::unowned_thread(thrd_get_zx_handle(optee_thread))->set_profile(std::move(profile), 0);
-      if (status != ZX_OK) {
-        LOG(WARNING, "could not set profile %d", status);
-      }
-    }
   }
 
   status = DdkAdd(kDeviceName.data(), DEVICE_ADD_ALLOW_MULTI_COMPOSITE);
@@ -500,10 +624,16 @@ zx_status_t OpteeController::ConnectToApplicationInternal(
     Uuid application_uuid, fidl::ClientEnd<fuchsia_tee_manager::Provider> service_provider,
     fidl::ServerEnd<fuchsia_tee::Application> application_request) {
   ZX_DEBUG_ASSERT(application_request.is_valid());
+  LOG(DEBUG, "Request to %s TA", application_uuid.ToString().c_str());
 
-  // Create a new `OpteeClient` device and hand off client communication to it.
+  async_dispatcher_t* dispatcher = GetDispatcherForTa(application_uuid);
+  if (dispatcher == nullptr) {
+    LOG(ERROR, "Failed to get dispatcher for %s TA.", application_uuid.ToString().c_str());
+    return ZX_ERR_INTERNAL;
+  }
+
   fidl::BindServer(
-      loop_.dispatcher(), std::move(application_request),
+      dispatcher, std::move(application_request),
       std::make_unique<OpteeClient>(this, std::move(service_provider), application_uuid));
 
   return ZX_OK;

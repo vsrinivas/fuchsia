@@ -8,7 +8,7 @@
   "pkg/ddk/include/lib/ddk/hw/inout.h": "c642e13fad48e9de276f39a7128d778d",
   "pkg/ddk/include/lib/ddk/hw/reg.h": "e1d0e2aa641d218daf1d624d244e984d",
   "pkg/ddk/include/lib/ddk/io-buffer.h": "e59c1358341fe8788f71bc5596a3f484",
-  "pkg/ddk/include/lib/ddk/metadata.h": "cd9117f9efcb4d36565b2116fcba9f6e",
+  "pkg/ddk/include/lib/ddk/metadata.h": "da59e9fa312f21ae4421c776cd9ade08",
   "pkg/ddk/include/lib/ddk/mmio-buffer.h": "c367b69b7d7339ee0216b9297921eefe",
   "pkg/ddk/include/lib/ddk/phys-iter.h": "d39773b5ab2a3175193afaf0ed41f2e0",
   "pkg/ddk/include/lib/ddk/protodefs.h": "9c9b74a91e3639e3dcbe054f51ad29f3",

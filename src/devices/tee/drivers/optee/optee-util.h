@@ -53,6 +53,9 @@ class Uuid final {
 
   fbl::StringBuffer<kUuidStringLength> ToString() const;
 
+  friend bool operator==(const Uuid& l, const Uuid& r);
+  friend bool operator<(const Uuid& l, const Uuid& r);
+
  private:
   template <typename T>
   void UuidInternal(const T&);

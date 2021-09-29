@@ -35,7 +35,6 @@ source_set("optee_lib") {
     "//src/devices/bus/lib/device-protocol-pdev",
     "//src/devices/bus/lib/device-protocol-platform-device",
     "//src/devices/lib/mmio",
-    "//src/lib/ddk",
     "//src/lib/ddktl",
     "//src/security/tee/tee-client-api:tee-client-api-headers",
     "//zircon/public/lib/zircon-internal",

@@ -5,7 +5,10 @@
 import("//build/fidl/fidl.gni")
 
 fidl("fuchsia.hardware.tee") {
-  sources = [ "device_connector.fidl" ]
+  sources = [
+    "device_connector.fidl",
+    "metadata.fidl",
+  ]
   public_deps = [
     "//sdk/fidl/fuchsia.tee",
     "//sdk/fidl/fuchsia.tee.manager",

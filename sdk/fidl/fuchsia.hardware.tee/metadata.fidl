@@ -1,0 +1,27 @@
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+library fuchsia.hardware.tee;
+
+using fuchsia.tee as tee;
+
+const MAX_NUM_OF_TRUSTED_APPS uint32 = 64;
+const MAX_NUM_OF_THREAD_POOLS uint32 = 64;
+
+/// Used to inform TEE driver about thread pool configuration
+type CustomThreadConfig = table {
+    /// Role name for custom thread pool.
+    1: role string:2048;
+    /// Number of threads in the thread pool.
+    2: count uint32;
+    /// List of TA UUIDs which should be assigned to this thread pool.
+    3: trusted_apps vector<tee.Uuid>:MAX_NUM_OF_TRUSTED_APPS;
+};
+
+/// Passed to the TEE driver in metadata as DEVICE_METADATA_TEE_THREAD_CONFIG
+type TeeMetadata = table {
+    /// Number of threads in the default pool.
+    1: default_thread_count uint32;
+    /// List of custom pool configurations.
+    2: custom_threads vector<CustomThreadConfig>:MAX_NUM_OF_THREAD_POOLS;
+};

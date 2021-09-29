@@ -8,6 +8,7 @@ test("fidl-metadata-unittest") {
   deps = [
     "//sdk/fidl/fuchsia.hardware.i2c:fuchsia.hardware.i2c_llcpp",
     "//sdk/fidl/fuchsia.hardware.spi:fuchsia.hardware.spi_llcpp",
+    "//sdk/fidl/fuchsia.hardware.tee:fuchsia.hardware.tee_llcpp",
     "//src/devices/lib/fidl-metadata",
     "//zircon/system/ulib/zxtest",
   ]
@@ -15,6 +16,7 @@ test("fidl-metadata-unittest") {
   sources = [
     "i2c-test.cc",
     "spi-test.cc",
+    "tee-test.cc",
   ]
 
   # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings

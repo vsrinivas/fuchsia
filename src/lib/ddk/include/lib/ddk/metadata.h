@@ -131,6 +131,9 @@ static_assert(DEVICE_METADATA_BOARD_PRIVATE == ZBI_TYPE_DRV_BOARD_PRIVATE, "");
 // list of linearized bytes as in fidl_outgoing_msg_t
 #define DEVICE_METADATA_VREG 0x47455256  // VREG
 
+// type: FIDL fuchsia.hardware.tee/TeeMetadata
+#define DEVICE_METADATA_TEE_THREAD_CONFIG 0x43454554  // TEEC
+
 // Metadata types that have least significant byte set to lowercase 'd'
 // signify private driver data.
 // This allows creating metadata types to be defined local to a particular

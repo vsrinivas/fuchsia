@@ -120,10 +120,8 @@ class OpteeController : public OpteeControllerBase,
                         public ddk::TeeProtocol<OpteeController, ddk::base_protocol>,
                         public fidl::WireServer<fuchsia_tee::DeviceInfo> {
  public:
-  explicit OpteeController(zx_device_t* parent, uint32_t thread_count = 3)
-      : DeviceType(parent),
-        loop_(&kAsyncLoopConfigNeverAttachToThread),
-        thread_count_(thread_count) {}
+  explicit OpteeController(zx_device_t* parent)
+      : DeviceType(parent), loop_(&kAsyncLoopConfigNeverAttachToThread) {}
 
   ~OpteeController() override;
   OpteeController(const OpteeController&) = delete;
@@ -185,6 +183,11 @@ class OpteeController : public OpteeControllerBase,
   static constexpr fuchsia_tee::wire::Uuid kOpteeOsUuid = {
       0x486178E0, 0xE7F8, 0x11E3, {0xBC, 0x5E, 0x00, 0x02, 0xA5, 0xD5, 0xC5, 0x1B}};
 
+  zx_status_t InitThreadPools();
+  zx_status_t SetProfileByRole(thrd_t& thr, const std::string& role);
+  zx_status_t CreateThreadPool(async::Loop* loop, uint32_t thread_count, const std::string& role);
+  async_dispatcher_t* GetDispatcherForTa(const Uuid& ta_uuid);
+
   zx_status_t ValidateApiUid() const;
   zx_status_t ValidateApiRevision() const;
   zx_status_t GetOsRevision();
@@ -198,7 +201,9 @@ class OpteeController : public OpteeControllerBase,
 
   ddk::PDev pdev_;
   async::Loop loop_;
-  uint32_t thread_count_;
+  std::list<async::Loop> custom_loops_;
+  std::map<Uuid, std::list<async::Loop>::iterator> uuid_config_;
+
   ddk::SysmemProtocolClient sysmem_;
   ddk::RpmbProtocolClient rpmb_protocol_client_ = {};
   zx::resource secure_monitor_;

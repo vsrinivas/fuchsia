@@ -6,6 +6,7 @@ source_set("fidl-metadata") {
   deps = [
     "//sdk/fidl/fuchsia.hardware.i2c:fuchsia.hardware.i2c_llcpp",
     "//sdk/fidl/fuchsia.hardware.spi:fuchsia.hardware.spi_llcpp",
+    "//sdk/fidl/fuchsia.hardware.tee:fuchsia.hardware.tee_llcpp",
     "//zircon/public/lib/zx",
   ]
 
@@ -13,6 +14,7 @@ source_set("fidl-metadata") {
   sources = [
     "i2c.cc",
     "spi.cc",
+    "tee.cc",
   ]
 }
 

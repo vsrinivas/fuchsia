@@ -6,13 +6,16 @@
 #include <lib/ddk/binding.h>
 #include <lib/ddk/debug.h>
 #include <lib/ddk/device.h>
+#include <lib/ddk/metadata.h>
 #include <lib/ddk/platform-defs.h>
+#include <lib/stdcompat/span.h>
 #include <zircon/syscalls/smc.h>
 
 #include <fbl/algorithm.h>
 
 #include "sherlock.h"
 #include "src/devices/board/drivers/sherlock/sherlock-tee-bind.h"
+#include "src/devices/lib/fidl-metadata/tee.h"
 
 namespace sherlock {
 // The Sherlock Secure OS memory region is defined within the bootloader image. The ZBI provided to
@@ -20,6 +23,10 @@ namespace sherlock {
 // exact sub-range of this memory space to be used by the driver.
 #define SHERLOCK_SECURE_OS_BASE 0x05300000
 #define SHERLOCK_SECURE_OS_LENGTH 0x02000000
+
+#define SHERLOCK_OPTEE_DEFAULT_THREAD_COUNT 2
+
+using tee_thread_config_t = fidl_metadata::tee::CustomThreadConfig;
 
 static const pbus_mmio_t sherlock_tee_mmios[] = {
     {
@@ -43,7 +50,20 @@ static const pbus_smc_t sherlock_tee_smcs[] = {
     },
 };
 
-static pbus_dev_t tee_dev = []() {
+static tee_thread_config_t tee_thread_cfg[] = {
+    {.role = "fuchsia.tee.media",
+     .count = 1,
+     .trusted_apps = {
+         {0x9a04f079,
+          0x9840,
+          0x4286,
+          {0xab, 0x92, 0xe6, 0x5b, 0xe0, 0x88, 0x5f, 0x95}},  // playready
+         {0xe043cde0, 0x61d0, 0x11e5, {0x9c, 0x26, 0x00, 0x02, 0xa5, 0xd5, 0xc5, 0x1b}}  // widevine
+     }}};
+
+zx_status_t Sherlock::TeeInit() {
+  std::vector<pbus_metadata_t> metadata;
+
   pbus_dev_t tee_dev = {};
   tee_dev.name = "tee";
   tee_dev.vid = PDEV_VID_GENERIC;
@@ -55,10 +75,27 @@ static pbus_dev_t tee_dev = []() {
   tee_dev.bti_count = std::size(sherlock_tee_btis);
   tee_dev.smc_list = sherlock_tee_smcs;
   tee_dev.smc_count = std::size(sherlock_tee_smcs);
-  return tee_dev;
-}();
 
-zx_status_t Sherlock::TeeInit() {
+  auto optee_status = fidl_metadata::tee::TeeMetadataToFidl(
+      SHERLOCK_OPTEE_DEFAULT_THREAD_COUNT,
+      cpp20::span<const tee_thread_config_t>(tee_thread_cfg, countof(tee_thread_cfg)));
+  if (optee_status.is_error()) {
+    zxlogf(ERROR, "%s: failed to fidl encode optee thread config: %d", __func__,
+           optee_status.error_value());
+    return optee_status.error_value();
+  }
+
+  auto& data = optee_status.value();
+
+  metadata.emplace_back(pbus_metadata_t{
+      .type = DEVICE_METADATA_TEE_THREAD_CONFIG,
+      .data_buffer = data.data(),
+      .data_size = data.size(),
+  });
+
+  tee_dev.metadata_count = metadata.size();
+  tee_dev.metadata_list = metadata.data();
+
   zx_status_t status = pbus_.AddComposite(&tee_dev, reinterpret_cast<uint64_t>(tee_fragments),
                                           countof(tee_fragments), "pdev");
   if (status != ZX_OK) {
