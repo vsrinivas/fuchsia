@@ -122,7 +122,8 @@ zx_status_t device_get_protocol(const zx_device_t* device, uint32_t proto_id, vo
 __EXPORT
 zx_status_t device_add_metadata(zx_device_t* device, uint32_t type, const void* data,
                                 size_t length) {
-  return ZX_ERR_NOT_SUPPORTED;
+  device->SetMetadata(type, data, length);
+  return ZX_OK;
 }
 
 __EXPORT

@@ -256,7 +256,7 @@ struct MockDevice : public std::enable_shared_from_this<MockDevice> {
   size_t size_ = 0;
 
   // Map of metadata set by SetMetadata.
-  std::unordered_map<uint32_t, std::pair<const void*, size_t>> metadata_;
+  std::unordered_map<uint32_t, std::vector<uint8_t>> metadata_;
 
   // parent in the device tree
   MockDevice* parent_ = nullptr;  // This will default to a nullptr, for the root parent.

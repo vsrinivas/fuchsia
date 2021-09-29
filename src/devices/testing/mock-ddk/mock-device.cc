@@ -142,20 +142,22 @@ zx_off_t MockDevice::GetSize() {
 }
 
 void MockDevice::SetMetadata(uint32_t type, const void* data, size_t data_length) {
-  metadata_[type] = std::make_pair(data, data_length);
+  std::vector<uint8_t> owned(data_length);
+  memcpy(owned.data(), data, data_length);
+  metadata_[type] = std::move(owned);
   PropagateMetadata();
 }
 
 zx_status_t MockDevice::GetMetadata(uint32_t type, void* buf, size_t buflen, size_t* actual) {
   auto itr = metadata_.find(type);
   if (itr != metadata_.end()) {
-    auto [metadata, size] = itr->second;
-    *actual = size;
-    if (buflen < size) {
+    auto& metadata = itr->second;
+    *actual = metadata.size();
+    if (buflen < metadata.size()) {
       return ZX_ERR_BUFFER_TOO_SMALL;
     }
 
-    memcpy(buf, metadata, size);
+    memcpy(buf, metadata.data(), metadata.size());
     return ZX_OK;
   }
   return ZX_ERR_NOT_FOUND;
@@ -164,8 +166,8 @@ zx_status_t MockDevice::GetMetadata(uint32_t type, void* buf, size_t buflen, siz
 zx_status_t MockDevice::GetMetadataSize(uint32_t type, size_t* out_size) {
   auto itr = metadata_.find(type);
   if (itr != metadata_.end()) {
-    auto [_, size] = itr->second;
-    *out_size = size;
+    auto metadata = itr->second;
+    *out_size = metadata.size();
     return ZX_OK;
   }
   return ZX_ERR_BAD_STATE;
