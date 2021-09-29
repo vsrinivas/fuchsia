@@ -306,6 +306,18 @@ This command accepts two parameters:
  **component URL**, indicating how Fuchsia should resolve the component from the
  package server.
 
+Bind to the new instance of the `echo-args` component using the following command:
+
+
+```posix-terminal
+ffx component bind /core/ffx-laboratory:echo-args
+```
+
+This command accepts one parameter:
+
+* `/core/ffx-laboratory:echo-args`: This is the **component moniker**,
+  representing the path inside the component topology for the component instance.
+
 The component instance is now running. Open a new terminal window and filter the
 device logs for messages from the example:
 
@@ -318,11 +330,6 @@ You should see the following output in the device logs:
 ```none {:.devsite-disable-click-to-copy}
 [ffx-laboratory:echo-args][I] Hello, Alice, Bob, Spot!
 ```
-
-<aside class="key-point">
-<b>Tip:</b> The <code>ffx-laboratory</code> collection automatically starts
-components after they are created, and destroys them after they are stopped.
-</aside>
 
 Components have no ambient capabilities to access other parts of the system.
 Every capability a component requires must be explicitly routed to it through

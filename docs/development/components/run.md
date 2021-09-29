@@ -203,9 +203,9 @@ components in this collection:
     *   `/dev`: Device driver `devfs` provided by Driver Manager
     *   `/boot`: Read-only `bootfs` provided by Component Manager
 
-The `ffx-laboratory` is a [`single_run`][manifest-collections] collection.
-Component instances in this collection start automatically after they are
-created, and destroy automatically after they are stopped.
+The `ffx-laboratory` is a [`transient`][manifest-collections] collection.
+Component instances in this collection will persist even after they stop.
+To destroy a component instance in this collection, use the `ffx component destroy` command.
 
 ## Troubleshooting
 
