@@ -236,14 +236,16 @@ through the data can be represented using a primitive:
 In performance-critical target languages, structs are represented in line, which
 reduces the cost of using structs to name important concepts.
 
-### Consider using fuchsia.mem.Buffer
+### Consider using Virtual Memory Objects (VMOs)
 
 A Virtual Memory Object (VMO) is a kernel object that represents a contiguous
-region of virtual memory.  VMOs track memory on a per-page basis, which means a
-VMO by itself does not track its size at byte-granularity.  When sending memory
-in a FIDL message, you will often need to send both a VMO and a size.  Rather
-than sending these primitives separately, consider using `fuchsia.mem.Buffer`,
-which combines these primitives and names this common concept.
+region of virtual memory along with a logical size. Use this type to transfer
+memory in a FIDL message and use the ZX_PROP_VMO_CONTENT_SIZE property to track
+the amount of data contained in the object.
+
+Note: This rubric previously recommended using the `fuchsia.mem.Buffer` type for
+this purpose. This recommendation is no longer applicable. New and updated APIs
+should use VMOs directly instead of using `fuchsia.mem.Buffer`.
 
 ### Specify bounds for vector and string
 
@@ -269,7 +271,7 @@ maximum message length.
 To address use cases with arbitrarily large sequences, consider breaking the
 sequence up into multiple messages using one of the pagination patterns
 discussed below or consider moving the data out of the message itself, for
-example into a `fuchsia.mem.Buffer`.
+example into a VMO.
 
 ### String encoding, string contents, and length bounds
 
@@ -564,7 +566,7 @@ Use `bytes` or `array<uint8>` for small non-text data:
 
 Use shared-memory primitives for blobs:
 
- * Use `fuchsia.mem.Buffer` for images and (large) protobufs, when it makes
+ * Use `zx.handle:VMO` for images and (large) protobufs, when it makes
    sense to buffer the data completely.
  * Use `zx.handle:SOCKET` for audio and video streams because data may arrive over
    time, or when it makes sense to process data before completely written or
@@ -1137,9 +1139,9 @@ them to the server in a batch.  The client should flush the batch to the server
 before hitting the channel capacity limits in either bytes and handles.
 
 For protocols with even higher message volumes, consider using a ring buffer in
-a `zx::vmo` for the data plane and an associated `zx::fifo` for the control
-plane.  Such protocols place a higher implementation burden on the client and
-the server but are appropriate when you need maximal performance.  For example,
+a `zx.handle:VMO` for the data plane and an associated `zx.handle:FIFO` for the
+control plane.  Such protocols place a higher implementation burden on the client
+and the server but are appropriate when you need maximal performance.  For example,
 the block device protocol uses this approach to optimize performance.
 
 ### Pagination

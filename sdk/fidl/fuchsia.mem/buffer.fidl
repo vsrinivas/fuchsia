@@ -8,10 +8,11 @@ using zx;
 /// A buffer for data whose size is not necessarily a multiple of the page
 /// size.
 ///
-/// VMO objects have a physical size that is always a multiple of the page
-/// size. As such, VMO alone cannot serve as a buffer for arbitrarly sized
-/// data. `fuchsia.mem.Buffer` is a standard struct that aggregate the VMO
-/// and its size.
+/// DEPRECATED: This type is superfluous and deprecated. Instead of using this type,
+/// use a zx.handle:VMO object and store the size of the contents in the ZX_PROP_VMO_CONTENT_SIZE
+/// property.
+// TODO(https://fxbug.dev/85452): Remove all users of this type, then remove
+// this type.
 @for_deprecated_c_bindings
 type Buffer = resource struct {
     /// The vmo that contains the buffer.
@@ -39,4 +40,7 @@ type Data = flexible resource union {
 
     /// The binary data provided out-of-line in a `Buffer`.
     2: buffer Buffer;
+    
+    // TODO(https://fxbug.dev/85452): Add a VMO entry and teach all users
+    // of this type how to store data in it.
 };
