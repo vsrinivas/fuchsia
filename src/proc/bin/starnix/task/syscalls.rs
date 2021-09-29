@@ -206,20 +206,8 @@ pub fn sys_getitimer(
     user_curr_value: UserRef<itimerval>,
 ) -> Result<SyscallResult, Errno> {
     let itimers = ctx.task.thread_group.itimers.read();
-    match which {
-        ITIMER_REAL => {
-            ctx.task.mm.write_object(user_curr_value, &itimers.itimer_real)?;
-        }
-        ITIMER_VIRTUAL => {
-            ctx.task.mm.write_object(user_curr_value, &itimers.itimer_virtual)?;
-        }
-        ITIMER_PROF => {
-            ctx.task.mm.write_object(user_curr_value, &itimers.itimer_prof)?;
-        }
-        _ => {
-            return error!(EINVAL);
-        }
-    }
+    let timer = itimers.get(which as usize).ok_or(errno!(EINVAL))?;
+    ctx.task.mm.write_object(user_curr_value, timer)?;
     Ok(SUCCESS)
 }
 
@@ -232,26 +220,10 @@ pub fn sys_setitimer(
     let mut new_value = itimerval::default();
     ctx.task.mm.read_object(user_new_value, &mut new_value)?;
 
-    let old_value;
-    let mut signal_state = ctx.task.thread_group.itimers.write();
-
-    match which {
-        ITIMER_REAL => {
-            old_value = signal_state.itimer_real;
-            signal_state.itimer_real = new_value;
-        }
-        ITIMER_VIRTUAL => {
-            old_value = signal_state.itimer_virtual;
-            signal_state.itimer_virtual = new_value;
-        }
-        ITIMER_PROF => {
-            old_value = signal_state.itimer_prof;
-            signal_state.itimer_prof = new_value;
-        }
-        _ => {
-            return error!(EINVAL);
-        }
-    }
+    let mut itimers = ctx.task.thread_group.itimers.write();
+    let timer = itimers.get_mut(which as usize).ok_or(errno!(EINVAL))?;
+    let old_value = *timer;
+    *timer = new_value;
 
     if !user_old_value.is_null() {
         ctx.task.mm.write_object(user_old_value, &old_value)?;

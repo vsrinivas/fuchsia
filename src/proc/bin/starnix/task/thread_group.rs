@@ -16,27 +16,6 @@ use crate::signals::types::*;
 use crate::task::*;
 use crate::types::*;
 
-#[derive(Debug, Default)]
-pub struct Itimers {
-    /// The ITIMER_REAL timer.
-    ///
-    /// See <https://linux.die.net/man/2/setitimer>/
-    // TODO: Actually schedule and fire the timer.
-    pub itimer_real: itimerval,
-
-    /// The ITIMER_VIRTUAL timer.
-    ///
-    /// See <https://linux.die.net/man/2/setitimer>/
-    // TODO: Actually schedule and fire the timer.
-    pub itimer_virtual: itimerval,
-
-    /// The ITIMER_PROF timer.
-    ///
-    /// See <https://linux.die.net/man/2/setitimer>/
-    // TODO: Actually schedule and fire the timer.
-    pub itimer_prof: itimerval,
-}
-
 pub struct ThreadGroup {
     /// The kernel to which this thread group belongs.
     pub kernel: Arc<Kernel>,
@@ -60,7 +39,7 @@ pub struct ThreadGroup {
     pub tasks: RwLock<HashSet<pid_t>>,
 
     /// The itimers for this thread group.
-    pub itimers: RwLock<Itimers>,
+    pub itimers: RwLock<[itimerval; 3]>,
 
     zombie_leader: Mutex<Option<ZombieTask>>,
 
@@ -84,7 +63,7 @@ impl ThreadGroup {
             process,
             leader,
             tasks: RwLock::new(tasks),
-            itimers: RwLock::new(Itimers::default()),
+            itimers: Default::default(),
             zombie_leader: Mutex::new(None),
             child_exit_observers: Mutex::default(),
         }
