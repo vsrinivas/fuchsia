@@ -242,6 +242,8 @@ func StringInLogsChecks() []FailureModeCheck {
 				{startString: "RUN   TestDisabledJitterEntropyAndRequiredDoesntBoot", endString: "PASS: TestDisabledJitterEntropyAndRequiredDoesntBoot"},
 				{startString: "RUN   TestDisabledJitterEntropyAndRequiredForReseedDoesntReachUserspace", endString: "PASS: TestDisabledJitterEntropyAndRequiredForReseedDoesntReachUserspace"},
 			}},
+			&stringInLogCheck{String: "double fault, halting", Type: lt},
+			&stringInLogCheck{String: "entering panic shell loop", Type: lt},
 			// For fxbug.dev/71784.
 			&stringInLogCheck{String: "intel-i915: No displays detected.", Type: lt},
 		}...)
