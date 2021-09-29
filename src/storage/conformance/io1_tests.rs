@@ -1225,8 +1225,8 @@ async fn vmo_file_describe() {
         return;
     }
 
-    let root = root_directory(vec![vmo_file(TEST_FILE, &[])]);
-    let test_dir = harness.get_directory(root, io::OPEN_RIGHT_READABLE);
+    let root = root_directory(vec![vmo_file(TEST_FILE, TEST_FILE_CONTENTS)]);
+    let test_dir = harness.get_directory(root, io::OPEN_RIGHT_READABLE | io::OPEN_RIGHT_WRITABLE);
     let file = open_node::<io::FileMarker>(
         &test_dir,
         io::OPEN_RIGHT_READABLE,
@@ -1237,11 +1237,18 @@ async fn vmo_file_describe() {
 
     let node_info = file.describe().await.expect("describe failed");
 
-    assert!(
-        matches!(node_info, io::NodeInfo::File { .. } | io::NodeInfo::Vmofile { .. }),
-        "Expected File, instead got {:?}",
-        node_info
-    );
+    if let io::NodeInfo::Vmofile { 0: vmo_file_obj } = node_info {
+        assert_eq!(vmo_file_obj.offset, 0);
+        assert_eq!(vmo_file_obj.length as usize, TEST_FILE_CONTENTS.len());
+        // Ensure the permissions we get from describe do not exceed those of the connection.
+        let vmo_rights: zx::Rights =
+            vmo_file_obj.vmo.basic_info().expect("failed to get VMO info").rights;
+        assert!(vmo_rights.contains(zx::Rights::READ));
+        assert!(!vmo_rights.contains(zx::Rights::WRITE));
+        assert!(!vmo_rights.contains(zx::Rights::EXECUTE));
+    } else {
+        panic!("Expected VmoFile, got {:?} instead!", node_info);
+    }
 }
 
 #[fasync::run_singlethreaded(test)]

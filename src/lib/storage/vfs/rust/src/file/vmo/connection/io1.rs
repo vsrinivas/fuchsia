@@ -23,8 +23,8 @@ use {
     fidl_fuchsia_io::{
         FileObject, FileRequest, FileRequestStream, NodeAttributes, NodeInfo, NodeMarker,
         SeekOrigin, Vmofile, INO_UNKNOWN, MODE_TYPE_FILE, OPEN_FLAG_DESCRIBE,
-        OPEN_FLAG_NODE_REFERENCE, OPEN_FLAG_TRUNCATE, OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE,
-        VMO_FLAG_EXEC, VMO_FLAG_PRIVATE, VMO_FLAG_WRITE,
+        OPEN_FLAG_NODE_REFERENCE, OPEN_FLAG_TRUNCATE, OPEN_RIGHT_EXECUTABLE, OPEN_RIGHT_READABLE,
+        OPEN_RIGHT_WRITABLE, VMO_FLAG_EXEC, VMO_FLAG_PRIVATE, VMO_FLAG_WRITE,
     },
     fidl_fuchsia_mem::Buffer,
     fuchsia_zircon::{
@@ -341,14 +341,27 @@ impl VmoFileConnection {
 
     /// Returns `NodeInfo` for the VMO file.
     async fn get_node_info(&mut self) -> Result<NodeInfo, zx::Status> {
-        if self.flags & &OPEN_FLAG_NODE_REFERENCE != 0 || self.flags & OPEN_RIGHT_WRITABLE != 0 {
+        // The current io.fidl specification for Vmofile node types specify that the node is
+        // immutable, thus if the file is writable, we report it as a regular file instead.
+        // If this changes in the future, we need to handle size changes in the backing VMO.
+        if self.flags & OPEN_FLAG_NODE_REFERENCE != 0 || self.flags & OPEN_RIGHT_WRITABLE != 0 {
             Ok(NodeInfo::File(FileObject { event: None, stream: None }))
         } else {
             let vmofile = update_initialized_state! {
                 match &*self.file.state().await;
                 error: "get_node_info" => Err(zx::Status::INTERNAL);
                 { vmo, size, .. } => {
-                    let vmo = vmo.duplicate_handle(zx::Rights::SAME_RIGHTS).unwrap();
+                    // Since the VMO rights may exceed those of the connection, we need to ensure
+                    // the duplicated handle's rights are not greater than those of the connection.
+                    let mut new_rights = vmo.basic_info().unwrap().rights;
+                    // We already checked above that the connection is not writable. We also remove
+                    // SET_PROPERTY as this would also allow size changes.
+                    new_rights.remove(zx::Rights::WRITE | zx::Rights::SET_PROPERTY);
+                    if (self.flags & OPEN_RIGHT_EXECUTABLE) == 0 {
+                        new_rights.remove(zx::Rights::EXECUTE);
+                    }
+                    let vmo = vmo.duplicate_handle(new_rights).unwrap();
+
                     Ok(Vmofile {vmo, offset: 0, length: *size})
                 }
             }?;
