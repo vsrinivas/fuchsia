@@ -1,0 +1,5 @@
+{
+    program: {
+        runner: "dart_jit_product_runner",
+    },
+}

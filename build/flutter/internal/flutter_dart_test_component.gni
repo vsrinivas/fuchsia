@@ -40,6 +40,7 @@ import("//build/flutter/internal/flutter_dart_component.gni")
 #    A description of how to build this component. This object needs
 #    to contain the following variables:
 #      runtime_meta: a path to the partial cmx file containing the runner
+#      runtime_meta_v2: a path to the partial cml file containing the runner
 #      platform_name: either 'dart_runner' or 'flutter_runner'
 #      is_aot: a boolean indicating if this is an AOT build
 #      is_product: a boolean indicating if this is a product build

@@ -1,0 +1,5 @@
+{
+    program: {
+        runner: "dart_aot_runner",
+    },
+}

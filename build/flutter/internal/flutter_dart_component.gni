@@ -126,6 +126,7 @@ template("_flutter_asset_manifest") {
 #    A description of how to build this component. This object needs
 #    to contain the following variables:
 #      runtime_meta: a path to the partial cmx file containing the runner
+#      runtime_meta_v2: a path to the partial cml file containing the runner
 #      platform_name: either 'dart_runner' or 'flutter_runner'
 #      is_aot: a boolean indicating if this is an AOT build
 #      is_product: a boolean indicating if this is a product build
@@ -162,14 +163,28 @@ template("flutter_dart_component") {
     _component_name = target_name
   }
 
-  # Flutter and Dart components need to run inside the runner which matches how
-  # they were compiled, for example, a JIT component must run in the JIT runner.
-  # We need to be able to dynamically convert the manifest files to include the
-  # runner requirements so that we can switch based on build modes.
+  # Flutter and Dart components must run inside the runner which matches how
+  # the component was compiled. For example, a JIT component must run in the JIT
+  # runner. This is done by merging the component's manifest with the
+  # build_cfg.runtime_meta manifest.
+  #
+  # There is no V2 Flutter runner, so we don't merge the component manifest with
+  # the runtime_meta manifest for V2 Flutter components. Instead, we leave the
+  # component's manifest as-is to avoid breaking the component's build.
+  #
+  # TODO(fxb/50694): Do the merge for all component types once a V2 Flutter
+  # runner exists.
   _manifest_extension = get_path_info(invoker.manifest, "extension")
-  if (_manifest_extension == "cmx") {
-    # This is a v1 component, merge with the runtime_meta
-    _merged_target_name = "${target_name}_merged.cmx"
+
+  if (_manifest_extension == "cmx" ||
+      build_cfg.platform_name == "dart_runner") {
+    _merged_target_name = "${target_name}_merged.${_manifest_extension}"
+
+    if (_manifest_extension == "cml") {
+      _runtime_meta = build_cfg.runtime_meta_v2
+    } else {
+      _runtime_meta = build_cfg.runtime_meta
+    }
 
     cmc_merge(_merged_target_name) {
       forward_variables_from(invoker,
@@ -179,19 +194,15 @@ template("flutter_dart_component") {
                              ])
       sources = [
         invoker.manifest,
-        rebase_path(build_cfg.runtime_meta, "."),
+        rebase_path(_runtime_meta, "."),
       ]
     }
 
-    _merged_outputs = []
-    _merged_outputs += get_target_outputs(":$_merged_target_name")
+    _merged_outputs = get_target_outputs(":$_merged_target_name")
     _manifest = _merged_outputs[0]
 
     _component_deps += [ ":$_merged_target_name" ]
   } else {
-    # This is a v2 component.
-    # The v2 runners have not been implemented yet so we just leave the manifest
-    # as is to avoid breaking the build.
     _manifest = invoker.manifest
   }
 
@@ -206,10 +217,9 @@ template("flutter_dart_component") {
     deps = _component_deps
   }
 
-  _package_config_output = []
-  _package_config_output =
+  _package_config_outputs =
       get_target_outputs(":$_dart_package_config_target_name")
-  _packages_path = _package_config_output[0]
+  _packages_path = _package_config_outputs[0]
 
   _kernel_target_name = _component_name + "_kernel"
   _kernel_target_dep_name = _kernel_target_name + "_gen_file"
