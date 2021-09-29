@@ -54,14 +54,16 @@ variant("coverage") {
 }
 
 # This variant is similar to `coverage` but is used to only compile sdk_source_set()
-# targets with coverage instrumentation. This works as follows:
+# and FIDL C++ binding source_set() targets with coverage instrumentation.
+# This works as follows:
 #
 # - Unlike `coverage`, this variant does not add assembler and compiler flags
 #   to enable profiling instrumentation.
 #
-# - The sdk_source_set() template adds the "coverage-sdk-source-config" config
-#   to its inner target when they are built in the "coverage-sdk" variant. This
-#   adds the necessary cflags/asmflags when building the target.
+# - The sdk_source_set() and FIDL C++ source_set() templates add the
+#   "coverage-sdk-source-config" config to its inner target when they are built
+#   in the "coverage-sdk" variant. This adds the necessary cflags/asmflags when
+#   building the target.
 #
 # - All final binaries (executables and shared libraries) are linked to the
 #   profiling runtime. Even if none of their code is actually instrumented.
