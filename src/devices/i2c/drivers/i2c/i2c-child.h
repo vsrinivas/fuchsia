@@ -40,7 +40,6 @@ class I2cChild : public I2cChildType, public ddk::I2cProtocol<I2cChild, ddk::bas
   void I2cTransact(const i2c_op_t* op_list, size_t op_count, i2c_transact_callback callback,
                    void* cookie);
   zx_status_t I2cGetMaxTransferSize(size_t* out_size);
-  zx_status_t I2cGetInterrupt(uint32_t flags, zx::interrupt* out_irq);
 
  private:
   fbl::RefPtr<I2cBus> bus_;

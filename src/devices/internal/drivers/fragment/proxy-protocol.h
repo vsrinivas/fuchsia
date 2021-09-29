@@ -331,7 +331,6 @@ struct EthBoardProxyRequest {
 enum class I2cOp {
   TRANSACT,
   GET_MAX_TRANSFER_SIZE,
-  GET_INTERRUPT,
 };
 
 struct I2cProxyRequest {

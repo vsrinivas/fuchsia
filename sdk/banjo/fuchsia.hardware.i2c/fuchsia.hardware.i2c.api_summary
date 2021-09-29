@@ -1,7 +1,6 @@
 const fuchsia.hardware.i2c/I2C_10_BIT_ADDR_MASK uint32 61440
 const fuchsia.hardware.i2c/I2C_MAX_RW_OPS uint32 8
 const fuchsia.hardware.i2c/I2C_MAX_TOTAL_TRANSFER uint32 4096
-protocol/member fuchsia.hardware.i2c/I2c.GetInterrupt(uint32 flags) -> (int32 s,zx/handle:INTERRUPT irq)
 protocol/member fuchsia.hardware.i2c/I2c.GetMaxTransferSize() -> (int32 s,uint64 size)
 protocol/member fuchsia.hardware.i2c/I2c.Transact(vector<fuchsia.hardware.i2c/I2cOp> op) -> (int32 status,vector<fuchsia.hardware.i2c/I2cOp> op)
 protocol fuchsia.hardware.i2c/I2c

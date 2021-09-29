@@ -7,6 +7,7 @@
 
 #include <fidl/fuchsia.hardware.power/cpp/wire.h>
 #include <lib/device-protocol/i2c-channel.h>
+#include <lib/zx/interrupt.h>
 #include <threads.h>
 
 #include <ddktl/device.h>

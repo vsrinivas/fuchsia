@@ -146,7 +146,6 @@ class FragmentProxy : public FragmentProxyBase,
   void I2cTransact(const i2c_op_t* op_list, size_t op_count, i2c_transact_callback callback,
                    void* cookie);
   zx_status_t I2cGetMaxTransferSize(size_t* out_size);
-  zx_status_t I2cGetInterrupt(uint32_t flags, zx::interrupt* out_irq);
   zx_status_t PDevGetMmio(uint32_t index, pdev_mmio_t* out_mmio);
   zx_status_t PDevGetInterrupt(uint32_t index, uint32_t flags, zx::interrupt* out_irq);
   zx_status_t PDevGetBti(uint32_t index, zx::bti* out_bti);

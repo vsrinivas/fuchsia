@@ -40,10 +40,4 @@ protocol I2c {
         s zx.status;
         size uint64;
     });
-    GetInterrupt(struct {
-        flags uint32;
-    }) -> (resource struct {
-        s zx.status;
-        irq zx.handle:INTERRUPT;
-    });
 };

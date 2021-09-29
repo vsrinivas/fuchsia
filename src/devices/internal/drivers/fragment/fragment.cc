@@ -532,15 +532,6 @@ zx_status_t Fragment::RpcI2c(const uint8_t* req_buf, uint32_t req_size, uint8_t*
     }
     case I2cOp::GET_MAX_TRANSFER_SIZE:
       return i2c_client_.proto_client().GetMaxTransferSize(&resp->size);
-    case I2cOp::GET_INTERRUPT: {
-      zx::interrupt irq;
-      auto status = i2c_client_.proto_client().GetInterrupt(req->flags, &irq);
-      if (status == ZX_OK) {
-        resp_handles[0] = std::move(irq);
-        *resp_handle_count = 1;
-      }
-      return status;
-    }
     default:
       zxlogf(ERROR, "%s: unknown I2C op %u", __func__, static_cast<uint32_t>(req->op));
       return ZX_ERR_INTERNAL;

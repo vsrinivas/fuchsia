@@ -676,17 +676,6 @@ zx_status_t FragmentProxy::I2cGetMaxTransferSize(size_t* out_size) {
   return ZX_OK;
 }
 
-zx_status_t FragmentProxy::I2cGetInterrupt(uint32_t flags, zx::interrupt* out_irq) {
-  I2cProxyRequest req = {};
-  I2cProxyResponse resp = {};
-  req.header.proto_id = ZX_PROTOCOL_I2C;
-  req.op = I2cOp::GET_INTERRUPT;
-  req.flags = flags;
-
-  return Rpc(&req.header, sizeof(req), &resp.header, sizeof(resp), nullptr, 0,
-             out_irq->reset_and_get_address(), 1, nullptr);
-}
-
 zx_status_t FragmentProxy::PDevGetMmio(uint32_t index, pdev_mmio_t* out_mmio) {
   PdevProxyRequest req = {};
   PdevProxyResponse resp = {};
