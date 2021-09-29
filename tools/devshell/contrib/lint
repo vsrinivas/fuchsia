@@ -190,7 +190,7 @@ declare GO_LINT_CMD=() # "${PREBUILT_GO_DIR}/bin/go<cmd?> <options?>"
 # TODO(fxbug.dev/27270): add command and args for JSON linter
 declare JSON_LINT_CMD=() # "${FUCHSIA_DIR}"/scripts/style/json-<cmd?> <options?>"
 
-declare RUST_LINT_CMD=( "${FUCHSIA_DIR}/tools/devshell/contrib/lib/rust/run-clippy.py" )
+declare RUST_LINT_CMD=( "${FUCHSIA_DIR}/tools/devshell/contrib/lib/rust/clippy.py" )
 if [[ -n "${VERBOSE}" ]]; then
   RUST_LINT_CMD+=( "-v" )
 fi
