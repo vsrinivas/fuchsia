@@ -19,4 +19,8 @@ declare_args() {
   # JSON with a valid product bundle path.
   # If empty, will create an empty product bundle.
   product_bundle_mapping_file_path = ""
+
+  # Overrides the default name value in the product bundle. Used to distinguish
+  # between similar builds with different packages.
+  product_name_override = ""
 }

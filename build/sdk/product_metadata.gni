@@ -5,6 +5,7 @@
 import("//build/info/info.gni")
 import("//build/json/validate_json.gni")
 import("//build/product.gni")
+import("config.gni")
 
 # Generates a physical device manifest and product bundle metadata JSON files.
 #
@@ -42,11 +43,16 @@ template("product_metadata") {
   # Schema ID must match the id field in the schema file.
   schema_id = "http://fuchsia.com/schemas/sdk/${schema_file}"
 
+  product_name = "${build_info_product}.${build_info_board}"
+  if (product_name_override != "") {
+    product_name = product_name_override
+  }
+
   file_contents = {
     schema_id = schema_id
     data = {
       type = "product_bundle"
-      name = "${build_info_product}.${build_info_board}"
+      name = product_name
       description = product_description
       device_refs = invoker.devices
       metadata = [
