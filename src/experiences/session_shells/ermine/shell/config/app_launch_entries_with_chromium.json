@@ -2,7 +2,7 @@
     {
         "icon": "images/Chromium-icon-2x.png",
         "title": "Chromium",
-        "url": "fuchsia-pkg://fuchsia.com/chromium#meta/chrome_v1.cmx"
+        "url": "fuchsia-pkg://fuchsia.com/chrome#meta/chrome_v1.cmx"
     },
     {
         "icon": "images/SpinningSquare-icon-2x.png",
