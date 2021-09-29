@@ -470,7 +470,7 @@ any kind of stable contract for users of the archive.
 
 **Current value (from the default):** `[]`
 
-From //build/images/args.gni:148
+From //build/images/args.gni:151
 
 ### board_zedboot_bootfs_labels
 A list of binary labels to include in the zedboot ZBI.
@@ -1760,6 +1760,13 @@ being linked directly into the binary.
 **Current value (from the default):** `true`
 
 From [//third_party/icu/config.gni:8](https://chromium.googlesource.com/chromium/deps/icu/+/a38aef9142ace942a8bf166020c569f4cda0f8d3/config.gni#8)
+
+### include_account_in_fvm
+Include an account partition in the FVM image if set to true.
+
+**Current value (from the default):** `false`
+
+From //build/images/args.gni:131
 
 ### include_fvm_blob_sparse
 Include fvm.blob.sparse.blk image into the build if set to true
@@ -3148,7 +3155,7 @@ Example value: "//build/images/recovery"
 
 **Current value (from the default):** `"//build/images/zedboot"`
 
-From //build/images/args.gni:137
+From //build/images/args.gni:140
 
 ### recovery_logo_path
 Path to file to use for recovery logo
@@ -4069,7 +4076,7 @@ is meant solely for developer debugging.
 
 **Current value (from the default):** `false`
 
-From //build/images/args.gni:153
+From //build/images/args.gni:156
 
 ### virtcon_boot_animation_path
 
