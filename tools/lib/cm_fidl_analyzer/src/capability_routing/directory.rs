@@ -230,7 +230,9 @@ mod tests {
         super::*,
         crate::{
             capability_routing::{route::RouteSegment, testing::*},
-            component_tree::{BuildTreeResult, ComponentTreeBuilder, NodeEnvironment, NodePath},
+            component_tree::{
+                BuildTreeResult, ComponentTreeBuilder, NodeEnvironment, NodePath, ResolverRegistry,
+            },
         },
         cm_rust::{CapabilityPath, DependencyType, ExposeSource, OfferSource, UseSource},
         fidl_fuchsia_io2 as fio2,
@@ -378,7 +380,11 @@ mod tests {
 
         ComponentTreeBuilder::new(decls).build(
             root_url,
-            NodeEnvironment::new_root(RunnerRegistry::default(), DebugRegistry::default()),
+            NodeEnvironment::new_root(
+                RunnerRegistry::default(),
+                ResolverRegistry::default(),
+                DebugRegistry::default(),
+            ),
         )
     }
 

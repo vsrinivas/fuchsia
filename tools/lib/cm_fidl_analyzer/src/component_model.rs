@@ -7,13 +7,14 @@ use {
         capability_routing::route::RouteSegment,
         component_tree::{
             ComponentNode, ComponentTree, ComponentTreeBuilder, NodeEnvironment, NodePath,
+            ResolverRegistry,
         },
     },
     anyhow::anyhow,
     async_trait::async_trait,
     cm_rust::{
         CapabilityDecl, CapabilityName, CapabilityPath, CollectionDecl, ComponentDecl, ExposeDecl,
-        OfferDecl, ProgramDecl, UseDecl,
+        OfferDecl, ProgramDecl, ResolverRegistration, UseDecl,
     },
     fidl::endpoints::ProtocolMarker,
     fidl_fuchsia_sys2 as fsys, fuchsia_zircon_status as zx_status,
@@ -156,7 +157,11 @@ impl ModelBuilderForAnalyzer {
     fn build_root_environment(&self, _runtime_config: &Arc<RuntimeConfig>) -> NodeEnvironment {
         // TODO(https://fxbug.dev/61861): Populate the root environment with appropriate runners,
         // resolvers, and debug capabilities based on the runtime config.
-        NodeEnvironment::new_root(RunnerRegistry::default(), DebugRegistry::default())
+        NodeEnvironment::new_root(
+            RunnerRegistry::default(),
+            ResolverRegistry::default(),
+            DebugRegistry::default(),
+        )
     }
 
     fn build_realm(
@@ -720,6 +725,40 @@ impl EnvironmentForAnalyzer {
     ) -> Arc<Self> {
         Arc::new(Self { environment, parent })
     }
+
+    /// Returns the resolver registered for `scheme` and the component that created the environment the
+    /// resolver was registered to. Returns `None` if there was no match.
+    #[allow(dead_code)]
+    fn get_registered_resolver(
+        &self,
+        scheme: &str,
+    ) -> Result<
+        Option<(ExtendedInstanceInterface<ComponentInstanceForAnalyzer>, ResolverRegistration)>,
+        ComponentInstanceError,
+    > {
+        let parent = self.parent().upgrade()?;
+        match self.resolver_registry().get_resolver(scheme) {
+            Some(reg) => Ok(Some((parent, reg.clone()))),
+            None => match self.extends() {
+                EnvironmentExtends::Realm => match parent {
+                    ExtendedInstanceInterface::Component(parent) => {
+                        parent.environment.get_registered_resolver(scheme)
+                    }
+                    ExtendedInstanceInterface::AboveRoot(_) => {
+                        unreachable!("root env can't extend")
+                    }
+                },
+                EnvironmentExtends::None => {
+                    return Ok(None);
+                }
+            },
+        }
+    }
+
+    #[allow(dead_code)]
+    fn resolver_registry(&self) -> &ResolverRegistry {
+        &self.environment.resolver_registry()
+    }
 }
 
 impl EnvironmentInterface<ComponentInstanceForAnalyzer> for EnvironmentForAnalyzer {
@@ -747,7 +786,10 @@ impl EnvironmentInterface<ComponentInstanceForAnalyzer> for EnvironmentForAnalyz
 #[cfg(test)]
 mod tests {
     use {
-        super::*, crate::capability_routing::testing::*, anyhow::Result,
+        super::*,
+        crate::capability_routing::testing::*,
+        anyhow::Result,
+        cm_rust::{EnvironmentDecl, RegistrationSource, RunnerRegistration},
         futures::executor::block_on,
     };
 
@@ -856,6 +898,87 @@ mod tests {
             assert!(root_instance.lock_resolved_state().await.is_ok());
             assert!(child_instance.lock_resolved_state().await.is_ok());
         });
+
+        Ok(())
+    }
+
+    // Builds a model from a 2-node `ComponentTree` with structure `root -- child` in which the child
+    // environment extends the root's. Checks that the child has access to the inherited runner and
+    // resolver registrations through its environment.
+    #[test]
+    fn environment_inherits() -> Result<()> {
+        let root_url = "root_url".to_string();
+        let child_url = "child_url".to_string();
+        let child_name = "child".to_string();
+        let child_env_name = "child_env".to_string();
+
+        let runner_registration = RunnerRegistration {
+            source_name: "child_env_runner".into(),
+            source: RegistrationSource::Self_,
+            target_name: "child_env_runner".into(),
+        };
+        let resolver_registration = ResolverRegistration {
+            resolver: "child_env_resolver".into(),
+            source: RegistrationSource::Self_,
+            scheme: "child_resolver_scheme".into(),
+        };
+        let child_env_decl = EnvironmentDecl {
+            name: child_env_name.clone(),
+            extends: fsys::EnvironmentExtends::Realm,
+            runners: vec![runner_registration.clone()],
+            resolvers: vec![resolver_registration.clone()],
+            debug_capabilities: vec![],
+            stop_timeout_ms: None,
+        };
+        let mut child_decl = new_child_decl(&child_name, &child_url);
+        child_decl.environment = Some(child_env_name.clone());
+        let mut root_decl = new_component_decl(vec![], vec![], vec![], vec![], vec![child_decl]);
+        root_decl.environments.push(child_env_decl);
+
+        let mut decls = HashMap::new();
+        decls.insert(root_url.clone(), root_decl.clone());
+        decls.insert(child_url, new_component_decl(vec![], vec![], vec![], vec![], vec![]));
+
+        let config = Arc::new(RuntimeConfig::default());
+        let build_model_result = block_on(async {
+            ModelBuilderForAnalyzer::new(root_url.clone())
+                .build(decls, config, Arc::new(ComponentIdIndex::default()))
+                .await
+        });
+        assert_eq!(build_model_result.errors.len(), 0);
+        assert!(build_model_result.model.is_some());
+        let model = build_model_result.model.unwrap();
+        assert_eq!(model.len(), 2);
+
+        let child_instance = model.get_instance(&NodePath::absolute_from_vec(vec![&child_name]))?;
+
+        let get_runner_result =
+            child_instance.environment.get_registered_runner(&runner_registration.target_name)?;
+        assert!(get_runner_result.is_some());
+        let (runner_registrar, runner) = get_runner_result.unwrap();
+        match runner_registrar {
+            ExtendedInstanceInterface::Component(instance) => {
+                assert_eq!(instance.abs_moniker(), &AbsoluteMoniker::from(vec![]));
+            }
+            ExtendedInstanceInterface::AboveRoot(_) => {
+                panic!("expected child_env_runner to be registered by the root instance")
+            }
+        }
+        assert_eq!(runner_registration, runner);
+
+        let get_resolver_result =
+            child_instance.environment.get_registered_resolver(&resolver_registration.scheme)?;
+        assert!(get_resolver_result.is_some());
+        let (resolver_registrar, resolver) = get_resolver_result.unwrap();
+        match resolver_registrar {
+            ExtendedInstanceInterface::Component(instance) => {
+                assert_eq!(instance.abs_moniker(), &AbsoluteMoniker::from(vec![]));
+            }
+            ExtendedInstanceInterface::AboveRoot(_) => {
+                panic!("expected child_env_resolver to be registered by the root instance")
+            }
+        }
+        assert_eq!(resolver_registration, resolver);
 
         Ok(())
     }

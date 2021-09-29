@@ -3,7 +3,9 @@
 // found in the LICENSE file.
 
 use {
-    crate::component_tree::{BuildTreeResult, ComponentTreeBuilder, NodeEnvironment, NodePath},
+    crate::component_tree::{
+        BuildTreeResult, ComponentTreeBuilder, NodeEnvironment, NodePath, ResolverRegistry,
+    },
     cm_rust::{
         CapabilityDecl, CapabilityPath, ChildDecl, ComponentDecl, DependencyType, DirectoryDecl,
         ExposeDecl, ExposeDirectoryDecl, ExposeProtocolDecl, ExposeSource, ExposeTarget, OfferDecl,
@@ -78,7 +80,11 @@ pub fn build_two_node_tree(
 
     ComponentTreeBuilder::new(decls).build(
         root_url,
-        NodeEnvironment::new_root(RunnerRegistry::default(), DebugRegistry::default()),
+        NodeEnvironment::new_root(
+            RunnerRegistry::default(),
+            ResolverRegistry::default(),
+            DebugRegistry::default(),
+        ),
     )
 }
 

@@ -11,7 +11,7 @@ use {
         verify::collection::V2ComponentTree,
     },
     anyhow::{anyhow, Context, Result},
-    cm_fidl_analyzer::component_tree::{ComponentTreeBuilder, NodeEnvironment},
+    cm_fidl_analyzer::component_tree::{ComponentTreeBuilder, NodeEnvironment, ResolverRegistry},
     cm_rust::{ComponentDecl, FidlIntoNative},
     cm_types::Url,
     fidl::encoding::decode_persistent,
@@ -124,7 +124,11 @@ impl DataCollector for V2ComponentTreeDataCollector {
 
         let build_result = ComponentTreeBuilder::new(decls_by_url).build(
             root_url,
-            NodeEnvironment::new_root(RunnerRegistry::default(), DebugRegistry::default()),
+            NodeEnvironment::new_root(
+                RunnerRegistry::default(),
+                ResolverRegistry::default(),
+                DebugRegistry::default(),
+            ),
         );
 
         for error in build_result.errors.iter() {

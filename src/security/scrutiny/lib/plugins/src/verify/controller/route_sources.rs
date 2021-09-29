@@ -638,7 +638,7 @@ mod tests {
         anyhow::{anyhow, Result},
         cm_fidl_analyzer::{
             capability_routing::route::RouteSegment,
-            component_tree::{ComponentTreeBuilder, NodeEnvironment, NodePath},
+            component_tree::{ComponentTreeBuilder, NodeEnvironment, NodePath, ResolverRegistry},
         },
         cm_rust::{
             CapabilityName, CapabilityPath, CapabilityTypeName, ChildDecl, ComponentDecl,
@@ -876,7 +876,11 @@ mod tests {
         })
         .build(
             "root_url".to_string(),
-            NodeEnvironment::new_root(RunnerRegistry::default(), DebugRegistry::default()),
+            NodeEnvironment::new_root(
+                RunnerRegistry::default(),
+                ResolverRegistry::default(),
+                DebugRegistry::default(),
+            ),
         );
         let tree = build_tree_result.tree.ok_or(anyhow!("Failed to build component tree"))?;
         let deps = hashset! {};

@@ -4,7 +4,7 @@
 
 use {
     anyhow::Result,
-    cm_rust::{ChildDecl, ComponentDecl, EnvironmentDecl},
+    cm_rust::{ChildDecl, ComponentDecl, EnvironmentDecl, ResolverRegistration},
     moniker::{
         AbsoluteMoniker, AbsoluteMonikerBase, ChildMonikerBase, PartialAbsoluteMoniker,
         PartialChildMoniker,
@@ -32,6 +32,8 @@ pub enum ComponentTreeError {
     ComponentNodeNotFound(String),
     #[error("environment `{0}` requested by child `{1}` not found at node `{2}`")]
     EnvironmentNotFound(String, String, String),
+    #[error("multiple resolvers found for scheme `{0}`")]
+    DuplicateResolverScheme(String),
 }
 
 /// A representation of a component's position in the component topology. The last segment of
@@ -52,6 +54,12 @@ pub struct ComponentNode {
     environment: NodeEnvironment,
 }
 
+/// A collection of resolver registrations, keyed by target URL scheme.
+#[derive(Clone, Debug, Default)]
+pub struct ResolverRegistry {
+    resolvers: HashMap<String, ResolverRegistration>,
+}
+
 /// The environment of a v2 component.
 #[derive(Clone, Debug)]
 pub struct NodeEnvironment {
@@ -62,6 +70,8 @@ pub struct NodeEnvironment {
     extends: EnvironmentExtends,
     /// The runners available in this environment.
     runner_registry: RunnerRegistry,
+    /// The resolvers available in this environment.
+    resolver_registry: ResolverRegistry,
     /// Protocols available in this environment as debug capabilities.
     debug_registry: DebugRegistry,
 }
@@ -195,6 +205,30 @@ impl From<Vec<&str>> for NodePath {
     }
 }
 
+impl ResolverRegistry {
+    pub fn new() -> ResolverRegistry {
+        Self { resolvers: HashMap::default() }
+    }
+
+    pub fn from_decl(decl: &[ResolverRegistration]) -> Result<Self, ComponentTreeError> {
+        let mut registry = Self::new();
+        for resolver in decl.iter() {
+            if let Some(reg) = registry.register(resolver) {
+                return Err(ComponentTreeError::DuplicateResolverScheme(reg.scheme));
+            }
+        }
+        Ok(registry)
+    }
+
+    pub fn register(&mut self, resolver: &ResolverRegistration) -> Option<ResolverRegistration> {
+        self.resolvers.insert(resolver.scheme.clone(), resolver.clone())
+    }
+
+    pub fn get_resolver(&self, scheme: &str) -> Option<&ResolverRegistration> {
+        self.resolvers.get(scheme)
+    }
+}
+
 impl NodeEnvironment {
     pub fn name(&self) -> Option<&str> {
         self.name.as_deref()
@@ -208,13 +242,28 @@ impl NodeEnvironment {
         &self.runner_registry
     }
 
+    pub fn resolver_registry(&self) -> &ResolverRegistry {
+        &self.resolver_registry
+    }
+
     pub fn debug_registry(&self) -> &DebugRegistry {
         &self.debug_registry
     }
 
-    // Defines an environment for the root node with the given `runner_registry` and `debug_registry`.
-    pub fn new_root(runner_registry: RunnerRegistry, debug_registry: DebugRegistry) -> Self {
-        Self { name: None, extends: EnvironmentExtends::None, runner_registry, debug_registry }
+    // Defines an environment for the root node with the given `runner_registry`, `resolver_registry`
+    // and `debug_registry`.
+    pub fn new_root(
+        runner_registry: RunnerRegistry,
+        resolver_registry: ResolverRegistry,
+        debug_registry: DebugRegistry,
+    ) -> Self {
+        Self {
+            name: None,
+            extends: EnvironmentExtends::None,
+            runner_registry,
+            resolver_registry,
+            debug_registry,
+        }
     }
 
     // Defines an environment inheriting the parent realm's environment without modification.
@@ -223,18 +272,20 @@ impl NodeEnvironment {
             name: None,
             extends: EnvironmentExtends::Realm,
             runner_registry: RunnerRegistry::default(),
+            resolver_registry: ResolverRegistry::default(),
             debug_registry: DebugRegistry::default(),
         }
     }
 
     // Defines a named environment from a parent instance's `EnvironmentDecl`.
-    fn from_decl(env_decl: &EnvironmentDecl) -> Self {
-        Self {
+    fn from_decl(env_decl: &EnvironmentDecl) -> Result<Self, ComponentTreeError> {
+        Ok(Self {
             name: Some(env_decl.name.clone()),
             extends: env_decl.extends.into(),
             runner_registry: RunnerRegistry::from_decl(&env_decl.runners),
+            resolver_registry: ResolverRegistry::from_decl(&env_decl.resolvers)?,
             debug_registry: env_decl.debug_capabilities.clone().into(),
-        }
+        })
     }
 }
 
@@ -314,7 +365,7 @@ impl ComponentNode {
                             self.node_path().to_string(),
                         ),
                     )?;
-                Ok(NodeEnvironment::from_decl(env_decl))
+                NodeEnvironment::from_decl(env_decl)
             }
             None => Ok(NodeEnvironment::new_inheriting()),
         }
@@ -505,13 +556,14 @@ mod tests {
         name: String,
         extends: fidl_fuchsia_sys2::EnvironmentExtends,
         runners: Vec<RunnerRegistration>,
+        resolvers: Vec<ResolverRegistration>,
         debug_capabilities: Vec<DebugRegistration>,
     ) -> EnvironmentDecl {
         EnvironmentDecl {
             name,
             extends,
             runners,
-            resolvers: vec![],
+            resolvers,
             debug_capabilities,
             stop_timeout_ms: None,
         }
@@ -535,7 +587,11 @@ mod tests {
     }
 
     fn default_root_environment() -> NodeEnvironment {
-        NodeEnvironment::new_root(RunnerRegistry::default(), DebugRegistry::default())
+        NodeEnvironment::new_root(
+            RunnerRegistry::default(),
+            ResolverRegistry::default(),
+            DebugRegistry::default(),
+        )
     }
 
     // Builds a `ComponentTree` with a single node.
@@ -629,7 +685,7 @@ mod tests {
             root_url.clone(),
             None,
             None,
-            NodeEnvironment::new_root(RunnerRegistry::default(), DebugRegistry::default()),
+            default_root_environment(),
         );
         assert_eq!(root_node.short_display(), "/");
         assert_eq!(root_node.url(), root_url);
@@ -740,11 +796,18 @@ mod tests {
     fn build_tree_with_environment() -> Result<(), ComponentTreeError> {
         let root_url = "root_url".to_string();
         let builtin_runner_name = CapabilityName("builtin_runner".to_string());
+        let builtin_resolver_name = CapabilityName("builtin_resolver".to_string());
+        let builtin_resolver_scheme = "test".to_string();
         let builtin_debug_name = CapabilityName("builtin_debug".to_string());
         let builtin_runner = RunnerRegistration {
             source_name: builtin_runner_name.clone(),
             target_name: builtin_runner_name.clone(),
             source: RegistrationSource::Parent,
+        };
+        let builtin_resolver = ResolverRegistration {
+            resolver: builtin_resolver_name.clone(),
+            source: RegistrationSource::Parent,
+            scheme: builtin_resolver_scheme.clone(),
         };
         let builtin_debug = DebugRegistration::Protocol(DebugProtocolRegistration {
             source_name: builtin_debug_name.clone(),
@@ -753,6 +816,7 @@ mod tests {
         });
         let root_environment = NodeEnvironment::new_root(
             RunnerRegistry::from_decl(&vec![builtin_runner.clone()]),
+            ResolverRegistry::from_decl(&vec![builtin_resolver.clone()])?,
             vec![builtin_debug.clone()].into(),
         );
 
@@ -761,12 +825,20 @@ mod tests {
         let foo_env_name = "foo_env".to_string();
         let foo_extends = fidl_fuchsia_sys2::EnvironmentExtends::Realm;
         let foo_runner_name = CapabilityName("foo_runner".to_string());
+        let foo_resolver_name = CapabilityName("foo_resolver".to_string());
+        let foo_resolver_scheme = "other".to_string();
         let foo_debug_name = CapabilityName("foo_debug".to_string());
         let foo_runner = RunnerRegistration {
             source_name: foo_runner_name.clone(),
             target_name: foo_runner_name.clone(),
             source: RegistrationSource::Parent,
         };
+        let foo_resolver = ResolverRegistration {
+            resolver: foo_resolver_name.clone(),
+            source: RegistrationSource::Parent,
+            scheme: foo_resolver_scheme.clone(),
+        };
+
         let foo_debug = DebugRegistration::Protocol(DebugProtocolRegistration {
             source_name: foo_debug_name.clone(),
             source: RegistrationSource::Parent,
@@ -779,6 +851,7 @@ mod tests {
                 foo_env_name.clone(),
                 foo_extends.clone(),
                 vec![foo_runner],
+                vec![foo_resolver],
                 vec![foo_debug],
             )],
         );
@@ -802,6 +875,11 @@ mod tests {
             .is_some());
         assert!(root_node
             .environment()
+            .resolver_registry()
+            .get_resolver(&builtin_resolver_scheme)
+            .is_some());
+        assert!(root_node
+            .environment()
             .debug_registry()
             .get_capability(&builtin_debug_name)
             .is_some());
@@ -810,6 +888,11 @@ mod tests {
         assert_eq!(foo_node.environment().name(), Some(foo_env_name).as_deref());
         assert_eq!(foo_node.environment().extends(), &foo_extends.into());
         assert!(foo_node.environment().runner_registry().get_runner(&foo_runner_name).is_some());
+        assert!(foo_node
+            .environment()
+            .resolver_registry()
+            .get_resolver(&foo_resolver_scheme)
+            .is_some());
         assert!(foo_node.environment().debug_registry().get_capability(&foo_debug_name).is_some());
         Ok(())
     }
