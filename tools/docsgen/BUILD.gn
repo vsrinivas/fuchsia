@@ -2,6 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/config/build_api_module.gni")
 import("//build/dart/dart_packages.gni")
 import("//build/python/python.gni")
 import("//build/python/python_binary.gni")
@@ -61,4 +62,12 @@ action("dart_sdk_docs") {
   }
 
   deps = [ ":${_dartdoc_transforms_script_target}" ] + dart_packages_list
+}
+
+# # Expose relevant paths for the infrastructure to upload.
+build_api_module("generated_docs") {
+  contents = {
+    output_path = rebase_path("$host_out_dir/obj/tools/docsgen", root_build_dir)
+    dartdoc_zip = "dartdoc_out.zip"
+  }
 }
