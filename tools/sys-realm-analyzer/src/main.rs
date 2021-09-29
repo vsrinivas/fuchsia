@@ -4,6 +4,7 @@
 
 use {
     argh::FromArgs,
+    scrutiny_config, scrutiny_frontend,
     serde::Deserialize,
     serde::Serialize,
     serde_json,
@@ -22,9 +23,9 @@ pub struct BuildTarget {
 
 #[derive(Debug, Clone, Deserialize, Serialize, Eq, PartialOrd, PartialEq, Ord)]
 struct ComponentManifest {
-    pub url: String,
-    pub manifest: String,
     pub features: ManifestContent,
+    pub manifest: String,
+    pub url: String,
 }
 
 #[derive(Debug, Deserialize, Clone, Serialize, Eq, PartialEq, PartialOrd, Ord)]
@@ -41,10 +42,6 @@ struct Options {
     #[argh(option, default = "\"fx\".to_string()")]
     /// path for the `fx` command
     fx_path: String,
-
-    #[argh(option, default = "\"ffx\".to_string()")]
-    /// path for the `ffx` command
-    ffx_path: String,
 
     #[argh(option)]
     /// the architectures to compose products from, if specified, '--boards' must also be provided
@@ -82,7 +79,6 @@ fn main() -> Result<(), u8> {
     }
 
     let fx_path = &args.fx_path;
-    let ffx_path = &args.ffx_path;
     for t in targets {
         println!("{}.{}", t.board, t.arch);
         let mut cmd = Command::new(fx_path);
@@ -117,11 +113,22 @@ fn main() -> Result<(), u8> {
             println!("Build failed! {}", build_cmd.status.code().unwrap());
         }
 
-        let mut scrutiny_cmd = Command::new(ffx_path);
-        scrutiny_cmd.arg("scrutiny").arg("shell").arg("sys.realm");
+        let mut scrutiny_config = scrutiny_config::Config::default();
+        scrutiny_config.runtime.plugin.plugins.push("SysRealmPlugin".to_string());
+        scrutiny_config.launch.command = Some("sys.realm".to_string());
+        // If a build dir was supplied, use this.
+        if let Some(dir) = &args.dir {
+            let mut out_path = std::env::current_dir().expect("couldn't get working dir");
+            out_path.push(dir);
+            scrutiny_config.runtime.model = scrutiny_config::ModelConfig::at_path(out_path);
+        }
 
-        let scrutiny_result = scrutiny_cmd.output().expect("getting command output failed");
-        let out_str = String::from_utf8_lossy(&scrutiny_result.stdout);
+        let out_str =
+            scrutiny_frontend::launcher::launch_from_config(scrutiny_config).map_err(|e| {
+                println!("Error running scrutiny: {}", e);
+                1
+            })?;
+
         let component_list = serde_json::from_str::<'_, Vec<ComponentManifest>>(&out_str).unwrap();
         let mut index = group_by_feature(&component_list);
         output_result(&component_list, &mut index, io::stdout());

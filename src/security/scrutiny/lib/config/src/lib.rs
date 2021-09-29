@@ -247,6 +247,10 @@ impl ModelConfig {
     /// to an empty environment.
     pub fn default() -> ModelConfig {
         let build_path = fuchsia_build_dir().unwrap_or_else(|_| Path::new("").to_path_buf());
+        Self::at_path(build_path)
+    }
+    /// Configure the model to be access at the supplied path.
+    pub fn at_path(build_path: PathBuf) -> ModelConfig {
         let repository_path = build_path.join("amber-files/repository");
         let blob_manifest_path =
             build_path.join("obj/build/images/fuchsia/fuchsia/gen/blob.manifest");
