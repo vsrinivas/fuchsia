@@ -4,9 +4,10 @@
 
 #include "src/virtualization/bin/vmm/arch/x64/decode.h"
 
-#include <gtest/gtest.h>
 #include <zircon/errors.h>
 #include <zircon/syscalls/hypervisor.h>
+
+#include <gtest/gtest.h>
 
 namespace {
 
@@ -698,6 +699,137 @@ TEST(InstDecodeTest, computing_flags) {
   EXPECT_EQ(x86_flags_for_test8(3, 3), 6);
   EXPECT_EQ(x86_flags_for_test8(0, 0), 0x46);
   EXPECT_EQ(x86_flags_for_test8(-1, -1), 0x86);
+}
+
+TEST(InstDecodeTest, or_81) {
+  zx_vcpu_state_t vcpu_state;
+  uint8_t bad_len[] = {0x81, 0};  // opcode modrm
+  ASSERT_EQ(inst_decode(bad_len, 2, 4, &vcpu_state, nullptr), ZX_ERR_OUT_OF_RANGE);
+  uint8_t bad_len_16bit[] = {0x81, 0b01'001'000, 0x1, 0, 0, 0};  // opcode modrm imm4 imm3 imm2 imm1
+  ASSERT_EQ(inst_decode(bad_len_16bit, 6, 2, &vcpu_state, nullptr), ZX_ERR_OUT_OF_RANGE);
+  uint8_t bad_disp[] = {0x81, 0b01'001'000};  // opcode modrm
+  ASSERT_EQ(inst_decode(bad_disp, 2, 4, &vcpu_state, nullptr), ZX_ERR_OUT_OF_RANGE);
+  uint8_t bad_mod_rm[] = {0x81, 0b00'111'000, 0x1, 0, 0, 0};  // opcode modrm imm4 imm3 imm2 imm1
+  ASSERT_EQ(inst_decode(bad_mod_rm, 6, 4, &vcpu_state, nullptr), ZX_ERR_INVALID_ARGS);
+  uint8_t bad_h66[] = {0x66, 0b0100'1000, 0x81, 0b00'001'000,
+                       0,    0,           0,    0x1};  // h66 rex opcode modrm imm4 imm3 imm2 imm1
+  ASSERT_EQ(inst_decode(bad_h66, 8, 4, &vcpu_state, nullptr), ZX_ERR_NOT_SUPPORTED);
+  uint8_t register_to_register[] = {0x81, 0b11'001'000, 0x1, 0, 0,
+                                    0};  // opcode modrm imm4 imm3 imm2 imm1
+  ASSERT_EQ(inst_decode(register_to_register, 6, 4, &vcpu_state, nullptr), ZX_ERR_NOT_SUPPORTED);
+
+  // orl 0x1, (%rax)
+  uint8_t orl[] = {0x81, 0b00'001'000, 0x1, 0, 0, 0};  // opcode modrm imm4 imm3 imm2 imm1
+  Instruction inst;
+  ASSERT_EQ(inst_decode(orl, 6, 4, &vcpu_state, &inst), ZX_OK);
+  EXPECT_EQ(inst.type, INST_OR);
+  EXPECT_EQ(inst.access_size, 4u);
+  EXPECT_EQ(inst.imm, 0x1u);
+  EXPECT_EQ(inst.reg, nullptr);
+  EXPECT_EQ(inst.flags, &vcpu_state.rflags);
+
+  // orw 0x1, (%ax)
+  uint8_t orw_16bit[] = {0x81, 0b00'001'000, 0x1, 0};  // opcode modrm imm2 imm1
+  ASSERT_EQ(inst_decode(orw_16bit, 4, 2, &vcpu_state, &inst), ZX_OK);
+  EXPECT_EQ(inst.type, INST_OR);
+  EXPECT_EQ(inst.access_size, 2u);
+  EXPECT_EQ(inst.imm, 0x1u);
+  EXPECT_EQ(inst.reg, nullptr);
+  EXPECT_EQ(inst.flags, &vcpu_state.rflags);
+
+  // orq 0x1000000, (%rax)
+  uint8_t rex_orq[] = {0b0100'1000, 0x81, 0b00'001'000, 0,
+                       0,           0,    0x1};  // rex opcode modrm imm4 imm3 imm2 imm1
+  ASSERT_EQ(inst_decode(rex_orq, 7, 4, &vcpu_state, &inst), ZX_OK);
+  EXPECT_EQ(inst.type, INST_OR);
+  EXPECT_EQ(inst.access_size, 8u);
+  EXPECT_EQ(inst.imm, 0x1000000u);
+  EXPECT_EQ(inst.reg, nullptr);
+  EXPECT_EQ(inst.flags, &vcpu_state.rflags);
+
+  // orl 0x10, -0x1(%rbx)
+  uint8_t orl_disp_1[] = {0x81, 0b01'001'011, 0xff, 0x10, 0, 0,
+                          0};  // opcode modrm disp imm4 imm3 imm2 imm1
+  ASSERT_EQ(inst_decode(orl_disp_1, 7, 4, &vcpu_state, &inst), ZX_OK);
+  EXPECT_EQ(inst.type, INST_OR);
+  EXPECT_EQ(inst.access_size, 4u);
+  EXPECT_EQ(inst.imm, 0x10u);
+  EXPECT_EQ(inst.reg, nullptr);
+  EXPECT_EQ(inst.flags, &vcpu_state.rflags);
+
+  // orl 0x1000000, -0x1000000(%rbx)
+  uint8_t orl_disp_4[] = {0x81, 0b10'001'011, 0, 0, 0, 0xff, 0, 0,
+                          0,    0x1};  // opcode modrm disp4 disp3 disp2 disp1 imm4 imm3 imm2 imm1
+  ASSERT_EQ(inst_decode(orl_disp_4, 10, 4, &vcpu_state, &inst), ZX_OK);
+  EXPECT_EQ(inst.type, INST_OR);
+  EXPECT_EQ(inst.access_size, 4u);
+  EXPECT_EQ(inst.imm, 0x1000000u);
+  EXPECT_EQ(inst.reg, nullptr);
+  EXPECT_EQ(inst.flags, &vcpu_state.rflags);
+
+  // orw 0x100, -0x1(%rax)
+  uint8_t h66_orw_disp[] = {0x66, 0b0100'0100, 0x81, 0b01'001'000,
+                            0xff, 0,           0x1};  // h66 rex opcode modrm disp imm2 imm1
+  ASSERT_EQ(inst_decode(h66_orw_disp, 7, 4, &vcpu_state, &inst), ZX_OK);
+  EXPECT_EQ(inst.type, INST_OR);
+  EXPECT_EQ(inst.access_size, 2u);
+  EXPECT_EQ(inst.imm, 0x100u);
+  EXPECT_EQ(inst.reg, nullptr);
+  EXPECT_EQ(inst.flags, &vcpu_state.rflags);
+
+  // orl 0x10, (%rax,%rcx,2)
+  uint8_t orl_sib[] = {0x81, 0b00'001'100, 0b01'001'000, 0x10, 0, 0,
+                       0};  // opcode modrm sib imm4 imm3 imm2 imm1
+  ASSERT_EQ(inst_decode(orl_sib, 7, 4, &vcpu_state, &inst), ZX_OK);
+  EXPECT_EQ(inst.type, INST_OR);
+  EXPECT_EQ(inst.access_size, 4u);
+  EXPECT_EQ(inst.imm, 0x10u);
+  EXPECT_EQ(inst.reg, nullptr);
+  EXPECT_EQ(inst.flags, &vcpu_state.rflags);
+
+  // orl 0x10, 0x04(%rax,%rcx,1)
+  uint8_t orl_sib_disp[] = {0x81, 0b01'001'100, 0b00'001'000, 0x04, 0x10, 0, 0,
+                            0};  // opcode modrm sib disp imm4 imm3 imm2 imm1
+  ASSERT_EQ(inst_decode(orl_sib_disp, 8, 4, &vcpu_state, &inst), ZX_OK);
+  EXPECT_EQ(inst.type, INST_OR);
+  EXPECT_EQ(inst.access_size, 4u);
+  EXPECT_EQ(inst.imm, 0x10u);
+  EXPECT_EQ(inst.reg, nullptr);
+  EXPECT_EQ(inst.flags, &vcpu_state.rflags);
+
+  // orl 0x10, 0x00ABCDEF
+  uint8_t orl_sib_nobase[] = {0x81, 0b00'001'100, 0b00'100'101, 0xEF, 0xCD, 0xAB, 0x00, 0x10, 0, 0,
+                              0};  // opcode modrm sib disp4 disp3 disp2 disp1 imm4 imm3 imm2 imm1
+  ASSERT_EQ(inst_decode(orl_sib_nobase, 11, 4, &vcpu_state, &inst), ZX_OK);
+  EXPECT_EQ(inst.type, INST_OR);
+  EXPECT_EQ(inst.access_size, 4u);
+  EXPECT_EQ(inst.imm, 0x10u);
+  EXPECT_EQ(inst.reg, nullptr);
+  EXPECT_EQ(inst.flags, &vcpu_state.rflags);
+}
+
+// 8-bit tests to compliment or_81.
+TEST(InstDecodeTest, or_80) {
+  zx_vcpu_state_t vcpu_state;
+  Instruction inst;
+
+  // orb 0x1, (%rax)
+  uint8_t orb[] = {0x80, 0b00'001'000, 0x1};  // opcode modrm imm
+  ASSERT_EQ(inst_decode(orb, 3, 4, &vcpu_state, &inst), ZX_OK);
+  EXPECT_EQ(inst.type, INST_OR);
+  EXPECT_EQ(inst.access_size, 1u);
+  EXPECT_EQ(inst.imm, 0x1u);
+  EXPECT_EQ(inst.reg, nullptr);
+  EXPECT_EQ(inst.flags, &vcpu_state.rflags);
+
+  // orb 0x1, -0x1(%rax)
+  uint8_t orb_disp_1[] = {0x80, 0b01'001'000, 0xff, 0x1};  // opcode modrm imm
+  ASSERT_EQ(inst_decode(orb_disp_1, 4, 4, &vcpu_state, &inst), ZX_OK);
+  EXPECT_EQ(inst.type, INST_OR);
+  EXPECT_EQ(inst.access_size, 1u);
+  EXPECT_EQ(inst.imm, 0x1u);
+  EXPECT_EQ(inst.reg, nullptr);
+  EXPECT_EQ(inst.flags, &vcpu_state.rflags);
 }
 
 }  // namespace

@@ -19,6 +19,7 @@
 #define INST_MOV_READ       0u
 #define INST_MOV_WRITE      1u
 #define INST_TEST           2u
+#define INST_OR             3u
 
 // clang-format on
 

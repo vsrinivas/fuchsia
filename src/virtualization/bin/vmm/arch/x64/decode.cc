@@ -4,6 +4,7 @@
 
 #include "src/virtualization/bin/vmm/arch/x64/decode.h"
 
+#include <lib/syslog/cpp/macros.h>
 #include <string.h>
 #include <zircon/syscalls/hypervisor.h>
 #include <zircon/syscalls/port.h>
@@ -15,17 +16,21 @@ static constexpr uint8_t kModRMRegMask = 0b00111000;
 static constexpr uint8_t kWMask = 1u;
 static constexpr uint8_t kSibBaseMask = 0b00000111;
 static constexpr uint8_t kSibBaseNone = 0b101;
+static constexpr uint8_t kModRegToRegAddressing = 0b11;
+
+// Get the "mod" bits from a ModRM value.
+static uint8_t modrm_get_mod(uint8_t v) { return v >> 6; }
 
 static bool is_h66_prefix(uint8_t prefix) { return prefix == 0x66; }
 
 static bool is_rex_prefix(uint8_t prefix) { return (prefix >> 4) == 0b0100; }
 
 static bool has_sib_byte(uint8_t mod_rm) {
-  return (mod_rm >> 6) != 0b11 && (mod_rm & 0b111) == 0b100;
+  return modrm_get_mod(mod_rm) != kModRegToRegAddressing && (mod_rm & 0b111) == 0b100;
 }
 
 static uint8_t displacement_size(uint8_t mod_rm, uint8_t sib) {
-  switch (mod_rm >> 6) {
+  switch (modrm_get_mod(mod_rm)) {
     case 0b00:
       if (has_sib_byte(mod_rm) && (sib & kSibBaseMask) == kSibBaseNone) {
         return 4;
@@ -37,7 +42,8 @@ static uint8_t displacement_size(uint8_t mod_rm, uint8_t sib) {
     case 0b10:
       return 4;
     default:
-      return (mod_rm & ~kModRMRegMask) == 0b00000101 ? 4 : 0;
+      FX_CHECK(false) << "Unexpected register-to-register instruction";
+      __UNREACHABLE;
   }
 }
 
@@ -223,10 +229,33 @@ zx_status_t inst_decode(const uint8_t* inst_buf, uint32_t inst_len, uint8_t defa
   if (status != ZX_OK) {
     return status;
   }
-
+  // Register-to-register addressing mode is not supported.
+  if (modrm_get_mod(mod_rm) == kModRegToRegAddressing) {
+    return ZX_ERR_NOT_SUPPORTED;
+  }
   const uint8_t sib_size = has_sib_byte(mod_rm) ? 1 : 0;
   const uint8_t disp_size = displacement_size(mod_rm, sib);
   switch (opcode) {
+    // Logical OR imm with r/m.
+    // 1000 000w : mod 001 r/m : immediate data
+    case 0x80:
+    case 0x81: {
+      const bool w = opcode & kWMask;
+      const uint8_t imm_size = immediate_size(h66, w, default_operand_size);
+      if (inst_len != sib_size + disp_size + imm_size + 2u) {
+        return ZX_ERR_OUT_OF_RANGE;
+      }
+      if (register_id(mod_rm, /*rex_r=*/false) != 1) {
+        return ZX_ERR_INVALID_ARGS;
+      }
+      inst->type = INST_OR;
+      inst->access_size = operand_size(h66, rex_w, w, default_operand_size);
+      inst->imm = 0;
+      inst->reg = NULL;
+      inst->flags = &vcpu_state->rflags;
+      memcpy(&inst->imm, inst_buf + sib_size + disp_size + 2, imm_size);
+      return ZX_OK;
+    }
     // Move r to r/m.
     // 1000 100w : mod reg r/m
     case 0x88:
