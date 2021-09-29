@@ -35,13 +35,13 @@ zx_status_t PerformMemAccess(const zx_packet_guest_mem_t& mem, IoMapping* device
     case INST_MOV_WRITE:
       switch (inst->access_size) {
         case 1:
-          status = inst_write8(inst, &mmio.u8);
+          status = inst_write<uint8_t>(inst, &mmio.u8);
           break;
         case 2:
-          status = inst_write16(inst, &mmio.u16);
+          status = inst_write<uint16_t>(inst, &mmio.u16);
           break;
         case 4:
-          status = inst_write32(inst, &mmio.u32);
+          status = inst_write<uint32_t>(inst, &mmio.u32);
           break;
         default:
           return ZX_ERR_NOT_SUPPORTED;
@@ -58,11 +58,11 @@ zx_status_t PerformMemAccess(const zx_packet_guest_mem_t& mem, IoMapping* device
       }
       switch (inst->access_size) {
         case 1:
-          return inst_read8(inst, mmio.u8);
+          return inst_read<uint8_t>(inst, mmio.u8);
         case 2:
-          return inst_read16(inst, mmio.u16);
+          return inst_read<uint16_t>(inst, mmio.u16);
         case 4:
-          return inst_read32(inst, mmio.u32);
+          return inst_read<uint32_t>(inst, mmio.u32);
         default:
           return ZX_ERR_NOT_SUPPORTED;
       }
