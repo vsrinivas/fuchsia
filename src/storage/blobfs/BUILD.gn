@@ -87,10 +87,10 @@ static_library("blobfs") {
     "//src/lib/storage/vfs/cpp/transaction",
     "//src/storage/lib/watchdog",
     "//zircon/public/lib/bitmap",
-    "//zircon/public/lib/zxc",
     "//zircon/system/ulib/id_allocator",
     "//zircon/system/ulib/range",
     "//zircon/system/ulib/storage/buffer",
+    "//zircon/system/ulib/zxc",
   ]
   deps = [
     "compression/configs",
@@ -106,11 +106,11 @@ static_library("blobfs") {
     "//zircon/public/lib/bitmap",
     "//zircon/public/lib/safemath",
     "//zircon/public/lib/zircon-internal",
-    "//zircon/public/lib/zxc",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/range",
     "//zircon/system/ulib/storage/buffer",
     "//zircon/system/ulib/storage/operation",
+    "//zircon/system/ulib/zxc",
     "//zircon/third_party/ulib/cksum",
   ]
   if (is_fuchsia) {
@@ -238,9 +238,9 @@ source_set("decompressor_impl") {
     "//src/lib/chunked-compression",
     "//src/lib/digest",
     "//src/lib/storage/vfs/cpp/journal",
-    "//zircon/public/lib/zxc",
     "//zircon/system/ulib/fzl",
     "//zircon/system/ulib/trace",
+    "//zircon/system/ulib/zxc",
   ]
 }
 
@@ -254,12 +254,12 @@ executable("decompressor") {
     "//sdk/lib/syslog/cpp:cpp",
     "//src/lib/digest",
     "//src/lib/storage/vfs/cpp/journal",
-    "//zircon/public/lib/zxc",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/fzl",
     "//zircon/system/ulib/trace",
     "//zircon/system/ulib/trace-provider:trace-provider-with-fdio",
+    "//zircon/system/ulib/zxc",
   ]
 }
 

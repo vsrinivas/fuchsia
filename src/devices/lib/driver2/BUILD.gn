@@ -42,9 +42,9 @@ source_set("llcpp") {
     "//sdk/lib/fdio",
     "//sdk/lib/fit-promise",
     "//src/lib/storage/vfs/cpp",
-    "//zircon/public/lib/zxc",
     "//zircon/system/ulib/inspect",
     "//zircon/system/ulib/syslog",
+    "//zircon/system/ulib/zxc",
   ]
 
   # TODO(fxbug.dev/69585): This target uses raw zx::channel with LLCPP which is deprecated.

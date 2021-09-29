@@ -60,9 +60,9 @@ source_set("paver-core") {
     "//src/lib/uuid",
     "//src/storage/fvm",
     "//zircon/public/lib/zx",
-    "//zircon/public/lib/zxc",
     "//zircon/system/ulib/block-client",
     "//zircon/system/ulib/fbl",
+    "//zircon/system/ulib/zxc",
   ]
 
   # TODO(fxbug.dev/69585): This target uses raw zx::channel with LLCPP which is deprecated.

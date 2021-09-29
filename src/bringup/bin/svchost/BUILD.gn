@@ -80,7 +80,6 @@ executable("svchost") {
     "//sdk/lib/fdio",
     "//src/lib/storage/vfs/cpp",
     "//src/sys/lib/stdout-to-debuglog/cpp",
-    "//zircon/public/lib/zxc",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/fdio-caller",
@@ -90,6 +89,7 @@ executable("svchost") {
     "//zircon/system/ulib/profile",
     "//zircon/system/ulib/svc",
     "//zircon/system/ulib/sysmem-connector",
+    "//zircon/system/ulib/zxc",
   ]
   output_dir = "$root_out_dir/zircon-migrated"
 

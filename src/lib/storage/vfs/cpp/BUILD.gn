@@ -117,7 +117,7 @@ static_library("cpp") {
       "//zircon/system/ulib/trace",
 
       # <fs/vnode.h> has #include <lib/zx/status.h>
-      "//zircon/public/lib/zxc",
+      "//zircon/system/ulib/zxc",
     ]
     deps += [
       "//sdk/fidl/fuchsia.cobalt:fuchsia.cobalt_c",

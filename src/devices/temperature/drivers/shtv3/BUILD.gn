@@ -26,7 +26,7 @@ source_set("common") {
     "//src/devices/lib/driver",
     "//src/lib/ddk",
     "//src/lib/ddktl",
-    "//zircon/public/lib/zxc",
+    "//zircon/system/ulib/zxc",
   ]
 }
 

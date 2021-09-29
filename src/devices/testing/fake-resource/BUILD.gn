@@ -20,8 +20,8 @@ zx_library("fake-resource") {
     "//src/devices/testing/fake-object",
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",
-    "//zircon/public/lib/zxc",
     "//zircon/system/ulib/fbl",
+    "//zircon/system/ulib/zxc",
   ]
   configs += [ "//build/config/fuchsia:static_cpp_standard_library" ]
 }

@@ -45,10 +45,10 @@ if (is_fuchsia) {
       "//third_party/boringssl",
       "//zircon/public/lib/pretty",
       "//zircon/public/lib/zx",
-      "//zircon/public/lib/zxc",
       "//zircon/system/ulib/fbl",
       "//zircon/system/ulib/fdio-caller",
       "//zircon/system/ulib/fzl",
+      "//zircon/system/ulib/zxc",
     ]
 
     # TODO(fxbug.dev/69585): This target uses raw zx::channel with LLCPP which is deprecated.

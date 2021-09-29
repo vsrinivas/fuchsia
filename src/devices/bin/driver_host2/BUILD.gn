@@ -33,9 +33,9 @@ source_set("lib") {
     "//src/devices/lib/driver2:llcpp",
     "//src/devices/lib/log",
     "//src/lib/storage/vfs/cpp",
-    "//zircon/public/lib/zxc",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/inspect",
+    "//zircon/system/ulib/zxc",
   ]
 }
 

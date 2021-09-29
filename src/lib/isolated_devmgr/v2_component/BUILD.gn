@@ -53,7 +53,7 @@ source_set("client") {
     "//sdk/lib/sys/cpp",
     "//sdk/lib/syslog/cpp",
   ]
-  public_deps = [ "//zircon/public/lib/zxc" ]
+  public_deps = [ "//zircon/system/ulib/zxc" ]
 
   # TODO(fxbug.dev/69585): This target uses raw zx::channel with LLCPP which is deprecated.
   # Please migrate to typed channel APIs (fidl::ClientEnd<T>, fidl::ServerEnd<T>).

@@ -42,8 +42,8 @@ test("disk_extractor_unit_test") {
     "//src/storage/extractor/cpp:disk_extractor",
     "//src/storage/fs_test",
     "//third_party/googletest:gtest",
-    "//zircon/public/lib/zxc",
     "//zircon/system/ulib/fbl",
+    "//zircon/system/ulib/zxc",
     "//zircon/third_party/ulib/cksum",
   ]
   data_deps = [ "//src/storage/bin/blobfs" ]
@@ -100,7 +100,7 @@ static_library("disk_extractor") {
     "//src/storage/blobfs",
     "//src/storage/extractor/c:disk_extractor",
     "//src/storage/minfs",
-    "//zircon/public/lib/zxc",
+    "//zircon/system/ulib/zxc",
   ]
   if (is_fuchsia) {
     sources += [ "blobfs_extractor.cc" ]

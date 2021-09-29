@@ -54,8 +54,8 @@ source_set("storage_driver_test_support") {
   ]
   public_deps = [
     "//src/lib/isolated_devmgr/v2_component:client",
-    "//zircon/public/lib/zxc",
     "//zircon/system/ulib/ramdevice-client",
+    "//zircon/system/ulib/zxc",
   ]
 }
 

@@ -22,8 +22,8 @@ source_set("factoryfs") {
     "//src/lib/storage/vfs/cpp",
     "//src/lib/storage/vfs/cpp/transaction",
     "//zircon/public/lib/bitmap",
-    "//zircon/public/lib/zxc",
     "//zircon/system/ulib/storage/buffer",
+    "//zircon/system/ulib/zxc",
   ]
   deps = [
     "//sdk/fidl/fuchsia.fs:fuchsia.fs_llcpp",
@@ -32,7 +32,6 @@ source_set("factoryfs") {
     "//sdk/lib/syslog/cpp",
     "//src/lib/storage/vfs/cpp",
     "//zircon/public/lib/zx",
-    "//zircon/public/lib/zxc",
     "//zircon/system/ulib/async-loop",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
@@ -41,6 +40,7 @@ source_set("factoryfs") {
     "//zircon/system/ulib/trace",
     "//zircon/system/ulib/trace-engine",
     "//zircon/system/ulib/trace-provider:trace-provider-with-fdio",
+    "//zircon/system/ulib/zxc",
   ]
 
   # TODO(fxbug.dev/69585): This target uses raw zx::channel with LLCPP which is deprecated.

@@ -463,8 +463,8 @@ test("copier_test") {
     "//sdk/lib/syslog/cpp:cpp-macros",
     "//src/lib/fxl/test:gtest_main",
     "//src/sys/test_runners:tmp_storage",
-    "//zircon/public/lib/zxc",
     "//zircon/system/ulib/fbl",
+    "//zircon/system/ulib/zxc",
   ]
 }
 

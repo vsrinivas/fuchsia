@@ -138,12 +138,12 @@ driver_module("platform-bus-x86-driver") {
     "//third_party/acpica",
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",
-    "//zircon/public/lib/zxc",
     "//zircon/system/ulib/driver-unit-test",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/hid",
     "//zircon/system/ulib/lazy_init",
     "//zircon/system/ulib/region-alloc",
+    "//zircon/system/ulib/zxc",
     "//zircon/system/ulib/zxtest",
     "//zircon/third_party/ulib/chromiumos-platform-ec",
   ]

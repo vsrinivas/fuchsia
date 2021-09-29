@@ -18,8 +18,8 @@ executable("ram-info") {
     "//src/devices/lib/amlogic",
     "//zircon/public/lib/fidl",
     "//zircon/public/lib/zx",
-    "//zircon/public/lib/zxc",
     "//zircon/system/ulib/fbl",
+    "//zircon/system/ulib/zxc",
   ]
 
   # TODO(fxbug.dev/69585): This target uses raw zx::channel with LLCPP which is deprecated.
@@ -41,11 +41,11 @@ test("ram-info-test-bin") {
     "//src/devices/lib/amlogic",
     "//zircon/public/lib/fidl",
     "//zircon/public/lib/zx",
-    "//zircon/public/lib/zxc",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/fidl-async:fidl-async-cpp",
+    "//zircon/system/ulib/zxc",
     "//zircon/system/ulib/zxtest",
   ]
 

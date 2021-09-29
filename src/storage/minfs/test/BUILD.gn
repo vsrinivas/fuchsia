@@ -49,13 +49,13 @@ test("minfs_unit") {
     "//zircon/public/lib/safemath",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zircon-internal",
-    "//zircon/public/lib/zxc",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/bitmap",
     "//zircon/system/ulib/block-client",
     "//zircon/system/ulib/block-client:fake-device",
     "//zircon/system/ulib/cobalt-client:in-memory-logger",
+    "//zircon/system/ulib/zxc",
     "//zircon/third_party/ulib/cksum",
   ]
 
@@ -108,9 +108,9 @@ test("minfs_dirty_cache_integration") {
     "//src/storage/testing:storage_driver_test_support",
     "//third_party/googletest:gtest",
     "//zircon/public/lib/zircon-internal",
-    "//zircon/public/lib/zxc",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/fdio-caller",
+    "//zircon/system/ulib/zxc",
   ]
 
   # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
@@ -217,11 +217,11 @@ fuzzer("minfs-fuzzer") {
   deps = [
     "//src/storage/minfs",
     "//zircon/public/lib/zircon-internal",
-    "//zircon/public/lib/zxc",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/bitmap",
     "//zircon/system/ulib/block-client:fake-device",
+    "//zircon/system/ulib/zxc",
   ]
 
   # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings

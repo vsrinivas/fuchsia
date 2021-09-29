@@ -47,8 +47,8 @@ test("mock-ddk-test-bin") {
     ":mock-ddk",
     "//src/lib/ddktl",
     "//zircon/public/lib/zx",
-    "//zircon/public/lib/zxc",
     "//zircon/system/ulib/fbl",
+    "//zircon/system/ulib/zxc",
     "//zircon/system/ulib/zxtest",
   ]
 }

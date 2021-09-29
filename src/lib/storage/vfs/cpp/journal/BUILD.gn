@@ -82,11 +82,11 @@ static_library("journal") {
       "//src/storage/lib/disk_inspector",
       "//zircon/public/lib/safemath",
       "//zircon/public/lib/sync",
-      "//zircon/public/lib/zxc",
       "//zircon/system/ulib/fbl",
       "//zircon/system/ulib/range",
       "//zircon/system/ulib/storage/buffer",
       "//zircon/system/ulib/storage/operation",
+      "//zircon/system/ulib/zxc",
     ]
   }
 }

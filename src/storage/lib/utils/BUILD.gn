@@ -8,8 +8,8 @@ source_set("topological_path") {
     "topological_path.h",
   ]
   deps = [
-    "//zircon/public/lib/zxc",
     "//zircon/system/ulib/service:service-llcpp",
+    "//zircon/system/ulib/zxc",
   ]
   public_deps = [ "//sdk/fidl/fuchsia.device:fuchsia.device_llcpp" ]
 }

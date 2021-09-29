@@ -121,9 +121,9 @@ static_library("lib") {
     "//src/lib/containers/cpp",
     "//src/lib/fxl",
     "//third_party/googletest:gtest_prod",
-    "//zircon/public/lib/zxc",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
+    "//zircon/system/ulib/zxc",
   ]
 
   # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings

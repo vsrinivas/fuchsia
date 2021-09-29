@@ -16,7 +16,7 @@ source_set("loader_service") {
     "//sdk/fidl/fuchsia.ldsvc:fuchsia.ldsvc_llcpp",
     "//zircon/public/lib/async",
     "//zircon/public/lib/zx",
-    "//zircon/public/lib/zxc",
+    "//zircon/system/ulib/zxc",
   ]
 
   deps = [

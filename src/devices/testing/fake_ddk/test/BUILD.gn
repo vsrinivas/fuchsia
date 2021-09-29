@@ -14,8 +14,8 @@ test("fake-ddk-test-bin") {
   deps = [
     "//src/devices/testing/fake_ddk",
     "//zircon/public/lib/zx",
-    "//zircon/public/lib/zxc",
     "//zircon/system/ulib/fbl",
+    "//zircon/system/ulib/zxc",
     "//zircon/system/ulib/zxtest",
   ]
 }

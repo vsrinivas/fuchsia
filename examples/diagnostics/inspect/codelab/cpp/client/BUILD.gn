@@ -14,7 +14,7 @@ executable("bin") {
     "//sdk/fidl/fuchsia.io",
     "//sdk/fidl/fuchsia.sys2",
     "//sdk/lib/syslog/cpp:cpp-macros",
-    "//zircon/public/lib/zxc",
+    "//zircon/system/ulib/zxc",
   ]
 }
 

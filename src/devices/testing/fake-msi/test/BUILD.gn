@@ -18,8 +18,8 @@ test("fake-msi-test-bin") {
   deps = [
     "//src/devices/testing/fake-msi",
     "//zircon/public/lib/zx",
-    "//zircon/public/lib/zxc",
     "//zircon/system/ulib/fbl",
+    "//zircon/system/ulib/zxc",
     "//zircon/system/ulib/zxtest",
   ]
 }

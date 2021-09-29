@@ -16,7 +16,7 @@ zx_library("test-exceptions") {
     "exception-catcher.cc",
     "exception-handling.cc",
   ]
-  public_deps = [ "//zircon/public/lib/zxc" ]
+  public_deps = [ "//zircon/system/ulib/zxc" ]
   deps = [ "//zircon/public/lib/zx" ]
 }
 

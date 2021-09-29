@@ -81,8 +81,8 @@ executable("virtual-console") {
     ":common",
     "//sdk/lib/syslog/cpp",
     "//src/sys/lib/stdout-to-debuglog/cpp",
-    "//zircon/public/lib/zxc",
     "//zircon/system/ulib/service:service-llcpp",
+    "//zircon/system/ulib/zxc",
   ]
 }
 
@@ -136,7 +136,7 @@ test("vc-session-manager-test") {
 
   deps = [
     ":common",
-    "//zircon/public/lib/zxc",
+    "//zircon/system/ulib/zxc",
     "//zircon/system/ulib/zxtest",
   ]
 }

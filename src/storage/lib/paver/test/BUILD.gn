@@ -55,7 +55,6 @@ test("test") {
     "//src/storage/lib/paver",
     "//src/storage/lib/utils:topological_path",
     "//zircon/public/lib/async",
-    "//zircon/public/lib/zxc",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/block-client",
@@ -70,6 +69,7 @@ test("test") {
     "//zircon/system/ulib/service:service-llcpp",
     "//zircon/system/ulib/svc",
     "//zircon/system/ulib/sysconfig-client:sysconfig-sync-client",
+    "//zircon/system/ulib/zxc",
     "//zircon/system/ulib/zxtest",
     "//zircon/third_party/ulib/cksum",
   ]
@@ -117,12 +117,12 @@ fuzzer("paver-validation-fuzzer") {
     "//sdk/fidl/fuchsia.paver:fuchsia.paver_llcpp",
     "//src/storage/gpt",
     "//src/storage/lib/paver:paver-core",
-    "//zircon/public/lib/zxc",
     "//zircon/system/ulib/block-client",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/fdio-caller",
     "//zircon/system/ulib/svc",
     "//zircon/system/ulib/sysconfig-client:sysconfig-sync-client",
+    "//zircon/system/ulib/zxc",
   ]
 
   include_dirs = [

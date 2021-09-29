@@ -25,7 +25,7 @@ source_set("manifest_parser") {
     "//src/devices/lib/log",
     "//src/lib/json_parser",
     "//src/lib/pkg_url",
-    "//zircon/public/lib/zxc",
+    "//zircon/system/ulib/zxc",
   ]
 
   # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
@@ -123,7 +123,6 @@ source_set("lib") {
     "//zircon/public/lib/fidl",
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",
-    "//zircon/public/lib/zxc",
     "//zircon/system/public",
     "//zircon/system/ulib/async-default",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
@@ -136,6 +135,7 @@ source_set("lib") {
     "//zircon/system/ulib/inspector",
     "//zircon/system/ulib/service:service-llcpp",
     "//zircon/system/ulib/svc",
+    "//zircon/system/ulib/zxc",
 
     # TODO(fxb/38132): Migrate to the new bind rules and delete the below
     "//src/lib/ddk:ddk-deprecated-binding-headers",

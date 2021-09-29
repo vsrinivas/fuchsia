@@ -27,7 +27,7 @@ rust_cxx_ffi_library("fuchsia-cxx") {
   ]
   public_deps = [
     "//zircon/public/lib/zx",
-    "//zircon/public/lib/zxc",
+    "//zircon/system/ulib/zxc",
   ]
 }
 

@@ -19,9 +19,9 @@ test("watchdog_unittest") {
     "//src/lib/storage/vfs/cpp",
     "//src/storage/lib/watchdog",
     "//zircon/public/lib/zx",
-    "//zircon/public/lib/zxc",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/syslog",
+    "//zircon/system/ulib/zxc",
     "//zircon/system/ulib/zxtest",
   ]
 
@@ -46,8 +46,8 @@ zx_library("watchdog") {
   deps = [
     "//sdk/lib/fit",
     "//src/lib/storage/vfs/cpp",
-    "//zircon/public/lib/zxc",
     "//zircon/system/ulib/fbl",
+    "//zircon/system/ulib/zxc",
   ]
 
   if (is_fuchsia) {

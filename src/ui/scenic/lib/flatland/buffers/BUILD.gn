@@ -15,7 +15,7 @@ source_set("buffers") {
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/syslog/cpp",
     "//src/ui/scenic/lib/allocation",
-    "//zircon/public/lib/zxc",
+    "//zircon/system/ulib/zxc",
   ]
 
   # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings

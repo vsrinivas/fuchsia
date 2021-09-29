@@ -42,9 +42,9 @@ driver_module("aml-sdmmc-driver") {
     "//src/lib/vmo_store",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zircon-internal",
-    "//zircon/public/lib/zxc",
     "//zircon/system/ulib/hwreg",
     "//zircon/system/ulib/inspect",
+    "//zircon/system/ulib/zxc",
   ]
 }
 
@@ -80,10 +80,10 @@ test("aml-sdmmc-test-bin") {
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",
-    "//zircon/public/lib/zxc",
     "//zircon/system/ulib/hwreg",
     "//zircon/system/ulib/inspect",
     "//zircon/system/ulib/mmio-ptr:mmio-ptr-fake",
+    "//zircon/system/ulib/zxc",
     "//zircon/system/ulib/zxtest",
   ]
 }

@@ -18,8 +18,8 @@ test("fake-resource-test-bin") {
   deps = [
     "//src/devices/testing/fake-resource",
     "//zircon/public/lib/zx",
-    "//zircon/public/lib/zxc",
     "//zircon/system/ulib/fbl",
+    "//zircon/system/ulib/zxc",
     "//zircon/system/ulib/zxtest",
   ]
 }

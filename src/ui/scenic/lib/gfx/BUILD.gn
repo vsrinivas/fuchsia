@@ -250,7 +250,7 @@ source_set("gfx") {
     "//src/ui/scenic/lib/scenic/util",
     "//src/ui/scenic/lib/scheduling:frame_scheduler",
     "//src/ui/scenic/lib/scheduling:present_helpers",
-    "//zircon/public/lib/zxc",
+    "//zircon/system/ulib/zxc",
   ]
 
   deps = [

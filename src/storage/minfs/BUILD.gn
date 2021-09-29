@@ -90,10 +90,10 @@ static_library("minfs") {
     "//src/storage/lib/disk_inspector",
     "//zircon/public/lib/safemath",
     "//zircon/public/lib/zircon-internal",
-    "//zircon/public/lib/zxc",
     "//zircon/system/ulib/bitmap",
     "//zircon/system/ulib/range",
     "//zircon/system/ulib/storage/operation",
+    "//zircon/system/ulib/zxc",
     "//zircon/third_party/ulib/cksum",
   ]
   if (is_fuchsia) {

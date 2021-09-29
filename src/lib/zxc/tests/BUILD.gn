@@ -24,7 +24,7 @@ test("zxc_unittests") {
     "type_traits_tests.cc",
   ]
   deps = [
-    "//zircon/public/lib/zxc",
+    "//zircon/system/ulib/zxc",
     "//zircon/system/ulib/zxtest",
   ]
 

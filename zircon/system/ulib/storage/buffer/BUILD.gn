@@ -30,10 +30,10 @@ zx_library("buffer") {
     ]
     public_deps = [
       "//zircon/public/lib/zx",
-      "//zircon/public/lib/zxc",
       "//zircon/system/ulib/fbl",
       "//zircon/system/ulib/fzl",
       "//zircon/system/ulib/storage/operation",
+      "//zircon/system/ulib/zxc",
     ]
     deps = [
       "//sdk/lib/fdio",

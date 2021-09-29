@@ -37,11 +37,11 @@ source_set("lib") {
     "//src/lib/storage/fs_management",
     "//src/lib/uuid",
     "//zircon/public/lib/zx",
-    "//zircon/public/lib/zxc",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/cmdline",
     "//zircon/system/ulib/fdio-caller",
+    "//zircon/system/ulib/zxc",
   ]
 
   # We want to optimize as much as possible for speed, under the assumption
@@ -125,7 +125,7 @@ executable("hwstress_test") {
     "//src/lib/testing/predicates",
     "//third_party/googletest:gmock",
     "//zircon/public/lib/zx",
-    "//zircon/public/lib/zxc",
+    "//zircon/system/ulib/zxc",
   ]
 
   # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
@@ -147,7 +147,7 @@ executable("hwstress_v2_test") {
     "//src/storage/testing:storage_driver_test_support",  # requires CFv2.
     "//third_party/googletest:gmock",
     "//zircon/public/lib/zx",
-    "//zircon/public/lib/zxc",
+    "//zircon/system/ulib/zxc",
   ]
 }
 
