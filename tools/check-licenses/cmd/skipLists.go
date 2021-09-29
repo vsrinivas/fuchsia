@@ -96,7 +96,6 @@ var additionalSkipDirs = []string{
 	"third_party/lz4/tests",
 
 	// TODO: Remove once completed
-	"build/secondary/third_party/llvm",                   // b/178682694
 	"prebuilt/camera",                                    // b/169948153 -
 	"prebuilt/connectivity/bluetooth/firmware/mediatek",  // b/178712290 -
 	"prebuilt/third_party/aemu",                          // b/178682298 -
