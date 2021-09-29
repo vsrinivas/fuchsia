@@ -68,8 +68,7 @@ zx_status_t LoadSuperblock(f2fs::Bcache* bc, SuperBlock* out_info, block_t bno) 
   // the 1st and the 2nd blocks each have a identical Superblock.
   ZX_ASSERT(bno <= 1);
   Page* page = GrabCachePage(nullptr, 0, 0);
-  if (zx_status_t status = bc->Readblk(bno, PageAddress(page));
-      status != ZX_OK) {
+  if (zx_status_t status = bc->Readblk(bno, PageAddress(page)); status != ZX_OK) {
     F2fsPutPage(page, 1);
     return status;
   }

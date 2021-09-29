@@ -35,6 +35,7 @@ constexpr uint32_t kDefaultSectorsPerBlock = 8;
 constexpr uint32_t kDefaultBlocksPerSegment = 512;
 constexpr uint32_t kDefaultSegmentsPerSection = 1;
 constexpr uint32_t kCpBlockSize = (kDefaultSectorSize * kDefaultSectorsPerBlock);
+constexpr uint32_t kVolumeLabelLength = 16;
 
 // For further optimization on multi-head logs, on-disk layout supports maximum
 // 16 logs by default. The number, 16, is expected to cover all the cases
@@ -71,7 +72,7 @@ struct GlobalParameters {
   uint64_t total_sectors = 0;
   uint32_t sectors_per_blk = 0;
   uint32_t blks_per_seg = 0;
-  uint8_t vol_label[16] = {
+  uint8_t vol_label[kVolumeLabelLength] = {
       0,
   };
   int heap = 0;

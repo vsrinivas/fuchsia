@@ -8,118 +8,35 @@
 #include <codecvt>
 #include <iostream>
 
+#include <safemath/checked_math.h>
+
 #include "src/lib/uuid/uuid.h"
 #include "src/storage/f2fs/f2fs.h"
 
 namespace f2fs {
 
-MkfsWorker::MkfsWorker(Bcache *bc) : bc_(bc) {}
-
-void MkfsWorker::PrintUsage() {
-  fprintf(stderr, "Usage: mkfs -p \"[OPTIONS]\" devicepath f2fs\n");
-  fprintf(stderr, "[OPTIONS]\n");
-  fprintf(stderr, "  -l label\n");
-  fprintf(stderr, "  -a heap-based allocation [default: 1]\n");
-  fprintf(stderr, "  -o overprovision ratio [default: 5]\n");
-  fprintf(stderr, "  -s # of segments per section [default: 1]\n");
-  fprintf(stderr, "  -z # of sections per zone [default: 1]\n");
-  fprintf(stderr, "  -e [extension list] e.g. \"mp3,gif,mov\"\n");
-  fprintf(stderr, "e.g. mkfs -p \"-l hello -a 1 -o 5 -s 1 -z 1 -e mp3,gif\" devicepath f2fs\n");
-}
-
-zx_status_t MkfsWorker::ParseOptions(int argc, char **argv) {
-  struct option opts[] = {
-      {"label", required_argument, nullptr, 'l'},
-      {"heap", required_argument, nullptr, 'a'},
-      {"op", required_argument, nullptr, 'o'},
-      {"seg_per_sec", required_argument, nullptr, 's'},
-      {"sec_per_zone", required_argument, nullptr, 'z'},
-      {"ext_list", required_argument, nullptr, 'e'},
-      {nullptr, 0, nullptr, 0},
-  };
-
-  int opt_index = -1;
-  int c = -1;
-
-  optreset = 1;
-  optind = 1;
-
-  while ((c = getopt_long(argc, argv, "l:a:o:s:z:e:", opts, &opt_index)) >= 0) {
-    switch (c) {
-      case 'l':
-        mkfs_options_.label = optarg;
-        if (strlen(mkfs_options_.label) >= sizeof(params_.vol_label)) {
-          fprintf(stderr, "ERROR: label length should be less than 16.\n");
-          return ZX_ERR_INVALID_ARGS;
-        }
-        break;
-      case 'a':
-        mkfs_options_.heap_based_allocation =
-            (static_cast<uint32_t>(strtoul(optarg, nullptr, 0)) != 0);
-        break;
-      case 'o':
-        mkfs_options_.overprovision_ratio = static_cast<uint32_t>(strtoul(optarg, nullptr, 0));
-        if (mkfs_options_.overprovision_ratio == 0) {
-          fprintf(stderr, "ERROR: overprovision ratio should be larger than 0.\n");
-          return ZX_ERR_INVALID_ARGS;
-        }
-        break;
-      case 's':
-        mkfs_options_.segs_per_sec = static_cast<uint32_t>(strtoul(optarg, nullptr, 0));
-        if (mkfs_options_.segs_per_sec == 0) {
-          fprintf(stderr, "ERROR: # of segments per section should be larger than 0.\n");
-          return ZX_ERR_INVALID_ARGS;
-        }
-        break;
-      case 'z':
-        mkfs_options_.secs_per_zone = static_cast<uint32_t>(strtoul(optarg, nullptr, 0));
-        if (mkfs_options_.secs_per_zone == 0) {
-          fprintf(stderr, "ERROR: # of sections per zone should be larger than 0.\n");
-          return ZX_ERR_INVALID_ARGS;
-        }
-        break;
-      case 'e':
-        mkfs_options_.extension_list = optarg;
-        break;
-      default:
-        PrintUsage();
-        return ZX_ERR_INVALID_ARGS;
-    };
-  };
-
-  return ZX_OK;
-}
-
 void MkfsWorker::PrintCurrentOption() {
-  fprintf(stderr, "f2fs mkfs label = %s\n", mkfs_options_.label);
-  fprintf(stderr, "f2fs mkfs heap-based allocation = %d\n", mkfs_options_.heap_based_allocation);
-  fprintf(stderr, "f2fs mkfs overprovision ratio = %u\n", mkfs_options_.overprovision_ratio);
-  fprintf(stderr, "f2fs mkfs segments per sector = %u\n", mkfs_options_.segs_per_sec);
-  fprintf(stderr, "f2fs mkfs sectors per zone = %u\n", mkfs_options_.secs_per_zone);
-  fprintf(stderr, "f2fs mkfs extension list = %s\n", mkfs_options_.extension_list);
+  std::cerr << "f2fs mkfs label = " << mkfs_options_.label << std::endl;
+  std::cerr << "f2fs mkfs heap-based allocation = " << mkfs_options_.heap_based_allocation
+            << std::endl;
+  std::cerr << "f2fs mkfs overprovision ratio = " << mkfs_options_.overprovision_ratio << std::endl;
+  std::cerr << "f2fs mkfs segments per sector = " << mkfs_options_.segs_per_sec << std::endl;
+  std::cerr << "f2fs mkfs sectors per zone = " << mkfs_options_.secs_per_zone << std::endl;
+  std::cerr << "f2fs mkfs extension list = " << mkfs_options_.extension_list << std::endl;
 }
 
-zx_status_t MkfsWorker::DoMkfs() {
-#ifdef F2FS_BU_DEBUG
-  PrintCurrentOption();
-#endif
-
+zx::status<std::unique_ptr<Bcache>> MkfsWorker::DoMkfs() {
   InitGlobalParameters();
 
   if (zx_status_t ret = GetDeviceInfo(); ret != ZX_OK)
-    return ret;
+    return zx::error(ret);
 
   if (zx_status_t ret = FormatDevice(); ret != ZX_OK)
-    return ret;
-#ifdef F2FS_BU_DEBUG
-  FX_LOGS(INFO) << "Formated successfully";
-#endif
-  return ZX_OK;
+    return zx::error(ret);
+  return zx::ok(std::move(bc_));
 }
 
-/*
- * String must be less than 16 characters.
- */
+// String must be less than 16 characters.
 void AsciiToUnicode(const std::string &in_string, std::u16string *out_string) {
   std::wstring_convert<std::codecvt_utf8_utf16<char16_t>, char16_t> cvt16;
 
@@ -164,7 +81,7 @@ zx_status_t MkfsWorker::GetDeviceInfo() {
   params_.start_sector = kSuperblockStart;
 
   if (info.block_size < kDefaultSectorSize || info.block_size > kBlockSize) {
-    fprintf(stderr, "Error: Block size %d is not supported\n", info.block_size);
+    std::cerr << "Error: Block size " << info.block_size << " is not supported" << std::endl;
     return ZX_ERR_INVALID_ARGS;
   }
 
@@ -189,7 +106,7 @@ void MkfsWorker::ConfigureExtensionList() {
   if (!ext_str)
     return;
 
-  /* add user ext list */
+  // add user ext list
   char *ue = strtok(ext_str, ",");
   while (ue != nullptr) {
     name_len = static_cast<int>(strlen(ue));
@@ -202,65 +119,41 @@ void MkfsWorker::ConfigureExtensionList() {
   super_block_.extension_count = i;
 }
 
-zx_status_t MkfsWorker::WriteToDisk(void *buf, uint64_t offset, size_t length) {
-#ifdef F2FS_BU_DEBUG
-  std::cout << std::hex << "writetodeisk: offset= 0x" << offset << " length= 0x" << length
-            << std::endl;
-#endif
-
-  if (offset % kBlockSize) {
-    std::cout << std::hex << "block is not aligned: offset =  " << offset << " length = " << length
-              << std::endl;
-    return ZX_ERR_INVALID_ARGS;
-  }
-
-  if (length % kBlockSize) {
-    std::cout << std::hex << "block size is not aligned: offset =  " << offset
-              << " length = " << length << std::endl;
-    return ZX_ERR_INVALID_ARGS;
-  }
-
-  zx_status_t status = ZX_OK;
-  uint64_t curr_offset = offset;
-
-  for (uint64_t i = 0; i < length / kBlockSize; i++) {
-    if ((status = bc_->Writeblk(static_cast<block_t>((offset / kBlockSize) + i), buf)) != ZX_OK) {
-      std::cout << "mkfs: Failed to write root directory: " << status << std::endl;
-    }
-
-    curr_offset += kBlockSize;
-  }
-
-  ZX_ASSERT(curr_offset == offset + length);
-
-  return status;
+zx_status_t MkfsWorker::WriteToDisk(FsBlock &buf, block_t bno) {
+  return bc_->Writeblk(bno, buf.GetData().data());
 }
 
-zx_status_t MkfsWorker::GetCalculatedOp(uint32_t &op) {
+zx::status<uint32_t> MkfsWorker::GetCalculatedOp(uint32_t user_op) {
   uint32_t max_op = 0;
   uint32_t max_user_segments = 0;
 
-  if (op < 100 && op > 0)
-    return ZX_OK;
+  if (user_op < 100 && user_op > 0)
+    return zx::ok(user_op);
 
   for (uint32_t calc_op = 1; calc_op < 100; calc_op++) {
     uint32_t reserved_segments =
         (2 * (100 / calc_op + 1) + kNrCursegType) * super_block_.segs_per_sec;
+
+    if ((safemath::CheckSub(LeToCpu(super_block_.segment_count_main), 2).ValueOrDie()) <
+        reserved_segments) {
+      continue;
+    }
     uint32_t user_segments =
-        super_block_.segment_count_main -
-        ((super_block_.segment_count_main - reserved_segments) * calc_op / 100) - reserved_segments;
+        (super_block_.segment_count_main -
+         (safemath::CheckSub(super_block_.segment_count_main, reserved_segments) * calc_op / 100) -
+         reserved_segments)
+            .ValueOrDie();
 
     if (user_segments > max_user_segments &&
-        (super_block_.segment_count_main - 2) >= reserved_segments) {
+        safemath::CheckSub(super_block_.segment_count_main, 2).ValueOrDie() >= reserved_segments) {
       max_user_segments = user_segments;
       max_op = calc_op;
     }
   }
-  op = max_op;
 
   if (max_op == 0)
-    return ZX_ERR_INVALID_ARGS;
-  return ZX_OK;
+    return zx::error(ZX_ERR_INVALID_ARGS);
+  return zx::ok(max_op);
 }
 
 zx_status_t MkfsWorker::PrepareSuperBlock() {
@@ -278,14 +171,14 @@ zx_status_t MkfsWorker::PrepareSuperBlock() {
   super_block_.log_sectorsize = CpuToLe(log_sectorsize);
 
   if (log_sectorsize < 0) {
-    printf("\n\tError: Failed to get the sector size: %u!\n", params_.sector_size);
+    FX_LOGS(ERROR) << "Error: Failed to get the sector size: " << params_.sector_size << "!";
     return ZX_ERR_INVALID_ARGS;
   }
 
   super_block_.log_sectors_per_block = CpuToLe(log_sectors_per_block);
 
   if (log_sectors_per_block < 0) {
-    printf("\n\tError: Failed to get sectors per block: %u!\n", params_.sectors_per_blk);
+    FX_LOGS(ERROR) << "Error: Failed to get sectors per block: " << params_.sectors_per_blk << "!";
     return ZX_ERR_INVALID_ARGS;
   }
 
@@ -293,7 +186,7 @@ zx_status_t MkfsWorker::PrepareSuperBlock() {
   super_block_.log_blocks_per_seg = CpuToLe(log_blks_per_seg);
 
   if (log_blks_per_seg < 0) {
-    printf("\n\tError: Failed to get block per segment: %u!\n", params_.blks_per_seg);
+    FX_LOGS(ERROR) << "Error: Failed to get block per segment: " << params_.blks_per_seg << "!";
     return ZX_ERR_INVALID_ARGS;
   }
 
@@ -315,14 +208,16 @@ zx_status_t MkfsWorker::PrepareSuperBlock() {
       params_.start_sector * params_.sector_size;
 
   if (params_.start_sector % params_.sectors_per_blk) {
-    printf("WARN: Align start sector number in a unit of pages\n");
-    printf("\ti.e., start sector: %d, ofs:%d (sectors per page: %d)\n", params_.start_sector,
-           params_.start_sector % params_.sectors_per_blk, params_.sectors_per_blk);
+    FX_LOGS(WARNING) << "WARN: Align start sector number in a unit of pages";
+    FX_LOGS(WARNING) << "\ti.e., start sector: " << params_.start_sector
+                     << ", ofs: " << params_.start_sector % params_.sectors_per_blk
+                     << " (sectors per page: " << params_.sectors_per_blk << ")";
   }
 
-  super_block_.segment_count = static_cast<uint32_t>(
-      CpuToLe(((params_.total_sectors * params_.sector_size) - zone_align_start_offset) /
-              segment_size_bytes));
+  super_block_.segment_count = static_cast<uint32_t>(CpuToLe(
+      (safemath::CheckSub(params_.total_sectors * params_.sector_size, zone_align_start_offset) /
+       segment_size_bytes)
+          .ValueOrDie()));
 
   super_block_.segment0_blkaddr =
       static_cast<uint32_t>(CpuToLe(zone_align_start_offset / blk_size_bytes));
@@ -335,9 +230,13 @@ zx_status_t MkfsWorker::PrepareSuperBlock() {
               (LeToCpu(super_block_.segment_count_ckpt) * (1 << log_blks_per_seg)));
 
   uint32_t blocks_for_sit =
-      (LeToCpu(super_block_.segment_count) + kSitEntryPerBlock - 1) / kSitEntryPerBlock;
+      (safemath::CheckSub(LeToCpu(super_block_.segment_count) + kSitEntryPerBlock, 1) /
+       kSitEntryPerBlock)
+          .ValueOrDie();
 
-  uint32_t sit_segments = (blocks_for_sit + params_.blks_per_seg - 1) / params_.blks_per_seg;
+  uint32_t sit_segments =
+      (safemath::CheckSub(blocks_for_sit + params_.blks_per_seg, 1) / params_.blks_per_seg)
+          .ValueOrDie();
 
   super_block_.segment_count_sit = CpuToLe(sit_segments * 2);
 
@@ -346,23 +245,27 @@ zx_status_t MkfsWorker::PrepareSuperBlock() {
               (LeToCpu(super_block_.segment_count_sit) * params_.blks_per_seg));
 
   uint32_t total_valid_blks_available =
-      (LeToCpu(super_block_.segment_count) -
-       (LeToCpu(super_block_.segment_count_ckpt) + LeToCpu(super_block_.segment_count_sit))) *
-      params_.blks_per_seg;
+      (safemath::CheckSub(
+           LeToCpu(super_block_.segment_count),
+           LeToCpu(super_block_.segment_count_ckpt) + LeToCpu(super_block_.segment_count_sit)) *
+       params_.blks_per_seg)
+          .ValueOrDie();
 
   uint32_t blocks_for_nat =
-      (total_valid_blks_available + kNatEntryPerBlock - 1) / kNatEntryPerBlock;
+      (safemath::CheckSub(total_valid_blks_available + kNatEntryPerBlock, 1) / kNatEntryPerBlock)
+          .ValueOrDie();
 
-  super_block_.segment_count_nat =
-      CpuToLe((blocks_for_nat + params_.blks_per_seg - 1) / params_.blks_per_seg);
-  /*
-   * The number of node segments should not be exceeded a "Threshold".
-   * This number resizes NAT bitmap area in a CP page.
-   * So the threshold is determined not to overflow one CP page
-   */
+  super_block_.segment_count_nat = CpuToLe(safemath::checked_cast<uint32_t>(
+      (safemath::CheckSub(blocks_for_nat + params_.blks_per_seg, 1) / params_.blks_per_seg)
+          .ValueOrDie()));
+
+  // The number of node segments should not be exceeded a "Threshold".
+  // This number resizes NAT bitmap area in a CP page.
+  // So the threshold is determined not to overflow one CP page
   uint32_t sit_bitmap_size =
       ((LeToCpu(super_block_.segment_count_sit) / 2) << log_blks_per_seg) / 8;
-  uint32_t max_nat_bitmap_size = 4096 - sizeof(Checkpoint) + 1 - sit_bitmap_size;
+  uint32_t max_nat_bitmap_size = safemath::checked_cast<uint32_t>(
+      (safemath::CheckSub(kBlockSize, sizeof(Checkpoint)) + 1 - sit_bitmap_size).ValueOrDie());
   uint32_t max_nat_segments = (max_nat_bitmap_size * 8) >> log_blks_per_seg;
 
   if (LeToCpu(super_block_.segment_count_nat) > max_nat_segments)
@@ -382,27 +285,32 @@ zx_status_t MkfsWorker::PrepareSuperBlock() {
 
   uint32_t blocks_for_ssa = total_valid_blks_available / params_.blks_per_seg + 1;
 
-  super_block_.segment_count_ssa =
-      CpuToLe((blocks_for_ssa + params_.blks_per_seg - 1) / params_.blks_per_seg);
+  super_block_.segment_count_ssa = CpuToLe(safemath::checked_cast<uint32_t>(
+      ((blocks_for_ssa + safemath::CheckSub(params_.blks_per_seg, 1)) / params_.blks_per_seg)
+          .ValueOrDie()));
 
   uint64_t total_meta_segments =
       LeToCpu(super_block_.segment_count_ckpt) + LeToCpu(super_block_.segment_count_sit) +
       LeToCpu(super_block_.segment_count_nat) + LeToCpu(super_block_.segment_count_ssa);
 
-  if (uint64_t diff = total_meta_segments % (params_.segs_per_sec * params_.secs_per_zone);
-      diff != 0)
-    super_block_.segment_count_ssa =
-        static_cast<uint32_t>(CpuToLe(LeToCpu(super_block_.segment_count_ssa) +
-                                      (params_.segs_per_sec * params_.secs_per_zone - diff)));
+  if (uint64_t diff =
+          total_meta_segments % static_cast<uint64_t>(params_.segs_per_sec * params_.secs_per_zone);
+      diff != 0) {
+    super_block_.segment_count_ssa = static_cast<uint32_t>(CpuToLe(
+        LeToCpu(super_block_.segment_count_ssa) +
+        (params_.segs_per_sec * params_.secs_per_zone - safemath::checked_cast<uint32_t>(diff))));
+  }
 
   super_block_.main_blkaddr =
       CpuToLe(LeToCpu(super_block_.ssa_blkaddr) +
               (LeToCpu(super_block_.segment_count_ssa) * params_.blks_per_seg));
 
-  super_block_.segment_count_main =
-      CpuToLe(LeToCpu(super_block_.segment_count) -
-              (LeToCpu(super_block_.segment_count_ckpt) + LeToCpu(super_block_.segment_count_sit) +
-               LeToCpu(super_block_.segment_count_nat) + LeToCpu(super_block_.segment_count_ssa)));
+  super_block_.segment_count_main = CpuToLe(safemath::checked_cast<uint32_t>(
+      safemath::CheckSub(
+          LeToCpu(super_block_.segment_count),
+          (LeToCpu(super_block_.segment_count_ckpt)) + LeToCpu(super_block_.segment_count_sit) +
+              LeToCpu(super_block_.segment_count_nat) + LeToCpu(super_block_.segment_count_ssa))
+          .ValueOrDie()));
 
   super_block_.section_count =
       CpuToLe(LeToCpu(super_block_.segment_count_main) / params_.segs_per_sec);
@@ -410,10 +318,12 @@ zx_status_t MkfsWorker::PrepareSuperBlock() {
   super_block_.segment_count_main =
       CpuToLe(LeToCpu(super_block_.section_count) * params_.segs_per_sec);
 
-  if (zx_status_t status = GetCalculatedOp(params_.overprovision); status != ZX_OK) {
+  auto op = GetCalculatedOp(params_.overprovision);
+  if (op.is_error()) {
     FX_LOGS(WARNING) << "Error: Device size is not sufficient for F2FS volume";
     return ZX_ERR_NO_SPACE;
   }
+  params_.overprovision = op.value();
 
   // The number of reserved_segments depends on the OP value. Assuming OP is 20%, 20% of a dirty
   // segment is invalid. That is, running GC on 5 dirty segments can obtain one free segment.
@@ -425,9 +335,10 @@ zx_status_t MkfsWorker::PrepareSuperBlock() {
   params_.reserved_segments =
       (2 * (100 / params_.overprovision + 1) + kNrCursegType) * params_.segs_per_sec;
 
-  if ((LeToCpu(super_block_.segment_count_main) - 2) < params_.reserved_segments) {
-    printf("Error: Device size is not sufficient for F2FS volume, more segment needed =%u",
-           params_.reserved_segments - (LeToCpu(super_block_.segment_count_main) - 2));
+  if ((safemath::CheckSub(LeToCpu(super_block_.segment_count_main), 2).ValueOrDie()) <
+      params_.reserved_segments) {
+    FX_LOGS(ERROR) << "Error: Device size is not sufficient for F2FS volume, more segment needed ="
+                   << params_.reserved_segments - (LeToCpu(super_block_.segment_count_main) - 2);
     return ZX_ERR_NO_SPACE;
   }
 
@@ -441,14 +352,16 @@ zx_status_t MkfsWorker::PrepareSuperBlock() {
   volume_name.copy(reinterpret_cast<char16_t *>(super_block_.volume_name), vol_label.size());
   super_block_.volume_name[vol_label.size()] = '\0';
 
-  super_block_.node_ino = CpuToLe(uint32_t{1});
-  super_block_.meta_ino = CpuToLe(uint32_t{2});
-  super_block_.root_ino = CpuToLe(uint32_t{3});
+  super_block_.node_ino = CpuToLe(1U);
+  super_block_.meta_ino = CpuToLe(2U);
+  super_block_.root_ino = CpuToLe(3U);
 
-  uint32_t total_zones = ((LeToCpu(super_block_.segment_count_main) - 1) / params_.segs_per_sec) /
-                         params_.secs_per_zone;
-  if (total_zones <= 6) {
-    printf("\n\tError: %d zones: Need more zones	by shrinking zone size\n", total_zones);
+  uint32_t total_zones =
+      ((safemath::CheckSub(LeToCpu(super_block_.segment_count_main), 1) / params_.segs_per_sec) /
+       params_.secs_per_zone)
+          .ValueOrDie();
+  if (total_zones <= kNrCursegType) {
+    FX_LOGS(ERROR) << "Error: " << total_zones << " zones: Need more zones by shrinking zone size";
     return ZX_ERR_NO_SPACE;
   }
 
@@ -494,281 +407,279 @@ zx_status_t MkfsWorker::PrepareSuperBlock() {
 }
 
 zx_status_t MkfsWorker::InitSitArea() {
-  uint32_t blk_size_bytes = 1 << LeToCpu(super_block_.log_blocksize);
-  uint32_t seg_size_bytes = (1 << LeToCpu(super_block_.log_blocks_per_seg)) * blk_size_bytes;
+  FsBlock sit_block;
+  uint32_t segment_count_sit_blocks = (1 << LeToCpu(super_block_.log_blocks_per_seg)) *
+                                      (LeToCpu(super_block_.segment_count_sit) / 2);
 
-  uint8_t *zero_buf = static_cast<uint8_t *>(calloc(sizeof(uint8_t), seg_size_bytes));
-  if (zero_buf == nullptr) {
-    printf("\n\tError: Calloc Failed for sit_zero_buf!!!\n");
-    return ZX_ERR_NO_MEMORY;
-  }
+  block_t sit_segment_block_num = LeToCpu(super_block_.sit_blkaddr);
 
-  uint64_t sit_seg_blk_offset = LeToCpu(super_block_.sit_blkaddr) * blk_size_bytes;
-
-  for (uint32_t index = 0; index < (LeToCpu(super_block_.segment_count_sit) / 2); index++) {
-    if (zx_status_t ret = WriteToDisk(zero_buf, sit_seg_blk_offset, seg_size_bytes); ret != ZX_OK) {
-      printf("\n\tError: While zeroing out the sit area on disk!!!\n");
+  for (block_t index = 0; index < segment_count_sit_blocks; index++) {
+    if (zx_status_t ret = WriteToDisk(sit_block, sit_segment_block_num + index); ret != ZX_OK) {
+      FX_LOGS(ERROR) << "Error: While zeroing out the sit area on disk!!!";
       return ret;
     }
-    sit_seg_blk_offset = sit_seg_blk_offset + seg_size_bytes;
   }
 
-  free(zero_buf);
   return ZX_OK;
 }
 
 zx_status_t MkfsWorker::InitNatArea() {
-  uint64_t blk_size_bytes = 1 << LeToCpu(super_block_.log_blocksize);
-  uint64_t seg_size_bytes = (1 << LeToCpu(super_block_.log_blocks_per_seg)) * blk_size_bytes;
+  FsBlock nat_block;
+  uint32_t segment_count_nat_blocks = (1 << LeToCpu(super_block_.log_blocks_per_seg)) *
+                                      (LeToCpu(super_block_.segment_count_nat) / 2);
 
-  uint8_t *nat_buf = static_cast<uint8_t *>(calloc(sizeof(uint8_t), seg_size_bytes));
-  if (nat_buf == nullptr) {
-    printf("\n\tError: Calloc Failed for nat_zero_blk!!!\n");
-    return ZX_ERR_NO_MEMORY;
-  }
+  block_t nat_segment_block_num = LeToCpu(super_block_.nat_blkaddr);
 
-  uint64_t nat_seg_blk_offset = LeToCpu(super_block_.nat_blkaddr) * blk_size_bytes;
-
-  for (uint32_t index = 0; index < (LeToCpu(super_block_.segment_count_nat) / 2); index++) {
-    if (zx_status_t ret = WriteToDisk(nat_buf, nat_seg_blk_offset, seg_size_bytes); ret != ZX_OK) {
-      printf("\n\tError: While zeroing out the nat area on disk!!!\n");
+  for (block_t index = 0; index < segment_count_nat_blocks; index++) {
+    if (zx_status_t ret = WriteToDisk(nat_block, nat_segment_block_num + index); ret != ZX_OK) {
+      FX_LOGS(ERROR) << "Error: While zeroing out the nat area on disk!!!";
       return ret;
     }
-    nat_seg_blk_offset = nat_seg_blk_offset + (2 * seg_size_bytes);
   }
 
-  free(nat_buf);
   return ZX_OK;
 }
 
 zx_status_t MkfsWorker::WriteCheckPointPack() {
-  Checkpoint *ckp = static_cast<Checkpoint *>(calloc(kBlockSize, 1));
-  if (ckp == nullptr) {
-    printf("\n\tError: Calloc Failed for Checkpoint!!!\n");
+  FsBlock checkpoint_block;
+  Checkpoint *checkpoint = reinterpret_cast<Checkpoint *>(checkpoint_block.GetData().data());
+
+  if (!checkpoint) {
+    FX_LOGS(ERROR) << "Error: Alloc Failed for Checkpoint!!!";
     return ZX_ERR_NO_MEMORY;
   }
 
-  SummaryBlock *sum = static_cast<SummaryBlock *>(calloc(kBlockSize, 1));
-  if (sum == nullptr) {
-    printf("\n\tError: Calloc Failed for summay_node!!!\n");
+  FsBlock summary_block;
+  SummaryBlock *summary = reinterpret_cast<SummaryBlock *>(summary_block.GetData().data());
+
+  if (!summary) {
+    FX_LOGS(ERROR) << "Error: Alloc Failed for summay_node!!!";
     return ZX_ERR_NO_MEMORY;
   }
 
-  /* 1. cp page 1 of checkpoint pack 1 */
-  ckp->checkpoint_ver = 1;
-  ckp->cur_node_segno[0] = CpuToLe(params_.cur_seg[static_cast<int>(CursegType::kCursegHotNode)]);
-  ckp->cur_node_segno[1] = CpuToLe(params_.cur_seg[static_cast<int>(CursegType::kCursegWarmNode)]);
-  ckp->cur_node_segno[2] = CpuToLe(params_.cur_seg[static_cast<int>(CursegType::kCursegColdNode)]);
-  ckp->cur_data_segno[0] = CpuToLe(params_.cur_seg[static_cast<int>(CursegType::kCursegHotData)]);
-  ckp->cur_data_segno[1] = CpuToLe(params_.cur_seg[static_cast<int>(CursegType::kCursegWarmData)]);
-  ckp->cur_data_segno[2] = CpuToLe(params_.cur_seg[static_cast<int>(CursegType::kCursegColdData)]);
+  // 1. cp page 1 of checkpoint pack 1
+  checkpoint->checkpoint_ver = 1;
+  checkpoint->cur_node_segno[0] =
+      CpuToLe(params_.cur_seg[static_cast<int>(CursegType::kCursegHotNode)]);
+  checkpoint->cur_node_segno[1] =
+      CpuToLe(params_.cur_seg[static_cast<int>(CursegType::kCursegWarmNode)]);
+  checkpoint->cur_node_segno[2] =
+      CpuToLe(params_.cur_seg[static_cast<int>(CursegType::kCursegColdNode)]);
+  checkpoint->cur_data_segno[0] =
+      CpuToLe(params_.cur_seg[static_cast<int>(CursegType::kCursegHotData)]);
+  checkpoint->cur_data_segno[1] =
+      CpuToLe(params_.cur_seg[static_cast<int>(CursegType::kCursegWarmData)]);
+  checkpoint->cur_data_segno[2] =
+      CpuToLe(params_.cur_seg[static_cast<int>(CursegType::kCursegColdData)]);
   for (int i = 3; i < kMaxActiveNodeLogs; i++) {
-    ckp->cur_node_segno[i] = 0xffffffff;
-    ckp->cur_data_segno[i] = 0xffffffff;
+    checkpoint->cur_node_segno[i] = 0xffffffff;
+    checkpoint->cur_data_segno[i] = 0xffffffff;
   }
 
-  ckp->cur_node_blkoff[0] = CpuToLe(uint16_t{1});
-  ckp->cur_data_blkoff[0] = CpuToLe(uint16_t{1});
-  ckp->valid_block_count = CpuToLe(uint64_t{2});
-  ckp->rsvd_segment_count = CpuToLe(params_.reserved_segments);
-  ckp->overprov_segment_count =
-      CpuToLe((LeToCpu(super_block_.segment_count_main) - LeToCpu(ckp->rsvd_segment_count)) *
-              params_.overprovision / 100);
-  ckp->overprov_segment_count =
-      CpuToLe(LeToCpu(ckp->overprov_segment_count) + LeToCpu(ckp->rsvd_segment_count));
+  checkpoint->cur_node_blkoff[0] = CpuToLe(uint16_t{1});
+  checkpoint->cur_data_blkoff[0] = CpuToLe(uint16_t{1});
+  checkpoint->valid_block_count = CpuToLe(2UL);
+  checkpoint->rsvd_segment_count = CpuToLe(params_.reserved_segments);
+  checkpoint->overprov_segment_count = CpuToLe(safemath::checked_cast<uint32_t>(
+      (safemath::CheckSub(LeToCpu(super_block_.segment_count_main),
+                          LeToCpu(checkpoint->rsvd_segment_count)) *
+       params_.overprovision / 100)
+          .ValueOrDie()));
+  checkpoint->overprov_segment_count = CpuToLe(LeToCpu(checkpoint->overprov_segment_count) +
+                                               LeToCpu(checkpoint->rsvd_segment_count));
 
-  /* main segments - reserved segments - (node + data segments) */
-  ckp->free_segment_count = CpuToLe(LeToCpu(super_block_.segment_count_main) - 6);
+  // main segments - reserved segments - (node + data segments)
+  checkpoint->free_segment_count = CpuToLe(safemath::checked_cast<uint32_t>(
+      safemath::CheckSub(LeToCpu(super_block_.segment_count_main), kNrCursegType).ValueOrDie()));
 
-  ckp->user_block_count =
-      CpuToLe(((LeToCpu(ckp->free_segment_count) + 6 - LeToCpu(ckp->overprov_segment_count)) *
-               params_.blks_per_seg));
+  checkpoint->user_block_count = CpuToLe(safemath::checked_cast<uint64_t>(
+      (safemath::CheckSub(LeToCpu(checkpoint->free_segment_count) + kNrCursegType,
+                          LeToCpu(checkpoint->overprov_segment_count)) *
+       params_.blks_per_seg)
+          .ValueOrDie()));
 
-  ckp->cp_pack_total_block_count = CpuToLe(uint32_t{8});
-  ckp->ckpt_flags |= kCpUmountFlag;
-  ckp->cp_pack_start_sum = CpuToLe(uint32_t{1});
-  ckp->valid_node_count = CpuToLe(uint32_t{1});
-  ckp->valid_inode_count = CpuToLe(uint32_t{1});
-  ckp->next_free_nid = CpuToLe(LeToCpu(super_block_.root_ino) + 1);
+  checkpoint->cp_pack_total_block_count = CpuToLe(8U);
+  checkpoint->ckpt_flags |= kCpUmountFlag;
+  checkpoint->cp_pack_start_sum = CpuToLe(1U);
+  checkpoint->valid_node_count = CpuToLe(1U);
+  checkpoint->valid_inode_count = CpuToLe(1U);
+  checkpoint->next_free_nid = CpuToLe(LeToCpu(super_block_.root_ino) + 1);
 
-  ckp->sit_ver_bitmap_bytesize = CpuToLe(
+  checkpoint->sit_ver_bitmap_bytesize = CpuToLe(
       ((LeToCpu(super_block_.segment_count_sit) / 2) << LeToCpu(super_block_.log_blocks_per_seg)) /
       8);
 
-  ckp->nat_ver_bitmap_bytesize = CpuToLe(
+  checkpoint->nat_ver_bitmap_bytesize = CpuToLe(
       ((LeToCpu(super_block_.segment_count_nat) / 2) << LeToCpu(super_block_.log_blocks_per_seg)) /
       8);
 
-  ckp->checksum_offset = CpuToLe(uint32_t{kChecksumOffset});
+  checkpoint->checksum_offset = CpuToLe(kChecksumOffset);
 
-  uint32_t crc = F2fsCalCrc32(kF2fsSuperMagic, ckp, LeToCpu(ckp->checksum_offset));
-  *(reinterpret_cast<uint32_t *>(reinterpret_cast<uint8_t *>(ckp) +
-                                 LeToCpu(ckp->checksum_offset))) = crc;
+  uint32_t crc = F2fsCalCrc32(kF2fsSuperMagic, checkpoint, LeToCpu(checkpoint->checksum_offset));
+  *(reinterpret_cast<uint32_t *>(reinterpret_cast<uint8_t *>(checkpoint) +
+                                 LeToCpu(checkpoint->checksum_offset))) = crc;
 
-  uint64_t blk_size_bytes = 1 << LeToCpu(super_block_.log_blocksize);
-  uint64_t cp_seg_blk_offset = LeToCpu(super_block_.segment0_blkaddr) * blk_size_bytes;
+  block_t cp_segment_block_num = LeToCpu(super_block_.segment0_blkaddr);
 
-  if (zx_status_t ret = WriteToDisk(ckp, cp_seg_blk_offset, kBlockSize); ret != ZX_OK) {
-    printf("\n\tError: While writing the ckp to disk!!!\n");
+  if (zx_status_t ret = WriteToDisk(checkpoint_block, cp_segment_block_num); ret != ZX_OK) {
+    FX_LOGS(ERROR) << "Error: While writing the ckp to disk!!!";
     return ret;
   }
 
-  /* 2. Prepare and write Segment summary for data blocks */
-  memset(sum, 0, sizeof(SummaryBlock));
-  SetSumType((&sum->footer), kSumTypeData);
+  // 2. Prepare and write Segment summary for data blocks
+  memset(summary, 0, sizeof(SummaryBlock));
+  SetSumType((&summary->footer), kSumTypeData);
 
-  sum->entries[0].nid = super_block_.root_ino;
-  sum->entries[0].ofs_in_node = 0;
+  summary->entries[0].nid = super_block_.root_ino;
+  summary->entries[0].ofs_in_node = 0;
 
-  cp_seg_blk_offset += blk_size_bytes;
-  if (zx_status_t ret = WriteToDisk(sum, cp_seg_blk_offset, kBlockSize); ret != ZX_OK) {
-    printf("\n\tError: While writing the sum_blk to disk!!!\n");
+  ++cp_segment_block_num;
+  if (zx_status_t ret = WriteToDisk(summary_block, cp_segment_block_num); ret != ZX_OK) {
+    FX_LOGS(ERROR) << "Error: While writing the summary_block to disk!!!";
     return ret;
   }
 
-  /* 3. Fill segment summary for data block to zero. */
-  memset(sum, 0, sizeof(SummaryBlock));
-  SetSumType((&sum->footer), kSumTypeData);
+  // 3. Fill segment summary for data block to zero.
+  memset(summary, 0, sizeof(SummaryBlock));
+  SetSumType((&summary->footer), kSumTypeData);
 
-  cp_seg_blk_offset += blk_size_bytes;
-  if (zx_status_t ret = WriteToDisk(sum, cp_seg_blk_offset, kBlockSize); ret != ZX_OK) {
-    printf("\n\tError: While writing the sum_blk to disk!!!\n");
+  ++cp_segment_block_num;
+  if (zx_status_t ret = WriteToDisk(summary_block, cp_segment_block_num); ret != ZX_OK) {
+    FX_LOGS(ERROR) << "Error: While writing the summary_block to disk!!!";
     return ret;
   }
 
-  /* 4. Fill segment summary for data block to zero. */
-  memset(sum, 0, sizeof(SummaryBlock));
-  SetSumType((&sum->footer), kSumTypeData);
+  // 4. Fill segment summary for data block to zero.
+  memset(summary, 0, sizeof(SummaryBlock));
+  SetSumType((&summary->footer), kSumTypeData);
 
-  /* inode sit for root */
-  sum->n_sits = CpuToLe(uint16_t{6});
-  sum->sit_j.entries[0].segno = ckp->cur_node_segno[0];
-  sum->sit_j.entries[0].se.vblocks =
+  // inode sit for root
+  summary->n_sits = CpuToLe(uint16_t{6});
+  summary->sit_j.entries[0].segno = checkpoint->cur_node_segno[0];
+  summary->sit_j.entries[0].se.vblocks =
       CpuToLe(uint16_t{(static_cast<int>(CursegType::kCursegHotNode) << 10) | 1});
-  SetValidBitmap(0, sum->sit_j.entries[0].se.valid_map);
-  sum->sit_j.entries[1].segno = ckp->cur_node_segno[1];
-  sum->sit_j.entries[1].se.vblocks =
+  SetValidBitmap(0, summary->sit_j.entries[0].se.valid_map);
+  summary->sit_j.entries[1].segno = checkpoint->cur_node_segno[1];
+  summary->sit_j.entries[1].se.vblocks =
       CpuToLe(uint16_t{(static_cast<int>(CursegType::kCursegWarmNode) << 10)});
-  sum->sit_j.entries[2].segno = ckp->cur_node_segno[2];
-  sum->sit_j.entries[2].se.vblocks =
+  summary->sit_j.entries[2].segno = checkpoint->cur_node_segno[2];
+  summary->sit_j.entries[2].se.vblocks =
       CpuToLe(uint16_t{(static_cast<int>(CursegType::kCursegColdNode) << 10)});
 
-  /* data sit for root */
-  sum->sit_j.entries[3].segno = ckp->cur_data_segno[0];
-  sum->sit_j.entries[3].se.vblocks =
+  // data sit for root
+  summary->sit_j.entries[3].segno = checkpoint->cur_data_segno[0];
+  summary->sit_j.entries[3].se.vblocks =
       CpuToLe(uint16_t{(static_cast<uint16_t>(CursegType::kCursegHotData) << 10) | 1});
-  SetValidBitmap(0, sum->sit_j.entries[3].se.valid_map);
-  sum->sit_j.entries[4].segno = ckp->cur_data_segno[1];
-  sum->sit_j.entries[4].se.vblocks =
+  SetValidBitmap(0, summary->sit_j.entries[3].se.valid_map);
+  summary->sit_j.entries[4].segno = checkpoint->cur_data_segno[1];
+  summary->sit_j.entries[4].se.vblocks =
       CpuToLe(uint16_t{(static_cast<int>(CursegType::kCursegWarmData) << 10)});
-  sum->sit_j.entries[5].segno = ckp->cur_data_segno[2];
-  sum->sit_j.entries[5].se.vblocks =
+  summary->sit_j.entries[5].segno = checkpoint->cur_data_segno[2];
+  summary->sit_j.entries[5].se.vblocks =
       CpuToLe(uint16_t{(static_cast<int>(CursegType::kCursegColdData) << 10)});
 
-  cp_seg_blk_offset += blk_size_bytes;
-  if (zx_status_t ret = WriteToDisk(sum, cp_seg_blk_offset, kBlockSize); ret != ZX_OK) {
-    printf("\n\tError: While writing the sum_blk to disk!!!\n");
+  ++cp_segment_block_num;
+  if (zx_status_t ret = WriteToDisk(summary_block, cp_segment_block_num); ret != ZX_OK) {
+    FX_LOGS(ERROR) << "Error: While writing the summary_block to disk!!!";
     return ret;
   }
 
-  /* 5. Prepare and write Segment summary for node blocks */
-  memset(sum, 0, sizeof(SummaryBlock));
-  SetSumType((&sum->footer), kSumTypeNode);
+  // 5. Prepare and write Segment summary for node blocks
+  memset(summary, 0, sizeof(SummaryBlock));
+  SetSumType((&summary->footer), kSumTypeNode);
 
-  sum->entries[0].nid = super_block_.root_ino;
-  sum->entries[0].ofs_in_node = 0;
+  summary->entries[0].nid = super_block_.root_ino;
+  summary->entries[0].ofs_in_node = 0;
 
-  cp_seg_blk_offset += blk_size_bytes;
-  if (zx_status_t ret = WriteToDisk(sum, cp_seg_blk_offset, kBlockSize); ret != ZX_OK) {
-    printf("\n\tError: While writing the sum_blk to disk!!!\n");
+  ++cp_segment_block_num;
+  if (zx_status_t ret = WriteToDisk(summary_block, cp_segment_block_num); ret != ZX_OK) {
+    FX_LOGS(ERROR) << "Error: While writing the summary_block to disk!!!";
     return ret;
   }
 
-  /* 6. Fill segment summary for data block to zero. */
-  memset(sum, 0, sizeof(SummaryBlock));
-  SetSumType((&sum->footer), kSumTypeNode);
+  // 6. Fill segment summary for data block to zero.
+  memset(summary, 0, sizeof(SummaryBlock));
+  SetSumType((&summary->footer), kSumTypeNode);
 
-  cp_seg_blk_offset += blk_size_bytes;
-  if (zx_status_t ret = WriteToDisk(sum, cp_seg_blk_offset, kBlockSize); ret != ZX_OK) {
-    printf("\n\tError: While writing the sum_blk to disk!!!\n");
+  ++cp_segment_block_num;
+  if (zx_status_t ret = WriteToDisk(summary_block, cp_segment_block_num); ret != ZX_OK) {
+    FX_LOGS(ERROR) << "Error: While writing the summary_block to disk!!!";
     return ret;
   }
 
-  /* 7. Fill segment summary for data block to zero. */
-  memset(sum, 0, sizeof(SummaryBlock));
-  SetSumType((&sum->footer), kSumTypeNode);
-  cp_seg_blk_offset += blk_size_bytes;
-  if (zx_status_t ret = WriteToDisk(sum, cp_seg_blk_offset, kBlockSize); ret != ZX_OK) {
-    printf("\n\tError: While writing the sum_blk to disk!!!\n");
+  // 7. Fill segment summary for data block to zero.
+  memset(summary, 0, sizeof(SummaryBlock));
+  SetSumType((&summary->footer), kSumTypeNode);
+
+  ++cp_segment_block_num;
+  if (zx_status_t ret = WriteToDisk(summary_block, cp_segment_block_num); ret != ZX_OK) {
+    FX_LOGS(ERROR) << "Error: While writing the summary_block to disk!!!";
     return ret;
   }
 
-  /* 8. cp page2 */
-  cp_seg_blk_offset += blk_size_bytes;
-  if (zx_status_t ret = WriteToDisk(ckp, cp_seg_blk_offset, kBlockSize); ret != ZX_OK) {
-    printf("\n\tError: While writing the ckp to disk!!!\n");
+  // 8. cp page2
+  ++cp_segment_block_num;
+  if (zx_status_t ret = WriteToDisk(checkpoint_block, cp_segment_block_num); ret != ZX_OK) {
+    FX_LOGS(ERROR) << "Error: While writing the checkpoint to disk!!!";
     return ret;
   }
 
-  /* 9. cp page 1 of check point pack 2
-   * Initiatialize other checkpoint pack with version zero
-   */
-  ckp->checkpoint_ver = 0;
+  // 9. cp page 1 of check point pack 2
+  // Initiatialize other checkpoint pack with version zero
+  checkpoint->checkpoint_ver = 0;
 
-  crc = F2fsCalCrc32(kF2fsSuperMagic, ckp, LeToCpu(ckp->checksum_offset));
-  *(reinterpret_cast<uint32_t *>(reinterpret_cast<uint8_t *>(ckp) +
-                                 LeToCpu(ckp->checksum_offset))) = crc;
+  crc = F2fsCalCrc32(kF2fsSuperMagic, checkpoint, LeToCpu(checkpoint->checksum_offset));
+  *(reinterpret_cast<uint32_t *>(reinterpret_cast<uint8_t *>(checkpoint) +
+                                 LeToCpu(checkpoint->checksum_offset))) = crc;
 
-  cp_seg_blk_offset =
-      (LeToCpu(super_block_.segment0_blkaddr) + params_.blks_per_seg) * blk_size_bytes;
-  if (zx_status_t ret = WriteToDisk(ckp, cp_seg_blk_offset, kBlockSize); ret != ZX_OK) {
-    printf("\n\tError: While writing the ckp to disk!!!\n");
+  cp_segment_block_num = (LeToCpu(super_block_.segment0_blkaddr) + params_.blks_per_seg);
+  if (zx_status_t ret = WriteToDisk(checkpoint_block, cp_segment_block_num); ret != ZX_OK) {
+    FX_LOGS(ERROR) << "Error: While writing the checkpoint to disk!!!";
     return ret;
   }
 
-  free(sum);
-  free(ckp);
   return ZX_OK;
 }
 
 zx_status_t MkfsWorker::WriteSuperBlock() {
-  uint8_t *zero_buff = static_cast<uint8_t *>(calloc(kBlockSize, 1));
+  FsBlock super_block;
+  uint8_t *super_block_buff = reinterpret_cast<uint8_t *>(super_block.GetData().data());
 
-  memcpy(zero_buff + kSuperOffset, &super_block_, sizeof(super_block_));
+  memcpy(super_block_buff + kSuperOffset, &super_block_, sizeof(super_block_));
 
-  for (uint64_t index = 0; index < 2; index++) {
-    if (zx_status_t ret = WriteToDisk(zero_buff, index * kBlockSize, kBlockSize); ret != ZX_OK) {
-      printf("\n\tError: While while writing supe_blk	on disk!!! index : %lu\n", index);
+  for (block_t index = 0; index < 2; index++) {
+    if (zx_status_t ret = WriteToDisk(super_block, index); ret != ZX_OK) {
+      FX_LOGS(ERROR) << "Error: While while writing supe_blk on disk!!! index : " << index;
       return ret;
     }
   }
 
-  free(zero_buff);
   return ZX_OK;
 }
 
 zx_status_t MkfsWorker::WriteRootInode() {
-  Node *raw_node = static_cast<Node *>(calloc(kBlockSize, 1));
+  FsBlock raw_block;
+  Node *raw_node = reinterpret_cast<Node *>(raw_block.GetData().data());
   if (raw_node == nullptr) {
-    printf("\n\tError: Calloc Failed for raw_node!!!\n");
+    FX_LOGS(ERROR) << "Error: Alloc Failed for raw_node!!!";
     return ZX_ERR_NO_MEMORY;
   }
 
   raw_node->footer.nid = super_block_.root_ino;
   raw_node->footer.ino = super_block_.root_ino;
-  raw_node->footer.cp_ver = CpuToLe(uint64_t{1});
+  raw_node->footer.cp_ver = CpuToLe(1UL);
   raw_node->footer.next_blkaddr = CpuToLe(
       LeToCpu(super_block_.main_blkaddr) +
       params_.cur_seg[static_cast<int>(CursegType::kCursegHotNode)] * params_.blks_per_seg + 1);
 
   raw_node->i.i_mode = CpuToLe(uint16_t{0x41ed});
-  raw_node->i.i_links = CpuToLe(uint32_t{2});
+  raw_node->i.i_links = CpuToLe(2U);
   raw_node->i.i_uid = CpuToLe(getuid());
   raw_node->i.i_gid = CpuToLe(getgid());
 
   uint64_t blk_size_bytes = 1 << LeToCpu(super_block_.log_blocksize);
-  raw_node->i.i_size = CpuToLe(1 * blk_size_bytes); /* dentry */
-  raw_node->i.i_blocks = CpuToLe(uint64_t{2});
+  raw_node->i.i_size = CpuToLe(1 * blk_size_bytes);  // dentry
+  raw_node->i.i_blocks = CpuToLe(2UL);
 
   timespec cur_time;
   clock_gettime(CLOCK_REALTIME, &cur_time);
@@ -781,7 +692,7 @@ zx_status_t MkfsWorker::WriteRootInode() {
   raw_node->i.i_generation = 0;
   raw_node->i.i_xattr_nid = 0;
   raw_node->i.i_flags = 0;
-  raw_node->i.i_current_depth = CpuToLe(uint32_t{1});
+  raw_node->i.i_current_depth = CpuToLe(1U);
 
   uint64_t data_blk_nor =
       LeToCpu(super_block_.main_blkaddr) +
@@ -790,97 +701,90 @@ zx_status_t MkfsWorker::WriteRootInode() {
 
   raw_node->i.i_ext.fofs = 0;
   raw_node->i.i_ext.blk_addr = static_cast<uint32_t>(CpuToLe(data_blk_nor));
-  raw_node->i.i_ext.len = CpuToLe(uint32_t{1});
+  raw_node->i.i_ext.len = CpuToLe(1U);
 
-  uint64_t main_area_node_seg_blk_offset = LeToCpu(super_block_.main_blkaddr);
-  main_area_node_seg_blk_offset +=
-      params_.cur_seg[static_cast<int>(CursegType::kCursegHotNode)] * params_.blks_per_seg;
-  main_area_node_seg_blk_offset *= blk_size_bytes;
+  block_t node_segment_block_num = LeToCpu(super_block_.main_blkaddr);
+  node_segment_block_num += safemath::checked_cast<uint64_t>(
+      params_.cur_seg[static_cast<int>(CursegType::kCursegHotNode)] * params_.blks_per_seg);
 
-  if (zx_status_t ret = WriteToDisk(raw_node, main_area_node_seg_blk_offset, kBlockSize);
-      ret != ZX_OK) {
-    printf("\n\tError: While writing the raw_node to disk!!!, size = %lu\n", sizeof(Node));
+  if (zx_status_t ret = WriteToDisk(raw_block, node_segment_block_num); ret != ZX_OK) {
+    FX_LOGS(ERROR) << "Error: While writing the raw_node to disk!!!, size = " << sizeof(Node);
     return ret;
   }
 
   memset(raw_node, 0xff, sizeof(Node));
 
-  if (zx_status_t ret = WriteToDisk(raw_node, main_area_node_seg_blk_offset + 4096, kBlockSize);
-      ret != ZX_OK) {
-    printf("\n\tError: While writing the raw_node to disk!!!\n");
+  if (zx_status_t ret = WriteToDisk(raw_block, node_segment_block_num + 1); ret != ZX_OK) {
+    FX_LOGS(ERROR) << "Error: While writing the raw_node to disk!!!";
     return ret;
   }
-  free(raw_node);
+
   return ZX_OK;
 }
 
 zx_status_t MkfsWorker::UpdateNatRoot() {
-  NatBlock *nat_blk = static_cast<NatBlock *>(calloc(kBlockSize, 1));
-  if (nat_blk == nullptr) {
-    printf("\n\tError: Calloc Failed for nat_blk!!!\n");
+  FsBlock raw_nat_block;
+  NatBlock *nat_block = reinterpret_cast<NatBlock *>(raw_nat_block.GetData().data());
+  if (nat_block == nullptr) {
+    FX_LOGS(ERROR) << "Error: Alloc Failed for nat_blk!!!";
     return ZX_ERR_NO_MEMORY;
   }
 
-  /* update root */
-  nat_blk->entries[super_block_.root_ino].block_addr =
+  // update root
+  nat_block->entries[super_block_.root_ino].block_addr =
       CpuToLe(LeToCpu(super_block_.main_blkaddr) +
               params_.cur_seg[static_cast<int>(CursegType::kCursegHotNode)] * params_.blks_per_seg);
-  nat_blk->entries[super_block_.root_ino].ino = super_block_.root_ino;
+  nat_block->entries[super_block_.root_ino].ino = super_block_.root_ino;
 
-  /* update node nat */
-  nat_blk->entries[super_block_.node_ino].block_addr = CpuToLe(uint32_t{1});
-  nat_blk->entries[super_block_.node_ino].ino = super_block_.node_ino;
+  // update node nat
+  nat_block->entries[super_block_.node_ino].block_addr = CpuToLe(1U);
+  nat_block->entries[super_block_.node_ino].ino = super_block_.node_ino;
 
-  /* update meta nat */
-  nat_blk->entries[super_block_.meta_ino].block_addr = CpuToLe(uint32_t{1});
-  nat_blk->entries[super_block_.meta_ino].ino = super_block_.meta_ino;
+  // update meta nat
+  nat_block->entries[super_block_.meta_ino].block_addr = CpuToLe(1U);
+  nat_block->entries[super_block_.meta_ino].ino = super_block_.meta_ino;
 
-  uint64_t blk_size_bytes = 1 << LeToCpu(super_block_.log_blocksize);
+  block_t nat_segment_block_num = LeToCpu(super_block_.nat_blkaddr);
 
-  uint64_t nat_seg_blk_offset = LeToCpu(super_block_.nat_blkaddr) * blk_size_bytes;
-
-  if (zx_status_t ret = WriteToDisk(nat_blk, nat_seg_blk_offset, kBlockSize); ret != ZX_OK) {
-    printf("\n\tError: While writing the nat_blk set0 to disk!!!\n");
+  if (zx_status_t ret = WriteToDisk(raw_nat_block, nat_segment_block_num); ret != ZX_OK) {
+    FX_LOGS(ERROR) << "Error: While writing the nat_blk set0 to disk!!!";
     return ret;
   }
 
-  free(nat_blk);
   return ZX_OK;
 }
 
 zx_status_t MkfsWorker::AddDefaultDentryRoot() {
-  DentryBlock *dent_blk = static_cast<DentryBlock *>(calloc(kBlockSize, 1));
-  if (dent_blk == nullptr) {
-    printf("\n\tError: Calloc Failed for dent_blk!!!\n");
+  FsBlock raw_dent_block;
+  DentryBlock *dent_block = reinterpret_cast<DentryBlock *>(raw_dent_block.GetData().data());
+  if (dent_block == nullptr) {
+    FX_LOGS(ERROR) << "Error: Alloc Failed for dent_blk!!!";
     return ZX_ERR_NO_MEMORY;
   }
 
-  dent_blk->dentry[0].hash_code = 0;
-  dent_blk->dentry[0].ino = super_block_.root_ino;
-  dent_blk->dentry[0].name_len = CpuToLe(uint16_t{1});
-  dent_blk->dentry[0].file_type = static_cast<uint8_t>(FileType::kFtDir);
-  memcpy(dent_blk->filename[0], ".", 1);
+  dent_block->dentry[0].hash_code = 0;
+  dent_block->dentry[0].ino = super_block_.root_ino;
+  dent_block->dentry[0].name_len = CpuToLe(uint16_t{1});
+  dent_block->dentry[0].file_type = static_cast<uint8_t>(FileType::kFtDir);
+  memcpy(dent_block->filename[0], ".", 1);
 
-  dent_blk->dentry[1].hash_code = 0;
-  dent_blk->dentry[1].ino = super_block_.root_ino;
-  dent_blk->dentry[1].name_len = CpuToLe(uint16_t{2});
-  dent_blk->dentry[1].file_type = static_cast<uint8_t>(FileType::kFtDir);
-  memcpy(dent_blk->filename[1], "..", 2);
+  dent_block->dentry[1].hash_code = 0;
+  dent_block->dentry[1].ino = super_block_.root_ino;
+  dent_block->dentry[1].name_len = CpuToLe(uint16_t{2});
+  dent_block->dentry[1].file_type = static_cast<uint8_t>(FileType::kFtDir);
+  memcpy(dent_block->filename[1], "..", 2);
 
-  /* bitmap for . and .. */
-  dent_blk->dentry_bitmap[0] = (1 << 1) | (1 << 0);
-  uint64_t blk_size_bytes = 1 << LeToCpu(super_block_.log_blocksize);
-  uint64_t data_blk_offset =
-      (LeToCpu(super_block_.main_blkaddr) +
-       params_.cur_seg[static_cast<int>(CursegType::kCursegHotData)] * params_.blks_per_seg) *
-      blk_size_bytes;
+  // bitmap for . and ..
+  dent_block->dentry_bitmap[0] = (1 << 1) | (1 << 0);
+  block_t data_block_num =
+      LeToCpu(super_block_.main_blkaddr) +
+      params_.cur_seg[static_cast<int>(CursegType::kCursegHotData)] * params_.blks_per_seg;
 
-  if (zx_status_t ret = WriteToDisk(dent_blk, data_blk_offset, kBlockSize); ret != ZX_OK) {
-    printf("\n\tError: While writing the dentry_blk to disk!!!\n");
+  if (zx_status_t ret = WriteToDisk(raw_dent_block, data_block_num); ret != ZX_OK) {
+    FX_LOGS(ERROR) << "Error: While writing the dentry_blk to disk!!!";
     return ret;
   }
 
-  free(dent_blk);
   return ZX_OK;
 }
 
@@ -920,7 +824,6 @@ zx_status_t MkfsWorker::FormatDevice() {
     } else {
       FX_LOGS(ERROR) << err_msg << "Failed to trim whole device" << err;
       return err;
-      ;
     }
   }
 
@@ -954,13 +857,83 @@ zx_status_t MkfsWorker::FormatDevice() {
   return err;
 }
 
-zx_status_t Mkfs(Bcache *bc, int argc, char **argv) {
-  MkfsWorker mkfs(bc);
+void PrintUsage() {
+  std::cerr << "Usage: mkfs -p \"[OPTIONS]\" devicepath f2fs" << std::endl;
+  std::cerr << "[OPTIONS]" << std::endl;
+  std::cerr << "  -l label" << std::endl;
+  std::cerr << "  -a heap-based allocation [default: 1]" << std::endl;
+  std::cerr << "  -o overprovision ratio [default: 5]" << std::endl;
+  std::cerr << "  -s # of segments per section [default: 1]" << std::endl;
+  std::cerr << "  -z # of sections per zone [default: 1]" << std::endl;
+  std::cerr << "  -e [extension list] e.g. \"mp3,gif,mov\"" << std::endl;
+  std::cerr << "e.g. mkfs -p \"-l hello -a 1 -o 5 -s 1 -z 1 -e mp3,gif\" devicepath f2fs"
+            << std::endl;
+}
 
-  if (zx_status_t ret = mkfs.ParseOptions(argc, argv); ret != ZX_OK) {
-    return ret;
-  }
+zx_status_t ParseOptions(int argc, char **argv, MkfsOptions &options) {
+  struct option opts[] = {
+      {"label", required_argument, nullptr, 'l'},
+      {"heap", required_argument, nullptr, 'a'},
+      {"op", required_argument, nullptr, 'o'},
+      {"seg_per_sec", required_argument, nullptr, 's'},
+      {"sec_per_zone", required_argument, nullptr, 'z'},
+      {"ext_list", required_argument, nullptr, 'e'},
+      {nullptr, 0, nullptr, 0},
+  };
 
+  int opt_index = -1;
+  int c = -1;
+
+  optreset = 1;
+  optind = 1;
+
+  while ((c = getopt_long(argc, argv, "l:a:o:s:z:e:", opts, &opt_index)) >= 0) {
+    switch (c) {
+      case 'l':
+        options.label = optarg;
+        if (strlen(options.label) >= kVolumeLabelLength) {
+          std::cerr << "ERROR: label length should be less than 16." << std::endl;
+          return ZX_ERR_INVALID_ARGS;
+        }
+        break;
+      case 'a':
+        options.heap_based_allocation = (static_cast<uint32_t>(strtoul(optarg, nullptr, 0)) != 0);
+        break;
+      case 'o':
+        options.overprovision_ratio = static_cast<uint32_t>(strtoul(optarg, nullptr, 0));
+        if (options.overprovision_ratio == 0) {
+          std::cerr << "ERROR: overprovision ratio should be larger than 0." << std::endl;
+          return ZX_ERR_INVALID_ARGS;
+        }
+        break;
+      case 's':
+        options.segs_per_sec = static_cast<uint32_t>(strtoul(optarg, nullptr, 0));
+        if (options.segs_per_sec == 0) {
+          std::cerr << "ERROR: # of segments per section should be larger than 0." << std::endl;
+          return ZX_ERR_INVALID_ARGS;
+        }
+        break;
+      case 'z':
+        options.secs_per_zone = static_cast<uint32_t>(strtoul(optarg, nullptr, 0));
+        if (options.secs_per_zone == 0) {
+          std::cerr << "ERROR: # of sections per zone should be larger than 0." << std::endl;
+          return ZX_ERR_INVALID_ARGS;
+        }
+        break;
+      case 'e':
+        options.extension_list = optarg;
+        break;
+      default:
+        PrintUsage();
+        return ZX_ERR_INVALID_ARGS;
+    };
+  };
+
+  return ZX_OK;
+}
+
+zx::status<std::unique_ptr<Bcache>> Mkfs(const MkfsOptions &options, std::unique_ptr<Bcache> bc) {
+  MkfsWorker mkfs(std::move(bc), options);
   return mkfs.DoMkfs();
 }
 

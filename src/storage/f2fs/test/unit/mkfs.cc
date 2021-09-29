@@ -65,11 +65,26 @@ __UNUSED void PrintArg(std::vector<const char *> &argv) {
   FX_LOGS(INFO) << "mkfs arg: " << str_args;
 }
 
-void DoMkfs(Bcache *bc, std::vector<const char *> &argv, bool expect_success) {
-  if (expect_success)
-    ASSERT_EQ(Mkfs(bc, static_cast<int>(argv.size()), const_cast<char **>(argv.data())), ZX_OK);
-  else
-    ASSERT_NE(Mkfs(bc, static_cast<int>(argv.size()), const_cast<char **>(argv.data())), ZX_OK);
+void DoMkfs(std::unique_ptr<Bcache> bcache, std::vector<const char *> &argv, bool expect_success,
+            std::unique_ptr<Bcache> *out) {
+  MkfsOptions mkfs_options;
+
+  zx_status_t status;
+  zx::status<std::unique_ptr<Bcache>> make_return;
+  if (status = ParseOptions(static_cast<int>(argv.size()), const_cast<char **>(argv.data()),
+                            mkfs_options);
+      status == ZX_OK) {
+    make_return = Mkfs(mkfs_options, std::move(bcache));
+    status = make_return.status_value();
+  }
+
+  if (expect_success) {
+    ASSERT_EQ(status, ZX_OK);
+    *out = std::move(*make_return);
+  } else {
+    ASSERT_NE(status, ZX_OK);
+    *out = nullptr;
+  }
 }
 
 void ReadSuperblock(Bcache *bc, SuperBlock *sb) { ASSERT_EQ(LoadSuperblock(bc, sb), ZX_OK); }
@@ -182,7 +197,7 @@ TEST(FormatFilesystemTest, MkfsOptionsLabel) {
 
   // Check default label is written when there is no arg for label
   std::vector<const char *> argv = {"mkfs"};
-  DoMkfs(bc.get(), argv, true);
+  DoMkfs(std::move(bc), argv, true, &bc);
 
   SuperBlock sb = {};
   ReadSuperblock(bc.get(), &sb);
@@ -193,7 +208,7 @@ TEST(FormatFilesystemTest, MkfsOptionsLabel) {
   argv.push_back("mkfs");
   memcpy(label, "0123456789abcde", 16);
   AddArg(argv, ArgType::Label, label);
-  DoMkfs(bc.get(), argv, true);
+  DoMkfs(std::move(bc), argv, true, &bc);
   ReadSuperblock(bc.get(), &sb);
   VerifyLabel(sb, label);
 
@@ -202,7 +217,7 @@ TEST(FormatFilesystemTest, MkfsOptionsLabel) {
   argv.push_back("mkfs");
   memcpy(label, "0123456789abcdef", 17);
   AddArg(argv, ArgType::Label, label);
-  DoMkfs(bc.get(), argv, false);
+  DoMkfs(std::move(bc), argv, false, &bc);
 }
 
 TEST(FormatFilesystemTest, MkfsOptionsSegsPerSec) {
@@ -213,7 +228,7 @@ TEST(FormatFilesystemTest, MkfsOptionsSegsPerSec) {
 
   // Check default value
   std::vector<const char *> argv = {"mkfs"};
-  DoMkfs(bc.get(), argv, true);
+  DoMkfs(std::move(bc), argv, true, &bc);
   SuperBlock sb = {};
   ReadSuperblock(bc.get(), &sb);
   VerifySegsPerSec(sb, default_option.segs_per_sec);
@@ -226,7 +241,7 @@ TEST(FormatFilesystemTest, MkfsOptionsSegsPerSec) {
     argv.push_back("mkfs");
     std::string tmp(std::to_string(segs_per_sec).c_str());
     AddArg(argv, ArgType::SegsPerSec, tmp.data());
-    DoMkfs(bc.get(), argv, true);
+    DoMkfs(std::move(bc), argv, true, &bc);
     ReadSuperblock(bc.get(), &sb);
     VerifySegsPerSec(sb, segs_per_sec);
   }
@@ -236,7 +251,7 @@ TEST(FormatFilesystemTest, MkfsOptionsSegsPerSec) {
   argv.push_back("mkfs");
   std::string tmp("0");
   AddArg(argv, ArgType::SegsPerSec, tmp.data());
-  DoMkfs(bc.get(), argv, false);
+  DoMkfs(std::move(bc), argv, false, &bc);
 }
 
 TEST(FormatFilesystemTest, MkfsOptionsSecsPerZone) {
@@ -247,7 +262,7 @@ TEST(FormatFilesystemTest, MkfsOptionsSecsPerZone) {
 
   // Check default value
   std::vector<const char *> argv = {"mkfs"};
-  DoMkfs(bc.get(), argv, true);
+  DoMkfs(std::move(bc), argv, true, &bc);
   SuperBlock sb = {};
   ReadSuperblock(bc.get(), &sb);
   VerifySecsPerZone(sb, default_option.secs_per_zone);
@@ -260,7 +275,7 @@ TEST(FormatFilesystemTest, MkfsOptionsSecsPerZone) {
     argv.push_back("mkfs");
     std::string tmp(std::to_string(secs_per_zone).c_str());
     AddArg(argv, ArgType::SecsPerZone, tmp.data());
-    DoMkfs(bc.get(), argv, true);
+    DoMkfs(std::move(bc), argv, true, &bc);
     ReadSuperblock(bc.get(), &sb);
     VerifySecsPerZone(sb, secs_per_zone);
   }
@@ -271,7 +286,7 @@ TEST(FormatFilesystemTest, MkfsOptionsSecsPerZone) {
   char tmp[20];
   strcpy(tmp, "0");
   AddArg(argv, ArgType::SecsPerZone, "0");
-  DoMkfs(bc.get(), argv, false);
+  DoMkfs(std::move(bc), argv, false, &bc);
 }
 
 TEST(FormatFilesystemTest, MkfsOptionsExtensions) {
@@ -282,7 +297,7 @@ TEST(FormatFilesystemTest, MkfsOptionsExtensions) {
 
   // Check default
   std::vector<const char *> argv = {"mkfs"};
-  DoMkfs(bc.get(), argv, true);
+  DoMkfs(std::move(bc), argv, true, &bc);
   SuperBlock sb = {};
   ReadSuperblock(bc.get(), &sb);
   VerifyExtensionList(sb, "");
@@ -300,7 +315,7 @@ TEST(FormatFilesystemTest, MkfsOptionsExtensions) {
   argv.clear();
   argv.push_back("mkfs");
   AddArg(argv, ArgType::Extension, ext_arg_buf);
-  DoMkfs(bc.get(), argv, true);
+  DoMkfs(std::move(bc), argv, true, &bc);
   ReadSuperblock(bc.get(), &sb);
   VerifyExtensionList(sb, extensions.c_str());
 
@@ -311,7 +326,7 @@ TEST(FormatFilesystemTest, MkfsOptionsExtensions) {
   argv.clear();
   argv.push_back("mkfs");
   AddArg(argv, ArgType::Extension, ext_arg_buf);
-  DoMkfs(bc.get(), argv, true);
+  DoMkfs(std::move(bc), argv, true, &bc);
   ReadSuperblock(bc.get(), &sb);
   VerifyExtensionList(sb, extensions.c_str());
 }
@@ -324,7 +339,7 @@ TEST(FormatFilesystemTest, MkfsOptionsHeapBasedAlloc) {
 
   // Check default
   std::vector<const char *> argv = {"mkfs"};
-  DoMkfs(bc.get(), argv, true);
+  DoMkfs(std::move(bc), argv, true, &bc);
   SuperBlock sb = {};
   ReadSuperblock(bc.get(), &sb);
   Checkpoint ckp = {};
@@ -336,7 +351,7 @@ TEST(FormatFilesystemTest, MkfsOptionsHeapBasedAlloc) {
   argv.push_back("mkfs");
   std::string tmp("0");
   AddArg(argv, ArgType::Heap, tmp.data());
-  DoMkfs(bc.get(), argv, true);
+  DoMkfs(std::move(bc), argv, true, &bc);
   ReadSuperblock(bc.get(), &sb);
   ReadCheckpoint(bc.get(), sb, &ckp);
   VerifyHeapBasedAllocation(sb, ckp, false);
@@ -346,7 +361,7 @@ TEST(FormatFilesystemTest, MkfsOptionsHeapBasedAlloc) {
   argv.push_back("mkfs");
   tmp = "1";
   AddArg(argv, ArgType::Heap, tmp.data());
-  DoMkfs(bc.get(), argv, true);
+  DoMkfs(std::move(bc), argv, true, &bc);
   ReadSuperblock(bc.get(), &sb);
   ReadCheckpoint(bc.get(), sb, &ckp);
   VerifyHeapBasedAllocation(sb, ckp, true);
@@ -360,7 +375,7 @@ TEST(FormatFilesystemTest, MkfsOptionsOverprovision) {
 
   // Check default
   std::vector<const char *> argv = {"mkfs"};
-  DoMkfs(bc.get(), argv, true);
+  DoMkfs(std::move(bc), argv, true, &bc);
   SuperBlock sb = {};
   ReadSuperblock(bc.get(), &sb);
   Checkpoint ckp = {};
@@ -374,7 +389,7 @@ TEST(FormatFilesystemTest, MkfsOptionsOverprovision) {
     argv.push_back("mkfs");
     std::string tmp(std::to_string(overprovision_ratio).c_str());
     AddArg(argv, ArgType::OP, tmp.data());
-    DoMkfs(bc.get(), argv, true);
+    DoMkfs(std::move(bc), argv, true, &bc);
     ReadCheckpoint(bc.get(), sb, &ckp);
     VerifyOP(sb, ckp, overprovision_ratio);
   }
@@ -384,7 +399,7 @@ TEST(FormatFilesystemTest, MkfsOptionsOverprovision) {
   argv.push_back("mkfs");
   std::string tmp("0");
   AddArg(argv, ArgType::OP, tmp.data());
-  DoMkfs(bc.get(), argv, false);
+  DoMkfs(std::move(bc), argv, false, &bc);
 }
 #if 0  //[TODO] fix errors with core.arm64-release
       // https://ci.chromium.org/ui/p/fuchsia/builders/try/core.arm64-release/b8837818659754240433/overview
@@ -454,6 +469,7 @@ TEST(FormatFilesystemTest, BlockSize) {
   for (uint32_t block_size : block_size_array) {
     uint64_t block_count = total_size / block_size;
     std::unique_ptr<Bcache> bc;
+    MkfsOptions mkfs_options;
     auto device = std::make_unique<FakeBlockDevice>(FakeBlockDevice::Config{
         .block_count = block_count, .block_size = block_size, .supports_trim = true});
     bool readonly_device = false;
@@ -463,14 +479,19 @@ TEST(FormatFilesystemTest, BlockSize) {
     } else if (block_size < (1 << kMinLogSectorSize)) {
       ASSERT_EQ(CreateBcache(std::move(device), &readonly_device, &bc), ZX_OK);
 
-      MkfsWorker mkfs(bc.get());
-      ASSERT_EQ(mkfs.DoMkfs(), ZX_ERR_INVALID_ARGS);
+      MkfsWorker mkfs(std::move(bc), mkfs_options);
+      auto ret = mkfs.DoMkfs();
+      ASSERT_EQ(ret.is_error(), true);
+      ASSERT_EQ(ret.error_value(), ZX_ERR_INVALID_ARGS);
+      bc = mkfs.Destroy();
       bc.reset();
     } else {
       ASSERT_EQ(CreateBcache(std::move(device), &readonly_device, &bc), ZX_OK);
 
-      MkfsWorker mkfs(bc.get());
-      ASSERT_EQ(mkfs.DoMkfs(), ZX_OK);
+      MkfsWorker mkfs(std::move(bc), mkfs_options);
+      auto ret = mkfs.DoMkfs();
+      ASSERT_EQ(ret.is_error(), false);
+      bc = std::move(*ret);
 
       std::unique_ptr<F2fs> fs;
       MountOptions options{};
@@ -509,8 +530,11 @@ TEST(FormatFilesystemTest, MkfsSmallVolume) {
     bool readonly_device = false;
     ASSERT_EQ(CreateBcache(std::move(device), &readonly_device, &bc), ZX_OK);
 
-    MkfsWorker mkfs(bc.get());
-    ASSERT_EQ(mkfs.DoMkfs(), ZX_OK);
+    MkfsOptions mkfs_options;
+    MkfsWorker mkfs(std::move(bc), mkfs_options);
+    auto ret = mkfs.DoMkfs();
+    ASSERT_EQ(ret.is_error(), false);
+    bc = std::move(*ret);
 
     std::unique_ptr<F2fs> fs;
     MountOptions options{};

@@ -220,7 +220,8 @@ class NodeManager {
   void SetNodeAddr(NodeInfo &ni, block_t new_blkaddr);
   int TryToFreeNats(int nr_shrink);
 
-  zx::status<int> GetNodePath(VnodeF2fs &vnode, long block, int (&offset)[4], uint32_t (&noffset)[4]);
+  zx::status<int> GetNodePath(VnodeF2fs &vnode, long block, int (&offset)[4],
+                              uint32_t (&noffset)[4]);
   void TruncateNode(DnodeOfData &dn);
   zx_status_t TruncateDnode(DnodeOfData &dn);
   zx_status_t TruncateNodes(DnodeOfData &dn, uint32_t nofs, int ofs, int depth);

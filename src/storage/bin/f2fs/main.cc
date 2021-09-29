@@ -26,8 +26,6 @@
 #include "src/storage/f2fs/f2fs.h"
 
 int main(int argc, char** argv) {
-  f2fs::MountOptions options;
-
 #ifdef F2FS_BU_DEBUG
   std::cout << "f2fs arg= ";
 
@@ -50,12 +48,12 @@ int main(int argc, char** argv) {
   if (!strcmp(argv[1], "fsync")) {
     if (argc != 3) {
       fprintf(stderr, "usage: fsync filename\n");
-      return -1;
+      return EXIT_FAILURE;
     }
     fbl::unique_fd fd(open(argv[2], O_RDONLY));
     if (!fd.get()) {
       std::cout << "f2fs: cannot open " << argv[2] << std::endl;
-      return -1;
+      return EXIT_FAILURE;
     }
     fsync(fd.get());
     close(fd.release());
@@ -69,7 +67,7 @@ int main(int argc, char** argv) {
   zx_status_t status = block_client::RemoteBlockDevice::Create(std::move(device_channel), &device);
   if (status != ZX_OK) {
     FX_LOGS(ERROR) << "Could not access block device";
-    return -1;
+    return EXIT_FAILURE;
   }
 
   std::unique_ptr<f2fs::Bcache> bc;
@@ -77,18 +75,24 @@ int main(int argc, char** argv) {
 
   if (f2fs::CreateBcache(std::move(device), &readonly_device, &bc) != ZX_OK) {
     FX_LOGS(ERROR) << "f2fs: error: cannot create block cache";
-    return -1;
+    return EXIT_FAILURE;
   }
 
   if (!strcmp(argv[1], "mkfs")) {
-    return f2fs::Mkfs(bc.get(), argc, argv);
+    f2fs::MkfsOptions mkfs_options;
+    if (f2fs::ParseOptions(argc, argv, mkfs_options) != ZX_OK) {
+      return EXIT_FAILURE;
+    }
+    if (f2fs::Mkfs(mkfs_options, std::move(bc)).is_error())
+      return EXIT_FAILURE;
   } else if (!strcmp(argv[1], "fsck")) {
     f2fs::Fsck(bc.get());
   } else if (!strcmp(argv[1], "mount")) {
-    f2fs::Mount(options, std::move(bc));
+    f2fs::MountOptions mount_options;
+    f2fs::Mount(mount_options, std::move(bc));
   } else {
     FX_LOGS(ERROR) << "unknown operation:" << argv[1];
   }
 
-  return 0;
+  return EXIT_SUCCESS;
 }

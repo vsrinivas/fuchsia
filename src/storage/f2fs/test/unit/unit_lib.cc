@@ -20,8 +20,24 @@ void FileTester::MkfsOnFakeDev(std::unique_ptr<Bcache> *bc, uint64_t blockCount,
   bool readonly_device = false;
   ASSERT_EQ(CreateBcache(std::move(device), &readonly_device, bc), ZX_OK);
 
-  MkfsWorker mkfs(bc->get());
-  ASSERT_EQ(mkfs.DoMkfs(), ZX_OK);
+  MkfsOptions options;
+  MkfsWorker mkfs(std::move(*bc), options);
+  auto ret = mkfs.DoMkfs();
+  ASSERT_EQ(ret.is_error(), false);
+  *bc = std::move(*ret);
+}
+
+void FileTester::MkfsOnFakeDevWithOptions(std::unique_ptr<Bcache> *bc, MkfsOptions &options,
+                                          uint64_t blockCount, uint32_t blockSize, bool btrim) {
+  auto device = std::make_unique<FakeBlockDevice>(FakeBlockDevice::Config{
+      .block_count = blockCount, .block_size = blockSize, .supports_trim = btrim});
+  bool readonly_device = false;
+  ASSERT_EQ(CreateBcache(std::move(device), &readonly_device, bc), ZX_OK);
+
+  MkfsWorker mkfs(std::move(*bc), options);
+  auto ret = mkfs.DoMkfs();
+  ASSERT_EQ(ret.is_error(), false);
+  *bc = std::move(*ret);
 }
 
 void FileTester::MountWithOptions(async_dispatcher_t *dispatcher, MountOptions &options,

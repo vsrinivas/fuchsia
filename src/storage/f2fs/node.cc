@@ -568,7 +568,7 @@ void NodeManager::GetNodeInfo(nid_t nid, NodeInfo &out) {
 // The maximum depth is four.
 // Offset[0] will have raw inode offset.
 zx::status<int> NodeManager::GetNodePath(VnodeF2fs &vnode, long block, int (&offset)[4],
-                                     uint32_t (&noffset)[4]) {
+                                         uint32_t (&noffset)[4]) {
   const long direct_index = kAddrsPerInode - (vnode.GetExtraISize() / sizeof(uint32_t));
   const long direct_blks = kAddrsPerBlock;
   const long dptrs_per_blk = kNidsPerBlock;

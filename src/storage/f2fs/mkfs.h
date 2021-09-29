@@ -24,16 +24,22 @@ struct MkfsOptions {
 
 class MkfsWorker {
  public:
-  explicit MkfsWorker(Bcache* bc);
+  explicit MkfsWorker(std::unique_ptr<Bcache> bc, const MkfsOptions& options)
+      : bc_(std::move(bc)), mkfs_options_(options) {}
 
-  ~MkfsWorker() = default;
+  // Not copyable or moveable
+  MkfsWorker(const MkfsWorker&) = delete;
+  MkfsWorker& operator=(const MkfsWorker&) = delete;
+  MkfsWorker(const MkfsWorker&&) = delete;
+  MkfsWorker& operator=(const MkfsWorker&&) = delete;
 
-  zx_status_t DoMkfs();
-  zx_status_t ParseOptions(int argc, char** argv);
+  zx::status<std::unique_ptr<Bcache>> DoMkfs();
+
+  std::unique_ptr<Bcache> Destroy() { return std::move(bc_); }
 
  private:
-  Bcache* bc_;
-  MkfsOptions mkfs_options_;
+  std::unique_ptr<Bcache> bc_;
+  MkfsOptions mkfs_options_{};
 
   // F2FS Parameter
   GlobalParameters params_;
@@ -45,9 +51,9 @@ class MkfsWorker {
 
   void ConfigureExtensionList();
 
-  zx_status_t WriteToDisk(void* buf, uint64_t offset, size_t length);
+  zx_status_t WriteToDisk(FsBlock& buf, block_t bno);
 
-  zx_status_t GetCalculatedOp(uint32_t& op);
+  zx::status<uint32_t> GetCalculatedOp(uint32_t op);
 
   zx_status_t PrepareSuperBlock();
   zx_status_t InitSitArea();
@@ -60,13 +66,15 @@ class MkfsWorker {
   zx_status_t AddDefaultDentryRoot();
   zx_status_t CreateRootDir();
 
-  void PrintUsage();
   void PrintCurrentOption();
 
   zx_status_t TrimDevice();
 };
 
-zx_status_t Mkfs(Bcache* bc, int argc, char** argv);
+void PrintUsage();
+zx_status_t ParseOptions(int argc, char** argv, MkfsOptions& options);
+
+zx::status<std::unique_ptr<Bcache>> Mkfs(const MkfsOptions& options, std::unique_ptr<Bcache> bc);
 
 void AsciiToUnicode(const std::string& in_string, std::u16string* out_string);
 
