@@ -92,7 +92,7 @@ impl<R: ResourceCapability + Send + Sync> BuiltinCapability for R {
         stream: <R::Marker as ProtocolMarker>::RequestStream,
     ) -> Result<(), Error> {
         let resource_info = self.get_resource_info()?;
-        if (resource_info.kind != R::KIND || resource_info.base != 0 || resource_info.size != 0) {
+        if resource_info.kind != R::KIND || resource_info.base != 0 || resource_info.size != 0 {
             return Err(format_err!("{} not available.", R::NAME));
         }
         self.server_loop(stream).await

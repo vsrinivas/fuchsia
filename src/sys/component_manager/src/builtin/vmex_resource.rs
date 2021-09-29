@@ -40,9 +40,9 @@ impl BuiltinCapability for VmexResource {
         mut stream: fkernel::VmexResourceRequestStream,
     ) -> Result<(), Error> {
         let resource_info = self.resource.info()?;
-        if (resource_info.kind != zx::sys::ZX_RSRC_KIND_SYSTEM
+        if resource_info.kind != zx::sys::ZX_RSRC_KIND_SYSTEM
             || resource_info.base != zx::sys::ZX_RSRC_SYSTEM_VMEX_BASE
-            || resource_info.size != 1)
+            || resource_info.size != 1
         {
             return Err(format_err!("VMEX resource not available."));
         }

@@ -29,7 +29,7 @@ arbitrary = { version = "0.4.0", features = ["derive"] }
 argh = "0.1.5"
 async-channel = "1.6.1"
 async-lock = "2.3"
-async-trait = "0.1.40"
+async-trait = "0.1.51"
 atomic-waker = "1.0.0"
 base64 = "0.9"
 bincode = "1"
@@ -336,6 +336,9 @@ add_cfgs = []
 [gn.package.anyhow."1.0.38"]
 # TODO(https://github.com/rust-lang/rust/pull/72981): uncomment when backtrace is stabilized.
 # rustflags = ["--cfg=backtrace"]
+
+[gn.package.async-trait."0.1.51"]
+rustflags = []
 
 [gn.package.bitflags."1.2.1"]
 rustflags = ["--cfg=bitflags_const_fn"]

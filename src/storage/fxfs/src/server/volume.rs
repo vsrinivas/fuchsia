@@ -220,7 +220,7 @@ impl FilesystemRename for FxVolume {
 
         if let Some((_, dst_descriptor)) = dst_id_and_descriptor.as_ref() {
             // dst is being overwritten; make sure it's a file iff src is.
-            if (dst_descriptor != &moved_descriptor) {
+            if dst_descriptor != &moved_descriptor {
                 match dst_descriptor {
                     ObjectDescriptor::File => return Err(Status::NOT_DIR),
                     ObjectDescriptor::Directory => return Err(Status::NOT_FILE),
