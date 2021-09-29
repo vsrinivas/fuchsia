@@ -14,10 +14,12 @@ use {
     async_trait::async_trait,
     cm_rust::{
         CapabilityDecl, CapabilityName, CapabilityPath, CollectionDecl, ComponentDecl, ExposeDecl,
-        OfferDecl, ProgramDecl, ResolverRegistration, UseDecl,
+        OfferDecl, ProgramDecl, RegistrationSource, ResolverRegistration, RunnerRegistration,
+        UseDecl,
     },
     fidl::endpoints::ProtocolMarker,
-    fidl_fuchsia_sys2 as fsys, fuchsia_zircon_status as zx_status,
+    fidl_fuchsia_component_internal as component_internal, fidl_fuchsia_sys2 as fsys,
+    fuchsia_zircon_status as zx_status,
     moniker::{
         AbsoluteMoniker, AbsoluteMonikerBase, ChildMoniker, ChildMonikerBase, PartialChildMoniker,
     },
@@ -45,6 +47,19 @@ use {
     },
     thiserror::Error,
 };
+
+// Constants used to set up the built-in environment.
+static BOOT_RESOLVER_NAME: &str = "boot_resolver";
+static BOOT_SCHEME: &str = "fuchsia-boot";
+
+static PKG_RESOLVER_NAME: &str = "package_resolver";
+static PKG_SCHEME: &str = "fuchsia-pkg";
+
+static ELF_RUNNER_NAME: &str = "elf";
+
+static REALM_BUILDER_RUNNER_NAME: &str = "realm_builder";
+static REALM_BUILDER_RESOLVER_NAME: &str = "realm_builder_resolver";
+static REALM_BUILDER_SCHEME: &str = "realm-builder";
 
 #[derive(Debug, Error, Deserialize, Serialize, PartialEq)]
 #[serde(rename_all = "snake_case")]
@@ -154,12 +169,75 @@ impl ModelBuilderForAnalyzer {
         result
     }
 
-    fn build_root_environment(&self, _runtime_config: &Arc<RuntimeConfig>) -> NodeEnvironment {
-        // TODO(https://fxbug.dev/61861): Populate the root environment with appropriate runners,
-        // resolvers, and debug capabilities based on the runtime config.
+    // TODO(https://fxbug.dev/61861): This parallel implementation of component manager's builtin environment
+    // setup will do for now, but is fragile and should be replaced soon. In particular, it doesn't provide a
+    // way to register builtin runners or resolvers that appear in the `builtin_capabilities` field of the
+    // RuntimeConfig but are not one of these hard-coded built-ins.
+    fn build_root_environment(&self, runtime_config: &Arc<RuntimeConfig>) -> NodeEnvironment {
+        let mut runners = Vec::new();
+        let mut resolver_registry = ResolverRegistry::default();
+
+        // Register the boot resolver, if any
+        match runtime_config.builtin_boot_resolver {
+            component_internal::BuiltinBootResolver::Boot => {
+                assert!(
+                    resolver_registry
+                        .register(&ResolverRegistration {
+                            resolver: BOOT_RESOLVER_NAME.into(),
+                            source: RegistrationSource::Self_,
+                            scheme: BOOT_SCHEME.to_string(),
+                        })
+                        .is_none(),
+                    "found duplicate resolver for boot scheme"
+                );
+            }
+            component_internal::BuiltinBootResolver::Pkg => {
+                assert!(
+                    resolver_registry
+                        .register(&ResolverRegistration {
+                            resolver: PKG_RESOLVER_NAME.into(),
+                            source: RegistrationSource::Self_,
+                            scheme: PKG_SCHEME.to_string(),
+                        })
+                        .is_none(),
+                    "found duplicate resolver for pkg scheme"
+                );
+            }
+            component_internal::BuiltinBootResolver::None => {}
+        };
+
+        // Register the ELF runner
+        runners.push(RunnerRegistration {
+            source_name: ELF_RUNNER_NAME.into(),
+            target_name: ELF_RUNNER_NAME.into(),
+            source: RegistrationSource::Self_,
+        });
+
+        // Register the RealmBuilder resolver and runner, if any
+        match runtime_config.realm_builder_resolver_and_runner {
+            component_internal::RealmBuilderResolverAndRunner::Namespace => {
+                runners.push(RunnerRegistration {
+                    source_name: REALM_BUILDER_RUNNER_NAME.into(),
+                    target_name: REALM_BUILDER_RUNNER_NAME.into(),
+                    source: RegistrationSource::Self_,
+                });
+                assert!(
+                    resolver_registry
+                        .register(&ResolverRegistration {
+                            resolver: REALM_BUILDER_RESOLVER_NAME.into(),
+                            source: RegistrationSource::Self_,
+                            scheme: REALM_BUILDER_SCHEME.to_string(),
+                        })
+                        .is_none(),
+                    "found duplicate resolver for realm builder scheme"
+                );
+            }
+            component_internal::RealmBuilderResolverAndRunner::None => {}
+        }
+
         NodeEnvironment::new_root(
-            RunnerRegistry::default(),
-            ResolverRegistry::default(),
+            RunnerRegistry::from_decl(&runners),
+            resolver_registry,
             DebugRegistry::default(),
         )
     }
@@ -912,12 +990,12 @@ mod tests {
         let child_name = "child".to_string();
         let child_env_name = "child_env".to_string();
 
-        let runner_registration = RunnerRegistration {
+        let child_runner_registration = RunnerRegistration {
             source_name: "child_env_runner".into(),
             source: RegistrationSource::Self_,
             target_name: "child_env_runner".into(),
         };
-        let resolver_registration = ResolverRegistration {
+        let child_resolver_registration = ResolverRegistration {
             resolver: "child_env_resolver".into(),
             source: RegistrationSource::Self_,
             scheme: "child_resolver_scheme".into(),
@@ -925,8 +1003,8 @@ mod tests {
         let child_env_decl = EnvironmentDecl {
             name: child_env_name.clone(),
             extends: fsys::EnvironmentExtends::Realm,
-            runners: vec![runner_registration.clone()],
-            resolvers: vec![resolver_registration.clone()],
+            runners: vec![child_runner_registration.clone()],
+            resolvers: vec![child_resolver_registration.clone()],
             debug_capabilities: vec![],
             stop_timeout_ms: None,
         };
@@ -939,10 +1017,14 @@ mod tests {
         decls.insert(root_url.clone(), root_decl.clone());
         decls.insert(child_url, new_component_decl(vec![], vec![], vec![], vec![], vec![]));
 
-        let config = Arc::new(RuntimeConfig::default());
+        // Set up the RuntimeConfig to register the `fuchsia-boot` resolver as a built-in,
+        // in addition to the ELF runner.
+        let mut config = RuntimeConfig::default();
+        config.builtin_boot_resolver = component_internal::BuiltinBootResolver::Boot;
+
         let build_model_result = block_on(async {
             ModelBuilderForAnalyzer::new(root_url.clone())
-                .build(decls, config, Arc::new(ComponentIdIndex::default()))
+                .build(decls, Arc::new(config), Arc::new(ComponentIdIndex::default()))
                 .await
         });
         assert_eq!(build_model_result.errors.len(), 0);
@@ -952,11 +1034,12 @@ mod tests {
 
         let child_instance = model.get_instance(&NodePath::absolute_from_vec(vec![&child_name]))?;
 
-        let get_runner_result =
-            child_instance.environment.get_registered_runner(&runner_registration.target_name)?;
-        assert!(get_runner_result.is_some());
-        let (runner_registrar, runner) = get_runner_result.unwrap();
-        match runner_registrar {
+        let get_child_runner_result = child_instance
+            .environment
+            .get_registered_runner(&child_runner_registration.target_name)?;
+        assert!(get_child_runner_result.is_some());
+        let (child_runner_registrar, child_runner) = get_child_runner_result.unwrap();
+        match child_runner_registrar {
             ExtendedInstanceInterface::Component(instance) => {
                 assert_eq!(instance.abs_moniker(), &AbsoluteMoniker::from(vec![]));
             }
@@ -964,13 +1047,14 @@ mod tests {
                 panic!("expected child_env_runner to be registered by the root instance")
             }
         }
-        assert_eq!(runner_registration, runner);
+        assert_eq!(child_runner_registration, child_runner);
 
-        let get_resolver_result =
-            child_instance.environment.get_registered_resolver(&resolver_registration.scheme)?;
-        assert!(get_resolver_result.is_some());
-        let (resolver_registrar, resolver) = get_resolver_result.unwrap();
-        match resolver_registrar {
+        let get_child_resolver_result = child_instance
+            .environment
+            .get_registered_resolver(&child_resolver_registration.scheme)?;
+        assert!(get_child_resolver_result.is_some());
+        let (child_resolver_registrar, child_resolver) = get_child_resolver_result.unwrap();
+        match child_resolver_registrar {
             ExtendedInstanceInterface::Component(instance) => {
                 assert_eq!(instance.abs_moniker(), &AbsoluteMoniker::from(vec![]));
             }
@@ -978,7 +1062,30 @@ mod tests {
                 panic!("expected child_env_resolver to be registered by the root instance")
             }
         }
-        assert_eq!(resolver_registration, resolver);
+        assert_eq!(child_resolver_registration, child_resolver);
+
+        let get_builtin_runner_result = child_instance
+            .environment
+            .get_registered_runner(&CapabilityName::from(ELF_RUNNER_NAME))?;
+        assert!(get_builtin_runner_result.is_some());
+        let (builtin_runner_registrar, _builtin_runner) = get_builtin_runner_result.unwrap();
+        match builtin_runner_registrar {
+            ExtendedInstanceInterface::Component(_) => {
+                panic!("expected ELF runner to be registered above the root")
+            }
+            ExtendedInstanceInterface::AboveRoot(_) => {}
+        }
+
+        let get_builtin_resolver_result =
+            child_instance.environment.get_registered_resolver(&BOOT_SCHEME.to_string())?;
+        assert!(get_builtin_resolver_result.is_some());
+        let (builtin_resolver_registrar, _builtin_resolver) = get_builtin_resolver_result.unwrap();
+        match builtin_resolver_registrar {
+            ExtendedInstanceInterface::Component(_) => {
+                panic!("expected boot resolver to be registered above the root")
+            }
+            ExtendedInstanceInterface::AboveRoot(_) => {}
+        }
 
         Ok(())
     }
