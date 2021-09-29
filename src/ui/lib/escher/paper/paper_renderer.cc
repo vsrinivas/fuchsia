@@ -33,6 +33,10 @@
 #include "src/ui/lib/escher/vk/shader_program.h"
 #include "src/ui/lib/escher/vk/texture.h"
 
+// In full 3d use-cases, we may not want to display backfacing triangles.  For now,
+// we disable backface culling everywhere so that we can flip rendered content.
+static constexpr bool kDisableBackfaceCulling = true;
+
 namespace escher {
 
 PaperRendererPtr PaperRenderer::New(EscherWeakPtr escher, const PaperRendererConfig& config) {
@@ -522,15 +526,24 @@ void PaperRenderer::GenerateCommandsForNoShadows(uint32_t camera_index) {
 
     // Render wireframe.
     cmd_buf->SetToDefaultState(CommandBuffer::DefaultState::kWireframe);
+    if (kDisableBackfaceCulling) {
+      cmd_buf->SetCullMode(vk::CullModeFlagBits::eNone);
+    }
     render_queue_.GenerateCommands(cmd_buf, &context, PaperRenderQueueFlagBits::kWireframe);
 
     // Render opaque.
     cmd_buf->SetWireframe(false);
     cmd_buf->SetToDefaultState(CommandBuffer::DefaultState::kOpaque);
+    if (kDisableBackfaceCulling) {
+      cmd_buf->SetCullMode(vk::CullModeFlagBits::eNone);
+    }
     render_queue_.GenerateCommands(cmd_buf, &context, PaperRenderQueueFlagBits::kOpaque);
 
     // Render translucent.
     cmd_buf->SetToDefaultState(CommandBuffer::DefaultState::kTranslucent);
+    if (kDisableBackfaceCulling) {
+      cmd_buf->SetCullMode(vk::CullModeFlagBits::eNone);
+    }
     render_queue_.GenerateCommands(cmd_buf, &context, PaperRenderQueueFlagBits::kTranslucent);
   }
   cmd_buf->EndRenderPass();
@@ -579,10 +592,16 @@ void PaperRenderer::GenerateCommandsForShadowVolumes(uint32_t camera_index) {
 
     // Render wireframe.
     cmd_buf->SetToDefaultState(CommandBuffer::DefaultState::kWireframe);
+    if (kDisableBackfaceCulling) {
+      cmd_buf->SetCullMode(vk::CullModeFlagBits::eNone);
+    }
     render_queue_.GenerateCommands(cmd_buf, &context, PaperRenderQueueFlagBits::kWireframe);
 
     // Render opaque.
     cmd_buf->SetToDefaultState(CommandBuffer::DefaultState::kOpaque);
+    if (kDisableBackfaceCulling) {
+      cmd_buf->SetCullMode(vk::CullModeFlagBits::eNone);
+    }
     render_queue_.GenerateCommands(cmd_buf, &context, PaperRenderQueueFlagBits::kOpaque);
   }
 
@@ -649,7 +668,8 @@ void PaperRenderer::GenerateCommandsForShadowVolumes(uint32_t camera_index) {
 
       cmd_buf->SetBlendEnable(true);
 
-      cmd_buf->SetCullMode(vk::CullModeFlagBits::eBack);
+      cmd_buf->SetCullMode(kDisableBackfaceCulling ? vk::CullModeFlagBits::eNone
+                                                   : vk::CullModeFlagBits::eBack);
       cmd_buf->SetDepthCompareOp(vk::CompareOp::eLessOrEqual);
 
       cmd_buf->SetStencilFrontOps(vk::CompareOp::eEqual, vk::StencilOp::eKeep, vk::StencilOp::eKeep,
@@ -679,6 +699,9 @@ void PaperRenderer::GenerateCommandsForShadowVolumes(uint32_t camera_index) {
   // Draw translucent geometry without lighting.
   context.set_shader_selector(PaperShaderListSelector::kAmbientLighting);
   cmd_buf->SetToDefaultState(CommandBuffer::DefaultState::kTranslucent);
+  if (kDisableBackfaceCulling) {
+    cmd_buf->SetCullMode(vk::CullModeFlagBits::eNone);
+  }
   render_queue_.GenerateCommands(cmd_buf, &context, PaperRenderQueueFlagBits::kTranslucent);
 
   cmd_buf->EndRenderPass();
@@ -857,15 +880,24 @@ void PaperRenderer::WarmPipelineAndRenderPassCaches(
     case PaperRendererShadowType::kNone: {
       if (escher->supports_wireframe()) {
         cbps.SetToDefaultState(CommandBuffer::DefaultState::kWireframe);
+        if (kDisableBackfaceCulling) {
+          cbps.SetCullMode(vk::CullModeFlagBits::eNone);
+        }
         WarmProgramHelper(escher->pipeline_layout_cache(),
                           escher->GetProgram(kNoLightingProgramData), &cbps, immutable_samplers);
       }
 
       cbps.SetToDefaultState(CommandBuffer::DefaultState::kOpaque);
+      if (kDisableBackfaceCulling) {
+        cbps.SetCullMode(vk::CullModeFlagBits::eNone);
+      }
       WarmProgramHelper(escher->pipeline_layout_cache(),
                         escher->GetProgram(kAmbientLightProgramData), &cbps, immutable_samplers);
 
       cbps.SetToDefaultState(CommandBuffer::DefaultState::kTranslucent);
+      if (kDisableBackfaceCulling) {
+        cbps.SetCullMode(vk::CullModeFlagBits::eNone);
+      }
       WarmProgramHelper(escher->pipeline_layout_cache(), escher->GetProgram(kNoLightingProgramData),
                         &cbps, immutable_samplers);
     } break;
@@ -873,6 +905,9 @@ void PaperRenderer::WarmPipelineAndRenderPassCaches(
       // Wireframe shapes (not shadow volumes).
       if (escher->supports_wireframe()) {
         cbps.SetToDefaultState(CommandBuffer::DefaultState::kWireframe);
+        if (kDisableBackfaceCulling) {
+          cbps.SetCullMode(vk::CullModeFlagBits::eNone);
+        }
         WarmProgramHelper(escher->pipeline_layout_cache(),
                           escher->GetProgram(kNoLightingProgramData), &cbps, immutable_samplers);
       }
@@ -880,12 +915,18 @@ void PaperRenderer::WarmPipelineAndRenderPassCaches(
       // Ambient opaque.
       {
         cbps.SetToDefaultState(CommandBuffer::DefaultState::kOpaque);
+        if (kDisableBackfaceCulling) {
+          cbps.SetCullMode(vk::CullModeFlagBits::eNone);
+        }
         WarmProgramHelper(escher->pipeline_layout_cache(),
                           escher->GetProgram(kAmbientLightProgramData), &cbps, immutable_samplers);
       }
 
       // Set state common to both stencil shadow "geometry" and "lighting" passes.
       cbps.SetToDefaultState(CommandBuffer::DefaultState::kOpaque);
+      if (kDisableBackfaceCulling) {
+        cbps.SetCullMode(vk::CullModeFlagBits::eNone);
+      }
       cbps.SetStencilTest(true);
       cbps.SetDepthTestAndWrite(true, false);
       cbps.SetBlendFactors(
@@ -909,7 +950,8 @@ void PaperRenderer::WarmPipelineAndRenderPassCaches(
       // Stencil shadow lighting.
       {
         cbps.SetBlendEnable(true);
-        cbps.SetCullMode(vk::CullModeFlagBits::eBack);
+        cbps.SetCullMode(kDisableBackfaceCulling ? vk::CullModeFlagBits::eNone
+                                                 : vk::CullModeFlagBits::eBack);
         cbps.SetDepthCompareOp(vk::CompareOp::eLessOrEqual);
         cbps.SetStencilFrontOps(vk::CompareOp::eEqual, vk::StencilOp::eKeep, vk::StencilOp::eKeep,
                                 vk::StencilOp::eKeep);
@@ -934,6 +976,9 @@ void PaperRenderer::WarmPipelineAndRenderPassCaches(
       // Translucent.
       {
         cbps.SetToDefaultState(CommandBuffer::DefaultState::kTranslucent);
+        if (kDisableBackfaceCulling) {
+          cbps.SetCullMode(vk::CullModeFlagBits::eNone);
+        }
         WarmProgramHelper(escher->pipeline_layout_cache(),
                           escher->GetProgram(kNoLightingProgramData), &cbps, immutable_samplers);
       }

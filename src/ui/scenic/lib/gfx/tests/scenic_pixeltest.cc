@@ -265,6 +265,11 @@ TEST_F(ScenicPixelTest, GlobalCoordinates) {
       pane_node.SetShape(pane_shape);
       pane_node.SetMaterial(pane_material);
       pane_node.SetTranslation((i + .5f) * pane_width, (j + .5f) * pane_height, -20);
+
+      // Flip some of the panes over the X and/or Y axis, and make sure that they still appear
+      // (i.e. are not backface-culled).
+      pane_node.SetScale(i == 0 ? 1.f : -1.f, j == 0 ? 1.f : -1.f, 1.f);
+
       scene->AddChild(pane_node);
     }
   }
