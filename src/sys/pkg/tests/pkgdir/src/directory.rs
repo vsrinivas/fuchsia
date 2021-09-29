@@ -974,14 +974,15 @@ async fn verify_open_failed(node: NodeProxy) -> Result<(), Error> {
 // TODO(fxbug.dev/81447) enhance Clone tests.
 #[fuchsia::test]
 async fn clone() {
-    for source in just_pkgfs_for_now().await {
+    for source in dirs_to_test().await {
         clone_per_package_source(source).await
     }
 }
 
 async fn clone_per_package_source(source: PackageSource) {
-    let root_dir = source.dir;
+    let root_dir = &source.dir;
     for flag in [
+        0,
         OPEN_RIGHT_READABLE,
         OPEN_RIGHT_WRITABLE,
         OPEN_RIGHT_ADMIN,
@@ -991,8 +992,24 @@ async fn clone_per_package_source(source: PackageSource) {
         OPEN_FLAG_DESCRIBE,
         CLONE_FLAG_SAME_RIGHTS,
     ] {
+        if source.is_pkgdir() && (flag & OPEN_FLAG_NO_REMOTE != 0) {
+            // TODO(fxbug.dev/83844): pkgdir doesn't accept OPEN_FLAG_NO_REMOTE
+            continue;
+        }
+        if source.is_pkgdir() && (flag & OPEN_FLAG_APPEND != 0) {
+            // "OPEN_FLAG_TRUNCATE and OPEN_FLAG_APPEND not supported"
+            continue;
+        }
+        if source.is_pkgdir() && (flag & OPEN_RIGHT_ADMIN != 0) {
+            // "OPEN_RIGHT_ADMIN not supported"
+            continue;
+        }
+        if source.is_pkgdir() && (flag & OPEN_RIGHT_WRITABLE != 0) {
+            // "OPEN_RIGHT_WRITABLE not supported"
+            continue;
+        }
         assert_clone_directory_overflow(
-            &root_dir,
+            root_dir,
             ".",
             flag,
             vec![
@@ -1013,7 +1030,7 @@ async fn clone_per_package_source(source: PackageSource) {
         )
         .await;
         assert_clone_directory_no_overflow(
-            &root_dir,
+            root_dir,
             "dir",
             flag,
             vec![
@@ -1022,38 +1039,45 @@ async fn clone_per_package_source(source: PackageSource) {
             ],
         )
         .await;
-        assert_clone_directory_overflow(
-            &root_dir,
-            "meta",
-            flag,
-            vec![
-                DirEntry { name: "contents".to_string(), kind: DirentKind::File },
-                DirEntry { name: "dir".to_string(), kind: DirentKind::Directory },
-                DirEntry {
-                    name: "dir_overflow_readdirents".to_string(),
-                    kind: DirentKind::Directory,
-                },
-                DirEntry { name: "exceeds_max_buf".to_string(), kind: DirentKind::File },
-                DirEntry { name: "file".to_string(), kind: DirentKind::File },
-                DirEntry { name: "package".to_string(), kind: DirentKind::File },
-                DirEntry { name: "file_0".to_string(), kind: DirentKind::File },
-                DirEntry { name: "file_1".to_string(), kind: DirentKind::File },
-                DirEntry { name: "file_4095".to_string(), kind: DirentKind::File },
-                DirEntry { name: "file_4096".to_string(), kind: DirentKind::File },
-                DirEntry { name: "file_4097".to_string(), kind: DirentKind::File },
-            ],
-        )
-        .await;
-        assert_clone_directory_no_overflow(
-            &root_dir,
-            "meta/dir",
-            flag,
-            vec![
-                DirEntry { name: "dir".to_string(), kind: DirentKind::Directory },
-                DirEntry { name: "file".to_string(), kind: DirentKind::File },
-            ],
-        )
-        .await;
+        if flag & OPEN_RIGHT_EXECUTABLE != 0 {
+            // pkgdir requires a directory to have EXECUTABLE rights for it to be cloned
+            // ("Hierarchical rights enforcement"), Since both pkgfs and pkgdir reject opening
+            // meta dirs with EXECUTABLE rights, we can't get a valid parent directory to
+            // test with. So no test is possible here.
+        } else {
+            assert_clone_directory_overflow(
+                &root_dir,
+                "meta",
+                flag,
+                vec![
+                    DirEntry { name: "contents".to_string(), kind: DirentKind::File },
+                    DirEntry { name: "dir".to_string(), kind: DirentKind::Directory },
+                    DirEntry {
+                        name: "dir_overflow_readdirents".to_string(),
+                        kind: DirentKind::Directory,
+                    },
+                    DirEntry { name: "exceeds_max_buf".to_string(), kind: DirentKind::File },
+                    DirEntry { name: "file".to_string(), kind: DirentKind::File },
+                    DirEntry { name: "package".to_string(), kind: DirentKind::File },
+                    DirEntry { name: "file_0".to_string(), kind: DirentKind::File },
+                    DirEntry { name: "file_1".to_string(), kind: DirentKind::File },
+                    DirEntry { name: "file_4095".to_string(), kind: DirentKind::File },
+                    DirEntry { name: "file_4096".to_string(), kind: DirentKind::File },
+                    DirEntry { name: "file_4097".to_string(), kind: DirentKind::File },
+                ],
+            )
+            .await;
+            assert_clone_directory_no_overflow(
+                &root_dir,
+                "meta/dir",
+                flag,
+                vec![
+                    DirEntry { name: "dir".to_string(), kind: DirentKind::Directory },
+                    DirEntry { name: "file".to_string(), kind: DirentKind::File },
+                ],
+            )
+            .await;
+        }
     }
 }
 
@@ -1063,7 +1087,10 @@ async fn assert_clone_directory_no_overflow(
     flags: u32,
     expected_dirents: Vec<DirEntry>,
 ) {
-    let parent = open_directory(package_root, path, 0).await.expect("open parent directory");
+    let parent =
+        open_directory(package_root, path, flags & (OPEN_RIGHT_READABLE | OPEN_RIGHT_EXECUTABLE))
+            .await
+            .expect("open parent directory");
     let (clone, server_end) =
         create_proxy::<fidl_fuchsia_io::DirectoryMarker>().expect("create_proxy");
 
@@ -1079,7 +1106,7 @@ async fn assert_clone_directory_overflow(
     flags: u32,
     expected_dirents: Vec<DirEntry>,
 ) {
-    let parent = open_directory(package_root, path, 0).await.expect("open parent directory");
+    let parent = open_parent(package_root, path).await;
     let (clone, server_end) =
         create_proxy::<fidl_fuchsia_io::DirectoryMarker>().expect("create_proxy");
 
