@@ -16,13 +16,20 @@ pub trait TryIntoTargetInfo: Sized {
     fn try_into_target_info(self, src: SocketAddr) -> Result<TargetInfo, Self::Error>;
 }
 
+#[derive(Debug, Hash, Clone, PartialEq, Eq)]
+pub enum FastbootInterface {
+    Usb,
+    Udp,
+    Tcp,
+}
+
 #[derive(Debug, Default, Hash, Clone, PartialEq, Eq)]
 pub struct TargetInfo {
     pub nodename: Option<String>,
     pub addresses: Vec<TargetAddr>,
     pub serial: Option<String>,
     pub ssh_port: Option<u16>,
-    pub is_fastboot: bool,
+    pub fastboot_interface: Option<FastbootInterface>,
 }
 
 #[derive(Debug, Hash, Clone, PartialEq, Eq)]

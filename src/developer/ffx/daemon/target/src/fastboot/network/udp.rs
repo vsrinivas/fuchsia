@@ -323,7 +323,7 @@ impl UdpNetworkFactory {
 #[async_trait(?Send)]
 impl InterfaceFactory<UdpNetworkInterface> for UdpNetworkFactory {
     async fn open(&mut self, target: &Target) -> Result<UdpNetworkInterface> {
-        let addr = target.fastboot_address().ok_or(anyhow!("No network address for fastboot"))?;
+        let addr = target.fastboot_address().ok_or(anyhow!("No network address for fastboot"))?.0;
         let mut to_sock: SocketAddr = addr.into();
         // TODO(fxb/78977): get the port from the mdns packet
         to_sock.set_port(HOST_PORT);

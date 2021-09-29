@@ -13,7 +13,7 @@ use {
     bridge::{TargetAddrInfo, TargetIpPort},
     chrono::{DateTime, Utc},
     ffx_daemon_core::events::{self, EventSynthesizer},
-    ffx_daemon_events::{TargetConnectionState, TargetEvent, TargetInfo},
+    ffx_daemon_events::{FastbootInterface, TargetConnectionState, TargetEvent, TargetInfo},
     fidl_fuchsia_developer_bridge as bridge,
     fidl_fuchsia_developer_bridge::TargetState,
     fidl_fuchsia_developer_remotecontrol::{IdentifyHostResponse, RemoteControlProxy},
@@ -45,7 +45,7 @@ pub enum TargetAddrType {
     Ssh,
     Manual,
     Netsvc,
-    Fastboot,
+    Fastboot(FastbootInterface),
 }
 
 #[derive(Debug, Clone, Hash)]
@@ -134,6 +134,7 @@ pub struct Target {
     ssh_port: RefCell<Option<u16>>,
     // used for Fastboot
     pub(crate) serial: RefCell<Option<String>>,
+    pub(crate) fastboot_interface: RefCell<Option<FastbootInterface>>,
     pub(crate) build_config: RefCell<Option<BuildConfig>>,
     boot_timestamp_nanos: RefCell<Option<u64>>,
     diagnostics_info: Arc<DiagnosticsStreamer<'static>>,
@@ -168,6 +169,7 @@ impl Target {
             host_pipe: Default::default(),
             logger: Default::default(),
             target_event_synthesizer,
+            fastboot_interface: RefCell::new(None),
         });
         target.target_event_synthesizer.target.replace(Rc::downgrade(&target));
         target
@@ -216,7 +218,11 @@ impl Target {
         target
     }
 
-    pub fn new_with_fastboot_addrs<S>(nodename: Option<S>, addrs: BTreeSet<TargetAddr>) -> Rc<Self>
+    pub fn new_with_fastboot_addrs<S>(
+        nodename: Option<S>,
+        addrs: BTreeSet<TargetAddr>,
+        interface: FastbootInterface,
+    ) -> Rc<Self>
     where
         S: Into<String>,
     {
@@ -225,9 +231,16 @@ impl Target {
         target.addrs.replace(
             addrs
                 .iter()
-                .map(|e| TargetAddrEntry::new(*e, Utc::now(), TargetAddrType::Fastboot))
+                .map(|e| {
+                    TargetAddrEntry::new(
+                        *e,
+                        Utc::now(),
+                        TargetAddrType::Fastboot(interface.clone()),
+                    )
+                })
                 .collect(),
         );
+        target.fastboot_interface.replace(Some(interface));
         target.update_connection_state(|_| TargetConnectionState::Fastboot(Instant::now()));
         target
     }
@@ -276,8 +289,12 @@ impl Target {
         Self::new_with_netsvc_addrs(t.nodename.take(), t.addresses.drain(..).collect())
     }
 
-    pub fn from_fastboot_target_info(mut t: TargetInfo) -> Rc<Self> {
-        Self::new_with_fastboot_addrs(t.nodename.take(), t.addresses.drain(..).collect())
+    pub fn from_fastboot_target_info(mut t: TargetInfo) -> Result<Rc<Self>> {
+        Ok(Self::new_with_fastboot_addrs(
+            t.nodename.take(),
+            t.addresses.drain(..).collect(),
+            t.fastboot_interface.ok_or(anyhow!("No fastboot mode?"))?,
+        ))
     }
 
     pub fn target_info(&self) -> TargetInfo {
@@ -286,7 +303,7 @@ impl Target {
             addresses: self.addrs(),
             serial: self.serial(),
             ssh_port: self.ssh_port(),
-            is_fastboot: matches!(self.get_connection_state(), TargetConnectionState::Fastboot(_)),
+            fastboot_interface: self.fastboot_interface(),
         }
     }
 
@@ -396,7 +413,7 @@ impl Target {
             .map(|addr_entry| addr_entry.addr.clone())
     }
 
-    pub fn fastboot_address(&self) -> Option<TargetAddr> {
+    pub fn fastboot_address(&self) -> Option<(TargetAddr, FastbootInterface)> {
         use itertools::Itertools;
         // Order e1 & e2 by most recent timestamp
         let recency = |e1: &TargetAddrEntry, e2: &TargetAddrEntry| e2.timestamp.cmp(&e1.timestamp);
@@ -405,10 +422,13 @@ impl Target {
             .iter()
             .sorted_by(|e1, e2| recency(e1, e2))
             .find(|t| match t.addr_type {
-                TargetAddrType::Fastboot => true,
+                TargetAddrType::Fastboot(_) => true,
                 _ => false,
             })
-            .map(|addr_entry| addr_entry.addr.clone())
+            .map(|addr_entry| match addr_entry.addr_type {
+                TargetAddrType::Fastboot(ref f) => (addr_entry.addr.clone(), f.clone()),
+                _ => unreachable!(),
+            })
     }
 
     pub fn ssh_address_info(&self) -> Option<bridge::TargetAddrInfo> {
@@ -613,6 +633,10 @@ impl Target {
 
     pub fn ssh_port(&self) -> Option<u16> {
         self.ssh_port.borrow().clone()
+    }
+
+    pub fn fastboot_interface(&self) -> Option<FastbootInterface> {
+        self.fastboot_interface.borrow().clone()
     }
 
     pub fn set_ssh_port(&self, port: Option<u16>) {

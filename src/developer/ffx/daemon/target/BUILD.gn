@@ -70,6 +70,7 @@ rustc_library("lib") {
     "src/fastboot/client.rs",
     "src/fastboot/mod.rs",
     "src/fastboot/network/mod.rs",
+    "src/fastboot/network/tcp.rs",
     "src/fastboot/network/udp.rs",
     "src/lib.rs",
     "src/logger/mod.rs",

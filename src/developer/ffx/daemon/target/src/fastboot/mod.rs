@@ -5,7 +5,10 @@
 use {
     crate::fastboot::{
         client::{FastbootImpl, InterfaceFactory},
-        network::udp::{UdpNetworkFactory, UdpNetworkInterface},
+        network::{
+            tcp::{TcpNetworkFactory, TcpNetworkInterface},
+            udp::{UdpNetworkFactory, UdpNetworkInterface},
+        },
     },
     crate::target::Target,
     crate::FASTBOOT_CHECK_INTERVAL,
@@ -19,7 +22,7 @@ use {
     },
     ffx_config::get,
     ffx_daemon_core::events,
-    ffx_daemon_events::{DaemonEvent, TargetInfo, WireTrafficType},
+    ffx_daemon_events::{DaemonEvent, FastbootInterface, TargetInfo, WireTrafficType},
     fidl::endpoints::ClientEnd,
     fidl_fuchsia_developer_bridge::{
         FastbootRequestStream, UploadProgressListenerMarker, UploadProgressListenerProxy,
@@ -59,6 +62,7 @@ pub struct Fastboot {
     target: Rc<Target>,
     usb: FastbootImpl<Interface>,
     udp: FastbootImpl<UdpNetworkInterface>,
+    tcp: FastbootImpl<TcpNetworkInterface>,
 }
 
 impl Fastboot {
@@ -67,6 +71,7 @@ impl Fastboot {
             target: target.clone(),
             udp: FastbootImpl::new(target.clone(), Box::new(UdpNetworkFactory::new())),
             usb: FastbootImpl::new(target.clone(), Box::new(UsbFactory::default())),
+            tcp: FastbootImpl::new(target.clone(), Box::new(TcpNetworkFactory::new())),
         }
     }
 
@@ -74,8 +79,16 @@ impl Fastboot {
         &mut self,
         stream: FastbootRequestStream,
     ) -> Result<()> {
-        if let Some(_) = self.target.fastboot_address() {
-            self.udp.handle_fastboot_requests_from_stream(stream).await
+        if let Some((_, interface)) = self.target.fastboot_address() {
+            match interface {
+                FastbootInterface::Tcp => {
+                    self.tcp.handle_fastboot_requests_from_stream(stream).await
+                }
+                FastbootInterface::Udp => {
+                    self.udp.handle_fastboot_requests_from_stream(stream).await
+                }
+                _ => bail!("Unexpected interface type {:?}", self.target.fastboot_interface()),
+            }
         } else {
             self.usb.handle_fastboot_requests_from_stream(stream).await
         }

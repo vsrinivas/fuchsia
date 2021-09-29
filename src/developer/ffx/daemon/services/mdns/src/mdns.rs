@@ -219,7 +219,7 @@ fn make_target<B: ByteSlice + Clone>(
         },
         scope_id: if let SocketAddr::V6(s) = &src { s.scope_id() } else { 0 },
     });
-    let is_fastboot = is_fastboot_response(&msg);
+    let fastboot_interface = is_fastboot_response(&msg);
     for record in msg.additional.iter() {
         if record.rtype != dns::Type::A && record.rtype != dns::Type::Aaaa {
             continue;
@@ -243,7 +243,8 @@ fn make_target<B: ByteSlice + Clone>(
         bridge::Target {
             nodename: Some(nodename),
             addresses: Some(vec![src]),
-            target_state: if is_fastboot { Some(bridge::TargetState::Fastboot) } else { None },
+            target_state: fastboot_interface.map(|_| bridge::TargetState::Fastboot),
+            fastboot_interface,
             ..bridge::Target::EMPTY
         },
         ttl,
@@ -287,7 +288,7 @@ async fn recv_loop(sock: Rc<UdpSocket>, mdns_service: Weak<MdnsServiceInner>) {
             }
         };
 
-        if !is_fuchsia_response(&msg) && !is_fastboot_response(&msg) {
+        if !is_fuchsia_response(&msg) && is_fastboot_response(&msg).is_none() {
             continue;
         }
 
@@ -387,8 +388,18 @@ fn is_fuchsia_response<B: zerocopy::ByteSlice + Clone>(m: &dns::Message<B>) -> b
     m.answers.len() >= 1 && m.answers[0].domain == "_fuchsia._udp.local"
 }
 
-fn is_fastboot_response<B: zerocopy::ByteSlice + Clone>(m: &dns::Message<B>) -> bool {
-    m.answers.len() >= 1 && m.answers[0].domain == "_fastboot._udp.local"
+fn is_fastboot_response<B: zerocopy::ByteSlice + Clone>(
+    m: &dns::Message<B>,
+) -> Option<bridge::FastbootInterface> {
+    if m.answers.len() < 1 {
+        None
+    } else if m.answers[0].domain == "_fastboot._udp.local" {
+        Some(bridge::FastbootInterface::Udp)
+    } else if m.answers[0].domain == "_fastboot._tcp.local" {
+        Some(bridge::FastbootInterface::Tcp)
+    } else {
+        None
+    }
 }
 
 fn make_listen_socket(listen_addr: SocketAddr) -> Result<UdpSocket> {

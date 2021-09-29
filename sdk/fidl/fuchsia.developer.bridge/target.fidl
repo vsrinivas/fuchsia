@@ -45,6 +45,13 @@ type RemoteControlState = strict enum {
     UNKNOWN = 3;
 };
 
+/// Interface fastboot is connected over.
+type FastbootInterface = strict enum {
+    USB = 0;
+    UDP = 1;
+    TCP = 2;
+};
+
 type Target = table {
     1: nodename string:fuchsia.device.DEVICE_NAME_MAX;
     2: addresses vector<TargetAddrInfo>:256;
@@ -63,6 +70,7 @@ type Target = table {
     /// device over SSH, and will include a port number if a custom SSH
     /// port number has been set.
    10: ssh_address TargetAddrInfo;
+   11: fastboot_interface FastbootInterface;
 };
 
 type TargetRebootError = strict enum {

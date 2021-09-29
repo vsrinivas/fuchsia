@@ -8,7 +8,7 @@ use {
     async_trait::async_trait,
     chrono::Utc,
     ffx_core::TryStreamUtilExt,
-    ffx_daemon_events::{TargetConnectionState, TargetInfo},
+    ffx_daemon_events::{FastbootInterface, TargetConnectionState, TargetInfo},
     ffx_daemon_target::target::{
         target_addr_info_to_socketaddr, Target, TargetAddrEntry, TargetAddrType,
     },
@@ -187,15 +187,29 @@ async fn handle_mdns_event(tc: &Rc<TargetCollection>, t: bridge::Target) {
             .addresses
             .map(|a| a.into_iter().map(Into::into).collect())
             .unwrap_or(Vec::new()),
-        is_fastboot: t.target_state == Some(bridge::TargetState::Fastboot),
+        fastboot_interface: if t.target_state == Some(bridge::TargetState::Fastboot) {
+            t.fastboot_interface.map(|v| match v {
+                bridge::FastbootInterface::Usb => FastbootInterface::Usb,
+                bridge::FastbootInterface::Udp => FastbootInterface::Udp,
+                bridge::FastbootInterface::Tcp => FastbootInterface::Tcp,
+            })
+        } else {
+            None
+        },
         ..Default::default()
     };
-    if t.is_fastboot {
+    if t.fastboot_interface.is_some() {
         log::trace!(
             "Found new target via fastboot: {}",
             t.nodename.clone().unwrap_or("<unknown>".to_string())
         );
-        let target = tc.merge_insert(Target::from_fastboot_target_info(t));
+        let target = tc.merge_insert(match Target::from_fastboot_target_info(t) {
+            Ok(ret) => ret,
+            Err(e) => {
+                log::trace!("Error while making target: {:?}", e);
+                return;
+            }
+        });
         target.update_connection_state(|s| match s {
             TargetConnectionState::Disconnected | TargetConnectionState::Fastboot(_) => {
                 TargetConnectionState::Fastboot(Instant::now())
@@ -250,6 +264,7 @@ mod tests {
             bridge::Target {
                 nodename: Some(t.nodename().unwrap()),
                 target_state: Some(bridge::TargetState::Fastboot),
+                fastboot_interface: Some(bridge::FastbootInterface::Tcp),
                 ..bridge::Target::EMPTY
             },
         )
