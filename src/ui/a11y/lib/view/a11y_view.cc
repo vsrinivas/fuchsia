@@ -61,7 +61,7 @@ void AccessibilityView::Initialize() {
   accessibility_view_registry_ =
       context_->svc()->Connect<fuchsia::ui::accessibility::view::Registry>();
   accessibility_view_registry_.set_error_handler([](zx_status_t status) {
-    FX_LOGS(ERROR) << "Error from fuchsia::ui::accessibility::view::Registry"
+    FX_LOGS(ERROR) << "Error from fuchsia::ui::accessibility::view::Registry: "
                    << zx_status_get_string(status);
   });
 
