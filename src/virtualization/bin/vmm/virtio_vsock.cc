@@ -7,20 +7,11 @@
 #include <lib/async/cpp/task.h>
 #include <lib/async/task.h>
 #include <lib/fit/defer.h>
+#include <zircon/status.h>
 #include <zircon/syscalls/object.h>
 #include <zircon/types.h>
 
 #include "src/lib/fsl/handles/object_info.h"
-
-template <VirtioVsock::StreamFunc F>
-VirtioVsock::Stream<F>::Stream(async_dispatcher_t* dispatcher, VirtioQueue* queue,
-                               VirtioVsock* vsock)
-    : waiter_(dispatcher, queue, fit::bind_member(vsock, F)) {}
-
-template <VirtioVsock::StreamFunc F>
-zx_status_t VirtioVsock::Stream<F>::WaitOnQueue() {
-  return waiter_.Begin();
-}
 
 // We take a |queue_callback| to decouple the connection from the device. This
 // allows a connection to wait on a Virtio queue and update the device state,
@@ -480,8 +471,8 @@ VirtioVsock::VirtioVsock(sys::ComponentContext* context, const PhysMem& phys_mem
                          async_dispatcher_t* dispatcher)
     : VirtioInprocessDevice("Virtio Vsock", phys_mem, 0 /* device_features */),
       dispatcher_(dispatcher),
-      rx_stream_(dispatcher, rx_queue(), this),
-      tx_stream_(dispatcher, tx_queue(), this) {
+      rx_queue_wait_(this, rx_queue()->event(), VirtioQueue::SIGNAL_QUEUE_AVAIL),
+      tx_queue_wait_(this, tx_queue()->event(), VirtioQueue::SIGNAL_QUEUE_AVAIL) {
   config_.guest_cid = 0;
 
   if (context) {
@@ -525,7 +516,12 @@ void VirtioVsock::SetContextId(
   }
   acceptor_bindings_.AddBinding(this, std::move(acceptor), dispatcher_);
   FX_CHECK(connector_.Bind(std::move(connector), dispatcher_) == ZX_OK);
-  tx_stream_.WaitOnQueue();
+
+  // Start waiting for incoming packets from the driver.
+  zx_status_t status = tx_queue_wait_.Begin(dispatcher_);
+  if (status != ZX_OK && status != ZX_ERR_ALREADY_EXISTS) {
+    FX_LOGS(ERROR) << "Failed to wait on virtio TX queue: " << zx_status_get_string(status);
+  }
 }
 
 static std::unique_ptr<VirtioVsock::Connection> create_connection(
@@ -641,9 +637,10 @@ bool VirtioVsock::EraseOnErrorLocked(ConnectionKey key, zx_status_t status) {
 }
 
 void VirtioVsock::WaitOnQueueLocked(ConnectionKey key) {
-  zx_status_t status = rx_stream_.WaitOnQueue();
-  if (EraseOnErrorLocked(key, status)) {
+  zx_status_t status = rx_queue_wait_.Begin(dispatcher_);
+  if (status != ZX_OK && status != ZX_ERR_ALREADY_EXISTS) {
     FX_LOGS(ERROR) << "Failed to wait on queue " << status;
+    EraseOnErrorLocked(key, status);
     return;
   }
   readable_.insert(key);
@@ -704,25 +701,32 @@ static zx_status_t transmit(VirtioVsock::Connection* conn, VirtioQueue* queue,
   }
 }
 
-void VirtioVsock::Mux(zx_status_t status, uint16_t index) {
+void VirtioVsock::Mux(async_dispatcher_t*, async::WaitBase*, zx_status_t status,
+                      const zx_packet_signal_t*) {
   if (status != ZX_OK) {
+    FX_LOGS(ERROR) << "Error while waiting on virtio RX queue: " << zx_status_get_string(status);
     return;
   }
 
-  bool index_valid = true;
-  VirtioDescriptor desc;
   std::lock_guard<std::mutex> lock(mutex_);
+
+  // Process all connections that are ready to transmit, until we run out
+  // of connections or descriptors in the guest's RX queue.
   for (auto i = readable_.begin(), end = readable_.end(); i != end; i = readable_.erase(i)) {
     Connection* conn = GetConnectionLocked(*i);
     if (conn == nullptr) {
       continue;
     }
-    if (!index_valid) {
-      status = rx_queue()->NextAvail(&index);
-      if (status != ZX_OK) {
-        return;
-      }
+
+    // Allocate a descriptor.
+    VirtioDescriptor desc;
+    uint16_t index;
+    zx_status_t status = rx_queue()->NextAvail(&index);
+    if (status != ZX_OK) {
+      return;
     }
+
+    // Write out the header.
     virtio_vsock_hdr_t* header = get_header(rx_queue(), index, &desc, true);
     if (header == nullptr) {
       FX_LOGS(ERROR) << "Failed to get header from read queue";
@@ -763,17 +767,8 @@ void VirtioVsock::Mux(zx_status_t status, uint16_t index) {
     uint32_t used = 0;
     status = transmit(conn, rx_queue(), header, &desc, &used);
     rx_queue()->Return(index, used + sizeof(*header));
-    index_valid = false;
     status = conn->WaitOnReceive(status);
     EraseOnErrorLocked(*i, status);
-  }
-
-  // Release buffer if we did not have any readable connections to avoid a
-  // descriptor leak.
-  if (index_valid) {
-    FX_LOGS(ERROR) << "Mux called with no readable connections. Descriptor "
-                   << "will be returned with 0 length";
-    rx_queue()->Return(index, 0);
   }
 }
 
@@ -824,15 +819,22 @@ static zx_status_t receive(VirtioVsock::Connection* conn, VirtioQueue* queue,
   }
 }
 
-void VirtioVsock::Demux(zx_status_t status, uint16_t index) {
+void VirtioVsock::Demux(async_dispatcher_t*, async::WaitBase*, zx_status_t status,
+                        const zx_packet_signal_t*) {
   if (status != ZX_OK) {
+    FX_LOGS(ERROR) << "Error while waiting on virtio TX queue: " << zx_status_get_string(status);
     return;
   }
 
-  VirtioDescriptor desc;
   std::lock_guard<std::mutex> lock(mutex_);
-  do {
-    auto free_desc = fit::defer([this, index]() { tx_queue()->Return(index, 0); });
+
+  // Process all packets in the guest's TX queue.
+  uint16_t index;
+  while (tx_queue()->NextAvail(&index) == ZX_OK) {
+    auto free_desc = fit::defer([this, index]() { tx_queue()->Return(index, /*len=*/0); });
+
+    // Get incoming descriptor.
+    VirtioDescriptor desc;
     auto header = get_header(tx_queue(), index, &desc, false);
     if (header == nullptr) {
       FX_LOGS(ERROR) << "Failed to get header from write queue";
@@ -906,10 +908,12 @@ void VirtioVsock::Demux(zx_status_t status, uint16_t index) {
         EraseOnErrorLocked(key, status);
         break;
     }
-  } while (tx_queue()->NextAvail(&index) == ZX_OK);
+  }
 
-  status = tx_stream_.WaitOnQueue();
-  if (status != ZX_OK) {
-    FX_LOGS(ERROR) << "Failed to wait on queue " << status;
+  // Schedule this function to be called again next time the queue receives
+  // a packet.
+  status = tx_queue_wait_.Begin(dispatcher_);
+  if (status != ZX_OK && status != ZX_ERR_ALREADY_EXISTS) {
+    FX_LOGS(ERROR) << "Failed to wait on TX queue: " << status;
   }
 }

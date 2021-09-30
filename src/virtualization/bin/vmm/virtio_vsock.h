@@ -72,18 +72,6 @@ class VirtioVsock
       std::unordered_map<ConnectionKey, std::unique_ptr<Connection>, ConnectionHash>;
   using ConnectionSet = std::unordered_set<ConnectionKey, ConnectionHash>;
 
-  using StreamFunc = void (VirtioVsock::*)(zx_status_t, uint16_t);
-  template <StreamFunc F>
-  class Stream {
-   public:
-    Stream(async_dispatcher_t* dispatcher, VirtioQueue* queue, VirtioVsock* device);
-
-    zx_status_t WaitOnQueue();
-
-   private:
-    VirtioQueueWaiter waiter_;
-  };
-
   // |fuchsia::virtualization::GuestVsockEndpoint|
   void SetContextId(
       uint32_t cid, fidl::InterfaceHandle<fuchsia::virtualization::HostVsockConnector> connector,
@@ -106,12 +94,14 @@ class VirtioVsock
 
   void WaitOnQueueLocked(ConnectionKey key) __TA_REQUIRES(mutex_);
 
-  void Mux(zx_status_t status, uint16_t index);
-  void Demux(zx_status_t status, uint16_t index);
+  void Mux(async_dispatcher_t*, async::WaitBase*, zx_status_t, const zx_packet_signal_t*);
+  void Demux(async_dispatcher_t*, async::WaitBase*, zx_status_t, const zx_packet_signal_t*);
 
   async_dispatcher_t* const dispatcher_;
-  Stream<&VirtioVsock::Mux> rx_stream_;
-  Stream<&VirtioVsock::Demux> tx_stream_;
+
+  // Waiter objects notifying us when the TX/RX virtio queues are ready.
+  async::WaitMethod<VirtioVsock, &VirtioVsock::Mux> rx_queue_wait_;
+  async::WaitMethod<VirtioVsock, &VirtioVsock::Demux> tx_queue_wait_;
 
   // TODO(fxbug.dev/12407): Evaluate granularity of locking.
   mutable std::mutex mutex_;
