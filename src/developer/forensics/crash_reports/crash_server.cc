@@ -182,45 +182,45 @@ void CrashServer::MakeRequest(const Report& report, Snapshot snapshot,
       return;
     }
 
+    std::string response_body;
+    if (response.has_body()) {
+      if (!fsl::BlockingDrainFrom(std::move(*response.mutable_body()),
+                                  [&response_body](const void* data, uint32_t len) {
+                                    const char* begin = static_cast<const char*>(data);
+                                    response_body.insert(response_body.end(), begin, begin + len);
+                                    return len;
+                                  })) {
+        FX_LOGST(WARNING, tags.c_str()) << "Failed to read http body";
+        response_body.clear();
+      }
+    } else {
+      FX_LOGST(WARNING, tags.c_str()) << "Http response is missing body";
+    }
+
     if (!response.has_status_code()) {
-      FX_LOGST(ERROR, tags.c_str()) << "No status code received";
+      FX_LOGST(ERROR, tags.c_str()) << "No status code received: " << response_body;
       callback(CrashServer::UploadStatus::kFailure, "");
       return;
     }
 
     if (response.status_code() == 429) {
-      FX_LOGST(WARNING, tags.c_str()) << "Upload throttled by server";
+      FX_LOGST(WARNING, tags.c_str()) << "Upload throttled by server: " << response_body;
       callback(CrashServer::UploadStatus::kThrottled, "");
       return;
     }
 
     if (response.status_code() < 200 || response.status_code() >= 204) {
-      FX_LOGST(WARNING, tags.c_str())
-          << "Failed to upload report, received HTTP status code " << response.status_code();
+      FX_LOGST(WARNING, tags.c_str()) << "Failed to upload report, received HTTP status code "
+                                      << response.status_code() << ": " << response_body;
       callback(CrashServer::UploadStatus::kFailure, "");
       return;
     }
 
-    if (!response.has_body()) {
-      FX_LOGST(WARNING, tags.c_str()) << "Http response is missing body";
+    if (response_body.empty()) {
       callback(CrashServer::UploadStatus::kFailure, "");
-      return;
+    } else {
+      callback(CrashServer::UploadStatus::kSuccess, std::move(response_body));
     }
-
-    // Read the response into |response_body|.
-    std::string response_body;
-    if (!fsl::BlockingDrainFrom(std::move(*response.mutable_body()),
-                                [&response_body](const void* data, uint32_t len) {
-                                  const char* begin = static_cast<const char*>(data);
-                                  response_body.insert(response_body.end(), begin, begin + len);
-                                  return len;
-                                })) {
-      FX_LOGST(WARNING, tags.c_str()) << "Failed to read http body";
-      callback(CrashServer::UploadStatus::kFailure, "");
-      return;
-    }
-
-    callback(CrashServer::UploadStatus::kSuccess, std::move(response_body));
   });
 
   pending_request_ = true;
