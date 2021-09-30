@@ -3,7 +3,7 @@
         "fuchsia.test": {
             "injected-services": {
                 "fuchsia.diagnostics.ArchiveAccessor": "fuchsia-pkg://fuchsia.com/archivist-for-embedding#meta/archivist-for-embedding.cmx",
-                "fuchsia.posix.socket.Provider": "fuchsia-pkg://fuchsia.com/netstack#meta/netstack.cmx"
+                "fuchsia.posix.socket.Provider": "fuchsia-pkg://fuchsia.com/omaha-client-integration-tests#meta/netstack.cmx"
             }
         }
     },

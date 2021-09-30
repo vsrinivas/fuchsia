@@ -117,7 +117,10 @@ rustc_staticlib("fuchsia-async-staticlib") {
 
 fuchsia_unittest_package("fuchsia-async-tests") {
   manifest = "meta/fuchsia_async_lib_test.cmx"
-  deps = [ ":fuchsia-async_test" ]
+  deps = [
+    ":fuchsia-async_test",
+    "//src/connectivity/network/netstack:component-legacy",
+  ]
   test_specs = {
     environments = [ emu_env ]
   }

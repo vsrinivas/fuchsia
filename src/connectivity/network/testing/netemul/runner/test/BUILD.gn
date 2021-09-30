@@ -156,6 +156,7 @@ fuchsia_test_package("netemul-sandbox-test") {
     ":sandbox-unittest",
     "dummy_proc",
     "dummy_proc:dummy_proc_with_dev",
+    "//src/connectivity/network/netstack:component-legacy",
   ]
 }
 

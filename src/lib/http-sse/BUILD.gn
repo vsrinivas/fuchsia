@@ -34,7 +34,10 @@ rustc_library("http_sse") {
 
 fuchsia_unittest_package("rust-http-sse-tests") {
   manifest = "meta/http-sse-lib-test.cmx"
-  deps = [ ":http_sse_test" ]
+  deps = [
+    ":http_sse_test",
+    "//src/connectivity/network/netstack:component-legacy",
+  ]
 }
 
 group("tests") {

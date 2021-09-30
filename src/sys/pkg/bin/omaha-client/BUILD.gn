@@ -124,6 +124,8 @@ fuchsia_unittest_package("omaha-client-service-bin-tests") {
   deps = [
     ":bin_test",
     ":omaha-client-policy-config-for-test",
+    "//src/connectivity/network/dns:component-legacy",
+    "//src/connectivity/network/netstack:component-legacy",
   ]
   manifest = "meta/omaha-client-service-bin-test.cmx"
 }

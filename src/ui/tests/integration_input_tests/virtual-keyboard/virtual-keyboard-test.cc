@@ -96,9 +96,10 @@ std::map<std::string, std::string> LocalServices() {
       {fuchsia::ui::input3::Keyboard::Name_,
        "fuchsia-pkg://fuchsia.com/text_manager#meta/text_manager.cmx"},
       // Netstack protocols.
-      {fuchsia::netstack::Netstack::Name_, "fuchsia-pkg://fuchsia.com/netstack#meta/netstack.cmx"},
+      {fuchsia::netstack::Netstack::Name_,
+       "fuchsia-pkg://fuchsia.com/virtual-keyboard-test#meta/netstack.cmx"},
       {fuchsia::net::interfaces::State::Name_,
-       "fuchsia-pkg://fuchsia.com/netstack#meta/netstack.cmx"},
+       "fuchsia-pkg://fuchsia.com/virtual-keyboard-test#meta/netstack.cmx"},
       // Misc protocols.
       {"fuchsia.cobalt.LoggerFactory",
        "fuchsia-pkg://fuchsia.com/mock_cobalt#meta/mock_cobalt.cmx"},

@@ -60,6 +60,7 @@ fuchsia_component("virtual-keyboard-test-component") {
 fuchsia_test_package("virtual-keyboard-test") {
   test_components = [ ":virtual-keyboard-test-component" ]
   deps = [
+    "//src/connectivity/network/netstack:component-legacy",
     "//src/ui/bin/root_presenter:component_v1_for_test",
     "//src/ui/scenic:component",
   ]

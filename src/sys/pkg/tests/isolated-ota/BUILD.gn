@@ -47,6 +47,8 @@ fuchsia_component("isolated-ota-integration-test") {
 fuchsia_test_package("isolated-ota-integration-tests") {
   test_components = [ ":isolated-ota-integration-test" ]
   deps = [
+    "//src/connectivity/network/dns:component-legacy",
+    "//src/connectivity/network/netstack:component-legacy",
     "//src/storage/bin/blobfs",
     "//src/sys/pkg/bin/pkgfs:pkgsvr",
     "//src/sys/pkg/bin/pm:pm_bin",

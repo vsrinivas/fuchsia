@@ -30,7 +30,7 @@ mod tests {
         let (env, env_server_end) = fidl::endpoints::create_proxy::<ManagedEnvironmentMarker>()?;
         let services = vec![LaunchService {
             name: String::from("fuchsia.netstack.Netstack"),
-            url: String::from("fuchsia-pkg://fuchsia.com/netstack#meta/netstack.cmx"),
+            url: String::from("fuchsia-pkg://fuchsia.com/netemul-sandbox-test#meta/netstack.cmx"),
             arguments: Vec::new(),
         }];
         sandbox.create_environment(

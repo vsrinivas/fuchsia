@@ -58,7 +58,12 @@ fuchsia_component("pkgctl-component") {
 
 fuchsia_test_package("pkgctl-integration-tests") {
   test_components = [ ":pkgctl_integration_test-component" ]
-  deps = [ ":pkgctl-component" ]
+  deps = [
+    ":pkgctl-component",
+    "//src/connectivity/network/dns:component-legacy",
+    "//src/connectivity/network/http-client:component-legacy",
+    "//src/connectivity/network/netstack:component-legacy",
+  ]
 }
 
 group("tests") {

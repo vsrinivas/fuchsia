@@ -17,9 +17,9 @@
                     "-t",
                     "class/ot-radio/000"
                 ],
-                "fuchsia.net.interfaces.State": "fuchsia-pkg://fuchsia.com/netstack#meta/netstack.cmx",
-                "fuchsia.net.stack.Stack": "fuchsia-pkg://fuchsia.com/netstack#meta/netstack.cmx",
-                "fuchsia.net.tun.Control": "fuchsia-pkg://fuchsia.com/network-tun#meta/network-tun.cmx",
+                "fuchsia.net.interfaces.State": "fuchsia-pkg://fuchsia.com/lowpan-driver-provision-mock#meta/netstack.cmx",
+                "fuchsia.net.stack.Stack": "fuchsia-pkg://fuchsia.com/lowpan-driver-provision-mock#meta/netstack.cmx",
+                "fuchsia.net.tun.Control": "fuchsia-pkg://fuchsia.com/lowpan-driver-provision-mock#meta/network-tun.cmx",
                 "fuchsia.openthread.devmgr.IsolatedDevmgr": [
                     "fuchsia-pkg://fuchsia.com/ot-radio-component-tests#meta/ot-devmgr-component-integration.cmx"
                 ]

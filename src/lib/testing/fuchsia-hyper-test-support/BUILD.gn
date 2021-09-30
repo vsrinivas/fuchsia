@@ -32,7 +32,11 @@ rustc_library("fuchsia-hyper-test-support") {
 }
 
 fuchsia_unittest_package("fuchsia-hyper-test-support-tests") {
-  deps = [ ":fuchsia-hyper-test-support_test" ]
+  deps = [
+    ":fuchsia-hyper-test-support_test",
+    "//src/connectivity/network/dns:component-legacy",
+    "//src/connectivity/network/netstack:component-legacy",
+  ]
   manifest = "meta/fuchsia_hyper_test_support_lib_test.cmx"
 }
 

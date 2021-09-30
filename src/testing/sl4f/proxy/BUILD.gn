@@ -32,5 +32,8 @@ rustc_binary("bin") {
 
 fuchsia_unittest_package("data-proxy-test") {
   manifest = "meta/data_proxy_bin_test.cmx"
-  deps = [ ":bin_test" ]
+  deps = [
+    ":bin_test",
+    "//src/connectivity/network/netstack:component-legacy",
+  ]
 }

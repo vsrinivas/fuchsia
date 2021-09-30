@@ -17,7 +17,7 @@
                 "fuchsia.logger.Log": "fuchsia-pkg://fuchsia.com/archivist-for-embedding#meta/archivist-with-klog.cmx",
                 "fuchsia.metrics.MetricEventLoggerFactory": "fuchsia-pkg://fuchsia.com/mock_cobalt#meta/mock_cobalt.cmx",
                 "fuchsia.metrics.test.MetricEventLoggerQuerier": "fuchsia-pkg://fuchsia.com/mock_cobalt#meta/mock_cobalt.cmx",
-                "fuchsia.net.interfaces.State": "fuchsia-pkg://fuchsia.com/netstack#meta/netstack.cmx",
+                "fuchsia.net.interfaces.State": "fuchsia-pkg://fuchsia.com/feedback-tests#meta/netstack.cmx",
                 "fuchsia.time.Utc": "fuchsia-pkg://fuchsia.com/timekeeper#meta/timekeeper.cmx",
                 "fuchsia.tracing.provider.Registry": "fuchsia-pkg://fuchsia.com/trace_manager#meta/trace_manager.cmx",
                 "fuchsia.ui.scenic.Scenic": "fuchsia-pkg://fuchsia.com/scenic#meta/scenic.cmx",

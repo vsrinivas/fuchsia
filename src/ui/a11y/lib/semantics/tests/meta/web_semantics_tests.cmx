@@ -2,9 +2,9 @@
     "facets": {
         "fuchsia.test": {
             "injected-services": {
-                "fuchsia.net.interfaces.State": "fuchsia-pkg://fuchsia.com/netstack#meta/netstack.cmx",
-                "fuchsia.netstack.Netstack": "fuchsia-pkg://fuchsia.com/netstack#meta/netstack.cmx",
-                "fuchsia.posix.socket.Provider": "fuchsia-pkg://fuchsia.com/netstack#meta/netstack.cmx"
+                "fuchsia.net.interfaces.State": "fuchsia-pkg://fuchsia.com/semantics-integration-tests#meta/netstack.cmx",
+                "fuchsia.netstack.Netstack": "fuchsia-pkg://fuchsia.com/semantics-integration-tests#meta/netstack.cmx",
+                "fuchsia.posix.socket.Provider": "fuchsia-pkg://fuchsia.com/semantics-integration-tests#meta/netstack.cmx"
             },
             "system-services": [
                 "fuchsia.device.NameProvider",

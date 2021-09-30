@@ -656,7 +656,8 @@ class WebEngineTest_IP : public TouchInputBase {
       "fuchsia-pkg://fuchsia.com/intl_property_manager#meta/intl_property_manager.cmx";
   static constexpr char kMemoryPressureProvider[] =
       "fuchsia-pkg://fuchsia.com/memory_monitor#meta/memory_monitor.cmx";
-  static constexpr char kNetstack[] = "fuchsia-pkg://fuchsia.com/netstack#meta/netstack.cmx";
+  static constexpr char kNetstack[] =
+      "fuchsia-pkg://fuchsia.com/touch-input-test-ip#meta/netstack.cmx";
   static constexpr char kWebContextProvider[] =
       "fuchsia-pkg://fuchsia.com/web_engine#meta/context_provider.cmx";
   static constexpr char kSemanticsManager[] =

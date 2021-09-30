@@ -81,6 +81,7 @@ fuchsia_component("fuchsia-hyper-lib-test") {
 
 fuchsia_test_package("fuchsia-hyper-tests") {
   test_components = [ ":fuchsia-hyper-lib-test" ]
+  deps = [ "//src/connectivity/network/netstack:component-legacy" ]
 }
 
 group("tests") {

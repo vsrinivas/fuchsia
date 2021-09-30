@@ -44,6 +44,8 @@ fuchsia_test_package("usb-system-update-checker-integration-tests") {
   test_components = [ ":usb-system-update-checker-integration-test" ]
 
   deps = [
+    "//src/connectivity/network/dns:component-legacy",
+    "//src/connectivity/network/netstack:component-legacy",
     "//src/storage/bin/blobfs",
     "//src/sys/pkg/bin/pkg-cache:isolated",
     "//src/sys/pkg/bin/pkg-resolver:isolated",

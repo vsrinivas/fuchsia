@@ -90,6 +90,8 @@ fuchsia_test_package("isolated-swd-tests") {
   test_components = [ ":isolated-swd-tests-component" ]
 
   deps = [
+    "//src/connectivity/network/dns:component-legacy",
+    "//src/connectivity/network/netstack:component-legacy",
     "//src/storage/bin/blobfs",
     "//src/sys/pkg/bin/pkgfs:pkgsvr_bin",
     "//src/sys/pkg/bin/pm:pm_bin",

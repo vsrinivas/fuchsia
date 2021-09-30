@@ -81,6 +81,7 @@ fuchsia_test_package("touch-input-test") {
   test_components = [ ":touch-input-test-component" ]
   deps = [
     ":touch-input-test-display_rotation",
+    "//src/connectivity/network/netstack:component-legacy",
     "//src/ui/bin/root_presenter:component_v1_for_test",
     "//src/ui/scenic:component",
   ]
@@ -154,6 +155,7 @@ fuchsia_test_package("touch-input-test-ip") {
   test_components = [ ":touch-input-test-ip-component" ]
   deps = [
     ":touch-input-test-display_rotation-ip",
+    "//src/connectivity/network/netstack:component-legacy",
     "//src/ui/bin/input-pipeline:component-for-test",
     "//src/ui/bin/root_presenter:component_v1_for_test",
     "//src/ui/scenic:component",

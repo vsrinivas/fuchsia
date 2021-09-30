@@ -882,7 +882,7 @@ class WebEngineTest : public TouchInputBase {
 
   static constexpr auto kNetstack = Moniker{"netstack"};
   static constexpr auto kNetstackUrl =
-      LegacyComponentUrl{"fuchsia-pkg://fuchsia.com/netstack#meta/netstack.cmx"};
+      LegacyComponentUrl{"fuchsia-pkg://fuchsia.com/touch-input-test#meta/netstack.cmx"};
 
   static constexpr auto kWebContextProvider = Moniker{"web_context_provider"};
   static constexpr auto kWebContextProviderUrl =

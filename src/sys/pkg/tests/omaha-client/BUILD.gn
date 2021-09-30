@@ -54,6 +54,7 @@ fuchsia_component("omaha-client-integration-test") {
 fuchsia_test_package("omaha-client-integration-tests") {
   test_components = [ ":omaha-client-integration-test" ]
   deps = [
+    "//src/connectivity/network/netstack:component-legacy",
     "//src/sys/pkg/bin/omaha-client:omaha-client-service-for-integration-test",
     "//src/sys/pkg/bin/system-updater:isolated",
     "//src/sys/pkg/tests/system-update-committer",

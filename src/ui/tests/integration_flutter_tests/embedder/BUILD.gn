@@ -25,6 +25,7 @@ fuchsia_unittest_package("flutter-embedder-test") {
   manifest = "meta/flutter-embedder-test.cmx"
   deps = [
     ":flutter-embedder-test-bin",
+    "//src/connectivity/network/netstack:component-legacy",
     "//src/ui/bin/root_presenter:component_v1_for_test",
     "//src/ui/scenic:component",
     "//src/ui/tests/integration_flutter_tests/embedder/child-view",

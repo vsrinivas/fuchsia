@@ -356,6 +356,7 @@ fuchsia_test_package("feedback-tests") {
   deps = [
     # needed for feedback_data_integration_test
     ":inspect_test_app",
+    "//src/connectivity/network/netstack:component-legacy",
   ]
 
   test_specs = {

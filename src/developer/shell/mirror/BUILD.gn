@@ -104,4 +104,5 @@ fuchsia_component("shell-mirror-test") {
 
 fuchsia_test_package("shell-mirror-tests") {
   test_components = [ ":shell-mirror-test" ]
+  deps = [ "//src/connectivity/network/netstack:component-legacy" ]
 }

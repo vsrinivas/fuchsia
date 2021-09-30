@@ -28,7 +28,7 @@ mod child;
 mod common;
 
 const MY_PACKAGE: &str = "fuchsia-pkg://fuchsia.com/netemul-sandbox-test#meta/netstack-socks.cmx";
-const NETSTACK_URL: &str = "fuchsia-pkg://fuchsia.com/netstack#meta/netstack.cmx";
+const NETSTACK_URL: &str = "fuchsia-pkg://fuchsia.com/netemul-sandbox-test#meta/netstack.cmx";
 const NETWORK_NAME: &str = "test-network";
 
 struct Env {

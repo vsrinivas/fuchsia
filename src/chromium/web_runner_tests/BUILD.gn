@@ -147,6 +147,7 @@ fuchsia_test_package("web_runner_tests") {
     # just declares that the binary needs to be compiled, but doesn't actually
     # add the package.  That happens below in the "tests" group.
     "//garnet/examples/intl/manager:intl_property_manager",
+    "//src/connectivity/network/netstack:component-legacy",
   ]
 
   test_specs = {

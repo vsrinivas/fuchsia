@@ -30,7 +30,7 @@ use structopt::StructOpt;
 const EP_NAME: &str = "ep0";
 const EP_MOUNT: &str = "class/ethernet/ep0";
 const MY_PACKAGE: &str = "fuchsia-pkg://fuchsia.com/netemul-sandbox-test#meta/svc-list.cmx";
-const NETSTACK_URL: &str = "fuchsia-pkg://fuchsia.com/netstack#meta/netstack.cmx";
+const NETSTACK_URL: &str = "fuchsia-pkg://fuchsia.com/netemul-sandbox-test#meta/netstack.cmx";
 const FAKE_SVC_NAME: &str = "fuchsia.some.fake.Service";
 const FAKE_SVC_URL: &str = "fuchsia-pkg://fuchsia.com/fake#meta/fake.cmx";
 

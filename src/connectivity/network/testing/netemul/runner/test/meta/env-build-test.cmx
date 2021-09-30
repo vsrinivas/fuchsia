@@ -47,8 +47,8 @@
                 ],
                 "name": "root",
                 "services": {
-                    "fuchsia.netstack.Netstack": "fuchsia-pkg://fuchsia.com/netstack#meta/netstack.cmx",
-                    "fuchsia.posix.socket.Provider": "fuchsia-pkg://fuchsia.com/netstack#meta/netstack.cmx"
+                    "fuchsia.netstack.Netstack": "fuchsia-pkg://fuchsia.com/netemul-sandbox-test#meta/netstack.cmx",
+                    "fuchsia.posix.socket.Provider": "fuchsia-pkg://fuchsia.com/netemul-sandbox-test#meta/netstack.cmx"
                 },
                 "setup": [
                     {

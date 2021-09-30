@@ -25,7 +25,10 @@ rustc_library("mock-omaha-server") {
 
 fuchsia_unittest_package("mock-omaha-server-tests") {
   manifest = "meta/mock-omaha-server-lib-test.cmx"
-  deps = [ ":mock-omaha-server_test" ]
+  deps = [
+    ":mock-omaha-server_test",
+    "//src/connectivity/network/netstack:component-legacy",
+  ]
 }
 
 group("tests") {

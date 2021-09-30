@@ -180,6 +180,8 @@ fuchsia_test_package("system_recovery_tests") {
   deps = [
     ":recovery_logo",
     ":roboto_regular",
+    "//src/connectivity/network/dns:component-legacy",
+    "//src/connectivity/network/netstack:component-legacy",
     "//src/storage/bin/blobfs",
     "//src/storage/bin/minfs",
     "//src/sys/pkg/bin/pkgfs:pkgsvr",
