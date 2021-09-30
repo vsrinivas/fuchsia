@@ -182,6 +182,12 @@ foreach(test_name, gvisor_tests) {
 
 wayland_tests = [
   "array-test",
+
+  # "client-test",
+  # "compositor-introspection-test",
+  # "connection-test",
+  # "display-test",
+  # "event-loop-test",
   "fixed-test",
   "headers-protocol-core-test",
   "headers-protocol-test",
@@ -193,8 +199,13 @@ wayland_tests = [
   "os-wrappers-test",
 
   # Disabled because it spawns a subprocess that page faults, which should have been a failure but wasn't when the test was added
-  #"protocol-logger-test",
+  # "protocol-logger-test",
+  # "queue-test",
+  # "resources-test",
+  # "sanity-test",
   "signal-test",
+
+  # "socket-test",
 ]
 
 foreach(test_name, wayland_tests) {

@@ -1,0 +1,6 @@
+{
+    include: [ "//src/proc/tests/android/wayland.shard.cml" ],
+    program: {
+        binary: "/data/tests/display-test",
+    },
+}
