@@ -18,6 +18,7 @@ rustc_test("bin") {
   name = "my-component-test-rust"
 
   deps = [
+    "//sdk/fidl/fuchsia.component:fuchsia.component-rustc",
     "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
     "//sdk/fidl/fuchsia.sys2:fuchsia.sys2-rustc",
     "//src/lib/diagnostics/reader/rust",

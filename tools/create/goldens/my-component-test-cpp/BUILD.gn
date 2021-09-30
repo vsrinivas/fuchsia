@@ -18,6 +18,7 @@ test("bin") {
   output_name = "my-component-test-cpp"
 
   deps = [
+    "//sdk/fidl/fuchsia.component",
     "//sdk/fidl/fuchsia.sys2",
     "//sdk/lib/inspect/contrib/cpp:archive_reader",
     "//sdk/lib/sys/cpp",

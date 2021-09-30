@@ -30,6 +30,10 @@ TEST_F(MyComponentTestCppIntegrationTest, TestMethod) {
   async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
 
   // Connect to the component(s) under test using the Realm protocol, e.g.
+  // This assumes that the child component exposes the `fuchsia.component.Binder`
+  // protocol. For more information on this protocol, see: 
+  // https://fuchsia.dev/fuchsia-src/concepts/components/v2/component_manifests#framework-protocols.
+  // If your component exposes another capability, you connect to it directly.
   // ```
   //  fidl::SynchronousInterfacePtr<fuchsia::sys2::Realm> realm;
   //  std::string realm_service = std::string("/svc/")
@@ -40,9 +44,17 @@ TEST_F(MyComponentTestCppIntegrationTest, TestMethod) {
   //              realm.NewRequest().TakeChannel().get()));
   //
   // fidl::SynchronousInterfacePtr<fuchsia::io::Directory> exposed_dir;
-  // fuchsia::sys2::Realm_BindChild_Result result;
-  // realm->BindChild(fuchsia::sys2::ChildRef{.name = "hello-world"},
+  // fuchsia::sys2::Realm_OpenExposedDir_Result result;
+  // realm->OpenExposedDir(fuchsia::sys2::ChildRef{.name = "hello-world"},
   //    exposed_dir.NewRequest(), &result);
+  // EXPECT_EQ(exposed_dir->Open("fuchsia.component.Binder"), ZX_OK);
+  // zx::channel handle, request;
+  // EXPECT_EQ(zx::channel::create(0, &handle, &request), ZX_OK);
+  // EXPECT_EQ(exposed_dir->Open(fuchsia::io::OPEN_FLAG_DIRECTORY |
+  // fuchsia::io::OPEN_RIGHT_READABLE,
+  //                   fuchsia::io::MODE_TYPE_DIRECTORY, fuchsia::component::Binder::Name_,
+  //                   fidl::InterfaceRequest<fuchsia::component::Binder>(std::move(request)))),
+  //                   ZX_OK);
   // ```
 
 

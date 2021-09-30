@@ -10,17 +10,26 @@ use {
 #[fuchsia::test]
 async fn my_component_test_rust_test() -> Result<(), Error> {
     // Connect to the component(s) under test using the Realm protocol, e.g.
+    // This assumes that the child component exposes the `fuchsia.component.Binder`
+    // protocol. For more information on this protocol, see: 
+    // https://fuchsia.dev/fuchsia-src/concepts/components/v2/component_manifests#framework-protocols.
+    // If your component exposes another capability, you connect to it directly.
     // ```
     // use fuchsia_component::client as fclient;
+    // use fidl_fuchsia_component as fcomponent;
+    // use fidl_fuchsia_sys2 as fsys;
+    // use fidl_fuchsia_io as fio;
+    // use fidl::endpoints;
     //
     // let realm_proxy = fclient::realm()?;
-    // let (_component_proxy, component_server_end) = create_proxy::<DirectoryMarker>()?;
-    // realm_proxy
-    //     .bind_child(
+    // let (exposed_directory, server_end) = endpoints::create_proxy::<fio::DirectoryMarker>()?;
+    // let () = realm_proxy
+    //     .open_exposed_dir(
     //         &mut fsys::ChildRef { name: "hello-world".to_string(), collection: None },
-    //         component_server_end,
+    //         server_end,
     //     )
-    //     .await?
+    //     .await?;
+    // let _: fcomponent::BinderProxy = fclient::connect_to_protocol_at_dir_root::<fcomponent::BinderMarker>(&exposed_directory)?;
     // ```
 
 
