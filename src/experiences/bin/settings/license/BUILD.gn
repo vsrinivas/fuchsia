@@ -16,10 +16,10 @@ dart_library("lib") {
   deps = [
     "//sdk/dart/fuchsia_logger",
     "//sdk/dart/fuchsia_webview_flutter",
-    "//sdk/dart/fuchsia_webview_flutter:webview_flutter",
     "//src/experiences/lib/ermine_localhost:ermine_localhost",
     "//src/experiences/session_shells/ermine/internationalization",
     "//third_party/dart-pkg/git/flutter/packages/flutter",
+    "//third_party/dart-pkg/pub/webview_flutter",
   ]
 }
 
