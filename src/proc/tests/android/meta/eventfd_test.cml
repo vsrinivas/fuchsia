@@ -2,6 +2,6 @@
     include: [ "//src/proc/tests/android/gvisor.shard.cml" ],
     program: {
         binary: "/data/tests/eventfd_test",
-        args: [ "--gunit_filter=*.Nothing*" ],
+        args: [ "--gunit_filter=-*.NotifyNonZero" ],
     },
 }

@@ -831,17 +831,14 @@ pub fn sys_eventfd2(
     value: u32,
     flags: u32,
 ) -> Result<SyscallResult, Errno> {
-    if flags & !(O_CLOEXEC | O_NONBLOCK) != 0 {
-        // TODO: Implement EFD_SEMAPHORE.
-        not_implemented!("eventfd2: flags 0x{:x}", flags);
+    if flags & !(EFD_CLOEXEC | EFD_NONBLOCK | EFD_SEMAPHORE) != 0 {
         return error!(EINVAL);
     }
-    let mut open_flags = OpenFlags::empty();
-    if flags & O_NONBLOCK != 0 {
-        open_flags |= OpenFlags::NONBLOCK;
-    }
-    let file = new_eventfd(ctx.kernel(), value, open_flags);
-    let fd_flags = get_fd_flags(flags);
+    let blocking = (flags & EFD_NONBLOCK) == 0;
+    let eventfd_type =
+        if (flags & EFD_SEMAPHORE) == 0 { EventFdType::Counter } else { EventFdType::Semaphore };
+    let file = new_eventfd(ctx.kernel(), value, eventfd_type, blocking);
+    let fd_flags = if flags & EFD_CLOEXEC != 0 { FdFlags::CLOEXEC } else { FdFlags::empty() };
     let fd = ctx.task.files.add_with_flags(file, fd_flags)?;
     Ok(fd.into())
 }

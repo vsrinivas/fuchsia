@@ -143,3 +143,7 @@ pub struct msghdr {
     pub msg_controllen: u64,
     pub msg_flags: u64,
 }
+
+pub const EFD_CLOEXEC: u32 = O_CLOEXEC;
+pub const EFD_NONBLOCK: u32 = O_NONBLOCK;
+pub const EFD_SEMAPHORE: u32 = 1;
