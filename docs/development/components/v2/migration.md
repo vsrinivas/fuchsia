@@ -432,6 +432,8 @@ component manifest.
 
 #### Test with injected services {#injected-services}
 
+##### Injecting v2 components
+
 For tests that use other [fuchsia.test facets][fuchsia-test-facets], such as
 `injected-services`, your [test root][trf-roles] and [test driver][trf-roles]
 must be split into different components to enable proper capability routing.
@@ -587,6 +589,150 @@ Do the following:
       ]
     }
     ```
+
+##### Some injected components are still v1 components
+
+When your test depends on injected components which have not been migrated to
+v2, you can't include those components in your test component's CML file. You
+need to use the [RealmBuilder API][realm-builder] in your test to inject those
+components.
+
+Note: The following example will not work if code invoked by the test connects
+directly to the injected service from the namespace (for example,
+"/svc/fuchsia.pkg.FontResolver"). In that case do one of the following:
+
+- Change logic to accept an [sys::ServiceDirectory][service-directory-cpp] (C++), or
+ [ProtocolConnector][protocol-connector] (Rust).
+- Change logic to accept an already opened FIDL channel.
+- Modify the code to connect to the protocol using generated realm (See below
+example).
+
+If none of the options are feasible, then the test cannot be ported. Please
+file a [bug][component-testing-bug] against ComponentFramework>Testing.
+
+In this example, suppose the test CMX declares a single injected service,
+`fuchsia.pkg.FontResolver`:
+
+```json
+// font_provider_test.cmx
+{
+    "facets": {
+        "fuchsia.test": {
+            "injected-services": {
+                "fuchsia.pkg.FontResolver":
+                    "fuchsia-pkg://fuchsia.com/font_provider_tests#meta/mock_font_resolver.cmx"
+            }
+        }
+    },
+    "program": {
+        "binary": "bin/font_provider_test"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.pkg.FontResolver"
+        ]
+    }
+}
+```
+and `mock_font_resolver` is still a v1 component. To migrate this test to
+the Test Runner Framework, do the following:
+
+1.  Create a new CML file for the test root. This component should include one
+of the appropriate test runner's shard.
+
+    ```json5
+    // font_provider_test.cml (test root)
+    {
+        include: [
+            // depend on realm builder shard
+            "//src/lib/fuchsia-component-test/meta/fuchsia_component_test.shard.cml",
+            // Select the appropriate test runner shard here:
+            // rust, gtest, go, etc.
+            "//src/sys/test_runners/rust/default.shard.cml",
+        ],
+        program: {
+            binary: "bin/font_provider_test",
+        },
+    }
+    ```
+
+1.  Add `fuchsia_component` rules in the build file, and update the
+    `fuchsia_package` to reference the child components as dependencies:
+
+    ```gn
+    fuchsia_component("mock_font_resolver") {
+      testonly = true
+      manifest = "meta/mock_font_resolver.cmx"
+      deps = [ ":mock_font_resolver_bin" ]
+    }
+
+    fuchsia_component("font_provider_test") {
+      testonly = true
+      manifest = "meta/font_provider_test.cml"
+    }
+
+    fuchsia_test_package("font_provider_tests") {
+      test_components = [ ":font_provider_test" ]
+      deps = [
+        ":mock_font_resolver",
+      ]
+    }
+    ```
+
+1.  Change your test code to launch `mock_font_resolver` using [RealmBuilder API][realm-builder]
+and connect to it:
+
+    ```rust
+    async fn do_work_with_resolver(resolver_proxy: fpkg::FontResolverProxy) {
+        // do some work with the proxy
+    }
+
+    async fn my_func() {
+        let mut builder = RealmBuilder::new().await?;
+        builder
+        .add_component("timezone",
+        ComponentSource::LegacyUrl("fuchsia-pkg://fuchsia.com/font_provider_tests#meta/mock_font_resolver.cmx".to_string()))
+        .await?
+        .add_route(CapabilityRoute {
+        capability: Capability::protocol("fuchsia.pkg.FontResolver"),
+        source: RouteEndpoint::component("font_resolver"),
+            targets: vec![RouteEndpoint::AboveRoot],
+        })?;
+
+        let font_resolver_realm = builder.build().create().await
+        // connect to the protocol
+        let resolver_proxy = font_resolver_realm.root
+        .connect_to_protocol_at_exposed_dir::<fpkg::FontResolverMarker>()?;
+        // .. some code
+        do_work_with_resolver(resolver_proxy).await;
+        // .. rest of the code
+    }
+
+
+
+    ```
+
+If your test code was connecting to the protocol from its namespace, change
+the code to connect to the protocol from the created realm. See above
+example.
+
+If there are other components in the dependency list, they can be injected and
+routed capabilities using [RealmBuilder][realm-builder]. See this
+[CL](https://fuchsia-review.googlesource.com/c/fuchsia/+/583623) as a working
+migration example.
+
+<aside class="note">
+  <b>Note:</b>There are some key differences between migrated and original test.
+  <ul>
+    <li>Once the test is migrated, the injected component will be a child of the
+    realm constructed by RealmBuilder and the service won't be injected in test's
+    own namespace (unlike original test).</li>
+    <li>In original test, each test case uses same instance of injected
+    component. Once the test is migrated each test case will use a separate
+    instance of injected component and the topology of the components can be
+    modified (if required) for each test case.</li>
+  </ul>
+</aside>
 
 ### Verify the migrated tests {#verify-tests}
 
@@ -2102,3 +2248,7 @@ described in the [Vulkan documentation][vulkan].
 [unit-tests-with-generated-manifests]: /docs/development/components/build.md#unit-tests
 [ffx-inspect]: /docs/reference/tools/sdk/ffx.md#inspect
 [vulkan]: /docs/concepts/graphics/magma/vulkan.md#components_v2
+[realm-builder]:/docs/development/components/v2/realm_builder.md
+[protocol-connector]: https://cs.opensource.google/fuchsia/fuchsia/+/main:src/lib/fuchsia-component/src/client.rs
+[service-directory-cpp]: https://cs.opensource.google/fuchsia/fuchsia/+/main:sdk/lib/sys/cpp/service_directory.h
+[component-testing-bug]: https://bugs.fuchsia.dev/p/fuchsia/issues/entry?components=ComponentFramework%3ETesting
