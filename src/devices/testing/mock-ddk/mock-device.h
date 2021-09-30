@@ -11,6 +11,7 @@
 #include <lib/stdcompat/span.h>
 #include <lib/sync/completion.h>
 #include <lib/zx/time.h>
+#include <lib/zx/vmo.h>
 
 #include <list>
 #include <memory>
@@ -148,6 +149,8 @@ struct MockDevice : public std::enable_shared_from_this<MockDevice> {
   cpp20::span<const zx_device_prop_t> GetProperties() const { return props_; }
   cpp20::span<const zx_device_str_prop_t> GetStringProperties() const { return str_props_; }
 
+  const zx::vmo& GetInspectVmo() const { return inspect_; }
+
   // Size is often set for the parent of a device, to be available when the device
   // calls device_get_size
   void SetSize(size_t size);
@@ -269,6 +272,7 @@ struct MockDevice : public std::enable_shared_from_this<MockDevice> {
 
   std::vector<zx_device_prop_t> props_;
   std::vector<zx_device_str_prop_t> str_props_;
+  zx::vmo inspect_;
 };
 
 namespace mock_ddk {

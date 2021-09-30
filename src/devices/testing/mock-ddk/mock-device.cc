@@ -15,6 +15,7 @@ MockDevice::MockDevice(device_add_args_t* args, MockDevice* parent)
   if (args->str_props) {
     str_props_.insert(str_props_.begin(), args->str_props, args->str_props + args->str_prop_count);
   }
+  inspect_ = zx::vmo(args->inspect_vmo);
 }
 
 // static

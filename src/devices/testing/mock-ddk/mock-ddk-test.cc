@@ -514,3 +514,16 @@ TEST(MockDdk, GetProperties) {
                    kStrProps.size()),
             0);
 }
+
+TEST(MockDdk, GetInspectVmo) {
+  auto parent = MockDevice::FakeRootParent();  // Hold on to the parent during the test.
+  auto dev = std::make_unique<TestDevice>(parent.get());
+  zx::vmo inspect;
+  ASSERT_OK(zx::vmo::create(1024, 0, &inspect));
+  zx_handle_t handle = inspect.get();
+  ASSERT_OK(dev->DdkAdd(ddk::DeviceAddArgs("my-test-device").set_inspect_vmo(std::move(inspect))));
+  // The MockDevice is now in charge of the memory for dev
+  TestDevice* test_device = dev.release();
+
+  ASSERT_EQ(test_device->zxdev()->GetInspectVmo().get(), handle);
+}
