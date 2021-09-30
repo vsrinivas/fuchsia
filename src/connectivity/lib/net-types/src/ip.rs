@@ -1251,9 +1251,12 @@ impl IpAddress for Ipv4Addr {
 
     #[inline]
     fn common_prefix_len(&self, other: &Ipv4Addr) -> u8 {
-        let Ipv4Addr(me) = self;
-        let Ipv4Addr(other) = other;
-        common_prefix_len(me.iter().copied().zip(other.iter().copied()))
+        let me = u32::from_be_bytes(self.0);
+        let other = u32::from_be_bytes(other.0);
+        // `same_bits` has a 0 wherever `me` and `other` have the same bit in a
+        // given position, and a 1 wherever they have opposite bits.
+        let same_bits = me ^ other;
+        same_bits.leading_zeros() as u8
     }
 
     #[inline]
@@ -1545,9 +1548,12 @@ impl IpAddress for Ipv6Addr {
 
     #[inline]
     fn common_prefix_len(&self, other: &Ipv6Addr) -> u8 {
-        let Ipv6Addr(me) = self;
-        let Ipv6Addr(other) = other;
-        common_prefix_len(me.iter().copied().zip(other.iter().copied()))
+        let me = u128::from_be_bytes(self.0);
+        let other = u128::from_be_bytes(other.0);
+        // `same_bits` has a 0 wherever `me` and `other` have the same bit in a
+        // given position, and a 1 wherever they have opposite bits.
+        let same_bits = me ^ other;
+        same_bits.leading_zeros() as u8
     }
 
     #[inline]
@@ -2404,22 +2410,6 @@ impl<A: IpAddrWitness> AddrSubnetEither<A> {
     }
 }
 
-/// Helper function to calculate common prefix length in an iterator of tuple of
-/// bytes.
-fn common_prefix_len(it: impl Iterator<Item = (u8, u8)>) -> u8 {
-    let mut len = 0;
-    for (a, b) in it {
-        let v = u8::leading_ones(!(a ^ b));
-        // Cast to u8 is always safe because leading ones can't return more than
-        // 8.
-        len += v as u8;
-        if v != 8 {
-            break;
-        }
-    }
-    len
-}
-
 #[cfg(test)]
 mod tests {
     use core::convert::TryInto;
@@ -2824,10 +2814,10 @@ mod tests {
         let compare_with_ip1 = |target, expect| {
             assert_eq!(ip1.common_prefix_len(&target), expect, "{} <=> {}", ip1, target);
         };
-        let () = compare_with_ip1(ip1, 128);
-        let () = compare_with_ip1(ip2, 0);
-        let () = compare_with_ip1(ip3, 24);
-        let () = compare_with_ip1(ip4, 17);
+        compare_with_ip1(ip1, 128);
+        compare_with_ip1(ip2, 0);
+        compare_with_ip1(ip3, 24);
+        compare_with_ip1(ip4, 17);
     }
 
     #[test]
@@ -2839,10 +2829,10 @@ mod tests {
         let compare_with_ip1 = |target, expect| {
             assert_eq!(ip1.common_prefix_len(&target), expect, "{} <=> {}", ip1, target);
         };
-        let () = compare_with_ip1(ip1, 32);
-        let () = compare_with_ip1(ip2, 0);
-        let () = compare_with_ip1(ip3, 24);
-        let () = compare_with_ip1(ip4, 17);
+        compare_with_ip1(ip1, 32);
+        compare_with_ip1(ip2, 0);
+        compare_with_ip1(ip3, 24);
+        compare_with_ip1(ip4, 17);
     }
 
     #[test]
