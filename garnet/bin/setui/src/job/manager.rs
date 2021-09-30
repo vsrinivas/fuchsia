@@ -441,7 +441,7 @@ mod tests {
         requests_tx
             .unbounded_send(Ok(Job::new(job::work::Load::Sequential(
                 Box::new(WaitingWorkload::new(rx, execute_tx)),
-                job::Signature::new(1),
+                job::Signature::new::<usize>(),
             ))))
             .expect("Should be able to send queue");
         messenger
@@ -467,7 +467,7 @@ mod tests {
         requests_tx
             .unbounded_send(Ok(Job::new(job::work::Load::Sequential(
                 Workload::new(test::Payload::Integer(result), signature),
-                job::Signature::new(1),
+                job::Signature::new::<usize>(),
             ))))
             .expect("Should be able to send queue");
 

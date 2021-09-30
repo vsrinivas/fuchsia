@@ -29,6 +29,7 @@ use core::pin::Pin;
 use futures::future::BoxFuture;
 use futures::lock::Mutex;
 use futures::stream::Stream;
+use std::any::TypeId;
 use std::collections::HashMap;
 use std::sync::Arc;
 
@@ -173,15 +174,18 @@ pub mod work {
 /// infrastructure to associate resources such as caches.
 #[derive(PartialEq, Copy, Clone, Debug, Eq, Hash)]
 pub struct Signature {
-    key: usize,
+    key: TypeId,
 }
 
 impl Signature {
     /// Constructs a new [Signature]. The key provided will group the associated [Job] with other
     /// [Jobs](Job) of the same key. The association is scoped to other [Jobs](Job) in the same
     /// parent source.
-    pub(crate) fn new(key: usize) -> Self {
-        Self { key }
+    pub(crate) fn new<T>() -> Self
+    where
+        T: 'static + ?Sized,
+    {
+        Self { key: TypeId::of::<T>() }
     }
 }
 

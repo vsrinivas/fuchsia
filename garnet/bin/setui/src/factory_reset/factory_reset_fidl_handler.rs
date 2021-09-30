@@ -8,7 +8,7 @@ use crate::handler::base::{Request, Response};
 use crate::ingress::Scoped;
 use crate::ingress::{request, watch};
 use crate::job::source::ErrorResponder;
-use crate::job::{Job, Signature};
+use crate::job::Job;
 use fidl_fuchsia_settings::{
     Error, FactoryResetMarker, FactoryResetRequest, FactoryResetSetResponder,
     FactoryResetSetResult, FactoryResetSettings, FactoryResetWatchResponder,
@@ -17,8 +17,6 @@ use fuchsia_syslog::fx_log_warn;
 use std::convert::TryFrom;
 
 use crate::job::source::Error as JobError;
-
-const WATCH_JOB_SIGNATURE: usize = 1;
 
 fidl_hanging_get_responder!(FactoryResetMarker, FactoryResetSettings, FactoryResetWatchResponder,);
 
@@ -68,12 +66,9 @@ impl TryFrom<FactoryResetRequest> for Job {
                 }
                 None => Err(JobError::InvalidInput(Box::new(responder))),
             },
-            FactoryResetRequest::Watch { responder } => Ok(watch::Work::new(
-                SettingType::FactoryReset,
-                Signature::new(WATCH_JOB_SIGNATURE),
-                responder,
-            )
-            .into()),
+            FactoryResetRequest::Watch { responder } => {
+                Ok(watch::Work::new(SettingType::FactoryReset, responder).into())
+            }
             _ => {
                 fx_log_warn!("Received a call to an unsupported API: {:?}", item);
                 Err(JobError::Unsupported)

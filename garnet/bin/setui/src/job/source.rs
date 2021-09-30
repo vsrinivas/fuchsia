@@ -412,7 +412,7 @@ mod tests {
         for result in &results {
             handler.add_pending_job(Job::new(job::work::Load::Sequential(
                 Workload::new(test::Payload::Integer(*result), receptor.get_signature()),
-                job::Signature::new(0),
+                job::Signature::new::<usize>(),
             )));
         }
 
@@ -510,7 +510,7 @@ mod tests {
 
         let data_key = job::data::Key::TestInteger(rng.gen());
         let initial_value = rng.gen_range(0, 9);
-        let signature = job::Signature::new(1);
+        let signature = job::Signature::new::<usize>();
 
         // Each result is the square of the previous result,
         let results: Vec<usize> = (0..5)

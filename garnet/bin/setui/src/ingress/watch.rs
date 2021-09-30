@@ -71,10 +71,13 @@ impl<
         T: Responder<R, E> + Send + Sync + 'static,
     > Work<R, E, T>
 {
-    pub(crate) fn new(setting_type: SettingType, signature: Signature, responder: T) -> Self {
+    pub(crate) fn new(setting_type: SettingType, responder: T) -> Self
+    where
+        T: 'static,
+    {
         Self {
             setting_type,
-            signature,
+            signature: Signature::new::<T>(),
             responder,
             change_function: None,
             _response_type: PhantomData,
@@ -86,13 +89,12 @@ impl<
     #[allow(dead_code)]
     pub(crate) fn with_change_function(
         setting_type: SettingType,
-        signature: Signature,
         responder: T,
         change_function: ChangeFunction,
     ) -> Self {
         Self {
             setting_type,
-            signature,
+            signature: Signature::new::<T>(),
             responder,
             change_function: Some(change_function),
             _response_type: PhantomData,
@@ -298,14 +300,9 @@ mod tests {
             futures::channel::oneshot::channel::<Result<SettingInfo, Error>>();
 
         let work = match change_function {
-            None => Box::new(Work::new(
-                SettingType::Unknown,
-                Signature::new(0),
-                TestResponder::new(response_tx),
-            )),
+            None => Box::new(Work::new(SettingType::Unknown, TestResponder::new(response_tx))),
             Some(change_function) => Box::new(Work::with_change_function(
                 SettingType::Unknown,
-                Signature::new(0),
                 TestResponder::new(response_tx),
                 change_function,
             )),
@@ -381,11 +378,7 @@ mod tests {
             futures::channel::oneshot::channel::<Result<SettingInfo, Error>>();
 
         // Create a listen request to a non-existent end-point.
-        let work = Box::new(Work::new(
-            SettingType::Unknown,
-            Signature::new(0),
-            TestResponder::new(response_tx),
-        ));
+        let work = Box::new(Work::new(SettingType::Unknown, TestResponder::new(response_tx)));
 
         let work_messenger = message_hub_delegate
             .create(MessengerType::Unbound)
