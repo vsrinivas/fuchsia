@@ -401,6 +401,9 @@ void FidlAudioRenderer::OnTimelineTransition() {
   unsupported_rate_ =
       timeline.subject_delta() != 0 && timeline.subject_delta() != timeline.reference_delta();
   if (unsupported_rate_) {
+    // Dropping all queued packets, so reset our local state tracking as well.
+    packet_bytes_outstanding_ = 0;
+    expected_packet_size_ = 0;
     audio_renderer_->DiscardAllPackets([]() {});
   }
 
