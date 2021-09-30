@@ -10,20 +10,26 @@ use {
     async_trait::async_trait,
     fidl, fidl_fuchsia_ui_app as ui_app, fidl_fuchsia_ui_gfx as ui_gfx,
     fidl_fuchsia_ui_scenic as ui_scenic, fidl_fuchsia_ui_views as ui_views,
+    fuchsia_async::{self as fasync},
     fuchsia_scenic as scenic, fuchsia_scenic,
-    fuchsia_syslog::fx_log_warn,
+    fuchsia_syslog::{fx_log_info, fx_log_warn},
     futures::channel::mpsc::unbounded,
     input_pipeline::Size,
-    std::sync::Arc,
+    std::sync::{Arc, Weak},
 };
 
 pub type FocuserPtr = Arc<ui_views::FocuserProxy>;
+pub type ViewRefInstalledPtr = Arc<ui_views::ViewRefInstalledProxy>;
 
 /// The [`FlatSceneManager`] constructs an empty scene with a single white ambient light.
 ///
 /// Each added view is positioned at (x, y, z) = 0, and sized to match the size of the display.
 /// The display dimensions are computed at the time the [`FlatSceneManager`] is constructed.
 pub struct FlatSceneManager {
+    /// The ViewRefInstalled handle used to ensure that the root view is reattached to the scene
+    /// after a11y view insertion.
+    pub view_ref_installed: ViewRefInstalledPtr,
+
     /// The Scenic session associated with this [`FlatSceneManager`].
     pub session: scenic::SessionPtr,
 
@@ -46,9 +52,15 @@ pub struct FlatSceneManager {
     views: Vec<scenic::EntityNode>,
 
     /// The proxy View/ViewHolder pair exists so that the a11y manager can insert its view into the
-    /// scene after SetRootView() has already been called. Note that the a11y manager will own the
-    /// proxy view holder.
-    a11y_proxy_view: Option<scenic::View>,
+    /// scene after SetRootView() has already been called.
+    a11y_proxy_view_holder: scenic::ViewHolder,
+
+    /// See comment for a11y_proxy_view_holder.
+    a11y_proxy_view: scenic::View,
+
+    /// Copy of the root view's [`ui_views::ViewRef`]. If the root view is attached before the a11y
+    /// view, then we need to re-focus it after the a11y view is inserted.
+    root_view_ref: Option<ui_views::ViewRef>,
 
     /// Proxy session. The proxy view must exist in a separate session from the root view since
     /// its parent is in a different session.
@@ -87,9 +99,12 @@ struct ScenicResources {
 impl SceneManager for FlatSceneManager {
     async fn new(
         scenic: ui_scenic::ScenicProxy,
+        view_ref_installed_proxy: ui_views::ViewRefInstalledProxy,
         display_pixel_density: Option<f32>,
         viewing_distance: Option<ViewingDistance>,
     ) -> Result<Self, Error> {
+        let view_ref_installed = Arc::new(view_ref_installed_proxy);
+
         let (session, focuser) = FlatSceneManager::create_session(&scenic)?;
         let (a11y_proxy_session, _a11y_proxy_focuser) = FlatSceneManager::create_session(&scenic)?;
 
@@ -120,6 +135,24 @@ impl SceneManager for FlatSceneManager {
         let root_node = scenic::EntityNode::new(session.clone());
         scene.add_child(&root_node);
 
+        // Create proxy view/viewholder and add to the scene.
+        let proxy_token_pair = scenic::ViewTokenPair::new()?;
+        let a11y_proxy_viewref_pair = scenic::ViewRefPair::new()?;
+        let a11y_proxy_view_holder = FlatSceneManager::create_view_holder(
+            &session,
+            proxy_token_pair.view_holder_token,
+            display_metrics,
+            Some(String::from("a11y proxy view holder")),
+        );
+        let a11y_proxy_view = scenic::View::new3(
+            a11y_proxy_session.clone(),
+            proxy_token_pair.view_token,
+            a11y_proxy_viewref_pair.control_ref,
+            a11y_proxy_viewref_pair.view_ref,
+            Some(String::from("a11y proxy view")),
+        );
+        root_node.add_child(&a11y_proxy_view_holder);
+
         let compositor_id = compositor.id();
 
         let resources = ScenicResources {
@@ -145,6 +178,7 @@ impl SceneManager for FlatSceneManager {
         FlatSceneManager::request_present(&a11y_proxy_sender);
 
         Ok(FlatSceneManager {
+            view_ref_installed,
             session,
             focuser,
             root_node,
@@ -152,7 +186,9 @@ impl SceneManager for FlatSceneManager {
             compositor_id,
             _resources: resources,
             views: vec![],
-            a11y_proxy_view: None,
+            a11y_proxy_view_holder,
+            a11y_proxy_view,
+            root_view_ref: None,
             a11y_proxy_session,
             display_metrics,
             cursor_node: None,
@@ -187,7 +223,15 @@ impl SceneManager for FlatSceneManager {
     ) -> Result<ui_views::ViewRef, Error> {
         let token_pair = scenic::ViewTokenPair::new()?;
         let mut viewref_pair = scenic::ViewRefPair::new()?;
+
+        // Make two additional copies of the ViewRef.
+        // - The original will be used to create the root view.
+        // - The first copy will be returned to the caller.
+        // - The second copy will be stored, and used to re-focus the root view if insertion
+        //   of the a11y view breaks the focus chain.
         let viewref_dup = fuchsia_scenic::duplicate_view_ref(&viewref_pair.view_ref)?;
+        self.root_view_ref = Some(fuchsia_scenic::duplicate_view_ref(&viewref_pair.view_ref)?);
+
         view_provider.create_view_with_view_ref(
             token_pair.view_token.value,
             &mut viewref_pair.control_ref,
@@ -220,26 +264,51 @@ impl SceneManager for FlatSceneManager {
         );
         self.root_node.add_child(&a11y_view_holder);
 
+        // Disconnect the old proxy view/viewholder from the scene graph.
+        self.a11y_proxy_view_holder.detach();
+        for view_holder_node in self.views.iter_mut() {
+            self.a11y_proxy_view.detach_child(&*view_holder_node);
+        }
+
         // Generate a new proxy view/viewholder token pair, and create a new proxy view.
+        // Save the proxy ViewRef so that we can observe when the view is attached to the scene.
         let proxy_token_pair = scenic::ViewTokenPair::new()?;
-        let a11y_proxy_viewref_pair = scenic::ViewRefPair::new()?;
-        let a11y_proxy_view = scenic::View::new3(
+        let a11y_proxy_view_ref_pair = scenic::ViewRefPair::new()?;
+        let a11y_proxy_view_ref =
+            fuchsia_scenic::duplicate_view_ref(&a11y_proxy_view_ref_pair.view_ref)?;
+        self.a11y_proxy_view = scenic::View::new3(
             self.a11y_proxy_session.clone(),
             proxy_token_pair.view_token,
-            a11y_proxy_viewref_pair.control_ref,
-            a11y_proxy_viewref_pair.view_ref,
+            a11y_proxy_view_ref_pair.control_ref,
+            a11y_proxy_view_ref_pair.view_ref,
             Some(String::from("a11y proxy view")),
         );
 
         // Reconnect existing view holders to the new a11y proxy view.
         for view_holder_node in self.views.iter_mut() {
-            a11y_proxy_view.add_child(&*view_holder_node);
+            self.a11y_proxy_view.add_child(&*view_holder_node);
         }
-
-        self.a11y_proxy_view = Some(a11y_proxy_view);
 
         FlatSceneManager::request_present(&self.presentation_sender);
         FlatSceneManager::request_present(&self.a11y_proxy_presentation_sender);
+
+        // If the root view was already set, inserting the a11y view will have broken the focus
+        // chain. In this case, we need to re-focus the root view.
+        let view_ref_installed = Arc::downgrade(&self.view_ref_installed);
+        let focuser = Arc::downgrade(&self.focuser);
+        if let Some(ref root_view_ref) = self.root_view_ref {
+            let root_view_ref_dup = fuchsia_scenic::duplicate_view_ref(&root_view_ref)?;
+            fasync::Task::local(async move {
+                FlatSceneManager::focus_root_view(
+                    view_ref_installed,
+                    focuser,
+                    root_view_ref_dup,
+                    a11y_proxy_view_ref,
+                )
+                .await;
+            })
+            .detach();
+        }
 
         Ok(proxy_token_pair.view_holder_token)
     }
@@ -440,13 +509,38 @@ impl FlatSceneManager {
         view_holder_node.attach(&view_holder);
         view_holder_node.set_translation(0.0, 0.0, 0.0);
 
-        // The a11y view may not be attached to the scene yet. If that's the case, then we can let
-        // [`insert_a11y_view()`] add the new view as a child of the a11y proxy view.
-        if let Some(ref a11y_proxy_view) = self.a11y_proxy_view {
-            a11y_proxy_view.add_child(&view_holder_node);
-        }
-
+        self.a11y_proxy_view.add_child(&view_holder_node);
         self.views.push(view_holder_node);
+    }
+
+    /// Sets focus on the root view if it exists.
+    async fn focus_root_view(
+        weak_view_ref_installed: Weak<ui_views::ViewRefInstalledProxy>,
+        weak_focuser: Weak<ui_views::FocuserProxy>,
+        mut root_view_ref: ui_views::ViewRef,
+        mut proxy_view_ref: ui_views::ViewRef,
+    ) {
+        if let Some(view_ref_installed) = weak_view_ref_installed.upgrade() {
+            let watch_result = view_ref_installed.watch(&mut proxy_view_ref).await;
+            match watch_result {
+                // Handle fidl::Errors.
+                Err(e) => fx_log_warn!("Failed with err: {}", e),
+                // Handle ui_views::ViewRefInstalledError.
+                Ok(Err(value)) => fx_log_warn!("Failed with err: {:?}", value),
+                Ok(_) => {
+                    // Now set focus on the view_ref.
+                    if let Some(focuser) = weak_focuser.upgrade() {
+                        let focus_result = focuser.request_focus(&mut root_view_ref).await;
+                        match focus_result {
+                            Ok(_) => fx_log_info!("Refocused client view"),
+                            Err(e) => fx_log_warn!("Failed with err: {:?}", e),
+                        }
+                    } else {
+                        fx_log_warn!("Failed to upgrade weak manager");
+                    }
+                }
+            }
+        }
     }
 
     /// Gets the `EntityNode` for the cursor or creates one if it doesn't exist yet.

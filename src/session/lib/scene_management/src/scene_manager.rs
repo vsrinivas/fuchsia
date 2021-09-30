@@ -56,6 +56,7 @@ pub trait SceneManager: Sized {
     /// Returns an error if a Scenic session could not be initialized, or the scene setup fails.
     async fn new(
         scenic: ui_scenic::ScenicProxy,
+        view_ref_installed: ui_views::ViewRefInstalledProxy,
         display_pixel_density: Option<f32>,
         viewing_distance: Option<ViewingDistance>,
     ) -> Result<Self, Error>;
