@@ -54,7 +54,7 @@ function ffx-add-repository {
   fi
 
   fx-command-run ffx --config ffx_repository=true repository add-from-pm \
-    "$repo_name" \
+    --repository "$repo_name" \
     "${FUCHSIA_BUILD_DIR}/amber-files"
   err=$?
   if [[ $err -ne 0 ]]; then

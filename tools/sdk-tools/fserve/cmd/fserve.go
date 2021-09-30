@@ -316,7 +316,7 @@ func (s *ffxServer) startServer(ctx context.Context, sdk sdkProvider) error {
 	// TODO(http://fxbug.dev/83720): We need `ffx_repository=true` until
 	// ffx repository has graduated from experimental.
 	args := []string{"--config", "ffx_repository=true", "repository",
-		"add-from-pm", s.name, s.repoPath}
+		"add-from-pm", "--repository", s.name, s.repoPath}
 	logger.Debugf(ctx, "running %v", args)
 	if _, err := sdk.RunFFX(args, false); err != nil {
 		var exitError *exec.ExitError

@@ -19,11 +19,11 @@ pub async fn add_from_pm(cmd: AddFromPmCommand, repos: RepositoryRegistryProxy) 
         .with_context(|| format!("failed to canonicalize {:?}", cmd.pm_repo_path))?;
     let repo_spec = RepositorySpec::Pm { path: full_path };
 
-    match repos.add_repository(&cmd.name, &mut repo_spec.into()).await? {
+    match repos.add_repository(&cmd.repository, &mut repo_spec.into()).await? {
         Ok(()) => Ok(()),
         Err(err) => {
             let err = RepositoryError::from(err);
-            ffx_bail!("Adding repository {:} failed: {}", cmd.name, err);
+            ffx_bail!("Adding repository {:} failed: {}", cmd.repository, err);
         }
     }
 }
@@ -54,7 +54,10 @@ mod test {
         });
 
         add_from_pm(
-            AddFromPmCommand { name: "MyRepo".to_owned(), pm_repo_path: tmp.path().to_path_buf() },
+            AddFromPmCommand {
+                repository: "MyRepo".to_owned(),
+                pm_repo_path: tmp.path().to_path_buf(),
+            },
             repos,
         )
         .await
