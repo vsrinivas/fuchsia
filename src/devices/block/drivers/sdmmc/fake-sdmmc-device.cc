@@ -281,7 +281,7 @@ zx_status_t FakeSdmmcDevice::SdmmcRequestNew(const sdmmc_req_new_t* req, uint32_
       .virt_size = linear_vmo.size(),
       .buf_offset = 0,
       .pmt = ZX_HANDLE_INVALID,
-      .probe_tuning_cmd = req->probe_tuning_cmd,
+      .suppress_error_messages = req->suppress_error_messages,
       .response = {},
       .status = ZX_OK,
   };

@@ -444,7 +444,7 @@ TEST_F(SdhciTest, RequestCommandOnly) {
       .virt_size = 0,
       .buf_offset = 0,
       .pmt = ZX_HANDLE_INVALID,
-      .probe_tuning_cmd = 0,
+      .suppress_error_messages = 0,
       .response = {},
       .status = ZX_ERR_BAD_STATE,
   };
@@ -477,7 +477,7 @@ TEST_F(SdhciTest, RequestCommandOnly) {
       .virt_size = 0,
       .buf_offset = 0,
       .pmt = ZX_HANDLE_INVALID,
-      .probe_tuning_cmd = 0,
+      .suppress_error_messages = 0,
       .response = {},
       .status = ZX_ERR_BAD_STATE,
   };
@@ -531,7 +531,7 @@ TEST_F(SdhciTest, RequestWithData) {
       .virt_size = 0,
       .buf_offset = 0,
       .pmt = ZX_HANDLE_INVALID,
-      .probe_tuning_cmd = 0,
+      .suppress_error_messages = 0,
       .response = {},
       .status = ZX_ERR_BAD_STATE,
   };
@@ -576,7 +576,7 @@ TEST_F(SdhciTest, RequestWithData) {
       .virt_size = 0,
       .buf_offset = 0,
       .pmt = ZX_HANDLE_INVALID,
-      .probe_tuning_cmd = 0,
+      .suppress_error_messages = 0,
       .response = {},
       .status = ZX_ERR_BAD_STATE,
   };
@@ -632,7 +632,7 @@ TEST_F(SdhciTest, RequestAbort) {
       .virt_size = 0,
       .buf_offset = 0,
       .pmt = ZX_HANDLE_INVALID,
-      .probe_tuning_cmd = 0,
+      .suppress_error_messages = 0,
       .response = {},
       .status = ZX_ERR_BAD_STATE,
   };
@@ -680,7 +680,7 @@ TEST_F(SdhciTest, DmaRequest64Bit) {
       .virt_size = 0,
       .buf_offset = 0,
       .pmt = ZX_HANDLE_INVALID,
-      .probe_tuning_cmd = 0,
+      .suppress_error_messages = 0,
       .response = {},
       .status = ZX_ERR_BAD_STATE,
   };
@@ -740,7 +740,7 @@ TEST_F(SdhciTest, DmaRequest32Bit) {
       .virt_size = 0,
       .buf_offset = 0,
       .pmt = ZX_HANDLE_INVALID,
-      .probe_tuning_cmd = 0,
+      .suppress_error_messages = 0,
       .response = {},
       .status = ZX_ERR_BAD_STATE,
   };
@@ -831,7 +831,7 @@ TEST_F(SdhciTest, DmaSplitOneBoundary) {
       .buf_offset = zx_system_get_page_size() -
                     4,  // The first buffer should be split across the 128M boundary.
       .pmt = ZX_HANDLE_INVALID,
-      .probe_tuning_cmd = 0,
+      .suppress_error_messages = 0,
       .response = {},
       .status = ZX_ERR_BAD_STATE,
   };
@@ -883,7 +883,7 @@ TEST_F(SdhciTest, DmaSplitManyBoundaries) {
       .virt_size = 0,
       .buf_offset = 128,
       .pmt = ZX_HANDLE_INVALID,
-      .probe_tuning_cmd = 0,
+      .suppress_error_messages = 0,
       .response = {},
       .status = ZX_ERR_BAD_STATE,
   };
@@ -950,7 +950,7 @@ TEST_F(SdhciTest, DmaNoBoundaries) {
       .virt_size = 0,
       .buf_offset = zx_system_get_page_size() - 4,
       .pmt = ZX_HANDLE_INVALID,
-      .probe_tuning_cmd = 0,
+      .suppress_error_messages = 0,
       .response = {},
       .status = ZX_ERR_BAD_STATE,
   };

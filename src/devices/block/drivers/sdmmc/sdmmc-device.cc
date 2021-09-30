@@ -251,7 +251,7 @@ zx_status_t SdmmcDevice::SdioSendOpCond(uint32_t ocr, uint32_t* rocr) {
   req.arg = ocr;
   req.cmd_flags = SDIO_SEND_OP_COND_FLAGS;
   req.use_dma = UseDma();
-  req.probe_tuning_cmd = true;
+  req.suppress_error_messages = true;
   for (size_t i = 0; i < 100; i++) {
     if ((st = SdmmcRequestHelper(&req, 3, 10)) != ZX_OK) {
       // fail on request error
@@ -285,7 +285,7 @@ zx_status_t SdmmcDevice::SdioIoRwDirect(bool write, uint32_t fn_idx, uint32_t re
   req.arg = cmd_arg;
   if (reg_addr == SDIO_CIA_CCCR_ASx_ABORT_SEL_CR_ADDR) {
     req.cmd_flags = SDIO_IO_RW_DIRECT_ABORT_FLAGS;
-    req.probe_tuning_cmd = true;
+    req.suppress_error_messages = true;
   } else {
     req.cmd_flags = SDIO_IO_RW_DIRECT_FLAGS;
   }

@@ -833,7 +833,7 @@ zx_status_t Sdhci::SdmmcPerformTuning(uint32_t cmd_idx) {
       .virt_size = 0,
       .buf_offset = 0,
       .pmt = ZX_HANDLE_INVALID,
-      .probe_tuning_cmd = true,
+      .suppress_error_messages = true,
       .response = {},
       .status = ZX_ERR_BAD_STATE,
   };

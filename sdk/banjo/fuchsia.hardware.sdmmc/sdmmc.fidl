@@ -66,9 +66,10 @@ type SdmmcReqNew = resource struct {
 
     blocksize uint32;
 
-    /// If true, the SDMMC driver should not print any error messages for this request. This is used
-    /// for initialization and tuning, when some requests are expected to fail.
-    probe_tuning_cmd bool;
+    /// If true, the SDMMC driver should reduce the log level of any error
+    /// messages that this request produces. This will be set on requests for
+    /// which errors are expected or not fatal.
+    suppress_error_messages bool;
 
     /// The client ID for this request. Only VMOs registered with this client may be present in
     /// buffers below.
@@ -100,7 +101,11 @@ type SdmmcReq = resource struct {
     /// offset into dma_vmo or virt
     buf_offset uint64;
     pmt zx.handle;
-    probe_tuning_cmd bool;
+
+    /// If true, the SDMMC driver should reduce the log level of any error
+    /// messages that this request produces. This will be set on requests for
+    /// which errors are expected or not fatal.
+    suppress_error_messages bool;
 
     /// response data
     response array<uint32, 4>;

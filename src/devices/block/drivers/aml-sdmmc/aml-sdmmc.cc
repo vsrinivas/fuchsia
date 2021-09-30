@@ -134,7 +134,7 @@ zx_status_t AmlSdmmc::WaitForInterrupt(sdmmc_req_t* req) {
       fit::defer([&]() { AmlSdmmcStart::Get().ReadFrom(&mmio_).set_desc_busy(0).WriteTo(&mmio_); });
 
   if (status_irq.rxd_err()) {
-    if (req->probe_tuning_cmd) {
+    if (req->suppress_error_messages) {
       AML_SDMMC_TRACE("RX Data CRC Error cmd%d, arg=0x%08x, status=0x%08x", req->cmd_idx, req->arg,
                       status_irq.reg_value());
     } else {
@@ -154,7 +154,7 @@ zx_status_t AmlSdmmc::WaitForInterrupt(sdmmc_req_t* req) {
     return ZX_ERR_IO_INVALID;
   }
   if (status_irq.resp_err()) {
-    if (req->probe_tuning_cmd) {
+    if (req->suppress_error_messages) {
       AML_SDMMC_TRACE("Response CRC Error, cmd%d, arg=0x%08x, status=0x%08x", req->cmd_idx,
                       req->arg, status_irq.reg_value());
     } else {
@@ -170,7 +170,7 @@ zx_status_t AmlSdmmc::WaitForInterrupt(sdmmc_req_t* req) {
     static_assert(SD_SEND_IF_COND == MMC_SEND_EXT_CSD &&
                   (SD_SEND_IF_COND_FLAGS) != (MMC_SEND_EXT_CSD_FLAGS));
     // When mmc dev_ice is being probed with SDIO command this is an expected failure.
-    if (req->probe_tuning_cmd || is_sd_cmd8) {
+    if (req->suppress_error_messages || is_sd_cmd8) {
       AML_SDMMC_TRACE("Response timeout, cmd%d, arg=0x%08x, status=0x%08x", req->cmd_idx, req->arg,
                       status_irq.reg_value());
     } else {
@@ -241,7 +241,7 @@ zx::status<std::array<uint32_t, AmlSdmmc::kResponseCount>> AmlSdmmc::WaitForInte
       fit::defer([&]() { AmlSdmmcStart::Get().ReadFrom(&mmio_).set_desc_busy(0).WriteTo(&mmio_); });
 
   if (status_irq.rxd_err()) {
-    if (req.probe_tuning_cmd) {
+    if (req.suppress_error_messages) {
       AML_SDMMC_TRACE("RX Data CRC Error cmd%d, arg=0x%08x, status=0x%08x", req.cmd_idx, req.arg,
                       status_irq.reg_value());
     } else {
@@ -261,7 +261,7 @@ zx::status<std::array<uint32_t, AmlSdmmc::kResponseCount>> AmlSdmmc::WaitForInte
     return zx::error(ZX_ERR_IO_INVALID);
   }
   if (status_irq.resp_err()) {
-    if (req.probe_tuning_cmd) {
+    if (req.suppress_error_messages) {
       AML_SDMMC_TRACE("Response CRC Error, cmd%d, arg=0x%08x, status=0x%08x", req.cmd_idx, req.arg,
                       status_irq.reg_value());
     } else {
@@ -277,7 +277,7 @@ zx::status<std::array<uint32_t, AmlSdmmc::kResponseCount>> AmlSdmmc::WaitForInte
     static_assert(SD_SEND_IF_COND == MMC_SEND_EXT_CSD &&
                   (SD_SEND_IF_COND_FLAGS) != (MMC_SEND_EXT_CSD_FLAGS));
     // When mmc dev_ice is being probed with SDIO command this is an expected failure.
-    if (req.probe_tuning_cmd || is_sd_cmd8) {
+    if (req.suppress_error_messages || is_sd_cmd8) {
       AML_SDMMC_TRACE("Response timeout, cmd%d, arg=0x%08x, status=0x%08x", req.cmd_idx, req.arg,
                       status_irq.reg_value());
     } else {
@@ -1041,7 +1041,7 @@ zx_status_t AmlSdmmc::TuningDoTransfer(uint8_t* tuning_res, size_t blk_pattern_s
   tuning_req.use_dma = false;
   tuning_req.virt_buffer = tuning_res;
   tuning_req.virt_size = blk_pattern_size;
-  tuning_req.probe_tuning_cmd = true;
+  tuning_req.suppress_error_messages = true;
   return AmlSdmmc::SdmmcRequest(&tuning_req);
 }
 
