@@ -39,8 +39,8 @@ App::App(sys::ComponentContext* component_context, fit::closure quit_callback)
       input_reader_(this),
       fdr_manager_(*component_context, std::make_shared<MediaRetriever>()),
       media_buttons_handler_(),
-      focus_dispatcher_(component_context->svc()),
-      virtual_keyboard_coordinator_(component_context) {
+      virtual_keyboard_coordinator_(component_context),
+      focus_dispatcher_(component_context->svc(), virtual_keyboard_coordinator_.GetWeakPtr()) {
   FX_DCHECK(component_context);
 
   input_reader_.Start();

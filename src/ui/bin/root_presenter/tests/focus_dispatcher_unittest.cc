@@ -20,6 +20,8 @@
 #include <src/lib/fxl/macros.h>
 #include <src/lib/testing/loop_fixture/test_loop_fixture.h>
 
+#include "src/lib/fxl/memory/weak_ptr.h"
+#include "src/ui/bin/root_presenter/focus_listener.h"
 #include "src/ui/bin/root_presenter/tests/fakes/fake_keyboard_focus_controller.h"
 
 namespace root_presenter {
@@ -30,8 +32,23 @@ using fuchsia::ui::focus::FocusChainListenerRegistry;
 using fuchsia::ui::keyboard::focus::Controller;
 using fuchsia::ui::views::ViewRef;
 
+class FakeFocusListener : public FocusListener {
+ public:
+  FakeFocusListener(fit::function<void(ViewRef)> callback)
+      : callback_(std::move(callback)), weak_ptr_factory_(this) {}
+  void NotifyFocusChange(ViewRef focused_view) override { callback_(std::move(focused_view)); }
+  fxl::WeakPtr<FakeFocusListener> GetWeakPtr() { return weak_ptr_factory_.GetWeakPtr(); }
+
+ private:
+  fit::function<void(ViewRef)> callback_;
+  fxl::WeakPtrFactory<FakeFocusListener> weak_ptr_factory_;  // Must be last.
+};
+
 class FocusDispatcherTest : public gtest::RealLoopFixture, public FocusChainListenerRegistry {
  public:
+  FocusDispatcherTest()
+      : focus_listener_(FakeFocusListener([this](ViewRef) { local_listener_notified_ = true; })) {}
+
   void SetUp() final {
     // Installs 'this' as a fake server for FocusChainListenerRegistry.
     context_provider_.service_directory_provider()->AddService(
@@ -47,7 +64,8 @@ class FocusDispatcherTest : public gtest::RealLoopFixture, public FocusChainList
     controller_handler_ = fake_keyboard_focus_controller_->GetHandler();
 
     // Finally, initializes the unit under test.
-    focus_dispatch_ = std::make_unique<FocusDispatcher>(context_provider_.context()->svc());
+    focus_dispatch_ = std::make_unique<FocusDispatcher>(context_provider_.context()->svc(),
+                                                        focus_listener_.GetWeakPtr());
   }
 
   // Implements `fuchsia.ui.focus.FocusChainListenerRegistry`, but only for a single
@@ -92,12 +110,17 @@ class FocusDispatcherTest : public gtest::RealLoopFixture, public FocusChainList
 
   fidl::InterfaceRequestHandler<Controller> controller_handler_;
 
+  FakeFocusListener focus_listener_;
+
   // Class under test.
+  // Must not be re-ordered before `focus_listener_`, as the FocusDispatcher's
+  // reference to `focus_listener_` must not out-live `focus_listener_`.
   std::unique_ptr<FocusDispatcher> focus_dispatch_;
 
   bool keyboard_notification_received_{};
   int focus_dispatched_{};
   int register_calls_{};
+  bool local_listener_notified_{};
 };
 
 TEST_F(FocusDispatcherTest, Forward) {
@@ -112,6 +135,7 @@ TEST_F(FocusDispatcherTest, Forward) {
   RunLoopUntilIdle();
   EXPECT_NE(0, focus_dispatched_) << "ChangeFocus should have dispatched OnFocusChange";
   EXPECT_TRUE(keyboard_notification_received_);
+  EXPECT_TRUE(local_listener_notified_);
 }
 
 TEST_F(FocusDispatcherTest, EmptyFocusChain) {

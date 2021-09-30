@@ -93,6 +93,11 @@ void FidlBoundVirtualKeyboardCoordinator::RequestTypeAndVisibility(
   }
 }
 
+void FidlBoundVirtualKeyboardCoordinator::NotifyFocusChange(
+    fuchsia::ui::views::ViewRef focused_view) {
+  FX_NOTIMPLEMENTED();
+}
+
 void FidlBoundVirtualKeyboardCoordinator::BindManager(
     fidl::InterfaceRequest<fuchsia::input::virtualkeyboard::Manager> request) {
   FX_LOGS(INFO) << __FUNCTION__;

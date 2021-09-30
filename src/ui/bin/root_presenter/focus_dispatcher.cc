@@ -11,6 +11,8 @@
 #include <lib/syslog/cpp/macros.h>
 #include <zircon/status.h>
 
+#include "src/ui/bin/root_presenter/focus_listener.h"
+
 namespace root_presenter {
 
 using fuchsia::ui::focus::FocusChain;
@@ -19,7 +21,9 @@ using fuchsia::ui::focus::FocusChainListenerRegistry;
 using fuchsia::ui::keyboard::focus::Controller;
 using sys::ServiceDirectory;
 
-FocusDispatcher::FocusDispatcher(const std::shared_ptr<ServiceDirectory>& svc) {
+FocusDispatcher::FocusDispatcher(const std::shared_ptr<ServiceDirectory>& svc,
+                                 fxl::WeakPtr<FocusListener> local_focus_listener)
+    : local_focus_listener_(std::move(local_focus_listener)) {
   // Connect to `fuchsia.ui.keyboard.focus.Controller`.
   keyboard_focus_ctl_ = svc->Connect<Controller>();
   keyboard_focus_ctl_.set_error_handler([](zx_status_t status) {
@@ -47,6 +51,12 @@ void FocusDispatcher::OnFocusChange(FocusChain new_focus_chain,
       FX_LOGS(ERROR) << "OnFocusChange: empty focus chain - should not happen";
     } else {
       auto& last_view_ref = focus_chain.back();
+
+      if (local_focus_listener_) {
+        local_focus_listener_->NotifyFocusChange(fidl::Clone(last_view_ref));
+      } else {
+        FX_LOGS(ERROR) << "FocusDispatcher::OnFocusChange: missing local_focus_listener_.";
+      }
 
       if (keyboard_focus_ctl_) {
         keyboard_focus_ctl_->Notify(fidl::Clone(last_view_ref), [] {

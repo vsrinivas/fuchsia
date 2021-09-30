@@ -180,6 +180,7 @@ source_set("focus_dispatcher") {
   sources = [
     "focus_dispatcher.cc",
     "focus_dispatcher.h",
+    "focus_listener.h",
   ]
 
   public_deps = [
@@ -272,6 +273,7 @@ source_set("virtual_keyboard") {
   ]
 
   deps = [
+    ":focus_dispatcher",
     "//sdk/fidl/fuchsia.input.virtualkeyboard",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/syslog/cpp",

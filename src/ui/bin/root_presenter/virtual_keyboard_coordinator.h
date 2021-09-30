@@ -14,6 +14,7 @@
 
 #include <memory>
 
+#include "src/ui/bin/root_presenter/focus_listener.h"
 #include "src/ui/bin/root_presenter/virtual_keyboard_controller.h"
 #include "src/ui/bin/root_presenter/virtual_keyboard_manager.h"
 
@@ -23,7 +24,7 @@ class VirtualKeyboardController;
 
 // Methods called by `VirtualKeyboardControllerCreator` and `VirtualKeyboardManager`.
 // Factored into a separate class to support unit testing.
-class VirtualKeyboardCoordinator {
+class VirtualKeyboardCoordinator : public FocusListener {
  public:
   virtual ~VirtualKeyboardCoordinator() = default;
 
@@ -39,6 +40,12 @@ class VirtualKeyboardCoordinator {
   // Reports an error from the Manager. The coordinator should close the corresponding FIDL
   // connection with `error`.
   virtual void NotifyManagerError(zx_status_t error) = 0;
+
+  // Reports a change in view focus. The coordinator should
+  // a) dismiss the keyboard, and
+  // b) process any pending RequestTypeAndVisibility() calls for `view_ref`, and
+  // c) accept new RequestTypeAndVisibility() calls for `view_ref`.
+  virtual void NotifyFocusChange(fuchsia::ui::views::ViewRef focused_view) = 0;
 };
 
 // Coordinates all activities for a single virtual keyboard.
@@ -69,6 +76,7 @@ class FidlBoundVirtualKeyboardCoordinator
   void NotifyManagerError(zx_status_t error) override;
   void RequestTypeAndVisibility(fuchsia::input::virtualkeyboard::TextType text_type,
                                 bool is_visible) override;
+  void NotifyFocusChange(fuchsia::ui::views::ViewRef focused_view) override;
 
   void SetControllerForTest(std::unique_ptr<VirtualKeyboardController> controller) {
     controller_bindings_.CloseAll();
@@ -113,6 +121,14 @@ class FidlBoundVirtualKeyboardCoordinator
   //   * no manager has connected since the RequestTypeAndVisibility()
   //     call.
   std::optional<KeyboardConfig> pending_manager_config_;
+
+  // The view that is currently focused.
+  //
+  // * This is initially `nullopt`.
+  // * This will have a value after FocusDispatcher receives the first
+  //   `OnFocusChange()` from Scenic.
+  // * This will have a value forever thereafter.
+  std::optional<fuchsia::ui::views::ViewRef> focused_view_;
 
   // Must be last, to invalidate weak pointers held by other fields before their
   // destructors are called.

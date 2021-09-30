@@ -97,10 +97,13 @@ class App : public fuchsia::ui::policy::DeviceListenerRegistry,
   // support.
   MediaButtonsHandler media_buttons_handler_;
 
+  // Coordinates virtual keyboard state changes between
+  // `fuchsia.input.virtualkeyboard.Controller`s and the
+  // `fuchsia.input.virtualkeyboard.Manager`.
+  FidlBoundVirtualKeyboardCoordinator virtual_keyboard_coordinator_;
+
   // Used to dispatch the focus change messages to interested downstream clients.
   FocusDispatcher focus_dispatcher_;
-
-  FidlBoundVirtualKeyboardCoordinator virtual_keyboard_coordinator_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(App);
 };
