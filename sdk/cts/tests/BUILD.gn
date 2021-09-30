@@ -58,7 +58,7 @@ action("fidl_mangled_to_api_mapping") {
   deps = [ ":cts_unstripped_binaries_list" ]
   script = "//sdk/cts/build/scripts/fidl_api_mapper.py"
   depfile = "$target_gen_dir/$target_name.dd"
-  outputs = [ "$target_gen_dir/fidl_mangled_to_api_mapping.json" ]
+  outputs = [ "$root_out_dir/fidl_mangled_to_api_mapping.json" ]
   args = [
     "--input",
     rebase_path(sources[0], root_build_dir),
