@@ -35,12 +35,22 @@ def main():
         action="store_true",
         help="treat the inputs as source files rather than gn targets",
     )
+    parser.add_argument(
+        "--raw",
+        action="store_true",
+        help="emit full json rather than human readable messages",
+    )
     parser.add_argument("--out-dir", help="Path to the Fuchsia build directory")
     args = parser.parse_args()
 
     build_dir = Path(args.out_dir) if args.out_dir else FUCHSIA_BUILD_DIR
-    jq = [THIRD_PARTY / "jq" / HOST_PLATFORM / "bin" / "jq", "-s", "-r"]
     ninja = [THIRD_PARTY / "ninja" / HOST_PLATFORM / "ninja", "-C", build_dir]
+    jq = [THIRD_PARTY / "jq" / HOST_PLATFORM / "bin" / "jq", "-s"]
+    # Our "raw" output is a json lint per line which jq calls "compact"
+    # what jq calls "raw" is our normal plaintext output for interactive use
+    jq += ["--compact-output" if args.raw else "--raw-output"]
+    dedup = "unique[] | select(.spans | length > 0)"
+    rendered = "" if args.raw else " | .rendered"
 
     if args.files:
         files = [os.path.relpath(f, build_dir) for f in args.input]
@@ -69,21 +79,16 @@ def main():
             '.file_name == "{}"'.format(os.path.relpath(Path(f).resolve(), build_dir))
             for f in args.input
         )
-        full_query = " | ".join(
-            [
-                "unique[]",
-                "select(.spans | length > 0)",
-                "select(.spans | first | {})".format(query),
-                ".rendered",
-            ]
+        select = " | select(.spans | first | {})".format(query)
+        subprocess.run(ninja + clippy_outputs, stdout=sys.stderr)
+        subprocess.run(
+            jq + [dedup + select + rendered] + [build_dir / p for p in clippy_outputs]
         )
-        subprocess.run(ninja + clippy_outputs)
-        subprocess.run(jq + [full_query] + [build_dir / p for p in clippy_outputs])
     else:
         targets = [rust.GnTarget(t + ".clippy") for t in args.input]
-        subprocess.run(ninja + [t.ninja_target for t in targets])
+        subprocess.run(ninja + [t.ninja_target for t in targets], stdout=sys.stderr)
         clippy_outputs = [t.gen_dir.joinpath(t.label_name) for t in targets]
-        subprocess.run(jq + ["unique[] | .rendered"] + clippy_outputs)
+        subprocess.run(jq + [dedup + rendered] + clippy_outputs)
 
 
 if __name__ == "__main__":
