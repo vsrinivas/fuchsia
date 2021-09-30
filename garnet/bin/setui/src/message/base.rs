@@ -251,11 +251,7 @@ impl<A: Address + 'static, R: Role + 'static> Audience<A, R> {
             Audience::Group(group) => {
                 group.audiences.iter().map(|audience| audience.flatten()).flatten().collect()
             }
-            _ => {
-                let mut hash_set = HashSet::new();
-                hash_set.insert(self.clone());
-                hash_set
-            }
+            _ => std::array::IntoIter::new([self.clone()]).collect(),
         }
     }
 }
@@ -577,7 +573,9 @@ impl<P: Payload + 'static, A: Address + 'static, R: Role + 'static> Message<P, A
     /// Delivers the supplied status to all participants in the return path.
     pub(super) async fn report_status(&self, status: Status) {
         for beacon in &self.return_path {
-            beacon.status(status).await.ok();
+            // It's ok if the other end is already closed and does not get an update, so we can
+            // safely ignore the result here.
+            let _ = beacon.status(status).await;
         }
     }
 }

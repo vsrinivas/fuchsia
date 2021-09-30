@@ -141,11 +141,7 @@ impl<C: Category + 'static> Client<C> {
     /// Spawns a new task, tracking its lifetime with the provided [`Category`].
     ///
     /// [`Category`]: enum.Category.html
-    pub(crate) fn spawn<T: Send>(
-        &self,
-        category: &C,
-        future: impl Future<Output = T> + Send + 'static,
-    ) {
+    pub(crate) fn spawn(&self, category: &C, future: impl Future<Output = ()> + Send + 'static) {
         let task_id = self.id_generator.generate();
 
         // We report the creation before spawning in case spawning fails.
@@ -198,18 +194,12 @@ impl<C: Category + 'static> Summary<C> {
     fn ingest(&mut self, id: Id, action: Action<C>, timestamp: zx::Time) {
         match action {
             Action::Create(category) => {
-                self.active_tasks.insert(id, category.clone());
+                let _ = self.active_tasks.insert(id, category.clone());
 
                 // Ensure stats exist for the particular category.
-                if !self.statistics.contains_key(&category) {
-                    self.statistics
-                        .insert(category.clone(), Statistics::<C>::new(category.clone()));
-                }
-
-                // Inform stats of task start.
                 self.statistics
-                    .get_mut(&category)
-                    .expect("category should be present")
+                    .entry(category.clone())
+                    .or_insert_with(|| Statistics::<C>::new(category))
                     .start(id, timestamp);
             }
             Action::Complete => {
@@ -334,7 +324,7 @@ impl<C: Category + 'static> Statistics<C> {
 
     /// Ingests data around the start of a task.
     pub(super) fn start(&mut self, id: Id, start_time: zx::Time) {
-        self.active_tasks.insert(id, start_time);
+        let _ = self.active_tasks.insert(id, start_time);
     }
 
     /// Ingests data surrounding the end of a task.

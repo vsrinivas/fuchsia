@@ -115,6 +115,7 @@ impl<P: Payload + 'static, A: Address + 'static, R: Role + 'static> MessageClien
             .auto_forwarder(self.forwarder.clone())
     }
 
+    /// Report back to the clients that the message has been acknowledged.
     pub(crate) async fn acknowledge(&mut self) {
         self.message.report_status(Status::Acknowledged).await;
     }

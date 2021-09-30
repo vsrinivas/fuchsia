@@ -216,7 +216,7 @@ impl InspectAgent {
 
         let last_requests = &mut request_type_info.last_requests;
         if last_requests.len() >= INSPECT_REQUESTS_COUNT {
-            last_requests.pop_back();
+            let _ = last_requests.pop_back();
         }
 
         let count = setting_type_info.count;

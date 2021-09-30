@@ -41,7 +41,7 @@ impl<P: Payload + 'static, A: Address + 'static, R: Role + 'static> Builder<P, A
     /// Includes the specified role in the list of roles to be associated with
     /// the new messenger.
     pub(crate) fn add_role(mut self, role: role::Signature<R>) -> Self {
-        self.roles.insert(role);
+        let _ = self.roles.insert(role);
         self
     }
 

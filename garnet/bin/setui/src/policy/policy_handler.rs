@@ -132,7 +132,9 @@ impl ClientProxy {
 
     /// Requests the setting handler to rebroadcast a settings changed event to its listeners.
     pub(crate) fn request_rebroadcast(&self, setting_type: SettingType) {
-        self.service_messenger
+        // Ignore the receptor result.
+        let _ = self
+            .service_messenger
             .message(
                 HandlerPayload::Request(Request::Rebroadcast).into(),
                 Audience::Address(service::Address::Handler(setting_type)),

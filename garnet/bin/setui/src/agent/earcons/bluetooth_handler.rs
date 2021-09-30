@@ -117,7 +117,7 @@ impl BluetoothHandler {
                         {
                             continue;
                         }
-                        active_sessions_clone.insert(id);
+                        let _ = active_sessions_clone.insert(id);
 
                         let publisher = publisher.clone();
                         let common_earcons_params = common_earcons_params.clone();
@@ -147,7 +147,7 @@ impl BluetoothHandler {
                             );
                             continue;
                         }
-                        active_sessions_clone.remove(&session_id);
+                        let _ = active_sessions_clone.remove(&session_id);
                         let publisher = publisher.clone();
                         let common_earcons_params = common_earcons_params.clone();
                         fasync::Task::spawn(async move {

@@ -121,7 +121,8 @@ impl SettingHandlerFactoryImpl {
         setting_type: SettingType,
         generate_function: GenerateHandler,
     ) {
-        self.generators.insert(setting_type, generate_function);
+        // Ignores any previously registered generator.
+        let _ = self.generators.insert(setting_type, generate_function);
     }
 }
 

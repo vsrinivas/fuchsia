@@ -126,7 +126,7 @@ impl<
                 };
 
                 if let Some(Ok(ref info)) = return_val {
-                    store.insert(key, Data::SettingInfo(info.clone()));
+                    let _ = store.insert(key, Data::SettingInfo(info.clone()));
                 }
 
                 return_val
@@ -351,7 +351,7 @@ mod tests {
 
         // Pre-fill the storage with the value so that the initial get will not trigger a response.
         let unchanged_info = SettingInfo::Unknown(UnknownInfo(true));
-        store_handle
+        let _ = store_handle
             .lock()
             .await
             .insert(Key::Identifier(LAST_VALUE_KEY), Data::SettingInfo(unchanged_info.clone()));
