@@ -18,7 +18,7 @@ source_set("common") {
 }
 
 test("nand-volume-driver") {
-  # Restrict visbility to ensure OS is checked.
+  # Restrict visibility to ensure OS is checked.
   visibility = [ ":tests" ]
   sources = [ "nand-volume-driver-tests.cc" ]
   deps = [

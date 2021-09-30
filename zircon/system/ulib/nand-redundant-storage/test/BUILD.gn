@@ -14,7 +14,7 @@ group("tests") {
 }
 
 test("nand-redundant-storage") {
-  # Restrict visbility to ensure OS is checked.
+  # Restrict visibility to ensure OS is checked.
   visibility = [ ":tests" ]
   sources = [ "nand-rs-tests.cc" ]
   deps = [

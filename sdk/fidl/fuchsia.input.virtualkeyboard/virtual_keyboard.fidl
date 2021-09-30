@@ -43,7 +43,7 @@ type VisibilityChangeReason = flexible enum {
 ///
 /// Note that the `Controller` itself allows configuration of the virtual
 /// keyboard's presentation (visibility and layout), but does not pertain
-/// to text events. See the `Controler` documentation for details.
+/// to text events. See the `Controller` documentation for details.
 ///
 /// # Roles
 /// This protocol will typically be:
@@ -58,7 +58,7 @@ protocol ControllerCreator {
     ///
     /// When `Controller.RequestShow()` is called, the `Controller`
     /// implementer will will attempt to provide a keyboard optimized
-    /// for the entry of `text_type` (unless the type is overriden by a
+    /// for the entry of `text_type` (unless the type is overridden by a
     /// call to `Controller.SetType()`).
     ///
     /// Implementers of `ControllerCreator` _should_ use knowledge of
@@ -88,7 +88,7 @@ protocol ControllerCreator {
 ///
 /// # Roles
 /// This protocol will typically be:
-/// * Implemented by platform components which control keyboard visbility.
+/// * Implemented by platform components which control keyboard visibility.
 /// * Consumed by application runtimes. For example, Flutter, Chromium.
 ///
 /// # Related protocols
