@@ -70,13 +70,13 @@ create_cros_tree() {
   repo sync -j8
 
   # Changes to termina overlays to add packages and customize USE flags:
-  (cd src/overlays; git fetch https://chromium.googlesource.com/chromiumos/overlays/board-overlays refs/changes/64/3187264/1 && git cherry-pick FETCH_HEAD)
+  (cd src/overlays; git fetch https://chromium.googlesource.com/chromiumos/overlays/board-overlays refs/changes/64/3187264/2 && git cherry-pick FETCH_HEAD)
 
   # Modify what is pulled into /opt/google/cros-containers by termina_container_tools
   (cd src/third_party/chromiumos-overlay; git fetch https://chromium.googlesource.com/chromiumos/overlays/chromiumos-overlay refs/changes/99/3187699/1 && git cherry-pick FETCH_HEAD)
 
   # Ebuild patch for building mesa with magma driver backend
-  (cd src/third_party/chromiumos-overlay; git fetch https://chromium.googlesource.com/chromiumos/overlays/chromiumos-overlay refs/changes/97/3187697/1 && git cherry-pick FETCH_HEAD)
+  (cd src/third_party/chromiumos-overlay; git fetch https://chromium.googlesource.com/chromiumos/overlays/chromiumos-overlay refs/changes/97/3187697/2 && git cherry-pick FETCH_HEAD)
 
   # Ebuild patch for building Xwayland with patches for excluding GLX and supporting ANGLE
   (cd src/third_party/chromiumos-overlay; git fetch https://chromium.googlesource.com/chromiumos/overlays/chromiumos-overlay refs/changes/98/3187698/1 && git cherry-pick FETCH_HEAD)
@@ -96,15 +96,18 @@ create_cros_tree() {
 
 build_angle() {
   local -r angle_dir="$1"
+  local -r arch="$2"
 
   git clone https://chromium.googlesource.com/angle/angle "${angle_dir}"
   pushd "${angle_dir}"
 
   python scripts/bootstrap.py
   gclient sync
+  build/linux/sysroot_scripts/install-sysroot.py --arch=${arch}
 
   gn gen out --args="\
     is_debug=false \
+    target_cpu=\"${arch}\" \
     target_os=\"linux\" \
     use_x11=true \
     use_ozone=true \
@@ -228,14 +231,17 @@ main() {
   create_cros_tree "${work_dir}/cros" "${termina_revision}"
 
   echo "*** Prepare ANGLE and build"
-  build_angle "${work_dir}/angle"
+  build_angle "${work_dir}/angle" "${arch}"
 
-  echo "*** Copy ANGLE outputs to chromeos tree"
-  cp "${work_dir}/angle/out/libEGL.so" "${work_dir}/cros/src/third_party/chromiumos-overlay/media-libs/mesa/files"
-  cp "${work_dir}/angle/out/libGLESv2.so" "${work_dir}/cros/src/third_party/chromiumos-overlay/media-libs/mesa/files"
+  # Tael board is 32bit userspace so we can't link in our 64bit libraries
+  if [ "${arch}" == "x64" ]; then
+    echo "*** Copy ANGLE outputs to chromeos tree"
+    cp "${work_dir}/angle/out/libEGL.so" "${work_dir}/cros/src/third_party/chromiumos-overlay/media-libs/mesa/files"
+    cp "${work_dir}/angle/out/libGLESv2.so" "${work_dir}/cros/src/third_party/chromiumos-overlay/media-libs/mesa/files"
 
-  echo "*** Copy GBM to chromeos tree"
-  cp "${FUCHSIA_DIR}/prebuilt/third_party/minigbm/linux-x64/libgbm.so" "${work_dir}/cros/src/third_party/chromiumos-overlay/media-libs/mesa/files"
+    echo "*** Copy GBM to chromeos tree"
+    cp "${FUCHSIA_DIR}/prebuilt/third_party/minigbm/linux-${arch}/libgbm.so" "${work_dir}/cros/src/third_party/chromiumos-overlay/media-libs/mesa/files"
+  fi
 
   echo "*** Build Termina image"
   build_termina_image "${arch}" "${work_dir}/cros"
