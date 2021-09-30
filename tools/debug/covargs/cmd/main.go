@@ -236,7 +236,6 @@ func getVersion(filepath string) (uint64, error) {
 }
 
 func isInstrumented(filepath string) bool {
-	sections := []string{"__llvm_covmap", "__llvm_prf_names"}
 	file, err := os.Open(filepath)
 	if err != nil {
 		return false
@@ -246,12 +245,16 @@ func isInstrumented(filepath string) bool {
 	if err != nil {
 		return false
 	}
-	for _, section := range sections {
-		if sec := elfFile.Section(section); sec == nil {
-			return false
+	elfSymbols, err := elfFile.Symbols()
+	if err != nil {
+		return false
+	}
+	for _, symbol := range elfSymbols {
+		if symbol.Name == "__llvm_profile_initialize" {
+			return true
 		}
 	}
-	return true
+	return false
 }
 
 func process(ctx context.Context, repo symbolize.Repository) error {
