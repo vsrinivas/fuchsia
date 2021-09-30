@@ -1,0 +1,53 @@
+{{/*
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+*/}}
+
+{{- define "Method:ClientImplOneway:MessagingHeader" }}
+  {{- /* Managed flavor */}}
+  {{ .Docs }}
+  {{- if .DocComments }}
+    //
+  {{- end }}
+  // {{- template "Method:ClientAllocationComment:Helper" . }}
+  ::fidl::Result {{ .Name }}({{ RenderParams .RequestArgs }});
+
+  {{- /* Caller-allocate flavor */}}
+  {{- if .RequestArgs }}
+    {{ .Docs }}
+    {{- if .DocComments }}
+      //
+    {{- end }}
+    // Caller provides the backing storage for FIDL message via request buffer.
+    ::fidl::Result {{ .Name }}({{- template "Method:ClientImplSyncCallerAllocateArguments:Helper" . }});
+  {{- end }}
+{{- end }}
+
+
+{{- define "Method:ClientImplOneway:MessagingSource" }}
+  {{- IfdefFuchsia -}}
+
+  {{- /* Managed flavor */}}
+  ::fidl::Result {{ .Protocol.WireClientImpl.NoLeading }}::{{ .Name }}(
+        {{ RenderParams .RequestArgs }}) {
+    FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
+    ::fidl::OwnedEncodedMessage<{{ .WireRequest }}> _request(
+        {{- RenderForwardParams "::fidl::internal::AllowUnownedInputRef{}" .RequestArgs }});
+    return ::fidl::internal::ClientBase::SendOneWay(_request.GetOutgoingMessage());
+  }
+
+  {{- /* Caller-allocate flavor */}}
+  {{- if .RequestArgs }}
+    ::fidl::Result {{ .Protocol.WireClientImpl.NoLeading }}::{{ .Name }}(
+          {{- template "Method:ClientImplSyncCallerAllocateArguments:Helper" . }}) {
+      ::fidl::UnownedEncodedMessage<{{ .WireRequest }}> _request({{ RenderForwardParams
+        "_request_buffer.data" "_request_buffer.capacity" .RequestArgs
+         }});
+      return ::fidl::internal::ClientBase::SendOneWay(_request.GetOutgoingMessage());
+    }
+  {{- end }}
+
+  {{- EndifFuchsia -}}
+{{- end }}
+

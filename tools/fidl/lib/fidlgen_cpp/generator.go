@@ -7,6 +7,7 @@ package fidlgen_cpp
 import (
 	"bytes"
 	"fmt"
+	"io/fs"
 	"log"
 	"os"
 	"path"
@@ -23,7 +24,7 @@ type Generator struct {
 	flags *CmdlineFlags
 }
 
-func NewGenerator(flags *CmdlineFlags, extraFuncs template.FuncMap, templates []string) *Generator {
+func newGenerator(flags *CmdlineFlags, extraFuncs template.FuncMap) *Generator {
 	gen := &Generator{
 		template.New(flags.name), flags,
 	}
@@ -37,12 +38,22 @@ func NewGenerator(flags *CmdlineFlags, extraFuncs template.FuncMap, templates []
 			return gen.ExperimentEnabled(experiment)
 		},
 	})
-
 	gen.tmpls.Funcs(funcs)
+
+	return gen
+}
+
+func NewGenerator(flags *CmdlineFlags, extraFuncs template.FuncMap, templates []string) *Generator {
+	gen := newGenerator(flags, extraFuncs)
 	for _, t := range templates {
 		template.Must(gen.tmpls.Parse(t))
 	}
+	return gen
+}
 
+func NewGeneratorFS(flags *CmdlineFlags, extraFuncs template.FuncMap, templates fs.FS) *Generator {
+	gen := newGenerator(flags, extraFuncs)
+	template.Must(gen.tmpls.ParseFS(templates, "*"))
 	return gen
 }
 

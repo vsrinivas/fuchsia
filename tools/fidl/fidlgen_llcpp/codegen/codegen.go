@@ -6,6 +6,7 @@ package codegen
 
 import (
 	"bytes"
+	"embed"
 	"fmt"
 	"reflect"
 	"text/template"
@@ -211,40 +212,9 @@ var utilityFuncs = template.FuncMap{
 	},
 }
 
+//go:embed *.tmpl
+var templates embed.FS
+
 func NewGenerator(flags *cpp.CmdlineFlags) *cpp.Generator {
-	return cpp.NewGenerator(flags, utilityFuncs, []string{
-		fileHeaderTmpl,
-		fileMarkersTmpl,
-		fileMessagingHeaderTmpl,
-		fileSourceTmpl,
-		fileTestBaseTmpl,
-		fileTypesHeaderTmpl,
-		fileTypesSourceTmpl,
-		fragmentBitsTmpl,
-		fragmentConstTmpl,
-		fragmentEnumTmpl,
-		fragmentMethodClientImplAsyncTmpl,
-		fragmentMethodClientImplOnewayTmpl,
-		fragmentMethodClientImplSyncTmpl,
-		fragmentMethodClientImplTmpl,
-		fragmentMethodCompleterBaseTmpl,
-		fragmentMethodRequestTmpl,
-		fragmentMethodResponseContextTmpl,
-		fragmentMethodResponseTmpl,
-		fragmentMethodResultTmpl,
-		fragmentMethodUnownedResultTmpl,
-		fragmentProtocolCallerTmpl,
-		fragmentProtocolClientImplTmpl,
-		fragmentProtocolDetailsTmpl,
-		fragmentProtocolDispatcherTmpl,
-		fragmentProtocolEventHandlerTmpl,
-		fragmentProtocolEventSenderTmpl,
-		fragmentProtocolInterfaceTmpl,
-		fragmentProtocolSyncClientTmpl,
-		fragmentProtocolTmpl,
-		fragmentServiceTmpl,
-		fragmentStructTmpl,
-		fragmentTableTmpl,
-		fragmentUnionTmpl,
-	})
+	return cpp.NewGeneratorFS(flags, utilityFuncs, templates)
 }
