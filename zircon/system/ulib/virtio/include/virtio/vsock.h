@@ -21,8 +21,8 @@
 #define VIRTIO_VSOCK_OP_CREDIT_UPDATE       6u
 #define VIRTIO_VSOCK_OP_CREDIT_REQUEST      7u
 
-#define VIRTIO_VSOCK_FLAG_SHUTDOWN_RECV     (1u << 0)
-#define VIRTIO_VSOCK_FLAG_SHUTDOWN_SEND     (1u << 1)
+#define VIRTIO_VSOCK_FLAG_SHUTDOWN_RECV     (1u << 0)  // Peer will not receive data.
+#define VIRTIO_VSOCK_FLAG_SHUTDOWN_SEND     (1u << 1)  // Peer will not send data.
 #define VIRTIO_VSOCK_FLAG_SHUTDOWN_BOTH     (VIRTIO_VSOCK_FLAG_SHUTDOWN_RECV | \
                                              VIRTIO_VSOCK_FLAG_SHUTDOWN_SEND)
 
