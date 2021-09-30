@@ -13,6 +13,7 @@ use {
     std::{convert::TryFrom, fmt},
     thiserror::Error,
 };
+
 #[derive(Debug, Error, PartialEq, Eq)]
 pub enum FieldMatcherError {
     #[error("Missing field: `{field_name}`")]
@@ -330,7 +331,7 @@ impl EventMatcher {
 mod tests {
     use super::*;
 
-    #[fuchsia_async::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn event_matcher_errors() {
         let matcher =
             EventMatcher::ok().capability_name("foobar").stop(Some(ExitStatusMatcher::AnyCrash));
