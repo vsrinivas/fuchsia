@@ -26,6 +26,9 @@ class FidlAudioRenderer : public AudioRenderer {
 
   ~FidlAudioRenderer() override;
 
+  // Control whether Play will be called upon transition to moving timeline.
+  void SetStarted(bool started) { started_ = started; }
+
   // AudioRenderer implementation.
   const char* label() const override;
 
@@ -83,6 +86,7 @@ class FidlAudioRenderer : public AudioRenderer {
   bool input_packet_request_outstanding_ = false;
   fit::closure prime_callback_;
   uint32_t bytes_per_frame_;
+  uint32_t frames_per_second_;
   bool flushed_ = true;
   int64_t min_lead_time_ns_;
   int64_t target_lead_time_ns_;
@@ -93,6 +97,7 @@ class FidlAudioRenderer : public AudioRenderer {
   size_t expected_packet_size_ = 0;
   bool stall_logged_ = false;
   bool unsupported_rate_ = false;
+  bool started_ = true;
 
   PacketTimingTracker arrivals_;
   PacketTimingTracker departures_;

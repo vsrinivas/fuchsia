@@ -719,5 +719,64 @@ TEST_F(AudioConsumerTests, DiscardAllPackets) {
   EXPECT_FALSE(sink_connection_closed);
 }
 
+// Test that packets are rendered even if timeline is started before Start is called. Use media time
+// offset from zero to expose issues with an initial internal media time of 0.
+TEST_F(AudioConsumerTests, SetRateBeforeStart) {
+  fuchsia::media::StreamSinkPtr sink;
+  fuchsia::media::AudioStreamType stream_type;
+  stream_type.frames_per_second = kFramesPerSecond;
+  stream_type.channels = kSamplesPerFrame;
+  stream_type.sample_format = fuchsia::media::AudioSampleFormat::SIGNED_16;
+  constexpr uint32_t kBytesPerFrame = kSamplesPerFrame * sizeof(int16_t);
+  bool sink_connection_closed = false;
+
+  fake_audio_.renderer().ExpectPackets({{255, kVmoSize, 0x0000000000000000},
+                                        {511, kVmoSize, 0x0000000000000000},
+                                        {768, kVmoSize, 0x0000000000000000},
+                                        {1023, kVmoSize, 0x0000000000000000},
+                                        {1279, kVmoSize, 0x0000000000000000},
+                                        {1536, kVmoSize, 0x0000000000000000},
+                                        {1791, kVmoSize, 0x0000000000000000},
+                                        {2047, kVmoSize, 0x0000000000000000},
+                                        {2304, kVmoSize, 0x0000000000000000},
+                                        {2559, kVmoSize, 0x0000000000000000}});
+
+  std::vector<zx::vmo> vmos(kNumVmos);
+  for (uint32_t i = 0; i < kNumVmos; i++) {
+    std::array<char, 1> test_data = {static_cast<char>(i)};
+    zx_status_t status = zx::vmo::create(kVmoSize, 0, &vmos[i]);
+    EXPECT_EQ(status, ZX_OK);
+    vmos[i].write(test_data.data(), 0, test_data.size());
+  }
+
+  audio_consumer_->CreateStreamSink(std::move(vmos), stream_type, nullptr, sink.NewRequest());
+
+  sink.set_error_handler(
+      [&sink_connection_closed](zx_status_t status) { sink_connection_closed = true; });
+
+  audio_consumer_->SetRate(1.0f);
+
+  auto pts_rate = media::TimelineRate(ZX_SEC(1), kFramesPerSecond);
+
+  for (int32_t i = 0; i < 10; i++) {
+    auto packet = fuchsia::media::StreamPacket::New();
+    packet->payload_buffer_id = 0;
+    packet->payload_size = kVmoSize;
+    packet->payload_offset = 0;
+    packet->pts = (i + 1) * kVmoSize / kBytesPerFrame * pts_rate;
+
+    bool sent_packet = false;
+    sink->SendPacket(*packet, [&sent_packet]() { sent_packet = true; });
+    RunLoopUntil([&sent_packet]() { return sent_packet; });
+  }
+
+  auto initial_pts = kVmoSize / kBytesPerFrame * pts_rate;
+  audio_consumer_->Start(fuchsia::media::AudioConsumerStartFlags::SUPPLY_DRIVEN, 0, initial_pts);
+
+  RunLoopUntil([this]() { return fake_audio_.renderer().expected(); });
+
+  EXPECT_FALSE(sink_connection_closed);
+}
+
 }  // namespace test
 }  // namespace media_player

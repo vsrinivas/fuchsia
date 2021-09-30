@@ -1133,19 +1133,24 @@ TEST_F(MediaPlayerTests, ElementarySourceDeferred) {
 
 // Play a real A/V file from beginning to end and rate 2.0.
 TEST_F(MediaPlayerTests, PlayBear2) {
-  // It would be great to verify the audio packets here, but test bots are slow enough that
-  // audio packets sometimes get dropped due to lack of VMO space for the audio renderer.
-
   fake_sysmem_.SetExpectations(BearSysmemExpectations());
 
+  // Only a few packets will be seen by audio renderer, and none of them would be actually rendered
+  // since Play won't be called due to 2.0 being an unsupported rate.
+
+  // ARM64 hashes
   fake_audio_.renderer().ExpectPackets({{1024, 8192, 0x0a68b3995a50a648},
                                         {2048, 8192, 0x93bf522ee77e9d50},
                                         {3072, 8192, 0x89cc3bcedd6034be},
-                                        {4096, 8192, 0x40931af9f379dd00}});
+                                        {4096, 8192, 0x40931af9f379dd00},
+                                        {5120, 8192, 0x79dc4cfe61738988}});
+
+  // X64 hashes
   fake_audio_.renderer().ExpectPackets({{1024, 8192, 0x0a278d9cb22e24c4},
                                         {2048, 8192, 0xcac15dcabac1d262},
                                         {3072, 8192, 0x8e9eab619d7bc6a4},
-                                        {4096, 8192, 0x71adf7d7c8ddda7c}});
+                                        {4096, 8192, 0x71adf7d7c8ddda7c},
+                                        {5120, 8192, 0x0b3e51a900e6b0b6}});
 
   fake_scenic_.session().SetExpectations(
       1,

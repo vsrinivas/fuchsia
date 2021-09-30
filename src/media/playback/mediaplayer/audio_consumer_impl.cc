@@ -100,7 +100,8 @@ AudioConsumerImpl::AudioConsumerImpl(uint64_t session_id,
       renderer_primed_(false),
       timeline_started_(false),
       rate_(kDefaultRate),
-      status_dirty_(true) {
+      status_dirty_(true),
+      reference_time_offset_(0) {
   FX_DCHECK(component_context_);
 
   ThreadPriority::SetToHigh();
@@ -236,6 +237,7 @@ void AudioConsumerImpl::EnsureRenderer() {
     fuchsia::media::AudioRendererPtr audio_renderer;
     audio->CreateAudioRenderer(audio_renderer.NewRequest());
     audio_renderer_ = FidlAudioRenderer::Create(std::move(audio_renderer));
+    audio_renderer_->SetStarted(false);
     core_.SetSinkSegment(RendererSinkSegment::Create(audio_renderer_, decoder_factory_.get()),
                          StreamType::Medium::kAudio);
     core_.SetProgramRange(0, 0, Packet::kMaxPts);
@@ -280,6 +282,10 @@ void AudioConsumerImpl::Start(fuchsia::media::AudioConsumerStartFlags flags, int
     media_time = 0;
   }
 
+  if (audio_renderer_) {
+    audio_renderer_->SetStarted(true);
+  }
+
   SetTimelineFunction(rate_, media_time, reference_time, []() {});
 }
 
@@ -309,6 +315,9 @@ void AudioConsumerImpl::BindVolumeControl(
 void AudioConsumerImpl::Stop() {
   int64_t now = CurrentReferenceTime();
   int64_t subject_time = core_.timeline_function()(now);
+  if (audio_renderer_) {
+    audio_renderer_->SetStarted(false);
+  }
   SetTimelineFunction(0.0f, subject_time, now, []() {});
 }
 

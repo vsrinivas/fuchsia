@@ -337,6 +337,7 @@ void FidlAudioRenderer::SetStreamType(const StreamType& stream_type) {
 
   pts_rate_ = media::TimelineRate(stream_type.audio()->frames_per_second(), 1);
   bytes_per_frame_ = stream_type.audio()->bytes_per_frame();
+  frames_per_second_ = stream_type.audio()->frames_per_second();
 }
 
 void FidlAudioRenderer::Prime(fit::closure callback) {
@@ -375,8 +376,10 @@ void FidlAudioRenderer::SetTimelineFunction(media::TimelineFunction timeline_fun
     if (timeline_function.subject_delta() == 0) {
       audio_renderer_->PauseNoReply();
     } else {
-      int64_t presentation_time = from_ns(timeline_function.subject_time());
-      audio_renderer_->PlayNoReply(timeline_function.reference_time(), presentation_time);
+      if (started_) {
+        int64_t presentation_time = from_ns(timeline_function.subject_time());
+        audio_renderer_->PlayNoReply(timeline_function.reference_time(), presentation_time);
+      }
     }
   };
 
@@ -435,11 +438,12 @@ bool FidlAudioRenderer::NeedMorePackets() {
 
   stall_logged_ = false;
 
-  int64_t presentation_time_ns = current_timeline_function()(zx::clock::get_monotonic().get());
+  int64_t duration_outstanding = static_cast<int64_t>(packet_bytes_outstanding_) * ZX_SEC(1) /
+                                 bytes_per_frame_ / frames_per_second_;
 
-  if (last_supplied_pts_ns_ == Packet::kNoPts ||
-      presentation_time_ns + target_lead_time_ns_ > last_supplied_pts_ns_) {
-    // We need more packets to meet lead time commitments.
+  if (duration_outstanding < target_lead_time_ns_ || !started_) {
+    // We need more packets to meet lead time commitments, or we are still queuing initial packets
+    // before being started.
     return true;
   }
 
@@ -451,8 +455,10 @@ bool FidlAudioRenderer::NeedMorePackets() {
 
   // We don't need packets now. Predict when we might need the next packet
   // and check then.
-  demand_task_.PostForTime(dispatcher(), zx::time(current_timeline_function().ApplyInverse(
-                                             last_supplied_pts_ns_ - target_lead_time_ns_)));
+  auto prediction = zx::time(
+      current_timeline_function().ApplyInverse(duration_outstanding - target_lead_time_ns_));
+
+  demand_task_.PostForTime(dispatcher(), prediction);
   return false;
 }
 
