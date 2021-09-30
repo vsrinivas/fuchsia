@@ -345,7 +345,18 @@ impl StorageAdmin {
         // subtree that has access to the storage is found, rather than checking every single
         // instance's storage uses as done here.
         while let Some(component) = components_to_visit.pop() {
-            let component_state = component.lock_resolved_state().await.unwrap();
+            let component_state = match component.lock_resolved_state().await {
+                Ok(state) => state,
+                // A component will not have resolved state if it has already been purged. In this
+                // case, it's storage has also been removed, so we should skip it.
+                Err(e) => {
+                    warn!(
+                        "Failed to lock component resolved state, it may already be purged: {:?}",
+                        e
+                    );
+                    continue;
+                }
+            };
             let storage_uses =
                 component_state.decl().uses.iter().filter_map(|use_decl| match use_decl {
                     UseDecl::Storage(use_storage) => Some(use_storage),

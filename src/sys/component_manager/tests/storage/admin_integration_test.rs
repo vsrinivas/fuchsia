@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 use {
+    component_events::{events::*, matcher::*},
     fidl::endpoints::create_proxy,
     fidl_fuchsia_io as fio, fidl_fuchsia_sys2 as fsys, fuchsia_async as fasync,
     fuchsia_component::client::connect_to_protocol,
@@ -182,4 +183,64 @@ async fn multiple_storage_users() {
     );
 
     futures::future::join_all(done_signals).await;
+}
+
+#[fasync::run_singlethreaded(test)]
+async fn purged_storage_user() {
+    let (mock, _) = new_data_user_mock("file", "data");
+    let mut builder = RealmBuilder::new().await.unwrap();
+    builder
+        .add_eager_component("storage-user", mock)
+        .await
+        .unwrap()
+        .add_route(CapabilityRoute {
+            capability: Capability::storage("data", "/data"),
+            source: RouteEndpoint::AboveRoot,
+            targets: vec![RouteEndpoint::component("storage-user")],
+        })
+        .unwrap()
+        .add_route(CapabilityRoute {
+            capability: Capability::protocol("fuchsia.logger.LogSink"),
+            source: RouteEndpoint::AboveRoot,
+            targets: vec![RouteEndpoint::component("storage-user")],
+        })
+        .unwrap();
+    let instance = builder.build().create().await.unwrap();
+    let instance_moniker = format!("./{}:{}", DEFAULT_COLLECTION_NAME, instance.root.child_name());
+    let storage_user_moniker = format!("{}/storage-user", &instance_moniker);
+    let storage_user_moniker_regex = format!("{}:.*/storage-user:.*", &instance_moniker);
+
+    let storage_admin = connect_to_protocol::<fsys::StorageAdminMarker>().unwrap();
+    let storage_users = collect_storage_user_monikers(&storage_admin, &instance_moniker).await;
+    assert_eq!(
+        storage_users
+            .iter()
+            .map(|moniker_with_instances| RelativeMoniker::parse(&moniker_with_instances)
+                .unwrap()
+                .to_string_without_instances())
+            .collect::<HashSet<_>>(),
+        hashset! {
+            storage_user_moniker.clone()
+        }
+    );
+
+    let source = EventSource::new().unwrap();
+    let mut event_stream =
+        source.take_static_event_stream("PurgedStorageEventStream").await.unwrap();
+    instance.destroy().await.unwrap();
+
+    EventMatcher::ok()
+        .moniker(storage_user_moniker_regex)
+        .wait::<Purged>(&mut event_stream)
+        .await
+        .unwrap();
+
+    let storage_users = collect_storage_user_monikers(&storage_admin, ".")
+        .await
+        .iter()
+        .map(|moniker_with_instances| {
+            RelativeMoniker::parse(&moniker_with_instances).unwrap().to_string_without_instances()
+        })
+        .collect::<HashSet<_>>();
+    assert!(!storage_users.contains(&instance_moniker));
 }

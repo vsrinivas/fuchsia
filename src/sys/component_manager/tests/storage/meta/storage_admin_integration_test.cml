@@ -26,6 +26,24 @@
             protocol: "fuchsia.sys2.StorageAdmin",
             from: "#data",
         },
+        {
+            protocol: "fuchsia.sys2.EventSource",
+            from: "parent",
+        },
+        {
+            event: [ "purged" ],
+            from: "framework",
+            modes: [ "async" ],
+        },
+        {
+            event_stream: "PurgedStorageEventStream",
+            subscriptions: [
+                {
+                    event: "purged",
+                    mode: "async",
+                },
+            ],
+        },
     ],
     offer: [
         {
