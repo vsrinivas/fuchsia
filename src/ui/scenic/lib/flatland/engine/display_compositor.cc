@@ -20,6 +20,15 @@ namespace flatland {
 
 namespace {
 
+// Since Scenic's wakeup time is hardcoded to be 14ms from vsync, it is safe to assume that
+// waking up 14ms in the future will be after vsync has occurred.
+constexpr zx::duration kFakeVsyncDuration = zx::msec(14);
+
+// The duration we wait for display controller's signal event. Vsync might not happening
+// within the hardcoded time in kFakeVsyncDuration, so this wait helps to ensure it is safe to reuse
+// image.
+constexpr zx::time kDisplaySignalWaitDuration = zx::time::infinite();
+
 // Debugging color used to highlight images that have gone through the GPU rendering path.
 const std::array<float, 4> kDebugColor = {0.9, 0.5, 0.5, 1};
 
@@ -499,10 +508,12 @@ void DisplayCompositor::RenderFrame(uint64_t frame_number, zx::time presentation
       // Reset the event data.
       auto& event_data = display_engine_data.frame_event_datas[curr_vmo];
 
-      // We expect the retired event to already have been signaled.  Verify this without waiting.
+      // TODO(fxbug.dev/77414): Once we are calling ApplyConfig2() here, we can expect the retired
+      // event to already have been signaled and verify this without waiting. But we wait now
+      // because vsync might not happening within the hardcoded time in kFakeVsyncDuration.
       {
-        zx_status_t status =
-            event_data.signal_event.wait_one(ZX_EVENT_SIGNALED, zx::time(), nullptr);
+        zx_status_t status = event_data.signal_event.wait_one(ZX_EVENT_SIGNALED,
+                                                              kDisplaySignalWaitDuration, nullptr);
         if (status != ZX_OK) {
           FX_DCHECK(status == ZX_ERR_TIMED_OUT) << "unexpected status: " << status;
           FX_LOGS(ERROR)
@@ -581,9 +592,7 @@ void DisplayCompositor::RenderFrame(uint64_t frame_number, zx::time presentation
           }
         }
       },
-      // Since Scenic's wakeup time is hardcoded to be 14ms from vsync, it is safe to assume that
-      // waking up 14ms in the future will be after vsync has occurred.
-      zx::duration(14'000'000));
+      kFakeVsyncDuration);
 }
 
 void DisplayCompositor::OnVsync(uint64_t display_id, uint64_t frame_number, zx::time timestamp) {
