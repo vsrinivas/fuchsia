@@ -57,7 +57,8 @@ fn find_components_internal(
             matching_components.append(&mut result);
         }
 
-        let should_include = name.contains(&query) || does_url_match_query(&query, &hub_dir).await;
+        let should_include = moniker.to_string_without_instances().contains(&query)
+            || does_url_match_query(&query, &hub_dir).await;
         if should_include {
             let component = Component::parse(moniker, &hub_dir).await?;
             matching_components.push(component);
@@ -97,7 +98,6 @@ fn find_cmx_realms(
 // Given a v1 component directory, collect components whose URL matches the given |query|.
 // |moniker| corresponds to the moniker of the current component.
 fn find_cmx_components(
-    name: String,
     query: String,
     moniker: PartialAbsoluteMoniker,
     hub_dir: Directory,
@@ -113,7 +113,8 @@ fn find_cmx_components(
             matching_components.append(&mut child_components);
         }
 
-        let should_include = name.contains(&query) || does_url_match_query(&query, &hub_dir).await;
+        let should_include = moniker.to_string_without_instances().contains(&query)
+            || does_url_match_query(&query, &hub_dir).await;
         if should_include {
             let component = Component::parse_cmx(moniker, hub_dir).await?;
             matching_components.push(component);
@@ -138,12 +139,7 @@ async fn find_cmx_components_in_c_dir(
         let job_ids_dir = c_dir.open_dir_readable(&child_component_name)?;
         let hub_dirs = open_all_job_ids(job_ids_dir).await?;
         for hub_dir in hub_dirs {
-            let future_child = find_cmx_components(
-                child_component_name.clone(),
-                query.clone(),
-                child_moniker.clone(),
-                hub_dir,
-            );
+            let future_child = find_cmx_components(query.clone(), child_moniker.clone(), hub_dir);
             future_children.push(future_child);
         }
     }
