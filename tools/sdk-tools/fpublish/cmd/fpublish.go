@@ -66,7 +66,13 @@ func main() {
 func registerSymbolIndex(sdk sdkProvider, packages []string, verbose bool) {
 	for _, pkg := range packages {
 		// pkg should end with ".far", otherwise the publish function should fail.
-		args := []string{"debug", "symbol-index", "add", pkg[:len(pkg)-4] + ".symbol-index.json"}
+		symbolIndexJsonFile := pkg[:len(pkg)-4] + ".symbol-index.json"
+		if _, err := os.Stat(symbolIndexJsonFile); err != nil {
+			// File doesn't exist or is not readable.
+			continue
+		}
+
+		args := []string{"debug", "symbol-index", "add", symbolIndexJsonFile}
 		if verbose {
 			fmt.Printf("Running command: ffx %v\n", args)
 		}

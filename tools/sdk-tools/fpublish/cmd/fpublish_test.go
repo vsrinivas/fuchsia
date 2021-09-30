@@ -21,6 +21,7 @@ type testSDKProperties struct {
 	err             error
 	properties      map[string]string
 	expectedFfxArgs []string
+	ffxCalled       *bool
 }
 
 func (testSDK testSDKProperties) GetToolsDir() (string, error) {
@@ -55,6 +56,7 @@ func (testSDK testSDKProperties) RunFFX(args []string, interactive bool) (string
 		os.Exit(1)
 	}
 
+	*testSDK.ffxCalled = true
 	return "", nil
 }
 
@@ -349,8 +351,22 @@ func TestFPublish(t *testing.T) {
 }
 
 func TestRegisterSymbolIndex(t *testing.T) {
+	tempDir := t.TempDir()
+	farFile := filepath.Join(tempDir, "some_package.far")
+	symbolIndexJsonFile := filepath.Join(tempDir, "some_package.symbol-index.json")
+	os.WriteFile(symbolIndexJsonFile, []byte("{}"), 0666)
+	ffxCalled := false
 	testSDK := testSDKProperties{
-		expectedFfxArgs: []string{"debug", "symbol-index", "add", "some/package.symbol-index.json"},
+		expectedFfxArgs: []string{"debug", "symbol-index", "add", symbolIndexJsonFile},
+		ffxCalled:       &ffxCalled,
 	}
-	registerSymbolIndex(testSDK, []string{"some/package.far"}, false)
+	registerSymbolIndex(&testSDK, []string{farFile}, false)
+	if !ffxCalled {
+		t.Fatal("ffx should be called")
+	}
+	ffxCalled = false
+	registerSymbolIndex(&testSDK, []string{"another_nonexist_package.far"}, false)
+	if ffxCalled {
+		t.Fatal("ffx should not be called")
+	}
 }
