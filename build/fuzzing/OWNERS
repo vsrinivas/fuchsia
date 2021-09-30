@@ -1,8 +1,6 @@
-aarongreen@google.com
-eep@google.com
-markdittmer@google.com
+include /src/sys/fuzzing/OWNERS
+
 mcgrathr@google.com
-mvanotti@google.com
 phosek@google.com
 
 # COMPONENT: Build
