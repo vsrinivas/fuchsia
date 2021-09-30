@@ -27,6 +27,7 @@ group("tests") {
     "rights:tests",
     "routing:tests",
     "security_policy:tests",
+    "services:tests",
     "shutdown:shutdown_integration_test",
     "storage:storage_integration_test",
     "utc-time:tests",

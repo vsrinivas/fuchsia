@@ -1,0 +1,45 @@
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+// This component exposes the `fuchsia.examples.services.BankAccount`
+// service with instances aggregated from a collection of account providers.
+{
+    include: [
+        "//sdk/lib/syslog/client.shard.cml",
+        "//src/sys/component_manager/tests/services/meta/account_providers.shard.cml",
+    ],
+    program: {
+        runner: "elf",
+        binary: "bin/service_routing_branch_bin",
+    },
+    collections: [
+        {
+            name: "account_providers",
+            durability: "transient",
+        },
+    ],
+    use: [
+        {
+            protocol: "fuchsia.sys2.Realm",
+            from: "framework",
+        },
+    ],
+    offer: [
+        {
+            protocol: "fuchsia.logger.LogSink",
+            from: "parent",
+            to: [ "#account_providers" ],
+        },
+    ],
+    expose: [
+        {
+            service: "fuchsia.examples.services.BankAccount",
+            from: "#account_providers",
+        },
+        {
+            protocol: "fuchsia.component.Binder",
+            from: "framework",
+        },
+    ],
+}

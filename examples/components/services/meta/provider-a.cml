@@ -18,6 +18,10 @@
     ],
     expose: [
         {
+            protocol: "fuchsia.component.Binder",
+            from: "framework",
+        },
+        {
             service: "fuchsia.examples.services.BankAccount",
             from: "self",
         },
