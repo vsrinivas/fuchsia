@@ -105,10 +105,16 @@ func main() {
 	log.SetFlags(logFlags)
 	ctx := logger.WithLogger(context.Background(), log)
 
+	if err := setupAndExecute(ctx); err != nil {
+		logger.Fatalf(ctx, err.Error())
+	}
+}
+
+func setupAndExecute(ctx context.Context) error {
 	testsPath := flag.Arg(0)
 	tests, err := loadTests(testsPath)
 	if err != nil {
-		logger.Fatalf(ctx, "failed to load tests from %q: %s", testsPath, err)
+		return fmt.Errorf("failed to load tests from %q: %w", testsPath, err)
 	}
 
 	// Configure a test outputs object, responsible for producing TAP output,
@@ -118,7 +124,7 @@ func main() {
 		var err error
 		testOutDir, err = ioutil.TempDir("", "testrunner")
 		if err != nil {
-			logger.Fatalf(ctx, "failed to create a test output directory")
+			return fmt.Errorf("failed to create a test output directory")
 		}
 	}
 	logger.Debugf(ctx, "test output directory: %s", testOutDir)
@@ -127,7 +133,7 @@ func main() {
 	tapProducer.Plan(len(tests))
 	outputs, err := createTestOutputs(tapProducer, testOutDir)
 	if err != nil {
-		logger.Fatalf(ctx, "failed to create test results object: %s", err)
+		return fmt.Errorf("failed to create test results object: %w", err)
 	}
 	defer outputs.Close()
 
@@ -135,7 +141,7 @@ func main() {
 	if deviceAddr, ok := os.LookupEnv(constants.DeviceAddrEnvKey); ok {
 		addrPtr, err := net.ResolveIPAddr("ip", deviceAddr)
 		if err != nil {
-			logger.Fatalf(ctx, "failed to parse device address %s: %s", deviceAddr, err)
+			return fmt.Errorf("failed to parse device address %s: %w", deviceAddr, err)
 		}
 		addr = *addrPtr
 	}
@@ -143,14 +149,12 @@ func main() {
 
 	cleanUp, err := environment.Ensure()
 	if err != nil {
-		logger.Fatalf(ctx, "failed to setup environment: %s", err)
+		return fmt.Errorf("failed to setup environment: %w", err)
 	}
 	defer cleanUp()
 
 	serialSocketPath := os.Getenv(constants.SerialSocketEnvKey)
-	if err := execute(ctx, tests, outputs, addr, sshKeyFile, serialSocketPath, testOutDir); err != nil {
-		logger.Fatalf(ctx, err.Error())
-	}
+	return execute(ctx, tests, outputs, addr, sshKeyFile, serialSocketPath, testOutDir)
 }
 
 func validateTest(test testsharder.Test) error {
