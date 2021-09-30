@@ -56,10 +56,6 @@
   api_primary: 'cpu@google.com'
   api_secondary: 'abarth@google.com'
 
-- name: 'Ledger'
-  api_primary: 'qsr@google.com'
-  api_secondary: ''
-
 - name: 'Media'
   api_primary: 'dalesat@google.com'
   api_secondary: ''

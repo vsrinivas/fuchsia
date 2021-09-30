@@ -98,7 +98,7 @@
   short_description: 'This document discusses the removal of thread killing functionality and the reasoning behind that removal.'
   authors: ['dgilhooley@google.com']
   file: '0007_remove_thread_killing.md'
-  area: ['Zircon']
+  area: ['Kernel']
   issue: []
   gerrit_change_id: ['431174']
   status: 'Accepted'
@@ -111,7 +111,7 @@
   short_description: 'Defines the plan to deprecate and then remove the zx_clock_get and zx_clock_adjust syscalls.'
   authors: ['jsankey@google.com', 'johngro@google.com']
   file: '0008_remove_zx_clock_get_and_adjust.md'
-  area: ['Zircon']
+  area: ['Kernel']
   issue: ['61987']
   gerrit_change_id: ['438135']
   status: 'Accepted'
@@ -124,7 +124,7 @@
   short_description: 'The proposal is that, if the ZX_WAIT_ASYNC_EDGE flag is specified, the initial check is omitted and the signal set added to the interest list of the DispatchObject regardless of the initial signal state. In this mode of operation, one of the signals must transition from inactive to active for a packet to be queued on the supplied port (possibly requiring a signal to become inactive in the process).'
   authors: ['steveaustin@google.com']
   file: '0009_edge_triggered_async_wait.md'
-  area: ['Zircon']
+  area: ['Kernel']
   issue: ['45709', '62553']
   gerrit_change_id: ['442834']
   status: 'Accepted'
@@ -137,7 +137,7 @@
   short_description: 'This RFC introduces a new mode to zx_channel_write and zx_channel_call which copies input data from multiple memory regions rather than from a single contiguous buffer.'
   authors: ['bprosnitz@google.com']
   file: '0010_channel_iovec.md'
-  area: ['Zircon']
+  area: ['Kernel']
   issue: ['60623']
   gerrit_change_id: ['433621']
   status: 'Accepted'
@@ -150,7 +150,7 @@
   short_description: 'Proposes adding a new topic - `ZX_INFO_KMEM_STATS_EXTENDED`, to the `zx_object_get_info()` syscall.'
   authors: ['rashaeqbal@google.com']
   file: '0011_getinfo_kmemstats_extended.md'
-  area: ['Zircon']
+  area: ['Kernel']
   issue: []
   gerrit_change_id: ['446786']
   status: 'Accepted'
@@ -163,7 +163,7 @@
   short_description: 'Describes a mechanism for userspace applications to indicate to the kernel that certain memory buffers are eligible for reclamation.'
   authors: ['rashaeqbal@google.com']
   file: '0012_zircon_discardable_memory.md'
-  area: ['Zircon']
+  area: ['Kernel']
   issue: ['60237']
   gerrit_change_id: ['441994']
   status: 'Accepted'
@@ -176,7 +176,7 @@
   short_description: 'A system call that creates a CoW clone of a VMO from a mapping, without needing a handle to it.'
   authors: ['tbodt@google.com']
   file: '0013_cloning_a_vmo_mapping.md'
-  area: ['Zircon']
+  area: ['Kernel']
   issue: ['60232']
   gerrit_change_id: ['443437']
   status: 'Accepted'
@@ -189,7 +189,7 @@
   short_description: 'Permit `zx_fifo_create` calls with element counts that are not powers of two.'
   authors: ['jfsulliv@google.com']
   file: '0014_relax_fifo_create_constraints.md'
-  area: ['Zircon']
+  area: ['Kernel']
   issue: ['65697']
   gerrit_change_id: ['457334']
   status: 'Accepted'
@@ -215,7 +215,7 @@
   short_description: 'Replace PAGE_SIZE constant with a vdsocall.'
   authors: ['adanis@google.com']
   file: '0016_boot_time_page_sizes.md'
-  area: ['Zircon']
+  area: ['Kernel']
   issue: []
   gerrit_change_id: ['457076']
   status: 'Accepted'
@@ -878,7 +878,7 @@
   short_description: 'Mechanism for userspace applications to hint to the kernel a relative order of eviction for user pager backed memory.'
   authors: ['rashaeqbal@google.com']
   file: '0068_eviction_hints.md'
-  area: ['Zircon']
+  area: ['Kernel']
   issue: ['65334']
   gerrit_change_id: ['468630']
   status: 'Accepted'
@@ -904,7 +904,7 @@
   short_description: 'Mitigations for spurious PCI legacy interrupts.'
   authors: ['cja@google.com']
   file: '0070_pci_protocol_legacy_interrupt_changes.md'
-  area: ['Zircon']
+  area: ['Kernel']
   issue: ['71188']
   gerrit_change_id: ['457076']
   status: 'Accepted'
@@ -943,7 +943,7 @@
   short_description: 'Raise the minimum x86-64 platform from v1 + extensions to v2'
   authors: ['venkateshs@chromium.org']
   file: '0073_x86_64_platform_requirement.md'
-  area: ['Zircon']
+  area: ['Kernel']
   issue: []
   gerrit_change_id: ['484898']
   status: 'Socialization'
@@ -956,7 +956,7 @@
   short_description: 'Make process start time queryable from userspace.'
   authors: ['joshuaseaton@google.com']
   file: '0074_expose_process_start_time.md'
-  area: ['Zircon']
+  area: ['Kernel']
   issue: []
   gerrit_change_id: ['488412']
   status: 'Accepted'
@@ -995,7 +995,7 @@
   short_description: 'Changes to zx_clock_update that let clock maintainers opt in to supplying more information and achieving higher accuracy.'
   authors: ['jsankey@google.com']
   file: '0077_zx_clock_update_accuracy.md'
-  area: ['Zircon']
+  area: ['Kernel']
   issue: ['65726']
   gerrit_change_id: ['495844']
   status: 'Accepted'
@@ -1008,7 +1008,7 @@
   short_description: 'Export Fuchsia kernel code coverage so it can be used for fuzzing with Syzkaller.'
   authors: ['eep@google.com', 'mvanotti@google.com', 'markdittmer@google.com']
   file: '0078_kernel_coverage_for_fuchsia_fuzzing.md'
-  area: ['Zircon']
+  area: ['Kernel']
   issue: []
   gerrit_change_id: ['']
   status: 'Accepted'
@@ -1021,7 +1021,7 @@
   short_description: 'A revised mechanism for detecting debuglog data loss.'
   authors: ['maniscalco@google.com']
   file: '0079_detecting_debuglog_data_loss.md'
-  area: ['Zircon', 'Diagnostics']
+  area: ['Kernel', 'Diagnostics']
   issue: ['69290']
   gerrit_change_id: ['487876']
   status: 'Accepted'
@@ -1034,7 +1034,7 @@
   short_description: 'This RFC proposes a new flag `ZX_INFO_VMO_IMMUTABLE` that makes it possible to determine if a VMO is immutable and has been since creation.'
   authors: ['bprosnitz@google.com']
   file: '0080_detecting_vmo_immutability.md'
-  area: ['Zircon']
+  area: ['Kernel']
   issue: []
   gerrit_change_id: []
   status: 'Accepted'
@@ -1086,7 +1086,7 @@
   short_description: 'Adds additional metrics to zx_info_task_runtime_t to debug media performance problems.'
   authors: ['tombergan@google.com']
   file: '0084_zircon_more_per_task_runtime_information.md'
-  area: ['Zircon']
+  area: ['Kernel']
   issue: ['67477']
   gerrit_change_id: ['485181']
   status: 'Accepted'
@@ -1099,7 +1099,7 @@
   short_description: 'Reduce the range of valid zx_status_t values, allowing the type to be more easily embedded in other types.'
   authors: ['dgreenaway@google.com', 'kulakowski@google.com']
   file: '0085_reducing_zx_status_t_space.md'
-  area: ['Zircon', 'System']
+  area: ['Kernel', 'System']
   issue: ['74211', '74212']
   gerrit_change_id: ['436685']
   status: 'Accepted'
@@ -1164,7 +1164,7 @@
   short_description: 'Add an allowlist for drivers shared libraries.'
   authors: ['dgilhooley@google.com']
   file: '0090_drivers_shared_library_allowlist.md'
-  area: ['Zircon']
+  area: ['Kernel']
   issue: ['']
   gerrit_change_id: ['508918']
   status: 'Accepted'
@@ -1177,7 +1177,7 @@
   short_description: 'Proposes adding a new event - `ZX_SYSTEM_EVENT_IMMINENT_OUT_OF_MEMORY`, to the `zx_system_get_event()` syscall.'
   authors: ['rashaeqbal@google.com']
   file: '0091_getevent_imminent_oom.md'
-  area: ['Zircon']
+  area: ['Kernel']
   issue: ['73872']
   gerrit_change_id: ['514760']
   status: 'Accepted'
@@ -1190,7 +1190,7 @@
   short_description: 'Defines the role of the session component.'
   authors: ['lindkvist@google.com']
   file: '0092_sessions.md'
-  area: ['Session']
+  area: ['Sessions']
   issue: ['']
   gerrit_change_id: ['513028']
   status: 'Accepted'
@@ -1281,7 +1281,7 @@
   short_description: 'Introduce `zx_socket_set_disposition` to replace `zx_socket_shutdown` with a reversible operation.'
   authors: ['tamird@google.com']
   file: '0099_socket_set_disposition.md'
-  area: ['Zircon']
+  area: ['Kernel']
   issue: ['67465']
   gerrit_change_id: ['526441']
   status: 'Accepted'
@@ -1320,7 +1320,7 @@
   short_description: 'Make it an error to pass ZX_VMO_CHILD_NO_WRITE with ZX_VMO_CHILD_RESIZABLE to zx_vmo_create_child'
   authors: ['adanis@google.com']
   file: '0102_forbid_no_write_with_resizable.md'
-  area: ['Zircon']
+  area: ['Kernel']
   issue: ['77315']
   gerrit_change_id: ['533409']
   submitted: '2021-05-25'
@@ -1593,7 +1593,7 @@
   short_description: 'Interface for communicating with the kernel regarding CPU performance'
   authors: ['claridge@google.com']
   file: '0123_cpu_performance_info.md'
-  area: ['Zircon']
+  area: ['Kernel']
   issue: ['']
   gerrit_change_id: ['554188']
   status: 'Accepted'
@@ -1661,7 +1661,7 @@
   short_description: 'A new syscall, `zx_vcpu_kick`, that can cause a running VCPU to exit to the host and return to user-space.'
   authors: ['abdulla@google.com']
   file: '0128_vcpu_kick.md'
-  area: ['Zircon']
+  area: ['Kernel']
   issue: ['']
   gerrit_change_id: ['573781']
   status: 'Accepted'
