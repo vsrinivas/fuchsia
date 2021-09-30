@@ -9,11 +9,14 @@
 #include <lib/sdio/hw.h>
 #include <lib/zx/vmo.h>
 
+#include <memory>
+
 #include <fbl/algorithm.h>
 #include <fbl/auto_lock.h>
 #include <zxtest/zxtest.h>
 
 #include "fake-sdmmc-device.h"
+#include "src/devices/testing/mock-ddk/mock-device.h"
 
 namespace {
 
@@ -27,18 +30,23 @@ namespace sdmmc {
 
 class SdioControllerDeviceTest : public zxtest::Test {
  public:
-  SdioControllerDeviceTest() : dut_(fake_ddk::kFakeParent, SdmmcDevice(sdmmc_.GetClient())) {}
+  SdioControllerDeviceTest() {
+    dut_ = std::make_unique<SdioControllerDevice>(parent_.get(), SdmmcDevice(sdmmc_.GetClient()));
+  }
 
   void SetUp() override { sdmmc_.Reset(); }
 
  protected:
+  std::shared_ptr<MockDevice> parent_ = MockDevice::FakeRootParent();
   FakeSdmmcDevice sdmmc_;
-  SdioControllerDevice dut_;
+  std::unique_ptr<SdioControllerDevice> dut_;
 };
 
 class SdioScatterGatherTest : public zxtest::Test {
  public:
-  SdioScatterGatherTest() : dut_(fake_ddk::kFakeParent, SdmmcDevice(sdmmc_.GetClient())) {}
+  SdioScatterGatherTest() {
+    dut_ = std::make_unique<SdioControllerDevice>(parent_.get(), SdmmcDevice(sdmmc_.GetClient()));
+  }
 
   void SetUp() override { sdmmc_.Reset(); }
 
@@ -64,10 +72,10 @@ class SdioScatterGatherTest : public zxtest::Test {
         .max_transfer_size_non_dma = 1024,
         .prefs = 0,
     });
-    EXPECT_OK(dut_.Init());
+    EXPECT_OK(dut_->Init());
 
-    EXPECT_OK(dut_.ProbeSdio());
-    EXPECT_OK(dut_.SdioUpdateBlockSize(function, 4, false));
+    EXPECT_OK(dut_->ProbeSdio());
+    EXPECT_OK(dut_->SdioUpdateBlockSize(function, 4, false));
 
     sdmmc_.requests().clear();
 
@@ -80,10 +88,10 @@ class SdioScatterGatherTest : public zxtest::Test {
                                     nullptr, &vmo3));
 
     const uint32_t vmo_rights = SDMMC_VMO_RIGHT_READ | SDMMC_VMO_RIGHT_WRITE;
-    EXPECT_OK(dut_.SdioRegisterVmo(function, 1, std::move(vmo1), 0, zx_system_get_page_size(),
-                                   vmo_rights));
-    EXPECT_OK(dut_.SdioRegisterVmo(function, 3, std::move(vmo3), 8, zx_system_get_page_size() - 8,
-                                   vmo_rights));
+    EXPECT_OK(dut_->SdioRegisterVmo(function, 1, std::move(vmo1), 0, zx_system_get_page_size(),
+                                    vmo_rights));
+    EXPECT_OK(dut_->SdioRegisterVmo(function, 3, std::move(vmo3), 8, zx_system_get_page_size() - 8,
+                                    vmo_rights));
   }
 
  protected:
@@ -139,25 +147,26 @@ class SdioScatterGatherTest : public zxtest::Test {
     uint32_t rw_flag;
   };
 
+  std::shared_ptr<MockDevice> parent_ = MockDevice::FakeRootParent();
   FakeSdmmcDevice sdmmc_;
-  SdioControllerDevice dut_;
+  std::unique_ptr<SdioControllerDevice> dut_;
 
   zx::vmo vmo2_;
   fzl::VmoMapper mapper1_, mapper2_, mapper3_;
 };
 
 TEST_F(SdioControllerDeviceTest, MultiplexInterrupts) {
-  EXPECT_OK(dut_.StartSdioIrqThread());
-  auto stop_thread = fit::defer([&]() { dut_.StopSdioIrqThread(); });
+  EXPECT_OK(dut_->StartSdioIrqThread());
+  auto stop_thread = fit::defer([&]() { dut_->StopSdioIrqThread(); });
 
   zx::port port;
   ASSERT_OK(zx::port::create(ZX_PORT_BIND_TO_INTERRUPT, &port));
 
   zx::interrupt interrupt1, interrupt2, interrupt4, interrupt7;
-  ASSERT_OK(dut_.SdioGetInBandIntr(1, &interrupt1));
-  ASSERT_OK(dut_.SdioGetInBandIntr(2, &interrupt2));
-  ASSERT_OK(dut_.SdioGetInBandIntr(4, &interrupt4));
-  ASSERT_OK(dut_.SdioGetInBandIntr(7, &interrupt7));
+  ASSERT_OK(dut_->SdioGetInBandIntr(1, &interrupt1));
+  ASSERT_OK(dut_->SdioGetInBandIntr(2, &interrupt2));
+  ASSERT_OK(dut_->SdioGetInBandIntr(4, &interrupt4));
+  ASSERT_OK(dut_->SdioGetInBandIntr(7, &interrupt7));
 
   ASSERT_OK(interrupt1.bind(port, 1, 0));
   ASSERT_OK(interrupt2.bind(port, 2, 0));
@@ -235,13 +244,13 @@ TEST_F(SdioControllerDeviceTest, SdioDoRwTxn) {
       .max_transfer_size_non_dma = 16,
       .prefs = 0,
   });
-  EXPECT_OK(dut_.Init());
+  EXPECT_OK(dut_->Init());
 
-  EXPECT_OK(dut_.ProbeSdio());
-  EXPECT_OK(dut_.SdioUpdateBlockSize(3, 0, true));
+  EXPECT_OK(dut_->ProbeSdio());
+  EXPECT_OK(dut_->SdioUpdateBlockSize(3, 0, true));
 
   uint16_t block_size = 0;
-  EXPECT_OK(dut_.SdioGetBlockSize(3, &block_size));
+  EXPECT_OK(dut_->SdioGetBlockSize(3, &block_size));
   EXPECT_EQ(block_size, 8);
 
   constexpr uint8_t kTestData[52] = {
@@ -265,7 +274,7 @@ TEST_F(SdioControllerDeviceTest, SdioDoRwTxn) {
       .virt_size = 0,
       .buf_offset = 16,
   };
-  EXPECT_OK(dut_.SdioDoRwTxn(3, &txn));
+  EXPECT_OK(dut_->SdioDoRwTxn(3, &txn));
 
   // The write sequence should be: four writes of blocks of eight, one write of four bytes. This is
   // a FIFO write, meaning the data will get overwritten each time. Verify the final state of the
@@ -287,7 +296,7 @@ TEST_F(SdioControllerDeviceTest, SdioDoRwTxn) {
       .virt_size = 0,
       .buf_offset = 16,
   };
-  EXPECT_OK(dut_.SdioDoRwTxn(3, &txn));
+  EXPECT_OK(dut_->SdioDoRwTxn(3, &txn));
 
   EXPECT_BYTES_EQ(buffer + 16, kTestData, 36);
 }
@@ -309,13 +318,13 @@ TEST_F(SdioControllerDeviceTest, SdioDoRwTxnMultiBlock) {
       .max_transfer_size_non_dma = 32,
       .prefs = 0,
   });
-  EXPECT_OK(dut_.Init());
+  EXPECT_OK(dut_->Init());
 
-  EXPECT_OK(dut_.ProbeSdio());
-  EXPECT_OK(dut_.SdioUpdateBlockSize(7, 0, true));
+  EXPECT_OK(dut_->ProbeSdio());
+  EXPECT_OK(dut_->SdioUpdateBlockSize(7, 0, true));
 
   uint16_t block_size = 0;
-  EXPECT_OK(dut_.SdioGetBlockSize(7, &block_size));
+  EXPECT_OK(dut_->SdioGetBlockSize(7, &block_size));
   EXPECT_EQ(block_size, 8);
 
   constexpr uint8_t kTestData[132] = {
@@ -348,7 +357,7 @@ TEST_F(SdioControllerDeviceTest, SdioDoRwTxnMultiBlock) {
       .virt_size = 0,
       .buf_offset = 64,
   };
-  EXPECT_OK(dut_.SdioDoRwTxn(7, &txn));
+  EXPECT_OK(dut_->SdioDoRwTxn(7, &txn));
 
   EXPECT_BYTES_EQ(buffer + 64, kTestData, 32);
   EXPECT_BYTES_EQ(buffer + 96, kTestData, 32);
@@ -366,79 +375,81 @@ TEST_F(SdioControllerDeviceTest, SdioDoRwTxnMultiBlock) {
       .virt_size = 0,
       .buf_offset = 64,
   };
-  EXPECT_OK(dut_.SdioDoRwTxn(7, &txn));
+  EXPECT_OK(dut_->SdioDoRwTxn(7, &txn));
 
   EXPECT_BYTES_EQ(sdmmc_.Read(0x12308, 68, 7).data(), kTestData + 64, 68);
 }
 
 TEST_F(SdioControllerDeviceTest, DdkLifecycle) {
   // The interrupt thread is started by AddDevice.
-  auto stop_thread = fit::defer([&]() { dut_.StopSdioIrqThread(); });
+  auto stop_thread = fit::defer([&]() { dut_->StopSdioIrqThread(); });
 
   sdmmc_.set_command_callback(
       SDIO_SEND_OP_COND, [](sdmmc_req_t* req) -> void { req->response[0] = OpCondFunctions(4); });
 
-  EXPECT_OK(dut_.ProbeSdio());
+  EXPECT_OK(dut_->ProbeSdio());
 
-  Bind ddk;
-  EXPECT_OK(dut_.AddDevice());
+  EXPECT_OK(dut_->AddDevice());
 
-  dut_.DdkAsyncRemove();
-  ddk.Ok();
-  EXPECT_EQ(ddk.total_children(), 4);
+  EXPECT_EQ(parent_->descendant_count(), 5);
+
+  dut_->DdkAsyncRemove();
+  __UNUSED auto ptr = dut_.release();
+  EXPECT_OK(mock_ddk::ReleaseFlaggedDevices(parent_.get()));
+  stop_thread.cancel();
 }
 
 TEST_F(SdioControllerDeviceTest, SdioIntrPending) {
   bool pending;
 
   sdmmc_.Write(SDIO_CIA_CCCR_INTx_INTR_PEN_ADDR, std::vector<uint8_t>{0b0011'0010}, 0);
-  EXPECT_OK(dut_.SdioIntrPending(4, &pending));
+  EXPECT_OK(dut_->SdioIntrPending(4, &pending));
   EXPECT_TRUE(pending);
 
   sdmmc_.Write(SDIO_CIA_CCCR_INTx_INTR_PEN_ADDR, std::vector<uint8_t>{0b0010'0010}, 0);
-  EXPECT_OK(dut_.SdioIntrPending(4, &pending));
+  EXPECT_OK(dut_->SdioIntrPending(4, &pending));
   EXPECT_FALSE(pending);
 
   sdmmc_.Write(SDIO_CIA_CCCR_INTx_INTR_PEN_ADDR, std::vector<uint8_t>{0b1000'0000}, 0);
-  EXPECT_OK(dut_.SdioIntrPending(7, &pending));
+  EXPECT_OK(dut_->SdioIntrPending(7, &pending));
   EXPECT_TRUE(pending);
 
   sdmmc_.Write(SDIO_CIA_CCCR_INTx_INTR_PEN_ADDR, std::vector<uint8_t>{0b0000'0000}, 0);
-  EXPECT_OK(dut_.SdioIntrPending(7, &pending));
+  EXPECT_OK(dut_->SdioIntrPending(7, &pending));
   EXPECT_FALSE(pending);
 
   sdmmc_.Write(SDIO_CIA_CCCR_INTx_INTR_PEN_ADDR, std::vector<uint8_t>{0b0000'1110}, 0);
-  EXPECT_OK(dut_.SdioIntrPending(1, &pending));
+  EXPECT_OK(dut_->SdioIntrPending(1, &pending));
   EXPECT_TRUE(pending);
 
   sdmmc_.Write(SDIO_CIA_CCCR_INTx_INTR_PEN_ADDR, std::vector<uint8_t>{0b0000'1110}, 0);
-  EXPECT_OK(dut_.SdioIntrPending(2, &pending));
+  EXPECT_OK(dut_->SdioIntrPending(2, &pending));
   EXPECT_TRUE(pending);
 
   sdmmc_.Write(SDIO_CIA_CCCR_INTx_INTR_PEN_ADDR, std::vector<uint8_t>{0b0000'1110}, 0);
-  EXPECT_OK(dut_.SdioIntrPending(3, &pending));
+  EXPECT_OK(dut_->SdioIntrPending(3, &pending));
   EXPECT_TRUE(pending);
 }
 
 TEST_F(SdioControllerDeviceTest, EnableDisableFnIntr) {
   sdmmc_.Write(0x04, std::vector<uint8_t>{0b0000'0000}, 0);
 
-  EXPECT_OK(dut_.SdioEnableFnIntr(4));
+  EXPECT_OK(dut_->SdioEnableFnIntr(4));
   EXPECT_EQ(sdmmc_.Read(0x04, 1, 0)[0], 0b0001'0001);
 
-  EXPECT_OK(dut_.SdioEnableFnIntr(7));
+  EXPECT_OK(dut_->SdioEnableFnIntr(7));
   EXPECT_EQ(sdmmc_.Read(0x04, 1, 0)[0], 0b1001'0001);
 
-  EXPECT_OK(dut_.SdioEnableFnIntr(4));
+  EXPECT_OK(dut_->SdioEnableFnIntr(4));
   EXPECT_EQ(sdmmc_.Read(0x04, 1, 0)[0], 0b1001'0001);
 
-  EXPECT_OK(dut_.SdioDisableFnIntr(4));
+  EXPECT_OK(dut_->SdioDisableFnIntr(4));
   EXPECT_EQ(sdmmc_.Read(0x04, 1, 0)[0], 0b1000'0001);
 
-  EXPECT_OK(dut_.SdioDisableFnIntr(7));
+  EXPECT_OK(dut_->SdioDisableFnIntr(7));
   EXPECT_EQ(sdmmc_.Read(0x04, 1, 0)[0], 0b0000'0000);
 
-  EXPECT_NOT_OK(dut_.SdioDisableFnIntr(7));
+  EXPECT_NOT_OK(dut_->SdioDisableFnIntr(7));
 }
 
 TEST_F(SdioControllerDeviceTest, ProcessCccr) {
@@ -451,9 +462,9 @@ TEST_F(SdioControllerDeviceTest, ProcessCccr) {
   sdmmc_.Write(0x14, std::vector<uint8_t>{0x3f}, 0);  // UHS-I support.
   sdmmc_.Write(0x15, std::vector<uint8_t>{0xb7}, 0);  // Driver strength.
 
-  EXPECT_OK(dut_.ProbeSdio());
+  EXPECT_OK(dut_->ProbeSdio());
   sdio_hw_info_t info = {};
-  EXPECT_OK(dut_.SdioGetDevHwInfo(&info));
+  EXPECT_OK(dut_->SdioGetDevHwInfo(&info));
   EXPECT_EQ(info.dev_hw_info.caps,
             SDIO_CARD_MULTI_BLOCK | SDIO_CARD_LOW_SPEED | SDIO_CARD_FOUR_BIT_BUS |
                 SDIO_CARD_HIGH_SPEED | SDIO_CARD_UHS_SDR50 | SDIO_CARD_UHS_SDR104 |
@@ -464,15 +475,15 @@ TEST_F(SdioControllerDeviceTest, ProcessCccr) {
   sdmmc_.Write(0x14, std::vector<uint8_t>{0x00}, 0);
   sdmmc_.Write(0x15, std::vector<uint8_t>{0x00}, 0);
 
-  EXPECT_OK(dut_.ProbeSdio());
-  EXPECT_OK(dut_.SdioGetDevHwInfo(&info));
+  EXPECT_OK(dut_->ProbeSdio());
+  EXPECT_OK(dut_->SdioGetDevHwInfo(&info));
   EXPECT_EQ(info.dev_hw_info.caps, 0);
 
   sdmmc_.Write(0x00, std::vector<uint8_t>{0x41}, 0);
-  EXPECT_NOT_OK(dut_.ProbeSdio());
+  EXPECT_NOT_OK(dut_->ProbeSdio());
 
   sdmmc_.Write(0x00, std::vector<uint8_t>{0x33}, 0);
-  EXPECT_NOT_OK(dut_.ProbeSdio());
+  EXPECT_NOT_OK(dut_->ProbeSdio());
 }
 
 TEST_F(SdioControllerDeviceTest, ProcessCis) {
@@ -496,10 +507,10 @@ TEST_F(SdioControllerDeviceTest, ProcessCis) {
   sdmmc_.Write(0x0000'c2b7, std::vector<uint8_t>{0x00, 0x01}, 0);  // Function block size.
   sdmmc_.Write(0x0000'c2d5, std::vector<uint8_t>{0x00}, 0);        // End-of-chain tuple.
 
-  EXPECT_OK(dut_.ProbeSdio());
+  EXPECT_OK(dut_->ProbeSdio());
 
   sdio_hw_info_t info = {};
-  EXPECT_OK(dut_.SdioGetDevHwInfo(&info));
+  EXPECT_OK(dut_->SdioGetDevHwInfo(&info));
 
   EXPECT_EQ(info.dev_hw_info.num_funcs, 6);
   EXPECT_EQ(info.funcs_hw_info[5].max_blk_size, 256);
@@ -517,7 +528,7 @@ TEST_F(SdioControllerDeviceTest, ProcessCisFunction0) {
       .max_transfer_size_non_dma = 1024,
       .prefs = 0,
   });
-  EXPECT_OK(dut_.Init());
+  EXPECT_OK(dut_->Init());
 
   sdmmc_.Write(0x0000'0009, std::vector<uint8_t>{0xf5, 0x61, 0x01}, 0);  // CIS pointer.
 
@@ -537,10 +548,10 @@ TEST_F(SdioControllerDeviceTest, ProcessCisFunction0) {
                },
                0);
 
-  EXPECT_OK(dut_.ProbeSdio());
+  EXPECT_OK(dut_->ProbeSdio());
 
   sdio_hw_info_t info = {};
-  EXPECT_OK(dut_.SdioGetDevHwInfo(&info));
+  EXPECT_OK(dut_->SdioGetDevHwInfo(&info));
 
   EXPECT_EQ(info.dev_hw_info.num_funcs, 6);
   EXPECT_EQ(info.funcs_hw_info[0].max_blk_size, 512);
@@ -559,10 +570,10 @@ TEST_F(SdioControllerDeviceTest, ProcessFbr) {
   sdmmc_.Write(0x601, std::vector<uint8_t>{0xab}, 0);
   sdmmc_.Write(0x700, std::vector<uint8_t>{0x4e}, 0);
 
-  EXPECT_OK(dut_.ProbeSdio());
+  EXPECT_OK(dut_->ProbeSdio());
 
   sdio_hw_info_t info = {};
-  EXPECT_OK(dut_.SdioGetDevHwInfo(&info));
+  EXPECT_OK(dut_->SdioGetDevHwInfo(&info));
 
   EXPECT_EQ(info.dev_hw_info.num_funcs, 8);
   EXPECT_EQ(info.funcs_hw_info[1].fn_intf_code, 0x03);
@@ -581,18 +592,18 @@ TEST_F(SdioControllerDeviceTest, SmallHostTransferSize) {
       .max_transfer_size_non_dma = 64,
       .prefs = 0,
   });
-  EXPECT_OK(dut_.Init());
+  EXPECT_OK(dut_->Init());
 
   // Set the maximum block size for function three to 128 bytes.
   sdmmc_.Write(0x0309, std::vector<uint8_t>{0x00, 0x10, 0x00}, 0);
   sdmmc_.Write(0x1000, std::vector<uint8_t>{0x22, 0x2a, 0x01}, 0);
   sdmmc_.Write(0x100e, std::vector<uint8_t>{0x80, 0x00}, 0);
 
-  EXPECT_OK(dut_.ProbeSdio());
-  EXPECT_OK(dut_.SdioUpdateBlockSize(3, 0, true));
+  EXPECT_OK(dut_->ProbeSdio());
+  EXPECT_OK(dut_->SdioUpdateBlockSize(3, 0, true));
 
   uint16_t block_size = 0;
-  EXPECT_OK(dut_.SdioGetBlockSize(3, &block_size));
+  EXPECT_OK(dut_->SdioGetBlockSize(3, &block_size));
   EXPECT_EQ(block_size, 128);
 
   constexpr uint8_t kTestData[128] = {
@@ -636,17 +647,17 @@ TEST_F(SdioControllerDeviceTest, SmallHostTransferSize) {
       .buf_offset = 0,
   };
 
-  EXPECT_NOT_OK(dut_.SdioDoRwTxn(3, &txn));
+  EXPECT_NOT_OK(dut_->SdioDoRwTxn(3, &txn));
 
   txn.use_dma = false;
-  EXPECT_OK(dut_.SdioDoRwTxn(3, &txn));
+  EXPECT_OK(dut_->SdioDoRwTxn(3, &txn));
   EXPECT_BYTES_EQ(sdmmc_.Read(0, 64, 3).data(), kTestData, 64);
 
   txn.data_size = 128;
-  EXPECT_NOT_OK(dut_.SdioDoRwTxn(3, &txn));
+  EXPECT_NOT_OK(dut_->SdioDoRwTxn(3, &txn));
 
   txn.use_dma = true;
-  EXPECT_NOT_OK(dut_.SdioDoRwTxn(3, &txn));
+  EXPECT_NOT_OK(dut_->SdioDoRwTxn(3, &txn));
 }
 
 TEST_F(SdioControllerDeviceTest, ProbeFail) {
@@ -657,7 +668,7 @@ TEST_F(SdioControllerDeviceTest, ProbeFail) {
   // to fail.
   sdmmc_.Write(0x0309, std::vector<uint8_t>{0x00, 0x00, 0x00}, 0);
 
-  EXPECT_NOT_OK(dut_.ProbeSdio());
+  EXPECT_NOT_OK(dut_->ProbeSdio());
 }
 
 TEST_F(SdioControllerDeviceTest, ProbeSdr104) {
@@ -674,9 +685,9 @@ TEST_F(SdioControllerDeviceTest, ProbeSdr104) {
       .max_transfer_size_non_dma = 0x1000,
       .prefs = 0,
   });
-  EXPECT_OK(dut_.Init());
+  EXPECT_OK(dut_->Init());
 
-  EXPECT_OK(dut_.ProbeSdio());
+  EXPECT_OK(dut_->ProbeSdio());
 
   EXPECT_EQ(sdmmc_.signal_voltage(), SDMMC_VOLTAGE_V180);
   EXPECT_EQ(sdmmc_.bus_width(), SDMMC_BUS_WIDTH_FOUR);
@@ -697,9 +708,9 @@ TEST_F(SdioControllerDeviceTest, ProbeSdr50LimitedByHost) {
       .max_transfer_size_non_dma = 0x1000,
       .prefs = 0,
   });
-  EXPECT_OK(dut_.Init());
+  EXPECT_OK(dut_->Init());
 
-  EXPECT_OK(dut_.ProbeSdio());
+  EXPECT_OK(dut_->ProbeSdio());
 
   EXPECT_EQ(sdmmc_.signal_voltage(), SDMMC_VOLTAGE_V180);
   EXPECT_EQ(sdmmc_.bus_width(), SDMMC_BUS_WIDTH_FOUR);
@@ -721,9 +732,9 @@ TEST_F(SdioControllerDeviceTest, ProbeSdr50LimitedByCard) {
       .max_transfer_size_non_dma = 0x1000,
       .prefs = 0,
   });
-  EXPECT_OK(dut_.Init());
+  EXPECT_OK(dut_->Init());
 
-  EXPECT_OK(dut_.ProbeSdio());
+  EXPECT_OK(dut_->ProbeSdio());
 
   EXPECT_EQ(sdmmc_.signal_voltage(), SDMMC_VOLTAGE_V180);
   EXPECT_EQ(sdmmc_.bus_width(), SDMMC_BUS_WIDTH_FOUR);
@@ -747,9 +758,9 @@ TEST_F(SdioControllerDeviceTest, ProbeFallBackToHs) {
       .max_transfer_size_non_dma = 0x1000,
       .prefs = 0,
   });
-  EXPECT_OK(dut_.Init());
+  EXPECT_OK(dut_->Init());
 
-  EXPECT_OK(dut_.ProbeSdio());
+  EXPECT_OK(dut_->ProbeSdio());
 
   EXPECT_EQ(sdmmc_.signal_voltage(), SDMMC_VOLTAGE_V180);
   EXPECT_EQ(sdmmc_.bus_width(), SDMMC_BUS_WIDTH_FOUR);
@@ -761,7 +772,7 @@ TEST_F(SdioControllerDeviceTest, ProbeSetVoltage) {
   sdmmc_.set_command_callback(
       SDIO_SEND_OP_COND, [](sdmmc_req_t* req) -> void { req->response[0] = OpCondFunctions(5); });
 
-  EXPECT_OK(dut_.ProbeSdio());
+  EXPECT_OK(dut_->ProbeSdio());
   // Card does not report 1.8V support so we don't request a change from the host.
   EXPECT_EQ(sdmmc_.signal_voltage(), SDMMC_VOLTAGE_MAX);
 
@@ -769,7 +780,7 @@ TEST_F(SdioControllerDeviceTest, ProbeSetVoltage) {
     req->response[0] = OpCondFunctions(5) | SDIO_SEND_OP_COND_RESP_S18A;
   });
 
-  EXPECT_OK(dut_.ProbeSdio());
+  EXPECT_OK(dut_->ProbeSdio());
   EXPECT_EQ(sdmmc_.signal_voltage(), SDMMC_VOLTAGE_V180);
 }
 
@@ -777,30 +788,30 @@ TEST_F(SdioControllerDeviceTest, IoAbortSetsAbortFlag) {
   sdmmc_.set_command_callback(
       SDIO_SEND_OP_COND, [](sdmmc_req_t* req) -> void { req->response[0] = OpCondFunctions(5); });
 
-  EXPECT_OK(dut_.ProbeSdio());
+  EXPECT_OK(dut_->ProbeSdio());
 
   sdmmc_.set_command_callback(SDIO_IO_RW_DIRECT, [](sdmmc_req_t* req) -> void {
     EXPECT_EQ(req->cmd_idx, SDIO_IO_RW_DIRECT);
     EXPECT_FALSE(req->cmd_flags & SDMMC_CMD_TYPE_ABORT);
     EXPECT_EQ(req->arg, 0xb024'68ab);
   });
-  EXPECT_OK(dut_.SdioDoRwByte(true, 3, 0x1234, 0xab, nullptr));
+  EXPECT_OK(dut_->SdioDoRwByte(true, 3, 0x1234, 0xab, nullptr));
 
   sdmmc_.set_command_callback(SDIO_IO_RW_DIRECT, [](sdmmc_req_t* req) -> void {
     EXPECT_EQ(req->cmd_idx, SDIO_IO_RW_DIRECT);
     EXPECT_TRUE(req->cmd_flags & SDMMC_CMD_TYPE_ABORT);
     EXPECT_EQ(req->arg, 0x8000'0c03);
   });
-  EXPECT_OK(dut_.SdioIoAbort(3));
+  EXPECT_OK(dut_->SdioIoAbort(3));
 }
 
 TEST_F(SdioControllerDeviceTest, DifferentManufacturerProductIds) {
-  auto stop_thread = fit::defer([&]() { dut_.StopSdioIrqThread(); });
+  auto stop_thread = fit::defer([&]() { dut_->StopSdioIrqThread(); });
 
   sdmmc_.set_command_callback(
       SDIO_SEND_OP_COND, [](sdmmc_req_t* req) -> void { req->response[0] = OpCondFunctions(4); });
 
-  EXPECT_OK(dut_.Init());
+  EXPECT_OK(dut_->Init());
 
   // Function 0-4 CIS pointers.
   sdmmc_.Write(0x0000'0009, std::vector<uint8_t>{0xf5, 0x61, 0x01}, 0);
@@ -867,20 +878,16 @@ TEST_F(SdioControllerDeviceTest, DifferentManufacturerProductIds) {
                },
                0);
 
-  EXPECT_OK(dut_.ProbeSdio());
+  EXPECT_OK(dut_->ProbeSdio());
 
   sdio_hw_info_t info = {};
-  EXPECT_OK(dut_.SdioGetDevHwInfo(&info));
+  EXPECT_OK(dut_->SdioGetDevHwInfo(&info));
 
   EXPECT_EQ(info.dev_hw_info.num_funcs, 5);
   EXPECT_EQ(info.funcs_hw_info[0].manufacturer_id, 0xbeef);
   EXPECT_EQ(info.funcs_hw_info[0].product_id, 0xcafe);
 
-  Bind ddk;
-  EXPECT_OK(dut_.AddDevice());
-
-  dut_.DdkAsyncRemove();
-  ddk.Ok();
+  EXPECT_OK(dut_->AddDevice());
 
   constexpr zx_device_prop_t kExpectedProps[4][3] = {
       {
@@ -905,10 +912,14 @@ TEST_F(SdioControllerDeviceTest, DifferentManufacturerProductIds) {
       },
   };
 
-  EXPECT_EQ(ddk.total_children(), std::size(kExpectedProps));
+  EXPECT_EQ(parent_->descendant_count(), std::size(kExpectedProps) + 1);
 
+  auto controller = parent_->GetLatestChild();
+  ASSERT_NE(controller, nullptr);
+  auto iter = controller->children().begin();
   for (size_t i = 0; i < std::size(kExpectedProps); i++) {
-    fbl::Span child = ddk.GetChildProps(i);
+    ASSERT_NE(iter, controller->children().end());
+    cpp20::span child = (*iter)->GetProperties();
     ASSERT_EQ(child.size(), std::size(kExpectedProps[0]));
     for (size_t j = 0; j < std::size(kExpectedProps[0]); j++) {
       const zx_device_prop_t& prop = child[j];
@@ -916,7 +927,13 @@ TEST_F(SdioControllerDeviceTest, DifferentManufacturerProductIds) {
       EXPECT_EQ(prop.reserved, kExpectedProps[i][j].reserved);
       EXPECT_EQ(prop.value, kExpectedProps[i][j].value);
     }
+    iter++;
   }
+
+  dut_->DdkAsyncRemove();
+  EXPECT_OK(mock_ddk::ReleaseFlaggedDevices(parent_.get()));
+  __UNUSED auto ptr = dut_.release();
+  stop_thread.cancel();
 }
 
 TEST_F(SdioControllerDeviceTest, RunDiagnostics) {
@@ -929,10 +946,10 @@ TEST_F(SdioControllerDeviceTest, RunDiagnostics) {
       .max_transfer_size_non_dma = 16,
       .prefs = 0,
   });
-  EXPECT_OK(dut_.Init());
-  EXPECT_OK(dut_.ProbeSdio());
+  EXPECT_OK(dut_->Init());
+  EXPECT_OK(dut_->ProbeSdio());
 
-  dut_.SdioRunDiagnostics();
+  dut_->SdioRunDiagnostics();
 }
 
 TEST_F(SdioScatterGatherTest, ScatterGatherByteMode) {
@@ -954,7 +971,7 @@ TEST_F(SdioScatterGatherTest, ScatterGatherByteMode) {
       .buffers_list = buffers,
       .buffers_count = countof(buffers),
   };
-  EXPECT_OK(dut_.SdioDoRwTxnNew(3, &txn));
+  EXPECT_OK(dut_->SdioDoRwTxnNew(3, &txn));
 
   std::vector<uint8_t> actual = sdmmc_.Read(0x1000, 6, 3);
   EXPECT_BYTES_EQ(actual.data(), kTestData1 + 8, 2);
@@ -998,7 +1015,7 @@ TEST_F(SdioScatterGatherTest, ScatterGatherBlockMode) {
       .buffers_list = buffers,
       .buffers_count = countof(buffers),
   };
-  EXPECT_OK(dut_.SdioDoRwTxnNew(3, &txn));
+  EXPECT_OK(dut_->SdioDoRwTxnNew(3, &txn));
 
   EXPECT_BYTES_EQ(static_cast<uint8_t*>(mapper1_.start()) + 8, kTestData1, 7);
   EXPECT_BYTES_EQ(static_cast<uint8_t*>(mapper2_.start()) + 4, kTestData1 + 7, 3);
@@ -1042,7 +1059,7 @@ TEST_F(SdioScatterGatherTest, ScatterGatherBlockModeNoMultiBlock) {
       .buffers_list = buffers,
       .buffers_count = countof(buffers),
   };
-  EXPECT_OK(dut_.SdioDoRwTxnNew(5, &txn));
+  EXPECT_OK(dut_->SdioDoRwTxnNew(5, &txn));
 
   std::vector<uint8_t> actual = sdmmc_.Read(0x1000, 16, 5);
   EXPECT_BYTES_EQ(actual.data(), kTestData1 + 8, 7);
@@ -1103,7 +1120,7 @@ TEST_F(SdioScatterGatherTest, ScatterGatherBlockModeMultipleFinalBuffers) {
       .buffers_list = buffers,
       .buffers_count = countof(buffers),
   };
-  EXPECT_OK(dut_.SdioDoRwTxnNew(1, &txn));
+  EXPECT_OK(dut_->SdioDoRwTxnNew(1, &txn));
 
   EXPECT_BYTES_EQ(static_cast<uint8_t*>(mapper1_.start()) + 8, kTestData1, 7);
   EXPECT_BYTES_EQ(static_cast<uint8_t*>(mapper2_.start()) + 4, kTestData1 + 7, 3);
@@ -1148,7 +1165,7 @@ TEST_F(SdioScatterGatherTest, ScatterGatherBlockModeLastAligned) {
       .buffers_list = buffers,
       .buffers_count = countof(buffers),
   };
-  EXPECT_OK(dut_.SdioDoRwTxnNew(3, &txn));
+  EXPECT_OK(dut_->SdioDoRwTxnNew(3, &txn));
 
   std::vector<uint8_t> actual = sdmmc_.Read(0x1000, 16, 3);
   EXPECT_BYTES_EQ(actual.data(), kTestData1 + 8, 7);
@@ -1194,7 +1211,7 @@ TEST_F(SdioScatterGatherTest, ScatterGatherOnlyFullBlocks) {
       .buffers_list = buffers,
       .buffers_count = countof(buffers),
   };
-  EXPECT_OK(dut_.SdioDoRwTxnNew(3, &txn));
+  EXPECT_OK(dut_->SdioDoRwTxnNew(3, &txn));
 
   std::vector<uint8_t> actual = sdmmc_.Read(0x1000, 17, 3);
   EXPECT_BYTES_EQ(actual.data(), kTestData1 + 8, 7);
@@ -1232,7 +1249,7 @@ TEST_F(SdioScatterGatherTest, ScatterGatherOverMaxTransferSize) {
       .buffers_list = buffers,
       .buffers_count = countof(buffers),
   };
-  EXPECT_OK(dut_.SdioDoRwTxnNew(3, &txn));
+  EXPECT_OK(dut_->SdioDoRwTxnNew(3, &txn));
 
   ASSERT_EQ(sdmmc_.requests().size(), 3);
 

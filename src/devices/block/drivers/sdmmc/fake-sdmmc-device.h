@@ -8,7 +8,6 @@
 #include <fuchsia/hardware/sdio/cpp/banjo.h>
 #include <fuchsia/hardware/sdmmc/cpp/banjo.h>
 #include <lib/ddk/binding.h>
-#include <lib/fake_ddk/fake_ddk.h>
 
 #include <array>
 #include <map>
@@ -20,107 +19,6 @@
 #include "src/lib/vmo_store/vmo_store.h"
 
 namespace sdmmc {
-
-class Bind : public fake_ddk::Bind {
- public:
-  ~Bind() override {
-    for (auto& child : children_ops_) {
-      child.release(child.ctx);
-    }
-  }
-
-  int total_children() const { return total_children_; }
-
-  zx_status_t DeviceAdd(zx_driver_t* drv, zx_device_t* parent, device_add_args_t* args,
-                        zx_device_t** out) override;
-  zx_status_t DeviceRemove(zx_device_t* device) override;
-  void DeviceAsyncRemove(zx_device_t* device) override;
-  void Ok() const;
-
-  void* GetChildContext(size_t index) const {
-    if (index >= children_ops_.size()) {
-      return nullptr;
-    }
-    return children_ops_[index].ctx;
-  }
-
-  zx_status_t GetChildProtocol(size_t index, uint32_t proto_id, void* proto) const {
-    if (index >= children_ops_.size()) {
-      return ZX_ERR_OUT_OF_RANGE;
-    }
-    if (children_ops_[index].get_protocol == nullptr) {
-      return ZX_ERR_INVALID_ARGS;
-    }
-
-    return children_ops_[index].get_protocol(children_ops_[index].ctx, proto_id, proto);
-  }
-
-  template <typename T>
-  zx_status_t GetChildProtocol(size_t index, T* proto) const {
-    if (index >= children_ops_.size()) {
-      return ZX_ERR_OUT_OF_RANGE;
-    }
-
-    auto* protocol = reinterpret_cast<ddk::AnyProtocol*>(proto);
-    protocol->ops = children_ops_[index].proto_ops;
-    protocol->ctx = children_ops_[index].ctx;
-    return ZX_OK;
-  }
-
-  zx_status_t MessageChild(size_t index, fidl_incoming_msg_t* msg, fidl_txn_t* txn) const {
-    if (index >= children_ops_.size()) {
-      return ZX_ERR_OUT_OF_RANGE;
-    }
-    if (children_ops_[index].message == nullptr) {
-      return ZX_ERR_INVALID_ARGS;
-    }
-
-    return children_ops_[index].message(children_ops_[index].ctx, msg, txn);
-  }
-
-  fbl::Span<const zx_device_prop_t> GetChildProps(size_t index) const {
-    if (index >= children_props_.size()) {
-      return fbl::Span<zx_device_prop_t>();
-    }
-    return fbl::Span(children_props_[index].data(), children_props_[index].size());
-  }
-
-  zx::unowned_vmo GetInspectVmo() const { return inspect_vmo_.borrow(); }
-
- private:
-  struct ChildOps {
-    explicit ChildOps(device_add_args_t* args)
-        : ctx(args->ctx),
-          proto_ops(args->proto_ops),
-          get_protocol(args->ops->get_protocol),
-          release(args->ops->release),
-          message(args->ops->message) {}
-
-    void* const ctx;
-    void* const proto_ops;
-    zx_status_t (*const get_protocol)(void* ctx, uint32_t proto_id, void* protocol);
-    void (*const release)(void* ctx);
-    zx_status_t (*const message)(void* ctx, fidl_incoming_msg_t* msg, fidl_txn_t* txn);
-  };
-
-  zx_device_t* kFakeChild = reinterpret_cast<zx_device_t*>(0x1234);
-  zx_device_t* kUnknownDevice = reinterpret_cast<zx_device_t*>(0x5678);
-
-  int total_children_ = 0;
-  int children_ = 0;
-
-  bool bad_parent_ = false;
-  bool bad_device_ = false;
-  bool add_called_ = false;
-  bool remove_called_ = false;
-
-  void* unbind_ctx_ = nullptr;
-  void (*unbind_op_)(void* ctx) = nullptr;
-
-  std::vector<ChildOps> children_ops_;
-  std::vector<std::vector<zx_device_prop_t>> children_props_;
-  zx::vmo inspect_vmo_;
-};
 
 class FakeSdmmcDevice : public ddk::SdmmcProtocol<FakeSdmmcDevice> {
  public:

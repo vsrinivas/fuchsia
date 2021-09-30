@@ -7,27 +7,31 @@
 #include <endian.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
-#include <lib/fake_ddk/fake_ddk.h>
-#include <lib/fake_ddk/fidl-helper.h>
 #include <lib/fidl/llcpp/client.h>
+#include <lib/fidl/llcpp/connect_service.h>
+#include <lib/fidl/llcpp/server.h>
 #include <lib/fit/defer.h>
 #include <lib/fzl/vmo-mapper.h>
 #include <lib/inspect/testing/cpp/zxtest/inspect.h>
 #include <lib/sdmmc/hw.h>
+#include <zircon/errors.h>
+
+#include <memory>
 
 #include <fbl/algorithm.h>
 #include <zxtest/zxtest.h>
 
 #include "fake-sdmmc-device.h"
+#include "src/devices/testing/mock-ddk/mock-device.h"
 
 namespace sdmmc {
 
 class SdmmcBlockDeviceTest : public zxtest::Test {
  public:
   SdmmcBlockDeviceTest()
-      : dut_(fake_ddk::kFakeParent, SdmmcDevice(sdmmc_.GetClient())),
+      : dut_(std::make_unique<SdmmcBlockDevice>(parent_.get(), SdmmcDevice(sdmmc_.GetClient()))),
         loop_(&kAsyncLoopConfigAttachToCurrentThread) {
-    dut_.SetBlockInfo(FakeSdmmcDevice::kBlockSize, FakeSdmmcDevice::kBlockCount);
+    dut_->SetBlockInfo(FakeSdmmcDevice::kBlockSize, FakeSdmmcDevice::kBlockCount);
     for (size_t i = 0; i < (FakeSdmmcDevice::kBlockSize / sizeof(kTestData)); i++) {
       test_block_.insert(test_block_.end(), kTestData, kTestData + sizeof(kTestData));
     }
@@ -55,7 +59,12 @@ class SdmmcBlockDeviceTest : public zxtest::Test {
     });
   }
 
-  void TearDown() override { dut_.StopWorkerThread(); }
+  void TearDown() override {
+    dut_->StopWorkerThread();
+    if (added_) {
+      __UNUSED auto ptr = dut_.release();
+    }
+  }
 
   void QueueBlockOps();
   void QueueRpmbRequests();
@@ -91,9 +100,10 @@ class SdmmcBlockDeviceTest : public zxtest::Test {
   }
 
   void AddDevice() {
-    EXPECT_OK(dut_.ProbeMmc());
+    EXPECT_OK(dut_->ProbeMmc());
 
-    EXPECT_OK(dut_.AddDevice());
+    EXPECT_OK(dut_->AddDevice());
+    added_ = true;
 
     user_ = GetBlockClient(USER_DATA_PARTITION);
     boot1_ = GetBlockClient(BOOT_PARTITION_1);
@@ -102,13 +112,18 @@ class SdmmcBlockDeviceTest : public zxtest::Test {
 
     ASSERT_TRUE(user_.is_valid());
 
-    const auto message_op = [](void* ctx, fidl_incoming_msg_t* msg,
-                               fidl_txn_t* txn) -> zx_status_t {
-      return static_cast<decltype(ddk_)*>(ctx)->MessageChild(RPMB_PARTITION, msg, txn);
-    };
-    ASSERT_OK(messenger_.SetMessageOp(&ddk_, message_op));
-    ASSERT_OK(loop_.StartThread("rpmb-client-thread"));
-    rpmb_fidl_.Bind(std::move(messenger_.local()), loop_.dispatcher());
+    if (rpmb_.is_valid()) {
+      auto iter = dut_->zxdev()->children().begin();
+      std::advance(iter, RPMB_PARTITION);
+
+      auto endpoints = fidl::CreateEndpoints<fuchsia_hardware_rpmb::Rpmb>();
+      ASSERT_OK(endpoints.status_value());
+
+      binding_ = fidl::BindServer(loop_.dispatcher(), std::move(endpoints->server),
+                                  (*iter)->GetDeviceContext<RpmbDevice>());
+      ASSERT_OK(loop_.StartThread("rpmb-client-thread"));
+      rpmb_fidl_.Bind(std::move(endpoints->client), loop_.dispatcher());
+    }
   }
 
   void MakeBlockOp(uint32_t command, uint32_t length, uint64_t offset,
@@ -184,32 +199,43 @@ class SdmmcBlockDeviceTest : public zxtest::Test {
     }
   }
 
-  ddk::BlockImplProtocolClient GetBlockClient(size_t index) {
-    block_impl_protocol_t proto;
-    if (ddk_.GetChildProtocol(index, ZX_PROTOCOL_BLOCK_IMPL, &proto) != ZX_OK) {
+  ddk::BlockImplProtocolClient GetBlockClient(MockDevice* device, size_t index) {
+    auto partition = device->children().begin();
+    std::advance(partition, index);
+    if (partition == device->children().end()) {
       return ddk::BlockImplProtocolClient();
     }
+    block_impl_protocol_t proto;
+    device_get_protocol(partition->get(), ZX_PROTOCOL_BLOCK_IMPL, &proto);
     return ddk::BlockImplProtocolClient(&proto);
   }
 
+  ddk::BlockImplProtocolClient GetBlockClient(size_t index) {
+    return GetBlockClient(dut_->zxdev(), index);
+  }
+
   ddk::RpmbProtocolClient GetRpmbClient(size_t index) {
-    rpmb_protocol_t proto;
-    if (ddk_.GetChildProtocol(index, &proto) != ZX_OK) {
+    auto partition = dut_->zxdev()->children().begin();
+    std::advance(partition, index);
+    if (partition == dut_->zxdev()->children().end()) {
       return ddk::RpmbProtocolClient();
     }
+    rpmb_protocol_t proto = {};
+    device_get_protocol(partition->get(), ZX_PROTOCOL_RPMB, &proto);
     return ddk::RpmbProtocolClient(&proto);
   }
 
   FakeSdmmcDevice sdmmc_;
-  SdmmcBlockDevice dut_;
+  std::shared_ptr<MockDevice> parent_ = MockDevice::FakeRootParent();
+  std::unique_ptr<SdmmcBlockDevice> dut_;
   ddk::BlockImplProtocolClient user_;
   ddk::BlockImplProtocolClient boot1_;
   ddk::BlockImplProtocolClient boot2_;
   ddk::RpmbProtocolClient rpmb_;
   fidl::WireSharedClient<fuchsia_hardware_rpmb::Rpmb> rpmb_fidl_;
-  Bind ddk_;
   std::atomic<bool> run_threads_ = true;
   async::Loop loop_;
+  bool added_ = false;
 
  private:
   static constexpr uint8_t kTestData[] = {
@@ -223,7 +249,7 @@ class SdmmcBlockDeviceTest : public zxtest::Test {
   static_assert(FakeSdmmcDevice::kBlockSize % sizeof(kTestData) == 0);
 
   std::vector<uint8_t> test_block_;
-  fake_ddk::FidlMessenger messenger_;
+  std::optional<fidl::ServerBindingRef<fuchsia_hardware_rpmb::Rpmb>> binding_;
 };
 
 TEST_F(SdmmcBlockDeviceTest, BlockImplQuery) {
@@ -351,7 +377,7 @@ TEST_F(SdmmcBlockDeviceTest, MultiBlockACmd12) {
       .max_transfer_size_non_dma = 0,
       .prefs = 0,
   });
-  EXPECT_OK(dut_.Init());
+  EXPECT_OK(dut_->Init());
 
   std::optional<block::Operation<OperationContext>> op1;
   ASSERT_NO_FATAL_FAILURES(MakeBlockOp(BLOCK_OP_WRITE, 1, 0, &op1));
@@ -398,7 +424,7 @@ TEST_F(SdmmcBlockDeviceTest, MultiBlockNoACmd12) {
       .max_transfer_size_non_dma = 0,
       .prefs = 0,
   });
-  EXPECT_OK(dut_.Init());
+  EXPECT_OK(dut_->Init());
 
   std::optional<block::Operation<OperationContext>> op1;
   ASSERT_NO_FATAL_FAILURES(MakeBlockOp(BLOCK_OP_WRITE, 1, 0, &op1));
@@ -488,7 +514,7 @@ TEST_F(SdmmcBlockDeviceTest, SendCmd12OnCommandFailure) {
       .max_transfer_size_non_dma = 0,
       .prefs = 0,
   });
-  EXPECT_OK(dut_.Init());
+  EXPECT_OK(dut_->Init());
 
   std::optional<block::Operation<OperationContext>> op1;
   ASSERT_NO_FATAL_FAILURES(MakeBlockOp(BLOCK_OP_WRITE, 1, FakeSdmmcDevice::kBadRegionStart, &op1));
@@ -506,7 +532,7 @@ TEST_F(SdmmcBlockDeviceTest, SendCmd12OnCommandFailure) {
       .max_transfer_size_non_dma = 0,
       .prefs = 0,
   });
-  EXPECT_OK(dut_.Init());
+  EXPECT_OK(dut_->Init());
 
   std::optional<block::Operation<OperationContext>> op2;
   ASSERT_NO_FATAL_FAILURES(MakeBlockOp(BLOCK_OP_WRITE, 1, FakeSdmmcDevice::kBadRegionStart, &op2));
@@ -638,9 +664,8 @@ TEST_F(SdmmcBlockDeviceTest, DdkLifecycle) {
 
   AddDevice();
 
-  dut_.DdkAsyncRemove();
-  ASSERT_NO_FATAL_FAILURES(ddk_.Ok());
-  EXPECT_EQ(ddk_.total_children(), 1);
+  dut_->DdkAsyncRemove();
+  EXPECT_EQ(parent_->descendant_count(), 3);
 }
 
 TEST_F(SdmmcBlockDeviceTest, DdkLifecycleBootPartitionsExistButNotUsed) {
@@ -654,9 +679,8 @@ TEST_F(SdmmcBlockDeviceTest, DdkLifecycleBootPartitionsExistButNotUsed) {
 
   AddDevice();
 
-  dut_.DdkAsyncRemove();
-  ASSERT_NO_FATAL_FAILURES(ddk_.Ok());
-  EXPECT_EQ(ddk_.total_children(), 1);
+  dut_->DdkAsyncRemove();
+  EXPECT_EQ(parent_->descendant_count(), 3);
 }
 
 TEST_F(SdmmcBlockDeviceTest, DdkLifecycleWithBootPartitions) {
@@ -670,9 +694,8 @@ TEST_F(SdmmcBlockDeviceTest, DdkLifecycleWithBootPartitions) {
 
   AddDevice();
 
-  dut_.DdkAsyncRemove();
-  ASSERT_NO_FATAL_FAILURES(ddk_.Ok());
-  EXPECT_EQ(ddk_.total_children(), 3);
+  dut_->DdkAsyncRemove();
+  EXPECT_EQ(parent_->descendant_count(), 5);
 }
 
 TEST_F(SdmmcBlockDeviceTest, DdkLifecycleWithBootAndRpmbPartitions) {
@@ -687,9 +710,8 @@ TEST_F(SdmmcBlockDeviceTest, DdkLifecycleWithBootAndRpmbPartitions) {
 
   AddDevice();
 
-  dut_.DdkAsyncRemove();
-  ASSERT_NO_FATAL_FAILURES(ddk_.Ok());
-  EXPECT_EQ(ddk_.total_children(), 4);
+  dut_->DdkAsyncRemove();
+  EXPECT_EQ(parent_->descendant_count(), 5);
 }
 
 TEST_F(SdmmcBlockDeviceTest, CompleteTransactions) {
@@ -711,13 +733,12 @@ TEST_F(SdmmcBlockDeviceTest, CompleteTransactions) {
   CallbackContext ctx(5);
 
   {
-    SdmmcBlockDevice dut(fake_ddk::kFakeParent, SdmmcDevice(sdmmc_.GetClient()));
-    dut.SetBlockInfo(FakeSdmmcDevice::kBlockSize, FakeSdmmcDevice::kBlockCount);
-    EXPECT_OK(dut.AddDevice());
+    auto dut = std::make_unique<SdmmcBlockDevice>(parent_.get(), SdmmcDevice(sdmmc_.GetClient()));
+    dut->SetBlockInfo(FakeSdmmcDevice::kBlockSize, FakeSdmmcDevice::kBlockCount);
+    EXPECT_OK(dut->AddDevice());
+    __UNUSED auto ptr = dut.release();
 
-    auto stop_threads = fit::defer([&]() { dut.StopWorkerThread(); });
-
-    ddk::BlockImplProtocolClient user = GetBlockClient(USER_DATA_PARTITION);
+    ddk::BlockImplProtocolClient user = GetBlockClient(ptr->zxdev(), USER_DATA_PARTITION);
     ASSERT_TRUE(user.is_valid());
 
     user.Queue(op1->operation(), OperationCallback, &ctx);
@@ -738,7 +759,7 @@ TEST_F(SdmmcBlockDeviceTest, CompleteTransactions) {
 
 TEST_F(SdmmcBlockDeviceTest, CompleteTransactionsOnUnbind) {
   AddDevice();
-  dut_.StopWorkerThread();  // Stop the worker thread so queued requests don't get completed.
+  dut_->StopWorkerThread();  // Stop the worker thread so queued requests don't get completed.
 
   std::optional<block::Operation<OperationContext>> op1;
   ASSERT_NO_FATAL_FAILURES(MakeBlockOp(BLOCK_OP_WRITE, 1, 0, &op1));
@@ -763,7 +784,7 @@ TEST_F(SdmmcBlockDeviceTest, CompleteTransactionsOnUnbind) {
   user_.Queue(op4->operation(), OperationCallback, &ctx);
   user_.Queue(op5->operation(), OperationCallback, &ctx);
 
-  dut_.DdkUnbind(ddk::UnbindTxn(dut_.zxdev()));
+  dut_->DdkUnbind(ddk::UnbindTxn(dut_->zxdev()));
 
   EXPECT_OK(sync_completion_wait(&ctx.completion, zx::duration::infinite().get()));
 
@@ -776,7 +797,7 @@ TEST_F(SdmmcBlockDeviceTest, CompleteTransactionsOnUnbind) {
 
 TEST_F(SdmmcBlockDeviceTest, CompleteTransactionsOnSuspend) {
   AddDevice();
-  dut_.StopWorkerThread();
+  dut_->StopWorkerThread();
 
   std::optional<block::Operation<OperationContext>> op1;
   ASSERT_NO_FATAL_FAILURES(MakeBlockOp(BLOCK_OP_WRITE, 1, 0, &op1));
@@ -801,7 +822,7 @@ TEST_F(SdmmcBlockDeviceTest, CompleteTransactionsOnSuspend) {
   user_.Queue(op4->operation(), OperationCallback, &ctx);
   user_.Queue(op5->operation(), OperationCallback, &ctx);
 
-  dut_.DdkSuspend(ddk::SuspendTxn(dut_.zxdev(), 0, false, 0));
+  dut_->DdkSuspend(ddk::SuspendTxn(dut_->zxdev(), 0, false, 0));
 
   EXPECT_OK(sync_completion_wait(&ctx.completion, zx::duration::infinite().get()));
 
@@ -829,7 +850,7 @@ TEST_F(SdmmcBlockDeviceTest, ProbeMmcSendStatusRetry) {
     }
   });
 
-  SdmmcBlockDevice dut(nullptr, SdmmcDevice(sdmmc_.GetClient()));
+  SdmmcBlockDevice dut(parent_.get(), SdmmcDevice(sdmmc_.GetClient()));
   EXPECT_OK(dut.ProbeMmc());
 }
 
@@ -842,7 +863,7 @@ TEST_F(SdmmcBlockDeviceTest, ProbeMmcSendStatusFail) {
   sdmmc_.set_command_callback(SDMMC_SEND_STATUS,
                               [](sdmmc_req_t* req) { req->status = ZX_ERR_IO_DATA_INTEGRITY; });
 
-  SdmmcBlockDevice dut(nullptr, SdmmcDevice(sdmmc_.GetClient()));
+  SdmmcBlockDevice dut(parent_.get(), SdmmcDevice(sdmmc_.GetClient()));
   EXPECT_NOT_OK(dut.ProbeMmc());
 }
 
@@ -1053,7 +1074,7 @@ TEST_F(SdmmcBlockDeviceTest, ProbeUsesPrefsHs) {
                SDMMC_HOST_PREFS_DISABLE_HSDDR,
   });
 
-  SdmmcBlockDevice dut(nullptr, SdmmcDevice(sdmmc_.GetClient()));
+  SdmmcBlockDevice dut(parent_.get(), SdmmcDevice(sdmmc_.GetClient()));
   EXPECT_OK(dut.Init());
   EXPECT_OK(dut.ProbeMmc());
 
@@ -1072,7 +1093,7 @@ TEST_F(SdmmcBlockDeviceTest, ProbeUsesPrefsHsDdr) {
       .prefs = SDMMC_HOST_PREFS_DISABLE_HS200 | SDMMC_HOST_PREFS_DISABLE_HS400,
   });
 
-  SdmmcBlockDevice dut(nullptr, SdmmcDevice(sdmmc_.GetClient()));
+  SdmmcBlockDevice dut(parent_.get(), SdmmcDevice(sdmmc_.GetClient()));
   EXPECT_OK(dut.Init());
   EXPECT_OK(dut.ProbeMmc());
 
@@ -1097,9 +1118,10 @@ TEST_F(SdmmcBlockDeviceTest, ProbeSd) {
     req->response[3] = 0x4000'0000;  // Set CSD_STRUCTURE to indicate SDHC/SDXC.
   });
 
-  EXPECT_OK(dut_.ProbeSd());
+  EXPECT_OK(dut_->ProbeSd());
 
-  EXPECT_OK(dut_.AddDevice());
+  EXPECT_OK(dut_->AddDevice());
+  added_ = true;
 
   ddk::BlockImplProtocolClient user = GetBlockClient(USER_DATA_PARTITION);
   ASSERT_TRUE(user.is_valid());
@@ -1123,12 +1145,6 @@ TEST_F(SdmmcBlockDeviceTest, RpmbPartition) {
   });
 
   AddDevice();
-
-  fake_ddk::FidlMessenger messenger;
-  const auto message_op = [](void* ctx, fidl_incoming_msg_t* msg, fidl_txn_t* txn) -> zx_status_t {
-    return static_cast<decltype(ddk_)*>(ctx)->MessageChild(1, msg, txn);
-  };
-  ASSERT_OK(messenger.SetMessageOp(&ddk_, message_op));
 
   sync_completion_t completion;
   rpmb_fidl_->GetDeviceInfo(
@@ -1226,7 +1242,7 @@ TEST_F(SdmmcBlockDeviceTest, RpmbRequestLimit) {
   });
 
   AddDevice();
-  dut_.StopWorkerThread();
+  dut_->StopWorkerThread();
 
   zx::vmo tx_frames;
   ASSERT_OK(zx::vmo::create(512, 0, &tx_frames));
@@ -1499,11 +1515,11 @@ TEST_F(SdmmcBlockDeviceTest, GetRpmbClient) {
 TEST_F(SdmmcBlockDeviceTest, Inspect) {
   AddDevice();
 
-  ASSERT_TRUE(ddk_.GetInspectVmo()->is_valid());
+  ASSERT_TRUE(parent_->GetLatestChild()->GetInspectVmo().is_valid());
 
   // IO error count should be zero after initialization.
   inspect::InspectTestHelper inspector;
-  inspector.ReadInspect(*ddk_.GetInspectVmo());
+  inspector.ReadInspect(parent_->GetLatestChild()->GetInspectVmo());
 
   const inspect::Hierarchy* root = inspector.hierarchy().GetByPath({"sdmmc_core"});
   ASSERT_NOT_NULL(root);
@@ -1526,7 +1542,7 @@ TEST_F(SdmmcBlockDeviceTest, Inspect) {
   EXPECT_TRUE(op1->private_storage()->completed);
   EXPECT_OK(op1->private_storage()->status);
 
-  inspector.ReadInspect(*ddk_.GetInspectVmo());
+  inspector.ReadInspect(parent_->GetLatestChild()->GetInspectVmo());
 
   root = inspector.hierarchy().GetByPath({"sdmmc_core"});
   ASSERT_NOT_NULL(root);
@@ -1552,7 +1568,7 @@ TEST_F(SdmmcBlockDeviceTest, Inspect) {
   EXPECT_TRUE(op2->private_storage()->completed);
   EXPECT_NOT_OK(op2->private_storage()->status);
 
-  inspector.ReadInspect(*ddk_.GetInspectVmo());
+  inspector.ReadInspect(parent_->GetLatestChild()->GetInspectVmo());
 
   root = inspector.hierarchy().GetByPath({"sdmmc_core"});
   ASSERT_NOT_NULL(root);
@@ -1572,9 +1588,9 @@ TEST_F(SdmmcBlockDeviceTest, InspectCmd12NotDoubleCounted) {
       .max_transfer_size_non_dma = 0,
       .prefs = 0,
   });
-  EXPECT_OK(dut_.Init());
+  EXPECT_OK(dut_->Init());
 
-  ASSERT_TRUE(ddk_.GetInspectVmo()->is_valid());
+  ASSERT_TRUE(parent_->GetLatestChild()->GetInspectVmo().is_valid());
 
   // Transfer failed, stop succeeded, error count should increment.
   sdmmc_.set_command_callback(SDMMC_WRITE_MULTIPLE_BLOCK,
@@ -1593,7 +1609,7 @@ TEST_F(SdmmcBlockDeviceTest, InspectCmd12NotDoubleCounted) {
   EXPECT_NOT_OK(op1->private_storage()->status);
 
   inspect::InspectTestHelper inspector;
-  inspector.ReadInspect(*ddk_.GetInspectVmo());
+  inspector.ReadInspect(parent_->GetLatestChild()->GetInspectVmo());
 
   const inspect::Hierarchy* root = inspector.hierarchy().GetByPath({"sdmmc_core"});
   ASSERT_NOT_NULL(root);
@@ -1621,7 +1637,7 @@ TEST_F(SdmmcBlockDeviceTest, InspectCmd12NotDoubleCounted) {
   EXPECT_TRUE(op2->private_storage()->completed);
   EXPECT_OK(op2->private_storage()->status);
 
-  inspector.ReadInspect(*ddk_.GetInspectVmo());
+  inspector.ReadInspect(parent_->GetLatestChild()->GetInspectVmo());
 
   root = inspector.hierarchy().GetByPath({"sdmmc_core"});
   ASSERT_NOT_NULL(root);
@@ -1647,7 +1663,7 @@ TEST_F(SdmmcBlockDeviceTest, InspectCmd12NotDoubleCounted) {
   EXPECT_TRUE(op3->private_storage()->completed);
   EXPECT_NOT_OK(op3->private_storage()->status);
 
-  inspector.ReadInspect(*ddk_.GetInspectVmo());
+  inspector.ReadInspect(parent_->GetLatestChild()->GetInspectVmo());
 
   root = inspector.hierarchy().GetByPath({"sdmmc_core"});
   ASSERT_NOT_NULL(root);

@@ -75,9 +75,8 @@ fuchsia_driver_component("sdmmc") {
 }
 
 test("sdmmc-test-bin") {
-  configs += [ "//build/unification/config:zircon-migrated" ]
-  output_name = "sdmmc-test"
   configs += [ "//build/config:all_source" ]
+  output_name = "sdmmc-test"
   sources = [
     "fake-sdmmc-device.cc",
     "mmc.cc",
@@ -103,7 +102,7 @@ test("sdmmc-test-bin") {
     "//src/devices/block/lib/sdio",
     "//src/devices/block/lib/sdmmc",
     "//src/devices/lib/dev-operation",
-    "//src/devices/testing/fake_ddk",
+    "//src/devices/testing/mock-ddk",
     "//src/lib/ddk",
     "//src/lib/ddktl",
     "//src/lib/vmo_store",
