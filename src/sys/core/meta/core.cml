@@ -14,7 +14,7 @@
         {
             name: "session-manager",
             url: "fuchsia-pkg://fuchsia.com/session_manager#meta/session_manager.cm",
-            environment: "#universe-resolver-env",
+            environment: "#full-resolver-env",
         },
         {
             name: "system-update-committer",
@@ -44,7 +44,7 @@
         {
             name: "brightness_manager",
             url: "fuchsia-pkg://fuchsia.com/brightness_manager#meta/brightness_manager.cm",
-            environment: "#universe-resolver-env",
+            environment: "#full-resolver-env",
         },
         {
             name: "cobalt",
@@ -73,7 +73,7 @@
         {
             name: "starnix_manager",
             url: "fuchsia-pkg://fuchsia.com/starnix#meta/starnix_manager.cm",
-            environment: "#universe-resolver-env",
+            environment: "#full-resolver-env",
         },
         {
             name: "stash",
@@ -114,16 +114,16 @@
         {
             name: "system-metrics-logger",
             url: "fuchsia-pkg://fuchsia.com/system-metrics-logger#meta/system-metrics-logger-component.cm",
-            environment: "#universe-resolver-env",
+            environment: "#full-resolver-env",
         },
         {
             name: "temperature-logger",
             url: "fuchsia-pkg://fuchsia.com/temperature-logger#meta/temperature-logger.cm",
-            environment: "#universe-resolver-env",
+            environment: "#full-resolver-env",
         },
         {
-            name: "universe-resolver",
-            url: "fuchsia-pkg://fuchsia.com/universe-resolver#meta/universe-resolver.cm",
+            name: "full-resolver",
+            url: "fuchsia-pkg://fuchsia.com/universe-resolver#meta/full-resolver.cm",
         },
         {
             name: "pkg-cache",
@@ -136,12 +136,12 @@
         {
             name: "soundplayer",
             url: "fuchsia-pkg://fuchsia.com/soundplayer#meta/soundplayer.cm",
-            environment: "#universe-resolver-env",
+            environment: "#full-resolver-env",
         },
         {
             name: "vulkan_loader",
             url: "fuchsia-pkg://fuchsia.com/vulkan_loader#meta/vulkan_loader.cm",
-            environment: "#universe-resolver-env",
+            environment: "#full-resolver-env",
         },
         {
             name: "ssh-key-manager",
@@ -150,7 +150,7 @@
         {
             name: "bt-avrcp",
             url: "fuchsia-pkg://fuchsia.com/bt-avrcp#meta/bt-avrcp.cm",
-            environment: "#universe-resolver-env",
+            environment: "#full-resolver-env",
         },
         {
             name: "network",
@@ -245,7 +245,7 @@
         {
             protocol: "fuchsia.sys2.ComponentResolver",
             from: "parent",
-            to: "#universe-resolver",
+            to: "#full-resolver",
         },
         {
             protocol: "fuchsia.ssh.AuthorizedKeys",
@@ -433,7 +433,7 @@
         {
             protocol: "fuchsia.pkg.PackageResolver",
             from: "#pkg-resolver",
-            to: "#universe-resolver",
+            to: "#full-resolver",
         },
         {
             directory: [
@@ -571,6 +571,7 @@
                 "#diagnostics-persistence",
                 "#emergency",
                 "#font_provider",
+                "#full-resolver",
                 "#hwinfo",
                 "#last_reboot",
                 "#log-stats",
@@ -591,7 +592,6 @@
                 "#system-metrics-logger",
                 "#system-update-committer",
                 "#temperature-logger",
-                "#universe-resolver",
                 "#vulkan_loader",
             ],
         },
@@ -1101,14 +1101,14 @@
         },
     ],
     environments: [
-        // Components that simply need access to universe-resolver can use this environment.
+        // Components that simply need access to full-resolver can use this environment.
         {
-            name: "universe-resolver-env",
+            name: "full-resolver-env",
             extends: "realm",
             resolvers: [
                 {
-                    resolver: "universe-resolver",
-                    from: "#universe-resolver",
+                    resolver: "full-resolver",
+                    from: "#full-resolver",
                     scheme: "fuchsia-pkg",
                 },
             ],

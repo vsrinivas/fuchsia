@@ -6,8 +6,8 @@
 {
     children: [
         {
-            name: "universe-resolver",
-            url: "fuchsia-pkg://fuchsia.com/universe-resolver#meta/universe-resolver.cm",
+            name: "full-resolver",
+            url: "fuchsia-pkg://fuchsia.com/universe-resolver#meta/full-resolver.cm",
         },
         {
             // This realm and its children are resolved with the universe-resolver.
@@ -21,7 +21,7 @@
             // Acquire the fuchsia.pkg.PackageResolver from somewhere.
             protocol: "fuchsia.pkg.PackageResolver",
             from: "parent",
-            to: "#universe-resolver",
+            to: "#full-resolver",
         },
     ],
     environments: [
@@ -30,8 +30,8 @@
             extends: "realm",
             resolvers: [
                 {
-                    resolver: "universe_resolver",
-                    from: "#universe-resolver",
+                    resolver: "full_resolver",
+                    from: "#full-resolver",
                     scheme: "fuchsia-pkg",
                 },
             ],

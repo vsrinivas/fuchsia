@@ -6,7 +6,7 @@
         {
             name: "bt-hfp-audio-gateway",
             url: "fuchsia-pkg://fuchsia.com/bt-hfp-audio-gateway-default#meta/bt-hfp-audio-gateway.cm",
-            environment: "#universe-resolver-env",
+            environment: "#full-resolver-env",
         },
     ],
     offer: [

@@ -52,8 +52,8 @@ rustc_binary("bin") {
   sources = [ "src/main.rs" ]
 }
 
-fuchsia_component("component") {
-  component_name = "universe-resolver"
+fuchsia_component("dev-component") {
+  component_name = "full-resolver"
   manifest = "meta/universe-resolver.cml"
   deps = [ ":bin" ]
 
@@ -69,7 +69,7 @@ fuchsia_component("component-for-test") {
 
 fuchsia_component("component-base-only") {
   manifest = "meta/universe-resolver-base-only.cml"
-  component_name = "universe-resolver"
+  component_name = "full-resolver"
   deps = [ ":bin" ]
 }
 
@@ -82,7 +82,7 @@ fuchsia_component("component-base-only-for-test") {
 
 fuchsia_package("universe-resolver") {
   if (auto_update_packages) {
-    deps = [ ":component" ]
+    deps = [ ":dev-component" ]
   } else {
     deps = [ ":component-base-only" ]
   }

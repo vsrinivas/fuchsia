@@ -95,7 +95,7 @@ From //build/config/sanitizers/sanitizer_default_options.gni:16
 
 ### auto_update_packages
 Controls the behavior of sysmgr's PackageUpdatingLoader (v1) and the
-universe-resolver (v2). If true, when resolving a component an attempt to
+full-resolver (v2). If true, when resolving a component an attempt to
 update the component's package is first made through the Software Delivery
 system (specifically, through the package resolver,
 fuchsia.pkg.PackageResolver). If false, no attempt to update is made and
@@ -4412,4 +4412,3 @@ be removed after everyone has had a chance to get hold of their machines.
 **Current value (from the default):** `false`
 
 From //zircon/kernel/BUILD.gn:29
-

@@ -1406,7 +1406,7 @@ capabilities or features.
 If your component is not part of the `base` package set for your product, you
 must route the `universe` resolver to it. Resolvers are routed to components
 using environments, and `core.cml` has a shared environment named
-`universe-resolver-env` for components outside of `base`.
+`full-resolver-env` for components outside of `base`.
 
 Use the `list-packages` command to report the package sets where your component
 package is included.
@@ -1419,7 +1419,7 @@ If the package is not listed with the `base` tag, follow the remaining
 instructions in this section.
 
 When [adding your component](#add-component-to-topology), assign the shared
-`universe-resolver-env` as your component's `environment`.
+`full-resolver-env` as your component's `environment`.
 
 ```json5
 // core.cml
@@ -1429,7 +1429,7 @@ When [adding your component](#add-component-to-topology), assign the shared
     {
       name: "my_component",
       url: "fuchsia-pkg://fuchsia.com/my-pkg#meta/my_component.cm",
-      {{ '<strong>' }}environment: "#universe-resolver-env",{{ '</strong>' }}
+      {{ '<strong>' }}environment: "#full-resolver-env",{{ '</strong>' }}
     },
   ],
 }

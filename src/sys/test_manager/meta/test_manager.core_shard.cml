@@ -8,7 +8,7 @@
         {
             name: "test_manager",
             url: "fuchsia-pkg://fuchsia.com/test_manager#meta/test_manager.cm",
-            environment: "#universe-resolver-env",
+            environment: "#full-resolver-env",
         },
     ],
     offer: [

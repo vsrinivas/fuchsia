@@ -10,7 +10,7 @@
     },
     capabilities: [
         {
-            resolver: "universe-resolver",
+            resolver: "full-resolver",
             path: "/svc/fuchsia.sys2.ComponentResolver",
         },
     ],
@@ -24,7 +24,7 @@
     ],
     expose: [
         {
-            resolver: "universe-resolver",
+            resolver: "full-resolver",
             from: "self",
         },
     ],

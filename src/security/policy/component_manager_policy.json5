@@ -317,7 +317,7 @@
                     // valid client of PackageResolver.  appmgr has its own
                     // allowlist for v1 components accessing pkg-resolver.
                     "/core/appmgr",
-                    "/core/universe-resolver",
+                    "/core/full-resolver",
                     "/core/system-updater",
                 ],
             },
@@ -354,7 +354,7 @@
                 source_name: "fuchsia.sys2.ComponentResolver",
                 capability: "protocol",
                 target_monikers: [
-                    "/core/universe-resolver",
+                    "/core/full-resolver",
                 ],
             },
         ],

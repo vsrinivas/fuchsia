@@ -5,7 +5,7 @@
             // The `ffx component run` command adds components to this collection.
             // TODO(78792): This collection needs a formal name.
             name: "ffx-laboratory",
-            environment: "#universe-resolver-env",
+            environment: "#full-resolver-env",
             durability: "transient",
         },
     ],

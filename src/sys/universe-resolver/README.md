@@ -14,7 +14,7 @@ Include in your local build with `fx set ... --with-base //src/sys/universe-reso
 ## Running
 
 To launch this component, include it as a child in the component topology using the URL
-`fuchsia-pkg://fuchsia.com/universe-resolver#meta/universe-resolver.cm`, and include its
+`fuchsia-pkg://fuchsia.com/universe-resolver#meta/full-resolver.cm`, and include its
 exposed resolver capability in an environment.
 
 ```json5

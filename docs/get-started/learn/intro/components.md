@@ -217,7 +217,7 @@ You should see output similar to the (truncated) list below:
     system-update-committer
     temperature-logger
     test_manager
-    universe-resolver
+    full-resolver
   startup
 ```
 
