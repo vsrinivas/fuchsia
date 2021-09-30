@@ -2,22 +2,31 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use fidl_fuchsia_developer_remotecontrol as fremotecontrol;
 use {
     anyhow::Result,
     ffx_core::ffx_plugin,
-    ffx_driver::get_device_info,
+    ffx_driver::*,
     ffx_driver_list_devices_args::DriverListDevicesCommand,
-    fidl_fuchsia_driver_development::{DeviceFlags, DriverDevelopmentProxy},
+    fidl_fuchsia_driver_development::{DeviceFlags, DriverDevelopmentMarker},
 };
 
-#[ffx_plugin(
-    "driver_enabled",
-    DriverDevelopmentProxy = "bootstrap/driver_manager:expose:fuchsia.driver.development.DriverDevelopment"
-)]
+#[ffx_plugin()]
 pub async fn list_devices(
-    service: DriverDevelopmentProxy,
+    remote_control: fremotecontrol::RemoteControlProxy,
     cmd: DriverListDevicesCommand,
 ) -> Result<()> {
+    let selector = match cmd.select {
+        true => {
+            user_choose_selector(&remote_control, "fuchsia.driver.development.DriverDevelopment")
+                .await?
+        }
+        false => "bootstrap/driver_manager:expose:fuchsia.driver.development.DriverDevelopment"
+            .to_string(),
+    };
+
+    let service =
+        remotecontrol_connect::<DriverDevelopmentMarker>(&remote_control, &selector).await?;
     let device_info = match cmd.device {
         Some(device) => get_device_info(&service, &mut [device].iter().map(String::as_str)).await?,
         None => get_device_info(&service, &mut [].iter().map(String::as_str)).await?,

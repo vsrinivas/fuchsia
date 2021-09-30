@@ -20,6 +20,10 @@ pub struct DriverListDevicesCommand {
     #[argh(positional)]
     pub device: Option<String>,
 
+    /// if this exists, the user will be prompted for a component to select.
+    #[argh(switch, short = 's', long = "select")]
+    pub select: bool,
+
     /// list all device properties.
     #[argh(switch, short = 'v', long = "verbose")]
     pub verbose: bool,

@@ -10,6 +10,7 @@ ffx_plugin("ffx_driver_list_devices") {
   with_unit_tests = true
 
   deps = [
+    "//sdk/fidl/fuchsia.developer.remotecontrol:fuchsia.developer.remotecontrol-rustc",
     "//sdk/fidl/fuchsia.driver.development:fuchsia.driver.development-rustc",
     "//src/developer/ffx/plugins/driver/common:ffx_driver",
   ]

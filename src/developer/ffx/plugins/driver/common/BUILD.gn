@@ -10,9 +10,15 @@ rustc_library("ffx_driver") {
   edition = "2018"
 
   deps = [
+    "//sdk/fidl/fuchsia.developer.remotecontrol:fuchsia.developer.remotecontrol-rustc",
     "//sdk/fidl/fuchsia.driver.development:fuchsia.driver.development-rustc",
+    "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
+    "//src/lib/component_hub",
+    "//src/lib/diagnostics/selectors",
     "//src/lib/fidl/rust/fidl",
+    "//src/lib/zircon/rust:fuchsia-zircon-status",
     "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates/compat/rustyline",
   ]
 
   sources = [ "src/lib.rs" ]
