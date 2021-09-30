@@ -87,18 +87,29 @@ template("clang_toolchain") {
 
     rebased_rust_sysroot = rebase_path(rust_sysroot, root_build_dir)
 
-    # Configure Rust builds to be restat-friendly by preserving timestamps of
+    # Configure builds to be restat-friendly by preserving timestamps of
     # unchanged outputs.
     _restat_rustc_prefix = ""
     if (restat_rust) {
-      _restat_wrapper =
+      _restat_rust_wrapper =
           string_join(" ",
                       [
                         rebase_path(python_exe_src, root_build_dir),
                         "-S",
                         rebase_path(restat_wrapper, root_build_dir),
                       ])
-      _restat_rustc_prefix = "$_restat_wrapper --outputs substitute_after:-o:{{output}} --depfile {{DEPFILE}} -- "
+      _restat_rustc_prefix = "$_restat_rust_wrapper --outputs substitute_after:-o:{{output}} --depfile {{DEPFILE}} -- "
+    }
+    _restat_cc_prefix = ""
+    if (restat_cc) {
+      _restat_cc_wrapper =
+          string_join(" ",
+                      [
+                        rebase_path(python_exe_src, root_build_dir),
+                        "-S",
+                        rebase_path(restat_wrapper, root_build_dir),
+                      ])
+      _restat_cc_prefix = "$_restat_cc_wrapper --outputs substitute_after:-o:{{output}} --depfile {{DEPFILE}} -- "
     }
 
     # Configure Rust remote builds.
@@ -181,55 +192,70 @@ template("clang_toolchain") {
       forward_variables_from(concurrent_jobs.goma, "*")
       depfile = "{{output}}.d"
       command = "$cc -MD -MF $depfile {{defines}} {{include_dirs}} {{cflags}} {{cflags_c}} -c {{source}} -o {{output}}"
-      command_launcher = compiler_prefix
+      command_launcher =
+          string_replace(_restat_cc_prefix, "{{DEPFILE}}", depfile) +
+          compiler_prefix
       depsformat = "gcc"
       description = "CC {{output}}"
       outputs =
           [ "{{source_out_dir}}/{{target_output_name}}.{{source_file_part}}.o" ]
+      restat = restat_cc
     }
 
     tool("cxx") {
       forward_variables_from(concurrent_jobs.goma, "*")
       depfile = "{{output}}.d"
       command = "$cxx -MD -MF $depfile {{defines}} {{include_dirs}} {{cflags}} {{cflags_cc}} -c {{source}} -o {{output}}"
-      command_launcher = compiler_prefix
+      command_launcher =
+          string_replace(_restat_cc_prefix, "{{DEPFILE}}", depfile) +
+          compiler_prefix
       depsformat = "gcc"
       description = "CXX {{output}}"
       outputs =
           [ "{{source_out_dir}}/{{target_output_name}}.{{source_file_part}}.o" ]
+      restat = restat_cc
     }
 
     tool("asm") {
       forward_variables_from(concurrent_jobs.goma, "*")
       depfile = "{{output}}.d"
       command = "$cc -MD -MF $depfile {{defines}} {{include_dirs}} {{asmflags}} -c {{source}} -o {{output}}"
-      command_launcher = compiler_prefix
+      command_launcher =
+          string_replace(_restat_cc_prefix, "{{DEPFILE}}", depfile) +
+          compiler_prefix
       depsformat = "gcc"
       description = "ASM {{output}}"
       outputs =
           [ "{{source_out_dir}}/{{target_output_name}}.{{source_file_part}}.o" ]
+      restat = restat_cc
     }
 
     tool("objc") {
       forward_variables_from(concurrent_jobs.local, "*")
       depfile = "{{output}}.d"
       command = "$cc -MD -MF $depfile {{defines}} {{include_dirs}} {{cflags}} {{cflags_c}} {{cflags_objc}} -c {{source}} -o {{output}}"
-      command_launcher = compiler_prefix
+      command_launcher =
+          string_replace(_restat_cc_prefix, "{{DEPFILE}}", depfile) +
+          compiler_prefix
       depsformat = "gcc"
       description = "OBJC {{output}}"
       outputs =
           [ "{{source_out_dir}}/{{target_output_name}}.{{source_file_part}}.o" ]
+      restat = restat_cc
     }
 
     tool("objcxx") {
       forward_variables_from(concurrent_jobs.local, "*")
       depfile = "{{output}}.d"
       command = "$cxx -MD -MF $depfile {{defines}} {{include_dirs}} {{cflags}} {{cflags_c}} {{cflags_objcc}} -c {{source}} -o {{output}}"
-      command_launcher = compiler_prefix
+      command_launcher =
+          string_replace(_restat_cc_prefix, "{{DEPFILE}}", depfile) +
+          compiler_prefix
       depsformat = "gcc"
       description = "OBJCXX {{output}}"
       outputs =
           [ "{{source_out_dir}}/{{target_output_name}}.{{source_name_part}}.o" ]
+      restat = restat_cc
     }
 
     # Compute default dynamic library extension

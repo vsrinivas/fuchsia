@@ -2,14 +2,16 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-# This transform any action to be restat-friendly by redirecting outputs
-# to a temporary location, followed by move-if-changed.
-# This is suitable for local and RBE actions.
+# Ninja `restat` can lead to on-the-fly pruning of the overall action graph.
+# This script transforms any command to be restat-friendly by redirecting
+# outputs to a temporary location, followed by move-if-changed.
+# This is suitable for both local and remote (RBE) actions.
 restat_wrapper = "//build/tracer/output_cacher.py"
 
 declare_args() {
-  # Set to true to make rust compiles preserve timestamps of unchanged outputs.
-  # This can lead to on-the-fly pruning of the overall action graph.
-  # This also works on local builds, without RBE.
+  # Set to true to make Rust compiles preserve timestamps of unchanged outputs.
   restat_rust = false
+
+  # Set to true to make C++ compiles preserve timestamps of unchanged outputs.
+  restat_cc = false
 }
