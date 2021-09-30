@@ -359,7 +359,7 @@ zx_status_t forward_command(statecontrol_fidl::wire::SystemPowerState fallback_s
     printf("[shutdown-shim]: trying to forward command\n");
     status = send_command(fidl::WireSyncClient<statecontrol_fidl::Admin>(std::move(local)),
                           fallback_state, reboot_reason);
-    if (status != ZX_ERR_UNAVAILABLE) {
+    if (status != ZX_ERR_UNAVAILABLE && status != ZX_ERR_NOT_SUPPORTED) {
       return status;
     }
   }
@@ -435,7 +435,8 @@ void StateControlAdminServer::Mexec(MexecRequestView request, MexecCompleter::Sy
     if (status == ZX_OK) {
       completer.ReplySuccess();
       return;
-    } else if (status != ZX_ERR_UNAVAILABLE) {
+    }
+    if (status != ZX_ERR_UNAVAILABLE && status != ZX_ERR_NOT_SUPPORTED) {
       completer.ReplyError(status);
       return;
     }
