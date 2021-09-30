@@ -21,12 +21,12 @@
   api_secondary: ''
 
 - name: 'Drivers'
-  api_primary: 'ravoorir@google.com'
+  api_primary: 'cja@google.com'
   api_secondary: 'jocelyndang@google.com'
 
 - name: 'Driver SDK'
   api_primary: 'jocelyndang@google.com'
-  api_secondary: 'ravoorir@google.com'
+  api_secondary: 'cja@google.com'
 
 - name: 'Experiences'
   api_primary: 'chaselatta@google.com'
