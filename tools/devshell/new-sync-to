@@ -196,9 +196,7 @@ class SyncToCommand:
                 "Use -h for help.")
 
         if not self.dry_run:
-            print(
-                "Success! To switch back to the latest, use `fx new-sync-to reset`"
-            )
+            self.print_synced_revision()
 
     def reset_checkout(self) -> None:
         """Sync all repos back to JIRI_HEAD."""
@@ -223,7 +221,6 @@ class SyncToCommand:
                 "See valid branches by running:\n\n"
                 "  git -C ${FUCHSIA_DIR}/integration ls-remote --heads")
         self.sync_to_integration_ref(branch)
-        self.print_synced_revision()
 
     def sync_to_release_tag(self) -> None:
         print(f"{self.state!r} looks like a release tag")
@@ -234,7 +231,6 @@ class SyncToCommand:
                 "See valid tags by running:\n\n"
                 "  git -C ${FUCHSIA_DIR}/integration tag -l")
         self.sync_to_integration_ref(f"tags/{self.state}")
-        self.print_synced_revision()
 
     def sync_to_integration_commit(self) -> None:
         print(f"{self.state!r} looks like an integration git commit")
@@ -491,29 +487,20 @@ class SyncToCommand:
         return snapshot_file
 
     def print_synced_revision(self) -> None:
-        if self.dry_run:
-            print(
-                "Dry-run: Fuchsia Platform tree not changed, currently synced to:"
-            )
-        else:
-            print("Success! Fuchsia Platform tree synced to:")
-        self.run_command(
-            "git",
-            "-C",
-            self.integration_dir,
-            "config",
-            "--get",
-            "remote.origin.url",
-            dry_run_safe=True,
-        )
+        print()
+        print("Success! To switch back to the latest, use `fx new-sync-to reset`.")
+        print("//integration HEAD is now at:")
         self.run_command(
             "git",
             "-C",
             self.integration_dir,
             "--no-pager",
             "show",
-            "--format=format:'  %h - (%ar) %s - %an %d'",
+            "--no-patch",
+            "--decorate",
+            "--format=format:  %h - (%ar) %an\n  %s\n",
             dry_run_safe=True,
+            log=False,
         )
 
     def run_command(
@@ -521,6 +508,7 @@ class SyncToCommand:
         *args: Union[str, pathlib.Path],
         dry_run_safe: bool = False,
         check: bool = True,
+        log: bool = True,
         **kwargs,
     ) -> subprocess.CompletedProcess:
         cmd = [str(a) for a in args]  # Convert any Path objects to strings.
@@ -529,7 +517,9 @@ class SyncToCommand:
             print("Dry-run: %s" % colorize(cmd_str, Color.GREEN))
             return subprocess.CompletedProcess(args=cmd, returncode=0)
 
-        print("Running: %s" % colorize(" ".join(cmd), Color.YELLOW))
+        if log:
+            print("Running: %s" % colorize(" ".join(cmd), Color.YELLOW))
+
         try:
             return subprocess.run(cmd, check=check, text=True, **kwargs)
         except subprocess.CalledProcessError as e:
