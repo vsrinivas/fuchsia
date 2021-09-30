@@ -22,9 +22,9 @@ impl Config {
         let mut config = OpenOptions::new().read(true).write(false).open(CONFIG_FILE_PATH).unwrap();
 
         let mut contents = String::new();
-        config.read_to_string(&mut contents).expect("The bt-init config file is corrupted");
+        let _ = config.read_to_string(&mut contents).expect("bt-init config file is corrupted");
 
-        Ok(serde_json::from_str(contents.as_str()).context("Failed to parse config file")?)
+        Ok(serde_json::from_str(contents.as_str()).context("failed to parse config file")?)
     }
 
     pub fn autostart_snoop(&self) -> bool {

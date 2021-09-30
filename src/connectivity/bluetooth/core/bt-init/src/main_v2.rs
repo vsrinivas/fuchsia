@@ -13,7 +13,7 @@ use {
     fuchsia_async as fasync,
     fuchsia_component::{client, server},
     futures::{future, StreamExt},
-    log::{error, info, warn},
+    tracing::{error, info, warn},
 };
 
 mod config;
@@ -68,8 +68,8 @@ async fn open_childs_service_directory<C: ComponentClientAdapter>(
     }
 }
 
-#[fuchsia::component(logging = true)]
 fn main() -> Result<(), Error> {
+    fuchsia_syslog::init_with_tags(&["bt-init"]).expect("Can't init logger");
     info!("starting bt-init...");
 
     let mut executor = fasync::LocalExecutor::new().context("error creating executor")?;
@@ -90,10 +90,10 @@ fn main() -> Result<(), Error> {
     let run_bluetooth = async move {
         let underlying_profile_svc = open_childs_service_directory(&mut ComponentClient).await?;
         let mut fs = server::ServiceFs::new();
-        fs.dir("svc").add_service_at(ProfileMarker::PROTOCOL_NAME, |chan| {
+        let _ = fs.dir("svc").add_service_at(ProfileMarker::PROTOCOL_NAME, |chan| {
             Some((ProfileMarker::PROTOCOL_NAME, chan))
         });
-        fs.take_and_serve_directory_handle()?;
+        let _ = fs.take_and_serve_directory_handle()?;
 
         info!("initialization complete, begin serving {}", ProfileMarker::PROTOCOL_NAME);
         let outer_fs = fs.for_each(move |(name, chan)| {
@@ -185,7 +185,7 @@ mod tests {
     async fn test_open_rfcomm_fails() {
         // If opening bt-rfcomm's directory fails, the directory should be connected to bt-gap.
         let mut mock_client = MockComponentClient::new();
-        mock_client.children_to_fail_for.insert(BT_RFCOMM_CHILD_NAME.to_owned());
+        let _ = mock_client.children_to_fail_for.insert(BT_RFCOMM_CHILD_NAME.to_owned());
         let profile_svc = open_childs_service_directory(&mut mock_client).await.unwrap();
         assert!(mock_client.bt_rfcomm_channel.is_none());
         assert!(mock_client.bt_gap_channel.is_some());
@@ -199,8 +199,8 @@ mod tests {
     async fn test_open_rfcomm_and_gap_fail() {
         // If opening both bt-gap and bt-rfcomm's directory fail, opening the profile service should fail.
         let mut mock_client = MockComponentClient::new();
-        mock_client.children_to_fail_for.insert(BT_RFCOMM_CHILD_NAME.to_owned());
-        mock_client.children_to_fail_for.insert(BT_GAP_CHILD_NAME.to_owned());
+        let _ = mock_client.children_to_fail_for.insert(BT_RFCOMM_CHILD_NAME.to_owned());
+        let _ = mock_client.children_to_fail_for.insert(BT_GAP_CHILD_NAME.to_owned());
         assert!(open_childs_service_directory(&mut mock_client).await.is_err());
     }
 }

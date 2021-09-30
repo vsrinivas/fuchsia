@@ -22,7 +22,7 @@ use {
     },
     fuchsia_zircon as zx,
     futures::{future, Future, FutureExt, StreamExt},
-    log::{info, warn},
+    tracing::{info, warn},
 };
 
 mod config;
@@ -44,10 +44,12 @@ async fn launch_rfcomm(
     // likely need to either launch an instance of bt-rfcomm per-bt-host (e.g. inside bt-gap), or
     // modify bt-rfcomm to accommodate this issue.
     let mut rfcomm_fs = server::ServiceFs::new();
-    rfcomm_fs
+    let _ = rfcomm_fs
         .add_service_at(ProfileMarker::PROTOCOL_NAME, move |chan| {
             info!("Connecting bt-rfcomm's Profile Service to bt-gap");
-            bt_gap.pass_to_named_protocol(ProfileMarker::PROTOCOL_NAME, chan).ok();
+            if let Err(e) = bt_gap.pass_to_named_protocol(ProfileMarker::PROTOCOL_NAME, chan) {
+                warn!("Failed to connect profile from bt-rfcomm to bt-gap: {:?}", e);
+            }
             None
         })
         .add_proxy_service::<fidl_fuchsia_logger::LogSinkMarker, _>()
@@ -165,7 +167,8 @@ fn main() -> Result<(), Error> {
 
         // Now that the child components are launched, we can begin serving bt-init services.
         let mut fs = server::ServiceFs::new();
-        fs.dir("svc")
+        let _ = fs
+            .dir("svc")
             .add_service_at(AccessMarker::NAME, |chan| Some((AccessMarker::NAME, chan)))
             .add_service_at(BootstrapMarker::NAME, |chan| Some((BootstrapMarker::NAME, chan)))
             .add_service_at(ConfigurationMarker::NAME, |chan| {
@@ -177,7 +180,7 @@ fn main() -> Result<(), Error> {
             .add_service_at(ProfileMarker::NAME, |chan| Some((ProfileMarker::NAME, chan)))
             .add_service_at(Server_Marker::NAME, |chan| Some((Server_Marker::NAME, chan)))
             .add_service_at(RfcommTestMarker::NAME, |chan| Some((RfcommTestMarker::NAME, chan)));
-        fs.take_and_serve_directory_handle()?;
+        let _ = fs.take_and_serve_directory_handle()?;
 
         info!("Initialization complete, begin serving FIDL protocols");
         let outer_fs = fs.for_each(move |(name, chan)| {
@@ -207,7 +210,7 @@ mod tests {
             _service_name: &str,
             server_channel: zx::Channel,
         ) -> Result<(), Error> {
-            self.last_channel.replace(Some(server_channel));
+            let _ = self.last_channel.replace(Some(server_channel));
             Ok(())
         }
     }
