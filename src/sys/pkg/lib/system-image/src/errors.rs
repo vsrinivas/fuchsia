@@ -2,7 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use {fuchsia_hash::ParseHashError, fuchsia_pkg::ParsePackagePathError, std::io, thiserror::Error};
+use {
+    fuchsia_hash::ParseHashError,
+    fuchsia_pkg::{PackageNameError, ParsePackagePathError},
+    std::{io, str::Utf8Error},
+    thiserror::Error,
+};
 
 #[derive(Debug, Error)]
 pub enum PathHashMappingError {
@@ -17,4 +22,13 @@ pub enum PathHashMappingError {
 
     #[error("invalid package path")]
     ParsePackagePath(#[from] ParsePackagePathError),
+}
+
+#[derive(Debug, Error)]
+pub enum AllowListError {
+    #[error("encoding error")]
+    Encoding(#[from] Utf8Error),
+
+    #[error("invalid package name")]
+    PackageName(#[from] PackageNameError),
 }

@@ -3,7 +3,11 @@
 // found in the LICENSE file.
 
 mod errors;
+mod non_static_allowlist;
 mod path_hash_mapping;
 
-pub use crate::errors::PathHashMappingError;
-pub use crate::path_hash_mapping::{CachePackages, StaticPackages};
+pub use crate::{
+    errors::PathHashMappingError,
+    non_static_allowlist::NonStaticAllowList,
+    path_hash_mapping::{CachePackages, StaticPackages},
+};

@@ -22,6 +22,7 @@ rustc_library("system-image") {
   sources = [
     "src/errors.rs",
     "src/lib.rs",
+    "src/non_static_allowlist.rs",
     "src/path_hash_mapping.rs",
   ]
 }

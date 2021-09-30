@@ -28,5 +28,7 @@ pub use crate::{
     package::{BlobEntry, Package, PackageBuilder},
     package_directory::{LoadMetaContentsError, OpenRights, PackageDirectory, ReadHashError},
     package_manifest::PackageManifest,
-    path::{check_package_name, check_package_variant, check_resource_path, PackagePath},
+    path::{
+        check_package_name, check_package_variant, check_resource_path, PackageName, PackagePath,
+    },
 };
