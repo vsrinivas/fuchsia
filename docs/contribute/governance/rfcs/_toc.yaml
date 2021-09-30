@@ -273,3 +273,5 @@ toc:
   path: /docs/contribute/governance/rfcs/0129_python_in_fuchsia.md
 - title: "RFC-0130: Supported hardware"
   path: /docs/contribute/governance/rfcs/0130_supported_hardware.md
+- title: "RFC-0131: Design principles of the FIDL wire format"
+  path: /docs/contribute/governance/rfcs/0131_fidl_wire_format_principles.md

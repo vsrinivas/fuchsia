@@ -1694,3 +1694,16 @@
   reviewers: ['nicoh@google.com', 'nmulcahey@goole.com', 'smithdave@google.com', 'nickvander@google.com', 'curtisgalloway@google.com']
   submitted: '2021-08-24'
   reviewed: '2021-09-28'
+
+- name: 'RFC-0131'
+  title: 'Design principles of the FIDL wire format'
+  short_description: 'We describe various design principles underpinning the FIDL wire format.'
+  authors: ['pascallouis@google.com']
+  file: '0131_fidl_wire_format_principles.md'
+  area: ['FIDL']
+  issue: ['']
+  gerrit_change_id: ['543461']
+  status: 'Accepted'
+  reviewers: ['jeremymanson@google.com','abarth@google.com','yifeit@google.com','bprosnitz@google.com']
+  submitted: '2021-06-15'
+  reviewed: '2021-09-29'

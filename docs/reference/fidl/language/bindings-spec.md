@@ -458,14 +458,15 @@ more rigid: changes to the FIDL wire format become more complex to implement.
 The [LLCPP bindings][llcpp] are the only binding that take this
 approach.
 
-### Equality comparison
+### Equality comparison {#equality-comparison}
 
 For aggregate types such as structs, tables, and unions, bindings MAY provide
 equality operators that perform a deep comparison on two instances of the same
-type. These operators SHOULD NOT be provided for resource types (see RFC-0057) as
-comparison of handles is not possible. Avoiding exposing equality operators for
-resource types prevents source breakages caused by an equality operation
-'disappearing' when a handle is added to the type.
+type. These operators SHOULD NOT be provided for resource types (see
+[RFC-0057][rfc0057] and [deep equality](#deep-equality)) as comparison of
+handles is not possible. Avoiding exposing equality operators for resource types
+prevents source breakages caused by an equality operation 'disappearing' when a
+handle is added to the type.
 
 ### Copying
 
@@ -573,17 +574,17 @@ FIDL to define conformance tests. These tests are standardized across bindings
 and ensure consistency in implementation of encoders and decoders and coverage
 of corner cases.
 
-#### Deep equality of decoded objects
+#### Deep equality of decoded objects {#deep-equality}
 
 Comparing object equality can be tricky and particularly so in the case of
-decoded FIDL objects. During decode, zx_handle_replace may be called on
+decoded FIDL objects. During decode, `zx_handle_replace` may be called on
 handles if they have more handle rights than needed. When this happens, the
 initial input handle will be closed and a new handle will be created to
 replace it with reduced rights.
 
 Because of this, handle values cannot be directly compared. Instead,
 handles can be compared by checking that their koid (kernel id), type and
-rights are the same.
+ensuring their rights are the same.
 
 ## Related Documents
 
