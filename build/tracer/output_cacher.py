@@ -419,11 +419,6 @@ def main_arg_parser() -> argparse.ArgumentParser:
         "File names must not contain =,: characters.",
     )
     parser.add_argument(
-        "--depfile",
-        help="A depfile that is written by the command.  " +
-        "This supports the same forms as --output.",
-    )
-    parser.add_argument(
         "--temp-suffix",
         type=str,
         default="",
@@ -512,8 +507,6 @@ def main():
 
     # Otherwise, rewrite the command using temporary outputs.
     outputs = set(args.outputs)
-    if args.depfile:
-        outputs.add(args.depfile)
 
     try:
         substitutions = [OutputSubstitution(x) for x in args.outputs]

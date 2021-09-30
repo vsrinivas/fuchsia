@@ -98,7 +98,7 @@ template("clang_toolchain") {
                         "-S",
                         rebase_path(restat_wrapper, root_build_dir),
                       ])
-      _restat_rustc_prefix = "$_restat_rust_wrapper --outputs substitute_after:-o:{{output}} --depfile {{DEPFILE}} -- "
+      _restat_rustc_prefix = "$_restat_rust_wrapper --outputs substitute_after:-o:{{output}} {{DEPFILE}} -- "
     }
     _restat_cc_prefix = ""
     if (restat_cc) {
@@ -109,7 +109,7 @@ template("clang_toolchain") {
                         "-S",
                         rebase_path(restat_wrapper, root_build_dir),
                       ])
-      _restat_cc_prefix = "$_restat_cc_wrapper --outputs substitute_after:-o:{{output}} --depfile {{DEPFILE}} -- "
+      _restat_cc_prefix = "$_restat_cc_wrapper --outputs substitute_after:-o:{{output}} {{DEPFILE}} -- "
     }
 
     # Configure Rust remote builds.
