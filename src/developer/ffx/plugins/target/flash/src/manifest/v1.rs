@@ -20,12 +20,19 @@ const REBOOT_ERR: &str = "Failed to reboot your device.  \
                           Power cycle the device manually and try again.";
 pub(crate) const MISSING_PRODUCT: &str = "Manifest does not contain product";
 
+const UNLOCK_ERR: &str = "The product requires the target is unlocked. \
+                          Please unlock target and try again.";
+
+const LOCKED_VAR: &str = "vx-locked";
+
 #[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
 pub(crate) struct Product {
     pub(crate) name: String,
     pub(crate) bootloader_partitions: Vec<Partition>,
     pub(crate) partitions: Vec<Partition>,
     pub(crate) oem_files: Vec<OemFile>,
+    #[serde(default)]
+    pub(crate) requires_unlock: bool,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
@@ -83,6 +90,11 @@ impl Flash for FlashManifest {
             Some(res) => res,
             None => ffx_bail!("{} {}", MISSING_PRODUCT, cmd.product),
         };
+        if product.requires_unlock
+            && !verify_variable_value(LOCKED_VAR, "no", &fastboot_proxy).await?
+        {
+            ffx_bail!("{}", UNLOCK_ERR);
+        }
         flash_partitions(writer, file_resolver, &product.bootloader_partitions, &fastboot_proxy)
             .await?;
         if product.bootloader_partitions.len() > 0 && !cmd.no_bootloader_reboot {
@@ -223,6 +235,18 @@ mod test {
             ],
             "partitions": [],
             "oem_files": []
+        }
+    ]"#;
+
+    const LOCKED_MANIFEST: &'static str = r#"[
+        {
+            "name": "zedboot",
+            "bootloader_partitions": [
+                ["btest1", "bpath1", "var1", "value1"]
+            ],
+            "partitions": [],
+            "oem_files": [],
+            "requires_unlock": true
         }
     ]"#;
 
@@ -405,6 +429,34 @@ mod test {
         .await?;
         let state = state.lock().unwrap();
         assert_eq!(0, state.bootloader_reboots);
+        Ok(())
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_should_not_flash_if_target_is_locked_and_product_requires_unlock() -> Result<()> {
+        let v: FlashManifest = from_str(LOCKED_MANIFEST)?;
+        let tmp_file = NamedTempFile::new().expect("tmp access failed");
+        let tmp_file_name = tmp_file.path().to_string_lossy().to_string();
+        let (state, proxy) = setup();
+        {
+            let mut state = state.lock().unwrap();
+            state.variables.push("vx-locked".to_string());
+            state.variables.push("yes".to_string());
+        }
+        let mut writer = Vec::<u8>::new();
+        let res = v
+            .flash(
+                &mut writer,
+                &mut TestResolver::new(),
+                proxy,
+                FlashCommand {
+                    manifest: Some(PathBuf::from(tmp_file_name)),
+                    product: "zedboot".to_string(),
+                    ..Default::default()
+                },
+            )
+            .await;
+        assert_eq!(true, res.is_err());
         Ok(())
     }
 }

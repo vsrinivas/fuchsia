@@ -20,6 +20,7 @@ use {
     fms::Entries,
     sdk_metadata::{Metadata, OemFile, Partition, Product},
     std::convert::{From, TryFrom, TryInto},
+    std::default::Default,
     std::io::Write,
 };
 
@@ -61,6 +62,7 @@ impl From<&Product> for ProductV3 {
             bootloader_partitions: p.bootloader_partitions.iter().map(|p| p.into()).collect(),
             partitions: p.partitions.iter().map(|p| p.into()).collect(),
             oem_files: p.oem_files.iter().map(|f| f.into()).collect(),
+            ..Default::default()
         }
     }
 }

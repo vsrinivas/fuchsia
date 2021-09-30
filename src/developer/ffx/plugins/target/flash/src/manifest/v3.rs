@@ -28,7 +28,7 @@ pub(crate) struct FlashManifest {
     pub(crate) products: Vec<Product>,
 }
 
-#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Default, Debug, Eq, PartialEq, Serialize, Deserialize)]
 pub(crate) struct Product {
     pub(crate) name: String,
     #[serde(default)]
@@ -36,6 +36,8 @@ pub(crate) struct Product {
     pub(crate) partitions: Vec<Partition>,
     #[serde(default)]
     pub(crate) oem_files: Vec<ExplicitOemFile>,
+    #[serde(default)]
+    pub(crate) requires_unlock: bool,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
@@ -82,6 +84,7 @@ impl From<&Product> for ProductV1 {
             bootloader_partitions: p.bootloader_partitions.iter().map(|p| p.into()).collect(),
             partitions: p.partitions.iter().map(|p| p.into()).collect(),
             oem_files: p.oem_files.iter().map(|f| f.into()).collect(),
+            requires_unlock: p.requires_unlock,
         }
     }
 }
