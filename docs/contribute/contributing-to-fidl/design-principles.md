@@ -30,6 +30,14 @@ From [RFC-0050: Syntax revamp][rfc-0050-binary-wire-format-first]:
 > preferential treatment, and is catered to first ... we choose to over rotate
 > towards the binary ABI format when making syntax choices.
 
+## Low level first
+
+From [RFC-0131: Design principles of the FIDL wire format][rfc-0131]:
+
+> When faced with making a design tradeoff to support low level programming at
+> the expense of high level programming (or the reverse), we typically opt for
+> enabling low level programming.
+
 ## Fewest features
 
 From [RFC-0050: Syntax revamp][rfc-0050-fewest-features]:
@@ -123,6 +131,12 @@ methods are strongly preferred.
 
 ## Canonical representation
 
+From [RFC-0131: Design principles of the FIDL wire format][rfc-0131]:
+
+> There must be a single unambiguous representation of a FIDL value, i.e. there
+> is one and only one encoded representation of a FIDL value, and one and only
+> one decoded representation of a FIDL value.
+
 The FIDL wire format [is canonical][wire-format-dual-forms]: there is exactly
 one encoding for a given message. As a corollary, every byte is accounted for:
 there is no byte that can be changed without altering the message's meaning.
@@ -141,10 +155,10 @@ knowing the schema: for [value types][lang-resource], it is a simple `memcmp`.
 
 ## No allocations required
 
-From the [wire format specification][wire-format-dual-forms]:
+From [RFC-0131: Design principles of the FIDL wire format][rfc-0131]:
 
-> FIDL is designed such that **encoding** and **decoding** of messages can occur
-> in place in memory.
+> It must be possible to encode and decode in a single pass, without allocation
+> beyond stack space (i.e. no dynamic heap allocation).
 
 This requirement significantly influences the design of the wire format: you
 must be able to decode in place using only the stack. It is the reason the wire
@@ -155,6 +169,13 @@ keep track of information while decoding.
 This principle is related to ["You only pay for what you use"](#you-only-pay),
 in that it caters to very low-level uses of FIDL where `malloc` may not yet
 exist, or is prohibitively expensive.
+
+## No reflective functionality out of the box
+
+From [RFC-0131: Design principles of the FIDL wire format][rfc-0131]:
+
+> Without explicit opt-in, a peer must not be allowed to perform reflection on a
+> protocol, be it exposed methods, or exposed types.
 
 ## Transport generality
 
@@ -192,3 +213,4 @@ FIDL too closely to the Zircon channel transport.
 [rfc-0057]: /docs/contribute/governance/rfcs/0057_default_no_handles.md
 [rfc-0061-pros-and-cons]: /docs/contribute/governance/rfcs/0061_extensible_unions.md#pros-and-cons
 [rfc-0062]: /docs/contribute/governance/rfcs/0062_method_impossible.md
+[rfc-0131]: /docs/contribute/governance/rfcs/0131_fidl_wire_format_principles.md
