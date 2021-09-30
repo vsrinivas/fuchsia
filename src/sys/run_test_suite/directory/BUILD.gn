@@ -27,16 +27,23 @@ rustc_library("directory") {
 
   test_deps = [
     "//third_party/rust_crates:maplit",
+    "//third_party/rust_crates:tempfile",
     "//third_party/rust_crates:valico",
   ]
 }
 
 fuchsia_unittest_component("test-output-directory-lib-test") {
+  manifest = "meta/test-output-directory-lib-test.cml"
   deps = [ ":directory_test" ]
 }
 
 fuchsia_test_package("test-output-directory-unit-tests") {
   test_components = [ ":test-output-directory-lib-test" ]
+  test_specs = {
+    log_settings = {
+      max_severity = "ERROR"
+    }
+  }
 }
 
 group("tests") {

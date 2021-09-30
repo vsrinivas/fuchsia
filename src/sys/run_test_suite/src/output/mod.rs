@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use std::io::{Error, Write};
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 mod directory;
 mod line;
@@ -14,8 +14,9 @@ use directory::DirectoryReporter;
 use fidl_fuchsia_test_manager as ftest_manager;
 use noop::NoopReporter;
 
-type DynReporter = dyn 'static + Reporter + Send + Sync;
 pub type DynArtifact = dyn 'static + Write + Send + Sync;
+pub type DynDirectoryArtifact = dyn 'static + DirectoryWrite + Send + Sync;
+type DynReporter = dyn 'static + Reporter + Send + Sync;
 type ArtifactWrapperFn = dyn Fn(&ArtifactType, Box<DynArtifact>) -> Box<DynArtifact>;
 
 /// A reporter for structured results scoped to a test run.
@@ -88,6 +89,15 @@ impl RunReporter {
             .map(|artifact| (self.artifact_wrapper)(artifact_type, artifact))
     }
 
+    /// Create a new directory artifact scoped to the test run.
+    pub fn new_directory_artifact(
+        &self,
+        artifact_type: &DirectoryArtifactType,
+        component_moniker: Option<String>,
+    ) -> Result<Box<DynDirectoryArtifact>, Error> {
+        self.reporter.new_directory_artifact(&EntityId::TestRun, artifact_type, component_moniker)
+    }
+
     /// Record that the test run has started.
     pub fn started(&self, timestamp: Timestamp) -> Result<(), Error> {
         self.reporter.entity_started(&EntityId::TestRun, timestamp)
@@ -120,6 +130,19 @@ impl<'a> SuiteReporter<'a> {
         self.reporter
             .new_artifact(&EntityId::Suite(self.suite_id), artifact_type)
             .map(|artifact| (self.artifact_wrapper)(artifact_type, artifact))
+    }
+
+    /// Create a new directory artifact scoped to the suite.
+    pub fn new_directory_artifact(
+        &self,
+        artifact_type: &DirectoryArtifactType,
+        component_moniker: Option<String>,
+    ) -> Result<Box<DynDirectoryArtifact>, Error> {
+        self.reporter.new_directory_artifact(
+            &EntityId::Suite(self.suite_id),
+            artifact_type,
+            component_moniker,
+        )
     }
 
     /// Record that the suite has started.
@@ -157,6 +180,15 @@ impl<'a> CaseReporter<'a> {
             .map(|artifact| (self.artifact_wrapper)(artifact_type, artifact))
     }
 
+    /// Create a new directory artifact scoped to the test case
+    pub fn new_directory_artifact(
+        &self,
+        artifact_type: &DirectoryArtifactType,
+        component_moniker: Option<String>,
+    ) -> Result<Box<DynDirectoryArtifact>, Error> {
+        self.reporter.new_directory_artifact(&self.entity_id, artifact_type, component_moniker)
+    }
+
     /// Record that the case has started.
     pub fn started(&self, timestamp: Timestamp) -> Result<(), Error> {
         self.reporter.entity_started(&self.entity_id, timestamp)
@@ -179,6 +211,12 @@ pub enum ArtifactType {
     Stdout,
     Stderr,
     Syslog,
+}
+
+/// An enumeration of different known artifact types consisting of multiple files.
+#[derive(Clone, Copy)]
+pub enum DirectoryArtifactType {
+    Custom,
 }
 
 /// Common outcome type for test results, suites, and test cases.
@@ -229,6 +267,14 @@ impl Into<test_output_directory::ArtifactType> for ArtifactType {
     }
 }
 
+impl Into<test_output_directory::ArtifactType> for DirectoryArtifactType {
+    fn into(self) -> test_output_directory::ArtifactType {
+        match self {
+            Self::Custom => test_output_directory::ArtifactType::Custom,
+        }
+    }
+}
+
 #[derive(Clone, Copy, PartialEq, Eq, Hash)]
 pub struct SuiteId(pub u32);
 #[derive(Clone, Copy, PartialEq, Eq, Hash)]
@@ -268,6 +314,18 @@ trait Reporter {
         entity: &EntityId,
         artifact_type: &ArtifactType,
     ) -> Result<Box<DynArtifact>, Error>;
+
+    /// Create a new artifact consisting of multiple files.
+    fn new_directory_artifact(
+        &self,
+        entity: &EntityId,
+        artifact_type: &DirectoryArtifactType,
+        component_moniker: Option<String>,
+    ) -> Result<Box<DynDirectoryArtifact>, Error>;
+}
+
+pub trait DirectoryWrite {
+    fn new_file(&self, path: &Path) -> Result<Box<DynArtifact>, Error>;
 }
 
 /// A wrapper around Fuchsia's representation of time.

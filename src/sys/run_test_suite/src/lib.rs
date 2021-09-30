@@ -22,7 +22,7 @@ use {
     std::collections::{HashMap, HashSet},
     std::convert::TryInto,
     std::fmt,
-    std::io::{self, Write},
+    std::io::{self, ErrorKind, Write},
     std::path::PathBuf,
     std::time::Duration,
 };
@@ -34,7 +34,8 @@ pub mod output;
 use {
     artifact::{Artifact, ArtifactSender},
     output::{
-        AnsiFilterWriter, ArtifactType, CaseId, RunReporter, SuiteId, SuiteReporter, Timestamp,
+        AnsiFilterWriter, ArtifactType, CaseId, DirectoryArtifactType, RunReporter, SuiteId,
+        SuiteReporter, Timestamp,
     },
 };
 
@@ -149,6 +150,7 @@ async fn collect_results_for_suite(
     let mut test_cases_failed = HashSet::new();
     let mut restricted_logs = vec![];
     let mut successful_completion = false;
+    let mut tasks = vec![];
 
     loop {
         match suite_controller.get_events().await? {
@@ -457,19 +459,97 @@ async fn collect_results_for_suite(
                                     }
                                 }
                             }
-                            ftest_manager::Artifact::Custom(artifact) => {
-                                warn!("Got a suite custom artifact. Ignoring it.");
-                                if let Some(ftest_manager::DirectoryAndToken { token, .. }) =
-                                    artifact.directory_and_token
-                                {
+                            ftest_manager::Artifact::Custom(ftest_manager::CustomArtifact {
+                                directory_and_token,
+                                component_moniker,
+                                ..
+                            }) => {
+                                let ftest_manager::DirectoryAndToken { directory, token } =
+                                    directory_and_token.unwrap();
+                                let directory_artifact = suite_reporter.new_directory_artifact(
+                                    &DirectoryArtifactType::Custom,
+                                    component_moniker,
+                                )?;
+
+                                let directory = directory.into_proxy()?;
+                                let directory_copy_task = async move {
+                                    let directory_ref = &directory;
+                                    let files_stream =
+                                        files_async::readdir_recursive(directory_ref, None)
+                                            .map_err(|e| {
+                                                std::io::Error::new(std::io::ErrorKind::Other, e)
+                                            })
+                                            .try_filter_map(
+                                                move |files_async::DirEntry { name, kind }| {
+                                                    let res =
+                                                        match kind {
+                                                            files_async::DirentKind::File => {
+                                                                let filepath: PathBuf = name.into();
+                                                                match io_util::open_file(
+                                                            directory_ref,
+                                                            &filepath,
+                                                            io_util::OPEN_RIGHT_READABLE,
+                                                        ) {
+                                                            Ok(file) => Ok(Some((file, filepath))),
+                                                            Err(e) => Err(std::io::Error::new(
+                                                                std::io::ErrorKind::Other,
+                                                                e,
+                                                            )),
+                                                        }
+                                                            }
+                                                            _ => Ok(None),
+                                                        };
+                                                    futures::future::ready(res)
+                                                },
+                                            )
+                                            .boxed();
+
+                                    /// Max number of bytes read at once from a file.
+                                    const READ_SIZE: u64 = 1024;
+                                    let directory_artifact_ref = &directory_artifact;
+                                    files_stream
+                                        .try_for_each_concurrent(
+                                            None,
+                                            |(file_proxy, filepath)| async move {
+                                                let mut file =
+                                                    directory_artifact_ref.new_file(&filepath)?;
+                                                loop {
+                                                    let (status, mut buf) =
+                                                        file_proxy.read(READ_SIZE).await.map_err(
+                                                            |e| io::Error::new(ErrorKind::Other, e),
+                                                        )?;
+                                                    if status != 0 {
+                                                        // hack - use a wrapper here
+                                                        return Err(io::Error::new(
+                                                            ErrorKind::Other,
+                                                            fidl::Error::ClientRead(
+                                                                fidl::Status::from_raw(status),
+                                                            ),
+                                                        ));
+                                                    }
+                                                    if buf.is_empty() {
+                                                        break;
+                                                    }
+                                                    file.write_all(&mut buf)?;
+                                                }
+                                                file.flush()
+                                            },
+                                        )
+                                        .await
+                                        .unwrap_or_else(|e| {
+                                            log::warn!("Failed to copy directory: {:?}", e)
+                                        });
                                     // TODO(fxbug.dev/84882): Remove this signal once Overnet
                                     // supports automatically signalling EVENTPAIR_CLOSED when the
                                     // handle is closed.
-                                    token.signal_peer(
-                                        fidl::Signals::empty(),
-                                        fidl::Signals::USER_0,
-                                    )?;
-                                }
+                                    token
+                                        .signal_peer(fidl::Signals::empty(), fidl::Signals::USER_0)
+                                        .unwrap_or_else(|e| {
+                                            log::warn!("Failed to copy directory: {:?}", e)
+                                        });
+                                };
+
+                                tasks.push(fasync::Task::spawn(directory_copy_task));
                             }
                             ftest_manager::ArtifactUnknown!() => {
                                 panic!("unknown artifact")
@@ -512,6 +592,10 @@ async fn collect_results_for_suite(
                 println!("Failed to collect logs: {:?}", e);
             }
         }
+    }
+
+    for t in tasks.into_iter() {
+        t.await;
     }
 
     let mut test_cases_in_progress = test_cases_in_progress

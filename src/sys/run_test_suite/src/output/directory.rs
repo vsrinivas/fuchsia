@@ -3,18 +3,21 @@
 // found in the LICENSE file.
 
 use crate::output::{
-    ArtifactType, DynArtifact, EntityId, ReportedOutcome, Reporter, Timestamp, ZxTime,
+    ArtifactType, DirectoryArtifactType, DirectoryWrite, DynArtifact, DynDirectoryArtifact,
+    EntityId, ReportedOutcome, Reporter, Timestamp, ZxTime,
 };
 use parking_lot::Mutex;
 use std::collections::HashMap;
 use std::fs::{DirBuilder, File};
 use std::io::Error;
 use std::path::{Path, PathBuf};
+use std::sync::atomic::{AtomicU32, Ordering};
 use test_output_directory as directory;
 
 const STDOUT_FILE: &str = "stdout.txt";
 const STDERR_FILE: &str = "stderr.txt";
 const SYSLOG_FILE: &str = "syslog.txt";
+const CUSTOM_ARTIFACT_DIRECTORY: &str = "custom";
 
 /// A reporter that saves results and artifacts to disk in the Fuchsia test output format.
 pub(super) struct DirectoryReporter {
@@ -24,6 +27,8 @@ pub(super) struct DirectoryReporter {
     /// is always contained in ID TEST_RUN_ID. Entries are added as new test cases and suites
     /// are found, and removed once they have been persisted.
     entries: Mutex<HashMap<EntityId, EntityEntry>>,
+    /// Atomic counter used to generate unique names for custom artifact directories.
+    name_counter: AtomicU32,
 }
 
 /// In-memory representation of either a test run, test suite, or test case.
@@ -98,7 +103,7 @@ impl DirectoryReporter {
                 approximate_host_start_time: None,
             },
         );
-        Ok(Self { root, entries: Mutex::new(entries) })
+        Ok(Self { root, entries: Mutex::new(entries), name_counter: AtomicU32::new(0) })
     }
 
     fn ensure_directory_exists(absolute: &Path) -> Result<(), Error> {
@@ -240,6 +245,47 @@ impl Reporter for DirectoryReporter {
         ));
         Ok(Box::new(artifact))
     }
+
+    fn new_directory_artifact(
+        &self,
+        entity: &EntityId,
+        artifact_type: &DirectoryArtifactType,
+        component_moniker: Option<String>,
+    ) -> Result<Box<DynDirectoryArtifact>, Error> {
+        let mut lock = self.entries.lock();
+        let entry = lock
+            .get_mut(entity)
+            .expect("Attempting to create an artifact for an entity that does not exist");
+        let name = format!(
+            "{}-{}",
+            prefix_for_directory_type(artifact_type),
+            self.name_counter.fetch_add(1, Ordering::Relaxed),
+        );
+        let artifact_dir = self.root.join(&entry.artifact_dir).join(&name);
+        Self::ensure_directory_exists(&artifact_dir)?;
+
+        entry.artifacts.push((
+            name,
+            directory::ArtifactMetadataV0 {
+                artifact_type: (*artifact_type).into(),
+                component_moniker,
+            },
+        ));
+
+        Ok(Box::new(DirectoryDirectoryWriter { path: artifact_dir.into() }))
+    }
+}
+
+/// A |DirectoryWrite| implementation that creates files in a set directory.
+struct DirectoryDirectoryWriter {
+    path: PathBuf,
+}
+
+impl DirectoryWrite for DirectoryDirectoryWriter {
+    fn new_file(&self, path: &Path) -> Result<Box<DynArtifact>, Error> {
+        let file = File::create(self.path.join(path))?;
+        Ok(Box::new(file))
+    }
 }
 
 fn artifact_dir_name(entity_id: &EntityId) -> PathBuf {
@@ -247,6 +293,12 @@ fn artifact_dir_name(entity_id: &EntityId) -> PathBuf {
         EntityId::TestRun => "artifact-run".into(),
         EntityId::Suite(suite) => format!("artifact-{:?}", suite.0).into(),
         EntityId::Case { suite, case } => format!("artifact-{:?}-{:?}", suite.0, case.0).into(),
+    }
+}
+
+fn prefix_for_directory_type(artifact_type: &DirectoryArtifactType) -> &'static str {
+    match artifact_type {
+        DirectoryArtifactType::Custom => CUSTOM_ARTIFACT_DIRECTORY,
     }
 }
 
@@ -347,7 +399,7 @@ mod test {
     use tempfile::tempdir;
     use test_output_directory::testing::{
         assert_run_result, assert_suite_result, assert_suite_results, parse_json_in_output,
-        ExpectedSuite, ExpectedTestCase, ExpectedTestRun,
+        ExpectedDirectory, ExpectedSuite, ExpectedTestCase, ExpectedTestRun,
     };
 
     #[test]
@@ -493,6 +545,165 @@ mod test {
                     directory::ArtifactType::Stdout,
                     STDOUT_FILE.into(),
                     "stdout from suite\n",
+                )],
+        );
+    }
+
+    #[test]
+    fn empty_directory_artifacts() {
+        let dir = tempdir().expect("create temp directory");
+
+        let run_reporter = RunReporter::new(dir.path().to_path_buf()).expect("create run reporter");
+        run_reporter.started(Timestamp::Unknown).expect("start run");
+        let _run_directory_artifact = run_reporter
+            .new_directory_artifact(&DirectoryArtifactType::Custom, None)
+            .expect("Create run directory artifact");
+
+        let suite_reporter =
+            run_reporter.new_suite("suite-1", &SuiteId(0)).expect("create new suite");
+        suite_reporter.started(Timestamp::Unknown).expect("start suite");
+        let _suite_directory_artifact = suite_reporter
+            .new_directory_artifact(&DirectoryArtifactType::Custom, Some("suite-moniker".into()))
+            .expect("create suite directory artifact");
+
+        let case_reporter =
+            suite_reporter.new_case("case-1-1", &CaseId(1)).expect("create new case");
+        case_reporter.started(Timestamp::Unknown).expect("start case");
+        let _case_directory_artifact = case_reporter
+            .new_directory_artifact(&DirectoryArtifactType::Custom, None)
+            .expect("create suite directory artifact");
+        case_reporter
+            .stopped(&ReportedOutcome::Passed, Timestamp::Unknown)
+            .expect("report case outcome");
+        case_reporter.finished().expect("Case finished");
+
+        suite_reporter
+            .stopped(&ReportedOutcome::Passed, Timestamp::Unknown)
+            .expect("report suite outcome");
+        suite_reporter.finished().expect("record suite");
+
+        run_reporter
+            .stopped(&ReportedOutcome::Passed, Timestamp::Unknown)
+            .expect("record run outcome");
+        run_reporter.finished().expect("record run");
+
+        let (run_result, suite_results) = parse_json_in_output(dir.path());
+        assert_run_result(
+            dir.path(),
+            &run_result,
+            &ExpectedTestRun::new(directory::Outcome::Passed).with_directory_artifact(
+                directory::ArtifactType::Custom,
+                Option::<&str>::None,
+                ExpectedDirectory::new(),
+            ),
+        );
+        assert_suite_results(
+            dir.path(),
+            &suite_results,
+            &vec![ExpectedSuite::new("suite-1", directory::Outcome::Passed)
+                .with_directory_artifact(
+                    directory::ArtifactMetadataV0 {
+                        artifact_type: directory::ArtifactType::Custom,
+                        component_moniker: Some("suite-moniker".into()),
+                    },
+                    Option::<&str>::None,
+                    ExpectedDirectory::new(),
+                )
+                .with_case(
+                    ExpectedTestCase::new("case-1-1", directory::Outcome::Passed)
+                        .with_directory_artifact(
+                            directory::ArtifactType::Custom,
+                            Option::<&str>::None,
+                            ExpectedDirectory::new(),
+                        ),
+                )],
+        );
+    }
+
+    #[test]
+    fn directory_artifacts() {
+        let dir = tempdir().expect("create temp directory");
+
+        let run_reporter = RunReporter::new(dir.path().to_path_buf()).expect("create run reporter");
+        run_reporter.started(Timestamp::Unknown).expect("start run");
+        let run_directory_artifact = run_reporter
+            .new_directory_artifact(&DirectoryArtifactType::Custom, None)
+            .expect("Create run directory artifact");
+        let mut run_artifact_file = run_directory_artifact
+            .new_file("run-artifact".as_ref())
+            .expect("Create file in run directory artifact");
+        writeln!(run_artifact_file, "run artifact content").expect("write to run artifact");
+        drop(run_artifact_file); // force flushing
+
+        let suite_reporter =
+            run_reporter.new_suite("suite-1", &SuiteId(0)).expect("create new suite");
+        suite_reporter.started(Timestamp::Unknown).expect("start suite");
+        let suite_directory_artifact = suite_reporter
+            .new_directory_artifact(&DirectoryArtifactType::Custom, Some("suite-moniker".into()))
+            .expect("create suite directory artifact");
+        let mut suite_artifact_file = suite_directory_artifact
+            .new_file("suite-artifact".as_ref())
+            .expect("Create file in suite directory artifact");
+        writeln!(suite_artifact_file, "suite artifact content").expect("write to suite artifact");
+        drop(suite_artifact_file); // force flushing
+
+        let case_reporter =
+            suite_reporter.new_case("case-1-1", &CaseId(1)).expect("create new case");
+        case_reporter.started(Timestamp::Unknown).expect("start case");
+        let case_directory_artifact = case_reporter
+            .new_directory_artifact(&DirectoryArtifactType::Custom, None)
+            .expect("create suite directory artifact");
+        let mut case_artifact_file = case_directory_artifact
+            .new_file("case-artifact".as_ref())
+            .expect("Create file in case directory artifact");
+        writeln!(case_artifact_file, "case artifact content").expect("write to case artifact");
+        drop(case_artifact_file); // force flushing
+        case_reporter
+            .stopped(&ReportedOutcome::Passed, Timestamp::Unknown)
+            .expect("report case outcome");
+        case_reporter.finished().expect("Case finished");
+
+        suite_reporter
+            .stopped(&ReportedOutcome::Passed, Timestamp::Unknown)
+            .expect("report suite outcome");
+        suite_reporter.finished().expect("record suite");
+
+        run_reporter
+            .stopped(&ReportedOutcome::Passed, Timestamp::Unknown)
+            .expect("record run outcome");
+        run_reporter.finished().expect("record run");
+
+        let (run_result, suite_results) = parse_json_in_output(dir.path());
+        assert_run_result(
+            dir.path(),
+            &run_result,
+            &ExpectedTestRun::new(directory::Outcome::Passed).with_directory_artifact(
+                directory::ArtifactType::Custom,
+                Option::<&str>::None,
+                ExpectedDirectory::new().with_file("run-artifact", "run artifact content\n"),
+            ),
+        );
+        assert_suite_results(
+            dir.path(),
+            &suite_results,
+            &vec![ExpectedSuite::new("suite-1", directory::Outcome::Passed)
+                .with_directory_artifact(
+                    directory::ArtifactMetadataV0 {
+                        artifact_type: directory::ArtifactType::Custom,
+                        component_moniker: Some("suite-moniker".into()),
+                    },
+                    Option::<&str>::None,
+                    ExpectedDirectory::new()
+                        .with_file("suite-artifact", "suite artifact content\n"),
+                )
+                .with_case(
+                    ExpectedTestCase::new("case-1-1", directory::Outcome::Passed)
+                        .with_directory_artifact(
+                            directory::ArtifactType::Custom,
+                            Option::<&str>::None,
+                            ExpectedDirectory::new()
+                                .with_file("case-artifact", "case artifact content\n"),
+                        ),
                 )],
         );
     }

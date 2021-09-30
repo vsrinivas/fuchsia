@@ -104,6 +104,8 @@ pub enum ArtifactType {
     Syslog,
     Stdout,
     Stderr,
+    /// A directory containing custom artifacts produced by a component in the test.
+    Custom,
 }
 
 impl From<ArtifactType> for ArtifactMetadataV0 {

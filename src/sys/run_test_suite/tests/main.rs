@@ -12,7 +12,7 @@ use std::io::Write;
 use std::str::from_utf8;
 use test_output_directory::{
     self as directory,
-    testing::{ExpectedSuite, ExpectedTestCase, ExpectedTestRun},
+    testing::{ExpectedDirectory, ExpectedSuite, ExpectedTestCase, ExpectedTestRun},
 };
 
 /// split and sort output as output can come in any order.
@@ -1070,6 +1070,58 @@ async fn test_syslog_to_directory() {
     .with_matching_artifact(directory::ArtifactType::Syslog, "syslog.txt".into(), |actual| {
         assert_output!(actual.as_bytes(), EXPECTED_SYSLOG);
     })
+    .with_any_start_time()
+    .with_any_run_duration()];
+
+    let (run_result, suite_results) = directory::testing::parse_json_in_output(output_dir.path());
+
+    directory::testing::assert_run_result(output_dir.path(), &run_result, &expected_test_run);
+
+    directory::testing::assert_suite_results(
+        output_dir.path(),
+        &suite_results,
+        &expected_test_suites,
+    );
+}
+
+#[fuchsia_async::run_singlethreaded(test)]
+async fn test_custom_artifacts_to_directory() {
+    let output_dir = tempfile::tempdir().expect("create temp directory");
+    let test_params = new_test_params(
+        "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/custom_artifact_user.cm",
+    );
+
+    let outcome = run_test_suite_lib::run_tests_and_get_outcome(
+        test_params,
+        diagnostics::LogCollectionOptions::default(),
+        std::num::NonZeroU16::new(1).unwrap(),
+        false,
+        Some(output_dir.path().to_path_buf()),
+    )
+    .await;
+
+    assert_eq!(outcome, Outcome::Passed);
+
+    let expected_test_run = ExpectedTestRun::new(directory::Outcome::Passed);
+    let expected_test_suites = vec![ExpectedSuite::new(
+        "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/custom_artifact_user.cm",
+        directory::Outcome::Passed,
+    )
+    .with_case(
+        ExpectedTestCase::new("use_artifact", directory::Outcome::Passed)
+            .with_artifact(directory::ArtifactType::Stdout, "stdout.txt".into(), "")
+            .with_any_start_time()
+            .with_no_run_duration(),
+    )
+    .with_artifact(directory::ArtifactType::Syslog, "syslog.txt".into(), "")
+    .with_directory_artifact(
+        directory::ArtifactMetadataV0 {
+            artifact_type: directory::ArtifactType::Custom,
+            component_moniker: Some(".".to_string()),
+        },
+        Option::<&str>::None,
+        ExpectedDirectory::new().with_file("artifact.txt", "Hello, world!"),
+    )
     .with_any_start_time()
     .with_any_run_duration()];
 

@@ -6,7 +6,7 @@ use crate::{
     ArtifactMetadataV0, Outcome, SuiteEntryV0, SuiteResult, TestCaseResultV0, TestRunResult,
     RUN_SUMMARY_NAME,
 };
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::fs::File;
 use std::path::{Path, PathBuf};
 
@@ -62,10 +62,7 @@ macro_rules! assert_match_option {
 }
 
 /// A mapping from artifact metadata to assertions made on the artifact.
-/// The value is a (name, assertion_fn) tuple. When a name is present it is used to verify the
-/// filename of the artifact. assertion_fn is run against the contents of the file.
-type ArtifactMetadataToAssertionMap =
-    HashMap<ArtifactMetadataV0, (Option<String>, Box<dyn Fn(&str)>)>;
+type ArtifactMetadataToAssertionMap = HashMap<ArtifactMetadataV0, ExpectedArtifact>;
 
 /// Assert that the run results contained in `actual_run` and the directory specified by `root`
 /// contain the results and artifacts in `expected_run`.
@@ -161,7 +158,7 @@ fn assert_artifacts(
 
     assert_eq!(actual_artifacts_by_metadata.len(), expected_artifacts.len());
 
-    for (expected_metadata, (expected_name, assertion_fn)) in expected_artifacts.iter() {
+    for (expected_metadata, expected_artifact) in expected_artifacts.iter() {
         let actual_filepath = actual_artifacts_by_metadata.get(expected_metadata);
         assert!(
             actual_filepath.is_some(),
@@ -169,20 +166,114 @@ fn assert_artifacts(
             expected_metadata
         );
         let actual_filepath = actual_filepath.unwrap();
-        match expected_name {
-            None => (),
-            Some(name) => assert_eq!(
-                name.as_str(),
-                actual_filepath.file_name().unwrap().to_str().unwrap(),
-                "Expected filename {} for artifact matching {:?} but got {}",
-                name,
-                expected_metadata,
-                actual_filepath.file_name().unwrap().to_str().unwrap()
-            ),
+        match expected_artifact {
+            ExpectedArtifact::File { name, assertion_fn } => {
+                assert_file(&root.join(actual_filepath), name, assertion_fn);
+            }
+            ExpectedArtifact::Directory { files, name } => {
+                match name {
+                    None => (),
+                    Some(name) => assert_eq!(
+                        name.as_str(),
+                        actual_filepath.file_name().unwrap().to_str().unwrap(),
+                        "Expected filename {} for artifact matching {:?} but got {}",
+                        name,
+                        expected_metadata,
+                        actual_filepath.file_name().unwrap().to_str().unwrap()
+                    ),
+                }
+                let actual_entries: HashSet<_> = std::fs::read_dir(root.join(actual_filepath))
+                    .expect("Failed to read directory artifact path")
+                    .map(|entry| match entry {
+                        Ok(dir_entry) if dir_entry.file_type().unwrap().is_file() => {
+                            dir_entry.file_name().to_str().unwrap().to_string()
+                        }
+                        // TODO(fxbugdev/85528) - support directory artifacts with subdirectories
+                        Ok(_) => panic!("Directory artifact with subdirectories unsupported"),
+                        Err(e) => panic!("Error reading directory artifact: {:?}", e),
+                    })
+                    .collect();
+                let expected_entries: HashSet<_> =
+                    files.iter().map(|(name, _)| name.to_string()).collect();
+                assert_eq!(
+                    actual_entries, expected_entries,
+                    "Expected files {:?} in directory artifact, got {:?}",
+                    &expected_entries, &actual_entries
+                );
+                for (name, assertion) in files {
+                    assert_file(&root.join(actual_filepath).join(name), &None, assertion);
+                }
+            }
         }
-        let absolute_artifact_path = root.join(actual_filepath);
-        let actual_contents = std::fs::read_to_string(&absolute_artifact_path);
-        (assertion_fn)(&actual_contents.unwrap());
+    }
+}
+
+fn assert_file(file_path: &Path, name: &Option<String>, assertion_fn: &Box<dyn Fn(&str)>) {
+    match name {
+        None => (),
+        Some(name) => assert_eq!(
+            name.as_str(),
+            file_path.file_name().unwrap().to_str().unwrap(),
+            "Expected filename {} for artifact but got {}",
+            name,
+            file_path.file_name().unwrap().to_str().unwrap()
+        ),
+    }
+    let actual_contents = std::fs::read_to_string(&file_path);
+    (assertion_fn)(&actual_contents.unwrap());
+}
+
+/// The expected contents of an artifact.
+enum ExpectedArtifact {
+    /// An artifact contained in a single file, such as stdout.
+    File {
+        /// If given, the expected name of the file.
+        name: Option<String>,
+        /// Assertion run against the contents of the file.
+        assertion_fn: Box<dyn Fn(&str)>,
+    },
+    /// An artifact consisting of files in a directory.
+    Directory {
+        /// List of expected files, as (name, assertion) pairs. The name
+        /// is the expected name of the file, and the assertion fn is run
+        /// against the contents of the file.
+        files: Vec<(String, Box<dyn Fn(&str)>)>,
+        /// If given, the expected name of the directory.
+        name: Option<String>,
+    },
+}
+
+/// Contents of an expected directory artifact.
+pub struct ExpectedDirectory {
+    files: Vec<(String, Box<dyn Fn(&str)>)>,
+}
+
+impl ExpectedDirectory {
+    /// Create a new empty expected directory.
+    pub fn new() -> Self {
+        Self { files: vec![] }
+    }
+
+    /// Add a file with expected |contents|.
+    pub fn with_file(self, name: impl AsRef<str>, contents: impl AsRef<str>) -> Self {
+        let owned_expected = contents.as_ref().to_string();
+        let owned_name = name.as_ref().to_string();
+        self.with_matching_file(name, move |actual| {
+            assert_eq!(
+                &owned_expected, actual,
+                "Mismatch in contents of file {}. Expected: '{}', actual:'{}'",
+                owned_name, &owned_expected, actual
+            )
+        })
+    }
+
+    pub fn with_matching_file(
+        mut self,
+        name: impl AsRef<str>,
+        matcher: impl 'static + Fn(&str),
+    ) -> Self {
+        self.files.push((name.as_ref().to_string(), Box::new(matcher)));
+        self
     }
 }
 
@@ -242,7 +333,7 @@ macro_rules! common_impl {
             })
         }
 
-        /// /// Add an artifact matching the exact contents. Artifacts are checked by finding
+        /// Add an artifact matching the exact contents. Artifacts are checked by finding
         /// an entry matching the given metadata, then running |matcher| against the contents of
         /// the file. If |name| is provided, the name of the file is verified. Artifacts are keyed
         /// by metadata rather than by name as the names of files are not guaranteed to be stable.
@@ -259,7 +350,31 @@ macro_rules! common_impl {
         {
             self.artifacts.insert(
                 metadata.into(),
-                (name.map(|s| s.as_ref().to_string()), Box::new(matcher))
+                ExpectedArtifact::File {
+                    name: name.map(|s| s.as_ref().to_string()),
+                    assertion_fn: Box::new(matcher),
+                }
+            );
+            self
+        }
+
+        /// Add a directory based artifact containing the entries described in |directory|.
+        pub fn with_directory_artifact<S, U>(
+            mut self,
+            metadata: U,
+            name: Option<S>,
+            directory: ExpectedDirectory,
+        ) -> Self
+        where
+            S: AsRef<str>,
+            U: Into<ArtifactMetadataV0>
+        {
+            self.artifacts.insert(
+                metadata.into(),
+                ExpectedArtifact::Directory {
+                    name: name.map(|s| s.as_ref().to_string()),
+                    files: directory.files,
+                }
             );
             self
         }
@@ -351,4 +466,619 @@ impl ExpectedTestCase {
     }
 
     common_impl! {}
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+    use crate::ArtifactType;
+    use maplit::hashmap;
+
+    fn make_tempdir<F: Fn(&Path)>(initialize_fn: F) -> tempfile::TempDir {
+        let dir = tempfile::TempDir::new().unwrap();
+        initialize_fn(dir.path());
+        dir
+    }
+
+    #[test]
+    fn assert_run_result_ok() {
+        let cases: Vec<(tempfile::TempDir, TestRunResult, ExpectedTestRun)> = vec![
+            (
+                make_tempdir(|_| ()),
+                TestRunResult::V0 {
+                    artifacts: hashmap! {},
+                    outcome: Outcome::Passed,
+                    suites: vec![],
+                    start_time: Some(64),
+                    duration_milliseconds: Some(128),
+                },
+                ExpectedTestRun::new(Outcome::Passed).with_any_start_time().with_any_run_duration(),
+            ),
+            (
+                make_tempdir(|_| ()),
+                TestRunResult::V0 {
+                    artifacts: hashmap! {},
+                    outcome: Outcome::Passed,
+                    suites: vec![],
+                    start_time: Some(64),
+                    duration_milliseconds: Some(128),
+                },
+                ExpectedTestRun::new(Outcome::Passed).with_start_time(64).with_run_duration(128),
+            ),
+            (
+                make_tempdir(|_| ()),
+                TestRunResult::V0 {
+                    artifacts: hashmap! {},
+                    outcome: Outcome::Passed,
+                    suites: vec![],
+                    start_time: None,
+                    duration_milliseconds: None,
+                },
+                ExpectedTestRun::new(Outcome::Passed).with_no_start_time().with_no_run_duration(),
+            ),
+            (
+                make_tempdir(|path| {
+                    std::fs::create_dir(path.join("a")).unwrap();
+                    std::fs::write(path.join("a/b.txt"), "hello").unwrap();
+                }),
+                TestRunResult::V0 {
+                    artifacts: hashmap! {
+                        Path::new("a/b.txt").to_path_buf() => ArtifactType::Syslog.into()
+                    },
+                    outcome: Outcome::Passed,
+                    suites: vec![],
+                    start_time: None,
+                    duration_milliseconds: None,
+                },
+                ExpectedTestRun::new(Outcome::Passed).with_artifact(
+                    ArtifactType::Syslog,
+                    Option::<&str>::None,
+                    "hello",
+                ),
+            ),
+            (
+                make_tempdir(|path| {
+                    std::fs::create_dir(path.join("a")).unwrap();
+                    std::fs::write(path.join("a/b.txt"), "hello").unwrap();
+                }),
+                TestRunResult::V0 {
+                    artifacts: hashmap! {
+                        Path::new("a/b.txt").to_path_buf() => ArtifactType::Syslog.into()
+                    },
+                    outcome: Outcome::Passed,
+                    suites: vec![],
+                    start_time: None,
+                    duration_milliseconds: None,
+                },
+                ExpectedTestRun::new(Outcome::Passed).with_artifact(
+                    ArtifactType::Syslog,
+                    "b.txt".into(),
+                    "hello",
+                ),
+            ),
+        ];
+
+        for (actual_dir, actual_test_run, expected_test_run) in cases.into_iter() {
+            assert_run_result(actual_dir.path(), &actual_test_run, &expected_test_run);
+        }
+    }
+
+    #[test]
+    #[should_panic]
+    fn assert_run_outcome_mismatch() {
+        let dir = make_tempdir(|_| ());
+        assert_run_result(
+            dir.path(),
+            &TestRunResult::V0 {
+                artifacts: hashmap! {},
+                outcome: Outcome::Failed,
+                suites: vec![],
+                start_time: None,
+                duration_milliseconds: None,
+            },
+            &ExpectedTestRun::new(Outcome::Passed),
+        );
+    }
+
+    #[test]
+    #[should_panic]
+    fn assert_run_start_time_mismatch() {
+        let dir = make_tempdir(|_| ());
+        assert_run_result(
+            dir.path(),
+            &TestRunResult::V0 {
+                artifacts: hashmap! {},
+                outcome: Outcome::Failed,
+                suites: vec![],
+                start_time: Some(64),
+                duration_milliseconds: None,
+            },
+            &ExpectedTestRun::new(Outcome::Passed).with_start_time(23),
+        );
+    }
+
+    #[test]
+    #[should_panic]
+    fn assert_run_duration_mismatch() {
+        let dir = make_tempdir(|_| ());
+        assert_run_result(
+            dir.path(),
+            &TestRunResult::V0 {
+                artifacts: hashmap! {},
+                outcome: Outcome::Failed,
+                suites: vec![],
+                start_time: None,
+                duration_milliseconds: None,
+            },
+            &ExpectedTestRun::new(Outcome::Passed).with_run_duration(23),
+        );
+    }
+
+    #[test]
+    #[should_panic]
+    fn assert_run_artifact_mismatch() {
+        let dir = make_tempdir(|_| ());
+        assert_run_result(
+            dir.path(),
+            &TestRunResult::V0 {
+                artifacts: hashmap! {
+                    Path::new("missing").to_path_buf() => ArtifactType::Syslog.into()
+                },
+                outcome: Outcome::Failed,
+                suites: vec![],
+                start_time: None,
+                duration_milliseconds: None,
+            },
+            &ExpectedTestRun::new(Outcome::Passed),
+        );
+    }
+
+    #[test]
+    fn assert_suite_result_ok() {
+        let cases: Vec<(tempfile::TempDir, SuiteResult, ExpectedSuite)> = vec![
+            (
+                make_tempdir(|_| ()),
+                SuiteResult::V0 {
+                    artifacts: hashmap! {},
+                    outcome: Outcome::Passed,
+                    name: "suite".into(),
+                    cases: vec![],
+                    start_time: Some(64),
+                    duration_milliseconds: Some(128),
+                },
+                ExpectedSuite::new("suite", Outcome::Passed)
+                    .with_any_start_time()
+                    .with_any_run_duration(),
+            ),
+            (
+                make_tempdir(|_| ()),
+                SuiteResult::V0 {
+                    artifacts: hashmap! {},
+                    outcome: Outcome::Passed,
+                    name: "suite".into(),
+                    cases: vec![],
+                    start_time: Some(64),
+                    duration_milliseconds: Some(128),
+                },
+                ExpectedSuite::new("suite", Outcome::Passed)
+                    .with_start_time(64)
+                    .with_run_duration(128),
+            ),
+            (
+                make_tempdir(|_| ()),
+                SuiteResult::V0 {
+                    artifacts: hashmap! {},
+                    outcome: Outcome::Passed,
+                    name: "suite".into(),
+                    cases: vec![],
+                    start_time: None,
+                    duration_milliseconds: None,
+                },
+                ExpectedSuite::new("suite", Outcome::Passed)
+                    .with_no_start_time()
+                    .with_no_run_duration(),
+            ),
+            (
+                make_tempdir(|path| {
+                    std::fs::create_dir(path.join("a")).unwrap();
+                    std::fs::write(path.join("a/b.txt"), "hello").unwrap();
+                }),
+                SuiteResult::V0 {
+                    artifacts: hashmap! {
+                        Path::new("a/b.txt").to_path_buf() => ArtifactType::Syslog.into()
+                    },
+                    outcome: Outcome::Passed,
+                    name: "suite".into(),
+                    cases: vec![],
+                    start_time: None,
+                    duration_milliseconds: None,
+                },
+                ExpectedSuite::new("suite", Outcome::Passed).with_artifact(
+                    ArtifactType::Syslog,
+                    "b.txt".into(),
+                    "hello",
+                ),
+            ),
+            (
+                make_tempdir(|_| ()),
+                SuiteResult::V0 {
+                    artifacts: hashmap! {},
+                    outcome: Outcome::Failed,
+                    name: "suite".into(),
+                    cases: vec![TestCaseResultV0 {
+                        artifacts: hashmap! {},
+                        outcome: Outcome::Passed,
+                        name: "case".into(),
+                        start_time: None,
+                        duration_milliseconds: None,
+                    }],
+                    start_time: None,
+                    duration_milliseconds: None,
+                },
+                ExpectedSuite::new("suite", Outcome::Failed).with_case(
+                    ExpectedTestCase::new("case", Outcome::Passed)
+                        .with_no_run_duration()
+                        .with_no_start_time(),
+                ),
+            ),
+        ];
+
+        for (actual_dir, actual_suite, expected_suite) in cases.into_iter() {
+            assert_suite_result(actual_dir.path(), &actual_suite, &expected_suite);
+        }
+    }
+
+    #[test]
+    #[should_panic]
+    fn assert_suite_outcome_mismatch() {
+        let dir = make_tempdir(|_| ());
+        assert_suite_result(
+            dir.path(),
+            &SuiteResult::V0 {
+                artifacts: hashmap! {},
+                outcome: Outcome::Passed,
+                name: "suite".into(),
+                cases: vec![],
+                start_time: Some(64),
+                duration_milliseconds: Some(128),
+            },
+            &ExpectedSuite::new("suite", Outcome::Failed),
+        );
+    }
+
+    #[test]
+    #[should_panic]
+    fn assert_suite_start_time_mismatch() {
+        let dir = make_tempdir(|_| ());
+        assert_suite_result(
+            dir.path(),
+            &SuiteResult::V0 {
+                artifacts: hashmap! {},
+                outcome: Outcome::Passed,
+                name: "suite".into(),
+                cases: vec![],
+                start_time: None,
+                duration_milliseconds: Some(128),
+            },
+            &ExpectedSuite::new("suite", Outcome::Passed).with_any_start_time(),
+        );
+    }
+
+    #[test]
+    #[should_panic]
+    fn assert_suite_duration_mismatch() {
+        let dir = make_tempdir(|_| ());
+        assert_suite_result(
+            dir.path(),
+            &SuiteResult::V0 {
+                artifacts: hashmap! {},
+                outcome: Outcome::Passed,
+                name: "suite".into(),
+                cases: vec![],
+                start_time: None,
+                duration_milliseconds: Some(128),
+            },
+            &ExpectedSuite::new("suite", Outcome::Passed).with_run_duration(32),
+        );
+    }
+
+    #[test]
+    #[should_panic]
+    fn assert_suite_artifact_mismatch() {
+        let dir = make_tempdir(|_| ());
+        assert_suite_result(
+            dir.path(),
+            &SuiteResult::V0 {
+                artifacts: hashmap! {},
+                outcome: Outcome::Failed,
+                name: "suite".into(),
+                cases: vec![],
+                start_time: None,
+                duration_milliseconds: None,
+            },
+            &ExpectedSuite::new("suite", Outcome::Passed).with_artifact(
+                ArtifactType::Stderr,
+                Option::<&str>::None,
+                "missing contents",
+            ),
+        );
+    }
+
+    #[test]
+    #[should_panic]
+    fn assert_suite_case_mismatch() {
+        let dir = make_tempdir(|_| ());
+        assert_suite_result(
+            dir.path(),
+            &SuiteResult::V0 {
+                artifacts: hashmap! {},
+                outcome: Outcome::Failed,
+                name: "suite".into(),
+                cases: vec![TestCaseResultV0 {
+                    artifacts: hashmap! {},
+                    outcome: Outcome::Passed,
+                    name: "case".into(),
+                    start_time: None,
+                    duration_milliseconds: None,
+                }],
+                start_time: None,
+                duration_milliseconds: None,
+            },
+            &ExpectedSuite::new("suite", Outcome::Passed)
+                .with_case(ExpectedTestCase::new("wrong name", Outcome::Passed)),
+        );
+    }
+
+    #[test]
+    fn assert_artifacts_ok() {
+        let cases: Vec<(tempfile::TempDir, TestRunResult, ExpectedTestRun)> = vec![
+            (
+                make_tempdir(|_| ()),
+                TestRunResult::V0 {
+                    artifacts: hashmap! {},
+                    outcome: Outcome::Passed,
+                    suites: vec![],
+                    start_time: None,
+                    duration_milliseconds: None,
+                },
+                ExpectedTestRun::new(Outcome::Passed),
+            ),
+            (
+                make_tempdir(|path| {
+                    std::fs::create_dir(path.join("a")).unwrap();
+                    std::fs::write(path.join("a/b.txt"), "hello").unwrap();
+                }),
+                TestRunResult::V0 {
+                    artifacts: hashmap! {
+                        "a/b.txt".into() => ArtifactType::Stderr.into(),
+                    },
+                    outcome: Outcome::Passed,
+                    suites: vec![],
+                    start_time: None,
+                    duration_milliseconds: None,
+                },
+                ExpectedTestRun::new(Outcome::Passed).with_artifact(
+                    ArtifactType::Stderr,
+                    Option::<&str>::None,
+                    "hello",
+                ),
+            ),
+            (
+                make_tempdir(|path| {
+                    std::fs::create_dir(path.join("a")).unwrap();
+                    std::fs::write(path.join("a/b.txt"), "hello").unwrap();
+                }),
+                TestRunResult::V0 {
+                    artifacts: hashmap! {
+                        "a/b.txt".into() => ArtifactType::Stderr.into(),
+                    },
+                    outcome: Outcome::Passed,
+                    suites: vec![],
+                    start_time: None,
+                    duration_milliseconds: None,
+                },
+                ExpectedTestRun::new(Outcome::Passed).with_artifact(
+                    ArtifactType::Stderr,
+                    Some("b.txt"),
+                    "hello",
+                ),
+            ),
+            (
+                make_tempdir(|path| {
+                    std::fs::create_dir(path.join("a")).unwrap();
+                    std::fs::write(path.join("a/b.txt"), "hello").unwrap();
+                }),
+                TestRunResult::V0 {
+                    artifacts: hashmap! {
+                        "a/b.txt".into() => ArtifactType::Stderr.into(),
+                    },
+                    outcome: Outcome::Passed,
+                    suites: vec![],
+                    start_time: None,
+                    duration_milliseconds: None,
+                },
+                ExpectedTestRun::new(Outcome::Passed).with_matching_artifact(
+                    ArtifactType::Stderr,
+                    Some("b.txt"),
+                    |content| assert_eq!(content, "hello"),
+                ),
+            ),
+            (
+                make_tempdir(|path| {
+                    std::fs::create_dir(path.join("a")).unwrap();
+                    std::fs::write(path.join("a/b.txt"), "hello").unwrap();
+                }),
+                TestRunResult::V0 {
+                    artifacts: hashmap! {
+                        "a/b.txt".into() => ArtifactMetadataV0 {
+                            artifact_type: ArtifactType::Syslog,
+                            component_moniker: Some("moniker".into())
+                        },
+                    },
+                    outcome: Outcome::Passed,
+                    suites: vec![],
+                    start_time: None,
+                    duration_milliseconds: None,
+                },
+                ExpectedTestRun::new(Outcome::Passed).with_artifact(
+                    ArtifactMetadataV0 {
+                        artifact_type: ArtifactType::Syslog,
+                        component_moniker: Some("moniker".into()),
+                    },
+                    Option::<&str>::None,
+                    "hello",
+                ),
+            ),
+            (
+                make_tempdir(|path| {
+                    std::fs::create_dir(path.join("a")).unwrap();
+                    std::fs::create_dir(path.join("a/b")).unwrap();
+                    std::fs::write(path.join("a/b/c.txt"), "hello c").unwrap();
+                    std::fs::write(path.join("a/b/d.txt"), "hello d").unwrap();
+                }),
+                TestRunResult::V0 {
+                    artifacts: hashmap! {
+                        "a/b".into() => ArtifactType::Custom.into(),
+                    },
+                    outcome: Outcome::Passed,
+                    suites: vec![],
+                    start_time: None,
+                    duration_milliseconds: None,
+                },
+                ExpectedTestRun::new(Outcome::Passed).with_directory_artifact(
+                    ArtifactType::Custom,
+                    Some("b"),
+                    ExpectedDirectory::new()
+                        .with_file("c.txt", "hello c")
+                        .with_matching_file("d.txt", |contents| assert_eq!(contents, "hello d")),
+                ),
+            ),
+        ];
+
+        for (actual_dir, actual_run, expected_run) in cases.into_iter() {
+            assert_run_result(actual_dir.path(), &actual_run, &expected_run);
+        }
+    }
+
+    #[test]
+    #[should_panic]
+    fn assert_artifacts_missing() {
+        let dir = make_tempdir(|_| ());
+        assert_run_result(
+            dir.path(),
+            &TestRunResult::V0 {
+                artifacts: hashmap! {},
+                outcome: Outcome::Passed,
+                suites: vec![],
+                start_time: None,
+                duration_milliseconds: None,
+            },
+            &ExpectedTestRun::new(Outcome::Passed).with_artifact(
+                ArtifactType::Syslog,
+                Some("missing"),
+                "missing contents",
+            ),
+        );
+    }
+
+    #[test]
+    #[should_panic]
+    fn assert_artifacts_extra_artifact() {
+        let dir = make_tempdir(|path| {
+            std::fs::create_dir(path.join("a")).unwrap();
+            std::fs::write(path.join("a/b.txt"), "hello").unwrap();
+        });
+        assert_run_result(
+            dir.path(),
+            &TestRunResult::V0 {
+                artifacts: hashmap! {
+                    "a/b.txt".into() => ArtifactType::Syslog.into(),
+                },
+                outcome: Outcome::Passed,
+                suites: vec![],
+                start_time: None,
+                duration_milliseconds: None,
+            },
+            &ExpectedTestRun::new(Outcome::Passed),
+        );
+    }
+
+    #[test]
+    #[should_panic]
+    fn assert_artifacts_content_not_equal() {
+        let dir = make_tempdir(|path| {
+            std::fs::create_dir(path.join("a")).unwrap();
+            std::fs::write(path.join("a/b.txt"), "wrong content").unwrap();
+        });
+        assert_run_result(
+            dir.path(),
+            &TestRunResult::V0 {
+                artifacts: hashmap! {
+                    "a/b.txt".into() => ArtifactType::Syslog.into()
+                },
+                outcome: Outcome::Passed,
+                suites: vec![],
+                start_time: None,
+                duration_milliseconds: None,
+            },
+            &ExpectedTestRun::new(Outcome::Passed).with_artifact(
+                ArtifactType::Syslog,
+                Option::<&str>::None,
+                "expected content",
+            ),
+        );
+    }
+
+    #[test]
+    #[should_panic]
+    fn assert_artifacts_content_does_not_match() {
+        let dir = make_tempdir(|path| {
+            std::fs::create_dir(path.join("a")).unwrap();
+            std::fs::write(path.join("a/b.txt"), "wrong content").unwrap();
+        });
+        assert_run_result(
+            dir.path(),
+            &TestRunResult::V0 {
+                artifacts: hashmap! {
+                    "a/b.txt".into() => ArtifactType::Syslog.into()
+                },
+                outcome: Outcome::Passed,
+                suites: vec![],
+                start_time: None,
+                duration_milliseconds: None,
+            },
+            &ExpectedTestRun::new(Outcome::Passed).with_matching_artifact(
+                ArtifactType::Syslog,
+                Option::<&str>::None,
+                |content| assert_eq!(content, "expected content"),
+            ),
+        );
+    }
+
+    #[test]
+    #[should_panic]
+    fn assert_artifacts_directory_mismatch() {
+        let dir = make_tempdir(|path| {
+            std::fs::create_dir(path.join("a")).unwrap();
+            std::fs::create_dir(path.join("a/b")).unwrap();
+            std::fs::write(path.join("a/b/c.txt"), "unexpected file").unwrap();
+        });
+        assert_run_result(
+            dir.path(),
+            &TestRunResult::V0 {
+                artifacts: hashmap! {
+                    "a/b".into() => ArtifactType::Custom.into()
+                },
+                outcome: Outcome::Passed,
+                suites: vec![],
+                start_time: None,
+                duration_milliseconds: None,
+            },
+            &ExpectedTestRun::new(Outcome::Passed).with_directory_artifact(
+                ArtifactType::Custom,
+                Option::<&str>::None,
+                ExpectedDirectory::new(),
+            ),
+        );
+    }
 }

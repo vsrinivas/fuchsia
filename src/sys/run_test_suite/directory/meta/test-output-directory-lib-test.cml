@@ -1,0 +1,10 @@
+{
+    include: [
+        "//src/sys/test_runners/rust/default.shard.cml",
+        "//src/sys/test_runners/tmp_storage.shard.cml",
+        "syslog/client.shard.cml",
+    ],
+    program: {
+        binary: "bin/test_output_directory_lib_test",
+    },
+}

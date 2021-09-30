@@ -121,6 +121,7 @@ fuchsia_unittest_package("run_test_suite_integration_tests") {
     "//examples/tests:run-closes-channel-example",
     "//examples/tests:run-hangs-example",
     "//examples/tests:test-with-stderr",
+    "//examples/tests/rust:custom_artifact_user_cmp",
   ]
 
   # There's expected error logs that happen due to races given that the logging component just
