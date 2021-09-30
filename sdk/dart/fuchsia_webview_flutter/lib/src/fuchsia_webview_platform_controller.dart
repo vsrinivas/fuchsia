@@ -35,12 +35,16 @@ class FuchsiaWebViewPlatformController extends WebViewPlatformController {
   var _beforeLoadChannels = Set<String>();
 
   final WebViewPlatformCallbacksHandler _platformCallbacksHandler;
+  final JavascriptChannelRegistry _javascriptChannelRegistry;
   final _javascriptChannelSubscriptions = <String, _ChannelSubscription>{};
 
   /// Initializes [FuchsiaWebViewPlatformController]
-  FuchsiaWebViewPlatformController(this._platformCallbacksHandler,
-      CreationParams creationParams, this._fuchsiaWebServices)
-      : super(_platformCallbacksHandler) {
+  FuchsiaWebViewPlatformController(
+    CreationParams creationParams,
+    this._platformCallbacksHandler,
+    this._javascriptChannelRegistry,
+    this._fuchsiaWebServices,
+  ) : super(_platformCallbacksHandler) {
     fuchsiaWebServices.setNavigationEventListener(
         _WebviewNavigationEventListener(_onNavigationStateChanged));
     if (creationParams.webSettings != null) {
@@ -276,7 +280,7 @@ class FuchsiaWebViewPlatformController extends WebViewPlatformController {
       _javascriptChannelSubscriptions[channelName]!.subscription =
           incomingMessagesStream.listen(
         (message) async {
-          _platformCallbacksHandler.onJavaScriptChannelMessage(
+          _javascriptChannelRegistry.onJavascriptChannelMessage(
               channelName, message);
         },
       );

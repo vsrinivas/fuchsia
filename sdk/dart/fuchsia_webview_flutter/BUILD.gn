@@ -7,8 +7,7 @@ import("//build/flutter/test.gni")
 import("//build/testing/environments.gni")
 
 group("webview_flutter") {
-  public_deps =
-      [ "//third_party/dart-pkg/pub/webview_flutter2:webview_flutter" ]
+  public_deps = [ "//third_party/dart-pkg/pub/webview_flutter" ]
 }
 
 dart_library("fuchsia_webview_flutter") {
@@ -38,7 +37,7 @@ dart_library("fuchsia_webview_flutter") {
     "//sdk/fidl/fuchsia.net.http",
     "//sdk/fidl/fuchsia.web",
     "//third_party/dart-pkg/git/flutter/packages/flutter",
-    "//third_party/dart-pkg/pub/webview_flutter2:webview_flutter",
+    "//third_party/dart-pkg/pub/webview_flutter",
   ]
 }
 
@@ -56,6 +55,6 @@ flutter_test("fuchsia_webview_flutter_unittests") {
     "//third_party/dart-pkg/git/flutter/packages/flutter_test",
     "//third_party/dart-pkg/pub/mockito",
     "//third_party/dart-pkg/pub/test",
-    "//third_party/dart-pkg/pub/webview_flutter2:webview_flutter",
+    "//third_party/dart-pkg/pub/webview_flutter",
   ]
 }

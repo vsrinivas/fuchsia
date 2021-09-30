@@ -32,15 +32,17 @@ class FuchsiaWebView implements WebViewPlatform {
 
   @override
   Widget build({
+    required BuildContext context,
+    required CreationParams creationParams,
     required WebViewPlatformCallbacksHandler webViewPlatformCallbacksHandler,
-    BuildContext? context,
-    CreationParams? creationParams,
+    required JavascriptChannelRegistry javascriptChannelRegistry,
     WebViewPlatformCreatedCallback? onWebViewPlatformCreated,
     Set<Factory<OneSequenceGestureRecognizer>>? gestureRecognizers,
   }) {
     return _EmbeddedWebview(
-      webViewPlatformCallbacksHandler: webViewPlatformCallbacksHandler,
       creationParams: creationParams,
+      webViewPlatformCallbacksHandler: webViewPlatformCallbacksHandler,
+      javascriptChannelRegistry: javascriptChannelRegistry,
       onWebViewPlatformCreated: onWebViewPlatformCreated,
       fuchsiaWebServices: fuchsiaWebServices,
     );
@@ -52,14 +54,16 @@ class FuchsiaWebView implements WebViewPlatform {
 }
 
 class _EmbeddedWebview extends StatefulWidget {
-  final WebViewPlatformCallbacksHandler? webViewPlatformCallbacksHandler;
-  final CreationParams? creationParams;
+  final CreationParams creationParams;
+  final WebViewPlatformCallbacksHandler webViewPlatformCallbacksHandler;
+  final JavascriptChannelRegistry javascriptChannelRegistry;
   final WebViewPlatformCreatedCallback? onWebViewPlatformCreated;
   final FuchsiaWebServices? fuchsiaWebServices;
 
   const _EmbeddedWebview({
-    this.webViewPlatformCallbacksHandler,
-    this.creationParams,
+    required this.creationParams,
+    required this.webViewPlatformCallbacksHandler,
+    required this.javascriptChannelRegistry,
     this.onWebViewPlatformCreated,
     this.fuchsiaWebServices,
   });
@@ -78,9 +82,11 @@ class _EmbeddedWebviewState extends State<_EmbeddedWebview> {
   void initState() {
     super.initState();
     _controller = FuchsiaWebViewPlatformController(
-        widget.webViewPlatformCallbacksHandler!,
-        widget.creationParams!,
-        widget.fuchsiaWebServices);
+      widget.creationParams,
+      widget.webViewPlatformCallbacksHandler,
+      widget.javascriptChannelRegistry,
+      widget.fuchsiaWebServices,
+    );
     widget.onWebViewPlatformCreated?.call(_controller);
   }
 
