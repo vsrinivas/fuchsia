@@ -89,6 +89,7 @@ template("clang_toolchain") {
 
     # Configure Rust builds to be restat-friendly by preserving timestamps of
     # unchanged outputs.
+    _restat_rustc_prefix = ""
     if (restat_rust) {
       _restat_wrapper =
           string_join(" ",
@@ -97,6 +98,7 @@ template("clang_toolchain") {
                         "-S",
                         rebase_path(restat_wrapper, root_build_dir),
                       ])
+      _restat_rustc_prefix = "$_restat_wrapper --outputs substitute_after:-o:{{output}} --depfile {{DEPFILE}} -- "
     }
 
     # Configure Rust remote builds.
@@ -320,11 +322,9 @@ template("clang_toolchain") {
         link_map_args = "-C link-args=-Wl,--Map=\"{{UNSTRIPPED_OUTFILE}}.map\""
       }
 
-      if (restat_rust) {  # Overwrite an existing output file only if its
-                          # contents have changed.
-        command += "$_restat_wrapper --outputs substitute_after:-o:{{output}} --depfile $depfile -- "
-        restat = true
-      }
+      # Overwrite an existing output file only if its contents have changed.
+      command += string_replace(_restat_rustc_prefix, "{{DEPFILE}}", depfile)
+      restat = restat_rust
 
       # Possibly enable remote building for the rustc command.
       command += _rustc_wrapper
@@ -433,12 +433,9 @@ template("clang_toolchain") {
       forward_variables_from(_rust_concurrent_jobs, "*")
       depfile = "{{output}}.d"
 
-      command = ""
-      if (restat_rust) {  # Overwrite an existing output file only if its
-                          # contents have changed.
-        command += "$_restat_wrapper --outputs substitute_after:-o:{{output}} --depfile $depfile -- "
-        restat = true
-      }
+      # Overwrite an existing output file only if its contents have changed.
+      command = string_replace(_restat_rustc_prefix, "{{DEPFILE}}", depfile)
+      restat = restat_rust
 
       # Possibly enable remote building for the rustc command.
       command += _rustc_wrapper
@@ -461,12 +458,9 @@ template("clang_toolchain") {
       forward_variables_from(_rust_concurrent_jobs, "*")
       depfile = "{{output}}.d"
 
-      command = ""
-      if (restat_rust) {  # Overwrite an existing output file only if its
-                          # contents have changed.
-        command += "$_restat_wrapper --outputs substitute_after:-o:{{output}} --depfile $depfile -- "
-        restat = true
-      }
+      # Overwrite an existing output file only if its contents have changed.
+      command = string_replace(_restat_rustc_prefix, "{{DEPFILE}}", depfile)
+      restat = restat_rust
 
       # Possibly enable remote building for the rustc command.
       command += _rustc_wrapper
@@ -506,12 +500,9 @@ template("clang_toolchain") {
       forward_variables_from(_rust_concurrent_jobs, "*")
       depfile = "{{output}}.d"
 
-      command = ""
-      if (restat_rust) {  # Overwrite an existing output file only if its
-                          # contents have changed.
-        command += "$_restat_wrapper --outputs substitute_after:-o:{{output}} --depfile $depfile -- "
-        restat = true
-      }
+      # Overwrite an existing output file only if its contents have changed.
+      command = string_replace(_restat_rustc_prefix, "{{DEPFILE}}", depfile)
+      restat = restat_rust
 
       # Possibly enable remote building for the rustc command.
       command += _rustc_wrapper
