@@ -25,7 +25,7 @@ alias port_id = uint8;
 type DeviceClass = strict enum : uint16 {
     // TODO(https://fxbug.dev/77697): Transition this variant out of zero per
     // recommendation in
-    // https://fuchsia.dev/fuchsia-src/concepts/api/fidl?hl=en#enum once this is
+    // https://fuchsia.dev/fuchsia-src/concepts/api/fidl#enum once this is
     // a flexible enum.
     VIRTUAL = 0;
     ETHERNET = 1;

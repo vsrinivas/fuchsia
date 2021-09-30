@@ -75,7 +75,7 @@ type ScanResultCode = strict enum {
 type ScanResult = struct {
     txn_id uint64;
     // Time of the scan result relative to when the system was powered on.
-    // See https://fuchsia.dev/fuchsia-src/concepts/time/language_support?hl=en#monotonic_time
+    // See https://fuchsia.dev/fuchsia-src/concepts/time/language_support#monotonic_time
     timestamp_nanos zx.time;
     bss internal.BssDescription;
 };

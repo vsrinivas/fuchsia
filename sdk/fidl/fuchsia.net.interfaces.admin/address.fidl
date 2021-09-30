@@ -67,7 +67,7 @@ type AddressAssignmentState = strict enum {
     //
     // The value of 0 is reserved and should never be added to avoid the
     // ambiguity of 0 being the default integer value in some languages. See:
-    // https://fuchsia.dev/fuchsia-src/concepts/api/fidl?hl=en#enum.
+    // https://fuchsia.dev/fuchsia-src/concepts/api/fidl#enum.
 
     /// Address assignment is in progress, e.g. Duplicate Address Detection
     /// is being performed. The address cannot be used when in this state
@@ -92,7 +92,7 @@ type AddressRemovalReason = strict enum {
     //
     // The value of 0 is reserved and should never be added to avoid the
     // ambiguity of 0 being the default integer value in some languages. See:
-    // https://fuchsia.dev/fuchsia-src/concepts/api/fidl?hl=en#enum.
+    // https://fuchsia.dev/fuchsia-src/concepts/api/fidl#enum.
 
     /// The address is not a valid address.
     INVALID = 1;
