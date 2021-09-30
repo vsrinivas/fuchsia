@@ -102,7 +102,7 @@ void DaiTest::CreateRingBuffer(
   ZX_ASSERT(out_result.response().dai_formats[0].frame_formats[0].is_frame_format_standard());
   dai_format.frame_format.set_frame_format_standard(  // Only standrd frame formats allowed.
       out_result.response().dai_formats[0].frame_formats[0].frame_format_standard());
-  dai_format.frame_rate = out_result.response().dai_formats[0].frame_rates[0];
+  dai_format.frame_rate = ring_buffer_format.pcm_format().frame_rate;
   dai_format.bits_per_slot = out_result.response().dai_formats[0].bits_per_slot[0];
   dai_format.bits_per_sample = out_result.response().dai_formats[0].bits_per_sample[0];
   dai_->CreateRingBuffer(std::move(dai_format), std::move(ring_buffer_format),
