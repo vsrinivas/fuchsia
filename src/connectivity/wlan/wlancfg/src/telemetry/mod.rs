@@ -261,6 +261,8 @@ fn record_inspect_counters(
                     disconnect_count: counters.disconnect_count,
                     tx_high_packet_drop_duration: counters.tx_high_packet_drop_duration.into_nanos(),
                     rx_high_packet_drop_duration: counters.rx_high_packet_drop_duration.into_nanos(),
+                    tx_very_high_packet_drop_duration: counters.tx_very_high_packet_drop_duration.into_nanos(),
+                    rx_very_high_packet_drop_duration: counters.rx_very_high_packet_drop_duration.into_nanos(),
                     no_rx_duration: counters.no_rx_duration.into_nanos(),
                 });
             }
@@ -589,7 +591,8 @@ fn float_to_ten_thousandth(value: f64) -> i64 {
     (value * 10000f64) as i64
 }
 
-const PACKET_DROP_RATE_THRESHOLD: f64 = 0.02;
+const HIGH_PACKET_DROP_RATE_THRESHOLD: f64 = 0.02;
+const VERY_HIGH_PACKET_DROP_RATE_THRESHOLD: f64 = 0.05;
 
 const DEVICE_LOW_UPTIME_THRESHOLD: f64 = 0.95;
 /// Threshold for high number of disconnects per day connected.
@@ -600,6 +603,7 @@ const DEVICE_HIGH_DPDC_THRESHOLD: f64 = 12.0;
 ///       That is, if threshold is 0.10, then the device passes that threshold if more
 ///       than 10% of the time it has high packet drop rate.
 const DEVICE_FREQUENT_HIGH_PACKET_DROP_RATE_THRESHOLD: f64 = 0.10;
+const DEVICE_FREQUENT_VERY_HIGH_PACKET_DROP_RATE_THRESHOLD: f64 = 0.10;
 /// TODO(fxbug.dev/83621): Adjust this threshold when we consider unicast frames only
 const DEVICE_FREQUENT_NO_RX_THRESHOLD: f64 = 0.01;
 const DEVICE_LOW_CONNECTION_SUCCESS_RATE_THRESHOLD: f64 = 0.1;
@@ -628,11 +632,17 @@ async fn diff_and_log_counters(
     let tx_drop_rate = if tx_total > 0 { tx_drop as f64 / tx_total as f64 } else { 0f64 };
     let rx_drop_rate = if rx_total > 0 { rx_drop as f64 / rx_total as f64 } else { 0f64 };
 
-    if tx_drop_rate > PACKET_DROP_RATE_THRESHOLD {
+    if tx_drop_rate > HIGH_PACKET_DROP_RATE_THRESHOLD {
         stats_logger.log_stat(StatOp::AddTxHighPacketDropDuration(duration)).await;
     }
-    if rx_drop_rate > PACKET_DROP_RATE_THRESHOLD {
+    if rx_drop_rate > HIGH_PACKET_DROP_RATE_THRESHOLD {
         stats_logger.log_stat(StatOp::AddRxHighPacketDropDuration(duration)).await;
+    }
+    if tx_drop_rate > VERY_HIGH_PACKET_DROP_RATE_THRESHOLD {
+        stats_logger.log_stat(StatOp::AddTxVeryHighPacketDropDuration(duration)).await;
+    }
+    if rx_drop_rate > VERY_HIGH_PACKET_DROP_RATE_THRESHOLD {
+        stats_logger.log_stat(StatOp::AddRxVeryHighPacketDropDuration(duration)).await;
     }
     if rx_total == 0 {
         stats_logger.log_stat(StatOp::AddNoRxDuration(duration)).await;
@@ -688,6 +698,12 @@ impl StatsLogger {
             }
             StatOp::AddRxHighPacketDropDuration(duration) => {
                 StatCounters { rx_high_packet_drop_duration: duration, ..zero }
+            }
+            StatOp::AddTxVeryHighPacketDropDuration(duration) => {
+                StatCounters { tx_very_high_packet_drop_duration: duration, ..zero }
+            }
+            StatOp::AddRxVeryHighPacketDropDuration(duration) => {
+                StatCounters { rx_very_high_packet_drop_duration: duration, ..zero }
             }
             StatOp::AddNoRxDuration(duration) => StatCounters { no_rx_duration: duration, ..zero },
         };
@@ -882,6 +898,48 @@ impl StatsLogger {
             if high_tx_drop_time_ratio > DEVICE_FREQUENT_HIGH_PACKET_DROP_RATE_THRESHOLD {
                 metric_events.push(MetricEvent {
                     metric_id: metrics::DEVICE_WITH_FREQUENT_HIGH_TX_PACKET_DROP_METRIC_ID,
+                    event_codes: vec![],
+                    payload: MetricEventPayload::Count(1),
+                });
+            }
+        }
+
+        let very_high_rx_drop_time_ratio = c.rx_very_high_packet_drop_duration.into_seconds()
+            as f64
+            / c.connected_duration.into_seconds() as f64;
+        if very_high_rx_drop_time_ratio.is_finite() {
+            metric_events.push(MetricEvent {
+                metric_id: metrics::TIME_RATIO_WITH_VERY_HIGH_RX_PACKET_DROP_METRIC_ID,
+                event_codes: vec![],
+                payload: MetricEventPayload::IntegerValue(float_to_ten_thousandth(
+                    very_high_rx_drop_time_ratio,
+                )),
+            });
+
+            if very_high_rx_drop_time_ratio > DEVICE_FREQUENT_VERY_HIGH_PACKET_DROP_RATE_THRESHOLD {
+                metric_events.push(MetricEvent {
+                    metric_id: metrics::DEVICE_WITH_FREQUENT_VERY_HIGH_RX_PACKET_DROP_METRIC_ID,
+                    event_codes: vec![],
+                    payload: MetricEventPayload::Count(1),
+                });
+            }
+        }
+
+        let very_high_tx_drop_time_ratio = c.tx_very_high_packet_drop_duration.into_seconds()
+            as f64
+            / c.connected_duration.into_seconds() as f64;
+        if very_high_tx_drop_time_ratio.is_finite() {
+            metric_events.push(MetricEvent {
+                metric_id: metrics::TIME_RATIO_WITH_VERY_HIGH_TX_PACKET_DROP_METRIC_ID,
+                event_codes: vec![],
+                payload: MetricEventPayload::IntegerValue(float_to_ten_thousandth(
+                    very_high_tx_drop_time_ratio,
+                )),
+            });
+
+            if very_high_tx_drop_time_ratio > DEVICE_FREQUENT_VERY_HIGH_PACKET_DROP_RATE_THRESHOLD {
+                metric_events.push(MetricEvent {
+                    metric_id: metrics::DEVICE_WITH_FREQUENT_VERY_HIGH_TX_PACKET_DROP_METRIC_ID,
                     event_codes: vec![],
                     payload: MetricEventPayload::Count(1),
                 });
@@ -1118,6 +1176,20 @@ impl StatsLogger {
             metric_id: metrics::TOTAL_TIME_WITH_HIGH_TX_PACKET_DROP_METRIC_ID,
             event_codes: vec![],
             payload: MetricEventPayload::IntegerValue(c.tx_high_packet_drop_duration.into_micros()),
+        });
+        metric_events.push(MetricEvent {
+            metric_id: metrics::TOTAL_TIME_WITH_VERY_HIGH_RX_PACKET_DROP_METRIC_ID,
+            event_codes: vec![],
+            payload: MetricEventPayload::IntegerValue(
+                c.rx_very_high_packet_drop_duration.into_micros(),
+            ),
+        });
+        metric_events.push(MetricEvent {
+            metric_id: metrics::TOTAL_TIME_WITH_VERY_HIGH_TX_PACKET_DROP_METRIC_ID,
+            event_codes: vec![],
+            payload: MetricEventPayload::IntegerValue(
+                c.tx_very_high_packet_drop_duration.into_micros(),
+            ),
         });
         metric_events.push(MetricEvent {
             metric_id: metrics::TOTAL_TIME_WITH_NO_RX_METRIC_ID,
@@ -1454,6 +1526,8 @@ enum StatOp {
     AddDisconnectCount,
     AddTxHighPacketDropDuration(zx::Duration),
     AddRxHighPacketDropDuration(zx::Duration),
+    AddTxVeryHighPacketDropDuration(zx::Duration),
+    AddRxVeryHighPacketDropDuration(zx::Duration),
     AddNoRxDuration(zx::Duration),
 }
 
@@ -1468,6 +1542,8 @@ struct StatCounters {
     disconnect_count: u64,
     tx_high_packet_drop_duration: zx::Duration,
     rx_high_packet_drop_duration: zx::Duration,
+    tx_very_high_packet_drop_duration: zx::Duration,
+    rx_very_high_packet_drop_duration: zx::Duration,
     no_rx_duration: zx::Duration,
 }
 
@@ -1500,6 +1576,10 @@ impl Add for StatCounters {
                 + other.tx_high_packet_drop_duration,
             rx_high_packet_drop_duration: self.rx_high_packet_drop_duration
                 + other.rx_high_packet_drop_duration,
+            tx_very_high_packet_drop_duration: self.tx_very_high_packet_drop_duration
+                + other.tx_very_high_packet_drop_duration,
+            rx_very_high_packet_drop_duration: self.rx_very_high_packet_drop_duration
+                + other.rx_very_high_packet_drop_duration,
             no_rx_duration: self.no_rx_duration + other.no_rx_duration,
         }
     }
@@ -1542,6 +1622,16 @@ impl SaturatingAdd for StatCounters {
                 self.rx_high_packet_drop_duration
                     .into_nanos()
                     .saturating_add(v.rx_high_packet_drop_duration.into_nanos()),
+            ),
+            tx_very_high_packet_drop_duration: zx::Duration::from_nanos(
+                self.tx_very_high_packet_drop_duration
+                    .into_nanos()
+                    .saturating_add(v.tx_very_high_packet_drop_duration.into_nanos()),
+            ),
+            rx_very_high_packet_drop_duration: zx::Duration::from_nanos(
+                self.rx_very_high_packet_drop_duration
+                    .into_nanos()
+                    .saturating_add(v.rx_very_high_packet_drop_duration.into_nanos()),
             ),
             no_rx_duration: zx::Duration::from_nanos(
                 self.no_rx_duration.into_nanos().saturating_add(v.no_rx_duration.into_nanos()),
@@ -2194,11 +2284,15 @@ mod tests {
                 "1d_counters": contains {
                     tx_high_packet_drop_duration: 0i64,
                     rx_high_packet_drop_duration: 0i64,
+                    tx_very_high_packet_drop_duration: 0i64,
+                    rx_very_high_packet_drop_duration: 0i64,
                     no_rx_duration: 0i64,
                 },
                 "7d_counters": contains {
                     tx_high_packet_drop_duration: 0i64,
                     rx_high_packet_drop_duration: 0i64,
+                    tx_very_high_packet_drop_duration: 0i64,
+                    rx_very_high_packet_drop_duration: 0i64,
                     no_rx_duration: 0i64,
                 },
             }
@@ -2238,11 +2332,15 @@ mod tests {
                     // the first interval of telemetry
                     tx_high_packet_drop_duration: (1.hour() - TELEMETRY_QUERY_INTERVAL).into_nanos(),
                     rx_high_packet_drop_duration: 0i64,
+                    tx_very_high_packet_drop_duration: (1.hour() - TELEMETRY_QUERY_INTERVAL).into_nanos(),
+                    rx_very_high_packet_drop_duration: 0i64,
                     no_rx_duration: 0i64,
                 },
                 "7d_counters": contains {
                     tx_high_packet_drop_duration: (1.hour() - TELEMETRY_QUERY_INTERVAL).into_nanos(),
                     rx_high_packet_drop_duration: 0i64,
+                    tx_very_high_packet_drop_duration: (1.hour() - TELEMETRY_QUERY_INTERVAL).into_nanos(),
+                    rx_very_high_packet_drop_duration: 0i64,
                     no_rx_duration: 0i64,
                 },
             }
@@ -2282,11 +2380,67 @@ mod tests {
                     // the first interval of telemetry
                     rx_high_packet_drop_duration: (1.hour() - TELEMETRY_QUERY_INTERVAL).into_nanos(),
                     tx_high_packet_drop_duration: 0i64,
+                    rx_very_high_packet_drop_duration: (1.hour() - TELEMETRY_QUERY_INTERVAL).into_nanos(),
+                    tx_very_high_packet_drop_duration: 0i64,
                     no_rx_duration: 0i64,
                 },
                 "7d_counters": contains {
                     rx_high_packet_drop_duration: (1.hour() - TELEMETRY_QUERY_INTERVAL).into_nanos(),
                     tx_high_packet_drop_duration: 0i64,
+                    rx_very_high_packet_drop_duration: (1.hour() - TELEMETRY_QUERY_INTERVAL).into_nanos(),
+                    tx_very_high_packet_drop_duration: 0i64,
+                    no_rx_duration: 0i64,
+                },
+            }
+        });
+    }
+
+    #[fuchsia::test]
+    fn test_rx_tx_high_but_not_very_high_packet_drop_duration_counters() {
+        let (mut test_helper, mut test_fut) = setup_test();
+        test_helper.set_iface_stats_req_handler(Box::new(|responder| {
+            let seed = fasync::Time::now().into_nanos() as u64;
+            let mut iface_stats = fake_iface_stats(seed);
+            match &mut iface_stats.mlme_stats {
+                Some(stats) => match **stats {
+                    MlmeStats::ClientMlmeStats(ref mut stats) => {
+                        // 3% drop rate would be high, but not very high
+                        stats.rx_frame.in_.count = 100 * seed;
+                        stats.rx_frame.drop.count = 3 * seed;
+                        stats.tx_frame.in_.count = 100 * seed;
+                        stats.tx_frame.drop.count = 3 * seed;
+                    }
+                    _ => panic!("expect ClientMlmeStats"),
+                },
+                _ => panic!("expect mlme_stats to be available"),
+            }
+            responder
+                .send(zx::sys::ZX_OK, Some(&mut iface_stats))
+                .expect("expect sending IfaceStats response to succeed");
+        }));
+
+        test_helper.send_connected_event(random_bss_description!(Wpa2));
+        assert_eq!(test_helper.exec.run_until_stalled(&mut test_fut), Poll::Pending);
+
+        test_helper.advance_by(1.hour(), test_fut.as_mut());
+        assert_data_tree!(test_helper.inspector, root: {
+            stats: contains {
+                get_iface_stats_fail_count: 0u64,
+                "1d_counters": contains {
+                    // Deduct 15 seconds beecause there isn't packet counter to diff against in
+                    // the first interval of telemetry
+                    rx_high_packet_drop_duration: (1.hour() - TELEMETRY_QUERY_INTERVAL).into_nanos(),
+                    tx_high_packet_drop_duration: (1.hour() - TELEMETRY_QUERY_INTERVAL).into_nanos(),
+                    // Very high drop rate counters should still be 0
+                    rx_very_high_packet_drop_duration: 0i64,
+                    tx_very_high_packet_drop_duration: 0i64,
+                    no_rx_duration: 0i64,
+                },
+                "7d_counters": contains {
+                    rx_high_packet_drop_duration: (1.hour() - TELEMETRY_QUERY_INTERVAL).into_nanos(),
+                    tx_high_packet_drop_duration: (1.hour() - TELEMETRY_QUERY_INTERVAL).into_nanos(),
+                    rx_very_high_packet_drop_duration: 0i64,
+                    tx_very_high_packet_drop_duration: 0i64,
                     no_rx_duration: 0i64,
                 },
             }
@@ -2326,11 +2480,15 @@ mod tests {
                     no_rx_duration: (1.hour() - TELEMETRY_QUERY_INTERVAL).into_nanos(),
                     rx_high_packet_drop_duration: 0i64,
                     tx_high_packet_drop_duration: 0i64,
+                    rx_very_high_packet_drop_duration: 0i64,
+                    tx_very_high_packet_drop_duration: 0i64,
                 },
                 "7d_counters": contains {
                     no_rx_duration: (1.hour() - TELEMETRY_QUERY_INTERVAL).into_nanos(),
                     rx_high_packet_drop_duration: 0i64,
                     tx_high_packet_drop_duration: 0i64,
+                    rx_very_high_packet_drop_duration: 0i64,
+                    tx_very_high_packet_drop_duration: 0i64,
                 },
             }
         });
@@ -2356,11 +2514,15 @@ mod tests {
                     no_rx_duration: 0i64,
                     rx_high_packet_drop_duration: 0i64,
                     tx_high_packet_drop_duration: 0i64,
+                    rx_very_high_packet_drop_duration: 0i64,
+                    tx_very_high_packet_drop_duration: 0i64,
                 },
                 "7d_counters": contains {
                     no_rx_duration: 0i64,
                     rx_high_packet_drop_duration: 0i64,
                     tx_high_packet_drop_duration: 0i64,
+                    rx_very_high_packet_drop_duration: 0i64,
+                    tx_very_high_packet_drop_duration: 0i64,
                 },
             }
         });
@@ -2579,6 +2741,32 @@ mod tests {
         assert_eq!(device_frequent_high_tx_drop.len(), 1);
         assert_eq!(device_frequent_high_tx_drop[0].payload, MetricEventPayload::Count(1));
 
+        let very_high_rx_drop_time_ratios = test_helper
+            .get_logged_metrics(metrics::TIME_RATIO_WITH_VERY_HIGH_RX_PACKET_DROP_METRIC_ID);
+        assert_eq!(very_high_rx_drop_time_ratios.len(), 1);
+        assert_eq!(
+            very_high_rx_drop_time_ratios[0].payload,
+            MetricEventPayload::IntegerValue(1666)
+        );
+
+        let device_frequent_very_high_rx_drop = test_helper
+            .get_logged_metrics(metrics::DEVICE_WITH_FREQUENT_VERY_HIGH_RX_PACKET_DROP_METRIC_ID);
+        assert_eq!(device_frequent_very_high_rx_drop.len(), 1);
+        assert_eq!(device_frequent_very_high_rx_drop[0].payload, MetricEventPayload::Count(1));
+
+        let very_high_tx_drop_time_ratios = test_helper
+            .get_logged_metrics(metrics::TIME_RATIO_WITH_VERY_HIGH_TX_PACKET_DROP_METRIC_ID);
+        assert_eq!(very_high_tx_drop_time_ratios.len(), 1);
+        assert_eq!(
+            very_high_tx_drop_time_ratios[0].payload,
+            MetricEventPayload::IntegerValue(1250)
+        );
+
+        let device_frequent_very_high_tx_drop = test_helper
+            .get_logged_metrics(metrics::DEVICE_WITH_FREQUENT_VERY_HIGH_TX_PACKET_DROP_METRIC_ID);
+        assert_eq!(device_frequent_very_high_tx_drop.len(), 1);
+        assert_eq!(device_frequent_very_high_tx_drop[0].payload, MetricEventPayload::Count(1));
+
         // 1 hour of no RX, 24 hours connected => 4.16% duration
         let no_rx_time_ratios =
             test_helper.get_logged_metrics(metrics::TIME_RATIO_WITH_NO_RX_METRIC_ID);
@@ -2611,6 +2799,16 @@ mod tests {
             test_helper.get_logged_metrics(metrics::TIME_RATIO_WITH_HIGH_TX_PACKET_DROP_METRIC_ID);
         assert_eq!(high_tx_drop_time_ratios.len(), 1);
         assert_eq!(high_tx_drop_time_ratios[0].payload, MetricEventPayload::IntegerValue(0));
+
+        let very_high_rx_drop_time_ratios = test_helper
+            .get_logged_metrics(metrics::TIME_RATIO_WITH_VERY_HIGH_RX_PACKET_DROP_METRIC_ID);
+        assert_eq!(very_high_rx_drop_time_ratios.len(), 1);
+        assert_eq!(very_high_rx_drop_time_ratios[0].payload, MetricEventPayload::IntegerValue(0));
+
+        let very_high_tx_drop_time_ratios = test_helper
+            .get_logged_metrics(metrics::TIME_RATIO_WITH_VERY_HIGH_TX_PACKET_DROP_METRIC_ID);
+        assert_eq!(very_high_tx_drop_time_ratios.len(), 1);
+        assert_eq!(very_high_tx_drop_time_ratios[0].payload, MetricEventPayload::IntegerValue(0));
 
         let no_rx_time_ratios =
             test_helper.get_logged_metrics(metrics::TIME_RATIO_WITH_NO_RX_METRIC_ID);
@@ -2767,6 +2965,22 @@ mod tests {
         assert_eq!(tx_high_drop_durs.len(), 1);
         assert_eq!(
             tx_high_drop_durs[0].payload,
+            MetricEventPayload::IntegerValue(10.minutes().into_micros())
+        );
+
+        let rx_very_high_drop_durs = test_helper
+            .get_logged_metrics(metrics::TOTAL_TIME_WITH_VERY_HIGH_RX_PACKET_DROP_METRIC_ID);
+        assert_eq!(rx_very_high_drop_durs.len(), 1);
+        assert_eq!(
+            rx_very_high_drop_durs[0].payload,
+            MetricEventPayload::IntegerValue(20.minutes().into_micros())
+        );
+
+        let tx_very_high_drop_durs = test_helper
+            .get_logged_metrics(metrics::TOTAL_TIME_WITH_VERY_HIGH_TX_PACKET_DROP_METRIC_ID);
+        assert_eq!(tx_very_high_drop_durs.len(), 1);
+        assert_eq!(
+            tx_very_high_drop_durs[0].payload,
             MetricEventPayload::IntegerValue(10.minutes().into_micros())
         );
 
