@@ -185,7 +185,18 @@ sdk_molecule("test_sdks") {
 Next add this target as a dependency to the closest ancestor
 `sdk_molecule("test_sdks")`.
 
-Once this step is complete, submit your change and you should see your test run
+Finally, add your test to `//sdk/cts/data/test_manifest.json`. The order of
+the JSON objects in the file does not matter:
+
+```
+{
+  "archive_name": "my_test",
+  "component_name": "my_test_component.cm",
+  "package": "my_test"
+},
+```
+
+Once these steps are complete, submit your change and you should see your test run
 as part of the next CTS release.
 
 ## How to write an API test
