@@ -175,6 +175,19 @@ class SyncToCommand:
                     "Running in dry-run mode. No changes will be made to your checkout.",
                     Color.GREEN))
 
+        # Always update the integration repo to avoid missing refs. This should
+        # be a safe operation, and it avoids false negatives.
+        print("Fetching refs in the integration repo...")
+        self.run_command(
+            "git",
+            "-C",
+            self.integration_dir,
+            "fetch",
+            "origin",
+            stderr=subprocess.DEVNULL,
+            stdout=subprocess.DEVNULL,
+            dry_run_safe=True)
+
         if self.state == "reset":
             self.reset_checkout()
         elif re.match(RELEASE_BRANCH_REGEX, self.state):
@@ -272,7 +285,7 @@ class SyncToCommand:
         """Sync to a branch, tag, or revision of the integration repo."""
         self.confirm_ok_to_change_source_code()
         print(f"Checking out integration repo at {ref}")
-        self.run_command("git", "-C", self.integration_dir, "fetch", "origin")
+
         self.run_command(
             "git",
             "-C",
@@ -283,9 +296,6 @@ class SyncToCommand:
             ref,
         )
         try:
-            # Make sure all repos are on JIRI_HEAD, because jiri update will
-            # skip any that aren't on JIRI_HEAD.
-            self.jiri("runp", "git checkout JIRI_HEAD")
             self.jiri("update", "-local-manifest", "-gc")
         except subprocess.CalledProcessError:
             print("Sync failed, restoring the integration repo to JIRI_HEAD")
