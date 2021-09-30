@@ -8,7 +8,7 @@ use {
     cm_rust,
     diagnostics_bridge::ArchiveReaderManager,
     fdiagnostics::ArchiveAccessorProxy,
-    fidl::endpoints::{ProtocolMarker, Proxy},
+    fidl::endpoints::{create_proxy, ClientEnd, ProtocolMarker, Proxy},
     fidl_fuchsia_debugdata as fdebugdata, fidl_fuchsia_diagnostics as fdiagnostics,
     fidl_fuchsia_io as fio, fidl_fuchsia_sys as fv1sys, fidl_fuchsia_sys2 as fsys,
     fidl_fuchsia_test as ftest, fidl_fuchsia_test_internal as ftest_internal,
@@ -40,10 +40,12 @@ use {
     },
     io_util,
     lazy_static::lazy_static,
+    moniker::RelativeMonikerBase,
     regex::Regex,
     routing::rights::READ_RIGHTS,
     std::{
         collections::{HashMap, HashSet},
+        convert::TryFrom,
         sync::{
             atomic::{AtomicU32, AtomicU64, Ordering},
             Arc, Mutex, Weak,
@@ -334,6 +336,7 @@ enum SuiteEventPayload {
     CaseFinished(u32),
     CaseStdout(u32, zx::Socket),
     CaseStderr(u32, zx::Socket),
+    CustomArtifact(ftest_manager::CustomArtifact),
     SuiteSyslog(ftest_manager::Syslog),
     SuiteStarted,
     SuiteStopped(SuiteStatus),
@@ -389,6 +392,13 @@ impl Into<FidlSuiteEvent> for SuiteEvents {
                 payload: Some(FidlSuiteEventPayload::CaseArtifact(ftest_manager::CaseArtifact {
                     identifier,
                     artifact: ftest_manager::Artifact::Stderr(socket),
+                })),
+                ..FidlSuiteEvent::EMPTY
+            },
+            SuiteEventPayload::CustomArtifact(custom) => FidlSuiteEvent {
+                timestamp: Some(self.timestamp),
+                payload: Some(FidlSuiteEventPayload::SuiteArtifact(ftest_manager::SuiteArtifact {
+                    artifact: ftest_manager::Artifact::Custom(custom),
                 })),
                 ..FidlSuiteEvent::EMPTY
             },
@@ -462,6 +472,13 @@ impl SuiteEvents {
         Self {
             timestamp: zx::Time::get_monotonic().into_nanos(),
             payload: SuiteEventPayload::SuiteSyslog(syslog),
+        }
+    }
+
+    fn suite_custom_artifact(custom: ftest_manager::CustomArtifact) -> Self {
+        Self {
+            timestamp: zx::Time::get_monotonic().into_nanos(),
+            payload: SuiteEventPayload::CustomArtifact(custom),
         }
     }
 
@@ -959,6 +976,10 @@ pub async fn run_test_manager_info_server(
 struct RunningSuite {
     instance: RealmInstance,
     logs_iterator_task: Option<fasync::Task<Result<(), Error>>>,
+    /// Server ends of event pairs used to track if a client is accessing a component's
+    /// custom storage. Used to defer destruction of the realm until clients have completed
+    /// reading the storage.
+    custom_artifact_tokens: Vec<zx::EventPair>,
     /// Keep archive accessor which tests might use through weak references.
     archive_accessor: Arc<ArchiveAccessorProxy>,
     /// Reference to an entry in the TestMap that marks it stale when the RunningSuite
@@ -1014,6 +1035,7 @@ impl RunningSuite {
                     test_map,
                     instance.root.child_name().to_string(),
                 ),
+                custom_artifact_tokens: vec![],
                 logs_iterator_task: None,
                 instance,
                 archive_accessor: archive_accessor_arc,
@@ -1033,7 +1055,7 @@ impl RunningSuite {
         mut sender: mpsc::Sender<Result<FidlSuiteEvent, LaunchError>>,
         mut stop_recv: oneshot::Receiver<()>,
     ) {
-        let test_url = self.test_map_entry.1.as_str();
+        let test_url = self.test_map_entry.1.to_string();
         debug!("running test suite {}", test_url);
 
         let (log_iterator, syslog) = match options.log_iterator {
@@ -1147,7 +1169,7 @@ impl RunningSuite {
                         .send(Ok(SuiteEvents::suite_stopped(SuiteStatus::TimedOut).into()))
                         .await
                         .unwrap();
-                    return Ok(());
+                    return self.report_custom_artifacts(&mut sender).await;
                 }
                 suite_status = concat_suite_status(suite_status, res);
                 if let Ok(Some(_)) = stop_recv.try_recv() {
@@ -1155,15 +1177,70 @@ impl RunningSuite {
                         .send(Ok(SuiteEvents::suite_stopped(SuiteStatus::Stopped).into()))
                         .await
                         .unwrap();
-                    return Ok(());
+                    return self.report_custom_artifacts(&mut sender).await;
                 }
             }
             sender.send(Ok(SuiteEvents::suite_stopped(suite_status).into())).await.unwrap();
-            Ok(())
+            self.report_custom_artifacts(&mut sender).await
         };
         if let Err(e) = fut.await {
             warn!("Error running test {}: {:?}", test_url, e);
         }
+    }
+
+    /// Find any custom artifact users under the test realm and report them via sender.
+    async fn report_custom_artifacts(
+        &mut self,
+        sender: &mut mpsc::Sender<Result<FidlSuiteEvent, LaunchError>>,
+    ) -> Result<(), Error> {
+        let artifact_storage_admin = connect_to_protocol::<fsys::StorageAdminMarker>()?;
+
+        let root_moniker = format!("./{}:{}", TESTS_COLLECTION, self.instance.root.child_name());
+        let (iterator, iter_server) = create_proxy::<fsys::StorageIteratorMarker>()?;
+        artifact_storage_admin
+            .list_storage_in_realm(&root_moniker, iter_server)
+            .await?
+            .map_err(|e| format_err!("Error listing storage users in test realm: {:?}", e))?;
+        let mut stream = stream_fn(move || iterator.next());
+        while let Some(storage_moniker) = stream.try_next().await? {
+            let (node, server) = fidl::endpoints::create_endpoints::<fio::NodeMarker>()?;
+            let directory: ClientEnd<fio::DirectoryMarker> = node.into_channel().into();
+            artifact_storage_admin.open_component_storage(
+                &storage_moniker,
+                fio::OPEN_RIGHT_READABLE,
+                fio::MODE_TYPE_DIRECTORY,
+                server,
+            )?;
+            let (event_client, event_server) = zx::EventPair::create()?;
+            self.custom_artifact_tokens.push(event_server);
+
+            // Monikers should be reported relative to the test root, so strip away the wrapping
+            // components from the path.
+            let moniker_parsed =
+                moniker::RelativeMoniker::try_from(storage_moniker.as_str()).unwrap();
+            let down_path = moniker_parsed
+                .down_path()
+                .iter()
+                .skip(3)
+                .map(Clone::clone)
+                .collect::<Vec<moniker::ChildMoniker>>();
+            let moniker_relative_to_test_root = moniker::RelativeMoniker::new(vec![], down_path);
+            sender
+                .send(Ok(SuiteEvents::suite_custom_artifact(ftest_manager::CustomArtifact {
+                    directory_and_token: Some(ftest_manager::DirectoryAndToken {
+                        directory,
+                        token: event_client,
+                    }),
+                    component_moniker: Some(
+                        moniker_relative_to_test_root.to_string_without_instances(),
+                    ),
+                    ..ftest_manager::CustomArtifact::EMPTY
+                })
+                .into()))
+                .await
+                .unwrap();
+        }
+        Ok(())
     }
 
     fn connect_to_suite(&self) -> Result<ftest::SuiteProxy, LaunchTestError> {
@@ -1176,6 +1253,17 @@ impl RunningSuite {
     }
 
     async fn destroy(mut self) {
+        // before destroying the realm, wait for any clients to finish accessing storage.
+        // TODO(fxbug.dev/84825): Separate realm destruction and destruction of custom
+        // storage resources.
+        // TODO(fxbug.dev/84882): Remove signal for USER_0, this is used while Overnet does not support
+        // signalling ZX_EVENTPAIR_CLOSED when the eventpair is closed.
+        let tokens_closed_signals = self.custom_artifact_tokens.iter().map(|token| {
+            fasync::OnSignals::new(token, zx::Signals::EVENTPAIR_CLOSED | zx::Signals::USER_0)
+                .unwrap_or_else(|_| zx::Signals::empty())
+        });
+        futures::future::join_all(tokens_closed_signals).await;
+
         let destroy_waiter = self.instance.root.take_destroy_waiter();
         drop(self.instance);
         drop(self.archive_accessor);
@@ -1188,6 +1276,22 @@ impl RunningSuite {
             error!(?err, "Failed to destroy instance");
         });
     }
+}
+
+/// Convert iterator fidl method into stream of events.
+/// ie convert
+/// fidl_method() -> Future<Result<Vec<T>, E>>
+/// to
+/// Stream<Item=Result<T, E>>
+fn stream_fn<F, T, E, Fut>(mut query_fn: F) -> impl Stream<Item = Result<T, E>>
+where
+    F: 'static + FnMut() -> Fut + Unpin + Send + Sync,
+    Fut: Future<Output = Result<Vec<T>, E>> + Unpin + Send + Sync,
+{
+    async_utils::hanging_get::client::GeneratedFutureStream::new(Box::new(move || Some(query_fn())))
+        .try_take_while(|vec| futures::future::ready(Ok(!vec.is_empty())))
+        .map_ok(|vec| futures::stream::iter(vec).map(Ok))
+        .try_flatten()
 }
 
 async fn get_realm(

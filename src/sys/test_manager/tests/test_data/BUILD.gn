@@ -72,6 +72,11 @@ fuchsia_component("v2_test_runs_v1_component") {
   manifest = "meta/v2_test_runs_v1_component.cml"
 }
 
+fuchsia_component("custom_artifact_realm_test") {
+  testonly = true
+  manifest = "meta/custom_artifact_realm_test.cml"
+}
+
 rustc_test("debug_data_test_bin") {
   testonly = true
   name = "debug_data_test"
@@ -112,11 +117,13 @@ fuchsia_test_package("debug-data-test") {
 group("test_data") {
   testonly = true
   public_deps = [
+    ":custom_artifact_realm_test",
     ":debug-data-test",
     ":debug_data_test_v1",
     ":hanging_test",
     ":no_suite_service",
     ":v2_test_runs_v1_component",
+    "//examples/tests/rust:custom_artifact_user_cmp",
     "//garnet/examples/fidl/echo_server_rust:echo-server-rust-cmp",
     "//src/diagnostics/archivist/tests/logging-component:logging-component",
   ]

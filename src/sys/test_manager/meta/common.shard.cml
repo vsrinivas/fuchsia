@@ -89,6 +89,13 @@
             backing_dir: "memfs",
             storage_id: "static_instance_id_or_moniker",
         },
+        {
+            storage: "custom_artifacts",
+            from: "#test_tmpfs",
+            subdir: "custom_artifacts",
+            backing_dir: "memfs",
+            storage_id: "static_instance_id_or_moniker",
+        },
         { protocol: "fuchsia.test.manager.Query" },
         { protocol: "fuchsia.test.internal.Info" },
         { protocol: "fuchsia.test.manager.RunBuilder" },
@@ -100,6 +107,10 @@
         },
         { protocol: "fuchsia.sys.Environment" },
         { protocol: "fuchsia.sys.Loader" },
+        {
+            protocol: "fuchsia.sys2.StorageAdmin",
+            from: "#custom_artifacts",
+        },
     ],
     offer: [
         {
@@ -258,6 +269,11 @@
         },
         {
             storage: "cache",
+            from: "self",
+            to: "#tests",
+        },
+        {
+            storage: "custom_artifacts",
             from: "self",
             to: "#tests",
         },

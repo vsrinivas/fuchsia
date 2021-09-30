@@ -11,13 +11,14 @@
 
 use {
     async_trait::async_trait,
+    fidl::Peered,
     fidl_fuchsia_test_manager::{
         self as ftest_manager, CaseArtifact, CaseFinished, CaseFound, CaseStarted, CaseStopped,
         RunBuilderProxy, SuiteArtifact, SuiteStopped,
     },
     fuchsia_async as fasync,
     futures::{channel::mpsc, join, prelude::*, stream::LocalBoxStream},
-    log::error,
+    log::{error, warn},
     std::collections::{HashMap, HashSet},
     std::convert::TryInto,
     std::fmt,
@@ -313,6 +314,20 @@ async fn collect_results_for_suite(
                                     .await
                                     .unwrap_or_else(|e| error!("Cannot write logs: {:?}", e));
                             }
+                            ftest_manager::Artifact::Custom(artifact) => {
+                                warn!("Got a case custom artifact. Ignoring it.");
+                                if let Some(ftest_manager::DirectoryAndToken { token, .. }) =
+                                    artifact.directory_and_token
+                                {
+                                    // TODO(fxbug.dev/84882): Remove this signal once Overnet
+                                    // supports automatically signalling EVENTPAIR_CLOSED when the
+                                    // handle is closed.
+                                    token.signal_peer(
+                                        fidl::Signals::empty(),
+                                        fidl::Signals::USER_0,
+                                    )?;
+                                }
+                            }
                             ftest_manager::ArtifactUnknown!() => {
                                 panic!("unknown artifact")
                             }
@@ -440,6 +455,20 @@ async fn collect_results_for_suite(
                                                 error!("Cannot write logs: {:?}", e)
                                             });
                                     }
+                                }
+                            }
+                            ftest_manager::Artifact::Custom(artifact) => {
+                                warn!("Got a suite custom artifact. Ignoring it.");
+                                if let Some(ftest_manager::DirectoryAndToken { token, .. }) =
+                                    artifact.directory_and_token
+                                {
+                                    // TODO(fxbug.dev/84882): Remove this signal once Overnet
+                                    // supports automatically signalling EVENTPAIR_CLOSED when the
+                                    // handle is closed.
+                                    token.signal_peer(
+                                        fidl::Signals::empty(),
+                                        fidl::Signals::USER_0,
+                                    )?;
                                 }
                             }
                             ftest_manager::ArtifactUnknown!() => {

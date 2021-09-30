@@ -1,0 +1,33 @@
+{
+    children: [
+        {
+            name: "test_driver",
+            url: "fuchsia-pkg://fuchsia.com/test_manager_test#meta/custom_artifact_user.cm",
+        },
+    ],
+    use: [
+        {
+            storage: "custom_artifacts",
+            rights: [ "rw*" ],
+            path: "/custom_artifacts",
+        },
+    ],
+    offer: [
+        {
+            storage: "custom_artifacts",
+            from: "parent",
+            to: "#test_driver",
+        },
+        {
+            protocol: "fuchsia.logger.LogSink",
+            from: "parent",
+            to: "#test_driver",
+        },
+    ],
+    expose: [
+        {
+            protocol: "fuchsia.test.Suite",
+            from: "#test_driver",
+        },
+    ],
+}

@@ -37,10 +37,31 @@ rustc_test("temp_user_bin") {
   sources = [ "temp_user.rs" ]
 }
 
+rustc_test("custom_artifact_test") {
+  name = "custom_artifact_test"
+  edition = "2018"
+  source_root = "custom_artifact_test.rs"
+
+  deps = [ "//third_party/rust_crates:anyhow" ]
+
+  sources = [ "custom_artifact_test.rs" ]
+}
+
 fuchsia_component("temp_user_cmp") {
   testonly = true
   manifest = "meta/temp_user.cml"
   deps = [ ":temp_user_bin" ]
+}
+
+fuchsia_component("custom_artifact_user_cmp") {
+  component_name = "custom_artifact_user"
+  testonly = true
+  deps = [ ":custom_artifact_test" ]
+  manifest = "meta/custom_artifact_test.cml"
+}
+
+fuchsia_test_package("custom_artifact_user") {
+  test_components = [ ":custom_artifact_user_cmp" ]
 }
 
 fuchsia_test_package("temp-user") {
@@ -49,5 +70,8 @@ fuchsia_test_package("temp-user") {
 
 group("tests") {
   testonly = true
-  deps = [ ":temp-user" ]
+  deps = [
+    ":custom_artifact_user",
+    ":temp-user",
+  ]
 }

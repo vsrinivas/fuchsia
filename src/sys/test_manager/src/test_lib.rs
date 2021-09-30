@@ -6,6 +6,7 @@
 
 use {
     anyhow::{Context as _, Error},
+    fidl_fuchsia_io as fio,
     fidl_fuchsia_test_manager::{
         self as ftest_manager, SuiteControllerProxy, SuiteEvent as FidlSuiteEvent,
         SuiteEventPayload as FidlSuiteEventPayload,
@@ -127,6 +128,20 @@ impl SuiteEvent {
         }
     }
 
+    pub fn suite_custom(
+        timestamp: Option<i64>,
+        component: String,
+        filename: String,
+        contents: String,
+    ) -> Self {
+        SuiteEvent {
+            timestamp,
+            payload: SuiteEventPayload::RunEvent(RunEvent::suite_custom(
+                component, filename, contents,
+            )),
+        }
+    }
+
     pub fn suite_log(timestamp: Option<i64>, log_stream: LogStream) -> Self {
         SuiteEvent { timestamp, payload: SuiteEventPayload::SuiteLog { log_stream } }
     }
@@ -156,6 +171,7 @@ pub enum RunEvent {
     CaseStopped { name: String, status: ftest_manager::CaseStatus },
     CaseFinished { name: String },
     SuiteStarted,
+    SuiteCustom { component: String, filename: String, contents: String },
     SuiteStopped { status: ftest_manager::SuiteStatus },
 }
 
@@ -208,6 +224,19 @@ impl RunEvent {
         Self::SuiteStarted
     }
 
+    pub fn suite_custom<T, U, V>(component: T, filename: U, contents: V) -> Self
+    where
+        T: Into<String>,
+        U: Into<String>,
+        V: Into<String>,
+    {
+        Self::SuiteCustom {
+            component: component.into(),
+            filename: filename.into(),
+            contents: contents.into(),
+        }
+    }
+
     pub fn suite_stopped(status: ftest_manager::SuiteStatus) -> Self {
         Self::SuiteStopped { status }
     }
@@ -220,7 +249,9 @@ impl RunEvent {
             | RunEvent::CaseStderr { name, .. }
             | RunEvent::CaseStopped { name, .. }
             | RunEvent::CaseFinished { name } => Some(name),
-            RunEvent::SuiteStarted | RunEvent::SuiteStopped { .. } => None,
+            RunEvent::SuiteStarted
+            | RunEvent::SuiteStopped { .. }
+            | RunEvent::SuiteCustom { .. } => None,
         }
     }
 
@@ -462,6 +493,42 @@ impl FidlSuiteEventProcessor {
                         None
                     }
                 },
+                ftest_manager::Artifact::Custom(custom_artifact) => {
+                    let ftest_manager::DirectoryAndToken { directory, token } =
+                        custom_artifact.directory_and_token.unwrap();
+                    let component_moniker = custom_artifact.component_moniker.unwrap();
+                    let mut sender_clone = sender.clone();
+                    fasync::Task::spawn(async move {
+                        let directory = directory.into_proxy().unwrap();
+                        let entries: Vec<_> = files_async::readdir_recursive(&directory, None)
+                            .try_collect()
+                            .await
+                            .expect("read custom artifact directory");
+                        for entry in entries.into_iter() {
+                            let file = io_util::open_file(
+                                &directory,
+                                entry.name.as_ref(),
+                                fio::OPEN_RIGHT_READABLE,
+                            )
+                            .unwrap();
+                            let contents = io_util::read_file(&file).await.unwrap();
+                            sender_clone
+                                .send(SuiteEvent::suite_custom(
+                                    timestamp,
+                                    component_moniker.clone(),
+                                    entry.name,
+                                    contents,
+                                ))
+                                .await
+                                .unwrap();
+                        }
+                        // Drop the token here - we must keep the token open for the duration that
+                        // the directory is in use.
+                        drop(token);
+                    })
+                    .detach();
+                    None
+                }
                 _ => {
                     panic!("not supported")
                 }

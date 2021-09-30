@@ -578,6 +578,50 @@ async fn launch_v1_v2_bridge_test() {
 }
 
 #[fuchsia_async::run_singlethreaded(test)]
+async fn custom_artifact_test() {
+    let test_url = "fuchsia-pkg://fuchsia.com/test_manager_test#meta/custom_artifact_user.cm";
+
+    let (events, _) = run_single_test(test_url, default_run_option()).await.unwrap();
+    let events = events.into_iter().group_by_test_case_unordered();
+
+    let expected_events = vec![
+        RunEvent::suite_started(),
+        RunEvent::case_found("use_artifact"),
+        RunEvent::case_started("use_artifact"),
+        RunEvent::case_stopped("use_artifact", CaseStatus::Passed),
+        RunEvent::case_finished("use_artifact"),
+        RunEvent::suite_stopped(SuiteStatus::Passed),
+        RunEvent::suite_custom(".", "artifact.txt", "Hello, world!"),
+    ]
+    .into_iter()
+    .group_by_test_case_unordered();
+
+    assert_eq!(&expected_events, &events);
+}
+
+#[fuchsia_async::run_singlethreaded(test)]
+async fn custom_artifact_realm_test() {
+    let test_url = "fuchsia-pkg://fuchsia.com/test_manager_test#meta/custom_artifact_realm_test.cm";
+
+    let (events, _) = run_single_test(test_url, default_run_option()).await.unwrap();
+    let events = events.into_iter().group_by_test_case_unordered();
+
+    let expected_events = vec![
+        RunEvent::suite_started(),
+        RunEvent::case_found("use_artifact"),
+        RunEvent::case_started("use_artifact"),
+        RunEvent::case_stopped("use_artifact", CaseStatus::Passed),
+        RunEvent::case_finished("use_artifact"),
+        RunEvent::suite_stopped(SuiteStatus::Passed),
+        RunEvent::suite_custom("./test_driver", "artifact.txt", "Hello, world!"),
+    ]
+    .into_iter()
+    .group_by_test_case_unordered();
+
+    assert_eq!(&expected_events, &events);
+}
+
+#[fuchsia_async::run_singlethreaded(test)]
 async fn enumerate_invalid_test() {
     let proxy = connect_query_server().await.unwrap();
     let (_iterator, server_end) = endpoints::create_proxy().unwrap();
