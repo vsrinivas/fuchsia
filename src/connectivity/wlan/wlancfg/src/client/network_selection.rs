@@ -48,18 +48,18 @@ const RECENT_DISCONNECT_WINDOW: zx::Duration = zx::Duration::from_seconds(60 * 1
 const STALE_SCAN_AGE: zx::Duration = zx::Duration::from_millis(50);
 
 /// Above or at this RSSI, we'll give 5G networks a preference
-const RSSI_CUTOFF_5G_PREFERENCE: i8 = -64;
+const RSSI_CUTOFF_5G_PREFERENCE: i16 = -64;
 /// The score boost for 5G networks that we are giving preference to.
-const RSSI_5G_PREFERENCE_BOOST: i8 = 20;
+const RSSI_5G_PREFERENCE_BOOST: i16 = 20;
 /// The amount to decrease the score by for each failed connection attempt.
-const SCORE_PENALTY_FOR_RECENT_FAILURE: i8 = 5;
+const SCORE_PENALTY_FOR_RECENT_FAILURE: i16 = 5;
 /// This penalty is much higher than for a general failure because we are not likely to succeed
 /// on a retry.
-const SCORE_PENALTY_FOR_RECENT_CREDENTIAL_REJECTED: i8 = 30;
+const SCORE_PENALTY_FOR_RECENT_CREDENTIAL_REJECTED: i16 = 30;
 /// The amount to decrease the score for each time we are connected for only a short amount
 /// of time before disconncting. This amount is the same as the penalty for 4 failed connect
 /// attempts to a BSS.
-const SCORE_PENALTY_FOR_SHORT_CONNECTION: i8 = 20;
+const SCORE_PENALTY_FOR_SHORT_CONNECTION: i16 = 20;
 // Threshold for what we consider a short time to be connected
 const SHORT_CONNECT_DURATION: zx::Duration = zx::Duration::from_seconds(7 * 60);
 
@@ -101,8 +101,8 @@ impl InternalBss<'_> {
     /// This function scores a BSS based on 3 factors: (1) RSSI (2) whether the BSS is 2.4 or 5 GHz
     /// and (3) recent failures to connect to this BSS. No single factor is enough to decide which
     /// BSS to connect to.
-    fn score(&self) -> i8 {
-        let mut score = self.scanned_bss.rssi;
+    fn score(&self) -> i16 {
+        let mut score = self.scanned_bss.rssi as i16;
         let channel = Channel::from(self.scanned_bss.channel);
 
         // If the network is 5G and has a strong enough RSSI, give it a bonus
@@ -110,28 +110,29 @@ impl InternalBss<'_> {
             score = score.saturating_add(RSSI_5G_PREFERENCE_BOOST);
         }
 
-        // Count failures for rejected credentials higher since we probably won't succeed another
-        // try with the same credentials.
-        let failure_score: i8 = self
+        // Penalize APs with recent failures to connect
+        let matching_failures = self
             .saved_network_info
             .recent_failures
             .iter()
-            .filter(|failure| failure.bssid == self.scanned_bss.bssid)
-            .map(|failure| {
-                if failure.reason == FailureReason::CredentialRejected {
-                    SCORE_PENALTY_FOR_RECENT_CREDENTIAL_REJECTED
-                } else {
-                    SCORE_PENALTY_FOR_RECENT_FAILURE
-                }
-            })
-            .sum();
-        let short_connection_score: i8 = self
+            .filter(|failure| failure.bssid == self.scanned_bss.bssid);
+        for failure in matching_failures {
+            // Count failures for rejected credentials higher since we probably won't succeed
+            // another try with the same credentials.
+            if failure.reason == FailureReason::CredentialRejected {
+                score = score.saturating_sub(SCORE_PENALTY_FOR_RECENT_CREDENTIAL_REJECTED);
+            } else {
+                score = score.saturating_sub(SCORE_PENALTY_FOR_RECENT_FAILURE);
+            }
+        }
+        // Penalize APs with recent short connections before disconnecting.
+        let short_connection_score: i16 = self
             .recent_short_connections()
             .try_into()
-            .unwrap_or_else(|_| i8::MAX)
+            .unwrap_or_else(|_| i16::MAX)
             .saturating_mul(SCORE_PENALTY_FOR_SHORT_CONNECTION);
 
-        return score.saturating_sub(failure_score).saturating_sub(short_connection_score);
+        return score.saturating_sub(short_connection_score);
     }
 
     fn recent_failure_count(&self) -> u64 {
@@ -1033,7 +1034,7 @@ mod tests {
         },
         -71; "5GHz score is RSSI, when below threshold")]
     #[fuchsia::test(add_test_attr = false)]
-    fn scoring_test(bss: types::Bss, expected_score: i8) {
+    fn scoring_test(bss: types::Bss, expected_score: i16) {
         let mut rng = rand::thread_rng();
 
         let network_id = types::NetworkIdentifier {
@@ -1172,6 +1173,32 @@ mod tests {
         };
 
         assert!(bss_better.score() > bss_worse.score());
+    }
+
+    #[fuchsia::test]
+    fn score_many_penalties_do_not_cause_panic() {
+        let bss = types::Bss { rssi: -80, channel: generate_channel(1), ..generate_random_bss() };
+        let (_test_id, mut internal_data) = generate_random_saved_network();
+        // Add 10 general failures and 10 rejected credentials failures
+        internal_data.recent_failures = vec![connect_failure_with_bssid(bss.bssid); 10];
+        for _ in 0..1200 {
+            internal_data.recent_failures.push(ConnectFailure {
+                bssid: bss.bssid,
+                time: zx::Time::get_monotonic(),
+                reason: FailureReason::CredentialRejected,
+            });
+        }
+        let short_uptime = zx::Duration::from_seconds(30);
+        internal_data.recent_disconnects =
+            vec![disconnect_with_bssid_uptime(bss.bssid, short_uptime); 10];
+        let internal_bss = InternalBss {
+            saved_network_info: internal_data.clone(),
+            scanned_bss: &bss,
+            multiple_bss_candidates: true,
+            hasher: WlanHasher::new(rand::thread_rng().gen::<u64>().to_le_bytes()),
+        };
+
+        assert_eq!(internal_bss.score(), i16::MIN);
     }
 
     #[fuchsia::test]
