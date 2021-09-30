@@ -356,7 +356,7 @@ mod tests {
         });
 
         // Setting handler notifies proxy of setting changed.
-        delegate
+        let _ = delegate
             .create(MessengerType::Unbound)
             .await
             .expect("seting handler should be created")

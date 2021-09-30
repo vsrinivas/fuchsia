@@ -513,10 +513,10 @@ mod tests {
         overall_bits: u64,
     ) -> InputDevice {
         let mut input_device = InputDevice::new(device_name.to_string(), device_type);
-        input_device
+        let _ = input_device
             .source_states
             .insert(DeviceStateSource::SOFTWARE, DeviceState::from_bits(sw_bits).unwrap());
-        input_device
+        let _ = input_device
             .source_states
             .insert(DeviceStateSource::HARDWARE, DeviceState::from_bits(hw_bits).unwrap());
         input_device.state = DeviceState::from_bits(overall_bits).unwrap();
@@ -829,16 +829,20 @@ mod tests {
         );
 
         let mut mic = InputDevice::new(DEFAULT_MIC_NAME.to_string(), InputDeviceType::MICROPHONE);
-        mic.source_states
+        let _ = mic
+            .source_states
             .insert(DeviceStateSource::SOFTWARE, DeviceState::from_bits(AVAILABLE_BITS).unwrap());
-        mic.source_states
+        let _ = mic
+            .source_states
             .insert(DeviceStateSource::HARDWARE, DeviceState::from_bits(AVAILABLE_BITS).unwrap());
         mic.state = DeviceState::from_bits(AVAILABLE_BITS).unwrap();
 
         let mut cam = InputDevice::new(DEFAULT_CAMERA_NAME.to_string(), InputDeviceType::CAMERA);
-        cam.source_states
+        let _ = cam
+            .source_states
             .insert(DeviceStateSource::SOFTWARE, DeviceState::from_bits(AVAILABLE_BITS).unwrap());
-        cam.source_states
+        let _ = cam
+            .source_states
             .insert(DeviceStateSource::HARDWARE, DeviceState::from_bits(MUTED_BITS).unwrap());
         cam.state = DeviceState::from_bits(MUTED_BITS).unwrap();
 

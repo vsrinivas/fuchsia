@@ -31,7 +31,7 @@ async fn create_test_environment() -> (service::message::Delegate, Arc<DeviceSto
     let env =
         EnvironmentBuilder::new(Arc::clone(&storage_factory)).spawn_nested(ENV_NAME).await.unwrap();
     let store = storage_factory.get_store().await;
-    store.write(&UnknownInfo(ORIGINAL_VALUE), true).await.expect("Write should succeed");
+    let _ = store.write(&UnknownInfo(ORIGINAL_VALUE), true).await.expect("Write should succeed");
     (env.delegate, store)
 }
 

@@ -172,11 +172,7 @@ mod tests {
     async fn ensure_startup_is_awaited() {
         let delegate = service::MessageHub::create_hub();
         let mut factory_impl = SettingHandlerFactoryImpl::new(
-            {
-                let mut settings = HashSet::new();
-                settings.insert(SettingType::Unknown);
-                settings
-            },
+            std::array::IntoIter::new([SettingType::Unknown]).collect(),
             Arc::new(ServiceContext::new(None, Some(delegate.clone()))),
             Arc::new(AtomicU64::new(0)),
         );
@@ -229,12 +225,12 @@ mod tests {
         while generate_done.is_none() || startup_done.is_none() {
             select! {
                 result = generate_future.select_next_some() => {
-                    result.expect("should have received a signature");
+                    let _ = result.expect("should have received a signature");
                     generate_done = Some(idx);
                     idx += 1;
                 }
                 maybe = broker_receptor.next() => {
-                    maybe.expect("should have gotten a reply");
+                    let _ = maybe.expect("should have gotten a reply");
                     startup_done = Some(idx);
                     idx += 1;
                 }

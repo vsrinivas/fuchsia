@@ -96,10 +96,10 @@ async fn test_message_client_equality() {
     let (messenger, _) = delegate.create(MessengerType::Unbound).await.unwrap();
     let (_, mut receptor) = delegate.create(MessengerType::Unbound).await.unwrap();
 
-    messenger.message(ORIGINAL, Audience::Broadcast).send();
+    let _ = messenger.message(ORIGINAL, Audience::Broadcast).send();
     let (_, client_1) = receptor.next_payload().await.unwrap();
 
-    messenger.message(ORIGINAL, Audience::Broadcast).send();
+    let _ = messenger.message(ORIGINAL, Audience::Broadcast).send();
     let (_, client_2) = receptor.next_payload().await.unwrap();
 
     assert!(client_1 != client_2);
@@ -356,7 +356,7 @@ async fn test_broadcast() {
     let (_, mut receptor_3) =
         delegate.create(MessengerType::Addressable(TestAddress::Foo(3))).await.unwrap();
 
-    messenger_client_1.message(ORIGINAL, Audience::Broadcast).send();
+    let _ = messenger_client_1.message(ORIGINAL, Audience::Broadcast).send();
 
     verify_payload(ORIGINAL, &mut receptor_2, None).await;
     verify_payload(ORIGINAL, &mut receptor_3, None).await;

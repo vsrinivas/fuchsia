@@ -2,13 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use std::collections::HashMap;
-use std::option::Option::Some;
-use std::sync::Arc;
-
-use fidl_fuchsia_settings::{LightError, LightMarker, LightProxy};
-use futures::lock::Mutex;
-
 use crate::agent::BlueprintHandle;
 use crate::base::SettingType;
 use crate::config::base::AgentType;
@@ -26,6 +19,10 @@ use crate::tests::fakes::hardware_light_service::HardwareLightService;
 use crate::tests::fakes::input_device_registry_service::InputDeviceRegistryService;
 use crate::tests::fakes::service_registry::ServiceRegistry;
 use crate::{EnvironmentBuilder, LightHardwareConfiguration};
+use fidl_fuchsia_settings::{LightError, LightMarker, LightProxy};
+use futures::lock::Mutex;
+use std::option::Option::Some;
+use std::sync::Arc;
 
 type HardwareLightServiceHandle = Arc<Mutex<HardwareLightService>>;
 
@@ -36,31 +33,33 @@ const LIGHT_NAME_2: &str = "light_name_2";
 const LIGHT_NAME_3: &str = "light_name_3";
 
 fn get_test_light_info() -> LightInfo {
-    let mut light_groups = HashMap::new();
-    light_groups.insert(
-        LIGHT_NAME_1.to_string(),
-        LightGroup {
-            name: LIGHT_NAME_1.to_string(),
-            enabled: true,
-            light_type: LightType::Brightness,
-            lights: vec![LightState { value: Some(LightValue::Brightness(0.42)) }],
-            hardware_index: vec![0],
-            disable_conditions: vec![],
-        },
-    );
-    light_groups.insert(
-        LIGHT_NAME_2.to_string(),
-        LightGroup {
-            name: LIGHT_NAME_2.to_string(),
-            enabled: true,
-            light_type: LightType::Simple,
-            lights: vec![LightState { value: Some(LightValue::Simple(true)) }],
-            hardware_index: vec![1],
-            disable_conditions: vec![],
-        },
-    );
-
-    LightInfo { light_groups }
+    LightInfo {
+        light_groups: std::array::IntoIter::new([
+            (
+                LIGHT_NAME_1.to_string(),
+                LightGroup {
+                    name: LIGHT_NAME_1.to_string(),
+                    enabled: true,
+                    light_type: LightType::Brightness,
+                    lights: vec![LightState { value: Some(LightValue::Brightness(0.42)) }],
+                    hardware_index: vec![0],
+                    disable_conditions: vec![],
+                },
+            ),
+            (
+                LIGHT_NAME_2.to_string(),
+                LightGroup {
+                    name: LIGHT_NAME_2.to_string(),
+                    enabled: true,
+                    light_type: LightType::Simple,
+                    lights: vec![LightState { value: Some(LightValue::Simple(true)) }],
+                    hardware_index: vec![1],
+                    disable_conditions: vec![],
+                },
+            ),
+        ])
+        .collect(),
+    }
 }
 
 /// Populates the given HardwareLightService fake with the lights from a LightInfo.
@@ -380,8 +379,8 @@ async fn test_light_restore_from_configuration() {
 
     // None of the light names provided by in the hardware itself are valid as they're not in the
     // configuration.
-    env.light_service.watch_light_group(LIGHT_NAME_1).await.expect_err("watch should fail");
-    env.light_service.watch_light_group(LIGHT_NAME_2).await.expect_err("watch should fail");
+    let _ = env.light_service.watch_light_group(LIGHT_NAME_1).await.expect_err("watch should fail");
+    let _ = env.light_service.watch_light_group(LIGHT_NAME_2).await.expect_err("watch should fail");
 }
 
 // Tests that setting a light that's specified in a `LightHardwareConfiguration` also sets the value
@@ -408,8 +407,13 @@ async fn test_light_set_from_configuration() {
     // The light hardware configuration basically renames LIGHT_NAME_1 to LIGHT_NAME_3.
     changed_light_group.name = LIGHT_NAME_3.to_string();
     changed_light_group.lights = vec![LightState { value: Some(LightValue::Brightness(0.99)) }];
-    let mut expected_light_info = LightInfo { light_groups: Default::default() };
-    expected_light_info.light_groups.insert(LIGHT_NAME_3.to_string(), changed_light_group.clone());
+    let expected_light_info = LightInfo {
+        light_groups: std::array::IntoIter::new([(
+            LIGHT_NAME_3.to_string(),
+            changed_light_group.clone(),
+        )])
+        .collect(),
+    };
 
     let env = TestLightEnvironmentBuilder::new()
         .set_hardware_light_service_handle(hardware_light_service_handle)
@@ -480,7 +484,9 @@ async fn test_light_store_and_watch() {
     let mut changed_light_group =
         expected_light_info.light_groups.get(LIGHT_NAME_1).unwrap().clone();
     changed_light_group.lights = vec![LightState { value: Some(LightValue::Brightness(0.128)) }];
-    expected_light_info.light_groups.insert(LIGHT_NAME_1.to_string(), changed_light_group.clone());
+    let _ = expected_light_info
+        .light_groups
+        .insert(LIGHT_NAME_1.to_string(), changed_light_group.clone());
 
     let env = TestLightEnvironmentBuilder::new()
         .set_starting_light_info(get_test_light_info())
@@ -507,7 +513,8 @@ async fn test_light_set_wrong_size() {
         .await;
 
     // Light group only has one light, attempt to set two lights.
-    env.light_service
+    let _ = env
+        .light_service
         .set_light_group_values(
             LIGHT_NAME_1,
             &mut vec![
@@ -556,12 +563,16 @@ async fn test_light_set_single_light() {
         LightState { value: Some(LightValue::Brightness(LIGHT_2_CHANGED_VAL)) },
     ];
 
-    let mut light_groups = HashMap::new();
-    light_groups.insert(TEST_LIGHT_NAME.to_string(), original_light_group);
-    let starting_light_info = LightInfo { light_groups };
+    let starting_light_info = LightInfo {
+        light_groups: std::array::IntoIter::new([(
+            TEST_LIGHT_NAME.to_string(),
+            original_light_group,
+        )])
+        .collect(),
+    };
 
     let mut expected_light_info = starting_light_info.clone();
-    expected_light_info
+    let _ = expected_light_info
         .light_groups
         .insert(TEST_LIGHT_NAME.to_string(), expected_light_group.clone());
 
@@ -634,7 +645,8 @@ async fn test_watch_unknown_light_group_name() {
         .await;
 
     // Unknown name should be rejected.
-    env.light_service.watch_light_group("unknown_name").await.expect_err("watch should fail");
+    let _ =
+        env.light_service.watch_light_group("unknown_name").await.expect_err("watch should fail");
 }
 
 #[fuchsia_async::run_until_stalled(test)]
@@ -703,9 +715,13 @@ async fn test_set_wrong_value_type() {
         hardware_index: vec![0, 1],
         disable_conditions: vec![],
     };
-    let mut light_groups = HashMap::new();
-    light_groups.insert(TEST_LIGHT_NAME.to_string(), original_light_group);
-    let starting_light_info = LightInfo { light_groups };
+    let starting_light_info = LightInfo {
+        light_groups: std::array::IntoIter::new([(
+            TEST_LIGHT_NAME.to_string(),
+            original_light_group,
+        )])
+        .collect(),
+    };
 
     let hardware_light_service_handle = Arc::new(Mutex::new(HardwareLightService::new()));
     let env = TestLightEnvironmentBuilder::new()
@@ -777,9 +793,13 @@ async fn test_set_invalid_rgb_values() {
         hardware_index: vec![0],
         disable_conditions: vec![],
     };
-    let mut light_groups = HashMap::new();
-    light_groups.insert(TEST_LIGHT_NAME.to_string(), original_light_group);
-    let starting_light_info = LightInfo { light_groups };
+    let starting_light_info = LightInfo {
+        light_groups: std::array::IntoIter::new([(
+            TEST_LIGHT_NAME.to_string(),
+            original_light_group,
+        )])
+        .collect(),
+    };
 
     let hardware_light_service_handle = Arc::new(Mutex::new(HardwareLightService::new()));
     let env = TestLightEnvironmentBuilder::new()

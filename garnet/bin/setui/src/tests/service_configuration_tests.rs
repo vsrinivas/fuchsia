@@ -55,13 +55,13 @@ async fn test_no_configuration_provided() {
 
     // No ServiceConfiguration provided, we should be able to connect to the service and make a watch call without issue.
     let service = env.connect_to_protocol::<AccessibilityMarker>().expect("Connected to service");
-    service.watch().await.expect("watch completed");
+    let _ = service.watch().await.expect("watch completed");
 
     // No ServiceConfiguration provided, audio policy should not be able to connect.
     let policy = env
         .connect_to_protocol::<VolumePolicyControllerMarker>()
         .expect("Connected to policy service");
-    policy.get_properties().await.expect_err("Policy get should fail");
+    let _ = policy.get_properties().await.expect_err("Policy get should fail");
 }
 
 #[fuchsia_async::run_until_stalled(test)]
@@ -88,11 +88,11 @@ async fn test_default_interfaces_configuration_provided() {
         .await
         .unwrap();
 
-    env.connect_to_protocol::<DisplayMarker>().expect("Connected to service");
+    let _ = env.connect_to_protocol::<DisplayMarker>().expect("Connected to service");
 
     // Any calls to the privacy service should fail since the service isn't included in the configuration.
     let privacy_service = env.connect_to_protocol::<PrivacyMarker>().unwrap();
-    privacy_service.watch().await.expect_err("watch completed");
+    let _ = privacy_service.watch().await.expect_err("watch completed");
 }
 
 #[fuchsia_async::run_until_stalled(test)]
@@ -129,12 +129,12 @@ async fn test_default_policy_configuration_provided() {
         .await
         .unwrap();
 
-    env.connect_to_protocol::<AccessibilityMarker>().expect("Connected to service");
+    let _ = env.connect_to_protocol::<AccessibilityMarker>().expect("Connected to service");
 
     // Service configuration includes volume policy and audio setting, so calls to volume policy
     // will succeed.
     let policy = env
         .connect_to_protocol::<VolumePolicyControllerMarker>()
         .expect("Connected to policy service");
-    policy.get_properties().await.expect("Policy get should succeed");
+    let _ = policy.get_properties().await.expect("Policy get should succeed");
 }

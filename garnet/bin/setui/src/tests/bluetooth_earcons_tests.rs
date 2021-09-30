@@ -80,7 +80,7 @@ async fn test_sounds() {
 
     // Add first connection.
     fake_services.discovery.lock().await.update_session(ID_1, BLUETOOTH_DOMAIN).await;
-    watch_for_next_sound_played(&mut sound_played_receiver).await.ok();
+    let _ = watch_for_next_sound_played(&mut sound_played_receiver).await;
     assert!(fake_services.sound_player.lock().await.id_exists(BLUETOOTH_CONNECTED_SOUND_ID).await);
     assert_eq!(
         fake_services.sound_player.lock().await.get_play_count(BLUETOOTH_CONNECTED_SOUND_ID).await,
@@ -89,7 +89,7 @@ async fn test_sounds() {
 
     // Add second connection.
     fake_services.discovery.lock().await.update_session(ID_2, BLUETOOTH_DOMAIN).await;
-    watch_for_next_sound_played(&mut sound_played_receiver).await.ok();
+    let _ = watch_for_next_sound_played(&mut sound_played_receiver).await;
     assert_eq!(
         fake_services.sound_player.lock().await.get_play_count(BLUETOOTH_CONNECTED_SOUND_ID).await,
         Some(2)
@@ -97,7 +97,7 @@ async fn test_sounds() {
 
     // Disconnect the first connection.
     fake_services.discovery.lock().await.remove_session(ID_1).await;
-    watch_for_next_sound_played(&mut sound_played_receiver).await.ok();
+    let _ = watch_for_next_sound_played(&mut sound_played_receiver).await;
     assert!(
         fake_services.sound_player.lock().await.id_exists(BLUETOOTH_DISCONNECTED_SOUND_ID).await
     );
@@ -113,7 +113,7 @@ async fn test_sounds() {
 
     // Disconnect the second connection.
     fake_services.discovery.lock().await.remove_session(ID_2).await;
-    watch_for_next_sound_played(&mut sound_played_receiver).await.ok();
+    let _ = watch_for_next_sound_played(&mut sound_played_receiver).await;
     assert_eq!(
         fake_services
             .sound_player
@@ -141,7 +141,7 @@ async fn test_bluetooth_domain() {
     fake_services.discovery.lock().await.update_session(ID_1, BLUETOOTH_DOMAIN).await;
     fake_services.discovery.lock().await.update_session(ID_2, NON_BLUETOOTH_DOMAIN_1).await;
     fake_services.discovery.lock().await.update_session(ID_3, NON_BLUETOOTH_DOMAIN_2).await;
-    watch_for_next_sound_played(&mut sound_played_receiver).await.ok();
+    let _ = watch_for_next_sound_played(&mut sound_played_receiver).await;
     assert!(fake_services.sound_player.lock().await.id_exists(BLUETOOTH_CONNECTED_SOUND_ID).await);
 
     // Ensure the connection sound only played once.
@@ -152,7 +152,7 @@ async fn test_bluetooth_domain() {
 
     // Disconnect the bluetooth connection.
     fake_services.discovery.lock().await.remove_session(ID_1).await;
-    watch_for_next_sound_played(&mut sound_played_receiver).await.ok();
+    let _ = watch_for_next_sound_played(&mut sound_played_receiver).await;
     assert!(
         fake_services.sound_player.lock().await.id_exists(BLUETOOTH_DISCONNECTED_SOUND_ID).await
     );
@@ -218,7 +218,7 @@ async fn test_oobe_connection() {
 
     // Add regular bluetooth connection.
     fake_services.discovery.lock().await.update_session(ID_2, BLUETOOTH_DOMAIN).await;
-    watch_for_next_sound_played(&mut sound_played_receiver).await.ok();
+    let _ = watch_for_next_sound_played(&mut sound_played_receiver).await;
     assert_eq!(
         fake_services.sound_player.lock().await.get_play_count(BLUETOOTH_CONNECTED_SOUND_ID).await,
         Some(1)
@@ -226,7 +226,7 @@ async fn test_oobe_connection() {
 
     // Disconnect the regular bluetooth connection.
     fake_services.discovery.lock().await.remove_session(ID_2).await;
-    watch_for_next_sound_played(&mut sound_played_receiver).await.ok();
+    let _ = watch_for_next_sound_played(&mut sound_played_receiver).await;
     assert_eq!(
         fake_services
             .sound_player

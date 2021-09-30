@@ -22,6 +22,7 @@ use crate::EnvironmentBuilder;
 use async_trait::async_trait;
 use futures::channel::mpsc::{unbounded, UnboundedSender};
 use futures::StreamExt;
+use std::collections::hash_map::Entry;
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 
@@ -139,11 +140,7 @@ async fn test_write_notify() {
     let agent_context = crate::agent::Context::new(
         agent_receptor,
         delegate,
-        {
-            let mut settings = HashSet::new();
-            settings.insert(SettingType::Accessibility);
-            settings
-        },
+        std::array::IntoIter::new([SettingType::Accessibility]).collect(),
         HashSet::new(),
         None,
     )
@@ -259,11 +256,13 @@ impl StateController {
             let reporter = reporter.clone();
             let invocation_counts_reporter = invocation_counts_reporter.clone();
             Box::pin(async move {
-                let mut invocation_counts = HashMap::new();
-                invocation_counts.insert(State::Startup, 0);
-                invocation_counts.insert(State::Listen, 0);
-                invocation_counts.insert(State::EndListen, 0);
-                invocation_counts.insert(State::Teardown, 0);
+                let invocation_counts = std::array::IntoIter::new([
+                    (State::Startup, 0),
+                    (State::Listen, 0),
+                    (State::EndListen, 0),
+                    (State::Teardown, 0),
+                ])
+                .collect();
                 Ok(Box::new(StateController {
                     state_reporter: reporter.clone(),
                     invocation_counts,
@@ -281,7 +280,9 @@ impl controller::Handle for StateController {
     }
 
     async fn change_state(&mut self, state: State) -> Option<ControllerStateResult> {
-        self.invocation_counts.entry(state).and_modify(|e| *e += 1);
+        if let Entry::Occupied(mut o) = self.invocation_counts.entry(state) {
+            *o.get_mut() += 1;
+        }
         self.invocation_counts_reporter.unbounded_send(self.invocation_counts.clone()).unwrap();
         self.state_reporter.unbounded_send(state).unwrap();
         None

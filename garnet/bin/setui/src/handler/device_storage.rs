@@ -600,7 +600,7 @@ pub(crate) mod testing {
             T: DeviceStorageCompatible,
         {
             let mut map = HashMap::new();
-            map.insert(T::KEY, serde_json::to_string(data).unwrap());
+            let _ = map.insert(T::KEY, serde_json::to_string(data).unwrap());
             InMemoryStorageFactory {
                 initial_data: map,
                 device_storage_cache: Mutex::new(InitializationState::new()),
@@ -618,7 +618,7 @@ pub(crate) mod testing {
         async fn initialize_storage_for_key(&self, key: &'static str) {
             match &mut *self.device_storage_cache.lock().await {
                 InitializationState::Initializing(initial_keys) => {
-                    initial_keys.insert(key);
+                    let _ = initial_keys.insert(key);
                 }
                 InitializationState::Initialized(_) => panic!("{}", INITIALIZATION_ERROR),
             }
@@ -628,7 +628,7 @@ pub(crate) mod testing {
             match &mut *self.device_storage_cache.lock().await {
                 InitializationState::Initializing(initial_keys) => {
                     for &key in keys {
-                        initial_keys.insert(key);
+                        let _ = initial_keys.insert(key);
                     }
                 }
                 InitializationState::Initialized(_) => panic!("{}", INITIALIZATION_ERROR),
@@ -714,7 +714,7 @@ pub(crate) mod testing {
                     }
                     StoreAccessorRequest::Flush { responder } => {
                         stats_clone.lock().await.record(StashAction::Flush);
-                        responder.send(&mut Ok(())).ok();
+                        let _ = responder.send(&mut Ok(()));
                     }
                     _ => {}
                 }
@@ -820,7 +820,7 @@ mod tests {
     async fn verify_stash_flush(stash_stream: &mut StoreAccessorRequestStream) {
         match stash_stream.next().await.unwrap() {
             Ok(StoreAccessorRequest::Flush { responder }) => {
-                responder.send(&mut Ok(())).ok();
+                let _ = responder.send(&mut Ok(()));
             } // expected
             request => panic!("Unexpected request: {:?}", request),
         }
@@ -983,11 +983,9 @@ mod tests {
                 match request {
                     Ok(StoreAccessorRequest::GetValue { key, responder }) => {
                         assert_eq!(key, STORE_KEY);
-                        responder
-                            .send(Some(&mut Value::Stringval(
-                                serde_json::to_string(&TestStruct { value: VALUE2 }).unwrap(),
-                            )))
-                            .ok();
+                        let _ = responder.send(Some(&mut Value::Stringval(
+                            serde_json::to_string(&TestStruct { value: VALUE2 }).unwrap(),
+                        )));
                     }
                     Ok(StoreAccessorRequest::SetValue { key, .. }) => {
                         assert_eq!(key, STORE_KEY);

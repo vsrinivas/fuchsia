@@ -75,5 +75,5 @@ async fn set_interfaces(
     let mut setup_settings = fidl_fuchsia_settings::SetupSettings::EMPTY;
     setup_settings.enabled_configuration_interfaces = interfaces;
     let setup_service = env.connect_to_protocol::<SetupMarker>().unwrap();
-    setup_service.set(setup_settings).await.ok();
+    let _ = setup_service.set(setup_settings).await;
 }

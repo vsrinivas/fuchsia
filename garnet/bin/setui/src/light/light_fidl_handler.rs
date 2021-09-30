@@ -219,9 +219,11 @@ mod tests {
             disable_conditions: vec![],
         };
 
-        let mut light_groups: HashMap<String, crate::light::types::LightGroup> = HashMap::new();
-        light_groups.insert("test".to_string(), light_group_1.clone());
-        light_groups.insert("test2".to_string(), light_group_2.clone());
+        let light_groups: HashMap<_, _> = std::array::IntoIter::new([
+            (String::from("test"), light_group_1.clone()),
+            (String::from("test2"), light_group_2.clone()),
+        ])
+        .collect();
 
         let mut response: Vec<fidl_fuchsia_settings::LightGroup> =
             SettingInfo::into((LightInfo { light_groups }).into());

@@ -219,7 +219,7 @@ async fn test_intl_invalid_timezone() {
     let updated_timezone = "not_a_real_time_zone";
     intl_settings.time_zone_id =
         Some(fidl_fuchsia_intl::TimeZoneId { id: updated_timezone.to_string() });
-    intl_service.set(intl_settings).await.expect("set completed").expect_err("invalid");
+    let _ = intl_service.set(intl_settings).await.expect("set completed").expect_err("invalid");
 
     // Verify the returned when watching hasn't changed.
     let settings = intl_service.watch().await.expect("watch completed");

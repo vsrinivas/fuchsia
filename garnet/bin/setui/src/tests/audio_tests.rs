@@ -105,7 +105,7 @@ async fn set_volume(proxy: &AudioProxy, streams: Vec<AudioStreamSettings>) {
 
 // Verifies that a stream equal to |stream| is inside of |settings|.
 fn verify_audio_stream(settings: &AudioSettings, stream: AudioStreamSettings) {
-    settings
+    let _ = settings
         .streams
         .as_ref()
         .expect("audio settings contain streams")
@@ -116,7 +116,7 @@ fn verify_audio_stream(settings: &AudioSettings, stream: AudioStreamSettings) {
 
 // Verify that |streams| contain |stream|.
 fn verify_contains_stream(streams: &[AudioStream; 5], stream: &AudioStream) {
-    streams.iter().find(|x| *x == stream).expect("contains changed media stream");
+    let _ = streams.iter().find(|x| *x == stream).expect("contains changed media stream");
 }
 
 // Returns a registry and audio related services it is populated with
@@ -638,8 +638,8 @@ async fn test_invalid_stream_fails() {
 
     // AudioInfo has to have 5 streams, but make them all the same stream type so that we can
     // perform a set call with a stream that isn't in the AudioInfo.
-    let mut counters = HashMap::new();
-    counters.insert(AudioStreamType::Background, 0);
+    let counters: HashMap<_, _> =
+        std::array::IntoIter::new([(AudioStreamType::Background, 0)]).collect();
 
     let test_audio_info = AudioInfo {
         streams: [
@@ -690,10 +690,11 @@ async fn test_invalid_stream_fails() {
 
     // Connect to the service and make a watch call that should succeed.
     let audio_proxy = env.connect_to_protocol::<AudioMarker>().unwrap();
-    audio_proxy.watch().await.expect("watch completed");
+    let _ = audio_proxy.watch().await.expect("watch completed");
 
     // Make a set call with the media stream, which isn't present and should fail.
     let mut audio_settings = AudioSettings::EMPTY;
     audio_settings.streams = Some(vec![CHANGED_MEDIA_STREAM_SETTINGS]);
-    audio_proxy.set(audio_settings).await.expect("set completed").expect_err("set should fail");
+    let _ =
+        audio_proxy.set(audio_settings).await.expect("set completed").expect_err("set should fail");
 }

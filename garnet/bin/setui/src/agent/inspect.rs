@@ -274,7 +274,7 @@ mod tests {
                 .send()
                 .ack();
 
-            receptor.next_payload().await.ok();
+            let _ = receptor.next_payload().await;
         }
     }
 

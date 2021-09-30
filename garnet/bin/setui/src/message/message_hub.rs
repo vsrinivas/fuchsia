@@ -558,7 +558,7 @@ impl<P: Payload + 'static, A: Address + 'static, R: Role + 'static> MessageHub<P
             #[cfg(test)]
             MessengerAction::CheckPresence(signature, responder) => {
                 trace!(nonce, "process messenger request check presence");
-                responder.send(Ok(self.resolve_messenger_id(&signature).is_ok())).ok();
+                let _ = responder.send(Ok(self.resolve_messenger_id(&signature).is_ok()));
             }
             MessengerAction::DeleteBySignature(signature) => {
                 trace!(nonce, "process messenger request delete");

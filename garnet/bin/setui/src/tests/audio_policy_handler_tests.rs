@@ -93,10 +93,8 @@ impl TestEnvironment {
 
         let client_proxy = ClientProxy::new(messenger);
 
-        let mut components = HashSet::new();
-        components.insert(SettingType::Audio);
-        let mut policies = HashSet::new();
-        policies.insert(PolicyType::Audio);
+        let components: HashSet<_> = std::array::IntoIter::new([SettingType::Audio]).collect();
+        let policies: HashSet<_> = std::array::IntoIter::new([PolicyType::Audio]).collect();
         let mut agent_authority = Authority::create(delegate.clone(), components, policies, None)
             .await
             .expect("failed to create agent authority");
@@ -216,8 +214,11 @@ impl TestEnvironment {
                         if let Ok((SettingPayload::Request(request), client)) =
                                 SettingPayload::try_from_with_client(event) {
                             // Echo request to those listening.
-                            test_messenger.message(TestEnvironmentPayload::Request(request.clone()),
-                                Audience::Broadcast)
+                            let _ = test_messenger
+                                .message(
+                                    TestEnvironmentPayload::Request(request.clone()),
+                                    Audience::Broadcast,
+                                )
                                 .send();
 
                             match request {
@@ -225,7 +226,7 @@ impl TestEnvironment {
                                     listeners.push(client);
                                 }
                                 SettingRequest::Get => {
-                                    client
+                                    let _ = client
                                         .reply(SettingPayload::Response(Ok(Some(
                                             audio_info.clone().into()))).into())
                                         .send();
@@ -233,10 +234,10 @@ impl TestEnvironment {
                                 SettingRequest::Rebroadcast => {
                                     // Inform all the service message hub listeners.
                                     for listener in &listeners {
-                                        listener
-                                        .reply(SettingPayload::Response(Ok(Some(
-                                            audio_info.clone().into()))).into())
-                                        .send();
+                                        let _ = listener
+                                            .reply(SettingPayload::Response(Ok(Some(
+                                                audio_info.clone().into()))).into())
+                                            .send();
                                     }
                                 }
                                 _ => {
@@ -455,13 +456,13 @@ async fn test_handler_restore_persisted_state() {
     // Persisted state with only one stream and transform.
     let mut persisted_state =
         StateBuilder::new().add_property(AudioStreamType::Media, TransformFlags::all()).build();
-    persisted_state.add_transform(modified_property, expected_transform);
+    let _ = persisted_state.add_transform(modified_property, expected_transform);
 
     let storage_factory = TestEnvironment::create_storage_factory().await;
     let store = storage_factory.get_store().await;
 
     // Write the "persisted" value to storage for the handler to read on start.
-    store.write(&persisted_state, false).await.expect("write failed");
+    let _ = store.write(&persisted_state, false).await.expect("write failed");
 
     let mut env = TestEnvironment::new_with_store(storage_factory, None).await;
 
@@ -606,7 +607,7 @@ async fn test_handler_add_policy_modifies_internal_volume_above_max() {
 
     // Create observer to capture the events to follow.
     let mut receptor = env.create_request_observer().await;
-    set_media_volume_limit(&mut env, Transform::Max(max_volume), starting_audio_info).await;
+    let _ = set_media_volume_limit(&mut env, Transform::Max(max_volume), starting_audio_info).await;
 
     // Handler requests that the setting handler set the volume to 60% (the max set by policy).
     verify_media_volume_set(&mut receptor, max_volume).await;
@@ -626,7 +627,7 @@ async fn test_handler_add_policy_modifies_internal_volume_below_min() {
     // Set the min volume limit to 40%.
     let min_volume = 0.4;
     let mut receptor = env.create_request_observer().await;
-    set_media_volume_limit(&mut env, Transform::Min(min_volume), starting_audio_info).await;
+    let _ = set_media_volume_limit(&mut env, Transform::Min(min_volume), starting_audio_info).await;
 
     // Handler requests that the setting handler set the volume to 40% (the min set by policy).
     verify_media_volume_set(&mut receptor, min_volume).await;
@@ -648,8 +649,12 @@ async fn test_handler_add_min_limit_unmutes() {
     starting_audio_info.replace_stream(create_media_stream(starting_volume_level, true));
 
     // Set a min limit so that the stream is unmuted.
-    set_media_volume_limit(&mut env, Transform::Min(starting_volume_level), starting_audio_info)
-        .await;
+    let _ = set_media_volume_limit(
+        &mut env,
+        Transform::Min(starting_volume_level),
+        starting_audio_info,
+    )
+    .await;
 
     // Handler requests that the setting handler unmute the stream.
     verify_stream_set(&mut receptor, expected_stream).await;
@@ -668,7 +673,7 @@ async fn test_handler_add_zero_max() {
 
     // Set the max volume limit to 0%.
     let max_volume = 0.0;
-    set_media_volume_limit(&mut env, Transform::Max(max_volume), starting_audio_info).await;
+    let _ = set_media_volume_limit(&mut env, Transform::Max(max_volume), starting_audio_info).await;
 
     // Handler requests that the setting handler set the volume to 0%.
     verify_media_volume_set(&mut receptor, max_volume).await;
@@ -687,14 +692,16 @@ async fn test_handler_add_policy_does_not_modify_internal_volume_within_limits()
     let mut receptor = env.create_request_observer().await;
 
     // Set the min volume limit to 40%.
-    set_media_volume_limit(&mut env, Transform::Min(0.4), starting_audio_info.clone()).await;
+    let _ =
+        set_media_volume_limit(&mut env, Transform::Min(0.4), starting_audio_info.clone()).await;
 
     // Set the max volume limit to 60%.
-    set_media_volume_limit(&mut env, Transform::Max(0.6), starting_audio_info.clone()).await;
+    let _ =
+        set_media_volume_limit(&mut env, Transform::Max(0.6), starting_audio_info.clone()).await;
 
     // So far, no set requests should have been sent to the setting proxy, set the min volume limit
     // to 55% to ensure that the first set request the setting proxy receives is this one.
-    set_media_volume_limit(&mut env, Transform::Min(0.55), starting_audio_info).await;
+    let _ = set_media_volume_limit(&mut env, Transform::Min(0.55), starting_audio_info).await;
 
     // Handler requests that the setting handler set the volume to 55% (the min set by policy).
     verify_media_volume_set(&mut receptor, 0.55).await;
@@ -742,7 +749,8 @@ async fn test_handler_remove_policy_notifies_listeners() {
     env.serve_audio_info(starting_audio_info.clone()).await;
 
     // Remove the policy from the handler.
-    env.handler
+    let _ = env
+        .handler
         .handle_policy_request(Request::Audio(audio::Request::RemovePolicy(policy_id)))
         .await
         .expect("remove policy succeeds");
@@ -766,7 +774,9 @@ async fn test_handler_lowest_max_limit_applies_internally() {
 
     // Add a policy transform to limit the max media volume to 60%.
     let max_volume = 0.6;
-    set_media_volume_limit(&mut env, Transform::Max(max_volume), starting_audio_info.clone()).await;
+    let _ =
+        set_media_volume_limit(&mut env, Transform::Max(max_volume), starting_audio_info.clone())
+            .await;
 
     // Handler requests that the setting handler set the volume to 60% (the max set by policy).
     verify_media_volume_set(&mut receptor, max_volume).await;
@@ -775,12 +785,17 @@ async fn test_handler_lowest_max_limit_applies_internally() {
     starting_audio_info.replace_stream(create_media_stream(max_volume, false));
 
     // Add a higher limit, which won't result in a new set request.
-    set_media_volume_limit(&mut env, Transform::Max(0.7), starting_audio_info.clone()).await;
+    let _ =
+        set_media_volume_limit(&mut env, Transform::Max(0.7), starting_audio_info.clone()).await;
 
     // Add a lower limit, which will cause a new set request.
     let lower_max_volume = 0.5;
-    set_media_volume_limit(&mut env, Transform::Max(lower_max_volume), starting_audio_info.clone())
-        .await;
+    let _ = set_media_volume_limit(
+        &mut env,
+        Transform::Max(lower_max_volume),
+        starting_audio_info.clone(),
+    )
+    .await;
 
     // Handler requests that the setting handler set the volume to 50% (the lowest max).
     verify_media_volume_set(&mut receptor, lower_max_volume).await;
@@ -800,7 +815,9 @@ async fn test_handler_highest_min_limit_applies_internally() {
 
     // Add a policy transform to limit the min media volume to 30%.
     let min_volume = 0.3;
-    set_media_volume_limit(&mut env, Transform::Min(min_volume), starting_audio_info.clone()).await;
+    let _ =
+        set_media_volume_limit(&mut env, Transform::Min(min_volume), starting_audio_info.clone())
+            .await;
 
     // Handler requests that the setting handler set the volume to 30% (the max set by policy).
     verify_media_volume_set(&mut receptor, min_volume).await;
@@ -809,11 +826,12 @@ async fn test_handler_highest_min_limit_applies_internally() {
     starting_audio_info.replace_stream(create_media_stream(min_volume, false));
 
     // Add a lower limit, which won't result in a new set request.
-    set_media_volume_limit(&mut env, Transform::Min(0.2), starting_audio_info.clone()).await;
+    let _ =
+        set_media_volume_limit(&mut env, Transform::Min(0.2), starting_audio_info.clone()).await;
 
     // Add a higher limit, which will cause a new set request.
     let higher_min_volume = 0.4;
-    set_media_volume_limit(
+    let _ = set_media_volume_limit(
         &mut env,
         Transform::Min(higher_min_volume),
         starting_audio_info.clone(),
@@ -852,7 +870,7 @@ async fn test_handler_max_volume_policy_scales_external_sets() {
 
     // Set the max volume limit to 60%.
     let max_volume = 0.6;
-    set_media_volume_limit(&mut env, Transform::Max(max_volume), starting_audio_info).await;
+    let _ = set_media_volume_limit(&mut env, Transform::Max(max_volume), starting_audio_info).await;
 
     // Test set requests with input volumes from 0.0 to 1.0.
     for i in 0..=10 {
@@ -881,7 +899,7 @@ async fn test_handler_min_volume_policy_scales_external_sets() {
 
     // Set the min volume limit to 60%.
     let min_volume = 0.2;
-    set_media_volume_limit(&mut env, Transform::Min(min_volume), starting_audio_info).await;
+    let _ = set_media_volume_limit(&mut env, Transform::Min(min_volume), starting_audio_info).await;
 
     // Test set requests with input volumes from 0.0 to 1.0.
     for i in 0..=10 {
@@ -907,7 +925,7 @@ async fn test_handler_min_volume_policy_prevents_mute() {
     starting_audio_info.replace_stream(starting_stream);
 
     // Set a min volume limit so the stream can't be muted.
-    set_media_volume_limit(&mut env, Transform::Min(0.1), starting_audio_info).await;
+    let _ = set_media_volume_limit(&mut env, Transform::Min(0.1), starting_audio_info).await;
 
     // External client attempts to mute the volume.
     let mut request = starting_stream;
@@ -930,11 +948,13 @@ async fn test_handler_min_and_max_volume_policy_scales_external_volume() {
 
     // Set the max volume limit to 80%.
     let max_volume = 0.8;
-    set_media_volume_limit(&mut env, Transform::Max(max_volume), starting_audio_info.clone()).await;
+    let _ =
+        set_media_volume_limit(&mut env, Transform::Max(max_volume), starting_audio_info.clone())
+            .await;
 
     // Set the min volume limit to 20%.
     let min_volume = 0.2;
-    set_media_volume_limit(&mut env, Transform::Min(min_volume), starting_audio_info).await;
+    let _ = set_media_volume_limit(&mut env, Transform::Min(min_volume), starting_audio_info).await;
 
     // Test set requests with input volumes from 0.0 to 1.0.
     for i in 0..=10 {
@@ -982,7 +1002,7 @@ async fn test_handler_max_volume_policy_scales_gets() {
 
     // Set the max volume limit to 60%.
     let max_volume = 0.6;
-    set_media_volume_limit(&mut env, Transform::Max(max_volume), starting_audio_info).await;
+    let _ = set_media_volume_limit(&mut env, Transform::Max(max_volume), starting_audio_info).await;
 
     // Test get requests with internal volumes from 0.0 to 1.0.
     for i in 0..=10 {
@@ -1011,7 +1031,7 @@ async fn test_handler_min_volume_policy_scales_gets() {
     starting_audio_info.replace_stream(create_media_stream(0.5, false));
 
     // Set the max volume limit to 60%.
-    set_media_volume_limit(&mut env, Transform::Min(0.2), starting_audio_info).await;
+    let _ = set_media_volume_limit(&mut env, Transform::Min(0.2), starting_audio_info).await;
 
     for i in 2..=10 {
         // 0.2 to 1 inclusive, with steps of 0.1. Starting at 20% since the min limit clamps the
@@ -1036,12 +1056,14 @@ async fn test_handler_min_and_max_volume_policy_scales_gets() {
 
     // Set the max volume limit to 80%.
     let max_volume = 0.8;
-    set_media_volume_limit(&mut env, Transform::Max(max_volume), starting_audio_info.clone()).await;
+    let _ =
+        set_media_volume_limit(&mut env, Transform::Max(max_volume), starting_audio_info.clone())
+            .await;
 
     // Set the min volume limit to 20%.
     // Since internal volumes shouldn't be below the min volume anyways, the min volume level has no
     // effect here.
-    set_media_volume_limit(&mut env, Transform::Min(0.2), starting_audio_info).await;
+    let _ = set_media_volume_limit(&mut env, Transform::Min(0.2), starting_audio_info).await;
 
     // Test get requests with internal volumes from 0.0 to 1.0.
     for i in 0..=10 {
@@ -1064,7 +1086,9 @@ async fn test_handler_audio_policy_config_scales_external_sets() {
     // Set a max volume of 0.6 through the configuration.
     let max_volume = 0.6;
     let mut audio_policy_config = AudioPolicyConfig { transforms: Default::default() };
-    audio_policy_config.transforms.insert(AudioStreamType::Media, vec![Transform::Max(max_volume)]);
+    let _ = audio_policy_config
+        .transforms
+        .insert(AudioStreamType::Media, vec![Transform::Max(max_volume)]);
 
     let mut env = TestEnvironment::new_with_store(
         TestEnvironment::create_storage_factory().await,
@@ -1082,7 +1106,9 @@ async fn test_handler_audio_policy_config_scales_gets() {
     // Set a max volume of 0.6 through the configuration.
     let max_volume = 0.6;
     let mut audio_policy_config = AudioPolicyConfig { transforms: Default::default() };
-    audio_policy_config.transforms.insert(AudioStreamType::Media, vec![Transform::Max(max_volume)]);
+    let _ = audio_policy_config
+        .transforms
+        .insert(AudioStreamType::Media, vec![Transform::Max(max_volume)]);
 
     let mut env = TestEnvironment::new_with_store(
         TestEnvironment::create_storage_factory().await,
@@ -1101,7 +1127,7 @@ async fn test_handler_audio_policy_config_works_with_client_policies() {
     // Set a max volume of 0.6 through the configuration.
     let config_max_volume = 0.6;
     let mut audio_policy_config = AudioPolicyConfig { transforms: Default::default() };
-    audio_policy_config
+    let _ = audio_policy_config
         .transforms
         .insert(AudioStreamType::Media, vec![Transform::Max(config_max_volume)]);
 
@@ -1112,15 +1138,19 @@ async fn test_handler_audio_policy_config_works_with_client_policies() {
     .await;
 
     // Set a higher max volume limit from a FIDL client.
-    set_media_volume_limit(&mut env, Transform::Max(0.8), default_audio_info()).await;
+    let _ = set_media_volume_limit(&mut env, Transform::Max(0.8), default_audio_info()).await;
 
     // A set request for max volume will be limited to the max level specified by the config.
     set_and_verify_media_volume(&mut env, 1.0, config_max_volume).await;
 
     // Set a lower max volume limit from a FIDL client.
     let fidl_client_max_volume = 0.4;
-    set_media_volume_limit(&mut env, Transform::Max(fidl_client_max_volume), default_audio_info())
-        .await;
+    let _ = set_media_volume_limit(
+        &mut env,
+        Transform::Max(fidl_client_max_volume),
+        default_audio_info(),
+    )
+    .await;
 
     // A set request for max volume will be limited to the max level specified by the client.
     set_and_verify_media_volume(&mut env, 1.0, fidl_client_max_volume).await;

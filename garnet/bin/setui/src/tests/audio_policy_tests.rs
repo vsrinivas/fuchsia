@@ -149,7 +149,8 @@ async fn add_and_verify_max_volume_policy(input_volume_limit: f32, actual_volume
 
     // Add the max volume transform.
     let env = create_test_environment().await;
-    env.policy_service
+    let _ = env
+        .policy_service
         .add_policy(
             &mut policy_fidl::Target::Stream(target.into()),
             &mut Transform::Max(input_volume_limit).into(),
@@ -189,7 +190,8 @@ async fn add_invalid_volume_policy_and_expect_error(input_volume_limit: f32) {
 
     // Add the max volume transform.
     let env = create_test_environment().await;
-    env.policy_service
+    let _ = env
+        .policy_service
         .add_policy(
             &mut policy_fidl::Target::Stream(target.into()),
             &mut Transform::Max(input_volume_limit).into(),
@@ -426,7 +428,7 @@ async fn test_policy_add_min_policy_adjusts_volume() {
     set_stream_volume(&env, expected_policy_target, 0.0).await;
 
     // Add a min policy transform.
-    add_policy(&env, expected_policy_target, Transform::Min(expected_user_volume)).await;
+    let _ = add_policy(&env, expected_policy_target, Transform::Min(expected_user_volume)).await;
 
     assert!(
         (expected_user_volume - get_stream_volume(&env, expected_policy_target).await).abs()
@@ -451,7 +453,7 @@ async fn test_policy_add_min_policy_unmutes_stream() {
     set_stream(&env, starting_stream).await;
 
     // Add a min policy transform to unmute the stream
-    add_policy(&env, policy_target, Transform::Min(0.1)).await;
+    let _ = add_policy(&env, policy_target, Transform::Min(0.1)).await;
 
     // Verify the stream is unmuted.
     let stream = get_stream_from_proxy(&env.setui_audio_service, policy_target).await;

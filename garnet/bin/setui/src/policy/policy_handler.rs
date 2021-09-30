@@ -268,7 +268,7 @@ mod tests {
                 .0,
         };
 
-        client_proxy.send_setting_request(target_setting_type, setting_request.clone());
+        let _ = client_proxy.send_setting_request(target_setting_type, setting_request.clone());
 
         verify_payload(
             service::Payload::Setting(HandlerPayload::Request(setting_request)),

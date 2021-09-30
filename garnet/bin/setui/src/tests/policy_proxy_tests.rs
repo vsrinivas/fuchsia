@@ -216,7 +216,7 @@ async fn test_policy_messages_passed_to_handler() {
 
     let service_delegate = service::MessageHub::create_hub();
     // Initialize the policy proxy and a messenger to communicate with it.
-    PolicyProxy::create(
+    let _ = PolicyProxy::create(
         POLICY_TYPE,
         create_handler_factory(
             InMemoryStorageFactory::new(),
@@ -224,8 +224,7 @@ async fn test_policy_messages_passed_to_handler() {
         ),
         service_delegate.clone(),
     )
-    .await
-    .ok();
+    .await;
 
     let (policy_messenger, _) =
         service_delegate.create(MessengerType::Unbound).await.expect("policy messenger created");
@@ -258,7 +257,7 @@ async fn test_setting_message_pass_through() {
         .await
         .expect("setting_proxy created");
 
-    PolicyProxy::create(
+    let _ = PolicyProxy::create(
         POLICY_TYPE,
         create_handler_factory(
             InMemoryStorageFactory::new(),
@@ -266,8 +265,7 @@ async fn test_setting_message_pass_through() {
         ),
         delegate.clone(),
     )
-    .await
-    .ok();
+    .await;
 
     // Create a messenger that represents the setting caller.
     let (messenger, _) = delegate.create(MessengerType::Unbound).await.expect("messenger created");
@@ -286,7 +284,7 @@ async fn test_setting_message_pass_through() {
         &mut setting_proxy_receptor,
         Some(Box::new(|client| -> BoxFuture<'_, ()> {
             Box::pin(async move {
-                client.reply(SETTING_RESPONSE_PAYLOAD.clone().into()).send();
+                let _ = client.reply(SETTING_RESPONSE_PAYLOAD.clone().into()).send();
             })
         })),
     )
@@ -313,7 +311,7 @@ async fn test_setting_message_result_replacement() {
         .await
         .expect("setting_proxy created");
 
-    PolicyProxy::create(
+    let _ = PolicyProxy::create(
         POLICY_TYPE,
         create_handler_factory(
             InMemoryStorageFactory::new(),
@@ -328,8 +326,7 @@ async fn test_setting_message_result_replacement() {
         ),
         delegate.clone(),
     )
-    .await
-    .ok();
+    .await;
 
     // the address of the setting handler
     let setting_handler_address = service::Address::Handler(SETTING_TYPE);
@@ -352,7 +349,7 @@ async fn test_setting_message_result_replacement() {
     let (test_messenger, _) =
         delegate.create(MessengerType::Unbound).await.expect("messenger created");
 
-    test_messenger
+    let _ = test_messenger
         .message(
             SETTING_REQUEST_PAYLOAD_2.clone().into(),
             service::message::Audience::Address(setting_handler_address),
@@ -398,7 +395,7 @@ async fn test_setting_message_payload_replacement() {
         .await
         .expect("setting proxy messenger created");
 
-    PolicyProxy::create(
+    let _ = PolicyProxy::create(
         POLICY_TYPE,
         create_handler_factory(
             InMemoryStorageFactory::new(),
@@ -409,8 +406,7 @@ async fn test_setting_message_payload_replacement() {
         ),
         delegate.clone(),
     )
-    .await
-    .ok();
+    .await;
 
     // Create a messenger that represents the client.
     let (messenger, _) = delegate.create(MessengerType::Unbound).await.expect("messenger created");
@@ -427,7 +423,7 @@ async fn test_setting_message_payload_replacement() {
         &mut setting_proxy_receptor,
         Some(Box::new(|client| -> BoxFuture<'_, ()> {
             Box::pin(async move {
-                client.reply(SETTING_RESPONSE_PAYLOAD.clone().into()).send();
+                let _ = client.reply(SETTING_RESPONSE_PAYLOAD.clone().into()).send();
             })
         })),
     )
@@ -449,7 +445,7 @@ async fn test_setting_response_pass_through() {
         .await
         .expect("setting proxy messenger created");
 
-    PolicyProxy::create(
+    let _ = PolicyProxy::create(
         POLICY_TYPE,
         create_handler_factory(
             InMemoryStorageFactory::new(),
@@ -457,15 +453,14 @@ async fn test_setting_response_pass_through() {
         ),
         delegate.clone(),
     )
-    .await
-    .ok();
+    .await;
 
     // Create a messenger that represents the client.
     let (_, mut receptor) =
         delegate.create(MessengerType::Unbound).await.expect("messenger created");
 
     // Send a setting event from the setting proxy to the client.
-    setting_proxy_messenger
+    let _ = setting_proxy_messenger
         .message(
             SETTING_RESPONSE_PAYLOAD.clone().into(),
             Audience::Messenger(receptor.get_signature()),
@@ -484,7 +479,7 @@ async fn test_setting_response_replace() {
         .await
         .expect("setting proxy messenger created");
 
-    PolicyProxy::create(
+    let _ = PolicyProxy::create(
         POLICY_TYPE,
         create_handler_factory(
             InMemoryStorageFactory::new(),
@@ -497,15 +492,14 @@ async fn test_setting_response_replace() {
         ),
         delegate.clone(),
     )
-    .await
-    .ok();
+    .await;
 
     // Create a messenger that represents the client.
     let (_, mut receptor) =
         delegate.create(MessengerType::Unbound).await.expect("messenger created");
 
     // Send a setting request from the setting proxy to the client.
-    setting_proxy_messenger
+    let _ = setting_proxy_messenger
         .message(
             SETTING_RESPONSE_PAYLOAD.clone().into(),
             Audience::Messenger(receptor.get_signature()),
@@ -536,7 +530,7 @@ async fn test_multiple_messages() {
         .expect("setting proxy messenger created");
 
     // Initialize the policy proxy and a messenger to communicate with it.
-    PolicyProxy::create(
+    let _ = PolicyProxy::create(
         POLICY_TYPE,
         create_handler_factory(
             InMemoryStorageFactory::new(),
@@ -550,8 +544,7 @@ async fn test_multiple_messages() {
         ),
         delegate.clone(),
     )
-    .await
-    .ok();
+    .await;
 
     // Create a messenger for sending messages directly to the policy proxy.
     let (policy_messenger, _) =

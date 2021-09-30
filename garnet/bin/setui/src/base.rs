@@ -284,11 +284,11 @@ mod tests {
         assert_eq!(dependency.is_fulfilled(&available_entities), false);
 
         // Verify an entity set without the target entity does not fulfill dependency.
-        available_entities.insert(Entity::Handler(SettingType::FactoryReset));
+        let _ = available_entities.insert(Entity::Handler(SettingType::FactoryReset));
         assert_eq!(dependency.is_fulfilled(&available_entities), false);
 
         // Verify an entity set with target entity does fulfill dependency.
-        available_entities.insert(target_entity);
+        let _ = available_entities.insert(target_entity);
         assert!(dependency.is_fulfilled(&available_entities));
     }
 }

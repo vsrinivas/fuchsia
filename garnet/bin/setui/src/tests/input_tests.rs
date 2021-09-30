@@ -286,10 +286,7 @@ fn create_broker(
 async fn wait_for_media_button_event(
     media_buttons_receptor: &mut Receptor<Payload, Address, Role>,
 ) {
-    let event = media_buttons_receptor.next_payload().await.expect("payload should exist");
-
-    let (payload, message_client) = event;
-    message_client.propagate(payload);
+    let _ = media_buttons_receptor.next_payload().await.expect("payload should exist");
 }
 
 // Returns true if the given attribution `message`'s payload is an OnButton event.

@@ -49,7 +49,7 @@ impl AudioCoreService {
     pub(crate) fn new(suppress_client_errors: bool) -> Self {
         let mut streams = HashMap::new();
         for stream in default_audio_info().streams.iter() {
-            streams.insert(
+            let _ = streams.insert(
                 AudioRenderUsage::from(stream.stream_type),
                 (stream.user_volume_level, stream.user_volume_muted),
             );
@@ -69,7 +69,7 @@ impl AudioCoreService {
     /// Has no effect if the service is not currently processing requests.
     pub(crate) fn exit(&mut self) {
         if let Some(tx) = self.exit_tx.take() {
-            tx.send(()).ok();
+            let _ = tx.send(());
         }
     }
 }
@@ -156,7 +156,7 @@ fn process_volume_control_stream(
                 } => {
                     let (_level, muted) =
                         get_level_and_mute(render_usage, &streams).expect("stream in map");
-                    (*streams.write()).insert(render_usage, (volume, muted));
+                    let _ = (*streams.write()).insert(render_usage, (volume, muted));
 
                     let on_volume_mute_changed_result =
                         control_handle.send_on_volume_mute_changed(volume, muted);
@@ -171,7 +171,7 @@ fn process_volume_control_stream(
                 } => {
                     let (level, _muted) =
                         get_level_and_mute(render_usage, &streams).expect("stream in map");
-                    (*streams.write()).insert(render_usage, (level, mute));
+                    let _ = (*streams.write()).insert(render_usage, (level, mute));
 
                     let on_volume_mute_changed_result =
                         control_handle.send_on_volume_mute_changed(level, mute);

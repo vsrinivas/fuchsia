@@ -571,7 +571,7 @@ mod tests {
         }
 
         // Signal first task to exit.
-        exit_tx_1.send(()).ok();
+        let _ = exit_tx_1.send(());
 
         {
             let summary = receiver.next().await.expect("should get summary");
@@ -597,7 +597,7 @@ mod tests {
         }
 
         // Signal second task to exit.
-        exit_tx_2.send(()).ok();
+        let _ = exit_tx_2.send(());
 
         {
             let summary = receiver.next().await.expect("should get summary");

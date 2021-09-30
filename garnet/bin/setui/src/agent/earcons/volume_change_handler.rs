@@ -275,9 +275,11 @@ mod tests {
             fake_values();
         let delegate = service::MessageHub::create_hub();
         let publisher = event::Publisher::create(&delegate, MessengerType::Unbound).await;
-        let mut last_user_volumes = HashMap::new();
-        last_user_volumes.insert(AudioStreamType::Media, 1.0);
-        last_user_volumes.insert(AudioStreamType::Interruption, 0.5);
+        let last_user_volumes: HashMap<_, _> = std::array::IntoIter::new([
+            (AudioStreamType::Media, 1.0),
+            (AudioStreamType::Interruption, 0.5),
+        ])
+        .collect();
 
         let mut handler = VolumeChangeHandler {
             common_earcons_params: CommonEarconsParams {

@@ -38,7 +38,7 @@ impl InputDeviceRegistryService {
     pub(crate) async fn send_media_button_event(&self, event: MediaButtonsEvent) {
         *self.last_sent_event.write() = Some(event.clone());
         for listener in self.listeners.read().iter() {
-            listener.on_event(event.clone()).await.ok();
+            let _ = listener.on_event(event.clone()).await;
         }
     }
 }
@@ -79,7 +79,7 @@ impl Service for InputDeviceRegistryService {
                         // Send the last event if there was one.
                         let last_event = last_event.read().clone();
                         if let Some(event) = last_event {
-                            proxy.on_event(event).await.ok();
+                            let _ = proxy.on_event(event).await;
                         }
                     }
                 }

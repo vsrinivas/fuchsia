@@ -43,19 +43,24 @@ impl HardwareLightService {
         light_type: LightType,
         value: LightValue,
     ) {
-        self.light_info.lock().await.insert(index, Info { name, capability: light_type.into() });
+        let _ = self
+            .light_info
+            .lock()
+            .await
+            .insert(index, Info { name, capability: light_type.into() });
         match value {
             LightValue::Brightness(value) => {
-                self.brightness_values.lock().await.insert(index, value);
+                let _ = self.brightness_values.lock().await.insert(index, value);
             }
             LightValue::Rgb(value) => {
-                self.rgb_values
+                let _ = self
+                    .rgb_values
                     .lock()
                     .await
                     .insert(index, value.try_into().expect("rgb conversion failed"));
             }
             LightValue::Simple(value) => {
-                self.simple_values.lock().await.insert(index, value);
+                let _ = self.simple_values.lock().await.insert(index, value);
             }
         };
     }
@@ -109,15 +114,21 @@ impl Service for HardwareLightService {
                         .send(&mut Ok(*rgb_values.lock().await.get(&index).expect("unknown light")))
                         .expect("get rgb value"),
                     LightRequest::SetBrightnessValue { index, value, responder } => {
-                        brightness_values.lock().await.insert(index, value).expect("unknown light");
+                        let _ = brightness_values
+                            .lock()
+                            .await
+                            .insert(index, value)
+                            .expect("unknown light");
                         responder.send(&mut Ok(())).expect("set brightness value")
                     }
                     LightRequest::SetSimpleValue { index, value, responder } => {
-                        simple_values.lock().await.insert(index, value).expect("unknown light");
+                        let _ =
+                            simple_values.lock().await.insert(index, value).expect("unknown light");
                         responder.send(&mut Ok(())).expect("set simple value")
                     }
                     LightRequest::SetRgbValue { index, value, responder } => {
-                        rgb_values.lock().await.insert(index, value).expect("unknown light");
+                        let _ =
+                            rgb_values.lock().await.insert(index, value).expect("unknown light");
                         responder.send(&mut Ok(())).expect("set rgb value")
                     }
                     _ => {}

@@ -408,7 +408,7 @@ mod tests {
             &mut policy_receptor,
             Some(Box::new(|client| -> BoxFuture<'_, ()> {
                 Box::pin(async move {
-                    client
+                    let _ = client
                         .reply(
                             Payload::Response(Ok(policy_base::response::Payload::PolicyInfo(
                                 PolicyInfo::Audio(initial_state),
@@ -427,7 +427,7 @@ mod tests {
             audio_policy::Request::RemovePolicy(PolicyId::create(0)),
         ))
         .into();
-        policy_sender
+        let _ = policy_sender
             .message(test_request.clone(), Audience::Messenger(policy_receptor.get_signature()))
             .send();
 
@@ -437,7 +437,7 @@ mod tests {
             &mut policy_receptor,
             Some(Box::new(|client| -> BoxFuture<'_, ()> {
                 Box::pin(async move {
-                    client
+                    let _ = client
                         .reply(
                             Payload::Response(Ok(policy_base::response::Payload::PolicyInfo(
                                 UnknownInfo(true).into(),

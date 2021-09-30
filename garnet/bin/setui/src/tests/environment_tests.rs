@@ -154,7 +154,7 @@ async fn test_bringup() {
                         .await
                         .expect("messenger should be created")
                         .0;
-                    messenger
+                    let _ = messenger
                         .message(
                             HandlerPayload::Request(request).into(),
                             Audience::Address(service::Address::Handler(setting_type)),

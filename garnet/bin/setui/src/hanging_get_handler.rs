@@ -504,7 +504,7 @@ mod tests {
 
         fn notify_listener(&self, value: f32) {
             if let Some(listener) = self.listener.clone() {
-                listener
+                let _ = listener
                     .reply(
                         Payload::Response(Ok(Some(SettingInfo::Brightness(DisplayInfo::new(
                             false,
@@ -547,7 +547,7 @@ mod tests {
                     }
 
                     if let Some(response) = response.take() {
-                        requestor.reply(Payload::Response(response).into()).send();
+                        let _ = requestor.reply(Payload::Response(response).into()).send();
                     }
                 }
                 _ => {

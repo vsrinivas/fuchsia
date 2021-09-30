@@ -12,6 +12,7 @@ use futures::channel::mpsc::UnboundedReceiver;
 use futures::channel::mpsc::UnboundedSender;
 use futures::lock::Mutex;
 use futures::TryStreamExt;
+use std::collections::hash_map::Entry;
 use std::collections::HashMap;
 use std::sync::Arc;
 
@@ -79,11 +80,14 @@ impl Service for SoundPlayerService {
             while let Some(req) = player_stream.try_next().await.unwrap() {
                 match req {
                     PlayerRequest::AddSoundFromFile { id, file: _file, responder } => {
-                        play_counts_clone.lock().await.insert(id, 0);
+                        let _ = play_counts_clone.lock().await.insert(id, 0);
                         responder.send(&mut Ok(DURATION)).unwrap();
                     }
                     PlayerRequest::PlaySound { id, usage, responder } => {
-                        play_counts_clone.lock().await.entry(id).and_modify(|count| *count += 1);
+                        if let Entry::Occupied(mut count) = play_counts_clone.lock().await.entry(id)
+                        {
+                            *count.get_mut() += 1;
+                        }
                         for listener in sound_played_listeners.lock().await.iter() {
                             // Panic if send failed, otherwise sound is played but cannot be
                             // notified.

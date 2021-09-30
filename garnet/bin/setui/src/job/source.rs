@@ -546,7 +546,7 @@ mod tests {
                         };
 
                         // Store value.
-                        storage_lock.insert(data_key, job::data::Data::TestData(new_value));
+                        let _ = storage_lock.insert(data_key, job::data::Data::TestData(new_value));
 
                         // Relay value back.
                         result_tx.unbounded_send(new_value).expect("should send");

@@ -412,7 +412,7 @@ mod tests {
             _nonce: TracingNonce,
         ) {
             self.execute_tx.send(()).expect("Should be able to signal start of execution");
-            self.rx.await.ok();
+            let _ = self.rx.await;
         }
     }
 

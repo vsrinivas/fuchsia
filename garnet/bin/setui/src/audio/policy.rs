@@ -376,7 +376,8 @@ mod tests {
         let target = AudioStreamType::Background;
         let mut state =
             StateBuilder::new().add_property(target, TransformFlags::TRANSFORM_MAX).build();
-        state.add_transform(target, Transform::Max(input_volume_limit)).expect("add succeeded");
+        let _ =
+            state.add_transform(target, Transform::Max(input_volume_limit)).expect("add succeeded");
 
         let added_policy = state
             .properties()
@@ -461,7 +462,7 @@ mod tests {
             {
                 assert_eq!(seen_targets.contains(&target), false);
             }
-            seen_targets.insert(target);
+            let _ = seen_targets.insert(target);
             // Ensure the specified transforms are present.
             assert_eq!(
                 property.available_transforms,

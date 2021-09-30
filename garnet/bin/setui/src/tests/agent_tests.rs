@@ -334,8 +334,9 @@ async fn create_agents(
     for _ in 0..count {
         let id = rng.gen();
         return_agents.push(id);
-        TestAgent::create_and_register(id, lifespan_target.clone(), authority, sender.clone())
-            .await;
+        let _ =
+            TestAgent::create_and_register(id, lifespan_target.clone(), authority, sender.clone())
+                .await;
     }
 
     return_agents

@@ -145,8 +145,8 @@ mod tests {
         let property1 = Property::new(AudioStreamType::Background, TransformFlags::TRANSFORM_MAX);
         let property2 = Property::new(AudioStreamType::Media, TransformFlags::TRANSFORM_MIN);
         let mut property_map: HashMap<PropertyTarget, Property> = HashMap::new();
-        property_map.insert(property1.target, property1.clone());
-        property_map.insert(property2.target, property2.clone());
+        let _ = property_map.insert(property1.target, property1.clone());
+        let _ = property_map.insert(property2.target, property2.clone());
         let response =
             response::Payload::PolicyInfo(PolicyInfo::Audio(State { properties: property_map }));
 

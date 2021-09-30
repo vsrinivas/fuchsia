@@ -44,18 +44,14 @@ async fn test_drop_thread() {
         .await
         .expect("service should be present");
 
-    // Scoped to cause the object to be dropped.
-    {
-        StreamVolumeControl::create(
-            0,
-            &audio_proxy,
-            create_default_audio_stream(AudioStreamType::Media),
-            None,
-            Some(publisher),
-        )
-        .await
-        .ok();
-    }
+    let _ = StreamVolumeControl::create(
+        0,
+        &audio_proxy,
+        create_default_audio_stream(AudioStreamType::Media),
+        None,
+        Some(publisher),
+    )
+    .await;
 
     assert_matches!(
         receptor

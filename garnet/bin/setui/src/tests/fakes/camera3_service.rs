@@ -48,7 +48,7 @@ impl Camera3Service {
     }
 
     pub(crate) fn set_camera_sw_muted(&self, muted: bool) {
-        (*self.camera_sw_muted).swap(muted, Ordering::Relaxed);
+        let _ = (*self.camera_sw_muted).swap(muted, Ordering::Relaxed);
     }
 }
 
@@ -118,7 +118,7 @@ impl Service for Camera3Service {
                                 // Support future expansion of FIDL.
                                 match req {
                                     DeviceRequest::SetSoftwareMuteState { muted, responder } => {
-                                        camera_sw_muted.swap(muted, Ordering::Relaxed);
+                                        let _ = camera_sw_muted.swap(muted, Ordering::Relaxed);
                                         let _ = responder.send();
                                     }
                                     DeviceRequest::WatchMuteState { responder } => {

@@ -146,7 +146,7 @@ impl SettingHandler {
             }
 
             if let Some(done_tx) = handler_clone.lock().await.done_tx.take() {
-                done_tx.send(()).ok();
+                let _ = done_tx.send(());
             }
         })
         .detach();
@@ -171,7 +171,7 @@ impl FakeFactory {
         setting_type: SettingType,
     ) -> (service::message::Messenger, service::message::Receptor) {
         let (client, receptor) = self.delegate.create(MessengerType::Unbound).await.unwrap();
-        self.handlers.insert(setting_type, receptor.get_signature());
+        let _ = self.handlers.insert(setting_type, receptor.get_signature());
 
         (client, receptor)
     }
@@ -193,14 +193,12 @@ impl SettingHandlerFactory for FakeFactory {
         _: service::message::Delegate,
         _: service::message::Signature,
     ) -> Result<service::message::Signature, SettingHandlerFactoryError> {
-        let existing_count = self.get_request_count(setting_type);
-
         Ok(self
             .handlers
             .get(&setting_type)
             .copied()
             .map(|signature| {
-                self.request_counts.insert(setting_type, existing_count + 1);
+                *self.request_counts.entry(setting_type).or_insert(0) += 1;
                 signature
             })
             .unwrap())
@@ -514,7 +512,7 @@ fn test_regeneration() {
             panic!("initial call stalled");
         };
 
-    executor.wake_next_timer();
+    let _ = executor.wake_next_timer();
 
     futures::pin_mut!(done_rx);
     matches::assert_matches!(executor.run_until_stalled(&mut done_rx), Poll::Ready(Ok(_)));
@@ -715,7 +713,7 @@ fn test_retry() {
             panic!("environment creation and retries stalled");
         };
 
-    executor.wake_next_timer();
+    let _ = executor.wake_next_timer();
 
     let environment_fut = run_to_response(environment, event_receptor, setting_type);
     futures::pin_mut!(environment_fut);
@@ -726,7 +724,7 @@ fn test_retry() {
             panic!("running final step stalled");
         };
 
-    executor.wake_next_timer();
+    let _ = executor.wake_next_timer();
 
     let event_fut = event_receptor.next_of::<event::Payload>();
     futures::pin_mut!(event_fut);
