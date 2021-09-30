@@ -468,6 +468,11 @@ class _FileConnection extends File {
   }
 
   @override
+  Future<void> sync2() async {
+    throw fidl.MethodException(ZX.ERR_NOT_SUPPORTED);
+  }
+
+  @override
   Future<int> truncate(int length) async {
     return _handleResize(length);
   }

@@ -522,6 +522,11 @@ class _DirConnection extends Directory {
   }
 
   @override
+  Future<void> sync2() async {
+    throw fidl.MethodException(ZX.ERR_NOT_SUPPORTED);
+  }
+
+  @override
   Future<void> unlink(String name, io2_fidl.UnlinkOptions options) async {
     throw fidl.MethodException(ZX.ERR_NOT_SUPPORTED);
   }
