@@ -64,8 +64,9 @@ type Client struct {
 
 	mu struct {
 		sync.RWMutex
-		closed bool
-		ports  map[PortId]*Port
+		closed     bool
+		didCallRun bool
+		ports      map[PortId]*Port
 	}
 }
 
@@ -265,7 +266,15 @@ func (p *Port) Close() error {
 	return multierr.Combine(p.port.Close(), p.watcher.Close(), err)
 }
 
-func (c *Client) Run(ctx context.Context) {
+func (c *Client) Run(ctx context.Context) error {
+	c.mu.Lock()
+	hadCalledRun := c.mu.didCallRun
+	c.mu.didCallRun = true
+	c.mu.Unlock()
+	if hadCalledRun {
+		panic("can't call Run twice on the same client")
+	}
+
 	ctx, cancel := context.WithCancel(ctx)
 	detachWithError := func(reason error) {
 		cancel()
@@ -351,6 +360,10 @@ func (c *Client) Run(ctx context.Context) {
 	}()
 
 	wg.Wait()
+
+	// We can only close the VMOs after all the goroutines here have ended to
+	// prevent any references into the VMO after it's unmapped.
+	return multierr.Combine(c.data.Close(), c.descriptors.Close())
 }
 
 func (p *Port) IsAttached() bool {
@@ -470,15 +483,23 @@ func (c *Client) Close() error {
 		c.mu.closed = true
 		ports := c.mu.ports
 		c.mu.ports = nil
+
+		// NB: descriptors and data VMOs are closed only after all the goroutines
+		// in Run are closed to prevent data races.
+		// If Run was not called, close them here.
+		var err error
+		if !c.mu.didCallRun {
+			err = multierr.Combine(c.data.Close(), c.descriptors.Close())
+		}
+
 		return ports, multierr.Combine(
+			err,
 			c.device.Close(),
 			// Session also has a Close method, make sure we're calling the ChannelProxy
 			// one.
 			((*fidl.ChannelProxy)(c.session)).Close(),
 			c.handler.RxFifo.Close(),
 			c.handler.TxFifo.Close(),
-			c.data.Close(),
-			c.descriptors.Close(),
 		)
 	}()
 

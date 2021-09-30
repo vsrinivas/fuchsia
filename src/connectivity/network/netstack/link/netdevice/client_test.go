@@ -21,6 +21,7 @@ import (
 	"testing"
 	"time"
 
+	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/link/fifo"
 	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/testutil"
 	"go.fuchsia.dev/fuchsia/src/lib/component"
 	syslog "go.fuchsia.dev/fuchsia/src/lib/syslog/go"
@@ -324,7 +325,9 @@ func runClient(t *testing.T, client *Client) {
 	var wg sync.WaitGroup
 	wg.Add(1)
 	go func() {
-		client.Run(ctx)
+		if err := client.Run(ctx); err != nil {
+			t.Errorf("client.Run(_) = %s", err)
+		}
 		wg.Done()
 	}()
 	t.Cleanup(func() {
@@ -811,7 +814,9 @@ func TestShutdown(t *testing.T) {
 			ctx, cancel := context.WithCancel(ctx)
 			clientClosed := make(chan struct{})
 			go func() {
-				client.Run(ctx)
+				if err := client.Run(ctx); err != nil {
+					t.Errorf("client.Run(_) = %s", err)
+				}
 				close(clientClosed)
 			}()
 			t.Cleanup(func() {
@@ -1064,4 +1069,43 @@ func TestPairExchangePackets(t *testing.T) {
 	}
 	lPort.Wait()
 	rPort.Wait()
+}
+
+func TestClosesVMOsIfDidntRun(t *testing.T) {
+	ctx := context.Background()
+	_, _, client, _ := createTunClientPair(t, ctx)
+
+	vmos := []struct {
+		name string
+		vmo  fifo.MappedVMO
+	}{
+		{
+			name: "data",
+			vmo:  client.data,
+		},
+		{
+			name: "descriptors",
+			vmo:  client.descriptors,
+		},
+	}
+
+	// Close the client and expect already closed errors on the VMOs.
+	if err := client.Close(); err != nil {
+		t.Fatalf("client.Close() = %s", err)
+	}
+
+	for _, vmo := range vmos {
+		t.Run(vmo.name, func(t *testing.T) {
+			data := vmo.vmo.GetData(0, 1)
+			// Try to write into the unmapped region and expect a panic.
+			defer func() {
+				if r := recover(); r == nil {
+					t.Errorf("expected to have observed a panic")
+				}
+			}()
+
+			t.Errorf("data = %d, should've panicked", data[0])
+		})
+	}
+
 }
