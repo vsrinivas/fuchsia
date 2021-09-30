@@ -423,20 +423,31 @@ to do that in order to simplify [ABI compatibility changes][abi-api-compat].
 
 ### Envelopes {#envelopes}
 
-An envelope is a container for out-of-line data, used internally by tables
+An envelope is a container for data, used internally by tables
 and extensible unions. It is not exposed to the FIDL language.
+It has a fixed, 8 byte format.
 
-It has a fixed, 16 byte format, and is never optional:
+An envelope header that is all zeros is referred to as the "zero envelope". It
+is used to represent an absent envelope. Otherwise, the envelope is present and
+bit 0 of its flags indicate whether the data is stored inline or out-of-line:
 
-![drawing](images/envelope.png)
+  - If bit 0 is set, an *inline representation* is used.
 
-An envelope can, however, point to empty content.
-In that case, `num_bytes`, `num_handles`, and the pointer will all be zero.
+![drawing](images/inline_envelope.png)
 
-Furthermore, because `num_bytes` represents the size of an object, it's
-always a multiple of 8, regardless of the actual amount of data that it points to.
+  - If bit 0 is unset an *out-of-line representation* is used.
+  
+![drawing](images/out_of_line_envelope.png)
+
+Bit 0 may only be set if the size of the payload is <= 4 bytes. Bit 0 may be
+unset only if either the envelope is the zero envelope or the size of the
+payload is > 4 bytes.
+
 
 Having `num_bytes` and `num_handles` allows us to skip unknown envelope content.
+
+`num_bytes` will always be a multiple of 8 because out-of-line objects are
+8 byte aligned.
 
 ### Tables
 
@@ -464,7 +475,7 @@ The following example shows how tables are laid out according to their fields.
 *   Each element is associated with a user specified ordinal.
 *   Ordinals are sequential. Unlike tables, gaps in ordinals do not incur a wire
     format space cost.
-*   Absent optional unions are represented with a `0` ordinal, and an empty envelope.
+*   Absent optional unions are represented with a `0` ordinal, and an zero envelope.
 *   Empty unions are not allowed.
 
 unions are denoted by their declared name (e.g. `Value`) and optionality:
@@ -671,13 +682,13 @@ Type(s)                      | Size (in-line)                    | Size (out-of-
 `int64`, `uint64`, `float64` | 8                                 | 0                                                               | 8
 `enum`, `bits`               | (underlying type)                 | 0                                                               | (underlying type)
 `handle`, et al.             | 4                                 | 0                                                               | 4
-`array<T, N>`                 | sizeof(T) * N                     | 0                                                               | alignof(T)
+`array<T, N>`                | sizeof(T) * N                     | 0                                                               | alignof(T)
 `vector`, et al.             | 16                                | N * sizeof(T)                                                   | 8
 `struct`                     | sum(sizeof(fields)) + padding     | 0                                                               | 8
 `box<struct>`                | 8                                 | sum(sizeof(fields)) + padding                                   | 8
-`envelope`                   | 16                                | sizeof(field)                                                   | 8
+`envelope`                   | 8                                 | sizeof(field)                                                   | 8
 `table`                      | 16                                | M * sizeof(envelope) + sum(aligned_to_8(sizeof(present fields)) | 8
-`union`, `union:optional`    | 24                                | sizeof(selected variant)                                        | 8
+`union`, `union:optional`    | 16                                | sizeof(selected variant)                                        | 8
 
 The `handle` entry above refers to all flavors of handles, specifically
 `handle`, `handle:optional`, `handle:H`, `handle:<H, optional>`,
