@@ -15,7 +15,7 @@ use {
         },
         static_pkgs::StaticPkgsCollection,
     },
-    anyhow::{anyhow, Result},
+    anyhow::{anyhow, Context, Result},
     cm_fidl_validator,
     fidl::encoding::decode_persistent,
     fidl_fuchsia_sys2 as fsys,
@@ -116,10 +116,15 @@ impl PackageDataCollector {
         package_reader: &mut Box<dyn PackageReader>,
     ) -> Result<Vec<PackageDefinition>> {
         // Retrieve the JSON packages definition from the package server.
-        let targets = package_reader.read_targets()?;
+        let targets = package_reader.read_targets().context("Failed to read targets")?;
         let mut pkgs: Vec<PackageDefinition> = Vec::new();
         for (name, target) in targets.signed.targets.iter() {
-            let pkg_def = package_reader.read_package_definition(&name, &target.custom.merkle)?;
+            let pkg_def = package_reader
+                .read_package_definition(&name, &target.custom.merkle)
+                .context(format!(
+                    "Failed to read package definition: name={}; merkle={}",
+                    &name, &target.custom.merkle
+                ))?;
             pkgs.push(pkg_def);
         }
         pkgs.sort_by(|lhs, rhs| lhs.url.cmp(&rhs.url));
@@ -686,13 +691,11 @@ impl PackageDataCollector {
         model: Arc<DataModel>,
     ) -> Result<()> {
         let package_reader = &mut package_reader;
-        let served_packages = self.get_packages(package_reader)?;
-        let sysmgr_config = self.extract_config_data(
-            config.config_data_package_url(),
-            package_reader,
-            &served_packages,
-        )?;
-
+        let served_packages =
+            self.get_packages(package_reader).context("Failed to read served packages")?;
+        let sysmgr_config = self
+            .extract_config_data(config.config_data_package_url(), package_reader, &served_packages)
+            .context("Failed to read sysmgr config")?;
         info!(
             "Done collecting. Found in the sys realm: {} services, {} apps, {} served packages.",
             sysmgr_config.services.keys().len(),
@@ -715,11 +718,15 @@ impl PackageDataCollector {
             model_comps.push(val);
         }
 
-        model.set(Components::new(model_comps))?;
-        model.set(Packages::new(response.packages))?;
-        model.set(Manifests::new(response.manifests))?;
-        model.set(Routes::new(response.routes))?;
-        model.set(Sysmgr::new(sysmgr_config.services, sysmgr_config.apps.into_iter().collect()))?;
+        model.set(Components::new(model_comps)).context("Failed to store components in model")?;
+        model.set(Packages::new(response.packages)).context("Failed to store packages in model")?;
+        model
+            .set(Manifests::new(response.manifests))
+            .context("Failed to store manifests in model")?;
+        model.set(Routes::new(response.routes)).context("Failed to store routes in model")?;
+        model
+            .set(Sysmgr::new(sysmgr_config.services, sysmgr_config.apps.into_iter().collect()))
+            .context("Failed to store sysmgr config in model")?;
 
         if let Some(zbi) = response.zbi {
             model.set(zbi)?;
@@ -734,7 +741,7 @@ impl PackageDataCollector {
         for dep in artifact_loader.get_deps().into_iter() {
             deps.insert(dep);
         }
-        model.set(CoreDataDeps::new(deps))?;
+        model.set(CoreDataDeps::new(deps)).context("Failed to store core data deps")?;
 
         Ok(())
     }

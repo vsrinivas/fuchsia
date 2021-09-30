@@ -157,7 +157,7 @@ impl Shell {
 
         let readline = self.readline.readline(&prompt);
         if let Err(e) = self.readline.save_history("/tmp/scrutiny_history") {
-            warn!("Failed to save scrutiny shell history: {}", e);
+            warn!("Failed to save scrutiny shell history: {:?}", e);
         }
 
         match readline {
@@ -183,7 +183,7 @@ impl Shell {
                     }
                     let desc = PluginDescriptor::new(builtin.args.first().unwrap());
                     if let Err(e) = self.manager.lock().unwrap().load(&desc) {
-                        writeln!(out_buffer, "Error: {}", e)?;
+                        writeln!(out_buffer, "Error: {:?}", e)?;
                     }
                 }
                 Builtin::PluginUnload => {
@@ -193,7 +193,7 @@ impl Shell {
                     }
                     let desc = PluginDescriptor::new(builtin.args.first().unwrap());
                     if let Err(e) = self.manager.lock().unwrap().unload(&desc) {
-                        writeln!(out_buffer, "Error: {}", e)?;
+                        writeln!(out_buffer, "Error: {:?}", e)?;
                     }
                 }
                 Builtin::Print => {
@@ -345,7 +345,7 @@ impl Shell {
                     return Ok(CommandResponse::Executed);
                 }
             }
-            writeln!(out_buffer, "Error: {}", err)?;
+            writeln!(out_buffer, "Error: {:?}", err)?;
             return Ok(CommandResponse::Executed);
         }
         let (namespace, query) = command_result.unwrap();
@@ -361,7 +361,7 @@ impl Shell {
                         _ => {}
                     }
                 }
-                writeln!(out_buffer, "Error: {}", e)?;
+                writeln!(out_buffer, "Error: {:?}", e)?;
                 Ok(CommandResponse::Executed)
             }
             Ok(result) => {

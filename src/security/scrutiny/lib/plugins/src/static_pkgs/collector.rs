@@ -348,7 +348,8 @@ impl DataCollector for StaticPkgsCollector {
                 StaticPkgsCollection { static_pkgs: None, deps: err.deps, errors: vec![err.error] }
             }
         };
-        model.set(data).context("Static packages collector failed to store result in model")
+        model.set(data).context("Static packages collector failed to store result in model")?;
+        Ok(())
     }
 }
 

@@ -8,7 +8,7 @@ use {
         to_meta_contents_dict, to_package_url,
         types::{ComponentManifest, PackageDefinition},
     },
-    anyhow::Result,
+    anyhow::{Context, Result},
     fuchsia_archive::Reader as FarReader,
     scrutiny_utils::artifact::ArtifactReader,
     serde_json::Value,
@@ -47,25 +47,25 @@ pub trait PackageReader: Send + Sync {
 }
 
 pub struct PackageServerReader {
-    pkg_reader_tracker: Box<dyn ArtifactReader>,
+    pkg_reader: Box<dyn ArtifactReader>,
 }
 
 impl PackageServerReader {
     pub fn new(pkg_reader_tracker: Box<dyn ArtifactReader>) -> Self {
-        Self { pkg_reader_tracker }
+        Self { pkg_reader: pkg_reader_tracker }
     }
 
     fn read_blob_raw(&mut self, merkle: &str) -> Result<Vec<u8>> {
-        Ok(self.pkg_reader_tracker.read_raw(&format!("blobs/{}", merkle)[..])?)
+        Ok(self.pkg_reader.read_raw(&format!("blobs/{}", merkle)[..])?)
     }
 }
 
 impl PackageReader for PackageServerReader {
     fn read_targets(&mut self) -> Result<TargetsJson> {
-        let resp_b = self.pkg_reader_tracker.read_raw("targets.json")?;
-        let resp = str::from_utf8(&resp_b)?;
+        let resp_b = self.pkg_reader.read_raw("targets.json")?;
+        let resp = str::from_utf8(&resp_b).context("Failed to decode targets.json as utf8")?;
 
-        Ok(serde_json::from_str(&resp)?)
+        Ok(serde_json::from_str(&resp).context("Failed to parse targets.json")?)
     }
 
     fn read_package_definition(
@@ -174,7 +174,7 @@ impl PackageReader for PackageServerReader {
     }
 
     fn get_deps(&self) -> HashSet<String> {
-        self.pkg_reader_tracker.get_deps()
+        self.pkg_reader.get_deps()
     }
 }
 
