@@ -94,6 +94,17 @@ class VirtioVsock
 
   void WaitOnQueueLocked(ConnectionKey key) __TA_REQUIRES(mutex_);
 
+  // Process an incoming packet from the guest.
+  void ProcessIncomingPacket(uint16_t index) __TA_REQUIRES(mutex_);
+
+  // Process a ready-to-send connection, writing any pending data to the
+  // guest's RX queue.
+  //
+  // Returns true if the connection was processed (and more connections can be
+  // processed), or false if now descriptors were available in the guest's RX
+  // queue.
+  bool ProcessReadyConnection(ConnectionKey key) __TA_REQUIRES(mutex_);
+
   void Mux(async_dispatcher_t*, async::WaitBase*, zx_status_t, const zx_packet_signal_t*);
   void Demux(async_dispatcher_t*, async::WaitBase*, zx_status_t, const zx_packet_signal_t*);
 

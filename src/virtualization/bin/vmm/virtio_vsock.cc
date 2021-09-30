@@ -701,6 +701,67 @@ static zx_status_t transmit(VirtioVsock::Connection* conn, VirtioQueue* queue,
   }
 }
 
+bool VirtioVsock::ProcessReadyConnection(ConnectionKey key) {
+  // Get the connection associated with the key.
+  Connection* conn = GetConnectionLocked(key);
+  if (conn == nullptr) {
+    return true;
+  }
+
+  // Allocate a descriptor.
+  VirtioDescriptor desc;
+  uint16_t index;
+  zx_status_t status = rx_queue()->NextAvail(&index);
+  if (status != ZX_OK) {
+    return false;
+  }
+
+  // Write out the header.
+  virtio_vsock_hdr_t* header = get_header(rx_queue(), index, &desc, true);
+  if (header == nullptr) {
+    FX_LOGS(ERROR) << "Failed to get header from read queue";
+    return false;
+  }
+  *header = {
+      .src_cid = key.local_cid,
+      .dst_cid = guest_cid(),
+      .src_port = key.local_port,
+      .dst_port = key.remote_port,
+      .type = VIRTIO_VSOCK_TYPE_STREAM,
+      .op = conn->op(),
+  };
+
+  // If reading was shutdown, but we're still receiving a read request, send
+  // a connection reset.
+  if (conn->op() == VIRTIO_VSOCK_OP_RW && conn->flags() & VIRTIO_VSOCK_FLAG_SHUTDOWN_RECV) {
+    conn->UpdateOp(VIRTIO_VSOCK_OP_RST);
+    FX_LOGS(ERROR) << "Receive was shutdown";
+  }
+
+  zx_status_t write_status = conn->WriteCredit(header);
+  switch (write_status) {
+    case ZX_OK:
+      break;
+    case ZX_ERR_UNAVAILABLE:
+      status = conn->WaitOnTransmit(ZX_OK);
+      if (EraseOnErrorLocked(key, status)) {
+        return true;
+      }
+      break;
+    default:
+      conn->UpdateOp(VIRTIO_VSOCK_OP_RST);
+      FX_LOGS(ERROR) << "Failed to write credit " << write_status;
+      break;
+  }
+
+  uint32_t used = 0;
+  status = transmit(conn, rx_queue(), header, &desc, &used);
+  rx_queue()->Return(index, used + sizeof(*header));
+  status = conn->WaitOnReceive(status);
+  EraseOnErrorLocked(key, status);
+  return true;
+}
+
 void VirtioVsock::Mux(async_dispatcher_t*, async::WaitBase*, zx_status_t status,
                       const zx_packet_signal_t*) {
   if (status != ZX_OK) {
@@ -713,62 +774,18 @@ void VirtioVsock::Mux(async_dispatcher_t*, async::WaitBase*, zx_status_t status,
   // Process all connections that are ready to transmit, until we run out
   // of connections or descriptors in the guest's RX queue.
   for (auto i = readable_.begin(), end = readable_.end(); i != end; i = readable_.erase(i)) {
-    Connection* conn = GetConnectionLocked(*i);
-    if (conn == nullptr) {
-      continue;
+    bool continue_sending = ProcessReadyConnection(/*key=*/*i);
+    if (!continue_sending) {
+      break;
     }
+  }
 
-    // Allocate a descriptor.
-    VirtioDescriptor desc;
-    uint16_t index;
-    zx_status_t status = rx_queue()->NextAvail(&index);
-    if (status != ZX_OK) {
-      return;
+  // If we still have connections waiting to send, wait on more descriptors to arrive.
+  if (!readable_.empty()) {
+    zx_status_t status = rx_queue_wait_.Begin(dispatcher_);
+    if (status != ZX_OK && status != ZX_ERR_ALREADY_EXISTS) {
+      FX_LOGS(ERROR) << "Failed to wait on RX queue: " << status;
     }
-
-    // Write out the header.
-    virtio_vsock_hdr_t* header = get_header(rx_queue(), index, &desc, true);
-    if (header == nullptr) {
-      FX_LOGS(ERROR) << "Failed to get header from read queue";
-      continue;
-    }
-    *header = {
-        .src_cid = i->local_cid,
-        .dst_cid = guest_cid(),
-        .src_port = i->local_port,
-        .dst_port = i->remote_port,
-        .type = VIRTIO_VSOCK_TYPE_STREAM,
-        .op = conn->op(),
-    };
-
-    // If reading was shutdown, but we're still receiving a read request, send
-    // a connection reset.
-    if (conn->op() == VIRTIO_VSOCK_OP_RW && conn->flags() & VIRTIO_VSOCK_FLAG_SHUTDOWN_RECV) {
-      conn->UpdateOp(VIRTIO_VSOCK_OP_RST);
-      FX_LOGS(ERROR) << "Receive was shutdown";
-    }
-
-    zx_status_t write_status = conn->WriteCredit(header);
-    switch (write_status) {
-      case ZX_OK:
-        break;
-      case ZX_ERR_UNAVAILABLE:
-        status = conn->WaitOnTransmit(ZX_OK);
-        if (EraseOnErrorLocked(*i, status)) {
-          continue;
-        }
-        break;
-      default:
-        conn->UpdateOp(VIRTIO_VSOCK_OP_RST);
-        FX_LOGS(ERROR) << "Failed to write credit " << write_status;
-        break;
-    }
-
-    uint32_t used = 0;
-    status = transmit(conn, rx_queue(), header, &desc, &used);
-    rx_queue()->Return(index, used + sizeof(*header));
-    status = conn->WaitOnReceive(status);
-    EraseOnErrorLocked(*i, status);
   }
 }
 
@@ -819,6 +836,87 @@ static zx_status_t receive(VirtioVsock::Connection* conn, VirtioQueue* queue,
   }
 }
 
+void VirtioVsock::ProcessIncomingPacket(uint16_t index) {
+  // Get incoming descriptor.
+  VirtioDescriptor desc;
+  auto header = get_header(tx_queue(), index, &desc, false);
+  if (header == nullptr) {
+    FX_LOGS(ERROR) << "Failed to get header from write queue";
+    return;
+  }
+
+  // Reject packets with unknown socket types.
+  if (header->type != VIRTIO_VSOCK_TYPE_STREAM) {
+    set_shutdown(header);
+    FX_LOGS(ERROR) << "Only stream sockets are supported";
+  }
+
+  // Fetch the connection associated with this packet.
+  ConnectionKey key{
+      static_cast<uint32_t>(header->dst_cid),
+      header->dst_port,
+      header->src_port,
+  };
+  Connection* conn = GetConnectionLocked(key);
+  if (header->op == VIRTIO_VSOCK_OP_REQUEST) {
+    if (conn != nullptr) {
+      // If a connection already exists, then the driver is in a bad state and
+      // the connection should be shut down.
+      set_shutdown(header);
+      FX_LOGS(ERROR) << "Connection request for an existing connection";
+    } else if (header->src_cid != guest_cid()) {
+      // If the source CID does not match guest CID, then the driver is in a
+      // bad state and the request should be ignored.
+      FX_LOGS(ERROR) << "Source CID does not match guest CID";
+      return;
+    } else if (connector_) {
+      // We received a request for the guest to connect to an external CID.
+      //
+      // If we don't have a connector then implicitly just refuse any outbound
+      // connections. Otherwise send out a request for a connection to the
+      // remote CID.
+      connector_->Connect(static_cast<uint32_t>(header->src_cid), header->src_port,
+                          static_cast<uint32_t>(header->dst_cid), header->dst_port,
+                          [this, key, buf_alloc = header->buf_alloc, fwd_cnt = header->fwd_cnt](
+                              zx_status_t status, zx::handle handle) {
+                            ConnectCallback(key, status, std::move(handle), buf_alloc, fwd_cnt);
+                          });
+      return;
+    }
+  }
+
+  if (conn == nullptr) {
+    // If we received a spurious reset, just ignore the request.
+    if (header->op == VIRTIO_VSOCK_OP_RST) {
+      return;
+    }
+
+    // Build a connection to send a connection reset.
+    auto new_conn = std::make_unique<NullConnection>();
+    conn = new_conn.get();
+    AddConnectionLocked(key, std::move(new_conn));
+    set_shutdown(header);
+    FX_LOGS(ERROR) << "Connection does not exist";
+  } else if (conn->op() == VIRTIO_VSOCK_OP_RW && conn->flags() & VIRTIO_VSOCK_FLAG_SHUTDOWN_SEND) {
+    // We are receiving a write, but send was shutdown.
+    set_shutdown(header);
+    FX_LOGS(ERROR) << "Send was shutdown";
+  }
+
+  conn->ReadCredit(header);
+  zx_status_t status = receive(conn, tx_queue(), header, &desc);
+  switch (conn->op()) {
+    case VIRTIO_VSOCK_OP_RST:
+    case VIRTIO_VSOCK_OP_CREDIT_UPDATE:
+      WaitOnQueueLocked(key);
+      break;
+    default:
+      status = conn->WaitOnTransmit(status);
+      EraseOnErrorLocked(key, status);
+      break;
+  }
+}
+
 void VirtioVsock::Demux(async_dispatcher_t*, async::WaitBase*, zx_status_t status,
                         const zx_packet_signal_t*) {
   if (status != ZX_OK) {
@@ -831,83 +929,8 @@ void VirtioVsock::Demux(async_dispatcher_t*, async::WaitBase*, zx_status_t statu
   // Process all packets in the guest's TX queue.
   uint16_t index;
   while (tx_queue()->NextAvail(&index) == ZX_OK) {
-    auto free_desc = fit::defer([this, index]() { tx_queue()->Return(index, /*len=*/0); });
-
-    // Get incoming descriptor.
-    VirtioDescriptor desc;
-    auto header = get_header(tx_queue(), index, &desc, false);
-    if (header == nullptr) {
-      FX_LOGS(ERROR) << "Failed to get header from write queue";
-      return;
-    } else if (header->type != VIRTIO_VSOCK_TYPE_STREAM) {
-      set_shutdown(header);
-      FX_LOGS(ERROR) << "Only stream sockets are supported";
-    }
-    ConnectionKey key{
-        static_cast<uint32_t>(header->dst_cid),
-        header->dst_port,
-        header->src_port,
-    };
-
-    Connection* conn = GetConnectionLocked(key);
-    if (header->op == VIRTIO_VSOCK_OP_REQUEST) {
-      if (conn != nullptr) {
-        // If a connection already exists, then the driver is in a bad state and
-        // the connection should be shut down.
-        set_shutdown(header);
-        FX_LOGS(ERROR) << "Connection request for an existing connection";
-      } else if (header->src_cid != guest_cid()) {
-        // If the source CID does not match guest CID, then the driver is in a
-        // bad state and the request should be ignored.
-        FX_LOGS(ERROR) << "Source CID does not match guest CID";
-        continue;
-      } else if (connector_) {
-        // We received a request for the guest to connect to an external CID.
-        //
-        // If we don't have a connector then implicitly just refuse any outbound
-        // connections. Otherwise send out a request for a connection to the
-        // remote CID.
-        connector_->Connect(static_cast<uint32_t>(header->src_cid), header->src_port,
-                            static_cast<uint32_t>(header->dst_cid), header->dst_port,
-                            [this, key, buf_alloc = header->buf_alloc, fwd_cnt = header->fwd_cnt](
-                                zx_status_t status, zx::handle handle) {
-                              ConnectCallback(key, status, std::move(handle), buf_alloc, fwd_cnt);
-                            });
-        continue;
-      }
-    }
-
-    if (conn == nullptr) {
-      // If we received a spurious reset, just ignore the request.
-      if (header->op == VIRTIO_VSOCK_OP_RST) {
-        continue;
-      }
-
-      // Build a connection to send a connection reset.
-      auto new_conn = std::make_unique<NullConnection>();
-      conn = new_conn.get();
-      status = AddConnectionLocked(key, std::move(new_conn));
-      set_shutdown(header);
-      FX_LOGS(ERROR) << "Connection does not exist";
-    } else if (conn->op() == VIRTIO_VSOCK_OP_RW &&
-               conn->flags() & VIRTIO_VSOCK_FLAG_SHUTDOWN_SEND) {
-      // We are receiving a write, but send was shutdown.
-      set_shutdown(header);
-      FX_LOGS(ERROR) << "Send was shutdown";
-    }
-
-    conn->ReadCredit(header);
-    status = receive(conn, tx_queue(), header, &desc);
-    switch (conn->op()) {
-      case VIRTIO_VSOCK_OP_RST:
-      case VIRTIO_VSOCK_OP_CREDIT_UPDATE:
-        WaitOnQueueLocked(key);
-        break;
-      default:
-        status = conn->WaitOnTransmit(status);
-        EraseOnErrorLocked(key, status);
-        break;
-    }
+    ProcessIncomingPacket(index);
+    tx_queue()->Return(index, /*len=*/0);
   }
 
   // Schedule this function to be called again next time the queue receives
