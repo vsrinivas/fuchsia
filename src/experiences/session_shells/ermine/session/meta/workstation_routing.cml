@@ -49,6 +49,7 @@
                 "fuchsia.ui.keyboard.focus.Controller",
                 "fuchsia.ui.scenic.Scenic",
                 "fuchsia.ui.shortcut.Manager",
+                "fuchsia.ui.views.ViewRefInstalled",
             ],
             from: "parent",
             to: [ "#scene_manager" ],
