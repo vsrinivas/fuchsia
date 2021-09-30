@@ -323,6 +323,10 @@ toc:
     path: /docs/reference/syscalls/system_mexec_payload_get.md
   - title: "zx_system_powerctl"
     path: /docs/reference/syscalls/system_powerctl.md
+  - title: "zx_system_get_performance_info"
+    path: /docs/reference/syscalls/system_get_performance_info.md
+  - title: "zx_system_set_performance_info"
+    path: /docs/reference/syscalls/system_set_performance_info.md
 - title: "DDK"
   section:
   - title: "zx_bti_create"

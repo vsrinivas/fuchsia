@@ -143,12 +143,14 @@ Symbols:
   - { Name: _zx_system_get_features, Type: Func }
   - { Name: _zx_system_get_num_cpus, Type: Func }
   - { Name: _zx_system_get_page_size, Type: Func }
+  - { Name: _zx_system_get_performance_info, Type: Func }
   - { Name: _zx_system_get_physmem, Type: Func }
   - { Name: _zx_system_get_version, Type: Func }
   - { Name: _zx_system_get_version_string, Type: Func }
   - { Name: _zx_system_mexec, Type: Func }
   - { Name: _zx_system_mexec_payload_get, Type: Func }
   - { Name: _zx_system_powerctl, Type: Func }
+  - { Name: _zx_system_set_performance_info, Type: Func }
   - { Name: _zx_task_create_exception_channel, Type: Func }
   - { Name: _zx_task_kill, Type: Func }
   - { Name: _zx_task_suspend, Type: Func }
@@ -327,12 +329,14 @@ Symbols:
   - { Name: zx_system_get_features, Type: Func, Weak: true }
   - { Name: zx_system_get_num_cpus, Type: Func, Weak: true }
   - { Name: zx_system_get_page_size, Type: Func, Weak: true }
+  - { Name: zx_system_get_performance_info, Type: Func, Weak: true }
   - { Name: zx_system_get_physmem, Type: Func, Weak: true }
   - { Name: zx_system_get_version, Type: Func, Weak: true }
   - { Name: zx_system_get_version_string, Type: Func, Weak: true }
   - { Name: zx_system_mexec, Type: Func, Weak: true }
   - { Name: zx_system_mexec_payload_get, Type: Func, Weak: true }
   - { Name: zx_system_powerctl, Type: Func, Weak: true }
+  - { Name: zx_system_set_performance_info, Type: Func, Weak: true }
   - { Name: zx_task_create_exception_channel, Type: Func, Weak: true }
   - { Name: zx_task_kill, Type: Func, Weak: true }
   - { Name: zx_task_suspend, Type: Func, Weak: true }

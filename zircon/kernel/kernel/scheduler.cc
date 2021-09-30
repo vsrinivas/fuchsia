@@ -36,6 +36,7 @@
 #include <ktl/forward.h>
 #include <ktl/move.h>
 #include <ktl/pair.h>
+#include <ktl/span.h>
 #include <object/thread_dispatcher.h>
 #include <vm/vm.h>
 
@@ -1042,6 +1043,15 @@ void Scheduler::RescheduleCommon(SchedTime now, EndTraceCallback end_outer_trace
     }
   }
 
+  // Update the current performance scale only after any uses of it in the
+  // reschedule path to ensure the scale value is applied consistently over the
+  // interval between reschedules (i.e. not earlier than the requested update).
+  // TODO(eieio): Apply a minimum value threshold to the userspace value.
+  if (performance_scale_ != pending_user_performance_scale_) {
+    performance_scale_ = pending_user_performance_scale_;
+    performance_scale_reciprocal_ = 1 / performance_scale_;
+  }
+
   // Always call to handle races between reschedule IPIs and changes to the run
   // queue.
   mp_prepare_current_cpu_idle_state(next_thread->IsIdle());
@@ -2016,4 +2026,54 @@ zx_time_t Scheduler::GetTargetPreemptionTime() {
   Scheduler* const current = Get();
   Guard<MonitoredSpinLock, IrqSave> guard{ThreadLock::Get(), SOURCE_TAG};
   return current->target_preemption_time_ns_.raw_value();
+}
+
+void Scheduler::InitializePerformanceScale(SchedPerformanceScale scale) {
+  DEBUG_ASSERT(scale > 0);
+  performance_scale_ = scale;
+  default_performance_scale_ = scale;
+  pending_user_performance_scale_ = scale;
+  performance_scale_reciprocal_ = 1 / scale;
+}
+
+void Scheduler::UpdatePerformanceScales(zx_cpu_performance_info_t* info, size_t count) {
+  DEBUG_ASSERT(count <= percpu::processor_count());
+  Guard<MonitoredSpinLock, IrqSave> guard{ThreadLock::Get(), SOURCE_TAG};
+
+  cpu_num_t cpus_to_reschedule_mask = 0;
+  for (auto& entry : ktl::span{info, count}) {
+    DEBUG_ASSERT(entry.logical_cpu_number <= percpu::processor_count());
+
+    cpus_to_reschedule_mask |= cpu_num_to_mask(entry.logical_cpu_number);
+    Scheduler* scheduler = Scheduler::Get(entry.logical_cpu_number);
+
+    // TODO(eieio): Apply a minimum value threshold and update the entry if
+    // the requested value is below it.
+    scheduler->pending_user_performance_scale_ = ToSchedPerformanceScale(entry.performance_scale);
+
+    // Return the original performance scale.
+    entry.performance_scale = ToUserPerformanceScale(scheduler->performance_scale());
+  }
+
+  mp_reschedule(cpus_to_reschedule_mask, 0);
+}
+
+void Scheduler::GetPerformanceScales(zx_cpu_performance_info_t* info, size_t count) {
+  DEBUG_ASSERT(count <= percpu::processor_count());
+  Guard<MonitoredSpinLock, IrqSave> guard{ThreadLock::Get(), SOURCE_TAG};
+  for (cpu_num_t i = 0; i < count; i++) {
+    Scheduler* scheduler = Scheduler::Get(i);
+    info[i].logical_cpu_number = i;
+    info[i].performance_scale = ToUserPerformanceScale(scheduler->pending_user_performance_scale_);
+  }
+}
+
+void Scheduler::GetDefaultPerformanceScales(zx_cpu_performance_info_t* info, size_t count) {
+  DEBUG_ASSERT(count <= percpu::processor_count());
+  Guard<MonitoredSpinLock, IrqSave> guard{ThreadLock::Get(), SOURCE_TAG};
+  for (cpu_num_t i = 0; i < count; i++) {
+    Scheduler* scheduler = Scheduler::Get(i);
+    info[i].logical_cpu_number = i;
+    info[i].performance_scale = ToUserPerformanceScale(scheduler->default_performance_scale_);
+  }
 }

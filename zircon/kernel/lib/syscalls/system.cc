@@ -34,10 +34,13 @@
 #include <dev/hw_watchdog.h>
 #include <dev/interrupt.h>
 #include <kernel/mp.h>
+#include <kernel/percpu.h>
 #include <kernel/range_check.h>
+#include <kernel/scheduler.h>
 #include <kernel/thread.h>
 #include <ktl/byte.h>
 #include <ktl/span.h>
+#include <ktl/unique_ptr.h>
 #include <object/event_dispatcher.h>
 #include <object/job_dispatcher.h>
 #include <object/process_dispatcher.h>
@@ -576,4 +579,95 @@ zx_status_t sys_system_get_event(zx_handle_t root_job, uint32_t kind, user_out_h
     default:
       return ZX_ERR_INVALID_ARGS;
   }
+}
+
+zx_status_t sys_system_set_performance_info(zx_handle_t resource, uint32_t topic,
+                                            user_in_ptr<const void> info_void, size_t count) {
+  const zx_status_t validate_status =
+      validate_ranged_resource(resource, ZX_RSRC_KIND_SYSTEM, ZX_RSRC_SYSTEM_CPU_BASE, 1);
+  if (validate_status != ZX_OK) {
+    return validate_status;
+  }
+
+  if (topic != ZX_CPU_PERF_SCALE) {
+    return ZX_ERR_INVALID_ARGS;
+  }
+
+  const size_t num_cpus = percpu::processor_count();
+  if (count == 0 || count > num_cpus) {
+    return ZX_ERR_OUT_OF_RANGE;
+  }
+
+  fbl::AllocChecker checker;
+  auto performance_info = ktl::make_unique<zx_cpu_performance_info_t[]>(&checker, count);
+  if (!checker.check()) {
+    return ZX_ERR_NO_MEMORY;
+  }
+
+  auto new_info = info_void.reinterpret<const zx_cpu_performance_info_t>();
+  if (new_info.copy_array_from_user(performance_info.get(), count) != ZX_OK) {
+    return ZX_ERR_INVALID_ARGS;
+  }
+
+  cpu_num_t last_cpu = INVALID_CPU;
+  for (auto& info : ktl::span{performance_info.get(), count}) {
+    const cpu_num_t cpu = info.logical_cpu_number;
+    if (last_cpu != INVALID_CPU && cpu <= last_cpu) {
+      return ZX_ERR_INVALID_ARGS;
+    }
+    last_cpu = cpu;
+
+    const auto [integral, fractional] = info.performance_scale;
+    if (cpu >= num_cpus || (integral == 0 && fractional == 0)) {
+      return ZX_ERR_OUT_OF_RANGE;
+    }
+  }
+
+  Scheduler::UpdatePerformanceScales(performance_info.get(), count);
+  return ZX_OK;
+}
+
+zx_status_t sys_system_get_performance_info(zx_handle_t resource, uint32_t topic, size_t info_count,
+                                            user_out_ptr<void> info_void,
+                                            user_out_ptr<size_t> output_count) {
+  const zx_status_t validate_status =
+      validate_ranged_resource(resource, ZX_RSRC_KIND_SYSTEM, ZX_RSRC_SYSTEM_CPU_BASE, 1);
+  if (validate_status != ZX_OK) {
+    return validate_status;
+  }
+
+  const size_t num_cpus = percpu::processor_count();
+  if (info_count != num_cpus) {
+    return ZX_ERR_OUT_OF_RANGE;
+  }
+
+  fbl::AllocChecker checker;
+  auto performance_info = ktl::make_unique<zx_cpu_performance_info_t[]>(&checker, info_count);
+  if (!checker.check()) {
+    return ZX_ERR_NO_MEMORY;
+  }
+
+  switch (topic) {
+    case ZX_CPU_PERF_SCALE:
+      Scheduler::GetPerformanceScales(performance_info.get(), info_count);
+      break;
+
+    case ZX_CPU_DEFAULT_PERF_SCALE:
+      Scheduler::GetDefaultPerformanceScales(performance_info.get(), info_count);
+      break;
+
+    default:
+      return ZX_ERR_INVALID_ARGS;
+  }
+
+  auto info = info_void.reinterpret<zx_cpu_performance_info_t>();
+  if (info.copy_array_to_user(performance_info.get(), info_count) != ZX_OK) {
+    return ZX_ERR_INVALID_ARGS;
+  }
+
+  if (output_count.copy_to_user(info_count) != ZX_OK) {
+    return ZX_ERR_INVALID_ARGS;
+  }
+
+  return ZX_OK;
 }

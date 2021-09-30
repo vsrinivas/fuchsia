@@ -39,6 +39,20 @@ typedef struct zx_system_powerctl_arg {
   };
 } zx_system_powerctl_arg_t;
 
+// Topics used by zx_system_{get,set}_performance_info():
+#define ZX_CPU_PERF_SCALE ((uint32_t)1u)
+#define ZX_CPU_DEFAULT_PERF_SCALE ((uint32_t)2u)
+
+typedef struct zx_cpu_performance_scale {
+  uint32_t integral_part;
+  uint32_t fractional_part;
+} zx_cpu_performance_scale_t;
+
+typedef struct zx_cpu_performance_info {
+  uint32_t logical_cpu_number;
+  zx_cpu_performance_scale_t performance_scale;
+} zx_cpu_performance_info_t;
+
 __END_CDECLS
 
 #endif  // SYSROOT_ZIRCON_SYSCALLS_SYSTEM_H_

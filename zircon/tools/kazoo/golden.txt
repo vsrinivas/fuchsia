@@ -795,6 +795,14 @@ TEXT ·Sys_system_get_features(SB),NOSPLIT,$0
 TEXT ·Sys_system_get_event(SB),NOSPLIT,$0
 	JMP runtime·vdsoCall_zx_system_get_event(SB)
 
+// func Sys_system_set_performance_info(resource Handle, topic uint32, info unsafe.Pointer, count uint) Status
+TEXT ·Sys_system_set_performance_info(SB),NOSPLIT,$0
+	JMP runtime·vdsoCall_zx_system_set_performance_info(SB)
+
+// func Sys_system_get_performance_info(resource Handle, topic uint32, count uint, info unsafe.Pointer, output_count *uint) Status
+TEXT ·Sys_system_get_performance_info(SB),NOSPLIT,$0
+	JMP runtime·vdsoCall_zx_system_get_performance_info(SB)
+
 // func Sys_system_mexec(resource Handle, kernel_vmo Handle, bootimage_vmo Handle) Status
 TEXT ·Sys_system_mexec(SB),NOSPLIT,$0
 	JMP runtime·vdsoCall_zx_system_mexec(SB)
@@ -1563,6 +1571,14 @@ func Sys_system_get_event(root_job Handle, kind uint32, event *Handle) Status
 
 //go:noescape
 //go:nosplit
+func Sys_system_set_performance_info(resource Handle, topic uint32, info unsafe.Pointer, count uint) Status
+
+//go:noescape
+//go:nosplit
+func Sys_system_get_performance_info(resource Handle, topic uint32, count uint, info unsafe.Pointer, output_count *uint) Status
+
+//go:noescape
+//go:nosplit
 func Sys_system_mexec(resource Handle, kernel_vmo Handle, bootimage_vmo Handle) Status
 
 //go:noescape
@@ -2324,6 +2340,14 @@ TEXT ·Sys_system_get_features(SB),NOSPLIT,$0
 // func Sys_system_get_event(root_job Handle, kind uint32, event *Handle) Status
 TEXT ·Sys_system_get_event(SB),NOSPLIT,$0
 	JMP runtime·vdsoCall_zx_system_get_event(SB)
+
+// func Sys_system_set_performance_info(resource Handle, topic uint32, info unsafe.Pointer, count uint) Status
+TEXT ·Sys_system_set_performance_info(SB),NOSPLIT,$0
+	JMP runtime·vdsoCall_zx_system_set_performance_info(SB)
+
+// func Sys_system_get_performance_info(resource Handle, topic uint32, count uint, info unsafe.Pointer, output_count *uint) Status
+TEXT ·Sys_system_get_performance_info(SB),NOSPLIT,$0
+	JMP runtime·vdsoCall_zx_system_get_performance_info(SB)
 
 // func Sys_system_mexec(resource Handle, kernel_vmo Handle, bootimage_vmo Handle) Status
 TEXT ·Sys_system_mexec(SB),NOSPLIT,$0
@@ -5297,6 +5321,45 @@ TEXT runtime·vdsoCall_zx_system_get_event(SB),NOSPLIT,$0-20
 	MOVD $0, m_vdsoSP(R21)
 	RET
 
+// func vdsoCall_zx_system_set_performance_info(resource uint32, topic uint32, info unsafe.Pointer, count uint) int32
+TEXT runtime·vdsoCall_zx_system_set_performance_info(SB),NOSPLIT,$0-28
+	GO_ARGS
+	NO_LOCAL_POINTERS
+	MOVD g_m(g), R21
+	MOVD LR, m_vdsoPC(R21)
+	DMB $0xe
+	MOVD RSP, R20
+	MOVD R20, m_vdsoSP(R21)
+	MOVW resource+0(FP), R0
+	MOVW topic+4(FP), R1
+	MOVD info+8(FP), R2
+	MOVD count+16(FP), R3
+	BL vdso_zx_system_set_performance_info(SB)
+	MOVW R0, ret+24(FP)
+	MOVD g_m(g), R21
+	MOVD $0, m_vdsoSP(R21)
+	RET
+
+// func vdsoCall_zx_system_get_performance_info(resource uint32, topic uint32, count uint, info unsafe.Pointer, output_count unsafe.Pointer) int32
+TEXT runtime·vdsoCall_zx_system_get_performance_info(SB),NOSPLIT,$0-36
+	GO_ARGS
+	NO_LOCAL_POINTERS
+	MOVD g_m(g), R21
+	MOVD LR, m_vdsoPC(R21)
+	DMB $0xe
+	MOVD RSP, R20
+	MOVD R20, m_vdsoSP(R21)
+	MOVW resource+0(FP), R0
+	MOVW topic+4(FP), R1
+	MOVD count+8(FP), R2
+	MOVD info+16(FP), R3
+	MOVD output_count+24(FP), R4
+	BL vdso_zx_system_get_performance_info(SB)
+	MOVW R0, ret+32(FP)
+	MOVD g_m(g), R21
+	MOVD $0, m_vdsoSP(R21)
+	RET
+
 // func vdsoCall_zx_system_mexec(resource uint32, kernel_vmo uint32, bootimage_vmo uint32) int32
 TEXT runtime·vdsoCall_zx_system_mexec(SB),NOSPLIT,$0-20
 	GO_ARGS
@@ -6155,6 +6218,8 @@ var vdsoSymbolKeys = []vdsoSymbolKey{
 	{"_zx_system_get_physmem", 0x5a0e027b, &vdso_zx_system_get_physmem},
 	{"_zx_system_get_features", 0x42682df7, &vdso_zx_system_get_features},
 	{"_zx_system_get_event", 0x7a0b68da, &vdso_zx_system_get_event},
+	{"_zx_system_set_performance_info", 0x17cc1da1, &vdso_zx_system_set_performance_info},
+	{"_zx_system_get_performance_info", 0x85f5f115, &vdso_zx_system_get_performance_info},
 	{"_zx_system_mexec", 0xd142362b, &vdso_zx_system_mexec},
 	{"_zx_system_mexec_payload_get", 0x34bd22b3, &vdso_zx_system_mexec_payload_get},
 	{"_zx_system_powerctl", 0x43f6ae09, &vdso_zx_system_powerctl},
@@ -6345,6 +6410,8 @@ var vdsoSymbolKeys = []vdsoSymbolKey{
 //go:cgo_import_dynamic vdso_zx_system_get_physmem zx_system_get_physmem
 //go:cgo_import_dynamic vdso_zx_system_get_features zx_system_get_features
 //go:cgo_import_dynamic vdso_zx_system_get_event zx_system_get_event
+//go:cgo_import_dynamic vdso_zx_system_set_performance_info zx_system_set_performance_info
+//go:cgo_import_dynamic vdso_zx_system_get_performance_info zx_system_get_performance_info
 //go:cgo_import_dynamic vdso_zx_system_mexec zx_system_mexec
 //go:cgo_import_dynamic vdso_zx_system_mexec_payload_get zx_system_mexec_payload_get
 //go:cgo_import_dynamic vdso_zx_system_powerctl zx_system_powerctl
@@ -6534,6 +6601,8 @@ var vdsoSymbolKeys = []vdsoSymbolKey{
 //go:linkname vdso_zx_system_get_physmem vdso_zx_system_get_physmem
 //go:linkname vdso_zx_system_get_features vdso_zx_system_get_features
 //go:linkname vdso_zx_system_get_event vdso_zx_system_get_event
+//go:linkname vdso_zx_system_set_performance_info vdso_zx_system_set_performance_info
+//go:linkname vdso_zx_system_get_performance_info vdso_zx_system_get_performance_info
 //go:linkname vdso_zx_system_mexec vdso_zx_system_mexec
 //go:linkname vdso_zx_system_mexec_payload_get vdso_zx_system_mexec_payload_get
 //go:linkname vdso_zx_system_powerctl vdso_zx_system_powerctl
@@ -7178,6 +7247,14 @@ func vdsoCall_zx_system_get_event(root_job uint32, kind uint32, event unsafe.Poi
 
 //go:noescape
 //go:nosplit
+func vdsoCall_zx_system_set_performance_info(resource uint32, topic uint32, info unsafe.Pointer, count uint) int32
+
+//go:noescape
+//go:nosplit
+func vdsoCall_zx_system_get_performance_info(resource uint32, topic uint32, count uint, info unsafe.Pointer, output_count unsafe.Pointer) int32
+
+//go:noescape
+//go:nosplit
 func vdsoCall_zx_system_mexec(resource uint32, kernel_vmo uint32, bootimage_vmo uint32) int32
 
 //go:noescape
@@ -7476,6 +7553,8 @@ var (
 	vdso_zx_system_get_physmem uintptr
 	vdso_zx_system_get_features uintptr
 	vdso_zx_system_get_event uintptr
+	vdso_zx_system_set_performance_info uintptr
+	vdso_zx_system_get_performance_info uintptr
 	vdso_zx_system_mexec uintptr
 	vdso_zx_system_mexec_payload_get uintptr
 	vdso_zx_system_powerctl uintptr
@@ -10988,6 +11067,53 @@ TEXT runtime·vdsoCall_zx_system_get_event(SB),NOSPLIT,$8-20
 	MOVQ vdso_zx_system_get_event(SB), AX
 	CALL AX
 	MOVL AX, ret+16(FP)
+	POPQ R14
+	MOVQ $0, m_vdsoSP(R14)
+	RET
+
+// func vdsoCall_zx_system_set_performance_info(resource uint32, topic uint32, info unsafe.Pointer, count uint) int32
+TEXT runtime·vdsoCall_zx_system_set_performance_info(SB),NOSPLIT,$8-28
+	GO_ARGS
+	NO_LOCAL_POINTERS
+	get_tls(CX)
+	MOVQ g(CX), AX
+	MOVQ g_m(AX), R14
+	PUSHQ R14
+	MOVQ 24(SP), DX
+	MOVQ DX, m_vdsoPC(R14)
+	LEAQ 24(SP), DX
+	MOVQ DX, m_vdsoSP(R14)
+	MOVL resource+0(FP), DI
+	MOVL topic+4(FP), SI
+	MOVQ info+8(FP), DX
+	MOVQ count+16(FP), CX
+	MOVQ vdso_zx_system_set_performance_info(SB), AX
+	CALL AX
+	MOVL AX, ret+24(FP)
+	POPQ R14
+	MOVQ $0, m_vdsoSP(R14)
+	RET
+
+// func vdsoCall_zx_system_get_performance_info(resource uint32, topic uint32, count uint, info unsafe.Pointer, output_count unsafe.Pointer) int32
+TEXT runtime·vdsoCall_zx_system_get_performance_info(SB),NOSPLIT,$8-36
+	GO_ARGS
+	NO_LOCAL_POINTERS
+	get_tls(CX)
+	MOVQ g(CX), AX
+	MOVQ g_m(AX), R14
+	PUSHQ R14
+	MOVQ 24(SP), DX
+	MOVQ DX, m_vdsoPC(R14)
+	LEAQ 24(SP), DX
+	MOVQ DX, m_vdsoSP(R14)
+	MOVL resource+0(FP), DI
+	MOVL topic+4(FP), SI
+	MOVQ count+8(FP), DX
+	MOVQ info+16(FP), CX
+	MOVQ output_count+24(FP), R8
+	MOVQ vdso_zx_system_get_performance_info(SB), AX
+	CALL AX
+	MOVL AX, ret+32(FP)
 	POPQ R14
 	MOVQ $0, m_vdsoSP(R14)
 	RET
@@ -17907,6 +18033,100 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
       "return_type": "zx_status_t"
     },
     {
+      "name": "system_set_performance_info",
+      "attributes": [
+        "*"
+      ],
+      "top_description": [
+        "Set", "CPU", "performance", "parameters", "."
+      ],
+      "requirements": [
+        "resource", "must", "have", "resource", "kind", "ZX_RSRC_KIND_SYSTEM", "."
+      ],
+      "arguments": [
+        {
+          "name": "resource",
+          "type": "zx_handle_t",
+          "is_array": false,
+          "attributes": [
+          ]
+        },
+        {
+          "name": "topic",
+          "type": "uint32_t",
+          "is_array": false,
+          "attributes": [
+          ]
+        },
+        {
+          "name": "info",
+          "type": "any",
+          "is_array": true,
+          "attributes": [
+            "IN"
+          ]
+        },
+        {
+          "name": "count",
+          "type": "size_t",
+          "is_array": false,
+          "attributes": [
+          ]
+        }
+      ],
+      "return_type": "zx_status_t"
+    },
+    {
+      "name": "system_get_performance_info",
+      "attributes": [
+        "*"
+      ],
+      "top_description": [
+        "Get", "CPU", "performance", "parameters", "."
+      ],
+      "requirements": [
+        "resource", "must", "have", "resource", "kind", "ZX_RSRC_KIND_SYSTEM", "."
+      ],
+      "arguments": [
+        {
+          "name": "resource",
+          "type": "zx_handle_t",
+          "is_array": false,
+          "attributes": [
+          ]
+        },
+        {
+          "name": "topic",
+          "type": "uint32_t",
+          "is_array": false,
+          "attributes": [
+          ]
+        },
+        {
+          "name": "count",
+          "type": "size_t",
+          "is_array": false,
+          "attributes": [
+          ]
+        },
+        {
+          "name": "info",
+          "type": "any",
+          "is_array": true,
+          "attributes": [
+          ]
+        },
+        {
+          "name": "output_count",
+          "type": "size_t",
+          "is_array": true,
+          "attributes": [
+          ]
+        }
+      ],
+      "return_type": "zx_status_t"
+    },
+    {
       "name": "system_mexec",
       "attributes": [
         "*"
@@ -20345,6 +20565,21 @@ KERNEL_SYSCALL(system_get_event, zx_status_t, /* no attributes */, 3,
     uint32_t kind,
     _ZX_SYSCALL_ANNO(acquire_handle("Fuchsia")) user_out_handle* event))
 
+KERNEL_SYSCALL(system_set_performance_info, zx_status_t, /* no attributes */, 4,
+    (resource, topic, info, count), (
+    _ZX_SYSCALL_ANNO(use_handle("Fuchsia")) zx_handle_t resource,
+    uint32_t topic,
+    user_in_ptr<const void> info,
+    size_t count))
+
+KERNEL_SYSCALL(system_get_performance_info, zx_status_t, /* no attributes */, 5,
+    (resource, topic, count, info, output_count), (
+    _ZX_SYSCALL_ANNO(use_handle("Fuchsia")) zx_handle_t resource,
+    uint32_t topic,
+    size_t count,
+    user_out_ptr<void> info,
+    user_out_ptr<size_t> output_count))
+
 KERNEL_SYSCALL(system_mexec, zx_status_t, /* no attributes */, 3,
     (resource, kernel_vmo, bootimage_vmo), (
     _ZX_SYSCALL_ANNO(use_handle("Fuchsia")) zx_handle_t resource,
@@ -21615,6 +21850,18 @@ syscall_result wrapper_system_get_event(SafeSyscallArgument<zx_handle_t>::RawTyp
         if (out_handle_event.begin_copyout(current_process, make_user_out_ptr(SafeSyscallArgument<zx_handle_t*>::Sanitize(event))))
             return ZX_ERR_INVALID_ARGS;
         out_handle_event.finish_copyout(current_process);
+        return result;
+    });
+}
+syscall_result wrapper_system_set_performance_info(SafeSyscallArgument<zx_handle_t>::RawType resource, SafeSyscallArgument<uint32_t>::RawType topic, SafeSyscallArgument<const void*>::RawType info, SafeSyscallArgument<size_t>::RawType count, uint64_t pc) {
+    return do_syscall(ZX_SYS_system_set_performance_info, pc, &VDso::ValidSyscallPC::system_set_performance_info, [&](ProcessDispatcher* current_process) -> uint64_t {
+        auto result = sys_system_set_performance_info(SafeSyscallArgument<zx_handle_t>::Sanitize(resource), SafeSyscallArgument<uint32_t>::Sanitize(topic), make_user_in_ptr(SafeSyscallArgument<const void*>::Sanitize(info)), SafeSyscallArgument<size_t>::Sanitize(count));
+        return result;
+    });
+}
+syscall_result wrapper_system_get_performance_info(SafeSyscallArgument<zx_handle_t>::RawType resource, SafeSyscallArgument<uint32_t>::RawType topic, SafeSyscallArgument<size_t>::RawType count, SafeSyscallArgument<void*>::RawType info, SafeSyscallArgument<size_t*>::RawType output_count, uint64_t pc) {
+    return do_syscall(ZX_SYS_system_get_performance_info, pc, &VDso::ValidSyscallPC::system_get_performance_info, [&](ProcessDispatcher* current_process) -> uint64_t {
+        auto result = sys_system_get_performance_info(SafeSyscallArgument<zx_handle_t>::Sanitize(resource), SafeSyscallArgument<uint32_t>::Sanitize(topic), SafeSyscallArgument<size_t>::Sanitize(count), make_user_out_ptr(SafeSyscallArgument<void*>::Sanitize(info)), make_user_out_ptr(SafeSyscallArgument<size_t*>::Sanitize(output_count)));
         return result;
     });
 }
@@ -22912,6 +23159,21 @@ KERNEL_SYSCALL(system_get_event, zx_status_t, /* no attributes */, 3,
     uint32_t kind,
     _ZX_SYSCALL_ANNO(acquire_handle("Fuchsia")) zx_handle_t* event))
 
+KERNEL_SYSCALL(system_set_performance_info, zx_status_t, /* no attributes */, 4,
+    (resource, topic, info, count), (
+    _ZX_SYSCALL_ANNO(use_handle("Fuchsia")) zx_handle_t resource,
+    uint32_t topic,
+    const void* info,
+    size_t count))
+
+KERNEL_SYSCALL(system_get_performance_info, zx_status_t, /* no attributes */, 5,
+    (resource, topic, count, info, output_count), (
+    _ZX_SYSCALL_ANNO(use_handle("Fuchsia")) zx_handle_t resource,
+    uint32_t topic,
+    size_t count,
+    void* info,
+    size_t* output_count))
+
 KERNEL_SYSCALL(system_mexec, zx_status_t, /* no attributes */, 3,
     (resource, kernel_vmo, bootimage_vmo), (
     _ZX_SYSCALL_ANNO(use_handle("Fuchsia")) zx_handle_t resource,
@@ -24003,6 +24265,21 @@ _ZX_SYSCALL_DECL(system_get_event, zx_status_t, /* no attributes */, 3,
     _ZX_SYSCALL_ANNO(use_handle("Fuchsia")) zx_handle_t root_job,
     uint32_t kind,
     _ZX_SYSCALL_ANNO(acquire_handle("Fuchsia")) zx_handle_t* event))
+
+_ZX_SYSCALL_DECL(system_set_performance_info, zx_status_t, /* no attributes */, 4,
+    (resource, topic, info, count), (
+    _ZX_SYSCALL_ANNO(use_handle("Fuchsia")) zx_handle_t resource,
+    uint32_t topic,
+    const void* info,
+    size_t count))
+
+_ZX_SYSCALL_DECL(system_get_performance_info, zx_status_t, /* no attributes */, 5,
+    (resource, topic, count, info, output_count), (
+    _ZX_SYSCALL_ANNO(use_handle("Fuchsia")) zx_handle_t resource,
+    uint32_t topic,
+    size_t count,
+    void* info,
+    size_t* output_count))
 
 _ZX_SYSCALL_DECL(system_mexec, zx_status_t, /* no attributes */, 3,
     (resource, kernel_vmo, bootimage_vmo), (
@@ -25200,6 +25477,21 @@ extern {
         event: *mut zx_handle_t
         ) -> zx_status_t;
 
+    pub fn zx_system_set_performance_info(
+        resource: zx_handle_t,
+        topic: u32,
+        info: *const u8,
+        count: usize
+        ) -> zx_status_t;
+
+    pub fn zx_system_get_performance_info(
+        resource: zx_handle_t,
+        topic: u32,
+        count: usize,
+        info: *mut u8,
+        output_count: *mut usize
+        ) -> zx_status_t;
+
     pub fn zx_system_mexec(
         resource: zx_handle_t,
         kernel_vmo: zx_handle_t,
@@ -25581,44 +25873,46 @@ extern {
 #define ZX_SYS_syscall_test_widening_unsigned_wide 132
 #define ZX_SYS_syscall_test_widening_signed_wide 133
 #define ZX_SYS_system_get_event 134
-#define ZX_SYS_system_mexec 135
-#define ZX_SYS_system_mexec_payload_get 136
-#define ZX_SYS_system_powerctl 137
-#define ZX_SYS_task_suspend 138
-#define ZX_SYS_task_suspend_token 139
-#define ZX_SYS_task_create_exception_channel 140
-#define ZX_SYS_task_kill 141
-#define ZX_SYS_thread_exit 142
-#define ZX_SYS_thread_create 143
-#define ZX_SYS_thread_start 144
-#define ZX_SYS_thread_read_state 145
-#define ZX_SYS_thread_write_state 146
-#define ZX_SYS_timer_create 147
-#define ZX_SYS_timer_set 148
-#define ZX_SYS_timer_cancel 149
-#define ZX_SYS_vcpu_create 150
-#define ZX_SYS_vcpu_enter 151
-#define ZX_SYS_vcpu_interrupt 152
-#define ZX_SYS_vcpu_read_state 153
-#define ZX_SYS_vcpu_write_state 154
-#define ZX_SYS_vmar_allocate 155
-#define ZX_SYS_vmar_destroy 156
-#define ZX_SYS_vmar_map 157
-#define ZX_SYS_vmar_unmap 158
-#define ZX_SYS_vmar_protect 159
-#define ZX_SYS_vmar_op_range 160
-#define ZX_SYS_vmo_create 161
-#define ZX_SYS_vmo_read 162
-#define ZX_SYS_vmo_write 163
-#define ZX_SYS_vmo_get_size 164
-#define ZX_SYS_vmo_set_size 165
-#define ZX_SYS_vmo_op_range 166
-#define ZX_SYS_vmo_create_child 167
-#define ZX_SYS_vmo_set_cache_policy 168
-#define ZX_SYS_vmo_replace_as_executable 169
-#define ZX_SYS_vmo_create_contiguous 170
-#define ZX_SYS_vmo_create_physical 171
-#define ZX_SYS_COUNT 172
+#define ZX_SYS_system_set_performance_info 135
+#define ZX_SYS_system_get_performance_info 136
+#define ZX_SYS_system_mexec 137
+#define ZX_SYS_system_mexec_payload_get 138
+#define ZX_SYS_system_powerctl 139
+#define ZX_SYS_task_suspend 140
+#define ZX_SYS_task_suspend_token 141
+#define ZX_SYS_task_create_exception_channel 142
+#define ZX_SYS_task_kill 143
+#define ZX_SYS_thread_exit 144
+#define ZX_SYS_thread_create 145
+#define ZX_SYS_thread_start 146
+#define ZX_SYS_thread_read_state 147
+#define ZX_SYS_thread_write_state 148
+#define ZX_SYS_timer_create 149
+#define ZX_SYS_timer_set 150
+#define ZX_SYS_timer_cancel 151
+#define ZX_SYS_vcpu_create 152
+#define ZX_SYS_vcpu_enter 153
+#define ZX_SYS_vcpu_interrupt 154
+#define ZX_SYS_vcpu_read_state 155
+#define ZX_SYS_vcpu_write_state 156
+#define ZX_SYS_vmar_allocate 157
+#define ZX_SYS_vmar_destroy 158
+#define ZX_SYS_vmar_map 159
+#define ZX_SYS_vmar_unmap 160
+#define ZX_SYS_vmar_protect 161
+#define ZX_SYS_vmar_op_range 162
+#define ZX_SYS_vmo_create 163
+#define ZX_SYS_vmo_read 164
+#define ZX_SYS_vmo_write 165
+#define ZX_SYS_vmo_get_size 166
+#define ZX_SYS_vmo_set_size 167
+#define ZX_SYS_vmo_op_range 168
+#define ZX_SYS_vmo_create_child 169
+#define ZX_SYS_vmo_set_cache_policy 170
+#define ZX_SYS_vmo_replace_as_executable 171
+#define ZX_SYS_vmo_create_contiguous 172
+#define ZX_SYS_vmo_create_physical 173
+#define ZX_SYS_COUNT 174
 ----- syscall-numbers.h END -----
 
 

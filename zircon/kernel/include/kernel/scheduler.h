@@ -11,6 +11,7 @@
 #include <platform.h>
 #include <stdint.h>
 #include <zircon/syscalls/scheduler.h>
+#include <zircon/syscalls/system.h>
 #include <zircon/types.h>
 
 #include <fbl/function.h>
@@ -35,9 +36,24 @@ struct percpu;
 #endif
 
 // Performance scale of a CPU relative to the highest performance CPU in the
-// system. The precision accommodates the 8bit performance values available for
-// ARM and x86.
-using SchedPerformanceScale = ffl::Fixed<int32_t, 8>;
+// system.
+using SchedPerformanceScale = ffl::Fixed<int64_t, 31>;
+
+// Converts a userspace CPU performance scale to a SchedPerformanceScale value.
+constexpr SchedPerformanceScale ToSchedPerformanceScale(zx_cpu_performance_scale_t value) {
+  const size_t FractionaBits = sizeof(value.fractional_part) * 8;
+  return ffl::FromRaw<FractionaBits>(uint64_t{value.integral_part} << FractionaBits |
+                                     value.fractional_part);
+}
+
+// Converts a SchedPerformanceScale value to a userspace CPU performance scale.
+constexpr zx_cpu_performance_scale_t ToUserPerformanceScale(SchedPerformanceScale value) {
+  using UserScale = ffl::Fixed<uint64_t, 32>;
+  const UserScale user_scale{value};
+  const uint64_t integral = user_scale.Integral().raw_value() >> UserScale::Format::FractionalBits;
+  const uint64_t fractional = user_scale.Fraction().raw_value();
+  return {.integral_part = uint32_t(integral), .fractional_part = uint32_t(fractional)};
+}
 
 // Implements fair and deadline scheduling algorithms and manages the associated
 // per-CPU state.
@@ -166,6 +182,29 @@ class Scheduler {
   // May only be called with preemption disabled.
   static zx_time_t GetTargetPreemptionTime() TA_EXCL(thread_lock);
 
+  // Updates the performance scales of the requested CPUs and returns the
+  // effective values in place, which may be different than the requested values
+  // if they are below the minimum safe values for the respective CPUs.
+  //
+  // Requires |count| <= num CPUs.
+  static void UpdatePerformanceScales(zx_cpu_performance_info_t* info, size_t count)
+      TA_EXCL(thread_lock);
+
+  // Gets the performance scales of up to count CPUs. Returns the last values
+  // requested by userspace, even if they have not yet taken effect.
+  //
+  // Requires |count| <= num CPUs.
+  static void GetPerformanceScales(zx_cpu_performance_info_t* info, size_t count)
+      TA_EXCL(thread_lock);
+
+  // Gets the default performance scales of up to count CPUs. Returns the
+  // initial values determined by the system topology, or 1.0 when no topology
+  // is available.
+  //
+  // Requires |count| <= num CPUs.
+  static void GetDefaultPerformanceScales(zx_cpu_performance_info_t* info, size_t count)
+      TA_EXCL(thread_lock);
+
  private:
   // Allow percpu to init our cpu number and performance scale.
   friend struct percpu;
@@ -173,6 +212,10 @@ class Scheduler {
   friend struct LoadBalancerTestAccess;
   // Allow tests to modify our state.
   friend class LoadBalancerTest;
+
+  // Sets the initial values of the CPU performance scales for this Scheduler
+  // instance.
+  void InitializePerformanceScale(SchedPerformanceScale scale);
 
   static inline void RescheduleMask(cpu_mask_t cpus_to_reschedule_mask) TA_REQ(thread_lock);
 
@@ -487,9 +530,19 @@ class Scheduler {
   SchedDuration target_latency_grans_{kDefaultTargetLatency / kDefaultMinimumGranularity};
 
   // Performance scale of this CPU relative to the highest performance CPU. This
-  // value is determined from the system topology, when available.
+  // value is initially determined from the system topology, when available, and
+  // by userspace performance/thermal management at runtime.
   SchedPerformanceScale performance_scale_{1};
   SchedPerformanceScale performance_scale_reciprocal_{1};
+
+  // Performance scale requested by userspace. The operational performance scale
+  // is updated to this value (possibly adjusted for the minimum allowed value)
+  // on the next reschedule, after the current thread's accounting is updated.
+  SchedPerformanceScale pending_user_performance_scale_{1};
+
+  // Default performance scale, determined from the system topology, when
+  // available.
+  SchedPerformanceScale default_performance_scale_{1};
 
   // The CPU this scheduler instance is associated with.
   // NOTE: This member is not initialized to prevent clobbering the value set

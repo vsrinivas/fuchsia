@@ -66,6 +66,7 @@ unified_only = [
   "profile",
   "resource",
   "system-event",
+  "system-cpu",
 
   # These build their own separate test binaries in their own BUILD.gn files,
   # but are also included in the unified standalone test binary.

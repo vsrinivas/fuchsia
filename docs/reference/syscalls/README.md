@@ -176,6 +176,8 @@
 + [system_mexec](system_mexec.md) - Soft reboot the system with a new kernel and bootimage
 + [system_mexec_payload_get](system_mexec_payload_get.md) - Return a ZBI containing ZBI entries necessary to boot this system
 + [system_powerctl](system_powerctl.md)
++ [system_get_performance_info](system_get_performance_info.md) - Get CPU performance info
++ [system_set_performance_info](system_set_performance_info.md) - Set CPU performance info
 
 ## DDK
 + [bti_create](bti_create.md) - create a new bus transaction initiator

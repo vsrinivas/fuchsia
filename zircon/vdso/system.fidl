@@ -75,6 +75,29 @@ protocol system {
         event handle:EVENT;
     });
 
+    /// Set CPU performance parameters.
+    /// Rights: resource must have resource kind ZX_RSRC_KIND_SYSTEM.
+    system_set_performance_info(resource struct {
+        resource handle:RESOURCE;
+        topic uint32;
+        info const_voidptr;
+        count usize;
+    }) -> (resource struct {
+        status status;
+    });
+
+    /// Get CPU performance parameters.
+    /// Rights: resource must have resource kind ZX_RSRC_KIND_SYSTEM.
+    system_get_performance_info(resource struct {
+        resource handle:RESOURCE;
+        topic uint32;
+        count usize;
+    }) -> (resource struct {
+        status status;
+        info voidptr;
+        output_count usize;
+    });
+
     /// Soft reboot the system with a new kernel and bootimage.
     /// Rights: resource must have resource kind ZX_RSRC_KIND_ROOT.
     /// Rights: kernel_vmo must be of type ZX_OBJ_TYPE_VMO and have ZX_RIGHT_READ.
