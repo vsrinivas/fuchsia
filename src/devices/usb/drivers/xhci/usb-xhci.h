@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_DEVICES_USB_DRIVERS_XHCI_REWRITE_USB_XHCI_H_
-#define SRC_DEVICES_USB_DRIVERS_XHCI_REWRITE_USB_XHCI_H_
+#ifndef SRC_DEVICES_USB_DRIVERS_XHCI_USB_XHCI_H_
+#define SRC_DEVICES_USB_DRIVERS_XHCI_USB_XHCI_H_
 
 #include <fuchsia/hardware/pci/cpp/banjo.h>
 #include <fuchsia/hardware/platform/device/cpp/banjo.h>
@@ -479,4 +479,4 @@ class UsbXhci : public UsbXhciType, public ddk::UsbHciProtocol<UsbXhci, ddk::bas
 
 }  // namespace usb_xhci
 
-#endif  // SRC_DEVICES_USB_DRIVERS_XHCI_REWRITE_USB_XHCI_H_
+#endif  // SRC_DEVICES_USB_DRIVERS_XHCI_USB_XHCI_H_

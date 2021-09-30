@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_DEVICES_USB_DRIVERS_XHCI_REWRITE_XHCI_TRANSFER_RING_H_
-#define SRC_DEVICES_USB_DRIVERS_XHCI_REWRITE_XHCI_TRANSFER_RING_H_
+#ifndef SRC_DEVICES_USB_DRIVERS_XHCI_XHCI_TRANSFER_RING_H_
+#define SRC_DEVICES_USB_DRIVERS_XHCI_XHCI_TRANSFER_RING_H_
 
 #include <fuchsia/hardware/usb/request/c/banjo.h>
 #include <lib/zx/status.h>
@@ -180,4 +180,4 @@ class CommandRing : public TransferRing {
 };
 }  // namespace usb_xhci
 
-#endif  // SRC_DEVICES_USB_DRIVERS_XHCI_REWRITE_XHCI_TRANSFER_RING_H_
+#endif  // SRC_DEVICES_USB_DRIVERS_XHCI_XHCI_TRANSFER_RING_H_

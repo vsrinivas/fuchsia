@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_DEVICES_USB_DRIVERS_XHCI_REWRITE_XHCI_ENUMERATION
-#define SRC_DEVICES_USB_DRIVERS_XHCI_REWRITE_XHCI_ENUMERATION
+#ifndef SRC_DEVICES_USB_DRIVERS_XHCI_XHCI_ENUMERATION_H_
+#define SRC_DEVICES_USB_DRIVERS_XHCI_XHCI_ENUMERATION_H_
 
 #include "xhci-context.h"
 
@@ -22,5 +22,4 @@ TRBPromise EnumerateDevice(UsbXhci* hci, uint8_t port, std::optional<HubInfo> hu
 fpromise::promise<uint8_t, zx_status_t> GetMaxPacketSize(UsbXhci* hci, uint8_t slot_id);
 }  // namespace usb_xhci
 
-
-#endif // SRC_DEVICES_USB_DRIVERS_XHCI_REWRITE_XHCI_ENUMERATION
+#endif  // SRC_DEVICES_USB_DRIVERS_XHCI_XHCI_ENUMERATION_H_

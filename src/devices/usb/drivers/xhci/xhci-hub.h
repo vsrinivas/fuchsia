@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_DEVICES_USB_DRIVERS_XHCI_REWRITE_XHCI_HUB_H_
-#define SRC_DEVICES_USB_DRIVERS_XHCI_REWRITE_XHCI_HUB_H_
+#ifndef SRC_DEVICES_USB_DRIVERS_XHCI_XHCI_HUB_H_
+#define SRC_DEVICES_USB_DRIVERS_XHCI_XHCI_HUB_H_
 
 #include <fuchsia/hardware/usb/descriptor/cpp/banjo.h>
 #include <zircon/hw/usb.h>
@@ -26,4 +26,4 @@ struct HubInfo {
 };
 }  // namespace usb_xhci
 
-#endif  // SRC_DEVICES_USB_DRIVERS_XHCI_REWRITE_XHCI_HUB_H_
+#endif  // SRC_DEVICES_USB_DRIVERS_XHCI_XHCI_HUB_H_

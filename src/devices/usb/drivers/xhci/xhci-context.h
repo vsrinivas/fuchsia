@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_DEVICES_USB_DRIVERS_XHCI_REWRITE_XHCI_CONTEXT_H_
-#define SRC_DEVICES_USB_DRIVERS_XHCI_REWRITE_XHCI_CONTEXT_H_
+#ifndef SRC_DEVICES_USB_DRIVERS_XHCI_XHCI_CONTEXT_H_
+#define SRC_DEVICES_USB_DRIVERS_XHCI_XHCI_CONTEXT_H_
 #include <lib/fit/function.h>
 #include <lib/fpromise/bridge.h>
 #include <lib/synchronous-executor/executor.h>
@@ -57,4 +57,4 @@ make_ok_promise(usb_xhci::TRB* trb) {
 }
 }  // namespace fpromise
 
-#endif  // SRC_DEVICES_USB_DRIVERS_XHCI_REWRITE_XHCI_CONTEXT_H_
+#endif  // SRC_DEVICES_USB_DRIVERS_XHCI_XHCI_CONTEXT_H_
