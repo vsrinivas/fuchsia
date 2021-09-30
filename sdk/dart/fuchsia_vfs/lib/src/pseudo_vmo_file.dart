@@ -36,8 +36,8 @@ class PseudoVmoFile extends PseudoFile {
 
   Vmo? _getVmoForDescription() {
     final Vmo? originalVmo = _vmoFn!();
-    final Vmo? duplicatedVmo =
-        originalVmo?.duplicate(ZX.RIGHTS_BASIC | ZX.RIGHT_READ | ZX.RIGHT_MAP);
+    final Vmo? duplicatedVmo = originalVmo?.duplicate(
+        ZX.RIGHTS_BASIC | ZX.RIGHT_READ | ZX.RIGHT_MAP | ZX.RIGHT_GET_PROPERTY);
     return duplicatedVmo;
   }
 

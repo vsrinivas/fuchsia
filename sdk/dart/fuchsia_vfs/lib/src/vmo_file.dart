@@ -48,8 +48,10 @@ class VmoFile extends PseudoFile {
 
   Vmo? _getVmoForDescription() {
     if (_sharingMode == VmoSharingMode.shareDuplicate) {
-      final Vmo duplicatedVmo =
-          _vmo.duplicate(ZX.RIGHTS_BASIC | ZX.RIGHT_READ | ZX.RIGHT_MAP);
+      final Vmo duplicatedVmo = _vmo.duplicate(ZX.RIGHTS_BASIC |
+          ZX.RIGHT_READ |
+          ZX.RIGHT_MAP |
+          ZX.RIGHT_GET_PROPERTY);
       return duplicatedVmo;
     }
     return null;
