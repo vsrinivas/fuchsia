@@ -18,11 +18,8 @@ To run the Remote Control Service:
 
     $ ffx component run-legacy \\
     fuchsia-pkg://fuchsia.com/remote-control#meta/remote-control-runner.cmx",
-    description = "Run a v1 component on the target",
-    note = "Runs a specified v1 component on the target. The <url> must follow the
-format:
-
-`fuchsia-pkg://fuchsia.com/<package>#meta/<component>.cmx`."
+    description = "Runs a legacy (CMX) component instance on the target",
+    note = "To learn more about component URLs, visit https://fuchsia.dev/fuchsia-src/concepts/components/component_urls"
 )]
 
 pub struct RunComponentCommand {

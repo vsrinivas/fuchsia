@@ -9,19 +9,15 @@ use {argh::FromArgs, ffx_core::ffx_command};
 #[argh(
     subcommand,
     name = "bind",
-    description = "Binds to the component designated by the provided relative moniker",
-    example = "To bind to the component designated by the moniker:
+    description = "Binds to a component instance, causing it to start",
+    example = "To bind to the component instance designated by the moniker `/core/brightness_manager`:
 
-    $ ffx component bind core/brightness_manager",
-    note = "Binds to the component designated by the provided moniker relative to the
-    root of the component topology.
-    This will resolve the component if it's not already resolved, and will start the
-    component if it isn't already running. ",
-    error_code(1, "Failed to bind to the component with moniker <moniker>.")
+    $ ffx component bind /core/brightness_manager",
+    note = "To learn more about running components, visit https://fuchsia.dev/fuchsia-src/development/components/run"
 )]
 pub struct ComponentBindCommand {
     #[argh(positional)]
-    /// moniker of the component
+    /// A moniker to a component instance
     pub moniker: String,
 }
 

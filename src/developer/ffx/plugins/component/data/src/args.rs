@@ -6,7 +6,7 @@ use {argh::FromArgs, ffx_component_data_sub_command::Subcommand, ffx_core::ffx_c
 
 #[ffx_command()]
 #[derive(FromArgs, Debug, PartialEq)]
-#[argh(subcommand, name = "data", description = "Manage persistent data storage of components")]
+#[argh(subcommand, name = "data", description = "Manages persistent data storage of components")]
 pub struct DataCommand {
     #[argh(subcommand)]
     pub subcommand: Subcommand,

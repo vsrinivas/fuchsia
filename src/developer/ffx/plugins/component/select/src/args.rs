@@ -10,7 +10,7 @@ use {argh::FromArgs, ffx_core::ffx_command};
 #[argh(
     subcommand,
     name = "select",
-    description = "Lists components matching a selector",
+    description = "Lists component instances matching a selector",
     example = "To show services exposed by remote-control:
 
     $ ffx component select moniker remote-control:expose:*'
@@ -18,7 +18,7 @@ use {argh::FromArgs, ffx_core::ffx_command};
 Or to show all services offered by v1 components:
 
     $ ffx component select moniker core/appmgr:out:*
-    
+
 Or to show all components that expose a capability:
 
     $ ffx component select capability fuchsia.sys.Loader",
@@ -32,8 +32,7 @@ Wildcards may be used anywhere in the selector.
 
 2). looking up components that expose a capability. The command takes in 
 a capability name consists of a string containing the characters a to z, 
-A to Z, 0 to 9, underscore (_), hyphen (-), or the full stop character (.).",
-    error_code(1, "No matching component paths found")
+A to Z, 0 to 9, underscore (_), hyphen (-), or the full stop character (.)."
 )]
 pub struct ComponentSelectCommand {
     #[argh(subcommand)]

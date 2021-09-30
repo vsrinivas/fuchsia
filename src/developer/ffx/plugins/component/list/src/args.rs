@@ -9,7 +9,7 @@ use {argh::FromArgs, component_hub::list::ListFilter, ffx_core::ffx_command};
 #[argh(
     subcommand,
     name = "list",
-    description = "List all components, with the option of listing only cmx/cml components",
+    description = "Lists all components in the component topology",
     example = "To list all components in the topology:
 
     $ ffx component list
@@ -28,15 +28,7 @@ use {argh::FromArgs, component_hub::list::ListFilter, ffx_core::ffx_command};
 
     To list all stopped components in the topology:
 
-    $ ffx component list --only stopped",
-    note = "Lists all the components on the running target. If no <only> is entered,
-the default option outputs a tree of all components on the system. If a valid <only>
-is entered, the command outputs a tree of only cmx/cml/running/stopped components in the system.
-
-If the command fails or times out, ensure RCS is running on the target.
-This can be verified by running `ffx target list` and seeing the status
-on the RCS column.",
-    error_code(1, "The command has timed out")
+    $ ffx component list --only stopped"
 )]
 
 pub struct ComponentListCommand {

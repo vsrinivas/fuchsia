@@ -9,21 +9,17 @@ use {argh::FromArgs, ffx_core::ffx_command};
 #[argh(
     subcommand,
     name = "stop",
-    description = "Stops the component designated by the provided relative moniker",
-    example = "To stop the component designated by the moniker:
+    description = "Stops a component instance",
+    example = "To stop the component instance designated by the moniker `/core/brightness_manager`:
 
-    $ ffx component stop core/brightness_manager",
-    note = "Stops the component designated by the provided moniker relative to the
-    root of the component topology.
-    This will resolve the component if it's not already resolved, and will stop the
-    component if it is already running.",
-    error_code(1, "Failed to stop the component with moniker <moniker>.")
+    $ ffx component stop /core/brightness_manager",
+    note = "To learn more about running components, visit https://fuchsia.dev/fuchsia-src/development/components/run"
 )]
 pub struct ComponentStopCommand {
     #[argh(positional)]
-    /// moniker of the component
+    /// A moniker to a component instance
     pub moniker: String,
-    #[argh(switch, long = "recursive", short = 'r')]
+    #[argh(switch, short = 'r')]
     /// whether or not to stop the component recursively
     pub recursive: bool,
 }

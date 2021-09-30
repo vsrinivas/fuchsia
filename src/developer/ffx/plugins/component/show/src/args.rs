@@ -9,29 +9,18 @@ use {argh::FromArgs, ffx_core::ffx_command};
 #[argh(
     subcommand,
     name = "show",
-    description = "Show useful information about a component",
-    example = "To show information about a component with full url:
+    description = "Shows detailed information about a component instance",
+    example = "To show information about the `brightness_manager` component instance, all of the
+following commands are valid:
 
-    $ ffx component show fuchsia-pkg://fuchsia.com/appmgr#meta/appmgr.cm
-
-    To show information about a component with partial url:
-
-    $ ffx component show appmgr.cm
-
-    To show information about a component with name:
-
-    $ ffx component show appmgr",
-    note = "Show useful information about a component including url, merkle root,
-exposed/incoming/outgoing services, etc. The command expects a <url/name> which is
-the partial url or name of the component.",
-    error_code(
-        1,
-        "Invalid filter 'asdfgh': filter should be a component name or component (partial) url.
-Filter format: component_name / url / partial url."
-    )
+    $ ffx component show /core/brightness_manager
+    $ ffx component show fuchsia-pkg://fuchsia.com/brightness_manager#meta/brightness_manager.cm
+    $ ffx component show meta/brightness_manager.cm
+    $ ffx component show brightness_manager",
+    note = "This command supports partial matches over the moniker and URL"
 )]
 pub struct ComponentShowCommand {
     #[argh(positional)]
-    /// partial url or name of the component
+    /// URL or moniker of component instance. Partial matches allowed.
     pub filter: String,
 }

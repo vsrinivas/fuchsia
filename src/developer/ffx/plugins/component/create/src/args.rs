@@ -9,19 +9,11 @@ use {argh::FromArgs, ffx_core::ffx_command};
 #[argh(
     subcommand,
     name = "create",
-    example = "To create a component instance of the hello-world-rust component
-    in the ffx-laboratory collection:
+    description = "Creates a component instance, adding it to the component topology",
+    example = "To create a component instance designated by the moniker `/core/ffx-laboratory:foo`:
 
-    $ ffx component create \\
-    /core/ffx-laboratory:foo \\
-    fuchsia-pkg://fuchsia.com/hello-world#meta/hello-world-rust.cm",
-    description = "Create a component instance in a specific collection",
-    note = "The component owning the collection must also have a `use` declaration
-for the fuchsia.sys2.Realm protocol in its manifest.
-    
-The <url> must follow the format:
-
-`fuchsia-pkg://fuchsia.com/<package>#meta/<component>.cm`"
+    $ ffx component create /core/ffx-laboratory:foo fuchsia-pkg://fuchsia.com/hello-world#meta/hello-world-rust.cm",
+    note = "To learn more about running components, visit https://fuchsia.dev/fuchsia-src/development/components/run"
 )]
 
 pub struct CreateComponentCommand {

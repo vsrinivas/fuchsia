@@ -9,17 +9,17 @@ use {argh::FromArgs, ffx_core::ffx_command};
 #[argh(
     subcommand,
     name = "destroy",
-    example = "To destroy a component instance with a given moniker:
+    description = "Destroys a component instance, removing it from the component topology",
+    example = "To destroy a component instance designated by the moniker `/core/ffx-laboratory:foo`:
 
     $ ffx component destroy /core/ffx-laboratory:foo",
-    description = "Destroy a component instance in a specific collection",
-    note = "The component owning the collection must also have a `use` declaration
-for the fuchsia.sys2.Realm protocol in its manifest."
+    note = "To learn more about running components, visit https://fuchsia.dev/fuchsia-src/development/components/run"
 )]
 
 pub struct DestroyComponentCommand {
     #[argh(positional)]
     /// A moniker to a component instance in a collection.
+    /// This component instance will be removed from the topology if this command succeeds.
     pub moniker: String,
 }
 
