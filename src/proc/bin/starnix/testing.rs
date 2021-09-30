@@ -61,6 +61,7 @@ pub fn create_kernel_and_task_with_fs(fs: Arc<FsContext>) -> (Arc<Kernel>, TaskO
         fs,
         SignalActions::default(),
         Credentials::default(),
+        Arc::clone(&kernel.default_abstract_socket_namespace),
         None,
     )
     .expect("failed to create first task");
@@ -80,6 +81,7 @@ pub fn create_task(kernel: &Arc<Kernel>, task_name: &str) -> TaskOwner {
         create_pkgfs(),
         SignalActions::default(),
         Credentials::default(),
+        Arc::clone(&kernel.default_abstract_socket_namespace),
         None,
     )
     .expect("failed to create second task")

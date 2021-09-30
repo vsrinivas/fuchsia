@@ -319,7 +319,7 @@ impl SocketEndpoint {
     /// The socket endpoint's address is set to a default value for the specified domain.
     pub fn new(node: Weak<FsNode>, domain: SocketDomain) -> SocketEndpointHandle {
         let address = match domain {
-            SocketDomain::Unix => SocketAddress::Unix(b"".to_vec()),
+            SocketDomain::Unix => SocketAddress::Unix(vec![]),
         };
         Arc::new(Mutex::new(SocketEndpoint {
             messages: MessageBuffer::new(usize::MAX),
@@ -335,13 +335,12 @@ impl SocketEndpoint {
             SocketDomain::Unix => AF_UNIX.to_ne_bytes().to_vec(),
         };
         match &self.address {
-            SocketAddress::Unix(path) => {
-                if path.len() > 0 {
+            SocketAddress::Unix(name) => {
+                if name.len() > 0 {
                     let mut address = sockaddr_un::default();
-                    let path_len = std::cmp::min(address.sun_path.len() - 1, path.len());
-
+                    let length = std::cmp::min(address.sun_path.len() - 1, name.len());
                     address.sun_family = AF_UNIX;
-                    address.sun_path[..path_len].copy_from_slice(&path[..path_len]);
+                    address.sun_path[..length].copy_from_slice(&name[..length]);
                     address.as_bytes().to_vec()
                 } else {
                     default_name

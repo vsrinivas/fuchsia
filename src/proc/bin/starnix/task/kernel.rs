@@ -6,7 +6,6 @@ use fuchsia_zircon::{self as zx, AsHandleRef, HandleBased};
 use once_cell::sync::OnceCell;
 use parking_lot::RwLock;
 use std::ffi::CStr;
-#[cfg(test)]
 use std::sync::Arc;
 
 use crate::fs::FileSystemHandle;
@@ -22,6 +21,13 @@ pub struct Kernel {
     /// The scheduler associated with this kernel. The scheduler stores state like suspended tasks,
     /// pending signals, etc.
     pub scheduler: RwLock<Scheduler>,
+
+    /// The default namespace for abstract AF_UNIX sockets in this kernel.
+    ///
+    /// Rather than use this default namespace, abstract socket addresses
+    /// should be looked up in the AbstractSocketNamespace on each Task
+    /// object because some Task objects might have a non-default namespace.
+    pub default_abstract_socket_namespace: Arc<AbstractSocketNamespace>,
 
     /// The kernel command line. Shows up in /proc/cmdline.
     pub cmdline: Vec<u8>,
@@ -48,6 +54,7 @@ impl Kernel {
             job: zx::Job::from_handle(zx::Handle::invalid()),
             pids: RwLock::new(PidTable::new()),
             scheduler: RwLock::new(Scheduler::new()),
+            default_abstract_socket_namespace: AbstractSocketNamespace::new(),
             cmdline: Vec::new(),
             anon_fs: OnceCell::new(),
             pipe_fs: OnceCell::new(),

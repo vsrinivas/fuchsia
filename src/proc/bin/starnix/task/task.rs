@@ -70,6 +70,9 @@ pub struct Task {
     /// The security credentials for this task.
     pub creds: RwLock<Credentials>,
 
+    /// The namespace for abstract AF_UNIX sockets for this task.
+    pub abstract_socket_namespace: Arc<AbstractSocketNamespace>,
+
     /// The IDs used to perform shell job control.
     pub shell_job_control: ShellJobControl,
 
@@ -140,6 +143,7 @@ impl Task {
         fs: Arc<FsContext>,
         signal_actions: Arc<SignalActions>,
         creds: Credentials,
+        abstract_socket_namespace: Arc<AbstractSocketNamespace>,
         sjc: ShellJobControl,
         exit_signal: Option<Signal>,
     ) -> TaskOwner {
@@ -156,6 +160,7 @@ impl Task {
                 mm,
                 fs,
                 creds: RwLock::new(creds),
+                abstract_socket_namespace,
                 shell_job_control: sjc,
                 clear_child_tid: Mutex::new(UserRef::default()),
                 signal_actions,
@@ -182,6 +187,7 @@ impl Task {
         fs: Arc<FsContext>,
         signal_actions: Arc<SignalActions>,
         creds: Credentials,
+        abstract_socket_namespace: Arc<AbstractSocketNamespace>,
         exit_signal: Option<Signal>,
     ) -> Result<TaskOwner, Errno> {
         let (process, root_vmar) = kernel
@@ -215,6 +221,7 @@ impl Task {
             fs,
             signal_actions,
             creds,
+            abstract_socket_namespace,
             ShellJobControl::new(id),
             exit_signal,
         );
@@ -257,6 +264,7 @@ impl Task {
             fs,
             signal_actions,
             creds,
+            Arc::clone(&self.abstract_socket_namespace),
             ShellJobControl::new(self.shell_job_control.sid),
             None,
         );
@@ -342,6 +350,7 @@ impl Task {
                 fs,
                 signal_actions,
                 creds,
+                Arc::clone(&self.abstract_socket_namespace),
                 child_exit_signal,
             )?;
             *child.task.signal_stack.lock() = *self.signal_stack.lock();

@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+mod abstract_socket_namespace;
 mod kernel;
 mod pid_table;
 mod scheduler;
@@ -9,6 +10,7 @@ mod task;
 mod thread_group;
 mod waiter;
 
+pub use abstract_socket_namespace::*;
 pub use kernel::*;
 pub use pid_table::*;
 pub use scheduler::*;

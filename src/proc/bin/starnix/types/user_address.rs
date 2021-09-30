@@ -135,6 +135,7 @@ impl<T: AsBytes + FromBytes> UserRef<T> {
         self.addr
     }
 
+    #[allow(dead_code)]
     pub fn len(&self) -> usize {
         mem::size_of::<T>()
     }

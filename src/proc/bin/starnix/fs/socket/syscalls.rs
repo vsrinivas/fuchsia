@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use fuchsia_cprng::cprng_draw;
 use std::convert::TryInto;
 
 use super::*;
@@ -30,6 +31,59 @@ pub fn sys_socket(
     Ok(fd.into())
 }
 
+fn parse_socket_address(
+    task: &Task,
+    user_socket_address: UserAddress,
+    address_length: usize,
+) -> Result<SocketAddress, Errno> {
+    const ADDRESS_FAMILY_SIZE: usize = std::mem::size_of::<uapi::__kernel_sa_family_t>();
+    if address_length < ADDRESS_FAMILY_SIZE {
+        return error!(EINVAL);
+    }
+
+    let mut address = vec![0u8; address_length];
+    task.mm.read_memory(user_socket_address, &mut address)?;
+
+    let mut family_bytes = [0u8; ADDRESS_FAMILY_SIZE];
+    family_bytes[..ADDRESS_FAMILY_SIZE].copy_from_slice(&address[..ADDRESS_FAMILY_SIZE]);
+    let family = uapi::__kernel_sa_family_t::from_ne_bytes(family_bytes);
+
+    let address = match family {
+        AF_UNIX => {
+            let template = sockaddr_un::default();
+            let sun_path = &address[ADDRESS_FAMILY_SIZE..];
+            if sun_path.len() > template.sun_path.len() {
+                return error!(EINVAL);
+            }
+            if sun_path.len() == 0 {
+                // Possibly an autobind address, depending on context.
+                SocketAddress::Unix(vec![])
+            } else {
+                let null_index =
+                    sun_path.iter().position(|&r| r == b'\0').ok_or_else(|| errno!(EINVAL))?;
+                if null_index == 0 {
+                    // If there is a null byte at the start of the sun_path, then the
+                    // address is abstract.
+                    SocketAddress::Unix(sun_path.to_vec())
+                } else {
+                    // Otherwise, the name is a path.
+                    SocketAddress::Unix(sun_path[..null_index].to_vec())
+                }
+            }
+        }
+        _ => return error!(EAFNOSUPPORT),
+    };
+    Ok(address)
+}
+
+// See "Autobind feature" section of https://man7.org/linux/man-pages/man7/unix.7.html
+fn generate_autobind_address() -> Vec<u8> {
+    let mut bytes = [0u8; 4];
+    cprng_draw(&mut bytes);
+    let value = u32::from_ne_bytes(bytes) & 0xFFFFF;
+    format!("\0{:0x}", value).into_bytes()
+}
+
 pub fn sys_bind(
     ctx: &SyscallContext<'_>,
     fd: FdNumber,
@@ -41,26 +95,31 @@ pub fn sys_bind(
         return error!(ENOTSOCK);
     }
     let socket = file.node().socket().ok_or_else(|| errno!(ENOTSOCK))?;
+    let address = parse_socket_address(&ctx.task, user_socket_address, address_length)?;
+    match address {
+        SocketAddress::Unix(mut name) => {
+            if name.is_empty() {
+                // If the name is empty, then we're supposed to generate an
+                // autobind address, which is always abstract.
+                name = generate_autobind_address();
+            }
+            // If there is a null byte at the start of the sun_path, then the
+            // address is abstract.
+            if name[0] == b'\0' {
+                ctx.task.abstract_socket_namespace.bind(name, socket)?;
+            } else {
+                let mode = ctx.task.fs.apply_umask(mode!(IFSOCK, 0o765));
+                // TODO: Is lookup_parent_at returning the right errors?
+                let (parent, basename) = ctx.task.lookup_parent_at(FdNumber::AT_FDCWD, &name)?;
 
-    // TODO: We shouldn't assume `sockaddr_un`.
-    let user_ref: UserRef<sockaddr_un> = UserRef::new(user_socket_address);
-    if address_length != user_ref.len() {
-        return error!(EINVAL);
+                let _dir_entry = parent
+                    .entry
+                    .bind_socket(basename, socket.clone(), SocketAddress::Unix(name.clone()), mode)
+                    .map_err(|errno| if errno == EEXIST { errno!(EADDRINUSE) } else { errno })?;
+            }
+        }
+        _ => return error!(EAFNOSUPPORT),
     }
-    let mut address = sockaddr_un::default();
-    ctx.task.mm.read_object(user_ref, &mut address)?;
-
-    let path_len =
-        address.sun_path.iter().position(|&r| r == b'\0').ok_or_else(|| errno!(EINVAL))?;
-    let mode = ctx.task.fs.apply_umask(mode!(IFSOCK, 0o765));
-    let path = &address.sun_path[..path_len];
-
-    let (parent, basename) = ctx.task.lookup_parent_at(FdNumber::AT_FDCWD, path)?;
-
-    let _dir_entry = parent
-        .entry
-        .bind_socket(basename, socket.clone(), SocketAddress::Unix(path.to_owned()), mode)
-        .map_err(|errno| if errno == EEXIST { errno!(EADDRINUSE) } else { errno })?;
 
     Ok(SUCCESS)
 }
@@ -73,27 +132,27 @@ pub fn sys_connect(
 ) -> Result<SyscallResult, Errno> {
     // The "active" socket is the one performing the connection.
     let active_socket_file = ctx.task.files.get(fd)?;
-    if !active_socket_file.node().is_sock() {
-        return error!(ENOTSOCK);
-    }
+    let active_socket = active_socket_file.node().socket().ok_or_else(|| errno!(ENOTSOCK))?;
+    let address = parse_socket_address(&ctx.task, user_socket_address, address_length)?;
 
-    // TODO: We shouldn't assume `sockaddr_un`.
-    let user_ref: UserRef<sockaddr_un> = UserRef::new(user_socket_address);
-    if address_length != user_ref.len() {
-        return error!(EINVAL);
-    }
-    let mut address = sockaddr_un::default();
-    ctx.task.mm.read_object(user_ref, &mut address)?;
+    let passive_socket = match address {
+        SocketAddress::Unix(name) => {
+            if name.is_empty() {
+                return error!(ECONNREFUSED);
+            }
+            if name[0] == b'\0' {
+                ctx.task.abstract_socket_namespace.lookup(&name)?
+            } else {
+                let (parent, basename) = ctx.task.lookup_parent_at(FdNumber::AT_FDCWD, &name)?;
+                let name =
+                    parent.lookup_child(&mut LookupContext::default(), ctx.task, basename)?;
+                name.entry.node.socket().ok_or_else(|| errno!(ECONNREFUSED))?.clone()
+            }
+        }
+        _ => return error!(EAFNOSUPPORT),
+    };
 
-    let path_len =
-        address.sun_path.iter().position(|&r| r == b'\0').ok_or_else(|| errno!(EINVAL))?;
-
-    let (parent, basename) =
-        ctx.task.lookup_parent_at(FdNumber::AT_FDCWD, &address.sun_path[..path_len])?;
-    let node = parent.lookup_child(&mut LookupContext::default(), ctx.task, basename)?;
-
-    connect_sockets(&node.entry.node, active_socket_file.node())?;
-
+    connect_sockets(&passive_socket, active_socket)?;
     Ok(SUCCESS)
 }
 
@@ -305,35 +364,33 @@ fn create_socket(
 /// WARNING: It's an error to call `connect` with nodes that do not contain sockets.
 ///
 /// # Parameters
-/// - `passive_node`: The node that is being connected *to*.
-/// - `active_node`: The node that is performing the connection.
+/// - `passive_socket`: The socket that is being connected *to*.
+/// - `active_socket`: The socket that is performing the connection.
 ///
 /// Returns an error if any of the sockets could not be connected.
-pub fn connect_sockets(
-    passive_node: &FsNodeHandle,
-    active_node: &FsNodeHandle,
+fn connect_sockets(
+    passive_socket: &SocketHandle,
+    active_socket: &SocketHandle,
 ) -> Result<(), Errno> {
-    assert!(passive_node.socket().is_some());
-    assert!(active_node.socket().is_some());
-    if std::ptr::eq(passive_node, active_node) {
+    if std::ptr::eq(passive_socket, active_socket) {
         return error!(ECONNREFUSED);
     }
 
     // Sort the nodes to determine which order to lock them in.
-    let mut ordered_nodes: [&FsNodeHandle; 2] = [active_node, passive_node];
-    sort_for_locking(&mut ordered_nodes, |node| node.socket().unwrap());
+    let mut ordered_sockets: [&SocketHandle; 2] = [active_socket, passive_socket];
+    sort_for_locking(&mut ordered_sockets, |socket| socket);
 
-    let first_node = ordered_nodes[0];
-    let second_node = ordered_nodes[1];
+    let first_socket = ordered_sockets[0];
+    let second_socket = ordered_sockets[1];
 
-    let mut first_socket = first_node.socket().unwrap().lock();
-    let mut second_socket = second_node.socket().unwrap().lock();
+    let mut first_socket_locked = first_socket.lock();
+    let mut second_socket_locked = second_socket.lock();
 
-    if std::ptr::eq(passive_node, first_node) {
+    if std::ptr::eq(passive_socket, first_socket) {
         // The first socket is the passive node, so connect *to* it.
-        second_socket.connect(&mut first_socket)
+        second_socket_locked.connect(&mut first_socket_locked)
     } else {
-        first_socket.connect(&mut second_socket)
+        first_socket_locked.connect(&mut second_socket_locked)
     }
 }
 
@@ -387,6 +444,26 @@ mod tests {
             .files
             .get(FdNumber::from_raw(fd1.try_into().unwrap()))
             .expect("Failed to fetch socket file.");
-        assert_eq!(connect_sockets(file.node(), file.node()), Err(ECONNREFUSED));
+        assert_eq!(
+            connect_sockets(file.node().socket().unwrap(), file.node().socket().unwrap()),
+            Err(ECONNREFUSED)
+        );
+    }
+
+    #[test]
+    fn test_generate_autobind_address() {
+        let address = generate_autobind_address();
+        assert_eq!(address.len(), 6);
+        assert_eq!(address[0], 0);
+        for byte in address[1..].iter() {
+            match byte {
+                b'0'..=b'9' | b'a'..=b'f' => {
+                    // Ok.
+                }
+                bad => {
+                    assert!(false, "bad byte: {}", bad);
+                }
+            }
+        }
     }
 }

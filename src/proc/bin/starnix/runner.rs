@@ -345,6 +345,7 @@ fn start_component(
         fs.clone(),
         SignalActions::default(),
         credentials,
+        Arc::clone(&kernel.default_abstract_socket_namespace),
         None,
     )?;
 

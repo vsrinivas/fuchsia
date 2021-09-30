@@ -135,6 +135,7 @@ if (target_cpu == "x64") {
       "syscalls/syscall_result.rs",
       "syscalls/system.rs",
       "syscalls/table.rs",
+      "task/abstract_socket_namespace.rs",
       "task/kernel.rs",
       "task/mod.rs",
       "task/pid_table.rs",
