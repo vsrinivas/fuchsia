@@ -28,7 +28,7 @@ async fn main() -> Result<(), Error> {
         }
     };
 
-    let emulator = Emulator::create_and_publish().await?;
+    let emulator = Emulator::create_and_publish(None).await?;
 
     let topo_path = fdio::device_get_topo_path(&emulator.file())?;
     eprintln!("Instantiated emulator at path: {}", topo_path);

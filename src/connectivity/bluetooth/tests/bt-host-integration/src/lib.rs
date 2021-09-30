@@ -47,12 +47,13 @@ async fn test_lifecycle(_: ()) -> Result<(), Error> {
         ..EmulatorSettings::EMPTY
     };
 
-    let mut emulator = Emulator::create().await?;
+    let mut emulator = Emulator::create(None).await?;
     let hci_topo = PathBuf::from(fdio::device_get_topo_path(emulator.file())?);
 
     // Publish the bt-hci device and verify that a bt-host appears under its topology within a
     // reasonable timeout.
-    let mut watcher = DeviceWatcher::new(HOST_DEVICE_DIR, zx::Duration::from_seconds(10)).await?;
+    let mut watcher =
+        DeviceWatcher::new_in_namespace(HOST_DEVICE_DIR, zx::Duration::from_seconds(10)).await?;
     let _ = emulator.publish(settings).await?;
     let bthost = watcher.watch_new(&hci_topo, WatchFilter::AddedOnly).await?;
 
@@ -72,7 +73,7 @@ async fn test_lifecycle(_: ()) -> Result<(), Error> {
     emulator.destroy_and_wait().await?;
 
     // Check that the bt-host device is also destroyed.
-    watcher.watch_removed(bthost.path()).await
+    watcher.watch_removed(bthost.relative_path()).await
 }
 
 // Tests that the bt-host driver assigns the local name to "fuchsia" when initialized.

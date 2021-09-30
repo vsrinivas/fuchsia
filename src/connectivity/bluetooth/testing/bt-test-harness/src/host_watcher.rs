@@ -119,7 +119,7 @@ pub async fn activate_fake_host(
     let initial_hosts: Vec<HostId> = host_watcher.read().hosts.keys().cloned().collect();
     let initial_hosts_ = initial_hosts.clone();
 
-    let hci = Emulator::create_and_publish().await?;
+    let hci = Emulator::create_and_publish(None).await?;
 
     let host_watcher_state = host_watcher
         .when_satisfied(

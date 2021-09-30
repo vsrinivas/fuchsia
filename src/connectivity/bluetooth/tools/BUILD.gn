@@ -22,7 +22,6 @@ group("profile") {
 
 group("hci") {
   deps = [
-    "bt-hci-emulator",
     "bt-hci-tool",
     "bt-intel-tool",
   ]
@@ -59,6 +58,7 @@ group("tests") {
     "bt-bredr-profile:tests",
     "bt-cli:tests",
     "bt-fct-hci:tests",
+    "bt-hci-emulator",
     "bt-le-central:tests",
     "bt-le-peripheral:tests",
     "bt-snoop:tests",

@@ -88,9 +88,9 @@ pub async fn handle_inspect_updates(harness: InspectHarness) -> Result<(), Error
 }
 
 pub async fn new_inspect_harness() -> Result<(InspectHarness, Emulator, PathBuf), Error> {
-    let emulator: Emulator = Emulator::create().await?;
+    let emulator: Emulator = Emulator::create(None).await?;
     let host_dev = emulator.publish_and_wait_for_host(Emulator::default_settings()).await?;
-    let host_path = host_dev.path().to_path_buf();
+    let host_path = host_dev.relative_path().to_path_buf();
 
     let proxy = fuchsia_component::client::connect_to_protocol::<AccessMarker>()
         .context("Failed to connect to Access service")?;
@@ -118,7 +118,8 @@ impl TestHarness for InspectHarness {
         let (host_path, mut emulator) = env;
         async move {
             // Shut down the fake bt-hci device and make sure the bt-host device gets removed.
-            let mut watcher = DeviceWatcher::new(HOST_DEVICE_DIR, timeout_duration()).await?;
+            let mut watcher =
+                DeviceWatcher::new_in_namespace(HOST_DEVICE_DIR, timeout_duration()).await?;
             emulator.destroy_and_wait().await?;
             watcher.watch_removed(&host_path).await
         }

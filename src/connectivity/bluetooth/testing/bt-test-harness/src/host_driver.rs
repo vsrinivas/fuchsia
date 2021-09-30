@@ -44,7 +44,7 @@ use crate::{
 pub struct HostState {
     emulator_state: EmulatorState,
 
-    // Access to the bt-host device under test.
+    // Path of the bt-host device relative to HOST_DEVICE_DIR
     host_path: PathBuf,
 
     // Current bt-host driver state.
@@ -136,7 +136,8 @@ impl TestHarness for HostDriverHarness {
         let (path, mut emulator) = env;
         async move {
             // Shut down the fake bt-hci device and make sure the bt-host device gets removed.
-            let mut watcher = DeviceWatcher::new(HOST_DEVICE_DIR, timeout_duration()).await?;
+            let mut watcher =
+                DeviceWatcher::new_in_namespace(HOST_DEVICE_DIR, timeout_duration()).await?;
             emulator.destroy_and_wait().await?;
             watcher.watch_removed(&path).await
         }
@@ -146,7 +147,7 @@ impl TestHarness for HostDriverHarness {
 
 // Creates a fake bt-hci device and returns the corresponding bt-host device once it gets created.
 async fn new_host_harness() -> Result<(HostDriverHarness, Emulator), Error> {
-    let emulator = Emulator::create().await.context("Error creating emulator root device")?;
+    let emulator = Emulator::create(None).await.context("Error creating emulator root device")?;
     let host_dev = emulator
         .publish_and_wait_for_host(Emulator::default_settings())
         .await
@@ -166,7 +167,7 @@ async fn new_host_harness() -> Result<(HostDriverHarness, Emulator), Error> {
         .context("Error calling WatchState()")?
         .try_into()
         .context("Invalid HostInfo received")?;
-    let host_path = host_dev.path().to_path_buf();
+    let host_path = host_dev.relative_path().to_path_buf();
     let peers = HashMap::new();
 
     let harness = HostDriverHarness(expectable(

@@ -7,6 +7,7 @@ import("//build/rust/rustc_binary.gni")
 
 rustc_binary("bin") {
   output_name = "bt-hci-emulator"
+  testonly = true
   with_unit_tests = true
 
   deps = [
@@ -23,5 +24,6 @@ rustc_binary("bin") {
 }
 
 fuchsia_shell_package("bt-hci-emulator") {
+  testonly = true
   deps = [ ":bin" ]
 }

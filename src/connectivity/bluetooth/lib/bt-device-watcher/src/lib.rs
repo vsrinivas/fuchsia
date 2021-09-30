@@ -6,12 +6,13 @@
 
 use {
     anyhow::{format_err, Error},
+    fidl::{endpoints::Proxy, HandleBased},
+    fidl_fuchsia_io::{self as fio, DirectoryProxy},
     fuchsia_async::{DurationExt, TimeoutExt},
-    fuchsia_bluetooth::util::open_rdwr,
     fuchsia_vfs_watcher::{WatchEvent, Watcher as VfsWatcher},
     fuchsia_zircon as zx,
     futures::{Future, TryStreamExt},
-    io_util::{open_directory_in_namespace, OPEN_RIGHT_READABLE},
+    io_util::{self, open_directory_in_namespace},
     log::{error, info},
     std::{
         fs::File,
@@ -19,12 +20,16 @@ use {
     },
 };
 
+/// A representation of an open device file, as constructed by a DeviceWatcher. A DeviceFile is
+/// necessarily linked to the directory of the DeviceWatcher that opened it, as the `relative_path`
+/// method is relative to the directory watched by that DeviceWatcher.
+#[derive(Debug)]
 pub struct DeviceFile {
     /// Open handle to the device file.
     file: File,
 
-    /// The path of the device in the current namespace.
-    path: PathBuf,
+    /// The path of the device relative to the directory of the DeviceWatcher that created it.
+    relative_path: PathBuf,
 
     /// Topological path of the device.
     topo_path: PathBuf,
@@ -35,8 +40,8 @@ impl DeviceFile {
         &self.file
     }
 
-    pub fn path(&self) -> &Path {
-        &self.path
+    pub fn relative_path(&self) -> &Path {
+        &self.relative_path
     }
 
     pub fn topo_path(&self) -> &Path {
@@ -44,19 +49,12 @@ impl DeviceFile {
     }
 }
 
-impl DeviceFile {
-    pub fn open(path: &Path) -> Result<DeviceFile, Error> {
-        let f = open_rdwr(path)?;
-        let topo = fdio::device_get_topo_path(&f)?;
-        Ok(DeviceFile { file: f, path: path.to_path_buf(), topo_path: PathBuf::from(topo) })
-    }
-}
-
 /// Utility object for watching for device creation and removal events.
 pub struct DeviceWatcher {
-    dir: PathBuf,
+    debug_dir_name: PathBuf,
     watcher: VfsWatcher,
     timeout: zx::Duration,
+    watched_dir: DirectoryProxy,
 }
 
 /// Filter used when watching for new devices.
@@ -69,18 +67,41 @@ pub enum WatchFilter {
 }
 
 impl DeviceWatcher {
-    pub async fn new(dir: &str, timeout: zx::Duration) -> Result<DeviceWatcher, Error> {
-        let dir_proxy = open_directory_in_namespace(dir, OPEN_RIGHT_READABLE)?;
+    /// Returns a DeviceWatcher. `open_dir` is an existing proxy to the directory to be watched.
+    /// `debug_dir_path` is the path to `open_dir`, passed along for clearer debugging.
+    ///
+    /// All `watch_*` operations return a Future that resolves successfully when the condition is
+    /// met, or in an error if the condition is not met within `timeout`.
+    pub async fn new(
+        debug_dir_name: &str,
+        open_dir: DirectoryProxy,
+        timeout: zx::Duration,
+    ) -> Result<DeviceWatcher, Error> {
+        let watched_dir = Clone::clone(&open_dir);
         Ok(DeviceWatcher {
-            dir: PathBuf::from(dir),
-            watcher: VfsWatcher::new(dir_proxy).await?,
+            debug_dir_name: PathBuf::from(debug_dir_name),
+            watcher: VfsWatcher::new(open_dir).await?,
             timeout,
+            watched_dir,
         })
     }
 
-    /// Functions for watching devices. All of these return a Future that resolves when the desired
-    /// condition is met. The Future resolves in an error if the condition is not met within the
-    /// `timeout` interval that the DeviceWatcher was constructed with.
+    /// Like `new`, but instead of an already-open directory, `dir` is the path in the component
+    /// namespace of the directory to be watched.
+    pub async fn new_in_namespace(
+        dir: &str,
+        timeout: zx::Duration,
+    ) -> Result<DeviceWatcher, Error> {
+        let open_dir = open_directory_in_namespace(dir, fio::OPEN_RIGHT_READABLE)?;
+        Self::new(dir, open_dir, timeout).await
+    }
+
+    /// Functions for watching devices based on topological path. The topological path is an
+    /// absolute path to a directory. This means it includes the entire topology up to the root
+    /// device, and that these methods returns once ANY new device is created under that directory.
+    //
+    // TODO(fxbug.dev/85719): Consider returning custom error type from watch_* methods to more
+    // specifically identify failure causes, instead of just anyhow::Error.
 
     /// Wait until a new device is added under `topo_path`. If `existing` is false, then the Future is
     /// satisfied only if the file is created after the creation of this DeviceWatcher or since the
@@ -106,16 +127,20 @@ impl DeviceWatcher {
         self.watch_with_timeout(topo_path, vec![WatchEvent::EXISTING])
     }
 
-    /// Wait until a device with the given `path` gets removed. The Future will time out if a
-    /// timeout has been set via set_timeout().
+    /// Wait until a device with the given `relative_path` gets removed.
+    /// NOTE: While watch_new and watch_existing open all files they are notified of and wait for
+    /// a device under the provided toplogical path, this is different. It takes the file name of
+    /// a device in the current directory, and matches removal notifications directly against that
+    /// path. As such, it rejects paths with multiple components, as the DeviceWatcher can only
+    /// watch for changes to its immediate children.
     pub fn watch_removed<'a>(
         &'a mut self,
-        path: &'a Path,
+        entry_path: &'a Path,
     ) -> impl Future<Output = Result<(), Error>> + 'a {
-        let path_str = path.display();
+        let debug_path = self.debug_dir_name.join(entry_path);
         let t = self.timeout;
-        self.removed_helper(path).on_timeout(t.after_now(), move || {
-            Err(format_err!("timed out waiting for device {}", path_str))
+        self.removed_helper(entry_path).on_timeout(t.after_now(), move || {
+            Err(format_err!("timed out waiting for device {:?}", debug_path))
         })
     }
 
@@ -132,17 +157,19 @@ impl DeviceWatcher {
         assert!(!events.contains(&WatchEvent::REMOVE_FILE));
         while let Some(msg) = self.watcher.try_next().await? {
             if events.contains(&msg.event) {
-                let path = self.dir.join(msg.filename);
-                let dev = match DeviceFile::open(&path) {
+                let relative_path = msg.filename.as_path();
+                let debug_path = self.debug_dir_name.join(relative_path);
+                let opened_dev = self.open_device_file(relative_path.to_owned());
+                let dev = match opened_dev {
                     Ok(d) => d,
                     Err(e) => {
-                        error!("Failed to open file (path: {}) {:#?}", path.to_string_lossy(), e);
+                        error!("Failed to open file (path: {:?}) {:#?}", debug_path, e);
                         // Ignore failures potentially triggered by devices we're not interested in.
                         continue;
                     }
                 };
                 if dev.topo_path().starts_with(topo_path) {
-                    info!("found device: {:#?}", dev.path());
+                    info!("found device: {:#?}", debug_path);
                     return Ok(dev);
                 }
             }
@@ -157,18 +184,23 @@ impl DeviceWatcher {
         events: Vec<WatchEvent>,
     ) -> impl Future<Output = Result<DeviceFile, Error>> + 'a {
         let t = self.timeout;
-        let path_str = topo_path.display();
         self.watch_helper(topo_path, events).on_timeout(t.after_now(), move || {
-            Err(format_err!("timed out waiting for device {}", path_str))
+            Err(format_err!("timed out waiting for device {:?}", topo_path))
         })
     }
 
     // Helper for watching for removal.
-    async fn removed_helper<'a>(&'a mut self, path: &'a Path) -> Result<(), Error> {
+    async fn removed_helper<'a>(&'a mut self, entry_path: &'a Path) -> Result<(), Error> {
+        if !entry_path.is_relative() || entry_path.components().count() != 1 {
+            return Err(format_err!(
+                "path to entry {:?} must be relative and have only one component",
+                entry_path
+            ));
+        }
         while let Some(msg) = self.watcher.try_next().await? {
             match msg.event {
                 WatchEvent::REMOVE_FILE => {
-                    if self.dir.join(msg.filename) == path {
+                    if msg.filename == entry_path {
                         return Ok(());
                     }
                 }
@@ -177,31 +209,140 @@ impl DeviceWatcher {
         }
         unreachable!();
     }
+
+    fn open_device_file(&self, relative_path: PathBuf) -> Result<DeviceFile, Error> {
+        let file = io_util::open_file(
+            &self.watched_dir,
+            relative_path.as_path(),
+            fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
+        )?;
+        let file = fdio::create_fd(
+            file.into_channel()
+                .map_err(|_| format_err!("failed to convert FileProxy to channel"))?
+                .into_zx_channel()
+                .into_handle(),
+        )?;
+        let topo = fdio::device_get_topo_path(&file)?;
+        Ok(DeviceFile { file, relative_path, topo_path: PathBuf::from(topo) })
+    }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use fidl_fuchsia_device_test::{
-        DeviceSynchronousProxy, RootDeviceSynchronousProxy, CONTROL_DEVICE,
+    use {
+        fidl_fuchsia_device_test::{
+            DeviceSynchronousProxy, RootDeviceSynchronousProxy, CONTROL_DEVICE,
+        },
+        fidl_fuchsia_io2 as fio2,
+        fuchsia_component_test::{
+            builder::{Capability, CapabilityRoute, ComponentSource, RealmBuilder, RouteEndpoint},
+            RealmInstance,
+        },
+        matches::assert_matches,
     };
 
     const TIMEOUT: zx::Duration = zx::Duration::from_seconds(10);
+    // The control device path from fuchsia.device.test.CONTROL_DEVICE is `/dev/sys/test/test`,
+    // but because we use the relative path so frequently, we define this a separate constant.
+    const CONTROL_DEVICE_RELATIVE: &'static str = "sys/test/test";
 
-    fn create_test_dev(name: &str) -> Result<DeviceFile, Error> {
-        let control = open_rdwr(CONTROL_DEVICE)?;
-        let root_dev = RootDeviceSynchronousProxy::new(fdio::clone_channel(&control)?);
+    /// Used to keep track of return values.
+    struct IsolatedDevMgrTest {
+        // The realm holding the IsolatedDevMgr
+        _realm: RealmInstance,
+        // The root `/dev` directory.
+        dev_dir: DirectoryProxy,
+        // The test root controller, generally found at `/dev/sys/test/test`
+        control_dev_dir: DirectoryProxy,
+    }
 
+    /// On success, returns the RealmInstance containing an IsolatedDevMgr, alongside the DevMgrs's
+    /// `/dev` dir and the test control device directory. The RealmInstance must not be dropped
+    /// while the DevMgr is in use.
+    async fn create_isolated_devmgr() -> Result<IsolatedDevMgrTest, Error> {
+        const ISOLATED_DEVMGR_MONIKER: &'static str = "isolated-devmgr";
+        const ISOLATED_DEVMGR_URL: &'static str = "#meta/isolated-devmgr.cm";
+        let mut realm = RealmBuilder::new().await.unwrap();
+        let _ = realm
+            .add_component(ISOLATED_DEVMGR_MONIKER, ComponentSource::url(ISOLATED_DEVMGR_URL))
+            .await
+            .unwrap();
+        let _ = realm
+            .add_route(CapabilityRoute {
+                capability: Capability::directory("dev", "/dev", fio2::RW_STAR_DIR),
+                source: RouteEndpoint::component(ISOLATED_DEVMGR_MONIKER),
+                targets: vec![RouteEndpoint::AboveRoot],
+            })
+            .expect("failed to add route")
+            .add_protocol_route::<fidl_fuchsia_logger::LogSinkMarker>(
+                RouteEndpoint::AboveRoot,
+                vec![RouteEndpoint::component(ISOLATED_DEVMGR_MONIKER)],
+            )
+            .expect("failed to add LogSink route")
+            .add_protocol_route::<fidl_fuchsia_process::LauncherMarker>(
+                RouteEndpoint::AboveRoot,
+                vec![RouteEndpoint::component(ISOLATED_DEVMGR_MONIKER)],
+            )
+            .expect("failed to add Launcher route")
+            .add_protocol_route::<fidl_fuchsia_sys::LauncherMarker>(
+                RouteEndpoint::AboveRoot,
+                vec![RouteEndpoint::component(ISOLATED_DEVMGR_MONIKER)],
+            )
+            .expect("failed to add Loader route");
+        let realm = realm.build().create().await.expect("failed to build realm");
+        let dev_dir = io_util::directory::open_directory(
+            realm.root.get_exposed_dir(),
+            "dev",
+            fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
+        )
+        .await?;
+        // Block until the test control device is ready.
+        let _control_dev_node =
+            device_watcher::recursive_wait_and_open_node(&dev_dir, CONTROL_DEVICE_RELATIVE).await?;
+        // One might think that it would be safe to just directly convert the control_dev_node to
+        // a DirectoryProxy and return that. However, DeviceWatchers created from the converted
+        // NodeProxy don't work - likely because we also open a channel to the control device as a
+        // RootDeviceProxy later in the test.
+        let control_dev_dir = io_util::directory::open_directory(
+            &dev_dir,
+            CONTROL_DEVICE_RELATIVE,
+            fio::OPEN_RIGHT_READABLE,
+        )
+        .await?;
+        Ok(IsolatedDevMgrTest { _realm: realm, dev_dir, control_dev_dir })
+    }
+
+    // Creates a fuchsia.device.test.Device under the root test device. `dev_dir` is the `/dev`
+    // directory of an IsolatedDevMgr.
+    fn create_test_dev_in_devmgr(
+        name: &str,
+        dev_dir: &DirectoryProxy,
+    ) -> Result<DeviceFile, Error> {
+        // Open the control device as a file, then convert the channel to a RootDeviceProxy
+        let control_dev_file = io_util::open_file(
+            dev_dir,
+            Path::new(CONTROL_DEVICE_RELATIVE),
+            fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE,
+        )?;
+        let control_dev_chan = control_dev_file
+            .into_channel()
+            .expect("failed to convert to channel")
+            .into_zx_channel();
+        let root_dev = RootDeviceSynchronousProxy::new(control_dev_chan);
+
+        // Create a test device under the `/dev/sys/test/test` root device.
         let (local, remote) = zx::Channel::create()?;
         let (status, path) =
             root_dev.create_device(name, Some(remote), zx::Time::after(TIMEOUT))?;
         zx::Status::ok(status)?;
-
-        let path =
-            PathBuf::from(path.ok_or(format_err!("RootDevice.CreateDevice returned null path"))?);
+        let relative_path =
+            Path::new(&path.ok_or(format_err!("RootDevice.CreateDevice returned null path"))?)
+                .strip_prefix(CONTROL_DEVICE)?
+                .to_owned();
         let file = fdio::create_fd(zx::Handle::from(local))?;
         let topo_path = PathBuf::from(fdio::device_get_topo_path(&file)?);
-        Ok(DeviceFile { file, path, topo_path })
+        Ok(DeviceFile { file, relative_path, topo_path })
     }
 
     fn remove_test_dev(dev: &DeviceFile) -> Result<(), Error> {
@@ -210,84 +351,122 @@ mod tests {
         Ok(device.destroy()?)
     }
 
-    #[fuchsia_async::run_singlethreaded(test)]
-    #[ignore] // TODO(fxbug.dev/35077) Re-enable once test flake is resolved
+    #[fuchsia::test]
     async fn test_watch_new() {
-        let mut watcher = DeviceWatcher::new(CONTROL_DEVICE, TIMEOUT)
+        let IsolatedDevMgrTest { _realm, dev_dir, control_dev_dir } =
+            create_isolated_devmgr().await.expect("Failed to create IsolatedDevMgr");
+        let control_dev_dir_clone = Clone::clone(&control_dev_dir);
+        let mut watcher = DeviceWatcher::new(CONTROL_DEVICE, control_dev_dir_clone, TIMEOUT)
             .await
             .expect("Failed to create watcher for test devices");
-        let dev = create_test_dev("test-watch-new").expect("Failed to create test device");
-        error!("created: {:?}", dev.topo_path());
+
+        let dev = create_test_dev_in_devmgr("test-watch-new", &dev_dir)
+            .expect("Failed to create test device");
         let found = watcher
             .watch_new(dev.topo_path(), WatchFilter::AddedOnly)
             .await
             .expect("Expected to be notified of new test device");
-        assert_eq!(dev.path(), found.path());
+        assert_eq!(dev.relative_path(), found.relative_path());
         assert_eq!(dev.topo_path(), found.topo_path());
 
         // Calling with the `existing` flag should succeed.
-        let mut watcher = DeviceWatcher::new(CONTROL_DEVICE, TIMEOUT)
+        let mut watcher = DeviceWatcher::new(CONTROL_DEVICE, control_dev_dir, TIMEOUT)
             .await
             .expect("Failed to create watcher for test devices");
         let found = watcher
             .watch_new(dev.topo_path(), WatchFilter::AddedOrExisting)
             .await
             .expect("Expected to be notified of existing test device");
-        assert_eq!(dev.path(), found.path());
+        assert_eq!(dev.relative_path(), found.relative_path());
         assert_eq!(dev.topo_path(), found.topo_path());
 
         // Cleanup after ourselves
         remove_test_dev(&dev).expect("Failed to remove test device");
     }
 
-    #[fuchsia_async::run_singlethreaded(test)]
-    #[ignore] // TODO(fxbug.dev/35077) Re-enable once test flake is resolved
+    #[fuchsia::test]
     async fn test_watch_existing() {
-        let dev = create_test_dev("test-watch-existing").expect("Failed to create test device");
-        let mut watcher = DeviceWatcher::new(CONTROL_DEVICE, TIMEOUT)
+        let IsolatedDevMgrTest { _realm, dev_dir, control_dev_dir } =
+            create_isolated_devmgr().await.expect("Failed to create IsolatedDevMgr");
+        let dev = create_test_dev_in_devmgr("test-watch-existing", &dev_dir)
+            .expect("Failed to create test device");
+        let mut watcher = DeviceWatcher::new(CONTROL_DEVICE, control_dev_dir, TIMEOUT)
             .await
             .expect("Failed to create watcher for test devices");
         let found = watcher
             .watch_existing(dev.topo_path())
             .await
             .expect("Expected to be notified of new test device");
-        assert_eq!(dev.path(), found.path());
+        assert_eq!(dev.relative_path(), found.relative_path());
         assert_eq!(dev.topo_path(), found.topo_path());
 
         // Cleanup after ourselves
         remove_test_dev(&dev).expect("Failed to remove test device");
     }
 
-    #[fuchsia_async::run_singlethreaded(test)]
-    #[ignore] // TODO(fxbug.dev/35077) Re-enable once test flake is resolved
+    #[fuchsia::test]
     async fn test_watch_removed() {
-        let dev = create_test_dev("test-watch-removed").expect("Failed to create test device");
-        let mut watcher = DeviceWatcher::new(CONTROL_DEVICE, TIMEOUT)
+        let IsolatedDevMgrTest { _realm, dev_dir, control_dev_dir } =
+            create_isolated_devmgr().await.expect("Failed to create IsolatedDevMgr");
+        let dev = create_test_dev_in_devmgr("test-watch-removed", &dev_dir)
+            .expect("Failed to create test device");
+        let mut watcher = DeviceWatcher::new(CONTROL_DEVICE, control_dev_dir, TIMEOUT)
             .await
             .expect("Failed to create watcher for test devices");
 
         remove_test_dev(&dev).expect("Failed to remove test device");
         let _ = watcher
-            .watch_removed(dev.path())
+            .watch_removed(dev.relative_path())
             .await
             .expect("Expected to be notified of device removal");
     }
 
-    #[fuchsia_async::run_singlethreaded(test)]
-    #[ignore] // TODO(fxbug.dev/35077) Re-enable once test flake is resolved
+    #[fuchsia::test]
     async fn test_watch_timeout() {
-        let mut watcher = DeviceWatcher::new(CONTROL_DEVICE, zx::Duration::from_nanos(0))
-            .await
-            .expect("Failed to create watcher");
+        let IsolatedDevMgrTest { _realm, dev_dir: _dev_dir, control_dev_dir } =
+            create_isolated_devmgr().await.expect("Failed to create IsolatedDevMgr");
+        let mut watcher =
+            DeviceWatcher::new(CONTROL_DEVICE, control_dev_dir, zx::Duration::from_nanos(0))
+                .await
+                .expect("Failed to create watcher");
         let path = PathBuf::from("/device_watcher/test_watch_timeout");
 
         let result = watcher.watch_new(&path, WatchFilter::AddedOnly).await;
-        assert!(!result.is_ok());
+        assert_matches!(result, Err(_));
         let result = watcher.watch_new(&path, WatchFilter::AddedOrExisting).await;
-        assert!(!result.is_ok());
+        assert_matches!(result, Err(_));
         let result = watcher.watch_existing(&path).await;
-        assert!(!result.is_ok());
-        let result = watcher.watch_removed(&path).await;
-        assert!(!result.is_ok());
+        assert_matches!(result, Err(_));
+        let result = watcher.watch_removed(Path::new("relative_path")).await;
+        assert_matches!(result, Err(_));
+    }
+
+    #[fuchsia::test]
+    async fn test_removed_helper_path_validation() {
+        let IsolatedDevMgrTest { _realm, dev_dir: _dev_dir, control_dev_dir } =
+            create_isolated_devmgr().await.expect("Failed to create IsolatedDevMgr");
+        let mut watcher = DeviceWatcher::new(CONTROL_DEVICE, control_dev_dir, TIMEOUT)
+            .await
+            .expect("Failed to create watcher");
+        let absolute_path = PathBuf::from("/");
+        let multiple_component_path = PathBuf::from("device_watcher/test_multiple_components");
+
+        // By using a validation timeout that is smaller than the DeviceWatcher timeout, we ensure
+        // that the `watch_removed` failures stem from path validation issues, not timeouts.
+        let validation_timeout = TIMEOUT / 5;
+        let result = watcher
+            .watch_removed(&absolute_path)
+            .on_timeout(validation_timeout.after_now(), || {
+                panic!("path validation should complete before timeout")
+            })
+            .await;
+        assert_matches!(result, Err(_));
+        let result = watcher
+            .watch_removed(&multiple_component_path)
+            .on_timeout(validation_timeout.after_now(), || {
+                panic!("path validation should complete before timeout")
+            })
+            .await;
+        assert_matches!(result, Err(_));
     }
 }

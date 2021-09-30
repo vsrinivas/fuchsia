@@ -4,25 +4,39 @@
 
 import("//build/components.gni")
 import("//build/rust/rustc_library.gni")
+import("//src/lib/isolated_devmgr/v2_component/isolated_devmgr.gni")
 
 rustc_library("hci-emulator-client") {
   with_unit_tests = true
+  testonly = true
 
   deps = [
+    "//garnet/lib/rust/io_util",
     "//sdk/fidl/fuchsia.bluetooth:fuchsia.bluetooth-rustc",
     "//sdk/fidl/fuchsia.bluetooth.test:fuchsia.bluetooth.test-rustc",
     "//sdk/fidl/fuchsia.device:fuchsia.device-rustc",
     "//sdk/fidl/fuchsia.hardware.bluetooth:fuchsia.hardware.bluetooth-rustc",
+    "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
     "//src/connectivity/bluetooth/lib/bt-device-watcher",
     "//src/connectivity/bluetooth/lib/fuchsia-bluetooth",
+    "//src/devices/lib/device-watcher/rust",
     "//src/lib/fdio/rust:fdio",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
+    "//src/lib/fuchsia-component-test",
     "//src/lib/zircon/rust:fuchsia-zircon",
     "//src/lib/zircon/rust:fuchsia-zircon-status",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:futures",
     "//third_party/rust_crates:log",
+  ]
+
+  test_deps = [
+    "//sdk/fidl/fuchsia.io2:fuchsia.io2-rustc",
+    "//sdk/fidl/fuchsia.logger:fuchsia.logger-rustc",
+    "//sdk/fidl/fuchsia.process:fuchsia.process-rustc",
+    "//sdk/fidl/fuchsia.sys:fuchsia.sys-rustc",
+    "//src/lib/fuchsia",
   ]
 
   sources = [
@@ -34,7 +48,21 @@ rustc_library("hci-emulator-client") {
 }
 
 fuchsia_unittest_package("hci-emulator-client-tests") {
-  deps = [ ":hci-emulator-client_test" ]
+  manifest = "meta/hci-emulator-client-tests.cml"
+  deps = [
+    ":hci-emulator-client_test",
+
+    # The tests use an IsolatedDevMgr to verify the emulator's lifecycle.
+    ":isolated-devmgr-component",
+  ]
+}
+
+# No bt-host driver because we want to check the HCI device lifecycle directly.
+isolated_devmgr_v2_component("isolated-devmgr-component") {
+  deps = [
+    "//src/connectivity/bluetooth/hci/emulator:driver",
+    "//src/devices/bus/drivers/platform",
+  ]
 }
 
 group("tests") {
