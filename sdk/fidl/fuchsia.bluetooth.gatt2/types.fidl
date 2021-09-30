@@ -112,16 +112,16 @@ type ServiceInfo = table {
     2: primary bool;
 
     /// The UUID that identifies the type of this service.
+    /// There may be multiple services with the same UUID.
     /// Always present for remote services. Required for local services.
     3: type bt.Uuid;
 
     /// The characteristics of this service.
-    /// Always present for remote services. Required for local services.
+    /// Required for local services. Never present for remote services.
     4: characteristics vector<Characteristic>:MAX_CHARACTERISTIC_COUNT;
 
     /// Handles of other services that are included by this service.
-    /// Only present for remote services if non-empty. Optional for local
-    /// services.
+    /// Optional for local services. Never present for remote services.
     5: includes vector<Handle>:MAX_SERVICE_COUNT;
 };
 

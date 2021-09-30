@@ -187,11 +187,18 @@ protocol RemoteService {
 
 protocol Client {
     /// Enumerates services found on the peer that this Client represents.
-    /// Results can be restricted by specifying a list of UUIDs in `uuids`. On
-    /// the initial request, a complete snapshot will be returned. Subsequent
-    /// calls receive a response only when one or more services have been added,
-    /// modified, or removed from the entries reported since the most recent
-    /// call.
+    ///
+    /// Results can be filtered by specifying a list of UUIDs in `uuids`. This
+    /// method follows the hanging get pattern. On the initial request, a
+    /// complete snapshot will be returned. Subsequent calls with the same set
+    /// of `uuids` receive a response only when one or more services have been
+    /// added, modified, or removed from the entries reported since the most
+    /// recent call. Calls with new values of `uuids` will reset the filter and
+    /// receive a complete snapshot.
+    ///
+    /// Handles may be reused across services, so a handle may be in both
+    /// `updated` and `removed`. For this reason, it is recommended to process
+    /// removed services before updated services.
     ///
     /// To further interact with services, clients must obtain a RemoteService
     /// protocol by calling ConnectToService().
@@ -201,7 +208,9 @@ protocol Client {
     /// - response `updated` the services that have been added or modified since
     ///   WatchServices() was last called. The returned ServiceInfo tables will
     ///   contain only basic information about each service and the
-    ///   `characteristics` and `includes` fields will be null.
+    ///   `characteristics` and `includes` fields will be null. If a service has
+    ///   been added/modified and then removed since the last call, it will only
+    ///   be present in `removed`, not `updated`.
     /// - response `removed` the handles of the services that have been removed
     ///   since the last call to WatchServices().
     WatchServices(struct {
@@ -211,13 +220,16 @@ protocol Client {
         removed vector<Handle>:MAX_SERVICE_COUNT;
     });
 
-    /// Connects the RemoteService with the given identifier.
+    /// Connects the RemoteService with the given identifier. Only 1 connection
+    /// per service is allowed.
     ///
     /// `service` will be closed on error, with an epitaph that provides a
     /// reason.
-    /// * error Returns a `ZX_ERR_BAD_HANDLE` if `handle` is invalid.
+    /// * error Returns a `ZX_ERR_INVALID_ARGS` if `handle` is invalid.
+    /// * error Returns a `ZX_ERR_NOT_FOUND` if the service is not found.
     /// * error Returns a `ZX_ERR_CONNECTION_RESET` if the service is removed.
     /// * error Returns a `ZX_ERR_NOT_CONNECTED` if the peer disconnects.
+    /// * error Returns a `ZX_ERR_ALREADY_EXISTS` if the service is already connected.
     ConnectToService(resource struct {
         handle Handle;
         service server_end:RemoteService;
