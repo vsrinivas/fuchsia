@@ -5,7 +5,6 @@
 import("//build/rust/clippy.gni")
 import("//build/rust/rustc_test.gni")
 import("//build/toolchain/rbe.gni")
-import("//build/toolchain/restat.gni")
 
 # Defines a Rust library
 #
@@ -185,13 +184,6 @@ template("rustc_library") {
   if (_use_rbe) {
     # Depend on Rust/RBE scripts and tools
     _local_inputs += rust_rbe_deps
-  }
-
-  if (restat_rust) {
-    _local_inputs += [
-      python_exe_src,
-      restat_wrapper,
-    ]
   }
 
   disable_clippy = defined(invoker.disable_clippy) && invoker.disable_clippy

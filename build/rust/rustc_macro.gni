@@ -186,12 +186,6 @@ template("rustc_macro") {
         # Depend on Rust/RBE scripts and tools
         inputs += rust_rbe_deps
       }
-      if (restat_rust) {
-        inputs += [
-          python_exe_src,
-          restat_wrapper,
-        ]
-      }
     }
   } else {
     not_needed(invoker, "*")

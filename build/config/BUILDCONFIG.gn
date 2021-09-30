@@ -2,6 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/toolchain/restat.gni")
 import("//build/tracer/tracer.gni")
 
 # The GN files in //third_party/flutter all use $flutter_root/
@@ -79,6 +80,13 @@ python_exe_src = "//prebuilt/third_party/python3/${host_platform}/bin/python${py
 pip_version = "3.8"
 pip_exe_src =
     "//prebuilt/third_party/python3/${host_platform}/bin/pip${pip_version}"
+
+# These files are needed when enabling 'restat' behavior through this wrapper
+# script.  'restat' preserves old timestamps on unchanged outputs.
+restat_wrapper_inputs = [
+  python_exe_src,
+  restat_wrapper,
+]
 
 declare_args() {
   # *This should never be set as a build argument.*
@@ -1700,6 +1708,13 @@ template("_fuchsia_binary") {
           data_deps += [ "//build/toolchain/runtime:shared-rust-libstd-deps" ]
         }
       }
+
+      if (restat_rust) {
+        if (!defined(inputs)) {
+          inputs = []
+        }
+        inputs += restat_wrapper_inputs
+      }
     }
   }
 }
@@ -1747,7 +1762,7 @@ template("_fuchsia_binary") {
 #
 # NOTE: This template assumes that `target_name` will be the name of a final target type,
 # like "executable", and that invoker.target_name is the name of the real final target that
-# needs to be built. In other words, this is suppoed to be called by a wrapper class as
+# needs to be built. In other words, this is supposed to be called by a wrapper class as
 # in the following example:
 #
 #     template("my_executable") {
@@ -1781,6 +1796,13 @@ template("variant_target") {
 
     if (!defined(output_name)) {
       output_name = target_name
+    }
+
+    if (defined(crate_root) && restat_rust) {
+      if (!defined(inputs)) {
+        inputs = []
+      }
+      inputs += restat_wrapper_inputs
     }
   }
 
@@ -2522,6 +2544,13 @@ template("executable") {
       }
     }
 
+    if (defined(crate_root) && restat_rust) {
+      if (!defined(inputs)) {
+        inputs = []
+      }
+      inputs += restat_wrapper_inputs
+    }
+
     rebased_output_file = rebase_path(output_file, root_build_dir)
     rebased_link_output_file = rebase_path(link_output_file, root_build_dir)
 
@@ -2791,16 +2820,33 @@ if (is_fuchsia && zircon_toolchain == false) {
         deps = []
       }
       deps += [ "//zircon/public/sysroot:headers" ]
+
+      if (defined(crate_root) && restat_rust) {
+        if (!defined(inputs)) {
+          inputs = []
+        }
+        inputs += restat_wrapper_inputs
+      }
     }
   }
 }
 
-# Clippy needs access to all the direct and transitive dependencies of a target.
-# To assemble these, we record the path to each library and proc_macro's output,
-# which will later get picked up by the clippy targets.
+# This wraps the GN built-in rust_library template:
+#
+# * When preserving unchanged outputs (restat), include the wrapper script
+#   as a dependency.
+# * Record the output for this target in metadata, used by clippy to access
+#   direct and transitive dependencies.
+#
 template("rust_library") {
   rust_library(target_name) {
     forward_variables_from(invoker, "*")
+    if (!defined(inputs)) {
+      inputs = []
+    }
+    if (restat_rust) {
+      inputs += restat_wrapper_inputs
+    }
     if (!defined(output_dir)) {
       output_dir = get_label_info(":$target_name", "target_out_dir")
     }
@@ -2813,10 +2859,24 @@ template("rust_library") {
     }
   }
 }
+
+# This wraps the GN built-in rust_proc_macro template:
+#
+# * When preserving unchanged outputs (restat), include the wrapper script
+#   as a dependency.
+# * Record the output for this target in metadata, used by clippy to access
+#   direct and transitive dependencies.
+#
 template("rust_proc_macro") {
   rust_proc_macro(target_name) {
     forward_variables_from(invoker, "*", [ "crate_name" ])
     forward_variables_from(invoker, [ "crate_name" ])
+    if (!defined(inputs)) {
+      inputs = []
+    }
+    if (restat_rust) {
+      inputs += restat_wrapper_inputs
+    }
     if (!defined(output_dir)) {
       output_dir = get_label_info(":$target_name", "target_out_dir")
     }

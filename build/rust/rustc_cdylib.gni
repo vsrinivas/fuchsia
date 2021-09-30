@@ -4,7 +4,6 @@
 
 import("//build/rust/rustc_test.gni")
 import("//build/toolchain/rbe.gni")
-import("//build/toolchain/restat.gni")
 
 # Defines a Rust cdylib library
 #
@@ -163,13 +162,6 @@ template("rustc_cdylib") {
   if (_use_rbe) {
     # Depend on Rust/RBE scripts and tools
     inputs += rust_rbe_deps
-  }
-
-  if (restat_rust) {
-    inputs += [
-      python_exe_src,
-      restat_wrapper,
-    ]
   }
 
   group(target_name) {
