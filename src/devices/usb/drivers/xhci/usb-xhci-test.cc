@@ -647,7 +647,7 @@ zx_status_t EventRing::Init(size_t page_size, const zx::bti& bti, ddk::MmioBuffe
                             bool is_32bit, uint32_t erst_max, ERSTSZ erst_size, ERDP erdp_reg,
                             IMAN iman_reg, uint8_t cap_length, HCSPARAMS1 hcs_params_1,
                             CommandRing* command_ring, DoorbellOffset doorbell_offset, UsbXhci* hci,
-                            HCCPARAMS1 hcc_params_1, uint64_t* dcbaa) {
+                            HCCPARAMS1 hcc_params_1, uint64_t* dcbaa, uint16_t interrupter) {
   fbl::AutoLock _(&segment_mutex_);
   erdp_reg_ = erdp_reg;
   hcs_params_1_ = hcs_params_1;
@@ -665,14 +665,23 @@ zx_status_t EventRing::Init(size_t page_size, const zx::bti& bti, ddk::MmioBuffe
   dcbaa_ = dcbaa;
   static_assert(sizeof(zx_paddr_t) == sizeof(this));
   erdp_phys_ = reinterpret_cast<zx_paddr_t>(this);
+  interrupter_ = interrupter;
   return segments_.Init(page_size, bti, is_32bit, erst_max, erst_size, hci->buffer_factory(),
                         mmio_);
-  ;
 }
 
-zx_status_t Interrupter::Start(uint32_t interrupter, const RuntimeRegisterOffset& offset,
-                               ddk::MmioView interrupter_regs, UsbXhci* hci) {
+size_t EventRing::GetPressure() { return 0; }
+
+zx_status_t Interrupter::Init(uint16_t interrupter, size_t page_size, ddk::MmioBuffer* buffer,
+                              const RuntimeRegisterOffset& offset, uint32_t erst_max,
+                              DoorbellOffset doorbell_offset, UsbXhci* hci, HCCPARAMS1 hcc_params_1,
+                              uint64_t* dcbaa) {
   hci_ = hci;
+  return ZX_OK;
+}
+
+zx_status_t Interrupter::Start(const RuntimeRegisterOffset& offset,
+                               ddk::MmioView interrupter_regs) {
   return ZX_OK;
 }
 

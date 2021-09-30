@@ -12,7 +12,6 @@
 
 #include <fbl/span.h>
 
-#include "registers.h"
 #include "xhci-context.h"
 #include "xhci-event-ring.h"
 

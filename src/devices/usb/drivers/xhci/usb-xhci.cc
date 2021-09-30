@@ -183,6 +183,23 @@ struct UsbXhci::UsbRequestState {
   TRB* last_trb;
 };
 
+uint16_t UsbXhci::InterrupterMapping() {
+  // No inactive interrupters. Find one with least pressure.
+  uint16_t idx = 0;
+  size_t min_pressure = interrupter(0).ring().GetPressure();
+  for (uint16_t i = 0; i < interrupters_.size(); i++) {
+    if (!interrupter(i).active()) {
+      continue;
+    }
+    size_t pressure = interrupter(i).ring().GetPressure();
+    if (min_pressure < pressure) {
+      idx = i;
+      min_pressure = pressure;
+    }
+  }
+  return idx;
+}
+
 TRBPromise UsbXhci::DisableSlotCommand(uint32_t slot_id) {
   uint8_t port;
   bool connected_to_hub = false;
@@ -260,18 +277,19 @@ usb_speed_t UsbXhci::GetDeviceSpeed(uint8_t slot) {
     }
   }
   return static_cast<usb_speed_t>(PORTSC::Get(cap_length_, device_state_[slot - 1].GetPort())
-      .ReadFrom(&mmio_.value())
-      .PortSpeed());
+                                      .ReadFrom(&mmio_.value())
+                                      .PortSpeed());
 }
 
 usb_speed_t UsbXhci::GetPortSpeed(uint8_t port_id) const {
-  return static_cast<usb_speed_t>(PORTSC::Get(cap_length_, port_id).ReadFrom(&mmio_.value()).PortSpeed());
+  return static_cast<usb_speed_t>(
+      PORTSC::Get(cap_length_, port_id).ReadFrom(&mmio_.value()).PortSpeed());
 }
 
 TRBPromise UsbXhci::AddressDeviceCommand(uint8_t slot_id, uint8_t port_id,
                                          std::optional<HubInfo> hub_info, bool bsr) {
   return device_state_[slot_id - 1].AddressDeviceCommand(this, slot_id, port_id, hub_info, dcbaa_,
-                                                         &interrupters_[0].ring(), &command_ring_,
+                                                         InterrupterMapping(), &command_ring_,
                                                          &mmio_.value(), bsr);
 }
 
@@ -503,16 +521,8 @@ void UsbXhci::DdkUnbind(ddk::UnbindTxn txn) {
     while (!USBSTS::Get(cap_length_).ReadFrom(&mmio_.value()).HCHalted()) {
     }
     // Disable all interrupters
-
-    uint32_t active_interrupters;
-    {
-      // This is safe because no new interrupters will be added after the running
-      // bit is set to false.
-      fbl::AutoLock _(&scheduler_lock_);
-      active_interrupters = active_interrupters_;
-    }
-    for (size_t i = 0; i < active_interrupters; i++) {
-      interrupters_[i].Stop();
+    for (auto& it : interrupters_) {
+      it.Stop();
     }
     // Should now be safe to terminate everything on the command ring
     bool pending;
@@ -681,10 +691,10 @@ void UsbXhci::StartNormalTransaction(UsbRequestState* state) {
   state->first_cycle = state->info.first()[0].status;
   state->first_trb = state->info.first().data();
   state->last_trb = state->info.trbs.data() + (packet_count - 1);
+  state->interrupter = static_cast<uint8_t>(InterrupterMapping());
 }
 
 void UsbXhci::ContinueNormalTransaction(UsbRequestState* state) {
-  // TODO(fxbug.dev/42611): Assign an interrupter dynamically from the pool
   // Data stage
   size_t pending_len = state->context->request->request()->header.length;
   auto current_nop = state->info.nop.data();
@@ -740,7 +750,7 @@ void UsbXhci::ContinueNormalTransaction(UsbRequestState* state) {
             .set_FrameID(
                 static_cast<uint32_t>(state->context->request->request()->header.frame % 2048))
             .set_TBC(burst_count)
-            .set_INTERRUPTER(0)
+            .set_INTERRUPTER(state->interrupter)
             .set_LENGTH(static_cast<uint16_t>(len))
             .set_SIZE(static_cast<uint32_t>(packet_count))
             .set_NO_SNOOP(!has_coherent_cache_)
@@ -750,7 +760,7 @@ void UsbXhci::ContinueNormalTransaction(UsbRequestState* state) {
         type = Control::Normal;
         Normal* data = reinterpret_cast<Normal*>(current);
         data->set_CHAIN(next != nullptr)
-            .set_INTERRUPTER(0)
+            .set_INTERRUPTER(state->interrupter)
             .set_LENGTH(static_cast<uint16_t>(len))
             .set_SIZE(static_cast<uint32_t>(state->packet_count))
             .set_NO_SNOOP(!has_coherent_cache_)
@@ -957,7 +967,6 @@ void UsbXhci::ControlRequestAllocationPhase(UsbRequestState* state) {
 }
 
 void UsbXhci::ControlRequestStatusPhase(UsbRequestState* state) {
-  // TODO(fxbug.dev/42611): Assign an interrupter dynamically from the pool
   state->interrupter = 0;
   bool status_in = true;
   // See table 4-7 in section 4.11.2.2
@@ -1084,9 +1093,11 @@ zx_status_t UsbXhci::UsbHciEnableEndpoint(uint32_t device_id,
     return ZX_ERR_OUT_OF_RANGE;
   }
   if (!enable) {
-    return RunSynchronously(UsbHciDisableEndpoint(device_id, ep_desc, ss_com_desc));
+    return RunSynchronously(kPrimaryInterrupter,
+                            UsbHciDisableEndpoint(device_id, ep_desc, ss_com_desc));
   }
-  return RunSynchronously(UsbHciEnableEndpoint(device_id, ep_desc, ss_com_desc));
+  return RunSynchronously(kPrimaryInterrupter,
+                          UsbHciEnableEndpoint(device_id, ep_desc, ss_com_desc));
 }
 
 TRBPromise UsbXhci::UsbHciEnableEndpoint(uint32_t device_id,
@@ -1112,14 +1123,11 @@ TRBPromise UsbXhci::UsbHciEnableEndpoint(uint32_t device_id,
       slot_context->set_CONTEXT_ENTRIES(index + 1);
     }
     // Allocate the transfer ring (see section 4.9)
-    // TODO (bbosak): Assign an Interrupter from the pool
     control[0] = 0;
     control[1] = 1 | (1 << (index + 1));
-    // TODO(bbosak): Dynamically assign an event ring
-    uint32_t event_ring = 0;
     zx_status_t status = state->GetTransferRing(index - 1).Init(
-        page_size_, bti_, &this->interrupters_[event_ring].ring(), is_32bit_, &mmio_.value(),
-        *this);
+        page_size_, bti_, &this->interrupter(state->GetInterrupterTarget()).ring(), is_32bit_,
+        &mmio_.value(), *this);
     if (status != ZX_OK) {
       return fpromise::make_error_promise(status);
     }
@@ -1260,17 +1268,17 @@ zx_status_t UsbXhci::UsbHciConfigureHub(uint32_t device_id, usb_speed_t speed,
   }
   sync_completion_t completion;
   zx_status_t hub_status = ZX_OK;
-  ScheduleTask(ConfigureHubAsync(device_id, speed, desc, multi_tt)
-                   .then([&](fpromise::result<TRB*, zx_status_t>& result) {
-                     if (result.is_ok()) {
-                       hub_status = ZX_OK;
-                     } else {
-                       hub_status = result.error();
-                     }
-                     sync_completion_signal(&completion);
-                     return result;
-                   })
-                   .box());
+  ScheduleTask(kPrimaryInterrupter, ConfigureHubAsync(device_id, speed, desc, multi_tt)
+                                        .then([&](fpromise::result<TRB*, zx_status_t>& result) {
+                                          if (result.is_ok()) {
+                                            hub_status = ZX_OK;
+                                          } else {
+                                            hub_status = result.error();
+                                          }
+                                          sync_completion_signal(&completion);
+                                          return result;
+                                        })
+                                        .box());
   sync_completion_wait(&completion, ZX_TIME_INFINITE);
   return hub_status;
 }
@@ -1280,17 +1288,17 @@ zx_status_t UsbXhci::UsbHciHubDeviceAdded(uint32_t device_id, uint32_t port, usb
   }
   sync_completion_t completion;
   zx_status_t out_status;
-  ScheduleTask(UsbHciHubDeviceAddedAsync(device_id, port, speed)
-                   .then([&](fpromise::result<TRB*, zx_status_t>& result) {
-                     if (result.is_ok()) {
-                       out_status = ZX_OK;
-                     } else {
-                       out_status = result.error();
-                     }
-                     sync_completion_signal(&completion);
-                     return result;
-                   })
-                   .box());
+  ScheduleTask(kPrimaryInterrupter, UsbHciHubDeviceAddedAsync(device_id, port, speed)
+                                        .then([&](fpromise::result<TRB*, zx_status_t>& result) {
+                                          if (result.is_ok()) {
+                                            out_status = ZX_OK;
+                                          } else {
+                                            out_status = result.error();
+                                          }
+                                          sync_completion_signal(&completion);
+                                          return result;
+                                        })
+                                        .box());
   sync_completion_wait(&completion, ZX_TIME_INFINITE);
   return ZX_OK;
 }
@@ -1344,7 +1352,8 @@ zx_status_t UsbXhci::UsbHciHubDeviceRemoved(uint32_t hub_id, uint32_t port) {
   if (status != ZX_OK) {
     return status;
   }
-  ScheduleTask(DisableSlotCommand(slot)
+  ScheduleTask(kPrimaryInterrupter,
+               DisableSlotCommand(slot)
                    .then([&](fpromise::result<TRB*, zx_status_t>& result) {
                      if (result.is_error()) {
                        success = false;
@@ -1365,7 +1374,7 @@ zx_status_t UsbXhci::UsbHciHubDeviceReset(uint32_t device_id, uint32_t port) {
 }
 
 zx_status_t UsbXhci::UsbHciResetEndpoint(uint32_t device_id, uint8_t ep_address) {
-  return RunSynchronously(UsbHciResetEndpointAsync(device_id, ep_address));
+  return RunSynchronously(kPrimaryInterrupter, UsbHciResetEndpointAsync(device_id, ep_address));
 }
 
 TRBPromise UsbXhci::UsbHciResetEndpointAsync(uint32_t device_id, uint8_t ep_address) {
@@ -1456,7 +1465,7 @@ size_t UsbXhci::UsbHciGetMaxTransferSize(uint32_t device_id, uint8_t ep_address)
 }
 
 zx_status_t UsbXhci::UsbHciCancelAll(uint32_t device_id, uint8_t ep_address) {
-  return RunSynchronously(UsbHciCancelAllAsync(device_id, ep_address));
+  return RunSynchronously(kPrimaryInterrupter, UsbHciCancelAllAsync(device_id, ep_address));
 }
 
 TRBPromise UsbXhci::UsbHciCancelAllAsync(uint32_t device_id, uint8_t ep_address) {
@@ -1592,19 +1601,32 @@ zx_status_t UsbXhci::InitPci() {
     return status;
   }
   mmio_ = std::move(*buffer);
-  uint32_t irq_count = 1;
-  status = pci_.ConfigureIrqMode(irq_count, nullptr);
+  irq_count_ = static_cast<uint16_t>(HCSPARAMS1::Get().ReadFrom(&mmio_.value()).MaxIntrs());
+  // Make sure irq_count_ doesn't exceed supported max PCI IRQs.
+  std::array<pci_irq_mode_t, 2> modes{PCI_IRQ_MODE_MSI_X, PCI_IRQ_MODE_MSI};
+  uint32_t mode_irq_max = 0;
+  for (auto& mode : modes) {
+    uint32_t mode_count = 0;
+    status = pci_.QueryIrqMode(mode, &mode_count);
+    if (status == ZX_OK) {
+      mode_irq_max = std::max(mode_irq_max, mode_count);
+    } else {
+      zxlogf(DEBUG, "Unable to query PciIrqMode %u", mode);
+    }
+  }
+  mode_irq_max = std::min(mode_irq_max, UINT16_MAX);
+  irq_count_ = std::min(irq_count_, static_cast<uint16_t>(mode_irq_max));
+  status = pci_.ConfigureIrqMode(irq_count_, nullptr);
   if (status != ZX_OK) {
     return status;
   }
-  irq_count_ = irq_count;
   fbl::AllocChecker ac;
-  interrupters_ = fbl::MakeArray<Interrupter>(&ac, irq_count);
+  interrupters_ = fbl::MakeArray<Interrupter>(&ac, irq_count_);
   if (!ac.check()) {
     return ZX_ERR_NO_MEMORY;
   }
-  for (uint32_t i = 0; i < irq_count; i++) {
-    status = pci_.MapInterrupt(i, &interrupters_[i].GetIrq());
+  for (uint16_t i = 0; i < irq_count_; i++) {
+    status = pci_.MapInterrupt(i, &interrupter(i).GetIrq());
     if (status != ZX_OK) {
       return status;
     }
@@ -1627,15 +1649,14 @@ zx_status_t UsbXhci::InitMmio() {
     return status;
   }
   mmio_ = std::move(*mmio);
-  uint32_t irq_count = 1;
-  irq_count_ = irq_count;
+  irq_count_ = static_cast<uint16_t>(HCSPARAMS1::Get().ReadFrom(&mmio_.value()).MaxIntrs());
   fbl::AllocChecker ac;
-  interrupters_ = fbl::MakeArray<Interrupter>(&ac, irq_count);
+  interrupters_ = fbl::MakeArray<Interrupter>(&ac, irq_count_);
   if (!ac.check()) {
     return ZX_ERR_NO_MEMORY;
   }
-  for (uint32_t i = 0; i < irq_count; i++) {
-    status = pdev_.GetInterrupt(i, &interrupters_[i].GetIrq());
+  for (uint16_t i = 0; i < irq_count_; i++) {
+    status = pdev_.GetInterrupt(i, &interrupter(i).GetIrq());
     if (status != ZX_OK) {
       zxlogf(ERROR, "MapMmio error: %s", zx_status_get_string(status));
       return status;
@@ -1823,29 +1844,25 @@ zx_status_t UsbXhci::HciFinalize() {
   doorbell_offset_ = DoorbellOffset::Get().ReadFrom(&mmio_.value());
   // Interrupt moderation interval == 30 microseconds (optimal value derived from scheduler trace)
   // TODO: Change this based on P state (performance states) for power management
-  IMODI::Get(offset, 0).ReadFrom(&mmio_.value()).set_MODI(240).WriteTo(&mmio_.value());
-  if (interrupters_[0].ring().Init(
-          page_size, bti_, &mmio_.value(), is_32bit_, 1 << hcsparams2.ERST_MAX(),
-          ERSTSZ::Get(offset, 0).ReadFrom(&mmio_.value()),
-          ERDP::Get(offset, 0).ReadFrom(&mmio_.value()), IMAN::Get(offset, 0).FromValue(0),
-          cap_length_, HCSPARAMS1::Get().ReadFrom(&mmio_.value()), &command_ring_, doorbell_offset_,
-          this, hcc_, dcbaa_) != ZX_OK) {
-    return ZX_ERR_INTERNAL;
+  for (uint16_t i = 0; i < irq_count_; i++) {
+    if (interrupter(i).Init(i, page_size, &mmio_.value(), offset, 1 << hcsparams2.ERST_MAX(),
+                            doorbell_offset_, this, hcc_, dcbaa_) != ZX_OK) {
+      return ZX_ERR_INTERNAL;
+    }
   }
-  if (command_ring_.Init(page_size, &bti_, &interrupters_[0].ring(), is_32bit_, &mmio_.value(),
+  if (command_ring_.Init(page_size, &bti_, &interrupter(0).ring(), is_32bit_, &mmio_.value(),
                          this) != ZX_OK) {
     return ZX_ERR_INTERNAL;
   }
   CRCR cr = command_ring_.phys(cap_length_);
   cr.WriteTo(&mmio_.value());
-  // Initialize initial interrupter. We will later demand-allocate interrupters
-  // as we get additional load.
-  {
-    fbl::AutoLock sched_lock(&scheduler_lock_);
-    active_interrupters_ = 1;
-  }
-  if (interrupters_[0].Start(0, offset, mmio_.value().View(0), this) != ZX_OK) {
-    return ZX_ERR_INTERNAL;
+  // Initialize all interrupters.
+  // TODO: For optimization, we could demand allocate interrupters and not start all interrupters in
+  // the beginning.
+  for (uint16_t i = 0; i < irq_count_; i++) {
+    if (interrupter(i).Start(offset, mmio_.value().View(0)) != ZX_OK) {
+      return ZX_ERR_INTERNAL;
+    }
   }
   init_txn_->Reply(ZX_OK);  // This will make the device visible and able to be unbound.
   sync_completion_wait(&bus_completion, ZX_TIME_INFINITE);

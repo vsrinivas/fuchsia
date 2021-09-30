@@ -16,6 +16,8 @@ namespace usb_xhci {
 // All section references refer to xHCI specification revision 1.2
 // unless stated otherwise.
 
+constexpr static uint16_t kPrimaryInterrupter = 0;
+
 // section 3.2.7
 struct TRB {
   uint64_t ptr = 0;
@@ -631,6 +633,7 @@ struct SlotContext {
   DEF_SUBFIELD(b, 15, 0, MAX_EXIT_LATENCY);
   DEF_SUBFIELD(c, 15, 8, PARENT_PORT_NUMBER);
   DEF_SUBFIELD(c, 7, 0, PARENT_HUB_SLOT_ID);
+  DEF_SUBFIELD(c, 31, 22, INTERRUPTER_TARGET);
 };
 
 // Section 6.2.3

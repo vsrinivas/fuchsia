@@ -4,6 +4,7 @@
 
 #include "xhci-enumeration.h"
 
+#include "src/devices/usb/drivers/xhci/registers.h"
 #include "usb-xhci.h"
 #include "xhci-async-auto-call.h"
 
@@ -106,7 +107,8 @@ TRBPromise EnumerateDeviceInternal(UsbXhci* hci, uint8_t port, std::optional<Hub
               // If we're in a retry context, it is the caller's responsibility to clean up.
               error_handler->GivebackPromise(error_handler->BorrowPromise()
                                                  .then([=](fpromise::result<void, void>& result) {
-                                                   hci->ScheduleTask(hci->DisableSlotCommand(slot));
+                                                   hci->ScheduleTask(kPrimaryInterrupter,
+                                                                     hci->DisableSlotCommand(slot));
                                                  })
                                                  .box());
             }
@@ -136,6 +138,7 @@ TRBPromise EnumerateDeviceInternal(UsbXhci* hci, uint8_t port, std::optional<Hub
               error_handler->GivebackPromise(error_handler->BorrowPromise()
                                                  .then([=](fpromise::result<void, void>& result) {
                                                    hci->ScheduleTask(
+                                                       kPrimaryInterrupter,
                                                        hci->DisableSlotCommand(state->slot));
                                                  })
                                                  .box());
@@ -180,7 +183,7 @@ TRBPromise EnumerateDeviceInternal(UsbXhci* hci, uint8_t port, std::optional<Hub
       .and_then([=](TRB*& result) -> TRBPromise {
         if (hci->GetDeviceSpeed(state->slot) != USB_SPEED_SUPER) {
           // See USB 2.0 specification (revision 2.0) section 9.2.6
-          return hci->Timeout(zx::deadline_after(zx::msec(10)));
+          return hci->Timeout(kPrimaryInterrupter, zx::deadline_after(zx::msec(10)));
         }
         return fpromise::make_ok_promise(result);
       })

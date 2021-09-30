@@ -35,16 +35,17 @@ class AsyncAutoCall : public fbl::RefCounted<AsyncAutoCall> {
   // Reinitializes a cancelled async auto call
   void Reinit() { Init(); }
   void Cancel() { completer_.reset(); }
+  // Control TRBs must be run on the primary interrupter. Section 4.9.4.3: secondary interrupters
+  // cannot handle them..
   ~AsyncAutoCall() {
     if (completer_.has_value()) {
       completer_->complete_ok();
-      hci_->ScheduleTask(
-          promise_
-              .then(
-                  [=](fpromise::result<void, void>& result) -> fpromise::result<TRB*, zx_status_t> {
-                    return fpromise::ok<TRB*>(nullptr);
-                  })
-              .box());
+      hci_->ScheduleTask(kPrimaryInterrupter, promise_
+                                                  .then([=](fpromise::result<void, void>& result)
+                                                            -> fpromise::result<TRB*, zx_status_t> {
+                                                    return fpromise::ok<TRB*>(nullptr);
+                                                  })
+                                                  .box());
     }
   }
 

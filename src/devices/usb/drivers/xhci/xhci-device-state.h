@@ -47,6 +47,8 @@ class DeviceState {
 
   uint8_t GetSlot() { return slot_; }
 
+  uint16_t GetInterrupterTarget() { return interrupter_target_; }
+
   std::optional<HubInfo>& GetHubLocked() __TA_REQUIRES(transaction_lock_) { return hub_; }
 
   std::optional<HubInfo>& GetHub() {
@@ -72,7 +74,7 @@ class DeviceState {
 
   TRBPromise AddressDeviceCommand(UsbXhci* hci, uint8_t slot_id, uint8_t port_id,
                                   std::optional<HubInfo> hub_info, uint64_t* dcbaa,
-                                  EventRing* event_ring, CommandRing* command_ring,
+                                  uint16_t interrupter_target, CommandRing* command_ring,
                                   ddk::MmioBuffer* mmio, bool bsr);
 
   fbl::Mutex& transaction_lock() __TA_RETURN_CAPABILITY(transaction_lock_) {
@@ -95,6 +97,7 @@ class DeviceState {
 
   uint8_t slot_ = 0;
   uint8_t port_ = 0;
+  uint16_t interrupter_target_;
   fbl::Mutex transaction_lock_;
   std::optional<HubInfo> hub_ __TA_GUARDED(transaction_lock_);
   bool disconnecting_ __TA_GUARDED(transaction_lock_) = false;

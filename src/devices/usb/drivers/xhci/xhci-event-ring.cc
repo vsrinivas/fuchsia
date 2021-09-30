@@ -64,7 +64,7 @@ zx_status_t EventRing::Init(size_t page_size, const zx::bti& bti, ddk::MmioBuffe
                             bool is_32bit, uint32_t erst_max, ERSTSZ erst_size, ERDP erdp_reg,
                             IMAN iman_reg, uint8_t cap_length, HCSPARAMS1 hcs_params_1,
                             CommandRing* command_ring, DoorbellOffset doorbell_offset, UsbXhci* hci,
-                            HCCPARAMS1 hcc_params_1, uint64_t* dcbaa) {
+                            HCCPARAMS1 hcc_params_1, uint64_t* dcbaa, uint16_t interrupter) {
   fbl::AutoLock l(&segment_mutex_);
   erdp_reg_ = erdp_reg;
   hcs_params_1_ = hcs_params_1;
@@ -80,8 +80,14 @@ zx_status_t EventRing::Init(size_t page_size, const zx::bti& bti, ddk::MmioBuffe
   hci_ = hci;
   hcc_params_1_ = hcc_params_1;
   dcbaa_ = dcbaa;
-  return segments_.Init(page_size, bti, is_32bit, erst_max, erst_size, hci->buffer_factory(),
-                        mmio_);
+  interrupter_ = interrupter;
+  auto status =
+      segments_.Init(page_size, bti, is_32bit, erst_max, erst_size, hci->buffer_factory(), mmio_);
+  if (status != ZX_OK) {
+    return status;
+  }
+  l.release();
+  return AddSegmentIfNone();
 }
 
 void EventRing::RemovePressure() {
@@ -194,8 +200,7 @@ TRBPromise EventRing::HandlePortStatusChangeEvent(uint8_t port_id) {
     // Link could be active from connect status change above.
     // To prevent enumerating a device twice, we ensure that the link wasn't previously active
     // before enumerating.
-    if ((sc.PLS() == PORTSC::U0) && sc.CCS() &&
-        !(hci_->GetPortState()[port_id - 1].link_active)) {
+    if ((sc.PLS() == PORTSC::U0) && sc.CCS() && !(hci_->GetPortState()[port_id - 1].link_active)) {
       if (!hci_->GetPortState()[port_id - 1].is_connected) {
         // Spontaneous initialization of USB 3.0 port without going through
         // CSC event. We know this is USB 3.0 since this cannot possibly happen
@@ -209,7 +214,7 @@ TRBPromise EventRing::HandlePortStatusChangeEvent(uint8_t port_id) {
         // states that we must wait 10 milliseconds.
         needs_enum = false;
         pending_enumeration =
-            hci_->Timeout(zx::deadline_after(zx::msec(10)))
+            hci_->Timeout(interrupter_, zx::deadline_after(zx::msec(10)))
                 .and_then([=](TRB*& result) { return LinkUp(static_cast<uint8_t>(port_id)); })
                 .box();
       } else {
@@ -302,40 +307,40 @@ TRBPromise EventRing::WaitForPortStatusChange(uint8_t port_id) {
 
 void EventRing::CallPortStatusChanged(fbl::RefPtr<PortStatusChangeState> state) {
   if (state->port_index < state->port_count) {
-    hci_->ScheduleTask(HandlePortStatusChangeEvent(static_cast<uint8_t>(state->port_index))
-                           .then([=](fpromise::result<TRB*, zx_status_t>& trb)
-                                     -> fpromise::result<TRB*, zx_status_t> {
-                             if (trb.is_error()) {
-                               if (trb.error() == ZX_ERR_BAD_STATE) {
-                                 return trb;
-                               }
-                             }
-                             state->port_index++;
-                             CallPortStatusChanged(state);
-                             return fpromise::ok(nullptr);
-                           })
-                           .box());
+    ScheduleTask(HandlePortStatusChangeEvent(static_cast<uint8_t>(state->port_index))
+                     .then([=](fpromise::result<TRB*, zx_status_t>& trb)
+                               -> fpromise::result<TRB*, zx_status_t> {
+                       if (trb.is_error()) {
+                         if (trb.error() == ZX_ERR_BAD_STATE) {
+                           return trb;
+                         }
+                       }
+                       state->port_index++;
+                       CallPortStatusChanged(state);
+                       return fpromise::ok(nullptr);
+                     })
+                     .box());
   } else {
     if (enumeration_queue_.is_empty()) {
       enumerating_ = false;
     } else {
       enumerating_ = true;
       auto enum_task = enumeration_queue_.pop_front();
-      hci_->ScheduleTask(HandlePortStatusChangeEvent(enum_task->port_number)
-                             .then([this, state, task = std::move(enum_task)](
-                                       fpromise::result<TRB*, zx_status_t>& trb) mutable {
-                               if (trb.is_error()) {
-                                 if (trb.error() == ZX_ERR_BAD_STATE) {
-                                   return trb;
-                                 }
-                                 task->completer->complete_error(trb.error());
-                               } else {
-                                 task->completer->complete_ok(trb.value());
-                               }
-                               state->port_index = state->port_count;
-                               CallPortStatusChanged(state);
-                               return trb;
-                             }));
+      ScheduleTask(HandlePortStatusChangeEvent(enum_task->port_number)
+                       .then([this, state, task = std::move(enum_task)](
+                                 fpromise::result<TRB*, zx_status_t>& trb) mutable {
+                         if (trb.is_error()) {
+                           if (trb.error() == ZX_ERR_BAD_STATE) {
+                             return trb;
+                           }
+                           task->completer->complete_error(trb.error());
+                         } else {
+                           task->completer->complete_ok(trb.value());
+                         }
+                         state->port_index = state->port_count;
+                         CallPortStatusChanged(state);
+                         return trb;
+                       }));
     }
   }
 }
@@ -345,9 +350,9 @@ void EventRing::HandlePortStatusChangeEventInterrupt(uint8_t port_id, bool preem
   ctx->port_number = port_id;
   fpromise::bridge<TRB*, zx_status_t> bridge;
   ctx->completer = std::move(bridge.completer);
-  hci_->ScheduleTask(bridge.consumer.promise()
-                         .then([=](fpromise::result<TRB*, zx_status_t>& result) { return result; })
-                         .box());
+  ScheduleTask(bridge.consumer.promise()
+                   .then([=](fpromise::result<TRB*, zx_status_t>& result) { return result; })
+                   .box());
   if (preempt) {
     enumeration_queue_.push_front(std::move(ctx));
   } else {
@@ -395,11 +400,11 @@ std::variant<bool, std::unique_ptr<TRBContext>> EventRing::StallWorkaroundForDef
         (request->header.length >= sizeof(desc))) {
       desc->b_device_protocol =
           0;  // Don't support multi-TT unless we're sure the device supports it.
-      hci_->ScheduleTask(hci_->UsbHciResetEndpointAsync(request->header.device_id, 0)
-                             .and_then([ctx = std::move(context)](TRB*& result) {
-                               ctx->request->Complete(ZX_OK, sizeof(*desc));
-                               return fpromise::ok(result);
-                             }));
+      ScheduleTask(hci_->UsbHciResetEndpointAsync(request->header.device_id, 0)
+                       .and_then([ctx = std::move(context)](TRB*& result) {
+                         ctx->request->Complete(ZX_OK, sizeof(*desc));
+                         return fpromise::ok(result);
+                       }));
 
       return true;
     }
@@ -595,7 +600,7 @@ zx_status_t EventRing::HandleIRQ() {
       }
     }
     if (last_phys != erdp_phys_) {
-      hci_->RunUntilIdle();
+      executor_.run_until_idle();
       erdp_reg_ =
           erdp_reg_.set_Pointer(erdp_phys_).set_DESI(segment_index_).set_EHB(1).WriteTo(mmio_);
       last_phys = erdp_phys_;

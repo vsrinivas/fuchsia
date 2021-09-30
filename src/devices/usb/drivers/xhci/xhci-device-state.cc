@@ -36,7 +36,8 @@ zx_status_t DeviceState::InitializeSlotBuffer(const UsbXhci& hci, uint8_t slot_i
     slot_context->set_CONTEXT_ENTRIES(1)
         .set_ROUTE_STRING(hub_info->route_string)
         .set_PORTNO(hub_info->rh_port)
-        .set_SPEED(hub_info->speed);
+        .set_SPEED(hub_info->speed)
+        .set_INTERRUPTER_TARGET(interrupter_target_);
   } else {
     slot_context->set_CONTEXT_ENTRIES(1).set_PORTNO(port_id).set_SPEED(hci.GetPortSpeed(port_id));
   }
@@ -113,11 +114,12 @@ zx_status_t DeviceState::InitializeOutputContextBuffer(
 
 TRBPromise DeviceState::AddressDeviceCommand(UsbXhci* hci, uint8_t slot, uint8_t port,
                                              std::optional<HubInfo> hub_info, uint64_t* dcbaa,
-                                             EventRing* event_ring, CommandRing* command_ring,
+                                             uint16_t interrupter_target, CommandRing* command_ring,
                                              ddk::MmioBuffer* mmio, bool bsr) {
   if (!hub_info.has_value()) {
     hci->GetPortState()[port - 1].slot_id = slot;
   }
+  interrupter_target_ = interrupter_target;
   std::unique_ptr<dma_buffer::PagedBuffer> slot_context_buffer;
   std::unique_ptr<dma_buffer::PagedBuffer> output_context_buffer;
   zx_status_t status = InitializeSlotBuffer(*hci, slot, port, hub_info, &slot_context_buffer);
@@ -126,10 +128,9 @@ TRBPromise DeviceState::AddressDeviceCommand(UsbXhci* hci, uint8_t slot, uint8_t
   }
 
   // Allocate the transfer ring (see section 4.9)
-  // TODO (bbosak): Assign an Interrupter from the pool
   fbl::AutoLock _(&transaction_lock_);
-  status = tr_.Init(hci->GetPageSize(), hci->bti(), event_ring, hci->Is32BitController(),
-                    mmio, *hci);
+  status = tr_.Init(hci->GetPageSize(), hci->bti(), &hci->interrupter(interrupter_target).ring(),
+                    hci->Is32BitController(), mmio, *hci);
   if (status != ZX_OK) {
     return fpromise::make_result_promise(
                fpromise::result<TRB*, zx_status_t>(fpromise::error(status)))

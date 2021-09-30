@@ -16,6 +16,8 @@ class UsbXhci;
 // Enumerates a device as specified in xHCI section 4.3 starting from step 4
 // This method should be called once the physical port of a device has been
 // initialized.
+// Control TRBs must be run on the primary interrupter. Section 4.9.4.3: secondary interrupters
+// cannot handle them..
 TRBPromise EnumerateDevice(UsbXhci* hci, uint8_t port, std::optional<HubInfo> hub_info);
 
 // Retrieves the bMaxPacketSize0 field in the USB device descriptor

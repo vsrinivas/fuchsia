@@ -35,8 +35,6 @@
 #include <fbl/mutex.h>
 
 #include "lib/dma-buffer/buffer.h"
-#include "registers.h"
-#include "xhci-context.h"
 #include "xhci-device-state.h"
 #include "xhci-enumeration.h"
 #include "xhci-event-ring.h"
@@ -102,6 +100,8 @@ class UsbXhci : public UsbXhciType, public ddk::UsbHciProtocol<UsbXhci, ddk::bas
   void DdkRelease();
 
   // USB HCI protocol implementation.
+  // Control TRBs must be run on the primary interrupter. Section 4.9.4.3: secondary interrupters
+  // cannot handle them..
   void UsbHciRequestQueue(usb_request_t* usb_request,
                           const usb_request_complete_callback_t* complete_cb);
   void UsbHciSetBusInterface(const usb_bus_interface_protocol_t* bus_intf);
@@ -225,12 +225,13 @@ class UsbXhci : public UsbXhciType, public ddk::UsbHciProtocol<UsbXhci, ddk::bas
   bool IsQemu() { return qemu_quirk_; }
 
   // Schedules a promise for execution on the executor
-  void ScheduleTask(TRBPromise promise) {
-    interrupters_[0].ring().ScheduleTask(std::move(promise));
+  void ScheduleTask(uint16_t target_interrupter, TRBPromise promise) {
+    interrupter(target_interrupter).ring().ScheduleTask(std::move(promise));
   }
 
   // Schedules the promise for execution and synchronously waits for it to complete
-  zx_status_t RunSynchronously(fpromise::promise<TRB*, zx_status_t> promise) {
+  zx_status_t RunSynchronously(uint16_t target_interrupter,
+                               fpromise::promise<TRB*, zx_status_t> promise) {
     sync_completion_t completion;
     zx_status_t completion_code;
     auto continuation = promise.then([&](fpromise::result<TRB*, zx_status_t>& result) {
@@ -243,19 +244,35 @@ class UsbXhci : public UsbXhciType, public ddk::UsbHciProtocol<UsbXhci, ddk::bas
       }
       return result;
     });
-    ScheduleTask(continuation.box());
-    RunUntilIdle();
+    ScheduleTask(target_interrupter, continuation.box());
+    RunUntilIdle(target_interrupter);
     sync_completion_wait(&completion, ZX_TIME_INFINITE);
     return completion_code;
   }
 
   // Creates a promise that resolves after a timeout
-  TRBPromise Timeout(zx::time deadline) { return interrupters_[0].Timeout(deadline); }
+  TRBPromise Timeout(uint16_t target_interrupter, zx::time deadline) {
+    return interrupter(target_interrupter).Timeout(deadline);
+  }
 
   // Provides a barrier for promises.
-  // After this method is invoked,
-  // all pending promises will be flushed.
-  void RunUntilIdle() { interrupters_[0].ring().RunUntilIdle(); }
+  // After this method is invoked, all pending promises on all interrupters will be flushed.
+  void RunUntilIdle() {
+    for (auto& it : interrupters_) {
+      if (it.active()) {
+        it.ring().RunUntilIdle();
+      }
+    }
+  }
+
+  // Provides a barrier for promises.
+  // After this method is invoked, all pending promises on the target interrupter will be flushed.
+  void RunUntilIdle(uint16_t target_interrupter) {
+    interrupter(target_interrupter).ring().RunUntilIdle();
+  }
+
+  // interrupter(uint32_t i): returns the interrupter with the corresponding index
+  Interrupter& interrupter(uint16_t i) { return interrupters_[i]; }
 
   // Initialization thread method. This is invoked from a separate detached thread
   // when xHCI binds.
@@ -331,6 +348,10 @@ class UsbXhci : public UsbXhciType, public ddk::UsbHciProtocol<UsbXhci, ddk::bas
   TRBPromise UsbHciCancelAllAsync(uint32_t device_id, uint8_t ep_address);
   TRBPromise UsbHciHubDeviceAddedAsync(uint32_t device_id, uint32_t port, usb_speed_t speed);
 
+  // InterrupterMapping: finds an interrupter. Currently finds the interrupter with the least
+  // pressure.
+  uint16_t InterrupterMapping();
+
   // Global scheduler lock. This should be held when adding or removing
   // interrupters, and; eventually dynamically assigning transfer rings
   // to interrupters.
@@ -356,7 +377,7 @@ class UsbXhci : public UsbXhciType, public ddk::UsbHciProtocol<UsbXhci, ddk::bas
   std::optional<ddk::MmioBuffer> mmio_;
 
   // The number of IRQs supported by the HCI
-  uint32_t irq_count_;
+  uint16_t irq_count_;
 
   // Array of interrupters, which service interrupts from the HCI
   fbl::Array<Interrupter> interrupters_;
@@ -393,9 +414,6 @@ class UsbXhci : public UsbXhciType, public ddk::UsbHciProtocol<UsbXhci, ddk::bas
 
   // Offset to the doorbells. See xHCI section 5.3.7
   DoorbellOffset doorbell_offset_;
-
-  // The number of enabled interrupters
-  uint32_t active_interrupters_ __TA_GUARDED(scheduler_lock_);
 
   // The value in the CAPLENGTH register (see xHCI section 5.3.1)
   uint8_t cap_length_;

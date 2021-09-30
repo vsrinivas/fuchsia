@@ -17,10 +17,9 @@
 #include <fbl/intrusive_double_list.h>
 #include <fbl/mutex.h>
 
-#include "registers.h"
 #include "xhci-context.h"
-#include "xhci-port-state.h"
 #include "xhci-hub.h"
+#include "xhci-port-state.h"
 
 namespace usb_xhci {
 
@@ -87,7 +86,7 @@ class EventRing {
                    uint32_t erst_max, ERSTSZ erst_size, ERDP erdp_reg, IMAN iman_reg,
                    uint8_t cap_length, HCSPARAMS1 hcs_params_1, CommandRing* command_ring,
                    DoorbellOffset doorbell_offset, UsbXhci* hci, HCCPARAMS1 hcc_params_1,
-                   uint64_t* dcbaa);
+                   uint64_t* dcbaa, uint16_t interrupter);
   // Disable thread safety analysis here.
   // We don't need to hold the mutex just to read the ERST
   // paddr, as this will never change (it is effectively a constant).
@@ -163,7 +162,7 @@ class EventRing {
   // Current Cycle State
   bool ccs_ = true;
   fbl::Mutex segment_mutex_;
-  size_t trbs_ __TA_GUARDED(segment_mutex_);
+  size_t trbs_ __TA_GUARDED(segment_mutex_) = 0;
   EventRingSegmentTable segments_ __TA_GUARDED(segment_mutex_);
   // BTI used for obtaining physical memory addresses.
   // This is valid for the lifetime of the UsbXhci driver,
@@ -194,6 +193,8 @@ class EventRing {
   // owned by UsbXhci, which this is a child of.
   // When xHCI shuts down, this pointer will be invalid.
   uint64_t* dcbaa_;
+
+  uint16_t interrupter_;
 };
 }  // namespace usb_xhci
 

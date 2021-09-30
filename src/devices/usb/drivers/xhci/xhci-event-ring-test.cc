@@ -170,7 +170,7 @@ class EventRingHarness : public zxtest::Test {
                                     CapLength::Get().ReadFrom(&buffer_.value()).Length(),
                                     HCSPARAMS1::Get().ReadFrom(&buffer_.value()), &command_ring_,
                                     DoorbellOffset::Get().ReadFrom(&buffer_.value()), &hci_,
-                                    HCCPARAMS1::Get().ReadFrom(&buffer_.value()), dcbaa_);
+                                    HCCPARAMS1::Get().ReadFrom(&buffer_.value()), dcbaa_, 0);
     if (status != ZX_OK) {
       return status;
     }
@@ -318,6 +318,8 @@ size_t UsbXhci::UsbHciGetRequestSize() { return Request::RequestSize(sizeof(usb_
 
 void UsbXhci::UsbHciRequestQueue(usb_request_t* usb_request,
                                  const usb_request_complete_callback_t* complete_cb) {}
+
+uint16_t UsbXhci::InterrupterMapping() { return 0; }
 
 zx_status_t TransferRing::Init(size_t page_size, const zx::bti& bti, EventRing* ring, bool is_32bit,
                                ddk::MmioBuffer* mmio, const UsbXhci& hci) {
