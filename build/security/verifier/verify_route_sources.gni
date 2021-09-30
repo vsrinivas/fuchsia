@@ -61,7 +61,7 @@ template("verify_route_sources") {
 
     args = [
       "--build-path",
-      root_build_dir,
+      rebase_path(root_build_dir),
       "--zbi",
       rebase_path(invoker.zbi, root_build_dir),
       "--manifest",
