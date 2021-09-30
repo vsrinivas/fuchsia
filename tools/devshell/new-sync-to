@@ -11,13 +11,17 @@
 
 import argparse
 import enum
+import functools
 import json
 import os
 import pathlib
 import re
+import shutil
 import subprocess
 import sys
+import tempfile
 from typing import Union
+import urllib.parse
 
 HELP = """\
 ## usage: fx new-sync-to [-h|--help] <STATE>
@@ -147,6 +151,15 @@ class SyncToCommand:
     def integration_dir(self) -> pathlib.Path:
         return self.fuchsia_dir.joinpath("integration")
 
+    @functools.cached_property
+    def gsutil_path(self) -> str:
+        gsutil = shutil.which("gsutil")
+        if not gsutil:
+            raise Error(
+                "Cannot find gsutil. Please install gcloud and run 'gcloud init'.\n"
+                "See https://cloud.google.com/storage/docs/gsutil_install")
+        return gsutil
+
     def run(self) -> None:
         if self.help:
             for line in HELP.splitlines():
@@ -155,6 +168,12 @@ class SyncToCommand:
 
         if not self.state:
             raise Error("A single positional argument is required.")
+
+        if self.dry_run:
+            print(
+                colorize(
+                    "Running in dry-run mode. No changes will be made to your checkout.",
+                    Color.GREEN))
 
         if self.state == "reset":
             self.reset_checkout()
@@ -175,6 +194,11 @@ class SyncToCommand:
             raise Error(
                 f"Unsupported state definition format: {self.state!r}.\n"
                 "Use -h for help.")
+
+        if not self.dry_run:
+            print(
+                "Success! To switch back to the latest, use `fx new-sync-to reset`"
+            )
 
     def reset_checkout(self) -> None:
         """Sync all repos back to JIRI_HEAD."""
@@ -233,6 +257,8 @@ class SyncToCommand:
             raise Error(
                 "Invalid Jiri history timestamp. See valid options by running:\n"
                 f"  ls {update_history_dir}")
+
+    def sync_to_snapshot(self, snapshot_file: pathlib.Path) -> None:
         integration_remote = self.jiri(
             "manifest",
             "-element=integration",
@@ -340,7 +366,7 @@ class SyncToCommand:
             bb,
             "get",
             build_id,
-            "-json",
+            "--json",
             "--fields",
             "status,builder,output.properties",
             dry_run_safe=True,
@@ -349,9 +375,12 @@ class SyncToCommand:
         build = json.loads(proc.stdout)
         checkout_info = build["output"]["properties"].get("checkout_info")
         if not checkout_info:
-            # TODO(olivernewman): If checkout_info is not available, fall back
-            # to legacy behavior of downloading a snapshot from GCS
-            raise Error("Build did not emit checkout info")
+            # `checkout_info` may not available if the build ran against a
+            # release branch that used an old version of recipes that didn't
+            # emit the `checkout_info` property. So fall back to legacy behavior
+            # of downloading a Jiri snapshot from GCS.
+            self.sync_to_legacy_build_id(build_id)
+            return
         integration_remote = checkout_info["manifest_remote"]
         self.assert_correct_integration_repo(integration_remote)
         manifest = checkout_info["manifest"]
@@ -376,6 +405,90 @@ class SyncToCommand:
         # update` again to make sure we respect any project/package pin updates.
         if has_integration_patch:
             self.jiri("update", "-local-manifest", "-rebase-tracked", "-gc")
+
+    def sync_to_legacy_build_id(self, build_id: str) -> None:
+        """Sync to a build's Jiri snapshot from GCS.
+
+        This is necessary for builds on old release branches that don't emit the
+        `checkout_info` output property.
+        """
+        print("Build did not emit checkout info, checking GCS for snapshots...")
+        tempdir = tempfile.TemporaryDirectory()
+        try:
+            snapshot_file = self.download_build_snapshot(
+                pathlib.Path(tempdir.name), build_id)
+        except Exception:
+            tempdir.cleanup()
+            raise
+        try:
+            self.sync_to_snapshot(snapshot_file)
+        except Exception:
+            print(
+                f"Preserving the snapshot directory for debugging: {tempdir.name}"
+            )
+            raise
+        tempdir.cleanup()
+
+    def download_build_snapshot(
+            self, dest_dir: pathlib.Path, build_id: str) -> pathlib.Path:
+        """Download a Jiri snapshot produced by an infra build from GCS.
+
+        Depending on the nature of the infra build, the snapshot file may come
+        from one of several buckets that have different schemas.
+        """
+        possible_urls = [
+            # Buckets where each build ID file is the snapshot file itself.
+            f"gs://fuchsia-snapshots/{build_id}",
+        ] + [
+            # Buckets where each build is a folder with a jiri_snapshot.xml
+            # inside.
+            f"gs://{bucket}/builds/{build_id}/jiri_snapshot.xml" for bucket in [
+                "fuchsia-artifacts-release",
+                "fuchsia-artifacts-internal",
+                "fuchsia-artifacts",
+            ]
+        ]
+
+        snapshot_url = ""
+        for url in possible_urls:
+            proc = self.gsutil(
+                "ls",
+                url,
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+                check=False,
+                dry_run_safe=True)
+            if proc.returncode == 0:
+                # Found the bucket that contains the snapshot, so no need to
+                # check the remaining buckets.
+                snapshot_url = url
+                break
+
+        if not snapshot_url:
+            locations = "\n".join(f"  {url}" for url in possible_urls)
+            raise Error(
+                f"Cannot find a valid snapshot in any of the following locations:\n{locations}\n"
+                f"Possible reasons:\n"
+                f"  - You are not logged in to gcloud. Try running 'gcloud auth list' and,\n"
+                f"    if necessary, 'gcloud auth login'\n"
+                f"  - The build {build_id} may have ended prematurely, so the step that\n"
+                f"    uploads its artifacts to GCS did not execute.\n"
+                f"    Compare https://ci.chromium.org/b/{build_id} with a successful\n"
+                f"    build of the same builder and see if the failed build stopped before\n"
+                f"    running a step like 'upload artifacts'")
+
+        bucket = urllib.parse.urlparse(snapshot_url).hostname
+        print(f"Downloading Jiri snapshot from {bucket}...")
+
+        snapshot_file = dest_dir.joinpath("jiri_snapshot.xml")
+        self.gsutil(
+            "-q",  # Quiet (no progress indicator)
+            "-m",  # Download files in parallel
+            "cp",
+            snapshot_url,
+            snapshot_file,
+            dry_run_safe=True)
+        return snapshot_file
 
     def print_synced_revision(self) -> None:
         if self.dry_run:
@@ -411,12 +524,27 @@ class SyncToCommand:
         **kwargs,
     ) -> subprocess.CompletedProcess:
         cmd = [str(a) for a in args]  # Convert any Path objects to strings.
+        cmd_str = " ".join(cmd)
         if self.dry_run and not dry_run_safe:
-            print("Dry-run: %s" % colorize(" ".join(cmd), Color.GREEN))
+            print("Dry-run: %s" % colorize(cmd_str, Color.GREEN))
             return subprocess.CompletedProcess(args=cmd, returncode=0)
 
         print("Running: %s" % colorize(" ".join(cmd), Color.YELLOW))
-        return subprocess.run(cmd, check=check, text=True, **kwargs)
+        try:
+            return subprocess.run(cmd, check=check, text=True, **kwargs)
+        except subprocess.CalledProcessError as e:
+            # Override CalledProcessError to make a more user-friendly error
+            # message and hide the stacktrace.
+            raise Error(
+                f"Command {cmd_str!r} returned non-zero exit status {e.returncode}."
+            )
+
+    def gsutil(
+        self,
+        *args: Union[str, pathlib.Path],
+        **kwargs,
+    ) -> subprocess.CompletedProcess:
+        return self.run_command(self.gsutil_path, *args, **kwargs)
 
     def jiri(
         self,
@@ -426,6 +554,12 @@ class SyncToCommand:
         return self.run_command("jiri", *args, **kwargs)
 
     def confirm_ok_to_change_source_code(self) -> None:
+        if self.dry_run:
+            # In dry-run mode we're not actually going to change the source
+            # code, so we shouldn't bother getting the user's approval or doing
+            # any safety checks.
+            return
+
         # Check if any repo has uncommitted changes and exit early if so,
         # because we can't sync without discarding the uncommitted changes,
         # which could be bad.
@@ -442,22 +576,21 @@ class SyncToCommand:
                 f" have uncommitted changes:\n{repos}"
                 "\nCommit or discard these changes and try again.")
 
-        if self.dry_run:
             print("Dry-run: nothing will be changed on your local repo.")
-        else:
-            while True:  # Loop until we get a valid input.
-                print(
-                    "I'm about to change the state of your source code."
-                    " No untracked changes will be discarded, but any"
-                    " repos not currently on JIRI_HEAD will not be"
-                    " automatically restored to their original revisions.")
-                yn = input("Are you sure you want to continue? (Y/n) ")
-                if yn.startswith(("y", "Y")):
-                    return
-                elif yn.startswith(("n", "N")):
-                    raise Error("Aborting.", fail=False)
-                else:
-                    print(colorize(f"Invalid choice: {yn!r}", Color.RED))
+
+        while True:  # Loop until we get a valid input.
+            print(
+                "I'm about to change the state of your source code."
+                " No untracked changes will be discarded, but any"
+                " repos not currently on JIRI_HEAD will not be"
+                " automatically restored to their original revisions.")
+            yn = input("Are you sure you want to continue [Y/n]? ")
+            if yn.startswith(("y", "Y")):
+                return
+            elif yn.startswith(("n", "N")):
+                raise Error("Aborting.", fail=False)
+            else:
+                print(colorize(f"Invalid choice: {yn!r}", Color.RED))
 
 
 def remove_prefix(s, prefix: str) -> str:

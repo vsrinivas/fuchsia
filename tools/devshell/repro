@@ -50,11 +50,12 @@ function repro {
   local instructions_file
 
   local can_sync_to=true
-  local no_sync_to_reason
+  local use_new_sync_to=false
 
+  # The sync-to command is internal, so always use new-sync-to if we don't have
+  # an internal checkout.
   if ! fx-command-exists "sync-to"; then
-    can_sync_to=false
-    no_sync_to_reason="\`fx sync-to\` is not available in a public checkout."
+    use_new_sync_to=true
   fi
 
   if [[ -z "$build_id" ]]; then
@@ -73,13 +74,11 @@ function repro {
 
     if [ "$project" == "fuchsia" ]; then
       # `sync-to` doesn't support public builds, so `repro` can't support them either.
-      can_sync_to=false
-      no_sync_to_reason="\`fx sync-to\` only supports internal builds (see https://fxbug.dev/66019)."
+      use_new_sync_to=true
     elif [[ "$bucket" = *try ]]; then
       # `sync-to` can't resolve the commit hashes that result from patching
       # changes in CQ builds.
-      can_sync_to=false
-      no_sync_to_reason="\`fx sync-to\` doesn't work on tryjobs (see https://fxbug.dev/72533)."
+      use_new_sync_to=true
     fi
 
     build_url="https://luci-milo.appspot.com/p/${project}/builders/${bucket}/${builder}/b${build_id}"
@@ -137,16 +136,17 @@ function repro {
 
   print_spacer
 
+  print_comment "Sync the Fuchsia source tree to the same commit:"
   if $can_sync_to; then
-    print_comment "Sync the Fuchsia source tree to the same commit:"
-    print_cmd "fx sync-to ${build_id}"
-    print_spacer
-  elif [[ -n "$build_id" ]]; then
-    print_comment "WARNING: Can't reproduce this build's checkout state."
-    print_comment "$no_sync_to_reason"
-    print_comment "Make sure your local checkout corresponds to the code used by the build."
-    print_spacer
+    # TODO(fxbug.dev/68492): Unconditionally use the new version of `fx sync-to`
+    # that supports tryjobs.
+    if $use_new_sync_to; then
+      print_cmd "fx new-sync-to ${build_id}"
+    else
+      print_cmd "fx sync-to ${build_id}"
+    fi
   fi
+  print_spacer
 
   print_comment "Set the build configuration:"
   print_cmd "fx --dir=${build_dir_name} set --fint-params-path '$fint_params_file_relative'"
