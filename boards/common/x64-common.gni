@@ -27,7 +27,7 @@ _bootfs_deps =
       "//src/devices/serial/drivers/uart16550",
       "//src/devices/spi/drivers/intel-gspi",
       "//src/devices/tpm/drivers/tpm",
-      "//src/devices/usb/drivers/xhci-rewrite:xhci",
+      "//src/devices/usb/drivers/xhci",
       "//src/graphics/display/drivers/intel-i915",
       "//src/graphics/display/drivers/simple:simple.amd-kaveri",
       "//src/graphics/display/drivers/simple:simple.nv",

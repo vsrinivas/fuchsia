@@ -11,7 +11,7 @@ board_description = "A generic emulated arm64 device."
 
 _common_bootfs_deps = [
   "//src/devices/bus/drivers/pci:bus-pci",
-  "//src/devices/usb/drivers/xhci-rewrite:xhci",
+  "//src/devices/usb/drivers/xhci",
   "//src/power/power-manager:base_config",
 ]
 _common_bootfs_deps += [ "//src/security/policy/zxcrypt:null" ]
