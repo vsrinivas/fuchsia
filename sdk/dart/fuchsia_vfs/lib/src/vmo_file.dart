@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 import 'package:fidl_fuchsia_io/fidl_async.dart';
+import 'package:fidl_fuchsia_mem/fidl_async.dart';
 import 'package:zircon/zircon.dart';
 
 import 'pseudo_file.dart';
@@ -45,19 +46,33 @@ class VmoFile extends PseudoFile {
 
   // TODO(crjohns): Support writable vmo files.
 
-  /// Describes this node. Returns null on error.
-  @override
-  NodeInfo describe() {
+  Vmo? _getVmoForDescription() {
     if (_sharingMode == VmoSharingMode.shareDuplicate) {
       final Vmo duplicatedVmo =
           _vmo.duplicate(ZX.RIGHTS_BASIC | ZX.RIGHT_READ | ZX.RIGHT_MAP);
-
-      if (duplicatedVmo != null) {
-        return NodeInfo.withVmofile(Vmofile(
-            vmo: duplicatedVmo, offset: 0, length: _vmo.getSize().size));
-      }
+      return duplicatedVmo;
     }
+    return null;
+  }
 
+  @override
+  NodeInfo describe() {
+    var vmo = _getVmoForDescription();
+    if (vmo != null) {
+      return NodeInfo.withVmofile(
+          Vmofile(vmo: vmo, offset: 0, length: vmo.getSize().size));
+    }
     return NodeInfo.withFile(FileObject(event: null));
+  }
+
+  @override
+  ConnectionInfo describe2(ConnectionInfoQuery query) {
+    var vmo = _getVmoForDescription();
+    if (vmo != null) {
+      return ConnectionInfo(
+          representation: Representation.withMemory(MemoryInfo(
+              buffer: Range(vmo: vmo, offset: 0, size: vmo.getSize().size))));
+    }
+    return ConnectionInfo(representation: Representation.withFile(FileInfo()));
   }
 }

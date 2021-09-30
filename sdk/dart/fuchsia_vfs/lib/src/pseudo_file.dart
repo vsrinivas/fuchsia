@@ -137,10 +137,12 @@ class PseudoFile extends Vnode {
     return direntTypeFile;
   }
 
-  /// Return the description of this file.
-  /// This function may return null if describing the node fails. In that case, the connection should be closed.
   NodeInfo describe() {
     return NodeInfo.withFile(FileObject(event: null));
+  }
+
+  ConnectionInfo describe2(ConnectionInfoQuery query) {
+    return ConnectionInfo(representation: Representation.withFile(FileInfo()));
   }
 
   ReadFn _getReadFn(ReadFnStr fn) {
@@ -282,7 +284,7 @@ class _FileConnection extends File {
     if ((flags & openFlagDescribe) == 0) {
       d = File$OnOpen$Response(ZX.ERR_NOT_FILE, null);
     } else {
-      NodeInfo nodeInfo = _describe();
+      NodeInfo nodeInfo = file.describe();
       d = File$OnOpen$Response(ZX.OK, nodeInfo);
     }
     return Stream.fromIterable([d]);
@@ -349,9 +351,7 @@ class _FileConnection extends File {
   }
 
   @override
-  Future<NodeInfo> describe() async {
-    return _describe();
-  }
+  Future<NodeInfo> describe() async => file.describe();
 
   @override
   Future<File$GetAttr$Response> getAttr() async {
@@ -534,14 +534,6 @@ class _FileConnection extends File {
       throw fidl.MethodException(response.s);
     }
     return response.actual;
-  }
-
-  NodeInfo _describe() {
-    NodeInfo ret = file.describe();
-    if (ret == null) {
-      close();
-    }
-    return ret;
   }
 
   File$Read$Response _handleRead(int count, int offset) {

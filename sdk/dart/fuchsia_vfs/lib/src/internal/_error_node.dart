@@ -59,6 +59,12 @@ class ErrorNodeForSendingEvent extends Node {
   }
 
   @override
+  Future<ConnectionInfo> describe2(ConnectionInfoQuery query) async {
+    throw UnsupportedError(
+        'ErrorNodeForSendingEvent.describe2 is unreachable.');
+  }
+
+  @override
   Future<Node$GetAttr$Response> getAttr() async {
     throw UnsupportedError('ErrorNodeForSendingEvent.getAttr is unreachable.');
   }

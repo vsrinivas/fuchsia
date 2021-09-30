@@ -5,6 +5,7 @@
 import 'dart:typed_data';
 
 import 'package:fidl_fuchsia_io/fidl_async.dart';
+import 'package:fidl_fuchsia_mem/fidl_async.dart';
 import 'package:zircon/zircon.dart';
 
 import 'pseudo_file.dart';
@@ -33,21 +34,31 @@ class PseudoVmoFile extends PseudoFile {
     ArgumentError.checkNotNull(_vmoFn, 'Vmo Function');
   }
 
-  /// Describes this node and exposes a duplicate of the underlying Vmo.
-  ///
-  /// Returns null when vmoFn returns null or duplicate fails.
-  ///
-  /// The function calls the passed callback.
-  @override
-  NodeInfo describe() {
+  Vmo? _getVmoForDescription() {
     final Vmo? originalVmo = _vmoFn!();
     final Vmo? duplicatedVmo =
         originalVmo?.duplicate(ZX.RIGHTS_BASIC | ZX.RIGHT_READ | ZX.RIGHT_MAP);
-    if (duplicatedVmo == null) {
-      return NodeInfo.withFile(FileObject(event: null));
-    }
+    return duplicatedVmo;
+  }
 
-    return NodeInfo.withVmofile(Vmofile(
-        vmo: duplicatedVmo, offset: 0, length: duplicatedVmo.getSize().size));
+  @override
+  NodeInfo describe() {
+    var vmo = _getVmoForDescription();
+    if (vmo != null) {
+      return NodeInfo.withVmofile(
+          Vmofile(vmo: vmo, offset: 0, length: vmo.getSize().size));
+    }
+    return NodeInfo.withFile(FileObject(event: null));
+  }
+
+  @override
+  ConnectionInfo describe2(ConnectionInfoQuery query) {
+    var vmo = _getVmoForDescription();
+    if (vmo != null) {
+      return ConnectionInfo(
+          representation: Representation.withMemory(MemoryInfo(
+              buffer: Range(vmo: vmo, offset: 0, size: vmo.getSize().size))));
+    }
+    return ConnectionInfo(representation: Representation.withFile(FileInfo()));
   }
 }

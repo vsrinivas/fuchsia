@@ -394,6 +394,13 @@ class _DirConnection extends Directory {
   }
 
   @override
+  Future<ConnectionInfo> describe2(ConnectionInfoQuery query) async {
+    return ConnectionInfo(
+      representation: Representation.withDirectory(DirectoryInfo()),
+    );
+  }
+
+  @override
   Future<Directory$GetAttr$Response> getAttr() async {
     var n = NodeAttributes(
       mode: modeTypeDirectory | modeProtectionMask,
