@@ -1,0 +1,15 @@
+{
+    include: [ "//src/sys/test_runners/starnix/default.shard.cml" ],
+    program: {
+        binary: "/data/tests/wayland_demo",
+        environ: [ "XDG_RUNTIME_DIR=/data/tmp" ],
+        mounts: [
+            "/:ext4:data/system.img",
+            "/data:remotefs:data",
+            "/dev:devfs",
+            "/data/tmp:tmpfs",
+            "/proc:proc",
+        ],
+        apex_hack: [ "com.android.runtime" ],
+    },
+}

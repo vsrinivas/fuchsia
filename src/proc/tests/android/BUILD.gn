@@ -206,6 +206,7 @@ wayland_tests = [
   "signal-test",
 
   # "socket-test",
+  # "wayland_demo",
 ]
 
 foreach(test_name, wayland_tests) {
