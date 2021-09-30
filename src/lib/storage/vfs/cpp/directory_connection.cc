@@ -340,31 +340,6 @@ void DirectoryConnection::GetToken(GetTokenRequestView request,
   completer.Reply(status, std::move(returned_token));
 }
 
-void DirectoryConnection::Rename(RenameRequestView request, RenameCompleter::Sync& completer) {
-  FS_PRETTY_TRACE_DEBUG("[DirectoryRename] our options: ", options(),
-                        ", src: ", request->src.data(), ", dst: ", request->dst.data());
-
-  // |fuchsia.io/Directory.Rename| only specified the token to be a generic handle; casting it here.
-  zx::event token(request->dst_parent_token.release());
-
-  if (request->src.empty() || request->dst.empty()) {
-    completer.Reply(ZX_ERR_INVALID_ARGS);
-    return;
-  }
-  if (options().flags.node_reference) {
-    completer.Reply(ZX_ERR_BAD_HANDLE);
-    return;
-  }
-  if (!options().rights.write) {
-    completer.Reply(ZX_ERR_BAD_HANDLE);
-    return;
-  }
-  zx_status_t status = vfs()->Rename(std::move(token), vnode(),
-                                     std::string_view(request->src.data(), request->src.size()),
-                                     std::string_view(request->dst.data(), request->dst.size()));
-  completer.Reply(status);
-}
-
 void DirectoryConnection::Rename2(Rename2RequestView request, Rename2Completer::Sync& completer) {
   FS_PRETTY_TRACE_DEBUG("[DirectoryRename] our options: ", options(),
                         ", src: ", request->src.data(), ", dst: ", request->dst.data());

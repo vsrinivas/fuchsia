@@ -54,7 +54,6 @@ class DirectoryConnection final : public Connection,
   void ReadDirents(ReadDirentsRequestView request, ReadDirentsCompleter::Sync& completer) final;
   void Rewind(RewindRequestView request, RewindCompleter::Sync& completer) final;
   void GetToken(GetTokenRequestView request, GetTokenCompleter::Sync& completer) final;
-  void Rename(RenameRequestView request, RenameCompleter::Sync& completer) final;
   void Rename2(Rename2RequestView request, Rename2Completer::Sync& completer) final;
   void Link(LinkRequestView request, LinkCompleter::Sync& completer) final;
   void Watch(WatchRequestView request, WatchCompleter::Sync& completer) final;

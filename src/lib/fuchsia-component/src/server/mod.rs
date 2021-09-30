@@ -1271,9 +1271,8 @@ impl<ServiceObjTy: ServiceObjTrait> ServiceFs<ServiceObjTy> {
                 responder.send(zx::sys::ZX_OK)?;
             }
             DirectoryRequest::GetToken { responder } => unsupported!(responder, None)?,
-            DirectoryRequest::Rename { responder, .. } => unsupported!(responder)?,
             DirectoryRequest::Rename2 { responder, .. } => {
-                responder.send(&mut Err(zx::Status::NOT_SUPPORTED.into_raw()))?
+                responder.send(&mut Err(zx::sys::ZX_ERR_NOT_SUPPORTED))?
             }
             DirectoryRequest::Link { responder, .. } => unsupported!(responder)?,
             DirectoryRequest::Watch { responder, .. } => unsupported!(responder)?,

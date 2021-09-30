@@ -177,12 +177,6 @@ impl MutableConnection {
             DirectoryAdminRequest::GetToken { responder } => {
                 self.handle_get_token(|status, token| responder.send(status.into_raw(), token))?;
             }
-            DirectoryAdminRequest::Rename { src, dst_parent_token, dst, responder } => {
-                self.handle_rename(src, dst_parent_token, dst, |status| {
-                    responder.send(status.into_raw())
-                })
-                .await?;
-            }
             DirectoryAdminRequest::Rename2 { src, dst_parent_token, dst, responder } => {
                 self.handle_rename(src, Handle::from(dst_parent_token), dst, |status| {
                     responder.send(&mut Result::from(status).map_err(|e| e.into_raw()))

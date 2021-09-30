@@ -56,7 +56,6 @@ protocol/member fuchsia.io/Directory.OnConnectionInfo -> (fuchsia.io/ConnectionI
 protocol/member fuchsia.io/Directory.OnOpen -> (int32 s,fuchsia.io/NodeInfo:optional info)
 protocol/member fuchsia.io/Directory.Open(uint32 flags,uint32 mode,string:4096 path,server_end:fuchsia.io/Node object)
 protocol/member fuchsia.io/Directory.ReadDirents(uint64 max_bytes) -> (int32 s,vector<uint8>:8192 dirents)
-protocol/member fuchsia.io/Directory.Rename(string:4096 src,zx/handle dst_parent_token,string:4096 dst) -> (int32 s)
 protocol/member fuchsia.io/Directory.Rename2(string:255 src,zx/handle:EVENT dst_parent_token,string:255 dst) -> (fuchsia.io/Directory_Rename2_Result result)
 protocol/member fuchsia.io/Directory.Reopen(fuchsia.io/ConnectionOptions options,zx/handle:CHANNEL object_request)
 protocol/member fuchsia.io/Directory.Rewind() -> (int32 s)

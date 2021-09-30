@@ -1396,10 +1396,8 @@ async fn assert_unsupported_directory_calls(
     let (status, token) = parent.get_token().await.unwrap();
     zx::Status::ok(status).expect("status ok");
     assert_eq!(
-        zx::Status::from_raw(
-            parent.rename(child_base_path, token.unwrap(), "renamed").await.unwrap()
-        ),
-        zx::Status::NOT_SUPPORTED
+        parent.rename2(child_base_path, zx::Event::from(token.unwrap()), "renamed").await.unwrap(),
+        Err(zx::sys::ZX_ERR_NOT_SUPPORTED)
     );
 
     // Verify watch() is not supported.

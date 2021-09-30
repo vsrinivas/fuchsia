@@ -450,8 +450,8 @@ where
             DirectoryRequest::GetToken { responder } => {
                 responder.send(ZX_ERR_NOT_SUPPORTED, None)?;
             }
-            DirectoryRequest::Rename { src: _, dst_parent_token: _, dst: _, responder } => {
-                responder.send(ZX_ERR_NOT_SUPPORTED)?;
+            DirectoryRequest::Rename2 { responder, .. } => {
+                responder.send(&mut Err(ZX_ERR_NOT_SUPPORTED))?
             }
             DirectoryRequest::Link { src: _, dst_parent_token: _, dst: _, responder } => {
                 responder.send(ZX_ERR_NOT_SUPPORTED)?;
