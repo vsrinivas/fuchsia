@@ -1182,14 +1182,14 @@ void iwl_mvm_rx_mpdu_mq(struct iwl_mvm* mvm, struct napi_struct* napi,
   uint8_t channel, energy_a, energy_b;
   uint8_t band;
   size_t desc_size;
-#if 0  // NEEDS_PORTING
+#if 0   // NEEDS_PORTING
   // TODO(fxbug.dev/84773)
   struct iwl_mvm_rx_phy_data phy_data = {
       .d4 = desc->phy_data4,
       .info_type = IWL_RX_PHY_INFO_TYPE_NONE,
   };
   uint8_t crypt_len = 0;
-#endif // NEEDS_PORTING
+#endif  // NEEDS_PORTING
 
   if (unlikely(test_bit(IWL_MVM_STATUS_IN_HW_RESTART, &mvm->status))) {
     return;
@@ -1203,12 +1203,12 @@ void iwl_mvm_rx_mpdu_mq(struct iwl_mvm* mvm, struct napi_struct* napi,
     energy_b = desc->v3.energy_b;
     desc_size = sizeof(*desc);
 
-#if 0  // NEEDS_PORTING
+#if 0   // NEEDS_PORTING
     phy_data.d0 = desc->v3.phy_data0;
     phy_data.d1 = desc->v3.phy_data1;
     phy_data.d2 = desc->v3.phy_data2;
     phy_data.d3 = desc->v3.phy_data3;
-#endif // NEEDS_PORTING
+#endif  // NEEDS_PORTING
   } else {
     rate_n_flags = le32_to_cpu(desc->v1.rate_n_flags);
     channel = desc->v1.channel;
@@ -1217,15 +1217,15 @@ void iwl_mvm_rx_mpdu_mq(struct iwl_mvm* mvm, struct napi_struct* napi,
     energy_b = desc->v1.energy_b;
     desc_size = IWL_RX_DESC_SIZE_V1;
 
-#if 0  // NEEDS_PORTING
+#if 0   // NEEDS_PORTING
     phy_data.d0 = desc->v1.phy_data0;
     phy_data.d1 = desc->v1.phy_data1;
     phy_data.d2 = desc->v1.phy_data2;
     phy_data.d3 = desc->v1.phy_data3;
-#endif // NEEDS_PORTING
+#endif  // NEEDS_PORTING
   }
 
-#if 0  // NEEDS_PORTING
+#if 0   // NEEDS_PORTING
   if (sts_phy_info & IWL_RX_MPDU_PHY_TSF_OVERLOAD) {
     phy_data.info_type = le32_get_bits(phy_data.d1, IWL_RX_PHY_DATA1_INFO_TYPE_MASK);
   }
@@ -1248,7 +1248,7 @@ void iwl_mvm_rx_mpdu_mq(struct iwl_mvm* mvm, struct napi_struct* napi,
          */
         skb_reserve(skb, 2);
     }
-#endif // NEEDS_PORTING
+#endif  // NEEDS_PORTING
 
   /* This may be overridden by iwl_mvm_rx_he() to HE_RU */
   switch (rate_n_flags & RATE_MCS_CHAN_WIDTH_MSK) {
@@ -1266,7 +1266,7 @@ void iwl_mvm_rx_mpdu_mq(struct iwl_mvm* mvm, struct napi_struct* napi,
       break;
   }
 
-#if 0 // NEEDS_PORTING
+#if 0   // NEEDS_PORTING
     if (rate_n_flags & RATE_MCS_HE_MSK) {
         iwl_mvm_rx_he(mvm, rx_status, &phy_data, rate_n_flags, phy_info, queue);
     }
@@ -1278,7 +1278,7 @@ void iwl_mvm_rx_mpdu_mq(struct iwl_mvm* mvm, struct napi_struct* napi,
         kfree_skb(skb);
         return;
     }
-#endif // NEEDS_PORTING
+#endif  // NEEDS_PORTING
 
   /*
    * Keep packets with CRC errors (and with overrun) for monitor mode
@@ -1291,7 +1291,7 @@ void iwl_mvm_rx_mpdu_mq(struct iwl_mvm* mvm, struct napi_struct* napi,
     rx_info.rx_flags |= WLAN_RX_INFO_FLAGS_FCS_INVALID;
   }
 
-#if 0  // NEEDS_PORTING
+#if 0   // NEEDS_PORTING
   /* set the preamble flag if appropriate */
   if (rate_n_flags & RATE_MCS_CCK_MSK && sts_phy_info & IWL_RX_MPDU_PHY_SHORT_PREAMBLE) {
     rx_status->enc_flags |= RX_ENC_FLAG_SHORTPRE;
@@ -1313,7 +1313,7 @@ void iwl_mvm_rx_mpdu_mq(struct iwl_mvm* mvm, struct napi_struct* napi,
 
   rx_status->device_timestamp = gp2_on_air_rise;
   rx_status->freq = ieee80211_channel_to_frequency(channel, band);
-#endif // NEEDS_PORTING
+#endif  // NEEDS_PORTING
 
   rx_info.rssi_dbm = iwl_mvm_get_signal_strength(mvm, energy_a, energy_b);
   rx_info.valid_fields |= WLAN_RX_INFO_VALID_RSSI;
@@ -1325,10 +1325,10 @@ void iwl_mvm_rx_mpdu_mq(struct iwl_mvm* mvm, struct napi_struct* napi,
   if (!queue && (sts_phy_info & IWL_RX_MPDU_PHY_AMPDU)) {
     bool toggle_bit = sts_phy_info & IWL_RX_MPDU_PHY_AMPDU_TOGGLE;
 
-#if 0  // NEEDS_PORTING
+#if 0   // NEEDS_PORTING
     rx_status->flag |= RX_FLAG_AMPDU_DETAILS;
     rx_status->ampdu_reference = mvm->ampdu_ref;
-#endif // NEEDS_PORTING
+#endif  // NEEDS_PORTING
     /* toggle is switched whenever new aggregation starts */
     if (toggle_bit != mvm->ampdu_toggle) {
       mvm->ampdu_ref++;
@@ -1404,7 +1404,7 @@ void iwl_mvm_rx_mpdu_mq(struct iwl_mvm* mvm, struct napi_struct* napi,
          * In both cases an existing station.
          */
         iwl_mvm_tdls_peer_cache_pkt(mvm, hdr, len, queue);
-#endif /* CPTCFG_IWLMVM_TDLS_PEER_CACHE */
+#endif  /* CPTCFG_IWLMVM_TDLS_PEER_CACHE */
 
         if (iwl_mvm_is_dup(sta, queue, rx_status, hdr, desc)) {
             kfree_skb(skb);
@@ -1445,18 +1445,18 @@ void iwl_mvm_rx_mpdu_mq(struct iwl_mvm* mvm, struct napi_struct* napi,
   if (rate_n_flags & RATE_MCS_LDPC_MSK) {
     rx_status->enc_flags |= RX_ENC_FLAG_LDPC;
   }
-#endif // NEEDS_PORTING
+#endif  // NEEDS_PORTING
   if (rate_n_flags & RATE_MCS_HT_MSK) {
-#if 0  // NEEDS_PORTING
+#if 0   // NEEDS_PORTING
     // TODO(fxbug.dev/36683)
     uint8_t stbc = (rate_n_flags & RATE_MCS_STBC_MSK) >> RATE_MCS_STBC_POS;
     rx_status->encoding = RX_ENC_HT;
     rx_status->rate_idx = rate_n_flags & RATE_HT_MCS_INDEX_MSK;
     rx_status->enc_flags |= stbc << RX_ENC_FLAG_STBC_SHIFT;
-#endif // NEEDS_PORTING
+#endif  // NEEDS_PORTING
     rx_info.phy = WLAN_INFO_PHY_TYPE_HT;
   } else if (rate_n_flags & RATE_MCS_VHT_MSK) {
-#if 0  // NEEDS_PORTING
+#if 0   // NEEDS_PORTING
     // TODO(fxbug.dev/36684)
     uint8_t stbc = (rate_n_flags & RATE_MCS_STBC_MSK) >> RATE_MCS_STBC_POS;
     rx_status->nss = ((rate_n_flags & RATE_VHT_MCS_NSS_MSK) >> RATE_VHT_MCS_NSS_POS) + 1;
@@ -1466,7 +1466,7 @@ void iwl_mvm_rx_mpdu_mq(struct iwl_mvm* mvm, struct napi_struct* napi,
     if (rate_n_flags & RATE_MCS_BF_MSK) {
       rx_status->enc_flags |= RX_ENC_FLAG_BF;
     }
-#endif // NEEDS_PORTING
+#endif  // NEEDS_PORTING
     rx_info.phy = WLAN_INFO_PHY_TYPE_VHT;
   } else if (!(rate_n_flags & RATE_MCS_HE_MSK)) {
     int rate;
@@ -1490,7 +1490,7 @@ void iwl_mvm_rx_mpdu_mq(struct iwl_mvm* mvm, struct napi_struct* napi,
   }
   rx_info.valid_fields |= WLAN_RX_INFO_VALID_DATA_RATE;
 
-#if 0  // NEEDS_PORTING
+#if 0   // NEEDS_PORTING
     /* management stuff on default queue */
     if (!queue) {
         if (unlikely((ieee80211_is_beacon(hdr->frame_control) ||
@@ -1505,7 +1505,7 @@ void iwl_mvm_rx_mpdu_mq(struct iwl_mvm* mvm, struct napi_struct* napi,
         }
     }
     iwl_mvm_create_skb(skb, hdr, len, crypt_len, rxb);
-#endif // NEEDS_PORTING
+#endif  // NEEDS_PORTING
 
   if (!iwl_mvm_reorder(mvm, queue, desc)) {
     iwl_mvm_pass_packet_to_mac80211(mvm, frame, desc, &rx_info);
