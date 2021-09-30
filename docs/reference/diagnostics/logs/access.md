@@ -68,11 +68,11 @@ from other sources:
 ```json
 {
     "version": 1,
-    "moniker": "netstack.cmx",
+    "moniker": "core/network/netstack",
     "metadata": {
         "timestamp": 1234567890,
         "severity": "INFO",
-        "component_url": "fuchsia-pkg://fuchsia.com/netstack#meta/netstack.cmx",
+        "component_url": "fuchsia-pkg://fuchsia.com/network#meta/netstack.cm",
         "size_bytes": 123
     },
     "payload": {

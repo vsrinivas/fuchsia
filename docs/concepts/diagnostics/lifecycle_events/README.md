@@ -67,12 +67,12 @@ from other sources. The following is an example of a JSON object entry:
 ```
 {
     "version": 1,
-    "moniker": "netstack.cmx",
+    "moniker": "core/network/netstack",
     "data_source": "LifecycleEvent",
     "metadata": {
         "timestamp": 1234567890,
         "lifecycle_event_type": "Started",
-        "component_url": "fuchsia-pkg://fuchsia.com/netstack#meta/netstack.cmx",
+        "component_url": "fuchsia-pkg://fuchsia.com/network#meta/netstack.cm",
         “errors”: []
     },
     "payload": null,

@@ -112,7 +112,7 @@ TEST_F(ModelTest, ParseTest) {
           }
         ],
         "services": {
-          "fuchsia.netstack.Netstack": "fuchsia-pkg://fuchsia.com/netstack#meta/netstack.cmx",
+          "fuchsia.foo.Bar": "fuchsia-pkg://fuchsia.com/foo#meta/bar.cmx",
           "fuchsia.some.Service" : {
             "url" : "fuchsia-pkg://fuchsia.com/some_service#meta/some_service.cmx",
             "arguments" : ["-a1", "-a2"]
@@ -176,12 +176,10 @@ TEST_F(ModelTest, ParseTest) {
   EXPECT_EQ(root_env.devices()[1], "ep1");
 
   // check the services
-  EXPECT_EQ(root_env.services()[0].launch().url(),
-            "fuchsia-pkg://fuchsia.com/netstack#meta/netstack.cmx");
+  EXPECT_EQ(root_env.services()[0].launch().url(), "fuchsia-pkg://fuchsia.com/foo#meta/bar.cmx");
   EXPECT_TRUE(root_env.services()[0].launch().arguments().empty());
-  EXPECT_EQ(root_env.services()[0].name(), "fuchsia.netstack.Netstack");
-  EXPECT_EQ(root_env.services()[0].launch().url(),
-            "fuchsia-pkg://fuchsia.com/netstack#meta/netstack.cmx");
+  EXPECT_EQ(root_env.services()[0].name(), "fuchsia.foo.Bar");
+  EXPECT_EQ(root_env.services()[0].launch().url(), "fuchsia-pkg://fuchsia.com/foo#meta/bar.cmx");
   EXPECT_TRUE(root_env.services()[0].launch().arguments().empty());
   EXPECT_EQ(root_env.services()[1].name(), "fuchsia.some.Service");
   EXPECT_EQ(root_env.services()[1].launch().url(),

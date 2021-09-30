@@ -164,12 +164,12 @@ mod test {
         "data_source": "Logs",
         "metadata": {
           "errors": null,
-          "component_url": "fuchsia-pkg://fuchsia.com/netstack#meta/netstack.cmx",
+          "component_url": "fuchsia-pkg://fuchsia.com/network#meta/netstack.cm",
           "timestamp": 403649538626725,
           "severity": "Info",
           "size_bytes": 158
         },
-        "moniker": "sys/netstack.cmx",
+        "moniker": "core/network/netstack",
         "payload": {
           "root": {
             "pid": 17247,
@@ -193,12 +193,12 @@ mod test {
         "data_source": "Logs",
         "metadata": {
           "errors": null,
-          "component_url": "fuchsia-pkg://fuchsia.com/netstack#meta/netstack.cmx",
+          "component_url": "fuchsia-pkg://fuchsia.com/network#meta/netstack.cm",
           "timestamp": 403649538626725,
           "severity": "INFO",
           "size_bytes": 158
         },
-        "moniker": "sys/netstack.cmx",
+        "moniker": "core/network/netstack",
         "payload": {
           "root": {
             "pid": 17247,
@@ -221,7 +221,7 @@ mod test {
             "data_source": "Logs",
             "metadata": {
               "errors": null,
-              "component_url": "fuchsia-pkg://fuchsia.com/netstack#meta/netstack.cmx",
+              "component_url": "fuchsia-pkg://fuchsia.com/network#meta/netstack.cm",
               "timestamp": 263002243373398,
               "severity": "WARN",
               "size_bytes": 137,
@@ -235,7 +235,7 @@ mod test {
               "line": null,
               "dropped": 0
             },
-            "moniker": "netstack.cmx",
+            "moniker": "core/network/netstack",
             "payload": {
               "root": {
                 "message": {
@@ -257,7 +257,7 @@ mod test {
             "data_source": "Logs",
             "metadata": {
               "errors": null,
-              "component_url": "fuchsia-pkg://fuchsia.com/netstack#meta/netstack.cmx",
+              "component_url": "fuchsia-pkg://fuchsia.com/network#meta/netstack.cm",
               "timestamp": 263002243373398,
               "severity": "WARN",
               "size_bytes": 137,
@@ -271,7 +271,7 @@ mod test {
               "line": null,
               "dropped": 0
             },
-            "moniker": "netstack.cmx",
+            "moniker": "core/network/netstack",
             "payload": {
               "root": {
                 "message": {
@@ -303,11 +303,9 @@ mod test {
 
     fn expected_v1_log_data() -> LogsData {
         LogsDataBuilder::new(BuilderArgs {
-            moniker: String::from("sys/netstack.cmx"),
+            moniker: String::from("core/network/netstack"),
             timestamp_nanos: Timestamp::from(403649538626725i64),
-            component_url: Some(String::from(
-                "fuchsia-pkg://fuchsia.com/netstack#meta/netstack.cmx",
-            )),
+            component_url: Some(String::from("fuchsia-pkg://fuchsia.com/network#meta/netstack.cm")),
             severity: Severity::Info,
             size_bytes: 158,
         })
@@ -327,11 +325,9 @@ mod test {
     }
     fn expected_v2_log_data() -> LogsData {
         LogsDataBuilder::new(BuilderArgs {
-            moniker: String::from("netstack.cmx"),
+            moniker: String::from("core/network/netstack"),
             timestamp_nanos: Timestamp::from(263002243373398i64),
-            component_url: Some(String::from(
-                "fuchsia-pkg://fuchsia.com/netstack#meta/netstack.cmx",
-            )),
+            component_url: Some(String::from("fuchsia-pkg://fuchsia.com/network#meta/netstack.cm")),
             severity: Severity::Warn,
             size_bytes: 137,
         })
