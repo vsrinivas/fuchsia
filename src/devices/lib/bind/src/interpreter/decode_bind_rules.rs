@@ -69,6 +69,26 @@ fn split_off_node(
     Ok((Node { name_id: node_id, instructions: node_instructions }, remaining_bytecode))
 }
 
+#[derive(Debug, PartialEq, Clone)]
+pub enum DecodedRules {
+    Normal(DecodedBindRules),
+    Composite(DecodedCompositeBindRules),
+}
+
+impl DecodedRules {
+    pub fn new(bytecode: Vec<u8>) -> Result<Self, BytecodeError> {
+        let (symbol_table, inst_bytecode) = get_symbol_table_and_instruction_bytecode(bytecode)?;
+        let parsed_magic_num = u32::from_be_bytes(get_u32_bytes(&inst_bytecode, 0)?);
+        if parsed_magic_num == COMPOSITE_MAGIC_NUM {
+            return Ok(DecodedRules::Composite(DecodedCompositeBindRules::new(
+                symbol_table,
+                inst_bytecode,
+            )?));
+        }
+        Ok(DecodedRules::Normal(DecodedBindRules::new(symbol_table, inst_bytecode)?))
+    }
+}
+
 // This struct decodes and unwraps the given bytecode into a symbol table
 // and list of instructions.
 #[derive(Debug, PartialEq, Clone)]
@@ -78,9 +98,10 @@ pub struct DecodedBindRules {
 }
 
 impl DecodedBindRules {
-    pub fn new(bytecode: Vec<u8>) -> Result<Self, BytecodeError> {
-        let (symbol_table, inst_bytecode) = get_symbol_table_and_instruction_bytecode(bytecode)?;
-
+    pub fn new(
+        symbol_table: HashMap<u32, String>,
+        inst_bytecode: Vec<u8>,
+    ) -> Result<Self, BytecodeError> {
         // Remove the INST header and check if the section size.
         // TODO(fxb/78832): Verify that the instructions are valid.
         let (inst_sz, inst_bytecode) =
@@ -90,6 +111,11 @@ impl DecodedBindRules {
         }
 
         Ok(DecodedBindRules { symbol_table: symbol_table, instructions: inst_bytecode })
+    }
+
+    pub fn from_bytecode(bytecode: Vec<u8>) -> Result<Self, BytecodeError> {
+        let (symbol_table, inst_bytecode) = get_symbol_table_and_instruction_bytecode(bytecode)?;
+        DecodedBindRules::new(symbol_table, inst_bytecode)
     }
 }
 
@@ -111,10 +137,10 @@ pub struct DecodedCompositeBindRules {
 }
 
 impl DecodedCompositeBindRules {
-    pub fn new(bytecode: Vec<u8>) -> Result<Self, BytecodeError> {
-        let (symbol_table, composite_inst_bytecode) =
-            get_symbol_table_and_instruction_bytecode(bytecode)?;
-
+    pub fn new(
+        symbol_table: HashMap<u32, String>,
+        composite_inst_bytecode: Vec<u8>,
+    ) -> Result<Self, BytecodeError> {
         // Separate the instruction bytecode out of the symbol table bytecode and verify
         // the magic number and length. Remove the composite instruction header.
         let (composite_inst_sz, mut composite_inst_bytecode) =
@@ -151,6 +177,11 @@ impl DecodedCompositeBindRules {
             primary_node: primary_node,
             additional_nodes: additional_nodes,
         })
+    }
+
+    pub fn from_bytecode(bytecode: Vec<u8>) -> Result<Self, BytecodeError> {
+        let (symbol_table, inst_bytecode) = get_symbol_table_and_instruction_bytecode(bytecode)?;
+        DecodedCompositeBindRules::new(symbol_table, inst_bytecode)
     }
 }
 
@@ -281,14 +312,14 @@ mod test {
         append_section_header(&mut bytecode, INSTRUCTION_MAGIC_NUM, 0);
         assert_eq!(
             Err(BytecodeError::InvalidHeader(BIND_MAGIC_NUM, 0x41494E44)),
-            DecodedBindRules::new(bytecode)
+            DecodedRules::new(bytecode)
         );
 
         // Test invalid version.
         let mut bytecode: Vec<u8> = vec![0x42, 0x49, 0x4E, 0x44, 0x03, 0, 0, 0];
         append_section_header(&mut bytecode, SYMB_MAGIC_NUM, 0);
         append_section_header(&mut bytecode, INSTRUCTION_MAGIC_NUM, 0);
-        assert_eq!(Err(BytecodeError::InvalidVersion(3)), DecodedBindRules::new(bytecode));
+        assert_eq!(Err(BytecodeError::InvalidVersion(3)), DecodedRules::new(bytecode));
 
         // Test invalid symbol table header.
         let mut bytecode: Vec<u8> = BIND_HEADER.to_vec();
@@ -296,7 +327,7 @@ mod test {
         append_section_header(&mut bytecode, INSTRUCTION_MAGIC_NUM, 0);
         assert_eq!(
             Err(BytecodeError::InvalidHeader(SYMB_MAGIC_NUM, 0xAAAAAAAA)),
-            DecodedBindRules::new(bytecode)
+            DecodedRules::new(bytecode)
         );
 
         // Test invalid instruction header.
@@ -305,7 +336,7 @@ mod test {
         append_section_header(&mut bytecode, 0xAAAAAAAA, 0);
         assert_eq!(
             Err(BytecodeError::InvalidHeader(INSTRUCTION_MAGIC_NUM, 0xAAAAAAAA)),
-            DecodedBindRules::new(bytecode)
+            DecodedRules::new(bytecode)
         );
     }
 
@@ -323,14 +354,14 @@ mod test {
         bytecode.extend_from_slice(&long_str);
 
         append_section_header(&mut bytecode, INSTRUCTION_MAGIC_NUM, 0);
-        assert_eq!(Err(BytecodeError::InvalidStringLength), DecodedBindRules::new(bytecode));
+        assert_eq!(Err(BytecodeError::InvalidStringLength), DecodedRules::new(bytecode));
     }
 
     #[test]
     fn test_unexpected_end() {
         let mut bytecode: Vec<u8> = BIND_HEADER.to_vec();
         bytecode.extend_from_slice(&SYMB_MAGIC_NUM.to_be_bytes());
-        assert_eq!(Err(BytecodeError::UnexpectedEnd), DecodedBindRules::new(bytecode));
+        assert_eq!(Err(BytecodeError::UnexpectedEnd), DecodedRules::new(bytecode));
     }
 
     #[test]
@@ -344,7 +375,7 @@ mod test {
 
         append_section_header(&mut bytecode, INSTRUCTION_MAGIC_NUM, 0);
 
-        assert_eq!(Err(BytecodeError::UnexpectedEnd), DecodedBindRules::new(bytecode));
+        assert_eq!(Err(BytecodeError::UnexpectedEnd), DecodedRules::new(bytecode));
     }
 
     #[test]
@@ -361,7 +392,7 @@ mod test {
         bytecode.extend_from_slice(&str_2);
 
         append_section_header(&mut bytecode, INSTRUCTION_MAGIC_NUM, 0);
-        assert_eq!(Err(BytecodeError::InvalidSymbolTableKey(1)), DecodedBindRules::new(bytecode));
+        assert_eq!(Err(BytecodeError::InvalidSymbolTableKey(1)), DecodedRules::new(bytecode));
     }
 
     #[test]
@@ -378,7 +409,7 @@ mod test {
         bytecode.extend_from_slice(&str_2);
 
         append_section_header(&mut bytecode, INSTRUCTION_MAGIC_NUM, 0);
-        assert_eq!(Err(BytecodeError::InvalidSymbolTableKey(5)), DecodedBindRules::new(bytecode));
+        assert_eq!(Err(BytecodeError::InvalidSymbolTableKey(5)), DecodedRules::new(bytecode));
     }
 
     #[test]
@@ -393,7 +424,7 @@ mod test {
         bytecode.extend_from_slice(&[2, 0]);
         append_section_header(&mut bytecode, INSTRUCTION_MAGIC_NUM, 0);
 
-        assert_eq!(Err(BytecodeError::UnexpectedEnd), DecodedBindRules::new(bytecode));
+        assert_eq!(Err(BytecodeError::UnexpectedEnd), DecodedRules::new(bytecode));
     }
 
     #[test]
@@ -402,7 +433,7 @@ mod test {
         append_section_header(&mut bytecode, SYMB_MAGIC_NUM, 0);
         append_section_header(&mut bytecode, INSTRUCTION_MAGIC_NUM, 0);
         bytecode.push(0x30);
-        assert_eq!(Err(BytecodeError::IncorrectSectionSize), DecodedBindRules::new(bytecode));
+        assert_eq!(Err(BytecodeError::IncorrectSectionSize), DecodedRules::new(bytecode));
     }
 
     #[test]
@@ -411,8 +442,11 @@ mod test {
         append_section_header(&mut bytecode, SYMB_MAGIC_NUM, 0);
         append_section_header(&mut bytecode, INSTRUCTION_MAGIC_NUM, 0);
         assert_eq!(
-            DecodedBindRules { symbol_table: HashMap::new(), instructions: vec![] },
-            DecodedBindRules::new(bytecode).unwrap()
+            DecodedRules::Normal(DecodedBindRules {
+                symbol_table: HashMap::new(),
+                instructions: vec![]
+            }),
+            DecodedRules::new(bytecode).unwrap()
         );
     }
 
@@ -421,7 +455,7 @@ mod test {
         let mut bytecode: Vec<u8> = BIND_HEADER.to_vec();
         append_section_header(&mut bytecode, SYMB_MAGIC_NUM, u32::MAX);
         append_section_header(&mut bytecode, INSTRUCTION_MAGIC_NUM, 0);
-        assert_eq!(Err(BytecodeError::IncorrectSectionSize), DecodedBindRules::new(bytecode));
+        assert_eq!(Err(BytecodeError::IncorrectSectionSize), DecodedRules::new(bytecode));
     }
 
     #[test]
@@ -433,7 +467,7 @@ mod test {
         append_section_header(&mut bytecode, INSTRUCTION_MAGIC_NUM, instructions.len() as u32);
         bytecode.extend_from_slice(&instructions);
 
-        let bind_rules = DecodedBindRules::new(bytecode).unwrap();
+        let bind_rules = DecodedBindRules::from_bytecode(bytecode).unwrap();
         assert_eq!(instructions.to_vec(), bind_rules.instructions);
     }
 
@@ -448,8 +482,13 @@ mod test {
 
         // DecodedBindRules does not validate the instruction bytecode, so it would still store it.
         // The instruction bytecode is validated when it's evaluated by a matcher.
-        let bind_rules = DecodedBindRules::new(bytecode).unwrap();
-        assert_eq!(instructions.to_vec(), bind_rules.instructions);
+        let bind_rules = DecodedRules::new(bytecode).unwrap();
+        match bind_rules {
+            DecodedRules::Normal(rules) => {
+                assert_eq!(instructions.to_vec(), rules.instructions);
+            }
+            _ => panic!("Rules should have been parsed as Normal"),
+        };
     }
 
     #[test]
@@ -473,13 +512,11 @@ mod test {
         expected_symbol_table.insert(1, "WREN".to_string());
         expected_symbol_table.insert(2, "DUCK".to_string());
 
-        assert_eq!(
-            DecodedBindRules {
-                symbol_table: expected_symbol_table,
-                instructions: instructions.to_vec()
-            },
-            DecodedBindRules::new(bytecode).unwrap()
-        );
+        let rules = DecodedBindRules {
+            symbol_table: expected_symbol_table,
+            instructions: instructions.to_vec(),
+        };
+        assert_eq!(DecodedRules::Normal(rules), DecodedRules::new(bytecode).unwrap());
     }
 
     #[test]
@@ -541,18 +578,16 @@ mod test {
         expected_symbol_table.insert(3, "COOT".to_string());
         expected_symbol_table.insert(4, "PLOVER".to_string());
 
-        assert_eq!(
-            DecodedCompositeBindRules {
-                symbol_table: expected_symbol_table,
-                device_name_id: 1,
-                primary_node: Node { name_id: 2, instructions: primary_node_inst.to_vec() },
-                additional_nodes: vec![
-                    Node { name_id: 3, instructions: additional_node_inst_1.to_vec() },
-                    Node { name_id: 4, instructions: additional_node_inst_2.to_vec() }
-                ],
-            },
-            DecodedCompositeBindRules::new(bytecode).unwrap()
-        );
+        let rules = DecodedCompositeBindRules {
+            symbol_table: expected_symbol_table,
+            device_name_id: 1,
+            primary_node: Node { name_id: 2, instructions: primary_node_inst.to_vec() },
+            additional_nodes: vec![
+                Node { name_id: 3, instructions: additional_node_inst_1.to_vec() },
+                Node { name_id: 4, instructions: additional_node_inst_2.to_vec() },
+            ],
+        };
+        assert_eq!(DecodedRules::Composite(rules), DecodedRules::new(bytecode).unwrap());
     }
 
     #[test]
@@ -586,13 +621,13 @@ mod test {
         expected_symbol_table.insert(2, "COOT".to_string());
 
         assert_eq!(
-            DecodedCompositeBindRules {
+            DecodedRules::Composite(DecodedCompositeBindRules {
                 symbol_table: expected_symbol_table,
                 device_name_id: 1,
                 primary_node: Node { name_id: 2, instructions: primary_node_inst.to_vec() },
                 additional_nodes: vec![]
-            },
-            DecodedCompositeBindRules::new(bytecode).unwrap()
+            }),
+            DecodedRules::new(bytecode).unwrap()
         );
     }
 
@@ -614,10 +649,7 @@ mod test {
         append_node_header(&mut bytecode, RawNodeType::Primary, 1, primary_node_inst.len() as u32);
         bytecode.extend_from_slice(&primary_node_inst);
 
-        assert_eq!(
-            Err(BytecodeError::MissingDeviceNameInSymbolTable),
-            DecodedCompositeBindRules::new(bytecode)
-        );
+        assert_eq!(Err(BytecodeError::MissingDeviceNameInSymbolTable), DecodedRules::new(bytecode));
     }
 
     #[test]
@@ -638,10 +670,7 @@ mod test {
         append_node_header(&mut bytecode, RawNodeType::Primary, 2, primary_node_inst.len() as u32);
         bytecode.extend_from_slice(&primary_node_inst);
 
-        assert_eq!(
-            Err(BytecodeError::MissingNodeIdInSymbolTable),
-            DecodedCompositeBindRules::new(bytecode)
-        );
+        assert_eq!(Err(BytecodeError::MissingNodeIdInSymbolTable), DecodedRules::new(bytecode));
     }
 
     #[test]
@@ -689,10 +718,7 @@ mod test {
         );
         bytecode.extend_from_slice(&additional_node_inst_2);
 
-        assert_eq!(
-            Err(BytecodeError::InvalidPrimaryNode),
-            DecodedCompositeBindRules::new(bytecode)
-        );
+        assert_eq!(Err(BytecodeError::InvalidPrimaryNode), DecodedRules::new(bytecode));
     }
 
     #[test]
@@ -734,10 +760,7 @@ mod test {
         append_node_header(&mut bytecode, RawNodeType::Primary, 2, primary_node_inst.len() as u32);
         bytecode.extend_from_slice(&primary_node_inst);
 
-        assert_eq!(
-            Err(BytecodeError::InvalidPrimaryNode),
-            DecodedCompositeBindRules::new(bytecode)
-        );
+        assert_eq!(Err(BytecodeError::InvalidPrimaryNode), DecodedRules::new(bytecode));
     }
 
     #[test]
@@ -779,10 +802,7 @@ mod test {
         );
         bytecode.extend_from_slice(&primary_node_inst_2);
 
-        assert_eq!(
-            Err(BytecodeError::MultiplePrimaryNodes),
-            DecodedCompositeBindRules::new(bytecode)
-        );
+        assert_eq!(Err(BytecodeError::MultiplePrimaryNodes), DecodedRules::new(bytecode));
     }
 
     #[test]
@@ -813,10 +833,7 @@ mod test {
         bytecode.extend_from_slice(&(primary_node_inst.len() as u32).to_le_bytes());
         bytecode.extend_from_slice(&primary_node_inst);
 
-        assert_eq!(
-            Err(BytecodeError::InvalidNodeType(0x52)),
-            DecodedCompositeBindRules::new(bytecode)
-        );
+        assert_eq!(Err(BytecodeError::InvalidNodeType(0x52)), DecodedRules::new(bytecode));
     }
 
     #[test]
@@ -860,10 +877,7 @@ mod test {
         );
         bytecode.extend_from_slice(&additional_node_inst);
 
-        assert_eq!(
-            Err(BytecodeError::InvalidNodeType(0)),
-            DecodedCompositeBindRules::new(bytecode)
-        );
+        assert_eq!(Err(BytecodeError::InvalidNodeType(0)), DecodedRules::new(bytecode));
     }
 
     #[test]
@@ -900,10 +914,7 @@ mod test {
         // Add the additional node with a size that's too small.
         append_node_header(&mut bytecode, RawNodeType::Additional, 3, 1);
         bytecode.extend_from_slice(&additional_node_inst);
-        assert_eq!(
-            Err(BytecodeError::InvalidNodeType(1)),
-            DecodedCompositeBindRules::new(bytecode)
-        );
+        assert_eq!(Err(BytecodeError::InvalidNodeType(1)), DecodedRules::new(bytecode));
     }
 
     #[test]
@@ -932,10 +943,7 @@ mod test {
         append_node_header(&mut bytecode, RawNodeType::Primary, 2, 50);
         bytecode.extend_from_slice(&primary_node_inst);
 
-        assert_eq!(
-            Err(BytecodeError::IncorrectNodeSectionSize),
-            DecodedCompositeBindRules::new(bytecode)
-        );
+        assert_eq!(Err(BytecodeError::IncorrectNodeSectionSize), DecodedRules::new(bytecode));
     }
 
     #[test]
@@ -966,7 +974,7 @@ mod test {
 
         assert_eq!(
             Err(BytecodeError::InvalidHeader(INSTRUCTION_MAGIC_NUM, COMPOSITE_MAGIC_NUM)),
-            DecodedBindRules::new(bytecode)
+            DecodedBindRules::from_bytecode(bytecode)
         );
     }
 
@@ -981,7 +989,7 @@ mod test {
 
         assert_eq!(
             Err(BytecodeError::InvalidHeader(COMPOSITE_MAGIC_NUM, INSTRUCTION_MAGIC_NUM)),
-            DecodedCompositeBindRules::new(bytecode)
+            DecodedCompositeBindRules::from_bytecode(bytecode)
         );
     }
 
@@ -1044,7 +1052,7 @@ mod test {
         ];
 
         assert_eq!(
-            DecodedCompositeBindRules {
+            DecodedRules::Composite(DecodedCompositeBindRules {
                 symbol_table: expected_symbol_table,
                 device_name_id: 1,
                 primary_node: Node { name_id: 2, instructions: primary_node_inst.to_vec() },
@@ -1052,8 +1060,8 @@ mod test {
                     name_id: 3,
                     instructions: additional_node_inst.to_vec()
                 }],
-            },
-            DecodedCompositeBindRules::new(bytecode).unwrap()
+            }),
+            DecodedRules::new(bytecode).unwrap()
         );
     }
 }

@@ -2,25 +2,29 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use anyhow::{self, Context};
-use bind::interpreter::decode_bind_rules::DecodedBindRules;
-use bind::interpreter::match_bind::{match_bind, DeviceProperties, MatchBindData, PropertyKey};
-use cm_rust::FidlIntoNative;
-use fidl_fuchsia_driver_development as fdd;
-use fidl_fuchsia_driver_framework as fdf;
-use fidl_fuchsia_driver_framework::{DriverIndexRequest, DriverIndexRequestStream};
-use fidl_fuchsia_io as fio;
-use fidl_fuchsia_sys2 as fsys;
-use fuchsia_async as fasync;
-use fuchsia_component::server::ServiceFs;
-use fuchsia_zircon::{zx_status_t, Status};
-use futures::prelude::*;
-use serde::Deserialize;
-use std::cell::RefCell;
-use std::ops::Deref;
-use std::ops::DerefMut;
-use std::rc::Rc;
-use std::sync::{Arc, Mutex};
+use {
+    anyhow::{self, Context},
+    bind::interpreter::{
+        common::BytecodeError,
+        decode_bind_rules::{DecodedCompositeBindRules, DecodedRules},
+        match_bind::{match_bind, DeviceProperties, MatchBindData, PropertyKey},
+    },
+    cm_rust::FidlIntoNative,
+    fidl_fuchsia_driver_development as fdd, fidl_fuchsia_driver_framework as fdf,
+    fidl_fuchsia_driver_framework::{DriverIndexRequest, DriverIndexRequestStream},
+    fidl_fuchsia_io as fio, fidl_fuchsia_sys2 as fsys, fuchsia_async as fasync,
+    fuchsia_component::server::ServiceFs,
+    fuchsia_zircon::{zx_status_t, Status},
+    futures::prelude::*,
+    serde::Deserialize,
+    std::{
+        cell::RefCell,
+        ops::Deref,
+        ops::DerefMut,
+        rc::Rc,
+        sync::{Arc, Mutex},
+    },
+};
 
 mod package_resolver;
 
@@ -128,7 +132,7 @@ async fn load_driver(
     let bind = io_util::read_file_bytes(&bind)
         .await
         .with_context(|| format!("{}: Failed to read bind", component_url.as_str()))?;
-    let bind = DecodedBindRules::new(bind)
+    let bind = DecodedRules::new(bind)
         .with_context(|| format!("{}: Failed to parse bind", component_url.as_str()))?;
 
     let driver_path = get_rules_string_value(&component, "binary")
@@ -172,13 +176,40 @@ async fn load_boot_drivers(dir: fio::DirectoryProxy) -> Result<Vec<ResolvedDrive
 struct ResolvedDriver {
     component_url: url::Url,
     driver_path: String,
-    bind_rules: DecodedBindRules,
+    bind_rules: DecodedRules,
 }
 
 impl std::fmt::Display for ResolvedDriver {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", &self.component_url)
     }
+}
+
+fn matches_composite_device(
+    rules: &DecodedCompositeBindRules,
+    properties: &DeviceProperties,
+) -> Result<Option<u32>, BytecodeError> {
+    let matches = match_bind(
+        MatchBindData {
+            symbol_table: &rules.symbol_table,
+            instructions: &rules.primary_node.instructions,
+        },
+        properties,
+    )?;
+    if matches {
+        return Ok(Some(0));
+    }
+
+    for (i, node) in rules.additional_nodes.iter().enumerate() {
+        let matches = match_bind(
+            MatchBindData { symbol_table: &rules.symbol_table, instructions: &node.instructions },
+            properties,
+        )?;
+        if matches {
+            return Ok(Some((i + 1) as u32));
+        }
+    }
+    Ok(None)
 }
 
 impl ResolvedDriver {
@@ -206,18 +237,40 @@ impl ResolvedDriver {
     fn matches(
         &self,
         properties: &DeviceProperties,
-    ) -> Result<bool, bind::interpreter::common::BytecodeError> {
-        match_bind(
-            MatchBindData {
-                symbol_table: &self.bind_rules.symbol_table,
-                instructions: &self.bind_rules.instructions,
-            },
-            properties,
-        )
-        .map_err(|e| {
-            log::error!("Driver {}: bind error: {}", self, e);
-            e
-        })
+    ) -> Result<Option<fdf::MatchedDriver>, bind::interpreter::common::BytecodeError> {
+        match &self.bind_rules {
+            DecodedRules::Normal(rules) => {
+                let matches = match_bind(
+                    MatchBindData {
+                        symbol_table: &rules.symbol_table,
+                        instructions: &rules.instructions,
+                    },
+                    properties,
+                )
+                .map_err(|e| {
+                    log::error!("Driver {}: bind error: {}", self, e);
+                    e
+                })?;
+                if !matches {
+                    return Ok(None);
+                }
+                Ok(Some(self.create_matched_driver()))
+            }
+            DecodedRules::Composite(composite) => {
+                let result = matches_composite_device(composite, properties).map_err(|e| {
+                    log::error!("Driver {}: bind error: {}", self, e);
+                    e
+                })?;
+                if result.is_none() {
+                    return Ok(None);
+                }
+                let node_index = result.unwrap();
+                let mut matched_driver = self.create_matched_driver();
+                matched_driver.node_index = Some(node_index);
+                matched_driver.num_nodes = Some((composite.additional_nodes.len() + 1) as u32);
+                Ok(Some(matched_driver))
+            }
+        }
     }
 
     fn create_matched_driver(&self) -> fdf::MatchedDriver {
@@ -233,12 +286,17 @@ impl ResolvedDriver {
 
     fn create_driver_info(&self) -> fdd::DriverInfo {
         let mut driver_url = self.component_url.clone();
+        let bind_rules = match &self.bind_rules {
+            DecodedRules::Normal(rules) => {
+                Some(fdd::BindRulesBytecode::BytecodeV2(rules.instructions.clone()))
+            }
+            // TODO(fxbug.dev/85651): Support compsosite bytecode in DriverInfo.
+            DecodedRules::Composite(_) => None,
+        };
         driver_url.set_fragment(Some(&self.driver_path));
         fdd::DriverInfo {
             url: Some(driver_url.to_string()),
-            bind_rules: Some(fdd::BindRulesBytecode::BytecodeV2(
-                self.bind_rules.instructions.clone(),
-            )),
+            bind_rules: bind_rules,
             ..fdd::DriverInfo::EMPTY
         }
     }
@@ -284,8 +342,8 @@ impl Indexer {
         let properties = node_to_device_property(&properties)?;
 
         for driver in &self.boot_repo {
-            if Ok(true) == driver.matches(&properties) {
-                return Ok(driver.create_matched_driver());
+            if let Ok(Some(m)) = driver.matches(&properties) {
+                return Ok(m);
             }
         }
 
@@ -297,8 +355,8 @@ impl Indexer {
             }
         };
         for driver in base_drivers {
-            if Ok(true) == driver.matches(&properties) {
-                return Ok(driver.create_matched_driver());
+            if let Ok(Some(m)) = driver.matches(&properties) {
+                return Ok(m);
             }
         }
         Err(Status::NOT_FOUND.into_raw())
@@ -321,8 +379,8 @@ impl Indexer {
             .boot_repo
             .iter()
             .chain(base_repo_iter)
-            .filter(|driver| driver.matches(&properties).unwrap_or(false))
-            .map(|driver| driver.create_matched_driver())
+            .filter_map(|driver| driver.matches(&properties).ok())
+            .filter_map(|d| d)
             .collect())
     }
 
@@ -564,6 +622,16 @@ async fn main() -> Result<(), anyhow::Error> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use {
+        bind::{
+            compiler::{
+                CompiledBindRules, CompositeBindRules, CompositeNode, Symbol, SymbolicInstruction,
+                SymbolicInstructionInfo,
+            },
+            parser::bind_library::ValueType,
+        },
+        std::collections::HashMap,
+    };
 
     async fn run_resolver_server(
         stream: fidl_fuchsia_pkg::PackageResolverRequestStream,
@@ -708,7 +776,7 @@ mod tests {
             symbol_table: std::collections::HashMap::new(),
             use_new_bytecode: true,
         };
-        let always_match = DecodedBindRules::new(
+        let always_match = DecodedRules::new(
             bind::bytecode_encoder::encode_v2::encode_to_bytecode_v2(always_match).unwrap(),
         )
         .unwrap();
@@ -762,7 +830,7 @@ mod tests {
             symbol_table: std::collections::HashMap::new(),
             use_new_bytecode: true,
         };
-        let always_match = DecodedBindRules::new(
+        let always_match = DecodedRules::new(
             bind::bytecode_encoder::encode_v2::encode_to_bytecode_v2(always_match).unwrap(),
         )
         .unwrap();
@@ -885,6 +953,118 @@ mod tests {
                 fdf::NodeAddArgs { properties: Some(vec![property]), ..fdf::NodeAddArgs::EMPTY };
             let result = proxy.match_driver(args).await.unwrap();
             assert_eq!(result, Err(Status::NOT_FOUND.into_raw()));
+        }
+        .fuse();
+
+        futures::pin_mut!(index_task, test_task);
+        futures::select! {
+            result = index_task => {
+                panic!("Index task finished: {:?}", result);
+            },
+            () = test_task => {},
+        }
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_bind_composite() {
+        // Create the Composite Bind rules.
+        let primary_node_inst = vec![SymbolicInstructionInfo {
+            location: None,
+            instruction: SymbolicInstruction::AbortIfNotEqual {
+                lhs: Symbol::Key("trembler".to_string(), ValueType::Str),
+                rhs: Symbol::StringValue("thrasher".to_string()),
+            },
+        }];
+
+        let additional_node_inst = vec![
+            SymbolicInstructionInfo {
+                location: None,
+                instruction: SymbolicInstruction::AbortIfNotEqual {
+                    lhs: Symbol::Key("thrasher".to_string(), ValueType::Str),
+                    rhs: Symbol::StringValue("catbird".to_string()),
+                },
+            },
+            SymbolicInstructionInfo {
+                location: None,
+                instruction: SymbolicInstruction::AbortIfNotEqual {
+                    lhs: Symbol::Key("catbird".to_string(), ValueType::Number),
+                    rhs: Symbol::NumberValue(1),
+                },
+            },
+        ];
+
+        let bind_rules = CompositeBindRules {
+            device_name: "mimid".to_string(),
+            symbol_table: HashMap::new(),
+            primary_node: CompositeNode {
+                name: "catbird".to_string(),
+                instructions: primary_node_inst,
+            },
+            additional_nodes: vec![CompositeNode {
+                name: "mockingbird".to_string(),
+                instructions: additional_node_inst,
+            }],
+        };
+
+        let bytecode = CompiledBindRules::CompositeBind(bind_rules).encode_to_bytecode().unwrap();
+        let rules = DecodedRules::new(bytecode).unwrap();
+
+        // Make the composite driver.
+        let base_repo = BaseRepo::Resolved(std::vec![ResolvedDriver {
+            component_url: url::Url::parse("fuchsia-pkg://fuchsia.com/package#driver/my-driver.cm")
+                .unwrap(),
+            driver_path: "meta/my-driver.so".to_string(),
+            bind_rules: rules,
+        },]);
+
+        let (proxy, stream) =
+            fidl::endpoints::create_proxy_and_stream::<fdf::DriverIndexMarker>().unwrap();
+
+        let index = Rc::new(Indexer::new(std::vec![], base_repo));
+
+        let index_task = run_index_server(index.clone(), stream).fuse();
+        let test_task = async move {
+            // Match primary node.
+            let property = fdf::NodeProperty {
+                key: Some(fdf::NodePropertyKey::StringValue("trembler".to_string())),
+                value: Some(fdf::NodePropertyValue::StringValue("thrasher".to_string())),
+                ..fdf::NodeProperty::EMPTY
+            };
+            let args =
+                fdf::NodeAddArgs { properties: Some(vec![property]), ..fdf::NodeAddArgs::EMPTY };
+
+            let result = proxy.match_driver(args).await.unwrap().unwrap();
+            assert_eq!(
+                "fuchsia-pkg://fuchsia.com/package#driver/my-driver.cm",
+                result.url.as_ref().unwrap().as_str(),
+            );
+            assert_eq!(result.node_index, Some(0));
+            assert_eq!(result.num_nodes, Some(2));
+
+            // Match secondary node.
+            let args = fdf::NodeAddArgs {
+                properties: Some(vec![
+                    fdf::NodeProperty {
+                        key: Some(fdf::NodePropertyKey::StringValue("thrasher".to_string())),
+                        value: Some(fdf::NodePropertyValue::StringValue("catbird".to_string())),
+                        ..fdf::NodeProperty::EMPTY
+                    },
+                    fdf::NodeProperty {
+                        key: Some(fdf::NodePropertyKey::StringValue("catbird".to_string())),
+                        value: Some(fdf::NodePropertyValue::IntValue(1)),
+                        ..fdf::NodeProperty::EMPTY
+                    },
+                ]),
+                ..fdf::NodeAddArgs::EMPTY
+            };
+
+            let result = proxy.match_driver(args).await.unwrap().unwrap();
+            assert_eq!(
+                "fuchsia-pkg://fuchsia.com/package#driver/my-driver.cm",
+                result.url.as_ref().unwrap().as_str(),
+            );
+            assert_eq!(result.node_index, Some(1));
+            assert_eq!(result.num_nodes, Some(2));
         }
         .fuse();
 

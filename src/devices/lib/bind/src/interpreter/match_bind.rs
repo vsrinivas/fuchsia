@@ -172,7 +172,7 @@ pub fn match_bytecode(
     bytecode: Vec<u8>,
     properties: &DeviceProperties,
 ) -> Result<bool, BytecodeError> {
-    let decoded_bind_rules = DecodedBindRules::new(bytecode)?;
+    let decoded_bind_rules = DecodedBindRules::from_bytecode(bytecode)?;
     let matcher = DeviceMatcher {
         properties: &properties,
         symbol_table: &decoded_bind_rules.symbol_table,
