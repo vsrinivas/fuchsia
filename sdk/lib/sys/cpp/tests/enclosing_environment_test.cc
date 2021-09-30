@@ -241,10 +241,10 @@ TEST_F(EnclosingEnvTest, OutErrPassing) {
         linfo.url = kHelperProc;
         linfo.arguments.emplace({"--echo", "--cout=potato", "--cerr=tomato"});
 
-        linfo.out = FileDescriptor::New();
+        linfo.out = std::make_unique<FileDescriptor>();
         linfo.out->type0 = PA_FD;
         linfo.out->handle0 = cout_reader.OpenSocket();
-        linfo.err = FileDescriptor::New();
+        linfo.err = std::make_unique<FileDescriptor>();
         linfo.err->type0 = PA_FD;
         linfo.err->handle0 = cerr_reader.OpenSocket();
 

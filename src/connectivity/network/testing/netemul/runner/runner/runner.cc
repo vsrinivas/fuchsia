@@ -78,7 +78,7 @@ void Runner::RunComponent(fuchsia::sys::PackagePtr package, fuchsia::sys::Startu
       {std::string(kDefinitionArg), std::string(kDefinitionRoot), "/", fp.resource_path()}));
 
   if (!linfo.flat_namespace) {
-    linfo.flat_namespace = fuchsia::sys::FlatNamespace::New();
+    linfo.flat_namespace = std::make_unique<fuchsia::sys::FlatNamespace>();
   }
   linfo.flat_namespace->paths.emplace_back(kDefinitionRoot);
   linfo.flat_namespace->directories.push_back(std::move(package->directory));

@@ -136,7 +136,7 @@ bool ProfilerLogListener::ConnectToLogger(sys::ComponentContext* component_conte
   }
 
   auto log_service = component_context->svc()->Connect<fuchsia::logger::Log>();
-  auto options = fuchsia::logger::LogFilterOptions::New();
+  auto options = std::make_unique<fuchsia::logger::LogFilterOptions>();
   options->filter_by_pid = true;
   options->pid = pid;
   // make tags non-null.

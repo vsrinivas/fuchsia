@@ -14,7 +14,7 @@ fuchsia::sys::FileDescriptorPtr CloneFileDescriptor(int fd) {
   zx_status_t status = fdio_fd_clone(fd, handle.reset_and_get_address());
   if (status != ZX_OK)
     return nullptr;
-  fuchsia::sys::FileDescriptorPtr result = fuchsia::sys::FileDescriptor::New();
+  fuchsia::sys::FileDescriptorPtr result = std::make_unique<fuchsia::sys::FileDescriptor>();
   result->type0 = PA_HND(PA_FD, fd);
   result->handle0 = std::move(handle);
   return result;

@@ -200,7 +200,7 @@ AgentContextImpl::AgentContextImpl(const AgentContextInfo& info,
       agent_services_factory_(info.agent_services_factory),
       agent_node_(std::move(agent_node)),
       on_crash_(std::move(on_crash)) {
-  auto service_list = fuchsia::sys::ServiceList::New();
+  auto service_list = std::make_unique<fuchsia::sys::ServiceList>();
   service_provider_impl_.AddBinding(service_list->provider.NewRequest());
 
   // Agent services factory is unavailable during testing.

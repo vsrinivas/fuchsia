@@ -392,7 +392,7 @@ class TouchInputBase : public gtest::TestWithEnvironmentFixture,
     //
     // Hence, a tap in the center of the display's top-right quadrant is observed by the child
     // view as a tap in the center of its top-left quadrant.
-    auto touch = fuchsia::ui::input::TouchscreenReport::New();
+    auto touch = std::make_unique<fuchsia::ui::input::TouchscreenReport>();
     switch (tap_location) {
       case TapLocation::kTopLeft:
         // center of top right quadrant -> ends up as center of top left quadrant

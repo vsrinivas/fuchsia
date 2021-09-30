@@ -106,7 +106,7 @@ TEST_F(AppClientTest, Run_Success) {
 }
 
 TEST_F(AppClientTest, RunWithParams_Success) {
-  fuchsia::sys::ServiceListPtr additional_services = fuchsia::sys::ServiceList::New();
+  fuchsia::sys::ServiceListPtr additional_services = std::make_unique<fuchsia::sys::ServiceList>();
   additional_services->names.push_back(kServiceName);
   // We just need |provider_request| to stay around till the end of this test.
   auto provider_request = additional_services->provider.NewRequest();

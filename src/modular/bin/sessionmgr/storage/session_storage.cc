@@ -49,7 +49,7 @@ fuchsia::modular::internal::StoryDataPtr SessionStorage::GetStoryData(std::strin
   fuchsia::modular::internal::StoryDataPtr value{};
   auto it = story_data_backing_store_.find(story_name);
   if (it != story_data_backing_store_.end()) {
-    value = fuchsia::modular::internal::StoryData::New();
+    value = std::make_unique<fuchsia::modular::internal::StoryData>();
     it->second.Clone(value.get());
   }
   return value;

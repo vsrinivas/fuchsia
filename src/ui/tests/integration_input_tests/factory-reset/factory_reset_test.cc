@@ -159,7 +159,7 @@ class FactoryResetTest : public gtest::TestWithEnvironmentFixture {
   // Inject directly into Root Presenter, using fuchsia.ui.input FIDLs.
   void InjectInput() {
     // Register an input device against Root Presenter.
-    auto descriptor = fuchsia::ui::input::MediaButtonsDescriptor::New();
+    auto descriptor = std::make_unique<fuchsia::ui::input::MediaButtonsDescriptor>();
     *descriptor = {.buttons = 6};
 
     fuchsia::ui::input::DeviceDescriptor device{.media_buttons = std::move(descriptor)};
@@ -169,7 +169,7 @@ class FactoryResetTest : public gtest::TestWithEnvironmentFixture {
     FX_LOGS(INFO) << "Registered media buttons input device.";
 
     // Inject one media buttons input report, with only reset set.
-    auto media_buttons_report = fuchsia::ui::input::MediaButtonsReport::New();
+    auto media_buttons_report = std::make_unique<fuchsia::ui::input::MediaButtonsReport>();
     *media_buttons_report = {
         .reset = true,
     };

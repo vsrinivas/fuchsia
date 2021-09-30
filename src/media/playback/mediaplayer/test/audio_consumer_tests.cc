@@ -134,7 +134,7 @@ TEST_F(AudioConsumerTests, ConsumerClosed) {
     audio_consumer.set_error_handler(
         [this](zx_status_t status) { audio_consumer_connection_closed_ = true; });
 
-    auto compression = fuchsia::media::Compression::New();
+    auto compression = std::make_unique<fuchsia::media::Compression>();
     compression->type = fuchsia::media::AUDIO_ENCODING_AACLATM;
 
     std::vector<zx::vmo> vmos(kNumVmos);
@@ -193,7 +193,7 @@ TEST_F(AudioConsumerTests, CreateStreamSink) {
   bool sink_connection_closed = false;
   got_status_ = false;
 
-  auto compression = fuchsia::media::Compression::New();
+  auto compression = std::make_unique<fuchsia::media::Compression>();
   compression->type = fuchsia::media::AUDIO_ENCODING_AACLATM;
 
   std::vector<zx::vmo> vmos(kNumVmos);
@@ -228,7 +228,7 @@ TEST_F(AudioConsumerTests, CreateStreamSink) {
 
   RunLoopUntil([this]() { return got_status_; });
 
-  auto packet = fuchsia::media::StreamPacket::New();
+  auto packet = std::make_unique<fuchsia::media::StreamPacket>();
   packet->payload_buffer_id = 0;
   packet->payload_size = kVmoSize;
   packet->payload_offset = 0;
@@ -252,7 +252,7 @@ TEST_F(AudioConsumerTests, SetRate) {
   bool sink_connection_closed = false;
   got_status_ = false;
 
-  auto compression = fuchsia::media::Compression::New();
+  auto compression = std::make_unique<fuchsia::media::Compression>();
   compression->type = fuchsia::media::AUDIO_ENCODING_AACLATM;
 
   std::vector<zx::vmo> vmos(kNumVmos);
@@ -320,7 +320,7 @@ TEST_F(AudioConsumerTests, UnsupportedCodec) {
   bool sink_connection_closed = false;
   got_status_ = false;
 
-  auto compression = fuchsia::media::Compression::New();
+  auto compression = std::make_unique<fuchsia::media::Compression>();
   compression->type = "not a real compression type";
 
   std::vector<zx::vmo> vmos(kNumVmos);
@@ -392,7 +392,7 @@ TEST_F(AudioConsumerTests, MultipleSinks) {
       EXPECT_EQ(status, ZX_OK);
     }
 
-    auto compression = fuchsia::media::Compression::New();
+    auto compression = std::make_unique<fuchsia::media::Compression>();
     compression->type = fuchsia::media::AUDIO_ENCODING_LPCM;
 
     audio_consumer_->CreateStreamSink(std::move(vmos), stream_type, std::move(compression),
@@ -430,7 +430,7 @@ TEST_F(AudioConsumerTests, MultipleSinks) {
       EXPECT_EQ(status, ZX_OK);
     }
 
-    auto compression = fuchsia::media::Compression::New();
+    auto compression = std::make_unique<fuchsia::media::Compression>();
     compression->type = fuchsia::media::AUDIO_ENCODING_LPCM;
 
     audio_consumer_->CreateStreamSink(std::move(vmos), stream_type, std::move(compression),
@@ -471,7 +471,7 @@ TEST_F(AudioConsumerTests, OverlappingStreamSink) {
   stream_type.channels = kSamplesPerFrame;
   stream_type.sample_format = fuchsia::media::AudioSampleFormat::SIGNED_16;
 
-  auto packet = fuchsia::media::StreamPacket::New();
+  auto packet = std::make_unique<fuchsia::media::StreamPacket>();
   packet->payload_buffer_id = 0;
   packet->payload_size = kVmoSize;
   packet->payload_offset = 0;
@@ -480,10 +480,10 @@ TEST_F(AudioConsumerTests, OverlappingStreamSink) {
   {
     fuchsia::media::StreamSinkPtr sink1;
 
-    auto compression1 = fuchsia::media::Compression::New();
+    auto compression1 = std::make_unique<fuchsia::media::Compression>();
     compression1->type = fuchsia::media::AUDIO_ENCODING_LPCM;
 
-    auto compression2 = fuchsia::media::Compression::New();
+    auto compression2 = std::make_unique<fuchsia::media::Compression>();
     compression2->type = fuchsia::media::AUDIO_ENCODING_LPCM;
 
     std::vector<zx::vmo> vmos1(kNumVmos);
@@ -570,7 +570,7 @@ TEST_F(AudioConsumerTests, CheckPtsRate) {
 
   RunLoopUntil([this]() { return got_status_; });
 
-  auto packet = fuchsia::media::StreamPacket::New();
+  auto packet = std::make_unique<fuchsia::media::StreamPacket>();
   packet->payload_buffer_id = 0;
   packet->payload_size = kVmoSize;
   packet->payload_offset = 0;
@@ -614,7 +614,7 @@ TEST_F(AudioConsumerTests, BufferOrdering) {
   audio_consumer_->Start(fuchsia::media::AudioConsumerStartFlags::SUPPLY_DRIVEN, 0,
                          fuchsia::media::NO_TIMESTAMP);
 
-  auto packet = fuchsia::media::StreamPacket::New();
+  auto packet = std::make_unique<fuchsia::media::StreamPacket>();
   packet->payload_buffer_id = 0;
   packet->payload_size = kVmoSize;
   packet->payload_offset = 0;
@@ -624,7 +624,7 @@ TEST_F(AudioConsumerTests, BufferOrdering) {
   sink->SendPacket(*packet, [&sent_packet]() { sent_packet = true; });
   RunLoopUntil([&sent_packet]() { return sent_packet; });
 
-  packet = fuchsia::media::StreamPacket::New();
+  packet = std::make_unique<fuchsia::media::StreamPacket>();
   packet->payload_buffer_id = 1;
   packet->payload_size = kVmoSize;
   packet->payload_offset = 0;
@@ -699,7 +699,7 @@ TEST_F(AudioConsumerTests, DiscardAllPackets) {
   sink.set_error_handler(
       [&sink_connection_closed](zx_status_t status) { sink_connection_closed = true; });
 
-  auto packet = fuchsia::media::StreamPacket::New();
+  auto packet = std::make_unique<fuchsia::media::StreamPacket>();
   packet->payload_buffer_id = 0;
   packet->payload_size = kVmoSize;
   packet->payload_offset = 0;

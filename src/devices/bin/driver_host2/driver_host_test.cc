@@ -59,7 +59,7 @@ class TestFile : public fio::testing::File_TestBase {
     fidl::WireSyncClient<fuchsia_io::File> file(std::move(endpoints->client));
     auto result = file.GetBuffer(flags);
     EXPECT_TRUE(result.ok());
-    auto buffer = fmem::Buffer::New();
+    auto buffer = std::make_unique<fmem::Buffer>();
     buffer->vmo = std::move(result->buffer->vmo);
     buffer->size = result->buffer->size;
     callback(ZX_OK, std::move(buffer));

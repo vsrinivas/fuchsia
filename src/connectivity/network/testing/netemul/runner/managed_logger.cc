@@ -175,7 +175,7 @@ fuchsia::sys::FileDescriptorPtr ManagedLoggerCollection::CreateLogger(const std:
       }
     }
   });
-  auto ret = fuchsia::sys::FileDescriptor::New();
+  auto ret = std::make_unique<fuchsia::sys::FileDescriptor>();
   ret->handle0 = std::move(handle);
   ret->type0 = PA_FD;
   return ret;

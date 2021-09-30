@@ -60,7 +60,7 @@ struct WlantapCtl : fidl::WireServer<wlantap::WlantapCtl> {
     }
 
     // Convert to HLCPP by transiting through fidl bytes.
-    auto phy_config = ::fuchsia::wlan::tap::WlantapPhyConfig::New();
+    auto phy_config = std::make_unique<::fuchsia::wlan::tap::WlantapPhyConfig>();
     {
       // TODO(fxbug.dev/74878): The conversion code here is fragile. We should
       // replace it with the officially supported API once that is implemented.

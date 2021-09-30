@@ -320,7 +320,7 @@ fuchsia::sys::ServiceListPtr BasemgrImpl::CreateAndServeSessionLauncherComponent
       fuchsia::io::OPEN_RIGHT_READABLE | fuchsia::io::OPEN_RIGHT_WRITABLE,
       dir_handle.NewRequest().TakeChannel());
 
-  auto services = fuchsia::sys::ServiceList::New();
+  auto services = std::make_unique<fuchsia::sys::ServiceList>();
   services->names.push_back(fuchsia::modular::session::Launcher::Name_);
   services->host_directory = dir_handle.TakeChannel();
 

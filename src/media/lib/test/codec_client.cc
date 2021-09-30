@@ -471,7 +471,7 @@ std::unique_ptr<fuchsia::media::Packet> CodecClient::BlockingGetFreeInputPacket(
     // caller queues the input packet.
     ZX_ASSERT(input_free_packet_bits_[free_packet_index]);
   }  // ~lock
-  std::unique_ptr<fuchsia::media::Packet> packet = fuchsia::media::Packet::New();
+  std::unique_ptr<fuchsia::media::Packet> packet = std::make_unique<fuchsia::media::Packet>();
   packet->mutable_header()->set_buffer_lifetime_ordinal(kInputBufferLifetimeOrdinal);
   packet->mutable_header()->set_packet_index(free_packet_index);
   return packet;

@@ -231,7 +231,7 @@ void MdnsImpl::OnPublication(fuchsia::net::mdns::PublicationCause publication_ca
 
   std::cout << "\n";
 
-  auto publication = fuchsia::net::mdns::Publication::New();
+  auto publication = std::make_unique<fuchsia::net::mdns::Publication>();
   publication->port = publication_port_;
   publication->text = publication_text_;
 

@@ -23,7 +23,7 @@ class FakeLoader : public fuchsia::sys::Loader {
       done(nullptr);
       return;
     }
-    auto package = fuchsia::sys::Package::New();
+    auto package = std::make_unique<fuchsia::sys::Package>();
     done(std::move(package));
   }
 

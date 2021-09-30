@@ -41,7 +41,7 @@ AppClientBase::AppClientBase(fuchsia::sys::Launcher* const launcher,
       FX_LOGS(ERROR) << "Unable to create directory at " << data_origin;
       return;
     }
-    launch_info.flat_namespace = fuchsia::sys::FlatNamespace::New();
+    launch_info.flat_namespace = std::make_unique<fuchsia::sys::FlatNamespace>();
     launch_info.flat_namespace->paths.push_back("/data");
 
     fbl::unique_fd dir(open(data_origin.c_str(), O_DIRECTORY | O_RDONLY));
@@ -64,7 +64,7 @@ AppClientBase::AppClientBase(fuchsia::sys::Launcher* const launcher,
 
   if (flat_namespace) {
     if (!launch_info.flat_namespace) {
-      launch_info.flat_namespace = fuchsia::sys::FlatNamespace::New();
+      launch_info.flat_namespace = std::make_unique<fuchsia::sys::FlatNamespace>();
     }
 
     for (size_t i = 0; i < flat_namespace->paths.size(); ++i) {

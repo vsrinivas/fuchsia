@@ -117,7 +117,7 @@ fpromise::promise<void, zx_status_t> LaunchBasemgrV1(
   // Build a LaunchInfo with the config directory above mapped to /config_override/data.
   fuchsia::sys::LaunchInfo launch_info;
   launch_info.url = kBasemgrV1Url;
-  launch_info.flat_namespace = fuchsia::sys::FlatNamespace::New();
+  launch_info.flat_namespace = std::make_unique<fuchsia::sys::FlatNamespace>();
   launch_info.flat_namespace->paths.push_back(modular_config::kOverriddenConfigDir);
   launch_info.flat_namespace->directories.push_back(dir_handle.TakeChannel());
 

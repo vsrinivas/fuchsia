@@ -239,7 +239,7 @@ class WebEngineTest : public gtest::TestWithEnvironmentFixture, public InputPosi
   void InjectInput(int32_t x, int32_t y) {
     using fuchsia::ui::input::InputReport;
     // Device parameters
-    auto parameters = fuchsia::ui::input::TouchscreenDescriptor::New();
+    auto parameters = std::make_unique<fuchsia::ui::input::TouchscreenDescriptor>();
     *parameters = {.x = {.range = {.min = 0, .max = static_cast<int32_t>(display_width())}},
                    .y = {.range = {.min = 0, .max = static_cast<int32_t>(display_height())}},
                    .max_finger_id = 10};
@@ -256,7 +256,7 @@ class WebEngineTest : public gtest::TestWithEnvironmentFixture, public InputPosi
 
     {
       // Inject input report.
-      auto touch = fuchsia::ui::input::TouchscreenReport::New();
+      auto touch = std::make_unique<fuchsia::ui::input::TouchscreenReport>();
       *touch = {.touches = {{.finger_id = 1, .x = x, .y = y}}};
       InputReport report{.event_time = static_cast<uint64_t>(zx::clock::get_monotonic().get()),
                          .touchscreen = std::move(touch)};
@@ -266,7 +266,7 @@ class WebEngineTest : public gtest::TestWithEnvironmentFixture, public InputPosi
 
     {
       // Inject conclusion (empty) report.
-      auto touch = fuchsia::ui::input::TouchscreenReport::New();
+      auto touch = std::make_unique<fuchsia::ui::input::TouchscreenReport>();
       InputReport report{.event_time = static_cast<uint64_t>(zx::clock::get_monotonic().get()),
                          .touchscreen = std::move(touch)};
       connection->DispatchReport(std::move(report));

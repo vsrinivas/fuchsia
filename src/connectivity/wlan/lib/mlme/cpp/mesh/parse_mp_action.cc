@@ -53,28 +53,28 @@ static void HandleCommonMpElement(element_id::ElementId id, fbl::Span<const uint
       break;
     case element_id::kHtCapabilities:
       if (auto ht_cap = common::ParseHtCapabilities(raw_body)) {
-        out->ht_cap = wlan_internal::HtCapabilities::New();
+        out->ht_cap = std::make_unique<wlan_internal::HtCapabilities>();
         static_assert(sizeof(out->ht_cap->bytes) == sizeof(*ht_cap));
         memcpy(out->ht_cap->bytes.data(), ht_cap, sizeof(*ht_cap));
       }
       break;
     case element_id::kHtOperation:
       if (auto ht_op = common::ParseHtOperation(raw_body)) {
-        out->ht_op = wlan_internal::HtOperation::New();
+        out->ht_op = std::make_unique<wlan_internal::HtOperation>();
         static_assert(sizeof(out->ht_op->bytes) == sizeof(*ht_op));
         memcpy(out->ht_op->bytes.data(), ht_op, sizeof(*ht_op));
       }
       break;
     case element_id::kVhtCapabilities:
       if (auto vht_cap = common::ParseVhtCapabilities(raw_body)) {
-        out->vht_cap = wlan_internal::VhtCapabilities::New();
+        out->vht_cap = std::make_unique<wlan_internal::VhtCapabilities>();
         static_assert(sizeof(out->vht_cap->bytes) == sizeof(*vht_cap));
         memcpy(out->vht_cap->bytes.data(), vht_cap, sizeof(*vht_cap));
       }
       break;
     case element_id::kVhtOperation:
       if (auto vht_op = common::ParseVhtOperation(raw_body)) {
-        out->vht_op = wlan_internal::VhtOperation::New();
+        out->vht_op = std::make_unique<wlan_internal::VhtOperation>();
         static_assert(sizeof(out->vht_op->bytes) == sizeof(*vht_op));
         memcpy(out->vht_op->bytes.data(), vht_op, sizeof(*vht_op));
       }

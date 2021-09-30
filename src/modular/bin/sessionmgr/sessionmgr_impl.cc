@@ -375,7 +375,7 @@ void SessionmgrImpl::InitializeSessionShell(
 
   // |service_list| enumerates which services are made available to the session
   // shell.
-  auto service_list = fuchsia::sys::ServiceList::New();
+  auto service_list = std::make_unique<fuchsia::sys::ServiceList>();
   for (const auto& service_name : agent_runner_->GetAgentServices()) {
     service_list->names.push_back(service_name);
   }

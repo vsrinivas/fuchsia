@@ -436,7 +436,7 @@ TypeConverter<fuchsia::media::FormatDetailsPtr, media_player::StreamType>::Conve
     return nullptr;
   }
 
-  auto result = fuchsia::media::FormatDetails::New();
+  auto result = std::make_unique<fuchsia::media::FormatDetails>();
   result->set_format_details_version_ordinal(0);
   result->set_mime_type(mime_type);
   if (input.encoding_parameters()) {

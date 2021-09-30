@@ -32,7 +32,7 @@ zx::socket AddStdio(int fd, fuchsia::sys::LaunchInfo* launch_info) {
   if (status != ZX_OK)
     return zx::socket();
 
-  auto io = fuchsia::sys::FileDescriptor::New();
+  auto io = std::make_unique<fuchsia::sys::FileDescriptor>();
   io->type0 = PA_HND(PA_FD, fd);
   io->handle0 = std::move(target);
 

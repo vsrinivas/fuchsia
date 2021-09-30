@@ -31,7 +31,7 @@ void InputDeviceImpl::DispatchReport(fuchsia::ui::input::InputReport report) {
   TRACE_FLOW_BEGIN("input", "report_to_presenter", report.trace_id);
   if (descriptor_.media_buttons) {
     if (!last_report_) {
-      last_report_ = fuchsia::ui::input::InputReport::New();
+      last_report_ = std::make_unique<fuchsia::ui::input::InputReport>();
     }
     fidl::Clone(report, last_report_.get());
   }

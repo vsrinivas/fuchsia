@@ -170,7 +170,7 @@ static bool AddAuxDirToLaunchInfo(const char* local_path, const char* remote_pat
 }
 
 static bool RunTraceComponentAndWait(const std::string& app, const std::vector<std::string>& args) {
-  auto flat_namespace = fuchsia::sys::FlatNamespace::New();
+  auto flat_namespace = std::make_unique<fuchsia::sys::FlatNamespace>();
   // Add a path to our /pkg so trace can read tspec files.
   if (!AddAuxDirToLaunchInfo(kTestPackagePath, kSpawnedTestPackagePath, flat_namespace.get())) {
     return false;

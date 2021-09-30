@@ -400,9 +400,9 @@ TEST(Xdr, FidlOptional) {
   json_xdr_unittest::OptionalData t0;
 
   t0.string = "1";
-  t0.struct_ = json_xdr_unittest::Struct::New();
+  t0.struct_ = std::make_unique<json_xdr_unittest::Struct>();
   t0.struct_->item = 12;
-  t0.union_ = json_xdr_unittest::Union::New();
+  t0.union_ = std::make_unique<json_xdr_unittest::Union>();
   t0.union_->set_int32(13);
 
   XdrWrite(&json, &t0, XdrOptionalData);
@@ -523,11 +523,11 @@ TEST(Xdr, FidlRequiredRepeatedOptional) {
   json_xdr_unittest::RequiredRepeatedOptionalData t0;
   t0.string.push_back("1");
 
-  json_xdr_unittest::StructPtr s = json_xdr_unittest::Struct::New();
+  json_xdr_unittest::StructPtr s = std::make_unique<json_xdr_unittest::Struct>();
   s->item = 12;
   t0.struct_.push_back(std::move(s));
 
-  json_xdr_unittest::UnionPtr u = json_xdr_unittest::Union::New();
+  json_xdr_unittest::UnionPtr u = std::make_unique<json_xdr_unittest::Union>();
   u->set_int32(13);
   t0.union_.push_back(std::move(u));
 
@@ -712,12 +712,12 @@ TEST(Xdr, FidlOptionalRepeatedOptional) {
   json_xdr_unittest::OptionalRepeatedOptionalData t0;
   t0.string.emplace({"1"});
 
-  json_xdr_unittest::StructPtr s = json_xdr_unittest::Struct::New();
+  json_xdr_unittest::StructPtr s = std::make_unique<json_xdr_unittest::Struct>();
   s->item = 12;
   t0.struct_.emplace();
   t0.struct_->push_back(std::move(s));
 
-  json_xdr_unittest::UnionPtr u = json_xdr_unittest::Union::New();
+  json_xdr_unittest::UnionPtr u = std::make_unique<json_xdr_unittest::Union>();
   u->set_int32(13);
   t0.union_.emplace();
   t0.union_->push_back(std::move(u));

@@ -282,7 +282,7 @@ class RemoteEnd : public fuchsia::net::mdns::PublicationResponder2 {
   void OnPublication(bool query, fidl::StringPtr subtype,
                      std::vector<fuchsia::net::IpAddress> source_addresses,
                      OnPublicationCallback callback) override {
-    auto publication = fuchsia::net::mdns::Publication::New();
+    auto publication = std::make_unique<fuchsia::net::mdns::Publication>();
     publication->port = kPort;
     publication->text = kText;
     publication->srv_priority = kPriority;

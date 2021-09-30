@@ -32,7 +32,7 @@ void FakeSettingsIntl::Watch(WatchCallback callback) { watch_callback_ = std::mo
 
 // |fuchsia::settings::Intl|
 void FakeSettingsIntl::Set(fuchsia::settings::IntlSettings settings, SetCallback callback) {
-  settings_ = fuchsia::settings::IntlSettings::New();
+  settings_ = std::make_unique<fuchsia::settings::IntlSettings>();
   zx_status_t status = settings.Clone(settings_.get());
 
   if (status == ZX_OK) {

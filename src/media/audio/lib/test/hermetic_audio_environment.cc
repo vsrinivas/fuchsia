@@ -46,7 +46,7 @@ std::function<fuchsia::sys::LaunchInfo()> LaunchInfoWithIsolatedDevmgrForUrl(
                             .TakeChannel();
     fuchsia::sys::LaunchInfo launch_info;
     launch_info.url = url;
-    launch_info.flat_namespace = fuchsia::sys::FlatNamespace::New();
+    launch_info.flat_namespace = std::make_unique<fuchsia::sys::FlatNamespace>();
     launch_info.flat_namespace->paths.push_back("/dev");
     launch_info.flat_namespace->directories.push_back(std::move(devfs));
 
@@ -114,8 +114,9 @@ HermeticAudioEnvironment::HermeticAudioEnvironment(Options options) : options_(o
     cv_.wait(lock);
   }
 
-  // IsolatedDevmgr will not serve any messages on the directory until /dev/sys/platform/00:00:2f/virtual_audio
-  // is ready. Run a simple Describe operation to ensure the devmgr is ready for traffic.
+  // IsolatedDevmgr will not serve any messages on the directory until
+  // /dev/sys/platform/00:00:2f/virtual_audio is ready. Run a simple Describe operation to ensure
+  // the devmgr is ready for traffic.
   //
   // Note we specifically use the |TextFixture| overrides of the virtual methods. This is needed
   // because some test fixtures override these methods and include some asserts that will not

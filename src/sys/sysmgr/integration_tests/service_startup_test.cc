@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fidl/examples/echo/cpp/fidl.h>
 #include <fuchsia/io/cpp/fidl.h>
 #include <fuchsia/logger/cpp/fidl.h>
 #include <fuchsia/sys/cpp/fidl.h>
@@ -13,7 +14,6 @@
 #include <lib/sys/cpp/service_directory.h>
 #include <stdio.h>
 
-#include <fidl/examples/echo/cpp/fidl.h>
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 #include <src/lib/files/glob.h>
@@ -66,7 +66,7 @@ class TestSysmgr : public ::gtest::RealLoopFixture {
                   std::vector<std::string> expected_patterns) {
     fidl::InterfaceHandle<fuchsia::logger::LogListenerSafe> listener_handle;
     SimpleLogCollector collector(listener_handle.NewRequest(), dispatcher());
-    auto filter_options = fuchsia::logger::LogFilterOptions::New();
+    auto filter_options = std::make_unique<fuchsia::logger::LogFilterOptions>();
     filter_options->tags = tags;
 
     // FIXME(45589) can't use DumpLogs without a fence

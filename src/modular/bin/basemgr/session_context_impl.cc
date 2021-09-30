@@ -73,7 +73,7 @@ fuchsia::sys::FlatNamespacePtr SessionContextImpl::CreateAndServeConfigNamespace
                                                   std::move(config_contents));
   config_dir_->Serve(fuchsia::io::OPEN_RIGHT_READABLE, std::move(config_request_channel));
 
-  auto flat_namespace = fuchsia::sys::FlatNamespace::New();
+  auto flat_namespace = std::make_unique<fuchsia::sys::FlatNamespace>();
   flat_namespace->paths.push_back(modular_config::kOverriddenConfigDir);
   flat_namespace->directories.push_back(std::move(config_dir_channel));
 

@@ -84,7 +84,7 @@ bool StubLogListener::ListenFiltered(const std::shared_ptr<sys::ServiceDirectory
     return false;
   }
   auto log_service = svc->Connect<fuchsia::logger::Log>();
-  auto options = fuchsia::logger::LogFilterOptions::New();
+  auto options = std::make_unique<fuchsia::logger::LogFilterOptions>();
   options->filter_by_pid = true;
   options->pid = pid;
   options->verbosity = 0;
@@ -98,7 +98,7 @@ bool StubLogListener::DumpLogs(fuchsia::logger::LogPtr log_service, DoneCallback
   if (!log_listener_) {
     return false;
   }
-  auto options = fuchsia::logger::LogFilterOptions::New();
+  auto options = std::make_unique<fuchsia::logger::LogFilterOptions>();
   log_service->DumpLogsSafe(std::move(log_listener_), std::move(options));
   done_callback_ = std::move(done_callback);
   return true;

@@ -46,7 +46,7 @@ TEST(FidlExamples, Unions) {
   ASSERT_EQ(str_val.Which(), fuchsia::examples::JsonValue::Tag::kStringValue);
   ASSERT_TRUE(str_val.is_string_value());
 
-  fuchsia::examples::JsonValuePtr other_int_val = fuchsia::examples::JsonValue::New();
+  fuchsia::examples::JsonValuePtr other_int_val = std::make_unique<fuchsia::examples::JsonValue>();
   other_int_val->set_int_value(5);
   ASSERT_EQ(other_int_val->int_value(), 5);
 }

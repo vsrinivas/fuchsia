@@ -289,7 +289,7 @@ class StoryControllerImpl::LaunchModuleCall : public Operation<> {
 
     fuchsia::sys::ServiceProviderPtr module_context_provider;
     auto module_context_provider_request = module_context_provider.NewRequest();
-    auto service_list = fuchsia::sys::ServiceList::New();
+    auto service_list = std::make_unique<fuchsia::sys::ServiceList>();
     for (const auto& service_name :
          story_controller_impl_->story_provider_impl_->component_context_info()
              .agent_runner->GetAgentServices()) {

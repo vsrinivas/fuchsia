@@ -141,7 +141,7 @@ class RunnerImpl : public fuchsia::sys::Runner {
     // Pass-through some arguments directly to the VMM package.
     launch_info.url = "fuchsia-pkg://fuchsia.com/vmm#meta/vmm.cmx";
     launch_info.arguments = std::move(startup_info.launch_info.arguments);
-    launch_info.flat_namespace = fuchsia::sys::FlatNamespace::New();
+    launch_info.flat_namespace = std::make_unique<fuchsia::sys::FlatNamespace>();
     for (size_t i = 0; i < startup_info.flat_namespace.paths.size(); ++i) {
       auto& path = startup_info.flat_namespace.paths[i];
       auto& directory = startup_info.flat_namespace.directories[i];
@@ -154,7 +154,7 @@ class RunnerImpl : public fuchsia::sys::Runner {
 
     // We list the GuestConfigProvider service, so that the VMM can connect back
     // to the guest runner in order to get its GuestConfig.
-    auto service_list = fuchsia::sys::ServiceList::New();
+    auto service_list = std::make_unique<fuchsia::sys::ServiceList>();
     service_list->names.emplace_back(fuchsia::virtualization::GuestConfigProvider::Name_);
     ServiceProviderImpl::CreateAndServe(service_list->provider.NewRequest(), std::move(pkg_dir),
                                         std::move(svc_dir));

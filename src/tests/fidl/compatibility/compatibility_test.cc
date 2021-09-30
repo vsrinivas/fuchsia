@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fidl/test/compatibility/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/async/default.h>
@@ -18,7 +19,6 @@
 #include <regex>
 #include <vector>
 
-#include <fidl/test/compatibility/cpp/fidl.h>
 #include <gtest/gtest.h>
 
 #include "lib/fidl/cpp/binding_set.h"
@@ -917,7 +917,7 @@ void InitializeStruct(Struct* s) {
 
   // unions
   s->unions.u.set_s(random_string);
-  s->unions.nullable_u = this_is_a_union::New();
+  s->unions.nullable_u = std::make_unique<this_is_a_union>();
   s->unions.nullable_u->set_b(bool_distribution(rand_engine));
 
   s->table.set_s(random_string);

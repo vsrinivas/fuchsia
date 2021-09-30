@@ -279,7 +279,7 @@ TEST_F(AnnotationManagerTest, InvalidAndNonExistentViewRef) {
 
   // Create Annotation ViewHolder using an empty ViewRef.
   {
-    auto annotation_view_ref = fuchsia::ui::views::ViewRef::New();
+    auto annotation_view_ref = std::make_unique<fuchsia::ui::views::ViewRef>();
     auto [annotation_view_token, annotation_view_holder_token] = scenic::ViewTokenPair::New();
     bool created = false;
     annotation_manager()->RequestCreate(kAnnotationHandlerId, std::move(*annotation_view_ref),

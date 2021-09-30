@@ -346,7 +346,7 @@ void TestHarnessImpl::Run(fuchsia::modular::testing::TestHarnessSpec spec) {
   fuchsia::sys::LaunchInfo launch_info;
   launch_info.url = kBasemgrUrl;
   launch_info.directory_request = basemgr_svc_dir.NewRequest().TakeChannel();
-  launch_info.flat_namespace = fuchsia::sys::FlatNamespace::New();
+  launch_info.flat_namespace = std::make_unique<fuchsia::sys::FlatNamespace>();
   launch_info.flat_namespace->paths.push_back(modular_config::kOverriddenConfigDir);
   launch_info.flat_namespace->directories.push_back(std::move(client));
 

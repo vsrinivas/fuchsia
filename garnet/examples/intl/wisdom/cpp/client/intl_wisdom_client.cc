@@ -59,7 +59,7 @@ void IntlWisdomClient::Start(std::string server_url) {
 }
 
 ProfilePtr MakeIntlProfile(const TimeZone& time_zone) {
-  auto intl_profile = Profile::New();
+  auto intl_profile = std::make_unique<Profile>();
 
   const std::string time_zone_key = GetShortTimeZoneKey(time_zone);
 

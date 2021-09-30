@@ -43,7 +43,7 @@ fpromise::result<std::unique_ptr<DeviceInstance>, zx_status_t> DeviceInstance::C
     FX_PLOGS(ERROR, status);
     return fpromise::error(status);
   }
-  auto additional_services = fuchsia::sys::ServiceList::New();
+  auto additional_services = std::make_unique<fuchsia::sys::ServiceList>();
   additional_services->names.push_back(fuchsia::camera2::hal::Controller::Name_);
 
   // Bind the injected services directory to the given channel.

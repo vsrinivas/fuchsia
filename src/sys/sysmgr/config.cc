@@ -120,7 +120,7 @@ bool Config::ParseServiceMap(const rapidjson::Document& document, const std::str
 
 fuchsia::sys::LaunchInfoPtr Config::GetLaunchInfo(const rapidjson::Document::ValueType& value,
                                                   const std::string& name) {
-  auto launch_info = fuchsia::sys::LaunchInfo::New();
+  auto launch_info = std::make_unique<fuchsia::sys::LaunchInfo>();
   if (value.IsString()) {
     launch_info->url = value.GetString();
     return launch_info;

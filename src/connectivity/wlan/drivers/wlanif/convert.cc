@@ -514,13 +514,13 @@ void ConvertBandCapabilities(wlan_mlme::BandCapabilities* fidl_band,
   fidl_band->channels.assign(band.channels, band.channels + band.num_channels);
 
   if (band.ht_supported) {
-    fidl_band->ht_cap = wlan_internal::HtCapabilities::New();
+    fidl_band->ht_cap = std::make_unique<wlan_internal::HtCapabilities>();
     static_assert(sizeof(fidl_band->ht_cap->bytes) == sizeof(band.ht_caps));
     memcpy(fidl_band->ht_cap->bytes.data(), &band.ht_caps, sizeof(band.ht_caps));
   }
 
   if (band.vht_supported) {
-    fidl_band->vht_cap = wlan_internal::VhtCapabilities::New();
+    fidl_band->vht_cap = std::make_unique<wlan_internal::VhtCapabilities>();
     static_assert(sizeof(fidl_band->vht_cap->bytes) == sizeof(band.vht_caps));
     memcpy(fidl_band->vht_cap->bytes.data(), &band.vht_caps, sizeof(band.vht_caps));
   }

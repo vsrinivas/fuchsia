@@ -332,7 +332,7 @@ void InputSystem::Upgrade(fidl::InterfaceHandle<fuchsia::ui::pointer::MouseSourc
   // this so we cache the channel if it arrives too early.
   const zx_koid_t view_ref_koid = FindViewRefKoidOfRelatedChannel(original);
   if (view_ref_koid == ZX_KOID_INVALID) {
-    auto error = fuchsia::ui::pointer::augment::ErrorForGlobalMouse::New();
+    auto error = std::make_unique<fuchsia::ui::pointer::augment::ErrorForGlobalMouse>();
     error->error_reason = fuchsia::ui::pointer::augment::ErrorReason::DENIED;
     error->original = std::move(original);
     callback({}, std::move(error));

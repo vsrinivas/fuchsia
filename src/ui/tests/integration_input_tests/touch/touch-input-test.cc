@@ -448,7 +448,7 @@ class TouchInputBase : public gtest::RealLoopFixture {
   TimeT InjectInput(TapLocation tap_location) {
     using fuchsia::ui::input::InputReport;
     // Device parameters
-    auto parameters = fuchsia::ui::input::TouchscreenDescriptor::New();
+    auto parameters = std::make_unique<fuchsia::ui::input::TouchscreenDescriptor>();
     *parameters = {.x = {.range = {.min = -1000, .max = 1000}},
                    .y = {.range = {.min = -1000, .max = 1000}},
                    .max_finger_id = 10};
@@ -472,7 +472,7 @@ class TouchInputBase : public gtest::RealLoopFixture {
       //
       // Hence, a tap in the center of the display's top-right quadrant is observed by the child
       // view as a tap in the center of its top-left quadrant.
-      auto touch = fuchsia::ui::input::TouchscreenReport::New();
+      auto touch = std::make_unique<fuchsia::ui::input::TouchscreenReport>();
       switch (tap_location) {
         case TapLocation::kTopLeft:
           // center of top right quadrant -> ends up as center of top left quadrant
@@ -493,7 +493,7 @@ class TouchInputBase : public gtest::RealLoopFixture {
     }
 
     {
-      auto touch = fuchsia::ui::input::TouchscreenReport::New();
+      auto touch = std::make_unique<fuchsia::ui::input::TouchscreenReport>();
       InputReport report{.event_time = TimeToUint(RealNow<TimeT>()),
                          .touchscreen = std::move(touch)};
       connection->DispatchReport(std::move(report));

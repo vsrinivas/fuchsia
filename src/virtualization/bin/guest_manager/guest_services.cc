@@ -15,7 +15,7 @@ GuestServices::GuestServices(fuchsia::virtualization::GuestConfig cfg) : cfg_(st
 }
 
 fuchsia::sys::ServiceListPtr GuestServices::ServeDirectory() {
-  auto services = fuchsia::sys::ServiceList::New();
+  auto services = std::make_unique<fuchsia::sys::ServiceList>();
   services->names.emplace_back(fuchsia::virtualization::GuestConfigProvider::Name_);
   services->provider = services_.AddBinding();
   return services;

@@ -348,7 +348,7 @@ void StoryProviderImpl::MaybeLoadStoryShell() {
     return;
   }
 
-  auto service_list = fuchsia::sys::ServiceList::New();
+  auto service_list = std::make_unique<fuchsia::sys::ServiceList>();
   for (auto service_name : component_context_info_.agent_runner->GetAgentServices()) {
     service_list->names.push_back(service_name);
   }

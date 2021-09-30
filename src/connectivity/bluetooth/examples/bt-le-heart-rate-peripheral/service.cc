@@ -114,24 +114,24 @@ void Service::PublishService(gatt::ServerPtr* gatt_server) {
   hrm.id = kHeartRateMeasurementId;
   hrm.type = kHeartRateMeasurementUuid;
   hrm.properties = gatt::kPropertyNotify;
-  hrm.permissions = gatt::AttributePermissions::New();
-  hrm.permissions->update = gatt::SecurityRequirements::New();
+  hrm.permissions = std::make_unique<gatt::AttributePermissions>();
+  hrm.permissions->update = std::make_unique<gatt::SecurityRequirements>();
 
   // Body Sensor Location
   gatt::Characteristic bsl;
   bsl.id = kBodySensorLocationId;
   bsl.type = kBodySensorLocationUuid;
   bsl.properties = gatt::kPropertyRead;
-  bsl.permissions = gatt::AttributePermissions::New();
-  bsl.permissions->read = gatt::SecurityRequirements::New();
+  bsl.permissions = std::make_unique<gatt::AttributePermissions>();
+  bsl.permissions->read = std::make_unique<gatt::SecurityRequirements>();
 
   // Heart Rate Control Point
   gatt::Characteristic hrcp;
   hrcp.id = kHeartRateControlPointId;
   hrcp.type = kHeartRateControlPointUuid;
   hrcp.properties = gatt::kPropertyWrite;
-  hrcp.permissions = gatt::AttributePermissions::New();
-  hrcp.permissions->write = gatt::SecurityRequirements::New();
+  hrcp.permissions = std::make_unique<gatt::AttributePermissions>();
+  hrcp.permissions->write = std::make_unique<gatt::SecurityRequirements>();
 
   std::vector<gatt::Characteristic> characteristics;
   characteristics.push_back(std::move(hrm));

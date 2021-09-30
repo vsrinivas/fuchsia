@@ -62,7 +62,7 @@ std::unique_ptr<Screenshot> LoadPngScreenshot() {
   dimensions.width = image_dim_in_px;
   dimensions.height = image_dim_in_px;
 
-  std::unique_ptr<Screenshot> screenshot = Screenshot::New();
+  std::unique_ptr<Screenshot> screenshot = std::make_unique<Screenshot>();
   screenshot->image = std::move(image).ToTransport();
   screenshot->dimensions_in_px = dimensions;
 

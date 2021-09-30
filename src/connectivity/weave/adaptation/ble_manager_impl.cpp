@@ -280,9 +280,10 @@ void BLEManagerImpl::DriveBLEState() {
     weave_characteristic_c1.id = WeaveBleChar::kWeaveBleCharWrite;
     weave_characteristic_c1.type = kWeaveBleChars[WeaveBleChar::kWeaveBleCharWrite].canonical_uuid;
     weave_characteristic_c1.properties = fuchsia::bluetooth::gatt::kPropertyWrite;
-    weave_characteristic_c1.permissions = fuchsia::bluetooth::gatt::AttributePermissions::New();
+    weave_characteristic_c1.permissions =
+        std::make_unique<fuchsia::bluetooth::gatt::AttributePermissions>();
     weave_characteristic_c1.permissions->write =
-        fuchsia::bluetooth::gatt::SecurityRequirements::New();
+        std::make_unique<fuchsia::bluetooth::gatt::SecurityRequirements>();
 
     fuchsia::bluetooth::gatt::Characteristic weave_characteristic_c2;
     weave_characteristic_c2.id = WeaveBleChar::kWeaveBleCharIndicate;
@@ -290,11 +291,12 @@ void BLEManagerImpl::DriveBLEState() {
         kWeaveBleChars[WeaveBleChar::kWeaveBleCharIndicate].canonical_uuid;
     weave_characteristic_c2.properties =
         fuchsia::bluetooth::gatt::kPropertyRead | fuchsia::bluetooth::gatt::kPropertyIndicate;
-    weave_characteristic_c2.permissions = fuchsia::bluetooth::gatt::AttributePermissions::New();
+    weave_characteristic_c2.permissions =
+        std::make_unique<fuchsia::bluetooth::gatt::AttributePermissions>();
     weave_characteristic_c2.permissions->read =
-        fuchsia::bluetooth::gatt::SecurityRequirements::New();
+        std::make_unique<fuchsia::bluetooth::gatt::SecurityRequirements>();
     weave_characteristic_c2.permissions->update =
-        fuchsia::bluetooth::gatt::SecurityRequirements::New();
+        std::make_unique<fuchsia::bluetooth::gatt::SecurityRequirements>();
 
     std::vector<fuchsia::bluetooth::gatt::Characteristic> characteristics;
     characteristics.push_back(std::move(weave_characteristic_c1));

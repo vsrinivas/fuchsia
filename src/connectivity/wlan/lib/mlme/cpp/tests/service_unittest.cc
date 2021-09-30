@@ -29,7 +29,7 @@ struct ServiceTest : public ::testing::Test {
 
 TEST(MlmeMsg, General) {
   // Construct simple message and write it to a Packet.
-  auto fidl_msg = wlan_mlme::DeauthenticateRequest::New();
+  auto fidl_msg = std::make_unique<wlan_mlme::DeauthenticateRequest>();
   fidl_msg->reason_code = wlan_ieee80211::ReasonCode::UNSPECIFIED_REASON;
   common::kBcastMac.CopyTo(fidl_msg->peer_sta_address.data());
 
@@ -46,7 +46,7 @@ TEST(MlmeMsg, General) {
 
 TEST(MlmeMsg, Generalize) {
   // Construct simple message and write it to a Packet.
-  auto fidl_msg = wlan_mlme::DeauthenticateRequest::New();
+  auto fidl_msg = std::make_unique<wlan_mlme::DeauthenticateRequest>();
   fidl_msg->reason_code = wlan_ieee80211::ReasonCode::UNSPECIFIED_REASON;
   common::kBcastMac.CopyTo(fidl_msg->peer_sta_address.data());
   fidl::Encoder enc(42);
@@ -67,7 +67,7 @@ TEST(MlmeMsg, Generalize) {
 
 TEST(MlmeMsg, CorruptedPacket) {
   // Construct simple message but shorten it.
-  auto fidl_msg = wlan_mlme::DeauthenticateRequest::New();
+  auto fidl_msg = std::make_unique<wlan_mlme::DeauthenticateRequest>();
   fidl_msg->reason_code = wlan_ieee80211::ReasonCode::UNSPECIFIED_REASON;
   common::kBcastMac.CopyTo(fidl_msg->peer_sta_address.data());
   fidl::Encoder enc(42);
@@ -81,7 +81,7 @@ TEST(MlmeMsg, CorruptedPacket) {
 }
 
 TEST(MlmeMsg, MismatchingOrdinal) {
-  auto fidl_msg = wlan_mlme::DeauthenticateRequest::New();
+  auto fidl_msg = std::make_unique<wlan_mlme::DeauthenticateRequest>();
   fidl_msg->reason_code = wlan_ieee80211::ReasonCode::UNSPECIFIED_REASON;
   fidl::Encoder enc(42);
   SerializeServiceMsg(&enc, fidl_msg.get());

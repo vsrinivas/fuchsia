@@ -63,7 +63,7 @@ bool Config::ReadFrom(const std::string& config_file) {
       if (!reg.name.IsString())
         return false;
 
-      auto launch_info = fuchsia::sys::LaunchInfo::New();
+      auto launch_info = std::make_unique<fuchsia::sys::LaunchInfo>();
       if (reg.value.IsString()) {
         launch_info->url = reg.value.GetString();
       } else if (reg.value.IsArray()) {

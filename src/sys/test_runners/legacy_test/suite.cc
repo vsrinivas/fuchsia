@@ -44,7 +44,8 @@ std::unique_ptr<run::OutputCollector> AddOutputFileDescriptor(
     int fileno, zx::socket sock, async_dispatcher_t* dispatcher,
     fuchsia::sys::FileDescriptorPtr* out_file_descriptor) {
   auto output_collector = run::OutputCollector::Create();
-  fuchsia::sys::FileDescriptorPtr file_descriptor = fuchsia::sys::FileDescriptor::New();
+  fuchsia::sys::FileDescriptorPtr file_descriptor =
+      std::make_unique<fuchsia::sys::FileDescriptor>();
   file_descriptor->type0 = PA_HND(PA_FD, fileno);
   file_descriptor->handle0 = output_collector->TakeServer();
   *out_file_descriptor = std::move(file_descriptor);

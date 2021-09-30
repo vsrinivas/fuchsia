@@ -163,7 +163,7 @@ class FlutterEmbedderTest : public gtest::TestWithEnvironmentFixture {
   void InjectInput() {
     using fuchsia::ui::input::InputReport;
     // Device parameters
-    auto parameters = fuchsia::ui::input::TouchscreenDescriptor::New();
+    auto parameters = std::make_unique<fuchsia::ui::input::TouchscreenDescriptor>();
     *parameters = {.x = {.range = {.min = -1000, .max = 1000}},
                    .y = {.range = {.min = -1000, .max = 1000}},
                    .max_finger_id = 10};
@@ -177,7 +177,7 @@ class FlutterEmbedderTest : public gtest::TestWithEnvironmentFixture {
 
     {
       // Inject one input report, then a conclusion (empty) report.
-      auto touch = fuchsia::ui::input::TouchscreenReport::New();
+      auto touch = std::make_unique<fuchsia::ui::input::TouchscreenReport>();
       *touch = {.touches = {{.finger_id = 1, .x = 0, .y = 0}}};  // center of display
       InputReport report{.event_time = static_cast<uint64_t>(zx::clock::get_monotonic().get()),
                          .touchscreen = std::move(touch)};
@@ -185,7 +185,7 @@ class FlutterEmbedderTest : public gtest::TestWithEnvironmentFixture {
     }
 
     {
-      auto touch = fuchsia::ui::input::TouchscreenReport::New();
+      auto touch = std::make_unique<fuchsia::ui::input::TouchscreenReport>();
       InputReport report{.event_time = static_cast<uint64_t>(zx::clock::get_monotonic().get()),
                          .touchscreen = std::move(touch)};
       connection->DispatchReport(std::move(report));
