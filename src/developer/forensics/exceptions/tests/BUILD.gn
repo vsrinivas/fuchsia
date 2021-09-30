@@ -177,7 +177,7 @@ resource("filter_jitd_config") {
 fuchsia_component("exception_broker_config_test") {
   testonly = true
 
-  manifest = "meta/exception_broker_config_test.cmx"
+  manifest = "meta/exception_broker_config_test.cml"
 
   deps = [
     ":enable_jitd_on_startup",
@@ -200,7 +200,7 @@ fuchsia_component("exception_broker_integration_test") {
 fuchsia_component("exception_broker_unittest") {
   testonly = true
 
-  manifest = "meta/exception_broker_unittest.cmx"
+  manifest = "meta/exception_broker_unittest.cml"
 
   deps = [
     ":crasher",
@@ -214,7 +214,7 @@ fuchsia_component("exception_broker_unittest") {
 fuchsia_component("process_launch_failure_unittest") {
   testonly = true
 
-  manifest = "meta/process_launch_failure_unittest.cmx"
+  manifest = "meta/process_launch_failure_unittest.cml"
 
   deps = [
     ":crasher",

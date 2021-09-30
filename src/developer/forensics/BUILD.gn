@@ -60,6 +60,7 @@ template("forensics_package") {
     deps = [
       ":crash_reports",
       ":exceptions",
+      ":exceptions_v1",
       ":feedback",
       ":feedback_data",
       ":last_reboot",
@@ -105,7 +106,19 @@ fuchsia_component("crash_reports") {
 }
 
 fuchsia_component("exceptions") {
+  manifest = "exceptions/meta/exceptions.cml"
+
+  deps = [
+    ":exception_handler_exe",
+    ":exceptions_exe",
+  ]
+}
+
+# Needed for integration test.
+fuchsia_component("exceptions_v1") {
   manifest = "exceptions/meta/exceptions.cmx"
+
+  component_name = "exceptions"
 
   deps = [
     ":exception_handler_exe",

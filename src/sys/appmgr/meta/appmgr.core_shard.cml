@@ -91,7 +91,6 @@
         {
             protocol: [
                 "fuchsia.amber.Control",
-                "fuchsia.exception.Handler",
                 "fuchsia.feedback.CrashReporter",
                 "fuchsia.hwinfo.Device",
                 "fuchsia.process.Resolver",

@@ -103,10 +103,7 @@ void HandOffException(zx::exception exception, const zx_exception_info_t& info,
   //
   // This needs to be kept in sync with the name of the process serving
   // fuchsia.exception.Handler.
-  //
-  // TODO(fxb/81844): change this to exceptions.cm once exceptions.cmx becomes a v2
-  // component.
-  if (process_name == "exceptions.cmx") {
+  if (process_name == "exceptions.cm") {
     LogError("cannot handle exception for the process serving fuchsia.exception.Handler",
              ZX_ERR_NOT_SUPPORTED);
 
@@ -118,10 +115,7 @@ void HandOffException(zx::exception exception, const zx_exception_info_t& info,
   // If an ancestor of the component serving fuchsia.exception.Handler crashes, the system may be
   // unable to meaningfully handle the exception because entries in exception handler's "/svc"
   // directory may be unserviceable and synchronous operations may hang indefinitely.
-  //
-  // TODO(fxb/81844): change this to component_manager.cm once exceptions.cmx becomes a v2
-  // component.
-  if (process_name == "appmgr.cm") {
+  if (process_name == "bin/component_manager") {
     LogError(
         "cannot handle exception for a process that is a necessary dependency of the process "
         "serving fuchsia.exception.Handler",

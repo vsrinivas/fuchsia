@@ -1,0 +1,50 @@
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    include: [
+        "//sdk/lib/inspect/client.shard.cml",
+        "//src/connectivity/network/lib/net_interfaces/client.shard.cml",
+        "syslog/client.shard.cml",
+    ],
+    program: {
+        runner: "elf",
+        binary: "bin/exceptions",
+    },
+    capabilities: [
+        {
+            protocol: [
+                "fuchsia.exception.Handler",
+                "fuchsia.exception.ProcessLimbo",
+            ],
+        },
+    ],
+    use: [
+        {
+            protocol: [
+                "fuchsia.feedback.CrashReporter",
+                "fuchsia.process.Launcher",
+                "fuchsia.sys.internal.CrashIntrospect",
+                "fuchsia.sys2.CrashIntrospect",
+            ],
+        },
+        {
+            directory: "config-data",
+            rights: [ "r*" ],
+            path: "/config/data",
+        },
+        {
+            storage: "tmp",
+            path: "/tmp",
+        },
+    ],
+    expose: [
+        {
+            protocol: [
+                "fuchsia.exception.Handler",
+                "fuchsia.exception.ProcessLimbo",
+            ],
+            from: "self",
+        },
+    ],
+}

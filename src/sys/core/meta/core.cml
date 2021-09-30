@@ -26,6 +26,10 @@
             url: "fuchsia-pkg://fuchsia.com/forensics#meta/last_reboot.cm",
         },
         {
+            name: "exceptions",
+            url: "fuchsia-pkg://fuchsia.com/forensics#meta/exceptions.cm",
+        },
+        {
             name: "setui_service",
             url: "fuchsia-pkg://fuchsia.com/setui_service#meta/setui_service.cm",
             on_terminate: "reboot",
@@ -376,6 +380,7 @@
             from: "#network",
             to: [
                 "#appmgr",
+                "#exceptions",
                 "#last_reboot",
                 "#remote-control",
             ],
@@ -495,6 +500,12 @@
         {
             directory: "config-data",
             from: "parent",
+            to: "#exceptions",
+            subdir: "forensics",
+        },
+        {
+            directory: "config-data",
+            from: "parent",
             to: [ "#emergency" ],
             subdir: "emergency",
         },
@@ -570,6 +581,7 @@
                 "#diagnostics-kcounter",
                 "#diagnostics-persistence",
                 "#emergency",
+                "#exceptions",
                 "#font_provider",
                 "#full-resolver",
                 "#hwinfo",
@@ -647,6 +659,20 @@
             to: "#remote-control",
         },
         {
+            protocol: [ "fuchsia.sys.internal.CrashIntrospect" ],
+            from: "#appmgr",
+            to: "#exceptions",
+            dependency: "weak_for_migration",
+        },
+        {
+            protocol: [
+                "fuchsia.process.Launcher",
+                "fuchsia.sys2.CrashIntrospect",
+            ],
+            from: "parent",
+            to: "#exceptions",
+        },
+        {
             protocol: [
                 "fuchsia.device.manager.Administrator",
                 "fuchsia.device.NameProvider",
@@ -693,7 +719,11 @@
         {
             protocol: "fuchsia.feedback.CrashReporter",
             from: "#appmgr",
-            to: [ "#detect" ],
+            to: [
+                "#detect",
+                "#exceptions",
+            ],
+            dependency: "weak_for_migration",
         },
         {
             protocol: "fuchsia.feedback.CrashReportingProductRegister",
@@ -915,6 +945,11 @@
             to: "#last_reboot",
         },
         {
+            storage: [ "tmp" ],
+            from: "self",
+            to: "#exceptions",
+        },
+        {
             storage: [ "cache" ],
             from: "self",
             to: "#regulatory_region",
@@ -1047,6 +1082,14 @@
             from: "self",
             to: "#cobalt",
         },
+        {
+            protocol: [
+                "fuchsia.exception.Handler",
+                "fuchsia.exception.ProcessLimbo",
+            ],
+            from: "#exceptions",
+            to: [ "#appmgr" ],
+        },
     ],
     expose: [
         {
@@ -1098,6 +1141,10 @@
         {
             protocol: [ "fuchsia.ui.activity.Provider" ],
             from: "#activity",
+        },
+        {
+            protocol: [ "fuchsia.exception.Handler" ],
+            from: "#exceptions",
         },
     ],
     environments: [

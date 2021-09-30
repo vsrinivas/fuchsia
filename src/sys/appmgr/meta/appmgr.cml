@@ -20,6 +20,7 @@
         },
         {
             protocol: [
+                "fuchsia.sys.internal.CrashIntrospect",
                 "fuchsia.test.manager.Query",
                 "fuchsia.test.manager.RunBuilder",
             ],
@@ -705,6 +706,16 @@
             protocol: "fuchsia.media.sounds.Player",
             path: "/svc_for_sys/fuchsia.media.sounds.Player",
         },
+
+        // From exceptions
+        {
+            protocol: "fuchsia.exception.Handler",
+            path: "/svc_for_sys/fuchsia.exception.Handler",
+        },
+        {
+            protocol: "fuchsia.exception.ProcessLimbo",
+            path: "/svc_for_sys/fuchsia.exception.ProcessLimbo",
+        },
     ],
     expose: [
         {
@@ -718,7 +729,6 @@
                 "fuchsia.bluetooth.le.Peripheral",
                 "fuchsia.camera3.DeviceWatcher",
                 "fuchsia.deprecatedtimezone.Timezone",
-                "fuchsia.exception.Handler",
                 "fuchsia.factory.MiscFactoryStoreProvider",
                 "fuchsia.feedback.CrashReporter",
                 "fuchsia.feedback.CrashReportingProductRegister",
@@ -770,6 +780,7 @@
             protocol: [
                 "fuchsia.appmgr.Startup",
                 "fuchsia.sys.internal.ComponentEventProvider",
+                "fuchsia.sys.internal.CrashIntrospect",
                 "fuchsia.sys.internal.LogConnector",
             ],
             from: "self",
