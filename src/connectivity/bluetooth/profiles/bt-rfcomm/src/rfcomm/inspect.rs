@@ -4,7 +4,7 @@
 
 use bt_rfcomm::{Role, DLCI};
 use fuchsia_async as fasync;
-use fuchsia_bluetooth::inspect::DataStreamInspect;
+use fuchsia_bluetooth::{inspect::DataStreamInspect, types::PeerId};
 use fuchsia_inspect::{self as inspect, Property};
 use fuchsia_inspect_derive::{AttachError, IValue, Inspect};
 
@@ -119,8 +119,10 @@ impl SessionMultiplexerInspect {
 }
 
 /// An inspect node that represents information about the current state of the RFCOMM Session.
-#[derive(Default, Debug)]
+#[derive(Debug)]
 pub struct SessionInspect {
+    /// The Bluetooth identifier assigned to the peer.
+    peer_id: PeerId,
     /// Whether the Session is currently connected to a peer.
     connected: inspect::StringProperty,
     inspect_node: inspect::Node,
@@ -129,12 +131,21 @@ pub struct SessionInspect {
 impl Inspect for &mut SessionInspect {
     fn iattach(self, parent: &inspect::Node, name: impl AsRef<str>) -> Result<(), AttachError> {
         self.inspect_node = parent.create_child(name.as_ref());
+        self.inspect_node.record_string("peer_id", self.peer_id.to_string());
         self.connected = self.inspect_node.create_string("connected", "Connected");
         Ok(())
     }
 }
 
 impl SessionInspect {
+    pub fn new(peer_id: PeerId) -> Self {
+        Self {
+            peer_id,
+            connected: inspect::StringProperty::default(),
+            inspect_node: inspect::Node::default(),
+        }
+    }
+
     pub fn node(&self) -> &inspect::Node {
         &self.inspect_node
     }
@@ -148,7 +159,7 @@ impl SessionInspect {
 mod tests {
     use super::*;
     use fuchsia_async::DurationExt;
-    use fuchsia_inspect::assert_data_tree;
+    use fuchsia_inspect::{assert_data_tree, testing::AnyProperty};
     use fuchsia_inspect_derive::WithInspect;
     use fuchsia_zircon::DurationNum;
     use std::convert::TryFrom;
@@ -159,12 +170,14 @@ mod tests {
     fn session_inspect_tree() {
         let inspect = inspect::Inspector::new();
 
+        let id = PeerId(999);
         let mut session_inspect =
-            SessionInspect::default().with_inspect(inspect.root(), "session").unwrap();
+            SessionInspect::new(id).with_inspect(inspect.root(), "session").unwrap();
 
         // Default inspect tree.
         assert_data_tree!(inspect, root: {
             session: {
+                peer_id: AnyProperty,
                 connected: "Connected",
             }
         });
@@ -173,6 +186,7 @@ mod tests {
         session_inspect.disconnect();
         assert_data_tree!(inspect, root: {
             session: {
+                peer_id: AnyProperty,
                 connected: "Disconnected",
             }
         });

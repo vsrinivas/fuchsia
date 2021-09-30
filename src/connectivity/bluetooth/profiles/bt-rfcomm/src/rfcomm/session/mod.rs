@@ -163,6 +163,7 @@ impl SessionInner {
     /// `channel_opened_fn` is used by the `SessionInner` to relay peer-opened RFCOMM channels to
     /// local clients.
     fn create(
+        id: PeerId,
         outgoing_frame_sender: mpsc::Sender<Frame>,
         channel_opened_fn: ChannelOpenedFn,
     ) -> Self {
@@ -172,7 +173,7 @@ impl SessionInner {
             pending_channels: HashMap::new(),
             outgoing_frame_sender,
             channel_opened_fn,
-            inspect: SessionInspect::default(),
+            inspect: SessionInspect::new(id),
         }
     }
 
@@ -903,6 +904,7 @@ impl Session {
         // `Session` using this mpsc::channel.
         let (frames_to_peer_sender, frame_receiver) = mpsc::channel(MAX_CONCURRENT_FRAMES);
         let session_inner = Arc::new(Mutex::new(SessionInner::create(
+            id,
             frames_to_peer_sender,
             channel_opened_callback,
         )));
@@ -1072,6 +1074,7 @@ mod tests {
 
     use async_utils::PollExt;
     use fuchsia_async as fasync;
+    use fuchsia_inspect::testing::AnyProperty;
     use futures::{pin_mut, task::Poll, Future};
     use matches::assert_matches;
     use std::convert::TryFrom;
@@ -1117,11 +1120,12 @@ mod tests {
     /// Creates and returns the SessionInner processing task. Uses a channel_opened_fn that
     /// indiscriminately accepts all opened RFCOMM channels.
     fn setup_session_task() -> (impl Future<Output = ()>, Channel) {
+        let id = PeerId(987);
         let (local, remote) = Channel::create();
         let channel_opened_fn = Box::new(|_server_channel, _channel| async { Ok(()) }.boxed());
         let (frame_sender, frame_receiver) = mpsc::channel(0);
         let session_inner =
-            Arc::new(Mutex::new(SessionInner::create(frame_sender, channel_opened_fn)));
+            Arc::new(Mutex::new(SessionInner::create(id, frame_sender, channel_opened_fn)));
         let (sender, _receiver) = oneshot::channel();
         let session_fut =
             Session::session_task(PeerId(1), local, session_inner, frame_receiver, sender);
@@ -1161,6 +1165,7 @@ mod tests {
     /// channels. Use this to validate channel establishment.
     fn setup_session(
     ) -> (SessionInner, mpsc::Receiver<Frame>, mpsc::Receiver<Result<Channel, ErrorCode>>) {
+        let id = PeerId(5);
         let (channel_opened_fn, channel_receiver) = create_inbound_relay();
         let (outgoing_frame_sender, outgoing_frames) = mpsc::channel(0);
         let session = SessionInner {
@@ -1169,7 +1174,7 @@ mod tests {
             pending_channels: HashMap::new(),
             outgoing_frame_sender,
             channel_opened_fn,
-            inspect: SessionInspect::default(),
+            inspect: SessionInspect::new(id),
         };
         (session, outgoing_frames, channel_receiver)
     }
@@ -1302,6 +1307,7 @@ mod tests {
         // Default inspect tree.
         fuchsia_inspect::assert_data_tree!(inspect, root: {
             session_test: contains {
+                peer_id: AnyProperty,
                 connected: "Connected",
             },
         });
@@ -1318,6 +1324,7 @@ mod tests {
         // Inspect when Session is not active.
         fuchsia_inspect::assert_data_tree!(inspect, root: {
             session_test: contains {
+                peer_id: AnyProperty,
                 connected: "Disconnected",
             }
         });

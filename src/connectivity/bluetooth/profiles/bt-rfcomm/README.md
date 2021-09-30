@@ -58,6 +58,7 @@ the current state of the RFCOMM server, use `fx iquery show bt-rfcomm_*/bt-rfcom
           channel_number0: 1
           channel_number1: 2
         peer_#:
+          peer_id
           connected = (Connected / Disconnected)
           multiplexer:
             flow_control = (Credit-Based / None)
