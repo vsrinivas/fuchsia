@@ -45,7 +45,11 @@ template("fidl_library") {
   _response_file = "$target_gen_dir/$target_name.rsp"
   _json_representation = "$target_gen_dir/${_library_name}.fidl.json"
   _output_gen_dir = "$target_gen_dir/fidl"
-  _output_base = "$_output_gen_dir/${_library_path}/cpp/fidl"
+  _fidlgen_files = [
+    "$_output_gen_dir/${_library_path}/cpp/fidl.h",
+    "$_output_gen_dir/${_library_path}/cpp/fidl.cc",
+    "$_output_gen_dir/${_library_path}/cpp/fidl_test_base.h",
+  ]
   _tables_file = "$_output_gen_dir/${_library_name}.fidl-tables.c"
 
   action("${target_name}_response_file") {
@@ -149,22 +153,15 @@ template("fidl_library") {
       _json_representation,
     ]
 
-    outputs = [
-      "${_output_base}.h",
-      "${_output_base}.cc",
-    ]
+    outputs = _fidlgen_files
 
     script = "${fuchsia_sdk}/build/gn_run_binary.py"
     args = [
       rebase_path("${fuchsia_tool_dir}/fidlgen", root_build_dir),
-      "-generators",
-      "cpp",
-      "-json",
+      "--json",
       rebase_path(_json_representation, root_build_dir),
-      "-include-base",
+      "--root",
       rebase_path(_output_gen_dir, root_build_dir),
-      "-output-base",
-      rebase_path("${_output_base}", root_build_dir),
     ]
   }
 
@@ -182,11 +179,7 @@ template("fidl_library") {
                              "visibility",
                            ])
 
-    sources = [
-      "${_output_base}.cc",
-      "${_output_base}.h",
-      _tables_file,
-    ]
+    sources = [ _tables_file ] + _fidlgen_files
 
     # Metadata to allow us to query all FIDL IR files.
     metadata = {

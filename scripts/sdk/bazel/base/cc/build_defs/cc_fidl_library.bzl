@@ -29,12 +29,8 @@ def _codegen_impl(context):
         arguments = [
             "--json",
             ir.path,
-            "--output-base",
-            header.dirname + "/fidl",
-            "--include-base",
+            "--root",
             output.path,
-            "--generators",
-            "cpp",
         ],
         inputs = [
             ir,
