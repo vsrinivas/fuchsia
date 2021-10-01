@@ -141,8 +141,6 @@ class PageQueues {
     None,
     // Aging occurred due to the maximum timeout being reached before any other reason could trigger
     Timeout,
-    // The allowable ratio of active versus inactive pages was exceeded.
-    ActiveRatio,
     // An explicit call to RotatePagerBackedQueues caused aging. This would typically occur due to
     // test code or via the kernel debug console.
     Manual,

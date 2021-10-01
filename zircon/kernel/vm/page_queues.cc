@@ -19,7 +19,6 @@ KCOUNTER(pq_aging_spurious_wakeup, "pq.aging.spurious_wakeup")
 KCOUNTER(pq_aging_timeout_with_reason, "pq.aging.timeout_with_reason")
 KCOUNTER(pq_aging_reason_none, "pq.aging.reason.none")
 KCOUNTER(pq_aging_reason_timeout, "pq.aging.reason.timeout")
-KCOUNTER(pq_aging_reason_active_ratio, "pq.aging.reason.active_ratio")
 KCOUNTER(pq_aging_reason_manual, "pq.aging.reason.manual")
 KCOUNTER(pq_aging_blocked_on_lru, "pq.aging.blocked_on_lru")
 KCOUNTER(pq_lru_spurious_wakeup, "pq.lru.spurious_wakeup")
@@ -27,14 +26,6 @@ KCOUNTER(pq_inactive_skipped, "pq.inactive_queue.pages_skipped")
 KCOUNTER(pq_inactive_evicted, "pq.inactive_queue.pages_evicted")
 
 }  // namespace
-
-// To control when the active ratio triggers, without using floating or fixed point arithmetic, an
-// integer multiplier is used so that (active/inactive > threshold) instead becomes
-// (active*KActiveRatioMultiplier > inactive).
-// This is presently an arbitrary constant, since the min and max mru rotate time are currently
-// fixed at the same value, meaning that the active ratio can not presently trigger, or prevent,
-// aging.
-constexpr uint64_t kActiveRatioMultiplier = 2;
 
 PageQueues::PageQueues(zx_duration_t min_mru_rotate_time, zx_duration_t max_mru_rotate_time)
     : min_mru_rotate_time_(min_mru_rotate_time), max_mru_rotate_time_(max_mru_rotate_time) {
@@ -129,10 +120,7 @@ PageQueues::AgeReason PageQueues::GetAgeReason() const {
 }
 
 PageQueues::AgeReason PageQueues::GetAgeReasonLocked() const {
-  ActiveInactiveCounts active_count = GetActiveInactiveCountsLocked();
-  if (active_count.active * kActiveRatioMultiplier > active_count.inactive) {
-    return AgeReason::ActiveRatio;
-  }
+  // Currently no reasons to age (before timeout forces it).
   return AgeReason::None;
 }
 
@@ -179,8 +167,6 @@ const char* PageQueues::string_from_age_reason(PageQueues::AgeReason reason) {
   switch (reason) {
     case AgeReason::None:
       return "None";
-    case AgeReason::ActiveRatio:
-      return "Active ratio";
     case AgeReason::Timeout:
       return "Timeout";
     case AgeReason::Manual:
@@ -415,9 +401,6 @@ void PageQueues::RotatePagerBackedQueues(AgeReason reason) {
     case AgeReason::Timeout:
       pq_aging_reason_timeout.Add(1);
       break;
-    case AgeReason::ActiveRatio:
-      pq_aging_reason_active_ratio.Add(1);
-      break;
     case AgeReason::Manual:
       pq_aging_reason_manual.Add(1);
       break;
@@ -519,7 +502,6 @@ void PageQueues::UpdateActiveInactiveLocked(PageQueue old_queue, PageQueue new_q
   } else if (queue_is_inactive(new_queue, mru)) {
     inactive_queue_count_++;
   }
-  MaybeTriggerAgingLocked();
 }
 
 void PageQueues::MarkAccessed(vm_page_t* page) {
@@ -692,9 +674,6 @@ void PageQueues::RecalculateActiveInactiveLocked() {
   // Update the counts.
   active_queue_count_ = active;
   inactive_queue_count_ = inactive;
-
-  // New counts might mean we need to age.
-  MaybeTriggerAgingLocked();
 }
 
 void PageQueues::EndAccessScan() {
@@ -702,13 +681,11 @@ void PageQueues::EndAccessScan() {
 
   ASSERT(use_cached_queue_counts_.load(ktl::memory_order_relaxed));
 
-  // First clear the cached counts. Although the uncached counts aren't correct right now, we hold
-  // the lock so no one can observe the counts right now.
+  RecalculateActiveInactiveLocked();
+  // Clear the cached counts.
   cached_active_queue_count_ = 0;
   cached_inactive_queue_count_ = 0;
   use_cached_queue_counts_.store(false, ktl::memory_order_relaxed);
-
-  RecalculateActiveInactiveLocked();
 }
 
 PageQueues::PagerCounts PageQueues::GetPagerQueueCounts() const {
