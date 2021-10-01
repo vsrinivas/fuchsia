@@ -28,9 +28,16 @@ zx::vmo VmoFile::GetVmoForDescribe() {
     case Sharing::NONE:
       break;
     case Sharing::DUPLICATE:
-      vmo_.duplicate(write_option_ == WriteOption::WRITABLE
-                         ? ZX_RIGHTS_BASIC | ZX_RIGHT_READ | ZX_RIGHT_WRITE
-                         : ZX_RIGHTS_BASIC | ZX_RIGHT_READ,
+      // TODO(fxbug.dev/45287): As part of fxbug.dev/85334 it was discovered that Describe leaks
+      // writable handles even if the connection lacks OPEN_RIGHT_WRITABLE. If duplicate handles
+      // to the underlying VMO require specific rights, they should be obtained via GetBuffer(),
+      // or we need to allow the VmoFile node itself query the connection rights (since these are
+      // currently not available when handling the Describe call).
+      //
+      // If an exact/duplicate handle includes ZX_RIGHT_WRITE, we need to either track possible size
+      // changes to the backing VMO, provide a writable child slice, or explicitly set the
+      // content size and ensure the duplicate handle lacks ZX_RIGHT_SET_PROPERTY.
+      vmo_.duplicate(ZX_RIGHTS_BASIC | ZX_RIGHT_READ | ZX_RIGHT_MAP | ZX_RIGHT_GET_PROPERTY,
                      &result_vmo);
       break;
     case Sharing::CLONE_COW:
@@ -91,6 +98,9 @@ zx_status_t VmoFile::ReadAt(uint64_t length, uint64_t offset, std::vector<uint8_
 }
 
 zx_status_t VmoFile::WriteAt(std::vector<uint8_t> data, uint64_t offset, uint64_t* out_actual) {
+  if (write_option_ != WriteOption::WRITABLE) {
+    return ZX_ERR_NOT_SUPPORTED;
+  }
   size_t length = data.size();
   if (length == 0u) {
     *out_actual = 0u;

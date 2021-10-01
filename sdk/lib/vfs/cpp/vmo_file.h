@@ -26,9 +26,9 @@ class VmoFile final : public vfs::internal::File {
  public:
   // Specifies the desired behavior of writes.
   enum class WriteOption {
-    // The VMO handle and file are read only.
+    // The VmoFile is read only.
     READ_ONLY,
-    // The VMO handle and file will be writable.
+    // The VmoFile will be writable.
     WRITABLE,
   };
 

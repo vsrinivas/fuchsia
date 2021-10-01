@@ -37,6 +37,7 @@ class SdkCppHarness : public fuchsia::io::test::Io1Harness {
     // Supported configuration options:
     config.set_immutable_file(false);  // Files are mutable.
     config.set_no_remote_dir(false);   // vfs::RemoteDir
+    config.set_no_vmofile(false);      // vfs::VmoFile
 
     // Unsupported configuration options:
     config.set_immutable_dir(true);                 // OPEN_FLAG_CREATE is not supported.
@@ -47,8 +48,7 @@ class SdkCppHarness : public fuchsia::io::test::Io1Harness {
     config.set_no_get_token(true);                  // GetToken is unsupported.
     config.set_non_conformant_path_handling(true);  // Path handling is currently inconsistent.
 
-    // TODO(fxbug.dev/45287): Support VmoFile, ExecFile, and GetBuffer.
-    config.set_no_vmofile(true);
+    // TODO(fxbug.dev/45287): Support ExecFile, and GetBuffer.
     config.set_no_execfile(true);
     config.set_no_get_buffer(true);
 
@@ -113,8 +113,18 @@ class SdkCppHarness : public fuchsia::io::test::Io1Harness {
         break;
       }
       case fuchsia::io::test::DirectoryEntry::Tag::kVmoFile: {
-        // TODO(fxbug.dev/82672): Add support for VmoFile nodes.
-        ZX_ASSERT_MSG(false, "TODO(fxbug.dev/82672): VmoFiles are not supported yet!");
+        const auto& buffer = entry.vmo_file().buffer();
+        // The VMO backing the buffer is duplicated so that tests using VMO_FLAG_EXACT can ensure
+        // the same VMO is returned by subsequent GetBuffer calls.
+        zx::vmo vmo_clone;
+        ZX_ASSERT_MSG(buffer.vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &vmo_clone) == ZX_OK,
+                      "Failed to duplicate VMO!");
+
+        auto vmo_file_entry = std::make_unique<vfs::VmoFile>(
+            std::move(vmo_clone), buffer.offset, buffer.size, vfs::VmoFile::WriteOption::WRITABLE);
+
+        ZX_ASSERT_MSG(dest.AddEntry(entry.vmo_file().name(), std::move(vmo_file_entry)) == ZX_OK,
+                      "Failed to add VmoFile entry!");
         break;
       }
       case fuchsia::io::test::DirectoryEntry::Tag::Invalid:

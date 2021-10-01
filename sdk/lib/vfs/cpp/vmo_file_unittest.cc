@@ -271,9 +271,11 @@ TEST(VmoFile, WritableDuplicate) {
   ASSERT_EQ(24u, info.vmofile().offset);
   EXPECT_EQ(ReadVmo(test_vmo, 0, 4096), ReadVmo(info.vmofile().vmo, 0, 4096));
 
-  // Writing should succeed on the new VMO.
-  EXPECT_EQ(ZX_OK, info.vmofile().vmo.write("test", 0, 4));
-  EXPECT_EQ(ReadVmo(test_vmo, 0, 4096), ReadVmo(info.vmofile().vmo, 0, 4096));
+  // TODO(fxbug.dev/45287): As part of fxbug.dev/85334 it was discovered that Describe leaks
+  // writable handles even if the connection lacks OPEN_RIGHT_WRITABLE. In the long term, if handles
+  // to the underlying VMO require specific rights, they should either be obtained via GetBuffer(),
+  // or we need to allow the VmoFile node itself query the connection rights (since these are
+  // currently not available when handling the Describe call).
 }
 
 TEST(VmoFile, ReadOnlyCopyOnWrite) {

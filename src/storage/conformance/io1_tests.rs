@@ -305,12 +305,12 @@ async fn validate_vmofile_rights() {
     )
     .await;
     // Opening with EXECUTE must fail to ensure W^X enforcement.
-    assert_eq!(
+    assert!(matches!(
         open_node_status::<io::NodeMarker>(&root_dir, io::OPEN_RIGHT_EXECUTABLE, 0, TEST_FILE)
             .await
             .expect_err("open succeeded"),
-        zx::Status::ACCESS_DENIED
-    );
+        zx::Status::ACCESS_DENIED | zx::Status::NOT_SUPPORTED
+    ));
 }
 
 // Validate allowed rights for ExecFile objects (ensures cannot be opened as writable).
