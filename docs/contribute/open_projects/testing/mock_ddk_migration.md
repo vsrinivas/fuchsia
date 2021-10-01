@@ -360,8 +360,8 @@ there may be something preventing it from being migrated.
 2. Change build rules and includes to target mock-ddk instead of fake_ddk
 
     ```bash
-    $ sed "s%testing/fake_ddk%testing/mock-ddk%" path/to/BUILD.gn
-    $ sed "s%<lib/fake_ddk/fake_ddk.h>%\"src/devices/testing/mock-ddk/mock-device.h\"%" test.cc 
+    $ sed -i 's%testing/fake_ddk%testing/mock-ddk%' path/to/BUILD.gn
+    $ sed -i 's%<lib/fake_ddk/fake_ddk.h>%"src/devices/testing/mock-ddk/mock-device.h"%' test.cc
     ```
 
 3. Remove the driver folder from the fake_ddk allowlist in `src/devices/testing/fake_ddk/BUILD.gn`
