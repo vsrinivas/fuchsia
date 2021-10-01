@@ -385,10 +385,14 @@ mod tests {
         let bytes = [11u8, 22, 33];
 
         inspect_log!(node, bytes: InspectBytes(&bytes));
+        inspect_log!(node, bytes: InspectBytes(&bytes[..]));
+        inspect_log!(node, bytes: InspectBytes(bytes));
 
         assert_data_tree!(inspector, root: {
             list_node: {
-                "0": { "@time": 12345i64, bytes: vec![11u8, 22, 33] }
+                "0": { "@time": 12345i64, bytes: vec![11u8, 22, 33] },
+                "1": { "@time": 12345i64, bytes: vec![11u8, 22, 33] },
+                "2": { "@time": 12345i64, bytes: vec![11u8, 22, 33] },
             }
         });
     }

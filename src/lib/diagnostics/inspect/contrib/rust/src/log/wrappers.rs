@@ -2,20 +2,18 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use super::WriteInspect;
-
-use fuchsia_inspect::Node;
+use {super::WriteInspect, fuchsia_inspect::Node, std::convert::AsRef};
 
 /// Wrapper to log bytes in an `inspect_log!` or `inspect_insert!` macro.
 ///
 /// This wrapper is defined because a default `WriteInspect` implementation isn't provided for
 /// an array or slice of bytes. Such default implementation was left out so that the user has
 /// to explicitly choose whether to log bytes slice as a string or a byte vector in Inspect.
-pub struct InspectBytes<'a>(pub &'a [u8]);
+pub struct InspectBytes<T: AsRef<[u8]>>(pub T);
 
-impl<'a> WriteInspect for InspectBytes<'a> {
+impl<T: AsRef<[u8]>> WriteInspect for InspectBytes<T> {
     fn write_inspect(&self, writer: &Node, key: &str) {
-        writer.record_bytes(key, self.0);
+        writer.record_bytes(key, self.0.as_ref());
     }
 }
 
