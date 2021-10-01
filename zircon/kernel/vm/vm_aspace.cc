@@ -778,21 +778,38 @@ void VmAspace::HarvestAllUserAccessedBits(NonTerminalAction action) {
       // destructor has not completed, and so the arch_aspace has not been destroyed. Even if the
       // actual VmAspace has been destroyed, it is still completely safe to walk to the hardware
       // page tables, there just will not be anything there.
-      // The harvest itself needs to be performed in one of two scenarios
-      // 1. The aspace has been active since any kind of harvest previously happened. Since there
-      //    may be new information, a new harvest must be done.
-      // 2. The last harvest retained page tables, and now we want to free page tables. Even if the
-      //    aspace has not been active since last harvest, the last harvest might have left page
-      //    tables around that should now be reclaimed.
-      // Even in the case of (2) where a harvest always happens, we still want to make sure to call
-      // ActiveSinceLastCheck to clear the state.
-      if (a.arch_aspace().ActiveSinceLastCheck() ||
-          (apply_action == NonTerminalAction::FreeUnaccessed &&
-           a.last_harvest_type_ == NonTerminalAction::Retain)) {
+      // First we always check ActiveSinceLastCheck (even if we could separately infer that we have
+      // to do a harvest) in order to clear the state from it.
+      bool harvest = true;
+      if (a.arch_aspace().ActiveSinceLastCheck()) {
+        // The aspace has been active since some kind of harvest last happened, so we must do a new
+        // one. Reset our counter of how many pt reclamations we've done based on what kind scan
+        // this is.
+        if (apply_action == NonTerminalAction::FreeUnaccessed) {
+          // This is set to one since we haven't yet performed the harvest, and so if next time the
+          // call to ActiveSinceLastCheck() returns false, then it will be true that one harvest has
+          // been done since last active. Alternative if next time ActiveSinceLastCheck() returns
+          // true, then we'll just re-set this back to 1 again.
+          a.pt_harvest_since_active_ = 1;
+        } else {
+          a.pt_harvest_since_active_ = 0;
+        }
+      } else if (apply_action == NonTerminalAction::FreeUnaccessed &&
+                 a.pt_harvest_since_active_ < 2) {
+        // The aspace hasn't been active, but we haven't yet performed two successive pt
+        // reclamations. Since the first pt reclamation only removes accessed information, the
+        // second is needed to actually do the reclamation.
+        a.pt_harvest_since_active_++;
+      } else {
+        // Either this is not a request to harvest pt information, or enough pt harvesting has been
+        // done, and so we can skip as the aspace should now be at a fixed point with no new
+        // information.
+        harvest = false;
+      }
+      if (harvest) {
         zx_status_t __UNUSED result =
             a.arch_aspace().HarvestAccessed(a.base(), a.size() / PAGE_SIZE, apply_action);
         DEBUG_ASSERT(result == ZX_OK);
-        a.last_harvest_type_ = apply_action;
         vm_aspace_accessed_harvests_performed.Add(1);
       } else {
         vm_aspace_accessed_harvests_skipped.Add(1);

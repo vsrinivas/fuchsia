@@ -286,9 +286,11 @@ class VmAspace : public fbl::DoublyLinkedListable<VmAspace*>, public fbl::RefCou
 
   fbl::RefPtr<VmMapping> vdso_code_mapping_;
 
-  // The kind of accessed harvest that was last performed.
-  ArchVmAspace::NonTerminalAction last_harvest_type_ TA_GUARDED(AspaceListLock::Get()) =
-      ArchVmAspace::NonTerminalAction::Retain;
+  // The number of page table reclamations attempted since last active. This is used since we need
+  // to perform pt reclamation twice in a row (once to clear accessed bits, another time to reclaim
+  // page tables) before the aspace is at a fixed point and we can actually stop performing the
+  // harvests.
+  uint32_t pt_harvest_since_active_ TA_GUARDED(AspaceListLock::Get()) = 0;
 
   DECLARE_SINGLETON_MUTEX(AspaceListLock);
   static fbl::DoublyLinkedList<VmAspace*> aspaces_list_ TA_GUARDED(AspaceListLock::Get());
