@@ -12,7 +12,7 @@
 
 #include "netdevice_migration.h"
 #include "src/devices/testing/fake-bti/include/lib/fake-bti/bti.h"
-#include "src/devices/testing/fake_ddk/include/lib/fake_ddk/fake_ddk.h"
+#include "src/devices/testing/mock-ddk/mock-device.h"
 #include "src/lib/testing/predicates/status.h"
 
 namespace {
@@ -20,10 +20,10 @@ namespace {
 class MockNetworkDeviceIfc : public ddk::Device<MockNetworkDeviceIfc>,
                              public ddk::NetworkDeviceIfcProtocol<MockNetworkDeviceIfc> {
  public:
-  MockNetworkDeviceIfc()
-      : ddk::Device<MockNetworkDeviceIfc>(fake_ddk::kFakeDevice),
-        proto_({&network_device_ifc_protocol_ops_, this}){};
-  void DdkRelease(){};
+  explicit MockNetworkDeviceIfc(MockDevice* parent)
+      : ddk::Device<MockNetworkDeviceIfc>(parent),
+        proto_({&network_device_ifc_protocol_ops_, this}) {}
+  void DdkRelease() {}
   network_device_ifc_protocol_t& proto() { return proto_; }
 
   MOCK_METHOD(void, NetworkDeviceIfcPortStatusChanged,
@@ -39,16 +39,13 @@ class MockNetworkDeviceIfc : public ddk::Device<MockNetworkDeviceIfc>,
 };
 
 class MockEthernetImpl : public ddk::Device<MockEthernetImpl>,
-                         public ddk::EthernetImplProtocol<MockEthernetImpl>,
-                         public fake_ddk::Bind {
+                         public ddk::EthernetImplProtocol<MockEthernetImpl> {
  public:
-  MockEthernetImpl()
-      : ddk::Device<MockEthernetImpl>(fake_ddk::kFakeParent),
-        proto_({&ethernet_impl_protocol_ops_, this}) {
-    SetProtocol(ZX_PROTOCOL_ETHERNET_IMPL, &proto_);
-  };
-  void DdkRelease(){};
-  fake_ddk::Bind& ddk() { return *this; }
+  explicit MockEthernetImpl(MockDevice* parent)
+      : ddk::Device<MockEthernetImpl>(parent), proto_({&ethernet_impl_protocol_ops_, this}) {
+    parent->AddProtocol(ZX_PROTOCOL_ETHERNET_IMPL, proto_.ops, proto_.ctx);
+  }
+  void DdkRelease() {}
 
   MOCK_METHOD(zx_status_t, EthernetImplQuery, (uint32_t options, ethernet_info_t* out_info));
   MOCK_METHOD(void, EthernetImplStop, ());
@@ -66,12 +63,18 @@ class MockEthernetImpl : public ddk::Device<MockEthernetImpl>,
 
 class NetdeviceMigrationTest : public ::testing::Test {
  protected:
+  NetdeviceMigrationTest()
+      : parent_(MockDevice::FakeRootParent()),
+        mock_network_device_ifc_(parent_.get()),
+        mock_ethernet_impl_(parent_.get()) {}
+
   void CreateDevice() {
-    zx::status device = netdevice_migration::NetdeviceMigration::Create(fake_ddk::kFakeParent);
+    zx::status device = netdevice_migration::NetdeviceMigration::Create(parent_.get());
     ASSERT_OK(device.status_value());
     device_ = std::move(device.value());
   }
 
+  const std::shared_ptr<MockDevice> parent_;
   testing::StrictMock<MockNetworkDeviceIfc> mock_network_device_ifc_;
   testing::StrictMock<MockEthernetImpl> mock_ethernet_impl_;
   std::unique_ptr<netdevice_migration::NetdeviceMigration> device_;
@@ -97,9 +100,12 @@ class NetdeviceMigrationDefaultSetupTest : public NetdeviceMigrationTest {
 };
 
 TEST_F(NetdeviceMigrationDefaultSetupTest, LifetimeTest) {
-  ASSERT_OK(device_->DeviceAdd());
-  device_->DdkAsyncRemove();
-  EXPECT_TRUE(mock_ethernet_impl_.ddk().Ok());
+  ASSERT_EQ(parent_->child_count(), 0u);
+  ASSERT_OK(device_.release()->DeviceAdd());
+  ASSERT_EQ(parent_->child_count(), 1u);
+  MockDevice* device = parent_->GetLatestChild();
+  ASSERT_NE(device, nullptr);
+  device->ReleaseOp();
 }
 
 TEST_F(NetdeviceMigrationDefaultSetupTest, NetworkDeviceImplInit) {
@@ -223,13 +229,14 @@ TEST_F(NetdeviceMigrationTest, NetworkDeviceImplPrepareReleaseVmo) {
         return fake_bti_create(out_bti->reset_and_get_address());
       });
   ASSERT_NO_FATAL_FAILURE(CreateDevice());
-  std::array<fake_bti_pinned_vmo_info_t, 3> pinned_vmos;
+  constexpr uint8_t kVMOs = 3;
+  std::array<fake_bti_pinned_vmo_info_t, kVMOs> pinned_vmos;
   size_t pinned;
   ASSERT_OK(fake_bti_get_pinned_vmos(device_->Bti().get(), pinned_vmos.data(), pinned_vmos.size(),
                                      &pinned));
   ASSERT_EQ(pinned, 0u);
 
-  for (uint8_t vmo_id = 1; vmo_id <= pinned_vmos.size(); vmo_id++) {
+  for (uint8_t vmo_id = 1; vmo_id <= kVMOs; vmo_id++) {
     zx::vmo vmo;
     ASSERT_OK(zx::vmo::create(kVmoSize, 0, &vmo));
     device_->NetworkDeviceImplPrepareVmo(vmo_id, std::move(vmo));

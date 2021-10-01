@@ -90,7 +90,6 @@ zx_library("fake_ddk") {
     "//src/connectivity/bluetooth/hci/vendor/broadcom/*",
     "//src/connectivity/bluetooth/hci/vendor/mediatek/*",
     "//src/connectivity/ethernet/drivers/ethernet/*",
-    "//src/connectivity/ethernet/drivers/ethernet/netdevice-migration/*",
     "//src/connectivity/ethernet/drivers/rndis-function/*",
     "//src/connectivity/ethernet/drivers/virtio/*",
     "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/sim/test/*",
