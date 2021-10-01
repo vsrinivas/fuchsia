@@ -37,11 +37,11 @@ use {
         task::{Context, Poll, Waker},
         FutureExt,
     },
-    log::trace,
     std::{
         convert::{TryFrom, TryInto},
         pin::Pin,
     },
+    tracing::trace,
 };
 
 /// Error type used by this library.

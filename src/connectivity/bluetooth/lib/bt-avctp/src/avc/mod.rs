@@ -7,9 +7,9 @@ use {
     fuchsia_bluetooth::types::Channel,
     fuchsia_zircon::Duration,
     futures::{future, future::Ready, stream::FilterMap, Stream, StreamExt},
-    log::{info, trace},
     packet_encoding::{Decodable, Encodable},
     std::convert::TryFrom,
+    tracing::{info, trace},
 };
 
 #[cfg(test)]

@@ -11,6 +11,8 @@ rustc_library("packet-encoding") {
   test_deps = [ "//third_party/rust_crates:matches" ]
 
   sources = [ "src/lib.rs" ]
+
+  configs -= [ "//build/config/rust:allow_unused_results" ]
 }
 
 fuchsia_unittest_package("packet-encoding-tests") {

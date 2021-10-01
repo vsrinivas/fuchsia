@@ -10,11 +10,11 @@ use {
         stream::{FusedStream, Stream},
         task::{Context, Poll, Waker},
     },
-    log::{info, trace, warn},
     packet_encoding::{Decodable, Encodable},
     parking_lot::Mutex,
     slab::Slab,
     std::{collections::VecDeque, convert::TryFrom, marker::Unpin, mem, pin::Pin, sync::Arc},
+    tracing::{info, trace, warn},
 };
 
 #[cfg(test)]
@@ -104,7 +104,7 @@ impl PeerInner {
         let id = TxLabel::try_from(key as u8);
         if id.is_err() {
             warn!("Transaction IDs are exhausted");
-            self.response_waiters.lock().remove(key);
+            let _ = self.response_waiters.lock().remove(key);
         }
         id
     }
@@ -114,7 +114,7 @@ impl PeerInner {
     fn remove_response_interest(&self, id: &TxLabel) {
         let mut lock = self.response_waiters.lock();
         let idx = usize::from(id);
-        lock.remove(idx);
+        let _ = lock.remove(idx);
     }
 
     /// Attempts to receive a new request by processing all packets on the socket.
@@ -283,7 +283,7 @@ impl PeerInner {
         if body.len() > 0 {
             rbuf.extend_from_slice(body);
         }
-        self.channel.as_ref().write(rbuf.as_slice()).map_err(|x| Error::PeerWrite(x))?;
+        let _ = self.channel.as_ref().write(rbuf.as_slice()).map_err(|x| Error::PeerWrite(x))?;
         Ok(())
     }
 }

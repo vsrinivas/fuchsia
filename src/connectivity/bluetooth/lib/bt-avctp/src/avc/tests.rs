@@ -111,7 +111,7 @@ fn send_stop_avc_passthrough_command_timeout() {
         &channel,
     );
 
-    exec.wake_next_timer();
+    let _ = exec.wake_next_timer();
     assert_eq!(Poll::Ready(Err(Error::Timeout)), exec.run_until_stalled(&mut cmd_fut));
 }
 
