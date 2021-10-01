@@ -187,7 +187,7 @@ impl DirEntry {
             } else {
                 let node = self.node.mknod(name, mode)?;
                 if mode.is_sock() {
-                    node.set_socket(Socket::new(Arc::downgrade(&node), SocketDomain::Unix));
+                    node.set_socket(Socket::new(SocketDomain::Unix));
                 }
                 Ok(node)
             }

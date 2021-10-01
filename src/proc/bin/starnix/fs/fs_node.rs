@@ -25,9 +25,6 @@ pub struct FsNode {
     /// The FileSystem that owns this FsNode's tree.
     fs: Weak<FileSystem>,
 
-    /// The tasks waiting on signals (e.g., POLLIN, POLLOUT) from this FsNode.
-    pub observers: Mutex<ObserverList>,
-
     /// The inode number for this FsNode.
     pub inode_num: ino_t,
 
@@ -246,7 +243,6 @@ impl FsNode {
         };
         Self {
             ops,
-            observers: Default::default(),
             fs,
             inode_num,
             fifo: if mode.is_fifo() { Some(Pipe::new()) } else { None },
@@ -285,7 +281,7 @@ impl FsNode {
         match mode & FileMode::IFMT {
             FileMode::IFCHR => open_character_device(rdev),
             FileMode::IFBLK => open_block_device(rdev),
-            FileMode::IFIFO => Ok(Pipe::open(self, self.fifo.as_ref().unwrap(), flags)),
+            FileMode::IFIFO => Ok(Pipe::open(self.fifo.as_ref().unwrap(), flags)),
             // UNIX domain sockets can't be opened.
             FileMode::IFSOCK => error!(ENXIO),
             _ => self.ops().open(self, flags),
@@ -406,10 +402,6 @@ impl FsNode {
 
     pub fn set_xattr(&self, name: &FsStr, value: &FsStr, op: XattrOp) -> Result<(), Errno> {
         self.ops().set_xattr(name, value, op)
-    }
-
-    pub fn notify(&self, events: FdEvents) {
-        self.observers.lock().notify_mask_count(events.mask(), usize::MAX)
     }
 
     pub fn info(&self) -> RwLockReadGuard<'_, FsNodeInfo> {

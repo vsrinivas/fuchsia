@@ -313,8 +313,7 @@ pub fn sys_shutdown(
     // TODO: Respect the `how` argument.
 
     let socket = file.node().socket().ok_or(errno!(ENOTSOCK))?;
-    let connected_node = socket.lock().shutdown()?;
-    let _ = connected_node.map(|node| node.socket().unwrap().lock().shutdown());
+    socket.lock().shutdown()?;
 
     Ok(SUCCESS)
 }

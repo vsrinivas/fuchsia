@@ -27,6 +27,8 @@ fn round_up(value: usize, increment: usize) -> usize {
 pub struct Pipe {
     messages: MessageBuffer,
 
+    waiters: WaitQueue,
+
     /// The number of open readers.
     reader_count: usize,
 
@@ -47,6 +49,7 @@ impl Default for Pipe {
 
         Pipe {
             messages: MessageBuffer::new(default_pipe_capacity),
+            waiters: WaitQueue::default(),
             reader_count: 0,
             had_reader: false,
             writer_count: 0,
@@ -62,26 +65,23 @@ impl Pipe {
         Arc::new(Mutex::new(Pipe::default()))
     }
 
-    pub fn open(node: &FsNode, pipe: &Arc<Mutex<Self>>, flags: OpenFlags) -> Box<dyn FileOps> {
-        let events = {
-            let mut events = FdEvents::empty();
-            let mut pipe = pipe.lock();
-            if flags.can_read() {
-                if !pipe.had_reader {
-                    events |= FdEvents::POLLOUT;
-                }
-                pipe.add_reader();
+    pub fn open(pipe: &Arc<Mutex<Self>>, flags: OpenFlags) -> Box<dyn FileOps> {
+        let mut events = FdEvents::empty();
+        let mut pipe_locked = pipe.lock();
+        if flags.can_read() {
+            if !pipe_locked.had_reader {
+                events |= FdEvents::POLLOUT;
             }
-            if flags.can_write() {
-                if !pipe.had_writer {
-                    events |= FdEvents::POLLIN;
-                }
-                pipe.add_writer();
+            pipe_locked.add_reader();
+        }
+        if flags.can_write() {
+            if !pipe_locked.had_writer {
+                events |= FdEvents::POLLIN;
             }
-            events
-        };
+            pipe_locked.add_writer();
+        }
         if events != FdEvents::empty() {
-            node.notify(events);
+            pipe_locked.waiters.notify_events(events);
         }
         Box::new(PipeFileObject { pipe: Arc::clone(pipe) })
     }
@@ -223,35 +223,33 @@ impl FileOps for PipeFileObject {
     fd_impl_nonseekable!();
 
     fn close(&self, file: &FileObject) {
-        let events = {
-            let mut events = FdEvents::empty();
-            let mut pipe = self.pipe.lock();
-            if file.flags().can_read() {
-                assert!(pipe.reader_count > 0);
-                pipe.reader_count -= 1;
-                if pipe.reader_count == 0 {
-                    events |= FdEvents::POLLOUT;
-                }
+        let mut events = FdEvents::empty();
+        let mut pipe = self.pipe.lock();
+        if file.flags().can_read() {
+            assert!(pipe.reader_count > 0);
+            pipe.reader_count -= 1;
+            if pipe.reader_count == 0 {
+                events |= FdEvents::POLLOUT;
             }
-            if file.flags().can_write() {
-                assert!(pipe.writer_count > 0);
-                pipe.writer_count -= 1;
-                if pipe.writer_count == 0 {
-                    events |= FdEvents::POLLIN;
-                }
+        }
+        if file.flags().can_write() {
+            assert!(pipe.writer_count > 0);
+            pipe.writer_count -= 1;
+            if pipe.writer_count == 0 {
+                events |= FdEvents::POLLIN;
             }
-            events
-        };
+        }
         if events != FdEvents::empty() {
-            file.node().notify(events);
+            pipe.waiters.notify_events(events);
         }
     }
 
-    fn read(&self, file: &FileObject, task: &Task, data: &[UserBuffer]) -> Result<usize, Errno> {
+    fn read(&self, _file: &FileObject, task: &Task, data: &[UserBuffer]) -> Result<usize, Errno> {
         let mut user_buffers = UserBufferIterator::new(data);
-        let actual = self.pipe.lock().read(task, &mut user_buffers)?;
+        let mut pipe = self.pipe.lock();
+        let actual = pipe.read(task, &mut user_buffers)?;
         if actual > 0 {
-            file.node().notify(FdEvents::POLLOUT);
+            pipe.waiters.notify_events(FdEvents::POLLOUT);
         }
         Ok(actual)
     }
@@ -263,10 +261,11 @@ impl FileOps for PipeFileObject {
         file.blocking_op(
             task,
             || {
-                actual += match self.pipe.lock().write(task, &mut user_buffers) {
+                let mut pipe = self.pipe.lock();
+                actual += match pipe.write(task, &mut user_buffers) {
                     Ok(chunk) => {
                         if chunk > 0 {
-                            file.node().notify(FdEvents::POLLIN);
+                            pipe.waiters.notify_events(FdEvents::POLLIN);
                         }
                         chunk
                     }
@@ -280,6 +279,17 @@ impl FileOps for PipeFileObject {
             },
             FdEvents::POLLOUT,
         )
+    }
+
+    fn wait_async(
+        &self,
+        _file: &FileObject,
+        waiter: &Arc<Waiter>,
+        events: FdEvents,
+        handler: EventHandler,
+    ) {
+        let mut pipe = self.pipe.lock();
+        pipe.waiters.wait_async_mask(waiter, events.mask(), handler)
     }
 
     fn fcntl(

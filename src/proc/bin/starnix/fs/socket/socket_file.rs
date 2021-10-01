@@ -2,14 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use std::sync::Arc;
+
 use crate::errno;
 use crate::error;
 use crate::fd_impl_nonseekable;
 use crate::fs::buffers::*;
-use crate::fs::socket::Socket;
 use crate::fs::socket::*;
-use crate::fs::{FdEvents, FileObject, FileOps, SeekOrigin};
-use crate::task::Task;
+use crate::fs::*;
+use crate::task::*;
 use crate::types::*;
 
 pub struct SocketFile {
@@ -25,6 +26,16 @@ impl FileOps for SocketFile {
 
     fn write(&self, file: &FileObject, task: &Task, data: &[UserBuffer]) -> Result<usize, Errno> {
         self.sendmsg(task, file, data, None)
+    }
+
+    fn wait_async(
+        &self,
+        _file: &FileObject,
+        waiter: &Arc<Waiter>,
+        events: FdEvents,
+        handler: EventHandler,
+    ) {
+        self.socket.lock().wait_async(waiter, events, handler)
     }
 }
 
@@ -60,8 +71,8 @@ impl SocketFile {
 
                 let bytes_written =
                     match socket.write(task, &mut user_buffers, &mut control_message) {
-                        Err(e) if e == EPIPE && actual > 0 => {
-                            // If the error is EPIPE (that is, the write failed because the socket was
+                        Err(e) if e == ENOTCONN && actual > 0 => {
+                            // If the error is ENOTCONN (that is, the write failed because the socket was
                             // disconnected), then return the amount of bytes that were written before
                             // the disconnect.
                             return Ok(actual);
@@ -97,20 +108,8 @@ impl SocketFile {
         file.blocking_op(
             task,
             || {
-                let socket = self.socket.lock();
                 let mut user_buffers = UserBufferIterator::new(data);
-                let (bytes_read, ancillary_data) = socket.read(task, &mut user_buffers)?;
-
-                if bytes_read == 0 && user_buffers.remaining() > 0 {
-                    match &*socket {
-                        // If no bytes were read, but the socket is connected, return an error indicating that
-                        // the reader can wait.
-                        Socket::Active(_) | Socket::Passive(_) => return error!(EAGAIN),
-                        _ => {}
-                    };
-                }
-
-                Ok((bytes_read, ancillary_data))
+                self.socket.lock().read(task, &mut user_buffers)
             },
             FdEvents::POLLIN | FdEvents::POLLHUP,
         )

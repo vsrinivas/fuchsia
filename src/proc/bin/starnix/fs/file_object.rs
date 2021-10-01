@@ -98,12 +98,11 @@ pub trait FileOps: Send + Sync + AsAny {
     /// Establish a one-shot, asynchronous wait for the given FdEvents for the given file and task.
     fn wait_async(
         &self,
-        file: &FileObject,
-        waiter: &Arc<Waiter>,
-        events: FdEvents,
-        handler: EventHandler,
+        _file: &FileObject,
+        _waiter: &Arc<Waiter>,
+        _events: FdEvents,
+        _handler: EventHandler,
     ) {
-        file.node().observers.lock().wait_async_mask(waiter, events.mask(), handler)
     }
 
     fn ioctl(

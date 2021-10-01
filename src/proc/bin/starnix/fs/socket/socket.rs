@@ -10,11 +10,11 @@ use crate::error;
 use crate::fs::buffers::*;
 use crate::fs::*;
 use crate::mode;
-use crate::task::{Kernel, Task};
+use crate::task::*;
 use crate::types::*;
 
 use parking_lot::Mutex;
-use std::sync::{Arc, Weak};
+use std::sync::Arc;
 
 /// A `Socket` represents one endpoint of a bidirectional communication channel.
 ///
@@ -66,8 +66,8 @@ impl Socket {
     /// # Parameters
     /// - `node`: The node that the socket is associated with.
     /// - `domain`: The domain of the socket (e.g., `AF_UNIX`).
-    pub fn new(node: Weak<FsNode>, domain: SocketDomain) -> SocketHandle {
-        Arc::new(Mutex::new(Socket::Unbound(SocketEndpoint::new(node, domain))))
+    pub fn new(domain: SocketDomain) -> SocketHandle {
+        Arc::new(Mutex::new(Socket::Unbound(SocketEndpoint::new(domain))))
     }
 
     /// Creates a `FileHandle` where the associated `FsNode` contains a socket.
@@ -80,7 +80,7 @@ impl Socket {
         let fs = socket_fs(kernel);
         let mode = mode!(IFSOCK, 0o777);
         let node = fs.create_node(Box::new(Anon), mode);
-        let socket = Socket::new(Arc::downgrade(&node), domain);
+        let socket = Socket::new(domain);
         node.set_socket(socket.clone());
 
         FileObject::new_anonymous(SocketFile::new(socket), node, open_flags)
@@ -210,7 +210,7 @@ impl Socket {
     ///
     /// Returns the file system node that this socket was connected to (this is useful to be able
     /// to notify the peer about the shutdown).
-    pub fn shutdown(&mut self) -> Result<Option<FsNodeHandle>, Errno> {
+    pub fn shutdown(&mut self) -> Result<(), Errno> {
         let (local_endpoint, remote_endpoint) = match &self {
             Socket::Active(connection) => {
                 Ok((connection.active.clone(), connection.passive.clone()))
@@ -222,12 +222,9 @@ impl Socket {
         }?;
 
         *self = Socket::Shutdown(local_endpoint.clone());
-        local_endpoint.lock().node.upgrade().map(|node| {
-            node.notify(FdEvents::POLLHUP);
-        });
-
-        let remote_node = remote_endpoint.lock().node.upgrade();
-        Ok(remote_node)
+        local_endpoint.lock().shutdown();
+        remote_endpoint.lock().shutdown();
+        Ok(())
     }
 
     /// Writes the data in the provided user buffers to this socket.
@@ -247,6 +244,11 @@ impl Socket {
     ) -> Result<usize, Errno> {
         let mut endpoint = self.connected_endpoint()?.lock();
         endpoint.write(task, user_buffers, ancillary_data)
+    }
+
+    pub fn wait_async(&self, waiter: &Arc<Waiter>, events: FdEvents, handler: EventHandler) {
+        let mut endpoint = self.endpoint().lock();
+        endpoint.waiters.wait_async_mask(waiter, events.mask(), handler)
     }
 }
 
@@ -298,15 +300,20 @@ pub struct SocketEndpoint {
     /// The `MessageBuffer` that contains messages for this socket endpoint.
     messages: MessageBuffer,
 
-    /// The file system node that is associated with this socket endpoint. This node will be
-    /// notified on reads, writes, disconnects etc.
-    node: Weak<FsNode>,
+    /// This queue will be notified on reads, writes, disconnects etc.
+    waiters: WaitQueue,
 
     /// The domain of this socket endpoint.
     domain: SocketDomain,
 
     /// The address that this socket has been bound to, if it has been bound.
     address: SocketAddress,
+
+    /// Whether this endpoint is readable.
+    readable: bool,
+
+    /// Whether this endpoint is writable.
+    writable: bool,
 }
 
 /// A `SocketHandle` is a `Socket` wrapped in a `Arc<Mutex<..>>`. This is used to share sockets
@@ -317,15 +324,17 @@ impl SocketEndpoint {
     /// Creates a new socket endpoint within the specified socket domain.
     ///
     /// The socket endpoint's address is set to a default value for the specified domain.
-    pub fn new(node: Weak<FsNode>, domain: SocketDomain) -> SocketEndpointHandle {
+    pub fn new(domain: SocketDomain) -> SocketEndpointHandle {
         let address = match domain {
             SocketDomain::Unix => SocketAddress::Unix(vec![]),
         };
         Arc::new(Mutex::new(SocketEndpoint {
             messages: MessageBuffer::new(usize::MAX),
-            node,
+            waiters: WaitQueue::default(),
             domain,
             address,
+            readable: true,
+            writable: true,
         }))
     }
 
@@ -366,22 +375,17 @@ impl SocketEndpoint {
         task: &Task,
         user_buffers: &mut UserBufferIterator<'_>,
     ) -> Result<(usize, Option<AncillaryData>), Errno> {
-        let (bytes_read, ancillary_data) = self.messages.read(task, user_buffers)?;
-        self.did_read(bytes_read);
-        Ok((bytes_read, ancillary_data))
-    }
-
-    /// Notifies the `FsNode` associated with this endpoint that a read completed.
-    ///
-    /// # Parameters
-    /// - `bytes_read`: The number of bytes that were read. This is used to determine whether or not
-    ///                 a notification should be sent.
-    fn did_read(&mut self, bytes_read: usize) {
-        if bytes_read > 0 {
-            self.node.upgrade().map(|node| {
-                node.notify(FdEvents::POLLOUT);
-            });
+        if !self.readable {
+            return Ok((0, None));
         }
+        let (bytes_read, ancillary_data) = self.messages.read(task, user_buffers)?;
+        if bytes_read == 0 && ancillary_data.is_none() && user_buffers.remaining() > 0 {
+            return error!(EAGAIN);
+        }
+        if bytes_read > 0 {
+            self.waiters.notify_events(FdEvents::POLLOUT);
+        }
+        Ok((bytes_read, ancillary_data))
     }
 
     /// Writes the the contents of `UserBufferIterator` into this socket.
@@ -399,21 +403,19 @@ impl SocketEndpoint {
         user_buffers: &mut UserBufferIterator<'_>,
         ancillary_data: &mut Option<AncillaryData>,
     ) -> Result<usize, Errno> {
+        if !self.writable {
+            return Err(ENOTCONN);
+        }
         let bytes_written = self.messages.write(task, user_buffers, ancillary_data)?;
-        self.did_write(bytes_written);
+        if bytes_written > 0 {
+            self.waiters.notify_events(FdEvents::POLLIN);
+        }
         Ok(bytes_written)
     }
 
-    /// Notifies the `FsNode` associated with this endpoint that a write completed.
-    ///
-    /// # Parameters
-    /// - `bytes_written`: The number of bytes that were written. This is used to determine whether
-    ///                    or not a notification should be sent.
-    fn did_write(&mut self, bytes_written: usize) {
-        if bytes_written > 0 {
-            self.node.upgrade().map(|node| {
-                node.notify(FdEvents::POLLIN);
-            });
-        }
+    fn shutdown(&mut self) {
+        self.readable = false;
+        self.writable = false;
+        self.waiters.notify_events(FdEvents::POLLIN | FdEvents::POLLOUT | FdEvents::POLLHUP);
     }
 }

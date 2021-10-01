@@ -20,7 +20,7 @@ pub fn wait_on_pid(
 ) -> Result<Option<ZombieTask>, Errno> {
     let waiter = Waiter::new();
     loop {
-        let mut wait_queue = task.thread_group.child_exit_observers.lock();
+        let mut wait_queue = task.thread_group.child_exit_waiters.lock();
         if let Some(zombie) = task.get_zombie_child(selector) {
             return Ok(Some(zombie));
         }

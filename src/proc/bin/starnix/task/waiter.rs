@@ -193,25 +193,25 @@ impl Waiter {
 
 /// A list of waiters waiting for some event.
 ///
-/// For events that are generated inside Starnix, we walk the observer list
+/// For events that are generated inside Starnix, we walk the wait queue
 /// on the thread that triggered the event to notify the waiters that the event
 /// has occurred. The waiters will then wake up on their own thread to handle
 /// the event.
 #[derive(Default)]
-pub struct ObserverList {
-    /// The list of observers.
-    observers: Vec<Observer>,
+pub struct WaitQueue {
+    /// The list of waiters.
+    waiters: Vec<WaitEntry>,
 }
 
-/// An entry in an ObserverList.
-struct Observer {
+/// An entry in a WaitQueue.
+struct WaitEntry {
     /// The waiter that is waking for the FdEvent.
     waiter: Arc<Waiter>,
 
     /// The bitmask that the waiter is waiting for.
     events: u32,
 
-    /// Whether the observer wishes to remain in the ObserverList after one of
+    /// Whether the waiter wishes to remain in the WaitQueue after one of
     /// the events that the waiter is waiting for occurs.
     persistent: bool,
 
@@ -219,7 +219,7 @@ struct Observer {
     key: WaitKey,
 }
 
-impl ObserverList {
+impl WaitQueue {
     /// Establish a wait for the given events.
     ///
     /// The waiter will be notified when an event matching the events mask
@@ -229,38 +229,41 @@ impl ObserverList {
     /// call the "wait" function on the waiter.
     pub fn wait_async_mask(&mut self, waiter: &Arc<Waiter>, events: u32, handler: EventHandler) {
         let key = waiter.wake_on_events(handler);
-        self.observers.push(Observer {
-            waiter: Arc::clone(waiter),
-            events,
-            persistent: false,
-            key,
-        });
+        self.waiters.push(WaitEntry { waiter: Arc::clone(waiter), events, persistent: false, key });
     }
 
     pub fn wait_async(&mut self, waiter: &Arc<Waiter>) {
         self.wait_async_mask(waiter, u32::MAX, WaitCallback::none())
     }
 
-    /// Notify any observers that the given events have occurred.
+    /// Notify any waiters that the given events have occurred.
     ///
-    /// Walks the observer list and wakes each observer that is waiting on an
-    /// event that matches the given mask. Persistent observers remain in the
-    /// list. Non-persistent observers are removed.
+    /// Walks the wait queue and wakes each waiter that is waiting on an
+    /// event that matches the given mask. Persistent waiters remain in the
+    /// list. Non-persistent waiters are removed.
     ///
     /// The waiters will wake up on their own threads to handle these events.
     /// They are not called synchronously by this function.
     pub fn notify_mask_count(&mut self, events: u32, mut limit: usize) {
-        self.observers = std::mem::take(&mut self.observers)
+        self.waiters = std::mem::take(&mut self.waiters)
             .into_iter()
-            .filter(|observer| {
-                if limit > 0 && (observer.events & events) != 0 {
-                    observer.waiter.queue_events(&observer.key, events);
+            .filter(|entry| {
+                if limit > 0 && (entry.events & events) != 0 {
+                    entry.waiter.queue_events(&entry.key, events);
                     limit -= 1;
-                    return observer.persistent;
+                    return entry.persistent;
                 }
                 return true;
             })
             .collect();
+    }
+
+    pub fn notify_mask(&mut self, events: u32) {
+        self.notify_mask_count(events, usize::MAX)
+    }
+
+    pub fn notify_events(&mut self, events: FdEvents) {
+        self.notify_mask(events.mask())
     }
 
     pub fn notify_count(&mut self, limit: usize) {
@@ -387,51 +390,51 @@ mod tests {
     }
 
     #[test]
-    fn test_observer_list() {
-        let mut list = ObserverList::default();
+    fn test_wait_queue() {
+        let mut queue = WaitQueue::default();
 
         let waiter0 = Waiter::new();
         let waiter1 = Waiter::new();
         let waiter2 = Waiter::new();
 
-        list.wait_async(&waiter0);
-        list.wait_async(&waiter1);
-        list.wait_async(&waiter2);
+        queue.wait_async(&waiter0);
+        queue.wait_async(&waiter1);
+        queue.wait_async(&waiter2);
 
-        list.notify_count(2);
+        queue.notify_count(2);
         assert!(waiter0.wait_until(zx::Time::ZERO).is_ok());
         assert!(waiter1.wait_until(zx::Time::ZERO).is_ok());
         assert!(waiter2.wait_until(zx::Time::ZERO).is_err());
 
-        list.notify_all();
+        queue.notify_all();
         assert!(waiter0.wait_until(zx::Time::ZERO).is_err());
         assert!(waiter1.wait_until(zx::Time::ZERO).is_err());
         assert!(waiter2.wait_until(zx::Time::ZERO).is_ok());
 
-        list.notify_count(3);
+        queue.notify_count(3);
         assert!(waiter0.wait_until(zx::Time::ZERO).is_err());
         assert!(waiter1.wait_until(zx::Time::ZERO).is_err());
         assert!(waiter2.wait_until(zx::Time::ZERO).is_err());
     }
 
     #[test]
-    fn test_observer_list_mask() {
-        let mut list = ObserverList::default();
+    fn test_wait_queue_mask() {
+        let mut queue = WaitQueue::default();
 
         let waiter0 = Waiter::new();
         let waiter1 = Waiter::new();
         let waiter2 = Waiter::new();
 
-        list.wait_async_mask(&waiter0, 0x13, WaitCallback::none());
-        list.wait_async_mask(&waiter1, 0x11, WaitCallback::none());
-        list.wait_async_mask(&waiter2, 0x12, WaitCallback::none());
+        queue.wait_async_mask(&waiter0, 0x13, WaitCallback::none());
+        queue.wait_async_mask(&waiter1, 0x11, WaitCallback::none());
+        queue.wait_async_mask(&waiter2, 0x12, WaitCallback::none());
 
-        list.notify_mask_count(0x2, 2);
+        queue.notify_mask_count(0x2, 2);
         assert!(waiter0.wait_until(zx::Time::ZERO).is_ok());
         assert!(waiter1.wait_until(zx::Time::ZERO).is_err());
         assert!(waiter2.wait_until(zx::Time::ZERO).is_ok());
 
-        list.notify_mask_count(0x1, usize::MAX);
+        queue.notify_mask_count(0x1, usize::MAX);
         assert!(waiter0.wait_until(zx::Time::ZERO).is_err());
         assert!(waiter1.wait_until(zx::Time::ZERO).is_ok());
         assert!(waiter2.wait_until(zx::Time::ZERO).is_err());

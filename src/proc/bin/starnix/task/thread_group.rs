@@ -43,8 +43,8 @@ pub struct ThreadGroup {
 
     zombie_leader: Mutex<Option<ZombieTask>>,
 
-    /// ObserverList for updates to the zombie_children lists of tasks in this group.
-    pub child_exit_observers: Mutex<ObserverList>,
+    /// WaitQueue for updates to the zombie_children lists of tasks in this group.
+    pub child_exit_waiters: Mutex<WaitQueue>,
 }
 
 impl PartialEq for ThreadGroup {
@@ -65,7 +65,7 @@ impl ThreadGroup {
             tasks: RwLock::new(tasks),
             itimers: Default::default(),
             zombie_leader: Mutex::new(None),
-            child_exit_observers: Mutex::default(),
+            child_exit_waiters: Mutex::default(),
         }
     }
 
@@ -110,7 +110,7 @@ impl ThreadGroup {
             }
 
             if let Some(parent) = self.kernel.pids.read().get_task(task.parent) {
-                parent.thread_group.child_exit_observers.lock().notify_all();
+                parent.thread_group.child_exit_waiters.lock().notify_all();
             }
             self.kernel.pids.write().remove_thread_group(self.leader);
         }
