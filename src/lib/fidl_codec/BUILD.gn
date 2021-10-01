@@ -54,8 +54,8 @@ static_library("fidl_codec") {
   deps = [
     ":value_proto",
     "//third_party/rapidjson",
-    "//zircon/public/lib/fidl_base",
     "//zircon/system/public",
+    "//zircon/system/ulib/fidl:fidl_base",
   ]
 }
 

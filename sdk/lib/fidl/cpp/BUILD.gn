@@ -135,7 +135,7 @@ sdk_source_set("cpp_base") {
     "//sdk/lib/fit",
     "//sdk/lib/fit-promise",
     "//sdk/lib/stdcompat",
-    "//zircon/public/lib/fidl_base",
+    "//zircon/system/ulib/fidl:fidl_base",
   ]
 
   if (is_fuchsia) {

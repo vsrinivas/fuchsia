@@ -61,7 +61,7 @@ if (is_host) {
       "//src/lib/fxl",
       "//third_party/protobuf:protobuf_full",
       "//third_party/rapidjson",
-      "//zircon/public/lib/fidl_base",
+      "//zircon/system/ulib/fidl:fidl_base",
     ]
 
     public_deps = [
@@ -88,7 +88,7 @@ if (is_host) {
       "//third_party/googletest:gtest",
       "//third_party/protobuf:protobuf_full",
       "//third_party/rapidjson",
-      "//zircon/public/lib/fidl_base",
+      "//zircon/system/ulib/fidl:fidl_base",
     ]
 
     # TODO(fxbug.dev/58162): delete the below and fix compiler warnings

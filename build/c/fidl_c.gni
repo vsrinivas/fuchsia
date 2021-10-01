@@ -24,7 +24,7 @@ template("fidl_tables") {
     sources = [ coding_tables ]
 
     deps = [ ":${main_target_name}_compile($fidl_toolchain)" ]
-    public_deps = [ "//zircon/public/lib/fidl_base" ]
+    public_deps = [ "//zircon/system/ulib/fidl:fidl_base" ]
     if (is_fuchsia) {
       public_deps += [ "//zircon/public/sysroot:headers" ]
     } else {

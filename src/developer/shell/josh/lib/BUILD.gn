@@ -32,7 +32,7 @@ static_library("lib") {
     "//src/lib/line_input",
     "//third_party/quickjs:qjs-lib",
     "//third_party/rapidjson",
-    "//zircon/public/lib/fidl_base",
+    "//zircon/system/ulib/fidl:fidl_base",
     "//zircon/system/ulib/zx",
   ]
 

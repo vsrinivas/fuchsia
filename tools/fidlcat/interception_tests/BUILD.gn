@@ -64,8 +64,8 @@ if (is_host) {
       "//third_party/rapidjson",
       "//tools/fidlcat/lib:host_lib",
       "//tools/fidlcat/lib:session_proto",
-      "//zircon/public/lib/fidl_base",
       "//zircon/system/public",
+      "//zircon/system/ulib/fidl:fidl_base",
     ]
 
     # TODO(fxbug.dev/58162): delete the below and fix compiler warnings

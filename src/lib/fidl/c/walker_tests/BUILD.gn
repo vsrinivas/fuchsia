@@ -149,7 +149,7 @@ source_set("host_test_sources") {
   public_deps = [
     ":fidl.test.coding_llcpp",
     "//sdk/lib/fidl/cpp:cpp_base",
-    "//zircon/public/lib/fidl_base",
+    "//zircon/system/ulib/fidl:fidl_base",
     "//zircon/system/ulib/zxtest",
   ]
 
