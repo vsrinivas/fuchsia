@@ -92,6 +92,10 @@ class NetDeviceDriverTest : public ::testing::Test, public fake_ddk::Bind {
     return zx::ok(fidl::BindSyncClient(std::move(client_end)));
   }
 
+  const FakeNetworkDeviceImpl& device_impl() const { return device_impl_; }
+  FakeNetworkPortImpl& port_impl() { return port_impl_; }
+
+ private:
   bool device_created_ = false;
   FakeMacDeviceImpl mac_impl_;
   FakeNetworkDeviceImpl device_impl_;
@@ -108,8 +112,9 @@ TEST_F(NetDeviceDriverTest, TestOpenSession) {
   ASSERT_OK(connect_result.status_value());
   fidl::WireSyncClient<netdev::Device>& netdevice = connect_result.value();
   ASSERT_OK(session.Open(netdevice, "test-session"));
-  ASSERT_OK(AttachSessionPort(session, port_impl_));
-  ASSERT_OK(device_impl_.events().wait_one(kEventStart, zx::deadline_after(kTestTimeout), nullptr));
+  ASSERT_OK(AttachSessionPort(session, port_impl()));
+  ASSERT_OK(
+      device_impl().events().wait_one(kEventStart, zx::deadline_after(kTestTimeout), nullptr));
   UnbindDeviceSync();
   ASSERT_OK(session.WaitClosed(zx::deadline_after(kTestTimeout)));
   // netdevice should also have been closed after device unbind:
