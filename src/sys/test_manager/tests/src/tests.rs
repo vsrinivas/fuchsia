@@ -150,6 +150,29 @@ async fn calling_kill_should_kill_test() {
 }
 
 #[fuchsia_async::run_singlethreaded(test)]
+async fn closing_suite_controller_should_kill_test() {
+    let proxy = connect_test_manager().await.unwrap();
+    let builder = TestBuilder::new(proxy);
+    let suite = builder
+        .add_suite(
+            "fuchsia-pkg://fuchsia.com/test_manager_test#meta/hanging_test.cm",
+            default_run_option(),
+        )
+        .await
+        .unwrap();
+    let builder_run_task = fasync::Task::spawn(async move { builder.run().await });
+
+    // let the test start
+    let _initial_events = suite.controller().get_events().await.unwrap().unwrap();
+    // drop suite, which should also close the suite channel
+    drop(suite);
+
+    // We can't verify that the suite didn't complete, but verify that the run
+    // completes successfully.
+    builder_run_task.await.expect("Run controller failed to collect events");
+}
+
+#[fuchsia_async::run_singlethreaded(test)]
 async fn calling_builder_kill_should_kill_test() {
     let proxy = connect_test_manager().await.unwrap();
     let builder = TestBuilder::new(proxy);

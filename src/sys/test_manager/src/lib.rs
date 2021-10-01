@@ -679,11 +679,12 @@ impl Suite {
     async fn run_controller(
         mut controller: SuiteControllerRequestStream,
         stop_sender: oneshot::Sender<()>,
-        kill_sender: futures::future::AbortHandle,
+        run_suite_remote_handle: futures::future::RemoteHandle<()>,
         event_recv: mpsc::Receiver<Result<FidlSuiteEvent, LaunchError>>,
     ) -> Result<(), Error> {
         let mut event_recv = event_recv.into_stream().fuse();
         let mut stop_sender = Some(stop_sender);
+        let mut run_suite_remote_handle = Some(run_suite_remote_handle);
         'controller_loop: while let Some(event) =
             controller.try_next().await.context("error running controller")?
         {
@@ -732,7 +733,8 @@ impl Suite {
                     }
                 }
                 SuiteControllerRequest::Kill { .. } => {
-                    kill_sender.abort();
+                    // Dropping the remote handle for the suite execution task cancels it.
+                    drop(run_suite_remote_handle.take());
                     // after this all `senders` go away and subsequent GetEvent call will
                     // return rest of event. Eventually an empty array and will close the
                     // connection after that.
@@ -753,13 +755,11 @@ impl Suite {
             None => futures::future::ready(()).boxed(),
         };
 
-        let (run_test_abortable, run_test_abort_handle) = futures::future::abortable(run_test_fut);
+        let (run_test_remote, run_test_handle) = run_test_fut.remote_handle();
 
-        let controller_fut =
-            Self::run_controller(controller, stop_sender, run_test_abort_handle, recv);
+        let controller_fut = Self::run_controller(controller, stop_sender, run_test_handle, recv);
         // Okay to ignore error in the run test result as aborted is expected when Kill is called
-        let (_run_test_res, controller_ret): (Result<(), futures::future::Aborted>, _) =
-            futures::future::join(run_test_abortable, controller_fut).await;
+        let ((), controller_ret) = futures::future::join(run_test_remote, controller_fut).await;
 
         if let Err(e) = controller_ret {
             warn!("Ended test {}: {:?}", test_url, e);
@@ -1898,17 +1898,21 @@ mod tests {
     async fn suite_controller_stop_test() {
         let (sender, recv) = mpsc::channel(1024);
         let (stop_sender, stop_recv) = oneshot::channel::<()>();
-        let task = async move {
+        let (task, remote_handle) = async move {
             stop_recv.await.unwrap();
             // drop event sender so that fake test can end.
             drop(sender);
-        };
-        let (abortable, abort_handle) = futures::future::abortable(task);
-        let _task = fasync::Task::spawn(abortable);
+        }
+        .remote_handle();
+        let _task = fasync::Task::spawn(task);
         let (proxy, controller) =
             create_proxy_and_stream::<ftest_manager::SuiteControllerMarker>().unwrap();
-        let run_controller =
-            fasync::Task::spawn(Suite::run_controller(controller, stop_sender, abort_handle, recv));
+        let run_controller = fasync::Task::spawn(Suite::run_controller(
+            controller,
+            stop_sender,
+            remote_handle,
+            recv,
+        ));
         proxy.stop().unwrap();
 
         assert_eq!(proxy.get_events().await.unwrap(), Ok(vec![]));
@@ -1917,15 +1921,41 @@ mod tests {
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
+    async fn suite_controller_abort_remote_when_controller_closed() {
+        let (_sender, recv) = mpsc::channel(1024);
+        let (stop_sender, _stop_recv) = oneshot::channel::<()>();
+        // Create a future that normally never resolves.
+        let (task, remote_handle) = futures::future::pending().remote_handle();
+        let pending_task = fasync::Task::spawn(task);
+        let (proxy, controller) =
+            create_proxy_and_stream::<ftest_manager::SuiteControllerMarker>().unwrap();
+        let run_controller = fasync::Task::spawn(Suite::run_controller(
+            controller,
+            stop_sender,
+            remote_handle,
+            recv,
+        ));
+        drop(proxy);
+        // After controller is dropped, both the controller future and the task it was
+        // controlling should terminate.
+        pending_task.await;
+        run_controller.await.unwrap();
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
     async fn suite_controller_get_events() {
         let (mut sender, recv) = mpsc::channel(1024);
         let (stop_sender, stop_recv) = oneshot::channel::<()>();
-        let (abortable, abort_handle) = futures::future::abortable(async {});
-        let _task = fasync::Task::spawn(abortable);
+        let (task, remote_handle) = async {}.remote_handle();
+        let _task = fasync::Task::spawn(task);
         let (proxy, controller) =
             create_proxy_and_stream::<ftest_manager::SuiteControllerMarker>().unwrap();
-        let run_controller =
-            fasync::Task::spawn(Suite::run_controller(controller, stop_sender, abort_handle, recv));
+        let run_controller = fasync::Task::spawn(Suite::run_controller(
+            controller,
+            stop_sender,
+            remote_handle,
+            recv,
+        ));
         sender.send(Ok(SuiteEvents::case_found(1, "case1".to_string()).into())).await.unwrap();
         sender.send(Ok(SuiteEvents::case_found(2, "case2".to_string()).into())).await.unwrap();
 
@@ -1970,12 +2000,16 @@ mod tests {
         let mut executor = fasync::TestExecutor::new().unwrap();
         let (mut sender, recv) = mpsc::channel(1024);
         let (stop_sender, _stop_recv) = oneshot::channel::<()>();
-        let (abortable, abort_handle) = futures::future::abortable(async {});
-        let _task = fasync::Task::spawn(abortable);
+        let (task, remote_handle) = async {}.remote_handle();
+        let _task = fasync::Task::spawn(task);
         let (proxy, controller) =
             create_proxy_and_stream::<ftest_manager::SuiteControllerMarker>().unwrap();
-        let _run_controller =
-            fasync::Task::spawn(Suite::run_controller(controller, stop_sender, abort_handle, recv));
+        let _run_controller = fasync::Task::spawn(Suite::run_controller(
+            controller,
+            stop_sender,
+            remote_handle,
+            recv,
+        ));
 
         // send get event call which would hang as there are no events.
         let mut get_events =
