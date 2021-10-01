@@ -9,6 +9,7 @@ use crate::fs::*;
 use crate::task::*;
 use crate::types::*;
 use parking_lot::Mutex;
+use std::sync::Arc;
 
 const DATA_SIZE: usize = 8;
 
@@ -24,6 +25,7 @@ pub enum EventFdType {
 /// See https://man7.org/linux/man-pages/man2/eventfd.2.html
 pub struct EventFdFileObject {
     value: Mutex<u64>,
+    wait_queue: Mutex<WaitQueue>,
     eventfd_type: EventFdType,
 }
 
@@ -34,10 +36,10 @@ pub fn new_eventfd(
     blocking: bool,
 ) -> FileHandle {
     let open_flags = if blocking { OpenFlags::RDWR } else { OpenFlags::RDWR | OpenFlags::NONBLOCK };
-
+    let wait_queue = Mutex::new(WaitQueue::default());
     Anon::new_file(
         anon_fs(kernel),
-        Box::new(EventFdFileObject { value: Mutex::new(value.into()), eventfd_type }),
+        Box::new(EventFdFileObject { value: Mutex::new(value.into()), wait_queue, eventfd_type }),
         open_flags,
     )
 }
@@ -62,6 +64,10 @@ impl FileOps for EventFdFileObject {
             return error!(EAGAIN);
         }
         *value = *value + add_value;
+        if *value > 0 {
+            let mut wait_queue = self.wait_queue.lock();
+            wait_queue.notify_mask(FdEvents::POLLIN.mask());
+        }
         Ok(DATA_SIZE)
     }
 
@@ -87,7 +93,20 @@ impl FileOps for EventFdFileObject {
             }
         };
         task.mm.write_all(data, &return_value.to_ne_bytes())?;
+        let mut wait_queue = self.wait_queue.lock();
+        wait_queue.notify_mask(FdEvents::POLLOUT.mask());
 
         Ok(DATA_SIZE)
+    }
+
+    fn wait_async(
+        &self,
+        _file: &FileObject,
+        waiter: &Arc<Waiter>,
+        events: FdEvents,
+        handler: EventHandler,
+    ) {
+        let mut wait_queue = self.wait_queue.lock();
+        wait_queue.wait_async_mask(waiter, events.mask(), handler);
     }
 }
