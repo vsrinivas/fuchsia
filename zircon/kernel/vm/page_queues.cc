@@ -23,6 +23,8 @@ KCOUNTER(pq_aging_reason_active_ratio, "pq.aging.reason.active_ratio")
 KCOUNTER(pq_aging_reason_manual, "pq.aging.reason.manual")
 KCOUNTER(pq_aging_blocked_on_lru, "pq.aging.blocked_on_lru")
 KCOUNTER(pq_lru_spurious_wakeup, "pq.lru.spurious_wakeup")
+KCOUNTER(pq_inactive_skipped, "pq.inactive_queue.pages_skipped")
+KCOUNTER(pq_inactive_evicted, "pq.inactive_queue.pages_evicted")
 
 }  // namespace
 
@@ -855,12 +857,15 @@ ktl::optional<PageQueues::VmoBacklink> PageQueues::PeekPagerBacked(size_t lowest
         list_delete(&page->queue_node);
         list_add_head(&page_queues_[new_queue], &page->queue_node);
       }
+      pq_inactive_skipped.Add(1);
     } else {
       // It's possible for MarkAccessed to race and change the queue from under us, i.e. if the page
       // is accessed exactly when we're trying to evict it. Ignore that race, and let eviction win.
       VmCowPages* cow = reinterpret_cast<VmCowPages*>(page->object.get_object());
       uint64_t page_offset = page->object.get_page_offset();
       DEBUG_ASSERT(cow);
+
+      pq_inactive_evicted.Add(1);
 
       // We may be racing with destruction of VMO. As we currently hold our lock we know that our
       // back pointer is correct in so far as the VmCowPages has not yet had completed running its
