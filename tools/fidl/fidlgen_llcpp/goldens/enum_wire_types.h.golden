@@ -112,13 +112,22 @@ namespace fidl {
 template <>
 struct IsFidlType<::fidl_test_enum::wire::MyStrictEnum>
     : public std::true_type {};
+template <>
+struct ContainsHandle<::fidl_test_enum::wire::MyStrictEnum>
+    : public std::false_type {};
 
 template <>
 struct IsFidlType<::fidl_test_enum::wire::MyFlexibleEnumWithCustomUnknown>
     : public std::true_type {};
+template <>
+struct ContainsHandle<::fidl_test_enum::wire::MyFlexibleEnumWithCustomUnknown>
+    : public std::false_type {};
 
 template <>
 struct IsFidlType<::fidl_test_enum::wire::MyFlexibleEnum>
     : public std::true_type {};
+template <>
+struct ContainsHandle<::fidl_test_enum::wire::MyFlexibleEnum>
+    : public std::false_type {};
 
 }  // namespace fidl

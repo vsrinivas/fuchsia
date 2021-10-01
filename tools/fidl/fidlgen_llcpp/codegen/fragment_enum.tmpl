@@ -59,6 +59,8 @@ constexpr const {{ $ }} {{ $.Name }}::{{ $member.Name }} =
 
 template <>
 struct IsFidlType<{{ . }}> : public std::true_type {};
+template <>
+struct ContainsHandle<{{ . }}> : public std::false_type {};
 
 {{- end }}
 

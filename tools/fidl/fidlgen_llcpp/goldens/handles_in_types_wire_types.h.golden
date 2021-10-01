@@ -566,5 +566,8 @@ static_assert(std::is_standard_layout_v<
 template <>
 struct IsFidlType<::fidl_test_handlesintypes::wire::ObjType>
     : public std::true_type {};
+template <>
+struct ContainsHandle<::fidl_test_handlesintypes::wire::ObjType>
+    : public std::false_type {};
 
 }  // namespace fidl

@@ -327,17 +327,26 @@ namespace fidl {
 template <>
 struct IsFidlType<::fidl_test_bits::wire::StrictBits> : public std::true_type {
 };
+template <>
+struct ContainsHandle<::fidl_test_bits::wire::StrictBits>
+    : public std::false_type {};
 static_assert(std::is_standard_layout_v<::fidl_test_bits::wire::StrictBits>);
 static_assert(sizeof(::fidl_test_bits::wire::StrictBits) == sizeof(uint64_t));
 
 template <>
 struct IsFidlType<::fidl_test_bits::wire::MyBits> : public std::true_type {};
+template <>
+struct ContainsHandle<::fidl_test_bits::wire::MyBits> : public std::false_type {
+};
 static_assert(std::is_standard_layout_v<::fidl_test_bits::wire::MyBits>);
 static_assert(sizeof(::fidl_test_bits::wire::MyBits) == sizeof(uint32_t));
 
 template <>
 struct IsFidlType<::fidl_test_bits::wire::FlexibleBits>
     : public std::true_type {};
+template <>
+struct ContainsHandle<::fidl_test_bits::wire::FlexibleBits>
+    : public std::false_type {};
 static_assert(std::is_standard_layout_v<::fidl_test_bits::wire::FlexibleBits>);
 static_assert(sizeof(::fidl_test_bits::wire::FlexibleBits) == sizeof(uint64_t));
 

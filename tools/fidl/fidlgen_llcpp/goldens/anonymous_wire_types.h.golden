@@ -1679,12 +1679,18 @@ namespace fidl {
 template <>
 struct IsFidlType<::fidl_test_anonymous::wire::Flags> : public std::true_type {
 };
+template <>
+struct ContainsHandle<::fidl_test_anonymous::wire::Flags>
+    : public std::false_type {};
 static_assert(std::is_standard_layout_v<::fidl_test_anonymous::wire::Flags>);
 static_assert(sizeof(::fidl_test_anonymous::wire::Flags) == sizeof(uint16_t));
 
 template <>
 struct IsFidlType<::fidl_test_anonymous::wire::BitsMember>
     : public std::true_type {};
+template <>
+struct ContainsHandle<::fidl_test_anonymous::wire::BitsMember>
+    : public std::false_type {};
 static_assert(
     std::is_standard_layout_v<::fidl_test_anonymous::wire::BitsMember>);
 static_assert(sizeof(::fidl_test_anonymous::wire::BitsMember) ==
@@ -1779,8 +1785,14 @@ static_assert(std::is_standard_layout_v<
 template <>
 struct IsFidlType<::fidl_test_anonymous::wire::SomeProtocolSomeMethodError>
     : public std::true_type {};
+template <>
+struct ContainsHandle<::fidl_test_anonymous::wire::SomeProtocolSomeMethodError>
+    : public std::false_type {};
 
 template <>
 struct IsFidlType<::fidl_test_anonymous::wire::Op> : public std::true_type {};
+template <>
+struct ContainsHandle<::fidl_test_anonymous::wire::Op>
+    : public std::false_type {};
 
 }  // namespace fidl

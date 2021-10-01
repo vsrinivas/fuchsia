@@ -6,6 +6,13 @@
 
 #include <fidl/fidl.llcpp.types.test/cpp/wire.h>
 
+#ifdef __Fuchsia__
+#include <lib/zx/object.h>
+#include <lib/zx/vmo.h>
+#endif
+
+#include <lib/fidl/llcpp/array.h>
+
 #include "gtest/gtest.h"
 
 namespace test = fidl_llcpp_types_test;
@@ -78,4 +85,22 @@ TEST(Traits, IsFidlType) {
   static_assert(fidl::IsFidlType<test::wire::StrictEnum>::value);
   static_assert(fidl::IsFidlType<test::wire::FlexibleEnum>::value);
   static_assert(!fidl::IsFidlType<NotAFidlType>::value);
+}
+
+TEST(Traits, ContainsHandle) {
+  static_assert(!fidl::ContainsHandle<uint32_t>::value);
+  static_assert(!fidl::ContainsHandle<fidl::Array<uint32_t, 3>>::value);
+  static_assert(!fidl::ContainsHandle<test::wire::CopyableStruct>::value);
+  static_assert(fidl::ContainsHandle<test::wire::MoveOnlyStruct>::value);
+  static_assert(!fidl::ContainsHandle<test::wire::TestResourceTable>::value);
+  static_assert(fidl::ContainsHandle<test::wire::TestHandleTable>::value);
+  static_assert(fidl::ContainsHandle<test::wire::TestXUnion>::value);
+  static_assert(fidl::ContainsHandle<test::wire::TestUnion>::value);
+  static_assert(!fidl::ContainsHandle<test::wire::TestStrictXUnion>::value);
+
+#ifdef __Fuchsia__
+  static_assert(fidl::ContainsHandle<zx::handle>::value);
+  static_assert(fidl::ContainsHandle<zx::vmo>::value);
+  static_assert(fidl::ContainsHandle<fidl::Array<zx::vmo, 3>>::value);
+#endif  // __Fuchsia__
 }

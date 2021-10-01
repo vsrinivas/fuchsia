@@ -8,7 +8,7 @@
   "pkg/fidl-llcpp-experimental-driver-only/include/lib/fidl/llcpp/client_end.h": "518af5c65d5de63b1e4edf48d71dc412",
   "pkg/fidl-llcpp-experimental-driver-only/include/lib/fidl/llcpp/coding.h": "4fe9f8ae3cad9a7aa7b676bac6ee41f4",
   "pkg/fidl-llcpp-experimental-driver-only/include/lib/fidl/llcpp/connect_service.h": "cf0bd04eb302b8484227b9774da7201a",
-  "pkg/fidl-llcpp-experimental-driver-only/include/lib/fidl/llcpp/envelope.h": "cb6cc57c6b2b2306c28a14c1e38d348a",
+  "pkg/fidl-llcpp-experimental-driver-only/include/lib/fidl/llcpp/envelope.h": "6364135bb683e3a6754e8c585133ce72",
   "pkg/fidl-llcpp-experimental-driver-only/include/lib/fidl/llcpp/extract_resource_on_destruction.h": "9b46db5221b528359b24d504047894bf",
   "pkg/fidl-llcpp-experimental-driver-only/include/lib/fidl/llcpp/internal/client_details.h": "a10270ee217929124d867d8b9f566356",
   "pkg/fidl-llcpp-experimental-driver-only/include/lib/fidl/llcpp/internal/intrusive_container/container_utils.h": "44b8d64b911decf2ea6ba7a161b02891",
@@ -29,7 +29,7 @@
   "pkg/fidl-llcpp-experimental-driver-only/include/lib/fidl/llcpp/soft_migration.h": "8cb5bf7f29c49d6295b6283f2d60d8e3",
   "pkg/fidl-llcpp-experimental-driver-only/include/lib/fidl/llcpp/string_view.h": "fa9125ffda1d8a71cc07ee2a97c24a72",
   "pkg/fidl-llcpp-experimental-driver-only/include/lib/fidl/llcpp/sync_call.h": "f539c7e09cfdfd27844d6768cd46801b",
-  "pkg/fidl-llcpp-experimental-driver-only/include/lib/fidl/llcpp/traits.h": "fd11964d808c79f9bd1c38632d6a6b86",
+  "pkg/fidl-llcpp-experimental-driver-only/include/lib/fidl/llcpp/traits.h": "653988f239d5e7035724398eb56f691e",
   "pkg/fidl-llcpp-experimental-driver-only/include/lib/fidl/llcpp/transaction.h": "288a9ee2d46cbdba54b523f483859ac0",
   "pkg/fidl-llcpp-experimental-driver-only/include/lib/fidl/llcpp/vector_view.h": "a7d87a7c61184f48a7e74943c0df1ae8",
   "pkg/fidl-llcpp-experimental-driver-only/include/lib/fidl/llcpp/wire_messaging.h": "93778fa9c7ad0793913d829fd6cd724a"

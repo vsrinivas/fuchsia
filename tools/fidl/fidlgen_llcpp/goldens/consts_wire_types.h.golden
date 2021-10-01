@@ -176,11 +176,17 @@ namespace fidl {
 template <>
 struct IsFidlType<::fidl_test_consts::wire::BitsType> : public std::true_type {
 };
+template <>
+struct ContainsHandle<::fidl_test_consts::wire::BitsType>
+    : public std::false_type {};
 static_assert(std::is_standard_layout_v<::fidl_test_consts::wire::BitsType>);
 static_assert(sizeof(::fidl_test_consts::wire::BitsType) == sizeof(uint32_t));
 
 template <>
 struct IsFidlType<::fidl_test_consts::wire::EnumType> : public std::true_type {
 };
+template <>
+struct ContainsHandle<::fidl_test_consts::wire::EnumType>
+    : public std::false_type {};
 
 }  // namespace fidl

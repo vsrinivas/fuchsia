@@ -137,6 +137,9 @@ namespace fidl {
 template <>
 struct IsFidlType<::fidl_test_bitsconstants::wire::BitsType>
     : public std::true_type {};
+template <>
+struct ContainsHandle<::fidl_test_bitsconstants::wire::BitsType>
+    : public std::false_type {};
 static_assert(
     std::is_standard_layout_v<::fidl_test_bitsconstants::wire::BitsType>);
 static_assert(sizeof(::fidl_test_bitsconstants::wire::BitsType) ==

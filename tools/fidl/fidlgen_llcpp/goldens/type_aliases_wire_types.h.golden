@@ -236,5 +236,8 @@ static_assert(
 template <>
 struct IsFidlType<::fidl_test_typealiases::wire::ObjType>
     : public std::true_type {};
+template <>
+struct ContainsHandle<::fidl_test_typealiases::wire::ObjType>
+    : public std::false_type {};
 
 }  // namespace fidl

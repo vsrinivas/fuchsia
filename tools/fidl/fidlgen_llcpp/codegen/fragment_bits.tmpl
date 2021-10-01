@@ -113,6 +113,8 @@ constexpr inline void {{ .Name }}::operator^=(
 
 template <>
 struct IsFidlType<{{ . }}> : public std::true_type {};
+template <>
+struct ContainsHandle<{{ . }}> : public std::false_type {};
 static_assert(std::is_standard_layout_v<{{ . }}>);
 static_assert(sizeof({{ . }}) == sizeof({{ .Type }}));
 {{- end }}

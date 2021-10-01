@@ -35,12 +35,6 @@ class Envelope {
 // the inline value rather than storing it natively.
 template <typename T>
 class Envelope<T, std::enable_if_t<sizeof(T) <= FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD>> {
-#if __Fuchsia__
-  static constexpr bool kIsHandle = std::is_base_of<zx::object_base, T>::value;
-#else
-  static constexpr bool kIsHandle = false;
-#endif
-
  public:
   bool has_data() const { return (flags_ & FIDL_ENVELOPE_FLAGS_INLINING_MASK) != 0; }
   const T& get_data() const {
@@ -60,8 +54,10 @@ class Envelope<T, std::enable_if_t<sizeof(T) <= FIDL_ENVELOPE_INLINING_SIZE_THRE
   }
   void set_data(T value) {
     inline_value_ = std::move(value);
-    num_handles_ =
-        (kIsHandle && reinterpret_cast<zx_handle_t&>(inline_value_) != ZX_HANDLE_INVALID) ? 1 : 0;
+    num_handles_ = (ContainsHandle<T>::value &&
+                    reinterpret_cast<zx_handle_t&>(inline_value_) != ZX_HANDLE_INVALID)
+                       ? 1
+                       : 0;
     flags_ |= FIDL_ENVELOPE_FLAGS_INLINING_MASK;
   }
   void clear_data() {

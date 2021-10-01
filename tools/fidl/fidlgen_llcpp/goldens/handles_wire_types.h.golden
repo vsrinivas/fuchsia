@@ -395,5 +395,8 @@ static_assert(sizeof(::fidl_test_handles::wire::Handles) ==
 template <>
 struct IsFidlType<::fidl_test_handles::wire::ObjType> : public std::true_type {
 };
+template <>
+struct ContainsHandle<::fidl_test_handles::wire::ObjType>
+    : public std::false_type {};
 
 }  // namespace fidl

@@ -845,6 +845,9 @@ namespace fidl {
 template <>
 struct IsFidlType<::fidl_test_doccomments::wire::MyStrictBits>
     : public std::true_type {};
+template <>
+struct ContainsHandle<::fidl_test_doccomments::wire::MyStrictBits>
+    : public std::false_type {};
 static_assert(
     std::is_standard_layout_v<::fidl_test_doccomments::wire::MyStrictBits>);
 static_assert(sizeof(::fidl_test_doccomments::wire::MyStrictBits) ==
@@ -853,6 +856,9 @@ static_assert(sizeof(::fidl_test_doccomments::wire::MyStrictBits) ==
 template <>
 struct IsFidlType<::fidl_test_doccomments::wire::MyFlexibleBits>
     : public std::true_type {};
+template <>
+struct ContainsHandle<::fidl_test_doccomments::wire::MyFlexibleBits>
+    : public std::false_type {};
 static_assert(
     std::is_standard_layout_v<::fidl_test_doccomments::wire::MyFlexibleBits>);
 static_assert(sizeof(::fidl_test_doccomments::wire::MyFlexibleBits) ==
@@ -897,9 +903,15 @@ static_assert(
 template <>
 struct IsFidlType<::fidl_test_doccomments::wire::MyStrictEnum>
     : public std::true_type {};
+template <>
+struct ContainsHandle<::fidl_test_doccomments::wire::MyStrictEnum>
+    : public std::false_type {};
 
 template <>
 struct IsFidlType<::fidl_test_doccomments::wire::MyFlexibleEnum>
     : public std::true_type {};
+template <>
+struct ContainsHandle<::fidl_test_doccomments::wire::MyFlexibleEnum>
+    : public std::false_type {};
 
 }  // namespace fidl

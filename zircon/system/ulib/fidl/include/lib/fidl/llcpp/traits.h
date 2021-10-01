@@ -145,6 +145,56 @@ struct IsFidlObject<
     T, typename std::enable_if<IsTable<T>::value || IsUnion<T>::value || IsStruct<T>::value>::type>
     : std::true_type {};
 
+// Indicates if the parameterized type contains a handle.
+template <typename T, typename Enable = void>
+struct ContainsHandle;
+
+// clang-format off
+// Specialize for primitives
+template <> struct ContainsHandle<bool> : public std::false_type {};
+template <> struct ContainsHandle<uint8_t> : public std::false_type {};
+template <> struct ContainsHandle<uint16_t> : public std::false_type {};
+template <> struct ContainsHandle<uint32_t> : public std::false_type {};
+template <> struct ContainsHandle<uint64_t> : public std::false_type {};
+template <> struct ContainsHandle<int8_t> : public std::false_type {};
+template <> struct ContainsHandle<int16_t> : public std::false_type {};
+template <> struct ContainsHandle<int32_t> : public std::false_type {};
+template <> struct ContainsHandle<int64_t> : public std::false_type {};
+template <> struct ContainsHandle<float> : public std::false_type {};
+template <> struct ContainsHandle<double> : public std::false_type {};
+// clang-format on
+
+#if __Fuchsia__
+template <typename T>
+struct ContainsHandle<T, typename std::enable_if<std::is_base_of<zx::object_base, T>::value>::type>
+    : std::true_type {};
+#endif
+
+template <typename Protocol>
+class ClientEnd;
+template <typename Protocol>
+class ServerEnd;
+
+template <typename Protocol>
+struct ContainsHandle<ClientEnd<Protocol>> : std::true_type {};
+template <typename Protocol>
+struct ContainsHandle<ServerEnd<Protocol>> : std::true_type {};
+
+template <typename T>
+struct ContainsHandle<T,
+                      typename std::enable_if<IsFidlType<T>::value && T::MaxNumHandles == 0>::type>
+    : std::false_type {};
+
+template <typename T>
+struct ContainsHandle<T,
+                      typename std::enable_if<(IsFidlType<T>::value && T::MaxNumHandles > 0)>::type>
+    : std::true_type {};
+
+template <typename T, size_t N>
+struct Array;
+template <typename T, size_t N>
+struct ContainsHandle<Array<T, N>> : ContainsHandle<T> {};
+
 // Code-gen will explicitly conform the generated FIDL structures to IsFidlType.
 
 // The direction where a message is going.
