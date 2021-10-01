@@ -147,6 +147,24 @@ In order to use this runner, add the following to your component manifest:
 }
 ```
 
+If you are [using in-tree unit test GN templates][component-unit-tests],
+and you are not already using a test framework with a dedicated test runner,
+add the following to your build deps:
+
+```
+fuchsia_unittest_package("my-test-packkage") {
+    // ...
+    deps = [
+        // ...
+        "//src/sys/testing/elftest",
+    ]
+}
+```
+
+Note: If you see the error message "Component has a \`program\` block defined,
+but doesn't specify a \`runner\`" for your test, this indicates you are not using a
+test framework with a dedicated test runner, and you should add the above dependency.
+
 #### Legacy test runner {#legacy-test-runner}
 
 Legacy tests are tests that were written before the Test Runner Framework was
