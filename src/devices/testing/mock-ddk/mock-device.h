@@ -8,8 +8,10 @@
 #include <lib/ddk/binding_priv.h>
 #include <lib/ddk/device.h>
 #include <lib/ddk/driver.h>
+#include <lib/fit/function.h>
 #include <lib/stdcompat/span.h>
 #include <lib/sync/completion.h>
+#include <lib/zx/channel.h>
 #include <lib/zx/time.h>
 #include <lib/zx/vmo.h>
 
@@ -18,6 +20,9 @@
 #include <string>
 #include <unordered_map>
 #include <vector>
+
+#include "lib/async/dispatcher.h"
+#include "lib/fidl/llcpp/wire_messaging.h"
 
 // Allow redefining the zx_device_t struct. MockDevice cannot be in the mock_ddk namespace.
 #define MockDevice zx_device
@@ -33,6 +38,8 @@ struct ProtocolEntry {
   uint32_t id;
   Protocol proto;
 };
+
+using ConnectCallback = fit::function<zx_status_t(zx::channel)>;
 }  // namespace mock_ddk
 
 // MockDevice is an implementation of the opaque type zx_device which mocks much of
@@ -164,6 +171,13 @@ struct MockDevice : public std::enable_shared_from_this<MockDevice> {
   // if you want to add a protocol to a fragment, add the fragment's name as 'name'.
   void AddProtocol(uint32_t id, const void* ops, void* ctx, const char* name = "");
 
+  // You can add FIDL protocols here to your device or your parent device.
+  // if you want to add a protocol to a fragment, add the fragment's name as 'name'.
+  // Devices will use `device_connect_fidl_protocol` or
+  // `device_connect_fragment_fidl_protocol` to connect to these protocols
+  void AddFidlProtocol(const char* protocol_name, mock_ddk::ConnectCallback callback,
+                       const char* name = "");
+
   // This struct can also be a root parent device, with reduced functionality.
   // This allows the parent to store protocols that can be accessed by a child device.
   // If IsRootParent returns true, only the following calls may target this device:
@@ -232,6 +246,15 @@ struct MockDevice : public std::enable_shared_from_this<MockDevice> {
   friend zx_status_t device_get_fragment_protocol(zx_device_t* device, const char* fragment_name,
                                                   uint32_t proto_id, void* protocol);
 
+  zx_status_t ConnectToFidlProtocol(const char* protocol_name, zx::channel request,
+                                    const char* fragment_name = "");
+  friend zx_status_t device_connect_fidl_protocol(zx_device_t* device, const char* protocol_name,
+                                                  zx_handle_t request);
+  friend zx_status_t device_connect_fragment_fidl_protocol(zx_device_t* device,
+                                                           const char* fragment_name,
+                                                           const char* protocol_name,
+                                                           zx_handle_t request);
+
   zx_off_t GetSize();
   friend zx_off_t device_get_size(zx_device_t* device);
 
@@ -254,6 +277,8 @@ struct MockDevice : public std::enable_shared_from_this<MockDevice> {
   std::list<std::shared_ptr<MockDevice>> children_;
   // Stores the normal protocols under the key "", fragment protocols under their name.
   std::unordered_map<std::string, std::list<mock_ddk::ProtocolEntry>> protocols_;
+  std::unordered_map<std::string, std::unordered_map<std::string, mock_ddk::ConnectCallback>>
+      fidl_protocols_;
   std::unordered_map<std::string_view, std::vector<uint8_t>> firmware_;
 
   size_t size_ = 0;

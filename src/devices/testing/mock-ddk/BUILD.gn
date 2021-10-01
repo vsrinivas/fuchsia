@@ -3,13 +3,9 @@
 # found in the LICENSE file.
 
 import("//build/components.gni")
-import("//build/cpp/sdk_source_set.gni")
 import("//build/test.gni")
 
-sdk_source_set("mock-ddk") {
-  category = "partner"
-  sdk_name = "mock-ddk"
-
+source_set("mock-ddk") {
   testonly = true
 
   sources = [
@@ -31,7 +27,9 @@ sdk_source_set("mock-ddk") {
     "//src/lib/ddk",
 
     # mock_ddk.h has #include <lib/sync/completion.h>.
+    "//zircon/public/lib/async",
     "//zircon/public/lib/sync",
+    "//zircon/system/ulib/svc",
   ]
 }
 
@@ -45,8 +43,10 @@ test("mock-ddk-test-bin") {
   sources = [ "mock-ddk-test.cc" ]
   deps = [
     ":mock-ddk",
+    "//garnet/examples/fidl/services:echo_llcpp",
     "//src/lib/ddktl",
     "//zircon/public/lib/zx",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/zxc",
     "//zircon/system/ulib/zxtest",

@@ -187,6 +187,12 @@ void MockDevice::AddProtocol(uint32_t id, const void* ops, void* ctx, const char
   protocols_[fragment_name].push_back(mock_ddk::ProtocolEntry{id, {ops, ctx}});
 }
 
+void MockDevice::AddFidlProtocol(const char* protocol_name, mock_ddk::ConnectCallback callback,
+                                 const char* name) {
+  fidl_protocols_.try_emplace(name, std::unordered_map<std::string, mock_ddk::ConnectCallback>());
+  fidl_protocols_[name][protocol_name] = std::move(callback);
+}
+
 void MockDevice::SetFirmware(std::vector<uint8_t> firmware, std::string_view path) {
   firmware_[path] = std::move(firmware);
 }
@@ -237,6 +243,20 @@ zx_status_t MockDevice::GetProtocol(uint32_t proto_id, void* protocol,
     }
   }
   return ZX_ERR_NOT_SUPPORTED;
+}
+
+zx_status_t MockDevice::ConnectToFidlProtocol(const char* protocol_name, zx::channel request,
+                                              const char* fragment_name) {
+  // Check if there are protocols for the fragment/device:
+  auto protocol_set = fidl_protocols_.find(fragment_name);
+  if (protocol_set == fidl_protocols_.end()) {
+    return ZX_ERR_NOT_SUPPORTED;
+  }
+  auto callback = protocol_set->second.find(protocol_name);
+  if (callback == protocol_set->second.end()) {
+    return ZX_ERR_NOT_FOUND;
+  }
+  return callback->second(std::move(request));
 }
 
 size_t MockDevice::descendant_count() const {
