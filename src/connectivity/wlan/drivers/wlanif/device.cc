@@ -38,10 +38,10 @@ Device::Device(zx_device_t* device, wlanif_impl_protocol_t wlanif_impl_proto)
 Device::~Device() { ltrace_fn(); }
 
 #define DEV(c) static_cast<Device*>(c)
-static zx_protocol_device_t eth_device_ops = {
+static zx_protocol_device_t device_ops = {
     .version = DEVICE_OPS_VERSION,
-    .unbind = [](void* ctx) { DEV(ctx)->EthUnbind(); },
-    .release = [](void* ctx) { DEV(ctx)->EthRelease(); },
+    .unbind = [](void* ctx) { DEV(ctx)->Unbind(); },
+    .release = [](void* ctx) { DEV(ctx)->Release(); },
 };
 
 static wlanif_impl_ifc_protocol_ops_t wlanif_impl_ifc_ops = {
@@ -135,15 +135,18 @@ static ethernet_impl_protocol_ops_t ethernet_impl_ops = {
 };
 #undef DEV
 
-zx_status_t Device::AddEthDevice() {
+zx_status_t Device::AddDevice() {
   device_add_args_t args = {};
   args.version = DEVICE_ADD_ARGS_VERSION;
-  args.name = "wlan-ethernet";
+  args.name = "wlanif";
   args.ctx = this;
-  args.ops = &eth_device_ops;
-  args.proto_id = ZX_PROTOCOL_ETHERNET_IMPL;
-  args.proto_ops = &ethernet_impl_ops;
-  return device_add(parent_, &args, &ethdev_);
+  args.ops = &device_ops;
+  if ((query_info_.driver_features & WLAN_INFO_DRIVER_FEATURE_SEPARATE_DATA_PLANE) == 0) {
+    // This is an ethernet driver, add the custom protocol to the device
+    args.proto_id = ZX_PROTOCOL_ETHERNET_IMPL;
+    args.proto_ops = &ethernet_impl_ops;
+  }
+  return device_add(parent_, &args, &device_);
 }
 
 #define VERIFY_PROTO_OP(fn)                                   \
@@ -191,6 +194,12 @@ zx_status_t Device::Bind() {
 
   // Query the device.
   wlanif_impl_query(&wlanif_impl_, &query_info_);
+  if (wlanif_impl_.ops->data_queue_tx &&
+      (query_info_.driver_features & WLAN_INFO_DRIVER_FEATURE_SEPARATE_DATA_PLANE) != 0) {
+    lwarn(
+        "driver implements data_queue_tx while indicating a separate data plane, data_queue_tx "
+        "will not be called.");
+  }
 
   status = loop_.StartThread("wlanif-loop");
   if (status != ZX_OK) {
@@ -198,16 +207,15 @@ zx_status_t Device::Bind() {
     return status;
   }
 
-  ZX_DEBUG_ASSERT(ethdev_ == nullptr);
-  status = AddEthDevice();
-
+  ZX_DEBUG_ASSERT(device_ == nullptr);
+  status = AddDevice();
   if (status != ZX_OK) {
     lerror("could not add ethernet_impl device: %s\n", zx_status_get_string(status));
   } else {
     status = Connect(zx::channel(mlme_channel));
     if (status != ZX_OK) {
       lerror("unable to wait on SME channel: %s\n", zx_status_get_string(status));
-      device_async_remove(ethdev_);
+      device_async_remove(device_);
       return status;
     }
   }
@@ -219,7 +227,7 @@ zx_status_t Device::Bind() {
 }
 #undef VERIFY_PROTO_OP
 
-void Device::EthUnbind() {
+void Device::Unbind() {
   ltrace_fn();
   auto dispatcher = loop_.dispatcher();
   {
@@ -231,10 +239,10 @@ void Device::EthUnbind() {
   }
 
   // Ensure that all FIDL messages have been processed before removing the device
-  ::async::PostTask(dispatcher, [this] { device_unbind_reply(ethdev_); });
+  ::async::PostTask(dispatcher, [this] { device_unbind_reply(device_); });
 }
 
-void Device::EthRelease() {
+void Device::Release() {
   ltrace_fn();
   delete this;
 }

@@ -76,6 +76,11 @@ type WlanInfoDriverFeature = strict enum : uint32 {
 
     /// Driver supports management frame protection and IGTK installation.
     MFP = 0x00000100;
+
+    // Driver implements a separate data plane and will not respond to or implement the Ethernet
+    // fidl protocol functionality in the wlanif protocol (specifically WlanifImpl::DataQueueTx and
+    // WlanifImplIfc::DataRecv).
+    SEPARATE_DATA_PLANE = 0x00000200;
 };
 
 /// IEEE Std 802.11-206 Section 9.4.1.4 Capability Information Field

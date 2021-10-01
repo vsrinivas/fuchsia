@@ -116,7 +116,7 @@ wlanif_impl_protocol_ops_t EmptyProtoOps() {
   return wlanif_impl_protocol_ops_t{
       // Each instance is required to provide its own .start() method to store the MLME channels.
       // SME Channel will be provided to wlanif-impl-driver when it calls back into its parent.
-      .query = [](void* ctx, wlanif_query_info_t* info) {},
+      .query = [](void* ctx, wlanif_query_info_t* info) { memset(info, 0, sizeof(*info)); },
       .start_scan = [](void* ctx, const wlanif_scan_req_t* req) {},
       .join_req = [](void* ctx, const wlanif_join_req_t* req) {},
       .auth_req = [](void* ctx, const wlanif_auth_req_t* req) {},
@@ -178,7 +178,7 @@ TEST(SmeChannel, Bound) {
   ASSERT_EQ(ctx.scan_req->bss_type_selector, fuchsia_wlan_internal_BSS_TYPE_SELECTOR_INFRASTRUCTURE);
   ASSERT_EQ(ctx.scan_req->scan_type, WLAN_SCAN_TYPE_PASSIVE);
 
-  device->EthUnbind();
+  device->Unbind();
 }
 
 // Tests that the device will be unbound following a failed device bind.
@@ -301,7 +301,7 @@ TEST(AssocReqHandling, MultipleAssocReq) {
   ASSERT_TRUE(ctx.assoc_req.has_value());
   ASSERT_EQ(ctx.assoc_confirmed, true);
 
-  device->EthUnbind();
+  device->Unbind();
 }
 
 struct EthernetTestFixture : public ::testing::Test {
@@ -312,7 +312,7 @@ struct EthernetTestFixture : public ::testing::Test {
         .state = ::fuchsia::wlan::mlme::ControlledPortState::OPEN});
     ASSERT_EQ(ethernet_status_, expected_status);
   }
-  void TearDown() override { device_->EthUnbind(); }
+  void TearDown() override { device_->Unbind(); }
 
   std::shared_ptr<MockDevice> parent_ = MockDevice::FakeRootParent();
   wlanif_impl_protocol_ops_t proto_ops_ = EmptyProtoOps();
@@ -323,6 +323,7 @@ struct EthernetTestFixture : public ::testing::Test {
   ethernet_ifc_protocol_t eth_proto_ = {.ops = &eth_ops_, .ctx = this};
   wlan_info_mac_role_t role_ = WLAN_INFO_MAC_ROLE_CLIENT;
   uint32_t ethernet_status_{0};
+  uint32_t driver_features_{0};
 
   zx::channel mlme_;
 };
@@ -335,7 +336,10 @@ static zx_status_t hook_start(void* ctx, const wlanif_impl_ifc_protocol_t* ifc,
   *out_mlme_channel = new_sme.release();
   return ZX_OK;
 }
-static void hook_query(void* ctx, wlanif_query_info_t* info) { info->role = ETH_DEV(ctx)->role_; }
+static void hook_query(void* ctx, wlanif_query_info_t* info) {
+  info->role = ETH_DEV(ctx)->role_;
+  info->driver_features = ETH_DEV(ctx)->driver_features_;
+}
 static void hook_eth_status(void* ctx, uint32_t status) { ETH_DEV(ctx)->ethernet_status_ = status; }
 #undef ETH_DEV
 
@@ -394,4 +398,27 @@ TEST_F(EthernetTestFixture, OnlineThenStart) {
   ASSERT_EQ(ethernet_status_, 0u);
   device_->EthStart(&eth_proto_);
   ASSERT_EQ(ethernet_status_, ETHERNET_STATUS_ONLINE);
+}
+
+TEST_F(EthernetTestFixture, EthernetDataPlane) {
+  InitDeviceWithRole(WLAN_INFO_MAC_ROLE_CLIENT);
+
+  // The device added should support the ethernet impl protocol
+  auto children = parent_->children();
+  ASSERT_EQ(children.size(), 1u);
+  ethernet_impl_protocol_t eth_impl_proto;
+  EXPECT_EQ(device_get_protocol(children.front().get(), ZX_PROTOCOL_ETHERNET_IMPL, &eth_impl_proto),
+            ZX_OK);
+}
+
+TEST_F(EthernetTestFixture, SeparateDataPlane) {
+  driver_features_ = WLAN_INFO_DRIVER_FEATURE_SEPARATE_DATA_PLANE;
+  InitDeviceWithRole(WLAN_INFO_MAC_ROLE_CLIENT);
+
+  // The device added should NOT support the ethernet impl protocol
+  auto children = parent_->children();
+  ASSERT_EQ(children.size(), 1u);
+  ethernet_impl_protocol_t eth_impl_proto;
+  EXPECT_NE(device_get_protocol(children.front().get(), ZX_PROTOCOL_ETHERNET_IMPL, &eth_impl_proto),
+            ZX_OK);
 }

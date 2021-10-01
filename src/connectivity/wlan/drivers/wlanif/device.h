@@ -24,9 +24,9 @@ class Device : public ::fuchsia::wlan::mlme::MLME {
 
   zx_status_t Bind();
 
-  // ETHERNET_IMPL zx_protocol_device_t
-  void EthUnbind();
-  void EthRelease();
+  // zx_protocol_device_t
+  void Unbind();
+  void Release();
 
   // wlanif_protocol_t (::fuchsia::wlan::mlme -> wlanif-impl)
   void StartScan(::fuchsia::wlan::mlme::ScanRequest req) override;
@@ -103,14 +103,14 @@ class Device : public ::fuchsia::wlan::mlme::MLME {
   zx_status_t Connect(zx::channel request);
 
  private:
-  zx_status_t AddEthDevice();
+  zx_status_t AddDevice();
   void SetEthernetStatusLocked(bool online) __TA_REQUIRES(lock_);
   void SetEthernetStatusUnlocked(bool online);
 
   std::mutex lock_;
 
   zx_device_t* parent_ = nullptr;
-  zx_device_t* ethdev_ = nullptr;  // ETHERNET_IMPL
+  zx_device_t* device_ = nullptr;
 
   wlanif_impl_protocol_t wlanif_impl_;
 
