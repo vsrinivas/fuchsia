@@ -179,7 +179,7 @@ zx_status_t StreamFvmPartition(fvm::SparseReader* reader, PartitionInfo* part,
       zx_status_t status = reader->ReadData(reinterpret_cast<uint8_t*>(mapper.start()),
                                             std::min(bytes_left, vmo_cap), &actual);
       if (status != ZX_OK) {
-        ERROR("Error reading partition data with %zu bytes of %zu remaining: %s\n", bytes_left,
+        ERROR("Error reading extent data with %zu bytes of %zu remaining: %s\n", bytes_left,
               ext.extent_length, zx_status_get_string(status));
         return status;
       }

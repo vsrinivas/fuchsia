@@ -17,6 +17,7 @@
 #include <stddef.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/stat.h>
 #include <unistd.h>
 #include <zircon/status.h>
 
@@ -156,6 +157,13 @@ bool ParseFlags(int argc, char** argv, Flags* flags) {
       if (!flags->payload_fd) {
         ERROR("Couldn't open supplied file\n");
         return false;
+      }
+      struct stat s;
+      if (fstat(flags->payload_fd.get(), &s) == 0) {
+        ERROR("Opening file \"%s\" of size: %llu\n", argv[0], s.st_size);
+      } else {
+        // This is purely informational. Don't return failure.
+        ERROR("Failed to stat \"%s\"\n", argv[0]);
       }
     } else if (!strcmp(argv[0], "--path")) {
       SHIFT_ARGS;

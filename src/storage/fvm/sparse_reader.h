@@ -140,6 +140,8 @@ class SparseReader {
   std::unique_ptr<uint8_t[]> metadata_;
   LZ4F_decompressionContext_t dctx_;
 
+  size_t raw_bytes_read_ = 0;
+
   // A hint of the size of the next compressed frame to be decompressed.
   // May be an overestimate, but will not be an underestimate (0 indicates no more data left to
   // decompress).

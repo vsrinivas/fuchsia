@@ -112,7 +112,7 @@ zx_status_t SparseReader::ReadMetadata() {
   // Read sparse image header.
   fvm::SparseImage image;
   size_t actual;
-  auto status = reader_->Read(&image, sizeof(fvm::SparseImage), &actual);
+  auto status = ReadRaw(reinterpret_cast<uint8_t*>(&image), sizeof(fvm::SparseImage), &actual);
   if (status != ZX_OK || actual != sizeof(fvm::SparseImage)) {
     fprintf(stderr, "failed to read the sparse header\n");
     return ZX_ERR_IO;
@@ -136,7 +136,7 @@ zx_status_t SparseReader::ReadMetadata() {
   // Read remainder of metadata.
   size_t off = sizeof(image);
   while (off < image.header_length) {
-    status = reader_->Read(&metadata_[off], image.header_length - off, &actual);
+    status = ReadRaw(&metadata_[off], image.header_length - off, &actual);
     if (status != ZX_OK) {
       fprintf(stderr, "SparseReader: Failed to read metadata\n");
       return status;
@@ -177,7 +177,7 @@ zx_status_t SparseReader::SetupLZ4() {
   uint8_t* inbuf = inbufptr.get();
 
   // Read first 4 bytes to let LZ4 tell us how much it expects in the first pass.
-  status = reader_->Read(inbuf, src_sz, &actual);
+  status = ReadRaw(inbuf, src_sz, &actual);
   if (status != ZX_OK || actual < src_sz) {
     fprintf(stderr, "SparseReader: could not read from input\n");
     return ZX_ERR_IO;
@@ -238,7 +238,13 @@ zx_status_t SparseReader::ReadData(uint8_t* data, size_t length, size_t* actual)
   size_t total_size = 0;
   if (compressed_) {
     if (out_.IsEmpty() && to_read_ == 0) {
-      fprintf(stderr, "Attempting to read past end of the compressed file.\n");
+      fprintf(stderr, "Attempting to read past end of the compressed extent. At offset: %lu\n",
+              raw_bytes_read_);
+      fprintf(stderr, "Last raw read of size %lu ended with:", in_.size());
+      for (size_t i = in_.size() - std::min(16ul, in_.size()); i < in_.size(); ++i) {
+        fprintf(stderr, " %#02x", in_.get()[i]);
+      }
+      fprintf(stderr, "\n");
       // There is no more to read
       return ZX_ERR_OUT_OF_RANGE;
     }
@@ -335,6 +341,7 @@ zx_status_t SparseReader::ReadRaw(uint8_t* data, size_t length, size_t* actual) 
     return status;
   }
 
+  raw_bytes_read_ += total_size;
   *actual = total_size;
   return ZX_OK;
 }
