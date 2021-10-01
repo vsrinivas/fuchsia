@@ -2,7 +2,7 @@
   "pkg/ddk/include/lib/ddk/binding_priv.h": "4a3009a686f415da64083152840627d3",
   "pkg/ddk/include/lib/ddk/debug.h": "736b21b5fa9bcaacb5ee83789cd7ee4e",
   "pkg/ddk/include/lib/ddk/device.h": "42ce4ff7cf07de33ffef9217bb839661",
-  "pkg/ddk/include/lib/ddk/driver.h": "c10c008173dbbb01e718531346a52e06",
+  "pkg/ddk/include/lib/ddk/driver.h": "46cfb88f3ba6342c396c35f315f05f62",
   "pkg/ddk/include/lib/ddk/fragment-device.h": "fcbfff749bc40f5b9de20763e1174c03",
   "pkg/ddk/include/lib/ddk/hw/arch_ops.h": "ef8c3cb79d2112918bf853ff82cd7f0e",
   "pkg/ddk/include/lib/ddk/hw/inout.h": "c642e13fad48e9de276f39a7128d778d",

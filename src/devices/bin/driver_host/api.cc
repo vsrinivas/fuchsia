@@ -497,6 +497,20 @@ __EXPORT zx_status_t device_connect_fidl_protocol(zx_device_t* device, const cha
   return device->proxy()->ConnectToProtocol(protocol_name, zx::channel(request)).status_value();
 }
 
+__EXPORT zx_status_t device_connect_fragment_fidl_protocol(zx_device_t* device,
+                                                           const char* fragment_name,
+                                                           const char* protocol_name,
+                                                           zx_handle_t request) {
+  if (!device->is_composite()) {
+    return ZX_ERR_NOT_SUPPORTED;
+  }
+  zx_device_t* fragment;
+  if (!device->composite()->GetFragment(fragment_name, &fragment)) {
+    return ZX_ERR_NOT_FOUND;
+  }
+  return device_connect_fidl_protocol(fragment, protocol_name, request);
+}
+
 __EXPORT async_dispatcher_t* device_get_dispatcher(zx_device_t* device) {
   return device->dispatcher();
 }

@@ -404,6 +404,9 @@ static inline zx_status_t load_firmware(zx_device_t* device, const char* path, z
 zx_status_t device_connect_fidl_protocol(zx_device_t* device, const char* protocol_name,
                                          zx_handle_t request);
 
+zx_status_t device_connect_fragment_fidl_protocol(zx_device_t* device, const char* fragment_name,
+                                                  const char* protocol_name, zx_handle_t request);
+
 // Returns an async dispatcher. It may be multithreaded, so user must take care to not assume
 // callbacks will be serialized in a single thread. All outstanding waits will be canceled once
 // device_unbind_reply is called.

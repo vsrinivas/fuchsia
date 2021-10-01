@@ -556,9 +556,18 @@ class Device : public ::ddk::internal::base_device<D, Mixins...> {
   }
 
   template <typename Protocol>
-  zx_status_t DdkConnectFidlProtocol(fidl::ServerEnd<Protocol> request,
-                                     const char* path = fidl::DiscoverableProtocolName<Protocol>) {
+  zx_status_t DdkConnectFidlProtocol(
+      fidl::ServerEnd<Protocol> request,
+      const char* path = fidl::DiscoverableProtocolName<Protocol>) const {
     return device_connect_fidl_protocol(parent(), path, request.TakeChannel().release());
+  }
+
+  template <typename Protocol>
+  zx_status_t DdkConnectFragmentFidlProtocol(
+      const char* fragment_name, fidl::ServerEnd<Protocol> request,
+      const char* path = fidl::DiscoverableProtocolName<Protocol>) const {
+    return device_connect_fragment_fidl_protocol(parent(), fragment_name, path,
+                                                 request.TakeChannel().release());
   }
 
   const char* name() const { return zxdev() ? device_get_name(zxdev()) : nullptr; }
