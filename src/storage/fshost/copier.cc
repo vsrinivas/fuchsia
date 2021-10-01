@@ -5,38 +5,96 @@
 #include "src/storage/fshost/copier.h"
 
 #include <dirent.h>
-#include <lib/fit/defer.h>
 #include <lib/syslog/cpp/macros.h>
 #include <sys/stat.h>
 #include <sys/types.h>
+#include <zircon/errors.h>
 
+#include <filesystem>
+#include <memory>
 #include <string>
+#include <vector>
+
+#include <fbl/unique_fd.h>
+
+#include "src/lib/files/directory.h"
+#include "src/lib/files/file.h"
 
 namespace fshost {
+namespace {
 
-zx::status<Copier> Copier::Read(fbl::unique_fd root_fd) {
-  std::vector<std::pair<DIR*, Tree*>> pending;
-  DIR* current = nullptr;
-  auto defer = fit::defer([&pending, &current] {
-    for (auto [dir, tree] : pending)
-      closedir(dir);
-    if (current)
-      closedir(current);
-  });
+struct DirCloser {
+  void operator()(DIR* dir) { closedir(dir); }
+};
+// RAII wrapper around a DIR* that close the DIR when it goes out of scope.
+using UniqueDir = std::unique_ptr<DIR, DirCloser>;
+
+UniqueDir OpenDir(fbl::unique_fd fd) {
+  UniqueDir dir(fdopendir(fd.get()));
+  if (dir) {
+    // DIR only takes ownership of the file descriptor on success.
+    fd.release();
+  }
+  return dir;
+}
+
+bool IsPathExcluded(const std::vector<std::filesystem::path>& excluded_paths,
+                    const std::filesystem::path& path) {
+  for (const auto& exclusion : excluded_paths) {
+    if (exclusion.empty()) {
+      // Skip the empty path. It would cause all files to be excluded which is probably not what the
+      // caller wanted.
+      continue;
+    }
+    auto exclusion_it = exclusion.begin();
+    auto path_it = path.begin();
+    while (exclusion_it != exclusion.end() && path_it != path.end()) {
+      if (*exclusion_it != *path_it) {
+        break;
+      }
+      ++exclusion_it;
+      ++path_it;
+    }
+    if (exclusion_it == exclusion.end()) {
+      return true;
+    }
+  }
+  return false;
+}
+
+}  // namespace
+
+zx::status<Copier> Copier::Read(fbl::unique_fd root_fd,
+                                const std::vector<std::filesystem::path>& excluded_paths) {
+  struct PendingRead {
+    UniqueDir dir;
+    Tree* tree;
+    // The path relative to |root_fd|.
+    std::filesystem::path path;
+  };
+  std::vector<PendingRead> pending;
+
   Copier copier;
   {
-    DIR* dir = fdopendir(root_fd.release());
+    UniqueDir dir = OpenDir(std::move(root_fd));
     if (!dir)
       return zx::error(ZX_ERR_BAD_STATE);
-    pending.push_back(std::make_pair(dir, &copier.tree_));
+    pending.push_back({
+        .dir = std::move(dir),
+        .tree = &copier.tree_,
+        .path = "",
+    });
   }
   while (!pending.empty()) {
-    current = pending.back().first;
-    Tree* tree = pending.back().second;
+    PendingRead current = std::move(pending.back());
     pending.pop_back();
     struct dirent* entry;
-    while ((entry = readdir(current)) != nullptr) {
-      fbl::unique_fd fd(openat(dirfd(current), entry->d_name, O_RDONLY));
+    while ((entry = readdir(current.dir.get())) != nullptr) {
+      std::string name(entry->d_name);
+      std::filesystem::path path = current.path / name;
+      if (IsPathExcluded(excluded_paths, path))
+        continue;
+      fbl::unique_fd fd(openat(dirfd(current.dir.get()), name.c_str(), O_RDONLY));
       if (!fd)
         return zx::error(ZX_ERR_BAD_STATE);
       switch (entry->d_type) {
@@ -45,35 +103,38 @@ zx::status<Copier> Copier::Read(fbl::unique_fd root_fd) {
           if (fstat(fd.get(), &stat_buf) != 0) {
             return zx::error(ZX_ERR_BAD_STATE);
           }
-          std::vector<uint8_t> buf(stat_buf.st_size);
-          if (read(fd.get(), buf.data(), stat_buf.st_size) != stat_buf.st_size) {
+          std::string buf;
+          buf.reserve(stat_buf.st_size);
+          if (!files::ReadFileDescriptorToString(fd.get(), &buf)) {
             return zx::error(ZX_ERR_BAD_STATE);
           }
-          tree->tree.push_back(std::make_pair(std::string(entry->d_name), std::move(buf)));
+          current.tree->tree.emplace_back(std::move(name), std::move(buf));
           break;
         }
         case DT_DIR: {
-          if (!strcmp(entry->d_name, "."))
+          if (name == "." || name == "..")
             continue;
           auto child_tree = std::make_unique<Tree>();
-          DIR* child_dir = fdopendir(fd.release());
+          UniqueDir child_dir = OpenDir(std::move(fd));
           if (!child_dir)
             return zx::error(ZX_ERR_BAD_STATE);
-          pending.push_back(std::make_pair(child_dir, child_tree.get()));
-          tree->tree.push_back(std::make_pair(std::string(entry->d_name), std::move(child_tree)));
+          pending.push_back({
+              .dir = std::move(child_dir),
+              .tree = child_tree.get(),
+              .path = std::move(path),
+          });
+          current.tree->tree.emplace_back(std::move(name), std::move(child_tree));
           break;
         }
       }
     }
-    closedir(current);
-    current = nullptr;
   }
   return zx::ok(std::move(copier));
 }
 
 zx_status_t Copier::Write(fbl::unique_fd root_fd) const {
   std::vector<std::pair<fbl::unique_fd, const Tree*>> pending;
-  pending.push_back(std::make_pair(std::move(root_fd), &tree_));
+  pending.emplace_back(std::move(root_fd), &tree_);
   while (!pending.empty()) {
     fbl::unique_fd fd = std::move(pending.back().first);
     const Tree* tree = pending.back().second;
@@ -81,18 +142,13 @@ zx_status_t Copier::Write(fbl::unique_fd root_fd) const {
     for (const auto& [name, child] : tree->tree) {
       auto child_data = std::get_if<0>(&child);
       if (child_data) {
-        fbl::unique_fd child_fd(openat(fd.get(), name.c_str(), O_RDWR | O_CREAT, 0666));
-        if (!child_fd) {
-          FX_LOGS(ERROR) << "Unable to open " << name;
-          return ZX_ERR_BAD_STATE;
-        }
-        if (write(child_fd.get(), child_data->data(), child_data->size()) !=
-            static_cast<ssize_t>(child_data->size())) {
+        if (!files::WriteFileAt(fd.get(), name, child_data->data(),
+                                static_cast<ssize_t>(child_data->size()))) {
           FX_LOGS(ERROR) << "Unable to write to " << name;
           return ZX_ERR_BAD_STATE;
         }
       } else {
-        if (mkdirat(fd.get(), name.c_str(), 0777)) {
+        if (!files::CreateDirectoryAt(fd.get(), name)) {
           FX_LOGS(ERROR) << "Unable to make directory " << name;
           return ZX_ERR_BAD_STATE;
         }
@@ -101,7 +157,7 @@ zx_status_t Copier::Write(fbl::unique_fd root_fd) const {
           FX_LOGS(ERROR) << "Unable to open directory " << name;
           return ZX_ERR_BAD_STATE;
         }
-        pending.push_back(std::make_pair(std::move(child_fd), std::get<1>(child).get()));
+        pending.emplace_back(std::move(child_fd), std::get<1>(child).get());
       }
     }
   }

@@ -22,13 +22,17 @@ namespace fshost {
 zx::status<fuchsia_hardware_block::wire::BlockInfo> GetBlockDeviceInfo(
     const zx::unowned_channel& device);
 
+// Parses |excluded_paths| into a list of paths. White space and empty paths are removed.
+std::vector<std::filesystem::path> ParseExcludedPaths(std::string_view excluded_paths);
+
 // For a given block |device| formatted with minfs, resizes minfs if it's not the correct size.
 //
 // "correct size" is defined as: the size of the minfs partition is less than or equal to
 // |size_limit| and the number of inodes in minfs is equal to |required_inodes|.
 //
 // This method is slow and may destroy files or corrupt minfs. Not tolerant to power interruptions.
-zx::status<> MaybeResizeMinfs(zx::channel device, uint64_t size_limit, uint64_t required_inodes);
+zx::status<> MaybeResizeMinfs(zx::channel device, uint64_t size_limit, uint64_t required_inodes,
+                              const std::vector<std::filesystem::path>& excluded_paths);
 
 // RAII wrapper around a mounted minfs that unmounts minfs when destroyed.
 class MountedMinfs {
@@ -50,7 +54,7 @@ class MountedMinfs {
   zx::status<fuchsia_io_admin::wire::FilesystemInfo> GetFilesystemInfo() const;
 
   // Copies the contents of minfs into ram.
-  zx::status<Copier> ReadFilesystem() const;
+  zx::status<Copier> ReadFilesystem(const std::vector<std::filesystem::path>& excluded_paths) const;
 
   // Populates minfs with the contents of |copier|.
   zx::status<> PopulateFilesystem(Copier copier) const;

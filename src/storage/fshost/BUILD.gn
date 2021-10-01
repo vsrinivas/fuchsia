@@ -43,6 +43,9 @@ declare_args() {
 
   # Make fshost watch for NAND devices.
   fshost_watch_for_nand = false
+
+  # List of files and directories that don't need to be preserved when resizing minfs.
+  minfs_resize_excluded_paths = []
 }
 
 group("tests") {
@@ -207,6 +210,7 @@ source_set("block-watcher") {
     "//sdk/lib/fit",
     "//src/devices/block/drivers/block-verity:verified-volume-client",
     "//src/lib/digest",
+    "//src/lib/files",
     "//src/lib/loader_service",
     "//src/lib/storage/fs_management",
     "//src/lib/storage/vfs/cpp",
@@ -461,6 +465,7 @@ test("copier_test") {
   ]
   deps = [
     "//sdk/lib/syslog/cpp:cpp-macros",
+    "//src/lib/files",
     "//src/lib/fxl/test:gtest_main",
     "//src/sys/test_runners:tmp_storage",
     "//zircon/system/ulib/fbl",
@@ -604,6 +609,11 @@ template("fshost_config") {
 
     if (fshost_watch_for_nand) {
       contents += [ "nand" ]
+    }
+
+    if (minfs_resize_excluded_paths != []) {
+      contents += [ "minfs-resize-excluded-paths=" +
+                    string_join(",", minfs_resize_excluded_paths) ]
     }
 
     output_conversion = "list lines"

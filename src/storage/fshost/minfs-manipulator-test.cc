@@ -18,6 +18,7 @@
 #include <fs-management/admin.h>
 #include <fs-management/format.h>
 #include <fs-management/launch.h>
+#include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
 #include "src/lib/files/directory.h"
@@ -30,6 +31,9 @@
 namespace fshost {
 namespace {
 
+using ::testing::ElementsAre;
+using ::testing::IsEmpty;
+
 constexpr uint64_t kBlockSize = 512;
 constexpr uint64_t kDeviceSize = 15lu * 1024 * 1024;
 constexpr uint64_t kBlockCount = kDeviceSize / kBlockSize;
@@ -39,8 +43,10 @@ constexpr uint64_t kMinfsPartitionSizeLimit = 13860864;
 // Minfs will never have exactly 3 inodes which will force a resize to always happen.
 constexpr uint64_t kForceResizeInodeCount = 3;
 
-class FsManipulatorTest : public testing::Test {
+class MinfsManipulatorTest : public testing::Test {
  public:
+  const std::vector<std::filesystem::path> kNoExcludedPaths = {};
+
   void SetUp() override {
     zx::status<storage::RamDisk> ram_disk = storage::RamDisk::Create(kBlockSize, kBlockCount);
     ASSERT_OK(ram_disk.status_value());
@@ -98,7 +104,7 @@ bool CreateSizedFileAt(int dir, const char* filename, ssize_t file_size) {
   return true;
 }
 
-TEST_F(FsManipulatorTest, MaybeResizeMinfsWithAcceptableSizeDoesNothing) {
+TEST_F(MinfsManipulatorTest, MaybeResizeMinfsWithAcceptableSizeDoesNothing) {
   constexpr char kFilename[] = "1MiBfile";
   zx::status<uint64_t> initialize_size = GetBlockDeviceSize();
   ASSERT_OK(initialize_size.status_value());
@@ -121,8 +127,8 @@ TEST_F(FsManipulatorTest, MaybeResizeMinfsWithAcceptableSizeDoesNothing) {
   ASSERT_GT(*filled_size, *initialize_size);
 
   // Attempt to resize minfs.
-  zx::status<> status =
-      MaybeResizeMinfs(device(), kMinfsPartitionSizeLimit, kMinfsDefaultInodeCount);
+  zx::status<> status = MaybeResizeMinfs(device(), kMinfsPartitionSizeLimit,
+                                         kMinfsDefaultInodeCount, kNoExcludedPaths);
   ASSERT_OK(status.status_value());
 
   // If minfs was resized then it would have given back all of its slices to fvm and the block
@@ -134,7 +140,7 @@ TEST_F(FsManipulatorTest, MaybeResizeMinfsWithAcceptableSizeDoesNothing) {
   EXPECT_EQ(*final_size, *filled_size);
 }
 
-TEST_F(FsManipulatorTest, MaybeResizeMinfsWithTooManyInodesResizes) {
+TEST_F(MinfsManipulatorTest, MaybeResizeMinfsWithTooManyInodesResizes) {
   // Write lots of files to minfs to increase the number of allocated inodes.
   {
     zx::status<MountedMinfs> minfs = MountedMinfs::Mount(device());
@@ -160,8 +166,8 @@ TEST_F(FsManipulatorTest, MaybeResizeMinfsWithTooManyInodesResizes) {
   }
 
   // Resize minfs
-  zx::status<> status =
-      MaybeResizeMinfs(device(), kMinfsPartitionSizeLimit, kMinfsDefaultInodeCount);
+  zx::status<> status = MaybeResizeMinfs(device(), kMinfsPartitionSizeLimit,
+                                         kMinfsDefaultInodeCount, kNoExcludedPaths);
   ASSERT_OK(status.status_value());
 
   // Minfs should have the desired number of inodes again.
@@ -172,7 +178,7 @@ TEST_F(FsManipulatorTest, MaybeResizeMinfsWithTooManyInodesResizes) {
   EXPECT_EQ(info->total_nodes, kMinfsDefaultInodeCount);
 }
 
-TEST_F(FsManipulatorTest, MaybeResizeMinfsWithTooManySlicesResizes) {
+TEST_F(MinfsManipulatorTest, MaybeResizeMinfsWithTooManySlicesResizes) {
   constexpr char kFilename[] = "1MiBfile";
   zx::status<uint64_t> initialize_size = GetBlockDeviceSize();
   ASSERT_OK(initialize_size.status_value());
@@ -195,7 +201,8 @@ TEST_F(FsManipulatorTest, MaybeResizeMinfsWithTooManySlicesResizes) {
   ASSERT_GT(*filled_size, *initialize_size);
 
   // Use |initial_size| as the limit which should cause minfs to be resized.
-  zx::status<> status = MaybeResizeMinfs(device(), *initialize_size, kMinfsDefaultInodeCount);
+  zx::status<> status =
+      MaybeResizeMinfs(device(), *initialize_size, kMinfsDefaultInodeCount, kNoExcludedPaths);
   ASSERT_OK(status.status_value());
 
   // If minfs was resized then it should be back to the initial size.
@@ -206,7 +213,7 @@ TEST_F(FsManipulatorTest, MaybeResizeMinfsWithTooManySlicesResizes) {
   EXPECT_EQ(*final_size, *initialize_size);
 }
 
-TEST_F(FsManipulatorTest, MaybeResizeMinfsResizingPreservesAllFiles) {
+TEST_F(MinfsManipulatorTest, MaybeResizeMinfsResizingWithNoExcludedPathsPreservesAllFiles) {
   const std::filesystem::path kFile1 = "file1.txt";
   const std::string kFile1Contents = "contents1";
   const std::filesystem::path kDirectory1 = "dir1";
@@ -229,8 +236,8 @@ TEST_F(FsManipulatorTest, MaybeResizeMinfsResizingPreservesAllFiles) {
   }
 
   // Force minfs to resize.
-  zx::status<> status =
-      MaybeResizeMinfs(device(), kMinfsPartitionSizeLimit, kForceResizeInodeCount);
+  zx::status<> status = MaybeResizeMinfs(device(), kMinfsPartitionSizeLimit, kForceResizeInodeCount,
+                                         kNoExcludedPaths);
   ASSERT_OK(status.status_value());
 
   // Verify that all of the files were preserved.
@@ -253,7 +260,45 @@ TEST_F(FsManipulatorTest, MaybeResizeMinfsResizingPreservesAllFiles) {
   EXPECT_FALSE(*is_resize_in_progress);
 }
 
-TEST_F(FsManipulatorTest, MaybeResizeMinfsWithResizeInProgressReformatsMinfs) {
+TEST_F(MinfsManipulatorTest, MaybeResizeMinfsResizingWithExcludedPathsIsCorrect) {
+  {
+    zx::status<MountedMinfs> minfs = MountedMinfs::Mount(device());
+    ASSERT_OK(minfs.status_value());
+    zx::status<fbl::unique_fd> root = minfs->GetRootFd();
+    ASSERT_OK(root.status_value());
+    ASSERT_TRUE(files::CreateDirectoryAt(root->get(), "cache"));
+    ASSERT_TRUE(files::WriteFileAt(root->get(), "cache/file", "contents1", 9));
+    ASSERT_TRUE(files::CreateDirectoryAt(root->get(), "p"));
+    ASSERT_TRUE(files::CreateDirectoryAt(root->get(), "p/m1"));
+    ASSERT_TRUE(files::WriteFileAt(root->get(), "p/m1/file", "contents2", 9));
+    ASSERT_TRUE(files::CreateDirectoryAt(root->get(), "p/m2"));
+    ASSERT_TRUE(files::WriteFileAt(root->get(), "p/m2/file", "contents3", 9));
+    ASSERT_TRUE(files::CreateDirectoryAt(root->get(), "p/m2/db"));
+    ASSERT_TRUE(files::WriteFileAt(root->get(), "p/m2/db/file", "contents4", 9));
+  }
+
+  std::vector<std::filesystem::path> excluded_paths = {"cache", "p/m1/file", "p/m2/db"};
+  // Force minfs to resize.
+  zx::status<> status =
+      MaybeResizeMinfs(device(), kMinfsPartitionSizeLimit, kForceResizeInodeCount, excluded_paths);
+  ASSERT_OK(status.status_value());
+
+  zx::status<MountedMinfs> minfs = MountedMinfs::Mount(device());
+  ASSERT_OK(minfs.status_value());
+  zx::status<fbl::unique_fd> root = minfs->GetRootFd();
+  ASSERT_OK(root.status_value());
+
+  // Verify that only non-excluded files were copied over.
+  std::string contents;
+  EXPECT_FALSE(files::ReadFileToStringAt(root->get(), "cache/file", &contents));
+  EXPECT_FALSE(files::ReadFileToStringAt(root->get(), "p/m1/file", &contents));
+  EXPECT_FALSE(files::ReadFileToStringAt(root->get(), "p/m2/db/file", &contents));
+
+  EXPECT_TRUE(files::ReadFileToStringAt(root->get(), "p/m2/file", &contents));
+  EXPECT_EQ(contents, "contents3");
+}
+
+TEST_F(MinfsManipulatorTest, MaybeResizeMinfsWithResizeInProgressReformatsMinfs) {
   const std::filesystem::path kFile = "file.txt";
   const std::string kFileContents = "contents";
   {
@@ -266,8 +311,8 @@ TEST_F(FsManipulatorTest, MaybeResizeMinfsWithResizeInProgressReformatsMinfs) {
     ASSERT_TRUE(files::WriteFileAt(root->get(), kFile, kFileContents.data(), kFileContents.size()));
   }
 
-  zx::status<> status =
-      MaybeResizeMinfs(device(), kMinfsPartitionSizeLimit, kMinfsDefaultInodeCount);
+  zx::status<> status = MaybeResizeMinfs(device(), kMinfsPartitionSizeLimit,
+                                         kMinfsDefaultInodeCount, kNoExcludedPaths);
   ASSERT_OK(status.status_value());
 
   zx::status<MountedMinfs> minfs = MountedMinfs::Mount(device());
@@ -282,7 +327,7 @@ TEST_F(FsManipulatorTest, MaybeResizeMinfsWithResizeInProgressReformatsMinfs) {
   EXPECT_FALSE(*is_resize_in_progress);
 }
 
-TEST_F(FsManipulatorTest, MaybeResizeMinfsResizeInProgressIsCorrectlyDetected) {
+TEST_F(MinfsManipulatorTest, MaybeResizeMinfsResizeInProgressIsCorrectlyDetected) {
   {
     zx::status<MountedMinfs> minfs = MountedMinfs::Mount(device());
     ASSERT_OK(minfs.status_value());
@@ -315,6 +360,21 @@ TEST_F(FsManipulatorTest, MaybeResizeMinfsResizeInProgressIsCorrectlyDetected) {
   auto is_resize_in_progress = minfs->IsResizeInProgress();
   ASSERT_OK(is_resize_in_progress.status_value());
   EXPECT_FALSE(*is_resize_in_progress);
+}
+
+TEST(ParseExcludedPaths, WithEmptyStringProducesEmptyList) {
+  std::vector<std::filesystem::path> paths = ParseExcludedPaths("");
+  EXPECT_THAT(paths, IsEmpty());
+}
+
+TEST(ParseExcludedPaths, RemovesEmptyPaths) {
+  std::vector<std::filesystem::path> paths = ParseExcludedPaths(",foo,,bar,");
+  EXPECT_THAT(paths, ElementsAre("foo", "bar"));
+}
+
+TEST(ParseExcludedPaths, RemovesWhitespace) {
+  std::vector<std::filesystem::path> paths = ParseExcludedPaths("  foo , bar,baz ");
+  EXPECT_THAT(paths, ElementsAre("foo", "bar", "baz"));
 }
 
 }  // namespace

@@ -694,8 +694,10 @@ zx_status_t BlockDevice::MountData(MountOptions* options) {
     uint64_t minfs_max_size = device_config_->ReadUint64OptionValue(Config::kMinfsMaxBytes, 0);
     bool using_custom_fs = device_config_->is_set(Config::kDataFilesystemBinaryPath);
     if (!using_custom_fs && minfs_max_size > 0) {
-      if (zx::status<> status =
-              MaybeResizeMinfs(CloneDeviceChannel(), minfs_max_size, /*required_inodes=*/4096);
+      auto excluded_paths = ParseExcludedPaths(
+          device_config_->ReadStringOptionValue(Config::kMinfsResizeExcludedPaths));
+      if (zx::status<> status = MaybeResizeMinfs(CloneDeviceChannel(), minfs_max_size,
+                                                 /*required_inodes=*/4096, excluded_paths);
           status.is_error()) {
         FX_LOGS(ERROR) << "Failed to resize minfs";
         // Continue on and hope that minfs can be still be mounted.

@@ -50,6 +50,7 @@ struct Config {
   static const char kDataFilesystemUsesCrypt[];
   static const char kAllowLegacyDataPartitionNames[];
   static const char kNand[];
+  static const char kMinfsResizeExcludedPaths[];
 
   // Reads options from the stream which consist of one option per line. "default" means include the
   // default options, and lines with a leading '-' negate the option.

@@ -96,6 +96,10 @@ const char Config::kAllowLegacyDataPartitionNames[] = "allow-legacy-data-partiti
 // Enables NAND devices.
 const char Config::kNand[] = "nand";
 
+// Comma separated list of files and directories that don't need to be preserved when resizing
+// minfs.
+const char Config::kMinfsResizeExcludedPaths[] = "minfs-resize-excluded-paths";
+
 Config::Options Config::ReadOptions(std::istream& stream) {
   Options options;
   for (std::string line; std::getline(stream, line);) {

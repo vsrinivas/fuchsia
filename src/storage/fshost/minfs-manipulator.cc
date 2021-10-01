@@ -20,6 +20,7 @@
 #include <zircon/types.h>
 
 #include <cstdint>
+#include <string_view>
 
 #include <block-client/cpp/remote-block-device.h>
 #include <fbl/unique_fd.h>
@@ -29,6 +30,7 @@
 #include <fs-management/mount.h>
 
 #include "src/lib/files/file_descriptor.h"
+#include "src/lib/fxl/strings/split_string.h"
 #include "src/storage/fshost/copier.h"
 #include "src/storage/fvm/client.h"
 
@@ -105,7 +107,20 @@ zx::status<fuchsia_hardware_block::wire::BlockInfo> GetBlockDeviceInfo(
   return zx::ok(*result->info);
 }
 
-zx::status<> MaybeResizeMinfs(zx::channel device, uint64_t size_limit, uint64_t required_inodes) {
+std::vector<std::filesystem::path> ParseExcludedPaths(std::string_view excluded_paths) {
+  std::vector<std::string> strings =
+      fxl::SplitStringCopy(excluded_paths, ",", fxl::WhiteSpaceHandling::kTrimWhitespace,
+                           fxl::SplitResult::kSplitWantNonEmpty);
+  std::vector<std::filesystem::path> paths;
+  paths.reserve(strings.size());
+  for (std::string& str : strings) {
+    paths.emplace_back(std::move(str));
+  }
+  return paths;
+}
+
+zx::status<> MaybeResizeMinfs(zx::channel device, uint64_t size_limit, uint64_t required_inodes,
+                              const std::vector<std::filesystem::path>& excluded_paths) {
   zx::status<MountedMinfs> minfs = MountedMinfs::Mount(CloneDeviceChannel(device));
   if (minfs.is_error()) {
     FX_LOGS(ERROR) << "Failed to mount minfs: " << minfs.status_string();
@@ -148,9 +163,9 @@ zx::status<> MaybeResizeMinfs(zx::channel device, uint64_t size_limit, uint64_t 
   }
 
   // Copy all of minfs into ram.
-  // TODO(fxbug.dev/84885): Filter out files that shouldn't be copied and check that the copied
-  // files will fit in the new minfs before destroying minfs.
-  zx::status<Copier> copier = minfs->ReadFilesystem();
+  // TODO(fxbug.dev/84885): Check that the copied files will fit in the new minfs before destroying
+  // minfs.
+  zx::status<Copier> copier = minfs->ReadFilesystem(excluded_paths);
   if (copier.is_error()) {
     FX_LOGS(ERROR) << "Failed to read the contents minfs into memory: " << copier.status_string();
     // Minfs wasn't modified yet. Try again on next boot.
@@ -275,12 +290,13 @@ zx::status<> MountedMinfs::PopulateFilesystem(Copier copier) const {
   return ClearResizeInProgress();
 }
 
-zx::status<Copier> MountedMinfs::ReadFilesystem() const {
+zx::status<Copier> MountedMinfs::ReadFilesystem(
+    const std::vector<std::filesystem::path>& excluded_paths) const {
   zx::status<fbl::unique_fd> root = GetRootFd();
   if (root.is_error()) {
     return root.take_error();
   }
-  return Copier::Read(*std::move(root));
+  return Copier::Read(*std::move(root), excluded_paths);
 }
 
 MountedMinfs::MountedMinfs(zx::channel root) : root_(std::move(root)) {}
