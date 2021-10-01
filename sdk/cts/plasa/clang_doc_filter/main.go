@@ -37,7 +37,7 @@ func fullName(name Name, ns []ID) string {
 // addAllFromDir scans inputDir for YAML aggregate files and extracts information from them.
 // The information is funneled into the supplied function 'add'.  The function 'add' is allowed
 // to fail, in which case the scanning is stopped.
-func addAllFromDir(inputDir string, addFn func(a Aggregate) error) error {
+func addAllFromDir(lenient bool, inputDir string, addFn func(a Aggregate) error) error {
 	err := filepath.WalkDir(inputDir, func(path string, d os.DirEntry, err error) error {
 		if err != nil {
 			return fmt.Errorf("filepath.WalkDir called with err != nil:\n\t%w", err)
@@ -49,7 +49,7 @@ func addAllFromDir(inputDir string, addFn func(a Aggregate) error) error {
 		if err != nil {
 			return fmt.Errorf("while opening: %v:\n\t%w", path, err)
 		}
-		a, err := ParseYAML(f)
+		a, err := ParseYAML(f, lenient)
 		if err != nil {
 			return fmt.Errorf("while parsing: %v:\n\t%w", path, err)
 		}
@@ -70,7 +70,7 @@ func run(inputDir string, w io.Writer, args args) error {
 	var r Report
 	r.setFileRegexes(args.allowlistFilenameRegexp)
 	r.setSymRegexes(args.allowlistNameRegexp)
-	if err := addAllFromDir(inputDir, r.Add); err != nil {
+	if err := addAllFromDir(args.lenient, inputDir, r.Add); err != nil {
 		return fmt.Errorf("in main.run(): while reading dir:\n\t%w", err)
 		os.Exit(-1)
 	}
@@ -86,6 +86,7 @@ type args struct {
 	outFile                 string
 	allowlistFilenameRegexp []string
 	allowlistNameRegexp     []string
+	lenient                 bool
 }
 
 func (a *args) addAllowlistFnRegexp(s string) error {
@@ -102,6 +103,7 @@ func main() {
 	var args args
 	flag.StringVar(&args.inputDir, "input-dir", "", "the input directory to get the files from")
 	flag.StringVar(&args.outFile, "output-file", "", "the file to write the final report to")
+	flag.BoolVar(&args.lenient, "lenient", false, "if set, reading YAML will not produce an error.")
 	flag.Func("allow-filename-regexp",
 		"a regexp that may match any part of the filename; if unset, no filtering will take place",
 		args.addAllowlistFnRegexp)
@@ -120,11 +122,11 @@ func main() {
 	}
 	of, err := os.Create(args.outFile)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "error while opening output file: %v:\n\t%v", args.outFile, err)
+		fmt.Fprintf(os.Stderr, "error while opening output file: %v:\n\t%v\n", args.outFile, err)
 		os.Exit(-1)
 	}
 	if err := run(args.inputDir, of, args); err != nil {
-		fmt.Fprintf(os.Stderr, "error while writing output file: %v:\n\t%v", args.outFile, err)
+		fmt.Fprintf(os.Stderr, "error while writing output file: %v:\n\t%v\n", args.outFile, err)
 		os.Exit(-1)
 	}
 }

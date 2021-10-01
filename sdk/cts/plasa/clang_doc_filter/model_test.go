@@ -42,7 +42,7 @@ func TestModelParsing(t *testing.T) {
 			// For the time being, we're only interested in a successful parse.
 			// Strict YAML parsing should be enough to alert us to possible
 			// model mismatches.
-			_, err = ParseYAML(r)
+			_, err = ParseYAML(r /*lenient=*/, false)
 			if err != nil {
 				t.Errorf("parse error for: %v: %v", fileName, err)
 			}

@@ -2,6 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/compiled_action.gni")
 import("//sdk/cts/plasa/clang_doc.gni")
 
 # Generates Plasa artifacts for a SDK target.
@@ -31,7 +32,6 @@ template("plasa_artifacts") {
   forward_variables_from(invoker,
                          [
                            "source_dir",
-                           "testonly",
                            "all_headers",
                            "main_target_name",
                            "all_deps",
@@ -50,6 +50,8 @@ template("plasa_artifacts") {
     _includable_headers = all_headers
   }
   source_set(_stub_cc_target_name) {
+    forward_variables_from(invoker, [ "testonly" ])
+
     # Write out the stub file that will be compiled thereafter.
     _contents = []
     foreach(_header, _includable_headers) {
@@ -73,11 +75,40 @@ template("plasa_artifacts") {
   # Currently we use clang-doc to extract the C++ API.
   _clang_doc_target_name = "${main_target_name}_api"
   clang_doc(_clang_doc_target_name) {
+    forward_variables_from(invoker, [ "testonly" ])
     stub_file = _cc_stub_file
     deps = [ ":${_stub_cc_target_name}" ]
   }
 
+  # This target directory is generated inside clang_doc.
+  _clang_doc_api_d =
+      "${target_gen_dir}/${main_target_name}_api_filter_compdb.api.d"
+  _plasa_api_output_file = "${target_gen_dir}/${main_target_name}.plasa.json"
+  _plasa_target_name = "${main_target_name}_plasa_api"
+  compiled_action(_plasa_target_name) {
+    forward_variables_from(invoker, [ "testonly" ])
+    tool = "//sdk/cts/plasa/clang_doc_filter"
+    outputs = [ _plasa_api_output_file ]
+    sources = [ _clang_doc_api_d ]
+    args = [
+      # TODO(fxbug.dev/85753): Remove leniency when bug is fixed.
+      "--lenient",
+      "--input-dir",
+      rebase_path(_clang_doc_api_d, root_build_dir),
+      "--output-file",
+      rebase_path(_plasa_api_output_file, root_build_dir),
+    ]
+    deps = [
+      ":${_clang_doc_target_name}",
+      ":${_clang_doc_target_name}_clang_doc_invoke",
+    ]
+  }
+
   group("${target_name}") {
-    deps = [ ":$_clang_doc_target_name" ]
+    forward_variables_from(invoker, [ "testonly" ])
+    deps = [
+      ":${_clang_doc_target_name}",
+      ":${_plasa_target_name}",
+    ]
   }
 }

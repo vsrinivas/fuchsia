@@ -53,6 +53,8 @@ template("clang_doc") {
   # Invokes clang-doc only on the API stub file.
   _clang_doc_invocation_target = "${_main_target_name}_clang_doc_invoke"
   _stamp_file = "${target_gen_dir}/${_clang_doc_invocation_target}.stamp"
+  _out_path = "${target_gen_dir}/${_filter_compdb_target_name}.api.d"
+  _clang_diagnosis_file = "${_output_compdb_dir}/stdout"
   action(_clang_doc_invocation_target) {
     script = "//sdk/cts/plasa/run_clang_doc.sh"
     inputs = [
@@ -60,13 +62,20 @@ template("clang_doc") {
       _output_compdb,
       invoker.stub_file,
     ]
-    outputs = [ _stamp_file ]
-    _out_dir =
-        rebase_path("${target_gen_dir}/${_filter_compdb_target_name}.api.d",
-                    root_build_dir)
+    outputs = [
+      _stamp_file,
+      _out_path,
+      _clang_diagnosis_file,
+    ]
+    _out_dir = rebase_path(_out_path, root_build_dir)
     _compdb_dir = rebase_path(_output_compdb_dir, root_build_dir)
     args = [
+      # run script args
       rebase_path(_stamp_file, root_build_dir),
+      _out_dir,
+      rebase_path(_clang_diagnosis_file, root_build_dir),
+
+      # the actual program to run
       "${rebased_clang_prefix}/clang-doc",
       "--public",
       "--format=yaml",

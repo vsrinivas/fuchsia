@@ -180,13 +180,18 @@ type Aggregate struct {
 }
 
 // ParseYAML reads an Aggregate from the supplied reader.
-func ParseYAML(r io.Reader) (Aggregate, error) {
+// If lenient is set, decode errors are reported as an empty aggregate
+// instead of a stopping error.
+func ParseYAML(r io.Reader, lenient bool) (Aggregate, error) {
 	d := yaml.NewDecoder(r)
 	// Without this, we'd have no idea whether YAML parsing made sense.
 	d.SetStrict(true)
 	var ret Aggregate
 	if err := d.Decode(&ret); err != nil {
-		return ret, fmt.Errorf("while reading YAML: %w", err)
+		if lenient {
+			return ret, nil
+		}
+		return ret, fmt.Errorf("while reading YAML: %w\n", err)
 	}
 	return ret, nil
 }
