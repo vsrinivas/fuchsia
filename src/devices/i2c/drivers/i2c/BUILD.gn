@@ -44,9 +44,6 @@ driver_module("i2c-driver") {
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/trace:trace-driver",
   ]
-
-  # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
-  configs += [ "//build/config:Wno-conversion" ]
 }
 
 fuchsia_driver_component("i2c") {
@@ -62,6 +59,8 @@ test("i2c-test-bin") {
     "i2c-bus.cc",
     "i2c-child-test.cc",
     "i2c-child.cc",
+    "i2c-test.cc",
+    "i2c.cc",
   ]
   deps = [
     ":i2c_bind",

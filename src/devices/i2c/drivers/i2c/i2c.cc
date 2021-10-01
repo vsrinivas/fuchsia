@@ -103,8 +103,13 @@ void I2cDevice::AddChildren() {
     return;
   }
 
+  if (metadata_size > UINT32_MAX) {
+    zxlogf(ERROR, "metadata too big");
+    return;
+  }
+
   fidl::DecodedMessage<fuchsia_hardware_i2c::wire::I2CBusMetadata> decoded(
-      fidl::internal::kLLCPPEncodedWireFormatVersion, buffer, metadata_size);
+      fidl::internal::kLLCPPEncodedWireFormatVersion, buffer, static_cast<uint32_t>(metadata_size));
   if (!decoded.ok()) {
     zxlogf(ERROR, "%s: Failed to deserialize metadata.", __func__);
     return;
@@ -143,6 +148,11 @@ void I2cDevice::AddChildren() {
     char name[20];
     snprintf(name, sizeof(name), "i2c-%u-%u", bus_id, address);
 
+    auto metadata = fidl::OwnedEncodedMessage<fidl_i2c::wire::I2CChannel>(&channel);
+    if (!metadata.ok()) {
+      zxlogf(ERROR, "failed to fidl-encode channel: %s", metadata.FormatDescription().data());
+      return;
+    }
     if (vid || pid || did) {
       zx_device_prop_t props[] = {
           {BIND_I2C_BUS_ID, 0, bus_id},    {BIND_I2C_ADDRESS, 0, address},
@@ -167,6 +177,11 @@ void I2cDevice::AddChildren() {
       return;
     }
 
+    auto bytes = metadata.GetOutgoingMessage().CopyBytes();
+    status = dev->DdkAddMetadata(DEVICE_METADATA_I2C_DEVICE, bytes.data(), bytes.size());
+    if (status != ZX_OK) {
+      zxlogf(ERROR, "DdkAddMetadata failed %d", status);
+    }
     // dev is now owned by devmgr.
     __UNUSED auto ptr = dev.release();
   }
