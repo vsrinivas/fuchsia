@@ -214,6 +214,8 @@ void DisplaySwapchain::ResetFrameRecord(const std::unique_ptr<FrameRecord>& fram
     } else {
       swapchain_buffers_.Put(frame_record->buffer);
     }
+    FX_DCHECK(frame_buffer_ids_.find(frame_record->buffer->id) != frame_buffer_ids_.end());
+    frame_buffer_ids_.erase(frame_record->buffer->id);
     frame_record->buffer = nullptr;
   }
 
@@ -267,6 +269,9 @@ bool DisplaySwapchain::DrawAndPresentFrame(const std::shared_ptr<FrameTimings>& 
                                                : swapchain_buffers_.GetUnused();
   frame_record->use_protected_memory = use_protected_memory_;
   FX_CHECK(frame_record->buffer != nullptr);
+
+  FX_DCHECK(frame_buffer_ids_.find(frame_record->buffer->id) == frame_buffer_ids_.end());
+  frame_buffer_ids_.insert(frame_record->buffer->id);
 
   // Bump the ring head.
   next_frame_index_ = (next_frame_index_ + 1) % swapchain_image_count_;
@@ -394,6 +399,16 @@ void DisplaySwapchain::OnVsync(zx::time timestamp, std::vector<uint64_t> image_i
   FX_CHECK(image_ids.size() == 1);
   uint64_t image_id = image_ids[0];
 
+  // It is possible that the image ID doesn't match any images imported by
+  // this DisplaySwapchain instance, for example, it could be from another
+  // DisplayCompositor. Thus we just ignore these OnVsync events with "invalid"
+  // image handles.
+  if (frame_buffer_ids_.find(image_id) == frame_buffer_ids_.end()) {
+    FX_LOGS(INFO) << "The image id " << image_id << " doesn't contain frame buffers from current "
+                  << "display swapchain. Vsync event skipped.";
+    return;
+  }
+
   bool match = false;
   size_t matches_checked = 0;
   while (outstanding_frame_count_ && !match) {
@@ -430,18 +445,9 @@ void DisplaySwapchain::OnVsync(zx::time timestamp, std::vector<uint64_t> image_i
     }
   }
 
-  // It is possible that the image ID doesn't match any images imported by
-  // this DisplaySwapchain instance, for example, it could be from another
-  // DisplayCompositor. Thus we just ignore these OnVsync events with "invalid"
-  // image handles.
-  // TODO(fxbug.dev/77160): Instead of allowing all unmatched image handles,
-  // we should Use BufferPool to filter image handles created by this
-  // DisplaySwapchain instance.
-  if (!match) {
-    FX_DLOGS(WARNING) << "Unhandled vsync image_id=" << image_id
-                      << " matches_checked=" << matches_checked
-                      << " presented_frame_idx_=" << presented_frame_idx_;
-  }
+  FX_DCHECK(match) << "Unhandled vsync image_id=" << image_id
+                   << " matches_checked=" << matches_checked
+                   << " presented_frame_idx_=" << presented_frame_idx_;
 }
 
 void DisplaySwapchain::Flip(uint64_t layer_id, uint64_t buffer, uint64_t render_finished_event_id,

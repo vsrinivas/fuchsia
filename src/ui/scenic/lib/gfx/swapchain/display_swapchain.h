@@ -160,6 +160,11 @@ class DisplaySwapchain : public Swapchain {
 
   std::vector<std::unique_ptr<FrameRecord>> frame_records_;
 
+  // Keep track of all the frame buffers that are currently used by this
+  // DisplaySwapchain / DisplayCompositor so that we can distinguish if Vsync
+  // events should be handled by this DisplaySwapchain instance.
+  std::unordered_set<uint64_t> frame_buffer_ids_;
+
   vk::Device device_;
   vk::Queue queue_;
 
