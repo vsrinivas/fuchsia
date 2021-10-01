@@ -3278,6 +3278,7 @@ class ::fidl::WireServer<
   // The FIDL protocol type that is implemented by this server.
   using _EnclosingProtocol =
       ::fidl_test_socketprotocol::WithAndWithoutRequestResponse;
+  using _EnclosingTransport = fidl::DriverTransport;
 
   using NoRequestNoResponseCompleter = ::fidl::internal::WireCompleter<
       ::fidl_test_socketprotocol::WithAndWithoutRequestResponse::

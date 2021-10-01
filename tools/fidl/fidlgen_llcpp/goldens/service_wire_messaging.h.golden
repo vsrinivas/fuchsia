@@ -371,6 +371,7 @@ class ::fidl::WireServer<::fidl_test_service::SecondProtocol>
 
   // The FIDL protocol type that is implemented by this server.
   using _EnclosingProtocol = ::fidl_test_service::SecondProtocol;
+  using _EnclosingTransport = fidl::ChannelTransport;
 
   using MethodOnSecondCompleter = ::fidl::internal::WireCompleter<
       ::fidl_test_service::SecondProtocol::MethodOnSecond>;
@@ -727,6 +728,7 @@ class ::fidl::WireServer<::fidl_test_service::FirstProtocol>
 
   // The FIDL protocol type that is implemented by this server.
   using _EnclosingProtocol = ::fidl_test_service::FirstProtocol;
+  using _EnclosingTransport = fidl::ChannelTransport;
 
   using MethodOnFirstCompleter = ::fidl::internal::WireCompleter<
       ::fidl_test_service::FirstProtocol::MethodOnFirst>;

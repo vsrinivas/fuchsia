@@ -1394,6 +1394,7 @@ class ::fidl::WireServer<::fidl_test_union::TestProtocol>
 
   // The FIDL protocol type that is implemented by this server.
   using _EnclosingProtocol = ::fidl_test_union::TestProtocol;
+  using _EnclosingTransport = fidl::ChannelTransport;
 
   using StrictXUnionHenceResponseMayBeStackAllocatedCompleter =
       ::fidl::internal::WireCompleter<

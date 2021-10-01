@@ -703,6 +703,7 @@ class ::fidl::WireServer<::fidl_test_nullable::SimpleProtocol>
 
   // The FIDL protocol type that is implemented by this server.
   using _EnclosingProtocol = ::fidl_test_nullable::SimpleProtocol;
+  using _EnclosingTransport = fidl::ChannelTransport;
 
   using AddCompleter = ::fidl::internal::WireCompleter<
       ::fidl_test_nullable::SimpleProtocol::Add>;

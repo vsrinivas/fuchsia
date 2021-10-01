@@ -469,6 +469,7 @@ class ::fidl::WireServer<::fidl_test_inheritancewithrecursivedecl::Parent>
 
   // The FIDL protocol type that is implemented by this server.
   using _EnclosingProtocol = ::fidl_test_inheritancewithrecursivedecl::Parent;
+  using _EnclosingTransport = fidl::ChannelTransport;
 
   using FirstCompleter = ::fidl::internal::WireCompleter<
       ::fidl_test_inheritancewithrecursivedecl::Parent::First>;
@@ -1247,6 +1248,7 @@ class ::fidl::WireServer<::fidl_test_inheritancewithrecursivedecl::Child>
 
   // The FIDL protocol type that is implemented by this server.
   using _EnclosingProtocol = ::fidl_test_inheritancewithrecursivedecl::Child;
+  using _EnclosingTransport = fidl::ChannelTransport;
 
   using FirstCompleter = ::fidl::internal::WireCompleter<
       ::fidl_test_inheritancewithrecursivedecl::Child::First>;

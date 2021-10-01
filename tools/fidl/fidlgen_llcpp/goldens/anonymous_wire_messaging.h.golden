@@ -769,6 +769,7 @@ class ::fidl::WireServer<::fidl_test_anonymous::SomeProtocol>
 
   // The FIDL protocol type that is implemented by this server.
   using _EnclosingProtocol = ::fidl_test_anonymous::SomeProtocol;
+  using _EnclosingTransport = fidl::ChannelTransport;
 
   using SomeMethodCompleter = ::fidl::internal::WireCompleter<
       ::fidl_test_anonymous::SomeProtocol::SomeMethod>;

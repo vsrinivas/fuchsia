@@ -136,6 +136,7 @@ class ::fidl::WireServer<::fidl_test_handles::SomeProtocol>
 
   // The FIDL protocol type that is implemented by this server.
   using _EnclosingProtocol = ::fidl_test_handles::SomeProtocol;
+  using _EnclosingTransport = fidl::ChannelTransport;
 
  private:
   void dispatch_message(::fidl::IncomingMessage&& msg,

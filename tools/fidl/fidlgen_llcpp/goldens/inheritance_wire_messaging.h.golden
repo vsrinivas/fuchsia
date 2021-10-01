@@ -682,6 +682,7 @@ class ::fidl::WireServer<::fidl_test_inheritance::Super>
 
   // The FIDL protocol type that is implemented by this server.
   using _EnclosingProtocol = ::fidl_test_inheritance::Super;
+  using _EnclosingTransport = fidl::ChannelTransport;
 
   using FooCompleter =
       ::fidl::internal::WireCompleter<::fidl_test_inheritance::Super::Foo>;
@@ -1353,6 +1354,7 @@ class ::fidl::WireServer<::fidl_test_inheritance::Sub>
 
   // The FIDL protocol type that is implemented by this server.
   using _EnclosingProtocol = ::fidl_test_inheritance::Sub;
+  using _EnclosingTransport = fidl::ChannelTransport;
 
   using FooCompleter =
       ::fidl::internal::WireCompleter<::fidl_test_inheritance::Sub::Foo>;

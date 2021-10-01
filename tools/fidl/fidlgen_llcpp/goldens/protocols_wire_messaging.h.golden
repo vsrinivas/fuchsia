@@ -1309,6 +1309,7 @@ class ::fidl::WireServer<::fidl_test_protocols::HandleRightsProtocol>
 
   // The FIDL protocol type that is implemented by this server.
   using _EnclosingProtocol = ::fidl_test_protocols::HandleRightsProtocol;
+  using _EnclosingTransport = fidl::ChannelTransport;
 
   using NoResponseMethodCompleter = ::fidl::internal::WireCompleter<
       ::fidl_test_protocols::HandleRightsProtocol::NoResponseMethod>;
@@ -4922,6 +4923,7 @@ class ::fidl::WireServer<::fidl_test_protocols::WithAndWithoutRequestResponse>
   // The FIDL protocol type that is implemented by this server.
   using _EnclosingProtocol =
       ::fidl_test_protocols::WithAndWithoutRequestResponse;
+  using _EnclosingTransport = fidl::ChannelTransport;
 
   using NoRequestNoResponseCompleter = ::fidl::internal::WireCompleter<
       ::fidl_test_protocols::WithAndWithoutRequestResponse::
@@ -6133,6 +6135,7 @@ class ::fidl::WireServer<::fidl_test_protocols::Transitional>
 
   // The FIDL protocol type that is implemented by this server.
   using _EnclosingProtocol = ::fidl_test_protocols::Transitional;
+  using _EnclosingTransport = fidl::ChannelTransport;
 
   using RequestCompleter = ::fidl::internal::WireCompleter<
       ::fidl_test_protocols::Transitional::Request>;
@@ -6551,6 +6554,7 @@ class ::fidl::WireServer<::fidl_test_protocols::MethodWithUnion>
 
   // The FIDL protocol type that is implemented by this server.
   using _EnclosingProtocol = ::fidl_test_protocols::MethodWithUnion;
+  using _EnclosingTransport = fidl::ChannelTransport;
 
   using UnionMethodCompleter = ::fidl::internal::WireCompleter<
       ::fidl_test_protocols::MethodWithUnion::UnionMethod>;
@@ -8669,6 +8673,7 @@ class ::fidl::WireServer<::fidl_test_protocols::WithProtocolEnds>
 
   // The FIDL protocol type that is implemented by this server.
   using _EnclosingProtocol = ::fidl_test_protocols::WithProtocolEnds;
+  using _EnclosingTransport = fidl::ChannelTransport;
 
   using ClientEndsCompleter = ::fidl::internal::WireCompleter<
       ::fidl_test_protocols::WithProtocolEnds::ClientEnds>;
@@ -9149,6 +9154,7 @@ class ::fidl::WireServer<::fidl_test_protocols::ManyParameters>
 
   // The FIDL protocol type that is implemented by this server.
   using _EnclosingProtocol = ::fidl_test_protocols::ManyParameters;
+  using _EnclosingTransport = fidl::ChannelTransport;
 
   using FifteenCompleter = ::fidl::internal::WireCompleter<
       ::fidl_test_protocols::ManyParameters::Fifteen>;
@@ -11710,6 +11716,7 @@ class ::fidl::WireServer<::fidl_test_protocols::WithErrorSyntax>
 
   // The FIDL protocol type that is implemented by this server.
   using _EnclosingProtocol = ::fidl_test_protocols::WithErrorSyntax;
+  using _EnclosingTransport = fidl::ChannelTransport;
 
   using ResponseAsStructCompleter = ::fidl::internal::WireCompleter<
       ::fidl_test_protocols::WithErrorSyntax::ResponseAsStruct>;
@@ -12105,6 +12112,7 @@ class ::fidl::WireServer<::fidl_test_protocols::DiscoverableProtocol>
 
   // The FIDL protocol type that is implemented by this server.
   using _EnclosingProtocol = ::fidl_test_protocols::DiscoverableProtocol;
+  using _EnclosingTransport = fidl::ChannelTransport;
 
   using MethodCompleter = ::fidl::internal::WireCompleter<
       ::fidl_test_protocols::DiscoverableProtocol::Method>;
@@ -14496,6 +14504,7 @@ class ::fidl::WireServer<::fidl_test_protocols::ChannelProtocol>
 
   // The FIDL protocol type that is implemented by this server.
   using _EnclosingProtocol = ::fidl_test_protocols::ChannelProtocol;
+  using _EnclosingTransport = fidl::ChannelTransport;
 
   using MethodACompleter = ::fidl::internal::WireCompleter<
       ::fidl_test_protocols::ChannelProtocol::MethodA>;

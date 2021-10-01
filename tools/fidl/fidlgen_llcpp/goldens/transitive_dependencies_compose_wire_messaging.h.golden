@@ -739,6 +739,7 @@ class ::fidl::WireServer<::fidl_test_transitivedependenciescompose::Top>
 
   // The FIDL protocol type that is implemented by this server.
   using _EnclosingProtocol = ::fidl_test_transitivedependenciescompose::Top;
+  using _EnclosingTransport = fidl::ChannelTransport;
 
   using GetFooCompleter = ::fidl::internal::WireCompleter<
       ::fidl_test_transitivedependenciescompose::Top::GetFoo>;

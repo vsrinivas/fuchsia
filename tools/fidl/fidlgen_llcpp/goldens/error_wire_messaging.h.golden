@@ -680,6 +680,7 @@ class ::fidl::WireServer<::fidl_test_error::Example>
 
   // The FIDL protocol type that is implemented by this server.
   using _EnclosingProtocol = ::fidl_test_error::Example;
+  using _EnclosingTransport = fidl::ChannelTransport;
 
   using FooCompleter =
       ::fidl::internal::WireCompleter<::fidl_test_error::Example::Foo>;
