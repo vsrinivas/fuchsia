@@ -298,6 +298,7 @@
   areas: ['Connectivity', 'Uart']
   path: '/src/connectivity/ppp/drivers/serial-ppp'
 - short_description: 'FocalTech FT8201 touch driver'
+  deletion_reason: 'Hardware is not actively supported'
   tracking_bug: '83830'
   gerrit_change_id: '575784'
   available_in_git: 'ae74b26b33034aab0d550cceea9726144e16dd08'
