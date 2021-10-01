@@ -700,6 +700,36 @@ template("fidl_cpp_family") {
       forward_variables_from(llcpp_options, "*")
       additional_public_deps = llcpp_public_deps
     }
+
+    driver_options = {
+      bindings_flavor = "driver"
+      generated_headers = [
+        "fidl/$library_name/cpp/markers.h",
+        "fidl/$library_name/cpp/driver_messaging.h",
+        "fidl/$library_name/cpp/wire.h",
+        "fidl/$library_name/cpp/wire_types.h",
+        "fidl/$library_name/cpp/wire_test_base.h",
+      ]
+      generated_sources = [
+        "fidl/$library_name/cpp/driver_messaging.cc",
+        "fidl/$library_name/cpp/wire_types.cc",
+      ]
+    }
+    fidl_cpp_codegen("${target_name}_driver") {
+      forward_variables_from(common_options, "*")
+      forward_variables_from(driver_options, "*")
+      fidlgen_tool = "//tools/fidl/fidlgen_llcpp"
+    }
+    fidl_cpp_library("${target_name}_driver") {
+      forward_variables_from(invoker,
+                             [
+                               "public_deps",
+                               "visibility",
+                             ])
+      forward_variables_from(common_options, "*")
+      forward_variables_from(driver_options, "*")
+      additional_public_deps = llcpp_public_deps
+    }
   }
 
   # Unified C++ Bindings

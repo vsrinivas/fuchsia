@@ -17,5 +17,6 @@ func main() {
 		"Header", "TestBase", "Markers",
 		"TypesHeader", "TypesSource",
 		"MessagingHeader", "MessagingSource",
+		"DriverMessagingHeader", "DriverMessagingSource",
 	})
 }

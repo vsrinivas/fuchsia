@@ -1,0 +1,38 @@
+{{/*
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+*/}}
+
+{{- define "Driver:Method:ClientImpl:MessagingHeader" }}
+  {{- if .HasResponse }}
+    {{- /* two-way method */}}
+
+    {{- template "Driver:Method:ClientImplAsync:MessagingHeader" . }}
+    {{- template "Driver:Method:ClientImplSync:MessagingHeader" . }}
+
+  {{- else }}
+    {{- /* one-way method */}}
+
+    {{- /* There is no distinction between sync vs async for one-way methods . */}}
+    {{- template "Driver:Method:ClientImplOneway:MessagingHeader" . }}
+
+  {{- end }}
+{{- end }}
+
+
+{{- define "Driver:Method:ClientImpl:MessagingSource" }}
+  {{- if .HasResponse }}
+    {{- /* two-way method */}}
+
+    {{- template "Driver:Method:ClientImplAsync:MessagingSource" . }}
+    {{- template "Driver:Method:ClientImplSync:MessagingSource" . }}
+
+  {{- else }}
+    {{- /* one-way method */}}
+
+    {{- /* There is no distinction between sync vs async for one-way methods . */}}
+    {{- template "Driver:Method:ClientImplOneway:MessagingSource" . }}
+  {{- end }}
+{{- end }}
+

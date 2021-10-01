@@ -18,6 +18,25 @@ if (is_host) {
     ]
     sources = [
       "codegen/codegen.go",
+      "codegen/driver_method_client_impl.tmpl",
+      "codegen/driver_method_client_impl_async.tmpl",
+      "codegen/driver_method_client_impl_oneway.tmpl",
+      "codegen/driver_method_client_impl_sync.tmpl",
+      "codegen/driver_method_completer_base.tmpl",
+      "codegen/driver_method_response_context.tmpl",
+      "codegen/driver_method_result.tmpl",
+      "codegen/driver_method_unownedresult.tmpl",
+      "codegen/driver_protocol.tmpl",
+      "codegen/driver_protocol_caller.tmpl",
+      "codegen/driver_protocol_client_impl.tmpl",
+      "codegen/driver_protocol_details.tmpl",
+      "codegen/driver_protocol_dispatcher.tmpl",
+      "codegen/driver_protocol_event_handler.tmpl",
+      "codegen/driver_protocol_event_sender.tmpl",
+      "codegen/driver_protocol_interface.tmpl",
+      "codegen/driver_protocol_sync_client.tmpl",
+      "codegen/file_driver_messaging_header.tmpl",
+      "codegen/file_driver_messaging_source.tmpl",
       "codegen/file_header.tmpl",
       "codegen/file_markers.tmpl",
       "codegen/file_messaging_header.tmpl",
@@ -76,6 +95,14 @@ if (is_host) {
         include_path = "fidl/${info.library}/cpp"
         entries += [
           {
+            golden = "${info.name}_driver_messaging.h.golden"
+            generated = "$gen_dir/$include_path/driver_messaging.h"
+          },
+          {
+            golden = "${info.name}_driver_messaging.cc.golden"
+            generated = "$gen_dir/$include_path/driver_messaging.cc"
+          },
+          {
             golden = "${info.name}.h.golden"
             generated = "$gen_dir/$include_path/wire.h"
           },
@@ -114,7 +141,7 @@ install_host_tools("host") {
   outputs = [ "fidlgen_llcpp" ]
 }
 
-group("goldens") {
+group("goldens_llcpp") {
   testonly = true
 
   denylist_key = "device_build_denylist"
@@ -131,11 +158,30 @@ group("goldens") {
   }
 }
 
+group("goldens_driver") {
+  testonly = true
+
+  denylist_key = "device_build_denylist"
+  if (is_host) {
+    denylist_key = "host_build_denylist"
+  }
+
+  deps = []
+  foreach(info, fidl_testdata_info) {
+    if (info[denylist_key] + [ "fidlgen_llcpp" ] - [ "fidlgen_llcpp" ] ==
+        info[denylist_key]) {
+      deps += [ "${info.target}_driver" ]
+    }
+  }
+}
+
 group("tests") {
   testonly = true
   deps = [
     ":fidlgen_llcpp_golden_tests($host_toolchain)",
-    ":goldens",
-    ":goldens($host_toolchain)",
+    ":goldens_driver",
+    ":goldens_driver($host_toolchain)",
+    ":goldens_llcpp",
+    ":goldens_llcpp($host_toolchain)",
   ]
 }
