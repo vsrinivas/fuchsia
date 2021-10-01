@@ -242,8 +242,6 @@ class Bind {
   // True if the unbind hook should be called. The unbind will not be started
   // until the device init hook has completed.
   std::atomic_bool unbind_requested_ = false;
-  // Whether |unbind_thread| has been created.
-  std::atomic_bool unbind_started_ = false;
   bool unbind_thread_joined_ = false;
   // Thread for calling the unbind hook.
   thrd_t unbind_thread_;
@@ -256,6 +254,9 @@ class Bind {
   void JoinUnbindThread();
 
   sync_completion_t remove_called_sync_;
+
+  // Whether |unbind_thread| has been created.
+  std::atomic_bool unbind_started_ = false;
 };
 
 }  // namespace fake_ddk

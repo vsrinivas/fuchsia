@@ -45,10 +45,8 @@ class NetDeviceDriverTest : public ::testing::Test, public fake_ddk::Bind {
   }
 
   void UnbindDeviceSync() {
-    if (!unbind_started_) {
-      DeviceAsyncRemove(fake_ddk::kFakeDevice);
-      EXPECT_OK(WaitUntilRemove(zx::deadline_after(kTestTimeout)));
-    }
+    DeviceAsyncRemove(fake_ddk::kFakeDevice);
+    EXPECT_OK(WaitUntilRemove(zx::deadline_after(kTestTimeout)));
   }
 
   void RemoveDeviceSync() {
