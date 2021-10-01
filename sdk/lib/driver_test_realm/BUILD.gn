@@ -24,7 +24,10 @@ group("realm_builder_version") {
 
 group("tests") {
   testonly = true
-  deps = [ "tests" ]
+  deps = [
+    "simple:tests",
+    "tests",
+  ]
 }
 
 executable("bin") {

@@ -1,0 +1,57 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/components.gni")
+import("//build/test.gni")
+import("//tools/cmc/build/expect_includes.gni")
+
+group("simple") {
+  testonly = true
+  deps = [
+    ":client_includes",
+    ":simple_component",
+    "//sdk/lib/driver_test_realm",
+    "//src/devices/misc/drivers/test-parent",
+  ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [ ":simple_driver_test_realm_test" ]
+}
+
+expect_includes("client_includes") {
+  includes = [ "meta/client.shard.cml" ]
+}
+
+executable("bin") {
+  testonly = true
+  output_name = "simple_driver_test_realm"
+  sources = [ "simple.cc" ]
+  deps = [
+    "//sdk/fidl/fuchsia.driver.test:fuchsia.driver.test_llcpp",
+    "//zircon/system/ulib/service:service-llcpp",
+  ]
+}
+
+fuchsia_component("simple_component") {
+  testonly = true
+  component_name = "simple_driver_test_realm"
+  manifest = "meta/simple_driver_test_realm.cml"
+  deps = [ ":bin" ]
+}
+
+test("test") {
+  output_name = "simple_driver_test_realm_test"
+  sources = [ "test.cc" ]
+  deps = [
+    "//sdk/lib/driver_test_realm/simple",
+    "//src/devices/lib/device-watcher/cpp",
+    "//src/lib/fxl/test:gtest_main",
+  ]
+}
+
+fuchsia_unittest_package("simple_driver_test_realm_test") {
+  deps = [ ":test" ]
+}

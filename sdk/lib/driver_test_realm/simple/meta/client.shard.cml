@@ -1,0 +1,19 @@
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    children: [
+        {
+            name: "simple_driver_test_realm",
+            url: "#meta/simple_driver_test_realm.cm",
+            startup: "eager",
+        },
+    ],
+    offer: [
+        {
+            protocol: [ "fuchsia.driver.test.Realm" ],
+            from: "#driver_test_realm",
+            to: [ "#simple_driver_test_realm" ],
+        },
+    ],
+}
