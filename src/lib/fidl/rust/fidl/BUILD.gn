@@ -33,6 +33,18 @@ if (is_fuchsia) {
   }
 }
 
+fidl_rust_sources = [
+  "src/client.rs",
+  "src/encoding.rs",
+  "src/endpoints.rs",
+  "src/epitaph.rs",
+  "src/error.rs",
+  "src/handle.rs",
+  "src/lib.rs",
+  "src/prelude.rs",
+  "src/server.rs",
+]
+
 rustc_library("fidl") {
   edition = "2018"
   deps = fidl_rust_deps
@@ -41,16 +53,7 @@ rustc_library("fidl") {
     features = [ "fidl_trace" ]
   }
 
-  sources = [
-    "src/client.rs",
-    "src/encoding.rs",
-    "src/endpoints.rs",
-    "src/epitaph.rs",
-    "src/error.rs",
-    "src/handle.rs",
-    "src/lib.rs",
-    "src/server.rs",
-  ]
+  sources = fidl_rust_sources
 }
 
 rustc_test("fidl_rust_lib_tests_bin") {
@@ -60,17 +63,7 @@ rustc_test("fidl_rust_lib_tests_bin") {
            "//third_party/rust_crates:futures-test",
            "//third_party/rust_crates:matches",
          ]
-
-  sources = [
-    "src/client.rs",
-    "src/encoding.rs",
-    "src/endpoints.rs",
-    "src/epitaph.rs",
-    "src/error.rs",
-    "src/handle.rs",
-    "src/lib.rs",
-    "src/server.rs",
-  ]
+  sources = fidl_rust_sources
 }
 
 fuchsia_unittest_package("fidl_rust_lib_tests") {

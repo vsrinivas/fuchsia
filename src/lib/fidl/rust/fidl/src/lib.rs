@@ -14,6 +14,7 @@ pub mod client;
 pub mod endpoints;
 pub mod epitaph;
 pub mod handle;
+pub mod prelude;
 pub mod server;
 
 mod error;
