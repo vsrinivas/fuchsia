@@ -7,6 +7,39 @@ import (
 	"gvisor.dev/gvisor/pkg/tcpip/buffer"
 )
 
+func (a *acceptQueue) StateTypeName() string {
+	return "pkg/tcpip/transport/tcp.acceptQueue"
+}
+
+func (a *acceptQueue) StateFields() []string {
+	return []string{
+		"endpoints",
+		"pendingEndpoints",
+		"capacity",
+	}
+}
+
+func (a *acceptQueue) beforeSave() {}
+
+// +checklocksignore
+func (a *acceptQueue) StateSave(stateSinkObject state.Sink) {
+	a.beforeSave()
+	var endpointsValue []*endpoint
+	endpointsValue = a.saveEndpoints()
+	stateSinkObject.SaveValue(0, endpointsValue)
+	stateSinkObject.Save(1, &a.pendingEndpoints)
+	stateSinkObject.Save(2, &a.capacity)
+}
+
+func (a *acceptQueue) afterLoad() {}
+
+// +checklocksignore
+func (a *acceptQueue) StateLoad(stateSourceObject state.Source) {
+	stateSourceObject.Load(1, &a.pendingEndpoints)
+	stateSourceObject.Load(2, &a.capacity)
+	stateSourceObject.LoadValue(0, new([]*endpoint), func(y interface{}) { a.loadEndpoints(y.([]*endpoint)) })
+}
+
 func (c *cubicState) StateTypeName() string {
 	return "pkg/tcpip/transport/tcp.cubicState"
 }
@@ -245,36 +278,6 @@ func (r *rcvQueueInfo) StateLoad(stateSourceObject state.Source) {
 	stateSourceObject.LoadWait(1, &r.rcvQueue)
 }
 
-func (a *accepted) StateTypeName() string {
-	return "pkg/tcpip/transport/tcp.accepted"
-}
-
-func (a *accepted) StateFields() []string {
-	return []string{
-		"endpoints",
-		"cap",
-	}
-}
-
-func (a *accepted) beforeSave() {}
-
-// +checklocksignore
-func (a *accepted) StateSave(stateSinkObject state.Sink) {
-	a.beforeSave()
-	var endpointsValue []*endpoint
-	endpointsValue = a.saveEndpoints()
-	stateSinkObject.SaveValue(0, endpointsValue)
-	stateSinkObject.Save(1, &a.cap)
-}
-
-func (a *accepted) afterLoad() {}
-
-// +checklocksignore
-func (a *accepted) StateLoad(stateSourceObject state.Source) {
-	stateSourceObject.Load(1, &a.cap)
-	stateSourceObject.LoadValue(0, new([]*endpoint), func(y interface{}) { a.loadEndpoints(y.([]*endpoint)) })
-}
-
 func (e *endpoint) StateTypeName() string {
 	return "pkg/tcpip/transport/tcp.endpoint"
 }
@@ -309,7 +312,6 @@ func (e *endpoint) StateFields() []string {
 		"delay",
 		"scoreboard",
 		"segmentQueue",
-		"synRcvdCount",
 		"userMSS",
 		"maxSynRetries",
 		"windowClamp",
@@ -318,7 +320,7 @@ func (e *endpoint) StateFields() []string {
 		"keepalive",
 		"userTimeout",
 		"deferAccept",
-		"accepted",
+		"acceptQueue",
 		"rcv",
 		"snd",
 		"connectingAddress",
@@ -368,29 +370,28 @@ func (e *endpoint) StateSave(stateSinkObject state.Sink) {
 	stateSinkObject.Save(25, &e.delay)
 	stateSinkObject.Save(26, &e.scoreboard)
 	stateSinkObject.Save(27, &e.segmentQueue)
-	stateSinkObject.Save(28, &e.synRcvdCount)
-	stateSinkObject.Save(29, &e.userMSS)
-	stateSinkObject.Save(30, &e.maxSynRetries)
-	stateSinkObject.Save(31, &e.windowClamp)
-	stateSinkObject.Save(32, &e.sndQueueInfo)
-	stateSinkObject.Save(33, &e.cc)
-	stateSinkObject.Save(34, &e.keepalive)
-	stateSinkObject.Save(35, &e.userTimeout)
-	stateSinkObject.Save(36, &e.deferAccept)
-	stateSinkObject.Save(37, &e.accepted)
-	stateSinkObject.Save(38, &e.rcv)
-	stateSinkObject.Save(39, &e.snd)
-	stateSinkObject.Save(40, &e.connectingAddress)
-	stateSinkObject.Save(41, &e.amss)
-	stateSinkObject.Save(42, &e.sendTOS)
-	stateSinkObject.Save(43, &e.gso)
-	stateSinkObject.Save(44, &e.stats)
-	stateSinkObject.Save(45, &e.tcpLingerTimeout)
-	stateSinkObject.Save(46, &e.closed)
-	stateSinkObject.Save(47, &e.txHash)
-	stateSinkObject.Save(48, &e.owner)
-	stateSinkObject.Save(49, &e.ops)
-	stateSinkObject.Save(50, &e.lastOutOfWindowAckTime)
+	stateSinkObject.Save(28, &e.userMSS)
+	stateSinkObject.Save(29, &e.maxSynRetries)
+	stateSinkObject.Save(30, &e.windowClamp)
+	stateSinkObject.Save(31, &e.sndQueueInfo)
+	stateSinkObject.Save(32, &e.cc)
+	stateSinkObject.Save(33, &e.keepalive)
+	stateSinkObject.Save(34, &e.userTimeout)
+	stateSinkObject.Save(35, &e.deferAccept)
+	stateSinkObject.Save(36, &e.acceptQueue)
+	stateSinkObject.Save(37, &e.rcv)
+	stateSinkObject.Save(38, &e.snd)
+	stateSinkObject.Save(39, &e.connectingAddress)
+	stateSinkObject.Save(40, &e.amss)
+	stateSinkObject.Save(41, &e.sendTOS)
+	stateSinkObject.Save(42, &e.gso)
+	stateSinkObject.Save(43, &e.stats)
+	stateSinkObject.Save(44, &e.tcpLingerTimeout)
+	stateSinkObject.Save(45, &e.closed)
+	stateSinkObject.Save(46, &e.txHash)
+	stateSinkObject.Save(47, &e.owner)
+	stateSinkObject.Save(48, &e.ops)
+	stateSinkObject.Save(49, &e.lastOutOfWindowAckTime)
 }
 
 // +checklocksignore
@@ -422,29 +423,28 @@ func (e *endpoint) StateLoad(stateSourceObject state.Source) {
 	stateSourceObject.Load(25, &e.delay)
 	stateSourceObject.Load(26, &e.scoreboard)
 	stateSourceObject.LoadWait(27, &e.segmentQueue)
-	stateSourceObject.Load(28, &e.synRcvdCount)
-	stateSourceObject.Load(29, &e.userMSS)
-	stateSourceObject.Load(30, &e.maxSynRetries)
-	stateSourceObject.Load(31, &e.windowClamp)
-	stateSourceObject.Load(32, &e.sndQueueInfo)
-	stateSourceObject.Load(33, &e.cc)
-	stateSourceObject.Load(34, &e.keepalive)
-	stateSourceObject.Load(35, &e.userTimeout)
-	stateSourceObject.Load(36, &e.deferAccept)
-	stateSourceObject.Load(37, &e.accepted)
-	stateSourceObject.LoadWait(38, &e.rcv)
-	stateSourceObject.LoadWait(39, &e.snd)
-	stateSourceObject.Load(40, &e.connectingAddress)
-	stateSourceObject.Load(41, &e.amss)
-	stateSourceObject.Load(42, &e.sendTOS)
-	stateSourceObject.Load(43, &e.gso)
-	stateSourceObject.Load(44, &e.stats)
-	stateSourceObject.Load(45, &e.tcpLingerTimeout)
-	stateSourceObject.Load(46, &e.closed)
-	stateSourceObject.Load(47, &e.txHash)
-	stateSourceObject.Load(48, &e.owner)
-	stateSourceObject.Load(49, &e.ops)
-	stateSourceObject.Load(50, &e.lastOutOfWindowAckTime)
+	stateSourceObject.Load(28, &e.userMSS)
+	stateSourceObject.Load(29, &e.maxSynRetries)
+	stateSourceObject.Load(30, &e.windowClamp)
+	stateSourceObject.Load(31, &e.sndQueueInfo)
+	stateSourceObject.Load(32, &e.cc)
+	stateSourceObject.Load(33, &e.keepalive)
+	stateSourceObject.Load(34, &e.userTimeout)
+	stateSourceObject.Load(35, &e.deferAccept)
+	stateSourceObject.Load(36, &e.acceptQueue)
+	stateSourceObject.LoadWait(37, &e.rcv)
+	stateSourceObject.LoadWait(38, &e.snd)
+	stateSourceObject.Load(39, &e.connectingAddress)
+	stateSourceObject.Load(40, &e.amss)
+	stateSourceObject.Load(41, &e.sendTOS)
+	stateSourceObject.Load(42, &e.gso)
+	stateSourceObject.Load(43, &e.stats)
+	stateSourceObject.Load(44, &e.tcpLingerTimeout)
+	stateSourceObject.Load(45, &e.closed)
+	stateSourceObject.Load(46, &e.txHash)
+	stateSourceObject.Load(47, &e.owner)
+	stateSourceObject.Load(48, &e.ops)
+	stateSourceObject.Load(49, &e.lastOutOfWindowAckTime)
 	stateSourceObject.LoadValue(10, new(EndpointState), func(y interface{}) { e.loadState(y.(EndpointState)) })
 	stateSourceObject.AfterLoad(e.afterLoad)
 }
@@ -1006,6 +1006,7 @@ func (e *segmentEntry) StateLoad(stateSourceObject state.Source) {
 }
 
 func init() {
+	state.Register((*acceptQueue)(nil))
 	state.Register((*cubicState)(nil))
 	state.Register((*SACKInfo)(nil))
 	state.Register((*ReceiveErrors)(nil))
@@ -1013,7 +1014,6 @@ func init() {
 	state.Register((*Stats)(nil))
 	state.Register((*sndQueueInfo)(nil))
 	state.Register((*rcvQueueInfo)(nil))
-	state.Register((*accepted)(nil))
 	state.Register((*endpoint)(nil))
 	state.Register((*keepalive)(nil))
 	state.Register((*rackControl)(nil))
