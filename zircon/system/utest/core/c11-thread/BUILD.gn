@@ -11,7 +11,7 @@ source_set("c11-thread") {
   deps = [
     "//sdk/lib/fdio",
     "//sdk/lib/fit",
-    "//zircon/public/lib/zx",
+    "//zircon/system/ulib/zx",
     "//zircon/system/ulib/zxtest",
   ]
 }

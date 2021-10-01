@@ -45,7 +45,7 @@ executable("publish-data-helper") {
   sources = [ "helper/publish-data-helper.cc" ]
   deps = [
     "//sdk/lib/fdio",
-    "//zircon/public/lib/zx",
+    "//zircon/system/ulib/zx",
     "//zircon/system/ulib/zxtest",
   ]
 
@@ -65,8 +65,8 @@ executable("profile-helper") {
 
   deps = [
     "//sdk/lib/fdio",
-    "//zircon/public/lib/zx",
     "//zircon/system/ulib/fbl",
+    "//zircon/system/ulib/zx",
     "//zircon/system/ulib/zxtest",
   ]
 }

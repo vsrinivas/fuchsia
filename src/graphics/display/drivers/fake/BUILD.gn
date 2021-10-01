@@ -55,10 +55,10 @@ source_set("fake-lib") {
     "//src/lib/ddk",
     "//src/lib/ddktl",
     "//zircon/public/lib/zircon-internal",
-    "//zircon/public/lib/zx",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/fzl",
     "//zircon/system/ulib/image-format",
+    "//zircon/system/ulib/zx",
   ]
   deps =
       [ "//src/graphics/display/drivers/display:preferred-scanout-image-type" ]

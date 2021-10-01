@@ -61,10 +61,10 @@ executable("unittests-bin") {
     "//src/lib/testing/loop_fixture",
     "//third_party/googletest:gtest",
     "//third_party/openthread:lib-ot-core",
-    "//zircon/public/lib/zx",
     "//zircon/system/ulib/async:async-cpp",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
+    "//zircon/system/ulib/zx",
   ]
 
   include_dirs = [
@@ -85,11 +85,11 @@ executable("bootstrap-unittests-bin") {
     "//src/lib/fxl/test:gtest_main",
     "//src/lib/testing/loop_fixture",
     "//third_party/googletest:gtest",
-    "//zircon/public/lib/zx",
     "//zircon/system/ulib/async:async-cpp",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/svc",
+    "//zircon/system/ulib/zx",
   ]
 
   include_dirs =

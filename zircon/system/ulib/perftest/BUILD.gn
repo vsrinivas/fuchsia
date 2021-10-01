@@ -20,13 +20,13 @@ zx_library("perftest") {
   if (is_fuchsia) {
     deps += [
       "//zircon/public/lib/async",
-      "//zircon/public/lib/zx",
       "//zircon/system/ulib/async-loop",
       "//zircon/system/ulib/async-loop:async-loop-cpp",
       "//zircon/system/ulib/async-loop:async-loop-default",
       "//zircon/system/ulib/trace",
       "//zircon/system/ulib/trace-engine",
       "//zircon/system/ulib/trace-provider:trace-provider-with-fdio",
+      "//zircon/system/ulib/zx",
     ]
   }
 }

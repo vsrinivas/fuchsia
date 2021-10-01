@@ -17,10 +17,10 @@ executable("telephony-qmi-usb-integration-test") {
     "//src/lib/ddk",
     "//src/lib/fxl/test:gtest_main",
     "//src/lib/isolated_devmgr:usb-virtual-bus",
-    "//zircon/public/lib/zx",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/fdio-caller",
     "//zircon/system/ulib/fzl",
+    "//zircon/system/ulib/zx",
   ]
 
   # TODO(fxbug.dev/69585): This target uses raw zx::channel with LLCPP which is deprecated.

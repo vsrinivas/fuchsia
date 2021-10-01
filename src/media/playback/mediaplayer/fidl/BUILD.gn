@@ -43,8 +43,8 @@ source_set("fidl") {
     "//src/media/playback/mediaplayer/process",
     "//src/media/playback/mediaplayer/render",
     "//src/media/playback/mediaplayer/util",
-    "//zircon/public/lib/zx",
     "//zircon/system/ulib/fzl",
+    "//zircon/system/ulib/zx",
   ]
 
   # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
@@ -68,7 +68,7 @@ test("tests") {
     "//src/lib/fxl/test:gtest_main",
     "//src/media/playback/mediaplayer/graph",
     "//src/media/playback/mediaplayer/process",
-    "//zircon/public/lib/zx",
+    "//zircon/system/ulib/zx",
   ]
 
   # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings

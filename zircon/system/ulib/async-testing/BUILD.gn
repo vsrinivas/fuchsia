@@ -24,14 +24,14 @@ zx_library("async-testing") {
     "//zircon/public/lib/async",
 
     # <lib/async-testing/dispatcher.h_stub> has #include <lib/zx/time.h>.
-    "//zircon/public/lib/zx",
+    "//zircon/system/ulib/zx",
   ]
   deps = [
     "//sdk/lib/fdio",
     "//zircon/public/lib/async",
     "//zircon/public/lib/async-cpp",
-    "//zircon/public/lib/zx",
     "//zircon/system/ulib/async-default",
+    "//zircon/system/ulib/zx",
   ]
 }
 

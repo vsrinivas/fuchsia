@@ -46,7 +46,7 @@ executable("board_info_provider_unittest_exe") {
     "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",
     "//zircon/public/lib/async-cpp",
-    "//zircon/public/lib/zx",
+    "//zircon/system/ulib/zx",
   ]
 }
 
@@ -69,7 +69,7 @@ executable("channel_provider_unittest_exe") {
     "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",
     "//zircon/public/lib/async-cpp",
-    "//zircon/public/lib/zx",
+    "//zircon/system/ulib/zx",
   ]
 }
 
@@ -87,7 +87,7 @@ executable("config_unittest_exe") {
     "//src/developer/forensics/testing:gtest_with_syslog_main",
     "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",
-    "//zircon/public/lib/zx",
+    "//zircon/system/ulib/zx",
   ]
 }
 
@@ -122,7 +122,7 @@ executable("data_provider_unittest_exe") {
     "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",
     "//third_party/rapidjson",
-    "//zircon/public/lib/zx",
+    "//zircon/system/ulib/zx",
   ]
 
   # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
@@ -196,7 +196,7 @@ executable("datastore_unittest_exe") {
     "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",
     "//zircon/public/lib/async-cpp",
-    "//zircon/public/lib/zx",
+    "//zircon/system/ulib/zx",
   ]
 }
 
@@ -293,7 +293,7 @@ executable("kernel_log_ptr_integration_test_exe") {
     "//src/lib/fxl/test:gtest_main",
     "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",
-    "//zircon/public/lib/zx",
+    "//zircon/system/ulib/zx",
   ]
 }
 
@@ -315,7 +315,7 @@ executable("product_info_provider_unittest_exe") {
     "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",
     "//zircon/public/lib/async-cpp",
-    "//zircon/public/lib/zx",
+    "//zircon/system/ulib/zx",
   ]
 }
 
@@ -334,7 +334,7 @@ executable("screenshot_ptr_unittest_exe") {
     "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",
     "//zircon/public/lib/async-cpp",
-    "//zircon/public/lib/zx",
+    "//zircon/system/ulib/zx",
   ]
 }
 
@@ -367,7 +367,7 @@ source_set("zx_object_util") {
 
   public_deps = [
     "//sdk/lib/syslog/cpp",
-    "//zircon/public/lib/zx",
+    "//zircon/system/ulib/zx",
   ]
 }
 

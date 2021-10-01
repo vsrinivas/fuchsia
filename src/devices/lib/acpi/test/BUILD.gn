@@ -10,9 +10,9 @@ test("acpi-unittest") {
     "//src/devices/lib/acpi",
     "//src/devices/lib/acpi/mock:mock-acpi",
     "//src/lib/ddk",
-    "//zircon/public/lib/zx",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/fidl-async:fidl-async-cpp",
+    "//zircon/system/ulib/zx",
     "//zircon/system/ulib/zxtest",
   ]
 

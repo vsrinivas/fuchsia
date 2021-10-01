@@ -25,8 +25,8 @@ zx_library("devmgr-launcher") {
     "//sdk/lib/fdio",
     "//sdk/lib/fdio:fdio-spawn-actions",
     "//sdk/lib/fit",
-    "//zircon/public/lib/zx",
     "//zircon/system/ulib/fbl",
+    "//zircon/system/ulib/zx",
   ]
   configs += [ "//build/config/fuchsia:static_cpp_standard_library" ]
 }

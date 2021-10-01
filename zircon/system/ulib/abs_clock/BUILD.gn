@@ -10,10 +10,10 @@ zx_library("abs_clock") {
   sources = [ "clock.cc" ]
   deps = [
     "//zircon/public/lib/sync",
-    "//zircon/public/lib/zx",
     "//zircon/system/ulib/fbl",
+    "//zircon/system/ulib/zx",
   ]
-  public_deps = [ "//zircon/public/lib/zx" ]
+  public_deps = [ "//zircon/system/ulib/zx" ]
 }
 
 group("tests") {

@@ -11,5 +11,5 @@ zx_library("statusor") {
     "lib/statusor/status-macros.h",
   ]
   sources = []
-  public_deps = [ "//zircon/public/lib/zx" ]
+  public_deps = [ "//zircon/system/ulib/zx" ]
 }

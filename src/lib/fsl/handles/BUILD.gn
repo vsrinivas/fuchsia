@@ -12,7 +12,7 @@ source_set("handles") {
 
   public_deps = [
     "//src/lib/fxl:common",
-    "//zircon/public/lib/zx",
+    "//zircon/system/ulib/zx",
   ]
 
   public_configs = [ "//garnet/public:config" ]

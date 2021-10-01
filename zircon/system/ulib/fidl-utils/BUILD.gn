@@ -15,8 +15,8 @@ zx_library("fidl-utils") {
   public_deps = [
     "//zircon/public/lib/async",
     "//zircon/public/lib/fidl",
-    "//zircon/public/lib/zx",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/fidl-async",
+    "//zircon/system/ulib/zx",
   ]
 }

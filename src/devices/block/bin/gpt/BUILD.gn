@@ -10,10 +10,10 @@ executable("gpt") {
     "//sdk/lib/fdio",
     "//sdk/lib/fit",
     "//src/storage/gpt",
-    "//zircon/public/lib/zx",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/fdio-caller",
     "//zircon/system/ulib/fzl",
+    "//zircon/system/ulib/zx",
     "//zircon/third_party/ulib/cksum",
   ]
 

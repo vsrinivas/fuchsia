@@ -27,12 +27,12 @@ common_deps = [
   "//src/lib/ddktl",
   "//zircon/public/lib/fidl",
   "//zircon/public/lib/zircon-internal",
-  "//zircon/public/lib/zx",
   "//zircon/system/ulib/fbl",
   "//zircon/system/ulib/fidl-async",
   "//zircon/system/ulib/fidl-utils",
   "//zircon/system/ulib/trace",
   "//zircon/system/ulib/trace:trace-driver",
+  "//zircon/system/ulib/zx",
 ]
 
 driver_module("address_space_driver-driver") {
@@ -71,7 +71,7 @@ test("goldfish-address-space-test") {
         "//zircon/public/lib/mock-function",
         "//zircon/public/lib/sync",
         "//zircon/public/lib/zircon-internal",
-        "//zircon/public/lib/zx",
+        "//zircon/system/ulib/zx",
         "//zircon/system/ulib/zxtest",
       ]
 

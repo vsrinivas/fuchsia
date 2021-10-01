@@ -86,7 +86,7 @@ test("fbl") {
     ]
     deps += [
       "//sdk/lib/fdio",
-      "//zircon/public/lib/zx",
+      "//zircon/system/ulib/zx",
     ]
   }
 }

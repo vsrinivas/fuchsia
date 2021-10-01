@@ -67,7 +67,7 @@ source_set("logs") {
   deps = [
     "//sdk/lib/syslog/cpp",
     "//src/lib/fxl",
-    "//zircon/public/lib/zx",
+    "//zircon/system/ulib/zx",
   ]
 }
 
@@ -96,7 +96,7 @@ source_set("time") {
 
   public_deps = [
     "//src/lib/timekeeper",
-    "//zircon/public/lib/zx",
+    "//zircon/system/ulib/zx",
   ]
 
   deps = [ "//src/lib/fxl" ]
@@ -113,8 +113,8 @@ source_set("utc_time_provider") {
     "//sdk/lib/sys/cpp",
     "//src/lib/timekeeper:system",
     "//zircon/public/lib/async",
-    "//zircon/public/lib/zx",
     "//zircon/system/ulib/async:async-cpp",
+    "//zircon/system/ulib/zx",
   ]
 
   deps = [

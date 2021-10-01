@@ -80,6 +80,6 @@ source_set("reporter") {
     "//src/lib/fsl",
     "//src/lib/fxl",
     "//zircon/public/lib/async-cpp",
-    "//zircon/public/lib/zx",
+    "//zircon/system/ulib/zx",
   ]
 }

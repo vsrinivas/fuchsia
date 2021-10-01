@@ -29,7 +29,7 @@ executable("magnifier_tests") {
     "//src/ui/lib/glm_workaround",
     "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",
-    "//zircon/public/lib/zx",
+    "//zircon/system/ulib/zx",
   ]
 
   # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings

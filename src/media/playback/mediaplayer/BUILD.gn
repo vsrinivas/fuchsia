@@ -140,10 +140,10 @@ executable("mediaplayer_tests_bin") {
     "//src/lib/fxl/test:gtest_main",
     "//src/lib/ui/base_view",
     "//src/media/playback/mediaplayer/graph",
-    "//zircon/public/lib/zx",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/hid",
+    "//zircon/system/ulib/zx",
   ]
 
   # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings

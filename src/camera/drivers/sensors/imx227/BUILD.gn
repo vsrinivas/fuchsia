@@ -48,9 +48,9 @@ source_set("lib") {
     "//sdk/lib/fit-promise",
     "//src/devices/bus/lib/device-protocol-pdev",
     "//src/devices/i2c/lib/device-protocol-i2c-channel",
-    "//zircon/public/lib/zx",
     "//zircon/system/ulib/driver-unit-test",
     "//zircon/system/ulib/trace:trace-driver",
+    "//zircon/system/ulib/zx",
     "//zircon/system/ulib/zxtest",
   ]
 

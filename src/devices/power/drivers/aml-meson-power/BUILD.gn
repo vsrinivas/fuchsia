@@ -41,9 +41,9 @@ driver_module("aml-meson-power-driver") {
     "//src/lib/ddktl",
     "//zircon/public/lib/fidl",
     "//zircon/public/lib/sync",
-    "//zircon/public/lib/zx",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/hwreg",
+    "//zircon/system/ulib/zx",
   ]
 }
 
@@ -83,11 +83,11 @@ test("aml-meson-power-test-bin") {
     "//src/lib/ddktl",
     "//zircon/public/lib/mock-function",
     "//zircon/public/lib/sync",
-    "//zircon/public/lib/zx",
     "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/fidl-utils",
     "//zircon/system/ulib/hwreg",
+    "//zircon/system/ulib/zx",
     "//zircon/system/ulib/zxtest",
   ]
 }

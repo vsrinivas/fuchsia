@@ -29,7 +29,7 @@ sdk_source_set("cpp") {
     "//sdk/lib/fit",
     "//sdk/lib/sys/service/cpp",
     "//sdk/lib/vfs/cpp",
-    "//zircon/public/lib/zx",
+    "//zircon/system/ulib/zx",
   ]
 
   deps = [ "//sdk/lib/fdio" ]

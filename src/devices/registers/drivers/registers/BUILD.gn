@@ -55,7 +55,7 @@ test("registers-test") {
     ":registers_bind",
     "//src/devices/testing/mock-mmio-reg",
     "//src/devices/testing/no_ddk",
-    "//zircon/public/lib/zx",
+    "//zircon/system/ulib/zx",
     "//zircon/system/ulib/zxtest",
   ]
 

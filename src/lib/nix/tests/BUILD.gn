@@ -31,8 +31,8 @@ test("nix") {
   deps = [
     "//sdk/lib/fdio",
     "//src/lib/nix",
-    "//zircon/public/lib/zx",
     "//zircon/system/ulib/fbl",
+    "//zircon/system/ulib/zx",
     "//zircon/system/ulib/zxtest",
   ]
 }

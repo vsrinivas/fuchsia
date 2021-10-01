@@ -40,11 +40,11 @@ driver_module("ams-light-driver") {
     "//src/ui/input/lib/input-report-reader",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zircon-internal",
-    "//zircon/public/lib/zx",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/fidl-async:fidl-async-cpp",
+    "//zircon/system/ulib/zx",
     "//zircon/system/ulib/zxc",
   ]
 }
@@ -84,11 +84,11 @@ test("ams-light-test-bin") {
     "//zircon/public/lib/mock-function",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zircon-internal",
-    "//zircon/public/lib/zx",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/fidl-async:fidl-async-cpp",
+    "//zircon/system/ulib/zx",
     "//zircon/system/ulib/zxc",
     "//zircon/system/ulib/zxtest",
   ]

@@ -21,9 +21,9 @@ source_set("socket") {
     "//src/lib/files",
     "//src/lib/fxl:common",
     "//zircon/public/lib/async-cpp",
-    "//zircon/public/lib/zx",
     "//zircon/system/ulib/async-default",
     "//zircon/system/ulib/fbl",
+    "//zircon/system/ulib/zx",
   ]
 
   public_configs = [ "//garnet/public:config" ]

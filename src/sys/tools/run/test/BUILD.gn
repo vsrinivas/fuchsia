@@ -47,7 +47,7 @@ executable("run_test_exiter_bin") {
 
   sources = [ "exiter.cc" ]
 
-  deps = [ "//zircon/public/lib/zx" ]
+  deps = [ "//zircon/system/ulib/zx" ]
 }
 
 add_to_component_index("index") {

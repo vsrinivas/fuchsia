@@ -78,9 +78,9 @@ group("common") {
     "//src/lib/ddktl",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zircon-internal",
-    "//zircon/public/lib/zx",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/hwreg",
+    "//zircon/system/ulib/zx",
   ]
 }
 

@@ -40,7 +40,7 @@ source_set("constants") {
 
   public_deps = [
     "//src/developer/forensics/utils:storage_size",
-    "//zircon/public/lib/zx",
+    "//zircon/system/ulib/zx",
   ]
 }
 
@@ -272,7 +272,7 @@ source_set("reporting_policy_watcher") {
     "//sdk/lib/sys/cpp",
     "//src/lib/backoff",
     "//zircon/public/lib/async",
-    "//zircon/public/lib/zx",
+    "//zircon/system/ulib/zx",
   ]
 
   deps = [ "//sdk/lib/syslog/cpp" ]
@@ -342,7 +342,7 @@ source_set("snapshot_manager") {
     "//src/developer/forensics/utils:storage_size",
     "//src/lib/timekeeper",
     "//zircon/public/lib/async",
-    "//zircon/public/lib/zx",
+    "//zircon/system/ulib/zx",
   ]
 
   deps = [

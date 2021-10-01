@@ -16,7 +16,7 @@ source_set("session_spec") {
     "//src/lib/json_parser",
     "//third_party/rapidjson",
     "//zircon/public/lib/zircon-internal",
-    "//zircon/public/lib/zx",
+    "//zircon/system/ulib/zx",
   ]
 }
 

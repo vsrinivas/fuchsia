@@ -10,8 +10,8 @@ executable("driver-registrar") {
     "//sdk/fidl/fuchsia.pkg",
     "//sdk/lib/fdio",
     "//sdk/lib/fidl/cpp",
-    "//zircon/public/lib/zx",
     "//zircon/system/ulib/fbl",
+    "//zircon/system/ulib/zx",
   ]
 
   # TODO(fxbug.dev/69585): This target uses raw zx::channel with LLCPP which is deprecated.

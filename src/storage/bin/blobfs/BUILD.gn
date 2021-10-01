@@ -10,10 +10,10 @@ executable("blobfs") {
     "//sdk/lib/syslog/cpp",
     "//src/lib/storage/vfs/cpp",
     "//src/storage/blobfs",
-    "//zircon/public/lib/zx",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/block-client",
     "//zircon/system/ulib/service:service-llcpp",
+    "//zircon/system/ulib/zx",
   ]
 }

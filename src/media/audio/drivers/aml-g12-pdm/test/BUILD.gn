@@ -31,10 +31,10 @@ executable("aml-g12-pdm-test-bin") {
     "//src/media/audio/lib/simple-audio-stream",
     "//zircon/public/lib/mock-function",
     "//zircon/public/lib/zircon-internal",
-    "//zircon/public/lib/zx",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/fzl",
     "//zircon/system/ulib/inspect",
+    "//zircon/system/ulib/zx",
     "//zircon/system/ulib/zxtest",
   ]
 }

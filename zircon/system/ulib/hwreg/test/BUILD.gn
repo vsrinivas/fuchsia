@@ -29,9 +29,9 @@ test("libhwreg-i2c-test") {
     "//src/devices/i2c/testing/mock-i2c",
     "//src/lib/ddk",
     "//src/lib/ddktl",
-    "//zircon/public/lib/zx",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/hwreg-i2c",
+    "//zircon/system/ulib/zx",
     "//zircon/system/ulib/zxtest",
   ]
 }

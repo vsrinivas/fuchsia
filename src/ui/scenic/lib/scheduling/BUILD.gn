@@ -50,7 +50,7 @@ source_set("frame_scheduler_interface") {
   public_deps = [
     ":id",
     "//src/lib/fxl",
-    "//zircon/public/lib/zx",
+    "//zircon/system/ulib/zx",
   ]
 }
 
@@ -61,7 +61,7 @@ source_set("vsync_timing") {
   ]
   deps = [
     "//src/lib/fxl",
-    "//zircon/public/lib/zx",
+    "//zircon/system/ulib/zx",
   ]
 }
 

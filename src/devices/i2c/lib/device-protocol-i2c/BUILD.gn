@@ -16,6 +16,6 @@ zx_library("device-protocol-i2c") {
     "//zircon/public/lib/sync",
 
     # <lib/device-protocol-i2c/i2c.h> has #include <zircon/types.h>
-    "//zircon/public/lib/zx",
+    "//zircon/system/ulib/zx",
   ]
 }

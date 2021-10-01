@@ -33,9 +33,9 @@ template("weavestack_lib") {
       "//src/connectivity/weave/lib/core",
       "//src/lib/files",
       "//src/lib/fsl",
-      "//zircon/public/lib/zx",
       "//zircon/system/ulib/async-loop:async-loop-cpp",
       "//zircon/system/ulib/async-loop:async-loop-default",
+      "//zircon/system/ulib/zx",
     ]
 
     if (invoker.is_shared) {

@@ -20,8 +20,8 @@ zx_library("edid") {
   deps = [
     "//src/lib/ddk",
     "//src/lib/ddktl",
-    "//zircon/public/lib/zx",
     "//zircon/system/ulib/fbl",
+    "//zircon/system/ulib/zx",
   ]
   public_deps = [ "//zircon/system/ulib/hwreg" ]
 }

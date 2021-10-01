@@ -23,7 +23,7 @@ executable("amlogic_decoder_integration_tests_bin") {
     "//sdk/fidl/fuchsia.device:fuchsia.device_llcpp",
     "//sdk/fidl/fuchsia.hardware.mediacodec:fuchsia.hardware.mediacodec_llcpp",
     "//sdk/lib/fdio",
-    "//zircon/public/lib/zx",
+    "//zircon/system/ulib/zx",
     "//zircon/system/ulib/zxtest",
   ]
 

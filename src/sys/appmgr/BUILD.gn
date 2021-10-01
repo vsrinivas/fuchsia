@@ -90,7 +90,6 @@ source_set("lib") {
     "//src/lib/storage/vfs/cpp",
     "//third_party/googletest:gtest_prod",
     "//third_party/rapidjson",
-    "//zircon/public/lib/zx",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/fdio-caller",
@@ -99,6 +98,7 @@ source_set("lib") {
     "//zircon/system/ulib/task-utils",
     "//zircon/system/ulib/trace",
     "//zircon/system/ulib/trace-provider:trace-provider-with-fdio",
+    "//zircon/system/ulib/zx",
     "//zircon/system/ulib/zxc",
   ]
 
@@ -141,8 +141,8 @@ source_set("appmgr_for_test") {
     "//src/lib/fxl",
     "//src/lib/storage/vfs/cpp",
     "//src/sys/lib/stdout-to-debuglog/cpp",
-    "//zircon/public/lib/zx",
     "//zircon/system/ulib/fidl-async:fidl-async-cpp",
+    "//zircon/system/ulib/zx",
   ]
 
   # TODO(fxbug.dev/58162): delete the below and fix compiler warnings

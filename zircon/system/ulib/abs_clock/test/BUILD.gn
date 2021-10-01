@@ -24,9 +24,9 @@ test("abs_clock_test") {
   deps = [
     "//sdk/lib/fdio",
     "//zircon/public/lib/sync",
-    "//zircon/public/lib/zx",
     "//zircon/system/ulib/abs_clock",
     "//zircon/system/ulib/fbl",
+    "//zircon/system/ulib/zx",
     "//zircon/system/ulib/zxtest",
   ]
 }

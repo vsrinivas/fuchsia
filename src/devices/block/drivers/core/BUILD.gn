@@ -51,9 +51,9 @@ test("core-unittest-bin") {
     "//src/devices/testing/no_ddk",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zircon-internal",
-    "//zircon/public/lib/zx",
     "//zircon/system/ulib/fzl",
     "//zircon/system/ulib/io-scheduler",
+    "//zircon/system/ulib/zx",
     "//zircon/system/ulib/zxtest",
   ]
 }
@@ -96,11 +96,11 @@ source_set("shared") {
     "//src/lib/ddktl",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zircon-internal",
-    "//zircon/public/lib/zx",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/fidl-utils",
     "//zircon/system/ulib/fzl",
     "//zircon/system/ulib/storage-metrics",
     "//zircon/system/ulib/trace",
+    "//zircon/system/ulib/zx",
   ]
 }

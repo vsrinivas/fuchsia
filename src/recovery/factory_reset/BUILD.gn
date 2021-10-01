@@ -34,9 +34,9 @@ source_set("lib") {
     "//src/lib/storage/fs_management",
     "//src/security/kms-stateless",
     "//src/security/zxcrypt:zxcrypt-client",
-    "//zircon/public/lib/zx",
     "//zircon/system/ulib/fdio-caller",
     "//zircon/system/ulib/fzl",
+    "//zircon/system/ulib/zx",
   ]
 }
 

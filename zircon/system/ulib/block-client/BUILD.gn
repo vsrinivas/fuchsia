@@ -27,9 +27,9 @@ zx_library("block-client") {
     "//zircon/system/ulib/range",
 
     # <block-client/cpp/fake-device.h> has #include <storage-metrics/block-metrics.h>.
-    "//zircon/public/lib/zx",
     "//zircon/system/ulib/storage-metrics",
     "//zircon/system/ulib/storage/buffer",
+    "//zircon/system/ulib/zx",
 
     # <block-client/cpp/block-device.h> has #include <.../fidl.h>
     "//sdk/fidl/fuchsia.device:fuchsia.device_c",
@@ -50,8 +50,8 @@ zx_library("block-client") {
     "//src/lib/ddk",
     "//src/lib/storage/vfs/cpp",
     "//zircon/public/lib/sync",
-    "//zircon/public/lib/zx",
     "//zircon/system/ulib/fbl",
+    "//zircon/system/ulib/zx",
   ]
 
   # TODO(fxbug.dev/69585): This target uses raw zx::channel with LLCPP which is deprecated.
@@ -74,11 +74,11 @@ zx_library("fake-device") {
   sources = [ "fake-device.cc" ]
   public_deps = [
     ":block-client",
-    "//zircon/public/lib/zx",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/range",
     "//zircon/system/ulib/storage-metrics",
     "//zircon/system/ulib/storage/buffer",
+    "//zircon/system/ulib/zx",
   ]
   deps = [
     "//sdk/fidl/fuchsia.device:fuchsia.device_c",

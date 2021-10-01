@@ -17,7 +17,7 @@ test("hdmi-dw") {
     "//src/graphics/display/lib/designware:hdmi-dw",
     "//src/graphics/display/lib/hdmi",
     "//src/lib/ddk",
-    "//zircon/public/lib/zx",
+    "//zircon/system/ulib/zx",
     "//zircon/system/ulib/zxtest",
   ]
 

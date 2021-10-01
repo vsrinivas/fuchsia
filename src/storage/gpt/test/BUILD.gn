@@ -20,8 +20,8 @@ test("gpt-unit-test") {
     "//sdk/fidl/fuchsia.hardware.block:fuchsia.hardware.block_c",
     "//sdk/lib/fdio",
     "//src/storage/gpt",
-    "//zircon/public/lib/zx",
     "//zircon/system/ulib/fbl",
+    "//zircon/system/ulib/zx",
     "//zircon/system/ulib/zxtest",
 
     # TODO(https://fxbug.dev/74373) replace once `RecursiveWaitForFile` is

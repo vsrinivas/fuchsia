@@ -27,10 +27,10 @@ executable("test_sysmgr_service_bin") {
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/syslog/cpp",
-    "//zircon/public/lib/zx",
     "//zircon/system/ulib/async-default",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
+    "//zircon/system/ulib/zx",
   ]
 }
 
@@ -51,10 +51,10 @@ executable("mock_resolver_bin") {
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/sys/cpp",
     "//src/lib/fxl",
-    "//zircon/public/lib/zx",
     "//zircon/system/ulib/async-default",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
+    "//zircon/system/ulib/zx",
   ]
 }
 
@@ -105,7 +105,7 @@ executable("package_updating_loader_test_bin") {
     "//src/lib/fxl/test:gtest_main",
     "//src/lib/storage/vfs/cpp",
     "//src/sys/sysmgr:lib",
-    "//zircon/public/lib/zx",
+    "//zircon/system/ulib/zx",
   ]
 }
 

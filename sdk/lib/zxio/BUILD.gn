@@ -30,7 +30,7 @@ library_headers("create_with_type") {
     "//sdk/fidl/fuchsia.io:fuchsia.io_llcpp",
     "//sdk/fidl/fuchsia.posix.socket:fuchsia.posix.socket_llcpp",
     "//sdk/fidl/fuchsia.posix.socket.raw:fuchsia.posix.socket.raw_llcpp",
-    "//zircon/public/lib/zx",
+    "//zircon/system/ulib/zx",
   ]
 }
 
@@ -83,8 +83,8 @@ source_set("zxio") {
     "//sdk/fidl/fuchsia.io:fuchsia.io_llcpp",
     "//sdk/fidl/fuchsia.io2:fuchsia.io2_llcpp",
     "//sdk/lib/zxio:inception",
-    "//zircon/public/lib/zx",
     "//zircon/system/ulib/fbl",
+    "//zircon/system/ulib/zx",
   ]
 }
 

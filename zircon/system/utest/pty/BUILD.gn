@@ -12,9 +12,9 @@ test("pty") {
   deps = [
     "//sdk/fidl/fuchsia.hardware.pty:fuchsia.hardware.pty_llcpp",
     "//sdk/lib/fdio",
-    "//zircon/public/lib/zx",
     "//zircon/system/ulib/fdio-caller",
     "//zircon/system/ulib/service:service-llcpp",
+    "//zircon/system/ulib/zx",
     "//zircon/system/ulib/zxtest",
   ]
 }

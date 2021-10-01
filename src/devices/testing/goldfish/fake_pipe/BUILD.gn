@@ -17,9 +17,9 @@ source_set("fake_pipe") {
     "//src/lib/ddk",
     "//src/lib/ddktl",
     "//zircon/public/lib/zircon-internal",
-    "//zircon/public/lib/zx",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/fzl",
+    "//zircon/system/ulib/zx",
   ]
 
   # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings

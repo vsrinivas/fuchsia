@@ -33,7 +33,7 @@ static_library("lib") {
     "//third_party/quickjs:qjs-lib",
     "//third_party/rapidjson",
     "//zircon/public/lib/fidl_base",
-    "//zircon/public/lib/zx",
+    "//zircon/system/ulib/zx",
   ]
 
   configs += [
@@ -111,11 +111,11 @@ source_set("tests") {
     "//src/storage/memfs",
     "//src/sys/component_index/fidl:index",
     "//third_party/googletest:gtest",
-    "//zircon/public/lib/zx",
     "//zircon/system/ulib/async-loop",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/task-utils",
+    "//zircon/system/ulib/zx",
   ]
   configs += [
     # TODO(fxbug.dev/58162): delete the below and fix compiler warnings

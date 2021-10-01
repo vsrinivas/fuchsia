@@ -18,9 +18,9 @@ test("watchdog_unittest") {
   deps = [
     "//src/lib/storage/vfs/cpp",
     "//src/storage/lib/watchdog",
-    "//zircon/public/lib/zx",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/syslog",
+    "//zircon/system/ulib/zx",
     "//zircon/system/ulib/zxc",
     "//zircon/system/ulib/zxtest",
   ]
@@ -53,9 +53,9 @@ zx_library("watchdog") {
   if (is_fuchsia) {
     sources = [ "watchdog.cc" ]
     public_deps = [
-      "//zircon/public/lib/zx",
       "//zircon/system/ulib/fzl",
       "//zircon/system/ulib/syslog",
+      "//zircon/system/ulib/zx",
     ]
     deps += [
       "//sdk/lib/fdio",

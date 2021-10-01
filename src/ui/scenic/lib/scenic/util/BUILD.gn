@@ -16,7 +16,7 @@ source_set("util") {
     "//sdk/fidl/fuchsia.scheduler",
     "//sdk/fidl/fuchsia.ui.gfx",
     "//sdk/lib/fdio",
-    "//zircon/public/lib/zx",
+    "//zircon/system/ulib/zx",
   ]
 
   deps = [ "//src/lib/fxl" ]

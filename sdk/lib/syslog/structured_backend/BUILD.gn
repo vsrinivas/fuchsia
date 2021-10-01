@@ -22,7 +22,7 @@ sdk_source_set("structured_backend") {
 
   public_deps = [
     "//sdk/lib/stdcompat",
-    "//zircon/public/lib/zx",
+    "//zircon/system/ulib/zx",
   ]
 
   sources = [

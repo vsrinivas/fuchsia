@@ -51,11 +51,11 @@ executable("netsvc") {
     "//src/sys/lib/stdout-to-debuglog/cpp",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/tftp",
-    "//zircon/public/lib/zx",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/fdio-caller",
     "//zircon/system/ulib/inet6",
     "//zircon/system/ulib/service:service-llcpp",
+    "//zircon/system/ulib/zx",
   ]
   data_deps = [
     # netsvc launches /boot/bin/sh for netruncmd.
@@ -108,10 +108,10 @@ source_set("netsvc_common") {
     "//sdk/fidl/fuchsia.paver:fuchsia.paver_llcpp",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/tftp",
-    "//zircon/public/lib/zx",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/fzl",
     "//zircon/system/ulib/inet6",
+    "//zircon/system/ulib/zx",
   ]
 }
 
@@ -131,7 +131,6 @@ test("netsvc-test") {
     "//sdk/fidl/fuchsia.sysinfo:fuchsia.sysinfo_llcpp",
     "//sdk/lib/fdio",
     "//src/lib/storage/vfs/cpp",
-    "//zircon/public/lib/zx",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/devmgr-integration-test",
@@ -140,6 +139,7 @@ test("netsvc-test") {
     "//zircon/system/ulib/mock-boot-arguments",
     "//zircon/system/ulib/ramdevice-client",
     "//zircon/system/ulib/zircon-internal",
+    "//zircon/system/ulib/zx",
     "//zircon/system/ulib/zxtest",
   ]
 }
@@ -152,13 +152,13 @@ test("netsvc-stress-test") {
     "//sdk/fidl/fuchsia.sysinfo:fuchsia.sysinfo_llcpp",
     "//sdk/lib/fdio",
     "//src/lib/storage/vfs/cpp",
-    "//zircon/public/lib/zx",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/devmgr-integration-test",
     "//zircon/system/ulib/driver-integration-test",
     "//zircon/system/ulib/fidl-async:fidl-async-cpp",
     "//zircon/system/ulib/ramdevice-client",
     "//zircon/system/ulib/zircon-internal",
+    "//zircon/system/ulib/zx",
     "//zircon/system/ulib/zxtest",
   ]
 }

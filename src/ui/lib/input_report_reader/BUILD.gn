@@ -26,7 +26,7 @@ source_set("input_report_reader") {
     "//sdk/lib/fdio",
     "//src/lib/fxl",
     "//zircon/public/lib/async-cpp",
-    "//zircon/public/lib/zx",
+    "//zircon/system/ulib/zx",
   ]
 }
 

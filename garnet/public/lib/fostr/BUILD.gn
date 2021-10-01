@@ -20,7 +20,7 @@ source_set("fostr") {
   if (is_fuchsia) {
     public_deps = [
       "//sdk/lib/fidl/cpp",
-      "//zircon/public/lib/zx",
+      "//zircon/system/ulib/zx",
     ]
   } else {
     public_deps = [ "//sdk/lib/fidl/cpp:cpp_base" ]

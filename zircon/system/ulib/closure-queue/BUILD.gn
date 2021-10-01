@@ -12,7 +12,7 @@ zx_library("closure-queue") {
   sources = [ "closure_queue.cc" ]
   deps = [
     "//zircon/public/lib/async-cpp",
-    "//zircon/public/lib/zx",
+    "//zircon/system/ulib/zx",
   ]
   public_deps = [ "//zircon/public/lib/async" ]
 }

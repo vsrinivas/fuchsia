@@ -51,7 +51,7 @@ template("trace_provider_library") {
       "//zircon/public/lib/async",
 
       # <trace-provider/provider.h> has #include <lib/zx/channel.h>.
-      "//zircon/public/lib/zx",
+      "//zircon/system/ulib/zx",
     ]
 
     if (!defined(sources)) {
@@ -77,8 +77,8 @@ template("trace_provider_library") {
       "//sdk/fidl/fuchsia.tracing.provider:fuchsia.tracing.provider_c",
       "//zircon/public/lib/async-cpp",
       "//zircon/public/lib/fidl",
-      "//zircon/public/lib/zx",
       "//zircon/system/ulib/fidl:fidl_base",
+      "//zircon/system/ulib/zx",
     ]
   }
 }
@@ -95,7 +95,7 @@ trace_provider_fdio_sources = [
 
 trace_provider_fdio_connect_source_deps = [
   "//sdk/lib/fdio",
-  "//zircon/public/lib/zx",
+  "//zircon/system/ulib/zx",
 ]
 
 trace_provider_fdio_connect_headers = [ "lib/trace-provider/fdio_connect.h" ]

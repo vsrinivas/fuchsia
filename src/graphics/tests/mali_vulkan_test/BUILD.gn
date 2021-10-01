@@ -17,7 +17,7 @@ executable("mali_vulkan_test_bin") {
     "//src/lib/vulkan",
     "//third_party/github.com/ARM-software/HWCPipe:mali_profiler",
     "//third_party/googletest:gtest",
-    "//zircon/public/lib/zx",
+    "//zircon/system/ulib/zx",
   ]
 
   # Disable ShadowCallStack, since there seem to be some issues with the call

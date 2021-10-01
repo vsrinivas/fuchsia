@@ -54,6 +54,6 @@ source_set("snapshotter") {
 
   deps = [
     "//sdk/fidl/fuchsia.feedback",
-    "//zircon/public/lib/zx",
+    "//zircon/system/ulib/zx",
   ]
 }

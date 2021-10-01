@@ -40,9 +40,9 @@ driver_module("aml-uart-driver") {
     "//src/lib/ddktl",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zircon-internal",
-    "//zircon/public/lib/zx",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/hwreg",
+    "//zircon/system/ulib/zx",
   ]
 }
 
@@ -78,9 +78,9 @@ test("aml-uart-test-bin") {
     "//src/lib/ddktl",
     "//zircon/public/lib/mock-function",
     "//zircon/public/lib/zircon-internal",
-    "//zircon/public/lib/zx",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/hwreg",
+    "//zircon/system/ulib/zx",
     "//zircon/system/ulib/zxtest",
   ]
 }

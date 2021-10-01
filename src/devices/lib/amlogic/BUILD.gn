@@ -67,9 +67,9 @@ zx_library("amlogic") {
     "//src/lib/ddk",
     "//src/lib/ddktl",
     "//zircon/public/lib/sync",
-    "//zircon/public/lib/zx",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/fzl",
+    "//zircon/system/ulib/zx",
   ]
   public_deps =
       [ "//sdk/fidl/fuchsia.hardware.thermal:fuchsia.hardware.thermal_c" ]

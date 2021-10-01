@@ -16,7 +16,7 @@ test("simple-codec-unittest-bin") {
     "//src/media/audio/lib/simple-codec",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zircon-internal",
-    "//zircon/public/lib/zx",
+    "//zircon/system/ulib/zx",
     "//zircon/system/ulib/zxtest",
   ]
 }

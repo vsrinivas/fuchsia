@@ -46,9 +46,9 @@ driver_module("wlantap_driver-driver") {
     "//src/devices/lib/driver",
     "//zircon/public/lib/async-cpp",
     "//zircon/public/lib/sync",
-    "//zircon/public/lib/zx",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
+    "//zircon/system/ulib/zx",
   ]
   configs += [ "//build/config/fuchsia:enable_zircon_asserts" ]
 

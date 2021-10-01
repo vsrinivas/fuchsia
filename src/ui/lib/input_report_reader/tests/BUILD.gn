@@ -44,7 +44,7 @@ source_set("mock_device_watcher") {
 
   deps = [
     "//src/lib/fxl",
-    "//zircon/public/lib/zx",
     "//zircon/system/ulib/hid-parser",
+    "//zircon/system/ulib/zx",
   ]
 }

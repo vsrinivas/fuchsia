@@ -58,8 +58,8 @@ source_set("qmi_driver_src") {
     "//src/devices/usb/lib/usb",
     "//src/lib/ddk",
     "//zircon/public/lib/sync",
-    "//zircon/public/lib/zx",
     "//zircon/system/ulib/fbl",
+    "//zircon/system/ulib/zx",
   ]
 
   # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings

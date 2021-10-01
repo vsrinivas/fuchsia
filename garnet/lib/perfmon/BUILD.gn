@@ -61,7 +61,7 @@ static_library("perfmon") {
 
     public_deps += [
       "//sdk/fidl/fuchsia.perfmon.cpu",
-      "//zircon/public/lib/zx",
+      "//zircon/system/ulib/zx",
     ]
   } else {
     sources += [
@@ -92,7 +92,7 @@ executable("perfmon_tests_app") {
     "//src/lib/fxl",
     "//src/lib/fxl/test:gtest_main",
     "//third_party/googletest:gtest",
-    "//zircon/public/lib/zx",
+    "//zircon/system/ulib/zx",
   ]
 
   deps += [ "//src/zircon/lib/zircon" ]

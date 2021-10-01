@@ -59,7 +59,6 @@ source_set("sysmem_common_srcs") {
     "//zircon/public/lib/async-cpp",
     "//zircon/public/lib/fidl",
     "//zircon/public/lib/sync",
-    "//zircon/public/lib/zx",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/closure-queue",
     "//zircon/system/ulib/fbl",
@@ -69,6 +68,7 @@ source_set("sysmem_common_srcs") {
     "//zircon/system/ulib/region-alloc",
     "//zircon/system/ulib/sysmem-version",
     "//zircon/system/ulib/trace:trace-driver",
+    "//zircon/system/ulib/zx",
   ]
 
   deps = [
@@ -141,7 +141,6 @@ test("sysmem-unittest-bin") {
     "//zircon/public/lib/async-cpp",
     "//zircon/public/lib/fidl",
     "//zircon/public/lib/sync",
-    "//zircon/public/lib/zx",
     "//zircon/system/ulib/async-default",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
@@ -152,6 +151,7 @@ test("sysmem-unittest-bin") {
     "//zircon/system/ulib/image-format",
     "//zircon/system/ulib/region-alloc",
     "//zircon/system/ulib/sysmem-version",
+    "//zircon/system/ulib/zx",
     "//zircon/system/ulib/zxtest",
   ]
 

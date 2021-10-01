@@ -59,7 +59,6 @@ source_set("common_srcs") {
     "//zircon/public/lib/bitmap",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zircon-internal",
-    "//zircon/public/lib/zx",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/fzl",
     "//zircon/system/ulib/hwreg",
@@ -67,6 +66,7 @@ source_set("common_srcs") {
     "//zircon/system/ulib/image-format:image-format-llcpp",
     "//zircon/system/ulib/inspect",
     "//zircon/system/ulib/mipi-dsi",
+    "//zircon/system/ulib/zx",
     "//zircon/system/ulib/zxc",
   ]
 

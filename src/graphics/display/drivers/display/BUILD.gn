@@ -71,7 +71,6 @@ source_set("shared") {
     "//zircon/public/lib/fidl",
     "//zircon/public/lib/pretty",
     "//zircon/public/lib/sync",
-    "//zircon/public/lib/zx",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/edid",
@@ -81,6 +80,7 @@ source_set("shared") {
     "//zircon/system/ulib/image-format:image-format-llcpp",
     "//zircon/system/ulib/inspect",
     "//zircon/system/ulib/trace:trace-driver",
+    "//zircon/system/ulib/zx",
   ]
 
   # TODO(fxbug.dev/58162): delete the below and fix compiler warnings

@@ -27,7 +27,7 @@ sdk_source_set("cpp") {
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/vfs/cpp",
     "//zircon/public/lib/async-cpp",
-    "//zircon/public/lib/zx",
+    "//zircon/system/ulib/zx",
   ]
 
   public_configs = [ "//sdk/config" ]

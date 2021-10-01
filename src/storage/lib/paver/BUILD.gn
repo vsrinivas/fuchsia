@@ -59,9 +59,9 @@ source_set("paver-core") {
     "//src/firmware/lib/abr",
     "//src/lib/uuid",
     "//src/storage/fvm",
-    "//zircon/public/lib/zx",
     "//zircon/system/ulib/block-client",
     "//zircon/system/ulib/fbl",
+    "//zircon/system/ulib/zx",
     "//zircon/system/ulib/zxc",
   ]
 
@@ -81,10 +81,10 @@ source_set("gpt") {
   public_deps = [
     ":paver-core",
     "//src/storage/gpt",
-    "//zircon/public/lib/zx",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/fdio-caller",
     "//zircon/system/ulib/service:service-llcpp",
+    "//zircon/system/ulib/zx",
   ]
 
   # TODO(fxbug.dev/69585): This target uses raw zx::channel with LLCPP which is deprecated.

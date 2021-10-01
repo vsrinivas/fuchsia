@@ -34,16 +34,16 @@ static_library("metrics-inspect") {
   ]
   sources = [ "histograms.cc" ]
   public_deps = [
-    "//zircon/public/lib/zx",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/fzl",
     "//zircon/system/ulib/inspect",
+    "//zircon/system/ulib/zx",
   ]
   deps = [
-    "//zircon/public/lib/zx",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/fzl",
     "//zircon/system/ulib/inspect",
+    "//zircon/system/ulib/zx",
   ]
 }
 
@@ -115,9 +115,9 @@ test("metrics-inspect-test") {
 
   deps = [
     ":metrics-inspect",
-    "//zircon/public/lib/zx",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/inspect",
+    "//zircon/system/ulib/zx",
     "//zircon/system/ulib/zxtest",
   ]
 }
@@ -133,9 +133,9 @@ test("metrics-cobalt-test") {
 
   deps = [
     ":metrics-cobalt",
-    "//zircon/public/lib/zx",
     "//zircon/system/ulib/cobalt-client",
     "//zircon/system/ulib/cobalt-client:in-memory-logger",
+    "//zircon/system/ulib/zx",
     "//zircon/system/ulib/zxtest",
   ]
 }

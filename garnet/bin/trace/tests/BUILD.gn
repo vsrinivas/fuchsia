@@ -31,9 +31,9 @@ source_set("component_context") {
 
   deps = [
     "//src/lib/fxl",
-    "//zircon/public/lib/zx",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
+    "//zircon/system/ulib/zx",
   ]
 
   public_deps = [
@@ -78,7 +78,7 @@ source_set("run_test") {
 
   public_deps = [
     "//sdk/lib/sys/cpp",
-    "//zircon/public/lib/zx",
+    "//zircon/system/ulib/zx",
   ]
 
   deps = [
@@ -103,10 +103,10 @@ source_set("integration_test_utils") {
 
   public_deps = [
     "//garnet/bin/trace:options",
-    "//zircon/public/lib/zx",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/trace-provider",
     "//zircon/system/ulib/trace-reader",
+    "//zircon/system/ulib/zx",
   ]
 
   deps = [
@@ -137,10 +137,10 @@ source_set("integration_test_utils_with_trace_with_static_engine") {
 
   public_deps = [
     "//garnet/bin/trace:options",
-    "//zircon/public/lib/zx",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/trace-provider:trace-provider-with-static-engine",
     "//zircon/system/ulib/trace-reader",
+    "//zircon/system/ulib/zx",
   ]
 
   deps = [
@@ -189,11 +189,11 @@ executable("basic_integration_test_app") {
   deps = [
     ":integration_test_utils",
     "//src/lib/fxl",
-    "//zircon/public/lib/zx",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/trace",
     "//zircon/system/ulib/trace-provider",
+    "//zircon/system/ulib/zx",
   ]
 
   # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
@@ -208,11 +208,11 @@ executable("two_providers_one_engine") {
   deps = [
     "//src/lib/fxl",
     "//zircon/public/lib/async-cpp",
-    "//zircon/public/lib/zx",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/trace",
     "//zircon/system/ulib/trace-provider",
+    "//zircon/system/ulib/zx",
   ]
 }
 
@@ -249,11 +249,11 @@ executable("two_providers_two_engines_test_app") {
     ":self_contained_provider",
     "//garnet/bin/trace:options",
     "//src/lib/fxl",
-    "//zircon/public/lib/zx",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/trace",
     "//zircon/system/ulib/trace-provider",
+    "//zircon/system/ulib/zx",
   ]
 
   # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
@@ -271,8 +271,8 @@ executable("nested_environment_test") {
   deps = [
     ":integration_test_utils",
     "//src/lib/fxl",
-    "//zircon/public/lib/zx",
     "//zircon/system/ulib/task-utils",
+    "//zircon/system/ulib/zx",
   ]
 
   # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
@@ -304,7 +304,7 @@ executable("run_awhile") {
 
   sources = [ "run_awhile.cc" ]
 
-  deps = [ "//zircon/public/lib/zx" ]
+  deps = [ "//zircon/system/ulib/zx" ]
 }
 
 executable("detach_tests") {
@@ -317,7 +317,7 @@ executable("detach_tests") {
     ":integration_test_utils",
     ":run_test",
     "//third_party/googletest:gtest",
-    "//zircon/public/lib/zx",
+    "//zircon/system/ulib/zx",
   ]
 }
 
@@ -332,8 +332,8 @@ executable("ktrace_integration_tests") {
     ":run_test",
     "//src/developer/tracing/lib/test_utils",
     "//third_party/googletest:gtest",
-    "//zircon/public/lib/zx",
     "//zircon/system/ulib/trace-reader",
+    "//zircon/system/ulib/zx",
   ]
 }
 
@@ -345,11 +345,11 @@ executable("shared_provider_app") {
   deps = [
     ":integration_test_utils",
     "//src/lib/fxl",
-    "//zircon/public/lib/zx",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/trace",
     "//zircon/system/ulib/trace-provider:trace-provider-so",
+    "//zircon/system/ulib/zx",
   ]
 }
 
@@ -363,8 +363,8 @@ executable("shared_provider_integration_tests") {
     ":integration_test_utils",
     ":run_test",
     "//third_party/googletest:gtest",
-    "//zircon/public/lib/zx",
     "//zircon/system/ulib/trace-reader",
+    "//zircon/system/ulib/zx",
   ]
 
   # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
@@ -379,11 +379,11 @@ executable("provider_destruction_app") {
   deps = [
     ":integration_test_utils",
     "//src/lib/fxl",
-    "//zircon/public/lib/zx",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/trace",
     "//zircon/system/ulib/trace-provider",
+    "//zircon/system/ulib/zx",
   ]
 }
 
@@ -397,8 +397,8 @@ executable("provider_destruction_tests") {
     ":integration_test_utils",
     ":run_test",
     "//third_party/googletest:gtest",
-    "//zircon/public/lib/zx",
     "//zircon/system/ulib/trace-reader",
+    "//zircon/system/ulib/zx",
   ]
 
   # TODO(fxbug.dev/58162): delete the below and fix compiler warnings

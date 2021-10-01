@@ -13,8 +13,8 @@ zx_library("kernel-debug") {
     "//zircon/public/lib/async",
     "//zircon/public/lib/fidl",
     "//zircon/public/lib/zircon-internal",
-    "//zircon/public/lib/zx",
     "//zircon/system/ulib/fidl-async",
+    "//zircon/system/ulib/zx",
   ]
   public_deps = [ "//zircon/system/ulib/svc" ]
 }

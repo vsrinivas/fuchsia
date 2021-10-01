@@ -15,11 +15,11 @@ static_library("testing") {
     "//sdk/fidl/fuchsia.sysmem:fuchsia.sysmem_llcpp",
     "//sdk/lib/fdio",
     "//zircon/public/lib/fidl",
-    "//zircon/public/lib/zx",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/fdio-caller",
     "//zircon/system/ulib/fzl",
     "//zircon/system/ulib/image-format:image-format-llcpp",
+    "//zircon/system/ulib/zx",
   ]
 
   # TODO(fxbug.dev/58162): delete the below and fix compiler warnings

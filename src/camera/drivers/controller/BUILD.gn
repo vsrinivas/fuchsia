@@ -83,7 +83,6 @@ source_set("source") {
     "//src/lib/fxl",
     "//zircon/public/lib/async-cpp",
     "//zircon/public/lib/zircon-internal",
-    "//zircon/public/lib/zx",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/fbl",
@@ -92,5 +91,6 @@ source_set("source") {
     "//zircon/system/ulib/image-format",
     "//zircon/system/ulib/syslog",
     "//zircon/system/ulib/trace:trace-driver",
+    "//zircon/system/ulib/zx",
   ]
 }

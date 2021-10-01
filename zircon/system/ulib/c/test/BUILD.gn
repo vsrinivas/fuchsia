@@ -66,7 +66,7 @@ executable("debugdata-test-helper") {
 
   testonly = true
   sources = [ "debugdata-test-helper.cc" ]
-  deps = [ "//zircon/public/lib/zx" ]
+  deps = [ "//zircon/system/ulib/zx" ]
 }
 
 test("cdebugdata-test") {
@@ -90,12 +90,12 @@ test("cdebugdata-test") {
     "//zircon/public/lib/async-cpp",
     "//zircon/public/lib/fidl",
     "//zircon/public/lib/zircon-internal",
-    "//zircon/public/lib/zx",
     "//zircon/system/ulib/async-loop",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/fidl-async",
     "//zircon/system/ulib/fidl-async:fidl-async-cpp",
+    "//zircon/system/ulib/zx",
     "//zircon/system/ulib/zxtest",
   ]
   output_dir = "$root_out_dir/zircon-migrated"
@@ -119,8 +119,8 @@ test("posix-clocks-test") {
   sources = [ "posix-clocks.cc" ]
   deps = [
     "//sdk/lib/fdio",
-    "//zircon/public/lib/zx",
     "//zircon/system/ulib/fbl",
+    "//zircon/system/ulib/zx",
     "//zircon/system/ulib/zxtest",
   ]
 }
@@ -139,7 +139,7 @@ test("pthread-detach-idempotent-test") {
   deps = [
     "//sdk/lib/fdio",
     "//zircon/public/lib/sync",
-    "//zircon/public/lib/zx",
+    "//zircon/system/ulib/zx",
     "//zircon/system/ulib/zxtest",
   ]
 }

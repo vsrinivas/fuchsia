@@ -48,9 +48,9 @@ source_set("common") {
     "//sdk/lib/fit",
     "//src/lib/storage/vfs/cpp",
     "//zircon/public/lib/zircon-internal",
-    "//zircon/public/lib/zx",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/fs-pty",
+    "//zircon/system/ulib/zx",
   ]
 
   deps = [

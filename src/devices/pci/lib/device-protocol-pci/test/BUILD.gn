@@ -13,7 +13,7 @@ test("device-protocol-pci") {
     "//sdk/lib/fdio",
     "//src/devices/lib/mmio",
     "//src/devices/pci/lib/device-protocol-pci",
-    "//zircon/public/lib/zx",
+    "//zircon/system/ulib/zx",
     "//zircon/system/ulib/zxtest",
   ]
 }

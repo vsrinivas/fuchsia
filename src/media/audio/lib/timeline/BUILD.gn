@@ -14,7 +14,7 @@ source_set("timeline") {
 
   deps = [ "//sdk/lib/syslog/cpp" ]
 
-  public_deps = [ "//zircon/public/lib/zx" ]
+  public_deps = [ "//zircon/system/ulib/zx" ]
 }
 
 executable("unittest_bin") {

@@ -36,7 +36,7 @@ test("trace-reader-test") {
   if (is_fuchsia) {
     deps += [
       "//sdk/lib/fdio",
-      "//zircon/public/lib/zx",
+      "//zircon/system/ulib/zx",
     ]
   }
 }

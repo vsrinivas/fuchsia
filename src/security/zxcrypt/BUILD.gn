@@ -31,8 +31,8 @@ static_library("zxcrypt-dev") {
     "//third_party/boringssl",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zircon-internal",
-    "//zircon/public/lib/zx",
     "//zircon/system/ulib/fbl",
+    "//zircon/system/ulib/zx",
   ]
   configs += [ "//build/config/fuchsia:static_cpp_standard_library" ]
 }
@@ -58,10 +58,10 @@ shared_library("zxcrypt-fdio") {
     "//sdk/lib/fdio",
     "//third_party/boringssl",
     "//zircon/public/lib/zircon-internal",
-    "//zircon/public/lib/zx",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/fdio-caller",
     "//zircon/system/ulib/fzl",
+    "//zircon/system/ulib/zx",
   ]
   configs += [ "//build/config/fuchsia:static_cpp_standard_library" ]
 
@@ -86,11 +86,11 @@ source_set("zxcrypt-client") {
     "//sdk/lib/fdio",
     "//src/security/kms-stateless",
     "//zircon/public/lib/zircon-internal",
-    "//zircon/public/lib/zx",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/fdio-caller",
     "//zircon/system/ulib/fzl",
     "//zircon/system/ulib/ramdevice-client:ramdevice-client-static",
+    "//zircon/system/ulib/zx",
   ]
   configs += [ "//build/config/fuchsia:static_cpp_standard_library" ]
 

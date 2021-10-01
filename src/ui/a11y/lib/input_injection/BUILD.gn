@@ -7,7 +7,7 @@ source_set("input_injection") {
 
   public_deps = [
     "//sdk/fidl/fuchsia.ui.input",
-    "//zircon/public/lib/zx",
+    "//zircon/system/ulib/zx",
   ]
 
   deps = [ "//sdk/fidl/fuchsia.ui.views" ]

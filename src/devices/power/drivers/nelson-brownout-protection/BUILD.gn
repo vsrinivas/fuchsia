@@ -27,8 +27,8 @@ group("common") {
     "//src/lib/ddk",
     "//src/lib/ddktl",
     "//src/media/audio/lib/simple-codec",
-    "//zircon/public/lib/zx",
     "//zircon/system/ulib/trace:trace-driver",
+    "//zircon/system/ulib/zx",
   ]
 }
 

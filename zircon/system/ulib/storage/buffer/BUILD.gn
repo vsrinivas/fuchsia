@@ -29,10 +29,10 @@ zx_library("buffer") {
       "vmo_buffer.cc",
     ]
     public_deps = [
-      "//zircon/public/lib/zx",
       "//zircon/system/ulib/fbl",
       "//zircon/system/ulib/fzl",
       "//zircon/system/ulib/storage/operation",
+      "//zircon/system/ulib/zx",
       "//zircon/system/ulib/zxc",
     ]
     deps = [
@@ -43,9 +43,9 @@ zx_library("buffer") {
       "//sdk/lib/syslog/cpp",
       "//src/lib/storage/vfs/cpp",
       "//zircon/public/lib/safemath",
-      "//zircon/public/lib/zx",
       "//zircon/system/ulib/fzl",
       "//zircon/system/ulib/storage/operation",
+      "//zircon/system/ulib/zx",
     ]
   } else {
     public_deps = [ "//zircon/system/public" ]

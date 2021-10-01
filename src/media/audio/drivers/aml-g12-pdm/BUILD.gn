@@ -40,10 +40,10 @@ driver_module("aml-g12-pdm-driver") {
     "//src/media/audio/lib/simple-audio-stream",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zircon-internal",
-    "//zircon/public/lib/zx",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/fzl",
     "//zircon/system/ulib/inspect",
+    "//zircon/system/ulib/zx",
   ]
 }
 

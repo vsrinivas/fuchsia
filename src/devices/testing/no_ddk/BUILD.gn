@@ -9,6 +9,6 @@ source_set("no_ddk") {
   deps = [
     "//sdk/lib/fdio",
     "//src/lib/ddk",
-    "//zircon/public/lib/zx",
+    "//zircon/system/ulib/zx",
   ]
 }

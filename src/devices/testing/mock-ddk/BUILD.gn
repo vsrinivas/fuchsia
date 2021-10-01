@@ -18,7 +18,7 @@ source_set("mock-ddk") {
     "//sdk/lib/fdio",
     "//src/lib/ddk",
     "//zircon/public/lib/sync",
-    "//zircon/public/lib/zx",
+    "//zircon/system/ulib/zx",
   ]
   public_deps = [
     "//sdk/lib/stdcompat",
@@ -45,9 +45,9 @@ test("mock-ddk-test-bin") {
     ":mock-ddk",
     "//garnet/examples/fidl/services:echo_llcpp",
     "//src/lib/ddktl",
-    "//zircon/public/lib/zx",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/fbl",
+    "//zircon/system/ulib/zx",
     "//zircon/system/ulib/zxc",
     "//zircon/system/ulib/zxtest",
   ]

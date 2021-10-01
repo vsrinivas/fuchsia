@@ -20,7 +20,6 @@ if (target_cpu == "x64") {
       "//sdk/lib/fdio",
       "//src/lib/ddk",
       "//zircon/public/lib/async",
-      "//zircon/public/lib/zx",
       "//zircon/system/ulib/async-default",
       "//zircon/system/ulib/async-loop:async-loop-cpp",
       "//zircon/system/ulib/async-loop:async-loop-default",
@@ -28,6 +27,7 @@ if (target_cpu == "x64") {
       "//zircon/system/ulib/fzl",
       "//zircon/system/ulib/trace",
       "//zircon/system/ulib/trace-provider:trace-provider-with-fdio",
+      "//zircon/system/ulib/zx",
     ]
   }
 }

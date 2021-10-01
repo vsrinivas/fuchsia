@@ -26,7 +26,7 @@ source_set("integration") {
     "//sdk/lib/ui/scenic/cpp",
     "//third_party/googletest:gtest",
     "//zircon/public/lib/async-cpp",
-    "//zircon/public/lib/zx",
+    "//zircon/system/ulib/zx",
   ]
 }
 
@@ -51,6 +51,6 @@ source_set("unit") {
     "//sdk/lib/ui/scenic/cpp",
     "//third_party/googletest:gtest",
     "//zircon/public/lib/async-cpp",
-    "//zircon/public/lib/zx",
+    "//zircon/system/ulib/zx",
   ]
 }

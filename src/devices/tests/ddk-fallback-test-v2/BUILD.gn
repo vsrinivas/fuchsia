@@ -47,12 +47,12 @@ test("test") {
     "//sdk/lib/fdio",
     "//src/lib/ddk",
     "//third_party/googletest:gtest",
-    "//zircon/public/lib/zx",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/devmgr-integration-test",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/service:service-llcpp",
+    "//zircon/system/ulib/zx",
   ]
 }
 

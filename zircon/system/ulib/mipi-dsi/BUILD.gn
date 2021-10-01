@@ -12,8 +12,8 @@ zx_library("mipi-dsi") {
     "//sdk/fidl/fuchsia.hardware.dsi:fuchsia.hardware.dsi_llcpp",
     "//sdk/lib/fit",
     "//zircon/public/lib/zircon-internal",
-    "//zircon/public/lib/zx",
     "//zircon/system/ulib/fbl",
+    "//zircon/system/ulib/zx",
     "//zircon/system/ulib/zxc",
   ]
   deps = [
@@ -21,8 +21,8 @@ zx_library("mipi-dsi") {
     "//sdk/fidl/fuchsia.hardware.dsi:fuchsia.hardware.dsi_llcpp",
     "//sdk/lib/fit",
     "//zircon/public/lib/zircon-internal",
-    "//zircon/public/lib/zx",
     "//zircon/system/ulib/fbl",
+    "//zircon/system/ulib/zx",
     "//zircon/system/ulib/zxc",
   ]
 }

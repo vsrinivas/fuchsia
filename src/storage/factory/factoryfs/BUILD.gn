@@ -31,7 +31,6 @@ source_set("factoryfs") {
     "//sdk/lib/fdio",
     "//sdk/lib/syslog/cpp",
     "//src/lib/storage/vfs/cpp",
-    "//zircon/public/lib/zx",
     "//zircon/system/ulib/async-loop",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
@@ -40,6 +39,7 @@ source_set("factoryfs") {
     "//zircon/system/ulib/trace",
     "//zircon/system/ulib/trace-engine",
     "//zircon/system/ulib/trace-provider:trace-provider-with-fdio",
+    "//zircon/system/ulib/zx",
     "//zircon/system/ulib/zxc",
   ]
 

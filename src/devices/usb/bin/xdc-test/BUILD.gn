@@ -17,10 +17,10 @@ executable("xdc-test") {
   deps = [
     "//sdk/fidl/fuchsia.usb.debug:fuchsia.usb.debug_c",
     "//sdk/lib/fdio",
-    "//zircon/public/lib/zx",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/fdio-caller",
     "//zircon/system/ulib/fzl",
+    "//zircon/system/ulib/zx",
   ]
 }
 

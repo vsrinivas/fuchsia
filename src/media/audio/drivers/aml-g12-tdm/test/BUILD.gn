@@ -37,10 +37,10 @@ executable("aml-g12-tdm-test-bin") {
     "//src/media/audio/lib/simple-codec",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zircon-internal",
-    "//zircon/public/lib/zx",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/fzl",
     "//zircon/system/ulib/inspect",
+    "//zircon/system/ulib/zx",
     "//zircon/system/ulib/zxtest",
   ]
 
@@ -72,10 +72,10 @@ executable("aml-g12-tdm-dai-test-bin") {
     "//src/lib/ddktl",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zircon-internal",
-    "//zircon/public/lib/zx",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/fzl",
+    "//zircon/system/ulib/zx",
     "//zircon/system/ulib/zxtest",
 
     # TODO(andresoportus): Remove depedency on TLS (maybe done by C++ bindings unification).

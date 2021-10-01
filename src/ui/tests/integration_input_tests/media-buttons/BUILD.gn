@@ -30,9 +30,9 @@ executable("mediabuttons_listener_test") {
     "//src/lib/fxl/test:gtest_main",
     "//src/lib/ui/base_view",
     "//third_party/googletest:gtest",
-    "//zircon/public/lib/zx",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
+    "//zircon/system/ulib/zx",
   ]
 }
 
@@ -75,9 +75,9 @@ executable("mediabuttons_listener_test_ip") {
     "//src/lib/fxl/test:gtest_main",
     "//src/ui/input/testing/fake_input_report_device",
     "//third_party/googletest:gtest",
-    "//zircon/public/lib/zx",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
+    "//zircon/system/ulib/zx",
   ]
 }
 

@@ -31,10 +31,10 @@ source_set("common") {
     "//zircon/system/ulib/trace",
 
     # The engine is chosen by the binary, we just need engine headers here.
-    "//zircon/public/lib/zx",
     "//zircon/system/ulib/trace-engine:trace-engine-headers-for-reader",
     "//zircon/system/ulib/trace-reader",
     "//zircon/system/ulib/trace-test-utils",
+    "//zircon/system/ulib/zx",
     "//zircon/system/ulib/zxtest",
 
     # fdio is here so that things like printf work.

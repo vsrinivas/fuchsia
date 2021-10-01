@@ -35,7 +35,7 @@ source_set("mock_magnification_handler") {
     "//sdk/fidl/fuchsia.accessibility",
     "//sdk/lib/fidl/cpp",
     "//src/lib/callback",
-    "//zircon/public/lib/zx",
+    "//zircon/system/ulib/zx",
   ]
 
   deps = [ "//third_party/googletest:gtest" ]

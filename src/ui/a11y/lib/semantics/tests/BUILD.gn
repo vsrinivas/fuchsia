@@ -179,7 +179,7 @@ source_set("semantics_integration_test_fixture") {
     "//sdk/lib/sys/cpp/testing:unit",
     "//sdk/lib/syslog/cpp",
     "//sdk/lib/ui/scenic/cpp",
-    "//zircon/public/lib/zx",
+    "//zircon/system/ulib/zx",
   ]
   data_deps = [
     "//src/fonts:downstream_test_deps($default_toolchain)",

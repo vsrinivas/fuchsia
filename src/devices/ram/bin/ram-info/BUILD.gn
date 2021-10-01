@@ -17,8 +17,8 @@ executable("ram-info") {
     "//sdk/lib/fdio",
     "//src/devices/lib/amlogic",
     "//zircon/public/lib/fidl",
-    "//zircon/public/lib/zx",
     "//zircon/system/ulib/fbl",
+    "//zircon/system/ulib/zx",
     "//zircon/system/ulib/zxc",
   ]
 
@@ -40,11 +40,11 @@ test("ram-info-test-bin") {
     "//sdk/lib/fdio",
     "//src/devices/lib/amlogic",
     "//zircon/public/lib/fidl",
-    "//zircon/public/lib/zx",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/fidl-async:fidl-async-cpp",
+    "//zircon/system/ulib/zx",
     "//zircon/system/ulib/zxc",
     "//zircon/system/ulib/zxtest",
   ]

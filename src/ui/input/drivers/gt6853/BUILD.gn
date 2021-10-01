@@ -56,12 +56,12 @@ group("common") {
     "//src/ui/input/lib/input-report-reader",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zircon-internal",
-    "//zircon/public/lib/zx",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/fzl",
     "//zircon/system/ulib/hid",
+    "//zircon/system/ulib/zx",
     "//zircon/system/ulib/zxc",
   ]
 }

@@ -61,9 +61,9 @@ test("tests") {
     ":fuchsia.device.instancelifecycle.test_llcpp",
     "//sdk/lib/fdio",
     "//src/lib/ddk",
-    "//zircon/public/lib/zx",
     "//zircon/system/ulib/driver-integration-test",
     "//zircon/system/ulib/fbl",
+    "//zircon/system/ulib/zx",
     "//zircon/system/ulib/zxtest",
   ]
   visibility = [ ":*" ]

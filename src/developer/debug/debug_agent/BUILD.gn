@@ -139,7 +139,7 @@ if (include_test_app) {
     }
 
     sources = [ "zxdb_test_app.cc" ]
-    deps = [ "//zircon/public/lib/zx" ]
+    deps = [ "//zircon/system/ulib/zx" ]
   }
 }
 

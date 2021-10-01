@@ -477,10 +477,10 @@ template("sherlock_driver") {
       "//src/lib/ddk:ddk-deprecated-binding-headers",
       "//src/lib/ddktl",
       "//zircon/public/lib/zircon-internal",
-      "//zircon/public/lib/zx",
       "//zircon/system/ulib/fbl",
       "//zircon/system/ulib/hwreg",
       "//zircon/system/ulib/inspect",
+      "//zircon/system/ulib/zx",
     ]
 
     # We need both headers to build but we can only depend on one bindfile at a time.

@@ -31,9 +31,9 @@ executable("pointerinjector_config_test") {
     "//src/lib/fxl/test:gtest_main",
     "//src/ui/a11y/lib/magnifier/tests/mocks:mock_magnifier",
     "//third_party/googletest:gtest",
-    "//zircon/public/lib/zx",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
+    "//zircon/system/ulib/zx",
   ]
 }
 

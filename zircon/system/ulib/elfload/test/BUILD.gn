@@ -12,8 +12,8 @@ group("tests") {
 fuzzer("elfload-fuzzer") {
   sources = [ "elfload-fuzzer.cc" ]
   deps = [
-    "//zircon/public/lib/zx",
     "//zircon/system/ulib/elfload",
+    "//zircon/system/ulib/zx",
   ]
 }
 

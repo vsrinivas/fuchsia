@@ -8,8 +8,8 @@ source_set("channel-iovec") {
   testonly = true
   sources = [ "iovec.cc" ]
   deps = [
-    "//zircon/public/lib/zx",
     "//zircon/system/public",
+    "//zircon/system/ulib/zx",
     "//zircon/system/ulib/zxtest",
   ]
 }

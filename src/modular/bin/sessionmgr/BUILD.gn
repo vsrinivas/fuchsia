@@ -185,7 +185,7 @@ source_set("rate_limited_retry") {
     "rate_limited_retry.h",
   ]
 
-  public_deps = [ "//zircon/public/lib/zx" ]
+  public_deps = [ "//zircon/system/ulib/zx" ]
 }
 
 source_set("annotations") {

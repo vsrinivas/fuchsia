@@ -16,8 +16,8 @@ test("fidl-struct-test") {
   public_deps = [
     ":fidl.types.test_c",
     ":fidl.types.test_llcpp",
-    "//zircon/public/lib/zx",
     "//zircon/system/ulib/fidl-async-2",
+    "//zircon/system/ulib/zx",
     "//zircon/system/ulib/zxtest",
   ]
 }

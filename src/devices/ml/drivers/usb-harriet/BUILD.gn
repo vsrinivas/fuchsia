@@ -37,8 +37,8 @@ driver_module("usb-harriet-driver") {
     "//src/lib/ddk",
     "//src/lib/ddktl",
     "//zircon/public/lib/fidl",
-    "//zircon/public/lib/zx",
     "//zircon/system/ulib/fbl",
+    "//zircon/system/ulib/zx",
   ]
 }
 

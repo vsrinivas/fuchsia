@@ -97,7 +97,7 @@ driver_module("ath10k_driver-driver") {
     "//src/lib/ddk",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zircon-internal",
-    "//zircon/public/lib/zx",
+    "//zircon/system/ulib/zx",
   ]
 
   public_deps = [ "//sdk/fidl/fuchsia.wlan.ieee80211:fuchsia.wlan.ieee80211_c" ]

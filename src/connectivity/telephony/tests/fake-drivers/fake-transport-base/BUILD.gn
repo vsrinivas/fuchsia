@@ -19,8 +19,8 @@ static_library("fake-transport-base") {
     "//src/lib/ddk",
     "//zircon/public/lib/async-cpp",
     "//zircon/public/lib/sync",
-    "//zircon/public/lib/zx",
     "//zircon/system/ulib/async-default",
     "//zircon/system/ulib/fbl",
+    "//zircon/system/ulib/zx",
   ]
 }

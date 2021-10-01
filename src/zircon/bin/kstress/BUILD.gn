@@ -23,7 +23,7 @@ executable("kstress") {
   deps = [
     "//sdk/fidl/fuchsia.boot:fuchsia.boot_c",
     "//sdk/lib/fdio",
-    "//zircon/public/lib/zx",
     "//zircon/system/ulib/fbl",
+    "//zircon/system/ulib/zx",
   ]
 }

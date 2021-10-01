@@ -78,7 +78,7 @@ source_set("msd_intel_entry") {
     "//src/graphics/lib/magma/src/sys_driver",
     "//src/lib/ddk",
     "//src/zircon/lib/zircon",
-    "//zircon/public/lib/zx",
+    "//zircon/system/ulib/zx",
   ]
 }
 
@@ -105,7 +105,7 @@ source_set("msd_intel_test_entry") {
     "//src/graphics/lib/magma/src/sys_driver",
     "//src/lib/ddk",
     "//src/zircon/lib/zircon",
-    "//zircon/public/lib/zx",
+    "//zircon/system/ulib/zx",
   ]
   deps += [
     "tests/unit_tests:hardware_tests",

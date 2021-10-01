@@ -37,8 +37,8 @@ source_set("test_device_helper") {
     "//sdk/lib/fdio",
     "//src/graphics/lib/magma/include:magma",
     "//third_party/googletest:gtest",
-    "//zircon/public/lib/zx",
     "//zircon/system/ulib/service:service-llcpp",
+    "//zircon/system/ulib/zx",
   ]
 
   sources = [ "test_device_helper.h" ]
@@ -54,7 +54,7 @@ source_set("logger_init_helper") {
   sources = [ "logger_init_helper.cc" ]
   deps = [
     "$magma_build_root/src/magma_util/platform:logger_impl",
-    "$zircon_build_root/public/lib/zx",
+    "$zircon_build_root/system/ulib/zx",
     "//sdk/lib/fdio",
   ]
 }

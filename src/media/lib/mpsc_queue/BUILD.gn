@@ -16,7 +16,7 @@ group("tests") {
 source_set("mpsc_queue_sources") {
   public = [ "mpsc_queue.h" ]
 
-  public_deps = [ "//zircon/public/lib/zx" ]
+  public_deps = [ "//zircon/system/ulib/zx" ]
 }
 
 executable("mpsc_queue_unittest_bin") {

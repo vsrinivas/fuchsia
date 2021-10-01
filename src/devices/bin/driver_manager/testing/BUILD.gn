@@ -5,11 +5,11 @@
 executable("ambient_vmex_test_util") {
   sources = [ "ambient_vmex_util.cc" ]
 
-  deps = [ "//zircon/public/lib/zx" ]
+  deps = [ "//zircon/system/ulib/zx" ]
 }
 
 executable("new_process_test_util") {
   sources = [ "new_process_util.cc" ]
 
-  deps = [ "//zircon/public/lib/zx" ]
+  deps = [ "//zircon/system/ulib/zx" ]
 }

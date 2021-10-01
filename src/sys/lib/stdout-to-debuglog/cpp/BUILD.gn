@@ -11,7 +11,7 @@ source_set("cpp") {
   deps = [
     "//sdk/fidl/fuchsia.boot:fuchsia.boot_llcpp",
     "//sdk/lib/fdio",
-    "//zircon/public/lib/zx",
+    "//zircon/system/ulib/zx",
   ]
 
   # TODO(fxbug.dev/69585): This target uses raw zx::channel with LLCPP which is deprecated.

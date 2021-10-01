@@ -36,9 +36,9 @@ driver_module("realtek-audio-codec-driver") {
     "//src/media/audio/drivers/lib/audio-driver-proto",
     "//src/media/audio/drivers/lib/audio-proto-utils",
     "//src/media/audio/drivers/lib/intel-hda",
-    "//zircon/public/lib/zx",
     "//zircon/system/ulib/dispatcher-pool",
     "//zircon/system/ulib/fbl",
+    "//zircon/system/ulib/zx",
   ]
 }
 

@@ -35,7 +35,7 @@ zx_library("fidl-async-cpp") {
     "//sdk/lib/fit",
 
     # <lib/fidl-async/cpp/channel_transaction.h> has #include <lib/zx/channel.h>.
-    "//zircon/public/lib/zx",
+    "//zircon/system/ulib/zx",
   ]
 }
 

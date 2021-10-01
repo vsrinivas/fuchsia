@@ -16,8 +16,8 @@ test("test-exceptions") {
   sources = [ "exception-catcher-test.cc" ]
   deps = [
     "//sdk/lib/fdio",
-    "//zircon/public/lib/zx",
     "//zircon/system/ulib/test-exceptions",
+    "//zircon/system/ulib/zx",
     "//zircon/system/ulib/zxtest",
   ]
 }

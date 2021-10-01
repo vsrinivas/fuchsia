@@ -34,9 +34,9 @@ common_deps = [
   "//src/devices/lib/acpi",
   "//src/devices/lib/driver",
   "//src/lib/ddktl",
-  "//zircon/public/lib/zx",
   "//zircon/system/ulib/fbl",
   "//zircon/system/ulib/inspect",
+  "//zircon/system/ulib/zx",
 ]
 
 driver_module("driver") {

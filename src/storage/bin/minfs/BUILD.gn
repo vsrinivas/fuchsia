@@ -18,7 +18,6 @@ executable("minfs") {
     "//zircon/public/lib/async-cpp",
     "//zircon/public/lib/bitmap",
     "//zircon/public/lib/sync",
-    "//zircon/public/lib/zx",
     "//zircon/system/ulib/async-default",
     "//zircon/system/ulib/async-loop",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
@@ -29,5 +28,6 @@ executable("minfs") {
     "//zircon/system/ulib/trace",
     "//zircon/system/ulib/trace-engine",
     "//zircon/system/ulib/trace-provider:trace-provider-with-fdio",
+    "//zircon/system/ulib/zx",
   ]
 }

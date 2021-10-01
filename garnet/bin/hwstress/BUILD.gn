@@ -36,11 +36,11 @@ source_set("lib") {
     "//src/lib/fxl",
     "//src/lib/storage/fs_management",
     "//src/lib/uuid",
-    "//zircon/public/lib/zx",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/cmdline",
     "//zircon/system/ulib/fdio-caller",
+    "//zircon/system/ulib/zx",
     "//zircon/system/ulib/zxc",
   ]
 
@@ -124,7 +124,7 @@ executable("hwstress_test") {
     "//src/lib/fxl/test:gtest_main",
     "//src/lib/testing/predicates",
     "//third_party/googletest:gmock",
-    "//zircon/public/lib/zx",
+    "//zircon/system/ulib/zx",
     "//zircon/system/ulib/zxc",
   ]
 
@@ -146,7 +146,7 @@ executable("hwstress_v2_test") {
     "//src/lib/testing/predicates",
     "//src/storage/testing:storage_driver_test_support",  # requires CFv2.
     "//third_party/googletest:gmock",
-    "//zircon/public/lib/zx",
+    "//zircon/system/ulib/zx",
     "//zircon/system/ulib/zxc",
   ]
 }

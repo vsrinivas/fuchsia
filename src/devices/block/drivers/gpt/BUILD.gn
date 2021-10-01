@@ -70,7 +70,7 @@ test("gpt-device-test-bin") {
     "//src/storage/gpt",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zircon-internal",
-    "//zircon/public/lib/zx",
+    "//zircon/system/ulib/zx",
     "//zircon/system/ulib/zxtest",
     "//zircon/third_party/ulib/cksum",
   ]

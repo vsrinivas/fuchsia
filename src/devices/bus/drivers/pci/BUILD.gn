@@ -53,11 +53,11 @@ source_set("user_pci") {
     "//src/lib/ddktl",
     "//zircon/public/lib/pretty",
     "//zircon/public/lib/zircon-internal",
-    "//zircon/public/lib/zx",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/hwreg",
     "//zircon/system/ulib/inspect",
     "//zircon/system/ulib/region-alloc",
+    "//zircon/system/ulib/zx",
     "//zircon/system/ulib/zxc",
 
     # TODO(fxbug.dev/33846): This shouldn't be here if the mmio code is actually

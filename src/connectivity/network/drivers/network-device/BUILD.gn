@@ -73,7 +73,7 @@ test("driver-test") {
     "//src/devices/testing/fake_ddk",
     "//src/lib/fxl/test:gtest_main",
     "//src/lib/testing/predicates",
-    "//zircon/public/lib/zx",
+    "//zircon/system/ulib/zx",
   ]
 }
 

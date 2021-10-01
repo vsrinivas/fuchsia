@@ -64,8 +64,8 @@ source_set("launcher") {
     "//sdk/lib/syslog/cpp",
     "//zircon/public/lib/fidl",
     "//zircon/public/lib/zircon-internal",
-    "//zircon/public/lib/zx",
     "//zircon/system/ulib/fbl",
+    "//zircon/system/ulib/zx",
   ]
 }
 
@@ -95,11 +95,11 @@ source_set("fshost-registry") {
     "//src/storage/fxfs:fuchsia.fxfs_llcpp",
     "//src/storage/memfs",
     "//zircon/public/lib/zircon-internal",
-    "//zircon/public/lib/zx",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/fdio-caller",
     "//zircon/system/ulib/service:service-llcpp",
+    "//zircon/system/ulib/zx",
   ]
   deps = [
     "//sdk/lib/fdio",
@@ -190,10 +190,10 @@ source_set("block-watcher") {
     "//src/storage/fxfs:fuchsia.fxfs_llcpp",
     "//src/storage/memfs",
     "//zircon/public/lib/zircon-internal",
-    "//zircon/public/lib/zx",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/fdio-caller",
+    "//zircon/system/ulib/zx",
   ]
   deps = [
     "//sdk/fidl/fuchsia.boot:fuchsia.boot_c",
@@ -220,13 +220,13 @@ source_set("block-watcher") {
     "//src/sys/pkg/fidl/fuchsia.update.verify:fuchsia.update.verify_llcpp",
     "//zircon/public/lib/fidl",
     "//zircon/public/lib/zircon-internal",
-    "//zircon/public/lib/zx",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/fidl-async:fidl-async-cpp",
     "//zircon/system/ulib/ramdevice-client",
     "//zircon/system/ulib/service:service-llcpp",
     "//zircon/system/ulib/trace",
     "//zircon/system/ulib/trace-engine",
+    "//zircon/system/ulib/zx",
   ]
 
   if (extract_minfs_metadata_on_corruption) {

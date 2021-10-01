@@ -52,10 +52,10 @@ source_set("tests") {
     ":console",
     "//src/storage/memfs",
     "//third_party/googletest:gtest",
-    "//zircon/public/lib/zx",
     "//zircon/system/ulib/async-loop",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
+    "//zircon/system/ulib/zx",
   ]
   configs += [
     # TODO(fxbug.dev/58162): delete the below and fix compiler warnings

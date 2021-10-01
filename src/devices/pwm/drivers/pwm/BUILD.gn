@@ -45,7 +45,7 @@ test("pwm-test-bin") {
   deps = [
     ":common",
     "//src/devices/testing/no_ddk",
-    "//zircon/public/lib/zx",
+    "//zircon/system/ulib/zx",
     "//zircon/system/ulib/zxtest",
   ]
 }

@@ -32,8 +32,8 @@ driver_module("mock-device-driver") {
     "//src/lib/ddktl",
     "//zircon/public/lib/fidl",
     "//zircon/public/lib/zircon-internal",
-    "//zircon/public/lib/zx",
     "//zircon/system/ulib/fbl",
+    "//zircon/system/ulib/zx",
   ]
 
   # TODO(fxbug.dev/69585): This target uses raw zx::channel with LLCPP which is deprecated.

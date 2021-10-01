@@ -48,12 +48,12 @@ source_set("common_srcs") {
     "//src/lib/ddk",
     "//src/lib/ddktl",
     "//zircon/public/lib/zircon-internal",
-    "//zircon/public/lib/zx",
     "//zircon/system/ulib/edid",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/hwreg",
     "//zircon/system/ulib/image-format",
     "//zircon/system/ulib/region-alloc",
+    "//zircon/system/ulib/zx",
   ]
 
   # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings

@@ -52,7 +52,6 @@ driver_module("sdmmc-driver") {
     "//zircon/public/lib/pretty",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zircon-internal",
-    "//zircon/public/lib/zx",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/fbl",
@@ -60,6 +59,7 @@ driver_module("sdmmc-driver") {
     "//zircon/system/ulib/fzl",
     "//zircon/system/ulib/inspect",
     "//zircon/system/ulib/trace:trace-driver",
+    "//zircon/system/ulib/zx",
     "//zircon/system/ulib/zxc",
   ]
 
@@ -110,13 +110,13 @@ test("sdmmc-test-bin") {
     "//zircon/public/lib/pretty",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zircon-internal",
-    "//zircon/public/lib/zx",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/fidl-async:fidl-async-cpp",
     "//zircon/system/ulib/fzl",
     "//zircon/system/ulib/inspect",
     "//zircon/system/ulib/trace:trace-driver",
+    "//zircon/system/ulib/zx",
     "//zircon/system/ulib/zxc",
     "//zircon/system/ulib/zxtest",
   ]

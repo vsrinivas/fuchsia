@@ -19,9 +19,9 @@ source_set("callback") {
   public_deps = [
     "//sdk/lib/fit",
     "//src/lib/fxl",
-    "//zircon/public/lib/zx",
     "//zircon/system/ulib/async-default",
     "//zircon/system/ulib/trace",
+    "//zircon/system/ulib/zx",
   ]
 
   public_configs = [ "//garnet/public:config" ]

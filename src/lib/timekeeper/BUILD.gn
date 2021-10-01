@@ -7,7 +7,7 @@ import("//build/components.gni")
 source_set("timekeeper") {
   sources = [ "clock.h" ]
 
-  public_deps = [ "//zircon/public/lib/zx" ]
+  public_deps = [ "//zircon/system/ulib/zx" ]
 
   public_configs = [ "//garnet/public:config" ]
 }
@@ -17,7 +17,7 @@ source_set("system") {
 
   public_deps = [
     ":timekeeper",
-    "//zircon/public/lib/zx",
+    "//zircon/system/ulib/zx",
   ]
 }
 

@@ -207,7 +207,7 @@ static_library("console") {
     deps += [
       "//sdk/lib/fdio",
       "//src/lib/fxl",
-      "//zircon/public/lib/zx",
+      "//zircon/system/ulib/zx",
     ]
   }
 

@@ -21,7 +21,7 @@ zx_library("async-loop-testing") {
     "//sdk/lib/stdcompat",
 
     # <real_loop.h> has #include <lib/zx/time.h>
-    "//zircon/public/lib/zx",
+    "//zircon/system/ulib/zx",
 
     # <real_loop.h> has #include <lib/async/cpp/executor.h>
     "//zircon/system/ulib/async:async-cpp",

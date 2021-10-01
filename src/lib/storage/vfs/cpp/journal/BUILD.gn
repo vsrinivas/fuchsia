@@ -132,10 +132,10 @@ test("journal-unit") {
     "//third_party/googletest:gtest",
     "//zircon/public/lib/safemath",
     "//zircon/public/lib/sync",
-    "//zircon/public/lib/zx",
     "//zircon/system/ulib/block-client:fake-device",
     "//zircon/system/ulib/cobalt-client",
     "//zircon/system/ulib/cobalt-client:in-memory-logger",
+    "//zircon/system/ulib/zx",
     "//zircon/third_party/ulib/cksum",
   ]
 }
@@ -149,8 +149,8 @@ source_set("fuzz-utils") {
     "//src/lib/storage/vfs/cpp/metrics:metrics-composite-latency-event",
     "//src/lib/storage/vfs/cpp/metrics:metrics-inspect",
     "//zircon/public/lib/sync",
-    "//zircon/public/lib/zx",
     "//zircon/system/ulib/cobalt-client",
+    "//zircon/system/ulib/zx",
     "//zircon/third_party/ulib/cksum",
   ]
 }

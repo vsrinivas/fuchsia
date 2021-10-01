@@ -175,11 +175,11 @@ executable("threads") {
     "//sdk/lib/fdio",
     "//zircon/public/lib/pretty",
     "//zircon/public/lib/sync",
-    "//zircon/public/lib/zx",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/fzl",
     "//zircon/system/ulib/inspector",
     "//zircon/system/ulib/task-utils",
+    "//zircon/system/ulib/zx",
     "//zircon/system/ulib/zxc",
   ]
 }

@@ -53,11 +53,11 @@ source_set("block") {
     "//src/lib/ddk",
     "//src/lib/ddktl",
     "//zircon/public/lib/sync",
-    "//zircon/public/lib/zx",
     "//zircon/system/ulib/async-loop",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/fidl-async",
     "//zircon/system/ulib/fzl",
+    "//zircon/system/ulib/zx",
   ]
 }
 
@@ -110,12 +110,12 @@ test("ums-integration") {
     "//sdk/fidl/fuchsia.hardware.usb.virtual.bus:fuchsia.hardware.usb.virtual.bus_llcpp",
     "//sdk/lib/fdio",
     "//src/lib/ddk",
-    "//zircon/public/lib/zx",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/fdio-caller",
     "//zircon/system/ulib/fidl-async",
     "//zircon/system/ulib/fzl",
     "//zircon/system/ulib/usb-virtual-bus-launcher",
+    "//zircon/system/ulib/zx",
     "//zircon/system/ulib/zxtest",
   ]
 

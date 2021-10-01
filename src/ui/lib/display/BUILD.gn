@@ -19,7 +19,7 @@ source_set("hdcp_service") {
     "//sdk/lib/fit",
     "//src/lib/fsl",
     "//src/lib/fxl",
-    "//zircon/public/lib/zx",
+    "//zircon/system/ulib/zx",
   ]
   deps = [
     "//sdk/fidl/fuchsia.hardware.display",

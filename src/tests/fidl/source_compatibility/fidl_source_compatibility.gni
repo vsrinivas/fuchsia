@@ -18,7 +18,7 @@ template("_hlcpp_compat") {
 
       # Included for ZX_ASSERT, since assert may get compiled away leading to
       # unused variable errors.
-      "//zircon/public/lib/zx",
+      "//zircon/system/ulib/zx",
     ]
   }
 }

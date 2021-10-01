@@ -18,7 +18,7 @@ source_set("page-size") {
   testonly = true
   sources = [ "page_size.cc" ]
   deps = [
-    "//zircon/public/lib/zx",
+    "//zircon/system/ulib/zx",
     "//zircon/system/ulib/zxtest",
   ]
 }

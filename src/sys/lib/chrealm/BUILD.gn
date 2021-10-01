@@ -13,7 +13,7 @@ source_set("chrealm") {
     "//sdk/lib/fdio",
     "//src/lib/fxl",
     "//src/lib/storage/vfs/cpp",
-    "//zircon/public/lib/zx",
+    "//zircon/system/ulib/zx",
   ]
 
   # TODO(fxbug.dev/58162): delete the below and fix compiler warnings

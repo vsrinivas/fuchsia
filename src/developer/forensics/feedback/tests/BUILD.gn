@@ -74,7 +74,7 @@ executable("feedback_integration_test_exe") {
     "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",
     "//third_party/rapidjson",
-    "//zircon/public/lib/zx",
+    "//zircon/system/ulib/zx",
   ]
 }
 
@@ -191,7 +191,7 @@ source_set("zx_object_util") {
 
   public_deps = [
     "//sdk/lib/syslog/cpp",
-    "//zircon/public/lib/zx",
+    "//zircon/system/ulib/zx",
   ]
 }
 

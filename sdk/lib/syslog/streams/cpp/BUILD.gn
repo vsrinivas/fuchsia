@@ -27,7 +27,7 @@ sdk_source_set("streams-encoder") {
 
   public_deps = [
     "//sdk/fidl/fuchsia.diagnostics.stream:fuchsia.diagnostics.stream",
-    "//zircon/public/lib/zx",
+    "//zircon/system/ulib/zx",
   ]
 
   deps = []

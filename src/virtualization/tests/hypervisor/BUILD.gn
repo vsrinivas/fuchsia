@@ -38,8 +38,8 @@ executable("hypervisor_tests") {
     "//src/virtualization/bin/vmm:bits",
     "//third_party/googletest:gtest",
     "//zircon/kernel/phys/lib/page-table",
-    "//zircon/public/lib/zx",
     "//zircon/system/ulib/fbl",
+    "//zircon/system/ulib/zx",
     "//zircon/system/ulib/zxc",
   ]
 }

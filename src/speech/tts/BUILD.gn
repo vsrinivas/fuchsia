@@ -27,10 +27,10 @@ executable("bin") {
     "//sdk/lib/sys/cpp",
     "//src/lib/fsl",
     "//third_party/flite",
-    "//zircon/public/lib/zx",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/fzl",
+    "//zircon/system/ulib/zx",
   ]
 }
 

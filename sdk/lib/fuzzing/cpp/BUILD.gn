@@ -23,7 +23,7 @@ source_set("traits") {
   public_deps = [
     ":cpp",
     "//sdk/lib/fidl/cpp:cpp_sync",
-    "//zircon/public/lib/zx",
+    "//zircon/system/ulib/zx",
   ]
 }
 

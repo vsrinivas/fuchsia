@@ -21,11 +21,11 @@ test("disk_inspector_unit") {
     "//src/lib/fxl/test:gtest_main",
     "//src/storage/lib/disk_inspector",
     "//third_party/googletest:gtest",
-    "//zircon/public/lib/zx",
     "//zircon/system/ulib/block-client",
     "//zircon/system/ulib/block-client:fake-device",
     "//zircon/system/ulib/storage/buffer",
     "//zircon/system/ulib/storage/operation",
+    "//zircon/system/ulib/zx",
   ]
 }
 

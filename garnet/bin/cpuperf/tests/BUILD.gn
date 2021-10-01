@@ -64,7 +64,7 @@ executable("cpuperf_integration_tests_bin") {
     "//src/lib/fxl",
     "//src/lib/fxl/test:test_settings",
     "//third_party/googletest:gtest",
-    "//zircon/public/lib/zx",
+    "//zircon/system/ulib/zx",
   ]
 }
 

@@ -16,10 +16,10 @@ source_set("async-watchdog") {
   deps = [
     "//src/lib/fxl",
     "//zircon/public/lib/async-cpp",
-    "//zircon/public/lib/zx",
     "//zircon/system/ulib/async-default",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/backtrace-request",
+    "//zircon/system/ulib/zx",
   ]
 }

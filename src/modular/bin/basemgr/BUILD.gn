@@ -120,7 +120,7 @@ source_set("lib") {
     "//src/modular/lib/async/cpp:future",
     "//src/modular/lib/fidl:app_client",
     "//src/modular/lib/fidl:environment",
-    "//zircon/public/lib/zx",
+    "//zircon/system/ulib/zx",
   ]
 
   # TODO(fxbug.dev/58160): delete the below and fix compiler warnings

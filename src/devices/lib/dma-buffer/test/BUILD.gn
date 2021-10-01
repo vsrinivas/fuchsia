@@ -12,8 +12,8 @@ test("dma-buffer-test-bin") {
     "//sdk/lib/fdio",
     "//src/devices/lib/dma-buffer",
     "//src/devices/testing/fake-object",
-    "//zircon/public/lib/zx",
     "//zircon/system/ulib/fbl",
+    "//zircon/system/ulib/zx",
     "//zircon/system/ulib/zxtest",
   ]
 }

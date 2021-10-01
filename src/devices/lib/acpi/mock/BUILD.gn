@@ -7,7 +7,7 @@ source_set("mock-acpi") {
     "//sdk/banjo/fuchsia.hardware.acpi:fuchsia.hardware.acpi_banjo_cpp",
     "//src/devices/lib/driver",
     "//src/lib/ddk",
-    "//zircon/public/lib/zx",
+    "//zircon/system/ulib/zx",
   ]
 
   public_deps =

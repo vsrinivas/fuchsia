@@ -31,12 +31,12 @@ test("service-proxy-dir") {
     "//sdk/fidl/fuchsia.io:fuchsia.io_llcpp",
     "//src/lib/storage/vfs/cpp",
     "//zircon/public/lib/fidl",
-    "//zircon/public/lib/zx",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/fidl-async:fidl-async-cpp",
     "//zircon/system/ulib/fidl-utils",
     "//zircon/system/ulib/runtests-utils",
+    "//zircon/system/ulib/zx",
     "//zircon/system/ulib/zxtest",
   ]
 }

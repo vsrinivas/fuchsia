@@ -22,8 +22,8 @@ zx_library("driver-unit-test") {
     "//sdk/lib/fidl/cpp:cpp_base",
     "//src/lib/ddk",
     "//zircon/public/lib/fidl",
-    "//zircon/public/lib/zx",
     "//zircon/system/ulib/fbl",
+    "//zircon/system/ulib/zx",
     "//zircon/system/ulib/zxtest",
   ]
 }

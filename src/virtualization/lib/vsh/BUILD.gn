@@ -28,7 +28,7 @@ source_set("util") {
   deps = [
     "//src/lib/fxl",
     "//third_party/protobuf:protobuf_lite",
-    "//zircon/public/lib/zx",
+    "//zircon/system/ulib/zx",
   ]
 }
 
@@ -45,7 +45,7 @@ source_set("client") {
     "//sdk/lib/fit-promise",
     "//src/lib/fxl",
     "//src/virtualization/third_party/vm_tools:vsh_cc_proto",
-    "//zircon/public/lib/zx",
+    "//zircon/system/ulib/zx",
   ]
 }
 

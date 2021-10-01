@@ -36,7 +36,7 @@ source_set("channel_control") {
     "//sdk/fidl/fuchsia.update.channelcontrol",
   ]
 
-  deps = [ "//zircon/public/lib/zx" ]
+  deps = [ "//zircon/system/ulib/zx" ]
 }
 
 source_set("cobalt") {
@@ -58,7 +58,7 @@ source_set("cobalt") {
   deps = [
     "//sdk/lib/syslog/cpp",
     "//src/lib/fsl",
-    "//zircon/public/lib/zx",
+    "//zircon/system/ulib/zx",
   ]
 }
 
@@ -73,7 +73,7 @@ source_set("crash_reporter") {
   public_deps = [
     ":fidl_server",
     "//sdk/fidl/fuchsia.feedback",
-    "//zircon/public/lib/zx",
+    "//zircon/system/ulib/zx",
   ]
 
   deps = [
@@ -96,7 +96,7 @@ source_set("data_provider") {
     "//sdk/fidl/fuchsia.feedback",
     "//sdk/lib/fidl/cpp",
     "//src/lib/fxl",
-    "//zircon/public/lib/zx",
+    "//zircon/system/ulib/zx",
   ]
 
   deps = [
@@ -121,7 +121,7 @@ source_set("device_id_provider") {
 
   deps = [
     "//sdk/lib/syslog/cpp",
-    "//zircon/public/lib/zx",
+    "//zircon/system/ulib/zx",
   ]
 }
 
@@ -260,6 +260,6 @@ source_set("scenic") {
   deps = [
     "//sdk/fidl/fuchsia.images",
     "//sdk/lib/syslog/cpp",
-    "//zircon/public/lib/zx",
+    "//zircon/system/ulib/zx",
   ]
 }

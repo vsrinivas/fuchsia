@@ -41,7 +41,7 @@ test("svc_unittests") {
     "//garnet/public/lib/gtest",
     "//sdk/lib/fdio",
     "//src/lib/fxl/test:gtest_main",
-    "//zircon/public/lib/zx",
+    "//zircon/system/ulib/zx",
   ]
 }
 

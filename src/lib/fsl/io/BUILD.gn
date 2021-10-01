@@ -28,9 +28,9 @@ source_set("io") {
     "//src/lib/fxl:common",
     "//src/lib/fxl:memory",
     "//zircon/public/lib/async-cpp",
-    "//zircon/public/lib/zx",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/fzl",
+    "//zircon/system/ulib/zx",
   ]
 
   public_configs = [ "//garnet/public:config" ]

@@ -14,8 +14,8 @@ static_library("cpp") {
   ]
   public_deps = [
     "//zircon/public/lib/async",
-    "//zircon/public/lib/zx",
     "//zircon/system/ulib/fbl",
+    "//zircon/system/ulib/zx",
   ]
   deps = [
     "//sdk/fidl/fuchsia.io:fuchsia.io_llcpp",

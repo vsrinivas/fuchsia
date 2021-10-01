@@ -30,7 +30,7 @@ zx_library("async-loop-cpp") {
     ":async-loop",
 
     # <lib/async-loop/cpp/loop.h> has #include <lib/zx/time.h>.
-    "//zircon/public/lib/zx",
+    "//zircon/system/ulib/zx",
   ]
 }
 

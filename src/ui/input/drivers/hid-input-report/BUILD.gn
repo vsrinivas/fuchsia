@@ -40,7 +40,6 @@ driver_module("hid-input-report-driver") {
     "//src/lib/ddktl",
     "//src/ui/input/lib/hid-input-report",
     "//zircon/public/lib/fidl",
-    "//zircon/public/lib/zx",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/fbl",
@@ -48,6 +47,7 @@ driver_module("hid-input-report-driver") {
     "//zircon/system/ulib/hid-parser",
     "//zircon/system/ulib/inspect",
     "//zircon/system/ulib/trace:trace-driver",
+    "//zircon/system/ulib/zx",
   ]
 }
 
@@ -76,7 +76,6 @@ test("hid-input-report-test-bin") {
     "//src/ui/input/lib/hid-input-report",
     "//zircon/public/lib/fidl",
     "//zircon/public/lib/sync",
-    "//zircon/public/lib/zx",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/fbl",
@@ -85,6 +84,7 @@ test("hid-input-report-test-bin") {
     "//zircon/system/ulib/hid-parser",
     "//zircon/system/ulib/inspect",
     "//zircon/system/ulib/trace:trace-driver",
+    "//zircon/system/ulib/zx",
     "//zircon/system/ulib/zxtest",
   ]
 }

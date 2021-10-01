@@ -17,11 +17,11 @@ zx_library("device-protocol-i2c-channel") {
     "//src/devices/i2c/lib/device-protocol-i2c",
 
     # <lib/device-protocol-i2c-channel/i2c-channel.h> has #include <zircon/types.h>
-    "//zircon/public/lib/zx",
+    "//zircon/system/ulib/zx",
   ]
   deps = [
     "//src/devices/i2c/lib/device-protocol-i2c",
-    "//zircon/public/lib/zx",
+    "//zircon/system/ulib/zx",
   ]
 }
 

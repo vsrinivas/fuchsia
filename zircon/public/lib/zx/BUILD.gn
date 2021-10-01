@@ -2,13 +2,18 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/sdk/sdk_alias.gni")
-
+# TODO(70426) Remove this once third_party projects have been updated to
+# depend on //zircon/system/ulib/zx directly instead.
 group("zx") {
   public_deps = [ "//zircon/system/ulib/zx" ]
-}
-
-sdk_alias("zx_sdk") {
-  target = "//zircon/system/ulib/zx:zx_sdk"
-  type = "atom"
+  visibility = [
+    "//third_party/android/device/generic/goldfish-opengl:*",
+    "//third_party/crashpad/third_party/fuchsia:*",
+    "//third_party/github.com/ARM-software/*:*",
+    "//third_party/imgtec-pvr-rgx-km:*",
+    "//third_party/mesa/src/util:*",
+    "//third_party/mesa/src/util/tests/*:*",
+    "//third_party/openssh-portable:*",
+    "//third_party/openweave-core/src/*:*",
+  ]
 }

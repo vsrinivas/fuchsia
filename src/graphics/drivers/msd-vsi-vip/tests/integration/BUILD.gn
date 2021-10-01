@@ -19,7 +19,7 @@ test("test_magma_vsi_exec_bin") {
     "//src/graphics/lib/magma/src/libmagma",
     "//src/graphics/lib/magma/tests/helper:magma_map_cpu",
     "//src/lib/fxl/test:gtest_main",
-    "//zircon/public/lib/zx",
+    "//zircon/system/ulib/zx",
   ]
 }
 

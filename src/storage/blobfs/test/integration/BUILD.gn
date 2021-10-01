@@ -53,13 +53,13 @@ test("external_decompressor_integration") {
     "//src/storage/blobfs:fuchsia.blobfs.internal",
     "//src/storage/blobfs/test:test_utils",
     "//third_party/googletest:gtest",
-    "//zircon/public/lib/zx",
     "//zircon/system/ulib/async-loop",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/block-client:fake-device",
     "//zircon/system/ulib/fzl",
     "//zircon/system/ulib/id_allocator",
+    "//zircon/system/ulib/zx",
   ]
 }
 
@@ -95,7 +95,6 @@ test("blobfs_integration") {
     "//src/storage/fs_test",
     "//src/storage/fvm",
     "//src/storage/lib/utils:topological_path",
-    "//zircon/public/lib/zx",
     "//zircon/system/ulib/async-loop",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
@@ -103,6 +102,7 @@ test("blobfs_integration") {
     "//zircon/system/ulib/fdio-caller",
     "//zircon/system/ulib/fidl-utils",
     "//zircon/system/ulib/service:service-llcpp",
+    "//zircon/system/ulib/zx",
   ]
 
   # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
@@ -142,12 +142,12 @@ test("blobfs_mount") {
     "//src/lib/fxl/test:gtest_main",
     "//src/lib/storage/fs_management",
     "//src/storage/blobfs",
-    "//zircon/public/lib/zx",
     "//zircon/system/ulib/async-loop",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/block-client:fake-device",
     "//zircon/system/ulib/fbl",
+    "//zircon/system/ulib/zx",
   ]
 }
 
@@ -186,8 +186,8 @@ test("blobfs_query_service") {
     "//src/storage/blobfs",
     "//src/storage/fvm",
     "//src/storage/lib/utils:topological_path",
-    "//zircon/public/lib/zx",
     "//zircon/system/ulib/fdio-caller",
+    "//zircon/system/ulib/zx",
   ]
 }
 
@@ -295,8 +295,8 @@ test("blobfs_verifier_service") {
     "//sdk/fidl/fuchsia.update:fuchsia.update_llcpp",
     "//sdk/lib/fdio",
     "//src/lib/fxl/test:gtest_main",
-    "//zircon/public/lib/zx",
     "//zircon/system/ulib/service:service-llcpp",
+    "//zircon/system/ulib/zx",
   ]
 }
 

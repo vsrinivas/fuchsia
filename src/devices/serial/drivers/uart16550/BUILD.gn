@@ -49,10 +49,10 @@ template("define_common_lib") {
       "//src/devices/lib/acpi",
       "//src/lib/ddk",
       "//src/lib/ddktl",
-      "//zircon/public/lib/zx",
       "//zircon/system/ulib/fbl",
       "//zircon/system/ulib/hwreg",
       "//zircon/system/ulib/uart",
+      "//zircon/system/ulib/zx",
     ]
     if (invoker.testonly) {
       testonly = true
@@ -102,8 +102,8 @@ test("uart16550-test-bin") {
   deps = [
     ":uart16550_lib_for_testing",
     "//src/devices/testing/no_ddk",
-    "//zircon/public/lib/zx",
     "//zircon/system/ulib/hwreg:hwreg-mock",
+    "//zircon/system/ulib/zx",
     "//zircon/system/ulib/zxtest",
   ]
 }

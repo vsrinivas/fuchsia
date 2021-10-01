@@ -21,14 +21,14 @@ zx_library("operation") {
   if (is_fuchsia) {
     sources += [ "unbuffered_operations_builder.cc" ]
     public_deps = [
-      "//zircon/public/lib/zx",
       "//zircon/system/ulib/fbl",
+      "//zircon/system/ulib/zx",
     ]
     deps += [
       "//sdk/lib/fdio",
       "//sdk/lib/fit",
-      "//zircon/public/lib/zx",
       "//zircon/system/ulib/range",
+      "//zircon/system/ulib/zx",
     ]
   }
 }

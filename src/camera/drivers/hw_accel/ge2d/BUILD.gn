@@ -49,10 +49,10 @@ source_set("lib") {
   ]
   deps = [
     "//src/devices/lib/driver",
-    "//zircon/public/lib/zx",
     "//zircon/system/ulib/fzl",
     "//zircon/system/ulib/image-format",
     "//zircon/system/ulib/trace:trace-driver",
+    "//zircon/system/ulib/zx",
   ]
   configs += [ "//build/config/fuchsia:enable_zircon_asserts" ]
 }
@@ -113,8 +113,8 @@ executable("ge2d_task_unittest_bin") {
     "//src/devices/testing/mock-mmio-reg",
     "//src/devices/testing/no_ddk",
     "//src/lib/ddk",
-    "//zircon/public/lib/zx",
     "//zircon/system/ulib/fbl",
+    "//zircon/system/ulib/zx",
     "//zircon/system/ulib/zxtest",
   ]
 

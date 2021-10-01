@@ -46,7 +46,7 @@ zx_library("crashsvc") {
     "//zircon/system/ulib/inspector",
   ]
 
-  public_deps = [ "//zircon/public/lib/zx" ]
+  public_deps = [ "//zircon/system/ulib/zx" ]
 
   configs += [ "//build/config:all_source" ]
 

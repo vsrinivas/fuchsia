@@ -10,7 +10,7 @@ executable("waitfor") {
     "//sdk/fidl/fuchsia.hardware.block.partition:fuchsia.hardware.block.partition_c",
     "//sdk/lib/fdio",
     "//src/storage/gpt",
-    "//zircon/public/lib/zx",
+    "//zircon/system/ulib/zx",
     "//zircon/third_party/ulib/cksum",
   ]
 

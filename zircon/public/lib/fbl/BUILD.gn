@@ -2,6 +2,9 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+# TODO(70426) Remove this once third_party projects have been updated to
+# depend on //zircon/system/ulib/fbl directly instead.
 group("fbl") {
   public_deps = [ "//zircon/system/ulib/fbl" ]
+  visibility = [ "//third_party/openssh-portable:*" ]
 }

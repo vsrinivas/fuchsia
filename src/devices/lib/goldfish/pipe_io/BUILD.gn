@@ -21,9 +21,9 @@ source_set("pipe_io") {
     "//src/lib/ddk",
     "//src/lib/ddktl",
     "//zircon/public/lib/zircon-internal",
-    "//zircon/public/lib/zx",
     "//zircon/system/ulib/async:async-cpp",
     "//zircon/system/ulib/fbl",
+    "//zircon/system/ulib/zx",
   ]
 
   # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
@@ -42,7 +42,7 @@ test("pipe_io_unittest") {
     "//third_party/googletest:gtest_main",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zircon-internal",
-    "//zircon/public/lib/zx",
+    "//zircon/system/ulib/zx",
   ]
 
   configs += [ "//build/config:all_source" ]

@@ -28,7 +28,7 @@ test("fake-mmio-reg-test-bin") {
     "//src/devices/lib/mmio",
     "//src/devices/testing/fake-mmio-reg",
     "//src/lib/ddk",
-    "//zircon/public/lib/zx",
+    "//zircon/system/ulib/zx",
     "//zircon/system/ulib/zxtest",
   ]
 }

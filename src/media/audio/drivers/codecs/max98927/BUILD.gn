@@ -32,9 +32,9 @@ driver_module("max98927-driver") {
     "//src/lib/ddk",
     "//src/lib/ddktl",
     "//zircon/public/lib/sync",
-    "//zircon/public/lib/zx",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/fidl-utils",
+    "//zircon/system/ulib/zx",
   ]
 }
 

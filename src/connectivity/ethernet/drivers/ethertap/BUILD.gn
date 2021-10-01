@@ -36,8 +36,8 @@ driver_module("ethertap-driver") {
     "//src/lib/ddktl",
     "//zircon/public/lib/fidl",
     "//zircon/public/lib/pretty",
-    "//zircon/public/lib/zx",
     "//zircon/system/ulib/fbl",
+    "//zircon/system/ulib/zx",
   ]
 }
 

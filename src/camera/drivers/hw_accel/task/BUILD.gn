@@ -17,8 +17,8 @@ source_set("camera-task") {
     "//zircon/system/ulib/fzl",
   ]
   deps = [
-    "//zircon/public/lib/zx",
     "//zircon/system/ulib/image-format",
     "//zircon/system/ulib/syslog",
+    "//zircon/system/ulib/zx",
   ]
 }

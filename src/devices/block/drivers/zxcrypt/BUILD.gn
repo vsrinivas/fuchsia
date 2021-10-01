@@ -44,9 +44,9 @@ driver_module("zxcrypt-driver") {
     "//zircon/public/lib/bitmap",
     "//zircon/public/lib/pretty",
     "//zircon/public/lib/sync",
-    "//zircon/public/lib/zx",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/trace:trace-driver",
+    "//zircon/system/ulib/zx",
   ]
 
   # Make sure we don't accidentally pull in a couple of easily-added dynamic

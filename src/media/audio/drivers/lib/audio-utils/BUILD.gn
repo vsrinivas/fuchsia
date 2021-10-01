@@ -23,11 +23,11 @@ zx_library("audio-utils") {
     "//sdk/fidl/fuchsia.hardware.audio:fuchsia.hardware.audio_llcpp",
     "//sdk/lib/fdio",
     "//src/media/audio/drivers/lib/audio-proto-utils",
-    "//zircon/public/lib/zx",
     "//zircon/system/ulib/affine",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/fzl",
     "//zircon/system/ulib/service:service-llcpp",
+    "//zircon/system/ulib/zx",
   ]
 
   # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings

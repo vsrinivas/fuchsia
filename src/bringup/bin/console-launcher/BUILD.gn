@@ -41,7 +41,7 @@ source_set("lib") {
     "//sdk/lib/syslog/cpp",
     "//sdk/lib/syslog/cpp:backend_legacy",
     "//zircon/public/lib/zircon-internal",
-    "//zircon/public/lib/zx",
+    "//zircon/system/ulib/zx",
   ]
 
   public_deps = [
@@ -69,7 +69,7 @@ executable("bin") {
     "//sdk/lib/syslog/cpp",
     "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/sys/lib/stdout-to-debuglog/cpp",
-    "//zircon/public/lib/zx",
+    "//zircon/system/ulib/zx",
   ]
 
   # TODO(fxbug.dev/69585): This target uses raw zx::channel with LLCPP which is deprecated.
@@ -109,7 +109,7 @@ test("shell-permissions-test") {
   sources = [ "shell-permissions-test.cc" ]
 
   deps = [
-    "//zircon/public/lib/zx",
+    "//zircon/system/ulib/zx",
     "//zircon/system/ulib/zxtest",
   ]
 }

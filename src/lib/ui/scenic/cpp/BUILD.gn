@@ -19,7 +19,7 @@ source_set("cpp") {
     "//sdk/lib/fit",
     "//sdk/lib/images/cpp",
     "//sdk/lib/ui/scenic/cpp",
-    "//zircon/public/lib/zx",
+    "//zircon/system/ulib/zx",
   ]
 
   # TODO(fxbug.dev/58162): delete the below and fix compiler warnings

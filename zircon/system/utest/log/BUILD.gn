@@ -19,12 +19,12 @@ test("log") {
   sources = [ "log_test.c" ]
   deps = [
     "//sdk/lib/fdio",
-    "//zircon/public/lib/zx",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/fzl",
     "//zircon/system/ulib/log",
     "//zircon/system/ulib/log-writer-logger",
     "//zircon/system/ulib/log-writer-textfile",
+    "//zircon/system/ulib/zx",
     "//zircon/system/ulib/zxtest",
   ]
 }

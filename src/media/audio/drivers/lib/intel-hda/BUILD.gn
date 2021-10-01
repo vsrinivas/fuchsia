@@ -32,11 +32,11 @@ zx_library("intel-hda") {
     "//sdk/banjo/fuchsia.hardware.intelhda.codec:fuchsia.hardware.intelhda.codec_banjo_cpp",
     "//sdk/fidl/fuchsia.hardware.audio:fuchsia.hardware.audio_llcpp",
     "//src/media/audio/drivers/lib/audio-driver-proto",
-    "//zircon/public/lib/zx",
     "//zircon/system/ulib/abs_clock",
     "//zircon/system/ulib/async:async-cpp",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/edid",
+    "//zircon/system/ulib/zx",
   ]
   deps = [
     "//sdk/fidl/fuchsia.hardware.audio:fuchsia.hardware.audio_llcpp",
@@ -44,10 +44,10 @@ zx_library("intel-hda") {
     "//src/media/audio/drivers/lib/audio-driver-proto",
     "//src/media/audio/drivers/lib/audio-proto-utils",
     "//zircon/public/lib/sync",
-    "//zircon/public/lib/zx",
     "//zircon/system/ulib/abs_clock",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/mmio-ptr",
+    "//zircon/system/ulib/zx",
   ]
 
   # TODO(fxbug.dev/69585): This target uses raw zx::channel with LLCPP which is deprecated.

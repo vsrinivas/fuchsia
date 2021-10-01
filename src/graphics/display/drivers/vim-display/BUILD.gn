@@ -39,12 +39,12 @@ source_set("common") {
     "//src/media/audio/lib/simple-audio-stream",
     "//third_party/boringssl",
     "//zircon/public/lib/sync",
-    "//zircon/public/lib/zx",
     "//zircon/system/ulib/dispatcher-pool",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/fzl",
     "//zircon/system/ulib/hwreg",
     "//zircon/system/ulib/image-format",
+    "//zircon/system/ulib/zx",
   ]
   configs += [
     "//build/config:all_source",

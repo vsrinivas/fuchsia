@@ -28,15 +28,15 @@ zx_library("fzl") {
     "vmo-pool.cc",
   ]
   deps = [
-    "//zircon/public/lib/zx",
     "//zircon/system/ulib/fbl",
+    "//zircon/system/ulib/zx",
   ]
   public_deps = [
     # Many public headers here use various fbl headers.
     "//zircon/system/ulib/fbl",
 
     # Many public headers here use various zx headers.
-    "//zircon/public/lib/zx",
+    "//zircon/system/ulib/zx",
   ]
 }
 

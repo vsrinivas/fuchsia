@@ -19,7 +19,7 @@ zx_library("fidl-async-2") {
     "//sdk/lib/fit",
     "//zircon/public/lib/async",
     "//zircon/public/lib/async-cpp",
-    "//zircon/public/lib/zx",
     "//zircon/system/ulib/fbl",
+    "//zircon/system/ulib/zx",
   ]
 }

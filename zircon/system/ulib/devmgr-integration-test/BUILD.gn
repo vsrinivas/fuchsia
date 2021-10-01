@@ -29,7 +29,7 @@ zx_library("devmgr-integration-test") {
     "//sdk/lib/fit",
 
     # <lib/devmgr-integration-test/fixture.h> has #include <lib/zx/channel.h>.
-    "//zircon/public/lib/zx",
+    "//zircon/system/ulib/zx",
 
     # <lib/devmgr-integration-test/fixture.h> has #include <fidl/fuchsia.io/cpp/wire.h>
     "//sdk/fidl/fuchsia.io:fuchsia.io_llcpp",
@@ -53,7 +53,6 @@ zx_library("devmgr-integration-test") {
     "//src/devices/bin/driver-index:component",
     "//src/lib/ddk",
     "//src/lib/storage/vfs/cpp",
-    "//zircon/public/lib/zx",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/devmgr-launcher",
@@ -64,6 +63,7 @@ zx_library("devmgr-integration-test") {
     "//zircon/system/ulib/mock-boot-arguments",
     "//zircon/system/ulib/service:service-llcpp",
     "//zircon/system/ulib/syslog",
+    "//zircon/system/ulib/zx",
   ]
   configs += [ "//build/config/fuchsia:static_cpp_standard_library" ]
 }

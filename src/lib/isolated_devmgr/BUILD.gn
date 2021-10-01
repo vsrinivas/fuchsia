@@ -25,13 +25,13 @@ source_set("src") {
     "//src/lib/ddk:ddk-metadata-headers",
     "//src/lib/fxl",
     "//zircon/public/lib/async-cpp",
-    "//zircon/public/lib/zx",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/fdio-caller",
     "//zircon/system/ulib/fzl",
     "//zircon/system/ulib/inspector",
+    "//zircon/system/ulib/zx",
   ]
 }
 
@@ -98,11 +98,11 @@ static_library("usb-virtual-bus") {
     "//sdk/lib/fit",
     "//sdk/lib/sys/cpp",
     "//src/lib/ddk",
-    "//zircon/public/lib/zx",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/fidl-async:fidl-async-cpp",
+    "//zircon/system/ulib/zx",
   ]
   configs += [
     "//build/config/fuchsia:enable_zircon_asserts",

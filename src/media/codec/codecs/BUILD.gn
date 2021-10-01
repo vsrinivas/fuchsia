@@ -55,7 +55,7 @@ source_set("timestamp_extrapolator") {
   public = [ "timestamp_extrapolator.h" ]
   sources = [ "timestamp_extrapolator.cc" ]
   public_configs = [ ":local_header_include_config" ]
-  public_deps = [ "//zircon/public/lib/zx" ]
+  public_deps = [ "//zircon/system/ulib/zx" ]
 }
 
 source_set("chunk_input_stream") {
@@ -65,7 +65,7 @@ source_set("chunk_input_stream") {
   public_deps = [
     ":timestamp_extrapolator",
     "//src/media/lib/codec_impl",
-    "//zircon/public/lib/zx",
+    "//zircon/system/ulib/zx",
   ]
 }
 
@@ -77,7 +77,7 @@ source_set("output_sink") {
     "//sdk/lib/fit",
     "//src/media/lib/codec_impl",
     "//src/media/lib/mpsc_queue",
-    "//zircon/public/lib/zx",
+    "//zircon/system/ulib/zx",
   ]
 
   # TODO(fxbug.dev/58162): delete the below and fix compiler warnings

@@ -97,10 +97,10 @@ test("ethernet-integration") {
     "//sdk/lib/fidl/cpp:cpp_base",
     "//src/lib/ddk",
     "//zircon/public/lib/fidl",
-    "//zircon/public/lib/zx",
     "//zircon/system/ulib/devmgr-integration-test",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/fzl",
+    "//zircon/system/ulib/zx",
     "//zircon/system/ulib/zxtest",
   ]
 }

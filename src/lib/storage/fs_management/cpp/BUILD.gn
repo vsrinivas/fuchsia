@@ -44,10 +44,10 @@ if (is_fuchsia) {
       "//src/storage/gpt",
       "//third_party/boringssl",
       "//zircon/public/lib/pretty",
-      "//zircon/public/lib/zx",
       "//zircon/system/ulib/fbl",
       "//zircon/system/ulib/fdio-caller",
       "//zircon/system/ulib/fzl",
+      "//zircon/system/ulib/zx",
       "//zircon/system/ulib/zxc",
     ]
 
@@ -98,7 +98,6 @@ test("fs-management-test") {
     "//zircon/public/lib/async",
     "//zircon/public/lib/async-cpp",
     "//zircon/public/lib/sync",
-    "//zircon/public/lib/zx",
     "//zircon/system/ulib/async-default",
     "//zircon/system/ulib/async-loop",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
@@ -108,6 +107,7 @@ test("fs-management-test") {
     "//zircon/system/ulib/fzl",
     "//zircon/system/ulib/trace",
     "//zircon/system/ulib/trace-engine",
+    "//zircon/system/ulib/zx",
   ]
   data_deps = [
     "//src/storage/bin/blobfs",

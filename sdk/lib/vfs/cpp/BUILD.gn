@@ -53,7 +53,7 @@ sdk_source_set("cpp") {
     "//sdk/lib/fdio",
     "//sdk/lib/fidl/cpp",
     "//zircon/public/lib/async",
-    "//zircon/public/lib/zx",
+    "//zircon/system/ulib/zx",
   ]
 
   public_configs = [ "//sdk/config" ]

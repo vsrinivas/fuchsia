@@ -37,8 +37,8 @@ driver_module("aml-thermistor-driver") {
     "//src/devices/lib/thermal",
     "//src/lib/ddk",
     "//src/lib/ddktl",
-    "//zircon/public/lib/zx",
     "//zircon/system/ulib/fbl",
+    "//zircon/system/ulib/zx",
   ]
 }
 

@@ -53,9 +53,9 @@ static_library("fvm") {
       "//sdk/fidl/fuchsia.hardware.block.volume:fuchsia.hardware.block.volume_c",
       "//src/storage/gpt",
       "//zircon/public/lib/sync",
-      "//zircon/public/lib/zx",
       "//zircon/system/ulib/block-client",
       "//zircon/system/ulib/fzl",
+      "//zircon/system/ulib/zx",
     ]
   } else {
     # fvm-check.cpp has #include <zircon/status.h> even when built for host.
@@ -74,9 +74,9 @@ static_library("test_support") {
   public_deps = [
     "//sdk/fidl/fuchsia.hardware.block.volume:fuchsia.hardware.block.volume_c",
     "//src/storage/fvm",
-    "//zircon/public/lib/zx",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/ramdevice-client",
+    "//zircon/system/ulib/zx",
   ]
 
   deps = [
@@ -88,12 +88,12 @@ static_library("test_support") {
     "//src/lib/storage/fs_management",
     "//src/storage/fvm",
     "//zircon/public/lib/fidl",
-    "//zircon/public/lib/zx",
     "//zircon/system/ulib/devmgr-integration-test",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/fdio-caller",
     "//zircon/system/ulib/fzl",
     "//zircon/system/ulib/ramdevice-client",
+    "//zircon/system/ulib/zx",
     "//zircon/system/ulib/zxtest",
   ]
 
@@ -123,9 +123,9 @@ test("fvm_unit") {
     sources += [ "client_test.cc" ]
     deps += [
       "//sdk/lib/fdio",
-      "//zircon/public/lib/zx",
       "//zircon/system/ulib/block-client",
       "//zircon/system/ulib/fdio-caller",
+      "//zircon/system/ulib/zx",
     ]
   }
 
@@ -175,7 +175,6 @@ test("fvm-integration") {
     "//src/storage/memfs",
     "//src/storage/minfs",
     "//zircon/public/lib/zircon-internal",
-    "//zircon/public/lib/zx",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/block-client",
@@ -183,6 +182,7 @@ test("fvm-integration") {
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/fdio-caller",
     "//zircon/system/ulib/ramdevice-client",
+    "//zircon/system/ulib/zx",
     "//zircon/system/ulib/zxtest",
   ]
 }

@@ -12,7 +12,7 @@ test("kernel-unittests") {
   deps = [
     "//sdk/fidl/fuchsia.kernel:fuchsia.kernel_c",
     "//sdk/lib/fdio",
-    "//zircon/public/lib/zx",
+    "//zircon/system/ulib/zx",
     "//zircon/system/ulib/zxtest",
   ]
 }

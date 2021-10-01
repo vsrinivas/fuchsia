@@ -39,8 +39,8 @@ source_set("common") {
     "//sdk/fidl/fuchsia.hardware.nand:fuchsia.hardware.nand_c",
     "//zircon/public/lib/fidl",
     "//zircon/public/lib/sync",
-    "//zircon/public/lib/zx",
     "//zircon/system/ulib/fzl",
+    "//zircon/system/ulib/zx",
   ]
   public_deps = [
     "//sdk/banjo/fuchsia.hardware.badblock:fuchsia.hardware.badblock_banjo_cpp",

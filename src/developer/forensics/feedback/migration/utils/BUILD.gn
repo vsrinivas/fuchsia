@@ -22,8 +22,8 @@ source_set("utils") {
     "//src/developer/forensics/utils:errors",
     "//zircon/public/lib/async",
     "//zircon/public/lib/async-cpp",
-    "//zircon/public/lib/zx",
     "//zircon/system/ulib/fbl",
+    "//zircon/system/ulib/zx",
   ]
 
   deps = [

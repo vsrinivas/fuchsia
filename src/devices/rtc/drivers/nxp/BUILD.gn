@@ -30,9 +30,9 @@ driver_module("nxp-driver") {
     "//src/lib/ddk",
     "//src/lib/ddktl",
     "//zircon/public/lib/sync",
-    "//zircon/public/lib/zx",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/hid",
+    "//zircon/system/ulib/zx",
   ]
 }
 

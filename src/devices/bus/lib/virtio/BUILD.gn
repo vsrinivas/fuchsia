@@ -60,11 +60,11 @@ zx_library("virtio") {
     "//zircon/public/lib/pretty",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zircon-internal",
-    "//zircon/public/lib/zx",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/hid",
     "//zircon/system/ulib/hwreg",
     "//zircon/system/ulib/virtio",
+    "//zircon/system/ulib/zx",
     "//zircon/system/ulib/zxc",
   ]
 

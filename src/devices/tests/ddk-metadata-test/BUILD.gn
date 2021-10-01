@@ -26,7 +26,7 @@ driver_module("driver_module") {
     "//sdk/lib/fdio",
     "//src/devices/lib/driver",
     "//src/lib/ddk",
-    "//zircon/public/lib/zx",
+    "//zircon/system/ulib/zx",
     "//zircon/system/ulib/zxtest",
   ]
 
@@ -50,9 +50,9 @@ test("tests") {
     ":metadata-test-bind",
     "//sdk/fidl/fuchsia.device:fuchsia.device_llcpp",
     "//sdk/lib/fdio",
-    "//zircon/public/lib/zx",
     "//zircon/system/ulib/devmgr-integration-test",
     "//zircon/system/ulib/fbl",
+    "//zircon/system/ulib/zx",
     "//zircon/system/ulib/zxtest",
   ]
   visibility = [ ":*" ]

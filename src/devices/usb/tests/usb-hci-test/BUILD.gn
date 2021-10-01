@@ -60,9 +60,9 @@ test("usb-hci-test") {
     "//sdk/lib/ui/scenic/cpp",
     "//src/lib/fxl",
     "//src/lib/ui/base_view",
-    "//zircon/public/lib/zx",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
+    "//zircon/system/ulib/zx",
     "//zircon/system/ulib/zxtest",
   ]
 }
@@ -83,8 +83,8 @@ driver_module("driver_module") {
     "//src/lib/ddk",
     "//src/lib/ddktl",
     "//zircon/public/lib/sync",
-    "//zircon/public/lib/zx",
     "//zircon/system/ulib/fbl",
+    "//zircon/system/ulib/zx",
   ]
   configs += [ "//build/config/fuchsia:enable_zircon_asserts" ]
 }

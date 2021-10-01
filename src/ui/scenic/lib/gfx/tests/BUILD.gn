@@ -66,9 +66,9 @@ source_set("testing_deps") {
     "//src/ui/scenic/lib/scheduling/tests/mocks:frame_scheduler_mocks",
     "//src/ui/scenic/lib/utils",
     "//zircon/public/lib/async-cpp",
-    "//zircon/public/lib/zx",
     "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/inspect",
+    "//zircon/system/ulib/zx",
   ]
 
   # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
@@ -93,7 +93,7 @@ source_set("pixel_test") {
     "//sdk/lib/ui/scenic/cpp",
     "//src/lib/ui/base_view",
     "//src/ui/testing/views",
-    "//zircon/public/lib/zx",
+    "//zircon/system/ulib/zx",
   ]
 
   deps = [
@@ -136,7 +136,7 @@ source_set("scenic_pixeltests") {
     "//src/ui/lib/yuv",
     "//src/ui/testing/views",
     "//third_party/googletest:gtest",
-    "//zircon/public/lib/zx",
+    "//zircon/system/ulib/zx",
   ]
 
   # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings

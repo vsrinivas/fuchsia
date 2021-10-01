@@ -397,9 +397,9 @@ driver_module("astro-driver") {
     "//src/lib/ddktl",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zircon-internal",
-    "//zircon/public/lib/zx",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/hwreg",
+    "//zircon/system/ulib/zx",
   ]
   if (internal_access) {
     deps += [ ":config-tas2770-copy($shlib_toolchain)" ]

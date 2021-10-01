@@ -21,7 +21,7 @@ source_set("test_lib") {
     "//sdk/lib/fdio",
     "//sdk/lib/syslog/cpp",
     "//src/lib/fsl",
-    "//zircon/public/lib/zx",
+    "//zircon/system/ulib/zx",
   ]
 }
 
@@ -96,7 +96,7 @@ executable("exception_broker_unittest_exe") {
     "//src/lib/fxl",
     "//src/lib/fxl/test:test_settings",
     "//third_party/googletest:gtest",
-    "//zircon/public/lib/zx",
+    "//zircon/system/ulib/zx",
   ]
 
   # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
@@ -117,7 +117,7 @@ executable("process_launch_failure_unittest_exe") {
     "//src/developer/forensics/testing:gtest_with_syslog_main",
     "//src/developer/forensics/testing:unit_test_fixture",
     "//third_party/googletest:gtest",
-    "//zircon/public/lib/zx",
+    "//zircon/system/ulib/zx",
   ]
 }
 

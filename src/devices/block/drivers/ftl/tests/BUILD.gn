@@ -88,11 +88,11 @@ test("ftl-integration") {
     "//sdk/lib/fdio",
     "//src/lib/storage/ramdevice_client/cpp:ramdevice-client-test",
     "//zircon/public/lib/sync",
-    "//zircon/public/lib/zx",
     "//zircon/system/ulib/devmgr-integration-test",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/fdio-caller",
     "//zircon/system/ulib/inspect",
+    "//zircon/system/ulib/zx",
     "//zircon/system/ulib/zxtest",
   ]
 

@@ -45,9 +45,9 @@ test("isolateddevmgr") {
     ":fuchsia.device.manager.test_c",
     "//sdk/lib/fdio",
     "//src/lib/ddk",
-    "//zircon/public/lib/zx",
     "//zircon/system/ulib/driver-integration-test",
     "//zircon/system/ulib/fbl",
+    "//zircon/system/ulib/zx",
     "//zircon/system/ulib/zxtest",
   ]
 }

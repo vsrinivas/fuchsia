@@ -16,10 +16,10 @@ test("exception") {
     "exception_to_string.cc",
   ]
   deps = [
-    "//zircon/public/lib/zx",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/test-exceptions",
     "//zircon/system/ulib/test-utils",
+    "//zircon/system/ulib/zx",
     "//zircon/system/ulib/zxtest",
   ]
 }

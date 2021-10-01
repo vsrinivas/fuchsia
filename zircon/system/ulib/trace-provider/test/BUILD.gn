@@ -35,12 +35,12 @@ test("provider-test") {
     "//sdk/lib/fdio",
     "//zircon/public/lib/async-cpp",
     "//zircon/public/lib/fidl",
-    "//zircon/public/lib/zx",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/fidl:fidl_base",
     "//zircon/system/ulib/trace",
     "//zircon/system/ulib/trace-provider",
+    "//zircon/system/ulib/zx",
     "//zircon/system/ulib/zxtest",
   ]
 }

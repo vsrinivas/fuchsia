@@ -12,7 +12,7 @@ test("miscsvc") {
   deps = [
     "//sdk/fidl/fuchsia.paver:fuchsia.paver_llcpp",
     "//sdk/lib/fdio",
-    "//zircon/public/lib/zx",
+    "//zircon/system/ulib/zx",
     "//zircon/system/ulib/zxtest",
   ]
 

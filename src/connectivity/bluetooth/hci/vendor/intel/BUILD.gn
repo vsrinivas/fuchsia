@@ -49,8 +49,8 @@ driver_module("driver_module") {
     "//src/lib/ddk",
     "//src/lib/ddktl",
     "//zircon/public/lib/sync",
-    "//zircon/public/lib/zx",
     "//zircon/system/ulib/fbl",
+    "//zircon/system/ulib/zx",
   ]
 
   configs += [ "//build/config/fuchsia:enable_zircon_asserts" ]

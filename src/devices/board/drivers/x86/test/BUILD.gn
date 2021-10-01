@@ -12,8 +12,8 @@ test("x86-board") {
     "//sdk/fidl/fuchsia.hardware.acpi:fuchsia.hardware.acpi_llcpp",
     "//sdk/lib/fdio",
     "//third_party/acpica",
-    "//zircon/public/lib/zx",
     "//zircon/system/ulib/fdio-caller",
+    "//zircon/system/ulib/zx",
     "//zircon/system/ulib/zxc",
     "//zircon/system/ulib/zxtest",
   ]

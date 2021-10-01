@@ -14,8 +14,8 @@ test("synchronous-executor-test") {
     "//sdk/lib/fit-promise",
     "//src/devices/lib/synchronous-executor",
     "//src/devices/testing/fake-object",
-    "//zircon/public/lib/zx",
     "//zircon/system/ulib/fbl",
+    "//zircon/system/ulib/zx",
     "//zircon/system/ulib/zxtest",
   ]
 }

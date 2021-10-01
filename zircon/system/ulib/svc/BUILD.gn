@@ -16,7 +16,7 @@ zx_library("svc") {
     "//sdk/fidl/fuchsia.io:fuchsia.io_llcpp",
     "//src/lib/storage/vfs/cpp",
     "//zircon/public/lib/async",
-    "//zircon/public/lib/zx",
+    "//zircon/system/ulib/zx",
   ]
 
   # TODO(fxbug.dev/69585): This target uses raw zx::channel with LLCPP which is deprecated.

@@ -35,7 +35,7 @@ sdk_source_set("cpp") {
   if (is_fuchsia) {
     public_deps = [
       "//sdk/lib/fit-promise",
-      "//zircon/public/lib/zx",
+      "//zircon/system/ulib/zx",
     ]
   } else {
     public_deps = [ "//sdk/lib/fit-promise" ]
@@ -108,8 +108,8 @@ sdk_source_set("backend_legacy") {
   if (is_fuchsia) {
     public_deps = [
       ":backend_fuchsia_lib",
-      "//zircon/public/lib/zx",
       "//zircon/system/ulib/syslog",
+      "//zircon/system/ulib/zx",
     ]
   } else {
     public_deps = [ ":backend_host" ]

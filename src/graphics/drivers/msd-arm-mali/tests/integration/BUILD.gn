@@ -34,8 +34,8 @@ executable("msd_arm_mali_integration_tests") {
     "//src/lib/fxl/test:gtest_main",
     "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",
-    "//zircon/public/lib/zx",
-    "//zircon/public/lib/zx",
+    "//zircon/system/ulib/zx",
+    "//zircon/system/ulib/zx",
   ]
 
   deps = [ "../../include" ]

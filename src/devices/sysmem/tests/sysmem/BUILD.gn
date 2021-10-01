@@ -17,11 +17,11 @@ test("sysmem") {
     "//src/lib/ddk",
     "//zircon/public/lib/fidl",
     "//zircon/public/lib/fidl-llcpp",
-    "//zircon/public/lib/zx",
     "//zircon/system/ulib/async-loop",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/service:service-llcpp",
+    "//zircon/system/ulib/zx",
     "//zircon/system/ulib/zxtest",
   ]
 }

@@ -30,9 +30,9 @@ driver_module("fidl-llcpp-driver-driver") {
     "//src/lib/ddk",
     "//src/lib/ddktl",
     "//zircon/public/lib/zircon-internal",
-    "//zircon/public/lib/zx",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/fidl-utils",
+    "//zircon/system/ulib/zx",
   ]
 }
 
@@ -63,12 +63,12 @@ driver_module("fidl-async-llcpp-driver-driver") {
     "//src/lib/ddk",
     "//src/lib/ddktl",
     "//zircon/public/lib/zircon-internal",
-    "//zircon/public/lib/zx",
     "//zircon/system/ulib/async:async-cpp",
     "//zircon/system/ulib/async-loop",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/fidl-utils",
+    "//zircon/system/ulib/zx",
   ]
 }
 
@@ -85,9 +85,9 @@ test("ddk-fidl-test") {
     "//src/devices/tests/fuchsia-hardware-test:fuchsia.hardware.test_llcpp",
     "//src/lib/ddk",
     "//zircon/public/lib/fidl",
-    "//zircon/public/lib/zx",
     "//zircon/system/ulib/driver-integration-test",
     "//zircon/system/ulib/fbl",
+    "//zircon/system/ulib/zx",
     "//zircon/system/ulib/zxtest",
   ]
 }

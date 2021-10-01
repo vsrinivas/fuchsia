@@ -17,6 +17,6 @@ executable("unittests") {
     "//src/ui/scenic/lib/gfx:util",
     "//src/ui/scenic/lib/gfx:validate_eventpair",
     "//third_party/googletest:gtest",
-    "//zircon/public/lib/zx",
+    "//zircon/system/ulib/zx",
   ]
 }

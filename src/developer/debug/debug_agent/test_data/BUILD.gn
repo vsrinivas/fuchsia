@@ -126,8 +126,8 @@ executable("backtrace_request") {
   sources = [ "backtrace_request.cc" ]
 
   deps = [
-    "//zircon/public/lib/zx",
     "//zircon/system/ulib/backtrace-request",
+    "//zircon/system/ulib/zx",
   ]
 }
 
@@ -153,7 +153,7 @@ executable("test_suite") {
     "//sdk/lib/fit",
     "//src/developer/debug/shared",
     "//src/lib/fxl",
-    "//zircon/public/lib/zx",
+    "//zircon/system/ulib/zx",
   ]
 }
 
@@ -166,7 +166,7 @@ executable("hw_watchpointer") {
   deps = [
     "//src/developer/debug/shared",
     "//src/lib/fxl",
-    "//zircon/public/lib/zx",
+    "//zircon/system/ulib/zx",
   ]
 }
 
@@ -177,7 +177,7 @@ executable("multi_threaded") {
 
   deps = [
     "//src/lib/fxl",
-    "//zircon/public/lib/zx",
+    "//zircon/system/ulib/zx",
   ]
 }
 
@@ -201,7 +201,7 @@ executable("process_spawner") {
   deps = [
     "//sdk/lib/fdio",
     "//src/lib/fxl",
-    "//zircon/public/lib/zx",
+    "//zircon/system/ulib/zx",
   ]
 }
 
@@ -214,7 +214,7 @@ executable("thread_signals") {
   deps = [
     "//sdk/lib/fdio",
     "//src/lib/fxl",
-    "//zircon/public/lib/zx",
+    "//zircon/system/ulib/zx",
   ]
 }
 
@@ -229,8 +229,8 @@ executable("limbo_caller") {
     "//sdk/lib/sys/cpp",
     "//src/lib/fsl",
     "//src/lib/fxl",
-    "//zircon/public/lib/zx",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
+    "//zircon/system/ulib/zx",
   ]
 }

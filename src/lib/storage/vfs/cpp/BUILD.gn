@@ -111,7 +111,7 @@ static_library("cpp") {
 
       # <fs/tracked_remote_dir.h> has #include <lib/async/cpp/wait.h>.
       "//zircon/public/lib/async-cpp",
-      "//zircon/public/lib/zx",
+      "//zircon/system/ulib/zx",
 
       # <fs/trace.h> has #include <lib/trace/event.h>.
       "//zircon/system/ulib/trace",
@@ -129,10 +129,10 @@ static_library("cpp") {
       "//zircon/public/lib/async",
       "//zircon/public/lib/fidl",
       "//zircon/public/lib/sync",
-      "//zircon/public/lib/zx",
       "//zircon/system/ulib/fbl",
       "//zircon/system/ulib/fzl",
       "//zircon/system/ulib/trace",
+      "//zircon/system/ulib/zx",
     ]
   }
 
@@ -152,11 +152,11 @@ static_library("inotify_test_base") {
     "//src/lib/storage/vfs/cpp",
     "//src/storage/memfs",
     "//zircon/public/lib/fidl",
-    "//zircon/public/lib/zx",
     "//zircon/system/ulib/async-loop",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/fbl",
+    "//zircon/system/ulib/zx",
     "//zircon/system/ulib/zxtest",
   ]
 }
@@ -209,7 +209,6 @@ test("fs-vnode-test") {
     "//zircon/public/lib/async-cpp",
     "//zircon/public/lib/fidl",
     "//zircon/public/lib/sync",
-    "//zircon/public/lib/zx",
     "//zircon/system/ulib/async-default",
     "//zircon/system/ulib/async-loop",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
@@ -218,6 +217,7 @@ test("fs-vnode-test") {
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/trace",
     "//zircon/system/ulib/trace-engine",
+    "//zircon/system/ulib/zx",
     "//zircon/system/ulib/zxtest",
   ]
 
@@ -251,12 +251,12 @@ test("fs-connection-test") {
     "//zircon/public/lib/async-cpp",
     "//zircon/public/lib/fidl",
     "//zircon/public/lib/sync",
-    "//zircon/public/lib/zx",
     "//zircon/system/ulib/async-default",
     "//zircon/system/ulib/async-loop",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/fbl",
+    "//zircon/system/ulib/zx",
     "//zircon/system/ulib/zxtest",
   ]
 
@@ -278,11 +278,11 @@ test("fs-inotify-test") {
     "//src/lib/storage/vfs/cpp",
     "//src/storage/memfs",
     "//zircon/public/lib/fidl",
-    "//zircon/public/lib/zx",
     "//zircon/system/ulib/async-loop",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/fbl",
+    "//zircon/system/ulib/zx",
     "//zircon/system/ulib/zxtest",
   ]
 }

@@ -122,7 +122,6 @@ source_set("lib") {
     "//src/zircon/lib/zircon",
     "//zircon/public/lib/fidl",
     "//zircon/public/lib/zircon-internal",
-    "//zircon/public/lib/zx",
     "//zircon/system/public",
     "//zircon/system/ulib/async-default",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
@@ -135,6 +134,7 @@ source_set("lib") {
     "//zircon/system/ulib/inspector",
     "//zircon/system/ulib/service:service-llcpp",
     "//zircon/system/ulib/svc",
+    "//zircon/system/ulib/zx",
     "//zircon/system/ulib/zxc",
 
     # TODO(fxb/38132): Migrate to the new bind rules and delete the below

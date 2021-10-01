@@ -47,9 +47,9 @@ driver_module("mbr-driver") {
     "//src/lib/ddktl",
     "//src/storage/gpt",
     "//zircon/public/lib/sync",
-    "//zircon/public/lib/zx",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/mbr",
+    "//zircon/system/ulib/zx",
   ]
 }
 
@@ -77,9 +77,9 @@ test("mbr-test-bin") {
     "//src/storage/gpt",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zircon-internal",
-    "//zircon/public/lib/zx",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/mbr",
+    "//zircon/system/ulib/zx",
     "//zircon/system/ulib/zxtest",
   ]
 }

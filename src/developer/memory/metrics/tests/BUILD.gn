@@ -19,7 +19,7 @@ source_set("utils") {
     "//garnet/public/lib/gtest",
     "//src/developer/memory/metrics",
     "//src/lib/fxl",
-    "//zircon/public/lib/zx",
+    "//zircon/system/ulib/zx",
   ]
 }
 

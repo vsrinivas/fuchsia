@@ -92,7 +92,7 @@ executable("soundplayer-tests-bin") {
     "//src/lib/testing/loop_fixture",
     "//third_party/googletest:gtest",
     "//third_party/ogg",
-    "//zircon/public/lib/zx",
+    "//zircon/system/ulib/zx",
   ]
 }
 

@@ -16,9 +16,9 @@ executable("bin") {
     "//src/lib/files",
     "//src/lib/fsl",
     "//src/lib/line_input",
-    "//zircon/public/lib/zx",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
+    "//zircon/system/ulib/zx",
   ]
 }
 

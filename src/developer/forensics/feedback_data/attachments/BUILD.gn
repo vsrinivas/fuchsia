@@ -36,7 +36,7 @@ source_set("attachment_providers") {
     "//src/developer/forensics/utils/fidl:oneshot_ptr",
     "//zircon/public/lib/async",
     "//zircon/public/lib/async-cpp",
-    "//zircon/public/lib/zx",
+    "//zircon/system/ulib/zx",
   ]
 
   deps = [

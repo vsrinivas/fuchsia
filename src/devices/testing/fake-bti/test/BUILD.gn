@@ -17,8 +17,8 @@ test("fake-bti-test-bin") {
   sources = [ "fake-bti-test.cc" ]
   deps = [
     "//src/devices/testing/fake-bti",
-    "//zircon/public/lib/zx",
     "//zircon/system/ulib/fbl",
+    "//zircon/system/ulib/zx",
     "//zircon/system/ulib/zxc",
     "//zircon/system/ulib/zxtest",
   ]

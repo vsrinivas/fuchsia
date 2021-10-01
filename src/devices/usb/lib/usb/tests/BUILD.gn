@@ -29,8 +29,8 @@ test("usb-request-test-bin") {
     "//src/devices/testing/no_ddk",
     "//src/devices/usb/lib/usb",
     "//src/lib/ddk",
-    "//zircon/public/lib/zx",
     "//zircon/system/ulib/fbl",
+    "//zircon/system/ulib/zx",
     "//zircon/system/ulib/zxtest",
   ]
 }

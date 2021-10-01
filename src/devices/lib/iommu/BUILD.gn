@@ -15,9 +15,9 @@ source_set("iommu") {
     "//sdk/lib/fit",
     "//src/lib/ddk",
     "//third_party/acpica",
-    "//zircon/public/lib/zx",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/syslog:syslog-headers",
+    "//zircon/system/ulib/zx",
   ]
 }
 

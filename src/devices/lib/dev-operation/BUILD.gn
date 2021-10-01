@@ -29,7 +29,7 @@ zx_library("dev-operation") {
   sources = [ "alloc_checker.cc" ]
   deps = [
     "//src/lib/ddk",
-    "//zircon/public/lib/zx",
+    "//zircon/system/ulib/zx",
   ]
 }
 

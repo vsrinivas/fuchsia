@@ -107,7 +107,7 @@ source_set("magma_util_tests") {
   ]
   if (is_fuchsia) {
     deps += [
-      "$zircon_build_root/public/lib/zx",
+      "$zircon_build_root/system/ulib/zx",
       "//sdk/fidl/fuchsia.gpu.magma:fuchsia.gpu.magma_llcpp",
     ]
   }
@@ -147,7 +147,7 @@ source_set("magma_platform_tests") {
     "$magma_build_root/tests/mock:mmio",
     "//sdk/lib/fdio",
     "//third_party/googletest:gtest",
-    "//zircon/public/lib/zx",
+    "//zircon/system/ulib/zx",
   ]
   if (is_fuchsia) {
     deps += [ "$magma_build_root/src/magma_util/platform/zircon:connection" ]
@@ -199,7 +199,7 @@ source_set("magma_platform_hardware_tests") {
     "//third_party/googletest:gtest",
   ]
   if (is_fuchsia) {
-    deps += [ "//zircon/public/lib/zx" ]
+    deps += [ "//zircon/system/ulib/zx" ]
   }
 }
 

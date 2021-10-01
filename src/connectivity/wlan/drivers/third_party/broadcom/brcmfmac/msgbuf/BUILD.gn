@@ -24,7 +24,7 @@ source_set("msgbuf") {
     "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac:util",
     "//src/connectivity/wlan/lib/common/cpp:common",
     "//zircon/public/lib/sync",
-    "//zircon/public/lib/zx",
+    "//zircon/system/ulib/zx",
   ]
   public_deps = [
     "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac:core",

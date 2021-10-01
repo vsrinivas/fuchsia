@@ -32,10 +32,10 @@ common_deps = [
   "//src/ui/input/lib/input-report-reader",
   "//zircon/public/lib/fidl-llcpp",
   "//zircon/public/lib/zircon-internal",
-  "//zircon/public/lib/zx",
   "//zircon/system/ulib/async-loop:async-loop-cpp",
   "//zircon/system/ulib/async-loop:async-loop-default",
   "//zircon/system/ulib/fbl",
+  "//zircon/system/ulib/zx",
 ]
 
 driver_module("sensor_driver_module") {
@@ -98,7 +98,7 @@ test("goldfish-sensor-unittest") {
            "//zircon/public/lib/mock-function",
            "//zircon/public/lib/sync",
            "//zircon/public/lib/zircon-internal",
-           "//zircon/public/lib/zx",
+           "//zircon/system/ulib/zx",
          ]
 
   configs += [ "//build/config:all_source" ]

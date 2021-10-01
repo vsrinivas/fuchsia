@@ -32,10 +32,10 @@ driver_module("cypress-driver") {
     "//src/lib/ddk",
     "//src/lib/ddktl",
     "//zircon/public/lib/zircon-internal",
-    "//zircon/public/lib/zx",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/hid",
     "//zircon/system/ulib/hwreg-i2c",
+    "//zircon/system/ulib/zx",
   ]
 }
 
@@ -66,10 +66,10 @@ test("cypress-touch-test") {
     "//src/ui/input/testing/mock-hidbus-ifc",
     "//zircon/public/lib/mock-function",
     "//zircon/public/lib/zircon-internal",
-    "//zircon/public/lib/zx",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/hid",
     "//zircon/system/ulib/hwreg-i2c",
+    "//zircon/system/ulib/zx",
     "//zircon/system/ulib/zxtest",
   ]
 }

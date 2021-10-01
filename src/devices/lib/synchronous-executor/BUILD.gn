@@ -16,8 +16,8 @@ zx_library("synchronous-executor") {
   sources = [ "executor.cc" ]
   deps = [
     "//sdk/lib/fit-promise",
-    "//zircon/public/lib/zx",
     "//zircon/system/ulib/fbl",
+    "//zircon/system/ulib/zx",
     "//zircon/system/ulib/zxtest",
   ]
   configs += [ "//build/config/fuchsia:static_cpp_standard_library" ]

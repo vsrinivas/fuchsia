@@ -11,8 +11,8 @@ test("mtrace") {
     "//sdk/fidl/fuchsia.boot:fuchsia.boot_llcpp",
     "//sdk/lib/fdio",
     "//zircon/public/lib/zircon-internal",
-    "//zircon/public/lib/zx",
     "//zircon/system/ulib/service:service-llcpp",
+    "//zircon/system/ulib/zx",
     "//zircon/system/ulib/zxtest",
   ]
 }

@@ -21,7 +21,7 @@ source_set("formatting") {
 
   public_deps = [
     "//src/ui/lib/glm_workaround",
-    "//zircon/public/lib/zx",
+    "//zircon/system/ulib/zx",
   ]
 }
 

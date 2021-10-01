@@ -13,7 +13,7 @@ source_set("process") {
   public_deps = [
     "//sdk/fidl/fuchsia.process",
     "//sdk/lib/sys/cpp",
-    "//zircon/public/lib/zx",
+    "//zircon/system/ulib/zx",
   ]
 
   deps = [

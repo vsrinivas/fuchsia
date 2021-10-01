@@ -31,9 +31,9 @@ executable("exe") {
   deps = [
     ":lib",
     "//sdk/lib/sys/cpp",
-    "//zircon/public/lib/zx",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
+    "//zircon/system/ulib/zx",
   ]
 }
 

@@ -19,8 +19,8 @@ shared_library("tee-client-api") {
     "//sdk/fidl/fuchsia.tee:fuchsia.tee_llcpp",
     "//sdk/lib/fdio",
     "//zircon/public/lib/fidl",
-    "//zircon/public/lib/zx",
     "//zircon/system/ulib/service:service-llcpp",
+    "//zircon/system/ulib/zx",
   ]
 }
 
@@ -32,7 +32,7 @@ static_library("tee-client-api-static") {
     "//sdk/fidl/fuchsia.tee:fuchsia.tee_llcpp",
     "//sdk/lib/fdio",
     "//zircon/public/lib/fidl",
-    "//zircon/public/lib/zx",
     "//zircon/system/ulib/service:service-llcpp",
+    "//zircon/system/ulib/zx",
   ]
 }

@@ -26,7 +26,7 @@ source_set("hlcpp_client_app") {
   deps = [
     ":fidl",
     "//sdk/lib/sys/cpp",
-    "//zircon/public/lib/zx",
+    "//zircon/system/ulib/zx",
   ]
 }
 

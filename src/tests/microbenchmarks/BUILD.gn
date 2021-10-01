@@ -54,11 +54,11 @@ executable("bin") {
     "//src/lib/fxl",
     "//src/lib/storage/vfs/cpp",
     "//src/zircon/lib/zircon",
-    "//zircon/public/lib/zx",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/inspect",
+    "//zircon/system/ulib/zx",
   ]
   public_deps = [ "//zircon/system/ulib/perftest" ]
 }
@@ -82,7 +82,7 @@ executable("context_switch_overhead_helper") {
     "//sdk/lib/fdio",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/syslog/cpp",
-    "//zircon/public/lib/zx",
+    "//zircon/system/ulib/zx",
   ]
 }
 
@@ -93,7 +93,7 @@ executable("get_info_helper") {
   sources = [ "get_info_helper.cc" ]
   deps = [
     "//sdk/lib/fdio",
-    "//zircon/public/lib/zx",
+    "//zircon/system/ulib/zx",
   ]
 }
 

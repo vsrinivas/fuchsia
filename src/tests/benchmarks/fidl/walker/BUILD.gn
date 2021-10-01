@@ -44,7 +44,7 @@ executable("bin") {
            "//src/zircon/lib/zircon",
            "//zircon/system/ulib/fbl",
            "//zircon/public/lib/fidl",
-           "//zircon/public/lib/zx",
+           "//zircon/system/ulib/zx",
            "//zircon/system/ulib/perftest",
          ] + gidl_deps
 }

@@ -21,8 +21,8 @@ zx_library("unittest") {
   }
   if (is_fuchsia) {
     deps += [
-      "//zircon/public/lib/zx",
       "//zircon/system/ulib/test-exceptions",
+      "//zircon/system/ulib/zx",
     ]
   }
 

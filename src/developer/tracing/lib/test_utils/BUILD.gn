@@ -16,8 +16,8 @@ source_set("test_utils") {
     "//sdk/lib/fdio",
     "//sdk/lib/sys/cpp",
     "//src/lib/fxl",
-    "//zircon/public/lib/zx",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/zx",
   ]
 
   deps = [ "//src/lib/fsl" ]
@@ -50,7 +50,7 @@ executable("tracing_test_utils_signal_peer") {
 
   sources = [ "signal_peer.cc" ]
 
-  deps = [ "//zircon/public/lib/zx" ]
+  deps = [ "//zircon/system/ulib/zx" ]
 }
 
 fuchsia_unittest_package("tracing_test_utils_tests") {

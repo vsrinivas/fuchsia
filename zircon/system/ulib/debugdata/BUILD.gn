@@ -39,7 +39,7 @@ zx_library("debugdata") {
     "//zircon/public/lib/zircon-internal",
 
     # <debugdata/datasink.h> has #include <lib/zx/vmo.h>.
-    "//zircon/public/lib/zx",
+    "//zircon/system/ulib/zx",
   ]
 }
 

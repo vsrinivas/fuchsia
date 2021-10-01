@@ -18,8 +18,8 @@ executable("test") {
   deps = [
     "//sdk/lib/fdio",
     "//src/devices/clock/lib/clocktree",
-    "//zircon/public/lib/zx",
     "//zircon/system/ulib/fbl",
+    "//zircon/system/ulib/zx",
     "//zircon/system/ulib/zxtest",
   ]
 }

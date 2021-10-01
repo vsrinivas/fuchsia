@@ -25,7 +25,7 @@ zx_library("dispatcher-pool") {
     "dispatcher-wakeup-event.cc",
   ]
   deps = [
-    "//zircon/public/lib/zx",
     "//zircon/system/ulib/fbl",
+    "//zircon/system/ulib/zx",
   ]
 }

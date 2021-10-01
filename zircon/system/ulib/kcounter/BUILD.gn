@@ -17,11 +17,11 @@ zx_library("kcounter") {
     "//src/lib/storage/vfs/cpp",
     "//zircon/kernel/lib/counters",
     "//zircon/public/lib/fidl",
-    "//zircon/public/lib/zx",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/fidl-async",
     "//zircon/system/ulib/fzl",
     "//zircon/system/ulib/inspect",
     "//zircon/system/ulib/svc",
+    "//zircon/system/ulib/zx",
   ]
 }

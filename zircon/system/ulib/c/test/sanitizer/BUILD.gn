@@ -53,7 +53,7 @@ source_set("memory-snapshot-test") {
   sources = [ "memory-snapshot-test.cc" ]
   deps = [
     ":sanitizer-memory-snapshot-test-needed-dso",
-    "//zircon/public/lib/zx",
+    "//zircon/system/ulib/zx",
     "//zircon/system/ulib/zxtest",
   ]
   data_deps = [ ":sanitizer-memory-snapshot-test-dlopen-dso" ]

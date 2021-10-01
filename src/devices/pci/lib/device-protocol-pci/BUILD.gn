@@ -17,7 +17,7 @@ zx_library("device-protocol-pci") {
     "//sdk/banjo/fuchsia.hardware.pci:fuchsia.hardware.pci_banjo_cpp",
 
     # <lib/device-protocol/pci.h> has #include <zircon/syscalls.h>
-    "//zircon/public/lib/zx",
+    "//zircon/system/ulib/zx",
   ]
 }
 

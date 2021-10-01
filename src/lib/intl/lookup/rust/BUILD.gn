@@ -37,8 +37,8 @@ rustc_staticlib("lib") {
   ]
   non_rust_deps = [
     "//third_party/icu",
-    "//zircon/public/lib/zx",
     "//zircon/system/ulib/syslog",
+    "//zircon/system/ulib/zx",
   ]
   test_deps = [
     ":fuchsia.intl.test-rustc",

@@ -28,7 +28,7 @@ template("trace_library") {
       # covered, <lib/async/cpp/wait.h>, <fit/function.h>, and <lib/zx/event.h>.
       "//zircon/public/lib/async-cpp",
       "//sdk/lib/fit",
-      "//zircon/public/lib/zx",
+      "//zircon/system/ulib/zx",
     ]
 
     sources = [
@@ -41,7 +41,7 @@ template("trace_library") {
       "//sdk/lib/fit",
       "//zircon/public/lib/async",
       "//zircon/public/lib/async-cpp",
-      "//zircon/public/lib/zx",
+      "//zircon/system/ulib/zx",
     ]
   }
 }

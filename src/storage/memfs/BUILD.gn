@@ -27,7 +27,7 @@ zx_library("memfs-cpp") {
     "//zircon/system/ulib/fbl",
 
     # <lib/memfs/cpp/vnode.h> has #include <lib/zx/vmo.h>
-    "//zircon/public/lib/zx",
+    "//zircon/system/ulib/zx",
 
     # <lib/memfs/cpp/vnode.h> has #include "src/lib/storage/vfs/cpp/vfs.h> and many other <fs/*.h"
     "//src/lib/storage/vfs/cpp",

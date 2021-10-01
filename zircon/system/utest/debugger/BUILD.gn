@@ -37,12 +37,12 @@ test("debugger") {
   deps = [
     "//zircon/public/lib/pretty",
     "//zircon/public/lib/zircon-internal",
-    "//zircon/public/lib/zx",
     "//zircon/system/ulib/backtrace-request",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/runtime",
     "//zircon/system/ulib/test-utils",
     "//zircon/system/ulib/unittest",
+    "//zircon/system/ulib/zx",
   ]
 
   deps += [ "//zircon/system/utest/dlopen-indirect-deps:dlopen-indirect-deps-test-module" ]

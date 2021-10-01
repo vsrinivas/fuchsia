@@ -138,9 +138,9 @@ source_set("lib") {
     "//src/lib/ddk",
     "//src/virtualization/bin/vmm/device",
     "//third_party/acpica:headers",
-    "//zircon/public/lib/zx",
     "//zircon/system/ulib/trace",
     "//zircon/system/ulib/virtio",
+    "//zircon/system/ulib/zx",
   ]
 }
 

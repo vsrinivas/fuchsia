@@ -88,7 +88,7 @@ source_set("channel_provider") {
     "//src/developer/forensics/utils/cobalt",
     "//src/lib/fxl",
     "//zircon/public/lib/async",
-    "//zircon/public/lib/zx",
+    "//zircon/system/ulib/zx",
   ]
 
   deps = [

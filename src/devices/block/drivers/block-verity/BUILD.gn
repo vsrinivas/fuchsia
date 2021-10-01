@@ -15,10 +15,10 @@ source_set("verified-volume-client") {
     "//sdk/fidl/fuchsia.device:fuchsia.device_llcpp",
     "//sdk/fidl/fuchsia.hardware.block.verified:fuchsia.hardware.block.verified_llcpp",
     "//src/lib/digest",
-    "//zircon/public/lib/zx",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/fdio-caller",
     "//zircon/system/ulib/ramdevice-client",
+    "//zircon/system/ulib/zx",
   ]
 
   # TODO(fxbug.dev/69585): This target uses raw zx::channel with LLCPP which is deprecated.
@@ -49,8 +49,8 @@ source_set("sealer") {
   ]
   deps = [
     "//src/lib/digest",
-    "//zircon/public/lib/zx",
     "//zircon/system/ulib/fbl",
+    "//zircon/system/ulib/zx",
   ]
 }
 
@@ -63,10 +63,10 @@ test("sealer-test") {
     ":geometry",
     ":sealer",
     "//src/lib/digest",
-    "//zircon/public/lib/zx",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/fbl",
+    "//zircon/system/ulib/zx",
     "//zircon/system/ulib/zxtest",
   ]
 }
@@ -75,8 +75,8 @@ source_set("block-verifier") {
   sources = [ "block-verifier.cc" ]
   deps = [
     "//src/lib/digest",
-    "//zircon/public/lib/zx",
     "//zircon/system/ulib/fbl",
+    "//zircon/system/ulib/zx",
   ]
 }
 
@@ -89,10 +89,10 @@ test("block-verifier-test") {
     ":block-verifier",
     ":geometry",
     "//src/lib/digest",
-    "//zircon/public/lib/zx",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/fbl",
+    "//zircon/system/ulib/zx",
     "//zircon/system/ulib/zxtest",
   ]
 }
@@ -161,8 +161,8 @@ driver_module("block-verity-driver") {
     "//src/lib/ddk",
     "//src/lib/ddktl",
     "//src/lib/digest",
-    "//zircon/public/lib/zx",
     "//zircon/system/ulib/fbl",
+    "//zircon/system/ulib/zx",
   ]
 }
 

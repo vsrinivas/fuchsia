@@ -66,7 +66,7 @@ source_set("periodic_logger") {
     "periodic_logger.h",
   ]
   deps = [ "//src/lib/fxl" ]
-  public_deps = [ "//zircon/public/lib/zx" ]
+  public_deps = [ "//zircon/system/ulib/zx" ]
 }
 
 source_set("socket_logger") {
@@ -79,8 +79,8 @@ source_set("socket_logger") {
     ":logger",
     "//src/lib/fsl",
     "//zircon/public/lib/async-cpp",
-    "//zircon/public/lib/zx",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/zx",
   ]
 }
 
@@ -101,7 +101,7 @@ source_set("guest_console") {
   ]
   public_deps = [
     ":logger",
-    "//zircon/public/lib/zx",
+    "//zircon/system/ulib/zx",
   ]
 }
 

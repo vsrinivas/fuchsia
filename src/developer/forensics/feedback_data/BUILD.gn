@@ -42,7 +42,7 @@ source_set("config") {
   public_deps = [
     "//src/developer/forensics/feedback_data/annotations:types",
     "//src/developer/forensics/feedback_data/attachments:types",
-    "//zircon/public/lib/zx",
+    "//zircon/system/ulib/zx",
   ]
 
   deps = [
@@ -80,8 +80,8 @@ source_set("data_provider") {
     "//src/developer/forensics/utils/cobalt",
     "//src/lib/timekeeper:system",
     "//zircon/public/lib/async-cpp",
-    "//zircon/public/lib/zx",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/zx",
   ]
 
   deps = [
@@ -139,7 +139,7 @@ source_set("datastore") {
     "//src/developer/forensics/utils:previous_boot_file",
     "//src/developer/forensics/utils/cobalt",
     "//zircon/public/lib/async-cpp",
-    "//zircon/public/lib/zx",
+    "//zircon/system/ulib/zx",
   ]
 
   deps = [

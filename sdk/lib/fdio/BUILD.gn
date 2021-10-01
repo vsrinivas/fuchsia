@@ -23,7 +23,7 @@ if (is_fuchsia) {
 
     deps = [
       ":fdio",
-      "//zircon/public/lib/zx",
+      "//zircon/system/ulib/zx",
     ]
   }
 }
@@ -112,8 +112,8 @@ if (toolchain_variant.configs + fuzzer_configs - fuzzer_configs !=
       "//zircon/public/lib/fidl",
       "//zircon/public/lib/safemath",
       "//zircon/public/lib/zircon-internal",
-      "//zircon/public/lib/zx",
       "//zircon/system/ulib/fbl",
+      "//zircon/system/ulib/zx",
       "//zircon/third_party/ulib/musl:getifaddrs-internal",
     ]
     fdio_version_script = "fdio.ld"

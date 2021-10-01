@@ -21,7 +21,7 @@ executable("vk_timer_query_bin") {
     "//src/graphics/lib/magma/tests/helper:test_device_helper",
     "//src/lib/fxl/test:test_settings",
     "//third_party/googletest:gtest",
-    "//zircon/public/lib/zx",
+    "//zircon/system/ulib/zx",
   ]
 
   deps += [ "//src/lib/vulkan" ]

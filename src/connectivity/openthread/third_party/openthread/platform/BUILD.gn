@@ -32,11 +32,11 @@ source_set("platform") {
     "//src/lib/fsl",
     "//src/lib/json_parser",
     "//third_party/modp_b64",
-    "//zircon/public/lib/zx",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/service:service-llcpp",
     "//zircon/system/ulib/svc",
+    "//zircon/system/ulib/zx",
   ]
 
   deps = [ "//third_party/openthread:lib-ot-core" ]

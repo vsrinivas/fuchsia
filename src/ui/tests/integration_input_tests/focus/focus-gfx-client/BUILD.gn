@@ -24,8 +24,8 @@ executable("focus-gfx-client-binary") {
     "//sdk/lib/ui/scenic/cpp",
     "//src/lib/fxl",
     "//src/ui/tests/integration_input_tests/focus:test.focus",
-    "//zircon/public/lib/zx",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
+    "//zircon/system/ulib/zx",
   ]
 }

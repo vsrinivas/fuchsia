@@ -41,7 +41,7 @@ source_set("constants") {
 
   public_deps = [
     "//src/developer/forensics/utils:storage_size",
-    "//zircon/public/lib/zx",
+    "//zircon/system/ulib/zx",
   ]
 }
 
@@ -58,7 +58,7 @@ source_set("device_id_provider") {
     "//src/developer/forensics/utils:errors",
     "//src/developer/forensics/utils/fidl:hanging_get_ptr",
     "//zircon/public/lib/async",
-    "//zircon/public/lib/zx",
+    "//zircon/system/ulib/zx",
   ]
   deps = [
     "//src/lib/files",
@@ -134,8 +134,8 @@ source_set("main_service") {
     "//src/developer/forensics/utils/cobalt",
     "//src/developer/forensics/utils/component",
     "//src/lib/fxl",
-    "//zircon/public/lib/zx",
     "//zircon/system/ulib/async:async-cpp",
+    "//zircon/system/ulib/zx",
   ]
 
   deps = [ "//sdk/lib/syslog/cpp" ]

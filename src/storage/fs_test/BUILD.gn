@@ -38,8 +38,8 @@ static_library("fs_test") {
     "//src/storage/blobfs",
     "//src/storage/testing:storage_driver_test_support",
     "//third_party/googletest:gtest",
-    "//zircon/public/lib/zx",
     "//zircon/system/ulib/fbl",
+    "//zircon/system/ulib/zx",
     "//zircon/system/ulib/zxc",
   ]
 
@@ -142,8 +142,8 @@ test("dot_dot_tests") {
     ":fs_test",
     "//sdk/fidl/fuchsia.io:fuchsia.io_llcpp",
     "//src/lib/fxl/test:gtest_main",
-    "//zircon/public/lib/zx",
     "//zircon/system/ulib/fdio-caller",
+    "//zircon/system/ulib/zx",
   ]
 
   # TODO(fxbug.dev/69585): This target uses raw zx::channel with LLCPP which is deprecated.

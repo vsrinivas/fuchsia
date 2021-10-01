@@ -30,7 +30,7 @@ executable("tests") {
     "//src/lib/fxl/test:gtest_main",
     "//src/lib/storage/vfs/cpp",
     "//src/sys/appmgr:lib",
-    "//zircon/public/lib/zx",
+    "//zircon/system/ulib/zx",
   ]
 }
 
@@ -44,9 +44,9 @@ executable("get_message_client_bin") {
     "//sdk/fidl/fuchsia.sys",
     "//sdk/lib/sys/cpp/",
     "//src/lib/fsl",
-    "//zircon/public/lib/zx",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
+    "//zircon/system/ulib/zx",
   ]
 }
 

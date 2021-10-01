@@ -42,8 +42,8 @@ driver_module("usb-dfu-driver") {
     "//src/lib/ddktl",
     "//zircon/public/lib/fidl",
     "//zircon/public/lib/sync",
-    "//zircon/public/lib/zx",
     "//zircon/system/ulib/fbl",
+    "//zircon/system/ulib/zx",
   ]
 }
 

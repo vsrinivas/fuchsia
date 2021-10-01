@@ -43,12 +43,12 @@ source_set("common") {
     "//sdk/lib/fit",
     "//src/lib/storage/vfs/cpp",
     "//zircon/public/lib/zircon-internal",
-    "//zircon/public/lib/zx",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/cmdline",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/syslog:syslog-headers",
+    "//zircon/system/ulib/zx",
   ]
 
   deps = [

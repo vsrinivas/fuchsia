@@ -27,12 +27,12 @@ common_deps = [
   "//src/lib/ddktl",
   "//zircon/public/lib/fidl-llcpp",
   "//zircon/public/lib/zircon-internal",
-  "//zircon/public/lib/zx",
   "//zircon/system/ulib/async-loop:async-loop-cpp",
   "//zircon/system/ulib/async-loop:async-loop-default",
   "//zircon/system/ulib/fbl",
   "//zircon/system/ulib/trace",
   "//zircon/system/ulib/trace:trace-driver",
+  "//zircon/system/ulib/zx",
 ]
 
 driver_module("goldfish_driver-driver") {
@@ -87,7 +87,7 @@ test("goldfish-pipe-device-test") {
            "//zircon/public/lib/mock-function",
            "//zircon/public/lib/sync",
            "//zircon/public/lib/zircon-internal",
-           "//zircon/public/lib/zx",
+           "//zircon/system/ulib/zx",
            "//zircon/system/ulib/zxtest",
          ]
 

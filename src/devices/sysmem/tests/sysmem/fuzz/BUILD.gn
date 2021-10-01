@@ -53,7 +53,6 @@ fuzzer("sysmem_fuzzer") {
     "//zircon/public/lib/fidl",
     "//zircon/public/lib/fidl-llcpp",
     "//zircon/public/lib/sync",
-    "//zircon/public/lib/zx",
     "//zircon/system/ulib/async-default",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/closure-queue",
@@ -63,6 +62,7 @@ fuzzer("sysmem_fuzzer") {
     "//zircon/system/ulib/region-alloc",
     "//zircon/system/ulib/sysmem-version",
     "//zircon/system/ulib/trace:trace-driver",
+    "//zircon/system/ulib/zx",
   ]
 
   # TODO(fxbug.dev/56714): Fix the leaks and remove this.
@@ -104,7 +104,6 @@ fuzzer("sysmem_fuzzer_multi") {
     "//zircon/public/lib/fidl",
     "//zircon/public/lib/fidl-llcpp",
     "//zircon/public/lib/sync",
-    "//zircon/public/lib/zx",
     "//zircon/system/ulib/async-default",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/closure-queue",
@@ -115,5 +114,6 @@ fuzzer("sysmem_fuzzer_multi") {
     "//zircon/system/ulib/region-alloc",
     "//zircon/system/ulib/sysmem-version",
     "//zircon/system/ulib/trace:trace-driver",
+    "//zircon/system/ulib/zx",
   ]
 }

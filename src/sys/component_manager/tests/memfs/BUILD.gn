@@ -7,9 +7,9 @@ executable("memfs") {
   public_deps = [
     "//src/lib/storage/vfs/cpp",
     "//src/storage/memfs",
-    "//zircon/public/lib/zx",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
+    "//zircon/system/ulib/zx",
   ]
 
   # TODO(fxbug.dev/69585): This target uses raw zx::channel with LLCPP which is deprecated.

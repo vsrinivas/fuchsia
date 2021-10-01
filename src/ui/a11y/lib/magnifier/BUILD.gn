@@ -24,7 +24,7 @@ source_set("magnifier") {
     "//src/ui/a11y/lib/gesture_manager/gesture_util",
     "//src/ui/lib/glm_workaround",
     "//zircon/public/lib/async-cpp",
-    "//zircon/public/lib/zx",
+    "//zircon/system/ulib/zx",
   ]
 
   deps = [

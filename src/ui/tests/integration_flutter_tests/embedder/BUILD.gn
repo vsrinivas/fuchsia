@@ -63,8 +63,8 @@ test("flutter-embedder-test-bin") {
     "//src/lib/fxl/test:gtest_main",
     "//src/ui/testing/views",
     "//third_party/googletest:gtest",
-    "//zircon/public/lib/zx",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
+    "//zircon/system/ulib/zx",
   ]
 }

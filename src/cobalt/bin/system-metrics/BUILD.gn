@@ -53,12 +53,12 @@ source_set("system_metrics_daemon_lib") {
     "//src/lib/fsl",
     "//src/lib/fxl",
     "//third_party/cobalt/src/lib/client/cpp:buckets_config",
-    "//zircon/public/lib/zx",
     "//zircon/system/ulib/abs_clock",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/trace",
     "//zircon/system/ulib/trace-provider:trace-provider-with-fdio",
+    "//zircon/system/ulib/zx",
   ]
 
   # TODO(fxbug.dev/69585): This target uses raw zx::channel with LLCPP which is deprecated.

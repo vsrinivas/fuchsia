@@ -21,7 +21,7 @@ source_set("unit_test_fixture") {
     "//src/developer/forensics/utils/cobalt",
     "//src/lib/testing/loop_fixture",
     "//third_party/googletest:gtest",
-    "//zircon/public/lib/zx",
+    "//zircon/system/ulib/zx",
   ]
 }
 
@@ -58,7 +58,7 @@ source_set("gpretty_printers") {
     "//src/developer/forensics/utils:errors",
     "//src/developer/forensics/utils/cobalt",
     "//src/lib/fsl",
-    "//zircon/public/lib/zx",
+    "//zircon/system/ulib/zx",
   ]
 }
 
@@ -84,6 +84,6 @@ source_set("log_message") {
 
   public_deps = [
     "//sdk/fidl/fuchsia.logger",
-    "//zircon/public/lib/zx",
+    "//zircon/system/ulib/zx",
   ]
 }

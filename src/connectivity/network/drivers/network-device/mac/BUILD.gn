@@ -42,8 +42,8 @@ test("test_bin") {
     "//src/lib/testing/predicates",
     "//third_party/googletest:gmock",
     "//zircon/public/lib/sync",
-    "//zircon/public/lib/zx",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/zx",
   ]
 }
 

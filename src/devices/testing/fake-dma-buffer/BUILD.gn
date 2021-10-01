@@ -17,7 +17,7 @@ zx_library("fake-dma-buffer") {
   public_deps = [
     "//sdk/lib/fit",
     "//src/devices/lib/dma-buffer",
-    "//zircon/public/lib/zx",
     "//zircon/system/ulib/fbl",
+    "//zircon/system/ulib/zx",
   ]
 }

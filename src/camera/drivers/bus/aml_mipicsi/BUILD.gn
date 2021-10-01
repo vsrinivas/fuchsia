@@ -41,8 +41,8 @@ driver_module("aml_mipicsi_driver-driver") {
     "//src/lib/ddk:ddk-metadata-headers",
     "//src/lib/ddktl",
     "//zircon/public/lib/safemath",
-    "//zircon/public/lib/zx",
     "//zircon/system/ulib/fzl",
+    "//zircon/system/ulib/zx",
   ]
 }
 

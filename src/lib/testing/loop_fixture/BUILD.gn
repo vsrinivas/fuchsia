@@ -30,12 +30,12 @@ source_set("gtest") {
     "//sdk/lib/stdcompat",
     "//src/lib/fxl",
     "//third_party/googletest:gtest",
-    "//zircon/public/lib/zx",
     "//zircon/system/ulib/async:async-cpp",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/async-loop/testing:async-loop-testing",
     "//zircon/system/ulib/async-testing",
+    "//zircon/system/ulib/zx",
   ]
 
   public_configs = [ "//garnet/public:config" ]

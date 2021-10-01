@@ -26,9 +26,9 @@ test("mipidsi") {
     "//sdk/banjo/fuchsia.hardware.dsiimpl:fuchsia.hardware.dsiimpl_banjo_cpp",
     "//sdk/fidl/fuchsia.hardware.dsi:fuchsia.hardware.dsi_llcpp",
     "//sdk/lib/fdio",
-    "//zircon/public/lib/zx",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/mipi-dsi",
+    "//zircon/system/ulib/zx",
     "//zircon/system/ulib/zxtest",
   ]
 }

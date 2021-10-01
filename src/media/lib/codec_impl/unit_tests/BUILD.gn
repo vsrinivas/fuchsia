@@ -50,9 +50,9 @@ source_set("codec_impl_tests") {
     "//src/media/lib/codec_impl",
     "//src/media/lib/codec_impl/test_utils",
     "//third_party/googletest:gtest",
-    "//zircon/public/lib/zx",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
+    "//zircon/system/ulib/zx",
   ]
 }
 
@@ -70,9 +70,9 @@ executable("decryptor_adapter_tests_bin") {
     "//src/lib/fxl/test:gtest_main",
     "//src/media/lib/codec_impl",
     "//third_party/googletest:gtest",
-    "//zircon/public/lib/zx",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
+    "//zircon/system/ulib/zx",
   ]
 
   # TODO(fxbug.dev/58162): delete the below and fix compiler warnings

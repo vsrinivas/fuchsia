@@ -40,9 +40,9 @@ driver_module("driver") {
     ":bind",
     "//src/devices/lib/driver",
     "//src/lib/ddktl",
-    "//zircon/public/lib/zx",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/inspect",
+    "//zircon/system/ulib/zx",
   ]
 }
 
@@ -71,9 +71,9 @@ test("unit-tests") {
     "//src/devices/lib/driver",
     "//src/devices/testing/fake_ddk",
     "//src/lib/ddktl",
-    "//zircon/public/lib/zx",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/inspect",
+    "//zircon/system/ulib/zx",
     "//zircon/system/ulib/zxtest",
   ]
 }

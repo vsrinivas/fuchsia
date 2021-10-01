@@ -27,7 +27,7 @@ test("mock-mmio-reg-test-bin") {
     "//src/devices/lib/mmio",
     "//src/devices/testing/mock-mmio-reg",
     "//src/lib/ddk",
-    "//zircon/public/lib/zx",
+    "//zircon/system/ulib/zx",
     "//zircon/system/ulib/zxtest",
   ]
 }

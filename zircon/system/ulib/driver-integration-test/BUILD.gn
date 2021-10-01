@@ -13,10 +13,10 @@ zx_library("driver-integration-test") {
   deps = [
     "//sdk/lib/fdio",
     "//src/lib/ddk",
-    "//zircon/public/lib/zx",
     "//zircon/system/ulib/devmgr-integration-test",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/inspector",
+    "//zircon/system/ulib/zx",
   ]
   public_deps = [
     "//sdk/fidl/fuchsia.io:fuchsia.io_llcpp",
@@ -38,10 +38,10 @@ zx_library("driver-integration-test-static") {
   deps = [
     "//sdk/lib/fdio",
     "//src/lib/ddk",
-    "//zircon/public/lib/zx",
     "//zircon/system/ulib/devmgr-integration-test",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/inspector",
+    "//zircon/system/ulib/zx",
   ]
   public_deps = [
     "//sdk/fidl/fuchsia.io:fuchsia.io_llcpp",

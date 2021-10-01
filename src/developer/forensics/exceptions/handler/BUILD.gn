@@ -35,7 +35,7 @@ source_set("lib") {
     "//third_party/crashpad/snapshot",
     "//third_party/crashpad/util",
     "//third_party/mini_chromium/base",
-    "//zircon/public/lib/zx",
+    "//zircon/system/ulib/zx",
   ]
 
   deps = [
