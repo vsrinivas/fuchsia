@@ -262,38 +262,88 @@ struct ThermalState {
     performance_capacity: NormPerfs,
 }
 
-/// Validates that thermal states are in order of decreasing power use for any input performance.
-/// Power is modeled as
-///     power = static_power + dynamic_power_per_normperf * min(performance, performance_capacity).
-/// It can be shown that power of the thermal states is strictly decreasing if:
-///  - static_power is non-increasing
-///  - dynamic_power_per_normperf is strictly decreasing
-///  - performance_capacity is non-increasing.
+/// Estimates the power that the provided thermal state will consume at the desired performance
+/// (which may not be attained if it exceeds the capacity of the thermal state).
+fn estimate_power(state: &ThermalState, desired_performance: NormPerfs) -> Watts {
+    let performance = NormPerfs::min(state.performance_capacity, desired_performance);
+    let dynamic_power = state.dynamic_power_per_normperf.mul_scalar(performance.0);
+    state.static_power + dynamic_power
+}
+
+/// Validates that thermal states are in order of decreasing power use for any desired performance.
+///
+/// First, some definitions:
+///  - Power is modeled as
+///
+///    ```
+///      power = static_power
+///              + dynamic_power_per_normperf * min(desired_performance, performance_capacity).
+///    ```
+///
+///  - A thermal state `state` is *admissible* at `desired_performance` if and only if
+///    `state.min_performance <= desired_performance`. That is, a state's min_performance defines
+///    the smallest performance value at which it will be utilized.
+///  - Two states are *adjacent* at `desired_performance` if and only if they are both admissible at
+///    `desired_performance`, and no state between them in the full list of states is admissible.
+///
+/// Power is strictly decreasing if the following conditions are met:
+///  - dynamic_power_per_normperf is non-increasing;
+///  - performance_capacity is non-increasing;
+///  - When any two states are adjacent, the lower-index state draws more power at the first
+///    performance value at which they are adjacent.
+///
+/// The first two conditions guarantee that the power delta between a lower-index state and a
+/// higher-index state is non-decreasing with respect to performance. The third condition implies
+/// that the power delta between any two adjacent states is initially positive; since the delta
+/// is non-decreasing by the first two conditions, it will continue to be positive for all
+/// subsequent performance values.
 fn validate_thermal_states(states: &Vec<ThermalState>) -> Result<(), Error> {
-    for pair in states.as_slice().windows(2) {
-        let (s0, s1) = (&pair[0], &pair[1]);
-        if s1.static_power > s0.static_power {
-            bail!(
-                "Thermal states' static_power must be non-increasing; violated by {:?} and {:?}",
-                s0,
-                s1
+    for i in 0..states.len() - 1 {
+        let state = &states[i];
+        let next_state = &states[i + 1];
+
+        anyhow::ensure!(
+            next_state.dynamic_power_per_normperf <= state.dynamic_power_per_normperf,
+            "Thermal states' dynamic_power_per_normperf must be non-increasing; violated by \
+            {:?} and {:?}",
+            state,
+            next_state
+        );
+        anyhow::ensure!(
+            next_state.performance_capacity <= state.performance_capacity,
+            "Thermal states' performance_capacity must be non-increasing; violated by {:?} and \
+            {:?}",
+            state,
+            next_state
+        );
+
+        // Compare `state` to each state further down the list that will be adjacent to it at some
+        // performance value. Verify that the adjacent state has lower power at the first shared
+        // performance.
+        for adjacent_state in &states[i + 1..] {
+            let first_shared_performance =
+                NormPerfs::max(state.min_performance, adjacent_state.min_performance);
+            let power = estimate_power(state, first_shared_performance);
+            let adjacent_power = estimate_power(adjacent_state, first_shared_performance);
+
+            anyhow::ensure!(
+                adjacent_power < power,
+                "Power is not strictly decreasing at performance {:?}; state {:?} consumes {:?}, \
+                while state {:?} consumes {:?}.",
+                first_shared_performance,
+                state,
+                power,
+                adjacent_state,
+                adjacent_power
             );
-        } else if s1.dynamic_power_per_normperf >= s0.dynamic_power_per_normperf {
-            bail!(
-                "Thermal states' dynamic_power_per_normperf must be strictly decreasing; \
-                violated by {:?} and {:?}",
-                s0,
-                s1
-            );
-        } else if s1.performance_capacity >= s0.performance_capacity {
-            bail!(
-                "Thermal states' performance_capacity must be non-increasing \
-                violated by {:?} and {:?}",
-                s0,
-                s1
-            );
+
+            if adjacent_state.min_performance <= state.min_performance {
+                // `adjacent_state` is always between `state` and any state later in the list.
+                break;
+            }
         }
     }
+
     Ok(())
 }
 
@@ -528,14 +578,6 @@ impl CpuManager {
         }
     }
 
-    /// Estimates the power that the provided thermal state will consume given its capacity and the
-    /// desired performance.
-    fn estimate_power(state: &ThermalState, desired_performance: NormPerfs) -> Watts {
-        let performance = NormPerfs::min(state.performance_capacity, desired_performance);
-        let dynamic_power = state.dynamic_power_per_normperf.mul_scalar(performance.0);
-        state.static_power + dynamic_power
-    }
-
     // Determines the thermal state that should be used for the given available power and projected
     // performance, also returning the power we expect to dissipate at that state.
     fn select_thermal_state_and_power(
@@ -555,7 +597,7 @@ impl CpuManager {
 
             max_allowed_index = i;
 
-            let power = Self::estimate_power(thermal_state, projected_performance);
+            let power = estimate_power(thermal_state, projected_performance);
             if power < available_power {
                 return (i, power);
             }
@@ -563,7 +605,7 @@ impl CpuManager {
 
         (
             max_allowed_index,
-            Self::estimate_power(&self.thermal_states[max_allowed_index], projected_performance),
+            estimate_power(&self.thermal_states[max_allowed_index], projected_performance),
         )
     }
 
@@ -993,32 +1035,7 @@ mod tests {
             },
         ];
 
-        // Increasing static power
-        let handlers = Handlers::new_for_failed_validation();
-        let thermal_state_configs = vec![
-            ThermalStateConfig {
-                cluster_pstates: vec![0, 0],
-                min_performance_normperfs: 0.0,
-                static_power_w: 2.0,
-                dynamic_power_per_normperf_w: 1.0,
-            },
-            ThermalStateConfig {
-                cluster_pstates: vec![2, 2],
-                min_performance_normperfs: 0.0,
-                static_power_w: 2.1,
-                dynamic_power_per_normperf_w: 0.8,
-            },
-        ];
-        let builder = CpuManagerBuilder::new(
-            cluster_configs.clone(),
-            vec![handlers.big_cluster.clone(), handlers.little_cluster.clone()],
-            thermal_state_configs.clone(),
-            handlers.syscall.clone(),
-            handlers.cpu_stats.clone(),
-        );
-        assert!(builder.build().await.is_err());
-
-        // Non-decreasing dynamic power
+        // Not allowed: Increasing dynamic power.
         let handlers = Handlers::new_for_failed_validation();
         let thermal_state_configs = vec![
             ThermalStateConfig {
@@ -1031,7 +1048,7 @@ mod tests {
                 cluster_pstates: vec![2, 2],
                 min_performance_normperfs: 0.0,
                 static_power_w: 1.5,
-                dynamic_power_per_normperf_w: 1.0,
+                dynamic_power_per_normperf_w: 1.1,
             },
         ];
         let builder = CpuManagerBuilder::new(
@@ -1043,7 +1060,7 @@ mod tests {
         );
         assert!(builder.build().await.is_err());
 
-        // Increasing performance capacity
+        // Not allowed: Increasing performance capacity.
         let handlers = Handlers::new_for_failed_validation();
         let thermal_state_configs = vec![
             ThermalStateConfig {
@@ -1060,9 +1077,61 @@ mod tests {
             },
         ];
         let builder = CpuManagerBuilder::new(
-            cluster_configs,
+            cluster_configs.clone(),
             vec![handlers.big_cluster.clone(), handlers.little_cluster.clone()],
             thermal_state_configs,
+            handlers.syscall.clone(),
+            handlers.cpu_stats.clone(),
+        );
+        assert!(builder.build().await.is_err());
+
+        // Allowed: The second state has higher static power, but its power draw is less than the
+        // first state at the first performance at which both states are admissible.
+        let handlers = Handlers::new();
+        let thermal_state_configs = vec![
+            ThermalStateConfig {
+                cluster_pstates: vec![0, 0],
+                min_performance_normperfs: 0.0,
+                static_power_w: 2.0,
+                dynamic_power_per_normperf_w: 1.0,
+            },
+            ThermalStateConfig {
+                cluster_pstates: vec![2, 2],
+                min_performance_normperfs: 1.0,
+                static_power_w: 2.1,
+                dynamic_power_per_normperf_w: 0.8,
+            },
+        ];
+        let builder = CpuManagerBuilder::new(
+            cluster_configs.clone(),
+            vec![handlers.big_cluster.clone(), handlers.little_cluster.clone()],
+            thermal_state_configs.clone(),
+            handlers.syscall.clone(),
+            handlers.cpu_stats.clone(),
+        );
+        builder.build().await.unwrap();
+
+        // Not allowed: The second state has higher power draw at the first performance at which
+        // both states are admissible.
+        let handlers = Handlers::new_for_failed_validation();
+        let thermal_state_configs = vec![
+            ThermalStateConfig {
+                cluster_pstates: vec![0, 0],
+                min_performance_normperfs: 0.0,
+                static_power_w: 2.0,
+                dynamic_power_per_normperf_w: 1.0,
+            },
+            ThermalStateConfig {
+                cluster_pstates: vec![2, 2],
+                min_performance_normperfs: 1.0,
+                static_power_w: 2.5,
+                dynamic_power_per_normperf_w: 0.8,
+            },
+        ];
+        let builder = CpuManagerBuilder::new(
+            cluster_configs.clone(),
+            vec![handlers.big_cluster.clone(), handlers.little_cluster.clone()],
+            thermal_state_configs.clone(),
             handlers.syscall.clone(),
             handlers.cpu_stats.clone(),
         );
