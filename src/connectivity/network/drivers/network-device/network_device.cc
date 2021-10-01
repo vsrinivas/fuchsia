@@ -82,12 +82,10 @@ void NetworkDevice::GetDevice(GetDeviceRequestView request, GetDeviceCompleter::
   device_->Bind(std::move(request->device));
 }
 
-static zx_driver_ops_t network_driver_ops = []() {
-  zx_driver_ops_t ops = {};
-  ops.version = DRIVER_OPS_VERSION;
-  ops.bind = NetworkDevice::Create;
-  return ops;
-}();
+static constexpr zx_driver_ops_t network_driver_ops = {
+    .version = DRIVER_OPS_VERSION,
+    .bind = NetworkDevice::Create,
+};
 
 }  // namespace network
 
