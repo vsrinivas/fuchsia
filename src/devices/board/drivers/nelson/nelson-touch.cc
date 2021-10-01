@@ -121,7 +121,7 @@ zx_status_t Nelson::TouchInitP1() {
   */
   const uint8_t gpio_state = GetDisplayId() & 1;
   zxlogf(INFO, "%s - Touch type: %s", __func__, (gpio_state ? "GTx8x" : "FT3x27"));
-  if (!gpio_state) {
+  if (gpio_state) {
     const zx_device_prop_t props[] = {
         {BIND_PLATFORM_DEV_VID, 0, PDEV_VID_GOOGLE},
         {BIND_PLATFORM_DEV_PID, 0, PDEV_PID_NELSON},
