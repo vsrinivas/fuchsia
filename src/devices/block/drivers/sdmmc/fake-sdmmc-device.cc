@@ -21,6 +21,11 @@ zx_status_t FakeSdmmcDevice::SdmmcRequest(sdmmc_req_t* req) {
   command_counts_[req->cmd_idx]++;
 
   uint8_t* const virt_buffer = reinterpret_cast<uint8_t*>(req->virt_buffer) + req->buf_offset;
+  // Zero out the buffer for read requests.
+  if (req->virt_buffer && (req->cmd_flags & SDMMC_RESP_DATA_PRESENT) &&
+      (req->cmd_flags & SDMMC_CMD_READ)) {
+    bzero(virt_buffer, req->virt_size);
+  }
 
   req->response[0] = 0;
   req->response[1] = 0;

@@ -665,7 +665,7 @@ TEST_F(SdmmcBlockDeviceTest, DdkLifecycle) {
   AddDevice();
 
   dut_->DdkAsyncRemove();
-  EXPECT_EQ(parent_->descendant_count(), 3);
+  EXPECT_EQ(parent_->descendant_count(), 2);
 }
 
 TEST_F(SdmmcBlockDeviceTest, DdkLifecycleBootPartitionsExistButNotUsed) {
@@ -680,7 +680,7 @@ TEST_F(SdmmcBlockDeviceTest, DdkLifecycleBootPartitionsExistButNotUsed) {
   AddDevice();
 
   dut_->DdkAsyncRemove();
-  EXPECT_EQ(parent_->descendant_count(), 3);
+  EXPECT_EQ(parent_->descendant_count(), 2);
 }
 
 TEST_F(SdmmcBlockDeviceTest, DdkLifecycleWithBootPartitions) {
@@ -695,7 +695,7 @@ TEST_F(SdmmcBlockDeviceTest, DdkLifecycleWithBootPartitions) {
   AddDevice();
 
   dut_->DdkAsyncRemove();
-  EXPECT_EQ(parent_->descendant_count(), 5);
+  EXPECT_EQ(parent_->descendant_count(), 4);
 }
 
 TEST_F(SdmmcBlockDeviceTest, DdkLifecycleWithBootAndRpmbPartitions) {
