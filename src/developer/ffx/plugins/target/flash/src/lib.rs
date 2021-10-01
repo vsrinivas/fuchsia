@@ -141,6 +141,10 @@ mod test {
                     let var = state.variables.pop().unwrap_or("test".to_string());
                     responder.send(&mut Ok(var)).unwrap();
                 }
+                FastbootRequest::GetAllVars { listener, responder, .. } => {
+                    listener.into_proxy().unwrap().on_variable("test", "test").unwrap();
+                    responder.send(&mut Ok(())).unwrap();
+                }
                 FastbootRequest::Flash { listener, responder, .. } => {
                     listener.into_proxy().unwrap().on_finished().unwrap();
                     responder.send(&mut Ok(())).unwrap();

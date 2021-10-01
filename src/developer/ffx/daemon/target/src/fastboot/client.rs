@@ -3,8 +3,8 @@
 // found in the LICENSE file.
 use {
     crate::fastboot::{
-        continue_boot, erase, flash, get_var, oem, reboot, reboot_bootloader, set_active, stage,
-        UploadProgressListener,
+        continue_boot, erase, flash, get_all_vars, get_var, oem, reboot, reboot_bootloader,
+        set_active, stage, UploadProgressListener, VariableListener,
     },
     crate::target::Target,
     crate::zedboot::reboot_to_bootloader,
@@ -156,6 +156,20 @@ impl<T: AsyncRead + AsyncWrite + Unpin> FastbootImpl<T> {
                     Ok(value) => responder.send(&mut Ok(value))?,
                     Err(e) => {
                         log::error!("Error getting variable '{}': {:?}", name, e);
+                        responder
+                            .send(&mut Err(FastbootError::ProtocolError))
+                            .context("sending error response")?;
+                    }
+                }
+            }
+            FastbootRequest::GetAllVars { listener, responder } => {
+                let variable_listener = VariableListener::new(listener)?;
+                match get_all_vars(self.interface().await?, &variable_listener).await {
+                    Ok(()) => {
+                        responder.send(&mut Ok(()))?;
+                    }
+                    Err(e) => {
+                        log::error!("Error getting all variables: {:?}", e);
                         responder
                             .send(&mut Err(FastbootError::ProtocolError))
                             .context("sending error response")?;

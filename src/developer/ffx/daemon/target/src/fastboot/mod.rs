@@ -18,7 +18,7 @@ use {
     fastboot::{
         command::{ClientVariable, Command},
         reply::Reply,
-        send, send_with_timeout, upload, SendError,
+        send, send_with_listener, send_with_timeout, upload, SendError,
     },
     ffx_config::get,
     ffx_daemon_core::events,
@@ -26,6 +26,7 @@ use {
     fidl::endpoints::ClientEnd,
     fidl_fuchsia_developer_bridge::{
         FastbootRequestStream, UploadProgressListenerMarker, UploadProgressListenerProxy,
+        VariableListenerMarker, VariableListenerProxy,
     },
     fuchsia_async::Timer,
     futures::{
@@ -140,6 +141,23 @@ pub struct FastbootDevice {
     pub serial: String,
 }
 
+pub struct VariableListener(VariableListenerProxy);
+
+impl VariableListener {
+    fn new(listener: ClientEnd<VariableListenerMarker>) -> Result<Self> {
+        Ok(Self(listener.into_proxy().map_err(|e| anyhow!(e))?))
+    }
+}
+
+impl fastboot::InfoListener for VariableListener {
+    fn on_info(&self, info: String) -> Result<()> {
+        if let Some((name, val)) = info.split_once(':') {
+            self.0.on_variable(name.trim(), val.trim()).map_err(|e| anyhow!(e))?;
+        }
+        Ok(())
+    }
+}
+
 pub struct UploadProgressListener(UploadProgressListenerProxy);
 
 impl UploadProgressListener {
@@ -246,6 +264,19 @@ pub async fn find_devices() -> Vec<FastbootDevice> {
 
 pub fn open_interface_with_serial(serial: &String) -> Result<Interface> {
     open_interface(|info: &InterfaceInfo| -> bool { extract_serial_number(info) == *serial })
+}
+
+pub async fn get_all_vars<T: AsyncRead + AsyncWrite + Unpin>(
+    interface: &mut T,
+    listener: &VariableListener,
+) -> Result<()> {
+    send_with_listener(Command::GetVar(ClientVariable::All), interface, listener).await.and_then(
+        |r| match r {
+            Reply::Okay(_) => Ok(()),
+            Reply::Fail(s) => bail!("Failed to get all variables {}", s),
+            _ => bail!("Unexpected reply from fastboot deviced for get_var"),
+        },
+    )
 }
 
 pub async fn get_var<T: AsyncRead + AsyncWrite + Unpin>(

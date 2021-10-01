@@ -4,7 +4,8 @@
 
 use {
     analytics::{add_crash_event, get_notice, opt_out_for_this_invocation},
-    anyhow::{Context as _, Result},
+    anyhow::{bail, Context as _, Result},
+    async_lock::Mutex,
     async_trait::async_trait,
     async_utils::async_once::Once,
     errors::{ffx_bail, ffx_error, FfxError, ResultExt as _},
@@ -39,12 +40,13 @@ const CURRENT_EXE_HASH: &str = "current.hash";
 
 struct Injection {
     daemon_once: Once<DaemonProxy>,
+    remote_failed: Mutex<Option<String>>,
     remote_once: Once<RemoteControlProxy>,
 }
 
 impl Default for Injection {
     fn default() -> Self {
-        Self { daemon_once: Once::new(), remote_once: Once::new() }
+        Self { daemon_once: Once::new(), remote_failed: Mutex::new(None), remote_once: Once::new() }
     }
 }
 
@@ -169,7 +171,24 @@ impl Injector for Injection {
     }
 
     async fn remote_factory(&self) -> Result<RemoteControlProxy> {
-        self.remote_once.get_or_try_init(self.init_remote_proxy()).await.map(|proxy| proxy.clone())
+        // Prevent multiple retries if there are multiple proxies.
+        let mut guard = self.remote_failed.lock().await;
+        if let Some(err) = &*guard {
+            bail!(err.to_owned())
+        }
+
+        self.remote_once
+            .get_or_try_init(async {
+                match self.init_remote_proxy().await {
+                    Ok(r) => Ok(r),
+                    Err(err) => {
+                        guard.replace(err.to_string());
+                        Err(err)
+                    }
+                }
+            })
+            .await
+            .map(|proxy| proxy.clone())
     }
 
     async fn is_experiment(&self, key: &str) -> bool {

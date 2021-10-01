@@ -573,7 +573,6 @@ pub fn ffx_plugin(input: ItemFn, proxies: ProxyMap) -> Result<TokenStream, Error
         }
     } else {
         quote! {
-            #(#proxies_to_generate)*
             #method(#args)#asyncness
         }
     };

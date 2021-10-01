@@ -34,6 +34,16 @@ protocol RebootListener {
     OnReboot();
 };
 
+
+/// Callback event listener for listing all variables.
+protocol VariableListener {
+    OnVariable(struct {
+        name string:64;
+        value string:64;
+    });
+};
+
+
 @discoverable
 protocol Fastboot {
     Prepare(resource struct {
@@ -44,6 +54,9 @@ protocol Fastboot {
     }) -> (struct {
         value string:64;
     }) error FastbootError;
+    GetAllVars(resource struct {
+        listener client_end:VariableListener;
+    }) -> (struct {}) error FastbootError;
     Flash(resource struct {
         partition_name string:64;
         path string:256;

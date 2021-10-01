@@ -6,6 +6,8 @@ use {anyhow::anyhow, std::convert::TryFrom};
 
 #[derive(PartialEq, Debug)]
 pub enum ClientVariable {
+    // All variables.
+    All,
     // Version of FastBoot protocol supported. It should be "0.4".
     Version,
     // Version string for the Bootloader.
@@ -91,6 +93,7 @@ impl TryFrom<ClientVariable> for Vec<u8> {
 
     fn try_from(var: ClientVariable) -> Result<Self, Self::Error> {
         match var {
+            ClientVariable::All => Ok(b"all".to_vec()),
             ClientVariable::Version => Ok(b"version".to_vec()),
             ClientVariable::VersionBootLoader => Ok(b"version-bootloader".to_vec()),
             ClientVariable::VersionBaseBand => Ok(b"version-baseband".to_vec()),

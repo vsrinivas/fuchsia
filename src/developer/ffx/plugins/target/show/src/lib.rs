@@ -8,13 +8,17 @@ use {
     anyhow::{anyhow, bail, Result},
     ffx_core::ffx_plugin,
     ffx_target_show_args as args,
+    fidl::endpoints::{create_endpoints, ServerEnd},
     fidl_fuchsia_buildinfo::ProviderProxy,
-    fidl_fuchsia_developer_bridge::{DaemonProxy, TargetAddrInfo},
+    fidl_fuchsia_developer_bridge::{
+        DaemonProxy, FastbootProxy, TargetAddrInfo, VariableListenerMarker, VariableListenerRequest,
+    },
     fidl_fuchsia_developer_remotecontrol::RemoteControlProxy,
     fidl_fuchsia_feedback::{DeviceIdProviderProxy, LastRebootInfoProviderProxy},
     fidl_fuchsia_hwinfo::{Architecture, BoardProxy, DeviceProxy, ProductProxy},
     fidl_fuchsia_intl::RegulatoryDomain,
     fidl_fuchsia_update_channelcontrol::ChannelControlProxy,
+    futures::{try_join, TryFutureExt, TryStreamExt},
     std::io::{stdout, Write},
     std::net::SocketAddr,
     std::time::Duration,
@@ -33,14 +37,15 @@ mod show;
     LastRebootInfoProviderProxy = "core/appmgr:out:fuchsia.feedback.LastRebootInfoProvider"
 )]
 pub async fn show_cmd(
-    channel_control_proxy: ChannelControlProxy,
-    board_proxy: BoardProxy,
-    device_proxy: DeviceProxy,
-    product_proxy: ProductProxy,
-    build_info_proxy: ProviderProxy,
+    channel_control_proxy: Option<ChannelControlProxy>,
+    board_proxy: Option<BoardProxy>,
+    device_proxy: Option<DeviceProxy>,
+    product_proxy: Option<ProductProxy>,
+    build_info_proxy: Option<ProviderProxy>,
     device_id_proxy: Option<DeviceIdProviderProxy>,
-    last_reboot_info_proxy: LastRebootInfoProviderProxy,
-    remote_proxy: RemoteControlProxy,
+    last_reboot_info_proxy: Option<LastRebootInfoProviderProxy>,
+    remote_proxy: Option<RemoteControlProxy>,
+    fastboot_proxy: FastbootProxy,
     daemon_proxy: DaemonProxy,
     target_show_args: args::TargetShow,
 ) -> Result<()> {
@@ -53,6 +58,7 @@ pub async fn show_cmd(
         device_id_proxy,
         last_reboot_info_proxy,
         remote_proxy,
+        fastboot_proxy,
         daemon_proxy,
         target_show_args,
         &mut stdout(),
@@ -60,16 +66,33 @@ pub async fn show_cmd(
     .await
 }
 
+/// Aggregates fastboot variables from a callback listener.
+async fn handle_variables_for_fastboot(
+    var_server: ServerEnd<VariableListenerMarker>,
+) -> Result<Vec<ShowEntry>> {
+    let mut stream = var_server.into_stream()?;
+    let mut vars = Vec::new();
+    loop {
+        match stream.try_next().await? {
+            Some(VariableListenerRequest::OnVariable { name, value, .. }) => {
+                vars.push(ShowEntry::str_value(&name, &name, "Variable.", &Some(value.to_string())))
+            }
+            None => return Ok(vars),
+        }
+    }
+}
+
 // Implementation of the target show command.
 async fn show_cmd_impl<W: Write>(
-    channel_control_proxy: ChannelControlProxy,
-    board_proxy: BoardProxy,
-    device_proxy: DeviceProxy,
-    product_proxy: ProductProxy,
-    build_info_proxy: ProviderProxy,
-    device_id_proxy: Option<DeviceIdProviderProxy>,
-    last_reboot_info_proxy: LastRebootInfoProviderProxy,
-    remote_proxy: RemoteControlProxy,
+    channel_control_proxy_option: Option<ChannelControlProxy>,
+    board_proxy_option: Option<BoardProxy>,
+    device_proxy_option: Option<DeviceProxy>,
+    product_proxy_option: Option<ProductProxy>,
+    build_info_proxy_option: Option<ProviderProxy>,
+    device_id_proxy_option: Option<DeviceIdProviderProxy>,
+    last_reboot_info_proxy_option: Option<LastRebootInfoProviderProxy>,
+    remote_proxy_option: Option<RemoteControlProxy>,
+    fastboot_proxy: FastbootProxy,
     daemon_proxy: DaemonProxy,
     target_show_args: args::TargetShow,
     writer: &mut W,
@@ -78,32 +101,83 @@ async fn show_cmd_impl<W: Write>(
         writeln!(writer, "ffx target show version 0.1")?;
         return Ok(());
     }
-    // To add more show information, add a `gather_*_show(*) call to this
-    // list, as well as the labels in the Ok() and vec![] just below.
-    let show = match futures::try_join!(
-        gather_target_show(remote_proxy, daemon_proxy),
-        gather_board_show(board_proxy),
-        gather_device_show(device_proxy),
-        gather_product_show(product_proxy),
-        gather_update_show(channel_control_proxy),
-        gather_build_info_show(build_info_proxy),
-        gather_device_id_show(device_id_proxy),
-        gather_last_reboot_info_show(last_reboot_info_proxy),
+
+    let show = match (
+        channel_control_proxy_option,
+        board_proxy_option,
+        device_proxy_option,
+        product_proxy_option,
+        build_info_proxy_option,
+        last_reboot_info_proxy_option,
+        remote_proxy_option,
     ) {
-        Ok((target, board, device, product, update, build, Some(device_id), reboot_info)) => {
-            vec![target, board, device, product, update, build, device_id, reboot_info]
+        (.., None) => gather_fastboot_show(fastboot_proxy).await?,
+        (
+            Some(channel_control_proxy),
+            Some(board_proxy),
+            Some(device_proxy),
+            Some(product_proxy),
+            Some(build_info_proxy),
+            Some(last_reboot_info_proxy),
+            Some(remote_proxy),
+        ) => {
+            // To add more show information, add a `gather_*_show(*) call to this
+            // list, as well as the labels in the Ok() and vec![] just below.
+            match try_join!(
+                gather_target_show(remote_proxy, daemon_proxy),
+                gather_board_show(board_proxy),
+                gather_device_show(device_proxy),
+                gather_product_show(product_proxy),
+                gather_update_show(channel_control_proxy),
+                gather_build_info_show(build_info_proxy),
+                gather_device_id_show(device_id_proxy_option),
+                gather_last_reboot_info_show(last_reboot_info_proxy),
+            ) {
+                Ok((
+                    target,
+                    board,
+                    device,
+                    product,
+                    update,
+                    build,
+                    Some(device_id),
+                    reboot_info,
+                )) => {
+                    vec![target, board, device, product, update, build, device_id, reboot_info]
+                }
+                Ok((target, board, device, product, update, build, None, reboot_info)) => {
+                    vec![target, board, device, product, update, build, reboot_info]
+                }
+                Err(e) => bail!(e),
+            }
         }
-        Ok((target, board, device, product, update, build, None, reboot_info)) => {
-            vec![target, board, device, product, update, build, reboot_info]
-        }
-        Err(e) => bail!(e),
+        _ => bail!(
+            "Could not communicate with target device. Run `ffx doctor` for further diagnostics."
+        ),
     };
+
     if target_show_args.json {
         show::output_for_machine(&show, &target_show_args, writer)?;
     } else {
         show::output_for_human(&show, &target_show_args, writer)?;
     }
     Ok(())
+}
+
+/// Gathers fastboot information from target.
+async fn gather_fastboot_show(fastboot_proxy: FastbootProxy) -> Result<Vec<ShowEntry>> {
+    let (var_client, var_server) = create_endpoints::<VariableListenerMarker>()?;
+    try_join!(
+        fastboot_proxy.get_all_vars(var_client).map_err(|e| {
+            log::error!("FIDL Communication error: {}", e);
+            anyhow!(
+                "There was an error communcation with the daemon. Try running\n\
+                `ffx doctor` for further diagnositcs."
+            )
+        }),
+        handle_variables_for_fastboot(var_server),
+    )
+    .map(|(_, vars)| vec![ShowEntry::group("Fastboot", "Fastboot", "", vars)])
 }
 
 /// Determine target information.
@@ -386,7 +460,7 @@ async fn gather_last_reboot_info_show(
 mod tests {
     use super::*;
     use fidl_fuchsia_buildinfo::{BuildInfo, ProviderRequest};
-    use fidl_fuchsia_developer_bridge::{DaemonRequest, TargetAddrInfo, TargetIp};
+    use fidl_fuchsia_developer_bridge::{DaemonRequest, FastbootRequest, TargetAddrInfo, TargetIp};
     use fidl_fuchsia_developer_remotecontrol::{IdentifyHostResponse, RemoteControlRequest};
     use fidl_fuchsia_feedback::{
         DeviceIdProviderRequest, LastReboot, LastRebootInfoProviderRequest, RebootReason,
@@ -536,14 +610,15 @@ mod tests {
     async fn test_show_cmd_impl() {
         let mut output = Vec::new();
         show_cmd_impl(
-            setup_fake_channel_control_server(),
-            setup_fake_board_server(),
-            setup_fake_device_server(),
-            setup_fake_product_server(),
-            setup_fake_build_info_server(),
+            Some(setup_fake_channel_control_server()),
+            Some(setup_fake_board_server()),
+            Some(setup_fake_device_server()),
+            Some(setup_fake_product_server()),
+            Some(setup_fake_build_info_server()),
             Some(setup_fake_device_id_server()),
-            setup_fake_last_reboot_info_server(),
-            setup_fake_remote_control_server(),
+            Some(setup_fake_last_reboot_info_server()),
+            Some(setup_fake_remote_control_server()),
+            setup_fake_fastboot_server(),
             setup_fake_daemon_server(),
             args::TargetShow::default(),
             &mut output,
@@ -560,14 +635,15 @@ mod tests {
     async fn test_show_cmd_impl_json() {
         let mut output = Vec::new();
         show_cmd_impl(
-            setup_fake_channel_control_server(),
-            setup_fake_board_server(),
-            setup_fake_device_server(),
-            setup_fake_product_server(),
-            setup_fake_build_info_server(),
+            Some(setup_fake_channel_control_server()),
+            Some(setup_fake_board_server()),
+            Some(setup_fake_device_server()),
+            Some(setup_fake_product_server()),
+            Some(setup_fake_build_info_server()),
             Some(setup_fake_device_id_server()),
-            setup_fake_last_reboot_info_server(),
-            setup_fake_remote_control_server(),
+            Some(setup_fake_last_reboot_info_server()),
+            Some(setup_fake_remote_control_server()),
+            setup_fake_fastboot_server(),
             setup_fake_daemon_server(),
             args::TargetShow { json: true, ..Default::default() },
             &mut output,
@@ -740,5 +816,32 @@ mod tests {
         assert_eq!(arch_to_string(Some(Architecture::X64)), Some("x64".to_string()));
         assert_eq!(arch_to_string(Some(Architecture::Arm64)), Some("arm64".to_string()));
         assert_eq!(arch_to_string(None), None);
+    }
+
+    pub(crate) fn setup_fake_fastboot_server() -> FastbootProxy {
+        setup_fake_fastboot_proxy(move |req| match req {
+            FastbootRequest::GetAllVars { listener, responder, .. } => {
+                let proxy = listener.into_proxy().unwrap();
+                proxy.on_variable("test1", "test_val1").unwrap();
+                proxy.on_variable("test2", "test_val2").unwrap();
+                proxy.on_variable("test3", "test_val3").unwrap();
+                responder.send(&mut Ok(())).unwrap();
+            }
+            _ => assert!(false),
+        })
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_gather_fastboot_show() {
+        let test_proxy = setup_fake_fastboot_server();
+        let result = gather_fastboot_show(test_proxy).await.expect("gather last reboot info show");
+        assert_eq!(result.len(), 1);
+        assert_eq!(result[0].title, "Fastboot");
+        assert_eq!(result[0].child[0].title, "test1");
+        assert_eq!(result[0].child[0].value, Some(ShowValue::StringValue("test_val1".to_string())));
+        assert_eq!(result[0].child[1].title, "test2");
+        assert_eq!(result[0].child[1].value, Some(ShowValue::StringValue("test_val2".to_string())));
+        assert_eq!(result[0].child[2].title, "test3");
+        assert_eq!(result[0].child[2].value, Some(ShowValue::StringValue("test_val3".to_string())));
     }
 }

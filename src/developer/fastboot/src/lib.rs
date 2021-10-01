@@ -36,6 +36,16 @@ pub enum SendError {
     Timeout,
 }
 
+pub trait InfoListener {
+    fn on_info(&self, info: String) -> Result<()> {
+        log::info!("Fastboot Info: \"{}\"", info);
+        Ok(())
+    }
+}
+
+struct LogInfoListener {}
+impl InfoListener for LogInfoListener {}
+
 pub trait UploadProgressListener {
     fn on_started(&self, size: usize) -> Result<()>;
     fn on_progress(&self, bytes_written: u64) -> Result<()>;
@@ -50,19 +60,28 @@ async fn read_from_interface<T: AsyncRead + Unpin>(interface: &mut T) -> Result<
     Reply::try_from(trimmed.to_vec())
 }
 
-async fn read_and_log_info<T: AsyncRead + Unpin>(interface: &mut T) -> Result<Reply> {
-    read_and_log_info_with_timeout(interface, Duration::seconds(DEFAULT_READ_TIMEOUT_SECS)).await
+async fn read<T: AsyncRead + Unpin>(
+    interface: &mut T,
+    listener: &impl InfoListener,
+) -> Result<Reply> {
+    read_with_timeout(interface, listener, Duration::seconds(DEFAULT_READ_TIMEOUT_SECS)).await
 }
 
-async fn read_and_log_info_with_timeout<T: AsyncRead + Unpin>(
+async fn read_and_log_info<T: AsyncRead + Unpin>(interface: &mut T) -> Result<Reply> {
+    read_with_timeout(interface, &LogInfoListener {}, Duration::seconds(DEFAULT_READ_TIMEOUT_SECS))
+        .await
+}
+
+async fn read_with_timeout<T: AsyncRead + Unpin>(
     interface: &mut T,
+    listener: &impl InfoListener,
     timeout: Duration,
 ) -> Result<Reply> {
     let start = Utc::now();
     loop {
         match read_from_interface(interface).await {
             Ok(reply) => match reply {
-                Reply::Info(msg) => log::info!("Fastboot Info: \"{}\"", msg),
+                Reply::Info(msg) => listener.on_info(msg)?,
                 _ => return Ok(reply),
             },
             Err(e) => {
@@ -77,6 +96,16 @@ async fn read_and_log_info_with_timeout<T: AsyncRead + Unpin>(
             }
         }
     }
+}
+
+pub async fn send_with_listener<T: AsyncRead + AsyncWrite + Unpin>(
+    cmd: Command,
+    interface: &mut T,
+    listener: &impl InfoListener,
+) -> Result<Reply> {
+    let _lock = SEND_LOCK.lock().await;
+    interface.write(&Vec::<u8>::try_from(cmd)?).await?;
+    read(interface, listener).await
 }
 
 pub async fn send<T: AsyncRead + AsyncWrite + Unpin>(
@@ -95,7 +124,7 @@ pub async fn send_with_timeout<T: AsyncRead + AsyncWrite + Unpin>(
 ) -> Result<Reply> {
     let _lock = SEND_LOCK.lock().await;
     interface.write(&Vec::<u8>::try_from(cmd)?).await?;
-    read_and_log_info_with_timeout(interface, timeout).await
+    read_with_timeout(interface, &LogInfoListener {}, timeout).await
 }
 
 pub async fn upload<T: AsyncRead + AsyncWrite + Unpin>(
