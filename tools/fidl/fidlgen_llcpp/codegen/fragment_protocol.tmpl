@@ -71,6 +71,10 @@ __LOCAL extern "C" const fidl_type_t {{ .Response.WireCodingTable.Name }};
 
 {{- define "Protocol:Traits:MessagingHeader" -}}
 {{ $protocol := . -}}
+
+template<>
+struct Transport<{{ . }}> : public ::fidl::ChannelTransport {};
+
 {{ range .Methods -}}
 {{ $method := . -}}
 {{- if .HasRequest }}

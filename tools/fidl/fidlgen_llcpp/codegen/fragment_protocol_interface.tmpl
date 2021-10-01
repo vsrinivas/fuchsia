@@ -20,7 +20,6 @@ class {{ .WireServer }} : public ::fidl::internal::IncomingMessageDispatcher {
 
   // The FIDL protocol type that is implemented by this server.
   using _EnclosingProtocol = {{ . }};
-  using _EnclosingTransport = fidl::ChannelTransport;
 
 {{ "" }}
   {{- range .Methods }}

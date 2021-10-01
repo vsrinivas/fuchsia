@@ -5,8 +5,10 @@
 #ifndef LIB_FIDL_LLCPP_TRANSPORT_H_
 #define LIB_FIDL_LLCPP_TRANSPORT_H_
 
+#ifdef __Fuchsia__
 #include <lib/fidl/llcpp/client_end.h>
 #include <lib/fidl/llcpp/server_end.h>
+#endif
 
 namespace fidl {
 
@@ -16,6 +18,6 @@ struct ChannelTransport {
 struct DriverTransport {
 };
 
-#endif  // LIB_FIDL_LLCPP_TRANSPORT_H_
-
 }
+
+#endif  // LIB_FIDL_LLCPP_TRANSPORT_H_
