@@ -513,6 +513,8 @@ impl<B: BufferMut, D: BufferDispatcher<B>> BufferIpSocketContext<Ipv6, B> for Ct
 
 /// IPv6 source address selection as defined in [RFC 6724 Section 5].
 mod ipv6_source_address_selection {
+    use net_types::ip::IpAddress as _;
+
     use super::*;
     use crate::device::AddressState;
 
@@ -574,7 +576,7 @@ mod ipv6_source_address_selection {
         b: &AddressEntry<Ipv6Addr, Instant, UnicastAddr<Ipv6Addr>>,
         b_device: DeviceId,
     ) -> Ordering {
-        // TODO(fxbug.dev/46822): Implement rules 2, 4, 5.5, 6, 7, and 8.
+        // TODO(fxbug.dev/46822): Implement rules 2, 4, 5.5, 6, and 7.
 
         let a_state = a.state();
         let a_addr = a.addr_sub().addr().into_specified();
@@ -593,6 +595,7 @@ mod ipv6_source_address_selection {
         rule_1(remote_ip, a_addr, b_addr)
             .then_with(|| rule_3(a_state, b_state))
             .then_with(|| rule_5(outbound_device, a_device, b_device))
+            .then_with(|| rule_8(remote_ip, a, b))
     }
 
     // Assumes that `a` and `b` are not both equal to `remote_ip`.
@@ -657,6 +660,44 @@ mod ipv6_source_address_selection {
         }
     }
 
+    fn rule_8<Instant>(
+        remote_ip: SpecifiedAddr<Ipv6Addr>,
+        a: &AddressEntry<Ipv6Addr, Instant, UnicastAddr<Ipv6Addr>>,
+        b: &AddressEntry<Ipv6Addr, Instant, UnicastAddr<Ipv6Addr>>,
+    ) -> Ordering {
+        // Per RFC 6724 Section 2.2:
+        //
+        //   We define the common prefix length CommonPrefixLen(S, D) of a
+        //   source address S and a destination address D as the length of the
+        //   longest prefix (looking at the most significant, or leftmost, bits)
+        //   that the two addresses have in common, up to the length of S's
+        //   prefix (i.e., the portion of the address not including the
+        //   interface ID).  For example, CommonPrefixLen(fe80::1, fe80::2) is
+        //   64.
+        fn common_prefix_len<Instant>(
+            src: &AddressEntry<Ipv6Addr, Instant, UnicastAddr<Ipv6Addr>>,
+            dst: SpecifiedAddr<Ipv6Addr>,
+        ) -> u8 {
+            core::cmp::min(
+                src.addr_sub().addr().common_prefix_len(&dst),
+                src.addr_sub().subnet().prefix(),
+            )
+        }
+
+        // Rule 8: Use longest matching prefix.
+        //
+        // Note that, per RFC 6724 Section 5:
+        //
+        //   Rule 8 MAY be superseded if the implementation has other means of
+        //   choosing among source addresses.  For example, if the
+        //   implementation somehow knows which source address will result in
+        //   the "best" communications performance.
+        //
+        // We don't currently make use of this option, but it's an option for
+        // the future.
+        common_prefix_len(a, remote_ip).cmp(&common_prefix_len(b, remote_ip))
+    }
+
     #[cfg(test)]
     mod tests {
         use net_types::ip::AddrSubnet;
@@ -704,27 +745,73 @@ mod ipv6_source_address_selection {
             assert_eq!(rule_5(dev0, dev0, dev0), Ordering::Equal);
             assert_eq!(rule_5(dev0, dev2, dev2), Ordering::Equal);
 
-            let new_addr_entry = |addr| {
-                AddressEntry::<_, (), _>::new(
-                    AddrSubnet::new(addr, 128).unwrap(),
-                    Assigned,
-                    AddrConfigType::Manual,
-                    None,
-                )
-            };
+            // Rule 8: Use longest matching prefix.
+            {
+                let new_addr_entry = |bytes, prefix_len| {
+                    AddressEntry::<_, (), _>::new(
+                        AddrSubnet::new(Ipv6Addr::from_bytes(bytes), prefix_len).unwrap(),
+                        AddressState::Assigned,
+                        AddrConfigType::Manual,
+                        None,
+                    )
+                };
 
-            // If no rules apply, then the two address entries are equal.
-            assert_eq!(
-                select_ipv6_source_address_cmp(
-                    remote,
-                    dev0,
-                    &new_addr_entry(*local0),
-                    dev1,
-                    &new_addr_entry(*local1),
-                    dev2
-                ),
-                Ordering::Equal
-            );
+                // First, test that the longest prefix match is preferred when
+                // using addresses whose common prefix length is shorter than
+                // the subnet prefix length.
+
+                // 4 leading 0x01 bytes.
+                let remote = SpecifiedAddr::new(Ipv6Addr::from_bytes([
+                    1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                ]))
+                .unwrap();
+                // 3 leading 0x01 bytes.
+                let local0 = new_addr_entry([1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], 64);
+                // 2 leading 0x01 bytes.
+                let local1 = new_addr_entry([1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], 64);
+
+                assert_eq!(rule_8(remote, &local0, &local1), Ordering::Greater);
+                assert_eq!(rule_8(remote, &local1, &local0), Ordering::Less);
+                assert_eq!(rule_8(remote, &local0, &local0), Ordering::Equal);
+                assert_eq!(rule_8(remote, &local1, &local1), Ordering::Equal);
+
+                // Second, test that the common prefix length is capped at the
+                // subnet prefix length.
+
+                // 3 leading 0x01 bytes, but a subnet prefix length of 8 (1 byte).
+                let local0 = new_addr_entry([1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], 8);
+                // 2 leading 0x01 bytes, but a subnet prefix length of 8 (1 byte).
+                let local1 = new_addr_entry([1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], 8);
+
+                assert_eq!(rule_8(remote, &local0, &local1), Ordering::Equal);
+                assert_eq!(rule_8(remote, &local1, &local0), Ordering::Equal);
+                assert_eq!(rule_8(remote, &local0, &local0), Ordering::Equal);
+                assert_eq!(rule_8(remote, &local1, &local1), Ordering::Equal);
+            }
+
+            {
+                let new_addr_entry = |addr| {
+                    AddressEntry::<_, (), _>::new(
+                        AddrSubnet::new(addr, 128).unwrap(),
+                        Assigned,
+                        AddrConfigType::Manual,
+                        None,
+                    )
+                };
+
+                // If no rules apply, then the two address entries are equal.
+                assert_eq!(
+                    select_ipv6_source_address_cmp(
+                        remote,
+                        dev0,
+                        &new_addr_entry(*local0),
+                        dev1,
+                        &new_addr_entry(*local1),
+                        dev2
+                    ),
+                    Ordering::Equal
+                );
+            }
         }
     }
 }
