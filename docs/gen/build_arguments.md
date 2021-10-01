@@ -47,7 +47,7 @@ It will be set below and passed to other toolchains through toolchain_args
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:1385
+From //build/config/BUILDCONFIG.gn:1393
 
 ### allow_legacy_data_partition_names
 Set to true to enable legacy data partition names.
@@ -1231,7 +1231,7 @@ This is just added to [`known_variants`](#known_variants).
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:1142
+From //build/config/BUILDCONFIG.gn:1150
 
 ### extract_minfs_metadata_on_corruption
 If extract_minfs_metadata_on_corruption is true, fshost extracts minfs metadata on finding it
@@ -1871,7 +1871,7 @@ and the analysis overhead turned off by default.
 
 **Current value (from the default):** `false`
 
-From //build/config/BUILDCONFIG.gn:20
+From //build/config/BUILDCONFIG.gn:21
 
 ### is_debug
 Debug build.
@@ -1882,7 +1882,7 @@ From //out/not-default/args.gn:6
 
 **Overridden from the default:** `true`
 
-From //build/config/BUILDCONFIG.gn:23
+From //build/config/BUILDCONFIG.gn:24
 
 **Current value for `target_cpu = "x64"`:** `false`
 
@@ -1890,7 +1890,7 @@ From //out/not-default/args.gn:6
 
 **Overridden from the default:** `true`
 
-From //build/config/BUILDCONFIG.gn:23
+From //build/config/BUILDCONFIG.gn:24
 
 ### jtrace_enabled
 Please refer to https://fuchsia.dev/fuchsia-src/development/debugging/jtrace
@@ -2146,7 +2146,7 @@ Each element of the list is one variant, which is a scope defining:
 }]
 ```
 
-From //build/config/BUILDCONFIG.gn:982
+From //build/config/BUILDCONFIG.gn:990
 
 ### launch_basemgr_on_boot
 Indicates whether to include basemgr.cmx in the boot sequence for the
@@ -2459,6 +2459,13 @@ From //build/images/fvm.gni:66
 **Current value (from the default):** `false`
 
 From //build/images/fvm.gni:56
+
+### minfs_resize_excluded_paths
+List of files and directories that don't need to be preserved when resizing minfs.
+
+**Current value (from the default):** `[]`
+
+From //src/storage/fshost/BUILD.gn:48
 
 ### mini_chromium_is_chromeos_ash
 
@@ -3005,14 +3012,14 @@ Sets if we should output breakpad symbols for Fuchsia binaries.
 
 **Current value (from the default):** `false`
 
-From //build/config/BUILDCONFIG.gn:26
+From //build/config/BUILDCONFIG.gn:27
 
 ### output_gsym
 Controls whether we should output GSYM files for Fuchsia binaries.
 
 **Current value (from the default):** `false`
 
-From //build/config/BUILDCONFIG.gn:29
+From //build/config/BUILDCONFIG.gn:30
 
 ### package_flavor_selections
 Used to configure the set of package flavors desired.
@@ -3263,14 +3270,19 @@ above changes.
 
 From //build/security.gni:36
 
-### restat_rust
-Set to true to make rust compiles preserve timestamps of unchanged outputs.
-This can lead to on-the-fly pruning of the overall action graph.
-This also works on local builds, without RBE.
+### restat_cc
+Set to true to make C++ compiles preserve timestamps of unchanged outputs.
 
 **Current value (from the default):** `false`
 
-From //build/toolchain/restat.gni:14
+From //build/toolchain/restat.gni:16
+
+### restat_rust
+Set to true to make Rust compiles preserve timestamps of unchanged outputs.
+
+**Current value (from the default):** `false`
+
+From //build/toolchain/restat.gni:13
 
 ### run_slow_bssl_tests
 
@@ -3524,7 +3536,7 @@ is satisfied if any of the strings matches against the candidate string.
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:1375
+From //build/config/BUILDCONFIG.gn:1383
 
 ### select_variant_canonical
 *This should never be set as a build argument.*
@@ -3533,7 +3545,7 @@ See //build/toolchain/clang_toolchain.gni for details.
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:1380
+From //build/config/BUILDCONFIG.gn:1388
 
 ### select_variant_shortcuts
 List of short names for commonly-used variant selectors.  Normally this
@@ -3577,7 +3589,7 @@ a list that can be spliced into [`select_variant`](#select_variant).
 }]
 ```
 
-From //build/config/BUILDCONFIG.gn:1188
+From //build/config/BUILDCONFIG.gn:1196
 
 ### size_checker_input
 The input to the size checker.
@@ -3788,7 +3800,7 @@ for details and documentation for each field.
 }
 ```
 
-From //build/config/BUILDCONFIG.gn:88
+From //build/config/BUILDCONFIG.gn:96
 
 ### ubsan_default_options
 Default [UndefinedBehaviorSanitizer](https://clang.llvm.org/docs/UndefinedBehaviorSanitizer.html)
@@ -3819,7 +3831,7 @@ From //build/config/sanitizers/sanitizer_default_options.gni:47
 }]
 ```
 
-From //build/config/BUILDCONFIG.gn:1172
+From //build/config/BUILDCONFIG.gn:1180
 
 ### universe_package_labels
 If you add package labels to this variable, the packages will be included
@@ -4345,7 +4357,7 @@ This allows testing for a Zircon-specific toolchain with:
 
 **Current value (from the default):** `false`
 
-From //build/config/BUILDCONFIG.gn:105
+From //build/config/BUILDCONFIG.gn:113
 
 ### zircon_tracelog
 Where to emit a tracelog from Zircon's GN run. No trace will be produced if
