@@ -296,34 +296,6 @@ int main(int argc, char** argv) {
   svc::Outgoing outgoing(loop.dispatcher());
   InspectManager inspect_manager(loop.dispatcher());
 
-  std::optional<DriverRunner> driver_runner;
-  if (driver_manager_args.driver_runner_root_driver_url.size() != 0) {
-    LOGF(INFO, "Starting DriverRunner with root driver URL: %s",
-         driver_manager_args.driver_runner_root_driver_url.data());
-
-    auto realm_result = service::Connect<fuchsia_sys2::Realm>();
-    if (realm_result.is_error()) {
-      return realm_result.error_value();
-    }
-
-    auto driver_index_result = service::Connect<fuchsia_driver_framework::DriverIndex>();
-    if (driver_index_result.is_error()) {
-      LOGF(ERROR, "Failed to connect to driver_index: %d", driver_index_result.error_value());
-      return driver_index_result.error_value();
-    }
-
-    driver_runner.emplace(std::move(realm_result.value()), std::move(driver_index_result.value()),
-                          inspect_manager.inspector(), loop.dispatcher());
-    auto publish = driver_runner->PublishComponentRunner(outgoing.svc_dir());
-    if (publish.is_error()) {
-      return publish.error_value();
-    }
-    auto start = driver_runner->StartRootDriver(driver_manager_args.driver_runner_root_driver_url);
-    if (start.is_error()) {
-      return start.error_value();
-    }
-  }
-
   CoordinatorConfig config;
   SystemInstance system_instance;
   config.boot_args = &boot_args;
@@ -359,11 +331,6 @@ int main(int argc, char** argv) {
     LOGF(ERROR, "Failed to get root job: %s", zx_status_get_string(status));
     return status;
   }
-  status = system_instance.CreateDriverHostJob(root_job, &config.driver_host_job);
-  if (status != ZX_OK) {
-    LOGF(ERROR, "Failed to create driver_host job: %s", zx_status_get_string(status));
-    return status;
-  }
 
   zx_handle_t oom_event;
   status = zx_system_get_event(root_job.get(), ZX_SYSTEM_EVENT_OUT_OF_MEMORY, &oom_event);
@@ -395,8 +362,21 @@ int main(int argc, char** argv) {
     }
   }
 
-  // Find and load v1 Drivers.
-  {
+  devfs_init(coordinator.root_device(), loop.dispatcher());
+
+  std::optional<DriverRunner> driver_runner;
+  std::optional<driver_manager::DevfsExporter> devfs_exporter;
+
+  // Find and load v1 or v2 Drivers.
+  bool load_v1_drivers = driver_manager_args.driver_runner_root_driver_url.size() == 0;
+  if (load_v1_drivers) {
+    // V1 Drivers.
+    status = system_instance.CreateDriverHostJob(root_job, &config.driver_host_job);
+    if (status != ZX_OK) {
+      LOGF(ERROR, "Failed to create driver_host job: %s", zx_status_get_string(status));
+      return status;
+    }
+
     status = coordinator.InitCoreDevices(driver_manager_args.sys_device_driver.c_str());
     if (status != ZX_OK) {
       LOGF(ERROR, "Failed to initialize core devices: %s", zx_status_get_string(status));
@@ -422,20 +402,43 @@ int main(int argc, char** argv) {
       coordinator.BindFallbackDrivers();
     }
     coordinator.ScheduleBaseDriverLoading();
-  }
 
-  devfs_init(coordinator.root_device(), loop.dispatcher());
-  devfs_publish(coordinator.root_device(), coordinator.sys_device());
-  devfs_connect_diagnostics(coordinator.inspect_manager().diagnostics_client());
+    devfs_publish(coordinator.root_device(), coordinator.sys_device());
+  } else {
+    // V2 Drivers.
+    LOGF(INFO, "Starting DriverRunner with root driver URL: %s",
+         driver_manager_args.driver_runner_root_driver_url.data());
 
-  std::optional<driver_manager::DevfsExporter> devfs_exporter;
-  if (driver_manager_args.driver_runner_root_driver_url.size() != 0) {
-    devfs_exporter.emplace(coordinator.sys_device()->devnode(), loop.dispatcher());
-    auto publish = devfs_exporter->PublishExporter(outgoing.svc_dir());
+    auto realm_result = service::Connect<fuchsia_sys2::Realm>();
+    if (realm_result.is_error()) {
+      return realm_result.error_value();
+    }
+
+    auto driver_index_result = service::Connect<fuchsia_driver_framework::DriverIndex>();
+    if (driver_index_result.is_error()) {
+      LOGF(ERROR, "Failed to connect to driver_index: %d", driver_index_result.error_value());
+      return driver_index_result.error_value();
+    }
+
+    driver_runner.emplace(std::move(realm_result.value()), std::move(driver_index_result.value()),
+                          inspect_manager.inspector(), loop.dispatcher());
+    auto publish = driver_runner->PublishComponentRunner(outgoing.svc_dir());
     if (publish.is_error()) {
       return publish.error_value();
     }
+    auto start = driver_runner->StartRootDriver(driver_manager_args.driver_runner_root_driver_url);
+    if (start.is_error()) {
+      return start.error_value();
+    }
+
+    devfs_exporter.emplace(coordinator.root_device()->devnode(), loop.dispatcher());
+    auto devfs_publish = devfs_exporter->PublishExporter(outgoing.svc_dir());
+    if (devfs_publish.is_error()) {
+      return publish.error_value();
+    }
   }
+
+  devfs_connect_diagnostics(coordinator.inspect_manager().diagnostics_client());
 
   // Check if whatever launched devmgr gave a channel to be connected to /dev.
   // This is for use in tests to let the test environment see devfs.

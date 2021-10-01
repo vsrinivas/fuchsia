@@ -140,6 +140,11 @@ Coordinator::Coordinator(CoordinatorConfig config, InspectManager* inspect_manag
     wait_on_oom_event_.Begin(dispatcher);
   }
   shutdown_system_state_ = config_.default_shutdown_system_state;
+
+  root_device_ =
+      fbl::MakeRefCounted<Device>(this, "root", fbl::String(), "root,", nullptr, ZX_PROTOCOL_ROOT,
+                                  zx::vmo(), zx::channel(), fidl::ClientEnd<fio::Directory>());
+  root_device_->flags = DEV_CTX_IMMORTAL | DEV_CTX_MUST_ISOLATE | DEV_CTX_MULTI_BIND;
 }
 
 Coordinator::~Coordinator() {}
@@ -215,11 +220,6 @@ zx_status_t Coordinator::InitCoreDevices(std::string_view sys_device_driver) {
     auto string = std::string(sys_device_driver.data());
     driver_loader_.LoadDriverUrl(string);
   }
-
-  root_device_ =
-      fbl::MakeRefCounted<Device>(this, "root", fbl::String(), "root,", nullptr, ZX_PROTOCOL_ROOT,
-                                  zx::vmo(), zx::channel(), fidl::ClientEnd<fio::Directory>());
-  root_device_->flags = DEV_CTX_IMMORTAL | DEV_CTX_MUST_ISOLATE | DEV_CTX_MULTI_BIND;
 
   sys_device_ =
       fbl::MakeRefCounted<Device>(this, "sys", sys_device_driver, "sys,", root_device_, 0,
