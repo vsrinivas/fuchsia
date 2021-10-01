@@ -82,7 +82,7 @@ class Bind {
 
   // Blocking wait until DdkRemove is called. Use this if you expect unbind/remove to
   // be called in a different thread.
-  zx_status_t WaitUntilRemove();
+  zx_status_t WaitUntilRemove(zx::time deadline = zx::time::infinite());
 
   // Blocking wait until SuspendTxn.Reply() is called. Use this if you expect the suspend reply to
   // be called in a different thread.
@@ -210,7 +210,6 @@ class Bind {
   bool add_called_ = false;
   bool remove_called_ = false;
   bool rebind_called_ = false;
-  sync_completion_t remove_called_sync_;
   sync_completion_t suspend_called_sync_;
   bool resume_complete_called_ = false;
   bool device_open_protocol_session_multibindable_ = false;
@@ -255,6 +254,8 @@ class Bind {
   void StartUnbindIfNeeded(zx_device_t* device);
   // Joins with |unbind_thread_| if it has been created and not yet joined.
   void JoinUnbindThread();
+
+  sync_completion_t remove_called_sync_;
 };
 
 }  // namespace fake_ddk

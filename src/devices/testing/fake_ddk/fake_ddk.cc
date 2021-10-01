@@ -66,8 +66,8 @@ zx_status_t Bind::WaitUntilInitComplete() {
   return sync_completion_wait_deadline(&init_replied_sync_, zx::time::infinite().get());
 }
 
-zx_status_t Bind::WaitUntilRemove() {
-  return sync_completion_wait_deadline(&remove_called_sync_, zx::time::infinite().get());
+zx_status_t Bind::WaitUntilRemove(zx::time deadline) {
+  return sync_completion_wait_deadline(&remove_called_sync_, deadline.get());
 }
 
 zx_status_t Bind::WaitUntilSuspend() {
