@@ -17,6 +17,9 @@ enum/member fuchsia.device.manager/CompatibilityTestStatus.ERR_UNBIND_NO_DDKREMO
 enum/member fuchsia.device.manager/CompatibilityTestStatus.ERR_UNBIND_TIMEOUT 5
 enum/member fuchsia.device.manager/CompatibilityTestStatus.OK 1
 strict enum fuchsia.device.manager/CompatibilityTestStatus uint32
+struct/member fuchsia.device.manager/CompositeDevice.fragments vector<fuchsia.device.manager/Fragment>:16
+struct/member fuchsia.device.manager/CompositeDevice.name string:31
+struct fuchsia.device.manager/CompositeDevice
 struct/member fuchsia.device.manager/CompositeDeviceDescriptor.fragments vector<fuchsia.device.manager/DeviceFragment>:16
 struct/member fuchsia.device.manager/CompositeDeviceDescriptor.metadata vector<fuchsia.device.manager/DeviceMetadata>:<32,optional>
 struct/member fuchsia.device.manager/CompositeDeviceDescriptor.primary_fragment_index uint32
@@ -25,7 +28,7 @@ struct/member fuchsia.device.manager/CompositeDeviceDescriptor.spawn_colocated b
 struct/member fuchsia.device.manager/CompositeDeviceDescriptor.str_props vector<fuchsia.device.manager/DeviceStrProperty>:256
 struct fuchsia.device.manager/CompositeDeviceDescriptor
 protocol/member fuchsia.device.manager/Coordinator.AddCompositeDevice(string:31 name,fuchsia.device.manager/CompositeDeviceDescriptor comp_desc) -> (fuchsia.device.manager/Coordinator_AddCompositeDevice_Result result)
-protocol/member fuchsia.device.manager/Coordinator.AddDevice(server_end:fuchsia.device.manager/Coordinator coordinator,client_end:fuchsia.device.manager/DeviceController device_controller,fuchsia.device.manager/DevicePropertyList property_list,string:31 name,uint32 protocol_id,string:<1024,optional> driver_path,string:<1024,optional> args,fuchsia.device.manager/AddDeviceConfig device_add_config,bool has_init,zx/handle:<VMO,optional> inspect,zx/handle:<CHANNEL,optional> client_remote) -> (fuchsia.device.manager/Coordinator_AddDevice_Result result)
+protocol/member fuchsia.device.manager/Coordinator.AddDevice(server_end:fuchsia.device.manager/Coordinator coordinator,client_end:fuchsia.device.manager/DeviceController device_controller,fuchsia.device.manager/DevicePropertyList property_list,string:31 name,uint32 protocol_id,string:<1024,optional> driver_path,string:<1024,optional> args,fuchsia.device.manager/AddDeviceConfig device_add_config,bool has_init,zx/handle:<VMO,optional> inspect,zx/handle:<CHANNEL,optional> client_remote,fuchsia.io/Directory:optional outgoing_dir) -> (fuchsia.device.manager/Coordinator_AddDevice_Result result)
 protocol/member fuchsia.device.manager/Coordinator.AddMetadata(uint32 key,vector<uint8>:<8192,optional> data) -> (fuchsia.device.manager/Coordinator_AddMetadata_Result result)
 protocol/member fuchsia.device.manager/Coordinator.BindDevice(string:<1024,optional> driver_path) -> (fuchsia.device.manager/Coordinator_BindDevice_Result result)
 protocol/member fuchsia.device.manager/Coordinator.GetMetadata(uint32 key) -> (fuchsia.device.manager/Coordinator_GetMetadata_Result result)
@@ -123,6 +126,11 @@ struct fuchsia.device.manager/DevicePropertyList
 struct/member fuchsia.device.manager/DeviceStrProperty.key string:255
 struct/member fuchsia.device.manager/DeviceStrProperty.value fuchsia.device.manager/PropertyValue
 struct fuchsia.device.manager/DeviceStrProperty
+union/member fuchsia.device.manager/DeviceType.composite fuchsia.device.manager/CompositeDevice
+union/member fuchsia.device.manager/DeviceType.new_proxy fuchsia.device.manager/NewProxyDevice
+union/member fuchsia.device.manager/DeviceType.proxy fuchsia.device.manager/ProxyDevice
+union/member fuchsia.device.manager/DeviceType.stub fuchsia.device.manager/StubDevice
+resource flexible union fuchsia.device.manager/DeviceType
 protocol/member fuchsia.device.manager/DeviceWatcher.NextDevice() -> (fuchsia.device.manager/DeviceWatcher_NextDevice_Result result)
 protocol fuchsia.device.manager/DeviceWatcher
 struct/member fuchsia.device.manager/DeviceWatcher_NextDevice_Response.device zx/handle:CHANNEL
@@ -130,9 +138,7 @@ resource struct fuchsia.device.manager/DeviceWatcher_NextDevice_Response
 union/member fuchsia.device.manager/DeviceWatcher_NextDevice_Result.err int32
 union/member fuchsia.device.manager/DeviceWatcher_NextDevice_Result.response fuchsia.device.manager/DeviceWatcher_NextDevice_Response
 resource strict union fuchsia.device.manager/DeviceWatcher_NextDevice_Result
-protocol/member fuchsia.device.manager/DriverHostController.CreateCompositeDevice(client_end:fuchsia.device.manager/Coordinator coordinator_rpc,server_end:fuchsia.device.manager/DeviceController device_controller_rpc,vector<fuchsia.device.manager/Fragment>:16 fragments,string:31 name,uint64 local_device_id) -> (int32 status)
-protocol/member fuchsia.device.manager/DriverHostController.CreateDevice(client_end:fuchsia.device.manager/Coordinator coordinator_rpc,server_end:fuchsia.device.manager/DeviceController device_controller_rpc,string:1024 driver_path,zx/handle:VMO driver,zx/handle:optional parent_proxy,string:<1024,optional> proxy_args,uint64 local_device_id)
-protocol/member fuchsia.device.manager/DriverHostController.CreateDeviceStub(client_end:fuchsia.device.manager/Coordinator coordinator_rpc,server_end:fuchsia.device.manager/DeviceController device_controller_rpc,uint32 protocol_id,uint64 local_device_id)
+protocol/member fuchsia.device.manager/DriverHostController.CreateDevice(client_end:fuchsia.device.manager/Coordinator coordinator,server_end:fuchsia.device.manager/DeviceController device_controller,fuchsia.device.manager/DeviceType type,uint64 local_device_id) -> (int32 status)
 protocol/member fuchsia.device.manager/DriverHostController.Restart() -> (int32 status)
 protocol fuchsia.device.manager/DriverHostController
 const fuchsia.device.manager/FRAGMENTS_MAX uint32 16
@@ -142,11 +148,18 @@ struct/member fuchsia.device.manager/Fragment.name string:32
 struct fuchsia.device.manager/Fragment
 const fuchsia.device.manager/METADATA_BYTES_MAX uint32 8192
 const fuchsia.device.manager/METADATA_MAX uint32 32
+struct/member fuchsia.device.manager/NewProxyDevice.incoming_dir fuchsia.io/Directory
+resource struct fuchsia.device.manager/NewProxyDevice
 const fuchsia.device.manager/PROPERTIES_MAX uint32 256
 union/member fuchsia.device.manager/PropertyValue.bool_value bool
 union/member fuchsia.device.manager/PropertyValue.int_value uint32
 union/member fuchsia.device.manager/PropertyValue.str_value string:255
 strict union fuchsia.device.manager/PropertyValue
+struct/member fuchsia.device.manager/ProxyDevice.driver zx/handle:VMO
+struct/member fuchsia.device.manager/ProxyDevice.driver_path string:1024
+struct/member fuchsia.device.manager/ProxyDevice.parent_proxy zx/handle:CHANNEL
+struct/member fuchsia.device.manager/ProxyDevice.proxy_args string:<1024,optional>
+resource struct fuchsia.device.manager/ProxyDevice
 const fuchsia.device.manager/STR_LENGTH_MAX uint32 255
 const fuchsia.device.manager/STR_PROPERTIES_MAX uint32 256
 const fuchsia.device.manager/SUSPEND_FLAG_MEXEC uint32 3705406208
@@ -155,6 +168,8 @@ const fuchsia.device.manager/SUSPEND_FLAG_REBOOT uint32 3705405696
 const fuchsia.device.manager/SUSPEND_FLAG_REBOOT_BOOTLOADER uint32 3705405697
 const fuchsia.device.manager/SUSPEND_FLAG_REBOOT_RECOVERY uint32 3705405698
 const fuchsia.device.manager/SUSPEND_FLAG_SUSPEND_RAM uint32 3705406464
+struct/member fuchsia.device.manager/StubDevice.protocol_id uint32
+struct fuchsia.device.manager/StubDevice
 protocol/member fuchsia.device.manager/SystemStateTransition.SetTerminationSystemState(fuchsia.hardware.power.statecontrol/SystemPowerState state) -> (fuchsia.device.manager/SystemStateTransition_SetTerminationSystemState_Result result)
 protocol fuchsia.device.manager/SystemStateTransition
 struct fuchsia.device.manager/SystemStateTransition_SetTerminationSystemState_Response

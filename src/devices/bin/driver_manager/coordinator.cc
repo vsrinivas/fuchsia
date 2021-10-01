@@ -8,6 +8,7 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <fidl/fuchsia.boot/cpp/wire.h>
+#include <fidl/fuchsia.device.manager/cpp/wire.h>
 #include <fidl/fuchsia.hardware.power.statecontrol/cpp/wire.h>
 #include <fidl/fuchsia.io/cpp/wire.h>
 #include <fidl/fuchsia.pkg/cpp/wire.h>
@@ -22,6 +23,7 @@
 #include <lib/fidl-async/bind.h>
 #include <lib/fidl-async/cpp/bind.h>
 #include <lib/fidl/coding.h>
+#include <lib/fidl/llcpp/arena.h>
 #include <lib/fit/defer.h>
 #include <lib/fzl/owned-vmo-mapper.h>
 #include <lib/service/llcpp/service.h>
@@ -52,6 +54,7 @@
 #include <inspector/inspector.h>
 
 #include "driver_host_loader_service.h"
+#include "lib/fidl/llcpp/wire_messaging.h"
 #include "src/devices/bin/driver_manager/composite_device.h"
 #include "src/devices/bin/driver_manager/devfs.h"
 #include "src/devices/bin/driver_manager/driver_host_loader_service.h"
@@ -213,12 +216,14 @@ zx_status_t Coordinator::InitCoreDevices(std::string_view sys_device_driver) {
     driver_loader_.LoadDriverUrl(string);
   }
 
-  root_device_ = fbl::MakeRefCounted<Device>(this, "root", fbl::String(), "root,", nullptr,
-                                             ZX_PROTOCOL_ROOT, zx::vmo(), zx::channel());
+  root_device_ =
+      fbl::MakeRefCounted<Device>(this, "root", fbl::String(), "root,", nullptr, ZX_PROTOCOL_ROOT,
+                                  zx::vmo(), zx::channel(), fidl::ClientEnd<fio::Directory>());
   root_device_->flags = DEV_CTX_IMMORTAL | DEV_CTX_MUST_ISOLATE | DEV_CTX_MULTI_BIND;
 
-  sys_device_ = fbl::MakeRefCounted<Device>(this, "sys", sys_device_driver, "sys,", root_device_, 0,
-                                            zx::vmo(), zx::channel());
+  sys_device_ =
+      fbl::MakeRefCounted<Device>(this, "sys", sys_device_driver, "sys,", root_device_, 0,
+                                  zx::vmo(), zx::channel(), fidl::ClientEnd<fio::Directory>());
   sys_device_->flags = DEV_CTX_IMMORTAL | DEV_CTX_MUST_ISOLATE;
 
   return ZX_OK;
@@ -467,7 +472,8 @@ zx_status_t Coordinator::AddDevice(
     const fdm::wire::DeviceStrProperty* str_props_data, size_t str_props_count,
     std::string_view name, uint32_t protocol_id, std::string_view driver_path,
     std::string_view args, bool skip_autobind, bool has_init, bool always_init, zx::vmo inspect,
-    zx::channel client_remote, fbl::RefPtr<Device>* new_device) {
+    zx::channel client_remote, fidl::ClientEnd<fio::Directory> outgoing_dir,
+    fbl::RefPtr<Device>* new_device) {
   // If this is true, then |name_data|'s size is properly bounded.
   static_assert(fdm::wire::kDeviceNameMax == ZX_DEVICE_NAME_MAX);
   static_assert(fdm::wire::kPropertiesMax <= UINT32_MAX);
@@ -524,11 +530,11 @@ zx_status_t Coordinator::AddDevice(
   // TODO(fxbug.dev/43370): remove this check once init tasks can be enabled for all devices.
   bool want_init_task = has_init || always_init;
   fbl::RefPtr<Device> dev;
-  zx_status_t status =
-      Device::Create(this, parent, std::move(name_str), std::move(driver_path_str),
-                     std::move(args_str), protocol_id, std::move(props), std::move(str_props),
-                     std::move(coordinator), std::move(device_controller), want_init_task,
-                     skip_autobind, std::move(inspect), std::move(client_remote), &dev);
+  zx_status_t status = Device::Create(
+      this, parent, std::move(name_str), std::move(driver_path_str), std::move(args_str),
+      protocol_id, std::move(props), std::move(str_props), std::move(coordinator),
+      std::move(device_controller), want_init_task, skip_autobind, std::move(inspect),
+      std::move(client_remote), std::move(outgoing_dir), &dev);
   if (status != ZX_OK) {
     return status;
   }
@@ -922,8 +928,8 @@ zx_status_t Coordinator::AddMetadata(const fbl::RefPtr<Device>& dev, uint32_t ty
 namespace {
 
 // send message to driver_host, requesting the creation of a device
-zx_status_t CreateDevice(const fbl::RefPtr<Device>& dev, fbl::RefPtr<DriverHost>& dh,
-                         const char* args, zx::handle rpc_proxy) {
+zx_status_t CreateProxyDevice(const fbl::RefPtr<Device>& dev, fbl::RefPtr<DriverHost>& dh,
+                              const char* args, zx::channel rpc_proxy) {
   auto coordinator_endpoints = fidl::CreateEndpoints<fdm::Coordinator>();
   if (coordinator_endpoints.is_error()) {
     return coordinator_endpoints.error_value();
@@ -931,6 +937,7 @@ zx_status_t CreateDevice(const fbl::RefPtr<Device>& dev, fbl::RefPtr<DriverHost>
 
   auto device_controller_request = dev->ConnectDeviceController(dev->coordinator->dispatcher());
 
+  fidl::Arena arena;
   if (dev->libname().size() != 0) {
     zx::vmo vmo;
     if (auto status = dev->coordinator->LibnameToVmo(dev->libname(), &vmo); status != ZX_OK) {
@@ -940,20 +947,66 @@ zx_status_t CreateDevice(const fbl::RefPtr<Device>& dev, fbl::RefPtr<DriverHost>
     auto driver_path = fidl::StringView::FromExternal(dev->libname().data(), dev->libname().size());
     auto args_view = fidl::StringView::FromExternal(args, strlen(args));
 
-    auto result = dh->controller()->CreateDevice(
-        std::move(coordinator_endpoints->client), std::move(device_controller_request), driver_path,
-        std::move(vmo), std::move(rpc_proxy), args_view, dev->local_id());
-    if (!result.ok()) {
-      return result.status();
-    }
+    fdm::wire::ProxyDevice proxy{driver_path, std::move(vmo), std::move(rpc_proxy), args_view};
+    auto type = fdm::wire::DeviceType::WithProxy(arena, std::move(proxy));
+
+    dh->controller()->CreateDevice(
+        std::move(coordinator_endpoints->client), std::move(device_controller_request),
+        std::move(type), dev->local_id(),
+        [](fidl::WireUnownedResult<fdm::DriverHostController::CreateDevice>& result) {
+          if (!result.ok()) {
+            LOGF(ERROR, "Failed to create device: %s", result.error().FormatDescription().c_str());
+            return;
+          }
+          if (result->status != ZX_OK) {
+            LOGF(ERROR, "Failed to create device: %s", zx_status_get_string(result->status));
+          }
+        });
   } else {
-    auto result = dh->controller()->CreateDeviceStub(std::move(coordinator_endpoints->client),
-                                                     std::move(device_controller_request),
-                                                     dev->protocol_id(), dev->local_id());
-    if (!result.ok()) {
-      return result.status();
-    }
+    fdm::wire::StubDevice stub{dev->protocol_id()};
+    auto type = fdm::wire::DeviceType::WithStub(stub);
+    dh->controller()->CreateDevice(
+        std::move(coordinator_endpoints->client), std::move(device_controller_request),
+        std::move(type), dev->local_id(),
+        [](fidl::WireUnownedResult<fdm::DriverHostController::CreateDevice>& result) {
+          if (!result.ok()) {
+            LOGF(ERROR, "Failed to create device: %s", result.error().FormatDescription().c_str());
+            return;
+          }
+          if (result->status != ZX_OK) {
+            LOGF(ERROR, "Failed to create device: %s", zx_status_get_string(result->status));
+          }
+        });
   }
+
+  Device::Bind(dev, dev->coordinator->dispatcher(), std::move(coordinator_endpoints->server));
+  return ZX_OK;
+}
+
+zx_status_t CreateNewProxyDevice(const fbl::RefPtr<Device>& dev, fbl::RefPtr<DriverHost>& dh,
+                                 fidl::ClientEnd<fio::Directory> incoming_dir) {
+  auto coordinator_endpoints = fidl::CreateEndpoints<fdm::Coordinator>();
+  if (coordinator_endpoints.is_error()) {
+    return coordinator_endpoints.error_value();
+  }
+
+  auto device_controller_request = dev->ConnectDeviceController(dev->coordinator->dispatcher());
+
+  fdm::wire::NewProxyDevice new_proxy{std::move(incoming_dir)};
+  auto type = fdm::wire::DeviceType::WithNewProxy(std::move(new_proxy));
+
+  dh->controller()->CreateDevice(
+      std::move(coordinator_endpoints->client), std::move(device_controller_request),
+      std::move(type), dev->local_id(),
+      [](fidl::WireUnownedResult<fdm::DriverHostController::CreateDevice>& result) {
+        if (!result.ok()) {
+          LOGF(ERROR, "Failed to create device: %s", result.error().FormatDescription().c_str());
+          return;
+        }
+        if (result->status != ZX_OK) {
+          LOGF(ERROR, "Failed to create device: %s", zx_status_get_string(result->status));
+        }
+      });
 
   Device::Bind(dev, dev->coordinator->dispatcher(), std::move(coordinator_endpoints->server));
   return ZX_OK;
@@ -1076,7 +1129,7 @@ zx_status_t Coordinator::PrepareProxy(const fbl::RefPtr<Device>& dev,
     }
 
     dev->proxy()->set_host(std::move(target_driver_host));
-    if ((r = CreateDevice(dev->proxy(), dev->proxy()->host(), arg1, std::move(h1))) < 0) {
+    if ((r = CreateProxyDevice(dev->proxy(), dev->proxy()->host(), arg1, std::move(h1))) < 0) {
       LOGF(ERROR, "Failed to create proxy device '%s' in driver_host '%s': %s", dev->name().data(),
            driver_hostname, zx_status_get_string(r));
       return r;
@@ -1105,6 +1158,40 @@ zx_status_t Coordinator::PrepareProxy(const fbl::RefPtr<Device>& dev,
   return ZX_OK;
 }
 
+zx_status_t Coordinator::PrepareNewProxy(const fbl::RefPtr<Device>& dev,
+                                         fbl::RefPtr<DriverHost> target_driver_host) {
+  ZX_ASSERT(dev->flags & DEV_CTX_MUST_ISOLATE);
+
+  zx_status_t status;
+  if (dev->new_proxy() == nullptr && (status = dev->CreateNewProxy()) != ZX_OK) {
+    LOGF(ERROR, "Cannot create new proxy device '%s': %s", dev->name().data(),
+         zx_status_get_string(status));
+    return status;
+  }
+
+  char driver_hostname[32];
+  snprintf(driver_hostname, sizeof(driver_hostname), "driver_host:%.*s",
+           static_cast<int>(dev->name().size()), dev->name().data());
+
+  if (target_driver_host == nullptr) {
+    if (status = NewDriverHost(driver_hostname, &target_driver_host); status != ZX_OK) {
+      LOGF(ERROR, "Failed to create driver_host '%s': %s", driver_hostname,
+           zx_status_get_string(status));
+      return status;
+    }
+  }
+  dev->new_proxy()->set_host(std::move(target_driver_host));
+  if (status = CreateNewProxyDevice(dev->new_proxy(), dev->new_proxy()->host(),
+                                    dev->take_outgoing_dir());
+      status != ZX_OK) {
+    LOGF(ERROR, "Failed to create proxy device '%s' in driver_host '%s': %s", dev->name().data(),
+         driver_hostname, zx_status_get_string(status));
+    return status;
+  }
+
+  return ZX_OK;
+}
+
 zx_status_t Coordinator::AttemptBind(const Driver* drv, const fbl::RefPtr<Device>& dev) {
   if (!driver_host_is_asan() && drv->flags & ZIRCON_DRIVER_NOTE_FLAG_ASAN) {
     LOGF(ERROR, "%s (%s) requires ASAN, but we are not in an ASAN environment", drv->libname.data(),
@@ -1117,6 +1204,7 @@ zx_status_t Coordinator::AttemptBind(const Driver* drv, const fbl::RefPtr<Device
     return ZX_ERR_ALREADY_BOUND;
   }
   if (!(dev->flags & DEV_CTX_MUST_ISOLATE)) {
+    VLOGF(1, "Binding driver to %s in same driver host as parent", dev->name().data());
     // non-busdev is pretty simple
     if (dev->host() == nullptr) {
       LOGF(ERROR, "Cannot bind to device '%s', it has no driver_host", dev->name().data());
@@ -1125,17 +1213,27 @@ zx_status_t Coordinator::AttemptBind(const Driver* drv, const fbl::RefPtr<Device
     return ::BindDriver(dev, drv->libname.c_str());
   }
 
-  zx_status_t r;
-  if ((r = PrepareProxy(dev, nullptr /* target_driver_host */)) < 0) {
-    return r;
+  zx_status_t status;
+  if (dev->has_outgoing_directory()) {
+    VLOGF(1, "Preparing new proxy for %s", dev->name().data());
+    status = PrepareNewProxy(dev, nullptr);
+    if (status != ZX_OK) {
+      return status;
+    }
+    status = ::BindDriver(dev->new_proxy(), drv->libname.c_str());
+  } else {
+    VLOGF(1, "Preparing old proxy for %s", dev->name().data());
+    status = PrepareProxy(dev, nullptr /* target_driver_host */);
+    if (status != ZX_OK) {
+      return status;
+    }
+    status = ::BindDriver(dev->proxy(), drv->libname.c_str());
   }
-
-  r = ::BindDriver(dev->proxy(), drv->libname.c_str());
   // TODO(swetland): arrange to mark us unbound when the proxy (or its driver_host) goes away
-  if ((r == ZX_OK) && !(dev->flags & DEV_CTX_MULTI_BIND)) {
+  if ((status == ZX_OK) && !(dev->flags & DEV_CTX_MULTI_BIND)) {
     dev->flags |= DEV_CTX_BOUND;
   }
-  return r;
+  return status;
 }
 
 void Coordinator::HandleNewDevice(const fbl::RefPtr<Device>& dev) {

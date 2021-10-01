@@ -10,6 +10,7 @@
 #include <fbl/auto_lock.h>
 
 #include "composite_device.h"
+#include "proxy_device.h"
 #include "src/devices/lib/log/log.h"
 #include "src/lib/storage/vfs/cpp/vfs.h"
 

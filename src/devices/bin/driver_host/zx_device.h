@@ -7,6 +7,8 @@
 
 #include <fidl/fuchsia.device.manager/cpp/wire.h>
 #include <fidl/fuchsia.device/cpp/wire.h>
+#include <lib/async-loop/cpp/loop.h>
+#include <lib/async/dispatcher.h>
 #include <lib/ddk/debug.h>
 #include <lib/ddk/device.h>
 #include <lib/ddk/driver.h>
@@ -36,6 +38,7 @@
 #include "inspect.h"
 
 class CompositeDevice;
+class ProxyDevice;
 class DeviceControllerConnection;
 class DriverHostContext;
 class DeviceInspect;
@@ -274,7 +277,17 @@ struct zx_device
     protocol_id_ = protocol_id;
     inspect_->set_protocol_id(protocol_id);
   }
+
   void* protocol_ops = nullptr;
+
+  cpp20::span<const char*> fidl_offers() { return {fidl_offers_.data(), fidl_offers_.size()}; }
+
+  void set_fidl_offers(cpp20::span<const char*> fidl_offers) {
+    fidl_offers_ = {fidl_offers.begin(), fidl_offers.end()};
+    inspect_->set_fidl_offers(fidl_offers);
+  }
+
+  std::vector<const char*> fidl_offers_;
 
   // driver that has published this device
   zx_driver_t* driver = nullptr;
@@ -325,6 +338,12 @@ struct zx_device
   bool is_composite() const;
   fbl::RefPtr<CompositeDevice> composite();
 
+  void set_proxy(fbl::RefPtr<ProxyDevice> proxy);
+  fbl::RefPtr<ProxyDevice> take_proxy();
+
+  bool is_proxy() const;
+  fbl::RefPtr<ProxyDevice> proxy();
+
   const DevicePowerStates& GetPowerStates() const;
   const PerformanceStates& GetPerformanceStates() const;
 
@@ -373,6 +392,9 @@ struct zx_device
   DeviceInspect& inspect() { return *inspect_; }
   void FreeInspect() { inspect_.reset(); }
 
+  async_dispatcher_t* dispatcher() { return loop_.dispatcher(); }
+  void CancelWaitsAndTasks() { loop_.Shutdown(); }
+
  private:
   explicit zx_device(DriverHostContext* ctx, std::string name, zx_driver_t* driver);
 
@@ -410,6 +432,11 @@ struct zx_device
   // If this device is a fragment of a composite, or if this device is a composite device itsefl,
   // this points to the composite control structure.
   fbl::RefPtr<CompositeDevice> composite_;
+
+  // True when this device is a proxy device.
+  bool is_proxy_ = false;
+
+  fbl::RefPtr<ProxyDevice> proxy_;
 
   // Identifier assigned by devmgr that can be used to assemble composite
   // devices.
@@ -450,6 +477,9 @@ struct zx_device
 
   DriverHostContext* const driver_host_context_;
   std::optional<DeviceInspect> inspect_;
+
+  // Temporary until we implement a better option.
+  async::Loop loop_{&kAsyncLoopConfigNeverAttachToThread};
 };
 
 // zx_device_t objects must be created or initialized by the driver manager's

@@ -4,6 +4,7 @@
 
 #include "composite_device.h"
 
+#include <lib/fidl/llcpp/arena.h>
 #include <zircon/status.h>
 
 #include <string_view>
@@ -235,10 +236,13 @@ zx_status_t CompositeDevice::TryAssemble() {
   coordinator->devices().push_back(new_device);
 
   // Create the composite device in the driver_host
-  driver_host->controller()->CreateCompositeDevice(
+  fdm::wire::CompositeDevice composite{fragments, fidl::StringView::FromExternal(name())};
+  auto type = fdm::wire::DeviceType::WithComposite(allocator, composite);
+
+  driver_host->controller()->CreateDevice(
       std::move(coordinator_endpoints->client), std::move(device_controller_endpoints->server),
-      fragments, fidl::StringView::FromExternal(name()), new_device->local_id(),
-      [](fidl::WireUnownedResult<fdm::DriverHostController::CreateCompositeDevice>& result) {
+      std::move(type), new_device->local_id(),
+      [](fidl::WireUnownedResult<fdm::DriverHostController::CreateDevice>& result) {
         if (!result.ok()) {
           LOGF(ERROR, "Failed to create composite device: %s",
                result.error().FormatDescription().c_str());

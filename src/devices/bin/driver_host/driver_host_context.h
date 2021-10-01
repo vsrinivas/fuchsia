@@ -5,6 +5,7 @@
 #ifndef SRC_DEVICES_BIN_DRIVER_HOST_DRIVER_HOST_CONTEXT_H_
 #define SRC_DEVICES_BIN_DRIVER_HOST_DRIVER_HOST_CONTEXT_H_
 
+#include <fidl/fuchsia.io/cpp/wire.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/fit/function.h>
 #include <lib/zx/event.h>
@@ -44,7 +45,9 @@ class DriverHostContext {
                                const fbl::RefPtr<zx_device_t>& child, const char* proxy_args,
                                const zx_device_prop_t* props, uint32_t prop_count,
                                const zx_device_str_prop_t* str_props, uint32_t str_prop_count,
-                               zx::vmo inspect, zx::channel client_remote) TA_REQ(api_lock_);
+                               zx::vmo inspect, zx::channel client_remote,
+                               fidl::ClientEnd<fuchsia_io::Directory> outgoing_dir)
+      TA_REQ(api_lock_);
   // Note that DriverManagerRemove() takes a RefPtr rather than a const RefPtr&.
   // It intends to consume a reference.
   zx_status_t DriverManagerRemove(fbl::RefPtr<zx_device_t> dev) TA_REQ(api_lock_);
@@ -54,8 +57,8 @@ class DriverHostContext {
   zx_status_t DeviceAdd(const fbl::RefPtr<zx_device_t>& dev, const fbl::RefPtr<zx_device_t>& parent,
                         const zx_device_prop_t* props, uint32_t prop_count,
                         const zx_device_str_prop_t* str_props, uint32_t str_prop_count,
-                        const char* proxy_args, zx::vmo inspect, zx::channel client_remote)
-      TA_REQ(api_lock_);
+                        const char* proxy_args, zx::vmo inspect, zx::channel client_remote,
+                        fidl::ClientEnd<fuchsia_io::Directory> outgoing_dir) TA_REQ(api_lock_);
 
   zx_status_t DeviceInit(const fbl::RefPtr<zx_device_t>& dev) TA_REQ(api_lock_);
   void DeviceInitReply(const fbl::RefPtr<zx_device_t>& dev, zx_status_t status,

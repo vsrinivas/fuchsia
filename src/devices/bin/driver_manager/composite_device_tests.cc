@@ -63,21 +63,20 @@ class FakeDevhost : public fidl::WireServer<fuchsia_device_manager::DriverHostCo
         device_controller_server_(device_controller_server) {}
 
   void CreateDevice(CreateDeviceRequestView request,
-                    CreateDeviceCompleter::Sync& completer) override {}
-
-  void CreateCompositeDevice(CreateCompositeDeviceRequestView request,
-                             CreateCompositeDeviceCompleter::Sync& completer) override {
-    if (strncmp(expected_name_, request->name.data(), request->name.size()) == 0 &&
-        request->fragments.count() == expected_fragments_count_) {
-      *device_coordinator_client_ = std::move(request->coordinator_rpc);
-      *device_controller_server_ = std::move(request->device_controller_rpc);
-      completer.Reply(ZX_OK);
-      return;
+                    CreateDeviceCompleter::Sync& completer) override {
+    if (request->type.is_composite()) {
+      auto& composite = request->type.composite();
+      if (strncmp(expected_name_, composite.name.data(), composite.name.size()) == 0 &&
+          composite.fragments.count() == expected_fragments_count_) {
+        *device_coordinator_client_ = std::move(request->coordinator);
+        *device_controller_server_ = std::move(request->device_controller);
+        completer.Reply(ZX_OK);
+        return;
+      }
+      completer.Reply(ZX_ERR_INTERNAL);
     }
-    completer.Reply(ZX_ERR_INTERNAL);
   }
-  void CreateDeviceStub(CreateDeviceStubRequestView request,
-                        CreateDeviceStubCompleter::Sync& completer) override {}
+
   void Restart(RestartRequestView request, RestartCompleter::Sync& completer) override {}
 
  private:

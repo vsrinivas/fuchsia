@@ -6,6 +6,7 @@
 #include <lib/ddk/device.h>
 #include <lib/ddk/driver.h>
 #include <lib/ddk/fragment-device.h>
+#include <lib/fidl/llcpp/client_end.h>
 #include <lib/syslog/logger.h>
 #include <lib/zx/process.h>
 #include <stdarg.h>
@@ -20,8 +21,10 @@
 
 #include "src/devices/bin/driver_host/composite_device.h"
 #include "src/devices/bin/driver_host/driver_host.h"
-#include "src/devices/bin/driver_host/env.h"
+#include "src/devices/bin/driver_host/proxy_device.h"
 #include "src/devices/bin/driver_host/scheduler_profile.h"
+
+namespace fio = fuchsia_io;
 
 // These are the API entry-points from drivers
 // They must take the internal::api_lock before calling internal::* internals
@@ -29,6 +32,7 @@
 // Driver code MUST NOT directly call internal::* APIs
 
 // LibDriver Device Interface
+//
 
 #define ALLOWED_FLAGS                                                        \
   (DEVICE_ADD_NON_BINDABLE | DEVICE_ADD_INSTANCE | DEVICE_ADD_MUST_ISOLATE | \
@@ -108,6 +112,9 @@ __EXPORT zx_status_t device_add_from_driver(zx_driver_t* drv, zx_device_t* paren
       dev->set_protocol_id(args->proto_id);
       dev->protocol_ops = args->proto_ops;
     }
+    if (args->fidl_protocol_offers) {
+      dev->set_fidl_offers({args->fidl_protocol_offers, args->fidl_protocol_offer_count});
+    }
     if (args->flags & DEVICE_ADD_NON_BINDABLE) {
       dev->set_flag(DEV_FLAG_UNBINDABLE);
     }
@@ -145,6 +152,13 @@ __EXPORT zx_status_t device_add_from_driver(zx_driver_t* drv, zx_device_t* paren
       return r;
     }
 
+    fidl::ClientEnd<fio::Directory> outgoing_dir(zx::channel(args->outgoing_dir_channel));
+    if (outgoing_dir && !(args->flags & DEVICE_ADD_MUST_ISOLATE)) {
+      // It is only valid to provide outgoing_dir if child is meant to be spawned in another driver
+      // host.
+      return ZX_ERR_INVALID_ARGS;
+    }
+
     // out must be set before calling DeviceAdd().
     // DeviceAdd() may result in child devices being created before it returns,
     // and those children may call ops on the device before device_add() returns.
@@ -155,15 +169,15 @@ __EXPORT zx_status_t device_add_from_driver(zx_driver_t* drv, zx_device_t* paren
     if (args->flags & DEVICE_ADD_MUST_ISOLATE) {
       r = api_ctx->DeviceAdd(dev, parent_ref, args->props, args->prop_count, args->str_props,
                              args->str_prop_count, args->proxy_args, std::move(inspect),
-                             std::move(client_remote));
+                             std::move(client_remote), std::move(outgoing_dir));
     } else if (args->flags & DEVICE_ADD_INSTANCE) {
       dev->set_flag(DEV_FLAG_INSTANCE | DEV_FLAG_UNBINDABLE);
       r = api_ctx->DeviceAdd(dev, parent_ref, nullptr, 0, nullptr, 0, nullptr, zx::vmo(),
-                             zx::channel() /* client_remote */);
+                             zx::channel() /* client_remote */, fidl::ClientEnd<fio::Directory>());
     } else {
       r = api_ctx->DeviceAdd(dev, parent_ref, args->props, args->prop_count, args->str_props,
                              args->str_prop_count, nullptr, std::move(inspect),
-                             zx::channel() /* client_remote */);
+                             zx::channel() /* client_remote */, fidl::ClientEnd<fio::Directory>());
     }
     if (r != ZX_OK) {
       if (out) {
@@ -473,4 +487,16 @@ __EXPORT zx_status_t device_get_fragment_metadata(zx_device_t* dev, const char* 
     return ZX_ERR_NOT_FOUND;
   }
   return device_get_metadata(fragment, type, buf, buflen, actual);
+}
+
+__EXPORT zx_status_t device_connect_fidl_protocol(zx_device_t* device, const char* protocol_name,
+                                                  zx_handle_t request) {
+  if (!device->is_proxy()) {
+    return ZX_ERR_NOT_SUPPORTED;
+  }
+  return device->proxy()->ConnectToProtocol(protocol_name, zx::channel(request)).status_value();
+}
+
+__EXPORT async_dispatcher_t* device_get_dispatcher(zx_device_t* device) {
+  return device->dispatcher();
 }

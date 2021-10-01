@@ -5,6 +5,7 @@
 #ifndef SRC_LIB_DDK_INCLUDE_LIB_DDK_DRIVER_H_
 #define SRC_LIB_DDK_INCLUDE_LIB_DDK_DRIVER_H_
 
+#include <lib/async/dispatcher.h>
 #include <stdint.h>
 #include <zircon/compiler.h>
 #include <zircon/types.h>
@@ -154,6 +155,15 @@ typedef struct device_add_args {
 
   // Optional custom protocol operations for this device
   void* proto_ops;
+
+  // Optional list of fidl protocols to offer to child driver.
+  // These protocols will automatically be added as bind properties which may be used in
+  // bind rules.
+  const char** fidl_protocol_offers;
+
+  // The number of elements in the above list.
+  size_t fidl_protocol_offer_count;
+
   // Arguments used with DEVICE_ADD_MUST_ISOLATE
   // these will be passed to the create() driver op of
   // the proxy device in the new devhost
@@ -168,6 +178,12 @@ typedef struct device_add_args {
 
   // Optional VMO representing that will get used in devfs inspect tree.
   zx_handle_t inspect_vmo;
+
+  // Optional client channel end for a fuchsia.io.Directory hosting fidl services specified in
+  // |fidl_service_offers|.
+  // If provided, the `DEVICE_ADD_MUST_ISOLATE` flag must also be specified, and a proxy will not be
+  // spawned.
+  zx_handle_t outgoing_dir_channel;
 } device_add_args_t;
 
 typedef struct device_init_reply_args {
@@ -382,6 +398,16 @@ static inline zx_status_t load_firmware(zx_device_t* device, const char* path, z
                                         size_t* size) {
   return load_firmware_from_driver(__zircon_driver_rec__.driver, device, path, fw, size);
 }
+
+// Opens a connection to specified fidl protocol on the specified device.
+// |request| must be the server end of a zircon channel.
+zx_status_t device_connect_fidl_protocol(zx_device_t* device, const char* protocol_name,
+                                         zx_handle_t request);
+
+// Returns an async dispatcher. It may be multithreaded, so user must take care to not assume
+// callbacks will be serialized in a single thread. All outstanding waits will be canceled once
+// device_unbind_reply is called.
+async_dispatcher_t* device_get_dispatcher(zx_device_t* device);
 
 // Protocol Identifiers
 #define DDK_PROTOCOL_DEF(tag, val, name, flags) ZX_PROTOCOL_##tag = val,

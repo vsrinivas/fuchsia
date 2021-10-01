@@ -36,6 +36,7 @@ source_set("common") {
     "driver_host_context.cc",
     "env.cc",
     "inspect.cc",
+    "proxy_device.cc",
     "proxy_iostate.cc",
     "scheduler_profile.cc",
     "tracing.cc",
@@ -71,6 +72,7 @@ source_set("common") {
     "//zircon/system/ulib/service:service-llcpp",
     "//zircon/system/ulib/trace",
     "//zircon/system/ulib/trace-provider:trace-provider-with-fdio",
+    "//zircon/system/ulib/zxc",
   ]
 
   configs += [ "//build/config:all_source" ]

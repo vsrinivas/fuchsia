@@ -47,27 +47,30 @@ class FidlTransaction : public fidl::Transaction {
   std::optional<fidl::UnbindInfo> detected_error_;
 };
 
-class FakeDevhost : public fidl::WireServer<fdm::DriverHostController> {
+class FakeDriverHost : public fidl::WireServer<fdm::DriverHostController> {
  public:
-  FakeDevhost(const char* expected_driver,
-              fidl::ClientEnd<fuchsia_device_manager::Coordinator>* device_coordinator_client,
-              fidl::ServerEnd<fuchsia_device_manager::DeviceController>* device_controller_server)
+  FakeDriverHost(
+      const char* expected_driver,
+      fidl::ClientEnd<fuchsia_device_manager::Coordinator>* device_coordinator_client,
+      fidl::ServerEnd<fuchsia_device_manager::DeviceController>* device_controller_server)
       : expected_driver_(expected_driver),
         device_coordinator_client_(device_coordinator_client),
         device_controller_server_(device_controller_server) {}
 
   void CreateDevice(CreateDeviceRequestView request,
                     CreateDeviceCompleter::Sync& completer) override {
-    if (strncmp(expected_driver_, request->driver_path.data(), request->driver_path.size()) == 0) {
-      *device_coordinator_client_ = std::move(request->coordinator_rpc);
-      *device_controller_server_ = std::move(request->device_controller_rpc);
+    if (request->type.is_proxy()) {
+      auto& proxy = request->type.proxy();
+      if (strncmp(expected_driver_, proxy.driver_path.data(), proxy.driver_path.size()) == 0) {
+        *device_coordinator_client_ = std::move(request->coordinator);
+        *device_controller_server_ = std::move(request->device_controller);
+        completer.Reply(ZX_OK);
+        return;
+      }
     }
+    completer.Reply(ZX_ERR_INTERNAL);
   }
 
-  void CreateCompositeDevice(CreateCompositeDeviceRequestView request,
-                             CreateCompositeDeviceCompleter::Sync& completer) override {}
-  void CreateDeviceStub(CreateDeviceStubRequestView request,
-                        CreateDeviceStubCompleter::Sync& completer) override {}
   void Restart(RestartRequestView request, RestartCompleter::Sync& completer) override {}
 
  private:
@@ -95,7 +98,7 @@ void MultipleDeviceTestCase::CheckCreateDeviceReceived(
   auto* header = msg.header();
   FidlTransaction txn(header->txid, zx::unowned(devhost_controller.channel()));
 
-  FakeDevhost fake(expected_driver, device_coordinator_client, device_controller_server);
+  FakeDriverHost fake(expected_driver, device_coordinator_client, device_controller_server);
   fidl::WireDispatch(&fake, std::move(msg), &txn);
   ASSERT_FALSE(txn.detected_error());
   ASSERT_TRUE(device_coordinator_client->is_valid());
@@ -245,7 +248,8 @@ void MultipleDeviceTestCase::SetUp() {
         /* driver_path */ {},
         /* args */ {}, /* skip_autobind */ false, /* has_init */ false,
         /* always_init */ true,
-        /*inspect*/ zx::vmo(), /* client_remote */ zx::channel(), &platform_bus_.device);
+        /*inspect*/ zx::vmo(), /* client_remote */ zx::channel(),
+        /* outgoing_dir */ fidl::ClientEnd<fio::Directory>(), &platform_bus_.device);
     ASSERT_OK(status);
     coordinator_loop_.RunUntilIdle();
 
@@ -309,7 +313,8 @@ void MultipleDeviceTestCase::AddDevice(const fbl::RefPtr<Device>& parent, const 
       /* props_count */ 0, /* str_props_data */ nullptr,
       /* str_props_count */ 0, name, /* driver_path */ protocol_id, driver.data(), /* args */ {},
       /* skip_autobind */ false, has_init, always_init, std::move(inspect),
-      /* client_remote */ zx::channel(), &state.device);
+      /* client_remote */ zx::channel(), /* outgoing_dir */ fidl::ClientEnd<fio::Directory>(),
+      &state.device);
   state.device->flags |= DEV_CTX_ALLOW_MULTI_COMPOSITE;
   ASSERT_OK(status);
   coordinator_loop_.RunUntilIdle();
@@ -347,7 +352,8 @@ void MultipleDeviceTestCase::AddDeviceSkipAutobind(const fbl::RefPtr<Device>& pa
       /* str_props_count */ 0, name, /* driver_path */ protocol_id, /* driver */ "", /* args */ {},
       /* skip_autobind */ true, /* has_init */ false, /* always_init */ true,
       /* inspect */ zx::vmo(),
-      /* client_remote */ zx::channel(), &state.device);
+      /* client_remote */ zx::channel(), /* outgoing_dir */ fidl::ClientEnd<fio::Directory>(),
+      &state.device);
   ASSERT_OK(status);
   coordinator_loop_.RunUntilIdle();
 

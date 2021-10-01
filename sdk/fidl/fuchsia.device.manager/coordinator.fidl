@@ -195,55 +195,54 @@ type Fragment = struct {
     id LocalDeviceId;
 };
 
+type StubDevice = struct {
+    protocol_id uint32;
+};
+
+type ProxyDevice = resource struct {
+    driver_path string:DEVICE_PATH_MAX;
+    driver zx.handle:VMO;
+    parent_proxy zx.handle:CHANNEL;
+    proxy_args string:<DEVICE_ARGS_MAX, optional>;
+};
+
+type NewProxyDevice = resource struct {
+    incoming_dir client_end:fuchsia.io.Directory;
+};
+
+type CompositeDevice = struct {
+    fragments vector<Fragment>:FRAGMENTS_MAX;
+    name string:DEVICE_NAME_MAX;
+};
+
+type DeviceType = resource union {
+    /// The device has no parent to communicate with and no driver to load.
+    1: stub StubDevice;
+
+    /// The device acts as a proxy for it's parent and talks to it via it's
+    /// proxy channel.
+    2: proxy ProxyDevice;
+
+    /// The parent device lives in another driver host, and provides a directory
+    /// of protocols. This will replace ProxyDevice eventually.
+    3: new_proxy NewProxyDevice;
+
+    /// The device is a composite device with several parents, referred to as
+    /// fragments. The device aggregates all parent devices together. The order of the
+    /// fragments will match the original composite creation request.
+    4: composite CompositeDevice;
+};
+
 /// Protocol for controlling a driver host process from the driver manager
 protocol DriverHostController {
-    /// Create a device in the devhost that only implements the device protocol
-    /// and claims to support the given `protocol_id`.  This device will communicate
-    /// with the devcoordinator via `coordinator`. Implements DeviceController on device_controller_rpc
-    CreateDeviceStub(resource struct {
-        coordinator_rpc client_end:Coordinator;
-        device_controller_rpc server_end:DeviceController;
-        protocol_id uint32;
-        local_device_id LocalDeviceId;
-    });
-
-    /// Create a device in the devhost representing the shadowed half of device
-    /// in another devhost.  This new device will communicate with the devcoordinator
-    /// via `rpc`, and with its other half via `parent_proxy`.
-    ///
-    /// The new device will have the given driver responsible for running its half
-    /// of the driver's cross-process protocol.  It's create() method will be invoked,
-    /// giving it access to `parent_proxy` and `proxy_args`.
-    ///
-    /// parent_proxy, if present, will usually be a channel to the upper half of
-    /// a shadowed device.  The one exception is when this method is used
-    /// to create the Platform Bus, in which case it will be a channel to a
-    /// fuchsia.boot.Items protocol.
+    /// Create a device in the driver host. |type| describes what type of device
+    /// is set up, how it communicates with it's parent (if it has one).
     ///
     /// `local_device_id` will be a unique value within the device's devhost
     CreateDevice(resource struct {
-        coordinator_rpc client_end:Coordinator;
-        device_controller_rpc server_end:DeviceController;
-        driver_path string:DEVICE_PATH_MAX;
-        driver zx.handle:VMO;
-        parent_proxy zx.handle:optional;
-        proxy_args string:<DEVICE_ARGS_MAX, optional>;
-        local_device_id LocalDeviceId;
-    });
-
-    /// Introduce a composite device that has the given name and properties.
-    /// `fragments` will be a list of all of the composite's fragments,
-    /// described using devhost local device ids.  The order of the fragments
-    /// will match the original composite creation request.  The new device will
-    /// communicate with devcoordinator via `rpc`.
-    ///
-    /// `local_device_id` will be a unique value within the device's devhost, identifying
-    /// the resulting composite device.
-    CreateCompositeDevice(resource struct {
-        coordinator_rpc client_end:Coordinator;
-        device_controller_rpc server_end:DeviceController;
-        fragments vector<Fragment>:FRAGMENTS_MAX;
-        name string:DEVICE_NAME_MAX;
+        coordinator client_end:Coordinator;
+        device_controller server_end:DeviceController;
+        type DeviceType;
         local_device_id LocalDeviceId;
     }) -> (struct {
         status zx.status;
@@ -280,6 +279,7 @@ protocol Coordinator {
         has_init bool;
         inspect zx.handle:<VMO, optional>;
         client_remote zx.handle:<CHANNEL, optional>;
+        outgoing_dir client_end:<fuchsia.io.Directory, optional>;
     }) -> (struct {
         local_device_id LocalDeviceId;
     }) error zx.status;

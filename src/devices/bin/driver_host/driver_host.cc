@@ -50,11 +50,14 @@
 #include "fidl_txn.h"
 #include "log.h"
 #include "main.h"
+#include "proxy_device.h"
 #include "proxy_iostate.h"
 #include "scheduler_profile.h"
 #include "tracing.h"
 
 namespace {
+
+namespace fio = fuchsia_io;
 
 bool property_value_type_valid(uint32_t value_type) {
   return value_type > ZX_DEVICE_PROPERTY_VALUE_UNDEFINED &&
@@ -230,13 +233,11 @@ void DriverHostContext::SetupDriverHostController(
 
 // Send message to driver_manager asking to add child device to
 // parent device.  Called under the api lock.
-zx_status_t DriverHostContext::DriverManagerAdd(const fbl::RefPtr<zx_device_t>& parent,
-                                                const fbl::RefPtr<zx_device_t>& child,
-                                                const char* proxy_args,
-                                                const zx_device_prop_t* props, uint32_t prop_count,
-                                                const zx_device_str_prop_t* str_props,
-                                                uint32_t str_prop_count, zx::vmo inspect,
-                                                zx::channel client_remote) {
+zx_status_t DriverHostContext::DriverManagerAdd(
+    const fbl::RefPtr<zx_device_t>& parent, const fbl::RefPtr<zx_device_t>& child,
+    const char* proxy_args, const zx_device_prop_t* props, uint32_t prop_count,
+    const zx_device_str_prop_t* str_props, uint32_t str_prop_count, zx::vmo inspect,
+    zx::channel client_remote, fidl::ClientEnd<fio::Directory> outgoing_dir) {
   using fuchsia_device_manager::wire::AddDeviceConfig;
   AddDeviceConfig add_device_config;
 
@@ -274,6 +275,13 @@ zx_status_t DriverHostContext::DriverManagerAdd(const fbl::RefPtr<zx_device_t>& 
     }
     str_props_list.push_back(convert_device_str_prop(str_props[i], allocator));
   }
+  for (const auto& offer : child->fidl_offers()) {
+    auto str_property = fuchsia_device_manager::wire::DeviceStrProperty{
+        .key = fidl::StringView(allocator, offer),
+        .value = fuchsia_device_manager::wire::PropertyValue::WithBoolValue(true),
+    };
+    str_props_list.push_back(str_property);
+  }
 
   const auto& coordinator_client = parent->coordinator_client;
   if (!coordinator_client) {
@@ -297,7 +305,8 @@ zx_status_t DriverHostContext::DriverManagerAdd(const fbl::RefPtr<zx_device_t>& 
       property_list, ::fidl::StringView::FromExternal(child->name()), child->protocol_id(),
       ::fidl::StringView::FromExternal(child->driver->libname()),
       ::fidl::StringView::FromExternal(proxy_args, proxy_args_len), add_device_config,
-      child->ops()->init /* has_init */, std::move(inspect), std::move(client_remote));
+      child->ops()->init /* has_init */, std::move(inspect), std::move(client_remote),
+      std::move(outgoing_dir));
   zx_status_t status = response.status();
   if (status == ZX_OK) {
     if (response.Unwrap()->result.is_response()) {
@@ -475,7 +484,61 @@ DriverHostContext* ContextForApi() { return kContextForApi; }
 
 void DriverHostControllerConnection::CreateDevice(CreateDeviceRequestView request,
                                                   CreateDeviceCompleter::Sync& completer) {
-  std::string_view driver_path(request->driver_path.data(), request->driver_path.size());
+  StatusOrConn newconn;
+  if (request->type.is_stub()) {
+    newconn = CreateStubDevice(request);
+  } else if (request->type.is_proxy()) {
+    newconn = CreateProxyDevice(request);
+  } else if (request->type.is_new_proxy()) {
+    newconn = CreateNewProxyDevice(request);
+  } else if (request->type.is_composite()) {
+    newconn = CreateCompositeDevice(request);
+  } else {
+    LOGF(ERROR, "Unexpected device type");
+    completer.Reply(ZX_ERR_NOT_SUPPORTED);
+    return;
+  }
+
+  if (newconn.is_error()) {
+    completer.Reply(newconn.status_value());
+    return;
+  }
+
+  DeviceControllerConnection::Bind(std::move(*newconn), std::move(request->device_controller),
+                                   driver_host_context_->loop().dispatcher());
+  completer.Reply(ZX_OK);
+}
+
+StatusOrConn DriverHostControllerConnection::CreateNewProxyDevice(
+    CreateDeviceRequestView& request) {
+  auto& proxy = request->type.mutable_new_proxy();
+
+  auto driver = GetProxyDriver(driver_host_context_);
+  if (driver == nullptr) {
+    return zx::error(ZX_ERR_INTERNAL);
+  }
+
+  fbl::RefPtr<zx_device_t> dev;
+  zx_status_t status = zx_device::Create(driver_host_context_, "proxy", driver.get(), &dev);
+  if (status != ZX_OK) {
+    return zx::error(status);
+  }
+  dev->set_local_id(request->local_device_id);
+
+  auto coordinator = fidl::WireSharedClient(std::move(request->coordinator),
+                                            driver_host_context_->loop().dispatcher());
+  auto newconn =
+      DeviceControllerConnection::Create(driver_host_context_, dev, std::move(coordinator));
+
+  InitializeProxyDevice(dev, std::move(proxy.incoming_dir));
+
+  VLOGF(1, "Created device proxy %p '%s'", dev.get(), dev->name());
+
+  return zx::ok(std::move(newconn));
+}
+
+StatusOrConn DriverHostControllerConnection::CreateProxyDevice(CreateDeviceRequestView& request) {
+  auto& proxy = request->type.mutable_proxy();
   // This does not operate under the driver_host api lock,
   // since the newly created device is not visible to
   // any API surface until a driver is bound to it.
@@ -483,26 +546,27 @@ void DriverHostControllerConnection::CreateDevice(CreateDeviceRequestView reques
 
   // named driver -- ask it to create the device
   fbl::RefPtr<zx_driver_t> drv;
-  zx_status_t r = driver_host_context_->FindDriver(driver_path, std::move(request->driver), &drv);
-  if (r != ZX_OK) {
-    LOGF(ERROR, "Failed to load driver '%.*s': %s", static_cast<int>(driver_path.size()),
-         driver_path.data(), zx_status_get_string(r));
-    return;
+  zx_status_t status =
+      driver_host_context_->FindDriver(proxy.driver_path.get(), std::move(proxy.driver), &drv);
+  if (status != ZX_OK) {
+    LOGF(ERROR, "Failed to load driver '%.*s': %s", static_cast<int>(proxy.driver_path.size()),
+         proxy.driver_path.data(), zx_status_get_string(status));
+    return zx::error(status);
   }
   if (!drv->has_create_op()) {
     LOGF(ERROR, "Driver does not support create operation");
-    return;
+    return zx::error(ZX_ERR_INTERNAL);
   }
 
-  auto coordinator = fidl::WireSharedClient(std::move(request->coordinator_rpc),
+  auto coordinator = fidl::WireSharedClient(std::move(request->coordinator),
                                             driver_host_context_->loop().dispatcher());
 
   // Create a dummy parent device for use in this call to Create
   fbl::RefPtr<zx_device> parent;
-  r = zx_device::Create(driver_host_context_, "device_create dummy", drv.get(), &parent);
-  if (r != ZX_OK) {
-    LOGF(ERROR, "Failed to create device: %s", zx_status_get_string(r));
-    return;
+  status = zx_device::Create(driver_host_context_, "device_create dummy", drv.get(), &parent);
+  if (status != ZX_OK) {
+    LOGF(ERROR, "Failed to create device: %s", zx_status_get_string(status));
+    return zx::error(status);
   }
   // magic cookie for device create handshake
   CreationContext creation_context = {
@@ -511,8 +575,8 @@ void DriverHostControllerConnection::CreateDevice(CreateDeviceRequestView reques
       .coordinator_client = coordinator.Clone(),
   };
 
-  r = drv->CreateOp(&creation_context, creation_context.parent, "proxy", request->proxy_args.data(),
-                    request->parent_proxy.release());
+  status = drv->CreateOp(&creation_context, creation_context.parent, "proxy",
+                         proxy.proxy_args.data(), proxy.parent_proxy.release());
 
   // Suppress a warning about dummy device being in a bad state.  The
   // message is spurious in this case, since the dummy parent never
@@ -520,22 +584,22 @@ void DriverHostControllerConnection::CreateDevice(CreateDeviceRequestView reques
   // set by device_remove().
   creation_context.parent->set_flag(DEV_FLAG_DEAD);
 
-  if (r != ZX_OK) {
+  if (status != ZX_OK) {
     constexpr char kLogFormat[] = "Failed to create driver: %s";
-    if (r == ZX_ERR_PEER_CLOSED) {
+    if (status == ZX_ERR_PEER_CLOSED) {
       // TODO(https://fxbug.dev/52627): change to an ERROR log once driver
       // manager can shut down gracefully.
-      LOGF(WARNING, kLogFormat, zx_status_get_string(r));
+      LOGF(WARNING, kLogFormat, zx_status_get_string(status));
     } else {
-      LOGF(ERROR, kLogFormat, zx_status_get_string(r));
+      LOGF(ERROR, kLogFormat, zx_status_get_string(status));
     }
-    return;
+    return zx::error(status);
   }
 
   auto new_device = std::move(creation_context.child);
   if (new_device == nullptr) {
     LOGF(ERROR, "Driver did not create a device");
-    return;
+    return zx::error(ZX_ERR_INTERNAL);
   }
 
   new_device->set_local_id(request->local_device_id);
@@ -543,30 +607,28 @@ void DriverHostControllerConnection::CreateDevice(CreateDeviceRequestView reques
                                                     std::move(coordinator));
 
   // TODO: inform devcoord
-  VLOGF(1, "Created device %p '%.*s'", new_device.get(), static_cast<int>(driver_path.size()),
-        driver_path.data());
-
-  DeviceControllerConnection::Bind(std::move(newconn), std::move(request->device_controller_rpc),
-                                   driver_host_context_->loop().dispatcher());
+  VLOGF(1, "Created device %p '%.*s'", new_device.get(), static_cast<int>(proxy.driver_path.size()),
+        proxy.driver_path.data());
+  return zx::ok(std::move(newconn));
 }
 
-void DriverHostControllerConnection::CreateCompositeDevice(
-    CreateCompositeDeviceRequestView request, CreateCompositeDeviceCompleter::Sync& completer) {
+StatusOrConn DriverHostControllerConnection::CreateCompositeDevice(
+    CreateDeviceRequestView& request) {
+  auto& composite = request->type.mutable_composite();
   // Convert the fragment IDs into zx_device references
-  CompositeFragments fragments_list(new CompositeFragment[request->fragments.count()],
-                                    request->fragments.count());
+  CompositeFragments fragments_list(new CompositeFragment[composite.fragments.count()],
+                                    composite.fragments.count());
   {
     // Acquire the API lock so that we don't have to worry about concurrent
     // device removes
     fbl::AutoLock lock(&driver_host_context_->api_lock());
 
-    for (size_t i = 0; i < request->fragments.count(); ++i) {
-      const auto& fragment = request->fragments.data()[i];
+    for (size_t i = 0; i < composite.fragments.count(); ++i) {
+      const auto& fragment = composite.fragments.data()[i];
       uint64_t local_id = fragment.id;
       fbl::RefPtr<zx_device_t> dev = zx_device::GetDeviceFromLocalId(local_id);
       if (dev == nullptr || (dev->flags() & DEV_FLAG_DEAD)) {
-        completer.Reply(ZX_ERR_NOT_FOUND);
-        return;
+        return zx::error(ZX_ERR_NOT_FOUND);
       }
       fragments_list[i].name = std::string(fragment.name.data(), fragment.name.size());
       fragments_list[i].device = std::move(dev);
@@ -575,69 +637,60 @@ void DriverHostControllerConnection::CreateCompositeDevice(
 
   auto driver = GetCompositeDriver(driver_host_context_);
   if (driver == nullptr) {
-    completer.Reply(ZX_ERR_INTERNAL);
-    return;
+    return zx::error(ZX_ERR_INTERNAL);
   }
 
   fbl::RefPtr<zx_device_t> dev;
   static_assert(fuchsia_device_manager::wire::kDeviceNameMax + 1 >= sizeof(dev->name()));
-  zx_status_t status = zx_device::Create(driver_host_context_,
-                                         std::string(request->name.data(), request->name.size()),
+  zx_status_t status = zx_device::Create(driver_host_context_, std::string(composite.name.get()),
                                          driver.get(), &dev);
   if (status != ZX_OK) {
-    completer.Reply(status);
-    return;
+    return zx::error(status);
   }
   dev->set_local_id(request->local_device_id);
 
-  auto coordinator = fidl::WireSharedClient(std::move(request->coordinator_rpc),
+  auto coordinator = fidl::WireSharedClient(std::move(request->coordinator),
                                             driver_host_context_->loop().dispatcher());
   auto newconn =
       DeviceControllerConnection::Create(driver_host_context_, dev, std::move(coordinator));
 
   status = InitializeCompositeDevice(dev, std::move(fragments_list));
   if (status != ZX_OK) {
-    completer.Reply(status);
-    return;
+    return zx::error(status);
   }
 
   VLOGF(1, "Created composite device %p '%s'", dev.get(), dev->name());
-  DeviceControllerConnection::Bind(std::move(newconn), std::move(request->device_controller_rpc),
-                                   driver_host_context_->loop().dispatcher());
-  completer.Reply(ZX_OK);
+  return zx::ok(std::move(newconn));
 }
 
-void DriverHostControllerConnection::CreateDeviceStub(CreateDeviceStubRequestView request,
-                                                      CreateDeviceStubCompleter::Sync& completer) {
+StatusOrConn DriverHostControllerConnection::CreateStubDevice(CreateDeviceRequestView& request) {
+  auto& stub = request->type.stub();
   // This method is used for creating driverless proxies in case of misc, root, test devices.
   // Since there are no proxy drivers backing the device, a dummy proxy driver will be used for
   // device creation.
-  if (!proxy_driver_) {
-    auto status =
-        zx_driver::Create("proxy", driver_host_context_->inspect().drivers(), &proxy_driver_);
-    if (status != ZX_OK) {
-      return;
-    }
+  auto driver = GetProxyDriver(driver_host_context_);
+  if (driver == nullptr) {
+    return zx::error(ZX_ERR_INTERNAL);
   }
 
   fbl::RefPtr<zx_device_t> dev;
-  zx_status_t r = zx_device::Create(driver_host_context_, "proxy", proxy_driver_.get(), &dev);
+  zx_status_t status = zx_device::Create(driver_host_context_, "proxy", driver.get(), &dev);
   // TODO: dev->ops() and other lifecycle bits
   // no name means a dummy proxy device
-  if (r != ZX_OK) {
-    return;
+  if (status != ZX_OK) {
+    return zx::error(status);
   }
-  dev->set_protocol_id(request->protocol_id);
+  dev->set_protocol_id(stub.protocol_id);
   dev->set_ops(&kDeviceDefaultOps);
   dev->set_local_id(request->local_device_id);
 
-  auto coordinator = fidl::WireSharedClient(std::move(request->coordinator_rpc),
+  auto coordinator = fidl::WireSharedClient(std::move(request->coordinator),
                                             driver_host_context_->loop().dispatcher());
   auto newconn =
       DeviceControllerConnection::Create(driver_host_context_, dev, std::move(coordinator));
   VLOGF(1, "Created device stub %p '%s'", dev.get(), dev->name());
-  DeviceControllerConnection::Bind(std::move(newconn), std::move(request->device_controller_rpc),
-                                   driver_host_context_->loop().dispatcher());
+
+  return zx::ok(std::move(newconn));
 }
 
 // TODO(fxbug.dev/68309): Implement Restart.

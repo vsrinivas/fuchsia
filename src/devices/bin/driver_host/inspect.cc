@@ -340,6 +340,13 @@ void DeviceInspect::set_protocol_id(uint32_t protocol_id) {
   device_node_.CreateString("protocol", protocol_name, &static_values_);
 }
 
+void DeviceInspect::set_fidl_offers(cpp20::span<const char*> fidl_offers) {
+  fidl_offers_ = device_node_.CreateChild("fidl offers");
+  for (const auto& offer : fidl_offers) {
+    fidl_offers_.CreateString(offer, "", &static_values_);
+  }
+}
+
 void DeviceInspect::increment_child_count() {
   if (!child_count_) {
     child_count_ = device_node_.CreateUint("child_count", 0);

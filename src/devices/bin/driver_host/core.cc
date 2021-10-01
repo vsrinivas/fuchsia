@@ -30,6 +30,9 @@
 #include "composite_device.h"
 #include "driver_host.h"
 #include "log.h"
+#include "proxy_device.h"
+
+namespace fio = fuchsia_io;
 
 using fuchsia_device::wire::DevicePowerState;
 using fuchsia_hardware_power_statecontrol::wire::SystemPowerState;
@@ -396,7 +399,8 @@ zx_status_t DriverHostContext::DeviceAdd(const fbl::RefPtr<zx_device_t>& dev,
                                          const zx_device_prop_t* props, uint32_t prop_count,
                                          const zx_device_str_prop_t* str_props,
                                          uint32_t str_prop_count, const char* proxy_args,
-                                         zx::vmo inspect, zx::channel client_remote) {
+                                         zx::vmo inspect, zx::channel client_remote,
+                                         fidl::ClientEnd<fio::Directory> outgoing_dir) {
   inspect_.DeviceAddStats().Update();
   auto mark_dead = fit::defer([&dev]() {
     if (dev) {
@@ -467,8 +471,9 @@ zx_status_t DriverHostContext::DeviceAdd(const fbl::RefPtr<zx_device_t>& dev,
 
   if (!(dev->flags() & DEV_FLAG_INSTANCE)) {
     // Add always consumes the handle
-    status = DriverManagerAdd(parent, dev, proxy_args, props, prop_count, str_props, str_prop_count,
-                              std::move(inspect), std::move(client_remote));
+    status =
+        DriverManagerAdd(parent, dev, proxy_args, props, prop_count, str_props, str_prop_count,
+                         std::move(inspect), std::move(client_remote), std::move(outgoing_dir));
     if (status < 0) {
       constexpr char kLogFormat[] = "Failed to add device %p to driver_manager: %s";
       if (status == ZX_ERR_PEER_CLOSED) {
@@ -623,6 +628,13 @@ void DriverHostContext::DeviceUnbindReply(const fbl::RefPtr<zx_device_t>& dev) {
     LOGD(FATAL, *dev, "Device %p cannot reply to unbind, has %zu outstanding transactions",
          dev.get(), dev->vnode->GetInflightTransactions());
   }
+
+  // Unfortunately, because of the incorrect direction of unbind, child devices may still attempt to
+  // use the device after unbind is replied to, so we cannot cut off it's connection to parent
+  // devices, which may be done through waits on the async dispatcher.
+  //
+  // TODO: Do this when unbind flow is reversed.
+  // dev->CancelWaitsandTasks();
 
   VLOGD(1, *dev, "Device %p unbind completed", dev.get());
   if (dev->unbind_cb) {

@@ -230,6 +230,7 @@ class Coordinator : public fidl::WireServer<fuchsia_driver_development::DriverDe
                         size_t str_props_count, std::string_view name, uint32_t protocol_id,
                         std::string_view driver_path, std::string_view args, bool skip_autobind,
                         bool has_init, bool always_init, zx::vmo inspect, zx::channel client_remote,
+                        fidl::ClientEnd<fio::Directory> outgoing_dir,
                         fbl::RefPtr<Device>* new_device);
   // Begin scheduling for removal of the device and unbinding of its children.
   void ScheduleRemove(const fbl::RefPtr<Device>& dev);
@@ -261,8 +262,11 @@ class Coordinator : public fidl::WireServer<fuchsia_driver_development::DriverDe
   void DmMexec(zx::vmo kernel, zx::vmo bootdata);
 
   void HandleNewDevice(const fbl::RefPtr<Device>& dev);
+
   zx_status_t PrepareProxy(const fbl::RefPtr<Device>& dev,
                            fbl::RefPtr<DriverHost> target_driver_host);
+  zx_status_t PrepareNewProxy(const fbl::RefPtr<Device>& dev,
+                              fbl::RefPtr<DriverHost> target_driver_host);
 
   void DumpState(VmoWriter* vmo) const;
 

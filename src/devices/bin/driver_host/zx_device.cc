@@ -12,6 +12,7 @@
 #include "composite_device.h"
 #include "driver_host.h"
 #include "log.h"
+#include "proxy_device.h"
 
 zx_device::zx_device(DriverHostContext* ctx, std::string name, zx_driver_t* drv)
     : driver(drv), driver_host_context_(ctx) {
@@ -34,6 +35,8 @@ zx_status_t zx_device::Create(DriverHostContext* ctx, std::string name, zx_drive
                               fbl::RefPtr<zx_device>* out_dev) {
   *out_dev = fbl::AdoptRef(new zx_device(ctx, name, driver));
   (*out_dev)->vnode = fbl::MakeRefCounted<DevfsVnode>(*out_dev);
+  auto loop_name = name + "-async-loop";
+  (*out_dev)->loop_.StartThread(loop_name.c_str());
   return ZX_OK;
 }
 
@@ -221,6 +224,7 @@ void zx_device::fbl_recycle() TA_NO_THREAD_SAFETY_ANALYSIS {
   }
 
   composite_.reset();
+  proxy_.reset();
   this->event.reset();
   this->local_event.reset();
 
@@ -288,6 +292,18 @@ void zx_device::set_composite(fbl::RefPtr<CompositeDevice> composite, bool fragm
 bool zx_device::is_composite() const { return is_composite_ && !!composite_; }
 
 fbl::RefPtr<CompositeDevice> zx_device::composite() { return composite_; }
+
+fbl::RefPtr<ProxyDevice> zx_device::take_proxy() { return std::move(proxy_); }
+
+void zx_device::set_proxy(fbl::RefPtr<ProxyDevice> proxy) {
+  proxy_ = std::move(proxy);
+  is_proxy_ = true;
+  inspect_->set_proxy();
+}
+
+bool zx_device::is_proxy() const { return is_proxy_ && !!proxy_; }
+
+fbl::RefPtr<ProxyDevice> zx_device::proxy() { return proxy_; }
 
 bool zx_device::IsPerformanceStateSupported(uint32_t requested_state) {
   if (requested_state >= fuchsia_device::wire::kMaxDevicePerformanceStates) {

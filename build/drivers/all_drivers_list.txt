@@ -199,6 +199,8 @@
 //src/devices/tests/ddk-runcompatibilityhook:ddk-runcompatibilityhook-test-driver
 //src/devices/tests/device-watcher:test-driver-driver
 //src/devices/tests/driver-inspect-test:driver_module
+//src/devices/tests/fidl-protocol:child-driver
+//src/devices/tests/fidl-protocol:parent-driver
 //src/devices/tests/isolateddevmgr:isolateddevmgr-test-driver-driver
 //src/devices/tests/mock-device:mock-device-driver
 //src/devices/tests/string-bind-test:child-driver-driver

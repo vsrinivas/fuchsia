@@ -13,6 +13,7 @@
 #include <lib/ddk/driver.h>
 #include <lib/zircon-internal/thread_annotations.h>
 #include <lib/zx/channel.h>
+#include <lib/zx/status.h>
 #include <stdint.h>
 #include <threads.h>
 #include <zircon/compiler.h>
@@ -44,6 +45,8 @@ namespace internal {
 DriverHostContext* ContextForApi();
 void RegisterContextForApi(DriverHostContext* context);
 
+using StatusOrConn = zx::status<std::unique_ptr<DeviceControllerConnection>>;
+
 class DriverHostControllerConnection
     : public fidl::WireServer<fuchsia_device_manager::DriverHostController> {
  public:
@@ -57,14 +60,14 @@ class DriverHostControllerConnection
  private:
   void CreateDevice(CreateDeviceRequestView request,
                     CreateDeviceCompleter::Sync& completer) override;
-  void CreateCompositeDevice(CreateCompositeDeviceRequestView request,
-                             CreateCompositeDeviceCompleter::Sync& completer) override;
-  void CreateDeviceStub(CreateDeviceStubRequestView request,
-                        CreateDeviceStubCompleter::Sync& completer) override;
   void Restart(RestartRequestView request, RestartCompleter::Sync& completer) override;
 
+  StatusOrConn CreateNewProxyDevice(CreateDeviceRequestView& request);
+  StatusOrConn CreateProxyDevice(CreateDeviceRequestView& request);
+  StatusOrConn CreateStubDevice(CreateDeviceRequestView& request);
+  StatusOrConn CreateCompositeDevice(CreateDeviceRequestView& request);
+
   DriverHostContext* const driver_host_context_;
-  fbl::RefPtr<zx_driver> proxy_driver_;
 };
 
 }  // namespace internal

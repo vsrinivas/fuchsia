@@ -20,11 +20,12 @@ zx_library("service-llcpp") {
     "//sdk/fidl/fuchsia.io:fuchsia.io_llcpp",
     "//sdk/lib/fit-promise",
     "//sdk/lib/stdcompat",
+    "//src/lib/storage/vfs/cpp",
+    "//zircon/public/lib/fbl",
     "//zircon/public/lib/zx",
   ]
   deps = [
     "//sdk/fidl/fuchsia.io:fuchsia.io_llcpp",
-    "//src/lib/storage/vfs/cpp",
     "//zircon/public/lib/async",
     "//zircon/public/lib/fidl-llcpp",
   ]

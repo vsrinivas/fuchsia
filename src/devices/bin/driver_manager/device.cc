@@ -30,7 +30,7 @@ static constexpr bool kEnableAlwaysInit = false;
 
 Device::Device(Coordinator* coord, fbl::String name, fbl::String libname, fbl::String args,
                fbl::RefPtr<Device> parent, uint32_t protocol_id, zx::vmo inspect_vmo,
-               zx::channel client_remote)
+               zx::channel client_remote, fidl::ClientEnd<fio::Directory> outgoing_dir)
     : coordinator(coord),
       name_(std::move(name)),
       libname_(std::move(libname)),
@@ -38,7 +38,8 @@ Device::Device(Coordinator* coord, fbl::String name, fbl::String libname, fbl::S
       parent_(std::move(parent)),
       protocol_id_(protocol_id),
       publish_task_([this] { coordinator->HandleNewDevice(fbl::RefPtr(this)); }),
-      client_remote_(std::move(client_remote)) {
+      client_remote_(std::move(client_remote)),
+      outgoing_dir_(std::move(outgoing_dir)) {
   test_reporter = std::make_unique<DriverTestReporter>(name_);
   inspect_.emplace(coord->inspect_manager().devices(), coord->inspect_manager().device_count(),
                    name_.c_str(), std::move(inspect_vmo));
@@ -105,7 +106,7 @@ zx_status_t Device::Create(
     fidl::ServerEnd<fuchsia_device_manager::Coordinator> coordinator_request,
     fidl::ClientEnd<fuchsia_device_manager::DeviceController> device_controller,
     bool want_init_task, bool skip_autobind, zx::vmo inspect, zx::channel client_remote,
-    fbl::RefPtr<Device>* device) {
+    fidl::ClientEnd<fio::Directory> outgoing_dir, fbl::RefPtr<Device>* device) {
   fbl::RefPtr<Device> real_parent;
   // If our parent is a proxy, for the purpose of devfs, we need to work with
   // *its* parent which is the device that it is proxying.
@@ -115,9 +116,9 @@ zx_status_t Device::Create(
     real_parent = parent;
   }
 
-  auto dev = fbl::MakeRefCounted<Device>(coordinator, std::move(name), std::move(driver_path),
-                                         std::move(args), real_parent, protocol_id,
-                                         std::move(inspect), std::move(client_remote));
+  auto dev = fbl::MakeRefCounted<Device>(
+      coordinator, std::move(name), std::move(driver_path), std::move(args), real_parent,
+      protocol_id, std::move(inspect), std::move(client_remote), std::move(outgoing_dir));
   if (!dev) {
     return ZX_ERR_NO_MEMORY;
   }
@@ -145,7 +146,7 @@ zx_status_t Device::Create(
   Device::Bind(dev, coordinator->dispatcher(), std::move(coordinator_request));
 
   // If we have bus device args we are, by definition, a bus device.
-  if (dev->args_.size() > 0) {
+  if (dev->args_.size() > 0 || dev->has_outgoing_directory()) {
     dev->flags |= DEV_CTX_MUST_ISOLATE;
   }
 
@@ -194,7 +195,8 @@ zx_status_t Device::CreateComposite(
   }
 
   auto dev = fbl::MakeRefCounted<Device>(coordinator, composite.name(), fbl::String(),
-                                         fbl::String(), nullptr, 0, zx::vmo(), zx::channel());
+                                         fbl::String(), nullptr, 0, zx::vmo(), zx::channel(),
+                                         fidl::ClientEnd<fio::Directory>());
   if (!dev) {
     return ZX_ERR_NO_MEMORY;
   }
@@ -252,9 +254,9 @@ zx_status_t Device::CreateProxy() {
     }
   }
 
-  auto dev =
-      fbl::MakeRefCounted<Device>(this->coordinator, name_, std::move(driver_path), fbl::String(),
-                                  fbl::RefPtr(this), protocol_id_, zx::vmo(), zx::channel());
+  auto dev = fbl::MakeRefCounted<Device>(this->coordinator, name_, std::move(driver_path),
+                                         fbl::String(), fbl::RefPtr(this), protocol_id_, zx::vmo(),
+                                         zx::channel(), fidl::ClientEnd<fio::Directory>());
   if (dev == nullptr) {
     return ZX_ERR_NO_MEMORY;
   }
@@ -265,6 +267,25 @@ zx_status_t Device::CreateProxy() {
 
   proxy_ = std::move(dev);
   VLOGF(1, "Created proxy device %p '%s'", this, name_.data());
+  return ZX_OK;
+}
+
+zx_status_t Device::CreateNewProxy() {
+  ZX_ASSERT(new_proxy_ == nullptr);
+
+  auto dev = fbl::MakeRefCounted<Device>(this->coordinator, name_, fbl::String(), fbl::String(),
+                                         fbl::RefPtr(this), 0, zx::vmo(), zx::channel(),
+                                         fidl::ClientEnd<fio::Directory>());
+  if (dev == nullptr) {
+    return ZX_ERR_NO_MEMORY;
+  }
+
+  dev->flags = DEV_CTX_PROXY;
+
+  dev->InitializeInspectValues();
+
+  new_proxy_ = std::move(dev);
+  VLOGF(1, "Created new_proxy device %p '%s'", this, name_.data());
   return ZX_OK;
 }
 
@@ -786,7 +807,8 @@ void Device::AddDevice(AddDeviceRequestView request, AddDeviceCompleter::Sync& c
       request->property_list.props.data(), request->property_list.props.count(),
       request->property_list.str_props.data(), request->property_list.str_props.count(), name,
       request->protocol_id, driver_path, args, skip_autobind, request->has_init, kEnableAlwaysInit,
-      std::move(request->inspect), std::move(request->client_remote), &device);
+      std::move(request->inspect), std::move(request->client_remote),
+      std::move(request->outgoing_dir), &device);
   if (device != nullptr && (request->device_add_config &
                             fuchsia_device_manager::wire::AddDeviceConfig::kAllowMultiComposite)) {
     device->flags |= DEV_CTX_ALLOW_MULTI_COMPOSITE;

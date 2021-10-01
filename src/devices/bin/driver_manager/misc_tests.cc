@@ -351,7 +351,8 @@ TEST(MiscTestCase, BindDevices) {
       std::move(coordinator_endpoints->server), nullptr /* props_data */, 0 /* props_count */,
       nullptr /* str_props_data */, 0 /* str_props_count */, "mock-device", ZX_PROTOCOL_TEST,
       {} /* driver_path */, {} /* args */, false /* skip_autobind */, false /* has_init */,
-      true /* always_init */, zx::vmo() /*inspect*/, zx::channel() /* client_remote */, &device);
+      true /* always_init */, zx::vmo() /*inspect*/, zx::channel() /* client_remote */,
+      fidl::ClientEnd<fio::Directory>() /* outgoing_dir */, &device);
   ASSERT_OK(status);
   ASSERT_EQ(1, coordinator.devices().size_slow());
 
@@ -405,7 +406,8 @@ TEST(MiscTestCase, TestOutput) {
       std::move(coordinator_endpoints->server), nullptr /* props_data */, 0 /* props_count */,
       nullptr /* str_props_data */, 0 /* str_props_count */, "mock-device", ZX_PROTOCOL_TEST,
       {} /* driver_path */, {} /* args */, false /* skip_autobind */, false /* has_init */,
-      true /* always_init */, zx::vmo() /*inspect*/, zx::channel() /* client_remote */, &device);
+      true /* always_init */, zx::vmo() /*inspect*/, zx::channel() /* client_remote */,
+      fidl::ClientEnd<fio::Directory>() /* outgoing_dir */, &device);
   ASSERT_OK(status);
   ASSERT_EQ(1, coordinator.devices().size_slow());
 
@@ -509,7 +511,8 @@ void AddDeviceWithProperties(const fuchsia_device_manager::wire::DeviceProperty*
       std::move(coordinator_endpoints->server), props_data, props_count, str_props_data,
       str_props_count, "mock-device", ZX_PROTOCOL_TEST, {} /* driver_path */, {} /* args */,
       false /* skip_autobind */, false /* has_init */, true /* always_init */,
-      zx::vmo() /*inspect*/, zx::channel() /* client_remote */, &device);
+      zx::vmo() /*inspect*/, zx::channel() /* client_remote */,
+      fidl::ClientEnd<fio::Directory>() /* outgoing_dir */, &device);
   ASSERT_OK(status);
 
   // Check that the device has been added to the coordinator, with the correct properties.
@@ -589,7 +592,8 @@ TEST(MiscTestCase, InvalidStringProperties) {
       std::move(coordinator_endpoints->server), nullptr /* props */, 0 /* props_count */, str_props,
       std::size(str_props), "mock-device", ZX_PROTOCOL_TEST, {} /* driver_path */, {} /* args */,
       false /* skip_autobind */, false /* has_init */, true /* always_init */,
-      zx::vmo() /*inspect*/, zx::channel() /* client_remote */, &device);
+      zx::vmo() /*inspect*/, zx::channel() /* client_remote */,
+      fidl::ClientEnd<fio::Directory>() /* outgoing_dir */, &device);
   ASSERT_EQ(ZX_ERR_INVALID_ARGS, status);
 }
 
@@ -625,7 +629,8 @@ TEST(MiscTestCase, DeviceAlreadyBoundFromDriverIndex) {
       std::move(coordinator_endpoints->server), nullptr /* props_data */, 0 /* props_count */,
       nullptr /* str_props_data */, 0 /* str_props_count */, "mock-device", ZX_PROTOCOL_TEST,
       {} /* driver_path */, {} /* args */, true /* skip_autobind */, false /* has_init */,
-      true /* always_init */, zx::vmo() /*inspect*/, zx::channel() /* client_remote */, &device);
+      true /* always_init */, zx::vmo() /*inspect*/, zx::channel() /* client_remote */,
+      fidl::ClientEnd<fio::Directory>() /*outgoing_dir*/, &device);
   ASSERT_OK(status);
   ASSERT_EQ(1, coordinator.devices().size_slow());
 

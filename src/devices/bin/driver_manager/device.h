@@ -6,6 +6,7 @@
 #define SRC_DEVICES_BIN_DRIVER_MANAGER_DEVICE_H_
 
 #include <fidl/fuchsia.device.manager/cpp/wire.h>
+#include <fidl/fuchsia.io/cpp/wire.h>
 #include <lib/async/cpp/task.h>
 #include <lib/async/cpp/wait.h>
 #include <lib/ddk/device.h>
@@ -26,6 +27,8 @@
 #include "inspect.h"
 #include "metadata.h"
 #include "src/lib/storage/vfs/cpp/vmo_file.h"
+
+namespace fio = fuchsia_io;
 
 class Coordinator;
 class DriverHost;
@@ -262,7 +265,7 @@ class Device
 
   Device(Coordinator* coord, fbl::String name, fbl::String libname, fbl::String args,
          fbl::RefPtr<Device> parent, uint32_t protocol_id, zx::vmo inspect,
-         zx::channel client_remote);
+         zx::channel client_remote, fidl::ClientEnd<fio::Directory> outgoing_dir);
   ~Device();
 
   // Create a new device with the given parameters.  This sets up its
@@ -276,7 +279,7 @@ class Device
       fidl::ServerEnd<fuchsia_device_manager::Coordinator> coordinator_request,
       fidl::ClientEnd<fuchsia_device_manager::DeviceController> device_controller,
       bool want_init_task, bool skip_autobind, zx::vmo inspect, zx::channel client_remote,
-      fbl::RefPtr<Device>* device);
+      fidl::ClientEnd<fio::Directory> outgoing_dir, fbl::RefPtr<Device>* device);
   static zx_status_t CreateComposite(
       Coordinator* coordinator, fbl::RefPtr<DriverHost> driver_host,
       const CompositeDevice& composite,
@@ -284,6 +287,7 @@ class Device
       fidl::ClientEnd<fuchsia_device_manager::DeviceController> device_controller,
       fbl::RefPtr<Device>* device);
   zx_status_t CreateProxy();
+  zx_status_t CreateNewProxy();
 
   static void Bind(fbl::RefPtr<Device> dev, async_dispatcher_t*,
                    fidl::ServerEnd<fuchsia_device_manager::Coordinator>);
@@ -349,6 +353,9 @@ class Device
 
   const fbl::RefPtr<Device>& proxy() { return proxy_; }
   fbl::RefPtr<const Device> proxy() const { return proxy_; }
+
+  const fbl::RefPtr<Device>& new_proxy() { return new_proxy_; }
+  fbl::RefPtr<const Device> new_proxy() const { return new_proxy_; }
 
   uint32_t protocol_id() const { return protocol_id_; }
 
@@ -459,6 +466,8 @@ class Device
                                std::optional<RunCompatibilityTestsCompleter::Async> completer);
 
   zx::channel take_client_remote() { return std::move(client_remote_); }
+  bool has_outgoing_directory() { return outgoing_dir_.is_valid(); }
+  fidl::ClientEnd<fio::Directory> take_outgoing_dir() { return std::move(outgoing_dir_); }
 
   const fbl::String& name() const { return name_; }
   const fbl::String& libname() const { return libname_; }
@@ -616,6 +625,7 @@ class Device
   const uint32_t protocol_id_;
 
   fbl::RefPtr<Device> proxy_;
+  fbl::RefPtr<Device> new_proxy_;
 
   fbl::Array<const zx_device_prop_t> props_;
 
@@ -694,6 +704,9 @@ class Device
   // For attaching as an open connection to the proxy device,
   // or once the device becomes visible.
   zx::channel client_remote_;
+
+  // Provides incoming directory for the driver which binds to this device.
+  fidl::ClientEnd<fio::Directory> outgoing_dir_;
 
   // For compatibility tests.
   fbl::Mutex test_state_lock_;

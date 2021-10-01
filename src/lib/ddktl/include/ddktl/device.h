@@ -7,6 +7,7 @@
 
 #include <lib/ddk/device.h>
 #include <lib/ddk/driver.h>
+#include <lib/fidl/llcpp/connect_service.h>
 #include <lib/fidl/llcpp/message.h>
 #include <lib/fidl/llcpp/wire_messaging.h>
 #include <lib/stdcompat/span.h>
@@ -450,6 +451,15 @@ class DeviceAddArgs {
     args_.inspect_vmo = inspect_vmo.release();
     return *this;
   }
+  DeviceAddArgs& set_outgoing_dir(zx::channel outgoing_dir) {
+    args_.outgoing_dir_channel = outgoing_dir.release();
+    return *this;
+  }
+  DeviceAddArgs& set_fidl_protocol_offers(cpp20::span<const char*> fidl_protocol_offers) {
+    args_.fidl_protocol_offers = fidl_protocol_offers.data();
+    args_.fidl_protocol_offer_count = fidl_protocol_offers.size();
+    return *this;
+  }
   DeviceAddArgs& set_power_states(cpp20::span<const device_power_state_info_t> power_states) {
     args_.power_states = power_states.data();
     args_.power_state_count = static_cast<uint8_t>(power_states.size());
@@ -543,6 +553,12 @@ class Device : public ::ddk::internal::base_device<D, Mixins...> {
 
   zx_status_t DdkGetFragmentProtocol(const char* name, uint32_t proto_id, void* out) {
     return device_get_fragment_protocol(zxdev(), name, proto_id, out);
+  }
+
+  template <typename Protocol>
+  zx_status_t DdkConnectFidlProtocol(fidl::ServerEnd<Protocol> request,
+                                     const char* path = fidl::DiscoverableProtocolName<Protocol>) {
+    return device_connect_fidl_protocol(parent(), path, request.TakeChannel().release());
   }
 
   const char* name() const { return zxdev() ? device_get_name(zxdev()) : nullptr; }

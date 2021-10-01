@@ -5,6 +5,7 @@
 #ifndef SRC_DEVICES_BIN_DRIVER_MANAGER_DRIVER_HOST_H_
 #define SRC_DEVICES_BIN_DRIVER_MANAGER_DRIVER_HOST_H_
 
+#include <fidl/fuchsia.device.manager/cpp/wire.h>
 #include <lib/async/cpp/wait.h>
 #include <lib/fit/function.h>
 #include <lib/zx/channel.h>
@@ -48,7 +49,7 @@ class DriverHost : public fbl::RefCounted<DriverHost>,
   // This constructor is public so that tests can create DriverHosts without launching processes.
   // The main program logic will want to use DriverHost::Launch
   // |coordinator| must outlive this DriverHost object.
-  // |rpc| is a client channel speaking fuchsia.device.manager/DriverHostController
+  // |client| is a client channel speaking fuchsia.device.manager/DevhostController
   // |diagnostics| is a client to driver host diagnostics directory
   // |proc| is a handle to the driver_host process this DriverHost tracks.
   DriverHost(Coordinator* coordinator,

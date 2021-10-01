@@ -232,12 +232,14 @@ class DeviceInspect {
 
   void set_composite() { device_node_.CreateBool("composite", true, &static_values_); }
   void set_fragment() { device_node_.CreateBool("fragment", true, &static_values_); }
+  void set_proxy() { device_node_.CreateBool("proxy", true, &static_values_); }
 
   void set_flags(uint32_t flags);
 
   void set_ops(const zx_protocol_device_t* ops);
 
   void set_protocol_id(uint32_t protocol_id);
+  void set_fidl_offers(cpp20::span<const char*> fidl_offers);
 
   void increment_instance_count();
   void decrement_instance_count();
@@ -293,6 +295,8 @@ class DeviceInspect {
              fuchsia_hardware_power_statecontrol::wire::kMaxSystemPowerStates>
       system_power_states_mapping_{};
   inspect::Node system_power_states_node_;
+
+  inspect::Node fidl_offers_;
 };
 
 #endif  // SRC_DEVICES_BIN_DRIVER_HOST_INSPECT_H_
