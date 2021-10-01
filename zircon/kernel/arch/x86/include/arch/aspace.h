@@ -131,6 +131,15 @@ class X86ArchVmAspace final : public ArchVmAspaceInterface {
   // Test the vaddr against the address space's range.
   bool IsValidVaddr(vaddr_t vaddr) { return (vaddr >= base_ && vaddr <= base_ + size_ - 1); }
 
+  // Helper method to mark this aspace active.
+  // This exists for clarity of call sites so that the comment explaining why this is done can be in
+  // one location.
+  void MarkAspaceModified() {
+    // If an aspace has been manipulated via a direction operation, then we want to try it
+    // equivalent to if it had been active on a CPU, since it may now have active/dirty information.
+    active_since_last_check_.store(true, ktl::memory_order_relaxed);
+  }
+
   fbl::Canary<fbl::magic("VAAS")> canary_;
   IoBitmap io_bitmap_;
 

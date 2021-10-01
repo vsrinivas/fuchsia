@@ -654,7 +654,9 @@ zx_status_t X86ArchVmAspace::Unmap(vaddr_t vaddr, size_t count, size_t* unmapped
   if (!IsValidVaddr(vaddr))
     return ZX_ERR_INVALID_ARGS;
 
-  return pt_->UnmapPages(vaddr, count, unmapped);
+  zx_status_t result = pt_->UnmapPages(vaddr, count, unmapped);
+  MarkAspaceModified();
+  return result;
 }
 
 zx_status_t X86ArchVmAspace::MapContiguous(vaddr_t vaddr, paddr_t paddr, size_t count,
@@ -662,7 +664,9 @@ zx_status_t X86ArchVmAspace::MapContiguous(vaddr_t vaddr, paddr_t paddr, size_t 
   if (!IsValidVaddr(vaddr))
     return ZX_ERR_INVALID_ARGS;
 
-  return pt_->MapPagesContiguous(vaddr, paddr, count, mmu_flags, mapped);
+  zx_status_t result = pt_->MapPagesContiguous(vaddr, paddr, count, mmu_flags, mapped);
+  MarkAspaceModified();
+  return result;
 }
 
 zx_status_t X86ArchVmAspace::Map(vaddr_t vaddr, paddr_t* phys, size_t count, uint mmu_flags,
@@ -670,14 +674,18 @@ zx_status_t X86ArchVmAspace::Map(vaddr_t vaddr, paddr_t* phys, size_t count, uin
   if (!IsValidVaddr(vaddr))
     return ZX_ERR_INVALID_ARGS;
 
-  return pt_->MapPages(vaddr, phys, count, mmu_flags, existing_action, mapped);
+  zx_status_t result = pt_->MapPages(vaddr, phys, count, mmu_flags, existing_action, mapped);
+  MarkAspaceModified();
+  return result;
 }
 
 zx_status_t X86ArchVmAspace::Protect(vaddr_t vaddr, size_t count, uint mmu_flags) {
   if (!IsValidVaddr(vaddr))
     return ZX_ERR_INVALID_ARGS;
 
-  return pt_->ProtectPages(vaddr, count, mmu_flags);
+  zx_status_t result = pt_->ProtectPages(vaddr, count, mmu_flags);
+  MarkAspaceModified();
+  return result;
 }
 
 void X86ArchVmAspace::ContextSwitch(X86ArchVmAspace* old_aspace, X86ArchVmAspace* aspace) {

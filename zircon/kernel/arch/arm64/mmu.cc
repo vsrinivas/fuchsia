@@ -1266,6 +1266,7 @@ zx_status_t ArmArchVmAspace::MapContiguous(vaddr_t vaddr, paddr_t paddr, size_t 
     ConsistencyManager cm(*this);
     ret = MapPages(vaddr, paddr, count * PAGE_SIZE, attrs, vaddr_base, top_size_shift,
                    top_index_shift, page_size_shift, cm);
+    MarkAspaceModified();
   }
 
   if (mapped) {
@@ -1345,6 +1346,7 @@ zx_status_t ArmArchVmAspace::Map(vaddr_t vaddr, paddr_t* phys, size_t count, uin
       DEBUG_ASSERT(IS_PAGE_ALIGNED(paddr));
       ret = MapPages(v, paddr, PAGE_SIZE, attrs, vaddr_base, top_size_shift, top_index_shift,
                      page_size_shift, cm);
+      MarkAspaceModified();
       if (ret < 0) {
         zx_status_t status = static_cast<zx_status_t>(ret);
         if (status != ZX_ERR_ALREADY_EXISTS || existing_action == ExistingEntryAction::Error) {
@@ -1401,6 +1403,7 @@ zx_status_t ArmArchVmAspace::Unmap(vaddr_t vaddr, size_t count, size_t* unmapped
     ConsistencyManager cm(*this);
     ret = UnmapPages(vaddr, count * PAGE_SIZE, vaddr_base, top_size_shift, top_index_shift,
                      page_size_shift, cm);
+    MarkAspaceModified();
   }
 
   if (unmapped) {
@@ -1459,6 +1462,7 @@ zx_status_t ArmArchVmAspace::Protect(vaddr_t vaddr, size_t count, uint mmu_flags
 
     ret = ProtectPages(vaddr, count * PAGE_SIZE, attrs, vaddr_base, top_size_shift, top_index_shift,
                        page_size_shift);
+    MarkAspaceModified();
   }
 
   return ret;
@@ -1577,6 +1581,7 @@ zx_status_t ArmArchVmAspace::MarkAccessed(vaddr_t vaddr, size_t count) {
   ConsistencyManager cm(*this);
 
   MarkAccessedPageTable(vaddr, vaddr_rel, size, top_index_shift, page_size_shift, tt_virt_, cm);
+  MarkAspaceModified();
 
   return ZX_OK;
 }
