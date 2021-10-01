@@ -1,0 +1,21 @@
+library fidl.test.socketprotocol;
+
+@transport("Driver")
+protocol WithAndWithoutRequestResponse {
+    NoRequestNoResponse();
+    NoRequestEmptyResponse() -> ();
+    NoRequestWithResponse() -> (struct {
+        ret string;
+    });
+    WithRequestNoResponse(struct {
+        arg string;
+    });
+    WithRequestEmptyResponse(struct {
+        arg string;
+    }) -> ();
+    WithRequestWithResponse(struct {
+        arg string;
+    }) -> (struct {
+        ret string;
+    });
+};

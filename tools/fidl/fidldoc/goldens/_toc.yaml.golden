@@ -59,6 +59,8 @@ toc:
     path: /fidl.test.requestflexibleenvelope
   - title: fidl.test.service
     path: /fidl.test.service
+  - title: fidl.test.socketprotocol
+    path: /fidl.test.socketprotocol
   - title: fidl.test.struct
     path: /fidl.test.struct
   - title: fidl.test.structdefaultvalueenumlibraryreference

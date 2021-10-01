@@ -407,6 +407,10 @@ fidl_testdata_info = [
     ]
   },
   {
+    name = "socket_protocol"
+    target = "//tools/fidl/fidlc/testdata:fidl.test.socketprotocol"
+  },
+  {
     name = "struct"
     target = "//tools/fidl/fidlc/testdata:fidl.test.struct"
     denylist = [

@@ -122,6 +122,10 @@
     <td></td>
 </tr>
 <tr>
+    <td><a href="fidl.test.socketprotocol/index">fidl.test.socketprotocol</a></td>
+    <td></td>
+</tr>
+<tr>
     <td><a href="fidl.test.struct/index">fidl.test.struct</a></td>
     <td></td>
 </tr>

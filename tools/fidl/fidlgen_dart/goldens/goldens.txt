@@ -52,6 +52,8 @@ request_flexible_envelope_async.dart.golden
 request_flexible_envelope_test.dart.golden
 service_async.dart.golden
 service_test.dart.golden
+socket_protocol_async.dart.golden
+socket_protocol_test.dart.golden
 struct_async.dart.golden
 struct_default_value_enum_library_reference_async.dart.golden
 struct_default_value_enum_library_reference_test.dart.golden

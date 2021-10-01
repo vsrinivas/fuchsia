@@ -26,6 +26,7 @@ protocol_request.syz.txt.golden
 protocols.syz.txt.golden
 request_flexible_envelope.syz.txt.golden
 service.syz.txt.golden
+socket_protocol.syz.txt.golden
 struct.syz.txt.golden
 table.syz.txt.golden
 transitive_dependencies.syz.txt.golden

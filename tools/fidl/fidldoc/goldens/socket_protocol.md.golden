@@ -1,0 +1,128 @@
+<link rel="stylesheet" href="../style.css" />
+
+[TOC]
+
+# fidl.test.socketprotocol
+
+
+
+## **PROTOCOLS**
+
+## WithAndWithoutRequestResponse {#WithAndWithoutRequestResponse}
+*Defined in [fidl.test.socketprotocol/socket_protocol.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/socket_protocol.test.fidl;l=4)*
+
+
+
+### NoRequestEmptyResponse {#WithAndWithoutRequestResponse.NoRequestEmptyResponse}
+
+
+
+#### Request {#WithAndWithoutRequestResponse.NoRequestEmptyResponse_Request}
+&lt;EMPTY&gt;
+
+
+#### Response {#WithAndWithoutRequestResponse.NoRequestEmptyResponse_Response}
+&lt;EMPTY&gt;
+
+### NoRequestNoResponse {#WithAndWithoutRequestResponse.NoRequestNoResponse}
+
+
+
+#### Request {#WithAndWithoutRequestResponse.NoRequestNoResponse_Request}
+&lt;EMPTY&gt;
+
+
+
+### NoRequestWithResponse {#WithAndWithoutRequestResponse.NoRequestWithResponse}
+
+
+
+#### Request {#WithAndWithoutRequestResponse.NoRequestWithResponse_Request}
+&lt;EMPTY&gt;
+
+
+#### Response {#WithAndWithoutRequestResponse.NoRequestWithResponse_Response}
+<table>
+    <tr><th>Name</th><th>Type</th></tr>
+    <tr>
+            <td><code>ret</code></td>
+            <td>
+                <code>string</code>
+            </td>
+        </tr></table>
+
+### WithRequestEmptyResponse {#WithAndWithoutRequestResponse.WithRequestEmptyResponse}
+
+
+
+#### Request {#WithAndWithoutRequestResponse.WithRequestEmptyResponse_Request}
+<table>
+    <tr><th>Name</th><th>Type</th></tr>
+    <tr>
+            <td><code>arg</code></td>
+            <td>
+                <code>string</code>
+            </td>
+        </tr></table>
+
+
+#### Response {#WithAndWithoutRequestResponse.WithRequestEmptyResponse_Response}
+&lt;EMPTY&gt;
+
+### WithRequestNoResponse {#WithAndWithoutRequestResponse.WithRequestNoResponse}
+
+
+
+#### Request {#WithAndWithoutRequestResponse.WithRequestNoResponse_Request}
+<table>
+    <tr><th>Name</th><th>Type</th></tr>
+    <tr>
+            <td><code>arg</code></td>
+            <td>
+                <code>string</code>
+            </td>
+        </tr></table>
+
+
+
+### WithRequestWithResponse {#WithAndWithoutRequestResponse.WithRequestWithResponse}
+
+
+
+#### Request {#WithAndWithoutRequestResponse.WithRequestWithResponse_Request}
+<table>
+    <tr><th>Name</th><th>Type</th></tr>
+    <tr>
+            <td><code>arg</code></td>
+            <td>
+                <code>string</code>
+            </td>
+        </tr></table>
+
+
+#### Response {#WithAndWithoutRequestResponse.WithRequestWithResponse_Response}
+<table>
+    <tr><th>Name</th><th>Type</th></tr>
+    <tr>
+            <td><code>ret</code></td>
+            <td>
+                <code>string</code>
+            </td>
+        </tr></table>
+
+
+
+## **STRUCTS**
+
+
+
+
+
+
+
+
+
+
+
+
+

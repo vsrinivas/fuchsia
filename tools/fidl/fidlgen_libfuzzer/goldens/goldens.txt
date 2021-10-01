@@ -62,6 +62,10 @@ service.cc.golden
 service.h.golden
 service_decode_encode.cc.golden
 service_decode_encode.h.golden
+socket_protocol.cc.golden
+socket_protocol.h.golden
+socket_protocol_decode_encode.cc.golden
+socket_protocol_decode_encode.h.golden
 transitive_dependencies_compose.cc.golden
 transitive_dependencies_compose.h.golden
 transitive_dependencies_compose_decode_encode.cc.golden

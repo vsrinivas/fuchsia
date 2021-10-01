@@ -76,6 +76,9 @@ request_flexible_envelope_test_base.h.golden
 service.cc.golden
 service.h.golden
 service_test_base.h.golden
+socket_protocol.cc.golden
+socket_protocol.h.golden
+socket_protocol_test_base.h.golden
 struct.cc.golden
 struct.h.golden
 struct_default_value_enum_library_reference.cc.golden

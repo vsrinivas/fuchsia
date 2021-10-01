@@ -33,21 +33,21 @@ fidl/{{ .LibraryDots }}/cpp/driver_messaging.h
   {{ end -}}
 
 
-  {{- range (call .ProtocolsForTransport "Channel") }}
+  {{- range (call .ProtocolsForTransport "Driver") }}
     {{ template "Driver:Protocol:ForwardDeclaration:MessagingHeader" . }}
   {{- end }}
 
-  {{- range (call .ProtocolsForTransport "Channel") }}
+  {{- range (call .ProtocolsForTransport "Driver") }}
     {{ template "Driver:Protocol:MessagingHeader" . }}
   {{- end }}
 
   {{ EnsureNamespace "fidl" }}
 
-  {{- range (call .ProtocolsForTransport "Channel") }}
+  {{- range (call .ProtocolsForTransport "Driver") }}
     {{ template "Driver:Protocol:Traits:MessagingHeader" . }}
   {{- end }}
 
-  {{- range (call .ProtocolsForTransport "Channel") }}
+  {{- range (call .ProtocolsForTransport "Driver") }}
     {{- range .TwoWayMethods }}
       {{ template "Driver:Method:ResponseContext:MessagingHeader" . }}
     {{- end }}

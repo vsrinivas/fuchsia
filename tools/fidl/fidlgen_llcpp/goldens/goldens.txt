@@ -232,6 +232,15 @@ service_wire_messaging.cc.golden
 service_wire_messaging.h.golden
 service_wire_types.cc.golden
 service_wire_types.h.golden
+socket_protocol.h.golden
+socket_protocol_driver_messaging.cc.golden
+socket_protocol_driver_messaging.h.golden
+socket_protocol_markers.h.golden
+socket_protocol_test_base.h.golden
+socket_protocol_wire_messaging.cc.golden
+socket_protocol_wire_messaging.h.golden
+socket_protocol_wire_types.cc.golden
+socket_protocol_wire_types.h.golden
 struct.h.golden
 struct_default_value_enum_library_reference.h.golden
 struct_default_value_enum_library_reference_driver_messaging.cc.golden

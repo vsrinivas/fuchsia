@@ -25,6 +25,7 @@ protocol_request.rs.golden
 protocols.rs.golden
 request_flexible_envelope.rs.golden
 service.rs.golden
+socket_protocol.rs.golden
 struct.rs.golden
 struct_default_value_enum_library_reference.rs.golden
 table.rs.golden

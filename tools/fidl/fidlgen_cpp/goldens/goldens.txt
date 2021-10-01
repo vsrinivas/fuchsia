@@ -50,6 +50,8 @@ request_flexible_envelope.cc.golden
 request_flexible_envelope.h.golden
 service.cc.golden
 service.h.golden
+socket_protocol.cc.golden
+socket_protocol.h.golden
 struct.cc.golden
 struct.h.golden
 struct_default_value_enum_library_reference.cc.golden

@@ -54,6 +54,8 @@ request_flexible_envelope.json.golden
 request_flexible_envelope.tables.c.golden
 service.json.golden
 service.tables.c.golden
+socket_protocol.json.golden
+socket_protocol.tables.c.golden
 struct.json.golden
 struct.tables.c.golden
 struct_default_value_enum_library_reference.json.golden

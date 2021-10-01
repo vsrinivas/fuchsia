@@ -25,6 +25,7 @@ protocol_request.go.golden
 protocols.go.golden
 request_flexible_envelope.go.golden
 service.go.golden
+socket_protocol.go.golden
 struct.go.golden
 struct_default_value_enum_library_reference.go.golden
 table.go.golden

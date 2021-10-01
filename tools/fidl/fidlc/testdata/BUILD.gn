@@ -30,6 +30,7 @@ standalone_libraries = [
   "protocols.test.fidl",
   "request_flexible_envelope.test.fidl",
   "service.test.fidl",
+  "socket_protocol.test.fidl",
   "struct.test.fidl",
   "table.test.fidl",
   "union.test.fidl",

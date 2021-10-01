@@ -28,6 +28,7 @@ protocol_request.md.golden
 protocols.md.golden
 request_flexible_envelope.md.golden
 service.md.golden
+socket_protocol.md.golden
 struct.md.golden
 struct_default_value_enum_library_reference.md.golden
 style.css.golden
