@@ -218,18 +218,19 @@ __Commands:__
 
 ```none {: style="white-space: break-spaces;" .devsite-disable-click-to-copy}
 
-  bind              Binds to the component designated by the provided relative
-                    moniker
-  knock             Connect to a service on the target
-  list              List all components, with the option of listing only cmx/cml
-                    components
-  run               Create and run a v2 component instance in an isolated realm
-  run-legacy        Run a v1 component on the target
-  select            Lists components matching a selector
-  show              Show useful information about a component
-  stop              Stops the component designated by the provided relative
-                    moniker
-  test              Run test suite
+  bind              Binds to a component instance, causing it to start
+  create            Creates a component instance, adding it to the component
+                    topology
+  data              Manages persistent data storage of components
+  destroy           Destroys a component instance, removing it from the
+                    component topology
+  knock             Connects to a capability described by a given selector
+  list              Lists all components in the component topology
+  run               Creates and binds to a component instance
+  run-legacy        Runs a legacy (CMX) component instance on the target
+  select            Lists component instances matching a selector
+  show              Shows detailed information about a component instance
+  stop              Stops a component instance
 
 ```
 
@@ -239,7 +240,7 @@ __Commands:__
 
 Usage: ffx component bind <moniker>
 
-Binds to the component designated by the provided relative moniker
+Binds to a component instance, causing it to start
 
 ```
 
@@ -250,26 +251,184 @@ __Options:__
   --help            display usage information
 
 Examples:
-  To bind to the component designated by the moniker:
+  To bind to the component instance designated by the moniker `/core/brightness_manager`:
   
-      $ ffx component bind core/brightness_manager
+      $ ffx component bind /core/brightness_manager
 
 Notes:
-  Binds to the component designated by the provided moniker relative to the
-      root of the component topology.
-      This will resolve the component if it's not already resolved, and will start the
-      component if it isn't already running. 
-
-Error codes:
-  1 Failed to bind to the component with moniker <moniker>.
+  To learn more about running components, visit https://fuchsia.dev/fuchsia-src/development/components/run
 
 ```
 
-### components
+### create
 
 ```none {: style="white-space: break-spaces;" .devsite-disable-click-to-copy}
 
-Unrecognized argument: components
+Usage: ffx component create <moniker> <url>
+
+Creates a component instance, adding it to the component topology
+
+```
+
+__Options:__
+
+```none {: style="white-space: break-spaces;" .devsite-disable-click-to-copy}
+
+  --help            display usage information
+
+Examples:
+  To create a component instance designated by the moniker `/core/ffx-laboratory:foo`:
+  
+      $ ffx component create /core/ffx-laboratory:foo fuchsia-pkg://fuchsia.com/hello-world#meta/hello-world-rust.cm
+
+Notes:
+  To learn more about running components, visit https://fuchsia.dev/fuchsia-src/development/components/run
+
+```
+
+### data
+
+```none {: style="white-space: break-spaces;" .devsite-disable-click-to-copy}
+
+Usage: ffx component data <command> [<args>]
+
+Manages persistent data storage of components
+
+```
+
+__Options:__
+
+```none {: style="white-space: break-spaces;" .devsite-disable-click-to-copy}
+
+  --help            display usage information
+
+```
+
+__Commands:__
+
+```none {: style="white-space: break-spaces;" .devsite-disable-click-to-copy}
+
+  copy              Copy files to/from a component's persistent data storage. If
+                    the file already exists at the destination it is
+                    overwritten.
+  list              List the contents of a component's persistent data storage.
+  make-directory    Create a new directory in a component's persistent data
+                    storage. If the directory already exists, this operation is
+                    a no-op.
+
+```
+
+#### copy
+
+```none {: style="white-space: break-spaces;" .devsite-disable-click-to-copy}
+
+Usage: ffx component data copy <source_path> <destination_path>
+
+Copy files to/from a component's persistent data storage. If the file already exists at the destination it is overwritten.
+
+```
+
+__Options:__
+
+```none {: style="white-space: break-spaces;" .devsite-disable-click-to-copy}
+
+  --help            display usage information
+
+Examples:
+  To copy `credentials.json` from the current working directory on the host to the `settings` directory of a component's persistent data storage:
+  
+      $ ffx component data copy ./credentials.json 2042425d4b16ac396ebdb70e40845dc51516dd25754741a209d1972f126a7520::settings/credentials.json
+  
+  Note: 2042425d4b16ac396ebdb70e40845dc51516dd25754741a209d1972f126a7520 is the instance ID of
+  the component whose persistent data storage is being accessed.
+  
+  To learn about component instance IDs, visit https://fuchsia.dev/fuchsia-src/development/components/component_id_index
+
+```
+
+#### list
+
+```none {: style="white-space: break-spaces;" .devsite-disable-click-to-copy}
+
+Usage: ffx component data list <path>
+
+List the contents of a component's persistent data storage.
+
+```
+
+__Options:__
+
+```none {: style="white-space: break-spaces;" .devsite-disable-click-to-copy}
+
+  --help            display usage information
+
+Examples:
+  To list the contents of the `settings` directory in a component's persistent data storage:
+  
+      $ ffx component data list 2042425d4b16ac396ebdb70e40845dc51516dd25754741a209d1972f126a7520::settings
+  
+  To list the contents of the root directory of a component's persistent data storage:
+  
+      $ ffx component data list 2042425d4b16ac396ebdb70e40845dc51516dd25754741a209d1972f126a7520::/
+  
+  Note: 2042425d4b16ac396ebdb70e40845dc51516dd25754741a209d1972f126a7520 is the instance ID of
+  the component whose persistent data storage is being accessed.
+  
+  To learn about component instance IDs, visit https://fuchsia.dev/fuchsia-src/development/components/component_id_index
+
+```
+
+#### make-directory
+
+```none {: style="white-space: break-spaces;" .devsite-disable-click-to-copy}
+
+Usage: ffx component data make-directory <path>
+
+Create a new directory in a component's persistent data storage. If the directory already exists, this operation is a no-op.
+
+```
+
+__Options:__
+
+```none {: style="white-space: break-spaces;" .devsite-disable-click-to-copy}
+
+  --help            display usage information
+
+Examples:
+  To make a `settings` directory in a storage:
+  
+      $ ffx component data make-directory 2042425d4b16ac396ebdb70e40845dc51516dd25754741a209d1972f126a7520::settings
+  
+  Note: 2042425d4b16ac396ebdb70e40845dc51516dd25754741a209d1972f126a7520 is the instance ID of
+  the component whose persistent data storage is being accessed.
+  
+  To learn about component instance IDs, visit https://fuchsia.dev/fuchsia-src/development/components/component_id_index
+
+```
+
+### destroy
+
+```none {: style="white-space: break-spaces;" .devsite-disable-click-to-copy}
+
+Usage: ffx component destroy <moniker>
+
+Destroys a component instance, removing it from the component topology
+
+```
+
+__Options:__
+
+```none {: style="white-space: break-spaces;" .devsite-disable-click-to-copy}
+
+  --help            display usage information
+
+Examples:
+  To destroy a component instance designated by the moniker `/core/ffx-laboratory:foo`:
+  
+      $ ffx component destroy /core/ffx-laboratory:foo
+
+Notes:
+  To learn more about running components, visit https://fuchsia.dev/fuchsia-src/development/components/run
 
 ```
 
@@ -279,7 +438,7 @@ Unrecognized argument: components
 
 Usage: ffx component knock <selector>
 
-Connect to a service on the target
+Connects to a capability described by a given selector
 
 ```
 
@@ -295,19 +454,15 @@ Examples:
       $ ffx component knock 'core/appmgr:out:fuchsia.hwinfo.Product'
 
 Notes:
-  Knock verifies the existence of a service exposed by a component by
-  attempting to connect to it. The command expects a <selector> with the
-  following format:
+  Knock verifies the existence of a capability by attempting to connect to it.
+  The command expects a <selector> with the following format:
   
   `<component moniker>:(in|out|exposed)[:<service name>].`
   
   Note that wildcards can be used but must match exactly one service.
   
-  The `component select` command can be used to explore the component
-  topology to compose the correct selector for use in `component knock`.
-
-Error codes:
-  1 Failed to connect to service
+  `ffx component select` can be used to explore the component
+  topology and find the correct selector for use in this command.
 
 ```
 
@@ -317,7 +472,7 @@ Error codes:
 
 Usage: ffx component list [-o <only>] [-v]
 
-List all components, with the option of listing only cmx/cml components
+Lists all components in the component topology
 
 ```
 
@@ -352,43 +507,15 @@ Examples:
   
       $ ffx component list --only stopped
 
-Notes:
-  Lists all the components on the running target. If no <only> is entered,
-  the default option outputs a tree of all components on the system. If a valid <only>
-  is entered, the command outputs a tree of only cmx/cml/running/stopped components in the system.
-  
-  If the command fails or times out, ensure RCS is running on the target.
-  This can be verified by running `ffx target list` and seeing the status
-  on the RCS column.
-
-Error codes:
-  1 The command has timed out
-
-```
-
-### moniker
-
-```none {: style="white-space: break-spaces;" .devsite-disable-click-to-copy}
-
-Unrecognized argument: moniker
-
-```
-
-### moniker
-
-```none {: style="white-space: break-spaces;" .devsite-disable-click-to-copy}
-
-Unrecognized argument: moniker
-
 ```
 
 ### run
 
 ```none {: style="white-space: break-spaces;" .devsite-disable-click-to-copy}
 
-Usage: ffx component run <url> [-n <name>]
+Usage: ffx component run <url> [-n <name>] [-r]
 
-Create and run a v2 component instance in an isolated realm
+Creates and binds to a component instance
 
 ```
 
@@ -396,20 +523,25 @@ __Options:__
 
 ```none {: style="white-space: break-spaces;" .devsite-disable-click-to-copy}
 
-  -n, --name        name of this instance. If not specified, the component name
-                    will be chosen as the instance name.
+  -n, --name        specify a name for the component instance. if this flag is
+                    not set, the instance name is derived from the component
+                    URL.
+  -r, --recreate    destroy and recreate the component instance if it already
+                    exists
   --help            display usage information
 
 Examples:
-  To run the 'hello_world_rust' component:
+  To create a component instance from the `hello-world-rust` component URL:
   
-      $ ffx component run \
-      fuchsia-pkg://fuchsia.com/hello-world#meta/hello-world-rust.cm
+      $ ffx component run fuchsia-pkg://fuchsia.com/hello-world#meta/hello-world-rust.cm
 
 Notes:
-  The <url> must follow the format:
+  This command is a shorthand for the following:
   
-  `fuchsia-pkg://fuchsia.com/<package>#meta/<component>.cm`
+      $ ffx component create /core/ffx-laboratory:<instance-name> <component-url>
+      $ ffx component bind /core/ffx-laboratory:<instance-name>
+  
+  To learn more about running components, visit https://fuchsia.dev/fuchsia-src/development/components/run
 
 ```
 
@@ -419,7 +551,7 @@ Notes:
 
 Usage: ffx component run-legacy <url> [<args...>] [-b]
 
-Run a v1 component on the target
+Runs a legacy (CMX) component instance on the target
 
 ```
 
@@ -442,10 +574,7 @@ Examples:
       fuchsia-pkg://fuchsia.com/remote-control#meta/remote-control-runner.cmx
 
 Notes:
-  Runs a specified v1 component on the target. The <url> must follow the
-  format:
-  
-  `fuchsia-pkg://fuchsia.com/<package>#meta/<component>.cmx`.
+  To learn more about component URLs, visit https://fuchsia.dev/fuchsia-src/concepts/components/component_urls
 
 ```
 
@@ -455,7 +584,7 @@ Notes:
 
 Usage: ffx component select <command> [<args>]
 
-Lists components matching a selector
+Lists component instances matching a selector
 
 ```
 
@@ -482,7 +611,7 @@ Examples:
   Or to show all services offered by v1 components:
   
       $ ffx component select moniker core/appmgr:out:*
-      
+  
   Or to show all components that expose a capability:
   
       $ ffx component select capability fuchsia.sys.Loader
@@ -500,45 +629,6 @@ Notes:
   a capability name consists of a string containing the characters a to z, 
   A to Z, 0 to 9, underscore (_), hyphen (-), or the full stop character (.).
 
-Error codes:
-  1 No matching component paths found
-
-```
-
-#### capability
-
-```none {: style="white-space: break-spaces;" .devsite-disable-click-to-copy}
-
-Usage: ffx component select capability <capability>
-
-subcommand capability
-
-```
-
-__Options:__
-
-```none {: style="white-space: break-spaces;" .devsite-disable-click-to-copy}
-
-  --help            display usage information
-
-```
-
-#### moniker
-
-```none {: style="white-space: break-spaces;" .devsite-disable-click-to-copy}
-
-Usage: ffx component select moniker <moniker>
-
-subcommand moniker
-
-```
-
-__Options:__
-
-```none {: style="white-space: break-spaces;" .devsite-disable-click-to-copy}
-
-  --help            display usage information
-
 ```
 
 ### show
@@ -547,7 +637,7 @@ __Options:__
 
 Usage: ffx component show <filter>
 
-Show useful information about a component
+Shows detailed information about a component instance
 
 ```
 
@@ -558,26 +648,16 @@ __Options:__
   --help            display usage information
 
 Examples:
-  To show information about a component with full url:
+  To show information about the `brightness_manager` component instance, all of the
+  following commands are valid:
   
-      $ ffx component show fuchsia-pkg://fuchsia.com/appmgr#meta/appmgr.cm
-  
-      To show information about a component with partial url:
-  
-      $ ffx component show appmgr.cm
-  
-      To show information about a component with name:
-  
-      $ ffx component show appmgr
+      $ ffx component show /core/brightness_manager
+      $ ffx component show fuchsia-pkg://fuchsia.com/brightness_manager#meta/brightness_manager.cm
+      $ ffx component show meta/brightness_manager.cm
+      $ ffx component show brightness_manager
 
 Notes:
-  Show useful information about a component including url, merkle root,
-  exposed/incoming/outgoing services, etc. The command expects a <url/name> which is
-  the partial url or name of the component.
-
-Error codes:
-  1 Invalid filter 'asdfgh': filter should be a component name or component (partial) url.
-Filter format: component_name / url / partial url.
+  This command supports partial matches over the moniker and URL
 
 ```
 
@@ -587,7 +667,7 @@ Filter format: component_name / url / partial url.
 
 Usage: ffx component stop <moniker> [-r]
 
-Stops the component designated by the provided relative moniker
+Stops a component instance
 
 ```
 
@@ -599,59 +679,12 @@ __Options:__
   --help            display usage information
 
 Examples:
-  To stop the component designated by the moniker:
+  To stop the component instance designated by the moniker `/core/brightness_manager`:
   
-      $ ffx component stop core/brightness_manager
+      $ ffx component stop /core/brightness_manager
 
 Notes:
-  Stops the component designated by the provided moniker relative to the
-      root of the component topology.
-      This will resolve the component if it's not already resolved, and will stop the
-      component if it is already running.
-
-Error codes:
-  1 Failed to stop the component with moniker <moniker>.
-
-```
-
-### test
-
-```none {: style="white-space: break-spaces;" .devsite-disable-click-to-copy}
-
-Usage: ffx component test <test_url> [-t <timeout>] [--test-filter <test-filter...>] [--list] [--run-disabled] [--filter-ansi] [--parallel <parallel>] [--count <count>] [--min-severity-logs <min-severity-logs>] [--max-severity-logs <max-severity-logs>] [--experimental-output-directory <experimental-output-directory>]
-
-Run test suite
-
-```
-
-__Options:__
-
-```none {: style="white-space: break-spaces;" .devsite-disable-click-to-copy}
-
-  -t, --timeout     test timeout
-  --test-filter     glob pattern for matching tests. Can be specified multiple
-                    times to pass in multiple patterns. example: --test-filter
-                    glob1 --test-filter glob2.
-  --list            list tests in the suite
-  --run-disabled    run tests that have been marked disabled/ignored
-  --filter-ansi     filter ANSI escape sequences from output
-  --parallel        run tests in parallel
-  --count           number of times to run the test [default = 1]
-  --min-severity-logs
-                    when set, only logs with a severity equal to the given one
-                    or higher will be printed.
-  --max-severity-logs
-                    when set, the test will fail if any log with a higher
-                    severity is emitted.
-  --experimental-output-directory
-                    when set, output test results to the specified directory.
-  --help            display usage information
-
-Notes:
-  Runs a test or suite implementing the `fuchsia.test.Suite` protocol.
-  
-  Note that if running multiple iterations of a test and an iteration times
-  out, no further iterations will be executed.
+  To learn more about running components, visit https://fuchsia.dev/fuchsia-src/development/components/run
 
 ```
 
