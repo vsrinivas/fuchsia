@@ -71,13 +71,68 @@ zx_status_t SdmmcDevice::SdmmcSendStatus(uint32_t* response) {
   return st;
 }
 
-zx_status_t SdmmcDevice::SdmmcStopTransmission() {
-  sdmmc_req_t req = {};
-  req.cmd_idx = SDMMC_STOP_TRANSMISSION;
-  req.arg = 0;
-  req.cmd_flags = SDMMC_STOP_TRANSMISSION_FLAGS;
-  req.use_dma = UseDma();
-  return host_.Request(&req);
+zx_status_t SdmmcDevice::SdmmcStopTransmission(uint32_t* status) {
+  zx_status_t st;
+  for (uint32_t i = 0; i < kRetryAttempts; i++) {
+    sdmmc_req_t req = {};
+    req.cmd_idx = SDMMC_STOP_TRANSMISSION;
+    req.arg = 0;
+    req.cmd_flags = SDMMC_STOP_TRANSMISSION_FLAGS;
+    req.use_dma = UseDma();
+    req.suppress_error_messages = i < (kRetryAttempts - 1);
+    if ((st = host_.Request(&req)) == ZX_OK) {
+      if (status) {
+        *status = req.response[0];
+      }
+      break;
+    }
+  }
+  return st;
+}
+
+zx_status_t SdmmcDevice::SdmmcWaitForState(uint32_t state) {
+  for (uint32_t i = 0; i < kRetryAttempts; i++) {
+    sdmmc_req_t req = {};
+    req.cmd_idx = SDMMC_SEND_STATUS;
+    req.arg = RcaArg();
+    req.cmd_flags = SDMMC_SEND_STATUS_FLAGS;
+    req.use_dma = UseDma();
+    req.suppress_error_messages = i < (kRetryAttempts - 1);
+    zx_status_t st = host_.Request(&req);
+    if (st == ZX_OK && MMC_STATUS_CURRENT_STATE(req.response[0]) == state) {
+      return ZX_OK;
+    }
+  }
+  return ZX_ERR_TIMED_OUT;
+}
+
+zx_status_t SdmmcDevice::SdmmcIoRequestWithRetries(sdmmc_req_t* request, uint32_t* retries) {
+  zx_status_t st;
+  for (uint32_t i = 0; i < kRetryAttempts; i++) {
+    sdmmc_req_t req = *request;
+    req.suppress_error_messages = i < (kRetryAttempts - 1);
+
+    if ((st = host_.Request(&req)) == ZX_OK) {
+      memcpy(request->response, req.response, sizeof(req.response));
+      break;
+    }
+
+    (*retries)++;
+
+    // Wait for the card to go idle (TRAN state) before retrying. SdmmcStopTransmission waits for
+    // the busy signal on dat0, so the card should be back in TRAN immediately after.
+
+    uint32_t status;
+    if (SdmmcStopTransmission(&status) == ZX_OK &&
+        MMC_STATUS_CURRENT_STATE(status) == MMC_STATUS_CURRENT_STATE_TRAN) {
+      continue;
+    }
+
+    SdmmcWaitForState(MMC_STATUS_CURRENT_STATE_TRAN);
+  }
+
+  request->status = st;
+  return st;
 }
 
 // SD ops

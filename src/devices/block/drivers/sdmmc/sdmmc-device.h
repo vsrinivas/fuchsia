@@ -37,7 +37,11 @@ class SdmmcDevice {
   // SD/MMC shared ops
   zx_status_t SdmmcGoIdle();
   zx_status_t SdmmcSendStatus(uint32_t* response);
-  zx_status_t SdmmcStopTransmission();
+  zx_status_t SdmmcStopTransmission(uint32_t* status = nullptr);
+  zx_status_t SdmmcWaitForState(uint32_t state);
+  // Retries a block read/write request. STOP_TRANSMISSION is issued after every attempt that
+  // results in an error, but not after the request succeeds.
+  zx_status_t SdmmcIoRequestWithRetries(sdmmc_req_t* request, uint32_t* retries);
 
   // SD ops
   zx_status_t SdSendOpCond(uint32_t flags, uint32_t* ocr);
@@ -71,6 +75,8 @@ class SdmmcDevice {
   zx_status_t MmcSwitch(uint8_t index, uint8_t value);
 
  private:
+  static constexpr uint32_t kRetryAttempts = 10;
+
   zx_status_t SdmmcRequestHelper(sdmmc_req_t* req, uint8_t retries, uint32_t wait_time) const;
   zx_status_t SdSendAppCmd();
 

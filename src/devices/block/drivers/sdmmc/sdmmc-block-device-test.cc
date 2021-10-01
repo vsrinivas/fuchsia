@@ -524,7 +524,7 @@ TEST_F(SdmmcBlockDeviceTest, SendCmd12OnCommandFailure) {
 
   EXPECT_OK(sync_completion_wait(&ctx1.completion, zx::duration::infinite().get()));
   EXPECT_TRUE(op1->private_storage()->completed);
-  EXPECT_EQ(sdmmc_.command_counts().at(SDMMC_STOP_TRANSMISSION), 1);
+  EXPECT_EQ(sdmmc_.command_counts().at(SDMMC_STOP_TRANSMISSION), 10);
 
   sdmmc_.set_host_info({
       .caps = SDMMC_HOST_CAP_AUTO_CMD12,
@@ -542,7 +542,7 @@ TEST_F(SdmmcBlockDeviceTest, SendCmd12OnCommandFailure) {
 
   EXPECT_OK(sync_completion_wait(&ctx2.completion, zx::duration::infinite().get()));
   EXPECT_TRUE(op2->private_storage()->completed);
-  EXPECT_EQ(sdmmc_.command_counts().at(SDMMC_STOP_TRANSMISSION), 2);
+  EXPECT_EQ(sdmmc_.command_counts().at(SDMMC_STOP_TRANSMISSION), 20);
 }
 
 // TODO(fxbug.dev/49028): Enable these tests once trim is enabled.
@@ -1526,8 +1526,11 @@ TEST_F(SdmmcBlockDeviceTest, Inspect) {
 
   const auto* io_errors = root->node().get_property<inspect::UintPropertyValue>("io_errors");
   ASSERT_NOT_NULL(io_errors);
-
   EXPECT_EQ(io_errors->value(), 0);
+
+  const auto* io_retries = root->node().get_property<inspect::UintPropertyValue>("io_retries");
+  ASSERT_NOT_NULL(io_retries);
+  EXPECT_EQ(io_retries->value(), 0);
 
   // IO error count should be a successful block op.
   std::optional<block::Operation<OperationContext>> op1;
@@ -1549,8 +1552,11 @@ TEST_F(SdmmcBlockDeviceTest, Inspect) {
 
   io_errors = root->node().get_property<inspect::UintPropertyValue>("io_errors");
   ASSERT_NOT_NULL(io_errors);
-
   EXPECT_EQ(io_errors->value(), 0);
+
+  io_retries = root->node().get_property<inspect::UintPropertyValue>("io_retries");
+  ASSERT_NOT_NULL(io_retries);
+  EXPECT_EQ(io_retries->value(), 0);
 
   // IO error count should be incremented after a failed block op.
   sdmmc_.set_command_callback(SDMMC_WRITE_MULTIPLE_BLOCK,
@@ -1575,8 +1581,11 @@ TEST_F(SdmmcBlockDeviceTest, Inspect) {
 
   io_errors = root->node().get_property<inspect::UintPropertyValue>("io_errors");
   ASSERT_NOT_NULL(io_errors);
-
   EXPECT_EQ(io_errors->value(), 1);
+
+  io_retries = root->node().get_property<inspect::UintPropertyValue>("io_retries");
+  ASSERT_NOT_NULL(io_retries);
+  EXPECT_EQ(io_retries->value(), 10);
 }
 
 TEST_F(SdmmcBlockDeviceTest, InspectCmd12NotDoubleCounted) {

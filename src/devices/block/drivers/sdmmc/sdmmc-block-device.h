@@ -221,6 +221,7 @@ class SdmmcBlockDevice : public SdmmcBlockDeviceType {
   inspect::Inspector inspector_;
   inspect::Node root_;
   inspect::UintProperty io_errors_;  // Only updated from the worker thread.
+  inspect::UintProperty io_retries_;  // Only updated from the worker thread.
 };
 
 }  // namespace sdmmc

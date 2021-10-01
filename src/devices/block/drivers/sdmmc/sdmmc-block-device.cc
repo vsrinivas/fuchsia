@@ -187,6 +187,7 @@ zx_status_t SdmmcBlockDevice::AddDevice() {
 
   root_ = inspector_.GetRoot().CreateChild("sdmmc_core");
   io_errors_ = root_.CreateUint("io_errors", 0);
+  io_retries_ = root_.CreateUint("io_retries", 0);
 
   fbl::AutoLock lock(&lock_);
 
@@ -395,19 +396,22 @@ zx_status_t SdmmcBlockDevice::ReadWrite(const block_read_write_t& txn,
     req->virt_size = length;
   }
 
-  st = sdmmc_.host().Request(req);
+  uint32_t retries = 0;
+  st = sdmmc_.SdmmcIoRequestWithRetries(req, &retries);
+  io_retries_.Add(retries);
   if (st != ZX_OK) {
     zxlogf(ERROR, "do_txn error %d", st);
     io_errors_.Add(1);
   }
 
-  if (st != ZX_OK || ((req->blockcount > 1) && !(req->cmd_flags & SDMMC_CMD_AUTO12))) {
+  // SdmmcIoRequestWithRetries sends STOP_TRANSMISSION (cmd12) when an error occurs, so it only
+  // needs to be sent here if the request succeeded, there was more than one block, and the
+  // controller doesn't support auto cmd12.
+  if (st == ZX_OK && req->blockcount > 1 && !(req->cmd_flags & SDMMC_CMD_AUTO12)) {
     zx_status_t stop_st = sdmmc_.SdmmcStopTransmission();
     if (stop_st != ZX_OK) {
       zxlogf(WARNING, "do_txn stop transmission error %d", stop_st);
-      if (st == ZX_OK) {  // Only increment once if either the transfer or stop failed.
-        io_errors_.Add(1);
-      }
+      io_errors_.Add(1);
     }
   }
 
@@ -486,6 +490,7 @@ zx_status_t SdmmcBlockDevice::Trim(const block_trim_t& txn, const EmmcPartition 
 }
 
 zx_status_t SdmmcBlockDevice::RpmbRequest(const RpmbRequestInfo& request) {
+  // TODO(fxbug.dev/85455): Find out if RPMB requests can be retried.
   using fuchsia_hardware_rpmb::wire::kFrameSize;
 
   const uint64_t tx_frame_count = request.tx_frames.size / kFrameSize;
