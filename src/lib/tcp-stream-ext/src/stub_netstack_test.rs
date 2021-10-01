@@ -5,6 +5,7 @@
 #![cfg(test)]
 
 use {
+    fidl::prelude::*,
     fuchsia_async as fasync,
     fuchsia_zircon::{self as zx, HandleBased as _},
     futures::stream::StreamExt as _,

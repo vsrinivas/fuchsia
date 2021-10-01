@@ -9,6 +9,7 @@ use {
     argh::FromArgs,
     async_utils::stream::{StreamItem, WithEpitaph, WithTag},
     fidl::endpoints::ClientEnd,
+    fidl::prelude::*,
     fidl_fuchsia_bluetooth::ErrorCode,
     fidl_fuchsia_bluetooth_bredr as bredr,
     fidl_fuchsia_sys::EnvironmentOptions,

@@ -4,6 +4,7 @@
 
 use std::collections::VecDeque;
 
+use fidl::prelude::*;
 use fidl_fuchsia_hardware_ethernet as fidl_ethernet;
 use fidl_fuchsia_hardware_network as fidl_netdev;
 use fidl_fuchsia_net_interfaces::{

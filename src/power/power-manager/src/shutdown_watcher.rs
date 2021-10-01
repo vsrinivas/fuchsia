@@ -262,7 +262,7 @@ impl InspectData {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use fidl::endpoints::RequestStream;
+    use fidl::prelude::*;
     use inspect::assert_data_tree;
     use matches::assert_matches;
 

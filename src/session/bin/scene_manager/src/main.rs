@@ -5,6 +5,7 @@
 use {
     ::input_pipeline::text_settings,
     anyhow::Error,
+    fidl::prelude::*,
     fidl_fuchsia_input_injection::InputDeviceRegistryRequestStream,
     fidl_fuchsia_input_keymap as fkeymap,
     fidl_fuchsia_session_scene::{ManagerRequest, ManagerRequestStream},

@@ -7,7 +7,7 @@
 use {
     anyhow::{format_err, Context as _, Error},
     argh::FromArgs,
-    fidl::endpoints::Proxy,
+    fidl::prelude::*,
     fidl::Error as FidlError,
     fidl_fuchsia_bluetooth_snoop::{SnoopRequest, SnoopRequestStream},
     fidl_fuchsia_io, fuchsia_async as fasync,

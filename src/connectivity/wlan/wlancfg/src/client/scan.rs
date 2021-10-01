@@ -13,6 +13,7 @@ use {
     },
     anyhow::{format_err, Error},
     async_trait::async_trait,
+    fidl::prelude::*,
     fidl_fuchsia_location_sensor as fidl_location_sensor, fidl_fuchsia_wlan_policy as fidl_policy,
     fidl_fuchsia_wlan_sme as fidl_sme,
     fuchsia_async::{self as fasync, DurationExt},

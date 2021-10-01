@@ -6,6 +6,7 @@
 
 use anyhow::{format_err, Context as _, Error};
 use fidl::endpoints::{create_proxy, ServerEnd};
+use fidl::prelude::*;
 use fidl_fuchsia_io::{DirectoryProxy, FileMarker, NodeMarker};
 use fidl_fuchsia_sys::{FlatNamespace, RunnerRequest, RunnerRequestStream};
 use fuchsia_async as fasync;

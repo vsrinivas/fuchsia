@@ -4,7 +4,8 @@
 
 use {
     anyhow::Error,
-    fidl::{endpoints::RequestStream, AsyncChannel},
+    fidl::prelude::*,
+    fidl::AsyncChannel,
     fidl_fuchsia_process_lifecycle::{LifecycleRequest, LifecycleRequestStream},
     fuchsia_async as fasync,
     fuchsia_component::server::ServiceFs,

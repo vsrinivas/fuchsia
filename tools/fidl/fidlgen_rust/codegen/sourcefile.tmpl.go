@@ -35,6 +35,7 @@ use {
 		fidl_union,
 		wrap_handle_metadata,
 		encoding::{Encodable as _, Decodable as _},
+		endpoints::{ControlHandle as _, Responder as _},
 		client::{
 			QueryResponseFut,
 			decode_transaction_body_fut,

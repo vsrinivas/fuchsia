@@ -4,7 +4,7 @@
 
 use {
     anyhow::Error,
-    fidl::endpoints::RequestStream,
+    fidl::prelude::*,
     fidl_fuchsia_fs::{AdminRequestStream, QueryRequestStream},
     fuchsia_async as fasync,
     fuchsia_component::server::ServiceFs,

@@ -17,6 +17,7 @@ use {
     fidl::{
         client::{decode_transaction_body_fut, QueryResponseFut},
         encoding::{Decodable as _, Encodable as _},
+        endpoints::{ControlHandle as _, Responder as _},
         fidl_bits, fidl_empty_struct, fidl_enum, fidl_struct, fidl_struct_copy, fidl_table,
         fidl_union, wrap_handle_metadata,
     },
@@ -222,16 +223,12 @@ impl futures::stream::FusedStream for Super_RequestStream {
 
 impl fidl::endpoints::RequestStream for Super_RequestStream {
     type Protocol = Super_Marker;
+    type ControlHandle = Super_ControlHandle;
 
-    /// Consume a channel to make a Super_RequestStream
     fn from_channel(channel: fidl::AsyncChannel) -> Self {
         Self { inner: std::sync::Arc::new(fidl::ServeInner::new(channel)), is_terminated: false }
     }
 
-    /// ControlHandle for the remote connection
-    type ControlHandle = Super_ControlHandle;
-
-    /// ControlHandle for the remote connection
     fn control_handle(&self) -> Self::ControlHandle {
         Super_ControlHandle { inner: self.inner.clone() }
     }
@@ -413,17 +410,17 @@ pub struct Super_ControlHandle {
     inner: std::sync::Arc<fidl::ServeInner>,
 }
 
-impl Super_ControlHandle {
-    /// Set the server to shutdown. The underlying channel is only closed the
-    /// next time the stream is polled.
-    pub fn shutdown(&self) {
+impl fidl::endpoints::ControlHandle for Super_ControlHandle {
+    fn shutdown(&self) {
         self.inner.shutdown()
     }
 
-    pub fn shutdown_with_epitaph(&self, status: zx_status::Status) {
+    fn shutdown_with_epitaph(&self, status: zx_status::Status) {
         self.inner.shutdown_with_epitaph(status)
     }
 }
+
+impl Super_ControlHandle {}
 #[must_use = "FIDL methods require a response to be sent"]
 #[derive(Debug)]
 pub struct Super_FooResponder {
@@ -443,22 +440,22 @@ impl std::ops::Drop for Super_FooResponder {
     }
 }
 
-impl Super_FooResponder {
-    pub fn control_handle(&self) -> &Super_ControlHandle {
+impl fidl::endpoints::Responder for Super_FooResponder {
+    type ControlHandle = Super_ControlHandle;
+
+    fn control_handle(&self) -> &Super_ControlHandle {
         &self.control_handle
     }
 
-    /// Drop the Responder without setting the channel to shutdown.
-    ///
-    /// This method shouldn't normally be used-- instead, send a response
-    /// to prevent the channel from shutting down.
-    pub fn drop_without_shutdown(mut self) {
+    fn drop_without_shutdown(mut self) {
         // Safety: drops once, never accessed again due to mem::forget
         unsafe { std::mem::ManuallyDrop::drop(&mut self.control_handle) };
         // Prevent Drop from running (which would shut down the channel)
         std::mem::forget(self);
     }
+}
 
+impl Super_FooResponder {
     /// Sends a response to the FIDL transaction.
     ///
     /// Sets the channel to shutdown if an error occurs.
@@ -699,16 +696,12 @@ impl futures::stream::FusedStream for SubRequestStream {
 
 impl fidl::endpoints::RequestStream for SubRequestStream {
     type Protocol = SubMarker;
+    type ControlHandle = SubControlHandle;
 
-    /// Consume a channel to make a SubRequestStream
     fn from_channel(channel: fidl::AsyncChannel) -> Self {
         Self { inner: std::sync::Arc::new(fidl::ServeInner::new(channel)), is_terminated: false }
     }
 
-    /// ControlHandle for the remote connection
-    type ControlHandle = SubControlHandle;
-
-    /// ControlHandle for the remote connection
     fn control_handle(&self) -> Self::ControlHandle {
         SubControlHandle { inner: self.inner.clone() }
     }
@@ -890,17 +883,17 @@ pub struct SubControlHandle {
     inner: std::sync::Arc<fidl::ServeInner>,
 }
 
-impl SubControlHandle {
-    /// Set the server to shutdown. The underlying channel is only closed the
-    /// next time the stream is polled.
-    pub fn shutdown(&self) {
+impl fidl::endpoints::ControlHandle for SubControlHandle {
+    fn shutdown(&self) {
         self.inner.shutdown()
     }
 
-    pub fn shutdown_with_epitaph(&self, status: zx_status::Status) {
+    fn shutdown_with_epitaph(&self, status: zx_status::Status) {
         self.inner.shutdown_with_epitaph(status)
     }
 }
+
+impl SubControlHandle {}
 #[must_use = "FIDL methods require a response to be sent"]
 #[derive(Debug)]
 pub struct SubFooResponder {
@@ -920,22 +913,22 @@ impl std::ops::Drop for SubFooResponder {
     }
 }
 
-impl SubFooResponder {
-    pub fn control_handle(&self) -> &SubControlHandle {
+impl fidl::endpoints::Responder for SubFooResponder {
+    type ControlHandle = SubControlHandle;
+
+    fn control_handle(&self) -> &SubControlHandle {
         &self.control_handle
     }
 
-    /// Drop the Responder without setting the channel to shutdown.
-    ///
-    /// This method shouldn't normally be used-- instead, send a response
-    /// to prevent the channel from shutting down.
-    pub fn drop_without_shutdown(mut self) {
+    fn drop_without_shutdown(mut self) {
         // Safety: drops once, never accessed again due to mem::forget
         unsafe { std::mem::ManuallyDrop::drop(&mut self.control_handle) };
         // Prevent Drop from running (which would shut down the channel)
         std::mem::forget(self);
     }
+}
 
+impl SubFooResponder {
     /// Sends a response to the FIDL transaction.
     ///
     /// Sets the channel to shutdown if an error occurs.

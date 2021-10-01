@@ -6,6 +6,7 @@ use {
     crate::keys::{KeyEntry, ParseKeyError},
     anyhow::Context as _,
     async_trait::async_trait,
+    fidl::prelude::*,
     fidl_fuchsia_ssh::{
         AuthorizedKeysRequest, AuthorizedKeysRequestStream, KeyEvent, KeyEventType,
         KeyWatcherRequest, KeyWatcherRequestStream, SshAuthorizedKeyEntry,

@@ -17,6 +17,7 @@ use {
     fidl::{
         client::{decode_transaction_body_fut, QueryResponseFut},
         encoding::{Decodable as _, Encodable as _},
+        endpoints::{ControlHandle as _, Responder as _},
         fidl_bits, fidl_empty_struct, fidl_enum, fidl_struct, fidl_struct_copy, fidl_table,
         fidl_union, wrap_handle_metadata,
     },

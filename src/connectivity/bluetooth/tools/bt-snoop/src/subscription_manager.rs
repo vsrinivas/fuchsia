@@ -4,6 +4,7 @@
 
 use {
     anyhow::{format_err, Error},
+    fidl::prelude::*,
     fidl_fuchsia_bluetooth_snoop::SnoopControlHandle,
     fuchsia_zircon as zx,
     log::{trace, warn},

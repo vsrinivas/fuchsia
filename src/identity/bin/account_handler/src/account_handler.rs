@@ -10,6 +10,7 @@ use crate::pre_auth;
 use account_common::{AccountId, AccountManagerError};
 use anyhow::format_err;
 use fidl::endpoints::{create_proxy, ClientEnd, ServerEnd};
+use fidl::prelude::*;
 use fidl_fuchsia_auth::AuthenticationContextProviderMarker;
 use fidl_fuchsia_identity_account::{AccountMarker, Error as ApiError};
 use fidl_fuchsia_identity_authentication::{Enrollment, StorageUnlockMechanismProxy};

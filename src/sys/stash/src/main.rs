@@ -7,7 +7,7 @@
 //! `stash` provides key/value storage to components.
 
 use anyhow::{format_err, Context as _, Error};
-use fidl::endpoints::ProtocolMarker;
+use fidl::prelude::*;
 use fuchsia_async as fasync;
 use fuchsia_component::server::ServiceFs;
 use fuchsia_inspect::{self as inspect, health::Reporter};

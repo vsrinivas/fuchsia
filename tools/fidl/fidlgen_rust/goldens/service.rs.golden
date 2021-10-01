@@ -17,6 +17,7 @@ use {
     fidl::{
         client::{decode_transaction_body_fut, QueryResponseFut},
         encoding::{Decodable as _, Encodable as _},
+        endpoints::{ControlHandle as _, Responder as _},
         fidl_bits, fidl_empty_struct, fidl_enum, fidl_struct, fidl_struct_copy, fidl_table,
         fidl_union, wrap_handle_metadata,
     },
@@ -197,16 +198,12 @@ impl futures::stream::FusedStream for FirstProtocolRequestStream {
 
 impl fidl::endpoints::RequestStream for FirstProtocolRequestStream {
     type Protocol = FirstProtocolMarker;
+    type ControlHandle = FirstProtocolControlHandle;
 
-    /// Consume a channel to make a FirstProtocolRequestStream
     fn from_channel(channel: fidl::AsyncChannel) -> Self {
         Self { inner: std::sync::Arc::new(fidl::ServeInner::new(channel)), is_terminated: false }
     }
 
-    /// ControlHandle for the remote connection
-    type ControlHandle = FirstProtocolControlHandle;
-
-    /// ControlHandle for the remote connection
     fn control_handle(&self) -> Self::ControlHandle {
         FirstProtocolControlHandle { inner: self.inner.clone() }
     }
@@ -363,17 +360,17 @@ pub struct FirstProtocolControlHandle {
     inner: std::sync::Arc<fidl::ServeInner>,
 }
 
-impl FirstProtocolControlHandle {
-    /// Set the server to shutdown. The underlying channel is only closed the
-    /// next time the stream is polled.
-    pub fn shutdown(&self) {
+impl fidl::endpoints::ControlHandle for FirstProtocolControlHandle {
+    fn shutdown(&self) {
         self.inner.shutdown()
     }
 
-    pub fn shutdown_with_epitaph(&self, status: zx_status::Status) {
+    fn shutdown_with_epitaph(&self, status: zx_status::Status) {
         self.inner.shutdown_with_epitaph(status)
     }
 }
+
+impl FirstProtocolControlHandle {}
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
 pub struct SecondProtocolMarker;
@@ -547,16 +544,12 @@ impl futures::stream::FusedStream for SecondProtocolRequestStream {
 
 impl fidl::endpoints::RequestStream for SecondProtocolRequestStream {
     type Protocol = SecondProtocolMarker;
+    type ControlHandle = SecondProtocolControlHandle;
 
-    /// Consume a channel to make a SecondProtocolRequestStream
     fn from_channel(channel: fidl::AsyncChannel) -> Self {
         Self { inner: std::sync::Arc::new(fidl::ServeInner::new(channel)), is_terminated: false }
     }
 
-    /// ControlHandle for the remote connection
-    type ControlHandle = SecondProtocolControlHandle;
-
-    /// ControlHandle for the remote connection
     fn control_handle(&self) -> Self::ControlHandle {
         SecondProtocolControlHandle { inner: self.inner.clone() }
     }
@@ -714,17 +707,17 @@ pub struct SecondProtocolControlHandle {
     inner: std::sync::Arc<fidl::ServeInner>,
 }
 
-impl SecondProtocolControlHandle {
-    /// Set the server to shutdown. The underlying channel is only closed the
-    /// next time the stream is polled.
-    pub fn shutdown(&self) {
+impl fidl::endpoints::ControlHandle for SecondProtocolControlHandle {
+    fn shutdown(&self) {
         self.inner.shutdown()
     }
 
-    pub fn shutdown_with_epitaph(&self, status: zx_status::Status) {
+    fn shutdown_with_epitaph(&self, status: zx_status::Status) {
         self.inner.shutdown_with_epitaph(status)
     }
 }
+
+impl SecondProtocolControlHandle {}
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
 pub struct EmptyServiceMarker;

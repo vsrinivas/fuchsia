@@ -19,7 +19,8 @@ use crate::{
 
 use {
     anyhow::Error,
-    fidl::endpoints::{RequestStream, ServerEnd},
+    fidl::endpoints::ServerEnd,
+    fidl::prelude::*,
     fidl_fuchsia_io::{
         FileObject, FileRequest, FileRequestStream, NodeAttributes, NodeInfo, NodeMarker,
         SeekOrigin, Vmofile, INO_UNKNOWN, MODE_TYPE_FILE, OPEN_FLAG_DESCRIBE,

@@ -5,7 +5,7 @@
 use super::*;
 
 use anyhow::Error;
-use fidl::endpoints::RequestStream;
+use fidl::prelude::*;
 use fidl_fuchsia_factory_lowpan::*;
 use fidl_fuchsia_lowpan::*;
 use fidl_fuchsia_lowpan_device::{

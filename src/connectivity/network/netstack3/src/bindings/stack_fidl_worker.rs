@@ -12,6 +12,7 @@ use super::{
     ContextExt as _, LockedStackContext, StackContext, StackDispatcher as _,
 };
 
+use fidl::prelude::*;
 use fidl_fuchsia_net as fidl_net;
 use fidl_fuchsia_net_stack::{
     self as fidl_net_stack, AdministrativeStatus, ForwardingEntry, InterfaceInfo,

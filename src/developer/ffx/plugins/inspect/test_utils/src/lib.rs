@@ -9,7 +9,8 @@ use {
         Data, DiagnosticsHierarchy, InspectData, LifecycleData, LifecycleType, Property,
     },
     ffx_inspect_common::Output,
-    fidl::endpoints::{RequestStream, ServerEnd},
+    fidl::endpoints::ServerEnd,
+    fidl::prelude::*,
     fidl_fuchsia_developer_remotecontrol::{
         ArchiveIteratorEntry, ArchiveIteratorError, ArchiveIteratorMarker, ArchiveIteratorRequest,
         BridgeStreamParameters, DiagnosticsData, InlineData, RemoteControlProxy,

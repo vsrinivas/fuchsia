@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 use anyhow::{format_err, Error};
+use fidl::prelude::*;
 use fidl_fuchsia_bluetooth_gatt::{
     self as gatt, AttributePermissions, Characteristic, Descriptor,
     LocalServiceDelegateControlHandle, LocalServiceDelegateMarker,

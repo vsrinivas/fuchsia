@@ -4,6 +4,7 @@
 
 use {
     anyhow::{Context as _, Error},
+    fidl::prelude::*,
     fidl_fuchsia_net_http as net_http,
     fuchsia_async::{self as fasync, TimeoutExt as _},
     fuchsia_component::server::{ServiceFs, ServiceFsDir},

@@ -503,8 +503,8 @@ impl futures::stream::FusedStream for {{ $protocol.Name }}RequestStream {
 
 impl fidl::endpoints::RequestStream for {{ $protocol.Name }}RequestStream {
 	type Protocol = {{ $protocol.Name }}Marker;
+	type ControlHandle = {{ $protocol.Name }}ControlHandle;
 
-	/// Consume a channel to make a {{ $protocol.Name }}RequestStream
 	fn from_channel(channel: fidl::AsyncChannel) -> Self {
 		Self {
 			inner: std::sync::Arc::new(fidl::ServeInner::new(channel)),
@@ -512,10 +512,6 @@ impl fidl::endpoints::RequestStream for {{ $protocol.Name }}RequestStream {
 		}
 	}
 
-	/// ControlHandle for the remote connection
-	type ControlHandle = {{ $protocol.Name }}ControlHandle;
-
-	/// ControlHandle for the remote connection
 	fn control_handle(&self) -> Self::ControlHandle {
 		{{ $protocol.Name }}ControlHandle { inner: self.inner.clone() }
 	}
@@ -750,16 +746,16 @@ impl {{ $protocol.Name }}Request {
 	{{ end }}
 	{{- end }}
 
-        /// Name of the method defined in FIDL
-        pub fn method_name(&self) -> &'static str {
-          match *self {
-            {{- range $method := $protocol.Methods }}
-              {{- if $method.HasRequest }}
-                {{ $protocol.Name }}Request::{{ $method.CamelName }}{..} => "{{ $method.Name }}",
-              {{- end }}
-            {{- end }}
-          }
-        }
+	/// Name of the method defined in FIDL
+	pub fn method_name(&self) -> &'static str {
+		match *self {
+		{{- range $method := $protocol.Methods }}
+			{{- if $method.HasRequest }}
+			{{ $protocol.Name }}Request::{{ $method.CamelName }}{..} => "{{ $method.Name }}",
+			{{- end }}
+		{{- end }}
+		}
+	}
 }
 
 pub struct {{ $protocol.Name }}Encoder;
@@ -846,17 +842,17 @@ pub struct {{ $protocol.Name }}ControlHandle {
 	inner: std::sync::Arc<fidl::ServeInner>,
 }
 
-impl {{ $protocol.Name }}ControlHandle {
-	/// Set the server to shutdown. The underlying channel is only closed the
-	/// next time the stream is polled.
-	pub fn shutdown(&self) {
+impl fidl::endpoints::ControlHandle for {{ $protocol.Name }}ControlHandle {
+	fn shutdown(&self) {
 		self.inner.shutdown()
 	}
 
-	pub fn shutdown_with_epitaph(&self, status: zx_status::Status) {
+	fn shutdown_with_epitaph(&self, status: zx_status::Status) {
 		self.inner.shutdown_with_epitaph(status)
 	}
+}
 
+impl {{ $protocol.Name }}ControlHandle {
 	{{- range $method := $protocol.Methods }}
 	{{- if not $method.HasRequest }}
 	pub fn send_{{ $method.Name }}(&self
@@ -908,22 +904,22 @@ impl std::ops::Drop for {{ $protocol.Name }}{{ $method.CamelName }}Responder {
 	}
 }
 
-impl {{ $protocol.Name }}{{ $method.CamelName }}Responder {
-	pub fn control_handle(&self) -> &{{ $protocol.Name }}ControlHandle {
+impl fidl::endpoints::Responder for {{ $protocol.Name }}{{ $method.CamelName }}Responder {
+	type ControlHandle = {{ $protocol.Name }}ControlHandle;
+
+	fn control_handle(&self) -> &{{ $protocol.Name }}ControlHandle {
 		&self.control_handle
 	}
 
-	/// Drop the Responder without setting the channel to shutdown.
-	///
-	/// This method shouldn't normally be used-- instead, send a response
-	/// to prevent the channel from shutting down.
-	pub fn drop_without_shutdown(mut self) {
+	fn drop_without_shutdown(mut self) {
 		// Safety: drops once, never accessed again due to mem::forget
 		unsafe { std::mem::ManuallyDrop::drop(&mut self.control_handle) };
 		// Prevent Drop from running (which would shut down the channel)
 		std::mem::forget(self);
 	}
+}
 
+impl {{ $protocol.Name }}{{ $method.CamelName }}Responder {
 	/// Sends a response to the FIDL transaction.
 	///
 	/// Sets the channel to shutdown if an error occurs.

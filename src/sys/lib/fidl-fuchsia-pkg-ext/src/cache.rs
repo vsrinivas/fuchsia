@@ -512,7 +512,7 @@ pub enum WriteBlobError {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use fidl::endpoints::RequestStream;
+    use fidl::prelude::*;
     use fidl_fuchsia_io::{DirectoryRequestStream, FileMarker, FileRequest, FileRequestStream};
     use fidl_fuchsia_pkg::{
         BlobInfoIteratorRequest, NeededBlobsRequest, NeededBlobsRequestStream,

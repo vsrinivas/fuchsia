@@ -8,6 +8,7 @@ use {
     anyhow::Context,
     async_trait::async_trait,
     fidl::endpoints::{ProtocolMarker, ServerEnd},
+    fidl::prelude::*,
     fidl_fuchsia_component_runner as fcrunner, fidl_fuchsia_io as fio,
     fidl_fuchsia_io::{DirectoryMarker, DirectoryProxy},
     fidl_fuchsia_ldsvc::{LoaderMarker, LoaderRequest},

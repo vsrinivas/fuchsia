@@ -4,7 +4,7 @@
 
 use {
     anyhow::Error, async_trait::async_trait, clonable_error::ClonableError,
-    fidl::endpoints::ServerEnd, fidl_fuchsia_component as fcomponent,
+    fidl::endpoints::ServerEnd, fidl::prelude::*, fidl_fuchsia_component as fcomponent,
     fidl_fuchsia_component_runner as fcrunner, fuchsia_async as fasync, fuchsia_zircon as zx,
     futures::stream::TryStreamExt, log::*, thiserror::Error,
 };

@@ -33,7 +33,7 @@ pub async fn set_keymap(proxy: Option<ConfigurationProxy>, cmd: Command) -> Resu
 #[cfg(test)]
 mod tests {
     use super::*;
-    use fidl::endpoints::RequestStream;
+    use fidl::prelude::*;
     use fuchsia_async as fasync;
     use input_pipeline::text_settings_handler;
 

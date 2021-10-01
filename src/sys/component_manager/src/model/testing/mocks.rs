@@ -20,7 +20,7 @@ use {
     anyhow::format_err,
     async_trait::async_trait,
     cm_rust::{ComponentDecl, ExposeDecl, UseDecl},
-    fidl::endpoints::RequestStream,
+    fidl::prelude::*,
     fidl::{endpoints::ServerEnd, epitaph::ChannelEpitaphExt},
     fidl_fidl_examples_echo::{EchoMarker, EchoRequest, EchoRequestStream},
     fidl_fuchsia_component_runner as fcrunner,

@@ -9,6 +9,7 @@ use crate::ingress::Scoped;
 use crate::ingress::{request, watch};
 use crate::job::source::ErrorResponder;
 use crate::job::Job;
+use fidl::prelude::*;
 use fidl_fuchsia_settings::{
     Error, FactoryResetMarker, FactoryResetRequest, FactoryResetSetResponder,
     FactoryResetSetResult, FactoryResetSettings, FactoryResetWatchResponder,
@@ -145,7 +146,7 @@ mod tests {
             job,
             Ok(Job {
                 workload: work::Load::Independent(_),
-                execution_type: execution::Type::Independent
+                execution_type: execution::Type::Independent,
             })
         );
     }
@@ -167,7 +168,7 @@ mod tests {
             job,
             Ok(Job {
                 workload: work::Load::Sequential(_, _),
-                execution_type: execution::Type::Sequential(_)
+                execution_type: execution::Type::Sequential(_),
             })
         );
     }

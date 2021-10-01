@@ -22,8 +22,8 @@ use fuchsia_zircon as zx;
 
 /// A marker for a particular FIDL protocol.
 ///
-/// Implementations of this trait can be used to manufacture instances of a FIDL protocol
-/// and get metadata about a particular protocol.
+/// Implementations of this trait can be used to manufacture instances of a FIDL
+/// protocol and get metadata about a particular protocol.
 pub trait ProtocolMarker: Sized + Send + Sync + 'static {
     /// The type of the structure against which FIDL requests are made.
     /// Queries made against the proxy are sent to the paired `ServerEnd`.
@@ -64,7 +64,7 @@ pub trait DiscoverableProtocolMarker: ProtocolMarker {
 
 /// A type which allows querying a remote FIDL server over a channel.
 pub trait Proxy: Sized + Send + Sync {
-    /// The service which this `Proxy` controls.
+    /// The protocol which this `Proxy` controls.
     type Protocol: ProtocolMarker<Proxy = Self>;
 
     /// Create a proxy over the given channel.
@@ -100,14 +100,14 @@ pub trait Proxy: Sized + Send + Sync {
 
 /// A stream of requests coming into a FIDL server over a channel.
 pub trait RequestStream: Sized + Send + Stream + TryStream<Error = crate::Error> + Unpin {
-    /// The service which this `RequestStream` serves.
+    /// The protocol which this `RequestStream` serves.
     type Protocol: ProtocolMarker<RequestStream = Self>;
 
-    /// A type that can be used to send events and shut down the request stream.
-    type ControlHandle;
+    /// The control handle for this `RequestStream`.
+    type ControlHandle: ControlHandle;
 
     /// Returns a copy of the `ControlHandle` for the given stream.
-    /// This handle can be used to send events and shut down the request stream.
+    /// This handle can be used to send events or shut down the request stream.
     fn control_handle(&self) -> Self::ControlHandle;
 
     /// Create a request stream from the given channel.
@@ -128,6 +128,36 @@ pub trait RequestStream: Sized + Send + Stream + TryStream<Error = crate::Error>
 
 /// The Request type associated with a Marker.
 pub type Request<Marker> = <<Marker as ProtocolMarker>::RequestStream as futures::TryStream>::Ok;
+
+/// A type associated with a `RequestStream` that can be used to send FIDL
+/// events or to shut down the request stream.
+pub trait ControlHandle {
+    /// Set the server to shutdown. The underlying channel is only closed the
+    /// next time the stream is polled.
+    // TODO(fxbug.dev/81036): Fix behavior or above docs.
+    fn shutdown(&self);
+
+    /// Sets the server to shutdown with an epitaph. The underlying channel is
+    /// only closed the next time the stream is polled.
+    // TODO(fxbug.dev/81036): Fix behavior or above docs.
+    fn shutdown_with_epitaph(&self, status: zx_status::Status);
+}
+
+/// A type associated with a particular two-way FIDL method, used by servers to
+/// send a response to the client.
+pub trait Responder {
+    /// The control handle for this protocol.
+    type ControlHandle: ControlHandle;
+
+    /// Returns the `ControlHandle` for this protocol.
+    fn control_handle(&self) -> &Self::ControlHandle;
+
+    /// Drops the responder without setting the channel to shutdown.
+    ///
+    /// This method shouldn't normally be used. Instead, send a response to
+    /// prevent the channel from shutting down.
+    fn drop_without_shutdown(self);
+}
 
 /// A marker for a particular FIDL service.
 #[cfg(target_os = "fuchsia")]

@@ -16,7 +16,7 @@ use crate::{
 };
 use diagnostics_data::{BuilderArgs, LogsDataBuilder};
 use diagnostics_message::Message;
-use fidl::endpoints::RequestStream;
+use fidl::prelude::*;
 use fidl_fuchsia_diagnostics::{Interest, StreamMode};
 use fidl_fuchsia_logger::{
     LogInterestSelector, LogSinkControlHandle, LogSinkRequest, LogSinkRequestStream,

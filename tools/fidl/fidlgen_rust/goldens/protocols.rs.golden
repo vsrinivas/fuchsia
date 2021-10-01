@@ -17,6 +17,7 @@ use {
     fidl::{
         client::{decode_transaction_body_fut, QueryResponseFut},
         encoding::{Decodable as _, Encodable as _},
+        endpoints::{ControlHandle as _, Responder as _},
         fidl_bits, fidl_empty_struct, fidl_enum, fidl_struct, fidl_struct_copy, fidl_table,
         fidl_union, wrap_handle_metadata,
     },
@@ -819,16 +820,12 @@ impl futures::stream::FusedStream for WithAndWithoutRequestResponseRequestStream
 
 impl fidl::endpoints::RequestStream for WithAndWithoutRequestResponseRequestStream {
     type Protocol = WithAndWithoutRequestResponseMarker;
+    type ControlHandle = WithAndWithoutRequestResponseControlHandle;
 
-    /// Consume a channel to make a WithAndWithoutRequestResponseRequestStream
     fn from_channel(channel: fidl::AsyncChannel) -> Self {
         Self { inner: std::sync::Arc::new(fidl::ServeInner::new(channel)), is_terminated: false }
     }
 
-    /// ControlHandle for the remote connection
-    type ControlHandle = WithAndWithoutRequestResponseControlHandle;
-
-    /// ControlHandle for the remote connection
     fn control_handle(&self) -> Self::ControlHandle {
         WithAndWithoutRequestResponseControlHandle { inner: self.inner.clone() }
     }
@@ -1376,16 +1373,17 @@ pub struct WithAndWithoutRequestResponseControlHandle {
     inner: std::sync::Arc<fidl::ServeInner>,
 }
 
-impl WithAndWithoutRequestResponseControlHandle {
-    /// Set the server to shutdown. The underlying channel is only closed the
-    /// next time the stream is polled.
-    pub fn shutdown(&self) {
+impl fidl::endpoints::ControlHandle for WithAndWithoutRequestResponseControlHandle {
+    fn shutdown(&self) {
         self.inner.shutdown()
     }
 
-    pub fn shutdown_with_epitaph(&self, status: zx_status::Status) {
+    fn shutdown_with_epitaph(&self, status: zx_status::Status) {
         self.inner.shutdown_with_epitaph(status)
     }
+}
+
+impl WithAndWithoutRequestResponseControlHandle {
     pub fn send_on_empty_response(&self) -> Result<(), fidl::Error> {
         let mut response = ();
 
@@ -1441,22 +1439,22 @@ impl std::ops::Drop for WithAndWithoutRequestResponseNoRequestEmptyResponseRespo
     }
 }
 
-impl WithAndWithoutRequestResponseNoRequestEmptyResponseResponder {
-    pub fn control_handle(&self) -> &WithAndWithoutRequestResponseControlHandle {
+impl fidl::endpoints::Responder for WithAndWithoutRequestResponseNoRequestEmptyResponseResponder {
+    type ControlHandle = WithAndWithoutRequestResponseControlHandle;
+
+    fn control_handle(&self) -> &WithAndWithoutRequestResponseControlHandle {
         &self.control_handle
     }
 
-    /// Drop the Responder without setting the channel to shutdown.
-    ///
-    /// This method shouldn't normally be used-- instead, send a response
-    /// to prevent the channel from shutting down.
-    pub fn drop_without_shutdown(mut self) {
+    fn drop_without_shutdown(mut self) {
         // Safety: drops once, never accessed again due to mem::forget
         unsafe { std::mem::ManuallyDrop::drop(&mut self.control_handle) };
         // Prevent Drop from running (which would shut down the channel)
         std::mem::forget(self);
     }
+}
 
+impl WithAndWithoutRequestResponseNoRequestEmptyResponseResponder {
     /// Sends a response to the FIDL transaction.
     ///
     /// Sets the channel to shutdown if an error occurs.
@@ -1519,22 +1517,22 @@ impl std::ops::Drop for WithAndWithoutRequestResponseNoRequestWithResponseRespon
     }
 }
 
-impl WithAndWithoutRequestResponseNoRequestWithResponseResponder {
-    pub fn control_handle(&self) -> &WithAndWithoutRequestResponseControlHandle {
+impl fidl::endpoints::Responder for WithAndWithoutRequestResponseNoRequestWithResponseResponder {
+    type ControlHandle = WithAndWithoutRequestResponseControlHandle;
+
+    fn control_handle(&self) -> &WithAndWithoutRequestResponseControlHandle {
         &self.control_handle
     }
 
-    /// Drop the Responder without setting the channel to shutdown.
-    ///
-    /// This method shouldn't normally be used-- instead, send a response
-    /// to prevent the channel from shutting down.
-    pub fn drop_without_shutdown(mut self) {
+    fn drop_without_shutdown(mut self) {
         // Safety: drops once, never accessed again due to mem::forget
         unsafe { std::mem::ManuallyDrop::drop(&mut self.control_handle) };
         // Prevent Drop from running (which would shut down the channel)
         std::mem::forget(self);
     }
+}
 
+impl WithAndWithoutRequestResponseNoRequestWithResponseResponder {
     /// Sends a response to the FIDL transaction.
     ///
     /// Sets the channel to shutdown if an error occurs.
@@ -1597,22 +1595,22 @@ impl std::ops::Drop for WithAndWithoutRequestResponseWithRequestEmptyResponseRes
     }
 }
 
-impl WithAndWithoutRequestResponseWithRequestEmptyResponseResponder {
-    pub fn control_handle(&self) -> &WithAndWithoutRequestResponseControlHandle {
+impl fidl::endpoints::Responder for WithAndWithoutRequestResponseWithRequestEmptyResponseResponder {
+    type ControlHandle = WithAndWithoutRequestResponseControlHandle;
+
+    fn control_handle(&self) -> &WithAndWithoutRequestResponseControlHandle {
         &self.control_handle
     }
 
-    /// Drop the Responder without setting the channel to shutdown.
-    ///
-    /// This method shouldn't normally be used-- instead, send a response
-    /// to prevent the channel from shutting down.
-    pub fn drop_without_shutdown(mut self) {
+    fn drop_without_shutdown(mut self) {
         // Safety: drops once, never accessed again due to mem::forget
         unsafe { std::mem::ManuallyDrop::drop(&mut self.control_handle) };
         // Prevent Drop from running (which would shut down the channel)
         std::mem::forget(self);
     }
+}
 
+impl WithAndWithoutRequestResponseWithRequestEmptyResponseResponder {
     /// Sends a response to the FIDL transaction.
     ///
     /// Sets the channel to shutdown if an error occurs.
@@ -1675,22 +1673,22 @@ impl std::ops::Drop for WithAndWithoutRequestResponseWithRequestWithResponseResp
     }
 }
 
-impl WithAndWithoutRequestResponseWithRequestWithResponseResponder {
-    pub fn control_handle(&self) -> &WithAndWithoutRequestResponseControlHandle {
+impl fidl::endpoints::Responder for WithAndWithoutRequestResponseWithRequestWithResponseResponder {
+    type ControlHandle = WithAndWithoutRequestResponseControlHandle;
+
+    fn control_handle(&self) -> &WithAndWithoutRequestResponseControlHandle {
         &self.control_handle
     }
 
-    /// Drop the Responder without setting the channel to shutdown.
-    ///
-    /// This method shouldn't normally be used-- instead, send a response
-    /// to prevent the channel from shutting down.
-    pub fn drop_without_shutdown(mut self) {
+    fn drop_without_shutdown(mut self) {
         // Safety: drops once, never accessed again due to mem::forget
         unsafe { std::mem::ManuallyDrop::drop(&mut self.control_handle) };
         // Prevent Drop from running (which would shut down the channel)
         std::mem::forget(self);
     }
+}
 
+impl WithAndWithoutRequestResponseWithRequestWithResponseResponder {
     /// Sends a response to the FIDL transaction.
     ///
     /// Sets the channel to shutdown if an error occurs.
@@ -2097,16 +2095,12 @@ impl futures::stream::FusedStream for WithErrorSyntaxRequestStream {
 
 impl fidl::endpoints::RequestStream for WithErrorSyntaxRequestStream {
     type Protocol = WithErrorSyntaxMarker;
+    type ControlHandle = WithErrorSyntaxControlHandle;
 
-    /// Consume a channel to make a WithErrorSyntaxRequestStream
     fn from_channel(channel: fidl::AsyncChannel) -> Self {
         Self { inner: std::sync::Arc::new(fidl::ServeInner::new(channel)), is_terminated: false }
     }
 
-    /// ControlHandle for the remote connection
-    type ControlHandle = WithErrorSyntaxControlHandle;
-
-    /// ControlHandle for the remote connection
     fn control_handle(&self) -> Self::ControlHandle {
         WithErrorSyntaxControlHandle { inner: self.inner.clone() }
     }
@@ -2507,17 +2501,17 @@ pub struct WithErrorSyntaxControlHandle {
     inner: std::sync::Arc<fidl::ServeInner>,
 }
 
-impl WithErrorSyntaxControlHandle {
-    /// Set the server to shutdown. The underlying channel is only closed the
-    /// next time the stream is polled.
-    pub fn shutdown(&self) {
+impl fidl::endpoints::ControlHandle for WithErrorSyntaxControlHandle {
+    fn shutdown(&self) {
         self.inner.shutdown()
     }
 
-    pub fn shutdown_with_epitaph(&self, status: zx_status::Status) {
+    fn shutdown_with_epitaph(&self, status: zx_status::Status) {
         self.inner.shutdown_with_epitaph(status)
     }
 }
+
+impl WithErrorSyntaxControlHandle {}
 #[must_use = "FIDL methods require a response to be sent"]
 #[derive(Debug)]
 pub struct WithErrorSyntaxResponseAsStructResponder {
@@ -2537,22 +2531,22 @@ impl std::ops::Drop for WithErrorSyntaxResponseAsStructResponder {
     }
 }
 
-impl WithErrorSyntaxResponseAsStructResponder {
-    pub fn control_handle(&self) -> &WithErrorSyntaxControlHandle {
+impl fidl::endpoints::Responder for WithErrorSyntaxResponseAsStructResponder {
+    type ControlHandle = WithErrorSyntaxControlHandle;
+
+    fn control_handle(&self) -> &WithErrorSyntaxControlHandle {
         &self.control_handle
     }
 
-    /// Drop the Responder without setting the channel to shutdown.
-    ///
-    /// This method shouldn't normally be used-- instead, send a response
-    /// to prevent the channel from shutting down.
-    pub fn drop_without_shutdown(mut self) {
+    fn drop_without_shutdown(mut self) {
         // Safety: drops once, never accessed again due to mem::forget
         unsafe { std::mem::ManuallyDrop::drop(&mut self.control_handle) };
         // Prevent Drop from running (which would shut down the channel)
         std::mem::forget(self);
     }
+}
 
+impl WithErrorSyntaxResponseAsStructResponder {
     /// Sends a response to the FIDL transaction.
     ///
     /// Sets the channel to shutdown if an error occurs.
@@ -2627,22 +2621,22 @@ impl std::ops::Drop for WithErrorSyntaxErrorAsPrimitiveResponder {
     }
 }
 
-impl WithErrorSyntaxErrorAsPrimitiveResponder {
-    pub fn control_handle(&self) -> &WithErrorSyntaxControlHandle {
+impl fidl::endpoints::Responder for WithErrorSyntaxErrorAsPrimitiveResponder {
+    type ControlHandle = WithErrorSyntaxControlHandle;
+
+    fn control_handle(&self) -> &WithErrorSyntaxControlHandle {
         &self.control_handle
     }
 
-    /// Drop the Responder without setting the channel to shutdown.
-    ///
-    /// This method shouldn't normally be used-- instead, send a response
-    /// to prevent the channel from shutting down.
-    pub fn drop_without_shutdown(mut self) {
+    fn drop_without_shutdown(mut self) {
         // Safety: drops once, never accessed again due to mem::forget
         unsafe { std::mem::ManuallyDrop::drop(&mut self.control_handle) };
         // Prevent Drop from running (which would shut down the channel)
         std::mem::forget(self);
     }
+}
 
+impl WithErrorSyntaxErrorAsPrimitiveResponder {
     /// Sends a response to the FIDL transaction.
     ///
     /// Sets the channel to shutdown if an error occurs.
@@ -2717,22 +2711,22 @@ impl std::ops::Drop for WithErrorSyntaxErrorAsEnumResponder {
     }
 }
 
-impl WithErrorSyntaxErrorAsEnumResponder {
-    pub fn control_handle(&self) -> &WithErrorSyntaxControlHandle {
+impl fidl::endpoints::Responder for WithErrorSyntaxErrorAsEnumResponder {
+    type ControlHandle = WithErrorSyntaxControlHandle;
+
+    fn control_handle(&self) -> &WithErrorSyntaxControlHandle {
         &self.control_handle
     }
 
-    /// Drop the Responder without setting the channel to shutdown.
-    ///
-    /// This method shouldn't normally be used-- instead, send a response
-    /// to prevent the channel from shutting down.
-    pub fn drop_without_shutdown(mut self) {
+    fn drop_without_shutdown(mut self) {
         // Safety: drops once, never accessed again due to mem::forget
         unsafe { std::mem::ManuallyDrop::drop(&mut self.control_handle) };
         // Prevent Drop from running (which would shut down the channel)
         std::mem::forget(self);
     }
+}
 
+impl WithErrorSyntaxErrorAsEnumResponder {
     /// Sends a response to the FIDL transaction.
     ///
     /// Sets the channel to shutdown if an error occurs.
@@ -2807,22 +2801,22 @@ impl std::ops::Drop for WithErrorSyntaxHandleInResultResponder {
     }
 }
 
-impl WithErrorSyntaxHandleInResultResponder {
-    pub fn control_handle(&self) -> &WithErrorSyntaxControlHandle {
+impl fidl::endpoints::Responder for WithErrorSyntaxHandleInResultResponder {
+    type ControlHandle = WithErrorSyntaxControlHandle;
+
+    fn control_handle(&self) -> &WithErrorSyntaxControlHandle {
         &self.control_handle
     }
 
-    /// Drop the Responder without setting the channel to shutdown.
-    ///
-    /// This method shouldn't normally be used-- instead, send a response
-    /// to prevent the channel from shutting down.
-    pub fn drop_without_shutdown(mut self) {
+    fn drop_without_shutdown(mut self) {
         // Safety: drops once, never accessed again due to mem::forget
         unsafe { std::mem::ManuallyDrop::drop(&mut self.control_handle) };
         // Prevent Drop from running (which would shut down the channel)
         std::mem::forget(self);
     }
+}
 
+impl WithErrorSyntaxHandleInResultResponder {
     /// Sends a response to the FIDL transaction.
     ///
     /// Sets the channel to shutdown if an error occurs.
@@ -3236,16 +3230,12 @@ impl futures::stream::FusedStream for ChannelProtocolRequestStream {
 
 impl fidl::endpoints::RequestStream for ChannelProtocolRequestStream {
     type Protocol = ChannelProtocolMarker;
+    type ControlHandle = ChannelProtocolControlHandle;
 
-    /// Consume a channel to make a ChannelProtocolRequestStream
     fn from_channel(channel: fidl::AsyncChannel) -> Self {
         Self { inner: std::sync::Arc::new(fidl::ServeInner::new(channel)), is_terminated: false }
     }
 
-    /// ControlHandle for the remote connection
-    type ControlHandle = ChannelProtocolControlHandle;
-
-    /// ControlHandle for the remote connection
     fn control_handle(&self) -> Self::ControlHandle {
         ChannelProtocolControlHandle { inner: self.inner.clone() }
     }
@@ -3664,16 +3654,17 @@ pub struct ChannelProtocolControlHandle {
     inner: std::sync::Arc<fidl::ServeInner>,
 }
 
-impl ChannelProtocolControlHandle {
-    /// Set the server to shutdown. The underlying channel is only closed the
-    /// next time the stream is polled.
-    pub fn shutdown(&self) {
+impl fidl::endpoints::ControlHandle for ChannelProtocolControlHandle {
+    fn shutdown(&self) {
         self.inner.shutdown()
     }
 
-    pub fn shutdown_with_epitaph(&self, status: zx_status::Status) {
+    fn shutdown_with_epitaph(&self, status: zx_status::Status) {
         self.inner.shutdown_with_epitaph(status)
     }
+}
+
+impl ChannelProtocolControlHandle {
     pub fn send_event_a(&self, mut a: i64, mut b: i64) -> Result<(), fidl::Error> {
         let mut response = (a, b);
 
@@ -3711,22 +3702,22 @@ impl std::ops::Drop for ChannelProtocolMethodBResponder {
     }
 }
 
-impl ChannelProtocolMethodBResponder {
-    pub fn control_handle(&self) -> &ChannelProtocolControlHandle {
+impl fidl::endpoints::Responder for ChannelProtocolMethodBResponder {
+    type ControlHandle = ChannelProtocolControlHandle;
+
+    fn control_handle(&self) -> &ChannelProtocolControlHandle {
         &self.control_handle
     }
 
-    /// Drop the Responder without setting the channel to shutdown.
-    ///
-    /// This method shouldn't normally be used-- instead, send a response
-    /// to prevent the channel from shutting down.
-    pub fn drop_without_shutdown(mut self) {
+    fn drop_without_shutdown(mut self) {
         // Safety: drops once, never accessed again due to mem::forget
         unsafe { std::mem::ManuallyDrop::drop(&mut self.control_handle) };
         // Prevent Drop from running (which would shut down the channel)
         std::mem::forget(self);
     }
+}
 
+impl ChannelProtocolMethodBResponder {
     /// Sends a response to the FIDL transaction.
     ///
     /// Sets the channel to shutdown if an error occurs.
@@ -3789,22 +3780,22 @@ impl std::ops::Drop for ChannelProtocolTakeHandleResponder {
     }
 }
 
-impl ChannelProtocolTakeHandleResponder {
-    pub fn control_handle(&self) -> &ChannelProtocolControlHandle {
+impl fidl::endpoints::Responder for ChannelProtocolTakeHandleResponder {
+    type ControlHandle = ChannelProtocolControlHandle;
+
+    fn control_handle(&self) -> &ChannelProtocolControlHandle {
         &self.control_handle
     }
 
-    /// Drop the Responder without setting the channel to shutdown.
-    ///
-    /// This method shouldn't normally be used-- instead, send a response
-    /// to prevent the channel from shutting down.
-    pub fn drop_without_shutdown(mut self) {
+    fn drop_without_shutdown(mut self) {
         // Safety: drops once, never accessed again due to mem::forget
         unsafe { std::mem::ManuallyDrop::drop(&mut self.control_handle) };
         // Prevent Drop from running (which would shut down the channel)
         std::mem::forget(self);
     }
+}
 
+impl ChannelProtocolTakeHandleResponder {
     /// Sends a response to the FIDL transaction.
     ///
     /// Sets the channel to shutdown if an error occurs.
@@ -3867,22 +3858,22 @@ impl std::ops::Drop for ChannelProtocolMutateSocketResponder {
     }
 }
 
-impl ChannelProtocolMutateSocketResponder {
-    pub fn control_handle(&self) -> &ChannelProtocolControlHandle {
+impl fidl::endpoints::Responder for ChannelProtocolMutateSocketResponder {
+    type ControlHandle = ChannelProtocolControlHandle;
+
+    fn control_handle(&self) -> &ChannelProtocolControlHandle {
         &self.control_handle
     }
 
-    /// Drop the Responder without setting the channel to shutdown.
-    ///
-    /// This method shouldn't normally be used-- instead, send a response
-    /// to prevent the channel from shutting down.
-    pub fn drop_without_shutdown(mut self) {
+    fn drop_without_shutdown(mut self) {
         // Safety: drops once, never accessed again due to mem::forget
         unsafe { std::mem::ManuallyDrop::drop(&mut self.control_handle) };
         // Prevent Drop from running (which would shut down the channel)
         std::mem::forget(self);
     }
+}
 
+impl ChannelProtocolMutateSocketResponder {
     /// Sends a response to the FIDL transaction.
     ///
     /// Sets the channel to shutdown if an error occurs.
@@ -4174,16 +4165,12 @@ impl futures::stream::FusedStream for TransitionalRequestStream {
 
 impl fidl::endpoints::RequestStream for TransitionalRequestStream {
     type Protocol = TransitionalMarker;
+    type ControlHandle = TransitionalControlHandle;
 
-    /// Consume a channel to make a TransitionalRequestStream
     fn from_channel(channel: fidl::AsyncChannel) -> Self {
         Self { inner: std::sync::Arc::new(fidl::ServeInner::new(channel)), is_terminated: false }
     }
 
-    /// ControlHandle for the remote connection
-    type ControlHandle = TransitionalControlHandle;
-
-    /// ControlHandle for the remote connection
     fn control_handle(&self) -> Self::ControlHandle {
         TransitionalControlHandle { inner: self.inner.clone() }
     }
@@ -4435,16 +4422,17 @@ pub struct TransitionalControlHandle {
     inner: std::sync::Arc<fidl::ServeInner>,
 }
 
-impl TransitionalControlHandle {
-    /// Set the server to shutdown. The underlying channel is only closed the
-    /// next time the stream is polled.
-    pub fn shutdown(&self) {
+impl fidl::endpoints::ControlHandle for TransitionalControlHandle {
+    fn shutdown(&self) {
         self.inner.shutdown()
     }
 
-    pub fn shutdown_with_epitaph(&self, status: zx_status::Status) {
+    fn shutdown_with_epitaph(&self, status: zx_status::Status) {
         self.inner.shutdown_with_epitaph(status)
     }
+}
+
+impl TransitionalControlHandle {
     pub fn send_event(&self, mut x: i64) -> Result<(), fidl::Error> {
         let mut response = (x);
 
@@ -4482,22 +4470,22 @@ impl std::ops::Drop for TransitionalRequestResponder {
     }
 }
 
-impl TransitionalRequestResponder {
-    pub fn control_handle(&self) -> &TransitionalControlHandle {
+impl fidl::endpoints::Responder for TransitionalRequestResponder {
+    type ControlHandle = TransitionalControlHandle;
+
+    fn control_handle(&self) -> &TransitionalControlHandle {
         &self.control_handle
     }
 
-    /// Drop the Responder without setting the channel to shutdown.
-    ///
-    /// This method shouldn't normally be used-- instead, send a response
-    /// to prevent the channel from shutting down.
-    pub fn drop_without_shutdown(mut self) {
+    fn drop_without_shutdown(mut self) {
         // Safety: drops once, never accessed again due to mem::forget
         unsafe { std::mem::ManuallyDrop::drop(&mut self.control_handle) };
         // Prevent Drop from running (which would shut down the channel)
         std::mem::forget(self);
     }
+}
 
+impl TransitionalRequestResponder {
     /// Sends a response to the FIDL transaction.
     ///
     /// Sets the channel to shutdown if an error occurs.
@@ -4720,16 +4708,12 @@ impl futures::stream::FusedStream for DiscoverableProtocolRequestStream {
 
 impl fidl::endpoints::RequestStream for DiscoverableProtocolRequestStream {
     type Protocol = DiscoverableProtocolMarker;
+    type ControlHandle = DiscoverableProtocolControlHandle;
 
-    /// Consume a channel to make a DiscoverableProtocolRequestStream
     fn from_channel(channel: fidl::AsyncChannel) -> Self {
         Self { inner: std::sync::Arc::new(fidl::ServeInner::new(channel)), is_terminated: false }
     }
 
-    /// ControlHandle for the remote connection
-    type ControlHandle = DiscoverableProtocolControlHandle;
-
-    /// ControlHandle for the remote connection
     fn control_handle(&self) -> Self::ControlHandle {
         DiscoverableProtocolControlHandle { inner: self.inner.clone() }
     }
@@ -4888,17 +4872,17 @@ pub struct DiscoverableProtocolControlHandle {
     inner: std::sync::Arc<fidl::ServeInner>,
 }
 
-impl DiscoverableProtocolControlHandle {
-    /// Set the server to shutdown. The underlying channel is only closed the
-    /// next time the stream is polled.
-    pub fn shutdown(&self) {
+impl fidl::endpoints::ControlHandle for DiscoverableProtocolControlHandle {
+    fn shutdown(&self) {
         self.inner.shutdown()
     }
 
-    pub fn shutdown_with_epitaph(&self, status: zx_status::Status) {
+    fn shutdown_with_epitaph(&self, status: zx_status::Status) {
         self.inner.shutdown_with_epitaph(status)
     }
 }
+
+impl DiscoverableProtocolControlHandle {}
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
 pub struct HandleRightsProtocolMarker;
@@ -5178,16 +5162,12 @@ impl futures::stream::FusedStream for HandleRightsProtocolRequestStream {
 
 impl fidl::endpoints::RequestStream for HandleRightsProtocolRequestStream {
     type Protocol = HandleRightsProtocolMarker;
+    type ControlHandle = HandleRightsProtocolControlHandle;
 
-    /// Consume a channel to make a HandleRightsProtocolRequestStream
     fn from_channel(channel: fidl::AsyncChannel) -> Self {
         Self { inner: std::sync::Arc::new(fidl::ServeInner::new(channel)), is_terminated: false }
     }
 
-    /// ControlHandle for the remote connection
-    type ControlHandle = HandleRightsProtocolControlHandle;
-
-    /// ControlHandle for the remote connection
     fn control_handle(&self) -> Self::ControlHandle {
         HandleRightsProtocolControlHandle { inner: self.inner.clone() }
     }
@@ -5455,16 +5435,17 @@ pub struct HandleRightsProtocolControlHandle {
     inner: std::sync::Arc<fidl::ServeInner>,
 }
 
-impl HandleRightsProtocolControlHandle {
-    /// Set the server to shutdown. The underlying channel is only closed the
-    /// next time the stream is polled.
-    pub fn shutdown(&self) {
+impl fidl::endpoints::ControlHandle for HandleRightsProtocolControlHandle {
+    fn shutdown(&self) {
         self.inner.shutdown()
     }
 
-    pub fn shutdown_with_epitaph(&self, status: zx_status::Status) {
+    fn shutdown_with_epitaph(&self, status: zx_status::Status) {
         self.inner.shutdown_with_epitaph(status)
     }
+}
+
+impl HandleRightsProtocolControlHandle {
     pub fn send_an_event(&self, mut h: fidl::Socket) -> Result<(), fidl::Error> {
         let mut response = (HandleWrapperObjectTypeSOCKETRights3::<fidl::Socket>(h));
 
@@ -5502,22 +5483,22 @@ impl std::ops::Drop for HandleRightsProtocolResponseMethodResponder {
     }
 }
 
-impl HandleRightsProtocolResponseMethodResponder {
-    pub fn control_handle(&self) -> &HandleRightsProtocolControlHandle {
+impl fidl::endpoints::Responder for HandleRightsProtocolResponseMethodResponder {
+    type ControlHandle = HandleRightsProtocolControlHandle;
+
+    fn control_handle(&self) -> &HandleRightsProtocolControlHandle {
         &self.control_handle
     }
 
-    /// Drop the Responder without setting the channel to shutdown.
-    ///
-    /// This method shouldn't normally be used-- instead, send a response
-    /// to prevent the channel from shutting down.
-    pub fn drop_without_shutdown(mut self) {
+    fn drop_without_shutdown(mut self) {
         // Safety: drops once, never accessed again due to mem::forget
         unsafe { std::mem::ManuallyDrop::drop(&mut self.control_handle) };
         // Prevent Drop from running (which would shut down the channel)
         std::mem::forget(self);
     }
+}
 
+impl HandleRightsProtocolResponseMethodResponder {
     /// Sends a response to the FIDL transaction.
     ///
     /// Sets the channel to shutdown if an error occurs.
@@ -5949,16 +5930,12 @@ impl futures::stream::FusedStream for WithProtocolEndsRequestStream {
 
 impl fidl::endpoints::RequestStream for WithProtocolEndsRequestStream {
     type Protocol = WithProtocolEndsMarker;
+    type ControlHandle = WithProtocolEndsControlHandle;
 
-    /// Consume a channel to make a WithProtocolEndsRequestStream
     fn from_channel(channel: fidl::AsyncChannel) -> Self {
         Self { inner: std::sync::Arc::new(fidl::ServeInner::new(channel)), is_terminated: false }
     }
 
-    /// ControlHandle for the remote connection
-    type ControlHandle = WithProtocolEndsControlHandle;
-
-    /// ControlHandle for the remote connection
     fn control_handle(&self) -> Self::ControlHandle {
         WithProtocolEndsControlHandle { inner: self.inner.clone() }
     }
@@ -6358,17 +6335,17 @@ pub struct WithProtocolEndsControlHandle {
     inner: std::sync::Arc<fidl::ServeInner>,
 }
 
-impl WithProtocolEndsControlHandle {
-    /// Set the server to shutdown. The underlying channel is only closed the
-    /// next time the stream is polled.
-    pub fn shutdown(&self) {
+impl fidl::endpoints::ControlHandle for WithProtocolEndsControlHandle {
+    fn shutdown(&self) {
         self.inner.shutdown()
     }
 
-    pub fn shutdown_with_epitaph(&self, status: zx_status::Status) {
+    fn shutdown_with_epitaph(&self, status: zx_status::Status) {
         self.inner.shutdown_with_epitaph(status)
     }
 }
+
+impl WithProtocolEndsControlHandle {}
 #[must_use = "FIDL methods require a response to be sent"]
 #[derive(Debug)]
 pub struct WithProtocolEndsClientEndsResponder {
@@ -6388,22 +6365,22 @@ impl std::ops::Drop for WithProtocolEndsClientEndsResponder {
     }
 }
 
-impl WithProtocolEndsClientEndsResponder {
-    pub fn control_handle(&self) -> &WithProtocolEndsControlHandle {
+impl fidl::endpoints::Responder for WithProtocolEndsClientEndsResponder {
+    type ControlHandle = WithProtocolEndsControlHandle;
+
+    fn control_handle(&self) -> &WithProtocolEndsControlHandle {
         &self.control_handle
     }
 
-    /// Drop the Responder without setting the channel to shutdown.
-    ///
-    /// This method shouldn't normally be used-- instead, send a response
-    /// to prevent the channel from shutting down.
-    pub fn drop_without_shutdown(mut self) {
+    fn drop_without_shutdown(mut self) {
         // Safety: drops once, never accessed again due to mem::forget
         unsafe { std::mem::ManuallyDrop::drop(&mut self.control_handle) };
         // Prevent Drop from running (which would shut down the channel)
         std::mem::forget(self);
     }
+}
 
+impl WithProtocolEndsClientEndsResponder {
     /// Sends a response to the FIDL transaction.
     ///
     /// Sets the channel to shutdown if an error occurs.
@@ -6477,22 +6454,22 @@ impl std::ops::Drop for WithProtocolEndsServerEndsResponder {
     }
 }
 
-impl WithProtocolEndsServerEndsResponder {
-    pub fn control_handle(&self) -> &WithProtocolEndsControlHandle {
+impl fidl::endpoints::Responder for WithProtocolEndsServerEndsResponder {
+    type ControlHandle = WithProtocolEndsControlHandle;
+
+    fn control_handle(&self) -> &WithProtocolEndsControlHandle {
         &self.control_handle
     }
 
-    /// Drop the Responder without setting the channel to shutdown.
-    ///
-    /// This method shouldn't normally be used-- instead, send a response
-    /// to prevent the channel from shutting down.
-    pub fn drop_without_shutdown(mut self) {
+    fn drop_without_shutdown(mut self) {
         // Safety: drops once, never accessed again due to mem::forget
         unsafe { std::mem::ManuallyDrop::drop(&mut self.control_handle) };
         // Prevent Drop from running (which would shut down the channel)
         std::mem::forget(self);
     }
+}
 
+impl WithProtocolEndsServerEndsResponder {
     /// Sends a response to the FIDL transaction.
     ///
     /// Sets the channel to shutdown if an error occurs.
@@ -6566,22 +6543,22 @@ impl std::ops::Drop for WithProtocolEndsStructContainingEndsResponder {
     }
 }
 
-impl WithProtocolEndsStructContainingEndsResponder {
-    pub fn control_handle(&self) -> &WithProtocolEndsControlHandle {
+impl fidl::endpoints::Responder for WithProtocolEndsStructContainingEndsResponder {
+    type ControlHandle = WithProtocolEndsControlHandle;
+
+    fn control_handle(&self) -> &WithProtocolEndsControlHandle {
         &self.control_handle
     }
 
-    /// Drop the Responder without setting the channel to shutdown.
-    ///
-    /// This method shouldn't normally be used-- instead, send a response
-    /// to prevent the channel from shutting down.
-    pub fn drop_without_shutdown(mut self) {
+    fn drop_without_shutdown(mut self) {
         // Safety: drops once, never accessed again due to mem::forget
         unsafe { std::mem::ManuallyDrop::drop(&mut self.control_handle) };
         // Prevent Drop from running (which would shut down the channel)
         std::mem::forget(self);
     }
+}
 
+impl WithProtocolEndsStructContainingEndsResponder {
     /// Sends a response to the FIDL transaction.
     ///
     /// Sets the channel to shutdown if an error occurs.
@@ -6786,16 +6763,12 @@ impl futures::stream::FusedStream for ManyParametersRequestStream {
 
 impl fidl::endpoints::RequestStream for ManyParametersRequestStream {
     type Protocol = ManyParametersMarker;
+    type ControlHandle = ManyParametersControlHandle;
 
-    /// Consume a channel to make a ManyParametersRequestStream
     fn from_channel(channel: fidl::AsyncChannel) -> Self {
         Self { inner: std::sync::Arc::new(fidl::ServeInner::new(channel)), is_terminated: false }
     }
 
-    /// ControlHandle for the remote connection
-    type ControlHandle = ManyParametersControlHandle;
-
-    /// ControlHandle for the remote connection
     fn control_handle(&self) -> Self::ControlHandle {
         ManyParametersControlHandle { inner: self.inner.clone() }
     }
@@ -6900,17 +6873,17 @@ pub struct ManyParametersControlHandle {
     inner: std::sync::Arc<fidl::ServeInner>,
 }
 
-impl ManyParametersControlHandle {
-    /// Set the server to shutdown. The underlying channel is only closed the
-    /// next time the stream is polled.
-    pub fn shutdown(&self) {
+impl fidl::endpoints::ControlHandle for ManyParametersControlHandle {
+    fn shutdown(&self) {
         self.inner.shutdown()
     }
 
-    pub fn shutdown_with_epitaph(&self, status: zx_status::Status) {
+    fn shutdown_with_epitaph(&self, status: zx_status::Status) {
         self.inner.shutdown_with_epitaph(status)
     }
 }
+
+impl ManyParametersControlHandle {}
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
 pub struct MethodWithUnionMarker;
@@ -7084,16 +7057,12 @@ impl futures::stream::FusedStream for MethodWithUnionRequestStream {
 
 impl fidl::endpoints::RequestStream for MethodWithUnionRequestStream {
     type Protocol = MethodWithUnionMarker;
+    type ControlHandle = MethodWithUnionControlHandle;
 
-    /// Consume a channel to make a MethodWithUnionRequestStream
     fn from_channel(channel: fidl::AsyncChannel) -> Self {
         Self { inner: std::sync::Arc::new(fidl::ServeInner::new(channel)), is_terminated: false }
     }
 
-    /// ControlHandle for the remote connection
-    type ControlHandle = MethodWithUnionControlHandle;
-
-    /// ControlHandle for the remote connection
     fn control_handle(&self) -> Self::ControlHandle {
         MethodWithUnionControlHandle { inner: self.inner.clone() }
     }
@@ -7252,14 +7221,14 @@ pub struct MethodWithUnionControlHandle {
     inner: std::sync::Arc<fidl::ServeInner>,
 }
 
-impl MethodWithUnionControlHandle {
-    /// Set the server to shutdown. The underlying channel is only closed the
-    /// next time the stream is polled.
-    pub fn shutdown(&self) {
+impl fidl::endpoints::ControlHandle for MethodWithUnionControlHandle {
+    fn shutdown(&self) {
         self.inner.shutdown()
     }
 
-    pub fn shutdown_with_epitaph(&self, status: zx_status::Status) {
+    fn shutdown_with_epitaph(&self, status: zx_status::Status) {
         self.inner.shutdown_with_epitaph(status)
     }
 }
+
+impl MethodWithUnionControlHandle {}

@@ -5,6 +5,7 @@
 use {
     anyhow::Result,
     fidl::endpoints::ServerEnd,
+    fidl::prelude::*,
     fidl_fuchsia_developer_remotecontrol::{
         ArchiveIteratorEntry, ArchiveIteratorError, ArchiveIteratorMarker, ArchiveIteratorRequest,
         DiagnosticsData, InlineData,

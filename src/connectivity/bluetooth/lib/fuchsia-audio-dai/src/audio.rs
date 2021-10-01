@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 use anyhow::{format_err, Error};
+use fidl::prelude::*;
 use fidl_fuchsia_hardware_audio::*;
 use fidl_fuchsia_media as media;
 use fuchsia_async as fasync;

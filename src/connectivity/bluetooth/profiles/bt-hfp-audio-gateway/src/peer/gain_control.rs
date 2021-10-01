@@ -9,7 +9,8 @@ use {
         pin::Pin,
         task::{Context, Poll},
     },
-    fidl::endpoints::{ClientEnd, RequestStream},
+    fidl::endpoints::ClientEnd,
+    fidl::prelude::*,
     fidl_fuchsia_bluetooth_hfp::{
         HeadsetGainMarker, HeadsetGainRequest, HeadsetGainRequestStream,
         HeadsetGainWatchMicrophoneGainResponder, HeadsetGainWatchSpeakerGainResponder,

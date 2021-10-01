@@ -17,6 +17,7 @@ use {
     fidl::{
         client::{decode_transaction_body_fut, QueryResponseFut},
         encoding::{Decodable as _, Encodable as _},
+        endpoints::{ControlHandle as _, Responder as _},
         fidl_bits, fidl_empty_struct, fidl_enum, fidl_struct, fidl_struct_copy, fidl_table,
         fidl_union, wrap_handle_metadata,
     },
@@ -629,16 +630,12 @@ impl futures::stream::FusedStream for SomeProtocolRequestStream {
 
 impl fidl::endpoints::RequestStream for SomeProtocolRequestStream {
     type Protocol = SomeProtocolMarker;
+    type ControlHandle = SomeProtocolControlHandle;
 
-    /// Consume a channel to make a SomeProtocolRequestStream
     fn from_channel(channel: fidl::AsyncChannel) -> Self {
         Self { inner: std::sync::Arc::new(fidl::ServeInner::new(channel)), is_terminated: false }
     }
 
-    /// ControlHandle for the remote connection
-    type ControlHandle = SomeProtocolControlHandle;
-
-    /// ControlHandle for the remote connection
     fn control_handle(&self) -> Self::ControlHandle {
         SomeProtocolControlHandle { inner: self.inner.clone() }
     }
@@ -742,14 +739,14 @@ pub struct SomeProtocolControlHandle {
     inner: std::sync::Arc<fidl::ServeInner>,
 }
 
-impl SomeProtocolControlHandle {
-    /// Set the server to shutdown. The underlying channel is only closed the
-    /// next time the stream is polled.
-    pub fn shutdown(&self) {
+impl fidl::endpoints::ControlHandle for SomeProtocolControlHandle {
+    fn shutdown(&self) {
         self.inner.shutdown()
     }
 
-    pub fn shutdown_with_epitaph(&self, status: zx_status::Status) {
+    fn shutdown_with_epitaph(&self, status: zx_status::Status) {
         self.inner.shutdown_with_epitaph(status)
     }
 }
+
+impl SomeProtocolControlHandle {}

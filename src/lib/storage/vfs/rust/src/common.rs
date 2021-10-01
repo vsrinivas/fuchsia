@@ -6,6 +6,7 @@
 
 use {
     fidl::endpoints::ServerEnd,
+    fidl::prelude::*,
     fidl_fuchsia_io::{
         NodeAttributes, NodeMarker, CLONE_FLAG_SAME_RIGHTS, OPEN_FLAG_APPEND, OPEN_FLAG_DESCRIBE,
         OPEN_FLAG_NODE_REFERENCE, OPEN_FLAG_POSIX, OPEN_FLAG_POSIX_EXECUTABLE,

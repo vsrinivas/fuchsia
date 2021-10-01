@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use fidl::endpoints::ProtocolMarker;
+use fidl::prelude::*;
 use fidl_fuchsia_settings::{
     LightError, LightGroup, LightMarker, LightRequest, LightState, LightWatchLightGroupResponder,
     LightWatchLightGroupsResponder,

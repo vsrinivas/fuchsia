@@ -227,9 +227,13 @@ pub(crate) fn convert_to_epitaph(error: &anyhow::Error) -> fuchsia_zircon::Statu
 #[macro_export]
 macro_rules! shutdown_responder_with_error {
     ($responder:expr, $error:ident) => {
-        $responder
-            .control_handle()
-            .shutdown_with_epitaph(crate::fidl_common::convert_to_epitaph($error))
+        // Extra pair of braces is needed to limit the scope of the import.
+        {
+            use ::fidl::prelude::*;
+            $responder
+                .control_handle()
+                .shutdown_with_epitaph(crate::fidl_common::convert_to_epitaph($error))
+        }
     };
 }
 

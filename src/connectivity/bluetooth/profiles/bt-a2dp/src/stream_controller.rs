@@ -7,7 +7,7 @@ use {
     bt_a2dp::permits::{Permit, Permits},
     core::pin::Pin,
     core::task::{Context, Poll},
-    fidl::endpoints::RequestStream,
+    fidl::prelude::*,
     fidl_fuchsia_bluetooth_internal_a2dp::{
         ControllerRequest, ControllerRequestStream, ControllerSuspendResponder,
         StreamSuspenderRequestStream,

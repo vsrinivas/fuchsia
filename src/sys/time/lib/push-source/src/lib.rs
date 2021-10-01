@@ -7,6 +7,7 @@
 
 use anyhow::Error;
 use async_trait::async_trait;
+use fidl::prelude::*;
 use fidl_fuchsia_time_external::{
     Properties, PushSourceRequest, PushSourceRequestStream, PushSourceWatchSampleResponder,
     PushSourceWatchStatusResponder, Status, TimeSample,

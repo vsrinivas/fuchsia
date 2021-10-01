@@ -12,7 +12,8 @@
 //! TODO(fxbug.dev/46491): Remove this once `vfs` supports OPEN_FLAG_EXECUTABLE.
 
 use {
-    fidl::endpoints::{RequestStream, ServerEnd},
+    fidl::endpoints::ServerEnd,
+    fidl::prelude::*,
     fidl_fuchsia_io::{
         self as fio, DirectoryMarker, DirectoryObject, DirectoryProxy, DirectoryRequest, NodeInfo,
         NodeMarker,

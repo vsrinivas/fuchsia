@@ -10,6 +10,7 @@ use diagnostics_data::{Data, LogError, Logs, Severity};
 use diagnostics_hierarchy::trie::TrieIterableNode;
 use diagnostics_message::{fx_log_packet_t, METADATA_SIZE};
 use diagnostics_reader::{ArchiveReader, Inspect, SubscriptionResultsStream};
+use fidl::prelude::*;
 use fidl_fuchsia_archivist_tests::{
     SocketPuppetControllerRequest, SocketPuppetControllerRequestStream, SocketPuppetProxy,
 };

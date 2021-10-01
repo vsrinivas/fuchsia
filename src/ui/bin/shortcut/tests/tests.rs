@@ -4,6 +4,7 @@
 #![cfg(test)]
 use {
     anyhow::{format_err, Result},
+    fidl::prelude::*,
     fidl_fuchsia_input as input, fidl_fuchsia_ui_input3 as ui_input3,
     fidl_fuchsia_ui_shortcut as ui_shortcut,
     fuchsia_async::{self as fasync, TimeoutExt},

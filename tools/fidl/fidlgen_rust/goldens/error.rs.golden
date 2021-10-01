@@ -17,6 +17,7 @@ use {
     fidl::{
         client::{decode_transaction_body_fut, QueryResponseFut},
         encoding::{Decodable as _, Encodable as _},
+        endpoints::{ControlHandle as _, Responder as _},
         fidl_bits, fidl_empty_struct, fidl_enum, fidl_struct, fidl_struct_copy, fidl_table,
         fidl_union, wrap_handle_metadata,
     },
@@ -261,16 +262,12 @@ impl futures::stream::FusedStream for ExampleRequestStream {
 
 impl fidl::endpoints::RequestStream for ExampleRequestStream {
     type Protocol = ExampleMarker;
+    type ControlHandle = ExampleControlHandle;
 
-    /// Consume a channel to make a ExampleRequestStream
     fn from_channel(channel: fidl::AsyncChannel) -> Self {
         Self { inner: std::sync::Arc::new(fidl::ServeInner::new(channel)), is_terminated: false }
     }
 
-    /// ControlHandle for the remote connection
-    type ControlHandle = ExampleControlHandle;
-
-    /// ControlHandle for the remote connection
     fn control_handle(&self) -> Self::ControlHandle {
         ExampleControlHandle { inner: self.inner.clone() }
     }
@@ -452,17 +449,17 @@ pub struct ExampleControlHandle {
     inner: std::sync::Arc<fidl::ServeInner>,
 }
 
-impl ExampleControlHandle {
-    /// Set the server to shutdown. The underlying channel is only closed the
-    /// next time the stream is polled.
-    pub fn shutdown(&self) {
+impl fidl::endpoints::ControlHandle for ExampleControlHandle {
+    fn shutdown(&self) {
         self.inner.shutdown()
     }
 
-    pub fn shutdown_with_epitaph(&self, status: zx_status::Status) {
+    fn shutdown_with_epitaph(&self, status: zx_status::Status) {
         self.inner.shutdown_with_epitaph(status)
     }
 }
+
+impl ExampleControlHandle {}
 #[must_use = "FIDL methods require a response to be sent"]
 #[derive(Debug)]
 pub struct ExampleFooResponder {
@@ -482,22 +479,22 @@ impl std::ops::Drop for ExampleFooResponder {
     }
 }
 
-impl ExampleFooResponder {
-    pub fn control_handle(&self) -> &ExampleControlHandle {
+impl fidl::endpoints::Responder for ExampleFooResponder {
+    type ControlHandle = ExampleControlHandle;
+
+    fn control_handle(&self) -> &ExampleControlHandle {
         &self.control_handle
     }
 
-    /// Drop the Responder without setting the channel to shutdown.
-    ///
-    /// This method shouldn't normally be used-- instead, send a response
-    /// to prevent the channel from shutting down.
-    pub fn drop_without_shutdown(mut self) {
+    fn drop_without_shutdown(mut self) {
         // Safety: drops once, never accessed again due to mem::forget
         unsafe { std::mem::ManuallyDrop::drop(&mut self.control_handle) };
         // Prevent Drop from running (which would shut down the channel)
         std::mem::forget(self);
     }
+}
 
+impl ExampleFooResponder {
     /// Sends a response to the FIDL transaction.
     ///
     /// Sets the channel to shutdown if an error occurs.

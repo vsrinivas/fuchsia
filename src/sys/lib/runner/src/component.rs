@@ -6,8 +6,9 @@ use {
     anyhow::Error,
     async_trait::async_trait,
     fidl::{
-        endpoints::{ClientEnd, Proxy, RequestStream, ServerEnd},
+        endpoints::{ClientEnd, ServerEnd},
         epitaph::ChannelEpitaphExt,
+        prelude::*,
     },
     fidl_fuchsia_component as fcomp, fidl_fuchsia_component_runner as fcrunner,
     fidl_fuchsia_io as fio, fidl_fuchsia_process as fproc, fuchsia_async as fasync,

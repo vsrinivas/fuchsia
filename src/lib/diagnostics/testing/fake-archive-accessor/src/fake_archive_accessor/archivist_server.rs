@@ -6,6 +6,7 @@
 // fuchsia-mirror/src/diagnostics/archivist/src/server.rs
 
 use {
+    fidl::prelude::*,
     fidl_fuchsia_diagnostics::FormattedContent,
     fidl_fuchsia_diagnostics::{
         self, BatchIteratorControlHandle, BatchIteratorRequest, BatchIteratorRequestStream,

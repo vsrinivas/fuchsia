@@ -188,7 +188,8 @@ pub mod fidl {
     #[cfg(test)]
     mod tests {
         use super::*;
-        use fidl::endpoints::{create_proxy_and_stream, RequestStream};
+        use fidl::endpoints::create_proxy_and_stream;
+        use fidl::prelude::*;
         use fidl_fuchsia_hardware_input::{DeviceMarker, DeviceRequest};
         use fuchsia_async as fasync;
         use fuchsia_zircon::AsHandleRef;

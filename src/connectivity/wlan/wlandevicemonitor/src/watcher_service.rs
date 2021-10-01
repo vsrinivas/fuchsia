@@ -3,7 +3,8 @@
 // found in the LICENSE file.
 
 use anyhow::format_err;
-use fidl::endpoints::{RequestStream, ServerEnd};
+use fidl::endpoints::ServerEnd;
+use fidl::prelude::*;
 use fidl_fuchsia_wlan_device_service::{
     self as fidl_svc, DeviceWatcherControlHandle, DeviceWatcherRequestStream,
 };

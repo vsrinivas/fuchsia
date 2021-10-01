@@ -8,7 +8,8 @@ use {
     },
     anyhow::{anyhow, Error},
     cobalt_sw_delivery_registry as metrics,
-    fidl::endpoints::{RequestStream, ServerEnd},
+    fidl::endpoints::ServerEnd,
+    fidl::prelude::*,
     fidl_fuchsia_io::{DirectoryMarker, FileRequest, FileRequestStream},
     fidl_fuchsia_pkg::{
         BlobInfoIteratorRequestStream, NeededBlobsMarker, NeededBlobsRequest,
@@ -1495,7 +1496,7 @@ mod serve_needed_blobs_tests {
             task.await,
             Err(ServeNeededBlobsError::FulfillMetaFar(FulfillMetaFarError::QueryPackageMetadata(
                 _
-            )))
+            )),)
         );
         pkgfs_install.expect_done().await;
         pkgfs_needs.expect_done().await;
