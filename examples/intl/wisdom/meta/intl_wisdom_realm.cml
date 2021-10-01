@@ -1,0 +1,35 @@
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+// Example realm that provisions the wisdom server and client.
+{
+    // Two children: a server and client.
+    children: [
+        {
+            name: "wisdom_server",
+            url: "#meta/wisdom_server.cm",
+        },
+        {
+            name: "wisdom_client",
+            url: "#meta/wisdom_client.cm",
+        },
+    ],
+
+    // Route IntlWisdomServer from server to client.
+    offer: [
+        {
+            protocol: "fuchsia.examples.intl.wisdom.IntlWisdomServer",
+            from: "#wisdom_server",
+            to: "#wisdom_client",
+        },
+        {
+            protocol: "fuchsia.logger.LogSink",
+            from: "parent",
+            to: [
+                "#wisdom_client",
+                "#wisdom_server",
+            ],
+        },
+    ],
+}

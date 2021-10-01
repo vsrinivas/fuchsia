@@ -1,0 +1,62 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/components.gni")
+import("//build/rust/rustc_binary.gni")
+
+# This is the main target in this BUILD file.  It implicitly contains everything
+# in the src/ directory, and implicitly looks for src/main.rs as entry point.
+# It intentionally has a long name to avoid naming conflicts, because the
+# binaries that are generated are named after the target name, and all binaries
+# for Fuchsia live in the same namespace and should be distinct.
+rustc_binary("intl_wisdom_client_rust") {
+  edition = "2018"
+  with_unit_tests = true
+  deps = [
+    "//examples/intl/wisdom/fidl:wisdom-rustc",
+    "//sdk/fidl/fuchsia.intl:fuchsia.intl-rustc",
+    "//src/lib/fidl/rust/fidl",
+    "//src/lib/fuchsia-async",
+    "//src/lib/fuchsia-component",
+    "//src/lib/icu_data/rust/icu_data",
+    "//src/lib/zircon/rust:fuchsia-zircon",
+    "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:futures",
+
+    # [START icu_library]
+    "//third_party/rust_crates:rust_icu_common",
+    "//third_party/rust_crates:rust_icu_sys",
+    "//third_party/rust_crates:rust_icu_ucal",
+    "//third_party/rust_crates:rust_icu_udat",
+    "//third_party/rust_crates:rust_icu_udata",
+    "//third_party/rust_crates:rust_icu_uenum",
+    "//third_party/rust_crates:rust_icu_uloc",
+    "//third_party/rust_crates:rust_icu_ustring",
+
+    # [END icu_library]
+    "//third_party/rust_crates:structopt",
+    "//third_party/rust_crates:thiserror",
+  ]
+
+  sources = [
+    "src/main.rs",
+    "src/wisdom_client_impl.rs",
+  ]
+}
+
+fuchsia_unittest_package("intl_wisdom_client_rust_tests") {
+  deps = [
+    ":intl_wisdom_client_rust_test",
+    "//src/intl:icudtl",
+  ]
+}
+
+group("client") {
+  deps = [ ":intl_wisdom_client_rust" ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [ ":intl_wisdom_client_rust_tests" ]
+}

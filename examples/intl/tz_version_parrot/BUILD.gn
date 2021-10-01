@@ -5,57 +5,32 @@
 import("//build/components.gni")
 import("//src/lib/icu/tzdata/icu_tzdata_config_data.gni")
 
-executable("tz_version_parrot_bin") {
-  output_name = "tz_version_parrot"
-
-  sources = [ "main.cc" ]
-
+group("tz_version_parrot") {
+  testonly = true
   deps = [
-    "//sdk/lib/sys/cpp",
-    "//src/lib/files",
-    "//src/lib/fxl",
-    "//src/lib/icu_data/cpp",
-    "//third_party/icu",
+    "cpp",
+    "rust",
   ]
-}
-
-icu_tzdata_config_data("icu_tz_data_for_tz_version_parrot") {
-  for_pkg = "tz_version_parrot"
-}
-
-fuchsia_component("tz_version_parrot_main") {
-  component_name = "tz_version_parrot"
-  manifest = "meta/tz_version_parrot.cmx"
-  deps = [ ":tz_version_parrot_bin" ]
-}
-
-fuchsia_component("tz_version_parrot_with_tzdata") {
-  manifest = "meta/tz_version_parrot_with_tzdata.cmx"
-  deps = [ ":tz_version_parrot_bin" ]
-}
-
-fuchsia_component("tz_version_parrot_with_tzdata_wrong_revision") {
-  manifest = "meta/tz_version_parrot_with_tzdata_wrong_revision.cmx"
-  deps = [ ":tz_version_parrot_bin" ]
-}
-
-fuchsia_package("tz_version_parrot") {
-  deps = [
-    ":icu_tz_data_for_tz_version_parrot",
-    ":tz_version_parrot_main",
-    ":tz_version_parrot_resources",
-    ":tz_version_parrot_with_tzdata",
-    ":tz_version_parrot_with_tzdata_wrong_revision",
-    "//src/intl:icudtl",
-  ]
-}
-
-resource("tz_version_parrot_resources") {
-  sources = [ "newer_revision.txt" ]
-  outputs = [ "data/{{source_file_part}}" ]
 }
 
 group("tests") {
   testonly = true
-  deps = [ "test" ]
+  deps = [
+    "cpp:tests",
+    "rust:tests",
+  ]
+}
+
+# [START tzdata_config]
+# Build rule to provide system TZData for the given package
+icu_tzdata_config_data("icu_tz_data_for_tz_version_parrot") {
+  for_pkg = "tz_version_parrot"
+}
+
+# [END tzdata_config]
+
+# Locally packaged TZData resource
+resource("tz_version_parrot_resources") {
+  sources = [ "newer_revision.txt" ]
+  outputs = [ "data/{{source_file_part}}" ]
 }

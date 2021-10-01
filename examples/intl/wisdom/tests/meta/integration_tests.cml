@@ -1,0 +1,17 @@
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    include: [
+        "//src/lib/fuchsia-component-test/meta/fuchsia_component_test.shard.cml",
+        "//src/sys/test_runners/rust/default.shard.cml",
+        "inspect/client.shard.cml",
+        "syslog/client.shard.cml",
+    ],
+    program: {
+        binary: "bin/intl_wisdom_test",
+    },
+    use: [
+        { protocol: "fuchsia.diagnostics.ArchiveAccessor" },
+    ],
+}

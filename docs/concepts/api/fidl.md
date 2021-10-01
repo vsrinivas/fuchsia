@@ -1462,7 +1462,7 @@ protocol.
 [api-council]: /docs/contribute/governance/api_council.md
 [api-council-membership]: /docs/contribute/governance/api_council.md#membership
 [rfc-0025]: /docs/contribute/governance/rfcs/0025_bit_flags.md
-[locale-passing-example]: /garnet/examples/intl/wisdom/
+[locale-passing-example]: /examples/intl/wisdom/
 [rust-hanging-get]: /docs/development/languages/fidl/guides/rust-hanging-get.md
 [resource-lang]: /docs/reference/fidl/language/language.md#value-vs-resource
 [flexible-lang]: /docs/reference/fidl/language/language.md#strict-vs-flexible

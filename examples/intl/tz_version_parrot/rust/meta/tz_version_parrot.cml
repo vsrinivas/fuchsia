@@ -1,0 +1,29 @@
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    include: [
+        "//src/sys/test_runners/rust/default.shard.cml",
+        "syslog/client.shard.cml",
+    ],
+
+    // Information about the program to run.
+    program: {
+        // The binary to run for this component.
+        binary: "bin/tz_version_parrot_rust",
+    },
+
+    // [START config_data]
+    // Capabilities used by this component.
+    use: [
+        // Map config-data for this package into namespace
+        {
+            directory: "config-data",
+            rights: [ "r*" ],
+            path: "/config/data",
+            subdir: "tz_version_parrot",
+        },
+    ],
+
+    // [END config_data]
+}

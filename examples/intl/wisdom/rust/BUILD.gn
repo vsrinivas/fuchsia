@@ -1,0 +1,44 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/components.gni")
+
+group("rust") {
+  deps = [
+    ":intl_wisdom_rust",
+    "client",
+    "server",
+  ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [
+    ":rust",
+    "client:tests",
+    "server:tests",
+  ]
+}
+
+fuchsia_component("intl_wisdom_client_rust") {
+  component_name = "wisdom_client"
+  manifest = "meta/intl_wisdom_client.cml"
+  deps = [ "client:intl_wisdom_client_rust" ]
+}
+
+fuchsia_component("intl_wisdom_server_rust") {
+  component_name = "wisdom_server"
+  manifest = "meta/intl_wisdom_server.cml"
+  deps = [ "server:intl_wisdom_server_rust" ]
+}
+
+# Package that contains all binaries for the wisdom example.
+fuchsia_package("intl_wisdom_rust") {
+  deps = [
+    ":intl_wisdom_client_rust",
+    ":intl_wisdom_server_rust",
+    "//examples/intl/wisdom:intl_wisdom_realm",
+    "//src/intl:icudtl",
+  ]
+}

@@ -96,8 +96,8 @@ group("intl") {
   testonly = true
   public_deps = [
     "//examples/intl/tz_version_parrot",
+    "//examples/intl/wisdom",
     "//garnet/examples/intl/manager:intl_property_manager",
-    "//garnet/examples/intl/wisdom/cpp:intl_wisdom",
   ]
 }
 

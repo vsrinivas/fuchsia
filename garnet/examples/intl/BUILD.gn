@@ -4,16 +4,10 @@
 
 group("intl") {
   testonly = true
-  public_deps = [
-    "manager",
-    "wisdom",
-  ]
+  public_deps = [ "manager" ]
 }
 
 group("tests") {
   testonly = true
-  public_deps = [
-    "manager:tests",
-    "wisdom:tests",
-  ]
+  public_deps = [ "manager:tests" ]
 }

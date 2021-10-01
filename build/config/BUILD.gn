@@ -547,7 +547,6 @@ config("default_warnings") {
 config("Wno-reorder-init-list") {
   cflags = [ "-Wno-reorder-init-list" ]
   visibility = [
-    "//garnet/examples/intl/wisdom/tests/*",
     "//src/developer/memory/metrics/tests/*",
     "//src/graphics/examples/vkcube/*",
     "//src/graphics/lib/compute/tests/*",

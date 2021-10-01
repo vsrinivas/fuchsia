@@ -1,0 +1,40 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+source_set("lib") {
+  sources = [
+    "intl_wisdom_client.cc",
+    "intl_wisdom_client.h",
+  ]
+
+  public_deps = [
+    "//examples/intl/wisdom/fidl:wisdom",
+    "//sdk/lib/fidl/cpp",
+    "//sdk/lib/sys/cpp",
+
+    # [START icu_library]
+    "//third_party/icu:icu",
+
+    # [END icu_library]
+  ]
+}
+
+executable("intl_wisdom_client") {
+  output_name = "intl_wisdom_client"
+
+  sources = [ "main.cc" ]
+
+  deps = [
+    ":lib",
+    "//examples/intl/wisdom/fidl:wisdom",
+    "//sdk/lib/fidl/cpp",
+    "//sdk/lib/sys/cpp",
+    "//src/lib/fxl",
+    "//src/lib/icu_data/cpp",
+    "//third_party/icu:icu",
+    "//zircon/system/ulib/async-default",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-default",
+  ]
+}
