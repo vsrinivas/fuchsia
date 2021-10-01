@@ -3,7 +3,8 @@
 // found in the LICENSE file.
 
 use crate::shutdown_request::ShutdownRequest;
-use crate::types::{Celsius, CpuPerformanceInfo, Nanoseconds, PState, ThermalLoad, Watts};
+use crate::types::{Celsius, Nanoseconds, PState, ThermalLoad, Watts};
+use fuchsia_zircon_sys as sys;
 
 /// Defines the message types and arguments to be used for inter-node communication
 #[derive(Debug, PartialEq)]
@@ -25,8 +26,8 @@ pub enum Message {
     /// Get all performance states for the handler's CPU domain
     GetCpuPerformanceStates,
 
-    // Issues the zx_system_get_set_performance_info syscall.
-    GetSetCpuPerformanceInfo(Vec<CpuPerformanceInfo>),
+    // Issues the zx_system_set_performance_info syscall.
+    SetCpuPerformanceInfo(Vec<sys::zx_cpu_performance_info_t>),
 
     /// Instruct the node to limit the power consumption of its corresponding component (e.g., CPU)
     /// Arg: the max number of watts that the component should be allowed to consume
@@ -96,7 +97,7 @@ pub enum MessageReturn {
     GetCpuPerformanceStates(Vec<PState>),
 
     /// There is no arg in this MessageReturn type. It only serves as an ACK.
-    GetSetCpuPerformanceInfo,
+    SetCpuPerformanceInfo,
 
     /// Arg: the max number of watts that the component will use. This number should typically be at
     /// or below the number that was specified in the Message, but there may be cases where it

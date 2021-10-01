@@ -20,7 +20,7 @@ use std::rc::Rc;
 use crate::{
     activity_handler, cpu_control_handler, cpu_device_handler, cpu_manager, cpu_stats_handler,
     crash_report_handler, dev_control_handler, driver_manager_handler, input_settings_handler,
-    lid_shutdown, platform_metrics, shutdown_watcher, system_profile_handler,
+    lid_shutdown, platform_metrics, shutdown_watcher, syscall_handler, system_profile_handler,
     system_shutdown_handler, temperature_handler, thermal_limiter, thermal_load_driver,
     thermal_policy, thermal_shutdown,
 };
@@ -160,6 +160,7 @@ impl PowerManager {
                 platform_metrics::PlatformMetricsBuilder::new_from_json(json_data, &self.nodes)
                     .build(node_futures)?
             }
+            "SyscallHandler" => syscall_handler::SyscallHandlerBuilder::new().build().await?,
             "SystemProfileHandler" => {
                 system_profile_handler::SystemProfileHandlerBuilder::new_from_json(
                     json_data,

@@ -5,10 +5,11 @@
 use crate::error::PowerManagerError;
 use crate::message::{Message, MessageResult, MessageReturn};
 use crate::node::Node;
-use crate::types::{CpuPerformanceInfo, CpuPerformanceScale, NormPerfs, PState, Watts};
+use crate::types::{NormPerfs, PState, Watts};
 use anyhow::{bail, format_err, Error};
 use async_trait::async_trait;
 use fuchsia_inspect::{self as inspect, ArrayProperty as _, Property as _};
+use fuchsia_zircon_sys as sys;
 use serde_derive::Deserialize;
 use serde_json as json;
 use std::cell::Cell;
@@ -32,7 +33,7 @@ use std::rc::Rc;
 ///     - GetCpuPerformanceStates
 ///     - GetPerformanceState
 ///     - SetPerformanceState
-///     - GetSetCpuPerformanceInfo
+///     - SetCpuPerformanceInfo
 ///
 /// FIDL dependencies: No direct dependencies
 
@@ -131,19 +132,19 @@ impl CpuCluster {
         syscall_handler: &Rc<dyn Node>,
         target_pstate: &PState,
     ) -> Result<(), PowerManagerError> {
-        let performance_scale: CpuPerformanceScale =
+        let performance_scale: sys::zx_cpu_performance_scale_t =
             self.performance_per_ghz.mul_scalar(target_pstate.frequency.0 / 1e9).try_into()?;
 
         let performance_info = self
             .logical_cpu_numbers
             .iter()
-            .map(|n| CpuPerformanceInfo { logical_cpu_number: *n, performance_scale })
+            .map(|n| sys::zx_cpu_performance_info_t { logical_cpu_number: *n, performance_scale })
             .collect::<Vec<_>>();
 
-        let msg = Message::GetSetCpuPerformanceInfo(performance_info);
+        let msg = Message::SetCpuPerformanceInfo(performance_info);
         match syscall_handler.handle_message(&msg).await {
-            Ok(MessageReturn::GetSetCpuPerformanceInfo) => Ok(()),
-            Ok(other) => panic!("Unexpected GetSetCpuPerformanceInfo result: {:?}", other),
+            Ok(MessageReturn::SetCpuPerformanceInfo) => Ok(()),
+            Ok(other) => panic!("Unexpected SetCpuPerformanceInfo result: {:?}", other),
             Err(e) => Err(e),
         }
     }
@@ -500,7 +501,7 @@ pub struct CpuManager {
     /// All supported thermal states for the CPU subsystem.
     thermal_states: Vec<ThermalState>,
 
-    /// Must service GetNumCpus and GetSetPerformanceInfo messages.
+    /// Must service GetNumCpus and SetCpuPerformanceInfo messages.
     syscall_handler: Rc<dyn Node>,
 
     /// The node that will provide CPU load information. It is expected that this node responds to
@@ -839,17 +840,20 @@ mod tests {
             handlers
         }
 
-        // Tells the syscall handler to expect a GetSetPerformanceInfo call for the provided
+        // Tells the syscall handler to expect a SetCpuPerformanceInfo call for the provided
         // collection of CPUs and performance scale.
         fn expect_performance_scale(&self, logical_cpu_numbers: &[u32], float_scale: f64) {
             let scale = NormPerfs(float_scale).try_into().unwrap();
             let info = logical_cpu_numbers
                 .iter()
-                .map(|n| CpuPerformanceInfo { logical_cpu_number: *n, performance_scale: scale })
+                .map(|n| sys::zx_cpu_performance_info_t {
+                    logical_cpu_number: *n,
+                    performance_scale: scale,
+                })
                 .collect::<Vec<_>>();
             self.syscall.add_msg_response_pair((
-                msg_eq!(GetSetCpuPerformanceInfo(info)),
-                msg_ok_return!(GetSetCpuPerformanceInfo),
+                msg_eq!(SetCpuPerformanceInfo(info)),
+                msg_ok_return!(SetCpuPerformanceInfo),
             ));
         }
 

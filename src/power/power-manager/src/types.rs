@@ -2,12 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-/// Below are definitions of newtypes corresponding to measurement units, including several that are
-/// passed across node boundaries in Messages.
-///
-/// Functionality has been added opportunistically so far and is not at all complete. A fully
-/// developed measurement unit library would probably require const generics, so the compiler can
-/// interpret exponents applied to different unit types.
+//! This crate contains definitions of newtypes corresponding to measurement units, including
+//! several that are passed across node boundaries in Messages.
+//!
+//! Functionality has been added opportunistically so far and is not at all complete. A fully
+//! developed measurement unit library would probably require const generics, so the compiler can
+//! interpret exponents applied to different unit types.
+
+use fuchsia_zircon_sys as sys;
 use std::ops;
 
 /// Defines aspects of a measurement unit that are applicable regardless of the scalar type.
@@ -77,8 +79,23 @@ define_unit!(Milliseconds, i64);
 define_unit!(ThermalLoad, u32);
 
 // Normalized performance units. The normalization is chosen such that 1 NormPerf is equivalent to a
-// performance scale of 1.0 with respect to the Fuchsia kernel scheduler.
+// performance scale of 1.0 with respect to the Fuchsia kernel scheduler. In particular, this means
+// that the wrapped f64 is appropriate for conversion to zx_cpu_performance_scale_t.
 define_unit!(NormPerfs, f64);
+
+impl std::convert::TryFrom<NormPerfs> for sys::zx_cpu_performance_scale_t {
+    type Error = anyhow::Error;
+
+    fn try_from(value: NormPerfs) -> Result<Self, Self::Error> {
+        let (fraction, integer) = libm::modf(value.0);
+        if integer > std::u32::MAX as f64 {
+            anyhow::bail!("Integer part {} exceeds std::u32::MAX", integer);
+        }
+        let integer_part = integer as u32;
+        let fractional_part = libm::ldexp(fraction, 32) as u32;
+        Ok(Self { integer_part, fractional_part })
+    }
+}
 
 // Addition and subtraction is implemented for types for which it is useful. Some, but not all,
 // other unit types could reasonably support these operations.
@@ -206,34 +223,4 @@ impl ops::Div<Hertz> for f64 {
 pub struct PState {
     pub frequency: Hertz,
     pub voltage: Volts,
-}
-
-// Representation of a CPU performance scale in fixed-point form, suitable for input to the kernel.
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub struct CpuPerformanceScale {
-    pub integer_part: u32,
-    pub fractional_part: u32,
-}
-
-// NormPerfs are normalized to the same scale used by the kernel scheduler. Hence, they are the
-// units from which a `CpuPerformanceScale` should generally be created.
-impl std::convert::TryFrom<NormPerfs> for CpuPerformanceScale {
-    type Error = anyhow::Error;
-
-    fn try_from(value: NormPerfs) -> Result<Self, Self::Error> {
-        let (fraction, integer) = libm::modf(value.0);
-        if integer > std::u32::MAX as f64 {
-            anyhow::bail!("Integer part {} exceeds std::u32::MAX", integer);
-        }
-        let integer_part = integer as u32;
-        let fractional_part = libm::ldexp(fraction, 32) as u32;
-        Ok(CpuPerformanceScale { integer_part, fractional_part })
-    }
-}
-
-// Single element of input for a zx_system_get_set_performance_info syscall.
-#[derive(Clone, Debug, Eq, PartialEq)]
-pub struct CpuPerformanceInfo {
-    pub logical_cpu_number: u32,
-    pub performance_scale: CpuPerformanceScale,
 }

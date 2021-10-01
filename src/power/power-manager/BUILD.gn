@@ -20,6 +20,11 @@ metrics_registry("power_manager_metrics") {
   generate_rust = true
 }
 
+source_set("fake_syscalls") {
+  testonly = true
+  sources = [ "testing/fake_syscalls.cc" ]
+}
+
 rustc_binary("bin") {
   name = "power_manager"
   edition = "2018"
@@ -87,6 +92,7 @@ rustc_binary("bin") {
   ]
 
   test_deps = [
+    ":fake_syscalls",
     "rkf45:lib",
     "//src/lib/storage/vfs/rust:vfs",
     "//src/lib/test_util",

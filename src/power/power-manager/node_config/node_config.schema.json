@@ -161,6 +161,10 @@
                     "name": {
                       "type": "string"
                     },
+                    "cluster_index": {
+                      "type": "integer",
+                      "minimum": 0
+                    },
                     "handler": {
                       "type": "string"
                     },
@@ -172,7 +176,7 @@
                         "minimum": 0
                       }
                     },
-                    "perfs_per_ghz": {
+                    "normperfs_per_ghz": {
                       "type": "number",
                       "minimum": 0
                     }
@@ -181,9 +185,10 @@
                 "additionalProperties": false,
                 "required": [
                   "name",
+                  "cluster_index",
                   "handler",
                   "logical_cpu_numbers",
-                  "perfs_per_ghz"
+                  "normperfs_per_ghz"
                 ]
               },
               "thermal_states": {
@@ -200,7 +205,7 @@
                         "minimum": 0
                       }
                     },
-                    "min_performance_perfs": {
+                    "min_performance_normperfs": {
                       "type": "number",
                       "minimum": 0
                     },
@@ -208,7 +213,7 @@
                       "type": "number",
                       "minimum": 0
                     },
-                    "watts_per_perf": {
+                    "dynamic_power_per_normperf_w": {
                       "type": "number",
                       "minimum": 0
                     }
@@ -217,9 +222,9 @@
                 "additionalProperties": false,
                 "required": [
                   "cluster_pstates",
-                  "min_performance_perfs",
+                  "min_performance_normperfs",
                   "static_power_w",
-                  "watts_per_perf"
+                  "dynamic_power_per_normperf_w"
                 ]
               }
             },
@@ -243,7 +248,8 @@
             "additionalProperties": false,
             "required": [
               "cpu_stats_handler",
-              "cpu_device_handlers"
+              "cpu_device_handlers",
+              "syscall_handler"
             ]
           }
         },
@@ -807,6 +813,21 @@
           "type",
           "name",
           "dependencies"
+        ]
+      },
+      {
+        "properties": {
+          "type": {
+            "pattern": "SyscallHandler"
+          },
+          "name": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "type",
+          "name"
         ]
       }
     ]

@@ -552,6 +552,10 @@ pub const ZX_TASK_RETCODE_EXCEPTION_KILL: i64 = -1028;
 // Resource flags.
 pub const ZX_RSRC_FLAG_EXCLUSIVE: zx_rsrc_flags_t = 0x00010000;
 
+// Topics for CPU performance info syscalls
+pub const ZX_CPU_PERF_SCALE: u32 = 1;
+pub const ZX_CPU_DEFAULT_PERF_SCALE: u32 = 2;
+
 #[repr(C)]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 pub enum zx_cache_policy_t {
@@ -1490,6 +1494,20 @@ struct zx_sched_deadline_params_t {
     capacity: zx_duration_t,
     relative_deadline: zx_duration_t,
     period: zx_duration_t,
+}
+
+#[repr(C)]
+#[derive(Debug, Default, Copy, Clone, Eq, PartialEq)]
+pub struct zx_cpu_performance_scale_t {
+    pub integer_part: u32,
+    pub fractional_part: u32,
+}
+
+#[repr(C)]
+#[derive(Debug, Default, Copy, Clone, Eq, PartialEq)]
+pub struct zx_cpu_performance_info_t {
+    pub logical_cpu_number: u32,
+    pub performance_scale: zx_cpu_performance_scale_t,
 }
 
 #[cfg(test)]
