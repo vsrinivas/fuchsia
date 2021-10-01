@@ -1,0 +1,52 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/components.gni")
+import("//build/cpp/library_headers.gni")
+import("//build/test.gni")
+
+group("tests") {
+  testonly = true
+  deps = [ ":driver_runtime_tests" ]
+}
+
+config("include") {
+  include_dirs = [ "include" ]
+}
+
+source_set("driver_runtime_impl") {
+  sources = [
+    "api.cc",
+    "arena.cc",
+  ]
+  public_configs = [ ":include" ]
+  public_deps = [ "//sdk/lib/driver_runtime" ]
+  deps = [
+    "//src/devices/lib/log",
+    "//src/lib/ddk",
+    "//zircon/system/ulib/fbl",
+    "//zircon/system/ulib/fidl:fidl-llcpp",
+  ]
+}
+
+shared_library("driver_runtime") {
+  sources = []
+
+  deps = [ ":driver_runtime_impl" ]
+}
+
+test("driver_runtime_test") {
+  sources = [ "arena_test.cc" ]
+  deps = [
+    ":driver_runtime_impl",
+    "//sdk/lib/driver_runtime",
+    "//zircon/public/lib/sync",
+    "//zircon/system/ulib/fidl:fidl-llcpp",
+    "//zircon/system/ulib/zxtest",
+  ]
+}
+
+fuchsia_unittest_package("driver_runtime_tests") {
+  deps = [ ":driver_runtime_test" ]
+}

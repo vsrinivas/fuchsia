@@ -10,6 +10,7 @@ group("bin") {
     "driver_host",
     "driver_host2",
     "driver_manager",
+    "driver_runtime",
     "driverctl",
     "lsdev",
     "register-util",
