@@ -67,7 +67,7 @@ static constexpr char kMcfgPath[] = "/pkg/data/mcfg.aml";
 
 // For devices that can have their addresses anywhere we run a dynamic
 // allocator that starts fairly high in the guest physical address space.
-static constexpr zx_gpaddr_t kFirstDynamicDeviceAddr = 0xc00000000;
+static constexpr zx_gpaddr_t kFirstDynamicDeviceAddr = 0xb00000000;
 
 static zx_gpaddr_t AllocDeviceAddr(size_t device_size) {
   static zx_gpaddr_t next_device_addr = kFirstDynamicDeviceAddr;
