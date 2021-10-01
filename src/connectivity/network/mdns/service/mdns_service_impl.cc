@@ -371,28 +371,24 @@ MdnsServiceImpl::Subscriber::~Subscriber() {
   }
 }
 
-void MdnsServiceImpl::Subscriber::InstanceDiscovered(const std::string& service,
-                                                     const std::string& instance,
-                                                     const inet::SocketAddress& v4_address,
-                                                     const inet::SocketAddress& v6_address,
-                                                     const std::vector<std::string>& text,
-                                                     uint16_t srv_priority, uint16_t srv_weight) {
+void MdnsServiceImpl::Subscriber::InstanceDiscovered(
+    const std::string& service, const std::string& instance, const inet::SocketAddress& v4_address,
+    const inet::SocketAddress& v6_address, const std::vector<std::string>& text,
+    uint16_t srv_priority, uint16_t srv_weight, const std::string& target) {
   Entry entry{.type = EntryType::kInstanceDiscovered};
   MdnsFidlUtil::FillServiceInstance(&entry.service_instance, service, instance, v4_address,
-                                    v6_address, text, srv_priority, srv_weight);
+                                    v6_address, text, srv_priority, srv_weight, target);
   entries_.push(std::move(entry));
   MaybeSendNextEntry();
 }
 
-void MdnsServiceImpl::Subscriber::InstanceChanged(const std::string& service,
-                                                  const std::string& instance,
-                                                  const inet::SocketAddress& v4_address,
-                                                  const inet::SocketAddress& v6_address,
-                                                  const std::vector<std::string>& text,
-                                                  uint16_t srv_priority, uint16_t srv_weight) {
+void MdnsServiceImpl::Subscriber::InstanceChanged(
+    const std::string& service, const std::string& instance, const inet::SocketAddress& v4_address,
+    const inet::SocketAddress& v6_address, const std::vector<std::string>& text,
+    uint16_t srv_priority, uint16_t srv_weight, const std::string& target) {
   Entry entry{.type = EntryType::kInstanceChanged};
   MdnsFidlUtil::FillServiceInstance(&entry.service_instance, service, instance, v4_address,
-                                    v6_address, text, srv_priority, srv_weight);
+                                    v6_address, text, srv_priority, srv_weight, target);
 
   entries_.push(std::move(entry));
   MaybeSendNextEntry();

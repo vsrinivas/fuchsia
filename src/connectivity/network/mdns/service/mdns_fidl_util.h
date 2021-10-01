@@ -45,7 +45,7 @@ class MdnsFidlUtil {
                                   const inet::SocketAddress& v4_address,
                                   const inet::SocketAddress& v6_address,
                                   const std::vector<std::string>& text, uint16_t srv_priority,
-                                  uint16_t srv_weight);
+                                  uint16_t srv_weight, const std::string& target);
 };
 
 }  // namespace mdns

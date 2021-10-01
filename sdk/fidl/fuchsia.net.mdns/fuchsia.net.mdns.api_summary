@@ -55,6 +55,7 @@ table/member fuchsia.net.mdns/ServiceInstance.ipv6_endpoint fuchsia.net/Ipv6Sock
 table/member fuchsia.net.mdns/ServiceInstance.service string:22
 table/member fuchsia.net.mdns/ServiceInstance.srv_priority uint16
 table/member fuchsia.net.mdns/ServiceInstance.srv_weight uint16
+table/member fuchsia.net.mdns/ServiceInstance.target string:255
 table/member fuchsia.net.mdns/ServiceInstance.text vector<string:255>:256
 table fuchsia.net.mdns/ServiceInstance
 table/member fuchsia.net.mdns/ServiceInstance2.instance string:63
@@ -63,6 +64,7 @@ table/member fuchsia.net.mdns/ServiceInstance2.ipv6_endpoint fuchsia.net/Ipv6Soc
 table/member fuchsia.net.mdns/ServiceInstance2.service string:22
 table/member fuchsia.net.mdns/ServiceInstance2.srv_priority uint16
 table/member fuchsia.net.mdns/ServiceInstance2.srv_weight uint16
+table/member fuchsia.net.mdns/ServiceInstance2.target string:255
 table/member fuchsia.net.mdns/ServiceInstance2.text vector<string:255>:256
 table fuchsia.net.mdns/ServiceInstance2
 protocol/member fuchsia.net.mdns/ServiceSubscriber.OnInstanceChanged(fuchsia.net.mdns/ServiceInstance instance) -> ()

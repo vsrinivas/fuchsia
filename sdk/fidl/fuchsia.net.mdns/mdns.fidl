@@ -247,6 +247,9 @@ type ServiceInstance = table {
     /// The weight of the SRV resource record for this publication. See
     /// [RFC6763](https://tools.ietf.org/html/rfc6763) for details.
     7: srv_weight uint16;
+
+    /// The domain name of the target host.
+    8: target host_name;
 };
 
 /// Describes a service instance.
@@ -273,6 +276,9 @@ type ServiceInstance2 = table {
     /// The weight of the SRV resource record for this publication. See
     /// [RFC6763](https://tools.ietf.org/html/rfc6763) for details.
     7: srv_weight uint16;
+
+    /// The domain name of the target host.
+    8: target host_name;
 };
 
 /// Client-supplied publication responder interface.

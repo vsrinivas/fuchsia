@@ -113,7 +113,7 @@ void InstanceRequestor::EndOfMessage() {
             service_name_, instance_info.instance_name_,
             inet::SocketAddress(target_info.v4_address_, instance_info.port_),
             inet::SocketAddress(target_info.v6_address_, instance_info.port_), instance_info.text_,
-            instance_info.srv_priority_, instance_info.srv_weight_);
+            instance_info.srv_priority_, instance_info.srv_weight_, instance_info.target_);
       }
     } else {
       for (auto subscriber : subscribers_) {
@@ -121,7 +121,7 @@ void InstanceRequestor::EndOfMessage() {
             service_name_, instance_info.instance_name_,
             inet::SocketAddress(target_info.v4_address_, instance_info.port_),
             inet::SocketAddress(target_info.v6_address_, instance_info.port_), instance_info.text_,
-            instance_info.srv_priority_, instance_info.srv_weight_);
+            instance_info.srv_priority_, instance_info.srv_weight_, instance_info.target_);
       }
     }
 
@@ -161,7 +161,7 @@ void InstanceRequestor::ReportAllDiscoveries(Mdns::Subscriber* subscriber) {
         service_name_, instance_info.instance_name_,
         inet::SocketAddress(target_info.v4_address_, instance_info.port_),
         inet::SocketAddress(target_info.v6_address_, instance_info.port_), instance_info.text_,
-        instance_info.srv_priority_, instance_info.srv_weight_);
+        instance_info.srv_priority_, instance_info.srv_weight_, instance_info.target_);
   }
 }
 

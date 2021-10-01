@@ -143,12 +143,13 @@ void MdnsFidlUtil::FillServiceInstance(fuchsia::net::mdns::ServiceInstance* serv
                                        const inet::SocketAddress& v4_address,
                                        const inet::SocketAddress& v6_address,
                                        const std::vector<std::string>& text, uint16_t srv_priority,
-                                       uint16_t srv_weight) {
+                                       uint16_t srv_weight, const std::string& target) {
   service_instance->set_service(service);
   service_instance->set_instance(instance);
   service_instance->set_text(text);
   service_instance->set_srv_priority(srv_priority);
   service_instance->set_srv_weight(srv_weight);
+  service_instance->set_target(target);
   if (v4_address) {
     service_instance->set_ipv4_endpoint(MdnsFidlUtil::CreateSocketAddressV4(v4_address));
   }
