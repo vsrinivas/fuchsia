@@ -4,14 +4,13 @@
 
 #include "network_device.h"
 
-#include <lib/fake_ddk/fake_ddk.h>
-
 #include <ddktl/device.h>
 #include <gtest/gtest.h>
 
 #include "device/test_session.h"
 #include "device/test_util.h"
 #include "mac/test_util.h"
+#include "src/devices/testing/mock-ddk/mock-device.h"
 #include "src/lib/testing/predicates/status.h"
 
 namespace {
@@ -22,51 +21,34 @@ constexpr zx::duration kTestTimeout = zx::duration::infinite();
 namespace network {
 namespace testing {
 
-class NetDeviceDriverTest : public ::testing::Test, public fake_ddk::Bind {
+class NetDeviceDriverTest : public ::testing::Test {
  protected:
-  using ReleaseOp = void(void*);
   // Use a nonzero port identifier to avoid default value traps.
   static constexpr uint8_t kPortId = 11;
 
-  void TearDown() override {
-    if (device_created_) {
-      RemoveDeviceSync();
-    }
+  NetDeviceDriverTest() : loop_(&kAsyncLoopConfigNeverAttachToThread) {
+    loop_.StartThread("net-device-driver-test");
   }
 
-  zx_status_t DeviceAdd(zx_driver_t* drv, zx_device_t* parent, device_add_args_t* args,
-                        zx_device_t** out) override {
-    zx_status_t status = Bind::DeviceAdd(drv, parent, args, out);
-    if (status == ZX_OK) {
-      release_op_ = args->ops->release;
-      device_created_ = true;
-    }
-    return status;
-  }
+  void TearDown() override { UnbindAndRelease(); }
 
-  void UnbindDeviceSync() {
-    DeviceAsyncRemove(fake_ddk::kFakeDevice);
-    EXPECT_OK(WaitUntilRemove(zx::deadline_after(kTestTimeout)));
-  }
-
-  void RemoveDeviceSync() {
-    UnbindDeviceSync();
-    if (release_op_) {
-      release_op_(op_ctx_);
+  void UnbindAndRelease() {
+    if (MockDevice* dev = parent_->GetLatestChild(); dev != nullptr) {
+      dev->UnbindOp();
+      EXPECT_OK(dev->WaitUntilUnbindReplyCalled(zx::deadline_after(kTestTimeout)));
+      dev->ReleaseOp();
     }
-    device_created_ = false;
   }
 
   zx_status_t CreateDevice(bool with_mac = false) {
     auto proto = device_impl_.proto();
-    SetProtocol(ZX_PROTOCOL_NETWORK_DEVICE_IMPL, &proto);
+    parent_->AddProtocol(ZX_PROTOCOL_NETWORK_DEVICE_IMPL, proto.ops, proto.ctx);
     if (with_mac) {
       port_impl_.SetMac(mac_impl_.proto());
     }
     port_impl_.SetStatus(
         {.mtu = 2048, .flags = static_cast<uint32_t>(netdev::wire::StatusFlags::kOnline)});
-    if (zx_status_t status = NetworkDevice::Create(nullptr, fake_ddk::kFakeParent);
-        status != ZX_OK) {
+    if (zx_status_t status = NetworkDevice::Create(nullptr, parent_.get()); status != ZX_OK) {
       return status;
     }
     port_impl_.AddPort(kPortId, device_impl_.client());
@@ -78,12 +60,23 @@ class NetDeviceDriverTest : public ::testing::Test, public fake_ddk::Bind {
     if (endpoints.is_error()) {
       return endpoints.take_error();
     }
+    zx::status client = [this]() -> zx::status<fidl::WireSyncClient<netdev::DeviceInstance>> {
+      zx::status endpoints = fidl::CreateEndpoints<netdev::DeviceInstance>();
+      if (endpoints.is_error()) {
+        return endpoints.take_error();
+      }
+      auto [client_end, server_end] = std::move(*endpoints);
+      fidl::BindServer(loop_.dispatcher(), std::move(server_end),
+                       parent_->GetLatestChild()->GetDeviceContext<NetworkDevice>());
+      return zx::ok(fidl::BindSyncClient(std::move(client_end)));
+    }();
+    if (client.is_error()) {
+      return client.take_error();
+    }
     auto [client_end, server_end] = std::move(*endpoints);
-    fidl::WireResult result =
-        fidl::WireCall(fidl::UnownedClientEnd<netdev::DeviceInstance>(zx::unowned(FidlClient())))
-            .GetDevice(std::move(server_end));
-    if (!result.ok()) {
-      return zx::error(result.status());
+    fidl::WireResult result = client->GetDevice(std::move(server_end));
+    if (zx_status_t status = result.status(); status != ZX_OK) {
+      return zx::error(status);
     }
 
     return zx::ok(fidl::BindSyncClient(std::move(client_end)));
@@ -93,11 +86,12 @@ class NetDeviceDriverTest : public ::testing::Test, public fake_ddk::Bind {
   FakeNetworkPortImpl& port_impl() { return port_impl_; }
 
  private:
-  bool device_created_ = false;
+  const std::shared_ptr<MockDevice> parent_ = MockDevice::FakeRootParent();
+  async::Loop loop_;
+
   FakeMacDeviceImpl mac_impl_;
   FakeNetworkDeviceImpl device_impl_;
   FakeNetworkPortImpl port_impl_;
-  ReleaseOp* release_op_;
 };
 
 TEST_F(NetDeviceDriverTest, TestCreateSimple) { ASSERT_OK(CreateDevice()); }
@@ -112,7 +106,7 @@ TEST_F(NetDeviceDriverTest, TestOpenSession) {
   ASSERT_OK(AttachSessionPort(session, port_impl()));
   ASSERT_OK(
       device_impl().events().wait_one(kEventStart, zx::deadline_after(kTestTimeout), nullptr));
-  UnbindDeviceSync();
+  UnbindAndRelease();
   ASSERT_OK(session.WaitClosed(zx::deadline_after(kTestTimeout)));
   // netdevice should also have been closed after device unbind:
   ASSERT_OK(netdevice.channel().wait_one(ZX_CHANNEL_PEER_CLOSED, zx::deadline_after(kTestTimeout),
@@ -139,7 +133,7 @@ TEST_F(NetDeviceDriverTest, TestWatcherDestruction) {
   ASSERT_OK(port.GetStatusWatcher(std::move(server_end), 1).status());
   fidl::WireSyncClient watcher = fidl::BindSyncClient(std::move(client_end));
   ASSERT_OK(watcher.WatchStatus().status());
-  UnbindDeviceSync();
+  UnbindAndRelease();
   // Watcher, port, and netdevice should all observe channel closure.
   ASSERT_OK(watcher.channel().wait_one(ZX_CHANNEL_PEER_CLOSED, zx::deadline_after(kTestTimeout),
                                        nullptr));

@@ -109,22 +109,22 @@ struct MockDevice : public std::enable_shared_from_this<MockDevice> {
   //
   // The WaitUntil* functions are useful if you expect the reply/remove/etc to be called
   // in a different thread.
-#define REGISTER_CALL_TRACKER(varname)                                                            \
- private:                                                                                         \
-  bool varname##_call_made_ = false;                                                              \
-  zx_status_t varname##_call_status_ = ZX_ERR_BAD_STATE;                                          \
-  sync_completion_t varname##_call_made_sync_;                                                    \
-                                                                                                  \
- public:                                                                                          \
-  void Record##varname(zx_status_t status) {                                                      \
-    varname##_call_status_ = status;                                                              \
-    varname##_call_made_ = true;                                                                  \
-    sync_completion_signal(&varname##_call_made_sync_);                                           \
-  }                                                                                               \
-  zx_status_t WaitUntil##varname##Called() {                                                      \
-    return sync_completion_wait_deadline(&varname##_call_made_sync_, zx::time::infinite().get()); \
-  }                                                                                               \
-  bool varname##Called() { return varname##_call_made_; }                                         \
+#define REGISTER_CALL_TRACKER(varname)                                                \
+ private:                                                                             \
+  bool varname##_call_made_ = false;                                                  \
+  zx_status_t varname##_call_status_ = ZX_ERR_BAD_STATE;                              \
+  sync_completion_t varname##_call_made_sync_;                                        \
+                                                                                      \
+ public:                                                                              \
+  void Record##varname(zx_status_t status) {                                          \
+    varname##_call_status_ = status;                                                  \
+    varname##_call_made_ = true;                                                      \
+    sync_completion_signal(&varname##_call_made_sync_);                               \
+  }                                                                                   \
+  zx_status_t WaitUntil##varname##Called(zx::time deadline = zx::time::infinite()) {  \
+    return sync_completion_wait_deadline(&varname##_call_made_sync_, deadline.get()); \
+  }                                                                                   \
+  bool varname##Called() { return varname##_call_made_; }                             \
   zx_status_t varname##CallStatus() { return varname##_call_status_; }
 
   REGISTER_CALL_TRACKER(InitReply)

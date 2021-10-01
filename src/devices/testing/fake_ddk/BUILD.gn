@@ -93,7 +93,6 @@ zx_library("fake_ddk") {
     "//src/connectivity/ethernet/drivers/ethernet/netdevice-migration/*",
     "//src/connectivity/ethernet/drivers/rndis-function/*",
     "//src/connectivity/ethernet/drivers/virtio/*",
-    "//src/connectivity/network/drivers/network-device/*",
     "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/sim/test/*",
     "//src/devices/block/drivers/aml-sdmmc/*",
     "//src/devices/block/drivers/gpt/*",

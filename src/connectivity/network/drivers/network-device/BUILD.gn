@@ -70,7 +70,7 @@ test("driver-test") {
   deps = [
     ":src",
     "//src/devices/testing/fake-bti",
-    "//src/devices/testing/fake_ddk",
+    "//src/devices/testing/mock-ddk",
     "//src/lib/fxl/test:gtest_main",
     "//src/lib/testing/predicates",
     "//zircon/system/ulib/zx",
