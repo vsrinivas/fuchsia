@@ -6,10 +6,6 @@ import("//build/dart/dart_library.gni")
 import("//build/flutter/test.gni")
 import("//build/testing/environments.gni")
 
-group("webview_flutter") {
-  public_deps = [ "//third_party/dart-pkg/pub/webview_flutter" ]
-}
-
 dart_library("fuchsia_webview_flutter") {
   package_name = "fuchsia_webview_flutter"
   null_safe = true
