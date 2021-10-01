@@ -85,10 +85,22 @@ async fn main() -> Result<(), Error> {
                             },
                         }
                     },
-                    ProfileEvent::SearchResult { id, protocol: _, attributes } => {
-                        if let Some(service) = AvrcpService::from_attributes(attributes) {
-                            info!("Service found on {:?}: {:?}", id, service);
-                            peer_manager.services_found(&id, vec![service]);
+                    ProfileEvent::SearchResult { id, protocol, attributes } => {
+                        let protocol = match protocol {
+                            Some(p) => p,
+                            None => {
+                                info!("Received search result with no protocol, ignoring..");
+                                continue;
+                            }
+                        };
+                        match AvrcpService::from_search_result(protocol, attributes) {
+                            Ok(service) => {
+                                info!("Valid service found on {:?}: {:?}", id, service);
+                                peer_manager.services_found(&id, vec![service]);
+                            }
+                            Err(e) => {
+                                warn!("Invalid service found: {:?}", e);
+                            }
                         }
                     },
                 }

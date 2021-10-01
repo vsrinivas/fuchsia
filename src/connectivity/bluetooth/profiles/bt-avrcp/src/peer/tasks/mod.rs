@@ -148,6 +148,7 @@ fn handle_notification(
 
 /// Attempt an outgoing L2CAP connection to remote's AVRCP control channel.
 /// The control channel should be in `Connecting` state before spawning this task.
+// TODO(fxbug.dev/85761): Refactor logic into RemotePeer to avoid multiple lock accesses.
 async fn make_connection(peer: Arc<RwLock<RemotePeer>>) {
     let random_delay: zx::Duration = zx::Duration::from_nanos(
         rand::thread_rng()
@@ -155,20 +156,20 @@ async fn make_connection(peer: Arc<RwLock<RemotePeer>>) {
     );
     trace!("AVRCP waiting {:?} millis before establishing connection", random_delay.into_millis());
     fuchsia_async::Timer::new(random_delay.after_now()).await;
-    let (peer_id, profile_service) = {
+    let (peer_id, profile_service, psm) = {
         let peer_guard = peer.read();
         // Return early if we are not in the `Connecting` state.
         if !peer_guard.control_channel.is_connecting() {
             return;
         }
-        (peer_guard.peer_id, peer_guard.profile_proxy.clone())
+        (peer_guard.peer_id, peer_guard.profile_proxy.clone(), peer_guard.service_psm())
     };
 
     match profile_service
         .connect(
             &mut peer_id.into(),
             &mut bredr::ConnectParameters::L2cap(bredr::L2capParameters {
-                psm: Some(bredr::PSM_AVCTP),
+                psm: Some(psm.into()),
                 ..bredr::L2capParameters::EMPTY
             }),
         )

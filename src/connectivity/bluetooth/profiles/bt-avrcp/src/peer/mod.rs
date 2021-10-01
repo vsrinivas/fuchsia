@@ -6,7 +6,7 @@ use {
     bt_avctp::{AvcCommandResponse, AvcCommandType, AvcPeer, AvcResponseType, AvctpPeer},
     derivative::Derivative,
     fidl_fuchsia_bluetooth_bredr as bredr, fuchsia_async as fasync,
-    fuchsia_bluetooth::types::PeerId,
+    fuchsia_bluetooth::{profile::Psm, types::PeerId},
     fuchsia_inspect::Property,
     fuchsia_inspect_derive::{AttachError, Inspect},
     fuchsia_zircon as zx,
@@ -234,6 +234,19 @@ impl RemotePeer {
     /// either controller or target.
     fn discovered(&self) -> bool {
         self.target_descriptor.is_some() || self.controller_descriptor.is_some()
+    }
+
+    /// Returns the L2CAP PSM associated with the AVRCP service for this peer. Defaults to PSM_AVCTP
+    /// if the peer advertises both Controller & Target services.
+    fn service_psm(&self) -> Psm {
+        match (&self.target_descriptor, &self.controller_descriptor) {
+            (Some(AvrcpService::Target { psm, .. }), None) => *psm,
+            (None, Some(AvrcpService::Controller { psm, .. })) => *psm,
+            _ => {
+                info!("Defaulting to PSM_AVCTP");
+                Psm::AVCTP
+            }
+        }
     }
 
     /// Caches the current value of this controller notification event for future controller event
@@ -566,7 +579,7 @@ mod tests {
         fidl::endpoints::create_proxy_and_stream,
         fidl_fuchsia_bluetooth::ErrorCode,
         fidl_fuchsia_bluetooth_bredr::{
-            ProfileMarker, ProfileRequest, ProfileRequestStream, PSM_AVCTP,
+            ConnectParameters, L2capParameters, ProfileMarker, ProfileRequest, ProfileRequestStream,
         },
         fuchsia_async::{self as fasync, DurationExt, TimeoutExt},
         fuchsia_bluetooth::types::Channel,
@@ -596,10 +609,12 @@ mod tests {
         let id = PeerId(1);
         let (peer_handle, _target_delegate, mut profile_requests) = setup_remote_peer(id)?;
 
-        // Set the descriptor to simulate service found for peer.
+        // Set the descriptor to simulate service found for peer - while unusual, this peer
+        // advertises a non-standard PSM.
+        let peer_psm = Psm::new(37); // OTS PSM
         peer_handle.set_target_descriptor(AvrcpService::Target {
             features: AvrcpTargetFeatures::CATEGORY1,
-            psm: PSM_AVCTP,
+            psm: peer_psm,
             protocol_version: AvrcpProtocolVersion(1, 6),
         });
 
@@ -615,12 +630,19 @@ mod tests {
         exec.set_fake_time(MAX_CONNECTION_EST_TIME.after_now());
         let _ = exec.wake_expired_timers();
 
-        // Peer should have requested a connection.
+        // We should have requested a connection.
         let (_remote, channel) = Channel::create();
         match exec.run_until_stalled(&mut next_request_fut) {
-            Poll::Ready(Some(Ok(ProfileRequest::Connect { responder, .. }))) => {
+            Poll::Ready(Some(Ok(ProfileRequest::Connect { responder, connection, .. }))) => {
                 let channel = channel.try_into().unwrap();
                 responder.send(&mut Ok(channel)).expect("FIDL response should work");
+                // The connect request should be for the PSM advertised by the remote peer.
+                match connection {
+                    ConnectParameters::L2cap(L2capParameters { psm: Some(v), .. }) => {
+                        assert_eq!(v, peer_psm.into());
+                    }
+                    x => panic!("Expected L2CAP parameters but got: {:?}", x),
+                }
             }
             x => panic!("Expected Profile connection request to be ready, got {:?} instead.", x),
         };
@@ -643,9 +665,10 @@ mod tests {
         let (peer_handle, _target_delegate, mut profile_requests) = setup_remote_peer(id)?;
 
         // Set the descriptor to simulate service found for peer.
+        let peer_psm = Psm::new(bredr::PSM_AVCTP);
         peer_handle.set_target_descriptor(AvrcpService::Target {
             features: AvrcpTargetFeatures::CATEGORY1,
-            psm: PSM_AVCTP,
+            psm: peer_psm,
             protocol_version: AvrcpProtocolVersion(1, 6),
         });
 
@@ -663,9 +686,15 @@ mod tests {
         // Peer should have requested a connection.
         let (remote, channel) = Channel::create();
         match exec.run_until_stalled(&mut next_request_fut) {
-            Poll::Ready(Some(Ok(ProfileRequest::Connect { responder, .. }))) => {
+            Poll::Ready(Some(Ok(ProfileRequest::Connect { responder, connection, .. }))) => {
                 let channel = channel.try_into().unwrap();
                 responder.send(&mut Ok(channel)).expect("FIDL response should work");
+                match connection {
+                    ConnectParameters::L2cap(L2capParameters { psm: Some(v), .. }) => {
+                        assert_eq!(v, peer_psm.into());
+                    }
+                    x => panic!("Expected L2CAP parameters but got: {:?}", x),
+                }
             }
             x => panic!("Expected Profile connection request to be ready, got {:?} instead.", x),
         };
@@ -722,7 +751,7 @@ mod tests {
         // Set the descriptor to simulate service found for peer.
         peer_handle.set_target_descriptor(AvrcpService::Target {
             features: AvrcpTargetFeatures::CATEGORY1,
-            psm: PSM_AVCTP,
+            psm: Psm::AVCTP,
             protocol_version: AvrcpProtocolVersion(1, 6),
         });
 
@@ -830,7 +859,7 @@ mod tests {
         // Set the descriptor to simulate service found for peer.
         peer_handle.set_target_descriptor(AvrcpService::Target {
             features: AvrcpTargetFeatures::CATEGORY1,
-            psm: PSM_AVCTP,
+            psm: Psm::AVCTP,
             protocol_version: AvrcpProtocolVersion(1, 6),
         });
 
@@ -874,7 +903,7 @@ mod tests {
         // Set the descriptor to simulate service found for peer.
         peer_handle.set_target_descriptor(AvrcpService::Target {
             features: AvrcpTargetFeatures::CATEGORY1,
-            psm: PSM_AVCTP,
+            psm: Psm::AVCTP,
             protocol_version: AvrcpProtocolVersion(1, 6),
         });
         // Peer initiates connection to us.

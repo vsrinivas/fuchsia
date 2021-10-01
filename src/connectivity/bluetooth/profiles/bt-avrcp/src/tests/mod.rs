@@ -8,9 +8,12 @@ use {
     fidl::endpoints::{create_endpoints, create_proxy, create_proxy_and_stream},
     fidl_fuchsia_bluetooth_avrcp::{self as fidl_avrcp, *},
     fidl_fuchsia_bluetooth_avrcp_test::*,
-    fidl_fuchsia_bluetooth_bredr::{ProfileMarker, ProfileRequestStream, PSM_AVCTP},
+    fidl_fuchsia_bluetooth_bredr::{ProfileMarker, ProfileRequestStream},
     fuchsia_async as fasync,
-    fuchsia_bluetooth::types::{Channel, PeerId},
+    fuchsia_bluetooth::{
+        profile::Psm,
+        types::{Channel, PeerId},
+    },
     fuchsia_zircon as zx,
     futures::{channel::mpsc, future::FutureExt, stream::StreamExt, task::Poll},
     matches::assert_matches,
@@ -234,7 +237,7 @@ async fn test_peer_manager_with_fidl_client_and_mock_profile() -> Result<(), Err
         &fake_peer_id,
         vec![AvrcpService::Target {
             features: AvrcpTargetFeatures::CATEGORY1,
-            psm: PSM_AVCTP,
+            psm: Psm::AVCTP,
             protocol_version: AvrcpProtocolVersion(1, 6),
         }],
     );

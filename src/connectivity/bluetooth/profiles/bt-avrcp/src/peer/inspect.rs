@@ -116,6 +116,7 @@ mod tests {
     use crate::profile::{AvrcpControllerFeatures, AvrcpProtocolVersion, AvrcpTargetFeatures};
 
     use {
+        fuchsia_bluetooth::profile::Psm,
         fuchsia_inspect::{assert_data_tree, testing::AnyProperty},
         fuchsia_inspect_derive::WithInspect,
     };
@@ -139,12 +140,12 @@ mod tests {
 
         let target_info = AvrcpService::Target {
             features: AvrcpTargetFeatures::PLAYERSETTINGS,
-            psm: 20,
+            psm: Psm::new(20),
             protocol_version: AvrcpProtocolVersion(1, 5),
         };
         let controller_info = AvrcpService::Controller {
             features: AvrcpControllerFeatures::CATEGORY1,
-            psm: 10,
+            psm: Psm::new(10),
             protocol_version: AvrcpProtocolVersion(1, 6),
         };
         // Setting the opposite feature set has no effect.

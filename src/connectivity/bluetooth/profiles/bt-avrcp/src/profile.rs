@@ -3,13 +3,16 @@
 // found in the LICENSE file.
 
 use {
-    anyhow::{Context, Error},
+    anyhow::{format_err, Context, Error},
     bitflags::bitflags,
     fidl_fuchsia_bluetooth_bredr::*,
-    fuchsia_bluetooth::{profile::elem_to_profile_descriptor, types::Uuid},
+    fuchsia_bluetooth::{
+        profile::{elem_to_profile_descriptor, psm_from_protocol, Psm},
+        types::Uuid,
+    },
     profile_client::ProfileClient,
     std::fmt::Debug,
-    tracing::{debug, info},
+    tracing::info,
 };
 
 bitflags! {
@@ -145,21 +148,30 @@ impl std::fmt::Debug for AvrcpProtocolVersion {
 pub enum AvrcpService {
     Target {
         features: AvrcpTargetFeatures,
-        psm: u16,
+        psm: Psm,
         protocol_version: AvrcpProtocolVersion,
     },
     Controller {
         features: AvrcpControllerFeatures,
-        psm: u16,
+        psm: Psm,
         protocol_version: AvrcpProtocolVersion,
     },
 }
 
 impl AvrcpService {
-    pub fn from_attributes(attributes: Vec<Attribute>) -> Option<AvrcpService> {
+    pub fn from_search_result(
+        protocol: Vec<ProtocolDescriptor>,
+        attributes: Vec<Attribute>,
+    ) -> Result<AvrcpService, Error> {
         let mut features: Option<u16> = None;
         let mut service_uuids: Option<Vec<Uuid>> = None;
         let mut profile: Option<ProfileDescriptor> = None;
+
+        // Both the `protocol` and `attributes` should contain the primary protocol descriptor. It
+        // is simpler to parse the former.
+        let protocol = protocol.iter().map(Into::into).collect();
+        let psm =
+            psm_from_protocol(&protocol).ok_or(format_err!("AVRCP Service with no L2CAP PSM"))?;
 
         for attr in attributes {
             match attr.id {
@@ -198,30 +210,34 @@ impl AvrcpService {
         let (service_uuids, features, profile) = match (service_uuids, features, profile) {
             (Some(s), Some(f), Some(p)) => (s, f, p),
             (s, f, p) => {
-                debug!(
+                let err = format_err!(
                     "{}{}{}missing in service attrs",
                     if s.is_some() { "" } else { "Class UUIDs " },
                     if f.is_some() { "" } else { "Features " },
                     if p.is_some() { "" } else { "Profile " }
                 );
-                return None;
+                return Err(err);
             }
         };
 
-        let psm = PSM_AVCTP as u16; // TODO(fxbug.dev/63715): Parse instead of assuming default
+        // The L2CAP PSM should always be PSM_AVCTP. However, in unexpected cases, the peer may try
+        // to advertise a different PSM for its AVRCP service.
+        if psm != Psm::AVCTP {
+            info!("Found AVRCP Service with non standard PSM: {:?}", psm);
+        }
+
         let protocol_version = AvrcpProtocolVersion(profile.major_version, profile.minor_version);
 
         if service_uuids.contains(&Uuid::new16(AV_REMOTE_TARGET_CLASS)) {
             let features = AvrcpTargetFeatures::from_bits_truncate(features);
-            return Some(AvrcpService::Target { features, psm, protocol_version });
+            return Ok(AvrcpService::Target { features, psm, protocol_version });
         } else if service_uuids.contains(&Uuid::new16(AV_REMOTE_CLASS))
             || service_uuids.contains(&Uuid::new16(AV_REMOTE_CONTROLLER_CLASS))
         {
             let features = AvrcpControllerFeatures::from_bits_truncate(features);
-            return Some(AvrcpService::Controller { features, psm, protocol_version });
+            return Ok(AvrcpService::Controller { features, psm, protocol_version });
         }
-        info!("Failed to find any applicable services for AVRCP");
-        None
+        Err(format_err!("Failed to find any applicable services for AVRCP"))
     }
 }
 
@@ -256,29 +272,84 @@ pub fn connect_and_advertise() -> Result<(ProfileProxy, ProfileClient), Error> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use matches::assert_matches;
 
-    #[test]
-    fn service_from_attributes_ignores_unknown_features() {
-        let attributes = vec![
-            Attribute {
+    fn build_attributes(
+        service_class: bool,
+        profile_descriptor: bool,
+        sdp_features: bool,
+    ) -> Vec<Attribute> {
+        let mut attrs = Vec::new();
+        if service_class {
+            attrs.push(Attribute {
                 id: ATTR_SERVICE_CLASS_ID_LIST,
                 element: DataElement::Sequence(vec![Some(Box::new(DataElement::Uuid(
                     Uuid::new16(AV_REMOTE_TARGET_CLASS).into(),
                 )))]),
-            },
-            Attribute {
+            });
+        }
+        if profile_descriptor {
+            attrs.push(Attribute {
                 id: ATTR_BLUETOOTH_PROFILE_DESCRIPTOR_LIST,
                 element: DataElement::Sequence(vec![Some(Box::new(DataElement::Sequence(vec![
                     Some(Box::new(DataElement::Uuid(Uuid::new16(4366).into()))),
                     Some(Box::new(DataElement::Uint16(0xffff))),
                 ])))]),
-            },
-            Attribute {
+            });
+        }
+
+        if sdp_features {
+            attrs.push(Attribute {
                 id: SDP_SUPPORTED_FEATURES, // SDP Attribute "SUPPORTED FEATURES"
                 element: DataElement::Uint16(0xffff),
-            },
-        ];
-        let service = AvrcpService::from_attributes(attributes);
-        assert!(service.is_some());
+            });
+        }
+        attrs
+    }
+
+    #[fuchsia::test]
+    fn service_from_search_result() {
+        let attributes = build_attributes(true, true, true);
+        let protocol = vec![ProtocolDescriptor {
+            protocol: ProtocolIdentifier::L2Cap,
+            params: vec![DataElement::Uint16(20)], // Random PSM is still OK.
+        }];
+        let service = AvrcpService::from_search_result(protocol, attributes);
+        assert_matches!(service, Ok(_));
+    }
+
+    #[fuchsia::test]
+    fn service_with_missing_features_returns_none() {
+        let no_service_class = build_attributes(false, true, true);
+        let protocol = vec![ProtocolDescriptor {
+            protocol: ProtocolIdentifier::L2Cap,
+            params: vec![DataElement::Uint16(20)], // Random PSM is still OK.
+        }];
+        let service = AvrcpService::from_search_result(protocol, no_service_class);
+        assert_matches!(service, Err(_));
+
+        let no_profile_descriptor = build_attributes(true, false, true);
+        let protocol = vec![ProtocolDescriptor {
+            protocol: ProtocolIdentifier::L2Cap,
+            params: vec![DataElement::Uint16(20)], // Random PSM is still OK.
+        }];
+        let service = AvrcpService::from_search_result(protocol, no_profile_descriptor);
+        assert_matches!(service, Err(_));
+
+        let no_sdp_features = build_attributes(true, true, false);
+        let protocol = vec![ProtocolDescriptor {
+            protocol: ProtocolIdentifier::L2Cap,
+            params: vec![DataElement::Uint16(20)], // Random PSM is still OK.
+        }];
+        let service = AvrcpService::from_search_result(protocol, no_sdp_features);
+        assert_matches!(service, Err(_));
+    }
+
+    #[test]
+    fn service_with_missing_protocol_returns_none() {
+        let attributes = build_attributes(true, true, true);
+        let protocol = vec![];
+        let service = AvrcpService::from_search_result(protocol, attributes);
+        assert_matches!(service, Err(_));
     }
 }
