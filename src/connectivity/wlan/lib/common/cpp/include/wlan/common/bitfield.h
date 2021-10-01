@@ -111,7 +111,8 @@ struct Integer : IntegerType<next_bitsize(N)> {};
     this->template set_bits<offset, len>(val);                          \
   }                                                                     \
   constexpr ::wlan::common::internal::Integer<len>::type name() const { \
-    return this->template get_bits<offset, len>();                      \
+    return static_cast<::wlan::common::internal::Integer<len>::type>(   \
+        this->template get_bits<offset, len>());                        \
   }
 
 }  // namespace common

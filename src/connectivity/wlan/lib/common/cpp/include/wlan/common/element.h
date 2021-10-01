@@ -965,7 +965,7 @@ struct VhtMcsNss : public common::BitField<uint64_t> {
     constexpr uint8_t kBitWidth = 2;
     uint8_t offset = kMcsBitOffset + (ss_num - 1) * kBitWidth;
     uint64_t mask = ((1ull << kBitWidth) - 1) << offset;
-    return (val() & mask) >> offset;
+    return static_cast<uint8_t>((val() & mask) >> offset);
   }
 
   uint8_t get_tx_max_mcs_ss(uint8_t ss_num) const {
@@ -974,7 +974,7 @@ struct VhtMcsNss : public common::BitField<uint64_t> {
     constexpr uint8_t kBitWidth = 2;
     uint8_t offset = kMcsBitOffset + (ss_num - 1) * kBitWidth;
     uint64_t mask = ((1ull << kBitWidth) - 1) << offset;
-    return (val() & mask) >> offset;
+    return static_cast<uint8_t>((val() & mask) >> offset);
   }
 
   void set_rx_max_mcs_ss(uint8_t ss_num, uint8_t mcs) {
@@ -1046,7 +1046,7 @@ struct BasicVhtMcsNss : public common::BitField<uint16_t> {
     constexpr uint8_t kBitWidth = 2;
     uint8_t offset = kMcsBitOffset + (ss_num - 1) * kBitWidth;
     uint64_t mask = ((1ull << kBitWidth) - 1) << offset;
-    return (val() & mask) >> offset;
+    return static_cast<uint8_t>((val() & mask) >> offset);
   }
 
   void set_max_mcs_ss(uint8_t ss_num, uint8_t mcs) {
@@ -1055,7 +1055,7 @@ struct BasicVhtMcsNss : public common::BitField<uint16_t> {
     constexpr uint8_t kBitWidth = 2;
     uint8_t offset = kMcsBitOffset + (ss_num - 1) * kBitWidth;
     uint64_t mcs_val = static_cast<uint64_t>(mcs) << offset;
-    set_val(val() | mcs_val);
+    set_val(static_cast<uint16_t>(val() | mcs_val));
   }
 };
 

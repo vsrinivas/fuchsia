@@ -35,7 +35,7 @@ TEST(McsTest, Intersect) {
 
   result = IntersectMcs(lhs, rhs);
   EXPECT_EQ(0xfful, result.rx_mcs_head.bitmask());
-  EXPECT_EQ(0x0f0f, result.rx_mcs_tail.bitmask());
+  EXPECT_EQ(0x0f0ful, result.rx_mcs_tail.bitmask());
   EXPECT_EQ(543, result.rx_mcs_tail.highest_rate());
   EXPECT_EQ(1, result.tx_mcs.set_defined());
   EXPECT_EQ(0, result.tx_mcs.rx_diff());
