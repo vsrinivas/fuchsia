@@ -17,6 +17,12 @@
             "metric_id": 5,
             "metric_type": "Occurrence",
             "selector": "bootstrap/driver_manager:root/sdmmc_core:io_errors"
+        },
+        {
+            "event_codes": [],
+            "metric_id": 6,
+            "metric_type": "Occurrence",
+            "selector": "bootstrap/driver_manager:root/sdmmc_core:io_retries"
         }
     ],
     "poll_rate_sec": 1800,
