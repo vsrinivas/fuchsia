@@ -1550,6 +1550,7 @@ bool TransportConstraint(Reporter* reporter, const std::unique_ptr<Attribute>& a
   static const auto kValidTransports = new std::set<std::string>{
       "Banjo",
       "Channel",
+      "Driver",
       "Syscall",
   };
 
