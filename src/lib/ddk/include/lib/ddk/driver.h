@@ -418,6 +418,11 @@ enum {
 #include <lib/ddk/protodefs.h>
 };
 
+#define DDK_FIDL_PROTOCOL_DEF(tag, val, name) ZX_FIDL_PROTOCOL_##tag = val,
+enum {
+#include <lib/ddk/fidl-protodefs.h>
+};
+
 __END_CDECLS
 
 #endif  // SRC_LIB_DDK_INCLUDE_LIB_DDK_DRIVER_H_

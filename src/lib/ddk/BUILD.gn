@@ -26,6 +26,7 @@ sdk_static_library("ddk") {
     "include/lib/ddk/debug.h",
     "include/lib/ddk/device.h",
     "include/lib/ddk/driver.h",
+    "include/lib/ddk/fidl-protodefs.h",
     "include/lib/ddk/fragment-device.h",
     "include/lib/ddk/hw/arch_ops.h",
     "include/lib/ddk/hw/inout.h",
