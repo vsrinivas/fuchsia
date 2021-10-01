@@ -395,10 +395,33 @@ int main(int argc, char** argv) {
     }
   }
 
-  status = coordinator.InitCoreDevices(driver_manager_args.sys_device_driver.c_str());
-  if (status != ZX_OK) {
-    LOGF(ERROR, "Failed to initialize core devices: %s", zx_status_get_string(status));
-    return status;
+  // Find and load v1 Drivers.
+  {
+    status = coordinator.InitCoreDevices(driver_manager_args.sys_device_driver.c_str());
+    if (status != ZX_OK) {
+      LOGF(ERROR, "Failed to initialize core devices: %s", zx_status_get_string(status));
+      return status;
+    }
+
+    for (const std::string& path : driver_manager_args.driver_search_paths) {
+      find_loadable_drivers(coordinator.boot_args(), path,
+                            fit::bind_member(&coordinator, &Coordinator::DriverAddedInit));
+    }
+    for (const char* driver : driver_manager_args.load_drivers) {
+      load_driver(coordinator.boot_args(), driver,
+                  fit::bind_member(&coordinator, &Coordinator::DriverAddedInit));
+    }
+
+    coordinator.PrepareProxy(coordinator.sys_device(), nullptr);
+
+    // Initial bind attempt for drivers enumerated at startup.
+    coordinator.BindDrivers();
+    if (coordinator.require_system()) {
+      LOGF(INFO, "Full system required, fallback drivers will be loaded after '/system' is loaded");
+    } else {
+      coordinator.BindFallbackDrivers();
+    }
+    coordinator.ScheduleBaseDriverLoading();
   }
 
   devfs_init(coordinator.root_device(), loop.dispatcher());
@@ -470,25 +493,6 @@ int main(int argc, char** argv) {
   });
   loader_loop.StartThread();
 
-  for (const std::string& path : driver_manager_args.driver_search_paths) {
-    find_loadable_drivers(coordinator.boot_args(), path,
-                          fit::bind_member(&coordinator, &Coordinator::DriverAddedInit));
-  }
-  for (const char* driver : driver_manager_args.load_drivers) {
-    load_driver(coordinator.boot_args(), driver,
-                fit::bind_member(&coordinator, &Coordinator::DriverAddedInit));
-  }
-
-  coordinator.PrepareProxy(coordinator.sys_device(), nullptr);
-
-  // Initial bind attempt for drivers enumerated at startup.
-  coordinator.BindDrivers();
-  if (coordinator.require_system()) {
-    LOGF(INFO, "Full system required, fallback drivers will be loaded after '/system' is loaded");
-  } else {
-    coordinator.BindFallbackDrivers();
-  }
-
   outgoing.svc_dir()->AddEntry(
       "fuchsia.hardware.pci.DeviceWatcher",
       fbl::MakeRefCounted<fs::Service>(
@@ -515,7 +519,6 @@ int main(int argc, char** argv) {
   outgoing.ServeFromStartupInfo();
 
   coordinator.set_running(true);
-  coordinator.ScheduleBaseDriverLoading();
   status = loop.Run();
   LOGF(ERROR, "Coordinator exited unexpectedly: %s", zx_status_get_string(status));
   return status;
