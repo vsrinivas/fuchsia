@@ -30,11 +30,11 @@ common_deps = [
   "//src/lib/ddktl",
   "//src/lib/fsl",
   "//src/ui/input/lib/input-report-reader",
-  "//zircon/public/lib/fidl-llcpp",
   "//zircon/public/lib/zircon-internal",
   "//zircon/system/ulib/async-loop:async-loop-cpp",
   "//zircon/system/ulib/async-loop:async-loop-default",
   "//zircon/system/ulib/fbl",
+  "//zircon/system/ulib/fidl:fidl-llcpp",
   "//zircon/system/ulib/zx",
 ]
 

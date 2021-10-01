@@ -65,7 +65,7 @@ test("fidl_llcpp_builder_tests_bin") {
     "//src/lib/fxl/test:gtest_main",
     "//third_party/googletest:gtest",
     "//zircon/public/lib/fidl",
-    "//zircon/public/lib/fidl-llcpp",
+    "//zircon/system/ulib/fidl:fidl-llcpp",
   ]
 
   if (is_fuchsia) {

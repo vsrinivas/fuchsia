@@ -38,8 +38,8 @@ executable("magma_conformance_tests") {
       "//sdk/lib/fdio",
       "//src/graphics/lib/magma/src/magma_util/platform:logger",
       "//src/graphics/lib/magma/src/magma_util/platform:trace_provider",
-      "//zircon/public/lib/fidl-llcpp",
       "//zircon/system/ulib/async-loop:async-loop-cpp",
+      "//zircon/system/ulib/fidl:fidl-llcpp",
     ]
   }
 

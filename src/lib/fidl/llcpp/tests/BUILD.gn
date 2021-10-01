@@ -23,7 +23,7 @@ source_set("types_test_utils") {
   public_deps = [
     "//third_party/googletest:gtest",
     "//zircon/public/lib/fidl",
-    "//zircon/public/lib/fidl-llcpp",
+    "//zircon/system/ulib/fidl:fidl-llcpp",
   ]
 
   # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings

@@ -47,7 +47,7 @@ test("fidl_llcpp_result_types_tests_bin") {
   output_name = "fidl_llcpp_result_types_tests"
   sources = [ "result_description_test.cc" ]
   deps = [
-    "//zircon/public/lib/fidl-llcpp",
+    "//zircon/system/ulib/fidl:fidl-llcpp",
     "//zircon/system/ulib/zxtest",
   ]
 }

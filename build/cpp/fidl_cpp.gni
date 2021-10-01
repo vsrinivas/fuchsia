@@ -573,7 +573,7 @@ template("fidl_cpp_family") {
     llcpp_public_deps = [
       "//sdk/lib/fit",
       "//zircon/public/lib/fidl",
-      "//zircon/public/lib/fidl-llcpp",
+      "//zircon/system/ulib/fidl:fidl-llcpp",
     ]
   } else {
     # On host.
@@ -581,7 +581,7 @@ template("fidl_cpp_family") {
     if (defined(invoker.host_llcpp) && invoker.host_llcpp) {
       llcpp_public_deps = [
         "//sdk/lib/fit",
-        "//zircon/public/lib/fidl-llcpp",
+        "//zircon/system/ulib/fidl:fidl-llcpp",
       ]
     } else {
       # Do not generate LLCPP if not requested.

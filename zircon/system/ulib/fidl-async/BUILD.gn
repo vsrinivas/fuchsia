@@ -29,7 +29,7 @@ zx_library("fidl-async-cpp") {
     "//sdk/lib/fit",
     "//zircon/public/lib/async",
     "//zircon/public/lib/fidl",
-    "//zircon/public/lib/fidl-llcpp",
+    "//zircon/system/ulib/fidl:fidl-llcpp",
   ]
   public_deps = [
     "//sdk/lib/fit",

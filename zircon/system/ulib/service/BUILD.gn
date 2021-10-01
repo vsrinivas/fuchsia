@@ -27,7 +27,7 @@ zx_library("service-llcpp") {
   deps = [
     "//sdk/fidl/fuchsia.io:fuchsia.io_llcpp",
     "//zircon/public/lib/async",
-    "//zircon/public/lib/fidl-llcpp",
+    "//zircon/system/ulib/fidl:fidl-llcpp",
   ]
 
   # TODO(fxbug.dev/69585): This target uses raw zx::channel with LLCPP which is deprecated.
