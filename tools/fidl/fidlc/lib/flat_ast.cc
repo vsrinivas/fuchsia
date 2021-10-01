@@ -139,85 +139,6 @@ class Compiling {
   Decl* decl_;
 };
 
-// The generic `ValidateUnknownConstraints` function is used by `Bits::Member` or `Enum::Member`.
-template <typename T>
-std::unique_ptr<Diagnostic> ValidateUnknownConstraints(const Decl& decl,
-                                                       types::Strictness decl_strictness,
-                                                       const std::vector<const T*>* members) {
-  if (!members)
-    return nullptr;
-
-  const bool is_transitional = decl.HasAttribute("transitional");
-
-  const bool is_strict = [&] {
-    switch (decl_strictness) {
-      case types::Strictness::kStrict:
-        return true;
-      case types::Strictness::kFlexible:
-        return false;
-    }
-  }();
-
-  bool found_member = false;
-  for (const auto* member : *members) {
-    const bool has_unknown = member->attributes && member->attributes->HasAttribute("unknown");
-    if (!has_unknown)
-      continue;
-
-    if (is_strict && !is_transitional) {
-      return Reporter::MakeError(ErrUnknownAttributeOnInvalidType, member->name);
-    }
-
-    if (found_member) {
-      return Reporter::MakeError(ErrUnknownAttributeOnMultipleMembers, member->name);
-    }
-
-    found_member = true;
-  }
-
-  return nullptr;
-}
-
-// This specialization for `Union::Member` is necessary because the `name` of the member is stored
-// inside of the `maybe_used` sub-struct.
-template <>
-std::unique_ptr<Diagnostic> ValidateUnknownConstraints(
-    const Decl& decl, types::Strictness decl_strictness,
-    const std::vector<const Union::Member*>* members) {
-  if (!members)
-    return nullptr;
-
-  const bool is_transitional = decl.HasAttribute("transitional");
-
-  const bool is_strict = [&] {
-    switch (decl_strictness) {
-      case types::Strictness::kStrict:
-        return true;
-      case types::Strictness::kFlexible:
-        return false;
-    }
-  }();
-
-  bool found_member = false;
-  for (const auto* member : *members) {
-    const bool has_unknown = member->attributes && member->attributes->HasAttribute("unknown");
-    if (!has_unknown)
-      continue;
-
-    if (is_strict && !is_transitional) {
-      return Reporter::MakeError(ErrUnknownAttributeOnInvalidType, member->maybe_used->name);
-    }
-
-    if (found_member) {
-      return Reporter::MakeError(ErrUnknownAttributeOnMultipleMembers, member->maybe_used->name);
-    }
-
-    found_member = true;
-  }
-
-  return nullptr;
-}
-
 }  // namespace
 
 uint32_t PrimitiveType::SubtypeSize(types::PrimitiveSubtype subtype) {
@@ -1712,16 +1633,12 @@ Libraries::Libraries() {
   }, AttributeArgSchema(ConstantValue::Kind::kString)));
   AddAttributeSchema("transitional", AttributeSchema({
     AttributePlacement::kMethod,
-    AttributePlacement::kBitsDecl,
-    AttributePlacement::kEnumDecl,
-    AttributePlacement::kUnionDecl,
   }, AttributeArgSchema("reason", ConstantValue::Kind::kString, AttributeArgSchema::Optionality::kOptional)));
   AddAttributeSchema("transport", AttributeSchema({
     AttributePlacement::kProtocolDecl,
   }, AttributeArgSchema("types", ConstantValue::Kind::kString), TransportConstraint));
   AddAttributeSchema("unknown", AttributeSchema({
     AttributePlacement::kEnumMember,
-    AttributePlacement::kUnionMember,
   }));
   // clang-format on
 }
@@ -4292,16 +4209,6 @@ bool Library::CompileBits(Bits* bits_declaration) {
                   bits_declaration->subtype_ctor->type);
   }
 
-  {
-    // In the line below, `nullptr` needs an explicit cast to the pointer type due to
-    // C++ template mechanics.
-    auto err = ValidateUnknownConstraints<const Bits::Member>(
-        *bits_declaration, bits_declaration->strictness, nullptr);
-    if (err) {
-      return Fail(std::move(err));
-    }
-  }
-
   return true;
 }
 
@@ -4746,19 +4653,6 @@ bool Library::CompileUnion(Union* union_declaration) {
     return Fail(ErrNonDenseOrdinal, span, ordinal);
   }
 
-  {
-    std::vector<const Union::Member*> members;
-    for (const auto& member : union_declaration->members) {
-      members.push_back(&member);
-    }
-
-    auto err =
-        ValidateUnknownConstraints(*union_declaration, union_declaration->strictness, &members);
-    if (err) {
-      return Fail(std::move(err));
-    }
-  }
-
   return true;
 }
 
@@ -5054,58 +4948,43 @@ bool Library::ValidateEnumMembersAndCalcUnknownValue(Enum* enum_decl,
   static_assert(std::is_integral<MemberType>::value && !std::is_same<MemberType, bool>::value,
                 "Enum members must be an integral type!");
 
-  auto unknown_value = std::numeric_limits<MemberType>::max();
+  const auto default_unknown_value = std::numeric_limits<MemberType>::max();
+  std::optional<MemberType> explicit_unknown_value;
   for (const auto& member : enum_decl->members) {
     if (!ResolveConstant(member.value.get(), enum_decl->subtype_ctor->type)) {
       return Fail(ErrCouldNotResolveMember, member.name, std::string("enum"));
     }
     auto attributes = member.attributes.get();
     if (attributes && attributes->HasAttribute("unknown")) {
-      unknown_value =
+      if (explicit_unknown_value.has_value()) {
+        return Fail(ErrUnknownAttributeOnMultipleEnumMembers, member.name);
+      }
+      explicit_unknown_value =
           static_cast<const NumericConstantValue<MemberType>&>(member.value->Value()).value;
     }
   }
-  *out_unknown_value = unknown_value;
 
-  auto validator = [enum_decl, unknown_value](
+  auto validator = [enum_decl, &explicit_unknown_value](
                        MemberType member,
                        const AttributeList* attributes) -> std::unique_ptr<Diagnostic> {
     switch (enum_decl->strictness) {
-      case types::Strictness::kFlexible:
-        break;
       case types::Strictness::kStrict:
-        // Strict enums cannot have [Unknown] attributes on members, but that will be validated by
-        // ValidateUnknownConstraints() (called later in this method).
+        if (attributes && attributes->HasAttribute("unknown")) {
+          return Reporter::MakeError(ErrUnknownAttributeOnStrictEnumMember);
+        }
+        return nullptr;
+      case types::Strictness::kFlexible:
+        if (member == default_unknown_value && !explicit_unknown_value.has_value()) {
+          return Reporter::MakeError(ErrFlexibleEnumMemberWithMaxValue,
+                                     std::to_string(default_unknown_value));
+        }
         return nullptr;
     }
-
-    if (member != unknown_value)
-      return nullptr;
-
-    if (attributes && attributes->HasAttribute("unknown"))
-      return nullptr;
-
-    return Reporter::MakeError(ErrFlexibleEnumMemberWithMaxValue, std::to_string(unknown_value),
-                               std::to_string(unknown_value), std::to_string(unknown_value),
-                               std::to_string(unknown_value));
   };
-
-  if (!ValidateMembers<Enum, MemberType>(enum_decl, validator))
+  if (!ValidateMembers<Enum, MemberType>(enum_decl, validator)) {
     return false;
-
-  {
-    std::vector<const Enum::Member*> members;
-    members.reserve(enum_decl->members.size());
-    for (const auto& member : enum_decl->members) {
-      members.push_back(&member);
-    }
-
-    auto err = ValidateUnknownConstraints(*enum_decl, enum_decl->strictness, &members);
-    if (err) {
-      return Fail(std::move(err));
-    }
   }
-
+  *out_unknown_value = explicit_unknown_value.value_or(default_unknown_value);
   return true;
 }
 

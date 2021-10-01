@@ -46,7 +46,7 @@ func TestCanUnmarshalAttributeValue(t *testing.T) {
 		@CAPS
 		type MyUnion = flexible union {
 			/// my_union_member
-			@unknown
+			@on_the_member
 			1: my_union_member bool;
 		};
 	`)
@@ -106,8 +106,8 @@ func TestCanUnmarshalAttributeValue(t *testing.T) {
 	if arg, found := attr.LookupArgStandalone(); !found || arg.ValueString() != toDocComment(wantUnionMemName) {
 		t.Errorf("'%s' 'doc' attribute: got '%s', want '%s'", unionMemName, arg.ValueString(), toDocComment(wantUnionMemName))
 	}
-	if _, found := unionMemAttrs.LookupAttribute("Unknown"); !found {
-		t.Errorf("'%s' 'unknown' attribute: not found", unionMemName)
+	if _, found := unionMemAttrs.LookupAttribute("on_the_member"); !found {
+		t.Errorf("'%s' 'on_the_member' attribute: not found", unionMemName)
 	}
 	if _, found := unionMemAttrs.LookupAttribute("Missing"); found {
 		t.Errorf("'%s' 'missing' attribute: found when non-existant", unionMemName)

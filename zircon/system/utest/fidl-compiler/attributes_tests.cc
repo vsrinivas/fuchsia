@@ -164,8 +164,7 @@ const EXAMPLE_CONSTANT string = "foo";
 
 /// For ExampleEnum
 @deprecated("Reason")
-@transitional
-type ExampleEnum = strict enum {
+type ExampleEnum = flexible enum {
     A = 1;
     /// For EnumMember
     @unknown
@@ -221,7 +220,6 @@ service ExampleService {
 
   auto example_enum = library.LookupEnum("ExampleEnum");
   ASSERT_NOT_NULL(example_enum);
-  EXPECT_TRUE(example_enum->HasAttribute("transitional"));
   EXPECT_TRUE(example_enum->HasAttributeArg("doc", "value"));
   auto enum_doc_value = static_cast<const fidl::flat::DocCommentConstantValue&>(
       example_enum->GetAttributeArg("doc", "value").value().get().value->Value());
@@ -517,6 +515,19 @@ type U = flexible union {
   ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "unknown");
 }
 
+TEST(AttributesTests, BadUnknownInvalidPlacementOnUnionMember) {
+  TestLibrary library(R"FIDL(
+library fidl.test;
+
+type U = flexible union {
+  @unknown 1: a int32;
+};
+  )FIDL");
+
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrInvalidAttributePlacement);
+  ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "unknown");
+}
+
 TEST(AttributesTests, BadUnknownInvalidPlacementOnBitsMember) {
   TestLibrary library(R"FIDL(
 library fidl.test;
@@ -530,78 +541,29 @@ type B = flexible bits : uint32 {
   ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "unknown");
 }
 
-TEST(AttributesTests, BadUnknownInvalidOnStrictUnionsEnums) {
-  {
-    TestLibrary library(R"FIDL(
-library fidl.test;
-
-type U = strict union {
-  @unknown 1: a int32;
-};
-  )FIDL");
-    ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrUnknownAttributeOnInvalidType);
-    ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "@unknown");
-  }
-
-  {
-    TestLibrary library(R"FIDL(
+TEST(AttributesTests, BadUnknownInvalidOnStrictEnumMember) {
+  TestLibrary library(R"FIDL(
 library fidl.test;
 
 type E = strict enum : uint32 {
   @unknown A = 1;
 };
   )FIDL");
-    ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrUnknownAttributeOnInvalidType);
-    ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "@unknown");
-  }
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrUnknownAttributeOnStrictEnumMember);
+  ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "unknown");
 }
 
-TEST(AttributesTests, GoodUnknownOkOnFlexibleOrTransitionalEnumsUnionMembers) {
-  {
-    TestLibrary library(R"FIDL(library fidl.test;
-
-type U = flexible union {
-    @unknown
-    1: a int32;
-};
-)FIDL");
-    ASSERT_COMPILED(library);
-  }
-
-  {
-    TestLibrary library(R"FIDL(library fidl.test;
-
-@transitional
-type U = strict union {
-    @unknown
-    1: a int32;
-};");
-)FIDL");
-    ASSERT_COMPILED(library);
-  }
-
-  {
-    TestLibrary library(R"FIDL(library fidl.test;
-
-type E = flexible enum : uint32 {
-    @unknown
-    A = 1;
-};
-)FIDL");
-    ASSERT_COMPILED(library);
-  }
-
-  {
-    TestLibrary library(R"FIDL(library fidl.test;
+TEST(AttributesTests, BadTransitionalOnEnum) {
+  TestLibrary library(R"FIDL(library fidl.test;
 
 @transitional
 type E = strict enum : uint32 {
-    @unknown
-    A = 1;
+  A = 1;
 };
 )FIDL");
-    ASSERT_COMPILED(library);
-  }
+
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrInvalidAttributePlacement);
+  ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "transitional");
 }
 
 TEST(AttributesTests, BadIncorrectPlacementLayout) {

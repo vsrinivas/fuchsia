@@ -160,22 +160,21 @@ constexpr ErrorDef<flat::LiteralConstant *, const flat::Type *>
     ErrConstantCannotBeInterpretedAsType("{} cannot be interpreted as type {}");
 constexpr ErrorDef ErrCouldNotResolveIdentifierToType("could not resolve identifier to a type");
 constexpr ErrorDef ErrBitsMemberMustBePowerOfTwo("bits members must be powers of two");
-constexpr ErrorDef<std::string, std::string, std::string, std::string>
-    ErrFlexibleEnumMemberWithMaxValue(
-        "flexible enums must not have a member with a value of {}, which is "
-        "reserved for the unknown value. either: remove the member with the {} "
-        "value, change the member with the {} value to something other than {}, or "
-        "explicitly specify the unknown value with the @unknown attribute. see "
-        "<https://fuchsia.dev/fuchsia-src/development/languages/fidl/reference/"
-        "language#unions> for more info.");
+constexpr ErrorDef<std::string> ErrFlexibleEnumMemberWithMaxValue(
+    "flexible enums must not have a member with a value of {}, which is "
+    "reserved for the unknown value. either: remove the member, change its "
+    "value to something else, or explicitly specify the unknown value with "
+    "the @unknown attribute. see "
+    "<https://fuchsia.dev/fuchsia-src/reference/fidl/language/attributes#unknown> "
+    "for more info.");
 constexpr ErrorDef<const flat::Type *> ErrBitsTypeMustBeUnsignedIntegralPrimitive(
     "bits may only be of unsigned integral primitive type, found {}");
 constexpr ErrorDef<const flat::Type *> ErrEnumTypeMustBeIntegralPrimitive(
     "enums may only be of integral primitive type, found {}");
-constexpr ErrorDef ErrUnknownAttributeOnInvalidType(
-    "the @unknown attribute can be only be used on flexible or @transitional types.");
-constexpr ErrorDef ErrUnknownAttributeOnMultipleMembers(
-    "the @unknown attribute can be only applied to one member.");
+constexpr ErrorDef ErrUnknownAttributeOnStrictEnumMember(
+    "the @unknown attribute can be only be used on flexible enum members.");
+constexpr ErrorDef ErrUnknownAttributeOnMultipleEnumMembers(
+    "the @unknown attribute can be only applied to one enum member.");
 constexpr ErrorDef ErrComposingNonProtocol("This declaration is not a protocol");
 constexpr ErrorDef ErrNamedParameterListTypesNotYetSupported(
     "using named types in this position is not yet allowed, use `struct { ... }` instead "
