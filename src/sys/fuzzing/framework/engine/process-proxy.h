@@ -43,6 +43,9 @@ class ProcessProxyImpl final : public ProcessProxy {
 
   bool leak_suspected() const { return leak_suspected_; }
 
+  // Lets this objects add defaults to unspecified options.
+  static void AddDefaults(Options* options);
+
   // Sets options for this object.
   void Configure(const std::shared_ptr<Options>& options);
 

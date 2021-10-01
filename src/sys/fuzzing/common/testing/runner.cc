@@ -16,6 +16,8 @@ FakeRunner::FakeRunner() {
   live_corpus_.push_back(Input());
 }
 
+void FakeRunner::AddDefaults(Options* options) {}
+
 zx_status_t FakeRunner::AddToCorpus(CorpusType corpus_type, Input input) {
   auto* corpus = corpus_type == CorpusType::SEED ? &seed_corpus_ : &live_corpus_;
   corpus->push_back(std::move(input));

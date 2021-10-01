@@ -15,6 +15,7 @@ source_set("common") {
     "input.h",
     "options.cc",
     "options.h",
+    "options.inc",
     "response.cc",
     "response.h",
     "runner.cc",

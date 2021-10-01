@@ -70,6 +70,9 @@ class Mutagen final {
   void set_crossover(const Input* crossover) { crossover_ = crossover; }
   void set_dictionary(Dictionary dictionary) { dictionary_ = std::move(dictionary); }
 
+  // Lets this objects add defaults to unspecified options.
+  static void AddDefaults(Options* options);
+
   // Sets options.
   void Configure(const std::shared_ptr<Options>& options);
 

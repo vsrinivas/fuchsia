@@ -62,6 +62,9 @@ class ControllerImpl : public Controller {
   void Merge(MergeCallback callback) override;
 
  private:
+  // Adds defaults for unset options.
+  void AddDefaults();
+
   // Factory method for making FIDL responses.
   template <typename Callback>
   Response NewResponse(Callback callback) {

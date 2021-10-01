@@ -33,6 +33,21 @@ ProcessProxyImpl::~ProcessProxyImpl() {
   }
 }
 
+void ProcessProxyImpl::AddDefaults(Options* options) {
+  if (!options->has_malloc_exitcode()) {
+    options->set_malloc_exitcode(kDefaultMallocExitcode);
+  }
+  if (!options->has_death_exitcode()) {
+    options->set_death_exitcode(kDefaultDeathExitcode);
+  }
+  if (!options->has_leak_exitcode()) {
+    options->set_leak_exitcode(kDefaultLeakExitcode);
+  }
+  if (!options->has_oom_exitcode()) {
+    options->set_oom_exitcode(kDefaultOomExitcode);
+  }
+}
+
 void ProcessProxyImpl::Configure(const std::shared_ptr<Options>& options) { options_ = options; }
 
 void ProcessProxyImpl::SetHandlers(SignalHandler on_signal, ErrorHandler on_error) {

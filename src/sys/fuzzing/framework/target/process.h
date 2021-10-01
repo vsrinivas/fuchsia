@@ -33,6 +33,9 @@ class Process {
  public:
   virtual ~Process();
 
+  // Adds defaults to unspecified options.
+  static void AddDefaults(Options* options);
+
   // Adds the counters and PCs associated with modules for this process. Invoked via the
   // |__sanitizer_cov_*_init| functions.
   void AddModules() FXL_LOCKS_EXCLUDED(mutex_);

@@ -39,6 +39,15 @@ size_t Corpus::total_size() {
   return total_size_;
 }
 
+void Corpus::AddDefaults(Options* options) {
+  if (!options->has_seed()) {
+    options->set_seed(kDefaultSeed);
+  }
+  if (!options->has_max_input_size()) {
+    options->set_max_input_size(kDefaultMaxInputSize);
+  }
+}
+
 void Corpus::Configure(const std::shared_ptr<Options>& options) {
   options_ = options;
   prng_.seed(options_->seed());

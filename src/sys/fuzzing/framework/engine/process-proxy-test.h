@@ -34,6 +34,8 @@ class ProcessProxyTest : public ::testing::Test {
 
   ProcessProxySyncPtr Bind(ProcessProxyImpl* impl);
 
+  static std::shared_ptr<Options> DefaultOptions();
+
   zx::eventpair IgnoreSentSignals();
   zx::process IgnoreTarget();
   Options* IgnoreOptions();

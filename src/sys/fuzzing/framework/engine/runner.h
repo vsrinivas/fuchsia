@@ -59,6 +59,7 @@ class RunnerImpl final : public Runner {
   ~RunnerImpl() override;
 
   // |Runner| method implementations.
+  void AddDefaults(Options* options) override;
   zx_status_t AddToCorpus(CorpusType corpus_type, Input input) override;
   Input ReadFromCorpus(CorpusType corpus_type, size_t offset) const override;
   zx_status_t ParseDictionary(const Input& input) override;

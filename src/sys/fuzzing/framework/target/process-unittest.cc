@@ -20,6 +20,7 @@
 #include "src/sys/fuzzing/common/options.h"
 #include "src/sys/fuzzing/common/testing/dispatcher.h"
 #include "src/sys/fuzzing/framework/engine/module-pool.h"
+#include "src/sys/fuzzing/framework/engine/process-proxy.h"
 #include "src/sys/fuzzing/framework/testing/module.h"
 #include "src/sys/fuzzing/framework/testing/process-proxy.h"
 
@@ -68,9 +69,9 @@ class ProcessTest : public ::testing::Test {
   }
 
   // Create a fake |ProcessProxy|, bind to it, and call |Connect| on it.
-  std::unique_ptr<FakeProcessProxy> MakeAndBindProxy(
-      TestProcess& process, const std::shared_ptr<Options>& options = DefaultOptions(),
-      bool disable_warnings = true) {
+  std::unique_ptr<FakeProcessProxy> MakeAndBindProxy(TestProcess& process,
+                                                     const std::shared_ptr<Options>& options,
+                                                     bool disable_warnings = true) {
     auto proxy = std::make_unique<FakeProcessProxy>(pool_);
     proxy->Configure(options);
     auto ptr = proxy->Bind(dispatcher_.get(), disable_warnings);
@@ -85,12 +86,31 @@ class ProcessTest : public ::testing::Test {
   std::shared_ptr<ModulePool> pool_;
 };
 
+std::shared_ptr<Options> DefaultOptions() {
+  auto options = std::make_shared<Options>();
+  Process::AddDefaults(options.get());
+  return options;
+}
+
 // Unit tests.
+
+TEST_F(ProcessTest, AddDefaults) {
+  Options options;
+  Process::AddDefaults(&options);
+  EXPECT_EQ(options.detect_leaks(), kDefaultDetectLeaks);
+  EXPECT_EQ(options.malloc_limit(), kDefaultMallocLimit);
+  EXPECT_EQ(options.oom_limit(), kDefaultOomLimit);
+  EXPECT_EQ(options.purge_interval(), kDefaultPurgeInterval);
+  EXPECT_EQ(options.malloc_exitcode(), kDefaultMallocExitcode);
+  EXPECT_EQ(options.death_exitcode(), kDefaultDeathExitcode);
+  EXPECT_EQ(options.leak_exitcode(), kDefaultLeakExitcode);
+  EXPECT_EQ(options.oom_exitcode(), kDefaultOomExitcode);
+}
 
 TEST_F(ProcessTest, ConnectProcess) {
   auto modules = CreateModulesAndInitFirst();
   TestProcess process;
-  auto proxy = MakeAndBindProxy(process);
+  auto proxy = MakeAndBindProxy(process, DefaultOptions());
 
   auto self = zx::process::self();
   zx_info_handle_basic_t info;
@@ -104,18 +124,14 @@ TEST_F(ProcessTest, ConnectWithDefaultOptions) {
   auto proxy = MakeAndBindProxy(process, DefaultOptions(), /* disable_warnings */ false);
 
   const auto& options = process.options();
-  EXPECT_EQ(options.runs(), kDefaultRuns);
-  EXPECT_EQ(options.max_total_time(), kDefaultMaxTotalTime.get());
-  EXPECT_EQ(options.max_input_size(), kDefaultMaxInputSize);
-  EXPECT_EQ(options.detect_exits(), kDefaultDetectExits);
   EXPECT_EQ(options.detect_leaks(), kDefaultDetectLeaks);
-  EXPECT_EQ(options.run_limit(), kDefaultRunLimit.get());
   EXPECT_EQ(options.malloc_limit(), kDefaultMallocLimit);
-  EXPECT_EQ(options.oom_limit(), kDefaultOOMLimit);
-  EXPECT_EQ(options.purge_interval(), kDefaultPurgeInterval.get());
-  EXPECT_EQ(options.malloc_exitcode(), kDefaultMallocExitCode);
-  EXPECT_EQ(options.death_exitcode(), kDefaultDeathExitCode);
-  EXPECT_EQ(options.leak_exitcode(), kDefaultLeakExitCode);
+  EXPECT_EQ(options.oom_limit(), kDefaultOomLimit);
+  EXPECT_EQ(options.purge_interval(), kDefaultPurgeInterval);
+  EXPECT_EQ(options.malloc_exitcode(), kDefaultMallocExitcode);
+  EXPECT_EQ(options.death_exitcode(), kDefaultDeathExitcode);
+  EXPECT_EQ(options.leak_exitcode(), kDefaultLeakExitcode);
+  EXPECT_EQ(options.oom_exitcode(), kDefaultOomExitcode);
 }
 
 TEST_F(ProcessTest, ConnectDisableLimits) {
@@ -138,7 +154,7 @@ TEST_F(ProcessTest, ConnectAndAddModules) {
     __sanitizer_cov_pcs_init(modules[i].pcs(), modules[i].pcs_end());
   }
   TestProcess process;
-  auto proxy = MakeAndBindProxy(process);
+  auto proxy = MakeAndBindProxy(process, DefaultOptions());
 
   // The mock ProcessProxy should have received exactly the IDs added via |__sanitizer_cov_*_init|.
   EXPECT_EQ(proxy->num_modules(), kNumModules - 1);
@@ -157,7 +173,7 @@ TEST_F(ProcessTest, ConnectAndAddModules) {
 TEST_F(ProcessTest, ConnectBadModules) {
   auto modules = CreateModulesAndInitFirst();
   TestProcess process;
-  auto proxy = MakeAndBindProxy(process);
+  auto proxy = MakeAndBindProxy(process, DefaultOptions());
   size_t num_modules = proxy->num_modules();
 
   // Empty-length module.
@@ -180,7 +196,7 @@ TEST_F(ProcessTest, ConnectBadModules) {
 TEST_F(ProcessTest, ConnectLateModules) {
   auto modules = CreateModulesAndInitFirst();
   TestProcess process;
-  auto proxy = MakeAndBindProxy(process);
+  auto proxy = MakeAndBindProxy(process, DefaultOptions());
   size_t num_modules = proxy->num_modules();
 
   // Modules with missing fields are deferred.
@@ -211,7 +227,7 @@ TEST_F(ProcessTest, ConnectLateModules) {
 TEST_F(ProcessTest, ImplicitStart) {
   auto modules = CreateModulesAndInitFirst();
   TestProcess process;
-  auto proxy = MakeAndBindProxy(process);
+  auto proxy = MakeAndBindProxy(process, DefaultOptions());
 
   // Processes should be implicitly |Start|ed on |Connect|ing.
   EXPECT_TRUE(proxy->SignalPeer(kFinish));
@@ -222,7 +238,7 @@ TEST_F(ProcessTest, ImplicitStart) {
 TEST_F(ProcessTest, UpdateOnStop) {
   auto modules = CreateModulesAndInitFirst();
   TestProcess process;
-  auto proxy = MakeAndBindProxy(process);
+  auto proxy = MakeAndBindProxy(process, DefaultOptions());
 
   // No new coverage.
   EXPECT_TRUE(proxy->SignalPeer(kStart));
@@ -246,7 +262,7 @@ TEST_F(ProcessTest, UpdateOnStop) {
 TEST_F(ProcessTest, UpdateOnExit) {
   auto modules = CreateModulesAndInitFirst();
   TestProcess process;
-  auto proxy = MakeAndBindProxy(process);
+  auto proxy = MakeAndBindProxy(process, DefaultOptions());
 
   // Add some counters.
   EXPECT_TRUE(proxy->SignalPeer(kStart));
@@ -265,7 +281,7 @@ TEST_F(ProcessTest, UpdateOnExit) {
 TEST_F(ProcessTest, StopWithoutLeaks) {
   auto modules = CreateModulesAndInitFirst();
   TestProcess process;
-  auto proxy = MakeAndBindProxy(process);
+  auto proxy = MakeAndBindProxy(process, DefaultOptions());
 
   // No mallocs/frees, and no leak detection.
   EXPECT_TRUE(proxy->SignalPeer(kStart));
@@ -309,7 +325,7 @@ TEST_F(ProcessTest, StopWithoutLeaks) {
 TEST_F(ProcessTest, StopWithLeaks) {
   auto modules = CreateModulesAndInitFirst();
   TestProcess process;
-  auto proxy = MakeAndBindProxy(process);
+  auto proxy = MakeAndBindProxy(process, DefaultOptions());
 
   // Unbalanced mallocs/frees, and no leak detection.
   // The pointers and sizes don't actually matter; just the number of calls.

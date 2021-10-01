@@ -14,6 +14,12 @@ ProcessProxySyncPtr ProcessProxyTest::Bind(ProcessProxyImpl* impl) {
   return proxy;
 }
 
+std::shared_ptr<Options> ProcessProxyTest::DefaultOptions() {
+  auto options = std::make_shared<Options>();
+  ProcessProxyImpl::AddDefaults(options.get());
+  return options;
+}
+
 zx::eventpair ProcessProxyTest::IgnoreSentSignals() {
   return coordinator_.Create([](zx_signals_t signals) { return true; });
 }

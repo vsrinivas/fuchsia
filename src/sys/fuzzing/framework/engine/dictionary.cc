@@ -24,6 +24,12 @@ Dictionary& Dictionary::operator=(Dictionary&& other) noexcept {
   return *this;
 }
 
+void Dictionary::AddDefaults(Options* options) {
+  if (!options->has_dictionary_level()) {
+    options->set_dictionary_level(kDefaultDictionaryLevel);
+  }
+}
+
 void Dictionary::Configure(const std::shared_ptr<Options>& options) { options_ = options; }
 
 // NOLINTNEXTLINE(bugprone-easily-swappable-parameters)

@@ -20,6 +20,12 @@ Input input2() { return Input({0x21, 0x22}); }
 Input input3() { return Input({0x31, 0x32, 0x33, 0x34, 0x35, 0x36}); }
 Input input4() { return Input({0x41, 0x42, 0x43, 0x44}); }
 
+std::shared_ptr<Options> DefaultOptions() {
+  auto options = std::make_shared<Options>();
+  Corpus::AddDefaults(options.get());
+  return options;
+}
+
 void AddAllToCorpus(Corpus *corpus) {
   ASSERT_EQ(corpus->Add(input1()), ZX_OK);
   ASSERT_EQ(corpus->Add(input2()), ZX_OK);
@@ -28,6 +34,13 @@ void AddAllToCorpus(Corpus *corpus) {
 }
 
 // Unit tests.
+
+TEST(CorpusTest, AddDefaults) {
+  Options options;
+  Corpus::AddDefaults(&options);
+  EXPECT_EQ(options.seed(), kDefaultSeed);
+  EXPECT_EQ(options.max_input_size(), kDefaultMaxInputSize);
+}
 
 TEST(CorpusTest, AddInputs) {
   Corpus corpus;

@@ -13,6 +13,12 @@ namespace {
 
 // Test fixtures.
 
+std::shared_ptr<Options> DefaultOptions() {
+  auto options = std::make_shared<Options>();
+  Dictionary::AddDefaults(options.get());
+  return options;
+}
+
 std::vector<std::string> Sort(const std::vector<std::string>& words) {
   std::vector<std::string> copy(words);
   std::sort(copy.begin(), copy.end());
@@ -33,6 +39,12 @@ std::vector<uint8_t> AsBytes(const std::string& str) {
 }
 
 // Unit tests.
+
+TEST(DictionaryTest, AddDefaults) {
+  Options options;
+  Dictionary::AddDefaults(&options);
+  EXPECT_EQ(options.dictionary_level(), kDefaultDictionaryLevel);
+}
 
 TEST(DictionaryTest, DefaultConstructor) {
   Dictionary dict;

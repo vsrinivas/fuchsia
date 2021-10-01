@@ -40,6 +40,9 @@ class Runner {
   Result result() const { return result_; }
   Input result_input() const { return result_input_.Duplicate(); }
 
+  // Lets this objects add defaults to unspecified options.
+  virtual void AddDefaults(Options* options) = 0;
+
   // Add an input to the specified corpus. Returns ZX_ERR_INVALID_ARGS if |corpus_type| is
   // unrecognized.
   virtual zx_status_t AddToCorpus(CorpusType corpus_type, Input input) = 0;
@@ -89,7 +92,7 @@ class Runner {
 
   // Collects the current status, labels it with the given |reason|, and sends it all attached
   //|Monitor|s.
-  virtual void UpdateMonitors(UpdateReason reason) FXL_LOCKS_EXCLUDED(mutex_);
+  void UpdateMonitors(UpdateReason reason) FXL_LOCKS_EXCLUDED(mutex_);
 
  private:
   // Schedule a workflow to be performed by the worker thread.

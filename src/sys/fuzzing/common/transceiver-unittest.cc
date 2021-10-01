@@ -67,7 +67,7 @@ TEST(TransceiverTest, Transmit) {
     fidl_input = std::move(result);
     sync_completion_signal(&sync);
   });
-  EXPECT_EQ(sync_completion_wait(&sync, ZX_TIME_INFINITE), ZX_OK);
+  sync_completion_wait(&sync, ZX_TIME_INFINITE);
 
   EXPECT_EQ(fidl_input.size, input.size());
   auto* data = input.data();

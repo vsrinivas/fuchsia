@@ -16,7 +16,7 @@ using ProcessProxyFatalTest = ProcessProxyTest;
 
 TEST_F(ProcessProxyFatalTest, Crash) {
   ProcessProxyImpl impl(pool());
-  impl.Configure(DefaultOptions());
+  impl.Configure(ProcessProxyTest::DefaultOptions());
   impl.SetHandlers(IgnoreReceivedSignals, IgnoreErrors);
   auto proxy = Bind(&impl);
   TestTarget target;

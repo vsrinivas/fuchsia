@@ -13,6 +13,12 @@ static constexpr size_t kNumReplacements = 2;
 
 // Test fixtures.
 
+std::shared_ptr<Options> RunnerTest::DefaultOptions(Runner* runner) {
+  auto options = std::make_shared<Options>();
+  runner->AddDefaults(options.get());
+  return options;
+}
+
 void RunnerTest::Configure(Runner* runner, const std::shared_ptr<Options>& options) {
   options_ = options;
   options_->set_seed(1);
@@ -32,7 +38,7 @@ zx_status_t RunnerTest::GetResult() {
 // Unit tests.
 
 void RunnerTest::ExecuteNoError(Runner* runner) {
-  Configure(runner, DefaultOptions());
+  Configure(runner, RunnerTest::DefaultOptions(runner));
   Input input({0x01});
   runner->Execute(input.Duplicate(), [&](zx_status_t result) { SetResult(result); });
   auto test_input = RunOne(Result::NO_ERRORS);
@@ -42,7 +48,7 @@ void RunnerTest::ExecuteNoError(Runner* runner) {
 }
 
 void RunnerTest::ExecuteWithError(Runner* runner) {
-  Configure(runner, DefaultOptions());
+  Configure(runner, RunnerTest::DefaultOptions(runner));
   Input input({0x02});
   runner->Execute(input.Duplicate(), [&](zx_status_t result) { SetResult(result); });
   // Simulate a large allocation.
@@ -52,7 +58,7 @@ void RunnerTest::ExecuteWithError(Runner* runner) {
 }
 
 void RunnerTest::ExecuteWithLeak(Runner* runner) {
-  auto options = DefaultOptions();
+  auto options = RunnerTest::DefaultOptions(runner);
   options->set_detect_leaks(true);
   Configure(runner, options);
   Input input({0x03});
@@ -67,7 +73,7 @@ void RunnerTest::ExecuteWithLeak(Runner* runner) {
 }
 
 void RunnerTest::MinimizeNoError(Runner* runner) {
-  Configure(runner, DefaultOptions());
+  Configure(runner, RunnerTest::DefaultOptions(runner));
   Input input({0x04});
   runner->Minimize(input.Duplicate(), [&](zx_status_t result) { SetResult(result); });
   // Simulate no error on the original input.
@@ -76,7 +82,7 @@ void RunnerTest::MinimizeNoError(Runner* runner) {
 }
 
 void RunnerTest::MinimizeOneByte(Runner* runner) {
-  Configure(runner, DefaultOptions());
+  Configure(runner, RunnerTest::DefaultOptions(runner));
   Input input;
   runner->Minimize(input.Duplicate(), [&](zx_status_t result) { SetResult(result); });
   // Empty input should exit immediately.
@@ -85,7 +91,7 @@ void RunnerTest::MinimizeOneByte(Runner* runner) {
 }
 
 void RunnerTest::MinimizeReduceByTwo(Runner* runner) {
-  auto options = DefaultOptions();
+  auto options = RunnerTest::DefaultOptions(runner);
   options->set_runs(4);
   Configure(runner, options);
   Input input({0x51, 0x52, 0x53, 0x54});
@@ -116,7 +122,7 @@ void RunnerTest::MinimizeReduceByTwo(Runner* runner) {
 }
 
 void RunnerTest::MinimizeNewError(Runner* runner) {
-  auto options = DefaultOptions();
+  auto options = RunnerTest::DefaultOptions(runner);
   options->set_run_limit(zx::msec(500).get());
   Configure(runner, options);
   Input input({0x05, 0x15, 0x25, 0x35});
@@ -131,7 +137,7 @@ void RunnerTest::MinimizeNewError(Runner* runner) {
 }
 
 void RunnerTest::CleanseNoError(Runner* runner) {
-  Configure(runner, DefaultOptions());
+  Configure(runner, RunnerTest::DefaultOptions(runner));
   Input input({0x06});
   runner->Cleanse(input.Duplicate(), [&](zx_status_t result) { SetResult(result); });
   // Simulate no error on original input.
@@ -141,7 +147,7 @@ void RunnerTest::CleanseNoError(Runner* runner) {
 }
 
 void RunnerTest::CleanseNoReplacement(Runner* runner) {
-  Configure(runner, DefaultOptions());
+  Configure(runner, RunnerTest::DefaultOptions(runner));
   Input input({0x07, 0x17, 0x27});
   runner->Cleanse(input.Duplicate(), [&](zx_status_t result) { SetResult(result); });
   // Simulate death on original input.
@@ -157,7 +163,7 @@ void RunnerTest::CleanseNoReplacement(Runner* runner) {
 }
 
 void RunnerTest::CleanseAlreadyClean(Runner* runner) {
-  Configure(runner, DefaultOptions());
+  Configure(runner, RunnerTest::DefaultOptions(runner));
   Input input({' ', 0xff});
   runner->Cleanse(input.Duplicate(), [&](zx_status_t result) { SetResult(result); });
   // Simulate death on original input.
@@ -168,7 +174,7 @@ void RunnerTest::CleanseAlreadyClean(Runner* runner) {
 }
 
 void RunnerTest::CleanseTwoBytes(Runner* runner) {
-  Configure(runner, DefaultOptions());
+  Configure(runner, RunnerTest::DefaultOptions(runner));
   Input input({0x08, 0x18, 0x28});
   runner->Cleanse(input.Duplicate(), [&](zx_status_t result) { SetResult(result); });
   // Simulate death on original input.
@@ -207,7 +213,7 @@ void RunnerTest::CleanseTwoBytes(Runner* runner) {
 }
 
 void RunnerTest::FuzzUntilError(Runner* runner) {
-  auto options = DefaultOptions();
+  auto options = RunnerTest::DefaultOptions(runner);
   options->set_detect_exits(true);
   Configure(runner, options);
   runner->Fuzz([&](zx_status_t result) { SetResult(result); });
@@ -222,7 +228,7 @@ void RunnerTest::FuzzUntilError(Runner* runner) {
 }
 
 void RunnerTest::FuzzUntilRuns(Runner* runner) {
-  auto options = DefaultOptions();
+  auto options = RunnerTest::DefaultOptions(runner);
   options->set_runs(3);
   Configure(runner, options);
   runner->Fuzz([&](zx_status_t result) { SetResult(result); });
@@ -234,7 +240,7 @@ void RunnerTest::FuzzUntilRuns(Runner* runner) {
 }
 
 void RunnerTest::FuzzUntilTime(Runner* runner) {
-  auto options = DefaultOptions();
+  auto options = RunnerTest::DefaultOptions(runner);
   options->set_max_total_time(zx::msec(200).get());
   Configure(runner, options);
 
@@ -258,7 +264,7 @@ void RunnerTest::FuzzUntilTime(Runner* runner) {
 }
 
 void RunnerTest::MergeSeedError(Runner* runner) {
-  Configure(runner, DefaultOptions());
+  Configure(runner, RunnerTest::DefaultOptions(runner));
   runner->AddToCorpus(CorpusType::SEED, Input({0x09}));
   runner->Merge([&](zx_status_t result) { SetResult(result); });
   RunOne(Result::OOM);
@@ -266,7 +272,7 @@ void RunnerTest::MergeSeedError(Runner* runner) {
 }
 
 void RunnerTest::Merge(Runner* runner) {
-  Configure(runner, DefaultOptions());
+  Configure(runner, RunnerTest::DefaultOptions(runner));
   Input input0;  // Empty input, implicitly included in all corpora.
 
   Input input1({0x0a});  // Seed input => kept.

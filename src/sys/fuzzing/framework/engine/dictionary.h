@@ -29,6 +29,9 @@ class Dictionary final {
   ~Dictionary() = default;
   Dictionary& operator=(Dictionary&& other) noexcept;
 
+  // Lets this objects add defaults to unspecified options.
+  static void AddDefaults(Options* options);
+
   // Sets options.
   void Configure(const std::shared_ptr<Options>& options);
 

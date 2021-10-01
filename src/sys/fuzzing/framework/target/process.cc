@@ -88,6 +88,33 @@ Process::Process() : connected_(false) {
 
 Process::~Process() { memset(&gContext, 0, sizeof(gContext)); }
 
+void Process::AddDefaults(Options* options) {
+  if (!options->has_detect_leaks()) {
+    options->set_detect_leaks(kDefaultDetectLeaks);
+  }
+  if (!options->has_malloc_limit()) {
+    options->set_malloc_limit(kDefaultMallocLimit);
+  }
+  if (!options->has_oom_limit()) {
+    options->set_oom_limit(kDefaultOomLimit);
+  }
+  if (!options->has_purge_interval()) {
+    options->set_purge_interval(kDefaultPurgeInterval);
+  }
+  if (!options->has_malloc_exitcode()) {
+    options->set_malloc_exitcode(kDefaultMallocExitcode);
+  }
+  if (!options->has_death_exitcode()) {
+    options->set_death_exitcode(kDefaultDeathExitcode);
+  }
+  if (!options->has_leak_exitcode()) {
+    options->set_leak_exitcode(kDefaultLeakExitcode);
+  }
+  if (!options->has_oom_exitcode()) {
+    options->set_oom_exitcode(kDefaultOomExitcode);
+  }
+}
+
 void Process::InstallHooks() {
   // This method can only be called once.
   static bool first = true;

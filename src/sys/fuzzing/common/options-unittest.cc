@@ -9,47 +9,7 @@
 namespace fuzzing {
 namespace {
 
-TEST(OptionsTest, Defaults) {
-  Options options;
-  EXPECT_FALSE(options.has_runs());
-  EXPECT_FALSE(options.has_max_total_time());
-  EXPECT_FALSE(options.has_seed());
-  EXPECT_FALSE(options.has_max_input_size());
-  EXPECT_FALSE(options.has_mutation_depth());
-  EXPECT_FALSE(options.has_dictionary_level());
-  EXPECT_FALSE(options.has_detect_exits());
-  EXPECT_FALSE(options.has_detect_leaks());
-  EXPECT_FALSE(options.has_run_limit());
-  EXPECT_FALSE(options.has_malloc_limit());
-  EXPECT_FALSE(options.has_oom_limit());
-  EXPECT_FALSE(options.has_purge_interval());
-  EXPECT_FALSE(options.has_malloc_exitcode());
-  EXPECT_FALSE(options.has_death_exitcode());
-  EXPECT_FALSE(options.has_leak_exitcode());
-  EXPECT_FALSE(options.has_oom_exitcode());
-  EXPECT_FALSE(options.has_pulse_interval());
-
-  AddDefaults(&options);
-  EXPECT_EQ(options.runs(), kDefaultRuns);
-  EXPECT_EQ(options.max_total_time(), kDefaultMaxTotalTime.get());
-  EXPECT_EQ(options.seed(), kDefaultSeed);
-  EXPECT_EQ(options.max_input_size(), kDefaultMaxInputSize);
-  EXPECT_EQ(options.mutation_depth(), kDefaultMutationDepth);
-  EXPECT_EQ(options.dictionary_level(), kDefaultDictionaryLevel);
-  EXPECT_EQ(options.detect_exits(), kDefaultDetectExits);
-  EXPECT_EQ(options.detect_leaks(), kDefaultDetectLeaks);
-  EXPECT_EQ(options.run_limit(), kDefaultRunLimit.get());
-  EXPECT_EQ(options.malloc_limit(), kDefaultMallocLimit);
-  EXPECT_EQ(options.oom_limit(), kDefaultOOMLimit);
-  EXPECT_EQ(options.purge_interval(), kDefaultPurgeInterval.get());
-  EXPECT_EQ(options.malloc_exitcode(), kDefaultMallocExitCode);
-  EXPECT_EQ(options.death_exitcode(), kDefaultDeathExitCode);
-  EXPECT_EQ(options.leak_exitcode(), kDefaultLeakExitCode);
-  EXPECT_EQ(options.oom_exitcode(), kDefaultOOMExitCode);
-  EXPECT_EQ(options.pulse_interval(), kDefaultPulseInterval.get());
-}
-
-TEST(OptionsTest, SetAndAddDefaults) {
+TEST(OptionsTest, Set) {
   Options options;
   uint32_t runs = 1000;
   zx::duration max_total_time = zx::sec(300);
@@ -87,7 +47,6 @@ TEST(OptionsTest, SetAndAddDefaults) {
   options.set_oom_exitcode(oom_exitcode);
   options.set_pulse_interval(pulse_interval.get());
 
-  AddDefaults(&options);
   EXPECT_EQ(options.runs(), runs);
   EXPECT_EQ(options.max_total_time(), max_total_time.get());
   EXPECT_EQ(options.seed(), seed);

@@ -86,22 +86,7 @@ TEST_F(ControllerTest, ConfigureAndGetOptions) {
   });
   sync_completion_wait(&sync, ZX_TIME_INFINITE);
   sync_completion_reset(&sync);
-  EXPECT_EQ(options1.runs(), kDefaultRuns);
-  EXPECT_EQ(options1.max_total_time(), kDefaultMaxTotalTime.get());
   EXPECT_NE(options1.seed(), 0U);
-  EXPECT_EQ(options1.max_input_size(), kDefaultMaxInputSize);
-  EXPECT_EQ(options1.mutation_depth(), kDefaultMutationDepth);
-  EXPECT_EQ(options1.detect_exits(), kDefaultDetectExits);
-  EXPECT_EQ(options1.detect_leaks(), kDefaultDetectLeaks);
-  EXPECT_EQ(options1.run_limit(), kDefaultRunLimit.get());
-  EXPECT_EQ(options1.malloc_limit(), kDefaultMallocLimit);
-  EXPECT_EQ(options1.oom_limit(), kDefaultOOMLimit);
-  EXPECT_EQ(options1.purge_interval(), kDefaultPurgeInterval.get());
-  EXPECT_EQ(options1.malloc_exitcode(), kDefaultMallocExitCode);
-  EXPECT_EQ(options1.death_exitcode(), kDefaultDeathExitCode);
-  EXPECT_EQ(options1.leak_exitcode(), kDefaultLeakExitCode);
-  EXPECT_EQ(options1.oom_exitcode(), kDefaultOOMExitCode);
-  EXPECT_EQ(options1.pulse_interval(), kDefaultPulseInterval.get());
 
   // Configure.
   uint32_t runs = 1000;

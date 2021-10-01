@@ -42,6 +42,8 @@ class RunnerTest : public ::testing::Test {
 
   void set_leak_suspected(bool leak_suspected) { leak_suspected_ = leak_suspected; }
 
+  static std::shared_ptr<Options> DefaultOptions(Runner* runner);
+
   // Adds test-related |options| (e.g. PRNG seed) and configures the |runner|.
   virtual void Configure(Runner* runner, const std::shared_ptr<Options>& options);
 

@@ -12,11 +12,19 @@
 
 namespace fuzzing {
 
-ControllerImpl::ControllerImpl() : binding_(this) { options_ = DefaultOptions(); }
+ControllerImpl::ControllerImpl() : binding_(this) { options_ = std::make_shared<Options>(); }
 
 void ControllerImpl::SetRunner(const std::shared_ptr<Runner>& runner) {
   runner_ = runner;
-  Configure(CopyOptions(*options_), [](zx_status_t status) {});
+  AddDefaults();
+  runner_->Configure(options_);
+}
+
+void ControllerImpl::AddDefaults() {
+  if (!options_->has_seed()) {
+    options_->set_seed(static_cast<uint32_t>(zx::ticks::now().get()));
+  }
+  runner_->AddDefaults(options_.get());
 }
 
 void ControllerImpl::ReceiveAndThen(FidlInput fidl_input, Response response,
@@ -44,10 +52,7 @@ void ControllerImpl::Bind(fidl::InterfaceRequest<Controller> request,
 
 void ControllerImpl::Configure(Options options, ConfigureCallback callback) {
   *options_ = std::move(options);
-  AddDefaults(options_.get());
-  if (options_->seed() == kDefaultSeed) {
-    options_->set_seed(static_cast<uint32_t>(zx::ticks::now().get()));
-  }
+  AddDefaults();
   callback(runner_->Configure(options_));
 }
 

@@ -33,6 +33,9 @@ class Corpus final {
   size_t num_inputs() FXL_LOCKS_EXCLUDED(mutex_);
   size_t total_size() FXL_LOCKS_EXCLUDED(mutex_);
 
+  // Lets this objects add defaults to unspecified options.
+  static void AddDefaults(Options* options);
+
   // Sets options. This will reset the PRNG.
   void Configure(const std::shared_ptr<Options>& options);
 
