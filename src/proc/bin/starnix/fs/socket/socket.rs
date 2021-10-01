@@ -297,8 +297,8 @@ impl SocketConnection {
 
 /// `SocketEndpoint` stores the state associated with a single endpoint of a socket.
 pub struct SocketEndpoint {
-    /// The `MessageBuffer` that contains messages for this socket endpoint.
-    messages: MessageBuffer,
+    /// The `MessageQueue` that contains messages for this socket endpoint.
+    messages: MessageQueue,
 
     /// This queue will be notified on reads, writes, disconnects etc.
     waiters: WaitQueue,
@@ -329,7 +329,7 @@ impl SocketEndpoint {
             SocketDomain::Unix => SocketAddress::Unix(vec![]),
         };
         Arc::new(Mutex::new(SocketEndpoint {
-            messages: MessageBuffer::new(usize::MAX),
+            messages: MessageQueue::new(usize::MAX),
             waiters: WaitQueue::default(),
             domain,
             address,

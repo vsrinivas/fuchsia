@@ -70,7 +70,7 @@ if (target_cpu == "x64") {
       "device/mod.rs",
       "device/registry.rs",
       "fs/anon_node.rs",
-      "fs/buffers/message_buffer.rs",
+      "fs/buffers/message_queue.rs",
       "fs/buffers/message_types.rs",
       "fs/buffers/mod.rs",
       "fs/devfs.rs",

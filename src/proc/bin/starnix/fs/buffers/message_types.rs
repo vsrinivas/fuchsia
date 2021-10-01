@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-/// A `Message` represents a typed segment of bytes within a `MessageBuffer`.
+/// A `Message` represents a typed segment of bytes within a `MessageQueue`.
 #[derive(Clone, PartialEq, Debug)]
 pub struct Message {
     /// The data contained in the message.

@@ -25,7 +25,7 @@ fn round_up(value: usize, increment: usize) -> usize {
 }
 
 pub struct Pipe {
-    messages: MessageBuffer,
+    messages: MessageQueue,
 
     waiters: WaitQueue,
 
@@ -48,7 +48,7 @@ impl Default for Pipe {
         let default_pipe_capacity = (*PAGE_SIZE * 16) as usize;
 
         Pipe {
-            messages: MessageBuffer::new(default_pipe_capacity),
+            messages: MessageQueue::new(default_pipe_capacity),
             waiters: WaitQueue::default(),
             reader_count: 0,
             had_reader: false,

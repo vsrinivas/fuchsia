@@ -9,38 +9,38 @@ use crate::error;
 use crate::task::Task;
 use crate::types::*;
 
-/// A `MessageBuffer` stores a FIFO sequence of messages.
-pub struct MessageBuffer {
-    /// The messages stored in the message buffer.
+/// A `MessageQueue` stores a FIFO sequence of messages.
+pub struct MessageQueue {
+    /// The messages stored in the message queue.
     ///
     /// Writes are added at the end of the queue. Reads consume from the front of the queue.
     messages: VecDeque<Message>,
 
-    /// The total number of bytes currently in the message buffer.
+    /// The total number of bytes currently in the message queue.
     length: usize,
 
     /// The maximum number of bytes that can be stored inside this pipe.
     capacity: usize,
 }
 
-impl MessageBuffer {
-    pub fn new(capacity: usize) -> MessageBuffer {
-        MessageBuffer { messages: VecDeque::default(), length: 0, capacity }
+impl MessageQueue {
+    pub fn new(capacity: usize) -> MessageQueue {
+        MessageQueue { messages: VecDeque::default(), length: 0, capacity }
     }
 
-    /// Returns the number of bytes that can be written to the message buffer before the buffer is
+    /// Returns the number of bytes that can be written to the message queue before the buffer is
     /// full.
     fn available_capacity(&self) -> usize {
         self.capacity - self.length
     }
 
-    /// Returns the total number of bytes this message buffer can store, regardless of the current
+    /// Returns the total number of bytes this message queue can store, regardless of the current
     /// amount of data in the buffer.
     pub fn capacity(&self) -> usize {
         self.capacity
     }
 
-    /// Sets the capacity of the message buffer to the provided number of bytes.
+    /// Sets the capacity of the message queue to the provided number of bytes.
     ///
     /// Reurns an error if the requested capacity could not be set (e.g., if the requested capacity
     /// was less than the current number of bytes stored).
@@ -52,12 +52,12 @@ impl MessageBuffer {
         Ok(())
     }
 
-    /// Returns true if the message buffer is empty, or it only contains empty messages.
+    /// Returns true if the message queue is empty, or it only contains empty messages.
     pub fn is_empty(&self) -> bool {
         self.len() == 0
     }
 
-    /// Returns the total length of all the messages in the message buffer.
+    /// Returns the total length of all the messages in the message queue.
     pub fn len(&self) -> usize {
         self.length
     }
@@ -182,13 +182,13 @@ impl MessageBuffer {
         Ok(actual)
     }
 
-    /// Writes a message to the front of the message buffer.
+    /// Writes a message to the front of the message queue.
     fn write_front(&mut self, message: Message) {
         self.length += message.len();
         self.messages.push_front(message);
     }
 
-    /// Writes a message to the back of the message buffer.
+    /// Writes a message to the back of the message queue.
     pub fn write_message(&mut self, message: Message) {
         self.length += message.len();
         self.messages.push_back(message);
@@ -202,103 +202,103 @@ mod tests {
     /// Tests that a write followed by a read returns the written message.
     #[test]
     fn test_read_write() {
-        let mut message_buffer = MessageBuffer::new(usize::MAX);
+        let mut message_queue = MessageQueue::new(usize::MAX);
         let bytes: Vec<u8> = vec![1, 2, 3];
         let message: Message = bytes.into();
-        message_buffer.write_message(message.clone());
-        assert_eq!(message_buffer.len(), 3);
-        assert_eq!(message_buffer.read_message(), Some(message));
-        assert!(message_buffer.is_empty());
+        message_queue.write_message(message.clone());
+        assert_eq!(message_queue.len(), 3);
+        assert_eq!(message_queue.read_message(), Some(message));
+        assert!(message_queue.is_empty());
     }
 
-    /// Tests that ancillary data does not contribute to the message buffer length.
+    /// Tests that ancillary data does not contribute to the message queue length.
     #[test]
     fn test_control_len() {
-        let mut message_buffer = MessageBuffer::new(usize::MAX);
+        let mut message_queue = MessageQueue::new(usize::MAX);
         let bytes: Vec<u8> = vec![1, 2, 3];
         let message = Message::new(vec![].into(), Some(bytes.clone().into()));
-        message_buffer.write_message(message.clone());
-        assert_eq!(message_buffer.len(), 0);
-        message_buffer.write_message(bytes.clone().into());
-        assert_eq!(message_buffer.len(), bytes.len());
+        message_queue.write_message(message.clone());
+        assert_eq!(message_queue.len(), 0);
+        message_queue.write_message(bytes.clone().into());
+        assert_eq!(message_queue.len(), bytes.len());
     }
 
     /// Tests that multiple writes followed by multiple reads return the data in the correct order.
     #[test]
     fn test_read_write_multiple() {
-        let mut message_buffer = MessageBuffer::new(usize::MAX);
+        let mut message_queue = MessageQueue::new(usize::MAX);
         let first_bytes: Vec<u8> = vec![1, 2, 3];
         let second_bytes: Vec<u8> = vec![3, 4, 5];
 
         for message in vec![first_bytes.clone().into(), second_bytes.clone().into()] {
-            message_buffer.write_message(message);
+            message_queue.write_message(message);
         }
 
-        assert_eq!(message_buffer.len(), first_bytes.len() + second_bytes.len());
-        assert_eq!(message_buffer.read_message(), Some(first_bytes.into()));
-        assert_eq!(message_buffer.len(), second_bytes.len());
-        assert_eq!(message_buffer.read_message(), Some(second_bytes.into()));
-        assert_eq!(message_buffer.read_message(), None);
+        assert_eq!(message_queue.len(), first_bytes.len() + second_bytes.len());
+        assert_eq!(message_queue.read_message(), Some(first_bytes.into()));
+        assert_eq!(message_queue.len(), second_bytes.len());
+        assert_eq!(message_queue.read_message(), Some(second_bytes.into()));
+        assert_eq!(message_queue.read_message(), None);
     }
 
     /// Tests that reading 0 bytes returns an empty vector.
     #[test]
     fn test_read_bytes_zero() {
-        let mut message_buffer = MessageBuffer::new(usize::MAX);
+        let mut message_queue = MessageQueue::new(usize::MAX);
         let bytes: Vec<u8> = vec![1, 2, 3];
-        message_buffer.write_message(bytes.clone().into());
+        message_queue.write_message(bytes.clone().into());
 
-        assert_eq!(message_buffer.len(), bytes.len());
-        assert_eq!(message_buffer.read_bytes(0), (vec![], 0));
-        assert_eq!(message_buffer.len(), bytes.len());
+        assert_eq!(message_queue.len(), bytes.len());
+        assert_eq!(message_queue.read_bytes(0), (vec![], 0));
+        assert_eq!(message_queue.len(), bytes.len());
     }
 
     /// Tests that reading a specific number of bytes that coincides with a message "end" returns
     /// the correct bytes.
     #[test]
     fn test_read_bytes_message_boundary() {
-        let mut message_buffer = MessageBuffer::new(usize::MAX);
+        let mut message_queue = MessageQueue::new(usize::MAX);
         let first_bytes: Vec<u8> = vec![1, 2];
         let second_bytes: Vec<u8> = vec![3, 4];
 
         for message in vec![first_bytes.clone().into(), second_bytes.clone().into()] {
-            message_buffer.write_message(message);
+            message_queue.write_message(message);
         }
 
         let expected_first_message = first_bytes.into();
         let expected_second_message = second_bytes.into();
 
-        assert_eq!(message_buffer.read_bytes(2), (vec![expected_first_message], 2));
-        assert_eq!(message_buffer.read_bytes(2), (vec![expected_second_message], 2));
+        assert_eq!(message_queue.read_bytes(2), (vec![expected_first_message], 2));
+        assert_eq!(message_queue.read_bytes(2), (vec![expected_second_message], 2));
     }
 
     /// Tests that reading a specific number of bytes that ends in the middle of a message returns
     /// the expected number of bytes.
     #[test]
     fn test_read_bytes_message_break() {
-        let mut message_buffer = MessageBuffer::new(usize::MAX);
+        let mut message_queue = MessageQueue::new(usize::MAX);
         let first_bytes: Vec<u8> = vec![1, 2, 3];
         let second_bytes: Vec<u8> = vec![4];
 
         for message in vec![first_bytes.clone().into(), second_bytes.clone().into()] {
-            message_buffer.write_message(message);
+            message_queue.write_message(message);
         }
 
         let expected_first_messages = vec![vec![1, 2].into()];
         let expected_second_messages = vec![vec![3].into(), vec![4].into()];
 
-        assert_eq!(message_buffer.len(), first_bytes.len() + second_bytes.len());
-        assert_eq!(message_buffer.read_bytes(2), (expected_first_messages, 2));
+        assert_eq!(message_queue.len(), first_bytes.len() + second_bytes.len());
+        assert_eq!(message_queue.read_bytes(2), (expected_first_messages, 2));
         // The first message was split, so verify that the length took the split into account.
-        assert_eq!(message_buffer.len(), 2);
-        assert_eq!(message_buffer.read_bytes(2), (expected_second_messages, 2));
+        assert_eq!(message_queue.len(), 2);
+        assert_eq!(message_queue.read_bytes(2), (expected_second_messages, 2));
     }
 
-    /// Tests that attempting to read more bytes than exist in the message buffer returns all the
+    /// Tests that attempting to read more bytes than exist in the message queue returns all the
     /// pending messages.
     #[test]
     fn test_read_bytes_all() {
-        let mut message_buffer = MessageBuffer::new(usize::MAX);
+        let mut message_queue = MessageQueue::new(usize::MAX);
         let first_bytes: Vec<u8> = vec![1, 2, 3];
         let second_bytes: Vec<u8> = vec![4, 5];
         let third_bytes: Vec<u8> = vec![9, 3];
@@ -308,19 +308,19 @@ mod tests {
             second_bytes.clone().into(),
             third_bytes.clone().into(),
         ] {
-            message_buffer.write_message(message);
+            message_queue.write_message(message);
         }
 
         let expected_messages = vec![first_bytes.into(), second_bytes.into(), third_bytes.into()];
 
-        assert_eq!(message_buffer.read_bytes(100), (expected_messages, 7));
+        assert_eq!(message_queue.read_bytes(100), (expected_messages, 7));
     }
 
     /// Tests that reading a control message interrupts the byte read, even if more bytes could
     /// have been returned.
     #[test]
     fn test_read_bytes_control_fits() {
-        let mut message_buffer = MessageBuffer::new(usize::MAX);
+        let mut message_queue = MessageQueue::new(usize::MAX);
         let first_bytes: Vec<u8> = vec![1, 2, 3];
         let control_bytes: Vec<u8> = vec![7, 7, 7];
         let second_bytes: Vec<u8> = vec![4, 5];
@@ -329,20 +329,20 @@ mod tests {
             Message::new(first_bytes.clone().into(), Some(control_bytes.clone().into())),
             second_bytes.clone().into(),
         ] {
-            message_buffer.write_message(message);
+            message_queue.write_message(message);
         }
 
-        let (messages, bytes) = message_buffer.read_bytes(20);
+        let (messages, bytes) = message_queue.read_bytes(20);
         assert_eq!(messages, vec![Message::new(first_bytes.into(), Some(control_bytes.into()))]);
         assert_eq!(bytes, 3);
-        assert_eq!(message_buffer.read_bytes(2), (vec![second_bytes.into()], 2));
+        assert_eq!(message_queue.read_bytes(2), (vec![second_bytes.into()], 2));
     }
 
     /// Tests that the length of the control message is not counted towards the amount of read
     /// bytes.
     #[test]
     fn test_read_bytes_control_does_not_fit() {
-        let mut message_buffer = MessageBuffer::new(usize::MAX);
+        let mut message_queue = MessageQueue::new(usize::MAX);
         let first_bytes: Vec<u8> = vec![1, 2, 3];
         let control_bytes: Vec<u8> = vec![7, 7, 7];
         let second_bytes: Vec<u8> = vec![4, 5];
@@ -351,19 +351,19 @@ mod tests {
             Message::new(first_bytes.clone().into(), Some(control_bytes.clone().into())),
             second_bytes.clone().into(),
         ] {
-            message_buffer.write_message(message);
+            message_queue.write_message(message);
         }
 
-        let (messages, bytes) = message_buffer.read_bytes(5);
+        let (messages, bytes) = message_queue.read_bytes(5);
         assert_eq!(messages, vec![Message::new(first_bytes.into(), Some(control_bytes.into()))]);
         assert_eq!(bytes, 3);
-        assert_eq!(message_buffer.read_bytes(2), (vec![second_bytes.into()], 2));
+        assert_eq!(message_queue.read_bytes(2), (vec![second_bytes.into()], 2));
     }
 
     /// Tests that ancillary data is returned with the "second" part of a split message.
     #[test]
     fn test_read_bytes_control_split() {
-        let mut message_buffer = MessageBuffer::new(usize::MAX);
+        let mut message_queue = MessageQueue::new(usize::MAX);
         let first_bytes: Vec<u8> = vec![1, 2, 3];
         let control_bytes: Vec<u8> = vec![7, 7, 7];
         let second_bytes: Vec<u8> = vec![4, 5];
@@ -372,16 +372,16 @@ mod tests {
             Message::new(first_bytes.clone().into(), Some(control_bytes.clone().into())),
             second_bytes.clone().into(),
         ] {
-            message_buffer.write_message(message);
+            message_queue.write_message(message);
         }
 
         // The first_bytes won't fit here, so the ancillary data should not have been returned.
-        assert_eq!(message_buffer.read_bytes(2), (vec![vec![1, 2].into()], 2));
+        assert_eq!(message_queue.read_bytes(2), (vec![vec![1, 2].into()], 2));
         // One byte remains from the first message, and the ancillary data should be included.
         assert_eq!(
-            message_buffer.read_bytes(2),
+            message_queue.read_bytes(2),
             (vec![Message::new(vec![3].into(), Some(control_bytes.into()))], 1)
         );
-        assert_eq!(message_buffer.read_bytes(2), (vec![second_bytes.into()], 2));
+        assert_eq!(message_queue.read_bytes(2), (vec![second_bytes.into()], 2));
     }
 }
