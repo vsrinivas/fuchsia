@@ -126,14 +126,13 @@ func (_ *{{$transitionalBaseName}}) {{ .Name }} (ctx_ _bindings.Context)
 {{- if .HasResponse -}}
 	{{- if .Response }} (
 		{{- range .Response.Members }}{{ .Type }}, {{ end -}}
-			error)
+			error) {
 	{{- else -}}
-		error
+		error {
 	{{ end -}}
 {{- else -}}
-	error
+	error {
 {{- end -}}
-{
 	panic("Not Implemented")
 }
 {{- end }}
