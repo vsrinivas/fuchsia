@@ -18,13 +18,23 @@ FakeRunner::FakeRunner() {
 
 void FakeRunner::AddDefaults(Options* options) {}
 
+void FakeRunner::set_result(Result result) {
+  Runner::set_result(result);
+  result_ = result;
+}
+
+void FakeRunner::set_result_input(const Input& input) {
+  Runner::set_result_input(input);
+  result_input_ = input.Duplicate();
+}
+
 zx_status_t FakeRunner::AddToCorpus(CorpusType corpus_type, Input input) {
   auto* corpus = corpus_type == CorpusType::SEED ? &seed_corpus_ : &live_corpus_;
   corpus->push_back(std::move(input));
   return ZX_OK;
 }
 
-Input FakeRunner::ReadFromCorpus(CorpusType corpus_type, size_t offset) const {
+Input FakeRunner::ReadFromCorpus(CorpusType corpus_type, size_t offset) {
   auto* corpus = corpus_type == CorpusType::SEED ? &seed_corpus_ : &live_corpus_;
   return offset < corpus->size() ? (*corpus)[offset].Duplicate() : Input();
 }
@@ -41,15 +51,11 @@ Input FakeRunner::GetDictionaryAsInput() const { return dictionary_.Duplicate();
 
 void FakeRunner::ConfigureImpl(const std::shared_ptr<Options>& options) {}
 
-zx_status_t FakeRunner::SyncExecute(const Input& input) { return error_; }
-
-zx_status_t FakeRunner::SyncMinimize(const Input& input) { return error_; }
-
-zx_status_t FakeRunner::SyncCleanse(const Input& input) { return error_; }
-
-zx_status_t FakeRunner::SyncFuzz() { return error_; }
-
-zx_status_t FakeRunner::SyncMerge() { return error_; }
+zx_status_t FakeRunner::Run() {
+  Runner::set_result(result_);
+  Runner::set_result_input(result_input_);
+  return error_;
+}
 
 Status FakeRunner::CollectStatusLocked() { return CopyStatus(status_); }
 

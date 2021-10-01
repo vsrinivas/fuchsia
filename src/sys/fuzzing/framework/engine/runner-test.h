@@ -27,17 +27,21 @@ class RunnerImplTest : public RunnerTest {
  protected:
   // RunnerTest methods.
   void Configure(Runner* runner, const std::shared_ptr<Options>& options) override;
-  void SetCoverage(const Coverage& coverage) override;
-  Input RunOne(Result expected) override;
+  Input GetTestInput() override;
+  void SetFeedback(const Coverage& coverage, Result result, bool leak) override;
+
+  // Unit test implementations and overrides.
+  void RunAllForCleanseTwoBytes() override;
+  void RunAllForFuzzUntilTime() override;
+  void MergeSeedError(Runner* runner) override;
+  void RunAllForMerge() override;
 
  private:
-  RunnerImpl* runner_ = nullptr;
   FakeDispatcher dispatcher_;
   FakeTargetAdapter target_adapter_;
   FakeProcess process_;
   fidl::InterfaceRequestHandler<ProcessProxy> process_proxy_handler_;
   bool stopped_ = true;
-  Coverage coverage_;
 };
 
 }  // namespace fuzzing

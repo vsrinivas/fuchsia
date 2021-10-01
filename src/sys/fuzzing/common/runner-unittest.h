@@ -9,6 +9,7 @@
 #include <lib/zx/time.h>
 
 #include <memory>
+#include <unordered_map>
 
 #include <gtest/gtest.h>
 
@@ -38,59 +39,87 @@ class RunnerTest : public ::testing::Test {
   // Test fixtures.
 
   const std::shared_ptr<Options>& options() { return options_; }
-  bool leak_suspected() const { return leak_suspected_; }
-
-  void set_leak_suspected(bool leak_suspected) { leak_suspected_ = leak_suspected; }
 
   static std::shared_ptr<Options> DefaultOptions(Runner* runner);
 
   // Adds test-related |options| (e.g. PRNG seed) and configures the |runner|.
   virtual void Configure(Runner* runner, const std::shared_ptr<Options>& options);
 
-  // Records the |result| of a fuzzing workflow.
-  void SetResult(zx_status_t result);
+  // Tests may set fake feedback to be "produced" during calls to |RunOne| with the given |input|.
+  void SetCoverage(const Input& input, const Coverage& coverage);
+  void SetResult(const Input& input, Result result);
+  void SetLeak(const Input& input, bool leak);
+
+  const Coverage& GetCoverage(const Input& input);
+  Result GetResult(const Input& input);
+  bool HasLeak(const Input& input);
+
+  // Fakes the interactions needed with the runner to perform a single fuzzing run.
+  Input RunOne();
+
+  // Like |RunOne()|, but the given parameters overrides any set by |SetResult|.
+  Input RunOne(Result result);
+  Input RunOne(const Coverage& coverage);
+  Input RunOne(bool leak);
+
+  // Returns the test input for the next run.
+  virtual Input GetTestInput() = 0;
+
+  // Sts the feedback for the next run.
+  virtual void SetFeedback(const Coverage& coverage, Result result, bool leak) = 0;
+
+  // Records the |status| of a fuzzing workflow.
+  void SetStatus(zx_status_t status);
 
   // Blocks until a workflow completes and calls |SetResult|, then returns its argument.
-  zx_status_t GetResult();
-
-  // Tests may set fake code |coverage| to be "produced" during a subsequent call to |RunOne|.
-  virtual void SetCoverage(const Coverage& coverage) = 0;
-
-  // Fakes the interactions needed with the runner to perform a single fuzzing run. Tests may
-  // indicate if the run should encounter an error or complete normally (using |Result::NO_ERRORS|).
-  // In the latter case, tests may also indicate whether the run should appear to have more
-  // |malloc|s than |free|s.
-  virtual Input RunOne(Result expected) = 0;
+  zx_status_t GetStatus();
 
   //////////////////////////////////////
   // Unit tests, organized by fuzzing workflow.
 
-  void ExecuteNoError(Runner* runner);
-  void ExecuteWithError(Runner* runner);
-  void ExecuteWithLeak(Runner* runner);
+  virtual void ExecuteNoError(Runner* runner);
+  virtual void ExecuteWithError(Runner* runner);
+  virtual void ExecuteWithLeak(Runner* runner);
 
-  void MinimizeNoError(Runner* runner);
-  void MinimizeOneByte(Runner* runner);
-  void MinimizeReduceByTwo(Runner* runner);
-  void MinimizeNewError(Runner* runner);
+  virtual void MinimizeNoError(Runner* runner);
+  virtual void MinimizeEmpty(Runner* runner);
+  virtual void MinimizeOneByte(Runner* runner);
+  virtual void MinimizeReduceByTwo(Runner* runner);
+  virtual void MinimizeNewError(Runner* runner);
 
-  void CleanseNoError(Runner* runner);
-  void CleanseNoReplacement(Runner* runner);
-  void CleanseAlreadyClean(Runner* runner);
-  void CleanseTwoBytes(Runner* runner);
+  virtual void CleanseNoReplacement(Runner* runner);
+  virtual void CleanseAlreadyClean(Runner* runner);
+  virtual void CleanseTwoBytes(Runner* runner);
 
-  void FuzzUntilError(Runner* runner);
-  void FuzzUntilRuns(Runner* runner);
-  void FuzzUntilTime(Runner* runner);
+  virtual void FuzzUntilError(Runner* runner);
+  virtual void FuzzUntilRuns(Runner* runner);
+  virtual void FuzzUntilTime(Runner* runner);
 
-  void MergeSeedError(Runner* runner);
-  void Merge(Runner* runner);
+  virtual void MergeSeedError(Runner* runner);
+  virtual void Merge(Runner* runner);
+
+  //////////////////////////////////////
+  // Partial unit test implementations deferred to derived classes.
+
+  // Provides runner-specific sequences of runs for individual unit tests.
+  virtual void RunAllForCleanseTwoBytes() = 0;
+  virtual void RunAllForFuzzUntilTime() = 0;
+  virtual void RunAllForMerge() = 0;
+
+  // Some engines (e.g. libFuzzer) discard error causing inputs when merging.
+  virtual bool MergePreservesErrors() { return true; }
 
  private:
+  struct Feedback {
+    Coverage coverage;
+    Result result = Result::NO_ERRORS;
+    bool leak = false;
+  };
+
   std::shared_ptr<Options> options_;
-  zx_status_t result_ = ZX_ERR_INTERNAL;
+  std::unordered_map<std::string, Feedback> feedback_;
+  zx_status_t status_ = ZX_ERR_INTERNAL;
   sync_completion_t sync_;
-  bool leak_suspected_ = false;
 };
 
 }  // namespace fuzzing

@@ -61,7 +61,7 @@ class RunnerImpl final : public Runner {
   // |Runner| method implementations.
   void AddDefaults(Options* options) override;
   zx_status_t AddToCorpus(CorpusType corpus_type, Input input) override;
-  Input ReadFromCorpus(CorpusType corpus_type, size_t offset) const override;
+  Input ReadFromCorpus(CorpusType corpus_type, size_t offset) override;
   zx_status_t ParseDictionary(const Input& input) override;
   Input GetDictionaryAsInput() const override;
 
@@ -87,6 +87,7 @@ class RunnerImpl final : public Runner {
   zx_status_t SyncMerge() override;
 
   Status CollectStatusLocked() override FXL_REQUIRE(mutex_);
+  void ClearErrors() override;
 
  private:
   // Configure both the run and overall deadlines, and sets an alarm for the run deadline on the
@@ -140,9 +141,6 @@ class RunnerImpl final : public Runner {
   // TODO(fxbug.dev/84364): |FuzzLoopRelaxed| is preferred here, but using that causes some test
   // flake. Switch to that version once the source of it is resolved.
   void FuzzLoop();
-
-  // Resets the error state for subsequent actions.
-  void ClearErrors();
 
   // Uses the target adapter request handler to connect to the target adapter.
   void ConnectTargetAdapter();

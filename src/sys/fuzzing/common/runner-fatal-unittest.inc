@@ -17,6 +17,11 @@
 // environment that does not interpret those logs as test failures.
 // See also runner-unittest.inc.
 
+TEST_F(RUNNER_TEST, MinimizeEmpty) {
+  RUNNER_TYPE runner;
+  MinimizeEmpty(&runner);
+}
+
 TEST_F(RUNNER_TEST, MinimizeOneByte) {
   RUNNER_TYPE runner;
   MinimizeOneByte(&runner);

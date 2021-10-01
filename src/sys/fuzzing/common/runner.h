@@ -48,8 +48,8 @@ class Runner {
   virtual zx_status_t AddToCorpus(CorpusType corpus_type, Input input) = 0;
 
   // Returns a copy of the input at the given |offset| in the corpus of the given |corpus_type|,
-  // or an empty input if |offset| is invalid.
-  virtual Input ReadFromCorpus(CorpusType corpus_type, size_t offset) const = 0;
+  // or an emtpy input if |offset| is invalid.
+  virtual Input ReadFromCorpus(CorpusType corpus_type, size_t offset) = 0;
 
   // Parses the given |input| as an AFL-style dictionary. For format details, see
   // https://lcamtuf.coredump.cx/afl/technical_details.txt. Returns ZX_ERR_INVALID_ARGS if parsing
@@ -76,8 +76,8 @@ class Runner {
  protected:
   Runner();
 
-  void set_result(Result result) { result_ = result; }
-  void set_result_input(const Input& input) { result_input_ = input.Duplicate(); }
+  virtual void set_result(Result result) { result_ = result; }
+  virtual void set_result_input(const Input& input) { result_input_ = input.Duplicate(); }
 
   // Fuzzing workflow implementations.
   virtual void ConfigureImpl(const std::shared_ptr<Options>& options) = 0;
@@ -89,6 +89,9 @@ class Runner {
 
   // Creates a |Status| object representing all attached processes.
   virtual Status CollectStatusLocked() = 0;
+
+  // Resets the error state for subsequent actions.
+  virtual void ClearErrors();
 
   // Collects the current status, labels it with the given |reason|, and sends it all attached
   //|Monitor|s.

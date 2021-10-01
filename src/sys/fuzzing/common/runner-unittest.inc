@@ -36,11 +36,6 @@ TEST_F(RUNNER_TEST, MinimizeNoError) {
   MinimizeNoError(&runner);
 }
 
-TEST_F(RUNNER_TEST, CleanseNoError) {
-  RUNNER_TYPE runner;
-  CleanseNoError(&runner);
-}
-
 TEST_F(RUNNER_TEST, CleanseNoReplacement) {
   RUNNER_TYPE runner;
   CleanseNoReplacement(&runner);

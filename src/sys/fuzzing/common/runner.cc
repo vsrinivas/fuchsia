@@ -117,6 +117,7 @@ void Runner::Worker() {
       return;
     }
     zx_status_t status = ZX_OK;
+    ClearErrors();
     switch (action) {
       case kExecute:
         status = SyncExecute(input);
@@ -163,6 +164,11 @@ void Runner::UpdateMonitors(UpdateReason reason) {
   if (reason == UpdateReason::DONE) {
     monitors_.clear();
   }
+}
+
+void Runner::ClearErrors() {
+  result_ = Result::NO_ERRORS;
+  result_input_.Clear();
 }
 
 }  // namespace fuzzing

@@ -4,11 +4,12 @@
 
 #include "src/sys/fuzzing/framework/engine/runner.h"
 
-#include <lib/fit/defer.h>
 #include <lib/syslog/cpp/macros.h>
 #include <lib/zx/clock.h>
 #include <zircon/sanitizer.h>
 #include <zircon/status.h>
+
+#include <deque>
 
 #include "src/lib/fxl/macros.h"
 
@@ -93,7 +94,7 @@ zx_status_t RunnerImpl::AddToCorpus(CorpusType corpus_type, Input input) {
   return ZX_OK;
 }
 
-Input RunnerImpl::ReadFromCorpus(CorpusType corpus_type, size_t offset) const {
+Input RunnerImpl::ReadFromCorpus(CorpusType corpus_type, size_t offset) {
   Input* input = nullptr;
   switch (corpus_type) {
     case CorpusType::SEED:
@@ -157,23 +158,17 @@ void RunnerImpl::Timer() {
 // Synchronous workflows.
 
 zx_status_t RunnerImpl::SyncExecute(const Input& input) {
-  run_ = 0;
   TestOne(input);
   return ZX_OK;
 }
 
 zx_status_t RunnerImpl::SyncMinimize(const Input& input) {
-  run_ = 0;
   TestOne(input);
   if (result() == Result::NO_ERRORS) {
     FX_LOGS(WARNING) << "Test input did not trigger an error.";
     return ZX_ERR_INVALID_ARGS;
   }
   auto minimized = result_input();
-  if (minimized.size() == 0) {
-    FX_LOGS(INFO) << "Empty input is already minimized.";
-    return ZX_OK;
-  }
   auto saved_result = result();
   auto saved_corpus = live_corpus_;
   auto saved_options = CopyOptions(*options_);
@@ -182,7 +177,11 @@ zx_status_t RunnerImpl::SyncMinimize(const Input& input) {
     options_->set_max_total_time(zx::min(10).get());
   }
   UpdateMonitors(UpdateReason::INIT);
-  while (minimized.size() != 0) {
+  while (true) {
+    if (minimized.size() < 2) {
+      FX_LOGS(INFO) << "Input is " << minimized.size() << " byte(s); will not minimize further.";
+      break;
+    }
     auto max_size = minimized.size() - 1;
     auto next_input = minimized.Duplicate();
     next_input.Truncate(max_size);
@@ -204,8 +203,6 @@ zx_status_t RunnerImpl::SyncMinimize(const Input& input) {
       break;
     }
     minimized = result_input();
-    FX_LOGS(INFO) << "Reduced error input to " << minimized.size() << " bytes"
-                  << (minimized.size() > 1 ? "; continuing..." : ".");
   }
   UpdateMonitors(UpdateReason::DONE);
   set_result_input(minimized);
@@ -216,80 +213,58 @@ zx_status_t RunnerImpl::SyncMinimize(const Input& input) {
 }
 
 zx_status_t RunnerImpl::SyncCleanse(const Input& input) {
-  run_ = 0;
-  TestOne(input);
-  if (result() == Result::NO_ERRORS) {
-    FX_LOGS(WARNING) << "Test input did not trigger an error.";
-    return ZX_ERR_INVALID_ARGS;
+  auto cleansed = input.Duplicate();
+  const std::vector<uint8_t> kClean = {' ', 0xff};
+  auto clean = kClean.begin();
+  std::deque<size_t> offsets;
+  for (size_t i = 0; i < input.size(); ++i) {
+    // Record which offsets are replaceable.
+    if (std::find(kClean.begin(), kClean.end(), input.data()[i]) == kClean.end()) {
+      offsets.push_back(i);
+    }
   }
-  auto cleansed = result_input();
-  if (cleansed.size() == 0) {
-    FX_LOGS(INFO) << "Empty input is already clean.";
-    return ZX_OK;
-  }
-  auto saved_result = result();
-
-  static const uint8_t kReplacements[] = {' ', 0xff};
+  size_t left = offsets.size();
   constexpr size_t kMaxCleanseAttempts = 5;
-  size_t i = 0;
-  bool modified = true;
-  uint8_t original = 0;
+  size_t tries = kMaxCleanseAttempts;
+  uint8_t orig = 0;
+  bool mod = false;
+  // Try various bytes at various offsets. To match existing engines (i.e. libFuzzer), this code
+  // does not distinguish between different types of errors.
   FuzzLoopStrict(
       /* next_input */
-      [&cleansed, &i, &modified, &original](bool first) -> Input* {
+      [&cleansed, &clean, &kClean, &offsets, &left, &tries, &mod, &orig](bool first) -> Input* {
         auto* data = cleansed.data();
-        auto size = cleansed.size();
-        while (true) {
-          size_t replacement = i % sizeof(kReplacements);
-          size_t offset = (i / sizeof(kReplacements)) % size;
-          size_t attempt = i / (sizeof(kReplacements) * size);
-          // Cap the number of the attempts.
-          if (attempt == kMaxCleanseAttempts) {
-            return nullptr;
-          }
-          // Only start a new attempt if still making progress..
-          if (offset == 0 && replacement == 0) {
-            if (!modified) {
-              return nullptr;
-            }
-            modified = false;
-          }
-          original = data[offset];
-          // For each new byte, check if it matches a replacement.
-          bool replaceable = true;
-          if (replacement == 0) {
-            for (auto r : kReplacements) {
-              if (r == original) {
-                replaceable = false;
-                break;
-              }
-            }
-          }
-          if (replaceable) {
-            data[offset] = kReplacements[replacement];
-            return &cleansed;
-          }
-          // Skip to the next byte.
-          i += sizeof(kReplacements);
+        if (clean == kClean.end()) {
+          clean = kClean.begin();
+          offsets.push_back(offsets.front());
+          offsets.pop_front();
+          --left;
         }
+        if (!left) {
+          left = offsets.size();
+          tries = mod ? (tries - 1) : 0;
+          mod = false;
+        }
+        if (tries == 0) {
+          return nullptr;
+        }
+        auto offset = offsets.front();
+        orig = data[offset];
+        data[offset] = *clean;
+        return &cleansed;
       },
       /* finish_run */
-      [this, &cleansed, saved_result, &i, &modified, &original](Input* last_input) {
+      [this, &cleansed, &clean, &kClean, &offsets, &left, &mod, &orig](Input* ignored) {
         auto* data = cleansed.data();
-        auto size = cleansed.size();
-        if (result() == saved_result) {
-          // Keep the replacement and advance to the next byte.
-          size_t replacement = i % sizeof(kReplacements);
-          i += sizeof(kReplacements) - replacement;
-          modified = true;
-        } else {
-          size_t offset = (i / sizeof(kReplacements)) % size;
-          // Restore the original byte and try the next replacement.
-          data[offset] = original;
-          ++i;
-        }
         if (result() != Result::NO_ERRORS) {
           ClearErrors();
+          clean = kClean.begin();
+          offsets.pop_front();
+          --left;
+          mod = true;
+        } else {
+          data[offsets.front()] = orig;
+          ++clean;
         }
       },
       /* ignore_errors */ true);
@@ -317,7 +292,6 @@ zx_status_t RunnerImpl::SyncFuzz() {
 }
 
 zx_status_t RunnerImpl::SyncMerge() {
-  run_ = 0;
   // Measure the coverage of the seed corpus.
   pool_->Clear();
   // TODO(fxbug.dev/84364): |FuzzLoopRelaxed| is preferred here and elsewhere in this function, but
@@ -388,6 +362,9 @@ void RunnerImpl::TestOne(const Input& input) {
 }
 
 void RunnerImpl::FuzzLoop() {
+  run_ = 0;
+  UpdateMonitors(UpdateReason::INIT);
+
   // Use two pre-allocated inputs, and swap the pointers between them each iteration, i.e. the old
   // |next_input| becomes |prev_input|, and the old |prev_input| is recycled to a new |next_input|.
   Input inputs[2];
@@ -607,8 +584,7 @@ void RunnerImpl::RunLoop(bool ignore_errors) {
 }
 
 void RunnerImpl::ClearErrors() {
-  set_result(Result::NO_ERRORS);
-  set_result_input(Input());
+  Runner::ClearErrors();
   error_ = nullptr;
   sync_completion_reset(&adapter_sync_);
   sync_completion_reset(&process_sync_);
