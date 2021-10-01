@@ -1,0 +1,139 @@
+# Copyright 2017 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/drivers/verify_shared_libraries.gni")
+import("//build/zircon/c_utils.gni")
+
+# Declare a fuchsia driver target.
+#
+# This target allows you to create an object file that can be used as a driver
+# that is loaded at runtime.
+#
+# Parameters
+#
+# Flags: cflags, cflags_c, cflags_cc,  asmflags, defines, include_dirs,
+#        ldflags, lib_dirs, libs,
+# Deps: data_deps, deps, public_deps
+# Dependent configs: all_dependent_configs, public_configs
+# General: check_includes, configs, data, inputs, output_name,
+#          output_extension, public, sources, testonly, visibility
+template("fuchsia_driver") {
+  check_target = "_driver.shlib-allowlist-check.$target_name"
+  shared_libraries_used_target = "_driver.shlib-used.$target_name"
+
+  driver_label = get_label_info(":$target_name", "label_with_toolchain")
+  shared_libraries_used_file =
+      "${target_gen_dir}/${target_name}.driver-shlib-used"
+
+  # Generates a list of all of the things our driver links against.
+  link_output_rspfile(shared_libraries_used_target) {
+    forward_variables_from(invoker,
+                           [
+                             "deps",
+                             "testonly",
+                           ])
+    outputs = [ shared_libraries_used_file ]
+  }
+
+  # Checks the driver's shared libraries against an allowlist.
+  verify_shared_libraries(check_target) {
+    forward_variables_from(invoker, [ "testonly" ])
+    target_label = driver_label
+    libraries_used_file = shared_libraries_used_file
+    libraries_allowlist_file = "//build/drivers/driver_shared_library_allowlist"
+    output_file = "$target_gen_dir/${check_target}.dynamic_libs"
+
+    deps = [ ":$shared_libraries_used_target" ]
+  }
+
+  # This is the actual driver module.
+  loadable_module(target_name) {
+    variant_selector_target_type = "driver_module"
+
+    # Save the target name as forward_variables_from below might override it.
+    _target_name = target_name
+
+    assert_no_deps = []
+
+    # Explicitly forward visibility, implicitly forward everything else.
+    # See comment in //build/config/BUILDCONFIG.gn for details on this pattern.
+    forward_variables_from(invoker, [ "visibility" ])
+    forward_variables_from(invoker,
+                           "*",
+                           [
+                             "test",
+                             "visibility",
+                           ])
+
+    # Restore the target name.
+    target_name = _target_name
+
+    if (!defined(deps)) {
+      deps = []
+    }
+
+    if (!defined(output_dir)) {
+      output_dir = root_out_dir
+    }
+    if (!defined(output_name)) {
+      output_name = target_name
+    }
+    if (!defined(output_extension)) {
+      output_extension = "so"
+    }
+
+    _output_file_name = output_name
+    if (output_extension != "") {
+      _output_file_name += ".$output_extension"
+    }
+    _output_file = "$output_dir/$_output_file_name"
+    _rebased_output_file = rebase_path(_output_file, root_build_dir)
+
+    has_syslog_backend = false
+
+    foreach(dep, deps) {
+      dep = get_label_info(dep, "label_no_toolchain")
+      has_syslog_backend =
+          has_syslog_backend || dep == "//sdk/lib/syslog/cpp:backend" ||
+          dep == "//sdk/lib/syslog/cpp:backend_legacy" ||
+          dep == "//sdk/lib/syslog/cpp:backend_fuchsia_compat" ||
+          dep == "//sdk/lib/syslog/cpp/sdk"
+    }
+
+    deps += [ ":$check_target" ]
+
+    # If no syslog backend is found, ensure we have not included the syslog frontend.
+    if (!has_syslog_backend) {
+      assert_no_deps += [ "//sdk/lib/syslog/cpp" ]
+    }
+
+    metadata = {
+      # Used by the check_included_drivers template.
+      driver_module_labels =
+          [ get_label_info(":$_target_name", "label_no_toolchain") ]
+
+      # Used by the distribution_manifest template.
+      distribution_entries = [
+        {
+          source = _rebased_output_file
+          destination = "driver/$_output_file_name"
+          label = get_label_info(":$_target_name", "label_with_toolchain")
+          elf_runtime_dir = "lib/${toolchain_variant.libprefix}"
+        },
+      ]
+    }
+  }
+}
+
+set_defaults("fuchsia_driver") {
+  # Sets the default configs for driver_module, which can be modified later
+  # by the invoker. This overrides the loadable_module default.
+  configs = default_shared_library_configs
+
+  # Drivers cannot dynamically link against the C++ standard library. This config
+  # tells the linker to link against it statically. This is safe for drivers which
+  # don't depend on the standard library as well as the linker will not have any
+  # symbols to resolve.
+  configs += [ "//build/config/fuchsia:static_cpp_standard_library" ]
+}
