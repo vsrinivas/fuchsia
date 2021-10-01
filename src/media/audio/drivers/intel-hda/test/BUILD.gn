@@ -25,7 +25,7 @@ source_set("test_libs") {
     "//src/media/audio/drivers/lib/audio-proto-utils",
     "//src/media/audio/drivers/lib/audio-utils",
     "//src/media/audio/drivers/lib/intel-hda",
-    "//zircon/public/lib/fidl",
+    "//zircon/system/ulib/fidl",
     "//zircon/system/ulib/zx",
     "//zircon/system/ulib/zxtest",
   ]

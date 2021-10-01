@@ -16,11 +16,11 @@ source_set("simple-audio-stream") {
     "//src/lib/ddktl",
     "//zircon/public/lib/async",
     "//zircon/public/lib/async-cpp",
-    "//zircon/public/lib/fidl",
     "//zircon/system/ulib/async-loop",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/fbl",
+    "//zircon/system/ulib/fidl",
     "//zircon/system/ulib/inspect",
     "//zircon/system/ulib/zx",
   ]

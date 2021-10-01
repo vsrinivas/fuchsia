@@ -109,10 +109,10 @@ if (toolchain_variant.configs + fuzzer_configs - fuzzer_configs !=
       "//sdk/lib/stdcompat",
       "//sdk/lib/zxio",
       "//sdk/lib/zxio:inception",
-      "//zircon/public/lib/fidl",
       "//zircon/public/lib/safemath",
       "//zircon/public/lib/zircon-internal",
       "//zircon/system/ulib/fbl",
+      "//zircon/system/ulib/fidl",
       "//zircon/system/ulib/zx",
       "//zircon/third_party/ulib/musl:getifaddrs-internal",
     ]

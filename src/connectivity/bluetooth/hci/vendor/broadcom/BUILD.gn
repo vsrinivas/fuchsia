@@ -35,8 +35,8 @@ driver_module("bt-hci-broadcom-driver") {
     "//sdk/fidl/fuchsia.hardware.bluetooth:fuchsia.hardware.bluetooth_c",
     "//src/devices/lib/driver",
     "//src/lib/ddk",
-    "//zircon/public/lib/fidl",
     "//zircon/public/lib/sync",
+    "//zircon/system/ulib/fidl",
   ]
 
   # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings

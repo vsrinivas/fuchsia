@@ -125,7 +125,7 @@ source_set("test_harness_impl_unittest") {
     "//src/lib/fxl/test:gtest_main",
     "//src/modular/lib/modular_config",
     "//src/modular/lib/pseudo_dir:pseudo_dir_server",
-    "//zircon/public/lib/fidl",
+    "//zircon/system/ulib/fidl",
   ]
 
   # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings

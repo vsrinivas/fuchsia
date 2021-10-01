@@ -131,8 +131,8 @@ if (platform_enable_user_pci) {
       "//src/devices/pci/lib/pci",
       "//src/lib/ddk",
       "//src/lib/ddktl",
-      "//zircon/public/lib/fidl",
       "//zircon/public/lib/pretty",
+      "//zircon/system/ulib/fidl",
     ]
 
     # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings

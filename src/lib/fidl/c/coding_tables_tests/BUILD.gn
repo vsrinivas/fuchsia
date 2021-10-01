@@ -14,8 +14,8 @@ executable("bin") {
   deps = [
     ":fidl.test.example.codingtables_llcpp",
     "//sdk/lib/fdio",
-    "//zircon/public/lib/fidl",
     "//zircon/system/ulib/fbl",
+    "//zircon/system/ulib/fidl",
     "//zircon/system/ulib/zx",
     "//zircon/system/ulib/zxtest",
   ]

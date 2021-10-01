@@ -79,7 +79,7 @@ template("fidl_c_target") {
       ":${main_target_name}_compile($fidl_toolchain)",
       ":${main_target_name}_tables",
     ]
-    public_deps = [ "//zircon/public/lib/fidl" ]
+    public_deps = [ "//zircon/system/ulib/fidl" ]
     if (is_fuchsia) {
       public_deps += [ "//zircon/public/sysroot:headers" ]
     } else {

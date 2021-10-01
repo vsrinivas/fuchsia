@@ -232,7 +232,7 @@ This new code requires the following additional dependencies:
 * `"//zircon/system/ulib/async-loop:async-loop-cpp"` and `"//zircon/system/ulib/async-loop:async-loop-default"`, which contain the async loop code.
 * `"//sdk/lib/fdio"` and `"//zircon/system/ulib/svc"`: These are libraries used
   to interact with the components environment (e.g. for serving protocols).
-* `"//zircon/public/lib/fidl"`: The LLCPP runtime, which contains utility code for
+* `"//zircon/system/ulib/fidl"`: The LLCPP runtime, which contains utility code for
   using the FIDL bindings, such as the `BindServer` function.
 
 The full `bin` target declaration should now look like this:

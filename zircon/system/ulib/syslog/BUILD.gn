@@ -28,8 +28,8 @@ zx_library("syslog") {
     "//sdk/lib/fdio",
     "//sdk/lib/syslog:client_includes",
     "//sdk/lib/syslog/cpp:cpp-macros",
-    "//zircon/public/lib/fidl",
     "//zircon/system/ulib/fbl",
+    "//zircon/system/ulib/fidl",
     "//zircon/system/ulib/zx",
   ]
   runtime_deps = [ "//sdk/lib/fdio:fdio_sdk" ]
@@ -62,8 +62,8 @@ zx_library("syslog-compat") {
     "//sdk/lib/syslog:client_includes",
     "//sdk/lib/syslog/cpp:backend_fuchsia_compat",
     "//sdk/lib/syslog/cpp:cpp-macros",
-    "//zircon/public/lib/fidl",
     "//zircon/system/ulib/fbl",
+    "//zircon/system/ulib/fidl",
     "//zircon/system/ulib/zx",
   ]
   runtime_deps = [ "//sdk/lib/fdio:fdio_sdk" ]

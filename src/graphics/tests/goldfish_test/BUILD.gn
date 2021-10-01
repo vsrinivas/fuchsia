@@ -16,8 +16,8 @@ executable("goldfish_test_bin") {
     "//sdk/lib/fdio",
     "//src/lib/fsl",
     "//third_party/googletest:gtest",
-    "//zircon/public/lib/fidl",
     "//zircon/public/lib/zircon-internal",
+    "//zircon/system/ulib/fidl",
     "//zircon/system/ulib/zx",
   ]
 

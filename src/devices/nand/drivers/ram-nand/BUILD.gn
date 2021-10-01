@@ -36,10 +36,10 @@ driver_module("ram-nand-driver") {
     "//src/devices/lib/nand",
     "//src/lib/ddk",
     "//src/lib/ddktl",
-    "//zircon/public/lib/fidl",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zircon-internal",
     "//zircon/system/ulib/fbl",
+    "//zircon/system/ulib/fidl",
     "//zircon/system/ulib/zx",
   ]
 }

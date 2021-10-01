@@ -64,7 +64,7 @@ test("fidl_llcpp_builder_tests_bin") {
   deps = [
     "//src/lib/fxl/test:gtest_main",
     "//third_party/googletest:gtest",
-    "//zircon/public/lib/fidl",
+    "//zircon/system/ulib/fidl",
     "//zircon/system/ulib/fidl:fidl-llcpp",
   ]
 

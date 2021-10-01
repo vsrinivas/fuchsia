@@ -62,9 +62,9 @@ source_set("launcher") {
   deps = [
     "//sdk/lib/fdio",
     "//sdk/lib/syslog/cpp",
-    "//zircon/public/lib/fidl",
     "//zircon/public/lib/zircon-internal",
     "//zircon/system/ulib/fbl",
+    "//zircon/system/ulib/fidl",
     "//zircon/system/ulib/zx",
   ]
 }
@@ -218,9 +218,9 @@ source_set("block-watcher") {
     "//src/storage/gpt",
     "//src/storage/minfs",
     "//src/sys/pkg/fidl/fuchsia.update.verify:fuchsia.update.verify_llcpp",
-    "//zircon/public/lib/fidl",
     "//zircon/public/lib/zircon-internal",
     "//zircon/system/ulib/fbl",
+    "//zircon/system/ulib/fidl",
     "//zircon/system/ulib/fidl-async:fidl-async-cpp",
     "//zircon/system/ulib/ramdevice-client",
     "//zircon/system/ulib/service:service-llcpp",

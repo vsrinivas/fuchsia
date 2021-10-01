@@ -12,8 +12,8 @@ zx_library("mock-boot-arguments") {
   deps = [
     "//sdk/fidl/fuchsia.boot:fuchsia.boot_llcpp",
     "//zircon/public/lib/async",
-    "//zircon/public/lib/fidl",
     "//zircon/system/ulib/fbl",
+    "//zircon/system/ulib/fidl",
     "//zircon/system/ulib/fidl-async",
     "//zircon/system/ulib/fidl-async:fidl-async-cpp",
   ]

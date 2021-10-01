@@ -572,7 +572,7 @@ template("fidl_cpp_family") {
     hlcpp_public_deps = [ "//sdk/lib/fidl/cpp" ]
     llcpp_public_deps = [
       "//sdk/lib/fit",
-      "//zircon/public/lib/fidl",
+      "//zircon/system/ulib/fidl",
       "//zircon/system/ulib/fidl:fidl-llcpp",
     ]
   } else {

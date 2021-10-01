@@ -18,9 +18,9 @@ executable("puppet") {
     "//sdk/lib/syslog/streams/cpp:streams",
     "//sdk/lib/syslog/streams/cpp:streams-encoder",
     "//src/lib/fsl",
-    "//zircon/public/lib/fidl",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
+    "//zircon/system/ulib/fidl",
   ]
 }
 

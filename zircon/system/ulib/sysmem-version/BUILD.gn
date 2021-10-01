@@ -14,7 +14,7 @@ zx_library("sysmem-version") {
     "//sdk/fidl/fuchsia.sysmem2:fuchsia.sysmem2_llcpp",
     "//zircon/system/ulib/fidl-async-2",
   ]
-  deps = [ "//zircon/public/lib/fidl" ]
+  deps = [ "//zircon/system/ulib/fidl" ]
 
   # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
   configs += [ "//build/config:Wno-conversion" ]

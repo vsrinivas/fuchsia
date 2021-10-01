@@ -50,7 +50,7 @@ source_set("optee_lib") {
     "//sdk/fidl/fuchsia.tee:fuchsia.tee_llcpp",
     "//sdk/fidl/fuchsia.tee.manager:fuchsia.tee.manager_llcpp",
     "//src/devices/lib/driver",
-    "//zircon/public/lib/fidl",
+    "//zircon/system/ulib/fidl",
     "//zircon/system/ulib/fidl-utils",
   ]
 

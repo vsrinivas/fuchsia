@@ -21,7 +21,7 @@ test("component_cpp_unittests_bin") {
     "//sdk/lib/sys/cpp",
     "//src/lib/fxl/test:gtest_main",
     "//src/testing/fidl:placeholders",
-    "//zircon/public/lib/fidl",
+    "//zircon/system/ulib/fidl",
   ]
 
   # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
@@ -48,7 +48,7 @@ test("component_cpp_testing_unittests_bin") {
     "//src/lib/fuchsia-component-test/fidl:fuchsia.realm.builder",
     "//src/lib/fxl/test:gtest_main",
     "//src/testing/fidl:placeholders",
-    "//zircon/public/lib/fidl",
+    "//zircon/system/ulib/fidl",
   ]
 }
 
@@ -74,7 +74,7 @@ test("component_cpp_testing_tests_bin") {
     "//sdk/lib/sys/cpp/testing:unit",
     "//src/lib/fxl/test:gtest_main",
     "//src/testing/fidl:placeholders",
-    "//zircon/public/lib/fidl",
+    "//zircon/system/ulib/fidl",
   ]
 }
 

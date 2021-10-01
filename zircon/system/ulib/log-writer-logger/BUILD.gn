@@ -15,8 +15,8 @@ zx_library("log-writer-logger") {
   deps = [
     "//sdk/fidl/fuchsia.logger:fuchsia.logger_llcpp",
     "//sdk/lib/fdio",
-    "//zircon/public/lib/fidl",
     "//zircon/system/ulib/fbl",
+    "//zircon/system/ulib/fidl",
     "//zircon/system/ulib/log",
     "//zircon/system/ulib/zx",
   ]

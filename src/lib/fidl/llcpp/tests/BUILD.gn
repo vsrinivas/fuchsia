@@ -22,7 +22,7 @@ source_set("types_test_utils") {
   ]
   public_deps = [
     "//third_party/googletest:gtest",
-    "//zircon/public/lib/fidl",
+    "//zircon/system/ulib/fidl",
     "//zircon/system/ulib/fidl:fidl-llcpp",
   ]
 

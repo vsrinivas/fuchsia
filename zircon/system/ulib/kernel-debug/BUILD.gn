@@ -11,8 +11,8 @@ zx_library("kernel-debug") {
   deps = [
     "//sdk/fidl/fuchsia.kernel:fuchsia.kernel_c",
     "//zircon/public/lib/async",
-    "//zircon/public/lib/fidl",
     "//zircon/public/lib/zircon-internal",
+    "//zircon/system/ulib/fidl",
     "//zircon/system/ulib/fidl-async",
     "//zircon/system/ulib/zx",
   ]

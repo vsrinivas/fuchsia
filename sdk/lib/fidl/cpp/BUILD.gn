@@ -55,8 +55,8 @@ sdk_source_set("cpp") {
     "//sdk/lib/fit-promise",
     "//sdk/lib/stdcompat",
     "//zircon/public/lib/async",
-    "//zircon/public/lib/fidl",
     "//zircon/system/ulib/async-default",
+    "//zircon/system/ulib/fidl",
     "//zircon/system/ulib/zx",
   ]
 
@@ -86,7 +86,7 @@ sdk_source_set("cpp_sync") {
   public_deps = [
     ":cpp_base",
     "//sdk/lib/fit",
-    "//zircon/public/lib/fidl",
+    "//zircon/system/ulib/fidl",
     "//zircon/system/ulib/zx",
   ]
 }
@@ -144,7 +144,7 @@ sdk_source_set("cpp_base") {
       "interface_request.h",
     ]
     public_deps += [
-      "//zircon/public/lib/fidl",
+      "//zircon/system/ulib/fidl",
       "//zircon/system/ulib/zx",
     ]
   }

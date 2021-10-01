@@ -40,8 +40,8 @@ driver_module("usb-peripheral-driver") {
     "//src/lib/ddk",
     "//src/lib/ddk:ddk-metadata-headers",
     "//src/lib/ddktl",
-    "//zircon/public/lib/fidl",
     "//zircon/system/ulib/fbl",
+    "//zircon/system/ulib/fidl",
   ]
 
   # Set default configuration here, rather than relying on usbctl to do it.

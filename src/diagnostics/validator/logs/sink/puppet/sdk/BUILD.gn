@@ -14,9 +14,9 @@ executable("sdk-puppet") {
     "//sdk/lib/sys/cpp",
     "//sdk/lib/syslog/structured_backend",
     "//src/diagnostics/validator/logs/sink/fidl:sink-puppet",
-    "//zircon/public/lib/fidl",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
+    "//zircon/system/ulib/fidl",
   ]
 }
 

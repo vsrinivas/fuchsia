@@ -21,8 +21,8 @@ zx_library("driver-unit-test") {
   deps = [
     "//sdk/lib/fidl/cpp:cpp_base",
     "//src/lib/ddk",
-    "//zircon/public/lib/fidl",
     "//zircon/system/ulib/fbl",
+    "//zircon/system/ulib/fidl",
     "//zircon/system/ulib/zx",
     "//zircon/system/ulib/zxtest",
   ]

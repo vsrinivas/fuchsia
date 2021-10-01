@@ -19,8 +19,8 @@ test("logger-unit") {
   deps = [
     "//sdk/fidl/fuchsia.driver.test:fuchsia.driver.test_c",
     "//sdk/lib/fdio",
-    "//zircon/public/lib/fidl",
     "//zircon/system/ulib/driver-unit-test",
+    "//zircon/system/ulib/fidl",
     "//zircon/system/ulib/zxtest",
   ]
 }

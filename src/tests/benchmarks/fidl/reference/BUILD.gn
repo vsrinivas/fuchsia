@@ -18,8 +18,8 @@ gidl_reference_benchmarks("benchmark_suite_reference") {
   ]
   fidl = benchmark_suite_fidl_target
   deps = [
-    "//zircon/public/lib/fidl",
     "//zircon/system/ulib/fbl",
+    "//zircon/system/ulib/fidl",
   ]
 }
 
@@ -38,9 +38,9 @@ executable("bin") {
   deps = [
     ":benchmark_suite_reference",
     "//src/zircon/lib/zircon",
-    "//zircon/public/lib/fidl",
     "//zircon/public/lib/sync",
     "//zircon/system/ulib/fbl",
+    "//zircon/system/ulib/fidl",
     "//zircon/system/ulib/perftest",
   ]
 }
