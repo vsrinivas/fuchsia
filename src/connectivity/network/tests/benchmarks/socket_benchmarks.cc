@@ -4,8 +4,12 @@
 
 #include <arpa/inet.h>
 #include <lib/syslog/cpp/macros.h>
+#include <netinet/icmp6.h>
+#include <netinet/ip_icmp.h>
 #include <netinet/tcp.h>
 #include <sys/socket.h>
+
+#include <array>
 
 #include <fbl/unique_fd.h>
 #include <perftest/perftest.h>
@@ -30,6 +34,9 @@ class Ipv6 {
  public:
   using SockAddr = AddrStorage<sockaddr_in6>;
   static constexpr int kFamily = AF_INET6;
+  static constexpr int kIpProtoIcmp = IPPROTO_ICMPV6;
+  static constexpr uint8_t kIcmpEchoRequestType = ICMP6_ECHO_REQUEST;
+  static constexpr uint8_t kIcmpEchoReplyType = ICMP6_ECHO_REPLY;
 
   static SockAddr loopback() {
     return {
@@ -46,6 +53,9 @@ class Ipv4 {
  public:
   using SockAddr = AddrStorage<sockaddr_in>;
   static constexpr int kFamily = AF_INET;
+  static constexpr int kIpProtoIcmp = IPPROTO_ICMP;
+  static constexpr uint8_t kIcmpEchoRequestType = ICMP_ECHO;
+  static constexpr uint8_t kIcmpEchoReplyType = ICMP_ECHOREPLY;
 
   static SockAddr loopback() {
     return {
@@ -168,13 +178,67 @@ bool UdpWriteRead(perftest::RepeatState* state, size_t message_size) {
   return true;
 }
 
+// Tests the ping latency over a loopback socket.
+//
+// Measures the time to send an echo request over an ICMP socket and observe its response.
+template <typename Ip>
+bool PingLatency(perftest::RepeatState* state) {
+  TemplateIsIpVersion<Ip>();
+  using Addr = typename Ip::SockAddr;
+
+  fbl::unique_fd sock;
+  CHECK_TRUE_ERRNO(sock = fbl::unique_fd(socket(Ip::kFamily, SOCK_DGRAM, Ip::kIpProtoIcmp)));
+  Addr sockaddr = Ip::loopback();
+  CHECK_ZERO_ERRNO(connect(sock.get(), sockaddr.as_sockaddr(), sockaddr.socklen()));
+
+  struct {
+    icmphdr icmp;
+    char payload[4];
+  } send_buffer, recv_buffer;
+  uint16_t sequence = 0;
+  icmphdr& send_header = send_buffer.icmp;
+
+  while (state->KeepRunning()) {
+    send_header = {
+        .type = Ip::kIcmpEchoRequestType,
+        .un = {.echo = {.sequence = ++sequence}},
+    };
+    ssize_t wr = write(sock.get(), &send_buffer, sizeof(send_buffer));
+    CHECK_TRUE_ERRNO(wr >= 0);
+    FX_CHECK(static_cast<size_t>(wr) == sizeof(send_buffer))
+        << "wrote " << wr << " expected " << sizeof(send_buffer);
+
+    ssize_t rd = read(sock.get(), &recv_buffer, sizeof(recv_buffer));
+    CHECK_TRUE_ERRNO(rd >= 0);
+    FX_CHECK(static_cast<size_t>(rd) == sizeof(recv_buffer))
+        << "read " << rd << " expected " << sizeof(recv_buffer);
+    const icmphdr& header = recv_buffer.icmp;
+    FX_CHECK(header.type == Ip::kIcmpEchoReplyType)
+        << "received header type " << header.type << ", expected echo response "
+        << Ip::kIcmpEchoReplyType;
+    FX_CHECK(header.un.echo.sequence == sequence)
+        << "received sequence " << header.un.echo.sequence << ", expected sequence " << sequence;
+  }
+
+  return true;
+}
+
 void RegisterTests() {
   constexpr char kTestNameFmt[] = "WriteRead/%s/%s/%ld%s";
   enum class Transport { kUdp, kTcp };
   enum class Network { kIpv4, kIpv6 };
 
-  auto get_test_name = [&kTestNameFmt](Transport transport, Network network,
-                                       size_t bytes) -> std::string {
+  auto network_to_string = [](Network network) {
+    switch (network) {
+      case Network::kIpv4:
+        return "IPv4";
+      case Network::kIpv6:
+        return "IPv6";
+    }
+  };
+
+  auto get_test_name = [&kTestNameFmt, &network_to_string](Transport transport, Network network,
+                                                           size_t bytes) -> std::string {
     const char* unit = "B";
     if (bytes >= 1024) {
       bytes /= 1024;
@@ -188,14 +252,7 @@ void RegisterTests() {
           return "TCP";
       }
     }();
-    const char* network_name = [network]() {
-      switch (network) {
-        case Network::kIpv4:
-          return "IPv4";
-        case Network::kIpv6:
-          return "IPv6";
-      }
-    }();
+    const char* network_name = network_to_string(network);
 
     return fxl::StringPrintf(kTestNameFmt, transport_name, network_name, bytes, unit);
   };
@@ -219,7 +276,16 @@ void RegisterTests() {
     perftest::RegisterTest(get_test_name(Transport::kUdp, Network::kIpv6, message_size).c_str(),
                            UdpWriteRead<Ipv6>, message_size);
   }
+
+  constexpr char kPingTestNameFmt[] = "PingLatency/%s";
+  perftest::RegisterTest(
+      fxl::StringPrintf(kPingTestNameFmt, network_to_string(Network::kIpv4)).c_str(),
+      PingLatency<Ipv4>);
+  perftest::RegisterTest(
+      fxl::StringPrintf(kPingTestNameFmt, network_to_string(Network::kIpv6)).c_str(),
+      PingLatency<Ipv6>);
 }
+
 PERFTEST_CTOR(RegisterTests);
 }  // namespace
 
