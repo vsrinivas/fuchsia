@@ -30,6 +30,11 @@
     ],
     expose: [
         {
+            directory: "hub",
+            from: "framework",
+            rights: [ "r*" ],
+        },
+        {
             protocol: "fuchsia.sys2.Realm",
             from: "framework",
         },

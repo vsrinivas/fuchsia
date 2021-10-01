@@ -1,13 +1,13 @@
-// Copyright 2021 The Fuchsia Authors. All rights reserved.
-// Use of this source code is governed by a BSD-style license that can be
-// found in the LICENSE file.
 {
     include: [
+        "//src/sys/test_runners/stress_test/default.shard.cml",
         "syslog/client.shard.cml",
-        "//src/sys/test_runners/rust/default.shard.cml",
     ],
     program: {
-        binary: "bin/stressor",
+        actor_url: "fuchsia-pkg://fuchsia.com/component-manager-stress-tests-alt#meta/actor.cm",
+        num_instances: "20",
+        action_timeout: "5 * 60", // Action Timeout: 5 minutes
+        test_duration: "60 * 60", // Test Duration: 1 hour
     },
     children: [
         {
@@ -20,15 +20,13 @@
             startup: "eager",
         },
     ],
-    use: [
+    offer: [
         {
             directory: "hub",
-            from: "framework",
+            from: "#dynamic_children_root",
+            to: "#actors",
             rights: [ "r*" ],
-            path: "/hub",
         },
-    ],
-    offer: [
         {
             protocol: "fidl.examples.routing.echo.Echo",
             from: "#unreliable_echo_server",
@@ -38,15 +36,9 @@
             protocol: "fuchsia.logger.LogSink",
             from: "parent",
             to: [
+                "#actors",
                 "#dynamic_children_root",
-                "#unreliable_echo_server",
             ],
-        },
-    ],
-    expose: [
-        {
-            protocol: "fuchsia.sys2.Realm",
-            from: "framework",
         },
     ],
 }

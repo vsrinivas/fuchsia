@@ -1,0 +1,18 @@
+{
+    include: [
+        "//src/sys/test_runners/stress_test/actor/default.shard.cml",
+        "syslog/client.shard.cml",
+    ],
+    program: {
+        runner: "elf",
+        binary: "bin/cm_actor",
+    },
+    use: [
+        {
+            directory: "hub",
+            from: "parent",
+            rights: [ "r*" ],
+            path: "/hub",
+        },
+    ],
+}

@@ -9,7 +9,7 @@ use {
     fuchsia_component::client::connect_to_protocol_at_dir_root,
     fuchsia_zircon::Status,
     futures::future::BoxFuture,
-    io_util::{directory::*, node::OpenError},
+    io_util::node::OpenError,
     log::debug,
     rand::{prelude::SliceRandom, rngs::SmallRng, Rng},
     std::path::Path,
@@ -124,7 +124,7 @@ impl Hub {
     }
 
     /// Delete the given child component.
-    pub async fn purge_child(&self, child_name: impl ToString) -> Result<()> {
+    pub async fn delete_child(&self, child_name: impl ToString) -> Result<()> {
         let mut child_ref = fsys::ChildRef {
             name: child_name.to_string(),
             collection: Some(COLLECTION_NAME.to_string()),
@@ -147,38 +147,52 @@ impl Hub {
     }
 
     /// Traverse the topology and at a random position, perform a random mutation to the tree.
-    pub fn traverse_and_mutate<'a>(&'a self, rng: &'a mut SmallRng) -> BoxFuture<'a, Result<()>> {
+    pub fn traverse_and_delete<'a>(&'a self, mut rng: SmallRng) -> BoxFuture<'a, Result<()>> {
         Box::pin(async move {
             let child_names = self.children().await?;
 
             if child_names.is_empty() {
-                // This component does not have children.
-                // Traversal is not possible
-                // Deletion is not possible
-                // Create a child
-                self.add_child(rng).await.context("Could not create first child")?;
-                return Ok(());
+                // No children. Nothing to do.
+                Ok(())
             } else if rng.gen_bool(0.85) {
                 // Bias towards traversal. This encourages deeper trees.
                 // Pick a random child and traverse
-                let child_name = child_names.choose(rng).unwrap();
+                let child_name = child_names.choose(&mut rng).unwrap();
                 let child = self
                     .child_hub(child_name)
                     .await
                     .context("Could not open child hub for traversal")?;
-                child.traverse_and_mutate(rng).await
-            } else if rng.gen_bool(0.5) {
+                child.traverse_and_delete(rng).await
+            } else {
                 // Pick a random child and delete it
-                let child_name = child_names.choose(rng).unwrap();
+                let child_name = child_names.choose(&mut rng).unwrap();
 
                 // Remove collection name from child name
                 let prefix = format!("{}:", COLLECTION_NAME);
                 let child_name = child_name.strip_prefix(&prefix).unwrap();
 
-                self.purge_child(child_name).await.context("Could not delete random child")
+                self.delete_child(child_name).await
+            }
+        })
+    }
+
+    /// Traverse the topology and at a random position, perform a random mutation to the tree.
+    pub fn traverse_and_add<'a>(&'a self, mut rng: SmallRng) -> BoxFuture<'a, Result<()>> {
+        Box::pin(async move {
+            let child_names = self.children().await?;
+
+            if child_names.is_empty() || rng.gen_bool(0.15) {
+                // Create a child at this position in the tree
+                self.add_child(&mut rng).await
             } else {
-                // Create a child at the current depth
-                self.add_child(rng).await.context("Could not create additional children")
+                // Bias towards traversal. This encourages deeper trees.
+                // Pick a random child and traverse
+                let child_name = child_names.choose(&mut rng).unwrap();
+                let child = self
+                    .child_hub(child_name)
+                    .await
+                    .context("Could not open child hub for traversal")?;
+                child.traverse_and_add(rng).await
             }
         })
     }
@@ -249,12 +263,5 @@ impl Directory {
                 panic!("Unexpected error reading dirents: {}", e);
             }
         }
-    }
-}
-
-impl Clone for Directory {
-    fn clone(&self) -> Self {
-        let new_proxy = clone_no_describe(&self.proxy, Some(fio::CLONE_FLAG_SAME_RIGHTS)).unwrap();
-        Self { proxy: new_proxy }
     }
 }
