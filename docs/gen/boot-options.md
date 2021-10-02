@@ -499,7 +499,7 @@ reduce memory usage and prevent out of memory scenarios, but removes some
 timing predictability from system behavior.
 
 ### kernel.page-scanner.discardable-evictions-percent=\<uint32_t>
-**Default:** `0x0`
+**Default:** `0x14`
 
 Percentage of page evictions, that should be satisfied from
 discardable VMOs, as opposed to pager-backed VMOs. For example, if this value

@@ -229,7 +229,11 @@ Evictor::EvictedPageCounts Evictor::EvictUntilTargetsMet(uint64_t min_pages_to_e
 
     // Compute the desired number of discardable pages to free (vs pager-backed).
     uint64_t pages_to_free_discardable = 0;
-    {
+    if (level == EvictionLevel::IncludeNewest) {
+      // If we're including newest pages too, first try to reclaim as much from discardable VMOs as
+      // possible.
+      pages_to_free_discardable = pages_to_free;
+    } else {
       Guard<SpinLock, IrqSave> guard{&lock_};
       DEBUG_ASSERT(discardable_evictions_percent_ <= 100);
       pages_to_free_discardable = pages_to_free * discardable_evictions_percent_ / 100;

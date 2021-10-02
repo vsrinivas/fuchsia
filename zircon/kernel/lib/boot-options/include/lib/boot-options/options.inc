@@ -473,7 +473,7 @@ timing predictability from system behavior.
 )""")
 
 DEFINE_OPTION("kernel.page-scanner.discardable-evictions-percent", uint32_t,
-              page_scanner_discardable_evictions_percent, {0}, R"""(
+              page_scanner_discardable_evictions_percent, {20}, R"""(
 Percentage of page evictions, that should be satisfied from
 discardable VMOs, as opposed to pager-backed VMOs. For example, if this value
 is set to `X` and the kernel needs to reclaim `N` pages to relieve memory
