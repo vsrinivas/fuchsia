@@ -6,6 +6,8 @@
 #define SRC_GRAPHICS_DISPLAY_DRIVERS_INTEL_I915_GTT_H_
 
 #include <fuchsia/hardware/display/controller/c/banjo.h>
+#include <lib/device-protocol/pci.h>
+#include <lib/mmio/mmio.h>
 #include <lib/zx/bti.h>
 #include <lib/zx/vmo.h>
 
@@ -17,12 +19,14 @@
 
 namespace i915 {
 
-class Controller;
+// The offset into the MMIO space (at BAR 0) where the GTT is stored.
+constexpr uint32_t GTT_BASE_OFFSET = 0x800000;
+
 class Gtt;
 
 class GttRegion {
  public:
-  explicit GttRegion(Gtt* gtt);
+  GttRegion(Gtt* gtt, RegionAllocator::Region::UPtr region);
   ~GttRegion();
 
   void SetRotation(uint32_t rotation, const image_t& image);
@@ -45,16 +49,20 @@ class GttRegion {
   // closed.
   zx_handle_t vmo_ = ZX_HANDLE_INVALID;
 
-  bool is_rotated_;
-
-  friend class Gtt;
+  bool is_rotated_ = false;
 };
 
 class Gtt {
  public:
   Gtt();
   ~Gtt();
-  zx_status_t Init(Controller* controller, uint32_t fb_offset);
+
+  // Initialize the GTT using the given parameters.
+  //
+  // |pci|: The PCI protocol implementation
+  // |buffer|: The MMIO region that stores the GTT. The contents of the GTT must start at offset 0.
+  // |fb_offset|: The offset to the end of the bootloader framebuffer in GTT-mapped memory.
+  zx_status_t Init(const pci_protocol_t* pci, ddk::MmioBuffer buffer, uint32_t fb_offset);
   zx_status_t AllocRegion(uint32_t length, uint32_t align_pow2,
                           std::unique_ptr<GttRegion>* region_out);
   void SetupForMexec(uintptr_t stolen_fb, uint32_t length);
@@ -62,7 +70,9 @@ class Gtt {
   uint64_t size() const { return gfx_mem_size_; }
 
  private:
-  Controller* controller_;
+  friend class GttRegion;
+
+  std::optional<ddk::MmioBuffer> buffer_;
 
   uint64_t gfx_mem_size_;
   RegionAllocator region_allocator_;
@@ -71,8 +81,6 @@ class Gtt {
   zx::pmt scratch_buffer_pmt_;
   zx_paddr_t scratch_buffer_paddr_ = 0;
   uint64_t min_contiguity_;
-
-  friend class GttRegion;
 
   DISALLOW_COPY_ASSIGN_AND_MOVE(Gtt);
 };

@@ -5,7 +5,7 @@
 #include "gtt.h"
 
 #include <fuchsia/hardware/pci/c/banjo.h>
-#include <lib/device-protocol/pci.h>
+#include <lib/mmio/mmio.h>
 #include <lib/zircon-internal/align.h>
 #include <stdlib.h>
 
@@ -16,7 +16,6 @@
 
 #include <fbl/algorithm.h>
 
-#include "intel-i915.h"
 #include "macros.h"
 #include "registers.h"
 #include "tiling.h"
@@ -33,8 +32,7 @@ inline uint64_t gen_pte_encode(uint64_t bus_addr) {
 }
 
 inline uint32_t get_pte_offset(uint32_t idx) {
-  constexpr uint32_t GTT_BASE_OFFSET = 0x800000;
-  return static_cast<uint32_t>(GTT_BASE_OFFSET + (idx * sizeof(uint64_t)));
+  return static_cast<uint32_t>(idx * sizeof(uint64_t));
 }
 
 }  // namespace
@@ -50,10 +48,11 @@ Gtt::~Gtt() {
   }
 }
 
-zx_status_t Gtt::Init(Controller* controller, uint32_t fb_offset) {
-  controller_ = controller;
+zx_status_t Gtt::Init(const pci_protocol_t* pci, ddk::MmioBuffer buffer, uint32_t fb_offset) {
+  ZX_DEBUG_ASSERT(pci);
+  buffer_ = std::move(buffer);
 
-  zx_status_t status = pci_get_bti(controller->pci(), 0, bti_.reset_and_get_address());
+  zx_status_t status = pci_get_bti(pci, 0, bti_.reset_and_get_address());
   if (status != ZX_OK) {
     zxlogf(ERROR, "Failed to get bti (%d)", status);
     return status;
@@ -69,14 +68,26 @@ zx_status_t Gtt::Init(Controller* controller, uint32_t fb_offset) {
 
   // Calculate the size of the gtt.
   auto gmch_gfx_ctrl = registers::GmchGfxControl::Get().FromValue(0);
-  status =
-      pci_config_read16(controller_->pci(), gmch_gfx_ctrl.kAddr, gmch_gfx_ctrl.reg_value_ptr());
+  status = pci_config_read16(pci, gmch_gfx_ctrl.kAddr, gmch_gfx_ctrl.reg_value_ptr());
   if (status != ZX_OK) {
     zxlogf(ERROR, "Failed to read GfxControl");
     return status;
   }
   uint32_t gtt_size = gmch_gfx_ctrl.gtt_mappable_mem_size();
   zxlogf(TRACE, "Gtt::Init gtt_size (for page tables) 0x%x", gtt_size);
+  if (gtt_size == 0) {
+    // IHD-OS-KBL-Vol 5-1.17 (intel-gfx-prm-osrc-kbl-vol05-memory_views.pdf p.35) lists that the GPU
+    // supports a global GTT and the size can be either 128KB, 256KB, or 512KB, which further map to
+    // aperture sizes of 128MB, 256MB, and 512MB). Here we are treating a 0-size aperture as
+    // illegal.
+    //
+    // TODO(armansito): The "GMCH Graphics Control" (GGC_0_0_0_PCI) register documentation says that
+    // the |gtt_size| value here actually corresponds to "the amount of main memory that is
+    // pre-allocated to supported the Internal GTT", which comes in sizes of 2MB, 4MB, and 8MB. Is
+    // it an error if the BIOS does not pre-allocate this memory?
+    zxlogf(ERROR, "The BIOS pre-allocated memory size for the internal GTT is 0! Aborting.");
+    return ZX_ERR_INTERNAL;
+  }
 
   status = zx::vmo::create(PAGE_SIZE, 0, &scratch_buffer_);
   if (status != ZX_OK) {
@@ -94,15 +105,15 @@ zx_status_t Gtt::Init(Controller* controller, uint32_t fb_offset) {
   scratch_buffer_.op_range(ZX_VMO_OP_CACHE_CLEAN, 0, PAGE_SIZE, nullptr, 0);
 
   // Populate the gtt with the scratch buffer. If we've been given an offset for the bootloader
-  // framebuffer, then leave the range up to |fb_offset| unchanged, as the bootloader framebuffer
+  // framebuffer, then leave the range up to |fb_offset| unchanged as the bootloader framebuffer
   // gets allocated out of stolen memory.
   uint32_t offset = ZX_ROUNDUP(fb_offset, PAGE_SIZE);
   uint64_t pte = gen_pte_encode(scratch_buffer_paddr_);
   unsigned i;
   for (i = offset / PAGE_SIZE; i < gtt_size / sizeof(uint64_t); i++) {
-    controller_->mmio_space()->Write<uint64_t>(pte, get_pte_offset(i));
+    buffer_->Write<uint64_t>(pte, get_pte_offset(i));
   }
-  controller_->mmio_space()->Read<uint32_t>(get_pte_offset(i - 1));  // Posting read
+  buffer_->Read<uint32_t>(get_pte_offset(i - 1));  // Posting read
 
   gfx_mem_size_ = gtt_size / sizeof(uint64_t) * PAGE_SIZE;
   return region_allocator_.AddRegion({.base = offset, .size = gfx_mem_size_ - offset});
@@ -111,14 +122,17 @@ zx_status_t Gtt::Init(Controller* controller, uint32_t fb_offset) {
 zx_status_t Gtt::AllocRegion(uint32_t length, uint32_t align_pow2,
                              std::unique_ptr<GttRegion>* region_out) {
   uint32_t region_length = ZX_ROUNDUP(length, PAGE_SIZE);
+  RegionAllocator::Region::UPtr region;
+  if (region_allocator_.GetRegion(region_length, align_pow2, region) != ZX_OK) {
+    return ZX_ERR_NO_RESOURCES;
+  }
+
   fbl::AllocChecker ac;
-  auto r = fbl::make_unique_checked<GttRegion>(&ac, this);
+  auto r = fbl::make_unique_checked<GttRegion>(&ac, this, std::move(region));
   if (!ac.check()) {
     return ZX_ERR_NO_MEMORY;
   }
-  if (region_allocator_.GetRegion(region_length, align_pow2, r->region_) != ZX_OK) {
-    return ZX_ERR_NO_RESOURCES;
-  }
+
   *region_out = std::move(r);
   return ZX_OK;
 }
@@ -128,13 +142,13 @@ void Gtt::SetupForMexec(uintptr_t stolen_fb, uint32_t length) {
   unsigned pte_idx = 0;
   for (unsigned i = 0; i < ZX_ROUNDUP(length, PAGE_SIZE) / PAGE_SIZE; i++, stolen_fb += PAGE_SIZE) {
     uint64_t pte = gen_pte_encode(stolen_fb);
-    controller_->mmio_space()->Write<uint64_t>(pte, get_pte_offset(pte_idx++));
+    buffer_->Write<uint64_t>(pte, get_pte_offset(pte_idx++));
   }
-  controller_->mmio_space()->Read<uint32_t>(get_pte_offset(pte_idx - 1));  // Posting read
+  buffer_->Read<uint32_t>(get_pte_offset(pte_idx - 1));  // Posting read
 }
 
-GttRegion::GttRegion(Gtt* gtt) : gtt_(gtt), is_rotated_(false) {}
-
+GttRegion::GttRegion(Gtt* gtt, RegionAllocator::Region::UPtr region)
+    : region_(std::move(region)), gtt_(gtt) {}
 GttRegion::~GttRegion() { ClearRegion(); }
 
 zx_status_t GttRegion::PopulateRegion(zx_handle_t vmo, uint64_t page_offset, uint64_t length,
@@ -184,12 +198,12 @@ zx_status_t GttRegion::PopulateRegion(zx_handle_t vmo, uint64_t page_offset, uin
     for (unsigned i = 0; i < actual_entries; i++) {
       for (unsigned j = 0; j < gtt_->min_contiguity_ / PAGE_SIZE && pte_idx < pte_idx_end; j++) {
         uint64_t pte = gen_pte_encode(paddrs[i] + j * PAGE_SIZE);
-        gtt_->controller_->mmio_space()->Write<uint64_t>(pte, get_pte_offset(pte_idx++));
+        gtt_->buffer_->Write<uint64_t>(pte, get_pte_offset(pte_idx++));
       }
     }
   }
 
-  gtt_->controller_->mmio_space()->Read<uint32_t>(get_pte_offset(pte_idx - 1));  // Posting read
+  gtt_->buffer_->Read<uint32_t>(get_pte_offset(pte_idx - 1));  // Posting read
   return ZX_OK;
 }
 
@@ -200,14 +214,16 @@ void GttRegion::ClearRegion() {
 
   uint32_t pte_idx = static_cast<uint32_t>(region_->base / PAGE_SIZE);
   uint64_t pte = gen_pte_encode(gtt_->scratch_buffer_paddr_);
-  auto mmio_space = gtt_->controller_->mmio_space();
+  auto mmio_space = &gtt_->buffer_.value();
 
   for (unsigned i = 0; i < mapped_end_ / PAGE_SIZE; i++) {
     uint32_t pte_offset = get_pte_offset(pte_idx++);
     mmio_space->Write<uint64_t>(pte, pte_offset);
   }
 
-  mmio_space->Read<uint32_t>(get_pte_offset(pte_idx - 1));  // Posting read
+  if (mapped_end_) {
+    mmio_space->Read<uint32_t>(get_pte_offset(pte_idx - 1));  // Posting read
+  }
 
   for (zx::pmt& pmt : pmts_) {
     if (pmt.unpin() != ZX_OK) {
@@ -240,7 +256,7 @@ void GttRegion::SetRotation(uint32_t rotation, const image_t& image) {
   uint32_t width = width_in_tiles(image.type, image.width, image.pixel_format);
   uint32_t height = height_in_tiles(image.type, image.height, image.pixel_format);
 
-  auto mmio_space = gtt_->controller_->mmio_space();
+  auto mmio_space = &gtt_->buffer_.value();
   uint32_t pte_offset = static_cast<uint32_t>(base() / PAGE_SIZE);
   for (uint32_t i = 0; i < size() / PAGE_SIZE; i++) {
     uint64_t entry = mmio_space->Read<uint64_t>(get_pte_offset(i + pte_offset));

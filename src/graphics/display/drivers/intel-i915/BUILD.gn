@@ -75,6 +75,7 @@ test("intel-i915-test") {
     "//build/config:all_source",
   ]
   sources = [
+    "gtt-unittest.cc",
     "intel-i915-test-interrupts.cc",
     "intel-i915-test.cc",
   ]

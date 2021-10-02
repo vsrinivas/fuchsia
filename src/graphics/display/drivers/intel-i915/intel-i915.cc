@@ -2244,7 +2244,8 @@ zx_status_t Controller::Bind(std::unique_ptr<i915::Controller>* controller_ptr) 
     }
 
     fbl::AutoLock lock(&gtt_lock_);
-    if ((status = gtt_.Init(this, fb.value().size)) != ZX_OK) {
+    status = gtt_.Init(pci(), mmio_space()->View(GTT_BASE_OFFSET), fb.value().size);
+    if (status != ZX_OK) {
       zxlogf(ERROR, "Failed to init gtt (%s)", zx_status_get_string(status));
       return status;
     }
