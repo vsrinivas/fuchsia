@@ -38,6 +38,11 @@ driver_module("intel-rtc-driver") {
 
   # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
   configs += [ "//build/config:Wno-conversion" ]
+
+  # TODO(fxbug.dev/85473): This target uses |fidl::WireTryDispatch| which is deprecated.
+  # Please remove ad-hoc composition of FIDL protocols and migrate to |fidl::WireDispatch|.
+  # See linked bug for details.
+  configs += [ "//build/cpp:fidl-llcpp-deprecated-wire-try-dispatch" ]
 }
 
 fuchsia_driver_component("intel-rtc") {
@@ -61,6 +66,11 @@ test("intel-rtc-test-bin") {
 
   # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
   configs += [ "//build/config:Wno-conversion" ]
+
+  # TODO(fxbug.dev/85473): This target uses |fidl::WireTryDispatch| which is deprecated.
+  # Please remove ad-hoc composition of FIDL protocols and migrate to |fidl::WireDispatch|.
+  # See linked bug for details.
+  configs += [ "//build/cpp:fidl-llcpp-deprecated-wire-try-dispatch" ]
 }
 
 fuchsia_unittest_package("intel-rtc-test") {

@@ -6,11 +6,14 @@
 #define LIB_FIDL_LLCPP_WIRE_MESSAGING_H_
 
 #include <lib/fit/function.h>
+
 #ifdef __Fuchsia__
 #include <lib/fidl/llcpp/client_end.h>
 #include <lib/fidl/llcpp/message.h>
+#include <lib/fidl/llcpp/soft_migration.h>
 #include <lib/fidl/llcpp/transaction.h>
 #include <zircon/fidl.h>
+
 #endif  // __Fuchsia__
 
 namespace fidl {
@@ -163,6 +166,7 @@ void WireDispatch(fidl::WireServer<FidlProtocol>* impl, fidl::IncomingMessage&& 
 template <typename FidlProtocol>
 fidl::DispatchResult WireTryDispatch(fidl::WireServer<FidlProtocol>* impl,
                                      fidl::IncomingMessage& msg, fidl::Transaction* txn) {
+  FIDL_EMIT_STATIC_ASSERT_ERROR_FOR_TRY_DISPATCH(FidlProtocol);
   return fidl::internal::WireServerDispatcher<FidlProtocol>::TryDispatch(impl, msg, txn);
 }
 #endif  // __Fuchsia__

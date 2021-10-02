@@ -747,21 +747,12 @@ Refer to the [example LLCPP server][llcpp-server-example] for how to bind and
 set up a server implementation.
 
 The LLCPP bindings also provide functions for manually dispatching a message
-given an implementation, `fidl::WireTryDispatch<TicTacToe>` and
-`fidl::WireDispatch<TicTacToe>`:
+given an implementation, `fidl::WireDispatch<TicTacToe>`:
 
-* `fidl::DispatchResult fidl::WireTryDispatch<TicTacToe>(
-  fidl::WireServer<TicTacToe>* impl, fidl::IncomingMessage& msg,
-  ::fidl::Transaction* txn)`: Attempts to dispatch the incoming message. If
-  there is no matching handler, it returns `fidl::DispatchResult::kNotFound`,
-  leaving the message and transaction intact. In all other cases, it consumes
-  the message and returns `fidl::DispatchResult::kFound`.
-* `fidl::DispatchResult fidl::WireDispatch<TicTacToe>(
-  fidl::WireServer<TicTacToe>* impl, fidl::IncomingMessage&& msg,
-  ::fidl::Transaction* txn)`: Dispatches the incoming message. If there is no
-  matching handler, it closes all handles in the message and closes the channel
-  with a `ZX_ERR_NOT_SUPPORTED` epitaph, and returns
-  `fidl::DispatchResult::kNotFound`.
+* `void fidl::WireDispatch<TicTacToe>(fidl::WireServer<TicTacToe>* impl,
+  fidl::IncomingMessage&& msg, ::fidl::Transaction* txn)`: Dispatches the
+  incoming message. If there is no matching handler, it closes all handles in
+  the message and notifies `txn` of an error.
 
 #### Requests {#server-requests}
 

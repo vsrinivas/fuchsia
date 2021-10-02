@@ -55,6 +55,11 @@ test("cpuctl-test-bin") {
   # Please migrate to typed channel APIs (fidl::ClientEnd<T>, fidl::ServerEnd<T>).
   # See linked bug for details.
   configs += [ "//build/cpp:fidl-llcpp-deprecated-raw-channels" ]
+
+  # TODO(fxbug.dev/85473): This target uses |fidl::WireTryDispatch| which is deprecated.
+  # Please remove ad-hoc composition of FIDL protocols and migrate to |fidl::WireDispatch|.
+  # See linked bug for details.
+  configs += [ "//build/cpp:fidl-llcpp-deprecated-wire-try-dispatch" ]
 }
 
 fuchsia_unittest_package("cpuctl-test") {

@@ -263,3 +263,28 @@ config(
     "fidl-llcpp-deprecated-raw-channels-reserved-for-llcpp-generated-code-only") {
   cflags_cc = [ "-DFIDL_LLCPP_ALLOW_DEPRECATED_RAW_CHANNELS" ]
 }
+
+# TODO(fxbug.dev/85473): Delete this config after all user code
+# migrates off |fidl::WireTryDispatch|.
+config("fidl-llcpp-deprecated-wire-try-dispatch") {
+  cflags_cc = [ "-DFIDL_LLCPP_ALLOW_DEPRECATED_TRY_DISPATCH" ]
+
+  # Please do not add to this list. Refer to fxbug.dev/85473 to see
+  # how a target could be migrated to |fidl::WireDispatch|.
+  #
+  # To regenerate this list, run
+  #
+  #   scripts/gn/trim_visibility.py --target="//build/cpp:fidl-llcpp-deprecated-wire-try-dispatch"
+  #
+  # and replace the contents of `visibility` with the script output.
+  visibility = [
+    "//src/devices/bin/driver_host:common",
+    "//src/devices/cpu/bin/cpuctl:cpuctl-test-bin",
+    "//src/devices/rtc/drivers/intel-rtc:intel-rtc-driver",
+    "//src/devices/rtc/drivers/intel-rtc:intel-rtc-test-bin",
+    "//src/lib/storage/vfs/cpp",
+    "//src/ui/backlight/drivers/ti-lp8556:ti-lp8556-driver",
+    "//src/ui/backlight/drivers/ti-lp8556:ti-lp8556-test",
+    "//zircon/system/ulib/block-client/test:block-client-unit-test",
+  ]
+}
