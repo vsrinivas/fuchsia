@@ -5,9 +5,14 @@
 import("//build/components.gni")
 import("//build/rust/rustc_test.gni")
 
+group("session_manager") {
+  testonly = true
+  deps = [ ":package" ]
+}
+
 rustc_test("test") {
-  name = "session_manager_integration_tests"
-  edition = "2018"
+  output_name = "session_manager_integration_test"
+
   source_root = "src/main.rs"
 
   deps = [
@@ -23,13 +28,15 @@ rustc_test("test") {
   sources = [ "src/main.rs" ]
 }
 
-fuchsia_component("session_manager_integration_tests_component") {
+fuchsia_component("component") {
   testonly = true
-  manifest = "meta/session_manager_integration_tests.cml"
+  component_name = "session-manager-integration-test"
+  manifest = "meta/session-manager-integration-test.cml"
   deps = [ ":test" ]
 }
 
-fuchsia_test_package("session_manager_integration_tests") {
-  test_components = [ ":session_manager_integration_tests_component" ]
-  deps = [ "//src/session/examples/graphical_session" ]
+fuchsia_test_package("package") {
+  package_name = "session-manager-integration-tests"
+  test_components = [ ":component" ]
+  deps = [ "//src/session/examples/graphical-session:component" ]
 }

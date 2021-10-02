@@ -9,8 +9,7 @@ mod tests {
         session_manager_lib,
     };
 
-    const GRAPHICAL_SESSION_URL: &'static str =
-        "fuchsia-pkg://fuchsia.com/graphical_session#meta/graphical_session.cm";
+    const GRAPHICAL_SESSION_URL: &'static str = "#meta/graphical-session.cm";
 
     /// Passes if the root session launches successfully. This tells us:
     ///     - session_manager is able to use the Realm service to launch a component.

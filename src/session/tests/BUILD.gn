@@ -5,10 +5,5 @@
 group("all") {
   testonly = true
 
-  deps = [
-    # This is required by the session_manager_integration_tests but packages
-    # don't support depending on other packages.
-    "//src/session/examples/graphical_session",
-    "//src/session/tests/session_manager:session_manager_integration_tests",
-  ]
+  deps = [ "session_manager" ]
 }

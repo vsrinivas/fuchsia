@@ -1,25 +1,26 @@
-# session_manager
+# `session_manager` integration tests
 
-Reviewed on: 2020-02-04
+Reviewed on: 2021-09-22
+
 These are integration tests for [session_manager](//src/session/bin/session_manager).
 
 ## Add Integration Tests to Build
 
 These tests can be added to build by adding `--with //src/session/tests` to your existing `fx
-set` command so that it looks like:
-```
-fx set <PRODUCT>.<BOARD> --with-base=//src/session,//src/session/bin/session_manager:session_manager.config --with //src/session:tests
-```
-To see a list of possible products, run: `fx list-products`
+set` command:
 
-To see a list of possible boards, run: `fx list-boards`
+```
+fx set <PRODUCT>.<BOARD> --with //src/session --with //src/session:tests
+```
 
 ## Run Tests
 
-`session_manager` integration tests are available in the `session_manager_integration_tests`
+`session-manager` integration tests are available in the
+`session-manager-integration-tests`
 package.
+
 ```
-$ fx test session_manager_integration_tests
+fx test session-manager-integration-tests
 ```
 
 ## Source layout

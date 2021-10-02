@@ -2,9 +2,9 @@
     include: [ "syslog/client.shard.cml" ],
     program: {
         runner: "elf",
-        binary: "bin/element_proposer",
+        binary: "bin/graphical-session",
     },
     use: [
-        { protocol: "fuchsia.session.ElementManager" },
+        { protocol: "fuchsia.ui.scenic.Scenic" },
     ],
 }

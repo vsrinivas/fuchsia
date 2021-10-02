@@ -4,20 +4,15 @@
 
 group("all") {
   deps = [
-    "//src/session/examples/elements",
-    "//src/session/examples/graphical_session:all",
-    "//src/session/examples/input_session:all",
-    "//src/session/examples/scene_manager_session:all",
+    "//src/session/examples/graphical-session",
+    "//src/session/examples/hello-world-session",
   ]
 }
 
-# Placeholder for adding unit tests for example sessions and related components.
 group("tests") {
   testonly = true
   deps = [
-    "//src/session/examples/elements:tests",
-    "//src/session/examples/graphical_session:tests",
-    "//src/session/examples/input_session:tests",
-    "//src/session/examples/scene_manager_session:tests",
+    "//src/session/examples/graphical-session:tests",
+    "//src/session/examples/hello-world-session:tests",
   ]
 }

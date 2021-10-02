@@ -14,14 +14,6 @@ import("//src/session/build/session_config.gni")
 
 # [END session_import]
 
-group("hello-world-session") {
-  testonly = true
-  deps = [
-    ":package",
-    ":tests",
-  ]
-}
-
 group("tests") {
   testonly = true
   deps = [ ":hello-world-session-unittests" ]
@@ -65,8 +57,7 @@ fuchsia_component("component") {
   deps = [ ":bin" ]
 }
 
-fuchsia_package("package") {
-  package_name = "hello-world-session"
+fuchsia_package("hello-world-session") {
   deps = [ ":component" ]
 }
 

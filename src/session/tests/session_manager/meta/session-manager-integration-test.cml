@@ -1,11 +1,10 @@
 {
     include: [
-        "//sdk/lib/inspect/client.shard.cml",
         "//src/sys/test_runners/rust/default.shard.cml",
         "syslog/client.shard.cml",
     ],
     program: {
-        binary: "bin/input_session_bin_test",
+        binary: "bin/session_manager_integration_test",
     },
     collections: [
         {
@@ -15,10 +14,8 @@
     ],
     use: [
         {
-            directory: "dev-input-report",
-            from: "parent",
-            rights: [ "r*" ],
-            path: "/dev/class/input-report",
+            protocol: "fuchsia.sys2.Realm",
+            from: "framework",
         },
     ],
 }
