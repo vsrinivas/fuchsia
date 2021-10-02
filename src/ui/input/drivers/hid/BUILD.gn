@@ -4,8 +4,7 @@
 
 import("//build/bind/bind.gni")
 import("//build/components.gni")
-import("//build/config/fuchsia/rules.gni")
-import("//build/drivers/fuchsia_driver_component.gni")
+import("//build/drivers.gni")
 import("//build/test.gni")
 
 driver_bind_rules("hid_bind") {
@@ -16,7 +15,7 @@ driver_bind_rules("hid_bind") {
   deps = [ "//src/devices/bind/fuchsia.hid" ]
 }
 
-driver_module("hid-driver") {
+fuchsia_driver("hid-driver") {
   output_name = "hid"
   configs += [
     "//build/config:all_source",

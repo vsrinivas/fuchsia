@@ -4,8 +4,7 @@
 
 import("//build/bind/bind.gni")
 import("//build/cipd.gni")
-import("//build/config/fuchsia/rules.gni")
-import("//build/drivers/fuchsia_driver_component.gni")
+import("//build/drivers.gni")
 
 if (internal_access) {
   config_tas2770 = "audio/config/tas2770/tas2770_config.h"
@@ -301,7 +300,7 @@ driver_bind_rules("wifi-bind") {
   ]
 }
 
-driver_module("astro-driver") {
+fuchsia_driver("astro-driver") {
   output_name = "astro"
   configs += [
     "//build/config:all_source",

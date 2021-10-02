@@ -16,7 +16,7 @@
 #    and generated files.
 
 import("//build/compiled_action.gni")
-import("//build/config/fuchsia/rules.gni")
+import("//build/drivers.gni")
 import("//build/rust/rustc_library.gni")
 
 # Generate the rust sources using the code generator

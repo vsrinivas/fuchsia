@@ -4,8 +4,7 @@
 
 import("//build/bind/bind.gni")
 import("//build/components.gni")
-import("//build/config/fuchsia/rules.gni")
-import("//build/drivers/fuchsia_driver_component.gni")
+import("//build/drivers.gni")
 import("//src/lib/isolated_devmgr/isolated_devmgr.gni")
 
 source_set("src") {
@@ -172,7 +171,7 @@ driver_bind_rules("crash-device-bind") {
 }
 
 # A device that causes a crash when it's operated on
-driver_module("crash-device-driver") {
+fuchsia_driver("crash-device-driver") {
   output_name = "crash-device"
   sources = [ "crash_device.cc" ]
   deps = [

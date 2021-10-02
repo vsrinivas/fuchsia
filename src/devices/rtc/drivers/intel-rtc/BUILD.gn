@@ -4,8 +4,7 @@
 
 import("//build/bind/bind.gni")
 import("//build/components.gni")
-import("//build/config/fuchsia/rules.gni")
-import("//build/drivers/fuchsia_driver_component.gni")
+import("//build/drivers.gni")
 import("//build/test.gni")
 
 assert(current_cpu == "x64")
@@ -31,7 +30,7 @@ common_deps = [
   "//zircon/public/lib/safemath",
 ]
 
-driver_module("intel-rtc-driver") {
+fuchsia_driver("intel-rtc-driver") {
   output_name = "intel-rtc"
   sources = [ "intel-rtc.cc" ]
   deps = common_deps

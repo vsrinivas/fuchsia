@@ -4,8 +4,7 @@
 
 import("//build/bind/bind.gni")
 import("//build/components.gni")
-import("//build/config/fuchsia/rules.gni")
-import("//build/drivers/fuchsia_driver_component.gni")
+import("//build/drivers.gni")
 import("//build/test.gni")
 
 driver_bind_rules("bt_transport_usb_bind") {
@@ -19,7 +18,7 @@ driver_bind_rules("bt_transport_usb_bind") {
   ]
 }
 
-driver_module("bt-transport-usb-driver") {
+fuchsia_driver("bt-transport-usb-driver") {
   output_name = "bt-transport-usb"
   configs += [
     "//build/config:all_source",

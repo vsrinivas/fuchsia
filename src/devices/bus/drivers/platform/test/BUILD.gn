@@ -3,8 +3,7 @@
 # found in the LICENSE file.
 
 import("//build/bind/bind.gni")
-import("//build/config/fuchsia/rules.gni")
-import("//build/drivers/fuchsia_driver_component.gni")
+import("//build/drivers.gni")
 import("//build/fidl/fidl.gni")
 import("//build/test.gni")
 import("//zircon/system/ulib/devmgr-integration-test/isolated_devmgr.gni")
@@ -40,7 +39,7 @@ driver_bind_rules("test-board-bind") {
   ]
 }
 
-driver_module("test-board-driver") {
+fuchsia_driver("test-board-driver") {
   output_name = "test-board"
   configs += [ "//build/config:all_source" ]
   sources = [
@@ -89,7 +88,7 @@ driver_bind_rules("test-gpio-bind") {
   ]
 }
 
-driver_module("test-gpio-driver") {
+fuchsia_driver("test-gpio-driver") {
   output_name = "test-gpio"
   configs += [ "//build/config:all_source" ]
   sources = [ "test/gpio.cc" ]
@@ -121,7 +120,7 @@ driver_bind_rules("test-power-bind") {
   ]
 }
 
-driver_module("test-power-driver") {
+fuchsia_driver("test-power-driver") {
   output_name = "test-power"
   configs += [ "//build/config:all_source" ]
   sources = [ "test/power.cc" ]
@@ -153,7 +152,7 @@ driver_bind_rules("test-goldfish-address-space-bind") {
   ]
 }
 
-driver_module("test-goldfish-address-space-driver") {
+fuchsia_driver("test-goldfish-address-space-driver") {
   output_name = "test-goldfish-address-space"
   configs += [ "//build/config:all_source" ]
   sources = [ "test/goldfish_address_space.cc" ]
@@ -184,7 +183,7 @@ driver_bind_rules("test-goldfish-pipe-bind") {
   ]
 }
 
-driver_module("test-goldfish-pipe-driver") {
+fuchsia_driver("test-goldfish-pipe-driver") {
   output_name = "test-goldfish-pipe"
   configs += [ "//build/config:all_source" ]
   sources = [ "test/goldfish_pipe.cc" ]
@@ -215,7 +214,7 @@ driver_bind_rules("test-goldfish-sync-bind") {
   ]
 }
 
-driver_module("test-goldfish-sync-driver") {
+fuchsia_driver("test-goldfish-sync-driver") {
   output_name = "test-goldfish-sync"
   configs += [ "//build/config:all_source" ]
   sources = [ "test/goldfish_sync.cc" ]
@@ -246,7 +245,7 @@ driver_bind_rules("test-clock-bind") {
   ]
 }
 
-driver_module("test-clock-driver") {
+fuchsia_driver("test-clock-driver") {
   output_name = "test-clock"
   configs += [ "//build/config:all_source" ]
   sources = [ "test/clock.cc" ]
@@ -278,7 +277,7 @@ driver_bind_rules("test-i2c-bind") {
   ]
 }
 
-driver_module("test-i2c-driver") {
+fuchsia_driver("test-i2c-driver") {
   output_name = "test-i2c"
   configs += [ "//build/config:all_source" ]
   sources = [ "test/i2c.cc" ]
@@ -310,7 +309,7 @@ driver_bind_rules("test-spi-bind") {
   ]
 }
 
-driver_module("test-spi-driver") {
+fuchsia_driver("test-spi-driver") {
   output_name = "test-spi"
   configs += [ "//build/config:all_source" ]
   sources = [ "test/spi.cc" ]
@@ -342,7 +341,7 @@ driver_bind_rules("test-pwm-bind") {
   ]
 }
 
-driver_module("test-pwm-driver") {
+fuchsia_driver("test-pwm-driver") {
   output_name = "test-pwm"
   configs += [ "//build/config:all_source" ]
   sources = [ "test/pwm.cc" ]
@@ -373,7 +372,7 @@ driver_bind_rules("test-rpmb-bind") {
   ]
 }
 
-driver_module("test-rpmb-driver") {
+fuchsia_driver("test-rpmb-driver") {
   output_name = "test-rpmb"
   configs += [ "//build/config:all_source" ]
   sources = [ "test/rpmb.cc" ]
@@ -414,7 +413,7 @@ driver_bind_rules("test-pci-bind") {
   ]
 }
 
-driver_module("test-pci-driver") {
+fuchsia_driver("test-pci-driver") {
   output_name = "test-pci"
   testonly = true
   configs += [ "//build/config:all_source" ]
@@ -442,7 +441,7 @@ fuchsia_driver_component("test-pci") {
   deps = [ ":test-pci-driver" ]
 }
 
-driver_module("test-vreg-driver") {
+fuchsia_driver("test-vreg-driver") {
   output_name = "test-vreg"
   configs += [ "//build/config:all_source" ]
   sources = [ "test/vreg.cc" ]
@@ -471,7 +470,7 @@ driver_bind_rules("test-composite-bind") {
   deps = [ "//src/devices/bind/test.platform" ]
 }
 
-driver_module("test-composite-driver") {
+fuchsia_driver("test-composite-driver") {
   output_name = "test-composite"
   configs += [ "//build/config:all_source" ]
   sources = [ "test/composite.c" ]
@@ -513,7 +512,7 @@ driver_bind_rules("test-child-2.proxy-bind") {
   disable_autobind = true
 }
 
-driver_module("test-child-2.proxy-driver") {
+fuchsia_driver("test-child-2.proxy-driver") {
   output_name = "test-child-2.proxy"
   configs += [ "//build/config:all_source" ]
   sources = [ "test/child-2.proxy.c" ]
@@ -543,7 +542,7 @@ foreach(driver, simple_drivers) {
     deps = [ "//src/devices/bind/test.platform" ]
   }
 
-  driver_module("test-$driver-driver") {
+  fuchsia_driver("test-$driver-driver") {
     output_name = "test-$driver"
     configs += [ "//build/config:all_source" ]
     sources = [ "test/$driver.c" ]
@@ -611,7 +610,7 @@ driver_bind_rules("test-bti-board-bind") {
   ]
 }
 
-driver_module("test-bti-board-driver") {
+fuchsia_driver("test-bti-board-driver") {
   output_name = "test-bti-board"
   configs += [ "//build/config:all_source" ]
   sources = [ "test-bti-board.cc" ]
@@ -638,7 +637,7 @@ driver_bind_rules("test-bti-bind") {
   header_output = "test-bti-bind.h"
   deps = [ "//src/devices/bind/test.platform" ]
 }
-driver_module("test-bti-driver") {
+fuchsia_driver("test-bti-driver") {
   output_name = "test-bti"
   configs += [ "//build/config:all_source" ]
   sources = [ "test-bti.cc" ]
@@ -691,7 +690,7 @@ driver_bind_rules("test-power-sensor-bind") {
   ]
 }
 
-driver_module("test-power-sensor-driver") {
+fuchsia_driver("test-power-sensor-driver") {
   output_name = "test-power-sensor"
   configs += [ "//build/config:all_source" ]
   sources = [ "test/power-sensor.cc" ]

@@ -3,8 +3,8 @@
 # found in the LICENSE file.
 
 import("//build/config.gni")
-import("//build/config/fuchsia/rules.gni")
 import("//build/dist/resource.gni")
+import("//build/drivers.gni")
 
 import("//src/connectivity/weave/weavestack/weavestack_package.gni")
 

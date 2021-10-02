@@ -4,8 +4,7 @@
 
 import("//build/bind/bind.gni")
 import("//build/components.gni")
-import("//build/config/fuchsia/rules.gni")
-import("//build/drivers/fuchsia_driver_component.gni")
+import("//build/drivers.gni")
 import("//build/test.gni")
 
 driver_bind_rules("ti_tas5782-bind") {
@@ -15,7 +14,7 @@ driver_bind_rules("ti_tas5782-bind") {
   deps = [ "//src/devices/bind/fuchsia.ti.platform" ]
 }
 
-driver_module("tas5782-driver") {
+fuchsia_driver("tas5782-driver") {
   output_name = "tas5782"
   configs += [
     "//build/config:all_source",

@@ -4,8 +4,7 @@
 
 import("//build/bind/bind.gni")
 import("//build/components.gni")
-import("//build/config/fuchsia/rules.gni")
-import("//build/drivers/fuchsia_driver_component.gni")
+import("//build/drivers.gni")
 import("//build/fidl/fidl.gni")
 import("//build/test.gni")
 
@@ -86,7 +85,7 @@ source_set("sysmem_common_srcs") {
   configs += [ "//build/config:Wno-conversion" ]
 }
 
-driver_module("sysmem-driver") {
+fuchsia_driver("sysmem-driver") {
   output_name = "sysmem"
   configs += [
     "//build/config:all_source",

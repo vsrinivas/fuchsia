@@ -13,7 +13,7 @@ virtio_drivers = [
   "//src/devices/misc/drivers/virtio-rng:virtio_rng",
   "//src/devices/misc/drivers/virtio-socket:virtio_socket",
   "//src/devices/serial/drivers/virtio-console:virtio_console",
-  "//src/graphics/drivers/misc:goldfish_driver_modules",
+  "//src/graphics/drivers/misc:goldfish_fuchsia_drivers",
   "//src/graphics/display/drivers/goldfish-display",
   "//src/graphics/drivers/virtio:virtio_gpu",
   "//src/ui/input/drivers/virtio:virtio_input",

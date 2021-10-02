@@ -4,8 +4,7 @@
 
 import("//build/bind/bind.gni")
 import("//build/components.gni")
-import("//build/config/fuchsia/rules.gni")
-import("//build/drivers/fuchsia_driver_component.gni")
+import("//build/drivers.gni")
 import("//build/test.gni")
 
 group("chromeos-acpi") {
@@ -39,7 +38,7 @@ common_deps = [
   "//zircon/system/ulib/zx",
 ]
 
-driver_module("driver") {
+fuchsia_driver("driver") {
   output_name = "chromeos-acpi"
   sources = [ "chromeos_acpi.cc" ]
   deps = common_deps

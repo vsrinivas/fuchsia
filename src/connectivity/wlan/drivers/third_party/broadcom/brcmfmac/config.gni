@@ -3,8 +3,8 @@
 # found in the LICENSE file.
 import("//build/cipd.gni")
 import("//build/components.gni")
-import("//build/config/fuchsia/rules.gni")
 import("//build/dist/resource.gni")
+import("//build/drivers.gni")
 
 # Firmware file copying below.  There are three targets:
 #
@@ -57,14 +57,14 @@ template("brcmfmac_driver") {
   # Driver package for the brcmfmac driver.
   fuchsia_system_package(orig_target_name) {
     deps = _deps
-    deps += [ ":driver_module" ]
+    deps += [ ":fuchsia_driver" ]
     visibility = [ "*" ]
     allowed_in_extra_deps = true
   }
 
   fuchsia_system_package("test-${orig_target_name}") {
     deps = _deps
-    deps += [ ":test_driver_module" ]
+    deps += [ ":test_fuchsia_driver" ]
     visibility = [ "*" ]
     allowed_in_extra_deps = true
   }

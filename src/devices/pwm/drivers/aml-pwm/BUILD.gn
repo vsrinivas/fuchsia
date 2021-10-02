@@ -4,8 +4,7 @@
 
 import("//build/bind/bind.gni")
 import("//build/components.gni")
-import("//build/config/fuchsia/rules.gni")
-import("//build/drivers/fuchsia_driver_component.gni")
+import("//build/drivers.gni")
 import("//build/test.gni")
 
 driver_bind_rules("aml-pwm-bind") {
@@ -19,7 +18,7 @@ driver_bind_rules("aml-pwm-bind") {
   ]
 }
 
-driver_module("aml-pwm-driver") {
+fuchsia_driver("aml-pwm-driver") {
   output_name = "aml-pwm"
   configs += [
     "//build/config:all_source",

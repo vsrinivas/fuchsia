@@ -4,8 +4,7 @@
 
 import("//build/bind/bind.gni")
 import("//build/components.gni")
-import("//build/config/fuchsia/rules.gni")
-import("//build/drivers/fuchsia_driver_component.gni")
+import("//build/drivers.gni")
 import("//build/test.gni")
 
 driver_bind_rules("rndis_function_bind") {
@@ -44,7 +43,7 @@ source_set("rndis-function-lib") {
   ]
 }
 
-driver_module("rndis-function-driver") {
+fuchsia_driver("rndis-function-driver") {
   # visibility = [ ":*" ]
   output_name = "rndis-function"
 

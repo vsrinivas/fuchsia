@@ -4,8 +4,7 @@
 
 import("//build/bind/bind.gni")
 import("//build/components.gni")
-import("//build/config/fuchsia/rules.gni")
-import("//build/drivers/fuchsia_driver_component.gni")
+import("//build/drivers.gni")
 import("//build/test.gni")
 
 driver_bind_rules("nandpart-bind") {
@@ -16,7 +15,7 @@ driver_bind_rules("nandpart-bind") {
   deps = [ "//src/devices/bind/fuchsia.nand" ]
 }
 
-driver_module("nandpart-driver") {
+fuchsia_driver("nandpart-driver") {
   output_name = "nandpart"
   configs += [
     "//build/config:all_source",

@@ -3,12 +3,11 @@
 # found in the LICENSE file.
 
 import("//build/components.gni")
-import("//build/config/fuchsia/rules.gni")
-import("//build/drivers/fuchsia_driver_component.gni")
+import("//build/drivers.gni")
 
 # Defines a controller driver
 #
-# This template creates a driver_module and driver_package customized for a
+# This template creates a fuchsia_driver and driver_package customized for a
 # specific target. Each instantiation must provide a dependency on a
 # source_set that provides an implementation of camera::ProductConfig::Create.
 # See //src/camera/drivers/controller/configs/product_config.h for more
@@ -51,7 +50,7 @@ template("camera_controller_driver") {
   }
   driver_target = "${package_name}_driver"
 
-  driver_module(driver_target) {
+  fuchsia_driver(driver_target) {
     output_name = package_name
     deps = [
       "//sdk/lib/syslog/cpp:backend_legacy",

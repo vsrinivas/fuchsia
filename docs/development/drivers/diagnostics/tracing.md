@@ -59,7 +59,7 @@ The following addition to your driver's `BUILD.gn` target is needed to
 pick up tracing support:
 
 ```gn
-driver_module("my_driver") {
+fuchsia_driver("my_driver") {
   deps = [
     ...
     "//zircon/system/ulib/trace"

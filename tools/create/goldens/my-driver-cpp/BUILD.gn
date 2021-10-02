@@ -8,8 +8,7 @@
 
 import("//build/bind/bind.gni")
 import("//build/components.gni")
-import("//build/config/fuchsia/rules.gni")
-import("//build/drivers/fuchsia_driver_component.gni")
+import("//build/drivers.gni")
 import("//build/test.gni")
 
 group("my-driver-cpp") {
@@ -33,7 +32,7 @@ driver_bind_rules("bind") {
   bind_output = "my_driver_cpp.bindbc"
 }
 
-driver_module("driver") {
+fuchsia_driver("driver") {
   output_name = "my-driver-cpp"
   sources = [ "my_driver_cpp.cc" ]
   deps = [

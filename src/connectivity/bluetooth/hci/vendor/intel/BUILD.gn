@@ -5,9 +5,8 @@
 import("//build/bind/bind.gni")
 import("//build/cipd.gni")
 import("//build/components.gni")
-import("//build/config/fuchsia/rules.gni")
 import("//build/dist/resource.gni")
-import("//build/drivers/fuchsia_driver_component.gni")
+import("//build/drivers.gni")
 
 driver_bind_rules("bt_hci_intel_bind") {
   rules = "bt_hci_intel.bind"
@@ -24,7 +23,7 @@ group("tests") {
   deps = [ ":bt_hci_intel_bind_test" ]
 }
 
-driver_module("driver_module") {
+fuchsia_driver("fuchsia_driver") {
   output_name = "bt-hci-intel"
 
   sources = [
@@ -61,7 +60,7 @@ driver_module("driver_module") {
 
 fuchsia_driver_component("driver") {
   component_name = "bt-hci-intel"
-  deps = [ ":driver_module" ]
+  deps = [ ":fuchsia_driver" ]
 }
 
 if (internal_access) {

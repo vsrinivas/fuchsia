@@ -4,8 +4,7 @@
 
 import("//build/bind/bind.gni")
 import("//build/components.gni")
-import("//build/config/fuchsia/rules.gni")
-import("//build/drivers/fuchsia_driver_component.gni")
+import("//build/drivers.gni")
 import("//build/test.gni")
 
 driver_bind_rules("bind") {
@@ -15,7 +14,7 @@ driver_bind_rules("bind") {
   deps = [ "//src/devices/bind/fuchsia.usb" ]
 }
 
-driver_module("usb-hub-driver") {
+fuchsia_driver("usb-hub-driver") {
   output_name = "usb-hub"
   configs += [
     "//build/config:all_source",

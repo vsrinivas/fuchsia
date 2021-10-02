@@ -3,8 +3,7 @@
 # found in the LICENSE file.
 
 import("//build/bind/bind.gni")
-import("//build/config/fuchsia/rules.gni")
-import("//build/drivers/fuchsia_driver_component.gni")
+import("//build/drivers.gni")
 
 driver_bind_rules("intel_i2c_bind") {
   rules = "intel_i2c.bind"
@@ -21,7 +20,7 @@ group("tests") {
   deps = [ ":intel_i2c_bind_test" ]
 }
 
-driver_module("intel-i2c-driver") {
+fuchsia_driver("intel-i2c-driver") {
   output_name = "intel-i2c"
   configs += [
     "//build/config:all_source",

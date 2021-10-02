@@ -3,8 +3,7 @@
 # found in the LICENSE file.
 
 import("//build/bind/bind.gni")
-import("//build/config/fuchsia/rules.gni")
-import("//build/drivers/fuchsia_driver_component.gni")
+import("//build/drivers.gni")
 import("//build/test.gni")
 import("//zircon/system/ulib/devmgr-integration-test/isolated_devmgr.gni")
 
@@ -14,7 +13,7 @@ driver_bind_rules("test-compatibility-hook-bind") {
   deps = [ "//src/devices/bind/test.platform" ]
 }
 
-driver_module("ddk-runcompatibilityhook-test-driver") {
+fuchsia_driver("ddk-runcompatibilityhook-test-driver") {
   output_name = "ddk-runcompatibilityhook-test"
   configs += [
     "//build/config:all_source",
@@ -43,7 +42,7 @@ driver_bind_rules("test-compatibility-hook-child-bind") {
   deps = [ "//src/devices/bind/fuchsia.test" ]
 }
 
-driver_module("ddk-runcompatibilityhook-test-child-driver") {
+fuchsia_driver("ddk-runcompatibilityhook-test-child-driver") {
   output_name = "ddk-runcompatibilityhook-test-child"
   configs += [
     "//build/config:all_source",

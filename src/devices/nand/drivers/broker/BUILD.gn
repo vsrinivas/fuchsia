@@ -3,8 +3,7 @@
 # found in the LICENSE file.
 
 import("//build/bind/bind.gni")
-import("//build/config/fuchsia/rules.gni")
-import("//build/drivers/fuchsia_driver_component.gni")
+import("//build/drivers.gni")
 
 group("broker") {
   deps = [ ":nand-broker" ]
@@ -19,7 +18,7 @@ driver_bind_rules("nand-broker-bind") {
   deps = [ "//src/devices/bind/fuchsia.nand" ]
 }
 
-driver_module("nand-broker-driver") {
+fuchsia_driver("nand-broker-driver") {
   output_name = "nand-broker"
   configs += [
     "//build/config:all_source",

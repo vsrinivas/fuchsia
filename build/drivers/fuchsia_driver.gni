@@ -49,7 +49,7 @@ template("fuchsia_driver") {
 
   # This is the actual driver module.
   loadable_module(target_name) {
-    variant_selector_target_type = "driver_module"
+    variant_selector_target_type = "fuchsia_driver"
 
     # Save the target name as forward_variables_from below might override it.
     _target_name = target_name
@@ -110,7 +110,7 @@ template("fuchsia_driver") {
 
     metadata = {
       # Used by the check_included_drivers template.
-      driver_module_labels =
+      fuchsia_driver_labels =
           [ get_label_info(":$_target_name", "label_no_toolchain") ]
 
       # Used by the distribution_manifest template.
@@ -127,7 +127,7 @@ template("fuchsia_driver") {
 }
 
 set_defaults("fuchsia_driver") {
-  # Sets the default configs for driver_module, which can be modified later
+  # Sets the default configs for fuchsia_driver, which can be modified later
   # by the invoker. This overrides the loadable_module default.
   configs = default_shared_library_configs
 

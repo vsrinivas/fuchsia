@@ -4,8 +4,7 @@
 
 import("//build/bind/bind.gni")
 import("//build/components.gni")
-import("//build/config/fuchsia/rules.gni")
-import("//build/drivers/fuchsia_driver_component.gni")
+import("//build/drivers.gni")
 import("//build/test.gni")
 import("//build/testing/bootfs_test.gni")
 import("//src/devices/bus/drivers/pci/pci.gni")
@@ -60,7 +59,7 @@ driver_bind_rules("x64-bind") {
   ]
 }
 
-driver_module("platform-bus-x86-driver") {
+fuchsia_driver("platform-bus-x86-driver") {
   output_name = "platform-bus-x86"
   configs += [
     "//build/config:all_source",

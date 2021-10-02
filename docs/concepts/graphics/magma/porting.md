@@ -39,7 +39,7 @@ Some considerations:
 * How similar is its ioctl interface to the Magma entry-points?
 
 The first coding step is to create a basic MSD that builds. MSDs are located
-in [the driver directory][driverdir]. They are built as `driver_modules`
+in [the driver directory][driverdir]. They are built as `fuchsia_drivers`
 using the GN build system. The Magma system driver must be open source but
 not GPL and hosted on *fuchsia.googlesource.com*.
 

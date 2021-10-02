@@ -4,8 +4,7 @@
 
 import("//build/bind/bind.gni")
 import("//build/components.gni")
-import("//build/config/fuchsia/rules.gni")
-import("//build/drivers/fuchsia_driver_component.gni")
+import("//build/drivers.gni")
 import("//build/test.gni")
 
 driver_bind_rules("intel-i915-bind") {
@@ -60,7 +59,7 @@ source_set("common_srcs") {
   configs += [ "//build/config:Wno-conversion" ]
 }
 
-driver_module("intel-i915-driver") {
+fuchsia_driver("intel-i915-driver") {
   output_name = "intel-i915"
   deps = [ ":common_srcs" ]
 }

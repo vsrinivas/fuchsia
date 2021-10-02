@@ -4,8 +4,7 @@
 
 import("//build/bind/bind.gni")
 import("//build/components.gni")
-import("//build/config/fuchsia/rules.gni")
-import("//build/drivers/fuchsia_driver_component.gni")
+import("//build/drivers.gni")
 import("//build/test.gni")
 
 driver_bind_rules("dsi_dw_bind") {
@@ -55,7 +54,7 @@ source_set("common_srcs") {
   ]
 }
 
-driver_module("dsi-dw-driver") {
+fuchsia_driver("dsi-dw-driver") {
   output_name = "dsi-dw"
   deps = [ ":common_srcs" ]
 }

@@ -4,8 +4,7 @@
 
 import("//build/bind/bind.gni")
 import("//build/components.gni")
-import("//build/config/fuchsia/rules.gni")
-import("//build/drivers/fuchsia_driver_component.gni")
+import("//build/drivers.gni")
 import("//build/test.gni")
 
 group("{{PROJECT_NAME}}") {
@@ -29,7 +28,7 @@ driver_bind_rules("bind") {
   bind_output = "{{snake_case PROJECT_NAME}}.bindbc"
 }
 
-driver_module("driver") {
+fuchsia_driver("driver") {
   output_name = "{{PROJECT_NAME}}"
   sources = [ "{{snake_case PROJECT_NAME}}.cc" ]
   deps = [

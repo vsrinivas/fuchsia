@@ -17,7 +17,7 @@ constexpr char kModuleUnderTestPath[] = "module_under_test";
 // integration testing against the mod run in |kModuleUnderTestPath|
 constexpr char kTestDriverPath[] = "test_driver_url";
 
-constexpr char kTestDriverLinkName[] = "test_driver_module";
+constexpr char kTestDriverLinkName[] = "test_fuchsia_driver";
 
 }  // namespace modular_testing
 

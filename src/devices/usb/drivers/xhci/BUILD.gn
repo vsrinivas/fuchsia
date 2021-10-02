@@ -4,8 +4,7 @@
 
 import("//build/bind/bind.gni")
 import("//build/components.gni")
-import("//build/config/fuchsia/rules.gni")
-import("//build/drivers/fuchsia_driver_component.gni")
+import("//build/drivers.gni")
 import("//build/test.gni")
 
 driver_bind_rules("usb_xhci_bind") {
@@ -21,7 +20,7 @@ driver_bind_rules("usb_xhci_bind") {
   ]
 }
 
-driver_module("xhci-driver") {
+fuchsia_driver("xhci-driver") {
   output_name = "xhci"
   configs += [
     "//build/config:all_source",

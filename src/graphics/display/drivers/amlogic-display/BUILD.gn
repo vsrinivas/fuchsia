@@ -4,8 +4,7 @@
 
 import("//build/bind/bind.gni")
 import("//build/components.gni")
-import("//build/config/fuchsia/rules.gni")
-import("//build/drivers/fuchsia_driver_component.gni")
+import("//build/drivers.gni")
 import("//build/test.gni")
 
 driver_bind_rules("amlogic_display_bind") {
@@ -79,7 +78,7 @@ source_set("common_srcs") {
   configs += [ "//build/config:Wno-conversion" ]
 }
 
-driver_module("amlogic-display-driver") {
+fuchsia_driver("amlogic-display-driver") {
   output_name = "amlogic-display"
   deps = [ ":common_srcs" ]
 }

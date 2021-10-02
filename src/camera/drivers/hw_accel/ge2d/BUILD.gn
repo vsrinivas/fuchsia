@@ -4,8 +4,7 @@
 
 import("//build/bind/bind.gni")
 import("//build/components.gni")
-import("//build/config/fuchsia/rules.gni")
-import("//build/drivers/fuchsia_driver_component.gni")
+import("//build/drivers.gni")
 
 group("tests") {
   testonly = true
@@ -57,7 +56,7 @@ source_set("lib") {
   configs += [ "//build/config/fuchsia:enable_zircon_asserts" ]
 }
 
-driver_module("ge2d-driver-driver") {
+fuchsia_driver("ge2d-driver-driver") {
   output_name = "ge2d"
   sources = [ "bind.cc" ]
   deps = [

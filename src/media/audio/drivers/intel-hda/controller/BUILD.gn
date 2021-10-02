@@ -4,8 +4,7 @@
 
 import("//build/bind/bind.gni")
 import("//build/components.gni")
-import("//build/config/fuchsia/rules.gni")
-import("//build/drivers/fuchsia_driver_component.gni")
+import("//build/drivers.gni")
 import("//build/fuzzing/fuzzer.gni")
 import("//build/test.gni")
 import("//build/unification/firmware.gni")
@@ -98,7 +97,7 @@ firmware("firmware") {
   sources = [ "intel-adsp-sst/dsp_fw_kbl_v3420.bin" ]
 }
 
-driver_module("intel-hda-driver") {
+fuchsia_driver("intel-hda-driver") {
   output_name = "intel-hda"
   configs += [
     "//build/config:all_source",

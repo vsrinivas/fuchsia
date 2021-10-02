@@ -4,8 +4,7 @@
 
 import("//build/bind/bind.gni")
 import("//build/components.gni")
-import("//build/config/fuchsia/rules.gni")
-import("//build/drivers/fuchsia_driver_component.gni")
+import("//build/drivers.gni")
 import("//build/test.gni")
 
 wlanphy_sources = [
@@ -39,7 +38,7 @@ driver_bind_rules("wlanphy_bind") {
   deps = [ "//src/devices/bind/fuchsia.wlan" ]
 }
 
-driver_module("wlanphy_driver-driver") {
+fuchsia_driver("wlanphy_driver-driver") {
   output_name = "wlanphy"
   sources = wlanphy_sources
 

@@ -4,8 +4,7 @@
 
 import("//build/bind/bind.gni")
 import("//build/components.gni")
-import("//build/config/fuchsia/rules.gni")
-import("//build/drivers/fuchsia_driver_component.gni")
+import("//build/drivers.gni")
 import("//build/test.gni")
 
 driver_bind_rules("optee-bind") {
@@ -58,7 +57,7 @@ source_set("optee_lib") {
   configs += [ "//build/config:Wno-conversion" ]
 }
 
-driver_module("optee-driver") {
+fuchsia_driver("optee-driver") {
   output_name = "optee"
   configs += [
     "//build/config:all_source",

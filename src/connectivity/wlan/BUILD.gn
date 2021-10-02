@@ -14,7 +14,7 @@ group("drivers") {
   deps = [
     "drivers/testing:wlanphy-testdev",
     "drivers/third_party/atheros/ath10k:ath10k_driver",
-    "drivers/third_party/broadcom/brcmfmac:driver_module",
+    "drivers/third_party/broadcom/brcmfmac:fuchsia_driver",
     "drivers/third_party/intel/iwlwifi:iwlwifi_driver",
     "drivers/wlan:wlan_driver",
     "drivers/wlanif:wlanif_driver",
@@ -22,7 +22,7 @@ group("drivers") {
     "testing/wlantap-driver:wlantap_driver",
   ]
   if (current_cpu == "x64") {
-    deps += [ "drivers/third_party/broadcom/brcmfmac:test_driver_module" ]
+    deps += [ "drivers/third_party/broadcom/brcmfmac:test_fuchsia_driver" ]
   }
 }
 

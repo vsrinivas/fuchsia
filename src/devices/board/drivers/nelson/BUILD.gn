@@ -5,8 +5,7 @@
 import("//build/bind/bind.gni")
 import("//build/cipd.gni")
 import("//build/components.gni")
-import("//build/config/fuchsia/rules.gni")
-import("//build/drivers/fuchsia_driver_component.gni")
+import("//build/drivers.gni")
 
 if (internal_access) {
   config_tas5805m = "audio/config/tas5805m_config.h"
@@ -42,7 +41,7 @@ driver_bind_rules("nelson-bind") {
   ]
 }
 
-driver_module("nelson-module-driver") {
+fuchsia_driver("nelson-module-driver") {
   output_name = "nelson-module"
   configs += [
     "//build/config:all_source",

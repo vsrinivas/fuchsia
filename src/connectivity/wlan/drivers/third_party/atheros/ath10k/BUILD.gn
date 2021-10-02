@@ -16,8 +16,7 @@
 import("//build/bind/bind.gni")
 import("//build/cipd.gni")
 import("//build/components.gni")
-import("//build/config/fuchsia/rules.gni")
-import("//build/drivers/fuchsia_driver_component.gni")
+import("//build/drivers.gni")
 
 driver_bind_rules("ath10k_bind") {
   rules = "ath10k_pci.bind"
@@ -34,7 +33,7 @@ group("tests") {
   ]
 }
 
-driver_module("ath10k_driver-driver") {
+fuchsia_driver("ath10k_driver-driver") {
   output_name = "ath10k"
 
   sources = [

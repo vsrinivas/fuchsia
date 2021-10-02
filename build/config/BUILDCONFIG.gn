@@ -1367,7 +1367,7 @@ declare_args() {
   #         If false, the selector matches in targets without testonly=true.
   #
   #     target_type
-  #         [strings]: `"executable"`, `"loadable_module"`, or `"driver_module"`
+  #         [strings]: `"executable"`, `"loadable_module"`, or `"fuchsia_driver"`
   #
   #     output_name
   #         [strings]: target's `output_name` (default: its `target name`)

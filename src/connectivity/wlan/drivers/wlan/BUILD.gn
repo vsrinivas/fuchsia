@@ -4,8 +4,7 @@
 
 import("//build/bind/bind.gni")
 import("//build/components.gni")
-import("//build/config/fuchsia/rules.gni")
-import("//build/drivers/fuchsia_driver_component.gni")
+import("//build/drivers.gni")
 import("//build/test.gni")
 
 config("wlan_config") {
@@ -19,7 +18,7 @@ driver_bind_rules("wlan_bind") {
   deps = [ "//src/devices/bind/fuchsia.wlan" ]
 }
 
-driver_module("wlan_driver-driver") {
+fuchsia_driver("wlan_driver-driver") {
   output_name = "wlan"
   sources = [
     "device.cc",

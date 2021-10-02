@@ -4,9 +4,8 @@
 
 import("//build/bind/bind.gni")
 import("//build/components.gni")
-import("//build/config/fuchsia/rules.gni")
 import("//build/dist/component_manifest_resources.gni")
-import("//build/drivers/fuchsia_driver_component.gni")
+import("//build/drivers.gni")
 import("//build/fidl/fidl.gni")
 
 group("driver_host2") {
@@ -48,7 +47,7 @@ driver_bind_rules("bind") {
   disable_autobind = true
 }
 
-driver_module("test_driver_driver") {
+fuchsia_driver("test_driver_driver") {
   output_name = "test_driver"
   testonly = true
   sources = [ "driver_host_test_driver.cc" ]
@@ -68,7 +67,7 @@ fuchsia_driver_component("test_driver") {
   deps = [ ":test_driver_driver" ]
 }
 
-driver_module("test_not_driver_driver") {
+fuchsia_driver("test_not_driver_driver") {
   testonly = true
   deps = [ ":bind" ]
 

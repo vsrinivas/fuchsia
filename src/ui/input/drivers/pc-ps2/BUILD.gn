@@ -3,8 +3,7 @@
 # found in the LICENSE file.
 
 import("//build/bind/bind.gni")
-import("//build/config/fuchsia/rules.gni")
-import("//build/drivers/fuchsia_driver_component.gni")
+import("//build/drivers.gni")
 
 driver_bind_rules("i8042_bind") {
   rules = "i8042.bind"
@@ -18,7 +17,7 @@ group("tests") {
   deps = [ ":i8042_bind_test" ]
 }
 
-driver_module("pc-ps2-driver") {
+fuchsia_driver("pc-ps2-driver") {
   output_name = "pc-ps2"
   configs += [
     "//build/config:all_source",

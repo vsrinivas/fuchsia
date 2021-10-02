@@ -4,8 +4,7 @@
 
 import("//build/bind/bind.gni")
 import("//build/components.gni")
-import("//build/config/fuchsia/rules.gni")
-import("//build/drivers/fuchsia_driver_component.gni")
+import("//build/drivers.gni")
 import("//build/test.gni")
 
 driver_bind_rules("ssd1306-bind") {
@@ -15,7 +14,7 @@ driver_bind_rules("ssd1306-bind") {
   deps = [ "//src/devices/bind/fuchsia.platform" ]
 }
 
-driver_module("ssd1306_driver-driver") {
+fuchsia_driver("ssd1306_driver-driver") {
   output_name = "ssd1306_driver"
   configs += [
     "//build/config:all_source",

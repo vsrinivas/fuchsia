@@ -4,8 +4,7 @@
 
 import("//build/bind/bind.gni")
 import("//build/components.gni")
-import("//build/config/fuchsia/rules.gni")
-import("//build/drivers/fuchsia_driver_component.gni")
+import("//build/drivers.gni")
 import("//build/test.gni")
 
 driver_bind_rules("aml-cpu-legacy-bind") {
@@ -16,7 +15,7 @@ driver_bind_rules("aml-cpu-legacy-bind") {
   deps = [ "//src/devices/bind/fuchsia.google.platform" ]
 }
 
-driver_module("aml-cpu-legacy-driver") {
+fuchsia_driver("aml-cpu-legacy-driver") {
   output_name = "aml-cpu-legacy"
   defines = [ "_ALL_SOURCE" ]
   configs += [ "//build/config/fuchsia:enable_zircon_asserts" ]

@@ -3,8 +3,7 @@
 # found in the LICENSE file.
 
 import("//build/bind/bind.gni")
-import("//build/config/fuchsia/rules.gni")
-import("//build/drivers/fuchsia_driver_component.gni")
+import("//build/drivers.gni")
 
 driver_bind_rules("usb_dfu_bind") {
   rules = "usb_dfu.bind"
@@ -21,7 +20,7 @@ group("tests") {
   testonly = true
   deps = [ ":usb_dfu_bind_test" ]
 }
-driver_module("usb-dfu-driver") {
+fuchsia_driver("usb-dfu-driver") {
   output_name = "usb-dfu"
   configs += [
     "//build/config:all_source",

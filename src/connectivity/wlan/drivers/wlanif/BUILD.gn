@@ -4,8 +4,7 @@
 
 import("//build/bind/bind.gni")
 import("//build/components.gni")
-import("//build/config/fuchsia/rules.gni")
-import("//build/drivers/fuchsia_driver_component.gni")
+import("//build/drivers.gni")
 
 all_hdrs = [
   "convert.h",
@@ -58,7 +57,7 @@ driver_bind_rules("wlanif_bind") {
   deps = [ "//src/devices/bind/fuchsia.wlan" ]
 }
 
-driver_module("wlanif_driver-driver") {
+fuchsia_driver("wlanif_driver-driver") {
   output_name = "wlanif"
 
   deps = [ ":lib_source" ]

@@ -59,7 +59,7 @@ To begin, create:
 # found in the LICENSE file.
 
 import("//build/bind/bind.gni")
-import("//build/config/fuchsia/rules.gni")
+import("//build/drivers.gni")
 
 driver_bind_rules("fancy-display-bind") {
   rules = "fancy-display.bind"
@@ -81,7 +81,7 @@ source_set("common") {
   ]
 }
 
-driver_module("fancy-display") {
+fuchsia_driver("fancy-display") {
   sources = []
   deps = [
     ":common",

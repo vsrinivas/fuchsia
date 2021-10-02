@@ -20,11 +20,11 @@ import("//build/components.gni")
 # The above component will be accessible when building test realms (via CML or dynamically) as
 # `fuchsia-pkg://fuchsia.com/my-package#meta/isolated-devmgr.cm`
 #
-# `isolated_devmgr_v2_component` may depend on any number of `driver_module()` targets to ensure
+# `isolated_devmgr_v2_component` may depend on any number of `fuchsia_driver()` targets to ensure
 # that any `fuchsia_package()` that includes them will include the same drivers.
 #
 # ```
-# driver_module("my_driver") {
+# fuchsia_driver("my_driver") {
 #   ...
 # }
 #

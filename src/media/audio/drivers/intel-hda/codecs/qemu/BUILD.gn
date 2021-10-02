@@ -3,8 +3,7 @@
 # found in the LICENSE file.
 
 import("//build/bind/bind.gni")
-import("//build/config/fuchsia/rules.gni")
-import("//build/drivers/fuchsia_driver_component.gni")
+import("//build/drivers.gni")
 
 driver_bind_rules("ihda_codecs_qemu_bind") {
   rules = "qemu_ihda_codec.bind"
@@ -17,7 +16,7 @@ group("qemu") {
   deps = [ ":qemu-audio-codec" ]
 }
 
-driver_module("qemu-audio-codec-driver") {
+fuchsia_driver("qemu-audio-codec-driver") {
   output_name = "qemu-audio-codec"
   configs += [
     "//build/config:all_source",

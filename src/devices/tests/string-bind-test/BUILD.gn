@@ -3,8 +3,7 @@
 # found in the LICENSE file.
 
 import("//build/bind/bind.gni")
-import("//build/config/fuchsia/rules.gni")
-import("//build/drivers/fuchsia_driver_component.gni")
+import("//build/drivers.gni")
 import("//build/test.gni")
 import("//zircon/system/ulib/devmgr-integration-test/isolated_devmgr.gni")
 
@@ -50,7 +49,7 @@ driver_bind_rules("parent-driver-bind") {
   deps = [ "//src/devices/bind/fuchsia.test" ]
 }
 
-driver_module("parent-driver-driver") {
+fuchsia_driver("parent-driver-driver") {
   output_name = "string-bind-parent"
   configs += [
     "//build/config:all_source",
@@ -78,7 +77,7 @@ driver_bind_rules("child-driver-bind") {
   ]
 }
 
-driver_module("child-driver-driver") {
+fuchsia_driver("child-driver-driver") {
   output_name = "string-bind-child"
   configs += [
     "//build/config:all_source",

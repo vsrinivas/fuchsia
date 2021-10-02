@@ -3,8 +3,7 @@
 # found in the LICENSE file.
 
 import("//build/bind/bind.gni")
-import("//build/config/fuchsia/rules.gni")
-import("//build/drivers/fuchsia_driver_component.gni")
+import("//build/drivers.gni")
 import("//build/fidl/fidl.gni")
 import("//build/test.gni")
 import("//build/testing/environments.gni")
@@ -103,7 +102,7 @@ driver_bind_rules("test-devhost-parent-bind") {
   deps = [ "//src/devices/bind/test.platform" ]
 }
 
-driver_module("driver-host-test-driver-driver") {
+fuchsia_driver("driver-host-test-driver-driver") {
   output_name = "driver-host-test-driver"
   sources = [ "test-driver.cc" ]
   deps = [
@@ -131,7 +130,7 @@ driver_bind_rules("test-devhost-child-bind") {
   deps = [ "//src/devices/bind/fuchsia.test" ]
 }
 
-driver_module("driver-host-test-child-driver-driver") {
+fuchsia_driver("driver-host-test-child-driver-driver") {
   output_name = "driver-host-test-child-driver"
   sources = [ "test-driver-child.cc" ]
   deps = [
@@ -160,7 +159,7 @@ driver_bind_rules("driver-host-restart-bind") {
   deps = [ "//src/devices/bind/test.platform" ]
 }
 
-driver_module("driver-host-restart-driver-driver") {
+fuchsia_driver("driver-host-restart-driver-driver") {
   output_name = "driver-host-restart-driver"
   sources = [ "host-restart-test-driver.cc" ]
   deps = [
@@ -223,7 +222,7 @@ driver_bind_rules("unit-test-fail-bind") {
   disable_autobind = true
 }
 
-driver_module("unit-test-fail-driver") {
+fuchsia_driver("unit-test-fail-driver") {
   output_name = "unit-test-fail"
   sources = [ "unit-test-fail.cc" ]
   deps = [
@@ -245,7 +244,7 @@ driver_bind_rules("unit-test-pass-bind") {
   disable_autobind = true
 }
 
-driver_module("unit-test-pass-driver") {
+fuchsia_driver("unit-test-pass-driver") {
   output_name = "unit-test-pass"
   sources = [ "unit-test-pass.cc" ]
   deps = [

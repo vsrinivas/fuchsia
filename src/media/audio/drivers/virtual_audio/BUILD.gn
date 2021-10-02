@@ -3,8 +3,7 @@
 
 import("//build/bind/bind.gni")
 import("//build/components.gni")
-import("//build/config/fuchsia/rules.gni")
-import("//build/drivers/fuchsia_driver_component.gni")
+import("//build/drivers.gni")
 import("//build/zbi/kernel_cmdline.gni")
 
 fuchsia_system_package("virtual_audio") {
@@ -23,7 +22,7 @@ group("tests") {
   testonly = true
   deps = [ ":virtual_audio_bind_test" ]
 }
-driver_module("virtual_audio_driver-driver") {
+fuchsia_driver("virtual_audio_driver-driver") {
   output_name = "virtual_audio_driver"
 
   sources = [

@@ -5,8 +5,7 @@
 import("//build/bind/bind.gni")
 import("//build/cipd.gni")
 import("//build/components.gni")
-import("//build/config/fuchsia/rules.gni")
-import("//build/drivers/fuchsia_driver_component.gni")
+import("//build/drivers.gni")
 import("//build/test.gni")
 
 config_9364_path = "gt6853/goodix_cfg_group_fiti9364.bin"
@@ -73,7 +72,7 @@ driver_bind_rules("gt6853-bind") {
   deps = [ "//src/devices/bind/goodix.platform" ]
 }
 
-driver_module("gt6853-module-driver") {
+fuchsia_driver("gt6853-module-driver") {
   output_name = "gt6853"
   sources = [ "gt6853.cc" ]
   configs += [

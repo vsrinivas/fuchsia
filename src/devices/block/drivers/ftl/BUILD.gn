@@ -3,8 +3,7 @@
 # found in the LICENSE file.
 
 import("//build/bind/bind.gni")
-import("//build/config/fuchsia/rules.gni")
-import("//build/drivers/fuchsia_driver_component.gni")
+import("//build/drivers.gni")
 
 group("tests") {
   testonly = true
@@ -22,7 +21,7 @@ driver_bind_rules("ftl_bind") {
   deps = [ "//src/devices/bind/fuchsia.nand" ]
 }
 
-driver_module("ftl-driver") {
+fuchsia_driver("ftl-driver") {
   output_name = "ftl"
   configs += [
     "//build/config:all_source",

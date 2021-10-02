@@ -5,8 +5,7 @@
 import("//build/bind/bind.gni")
 import("//build/cipd.gni")
 import("//build/components.gni")
-import("//build/config/fuchsia/rules.gni")
-import("//build/drivers/fuchsia_driver_component.gni")
+import("//build/drivers.gni")
 import("//build/test.gni")
 
 driver_bind_rules("gt92xx_bind") {
@@ -20,7 +19,7 @@ driver_bind_rules("gt92xx_bind") {
 astro_firmware_path =
     "gt9293-astro/GT9293_6105(6E43)_Official_Release_20180917.bin"
 
-driver_module("goodix-module-driver") {
+fuchsia_driver("goodix-module-driver") {
   output_name = "goodix"
   configs += [
     "//build/config:all_source",

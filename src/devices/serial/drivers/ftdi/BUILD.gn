@@ -3,8 +3,7 @@
 # found in the LICENSE file.
 
 import("//build/bind/bind.gni")
-import("//build/config/fuchsia/rules.gni")
-import("//build/drivers/fuchsia_driver_component.gni")
+import("//build/drivers.gni")
 
 driver_bind_rules("ftdi_bind") {
   rules = "ftdi.bind"
@@ -14,7 +13,7 @@ driver_bind_rules("ftdi_bind") {
   deps = [ "//src/devices/bind/fuchsia.usb" ]
 }
 
-driver_module("ftdi-driver") {
+fuchsia_driver("ftdi-driver") {
   output_name = "ftdi"
   configs += [
     "//build/config:all_source",
@@ -65,7 +64,7 @@ driver_bind_rules("ftdi_function_bind") {
   ]
 }
 
-driver_module("ftdi-fake-usb-driver") {
+fuchsia_driver("ftdi-fake-usb-driver") {
   output_name = "ftdi-fake-usb"
   configs += [
     "//build/config:all_source",

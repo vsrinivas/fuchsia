@@ -39,8 +39,8 @@ template("check_included_drivers") {
     outputs = [ metadata_check_output ]
     deps = invoker.deps
 
-    # driver_module_labels should be a list of qualified GN labels without toolchain information
-    data_keys = [ "driver_module_labels" ]
+    # fuchsia_driver_labels should be a list of qualified GN labels without toolchain information
+    data_keys = [ "fuchsia_driver_labels" ]
   }
 
   action(target_name) {

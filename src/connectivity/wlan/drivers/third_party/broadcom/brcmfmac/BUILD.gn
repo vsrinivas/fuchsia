@@ -13,8 +13,7 @@
 
 import("//build/bind/bind.gni")
 import("//build/components.gni")
-import("//build/config/fuchsia/rules.gni")
-import("//build/drivers/fuchsia_driver_component.gni")
+import("//build/drivers.gni")
 import("config.gni")
 
 # By default, targets are only visible here and to subdirectories.
@@ -41,7 +40,7 @@ visibility = [ "./*" ]
 # and will then conditionally compile it with the set of preprocessor #defines set by the targets
 # it depends on.
 #
-# See the targets ":driver_module" and ":test_driver_module" to see how this is done.
+# See the targets ":fuchsia_driver" and ":test_fuchsia_driver" to see how this is done.
 
 # Sources for driver debug logging.
 source_set("debug") {
@@ -267,7 +266,7 @@ driver_bind_rules("brcmfmac_sdio_bind") {
 }
 
 # Driver module for the brcmfmac driver.
-driver_module("driver_module-driver") {
+fuchsia_driver("fuchsia_driver-driver") {
   output_name = "brcmfmac"
   sources = [ "binding.cc" ]
   deps = [
@@ -282,9 +281,9 @@ driver_module("driver_module-driver") {
   configs += [ "//build/config:Wno-conversion" ]
 }
 
-fuchsia_driver_component("driver_module") {
+fuchsia_driver_component("fuchsia_driver") {
   component_name = "brcmfmac"
-  deps = [ ":driver_module-driver" ]
+  deps = [ ":fuchsia_driver-driver" ]
   visibility += [
     "//bundles/drivers:pci",
     "//src/connectivity/wlan:drivers",
@@ -293,7 +292,7 @@ fuchsia_driver_component("driver_module") {
 
 # Driver module for the test version of the brcmfmac driver, which includes run_unit_tests() DDK
 # tests.
-driver_module("test_driver_module-driver") {
+fuchsia_driver("test_fuchsia_driver-driver") {
   output_name = "brcmfmac-test"
   sources = [ "binding.cc" ]
   deps = [
@@ -311,9 +310,9 @@ driver_module("test_driver_module-driver") {
   configs += [ "//build/config:Wno-conversion" ]
 }
 
-fuchsia_driver_component("test_driver_module") {
+fuchsia_driver_component("test_fuchsia_driver") {
   component_name = "brcmfmac-test"
-  deps = [ ":test_driver_module-driver" ]
+  deps = [ ":test_fuchsia_driver-driver" ]
   visibility += [ "//src/connectivity/wlan:drivers" ]
 }
 

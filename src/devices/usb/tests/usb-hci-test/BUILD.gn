@@ -4,8 +4,7 @@
 
 import("//build/bind/bind.gni")
 import("//build/components.gni")
-import("//build/config/fuchsia/rules.gni")
-import("//build/drivers/fuchsia_driver_component.gni")
+import("//build/drivers.gni")
 import("//build/test.gni")
 
 driver_bind_rules("usb_hci_test_bind") {
@@ -67,7 +66,7 @@ test("usb-hci-test") {
   ]
 }
 
-driver_module("driver_module") {
+fuchsia_driver("fuchsia_driver") {
   output_name = "usb-hci-test-driver"
 
   sources = [ "usb-hci-test-driver.cc" ]
@@ -91,7 +90,7 @@ driver_module("driver_module") {
 
 fuchsia_driver_component("driver") {
   component_name = "usb-hci-test-driver"
-  deps = [ ":driver_module" ]
+  deps = [ ":fuchsia_driver" ]
 }
 
 fuchsia_system_package("usb-hci-test-driver") {

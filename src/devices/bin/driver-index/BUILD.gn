@@ -4,9 +4,8 @@
 
 import("//build/bind/bind.gni")
 import("//build/components.gni")
-import("//build/config/fuchsia/rules.gni")
+import("//build/drivers.gni")
 import("//build/drivers/driver_manifest.gni")
-import("//build/drivers/fuchsia_driver_component.gni")
 import("//build/drivers/fuchsia_driver_package.gni")
 import("//build/rust/rustc_binary.gni")
 
@@ -84,7 +83,7 @@ fuchsia_package("package") {
   deps = [ ":component" ]
 }
 
-driver_module("fake-driver") {
+fuchsia_driver("fake-driver") {
 }
 
 driver_bind_rules("test-bind") {
@@ -98,7 +97,7 @@ fuchsia_driver_component("test-bind-component") {
   ]
 }
 
-driver_module("fake-driver2") {
+fuchsia_driver("fake-driver2") {
 }
 
 driver_bind_rules("test-bind2") {

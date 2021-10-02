@@ -11,7 +11,7 @@ group("misc") {
   ]
 }
 
-group("goldfish_driver_modules") {
+group("goldfish_fuchsia_drivers") {
   deps = [
     "goldfish:goldfish_driver",
     "goldfish_address_space:address_space_driver",

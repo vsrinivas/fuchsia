@@ -3,14 +3,13 @@
 # found in the LICENSE file.
 
 import("//build/components.gni")
-import("//build/config/fuchsia/rules.gni")
-import("//build/drivers/fuchsia_driver_component.gni")
+import("//build/drivers.gni")
 
 group("packaged") {
   deps = [ ":package" ]
 }
 
-driver_module("lib") {
+fuchsia_driver("lib") {
   output_name = "packaged_driver"
   sources = [ "packaged_driver.cc" ]
   deps = [

@@ -54,7 +54,7 @@ group("pci") {
   deps = [
     "//src/connectivity/ethernet/drivers/virtio:virtio_ethernet",
     "//src/connectivity/wlan/drivers/third_party/atheros/ath10k:ath10k_driver",
-    "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac:driver_module",
+    "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac:fuchsia_driver",
     "//src/connectivity/wlan/drivers/third_party/intel/iwlwifi:iwlwifi_driver",
     "//src/devices/block/drivers/ahci:ahci",
     "//src/devices/block/drivers/nvme:nvme",

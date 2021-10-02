@@ -4,8 +4,7 @@
 
 import("//build/bind/bind.gni")
 import("//build/components.gni")
-import("//build/config/fuchsia/rules.gni")
-import("//build/drivers/fuchsia_driver_component.gni")
+import("//build/drivers.gni")
 import("//build/test.gni")
 
 driver_bind_rules("aml-thermal-s905d2g-bind") {
@@ -19,7 +18,7 @@ driver_bind_rules("aml-thermal-s905d2g-bind") {
   ]
 }
 
-driver_module("aml-thermal-s905d2g-driver") {
+fuchsia_driver("aml-thermal-s905d2g-driver") {
   output_name = "aml-thermal-s905d2g"
   configs += [
     "//build/config:all_source",

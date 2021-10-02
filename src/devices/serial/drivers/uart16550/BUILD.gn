@@ -4,8 +4,7 @@
 
 import("//build/bind/bind.gni")
 import("//build/components.gni")
-import("//build/config/fuchsia/rules.gni")
-import("//build/drivers/fuchsia_driver_component.gni")
+import("//build/drivers.gni")
 import("//build/test.gni")
 
 group("tests") {
@@ -80,7 +79,7 @@ driver_bind_rules("uart16550_bind") {
   deps = [ "//src/devices/bind/fuchsia.acpi" ]
 }
 
-driver_module("uart16550-driver") {
+fuchsia_driver("uart16550-driver") {
   output_name = "uart16550"
   configs += [ "//build/unification/config:zircon-migrated" ]
   deps = [

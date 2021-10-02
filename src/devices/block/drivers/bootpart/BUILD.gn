@@ -3,8 +3,7 @@
 # found in the LICENSE file.
 
 import("//build/bind/bind.gni")
-import("//build/config/fuchsia/rules.gni")
-import("//build/drivers/fuchsia_driver_component.gni")
+import("//build/drivers.gni")
 
 driver_bind_rules("bootpart_bind") {
   disable_autobind = true
@@ -19,7 +18,7 @@ group("tests") {
   deps = [ ":bootpart_bind_test" ]
 }
 
-driver_module("bootpart-driver") {
+fuchsia_driver("bootpart-driver") {
   output_name = "bootpart"
   configs += [
     "//build/config:all_source",

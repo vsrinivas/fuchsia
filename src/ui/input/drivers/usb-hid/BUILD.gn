@@ -3,8 +3,7 @@
 # found in the LICENSE file.
 
 import("//build/bind/bind.gni")
-import("//build/config/fuchsia/rules.gni")
-import("//build/drivers/fuchsia_driver_component.gni")
+import("//build/drivers.gni")
 import("//build/test.gni")
 import("//zircon/system/ulib/devmgr-integration-test/isolated_devmgr.gni")
 
@@ -36,7 +35,7 @@ driver_bind_rules("two_endpoint_hid_bind") {
   ]
 }
 
-driver_module("usb-hid-driver") {
+fuchsia_driver("usb-hid-driver") {
   output_name = "usb-hid"
   configs += [
     "//build/config:all_source",
@@ -66,7 +65,7 @@ fuchsia_driver_component("usb-hid") {
   deps = [ ":usb-hid-driver" ]
 }
 
-driver_module("usb-one-endpoint-hid-fake-usb-driver") {
+fuchsia_driver("usb-one-endpoint-hid-fake-usb-driver") {
   output_name = "usb-one-endpoint-hid-fake-usb"
   configs += [
     "//build/config:all_source",
@@ -97,7 +96,7 @@ fuchsia_driver_component("usb-one-endpoint-hid-fake-usb") {
   deps = [ ":usb-one-endpoint-hid-fake-usb-driver" ]
 }
 
-driver_module("usb-two-endpoint-hid-fake-usb-driver") {
+fuchsia_driver("usb-two-endpoint-hid-fake-usb-driver") {
   output_name = "usb-two-endpoint-hid-fake-usb"
   configs += [
     "//build/config:all_source",

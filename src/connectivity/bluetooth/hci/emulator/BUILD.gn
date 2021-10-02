@@ -4,8 +4,7 @@
 
 import("//build/bind/bind.gni")
 import("//build/components.gni")
-import("//build/config/fuchsia/rules.gni")
-import("//build/drivers/fuchsia_driver_component.gni")
+import("//build/drivers.gni")
 
 driver_bind_rules("bt-hci-emulator-bind") {
   rules = "bt-hci-emulator.bind"
@@ -14,7 +13,7 @@ driver_bind_rules("bt-hci-emulator-bind") {
   deps = [ "//src/devices/bind/fuchsia.platform" ]
 }
 
-driver_module("driver_module") {
+fuchsia_driver("fuchsia_driver") {
   output_name = "bt-hci-emulator"
   testonly = true
 
@@ -56,7 +55,7 @@ driver_module("driver_module") {
 fuchsia_driver_component("driver") {
   testonly = true
   component_name = "bt-hci-emulator"
-  deps = [ ":driver_module" ]
+  deps = [ ":fuchsia_driver" ]
 }
 
 fuchsia_system_package("emulator") {

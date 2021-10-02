@@ -3,8 +3,7 @@
 # found in the LICENSE file.
 
 import("//build/bind/bind.gni")
-import("//build/config/fuchsia/rules.gni")
-import("//build/drivers/fuchsia_driver_component.gni")
+import("//build/drivers.gni")
 
 config("factory") {
   defines = [ "FACTORY_BUILD" ]
@@ -360,7 +359,7 @@ driver_bind_rules("sherlock-wifi-bind") {
 }
 
 template("sherlock_driver") {
-  driver_module(target_name + "-driver") {
+  fuchsia_driver(target_name + "-driver") {
     output_name = invoker.target_name
     forward_variables_from(invoker, "*")
 

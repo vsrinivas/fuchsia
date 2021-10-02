@@ -5,8 +5,7 @@
 import("//build/bind/bind.gni")
 import("//build/cipd.gni")
 import("//build/components.gni")
-import("//build/config/fuchsia/rules.gni")
-import("//build/drivers/fuchsia_driver_component.gni")
+import("//build/drivers.gni")
 
 declare_args() {
   # Path to the amlogic decoder firmware file. Overrides the default in the build.
@@ -51,7 +50,7 @@ if (target_cpu == "arm64") {
     deps = [ "//src/devices/bind/fuchsia.amlogic.platform" ]
   }
 
-  driver_module("amlogic_video_decoder-driver") {
+  fuchsia_driver("amlogic_video_decoder-driver") {
     output_name = "amlogic_video_decoder"
     deps = [
       ":amlogic_video_bind",
@@ -69,7 +68,7 @@ if (target_cpu == "arm64") {
   }
 
   # This version of the driver runs tests on startup.
-  driver_module("amlogic_decoder_test-driver") {
+  fuchsia_driver("amlogic_decoder_test-driver") {
     output_name = "amlogic_video_decoder_test"
 
     testonly = true

@@ -12,7 +12,7 @@ import("//build/drivers/driver_manifest.gni")
 # list and included in the Base Driver Manifest.
 #
 # A driver is a shared library that's placed in the /driver/ directory of the package.
-# Drivers are normally built with the `driver_module` build target.
+# Drivers are normally built with the `fuchsia_driver` build target.
 #
 # The fuchsia_driver_package does not need to contain any components, although
 # components placed in the package will behave normally.

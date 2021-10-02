@@ -205,7 +205,7 @@ words, those words should be separated by underscores .e.g `long_file_name`.
 The following is an example for a directory called `fortune`.
 
 ```gn
-import("//build/config/fuchsia/rules.gni")
+import("//build/drivers.gni")
 import("//build/components.gni")
 
 group("fortune") {

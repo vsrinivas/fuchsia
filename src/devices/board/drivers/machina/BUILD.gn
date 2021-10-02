@@ -3,8 +3,7 @@
 # found in the LICENSE file.
 
 import("//build/bind/bind.gni")
-import("//build/config/fuchsia/rules.gni")
-import("//build/drivers/fuchsia_driver_component.gni")
+import("//build/drivers.gni")
 
 driver_bind_rules("machina_board_bind") {
   rules = "machina_board.bind"
@@ -21,7 +20,7 @@ group("tests") {
   deps = [ ":machina_board_bind_test" ]
 }
 
-driver_module("machina-driver") {
+fuchsia_driver("machina-driver") {
   output_name = "machina"
   configs += [
     "//build/config:all_source",

@@ -13,7 +13,7 @@ template("driver_module") {
 }
 
 set_defaults("driver_module") {
-  # Sets the default configs for driver_module, which can be modified later
+  # Sets the default configs for fuchsia_driver, which can be modified later
   # by the invoker. This overrides the loadable_module default.
   configs = default_shared_library_configs
 

@@ -3,8 +3,7 @@
 # found in the LICENSE file.
 
 import("//build/bind/bind.gni")
-import("//build/config/fuchsia/rules.gni")
-import("//build/drivers/fuchsia_driver_component.gni")
+import("//build/drivers.gni")
 
 driver_bind_rules("test-bus-bind") {
   rules = "test-bus.bind"
@@ -15,7 +14,7 @@ driver_bind_rules("test-bus-bind") {
   ]
 }
 
-driver_module("integration-test-driver") {
+fuchsia_driver("integration-test-driver") {
   output_name = "integration-test"
   configs += [ "//build/config:all_source" ]
 

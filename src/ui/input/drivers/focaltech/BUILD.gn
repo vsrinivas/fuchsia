@@ -5,8 +5,7 @@
 import("//build/bind/bind.gni")
 import("//build/cipd.gni")
 import("//build/components.gni")
-import("//build/config/fuchsia/rules.gni")
-import("//build/drivers/fuchsia_driver_component.gni")
+import("//build/drivers.gni")
 import("//build/test.gni")
 
 driver_bind_rules("focaltech_touch_bind") {
@@ -55,7 +54,7 @@ group("common") {
   ]
 }
 
-driver_module("focaltech-driver") {
+fuchsia_driver("focaltech-driver") {
   output_name = "focaltech"
   configs += [
     "//build/config:all_source",
@@ -76,7 +75,7 @@ fuchsia_driver_component("focaltech") {
 }
 
 # Requires internal access.
-driver_module("focaltech-sherlock-driver") {
+fuchsia_driver("focaltech-sherlock-driver") {
   output_name = "focaltech-sherlock"
   configs += [
     "//build/config:all_source",

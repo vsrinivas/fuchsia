@@ -10,7 +10,7 @@ The variants defined so far enable things like
 The GN build argument
 [`select_variant`](/docs/gen/build_arguments.md#select_variant)
 controls which components are built in which variants.  It applies
-automatically to every `executable`, `loadable_module`, or `driver_module`
+automatically to every `executable`, `loadable_module`, or `fuchsia_driver`
 target in GN files.  It's a flexible mechanism in which you give a list of
 matching rules to apply to each target to decide which variant to use (if
 any).  To support this flexibility, the value for `select_variant` uses a

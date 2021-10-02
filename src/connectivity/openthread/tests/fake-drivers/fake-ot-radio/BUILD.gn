@@ -4,8 +4,7 @@
 
 import("//build/bind/bind.gni")
 import("//build/components.gni")
-import("//build/config/fuchsia/rules.gni")
-import("//build/drivers/fuchsia_driver_component.gni")
+import("//build/drivers.gni")
 
 driver_bind_rules("fake_ot_radio_bind") {
   rules = "fake-ot-radio.bind"
@@ -22,7 +21,7 @@ fuchsia_system_package("fake-ot-radio") {
   allowed_in_extra_deps = true
 }
 
-driver_module("fake-ot-radio-driver-driver") {
+fuchsia_driver("fake-ot-radio-driver-driver") {
   output_name = "fake-ot-radio"
   testonly = true
 

@@ -20,11 +20,11 @@ import("//build/components.gni")
 # The component above will have the following launch URL:
 # `fuchsia-pkg://fuchsia.com/my-package#meta/my-component.cmx`
 #
-# `isolated_devmgr_unittest_component` may depend on any number of `driver_module()` targets to
+# `isolated_devmgr_unittest_component` may depend on any number of `fuchsia_driver()` targets to
 # ensure that any `fuchsia_package()` that includes them will include the same drivers.
 #
 # ```
-# driver_module("my_driver") {
+# fuchsia_driver("my_driver") {
 #   ...
 # }
 #
@@ -132,11 +132,11 @@ template("isolated_devmgr_unittest_component") {
 # The component above will have the following launch URL:
 # `fuchsia-pkg://fuchsia.com/my-driver-test#meta/my-driver-test.cmx`
 #
-# `isolated_devmgr_unittest_package` may depend on any number of `driver_module()` targets to
+# `isolated_devmgr_unittest_package` may depend on any number of `fuchsia_driver()` targets to
 # include them in the package.
 #
 # ```
-# driver_module("my_driver") {
+# fuchsia_driver("my_driver") {
 #   ...
 # }
 #

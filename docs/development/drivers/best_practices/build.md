@@ -21,8 +21,7 @@ driver packages:
 Below is a hypothetical package containing one driver component:
 
 ```gn
-import("//build/drivers/fuchsia_driver_component.gni")
-import("//build/drivers/fuchsia_driver_package.gni")
+import("//build/drivers.gni")
 
 
 driver_bind_rules("bind") {
@@ -30,7 +29,7 @@ driver_bind_rules("bind") {
     bind_output = "my-driver.bindbc"
 }
 
-driver_module("driver") {
+fuchsia_driver("driver") {
   output_name = "my-driver"
   sources = [ "my_driver.cc" ]
 }
@@ -50,7 +49,7 @@ fuchsia_driver_package("my_package") {
 
 Note the following details:
 *   The `fuchsia_driver_component()` template declares the component.
-    It depends on the driver shared library (the `driver_module()`), as well
+    It depends on the driver shared library (the `fuchsia_driver()`), as well
     as the driver's bind rules (the `driver_bind_rules()`).
 *   The `fuchsia_driver_component()` automatically generates a component manifest
     for the driver. We will see what that looks like in a later section.
@@ -127,7 +126,7 @@ add an entry to `//src/ui/input:drivers`.
 
 For the `drivers-build-only` target, you need to be sure that you're including
 the path to your `fuchsia_driver_components()` target, and not point to your
-`driver_module()` target directly.
+`fuchsia_driver()` target directly.
 
 ## Including your driver on a device
 

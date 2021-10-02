@@ -4,8 +4,7 @@
 
 import("//build/bind/bind.gni")
 import("//build/components.gni")
-import("//build/config/fuchsia/rules.gni")
-import("//build/drivers/fuchsia_driver_component.gni")
+import("//build/drivers.gni")
 import("//build/test.gni")
 import("//zircon/system/ulib/devmgr-integration-test/isolated_devmgr.gni")
 
@@ -134,7 +133,7 @@ bind_test("block-verity-bind-test") {
   deps = [ "//src/devices/bind/fuchsia.hardware.block" ]
 }
 
-driver_module("block-verity-driver") {
+fuchsia_driver("block-verity-driver") {
   output_name = "block-verity"
 
   sources = [

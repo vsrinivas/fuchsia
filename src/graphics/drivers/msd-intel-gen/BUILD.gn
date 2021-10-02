@@ -3,12 +3,11 @@
 # found in the LICENSE file.
 
 import("//build/bind/bind.gni")
-import("//build/config/fuchsia/rules.gni")
-import("//build/drivers/fuchsia_driver_component.gni")
+import("//build/drivers.gni")
 import("//src/graphics/lib/magma/gnbuild/magma.gni")
 
 # The gpu device
-driver_module("msd_intel-driver") {
+fuchsia_driver("msd_intel-driver") {
   output_name = "libmsd_intel"
 
   deps = [
@@ -24,7 +23,7 @@ fuchsia_driver_component("msd_intel") {
 }
 
 # The gpu device; runs gtests at startup
-driver_module("msd_intel_test-driver") {
+fuchsia_driver("msd_intel_test-driver") {
   testonly = true
 
   output_name = "libmsd_intel_test"

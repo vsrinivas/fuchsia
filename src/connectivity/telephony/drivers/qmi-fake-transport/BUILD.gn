@@ -4,8 +4,7 @@
 
 import("//build/bind/bind.gni")
 import("//build/components.gni")
-import("//build/config/fuchsia/rules.gni")
-import("//build/drivers/fuchsia_driver_component.gni")
+import("//build/drivers.gni")
 
 fuchsia_system_package("qmi-fake-transport") {
   testonly = true
@@ -28,7 +27,7 @@ group("tests") {
   deps = [ ":qmi_fake_bind_test" ]
 }
 
-driver_module("fake_qmi_driver-driver") {
+fuchsia_driver("fake_qmi_driver-driver") {
   output_name = "qmi-fake-transport"
   testonly = true
 

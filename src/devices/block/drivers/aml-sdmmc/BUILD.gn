@@ -4,8 +4,7 @@
 
 import("//build/bind/bind.gni")
 import("//build/components.gni")
-import("//build/config/fuchsia/rules.gni")
-import("//build/drivers/fuchsia_driver_component.gni")
+import("//build/drivers.gni")
 import("//build/test.gni")
 
 driver_bind_rules("aml-sdmmc-bind") {
@@ -16,7 +15,7 @@ driver_bind_rules("aml-sdmmc-bind") {
   deps = [ "//src/devices/bind/fuchsia.amlogic.platform" ]
 }
 
-driver_module("aml-sdmmc-driver") {
+fuchsia_driver("aml-sdmmc-driver") {
   output_name = "aml-sdmmc"
   configs += [
     "//build/config:all_source",

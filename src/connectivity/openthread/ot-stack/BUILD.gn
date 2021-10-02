@@ -3,7 +3,7 @@
 # found in the LICENSE file.
 
 import("//build/components.gni")
-import("//build/config/fuchsia/rules.gni")
+import("//build/drivers.gni")
 
 # In file included from ../../src/connectivity/openthread/ot-stack/src/app.cc:17:
 # In file included from ../../src/connectivity/openthread/third_party/openthread/platform/radio.h:17:

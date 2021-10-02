@@ -3,8 +3,7 @@
 # found in the LICENSE file.
 
 import("//build/bind/bind.gni")
-import("//build/config/fuchsia/rules.gni")
-import("//build/drivers/fuchsia_driver_component.gni")
+import("//build/drivers.gni")
 import("pci.gni")
 
 group("pci") {
@@ -82,7 +81,7 @@ driver_bind_rules("pci_bind") {
 }
 
 if (platform_enable_user_pci) {
-  driver_module("bus-pci-driver") {
+  fuchsia_driver("bus-pci-driver") {
     output_name = "bus-pci"
     configs += [
       "//build/config:all_source",
@@ -108,7 +107,7 @@ if (platform_enable_user_pci) {
     deps = [ ":bus-pci-driver" ]
   }
 } else {  # Kernel PCI
-  driver_module("bus-pci-driver") {
+  fuchsia_driver("bus-pci-driver") {
     output_name = "bus-pci"
     configs += [
       "//build/config:all_source",

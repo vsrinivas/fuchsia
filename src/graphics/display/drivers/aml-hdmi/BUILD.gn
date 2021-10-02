@@ -4,8 +4,7 @@
 
 import("//build/bind/bind.gni")
 import("//build/components.gni")
-import("//build/config/fuchsia/rules.gni")
-import("//build/drivers/fuchsia_driver_component.gni")
+import("//build/drivers.gni")
 import("//build/test.gni")
 
 driver_bind_rules("aml_hdmi_bind") {
@@ -47,7 +46,7 @@ source_set("common_srcs") {
   ]
 }
 
-driver_module("aml-hdmi-driver") {
+fuchsia_driver("aml-hdmi-driver") {
   output_name = "aml-hdmi"
   sources = [ "aml-hdmi.cc" ]
   deps = [ ":common_srcs" ]

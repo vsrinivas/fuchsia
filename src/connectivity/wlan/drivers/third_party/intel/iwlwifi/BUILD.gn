@@ -3,8 +3,7 @@
 # found in the LICENSE file.
 
 import("//build/components.gni")
-import("//build/config/fuchsia/rules.gni")
-import("//build/drivers/fuchsia_driver_component.gni")
+import("//build/drivers.gni")
 
 visibility = [ "//src/connectivity/wlan/drivers/third_party/intel/iwlwifi/*" ]
 
@@ -65,7 +64,7 @@ source_set("core") {
   configs += [ "//build/config:Wno-conversion" ]
 }
 
-driver_module("iwlwifi_driver-driver") {
+fuchsia_driver("iwlwifi_driver-driver") {
   output_name = "iwlwifi"
   deps = [ "//src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform:fuchsia_device" ]
 }

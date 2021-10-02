@@ -4,8 +4,7 @@
 
 import("//build/bind/bind.gni")
 import("//build/components.gni")
-import("//build/config/fuchsia/rules.gni")
-import("//build/drivers/fuchsia_driver_component.gni")
+import("//build/drivers.gni")
 import("//build/test.gni")
 
 group("tests") {
@@ -24,7 +23,7 @@ driver_bind_rules("mbr_bind") {
   deps = [ "//src/devices/bind/fuchsia.hardware.block" ]
 }
 
-driver_module("mbr-driver") {
+fuchsia_driver("mbr-driver") {
   output_name = "mbr"
   configs += [
     "//build/config:all_source",

@@ -4,8 +4,7 @@
 
 import("//build/bind/bind.gni")
 import("//build/components.gni")
-import("//build/config/fuchsia/rules.gni")
-import("//build/drivers/fuchsia_driver_component.gni")
+import("//build/drivers.gni")
 
 fuchsia_system_package("at-fake-transport") {
   testonly = true
@@ -25,7 +24,7 @@ group("tests") {
   deps = [ ":at_fake_bind_test" ]
 }
 
-driver_module("fake_at_driver-driver") {
+fuchsia_driver("fake_at_driver-driver") {
   output_name = "at-fake-transport"
   testonly = true
 

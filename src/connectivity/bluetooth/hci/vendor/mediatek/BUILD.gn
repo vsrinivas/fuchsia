@@ -4,8 +4,7 @@
 
 import("//build/bind/bind.gni")
 import("//build/components.gni")
-import("//build/config/fuchsia/rules.gni")
-import("//build/drivers/fuchsia_driver_component.gni")
+import("//build/drivers.gni")
 import("//build/test.gni")
 import("//build/unification/firmware.gni")
 
@@ -16,7 +15,7 @@ driver_bind_rules("bt-hci-mediatek-bind") {
   deps = [ "//src/devices/bind/fuchsia.mediatek.sdio" ]
 }
 
-driver_module("bt-hci-mediatek-driver") {
+fuchsia_driver("bt-hci-mediatek-driver") {
   output_name = "bt-hci-mediatek"
   configs += [
     "//build/config:all_source",

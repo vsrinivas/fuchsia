@@ -4,8 +4,7 @@
 
 import("//build/bind/bind.gni")
 import("//build/components.gni")
-import("//build/config/fuchsia/rules.gni")
-import("//build/drivers/fuchsia_driver_component.gni")
+import("//build/drivers.gni")
 import("//build/test.gni")
 
 driver_bind_rules("shtv3-bind") {
@@ -30,7 +29,7 @@ source_set("common") {
   ]
 }
 
-driver_module("shtv3-driver") {
+fuchsia_driver("shtv3-driver") {
   output_name = "shtv3"
   configs += [
     "//build/config:all_source",

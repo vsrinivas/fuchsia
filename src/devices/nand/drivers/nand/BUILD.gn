@@ -3,8 +3,7 @@
 # found in the LICENSE file.
 
 import("//build/bind/bind.gni")
-import("//build/config/fuchsia/rules.gni")
-import("//build/drivers/fuchsia_driver_component.gni")
+import("//build/drivers.gni")
 
 driver_bind_rules("nand-bind") {
   rules = "nand.bind"
@@ -34,7 +33,7 @@ source_set("common") {
   ]
 }
 
-driver_module("nand-driver") {
+fuchsia_driver("nand-driver") {
   output_name = "nand"
   deps = [
     ":common",

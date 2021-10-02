@@ -3,8 +3,7 @@
 # found in the LICENSE file.
 
 import("//build/bind/bind.gni")
-import("//build/config/fuchsia/rules.gni")
-import("//build/drivers/fuchsia_driver_component.gni")
+import("//build/drivers.gni")
 
 driver_bind_rules("nelson_usb_phy_bind") {
   rules = "nelson_usb_phy.bind"
@@ -21,7 +20,7 @@ group("tests") {
   deps = [ ":nelson_usb_phy_bind_test" ]
 }
 
-driver_module("nelson-usb-phy-driver") {
+fuchsia_driver("nelson-usb-phy-driver") {
   output_name = "nelson-usb-phy"
   configs += [
     "//build/config:all_source",

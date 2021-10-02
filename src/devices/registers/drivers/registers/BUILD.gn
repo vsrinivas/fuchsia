@@ -4,8 +4,7 @@
 
 import("//build/bind/bind.gni")
 import("//build/components.gni")
-import("//build/config/fuchsia/rules.gni")
-import("//build/drivers/fuchsia_driver_component.gni")
+import("//build/drivers.gni")
 import("//build/test.gni")
 
 driver_bind_rules("registers_bind") {
@@ -16,7 +15,7 @@ driver_bind_rules("registers_bind") {
   deps = [ "//src/devices/bind/fuchsia.platform" ]
 }
 
-driver_module("registers-driver") {
+fuchsia_driver("registers-driver") {
   output_name = "registers"
   configs += [
     "//build/config:all_source",

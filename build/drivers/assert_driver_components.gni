@@ -2,9 +2,9 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-# Asserts that there are no dependencies on driver_module targets
+# Asserts that there are no dependencies on fuchsia_driver targets
 # unless it's an indirect dependency through the fuchsia_driver_component
-# target. In other words, asserts that all driver_module targets are
+# target. In other words, asserts that all fuchsia_driver targets are
 # being used through a fuchsia_driver_component. This shows that there
 # aren't any drivers that are missing a component manifest.
 #
@@ -20,7 +20,7 @@ template("assert_driver_components") {
     visibility = [ ":*" ]
     outputs = [ metadata_check_output ]
     deps = invoker.deps
-    data_keys = [ "driver_module_labels" ]
+    data_keys = [ "fuchsia_driver_labels" ]
     walk_keys = [ "driver_component_barrier" ]
   }
 

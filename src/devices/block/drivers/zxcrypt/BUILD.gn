@@ -3,10 +3,9 @@
 # found in the LICENSE file.
 
 import("//build/bind/bind.gni")
-import("//build/config/fuchsia/rules.gni")
-import("//build/drivers/fuchsia_driver_component.gni")
+import("//build/drivers.gni")
 
-driver_module("zxcrypt-driver") {
+fuchsia_driver("zxcrypt-driver") {
   output_name = "zxcrypt"
   configs += [
     "//build/config:all_source",

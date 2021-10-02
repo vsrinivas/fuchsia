@@ -4,8 +4,7 @@
 
 import("//build/bind/bind.gni")
 import("//build/components.gni")
-import("//build/config/fuchsia/rules.gni")
-import("//build/drivers/fuchsia_driver_component.gni")
+import("//build/drivers.gni")
 import("//build/test.gni")
 
 driver_bind_rules("lp50xx_light-bind") {
@@ -15,7 +14,7 @@ driver_bind_rules("lp50xx_light-bind") {
   deps = [ "//src/devices/bind/fuchsia.ti.platform" ]
 }
 
-driver_module("lp50xx-light-driver") {
+fuchsia_driver("lp50xx-light-driver") {
   output_name = "lp50xx-light"
   configs += [
     "//build/config:all_source",

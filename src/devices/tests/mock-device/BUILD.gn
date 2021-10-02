@@ -3,8 +3,7 @@
 # found in the LICENSE file.
 
 import("//build/bind/bind.gni")
-import("//build/config/fuchsia/rules.gni")
-import("//build/drivers/fuchsia_driver_component.gni")
+import("//build/drivers.gni")
 import("//build/fidl/fidl.gni")
 
 driver_bind_rules("mock-device-bind") {
@@ -14,7 +13,7 @@ driver_bind_rules("mock-device-bind") {
   disable_autobind = true
 }
 
-driver_module("mock-device-driver") {
+fuchsia_driver("mock-device-driver") {
   output_name = "mock-device"
   testonly = true
   sources = [

@@ -4,8 +4,7 @@
 
 import("//build/bind/bind.gni")
 import("//build/components.gni")
-import("//build/config/fuchsia/rules.gni")
-import("//build/drivers/fuchsia_driver_component.gni")
+import("//build/drivers.gni")
 
 fuchsia_system_package("qmi-usb-transport") {
   deps = [ ":qmi_driver" ]
@@ -29,7 +28,7 @@ group("tests") {
   deps = [ ":qmi_usb_bind_test" ]
 }
 
-driver_module("qmi_driver-driver") {
+fuchsia_driver("qmi_driver-driver") {
   output_name = "qmi-transport"
 
   deps = [ ":qmi_driver_src" ]

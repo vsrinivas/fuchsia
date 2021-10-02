@@ -4,9 +4,8 @@
 
 import("//build/bind/bind.gni")
 import("//build/components.gni")
-import("//build/config/fuchsia/rules.gni")
+import("//build/drivers.gni")
 import("//build/drivers/driver_manifest.gni")
-import("//build/drivers/fuchsia_driver_component.gni")
 import("//build/fidl/fidl.gni")
 import("//build/rust/rustc_test.gni")
 import("//build/test.gni")
@@ -28,7 +27,7 @@ driver_bind_rules("ddk-firmware-test-bind") {
   deps = [ "//src/devices/bind/fuchsia.test" ]
 }
 
-driver_module("ddk-firmware-test") {
+fuchsia_driver("ddk-firmware-test") {
   configs += [
     "//build/config:all_source",
     "//build/config/fuchsia:enable_zircon_asserts",

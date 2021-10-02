@@ -30,16 +30,16 @@ fn process_build_file(input: PathBuf) -> Result<Vec<PathBuf>, &'static str> {
     let mut contents = String::new();
     file.read_to_string(&mut contents).map_err(|_| "Failed to read build file")?;
 
-    let driver_module_re = Regex::new("driver_module").unwrap();
+    let fuchsia_driver_re = Regex::new("fuchsia_driver").unwrap();
     let sources_re = Regex::new(r"sources = \[([^\]]*)\]").unwrap();
 
     let module =
-        driver_module_re.find(&contents).ok_or("Couldn't find driver_module in build file")?;
+        fuchsia_driver_re.find(&contents).ok_or("Couldn't find fuchsia_driver in build file")?;
     let sources = sources_re
         .captures(&contents[module.start()..])
-        .ok_or("Couldn't find sources in driver_module target")?;
+        .ok_or("Couldn't find sources in fuchsia_driver target")?;
 
-    let source_files = sources.get(1).ok_or("Couldn't find sources in driver_module target")?;
+    let source_files = sources.get(1).ok_or("Couldn't find sources in fuchsia_driver target")?;
     let mut result = vec![];
     for source in source_files.as_str().split(",") {
         let trimmed = source.trim();
@@ -71,15 +71,15 @@ fn insert_build_rule(
     let first_import = iter.next().ok_or("Couldn't find import list in build file")?;
     let last_import = iter.last().unwrap_or(first_import);
 
-    // Check for a driver_module.
-    let driver_module_re = Regex::new("driver_module").unwrap();
+    // Check for a fuchsia_driver.
+    let fuchsia_driver_re = Regex::new("fuchsia_driver").unwrap();
     let module =
-        driver_module_re.find(&contents).ok_or("Couldn't find driver_module in build file")?;
+        fuchsia_driver_re.find(&contents).ok_or("Couldn't find fuchsia_driver in build file")?;
 
     // Find the dependencies and store the location in the BUILD file.
     let deps_re = Regex::new(r"deps = \[").unwrap();
     let deps =
-        deps_re.find(&contents[module.start()..]).ok_or("Couldn't find driver_module deps")?;
+        deps_re.find(&contents[module.start()..]).ok_or("Couldn't find fuchsia_driver deps")?;
     let deps_start = module.start() + deps.start();
     let deps_end = module.start() + deps.end();
 
@@ -107,7 +107,7 @@ fn insert_build_rule(
     }
     output.push_str("}\n");
 
-    // Add the bind header to the driver_module's dependency.
+    // Add the bind header to the fuchsia_driver's dependency.
     output.push_str(&contents[last_import.end()..deps_start]);
     output.push_str(format!("deps = [\n    \":{}_bind_header\",", device_name).as_str());
     output.push_str(&contents[deps_end..]);

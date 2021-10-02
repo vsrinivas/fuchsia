@@ -3,8 +3,7 @@
 # found in the LICENSE file.
 
 import("//build/bind/bind.gni")
-import("//build/config/fuchsia/rules.gni")
-import("//build/drivers/fuchsia_driver_component.gni")
+import("//build/drivers.gni")
 import("//src/devices/bus/drivers/pci/pci.gni")
 
 driver_bind_rules("qemu_bus_bind") {
@@ -19,7 +18,7 @@ group("tests") {
   deps = [ ":qemu_bus_bind_test" ]
 }
 
-driver_module("qemu-arm64-driver") {
+fuchsia_driver("qemu-arm64-driver") {
   output_name = "qemu-arm64"
   configs += [
     "//build/config:all_source",

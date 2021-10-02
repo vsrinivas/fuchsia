@@ -4,8 +4,7 @@
 
 import("//build/bind/bind.gni")
 import("//build/components.gni")
-import("//build/config/fuchsia/rules.gni")
-import("//build/drivers/fuchsia_driver_component.gni")
+import("//build/drivers.gni")
 import("//build/test.gni")
 
 group("platform") {
@@ -21,7 +20,7 @@ driver_bind_rules("platform-bus-bind") {
   disable_autobind = true
 }
 
-driver_module("platform-bus-driver") {
+fuchsia_driver("platform-bus-driver") {
   output_name = "platform-bus"
   sources = [
     "cpu-trace.cc",
@@ -65,7 +64,7 @@ fuchsia_driver_component("platform-bus") {
   deps = [ ":platform-bus-driver" ]
 }
 
-driver_module("platform-bus.proxy-driver") {
+fuchsia_driver("platform-bus.proxy-driver") {
   output_name = "platform-bus.proxy"
   sources = [ "platform-proxy.cc" ]
   deps = [

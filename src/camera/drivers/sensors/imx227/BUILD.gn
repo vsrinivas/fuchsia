@@ -4,8 +4,7 @@
 
 import("//build/bind/bind.gni")
 import("//build/components.gni")
-import("//build/config/fuchsia/rules.gni")
-import("//build/drivers/fuchsia_driver_component.gni")
+import("//build/drivers.gni")
 
 group("tests") {
   testonly = true
@@ -58,7 +57,7 @@ source_set("lib") {
   configs += [ "//build/config:Wno-conversion" ]
 }
 
-driver_module("driver_module") {
+fuchsia_driver("fuchsia_driver") {
   output_name = "imx227"
 
   sources = [ "imx227_hardware_test.cc" ]
@@ -72,7 +71,7 @@ driver_module("driver_module") {
 
 fuchsia_driver_component("driver") {
   component_name = "imx227"
-  deps = [ ":driver_module" ]
+  deps = [ ":fuchsia_driver" ]
 }
 
 fuchsia_system_package("imx227") {

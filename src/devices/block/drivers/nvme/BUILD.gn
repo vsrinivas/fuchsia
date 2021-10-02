@@ -3,8 +3,7 @@
 # found in the LICENSE file.
 
 import("//build/bind/bind.gni")
-import("//build/config/fuchsia/rules.gni")
-import("//build/drivers/fuchsia_driver_component.gni")
+import("//build/drivers.gni")
 
 driver_bind_rules("nvme_bind") {
   rules = "nvme.bind"
@@ -21,7 +20,7 @@ group("tests") {
   deps = [ ":nvme_bind_test" ]
 }
 
-driver_module("nvme-driver") {
+fuchsia_driver("nvme-driver") {
   output_name = "nvme"
   configs += [
     "//build/config:all_source",

@@ -4,8 +4,7 @@
 
 import("//build/bind/bind.gni")
 import("//build/components.gni")
-import("//build/config/fuchsia/rules.gni")
-import("//build/drivers/fuchsia_driver_component.gni")
+import("//build/drivers.gni")
 
 group("tests") {
   testonly = true
@@ -19,7 +18,7 @@ driver_bind_rules("aml_mipi_bind") {
   deps = [ "//src/devices/bind/fuchsia.amlogic.platform" ]
 }
 
-driver_module("aml_mipicsi_driver-driver") {
+fuchsia_driver("aml_mipicsi_driver-driver") {
   output_name = "aml_mipicsi"
   sources = [
     "aml_mipi.cc",
