@@ -96,6 +96,8 @@ test -z "$prev_out" || { echo "Option is missing argument to set $prev_opt." ; e
 # For debugging, trace the files accessed.
 fsatrace="$project_root"/prebuilt/fsatrace/fsatrace
 
+build_subdir="$(realpath --relative-to="$project_root" . )"
+
 # Modify original command to extract dep-info only (fast).
 # Start with `env` in case command starts with environment variables.
 # Note: `env` is not $root_build_dir/env, which comes from
@@ -153,6 +155,8 @@ target_triple=
 
 # Paths to direct dependencies.
 extern_paths=()
+
+save_analysis=0
 
 prev_opt=
 for opt in "$@"
@@ -240,6 +244,8 @@ EOF
 
     # Capture arch-vendor-os triple.
     --target) prev_opt=target_triple ;;
+
+    -Zsave-analysis=yes | save-analysis=yes) save_analysis=1 ;;
 
     # Rewrite this token to only generate dependency information (locally),
     # and do no other compilation/linking.
@@ -455,6 +461,11 @@ then
   extra_outputs+=($(realpath --relative-to="$project_root" "$logfile"))
 fi
 
+test "$save_analysis" = 0 || {
+  analysis_file=save-analysis-temp/"$(basename "$output" .rlib)".json
+  extra_outputs+="$build_subdir/$analysis_file"
+}
+
 # Inputs to upload include (all relative to $project_root):
 #   * rust tool(s) [$rustc_relative]
 #   * rust tool shared libraries [$rustc_shlibs]
@@ -503,6 +514,7 @@ rm -f "${outputs[@]}"
 outputs_joined="$(IFS=, ; echo "${outputs[*]}")"
 
 dump_vars() {
+  debug_var "build subdir" "$build_subdir"
   debug_var "outputs" "${outputs[@]}"
   debug_var "rustc binary" "$rustc_relative"
   debug_var "rustc shlibs" "${rustc_shlibs[@]}"
@@ -587,7 +599,7 @@ Once it passes locally, re-enable RBE.
 You can manually re-run the remote command outside of the build system
 to reproduce the failure (with -v for debug info):
 
-  cd $PWD && $script_dir/fuchsia-reproxy-wrap.sh -- $script -v -- ...
+  cd $build_subdir && $script_dir/fuchsia-reproxy-wrap.sh -- $script -v -- ...
 
 If the remote version still fails, file a bug, and CC fuchsia-build-team@,
 including output from the verbose re-run.
