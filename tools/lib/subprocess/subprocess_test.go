@@ -8,15 +8,9 @@ import (
 	"bytes"
 	"context"
 	"errors"
-	"io/ioutil"
-	"os"
 	"os/exec"
-	"path/filepath"
 	"strings"
 	"testing"
-	"time"
-
-	"go.fuchsia.dev/fuchsia/tools/lib/clock"
 )
 
 func TestRun(t *testing.T) {
@@ -67,93 +61,6 @@ func TestRun(t *testing.T) {
 				t.Fatalf("Expected invalid command to fail but it succeeded: %s", err)
 			} else if !errors.Is(err, exec.ErrNotFound) {
 				t.Fatalf("Expected Run() to return exec.ErrNotFound but got: %s", err)
-			}
-		})
-
-		t.Run("should wait for command to finish after sending SIGTERM", func(t *testing.T) {
-			tmpDir := t.TempDir()
-			script := filepath.Join(tmpDir, "script")
-			if err := ioutil.WriteFile(script, []byte(
-				`#!/bin/bash
-				cleanup() {
-					echo "finished"; exit 1
-				}
-				trap cleanup TERM INT
-				echo "start"
-				while true;do :; done`,
-			), os.ModePerm); err != nil {
-				t.Fatalf("failed to write script: %s", err)
-			}
-			r := Runner{}
-			command := []string{script}
-			stdout := new(bytes.Buffer)
-			ctx, cancel := context.WithCancel(context.Background())
-			defer cancel()
-			go func() {
-				for ctx.Err() == nil {
-					if strings.Contains(stdout.String(), "start") {
-						break
-					}
-				}
-				cancel()
-			}()
-			err := r.Run(ctx, command, stdout, stdout)
-			if err == nil {
-				t.Errorf("Expected script to terminate early but it completed successfully")
-			} else {
-				var exitError *exec.ExitError
-				if !errors.As(err, &exitError) {
-					t.Errorf("Expected Run() to return exec.ExitError but got: %s", err)
-				}
-			}
-			if !strings.Contains(stdout.String(), "finished") {
-				t.Fatalf("Expected script to print 'finished' before exiting; got: %s", stdout.String())
-			}
-		})
-
-		t.Run("should kill command if it doesn't terminate after sending SIGTERM", func(t *testing.T) {
-			tmpDir := t.TempDir()
-			script := filepath.Join(tmpDir, "script")
-			if err := ioutil.WriteFile(script, []byte(
-				`#!/bin/bash
-                                cleanup() {
-					echo "finished"; exit 1
-                                }
-                                trap cleanup TERM INT
-                                echo "start"
-				sleep 10000`,
-			), os.ModePerm); err != nil {
-				t.Fatalf("failed to write script: %s", err)
-			}
-			r := Runner{}
-			command := []string{script}
-			stdout := new(bytes.Buffer)
-			fakeClock := clock.NewFakeClock()
-			ctx := clock.NewContext(context.Background(), fakeClock)
-			ctx, cancel := context.WithCancel(ctx)
-			defer cancel()
-			go func() {
-				for ctx.Err() == nil {
-					if strings.Contains(stdout.String(), "start") {
-						break
-					}
-				}
-				cancel()
-				// Wait for After() to be called before advancing the clock.
-				<-fakeClock.AfterCalledChan()
-				fakeClock.Advance(finishTimeout + time.Second)
-			}()
-			err := r.RunWithStdin(ctx, command, stdout, stdout, nil)
-			if err == nil {
-				t.Errorf("Expected script to terminate early but it completed successfully")
-			} else {
-				var exitError *exec.ExitError
-				if !errors.As(err, &exitError) {
-					t.Errorf("Expected Run() to return exec.ExitError but got: %s", err)
-				}
-			}
-			if strings.Contains(stdout.String(), "finished") {
-				t.Fatal("Expected script to be killed without doing cleanup")
 			}
 		})
 	})

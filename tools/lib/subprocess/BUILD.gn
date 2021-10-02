@@ -11,10 +11,7 @@ go_library("subprocess") {
     "subprocess.go",
     "subprocess_test.go",
   ]
-  deps = [
-    "//tools/lib/clock",
-    "//tools/lib/logger",
-  ]
+  deps = [ "//tools/lib/logger" ]
 }
 
 go_test("subprocess_tests") {
