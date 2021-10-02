@@ -16,6 +16,8 @@
 #include <optional>
 #include <utility>
 
+#include <pretty/hexdump.h>
+
 #include "src/media/audio/drivers/aml-g12-tdm/aml_tdm-bind.h"
 
 namespace audio {
@@ -81,7 +83,22 @@ zx_status_t AmlG12TdmStream::InitPDev() {
   zx_status_t status = device_get_metadata(parent(), DEVICE_METADATA_PRIVATE, &metadata_,
                                            sizeof(metadata::AmlConfig), &actual);
   if (status != ZX_OK || sizeof(metadata::AmlConfig) != actual) {
-    zxlogf(ERROR, "device_get_metadata failed %d", status);
+    zxlogf(
+        ERROR,
+        "device_get_metadata failed %d. Expected size %zu, got size %zu. Got metadata with value",
+        status, sizeof(metadata::AmlConfig), actual);
+    char output_buffer[80];
+    for (size_t count = 0; count < actual; count += 16) {
+      FILE* f = fmemopen(output_buffer, sizeof(output_buffer), "w");
+      if (!f) {
+        zxlogf(ERROR, "Couldn't open buffer. Returning.");
+        return status;
+      }
+      hexdump_very_ex(reinterpret_cast<uint8_t*>(&metadata_) + count,
+                      std::min(actual - count, 16UL), count, hexdump_stdio_printf, f);
+      fclose(f);
+      zxlogf(ERROR, "%s", output_buffer);
+    }
     return status;
   }
 

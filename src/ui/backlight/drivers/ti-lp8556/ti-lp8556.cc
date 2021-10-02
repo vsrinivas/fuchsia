@@ -16,6 +16,7 @@
 #include <ddktl/fidl.h>
 #include <fbl/algorithm.h>
 #include <fbl/alloc_checker.h>
+#include <pretty/hexdump.h>
 
 #include "src/ui/backlight/drivers/ti-lp8556/ti-lp8556-bind.h"
 #include "ti-lp8556Metadata.h"
@@ -294,10 +295,26 @@ zx_status_t Lp8556Device::Init() {
   // Supplying this metadata is optional.
   if (status == ZX_OK) {
     if (metadata_.register_count % (2 * sizeof(uint8_t)) != 0) {
-      LOG_ERROR("Register metadata is invalid\n");
+      LOG_ERROR("Register metadata is invalid. Register count (%u) is not a multiple of %zu\n",
+                metadata_.register_count, 2 * sizeof(uint8_t));
       return ZX_ERR_INVALID_ARGS;
     } else if (actual != sizeof(metadata_)) {
-      LOG_ERROR("Too many registers specified in metadata\n");
+      LOG_ERROR(
+          "Too many registers specified in metadata. Expected size %zu, got %zu. Got metadata with "
+          "value\n",
+          sizeof(metadata_), actual);
+      char output_buffer[80];
+      for (size_t count = 0; count < actual; count += 16) {
+        FILE* f = fmemopen(output_buffer, sizeof(output_buffer), "w");
+        if (!f) {
+          zxlogf(ERROR, "Couldn't open buffer. Returning.");
+          return status;
+        }
+        hexdump_very_ex(reinterpret_cast<uint8_t*>(&metadata_) + count,
+                        std::min(actual - count, 16UL), count, hexdump_stdio_printf, f);
+        fclose(f);
+        zxlogf(ERROR, "%s", output_buffer);
+      }
       return ZX_ERR_OUT_OF_RANGE;
     }
 
