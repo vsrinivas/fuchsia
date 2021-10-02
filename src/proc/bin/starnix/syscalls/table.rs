@@ -45,6 +45,8 @@ pub fn dispatch_syscall(
 ) -> Result<SyscallResult, Errno> {
     syscall_match! {
         ctx; syscall_number; args;
+        accept[3],
+        accept4[4],
         access[2],
         arch_prctl[2],
         bind[3],
@@ -106,6 +108,7 @@ pub fn dispatch_syscall(
         ioctl[4],
         kill[2],
         linkat[5],
+        listen[2],
         lseek[3],
         memfd_create[2],
         mkdirat[3],

@@ -203,17 +203,10 @@ impl DirEntry {
     ) -> Result<DirEntryHandle, Errno> {
         self.create_entry(name, mode, DeviceType::NONE, || {
             let mut locked_socket = socket.lock();
+            let node = self.node.mknod(name, mode)?;
             locked_socket.bind(socket_address)?;
-            match self.node.mknod(name, mode) {
-                Ok(node) => {
-                    node.set_socket(socket.clone());
-                    Ok(node)
-                }
-                Err(error) => {
-                    locked_socket.unbind();
-                    Err(error)
-                }
-            }
+            node.set_socket(socket.clone());
+            Ok(node)
         })
     }
 

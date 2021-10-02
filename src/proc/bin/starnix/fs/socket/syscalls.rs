@@ -4,6 +4,7 @@
 
 use fuchsia_cprng::cprng_draw;
 use std::convert::TryInto;
+use std::sync::Arc;
 
 use super::*;
 use crate::errno;
@@ -20,15 +21,52 @@ pub fn sys_socket(
     ctx: &SyscallContext<'_>,
     domain: u32,
     socket_type: u32,
-    protocol: u32,
+    _protocol: u32,
 ) -> Result<SyscallResult, Errno> {
     let flags = socket_type & (SOCK_NONBLOCK | SOCK_CLOEXEC);
-    let socket_file = create_socket(ctx, domain, socket_type, protocol, flags)?;
+    let domain = parse_socket_domain(domain)?;
+    parse_socket_type(socket_type)?;
+    let open_flags = socket_flags_to_open_flags(flags);
 
-    let fd_flags = if flags & SOCK_CLOEXEC != 0 { FdFlags::CLOEXEC } else { FdFlags::empty() };
+    let socket_file = Socket::new_file(ctx.kernel(), Socket::new(domain), open_flags);
+
+    let fd_flags = socket_flags_to_fd_flags(flags);
     let fd = ctx.task.files.add_with_flags(socket_file, fd_flags)?;
 
     Ok(fd.into())
+}
+
+fn socket_flags_to_open_flags(flags: u32) -> OpenFlags {
+    OpenFlags::RDWR
+        | if flags & SOCK_NONBLOCK != 0 { OpenFlags::NONBLOCK } else { OpenFlags::empty() }
+}
+
+fn socket_flags_to_fd_flags(flags: u32) -> FdFlags {
+    if flags & SOCK_CLOEXEC != 0 {
+        FdFlags::CLOEXEC
+    } else {
+        FdFlags::empty()
+    }
+}
+
+fn parse_socket_domain(domain: u32) -> Result<SocketDomain, Errno> {
+    match domain.try_into().map_err(|_| errno!(EAFNOSUPPORT))? {
+        AF_UNIX => Ok(SocketDomain::Unix),
+        _ => {
+            not_implemented!("unsupported socket domain {}", domain);
+            error!(EAFNOSUPPORT)
+        }
+    }
+}
+
+fn parse_socket_type(socket_type: u32) -> Result<(), Errno> {
+    let socket_type = socket_type & 0xf;
+    if !(socket_type == SOCK_STREAM || socket_type == SOCK_DGRAM || socket_type == SOCK_SEQPACKET) {
+        not_implemented!("unsupported socket type 0x{:x}", socket_type);
+        return error!(EPROTONOSUPPORT);
+    }
+    // TODO: Add an enum for socket types.
+    Ok(())
 }
 
 fn parse_socket_address(
@@ -91,9 +129,6 @@ pub fn sys_bind(
     address_length: usize,
 ) -> Result<SyscallResult, Errno> {
     let file = ctx.task.files.get(fd)?;
-    if !file.node().is_sock() {
-        return error!(ENOTSOCK);
-    }
     let socket = file.node().socket().ok_or_else(|| errno!(ENOTSOCK))?;
     let address = parse_socket_address(&ctx.task, user_socket_address, address_length)?;
     match address {
@@ -118,10 +153,53 @@ pub fn sys_bind(
                     .map_err(|errno| if errno == EEXIST { errno!(EADDRINUSE) } else { errno })?;
             }
         }
-        _ => return error!(EAFNOSUPPORT),
     }
 
     Ok(SUCCESS)
+}
+
+pub fn sys_listen(
+    ctx: &SyscallContext<'_>,
+    fd: FdNumber,
+    backlog: u32,
+) -> Result<SyscallResult, Errno> {
+    let file = ctx.task.files.get(fd)?;
+    let socket = file.node().socket().ok_or_else(|| errno!(ENOTSOCK))?;
+    socket.lock().listen(backlog)?;
+    Ok(SUCCESS)
+}
+
+pub fn sys_accept(
+    ctx: &SyscallContext<'_>,
+    fd: FdNumber,
+    user_socket_address: UserAddress,
+    user_address_length: UserRef<usize>,
+) -> Result<SyscallResult, Errno> {
+    sys_accept4(ctx, fd, user_socket_address, user_address_length, 0)
+}
+
+pub fn sys_accept4(
+    ctx: &SyscallContext<'_>,
+    fd: FdNumber,
+    _user_socket_address: UserAddress,
+    _user_address_length: UserRef<usize>,
+    flags: u32,
+) -> Result<SyscallResult, Errno> {
+    let file = ctx.task.files.get(fd)?;
+    let socket = file.node().socket().ok_or_else(|| errno!(ENOTSOCK))?;
+    let accepted_socket = file.blocking_op(
+        &ctx.task,
+        || socket.lock().accept(),
+        FdEvents::POLLIN | FdEvents::POLLHUP,
+    )?;
+    let open_flags = socket_flags_to_open_flags(flags);
+    let accepted_socket_file = Socket::new_file(ctx.kernel(), accepted_socket, open_flags);
+
+    // TODO: Copy out to user_socket_address.
+
+    let fd_flags = if flags & SOCK_CLOEXEC != 0 { FdFlags::CLOEXEC } else { FdFlags::empty() };
+    let accepted_fd = ctx.task.files.add_with_flags(accepted_socket_file, fd_flags)?;
+    Ok(accepted_fd.into())
 }
 
 pub fn sys_connect(
@@ -130,9 +208,8 @@ pub fn sys_connect(
     user_socket_address: UserAddress,
     address_length: usize,
 ) -> Result<SyscallResult, Errno> {
-    // The "active" socket is the one performing the connection.
-    let active_socket_file = ctx.task.files.get(fd)?;
-    let active_socket = active_socket_file.node().socket().ok_or_else(|| errno!(ENOTSOCK))?;
+    let client_file = ctx.task.files.get(fd)?;
+    let client_socket = client_file.node().socket().ok_or_else(|| errno!(ENOTSOCK))?;
     let address = parse_socket_address(&ctx.task, user_socket_address, address_length)?;
 
     let passive_socket = match address {
@@ -149,10 +226,9 @@ pub fn sys_connect(
                 name.entry.node.socket().ok_or_else(|| errno!(ECONNREFUSED))?.clone()
             }
         }
-        _ => return error!(EAFNOSUPPORT),
     };
 
-    connect_sockets(&passive_socket, active_socket)?;
+    connect(client_socket, &passive_socket)?;
     Ok(SUCCESS)
 }
 
@@ -177,9 +253,6 @@ pub fn sys_getsockname(
     user_address_length: UserRef<usize>,
 ) -> Result<SyscallResult, Errno> {
     let file = ctx.task.files.get(fd)?;
-    if !file.node().is_sock() {
-        return error!(ENOTSOCK);
-    }
     let socket = file.node().socket().ok_or_else(|| errno!(ENOTSOCK))?;
     let locked_socket = socket.lock();
     let address_bytes = locked_socket.getsockname();
@@ -196,9 +269,6 @@ pub fn sys_getpeername(
     user_address_length: UserRef<usize>,
 ) -> Result<SyscallResult, Errno> {
     let file = ctx.task.files.get(fd)?;
-    if !file.node().is_sock() {
-        return error!(ENOTSOCK);
-    }
     let socket = file.node().socket().ok_or_else(|| errno!(ENOTSOCK))?;
     let address_bytes = socket.lock().getpeername()?;
 
@@ -209,33 +279,29 @@ pub fn sys_getpeername(
 
 pub fn sys_socketpair(
     ctx: &SyscallContext<'_>,
-    raw_domain: u32,
+    domain: u32,
     socket_type: u32,
-    protocol: u32,
+    _protocol: u32,
     user_sockets: UserRef<[FdNumber; 2]>,
 ) -> Result<SyscallResult, Errno> {
-    // Create both the sockets. It's fine to call this twice, since both will either succeed or
-    // fail. Put another way, there's no way the second socket file creation can error, if the first
-    // succeeds, since they are created with the same options.
     let flags = socket_type & (SOCK_NONBLOCK | SOCK_CLOEXEC);
-    let first_socket_file = create_socket(ctx, raw_domain, socket_type, protocol, flags)?;
-    let second_socket_file = create_socket(ctx, raw_domain, socket_type, protocol, flags)?;
+    let domain = parse_socket_domain(domain)?;
+    parse_socket_type(socket_type)?;
+    let open_flags = socket_flags_to_open_flags(flags);
 
-    {
-        let mut first_socket = first_socket_file.node().socket().unwrap().lock();
-        let mut second_socket = second_socket_file.node().socket().unwrap().lock();
-        first_socket.bind(SocketAddress::Unspecified)?;
-        second_socket.connect(&mut first_socket)?;
-    }
+    let (left, right) = Socket::new_pair(domain);
 
-    let fd_flags = if flags & SOCK_CLOEXEC != 0 { FdFlags::CLOEXEC } else { FdFlags::empty() };
-    // TODO: Eventually this will need to allocate two inode numbers (each of which could
-    // potentially fail), and only populate the inode numbers (which can't fail) if both allocations
+    let left_file = Socket::new_file(ctx.kernel(), left, open_flags);
+    let right_file = Socket::new_file(ctx.kernel(), right, open_flags);
+
+    let fd_flags = socket_flags_to_fd_flags(flags);
+    // TODO: Eventually this will need to allocate two fd numbers (each of which could
+    // potentially fail), and only populate the fd numbers (which can't fail) if both allocations
     // succeed.
-    let fd1 = ctx.task.files.add_with_flags(first_socket_file, fd_flags)?;
-    let fd2 = ctx.task.files.add_with_flags(second_socket_file, fd_flags)?;
+    let left_fd = ctx.task.files.add_with_flags(left_file, fd_flags)?;
+    let right_fd = ctx.task.files.add_with_flags(right_file, fd_flags)?;
 
-    let fds = [fd1, fd2];
+    let fds = [left_fd, right_fd];
     ctx.task.mm.write_object(user_sockets, &fds)?;
 
     Ok(SUCCESS)
@@ -318,65 +384,13 @@ pub fn sys_shutdown(
     Ok(SUCCESS)
 }
 
-/// Creates a socket with the provided configuration options, and returns the file that owns it.
-///
-/// The caller is responsible for adding the returned file to an `FdTable`. For example, by calling
-/// `task.files.add_with_flags(file, ...);`.
-///
-/// # Parameters
-/// - `domain`: The domain of the socket. Currently only `AF_UNIX` is supported.
-/// - `socket_type`: The type of socket, for example `SOCK_STREAM` or `SOCK_DGRAM`.
-/// - `protocol`: The protocol to be used with the socket, most commonly 0.
-/// - `flags`: The socket flags that are used to determine the `OpenFlags` for the file.
-fn create_socket(
-    ctx: &SyscallContext<'_>,
-    raw_domain: u32,
-    socket_type: u32,
-    _protocol: u32,
-    flags: u32,
-) -> Result<FileHandle, Errno> {
-    let domain = match raw_domain.try_into().map_err(|_| errno!(EAFNOSUPPORT))? {
-        AF_UNIX => SocketDomain::Unix,
-        _ => {
-            not_implemented!("unsupported socket domain {}", raw_domain);
-            return error!(EAFNOSUPPORT);
-        }
-    };
-
-    let socket_type = socket_type & 0xf;
-    if !(socket_type == SOCK_STREAM || socket_type == SOCK_DGRAM || socket_type == SOCK_SEQPACKET) {
-        not_implemented!("unsupported socket type 0x{:x}", socket_type);
-        return error!(EPROTONOSUPPORT);
-    }
-
-    let open_flags = OpenFlags::RDWR
-        | if flags & SOCK_NONBLOCK != 0 { OpenFlags::NONBLOCK } else { OpenFlags::empty() };
-
-    Ok(Socket::new_file(ctx.kernel(), domain, open_flags))
-}
-
-/// Connects the sockets in the provided `FsNodeHandle`s together.
-///
-/// After the connection has been established, the sockets in each node will read/write from
-/// each other.
-///
-/// WARNING: It's an error to call `connect` with nodes that do not contain sockets.
-///
-/// # Parameters
-/// - `passive_socket`: The socket that is being connected *to*.
-/// - `active_socket`: The socket that is performing the connection.
-///
-/// Returns an error if any of the sockets could not be connected.
-fn connect_sockets(
-    passive_socket: &SocketHandle,
-    active_socket: &SocketHandle,
-) -> Result<(), Errno> {
-    if std::ptr::eq(passive_socket, active_socket) {
+fn connect(client_socket: &SocketHandle, passive_socket: &SocketHandle) -> Result<(), Errno> {
+    if Arc::ptr_eq(client_socket, passive_socket) {
         return error!(ECONNREFUSED);
     }
 
     // Sort the nodes to determine which order to lock them in.
-    let mut ordered_sockets: [&SocketHandle; 2] = [active_socket, passive_socket];
+    let mut ordered_sockets: [&SocketHandle; 2] = [client_socket, passive_socket];
     sort_for_locking(&mut ordered_sockets, |socket| socket);
 
     let first_socket = ordered_sockets[0];
@@ -444,7 +458,7 @@ mod tests {
             .get(FdNumber::from_raw(fd1.try_into().unwrap()))
             .expect("Failed to fetch socket file.");
         assert_eq!(
-            connect_sockets(file.node().socket().unwrap(), file.node().socket().unwrap()),
+            connect(file.node().socket().unwrap(), file.node().socket().unwrap()),
             Err(ECONNREFUSED)
         );
     }
