@@ -208,6 +208,10 @@ fuchsia_test_package("wlancfg-tests") {
     log_settings = {
       max_severity = "ERROR"
     }
+    if (is_coverage) {
+      # For some reason, running single threaded is faster on EMU
+      parallel = 1
+    }
   }
 }
 
@@ -239,11 +243,8 @@ fuzzers_package("wlancfg-fuzzers") {
 
 group("tests") {
   testonly = true
-  deps = [ ":wlancfg-fuzzers" ]
-
-  # TODO(fxbug.dev/82278): Flaky test disabled on coverage.
-  # Please fix test and remove condition below.
-  if (!is_coverage) {
-    deps += [ ":wlancfg-tests" ]
-  }
+  deps = [
+    ":wlancfg-fuzzers",
+    ":wlancfg-tests",
+  ]
 }
