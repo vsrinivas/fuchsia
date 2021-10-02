@@ -119,22 +119,25 @@ envvar_files=()
 
 rust_lld=()
 
-debug_var() {
-  # With --verbose, prints variable values to stdout.
+print_var() {
+  # Prints variable values to stdout.
   # $1 is name of variable to display.
   # The rest are array values.
-  test "$verbose" = 0 || {
-    if test "$#" -le 2
-    then
-      echo "$1: $2"
-    else
-      echo "$1:"
-      shift
-      for f in "$@"
-      do echo "  $f"
-      done
-    fi
-  }
+  if test "$#" -le 2
+  then
+    echo "$1: $2"
+  else
+    echo "$1:"
+    shift
+    for f in "$@"
+    do echo "  $f"
+    done
+  fi
+}
+
+debug_var() {
+  # With --verbose, prints variable values to stdout.
+  test "$verbose" = 0 || print_var "$@"
 }
 
 # Examine the rustc compile command
@@ -570,8 +573,6 @@ then
 fi
 
 test "$status" = 0 || {
-  # On any failure, dump debug info, even if it is not related to RBE.
-  verbose=1
   cat <<EOF
 ======== Remote Rust build action FAILED ========
 This could either be a failure with the original command, or something
@@ -582,8 +583,14 @@ Add 'disable_rbe = true' to the problematic Rust target in GN,
 or 'fx set' without '--rbe' to disable globally.
 
 Once it passes locally, re-enable RBE.
-If the remote version still fails, file a bug, and CC the Fuchsia Build Team
-with the following info below:
+
+You can manually re-run the remote command outside of the build system
+to reproduce the failure (with -v for debug info):
+
+  cd $PWD && $script_dir/fuchsia-reproxy-wrap.sh -- $script -v -- ...
+
+If the remote version still fails, file a bug, and CC fuchsia-build-team@,
+including output from the verbose re-run.
 
 EOF
   # Identify which target failed by its command, useful in parallel build.
@@ -593,7 +600,7 @@ EOF
   # Reject absolute paths in depfiles.
   if test "${#abs_deps[@]}" -ge 1
   then
-    debug_var "Forbidden absolute paths in remote-generated depfile" "${abs_deps[@]}"
+    print_var "Error: Forbidden absolute paths in remote-generated depfile" "${abs_deps[@]}"
   fi
 }
 
