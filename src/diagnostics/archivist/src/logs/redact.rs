@@ -336,13 +336,12 @@ impl Redactor {
 mod test {
     use super::*;
     use crate::testing::TEST_IDENTITY;
-    use diagnostics_data::Severity;
-    use diagnostics_message::Message;
+    use diagnostics_data::{LogsData, Severity};
     use futures::stream::iter as iter2stream;
     use pretty_assertions::assert_eq;
     use std::sync::Arc;
 
-    fn test_message(contents: &str) -> Message {
+    fn test_message(contents: &str) -> LogsData {
         diagnostics_data::LogsDataBuilder::new(diagnostics_data::BuilderArgs {
             timestamp_nanos: 0.into(),
             component_url: Some(TEST_IDENTITY.url.clone()),
@@ -352,7 +351,6 @@ mod test {
         })
         .set_message(contents.to_string())
         .build()
-        .into()
     }
 
     macro_rules! test_redaction {

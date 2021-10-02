@@ -45,8 +45,6 @@ rustc_library("lib") {
     "//src/lib/diagnostics/inspect/derive",
     "//src/lib/diagnostics/inspect/runtime/rust",
     "//src/lib/diagnostics/inspect/rust",
-    "//src/lib/diagnostics/log/message/rust",
-    "//src/lib/diagnostics/log/message/rust",
     "//src/lib/diagnostics/reader/rust",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia",
@@ -63,7 +61,10 @@ rustc_library("lib") {
     "//third_party/rust_crates:tracing",
   ]
 
-  test_deps = [ "//third_party/rust_crates:proptest" ]
+  test_deps = [
+    "//src/lib/diagnostics/log/message/rust",
+    "//third_party/rust_crates:proptest",
+  ]
 
   sources = [
     "src/lib.rs",

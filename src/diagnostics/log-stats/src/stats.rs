@@ -315,7 +315,10 @@ pub enum LogSource {
 #[cfg(test)]
 mod tests {
     use diagnostics_data::{BuilderArgs, LogsDataBuilder};
-    use diagnostics_message::{Message, METADATA_SIZE, TEST_IDENTITY};
+    use diagnostics_message::METADATA_SIZE;
+
+    const TEST_URL: &'static str = "fuchsia-pkg://test";
+    const TEST_MONIKER: &'static str = "fake-test/moniker";
 
     use {
         super::*, fuchsia_async as fasync, fuchsia_inspect::testing::*, fuchsia_inspect::*,
@@ -347,8 +350,8 @@ mod tests {
     fn granular_stats() -> Result<(), anyhow::Error> {
         let mut state = GranularTestState::new()?;
 
-        let msg1 = create_message("[path/to/file.cpp(123)] Hello");
-        let msg2 = create_message("[another_file.h(1)]");
+        let msg1 = create_logs_data("[path/to/file.cpp(123)] Hello");
+        let msg2 = create_logs_data("[another_file.h(1)]");
 
         // Send |msg1|. Creates a new entry in bucket 0.
         state.granular_stats.record_log(&msg1);
@@ -536,17 +539,17 @@ mod tests {
         let mut state = GranularTestState::new()?;
 
         let fatal_msg =
-            create_message_with_severity("[path/to/file.cpp(121)] Hello", Severity::Fatal);
+            create_logs_data_with_severity("[path/to/file.cpp(121)] Hello", Severity::Fatal);
         let error_msg =
-            create_message_with_severity("[path/to/file.cpp(122)] Hello", Severity::Error);
+            create_logs_data_with_severity("[path/to/file.cpp(122)] Hello", Severity::Error);
         let warn_msg =
-            create_message_with_severity("[path/to/file.cpp(123)] Hello", Severity::Warn);
+            create_logs_data_with_severity("[path/to/file.cpp(123)] Hello", Severity::Warn);
         let info_msg =
-            create_message_with_severity("[path/to/file.cpp(124)] Hello", Severity::Info);
+            create_logs_data_with_severity("[path/to/file.cpp(124)] Hello", Severity::Info);
         let debug_msg =
-            create_message_with_severity("[path/to/file.cpp(125)] Hello", Severity::Debug);
+            create_logs_data_with_severity("[path/to/file.cpp(125)] Hello", Severity::Debug);
         let trace_msg =
-            create_message_with_severity("[path/to/file.cpp(126)] Hello", Severity::Trace);
+            create_logs_data_with_severity("[path/to/file.cpp(126)] Hello", Severity::Trace);
 
         // Fatal message should be recorded.
         state.granular_stats.record_log(&fatal_msg);
@@ -674,7 +677,7 @@ mod tests {
 
         for i in 1..MAX_RECORDS_PER_BUCKET + 2 {
             let msg_str = format!("[path/to/file.cpp({})] Hello", i);
-            let msg = create_message(&msg_str);
+            let msg = create_logs_data(&msg_str);
             state.granular_stats.record_log(&msg);
             if i == MAX_RECORDS_PER_BUCKET + 1 {
                 assert_data_tree!(state.inspector,
@@ -729,7 +732,7 @@ mod tests {
         }
 
         // Repeat the first message another time. Its count should increase to 2.
-        let msg = create_message("[path/to/file.cpp(1)] Hello");
+        let msg = create_logs_data("[path/to/file.cpp(1)] Hello");
         state.granular_stats.record_log(&msg);
         assert_data_tree!(state.inspector,
           root: {
@@ -752,21 +755,19 @@ mod tests {
         let mut state = GranularTestState::new()?;
 
         // Simple structured log
-        let msg = Message::from(
-            LogsDataBuilder::new(BuilderArgs {
-                timestamp_nanos: zx::Time::from_nanos(1).into(),
-                component_url: Some(TEST_IDENTITY.url.clone()),
-                moniker: TEST_IDENTITY.moniker.clone(),
-                severity: Severity::Error,
-                size_bytes: 0,
-            })
-            .set_message("[irrelevant_tag(32)] Hello".to_string())
-            .set_line(123u64)
-            .set_file("path/to/file.cc".to_string())
-            .build(),
-        );
+        let data = LogsDataBuilder::new(BuilderArgs {
+            timestamp_nanos: zx::Time::from_nanos(1).into(),
+            component_url: Some(TEST_URL.to_string()),
+            moniker: TEST_MONIKER.to_string(),
+            severity: Severity::Error,
+            size_bytes: 0,
+        })
+        .set_message("[irrelevant_tag(32)] Hello".to_string())
+        .set_line(123u64)
+        .set_file("path/to/file.cc".to_string())
+        .build();
 
-        state.granular_stats.record_log(&msg);
+        state.granular_stats.record_log(&data);
         assert_data_tree!(state.inspector,
           root: {
             granular_stats: {
@@ -783,19 +784,17 @@ mod tests {
         );
 
         // Line number field missing. Should parse the message instead.
-        let msg = Message::from(
-            LogsDataBuilder::new(BuilderArgs {
-                timestamp_nanos: zx::Time::from_nanos(1).into(),
-                component_url: Some(TEST_IDENTITY.url.clone()),
-                moniker: TEST_IDENTITY.moniker.clone(),
-                severity: Severity::Error,
-                size_bytes: 0,
-            })
-            .set_message("[irrelevant_tag(32)] Hello".to_string())
-            .set_file("path/to/file.cc".to_string())
-            .build(),
-        );
-        state.granular_stats.record_log(&msg);
+        let data = LogsDataBuilder::new(BuilderArgs {
+            timestamp_nanos: zx::Time::from_nanos(1).into(),
+            component_url: Some(TEST_URL.to_string()),
+            moniker: TEST_MONIKER.to_string(),
+            severity: Severity::Error,
+            size_bytes: 0,
+        })
+        .set_message("[irrelevant_tag(32)] Hello".to_string())
+        .set_file("path/to/file.cc".to_string())
+        .build();
+        state.granular_stats.record_log(&data);
         assert_data_tree!(state.inspector,
           root: {
             granular_stats: {
@@ -817,18 +816,16 @@ mod tests {
         );
 
         // No file field. Will parse the message instead.
-        let msg = Message::from(
-            LogsDataBuilder::new(BuilderArgs {
-                timestamp_nanos: zx::Time::from_nanos(1).into(),
-                component_url: Some(TEST_IDENTITY.url.clone()),
-                moniker: TEST_IDENTITY.moniker.clone(),
-                severity: Severity::Error,
-                size_bytes: 0,
-            })
-            .set_message("[irrelevant_tag(32)] Hello".to_string())
-            .build(),
-        );
-        state.granular_stats.record_log(&msg);
+        let data = LogsDataBuilder::new(BuilderArgs {
+            timestamp_nanos: zx::Time::from_nanos(1).into(),
+            component_url: Some(TEST_URL.to_string()),
+            moniker: TEST_MONIKER.to_string(),
+            severity: Severity::Error,
+            size_bytes: 0,
+        })
+        .set_message("[irrelevant_tag(32)] Hello".to_string())
+        .build();
+        state.granular_stats.record_log(&data);
         assert_data_tree!(state.inspector,
           root: {
             granular_stats: {
@@ -931,7 +928,8 @@ mod tests {
             println!("Started 1st access");
             let component_stats = component_stats.get_component_log_stats(&component_a).await;
             println!("Component stats unlocked");
-            let msg = create_message_with_severity("[path/to/file.cpp(123)] Hello", Severity::Info);
+            let msg =
+                create_logs_data_with_severity("[path/to/file.cpp(123)] Hello", Severity::Info);
             component_stats.record_log(&msg);
             println!("Log recorded");
             // Do not retain Arc; it should be kept alive by the timeout mechanism.
@@ -962,7 +960,8 @@ mod tests {
         // 2nd access: stats un-marked for GC.
         state.run(&mut Box::pin(async {
             let component_stats = component_stats.get_component_log_stats(&component_a).await;
-            let msg = create_message_with_severity("[path/to/file.cpp(123)] Hello", Severity::Info);
+            let msg =
+                create_logs_data_with_severity("[path/to/file.cpp(123)] Hello", Severity::Info);
             component_stats.record_log(&msg);
             // Do not retain Arc; it should be kept alive by the timeout mechanism.
             drop(component_stats);
@@ -978,7 +977,7 @@ mod tests {
         state.run(&mut Box::pin(async {
             let component_stats = component_stats.get_component_log_stats(&component_b).await;
             let msg =
-                create_message_with_severity("[some/other/file.rs(456)] Goodbye", Severity::Info);
+                create_logs_data_with_severity("[some/other/file.rs(456)] Goodbye", Severity::Info);
             component_stats.record_log(&msg);
             // Do not retain Arc; it should be kept alive by the timeout mechanism.
             drop(component_stats);
@@ -1053,27 +1052,25 @@ mod tests {
         }
     }
 
-    fn create_message(msg: &str) -> Message {
-        create_message_with_severity(msg, Severity::Error)
+    fn create_logs_data(msg: &str) -> LogsData {
+        create_logs_data_with_severity(msg, Severity::Error)
     }
 
-    fn create_message_with_severity(msg: &str, severity: Severity) -> Message {
-        Message::from(
-            LogsDataBuilder::new(BuilderArgs {
-                timestamp_nanos: zx::Time::from_nanos(1).into(),
-                component_url: Some(TEST_IDENTITY.url.clone()),
-                moniker: TEST_IDENTITY.moniker.clone(),
-                severity: severity,
-                size_bytes: METADATA_SIZE + 1 + msg.len(),
-            })
-            .set_message(msg.to_string())
-            .build(),
-        )
+    fn create_logs_data_with_severity(msg: &str, severity: Severity) -> LogsData {
+        LogsDataBuilder::new(BuilderArgs {
+            timestamp_nanos: zx::Time::from_nanos(1).into(),
+            component_url: Some(TEST_URL.to_string()),
+            moniker: TEST_MONIKER.to_string(),
+            severity: severity,
+            size_bytes: METADATA_SIZE + 1 + msg.len(),
+        })
+        .set_message(msg.to_string())
+        .build()
     }
 
     fn verify_message_ignored(msg_str: &str) -> Result<(), anyhow::Error> {
         let mut state = GranularTestState::new()?;
-        let msg = create_message(msg_str);
+        let msg = create_logs_data(msg_str);
         state.granular_stats.record_log(&msg);
         let tree_assertion = tree_assertion!(
               root: {
@@ -1092,7 +1089,7 @@ mod tests {
 
     fn verify_file_and_line(msg_str: &str, file: &str, line: u64) -> Result<(), anyhow::Error> {
         let mut state = GranularTestState::new()?;
-        let msg = create_message(msg_str);
+        let msg = create_logs_data(msg_str);
         state.granular_stats.record_log(&msg);
         let tree_assertion = tree_assertion!(
               root: {

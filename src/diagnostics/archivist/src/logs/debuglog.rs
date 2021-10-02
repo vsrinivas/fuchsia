@@ -10,8 +10,8 @@ use crate::{
     logs::{error::LogsError, stored_message::StoredMessage},
 };
 use async_trait::async_trait;
-use diagnostics_data::{BuilderArgs, LogsDataBuilder, Severity};
-use diagnostics_message::{Message, METADATA_SIZE};
+use diagnostics_data::{BuilderArgs, LogsData, LogsDataBuilder, Severity};
+use diagnostics_message::METADATA_SIZE;
 use fidl::endpoints::ProtocolMarker;
 use fidl_fuchsia_boot::ReadOnlyLogMarker;
 use fuchsia_async as fasync;
@@ -120,7 +120,7 @@ impl<K: DebugLog> DebugLogBridge<K> {
 
 /// Parses a raw debug log read from the kernel.  Returns the parsed message and
 /// its size in memory on success, and None if parsing fails.
-pub fn convert_debuglog_to_log_message(record: &zx::sys::zx_log_record_t) -> Option<Message> {
+pub fn convert_debuglog_to_log_message(record: &zx::sys::zx_log_record_t) -> Option<LogsData> {
     let data_len = record.datalen as usize;
 
     let mut contents = match std::str::from_utf8(&record.data[0..data_len]) {
@@ -172,8 +172,7 @@ pub fn convert_debuglog_to_log_message(record: &zx::sys::zx_log_record_t) -> Opt
         .add_tag("klog".to_string())
         .set_dropped(0)
         .set_message(contents)
-        .build()
-        .into(),
+        .build(),
     )
 }
 
@@ -188,9 +187,9 @@ mod tests {
     #[test]
     fn convert_debuglog_to_log_message_test() {
         let klog = TestDebugEntry::new("test log".as_bytes());
-        let log_message = convert_debuglog_to_log_message(&klog.record).unwrap();
+        let data = convert_debuglog_to_log_message(&klog.record).unwrap();
         assert_eq!(
-            log_message,
+            data,
             LogsDataBuilder::new(BuilderArgs {
                 timestamp_nanos: klog.record.timestamp.into(),
                 component_url: Some(KERNEL_IDENTITY.url.clone()),
@@ -203,11 +202,11 @@ mod tests {
             .add_tag("klog")
             .set_message("test log".to_string())
             .build()
-            .into()
         );
         // make sure the `klog` tag still shows up for legacy listeners
+        let log_message: LogMessage = data.into();
         assert_eq!(
-            log_message.for_listener(),
+            log_message,
             LogMessage {
                 pid: klog.record.pid,
                 tid: klog.record.tid,
@@ -221,9 +220,9 @@ mod tests {
 
         // maximum allowed klog size
         let klog = TestDebugEntry::new(&vec!['a' as u8; zx::sys::ZX_LOG_RECORD_DATA_MAX]);
-        let log_message = convert_debuglog_to_log_message(&klog.record).unwrap();
+        let data = convert_debuglog_to_log_message(&klog.record).unwrap();
         assert_eq!(
-            log_message,
+            data,
             LogsDataBuilder::new(BuilderArgs {
                 timestamp_nanos: klog.record.timestamp.into(),
                 component_url: Some(KERNEL_IDENTITY.url.clone()),
@@ -238,14 +237,13 @@ mod tests {
                 String::from_utf8(vec!['a' as u8; zx::sys::ZX_LOG_RECORD_DATA_MAX]).unwrap()
             )
             .build()
-            .into()
         );
 
         // empty message
         let klog = TestDebugEntry::new(&vec![]);
-        let log_message = convert_debuglog_to_log_message(&klog.record).unwrap();
+        let data = convert_debuglog_to_log_message(&klog.record).unwrap();
         assert_eq!(
-            log_message,
+            data,
             LogsDataBuilder::new(BuilderArgs {
                 timestamp_nanos: klog.record.timestamp.into(),
                 component_url: Some(KERNEL_IDENTITY.url.clone()),
@@ -258,7 +256,6 @@ mod tests {
             .add_tag("klog")
             .set_message("".to_string())
             .build()
-            .into()
         );
 
         // invalid utf-8

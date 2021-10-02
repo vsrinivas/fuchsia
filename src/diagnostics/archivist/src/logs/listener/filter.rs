@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be found in the LICENSE file.
 
 use super::ListenerError;
-use diagnostics_message::{LegacySeverity, Message};
+use diagnostics_data::{LegacySeverity, LogsData};
+use diagnostics_message::fx_log_severity_t;
 use fidl_fuchsia_logger::{LogFilterOptions, LogLevelFilter};
 use std::{collections::HashSet, convert::TryFrom};
 
@@ -75,19 +76,24 @@ impl MessageFilter {
 
     /// This filter defaults to open, allowing messages through. If multiple portions of the filter
     /// are specified, they are additive, only allowing messages through that pass all criteria.
-    pub fn should_send(&self, log_message: &Message) -> bool {
+    pub fn should_send(&self, log_message: &LogsData) -> bool {
         let reject_pid = self.pid.map(|p| log_message.pid() != Some(p)).unwrap_or(false);
         let reject_tid = self.tid.map(|t| log_message.tid() != Some(t)).unwrap_or(false);
         let reject_severity = self
             .min_severity
-            .map(|m| m.for_listener() > log_message.legacy_severity().for_listener())
+            .map(|m| {
+                fx_log_severity_t::from(m) > fx_log_severity_t::from(log_message.legacy_severity())
+            })
             .unwrap_or(false);
         let reject_tags = if self.tags.is_empty() {
             false
-        } else if log_message.tags().count() == 0 {
+        } else if log_message.tags().map(|t| t.len() == 0).unwrap_or(true) {
             !self.tags.contains(log_message.component_name())
         } else {
-            !log_message.tags().any(|tag| self.tags.contains(tag))
+            !log_message
+                .tags()
+                .map(|tags| tags.iter().any(|tag| self.tags.contains(tag)))
+                .unwrap_or(false)
         };
 
         !(reject_pid || reject_tid || reject_severity || reject_tags)
@@ -101,7 +107,7 @@ mod tests {
     use super::*;
     use crate::{container::ComponentIdentity, events::types::ComponentIdentifier};
 
-    fn test_message() -> Message {
+    fn test_message() -> LogsData {
         let identity = ComponentIdentity::from_identifier_and_url(
             &ComponentIdentifier::Legacy {
                 moniker: vec!["bogus", "specious-at-best.cmx"].into(),
@@ -117,7 +123,6 @@ mod tests {
             size_bytes: 1,
         })
         .build()
-        .into()
     }
 
     #[test]

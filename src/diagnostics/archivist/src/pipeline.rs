@@ -14,8 +14,8 @@ use {
         ImmutableString,
     },
     anyhow::Error,
+    diagnostics_data::LogsData,
     diagnostics_hierarchy::InspectHierarchyMatcher,
-    diagnostics_message::Message,
     fidl::endpoints::ProtocolMarker,
     fidl_fuchsia_diagnostics::{self, ArchiveAccessorMarker, Selector, StreamMode},
     fuchsia_async as fasync,
@@ -223,7 +223,7 @@ impl Pipeline {
         &self,
         mode: StreamMode,
         selectors: Option<Vec<Selector>>,
-    ) -> impl Stream<Item = RedactedItem<Message>> {
+    ) -> impl Stream<Item = RedactedItem<LogsData>> {
         self.log_redactor.clone().redact_stream(self.data_repo.logs_cursor(mode, selectors))
     }
 

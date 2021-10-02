@@ -19,11 +19,11 @@ use {
         ImmutableString,
     },
     anyhow::{format_err, Error},
+    diagnostics_data::LogsData,
     diagnostics_hierarchy::{
         trie::{self, TrieIterableNode},
         InspectHierarchyMatcher,
     },
-    diagnostics_message::Message,
     fidl::endpoints::ProtocolMarker,
     fidl_fuchsia_diagnostics::{self, Selector, StreamMode},
     fidl_fuchsia_io::{DirectoryProxy, CLONE_FLAG_SAME_RIGHTS},
@@ -153,7 +153,7 @@ impl DataRepo {
         &self,
         mode: StreamMode,
         selectors: Option<Vec<Selector>>,
-    ) -> impl Stream<Item = Arc<Message>> + Send + 'static {
+    ) -> impl Stream<Item = Arc<LogsData>> + Send + 'static {
         let mut repo = self.write();
         let (mut merged, mpx_handle) = Multiplexer::new();
         if let Some(selectors) = selectors {
@@ -539,13 +539,13 @@ impl DataRepoState {
 /// Ensures that BatchIterators get access to logs from newly started components.
 #[derive(Default)]
 pub struct MultiplexerBroker {
-    live_iterators: Vec<(StreamMode, MultiplexerHandle<Arc<Message>>)>,
+    live_iterators: Vec<(StreamMode, MultiplexerHandle<Arc<LogsData>>)>,
 }
 
 impl MultiplexerBroker {
     /// A new BatchIterator has been created and must be notified when future log containers are
     /// created.
-    fn add(&mut self, mode: StreamMode, recipient: MultiplexerHandle<Arc<Message>>) {
+    fn add(&mut self, mode: StreamMode, recipient: MultiplexerHandle<Arc<LogsData>>) {
         match mode {
             // snapshot streams only want to know about what's currently available
             StreamMode::Snapshot => recipient.close(),

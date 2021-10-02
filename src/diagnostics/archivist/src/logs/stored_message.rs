@@ -6,8 +6,8 @@ use crate::{
     container::ComponentIdentity,
     logs::{debuglog, error::StreamError, stats::LogStreamStats},
 };
-use diagnostics_data::Severity;
-use diagnostics_message::{LoggerMessage, Message, METADATA_SIZE};
+use diagnostics_data::{LogsData, Severity};
+use diagnostics_message::{LoggerMessage, METADATA_SIZE};
 use fuchsia_zircon as zx;
 use std::{convert::TryInto, sync::Arc};
 use tracing::warn;
@@ -131,11 +131,13 @@ impl Drop for StoredMessage {
 }
 
 impl StoredMessage {
-    pub fn parse(&self, source: &ComponentIdentity) -> Result<Message, StreamError> {
+    pub fn parse(&self, source: &ComponentIdentity) -> Result<LogsData, StreamError> {
         match &self.bytes {
-            MessageBytes::Legacy(msg) => Ok(Message::from_logger(source.into(), msg.clone())),
+            MessageBytes::Legacy(msg) => {
+                Ok(diagnostics_message::from_logger(source.into(), msg.clone()))
+            }
             MessageBytes::Structured { bytes, .. } => {
-                Message::from_structured(source.into(), &bytes).map_err(|er| er.into())
+                diagnostics_message::from_structured(source.into(), &bytes).map_err(|er| er.into())
             }
             MessageBytes::DebugLog { msg, .. } => {
                 debuglog::convert_debuglog_to_log_message(&msg).ok_or(StreamError::DebugLogMessage)

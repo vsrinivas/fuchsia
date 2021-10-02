@@ -16,9 +16,9 @@ use {
         repository::MultiplexerBroker,
         ImmutableString,
     },
-    diagnostics_data as schema,
+    diagnostics_data::{self, LogsData},
     diagnostics_hierarchy::DiagnosticsHierarchy,
-    diagnostics_message::{Message, MonikerWithUrl},
+    diagnostics_message::MonikerWithUrl,
     fidl_fuchsia_diagnostics::StreamMode,
     fidl_fuchsia_logger::LogInterestSelector,
     fidl_fuchsia_sys_internal::SourceIdentity,
@@ -207,7 +207,7 @@ impl ComponentDiagnostics {
     }
 
     /// Return a cursor over messages from this component with the given `mode`.
-    pub fn logs_cursor(&self, mode: StreamMode) -> Option<PinStream<Arc<Message>>> {
+    pub fn logs_cursor(&self, mode: StreamMode) -> Option<PinStream<Arc<LogsData>>> {
         self.logs.as_ref().map(|l| l.cursor(mode))
     }
 
@@ -262,7 +262,7 @@ pub struct SnapshotData {
     // Timestamp at which this snapshot resolved or failed.
     pub timestamp: zx::Time,
     // Errors encountered when processing this snapshot.
-    pub errors: Vec<schema::Error>,
+    pub errors: Vec<diagnostics_data::Error>,
     // Optional snapshot of the inspect hierarchy, in case reading fails
     // and we have errors to share with client.
     pub snapshot: Option<ReadSnapshot>,
@@ -280,7 +280,7 @@ impl SnapshotData {
     }
 
     // Constructs packet that timestamps and packages inspect snapshot failure for exfiltration.
-    pub fn failed(error: schema::Error, filename: ImmutableString) -> SnapshotData {
+    pub fn failed(error: diagnostics_data::Error, filename: ImmutableString) -> SnapshotData {
         SnapshotData {
             filename,
             timestamp: fasync::Time::now().into_zx(),

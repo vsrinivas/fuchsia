@@ -1,7 +1,8 @@
 // Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be found in the LICENSE file.
 
-use diagnostics_message::{error::MessageError, Message};
+use diagnostics_data::{LogsData, SeverityError};
+use diagnostics_message::error::MessageError;
 use fidl::endpoints::ClientEnd;
 use fidl_fuchsia_logger::{
     LogFilterOptions, LogListenerSafeMarker, LogListenerSafeProxy, LogMessage,
@@ -53,7 +54,7 @@ impl Listener {
 
     pub fn spawn(
         self,
-        logs: impl Stream<Item = Arc<Message>> + Send + Unpin + 'static,
+        logs: impl Stream<Item = Arc<LogsData>> + Send + Unpin + 'static,
         call_done: bool,
     ) -> Task<()> {
         Task::spawn(async move { self.run(logs, call_done).await })
@@ -61,7 +62,7 @@ impl Listener {
 
     /// Send messages to the listener. First eagerly collects any backlog and sends it out in
     /// batches before waiting for wakeups.
-    async fn run(mut self, mut logs: impl Stream<Item = Arc<Message>> + Unpin, call_done: bool) {
+    async fn run(mut self, mut logs: impl Stream<Item = Arc<LogsData>> + Unpin, call_done: bool) {
         debug!("Backfilling from cursor until pending.");
         let mut backlog = vec![];
         futures::future::poll_fn(|cx| {
@@ -97,7 +98,7 @@ impl Listener {
 
     /// Send all messages currently in the provided buffer to this listener. Attempts to batch up
     /// to the message size limit. Returns early if the listener appears to be unhealthy.
-    async fn backfill<'a>(&mut self, mut messages: Vec<Arc<Message>>) {
+    async fn backfill<'a>(&mut self, mut messages: Vec<Arc<LogsData>>) {
         messages.sort_by_key(|m| m.metadata.timestamp);
 
         // Initialize batch size to the size of the vector header.
@@ -107,7 +108,7 @@ impl Listener {
             if self.filter.should_send(&msg) {
                 // Convert archivist-encoded log message to legacy format expected
                 // by the listener, then use measure_tape to get true size.
-                let legacy_msg = msg.for_listener();
+                let legacy_msg: LogMessage = msg.as_ref().into();
                 let msg_size = legacy_msg.measure().num_bytes;
 
                 // If a message by itself is too big to fit into fidl, warn and skip.
@@ -148,9 +149,9 @@ impl Listener {
     }
 
     /// Send a single log message if it should be sent according to this listener's filter settings.
-    async fn send_log(&mut self, log_message: &Message) {
+    async fn send_log(&mut self, log_message: &LogsData) {
         if self.filter.should_send(log_message) {
-            let mut to_send = log_message.for_listener();
+            let mut to_send: LogMessage = log_message.into();
             self.check_result(self.listener.log(&mut to_send).await);
         }
     }
@@ -186,6 +187,12 @@ pub enum ListenerError {
 
     #[error("error while forwarding unsafe log requests: {source}")]
     AsbestosIo { source: fidl::Error },
+
+    #[error(transparent)]
+    Severity {
+        #[from]
+        source: SeverityError,
+    },
 }
 
 #[cfg(test)]
@@ -231,7 +238,7 @@ mod tests {
         assert_eq!(run_and_consume_backfill(message_vec).await, 4);
     }
 
-    async fn run_and_consume_backfill(message_vec: Vec<Arc<Message>>) -> usize {
+    async fn run_and_consume_backfill(message_vec: Vec<Arc<LogsData>>) -> usize {
         let (client, server) = zx::Channel::create().unwrap();
         let client_end = ClientEnd::<LogListenerSafeMarker>::new(client);
         let mut listener_server =
@@ -257,12 +264,12 @@ mod tests {
         observed_logs
     }
 
-    fn provide_messages(summed_msg_size_bytes: usize, num_messages: usize) -> Vec<Arc<Message>> {
+    fn provide_messages(summed_msg_size_bytes: usize, num_messages: usize) -> Vec<Arc<LogsData>> {
         let per_msg_size = summed_msg_size_bytes / num_messages;
         let mut message_vec = Vec::new();
         for _ in 0..num_messages {
             let byte_encoding = generate_byte_encoded_log(per_msg_size);
-            message_vec.push(Arc::new(Message::from_logger(
+            message_vec.push(Arc::new(diagnostics_message::from_logger(
                 get_test_identity().into(),
                 LoggerMessage::try_from(byte_encoding.as_bytes()).unwrap(),
             )))

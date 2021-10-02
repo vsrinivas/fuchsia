@@ -1,14 +1,15 @@
 // Copyright 2021 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be found in the LICENSE file.
 
-use crate::message::{fx_log_severity_t, MAX_TAGS, MAX_TAG_LEN, MIN_PACKET_SIZE};
+use crate::{MAX_TAGS, MAX_TAG_LEN, MIN_PACKET_SIZE};
+use diagnostics_data::SeverityError;
 use diagnostics_log_encoding::parse::ParseError;
 use thiserror::Error;
 
 #[derive(Debug, Error)]
 pub enum MessageError {
-    #[error("invalid or corrupt severity received: {provided}")]
-    InvalidSeverity { provided: fx_log_severity_t },
+    #[error(transparent)]
+    InvalidSeverity(#[from] SeverityError),
     #[error("unrecognized value type encountered")]
     UnrecognizedValue,
     #[error("wrong value type encountered, expected integer, found {found} {value}")]
@@ -48,7 +49,7 @@ impl PartialEq for MessageError {
                 index == i2 && len == l2
             }
             (OutOfBounds, OutOfBounds) => true,
-            (InvalidSeverity { provided }, InvalidSeverity { provided: p2 }) => provided == p2,
+            (InvalidSeverity(a), InvalidSeverity(b)) => a == b,
             (InvalidString { source }, InvalidString { source: s2 }) => source == s2,
             _ => false,
         }

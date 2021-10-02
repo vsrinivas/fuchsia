@@ -96,10 +96,11 @@ where
 mod tests {
     use super::*;
     use crate::testing::TEST_IDENTITY;
+    use diagnostics_data::{LogsField, Severity};
     use diagnostics_log_encoding::{
         encode::Encoder, Argument, Record, Severity as StreamSeverity, Value,
     };
-    use diagnostics_message::{fx_log_packet_t, LogsField, Severity, METADATA_SIZE};
+    use diagnostics_message::{fx_log_packet_t, METADATA_SIZE};
     use std::io::Cursor;
 
     #[fasync::run_until_stalled(test)]

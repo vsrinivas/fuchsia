@@ -246,7 +246,7 @@ group("with_default_config") {
 rustc_fuzzer("convert_debuglog_to_log_message_fuzzer") {
   deps = [
     ":lib",
-    "//src/lib/diagnostics/log/message/rust",
+    "//src/lib/diagnostics/data/rust",
     "//src/lib/fuzzing/rust:fuzz",
     "//src/lib/syslog/rust:syslog",
     "//src/lib/zircon/rust:fuchsia-zircon",

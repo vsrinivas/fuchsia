@@ -133,11 +133,10 @@ mod tests {
         },
         testing::TEST_IDENTITY,
     };
-    use diagnostics_data::Severity;
+    use diagnostics_data::{LogsData, Severity};
     use diagnostics_log_encoding::{
         encode::Encoder, Argument, Record, Severity as StreamSeverity, Value,
     };
-    use diagnostics_message::Message;
     use fidl_fuchsia_diagnostics::StreamMode;
     use futures::{Stream, StreamExt};
     use std::{
@@ -146,10 +145,10 @@ mod tests {
         task::{Context, Poll},
     };
 
-    struct CursorWrapper(PinStream<Arc<Message>>);
+    struct CursorWrapper(PinStream<Arc<LogsData>>);
 
     impl Stream for CursorWrapper {
-        type Item = Arc<Message>;
+        type Item = Arc<LogsData>;
         fn poll_next(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
             self.0.as_mut().poll_next(cx)
         }
@@ -210,19 +209,16 @@ mod tests {
         StoredMessage::structured(encoded, Default::default()).unwrap()
     }
 
-    fn fake_message(timestamp: i64) -> Message {
-        let message = Message::from(
-            diagnostics_data::LogsDataBuilder::new(diagnostics_data::BuilderArgs {
-                timestamp_nanos: timestamp.into(),
-                component_url: Some(TEST_IDENTITY.url.clone()),
-                moniker: TEST_IDENTITY.to_string(),
-                severity: Severity::Debug,
-                size_bytes: 64,
-            })
-            .set_pid(123)
-            .set_tid(456)
-            .build(),
-        );
-        message
+    fn fake_message(timestamp: i64) -> LogsData {
+        diagnostics_data::LogsDataBuilder::new(diagnostics_data::BuilderArgs {
+            timestamp_nanos: timestamp.into(),
+            component_url: Some(TEST_IDENTITY.url.clone()),
+            moniker: TEST_IDENTITY.to_string(),
+            severity: Severity::Debug,
+            size_bytes: 64,
+        })
+        .set_pid(123)
+        .set_tid(456)
+        .build()
     }
 }

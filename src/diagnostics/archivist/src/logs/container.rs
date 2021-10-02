@@ -14,8 +14,7 @@ use crate::{
         stored_message::StoredMessage,
     },
 };
-use diagnostics_data::{BuilderArgs, LogsDataBuilder};
-use diagnostics_message::Message;
+use diagnostics_data::{BuilderArgs, LogsData, LogsDataBuilder};
 use fidl::prelude::*;
 use fidl_fuchsia_diagnostics::{Interest, StreamMode};
 use fidl_fuchsia_logger::{
@@ -96,7 +95,7 @@ impl LogsArtifactsContainer {
     /// When messages are evicted from our internal buffers before a client can read them, they
     /// are surfaced here as an `LazyItem::ItemsDropped` variant. We report these as synthesized
     /// messages with the timestamp populated as the most recent timestamp from the stream.
-    pub fn cursor(&self, mode: StreamMode) -> PinStream<Arc<Message>> {
+    pub fn cursor(&self, mode: StreamMode) -> PinStream<Arc<LogsData>> {
         let identity = self.identity.clone();
         let earliest_timestamp = self.buffer.peek_front().map(|f| f.timestamp()).unwrap_or(0);
         Box::pin(self.buffer.cursor(mode).scan(earliest_timestamp, move |last_timestamp, item| {
@@ -134,7 +133,7 @@ impl LogsArtifactsContainer {
                     .add_error(diagnostics_data::LogError::DroppedLogs { count: n })
                     .set_message(message)
                     .build();
-                    Arc::new(data.into())
+                    Arc::new(data)
                 }
             }))
         }))

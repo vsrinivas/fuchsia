@@ -15,6 +15,7 @@ use serde::{
 };
 use std::{
     borrow::Borrow,
+    cmp::Ordering,
     fmt,
     hash::Hash,
     ops::{Deref, DerefMut},
@@ -25,6 +26,12 @@ use std::{
 pub use diagnostics_hierarchy::{
     assert_data_tree, hierarchy, tree_assertion, DiagnosticsHierarchy, Property,
 };
+
+#[cfg(target_os = "fuchsia")]
+mod logs_legacy;
+
+#[cfg(target_os = "fuchsia")]
+pub use crate::logs_legacy::*;
 
 const SCHEMA_VERSION: u64 = 1;
 const MICROS_IN_SEC: u128 = 1000000;
@@ -854,6 +861,69 @@ impl Data<Logs> {
     pub fn tags(&self) -> Option<&Vec<String>> {
         self.metadata.tags.as_ref()
     }
+
+    /// The message's severity.
+    #[cfg(target_os = "fuchsia")]
+    pub fn legacy_severity(&self) -> LegacySeverity {
+        if let Some(verbosity) = self.verbosity() {
+            LegacySeverity::Verbose(verbosity)
+        } else {
+            match self.metadata.severity {
+                Severity::Trace => LegacySeverity::Trace,
+                Severity::Debug => LegacySeverity::Debug,
+                Severity::Info => LegacySeverity::Info,
+                Severity::Warn => LegacySeverity::Warn,
+                Severity::Error => LegacySeverity::Error,
+                Severity::Fatal => LegacySeverity::Fatal,
+            }
+        }
+    }
+
+    /// Returns number of dropped logs if reported in the message.
+    pub fn dropped_logs(&self) -> Option<u64> {
+        self.metadata
+            .errors
+            .as_ref()
+            .map(|errors| {
+                errors.iter().find_map(|e| match e {
+                    LogError::DroppedLogs { count } => Some(*count),
+                    _ => None,
+                })
+            })
+            .flatten()
+    }
+
+    pub fn verbosity(&self) -> Option<i8> {
+        self.payload_message().and_then(|payload| {
+            payload
+                .properties
+                .iter()
+                .filter_map(|property| match property {
+                    LogsProperty::Int(LogsField::Verbosity, verbosity) => Some(*verbosity as i8),
+                    _ => None,
+                })
+                .next()
+        })
+    }
+
+    pub fn set_legacy_verbosity(&mut self, legacy: i8) {
+        if let Some(payload_message) = self.payload_message_mut() {
+            payload_message.properties.push(LogsProperty::Int(LogsField::Verbosity, legacy.into()));
+        }
+    }
+
+    #[cfg(target_os = "fuchsia")]
+    pub(crate) fn non_legacy_contents(&self) -> Box<dyn Iterator<Item = &LogsProperty> + '_> {
+        match self.payload_args() {
+            None => Box::new(std::iter::empty()),
+            Some(payload) => Box::new(payload.properties.iter()),
+        }
+    }
+
+    /// Returns the component nam. This only makes sense for v1 components.
+    pub fn component_name(&self) -> &str {
+        self.moniker.rsplit("/").next().unwrap_or("UNKNOWN")
+    }
 }
 
 impl fmt::Display for Data<Logs> {
@@ -937,6 +1007,20 @@ impl fmt::Display for Data<Logs> {
             }
         }
         Ok(())
+    }
+}
+
+impl Eq for Data<Logs> {}
+
+impl PartialOrd for Data<Logs> {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+impl Ord for Data<Logs> {
+    fn cmp(&self, other: &Self) -> Ordering {
+        self.metadata.timestamp.cmp(&other.metadata.timestamp)
     }
 }
 
@@ -1110,7 +1194,6 @@ impl Metadata {
 mod tests {
     use super::*;
     use diagnostics_hierarchy::hierarchy;
-    use pretty_assertions;
     use serde_json::json;
 
     const TEST_URL: &'static str = "fuchsia-pkg://test";

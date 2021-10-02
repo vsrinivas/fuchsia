@@ -1,7 +1,7 @@
 // Copyright 2021 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be found in the LICENSE file.
 
-use diagnostics_message::{Message, MonikerWithUrl};
+use diagnostics_message::{self as message, MonikerWithUrl};
 use std::ffi::CString;
 use std::os::raw::c_char;
 
@@ -11,13 +11,12 @@ pub extern "C" fn fuchsia_decode_log_message_to_json(msg: *const u8, size: usize
     unsafe {
         managed_ptr = std::slice::from_raw_parts(msg, size);
     }
-    let msg = &Message::from_structured(
+    let data = &message::from_structured(
         MonikerWithUrl { moniker: "<test_moniker>".to_string(), url: "".to_string() },
         managed_ptr,
     )
-    .unwrap()
-    .data;
-    let item = serde_json::to_string(&msg).unwrap();
+    .unwrap();
+    let item = serde_json::to_string(&data).unwrap();
     CString::new(format!("[{}]", item)).unwrap().into_raw()
 }
 
