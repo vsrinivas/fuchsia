@@ -169,8 +169,8 @@ mod tests {
             pkg_lib = io_util::open_directory(&pkg_lib, &Path::new("coverage"), rights)?;
         } else if entries.iter().any(|f| &f as &str == "coverage-rust") {
             pkg_lib = io_util::open_directory(&pkg_lib, &Path::new("coverage-rust"), rights)?;
-        } else if entries.iter().any(|f| &f as &str == "coverage-sdk") {
-            pkg_lib = io_util::open_directory(&pkg_lib, &Path::new("coverage-sdk"), rights)?;
+        } else if entries.iter().any(|f| &f as &str == "coverage-cts") {
+            pkg_lib = io_util::open_directory(&pkg_lib, &Path::new("coverage-cts"), rights)?;
         } else if entries.iter().any(|f| &f as &str == "profile") {
             pkg_lib = io_util::open_directory(&pkg_lib, &Path::new("profile"), rights)?;
         }

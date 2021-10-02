@@ -346,9 +346,9 @@ template("_fidl_cpp_library_old_impl") {
     configs += [ "//build/cpp:fidl-llcpp-deprecated-raw-channels-reserved-for-llcpp-generated-code-only" ]
 
     # Ensure this source_set() is instrumented for coverage when
-    # building in the 'coverage-sdk' build variant.
-    if (toolchain_variant.name == "coverage-sdk") {
-      configs += [ "//build/config/profile:coverage-sdk-source-config" ]
+    # building in the 'coverage-cts' build variant.
+    if (toolchain_variant.name == "coverage-cts") {
+      configs += [ "//build/config/profile:coverage-cts-source-config" ]
     }
 
     # Let dependencies use `#include "$file_stem.h"`.

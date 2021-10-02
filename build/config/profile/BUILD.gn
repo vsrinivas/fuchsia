@@ -61,16 +61,16 @@ variant("coverage") {
 #   to enable profiling instrumentation.
 #
 # - The sdk_source_set() and FIDL C++ source_set() templates add the
-#   "coverage-sdk-source-config" config to its inner target when they are built
-#   in the "coverage-sdk" variant. This adds the necessary cflags/asmflags when
+#   "coverage-cts-source-config" config to its inner target when they are built
+#   in the "coverage-cts" variant. This adds the necessary cflags/asmflags when
 #   building the target.
 #
 # - All final binaries (executables and shared libraries) are linked to the
 #   profiling runtime. Even if none of their code is actually instrumented.
 #
-# - Since this is an instrumented build variant, the libdir is 'lib/coverage-sdk'.
+# - Since this is an instrumented build variant, the libdir is 'lib/coverage-cts'.
 #
-variant("coverage-sdk") {
+variant("coverage-cts") {
   inputs = _coverage_inputs
 
   if (!is_kernel && is_fuchsia) {
@@ -82,7 +82,7 @@ variant("coverage-sdk") {
   # All instrumented build variants place their dynamic loader and dependency
   # libraries under lib/<variant>/ so ensure generated executables will find
   # it here. See toolchain_variant.libprefix definition.
-  dynamic_linker_flags = "-dynamic-linker=coverage-sdk/ld.so.1"
+  dynamic_linker_flags = "-dynamic-linker=coverage-cts/ld.so.1"
   ldflags = [ "-Wl,$dynamic_linker_flags" ]
   rustflags = [ "-Clink-arg=$dynamic_linker_flags" ]
 
@@ -90,7 +90,7 @@ variant("coverage-sdk") {
 }
 
 # This config should only be added to sdk_source_set() targets.
-config("coverage-sdk-source-config") {
+config("coverage-cts-source-config") {
   cflags = _coverage_common_flags
   asmflags = _coverage_common_flags
 }

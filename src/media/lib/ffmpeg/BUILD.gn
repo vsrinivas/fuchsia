@@ -15,7 +15,7 @@ ffmpeg_prebuilt_variants = [
   "profile",
   "coverage",
   "coverage-rust",
-  "coverage-sdk",
+  "coverage-cts",
   "novariant",
   "thinlto",
   "ubsan",
@@ -73,10 +73,10 @@ if (use_prebuilt_ffmpeg) {
     variant_prefix = ""
   }
 
-  # THe 'coverage-sdk' build variant only builds the SDK sdk_source_set() targets
-  # with instrumentation, all other targets are built with the default toolchain
-  # suite otherwise.
-  if (variant_prefix == "coverage-sdk") {
+  # THe 'coverage-cts' build variant only builds the SDK sdk_source_set() and
+  # FIDL C++ source_set() targets with instrumentation, all other targets are
+  # built with the default toolchain suite otherwise.
+  if (variant_prefix == "coverage-cts") {
     variant_prefix = ""
   }
   if (variant_prefix != "") {

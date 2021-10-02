@@ -2070,7 +2070,7 @@ Each element of the list is one variant, which is a scope defining:
   configs = ["//build/config/profile"]
   tags = ["instrumented", "profile", "llvm-profdata"]
 }, {
-  configs = ["//build/config/profile:coverage-sdk"]
+  configs = ["//build/config/profile:coverage-cts"]
   tags = ["instrumented", "coverage", "llvm-profdata"]
 }, {
   configs = ["//build/config/sanitizers:ubsan"]
