@@ -130,7 +130,7 @@ impl Default for sockaddr_un {
     }
 }
 
-type socklen_t = u32;
+pub type socklen_t = u32;
 
 #[derive(Debug, Default, Clone, AsBytes, FromBytes)]
 #[repr(C)]

@@ -187,7 +187,7 @@ impl DirEntry {
             } else {
                 let node = self.node.mknod(name, mode)?;
                 if mode.is_sock() {
-                    node.set_socket(Socket::new(SocketDomain::Unix));
+                    node.set_socket(Socket::new(SocketDomain::Unix, SocketType::Stream));
                 }
                 Ok(node)
             }

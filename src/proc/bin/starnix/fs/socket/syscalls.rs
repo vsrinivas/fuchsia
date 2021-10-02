@@ -25,10 +25,10 @@ pub fn sys_socket(
 ) -> Result<SyscallResult, Errno> {
     let flags = socket_type & (SOCK_NONBLOCK | SOCK_CLOEXEC);
     let domain = parse_socket_domain(domain)?;
-    parse_socket_type(socket_type)?;
+    let socket_type = parse_socket_type(socket_type)?;
     let open_flags = socket_flags_to_open_flags(flags);
 
-    let socket_file = Socket::new_file(ctx.kernel(), Socket::new(domain), open_flags);
+    let socket_file = Socket::new_file(ctx.kernel(), Socket::new(domain, socket_type), open_flags);
 
     let fd_flags = socket_flags_to_fd_flags(flags);
     let fd = ctx.task.files.add_with_flags(socket_file, fd_flags)?;
@@ -50,23 +50,17 @@ fn socket_flags_to_fd_flags(flags: u32) -> FdFlags {
 }
 
 fn parse_socket_domain(domain: u32) -> Result<SocketDomain, Errno> {
-    match domain.try_into().map_err(|_| errno!(EAFNOSUPPORT))? {
-        AF_UNIX => Ok(SocketDomain::Unix),
-        _ => {
-            not_implemented!("unsupported socket domain {}", domain);
-            error!(EAFNOSUPPORT)
-        }
-    }
+    SocketDomain::from_raw(domain.try_into().map_err(|_| errno!(EAFNOSUPPORT))?).ok_or_else(|| {
+        not_implemented!("unsupported socket domain {}", domain);
+        errno!(EAFNOSUPPORT)
+    })
 }
 
-fn parse_socket_type(socket_type: u32) -> Result<(), Errno> {
-    let socket_type = socket_type & 0xf;
-    if !(socket_type == SOCK_STREAM || socket_type == SOCK_DGRAM || socket_type == SOCK_SEQPACKET) {
+fn parse_socket_type(socket_type: u32) -> Result<SocketType, Errno> {
+    SocketType::from_raw(socket_type & 0xf).ok_or_else(|| {
         not_implemented!("unsupported socket type 0x{:x}", socket_type);
-        return error!(EPROTONOSUPPORT);
-    }
-    // TODO: Add an enum for socket types.
-    Ok(())
+        errno!(EPROTONOSUPPORT)
+    })
 }
 
 fn parse_socket_address(
@@ -286,10 +280,10 @@ pub fn sys_socketpair(
 ) -> Result<SyscallResult, Errno> {
     let flags = socket_type & (SOCK_NONBLOCK | SOCK_CLOEXEC);
     let domain = parse_socket_domain(domain)?;
-    parse_socket_type(socket_type)?;
+    let socket_type = parse_socket_type(socket_type)?;
     let open_flags = socket_flags_to_open_flags(flags);
 
-    let (left, right) = Socket::new_pair(domain);
+    let (left, right) = Socket::new_pair(domain, socket_type);
 
     let left_file = Socket::new_file(ctx.kernel(), left, open_flags);
     let right_file = Socket::new_file(ctx.kernel(), right, open_flags);
@@ -367,6 +361,47 @@ pub fn sys_sendmsg(
     let socket_ops = file.downcast_file::<SocketFile>().unwrap();
     let bytes_sent = socket_ops.sendmsg(ctx.task, &file, &iovec, control)?;
     Ok(bytes_sent.into())
+}
+
+pub fn sys_getsockopt(
+    ctx: &SyscallContext<'_>,
+    fd: FdNumber,
+    level: u32,
+    optname: u32,
+    user_optval: UserAddress,
+    user_optlen: UserRef<socklen_t>,
+) -> Result<SyscallResult, Errno> {
+    let file = ctx.task.files.get(fd)?;
+    let socket = file.node().socket().ok_or_else(|| errno!(ENOTSOCK))?;
+    match level {
+        SOL_SOCKET => match optname {
+            SO_TYPE => {
+                let mut optlen = 0;
+                ctx.task.mm.read_object(user_optlen, &mut optlen)?;
+                let raw = socket.lock().socket_type().as_raw();
+                let actual_optlen = std::mem::size_of_val(&raw) as socklen_t;
+                if optlen < actual_optlen {
+                    return error!(EINVAL);
+                }
+                ctx.task.mm.write_memory(user_optval, &raw.to_ne_bytes())?;
+                ctx.task.mm.write_object(user_optlen, &actual_optlen)?;
+                Ok(SUCCESS)
+            }
+            _ => error!(ENOPROTOOPT),
+        },
+        _ => error!(ENOPROTOOPT),
+    }
+}
+
+pub fn sys_setsockopt(
+    _ctx: &SyscallContext<'_>,
+    _fd: FdNumber,
+    _level: u32,
+    _optname: u32,
+    _optval: UserAddress,
+    _optlen: socklen_t,
+) -> Result<SyscallResult, Errno> {
+    error!(ENOSYS)
 }
 
 pub fn sys_shutdown(

@@ -15,6 +15,7 @@
 #include <asm/prctl.h>
 #include <asm/sigcontext.h>
 #include <asm/signal.h>
+#include <asm/socket.h>
 #include <asm/ucontext.h>
 #include <linux/auxvec.h>
 #include <linux/capability.h>

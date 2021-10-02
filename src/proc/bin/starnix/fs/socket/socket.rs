@@ -65,17 +65,18 @@ impl Socket {
     ///
     /// # Parameters
     /// - `domain`: The domain of the socket (e.g., `AF_UNIX`).
-    pub fn new(domain: SocketDomain) -> SocketHandle {
-        new_handle(Socket::Unbound(SocketEndpoint::new(domain)))
+    pub fn new(domain: SocketDomain, socket_type: SocketType) -> SocketHandle {
+        new_handle(Socket::Unbound(SocketEndpoint::new(domain, socket_type)))
     }
 
     /// Creates a pair of connected sockets.
     ///
     /// # Parameters
     /// - `domain`: The domain of the socket (e.g., `AF_UNIX`).
-    pub fn new_pair(domain: SocketDomain) -> (SocketHandle, SocketHandle) {
-        let left_endpoint = SocketEndpoint::new(domain);
-        let right_endpoint = SocketEndpoint::new(domain);
+    /// - `socket_type`: The type of the socket (e.g., `SOCK_STREAM`).
+    pub fn new_pair(domain: SocketDomain, socket_type: SocketType) -> (SocketHandle, SocketHandle) {
+        let left_endpoint = SocketEndpoint::new(domain, socket_type);
+        let right_endpoint = SocketEndpoint::new(domain, socket_type);
         let (left, right) = SocketConnection::connect(left_endpoint, right_endpoint);
         (new_handle(left), new_handle(right))
     }
@@ -92,6 +93,15 @@ impl Socket {
         let node = fs.create_node(Box::new(Anon), mode);
         node.set_socket(socket.clone());
         FileObject::new_anonymous(SocketFile::new(socket), node, open_flags)
+    }
+
+    #[allow(dead_code)]
+    pub fn domain(&self) -> SocketDomain {
+        self.local_endpoint().lock().domain
+    }
+
+    pub fn socket_type(&self) -> SocketType {
+        self.local_endpoint().lock().socket_type
     }
 
     /// Binds this socket to a `socket_address`.
@@ -121,8 +131,7 @@ impl Socket {
             Socket::Bound(endpoint) => {
                 *self = ListeningSocketEndpoint::new(endpoint.clone(), backlog);
                 Ok(())
-
-            },
+            }
             Socket::Listening(passive) => {
                 passive.set_backlog(backlog)?;
                 Ok(())
@@ -275,6 +284,41 @@ pub enum SocketDomain {
     Unix,
 }
 
+impl SocketDomain {
+    pub fn from_raw(raw: u16) -> Option<SocketDomain> {
+        match raw {
+            AF_UNIX => Some(SocketDomain::Unix),
+            _ => None,
+        }
+    }
+}
+
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
+pub enum SocketType {
+    Stream,
+    Datagram,
+    SeqPacket,
+}
+
+impl SocketType {
+    pub fn from_raw(raw: u32) -> Option<SocketType> {
+        match raw {
+            SOCK_STREAM => Some(SocketType::Stream),
+            SOCK_DGRAM => Some(SocketType::Datagram),
+            SOCK_SEQPACKET => Some(SocketType::SeqPacket),
+            _ => None,
+        }
+    }
+
+    pub fn as_raw(&self) -> u32 {
+        match self {
+            SocketType::Stream => SOCK_STREAM,
+            SocketType::Datagram => SOCK_DGRAM,
+            SocketType::SeqPacket => SOCK_SEQPACKET,
+        }
+    }
+}
+
 #[derive(Debug, Clone)]
 pub enum SocketAddress {
     /// A `Unix` socket address contains the filesystem path that was used to bind the socket.
@@ -318,6 +362,9 @@ pub struct SocketEndpoint {
     /// The domain of this socket endpoint.
     domain: SocketDomain,
 
+    /// The type of this socket.
+    socket_type: SocketType,
+
     /// The address that this socket has been bound to, if it has been bound.
     address: SocketAddress,
 
@@ -334,7 +381,7 @@ impl SocketEndpoint {
     /// Creates a new socket endpoint within the specified socket domain.
     ///
     /// The socket endpoint's address is set to a default value for the specified domain.
-    pub fn new(domain: SocketDomain) -> SocketEndpointHandle {
+    pub fn new(domain: SocketDomain, socket_type: SocketType) -> SocketEndpointHandle {
         let address = match domain {
             SocketDomain::Unix => SocketAddress::Unix(vec![]),
         };
@@ -342,6 +389,7 @@ impl SocketEndpoint {
             messages: MessageQueue::new(usize::MAX),
             waiters: WaitQueue::default(),
             domain,
+            socket_type,
             address,
             readable: true,
             writable: true,
@@ -453,10 +501,7 @@ impl ListeningSocketEndpoint {
         let backlog = backlog as usize;
         Socket::Listening(ListeningSocketEndpoint {
             endpoint,
-            queue: Mutex::new(AcceptQueue {
-                sockets: VecDeque::with_capacity(backlog),
-                backlog,
-            }),
+            queue: Mutex::new(AcceptQueue { sockets: VecDeque::with_capacity(backlog), backlog }),
         })
     }
 
@@ -477,7 +522,7 @@ impl ListeningSocketEndpoint {
         let mut passive = self.endpoint.lock();
         let mut active = client_endpoint.lock();
 
-        if active.domain != passive.domain {
+        if active.domain != passive.domain || active.socket_type != passive.socket_type {
             return error!(EPROTOTYPE);
         }
 
@@ -486,7 +531,7 @@ impl ListeningSocketEndpoint {
             return error!(EAGAIN);
         }
 
-        let server_endpoint = SocketEndpoint::new(passive.domain);
+        let server_endpoint = SocketEndpoint::new(active.domain, active.socket_type);
         let (client, server) =
             SocketConnection::connect(client_endpoint.clone(), server_endpoint.clone());
         queue.sockets.push_back(new_handle(server));
