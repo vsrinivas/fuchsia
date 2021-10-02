@@ -3,11 +3,10 @@
 // found in the LICENSE file.
 
 use crate::not_implemented;
-use crate::signals::{Signal, UncheckedSignal};
+use crate::signals::*;
 use crate::syscalls::SyscallContext;
-use crate::task::{Scheduler, Task};
+use crate::task::*;
 use crate::types::*;
-use crate::types::{pid_t, sigaction_t, Errno, UserAddress};
 use fuchsia_zircon::sys::zx_thread_state_general_regs_t;
 use std::convert::TryFrom;
 
@@ -70,7 +69,12 @@ fn misalign_stack_pointer(pointer: u64) -> u64 {
 /// This function stores the state required to restore after the signal handler on the stack.
 // TODO(lindkvist): Honor the flags in `sa_flags`.
 // TODO(lindkvist): Apply `sa_mask` to block signals during the execution of the signal handler.
-pub fn dispatch_signal_handler(ctx: &mut SyscallContext<'_>, signal: Signal, action: sigaction_t) {
+fn dispatch_signal_handler(
+    ctx: &mut SyscallContext<'_>,
+    signal_state: &mut SignalState,
+    signal: Signal,
+    action: sigaction_t,
+) {
     let signal_stack_frame = SignalStackFrame::new(ctx.registers, action.sa_restorer.ptr() as u64);
 
     // Determine which stack pointer to use for the signal handler.
@@ -78,7 +82,7 @@ pub fn dispatch_signal_handler(ctx: &mut SyscallContext<'_>, signal: Signal, act
     // the red zone.
     // https://en.wikipedia.org/wiki/Red_zone_%28computing%29
     let mut stack_pointer = if (action.sa_flags & SA_ONSTACK as u64) != 0 {
-        match *ctx.task.signal_stack.lock() {
+        match signal_state.alt_stack {
             Some(sigaltstack) => {
                 // Since the stack grows down, the size is added to the ss_sp when calculating the
                 // "bottom" of the stack.
@@ -118,10 +122,12 @@ pub fn restore_from_signal_handler(ctx: &mut SyscallContext<'_>) {
     ctx.registers = signal_stack_frame.registers;
 
     // Restore the task's signal mask.
-    if let Some(saved_signal_mask) = *ctx.task.saved_signal_mask.lock() {
-        *ctx.task.signal_mask.lock() = saved_signal_mask;
+    // TODO: is this useful?
+    let mut signal_state = ctx.task.signals.write();
+    if let Some(saved_signal_mask) = signal_state.saved_mask {
+        signal_state.mask = saved_signal_mask;
     }
-    *ctx.task.saved_signal_mask.lock() = None;
+    signal_state.saved_mask = None;
 }
 
 pub fn send_signal(task: &Task, unchecked_signal: &UncheckedSignal) -> Result<(), Errno> {
@@ -131,86 +137,95 @@ pub fn send_signal(task: &Task, unchecked_signal: &UncheckedSignal) -> Result<()
         return Ok(());
     }
 
-    send_checked_signal(task, Signal::try_from(unchecked_signal)?)?;
+    send_checked_signal(task, Signal::try_from(unchecked_signal)?);
     Ok(())
 }
 
-pub fn send_checked_signal(task: &Task, signal: Signal) -> Result<(), Errno> {
-    let mut scheduler = task.thread_group.kernel.scheduler.write();
-    scheduler.add_pending_signal(task.id, signal.clone());
+pub fn send_checked_signal(task: &Task, signal: Signal) {
+    let mut signal_state = task.signals.write();
+    let pending_count = signal_state.pending.entry(signal.clone()).or_insert(0);
+    if signal.is_real_time() {
+        *pending_count += 1;
+    } else {
+        *pending_count = 1;
+    }
 
-    if signal.passes_mask(*task.signal_mask.lock()) {
+    if signal.passes_mask(signal_state.mask)
+        && action_for_signal(signal, task.signal_actions.get(signal)) != DeliveryAction::Ignore
+    {
         // Wake the task. Note that any potential signal handler will be executed before
         // the task returns from the suspend (from the perspective of user space).
-        wake(task.id, &mut scheduler)?;
+        if let Some(waiter) = &signal_state.waiter {
+            waiter.interrupt();
+        }
     }
-    Ok(())
+}
+
+fn next_pending_signal(state: &SignalState) -> Option<Signal> {
+    state
+        .pending
+        .iter()
+        // Filter out signals that are blocked.
+        .filter(|&(signal, num_signals)| signal.passes_mask(state.mask) && *num_signals > 0)
+        .flat_map(
+            // Filter out signals that are present in the map but have a 0 count.
+            |(signal, num_signals)| if *num_signals > 0 { Some(*signal) } else { None },
+        )
+        .next()
+}
+
+/// Represents the action to take when signal is delivered.
+///
+/// See https://man7.org/linux/man-pages/man7/signal.7.html.
+#[derive(Debug, PartialEq)]
+enum DeliveryAction {
+    Ignore,
+    CallHandler,
+    Terminate,
+    CoreDump,
+    Stop,
+    Continue,
+}
+
+fn action_for_signal(signal: Signal, sigaction: sigaction_t) -> DeliveryAction {
+    match sigaction.sa_handler {
+        SIG_DFL => match signal.number() {
+            SIGCHLD | SIGURG | SIGWINCH | SIGRTMIN..=Signal::NUM_SIGNALS => DeliveryAction::Ignore,
+            SIGHUP | SIGINT | SIGKILL | SIGPIPE | SIGALRM | SIGTERM | SIGUSR1 | SIGUSR2
+            | SIGPROF | SIGVTALRM | SIGSTKFLT | SIGIO | SIGPWR => DeliveryAction::Terminate,
+            SIGQUIT | SIGILL | SIGABRT | SIGFPE | SIGSEGV | SIGBUS | SIGSYS | SIGTRAP | SIGXCPU
+            | SIGXFSZ => DeliveryAction::CoreDump,
+            SIGSTOP | SIGTSTP | SIGTTIN | SIGTTOU => DeliveryAction::Stop,
+            SIGCONT => DeliveryAction::Continue,
+            _ => panic!("Unknown signal"),
+        },
+        SIG_IGN => DeliveryAction::Ignore,
+        _ => DeliveryAction::CallHandler,
+    }
 }
 
 /// Dequeues and handles a pending signal for `ctx.task`.
 pub fn dequeue_signal(ctx: &mut SyscallContext<'_>) {
     let task = ctx.task;
+    let mut signal_state = task.signals.write();
 
-    let mut scheduler = task.thread_group.kernel.scheduler.write();
-    let signals = scheduler.get_pending_signals(task.id);
-
-    if let Some(&unblocked_signal) = signals
-        .iter()
-        // Filter out signals that are blocked.
-        .filter(|&(signal, num_signals)| {
-            signal.passes_mask(*task.signal_mask.lock()) && *num_signals > 0
-        })
-        .flat_map(
-            // Filter out signals that are present in the map but have a 0 count.
-            |(signal, num_signals)| if *num_signals > 0 { Some(signal) } else { None },
-        )
-        .next()
-    {
-        /// Represents the action to take when signal is delivered.
-        ///
-        /// See https://man7.org/linux/man-pages/man7/signal.7.html.
-        #[derive(Debug)]
-        enum SigAct {
-            Ignore,
-            CallHandler,
-            Terminate,
-            CoreDump,
-            Stop,
-            Continue,
-        }
-
-        let sigaction = task.signal_actions.get(unblocked_signal);
-        let action = match sigaction.sa_handler {
-            SIG_DFL => match unblocked_signal.number() {
-                SIGCHLD | SIGURG | SIGWINCH | SIGRTMIN..=Signal::NUM_SIGNALS => SigAct::Ignore,
-                SIGHUP | SIGINT | SIGKILL | SIGPIPE | SIGALRM | SIGTERM | SIGUSR1 | SIGUSR2
-                | SIGPROF | SIGVTALRM | SIGSTKFLT | SIGIO | SIGPWR => SigAct::Terminate,
-                SIGQUIT | SIGILL | SIGABRT | SIGFPE | SIGSEGV | SIGBUS | SIGSYS | SIGTRAP
-                | SIGXCPU | SIGXFSZ => SigAct::CoreDump,
-                SIGSTOP | SIGTSTP | SIGTTIN | SIGTTOU => SigAct::Stop,
-                SIGCONT => SigAct::Continue,
-                _ => panic!("Unknown signal"),
-            },
-            SIG_IGN => SigAct::Ignore,
-            _ => SigAct::CallHandler,
-        };
+    if let Some(signal) = next_pending_signal(&signal_state) {
+        let sigaction = task.signal_actions.get(signal);
+        let action = action_for_signal(signal, sigaction);
         match action {
-            SigAct::CallHandler => {
-                dispatch_signal_handler(ctx, unblocked_signal, sigaction);
+            DeliveryAction::CallHandler => {
+                dispatch_signal_handler(ctx, &mut signal_state, signal, sigaction);
             }
 
-            SigAct::Ignore => {}
-            _ => not_implemented!("Unimplemented signal action {:?}", action),
+            DeliveryAction::Ignore => {}
+
+            _ => not_implemented!("Unimplemented signal delivery action {:?}", action),
         };
         // This unwrap is safe since we checked the signal comes from the signals collection.
-        *signals.get_mut(&unblocked_signal).unwrap() -= 1;
+        *signal_state.pending.get_mut(&signal).unwrap() -= 1;
     }
 }
 
-/// Wakes the task from call to `sigsuspend`.
-fn wake(pid: pid_t, scheduler: &mut Scheduler) -> Result<(), Errno> {
-    if let Some(waiter_condvar) = scheduler.remove_suspended_task(pid) {
-        waiter_condvar.wake();
-    }
-    Ok(())
+pub fn are_signals_pending(state: &SignalState) -> bool {
+    next_pending_signal(state).is_some()
 }

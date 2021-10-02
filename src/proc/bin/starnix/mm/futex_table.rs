@@ -37,6 +37,7 @@ impl FutexTable {
     ) -> Result<(), Errno> {
         let user_current = UserRef::<u32>::new(addr);
         let mut current = 0;
+        let waiter = Waiter::for_task(task);
         {
             let waiters = self.get_waiters(addr);
             let mut waiters = waiters.lock();
@@ -46,9 +47,9 @@ impl FutexTable {
                 return Ok(());
             }
 
-            waiters.wait_async_mask(&task.waiter, mask, WaitCallback::none());
+            waiters.wait_async_mask(&waiter, mask, WaitCallback::none());
         }
-        task.waiter.wait_until(deadline)
+        waiter.wait_until(task, deadline)
     }
 
     /// Wake the given number of waiters on futex at the given address.

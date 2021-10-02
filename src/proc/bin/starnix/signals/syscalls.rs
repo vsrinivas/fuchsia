@@ -79,10 +79,11 @@ pub fn sys_rt_sigprocmask(
         ctx.task.mm.read_object(user_set, &mut new_mask)?;
     }
 
-    let mut signal_mask = ctx.task.signal_mask.lock();
+    let mut signal_state = ctx.task.signals.write();
+    let signal_mask = signal_state.mask;
     // If old_set is not null, store the previous value in old_set.
     if !user_old_set.is_null() {
-        ctx.task.mm.write_object(user_old_set, &mut signal_mask)?;
+        ctx.task.mm.write_object(user_old_set, &signal_mask)?;
     }
 
     // If set is null, how is ignored and the mask is not updated.
@@ -90,17 +91,17 @@ pub fn sys_rt_sigprocmask(
         return Ok(SUCCESS);
     }
 
-    let mut updated_signal_mask = match how {
-        SIG_BLOCK => (*signal_mask | new_mask),
-        SIG_UNBLOCK => *signal_mask & !new_mask,
+    let signal_mask = match how {
+        SIG_BLOCK => (signal_mask | new_mask),
+        SIG_UNBLOCK => signal_mask & !new_mask,
         SIG_SETMASK => new_mask,
         // Arguments have already been verified, this should never match.
-        _ => *signal_mask,
+        _ => signal_mask,
     };
 
     // Can't block SIGKILL, or SIGSTOP.
-    updated_signal_mask = updated_signal_mask & !(Signal::SIGSTOP.mask() | Signal::SIGKILL.mask());
-    *signal_mask = updated_signal_mask;
+    let signal_mask = signal_mask & !(Signal::SIGSTOP.mask() | Signal::SIGKILL.mask());
+    signal_state.mask = signal_mask;
 
     Ok(SUCCESS)
 }
@@ -110,8 +111,9 @@ pub fn sys_sigaltstack(
     user_ss: UserRef<sigaltstack_t>,
     user_old_ss: UserRef<sigaltstack_t>,
 ) -> Result<SyscallResult, Errno> {
-    let mut signal_stack = ctx.task.signal_stack.lock();
-    let on_signal_stack = signal_stack
+    let mut signal_state = ctx.task.signals.write();
+    let on_signal_stack = signal_state
+        .alt_stack
         .map(|signal_stack| signal_stack.contains_pointer(ctx.registers.rsp))
         .unwrap_or(false);
 
@@ -127,7 +129,7 @@ pub fn sys_sigaltstack(
     }
 
     if !user_old_ss.is_null() {
-        let mut old_ss = match *signal_stack {
+        let mut old_ss = match signal_state.alt_stack {
             Some(old_ss) => old_ss,
             None => sigaltstack_t { ss_flags: SS_DISABLE, ..sigaltstack_t::default() },
         };
@@ -139,9 +141,9 @@ pub fn sys_sigaltstack(
 
     if !user_ss.is_null() {
         if ss.ss_flags & SS_DISABLE != 0 {
-            *signal_stack = None;
+            signal_state.alt_stack = None;
         } else {
-            *signal_stack = Some(ss);
+            signal_state.alt_stack = Some(ss);
         }
     }
 
@@ -160,44 +162,20 @@ pub fn sys_rt_sigsuspend(
     let mut mask = sigset_t::default();
     ctx.task.mm.read_object(user_mask, &mut mask)?;
 
-    // This block makes sure the lock on the signal mask is released before waiting.
-    let (old_mask, current_signal_mask) = {
-        // Save the old signal mask so it can be restored once the task wakes back up.
-        let mut current_signal_mask = ctx.task.signal_mask.lock();
-        let old_mask = *current_signal_mask;
-        *current_signal_mask = mask & !(Signal::SIGSTOP.mask() | Signal::SIGKILL.mask());
-        (old_mask, *current_signal_mask)
+    let waiter = Waiter::for_task(&ctx.task);
+    // This block is important to release the signal state lock while waiting.
+    let old_mask = {
+        let mut signal_state = ctx.task.signals.write();
+        let old_mask = signal_state.mask;
+        signal_state.mask = mask & !(Signal::SIGSTOP.mask() | Signal::SIGKILL.mask());
+        old_mask
     };
-
-    // This block makes sure the write lock on the pids is dropped before waiting.
-    let waiter = {
-        let mut scheduler = ctx.task.thread_group.kernel.scheduler.write();
-        // If there is already a matching pending signal, don't suspend the task.
-        if scheduler
-            .get_pending_signals(ctx.task.id)
-            .iter()
-            .filter(|&(signal, &num_signals)| {
-                num_signals > 0 && signal.passes_mask(current_signal_mask)
-            })
-            .next()
-            .is_some()
-        {
-            None
-        } else {
-            scheduler.add_suspended_task(ctx.task);
-            Some(ctx.task.waiter.clone())
-        }
-    };
-
-    if let Some(waiter) = waiter {
-        waiter.wait()?;
-    }
-
-    // Save the old mask, so that the task can restore it after the signal handler executes.
-    *ctx.task.saved_signal_mask.lock() = Some(old_mask);
-
-    // sigsuspend always returns an error.
-    error!(EINTR)
+    let result = waiter.wait(&ctx.task);
+    // TODO(tbodt): There's a window right here where another thread can see an empty
+    // signals.waiter and the wrong mask. Unsure if this is actually a problem.
+    ctx.task.signals.write().mask = old_mask;
+    result?;
+    Ok(SUCCESS)
 }
 
 pub fn sys_kill(
@@ -515,7 +493,7 @@ mod tests {
         let addr = map_memory(&ctx, UserAddress::default(), *PAGE_SIZE);
         let original_mask = Signal::SIGTRAP.mask();
         {
-            *ctx.task.signal_mask.lock() = original_mask;
+            ctx.task.signals.write().mask = original_mask;
         }
 
         let set = UserRef::<sigset_t>::default();
@@ -545,7 +523,7 @@ mod tests {
         let ctx = SyscallContext::new(&task_owner.task);
         let original_mask = Signal::SIGTRAP.mask();
         {
-            *ctx.task.signal_mask.lock() = original_mask;
+            ctx.task.signals.write().mask = original_mask;
         }
 
         let set = UserRef::<sigset_t>::default();
@@ -556,7 +534,7 @@ mod tests {
             sys_rt_sigprocmask(&ctx, how, set, old_set, std::mem::size_of::<sigset_t>()),
             Ok(SUCCESS)
         );
-        assert_eq!(*ctx.task.signal_mask.lock(), original_mask);
+        assert_eq!(ctx.task.signals.read().mask, original_mask);
     }
 
     /// Calling rt_sigprocmask with SIG_SETMASK should set the mask to the provided set.
@@ -572,7 +550,7 @@ mod tests {
 
         let original_mask = Signal::SIGTRAP.mask();
         {
-            *ctx.task.signal_mask.lock() = original_mask;
+            ctx.task.signals.write().mask = original_mask;
         }
 
         let new_mask: sigset_t = Signal::SIGIO.mask();
@@ -590,7 +568,7 @@ mod tests {
         let mut old_mask = sigset_t::default();
         ctx.task.mm.read_object(old_set, &mut old_mask).expect("failed to read mask");
         assert_eq!(old_mask, original_mask);
-        assert_eq!(*ctx.task.signal_mask.lock(), new_mask);
+        assert_eq!(ctx.task.signals.read().mask, new_mask);
     }
 
     /// Calling st_sigprocmask with a how of SIG_BLOCK should add to the existing set.
@@ -606,7 +584,7 @@ mod tests {
 
         let original_mask = Signal::SIGTRAP.mask();
         {
-            *ctx.task.signal_mask.lock() = original_mask;
+            ctx.task.signals.write().mask = original_mask;
         }
 
         let new_mask: sigset_t = Signal::SIGIO.mask();
@@ -624,7 +602,7 @@ mod tests {
         let mut old_mask = sigset_t::default();
         ctx.task.mm.read_object(old_set, &mut old_mask).expect("failed to read mask");
         assert_eq!(old_mask, original_mask);
-        assert_eq!(*ctx.task.signal_mask.lock(), new_mask | original_mask);
+        assert_eq!(ctx.task.signals.read().mask, new_mask | original_mask);
     }
 
     /// Calling st_sigprocmask with a how of SIG_UNBLOCK should remove from the existing set.
@@ -640,7 +618,7 @@ mod tests {
 
         let original_mask = Signal::SIGTRAP.mask() | Signal::SIGIO.mask();
         {
-            *ctx.task.signal_mask.lock() = original_mask;
+            ctx.task.signals.write().mask = original_mask;
         }
 
         let new_mask: sigset_t = Signal::SIGTRAP.mask();
@@ -658,7 +636,7 @@ mod tests {
         let mut old_mask = sigset_t::default();
         ctx.task.mm.read_object(old_set, &mut old_mask).expect("failed to read mask");
         assert_eq!(old_mask, original_mask);
-        assert_eq!(*ctx.task.signal_mask.lock(), Signal::SIGIO.mask());
+        assert_eq!(ctx.task.signals.read().mask, Signal::SIGIO.mask());
     }
 
     /// It's ok to call sigprocmask to unblock a signal that is not set.
@@ -674,7 +652,7 @@ mod tests {
 
         let original_mask = Signal::SIGIO.mask();
         {
-            *ctx.task.signal_mask.lock() = original_mask;
+            ctx.task.signals.write().mask = original_mask;
         }
 
         let new_mask: sigset_t = Signal::SIGTRAP.mask();
@@ -692,7 +670,7 @@ mod tests {
         let mut old_mask = sigset_t::default();
         ctx.task.mm.read_object(old_set, &mut old_mask).expect("failed to read mask");
         assert_eq!(old_mask, original_mask);
-        assert_eq!(*ctx.task.signal_mask.lock(), original_mask);
+        assert_eq!(ctx.task.signals.read().mask, original_mask);
     }
 
     /// It's not possible to block SIGKILL or SIGSTOP.
@@ -708,7 +686,7 @@ mod tests {
 
         let original_mask = Signal::SIGIO.mask();
         {
-            *ctx.task.signal_mask.lock() = original_mask;
+            ctx.task.signals.write().mask = original_mask;
         }
 
         let new_mask: sigset_t = Signal::SIGSTOP.mask() | Signal::SIGKILL.mask();
@@ -726,7 +704,7 @@ mod tests {
         let mut old_mask = sigset_t::default();
         ctx.task.mm.read_object(old_set, &mut old_mask).expect("failed to read mask");
         assert_eq!(old_mask, original_mask);
-        assert_eq!(*ctx.task.signal_mask.lock(), original_mask);
+        assert_eq!(ctx.task.signals.read().mask, original_mask);
     }
 
     #[fasync::run_singlethreaded(test)]
@@ -861,7 +839,7 @@ mod tests {
     /// Sending a blocked signal should result in a pending signal.
     #[fasync::run_singlethreaded(test)]
     async fn test_blocked_signal_pending() {
-        let (kernel, task_owner) = create_kernel_and_task();
+        let (_kernel, task_owner) = create_kernel_and_task();
         let ctx = SyscallContext::new(&task_owner.task);
         let addr = map_memory(&ctx, UserAddress::default(), *PAGE_SIZE);
         ctx.task
@@ -886,8 +864,7 @@ mod tests {
         assert_eq!(sys_kill(&ctx, task_owner.task.id, SIGIO.into()), Ok(SUCCESS));
 
         {
-            let mut scheduler = kernel.scheduler.write();
-            let pending_signals = scheduler.get_pending_signals(task_owner.task.id);
+            let pending_signals = &task_owner.task.signals.read().pending;
             assert_eq!(pending_signals[&Signal::SIGIO], 1);
         }
 
@@ -895,8 +872,7 @@ mod tests {
         assert_eq!(sys_kill(&ctx, task_owner.task.id, SIGIO.into()), Ok(SUCCESS));
 
         {
-            let mut scheduler = kernel.scheduler.write();
-            let pending_signals = scheduler.get_pending_signals(task_owner.task.id);
+            let pending_signals = &task_owner.task.signals.read().pending;
             assert_eq!(pending_signals[&Signal::SIGIO], 1);
         }
     }
@@ -904,7 +880,7 @@ mod tests {
     /// More than one instance of a real-time signal can be blocked.
     #[fasync::run_singlethreaded(test)]
     async fn test_blocked_real_time_signal_pending() {
-        let (kernel, task_owner) = create_kernel_and_task();
+        let (_kernel, task_owner) = create_kernel_and_task();
         let ctx = SyscallContext::new(&task_owner.task);
         let addr = map_memory(&ctx, UserAddress::default(), *PAGE_SIZE);
         ctx.task
@@ -929,8 +905,7 @@ mod tests {
         assert_eq!(sys_kill(&ctx, task_owner.task.id, SIGRTMIN.into()), Ok(SUCCESS));
 
         {
-            let mut scheduler = kernel.scheduler.write();
-            let pending_signals = scheduler.get_pending_signals(task_owner.task.id);
+            let pending_signals = &task_owner.task.signals.read().pending;
             assert_eq!(pending_signals[&Signal::SIGRTMIN], 1);
         }
 
@@ -938,8 +913,7 @@ mod tests {
         assert_eq!(sys_kill(&ctx, task_owner.task.id, SIGRTMIN.into()), Ok(SUCCESS));
 
         {
-            let mut scheduler = kernel.scheduler.write();
-            let pending_signals = scheduler.get_pending_signals(task_owner.task.id);
+            let pending_signals = &task_owner.task.signals.read().pending;
             assert_eq!(pending_signals[&Signal::SIGRTMIN], 2);
         }
     }
@@ -947,7 +921,8 @@ mod tests {
     #[fasync::run_singlethreaded(test)]
     async fn test_suspend() {
         let (kernel, task_owner) = create_kernel_and_task();
-        let first_task_id = task_owner.task.id;
+        let first_task_clone = Arc::clone(&task_owner.task);
+        let first_task_id = first_task_clone.id;
 
         let thread = std::thread::spawn(move || {
             let ctx = SyscallContext::new(&task_owner.task);
@@ -969,8 +944,7 @@ mod tests {
         // Wait for the first task to be suspended.
         let mut suspended = false;
         while !suspended {
-            let scheduler = kernel.scheduler.read();
-            suspended = scheduler.is_task_suspended(first_task_id);
+            suspended = first_task_clone.signals.read().waiter.is_some();
             std::thread::sleep(std::time::Duration::from_millis(10));
         }
 
@@ -980,60 +954,7 @@ mod tests {
         // Wait for the sigsuspend to complete.
         let _ = thread.join();
 
-        let scheduler = kernel.scheduler.read();
-        assert!(!scheduler.is_task_suspended(first_task_id));
-    }
-
-    #[fasync::run_singlethreaded(test)]
-    async fn test_signal_mask_restored() {
-        let (kernel, task_owner) = create_kernel_and_task();
-        let first_task_id = task_owner.task.id;
-
-        // The original and suspended masks exclude STOP and KILL explicitly, since they aren't
-        // blockable. This makes the asserts in the test cleaner, since otherwise we would need
-        // to remove STOP and KILL before comparing masks.
-        let original_signal_mask =
-            !(Signal::SIGCHLD.mask() | Signal::SIGSTOP.mask() | Signal::SIGKILL.mask());
-        let suspended_signal_mask =
-            !(Signal::SIGCONT.mask() | Signal::SIGSTOP.mask() | Signal::SIGKILL.mask());
-        *task_owner.task.signal_mask.lock() = original_signal_mask;
-
-        // Clone the task so that the signal mask can be checked during sigsuspend.
-        let first_task_clone = &task_owner.task.clone();
-        let thread = std::thread::spawn(move || {
-            let ctx = SyscallContext::new(&task_owner.task);
-            let addr = map_memory(&ctx, UserAddress::default(), *PAGE_SIZE);
-            let user_ref = UserRef::<sigset_t>::new(addr);
-
-            let sigset: sigset_t = suspended_signal_mask.clone();
-            ctx.task.mm.write_object(user_ref, &sigset).expect("failed to set action");
-
-            assert_eq!(
-                sys_rt_sigsuspend(&ctx, user_ref, std::mem::size_of::<sigset_t>()),
-                error!(EINTR)
-            );
-        });
-
-        let second_task_owner = create_task(&kernel, "test-task-2");
-        let ctx = SyscallContext::new(&second_task_owner.task);
-
-        // Wait for the first task to be suspended.
-        let mut suspended = false;
-        while !suspended {
-            let scheduler = kernel.scheduler.read();
-            suspended = scheduler.is_task_suspended(first_task_id);
-            std::thread::sleep(std::time::Duration::from_millis(10));
-        }
-
-        let _ = sys_kill(&ctx, first_task_id, UncheckedSignal::from(SIGCONT));
-        let _ = thread.join();
-
-        // Make sure that the signal masks are correct after the suspend returns. The signal has
-        // yet to be handled at this point, so the signal mask should be the mask passed to
-        // sigsuspend, and the saved mask should be the signal mask that was in place prior to
-        // sigsuspend.
-        assert_eq!(*first_task_clone.signal_mask.lock(), suspended_signal_mask);
-        assert_eq!(*first_task_clone.saved_signal_mask.lock(), Some(original_signal_mask));
+        assert!(first_task_clone.signals.read().waiter.is_none());
     }
 
     /// Waitid does not support all options.

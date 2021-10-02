@@ -55,6 +55,7 @@ if (target_cpu == "x64") {
       "//third_party/rust_crates:parking_lot",
       "//third_party/rust_crates:paste",
       "//third_party/rust_crates:rand",
+      "//third_party/rust_crates:scopeguard",
     ]
 
     test_deps = [
@@ -139,7 +140,6 @@ if (target_cpu == "x64") {
       "task/kernel.rs",
       "task/mod.rs",
       "task/pid_table.rs",
-      "task/scheduler.rs",
       "task/syscalls.rs",
       "task/task.rs",
       "task/thread_group.rs",

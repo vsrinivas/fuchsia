@@ -6,8 +6,10 @@
 
 use crate::errno;
 use crate::error;
+use crate::task::Waiter;
 use crate::types::*;
 use parking_lot::RwLock;
+use std::collections::HashMap;
 use std::convert::TryFrom;
 use std::fmt;
 use std::hash::{Hash, Hasher};
@@ -215,6 +217,37 @@ impl SignalActions {
     pub fn fork(&self) -> Arc<SignalActions> {
         Arc::new(SignalActions { actions: RwLock::new(self.actions.read().clone()) })
     }
+}
+
+/// Per-task signal handling state.
+#[derive(Default)]
+pub struct SignalState {
+    /// The pending signals for a given task.
+    ///
+    /// There may be more than one instance of a real-time signal pending, but for standard
+    /// signals there is only ever one instance of any given signal.
+    ///
+    /// Signals are delivered immediately if the target is running, but there are two cases where
+    /// the signal would end up pending:
+    ///   1. The task is not running, the signal will then be delivered the next time the task is
+    ///      scheduled to run.
+    ///   2. The signal is blocked by the target. The signal is then pending until the signal is
+    ///      unblocked and can be delivered to the target.
+    pub pending: HashMap<Signal, u64>,
+
+    // See https://man7.org/linux/man-pages/man2/sigaltstack.2.html
+    pub alt_stack: Option<sigaltstack_t>,
+
+    /// The signal mask of the task.
+    // See https://man7.org/linux/man-pages/man2/rt_sigprocmask.2.html
+    pub mask: sigset_t,
+
+    /// The saved signal mask of the task. This mask is set when a task wakes in `sys_rt_sigsuspend`
+    /// so that the signal mask can be restored properly after the signal handler has executed.
+    pub saved_mask: Option<sigset_t>,
+
+    /// The waiter that the task is currently sleeping on, if any.
+    pub waiter: Option<Arc<Waiter>>,
 }
 
 pub const CLD_EXITED: i32 = 1;

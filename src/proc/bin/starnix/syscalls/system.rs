@@ -13,6 +13,7 @@ use crate::logging::*;
 use crate::not_implemented;
 use crate::syscalls::decls::SyscallDecl;
 use crate::syscalls::*;
+use crate::task::Waiter;
 use crate::types::*;
 
 pub fn sys_uname(
@@ -124,17 +125,15 @@ pub fn sys_nanosleep(
     let mut request = timespec::default();
     ctx.task.mm.read_object(user_request, &mut request)?;
     let deadline = zx::Time::after(duration_from_timespec(request)?);
-    ctx.task.waiter.wait_until(deadline).map_err(|e| {
-        if e == EINTR {
+    match Waiter::for_task(&ctx.task).wait_until(&ctx.task, deadline) {
+        Err(err) if err == EINTR => {
             let now = zx::Time::get_monotonic();
             let remaining =
                 timespec_from_duration(std::cmp::max(zx::Duration::from_nanos(0), deadline - now));
-            if let Err(e) = ctx.task.mm.write_object(user_remaining, &remaining) {
-                return e;
-            }
+            ctx.task.mm.write_object(user_remaining, &remaining)?;
         }
-        e
-    })?;
+        non_eintr => non_eintr?,
+    }
     Ok(SUCCESS)
 }
 

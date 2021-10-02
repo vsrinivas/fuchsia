@@ -82,19 +82,12 @@ pub struct Task {
     /// The signal actions that are registered for this task.
     pub signal_actions: Arc<SignalActions>,
 
-    // See https://man7.org/linux/man-pages/man2/sigaltstack.2.html
-    pub signal_stack: Mutex<Option<sigaltstack_t>>,
+    /// Signal handler related state. This is grouped together for when atomicity is needed during
+    /// signal sending and delivery.
+    pub signals: RwLock<SignalState>,
 
-    /// The signal mask of the task.
-    // See https://man7.org/linux/man-pages/man2/rt_sigprocmask.2.html
-    pub signal_mask: Mutex<sigset_t>,
-
-    /// The saved signal mask of the task. This mask is set when a task wakes in `sys_rt_sigsuspend`
-    /// so that the signal mask can be restored properly after the signal handler has executed.
-    pub saved_signal_mask: Mutex<Option<sigset_t>>,
-
-    /// The object this task sleeps upon.
-    pub waiter: Arc<Waiter>,
+    /// The default Waiter. Use Waiter::for_task instead of directly accessing this field.
+    pub default_waiter: Arc<Waiter>,
 
     /// The signal this task generates on exit.
     pub exit_signal: Option<Signal>,
@@ -164,10 +157,8 @@ impl Task {
                 shell_job_control: sjc,
                 clear_child_tid: Mutex::new(UserRef::default()),
                 signal_actions,
-                signal_stack: Mutex::new(None),
-                signal_mask: Mutex::new(sigset_t::default()),
-                saved_signal_mask: Mutex::new(None),
-                waiter: Waiter::new(),
+                signals: Default::default(),
+                default_waiter: Waiter::new(),
                 exit_signal,
                 exit_code: Mutex::new(None),
                 zombie_children: Mutex::new(vec![]),
@@ -353,7 +344,7 @@ impl Task {
                 Arc::clone(&self.abstract_socket_namespace),
                 child_exit_signal,
             )?;
-            *child.task.signal_stack.lock() = *self.signal_stack.lock();
+            child.task.signals.write().alt_stack = self.signals.read().alt_stack;
             self.mm.snapshot_to(&child.task.mm)?;
         }
 
@@ -390,7 +381,7 @@ impl Task {
         // TODO: The dispositions of any signals that are being caught are
         //       reset to the default.
 
-        *self.signal_stack.lock() = None;
+        self.signals.write().alt_stack = None;
 
         self.mm.exec().map_err(|status| from_status_like_fdio!(status))?;
 

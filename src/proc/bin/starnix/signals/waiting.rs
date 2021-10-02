@@ -10,18 +10,18 @@ use crate::types::*;
 /// If the task has not yet exited, `should_hang` is called to check whether or not an actual
 /// wait should be performed. If `should_hang` then returns false, `wait_on_pid` returns `Ok(None)`.
 ///
-/// - `task`: The task that is waiting on `pid`.
+/// - `current_task`: The current task.
 /// - `pid`: The id of the task to wait on.
 /// - `should_hang`: Whether or not `task` should hang if the waited on task has not yet exited.
 pub fn wait_on_pid(
-    task: &Task,
+    current_task: &Task,
     selector: TaskSelector,
     should_hang: bool,
 ) -> Result<Option<ZombieTask>, Errno> {
-    let waiter = Waiter::new();
+    let waiter = Waiter::for_task(current_task);
     loop {
-        let mut wait_queue = task.thread_group.child_exit_waiters.lock();
-        if let Some(zombie) = task.get_zombie_child(selector) {
+        let mut wait_queue = current_task.thread_group.child_exit_waiters.lock();
+        if let Some(zombie) = current_task.get_zombie_child(selector) {
             return Ok(Some(zombie));
         }
         if !should_hang {
@@ -29,7 +29,7 @@ pub fn wait_on_pid(
         }
         wait_queue.wait_async(&waiter);
         std::mem::drop(wait_queue);
-        waiter.wait()?;
+        waiter.wait(current_task)?;
     }
 }
 

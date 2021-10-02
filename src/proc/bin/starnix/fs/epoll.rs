@@ -123,7 +123,12 @@ impl EpollFileObject {
     }
 
     /// Blocking wait on all waited upon events with a timeout.
-    pub fn wait(&self, max_events: i32, timeout: i32) -> Result<Vec<EpollEvent>, Errno> {
+    pub fn wait(
+        &self,
+        current: &Task,
+        max_events: i32,
+        timeout: i32,
+    ) -> Result<Vec<EpollEvent>, Errno> {
         // First we start waiting again on wait objects that have
         // previously been triggered.
         {
@@ -151,7 +156,7 @@ impl EpollFileObject {
         // how this happens.
         let mut pending_list: Vec<ReadyObject> = vec![];
         loop {
-            match self.waiter.wait_until(wait_deadline) {
+            match self.waiter.wait_until(current, wait_deadline) {
                 Ok(_) => {}
                 Err(err) => {
                     if err == ETIMEDOUT {
@@ -260,7 +265,7 @@ mod tests {
             assert_eq!(bytes_written, test_len);
             WRITE_COUNT.fetch_add(bytes_written as u64, Ordering::Relaxed);
         });
-        let events = epoll_file.wait(10, -1).unwrap();
+        let events = epoll_file.wait(&task, 10, -1).unwrap();
         let _ = thread.join();
         assert_eq!(1, events.len());
         let event = &events[0];

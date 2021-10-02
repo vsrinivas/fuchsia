@@ -101,12 +101,7 @@ impl ThreadGroup {
             if let Some(parent) = self.kernel.pids.read().get_task(zombie.parent) {
                 parent.zombie_children.lock().push(zombie);
                 // TODO: Should this be zombie_leader.exit_signal?
-                send_checked_signal(&parent, Signal::SIGCHLD).unwrap_or_else(|err| {
-                    log::warn!(
-                        "unexpected error with send_checked_signal in ThreadGroup::remove {}",
-                        err
-                    );
-                });
+                send_checked_signal(&parent, Signal::SIGCHLD);
             }
 
             if let Some(parent) = self.kernel.pids.read().get_task(task.parent) {

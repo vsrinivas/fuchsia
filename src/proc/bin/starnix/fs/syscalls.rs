@@ -992,7 +992,7 @@ pub fn sys_epoll_pwait(
     let file = ctx.task.files.get(epfd)?;
     let epoll_file = file.downcast_file::<EpollFileObject>().ok_or(errno!(EINVAL))?;
 
-    let active_events = epoll_file.wait(max_events, timeout)?;
+    let active_events = epoll_file.wait(&ctx.task, max_events, timeout)?;
     let mut event_ref = events;
     for event in active_events.iter() {
         ctx.task.mm.write_object(UserRef::new(event_ref.addr()), event)?;

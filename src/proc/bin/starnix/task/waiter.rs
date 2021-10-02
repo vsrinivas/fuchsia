@@ -5,6 +5,8 @@
 use crate::error;
 use crate::fs::FdEvents;
 use crate::logging::*;
+use crate::signals::signal_handling::are_signals_pending;
+use crate::task::Task;
 use crate::types::Errno;
 use crate::types::*;
 use fuchsia_zircon as zx;
@@ -56,19 +58,43 @@ impl Waiter {
         })
     }
 
+    /// Return a cached waiter for the task. This can be used for one-off waits to avoid the cost
+    /// of creating a new Waiter. Not all blocking operations should use this (notably, an epoll
+    /// has its own Waiter).
+    pub fn for_task(task: &Task) -> &Arc<Waiter> {
+        &task.default_waiter
+    }
+
     /// Wait until the waiter is woken up.
     ///
     /// If the wait is interrupted (see interrupt), this function returns
     /// EINTR.
-    pub fn wait(&self) -> Result<(), Errno> {
-        self.wait_until(zx::Time::INFINITE)
+    pub fn wait(self: &Arc<Self>, current_task: &Task) -> Result<(), Errno> {
+        self.wait_until(current_task, zx::Time::INFINITE)
     }
 
     /// Wait until the given deadline has passed or the waiter is woken up.
     ///
     /// If the wait is interrupted (seee interrupt), this function returns
     /// EINTR.
-    pub fn wait_until(&self, deadline: zx::Time) -> Result<(), Errno> {
+    pub fn wait_until(
+        self: &Arc<Self>,
+        current_task: &Task,
+        deadline: zx::Time,
+    ) -> Result<(), Errno> {
+        {
+            let mut signal_state = current_task.signals.write();
+            if are_signals_pending(&signal_state) {
+                return Err(EINTR);
+            }
+            signal_state.waiter = Some(Arc::clone(self));
+        }
+        scopeguard::defer! {
+            let mut signal_state = current_task.signals.write();
+            assert!(Arc::ptr_eq(signal_state.waiter.as_ref().unwrap(), self), "SignalState waiter changed while waiting!");
+            signal_state.waiter = None;
+        }
+
         match self.port.wait(deadline) {
             Ok(packet) => match packet.status() {
                 zx::sys::ZX_OK => {
@@ -105,16 +131,12 @@ impl Waiter {
                                 }
                             }
                         }
-                        _ => {
-                            return error!(EBADMSG);
-                        }
+                        _ => return error!(EBADMSG),
                     }
                     Ok(())
                 }
                 // TODO make a match arm for this and return EBADMSG by default
-                _ => {
-                    return error!(EINTR);
-                }
+                _ => error!(EINTR),
             },
             Err(zx::Status::TIMED_OUT) => error!(ETIMEDOUT),
             Err(errno) => Err(impossible_error(errno)),
@@ -146,25 +168,17 @@ impl Waiter {
         handle.wait_async_handle(&self.port, key, signals, zx::WaitAsyncOpts::empty())
     }
 
-    pub fn wake_on_events(&self, handler: EventHandler) -> WaitKey {
+    fn wake_on_events(&self, handler: EventHandler) -> WaitKey {
         let callback = WaitCallback::EventHandler(handler);
         let key = self.register_callback(callback);
         WaitKey { key }
     }
 
-    pub fn queue_events(&self, key: &WaitKey, event_mask: u32) {
+    fn queue_events(&self, key: &WaitKey, event_mask: u32) {
         let mut packet_data = [0u8; 32];
         packet_data[..4].copy_from_slice(&event_mask.to_ne_bytes()[..4]);
 
         self.queue_user_packet_data(key, zx::sys::ZX_OK, packet_data);
-    }
-
-    /// Wake up the waiter.
-    ///
-    /// This function is called before the waiter goes to sleep, the waiter
-    /// will wake up immediately upon attempting to go to sleep.
-    pub fn wake(&self) {
-        self.queue_user_packet(zx::sys::ZX_OK);
     }
 
     /// Interrupt the waiter.
@@ -172,7 +186,6 @@ impl Waiter {
     /// Used to break the waiter out of its sleep, for example to deliver an
     /// async signal. The wait operation will return EINTR, and unwind until
     /// the thread can process the async signal.
-    #[allow(dead_code)]
     pub fn interrupt(&self) {
         self.queue_user_packet(zx::sys::ZX_ERR_CANCELED);
     }
@@ -323,7 +336,7 @@ mod tests {
 
         // this code would block on failure
         assert_eq!(INIT_VAL, COUNTER.load(Ordering::Relaxed));
-        waiter.wait().unwrap();
+        waiter.wait(task).unwrap();
         let _ = thread.join();
         assert_eq!(FINAL_VAL, COUNTER.load(Ordering::Relaxed));
 
@@ -375,7 +388,7 @@ mod tests {
 
         // this code would block on failure
         assert_eq!(INIT_VAL, COUNTER.load(Ordering::Relaxed));
-        waiter.wait().unwrap();
+        waiter.wait(task).unwrap();
         let _ = thread.join();
         assert_eq!(FINAL_VAL, COUNTER.load(Ordering::Relaxed));
 
@@ -391,6 +404,8 @@ mod tests {
 
     #[test]
     fn test_wait_queue() {
+        let (_kernel, task_owner) = create_kernel_and_task();
+        let task = &task_owner.task;
         let mut queue = WaitQueue::default();
 
         let waiter0 = Waiter::new();
@@ -402,23 +417,25 @@ mod tests {
         queue.wait_async(&waiter2);
 
         queue.notify_count(2);
-        assert!(waiter0.wait_until(zx::Time::ZERO).is_ok());
-        assert!(waiter1.wait_until(zx::Time::ZERO).is_ok());
-        assert!(waiter2.wait_until(zx::Time::ZERO).is_err());
+        assert!(waiter0.wait_until(task, zx::Time::ZERO).is_ok());
+        assert!(waiter1.wait_until(task, zx::Time::ZERO).is_ok());
+        assert!(waiter2.wait_until(task, zx::Time::ZERO).is_err());
 
         queue.notify_all();
-        assert!(waiter0.wait_until(zx::Time::ZERO).is_err());
-        assert!(waiter1.wait_until(zx::Time::ZERO).is_err());
-        assert!(waiter2.wait_until(zx::Time::ZERO).is_ok());
+        assert!(waiter0.wait_until(task, zx::Time::ZERO).is_err());
+        assert!(waiter1.wait_until(task, zx::Time::ZERO).is_err());
+        assert!(waiter2.wait_until(task, zx::Time::ZERO).is_ok());
 
         queue.notify_count(3);
-        assert!(waiter0.wait_until(zx::Time::ZERO).is_err());
-        assert!(waiter1.wait_until(zx::Time::ZERO).is_err());
-        assert!(waiter2.wait_until(zx::Time::ZERO).is_err());
+        assert!(waiter0.wait_until(task, zx::Time::ZERO).is_err());
+        assert!(waiter1.wait_until(task, zx::Time::ZERO).is_err());
+        assert!(waiter2.wait_until(task, zx::Time::ZERO).is_err());
     }
 
     #[test]
     fn test_wait_queue_mask() {
+        let (_kernel, task_owner) = create_kernel_and_task();
+        let task = &task_owner.task;
         let mut queue = WaitQueue::default();
 
         let waiter0 = Waiter::new();
@@ -430,13 +447,13 @@ mod tests {
         queue.wait_async_mask(&waiter2, 0x12, WaitCallback::none());
 
         queue.notify_mask_count(0x2, 2);
-        assert!(waiter0.wait_until(zx::Time::ZERO).is_ok());
-        assert!(waiter1.wait_until(zx::Time::ZERO).is_err());
-        assert!(waiter2.wait_until(zx::Time::ZERO).is_ok());
+        assert!(waiter0.wait_until(task, zx::Time::ZERO).is_ok());
+        assert!(waiter1.wait_until(task, zx::Time::ZERO).is_err());
+        assert!(waiter2.wait_until(task, zx::Time::ZERO).is_ok());
 
         queue.notify_mask_count(0x1, usize::MAX);
-        assert!(waiter0.wait_until(zx::Time::ZERO).is_err());
-        assert!(waiter1.wait_until(zx::Time::ZERO).is_ok());
-        assert!(waiter2.wait_until(zx::Time::ZERO).is_err());
+        assert!(waiter0.wait_until(task, zx::Time::ZERO).is_err());
+        assert!(waiter1.wait_until(task, zx::Time::ZERO).is_ok());
+        assert!(waiter2.wait_until(task, zx::Time::ZERO).is_err());
     }
 }

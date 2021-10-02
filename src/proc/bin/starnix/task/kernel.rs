@@ -18,10 +18,6 @@ pub struct Kernel {
     /// The processes and threads running in this kernel, organized by pid_t.
     pub pids: RwLock<PidTable>,
 
-    /// The scheduler associated with this kernel. The scheduler stores state like suspended tasks,
-    /// pending signals, etc.
-    pub scheduler: RwLock<Scheduler>,
-
     /// The default namespace for abstract AF_UNIX sockets in this kernel.
     ///
     /// Rather than use this default namespace, abstract socket addresses
@@ -53,7 +49,6 @@ impl Kernel {
         Kernel {
             job: zx::Job::from_handle(zx::Handle::invalid()),
             pids: RwLock::new(PidTable::new()),
-            scheduler: RwLock::new(Scheduler::new()),
             default_abstract_socket_namespace: AbstractSocketNamespace::new(),
             cmdline: Vec::new(),
             anon_fs: OnceCell::new(),
