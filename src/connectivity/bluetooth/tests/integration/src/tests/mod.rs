@@ -4,9 +4,6 @@
 
 use fuchsia_zircon::{Duration, DurationNum};
 
-/// Tests for fuchsia.bluetooth.sys.Access protocol
-pub mod access;
-
 /// Tests for fuchsia.bluetooth.sys.bootstrap protocol
 pub mod bootstrap;
 

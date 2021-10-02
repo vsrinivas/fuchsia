@@ -1,24 +1,24 @@
-// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-
 use {
     anyhow::{format_err, Error},
     bt_test_harness::{
-        access::{expectation, AccessHarness},
-        host_watcher::{activate_fake_host, HostWatcherHarness},
+        access_v2::{expectation, AccessHarness},
+        core_realm::DEFAULT_TEST_DEVICE_NAME,
+        host_watcher_v2::{activate_fake_host, HostWatcherHarness},
     },
+    fidl,
     fidl_fuchsia_bluetooth_sys::ProcedureTokenProxy,
     fidl_fuchsia_bluetooth_test::{AdvertisingData, LowEnergyPeerParameters, PeerProxy},
     fuchsia_bluetooth::{
+        constants::integration_timeout_duration as timeout_duration,
         expectation::asynchronous::{ExpectableExt, ExpectableStateExt},
         types::Address,
     },
     hci_emulator_client::Emulator,
-    test_harness::run_suite,
+    test_harness,
 };
-
-use crate::tests::timeout_duration;
 
 async fn create_le_peer(hci: &Emulator, address: Address) -> Result<PeerProxy, Error> {
     let peer_params = LowEnergyPeerParameters {
@@ -65,6 +65,7 @@ async fn make_discoverable(access: &AccessHarness) -> Result<ProcedureTokenProxy
 // Test that we can
 //  * Enable discovery via fuchsia.bluetooth.sys.Access.StartDiscovery()
 //  * Receive peer information via fuchsia.bluetooth.sys.Access.WatchPeers()
+#[test_harness::run_singlethreaded_test]
 async fn test_watch_peers(
     (access, host_watcher): (AccessHarness, HostWatcherHarness),
 ) -> Result<(), Error> {
@@ -94,6 +95,7 @@ async fn test_watch_peers(
     Ok(())
 }
 
+#[test_harness::run_singlethreaded_test]
 async fn test_disconnect(
     (access, host_watcher): (AccessHarness, HostWatcherHarness),
 ) -> Result<(), Error> {
@@ -136,13 +138,14 @@ async fn test_disconnect(
 // Test that we can
 //  * Set local name via fuchsia.bluetooth.sys.Access.SetLocalName()
 //  * Receive host information via fuchsia.bluetooth.sys.HostWatcher.Watch()
+#[test_harness::run_singlethreaded_test]
 async fn test_set_local_name(
     (access, host_watcher): (AccessHarness, HostWatcherHarness),
 ) -> Result<(), Error> {
     let (_host, mut hci) = activate_fake_host(host_watcher.clone()).await?;
 
     let _ = host_watcher
-        .when_satisfied(expectation::host_with_name("fuchsia"), timeout_duration())
+        .when_satisfied(expectation::host_with_name(DEFAULT_TEST_DEVICE_NAME), timeout_duration())
         .await?;
 
     let expected_name = "bt-integration-test";
@@ -159,6 +162,7 @@ async fn test_set_local_name(
 // Test that we can
 //  * Enable discovery via fuchsia.bluetooth.sys.Access.StartDiscovery()
 //  * Disable discovery by dropping our token
+#[test_harness::run_singlethreaded_test]
 async fn test_discovery(
     (access, host_watcher): (AccessHarness, HostWatcherHarness),
 ) -> Result<(), Error> {
@@ -185,6 +189,7 @@ async fn test_discovery(
 // Test that we can
 //  * Enable discoverable via fuchsia.bluetooth.sys.Access.StartDiscoverable()
 //  * Disable discoverable by dropping our token
+#[test_harness::run_singlethreaded_test]
 async fn test_discoverable(
     (access, host_watcher): (AccessHarness, HostWatcherHarness),
 ) -> Result<(), Error> {
@@ -206,12 +211,4 @@ async fn test_discoverable(
 
     hci.destroy_and_wait().await?;
     Ok(())
-}
-
-/// Run all test cases.
-pub fn run_all() -> Result<(), Error> {
-    run_suite!(
-        "sys.Access",
-        [test_watch_peers, test_disconnect, test_set_local_name, test_discoverable, test_discovery]
-    )
 }

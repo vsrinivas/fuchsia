@@ -22,7 +22,6 @@ fn main() -> Result<(), Error> {
         // Tests that trigger bt-gap.cmx.
         tests::inspect::run_all(),
         tests::bootstrap::run_all(),
-        tests::access::run_all(),
         tests::low_energy_central::run_all(),
         tests::low_energy_peripheral::run_all(),
     ]

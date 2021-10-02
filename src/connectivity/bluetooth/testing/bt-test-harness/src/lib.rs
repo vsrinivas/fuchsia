@@ -5,11 +5,13 @@
 use fuchsia_zircon::{Duration, DurationNum};
 
 pub mod access;
+pub mod access_v2;
 pub mod bootstrap;
 pub mod core_realm;
 pub mod emulator;
 pub mod host_driver;
 pub mod host_watcher;
+pub mod host_watcher_v2;
 pub mod inspect;
 pub mod low_energy_central;
 pub mod low_energy_peripheral;

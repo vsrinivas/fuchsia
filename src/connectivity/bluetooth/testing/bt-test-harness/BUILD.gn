@@ -57,11 +57,13 @@ rustc_library("bt-test-harness") {
 
   sources = [
     "src/access.rs",
+    "src/access_v2.rs",
     "src/bootstrap.rs",
     "src/core_realm.rs",
     "src/emulator.rs",
     "src/host_driver.rs",
     "src/host_watcher.rs",
+    "src/host_watcher_v2.rs",
     "src/inspect.rs",
     "src/lib.rs",
     "src/lib.rs",

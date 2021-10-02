@@ -40,7 +40,6 @@ rustc_binary("integration_tests_bin") {
   sources = [
     "src/expect.rs",
     "src/main.rs",
-    "src/tests/access.rs",
     "src/tests/bootstrap.rs",
     "src/tests/inspect.rs",
     "src/tests/low_energy_central.rs",
