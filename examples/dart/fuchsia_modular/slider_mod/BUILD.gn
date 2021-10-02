@@ -30,7 +30,7 @@ flutter_app("slider_mod") {
   ]
 
   deps = [
-    "//examples/dart/fuchsia_modular/fidl:fibonacci_service",
+    "//examples/dart/fuchsia_modular/fidl:fuchsia.fibonacci",
     "//sdk/dart/fuchsia_logger",
     "//sdk/dart/fuchsia_modular",
     "//sdk/dart/fuchsia_services",

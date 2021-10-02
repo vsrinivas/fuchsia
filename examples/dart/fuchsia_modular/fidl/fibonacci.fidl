@@ -1,13 +1,13 @@
 // Copyright 2018 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-library fuchsia.testing.chrealm;
+library fuchsia.fibonacci;
 
-// An interface for a test service.
 @discoverable
-protocol TestService {
-    // Returns a nice message.
-    GetMessage() -> (struct {
-        message string;
+protocol Fibonacci {
+    Calculate(struct {
+        n uint32;
+    }) -> (struct {
+        result uint32;
     });
 };

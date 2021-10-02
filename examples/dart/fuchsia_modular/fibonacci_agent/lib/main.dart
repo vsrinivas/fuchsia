@@ -9,12 +9,12 @@ import 'package:fuchsia_logger/logger.dart';
 
 import 'package:fuchsia_modular/agent.dart';
 import 'package:fuchsia_services/services.dart';
-import 'src/fibonacci_service_impl.dart';
+import 'src/fibonacci_impl.dart';
 
 void main(List<String> args) {
   setupLogger(name: 'fibonacci-agent');
   final context = ComponentContext.createAndServe();
   Agent()
-    ..exposeService(FibonacciServiceImpl())
+    ..exposeService(FibonacciImpl())
     ..serve(context.outgoing);
 }

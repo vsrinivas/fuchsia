@@ -19,11 +19,11 @@ dart_app("fibonacci_agent") {
 
   sources = [
     "main.dart",
-    "src/fibonacci_service_impl.dart",
+    "src/fibonacci_impl.dart",
   ]
 
   deps = [
-    "//examples/dart/fuchsia_modular/fidl:fibonacci_service",
+    "//examples/dart/fuchsia_modular/fidl:fuchsia.fibonacci",
     "//sdk/dart/fidl",
     "//sdk/dart/fuchsia",
     "//sdk/dart/fuchsia_logger",

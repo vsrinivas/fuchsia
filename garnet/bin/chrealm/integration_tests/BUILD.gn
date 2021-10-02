@@ -13,4 +13,5 @@ group("chrealm_integrationtests") {
 group("chrealm_test_get_message") {
   public_deps =
       [ "//src/sys/tools/chrealm/integration_tests:chrealm_test_get_message" ]
+  testonly = true
 }

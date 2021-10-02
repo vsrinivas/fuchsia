@@ -38,9 +38,9 @@ const char kMessage[] = "hello";
 const char kRealm[] = "chrealmtest";
 
 class ChrealmTest : public gtest::TestWithEnvironmentFixture,
-                    public fuchsia::testing::chrealm::TestService {
+                    public fuchsia::testing::chrealm::Tester {
  public:
-  void GetMessage(fuchsia::testing::chrealm::TestService::GetMessageCallback cb) override {
+  void GetMessage(fuchsia::testing::chrealm::Tester::GetMessageCallback cb) override {
     cb(kMessage);
   }
 
@@ -50,7 +50,7 @@ class ChrealmTest : public gtest::TestWithEnvironmentFixture,
 
     ASSERT_EQ(files::Glob(kRealmGlob).size(), 0u);
 
-    // Add a TestService that the test realm can use.
+    // Add a Tester that the test realm can use.
     auto services = CreateServices();
     ASSERT_EQ(ZX_OK, services->AddService(bindings_.GetHandler(this)));
     // Create a nested realm to test with.
@@ -119,7 +119,7 @@ class ChrealmTest : public gtest::TestWithEnvironmentFixture,
 
  private:
   std::unique_ptr<sys::testing::EnclosingEnvironment> enclosing_env_;
-  fidl::BindingSet<fuchsia::testing::chrealm::TestService> bindings_;
+  fidl::BindingSet<fuchsia::testing::chrealm::Tester> bindings_;
 };
 
 TEST_F(ChrealmTest, ConnectToService) {
@@ -128,9 +128,9 @@ TEST_F(ChrealmTest, ConnectToService) {
 
   // List services under /hub -- expect same as /svc.
   {
-    // TODO(geb): Explicitly check for testing.chrealm.TestService once
-    // fxbug.dev/3922 is fixed. Currently this trivially passes because readdir
-    // only finds the built-in services.
+    // TODO(https://fxbug.dev/4021): Explicitly check for
+    // fuchsia.testing.chrealm.Tester. Currently this trivially passes because
+    // readdir only finds the built-in services.
     std::string svc_contents;
     std::string hub_contents;
     const std::vector<const char*> lssvc_args = {"/bin/chrealm", realm_path.c_str(), "--",
@@ -143,7 +143,7 @@ TEST_F(ChrealmTest, ConnectToService) {
   }
 
   // Run chrealm under the test realm with the getmessage program, which
-  // should attempt to reach TestService.
+  // should attempt to reach Tester.
   {
     std::string out;
     const std::vector<const char*> args = {

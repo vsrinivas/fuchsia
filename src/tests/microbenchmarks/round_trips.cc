@@ -489,7 +489,7 @@ class SocketPortTest {
 };
 
 // Implementation of FIDL interface for testing round trip IPCs.
-class RoundTripServiceImpl : public fuchsia::zircon::benchmarks::RoundTripService {
+class RoundTripperImpl : public fuchsia::zircon::benchmarks::RoundTripper {
  public:
   void RoundTripTest(uint32_t arg, RoundTripTestCallback callback) override {
     FX_CHECK(arg == 123);
@@ -511,9 +511,9 @@ class FidlTest {
     zx::channel channel(std::move(handles[0]));
 
     async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
-    RoundTripServiceImpl service_impl;
-    fidl::Binding<fuchsia::zircon::benchmarks::RoundTripService> binding(&service_impl,
-                                                                         std::move(channel));
+    RoundTripperImpl service_impl;
+    fidl::Binding<fuchsia::zircon::benchmarks::RoundTripper> binding(&service_impl,
+                                                                     std::move(channel));
     binding.set_error_handler([&loop](zx_status_t status) { loop.Quit(); });
     loop.Run();
   }
@@ -526,7 +526,7 @@ class FidlTest {
 
  private:
   ThreadOrProcess thread_or_process_;
-  fuchsia::zircon::benchmarks::RoundTripServiceSyncPtr service_ptr_;
+  fuchsia::zircon::benchmarks::RoundTripperSyncPtr service_ptr_;
 };
 
 // Test the round trip time for waking up threads using Zircon futexes.

@@ -7,7 +7,7 @@
     },
     "sandbox": {
         "services": [
-            "fuchsia.testing.chrealm.TestService"
+            "fuchsia.testing.chrealm.Tester"
         ]
     }
 }

@@ -35,6 +35,8 @@ executable("tests") {
 }
 
 executable("get_message_client_bin") {
+  testonly = true
+
   output_name = "get_message_client"
 
   sources = [ "get_message_client.cc" ]
@@ -51,6 +53,7 @@ executable("get_message_client_bin") {
 }
 
 fuchsia_package_with_single_component("chrealm_test_get_message") {
+  testonly = true
   deps = [ ":get_message_client_bin" ]
   manifest = "chrealm_test_get_message.cmx"
 }

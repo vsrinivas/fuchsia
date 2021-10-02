@@ -4,11 +4,6 @@
 
 import("//build/fidl/fidl.gni")
 
-fidl("fibonacci_service") {
-  # TODO(fxb/35879): Remove lint exclusions by fixing known FIDL lint violations in this target
-  excluded_checks = [ "protocol-name-includes-service" ]
-
-  name = "fuchsia.fibonacci"
-
-  sources = [ "fibonacci_service.fidl" ]
+fidl("fuchsia.fibonacci") {
+  sources = [ "fibonacci.fidl" ]
 }

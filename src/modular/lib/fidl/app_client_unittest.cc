@@ -15,7 +15,7 @@ namespace modular_testing {
 namespace {
 
 using ::sys::testing::FakeLauncher;
-using ::test::peridot::lib::fidl::appclient::TerminateService;
+using ::test::peridot::lib::fidl::appclient::Terminator;
 
 constexpr char kServiceName[] = "service1";
 constexpr char kTestUrl[] = "some/test/url";
@@ -100,7 +100,7 @@ TEST_F(AppClientTest, Run_Success) {
         callback_called = true;
       });
 
-  modular::AppClient<TerminateService> app_client(&launcher, GetTestAppConfig());
+  modular::AppClient<Terminator> app_client(&launcher, GetTestAppConfig());
 
   EXPECT_TRUE(callback_called);
 }
@@ -122,8 +122,8 @@ TEST_F(AppClientTest, RunWithParams_Success) {
         callback_called = true;
       });
 
-  modular::AppClient<TerminateService> app_client(&launcher, GetTestAppConfig(), "",
-                                                  std::move(additional_services));
+  modular::AppClient<Terminator> app_client(&launcher, GetTestAppConfig(), "",
+                                            std::move(additional_services));
 
   EXPECT_TRUE(callback_called);
 }

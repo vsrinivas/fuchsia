@@ -6,6 +6,6 @@
 library test.peridot.lib.fidl.appclient;
 
 @discoverable
-protocol TerminateService {
+protocol Terminator {
     Terminate();
 };

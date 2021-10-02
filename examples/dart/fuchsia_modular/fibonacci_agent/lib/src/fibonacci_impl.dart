@@ -7,9 +7,9 @@
 
 import 'package:fidl_fuchsia_fibonacci/fidl_async.dart' as fidl_fib;
 
-class FibonacciServiceImpl extends fidl_fib.FibonacciService {
+class FibonacciImpl extends fidl_fib.Fibonacci {
   @override
-  Future<int> calcFibonacci(int n) async {
+  Future<int> calculate(int n) async {
     return _fib(n);
   }
 

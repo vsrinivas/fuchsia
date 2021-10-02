@@ -9,7 +9,6 @@ group("fidl") {
   deps = [
     ":app_client",
     ":app_client_unittest",
-    ":app_client_unittest_fidl",
     ":array_to_string",
     ":clone",
     ":environment",
@@ -18,6 +17,7 @@ group("fidl") {
     ":json_xdr_unittest_fidl",
     ":proxy",
     ":single_service_app",
+    ":test.peridot.lib.fidl.appclient",
     ":unittests",
     ":view_host",
   ]
@@ -137,16 +137,11 @@ source_set("view_host") {
   ]
 }
 
-fidl("app_client_unittest_fidl") {
+fidl("test.peridot.lib.fidl.appclient") {
   # TODO(fxbug.dev/35879): Remove lint exclusions by fixing known FIDL lint violations in this target
-  excluded_checks = [
-    "protocol-name-includes-service",
-    "too-many-nested-libraries",
-  ]
+  excluded_checks = [ "too-many-nested-libraries" ]
 
   testonly = true
-
-  name = "test.peridot.lib.fidl.appclient"
 
   sources = [ "app_client_unittest.fidl" ]
 }
@@ -167,7 +162,7 @@ source_set("app_client_unittest") {
 
   deps = [
     ":app_client",
-    ":app_client_unittest_fidl",
+    ":test.peridot.lib.fidl.appclient",
     "//garnet/public/lib/gtest",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/sys/cpp/testing:unit",

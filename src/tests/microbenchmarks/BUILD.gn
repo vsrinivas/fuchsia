@@ -48,7 +48,7 @@ executable("bin") {
     "vmo.cc",
   ]
   deps = [
-    ":fidl_interface",
+    ":fuchsia.zircon.benchmarks",
     "//sdk/lib/fdio",
     "//src/lib/fsl",
     "//src/lib/fxl",
@@ -97,15 +97,11 @@ executable("get_info_helper") {
   ]
 }
 
-fidl("fidl_interface") {
-  # TODO(fxbug.dev/35879): Remove lint exclusions by fixing known FIDL lint violations in this target
-  excluded_checks = [ "protocol-name-includes-service" ]
-
+fidl("fuchsia.zircon.benchmarks") {
   testonly = true
-  name = "fuchsia.zircon.benchmarks"
   sources = [
     "async_loop.fidl",
-    "round_trip_service.fidl",
+    "round_tripper.fidl",
   ]
 }
 

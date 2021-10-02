@@ -5,14 +5,7 @@
 import("//build/fidl/fidl.gni")
 
 fidl("fuchsia.testing.appmgr") {
-  # TODO(fxbug.dev/35879): Remove lint exclusions by fixing known FIDL lint violations in this target
-  excluded_checks = [
-    "protocol-name-includes-service",
-    "string-bounds-not-specified",
-  ]
+  testonly = true
 
-  sources = [
-    "crash_inducer.fidl",
-    "test_service.fidl",
-  ]
+  sources = [ "crash_inducer.fidl" ]
 }
