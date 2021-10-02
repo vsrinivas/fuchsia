@@ -396,9 +396,9 @@ TEST(SystemCpu, ScaleBandwidth) {
 
     const zx::duration delta_runtime = total_runtime - expected_runtime;
 
-    // Accept +/-5% variation from the expected runtime.
-    const zx::duration max_delta = expected_runtime * 5 / 100;
-    const zx::duration min_delta = expected_runtime * -5 / 100;
+    // Accept +/-20% variation from the expected runtime.
+    const zx::duration max_delta = expected_runtime * 20 / 100;
+    const zx::duration min_delta = expected_runtime * -20 / 100;
 
     EXPECT_LE(delta_runtime, max_delta);
     EXPECT_GE(delta_runtime, min_delta);
