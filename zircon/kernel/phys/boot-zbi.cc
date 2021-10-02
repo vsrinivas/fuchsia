@@ -302,7 +302,7 @@ fitx::result<BootZbi::Error> BootZbi::Load(uint32_t extra_data_capacity,
         input_capacity - (data_address - input_address),
     };
   } else if (aligned_data_address > input_address &&
-             aligned_data_address - input_address >= (2 * sizeof(zbi_header_t))) {
+             data_address - aligned_data_address >= (2 * sizeof(zbi_header_t))) {
     // Aligning down leaves enough space to insert a ZBI header to consume
     // the remaining space with a ZBI_TYPE_DISCARD item so the actual
     // contents can be left in place.
@@ -371,6 +371,7 @@ fitx::result<BootZbi::Error> BootZbi::Load(uint32_t extra_data_capacity,
     auto hdr = reinterpret_cast<zbi_header_t*>(data_.storage().data());
     auto discard_size = data_address - aligned_data_address - sizeof(hdr[1]);
     auto data_size = data_load_size + sizeof(hdr[1]) + discard_size;
+    ZX_ASSERT(aligned_data_address > input_address);
     ZX_ASSERT(data_address > aligned_data_address);
     ZX_ASSERT(data_address - aligned_data_address >= sizeof(hdr[1]));
     ZX_ASSERT(discard_size < data_size);
