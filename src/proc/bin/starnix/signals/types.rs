@@ -242,10 +242,6 @@ pub struct SignalState {
     // See https://man7.org/linux/man-pages/man2/rt_sigprocmask.2.html
     pub mask: sigset_t,
 
-    /// The saved signal mask of the task. This mask is set when a task wakes in `sys_rt_sigsuspend`
-    /// so that the signal mask can be restored properly after the signal handler has executed.
-    pub saved_mask: Option<sigset_t>,
-
     /// The waiter that the task is currently sleeping on, if any.
     pub waiter: Option<Arc<Waiter>>,
 }

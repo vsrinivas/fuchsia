@@ -38,15 +38,6 @@ impl<T> ::std::fmt::Debug for __IncompleteArrayField<T> {
         fmt.write_str("__IncompleteArrayField")
     }
 }
-pub const ARCH_SET_GS: u32 = 4097;
-pub const ARCH_SET_FS: u32 = 4098;
-pub const ARCH_GET_FS: u32 = 4099;
-pub const ARCH_GET_GS: u32 = 4100;
-pub const ARCH_GET_CPUID: u32 = 4113;
-pub const ARCH_SET_CPUID: u32 = 4114;
-pub const ARCH_MAP_VDSO_X32: u32 = 8193;
-pub const ARCH_MAP_VDSO_32: u32 = 8194;
-pub const ARCH_MAP_VDSO_64: u32 = 8195;
 pub const _IOC_NRBITS: u32 = 8;
 pub const _IOC_TYPEBITS: u32 = 8;
 pub const _IOC_SIZEBITS: u32 = 14;
@@ -139,6 +130,93 @@ pub const TIOCPKT_NOSTOP: u32 = 16;
 pub const TIOCPKT_DOSTOP: u32 = 32;
 pub const TIOCPKT_IOCTL: u32 = 64;
 pub const TIOCSER_TEMT: u32 = 1;
+pub const ARCH_SET_GS: u32 = 4097;
+pub const ARCH_SET_FS: u32 = 4098;
+pub const ARCH_GET_FS: u32 = 4099;
+pub const ARCH_GET_GS: u32 = 4100;
+pub const ARCH_GET_CPUID: u32 = 4113;
+pub const ARCH_SET_CPUID: u32 = 4114;
+pub const ARCH_MAP_VDSO_X32: u32 = 8193;
+pub const ARCH_MAP_VDSO_32: u32 = 8194;
+pub const ARCH_MAP_VDSO_64: u32 = 8195;
+pub const __BITS_PER_LONG: u32 = 64;
+pub const __FD_SETSIZE: u32 = 1024;
+pub const FP_XSTATE_MAGIC1: u32 = 1179670611;
+pub const FP_XSTATE_MAGIC2: u32 = 1179670597;
+pub const X86_FXSR_MAGIC: u32 = 0;
+pub const ITIMER_REAL: u32 = 0;
+pub const ITIMER_VIRTUAL: u32 = 1;
+pub const ITIMER_PROF: u32 = 2;
+pub const CLOCK_REALTIME: u32 = 0;
+pub const CLOCK_MONOTONIC: u32 = 1;
+pub const CLOCK_PROCESS_CPUTIME_ID: u32 = 2;
+pub const CLOCK_THREAD_CPUTIME_ID: u32 = 3;
+pub const CLOCK_MONOTONIC_RAW: u32 = 4;
+pub const CLOCK_REALTIME_COARSE: u32 = 5;
+pub const CLOCK_MONOTONIC_COARSE: u32 = 6;
+pub const CLOCK_BOOTTIME: u32 = 7;
+pub const CLOCK_REALTIME_ALARM: u32 = 8;
+pub const CLOCK_BOOTTIME_ALARM: u32 = 9;
+pub const CLOCK_SGI_CYCLE: u32 = 10;
+pub const CLOCK_TAI: u32 = 11;
+pub const MAX_CLOCKS: u32 = 16;
+pub const CLOCKS_MASK: u32 = 1;
+pub const CLOCKS_MONO: u32 = 1;
+pub const TIMER_ABSTIME: u32 = 1;
+pub const _KERNEL_NSIG: u32 = 32;
+pub const SIGHUP: u32 = 1;
+pub const SIGINT: u32 = 2;
+pub const SIGQUIT: u32 = 3;
+pub const SIGILL: u32 = 4;
+pub const SIGTRAP: u32 = 5;
+pub const SIGABRT: u32 = 6;
+pub const SIGIOT: u32 = 6;
+pub const SIGBUS: u32 = 7;
+pub const SIGFPE: u32 = 8;
+pub const SIGKILL: u32 = 9;
+pub const SIGUSR1: u32 = 10;
+pub const SIGSEGV: u32 = 11;
+pub const SIGUSR2: u32 = 12;
+pub const SIGPIPE: u32 = 13;
+pub const SIGALRM: u32 = 14;
+pub const SIGTERM: u32 = 15;
+pub const SIGSTKFLT: u32 = 16;
+pub const SIGCHLD: u32 = 17;
+pub const SIGCONT: u32 = 18;
+pub const SIGSTOP: u32 = 19;
+pub const SIGTSTP: u32 = 20;
+pub const SIGTTIN: u32 = 21;
+pub const SIGTTOU: u32 = 22;
+pub const SIGURG: u32 = 23;
+pub const SIGXCPU: u32 = 24;
+pub const SIGXFSZ: u32 = 25;
+pub const SIGVTALRM: u32 = 26;
+pub const SIGPROF: u32 = 27;
+pub const SIGWINCH: u32 = 28;
+pub const SIGIO: u32 = 29;
+pub const SIGPOLL: u32 = 29;
+pub const SIGPWR: u32 = 30;
+pub const SIGSYS: u32 = 31;
+pub const SIGUNUSED: u32 = 31;
+pub const __SIGRTMIN: u32 = 32;
+pub const SA_NOCLDSTOP: u32 = 1;
+pub const SA_NOCLDWAIT: u32 = 2;
+pub const SA_SIGINFO: u32 = 4;
+pub const SA_ONSTACK: u32 = 134217728;
+pub const SA_RESTART: u32 = 268435456;
+pub const SA_NODEFER: u32 = 1073741824;
+pub const SA_RESETHAND: u32 = 2147483648;
+pub const SA_NOMASK: u32 = 1073741824;
+pub const SA_ONESHOT: u32 = 2147483648;
+pub const SA_RESTORER: u32 = 67108864;
+pub const MINSIGSTKSZ: u32 = 2048;
+pub const SIGSTKSZ: u32 = 8192;
+pub const SIG_BLOCK: u32 = 0;
+pub const SIG_UNBLOCK: u32 = 1;
+pub const SIG_SETMASK: u32 = 2;
+pub const UC_FP_XSTATE: u32 = 1;
+pub const UC_SIGCONTEXT_SS: u32 = 2;
+pub const UC_STRICT_RESTORE_SS: u32 = 4;
 pub const AT_SYSINFO_EHDR: u32 = 33;
 pub const AT_VECTOR_SIZE_ARCH: u32 = 2;
 pub const AT_NULL: u32 = 0;
@@ -164,8 +242,6 @@ pub const AT_BASE_PLATFORM: u32 = 24;
 pub const AT_RANDOM: u32 = 25;
 pub const AT_HWCAP2: u32 = 26;
 pub const AT_EXECFN: u32 = 31;
-pub const __BITS_PER_LONG: u32 = 64;
-pub const __FD_SETSIZE: u32 = 1024;
 pub const _LINUX_CAPABILITY_VERSION_1: u32 = 429392688;
 pub const _LINUX_CAPABILITY_U32S_1: u32 = 1;
 pub const _LINUX_CAPABILITY_VERSION_2: u32 = 537333798;
@@ -1049,25 +1125,6 @@ pub const PR_SET_IO_FLUSHER: u32 = 57;
 pub const PR_GET_IO_FLUSHER: u32 = 58;
 pub const PR_SET_VMA: u32 = 1398164801;
 pub const PR_SET_VMA_ANON_NAME: u32 = 0;
-pub const ITIMER_REAL: u32 = 0;
-pub const ITIMER_VIRTUAL: u32 = 1;
-pub const ITIMER_PROF: u32 = 2;
-pub const CLOCK_REALTIME: u32 = 0;
-pub const CLOCK_MONOTONIC: u32 = 1;
-pub const CLOCK_PROCESS_CPUTIME_ID: u32 = 2;
-pub const CLOCK_THREAD_CPUTIME_ID: u32 = 3;
-pub const CLOCK_MONOTONIC_RAW: u32 = 4;
-pub const CLOCK_REALTIME_COARSE: u32 = 5;
-pub const CLOCK_MONOTONIC_COARSE: u32 = 6;
-pub const CLOCK_BOOTTIME: u32 = 7;
-pub const CLOCK_REALTIME_ALARM: u32 = 8;
-pub const CLOCK_BOOTTIME_ALARM: u32 = 9;
-pub const CLOCK_SGI_CYCLE: u32 = 10;
-pub const CLOCK_TAI: u32 = 11;
-pub const MAX_CLOCKS: u32 = 16;
-pub const CLOCKS_MASK: u32 = 1;
-pub const CLOCKS_MONO: u32 = 1;
-pub const TIMER_ABSTIME: u32 = 1;
 pub const RUSAGE_SELF: u32 = 0;
 pub const RUSAGE_CHILDREN: i32 = -1;
 pub const RUSAGE_BOTH: i32 = -2;
@@ -1145,57 +1202,6 @@ pub const SCHED_FLAG_UTIL_CLAMP_MAX: u32 = 64;
 pub const SCHED_FLAG_KEEP_ALL: u32 = 24;
 pub const SCHED_FLAG_UTIL_CLAMP: u32 = 96;
 pub const SCHED_FLAG_ALL: u32 = 127;
-pub const _KERNEL_NSIG: u32 = 32;
-pub const SIGHUP: u32 = 1;
-pub const SIGINT: u32 = 2;
-pub const SIGQUIT: u32 = 3;
-pub const SIGILL: u32 = 4;
-pub const SIGTRAP: u32 = 5;
-pub const SIGABRT: u32 = 6;
-pub const SIGIOT: u32 = 6;
-pub const SIGBUS: u32 = 7;
-pub const SIGFPE: u32 = 8;
-pub const SIGKILL: u32 = 9;
-pub const SIGUSR1: u32 = 10;
-pub const SIGSEGV: u32 = 11;
-pub const SIGUSR2: u32 = 12;
-pub const SIGPIPE: u32 = 13;
-pub const SIGALRM: u32 = 14;
-pub const SIGTERM: u32 = 15;
-pub const SIGSTKFLT: u32 = 16;
-pub const SIGCHLD: u32 = 17;
-pub const SIGCONT: u32 = 18;
-pub const SIGSTOP: u32 = 19;
-pub const SIGTSTP: u32 = 20;
-pub const SIGTTIN: u32 = 21;
-pub const SIGTTOU: u32 = 22;
-pub const SIGURG: u32 = 23;
-pub const SIGXCPU: u32 = 24;
-pub const SIGXFSZ: u32 = 25;
-pub const SIGVTALRM: u32 = 26;
-pub const SIGPROF: u32 = 27;
-pub const SIGWINCH: u32 = 28;
-pub const SIGIO: u32 = 29;
-pub const SIGPOLL: u32 = 29;
-pub const SIGPWR: u32 = 30;
-pub const SIGSYS: u32 = 31;
-pub const SIGUNUSED: u32 = 31;
-pub const __SIGRTMIN: u32 = 32;
-pub const SA_NOCLDSTOP: u32 = 1;
-pub const SA_NOCLDWAIT: u32 = 2;
-pub const SA_SIGINFO: u32 = 4;
-pub const SA_ONSTACK: u32 = 134217728;
-pub const SA_RESTART: u32 = 268435456;
-pub const SA_NODEFER: u32 = 1073741824;
-pub const SA_RESETHAND: u32 = 2147483648;
-pub const SA_NOMASK: u32 = 1073741824;
-pub const SA_ONESHOT: u32 = 2147483648;
-pub const SA_RESTORER: u32 = 67108864;
-pub const MINSIGSTKSZ: u32 = 2048;
-pub const SIGSTKSZ: u32 = 8192;
-pub const SIG_BLOCK: u32 = 0;
-pub const SIG_UNBLOCK: u32 = 1;
-pub const SIG_SETMASK: u32 = 2;
 pub const SS_ONSTACK: u32 = 1;
 pub const SS_DISABLE: u32 = 2;
 pub const SS_AUTODISARM: u32 = 2147483648;
@@ -1755,6 +1761,398 @@ pub type __wsum = __u32;
 pub type __poll_t = crate::x86_64_types::c_uint;
 #[repr(C)]
 #[derive(Debug, Default, Copy, Clone, AsBytes, FromBytes)]
+pub struct _fpx_sw_bytes {
+    pub magic1: __u32,
+    pub extended_size: __u32,
+    pub xfeatures: __u64,
+    pub xstate_size: __u32,
+    pub padding: [__u32; 7usize],
+}
+#[repr(C)]
+#[derive(Debug, Default, Copy, Clone, AsBytes, FromBytes)]
+pub struct _fpreg {
+    pub significand: [__u16; 4usize],
+    pub exponent: __u16,
+}
+#[repr(C)]
+#[derive(Debug, Default, Copy, Clone, AsBytes, FromBytes)]
+pub struct _fpxreg {
+    pub significand: [__u16; 4usize],
+    pub exponent: __u16,
+    pub padding: [__u16; 3usize],
+}
+#[repr(C)]
+#[derive(Debug, Default, Copy, Clone, AsBytes, FromBytes)]
+pub struct _xmmreg {
+    pub element: [__u32; 4usize],
+}
+#[repr(C)]
+#[derive(Copy, Clone)]
+pub struct _fpstate_32 {
+    pub cw: __u32,
+    pub sw: __u32,
+    pub tag: __u32,
+    pub ipoff: __u32,
+    pub cssel: __u32,
+    pub dataoff: __u32,
+    pub datasel: __u32,
+    pub _st: [_fpreg; 8usize],
+    pub status: __u16,
+    pub magic: __u16,
+    pub _fxsr_env: [__u32; 6usize],
+    pub mxcsr: __u32,
+    pub reserved: __u32,
+    pub _fxsr_st: [_fpxreg; 8usize],
+    pub _xmm: [_xmmreg; 8usize],
+    pub __bindgen_anon_1: _fpstate_32__bindgen_ty_1,
+    pub __bindgen_anon_2: _fpstate_32__bindgen_ty_2,
+}
+#[repr(C)]
+#[derive(Copy, Clone)]
+pub union _fpstate_32__bindgen_ty_1 {
+    pub padding1: [__u32; 44usize],
+    pub padding: [__u32; 44usize],
+}
+impl Default for _fpstate_32__bindgen_ty_1 {
+    fn default() -> Self {
+        let mut s = ::std::mem::MaybeUninit::<Self>::uninit();
+        unsafe {
+            ::std::ptr::write_bytes(s.as_mut_ptr(), 0, 1);
+            s.assume_init()
+        }
+    }
+}
+#[repr(C)]
+#[derive(Copy, Clone)]
+pub union _fpstate_32__bindgen_ty_2 {
+    pub padding2: [__u32; 12usize],
+    pub sw_reserved: _fpx_sw_bytes,
+}
+impl Default for _fpstate_32__bindgen_ty_2 {
+    fn default() -> Self {
+        let mut s = ::std::mem::MaybeUninit::<Self>::uninit();
+        unsafe {
+            ::std::ptr::write_bytes(s.as_mut_ptr(), 0, 1);
+            s.assume_init()
+        }
+    }
+}
+impl Default for _fpstate_32 {
+    fn default() -> Self {
+        let mut s = ::std::mem::MaybeUninit::<Self>::uninit();
+        unsafe {
+            ::std::ptr::write_bytes(s.as_mut_ptr(), 0, 1);
+            s.assume_init()
+        }
+    }
+}
+#[repr(C)]
+#[derive(Copy, Clone)]
+pub struct _fpstate_64 {
+    pub cwd: __u16,
+    pub swd: __u16,
+    pub twd: __u16,
+    pub fop: __u16,
+    pub rip: __u64,
+    pub rdp: __u64,
+    pub mxcsr: __u32,
+    pub mxcsr_mask: __u32,
+    pub st_space: [__u32; 32usize],
+    pub xmm_space: [__u32; 64usize],
+    pub reserved2: [__u32; 12usize],
+    pub __bindgen_anon_1: _fpstate_64__bindgen_ty_1,
+}
+#[repr(C)]
+#[derive(Copy, Clone)]
+pub union _fpstate_64__bindgen_ty_1 {
+    pub reserved3: [__u32; 12usize],
+    pub sw_reserved: _fpx_sw_bytes,
+}
+impl Default for _fpstate_64__bindgen_ty_1 {
+    fn default() -> Self {
+        let mut s = ::std::mem::MaybeUninit::<Self>::uninit();
+        unsafe {
+            ::std::ptr::write_bytes(s.as_mut_ptr(), 0, 1);
+            s.assume_init()
+        }
+    }
+}
+impl Default for _fpstate_64 {
+    fn default() -> Self {
+        let mut s = ::std::mem::MaybeUninit::<Self>::uninit();
+        unsafe {
+            ::std::ptr::write_bytes(s.as_mut_ptr(), 0, 1);
+            s.assume_init()
+        }
+    }
+}
+#[repr(C)]
+#[derive(Debug, Default, Copy, Clone, AsBytes, FromBytes)]
+pub struct _header {
+    pub xfeatures: __u64,
+    pub reserved1: [__u64; 2usize],
+    pub reserved2: [__u64; 5usize],
+}
+#[repr(C)]
+#[derive(Debug, Copy, Clone)]
+pub struct _ymmh_state {
+    pub ymmh_space: [__u32; 64usize],
+}
+impl Default for _ymmh_state {
+    fn default() -> Self {
+        let mut s = ::std::mem::MaybeUninit::<Self>::uninit();
+        unsafe {
+            ::std::ptr::write_bytes(s.as_mut_ptr(), 0, 1);
+            s.assume_init()
+        }
+    }
+}
+#[repr(C)]
+#[derive(Copy, Clone)]
+pub struct _xstate {
+    pub fpstate: _fpstate_64,
+    pub xstate_hdr: _header,
+    pub ymmh: _ymmh_state,
+}
+impl Default for _xstate {
+    fn default() -> Self {
+        let mut s = ::std::mem::MaybeUninit::<Self>::uninit();
+        unsafe {
+            ::std::ptr::write_bytes(s.as_mut_ptr(), 0, 1);
+            s.assume_init()
+        }
+    }
+}
+#[repr(C)]
+#[derive(Debug, Default, Copy, Clone, AsBytes, FromBytes)]
+pub struct sigcontext_32 {
+    pub gs: __u16,
+    pub __gsh: __u16,
+    pub fs: __u16,
+    pub __fsh: __u16,
+    pub es: __u16,
+    pub __esh: __u16,
+    pub ds: __u16,
+    pub __dsh: __u16,
+    pub di: __u32,
+    pub si: __u32,
+    pub bp: __u32,
+    pub sp: __u32,
+    pub bx: __u32,
+    pub dx: __u32,
+    pub cx: __u32,
+    pub ax: __u32,
+    pub trapno: __u32,
+    pub err: __u32,
+    pub ip: __u32,
+    pub cs: __u16,
+    pub __csh: __u16,
+    pub flags: __u32,
+    pub sp_at_signal: __u32,
+    pub ss: __u16,
+    pub __ssh: __u16,
+    pub fpstate: __u32,
+    pub oldmask: __u32,
+    pub cr2: __u32,
+}
+#[repr(C)]
+#[derive(Debug, Default, Copy, Clone, AsBytes, FromBytes)]
+pub struct sigcontext_64 {
+    pub r8: __u64,
+    pub r9: __u64,
+    pub r10: __u64,
+    pub r11: __u64,
+    pub r12: __u64,
+    pub r13: __u64,
+    pub r14: __u64,
+    pub r15: __u64,
+    pub di: __u64,
+    pub si: __u64,
+    pub bp: __u64,
+    pub bx: __u64,
+    pub dx: __u64,
+    pub ax: __u64,
+    pub cx: __u64,
+    pub sp: __u64,
+    pub ip: __u64,
+    pub flags: __u64,
+    pub cs: __u16,
+    pub gs: __u16,
+    pub fs: __u16,
+    pub ss: __u16,
+    pub err: __u64,
+    pub trapno: __u64,
+    pub oldmask: __u64,
+    pub cr2: __u64,
+    pub fpstate: __u64,
+    pub reserved1: [__u64; 8usize],
+}
+#[repr(C)]
+#[derive(Copy, Clone)]
+pub struct sigcontext {
+    pub r8: __u64,
+    pub r9: __u64,
+    pub r10: __u64,
+    pub r11: __u64,
+    pub r12: __u64,
+    pub r13: __u64,
+    pub r14: __u64,
+    pub r15: __u64,
+    pub rdi: __u64,
+    pub rsi: __u64,
+    pub rbp: __u64,
+    pub rbx: __u64,
+    pub rdx: __u64,
+    pub rax: __u64,
+    pub rcx: __u64,
+    pub rsp: __u64,
+    pub rip: __u64,
+    pub eflags: __u64,
+    pub cs: __u16,
+    pub gs: __u16,
+    pub fs: __u16,
+    pub __bindgen_anon_1: sigcontext__bindgen_ty_1,
+    pub err: __u64,
+    pub trapno: __u64,
+    pub oldmask: __u64,
+    pub cr2: __u64,
+    pub fpstate: *mut _fpstate_64,
+    pub reserved1: [__u64; 8usize],
+}
+#[repr(C)]
+#[derive(Copy, Clone)]
+pub union sigcontext__bindgen_ty_1 {
+    pub ss: __u16,
+    pub __pad0: __u16,
+}
+impl Default for sigcontext__bindgen_ty_1 {
+    fn default() -> Self {
+        let mut s = ::std::mem::MaybeUninit::<Self>::uninit();
+        unsafe {
+            ::std::ptr::write_bytes(s.as_mut_ptr(), 0, 1);
+            s.assume_init()
+        }
+    }
+}
+impl Default for sigcontext {
+    fn default() -> Self {
+        let mut s = ::std::mem::MaybeUninit::<Self>::uninit();
+        unsafe {
+            ::std::ptr::write_bytes(s.as_mut_ptr(), 0, 1);
+            s.assume_init()
+        }
+    }
+}
+#[repr(C)]
+#[derive(Debug, Default, Copy, Clone, AsBytes, FromBytes)]
+pub struct __kernel_timespec {
+    pub tv_sec: __kernel_time64_t,
+    pub tv_nsec: crate::x86_64_types::c_longlong,
+}
+#[repr(C)]
+#[derive(Debug, Default, Copy, Clone, AsBytes, FromBytes)]
+pub struct __kernel_itimerspec {
+    pub it_interval: __kernel_timespec,
+    pub it_value: __kernel_timespec,
+}
+#[repr(C)]
+#[derive(Debug, Default, Copy, Clone, AsBytes, FromBytes)]
+pub struct __kernel_old_timespec {
+    pub tv_sec: __kernel_old_time_t,
+    pub tv_nsec: crate::x86_64_types::c_long,
+}
+#[repr(C)]
+#[derive(Debug, Default, Copy, Clone, AsBytes, FromBytes)]
+pub struct __kernel_sock_timeval {
+    pub tv_sec: __s64,
+    pub tv_usec: __s64,
+}
+#[repr(C)]
+#[derive(Debug, Default, Copy, Clone, AsBytes, FromBytes)]
+pub struct timespec {
+    pub tv_sec: __kernel_old_time_t,
+    pub tv_nsec: crate::x86_64_types::c_long,
+}
+#[repr(C)]
+#[derive(Debug, Default, Copy, Clone, AsBytes, FromBytes)]
+pub struct timeval {
+    pub tv_sec: __kernel_old_time_t,
+    pub tv_usec: __kernel_suseconds_t,
+}
+#[repr(C)]
+#[derive(Debug, Default, Copy, Clone, AsBytes, FromBytes)]
+pub struct itimerspec {
+    pub it_interval: timespec,
+    pub it_value: timespec,
+}
+#[repr(C)]
+#[derive(Debug, Default, Copy, Clone, AsBytes, FromBytes)]
+pub struct itimerval {
+    pub it_interval: timeval,
+    pub it_value: timeval,
+}
+#[repr(C)]
+#[derive(Debug, Default, Copy, Clone, AsBytes, FromBytes)]
+pub struct timezone {
+    pub tz_minuteswest: crate::x86_64_types::c_int,
+    pub tz_dsttime: crate::x86_64_types::c_int,
+}
+#[repr(C)]
+#[derive(Debug, Copy, Clone)]
+pub struct siginfo {
+    _unused: [u8; 0],
+}
+pub type sigset_t = crate::x86_64_types::c_ulong;
+pub type __signalfn_t =
+    ::std::option::Option<unsafe extern "C" fn(arg1: crate::x86_64_types::c_int)>;
+pub type __sighandler_t = u64;
+pub type __restorefn_t = ::std::option::Option<unsafe extern "C" fn()>;
+pub type __sigrestore_t = u64;
+#[repr(C)]
+#[derive(Debug, Default, Copy, Clone, AsBytes, FromBytes)]
+pub struct sigaction {
+    pub sa_handler: __sighandler_t,
+    pub sa_flags: crate::x86_64_types::c_ulong,
+    pub sa_restorer: __sigrestore_t,
+    pub sa_mask: sigset_t,
+}
+#[repr(C)]
+#[derive(Debug, Copy, Clone)]
+pub struct sigaltstack {
+    pub ss_sp: *mut crate::x86_64_types::c_void,
+    pub ss_flags: crate::x86_64_types::c_int,
+    pub ss_size: usize,
+}
+impl Default for sigaltstack {
+    fn default() -> Self {
+        let mut s = ::std::mem::MaybeUninit::<Self>::uninit();
+        unsafe {
+            ::std::ptr::write_bytes(s.as_mut_ptr(), 0, 1);
+            s.assume_init()
+        }
+    }
+}
+pub type stack_t = sigaltstack;
+#[repr(C)]
+#[derive(Copy, Clone)]
+pub struct ucontext {
+    pub uc_flags: crate::x86_64_types::c_ulong,
+    pub uc_link: *mut ucontext,
+    pub uc_stack: stack_t,
+    pub uc_mcontext: sigcontext,
+    pub uc_sigmask: sigset_t,
+}
+impl Default for ucontext {
+    fn default() -> Self {
+        let mut s = ::std::mem::MaybeUninit::<Self>::uninit();
+        unsafe {
+            ::std::ptr::write_bytes(s.as_mut_ptr(), 0, 1);
+            s.assume_init()
+        }
+    }
+}
+#[repr(C)]
+#[derive(Debug, Default, Copy, Clone, AsBytes, FromBytes)]
 pub struct __user_cap_header_struct {
     pub version: __u32,
     pub pid: crate::x86_64_types::c_int,
@@ -2098,60 +2496,6 @@ impl Default for prctl_mm_map {
 }
 #[repr(C)]
 #[derive(Debug, Default, Copy, Clone, AsBytes, FromBytes)]
-pub struct __kernel_timespec {
-    pub tv_sec: __kernel_time64_t,
-    pub tv_nsec: crate::x86_64_types::c_longlong,
-}
-#[repr(C)]
-#[derive(Debug, Default, Copy, Clone, AsBytes, FromBytes)]
-pub struct __kernel_itimerspec {
-    pub it_interval: __kernel_timespec,
-    pub it_value: __kernel_timespec,
-}
-#[repr(C)]
-#[derive(Debug, Default, Copy, Clone, AsBytes, FromBytes)]
-pub struct __kernel_old_timespec {
-    pub tv_sec: __kernel_old_time_t,
-    pub tv_nsec: crate::x86_64_types::c_long,
-}
-#[repr(C)]
-#[derive(Debug, Default, Copy, Clone, AsBytes, FromBytes)]
-pub struct __kernel_sock_timeval {
-    pub tv_sec: __s64,
-    pub tv_usec: __s64,
-}
-#[repr(C)]
-#[derive(Debug, Default, Copy, Clone, AsBytes, FromBytes)]
-pub struct timespec {
-    pub tv_sec: __kernel_old_time_t,
-    pub tv_nsec: crate::x86_64_types::c_long,
-}
-#[repr(C)]
-#[derive(Debug, Default, Copy, Clone, AsBytes, FromBytes)]
-pub struct timeval {
-    pub tv_sec: __kernel_old_time_t,
-    pub tv_usec: __kernel_suseconds_t,
-}
-#[repr(C)]
-#[derive(Debug, Default, Copy, Clone, AsBytes, FromBytes)]
-pub struct itimerspec {
-    pub it_interval: timespec,
-    pub it_value: timespec,
-}
-#[repr(C)]
-#[derive(Debug, Default, Copy, Clone, AsBytes, FromBytes)]
-pub struct itimerval {
-    pub it_interval: timeval,
-    pub it_value: timeval,
-}
-#[repr(C)]
-#[derive(Debug, Default, Copy, Clone, AsBytes, FromBytes)]
-pub struct timezone {
-    pub tz_minuteswest: crate::x86_64_types::c_int,
-    pub tz_dsttime: crate::x86_64_types::c_int,
-}
-#[repr(C)]
-#[derive(Debug, Default, Copy, Clone, AsBytes, FromBytes)]
 pub struct rusage {
     pub ru_utime: timeval,
     pub ru_stime: timeval,
@@ -2197,42 +2541,6 @@ pub struct clone_args {
     pub set_tid_size: __u64,
     pub cgroup: __u64,
 }
-#[repr(C)]
-#[derive(Debug, Copy, Clone)]
-pub struct siginfo {
-    _unused: [u8; 0],
-}
-pub type sigset_t = crate::x86_64_types::c_ulong;
-pub type __signalfn_t =
-    ::std::option::Option<unsafe extern "C" fn(arg1: crate::x86_64_types::c_int)>;
-pub type __sighandler_t = u64;
-pub type __restorefn_t = ::std::option::Option<unsafe extern "C" fn()>;
-pub type __sigrestore_t = u64;
-#[repr(C)]
-#[derive(Debug, Default, Copy, Clone, AsBytes, FromBytes)]
-pub struct sigaction {
-    pub sa_handler: __sighandler_t,
-    pub sa_flags: crate::x86_64_types::c_ulong,
-    pub sa_restorer: __sigrestore_t,
-    pub sa_mask: sigset_t,
-}
-#[repr(C)]
-#[derive(Debug, Copy, Clone)]
-pub struct sigaltstack {
-    pub ss_sp: *mut crate::x86_64_types::c_void,
-    pub ss_flags: crate::x86_64_types::c_int,
-    pub ss_size: usize,
-}
-impl Default for sigaltstack {
-    fn default() -> Self {
-        let mut s = ::std::mem::MaybeUninit::<Self>::uninit();
-        unsafe {
-            ::std::ptr::write_bytes(s.as_mut_ptr(), 0, 1);
-            s.assume_init()
-        }
-    }
-}
-pub type stack_t = sigaltstack;
 pub type __kernel_sa_family_t = crate::x86_64_types::c_ushort;
 #[repr(C)]
 #[derive(Copy, Clone)]

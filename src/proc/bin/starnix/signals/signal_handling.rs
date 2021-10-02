@@ -7,8 +7,9 @@ use crate::signals::*;
 use crate::syscalls::SyscallContext;
 use crate::task::*;
 use crate::types::*;
-use fuchsia_zircon::sys::zx_thread_state_general_regs_t;
 use std::convert::TryFrom;
+
+use fuchsia_zircon as zx;
 
 /// The size of the red zone.
 ///
@@ -30,20 +31,21 @@ const RED_ZONE_SIZE: u64 = 128;
 /// must be the first field, since that is where the signal handler will return after
 /// it finishes executing.
 #[repr(C)]
-#[derive(Default, Debug)]
+#[derive(Default)]
+#[cfg(target_arch = "x86_64")]
 struct SignalStackFrame {
     /// The address of the signal handler function.
     restorer_address: u64,
 
-    // The register state at the time the signal was handled.
-    registers: zx_thread_state_general_regs_t,
+    /// The state of the thread at the time the signal was handled.
+    context: ucontext,
 }
 
 const SIG_STACK_SIZE: usize = std::mem::size_of::<SignalStackFrame>();
 
 impl SignalStackFrame {
-    fn new(registers: zx_thread_state_general_regs_t, restorer_address: u64) -> SignalStackFrame {
-        SignalStackFrame { registers, restorer_address }
+    fn new(context: ucontext, restorer_address: u64) -> SignalStackFrame {
+        SignalStackFrame { context, restorer_address }
     }
 
     fn as_bytes(self) -> [u8; SIG_STACK_SIZE] {
@@ -68,14 +70,49 @@ fn misalign_stack_pointer(pointer: u64) -> u64 {
 ///
 /// This function stores the state required to restore after the signal handler on the stack.
 // TODO(lindkvist): Honor the flags in `sa_flags`.
-// TODO(lindkvist): Apply `sa_mask` to block signals during the execution of the signal handler.
 fn dispatch_signal_handler(
     ctx: &mut SyscallContext<'_>,
     signal_state: &mut SignalState,
     signal: Signal,
     action: sigaction_t,
 ) {
-    let signal_stack_frame = SignalStackFrame::new(ctx.registers, action.sa_restorer.ptr() as u64);
+    let signal_stack_frame = SignalStackFrame::new(
+        ucontext {
+            uc_mcontext: sigcontext {
+                r8: ctx.registers.r8,
+                r9: ctx.registers.r9,
+                r10: ctx.registers.r10,
+                r11: ctx.registers.r11,
+                r12: ctx.registers.r12,
+                r13: ctx.registers.r13,
+                r14: ctx.registers.r14,
+                r15: ctx.registers.r15,
+                rdi: ctx.registers.rdi,
+                rsi: ctx.registers.rsi,
+                rbp: ctx.registers.rbp,
+                rbx: ctx.registers.rbx,
+                rdx: ctx.registers.rdx,
+                rax: ctx.registers.rax,
+                rcx: ctx.registers.rcx,
+                rsp: ctx.registers.rsp,
+                rip: ctx.registers.rip,
+                eflags: ctx.registers.rflags,
+                oldmask: signal_state.mask,
+                ..Default::default()
+            },
+            uc_stack: signal_state
+                .alt_stack
+                .map(|stack| sigaltstack {
+                    ss_sp: stack.ss_sp.ptr() as *mut c_void,
+                    ss_flags: stack.ss_flags as i32,
+                    ss_size: stack.ss_size,
+                })
+                .unwrap_or(sigaltstack::default()),
+            uc_sigmask: signal_state.mask,
+            ..Default::default()
+        },
+        action.sa_restorer.ptr() as u64,
+    );
 
     // Determine which stack pointer to use for the signal handler.
     // If the signal handler is executed on the main stack, adjust the stack pointer to account for
@@ -102,6 +139,8 @@ fn dispatch_signal_handler(
         .write_memory(UserAddress::from(stack_pointer), &signal_stack_frame.as_bytes())
         .unwrap();
 
+    signal_state.mask = action.sa_mask;
+
     ctx.registers.rsp = stack_pointer;
     ctx.registers.rdi = signal.number() as u64;
     ctx.registers.rip = action.sa_handler.ptr() as u64;
@@ -118,16 +157,31 @@ pub fn restore_from_signal_handler(ctx: &mut SyscallContext<'_>) {
         .unwrap();
 
     let signal_stack_frame = SignalStackFrame::from_bytes(signal_stack_bytes);
+    let uctx = &signal_stack_frame.context.uc_mcontext;
     // Restore the register state from before executing the signal handler.
-    ctx.registers = signal_stack_frame.registers;
-
-    // Restore the task's signal mask.
-    // TODO: is this useful?
-    let mut signal_state = ctx.task.signals.write();
-    if let Some(saved_signal_mask) = signal_state.saved_mask {
-        signal_state.mask = saved_signal_mask;
-    }
-    signal_state.saved_mask = None;
+    ctx.registers = zx::sys::zx_thread_state_general_regs_t {
+        r8: uctx.r8,
+        r9: uctx.r9,
+        r10: uctx.r10,
+        r11: uctx.r11,
+        r12: uctx.r12,
+        r13: uctx.r13,
+        r14: uctx.r14,
+        r15: uctx.r15,
+        rax: uctx.rax,
+        rbx: uctx.rbx,
+        rcx: uctx.rcx,
+        rdx: uctx.rdx,
+        rsi: uctx.rsi,
+        rdi: uctx.rdi,
+        rbp: uctx.rbp,
+        rsp: uctx.rsp,
+        rip: uctx.rip,
+        rflags: uctx.eflags,
+        fs_base: ctx.registers.fs_base,
+        gs_base: ctx.registers.gs_base,
+    };
+    ctx.task.signals.write().mask = signal_stack_frame.context.uc_sigmask;
 }
 
 pub fn send_signal(task: &Task, unchecked_signal: &UncheckedSignal) -> Result<(), Errno> {
