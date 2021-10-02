@@ -4,8 +4,7 @@
 
 import("//build/bind/bind.gni")
 import("//build/components.gni")
-import("//build/config/fuchsia/rules.gni")
-import("//build/drivers/fuchsia_driver_component.gni")
+import("//build/drivers.gni")
 import("//build/test.gni")
 
 test("test") {
@@ -45,7 +44,7 @@ driver_bind_rules("parent-driver-bind") {
   deps = [ "//src/devices/bind/fuchsia.test" ]
 }
 
-driver_module("parent-driver") {
+fuchsia_driver("parent-driver") {
   output_name = "fidl-protocol-parent"
   sources = [ "parent-driver.cc" ]
   deps = [
@@ -71,7 +70,7 @@ driver_bind_rules("child-driver-bind") {
   deps = [ ":fidl.examples.echo-bind" ]
 }
 
-driver_module("child-driver") {
+fuchsia_driver("child-driver") {
   output_name = "fidl-protocol-child"
   sources = [ "child-driver.cc" ]
   deps = [
