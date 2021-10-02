@@ -73,7 +73,7 @@ class AppTheme {
         appBarTheme: AppBarTheme(
           backgroundColor: Colors.white,
           iconTheme: IconThemeData(color: Colors.black),
-          titleTextStyle: TextStyle(color: Colors.black),
+          titleTextStyle: TextStyle(color: Colors.black, fontSize: 24),
           elevation: 0,
           shadowColor: Colors.transparent,
         ),
@@ -158,7 +158,7 @@ class AppTheme {
         appBarTheme: AppBarTheme(
           backgroundColor: Colors.black,
           iconTheme: IconThemeData(color: Colors.white),
-          titleTextStyle: TextStyle(color: Colors.white),
+          titleTextStyle: TextStyle(color: Colors.white, fontSize: 24),
           elevation: 0,
           shadowColor: Colors.transparent,
         ),

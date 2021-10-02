@@ -422,9 +422,21 @@ class AppStateImpl with Disposable implements AppState {
         'close': closeView,
         'closeAll': closeAll,
         'settings': showOverlay,
-        'shortcuts': showOverlay,
+        'shortcuts': () {
+          settingsState.showShortcutSettings();
+          showOverlay();
+        },
         'screenSaver': showScreenSaver,
         'inspect': () => json.encode(_getInspectData()),
+        'navigateBack': () {
+          if (!settingsState.allSettingsPageVisible) {
+            settingsState.showAllSettings();
+          }
+        },
+        // ignore: unnecessary_lambdas
+        'increaseBrightness': () => settingsState.increaseBrightness(),
+        // ignore: unnecessary_lambdas
+        'decreaseBrightness': () => settingsState.decreaseBrightness(),
       };
 
   final _focusedView = Observable<ViewHandle?>(null);

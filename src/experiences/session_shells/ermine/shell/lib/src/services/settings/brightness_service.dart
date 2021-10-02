@@ -6,17 +6,19 @@ import 'dart:async';
 
 import 'package:ermine/src/services/settings/task_service.dart';
 import 'package:fidl_fuchsia_ui_brightness/fidl_async.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:fuchsia_services/services.dart';
 
 /// Defines a [TaskService] for updating and responding to brightness.
+///
+/// Brightness service runs all the time to allow changing brighness even
+/// when the shell ui is not visible.
 class BrightnessService implements TaskService {
   late final VoidCallback onChanged;
 
   ControlProxy? _control;
-  StreamSubscription? _brightnessSubscription;
-  StreamSubscription? _autoSubscription;
+  late StreamSubscription _brightnessSubscription;
+  late StreamSubscription _autoSubscription;
   late bool _auto;
   late double _brightness;
 
@@ -34,6 +36,16 @@ class BrightnessService implements TaskService {
     }
   }
 
+  // Increase brightness by 10%.
+  void increaseBrightness() {
+    brightness = (brightness + 0.1).clamp(0, 1);
+  }
+
+  // Decrease brightness by 10%.
+  void decreaseBrightness() {
+    brightness = (brightness - 0.1).clamp(0.05, 1);
+  }
+
   IconData get icon => _auto ? Icons.brightness_auto : Icons.brightness_5;
 
   bool get auto => _auto;
@@ -47,6 +59,10 @@ class BrightnessService implements TaskService {
 
   @override
   Future<void> start() async {
+    if (_control != null) {
+      return;
+    }
+
     _control = ControlProxy();
     Incoming.fromSvcPath().connectToService(_control);
 
@@ -59,7 +75,7 @@ class BrightnessService implements TaskService {
       }
     });
 
-    // Watch for changes in brightness value
+    // Watch for changes in brightness value.
     _control!
         .watchCurrentBrightness()
         .asStream()
@@ -67,16 +83,17 @@ class BrightnessService implements TaskService {
   }
 
   @override
-  Future<void> stop() async {
-    await _brightnessSubscription?.cancel();
-    await _autoSubscription?.cancel();
-    dispose();
-  }
+  Future<void> stop() async {}
 
   @override
   void dispose() {
-    _control?.ctrl.close();
-    _control = null;
+    Future.wait(
+      [_autoSubscription.cancel(), _brightnessSubscription.cancel()],
+      cleanUp: (_) {
+        _control?.ctrl.close();
+        _control = null;
+      },
+    );
   }
 
   void _onBrightnessSettingsChanged(double value) {

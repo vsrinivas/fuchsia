@@ -93,6 +93,8 @@ abstract class SettingsState implements TaskService {
   void showTimezoneSettings();
   void setBrightnessLevel(double value);
   void setBrightnessAuto();
+  void increaseBrightness();
+  void decreaseBrightness();
   void showAboutSettings();
   void showChannelSettings();
   void setTargetChannel(String channel);

@@ -273,7 +273,6 @@ class SettingsStateImpl with Disposable implements SettingsState, TaskService {
     await networkService.stop();
     await memoryWatcherService.stop();
     await batteryWatcherService.stop();
-    await brightnessService.stop();
     await channelService.stop();
     _dateTimeNow = null;
   }
@@ -286,6 +285,7 @@ class SettingsStateImpl with Disposable implements SettingsState, TaskService {
     networkService.dispose();
     memoryWatcherService.dispose();
     batteryWatcherService.dispose();
+    brightnessService.dispose();
     channelService.dispose();
   }
 
@@ -323,6 +323,14 @@ class SettingsStateImpl with Disposable implements SettingsState, TaskService {
   @override
   void setBrightnessLevel(double value) =>
       runInAction(() => brightnessService.brightness = value);
+
+  @override
+  void increaseBrightness() =>
+      runInAction(brightnessService.increaseBrightness);
+
+  @override
+  void decreaseBrightness() =>
+      runInAction(brightnessService.decreaseBrightness);
 
   @override
   void setBrightnessAuto() => runInAction(() => brightnessService.auto = true);

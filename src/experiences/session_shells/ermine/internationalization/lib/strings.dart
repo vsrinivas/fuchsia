@@ -847,6 +847,56 @@ class Strings {
         name: 'switch to previous app',
         desc: 'Keyboard shortcut description to switch to previous app.',
       );
+  static String get navigateBackKeyboardShortcut => Intl.message(
+        'Navigate back',
+        name: 'navigate back',
+        desc: 'Keyboard shortcut description to go back to previous state.',
+      );
+  static String get refreshKeyboardShortcut => Intl.message(
+        'Refresh',
+        name: 'refresh',
+        desc: 'Keyboard shortcut description to refresh current view.',
+      );
+  static String get fullscreenToggleKeyboardShortcut => Intl.message(
+        'Toggle Fullscreen',
+        name: 'toggle fullscreen',
+        desc: 'Keyboard shortcut description to toggle fullscreen view mode.',
+      );
+  static String get arrangeWindowsKeyboardShortcut => Intl.message(
+        'Arrange Windows',
+        name: 'arrange windows',
+        desc: 'Keyboard shortcut description to arrange windows on screen.',
+      );
+  static String get decreaseBrightnessKeyboardShortcut => Intl.message(
+        'Decrease Brightness',
+        name: 'decrease brighness',
+        desc: 'Keyboard shortcut description to decrease screen brightness.',
+      );
+  static String get increaseBrightnessKeyboardShortcut => Intl.message(
+        'Increase Brightness',
+        name: 'increase brighness',
+        desc: 'Keyboard shortcut description to increase screen brightness.',
+      );
+  static String get playPauseMediaKeyboardShortcut => Intl.message(
+        'Play/Pause Media',
+        name: 'play/pause media',
+        desc: 'Keyboard shortcut description to play or pause media playback.',
+      );
+  static String get muteVolumeKeyboardShortcut => Intl.message(
+        'Mute Volume',
+        name: 'mute volume',
+        desc: 'Keyboard shortcut description to mute sound volume.',
+      );
+  static String get decreaseVolumeKeyboardShortcut => Intl.message(
+        'Decrease Volume',
+        name: 'decrease volume',
+        desc: 'Keyboard shortcut description to decrease sound volume.',
+      );
+  static String get increaseVolumeKeyboardShortcut => Intl.message(
+        'Increase Volume',
+        name: 'increase volume',
+        desc: 'Keyboard shortcut description to increase sound volume.',
+      );
   static String get update => Intl.message(
         'Update',
         name: 'update',
