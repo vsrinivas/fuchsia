@@ -128,11 +128,6 @@ At present, these are the libraries considered in this document:
    + protocol `LookupAdmin` is the role-separated pair of `Lookup`
 - `fuchsia.net.neighbor`
    + not planned for SDK inclusion
-- `fuchsia.net.oldhttp`
-   + out of scope of this document, not maintained by networking
-   + only referenced in
-     https://source.chromium.org/chromium/chromium/src/+/main:fuchsia/http/
-   + slated for deletion
 - `fuchsia.net.routes`
    + included in SDK
    + narrow route+MAC resolution API in service of partner needs

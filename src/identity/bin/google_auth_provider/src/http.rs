@@ -99,8 +99,7 @@ pub trait HttpClient {
     ) -> TokenProviderResult<(Option<String>, StatusCode)>;
 }
 
-/// A client capable of making HTTP requests using the Fuchsia oldhttp URL
-/// Loader service.
+/// A client capable of making HTTP requests.
 #[derive(Clone)]
 pub struct UrlLoaderHttpClient {
     url_loader: fidl_fuchsia_net_http::LoaderProxy,
@@ -115,7 +114,7 @@ impl UrlLoaderHttpClient {
 
 #[async_trait]
 impl HttpClient for UrlLoaderHttpClient {
-    /// Asynchronously send an HTTP request using oldhttp URLLoader service.
+    /// Asynchronously send an HTTP request.
     async fn request(
         &self,
         HttpRequest(http_request): HttpRequest,

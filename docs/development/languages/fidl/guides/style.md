@@ -194,11 +194,9 @@ broad scope.  For example, `fuchsia.power.Manager`. However, be warned that
 functionality that might be better factored into multiple protocols.
 
 Protocols must not include the name `service.` All protocols define services.
-The term is meaningless. For example, `fuchsia.net.oldhttp.HttpService`
-violates this rubric in two ways.  First, the `http` prefix is redundant with
-the library name. Second, the `service` suffix is banned.
-Notice that the successor library simply omits this altogether by being
-explicit in naming the service it offers `fuchsia.net.http.Loader`.
+The term is meaningless. For example, `fuchsia.tts.TtsService` violates this
+rubric in two ways.  First, the `Tts` prefix is redundant with the library
+name. Second, the `Service` suffix is banned.
 
 #### Methods
 
