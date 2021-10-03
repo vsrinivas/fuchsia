@@ -8,6 +8,7 @@ import os
 import paths
 import subprocess
 import sys
+import tempfile
 
 # These are the locations of pubspec files that are roots of the dependency
 # graph.  If they contain conflicting requirements for a package 'pub get' will
@@ -99,7 +100,14 @@ def main():
             script_args.changelog,
         ])
 
-    subprocess.check_call(args, env={'FLUTTER_ROOT': flutter_absolute_root})
+        # pub assumes that the HOME variable will be set so we set it to a temporary directory. This
+        # should be fixed once https://github.com/dart-lang/pub/issues/3167 is addressed.
+        subprocess.check_call(
+            args,
+            env={
+                'FLUTTER_ROOT': flutter_absolute_root,
+                'HOME': tempfile.mkdtemp()
+            })
 
 
 if __name__ == '__main__':
