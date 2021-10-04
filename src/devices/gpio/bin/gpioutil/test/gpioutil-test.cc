@@ -61,6 +61,14 @@ class FakeGpio : public fidl::WireServer<Gpio> {
     mock_set_drive_strength_.Call();
     completer.ReplySuccess(2000);
   }
+  void GetInterrupt(GetInterruptRequestView request,
+                    GetInterruptCompleter::Sync& completer) override {
+    completer.ReplyError(ZX_ERR_NOT_SUPPORTED);
+  }
+  void ReleaseInterrupt(ReleaseInterruptRequestView request,
+                        ReleaseInterruptCompleter::Sync& completer) override {
+    completer.ReplyError(ZX_ERR_NOT_SUPPORTED);
+  }
 
   mock_function::MockFunction<zx_status_t>& MockConfigIn() { return mock_config_in_; }
   mock_function::MockFunction<zx_status_t>& MockConfigOut() { return mock_config_out_; }

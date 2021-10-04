@@ -66,6 +66,22 @@ zx_status_t GpioDevice::GpioSetDriveStrength(uint64_t ds_ua, uint64_t* out_actua
 
 void GpioDevice::DdkRelease() { delete this; }
 
+zx_status_t GpioDevice::DdkOpen(zx_device_t** dev_out, uint32_t flags) {
+  fbl::AutoLock lock(&lock_);
+  if (opened_) {
+    return ZX_ERR_ALREADY_BOUND;
+  }
+  opened_ = true;
+  return ZX_OK;
+}
+
+zx_status_t GpioDevice::DdkClose(uint32_t flags) {
+  fbl::AutoLock lock(&lock_);
+  gpio_.ReleaseInterrupt(pin_);
+  opened_ = false;
+  return ZX_OK;
+}
+
 zx_status_t GpioDevice::Create(void* ctx, zx_device_t* parent) {
   gpio_impl_protocol_t gpio;
   auto status = device_get_protocol(parent, ZX_PROTOCOL_GPIO_IMPL, &gpio);

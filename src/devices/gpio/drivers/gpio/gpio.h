@@ -20,7 +20,8 @@ namespace gpio {
 class GpioDevice;
 using fuchsia_hardware_gpio::Gpio;
 using fuchsia_hardware_gpio::wire::GpioFlags;
-using GpioDeviceType = ddk::Device<GpioDevice, ddk::Messageable<Gpio>::Mixin>;
+using GpioDeviceType =
+    ddk::Device<GpioDevice, ddk::Messageable<Gpio>::Mixin, ddk::Openable, ddk::Closable>;
 
 static_assert(GPIO_PULL_DOWN == static_cast<uint32_t>(GpioFlags::kPullDown),
               "ConfigIn PULL_DOWN flag doesn't match.");
@@ -39,6 +40,8 @@ class GpioDevice : public GpioDeviceType, public ddk::GpioProtocol<GpioDevice, d
   static zx_status_t Create(void* ctx, zx_device_t* parent);
 
   void DdkRelease();
+  zx_status_t DdkOpen(zx_device_t** dev_out, uint32_t flags);
+  zx_status_t DdkClose(uint32_t flags);
 
   zx_status_t GpioConfigIn(uint32_t flags);
   zx_status_t GpioConfigOut(uint8_t initial_value);
@@ -94,11 +97,31 @@ class GpioDevice : public GpioDeviceType, public ddk::GpioProtocol<GpioDevice, d
       completer.ReplyError(status);
     }
   }
+  void GetInterrupt(GetInterruptRequestView request,
+                    GetInterruptCompleter::Sync& completer) override {
+    zx::interrupt interrupt;
+    zx_status_t status = GpioGetInterrupt(request->flags, &interrupt);
+    if (status == ZX_OK) {
+      completer.ReplySuccess(std::move(interrupt));
+    } else {
+      completer.ReplyError(status);
+    }
+  }
+  void ReleaseInterrupt(ReleaseInterruptRequestView request,
+                        ReleaseInterruptCompleter::Sync& completer) override {
+    zx_status_t status = GpioReleaseInterrupt();
+    if (status == ZX_OK) {
+      completer.ReplySuccess();
+    } else {
+      completer.ReplyError(status);
+    }
+  }
 
  private:
   const ddk::GpioImplProtocolClient gpio_ TA_GUARDED(lock_);
   const uint32_t pin_;
   fbl::Mutex lock_;
+  bool opened_ TA_GUARDED(lock_) = false;
 };
 
 }  // namespace gpio

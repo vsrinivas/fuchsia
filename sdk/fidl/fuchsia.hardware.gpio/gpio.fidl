@@ -42,4 +42,16 @@ protocol Gpio {
     }) -> (struct {
         actual_ds_ua uint64;
     }) error zx.status;
+
+    /// Gets an interrupt object pertaining to a particular GPIO pin. `flags`
+    /// is passed as the `options` parameter when
+    /// [creating the interrupt](https://fuchsia.dev/fuchsia-src/reference/syscalls/interrupt_create).
+    GetInterrupt(struct {
+        flags uint32;
+    }) -> (resource struct {
+        irq zx.handle:INTERRUPT;
+    }) error zx.status;
+
+    /// Release the interrupt.
+    ReleaseInterrupt() -> (struct {}) error zx.status;
 };

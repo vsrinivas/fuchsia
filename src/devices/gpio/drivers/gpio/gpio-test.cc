@@ -94,4 +94,29 @@ TEST_F(GpioTest, TestBanjoSetDriveStrength) {
   EXPECT_EQ(actual, 3000);
 }
 
+TEST_F(GpioTest, TestCloseReleasesInterrupt) {
+  EXPECT_OK(gpio_->DdkOpen(nullptr, 0));
+
+  zx::interrupt interrupt;
+  gpio_impl_.ExpectReleaseInterrupt(ZX_OK, 0);
+
+  EXPECT_OK(gpio_->DdkClose(0));
+
+  ASSERT_NO_FAILURES(gpio_impl_.VerifyAndClear());
+}
+
+TEST_F(GpioTest, TestOneClient) {
+  gpio_impl_.ExpectReleaseInterrupt(ZX_OK, 0).ExpectReleaseInterrupt(ZX_OK, 0);
+
+  EXPECT_OK(gpio_->DdkOpen(nullptr, 0));
+
+  EXPECT_NOT_OK(gpio_->DdkOpen(nullptr, 0));
+
+  EXPECT_OK(gpio_->DdkClose(0));
+
+  EXPECT_OK(gpio_->DdkOpen(nullptr, 0));
+
+  EXPECT_OK(gpio_->DdkClose(0));
+}
+
 }  // namespace gpio
