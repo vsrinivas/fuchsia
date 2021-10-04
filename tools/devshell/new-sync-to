@@ -175,6 +175,8 @@ class SyncToCommand:
                     "Running in dry-run mode. No changes will be made to your checkout.",
                     Color.GREEN))
 
+        self.confirm_ok_to_change_source_code()
+
         # Always update the integration repo to avoid missing refs. This should
         # be a safe operation, and it avoids false negatives.
         print("Fetching refs in the integration repo...")
@@ -187,6 +189,13 @@ class SyncToCommand:
             stderr=subprocess.DEVNULL,
             stdout=subprocess.DEVNULL,
             dry_run_safe=True)
+
+        # Force-checkout every repository at JIRI_HEAD to ensure subsequent
+        # `jiri update` calls won't skip repos not at JIRI_HEAD. This will
+        # intentionally fail if there are any uncommitted changes (which should
+        # have been detected by `confirm_ok_to_change_source_code` anyway) to
+        # avoid permanently deleting code.
+        self.jiri("runp", "git checkout JIRI_HEAD")
 
         if self.state == "reset":
             self.reset_checkout()
@@ -217,11 +226,6 @@ class SyncToCommand:
         # checkout prior to syncing and have `reset` restore the exact contents
         # of the old checkout instead of always going back to JIRI_HEAD.
         print("Resetting the tree to the latest...")
-        self.confirm_ok_to_change_source_code()
-        print("Checking out integration repo for JIRI_HEAD")
-        self.run_command("git", "-C", "./integration", "checkout", "JIRI_HEAD")
-        print("Syncing the source tree")
-        self.jiri("runp", "git checkout JIRI_HEAD")
         self.jiri("update", "-gc")
 
     def sync_to_release_branch(self) -> None:
@@ -277,13 +281,11 @@ class SyncToCommand:
             stdout=subprocess.PIPE,
         ).stdout.strip()
         self.assert_correct_integration_repo(integration_remote)
-        self.confirm_ok_to_change_source_code()
         print(f"Syncing to Jiri snapshot {str(snapshot_file)!r}")
         self.jiri("update", "-local-manifest", "-gc", snapshot_file)
 
     def sync_to_integration_ref(self, ref: str) -> None:
         """Sync to a branch, tag, or revision of the integration repo."""
-        self.confirm_ok_to_change_source_code()
         print(f"Checking out integration repo at {ref}")
 
         self.run_command(
@@ -291,8 +293,14 @@ class SyncToCommand:
             "-C",
             self.integration_dir,
             "checkout",
+            # Create a new branch; if we checked out without branching, `jiri
+            # update` would reset integration back to JIRI_HEAD.
             "-B",
             TEMP_BRANCH_NAME,
+            # Don't auto-track any remote branch. Otherwise `fx sync-to reset`
+            # might fail to switch off a branch that's behind the remote branch
+            # it's tracking.
+            "--no-track",
             ref,
         )
         try:
@@ -498,7 +506,9 @@ class SyncToCommand:
 
     def print_synced_revision(self) -> None:
         print()
-        print("Success! To switch back to the latest, use `fx new-sync-to reset`.")
+        print(
+            "Success! To switch back to the latest, use `fx new-sync-to reset`."
+        )
         print("//integration HEAD is now at:")
         self.run_command(
             "git",
@@ -551,7 +561,7 @@ class SyncToCommand:
         *args: Union[str, pathlib.Path],
         **kwargs,
     ) -> subprocess.CompletedProcess:
-        return self.run_command("jiri", *args, **kwargs)
+        return self.run_command("jiri", "-color=always", *args, **kwargs)
 
     def confirm_ok_to_change_source_code(self) -> None:
         if self.dry_run:
