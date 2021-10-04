@@ -116,7 +116,7 @@ impl Socket {
         }?;
         {
             let mut locked_endpoint = endpoint.lock();
-            locked_endpoint.address = socket_address;
+            locked_endpoint.address = Some(socket_address);
         }
         *self = Socket::Bound(endpoint.clone());
 
@@ -167,12 +167,16 @@ impl Socket {
     /// Returns an error if the connection cannot be established (e.g., if one
     /// of the sockets is already connected).
     pub fn connect(&mut self, socket: &mut Socket) -> Result<(), Errno> {
-        let (client, passive) = match (&self, &socket) {
-            (Socket::Connected(_), _) => error!(EISCONN),
-            (Socket::Unbound(client), Socket::Listening(passive)) => Ok((client, passive)),
+        let client = match self {
+            Socket::Connected(_) => error!(EISCONN),
+            Socket::Unbound(endpoint) => Ok(endpoint),
+            Socket::Bound(endpoint) => Ok(endpoint),
             _ => error!(ECONNREFUSED),
         }?;
-
+        let passive = match socket {
+            Socket::Listening(passive) => Ok(passive),
+            _ => error!(ECONNREFUSED),
+        }?;
         *self = passive.connect(client)?;
         Ok(())
     }
@@ -229,7 +233,7 @@ impl Socket {
         &self,
         task: &Task,
         user_buffers: &mut UserBufferIterator<'_>,
-    ) -> Result<(usize, Option<AncillaryData>), Errno> {
+    ) -> Result<(usize, Option<SocketAddress>, Option<AncillaryData>), Errno> {
         let endpoint = self.local_endpoint();
         endpoint.lock().read(task, user_buffers)
     }
@@ -268,7 +272,12 @@ impl Socket {
         ancillary_data: &mut Option<AncillaryData>,
     ) -> Result<usize, Errno> {
         let mut endpoint = self.remote_endpoint()?.lock();
-        endpoint.write(task, user_buffers, ancillary_data)
+        endpoint.write(
+            task,
+            user_buffers,
+            self.local_endpoint().lock().address.clone(),
+            ancillary_data,
+        )
     }
 
     pub fn wait_async(&self, waiter: &Arc<Waiter>, events: FdEvents, handler: EventHandler) {
@@ -319,10 +328,33 @@ impl SocketType {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum SocketAddress {
+    /// An address in the AF_UNSPEC domain.
+    #[allow(dead_code)]
+    Unspecified,
+
     /// A `Unix` socket address contains the filesystem path that was used to bind the socket.
     Unix(FsString),
+}
+
+impl SocketAddress {
+    pub fn to_bytes(&self) -> Vec<u8> {
+        match self {
+            SocketAddress::Unspecified => AF_UNSPEC.to_ne_bytes().to_vec(),
+            SocketAddress::Unix(name) => {
+                if name.len() > 0 {
+                    let mut address = sockaddr_un::default();
+                    let length = std::cmp::min(address.sun_path.len() - 1, name.len());
+                    address.sun_family = AF_UNIX;
+                    address.sun_path[..length].copy_from_slice(&name[..length]);
+                    address.as_bytes().to_vec()
+                } else {
+                    AF_UNIX.to_ne_bytes().to_vec()
+                }
+            }
+        }
+    }
 }
 
 /// A `SocketConnection` contains two connected sockets.
@@ -366,7 +398,7 @@ pub struct SocketEndpoint {
     socket_type: SocketType,
 
     /// The address that this socket has been bound to, if it has been bound.
-    address: SocketAddress,
+    address: Option<SocketAddress>,
 
     /// Whether this endpoint is readable.
     readable: bool,
@@ -382,15 +414,12 @@ impl SocketEndpoint {
     ///
     /// The socket endpoint's address is set to a default value for the specified domain.
     pub fn new(domain: SocketDomain, socket_type: SocketType) -> SocketEndpointHandle {
-        let address = match domain {
-            SocketDomain::Unix => SocketAddress::Unix(vec![]),
-        };
         Arc::new(Mutex::new(SocketEndpoint {
             messages: MessageQueue::new(usize::MAX),
             waiters: WaitQueue::default(),
             domain,
             socket_type,
-            address,
+            address: None,
             readable: true,
             writable: true,
         }))
@@ -398,20 +427,11 @@ impl SocketEndpoint {
 
     /// Returns the name of the endpoint.
     fn name(&self) -> Vec<u8> {
-        let default_name = match self.domain {
-            SocketDomain::Unix => AF_UNIX.to_ne_bytes().to_vec(),
-        };
-        match &self.address {
-            SocketAddress::Unix(name) => {
-                if name.len() > 0 {
-                    let mut address = sockaddr_un::default();
-                    let length = std::cmp::min(address.sun_path.len() - 1, name.len());
-                    address.sun_family = AF_UNIX;
-                    address.sun_path[..length].copy_from_slice(&name[..length]);
-                    address.as_bytes().to_vec()
-                } else {
-                    default_name
-                }
+        if let Some(address) = &self.address {
+            address.to_bytes()
+        } else {
+            match self.domain {
+                SocketDomain::Unix => AF_UNIX.to_ne_bytes().to_vec(),
             }
         }
     }
@@ -431,18 +451,18 @@ impl SocketEndpoint {
         &mut self,
         task: &Task,
         user_buffers: &mut UserBufferIterator<'_>,
-    ) -> Result<(usize, Option<AncillaryData>), Errno> {
+    ) -> Result<(usize, Option<SocketAddress>, Option<AncillaryData>), Errno> {
         if !self.readable {
-            return Ok((0, None));
+            return Ok((0, None, None));
         }
-        let (bytes_read, ancillary_data) = self.messages.read(task, user_buffers)?;
+        let (bytes_read, address, ancillary_data) = self.messages.read(task, user_buffers)?;
         if bytes_read == 0 && ancillary_data.is_none() && user_buffers.remaining() > 0 {
             return error!(EAGAIN);
         }
         if bytes_read > 0 {
             self.waiters.notify_events(FdEvents::POLLOUT);
         }
-        Ok((bytes_read, ancillary_data))
+        Ok((bytes_read, address, ancillary_data))
     }
 
     /// Writes the the contents of `UserBufferIterator` into this socket.
@@ -458,12 +478,13 @@ impl SocketEndpoint {
         &mut self,
         task: &Task,
         user_buffers: &mut UserBufferIterator<'_>,
+        address: Option<SocketAddress>,
         ancillary_data: &mut Option<AncillaryData>,
     ) -> Result<usize, Errno> {
         if !self.writable {
             return Err(ENOTCONN);
         }
-        let bytes_written = self.messages.write(task, user_buffers, ancillary_data)?;
+        let bytes_written = self.messages.write(task, user_buffers, address, ancillary_data)?;
         if bytes_written > 0 {
             self.waiters.notify_events(FdEvents::POLLIN);
         }

@@ -126,6 +126,7 @@ pub fn sys_bind(
     let socket = file.node().socket().ok_or_else(|| errno!(ENOTSOCK))?;
     let address = parse_socket_address(&ctx.task, user_socket_address, address_length)?;
     match address {
+        SocketAddress::Unspecified => return error!(EAFNOSUPPORT),
         SocketAddress::Unix(mut name) => {
             if name.is_empty() {
                 // If the name is empty, then we're supposed to generate an
@@ -207,6 +208,7 @@ pub fn sys_connect(
     let address = parse_socket_address(&ctx.task, user_socket_address, address_length)?;
 
     let passive_socket = match address {
+        SocketAddress::Unspecified => return error!(EAFNOSUPPORT),
         SocketAddress::Unix(name) => {
             if name.is_empty() {
                 return error!(ECONNREFUSED);
@@ -229,14 +231,15 @@ pub fn sys_connect(
 fn write_socket_address(
     task: &Task,
     user_socket_address: UserAddress,
-    user_address_length: UserRef<usize>,
+    user_address_length: UserRef<socklen_t>,
     address_bytes: &[u8],
 ) -> Result<(), Errno> {
     let mut address_length = 0;
     task.mm.read_object(user_address_length, &mut address_length)?;
-    let byte_count = std::cmp::min(address_bytes.len(), address_length);
+    let byte_count = std::cmp::min(address_bytes.len(), address_length as usize);
     task.mm.write_memory(user_socket_address, &address_bytes[..byte_count])?;
-    task.mm.write_object(user_address_length, &address_bytes.len())?;
+    let len = address_bytes.len() as socklen_t;
+    task.mm.write_object(user_address_length, &len)?;
     Ok(())
 }
 
@@ -244,7 +247,7 @@ pub fn sys_getsockname(
     ctx: &SyscallContext<'_>,
     fd: FdNumber,
     user_socket_address: UserAddress,
-    user_address_length: UserRef<usize>,
+    user_address_length: UserRef<socklen_t>,
 ) -> Result<SyscallResult, Errno> {
     let file = ctx.task.files.get(fd)?;
     let socket = file.node().socket().ok_or_else(|| errno!(ENOTSOCK))?;
@@ -260,7 +263,7 @@ pub fn sys_getpeername(
     ctx: &SyscallContext<'_>,
     fd: FdNumber,
     user_socket_address: UserAddress,
-    user_address_length: UserRef<usize>,
+    user_address_length: UserRef<socklen_t>,
 ) -> Result<SyscallResult, Errno> {
     let file = ctx.task.files.get(fd)?;
     let socket = file.node().socket().ok_or_else(|| errno!(ENOTSOCK))?;
@@ -319,7 +322,7 @@ pub fn sys_recvmsg(
 
     let iovec = ctx.task.mm.read_iovec(message_header.msg_iov, message_header.msg_iovlen as i32)?;
     let socket_ops = file.downcast_file::<SocketFile>().unwrap();
-    let (bytes_read, control) = socket_ops.recvmsg(ctx.task, &file, &iovec)?;
+    let (bytes_read, _address, control) = socket_ops.recvmsg(ctx.task, &file, &iovec)?;
 
     if let Some(control) = control {
         let max_bytes = std::cmp::min(control.len(), message_header.msg_controllen as usize);
@@ -330,6 +333,45 @@ pub fn sys_recvmsg(
         message_header.msg_controllen = 0;
     }
     ctx.task.mm.write_object(user_message_header, &message_header)?;
+
+    Ok(bytes_read.into())
+}
+
+pub fn sys_recvfrom(
+    ctx: &SyscallContext<'_>,
+    fd: FdNumber,
+    user_buffer: UserAddress,
+    buffer_length: usize,
+    _flags: u32,
+    user_src_address: UserAddress,
+    user_src_address_length: UserRef<socklen_t>,
+) -> Result<SyscallResult, Errno> {
+    let file = ctx.task.files.get(fd)?;
+    if !file.node().is_sock() {
+        return error!(ENOTSOCK);
+    }
+
+    // TODO: Respect the `flags` argument.
+
+    let socket_ops = file.downcast_file::<SocketFile>().unwrap();
+    let (bytes_read, address, _control) = socket_ops.recvmsg(
+        ctx.task,
+        &file,
+        &[UserBuffer { address: user_buffer, length: buffer_length }],
+    )?;
+
+    if !user_src_address.is_null() {
+        if let Some(address) = address {
+            write_socket_address(
+                &ctx.task,
+                user_src_address,
+                user_src_address_length,
+                &address.to_bytes(),
+            )?;
+        } else {
+            ctx.task.mm.write_object(user_src_address_length, &0)?;
+        }
+    }
 
     Ok(bytes_read.into())
 }
@@ -361,6 +403,29 @@ pub fn sys_sendmsg(
     let socket_ops = file.downcast_file::<SocketFile>().unwrap();
     let bytes_sent = socket_ops.sendmsg(ctx.task, &file, &iovec, control)?;
     Ok(bytes_sent.into())
+}
+
+pub fn sys_sendto(
+    ctx: &SyscallContext<'_>,
+    fd: FdNumber,
+    user_buffer: UserAddress,
+    buffer_length: usize,
+    _flags: u32,
+    user_dest_address: UserAddress,
+    _user_address_length: socklen_t,
+) -> Result<SyscallResult, Errno> {
+    let file = ctx.task.files.get(fd)?;
+    if !file.node().is_sock() {
+        return error!(ENOTSOCK);
+    }
+
+    // TODO: Respect the `flags` argument.
+
+    if !user_dest_address.is_null() {
+        not_implemented!("sendto: non-null destination address");
+        return error!(ENOSYS);
+    }
+    Ok(file.write(&ctx.task, &[UserBuffer { address: user_buffer, length: buffer_length }])?.into())
 }
 
 pub fn sys_getsockopt(
@@ -421,7 +486,7 @@ pub fn sys_shutdown(
 
 fn connect(client_socket: &SocketHandle, passive_socket: &SocketHandle) -> Result<(), Errno> {
     if Arc::ptr_eq(client_socket, passive_socket) {
-        return error!(ECONNREFUSED);
+        return error!(EINVAL);
     }
 
     // Sort the nodes to determine which order to lock them in.
@@ -494,7 +559,7 @@ mod tests {
             .expect("Failed to fetch socket file.");
         assert_eq!(
             connect(file.node().socket().unwrap(), file.node().socket().unwrap()),
-            Err(ECONNREFUSED)
+            Err(EINVAL)
         );
     }
 

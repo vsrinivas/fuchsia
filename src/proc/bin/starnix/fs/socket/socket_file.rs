@@ -21,7 +21,7 @@ impl FileOps for SocketFile {
     fd_impl_nonseekable!();
 
     fn read(&self, file: &FileObject, task: &Task, data: &[UserBuffer]) -> Result<usize, Errno> {
-        self.recvmsg(task, file, data).map(|(bytes_read, _control_message)| bytes_read)
+        self.recvmsg(task, file, data).map(|(bytes_read, _, _)| bytes_read)
     }
 
     fn write(&self, file: &FileObject, task: &Task, data: &[UserBuffer]) -> Result<usize, Errno> {
@@ -104,7 +104,7 @@ impl SocketFile {
         task: &Task,
         file: &FileObject,
         data: &[UserBuffer],
-    ) -> Result<(usize, Option<AncillaryData>), Errno> {
+    ) -> Result<(usize, Option<SocketAddress>, Option<AncillaryData>), Errno> {
         file.blocking_op(
             task,
             || {

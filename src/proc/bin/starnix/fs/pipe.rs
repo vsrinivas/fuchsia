@@ -134,7 +134,7 @@ impl Pipe {
             return error!(EAGAIN);
         }
 
-        self.messages.read(task, user_buffers).map(|(bytes_read, _ancillary_data)| bytes_read)
+        self.messages.read(task, user_buffers).map(|(bytes_read, _, _)| bytes_read)
     }
 
     pub fn write(
@@ -151,7 +151,7 @@ impl Pipe {
             return error!(EPIPE);
         }
 
-        self.messages.write(task, user_buffers, &mut None)
+        self.messages.write(task, user_buffers, None, &mut None)
     }
 
     fn fcntl(

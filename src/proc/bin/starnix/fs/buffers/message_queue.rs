@@ -6,6 +6,7 @@ use std::collections::VecDeque;
 
 use super::message_types::*;
 use crate::error;
+use crate::fs::socket::SocketAddress;
 use crate::task::Task;
 use crate::types::*;
 
@@ -75,13 +76,14 @@ impl MessageQueue {
         &mut self,
         task: &Task,
         user_buffers: &mut UserBufferIterator<'_>,
-    ) -> Result<(usize, Option<AncillaryData>), Errno> {
+    ) -> Result<(usize, Option<SocketAddress>, Option<AncillaryData>), Errno> {
         let mut total_bytes_read = 0;
+        let mut address = None;
 
         while !self.is_empty() {
             if let Some(mut user_buffer) = user_buffers.next(self.length) {
                 // Try to read enough bytes to fill the current user buffer.
-                let (messages, bytes_read) = self.read_bytes(user_buffer.length);
+                let (messages, bytes_read) = self.read_bytes(&mut address, user_buffer.length);
 
                 for message in messages {
                     task.mm.write_memory(user_buffer.address, message.data.bytes())?;
@@ -89,7 +91,7 @@ impl MessageQueue {
                     user_buffer.address += message.len();
                     total_bytes_read += message.len();
                     if message.ancillary_data.is_some() {
-                        return Ok((total_bytes_read, message.ancillary_data));
+                        return Ok((total_bytes_read, address, message.ancillary_data));
                     }
                 }
 
@@ -103,7 +105,7 @@ impl MessageQueue {
             }
         }
 
-        Ok((total_bytes_read, None))
+        Ok((total_bytes_read, address, None))
     }
 
     /// Reads messages, where the total length of the returned messages is less than `max_bytes`.
@@ -116,10 +118,25 @@ impl MessageQueue {
     ///
     /// Returns a vector of read messages, where the sum of the message lengths is guaranteed to be
     /// less than `max_bytes`. The returned `usize` indicates the exact number of bytes read.
-    fn read_bytes(&mut self, max_bytes: usize) -> (Vec<Message>, usize) {
+    fn read_bytes(
+        &mut self,
+        address: &mut Option<SocketAddress>,
+        max_bytes: usize,
+    ) -> (Vec<Message>, usize) {
         let mut number_of_bytes_read = 0;
         let mut messages = vec![];
         while let Some(mut message) = self.read_message() {
+            if message.address.is_some() && *address != message.address {
+                if address.is_some() {
+                    // We've already locked onto an address for this batch of messages, but we
+                    // have found a message that doesn't match. We put it back for now and
+                    // return the messages we have so far.
+                    self.write_front(message);
+                    break;
+                }
+                *address = message.address.clone();
+            }
+
             // The split_packet contains any bytes that did not fit within the bounds.
             let split_packet = message.data.split_off(max_bytes - number_of_bytes_read);
             number_of_bytes_read += message.len();
@@ -127,7 +144,11 @@ impl MessageQueue {
             if !split_packet.is_empty() {
                 // If not all the message data could fit move the ancillary data to the split off
                 // message, so that the ancillary data is returned with the "last" message.
-                self.write_front(Message::new(split_packet, message.ancillary_data.take()));
+                self.write_front(Message::new(
+                    split_packet,
+                    message.address.clone(),
+                    message.ancillary_data.take(),
+                ));
             }
 
             // Whether or not the message has ancillary data. Note that this needs to be computed
@@ -169,6 +190,7 @@ impl MessageQueue {
         &mut self,
         task: &Task,
         user_buffers: &mut UserBufferIterator<'_>,
+        address: Option<SocketAddress>,
         ancillary_data: &mut Option<AncillaryData>,
     ) -> Result<usize, Errno> {
         let actual = std::cmp::min(self.available_capacity(), user_buffers.remaining());
@@ -178,7 +200,7 @@ impl MessageQueue {
             task.mm.read_memory(buffer.address, &mut bytes[offset..(offset + buffer.length)])?;
             offset += buffer.length;
         }
-        self.write_message(Message::new(bytes.into(), ancillary_data.take()));
+        self.write_message(Message::new(bytes.into(), address, ancillary_data.take()));
         Ok(actual)
     }
 
@@ -216,7 +238,7 @@ mod tests {
     fn test_control_len() {
         let mut message_queue = MessageQueue::new(usize::MAX);
         let bytes: Vec<u8> = vec![1, 2, 3];
-        let message = Message::new(vec![].into(), Some(bytes.clone().into()));
+        let message = Message::new(vec![].into(), None, Some(bytes.clone().into()));
         message_queue.write_message(message.clone());
         assert_eq!(message_queue.len(), 0);
         message_queue.write_message(bytes.clone().into());
@@ -249,7 +271,7 @@ mod tests {
         message_queue.write_message(bytes.clone().into());
 
         assert_eq!(message_queue.len(), bytes.len());
-        assert_eq!(message_queue.read_bytes(0), (vec![], 0));
+        assert_eq!(message_queue.read_bytes(&mut None, 0), (vec![], 0));
         assert_eq!(message_queue.len(), bytes.len());
     }
 
@@ -268,8 +290,8 @@ mod tests {
         let expected_first_message = first_bytes.into();
         let expected_second_message = second_bytes.into();
 
-        assert_eq!(message_queue.read_bytes(2), (vec![expected_first_message], 2));
-        assert_eq!(message_queue.read_bytes(2), (vec![expected_second_message], 2));
+        assert_eq!(message_queue.read_bytes(&mut None, 2), (vec![expected_first_message], 2));
+        assert_eq!(message_queue.read_bytes(&mut None, 2), (vec![expected_second_message], 2));
     }
 
     /// Tests that reading a specific number of bytes that ends in the middle of a message returns
@@ -288,10 +310,10 @@ mod tests {
         let expected_second_messages = vec![vec![3].into(), vec![4].into()];
 
         assert_eq!(message_queue.len(), first_bytes.len() + second_bytes.len());
-        assert_eq!(message_queue.read_bytes(2), (expected_first_messages, 2));
+        assert_eq!(message_queue.read_bytes(&mut None, 2), (expected_first_messages, 2));
         // The first message was split, so verify that the length took the split into account.
         assert_eq!(message_queue.len(), 2);
-        assert_eq!(message_queue.read_bytes(2), (expected_second_messages, 2));
+        assert_eq!(message_queue.read_bytes(&mut None, 2), (expected_second_messages, 2));
     }
 
     /// Tests that attempting to read more bytes than exist in the message queue returns all the
@@ -313,7 +335,7 @@ mod tests {
 
         let expected_messages = vec![first_bytes.into(), second_bytes.into(), third_bytes.into()];
 
-        assert_eq!(message_queue.read_bytes(100), (expected_messages, 7));
+        assert_eq!(message_queue.read_bytes(&mut None, 100), (expected_messages, 7));
     }
 
     /// Tests that reading a control message interrupts the byte read, even if more bytes could
@@ -326,16 +348,19 @@ mod tests {
         let second_bytes: Vec<u8> = vec![4, 5];
 
         for message in vec![
-            Message::new(first_bytes.clone().into(), Some(control_bytes.clone().into())),
+            Message::new(first_bytes.clone().into(), None, Some(control_bytes.clone().into())),
             second_bytes.clone().into(),
         ] {
             message_queue.write_message(message);
         }
 
-        let (messages, bytes) = message_queue.read_bytes(20);
-        assert_eq!(messages, vec![Message::new(first_bytes.into(), Some(control_bytes.into()))]);
+        let (messages, bytes) = message_queue.read_bytes(&mut None, 20);
+        assert_eq!(
+            messages,
+            vec![Message::new(first_bytes.into(), None, Some(control_bytes.into()))]
+        );
         assert_eq!(bytes, 3);
-        assert_eq!(message_queue.read_bytes(2), (vec![second_bytes.into()], 2));
+        assert_eq!(message_queue.read_bytes(&mut None, 2), (vec![second_bytes.into()], 2));
     }
 
     /// Tests that the length of the control message is not counted towards the amount of read
@@ -348,16 +373,19 @@ mod tests {
         let second_bytes: Vec<u8> = vec![4, 5];
 
         for message in vec![
-            Message::new(first_bytes.clone().into(), Some(control_bytes.clone().into())),
+            Message::new(first_bytes.clone().into(), None, Some(control_bytes.clone().into())),
             second_bytes.clone().into(),
         ] {
             message_queue.write_message(message);
         }
 
-        let (messages, bytes) = message_queue.read_bytes(5);
-        assert_eq!(messages, vec![Message::new(first_bytes.into(), Some(control_bytes.into()))]);
+        let (messages, bytes) = message_queue.read_bytes(&mut None, 5);
+        assert_eq!(
+            messages,
+            vec![Message::new(first_bytes.into(), None, Some(control_bytes.into()))]
+        );
         assert_eq!(bytes, 3);
-        assert_eq!(message_queue.read_bytes(2), (vec![second_bytes.into()], 2));
+        assert_eq!(message_queue.read_bytes(&mut None, 2), (vec![second_bytes.into()], 2));
     }
 
     /// Tests that ancillary data is returned with the "second" part of a split message.
@@ -369,19 +397,48 @@ mod tests {
         let second_bytes: Vec<u8> = vec![4, 5];
 
         for message in vec![
-            Message::new(first_bytes.clone().into(), Some(control_bytes.clone().into())),
+            Message::new(first_bytes.clone().into(), None, Some(control_bytes.clone().into())),
             second_bytes.clone().into(),
         ] {
             message_queue.write_message(message);
         }
 
         // The first_bytes won't fit here, so the ancillary data should not have been returned.
-        assert_eq!(message_queue.read_bytes(2), (vec![vec![1, 2].into()], 2));
+        assert_eq!(message_queue.read_bytes(&mut None, 2), (vec![vec![1, 2].into()], 2));
         // One byte remains from the first message, and the ancillary data should be included.
         assert_eq!(
-            message_queue.read_bytes(2),
-            (vec![Message::new(vec![3].into(), Some(control_bytes.into()))], 1)
+            message_queue.read_bytes(&mut None, 2),
+            (vec![Message::new(vec![3].into(), None, Some(control_bytes.into()))], 1)
         );
-        assert_eq!(message_queue.read_bytes(2), (vec![second_bytes.into()], 2));
+        assert_eq!(message_queue.read_bytes(&mut None, 2), (vec![second_bytes.into()], 2));
+    }
+
+    #[test]
+    fn test_read_bytes_address_boundary() {
+        let mut message_queue = MessageQueue::new(usize::MAX);
+        let messages = vec![
+            Message::new(vec![1, 2, 3].into(), Some(SocketAddress::Unix(b"/foo".to_vec())), None),
+            Message::new(vec![4, 5].into(), None, None),
+            Message::new(vec![6, 7, 8].into(), Some(SocketAddress::Unix(b"/foo".to_vec())), None),
+            Message::new(vec![9, 10, 11].into(), Some(SocketAddress::Unix(b"/bar".to_vec())), None),
+            Message::new(vec![12].into(), Some(SocketAddress::Unix(b"/bar".to_vec())), None),
+        ];
+
+        for message in messages.clone().into_iter() {
+            message_queue.write_message(message);
+        }
+
+        let mut address = None;
+        assert_eq!(
+            message_queue.read_bytes(&mut address, 20),
+            (vec![messages[0].clone(), messages[1].clone(), messages[2].clone()], 8)
+        );
+        assert_eq!(address, Some(SocketAddress::Unix(b"/foo".to_vec())));
+        let mut address = None;
+        assert_eq!(
+            message_queue.read_bytes(&mut address, 20),
+            (vec![messages[3].clone(), messages[4].clone()], 4)
+        );
+        assert_eq!(address, Some(SocketAddress::Unix(b"/bar".to_vec())));
     }
 }

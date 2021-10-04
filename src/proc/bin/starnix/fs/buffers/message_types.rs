@@ -2,11 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use crate::fs::socket::SocketAddress;
+
 /// A `Message` represents a typed segment of bytes within a `MessageQueue`.
 #[derive(Clone, PartialEq, Debug)]
 pub struct Message {
     /// The data contained in the message.
     pub data: MessageData,
+
+    /// The address from which the message was sent.
+    pub address: Option<SocketAddress>,
 
     /// The ancillary data that is associated with this message.
     pub ancillary_data: Option<AncillaryData>,
@@ -14,8 +19,12 @@ pub struct Message {
 
 impl Message {
     /// Creates a a new message with the provided message and ancillary data.
-    pub fn new(data: MessageData, ancillary_data: Option<AncillaryData>) -> Self {
-        Message { data, ancillary_data }
+    pub fn new(
+        data: MessageData,
+        address: Option<SocketAddress>,
+        ancillary_data: Option<AncillaryData>,
+    ) -> Self {
+        Message { data, address, ancillary_data }
     }
 
     /// Returns the length of the message in bytes.
@@ -28,13 +37,13 @@ impl Message {
 
 impl From<MessageData> for Message {
     fn from(data: MessageData) -> Self {
-        Message { data, ancillary_data: None }
+        Message { data, address: None, ancillary_data: None }
     }
 }
 
 impl From<Vec<u8>> for Message {
     fn from(data: Vec<u8>) -> Self {
-        Self { data: data.into(), ancillary_data: None }
+        Self { data: data.into(), address: None, ancillary_data: None }
     }
 }
 
