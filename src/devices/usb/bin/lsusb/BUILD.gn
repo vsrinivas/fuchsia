@@ -33,7 +33,7 @@ executable("lsusb") {
   deps = [
     "//sdk/fidl/fuchsia.hardware.usb.device:fuchsia.hardware.usb.device_c",
     "//sdk/lib/fdio",
-    "//zircon/public/lib/pretty",
+    "//zircon/system/ulib/pretty",
   ]
 
   # TODO(fxbug.dev/58162): delete the below and fix compiler warnings

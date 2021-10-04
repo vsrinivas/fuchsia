@@ -30,10 +30,10 @@ test("inspect") {
 
   deps = [
     "//sdk/lib/fit-promise",
-    "//zircon/public/lib/pretty",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/fzl",
     "//zircon/system/ulib/inspect",
+    "//zircon/system/ulib/pretty",
     "//zircon/system/ulib/zxtest",
   ]
 }

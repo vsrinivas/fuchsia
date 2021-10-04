@@ -21,9 +21,9 @@ test("kcounter") {
     "//sdk/lib/fdio",
     "//src/zircon/bin/kcounter:cmdline",
     "//zircon/kernel/lib/counters",
-    "//zircon/public/lib/pretty",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/fzl",
+    "//zircon/system/ulib/pretty",
     "//zircon/system/ulib/zx",
     "//zircon/system/ulib/zxtest",
   ]

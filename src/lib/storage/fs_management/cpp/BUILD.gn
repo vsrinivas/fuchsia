@@ -43,10 +43,10 @@ if (is_fuchsia) {
       "//src/storage/fvm",
       "//src/storage/gpt",
       "//third_party/boringssl",
-      "//zircon/public/lib/pretty",
       "//zircon/system/ulib/fbl",
       "//zircon/system/ulib/fdio-caller",
       "//zircon/system/ulib/fzl",
+      "//zircon/system/ulib/pretty",
       "//zircon/system/ulib/zx",
       "//zircon/system/ulib/zxc",
     ]

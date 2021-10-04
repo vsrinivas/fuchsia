@@ -62,10 +62,10 @@ executable("dash") {
     "//sdk/fidl/fuchsia.kernel:fuchsia.kernel_c",
     "//sdk/lib/fdio",
     "//src/lib/ddk:ddk-device-headers",
-    "//zircon/public/lib/pretty",
     "//zircon/public/lib/zircon-internal",
     "//zircon/system/ulib/fidl",
     "//zircon/system/ulib/fidl:fidl_base",
+    "//zircon/system/ulib/pretty",
     "//zircon/third_party/ulib/linenoise",
   ]
 

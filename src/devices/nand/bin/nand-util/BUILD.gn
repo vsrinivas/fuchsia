@@ -25,9 +25,9 @@ executable("nand-util") {
     ":common",
     "//sdk/fidl/fuchsia.hardware.nand:fuchsia.hardware.nand_c",
     "//sdk/lib/fdio",
-    "//zircon/public/lib/pretty",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/fzl",
+    "//zircon/system/ulib/pretty",
     "//zircon/system/ulib/zx",
     "//zircon/third_party/ulib/cksum",
   ]
@@ -39,7 +39,7 @@ source_set("common") {
     "ftl_internal.cc",
     "nand-broker.cc",
   ]
-  deps = [ "//zircon/public/lib/pretty" ]
+  deps = [ "//zircon/system/ulib/pretty" ]
   public_deps = [
     "//sdk/fidl/fuchsia.device:fuchsia.device_c",
     "//sdk/fidl/fuchsia.device:fuchsia.device_llcpp",

@@ -50,11 +50,11 @@ source_set("user_pci") {
     "//src/devices/pci/lib/pci",
     "//src/lib/ddk",
     "//src/lib/ddktl",
-    "//zircon/public/lib/pretty",
     "//zircon/public/lib/zircon-internal",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/hwreg",
     "//zircon/system/ulib/inspect",
+    "//zircon/system/ulib/pretty",
     "//zircon/system/ulib/region-alloc",
     "//zircon/system/ulib/zx",
     "//zircon/system/ulib/zxc",
@@ -130,8 +130,8 @@ if (platform_enable_user_pci) {
       "//src/devices/pci/lib/pci",
       "//src/lib/ddk",
       "//src/lib/ddktl",
-      "//zircon/public/lib/pretty",
       "//zircon/system/ulib/fidl",
+      "//zircon/system/ulib/pretty",
     ]
 
     # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings

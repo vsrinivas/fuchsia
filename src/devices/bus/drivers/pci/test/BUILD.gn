@@ -82,7 +82,7 @@ fuchsia_driver("pci_fake-driver") {
     "//src/devices/testing/fake-resource",
     "//src/lib/ddk",
     "//src/lib/ddktl",
-    "//zircon/public/lib/pretty",
+    "//zircon/system/ulib/pretty",
     "//zircon/system/ulib/zxtest",
   ]
 }

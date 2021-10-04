@@ -40,10 +40,10 @@ fuchsia_driver("zxcrypt-driver") {
     "//src/lib/ddktl",
     "//src/security/fcrypto",
     "//src/security/zxcrypt:zxcrypt-dev",
-    "//zircon/public/lib/pretty",
     "//zircon/public/lib/sync",
     "//zircon/system/ulib/bitmap",
     "//zircon/system/ulib/fbl",
+    "//zircon/system/ulib/pretty",
     "//zircon/system/ulib/trace:trace-driver",
     "//zircon/system/ulib/zx",
   ]

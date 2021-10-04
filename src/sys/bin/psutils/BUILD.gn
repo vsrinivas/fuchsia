@@ -24,7 +24,7 @@ source_set("ps_internal") {
   deps = [
     "//sdk/fidl/fuchsia.boot:fuchsia.boot_c",
     "//sdk/lib/fdio",
-    "//zircon/public/lib/pretty",
+    "//zircon/system/ulib/pretty",
     "//zircon/system/ulib/task-utils",
   ]
 
@@ -41,7 +41,7 @@ source_set("handles_internal") {
   deps = [
     "//sdk/fidl/fuchsia.boot:fuchsia.boot_c",
     "//sdk/lib/fdio",
-    "//zircon/public/lib/pretty",
+    "//zircon/system/ulib/pretty",
     "//zircon/system/ulib/task-utils",
   ]
 }
@@ -54,7 +54,7 @@ executable("ps") {
     ":ps_internal",
     "//sdk/fidl/fuchsia.boot:fuchsia.boot_c",
     "//sdk/lib/fdio",
-    "//zircon/public/lib/pretty",
+    "//zircon/system/ulib/pretty",
     "//zircon/system/ulib/task-utils",
   ]
 
@@ -69,7 +69,7 @@ executable("top") {
     "//sdk/fidl/fuchsia.boot:fuchsia.boot_c",
     "//sdk/lib/fdio",
     "//src/lib/listnode",
-    "//zircon/public/lib/pretty",
+    "//zircon/system/ulib/pretty",
     "//zircon/system/ulib/task-utils",
   ]
 
@@ -106,7 +106,7 @@ executable("vmaps") {
   deps = [
     "//sdk/fidl/fuchsia.boot:fuchsia.boot_c",
     "//sdk/lib/fdio",
-    "//zircon/public/lib/pretty",
+    "//zircon/system/ulib/pretty",
     "//zircon/system/ulib/task-utils",
   ]
 }
@@ -120,7 +120,7 @@ executable("vmos") {
   deps = [
     "//sdk/fidl/fuchsia.boot:fuchsia.boot_c",
     "//sdk/lib/fdio",
-    "//zircon/public/lib/pretty",
+    "//zircon/system/ulib/pretty",
     "//zircon/system/ulib/task-utils",
   ]
 }
@@ -160,7 +160,7 @@ executable("kstats") {
   deps = [
     "//sdk/fidl/fuchsia.boot:fuchsia.boot_c",
     "//sdk/lib/fdio",
-    "//zircon/public/lib/pretty",
+    "//zircon/system/ulib/pretty",
   ]
 
   # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
@@ -173,11 +173,11 @@ executable("threads") {
   deps = [
     "//sdk/fidl/fuchsia.boot:fuchsia.boot_c",
     "//sdk/lib/fdio",
-    "//zircon/public/lib/pretty",
     "//zircon/public/lib/sync",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/fzl",
     "//zircon/system/ulib/inspector",
+    "//zircon/system/ulib/pretty",
     "//zircon/system/ulib/task-utils",
     "//zircon/system/ulib/zx",
     "//zircon/system/ulib/zxc",

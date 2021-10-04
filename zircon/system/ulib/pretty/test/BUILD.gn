@@ -27,7 +27,7 @@ test("pretty-test") {
   ]
   deps = [
     "//sdk/lib/fdio",
-    "//zircon/public/lib/pretty",
+    "//zircon/system/ulib/pretty",
     "//zircon/system/ulib/zxtest",
   ]
 }

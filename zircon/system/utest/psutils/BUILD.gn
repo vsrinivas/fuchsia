@@ -21,7 +21,7 @@ test("ps") {
   deps = [
     "//sdk/lib/fdio",
     "//src/sys/bin/psutils:ps_internal",
-    "//zircon/public/lib/pretty",
+    "//zircon/system/ulib/pretty",
     "//zircon/system/ulib/task-utils",
     "//zircon/system/ulib/zxtest",
   ]
@@ -34,7 +34,7 @@ test("handles") {
   deps = [
     "//sdk/lib/fdio",
     "//src/sys/bin/psutils:handles_internal",
-    "//zircon/public/lib/pretty",
+    "//zircon/system/ulib/pretty",
     "//zircon/system/ulib/task-utils",
     "//zircon/system/ulib/zxtest",
   ]

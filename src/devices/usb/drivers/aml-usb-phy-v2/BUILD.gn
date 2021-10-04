@@ -81,10 +81,10 @@ test("aml-usb-phy-test-bin") {
     "//src/devices/usb/lib/usb",
     "//src/lib/ddk",
     "//src/lib/ddktl",
-    "//zircon/public/lib/pretty",
     "//zircon/public/lib/sync",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/hwreg",
+    "//zircon/system/ulib/pretty",
     "//zircon/system/ulib/zxtest",
   ]
 

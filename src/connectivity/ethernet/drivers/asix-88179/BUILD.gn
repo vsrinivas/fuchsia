@@ -45,10 +45,10 @@ fuchsia_driver("asix-88179-driver") {
     "//src/devices/usb/lib/usb",
     "//src/devices/usb/lib/usb",
     "//src/lib/ddk",
-    "//zircon/public/lib/pretty",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zircon-internal",
     "//zircon/system/ulib/fbl",
+    "//zircon/system/ulib/pretty",
     "//zircon/third_party/ulib/cksum",
   ]
 }

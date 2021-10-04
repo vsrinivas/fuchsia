@@ -40,10 +40,10 @@ fuchsia_driver("dwc2-driver") {
     "//src/devices/usb/lib/usb",
     "//src/lib/ddk",
     "//src/lib/ddktl",
-    "//zircon/public/lib/pretty",
     "//zircon/public/lib/sync",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/hwreg",
+    "//zircon/system/ulib/pretty",
     "//zircon/system/ulib/zx",
   ]
 }
@@ -77,10 +77,10 @@ test("dwc2-test-bin") {
     "//src/devices/usb/lib/usb",
     "//src/lib/ddk",
     "//src/lib/ddktl",
-    "//zircon/public/lib/pretty",
     "//zircon/public/lib/sync",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/hwreg",
+    "//zircon/system/ulib/pretty",
     "//zircon/system/ulib/zxtest",
   ]
 }

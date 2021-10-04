@@ -15,12 +15,12 @@ executable("blktest") {
   deps = [
     "//sdk/fidl/fuchsia.hardware.block:fuchsia.hardware.block_c",
     "//sdk/lib/fdio",
-    "//zircon/public/lib/pretty",
     "//zircon/public/lib/sync",
     "//zircon/system/ulib/block-client",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/fdio-caller",
     "//zircon/system/ulib/fzl",
+    "//zircon/system/ulib/pretty",
     "//zircon/system/ulib/zx",
     "//zircon/system/ulib/zxtest",
   ]

@@ -13,8 +13,8 @@ test("firmware_zbi_test") {
   sources = [ "zbi.cc" ]
   deps = [
     "//src/firmware/lib/zbi:in_tree",
-    "//zircon/public/lib/pretty",
     "//zircon/system/ulib/fbl",
+    "//zircon/system/ulib/pretty",
     "//zircon/system/ulib/zxtest",
   ]
 }

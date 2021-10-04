@@ -51,7 +51,7 @@ executable("register-util") {
   deps = [
     "//sdk/fidl/fuchsia.hardware.registers:fuchsia.hardware.registers_llcpp",
     "//sdk/lib/fdio",
-    "//zircon/public/lib/pretty",
+    "//zircon/system/ulib/pretty",
   ]
 
   # TODO(fxbug.dev/69585): This target uses raw zx::channel with LLCPP which is deprecated.

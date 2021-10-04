@@ -16,7 +16,7 @@ executable("bin") {
   deps = [
     ":common",
     "//sdk/fidl/fuchsia.hardware.ethernet:fuchsia.hardware.ethernet_c_client",
-    "//zircon/public/lib/pretty",
+    "//zircon/system/ulib/pretty",
   ]
 }
 

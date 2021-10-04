@@ -15,7 +15,7 @@ zx_library("unittest") {
     "unittest.cc",
     "watchdog.cc",
   ]
-  deps = [ "//zircon/public/lib/pretty" ]
+  deps = [ "//zircon/system/ulib/pretty" ]
   if (current_os == "linux") {
     libs = [ "pthread" ]
   }
@@ -49,7 +49,7 @@ zx_library("unittest-static") {
     "unittest.cc",
     "watchdog.cc",
   ]
-  deps = [ "//zircon/public/lib/pretty" ]
+  deps = [ "//zircon/system/ulib/pretty" ]
   if (current_os == "linux") {
     libs = [ "pthread" ]
   }

@@ -35,7 +35,7 @@ fuchsia_driver("usb-cdc-ecm-driver") {
     "//src/devices/lib/driver",
     "//src/lib/ddk",
     "//src/lib/listnode",
-    "//zircon/public/lib/pretty",
+    "//zircon/system/ulib/pretty",
   ]
 }
 
