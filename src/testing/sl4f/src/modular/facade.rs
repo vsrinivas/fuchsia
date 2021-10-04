@@ -168,6 +168,11 @@ impl ModularFacade {
         }
     }
 
+    /// Facade that returns true if basemgr is running.
+    pub fn is_basemgr_running(&self) -> Result<bool, Error> {
+        Ok(self.discover_basemgr_service()?.is_some())
+    }
+
     /// Facade to launch mod from Sl4f
     /// # Arguments
     /// * `args`: will be parsed to LaunchModRequest
@@ -243,5 +248,52 @@ impl ModularFacade {
         proxy.execute().await?;
 
         Ok(BasemgrResult::Success)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use {
+        crate::common_utils::namespace_binder::NamespaceBinder,
+        fidl_fuchsia_modular_internal as fmodular_internal, matches::assert_matches,
+        vfs::execution_scope::ExecutionScope,
+    };
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_is_basemgr_running_not_running() -> Result<(), Error> {
+        // This test does not bind the debug protocol that is_basemgr_running expects to be
+        // in the namespace, to simulate the case when basemgr is not running.
+        let facade = ModularFacade::new();
+
+        assert_matches!(facade.is_basemgr_running(), Ok(false));
+
+        Ok(())
+    }
+
+    #[fuchsia_async::run(2, test)]
+    async fn test_is_basemgr_running_is_running() -> Result<(), Error> {
+        let scope = ExecutionScope::new();
+        let mut ns = NamespaceBinder::new(scope);
+
+        // Serve the `fuchsia.modular.internal.BasemgrDebug` protocol in the hub path
+        // for legacy basemgr. This simulates a running legacy basemgr component.
+        ns.bind_at_path(
+            "/hub/c/basemgr.cmx/123456/out/debug/basemgr",
+            vfs::service::host(
+                |mut stream: fmodular_internal::BasemgrDebugRequestStream| async move {
+                    // Serve the protocol so is_basemgr_running can connect to it, but don't
+                    // expect it to call any of its methods.
+                    let _ = stream.try_next().await;
+                    panic!("ModularFacade.is_basemgr_running should not call BasemgrDebug methods");
+                },
+            ),
+        )?;
+
+        let facade = ModularFacade::new();
+
+        assert_matches!(facade.is_basemgr_running(), Ok(true));
+
+        Ok(())
     }
 }
