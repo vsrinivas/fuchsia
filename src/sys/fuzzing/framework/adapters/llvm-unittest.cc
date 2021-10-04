@@ -8,7 +8,7 @@
 
 #include <gtest/gtest.h>
 
-#include "src/sys/fuzzing/common/testing/dispatcher.h"
+#include "src/sys/fuzzing/common/dispatcher.h"
 #include "src/sys/fuzzing/common/testing/signal-coordinator.h"
 
 // Test fixtures.
@@ -32,11 +32,11 @@ using ::fuchsia::fuzzer::TargetAdapterSyncPtr;
 // Unit tests.
 
 TEST(LLVMTargetAdapterTest, Connect) {
-  LLVMTargetAdapter adapter;
-  FakeDispatcher dispatcher;
+  auto dispatcher = std::make_shared<Dispatcher>();
+  LLVMTargetAdapter adapter(dispatcher);
 
   sync_completion_t closed;
-  auto handler = adapter.GetHandler([&]() { sync_completion_signal(&closed); }, dispatcher.get());
+  auto handler = adapter.GetHandler([&]() { /* on_close */ sync_completion_signal(&closed); });
 
   TargetAdapterSyncPtr ptr;
   handler(ptr.NewRequest());

@@ -11,8 +11,9 @@
 
 namespace fuzzing {
 
-FakeProcessProxy::FakeProcessProxy(std::shared_ptr<ModulePool> pool)
-    : binding_(this), pool_(std::move(pool)) {}
+FakeProcessProxy::FakeProcessProxy(const std::shared_ptr<Dispatcher>& dispatcher,
+                                   const std::shared_ptr<ModulePool>& pool)
+    : binding_(this, dispatcher), pool_(std::move(pool)) {}
 
 bool FakeProcessProxy::has_module(FakeModule* module) const {
   auto id = module->id();
@@ -22,14 +23,13 @@ bool FakeProcessProxy::has_module(FakeModule* module) const {
 
 void FakeProcessProxy::Configure(const std::shared_ptr<Options>& options) { options_ = options; }
 
-ProcessProxySyncPtr FakeProcessProxy::Bind(async_dispatcher_t* dispatcher, bool disable_warnings) {
+ProcessProxySyncPtr FakeProcessProxy::Bind(bool disable_warnings) {
   if (disable_warnings) {
     options_->set_purge_interval(0);
     options_->set_malloc_limit(0);
   }
   ProcessProxySyncPtr proxy;
   auto request = proxy.NewRequest();
-  binding_.set_dispatcher(dispatcher);
   binding_.Bind(std::move(request));
   return proxy;
 }

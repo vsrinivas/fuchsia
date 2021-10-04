@@ -243,10 +243,11 @@ void RunnerTest::FuzzUntilError(Runner* runner) {
 
 void RunnerTest::FuzzUntilRuns(Runner* runner) {
   auto options = RunnerTest::DefaultOptions(runner);
-  // bool detects_exits = options->has_detect_exits() && options->detect_exits();
   options->set_runs(3);
   Configure(runner, options);
   runner->Fuzz([&](zx_status_t status) { SetStatus(status); });
+  // Seed corpus is run first. It has one element.
+  RunOne(Result::NO_ERRORS);
   for (size_t i = 0; i < 3; ++i) {
     RunOne(Result::NO_ERRORS);
   }
@@ -260,7 +261,8 @@ void RunnerTest::FuzzUntilTime(Runner* runner) {
   Configure(runner, options);
 
   FakeMonitor monitor;
-  runner->AddMonitor(monitor.Bind());
+  auto dispatcher = std::make_shared<Dispatcher>();
+  runner->AddMonitor(monitor.Bind(dispatcher));
   runner->Fuzz([&](zx_status_t status) { SetStatus(status); });
   RunAllForFuzzUntilTime();
   EXPECT_EQ(GetStatus(), ZX_OK);

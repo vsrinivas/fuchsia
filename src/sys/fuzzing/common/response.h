@@ -14,6 +14,7 @@
 #include <variant>
 
 #include "src/lib/fxl/macros.h"
+#include "src/sys/fuzzing/common/dispatcher.h"
 #include "src/sys/fuzzing/common/input.h"
 #include "src/sys/fuzzing/common/transceiver.h"
 
@@ -39,8 +40,10 @@ class Response final {
 
   Response& operator=(Response&& other) noexcept;
 
-  void set_dispatcher(async_dispatcher_t* dispatcher) { dispatcher_ = dispatcher; }
-  void set_transceiver(Transceiver* transceiver) { transceiver_ = transceiver; }
+  void set_dispatcher(const std::shared_ptr<Dispatcher>& dispatcher) { dispatcher_ = dispatcher; }
+  void set_transceiver(const std::shared_ptr<Transceiver>& transceiver) {
+    transceiver_ = transceiver;
+  }
 
   template <typename Callback>
   void set_callback(Callback&& callback) {
@@ -59,8 +62,8 @@ class Response final {
  private:
   void SendImpl(zx_status_t status, Result result, FidlInput input);
 
-  async_dispatcher_t* dispatcher_ = nullptr;
-  Transceiver* transceiver_ = nullptr;
+  std::shared_ptr<Dispatcher> dispatcher_;
+  std::shared_ptr<Transceiver> transceiver_;
   std::variant<std::monostate, InputCallback, ResultAndInputCallback, StatusCallback,
                ResultAndStatusCallback, InputAndStatusCallback, FullCallback>
       callback_;

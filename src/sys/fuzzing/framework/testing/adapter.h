@@ -7,18 +7,17 @@
 
 #include <fuchsia/fuzzer/cpp/fidl.h>
 #include <fuchsia/mem/cpp/fidl.h>
-#include <lib/async-loop/cpp/loop.h>
 #include <lib/fidl/cpp/interface_request.h>
 #include <lib/sync/completion.h>
 
 #include <memory>
 
 #include "src/lib/fxl/macros.h"
-#include "src/sys/fuzzing/common/binding.h"
+#include "src/sys/fuzzing/common/dispatcher.h"
 #include "src/sys/fuzzing/common/input.h"
 #include "src/sys/fuzzing/common/shared-memory.h"
 #include "src/sys/fuzzing/common/signal-coordinator.h"
-#include "src/sys/fuzzing/common/testing/dispatcher.h"
+#include "src/sys/fuzzing/common/testing/binding.h"
 
 namespace fuzzing {
 
@@ -48,8 +47,7 @@ class FakeTargetAdapter final : public TargetAdapter {
   void SignalPeer(Signal signal);
 
  private:
-  Binding<TargetAdapter> binding_;
-  FakeDispatcher dispatcher_;
+  FakeBinding<TargetAdapter> binding_;
   SharedMemory test_input_;
   SignalCoordinator coordinator_;
 

@@ -102,6 +102,7 @@ Input RunnerImpl::ReadFromCorpus(CorpusType corpus_type, size_t offset) {
       break;
     case CorpusType::LIVE:
       input = live_corpus_->At(offset);
+      FX_LOGS(WARNING) << "live_corpus_[" << offset << "]=" << (input ? input->ToHex() : "null");
       break;
     default:
       FX_NOTREACHED();
@@ -363,8 +364,6 @@ void RunnerImpl::TestOne(const Input& input) {
 
 void RunnerImpl::FuzzLoop() {
   run_ = 0;
-  UpdateMonitors(UpdateReason::INIT);
-
   // Use two pre-allocated inputs, and swap the pointers between them each iteration, i.e. the old
   // |next_input| becomes |prev_input|, and the old |prev_input| is recycled to a new |next_input|.
   Input inputs[2];
@@ -599,10 +598,10 @@ void RunnerImpl::SetTargetAdapterHandler(fidl::InterfaceRequestHandler<TargetAda
 }
 
 fidl::InterfaceRequestHandler<ProcessProxy> RunnerImpl::GetProcessProxyHandler(
-    async_dispatcher_t* dispatcher) {
+    const std::shared_ptr<Dispatcher>& dispatcher) {
   return [this, dispatcher](fidl::InterfaceRequest<ProcessProxy> request) {
-    auto proxy = std::make_unique<ProcessProxyImpl>(pool_);
-    proxy->Bind(std::move(request), dispatcher);
+    auto proxy = std::make_unique<ProcessProxyImpl>(dispatcher, pool_);
+    proxy->Bind(std::move(request));
     proxy->Configure(options_);
     {
       std::lock_guard<std::mutex> lock(mutex_);

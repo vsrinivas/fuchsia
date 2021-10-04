@@ -9,26 +9,20 @@
 
 namespace fuzzing {
 
-FakeCorpusReader::FakeCorpusReader() : binding_(this) {
-  transceiver_ = std::make_shared<Transceiver>();
-};
+FakeCorpusReader::FakeCorpusReader(std::shared_ptr<Dispatcher> dispatcher)
+    : binding_(this, std::move(dispatcher)) {}
 
-fidl::InterfaceHandle<CorpusReader> FakeCorpusReader::NewBinding(async_dispatcher_t* dispatcher) {
-  binding_.set_dispatcher(dispatcher);
-  binding_.set_error_handler([this](zx_status_t status) {
-    FX_LOGS(WARNING) << zx_status_get_string(status);
-    std::lock_guard<std::mutex> lock(mutex_);
-    closed_ = true;
-    sync_completion_signal(&sync_);
-  });
-  return binding_.NewBinding();
-}
+fidl::InterfaceHandle<CorpusReader> FakeCorpusReader::NewBinding() { return binding_.NewBinding(); }
 
 void FakeCorpusReader::Next(FidlInput fidl_input, NextCallback callback) {
-  transceiver_->Receive(std::move(fidl_input), [&](zx_status_t status, Input input) {
+  transceiver_.Receive(std::move(fidl_input), [&](zx_status_t status, Input input) {
     FX_DCHECK(status == ZX_OK) << zx_status_get_string(status);
     std::lock_guard<std::mutex> lock(mutex_);
-    inputs_.push_back(std::move(input));
+    if (input.size() == 0) {
+      has_more_ = false;
+    } else {
+      inputs_.push_back(std::move(input));
+    }
     sync_completion_signal(&sync_);
   });
   callback(ZX_OK);
@@ -36,16 +30,16 @@ void FakeCorpusReader::Next(FidlInput fidl_input, NextCallback callback) {
 
 bool FakeCorpusReader::AwaitNext() {
   while (true) {
+    sync_completion_wait(&sync_, ZX_TIME_INFINITE);
     {
       std::lock_guard<std::mutex> lock(mutex_);
       if (!inputs_.empty()) {
         return true;
       }
-      if (closed_) {
+      if (!has_more_) {
         return false;
       }
     }
-    sync_completion_wait(&sync_, ZX_TIME_INFINITE);
   }
 }
 
@@ -56,7 +50,9 @@ Input FakeCorpusReader::GetNext() {
     FX_DCHECK(!inputs_.empty());
     input = std::move(inputs_.front());
     inputs_.pop_front();
-    sync_completion_reset(&sync_);
+    if (inputs_.empty() && has_more_) {
+      sync_completion_reset(&sync_);
+    }
   }
   return input;
 }

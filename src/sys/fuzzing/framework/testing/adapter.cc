@@ -6,12 +6,13 @@
 
 #include <lib/syslog/cpp/macros.h>
 
+#include "src/sys/fuzzing/common/dispatcher.h"
+
 namespace fuzzing {
 
 FakeTargetAdapter::FakeTargetAdapter() : binding_(this) { sync_completion_signal(&wsync_); }
 
 fidl::InterfaceRequestHandler<TargetAdapter> FakeTargetAdapter::GetHandler() {
-  binding_.set_dispatcher(dispatcher_.get());
   return [&](fidl::InterfaceRequest<TargetAdapter> request) {
     coordinator_.Reset();
     binding_.Bind(std::move(request));

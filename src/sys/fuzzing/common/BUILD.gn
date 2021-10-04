@@ -11,6 +11,8 @@ source_set("common") {
     "binding.h",
     "controller.cc",
     "controller.h",
+    "dispatcher.cc",
+    "dispatcher.h",
     "input.cc",
     "input.h",
     "options.cc",
@@ -34,10 +36,14 @@ source_set("common") {
     "//sdk/fidl/fuchsia.mem",
     "//src/lib/fxl",
     "//zircon/system/ulib/async:async-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/sync",
     "//zircon/system/ulib/zx",
   ]
-  deps = [ "//sdk/lib/syslog/cpp" ]
+  deps = [
+    "//sdk/lib/syslog/cpp",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+  ]
 }
 
 source_set("runner-unittests-common") {

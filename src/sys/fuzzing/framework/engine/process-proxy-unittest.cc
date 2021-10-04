@@ -31,7 +31,7 @@ TEST_F(ProcessProxyTest, AddDefaults) {
 }
 
 TEST_F(ProcessProxyTest, Connect) {
-  ProcessProxyImpl impl(pool());
+  ProcessProxyImpl impl(dispatcher(), pool());
 
   uint32_t runs = 1000;
   int64_t run_limit = 20;
@@ -49,7 +49,7 @@ TEST_F(ProcessProxyTest, Connect) {
 }
 
 TEST_F(ProcessProxyTest, AddFeedback) {
-  ProcessProxyImpl impl(pool());
+  ProcessProxyImpl impl(dispatcher(), pool());
 
   FakeModule fake;
   fake[0] = 1;
@@ -68,7 +68,7 @@ TEST_F(ProcessProxyTest, AddFeedback) {
 }
 
 TEST_F(ProcessProxyTest, SignalPeer) {
-  ProcessProxyImpl impl(pool());
+  ProcessProxyImpl impl(dispatcher(), pool());
   impl.Configure(ProcessProxyTest::DefaultOptions());
   impl.SetHandlers(IgnoreReceivedSignals, IgnoreErrors);
   zx_signals_t observed;
@@ -100,7 +100,7 @@ TEST_F(ProcessProxyTest, SignalPeer) {
 }
 
 TEST_F(ProcessProxyTest, AwaitSignals) {
-  ProcessProxyImpl impl(pool());
+  ProcessProxyImpl impl(dispatcher(), pool());
   impl.Configure(ProcessProxyTest::DefaultOptions());
   sync_completion_t sync;
   ProcessProxyImpl* failed_impl = nullptr;
@@ -136,7 +136,7 @@ TEST_F(ProcessProxyTest, AwaitSignals) {
 }
 
 TEST_F(ProcessProxyTest, GetStats) {
-  ProcessProxyImpl impl(pool());
+  ProcessProxyImpl impl(dispatcher(), pool());
   impl.Configure(ProcessProxyTest::DefaultOptions());
   impl.SetHandlers(IgnoreReceivedSignals, IgnoreErrors);
   auto proxy = Bind(&impl);
@@ -168,7 +168,7 @@ TEST_F(ProcessProxyTest, GetStats) {
 }
 
 TEST_F(ProcessProxyTest, DefaultBadMalloc) {
-  ProcessProxyImpl impl(pool());
+  ProcessProxyImpl impl(dispatcher(), pool());
   impl.Configure(ProcessProxyTest::DefaultOptions());
   impl.SetHandlers(IgnoreReceivedSignals, IgnoreErrors);
   auto proxy = Bind(&impl);
@@ -179,7 +179,7 @@ TEST_F(ProcessProxyTest, DefaultBadMalloc) {
 }
 
 TEST_F(ProcessProxyTest, CustomBadMalloc) {
-  ProcessProxyImpl impl(pool());
+  ProcessProxyImpl impl(dispatcher(), pool());
   int32_t exitcode = 1234;
   auto options = ProcessProxyTest::DefaultOptions();
   options->set_malloc_exitcode(exitcode);
@@ -193,7 +193,7 @@ TEST_F(ProcessProxyTest, CustomBadMalloc) {
 }
 
 TEST_F(ProcessProxyTest, DefaultDeath) {
-  ProcessProxyImpl impl(pool());
+  ProcessProxyImpl impl(dispatcher(), pool());
   impl.Configure(ProcessProxyTest::DefaultOptions());
   impl.SetHandlers(IgnoreReceivedSignals, IgnoreErrors);
   auto proxy = Bind(&impl);
@@ -204,7 +204,7 @@ TEST_F(ProcessProxyTest, DefaultDeath) {
 }
 
 TEST_F(ProcessProxyTest, CustomDeath) {
-  ProcessProxyImpl impl(pool());
+  ProcessProxyImpl impl(dispatcher(), pool());
   int32_t exitcode = 4321;
   auto options = ProcessProxyTest::DefaultOptions();
   options->set_death_exitcode(exitcode);
@@ -218,7 +218,7 @@ TEST_F(ProcessProxyTest, CustomDeath) {
 }
 
 TEST_F(ProcessProxyTest, Exit) {
-  ProcessProxyImpl impl(pool());
+  ProcessProxyImpl impl(dispatcher(), pool());
   impl.Configure(ProcessProxyTest::DefaultOptions());
   impl.SetHandlers(IgnoreReceivedSignals, IgnoreErrors);
   auto proxy = Bind(&impl);
@@ -229,7 +229,7 @@ TEST_F(ProcessProxyTest, Exit) {
 }
 
 TEST_F(ProcessProxyTest, DefaultLeak) {
-  ProcessProxyImpl impl(pool());
+  ProcessProxyImpl impl(dispatcher(), pool());
   impl.Configure(ProcessProxyTest::DefaultOptions());
   impl.SetHandlers(IgnoreReceivedSignals, IgnoreErrors);
   auto proxy = Bind(&impl);
@@ -240,7 +240,7 @@ TEST_F(ProcessProxyTest, DefaultLeak) {
 }
 
 TEST_F(ProcessProxyTest, CustomLeak) {
-  ProcessProxyImpl impl(pool());
+  ProcessProxyImpl impl(dispatcher(), pool());
   int32_t exitcode = 5678309;
   auto options = ProcessProxyTest::DefaultOptions();
   options->set_leak_exitcode(exitcode);
@@ -254,7 +254,7 @@ TEST_F(ProcessProxyTest, CustomLeak) {
 }
 
 TEST_F(ProcessProxyTest, DefaultOom) {
-  ProcessProxyImpl impl(pool());
+  ProcessProxyImpl impl(dispatcher(), pool());
   impl.Configure(ProcessProxyTest::DefaultOptions());
   impl.SetHandlers(IgnoreReceivedSignals, IgnoreErrors);
   auto proxy = Bind(&impl);
@@ -265,7 +265,7 @@ TEST_F(ProcessProxyTest, DefaultOom) {
 }
 
 TEST_F(ProcessProxyTest, CustomOom) {
-  ProcessProxyImpl impl(pool());
+  ProcessProxyImpl impl(dispatcher(), pool());
   int32_t exitcode = 24601;
   auto options = ProcessProxyTest::DefaultOptions();
   options->set_oom_exitcode(exitcode);
@@ -279,7 +279,7 @@ TEST_F(ProcessProxyTest, CustomOom) {
 }
 
 TEST_F(ProcessProxyTest, Timeout) {
-  ProcessProxyImpl impl(pool());
+  ProcessProxyImpl impl(dispatcher(), pool());
   impl.Configure(ProcessProxyTest::DefaultOptions());
   impl.SetHandlers(IgnoreReceivedSignals, IgnoreErrors);
   auto proxy = Bind(&impl);

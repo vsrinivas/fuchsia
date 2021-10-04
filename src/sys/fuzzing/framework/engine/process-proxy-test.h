@@ -11,8 +11,8 @@
 
 #include <gtest/gtest.h>
 
+#include "src/sys/fuzzing/common/dispatcher.h"
 #include "src/sys/fuzzing/common/options.h"
-#include "src/sys/fuzzing/common/testing/dispatcher.h"
 #include "src/sys/fuzzing/framework/engine/module-pool.h"
 #include "src/sys/fuzzing/framework/engine/process-proxy.h"
 #include "src/sys/fuzzing/framework/testing/target.h"
@@ -30,6 +30,8 @@ class ProcessProxyTest : public ::testing::Test {
  protected:
   void SetUp() override;
 
+  std::shared_ptr<Dispatcher> dispatcher() const { return dispatcher_; }
+
   std::shared_ptr<ModulePool> pool() const { return pool_; }
 
   ProcessProxySyncPtr Bind(ProcessProxyImpl* impl);
@@ -40,8 +42,10 @@ class ProcessProxyTest : public ::testing::Test {
   zx::process IgnoreTarget();
   Options* IgnoreOptions();
 
+  void TearDown() override;
+
  private:
-  FakeDispatcher dispatcher_;
+  std::shared_ptr<Dispatcher> dispatcher_;
   std::shared_ptr<ModulePool> pool_;
   SignalCoordinator coordinator_;
   TestTarget target_;

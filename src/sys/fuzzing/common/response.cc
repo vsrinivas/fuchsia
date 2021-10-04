@@ -11,7 +11,7 @@ namespace fuzzing {
 namespace {
 
 struct CallbackVisitor {
-  async_dispatcher_t* dispatcher = nullptr;
+  async_dispatcher_t* dispatcher;
   zx_status_t status = ZX_OK;
   Result result = Result::NO_ERRORS;
   FidlInput fidl_input;
@@ -108,7 +108,7 @@ void Response::Send(zx_status_t status, Result result, const Input& input) {
 }
 
 void Response::SendImpl(zx_status_t status, Result result, FidlInput fidl_input) {
-  std::visit(CallbackVisitor{dispatcher_, status, result, std::move(fidl_input)}, callback_);
+  std::visit(CallbackVisitor{dispatcher_->get(), status, result, std::move(fidl_input)}, callback_);
   callback_ = std::monostate{};
 }
 

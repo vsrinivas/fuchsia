@@ -11,9 +11,9 @@
 #include <gtest/gtest.h>
 
 #include "src/sys/fuzzing/common/binding.h"
+#include "src/sys/fuzzing/common/dispatcher.h"
 #include "src/sys/fuzzing/common/status.h"
 #include "src/sys/fuzzing/common/testing/corpus-reader.h"
-#include "src/sys/fuzzing/common/testing/dispatcher.h"
 #include "src/sys/fuzzing/common/testing/monitor.h"
 #include "src/sys/fuzzing/common/testing/runner.h"
 #include "src/sys/fuzzing/common/testing/transceiver.h"
@@ -30,6 +30,10 @@ using fuchsia::fuzzer::UpdateReason;
 // Base class for |Controller| unit tests.
 class ControllerTest : public ::testing::Test {
  public:
+  void SetUp() override { dispatcher_ = std::make_shared<Dispatcher>(); }
+
+  const std::shared_ptr<Dispatcher>& dispatcher() const { return dispatcher_; }
+
   // Implicitly tests |Controller::SetRunner| and |Controller::Bind|.
   ControllerPtr Bind() {
     // The shared_ptr will be responsible for deleting the FakeRunner memory.
@@ -38,11 +42,9 @@ class ControllerTest : public ::testing::Test {
     controller_.SetRunner(runner);
 
     ControllerPtr controller;
-    controller_.Bind(controller.NewRequest(client_.get()), server_.get());
+    controller_.Bind(controller.NewRequest(dispatcher_->get()));
     return controller;
   }
-
-  async_dispatcher_t* dispatcher() const { return client_.get(); }
 
   void AddToCorpus(CorpusType corpus_type, Input input) {
     runner_->AddToCorpus(corpus_type, std::move(input));
@@ -64,10 +66,11 @@ class ControllerTest : public ::testing::Test {
   // Synchronously receives and returns an |Input| from a provided |FidlInput|.
   Input Receive(FidlInput fidl_input) { return transceiver_.Receive(std::move(fidl_input)); }
 
+  void TearDown() override { dispatcher_->Shutdown(); }
+
  private:
   ControllerImpl controller_;
-  FakeDispatcher client_;
-  FakeDispatcher server_;
+  std::shared_ptr<Dispatcher> dispatcher_;
   FakeRunner* runner_;
   FakeTransceiver transceiver_;
 };
@@ -230,29 +233,29 @@ TEST_F(ControllerTest, ReadCorpus) {
   AddToCorpus(CorpusType::LIVE, input3.Duplicate());
   AddToCorpus(CorpusType::LIVE, input4.Duplicate());
 
-  FakeCorpusReader seed_reader;
-  FakeCorpusReader live_reader;
-  controller->ReadCorpus(CorpusType::SEED, seed_reader.NewBinding(dispatcher()),
+  FakeCorpusReader seed_reader(dispatcher());
+  FakeCorpusReader live_reader(dispatcher());
+  controller->ReadCorpus(CorpusType::SEED, seed_reader.NewBinding(),
                          [&]() { sync_completion_signal(&sync); });
   sync_completion_wait(&sync, ZX_TIME_INFINITE);
   sync_completion_reset(&sync);
 
-  controller->ReadCorpus(CorpusType::LIVE, live_reader.NewBinding(dispatcher()),
+  controller->ReadCorpus(CorpusType::LIVE, live_reader.NewBinding(),
                          [&]() { sync_completion_signal(&sync); });
   sync_completion_wait(&sync, ZX_TIME_INFINITE);
   sync_completion_reset(&sync);
 
   // Interleave the calls.
-  EXPECT_TRUE(live_reader.AwaitNext());
+  ASSERT_TRUE(live_reader.AwaitNext());
   EXPECT_EQ(live_reader.GetNext().ToHex(), input3.ToHex());
 
-  EXPECT_TRUE(seed_reader.AwaitNext());
+  ASSERT_TRUE(seed_reader.AwaitNext());
   EXPECT_EQ(seed_reader.GetNext().ToHex(), input1.ToHex());
 
-  EXPECT_TRUE(live_reader.AwaitNext());
+  ASSERT_TRUE(live_reader.AwaitNext());
   EXPECT_EQ(live_reader.GetNext().ToHex(), input4.ToHex());
 
-  EXPECT_TRUE(seed_reader.AwaitNext());
+  ASSERT_TRUE(seed_reader.AwaitNext());
   EXPECT_EQ(seed_reader.GetNext().ToHex(), input2.ToHex());
 
   // The connection is closed after all inputs have been sent.

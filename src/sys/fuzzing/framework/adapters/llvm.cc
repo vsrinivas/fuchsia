@@ -10,12 +10,11 @@
 
 namespace fuzzing {
 
-LLVMTargetAdapter::LLVMTargetAdapter() : binding_(this) {}
+LLVMTargetAdapter::LLVMTargetAdapter(const std::shared_ptr<Dispatcher>& dispatcher)
+    : binding_(this, dispatcher) {}
 
-fidl::InterfaceRequestHandler<TargetAdapter> LLVMTargetAdapter::GetHandler(
-    fit::closure on_close, async_dispatcher_t* dispatcher) {
+fidl::InterfaceRequestHandler<TargetAdapter> LLVMTargetAdapter::GetHandler(fit::closure on_close) {
   on_close_ = std::move(on_close);
-  binding_.set_dispatcher(dispatcher);
   return
       [this](fidl::InterfaceRequest<TargetAdapter> request) { binding_.Bind(std::move(request)); };
 }

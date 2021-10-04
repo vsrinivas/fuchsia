@@ -4,6 +4,7 @@
 
 #include "src/sys/fuzzing/framework/engine/runner.h"
 
+#include "src/sys/fuzzing/common/options.h"
 #include "src/sys/fuzzing/framework/engine/runner-test.h"
 
 namespace fuzzing {

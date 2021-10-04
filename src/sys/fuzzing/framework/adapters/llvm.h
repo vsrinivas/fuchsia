@@ -12,8 +12,11 @@
 #include <lib/zx/eventpair.h>
 #include <zircon/compiler.h>
 
+#include <memory>
+
 #include "src/lib/fxl/macros.h"
 #include "src/sys/fuzzing/common/binding.h"
+#include "src/sys/fuzzing/common/dispatcher.h"
 #include "src/sys/fuzzing/common/shared-memory.h"
 #include "src/sys/fuzzing/common/signal-coordinator.h"
 
@@ -27,13 +30,12 @@ using ::fuchsia::mem::Buffer;
 
 class LLVMTargetAdapter final : public TargetAdapter {
  public:
-  LLVMTargetAdapter();
+  explicit LLVMTargetAdapter(const std::shared_ptr<Dispatcher>& dispatcher);
   ~LLVMTargetAdapter() override = default;
 
   // Returns an interface request handler. The given |on_close| closure will be invoked when a
   // |Connect|ed peer, i.e. the engine, disconnects.
-  fidl::InterfaceRequestHandler<TargetAdapter> GetHandler(fit::closure on_close,
-                                                          async_dispatcher_t* dispatcher);
+  fidl::InterfaceRequestHandler<TargetAdapter> GetHandler(fit::closure on_close);
 
   // FIDL method.
   void Connect(zx::eventpair eventpair, Buffer test_input, ConnectCallback callback) override;

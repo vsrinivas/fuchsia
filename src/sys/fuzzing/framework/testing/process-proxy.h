@@ -35,7 +35,8 @@ using ::fuchsia::fuzzer::ProcessProxySyncPtr;
 // |ModulePool|.
 class FakeProcessProxy : public ProcessProxy {
  public:
-  explicit FakeProcessProxy(std::shared_ptr<ModulePool> pool);
+  FakeProcessProxy(const std::shared_ptr<Dispatcher>& dispatcher,
+                   const std::shared_ptr<ModulePool>& pool);
   ~FakeProcessProxy() override = default;
 
   zx_koid_t process_koid() const { return process_koid_; }
@@ -45,7 +46,7 @@ class FakeProcessProxy : public ProcessProxy {
   void Configure(const std::shared_ptr<Options>& options);
 
   // FIDL methods.
-  ProcessProxySyncPtr Bind(async_dispatcher_t* dispatcher, bool disable_warnings);
+  ProcessProxySyncPtr Bind(bool disable_warnings);
   void Connect(zx::eventpair eventpair, zx::process process, ConnectCallback callback) override;
   void AddFeedback(Feedback feedback, AddFeedbackCallback callback) override;
 

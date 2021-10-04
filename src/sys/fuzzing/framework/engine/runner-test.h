@@ -10,10 +10,10 @@
 
 #include <memory>
 
+#include "src/sys/fuzzing/common/dispatcher.h"
 #include "src/sys/fuzzing/common/options.h"
 #include "src/sys/fuzzing/common/runner-unittest.h"
 #include "src/sys/fuzzing/common/testing/coverage.h"
-#include "src/sys/fuzzing/common/testing/dispatcher.h"
 #include "src/sys/fuzzing/framework/engine/runner.h"
 #include "src/sys/fuzzing/framework/testing/adapter.h"
 #include "src/sys/fuzzing/framework/testing/process.h"
@@ -26,6 +26,7 @@ using fuchsia::fuzzer::Result;
 class RunnerImplTest : public RunnerTest {
  protected:
   // RunnerTest methods.
+  void SetUp() override;
   void Configure(Runner* runner, const std::shared_ptr<Options>& options) override;
   Input GetTestInput() override;
   void SetFeedback(const Coverage& coverage, Result result, bool leak) override;
@@ -37,7 +38,7 @@ class RunnerImplTest : public RunnerTest {
   void RunAllForMerge() override;
 
  private:
-  FakeDispatcher dispatcher_;
+  std::shared_ptr<Dispatcher> dispatcher_;
   FakeTargetAdapter target_adapter_;
   FakeProcess process_;
   fidl::InterfaceRequestHandler<ProcessProxy> process_proxy_handler_;

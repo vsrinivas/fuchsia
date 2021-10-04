@@ -21,6 +21,7 @@
 
 #include "src/lib/fxl/macros.h"
 #include "src/lib/fxl/synchronization/thread_annotations.h"
+#include "src/sys/fuzzing/common/dispatcher.h"
 #include "src/sys/fuzzing/common/input.h"
 #include "src/sys/fuzzing/common/runner.h"
 #include "src/sys/fuzzing/common/shared-memory.h"
@@ -70,7 +71,7 @@ class RunnerImpl final : public Runner {
 
   // Handle incoming |ProcessProxy| requests.
   fidl::InterfaceRequestHandler<ProcessProxy> GetProcessProxyHandler(
-      async_dispatcher_t* dispatcher);
+      const std::shared_ptr<Dispatcher>& dispatcher);
 
   // Callbacks for signals received from the target adapter and process proxies that are used to
   // notify the runner that they have started, finished, or encountered an error.

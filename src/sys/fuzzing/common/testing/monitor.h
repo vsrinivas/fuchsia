@@ -6,7 +6,6 @@
 #define SRC_SYS_FUZZING_COMMON_TESTING_MONITOR_H_
 
 #include <fuchsia/fuzzer/cpp/fidl.h>
-#include <lib/async-loop/cpp/loop.h>
 #include <lib/fidl/cpp/interface_handle.h>
 #include <lib/sync/completion.h>
 
@@ -15,9 +14,8 @@
 #include <mutex>
 
 #include "src/lib/fxl/macros.h"
-#include "src/sys/fuzzing/common/binding.h"
-#include "src/sys/fuzzing/common/testing/coverage.h"
-#include "src/sys/fuzzing/common/testing/dispatcher.h"
+#include "src/sys/fuzzing/common/dispatcher.h"
+#include "src/sys/fuzzing/common/testing/binding.h"
 
 namespace fuzzing {
 
@@ -34,9 +32,8 @@ class FakeMonitor final : public Monitor {
   ~FakeMonitor() override = default;
 
   // FIDL-related methods.
-  async_dispatcher_t* dispatcher() { return client_.get(); }
   fidl::InterfaceHandle<Monitor> NewBinding();
-  MonitorPtr Bind();
+  MonitorPtr Bind(const std::shared_ptr<Dispatcher>& dispatcher);
   void Update(UpdateReason reason, Status status, UpdateCallback callback) override;
 
   // Blocks until the next call to |Update| and returns the provided reason.
@@ -47,9 +44,7 @@ class FakeMonitor final : public Monitor {
   Status NextStatus(UpdateReason* out_reason = nullptr);
 
  private:
-  Binding<Monitor> binding_;
-  FakeDispatcher server_;
-  FakeDispatcher client_;
+  FakeBinding<Monitor> binding_;
   std::mutex mutex_;
   std::deque<UpdateReason> reasons_;
   std::deque<Status> statuses_;

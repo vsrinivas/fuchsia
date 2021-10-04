@@ -10,11 +10,16 @@
 
 namespace fuzzing {
 
+void RunnerImplTest::SetUp() {
+  RunnerTest::SetUp();
+  dispatcher_ = std::make_shared<Dispatcher>();
+}
+
 void RunnerImplTest::Configure(Runner* runner, const std::shared_ptr<Options>& options) {
   RunnerTest::Configure(runner, options);
   auto* runner_impl = static_cast<RunnerImpl*>(runner);
   runner_impl->SetTargetAdapterHandler(target_adapter_.GetHandler());
-  process_proxy_handler_ = runner_impl->GetProcessProxyHandler(dispatcher_.get());
+  process_proxy_handler_ = runner_impl->GetProcessProxyHandler(dispatcher_);
 }
 
 Input RunnerImplTest::GetTestInput() {
@@ -87,6 +92,8 @@ void RunnerImplTest::RunAllForCleanseTwoBytes() {
 }
 
 void RunnerImplTest::RunAllForFuzzUntilTime() {
+  // Seed corpus is executed first. It has one input.
+  RunOne();
   RunOne({{1, 2}});
   zx::nanosleep(zx::deadline_after(zx::msec(200)));
   RunOne();

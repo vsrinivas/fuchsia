@@ -6,11 +6,10 @@ source_set("testing") {
   visibility = [ "//src/sys/fuzzing/*" ]
   testonly = true
   sources = [
+    "binding.h",
     "corpus-reader.cc",
     "corpus-reader.h",
     "coverage.h",
-    "dispatcher.cc",
-    "dispatcher.h",
     "monitor.cc",
     "monitor.h",
     "runner.cc",
@@ -21,13 +20,9 @@ source_set("testing") {
     "transceiver.h",
   ]
 
-  deps = [
-    "//sdk/lib/syslog/cpp",
-    "//zircon/system/ulib/async-loop:async-loop-default",
-  ]
+  deps = [ "//sdk/lib/syslog/cpp" ]
   public_deps = [
     "..:common",
-    "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/sync",
   ]
 }

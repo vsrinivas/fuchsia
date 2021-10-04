@@ -11,15 +11,11 @@ namespace fuzzing {
 
 FakeMonitor::FakeMonitor() : binding_(this) {}
 
-fidl::InterfaceHandle<Monitor> FakeMonitor::NewBinding() {
-  binding_.set_dispatcher(server_.get());
-  return binding_.NewBinding();
-}
+fidl::InterfaceHandle<Monitor> FakeMonitor::NewBinding() { return binding_.NewBinding(); }
 
-MonitorPtr FakeMonitor::Bind() {
+MonitorPtr FakeMonitor::Bind(const std::shared_ptr<Dispatcher>& dispatcher) {
   MonitorPtr ptr;
-  binding_.set_dispatcher(server_.get());
-  auto status = binding_.Bind(ptr.NewRequest(client_.get()));
+  auto status = binding_.Bind(ptr.NewRequest(dispatcher->get()));
   FX_DCHECK(status == ZX_OK) << zx_status_get_string(status);
   return ptr;
 }

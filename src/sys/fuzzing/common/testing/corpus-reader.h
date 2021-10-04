@@ -13,9 +13,9 @@
 #include <mutex>
 
 #include "src/lib/fxl/macros.h"
-#include "src/lib/fxl/synchronization/thread_annotations.h"
-#include "src/sys/fuzzing/common/binding.h"
+#include "src/sys/fuzzing/common/dispatcher.h"
 #include "src/sys/fuzzing/common/input.h"
+#include "src/sys/fuzzing/common/testing/binding.h"
 #include "src/sys/fuzzing/common/transceiver.h"
 
 namespace fuzzing {
@@ -26,11 +26,11 @@ using ::fuchsia::fuzzer::CorpusReader;
 // from the engine and adds them to a queue that can be waited on.
 class FakeCorpusReader final : public CorpusReader {
  public:
-  FakeCorpusReader();
+  explicit FakeCorpusReader(std::shared_ptr<Dispatcher> dispatcher);
   ~FakeCorpusReader() override = default;
 
   // FIDL methods.
-  fidl::InterfaceHandle<CorpusReader> NewBinding(async_dispatcher_t* dispatcher);
+  fidl::InterfaceHandle<CorpusReader> NewBinding();
   void Next(FidlInput fidl_input, NextCallback callback) override;
 
   // Blocks until a call to |GetNext| would succeed, in which case it returns true, or until the
@@ -43,11 +43,11 @@ class FakeCorpusReader final : public CorpusReader {
 
  private:
   Binding<CorpusReader> binding_;
-  std::shared_ptr<Transceiver> transceiver_;
+  Transceiver transceiver_;
   sync_completion_t sync_;
   std::mutex mutex_;
   std::deque<Input> inputs_ FXL_GUARDED_BY(mutex_);
-  bool closed_ FXL_GUARDED_BY(mutex_) = false;
+  bool has_more_ FXL_GUARDED_BY(mutex_) = true;
 
   FXL_DISALLOW_COPY_ASSIGN_AND_MOVE(FakeCorpusReader);
 };
