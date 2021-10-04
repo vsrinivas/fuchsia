@@ -16,7 +16,7 @@ your [.cml][cml] file:
 ```json
 {
   include: [
-    "vukan/client.shard.cml"
+    "vulkan/client.shard.cml"
   ],
   ...
 }
