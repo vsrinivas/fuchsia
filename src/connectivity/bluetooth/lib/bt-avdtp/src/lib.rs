@@ -13,7 +13,6 @@ use {
         task::{Context, Poll, Waker},
         Future, FutureExt, TryFutureExt,
     },
-    log::{info, trace, warn},
     packet_encoding::{Decodable, Encodable},
     parking_lot::Mutex,
     slab::Slab,
@@ -25,6 +24,7 @@ use {
         pin::Pin,
         sync::Arc,
     },
+    tracing::{info, trace, warn},
 };
 
 #[cfg(test)]
@@ -957,7 +957,7 @@ impl PeerInner {
         let id = TxLabel::try_from(key as u8);
         if id.is_err() {
             warn!("Transaction IDs are exhausted");
-            self.response_waiters.lock().remove(key);
+            let _ = self.response_waiters.lock().remove(key);
         }
         id
     }
@@ -968,7 +968,7 @@ impl PeerInner {
         let mut lock = self.response_waiters.lock();
         let idx = usize::from(id);
         if lock[idx].is_received() {
-            lock.remove(idx);
+            let _ = lock.remove(idx);
         } else {
             lock[idx] = ResponseWaiter::Discard;
         }
@@ -1074,7 +1074,7 @@ impl PeerInner {
                 let idx = usize::from(&header.label());
                 let rest = buf.split_off(packet_size);
                 if let Some(&ResponseWaiter::Discard) = waiters.get(idx) {
-                    waiters.remove(idx);
+                    let _ = waiters.remove(idx);
                 } else if let Some(entry) = waiters.get_mut(idx) {
                     let old_entry = mem::replace(entry, ResponseWaiter::Received(buf));
                     if let ResponseWaiter::Waiting(waker) = old_entry {
@@ -1153,7 +1153,7 @@ impl PeerInner {
     }
 
     fn send_signal(&self, data: &[u8]) -> Result<()> {
-        self.signaling.as_ref().write(data).map_err(|x| Error::PeerWrite(x))?;
+        let _ = self.signaling.as_ref().write(data).map_err(|x| Error::PeerWrite(x))?;
         Ok(())
     }
 }

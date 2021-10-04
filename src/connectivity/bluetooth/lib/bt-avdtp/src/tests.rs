@@ -99,8 +99,8 @@ fn can_only_take_stream_once() {
     let (_, signaling) = Channel::create();
 
     let peer = Peer::new(signaling);
-    let mut _stream = peer.take_request_stream();
-    peer.take_request_stream();
+    let _stream = peer.take_request_stream();
+    let _ = peer.take_request_stream();
 }
 
 // Generic Request tests
@@ -263,7 +263,7 @@ fn command_timeout() {
     let complete = exec.run_until_stalled(&mut response_fut);
     assert!(complete.is_pending());
 
-    exec.wake_next_timer();
+    let _ = exec.wake_next_timer();
     assert_matches!(exec.run_until_stalled(&mut response_fut), Poll::Ready(Err(Error::Timeout)));
 
     // We should be able to make a new request now.
@@ -1426,7 +1426,7 @@ fn abort_sent_no_response() {
     let complete = exec.run_until_stalled(&mut response_fut);
     assert!(complete.is_pending());
 
-    exec.wake_next_timer();
+    let _ = exec.wake_next_timer();
     assert_matches!(exec.run_until_stalled(&mut response_fut), Poll::Ready(Err(Error::Timeout)));
 }
 

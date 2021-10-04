@@ -145,7 +145,9 @@ impl StreamEndpoint {
     }
 
     fn update_callback(&self) {
-        self.update_callback.as_ref().map(|cb| cb(self));
+        if let Some(cb) = self.update_callback.as_ref() {
+            cb(self);
+        }
     }
 
     /// Build a new StreamEndpoint from a StreamInformation and associated Capabilities.
@@ -681,7 +683,7 @@ mod tests {
         // are only configured, even though this is probably not allowed per the spec.
 
         // Can't configure while open
-        establish_stream(&mut s);
+        let _channel = establish_stream(&mut s);
 
         assert_matches!(
             s.configure(&REMOTE_ID, vec![ServiceCapability::MediaTransport]),
@@ -761,7 +763,7 @@ mod tests {
     fn setup_peer_for_release(exec: &mut fasync::TestExecutor) -> (Peer, Channel, SimpleResponder) {
         let (peer, signaling) = setup_peer();
         // Send a close from the other side to produce an event we can respond to.
-        signaling.as_ref().write(&[0x40, 0x08, 0x04]).expect("signaling write");
+        let _ = signaling.as_ref().write(&[0x40, 0x08, 0x04]).expect("signaling write");
         let mut req_stream = peer.take_request_stream();
         let mut req_fut = req_stream.next();
         let complete = exec.run_until_stalled(&mut req_fut);
@@ -881,7 +883,7 @@ mod tests {
         // Expect a "yes" response.
         expect_remote_recv(&[0x42, 0x08], &signaling);
 
-        exec.wake_next_timer();
+        let _ = exec.wake_next_timer();
         let complete = exec.run_until_stalled(&mut release_fut);
         // Now we're waiting on response from the Abort
         assert!(complete.is_pending());
@@ -1087,7 +1089,7 @@ mod tests {
         let call_count = Arc::new(AtomicUsize::new(0));
         let call_count_reader = call_count.clone();
         let count_cb: StreamEndpointUpdateCallback = Box::new(move |_stream: &StreamEndpoint| {
-            call_count.fetch_add(1, Ordering::SeqCst);
+            let _ = call_count.fetch_add(1, Ordering::SeqCst);
         });
         (Some(count_cb), call_count_reader)
     }
@@ -1115,7 +1117,10 @@ mod tests {
         call_count.store(0, Ordering::SeqCst); // clear call count
 
         let (_, transport) = Channel::create();
-        s.receive_channel(transport).expect("Receive channel to succeed in test");
+        assert_eq!(
+            s.receive_channel(transport).expect("Receive channel to succeed in test"),
+            false
+        );
         assert!(call_count.load(Ordering::SeqCst) > 0, "Update callback called at least once");
         call_count.store(0, Ordering::SeqCst); // clear call count
 

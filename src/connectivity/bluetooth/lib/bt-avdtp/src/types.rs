@@ -670,7 +670,7 @@ impl Encodable for ServiceCapability {
             return Err(Error::Encoding);
         }
         let mut cursor = Cursor::new(buf);
-        cursor
+        let _ = cursor
             .write(&[u8::from(&self.category()), self.length_of_service_capabilities()])
             .map_err(|_| Error::Encoding)?;
         match self {
@@ -679,17 +679,19 @@ impl Encodable for ServiceCapability {
                 max_recovery_window_size: max_size,
                 max_number_media_packets: max_packets,
             } => {
-                cursor.write(&[*t, *max_size, *max_packets]).map_err(|_| Error::Encoding)?;
+                let _ =
+                    cursor.write(&[*t, *max_size, *max_packets]).map_err(|_| Error::Encoding)?;
             }
             ServiceCapability::MediaCodec { media_type, codec_type, codec_extra } => {
-                cursor
+                let _ = cursor
                     .write(&[u8::from(media_type) << 4, codec_type.0])
                     .map_err(|_| Error::Encoding)?;
-                cursor.write(codec_extra.as_slice()).map_err(|_| Error::Encoding)?;
+                let _ = cursor.write(codec_extra.as_slice()).map_err(|_| Error::Encoding)?;
             }
             ServiceCapability::ContentProtection { protection_type, extra } => {
-                cursor.write(&protection_type.to_le_bytes()).map_err(|_| Error::Encoding)?;
-                cursor.write(extra.as_slice()).map_err(|_| Error::Encoding)?;
+                let _ =
+                    cursor.write(&protection_type.to_le_bytes()).map_err(|_| Error::Encoding)?;
+                let _ = cursor.write(extra.as_slice()).map_err(|_| Error::Encoding)?;
             }
             _ => {}
         }
