@@ -25,7 +25,7 @@ use packet_formats::icmp::{
 };
 use packet_formats::ip::{IpExt, Ipv4Proto, Ipv6Proto};
 use packet_formats::ipv4::{Ipv4FragmentType, Ipv4Header};
-use packet_formats::ipv6::{Ipv6Header, UndefinedBodyBoundsError};
+use packet_formats::ipv6::{ExtHdrParseError, Ipv6Header};
 use zerocopy::ByteSlice;
 
 use crate::context::{CounterContext, InstantContext, StateContext};
@@ -1105,25 +1105,26 @@ fn receive_icmpv6_error<
             let dst_ip = try_unit!(SpecifiedAddr::new(original_packet.dst_ip()).ok_or_else(|| {
                 trace!("receive_icmpv6_error: Got ICMP error message whose original IPv6 packet contains an unspecified destination address; discarding");
             }));
-            let body = match original_packet.body() {
-                Ok(body) => body.into_inner(),
-                Err(UndefinedBodyBoundsError) => {
+            match original_packet.body_proto() {
+                Ok((body, proto)) => {
+                    InnerIcmpContext::receive_icmp_error(
+                        ctx,
+                        SpecifiedAddr::new(original_packet.src_ip()),
+                        dst_ip,
+                        proto,
+                        body.into_inner(),
+                        err,
+                    );
+                }
+                Err(ExtHdrParseError) => {
                     trace!("receive_icmpv6_error: We could not parse the original packet's extension headers, and so we don't know where the original packet's body begins; discarding");
                     // There's nothing we can do in this case, so we just
                     // return.
                     return;
                 }
-            };
-            InnerIcmpContext::receive_icmp_error(
-                ctx,
-                SpecifiedAddr::new(original_packet.src_ip()),
-                dst_ip,
-                original_packet.next_header(),
-                body,
-                err,
-            );
+            }
         }
-        Err(_) => debug!(
+        Err(_body) => debug!(
             "receive_icmpv6_error: Got ICMPv6 error message with unparsable original IPv6 packet"
         ),
     })

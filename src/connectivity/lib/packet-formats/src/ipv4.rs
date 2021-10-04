@@ -344,7 +344,7 @@ impl<B: ByteSlice> Ipv4Packet<B> {
             flags: 0,
             frag_off: self.fragment_offset(),
             ttl: self.ttl(),
-            proto: self.hdr_prefix.proto,
+            proto: self.hdr_prefix.proto.into(),
             src_ip: self.src_ip(),
             dst_ip: self.dst_ip(),
         };
@@ -541,7 +541,7 @@ pub struct Ipv4PacketBuilder {
     flags: u8,
     frag_off: u16,
     ttl: u8,
-    proto: u8,
+    proto: Ipv4Proto,
     src_ip: Ipv4Addr,
     dst_ip: Ipv4Addr,
 }
@@ -561,7 +561,7 @@ impl Ipv4PacketBuilder {
             flags: 0,
             frag_off: 0,
             ttl,
-            proto: proto.into(),
+            proto: proto,
             src_ip: src_ip.into(),
             dst_ip: dst_ip.into(),
         }
@@ -619,9 +619,7 @@ impl Ipv4PacketBuilder {
         assert!(fragment_offset < 1 << 13, "invalid fragment offset: {}", fragment_offset);
         self.frag_off = fragment_offset;
     }
-}
 
-impl Ipv4PacketBuilder {
     /// Writes a `HeaderPrefix` to the beginning of `buffer` according to the
     /// given `options` and `body`.
     fn write_header_prefix<B: ByteSliceMut, BV: BufferViewMut<B>>(
@@ -652,7 +650,7 @@ impl Ipv4PacketBuilder {
             self.flags,
             self.frag_off,
             self.ttl,
-            self.proto,
+            self.proto.into(),
             [0, 0], // header checksum
             self.src_ip,
             self.dst_ip,

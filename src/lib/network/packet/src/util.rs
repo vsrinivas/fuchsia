@@ -37,6 +37,7 @@ pub trait FromRaw<R, A>: Sized {
 ///
 /// The type parameters `C` and `I` are the types for a "complete" and
 /// "incomplete" parsing result, respectively.
+#[derive(Copy, Clone, Debug, Eq, PartialEq)]
 pub enum MaybeParsed<C, I> {
     Complete(C),
     Incomplete(I),

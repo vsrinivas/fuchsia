@@ -244,10 +244,8 @@ pub trait Ipv6Header {
     }
 
     /// The Next Header.
-    ///
-    /// `next_header` returns the `Ipv6Proto` from the next header field.
-    fn next_header(&self) -> Ipv6Proto {
-        Ipv6Proto::from(self.get_fixed_header().next_hdr)
+    fn next_header(&self) -> u8 {
+        self.get_fixed_header().next_hdr
     }
 
     /// The source IP address.
@@ -327,14 +325,16 @@ impl<B: ByteSlice> FromRaw<Ipv6PacketRaw<B>, ()> for Ipv6Packet<B> {
             }
         };
 
-        // If extension headers parse sucessfully, then proto MUST be available,
-        // in the raw form AND that it's a valid next header for upper layers.
-        let proto = raw.proto.expect("Unable to retrieve Ipv6Proto from raw");
+        // If extension headers parse successfully, then proto and a
+        // `MaybeParsed` body MUST be available, and the proto must be a valid
+        // next header for upper layers.
+        let (body, proto) =
+            raw.body_proto.expect("Unable to retrieve Ipv6Proto or MaybeParsed body from raw");
         debug_assert!(is_valid_next_header_upper_layer(proto.into()));
 
-        let body = match raw.body {
-            Ok(MaybeParsed::Complete(b)) => b,
-            _ => {
+        let body = match body {
+            MaybeParsed::Complete(b) => b,
+            MaybeParsed::Incomplete(_b) => {
                 return debug_err!(Err(ParseError::Format.into()), "IPv6 body unretrievable.");
             }
         };
@@ -521,7 +521,7 @@ impl<B: ByteSlice> Ipv6Packet<B> {
             ecn: self.ecn(),
             flowlabel: self.flowlabel(),
             hop_limit: self.hop_limit(),
-            next_hdr: self.fixed_hdr.next_hdr,
+            proto: self.proto(),
             src_ip: self.src_ip(),
             dst_ip: self.dst_ip(),
         }
@@ -551,13 +551,13 @@ impl<B: ByteSlice> Debug for Ipv6Packet<B> {
     }
 }
 
-/// We were unable to find the start of the body due to a malformed sequence of
-/// extension headers.
+/// We were unable to parse the extension headers.
 ///
-/// Since we could not finish parsing extension headers, we were unable to
-/// figure out where the body begins.
-#[derive(Copy, Clone, Debug)]
-pub struct UndefinedBodyBoundsError;
+/// As a result, we were unable to determine the upper-layer Protocol Number
+/// (which is stored in the last extension header's Next Header field) and were
+/// unable figure out where the body begins.
+#[derive(Copy, Clone, Debug, Eq, PartialEq)]
+pub struct ExtHdrParseError;
 
 /// A partially parsed and not yet validated IPv6 packet.
 ///
@@ -577,17 +577,19 @@ pub struct Ipv6PacketRaw<B> {
     /// successfully consumed before reaching an error (typically "buffer
     /// exhausted").
     extension_hdrs: MaybeParsed<RecordsRaw<B, Ipv6ExtensionHeaderImpl>, B>,
-    /// If extension headers failed to parse, `body` will be
-    /// `Err(UndefinedBodyBoundsError)`, since we can't find where the body
-    /// begins. Otherwise it will be `Ok` of [`MaybeParsed::Complete`] if all
-    /// the body bytes were consumed (as stated by the header's payload length
-    /// value) or [`MaybeParsed::Incomplete`] containing the bytes that that
-    /// were present otherwise.
-    body: Result<MaybeParsed<B, B>, UndefinedBodyBoundsError>,
-    /// If extension headers are successfully parsed, the last "next header"
-    /// value is stored in `proto` as `Some(Ipv6Proto)`. Otherwise, `proto` will
-    /// be `None`.
-    proto: Option<Ipv6Proto>,
+    /// The body and upper-layer Protocol Number.
+    ///
+    /// If extension headers failed to parse, this will be
+    /// `Err(ExtHdrParseError)`. Extension headers must be parsed in order to
+    /// find the bounds of the upper-layer payload and to find that last
+    /// extension header's Next Header field, which is the Protocol Number of
+    /// the upper-layer payload.
+    ///
+    /// The body will be [`MaybeParsed::Complete`] if all the body bytes were
+    /// consumed (as stated by the header's payload length value) or
+    /// [`MaybeParsed::Incomplete`] containing the bytes that were present
+    /// otherwise.
+    body_proto: Result<(MaybeParsed<B, B>, Ipv6Proto), ExtHdrParseError>,
 }
 
 impl<B: ByteSlice> Ipv6Header for Ipv6PacketRaw<B> {
@@ -616,7 +618,7 @@ impl<B: ByteSlice> ParsablePacket<B, ()> for Ipv6PacketRaw<B> {
             RecordsRaw::parse_raw_with_mut_context(&mut buffer, &mut extension_hdr_context)
                 .map_incomplete(|(b, _)| b);
 
-        let (proto, body) = if extension_hdrs.is_complete() {
+        let body_proto = if extension_hdrs.is_complete() {
             // If we have extension headers our context's
             // (`extension_hdr_context`) `next_header` would be updated with the
             // last extension header's Next Header value. This will also work if
@@ -625,8 +627,8 @@ impl<B: ByteSlice> ParsablePacket<B, ()> for Ipv6PacketRaw<B> {
             // value in the fixed header will be a valid upper layer protocol
             // value. `parse_bv_with_mut_context` will return almost immediately
             // without doing any actual work when it checks the context's
-            // (`extension_hdr_context`) `next_header`, value and ends parsing
-            // since according to our context, its data is for an upper layer
+            // (`extension_hdr_context`) `next_header` value and ends parsing
+            // since, according to our context, its data is for an upper layer
             // protocol. Now, since nothing was parsed, our context was never
             // modified, so the next header value it was initialized with when
             // calling `Ipv6ExtensionHeaderParsingContext::new`, will not have
@@ -636,39 +638,70 @@ impl<B: ByteSlice> ParsablePacket<B, ()> for Ipv6PacketRaw<B> {
             // next header that is meant for the upper layer. The assertion
             // below enforces that contract.
             assert!(is_valid_next_header_upper_layer(extension_hdr_context.next_header));
-            let proto = Some(Ipv6Proto::from(extension_hdr_context.next_header));
+            let proto = Ipv6Proto::from(extension_hdr_context.next_header);
             let body = MaybeParsed::new_with_min_len(
                 buffer.into_rest(),
                 pl_len.saturating_sub(extension_hdrs.len()),
             );
-            (proto, Ok(body))
+            Ok((body, proto))
         } else {
-            (None, Err(UndefinedBodyBoundsError))
+            Err(ExtHdrParseError)
         };
 
-        Ok(Ipv6PacketRaw { fixed_hdr, extension_hdrs, body, proto })
+        Ok(Ipv6PacketRaw { fixed_hdr, extension_hdrs, body_proto })
     }
 
     fn parse_metadata(&self) -> ParseMetadata {
         let header_len = self.fixed_hdr.bytes().len() + self.extension_hdrs.len();
-        let body_len = self.body.as_ref().map(|b| b.len()).unwrap_or(0);
+        let body_len = self.body_proto.as_ref().map(|(b, _p)| b.len()).unwrap_or(0);
         ParseMetadata::from_packet(header_len, body_len, 0)
     }
 }
 
 impl<B: ByteSlice> Ipv6PacketRaw<B> {
-    /// Return the body.
+    /// Returns the body and upper-layer Protocol Number.
     ///
-    /// `body` returns [`Ok(MaybeParsed::Complete)`] if the entire body is
-    /// present (as determined by the header's "payload length length" field),
-    /// [`Ok(MaybeParsed::Incomplete)`] if only part of the body is present, or
-    /// [`Err(UndefinedBodyBoundsError)`] if the packet's extension headers
-    /// failed to parse (in which case we can't locate the body's beginning).
-    pub fn body(&self) -> Result<MaybeParsed<&[u8], &[u8]>, UndefinedBodyBoundsError> {
-        self.body
+    /// If extension headers failed to parse, `body_proto` returns
+    /// `Err(ExtHdrParseError)`. Extension headers must be parsed in order to
+    /// find the bounds of the upper-layer payload and to find that last
+    /// extension header's Next Header field, which is the Protocol Number of
+    /// the upper-layer payload.
+    ///
+    /// The returned body will be [`MaybeParsed::Complete`] if all the body
+    /// bytes were consumed (as stated by the header's payload length value) or
+    /// [`MaybeParsed::Incomplete`] containing the bytes that were present
+    /// otherwise.
+    pub fn body_proto(&self) -> Result<(MaybeParsed<&[u8], &[u8]>, Ipv6Proto), ExtHdrParseError> {
+        self.body_proto
             .as_ref()
-            .map(|mp| mp.as_ref().map(|b| b.deref()).map_incomplete(|b| b.deref()))
+            .map(|(mp, proto)| {
+                (mp.as_ref().map(|b| b.deref()).map_incomplete(|b| b.deref()), *proto)
+            })
             .map_err(|e| *e)
+    }
+
+    /// Returns the body.
+    ///
+    /// If extension headers failed to parse, `body` returns
+    /// `Err(ExtHdrParseError)`. Extension headers must be parsed in order to
+    /// find the bounds of the upper-layer payload.
+    ///
+    /// The returned body will be [`MaybeParsed::Complete`] if all the body
+    /// bytes were consumed (as stated by the header's payload length value) or
+    /// [`MaybeParsed::Incomplete`] containing the bytes that were present
+    /// otherwise.
+    pub fn body(&self) -> Result<MaybeParsed<&[u8], &[u8]>, ExtHdrParseError> {
+        self.body_proto().map(|(body, _proto)| body)
+    }
+
+    /// Returns the upper-layer Protocol Number.
+    ///
+    /// If extension headers failed to parse, `body_proto` returns
+    /// `Err(ExtHdrParseError)`. Extension headers must be parsed in order to
+    /// find the last extension header's Next Header field, which is the
+    /// Protocol Number of the upper-layer payload.
+    pub fn proto(&self) -> Result<Ipv6Proto, ExtHdrParseError> {
+        self.body_proto().map(|(_body, proto)| proto)
     }
 }
 
@@ -679,25 +712,31 @@ pub struct Ipv6PacketBuilder {
     ecn: u8,
     flowlabel: u32,
     hop_limit: u8,
-    next_hdr: u8,
+    // The protocol number of the upper layer protocol, not the Next Header
+    // value of the first extension header (if one exists).
+    proto: Ipv6Proto,
     src_ip: Ipv6Addr,
     dst_ip: Ipv6Addr,
 }
 
 impl Ipv6PacketBuilder {
-    /// Construct a new `Ipv6PacketBuilder`.
+    /// Constructs a new `Ipv6PacketBuilder`.
+    ///
+    /// The `proto` field encodes the protocol number identifying the upper
+    /// layer payload, not the Next Header value of the first extension header
+    /// (if one exists).
     pub fn new<S: Into<Ipv6Addr>, D: Into<Ipv6Addr>>(
         src_ip: S,
         dst_ip: D,
         hop_limit: u8,
-        next_hdr: Ipv6Proto,
+        proto: Ipv6Proto,
     ) -> Ipv6PacketBuilder {
         Ipv6PacketBuilder {
             ds: 0,
             ecn: 0,
             flowlabel: 0,
             hop_limit,
-            next_hdr: next_hdr.into(),
+            proto,
             src_ip: src_ip.into(),
             dst_ip: dst_ip.into(),
         }
@@ -818,7 +857,7 @@ impl PacketBuilder for Ipv6PacketBuilder {
 
     fn serialize(&self, buffer: &mut SerializeBuffer<'_, '_>) {
         let (mut header, body, _) = buffer.parts();
-        self.serialize_fixed_hdr(&mut header, body.len(), self.next_hdr);
+        self.serialize_fixed_hdr(&mut header, body.len(), self.proto.into());
     }
 }
 
@@ -841,9 +880,9 @@ impl<'a, I: Clone + Iterator<Item = &'a HopByHopOption<'a>>> PacketBuilder
             .take_back_zero(aligned_hbh_len)
             .expect("too few bytes for Hop-by-Hop extension header");
         let mut hbh_pointer = &mut hbh_extension_header;
-        // take the first two bytes to write in next_header and length information.
+        // take the first two bytes to write in proto and length information.
         let next_header_and_len = hbh_pointer.take_front_zero(2).unwrap();
-        next_header_and_len[0] = self.prefix_builder.next_hdr;
+        next_header_and_len[0] = self.prefix_builder.proto.into();
         next_header_and_len[1] =
             u8::try_from((aligned_hbh_len - 8) / 8).expect("extension header too big");
         // After the first two bytes, we can serialize our real options.
@@ -1284,8 +1323,7 @@ mod tests {
         let partial = buf.parse::<Ipv6PacketRaw<_>>().unwrap();
         assert_eq!(partial.fixed_hdr.bytes(), &fixed_hdr_buf[..]);
         assert!(partial.extension_hdrs.is_incomplete());
-        assert!(partial.body.is_err());
-        assert!(partial.proto.is_none());
+        assert_eq!(partial.body_proto(), Err(ExtHdrParseError));
         assert!(Ipv6Packet::try_from_raw(partial).is_err());
 
         // Incomplete body:
@@ -1305,10 +1343,10 @@ mod tests {
         assert_eq!(partial.fixed_hdr.bytes(), &fixed_hdr_buf[..]);
         assert_eq!(partial.extension_hdrs.as_ref().unwrap().deref().len(), 0);
         assert_eq!(
-            *partial.body.as_ref().unwrap().as_ref().unwrap_incomplete(),
+            *partial.body().unwrap().as_ref().unwrap_incomplete(),
             &buf[IPV6_FIXED_HDR_LEN..]
         );
-        assert_eq!(partial.proto.unwrap(), IpProto::Tcp.into());
+        assert_eq!(partial.proto(), Ok(IpProto::Tcp.into()));
         assert!(Ipv6Packet::try_from_raw(partial).is_err());
     }
 
@@ -1363,6 +1401,31 @@ mod tests {
             .unwrap()
             .unwrap_a();
         assert_eq!(&buf_0[..], &buf_1[..]);
+    }
+
+    #[test]
+    fn test_packet_builder_proto_not_next_header() {
+        // Test that Ipv6PacketBuilder's `proto` field is used as the Protocol
+        // Number for the upper layer payload, not the Next Header value for the
+        // extension header.
+        let mut buf = (&[0, 1, 2, 3, 4, 5, 6, 7, 8, 9])
+            .into_serializer()
+            .encapsulate(
+                Ipv6PacketBuilderWithHbhOptions::new(
+                    new_builder(),
+                    &[HopByHopOption {
+                        action: ExtensionHeaderOptionAction::SkipAndContinue,
+                        mutable: false,
+                        data: HopByHopOptionData::RouterAlert { data: 0 },
+                    }],
+                )
+                .unwrap(),
+            )
+            .serialize_vec_outer()
+            .unwrap();
+        let packet = buf.parse::<Ipv6Packet<_>>().unwrap();
+        assert_eq!(packet.proto(), IpProto::Tcp.into());
+        assert_eq!(packet.next_header(), Ipv6ExtHdrType::HopByHopOptions.into());
     }
 
     #[test]
