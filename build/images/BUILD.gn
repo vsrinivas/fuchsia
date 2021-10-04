@@ -629,8 +629,19 @@ action("flash_script") {
   }
 }
 
+fastboot_credentials = []
+archive_fastboot_credentials = []
+
+foreach(cred_path, board_fastboot_unlock_credentials) {
+  basename = get_path_info(cred_path, "file")
+  fastboot_credentials +=
+      [ rebase_path("$root_out_dir/board_tools/$basename", root_build_dir) ]
+  archive_fastboot_credentials += [ "$basename.script" ]
+}
+
 flash_manifest_content = {
   hw_revision = "${board_name}"
+  credentials = fastboot_credentials
   products = [
     {
       name = "recovery"
@@ -771,6 +782,7 @@ generated_file("fastboot_manifest_archive") {
       version = flash_manifest_version
       manifest = {
         hw_revision = "${board_name}"
+        credentials = archive_fastboot_credentials
         products = [
           {
             name = "recovery"

@@ -29,6 +29,13 @@
                     "description": "A board name used to verify whether the device can be flashed using this manifest.",
                     "type": "string"
                 },
+                "credentials": {
+                    "description": "A list of credential file for unlocking fastboot devices.",
+                    "items": {
+                        "type": "string"
+                    },
+                    "type": "array"
+                },
                 "products": {
                     "description": "A list of product specifications that can be flashed onto the device.",
                     "items": {

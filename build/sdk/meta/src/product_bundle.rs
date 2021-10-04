@@ -36,6 +36,10 @@ pub struct FlashManifest {
     /// A list of product specifications that can be flashed onto the device.
     /// Expect at least one entry.
     pub products: Vec<Product>,
+
+    /// A list of credential files needed for unlocking fastboot devices.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub credentials: Vec<String>,
 }
 
 /// A set of artifacts necessary to provision a physical or virtual device.
