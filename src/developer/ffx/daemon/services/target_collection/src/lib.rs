@@ -23,6 +23,7 @@ use {
     tasks::TaskManager,
 };
 
+mod reboot;
 mod target_handle;
 
 #[ffx_service]

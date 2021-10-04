@@ -9,6 +9,7 @@ ffx_plugin("ffx_reboot") {
   edition = "2018"
   with_unit_tests = true
   deps = [
+    "//src/developer/ffx:ffx_lib_args",
     "//src/lib/fuchsia-async",
     "//third_party/rust_crates:chrono",
     "//third_party/rust_crates:termion",

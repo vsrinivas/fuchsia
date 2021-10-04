@@ -3,19 +3,18 @@
 // found in the LICENSE file.
 
 use {
+    crate::reboot,
     anyhow::{anyhow, Context as _, Result},
     ffx_core::TryStreamUtilExt,
     ffx_daemon_events::TargetEvent,
-    ffx_daemon_target::fastboot::Fastboot,
     ffx_daemon_target::target::Target,
     fidl::endpoints::ServerEnd,
-    fidl_fuchsia_developer_bridge as bridge,
+    fidl_fuchsia_developer_bridge::{self as bridge},
     fuchsia_async::futures::TryStreamExt,
     services::Context,
     std::future::Future,
     std::pin::Pin,
     std::rc::Rc,
-    tasks::TaskManager,
 };
 
 // TODO(awdavies): Abstract this to use similar utilities to an actual service.
@@ -30,7 +29,8 @@ impl TargetHandle {
         cx: Context,
         handle: ServerEnd<bridge::TargetHandleMarker>,
     ) -> Result<Pin<Box<dyn Future<Output = ()>>>> {
-        let inner = TargetHandleInner { target, tasks: Default::default() };
+        let reboot_controller = reboot::RebootController::new(target.clone());
+        let inner = TargetHandleInner { target, reboot_controller };
         let stream = handle.into_stream()?;
         let fut = Box::pin(async move {
             let _ = stream
@@ -43,8 +43,8 @@ impl TargetHandle {
 }
 
 struct TargetHandleInner {
-    tasks: TaskManager,
     target: Rc<Target>,
+    reboot_controller: reboot::RebootController,
 }
 
 impl TargetHandleInner {
@@ -101,15 +101,11 @@ impl TargetHandleInner {
                 responder.send().map_err(Into::into)
             }
             bridge::TargetHandleRequest::OpenFastboot { fastboot, responder } => {
-                let mut fastboot_manager = Fastboot::new(self.target.clone());
-                let stream = fastboot.into_stream()?;
-                self.tasks.spawn(async move {
-                    match fastboot_manager.handle_fastboot_requests_from_stream(stream).await {
-                        Ok(_) => log::trace!("Fastboot proxy finished - client disconnected"),
-                        Err(e) => log::error!("Handling fastboot requests: {:?}", e),
-                    }
-                });
+                self.reboot_controller.spawn_fastboot(fastboot).await?;
                 responder.send().map_err(Into::into)
+            }
+            bridge::TargetHandleRequest::Reboot { state, responder } => {
+                self.reboot_controller.reboot(state, responder).await
             }
         }
     }

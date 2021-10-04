@@ -11,12 +11,16 @@ rustc_library("ffx_daemon_service_target_collection") {
 
   deps = [
     "//sdk/fidl/fuchsia.developer.bridge:fuchsia.developer.bridge-rustc",
+    "//sdk/fidl/fuchsia.developer.remotecontrol:fuchsia.developer.remotecontrol-rustc",
+    "//sdk/fidl/fuchsia.hardware.power.statecontrol:fuchsia.hardware.power.statecontrol-rustc",
     "//sdk/fidl/fuchsia.net:fuchsia.net-rustc",
     "//src/developer/ffx/core:lib",
     "//src/developer/ffx/daemon/events:lib",
     "//src/developer/ffx/daemon/target:lib",
     "//src/developer/ffx/lib/services:lib",
     "//src/developer/ffx/lib/tasks:lib",
+    "//src/lib/async-utils",
+    "//src/lib/diagnostics/selectors",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
     "//third_party/rust_crates:anyhow",
@@ -39,6 +43,7 @@ rustc_library("ffx_daemon_service_target_collection") {
 
   sources = [
     "src/lib.rs",
+    "src/reboot.rs",
     "src/target_handle.rs",
   ]
 }

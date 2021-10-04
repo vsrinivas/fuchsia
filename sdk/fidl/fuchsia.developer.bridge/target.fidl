@@ -74,14 +74,18 @@ type Target = table {
 };
 
 type TargetRebootError = strict enum {
-    UNKNOWN = 1;
     /// Cannot reboot from fastboot to recovery.
-    FASTBOOT_TO_RECOVERY = 2;
+    FASTBOOT_TO_RECOVERY = 1;
     /// There was an Overnet communication issue with the target.
-    TARGET_COMMUNICATION = 3;
+    TARGET_COMMUNICATION = 2;
     /// There was a Fastboot protocol communication issue with the
     /// target.
-    FASTBOOT_COMMUNICATION = 4;
+    FASTBOOT_COMMUNICATION = 3;
+    /// No netsvc address was found for the target when attempting
+    /// to reboot from Zedboot.
+    NETSVC_ADDRESS_NOT_FOUND = 4;
+    /// Error when running a function through netsvc protocol.
+    NETSVC_COMMUNICATION = 5;
 };
 
 type TargetRebootState = strict enum {
@@ -92,6 +96,7 @@ type TargetRebootState = strict enum {
 
 @discoverable
 protocol TargetControl {
+    @deprecated("Please use target collection -> target handle instead.")
     Reboot(struct {
         state TargetRebootState;
     }) -> (struct {}) error TargetRebootError;
@@ -178,4 +183,15 @@ protocol TargetHandle {
     OpenFastboot(resource struct {
         fastboot server_end:Fastboot;
     }) -> ();
+
+    /// Reboots the target to the desired state.
+    ///
+    /// Returns:
+    /// * Empty struct on success.
+    ///
+    /// Errors:
+    /// * See [TargetRebootError] for failure states.
+    Reboot(struct {
+        state TargetRebootState;
+    }) -> (struct {}) error TargetRebootError;
 };
