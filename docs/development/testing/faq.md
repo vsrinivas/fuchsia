@@ -36,6 +36,20 @@ command, for example:
 
 `fx set ... --with //src/sys:tests`
 
+A test may also be disabled on certain product or variant configurations. If
+`fx test` does not find the test after adding the label using `fx set`, verify
+that the test is not excluded by a build rule. For example, a test might be
+excluded in coverage variants. This could appear as follows in the test's
+BUILD.gn file:
+
+```
+group("tests") {
+  if (!is_coverage) {
+    deps = [ ":my-test" ]
+  }
+}
+```
+
 If a newly added test is in the product configuration defined by `fx set` but
 still doesn't show in `tests.json`, you may need to run `fx gen` or `fx build`
 to update `tests.json` so that `fx test` knows how to run it.
