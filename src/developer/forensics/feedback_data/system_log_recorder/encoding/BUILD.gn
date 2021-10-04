@@ -43,7 +43,7 @@ source_set("lz4_decoder") {
   public_deps = [
     ":decoder",
     ":version",
-    "//zircon/public/lib/lz4",
+    "//zircon/third_party/ulib/lz4",
   ]
 
   deps = [
@@ -63,7 +63,7 @@ source_set("lz4_encoder") {
   public_deps = [
     ":encoder",
     ":version",
-    "//zircon/public/lib/lz4",
+    "//zircon/third_party/ulib/lz4",
   ]
 
   deps = [
@@ -78,7 +78,7 @@ source_set("lz4_utils") {
 
   public_deps = [
     "//src/developer/forensics/feedback_data:constants",
-    "//zircon/public/lib/lz4",
+    "//zircon/third_party/ulib/lz4",
   ]
 }
 

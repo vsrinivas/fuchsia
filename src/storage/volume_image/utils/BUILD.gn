@@ -29,8 +29,8 @@ source_set("lz4-compression") {
     ":compression-interfaces",
     "//sdk/lib/fit-promise",
     "//src/storage/volume_image:options",
-    "//zircon/public/lib/lz4",
     "//zircon/system/ulib/fbl",
+    "//zircon/third_party/ulib/lz4",
   ]
 }
 

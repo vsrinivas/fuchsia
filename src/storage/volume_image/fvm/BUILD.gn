@@ -116,7 +116,7 @@ source_set("fvm-test") {
     "//src/storage/volume_image/utils:lz4-compression",
     "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",
-    "//zircon/public/lib/lz4",
+    "//zircon/third_party/ulib/lz4",
   ]
 
   # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
