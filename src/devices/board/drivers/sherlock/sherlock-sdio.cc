@@ -75,7 +75,7 @@ constexpr pbus_bti_t sd_emmc_btis[] = {
 };
 
 constexpr aml_sdmmc_config_t sd_emmc_config = {
-    .supports_dma = false,
+    .supports_dma = true,
     .min_freq = 500'000,      // 500KHz
     .max_freq = 208'000'000,  // 208MHz
     .version_3 = true,
