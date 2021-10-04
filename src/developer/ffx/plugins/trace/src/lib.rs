@@ -35,7 +35,16 @@ async fn trace_impl<W: Write>(
     let default = default.as_ref().and_then(|s| Some(s.as_str()));
     match cmd.sub_cmd {
         TraceSubCommand::ListProviders(_) => {
-            let providers = controller.get_providers().await?;
+            let providers = match controller.get_providers().await {
+                Ok(providers) => providers,
+                Err(fidl::Error::ClientChannelClosed { status, protocol_name }) => {
+                    errors::ffx_bail!("An attempt to access {} resulted in a bad status: {}.
+This can happen if tracing is not supported on the product configuration you are running or if it is missing from the base image.", protocol_name, status);
+                }
+                Err(e) => {
+                    errors::ffx_bail!("Accessing the tracing controller failed: {:#?}", e);
+                }
+            };
             writeln!(write, "Trace providers:")?;
             for provider in &providers {
                 writeln!(write, "- {}", provider.name.as_ref().unwrap_or(&"unknown".to_string()))?;
@@ -107,7 +116,9 @@ fn canonical_path(output_path: String) -> Result<String> {
 mod tests {
     use {
         super::*,
+        errors::ResultExt as _,
         ffx_trace_args::{ListProviders, Start, Stop},
+        fidl::endpoints::{ControlHandle, Responder},
         fidl_fuchsia_developer_bridge as bridge, fidl_fuchsia_tracing_controller as trace,
         std::io::BufWriter,
         std::matches,
@@ -174,6 +185,15 @@ mod tests {
         })
     }
 
+    fn setup_closed_fake_controller_proxy() -> ControllerProxy {
+        setup_fake_controller(|req| match req {
+            trace::ControllerRequest::GetProviders { responder, .. } => {
+                responder.control_handle().shutdown();
+            }
+            r => panic!("unsupported req: {:?}", r),
+        })
+    }
+
     async fn run_trace_test(cmd: TraceCommand) -> String {
         let mut output = String::new();
         let writer = unsafe { BufWriter::new(output.as_mut_vec()) };
@@ -195,6 +215,19 @@ mod tests {
                    - unknown\n"
             .to_string();
         assert_eq!(want, output);
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_get_providers_peer_closed() {
+        let mut output = String::new();
+        let writer = unsafe { BufWriter::new(output.as_mut_vec()) };
+        let proxy = setup_fake_service();
+        let controller = setup_closed_fake_controller_proxy();
+        let cmd = TraceCommand { sub_cmd: TraceSubCommand::ListProviders(ListProviders {}) };
+        let res = trace_impl(proxy, controller, cmd, writer).await.unwrap_err();
+        assert!(res.ffx_error().is_some());
+        assert!(res.to_string().contains("This can happen if tracing is not"));
+        assert!(output.is_empty());
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
