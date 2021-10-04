@@ -37,7 +37,9 @@ void OtStackApp::ClientAllowanceInit() {
 
 void OtStackApp::RadioAllowanceInit() {
   radio_inbound_allowance_ = kInboundAllowanceInit;
+  fbl::AutoLock lock(&radio_ctrl_flow_mtx_);
   radio_outbound_allowance_ = 0;
+  lock.release();
 
   // try to open the device
   auto fidl_result = device_client_ptr_->Open();
@@ -57,6 +59,7 @@ void OtStackApp::RadioAllowanceInit() {
 }
 
 void OtStackApp::HandleRadioOnReadyForSendFrame(uint32_t allowance) {
+  fbl::AutoLock lock(&radio_ctrl_flow_mtx_);
   radio_outbound_allowance_ += allowance;
 }
 
@@ -68,10 +71,12 @@ void OtStackApp::HandleClientReadyToReceiveFrames(uint32_t allowance) {
 }
 
 void OtStackApp::UpdateRadioOutboundAllowance() {
+  fbl::AutoLock lock(&radio_ctrl_flow_mtx_);
   OT_STACK_ASSERT(radio_outbound_allowance_ > 0);
-  radio_outbound_allowance_--;
+  uint32_t radio_outbound_allowance_dbg = --radio_outbound_allowance_;
+  lock.release();
   radio_outbound_cnt++;
-  FX_LOGS(DEBUG) << "ot-stack: updated radio_outbound_allowance_:" << radio_outbound_allowance_;
+  FX_LOGS(DEBUG) << "ot-stack: updated radio_outbound_allowance_:" << radio_outbound_allowance_dbg;
 }
 
 void OtStackApp::UpdateRadioInboundAllowance() {
@@ -189,10 +194,13 @@ OtStackApp::OtStackCallBackImpl::OtStackCallBackImpl(OtStackApp& app) : app_(app
 // TODO (jiamingw): flow control, and timeout when it is unable to send out the packet
 void OtStackApp::OtStackCallBackImpl::SendOneFrameToRadio(uint8_t* buffer, uint32_t size) {
   auto data = fidl::VectorView<uint8_t>::FromExternal(buffer, size);
+  fbl::AutoLock lock(&app_.radio_ctrl_flow_mtx_);
   if (app_.radio_outbound_allowance_ == 0) {
+    lock.release();
     FX_LOGS(ERROR) << "ot-stack: radio_outbound_allowance_ is 0, cannot send packet";
     return;
   }
+  lock.release();
   app_.device_client_ptr_->SendFrame(std::move(data));
   app_.UpdateRadioOutboundAllowance();
 }
