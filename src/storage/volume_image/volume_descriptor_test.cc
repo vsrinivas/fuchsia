@@ -5,6 +5,7 @@
 #include "src/storage/volume_image/volume_descriptor.h"
 
 #include <lib/fit/function.h>
+#include <zircon/assert.h>
 
 #include <limits>
 #include <string_view>

@@ -90,7 +90,7 @@ INSTANTIATE_TEST_SUITE_P(
                     BlockSizeParam{.block_size = 4096, .expected_id = LZ4F_max4MB},
                     BlockSizeParam{.block_size = 999999999, .expected_id = LZ4F_max4MB}));
 
-fpromise::result<void, std::string> HandlerReturnsOk(fbl::Span<const uint8_t> /*unused*/) {
+fpromise::result<void, std::string> HandlerReturnsOk(cpp20::span<const uint8_t> /*unused*/) {
   return fpromise::ok();
 }
 
@@ -170,8 +170,8 @@ TEST(Lz4CompressorTest, PreparedAfterCallingCompressIsError) {
 
   auto prepare_result = compressor.Prepare(&HandlerReturnsOk);
   ASSERT_TRUE(prepare_result.is_ok()) << prepare_result.error();
-  auto compress_result =
-      compressor.Compress(fbl::Span(reinterpret_cast<const uint8_t*>(kData.data()), kData.size()));
+  auto compress_result = compressor.Compress(
+      cpp20::span(reinterpret_cast<const uint8_t*>(kData.data()), kData.size()));
   EXPECT_TRUE(compress_result.is_ok());
   EXPECT_TRUE(compressor.Prepare(&HandlerReturnsOk).is_error());
 }
@@ -187,8 +187,8 @@ TEST(Lz4CompressorTest, PreparedAfterCallingFinalizeIsOk) {
 
   auto prepare_result = compressor.Prepare(&HandlerReturnsOk);
   ASSERT_TRUE(prepare_result.is_ok()) << prepare_result.error();
-  auto compress_result =
-      compressor.Compress(fbl::Span(reinterpret_cast<const uint8_t*>(kData.data()), kData.size()));
+  auto compress_result = compressor.Compress(
+      cpp20::span(reinterpret_cast<const uint8_t*>(kData.data()), kData.size()));
   EXPECT_TRUE(compress_result.is_ok()) << compress_result.error();
   EXPECT_TRUE(compressor.Finalize().is_ok());
 
@@ -207,8 +207,8 @@ TEST(Lz4CompressorTest, CompressWithCallingPrepareIsOk) {
 
   auto prepare_result = compressor.Prepare(&HandlerReturnsOk);
   ASSERT_TRUE(prepare_result.is_ok()) << prepare_result.error();
-  auto compress_result =
-      compressor.Compress(fbl::Span(reinterpret_cast<const uint8_t*>(kData.data()), kData.size()));
+  auto compress_result = compressor.Compress(
+      cpp20::span(reinterpret_cast<const uint8_t*>(kData.data()), kData.size()));
   ASSERT_TRUE(compress_result.is_ok()) << compress_result.error();
 }
 
@@ -232,8 +232,8 @@ TEST(Lz4CompressorTest, CompressForwardsHandlerError) {
   ASSERT_TRUE(prepare_result.is_ok()) << prepare_result.error();
   should_fail = true;
 
-  auto compress_result =
-      compressor.Compress(fbl::Span(reinterpret_cast<const uint8_t*>(kData.data()), kData.size()));
+  auto compress_result = compressor.Compress(
+      cpp20::span(reinterpret_cast<const uint8_t*>(kData.data()), kData.size()));
   ASSERT_TRUE(compress_result.is_error());
   EXPECT_EQ(compress_result.error(), kHandlerError);
 }
@@ -247,8 +247,8 @@ TEST(Lz4CompressorTest, CompressWithoutCallingPrepareIsError) {
   ASSERT_TRUE(compressor_result.is_ok()) << compressor_result.error();
   Lz4Compressor compressor = compressor_result.take_value();
 
-  auto compress_result =
-      compressor.Compress(fbl::Span(reinterpret_cast<const uint8_t*>(kData.data()), kData.size()));
+  auto compress_result = compressor.Compress(
+      cpp20::span(reinterpret_cast<const uint8_t*>(kData.data()), kData.size()));
   ASSERT_TRUE(compress_result.is_error());
 }
 
@@ -285,8 +285,8 @@ TEST(Lz4CompressorTest, FinalizeForwardsHandlerError) {
         return fpromise::ok();
       });
   ASSERT_TRUE(prepare_result.is_ok()) << prepare_result.error();
-  auto compress_result =
-      compressor.Compress(fbl::Span(reinterpret_cast<const uint8_t*>(kData.data()), kData.size()));
+  auto compress_result = compressor.Compress(
+      cpp20::span(reinterpret_cast<const uint8_t*>(kData.data()), kData.size()));
   ASSERT_TRUE(compress_result.is_ok());
   should_fail = true;
   auto finalize_result = compressor.Finalize();
@@ -335,7 +335,7 @@ TEST(Lz4CompressorTest, CompressedDataMatchesUncompressedDataWhenDecompressed) {
   // Copy |kCompressionChunkSize| at a time.
   for (size_t i = 0; i < kCompressionChunkCount; ++i) {
     auto compress_result = compressor.Compress(
-        fbl::Span(uncompressed_data.data() + (i * kCompressionChunkSize), kCompressionChunkSize));
+        cpp20::span(uncompressed_data.data() + (i * kCompressionChunkSize), kCompressionChunkSize));
   }
 
   auto finalize_result = compressor.Finalize();

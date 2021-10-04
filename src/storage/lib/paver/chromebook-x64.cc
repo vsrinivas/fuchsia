@@ -367,7 +367,7 @@ zx::status<> CrosDevicePartitioner::WipePartitionTables() const {
 }
 
 zx::status<> CrosDevicePartitioner::ValidatePayload(const PartitionSpec& spec,
-                                                    fbl::Span<const uint8_t> data) const {
+                                                    cpp20::span<const uint8_t> data) const {
   if (!SupportsPartition(spec)) {
     ERROR("Unsupported partition %s\n", spec.ToString().c_str());
     return zx::error(ZX_ERR_NOT_SUPPORTED);

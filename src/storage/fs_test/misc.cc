@@ -16,7 +16,7 @@
 
 namespace fs_test {
 
-void CheckDirectoryContents(DIR* dir, fbl::Span<const ExpectedDirectoryEntry> entries) {
+void CheckDirectoryContents(DIR* dir, cpp20::span<const ExpectedDirectoryEntry> entries) {
   rewinddir(dir);
   std::vector<bool> seen(entries.size());
   size_t total_seen = 0;
@@ -43,14 +43,15 @@ void CheckDirectoryContents(DIR* dir, fbl::Span<const ExpectedDirectoryEntry> en
   ASSERT_EQ(readdir(dir), nullptr) << "There exists an entry we didn't expect to see";
 }
 
-void CheckDirectoryContents(const char* dirname, fbl::Span<const ExpectedDirectoryEntry> entries) {
+void CheckDirectoryContents(const char* dirname,
+                            cpp20::span<const ExpectedDirectoryEntry> entries) {
   DIR* dir = opendir(dirname);
   CheckDirectoryContents(dir, entries);
   ASSERT_EQ(closedir(dir), 0);
 }
 
 // Check the contents of a file are what we expect
-void CheckFileContents(int fd, fbl::Span<const uint8_t> expected) {
+void CheckFileContents(int fd, cpp20::span<const uint8_t> expected) {
   ASSERT_EQ(lseek(fd, 0, SEEK_SET), 0);
   std::vector<uint8_t> buffer(expected.size());
   ASSERT_EQ(read(fd, buffer.data(), buffer.size()), static_cast<ssize_t>(buffer.size()));

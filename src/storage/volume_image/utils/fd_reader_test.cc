@@ -5,6 +5,7 @@
 #include "src/storage/volume_image/utils/fd_reader.h"
 
 #include <fcntl.h>
+#include <lib/stdcompat/span.h>
 
 #include <array>
 #include <cstdint>
@@ -14,7 +15,6 @@
 #include <limits>
 
 #include <fbl/algorithm.h>
-#include <fbl/span.h>
 #include <fbl/unique_fd.h>
 #include <gtest/gtest.h>
 
@@ -44,7 +44,7 @@ TEST(FdReaderTest, CreateFromExistingFileIsOk) {
 }
 
 // Wrapper on top of posix, to guarantee to write all contents to the file or fail.
-void Write(int fd, fbl::Span<const char> buffer) {
+void Write(int fd, cpp20::span<const char> buffer) {
   uint64_t written_bytes = 0;
   while (written_bytes < buffer.size()) {
     auto return_code = write(fd, buffer.data() + written_bytes, buffer.size() - written_bytes);
@@ -64,7 +64,7 @@ TEST(FdReaderTest, ReadReturnsCorrectContents) {
   fbl::unique_fd target_fd(open(file.path().data(), O_RDWR | O_APPEND));
   ASSERT_TRUE(target_fd.is_valid());
   ASSERT_NO_FATAL_FAILURE(
-      Write(target_fd.get(), fbl::Span(kFileContents.data(), kFileContents.size())));
+      Write(target_fd.get(), cpp20::span(kFileContents.data(), kFileContents.size())));
 
   auto fd_reader_or_error = FdReader::Create(file.path());
   ASSERT_TRUE(fd_reader_or_error.is_ok()) << fd_reader_or_error.error();
@@ -88,7 +88,7 @@ TEST(FdReaderTest, ReadReturnsCorrectContentsAtOffset) {
   fbl::unique_fd target_fd(open(file.path().data(), O_RDWR | O_APPEND));
   ASSERT_TRUE(target_fd.is_valid());
   ASSERT_NO_FATAL_FAILURE(
-      Write(target_fd.get(), fbl::Span(kFileContents.data(), kFileContents.size())));
+      Write(target_fd.get(), cpp20::span(kFileContents.data(), kFileContents.size())));
 
   auto fd_reader_or_error = FdReader::Create(file.path());
   ASSERT_TRUE(fd_reader_or_error.is_ok()) << fd_reader_or_error.error();
@@ -112,7 +112,7 @@ TEST(FdReaderTest, ReadAreIdempotent) {
   fbl::unique_fd target_fd(open(file.path().data(), O_RDWR | O_APPEND));
   ASSERT_TRUE(target_fd.is_valid());
   ASSERT_NO_FATAL_FAILURE(
-      Write(target_fd.get(), fbl::Span(kFileContents.data(), kFileContents.size())));
+      Write(target_fd.get(), cpp20::span(kFileContents.data(), kFileContents.size())));
 
   auto fd_reader_or_error = FdReader::Create(file.path());
   ASSERT_TRUE(fd_reader_or_error.is_ok()) << fd_reader_or_error.error();
@@ -123,7 +123,7 @@ TEST(FdReaderTest, ReadAreIdempotent) {
   // This checks that, for example a different implementation using read instead of pread, would
   // do appropiate seeks before reading.
   for (uint64_t offset = 0; offset < kFileContents.size() - 1; ++offset) {
-    auto read_result = reader.Read(offset, fbl::Span(buffer.data(), buffer.size() - offset));
+    auto read_result = reader.Read(offset, cpp20::span(buffer.data(), buffer.size() - offset));
     ASSERT_TRUE(read_result.is_ok()) << read_result.error();
 
     EXPECT_TRUE(
@@ -141,7 +141,7 @@ TEST(FdReaderTest, ReadOutOfBoundsIsError) {
   fbl::unique_fd target_fd(open(file.path().data(), O_RDWR | O_APPEND));
   ASSERT_TRUE(target_fd.is_valid());
   ASSERT_NO_FATAL_FAILURE(
-      Write(target_fd.get(), fbl::Span(kFileContents.data(), kFileContents.size())));
+      Write(target_fd.get(), cpp20::span(kFileContents.data(), kFileContents.size())));
 
   auto fd_reader_or_error = FdReader::Create(file.path());
   ASSERT_TRUE(fd_reader_or_error.is_ok()) << fd_reader_or_error.error();
@@ -150,10 +150,10 @@ TEST(FdReaderTest, ReadOutOfBoundsIsError) {
   std::vector<uint8_t> buffer(kFileContents.size(), 0);
 
   // Offset out of bounds.
-  EXPECT_TRUE(reader.Read(kFileContents.size(), fbl::Span(buffer.data(), 1)).is_error());
+  EXPECT_TRUE(reader.Read(kFileContents.size(), cpp20::span(buffer.data(), 1)).is_error());
 
   // Try to read too much.
-  EXPECT_TRUE(reader.Read(1, fbl::Span(buffer.data(), buffer.size())).is_error());
+  EXPECT_TRUE(reader.Read(1, cpp20::span(buffer.data(), buffer.size())).is_error());
 }
 
 }  // namespace

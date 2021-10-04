@@ -5,6 +5,7 @@
 #include "device-partitioner.h"
 
 #include <lib/fdio/fd.h>
+#include <lib/stdcompat/span.h>
 #include <lib/zx/status.h>
 #include <zircon/errors.h>
 
@@ -12,7 +13,6 @@
 #include <unordered_map>
 #include <utility>
 
-#include <fbl/span.h>
 #include <fbl/string.h>
 #include <fbl/string_printf.h>
 #include <gpt/gpt.h>
@@ -265,7 +265,7 @@ zx::status<> FixedDevicePartitioner::WipePartitionTables() const {
 }
 
 zx::status<> FixedDevicePartitioner::ValidatePayload(const PartitionSpec& spec,
-                                                     fbl::Span<const uint8_t> data) const {
+                                                     cpp20::span<const uint8_t> data) const {
   if (!SupportsPartition(spec)) {
     ERROR("Unsupported partition %s\n", spec.ToString().c_str());
     return zx::error(ZX_ERR_NOT_SUPPORTED);

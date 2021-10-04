@@ -73,7 +73,7 @@ inline fpromise::result<fvm::Header, std::string> ConvertToFvmHeader(
 }
 
 fpromise::result<fvm::Metadata, std::string> ConvertToFvmMetadata(
-    const fvm::Header& header, fbl::Span<const PartitionEntry> partition_entries);
+    const fvm::Header& header, cpp20::span<const PartitionEntry> partition_entries);
 
 // Returns a |fvm::SparseImage| representation of |descriptor| on success.
 fvm::SparseImage GenerateHeader(const FvmDescriptor& descriptor);

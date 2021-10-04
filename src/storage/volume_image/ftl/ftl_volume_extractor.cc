@@ -5,6 +5,7 @@
 #include <assert.h>
 #include <getopt.h>
 #include <inttypes.h>
+#include <lib/stdcompat/span.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -13,7 +14,6 @@
 #include <vector>
 
 #include <fbl/algorithm.h>
-#include <fbl/span.h>
 
 #include "src/storage/volume_image/ftl/ftl_test_helper.h"
 #include "zircon/system/ulib/ftl/include/lib/ftl/volume.h"
@@ -29,7 +29,7 @@ class FakeFtl : public ftl::FtlInstance {
 
 enum BlockStatus { kOk, kBadBlock, kReadFailure };
 
-BlockStatus block_status(fbl::Span<uint8_t> data) {
+BlockStatus block_status(cpp20::span<uint8_t> data) {
   if (!memcmp(data.data(), "BADBLOCK", 8)) {
     return BlockStatus::kBadBlock;
   }
@@ -60,7 +60,8 @@ bool LoadData(InMemoryRawNand* nand, FILE* data) {
       if (actual_read == 0 && feof(data)) {
         goto done;
       } else if (actual_read != nand->options.page_size / 2) {
-        fprintf(stderr, "ERROR: Failed to read, or read partial page for page number: %u\n", page_count);
+        fprintf(stderr, "ERROR: Failed to read, or read partial page for page number: %u\n",
+                page_count);
         return false;
       }
       data_offset += nand->options.page_size / 2;
@@ -73,7 +74,7 @@ bool LoadData(InMemoryRawNand* nand, FILE* data) {
       spare_offset += nand->options.oob_bytes_size / 2;
     }
 
-    auto status = block_status(fbl::Span(&data_buf[0], 8));
+    auto status = block_status(cpp20::span(&data_buf[0], 8));
     switch (status) {
       case BlockStatus::kOk: {
         nand->page_data[page_count] = std::move(data_buf);

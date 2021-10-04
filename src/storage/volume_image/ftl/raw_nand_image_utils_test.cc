@@ -4,10 +4,11 @@
 
 #include "src/storage/volume_image/ftl/raw_nand_image_utils.h"
 
+#include <lib/stdcompat/span.h>
+
 #include <cstdint>
 #include <limits>
 
-#include <fbl/span.h>
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
@@ -22,7 +23,7 @@ class BufferWriter final : public Writer {
   explicit BufferWriter(size_t size) : buffer_(size, std::numeric_limits<uint8_t>::max()) {}
 
   fpromise::result<void, std::string> Write(uint64_t offset,
-                                            fbl::Span<const uint8_t> buffer) final {
+                                            cpp20::span<const uint8_t> buffer) final {
     if (offset + buffer.size() > buffer_.size()) {
       return fpromise::error("Out of Range");
     }
@@ -30,7 +31,7 @@ class BufferWriter final : public Writer {
     return fpromise::ok();
   }
 
-  fbl::Span<const uint8_t> data() const { return buffer_; }
+  cpp20::span<const uint8_t> data() const { return buffer_; }
 
  private:
   std::vector<uint8_t> buffer_;
@@ -72,8 +73,8 @@ TEST(RawNandImageUtilsTest, RawNandImageGetNextEraseBlockOffsetBumpsToNextBlockS
 TEST(RawNandImageUtilsTest, RawNandImageWritePageCompliesWithFormat) {
   constexpr uint64_t kWriterOffset = 32;
   std::vector<uint8_t> buffer(24, 0xFF);
-  auto page = fbl::Span<uint8_t>(buffer).subspan(0, 16);
-  auto oob = fbl::Span<uint8_t>(buffer).subspan(16, 8);
+  auto page = cpp20::span<uint8_t>(buffer).subspan(0, 16);
+  auto oob = cpp20::span<uint8_t>(buffer).subspan(16, 8);
 
   BufferWriter writer(kWriterOffset + buffer.size());
 
@@ -90,8 +91,8 @@ TEST(RawNandImageUtilsTest, RawNandImageWritePageCompliesWithFormat) {
 TEST(RawNandImageUtilsTest, RawNandImageWriteReturnsErrors) {
   constexpr uint64_t kWriterOffset = 32;
   std::vector<uint8_t> buffer(24, 0xFF);
-  auto page = fbl::Span<uint8_t>(buffer).subspan(0, 16);
-  auto oob = fbl::Span<uint8_t>(buffer).subspan(16, 8);
+  auto page = cpp20::span<uint8_t>(buffer).subspan(0, 16);
+  auto oob = cpp20::span<uint8_t>(buffer).subspan(16, 8);
 
   BufferWriter writer(kWriterOffset);
 

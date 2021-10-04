@@ -11,6 +11,7 @@
 #include <lib/fidl/epitaph.h>
 #include <lib/fzl/vmo-mapper.h>
 #include <lib/service/llcpp/service.h>
+#include <lib/stdcompat/span.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/time.h>
 #include <lib/zx/vmo.h>
@@ -28,7 +29,6 @@
 
 #include <fbl/algorithm.h>
 #include <fbl/alloc_checker.h>
-#include <fbl/span.h>
 #include <fbl/unique_fd.h>
 #include <fs-management/fvm.h>
 #include <fs-management/mount.h>
@@ -257,9 +257,9 @@ zx::status<fuchsia_mem::wire::Buffer> PartitionRead(const DevicePartitioner& par
   // Try to find ZBI size if asset is a ZBI. This won't work on signed ZBI, nor vbmeta assets.
   fzl::VmoMapper mapper;
   if (zx::make_status(mapper.Map(vmo, 0, partition_size, ZX_VM_PERM_READ)).is_ok()) {
-    auto data = fbl::Span(static_cast<uint8_t*>(mapper.start()), mapper.size());
+    auto data = cpp20::span(static_cast<uint8_t*>(mapper.start()), mapper.size());
     const zbi_header_t* container_header;
-    fbl::Span<const uint8_t> container_data;
+    cpp20::span<const uint8_t> container_data;
     if (ExtractZbiPayload(data, &container_header, &container_data)) {
       asset_size = container_data.size();
     }
@@ -281,7 +281,7 @@ zx::status<> ValidatePartitionPayload(const DevicePartitioner& partitioner,
   ZX_ASSERT(payload_mapper.size() >= payload_size);
 
   auto payload =
-      fbl::Span<const uint8_t>(static_cast<const uint8_t*>(payload_mapper.start()), payload_size);
+      cpp20::span<const uint8_t>(static_cast<const uint8_t*>(payload_mapper.start()), payload_size);
   return partitioner.ValidatePayload(spec, payload);
 }
 

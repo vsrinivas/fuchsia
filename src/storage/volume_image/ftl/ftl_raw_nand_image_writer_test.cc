@@ -5,6 +5,7 @@
 #include "src/storage/volume_image/ftl/ftl_raw_nand_image_writer.h"
 
 #include <lib/fpromise/result.h>
+#include <lib/stdcompat/span.h>
 
 #include <array>
 #include <cinttypes>
@@ -12,7 +13,6 @@
 #include <type_traits>
 #include <vector>
 
-#include <fbl/span.h>
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
@@ -41,7 +41,8 @@ class RamRawNandImageWriter : public Writer {
  public:
   explicit RamRawNandImageWriter(RawNandOptions options) : options_(options) {}
 
-  fpromise::result<void, std::string> Write(uint64_t offset, fbl::Span<const uint8_t> data) final {
+  fpromise::result<void, std::string> Write(uint64_t offset,
+                                            cpp20::span<const uint8_t> data) final {
     uint32_t data_offset = 0;
     if (offset < sizeof(RawNandImageHeader)) {
       data_offset = sizeof(RawNandImageHeader) - offset;
@@ -196,7 +197,7 @@ TEST(FtlRawNandImageWriterTest, WriteAtAlignedOffsetWithWrongBufferSizeIsError) 
 }
 
 // Fills |buffer| with a sequence starting at shift up to upper limit, and then jumps back to zero.
-void FillBuffer(fbl::Span<uint8_t> buffer, uint64_t shift) {
+void FillBuffer(cpp20::span<uint8_t> buffer, uint64_t shift) {
   for (auto& b : buffer) {
     b = shift;
     shift = (shift + 1) % std::numeric_limits<uint8_t>::max();
@@ -245,8 +246,8 @@ TEST(FtlRawNandImageWriterTest, WriteAtAlignedOffsetWithExpectedBufferSizeIsOk) 
     SCOPED_TRACE("Logical Page " + std::to_string(i));
     FillBuffer(page_buffer, i);
     FillBuffer(oob_buffer, i + device_options.oob_bytes_size);
-    auto page_view = fbl::Span<const uint8_t>(page_buffer);
-    auto oob_view = fbl::Span<const uint8_t>(oob_buffer);
+    auto page_view = cpp20::span<const uint8_t>(page_buffer);
+    auto oob_view = cpp20::span<const uint8_t>(oob_buffer);
 
     EXPECT_THAT(writer.pages().at(2 * i).data_,
                 testing::ElementsAreArray(page_view.subspan(0, device_options.page_size)));

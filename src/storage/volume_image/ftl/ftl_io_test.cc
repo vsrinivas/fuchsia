@@ -30,7 +30,7 @@ RawNandOptions GetOptions() {
   return options;
 }
 
-void FillRandomRange(fbl::Span<uint8_t> data) {
+void FillRandomRange(cpp20::span<uint8_t> data) {
   // fill in a range with random contents.
   unsigned int seed = ::testing::UnitTest::GetInstance()->random_seed();
   size_t start = rand_r(&seed) % (data.size() - 1);

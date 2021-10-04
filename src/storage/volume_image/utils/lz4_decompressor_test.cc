@@ -56,8 +56,8 @@ TEST(Lz4DecompressorTest, PrepareAfterConstructionIsOk) {
   ASSERT_TRUE(decompressor_or.is_ok()) << decompressor_or.error();
   auto decompressor = decompressor_or.take_value();
 
-  EXPECT_TRUE(
-      decompressor.Prepare([](fbl::Span<const uint8_t> buffer) { return fpromise::ok(); }).is_ok());
+  EXPECT_TRUE(decompressor.Prepare([](cpp20::span<const uint8_t> buffer) { return fpromise::ok(); })
+                  .is_ok());
 }
 
 TEST(Lz4DecompressorTest, DecompressWithoutPrepareIsError) {
@@ -67,7 +67,7 @@ TEST(Lz4DecompressorTest, DecompressWithoutPrepareIsError) {
   ASSERT_TRUE(decompressor_or.is_ok()) << decompressor_or.error();
   auto decompressor = decompressor_or.take_value();
 
-  EXPECT_TRUE(decompressor.Decompress(fbl::Span<const uint8_t>()).is_error());
+  EXPECT_TRUE(decompressor.Decompress(cpp20::span<const uint8_t>()).is_error());
 }
 
 TEST(Lz4DecompressorTest, FinalizeWithoutPrepareIsError) {
@@ -91,7 +91,7 @@ TEST(Lz4DecompressorTest, DecompressWithPrepareAndSizeHintIsOk) {
 
   auto decompressor = decompressor_or.take_value();
   ASSERT_TRUE(decompressor
-                  .Prepare([](fbl::Span<const uint8_t> buffer) {
+                  .Prepare([](cpp20::span<const uint8_t> buffer) {
                     EXPECT_THAT(buffer, testing::ElementsAreArray(kData));
                     return fpromise::ok();
                   })
@@ -120,9 +120,9 @@ TEST(Lz4DecompressorTest, DecompressOnMultipleStepsIsOk) {
   size_t total_consumed_bytes = 0;
   size_t decompressed_data_offset = 0;
   ASSERT_TRUE(decompressor
-                  .Prepare([&](fbl::Span<const uint8_t> buffer) {
+                  .Prepare([&](cpp20::span<const uint8_t> buffer) {
                     EXPECT_THAT(buffer,
-                                testing::ElementsAreArray(fbl::Span<const uint8_t>(kData).subspan(
+                                testing::ElementsAreArray(cpp20::span<const uint8_t>(kData).subspan(
                                     decompressed_data_offset, buffer.size())));
                     decompressed_data_offset += buffer.size();
                     return fpromise::ok();
@@ -133,8 +133,8 @@ TEST(Lz4DecompressorTest, DecompressOnMultipleStepsIsOk) {
 
   bool is_decompression_done = false;
   while (!is_decompression_done) {
-    auto decompression_result =
-        decompressor.Decompress(fbl::Span<uint8_t>(data_or.value()).subspan(total_consumed_bytes));
+    auto decompression_result = decompressor.Decompress(
+        cpp20::span<uint8_t>(data_or.value()).subspan(total_consumed_bytes));
     ASSERT_TRUE(decompression_result.is_ok()) << decompression_result.is_error();
 
     auto [hint, consumed_bytes] = decompression_result.take_value();
@@ -151,8 +151,8 @@ TEST(Lz4DecompressorTest, FinalizeWithPrepareIsOk) {
 
   ASSERT_TRUE(decompressor_or.is_ok()) << decompressor_or.error();
   auto decompressor = decompressor_or.take_value();
-  ASSERT_TRUE(
-      decompressor.Prepare([](fbl::Span<const uint8_t> buffer) { return fpromise::ok(); }).is_ok());
+  ASSERT_TRUE(decompressor.Prepare([](cpp20::span<const uint8_t> buffer) { return fpromise::ok(); })
+                  .is_ok());
 
   EXPECT_TRUE(decompressor.Finalize().is_ok());
 }
@@ -163,13 +163,13 @@ TEST(Lz4DecompressorTest, PrepareAfterFinalizeIsOk) {
 
   ASSERT_TRUE(decompressor_or.is_ok()) << decompressor_or.error();
   auto decompressor = decompressor_or.take_value();
-  ASSERT_TRUE(
-      decompressor.Prepare([](fbl::Span<const uint8_t> buffer) { return fpromise::ok(); }).is_ok());
+  ASSERT_TRUE(decompressor.Prepare([](cpp20::span<const uint8_t> buffer) { return fpromise::ok(); })
+                  .is_ok());
 
   EXPECT_TRUE(decompressor.Finalize().is_ok());
 
-  ASSERT_TRUE(
-      decompressor.Prepare([](fbl::Span<const uint8_t> buffer) { return fpromise::ok(); }).is_ok());
+  ASSERT_TRUE(decompressor.Prepare([](cpp20::span<const uint8_t> buffer) { return fpromise::ok(); })
+                  .is_ok());
 }
 
 }  // namespace

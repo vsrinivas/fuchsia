@@ -4,10 +4,10 @@
 
 #include "src/storage/volume_image/fvm/fvm_metadata.h"
 
+#include <lib/stdcompat/span.h>
+
 #include <memory>
 #include <vector>
-
-#include <fbl/span.h>
 
 #include "src/storage/fvm/metadata.h"
 #include "src/storage/fvm/metadata_buffer.h"
@@ -17,7 +17,7 @@ namespace storage::volume_image {
 
 fpromise::result<fvm::Metadata, std::string> FvmGetMetadata(const Reader& source_image) {
   fvm::Header header = {};
-  auto header_view = fbl::Span<uint8_t>(reinterpret_cast<uint8_t*>(&header), sizeof(fvm::Header));
+  auto header_view = cpp20::span<uint8_t>(reinterpret_cast<uint8_t*>(&header), sizeof(fvm::Header));
 
   if (auto header_read_result = source_image.Read(0, header_view); header_read_result.is_error()) {
     return header_read_result.take_error_result();
@@ -32,7 +32,7 @@ fpromise::result<fvm::Metadata, std::string> FvmGetMetadata(const Reader& source
   auto primary_metadata_buffer = std::make_unique<uint8_t[]>(header.GetMetadataAllocatedBytes());
   if (auto primary_metadata_read_result = source_image.Read(
           header.GetSuperblockOffset(fvm::SuperblockType::kPrimary),
-          fbl::Span<uint8_t>(primary_metadata_buffer.get(), header.GetMetadataAllocatedBytes()));
+          cpp20::span<uint8_t>(primary_metadata_buffer.get(), header.GetMetadataAllocatedBytes()));
       primary_metadata_read_result.is_error()) {
     return primary_metadata_read_result.take_error_result();
   }
@@ -40,9 +40,10 @@ fpromise::result<fvm::Metadata, std::string> FvmGetMetadata(const Reader& source
       std::move(primary_metadata_buffer), header.GetMetadataAllocatedBytes());
 
   auto secondary_metadata_buffer = std::make_unique<uint8_t[]>(header.GetMetadataAllocatedBytes());
-  if (auto secondary_metadata_read_result = source_image.Read(
-          header.GetSuperblockOffset(fvm::SuperblockType::kSecondary),
-          fbl::Span<uint8_t>(secondary_metadata_buffer.get(), header.GetMetadataAllocatedBytes()));
+  if (auto secondary_metadata_read_result =
+          source_image.Read(header.GetSuperblockOffset(fvm::SuperblockType::kSecondary),
+                            cpp20::span<uint8_t>(secondary_metadata_buffer.get(),
+                                                 header.GetMetadataAllocatedBytes()));
       secondary_metadata_read_result.is_error()) {
     return secondary_metadata_read_result.take_error_result();
   }

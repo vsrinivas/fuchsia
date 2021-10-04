@@ -42,7 +42,8 @@ class FakeReader final : public Reader {
  public:
   uint64_t length() const final { return 0; }
 
-  fpromise::result<void, std::string> Read(uint64_t offset, fbl::Span<uint8_t> buffer) const final {
+  fpromise::result<void, std::string> Read(uint64_t offset,
+                                           cpp20::span<uint8_t> buffer) const final {
     memset(buffer.data(), 0, buffer.size());
     if (offset == 0) {
       memcpy(buffer.data(), &superblock_, std::min(sizeof(superblock_), buffer.size()));
@@ -328,7 +329,7 @@ TEST(MinfsPartitionTest, PartitionDataAndReaderIsCorrectWithMinimumInodeCountHig
 
   minfs::Superblock sb_tmp = {};
   auto read_result = original_minfs_reader.Read(
-      0, fbl::Span<uint8_t>(reinterpret_cast<uint8_t*>(&sb_tmp), sizeof(sb_tmp)));
+      0, cpp20::span<uint8_t>(reinterpret_cast<uint8_t*>(&sb_tmp), sizeof(sb_tmp)));
   ASSERT_TRUE(read_result.is_ok()) << read_result.error();
 
   // Add as many inodes such that at least an extra slice is allocated.
@@ -414,7 +415,7 @@ TEST(MinfsPartitionTest, PartitionDataAndReaderIsCorrectWithMinimumDataBytesHigh
 
   minfs::Superblock sb_tmp = {};
   auto read_result = original_minfs_reader.Read(
-      0, fbl::Span<uint8_t>(reinterpret_cast<uint8_t*>(&sb_tmp), sizeof(sb_tmp)));
+      0, cpp20::span<uint8_t>(reinterpret_cast<uint8_t*>(&sb_tmp), sizeof(sb_tmp)));
   ASSERT_TRUE(read_result.is_ok()) << read_result.error();
 
   // Add as many inodes such that at least an extra slice is allocated.

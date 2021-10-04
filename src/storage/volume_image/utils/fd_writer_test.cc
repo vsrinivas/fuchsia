@@ -5,6 +5,7 @@
 #include "src/storage/volume_image/utils/fd_writer.h"
 
 #include <fcntl.h>
+#include <lib/stdcompat/span.h>
 
 #include <array>
 #include <cstdint>
@@ -14,7 +15,6 @@
 #include <limits>
 
 #include <fbl/algorithm.h>
-#include <fbl/span.h>
 #include <fbl/unique_fd.h>
 #include <gtest/gtest.h>
 
@@ -44,7 +44,7 @@ TEST(FdWriterTest, CreateFromExistingFileIsOk) {
 }
 
 // Wrapper on top of posix, to guarantee to write all contents to the file or fail.
-void Read(int fd, fbl::Span<char> buffer) {
+void Read(int fd, cpp20::span<char> buffer) {
   uint64_t read_bytes = 0;
   while (read_bytes < buffer.size()) {
     auto return_code = read(fd, buffer.data() + read_bytes, buffer.size() - read_bytes);
@@ -65,7 +65,7 @@ TEST(FdWriterTest, WriteUpdateContentsReturnsNoError) {
   ASSERT_TRUE(fd_writer_or_error.is_ok()) << fd_writer_or_error.error();
   auto writer = fd_writer_or_error.take_value();
   auto write_result = writer.Write(
-      0, fbl::Span(reinterpret_cast<const uint8_t*>(kFileContents.data()), kFileContents.size()));
+      0, cpp20::span(reinterpret_cast<const uint8_t*>(kFileContents.data()), kFileContents.size()));
   ASSERT_TRUE(write_result.is_ok()) << write_result.error();
 
   std::vector<char> buffer(kFileContents.size(), 0);
@@ -87,7 +87,7 @@ TEST(FdWriterTest, WriteReturnsCorrectContentsAtOffset) {
   auto writer = fd_writer_or_error.take_value();
   auto write_result = writer.Write(
       kOffset,
-      fbl::Span(reinterpret_cast<const uint8_t*>(kFileContents.data()), kFileContents.size())
+      cpp20::span(reinterpret_cast<const uint8_t*>(kFileContents.data()), kFileContents.size())
           .subspan(kOffset));
   ASSERT_TRUE(write_result.is_ok()) << write_result.error();
 
@@ -112,7 +112,7 @@ TEST(FdWriterTest, WritesAreIdempotent) {
   // If writes are idempotent, we should see the same written value as if we written once.
   for (unsigned int i = 0; i < kFileContents.size() - 1; i++) {
     auto write_result = writer.Write(
-        i, fbl::Span(reinterpret_cast<const uint8_t*>(kFileContents.data()), kFileContents.size())
+        i, cpp20::span(reinterpret_cast<const uint8_t*>(kFileContents.data()), kFileContents.size())
                .subspan(i));
     ASSERT_TRUE(write_result.is_ok()) << write_result.error();
   }
@@ -139,22 +139,22 @@ TEST(FdWriterTest, WritingPastEndOfFileIsOk) {
 
   // Try to write past the end.
   EXPECT_TRUE(writer
-                  .Write(0, fbl::Span(reinterpret_cast<const uint8_t*>(kFileContents.data()),
-                                      kFileContents.size()))
+                  .Write(0, cpp20::span(reinterpret_cast<const uint8_t*>(kFileContents.data()),
+                                        kFileContents.size()))
                   .is_ok());
 
   // Try to start writing at the end.
   EXPECT_TRUE(writer
                   .Write(kFileContents.size(),
-                         fbl::Span(reinterpret_cast<const uint8_t*>(kFileContents.data()),
-                                   kFileContents.size()))
+                         cpp20::span(reinterpret_cast<const uint8_t*>(kFileContents.data()),
+                                     kFileContents.size()))
                   .is_ok());
 
   // Try to start writing at random offset
   EXPECT_TRUE(writer
                   .Write(4 * kFileContents.size(),
-                         fbl::Span(reinterpret_cast<const uint8_t*>(kFileContents.data()),
-                                   kFileContents.size()))
+                         cpp20::span(reinterpret_cast<const uint8_t*>(kFileContents.data()),
+                                     kFileContents.size()))
                   .is_ok());
 
   std::vector<char> buffer(kFileContents.size() * 5, 0);

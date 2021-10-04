@@ -17,7 +17,8 @@ class FtlReader final : public Reader {
 
   uint64_t length() const final { return length_; }
 
-  fpromise::result<void, std::string> Read(uint64_t offset, fbl::Span<uint8_t> buffer) const final {
+  fpromise::result<void, std::string> Read(uint64_t offset,
+                                           cpp20::span<uint8_t> buffer) const final {
     if (offset % instance_->page_size() != 0) {
       return fpromise::error("FtlReader requires aligned offset(" + std::to_string(offset) +
                              ") at page boundaries(" + std::to_string(instance_->page_size()) +
@@ -69,7 +70,7 @@ class FtlWriter final : public Writer {
   ~FtlWriter() final { volume_->Flush(); }
 
   fpromise::result<void, std::string> Write(uint64_t offset,
-                                            fbl::Span<const uint8_t> buffer) final {
+                                            cpp20::span<const uint8_t> buffer) final {
     if (offset % instance_->page_size() != 0) {
       return fpromise::error("FtlWriter requires aligned offset(" + std::to_string(offset) +
                              ") at page boundaries(" + std::to_string(instance_->page_size()) +

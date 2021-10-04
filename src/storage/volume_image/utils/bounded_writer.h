@@ -3,12 +3,11 @@
 // found in the LICENSE file.
 
 #include <lib/fpromise/result.h>
+#include <lib/stdcompat/span.h>
 
 #include <cstdint>
 #include <memory>
 #include <string_view>
-
-#include <fbl/span.h>
 
 #include "src/storage/volume_image/utils/writer.h"
 
@@ -22,7 +21,7 @@ class BoundedWriter final : public Writer {
       : offset_(offset), length_(length), writer_(std::move(writer)) {}
 
   fpromise::result<void, std::string> Write(uint64_t offset,
-                                            fbl::Span<const uint8_t> buffer) final {
+                                            cpp20::span<const uint8_t> buffer) final {
     if (offset + buffer.size() > length_) {
       return fpromise::error(
           "BoundedWriter::Write out of bounds. offset: " + std::to_string(offset) + " byte_cout: " +

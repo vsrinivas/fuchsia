@@ -5,8 +5,8 @@
 #include "src/storage/lib/paver/nelson.h"
 
 #include <lib/fzl/owned-vmo-mapper.h>
+#include <lib/stdcompat/span.h>
 
-#include <fbl/span.h>
 #include <gpt/gpt.h>
 #include <soc/aml-common/aml-guid.h>
 
@@ -225,7 +225,7 @@ zx::status<> NelsonPartitioner::WipePartitionTables() const {
 }
 
 zx::status<> NelsonPartitioner::ValidatePayload(const PartitionSpec& spec,
-                                                fbl::Span<const uint8_t> data) const {
+                                                cpp20::span<const uint8_t> data) const {
   if (!SupportsPartition(spec)) {
     ERROR("Unsupported partition %s\n", spec.ToString().c_str());
     return zx::error(ZX_ERR_NOT_SUPPORTED);

@@ -17,7 +17,7 @@ namespace {
 class FakeWriter final : public Writer {
  public:
   fpromise::result<void, std::string> Write(uint64_t offset,
-                                            fbl::Span<const uint8_t> buffer) final {
+                                            cpp20::span<const uint8_t> buffer) final {
     if (offset + buffer.size() > data_.size()) {
       data_.resize(offset + buffer.size(), 0);
     }

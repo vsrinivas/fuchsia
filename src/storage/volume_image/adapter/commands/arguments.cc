@@ -19,7 +19,7 @@ namespace storage::volume_image {
 namespace {
 
 // Returns the first matching argument in |arguments| with |name|.
-std::optional<size_t> FindArgumentByName(fbl::Span<std::string_view> arguments,
+std::optional<size_t> FindArgumentByName(cpp20::span<std::string_view> arguments,
                                          std::string_view name) {
   for (size_t i = 0; i < arguments.size(); ++i) {
     if (arguments[i] == name) {
@@ -35,7 +35,7 @@ std::optional<size_t> FindArgumentByName(fbl::Span<std::string_view> arguments,
 // argument.
 // If presence is required, then |FindArgumentByName| should be called instead.
 fpromise::result<std::optional<size_t>, std::string> FindArgumentValueByName(
-    fbl::Span<std::string_view> arguments, std::string_view name) {
+    cpp20::span<std::string_view> arguments, std::string_view name) {
   auto argument_index = FindArgumentByName(arguments, name);
 
   if (!argument_index.has_value()) {
@@ -92,7 +92,7 @@ fpromise::result<uint64_t, std::string> ParseSize(std::string_view size_str) {
 // If |arguments| contains |argument| and |argument| has a value, then |target| is updated to the
 // converted value.
 template <typename T>
-fpromise::result<void, std::string> GetArgumentValue(fbl::Span<std::string_view> arguments,
+fpromise::result<void, std::string> GetArgumentValue(cpp20::span<std::string_view> arguments,
                                                      std::string_view argument, T& target) {
   auto index_or = FindArgumentValueByName(arguments, argument);
   if (index_or.is_error()) {
@@ -110,7 +110,7 @@ fpromise::result<void, std::string> GetArgumentValue(fbl::Span<std::string_view>
 // If |arguments| contains |argument| and |argument|'s value is a valid representation of a size
 // value, then |target| is updated to the converted value.
 template <typename T>
-fpromise::result<void, std::string> GetSizeArgumentValue(fbl::Span<std::string_view> arguments,
+fpromise::result<void, std::string> GetSizeArgumentValue(cpp20::span<std::string_view> arguments,
                                                          std::string_view argument, T& target) {
   std::optional<std::string> size_str;
   if (auto result = GetArgumentValue(arguments, argument, size_str); result.is_error()) {
@@ -131,7 +131,7 @@ fpromise::result<void, std::string> GetSizeArgumentValue(fbl::Span<std::string_v
 }  // namespace
 
 fpromise::result<std::vector<PartitionParams>, std::string> PartitionParams::FromArguments(
-    fbl::Span<std::string_view> arguments, const FvmOptions& options) {
+    cpp20::span<std::string_view> arguments, const FvmOptions& options) {
   constexpr std::array<std::string_view, 5> kPartitionArgs = {"--blob", "--data", "--data-unsafe",
                                                               "--system", "--default"};
   std::vector<size_t> partition_args_indexes;
@@ -236,7 +236,7 @@ fpromise::result<std::vector<PartitionParams>, std::string> PartitionParams::Fro
 }
 
 fpromise::result<CreateParams, std::string> CreateParams::FromArguments(
-    fbl::Span<std::string_view> arguments) {
+    cpp20::span<std::string_view> arguments) {
   // Create takes an output path, and is of the form:
   // bin output_path create/sparse args
   if (arguments.size() < 3) {
@@ -314,7 +314,7 @@ fpromise::result<CreateParams, std::string> CreateParams::FromArguments(
 }
 
 fpromise::result<PaveParams, std::string> PaveParams::FromArguments(
-    fbl::Span<std::string_view> arguments) {
+    cpp20::span<std::string_view> arguments) {
   PaveParams params;
   if (arguments.size() < 3) {
     return fpromise::error("Not enough arguments for 'pave' command.");
@@ -369,7 +369,7 @@ fpromise::result<PaveParams, std::string> PaveParams::FromArguments(
 }
 
 fpromise::result<ExtendParams, std::string> ExtendParams::FromArguments(
-    fbl::Span<std::string_view> arguments) {
+    cpp20::span<std::string_view> arguments) {
   ExtendParams params;
   if (arguments.size() < 3) {
     return fpromise::error("Not enough arguments for 'extend' command.");
@@ -393,7 +393,7 @@ fpromise::result<ExtendParams, std::string> ExtendParams::FromArguments(
 }
 
 fpromise::result<SizeParams, std::string> SizeParams::FromArguments(
-    fbl::Span<std::string_view> arguments) {
+    cpp20::span<std::string_view> arguments) {
   SizeParams params;
   if (arguments.size() < 3) {
     return fpromise::error("Not enough arguments for 'size' command.");

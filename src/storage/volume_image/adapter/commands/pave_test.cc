@@ -170,7 +170,7 @@ TEST(PaveCommandTest, CreateEmbeddedFvmImageIsOk) {
 
   // Copy contents into a new file to run fvm check.
   while (current_offset < pave_params.offset.value() + pave_params.length.value()) {
-    auto buffer_view = fbl::Span<uint8_t>(buffer).subspan(
+    auto buffer_view = cpp20::span<uint8_t>(buffer).subspan(
         0, std::min(pave_params.offset.value() + pave_params.length.value() - current_offset,
                     static_cast<uint64_t>(buffer.size())));
     ;

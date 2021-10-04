@@ -5,12 +5,12 @@
 #ifndef SRC_STORAGE_VOLUME_IMAGE_UTILS_LZ4_DECOMPRESS_READER_H_
 #define SRC_STORAGE_VOLUME_IMAGE_UTILS_LZ4_DECOMPRESS_READER_H_
 
+#include <lib/stdcompat/span.h>
+
 #include <cstdint>
 #include <limits>
 #include <memory>
 #include <string>
-
-#include <fbl/span.h>
 
 #include "src/storage/volume_image/utils/lz4_decompressor.h"
 #include "src/storage/volume_image/utils/reader.h"
@@ -41,11 +41,12 @@ class Lz4DecompressReader final : public Reader {
   // |buffer|.
   //
   // On error the returned result to contains a string describing the error.
-  fpromise::result<void, std::string> Read(uint64_t offset, fbl::Span<uint8_t> buffer) const final;
+  fpromise::result<void, std::string> Read(uint64_t offset,
+                                           cpp20::span<uint8_t> buffer) const final;
 
  private:
   fpromise::result<void, std::string> DecompressionHandler(
-      fbl::Span<const uint8_t> decompressed_data) const;
+      cpp20::span<const uint8_t> decompressed_data) const;
 
   fpromise::result<void, std::string> Seek(uint64_t offset) const;
 

@@ -101,11 +101,11 @@ fpromise::result<void, std::string> Lz4Compressor::Prepare(Handler handler) {
   }
   state_ = State::kPrepared;
 
-  return handler_(fbl::Span(compression_buffer_.data(), result.byte_count()));
+  return handler_(cpp20::span(compression_buffer_.data(), result.byte_count()));
 }
 
 fpromise::result<void, std::string> Lz4Compressor::Compress(
-    fbl::Span<const uint8_t> uncompressed_data) {
+    cpp20::span<const uint8_t> uncompressed_data) {
   if (state_ != State::kPrepared && state_ != State::kCompressed) {
     return fpromise::error(
         "Lz4Compressor::Compress must be in |kPrepared| or |kCompressed| state.");
@@ -125,7 +125,7 @@ fpromise::result<void, std::string> Lz4Compressor::Compress(
     return fpromise::error(error);
   }
   state_ = State::kCompressed;
-  return handler_(fbl::Span(compression_buffer_.data(), result.byte_count()));
+  return handler_(cpp20::span(compression_buffer_.data(), result.byte_count()));
 }
 
 fpromise::result<void, std::string> Lz4Compressor::Finalize() {
@@ -145,7 +145,7 @@ fpromise::result<void, std::string> Lz4Compressor::Finalize() {
     error.append(result.error()).append(".");
     return fpromise::error(error);
   }
-  auto handler_result = handler_(fbl::Span(compression_buffer_.data(), result.byte_count()));
+  auto handler_result = handler_(cpp20::span(compression_buffer_.data(), result.byte_count()));
 
   // Even though we can reuse compression context after compressionEnd, its preferred not to
   // delegate this to the destructor, since it may error, and we wont be able to surface it.

@@ -6,11 +6,10 @@
 #define SRC_STORAGE_VOLUME_IMAGE_FTL_FTL_IMAGE_INTERNAL_H_
 
 #include <lib/fpromise/result.h>
+#include <lib/stdcompat/span.h>
 
 #include <map>
 #include <string>
-
-#include <fbl/span.h>
 
 #include "src/storage/volume_image/ftl/options.h"
 #include "src/storage/volume_image/utils/writer.h"
@@ -38,7 +37,7 @@ enum PageType {
 
 // Fills |oob_bytes| with the expected FTL data for a Volume Page.
 template <PageType page_type>
-void WriteOutOfBandBytes(uint32_t logical_page_number, fbl::Span<uint8_t> oob_bytes);
+void WriteOutOfBandBytes(uint32_t logical_page_number, cpp20::span<uint8_t> oob_bytes);
 
 // Writes a map block into |writer| with the providing |logical_to_physical_pages| mappings,
 // assuming the next block starts at |offset|.

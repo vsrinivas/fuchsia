@@ -6,13 +6,12 @@
 #define SRC_STORAGE_VOLUME_IMAGE_ADAPTER_COMMANDS_H_
 
 #include <lib/fpromise/result.h>
+#include <lib/stdcompat/span.h>
 
 #include <optional>
 #include <string>
 #include <string_view>
 #include <vector>
-
-#include <fbl/span.h>
 
 #include "src/storage/volume_image/adapter/adapter_options.h"
 #include "src/storage/volume_image/address_descriptor.h"
@@ -56,7 +55,7 @@ enum PartitionImageFormat {
 
 struct PartitionParams {
   static fpromise::result<std::vector<PartitionParams>, std::string> FromArguments(
-      fbl::Span<std::string_view> arguments, const FvmOptions& options);
+      cpp20::span<std::string_view> arguments, const FvmOptions& options);
 
   // The image path for the partition.
   std::string source_image_path;
@@ -83,7 +82,7 @@ struct CreateParams {
   // Returns arguments from |arguments| as a |CreateParam| instance. Validation is done by the
   // |CreateParam| consumers.
   static fpromise::result<CreateParams, std::string> FromArguments(
-      fbl::Span<std::string_view> arguments);
+      cpp20::span<std::string_view> arguments);
 
   // Path to the output file where the FVM image should be written to.
   std::string output_path;
@@ -133,7 +132,7 @@ struct PaveParams {
   // Returns arguments from |arguments| as a |PaveParams| instance. Validation is done by the
   // |PaveParams| consumers.
   static fpromise::result<PaveParams, std::string> FromArguments(
-      fbl::Span<std::string_view> arguments);
+      cpp20::span<std::string_view> arguments);
 
   // Sparse image path.
   std::string input_path;
@@ -173,7 +172,7 @@ struct ExtendParams {
   // Returns arguments from |arguments| as a |ExtendParams| instance. Validation is done by the
   // |ExtendParams| consumers.
   static fpromise::result<ExtendParams, std::string> FromArguments(
-      fbl::Span<std::string_view> arguments);
+      cpp20::span<std::string_view> arguments);
 
   // Path to the file where the FVM image is contained.
   std::string image_path;
@@ -198,7 +197,7 @@ struct SizeParams {
   // Returns arguments from |arguments| as a |SizeParams| instance. Validation is done by the
   // |ExtendParams| consumers.
   static fpromise::result<SizeParams, std::string> FromArguments(
-      fbl::Span<std::string_view> arguments);
+      cpp20::span<std::string_view> arguments);
 
   // Path to the file where the FVM sparse image is contained.
   std::string image_path;

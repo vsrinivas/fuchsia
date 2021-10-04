@@ -4,10 +4,11 @@
 
 #include "src/storage/volume_image/ftl/ftl_test_helper.h"
 
+#include <lib/stdcompat/span.h>
+
 #include <iostream>
 
 #include <fbl/algorithm.h>
-#include <fbl/span.h>
 
 namespace storage::volume_image {
 
@@ -42,24 +43,24 @@ int InMemoryNdm::NandRead(uint32_t start_page, uint32_t page_count, void* page_b
     if (raw_nand_->page_data.find(page_number) == raw_nand_->page_data.end()) {
       if (page_buffer != nullptr) {
         auto page_view =
-            fbl::Span<uint8_t>(reinterpret_cast<uint8_t*>(page_buffer) + page_offset, page_size_);
+            cpp20::span<uint8_t>(reinterpret_cast<uint8_t*>(page_buffer) + page_offset, page_size_);
         std::fill(page_view.begin(), page_view.end(), 0xFF);
       }
       if (oob_buffer != nullptr) {
         auto oob_view =
-            fbl::Span<uint8_t>(reinterpret_cast<uint8_t*>(oob_buffer) + oob_offset, oob_size_);
+            cpp20::span<uint8_t>(reinterpret_cast<uint8_t*>(oob_buffer) + oob_offset, oob_size_);
         std::fill(oob_view.begin(), oob_view.end(), 0xFF);
       }
     } else {
       if (page_buffer != nullptr) {
         auto page_view =
-            fbl::Span<uint8_t>(reinterpret_cast<uint8_t*>(page_buffer) + page_offset, page_size_);
+            cpp20::span<uint8_t>(reinterpret_cast<uint8_t*>(page_buffer) + page_offset, page_size_);
         memcpy(page_view.data(), raw_nand_->page_data.at(page_number).data(), page_view.size());
       }
 
       if (oob_buffer != nullptr) {
         auto oob_view =
-            fbl::Span<uint8_t>(reinterpret_cast<uint8_t*>(oob_buffer) + oob_offset, oob_size_);
+            cpp20::span<uint8_t>(reinterpret_cast<uint8_t*>(oob_buffer) + oob_offset, oob_size_);
         memcpy(oob_view.data(), raw_nand_->page_oob.at(page_number).data(), oob_view.size());
       }
     }
@@ -77,11 +78,11 @@ int InMemoryNdm::NandWrite(uint32_t start_page, uint32_t page_count, const void*
     uint32_t page_number = start_page + i;
     size_t page_offset = i * page_size_;
     size_t oob_offset = i * oob_size_;
-    auto page_view = fbl::Span<const uint8_t>(
+    auto page_view = cpp20::span<const uint8_t>(
         reinterpret_cast<const uint8_t*>(page_buffer) + page_offset, raw_nand_->options.page_size);
     auto oob_view =
-        fbl::Span<const uint8_t>(reinterpret_cast<const uint8_t*>(oob_buffer) + oob_offset,
-                                 raw_nand_->options.oob_bytes_size);
+        cpp20::span<const uint8_t>(reinterpret_cast<const uint8_t*>(oob_buffer) + oob_offset,
+                                   raw_nand_->options.oob_bytes_size);
     if (page_buffer != nullptr) {
       raw_nand_->page_data[page_number] = std::vector<uint8_t>(page_view.begin(), page_view.end());
     }
@@ -108,8 +109,8 @@ int InMemoryNdm::NandErase(uint32_t page_num) {
 // Returns whether a given page is empty or not. |data| and |spare| store
 // the contents of the page.
 bool InMemoryNdm::IsEmptyPage(uint32_t page_num, const uint8_t* data, const uint8_t* spare) {
-  auto page_view = fbl::Span<const uint8_t>(reinterpret_cast<const uint8_t*>(data), page_size_);
-  auto oob_view = fbl::Span<const uint8_t>(reinterpret_cast<const uint8_t*>(spare), oob_size_);
+  auto page_view = cpp20::span<const uint8_t>(reinterpret_cast<const uint8_t*>(data), page_size_);
+  auto oob_view = cpp20::span<const uint8_t>(reinterpret_cast<const uint8_t*>(spare), oob_size_);
 
   return std::all_of(oob_view.begin(), oob_view.end(), [](const auto& b) { return b == 0xFF; }) &&
          std::all_of(page_view.begin(), page_view.end(), [](const auto& b) { return b == 0xFF; });

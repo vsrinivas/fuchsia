@@ -192,7 +192,7 @@ fpromise::result<void, std::string> Decompress(std::string_view path) {
       view_size = hint;
     }
     decompressor.ProvideSizeHint(view_size);
-    auto read_view = fbl::Span<uint8_t>(read_buffer).subspan(0, view_size);
+    auto read_view = cpp20::span<uint8_t>(read_buffer).subspan(0, view_size);
 
     if (auto result = reader.Read(read_bytes, read_view); result.is_error()) {
       return result;
@@ -467,7 +467,7 @@ TEST(CreateCommandTest, CreateEmbeddedFvmImageIsOk) {
 
   // Copy contents into a new file to run fvm check.
   while (current_offset < params.offset.value() + params.length.value()) {
-    auto buffer_view = fbl::Span<uint8_t>(buffer).subspan(
+    auto buffer_view = cpp20::span<uint8_t>(buffer).subspan(
         0, std::min(params.offset.value() + params.length.value() - current_offset,
                     static_cast<uint64_t>(buffer.size())));
     ;

@@ -7,6 +7,7 @@
 #include <fcntl.h>
 #include <inttypes.h>
 #include <lib/cksum.h>
+#include <lib/stdcompat/span.h>
 #include <lib/syslog/cpp/macros.h>
 #include <stdarg.h>
 #include <stdio.h>
@@ -14,6 +15,7 @@
 #include <string.h>
 #include <sys/stat.h>
 #include <unistd.h>
+#include <zircon/assert.h>
 
 #include <iomanip>
 #include <limits>
@@ -1650,7 +1652,7 @@ zx_status_t Mkfs(const MountOptions& options, Bcache* bc) {
     bc->Writeblk(kFvmSuperblockBackup, &info);
   }
 
-  fs::WriteBlocksFn write_blocks_fn = [bc, info](fbl::Span<const uint8_t> buffer,
+  fs::WriteBlocksFn write_blocks_fn = [bc, info](cpp20::span<const uint8_t> buffer,
                                                  uint64_t block_offset, uint64_t block_count) {
     ZX_ASSERT((block_count + block_offset) <= JournalBlocks(info));
     ZX_ASSERT(buffer.size() >= (block_count * info.BlockSize()));

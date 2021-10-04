@@ -33,8 +33,8 @@ constexpr const char* kTestMtdDevicePath = "/dev/mtd0";
 constexpr std::string_view kFvmSparseImagePath =
     STORAGE_VOLUME_IMAGE_ADAPTER_TEST_IMAGE_PATH "test_fvm.sparse.blk";
 
-fpromise::result<void, std::string> ReadUnalignedBlock(uint64_t offset, fbl::Span<uint8_t> data,
-                                                       fbl::Span<uint8_t> block_buffer,
+fpromise::result<void, std::string> ReadUnalignedBlock(uint64_t offset, cpp20::span<uint8_t> data,
+                                                       cpp20::span<uint8_t> block_buffer,
                                                        Reader& reader) {
   uint64_t read_bytes = 0;
 
@@ -197,10 +197,10 @@ TEST(MtdWriterTest, WriteFvmAndPersistsIsOk) {
 
   // Read back the fvm header to calculate the slice offsets.
   fvm::Header header = {};
-  ASSERT_TRUE(
-      ReadUnalignedBlock(0, fbl::Span<uint8_t>(reinterpret_cast<uint8_t*>(&header), sizeof(header)),
-                         page_buffer, *actual_reader)
-          .is_ok());
+  ASSERT_TRUE(ReadUnalignedBlock(
+                  0, cpp20::span<uint8_t>(reinterpret_cast<uint8_t*>(&header), sizeof(header)),
+                  page_buffer, *actual_reader)
+                  .is_ok());
 
   while (read_bytes < expected_image_reader.length()) {
     uint64_t bytes_to_read = buffer.size();
@@ -211,9 +211,9 @@ TEST(MtdWriterTest, WriteFvmAndPersistsIsOk) {
     ASSERT_TRUE(expected_result.is_ok()) << expected_result.error();
 
     // Read same range from the FTL.
-    auto actual_result =
-        ReadUnalignedBlock(read_bytes, fbl::Span<uint8_t>(actual_buffer).subspan(0, bytes_to_read),
-                           page_buffer, *actual_reader);
+    auto actual_result = ReadUnalignedBlock(
+        read_bytes, cpp20::span<uint8_t>(actual_buffer).subspan(0, bytes_to_read), page_buffer,
+        *actual_reader);
     ASSERT_TRUE(actual_result.is_ok()) << actual_result.error();
 
     bool is_empty = false;

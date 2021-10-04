@@ -6,13 +6,12 @@
 #define SRC_STORAGE_VOLUME_IMAGE_ADDRESS_DESCRIPTOR_H_
 
 #include <lib/fpromise/result.h>
+#include <lib/stdcompat/span.h>
 
 #include <cstdint>
 #include <map>
 #include <string>
 #include <vector>
-
-#include <fbl/span.h>
 
 namespace storage::volume_image {
 
@@ -49,13 +48,13 @@ struct AddressDescriptor {
   //
   // On error, returns a string describing the error condition.
   static fpromise::result<AddressDescriptor, std::string> Deserialize(
-      fbl::Span<const uint8_t> serialized);
+      cpp20::span<const uint8_t> serialized);
 
   // On success returns the VolumeDescriptor with the deserialized contents of |serialized|.
   static fpromise::result<AddressDescriptor, std::string> Deserialize(
-      fbl::Span<const char> serialized) {
-    return Deserialize(fbl::Span<const uint8_t>(reinterpret_cast<const uint8_t*>(serialized.data()),
-                                                serialized.size() * sizeof(char)));
+      cpp20::span<const char> serialized) {
+    return Deserialize(cpp20::span<const uint8_t>(
+        reinterpret_cast<const uint8_t*>(serialized.data()), serialized.size() * sizeof(char)));
   }
 
   // Returns a vector containing a serialized version of |this|.

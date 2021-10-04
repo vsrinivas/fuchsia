@@ -6,11 +6,11 @@
 #define SRC_STORAGE_VOLUME_IMAGE_UTILS_FD_WRITER_H_
 
 #include <lib/fpromise/result.h>
+#include <lib/stdcompat/span.h>
 
 #include <string>
 #include <string_view>
 
-#include <fbl/span.h>
 #include <fbl/unique_fd.h>
 
 #include "src/storage/volume_image/utils/writer.h"
@@ -35,7 +35,8 @@ class FdWriter final : public Writer {
   // |buffer.size()|] to |buffer|.
   //
   // On error the returned result to contains a string describing the error.
-  fpromise::result<void, std::string> Write(uint64_t offset, fbl::Span<const uint8_t> buffer) final;
+  fpromise::result<void, std::string> Write(uint64_t offset,
+                                            cpp20::span<const uint8_t> buffer) final;
 
   // Returns a unique identifier for this |FdWriter|.
   std::string_view name() const { return name_; }

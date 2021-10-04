@@ -31,7 +31,7 @@ fpromise::result<void, std::string> Lz4DecompressReader::Initialize(
 }
 
 fpromise::result<void, std::string> Lz4DecompressReader::DecompressionHandler(
-    fbl::Span<const uint8_t> decompressed_data) const {
+    cpp20::span<const uint8_t> decompressed_data) const {
   memcpy(context_.decompressed_data.data(), decompressed_data.data(), decompressed_data.size());
   context_.decompressed_offset += context_.decompressed_length;
   context_.decompressed_length = decompressed_data.size();
@@ -77,7 +77,7 @@ fpromise::result<void, std::string> Lz4DecompressReader::Seek(uint64_t offset) c
 }
 
 fpromise::result<void, std::string> Lz4DecompressReader::NextDecompressedChunk() const {
-  auto read_view = fbl::Span<uint8_t>(context_.compressed_data);
+  auto read_view = cpp20::span<uint8_t>(context_.compressed_data);
   uint64_t remaining_compressed_bytes = compressed_reader_->length() - context_.compressed_offset;
 
   if (read_view.size() > remaining_compressed_bytes) {
@@ -105,7 +105,7 @@ fpromise::result<void, std::string> Lz4DecompressReader::NextDecompressedChunk()
 }
 
 fpromise::result<void, std::string> Lz4DecompressReader::Read(uint64_t offset,
-                                                              fbl::Span<uint8_t> buffer) const {
+                                                              cpp20::span<uint8_t> buffer) const {
   // Base recursion case.
   if (buffer.empty()) {
     return fpromise::ok();

@@ -64,7 +64,7 @@ fpromise::result<void, std::string> Lz4Decompressor::Prepare(Handler handler) {
 }
 
 fpromise::result<Decompressor::DecompressResult, std::string> Lz4Decompressor::Decompress(
-    fbl::Span<const uint8_t> compressed_data) {
+    cpp20::span<const uint8_t> compressed_data) {
   if (state_ != State::kPrepared && state_ != State::kDecompressed) {
     return fpromise::error(
         "Lz4Decompressor::Decompress may only be called in |State::kPrepared| or "
@@ -82,7 +82,7 @@ fpromise::result<Decompressor::DecompressResult, std::string> Lz4Decompressor::D
   }
 
   auto handler_result =
-      handler_(fbl::Span<const uint8_t>(decompression_buffer_.data(), written_bytes));
+      handler_(cpp20::span<const uint8_t>(decompression_buffer_.data(), written_bytes));
   if (handler_result.is_error()) {
     return handler_result.take_error_result();
   }

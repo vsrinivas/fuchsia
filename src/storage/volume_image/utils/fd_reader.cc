@@ -6,13 +6,13 @@
 
 #include <fcntl.h>
 #include <lib/fpromise/result.h>
+#include <lib/stdcompat/span.h>
 #include <sys/stat.h>
 
 #include <cstdio>
 #include <cstdlib>
 #include <iostream>
 
-#include <fbl/span.h>
 #include <fbl/unique_fd.h>
 #include <safemath/safe_conversions.h>
 
@@ -40,7 +40,7 @@ fpromise::result<FdReader, std::string> FdReader::Create(std::string_view path) 
 }
 
 fpromise::result<void, std::string> FdReader::Read(uint64_t offset,
-                                                   fbl::Span<uint8_t> buffer) const {
+                                                   cpp20::span<uint8_t> buffer) const {
   size_t bytes_read = 0;
   while (bytes_read < buffer.size()) {
     uint8_t* destination = buffer.data() + bytes_read;

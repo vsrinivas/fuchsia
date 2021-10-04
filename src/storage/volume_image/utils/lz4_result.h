@@ -6,11 +6,11 @@
 #define SRC_STORAGE_VOLUME_IMAGE_UTILS_LZ4_RESULT_H_
 
 #include <lib/fpromise/result.h>
+#include <lib/stdcompat/span.h>
 
 #include <string>
 #include <vector>
 
-#include <fbl/span.h>
 #include <lz4/lz4frame.h>
 
 #include "src/storage/volume_image/options.h"

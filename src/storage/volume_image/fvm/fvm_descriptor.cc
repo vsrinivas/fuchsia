@@ -4,6 +4,9 @@
 
 #include "src/storage/volume_image/fvm/fvm_descriptor.h"
 
+#include <lib/stdcompat/span.h>
+#include <zircon/assert.h>
+
 #include <cstdint>
 #include <functional>
 #include <iostream>
@@ -14,7 +17,6 @@
 #include <utility>
 
 #include <fbl/algorithm.h>
-#include <fbl/span.h>
 
 #include "src/storage/fvm/format.h"
 #include "src/storage/fvm/metadata.h"
@@ -207,7 +209,7 @@ fpromise::result<void, std::string> FvmDescriptor::WriteBlockImage(Writer& write
   }
   auto fvm_metadata = std::move(fvm_metadata_or.value());
 
-  auto metadata_view = fbl::Span<const uint8_t>(
+  auto metadata_view = cpp20::span<const uint8_t>(
       reinterpret_cast<const uint8_t*>(fvm_metadata.Get()->data()), fvm_metadata.Get()->size());
   auto metadata_write_result = writer.Write(
       fvm_metadata.GetHeader().GetSuperblockOffset(fvm::SuperblockType::kPrimary), metadata_view);
@@ -247,7 +249,7 @@ fpromise::result<void, std::string> FvmDescriptor::WriteBlockImage(Writer& write
         fill_value = static_cast<uint8_t>(fill_value_it->second);
       }
       for (uint64_t slice = 0; slice < slice_count; ++slice) {
-        auto slice_data_view = fbl::Span<uint8_t>(slice_buffer);
+        auto slice_data_view = cpp20::span<uint8_t>(slice_buffer);
         if (slice < data_slice_count) {
           // Byte offset of current slice.
           const uint64_t slice_offset = slice * options_.slice_size;

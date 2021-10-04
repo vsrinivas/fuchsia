@@ -449,8 +449,8 @@ zx_status_t Blob::Commit() {
   if (compress) {
     // The data comes from the compression buffer.
     data_ptr = &data.emplace<SimpleBlobDataProducer>(
-        fbl::Span(static_cast<const uint8_t*>(write_info_->compressor->Data()),
-                  write_info_->compressor->Size()));
+        cpp20::span(static_cast<const uint8_t*>(write_info_->compressor->Data()),
+                    write_info_->compressor->Size()));
     compression_algorithm = write_info_->compressor->algorithm();
   } else if (write_info_->compressor) {
     // In this case, we've decided against compressing because there are no savings, so we have to
@@ -471,10 +471,10 @@ zx_status_t Blob::Commit() {
       return status;
     }
     data_ptr = &data.emplace<SimpleBlobDataProducer>(
-        fbl::Span(static_cast<const uint8_t*>(data_mapping.start()), blob_size_));
+        cpp20::span(static_cast<const uint8_t*>(data_mapping.start()), blob_size_));
   }
 
-  SimpleBlobDataProducer merkle(fbl::Span(write_info_->merkle_tree(), merkle_size));
+  SimpleBlobDataProducer merkle(cpp20::span(write_info_->merkle_tree(), merkle_size));
 
   MergeBlobDataProducer producer = [&]() {
     switch (blob_layout->Format()) {

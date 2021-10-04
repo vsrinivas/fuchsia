@@ -25,13 +25,13 @@ struct VolumeDescriptor {
 
   // On success returns the VolumeDescriptor with the deserialized contents of |serialized|.
   static fpromise::result<VolumeDescriptor, std::string> Deserialize(
-      fbl::Span<const uint8_t> serialized);
+      cpp20::span<const uint8_t> serialized);
 
   // On success returns the VolumeDescriptor with the deserialized contents of |serialized|.
   static fpromise::result<VolumeDescriptor, std::string> Deserialize(
-      fbl::Span<const char> serialized) {
-    return Deserialize(fbl::Span<const uint8_t>(reinterpret_cast<const uint8_t*>(serialized.data()),
-                                                serialized.size() * sizeof(char)));
+      cpp20::span<const char> serialized) {
+    return Deserialize(cpp20::span<const uint8_t>(
+        reinterpret_cast<const uint8_t*>(serialized.data()), serialized.size() * sizeof(char)));
   }
 
   std::string DebugString() const;

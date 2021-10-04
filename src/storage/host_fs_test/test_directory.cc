@@ -2,10 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <lib/stdcompat/span.h>
+
 #include <iterator>
 
 #include <fbl/algorithm.h>
-#include <fbl/span.h>
 
 #include "src/storage/host_fs_test/fixture.h"
 
@@ -17,7 +18,8 @@ struct ExpectedDirectoryEntry {
   unsigned char d_type;  // Same as the d_type entry from struct dirent.
 };
 
-void CheckDirectoryContents(const char* dirname, fbl::Span<const ExpectedDirectoryEntry> entries) {
+void CheckDirectoryContents(const char* dirname,
+                            cpp20::span<const ExpectedDirectoryEntry> entries) {
   DIR* dir = emu_opendir(dirname);
   emu_rewinddir(dir);
   std::vector<bool> seen(entries.size());

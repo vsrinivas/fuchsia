@@ -107,7 +107,7 @@ TEST(FvmSparseImageReaderTest, PartitionsInImagePassFsck) {
       ASSERT_EQ(status, ZX_OK);
     }
     auto result = sparse_image_or.value().reader()->Read(
-        map.source, fbl::Span<uint8_t>(reinterpret_cast<uint8_t*>(vmo->start()), map.count));
+        map.source, cpp20::span<uint8_t>(reinterpret_cast<uint8_t*>(vmo->start()), map.count));
     ASSERT_TRUE(result.is_ok()) << result.error();
 
     // Write the mapping to the ram disk.
@@ -173,7 +173,7 @@ TEST(FvmSparseImageReaderTest, PartitionsInImagePassFsck) {
 
 class NullWriter : public Writer {
  public:
-  fpromise::result<void, std::string> Write(uint64_t offset, fbl::Span<const uint8_t> buffer) {
+  fpromise::result<void, std::string> Write(uint64_t offset, cpp20::span<const uint8_t> buffer) {
     return fpromise::ok();
   }
 };
@@ -183,7 +183,7 @@ TEST(FvmSparseImageReaderTest, ImageWithMaxSizeAllocatesEnoughMetadata) {
   ASSERT_TRUE(base_reader_or.is_ok()) << base_reader_or.error();
 
   fvm::SparseImage image = {};
-  auto image_stream = fbl::Span<uint8_t>(reinterpret_cast<uint8_t*>(&image), sizeof(image));
+  auto image_stream = cpp20::span<uint8_t>(reinterpret_cast<uint8_t*>(&image), sizeof(image));
   auto read_result = base_reader_or.value().Read(0, image_stream);
   ASSERT_TRUE(read_result.is_ok()) << read_result.error();
   ASSERT_EQ(image.magic, fvm::kSparseFormatMagic);
@@ -196,7 +196,7 @@ TEST(FvmSparseImageReaderTest, ImageWithMaxSizeAllocatesEnoughMetadata) {
       fvm::Header::FromDiskSize(fvm::kMaxUsablePartitions, 300 << 20, image.slice_size);
 
   fvm::Header header = {};
-  auto header_stream = fbl::Span<uint8_t>(reinterpret_cast<uint8_t*>(&header), sizeof(header));
+  auto header_stream = cpp20::span<uint8_t>(reinterpret_cast<uint8_t*>(&header), sizeof(header));
   read_result = sparse_image.reader()->Read(
       sparse_image.reader()->length() - expected_header.GetMetadataAllocatedBytes(), header_stream);
   ASSERT_TRUE(read_result.is_ok()) << read_result.error();

@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <lib/fit/defer.h>
+#include <lib/stdcompat/span.h>
 #include <unistd.h>
 
 #include <cstdint>
@@ -16,7 +17,6 @@
 #include <string_view>
 
 #include <fbl/alloc_checker.h>
-#include <fbl/span.h>
 #include <safemath/checked_math.h>
 
 #include "fbl/unique_fd.h"
@@ -199,7 +199,7 @@ class RawBlockImageWriter final : public storage::volume_image::Writer {
   explicit RawBlockImageWriter(storage::volume_image::Writer* writer) : writer_(writer) {}
 
   fpromise::result<void, std::string> Write(uint64_t offset,
-                                            fbl::Span<const uint8_t> buffer) final {
+                                            cpp20::span<const uint8_t> buffer) final {
     ranges_.insert(range::Range<>(offset, offset + buffer.size()));
     return writer_->Write(offset, buffer);
   }
@@ -603,7 +603,7 @@ int main(int argc, char** argv) {
           if (filler.size() < length) {
             filler.resize(length, 0xFF);
           }
-          return writer->Write(start, fbl::Span<const uint8_t>(filler).subspan(0, length));
+          return writer->Write(start, cpp20::span<const uint8_t>(filler).subspan(0, length));
         });
 
     if (fill_result.is_error()) {

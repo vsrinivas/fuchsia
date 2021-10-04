@@ -4,6 +4,8 @@
 
 #include "src/storage/blobfs/blobfs_inspector.h"
 
+#include <lib/stdcompat/span.h>
+
 #include <iostream>
 #include <memory>
 
@@ -113,7 +115,7 @@ void CreateFakeBlobfsHandler(std::unique_ptr<FakeTransactionHandler>* handler) {
   memset(device->Data(NodeMapStartBlock(superblock)), 0, nodemap_length);
 
   // Journal.
-  fs::WriteBlocksFn write_blocks_fn = [&device, &superblock](fbl::Span<const uint8_t> buffer,
+  fs::WriteBlocksFn write_blocks_fn = [&device, &superblock](cpp20::span<const uint8_t> buffer,
                                                              uint64_t block_offset,
                                                              uint64_t block_count) {
     uint64_t size = safemath::CheckMul<uint64_t>(block_count, kBlobfsBlockSize).ValueOrDie();

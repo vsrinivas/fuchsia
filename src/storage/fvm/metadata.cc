@@ -4,14 +4,15 @@
 
 #include "src/storage/fvm/metadata.h"
 
+#include <lib/stdcompat/span.h>
 #include <lib/zx/status.h>
+#include <zircon/assert.h>
 #include <zircon/types.h>
 
 #include <memory>
 #include <optional>
 #include <vector>
 
-#include <fbl/span.h>
 #include <safemath/checked_math.h>
 
 #include "src/storage/fvm/format.h"
@@ -23,18 +24,18 @@ namespace {
 
 // Returns a byte view of a fixed size struct.
 template <typename T>
-fbl::Span<const uint8_t> FixedSizeStructToSpan(const T& typed_content) {
-  return fbl::Span<const uint8_t>(reinterpret_cast<const uint8_t*>(&typed_content), sizeof(T));
+cpp20::span<const uint8_t> FixedSizeStructToSpan(const T& typed_content) {
+  return cpp20::span<const uint8_t>(reinterpret_cast<const uint8_t*>(&typed_content), sizeof(T));
 }
 
 // Returns a byte view of an array of structs.
 template <typename T>
-fbl::Span<const uint8_t> ContainerToSpan(const T& container) {
+cpp20::span<const uint8_t> ContainerToSpan(const T& container) {
   if (container.empty()) {
-    return fbl::Span<const uint8_t>();
+    return cpp20::span<const uint8_t>();
   }
-  return fbl::Span<const uint8_t>(reinterpret_cast<const uint8_t*>(container.data()),
-                                  container.size() * sizeof(*container.data()));
+  return cpp20::span<const uint8_t>(reinterpret_cast<const uint8_t*>(container.data()),
+                                    container.size() * sizeof(*container.data()));
 }
 
 }  // namespace
@@ -234,11 +235,11 @@ zx::status<Metadata> Metadata::Synthesize(const fvm::Header& header,
     }
   }
 
-  const fbl::Span<const uint8_t> header_span = FixedSizeStructToSpan(header);
-  const fbl::Span<const uint8_t> partitions_span = ContainerToSpan(actual_partitions);
-  const fbl::Span<const uint8_t> slices_span = ContainerToSpan(actual_slices);
+  const cpp20::span<const uint8_t> header_span = FixedSizeStructToSpan(header);
+  const cpp20::span<const uint8_t> partitions_span = ContainerToSpan(actual_partitions);
+  const cpp20::span<const uint8_t> slices_span = ContainerToSpan(actual_slices);
 
-  auto write_metadata = [&](size_t offset, size_t sz, const fbl::Span<const uint8_t>& span) {
+  auto write_metadata = [&](size_t offset, size_t sz, const cpp20::span<const uint8_t>& span) {
     ZX_ASSERT(offset + sz <= buffer_size);
     ZX_ASSERT(sz >= span.size());
     if (!span.empty()) {

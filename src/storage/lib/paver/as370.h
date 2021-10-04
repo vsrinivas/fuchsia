@@ -31,7 +31,7 @@ class As370Partitioner : public DevicePartitioner {
   zx::status<> WipePartitionTables() const override;
 
   zx::status<> ValidatePayload(const PartitionSpec& spec,
-                               fbl::Span<const uint8_t> data) const override;
+                               cpp20::span<const uint8_t> data) const override;
 
   zx::status<> Flush() const override { return zx::ok(); }
 

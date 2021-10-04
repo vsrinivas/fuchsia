@@ -5,12 +5,12 @@
 #ifndef SRC_STORAGE_FVM_METADATA_H_
 #define SRC_STORAGE_FVM_METADATA_H_
 
+#include <lib/stdcompat/span.h>
 #include <lib/zx/status.h>
 #include <zircon/types.h>
 
 #include <limits>
 
-#include "fbl/span.h"
 #include "src/storage/fvm/format.h"
 #include "src/storage/fvm/metadata_buffer.h"
 
@@ -69,8 +69,8 @@ class Metadata {
 
   // See Synthesize(fvm::Header, const VPartition,* size_t, const SliceEntry*, size_t);
   static zx::status<Metadata> Synthesize(const fvm::Header& header,
-                                         fbl::Span<const VPartitionEntry> vpartitions,
-                                         fbl::Span<const SliceEntry> slices) {
+                                         cpp20::span<const VPartitionEntry> vpartitions,
+                                         cpp20::span<const SliceEntry> slices) {
     return Synthesize(header, vpartitions.data(), vpartitions.size(), slices.data(), slices.size());
   }
 

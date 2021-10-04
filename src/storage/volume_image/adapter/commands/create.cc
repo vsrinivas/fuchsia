@@ -46,7 +46,8 @@ std::string Errno() { return std::string(strerror(errno)); }
 class ZeroReader final : public Reader {
   uint64_t length() const final { return std::numeric_limits<uint64_t>::max(); }
 
-  fpromise::result<void, std::string> Read(uint64_t offset, fbl::Span<uint8_t> buffer) const final {
+  fpromise::result<void, std::string> Read(uint64_t offset,
+                                           cpp20::span<uint8_t> buffer) const final {
     memset(buffer.data(), '0', buffer.size());
     return fpromise::ok();
   }
@@ -170,7 +171,7 @@ fpromise::result<void, std::string> CompressFile(std::string_view input, std::st
       });
   while (read_bytes < input_reader.length()) {
     auto read_view =
-        fbl::Span<uint8_t>(read_buffer)
+        cpp20::span<uint8_t>(read_buffer)
             .subspan(0, std::min(kMaxBufferSize,
                                  static_cast<uint64_t>(input_reader.length() - read_bytes)));
     if (auto result = input_reader.Read(read_bytes, read_view); result.is_error()) {

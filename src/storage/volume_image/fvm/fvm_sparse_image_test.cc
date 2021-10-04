@@ -269,26 +269,27 @@ TEST(FvmSparseCalculateUncompressedImageSizeTest, ParitionsAndExtentsMatchesSeri
 class FakeReader : public Reader {
  public:
   explicit FakeReader(
-      fit::function<fpromise::result<void, std::string>(uint64_t, fbl::Span<uint8_t>)> filler)
+      fit::function<fpromise::result<void, std::string>(uint64_t, cpp20::span<uint8_t>)> filler)
       : filler_(std::move(filler)) {}
 
   uint64_t length() const override { return 0; }
 
-  fpromise::result<void, std::string> Read(uint64_t offset, fbl::Span<uint8_t> buffer) const final {
+  fpromise::result<void, std::string> Read(uint64_t offset,
+                                           cpp20::span<uint8_t> buffer) const final {
     return filler_(offset, buffer);
   }
 
  private:
-  fit::function<fpromise::result<void, std::string>(uint64_t offset, fbl::Span<uint8_t>)> filler_;
+  fit::function<fpromise::result<void, std::string>(uint64_t offset, cpp20::span<uint8_t>)> filler_;
 };
 
 // Fake writer implementations that writes into a provided buffer.
 class BufferWriter : public Writer {
  public:
-  explicit BufferWriter(fbl::Span<uint8_t> buffer) : buffer_(buffer) {}
+  explicit BufferWriter(cpp20::span<uint8_t> buffer) : buffer_(buffer) {}
 
   fpromise::result<void, std::string> Write(uint64_t offset,
-                                            fbl::Span<const uint8_t> buffer) final {
+                                            cpp20::span<const uint8_t> buffer) final {
     if (offset > buffer_.size() || offset + buffer.size() > buffer_.size()) {
       return fpromise::error("BufferWriter: Out of Range. Offset at " + std::to_string(offset) +
                              " and byte count is " + std::to_string(buffer.size()) +
@@ -299,11 +300,11 @@ class BufferWriter : public Writer {
   }
 
  private:
-  fbl::Span<uint8_t> buffer_;
+  cpp20::span<uint8_t> buffer_;
 };
 
 template <int shift>
-fpromise::result<void, std::string> GetContents(uint64_t offset, fbl::Span<uint8_t> buffer) {
+fpromise::result<void, std::string> GetContents(uint64_t offset, cpp20::span<uint8_t> buffer) {
   for (uint64_t index = 0; index < buffer.size(); ++index) {
     buffer[index] = (offset + index + shift) % sizeof(uint64_t);
   }
@@ -314,9 +315,9 @@ class SerializedImageContainer {
  public:
   SerializedImageContainer() : serialized_image_(new SerializedSparseImage()), writer_(AsSpan()) {}
 
-  fbl::Span<uint8_t> AsSpan() {
-    return fbl::Span<uint8_t>(reinterpret_cast<uint8_t*>(serialized_image_.get()),
-                              sizeof(SerializedSparseImage));
+  cpp20::span<uint8_t> AsSpan() {
+    return cpp20::span<uint8_t>(reinterpret_cast<uint8_t*>(serialized_image_.get()),
+                                sizeof(SerializedSparseImage));
   }
 
   const SerializedSparseImage& serialized_image() const { return *serialized_image_; }
@@ -325,12 +326,12 @@ class SerializedImageContainer {
 
   BufferWriter& writer() { return writer_; }
 
-  std::vector<fbl::Span<const uint8_t>> PartitionExtents(size_t index) {
-    auto view = fbl::Span(serialized_image_->extent_data);
+  std::vector<cpp20::span<const uint8_t>> PartitionExtents(size_t index) {
+    auto view = cpp20::span(serialized_image_->extent_data);
     if (index == 0) {
-      return {{view.subspan(0, 48), view.subspan(48, 52), view.subspan(100, 20)}};
+      return {view.subspan(0, 48), view.subspan(48, 52), view.subspan(100, 20)};
     }
-    return {{view.subspan(120, 30), view.subspan(150, 61)}};
+    return {view.subspan(120, 30), view.subspan(150, 61)};
   }
 
  private:
@@ -583,7 +584,7 @@ class ErrorWriter final : public Writer {
   ~ErrorWriter() final = default;
 
   fpromise::result<void, std::string> Write(
-      [[maybe_unused]] uint64_t offset, [[maybe_unused]] fbl::Span<const uint8_t> buffer) final {
+      [[maybe_unused]] uint64_t offset, [[maybe_unused]] cpp20::span<const uint8_t> buffer) final {
     if (offset >= error_offset_) {
       return fpromise::error(error_);
     }
@@ -607,7 +608,7 @@ TEST(FvmSparseWriteImageTest, WithReadErrorIsError) {
   auto partition_1_result = Partition::Create(
       kSerializedVolumeImage1,
       std::make_unique<FakeReader>(
-          []([[maybe_unused]] uint64_t offset, [[maybe_unused]] fbl::Span<uint8_t> buffer) {
+          []([[maybe_unused]] uint64_t offset, [[maybe_unused]] cpp20::span<uint8_t> buffer) {
             return fpromise::error(std::string(kReadError));
           }));
   ASSERT_TRUE(partition_1_result.is_ok()) << partition_1_result.error();
@@ -663,7 +664,8 @@ class BufferReader final : public Reader {
 
   uint64_t length() const final { return length_; }
 
-  fpromise::result<void, std::string> Read(uint64_t offset, fbl::Span<uint8_t> buffer) const final {
+  fpromise::result<void, std::string> Read(uint64_t offset,
+                                           cpp20::span<uint8_t> buffer) const final {
     // if no overlap zero the buffer.
     if (offset + buffer.size() < image_offset_ || offset > image_offset_ + image_buffer_.size()) {
       std::fill(buffer.begin(), buffer.end(), 0);
@@ -695,7 +697,7 @@ class BufferReader final : public Reader {
 
  private:
   uint64_t image_offset_ = 0;
-  fbl::Span<const uint8_t> image_buffer_;
+  cpp20::span<const uint8_t> image_buffer_;
   uint64_t length_ = std::numeric_limits<uint64_t>::max();
 };
 
@@ -994,7 +996,7 @@ TEST(GetPartitionsTest, WithValidReaderAndHeaderIsOk) {
 
 class FvmSparseReaderImpl final : public fvm::ReaderInterface {
  public:
-  explicit FvmSparseReaderImpl(fbl::Span<const uint8_t> buffer) : buffer_(buffer) {}
+  explicit FvmSparseReaderImpl(cpp20::span<const uint8_t> buffer) : buffer_(buffer) {}
 
   ~FvmSparseReaderImpl() final = default;
 
@@ -1007,7 +1009,7 @@ class FvmSparseReaderImpl final : public fvm::ReaderInterface {
   }
 
  private:
-  fbl::Span<const uint8_t> buffer_;
+  cpp20::span<const uint8_t> buffer_;
   size_t cursor_ = 0;
 };
 
@@ -1031,7 +1033,7 @@ TEST(FvmSparseWriteImageTest, WrittenImageIsCompatibleWithLegacyImplementation) 
   // Partition 1 metadata.
   {
     const auto& partition_descriptor = sparse_reader->Partitions()[0];
-    const auto partition_extent_descriptors = fbl::Span<const fvm::ExtentDescriptor>(
+    const auto partition_extent_descriptors = cpp20::span<const fvm::ExtentDescriptor>(
         reinterpret_cast<const fvm::ExtentDescriptor*>(
             reinterpret_cast<const uint8_t*>(&partition_descriptor + 1)),
         3);
@@ -1048,7 +1050,7 @@ TEST(FvmSparseWriteImageTest, WrittenImageIsCompatibleWithLegacyImplementation) 
     off_t partition_2_offset = sizeof(fvm::PartitionDescriptor) + 3 * sizeof(fvm::ExtentDescriptor);
     const auto& partition_descriptor = *reinterpret_cast<fvm::PartitionDescriptor*>(
         reinterpret_cast<uint8_t*>(sparse_reader->Partitions()) + partition_2_offset);
-    const auto partition_extent_descriptors = fbl::Span<const fvm::ExtentDescriptor>(
+    const auto partition_extent_descriptors = cpp20::span<const fvm::ExtentDescriptor>(
         reinterpret_cast<const fvm::ExtentDescriptor*>(
             reinterpret_cast<const uint8_t*>(&partition_descriptor + 1)),
         2);
@@ -1097,7 +1099,7 @@ TEST(FvmSparseWriteImageTest, WrittenCompressedImageIsCompatibleWithLegacyImplem
   // Partition 1 metadata.
   {
     const auto& partition_descriptor = sparse_reader->Partitions()[0];
-    const auto partition_extent_descriptors = fbl::Span<const fvm::ExtentDescriptor>(
+    const auto partition_extent_descriptors = cpp20::span<const fvm::ExtentDescriptor>(
         reinterpret_cast<const fvm::ExtentDescriptor*>(
             reinterpret_cast<const uint8_t*>(&partition_descriptor + 1)),
         3);
@@ -1114,7 +1116,7 @@ TEST(FvmSparseWriteImageTest, WrittenCompressedImageIsCompatibleWithLegacyImplem
     off_t partition_2_offset = sizeof(fvm::PartitionDescriptor) + 3 * sizeof(fvm::ExtentDescriptor);
     const auto& partition_descriptor = *reinterpret_cast<fvm::PartitionDescriptor*>(
         reinterpret_cast<uint8_t*>(sparse_reader->Partitions()) + partition_2_offset);
-    const auto partition_extent_descriptors = fbl::Span<const fvm::ExtentDescriptor>(
+    const auto partition_extent_descriptors = cpp20::span<const fvm::ExtentDescriptor>(
         reinterpret_cast<const fvm::ExtentDescriptor*>(
             reinterpret_cast<const uint8_t*>(&partition_descriptor + 1)),
         2);
@@ -1137,7 +1139,7 @@ TEST(FvmSparseWriteImageTest, WrittenCompressedImageIsCompatibleWithLegacyImplem
                 ZX_OK);
       ASSERT_EQ(read_content.size(), read_bytes);
       auto read_result = partition.reader()->Read(
-          mapping.source, fbl::Span(original_content.data(), original_content.size()));
+          mapping.source, cpp20::span(original_content.data(), original_content.size()));
       ASSERT_TRUE(read_result.is_ok()) << read_result.error();
 
       EXPECT_THAT(read_content, testing::ElementsAreArray(original_content));
@@ -1347,7 +1349,7 @@ TEST(ConvertToFvmMetadataTest, WithNoPartitionsIsOk) {
   auto header = header_or.take_value();
 
   auto metadata_or = fvm_sparse_internal::ConvertToFvmMetadata(
-      header, fbl::Span<fvm_sparse_internal::PartitionEntry>());
+      header, cpp20::span<fvm_sparse_internal::PartitionEntry>());
   ASSERT_TRUE(metadata_or.is_ok()) << metadata_or.error();
   auto metadata = metadata_or.take_value();
 
@@ -1383,7 +1385,7 @@ TEST(ConvertToFvmMetadataTest, WithSinglePartitionsAndNoSlicesIsOk) {
   auto header = header_or.take_value();
 
   auto metadata_or = fvm_sparse_internal::ConvertToFvmMetadata(
-      header, fbl::Span<fvm_sparse_internal::PartitionEntry>(&entry, 1));
+      header, cpp20::span<fvm_sparse_internal::PartitionEntry>(&entry, 1));
   ASSERT_TRUE(metadata_or.is_ok()) << metadata_or.error();
   auto metadata = metadata_or.take_value();
 
@@ -1405,7 +1407,7 @@ TEST(ConvertToFvmMetadataTest, WithSinglePartitionsAndNoSlicesIsOk) {
     EXPECT_EQ(entry.type[0], 1);
     EXPECT_TRUE(kPartitionName.compare(entry.name()) == 0);
     EXPECT_EQ(entry.flags, 0u);
-    for (auto& b : fbl::Span<uint8_t>(entry.type).subspan(1)) {
+    for (auto& b : cpp20::span<uint8_t>(entry.type).subspan(1)) {
       EXPECT_EQ(b, 0);
     }
     EXPECT_EQ(entry.slices, 0u);
@@ -1443,7 +1445,7 @@ TEST(ConvertToFvmMetadataTest, WithSinglePartitionsAndSlicesIsOk) {
   auto header = header_or.take_value();
 
   auto metadata_or = fvm_sparse_internal::ConvertToFvmMetadata(
-      header, fbl::Span<fvm_sparse_internal::PartitionEntry>(&entry, 1));
+      header, cpp20::span<fvm_sparse_internal::PartitionEntry>(&entry, 1));
   ASSERT_TRUE(metadata_or.is_ok()) << metadata_or.error();
   auto metadata = metadata_or.take_value();
 
@@ -1465,7 +1467,7 @@ TEST(ConvertToFvmMetadataTest, WithSinglePartitionsAndSlicesIsOk) {
     EXPECT_TRUE(kPartitionName.compare(entry.name()) == 0);
     EXPECT_EQ(entry.flags, 0u);
     EXPECT_EQ(entry.type[0], 1);
-    for (auto& b : fbl::Span<uint8_t>(entry.type).subspan(1)) {
+    for (auto& b : cpp20::span<uint8_t>(entry.type).subspan(1)) {
       EXPECT_EQ(b, 0);
     }
     EXPECT_EQ(entry.slices, kTotalSlices);
@@ -1547,7 +1549,7 @@ TEST(ConvertToFvmMetadataTest, WithsMultiplePartitionsAndSlicesIsOk) {
     EXPECT_EQ(actual_entry.slices, expected_slices);
     EXPECT_EQ(actual_entry.flags, 0u);
     EXPECT_EQ(actual_entry.type[0], static_cast<uint8_t>(i));
-    for (auto& b : fbl::Span<uint8_t>(actual_entry.type).subspan(1)) {
+    for (auto& b : cpp20::span<uint8_t>(actual_entry.type).subspan(1)) {
       EXPECT_EQ(b, 0);
     }
     EXPECT_TRUE(entry.IsActive());

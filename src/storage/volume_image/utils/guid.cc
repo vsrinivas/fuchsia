@@ -4,6 +4,8 @@
 
 #include "src/storage/volume_image/utils/guid.h"
 
+#include <zircon/assert.h>
+
 #include <algorithm>
 #include <array>
 #include <cstdint>
@@ -110,7 +112,7 @@ constexpr uint64_t kLowMask = 0x0F;
 
 }  // namespace
 
-fpromise::result<std::string, std::string> Guid::ToString(fbl::Span<const uint8_t> guid) {
+fpromise::result<std::string, std::string> Guid::ToString(cpp20::span<const uint8_t> guid) {
   if (guid.size() != kGuidLength) {
     std::string error = "Input GUID size must be equal to |kGuidLength|. Input Size: ";
     error.append(std::to_string(guid.size())).append(".\n");
@@ -143,7 +145,7 @@ fpromise::result<std::string, std::string> Guid::ToString(fbl::Span<const uint8_
 }
 
 fpromise::result<std::array<uint8_t, kGuidLength>, std::string> Guid::FromString(
-    fbl::Span<const char> guid) {
+    cpp20::span<const char> guid) {
   if (guid.size() != kGuidStrLength) {
     std::string error = "Input GUID size must be equal to |kGuidStrLength|. Input Size: ";
     error.append(std::to_string(guid.size())).append(".\n");

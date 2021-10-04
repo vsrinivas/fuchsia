@@ -5,13 +5,13 @@
 #include "src/storage/volume_image/ftl/ftl_image_internal.h"
 
 #include <lib/fpromise/result.h>
+#include <lib/stdcompat/span.h>
 
 #include <cstdint>
 #include <iterator>
 #include <limits>
 
 #include <fbl/algorithm.h>
-#include <fbl/span.h>
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
@@ -104,7 +104,7 @@ class PageWriter final : public Writer {
       : block_start_(block_start) {}
 
   fpromise::result<void, std::string> Write(uint64_t offset,
-                                            fbl::Span<const uint8_t> buffer) final {
+                                            cpp20::span<const uint8_t> buffer) final {
     if (offset < block_start_) {
       return fpromise::error("PageWriter write failed: Bad offset.");
     }
@@ -118,14 +118,14 @@ class PageWriter final : public Writer {
     return fpromise::ok();
   }
 
-  fbl::Span<const uint8_t> pages() const { return pages_; }
+  cpp20::span<const uint8_t> pages() const { return pages_; }
 
  private:
   uint64_t block_start_ = 0;
   std::vector<uint8_t> pages_;
 };
 
-std::vector<uint32_t> GetMappingsFromPage(fbl::Span<const uint8_t> contents,
+std::vector<uint32_t> GetMappingsFromPage(cpp20::span<const uint8_t> contents,
                                           const RawNandOptions& options) {
   uint32_t mappings_per_page = options.page_size / sizeof(uint32_t);
   std::vector<uint32_t> actual_mappings;

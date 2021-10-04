@@ -4,6 +4,8 @@
 
 #include "src/storage/volume_image/address_descriptor.h"
 
+#include <zircon/assert.h>
+
 #include <string>
 #include <string_view>
 #include <vector>

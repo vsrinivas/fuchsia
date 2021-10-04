@@ -6,9 +6,9 @@
 #define SRC_STORAGE_FSHOST_WATCHER_H_
 
 #include <lib/fdio/cpp/caller.h>
+#include <lib/stdcompat/span.h>
 #include <zircon/status.h>
 
-#include <fbl/span.h>
 #include <fbl/unique_fd.h>
 
 #include "src/storage/fshost/block-device-manager.h"
@@ -42,7 +42,7 @@ class Watcher {
 
   // Parse watch events from |buf|, calling |callback| for each event.
   // |callback| should return true if it receives an idle event and the block watcher is paused.
-  void ProcessWatchMessages(fbl::Span<uint8_t> buf, WatcherCallback callback);
+  void ProcessWatchMessages(cpp20::span<uint8_t> buf, WatcherCallback callback);
   zx_status_t AddDevice(BlockDeviceManager& manager, FilesystemMounter* mounter, fbl::unique_fd fd);
   WatcherType type() const { return type_; }
   bool ignore_existing() const { return ignore_existing_; }

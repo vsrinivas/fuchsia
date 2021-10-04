@@ -22,7 +22,7 @@
 namespace storage::volume_image {
 
 fpromise::result<VolumeDescriptor, std::string> VolumeDescriptor::Deserialize(
-    fbl::Span<const uint8_t> serialized) {
+    cpp20::span<const uint8_t> serialized) {
   rapidjson::Document document;
   rapidjson::ParseResult result =
       document.Parse(reinterpret_cast<const char*>(serialized.data()), serialized.size());

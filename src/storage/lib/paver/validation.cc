@@ -8,12 +8,12 @@
 #include "validation.h"
 
 #include <lib/cksum.h>
+#include <lib/stdcompat/span.h>
 #include <zircon/errors.h>
 #include <zircon/status.h>
 
 #include <fbl/algorithm.h>
 #include <fbl/alloc_checker.h>
-#include <fbl/span.h>
 
 #include "device-partitioner.h"
 #include "pave-logging.h"
@@ -40,8 +40,8 @@ bool ZbiHeaderCrcValid(const zbi_header_t* hdr) {
 
 }  // namespace
 
-bool ExtractZbiPayload(fbl::Span<const uint8_t> data, const zbi_header_t** header,
-                       fbl::Span<const uint8_t>* payload) {
+bool ExtractZbiPayload(cpp20::span<const uint8_t> data, const zbi_header_t** header,
+                       cpp20::span<const uint8_t>* payload) {
   // Validate data header.
   if (data.size() < sizeof(zbi_header_t)) {
     ERROR("Data too short: expected at least %ld byte(s), got %ld byte(s).\n", sizeof(zbi_header_t),
@@ -80,10 +80,10 @@ bool ExtractZbiPayload(fbl::Span<const uint8_t> data, const zbi_header_t** heade
   return true;
 }
 
-bool IsValidKernelZbi(Arch arch, fbl::Span<const uint8_t> data) {
+bool IsValidKernelZbi(Arch arch, cpp20::span<const uint8_t> data) {
   // Get container header.
   const zbi_header_t* container_header;
-  fbl::Span<const uint8_t> container_data;
+  cpp20::span<const uint8_t> container_data;
   if (!ExtractZbiPayload(data, &container_header, &container_data)) {
     return false;
   }
@@ -100,7 +100,7 @@ bool IsValidKernelZbi(Arch arch, fbl::Span<const uint8_t> data) {
 
   // Extract kernel.
   const zbi_header_t* kernel_header;
-  fbl::Span<const uint8_t> kernel_data;
+  cpp20::span<const uint8_t> kernel_data;
   if (!ExtractZbiPayload(container_data, &kernel_header, &kernel_data)) {
     return false;
   }
@@ -123,7 +123,7 @@ bool IsValidKernelZbi(Arch arch, fbl::Span<const uint8_t> data) {
   return true;
 }
 
-bool IsValidChromeOSKernel(fbl::Span<const uint8_t> data) {
+bool IsValidChromeOSKernel(cpp20::span<const uint8_t> data) {
   // Ensure the data contains the ChromeOS verification block magic
   // signature.
   //

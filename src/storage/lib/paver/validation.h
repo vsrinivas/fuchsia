@@ -5,11 +5,10 @@
 #ifndef SRC_STORAGE_LIB_PAVER_VALIDATION_H_
 #define SRC_STORAGE_LIB_PAVER_VALIDATION_H_
 
+#include <lib/stdcompat/span.h>
 #include <zircon/boot/image.h>
 #include <zircon/errors.h>
 #include <zircon/status.h>
-
-#include <fbl/span.h>
 
 #include "src/storage/lib/paver/device-partitioner.h"
 
@@ -22,16 +21,16 @@ namespace paver {
 // On success, sets "header" to the header of the ZBI image, and
 // "payload" to the payload of the ZBI. Both are guaranteed to be
 // completed contained in "data".
-bool ExtractZbiPayload(fbl::Span<const uint8_t> data, const zbi_header_t** header,
-                       fbl::Span<const uint8_t>* payload);
+bool ExtractZbiPayload(cpp20::span<const uint8_t> data, const zbi_header_t** header,
+                       cpp20::span<const uint8_t>* payload);
 
 // Perform some basic safety checks to ensure the given payload is a valid ZBI
 // for the given architecture.
-bool IsValidKernelZbi(Arch arch, fbl::Span<const uint8_t> data);
+bool IsValidKernelZbi(Arch arch, cpp20::span<const uint8_t> data);
 
 // Perform some basic safety checks to ensure the given payload is a valid ChromeOS
 // kernel image.
-bool IsValidChromeOSKernel(fbl::Span<const uint8_t> data);
+bool IsValidChromeOSKernel(cpp20::span<const uint8_t> data);
 
 }  // namespace paver
 

@@ -5,6 +5,7 @@
 #include <lib/fpromise/result.h>
 #include <lib/ftl/ndm-driver.h>
 #include <lib/ftl/volume.h>
+#include <lib/stdcompat/span.h>
 
 #include <algorithm>
 #include <cstdint>
@@ -14,7 +15,6 @@
 
 #include <fbl/algorithm.h>
 #include <fbl/ref_ptr.h>
-#include <fbl/span.h>
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
@@ -63,7 +63,7 @@ RawNandOptions GetOptions() {
 //
 //  This is tracked as part of the  FTL image generation stack.
 
-void FillBlock(uint32_t block_number, size_t block_offset, fbl::Span<uint8_t> block_view) {
+void FillBlock(uint32_t block_number, size_t block_offset, cpp20::span<uint8_t> block_view) {
   uint8_t* content = reinterpret_cast<uint8_t*>(&block_number);
 
   for (size_t i = 0; i < block_view.size(); ++i) {
@@ -78,7 +78,8 @@ class FakeContentReader final : public Reader {
  public:
   uint64_t length() const override { return 0; }
 
-  fpromise::result<void, std::string> Read(uint64_t offset, fbl::Span<uint8_t> buffer) const final {
+  fpromise::result<void, std::string> Read(uint64_t offset,
+                                           cpp20::span<uint8_t> buffer) const final {
     // Calculate the block the offset is in.
     uint32_t first_block = GetBlockFromBytes(offset, kBlockSize);
     uint64_t offset_from_first_block = GetOffsetFromBlockStart(offset, kBlockSize);
@@ -107,7 +108,7 @@ class InMemoryWriter final : public Writer {
   explicit InMemoryWriter(InMemoryRawNand* raw_nand) : raw_nand_(raw_nand) {}
 
   fpromise::result<void, std::string> Write(uint64_t offset,
-                                            fbl::Span<const uint8_t> buffer) final {
+                                            cpp20::span<const uint8_t> buffer) final {
     // Calculate page number based on adjusted offset.
     uint64_t adjusted_page_size = RawNandImageGetAdjustedPageSize(raw_nand_->options);
     uint64_t page_number = offset / adjusted_page_size;
@@ -186,14 +187,15 @@ TEST(FtlImageBootstrapTest, FtlDriverBootstrapsFromImageIsOk) {
   std::vector<uint8_t> expected_page_buffer(raw_nand->options.page_size, 0xFF);
   ASSERT_TRUE(partition.reader()->Read(512, expected_page_buffer).is_ok());
 
-  EXPECT_THAT(fbl::Span<uint8_t>(page_buffer).subspan(0, 4096),
-              testing::ElementsAreArray(fbl::Span<uint8_t>(expected_page_buffer).subspan(0, 4096)));
+  EXPECT_THAT(
+      cpp20::span<uint8_t>(page_buffer).subspan(0, 4096),
+      testing::ElementsAreArray(cpp20::span<uint8_t>(expected_page_buffer).subspan(0, 4096)));
   // Remainder of a mapping fitting on the same page, is filled with zeroes.
-  EXPECT_THAT(fbl::Span<uint8_t>(page_buffer).subspan(4096, 4096), testing::Each(testing::Eq(0)));
+  EXPECT_THAT(cpp20::span<uint8_t>(page_buffer).subspan(4096, 4096), testing::Each(testing::Eq(0)));
 
   // Second mapping.
   ASSERT_EQ(ftl_volume.Read(0, 1, page_buffer.data()), ZX_OK);
-  EXPECT_THAT(fbl::Span<uint8_t>(page_buffer).subspan(0, 8192), testing::Each(testing::Eq(0)));
+  EXPECT_THAT(cpp20::span<uint8_t>(page_buffer).subspan(0, 8192), testing::Each(testing::Eq(0)));
 
   // Third mapping.
   std::fill(expected_page_buffer.begin(), expected_page_buffer.end(), 0);
@@ -247,7 +249,7 @@ class InMemoryWriterWithHeader : public Writer {
   explicit InMemoryWriterWithHeader(InMemoryWriter* writer) : writer_(writer) {}
 
   fpromise::result<void, std::string> Write(uint64_t offset,
-                                            fbl::Span<const uint8_t> buffer) final {
+                                            cpp20::span<const uint8_t> buffer) final {
     if (offset < sizeof(RawNandImageHeader)) {
       uint32_t leading_header_bytes =
           std::min(static_cast<size_t>(sizeof(RawNandImageHeader) - offset), buffer.size());
@@ -307,14 +309,15 @@ TEST(FtlImageBootstrapTest, FtlDriverBootstrapsFromImageWithPageDoubleIsOk) {
   std::vector<uint8_t> expected_page_buffer(stitched_raw_nand->options.page_size, 0xFF);
   ASSERT_TRUE(partition.reader()->Read(512, expected_page_buffer).is_ok());
 
-  EXPECT_THAT(fbl::Span<uint8_t>(page_buffer).subspan(0, 4096),
-              testing::ElementsAreArray(fbl::Span<uint8_t>(expected_page_buffer).subspan(0, 4096)));
+  EXPECT_THAT(
+      cpp20::span<uint8_t>(page_buffer).subspan(0, 4096),
+      testing::ElementsAreArray(cpp20::span<uint8_t>(expected_page_buffer).subspan(0, 4096)));
   // Remainder of a mapping fitting on the same page, is filled with zeroes.
-  EXPECT_THAT(fbl::Span<uint8_t>(page_buffer).subspan(4096, 4096), testing::Each(testing::Eq(0)));
+  EXPECT_THAT(cpp20::span<uint8_t>(page_buffer).subspan(4096, 4096), testing::Each(testing::Eq(0)));
 
   // Second mapping.
   ASSERT_EQ(ftl_volume.Read(0, 1, page_buffer.data()), ZX_OK);
-  EXPECT_THAT(fbl::Span<uint8_t>(page_buffer).subspan(0, 8192), testing::Each(testing::Eq(0)));
+  EXPECT_THAT(cpp20::span<uint8_t>(page_buffer).subspan(0, 8192), testing::Each(testing::Eq(0)));
 
   // Third mapping.
   std::fill(expected_page_buffer.begin(), expected_page_buffer.end(), 0);

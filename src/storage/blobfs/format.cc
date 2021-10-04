@@ -5,6 +5,7 @@
 #include "src/storage/blobfs/format.h"
 
 #include <lib/cksum.h>
+#include <lib/stdcompat/span.h>
 #include <lib/syslog/cpp/macros.h>
 
 #include <iterator>
@@ -204,7 +205,7 @@ zx_status_t WriteFilesystemToDisk(BlockDevice* device, const Superblock& superbl
 
   auto base_offset = superblock_blocks + blockmap_blocks + nodemap_blocks;
   fs::WriteBlocksFn write_blocks_fn = [&vmo, &superblock, base_offset](
-                                          fbl::Span<const uint8_t> buffer, uint64_t block_offset,
+                                          cpp20::span<const uint8_t> buffer, uint64_t block_offset,
                                           uint64_t block_count) {
     uint64_t offset =
         safemath::CheckMul<uint64_t>(safemath::CheckAdd(base_offset, block_offset).ValueOrDie(),

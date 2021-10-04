@@ -73,7 +73,7 @@ fpromise::result<void, std::string> FvmImageExtend(const Reader& source_image,
     // The size of the slice is arbitrary, so we se a maximum buffer size, and stream the contents.
     while (moved_bytes < metadata_or.value().GetHeader().slice_size) {
       auto chunk_view =
-          fbl::Span<uint8_t>(read_buffer)
+          cpp20::span<uint8_t>(read_buffer)
               .subspan(0, std::min(kMaxBufferSize, metadata_or.value().GetHeader().slice_size));
 
       if (auto read_result = source_image.Read(read_slice_start + moved_bytes, chunk_view);
@@ -100,16 +100,16 @@ fpromise::result<void, std::string> FvmImageExtend(const Reader& source_image,
   // Now write both copies into the new place.
   if (auto write_primary_metadata_result = target_image.Write(
           new_header.GetSuperblockOffset(fvm::SuperblockType::kPrimary),
-          fbl::Span<const uint8_t>(reinterpret_cast<const uint8_t*>(new_metadata->Get()->data()),
-                                   new_metadata->Get()->size()));
+          cpp20::span<const uint8_t>(reinterpret_cast<const uint8_t*>(new_metadata->Get()->data()),
+                                     new_metadata->Get()->size()));
       write_primary_metadata_result.is_error()) {
     return write_primary_metadata_result.take_error_result();
   }
 
   if (auto write_secondary_metadata_result = target_image.Write(
           new_header.GetSuperblockOffset(fvm::SuperblockType::kSecondary),
-          fbl::Span<const uint8_t>(reinterpret_cast<const uint8_t*>(new_metadata->Get()->data()),
-                                   new_metadata->Get()->size()));
+          cpp20::span<const uint8_t>(reinterpret_cast<const uint8_t*>(new_metadata->Get()->data()),
+                                     new_metadata->Get()->size()));
       write_secondary_metadata_result.is_error()) {
     return write_secondary_metadata_result.take_error_result();
   }

@@ -6,11 +6,11 @@
 
 #include <fcntl.h>
 #include <lib/fpromise/result.h>
+#include <lib/stdcompat/span.h>
 
 #include <cstdio>
 #include <cstdlib>
 
-#include <fbl/span.h>
 #include <fbl/unique_fd.h>
 
 namespace storage::volume_image {
@@ -30,7 +30,7 @@ fpromise::result<FdWriter, std::string> FdWriter::Create(std::string_view path) 
 }
 
 fpromise::result<void, std::string> FdWriter::Write(uint64_t offset,
-                                                    fbl::Span<const uint8_t> buffer) {
+                                                    cpp20::span<const uint8_t> buffer) {
   size_t bytes_written = 0;
   while (bytes_written < buffer.size()) {
     const uint8_t* source = buffer.data() + bytes_written;

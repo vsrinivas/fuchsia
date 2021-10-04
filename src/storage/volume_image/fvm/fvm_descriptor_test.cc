@@ -6,6 +6,7 @@
 
 #include <lib/fit/function.h>
 #include <string.h>
+#include <zircon/assert.h>
 
 #include <cstdint>
 #include <limits>
@@ -352,7 +353,7 @@ TEST(FvmDescriptorTest, MakeHeader) {
 }
 
 template <int shift>
-fpromise::result<void, std::string> GetContents(uint64_t offset, fbl::Span<uint8_t> buffer) {
+fpromise::result<void, std::string> GetContents(uint64_t offset, cpp20::span<uint8_t> buffer) {
   for (uint64_t index = 0; index < buffer.size(); ++index) {
     buffer[index] = (offset + index + shift) % std::numeric_limits<uint8_t>::max();
   }
@@ -361,16 +362,17 @@ fpromise::result<void, std::string> GetContents(uint64_t offset, fbl::Span<uint8
 
 class FakeReader final : public Reader {
  public:
-  FakeReader(fit::function<fpromise::result<void, std::string>(uint64_t, fbl::Span<uint8_t>)>
+  FakeReader(fit::function<fpromise::result<void, std::string>(uint64_t, cpp20::span<uint8_t>)>
                  content_provider,
              uint64_t length)
       : content_provider_(std::move(content_provider)), length_(length) {}
   explicit FakeReader(
-      fit::function<fpromise::result<void, std::string>(uint64_t, fbl::Span<uint8_t>)>
+      fit::function<fpromise::result<void, std::string>(uint64_t, cpp20::span<uint8_t>)>
           content_provider)
       : FakeReader(std::move(content_provider), std::numeric_limits<uint64_t>::max()) {}
 
-  fpromise::result<void, std::string> Read(uint64_t offset, fbl::Span<uint8_t> buffer) const final {
+  fpromise::result<void, std::string> Read(uint64_t offset,
+                                           cpp20::span<uint8_t> buffer) const final {
     if (buffer.size() > length_ || offset > length_ - buffer.size()) {
       return fpromise::error("FakeReader::Read Out of Range. Offset: " + std::to_string(offset) +
                              " buffer size: " + std::to_string(buffer.size()) +
@@ -382,7 +384,7 @@ class FakeReader final : public Reader {
   uint64_t length() const final { return length_; }
 
  private:
-  fit::function<fpromise::result<void, std::string>(uint64_t, fbl::Span<uint8_t>)>
+  fit::function<fpromise::result<void, std::string>(uint64_t, cpp20::span<uint8_t>)>
       content_provider_;
   uint64_t length_;
 };
@@ -394,7 +396,7 @@ Partition MakePartitionWithNameAndInstanceGuidAndContentProvider(
     std::string_view name, const std::array<uint8_t, kGuidLength>& type_guid,
     const std::array<uint8_t, kGuidLength>& instance_guid, uint64_t block_size,
     uint64_t block_count,
-    fit::function<fpromise::result<void, std::string>(uint64_t, fbl::Span<uint8_t>)>
+    fit::function<fpromise::result<void, std::string>(uint64_t, cpp20::span<uint8_t>)>
         content_provider) {
   VolumeDescriptor volume = {};
   ZX_ASSERT(name.size() < kNameLength);
@@ -420,7 +422,7 @@ Partition MakePartitionWithNameAndInstanceGuidAndContentProvider(
 }
 class ErrorWriter final : public Writer {
   fpromise::result<void, std::string> Write(uint64_t offset,
-                                            fbl::Span<const uint8_t> buffer) final {
+                                            cpp20::span<const uint8_t> buffer) final {
     return fpromise::error("Oops something went wrong!.");
   }
 };
@@ -429,7 +431,7 @@ class FakeWriter final : public Writer {
  public:
   // Like writing into a file, the intermediate unwritten parts are zeroed,
   fpromise::result<void, std::string> Write(uint64_t offset,
-                                            fbl::Span<const uint8_t> buffer) final {
+                                            cpp20::span<const uint8_t> buffer) final {
     if (offset + buffer.size() > data_.size()) {
       data_.resize(offset + buffer.size(), 0);
     }
@@ -449,7 +451,7 @@ class FakeWriter final : public Writer {
 class MetadataBufferView final : public fvm::MetadataBuffer {
  public:
   MetadataBufferView() : data_(std::vector<uint8_t>()) {}
-  explicit MetadataBufferView(fbl::Span<uint8_t> data) : data_(data) {}
+  explicit MetadataBufferView(cpp20::span<uint8_t> data) : data_(data) {}
 
   std::unique_ptr<MetadataBuffer> Create(size_t size) const final {
     auto view = std::make_unique<MetadataBufferView>();
@@ -466,7 +468,7 @@ class MetadataBufferView final : public fvm::MetadataBuffer {
   }
 
  private:
-  mutable std::variant<fbl::Span<uint8_t>, std::vector<uint8_t>> data_;
+  mutable std::variant<cpp20::span<uint8_t>, std::vector<uint8_t>> data_;
 };
 
 void CheckPartitionMetadata(const FvmDescriptor& descriptor, fvm::Metadata& metadata) {
@@ -530,7 +532,7 @@ void CheckPartitionMetadata(const FvmDescriptor& descriptor, fvm::Metadata& meta
 }
 
 void CheckImageExtentData(const FvmDescriptor& descriptor, fvm::Metadata& metadata,
-                          fbl::Span<const uint8_t> fvm_image_data) {
+                          cpp20::span<const uint8_t> fvm_image_data) {
   uint64_t allocated_partitions = descriptor.partitions().size();
   auto expected_partition_it = descriptor.partitions().begin();
 
@@ -553,7 +555,7 @@ void CheckImageExtentData(const FvmDescriptor& descriptor, fvm::Metadata& metada
           volume_image::GetBlockCount(mapping.target, size, slice_size);
       uint64_t data_slice_count =
           volume_image::GetBlockCount(mapping.target, mapping.count, slice_size);
-      auto expected_slice_data_view = fbl::Span<uint8_t>(expected_slice_buffer);
+      auto expected_slice_data_view = cpp20::span<uint8_t>(expected_slice_buffer);
 
       for (uint64_t pslice_offset = 0; pslice_offset < data_slice_count; ++pslice_offset) {
         uint64_t remaining_bytes_in_slice = mapping.count < (pslice_offset + 1) * slice_size
@@ -582,7 +584,7 @@ void CheckImageExtentData(const FvmDescriptor& descriptor, fvm::Metadata& metada
 
         // Check the remainder of the last data slice, filled as well.
         if (expected_slice_data_view.size() < slice_size) {
-          auto tail_view = fbl::Span<uint8_t>(expected_slice_buffer)
+          auto tail_view = cpp20::span<uint8_t>(expected_slice_buffer)
                                .subspan(expected_slice_data_view.size(),
                                         slice_size - expected_slice_data_view.size());
           EXPECT_TRUE(memcmp(tail_view.data(), expected_slice_buffer.data(), tail_view.size()) ==
@@ -690,12 +692,12 @@ TEST(FvmDescriptorTest, WriteBlockImageNoPartitionsIsOk) {
   // Verify the metadata matches the supplied options and that no partitions are there.
   // There are no partitions so no required slices, and the options will set everything base
   auto header = internal::MakeHeader(options, 0);
-  auto metadata_view = fbl::Span<uint8_t>(writer.data())
+  auto metadata_view = cpp20::span<uint8_t>(writer.data())
                            .subspan(header.GetSuperblockOffset(fvm::SuperblockType::kPrimary),
                                     header.GetMetadataAllocatedBytes());
   auto primary_metadata_buffer = std::make_unique<MetadataBufferView>(metadata_view);
 
-  metadata_view = fbl::Span<uint8_t>(writer.data())
+  metadata_view = cpp20::span<uint8_t>(writer.data())
                       .subspan(header.GetSuperblockOffset(fvm::SuperblockType::kSecondary),
                                header.GetMetadataAllocatedBytes());
   auto secondary_metadata_buffer = std::make_unique<MetadataBufferView>(metadata_view);
@@ -737,12 +739,12 @@ TEST(FvmDescriptorTest, WriteBlockImageWithSinglePartitionMultipleExtentsIsOk) {
   // Verify the metadata matches the supplied options and that no partitions are there.
   // There are no partitions so no required slices, and the options will set everything base
   auto header = internal::MakeHeader(options, 0);
-  auto metadata_view = fbl::Span<uint8_t>(writer.data())
+  auto metadata_view = cpp20::span<uint8_t>(writer.data())
                            .subspan(header.GetSuperblockOffset(fvm::SuperblockType::kPrimary),
                                     header.GetMetadataAllocatedBytes());
   auto primary_metadata_buffer = std::make_unique<MetadataBufferView>(metadata_view);
 
-  metadata_view = fbl::Span<uint8_t>(writer.data())
+  metadata_view = cpp20::span<uint8_t>(writer.data())
                       .subspan(header.GetSuperblockOffset(fvm::SuperblockType::kSecondary),
                                header.GetMetadataAllocatedBytes());
   auto secondary_metadata_buffer = std::make_unique<MetadataBufferView>(metadata_view);
@@ -795,12 +797,12 @@ TEST(FvmDescriptorTest, WriteBlockImageWithMultiplePartitionsAndExtentsIsOk) {
   // Verify the metadata matches the supplied options and that no partitions are there.
   // There are no partitions so no required slices, and the options will set everything base
   auto header = internal::MakeHeader(options, 0);
-  auto metadata_view = fbl::Span<uint8_t>(writer.data())
+  auto metadata_view = cpp20::span<uint8_t>(writer.data())
                            .subspan(header.GetSuperblockOffset(fvm::SuperblockType::kPrimary),
                                     header.GetMetadataAllocatedBytes());
   auto primary_metadata_buffer = std::make_unique<MetadataBufferView>(metadata_view);
 
-  metadata_view = fbl::Span<uint8_t>(writer.data())
+  metadata_view = cpp20::span<uint8_t>(writer.data())
                       .subspan(header.GetSuperblockOffset(fvm::SuperblockType::kSecondary),
                                header.GetMetadataAllocatedBytes());
   auto secondary_metadata_buffer = std::make_unique<MetadataBufferView>(metadata_view);

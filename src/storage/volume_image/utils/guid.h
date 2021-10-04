@@ -6,12 +6,11 @@
 #define SRC_STORAGE_VOLUME_IMAGE_UTILS_GUID_H_
 
 #include <lib/fpromise/result.h>
+#include <lib/stdcompat/span.h>
 
 #include <array>
 #include <cstdint>
 #include <string_view>
-
-#include <fbl/span.h>
 
 namespace storage::volume_image {
 
@@ -28,13 +27,13 @@ struct Guid {
   // Returns a string containing the representation of |guid|.
   //
   // On error returns a string describing the error condition.
-  static fpromise::result<std::string, std::string> ToString(fbl::Span<const uint8_t> guid);
+  static fpromise::result<std::string, std::string> ToString(cpp20::span<const uint8_t> guid);
 
   // Returns an array containing the byte representation of |guid|.
   //
   // On error returns a string describing the error condition.
   static fpromise::result<std::array<uint8_t, kGuidLength>, std::string> FromString(
-      fbl::Span<const char> guid);
+      cpp20::span<const char> guid);
 };
 
 }  // namespace storage::volume_image

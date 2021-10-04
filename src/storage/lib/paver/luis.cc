@@ -4,9 +4,9 @@
 
 #include "src/storage/lib/paver/luis.h"
 
+#include <lib/stdcompat/span.h>
 #include <zircon/hw/gpt.h>
 
-#include <fbl/span.h>
 #include <gpt/gpt.h>
 #include <soc/aml-common/aml-guid.h>
 
@@ -165,7 +165,7 @@ zx::status<> LuisPartitioner::WipePartitionTables() const {
 }
 
 zx::status<> LuisPartitioner::ValidatePayload(const PartitionSpec& spec,
-                                              fbl::Span<const uint8_t> data) const {
+                                              cpp20::span<const uint8_t> data) const {
   if (!SupportsPartition(spec)) {
     ERROR("Unsupported partition %s\n", spec.ToString().c_str());
     return zx::error(ZX_ERR_NOT_SUPPORTED);

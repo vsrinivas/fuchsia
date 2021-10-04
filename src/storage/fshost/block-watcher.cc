@@ -104,13 +104,13 @@ void BlockWatcher::Thread() {
 
     // +1 for the NUL terminator at the end of the last name.
     uint8_t buf[fio::wire::kMaxBuf + 1];
-    fbl::Span buf_span(buf, std::size(buf) - 1);
+    cpp20::span buf_span(buf, std::size(buf) - 1);
 
     zx_signals_t signals;
     Watcher* selected = nullptr;
     while ((signals = WaitForWatchMessages(watchers, buf_span, &selected)) == ZX_CHANNEL_READABLE) {
       // Add an extra byte, so that ProcessWatchMessages can make C strings in the messages.
-      buf_span = fbl::Span(buf_span.data(), buf_span.size() + 1);
+      buf_span = cpp20::span(buf_span.data(), buf_span.size() + 1);
       buf_span.back() = 0;
       selected->ProcessWatchMessages(
           buf_span, [this](Watcher& watcher, int dirfd, int event, const char* name) {
@@ -118,7 +118,7 @@ void BlockWatcher::Thread() {
           });
 
       // reset the buffer for the next read.
-      buf_span = fbl::Span(buf, std::size(buf) - 1);
+      buf_span = cpp20::span(buf, std::size(buf) - 1);
     }
     switch (signals) {
       case kSignalWatcherPaused: {
@@ -262,7 +262,7 @@ bool BlockWatcher::Callback(Watcher& watcher, int dirfd, int event, const char* 
 }
 
 zx_signals_t BlockWatcher::WaitForWatchMessages(cpp20::span<Watcher> watchers,
-                                                fbl::Span<uint8_t>& buf, Watcher** selected) {
+                                                cpp20::span<uint8_t>& buf, Watcher** selected) {
   *selected = nullptr;
   zx_status_t status;
   std::vector<zx_wait_item_t> wait_items;

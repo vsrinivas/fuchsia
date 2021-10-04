@@ -79,7 +79,7 @@ zx_status_t Watcher::ReinitWatcher() {
   return ZX_OK;
 }
 
-void Watcher::ProcessWatchMessages(fbl::Span<uint8_t> buf, WatcherCallback callback) {
+void Watcher::ProcessWatchMessages(cpp20::span<uint8_t> buf, WatcherCallback callback) {
   uint8_t* iter = buf.begin();
   while (iter + 2 <= buf.end()) {
     uint8_t event = *iter++;

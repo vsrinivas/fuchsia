@@ -4,12 +4,12 @@
 
 #include "src/storage/fvm/metadata.h"
 
+#include <lib/stdcompat/span.h>
 #include <zircon/errors.h>
 
 #include <random>
 #include <vector>
 
-#include <fbl/span.h>
 #include <zxtest/zxtest.h>
 
 #include "src/storage/fvm/format.h"

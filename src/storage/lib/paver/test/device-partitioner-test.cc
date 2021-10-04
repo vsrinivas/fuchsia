@@ -17,6 +17,7 @@
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
 #include <lib/service/llcpp/service.h>
+#include <lib/stdcompat/span.h>
 #include <zircon/boot/image.h>
 #include <zircon/errors.h>
 #include <zircon/hw/gpt.h>
@@ -30,7 +31,6 @@
 #include <string_view>
 #include <utility>
 
-#include <fbl/span.h>
 #include <gpt/cros.h>
 #include <gpt/gpt.h>
 #include <soc/aml-common/aml-guid.h>
@@ -291,7 +291,7 @@ const gpt_partition_t* FindPartitionWithLabel(const gpt::GptDevice* gpt, std::st
 
 // Ensure that the partitions on the device matches the given list.
 void EnsurePartitionsMatch(const gpt::GptDevice* gpt,
-                           fbl::Span<const PartitionDescription> expected) {
+                           cpp20::span<const PartitionDescription> expected) {
   for (auto& part : expected) {
     const gpt_partition_t* gpt_part = FindPartitionWithLabel(gpt, part.name);
     ASSERT_TRUE(gpt_part != nullptr, "Partition \"%s\" not found", part.name);
@@ -845,15 +845,15 @@ TEST_F(EfiDevicePartitionerTests, ValidatePayload) {
 
   // Test invalid partitions.
   ASSERT_NOT_OK(partitioner->ValidatePayload(PartitionSpec(paver::Partition::kZirconA),
-                                             fbl::Span<uint8_t>()));
+                                             cpp20::span<uint8_t>()));
   ASSERT_NOT_OK(partitioner->ValidatePayload(PartitionSpec(paver::Partition::kZirconB),
-                                             fbl::Span<uint8_t>()));
+                                             cpp20::span<uint8_t>()));
   ASSERT_NOT_OK(partitioner->ValidatePayload(PartitionSpec(paver::Partition::kZirconR),
-                                             fbl::Span<uint8_t>()));
+                                             cpp20::span<uint8_t>()));
 
   // Non-kernel partitions are not validated.
   ASSERT_OK(partitioner->ValidatePayload(PartitionSpec(paver::Partition::kAbrMeta),
-                                         fbl::Span<uint8_t>()));
+                                         cpp20::span<uint8_t>()));
 }
 
 class CrosDevicePartitionerTests : public GptDevicePartitionerTests {
@@ -1089,22 +1089,22 @@ TEST_F(CrosDevicePartitionerTests, ValidatePayload) {
 
   // Test invalid partitions.
   ASSERT_NOT_OK(partitioner->ValidatePayload(PartitionSpec(paver::Partition::kZirconA),
-                                             fbl::Span<uint8_t>()));
+                                             cpp20::span<uint8_t>()));
   ASSERT_NOT_OK(partitioner->ValidatePayload(PartitionSpec(paver::Partition::kZirconB),
-                                             fbl::Span<uint8_t>()));
+                                             cpp20::span<uint8_t>()));
   ASSERT_NOT_OK(partitioner->ValidatePayload(PartitionSpec(paver::Partition::kZirconR),
-                                             fbl::Span<uint8_t>()));
+                                             cpp20::span<uint8_t>()));
 
   // Test valid partition.
   constexpr std::string_view kChromeOsMagicHeader = "CHROMEOS";
   ASSERT_OK(partitioner->ValidatePayload(
       PartitionSpec(paver::Partition::kZirconA),
-      fbl::Span<const uint8_t>(reinterpret_cast<const uint8_t*>(kChromeOsMagicHeader.data()),
-                               kChromeOsMagicHeader.size())));
+      cpp20::span<const uint8_t>(reinterpret_cast<const uint8_t*>(kChromeOsMagicHeader.data()),
+                                 kChromeOsMagicHeader.size())));
 
   // Non-kernel partitions are not validated.
   ASSERT_OK(partitioner->ValidatePayload(PartitionSpec(paver::Partition::kFuchsiaVolumeManager),
-                                         fbl::Span<uint8_t>()));
+                                         cpp20::span<uint8_t>()));
 }
 
 TEST_F(CrosDevicePartitionerTests, InitPartitionTablesForRecoveredDevice) {
@@ -1420,7 +1420,7 @@ TEST_F(SherlockPartitionerTests, InitializePartitionTable) {
         {"buf", kDummyType, 0x730000, 0x18000},
     };
 
-    for (const auto& part : fbl::Span(kStartingPartitions)) {
+    for (const auto& part : cpp20::span(kStartingPartitions)) {
       ASSERT_OK(
           gpt->AddPartition(part.name, part.type, GetRandomGuid(), part.start, part.length, 0),
           "%s", part.name);
@@ -2105,18 +2105,18 @@ TEST_F(NelsonPartitionerTests, ValidatePayload) {
   std::vector<uint8_t> payload_bl2_size(paver::kNelsonBL2Size);
   ASSERT_NOT_OK(
       partitioner->ValidatePayload(PartitionSpec(paver::Partition::kBootloaderA, "bootloader"),
-                                   fbl::Span<uint8_t>(payload_bl2_size)));
+                                   cpp20::span<uint8_t>(payload_bl2_size)));
   ASSERT_NOT_OK(
       partitioner->ValidatePayload(PartitionSpec(paver::Partition::kBootloaderB, "bootloader"),
-                                   fbl::Span<uint8_t>(payload_bl2_size)));
+                                   cpp20::span<uint8_t>(payload_bl2_size)));
 
   std::vector<uint8_t> payload_bl2_tpl_size(2 * 1024 * 1024);
   ASSERT_OK(
       partitioner->ValidatePayload(PartitionSpec(paver::Partition::kBootloaderA, "bootloader"),
-                                   fbl::Span<uint8_t>(payload_bl2_tpl_size)));
+                                   cpp20::span<uint8_t>(payload_bl2_tpl_size)));
   ASSERT_OK(
       partitioner->ValidatePayload(PartitionSpec(paver::Partition::kBootloaderB, "bootloader"),
-                                   fbl::Span<uint8_t>(payload_bl2_tpl_size)));
+                                   cpp20::span<uint8_t>(payload_bl2_tpl_size)));
 }
 
 TEST_F(NelsonPartitionerTests, WriteBootloaderA) {

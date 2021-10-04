@@ -5,6 +5,7 @@
 #include "src/storage/volume_image/ftl/ftl_image.h"
 
 #include <lib/fpromise/result.h>
+#include <lib/stdcompat/span.h>
 
 #include <cassert>
 #include <cstdint>
@@ -15,7 +16,6 @@
 #include <type_traits>
 #include <vector>
 
-#include <fbl/span.h>
 #include <safemath/safe_conversions.h>
 
 #include "src/storage/volume_image/address_descriptor.h"
@@ -39,7 +39,7 @@ class FtlPageWriter {
   // |page_content| in the data section and the appropiate FTL metadata in the spare area section
   // for a volume page, into |writer|.
   fpromise::result<void, std::string> WriteVolumePage(uint64_t logical_page,
-                                                      fbl::Span<const uint8_t> page_content,
+                                                      cpp20::span<const uint8_t> page_content,
                                                       Writer* writer) {
     std::vector<uint8_t> oob_byte_buffer(options_.oob_bytes_size, 0xFF);
     ftl_image_internal::WriteOutOfBandBytes<ftl_image_internal::PageType::kVolumePage>(
@@ -116,7 +116,7 @@ fpromise::result<void, std::string> FtlImageWrite(const RawNandOptions& options,
         buffer_size = options.page_size - current_page_start;
       }
 
-      auto view = fbl::Span<uint8_t>(page_buffer).subspan(current_page_start, buffer_size);
+      auto view = cpp20::span<uint8_t>(page_buffer).subspan(current_page_start, buffer_size);
 
       auto read_result = partition.reader()->Read(read_offset, view);
       if (read_result.is_error()) {

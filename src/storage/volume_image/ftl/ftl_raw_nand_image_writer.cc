@@ -23,7 +23,7 @@ namespace storage::volume_image {
 
 fpromise::result<std::tuple<FtlRawNandImageWriter, RawNandOptions>, std::string>
 FtlRawNandImageWriter::Create(const RawNandOptions& device_options,
-                              fbl::Span<const RawNandImageFlag> flags, ImageFormat format,
+                              cpp20::span<const RawNandImageFlag> flags, ImageFormat format,
                               Writer* writer) {
   if (writer == nullptr) {
     return fpromise::error(
@@ -69,8 +69,8 @@ FtlRawNandImageWriter::Create(const RawNandOptions& device_options,
   }
 
   auto write_result =
-      writer->Write(0, fbl::Span<const uint8_t>(reinterpret_cast<const uint8_t*>(&header),
-                                                sizeof(RawNandImageHeader)));
+      writer->Write(0, cpp20::span<const uint8_t>(reinterpret_cast<const uint8_t*>(&header),
+                                                  sizeof(RawNandImageHeader)));
   if (write_result.is_error()) {
     return write_result.take_error_result();
   }
@@ -80,7 +80,7 @@ FtlRawNandImageWriter::Create(const RawNandOptions& device_options,
 }
 
 fpromise::result<void, std::string> FtlRawNandImageWriter::Write(uint64_t offset,
-                                                                 fbl::Span<const uint8_t> data) {
+                                                                 cpp20::span<const uint8_t> data) {
   uint64_t device_adjusted_page_size = RawNandImageGetAdjustedPageSize(options_);
   uint64_t adjusted_page_size = scale_factor_ * device_adjusted_page_size;
   uint64_t page_offset = offset % adjusted_page_size;

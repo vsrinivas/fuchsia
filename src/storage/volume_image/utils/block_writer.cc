@@ -10,7 +10,7 @@
 
 namespace storage::volume_image {
 fpromise::result<void, std::string> BlockWriter::Write(uint64_t offset,
-                                                       fbl::Span<const uint8_t> buffer) {
+                                                       cpp20::span<const uint8_t> buffer) {
   if (buffer.size() == 0) {
     return fpromise::ok();
   }

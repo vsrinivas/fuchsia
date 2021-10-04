@@ -6,6 +6,7 @@
 #define SRC_STORAGE_LIB_PAVER_DEVICE_PARTITIONER_H_
 
 #include <fidl/fuchsia.paver/cpp/wire.h>
+#include <lib/stdcompat/span.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/status.h>
 #include <stdbool.h>
@@ -17,7 +18,6 @@
 #include <utility>
 #include <vector>
 
-#include <fbl/span.h>
 #include <fbl/string.h>
 #include <fbl/unique_fd.h>
 
@@ -130,7 +130,7 @@ class DevicePartitioner {
   //
   // This analysis is best-effort only, providing only basic safety checks.
   virtual zx::status<> ValidatePayload(const PartitionSpec& spec,
-                                       fbl::Span<const uint8_t> data) const = 0;
+                                       cpp20::span<const uint8_t> data) const = 0;
 
   // Flush all buffered write to persistant storage.
   virtual zx::status<> Flush() const = 0;
@@ -187,7 +187,7 @@ class FixedDevicePartitioner : public DevicePartitioner {
   zx::status<> WipePartitionTables() const override;
 
   zx::status<> ValidatePayload(const PartitionSpec& spec,
-                               fbl::Span<const uint8_t> data) const override;
+                               cpp20::span<const uint8_t> data) const override;
 
   zx::status<> Flush() const override { return zx::ok(); }
 

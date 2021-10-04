@@ -4,7 +4,8 @@
 
 #include "src/storage/lib/paver/sherlock.h"
 
-#include <fbl/span.h>
+#include <lib/stdcompat/span.h>
+
 #include <gpt/gpt.h>
 #include <soc/aml-common/aml-guid.h>
 
@@ -191,7 +192,7 @@ zx::status<> SherlockPartitioner::InitPartitionTables() const {
     size_t min_size;
   };
 
-  const auto add_partitions = [&](fbl::Span<const Partition> partitions) -> zx::status<> {
+  const auto add_partitions = [&](cpp20::span<const Partition> partitions) -> zx::status<> {
     for (const auto& part : partitions) {
       if (auto status = gpt_->AddPartition(part.name, part.type, part.min_size, 0);
           status.is_error()) {
@@ -222,7 +223,7 @@ zx::status<> SherlockPartitioner::InitPartitionTables() const {
     char cstring_name[GPT_NAME_LEN] = {};
     utf16_to_cstring(cstring_name, part.name, GPT_NAME_LEN);
 
-    for (const auto& partition_name : fbl::Span(partitions_to_wipe)) {
+    for (const auto& partition_name : cpp20::span(partitions_to_wipe)) {
       if (strncmp(cstring_name, partition_name, GPT_NAME_LEN) == 0) {
         return true;
       }
@@ -297,7 +298,7 @@ zx::status<> SherlockPartitioner::InitPartitionTables() const {
       },
   };
 
-  if (auto status = add_partitions(fbl::Span<const Partition>(partitions_to_add));
+  if (auto status = add_partitions(cpp20::span<const Partition>(partitions_to_add));
       status.is_error()) {
     return status.take_error();
   }
@@ -310,7 +311,7 @@ zx::status<> SherlockPartitioner::WipePartitionTables() const {
 }
 
 zx::status<> SherlockPartitioner::ValidatePayload(const PartitionSpec& spec,
-                                                  fbl::Span<const uint8_t> data) const {
+                                                  cpp20::span<const uint8_t> data) const {
   if (!SupportsPartition(spec)) {
     ERROR("Unsupported partition %s\n", spec.ToString().c_str());
     return zx::error(ZX_ERR_NOT_SUPPORTED);

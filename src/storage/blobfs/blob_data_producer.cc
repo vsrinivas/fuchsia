@@ -14,7 +14,7 @@ namespace blobfs {
 
 uint64_t SimpleBlobDataProducer::GetRemainingBytes() const { return data_.size(); }
 
-zx::status<fbl::Span<const uint8_t>> SimpleBlobDataProducer::Consume(uint64_t max) {
+zx::status<cpp20::span<const uint8_t>> SimpleBlobDataProducer::Consume(uint64_t max) {
   auto result = data_.subspan(0, std::min(max, data_.size()));
   data_ = data_.subspan(result.size());
   return zx::ok(result);
@@ -31,7 +31,7 @@ uint64_t MergeBlobDataProducer::GetRemainingBytes() const {
   return first_.GetRemainingBytes() + padding_ + second_.GetRemainingBytes();
 }
 
-zx::status<fbl::Span<const uint8_t>> MergeBlobDataProducer::Consume(uint64_t max) {
+zx::status<cpp20::span<const uint8_t>> MergeBlobDataProducer::Consume(uint64_t max) {
   if (first_.GetRemainingBytes() > 0) {
     auto data = first_.Consume(max);
     if (data.is_error()) {
@@ -46,7 +46,7 @@ zx::status<fbl::Span<const uint8_t>> MergeBlobDataProducer::Consume(uint64_t max
       uint8_t* p = const_cast<uint8_t*>(data->end());
       memset(p, 0, to_pad);
       p += to_pad;
-      data.value() = fbl::Span(data->data(), data->size() + to_pad);
+      data.value() = cpp20::span(data->data(), data->size() + to_pad);
       padding_ -= to_pad;
 
       // If we still don't have a full block, fill the block with data from the second producer.
@@ -56,7 +56,7 @@ zx::status<fbl::Span<const uint8_t>> MergeBlobDataProducer::Consume(uint64_t max
         if (data2.is_error())
           return data2;
         memcpy(p, data2->data(), data2->size());
-        data.value() = fbl::Span(data->data(), data->size() + data2->size());
+        data.value() = cpp20::span(data->data(), data->size() + data2->size());
       }
     }
     return data;
@@ -67,7 +67,7 @@ zx::status<fbl::Span<const uint8_t>> MergeBlobDataProducer::Consume(uint64_t max
 
     // If we have some padding, prepend zeroed data.
     if (padding_ > 0) {
-      data.value() = fbl::Span(data->data() - padding_, data->size() + padding_);
+      data.value() = cpp20::span(data->data() - padding_, data->size() + padding_);
       memset(const_cast<uint8_t*>(data->data()), 0, padding_);
       padding_ = 0;
     }
@@ -109,13 +109,13 @@ uint64_t DecompressBlobDataProducer::GetRemainingBytes() const {
   return decompressed_remaining_ + buffer_avail_;
 }
 
-zx::status<fbl::Span<const uint8_t>> DecompressBlobDataProducer::Consume(uint64_t max) {
+zx::status<cpp20::span<const uint8_t>> DecompressBlobDataProducer::Consume(uint64_t max) {
   if (buffer_avail_ == 0) {
     if (zx_status_t status = Decompress(); status != ZX_OK) {
       return zx::error(status);
     }
   }
-  fbl::Span result(buffer_.get() + buffer_offset_, std::min(buffer_avail_, max));
+  cpp20::span result(buffer_.get() + buffer_offset_, std::min(buffer_avail_, max));
   buffer_offset_ += result.size();
   buffer_avail_ -= result.size();
   return zx::ok(result);

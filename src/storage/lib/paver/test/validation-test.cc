@@ -4,6 +4,7 @@
 
 #include "src/storage/lib/paver/validation.h"
 
+#include <lib/stdcompat/span.h>
 #include <zircon/boot/image.h>
 #include <zircon/errors.h>
 
@@ -11,7 +12,6 @@
 #include <vector>
 
 #include <fbl/array.h>
-#include <fbl/span.h>
 #include <zxtest/zxtest.h>
 
 #include "src/storage/lib/paver/device-partitioner.h"
@@ -28,7 +28,7 @@ namespace {
 // If "result_header" is non-null, it will point to the beginning of the
 // uint8_t. It must not outlive the returned fbl::Array object.
 fbl::Array<uint8_t> CreateZbiHeader(Arch arch, size_t payload_size, zircon_kernel_t** result_header,
-                                    fbl::Span<uint8_t>* span = nullptr) {
+                                    cpp20::span<uint8_t>* span = nullptr) {
   // Allocate raw memory.
   const size_t data_size = sizeof(zircon_kernel_t) + payload_size;
   auto data = fbl::Array<uint8_t>(new uint8_t[data_size], data_size);
@@ -52,7 +52,7 @@ fbl::Array<uint8_t> CreateZbiHeader(Arch arch, size_t payload_size, zircon_kerne
   header->hdr_kernel.length = static_cast<uint32_t>(sizeof(zbi_kernel_t) + payload_size);
 
   if (span != nullptr) {
-    *span = fbl::Span<uint8_t>(data.get(), data_size);
+    *span = cpp20::span<uint8_t>(data.get(), data_size);
   }
   if (result_header != nullptr) {
     *result_header = reinterpret_cast<zircon_kernel_t*>(data.get());
@@ -62,18 +62,18 @@ fbl::Array<uint8_t> CreateZbiHeader(Arch arch, size_t payload_size, zircon_kerne
 }
 
 TEST(IsValidKernelZbi, EmptyData) {
-  ASSERT_FALSE(IsValidKernelZbi(Arch::kX64, fbl::Span<uint8_t>()));
+  ASSERT_FALSE(IsValidKernelZbi(Arch::kX64, cpp20::span<uint8_t>()));
 }
 
 TEST(IsValidKernelZbi, MinimalValid) {
-  fbl::Span<uint8_t> data;
+  cpp20::span<uint8_t> data;
   zircon_kernel_t* header;
   auto array = CreateZbiHeader(Arch::kX64, 0, &header, &data);
   ASSERT_TRUE(IsValidKernelZbi(Arch::kX64, data));
 }
 
 TEST(IsValidKernelZbi, DataTooSmall) {
-  fbl::Span<uint8_t> data;
+  cpp20::span<uint8_t> data;
   zircon_kernel_t* header;
   auto array = CreateZbiHeader(Arch::kX64, 1024, &header, &data);
   header->hdr_file.length += 1;
@@ -81,7 +81,7 @@ TEST(IsValidKernelZbi, DataTooSmall) {
 }
 
 TEST(IsValidKernelZbi, DataTooBig) {
-  fbl::Span<uint8_t> data;
+  cpp20::span<uint8_t> data;
   zircon_kernel_t* header;
   auto array = CreateZbiHeader(Arch::kX64, 1024, &header, &data);
   header->hdr_file.length = 0xffff'ffffu;
@@ -89,7 +89,7 @@ TEST(IsValidKernelZbi, DataTooBig) {
 }
 
 TEST(IsValidKernelZbi, KernelDataTooSmall) {
-  fbl::Span<uint8_t> data;
+  cpp20::span<uint8_t> data;
   zircon_kernel_t* header;
   auto array = CreateZbiHeader(Arch::kX64, 1024, &header, &data);
   header->hdr_kernel.length += 1;
@@ -97,21 +97,21 @@ TEST(IsValidKernelZbi, KernelDataTooSmall) {
 }
 
 TEST(IsValidKernelZbi, ValidWithPayload) {
-  fbl::Span<uint8_t> data;
+  cpp20::span<uint8_t> data;
   zircon_kernel_t* header;
   auto array = CreateZbiHeader(Arch::kX64, 1024, &header, &data);
   ASSERT_TRUE(IsValidKernelZbi(Arch::kX64, data));
 }
 
 TEST(IsValidKernelZbi, InvalidArch) {
-  fbl::Span<uint8_t> data;
+  cpp20::span<uint8_t> data;
   zircon_kernel_t* header;
   auto array = CreateZbiHeader(Arch::kX64, 0, &header, &data);
   ASSERT_FALSE(IsValidKernelZbi(Arch::kArm64, data));
 }
 
 TEST(IsValidKernelZbi, InvalidMagic) {
-  fbl::Span<uint8_t> data;
+  cpp20::span<uint8_t> data;
   zircon_kernel_t* header;
   auto array = CreateZbiHeader(Arch::kX64, 0, &header, &data);
   header->hdr_file.magic = 0;
@@ -119,7 +119,7 @@ TEST(IsValidKernelZbi, InvalidMagic) {
 }
 
 TEST(IsValidKernelZbi, ValidCrc) {
-  fbl::Span<uint8_t> data;
+  cpp20::span<uint8_t> data;
   zircon_kernel_t* header;
   auto array = CreateZbiHeader(Arch::kX64, 0, &header, &data);
   header->hdr_kernel.flags |= ZBI_FLAG_CRC32;
@@ -130,7 +130,7 @@ TEST(IsValidKernelZbi, ValidCrc) {
 }
 
 TEST(IsValidKernelZbi, InvalidCrc) {
-  fbl::Span<uint8_t> data;
+  cpp20::span<uint8_t> data;
   zircon_kernel_t* header;
   auto array = CreateZbiHeader(Arch::kX64, 0, &header, &data);
   header->hdr_kernel.flags |= ZBI_FLAG_CRC32;
@@ -140,8 +140,8 @@ TEST(IsValidKernelZbi, InvalidCrc) {
   ASSERT_FALSE(IsValidKernelZbi(Arch::kX64, data));
 }
 
-static fbl::Span<const uint8_t> StringToSpan(const std::string& data) {
-  return fbl::Span<const uint8_t>(reinterpret_cast<const uint8_t*>(data.data()), data.size());
+static cpp20::span<const uint8_t> StringToSpan(const std::string& data) {
+  return cpp20::span<const uint8_t>(reinterpret_cast<const uint8_t*>(data.data()), data.size());
 }
 
 TEST(IsValidChromeOSKernel, TooSmall) {

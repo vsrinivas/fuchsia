@@ -4,8 +4,9 @@
 
 #include "src/storage/minfs/lazy_buffer.h"
 
+#include <lib/stdcompat/span.h>
+
 #include <block-client/cpp/fake-device.h>
-#include <fbl/span.h>
 #include <gtest/gtest.h>
 
 #include "src/storage/minfs/bcache.h"
@@ -54,7 +55,7 @@ class LazyBufferTest : public testing::Test {
   }
 
   // Writes |data| at kIndex.
-  void Write(fbl::Span<const uint32_t> data) {
+  void Write(cpp20::span<const uint32_t> data) {
     SimpleMapper mapper;
     auto flusher = [this, &mapper](BaseBufferView* view) {
       return buffer_->Flush(
