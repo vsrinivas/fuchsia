@@ -99,6 +99,10 @@ pub struct Product {
     /// partitions.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub partitions: Vec<Partition>,
+
+    /// Does this product require fastboot to be unlocked.
+    #[serde(default)]
+    pub requires_unlock: bool,
 }
 
 /// A partition to flash on the target.

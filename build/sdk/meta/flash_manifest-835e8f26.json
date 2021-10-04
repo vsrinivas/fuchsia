@@ -109,6 +109,10 @@
                         "$ref": "#/definitions/partition"
                     },
                     "type": "array"
+                },
+                "requires_unlock": {
+                    "description": "A boolean identifying if the fastboot device needs to be unlocked.",
+                    "type": "boolean"
                 }
             },
             "required": [

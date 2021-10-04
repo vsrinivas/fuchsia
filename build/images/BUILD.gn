@@ -650,6 +650,7 @@ flash_manifest_content = {
     # ready to be flashed using the standard means.
     {
       name = "bootstrap"
+      requires_unlock = true
       bootloader_partitions = bootstrap_parts + bootloader_parts
       partitions = []
       oem_files = []
@@ -789,6 +790,7 @@ generated_file("fastboot_manifest_archive") {
           # ready to be flashed using the standard means.
           {
             name = "bootstrap"
+            requires_unlock = true
             bootloader_partitions =
                 archive_bootstrap_parts + archive_bootloader_parts
             partitions = []
