@@ -8,14 +8,14 @@ group("network-device") {
   deps = [ "cpp" ]
 }
 
-fuchsia_unittest_component("netdev-client-cpp-test") {
+fuchsia_unittest_component("cpp-test") {
   deps = [ "cpp:tests" ]
-  manifest = "meta/cpp-test.cmx"
+  manifest = "meta/cpp-test.cml"
 }
 
 fuchsia_test_package("netdev-client-tests") {
-  deps = [ "//src/connectivity/network/tun/network-tun:component" ]
-  test_components = [ ":netdev-client-cpp-test" ]
+  test_components = [ ":cpp-test" ]
+  deps = [ "//src/connectivity/network/tun/network-tun:component-v2" ]
   test_specs = {
     log_settings = {
       max_severity = "ERROR"
