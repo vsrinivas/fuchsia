@@ -8,7 +8,7 @@ Acquire the current time.
 
 ## STATUS
 
-`zx_clock_adjust` is currently **DEPRECATED**. Do not make use of it in any new
+`zx_clock_get` is currently **DEPRECATED**. Do not make use of it in any new
 code. See the [ALTERNATIVES](#alternatives) section of this page for the
 updated way to fetch the values that used to be accessible via
 `zx_clock_get()`.
