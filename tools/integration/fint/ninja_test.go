@@ -19,6 +19,7 @@ import (
 	"github.com/google/go-cmp/cmp"
 
 	"go.fuchsia.dev/fuchsia/tools/build"
+	"go.fuchsia.dev/fuchsia/tools/lib/streams"
 )
 
 func TestRunNinja(t *testing.T) {
@@ -236,11 +237,8 @@ func TestRunNinja(t *testing.T) {
 }
 
 func TestRunWithNinjaExplain(t *testing.T) {
-	origStdout := osStdout
-	t.Cleanup(func() { osStdout = origStdout })
-
 	gotStdout := new(strings.Builder)
-	osStdout = gotStdout
+	ctx := streams.ContextWithStdout(context.Background(), gotStdout)
 
 	sr := &fakeSubprocessRunner{
 		mockStdout: []byte(`ninja: Entering directory /foo
@@ -256,8 +254,7 @@ ninja explain: obj/build/foo is dirty`),
 
 	explainSink := new(strings.Builder)
 
-	_, err := runNinja(context.Background(), r, []string{"foo", "bar"}, true /* explain */, explainSink)
-	if err != nil {
+	if _, err := runNinja(ctx, r, []string{"foo", "bar"}, true /* explain */, explainSink); err != nil {
 		t.Fatalf("runNinja failed: %s", err)
 	}
 
@@ -597,7 +594,8 @@ func TestNinjaDryRun(t *testing.T) {
 	}
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			ctx := context.Background()
+			var gotStdout strings.Builder
+			ctx := streams.ContextWithStdout(context.Background(), &gotStdout)
 			mockStdout := "ninja\nstdout\n"
 			subprocessRunner := &fakeSubprocessRunner{
 				mockStdout: []byte(mockStdout),
@@ -621,6 +619,14 @@ func TestNinjaDryRun(t *testing.T) {
 			}
 			if stderr != "" {
 				t.Errorf("stderr is unexpectedly non-empty: %s", stderr)
+			}
+
+			if tc.fail {
+				if diff := cmp.Diff(mockStdout, gotStdout.String()); diff != "" {
+					t.Errorf("os.Stdout differs from expected (-want +got): %s", diff)
+				}
+			} else if gotStdout.String() != "" {
+				t.Errorf("ninjaDryRun should not emit to os.Stdout if it succeeds")
 			}
 		})
 	}

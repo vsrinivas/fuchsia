@@ -21,6 +21,7 @@ import (
 	"unicode"
 
 	"go.fuchsia.dev/fuchsia/tools/build"
+	"go.fuchsia.dev/fuchsia/tools/lib/streams"
 )
 
 var (
@@ -73,9 +74,6 @@ var (
 		"//tools/fvdl/e2e:fvdl_sdk_test",
 	}
 )
-
-// Stubbable in test.
-var osStdout io.Writer = os.Stdout
 
 const (
 	// unrecognizedFailureMsg is the message we'll output if ninja fails but its
@@ -268,7 +266,7 @@ func runNinja(
 		if explain {
 			targets = append(targets, "-d", "explain")
 		}
-		stdout, stderr := stripNinjaExplain(osStdout), stripNinjaExplain(os.Stderr)
+		stdout, stderr := stripNinjaExplain(streams.Stdout(ctx)), stripNinjaExplain(streams.Stderr(ctx))
 		err := r.run(
 			ctx,
 			targets,
@@ -316,18 +314,16 @@ func ninjaDryRun(ctx context.Context, r ninjaRunner, targets []string) (string, 
 	args := []string{"-d", "explain", "--verbose", "-n"}
 	args = append(args, targets...)
 
-	var stdout, stderr strings.Builder
+	var stdout, stderr bytes.Buffer
 	err := r.run(ctx, args, &stdout, &stderr)
-	stdoutStr := stdout.String()
-	stderrStr := stderr.String()
 	if err != nil {
 		// stdout and stderr are normally not emitted because they're very
 		// noisy, but if the dry run fails then they'll likely contain the
 		// information necessary to understand the failure.
-		os.Stdout.WriteString(stdoutStr)
-		os.Stderr.WriteString(stderrStr)
+		streams.Stdout(ctx).Write(stdout.Bytes())
+		streams.Stderr(ctx).Write(stderr.Bytes())
 	}
-	return stdoutStr, stderrStr, err
+	return stdout.String(), stderr.String(), err
 }
 
 // checkNinjaNoop runs `ninja explain` against a build directory to determine
