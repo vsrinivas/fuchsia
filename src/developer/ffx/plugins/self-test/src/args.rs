@@ -25,6 +25,12 @@ pub struct SelftestCommand {
     #[argh(option, default = "true", description = "include target interaction tests")]
     pub include_target: bool,
 
+    #[argh(
+        option,
+        description = "the path to find an ssh key for host/target communication. This command creates an isolated environment for each test. It is designed to work within the CQ infrastructure where certain environment variables are set related to the location of temp directories as well as the FUCHSIA_SSH_KEY variable. If you are running this command locally and wish to run tests where `include_target` is true, then you must also provide a way to find an ssh key. This argument is one way to do that. The other is to emulate the CQ environment and set FUCHSIA_SSH_KEY."
+    )]
+    pub ssh_key_path: Option<String>,
+
     #[argh(subcommand)]
     pub subcommand: Option<Subcommand>,
 }

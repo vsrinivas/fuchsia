@@ -28,6 +28,7 @@ ffx_plugin("ffx_selftest") {
     "//src/developer/ffx/lib/errors:lib",
     "//src/lib/fuchsia-async",
     "//third_party/rust_crates:libc",
+    "//third_party/rust_crates:once_cell",
     "//third_party/rust_crates:serde",
     "//third_party/rust_crates:serde_json",
     "//third_party/rust_crates:tempfile",

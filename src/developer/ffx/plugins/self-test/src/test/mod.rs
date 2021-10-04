@@ -7,6 +7,7 @@ use {
     errors::ffx_bail,
     ffx_daemon::is_daemon_running_at_path,
     fuchsia_async::TimeoutExt,
+    once_cell::sync::OnceCell,
     serde::Serialize,
     serde_json::Value,
     std::borrow::Cow,
@@ -19,6 +20,9 @@ use {
 };
 
 pub mod asserts;
+
+const FUCHSIA_SSH_KEY: &'static str = "FUCHSIA_SSH_KEY";
+static SSH_KEY_PATH: OnceCell<String> = OnceCell::new();
 
 /// Get the target nodename we're expected to interact with in this test, or
 /// pick the first discovered target. If nodename is set via $FUCHSIA_NODENAME
@@ -156,7 +160,13 @@ impl Isolate {
         for (var, val) in std::env::vars() {
             if var.contains("TEMP") || var.contains("TMP") {
                 cmd.env(var, val);
+            } else if var == FUCHSIA_SSH_KEY {
+                cmd.env(var, val);
             }
+        }
+
+        if let Some(key) = SSH_KEY_PATH.get() {
+            cmd.env(FUCHSIA_SSH_KEY, key);
         }
 
         cmd.env("HOME", &*self.home_dir);
@@ -197,9 +207,18 @@ impl Drop for Isolate {
 
 /// run runs the given set of tests printing results to stdout and exiting
 /// with 0 or 1 if the tests passed or failed, respectively.
-pub async fn run(tests: Vec<TestCase>, timeout: Duration, case_timeout: Duration) -> Result<()> {
+pub async fn run(
+    tests: Vec<TestCase>,
+    timeout: Duration,
+    case_timeout: Duration,
+    ssh_key_path: Option<String>,
+) -> Result<()> {
     let mut writer = std::io::stdout();
     let color = is_tty(&writer);
+
+    if let Some(path) = ssh_key_path {
+        SSH_KEY_PATH.set(path).map_err(|_| anyhow!("Attempted to set SSH_KEY_PATH twice"))?;
+    }
 
     async {
         let num_tests = tests.len();
