@@ -264,7 +264,7 @@ TEST_F(VirtioTests, TwoMsixBindSuccess) {
 
 // Ensure that the Legacy interface looks for IO Bar 0 and succeeds up until it
 // tries to make IO writes using in/out instructions.
-TEST_F(VirtioTests, LegacyIoBackendError) {
+TEST_F(VirtioTests, DISABLED_LegacyIoBackendError) {
   fake_pci().AddLegacyInterrupt();
   SetUpProtocol();
   SetUpLegacyBar();
