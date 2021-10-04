@@ -696,9 +696,9 @@ impl<'a> RecordsSerializerImpl<'a> for DhcpOptionImpl {
                 let len = u16::try_from(IANA_HEADER_LEN + options.records_bytes_len())
                     .expect("overflows");
                 let () = buf.write_obj_front(&U16::new(len)).expect("buffer is too small");
-                let () = buf.write_obj_front(iaid).expect("buffer is too small");
-                let () = buf.write_obj_front(t1).expect("buffer is too small");
-                let () = buf.write_obj_front(t2).expect("buffer is too small");
+                let () = buf.write_obj_front(&U32::new(*iaid)).expect("buffer is too small");
+                let () = buf.write_obj_front(&U32::new(*t1)).expect("buffer is too small");
+                let () = buf.write_obj_front(&U32::new(*t2)).expect("buffer is too small");
                 let () = options.serialize_records(buf);
             }
             DhcpOption::IaAddr(IaAddrSerializer {
@@ -711,8 +711,11 @@ impl<'a> RecordsSerializerImpl<'a> for DhcpOptionImpl {
                     .expect("overflows");
                 let () = buf.write_obj_front(&U16::new(len)).expect("buffer is too small");
                 let () = buf.write_obj_front(&addr.octets()).expect("buffer is too small");
-                let () = buf.write_obj_front(preferred_lifetime).expect("buffer is too small");
-                let () = buf.write_obj_front(valid_lifetime).expect("buffer is too small");
+                let () = buf
+                    .write_obj_front(&U32::new(*preferred_lifetime))
+                    .expect("buffer is too small");
+                let () =
+                    buf.write_obj_front(&U32::new(*valid_lifetime)).expect("buffer is too small");
                 let () = options.serialize_records(buf);
             }
             DhcpOption::Oro(requested_opts) => {
@@ -926,8 +929,8 @@ mod tests {
             DhcpOption::Preference(42),
             DhcpOption::IaAddr(IaAddrSerializer::new(
                 Ipv6Addr::from([0, 1, 2, 3, 4, 5, 6, 107, 108, 109, 110, 111, 212, 213, 214, 215]),
-                0,
-                0,
+                3600,
+                7200,
                 &iaaddr_options,
             )),
         ];
@@ -942,7 +945,7 @@ mod tests {
         let options = [
             DhcpOption::ClientId(&[4, 5, 6]),
             DhcpOption::ServerId(&[8]),
-            DhcpOption::Iana(IanaSerializer::new(0, 0, 0, &iana_options)),
+            DhcpOption::Iana(IanaSerializer::new(42, 3000, 6500, &iana_options)),
             DhcpOption::Oro(&[OptionCode::ClientId, OptionCode::ServerId]),
             DhcpOption::Preference(42),
             DhcpOption::ElapsedTime(3600),
@@ -967,7 +970,7 @@ mod tests {
                 0, 1, 0, 3, 4, 5, 6, // option - client ID
                 0, 2, 0, 1, 8, // option - server ID
                 // option - IA_NA
-                0, 3, 0, 59, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 7, 0, 1, 42,  0, 5, 0, 38, 0, 1, 2, 3, 4, 5, 6, 107, 108, 109, 110, 111, 212, 213, 214, 215, 0, 0, 0, 0, 0, 0, 0, 0, 0, 13, 0, 10, 0, 0, 83, 117, 99, 99, 101, 115, 115, 46,
+                0, 3, 0, 59, 0, 0, 0, 42, 0, 0, 11, 184, 0, 0, 25, 100, 0, 7, 0, 1, 42, 0, 5, 0, 38, 0, 1, 2, 3, 4, 5, 6, 107, 108, 109, 110, 111, 212, 213, 214, 215, 0, 0, 14, 16, 0, 0, 28, 32, 0, 13, 0, 10, 0, 0, 83, 117, 99, 99, 101, 115, 115, 46,
                 0, 6, 0, 4, 0, 1, 0, 2, // option - ORO
                 0, 7, 0, 1, 42, // option - preference
                 0, 8, 0, 2, 14, 16, // option - elapsed time
@@ -994,8 +997,8 @@ mod tests {
             DhcpOption::Preference(42),
             DhcpOption::IaAddr(IaAddrSerializer::new(
                 Ipv6Addr::from([0, 1, 2, 3, 4, 5, 6, 107, 108, 109, 110, 111, 212, 213, 214, 215]),
-                0,
-                0,
+                7200,
+                9000,
                 &iaaddr_suboptions,
             )),
         ];
@@ -1007,7 +1010,7 @@ mod tests {
         let options = [
             DhcpOption::ClientId(&[4, 5, 6]),
             DhcpOption::ServerId(&[8]),
-            DhcpOption::Iana(IanaSerializer::new(0, 0, 0, &iana_suboptions)),
+            DhcpOption::Iana(IanaSerializer::new(1234, 7000, 8800, &iana_suboptions)),
             DhcpOption::Oro(&[OptionCode::ClientId, OptionCode::ServerId]),
             DhcpOption::Preference(42),
             DhcpOption::ElapsedTime(3600),
@@ -1028,9 +1031,9 @@ mod tests {
         let got_options: Vec<_> = msg.options.iter().collect();
 
         let iana_buf = [
-            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 7, 0, 1, 42, 0, 5, 0, 38, 0, 1, 2, 3, 4, 5, 6,
-            107, 108, 109, 110, 111, 212, 213, 214, 215, 0, 0, 0, 0, 0, 0, 0, 0, 0, 13, 0, 10, 0,
-            0, 83, 117, 99, 99, 101, 115, 115, 46,
+            0, 0, 4, 210, 0, 0, 27, 88, 0, 0, 34, 96, 0, 7, 0, 1, 42, 0, 5, 0, 38, 0, 1, 2, 3, 4,
+            5, 6, 107, 108, 109, 110, 111, 212, 213, 214, 215, 0, 0, 28, 32, 0, 0, 35, 40, 0, 13,
+            0, 10, 0, 0, 83, 117, 99, 99, 101, 115, 115, 46,
         ];
         let options = [
             ParsedDhcpOption::ClientId(&[4, 5, 6]),
@@ -1175,15 +1178,15 @@ mod tests {
     #[test]
     fn test_iana_no_suboptions_serialization_parsing_roundtrip() {
         let mut buf = [0u8; 16];
-        let option = DhcpOption::Iana(IanaSerializer::new(0, 0, 0, &[]));
+        let option = DhcpOption::Iana(IanaSerializer::new(3456, 1024, 54321, &[]));
 
         let () = <DhcpOptionImpl as RecordsSerializerImpl>::serialize(&mut buf, &option);
-        assert_eq!(buf, [0, 3, 0, 12, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]);
+        assert_eq!(buf, [0, 3, 0, 12, 0, 0, 13, 128, 0, 0, 4, 0, 0, 0, 212, 49]);
 
         let options = Records::<_, ParsedDhcpOptionImpl>::parse_with_context(&buf[..], ())
             .expect("parse should succeed");
         let options: Vec<ParsedDhcpOption<'_>> = options.iter().collect();
-        let iana_buf = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
+        let iana_buf = [0, 0, 13, 128, 0, 0, 4, 0, 0, 0, 212, 49];
         assert_eq!(
             options[..],
             [ParsedDhcpOption::Iana(IanaData::new(&iana_buf[..]).expect("construction failed"))]
