@@ -11,6 +11,7 @@ group("tests") {
     "file-lock:tests",
     "fit:tests",
     "fit-promise:tests",
+    "fuchsia-mem-ext:tests",
     "procfs:tests",
     "stdcompat:tests",
     "syslog:tests",
