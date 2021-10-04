@@ -32,7 +32,10 @@ group("config") {
 # Configurations that require all the runners can use :services.
 
 group("codec_factory") {
-  public_deps = [ "//src/media/codec:codec_factory" ]
+  public_deps = [
+    "//src/media/codec:codec_factory",
+    "//src/media/codec:codec_factory_config",
+  ]
 }
 
 group("codec_sw_aac") {

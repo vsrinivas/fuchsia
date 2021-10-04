@@ -2,13 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 {
-    include: [ "//src/connectivity/bluetooth/profiles/bt-a2dp/meta/bt-a2dp-base.core_shard.cml" ],
     offer: [
         {
-            protocol: [ "fuchsia.mediacodec.CodecFactory" ],
-            from: "#appmgr",
+            protocol: "fuchsia.mediacodec.CodecFactory",
+            from: "#codec_factory",
             to: [ "#bt-a2dp" ],
-            dependency: "weak_for_migration",
         },
     ],
 }
