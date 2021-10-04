@@ -2,8 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-import 'dart:ui';
-
 import 'package:ermine/src/services/settings/task_service.dart';
 import 'package:fidl_fuchsia_power/fidl_async.dart';
 import 'package:flutter/material.dart';

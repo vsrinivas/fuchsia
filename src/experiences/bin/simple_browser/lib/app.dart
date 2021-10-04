@@ -16,7 +16,7 @@ import 'package:intl/intl.dart';
 import 'src/blocs/webpage_bloc.dart';
 import 'src/models/app_model.dart';
 import 'src/widgets/error_page.dart';
-import 'src/widgets/navigation_bar.dart';
+import 'src/widgets/navigation_bar.dart' as nb;
 import 'src/widgets/tabs_widget.dart';
 
 // TODO(fxb/45264): Replace these with colors from the central Ermine styles.
@@ -87,7 +87,7 @@ class App extends StatelessWidget {
                       children: <Widget>[
                         AnimatedBuilder(
                           animation: model.tabsBloc.currentTabNotifier,
-                          builder: (_, __) => NavigationBar(
+                          builder: (_, __) => nb.NavigationBar(
                             bloc: model.tabsBloc.currentTab,
                             newTab: model.newTab,
                             fieldFocus: model.fieldFocus,

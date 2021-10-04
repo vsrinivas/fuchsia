@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 import 'dart:async';
-import 'dart:ui';
 
 import 'package:ermine/src/services/settings/task_service.dart';
 import 'package:fidl/fidl.dart' show InterfaceHandle;

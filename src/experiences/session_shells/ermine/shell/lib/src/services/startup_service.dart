@@ -5,7 +5,6 @@
 import 'dart:async';
 import 'dart:convert' show json;
 import 'dart:io';
-import 'dart:ui';
 
 import 'package:ermine_utils/ermine_utils.dart';
 import 'package:fidl_fuchsia_buildinfo/fidl_async.dart' as buildinfo;

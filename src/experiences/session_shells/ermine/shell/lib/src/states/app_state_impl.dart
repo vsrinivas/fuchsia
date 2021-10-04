@@ -4,7 +4,6 @@
 
 import 'dart:convert';
 import 'dart:isolate';
-import 'dart:ui';
 
 import 'package:ermine/src/services/focus_service.dart';
 import 'package:ermine/src/services/launch_service.dart';
