@@ -723,7 +723,7 @@ void lockup_status() {
          HeartbeatLockupChecker::threshold() / ZX_MSEC(1));
 
   for (cpu_num_t cpu = 0; cpu < percpu::processor_count(); ++cpu) {
-    if (!mp_is_cpu_online(cpu) | !mp_is_cpu_active(cpu)) {
+    if (!mp_is_cpu_online(cpu) || !mp_is_cpu_active(cpu)) {
       continue;
     }
 
