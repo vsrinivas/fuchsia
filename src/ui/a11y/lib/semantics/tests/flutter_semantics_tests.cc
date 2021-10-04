@@ -2,78 +2,82 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fuchsia/feedback/cpp/fidl.h>
+#include <fuchsia/tracing/provider/cpp/fidl.h>
+#include <fuchsia/vulkan/loader/cpp/fidl.h>
 #include <lib/sys/cpp/termination_reason.h>
+#include <lib/sys/cpp/testing/realm_builder.h>
+#include <lib/sys/cpp/testing/realm_builder_types.h>
 #include <lib/syslog/cpp/macros.h>
 
 #include <gtest/gtest.h>
 
-#include "src/lib/fsl/handles/object_info.h"
 #include "src/lib/ui/base_view/embedded_view_utils.h"
-#include "src/ui/a11y/lib/semantics/tests/semantics_integration_test_fixture.h"
+#include "src/ui/a11y/lib/semantics/tests/semantics_integration_test_fixture_v2.h"
 #include "src/ui/testing/views/embedder_view.h"
 
 namespace accessibility_test {
 namespace {
 
-constexpr char kClientUrl[] = "fuchsia-pkg://fuchsia.com/a11y-demo#meta/a11y-demo.cmx";
+using sys::testing::AboveRoot;
+using sys::testing::CapabilityRoute;
+using sys::testing::Component;
+using sys::testing::LegacyComponentUrl;
+using sys::testing::Moniker;
+using sys::testing::Protocol;
 
-class FlutterSemanticsTests : public SemanticsIntegrationTest {
+class FlutterSemanticsTests : public SemanticsIntegrationTestV2 {
  public:
-  FlutterSemanticsTests() : SemanticsIntegrationTest("flutter_semantics_test") {}
+  static constexpr auto kFlutterMoniker = Moniker{"flutter"};
+  static constexpr auto kClientUrl =
+      LegacyComponentUrl{"fuchsia-pkg://fuchsia.com/a11y-demo#meta/a11y-demo.cmx"};
+
+  FlutterSemanticsTests() = default;
+  ~FlutterSemanticsTests() override = default;
 
   void SetUp() override {
-    ASSERT_NO_FATAL_FAILURE(SemanticsIntegrationTest::SetUp());
+    SemanticsIntegrationTestV2::SetUp();
 
     view_manager()->SetSemanticsEnabled(true);
-
-    scenic::EmbeddedViewInfo flutter_runner =
-        scenic::LaunchComponentAndCreateView(environment()->launcher_ptr(), kClientUrl);
-    flutter_runner.controller.events().OnTerminated = [](int64_t return_code,
-                                                         fuchsia::sys::TerminationReason reason) {
-      FX_LOGS(ERROR) << "Flutter Runner terminated: return_code=" << return_code
-                     << " reason=" << sys::HumanReadableTerminationReason(reason);
-      FAIL();
-    };
-
-    view_ref_koid_ = fsl::GetKoid(flutter_runner.view_ref.reference.get());
-
-    // Present the view.
-    embedder_view_.emplace(scenic::ViewContext{
-        .session_and_listener_request = scenic::CreateScenicSessionPtrAndListenerRequest(scenic()),
-        .view_token = CreatePresentationViewToken(),
-    });
-
-    // Embed the view.
-    bool is_rendering = false;
-    embedder_view_->EmbedView(std::move(flutter_runner),
-                              [&is_rendering](fuchsia::ui::gfx::ViewState view_state) {
-                                is_rendering = view_state.is_rendering;
-                              });
-    RunLoopUntil([&is_rendering] { return is_rendering; });
-
+    FX_LOGS(INFO) << "Launching client view";
+    LaunchClient("flutter");
+    FX_LOGS(INFO) << "Client view launched";
     RunLoopUntil([&] {
-      auto node = view_manager()->GetSemanticNode(view_ref_koid_, 0u);
+      auto node = view_manager()->GetSemanticNode(view_ref_koid(), 0u);
       return node != nullptr && node->has_attributes() && node->attributes().has_label();
     });
-
-    // a11y-demo's semantic tree:
-    // ID: 0 Label:
-    //   ID: 1 Label:Blue tapped 0 times
-    //   ID: 2 Label:Yellow tapped 0 times
-    //   ID: 3 Label:
-    //     ID: 6 Label:
-    //       ID: 4 Label:Blue
-    //       ID: 5 Label:Yellow
   }
 
-  zx_koid_t view_ref_koid() const { return view_ref_koid_; }
+  // Subclass should implement this method to add components to the test realm
+  // next to the base ones added.
+  std::vector<std::pair<Moniker, Component>> GetTestComponents() override {
+    return {std::make_pair(kFlutterMoniker, Component{.source = kClientUrl})};
+  }
 
- private:
-  // Wrapped in optional since the view is not created until the middle of SetUp
-  std::optional<scenic::EmbedderView> embedder_view_;
-
-  zx_koid_t view_ref_koid_;
+  // Subclass should implement this method to add capability routes to the test
+  // realm next to the base ones added.
+  virtual std::vector<CapabilityRoute> GetTestRoutes() override {
+    return {{.capability = Protocol{fuchsia::ui::app::ViewProvider::Name_},
+             .source = kFlutterMoniker,
+             .targets = {AboveRoot()}},
+            {.capability = Protocol{fuchsia::accessibility::semantics::SemanticsManager::Name_},
+             .source = kSemanticsManagerMoniker,
+             .targets = {kFlutterMoniker}},
+            {.capability = Protocol{fuchsia::ui::scenic::Scenic::Name_},
+             .source = kScenicMoniker,
+             .targets = {kFlutterMoniker}},
+            {.capability = Protocol{fuchsia::sys::Environment::Name_},
+             .source = AboveRoot(),
+             .targets = {kFlutterMoniker}},
+            {.capability = Protocol{fuchsia::vulkan::loader::Loader::Name_},
+             .source = AboveRoot(),
+             .targets = {kFlutterMoniker}},
+            {.capability = Protocol{fuchsia::tracing::provider::Registry::Name_},
+             .source = AboveRoot(),
+             .targets = {kFlutterMoniker}},
+            {.capability = Protocol{fuchsia::sysmem::Allocator::Name_},
+             .source = AboveRoot(),
+             .targets = {kFlutterMoniker}}};
+  }
 };
 
 // Loads ally-demo flutter app and verifies its semantic tree.

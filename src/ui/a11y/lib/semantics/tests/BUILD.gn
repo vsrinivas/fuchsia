@@ -20,6 +20,19 @@ source_set("semantics_integration_test_fixture_v2") {
 
   deps = [
     "//garnet/public/lib/gtest",
+    "//sdk/lib/fdio",
+    "//sdk/lib/fit",
+    "//sdk/lib/sys/cpp",
+    "//sdk/lib/sys/cpp/testing:integration_fixture",
+    "//sdk/lib/sys/cpp/testing:realm_builder",
+    "//sdk/lib/ui/scenic/cpp",
+    "//src/graphics/bin/vulkan_loader",
+    "//src/lib/fsl",
+    "//src/lib/fxl",
+    "//src/lib/fxl/test:gtest_main",
+  ]
+
+  public_deps = [
     "//sdk/fidl/fuchsia.accessibility.semantics",
     "//sdk/fidl/fuchsia.cobalt",
     "//sdk/fidl/fuchsia.component",
@@ -38,15 +51,6 @@ source_set("semantics_integration_test_fixture_v2") {
     "//sdk/fidl/fuchsia.ui.policy",
     "//sdk/fidl/fuchsia.ui.scenic",
     "//sdk/fidl/fuchsia.vulkan.loader",
-    "//sdk/lib/fdio",
-    "//sdk/lib/fit",
-    "//sdk/lib/sys/cpp",
-    "//sdk/lib/sys/cpp/testing:integration_fixture",
-    "//sdk/lib/sys/cpp/testing:realm_builder",
-    "//sdk/lib/ui/scenic/cpp",
-    "//src/graphics/bin/vulkan_loader",
-    "//src/lib/fxl",
-    "//src/lib/fxl/test:gtest_main",
     "//src/ui/a11y/lib/annotation/tests/mocks",
     "//src/ui/a11y/lib/semantics",
     "//src/ui/a11y/lib/semantics/util",
@@ -118,7 +122,7 @@ executable("semantics_tests") {
 fuchsia_component("flutter_semantics_tests") {
   testonly = true
   deps = [ ":flutter_semantics_tests_bin" ]
-  manifest = "meta/flutter_semantics_tests.cmx"
+  manifest = "meta/flutter-semantics-tests-v2.cml"
 }
 
 fuchsia_component("web_semantics_tests") {
@@ -156,6 +160,7 @@ fuchsia_test_package("semantics-integration-tests") {
     ":dynamic_button",
     ":static",
     "//src/connectivity/network/netstack:component-legacy",
+    "//src/ui/bin/root_presenter:component_v1_for_test",
   ]
 
   test_specs = {
@@ -172,13 +177,21 @@ executable("flutter_semantics_tests_bin") {
   sources = [ "flutter_semantics_tests.cc" ]
 
   deps = [
-    ":semantics_integration_test_fixture",
+    ":semantics_integration_test_fixture_v2",
+    "//sdk/lib/sys/cpp/testing:realm_builder",
     "//sdk/lib/syslog/cpp",
-    "//src/lib/fxl/test:gtest_main",
     "//src/lib/ui/base_view",
     "//src/ui/testing/views",
     "//third_party/googletest:gtest",
   ]
+
+  public_deps = [
+    "//sdk/fidl/fuchsia.tracing.provider",
+    "//sdk/fidl/fuchsia.vulkan.loader",
+    "//src/ui/a11y/bin/demo:a11y-demo",
+  ]
+
+  data_deps = [ "//src/ui/a11y/bin/demo:a11y-demo" ]
 }
 
 executable("web_semantics_tests_bin") {

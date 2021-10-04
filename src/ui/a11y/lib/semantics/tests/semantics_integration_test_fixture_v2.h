@@ -28,12 +28,15 @@
 namespace accessibility_test {
 
 // Types imported for the realm_builder library.
+using fuchsia::accessibility::semantics::Node;
+
 using sys::testing::CapabilityRoute;
 using sys::testing::Component;
 using sys::testing::MockComponent;
 using sys::testing::MockHandles;
 using sys::testing::Moniker;
 using sys::testing::Realm;
+
 using RealmBuilder = sys::testing::Realm::Builder;
 
 // Mock component that will proxy SemanticsManager and SemanticTree requests to the ViewManager
@@ -64,6 +67,13 @@ class SemanticsManagerProxy : public fuchsia::accessibility::semantics::Semantic
 
 class SemanticsIntegrationTestV2 : public gtest::RealLoopFixture {
  public:
+  static constexpr auto kSemanticsManagerMoniker = Moniker{"semantics_manager"};
+  static constexpr auto kRootPresenterMoniker = Moniker{"root_presenter"};
+  static constexpr auto kScenicMoniker = Moniker{"scenic"};
+  static constexpr auto kMockCobaltMoniker = Moniker{"cobalt"};
+  static constexpr auto kHdcpMoniker = Moniker{"hdcp"};
+  static constexpr auto kNetstackMoniker = Moniker{"netstack"};
+
   SemanticsIntegrationTestV2()
       : context_(sys::ComponentContext::Create()),
         realm_builder_(std::make_unique<RealmBuilder>(RealmBuilder::New(context_.get()))) {}
@@ -93,6 +103,27 @@ class SemanticsIntegrationTestV2 : public gtest::RealLoopFixture {
   // the root of the test realm. After establishing a connection, this method
   // listens for the client is_rendering signal and calls |on_is_rendering| when it arrives.
   void LaunchClient(std::string debug_name);
+
+  // Recursively traverses the node hierarchy, rooted at |node|, to find the first descendant
+  // with |label|.
+  const Node* FindNodeWithLabel(const Node* node, zx_koid_t view_ref_koid, std::string label);
+
+  // Get the transform between the view's local space and the node's local space.
+  a11y::SemanticTransform GetTransformForNode(zx_koid_t view_ref_koid, uint32_t node_id);
+
+  // Calculates the point in the view's local space corresponding to the point at the center of the
+  // semantic node's bounding box.
+  fuchsia::math::PointF CalculateCenterOfSemanticNodeBoundingBoxCoordinate(
+      zx_koid_t view_ref_koid, const fuchsia::accessibility::semantics::Node* node);
+
+  // Perform a hit test against the target node and return the node ID of the node (if any) that is
+  // hit.
+  std::optional<uint32_t> HitTest(zx_koid_t view_ref_koid, fuchsia::math::PointF target);
+
+  // Perform an accessibility action against the target node and return whether or not the action
+  // was handled
+  bool PerformAccessibilityAction(zx_koid_t view_ref_koid, uint32_t node_id,
+                                  fuchsia::accessibility::semantics::Action action);
 
  private:
   void BuildRealm(const std::vector<std::pair<Moniker, Component>>& components,

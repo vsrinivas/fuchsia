@@ -9,7 +9,10 @@ import("//build/flutter/flutter_component.gni")
 dart_library("lib") {
   package_name = "a11y-demo"
   sources = [ "main.dart" ]
-  deps = [ "//third_party/dart-pkg/git/flutter/packages/flutter" ]
+  deps = [
+    "//sdk/dart/fuchsia_services",
+    "//third_party/dart-pkg/git/flutter/packages/flutter",
+  ]
 }
 
 flutter_component("component") {
