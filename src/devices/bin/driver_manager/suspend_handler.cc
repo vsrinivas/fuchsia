@@ -88,7 +88,7 @@ SuspendHandler::SuspendHandler(Coordinator* coordinator, bool suspend_fallback,
 void SuspendHandler::Suspend(uint32_t flags, SuspendCallback callback) {
   // The sys device should have a proxy. If not, the system hasn't fully initialized yet and
   // cannot go to suspend.
-  if (!coordinator_->sys_device()->proxy()) {
+  if (!coordinator_->sys_device() || !coordinator_->sys_device()->proxy()) {
     LOGF(ERROR, "Aborting system-suspend, system is not fully initialized yet");
     if (callback) {
       callback(ZX_ERR_UNAVAILABLE);
