@@ -226,8 +226,9 @@ void Directory::Open(uint32_t open_flags, uint32_t parent_flags, uint32_t mode, 
     return SendOnOpenEventOnError(open_flags, std::move(request), status);
   }
 
-  // Explicitly expand OPEN_FLAG_POSIX into new set of equivalent flags.
-  // TODO(fxbug.dev/40862): Remove entire branch when removing OPEN_FLAG_POSIX.
+  // Explicitly expand OPEN_FLAG_POSIX to prevent any right escalations from occurring if we have
+  // to cross a remote mount point.
+  // TODO(fxbug.dev/81185): Remove entire branch when removing OPEN_FLAG_POSIX.
   if (open_flags & fuchsia::io::OPEN_FLAG_POSIX) {
     open_flags |= fuchsia::io::OPEN_FLAG_POSIX_WRITABLE | fuchsia::io::OPEN_FLAG_POSIX_EXECUTABLE;
     open_flags &= ~fuchsia::io::OPEN_FLAG_POSIX;
@@ -245,13 +246,6 @@ void Directory::Open(uint32_t open_flags, uint32_t parent_flags, uint32_t mode, 
 
   if (n->IsRemote() && new_path_len > 0) {
     fuchsia::io::DirectoryPtr temp_dir;
-    // Temporarily pass old POSIX flag since not all remote nodes support the new flags yet.
-    // TODO(fxbug.dev/40862): Remove this branch when all SDK users have been updated.
-    if (Flags::IsPosixWritable(open_flags) || Flags::IsPosixExecutable(open_flags)) {
-      open_flags &=
-          ~(fuchsia::io::OPEN_FLAG_POSIX_WRITABLE | fuchsia::io::OPEN_FLAG_POSIX_EXECUTABLE);
-      open_flags |= fuchsia::io::OPEN_FLAG_POSIX;
-    }
     status = n->Serve(open_flags | fuchsia::io::OPEN_FLAG_DIRECTORY,
                       temp_dir.NewRequest().TakeChannel());
     if (status != ZX_OK) {

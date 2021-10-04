@@ -41,8 +41,13 @@ pub fn new_connection_validate_flags(mut flags: u32) -> Result<u32, zx::Status> 
         return Err(zx::Status::NOT_FILE);
     }
 
-    // Parent connection must have already checked the POSIX flags, so if present we expand
-    // those respective rights and remove the flags.
+    // Explicitly expand OPEN_FLAG_POSIX to prevent right escalation issues.
+    // TODO(fxbug.dev/81185): Remove this branch when removing OPEN_FLAG_POSIX.
+    if (flags & OPEN_FLAG_POSIX) != 0 {
+        flags |= OPEN_FLAG_POSIX_WRITABLE | OPEN_FLAG_POSIX_EXECUTABLE;
+    }
+    // Parent connection must check the POSIX flags in `check_child_connection_flags`, so if any
+    // are still present, we expand their respective rights and remove any remaining flags.
     if flags & (OPEN_FLAG_POSIX | OPEN_FLAG_POSIX_EXECUTABLE) != 0 {
         flags |= OPEN_RIGHT_EXECUTABLE;
     }

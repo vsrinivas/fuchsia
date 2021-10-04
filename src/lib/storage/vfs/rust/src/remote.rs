@@ -18,8 +18,7 @@ use {
     fidl::{self, endpoints::ServerEnd},
     fidl_fuchsia_io::{
         DirectoryProxy, NodeMarker, DIRENT_TYPE_DIRECTORY, DIRENT_TYPE_UNKNOWN, INO_UNKNOWN,
-        OPEN_FLAG_NODE_REFERENCE, OPEN_FLAG_NO_REMOTE, OPEN_FLAG_POSIX, OPEN_FLAG_POSIX_EXECUTABLE,
-        OPEN_FLAG_POSIX_WRITABLE,
+        OPEN_FLAG_NODE_REFERENCE, OPEN_FLAG_NO_REMOTE,
     },
     std::sync::Arc,
 };
@@ -117,7 +116,7 @@ impl DirectoryEntry for Remote {
     fn open(
         self: Arc<Self>,
         scope: ExecutionScope,
-        mut flags: u32,
+        flags: u32,
         mode: u32,
         path: Path,
         server_end: ServerEnd<NodeMarker>,
@@ -125,13 +124,6 @@ impl DirectoryEntry for Remote {
         if flags & OPEN_FLAG_NO_REMOTE != 0 && path.is_empty() {
             self.open_as_node(scope, flags, mode, server_end);
         } else {
-            // Temporarily pass old POSIX flag as the remote may not support the new flags yet.
-            // TODO(fxbug.dev/40862): Remove this branch to resolve rights escalation bug
-            // once all out-of-tree remote clients have been updated with the new SDK.
-            if flags & (OPEN_FLAG_POSIX_EXECUTABLE | OPEN_FLAG_POSIX_WRITABLE) != 0 {
-                flags |= OPEN_FLAG_POSIX;
-                flags &= !(OPEN_FLAG_POSIX_EXECUTABLE | OPEN_FLAG_POSIX_WRITABLE);
-            }
             self.open_as_remote(scope, flags, mode, path, server_end);
         }
     }

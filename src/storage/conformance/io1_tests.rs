@@ -350,7 +350,7 @@ async fn open_remote_directory_test() {
 
     let (remote_dir_client, remote_dir_server) =
         create_endpoints::<io::DirectoryMarker>().expect("Cannot create endpoints");
-
+    // Create a logged directory client/server pair so we can intercept the Open() call.
     let remote_name = "remote_directory";
 
     // Request an extra directory connection from the harness to use as the remote.
@@ -422,6 +422,73 @@ async fn open_remote_file_test() {
         [remote_name, "/", TEST_FILE].join("").as_str(),
     )
     .await;
+}
+
+/// Ensure specifying OPEN_FLAG_POSIX cannot cause rights escalation (fxbug.dev/40862).
+/// The test sets up the following hierarchy of nodes:
+///
+/// ------------------ RW   --------------------------
+/// | test_dir_proxy | ---> | test_dir_server        |
+/// ------------------ (a)  |  - /remote_directory   | RWX  ---------------------
+///                         |    (remote_dir_client) | ---> | remote_dir_server |
+///                         -------------------------- (b)  ---------------------
+///
+/// To validate the right escalation issue has been resolved, we call Open() on the
+/// test_dir_proxy passing in OPEN_FLAG_POSIX, which if handled correctly, should result
+/// in opening remote_dir_server as RW (and NOT RWX, which can occur if the POSIX flag is
+/// passed directly to the remote instead of OPEN_FLAG_POSIX_WRITABLE/EXECUTABLE).
+#[fasync::run_singlethreaded(test)]
+async fn open_remote_directory_right_escalation_test() {
+    let harness = TestHarness::new().await;
+    if harness.config.no_remote_dir.unwrap_or_default() {
+        return;
+    }
+
+    // Use the test harness to serve a directory on the remote server with RWX permissions.
+    let (remote_dir_client, remote_dir_server) =
+        create_endpoints::<io::DirectoryMarker>().expect("Cannot create endpoints");
+    let root = root_directory(vec![]);
+    let remote_name = "remote_directory";
+    harness
+        .proxy
+        .get_directory(
+            root,
+            io::OPEN_RIGHT_READABLE | io::OPEN_RIGHT_WRITABLE | io::OPEN_RIGHT_EXECUTABLE,
+            remote_dir_server,
+        )
+        .expect("Cannot get empty remote directory");
+
+    // Mount the remote node through test_dir_proxy, and ensure that the root connection has
+    // only RW permissions (and thus is a sub-set of those in the remote).
+    let (test_dir_proxy, test_dir_server) =
+        create_proxy::<io::DirectoryMarker>().expect("Cannot create proxy");
+    harness
+        .proxy
+        .get_directory_with_remote_directory(
+            remote_dir_client,
+            remote_name,
+            io::OPEN_RIGHT_READABLE | io::OPEN_RIGHT_WRITABLE,
+            test_dir_server,
+        )
+        .expect("Cannot get test harness directory");
+
+    // Create a new proxy/server for opening the remote node through test_dir_proxy.
+    // Here we pass the POSIX flag, which should only expand to the maximum set of
+    // rights available along the open chain.
+    let (node_proxy, node_server) = create_proxy::<io::NodeMarker>().expect("Cannot create proxy");
+    test_dir_proxy
+        .open(
+            io::OPEN_RIGHT_READABLE | io::OPEN_FLAG_POSIX,
+            io::MODE_TYPE_DIRECTORY,
+            remote_name,
+            node_server,
+        )
+        .expect("Cannot open remote directory");
+
+    // Since the root node only has RW permissions, and even though the remote has RWX,
+    // we should only get RW permissions back.
+    let (_, node_flags) = node_proxy.node_get_flags().await.unwrap();
+    assert_eq!(node_flags, io::OPEN_RIGHT_READABLE | io::OPEN_RIGHT_WRITABLE);
 }
 
 /// Creates a directory with all rights, and checks it can be opened for all subsets of rights.
