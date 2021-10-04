@@ -4,17 +4,19 @@
 
 use {
     crate::display_metrics::{DisplayMetrics, ViewingDistance},
-    crate::graphics_utils::{ScreenCoordinates, ScreenSize},
+    crate::graphics_utils::{ImageResource, ScreenCoordinates, ScreenSize},
     crate::scene_manager::{self, PresentationMessage, PresentationSender, SceneManager},
     anyhow::Error,
     async_trait::async_trait,
     fidl, fidl_fuchsia_ui_app as ui_app, fidl_fuchsia_ui_gfx as ui_gfx,
     fidl_fuchsia_ui_scenic as ui_scenic, fidl_fuchsia_ui_views as ui_views,
-    fuchsia_async::{self as fasync},
-    fuchsia_scenic as scenic, fuchsia_scenic,
+    fuchsia_async as fasync, fuchsia_scenic as scenic, fuchsia_scenic,
     fuchsia_syslog::{fx_log_info, fx_log_warn},
     futures::channel::mpsc::unbounded,
-    input_pipeline::Size,
+    input_pipeline::{
+        input_pipeline::InputPipelineAssembly, mouse_handler::MouseHandler,
+        touch_handler::TouchHandler, Position, Size,
+    },
     std::sync::{Arc, Weak},
 };
 
@@ -97,7 +99,196 @@ struct ScenicResources {
 
 #[async_trait]
 impl SceneManager for FlatSceneManager {
-    async fn new(
+    async fn add_view_to_scene(
+        &mut self,
+        view_provider: ui_app::ViewProviderProxy,
+        name: Option<String>,
+    ) -> Result<ui_views::ViewRef, Error> {
+        let token_pair = scenic::ViewTokenPair::new()?;
+        let mut viewref_pair = scenic::ViewRefPair::new()?;
+        let viewref_dup = fuchsia_scenic::duplicate_view_ref(&viewref_pair.view_ref)?;
+        view_provider.create_view_with_view_ref(
+            token_pair.view_token.value,
+            &mut viewref_pair.control_ref,
+            &mut viewref_pair.view_ref,
+        )?;
+        self.add_view(token_pair.view_holder_token, name);
+        FlatSceneManager::request_present(&self.a11y_proxy_presentation_sender);
+
+        Ok(viewref_dup)
+    }
+
+    async fn set_root_view(
+        &mut self,
+        view_provider: ui_app::ViewProviderProxy,
+    ) -> Result<ui_views::ViewRef, Error> {
+        let token_pair = scenic::ViewTokenPair::new()?;
+        let mut viewref_pair = scenic::ViewRefPair::new()?;
+
+        // Make two additional copies of the ViewRef.
+        // - The original will be used to create the root view.
+        // - The first copy will be returned to the caller.
+        // - The second copy will be stored, and used to re-focus the root view if insertion
+        //   of the a11y view breaks the focus chain.
+        let viewref_dup = fuchsia_scenic::duplicate_view_ref(&viewref_pair.view_ref)?;
+        self.root_view_ref = Some(fuchsia_scenic::duplicate_view_ref(&viewref_pair.view_ref)?);
+
+        view_provider.create_view_with_view_ref(
+            token_pair.view_token.value,
+            &mut viewref_pair.control_ref,
+            &mut viewref_pair.view_ref,
+        )?;
+        self.add_view(token_pair.view_holder_token, Some("root".to_string()));
+        FlatSceneManager::request_present(&self.a11y_proxy_presentation_sender);
+
+        Ok(viewref_dup)
+    }
+
+    fn request_focus(
+        &self,
+        view_ref: &mut ui_views::ViewRef,
+    ) -> fidl::client::QueryResponseFut<ui_views::FocuserRequestFocusResult> {
+        self.focuser.request_focus(view_ref)
+    }
+
+    /// Creates an a11y view holder and attaches it to the scene. This method also deletes the
+    /// existing proxy view/viewholder pair, and creates a new proxy view. It then returns the
+    /// new proxy view holder token. The a11y manager is responsible for using this token to
+    /// create the new proxy view holder.
+    ///
+    /// # Parameters
+    /// - `a11y_view_ref`: The view ref of the a11y view.
+    /// - `a11y_view_holder_token`: The token used to create the a11y view holder.
+    fn insert_a11y_view(
+        &mut self,
+        a11y_view_holder_token: ui_views::ViewHolderToken,
+    ) -> Result<ui_views::ViewHolderToken, Error> {
+        // Create the new a11y view holder, and attach it as a child of the root node.
+        let a11y_view_holder = FlatSceneManager::create_view_holder(
+            &self.session,
+            a11y_view_holder_token,
+            self.display_metrics,
+            Some(String::from("a11y view holder")),
+        );
+        self.root_node.add_child(&a11y_view_holder);
+
+        // Disconnect the old proxy view/viewholder from the scene graph.
+        self.a11y_proxy_view_holder.detach();
+        for view_holder_node in self.views.iter_mut() {
+            self.a11y_proxy_view.detach_child(&*view_holder_node);
+        }
+
+        // Generate a new proxy view/viewholder token pair, and create a new proxy view.
+        // Save the proxy ViewRef so that we can observe when the view is attached to the scene.
+        let proxy_token_pair = scenic::ViewTokenPair::new()?;
+        let a11y_proxy_view_ref_pair = scenic::ViewRefPair::new()?;
+        let a11y_proxy_view_ref =
+            fuchsia_scenic::duplicate_view_ref(&a11y_proxy_view_ref_pair.view_ref)?;
+        self.a11y_proxy_view = scenic::View::new3(
+            self.a11y_proxy_session.clone(),
+            proxy_token_pair.view_token,
+            a11y_proxy_view_ref_pair.control_ref,
+            a11y_proxy_view_ref_pair.view_ref,
+            Some(String::from("a11y proxy view")),
+        );
+
+        // Reconnect existing view holders to the new a11y proxy view.
+        for view_holder_node in self.views.iter_mut() {
+            self.a11y_proxy_view.add_child(&*view_holder_node);
+        }
+
+        FlatSceneManager::request_present(&self.presentation_sender);
+        FlatSceneManager::request_present(&self.a11y_proxy_presentation_sender);
+
+        // If the root view was already set, inserting the a11y view will have broken the focus
+        // chain. In this case, we need to re-focus the root view.
+        let view_ref_installed = Arc::downgrade(&self.view_ref_installed);
+        let focuser = Arc::downgrade(&self.focuser);
+        if let Some(ref root_view_ref) = self.root_view_ref {
+            let root_view_ref_dup = fuchsia_scenic::duplicate_view_ref(&root_view_ref)?;
+            fasync::Task::local(async move {
+                FlatSceneManager::focus_root_view(
+                    view_ref_installed,
+                    focuser,
+                    root_view_ref_dup,
+                    a11y_proxy_view_ref,
+                )
+                .await;
+            })
+            .detach();
+        }
+
+        Ok(proxy_token_pair.view_holder_token)
+    }
+
+    fn insert_a11y_view2(
+        &mut self,
+        _a11y_viewport_creation_token: ui_views::ViewportCreationToken,
+    ) -> Result<ui_views::ViewportCreationToken, Error> {
+        Err(anyhow::anyhow!("A11y should be configured to use Gfx, not Flatland"))
+    }
+
+    fn set_cursor_position(&mut self, position: input_pipeline::Position) {
+        let location = ScreenCoordinates::from_pixels(position.x, position.y, self.display_metrics);
+        if self.cursor_node.is_none() {
+            // We don't already have a cursor node so let's make one with the default cursor
+            if let Err(error) = self.set_cursor_image("/pkg/data/cursor.png") {
+                fx_log_warn!("Failed to load image cursor: {:?}", error);
+                self.set_cursor_shape(self.get_default_cursor());
+            }
+        }
+
+        let (x, y) = location.pips();
+        self.cursor_node().set_translation(x, y, FlatSceneManager::CURSOR_DEPTH);
+        FlatSceneManager::request_present(&self.presentation_sender);
+    }
+
+    async fn add_touch_handler(
+        &self,
+        mut assembly: InputPipelineAssembly,
+    ) -> InputPipelineAssembly {
+        let (width_pixels, height_pixels) = self.display_size.pixels();
+        if let Ok(touch_handler) = TouchHandler::new(
+            self.session.clone(),
+            self.compositor_id,
+            Size { width: width_pixels, height: height_pixels },
+        )
+        .await
+        {
+            assembly = assembly.add_handler(touch_handler);
+        }
+        assembly
+    }
+
+    async fn add_mouse_handler(
+        &self,
+        position_sender: futures::channel::mpsc::Sender<input_pipeline::Position>,
+        mut assembly: InputPipelineAssembly,
+    ) -> InputPipelineAssembly {
+        let (width_pixels, height_pixels) = self.display_size.pixels();
+        let mouse_handler = MouseHandler::new(
+            Position { x: width_pixels, y: height_pixels },
+            position_sender,
+            self.session.clone(),
+            self.compositor_id,
+        );
+        assembly = assembly.add_handler(mouse_handler);
+        assembly
+    }
+}
+
+impl FlatSceneManager {
+    /// The depth of the bounds of any added views. This can be used to compute where a view
+    /// should be placed to render "in front of" another view.
+    const VIEW_BOUNDS_DEPTH: f32 = -800.0;
+    /// The depth at which to draw the cursor in order to ensure it's on top of everything else
+    const CURSOR_DEPTH: f32 = FlatSceneManager::VIEW_BOUNDS_DEPTH - 1.0;
+
+    /// Creates a new SceneManager.
+    ///
+    /// # Errors
+    /// Returns an error if a Scenic session could not be initialized, or the scene setup fails.
+    pub async fn new(
         scenic: ui_scenic::ScenicProxy,
         view_ref_installed_proxy: ui_views::ViewRefInstalledProxy,
         display_pixel_density: Option<f32>,
@@ -197,163 +388,6 @@ impl SceneManager for FlatSceneManager {
             a11y_proxy_presentation_sender: a11y_proxy_sender,
         })
     }
-
-    async fn add_view_to_scene(
-        &mut self,
-        view_provider: ui_app::ViewProviderProxy,
-        name: Option<String>,
-    ) -> Result<ui_views::ViewRef, Error> {
-        let token_pair = scenic::ViewTokenPair::new()?;
-        let mut viewref_pair = scenic::ViewRefPair::new()?;
-        let viewref_dup = fuchsia_scenic::duplicate_view_ref(&viewref_pair.view_ref)?;
-        view_provider.create_view_with_view_ref(
-            token_pair.view_token.value,
-            &mut viewref_pair.control_ref,
-            &mut viewref_pair.view_ref,
-        )?;
-        self.add_view(token_pair.view_holder_token, name);
-        FlatSceneManager::request_present(&self.a11y_proxy_presentation_sender);
-
-        Ok(viewref_dup)
-    }
-
-    async fn set_root_view(
-        &mut self,
-        view_provider: ui_app::ViewProviderProxy,
-    ) -> Result<ui_views::ViewRef, Error> {
-        let token_pair = scenic::ViewTokenPair::new()?;
-        let mut viewref_pair = scenic::ViewRefPair::new()?;
-
-        // Make two additional copies of the ViewRef.
-        // - The original will be used to create the root view.
-        // - The first copy will be returned to the caller.
-        // - The second copy will be stored, and used to re-focus the root view if insertion
-        //   of the a11y view breaks the focus chain.
-        let viewref_dup = fuchsia_scenic::duplicate_view_ref(&viewref_pair.view_ref)?;
-        self.root_view_ref = Some(fuchsia_scenic::duplicate_view_ref(&viewref_pair.view_ref)?);
-
-        view_provider.create_view_with_view_ref(
-            token_pair.view_token.value,
-            &mut viewref_pair.control_ref,
-            &mut viewref_pair.view_ref,
-        )?;
-        self.add_view(token_pair.view_holder_token, Some("root".to_string()));
-        FlatSceneManager::request_present(&self.a11y_proxy_presentation_sender);
-
-        Ok(viewref_dup)
-    }
-
-    /// Creates an a11y view holder and attaches it to the scene. This method also deletes the
-    /// existing proxy view/viewholder pair, and creates a new proxy view. It then returns the
-    /// new proxy view holder token. The a11y manager is responsible for using this token to
-    /// create the new proxy view holder.
-    ///
-    /// # Parameters
-    /// - `a11y_view_ref`: The view ref of the a11y view.
-    /// - `a11y_view_holder_token`: The token used to create the a11y view holder.
-    fn insert_a11y_view(
-        &mut self,
-        a11y_view_holder_token: ui_views::ViewHolderToken,
-    ) -> Result<ui_views::ViewHolderToken, Error> {
-        // Create the new a11y view holder, and attach it as a child of the root node.
-        let a11y_view_holder = FlatSceneManager::create_view_holder(
-            &self.session,
-            a11y_view_holder_token,
-            self.display_metrics,
-            Some(String::from("a11y view holder")),
-        );
-        self.root_node.add_child(&a11y_view_holder);
-
-        // Disconnect the old proxy view/viewholder from the scene graph.
-        self.a11y_proxy_view_holder.detach();
-        for view_holder_node in self.views.iter_mut() {
-            self.a11y_proxy_view.detach_child(&*view_holder_node);
-        }
-
-        // Generate a new proxy view/viewholder token pair, and create a new proxy view.
-        // Save the proxy ViewRef so that we can observe when the view is attached to the scene.
-        let proxy_token_pair = scenic::ViewTokenPair::new()?;
-        let a11y_proxy_view_ref_pair = scenic::ViewRefPair::new()?;
-        let a11y_proxy_view_ref =
-            fuchsia_scenic::duplicate_view_ref(&a11y_proxy_view_ref_pair.view_ref)?;
-        self.a11y_proxy_view = scenic::View::new3(
-            self.a11y_proxy_session.clone(),
-            proxy_token_pair.view_token,
-            a11y_proxy_view_ref_pair.control_ref,
-            a11y_proxy_view_ref_pair.view_ref,
-            Some(String::from("a11y proxy view")),
-        );
-
-        // Reconnect existing view holders to the new a11y proxy view.
-        for view_holder_node in self.views.iter_mut() {
-            self.a11y_proxy_view.add_child(&*view_holder_node);
-        }
-
-        FlatSceneManager::request_present(&self.presentation_sender);
-        FlatSceneManager::request_present(&self.a11y_proxy_presentation_sender);
-
-        // If the root view was already set, inserting the a11y view will have broken the focus
-        // chain. In this case, we need to re-focus the root view.
-        let view_ref_installed = Arc::downgrade(&self.view_ref_installed);
-        let focuser = Arc::downgrade(&self.focuser);
-        if let Some(ref root_view_ref) = self.root_view_ref {
-            let root_view_ref_dup = fuchsia_scenic::duplicate_view_ref(&root_view_ref)?;
-            fasync::Task::local(async move {
-                FlatSceneManager::focus_root_view(
-                    view_ref_installed,
-                    focuser,
-                    root_view_ref_dup,
-                    a11y_proxy_view_ref,
-                )
-                .await;
-            })
-            .detach();
-        }
-
-        Ok(proxy_token_pair.view_holder_token)
-    }
-
-    fn session(&self) -> scenic::SessionPtr {
-        return self.session.clone();
-    }
-
-    fn display_metrics(&self) -> DisplayMetrics {
-        self.display_metrics
-    }
-
-    fn set_cursor_location(&mut self, location: ScreenCoordinates) {
-        if self.cursor_node.is_none() {
-            // We don't already have a cursor node so let's make one with the default cursor
-            if let Err(error) = self.set_cursor_image("/pkg/data/cursor.png") {
-                fx_log_warn!("Failed to load image cursor: {:?}", error);
-                self.set_cursor_shape(self.get_default_cursor());
-            }
-        }
-
-        let (x, y) = location.pips();
-        self.cursor_node().set_translation(x, y, FlatSceneManager::CURSOR_DEPTH);
-        FlatSceneManager::request_present(&self.presentation_sender);
-    }
-
-    fn set_cursor_shape(&mut self, shape: scenic::ShapeNode) {
-        if !self.cursor_shape.is_none() {
-            let current_shape = self.cursor_shape.as_ref().unwrap();
-            let node = self.cursor_node.as_ref().unwrap();
-            node.remove_child(current_shape);
-        }
-
-        self.cursor_node().add_child(&shape);
-        self.cursor_shape = Some(shape);
-        FlatSceneManager::request_present(&self.presentation_sender);
-    }
-}
-
-impl FlatSceneManager {
-    /// The depth of the bounds of any added views. This can be used to compute where a view
-    /// should be placed to render "in front of" another view.
-    const VIEW_BOUNDS_DEPTH: f32 = -800.0;
-    /// The depth at which to draw the cursor in order to ensure it's on top of everything else
-    const CURSOR_DEPTH: f32 = FlatSceneManager::VIEW_BOUNDS_DEPTH - 1.0;
 
     /// Creates a new Scenic session.
     ///
@@ -561,5 +595,79 @@ impl FlatSceneManager {
         presentation_sender
             .unbounded_send(PresentationMessage::RequestPresent)
             .expect("failed to send RequestPresent message");
+    }
+
+    /// Sets the image to use for the scene's cursor.
+    ///
+    /// # Parameters
+    /// - `image_path`: The path to the image to be used for the cursor.
+    ///
+    /// # Notes
+    /// Due to a current limitation in the `Scenic` api this should only be called once and must be
+    /// called *before* `set_cursor_location`.
+    fn set_cursor_image(&mut self, image_path: &str) -> Result<(), Error> {
+        let image = ImageResource::new(image_path, self.session())?;
+        let cursor_rect = scenic::Rectangle::new(self.session(), image.width, image.height);
+        let cursor_shape = scenic::ShapeNode::new(self.session());
+        cursor_shape.set_shape(&cursor_rect);
+        cursor_shape.set_material(&image.material);
+        cursor_shape.set_translation(image.width / 2.0, image.height / 2.0, 0.0);
+
+        self.set_cursor_shape(cursor_shape);
+        Ok(())
+    }
+
+    /// Allows the client to customize the look of the cursor by supplying their own ShapeNode
+    ///
+    /// # Parameters
+    /// - `shape`: The [`scenic::ShapeNode`] to be used as the cursor.
+    ///
+    /// # Notes
+    /// Due to a current limitation in the `Scenic` api this should only be called once and must be
+    /// called *before* `set_cursor_location`.
+    fn set_cursor_shape(&mut self, shape: scenic::ShapeNode) {
+        if !self.cursor_shape.is_none() {
+            let current_shape = self.cursor_shape.as_ref().unwrap();
+            let node = self.cursor_node.as_ref().unwrap();
+            node.remove_child(current_shape);
+        }
+
+        self.cursor_node().add_child(&shape);
+        self.cursor_shape = Some(shape);
+        FlatSceneManager::request_present(&self.presentation_sender);
+    }
+
+    /// Creates a default cursor shape for use with the client hasn't created a custom cursor
+    ///
+    /// # Returns
+    /// The [`scenic::ShapeNode`] to be used as the cursor.
+    fn get_default_cursor(&self) -> scenic::ShapeNode {
+        const CURSOR_DEFAULT_WIDTH: f32 = 20.0;
+        const CURSOR_DEFAULT_HEIGHT: f32 = 20.0;
+
+        let cursor_rect = scenic::RoundedRectangle::new(
+            self.session(),
+            CURSOR_DEFAULT_WIDTH,
+            CURSOR_DEFAULT_HEIGHT,
+            0.0,
+            CURSOR_DEFAULT_WIDTH / 2.0,
+            CURSOR_DEFAULT_WIDTH / 2.0,
+            CURSOR_DEFAULT_WIDTH / 2.0,
+        );
+        let cursor_shape = scenic::ShapeNode::new(self.session());
+        cursor_shape.set_shape(&cursor_rect);
+
+        // Adjust position so that the upper left corner matches the pointer location
+        cursor_shape.set_translation(CURSOR_DEFAULT_WIDTH / 2.0, CURSOR_DEFAULT_HEIGHT / 2.0, 0.0);
+
+        let material = scenic::Material::new(self.session());
+        material.set_color(ui_gfx::ColorRgba { red: 255, green: 0, blue: 255, alpha: 255 });
+        cursor_shape.set_material(&material);
+
+        cursor_shape
+    }
+
+    fn session(&self) -> scenic::SessionPtr {
+        return self.session.clone();
     }
 }

@@ -17,13 +17,10 @@ use {
         input_device,
         input_pipeline::{InputDeviceBindingHashMap, InputPipeline, InputPipelineAssembly},
         keymap,
-        mouse_handler::MouseHandler,
         shortcut_handler::ShortcutHandler,
         text_settings,
-        touch_handler::TouchHandler,
-        Position, Size,
     },
-    scene_management::{self, FlatSceneManager, SceneManager, ScreenCoordinates},
+    scene_management::{self, SceneManager},
     std::rc::Rc,
     std::sync::Arc,
 };
@@ -39,7 +36,7 @@ use {
 ///    text settings (e.g. desired keymap IDs).
 /// - `node`: The inspect node to insert individual inspect handler nodes into.
 pub async fn handle_input(
-    scene_manager: Arc<Mutex<FlatSceneManager>>,
+    scene_manager: Arc<Mutex<Box<dyn SceneManager>>>,
     input_device_registry_request_stream_receiver: futures::channel::mpsc::UnboundedReceiver<
         InputDeviceRegistryRequestStream,
     >,
@@ -70,11 +67,12 @@ pub async fn handle_input(
 }
 
 async fn input_handlers(
-    scene_manager: Arc<Mutex<FlatSceneManager>>,
+    scene_manager: Arc<Mutex<Box<dyn SceneManager>>>,
     text_settings_handler: Rc<text_settings::Handler>,
     node: &inspect::Node,
 ) -> InputPipelineAssembly {
     let mut assembly = InputPipelineAssembly::new();
+    let (sender, mut receiver) = futures::channel::mpsc::channel(0);
     {
         let locked_scene_manager = scene_manager.lock().await;
         assembly = add_inspect_handler(node.create_child("input_pipeline_entry"), assembly);
@@ -86,10 +84,21 @@ async fn input_handlers(
         assembly = add_shortcut_handler(assembly).await;
         assembly = add_ime(assembly).await;
 
-        assembly = add_touch_handler(&locked_scene_manager, assembly).await;
+        assembly = locked_scene_manager.add_touch_handler(assembly).await;
+        assembly = locked_scene_manager.add_mouse_handler(sender, assembly).await;
+        assembly = add_inspect_handler(node.create_child("input_pipeline_exit"), assembly);
     }
-    assembly = add_mouse_handler(scene_manager, assembly).await;
-    assembly = add_inspect_handler(node.create_child("input_pipeline_exit"), assembly);
+
+    {
+        let scene_manager = scene_manager.clone();
+        fasync::Task::spawn(async move {
+            while let Some(position) = receiver.next().await {
+                let mut scene_manager = scene_manager.lock().await;
+                scene_manager.set_cursor_position(position);
+            }
+        })
+        .detach();
+    }
 
     assembly
 }
@@ -130,52 +139,6 @@ async fn add_ime(mut assembly: InputPipelineAssembly) -> InputPipelineAssembly {
     if let Ok(ime_handler) = ImeHandler::new().await {
         assembly = assembly.add_handler(ime_handler);
     }
-    assembly
-}
-
-async fn add_touch_handler(
-    scene_manager: &FlatSceneManager,
-    mut assembly: InputPipelineAssembly,
-) -> InputPipelineAssembly {
-    let (width_pixels, height_pixels) = scene_manager.display_size.pixels();
-    if let Ok(touch_handler) = TouchHandler::new(
-        scene_manager.session.clone(),
-        scene_manager.compositor_id,
-        Size { width: width_pixels, height: height_pixels },
-    )
-    .await
-    {
-        assembly = assembly.add_handler(touch_handler);
-    }
-    assembly
-}
-
-async fn add_mouse_handler(
-    scene_manager: Arc<Mutex<FlatSceneManager>>,
-    mut assembly: InputPipelineAssembly,
-) -> InputPipelineAssembly {
-    let (sender, mut receiver) = futures::channel::mpsc::channel(0);
-    {
-        let scene_manager = scene_manager.lock().await;
-        let (width_pixels, height_pixels) = scene_manager.display_size.pixels();
-        let mouse_handler = MouseHandler::new(
-            Position { x: width_pixels, y: height_pixels },
-            sender,
-            scene_manager.session.clone(),
-            scene_manager.compositor_id,
-        );
-        assembly = assembly.add_handler(mouse_handler);
-    }
-
-    fasync::Task::spawn(async move {
-        while let Some(Position { x, y }) = receiver.next().await {
-            let mut scene_manager = scene_manager.lock().await;
-            let screen_coordinates =
-                ScreenCoordinates::from_pixels(x, y, scene_manager.display_metrics);
-            scene_manager.set_cursor_location(screen_coordinates);
-        }
-    })
-    .detach();
     assembly
 }
 

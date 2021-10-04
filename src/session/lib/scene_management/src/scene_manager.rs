@@ -3,16 +3,15 @@
 // found in the LICENSE file.
 
 use {
-    crate::display_metrics::{DisplayMetrics, ViewingDistance},
-    crate::graphics_utils::{ImageResource, ScreenCoordinates},
     anyhow::Error,
     async_trait::async_trait,
-    fidl_fuchsia_ui_app as ui_app, fidl_fuchsia_ui_gfx as ui_gfx,
-    fidl_fuchsia_ui_scenic as ui_scenic, fidl_fuchsia_ui_views as ui_views,
-    fuchsia_async as fasync, fuchsia_scenic as scenic, fuchsia_scenic, fuchsia_syslog as syslog,
+    fidl_fuchsia_ui_app as ui_app, fidl_fuchsia_ui_scenic as ui_scenic,
+    fidl_fuchsia_ui_views as ui_views, fuchsia_async as fasync, fuchsia_scenic as scenic,
+    fuchsia_scenic, fuchsia_syslog as syslog,
     futures::channel::mpsc::{UnboundedReceiver, UnboundedSender},
     futures::future::TryFutureExt,
     futures::prelude::*,
+    input_pipeline::input_pipeline::InputPipelineAssembly,
     parking_lot::Mutex,
     std::sync::Weak,
 };
@@ -49,18 +48,7 @@ pub type PresentationReceiver = UnboundedReceiver<PresentationMessage>;
 /// node.set_translation(20.0, 30.0, 0.0);
 /// ```
 #[async_trait]
-pub trait SceneManager: Sized {
-    /// Creates a new SceneManager.
-    ///
-    /// # Errors
-    /// Returns an error if a Scenic session could not be initialized, or the scene setup fails.
-    async fn new(
-        scenic: ui_scenic::ScenicProxy,
-        view_ref_installed: ui_views::ViewRefInstalledProxy,
-        display_pixel_density: Option<f32>,
-        viewing_distance: Option<ViewingDistance>,
-    ) -> Result<Self, Error>;
-
+pub trait SceneManager: Send {
     /// Requests a view from the view provider and adds it to the scene.
     ///
     /// # Parameters
@@ -87,6 +75,11 @@ pub trait SceneManager: Sized {
         view_provider: ui_app::ViewProviderProxy,
     ) -> Result<ui_views::ViewRef, Error>;
 
+    fn request_focus(
+        &self,
+        view_ref: &mut ui_views::ViewRef,
+    ) -> fidl::client::QueryResponseFut<ui_views::FocuserRequestFocusResult>;
+
     /// Inserts an a11y view into the scene.
     ///
     /// Removes the existing proxy view/viewholder pair, adds the a11y view/viewholder under the
@@ -107,88 +100,39 @@ pub trait SceneManager: Sized {
         a11y_view_holder_token: ui_views::ViewHolderToken,
     ) -> Result<ui_views::ViewHolderToken, Error>;
 
-    /// Requests the scenic session from the scene_manager.
-    ///
-    /// # Returns
-    /// The [`scenic::SessionPtr`] for the scene_manager.
-    fn session(&self) -> scenic::SessionPtr;
+    fn insert_a11y_view2(
+        &mut self,
+        a11y_viewport_creation_token: ui_views::ViewportCreationToken,
+    ) -> Result<ui_views::ViewportCreationToken, Error>;
 
-    /// Requests the [`DisplayMetrics`] for this display.
-    ///
-    /// # Returns
-    /// The [`DisplayMetrics`] for this display.
-    fn display_metrics(&self) -> DisplayMetrics;
-
-    /// Sets the location of the cursor in the current scene. If no cursor has been created it will
+    /// Sets the position of the cursor in the current scene. If no cursor has been created it will
     /// create one using default settings.
     ///
     /// # Parameters
-    /// - `location`: A [`ScreenCoordinates`] struct representing the cursor location.
+    /// - `position`: A [`Position`] struct representing the cursor position.
     ///
     /// # Notes
     /// If a custom cursor has not been set using `set_cursor_image` or `set_cursor_shape` a default
-    /// cursor will be created and added to the scene.
-    fn set_cursor_location(&mut self, location: ScreenCoordinates);
+    /// cursor will be created and added to the scene.  The implementation of the `SceneManager` trait
+    /// is responsible for translating the raw input position into "pips".
+    fn set_cursor_position(&mut self, position: input_pipeline::Position);
 
-    /// Sets the image to use for the scene's cursor.
+    /// Annotates `assembly` with an additional pipeline stage.
     ///
     /// # Parameters
-    /// - `image_path`: The path to the image to be used for the cursor.
-    ///
-    /// # Notes
-    /// Due to a current limitation in the `Scenic` api this should only be called once and must be
-    /// called *before* `set_cursor_location`.
-    fn set_cursor_image(&mut self, image_path: &str) -> Result<(), Error> {
-        let image = ImageResource::new(image_path, self.session())?;
-        let cursor_rect = scenic::Rectangle::new(self.session(), image.width, image.height);
-        let cursor_shape = scenic::ShapeNode::new(self.session());
-        cursor_shape.set_shape(&cursor_rect);
-        cursor_shape.set_material(&image.material);
-        cursor_shape.set_translation(image.width / 2.0, image.height / 2.0, 0.0);
+    /// - `assembly`: An [`InputPipelineAssembly`] which represents a partially-constructed input pipeline.
+    async fn add_touch_handler(&self, mut assembly: InputPipelineAssembly)
+        -> InputPipelineAssembly;
 
-        self.set_cursor_shape(cursor_shape);
-        Ok(())
-    }
-
-    /// Allows the client to customize the look of the cursor by supplying their own ShapeNode
+    /// Annotates `assembly` with an additional pipeline stage.
     ///
     /// # Parameters
-    /// - `shape`: The [`scenic::ShapeNode`] to be used as the cursor.
-    ///
-    /// # Notes
-    /// Due to a current limitation in the `Scenic` api this should only be called once and must be
-    /// called *before* `set_cursor_location`.
-    fn set_cursor_shape(&mut self, shape: scenic::ShapeNode);
-
-    /// Creates a default cursor shape for use with the client hasn't created a custom cursor
-    ///
-    /// # Returns
-    /// The [`scenic::ShapeNode`] to be used as the cursor.
-    fn get_default_cursor(&self) -> scenic::ShapeNode {
-        const CURSOR_DEFAULT_WIDTH: f32 = 20.0;
-        const CURSOR_DEFAULT_HEIGHT: f32 = 20.0;
-
-        let cursor_rect = scenic::RoundedRectangle::new(
-            self.session(),
-            CURSOR_DEFAULT_WIDTH,
-            CURSOR_DEFAULT_HEIGHT,
-            0.0,
-            CURSOR_DEFAULT_WIDTH / 2.0,
-            CURSOR_DEFAULT_WIDTH / 2.0,
-            CURSOR_DEFAULT_WIDTH / 2.0,
-        );
-        let cursor_shape = scenic::ShapeNode::new(self.session());
-        cursor_shape.set_shape(&cursor_rect);
-
-        // Adjust position so that the upper left corner matches the pointer location
-        cursor_shape.set_translation(CURSOR_DEFAULT_WIDTH / 2.0, CURSOR_DEFAULT_HEIGHT / 2.0, 0.0);
-
-        let material = scenic::Material::new(self.session());
-        material.set_color(ui_gfx::ColorRgba { red: 255, green: 0, blue: 255, alpha: 255 });
-        cursor_shape.set_material(&material);
-
-        cursor_shape
-    }
+    /// - `assembly`: An [`InputPipelineAssembly`] which represents a partially-constructed input pipeline.
+    async fn add_mouse_handler(
+        &self,
+        position_sender: futures::channel::mpsc::Sender<input_pipeline::Position>,
+        mut assembly: InputPipelineAssembly,
+    ) -> InputPipelineAssembly;
 }
 
 /// Listens for presentation requests and schedules presents.

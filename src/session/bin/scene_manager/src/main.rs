@@ -9,7 +9,10 @@ use {
     fidl_fuchsia_input_injection::InputDeviceRegistryRequestStream,
     fidl_fuchsia_input_keymap as fkeymap,
     fidl_fuchsia_session_scene::{ManagerRequest, ManagerRequestStream},
-    fidl_fuchsia_ui_accessibility_view::{RegistryRequest, RegistryRequestStream},
+    fidl_fuchsia_ui_accessibility_view::{
+        RegistryRequest as A11yViewRegistryRequest,
+        RegistryRequestStream as A11yViewRegistryRequestStream,
+    },
     fidl_fuchsia_ui_scenic::ScenicMarker,
     fidl_fuchsia_ui_views as ui_views, fuchsia_async as fasync,
     fuchsia_component::{client::connect_to_protocol, server::ServiceFs},
@@ -27,7 +30,7 @@ mod input_device_registry_server;
 mod input_pipeline;
 
 enum ExposedServices {
-    AccessibilityViewRegistry(RegistryRequestStream),
+    AccessibilityViewRegistry(A11yViewRegistryRequestStream),
     Manager(ManagerRequestStream),
     InputDeviceRegistry(InputDeviceRegistryRequestStream),
     /// The requests for `fuchsia.input.keymap.Configuration`.
@@ -39,6 +42,9 @@ async fn main() -> Result<(), Error> {
     fuchsia_syslog::init_with_tags(&["scene_manager"]).expect("Failed to init syslog");
 
     let mut fs = ServiceFs::new_local();
+
+    // This will later be replaced by a flag, perhaps config-data.
+    let use_flatland = false;
 
     inspect_runtime::serve(inspect::component::inspector(), &mut fs)?;
 
@@ -57,11 +63,15 @@ async fn main() -> Result<(), Error> {
     // It also listens to configuration.
     let text_handler = text_settings::Handler::new(None);
 
-    let scenic = connect_to_protocol::<ScenicMarker>()?;
-    let view_ref_installed = connect_to_protocol::<ui_views::ViewRefInstalledMarker>()?;
-    let flat_scene_manager =
-        scene_management::FlatSceneManager::new(scenic, view_ref_installed, None, None).await?;
-    let scene_manager = Arc::new(Mutex::new(flat_scene_manager));
+    let scene_manager: Arc<Mutex<Box<dyn SceneManager>>> = if use_flatland {
+        panic!("Flatland not supported yet");
+    } else {
+        let scenic = connect_to_protocol::<ScenicMarker>()?;
+        let view_ref_installed = connect_to_protocol::<ui_views::ViewRefInstalledMarker>()?;
+        Arc::new(Mutex::new(Box::new(
+            scene_management::FlatSceneManager::new(scenic, view_ref_installed, None, None).await?,
+        )))
+    };
 
     // Create a node under root to hang all input pipeline inspect data off of.
     let inspect_node =
@@ -138,7 +148,7 @@ async fn main() -> Result<(), Error> {
 
 pub async fn handle_manager_request_stream(
     mut request_stream: ManagerRequestStream,
-    scene_manager: Arc<Mutex<scene_management::FlatSceneManager>>,
+    scene_manager: Arc<Mutex<Box<dyn scene_management::SceneManager>>>,
     input_device_registry_request_stream_receiver: futures::channel::mpsc::UnboundedReceiver<
         InputDeviceRegistryRequestStream,
     >,
@@ -167,7 +177,7 @@ pub async fn handle_manager_request_stream(
             }
             ManagerRequest::RequestFocus { mut view_ref, responder, .. } => {
                 let scene_manager = scene_manager.lock().await;
-                if let Ok(mut response) = scene_manager.focuser.request_focus(&mut view_ref).await {
+                if let Ok(mut response) = scene_manager.request_focus(&mut view_ref).await {
                     let _ = responder.send(&mut response);
                 }
             }
@@ -176,12 +186,12 @@ pub async fn handle_manager_request_stream(
 }
 
 pub async fn handle_accessibility_view_registry_request_stream(
-    mut request_stream: RegistryRequestStream,
-    scene_manager: Arc<Mutex<scene_management::FlatSceneManager>>,
+    mut request_stream: A11yViewRegistryRequestStream,
+    scene_manager: Arc<Mutex<Box<dyn scene_management::SceneManager>>>,
 ) {
     while let Ok(Some(request)) = request_stream.try_next().await {
         match request {
-            RegistryRequest::CreateAccessibilityViewHolder {
+            A11yViewRegistryRequest::CreateAccessibilityViewHolder {
                 a11y_view_ref: _,
                 a11y_view_token,
                 responder,
@@ -194,7 +204,8 @@ pub async fn handle_accessibility_view_registry_request_stream(
                     Ok(mut result) => {
                         let _ = responder.send(&mut result);
                     }
-                    Err(_) => {
+                    Err(e) => {
+                        fx_log_warn!("Closing A11yViewRegistry connection due to error {:?}", e);
                         responder.control_handle().shutdown_with_epitaph(zx::Status::PEER_CLOSED);
                     }
                 };
