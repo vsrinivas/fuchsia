@@ -5,9 +5,7 @@
 // ignore_for_file: avoid_as, unnecessary_null_comparison
 
 import 'dart:async';
-import 'dart:ui';
 
-import 'package:flutter/gestures.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 

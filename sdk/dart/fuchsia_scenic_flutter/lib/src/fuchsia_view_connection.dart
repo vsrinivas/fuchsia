@@ -7,7 +7,6 @@
 import 'package:fidl_fuchsia_ui_views/fidl_async.dart';
 import 'package:flutter/widgets.dart';
 import 'package:fuchsia_scenic/views.dart';
-import 'package:meta/meta.dart';
 import 'package:zircon/zircon.dart';
 
 import 'fuchsia_view_controller.dart';
