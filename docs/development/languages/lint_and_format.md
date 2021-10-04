@@ -232,7 +232,7 @@ prebuilt/third_party/dart/${HOST_PLATFORM}/bin/dartanalyzer \
   --enable-experiment \
   non-nullable \
   $FILES
-  ```
+```
 
 ## FIDL
 
