@@ -6,6 +6,7 @@
 
 #include <elf.h>
 #include <inttypes.h>
+#include <lib/fdio/fd.h>
 #include <link.h>
 #include <stdarg.h>
 #include <stdlib.h>
@@ -118,8 +119,14 @@ bool setup_inferior(const char* name, springboard_t** out_sb, zx_handle_t* out_i
   const char verbosity_string[] = {'v', '=', static_cast<char>(utest_verbosity_level + '0'), '\0'};
   const char* test_child_path = g_program_path;
   const char* const argv[] = {test_child_path, name, verbosity_string};
-  zx_handle_t handles[1] = {channel2};
-  uint32_t handle_ids[1] = {PA_USER0};
+  zx_handle_t handles[4];
+  uint32_t handle_ids[4];
+  for (int fd = 0; fd < 3; ++fd) {
+    ASSERT_EQ(fdio_fd_clone(fd, &handles[fd]), ZX_OK);
+    handle_ids[fd] = PA_HND(PA_FD, fd);
+  }
+  handles[3] = channel2;
+  handle_ids[3] = PA_USER0;
 
   unittest_printf("Creating process \"%s\"\n", name);
   springboard_t* sb = tu_launch_init(zx_job_default(), name, std::size(argv), argv, 0, NULL,
