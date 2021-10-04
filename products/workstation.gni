@@ -25,7 +25,6 @@ base_package_labels += [
   "//src/identity/bin:tier_2",
   "//src/media/audio/bundles:services",
   "//src/power:battery",
-  "//src/proc/bundles:starsh",
   "//src/session/bundles:session_manager",
   "//src/sys/activity",
   "//src/ui/bin/brightness_manager",
@@ -61,10 +60,12 @@ cache_package_labels += [
 universe_package_labels += [
   "//examples/fidl:tests",
 
+  "//src/lib/ui/carnelian:examples",
   "//src/ui/examples/bouncing_ball",
   "//src/ui/examples/spinning_square_view",
-  "//src/lib/ui/carnelian:examples",
   "//src/virtualization/bin",
+
+  "//src/proc/bundles:starsh",
 ]
 
 universe_package_labels -= [ "//src/tests/end_to_end/perf:test" ]
