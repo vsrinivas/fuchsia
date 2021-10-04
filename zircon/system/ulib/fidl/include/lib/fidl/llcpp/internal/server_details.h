@@ -24,8 +24,9 @@ class ServerBindingRef;
 // It is not required to wrap the callback lambda in this type; |BindServer|
 // accepts a lambda function directly.
 template <typename ServerImpl>
-using OnUnboundFn = fit::callback<void(ServerImpl*, UnbindInfo,
-                                       fidl::ServerEnd<typename ServerImpl::_EnclosingProtocol>)>;
+using OnUnboundFn = fit::callback<void(
+    ServerImpl*, UnbindInfo,
+    typename fidl::Transport<typename ServerImpl::_EnclosingProtocol>::ServerEnd)>;
 
 namespace internal {
 
@@ -172,8 +173,9 @@ template <typename Derived, typename OnUnbound>
 struct UnboundThunkCallOperator<Derived, OnUnbound,
                                 std::enable_if_t<!OnUnboundIsNull<OnUnbound>::value>> {
   template <typename ServerImpl>
-  void operator()(ServerImpl* impl_ptr, UnbindInfo info,
-                  fidl::ServerEnd<typename ServerImpl::_EnclosingProtocol>&& server_end) {
+  void operator()(
+      ServerImpl* impl_ptr, UnbindInfo info,
+      typename fidl::Transport<typename ServerImpl::_EnclosingProtocol>::ServerEnd&& server_end) {
     static_assert(std::is_convertible_v<OnUnbound, OnUnboundFn<ServerImpl>>,
                   "|on_unbound| must have the same signature as fidl::OnUnboundFn<ServerImpl>.");
     auto* self = static_cast<Derived*>(this);
@@ -185,8 +187,9 @@ template <typename Derived, typename OnUnbound>
 struct UnboundThunkCallOperator<Derived, OnUnbound,
                                 std::enable_if_t<OnUnboundIsNull<OnUnbound>::value>> {
   template <typename ServerImpl>
-  void operator()(ServerImpl* impl_ptr, UnbindInfo info,
-                  fidl::ServerEnd<typename ServerImpl::_EnclosingProtocol>&& server_end) {
+  void operator()(
+      ServerImpl* impl_ptr, UnbindInfo info,
+      typename fidl::Transport<typename ServerImpl::_EnclosingProtocol>::ServerEnd&& server_end) {
     // |fn_| is a nullptr, meaning the user did not provide an |on_unbound| callback.
     static_assert(std::is_same_v<OnUnbound, std::nullptr_t>, "|on_unbound| is no-op here");
   }
