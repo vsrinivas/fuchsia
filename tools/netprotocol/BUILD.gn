@@ -22,7 +22,7 @@ executable("netcp") {
   sources = [ "netcp.c" ]
   deps = [
     ":common",
-    "//zircon/public/lib/tftp",
+    "//zircon/system/ulib/tftp",
   ]
   configs += [
     # TODO(fxbug.dev/58162): delete the below and fix compiler warnings

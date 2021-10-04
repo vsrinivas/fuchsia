@@ -50,11 +50,11 @@ executable("netsvc") {
     "//sdk/lib/fdio",
     "//src/sys/lib/stdout-to-debuglog/cpp",
     "//zircon/public/lib/sync",
-    "//zircon/public/lib/tftp",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/fdio-caller",
     "//zircon/system/ulib/inet6",
     "//zircon/system/ulib/service:service-llcpp",
+    "//zircon/system/ulib/tftp",
     "//zircon/system/ulib/zx",
   ]
   data_deps = [
@@ -107,10 +107,10 @@ source_set("netsvc_common") {
   public_deps = [
     "//sdk/fidl/fuchsia.paver:fuchsia.paver_llcpp",
     "//zircon/public/lib/sync",
-    "//zircon/public/lib/tftp",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/fzl",
     "//zircon/system/ulib/inet6",
+    "//zircon/system/ulib/tftp",
     "//zircon/system/ulib/zx",
   ]
 }
