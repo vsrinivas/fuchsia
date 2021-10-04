@@ -32,51 +32,51 @@ using zx;
 ///
 /// `Io1Config` lets the test harness modulate the set of expected outcomes and
 /// behaviors validated by the test suite, by declaring specific properties
-/// about the filesystem implementation and what features/methods they support.
-type Io1Config = struct {
-    /// `File` objects are mutable (i.e. they support opening with OPEN_RIGHT_WRITABLE).
-    mutable_file bool = true;
+/// about the filesystem implementation. For example, setting [`ImmutableFile`]
+/// to true informs the test suites that files hosted by this harness do not
+/// support mutation.
+type Io1Config = table {
+    /// Files are read-only.
+    1: immutable_file bool;
 
-    /// `Directory` objects are mutable (i.e. OPEN_FLAG_CREATE is supported).
-    mutable_dir bool = true;
+    /// Directories are read-only.
+    2: immutable_dir bool;
 
-    /// `ExecFile` objects are supported. If true, `get_buffer` should also be true.
-    exec_file bool = true;
+    /// ExecFile objects are not supported.
+    3: no_execfile bool;
 
-    /// `VmoFile` objects are supported.
-    vmo_file bool = true;
+    /// VmoFile objects are not supported.
+    4: no_vmofile bool;
 
-    /// Remote directories are supported (see `GetDirectoryWithRemoteDirectory`).
-    remote_dir bool = true;
+    /// Remote directories are not supported.
+    5: no_remote_dir bool;
 
-    /// The admin right is supported.
-    admin bool = true;
+    /// The admin right is not supported.
+    6: no_admin bool;
 
-    /// The GetBuffer method is supported.
-    get_buffer bool = true;
+    /// The GetBuffer method is not supported.
+    7: no_get_buffer bool;
 
-    /// The Rename method is supported. If true, `mutable_dir` and `get_token` should
-    /// also be true.
-    rename bool = true;
+    /// The Rename method is not supported.
+    8: no_rename bool;
 
-    /// The Link and Unlink methods are supported. If true, `mutable_dir` and `get_token`
-    /// should also be true.
-    link bool = true;
+    /// The Link and Unlink methods are not supported.
+    9: no_link bool;
 
-    /// The SetAttr method is supported.
-    set_attr bool = true;
+    /// The SetAttr method is not supported.
+   10: no_set_attr bool;
 
-    /// The GetToken method is supported.
-    get_token bool = true;
+    /// The GetToken method is not supported.
+   11: no_get_token bool;
 
-    /// Path handling conforms to in-tree behavior.
+    /// Path handling does not conform to in-tree behavior.
     /// TODO(fxbug.dev/82672): Ensure all libraries are conformant and remove this option.
     /// Currently the only non-conformant implementation being tested is the SDK VFS.
-    conformant_path_handling bool = true;
+   12: non_conformant_path_handling bool;
 };
 
 /// Directory entries should support opening with any combination of read/write/execute rights.
-/// If `admin` is true, the admin right should also be supported.
+/// If `no_admin` is false, the admin right should also be supported.
 type Directory = resource table {
     /// Name not required for root directory.
     1: name string;
@@ -85,7 +85,7 @@ type Directory = resource table {
     2: entries vector<DirectoryEntry:optional>;
 };
 
-/// File object which supports reading, and if `mutable_file` is true, also supports writing.
+/// File object which supports reading, and if `immutable_file` is false, also supports writing.
 ///
 /// As the conformance tests verify W^X enforcement, attempting to open a File object as executable
 /// should fail with ACCESS_DENIED. If executable files are required, use ExecFile.
@@ -96,7 +96,7 @@ type File = table {
 
 /// Vmo-backed file object which supports opening as readable + writable.
 ///
-/// Enabled via the `vmo_file` configuration option.
+/// Enabled via the `no_vmofile` configuration option.
 ///
 /// As the conformance tests verify W^X enforcement, attempting to open a VmoFile as executable
 /// should fail with ACCESS_DENIED. If executable pseudofiles are required, use ExecFile.
@@ -108,7 +108,7 @@ type VmoFile = resource table {
 /// Adds an executable file that supports opening as readable + executable. The file has a non-zero
 /// size, but the contents are otherwise unspecified.
 ///
-/// Enabled via the `exec_file` configuration option. If enabled, `get_buffer` should also be true.
+/// Enabled by setting `no_execfile` to false. If enabled, `no_get_buffer` should also be false.
 ///
 /// As the conformance tests verify W^X enforcement, attempting to open an ExecFile as writable
 /// should fail with ACCESS_DENIED. If writable pseudofiles are required, use File/VmoFile instead.

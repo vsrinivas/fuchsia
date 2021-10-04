@@ -24,10 +24,10 @@ pub struct TestHarness {
     pub file_rights: Rights,
 
     /// All VmoFile rights supported by the filesystem.
-    pub vmo_file_rights: Rights,
+    pub vmofile_rights: Rights,
 
     /// All ExecFile rights supported by the filesystem.
-    pub exec_file_rights: Rights,
+    pub execfile_rights: Rights,
 }
 
 impl TestHarness {
@@ -35,26 +35,17 @@ impl TestHarness {
     pub async fn new() -> TestHarness {
         let proxy = connect_to_harness().await;
         let config = proxy.get_config().await.expect("Could not get config from proxy");
-
-        // Validate configuration options for consistency, disallow invalid combinations.
-        if config.exec_file {
-            assert!(config.get_buffer, "GetBuffer must be supported for testing ExecFile objects!");
-        }
-        if config.rename || config.link {
-            assert!(
-                config.mutable_dir,
-                "Directories must be mutable for testing Rename or Link/Unlink!"
-            );
-            assert!(config.get_token, "GetToken must be supported for testing Rename/Link/Unlink!");
-        }
-
-        // Generate supported set of rights for each type of node object.
         let dir_rights = Rights::new(get_supported_dir_rights(&config));
         let file_rights = Rights::new(get_supported_file_rights(&config));
-        let vmo_file_rights = Rights::new(get_supported_vmo_file_rights());
-        let exec_file_rights = Rights::new(get_supported_exec_file_rights());
+        let vmofile_rights = Rights::new(get_supported_vmofile_rights());
+        let execfile_rights = Rights::new(get_supported_execfile_rights());
 
-        TestHarness { proxy, config, dir_rights, file_rights, vmo_file_rights, exec_file_rights }
+        // TODO(fxbug.dev/77633): Validate configuration options for consistency, e.g.:
+        //  - If no_get_buffer is false, no_vmofile should be false
+        //  - If no_execfile is false, no_get_buffer should be false
+        //  - If no_admin or no_link is false, immutable_dir should be false (what about no_rename?)
+
+        TestHarness { proxy, config, dir_rights, file_rights, vmofile_rights, execfile_rights }
     }
 
     /// Creates a DirectoryProxy with the given root directory structure.
@@ -114,7 +105,7 @@ async fn connect_to_harness() -> io_test::Io1HarnessProxy {
 /// Must support read, write, execute, and optionally, admin (if no_admin == false).
 fn get_supported_dir_rights(config: &io_test::Io1Config) -> u32 {
     let mut rights = io::OPEN_RIGHT_READABLE | io::OPEN_RIGHT_WRITABLE | io::OPEN_RIGHT_EXECUTABLE;
-    if config.admin {
+    if !config.no_admin.unwrap_or_default() {
         rights |= io::OPEN_RIGHT_ADMIN;
     }
     rights
@@ -125,7 +116,7 @@ fn get_supported_dir_rights(config: &io_test::Io1Config) -> u32 {
 /// Must support read, and optionally, write (if immutable_file == true).
 fn get_supported_file_rights(config: &io_test::Io1Config) -> u32 {
     let mut rights = io::OPEN_RIGHT_READABLE;
-    if config.mutable_file {
+    if !config.immutable_file.unwrap_or_default() {
         rights |= io::OPEN_RIGHT_WRITABLE;
     }
     rights
@@ -134,13 +125,13 @@ fn get_supported_file_rights(config: &io_test::Io1Config) -> u32 {
 /// Returns the aggregate of all rights that are supported for VmoFile objects.
 ///
 /// Must support both read and write.
-fn get_supported_vmo_file_rights() -> u32 {
+fn get_supported_vmofile_rights() -> u32 {
     io::OPEN_RIGHT_READABLE | io::OPEN_RIGHT_WRITABLE
 }
 
 /// Returns the aggregate of all rights that are supported for ExecFile objects.
 ///
 /// Must support both read and execute.
-fn get_supported_exec_file_rights() -> u32 {
+fn get_supported_execfile_rights() -> u32 {
     io::OPEN_RIGHT_READABLE | io::OPEN_RIGHT_EXECUTABLE
 }

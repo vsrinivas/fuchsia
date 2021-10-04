@@ -47,21 +47,20 @@ class TestHarness : public fuchsia::io::test::Io1Harness {
   }
 
   void GetConfig(GetConfigCallback callback) final {
-    fuchsia::io::test::Io1Config config{};
-
-    config.mutable_file = true;
-    config.vmo_file = true;
-    config.remote_dir = true;
-    config.admin = true;
-    config.get_token = true;
+    fuchsia::io::test::Io1Config config;
+    config.set_immutable_file(false);
+    config.set_no_vmofile(false);
+    config.set_no_remote_dir(false);
+    config.set_no_admin(false);
+    config.set_no_get_token(false);
 
     // PseudoFile/PseudoDir do not support a variety of methods:
-    config.exec_file = false;
-    config.mutable_dir = false;
-    config.get_buffer = false;
-    config.rename = false;
-    config.link = false;
-    config.set_attr = false;
+    config.set_no_execfile(true);
+    config.set_immutable_dir(true);
+    config.set_no_get_buffer(true);
+    config.set_no_rename(true);
+    config.set_no_link(true);
+    config.set_no_set_attr(true);
 
     callback(std::move(config));
   }

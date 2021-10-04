@@ -62,21 +62,20 @@ class MinfsHarness : public fuchsia::io::test::Io1Harness {
   }
 
   void GetConfig(GetConfigCallback callback) final {
-    fuchsia::io::test::Io1Config config{};
-
-    config.mutable_file = true;
-    config.mutable_dir = true;
-    config.admin = true;
-    config.rename = true;
-    config.link = true;
-    config.set_attr = true;
-    config.get_token = true;
+    fuchsia::io::test::Io1Config config;
+    config.set_immutable_file(false);
+    config.set_immutable_dir(false);
+    config.set_no_admin(false);
+    config.set_no_rename(false);
+    config.set_no_link(false);
+    config.set_no_set_attr(false);
+    config.set_no_get_token(false);
 
     // Minfs doesn't support executable files, VMO files, nor remote directories.
-    config.exec_file = false;
-    config.vmo_file = false;
-    config.remote_dir = false;
-    config.get_buffer = false;
+    config.set_no_execfile(true);
+    config.set_no_vmofile(true);
+    config.set_no_remote_dir(true);
+    config.set_no_get_buffer(true);
 
     callback(std::move(config));
   }
