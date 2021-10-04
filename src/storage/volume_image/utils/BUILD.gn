@@ -85,8 +85,8 @@ source_set("guid") {
   public = [ "guid.h" ]
   public_deps = [
     "//sdk/lib/fit-promise",
-    "//zircon/public/lib/safemath",
     "//zircon/system/ulib/fbl",
+    "//zircon/third_party/ulib/safemath",
   ]
 }
 
@@ -146,8 +146,8 @@ source_set("fd-io") {
   public_deps = [
     ":io-interfaces",
     "//sdk/lib/fit-promise",
-    "//zircon/public/lib/safemath",
     "//zircon/system/ulib/fbl",
+    "//zircon/third_party/ulib/safemath",
   ]
 }
 

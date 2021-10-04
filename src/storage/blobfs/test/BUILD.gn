@@ -47,8 +47,8 @@ source_set("test_utils") {
     "//sdk/lib/fdio",
     "//src/lib/digest",
     "//third_party/googletest:gtest",
-    "//zircon/public/lib/safemath",
     "//zircon/system/ulib/fbl",
+    "//zircon/third_party/ulib/safemath",
   ]
   public_deps = [
     "//src/storage/blobfs",
@@ -105,7 +105,6 @@ test("blobfs_unittest") {
     "//src/storage/blobfs:fuchsia.blobfs.internal",
     "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",
-    "//zircon/public/lib/safemath",
     "//zircon/public/lib/sync",
     "//zircon/system/ulib/block-client:fake-device",
     "//zircon/system/ulib/cobalt-client:in-memory-logger",
@@ -113,6 +112,7 @@ test("blobfs_unittest") {
     "//zircon/system/ulib/storage/buffer",
     "//zircon/system/ulib/storage/operation",
     "//zircon/third_party/ulib/cksum",
+    "//zircon/third_party/ulib/safemath",
   ]
 
   # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings

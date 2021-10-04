@@ -191,7 +191,6 @@ if (target_cpu == "arm64") {
       "//src/media/lib/memory_barriers",
       "//src/security/tee/tee-client-api",
       "//zircon/public/lib/async-cpp",
-      "//zircon/public/lib/safemath",
       "//zircon/public/lib/sync",
       "//zircon/system/ulib/async-loop:async-loop-cpp",
       "//zircon/system/ulib/async-loop:async-loop-default",
@@ -200,6 +199,7 @@ if (target_cpu == "arm64") {
       "//zircon/system/ulib/syslog",
       "//zircon/system/ulib/trace:trace-driver",
       "//zircon/system/ulib/zx",
+      "//zircon/third_party/ulib/safemath",
     ]
     deps = [
       ":test_support",

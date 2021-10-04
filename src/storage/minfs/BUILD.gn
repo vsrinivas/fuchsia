@@ -88,13 +88,13 @@ static_library("minfs") {
     "//src/lib/storage/vfs/cpp",
     "//src/storage/fvm",
     "//src/storage/lib/disk_inspector",
-    "//zircon/public/lib/safemath",
     "//zircon/public/lib/zircon-internal",
     "//zircon/system/ulib/bitmap",
     "//zircon/system/ulib/range",
     "//zircon/system/ulib/storage/operation",
     "//zircon/system/ulib/zxc",
     "//zircon/third_party/ulib/cksum",
+    "//zircon/third_party/ulib/safemath",
   ]
   if (is_fuchsia) {
     if (minfs_enable_dirty_cache) {

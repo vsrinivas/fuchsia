@@ -82,8 +82,8 @@ if (is_fuchsia) {
 
       deps += [
         "//sdk/lib/fdio",
-        "//zircon/public/lib/safemath",
         "//zircon/system/ulib/storage/operation",
+        "//zircon/third_party/ulib/safemath",
       ]
     }
   }

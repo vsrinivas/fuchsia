@@ -53,13 +53,13 @@ fuchsia_driver("aml-securemem-driver") {
     "//src/lib/ddk",
     "//src/security/tee/tee-client-api:tee-client-api-headers",
     "//zircon/public/lib/async-cpp",
-    "//zircon/public/lib/safemath",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/closure-queue",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/fidl-async:fidl-async-cpp",
     "//zircon/system/ulib/zx",
+    "//zircon/third_party/ulib/safemath",
   ]
 
   # TODO(fxbug.dev/69585): This target uses raw zx::channel with LLCPP which is deprecated.
@@ -100,13 +100,13 @@ test("aml-securemem-test-bin") {
     "//src/devices/testing/fake_ddk",
     "//src/security/tee/tee-client-api:tee-client-api-static",
     "//zircon/public/lib/async-cpp",
-    "//zircon/public/lib/safemath",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/closure-queue",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/fidl-async:fidl-async-cpp",
     "//zircon/system/ulib/zxtest",
+    "//zircon/third_party/ulib/safemath",
   ]
 
   # TODO(fxbug.dev/69585): This target uses raw zx::channel with LLCPP which is deprecated.

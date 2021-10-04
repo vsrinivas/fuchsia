@@ -27,7 +27,7 @@ common_deps = [
   "//src/devices/rtc/lib/rtc:rtc_llcpp",
   "//src/lib/ddk",
   "//src/lib/ddktl",
-  "//zircon/public/lib/safemath",
+  "//zircon/third_party/ulib/safemath",
 ]
 
 fuchsia_driver("intel-rtc-driver") {

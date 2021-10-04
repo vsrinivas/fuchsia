@@ -12,7 +12,7 @@ source_set("cpp") {
     "vector_buffer.h",
   ]
 
-  public_deps = [ "//zircon/public/lib/safemath" ]
+  public_deps = [ "//zircon/third_party/ulib/safemath" ]
 
   # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
   configs += [ "//build/config:Wno-conversion" ]

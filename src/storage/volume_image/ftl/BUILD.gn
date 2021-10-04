@@ -29,7 +29,7 @@ source_set("ftl-image-internal") {
   ]
   deps = [
     ":raw-nand-image-utils",
-    "//zircon/public/lib/safemath",
+    "//zircon/third_party/ulib/safemath",
   ]
 }
 
@@ -43,8 +43,8 @@ source_set("ftl-io") {
   ]
   deps = [
     ":raw-nand-image-utils",
-    "//zircon/public/lib/safemath",
     "//zircon/system/ulib/fbl",
+    "//zircon/third_party/ulib/safemath",
   ]
 }
 
@@ -60,7 +60,7 @@ source_set("ftl-raw-nand-image-writer") {
   deps = [
     ":ftl-image-internal",
     ":raw-nand-image-utils",
-    "//zircon/public/lib/safemath",
+    "//zircon/third_party/ulib/safemath",
   ]
 }
 

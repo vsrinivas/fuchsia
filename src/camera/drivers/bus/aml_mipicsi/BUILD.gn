@@ -39,9 +39,9 @@ fuchsia_driver("aml_mipicsi_driver-driver") {
     "//src/lib/ddk",
     "//src/lib/ddk:ddk-metadata-headers",
     "//src/lib/ddktl",
-    "//zircon/public/lib/safemath",
     "//zircon/system/ulib/fzl",
     "//zircon/system/ulib/zx",
+    "//zircon/third_party/ulib/safemath",
   ]
 }
 

@@ -90,7 +90,6 @@ static_library("f2fs") {
     "//src/lib/storage/vfs/cpp/metrics:metrics-cobalt",
     "//zircon/public/lib/async",
     "//zircon/public/lib/async-cpp",
-    "//zircon/public/lib/safemath",
     "//zircon/system/ulib/async-default",
     "//zircon/system/ulib/async-loop",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
@@ -104,6 +103,7 @@ static_library("f2fs") {
     "//zircon/system/ulib/trace-engine",
     "//zircon/system/ulib/trace-provider:trace-provider-with-fdio",
     "//zircon/system/ulib/zx",
+    "//zircon/third_party/ulib/safemath",
   ]
 
   defines = []

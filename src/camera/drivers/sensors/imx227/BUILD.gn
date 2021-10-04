@@ -35,8 +35,8 @@ source_set("lib") {
     "//sdk/lib/syslog/cpp",
     "//src/devices/lib/driver",
     "//src/lib/ddk:ddk-metadata-headers",
-    "//zircon/public/lib/safemath",
     "//zircon/system/ulib/fzl",
+    "//zircon/third_party/ulib/safemath",
   ]
 
   public_deps = [

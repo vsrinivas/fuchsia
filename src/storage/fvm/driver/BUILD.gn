@@ -67,7 +67,6 @@ source_set("shared") {
     "//src/storage/fvm",
     "//src/storage/gpt",
     "//third_party/boringssl",
-    "//zircon/public/lib/safemath",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zircon-internal",
     "//zircon/system/ulib/fbl",
@@ -75,6 +74,7 @@ source_set("shared") {
     "//zircon/system/ulib/fzl",
     "//zircon/system/ulib/inspect",
     "//zircon/system/ulib/zx",
+    "//zircon/third_party/ulib/safemath",
   ]
 
   configs += [ "//build/config:all_source" ]

@@ -46,7 +46,6 @@ test("minfs_unit") {
     "//src/storage/minfs",
     "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",
-    "//zircon/public/lib/safemath",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zircon-internal",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
@@ -57,6 +56,7 @@ test("minfs_unit") {
     "//zircon/system/ulib/cobalt-client:in-memory-logger",
     "//zircon/system/ulib/zxc",
     "//zircon/third_party/ulib/cksum",
+    "//zircon/third_party/ulib/safemath",
   ]
 
   # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings

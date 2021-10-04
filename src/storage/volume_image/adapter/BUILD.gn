@@ -106,9 +106,9 @@ source_set("mtd-writer") {
   if (current_os == "linux") {
     sources = [ "mtd_writer_linux.cc" ]
     deps += [
-      "//zircon/public/lib/safemath",
       "//zircon/system/ulib/ftl-mtd",
       "//zircon/system/ulib/mtd",
+      "//zircon/third_party/ulib/safemath",
     ]
   } else {
     sources = [ "mtd_writer_default.cc" ]

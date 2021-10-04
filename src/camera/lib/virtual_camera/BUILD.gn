@@ -24,10 +24,10 @@ source_set("lib") {
     "//sdk/lib/syslog/cpp",
     "//src/camera/lib/fake_camera",
     "//src/camera/lib/fake_stream",
-    "//zircon/public/lib/safemath",
     "//zircon/system/ulib/async:async-cpp",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
+    "//zircon/third_party/ulib/safemath",
   ]
   public_deps = [
     "//sdk/fidl/fuchsia.camera3",

@@ -19,8 +19,8 @@ executable("fvm") {
     "//src/storage/volume_image/fvm:fvm-sparse-image",
     "//src/storage/volume_image/fvm:fvm-unpack",
     "//src/storage/volume_image/utils:fd-io",
-    "//zircon/public/lib/safemath",
     "//zircon/system/ulib/fbl",
+    "//zircon/third_party/ulib/safemath",
   ]
 
   if (!is_fuchsia) {

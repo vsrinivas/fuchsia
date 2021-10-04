@@ -86,12 +86,12 @@ source_set("ge2d_on_device_test") {
     "//src/camera/drivers/hw_accel/ge2d:lib",
     "//src/camera/drivers/test_utils",
     "//src/lib/ddk",
-    "//zircon/public/lib/safemath",
     "//zircon/public/lib/sync",
     "//zircon/system/ulib/driver-unit-test",
     "//zircon/system/ulib/fzl",
     "//zircon/system/ulib/image-format",
     "//zircon/system/ulib/zxtest",
+    "//zircon/third_party/ulib/safemath",
   ]
 }
 

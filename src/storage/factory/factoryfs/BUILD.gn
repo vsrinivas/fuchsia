@@ -60,7 +60,6 @@ test("factoryfs_unit") {
   deps = [
     ":factoryfs",
     "//src/lib/storage/fs_management",
-    "//zircon/public/lib/safemath",
     "//zircon/public/lib/sync",
     "//zircon/system/ulib/async-loop",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
@@ -70,6 +69,7 @@ test("factoryfs_unit") {
     "//zircon/system/ulib/storage/buffer",
     "//zircon/system/ulib/storage/operation",
     "//zircon/system/ulib/zxtest",
+    "//zircon/third_party/ulib/safemath",
   ]
 }
 

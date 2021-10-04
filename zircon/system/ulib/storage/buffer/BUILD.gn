@@ -42,10 +42,10 @@ zx_library("buffer") {
       # TODO(fxbug.dev/38240): Clean up any remaining 'fs' dependencies. Only for fs/trace
       "//sdk/lib/syslog/cpp",
       "//src/lib/storage/vfs/cpp",
-      "//zircon/public/lib/safemath",
       "//zircon/system/ulib/fzl",
       "//zircon/system/ulib/storage/operation",
       "//zircon/system/ulib/zx",
+      "//zircon/third_party/ulib/safemath",
     ]
   } else {
     public_deps = [ "//zircon/system/public" ]

@@ -12,6 +12,6 @@ executable("mkfs") {
   deps = [
     "//sdk/lib/fdio",
     "//src/lib/storage/fs_management",
-    "//zircon/public/lib/safemath",
+    "//zircon/third_party/ulib/safemath",
   ]
 }

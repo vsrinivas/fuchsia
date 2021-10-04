@@ -52,7 +52,7 @@ source_set("source") {
   ]
   deps = [
     ":camera_controller_bind",
-    "//zircon/public/lib/safemath",
+    "//zircon/third_party/ulib/safemath",
   ]
   public_deps = [
     "//sdk/banjo/fuchsia.hardware.camerahwaccel:fuchsia.hardware.camerahwaccel_banjo_cpp",

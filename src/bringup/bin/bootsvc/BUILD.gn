@@ -94,7 +94,7 @@ source_set("util") {
     "util.cc",
     "util.h",
   ]
-  deps = [ "//zircon/public/lib/safemath" ]
+  deps = [ "//zircon/third_party/ulib/safemath" ]
   public_deps = [
     "//src/lib/storage/vfs/cpp",
     "//zircon/system/ulib/fbl",
