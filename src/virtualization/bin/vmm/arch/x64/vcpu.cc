@@ -32,7 +32,7 @@ zx_status_t PerformMemAccess(const zx_packet_guest_mem_t& mem, IoMapping* device
   zx_status_t status;
   IoValue mmio = {inst->access_size, {.u64 = 0}};
   switch (inst->type) {
-    case INST_MOV_WRITE:
+    case InstructionType::kWrite:
       switch (inst->access_size) {
         case 1:
           status = inst_write<uint8_t>(inst, &mmio.u8);
@@ -51,7 +51,7 @@ zx_status_t PerformMemAccess(const zx_packet_guest_mem_t& mem, IoMapping* device
       }
       return device_mapping->Write(mem.addr, mmio);
 
-    case INST_MOV_READ:
+    case InstructionType::kRead:
       status = device_mapping->Read(mem.addr, &mmio);
       if (status != ZX_OK) {
         return status;
@@ -67,7 +67,7 @@ zx_status_t PerformMemAccess(const zx_packet_guest_mem_t& mem, IoMapping* device
           return ZX_ERR_NOT_SUPPORTED;
       }
 
-    case INST_TEST:
+    case InstructionType::kTest:
       status = device_mapping->Read(mem.addr, &mmio);
       if (status != ZX_OK) {
         return status;
@@ -79,7 +79,7 @@ zx_status_t PerformMemAccess(const zx_packet_guest_mem_t& mem, IoMapping* device
           return ZX_ERR_NOT_SUPPORTED;
       }
 
-    case INST_OR:
+    case InstructionType::kLogicalOr:
       status = device_mapping->Read(mem.addr, &mmio);
       if (status != ZX_OK) {
         return status;
@@ -135,7 +135,7 @@ zx_status_t Vcpu::ArchHandleMem(const zx_packet_guest_mem_t& mem, IoMapping* dev
   }
 
   // If the operation was write-only and didn't change registers or flags, we are done.
-  if (inst.type == INST_MOV_WRITE) {
+  if (inst.type == InstructionType::kWrite) {
     return ZX_OK;
   }
 

@@ -7,29 +7,29 @@
 
 #include <zircon/types.h>
 
-// clang-format off
+#define X86_FLAGS_STATUS (FLAG_OF | FLAG_SF | FLAG_ZF | FLAG_PF | FLAG_RESERVED | FLAG_CF)
 
-#define FLAG_OF             (1u << 11)
-#define FLAG_SF             (1u << 7)
-#define FLAG_ZF             (1u << 6)
-#define FLAG_PF             (1u << 2)
-#define FLAG_RESERVED       (1u << 1)
-#define FLAG_CF             (1u << 0)
+enum Flag {
+  FLAG_OF = (1u << 11),
+  FLAG_SF = (1u << 7),
+  FLAG_ZF = (1u << 6),
+  FLAG_PF = (1u << 2),
+  FLAG_RESERVED = (1u << 1),
+  FLAG_CF = (1u << 0)
+};
 
-#define X86_FLAGS_STATUS    (FLAG_OF | FLAG_SF | FLAG_ZF | FLAG_PF | FLAG_RESERVED | FLAG_CF)
+enum class InstructionType : uint8_t {
+  kRead,
+  kWrite,
+  kTest,
+  kLogicalOr,
+};
 
-#define INST_MOV_READ       0u
-#define INST_MOV_WRITE      1u
-#define INST_TEST           2u
-#define INST_OR             3u
-
-// clang-format on
-
-typedef struct zx_vcpu_state zx_vcpu_state_t;
+using zx_vcpu_state_t = struct zx_vcpu_state;
 
 // Stores info from a decoded instruction.
 struct Instruction {
-  uint8_t type;
+  InstructionType type;
   uint8_t access_size;
   uint32_t imm;
   uint64_t* reg;
@@ -46,7 +46,7 @@ static inline T get_inst_val(const Instruction* inst) {
 
 template <typename T>
 static inline zx_status_t inst_read(const Instruction* inst, T value) {
-  if (inst->type != INST_MOV_READ || inst->access_size != sizeof(T)) {
+  if (inst->type != InstructionType::kRead || inst->access_size != sizeof(T)) {
     return ZX_ERR_NOT_SUPPORTED;
   }
   *inst->reg = value;
@@ -55,7 +55,7 @@ static inline zx_status_t inst_read(const Instruction* inst, T value) {
 
 template <typename T>
 static inline zx_status_t inst_write(const Instruction* inst, T* value) {
-  if (inst->type != INST_MOV_WRITE || inst->access_size != sizeof(T)) {
+  if (inst->type != InstructionType::kWrite || inst->access_size != sizeof(T)) {
     return ZX_ERR_NOT_SUPPORTED;
   }
   *value = get_inst_val<T>(inst);
@@ -78,7 +78,7 @@ static inline uint16_t x86_flags_for_test8(uint8_t value1, uint8_t value2) {
 }
 
 static inline zx_status_t inst_test8(const Instruction* inst, uint8_t inst_val, uint8_t value) {
-  if (inst->type != INST_TEST || inst->access_size != 1u ||
+  if (inst->type != InstructionType::kTest || inst->access_size != 1u ||
       get_inst_val<uint8_t>(inst) != inst_val) {
     return ZX_ERR_NOT_SUPPORTED;
   }
@@ -103,7 +103,7 @@ static inline uint16_t x86_simulate_or(T immediate, T* memory) {
 
 template <typename T>
 static inline zx_status_t inst_or(const Instruction* inst, T inst_val, T* value) {
-  if (inst->type != INST_OR || inst->access_size != sizeof(T) ||
+  if (inst->type != InstructionType::kLogicalOr || inst->access_size != sizeof(T) ||
       get_inst_val<T>(inst) != inst_val) {
     return ZX_ERR_NOT_SUPPORTED;
   }

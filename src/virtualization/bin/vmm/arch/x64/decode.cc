@@ -248,7 +248,7 @@ zx_status_t inst_decode(const uint8_t* inst_buf, uint32_t inst_len, uint8_t defa
       if (register_id(mod_rm, /*rex_r=*/false) != 1) {
         return ZX_ERR_INVALID_ARGS;
       }
-      inst->type = INST_OR;
+      inst->type = InstructionType::kLogicalOr;
       inst->access_size = operand_size(h66, rex_w, w, default_operand_size);
       inst->imm = 0;
       inst->reg = NULL;
@@ -264,7 +264,7 @@ zx_status_t inst_decode(const uint8_t* inst_buf, uint32_t inst_len, uint8_t defa
         return ZX_ERR_OUT_OF_RANGE;
       }
       const bool w = opcode & kWMask;
-      inst->type = INST_MOV_WRITE;
+      inst->type = InstructionType::kWrite;
       inst->access_size = operand_size(h66, rex_w, w, default_operand_size);
       inst->imm = 0;
       inst->reg = select_register(vcpu_state, register_id(mod_rm, rex_r), inst->access_size, rex);
@@ -279,7 +279,7 @@ zx_status_t inst_decode(const uint8_t* inst_buf, uint32_t inst_len, uint8_t defa
         return ZX_ERR_OUT_OF_RANGE;
       }
       const bool w = opcode & kWMask;
-      inst->type = INST_MOV_READ;
+      inst->type = InstructionType::kRead;
       inst->access_size = operand_size(h66, rex_w, w, default_operand_size);
       inst->imm = 0;
       inst->reg = select_register(vcpu_state, register_id(mod_rm, rex_r), inst->access_size, rex);
@@ -298,7 +298,7 @@ zx_status_t inst_decode(const uint8_t* inst_buf, uint32_t inst_len, uint8_t defa
       if ((mod_rm & kModRMRegMask) != 0) {
         return ZX_ERR_INVALID_ARGS;
       }
-      inst->type = INST_MOV_WRITE;
+      inst->type = InstructionType::kWrite;
       inst->access_size = operand_size(h66, rex_w, w, default_operand_size);
       inst->imm = 0;
       inst->reg = NULL;
@@ -324,7 +324,7 @@ zx_status_t inst_decode(const uint8_t* inst_buf, uint32_t inst_len, uint8_t defa
       // select the destination register size.
       const uint8_t access_size = w ? 2 : 1;
       const uint8_t reg_size = operand_size(h66, rex_w, true, default_operand_size);
-      inst->type = INST_MOV_READ;
+      inst->type = InstructionType::kRead;
       inst->access_size = access_size;
       inst->imm = 0;
       inst->reg = select_register(vcpu_state, register_id(mod_rm, rex_r), reg_size, rex);
@@ -342,7 +342,7 @@ zx_status_t inst_decode(const uint8_t* inst_buf, uint32_t inst_len, uint8_t defa
       if ((mod_rm & kModRMRegMask) != 0) {
         return ZX_ERR_INVALID_ARGS;
       }
-      inst->type = INST_TEST;
+      inst->type = InstructionType::kTest;
       inst->access_size = 1;
       inst->imm = 0;
       inst->reg = NULL;
