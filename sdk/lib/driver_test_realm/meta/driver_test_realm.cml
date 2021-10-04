@@ -8,8 +8,9 @@
     ],
     children: [
         {
-            name: "driver-manager-test",
+            name: "driver_manager",
             url: "#meta/driver-manager-test.cm",
+            environment: "#driver_manager-env",
         },
         {
             name: "driver-manager-support",
@@ -20,14 +21,39 @@
             url: "#meta/driver-index.cm",
         },
     ],
+    collections: [
+        {
+            name: "driver-hosts",
+            environment: "#driver-host-env",
+            durability: "single_run",
+        },
+        {
+            name: "boot-drivers",
+            environment: "#driver-env",
+            durability: "single_run",
+        },
+        {
+            name: "pkg-drivers",
+            environment: "#driver-env",
+            durability: "single_run",
+        },
+    ],
     offer: [
+        {
+            protocol: "fuchsia.sys2.Realm",
+            from: "framework",
+            to: "#driver_manager",
+        },
         {
             protocol: [ "fuchsia.logger.LogSink" ],
             from: "parent",
             to: [
+                "#boot-drivers",
+                "#driver-hosts",
                 "#driver-index",
                 "#driver-manager-support",
-                "#driver-manager-test",
+                "#driver_manager",
+                "#pkg-drivers",
             ],
         },
         {
@@ -36,7 +62,7 @@
                 "fuchsia.sys.Launcher",
             ],
             from: "parent",
-            to: [ "#driver-manager-test" ],
+            to: [ "#driver_manager" ],
         },
         {
             protocol: [
@@ -46,7 +72,7 @@
                 "fuchsia.power.manager.DriverManagerRegistration",
             ],
             from: "#driver-manager-support",
-            to: [ "#driver-manager-test" ],
+            to: [ "#driver_manager" ],
         },
         {
             protocol: [
@@ -54,17 +80,17 @@
                 "fuchsia.driver.framework.DriverIndex",
             ],
             from: "#driver-index",
-            to: [ "#driver-manager-test" ],
+            to: [ "#driver_manager" ],
         },
         {
             directory: "pkgfs-delayed",
             from: "#driver-manager-support",
-            to: [ "#driver-manager-test" ],
+            to: [ "#driver_manager" ],
         },
         {
             directory: "system-delayed",
             from: "#driver-manager-support",
-            to: [ "#driver-manager-test" ],
+            to: [ "#driver_manager" ],
         },
         {
             directory: "pkgfs-packages-delayed",
@@ -76,7 +102,7 @@
             from: "#driver-manager-support",
             to: [
                 "#driver-index",
-                "#driver-manager-test",
+                "#driver_manager",
             ],
             rights: [ "rx*" ],
         },
@@ -84,7 +110,7 @@
     expose: [
         {
             directory: "dev",
-            from: "#driver-manager-test",
+            from: "#driver_manager",
         },
         {
             protocol: [
@@ -97,15 +123,44 @@
                 "fuchsia.hardware.pci.DeviceWatcher",
                 "fuchsia.hardware.usb.DeviceWatcher",
             ],
-            from: "#driver-manager-test",
+            from: "#driver_manager",
         },
         {
             runner: "driver",
-            from: "#driver-manager-test",
+            from: "#driver_manager",
         },
         {
             protocol: [ "fuchsia.driver.test.Realm" ],
             from: "#driver-manager-support",
+        },
+    ],
+    environments: [
+        {
+            name: "driver_manager-env",
+            extends: "realm",
+
+            // 1 minute
+            __stop_timeout_ms: 60000,
+        },
+        {
+            name: "driver-host-env",
+            extends: "realm",
+
+            // 2 seconds
+            __stop_timeout_ms: 2000,
+        },
+        {
+            name: "driver-env",
+            extends: "realm",
+            runners: [
+                {
+                    runner: "driver",
+                    from: "#driver_manager",
+                },
+            ],
+
+            // 1 second
+            __stop_timeout_ms: 1000,
         },
     ],
 }

@@ -32,8 +32,6 @@ struct Args {
   // should be bound to the sys_device (the top-level device for most
   // devices).  If nullptr, this uses devmgr's default.
   const char* sys_device_driver = nullptr;
-  // If this exists, use the driver runner and launch this driver URL as the root driver.
-  const char* driver_runner_root_driver_url = nullptr;
 
   // If valid, the FD to give to devmgr as stdin/stdout/stderr.  Otherwise
   // inherits from the caller of Launch().

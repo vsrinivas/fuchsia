@@ -36,7 +36,6 @@ fuchsia_unittest_package("package") {
   package_name = "driver_test_realm_test"
   deps = [
     ":driver_test_realm_test",
-    "//sdk/lib/driver_test_realm:realm_builder_version",
     "//src/devices/bus/drivers/platform:platform-bus",
     "//src/devices/misc/drivers/test",
     "//src/devices/misc/drivers/test-parent",

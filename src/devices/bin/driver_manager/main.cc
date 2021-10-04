@@ -64,6 +64,7 @@ struct DriverManagerParams {
   bool verbose;
   DriverHostCrashPolicy crash_policy;
   std::string root_driver;
+  bool use_dfv2;
 };
 
 DriverManagerParams GetDriverManagerParams(fidl::WireSyncClient<fuchsia_boot::Arguments>& client) {
@@ -74,6 +75,7 @@ DriverManagerParams GetDriverManagerParams(fidl::WireSyncClient<fuchsia_boot::Ar
       // Turn it on by default. See fxbug.dev/34577
       {"devmgr.suspend-timeout-fallback", true},
       {"devmgr.verbose", false},
+      {"driver_manager.use_driver_framework_v2", false},
   };
   auto bool_resp =
       client.GetBools(fidl::VectorView<fuchsia_boot::wire::BoolPair>::FromExternal(bool_req));
@@ -113,6 +115,7 @@ DriverManagerParams GetDriverManagerParams(fidl::WireSyncClient<fuchsia_boot::Ar
       .verbose = bool_resp->values[4],
       .crash_policy = crash_policy,
       .root_driver = std::move(root_driver),
+      .use_dfv2 = bool_resp->values[5],
   };
 }
 
@@ -164,8 +167,6 @@ struct DriverManagerArgs {
   // Use this driver as the sys_device driver.  If nullptr, the default will
   // be used.
   std::string sys_device_driver;
-  // If this exists, use the driver runner and launch this driver URL as the root driver.
-  std::string driver_runner_root_driver_url;
   // If true then DriverManager uses DriverIndex for binding rather than
   // looking in /boot/drivers/. If this is false DriverManager will not
   // be able to load base packages.
@@ -178,7 +179,6 @@ DriverManagerArgs ParseDriverManagerArgs(int argc, char** argv) {
     kLogToDebuglog,
     kNoExitAfterSuspend,
     kSysDeviceDriver,
-    kDriverRunnerRootDriverUrl,
     kUseDriverIndex,
   };
   option options[] = {
@@ -186,7 +186,6 @@ DriverManagerArgs ParseDriverManagerArgs(int argc, char** argv) {
       {"log-to-debuglog", no_argument, nullptr, kLogToDebuglog},
       {"no-exit-after-suspend", no_argument, nullptr, kNoExitAfterSuspend},
       {"sys-device-driver", required_argument, nullptr, kSysDeviceDriver},
-      {"driver-runner-root-driver-url", required_argument, nullptr, kDriverRunnerRootDriverUrl},
       {"use-driver-index", no_argument, nullptr, kUseDriverIndex},
       {0, 0, 0, 0},
   };
@@ -221,9 +220,6 @@ DriverManagerArgs ParseDriverManagerArgs(int argc, char** argv) {
       case kSysDeviceDriver:
         check_not_duplicated(args.sys_device_driver);
         args.sys_device_driver = optarg;
-        break;
-      case kDriverRunnerRootDriverUrl:
-        args.driver_runner_root_driver_url = optarg;
         break;
       case kUseDriverIndex:
         args.use_driver_index = true;
@@ -368,8 +364,7 @@ int main(int argc, char** argv) {
   std::optional<driver_manager::DevfsExporter> devfs_exporter;
 
   // Find and load v1 or v2 Drivers.
-  bool load_v1_drivers = driver_manager_args.driver_runner_root_driver_url.size() == 0;
-  if (load_v1_drivers) {
+  if (!driver_manager_params.use_dfv2) {
     // V1 Drivers.
     status = system_instance.CreateDriverHostJob(root_job, &config.driver_host_job);
     if (status != ZX_OK) {
@@ -407,7 +402,7 @@ int main(int argc, char** argv) {
   } else {
     // V2 Drivers.
     LOGF(INFO, "Starting DriverRunner with root driver URL: %s",
-         driver_manager_args.driver_runner_root_driver_url.data());
+         driver_manager_args.sys_device_driver.data());
 
     auto realm_result = service::Connect<fuchsia_sys2::Realm>();
     if (realm_result.is_error()) {
@@ -426,7 +421,7 @@ int main(int argc, char** argv) {
     if (publish.is_error()) {
       return publish.error_value();
     }
-    auto start = driver_runner->StartRootDriver(driver_manager_args.driver_runner_root_driver_url);
+    auto start = driver_runner->StartRootDriver(driver_manager_args.sys_device_driver);
     if (start.is_error()) {
       return start.error_value();
     }

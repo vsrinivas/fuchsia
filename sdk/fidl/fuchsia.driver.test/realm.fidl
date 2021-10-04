@@ -18,6 +18,10 @@ type RealmArgs = resource table {
     /// NOTE: The test parent driver is not included by default. This must
     ///  be included in your package to work correctly.
     2: root_driver string:MAX;
+
+    /// If this is true, then DriverManager will load DFv2 drivers.
+    /// Default: false
+    3: use_driver_framework_v2 bool;
 };
 
 /// This protocol is for the DriverTestRealm. It is an integration test

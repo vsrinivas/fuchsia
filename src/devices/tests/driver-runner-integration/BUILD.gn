@@ -9,7 +9,7 @@ import("//build/test.gni")
 
 group("tests") {
   testonly = true
-  deps = [ ":driver-runner-integration-test" ]
+  deps = [ ":package" ]
 }
 
 rustc_test("driver_runner_integration_test") {
@@ -17,6 +17,8 @@ rustc_test("driver_runner_integration_test") {
   source_root = "driver_runner_integration_test.rs"
   sources = [ "driver_runner_integration_test.rs" ]
   deps = [
+    "//sdk/fidl/fuchsia.driver.test:fuchsia.driver.test-rustc",
+    "//sdk/lib/driver_test_realm/realm_builder/rust",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component-test",
     "//src/sys/lib/component-events",
@@ -24,27 +26,16 @@ rustc_test("driver_runner_integration_test") {
   ]
 }
 
-fuchsia_component("driver-runner-integration-test-component") {
+fuchsia_component("component") {
+  component_name = "driver_runner_integration_test"
   testonly = true
-  manifest = "meta/driver-runner-integration-test.cml"
+  manifest = "meta/driver_runner_integration_test.cml"
   deps = [ ":driver_runner_integration_test" ]
 }
 
-fuchsia_component("driver-runner-integration-root") {
-  manifest = "meta/driver-runner-integration-root.cml"
-}
-
-fuchsia_component("driver-manager-component") {
-  manifest = "meta/driver-runner-integration-driver-manager.cml"
-  deps = [
-    "//src/devices/bin/driver_host:driver_host",
-    "//src/devices/bin/driver_manager:driver_manager",
-    "//src/devices/bus/drivers/platform",
-  ]
-}
-
-fuchsia_test_package("driver-runner-integration-test") {
-  test_components = [ ":driver-runner-integration-test-component" ]
+fuchsia_test_package("package") {
+  package_name = "driver_runner_integration_test"
+  test_components = [ ":component" ]
 
   # TODO(fxdebug.dev/80878): Make ERROR logs fail the test.
   test_specs = {
@@ -53,11 +44,7 @@ fuchsia_test_package("driver-runner-integration-test") {
     }
   }
   deps = [
-    ":driver-manager-component",
-    ":driver-runner-integration-root",
-    "//src/devices/bin/driver-index:component",
     "//src/devices/bin/driver_host2",
     "//src/devices/misc/drivers/packaged:component",
-    "//src/lib/isolated_devmgr/v2_component:driver-manager-support",
   ]
 }

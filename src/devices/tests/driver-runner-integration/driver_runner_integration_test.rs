@@ -8,10 +8,9 @@ use {
         events::{self, Event},
         matcher::EventMatcher,
     },
-    fuchsia_async as fasync,
-    fuchsia_component_test::builder::{
-        Capability, CapabilityRoute, ComponentSource, RealmBuilder, RouteEndpoint,
-    },
+    fidl_fuchsia_driver_test as fdt, fuchsia_async as fasync,
+    fuchsia_component_test::builder::RealmBuilder,
+    fuchsia_driver_test::{DriverTestRealmBuilder, DriverTestRealmInstance},
     std::convert::TryFrom,
 };
 
@@ -41,33 +40,27 @@ async fn driver_runner_test() -> Result<(), anyhow::Error> {
         )])
         .await?;
 
-    let mut builder = RealmBuilder::new().await?;
-    builder
-        .add_eager_component(
-            "root",
-            ComponentSource::url(
-                "fuchsia-pkg://fuchsia.com/driver-runner-integration-test#meta/driver-runner-integration-root.cm",
-            ),
+    let mut realm = RealmBuilder::new().await?;
+    // TODO(fxbug.dev/85884): This should be a relative URL but then driver_host2.cm doesn't resolve correctly.
+    realm
+        .driver_test_realm_setup_with_url(
+            "fuchsia-pkg://fuchsia.com/driver_runner_integration_test#meta/driver_test_realm.cm",
         )
         .await?;
 
-    let root = RouteEndpoint::component("root");
-    builder.add_route(CapabilityRoute {
-        capability: Capability::protocol("fuchsia.logger.LogSink"),
-        source: RouteEndpoint::AboveRoot,
-        targets: vec![root.clone()],
-    })?;
-    builder.add_route(CapabilityRoute {
-        capability: Capability::protocol("fuchsia.process.Launcher"),
-        source: RouteEndpoint::AboveRoot,
-        targets: vec![root.clone()],
-    })?;
-    builder.add_route(CapabilityRoute {
-        capability: Capability::protocol("fuchsia.sys.Launcher"),
-        source: RouteEndpoint::AboveRoot,
-        targets: vec![root.clone()],
-    })?;
-    let _realm = builder.build().create().await?;
+    let instance = realm.build().create().await?;
+
+    let args = fdt::RealmArgs {
+        use_driver_framework_v2: Some(true),
+        root_driver: Some(
+            "fuchsia-pkg://fuchsia.com/driver_runner_integration_test#meta/packaged_driver.cm"
+                .to_string(),
+        ),
+        ..fdt::RealmArgs::EMPTY
+    };
+    instance.driver_test_realm_start(args).await?;
+
+    let _ = instance.driver_test_realm_connect_to_dev()?;
 
     // List the components that we expect to be created.
     // We list the components by monikers which are described at:
@@ -80,7 +73,7 @@ async fn driver_runner_test() -> Result<(), anyhow::Error> {
     // We don't know how consistent the INSTANCE_NUMBER is so we regex match it with '\d+'.
     let events = vec![
         EventMatcher::ok().r#type(events::Started::TYPE).moniker(r".*/driver_manager:\d+"),
-        EventMatcher::ok().r#type(events::Started::TYPE).moniker(r".*/driver_index:\d+"),
+        EventMatcher::ok().r#type(events::Started::TYPE).moniker(r".*/driver-index:\d+"),
         EventMatcher::ok().r#type(events::Started::TYPE).moniker(r".*/pkg-drivers:root:\d+"),
         EventMatcher::ok()
             .r#type(events::Started::TYPE)

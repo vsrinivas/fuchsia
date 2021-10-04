@@ -277,10 +277,6 @@ zx_status_t LaunchDriverManager(const Args& args, zx::job& job, zx::channel devf
     argv.push_back("--sys-device-driver");
     argv.push_back(args.sys_device_driver);
   }
-  if (args.driver_runner_root_driver_url != nullptr) {
-    argv.push_back("--driver-runner-root-driver-url");
-    argv.push_back(args.driver_runner_root_driver_url);
-  }
   argv.push_back(nullptr);
 
   FdioSpawnActions actions;

@@ -36,10 +36,6 @@ Do not exit Driver Manager after suspending the system.
 
 Use this driver as the sys_device driver.  If nullptr, the default will be used.
 
-### --driver-runner-root-driver-url=\<string\>
-
-Use the Driver Runner and launch this driver URL as the root driver.
-
 ## Kernel Commandline Options
 
 The behavior of Driver Manager can also be changed by several kernel commandline options.
