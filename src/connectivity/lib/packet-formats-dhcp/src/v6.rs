@@ -490,7 +490,7 @@ impl<'a> RecordsImpl<'a> for ParsedDhcpOptionImpl {
 /// Generates a random DUID UUID based on the format defined in [RFC 8415, Section 11.5].
 ///
 /// [RFC 8415, Section 11.5]: https://tools.ietf.org/html/rfc8415#section-11.5
-fn duid_uuid() -> [u8; 18] {
+pub fn duid_uuid() -> [u8; 18] {
     let mut duid = [0u8; 18];
     duid[1] = 4;
     let uuid = Uuid::new_v4();

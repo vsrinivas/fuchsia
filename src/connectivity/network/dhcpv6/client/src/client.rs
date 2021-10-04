@@ -11,8 +11,8 @@ use {
     fidl::endpoints::ServerEnd,
     fidl_fuchsia_net as fnet,
     fidl_fuchsia_net_dhcpv6::{
-        ClientConfig, ClientMarker, ClientRequest, ClientRequestStream,
-        ClientWatchServersResponder, InformationConfig, NewClientParams,
+        AddressAssignmentConfig, AddressConfig, ClientConfig, ClientMarker, ClientRequest,
+        ClientRequestStream, ClientWatchServersResponder, InformationConfig, NewClientParams,
         RELAY_AGENT_AND_SERVER_LINK_LOCAL_MULTICAST_ADDRESS, RELAY_AGENT_AND_SERVER_PORT,
     },
     fidl_fuchsia_net_ext as fnetext, fidl_fuchsia_net_name as fnetname, fuchsia_async as fasync,
@@ -23,6 +23,7 @@ use {
         stream::futures_unordered::FuturesUnordered,
         Future, FutureExt as _, StreamExt as _, TryStreamExt as _,
     },
+    matches::assert_matches,
     packet::ParsablePacket,
     packet_formats_dhcp::v6,
     rand::{rngs::StdRng, thread_rng, FromEntropy, Rng},
@@ -34,7 +35,7 @@ use {
         convert::TryFrom,
         hash::{Hash, Hasher},
         net::{IpAddr, Ipv6Addr, SocketAddr},
-        num::TryFromIntError,
+        num::{NonZeroU8, TryFromIntError},
         str::FromStr as _,
         time::Duration,
     },
@@ -49,9 +50,9 @@ pub enum ClientError {
     #[error("fidl error: {}", _0)]
     Fidl(fidl::Error),
     #[error("got watch request while the previous one is pending")]
-    DoubleWatch(),
-    #[error("unsupported DHCPv6 config: {:?}, no addresses or configurations", _0)]
-    UnsupportedConfigs(ClientConfig),
+    DoubleWatch,
+    #[error("unsupported DHCPv6 configuration")]
+    UnsupportedConfigs,
     #[error("socket receive error: {:?}", _0)]
     SocketRecv(std::io::Error),
     #[error("unimplemented DHCPv6 functionality: {:?}()", _0)]
@@ -122,6 +123,37 @@ fn to_dhcpv6_option_codes(information_config: InformationConfig) -> Vec<v6::Opti
     codes
 }
 
+/// Converts `AddressConfig` to a map of `Option<Ipv6Addr>` indexed by IAID.
+/// Returns an error if `address_config.address_count` is `None` or zero, or if
+/// the size of `address_config.preferred_addresses` is greater than
+/// `address_config.address_count`.
+fn to_configured_addresses(
+    address_config: AddressConfig,
+) -> Result<HashMap<u32, Option<Ipv6Addr>>, ClientError> {
+    let AddressConfig { address_count, preferred_addresses, .. } = address_config;
+    let address_count =
+        address_count.and_then(NonZeroU8::new).ok_or(ClientError::UnsupportedConfigs)?;
+    let preferred_addresses = preferred_addresses.unwrap_or(Vec::new());
+    if preferred_addresses.len() > address_count.get().into() {
+        return Err(ClientError::UnsupportedConfigs);
+    }
+    let mut configured_addresses = HashMap::new();
+    let preferred_addresses: Vec<Option<Ipv6Addr>> = preferred_addresses
+        .iter()
+        .map(|&fnet::Ipv6Address { addr, .. }| Some(Ipv6Addr::from(addr)))
+        .collect();
+    let addresses = preferred_addresses
+        .into_iter()
+        .chain(std::iter::repeat(None))
+        .take(address_count.get().into());
+    for (iaid, addr) in (0..).zip(addresses) {
+        let entry = configured_addresses.insert(iaid, addr);
+        assert_matches!(entry, None);
+    }
+
+    Ok(configured_addresses)
+}
+
 /// Creates a state machine for the input client config.
 fn create_state_machine(
     transaction_id: [u8; 3],
@@ -130,20 +162,35 @@ fn create_state_machine(
     (dhcpv6_core::client::ClientStateMachine<StdRng>, dhcpv6_core::client::Actions),
     ClientError,
 > {
-    if let ClientConfig {
-        address_assignment_config: None,
-        information_config: Some(information_config),
-        ..
-    } = config
-    {
-        return Ok(dhcpv6_core::client::ClientStateMachine::start_information_request(
+    match config {
+        ClientConfig {
+            address_assignment_config: None,
+            information_config: Some(information_config),
+            ..
+        } => Ok(dhcpv6_core::client::ClientStateMachine::start_stateless(
             transaction_id,
             to_dhcpv6_option_codes(information_config),
             StdRng::from_entropy(),
-        ));
-    };
-    // TODO(https://fxbug.dev/69696) Implement address assignment state machine.
-    Err(ClientError::UnsupportedConfigs(config))
+        )),
+        ClientConfig {
+            address_assignment_config:
+                Some(AddressAssignmentConfig {
+                    non_temporary_address_config: Some(address_config), ..
+                }),
+            information_config,
+            ..
+        } => {
+            let configured_addresses = to_configured_addresses(address_config)?;
+            Ok(dhcpv6_core::client::ClientStateMachine::start_stateful(
+                transaction_id,
+                v6::duid_uuid(),
+                configured_addresses,
+                information_config.map_or_else(Vec::new, to_dhcpv6_option_codes),
+                StdRng::from_entropy(),
+            ))
+        }
+        _ => Err(ClientError::UnsupportedConfigs),
+    }
 }
 
 /// Calculates a hash for the input.
@@ -220,7 +267,7 @@ impl<S: for<'a> AsyncSocket<'a>> Client<S> {
             .map(|_: &mut Client<S>| ())
     }
 
-    /// Sends the latest DNS servers iff a watcher is watching, and the latest set of servers are
+    /// Sends the latest DNS servers if a watcher is watching, and the latest set of servers are
     /// different from what the watcher has observed last time.
     fn maybe_send_dns_server_updates(&mut self, servers: Vec<Ipv6Addr>) -> Result<(), ClientError> {
         let servers_hash = hash(&servers);
@@ -349,7 +396,7 @@ impl<S: for<'a> AsyncSocket<'a>> Client<S> {
                     // Drop the previous responder to close the channel.
                     self.dns_responder = None;
                     // Return an error to stop the client because the channel is closed.
-                    Err(ClientError::DoubleWatch())
+                    Err(ClientError::DoubleWatch)
                 }
                 None => {
                     let dns_servers = self.state_machine.get_dns_servers();
@@ -501,11 +548,10 @@ pub(crate) async fn serve_client(
 mod tests {
     use {
         super::*,
-        fidl::endpoints::create_endpoints,
-        fidl_fuchsia_net_dhcpv6::{ClientConfig, ClientMarker, DEFAULT_CLIENT_PORT},
+        fidl::endpoints::{create_endpoints, ClientEnd},
+        fidl_fuchsia_net_dhcpv6::{ClientMarker, DEFAULT_CLIENT_PORT},
         fuchsia_async as fasync,
         futures::{channel::mpsc, join},
-        matches::assert_matches,
         net_declare::{
             fidl_ip_v6, fidl_socket_addr, fidl_socket_addr_v6, std_ip_v6, std_socket_addr,
         },
@@ -521,32 +567,84 @@ mod tests {
         (fasync::net::UdpSocket::from_socket(socket).expect("failed to create test socket"), addr)
     }
 
-    /// Asserts `socket` receives an information request from `want_from_addr`.
-    async fn assert_received_information_request(
+    /// Asserts `socket` receives a message of `message_type` from
+    /// `want_from_addr`.
+    async fn assert_received_message(
         socket: &fasync::net::UdpSocket,
         want_from_addr: SocketAddr,
+        msg_type: v6::MessageType,
     ) {
         let mut buf = vec![0u8; MAX_UDP_DATAGRAM_SIZE];
         let (size, from_addr) =
             socket.recv_from(&mut buf).await.expect("failed to receive on test server socket");
         assert_eq!(from_addr, want_from_addr);
         let buf = &mut &buf[..size]; // Implements BufferView.
-        assert_eq!(
-            v6::Message::parse(buf, ()).map(|x| x.msg_type()),
-            Ok(v6::MessageType::InformationRequest)
-        )
+        assert_eq!(v6::Message::parse(buf, ()).map(|x| x.msg_type()), Ok(msg_type))
     }
 
     #[test]
     fn test_create_client_with_unsupported_config() {
-        assert_matches!(
-            create_state_machine([1, 2, 3], ClientConfig::EMPTY),
-            Err(ClientError::UnsupportedConfigs(ClientConfig {
-                address_assignment_config: None,
+        for unsupported_config in vec![
+            // No address config and no information config.
+            ClientConfig::EMPTY,
+            // Empty address config and no information config.
+            ClientConfig {
+                address_assignment_config: Some(AddressAssignmentConfig {
+                    non_temporary_address_config: None,
+                    ..AddressAssignmentConfig::EMPTY
+                }),
                 information_config: None,
-                ..
-            }))
-        );
+                ..ClientConfig::EMPTY
+            },
+            // Address config requesting no addresses, and no information
+            // config.
+            ClientConfig {
+                address_assignment_config: Some(AddressAssignmentConfig {
+                    non_temporary_address_config: Some(AddressConfig {
+                        address_count: None,
+                        ..AddressConfig::EMPTY
+                    }),
+                    ..AddressAssignmentConfig::EMPTY
+                }),
+                information_config: None,
+                ..ClientConfig::EMPTY
+            },
+            // Address config requesting zero addresses, and no information
+            // config.
+            ClientConfig {
+                address_assignment_config: Some(AddressAssignmentConfig {
+                    non_temporary_address_config: Some(AddressConfig {
+                        address_count: Some(0),
+                        ..AddressConfig::EMPTY
+                    }),
+                    ..AddressAssignmentConfig::EMPTY
+                }),
+                information_config: None,
+                ..ClientConfig::EMPTY
+            },
+            // Address config with more preferred addresses than
+            // `address_count`.
+            ClientConfig {
+                address_assignment_config: Some(AddressAssignmentConfig {
+                    non_temporary_address_config: Some(AddressConfig {
+                        address_count: Some(1),
+                        preferred_addresses: Some(vec![
+                            fidl_ip_v6!("ff01::1"),
+                            fidl_ip_v6!("ff01::1"),
+                        ]),
+                        ..AddressConfig::EMPTY
+                    }),
+                    ..AddressAssignmentConfig::EMPTY
+                }),
+                information_config: None,
+                ..ClientConfig::EMPTY
+            },
+        ] {
+            assert_matches!(
+                create_state_machine([1, 2, 3], unsupported_config),
+                Err(ClientError::UnsupportedConfigs)
+            );
+        }
     }
 
     #[fasync::run_singlethreaded(test)]
@@ -612,33 +710,129 @@ mod tests {
 
     #[test]
     fn test_client_starts_with_valid_args() {
-        let mut exec = fasync::TestExecutor::new().expect("failed to create test executor");
+        for valid_config in vec![
+            // Information config is set.
+            ClientConfig {
+                information_config: Some(InformationConfig { ..InformationConfig::EMPTY }),
+                ..ClientConfig::EMPTY
+            },
+            // Address config is set.
+            ClientConfig {
+                address_assignment_config: Some(AddressAssignmentConfig {
+                    non_temporary_address_config: Some(AddressConfig {
+                        address_count: Some(1),
+                        preferred_addresses: None,
+                        ..AddressConfig::EMPTY
+                    }),
+                    ..AddressAssignmentConfig::EMPTY
+                }),
+                ..ClientConfig::EMPTY
+            },
+            // Both address config and information config are set.
+            ClientConfig {
+                address_assignment_config: Some(AddressAssignmentConfig {
+                    non_temporary_address_config: Some(AddressConfig {
+                        address_count: Some(1),
+                        preferred_addresses: None,
+                        ..AddressConfig::EMPTY
+                    }),
+                    ..AddressAssignmentConfig::EMPTY
+                }),
+                information_config: Some(InformationConfig { ..InformationConfig::EMPTY }),
+                ..ClientConfig::EMPTY
+            },
+        ] {
+            let mut exec = fasync::TestExecutor::new().expect("failed to create test executor");
 
-        let (client_end, server_end) =
-            create_endpoints::<ClientMarker>().expect("failed to create test fidl channel");
-        let client_proxy = client_end.into_proxy().expect("failed to create test client proxy");
+            let (client_end, server_end) =
+                create_endpoints::<ClientMarker>().expect("failed to create test fidl channel");
+            let client_proxy = client_end.into_proxy().expect("failed to create test client proxy");
 
-        let test_fut = async {
-            join!(
-                client_proxy.watch_servers(),
-                serve_client(
-                    NewClientParams {
-                        interface_id: Some(1),
-                        address: Some(fidl_socket_addr_v6!("[::1]:546")),
-                        config: Some(ClientConfig {
-                            information_config: Some(InformationConfig {
-                                ..InformationConfig::EMPTY
-                            }),
-                            ..ClientConfig::EMPTY
-                        }),
-                        ..NewClientParams::EMPTY
-                    },
-                    server_end
+            let test_fut = async {
+                join!(
+                    client_proxy.watch_servers(),
+                    serve_client(
+                        NewClientParams {
+                            interface_id: Some(1),
+                            address: Some(fidl_socket_addr_v6!("[::1]:546")),
+                            config: Some(valid_config),
+                            ..NewClientParams::EMPTY
+                        },
+                        server_end
+                    )
                 )
+            };
+            futures::pin_mut!(test_fut);
+            assert_matches!(exec.run_until_stalled(&mut test_fut), Poll::Pending);
+        }
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_client_starts_in_correct_mode() {
+        for (config, want_msg_type) in vec![
+            // When only the information config is set, the client should start
+            // in stateless mode, by sending out an information request.
+            (
+                ClientConfig {
+                    information_config: Some(InformationConfig { ..InformationConfig::EMPTY }),
+                    ..ClientConfig::EMPTY
+                },
+                v6::MessageType::InformationRequest,
+            ),
+            // When only the address config is set, the client should start in
+            // stateful mode, by sending out a solicit.
+            (
+                ClientConfig {
+                    address_assignment_config: Some(AddressAssignmentConfig {
+                        non_temporary_address_config: Some(AddressConfig {
+                            address_count: Some(1),
+                            preferred_addresses: None,
+                            ..AddressConfig::EMPTY
+                        }),
+                        ..AddressAssignmentConfig::EMPTY
+                    }),
+                    ..ClientConfig::EMPTY
+                },
+                v6::MessageType::Solicit,
+            ),
+            // When both the address config and information config are set, the
+            // client should start in stateful mode, by sending out a solicit.
+            (
+                ClientConfig {
+                    address_assignment_config: Some(AddressAssignmentConfig {
+                        non_temporary_address_config: Some(AddressConfig {
+                            address_count: Some(1),
+                            preferred_addresses: None,
+                            ..AddressConfig::EMPTY
+                        }),
+                        ..AddressAssignmentConfig::EMPTY
+                    }),
+                    information_config: Some(InformationConfig { ..InformationConfig::EMPTY }),
+                    ..ClientConfig::EMPTY
+                },
+                v6::MessageType::Solicit,
+            ),
+        ] {
+            let (_, server_end): (ClientEnd<ClientMarker>, _) =
+                create_endpoints::<ClientMarker>().expect("failed to create test fidl channel");
+            let client_stream =
+                server_end.into_stream().expect("failed to create test request stream");
+
+            let (client_socket, client_addr) = create_test_socket();
+            let (server_socket, server_addr) = create_test_socket();
+            let _: Client<fasync::net::UdpSocket> = Client::start(
+                [1, 2, 3], /* transaction ID */
+                config,
+                1, /* interface ID */
+                client_socket,
+                server_addr,
+                client_stream,
             )
-        };
-        futures::pin_mut!(test_fut);
-        assert_matches!(exec.run_until_stalled(&mut test_fut), Poll::Pending);
+            .await
+            .expect("failed to create test client");
+
+            assert_received_message(&server_socket, client_addr, want_msg_type).await;
+        }
     }
 
     #[fasync::run_singlethreaded(test)]
@@ -1082,7 +1276,7 @@ mod tests {
     }
 
     #[fasync::run_singlethreaded(test)]
-    async fn test_handle_next_event_on_client() {
+    async fn test_handle_next_event_on_stateless_client() {
         let (client_end, server_end) =
             create_endpoints::<ClientMarker>().expect("failed to create test fidl channel");
         let client_proxy = client_end.into_proxy().expect("failed to create test client proxy");
@@ -1105,7 +1299,8 @@ mod tests {
         .expect("failed to create test client");
 
         // Starting the client in stateless should send an information request out.
-        assert_received_information_request(&server_socket, client_addr).await;
+        assert_received_message(&server_socket, client_addr, v6::MessageType::InformationRequest)
+            .await;
         assert_eq!(
             client.timer_abort_handles.keys().collect::<Vec<_>>(),
             vec![&dhcpv6_core::client::ClientTimerType::Retransmission]
@@ -1114,7 +1309,8 @@ mod tests {
         let mut buf = vec![0u8; MAX_UDP_DATAGRAM_SIZE];
         // Trigger a retransmission.
         assert_matches!(client.handle_next_event(&mut buf).await, Ok(Some(())));
-        assert_received_information_request(&server_socket, client_addr).await;
+        assert_received_message(&server_socket, client_addr, v6::MessageType::InformationRequest)
+            .await;
         assert_eq!(
             client.timer_abort_handles.keys().collect::<Vec<_>>(),
             vec![&dhcpv6_core::client::ClientTimerType::Retransmission]
@@ -1163,7 +1359,8 @@ mod tests {
 
         // Trigger a refresh.
         assert_matches!(client.handle_next_event(&mut buf).await, Ok(Some(())));
-        assert_received_information_request(&server_socket, client_addr).await;
+        assert_received_message(&server_socket, client_addr, v6::MessageType::InformationRequest)
+            .await;
         assert_eq!(
             client.timer_abort_handles.keys().collect::<Vec<_>>(),
             vec![&dhcpv6_core::client::ClientTimerType::Retransmission]
@@ -1201,6 +1398,49 @@ mod tests {
             }]
         );
 
+        // Drop the channel should cause `handle_next_event(&mut buf)` to return `None`.
+        drop(client_proxy);
+        assert_matches!(client.handle_next_event(&mut buf).await, Ok(None));
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_handle_next_event_on_stateful_client() {
+        let (client_end, server_end) =
+            create_endpoints::<ClientMarker>().expect("failed to create test fidl channel");
+        let client_proxy = client_end.into_proxy().expect("failed to create test client proxy");
+        let client_stream = server_end.into_stream().expect("failed to create test request stream");
+
+        let (client_socket, client_addr) = create_test_socket();
+        let (server_socket, server_addr) = create_test_socket();
+        let mut client = Client::<fasync::net::UdpSocket>::start(
+            [1, 2, 3], /* transaction ID */
+            ClientConfig {
+                address_assignment_config: Some(AddressAssignmentConfig {
+                    non_temporary_address_config: Some(AddressConfig {
+                        address_count: Some(1),
+                        preferred_addresses: None,
+                        ..AddressConfig::EMPTY
+                    }),
+                    ..AddressAssignmentConfig::EMPTY
+                }),
+                ..ClientConfig::EMPTY
+            },
+            1, /* interface ID */
+            client_socket,
+            server_addr,
+            client_stream,
+        )
+        .await
+        .expect("failed to create test client");
+
+        // Starting the client in stateful should send out a solicit.
+        assert_received_message(&server_socket, client_addr, v6::MessageType::Solicit).await;
+        assert_eq!(
+            client.timer_abort_handles.keys().collect::<Vec<_>>(),
+            vec![&dhcpv6_core::client::ClientTimerType::Retransmission]
+        );
+
+        let mut buf = vec![0u8; MAX_UDP_DATAGRAM_SIZE];
         // Drop the channel should cause `handle_next_event(&mut buf)` to return `None`.
         drop(client_proxy);
         assert_matches!(client.handle_next_event(&mut buf).await, Ok(None));

@@ -4,11 +4,14 @@
 
 //! Core DHCPv6 client state transitions.
 
+use std::collections::HashMap;
+
 use {
+    matches::assert_matches,
     packet::serialize::InnerPacketBuilder,
     packet_formats_dhcp::v6,
     rand::Rng,
-    std::{default::Default, net::Ipv6Addr, time::Duration},
+    std::{convert::TryFrom, default::Default, net::Ipv6Addr, time::Duration, time::Instant},
     zerocopy::ByteSlice,
 };
 
@@ -30,6 +33,27 @@ const IRT_DEFAULT: Duration = Duration::from_secs(86400);
 /// NOTE: it is possible for `Duration` to be bigger by filling in the nanos field, but this value
 /// is good enough for the purpose of this crate.
 const MAX_DURATION: Duration = Duration::from_secs(std::u64::MAX);
+
+/// Initial Solicit timeout `SOL_TIMEOUT` from [RFC 8415, Section 7.6].
+///
+/// [RFC 8415, Section 7.6]: https://tools.ietf.org/html/rfc8415#section-7.6
+const SOLICIT_TIMEOUT: Duration = Duration::from_secs(1);
+
+/// Max Solicit timeout `SOL_MAX_RT` from [RFC 8415, Section 7.6].
+///
+/// [RFC 8415, Section 7.6]: https://tools.ietf.org/html/rfc8415#section-7.6
+const SOLICIT_MAX_RT: Duration = Duration::from_secs(3600);
+
+/// Denominator used for transforming the elapsed time from milliseconds to
+/// hundredths of a second.
+///
+/// [RFC 8415, Section 21.9]: https://tools.ietf.org/html/rfc8415#section-21.9
+const ELAPSED_TIME_DENOMINATOR: u128 = 10;
+
+/// The length of the [Client Identifier].
+///
+/// [Client Identifier]: https://datatracker.ietf.org/doc/html/rfc8415#section-21.2
+const CLIENT_ID_LEN: usize = 18;
 
 /// Calculates retransmission timeout based on formulas defined in [RFC 8415, Section 15].
 /// A zero `prev_retrans_timeout` indicates this is the first transmission, so
@@ -115,7 +139,7 @@ pub type Actions = Vec<Action>;
 
 /// Holds data and provides methods for handling state transitions from information requesting
 /// state.
-#[derive(Debug, PartialEq)]
+#[derive(Debug)]
 struct InformationRequesting {
     retrans_timeout: Duration,
 }
@@ -213,7 +237,7 @@ impl InformationRequesting {
 }
 
 /// Provides methods for handling state transitions from information received state.
-#[derive(Debug, PartialEq)]
+#[derive(Debug)]
 struct InformationReceived {
     /// Stores the DNS servers received from the reply.
     dns_servers: Vec<Ipv6Addr>,
@@ -231,16 +255,140 @@ impl InformationReceived {
     }
 }
 
+/// Provides methods for handling state transitions from server discovery
+/// state.
+#[derive(Debug)]
+struct ServerDiscovery {
+    /// [Client Identifier] used for uniquely identifying the client in
+    /// communication with servers.
+    ///
+    /// [Client Identifier]: https://datatracker.ietf.org/doc/html/rfc8415#section-21.2
+    client_id: [u8; CLIENT_ID_LEN],
+    /// The addresses the client is configured to negotiate, indexed by IAID.
+    configured_addresses: HashMap<u32, Option<Ipv6Addr>>,
+    /// The time of the first solicit. `None` before a solicit is sent. Used in
+    /// calculating the [elapsed time].
+    ///
+    /// [elapsed time]:https://datatracker.ietf.org/doc/html/rfc8415#section-21.9
+    first_solicit_time: Option<Instant>,
+    /// The solicit retransmission timeout.
+    retrans_timeout: Duration,
+}
+
+impl ServerDiscovery {
+    /// Starts server discovery by sending a solicit message, as described in
+    /// [RFC 8415, Section 18.2.1].
+    ///
+    /// [RFC 8415, Section 18.2.1]: https://datatracker.ietf.org/doc/html/rfc8415#section-18.2.1
+    fn start<R: Rng>(
+        transaction_id: [u8; 3],
+        client_id: [u8; CLIENT_ID_LEN],
+        configured_addresses: HashMap<u32, Option<Ipv6Addr>>,
+        options_to_request: &[v6::OptionCode],
+        rng: &mut R,
+    ) -> Transition {
+        let server_discovery = ServerDiscovery {
+            client_id,
+            configured_addresses,
+            first_solicit_time: None,
+            retrans_timeout: Duration::default(),
+        };
+        server_discovery.send_and_schedule_retransmission(transaction_id, options_to_request, rng)
+    }
+
+    /// Calculates timeout for retransmitting solicits, as specified in
+    /// [RFC 8415, Section 18.2.1].
+    ///
+    /// [RFC 8415, Section 18.2.1]: https://datatracker.ietf.org/doc/html/rfc8415#section-18.2.1
+    fn retransmission_timeout<R: Rng>(&self, rng: &mut R) -> Duration {
+        // TODO(fxbug.dev/69696): implement server selection.
+        retransmission_timeout(self.retrans_timeout, SOLICIT_TIMEOUT, SOLICIT_MAX_RT, rng)
+    }
+
+    /// Returns a transition back to `ServerDiscovery`, with actions to send a
+    /// solicit and schedule retransmission.
+    fn send_and_schedule_retransmission<R: Rng>(
+        self,
+        transaction_id: [u8; 3],
+        options_to_request: &[v6::OptionCode],
+        rng: &mut R,
+    ) -> Transition {
+        let mut options = vec![v6::DhcpOption::ClientId(&self.client_id)];
+
+        let elapsed_time = match self.first_solicit_time {
+            None => 0,
+            Some(first_solicit_time) => u16::try_from(
+                Instant::now()
+                    .duration_since(first_solicit_time)
+                    .as_millis()
+                    .checked_div(ELAPSED_TIME_DENOMINATOR)
+                    .expect("division should succeed"),
+            )
+            .unwrap_or(u16::MAX),
+        };
+        options.push(v6::DhcpOption::ElapsedTime(elapsed_time));
+
+        let mut address_hint = HashMap::new();
+        for (iaid, addr_opt) in &self.configured_addresses {
+            let entry = address_hint.insert(
+                *iaid,
+                match addr_opt {
+                    None => vec![],
+                    Some(addr) => {
+                        vec![v6::DhcpOption::IaAddr(v6::IaAddrSerializer::new(*addr, 0, 0, &[]))]
+                    }
+                },
+            );
+            assert_matches!(entry, None);
+        }
+
+        // Adds IA_NA options: one IA_NA per address hint, plus IA_NA options
+        // without hints, up to the configured `address_count`, as described in
+        // https://datatracker.ietf.org/doc/html/rfc8415#section-6.6.
+        for (iaid, addr_hint) in &address_hint {
+            options.push(v6::DhcpOption::Iana(v6::IanaSerializer::new(*iaid, 0, 0, addr_hint)));
+        }
+
+        let mut oro = vec![v6::OptionCode::SolMaxRt];
+        oro.extend_from_slice(options_to_request);
+        options.push(v6::DhcpOption::Oro(&oro));
+
+        let builder = v6::MessageBuilder::new(v6::MessageType::Solicit, transaction_id, &options);
+        let mut buf = vec![0; builder.bytes_len()];
+        let () = builder.serialize(&mut buf);
+
+        let retrans_timeout = self.retransmission_timeout(rng);
+        let first_solicit_time = self.first_solicit_time.unwrap_or(Instant::now());
+
+        (
+            ClientState::ServerDiscovery(ServerDiscovery {
+                client_id: self.client_id,
+                configured_addresses: self.configured_addresses,
+                first_solicit_time: Some(first_solicit_time),
+                retrans_timeout,
+            }),
+            vec![
+                Action::SendMessage(buf),
+                Action::ScheduleTimer(ClientTimerType::Retransmission, retrans_timeout),
+            ],
+        )
+    }
+}
+
 /// All possible states of a DHCPv6 client.
 ///
 /// States not found in this enum are not supported yet.
-#[derive(Debug, PartialEq)]
+#[derive(Debug)]
 enum ClientState {
     /// Creating and (re)transmitting an information request, and waiting for a reply.
     InformationRequesting(InformationRequesting),
     /// Client is waiting to refresh, after receiving a valid reply to a previous information
     /// request.
     InformationReceived(InformationReceived),
+    /// Sending solicit messages, collecting advertise messages, and selecting
+    /// a server from which to obtain addresses and other optional
+    /// configuration information.
+    ServerDiscovery(ServerDiscovery),
 }
 
 /// Defines the next state, and the actions the client should take to transition to that state.
@@ -308,11 +456,12 @@ impl ClientState {
 /// imperative shell should take to complete the transition.
 #[derive(Debug)]
 pub struct ClientStateMachine<R: Rng> {
-    /// [Transaction ID](https://tools.ietf.org/html/rfc8415#section-16.1) the client is using to
-    /// communicate with servers.
+    /// [Transaction ID] the client is using to communicate with servers.
+    ///
+    /// [Transaction ID]: https://tools.ietf.org/html/rfc8415#section-16.1
     transaction_id: [u8; 3],
-    /// Options to include in
-    /// [Option Request Option](https://tools.ietf.org/html/rfc8415#section-21.7).
+    /// Options to include in [Option Request Option].
+    /// [Option Request Option]: https://tools.ietf.org/html/rfc8415#section-21.7
     options_to_request: Vec<v6::OptionCode>,
     /// Current state of the client, must not be `None`.
     ///
@@ -324,17 +473,41 @@ pub struct ClientStateMachine<R: Rng> {
 }
 
 impl<R: Rng> ClientStateMachine<R> {
-    /// Starts the client to send information requests and respond to replies. The client will
-    /// operate in the Stateless DHCP model defined in [RFC 8415, Section 6.1].
+    /// Starts the client in Stateless mode, as defined in [RFC 8415, Section 6.1].
+    /// The client exchanges messages with servers to obtain the configuration
+    /// information specified in `options_to_request`.
     ///
     /// [RFC 8415, Section 6.1]: https://tools.ietf.org/html/rfc8415#section-6.1
-    pub fn start_information_request(
+    pub fn start_stateless(
         transaction_id: [u8; 3],
         options_to_request: Vec<v6::OptionCode>,
         mut rng: R,
     ) -> (Self, Actions) {
         let (state, actions) =
             InformationRequesting::start(transaction_id, &options_to_request, &mut rng);
+        (Self { state: Some(state), transaction_id, options_to_request, rng }, actions)
+    }
+
+    /// Starts the client in Statelful mode, as defined in [RFC 8415, Section 6.2].
+    /// The client exchanges messages with servers to obtain addresses in
+    /// `configured_addresses`, and the configuration information in
+    /// `options_to_request`.
+    ///
+    /// [RFC 8415, Section 6.1]: https://tools.ietf.org/html/rfc8415#section-6.2
+    pub fn start_stateful(
+        transaction_id: [u8; 3],
+        client_id: [u8; CLIENT_ID_LEN],
+        configured_addresses: HashMap<u32, Option<Ipv6Addr>>,
+        options_to_request: Vec<v6::OptionCode>,
+        mut rng: R,
+    ) -> (Self, Actions) {
+        let (state, actions) = ServerDiscovery::start(
+            transaction_id,
+            client_id,
+            configured_addresses,
+            &options_to_request,
+            &mut rng,
+        );
         (Self { state: Some(state), transaction_id, options_to_request, rng }, actions)
     }
 
@@ -405,10 +578,7 @@ impl<R: Rng> ClientStateMachine<R> {
 
 #[cfg(test)]
 mod tests {
-    use {
-        super::*, matches::assert_matches, net_declare::std_ip_v6, packet::ParsablePacket,
-        rand::rngs::mock::StepRng,
-    };
+    use {super::*, net_declare::std_ip_v6, packet::ParsablePacket, rand::rngs::mock::StepRng};
 
     #[test]
     fn test_information_request_and_reply() {
@@ -418,20 +588,20 @@ mod tests {
             vec![v6::OptionCode::DnsServers],
             vec![v6::OptionCode::DnsServers, v6::OptionCode::DomainList],
         ]) {
-            let (mut client, actions) = ClientStateMachine::start_information_request(
+            let (mut client, actions) = ClientStateMachine::start_stateless(
                 [0, 1, 2],
                 options.clone(),
                 StepRng::new(std::u64::MAX / 2, 0),
             );
 
-            assert_eq!(
+            assert_matches!(
                 client.state,
                 Some(ClientState::InformationRequesting(InformationRequesting {
                     retrans_timeout: INFO_REQ_TIMEOUT,
                 }))
             );
 
-            // Start of information requesting should send a information request and schedule a
+            // Start of information requesting should send an information request and schedule a
             // retransmission timer.
             let want_options_array = [v6::DhcpOption::Oro(&options)];
             let want_options = if options.is_empty() { &[][..] } else { &want_options_array[..] };
@@ -467,11 +637,11 @@ mod tests {
             let actions = client.handle_message_receive(msg);
 
             {
-                assert_eq!(
+                assert_matches!(
                     client.state,
                     Some(ClientState::InformationReceived(InformationReceived {
-                        dns_servers: dns_servers.to_vec()
-                    }))
+                        dns_servers: d
+                    })) if d == dns_servers.to_vec()
                 );
             }
             // Upon receiving a valid reply, client should set up for refresh based on the reply.
@@ -490,8 +660,121 @@ mod tests {
     }
 
     #[test]
+    fn test_solicit() {
+        // Try to start the client in stateful mode with different address
+        // configurations.
+        for (address_count, preferred_addresses) in vec![
+            (1u32, Vec::new()),
+            (2u32, vec![Ipv6Addr::new(0, 0, 0, 0, 0, 0xffff, 0xc00a, 0x2ff)]),
+            (
+                2u32,
+                vec![
+                    Ipv6Addr::new(0, 0, 0, 0, 0, 0xffff, 0xc00a, 0x2ff),
+                    Ipv6Addr::new(0, 0, 0, 0, 0, 0xffff, 0xc00a, 0x3ff),
+                ],
+            ),
+        ] {
+            let client_id = v6::duid_uuid();
+            let mut configured_addresses: HashMap<u32, Option<Ipv6Addr>> = HashMap::new();
+            let addresses: Vec<Option<Ipv6Addr>> =
+                preferred_addresses.iter().map(|&addr| Some(addr)).collect();
+            let addresses = addresses
+                .into_iter()
+                .chain(std::iter::repeat(None))
+                .take(usize::try_from(address_count).unwrap());
+            for (iaid, addr) in (0..).zip(addresses) {
+                let entry = configured_addresses.insert(iaid, addr);
+                assert_matches!(entry, None);
+            }
+
+            let (client, actions) = ClientStateMachine::start_stateful(
+                [0, 1, 2],
+                client_id.clone(),
+                configured_addresses,
+                Vec::new(),
+                StepRng::new(std::u64::MAX / 2, 0),
+            );
+
+            assert_matches!(
+                client.state,
+                Some(ClientState::ServerDiscovery(ServerDiscovery {
+                    client_id: ref state_client_id,
+                    first_solicit_time: Some(_),
+                    retrans_timeout: SOLICIT_TIMEOUT,
+                    ..
+                })) if *state_client_id == client_id
+            );
+
+            // Start of server discovery should send a solicit and schedule a
+            // retransmission timer.
+            assert_matches!(
+                &actions[..],
+                [
+                    Action::SendMessage(buf),
+                    Action::ScheduleTimer(ClientTimerType::Retransmission, SOLICIT_TIMEOUT)
+                ]
+                if {
+                    let mut buf = &buf[..];
+                    let msg = v6::Message::parse(&mut buf, ()).expect("failed to parse test buffer");
+                    assert_eq!(msg.msg_type(), v6::MessageType::Solicit);
+
+                    // The solicit should contain the expected options.
+                    let mut got_options = msg
+                        .options()
+                        .filter(|opt| {
+                            vec![
+                                v6::OptionCode::ClientId,
+                                v6::OptionCode::ElapsedTime,
+                                v6::OptionCode::Oro,
+                            ]
+                            .contains(&opt.code())
+                        })
+                        .collect::<Vec<_>>();
+                    let option_sorter: fn(
+                        &v6::ParsedDhcpOption<'_>,
+                        &v6::ParsedDhcpOption<'_>,
+                    ) -> std::cmp::Ordering =
+                        |opt1, opt2| (u16::from(opt1.code())).cmp(&(u16::from(opt2.code())));
+
+                    got_options.sort_by(option_sorter);
+                    let mut expected_options = vec![
+                        v6::ParsedDhcpOption::ClientId(&client_id),
+                        v6::ParsedDhcpOption::ElapsedTime(0),
+                        v6::ParsedDhcpOption::Oro(vec![v6::OptionCode::SolMaxRt]),
+                    ];
+                    expected_options.sort_by(option_sorter);
+                    assert_eq!(got_options, expected_options);
+
+                    let iana_options = msg.options().filter(|opt| {
+                        opt.code() == v6::OptionCode::Iana
+                    }).collect::<Vec<_>>();
+                    assert_eq!(usize::try_from(address_count).unwrap(), iana_options.len());
+                    let mut got_preferred_addresses = Vec::new();
+                    for option in iana_options {
+                        let iana_data = if let v6::ParsedDhcpOption::Iana(iana_data) = option {
+                            iana_data
+                        } else {
+                            continue;
+                        };
+                        // Each IANA option should at most one IA Address option.
+                        assert!(iana_data.iter_options().count() <= 1);
+                        for iana_option in iana_data.iter_options() {
+                            if let v6::ParsedDhcpOption::IaAddr(iaaddr_data) = iana_option {
+                                got_preferred_addresses.push(iaaddr_data.addr());
+                            }
+                        }
+                    }
+                    got_preferred_addresses.sort();
+                    assert_eq!(got_preferred_addresses, preferred_addresses);
+                    true
+                }
+            );
+        }
+    }
+
+    #[test]
     fn test_unexpected_messages_are_ignored() {
-        let (mut client, _) = ClientStateMachine::start_information_request(
+        let (mut client, _) = ClientStateMachine::start_stateless(
             [0, 1, 2],
             Vec::new(),
             StepRng::new(std::u64::MAX / 2, 0),
@@ -538,7 +821,7 @@ mod tests {
 
     #[test]
     fn test_unexpected_events_are_ignored() {
-        let (mut client, _) = ClientStateMachine::start_information_request(
+        let (mut client, _) = ClientStateMachine::start_stateless(
             [0, 1, 2],
             Vec::new(),
             StepRng::new(std::u64::MAX / 2, 0),
@@ -546,7 +829,7 @@ mod tests {
 
         // The client expects either a reply or retransmission timeout in the current state.
         assert_eq!(client.handle_timeout(ClientTimerType::Refresh)[..], []);
-        assert_eq!(
+        assert_matches!(
             client.state,
             Some(ClientState::InformationRequesting(InformationRequesting {
                 retrans_timeout: INFO_REQ_TIMEOUT
@@ -566,9 +849,9 @@ mod tests {
                 Action::ScheduleTimer(ClientTimerType::Refresh, IRT_DEFAULT)
             ]
         );
-        assert_eq!(
+        assert_matches!(
             client.state,
-            Some(ClientState::InformationReceived(InformationReceived { dns_servers: vec![] }))
+            Some(ClientState::InformationReceived(InformationReceived { dns_servers : ref d})) if *d == Vec::<Ipv6Addr>::new()
         );
 
         let mut buf = vec![0; builder.bytes_len()];
@@ -577,22 +860,22 @@ mod tests {
         let msg = v6::Message::parse(&mut buf, ()).expect("failed to parse test buffer");
         // Extra replies received in information received state are ignored.
         assert_eq!(client.handle_message_receive(msg)[..], []);
-        assert_eq!(
+        assert_matches!(
             client.state,
-            Some(ClientState::InformationReceived(InformationReceived { dns_servers: vec![] }))
+            Some(ClientState::InformationReceived(InformationReceived { dns_servers : ref d})) if *d == Vec::<Ipv6Addr>::new()
         );
 
         // Information received state should only respond to `Refresh` timer.
         assert_eq!(client.handle_timeout(ClientTimerType::Retransmission)[..], []);
-        assert_eq!(
+        assert_matches!(
             client.state,
-            Some(ClientState::InformationReceived(InformationReceived { dns_servers: vec![] }))
+            Some(ClientState::InformationReceived(InformationReceived { dns_servers : ref d})) if *d == Vec::<Ipv6Addr>::new()
         );
     }
 
     #[test]
     fn test_information_request_retransmission() {
-        let (mut client, actions) = ClientStateMachine::start_information_request(
+        let (mut client, actions) = ClientStateMachine::start_stateless(
             [0, 1, 2],
             Vec::new(),
             StepRng::new(std::u64::MAX / 2, 0),
@@ -612,7 +895,7 @@ mod tests {
 
     #[test]
     fn test_information_request_refresh() {
-        let (mut client, _) = ClientStateMachine::start_information_request(
+        let (mut client, _) = ClientStateMachine::start_stateless(
             [0, 1, 2],
             Vec::new(),
             StepRng::new(std::u64::MAX / 2, 0),
