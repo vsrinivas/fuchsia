@@ -22,8 +22,8 @@ fidl/{{ .LibraryDots }}/cpp/driver_messaging.cc
 
 
 {{- range (call .ProtocolsForTransport "Driver") }}
-  {{ template "Driver:Protocol:MessagingSource" . }}
-  {{ template "Driver:Protocol:EventSender:MessagingSource" . }}
+  {{ template "Socket:Protocol:MessagingSource" . }}
+  {{ template "Socket:Protocol:EventSender:MessagingSource" . }}
 {{ end }}
 {{ "" }}
 

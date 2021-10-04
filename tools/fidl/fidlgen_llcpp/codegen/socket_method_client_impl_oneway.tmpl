@@ -4,13 +4,13 @@
 // found in the LICENSE file.
 */}}
 
-{{- define "Driver:Method:ClientImplOneway:MessagingHeader" }}
+{{- define "Socket:Method:ClientImplOneway:MessagingHeader" }}
   {{- /* Managed flavor */}}
   {{ .Docs }}
   {{- if .DocComments }}
     //
   {{- end }}
-  // {{- template "Driver:Method:ClientAllocationComment:Helper" . }}
+  // {{- template "Socket:Method:ClientAllocationComment:Helper" . }}
   ::fidl::Result {{ .Name }}({{ RenderParams .RequestArgs }});
 
   {{- /* Caller-allocate flavor */}}
@@ -20,12 +20,12 @@
       //
     {{- end }}
     // Caller provides the backing storage for FIDL message via request buffer.
-    ::fidl::Result {{ .Name }}({{- template "Driver:Method:ClientImplSyncCallerAllocateArguments:Helper" . }});
+    ::fidl::Result {{ .Name }}({{- template "Socket:Method:ClientImplSyncCallerAllocateArguments:Helper" . }});
   {{- end }}
 {{- end }}
 
 
-{{- define "Driver:Method:ClientImplOneway:MessagingSource" }}
+{{- define "Socket:Method:ClientImplOneway:MessagingSource" }}
   {{- IfdefFuchsia -}}
 
   {{- /* Managed flavor */}}
@@ -40,7 +40,7 @@
   {{- /* Caller-allocate flavor */}}
   {{- if .RequestArgs }}
     ::fidl::Result {{ .Protocol.WireClientImpl.NoLeading }}::{{ .Name }}(
-          {{- template "Driver:Method:ClientImplSyncCallerAllocateArguments:Helper" . }}) {
+          {{- template "Socket:Method:ClientImplSyncCallerAllocateArguments:Helper" . }}) {
       ::fidl::UnownedEncodedMessage<{{ .WireRequest }}> _request({{ RenderForwardParams
         "_request_buffer.data" "_request_buffer.capacity" .RequestArgs
          }});

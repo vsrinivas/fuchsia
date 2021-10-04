@@ -4,14 +4,14 @@
 // found in the LICENSE file.
 */}}
 
-{{- define "Driver:Protocol:ClientImpl:MessagingHeader" }}
+{{- define "Socket:Protocol:ClientImpl:MessagingHeader" }}
 {{- IfdefFuchsia -}}
 {{- EnsureNamespace "" }}
 template<>
 class {{ .WireClientImpl }} final : public ::fidl::internal::ClientBase {
  public:
   {{- range .ClientMethods }}
-    {{- template "Driver:Method:ClientImpl:MessagingHeader" . }}
+    {{- template "Socket:Method:ClientImpl:MessagingHeader" . }}
   {{- end }}
   {{ .WireClientImpl.Self }}() = default;
 
@@ -25,12 +25,12 @@ class {{ .WireClientImpl }} final : public ::fidl::internal::ClientBase {
 
 
 
-{{- define "Driver:Protocol:ClientImpl:MessagingSource" }}
+{{- define "Socket:Protocol:ClientImpl:MessagingSource" }}
   {{ EnsureNamespace ""}}
   {{- IfdefFuchsia -}}
 
   {{- range .ClientMethods }}
-    {{- template "Driver:Method:ClientImpl:MessagingSource" . }}
+    {{- template "Socket:Method:ClientImpl:MessagingSource" . }}
   {{- end }}
 
   std::optional<::fidl::UnbindInfo>

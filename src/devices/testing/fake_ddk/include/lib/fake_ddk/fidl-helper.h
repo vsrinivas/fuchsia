@@ -8,6 +8,7 @@
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/fidl/llcpp/server.h>
 #include <lib/fidl/llcpp/transaction.h>
+#include <lib/fidl/llcpp/transport.h>
 #include <lib/fidl/llcpp/wire_messaging.h>
 #include <lib/zx/channel.h>
 #include <zircon/fidl.h>
@@ -23,6 +24,11 @@
 namespace fake_ddk {
 class FidlMessenger;
 }
+
+namespace fidl {
+template <>
+struct Transport<fake_ddk::FidlMessenger> : public FakeDDKTransport<fake_ddk::FidlMessenger> {};
+}  // namespace fidl
 
 template <>
 class fidl::internal::WireWeakEventSender<fake_ddk::FidlMessenger> {

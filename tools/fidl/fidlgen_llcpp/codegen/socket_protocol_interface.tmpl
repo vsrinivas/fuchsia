@@ -4,9 +4,9 @@
 // found in the LICENSE file.
 */}}
 
-{{- define "Driver:Protocol:Interface:MessagingHeader" }}
+{{- define "Socket:Protocol:Interface:MessagingHeader" }}
 {{- range .ClientMethods }}
-  {{- template "Driver:Method:CompleterBase:MessagingHeader" . }}
+  {{- template "Socket:Method:CompleterBase:MessagingHeader" . }}
 {{- end }}
 
 // Pure-virtual interface to be implemented by a server.

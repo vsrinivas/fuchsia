@@ -4,7 +4,7 @@
 // found in the LICENSE file.
 */}}
 
-{{- define "Driver:Method:ClientImplSyncCallerAllocateArguments:Helper" -}}
+{{- define "Socket:Method:ClientImplSyncCallerAllocateArguments:Helper" -}}
 {{- $args := (List) }}
 {{- if .RequestArgs }}
   {{- $args = (List $args "::fidl::BufferSpan _request_buffer" .RequestArgs) }}
@@ -17,14 +17,14 @@
 
 
 
-{{- define "Driver:Method:ClientImplSync:MessagingHeader" }}
+{{- define "Socket:Method:ClientImplSync:MessagingHeader" }}
   {{- /* Sync managed flavor */}}
   {{- .Docs }}
   {{ if .DocComments }}
     //
   {{- end }}
   // Synchronous variant of |{{ $.Name }}.{{ .Name }}()|.
-  // {{- template "Driver:Method:ClientAllocationComment:Helper" . }}
+  // {{- template "Socket:Method:ClientAllocationComment:Helper" . }}
   {{ .WireResult }} {{ .Name }}_Sync({{ RenderParams .RequestArgs }});
 
   {{- /* Sync caller-allocate flavor */}}
@@ -37,13 +37,13 @@
     // Caller provides the backing storage for FIDL message via request and
     // response buffers.
     {{ .WireUnownedResult }} {{ .Name }}{{ if .HasResponse }}_Sync{{ end }}(
-        {{- template "Driver:Method:ClientImplSyncCallerAllocateArguments:Helper" . }});
+        {{- template "Socket:Method:ClientImplSyncCallerAllocateArguments:Helper" . }});
   {{- end }}
 {{- end }}
 
 
 
-{{- define "Driver:Method:ClientImplSyncCallerAllocate:MessagingSource" }}
+{{- define "Socket:Method:ClientImplSyncCallerAllocate:MessagingSource" }}
   {{ EnsureNamespace "" }}
 
   {{- $base_args := (printf "::fidl::UnownedClientEnd<%s>(_channel->get())" .Protocol) }}
@@ -56,7 +56,7 @@
 
   {{ .WireUnownedResult }}
   {{ .Protocol.WireClientImpl.NoLeading }}::{{ .Name }}_Sync(
-      {{- template "Driver:Method:ClientImplSyncCallerAllocateArguments:Helper" . }}) {
+      {{- template "Socket:Method:ClientImplSyncCallerAllocateArguments:Helper" . }}) {
     return ::fidl::internal::ClientBase::MakeSyncCallWith([&] (std::shared_ptr<zx::channel> _channel) {
       return {{ .WireUnownedResult }}(
           {{- RenderForwardParams $base_args "_response_buffer.data" "_response_buffer.capacity" }});
@@ -68,7 +68,7 @@
 
 
 
-{{- define "Driver:Method:ClientImplSyncManaged:MessagingSource" }}
+{{- define "Socket:Method:ClientImplSyncManaged:MessagingSource" }}
   {{ EnsureNamespace "" }}
 
   {{- IfdefFuchsia -}}
@@ -87,10 +87,10 @@
 
 
 
-{{- define "Driver:Method:ClientImplSync:MessagingSource" }}
-  {{- template "Driver:Method:ClientImplSyncManaged:MessagingSource" . }}
+{{- define "Socket:Method:ClientImplSync:MessagingSource" }}
+  {{- template "Socket:Method:ClientImplSyncManaged:MessagingSource" . }}
   {{- if or .RequestArgs .ResponseArgs }}
-    {{- template "Driver:Method:ClientImplSyncCallerAllocate:MessagingSource" . }}
+    {{- template "Socket:Method:ClientImplSyncCallerAllocate:MessagingSource" . }}
   {{- end }}
 {{- end }}
 

@@ -4,35 +4,35 @@
 // found in the LICENSE file.
 */}}
 
-{{- define "Driver:Method:ClientImpl:MessagingHeader" }}
+{{- define "Socket:Method:ClientImpl:MessagingHeader" }}
   {{- if .HasResponse }}
     {{- /* two-way method */}}
 
-    {{- template "Driver:Method:ClientImplAsync:MessagingHeader" . }}
-    {{- template "Driver:Method:ClientImplSync:MessagingHeader" . }}
+    {{- template "Socket:Method:ClientImplAsync:MessagingHeader" . }}
+    {{- template "Socket:Method:ClientImplSync:MessagingHeader" . }}
 
   {{- else }}
     {{- /* one-way method */}}
 
     {{- /* There is no distinction between sync vs async for one-way methods . */}}
-    {{- template "Driver:Method:ClientImplOneway:MessagingHeader" . }}
+    {{- template "Socket:Method:ClientImplOneway:MessagingHeader" . }}
 
   {{- end }}
 {{- end }}
 
 
-{{- define "Driver:Method:ClientImpl:MessagingSource" }}
+{{- define "Socket:Method:ClientImpl:MessagingSource" }}
   {{- if .HasResponse }}
     {{- /* two-way method */}}
 
-    {{- template "Driver:Method:ClientImplAsync:MessagingSource" . }}
-    {{- template "Driver:Method:ClientImplSync:MessagingSource" . }}
+    {{- template "Socket:Method:ClientImplAsync:MessagingSource" . }}
+    {{- template "Socket:Method:ClientImplSync:MessagingSource" . }}
 
   {{- else }}
     {{- /* one-way method */}}
 
     {{- /* There is no distinction between sync vs async for one-way methods . */}}
-    {{- template "Driver:Method:ClientImplOneway:MessagingSource" . }}
+    {{- template "Socket:Method:ClientImplOneway:MessagingSource" . }}
   {{- end }}
 {{- end }}
 

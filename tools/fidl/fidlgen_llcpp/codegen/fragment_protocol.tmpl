@@ -72,8 +72,10 @@ __LOCAL extern "C" const fidl_type_t {{ .Response.WireCodingTable.Name }};
 {{- define "Protocol:Traits:MessagingHeader" -}}
 {{ $protocol := . -}}
 
+#ifdef __Fuchsia__
 template<>
-struct Transport<{{ . }}> : public ::fidl::ChannelTransport {};
+struct Transport<{{ . }}> : public ::fidl::ChannelTransport<{{ . }}> {};
+#endif
 
 {{ range .Methods -}}
 {{ $method := . -}}

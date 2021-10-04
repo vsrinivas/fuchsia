@@ -257,7 +257,7 @@ class ServerBindingRef {
   // This is so that only |BindServerTypeErased| will be able to construct a
   // new instance of |ServerBindingRef|.
   friend ServerBindingRef<Protocol> internal::BindServerTypeErased<Protocol>(
-      async_dispatcher_t* dispatcher, fidl::ServerEnd<Protocol> server_end,
+      async_dispatcher_t* dispatcher, typename Transport<Protocol>::ServerEnd server_end,
       internal::IncomingMessageDispatcher* interface, internal::AnyOnUnboundFn on_unbound);
 
   explicit ServerBindingRef(std::weak_ptr<internal::AsyncServerBinding> internal_binding)

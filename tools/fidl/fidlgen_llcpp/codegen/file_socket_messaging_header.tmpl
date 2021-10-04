@@ -34,27 +34,27 @@ fidl/{{ .LibraryDots }}/cpp/driver_messaging.h
 
 
   {{- range (call .ProtocolsForTransport "Driver") }}
-    {{ template "Driver:Protocol:ForwardDeclaration:MessagingHeader" . }}
+    {{ template "Socket:Protocol:ForwardDeclaration:MessagingHeader" . }}
   {{- end }}
 
   {{- range (call .ProtocolsForTransport "Driver") }}
-    {{ template "Driver:Protocol:MessagingHeader" . }}
+    {{ template "Socket:Protocol:MessagingHeader" . }}
   {{- end }}
 
   {{ EnsureNamespace "fidl" }}
 
   {{- range (call .ProtocolsForTransport "Driver") }}
-    {{ template "Driver:Protocol:Traits:MessagingHeader" . }}
+    {{ template "Socket:Protocol:Traits:MessagingHeader" . }}
   {{- end }}
 
   {{- range (call .ProtocolsForTransport "Driver") }}
     {{- range .TwoWayMethods }}
-      {{ template "Driver:Method:ResponseContext:MessagingHeader" . }}
+      {{ template "Socket:Method:ResponseContext:MessagingHeader" . }}
     {{- end }}
 
-    {{ template "Driver:Protocol:ClientImpl:MessagingHeader" . }}
+    {{ template "Socket:Protocol:ClientImpl:MessagingHeader" . }}
 
-    {{ template "Driver:Protocol:EventSender:MessagingHeader" . }}
+    {{ template "Socket:Protocol:EventSender:MessagingHeader" . }}
 
     {{- end }}
 

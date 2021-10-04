@@ -4,7 +4,7 @@
 // found in the LICENSE file.
 */}}
 
-{{- define "Driver:Method:ResponseContext:MessagingHeader" }}
+{{- define "Socket:Method:ResponseContext:MessagingHeader" }}
 {{- EnsureNamespace "" }}
 {{- IfdefFuchsia }}
 template<>
@@ -22,7 +22,7 @@ class {{ .WireResponseContext }} : public ::fidl::internal::ResponseContext {
 
 
 
-{{- define "Driver:Method:ResponseContext:MessagingSource" }}
+{{- define "Socket:Method:ResponseContext:MessagingSource" }}
 {{- EnsureNamespace "" }}
 {{- IfdefFuchsia }}
 {{ .WireResponseContext }}::{{ .WireResponseContext.Self }}()

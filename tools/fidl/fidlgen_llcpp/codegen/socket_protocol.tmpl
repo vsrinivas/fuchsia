@@ -4,13 +4,13 @@
 // found in the LICENSE file.
 */}}
 
-{{- define "Driver:Protocol:ForwardDeclaration:MessagingHeader" }}
+{{- define "Socket:Protocol:ForwardDeclaration:MessagingHeader" }}
   {{ EnsureNamespace . }}
   class {{ .Name }};
 {{- end }}
 
 
-{{- define "Driver:Method:ClientAllocationComment:Helper" -}}
+{{- define "Socket:Method:ClientAllocationComment:Helper" -}}
   {{- if SyncCallTotalStackSizeV2 . -}}
     Allocates {{ SyncCallTotalStackSizeV2 . }} bytes of {{ "" -}}
     {{- if not .Request.ClientAllocationV2.IsStack -}}
@@ -31,7 +31,7 @@
   {{- end }}
 {{- end }}
 
-{{- define "Driver:Protocol:MessagingHeader" }}
+{{- define "Socket:Protocol:MessagingHeader" }}
 {{- $protocol := . }}
 {{ "" }}
   {{- range .Methods }}
@@ -43,8 +43,8 @@ __LOCAL extern "C" const fidl_type_t {{ .Response.WireCodingTable.Name }};
 {{ "" }}
 {{ EnsureNamespace . }}
 
-{{- template "Driver:Protocol:Details:MessagingHeader" . }}
-{{- template "Driver:Protocol:Dispatcher:MessagingHeader" . }}
+{{- template "Socket:Protocol:Details:MessagingHeader" . }}
+{{- template "Socket:Protocol:Dispatcher:MessagingHeader" . }}
 
 {{- range .Methods }}
   {{- if .HasRequest }}
@@ -57,20 +57,26 @@ __LOCAL extern "C" const fidl_type_t {{ .Response.WireCodingTable.Name }};
 
 {{- IfdefFuchsia -}}
 {{- range .ClientMethods -}}
-  {{- template "Driver:Method:Result:MessagingHeader" . }}
-  {{- template "Driver:Method:UnownedResult:MessagingHeader" . }}
+  {{- template "Socket:Method:Result:MessagingHeader" . }}
+  {{- template "Socket:Method:UnownedResult:MessagingHeader" . }}
 {{- end }}
 
-{{- template "Driver:Protocol:Caller:MessagingHeader" . }}
-{{- template "Driver:Protocol:EventHandler:MessagingHeader" . }}
-{{- template "Driver:Protocol:SyncClient:MessagingHeader" . }}
-{{- template "Driver:Protocol:Interface:MessagingHeader" . }}
+{{- template "Socket:Protocol:Caller:MessagingHeader" . }}
+{{- template "Socket:Protocol:EventHandler:MessagingHeader" . }}
+{{- template "Socket:Protocol:SyncClient:MessagingHeader" . }}
+{{- template "Socket:Protocol:Interface:MessagingHeader" . }}
 {{- EndifFuchsia -}}
 
 {{- end }}
 
-{{- define "Driver:Protocol:Traits:MessagingHeader" -}}
+{{- define "Socket:Protocol:Traits:MessagingHeader" -}}
 {{ $protocol := . -}}
+
+#ifdef __Fuchsia__
+template<>
+struct Transport<{{ . }}> : public ::fidl::SocketTransport<{{ . }}> {};
+#endif
+
 {{ range .Methods -}}
 {{ $method := . -}}
 {{- if .HasRequest }}
@@ -112,7 +118,7 @@ static_assert(offsetof({{ $method.WireResponse }}, {{ $param.Name }}) == {{ $par
 {{- end }}
 {{- end }}
 
-{{- define "Driver:Protocol:MessagingSource" }}
+{{- define "Socket:Protocol:MessagingSource" }}
 {{ $protocol := . -}}
 
 {{- range .Methods }}
@@ -128,31 +134,31 @@ extern "C" const fidl_type_t {{ .Response.WireCodingTable.Name }};
 {{- /* Client-calling functions do not apply to events. */}}
 {{- range .ClientMethods -}}
 {{ "" }}
-    {{- template "Driver:Method:Result:MessagingSource" . }}
+    {{- template "Socket:Method:Result:MessagingSource" . }}
   {{- if or .RequestArgs .ResponseArgs }}
 {{ "" }}
-    {{- template "Driver:Method:UnownedResult:MessagingSource" . }}
+    {{- template "Socket:Method:UnownedResult:MessagingSource" . }}
   {{- end }}
 {{ "" }}
 {{- end }}
 
 {{- range .ClientMethods }}
   {{- if .HasResponse }}
-    {{- template "Driver:Method:ResponseContext:MessagingSource" . }}
+    {{- template "Socket:Method:ResponseContext:MessagingSource" . }}
   {{- end }}
 {{- end }}
-{{ template "Driver:Protocol:ClientImpl:MessagingSource" . }}
+{{ template "Socket:Protocol:ClientImpl:MessagingSource" . }}
 
 {{- if .Events }}
-  {{- template "Driver:Protocol:EventHandler:MessagingSource" . }}
+  {{- template "Socket:Protocol:EventHandler:MessagingSource" . }}
 {{- end }}
 
 {{- /* Server implementation */}}
-{{ template "Driver:Protocol:Dispatcher:MessagingSource" . }}
+{{ template "Socket:Protocol:Dispatcher:MessagingSource" . }}
 
 {{- if .Methods }}
   {{- range .TwoWayMethods -}}
-    {{- template "Driver:Method:CompleterBase:MessagingSource" . }}
+    {{- template "Socket:Method:CompleterBase:MessagingSource" . }}
   {{- end }}
 
   {{- range .Methods }}

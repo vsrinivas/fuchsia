@@ -4,7 +4,7 @@
 // found in the LICENSE file.
 */}}
 
-{{- define "Driver:Protocol:SyncClient:MessagingHeader" }}
+{{- define "Socket:Protocol:SyncClient:MessagingHeader" }}
 {{- EnsureNamespace "" }}
 template<>
 class {{ .WireSyncClient }} final {
@@ -27,7 +27,7 @@ class {{ .WireSyncClient }} final {
    {{- /* Client-calling functions do not apply to events. */}}
    {{- range .ClientMethods }}
    {{ .Docs }}
-   //{{ template "Driver:Method:ClientAllocationComment:Helper" . }}
+   //{{ template "Socket:Method:ClientAllocationComment:Helper" . }}
    {{ .WireResult }} {{ .Name }}({{ RenderParams .RequestArgs }}) {
      return {{ .WireResult }}({{ RenderForwardParams "this->client_end()" .RequestArgs }});
    }
@@ -35,7 +35,7 @@ class {{ .WireSyncClient }} final {
    {{- if or .RequestArgs .ResponseArgs }}
     {{ .Docs }}
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    {{ .WireUnownedResult }} {{ .Name }}({{ template "Driver:Method:ClientImplSyncCallerAllocateArguments:Helper" . }}) {
+    {{ .WireUnownedResult }} {{ .Name }}({{ template "Socket:Method:ClientImplSyncCallerAllocateArguments:Helper" . }}) {
     {{- $args := (List "this->client_end()") }}
     {{- if .RequestArgs }}
       {{- $args = (List $args "_request_buffer.data" "_request_buffer.capacity") }}

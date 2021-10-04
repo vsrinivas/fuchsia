@@ -5,7 +5,7 @@
 */}}
 
 
-{{- define "Driver:Method:CompleterBase:MessagingHeader" }}
+{{- define "Socket:Method:CompleterBase:MessagingHeader" }}
 {{ EnsureNamespace "" }}
 {{- if .HasResponse }}
   template<>
@@ -43,7 +43,7 @@
 {{- end }}
 {{- end }}
 
-{{- define "Driver:Method:CompleterBase:MessagingSource" }}
+{{- define "Socket:Method:CompleterBase:MessagingSource" }}
 {{ EnsureNamespace "" }}
 {{- IfdefFuchsia -}}
 ::fidl::Result

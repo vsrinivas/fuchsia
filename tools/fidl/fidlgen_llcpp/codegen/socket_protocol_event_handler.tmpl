@@ -4,7 +4,7 @@
 // found in the LICENSE file.
 */}}
 
-{{- define "Driver:Protocol:EventHandler:MessagingHeader" }}
+{{- define "Socket:Protocol:EventHandler:MessagingHeader" }}
 {{- EnsureNamespace "" }}
 {{- IfdefFuchsia }}
 template<>
@@ -44,7 +44,7 @@ public:
 {{- end }}
 
 
-{{- define "Driver:Protocol:EventHandler:MessagingSource" }}
+{{- define "Socket:Protocol:EventHandler:MessagingSource" }}
 {{ EnsureNamespace "" }}
 ::fidl::Result {{ .WireSyncEventHandler.NoLeading }}::HandleOneEvent(
     ::fidl::UnownedClientEnd<{{ . }}> client_end) {

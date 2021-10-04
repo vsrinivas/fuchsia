@@ -4,7 +4,7 @@
 // found in the LICENSE file.
 */}}
 
-{{- define "Driver:Protocol:Dispatcher:MessagingHeader" }}
+{{- define "Socket:Protocol:Dispatcher:MessagingHeader" }}
 {{- IfdefFuchsia }}
 {{- EnsureNamespace "" }}
 template<>
@@ -22,7 +22,7 @@ struct {{ .WireServerDispatcher }} final {
 {{- EndifFuchsia }}
 {{- end }}
 
-{{- define "Driver:Protocol:Dispatcher:MessagingSource" }}
+{{- define "Socket:Protocol:Dispatcher:MessagingSource" }}
 {{- IfdefFuchsia -}}
 {{ EnsureNamespace "" }}
 

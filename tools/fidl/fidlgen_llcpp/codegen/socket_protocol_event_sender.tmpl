@@ -4,7 +4,7 @@
 // found in the LICENSE file.
 */}}
 
-{{- define "Driver:Protocol:EventSender:MessagingHeader" }}
+{{- define "Socket:Protocol:EventSender:MessagingHeader" }}
 {{ EnsureNamespace "" }}
 {{- IfdefFuchsia -}}
 // |EventSender| owns a server endpoint of a channel speaking
@@ -72,7 +72,7 @@ class {{ .WireWeakEventSender }} {
 {{- EndifFuchsia -}}
 {{- end }}
 
-{{- define "Driver:Protocol:EventSender:MessagingSource" }}
+{{- define "Socket:Protocol:EventSender:MessagingSource" }}
 {{ EnsureNamespace "" }}
 {{- IfdefFuchsia -}}
   {{- range .Events }}

@@ -31,6 +31,11 @@ class TestProtocol {
 }  // namespace
 }  // namespace fidl_test
 
+namespace fidl {
+template <>
+struct Transport<fidl_test::TestProtocol> : public ChannelTransport<fidl_test::TestProtocol> {};
+}  // namespace fidl
+
 template <>
 class ::fidl::internal::WireWeakEventSender<fidl_test::TestProtocol> {
  public:

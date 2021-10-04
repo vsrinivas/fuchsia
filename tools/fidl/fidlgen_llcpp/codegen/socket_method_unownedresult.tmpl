@@ -4,7 +4,7 @@
 // found in the LICENSE file.
 */}}
 
-{{- define "Driver:Method:UnownedResult:MessagingHeader" }}
+{{- define "Socket:Method:UnownedResult:MessagingHeader" }}
 {{- EnsureNamespace "" }}
 template<>
 class {{ .WireUnownedResult }} final : public ::fidl::Result {
@@ -76,7 +76,7 @@ class {{ .WireUnownedResult }} final : public ::fidl::Result {
 
 
 
-{{- define "Driver:Method:UnownedResult:MessagingSource" }}
+{{- define "Socket:Method:UnownedResult:MessagingSource" }}
 {{- IfdefFuchsia -}}
 {{- EnsureNamespace "" }}
 {{ $args := (printf "::fidl::UnownedClientEnd<%s> _client" .Protocol) }}

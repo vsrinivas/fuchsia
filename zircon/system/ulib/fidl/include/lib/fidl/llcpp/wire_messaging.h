@@ -6,17 +6,17 @@
 #define LIB_FIDL_LLCPP_WIRE_MESSAGING_H_
 
 #include <lib/fit/function.h>
-#include <lib/fidl/llcpp/transport.h>
 #ifdef __Fuchsia__
 #include <lib/fidl/llcpp/client_end.h>
 #include <lib/fidl/llcpp/message.h>
 #include <lib/fidl/llcpp/transaction.h>
+#include <lib/fidl/llcpp/transport.h>
 #include <zircon/fidl.h>
 #endif  // __Fuchsia__
 
 namespace fidl {
 
-template<typename FidlProtocol>
+template <typename FidlProtocol>
 struct Transport;
 
 template <typename FidlMethod>
