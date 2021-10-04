@@ -63,11 +63,11 @@ test("cypress-touch-test") {
     "//src/lib/ddktl",
     "//src/ui/input/testing/fake-hidbus-ifc",
     "//src/ui/input/testing/mock-hidbus-ifc",
-    "//zircon/public/lib/mock-function",
     "//zircon/public/lib/zircon-internal",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/hid",
     "//zircon/system/ulib/hwreg-i2c",
+    "//zircon/system/ulib/mock-function",
     "//zircon/system/ulib/zx",
     "//zircon/system/ulib/zxtest",
   ]

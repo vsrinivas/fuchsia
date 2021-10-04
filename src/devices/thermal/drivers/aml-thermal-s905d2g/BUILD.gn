@@ -87,12 +87,12 @@ test("aml-thermal-s905d2g-test-bin") {
     "//src/devices/testing/no_ddk",
     "//src/lib/ddk",
     "//src/lib/ddktl",
-    "//zircon/public/lib/mock-function",
     "//zircon/public/lib/sync",
     "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/fidl-utils",
     "//zircon/system/ulib/hwreg",
+    "//zircon/system/ulib/mock-function",
     "//zircon/system/ulib/zx",
     "//zircon/system/ulib/zxtest",
   ]

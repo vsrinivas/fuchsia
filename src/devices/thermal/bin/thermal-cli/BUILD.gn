@@ -39,10 +39,10 @@ test("thermal-cli-test-bin") {
     ":common",
     "//sdk/fidl/fuchsia.hardware.thermal:fuchsia.hardware.thermal_c",
     "//sdk/lib/fdio",
-    "//zircon/public/lib/mock-function",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/fidl-utils",
+    "//zircon/system/ulib/mock-function",
     "//zircon/system/ulib/zxtest",
   ]
 }

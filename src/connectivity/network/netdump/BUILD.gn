@@ -43,7 +43,7 @@ test("unit_tests") {
   include_dirs = [ "." ]
   deps = [
     ":common",
-    "//zircon/public/lib/mock-function",
+    "//zircon/system/ulib/mock-function",
     "//zircon/system/ulib/zxtest",
   ]
 }

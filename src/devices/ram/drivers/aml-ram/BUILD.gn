@@ -55,7 +55,7 @@ test("aml-ram-test-bin") {
     "//src/devices/bus/testing/fake-pdev",
     "//src/devices/testing/fake-mmio-reg",
     "//src/devices/testing/fake_ddk",
-    "//zircon/public/lib/mock-function",
+    "//zircon/system/ulib/mock-function",
     "//zircon/system/ulib/zxtest",
   ]
 

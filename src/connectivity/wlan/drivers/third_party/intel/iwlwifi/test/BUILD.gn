@@ -149,8 +149,8 @@ executable("mac80211_test") {
   deps = [
     ":sim_library",
     "//src/connectivity/wlan/drivers/third_party/intel/iwlwifi/mvm",
-    "//zircon/public/lib/mock-function",
     "//zircon/system/ulib/fbl",
+    "//zircon/system/ulib/mock-function",
     "//zircon/system/ulib/zxtest",
   ]
 
@@ -183,8 +183,8 @@ executable("mvm_mlme_test") {
     "//sdk/fidl/fuchsia.wlan.internal:fuchsia.wlan.internal_banjo_cpp",
     "//src/connectivity/wlan/drivers/third_party/intel/iwlwifi/mvm",
     "//src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform:fuchsia_device",
-    "//zircon/public/lib/mock-function",
     "//zircon/system/public",
+    "//zircon/system/ulib/mock-function",
     "//zircon/system/ulib/zxtest",
   ]
 
@@ -201,10 +201,10 @@ executable("mvm_test") {
     ":sim_library",
     "//src/connectivity/wlan/drivers/third_party/intel/iwlwifi/mvm",
     "//src/devices/testing/fake-bti",
-    "//zircon/public/lib/mock-function",
     "//zircon/public/lib/zircon-internal",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
+    "//zircon/system/ulib/mock-function",
     "//zircon/system/ulib/zxtest",
   ]
 
@@ -252,11 +252,11 @@ executable("pcie_test") {
     "//src/devices/pci/testing:pci-protocol-fake",
     "//src/devices/testing/fake-bti",
     "//src/devices/testing/mock-ddk",
-    "//zircon/public/lib/mock-function",
     "//zircon/public/lib/zircon-internal",
     "//zircon/system/public",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
+    "//zircon/system/ulib/mock-function",
     "//zircon/system/ulib/sync",
     "//zircon/system/ulib/zx",
     "//zircon/system/ulib/zxtest",
@@ -300,7 +300,7 @@ executable("sta_test") {
   deps = [
     ":sim_library",
     "//src/connectivity/wlan/drivers/third_party/intel/iwlwifi/mvm",
-    "//zircon/public/lib/mock-function",
+    "//zircon/system/ulib/mock-function",
     "//zircon/system/ulib/zxtest",
   ]
 

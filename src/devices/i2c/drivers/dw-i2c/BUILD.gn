@@ -65,9 +65,9 @@ test("dw-i2c-test-bin") {
     "//src/devices/testing/mock-mmio-reg",
     "//src/lib/ddk",
     "//src/lib/ddktl",
-    "//zircon/public/lib/mock-function",
     "//zircon/public/lib/sync",
     "//zircon/system/ulib/hwreg",
+    "//zircon/system/ulib/mock-function",
     "//zircon/system/ulib/zx",
     "//zircon/system/ulib/zxtest",
   ]

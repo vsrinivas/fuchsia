@@ -90,7 +90,7 @@ test("goldfish-control-device-test") {
            "//zircon/system/ulib/mmio-ptr:mmio-ptr-fake",
            "//src/devices/testing/fake-bti",
            "//src/devices/testing/fake-object",
-           "//zircon/public/lib/mock-function",
+           "//zircon/system/ulib/mock-function",
            "//zircon/public/lib/sync",
            "//zircon/public/lib/zircon-internal",
            "//zircon/system/ulib/zx",

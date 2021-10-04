@@ -70,11 +70,11 @@ test("goldfish-sync-device-test") {
     "//src/devices/lib/acpi/mock:mock-acpi",
     "//src/devices/testing/fake-bti",
     "//src/devices/testing/fake_ddk",
-    "//zircon/public/lib/mock-function",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zircon-internal",
     "//zircon/system/ulib/fzl",
     "//zircon/system/ulib/mmio-ptr:mmio-ptr-fake",
+    "//zircon/system/ulib/mock-function",
     "//zircon/system/ulib/zx",
     "//zircon/system/ulib/zxtest",
   ]

@@ -71,10 +71,10 @@ test("tas27xx-test-bin") {
     "//src/lib/ddktl",
     "//src/media/audio/lib/simple-codec",
     "//zircon/public/lib/async-cpp",
-    "//zircon/public/lib/mock-function",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zircon-internal",
     "//zircon/system/ulib/fbl",
+    "//zircon/system/ulib/mock-function",
     "//zircon/system/ulib/zx",
     "//zircon/system/ulib/zxtest",
   ]
