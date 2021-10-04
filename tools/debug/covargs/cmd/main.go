@@ -9,6 +9,7 @@ import (
 	"context"
 	"debug/elf"
 	"encoding/binary"
+	"encoding/hex"
 	"encoding/json"
 	"flag"
 	"fmt"
@@ -42,29 +43,30 @@ const (
 )
 
 var (
-	colors            color.EnableColor
-	level             logger.LogLevel
-	summaryFile       flagmisc.StringsValue
-	buildIDDirPaths   flagmisc.StringsValue
-	symbolServers     flagmisc.StringsValue
-	symbolCache       string
-	symbolizeDumpFile flagmisc.StringsValue
-	dryRun            bool
-	skipFunctions     bool
-	outputDir         string
-	llvmCov           string
-	llvmProfdata      flagmisc.StringsValue
-	outputFormat      string
-	jsonOutput        string
-	reportDir         string
-	saveTemps         string
-	basePath          string
-	diffMappingFile   string
-	compilationDir    string
-	pathRemapping     flagmisc.StringsValue
-	srcFiles          flagmisc.StringsValue
-	numThreads        int
-	jobs              int
+	colors             color.EnableColor
+	level              logger.LogLevel
+	summaryFile        flagmisc.StringsValue
+	buildIDDirPaths    flagmisc.StringsValue
+	symbolServers      flagmisc.StringsValue
+	symbolCache        string
+	symbolizeDumpFile  flagmisc.StringsValue
+	dryRun             bool
+	skipFunctions      bool
+	outputDir          string
+	llvmCov            string
+	llvmProfdata       flagmisc.StringsValue
+	outputFormat       string
+	jsonOutput         string
+	reportDir          string
+	saveTemps          string
+	basePath           string
+	diffMappingFile    string
+	compilationDir     string
+	pathRemapping      flagmisc.StringsValue
+	srcFiles           flagmisc.StringsValue
+	numThreads         int
+	jobs               int
+	useEmbeddedBuildId bool
 )
 
 func init() {
@@ -95,6 +97,7 @@ func init() {
 		"Multiple files can be specified with multiple instances of this flag.")
 	flag.IntVar(&numThreads, "num-threads", 0, "number of processing threads")
 	flag.IntVar(&jobs, "jobs", runtime.NumCPU(), "number of parallel jobs")
+	flag.BoolVar(&useEmbeddedBuildId, "use-embedded-build-id", true, "Use embedded build id instead of symbolizer output")
 }
 
 const llvmProfileSinkType = "llvm-profile"
@@ -270,17 +273,6 @@ func process(ctx context.Context, repo symbolize.Repository) error {
 		return fmt.Errorf("merging info: %w", err)
 	}
 
-	if jsonOutput != "" {
-		file, err := os.Create(jsonOutput)
-		if err != nil {
-			return fmt.Errorf("creating profile output file: %w", err)
-		}
-		defer file.Close()
-		if err := json.NewEncoder(file).Encode(entries); err != nil {
-			return fmt.Errorf("writing profile information: %w", err)
-		}
-	}
-
 	tempDir := saveTemps
 	if saveTemps == "" {
 		tempDir, err = ioutil.TempDir(saveTemps, "covargs")
@@ -311,11 +303,79 @@ func process(ctx context.Context, repo symbolize.Repository) error {
 		return fmt.Errorf("missing default llvm-profdata tool path")
 	}
 
+	// When embedded build ids are enabled, read embedded build ids from raw profiles.
+	// TODO(gulfem): Assign build ids when we merge entries.
+	// Currently, we generate the entries by merging summary & symbolizer output.
+	// Then we update entries with embedded build ids.
+	// When we completely remove using symbolizer output, we can directly assign build ids.
+	// TODO(gulfem): Try using goroutines that run `llvm-profdata show` in parallel.
+	if useEmbeddedBuildId {
+		for index, entry := range entries {
+			version, err := getVersion(entry.Profile)
+			if err != nil {
+				// TODO(fxbug.dev/83504): Known issue causes occasional failures on host tests.
+				// Once resolved, return an error.
+				logger.Warningf(ctx, "cannot read version from profile %q: %w", entry.Profile, err)
+				continue
+			}
+			// Embedded build ids are only enabled after raw profile version 7
+			if version < 7 {
+				continue
+			}
+
+			// Find the associated llvm-profdata tool
+			partition, ok := partitions[version]
+			if !ok {
+				partition = partitions[0]
+			}
+
+			args := []string{
+				"show",
+				"--binary-ids",
+			}
+			args = append(args, entry.Profile)
+			// Use llvm-profdata show --binary-ids command to read embedded build ids
+			readCmd := Action{Path: partition.tool, Args: args}
+			output, err := readCmd.Run(ctx)
+			if err != nil {
+				// TODO(fxbug.dev/83504): Known issue causes occasional malformed profiles on host tests.
+				// Once resolved, return an error.
+				logger.Warningf(ctx, "Cannot read embedded build id in this profile %q: %w", entry.Profile, err)
+				continue
+			}
+
+			// Split each line in llvm-profdata output
+			splittedOutput := strings.Split((string(output)), "\n")
+			if len(splittedOutput) < 2 {
+				return fmt.Errorf("invalid llvm-profdata output %q: %w", splittedOutput, err)
+			}
+
+			embeddedBuildId := splittedOutput[len(splittedOutput)-2]
+			// Check if embedded build id consists of hex characters
+			_, err = hex.DecodeString(embeddedBuildId)
+			if err != nil {
+				return fmt.Errorf("invalid build id %q: %w", embeddedBuildId, err)
+			}
+			entries[index].Modules = []string{embeddedBuildId}
+		}
+	}
+
+	if jsonOutput != "" {
+		file, err := os.Create(jsonOutput)
+		if err != nil {
+			return fmt.Errorf("creating profile output file: %w", err)
+		}
+		defer file.Close()
+		if err := json.NewEncoder(file).Encode(entries); err != nil {
+			return fmt.Errorf("writing profile information: %w", err)
+		}
+	}
+
 	for _, entry := range entries {
 		version, err := getVersion(entry.Profile)
 		if err != nil {
-			// TODO(fxbug.dev/83504): This should be rare enough that we should
-			// return an error, but that's not the case at the moment on host.
+			// TODO(fxbug.dev/83504): Known issue causes occasional failures on host tests.
+			// Once resolved, return error below.
 			logger.Warningf(ctx, "cannot read version from profile %q: %w", entry.Profile, err)
 			continue
 		}
