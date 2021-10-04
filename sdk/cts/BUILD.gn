@@ -74,14 +74,6 @@ group("cts") {
     ":cts_no_e2e",
     "tests",
   ]
-
-  # Prevents us from adding example tests and build scripts to the archive.
-  # TODO(jcecil): add tools back once we're able to execute them OOT.
-  path = get_label_info(":${target_name}", "dir")
-  is_cts_tot = string_replace(path, "//sdk/cts", "") != path
-  if (is_cts_tot) {
-    deps += [ "tools" ]
-  }
 }
 
 cts_copy_to_sdk("build") {

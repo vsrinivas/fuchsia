@@ -1,9 +1,0 @@
-{
-    "sdk": {
-      "cipd_pkg": "fuchsia/sdk/gn/linux-amd64",
-      "version": "0.20201029.0.1"
-    },
-    "tests": [
-      "prebuilt/hello-world"
-    ]
-  }
