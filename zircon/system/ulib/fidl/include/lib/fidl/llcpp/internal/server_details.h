@@ -120,10 +120,10 @@ class WeakEventSenderInner {
 // user-provided on-unbound handler.
 template <typename Protocol>
 ServerBindingRef<Protocol> BindServerTypeErased(
-    async_dispatcher_t* dispatcher, typename fidl::Transport<Protocol>::ServerEnd server_end,
+    async_dispatcher_t* dispatcher, typename Transport<Protocol>::ServerEnd server_end,
     IncomingMessageDispatcher* interface, internal::AnyOnUnboundFn on_unbound) {
-  auto internal_binding = internal::AsyncServerBinding::Create(dispatcher, server_end.TakeChannel(),
-                                                               interface, std::move(on_unbound));
+  auto internal_binding = internal::AsyncServerBinding::Create(
+      dispatcher, Transport<Protocol>::TakeTransportObject(server_end), interface, std::move(on_unbound));
   auto binding_ref = fidl::ServerBindingRef<Protocol>(internal_binding);
   auto* binding_ptr = internal_binding.get();
   // The binding object keeps itself alive until unbinding, so dropping the

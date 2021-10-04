@@ -16,9 +16,6 @@
 
 namespace fidl {
 
-template <typename FidlProtocol>
-struct Transport;
-
 template <typename FidlMethod>
 struct WireRequest;
 
@@ -26,6 +23,9 @@ template <typename FidlMethod>
 struct WireResponse;
 
 #ifdef __Fuchsia__
+template <typename FidlProtocol>
+struct Transport;
+
 // WireSyncClient owns a client endpoint and exposes synchronous FIDL calls.
 template <typename FidlProtocol>
 class WireSyncClient;

@@ -13,6 +13,9 @@
 
 namespace fidl {
 
+template <typename Protocol>
+struct Transport;
+
 // The server endpoint of a FIDL channel.
 //
 // The remote (client) counterpart of the channel expects this end of the
@@ -61,8 +64,6 @@ class ServerEnd final {
 
   // Transfers ownership of the underlying channel to the caller.
   zx::channel TakeChannel() { return std::move(channel_); }
-
-  zx::channel TakeTransportObject() { return TakeChannel(); }
 
   // Sends an epitaph over the underlying channel, then closes the channel.
   // An epitaph is a final optional message sent over a server-end towards
@@ -116,7 +117,7 @@ class SocketServerEnd final {
   // and reset the object back to an invalid state.
   void reset() { socket_.reset(); }
 
-  zx::socket TakeTransportObject() { return std::move(socket_); }
+  zx::socket TakeSocket() { return std::move(socket_); }
 
   // Sends an epitaph over the underlying channel, then closes the channel.
   // An epitaph is a final optional message sent over a server-end towards
@@ -129,7 +130,7 @@ class SocketServerEnd final {
     if (!is_valid()) {
       ZX_PANIC("Cannot close an invalid ServerEnd.");
     }
-    zx::socket socket = TakeTransportObject();
+    zx::socket socket = TakeSocket();
     return fidl_epitaph_write(socket.get(), epitaph_value);
   }
 

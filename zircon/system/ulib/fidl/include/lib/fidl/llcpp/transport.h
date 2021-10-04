@@ -5,6 +5,7 @@
 #ifndef LIB_FIDL_LLCPP_TRANSPORT_H_
 #define LIB_FIDL_LLCPP_TRANSPORT_H_
 
+#include <lib/fidl/epitaph.h>
 #include <lib/fidl/llcpp/client_end.h>
 #include <lib/fidl/llcpp/server_end.h>
 #include <lib/zx/channel.h>
@@ -16,6 +17,10 @@ template <typename Protocol>
 struct ChannelTransport {
   using TransportObject = zx::channel;
   using ServerEnd = typename ::fidl::ServerEnd<Protocol>;
+
+  static zx::channel TakeTransportObject(::fidl::ServerEnd<Protocol>& s) {
+      return s.TakeChannel();
+  }
 };
 
 // Temp
