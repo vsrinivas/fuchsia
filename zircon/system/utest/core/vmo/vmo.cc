@@ -790,6 +790,110 @@ TEST(VmoTestCase, Rights) {
   EXPECT_EQ(ZX_ERR_ACCESS_DENIED, status, "vmo_write");
   zx_handle_close(vmo2);
 
+  // full perm test
+  ASSERT_NO_FATAL_FAILURES(ChildPermsTestHelper(vmo));
+  ASSERT_NO_FATAL_FAILURES(RightsTestMapHelper(vmo, len, 0, true, 0));
+  ASSERT_NO_FATAL_FAILURES(RightsTestMapHelper(vmo, len, ZX_VM_PERM_READ, true, 0));
+  ASSERT_NO_FATAL_FAILURES(
+      RightsTestMapHelper(vmo, len, ZX_VM_PERM_WRITE, false, ZX_ERR_INVALID_ARGS));
+  ASSERT_NO_FATAL_FAILURES(
+      RightsTestMapHelper(vmo, len, ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, true, 0));
+
+  // try most of the permutations of mapping and clone a vmo with various rights dropped
+  vmo2 = ZX_HANDLE_INVALID;
+  zx_handle_duplicate(vmo, ZX_RIGHT_READ | ZX_RIGHT_WRITE | ZX_RIGHT_DUPLICATE, &vmo2);
+  ASSERT_NO_FATAL_FAILURES(ChildPermsTestHelper(vmo2));
+  ASSERT_NO_FATAL_FAILURES(RightsTestMapHelper(vmo2, len, 0, false, ZX_ERR_ACCESS_DENIED));
+  ASSERT_NO_FATAL_FAILURES(
+      RightsTestMapHelper(vmo2, len, ZX_VM_PERM_READ, false, ZX_ERR_ACCESS_DENIED));
+  ASSERT_NO_FATAL_FAILURES(
+      RightsTestMapHelper(vmo2, len, ZX_VM_PERM_WRITE, false, ZX_ERR_ACCESS_DENIED));
+  ASSERT_NO_FATAL_FAILURES(RightsTestMapHelper(vmo2, len, ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, false,
+                                               ZX_ERR_ACCESS_DENIED));
+  zx_handle_close(vmo2);
+
+  vmo2 = ZX_HANDLE_INVALID;
+  zx_handle_duplicate(vmo, ZX_RIGHT_READ | ZX_RIGHT_MAP | ZX_RIGHT_DUPLICATE, &vmo2);
+  ASSERT_NO_FATAL_FAILURES(ChildPermsTestHelper(vmo2));
+  ASSERT_NO_FATAL_FAILURES(RightsTestMapHelper(vmo2, len, 0, true, 0));
+  ASSERT_NO_FATAL_FAILURES(RightsTestMapHelper(vmo2, len, ZX_VM_PERM_READ, true, 0));
+  ASSERT_NO_FATAL_FAILURES(
+      RightsTestMapHelper(vmo2, len, ZX_VM_PERM_WRITE, false, ZX_ERR_INVALID_ARGS));
+  ASSERT_NO_FATAL_FAILURES(RightsTestMapHelper(vmo2, len, ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, false,
+                                               ZX_ERR_ACCESS_DENIED));
+  zx_handle_close(vmo2);
+
+  vmo2 = ZX_HANDLE_INVALID;
+  zx_handle_duplicate(vmo, ZX_RIGHT_WRITE | ZX_RIGHT_MAP | ZX_RIGHT_DUPLICATE, &vmo2);
+  ASSERT_NO_FATAL_FAILURES(RightsTestMapHelper(vmo2, len, 0, true, 0));
+  ASSERT_NO_FATAL_FAILURES(
+      RightsTestMapHelper(vmo2, len, ZX_VM_PERM_READ, false, ZX_ERR_ACCESS_DENIED));
+  ASSERT_NO_FATAL_FAILURES(
+      RightsTestMapHelper(vmo2, len, ZX_VM_PERM_WRITE, false, ZX_ERR_INVALID_ARGS));
+  ASSERT_NO_FATAL_FAILURES(RightsTestMapHelper(vmo2, len, ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, false,
+                                               ZX_ERR_ACCESS_DENIED));
+  zx_handle_close(vmo2);
+
+  vmo2 = ZX_HANDLE_INVALID;
+  zx_handle_duplicate(vmo, ZX_RIGHT_READ | ZX_RIGHT_WRITE | ZX_RIGHT_MAP | ZX_RIGHT_DUPLICATE,
+                      &vmo2);
+  ASSERT_NO_FATAL_FAILURES(ChildPermsTestHelper(vmo2));
+  ASSERT_NO_FATAL_FAILURES(RightsTestMapHelper(vmo2, len, 0, true, 0));
+  ASSERT_NO_FATAL_FAILURES(RightsTestMapHelper(vmo2, len, ZX_VM_PERM_READ, true, 0));
+  ASSERT_NO_FATAL_FAILURES(
+      RightsTestMapHelper(vmo2, len, ZX_VM_PERM_WRITE, false, ZX_ERR_INVALID_ARGS));
+  ASSERT_NO_FATAL_FAILURES(
+      RightsTestMapHelper(vmo2, len, ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, true, 0));
+  zx_handle_close(vmo2);
+
+  // test that we can get/set a property on it
+  const char *set_name = "test vmo";
+  status = zx_object_set_property(vmo, ZX_PROP_NAME, set_name, sizeof(set_name));
+  EXPECT_OK(status, "set_property");
+  char get_name[ZX_MAX_NAME_LEN];
+  status = zx_object_get_property(vmo, ZX_PROP_NAME, get_name, sizeof(get_name));
+  EXPECT_OK(status, "get_property");
+  EXPECT_STR_EQ(set_name, get_name, "vmo name");
+
+  // close the handle
+  status = zx_handle_close(vmo);
+  EXPECT_OK(status, "handle_close");
+
+  // Use wrong handle with wrong permission, and expect wrong type not
+  // ZX_ERR_ACCESS_DENIED
+  vmo = ZX_HANDLE_INVALID;
+  vmo2 = ZX_HANDLE_INVALID;
+  status = zx_port_create(0, &vmo);
+  EXPECT_OK(status, "zx_port_create");
+  status = zx_handle_duplicate(vmo, 0, &vmo2);
+  EXPECT_OK(status, "zx_handle_duplicate");
+  status = zx_vmo_read(vmo2, buf, 0, 0);
+  EXPECT_EQ(ZX_ERR_WRONG_TYPE, status, "vmo_read wrong type");
+
+  // close the handle
+  status = zx_handle_close(vmo);
+  EXPECT_OK(status, "handle_close");
+  status = zx_handle_close(vmo2);
+  EXPECT_OK(status, "handle_close");
+}
+
+// This test covers VMOs with the execute bit set using the vmo_replace_as_executable syscall.
+TEST(VmoTestCase, RightsExec) {
+  size_t len = zx_system_get_page_size() * 4;
+  zx_status_t status;
+  zx_handle_t vmo, vmo2;
+
+  // allocate an object
+  status = zx_vmo_create(len, 0, &vmo);
+  EXPECT_OK(status, "vm_object_create");
+
+  // Check that the handle has at least the expected rights.
+  // This list should match the list in docs/syscalls/vmo_create.md.
+  static const zx_rights_t kExpectedRights =
+      ZX_RIGHT_DUPLICATE | ZX_RIGHT_TRANSFER | ZX_RIGHT_WAIT | ZX_RIGHT_READ | ZX_RIGHT_WRITE |
+      ZX_RIGHT_MAP | ZX_RIGHT_GET_PROPERTY | ZX_RIGHT_SET_PROPERTY;
+  EXPECT_EQ(kExpectedRights, kExpectedRights & GetHandleRights(vmo));
+
   status = zx_vmo_replace_as_executable(vmo, ZX_HANDLE_INVALID, &vmo);
   EXPECT_OK(status, "vmo_replace_as_executable");
   EXPECT_EQ(kExpectedRights | ZX_RIGHT_EXECUTE,
@@ -908,33 +1012,8 @@ TEST(VmoTestCase, Rights) {
       vmo2, len, ZX_VM_PERM_READ | ZX_VM_PERM_WRITE | ZX_VM_PERM_EXECUTE, true, 0));
   ASSERT_NO_FATAL_FAILURES(
       RightsTestMapHelper(vmo, len, ZX_VM_PERM_READ | ZX_VM_PERM_EXECUTE, true, 0));
-  zx_handle_close(vmo2);
 
-  // test that we can get/set a property on it
-  const char *set_name = "test vmo";
-  status = zx_object_set_property(vmo, ZX_PROP_NAME, set_name, sizeof(set_name));
-  EXPECT_OK(status, "set_property");
-  char get_name[ZX_MAX_NAME_LEN];
-  status = zx_object_get_property(vmo, ZX_PROP_NAME, get_name, sizeof(get_name));
-  EXPECT_OK(status, "get_property");
-  EXPECT_STR_EQ(set_name, get_name, "vmo name");
-
-  // close the handle
-  status = zx_handle_close(vmo);
-  EXPECT_OK(status, "handle_close");
-
-  // Use wrong handle with wrong permission, and expect wrong type not
-  // ZX_ERR_ACCESS_DENIED
-  vmo = ZX_HANDLE_INVALID;
-  vmo2 = ZX_HANDLE_INVALID;
-  status = zx_port_create(0, &vmo);
-  EXPECT_OK(status, "zx_port_create");
-  status = zx_handle_duplicate(vmo, 0, &vmo2);
-  EXPECT_OK(status, "zx_handle_duplicate");
-  status = zx_vmo_read(vmo2, buf, 0, 0);
-  EXPECT_EQ(ZX_ERR_WRONG_TYPE, status, "vmo_read wrong type");
-
-  // close the handle
+  // close the handles
   status = zx_handle_close(vmo);
   EXPECT_OK(status, "handle_close");
   status = zx_handle_close(vmo2);
