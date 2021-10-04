@@ -338,8 +338,11 @@ class SyncToCommand:
         ).stdout.strip()
         if local_remote != remote:
             raise Error(
-                f"Integration remote {remote!r} does not match"
-                f" local checkout remote {local_remote!r}")
+                f"Integration remote {remote!r} does not match local"
+                f" checkout remote {local_remote!r}."
+                "\nIf this is a public build, you may need to create a"
+                " separate public checkout for the public source code:"
+                " https://fuchsia.dev/fuchsia-src/get-started/get_fuchsia_source")
 
     def assert_correct_integration_manifest(self, manifest: str) -> None:
         jiri_manifest = self.fuchsia_dir.joinpath(".jiri_manifest")
@@ -403,18 +406,33 @@ class SyncToCommand:
         self.sync_to_integration_ref(checkout_info["base_manifest_revision"])
         has_integration_patch = False
         for patch in checkout_info.get("patches", []):
-            if patch["project"] == "integration":
+            project = patch["project"]
+            if project == "integration":
                 has_integration_patch = True
-            self.jiri(
-                "patch",
-                # Delete the target branch if it exists.
-                "-delete",
-                "-host",
-                patch["host"],
-                "-project",
-                patch["project"],
-                patch["ref"],
-            )
+            args = ["patch"]
+            # Some old versions of recipes didn't emit `base_revision`. If no
+            # `base_revision` is available then we can't reproduce the checkout
+            # exactly (the build's checkout may have included some extra commits
+            # between the commit pinned in integration and the patched commit)
+            # but patching on top of the integration-pinned commit is probably
+            # close enough in most cases.
+            if "base_revision" in patch:
+                args.extend(
+                    ["-rebase", "-rebase-revision", patch["base_revision"]])
+            else:
+                warning = colorize("WARNING", Color.YELLOW)
+                print(
+                    f"{warning}: No base revision available for project {project},"
+                    " rebasing on current main branch instead.")
+            args.extend(
+                [
+                    "-host",
+                    patch["host"],
+                    "-project",
+                    project,
+                    patch["ref"],
+                ])
+            self.jiri(*args)
         # If we patched in a change to the integration repo, we have to `jiri
         # update` again to make sure we respect any project/package pin updates.
         if has_integration_patch:
