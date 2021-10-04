@@ -34,8 +34,8 @@ if ! fuchsia_dir="$(find_tree_root "$(pwd)")"; then
 fi
 
 _this_script="$0"
-if [[ "$_this_script" != "${fuchsia_dir}/.jiri_root/bin/fx" &&
-    "$_this_script" != "${fuchsia_dir}/scripts/fx" ]]; then
+if [[ "$_this_script" != "${fuchsia_dir}/.jiri_root/bin/ffx" &&
+    "$_this_script" != "${fuchsia_dir}/src/developer/ffx/scripts/ffx" ]]; then
    _this_fuchsia_dir="$(find_tree_root "$(dirname "$_this_script")")"
    if [[ $? -ne 0 || "$_this_fuchsia_dir" != "$fuchsia_dir" ]]; then
      if ! cmp -s "$_this_script" "${fuchsia_dir}/.jiri_root/bin/fx"; then

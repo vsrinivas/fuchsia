@@ -57,14 +57,14 @@ _fx() {
   # This logic is replicated in //scripts/fx, //scripts/hermetic_env,
   # //scripts/zsh_completion/_fx, and //src/developer/ffx/scripts. For
   # consistency, copy any changes here to those files as well.
-if ! fuchsia_dir="$(find_tree_root "$(pwd)")"; then
+  if ! fuchsia_dir="$(find_tree_root "$(pwd)")"; then
     echo >&2 "ERROR: Cannot find the Platform Source Tree in a parent of the current directory: $(pwd)"
     exit 1
   fi
 
   _this_script="$0"
   if [[ "$_this_script" != "${fuchsia_dir}/.jiri_root/bin/fx" &&
-      "$_this_script" != "${fuchsia_dir}/scripts/fx" ]]; then
+      "$_this_script" != *"_fx" ]]; then
     _this_fuchsia_dir="$(find_tree_root "$(dirname "$_this_script")")"
     if [[ $? -ne 0 || "$_this_fuchsia_dir" != "$fuchsia_dir" ]]; then
       if ! cmp -s "$_this_script" "${fuchsia_dir}/.jiri_root/bin/fx"; then
