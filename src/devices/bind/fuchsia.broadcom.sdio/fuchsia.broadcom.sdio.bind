@@ -1,0 +1,20 @@
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file
+
+library fuchsia.broadcom.sdio;
+
+extend uint fuchsia.BIND_SDIO_VID {
+    BROADCOM = 0x02d0,
+};
+
+extend uint fuchsia.BIND_SDIO_PID {
+    BCM4359 = 0x4359,
+    BCM4345 = 0x4345,
+    BCM4356 = 0x4356,
+};
+
+extend uint fuchsia.BIND_SDIO_FUNCTION {
+    FUNC_1 = 1,
+    FUNC_2 = 2,
+};
