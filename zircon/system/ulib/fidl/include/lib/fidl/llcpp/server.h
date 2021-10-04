@@ -171,8 +171,8 @@ namespace fidl {
 template <typename ServerImpl, typename OnUnbound = std::nullptr_t>
 ServerBindingRef<typename ServerImpl::_EnclosingProtocol> BindServer(
     async_dispatcher_t* dispatcher,
-    fidl::ServerEnd<typename ServerImpl::_EnclosingProtocol> server_end, ServerImpl* impl,
-    OnUnbound&& on_unbound = nullptr) {
+    typename fidl::Transport<typename ServerImpl::_EnclosingProtocol>::ServerEnd server_end,
+    ServerImpl* impl, OnUnbound&& on_unbound = nullptr) {
   return internal::BindServerImpl<ServerImpl>(
       dispatcher, std::move(server_end), impl,
       internal::UnboundThunk(std::move(impl), std::forward<OnUnbound>(on_unbound)));
@@ -184,7 +184,7 @@ ServerBindingRef<typename ServerImpl::_EnclosingProtocol> BindServer(
 template <typename ServerImpl, typename OnUnbound = std::nullptr_t>
 ServerBindingRef<typename ServerImpl::_EnclosingProtocol> BindServer(
     async_dispatcher_t* dispatcher,
-    fidl::ServerEnd<typename ServerImpl::_EnclosingProtocol> server_end,
+    typename fidl::Transport<typename ServerImpl::_EnclosingProtocol>::ServerEnd server_end,
     std::unique_ptr<ServerImpl>&& impl, OnUnbound&& on_unbound = nullptr) {
   ServerImpl* impl_raw = impl.get();
   return internal::BindServerImpl<ServerImpl>(
@@ -198,7 +198,7 @@ ServerBindingRef<typename ServerImpl::_EnclosingProtocol> BindServer(
 template <typename ServerImpl, typename OnUnbound = std::nullptr_t>
 ServerBindingRef<typename ServerImpl::_EnclosingProtocol> BindServer(
     async_dispatcher_t* dispatcher,
-    fidl::ServerEnd<typename ServerImpl::_EnclosingProtocol> server_end,
+    typename fidl::Transport<typename ServerImpl::_EnclosingProtocol>::ServerEnd server_end,
     std::shared_ptr<ServerImpl> impl, OnUnbound&& on_unbound = nullptr) {
   ServerImpl* impl_raw = impl.get();
   return internal::BindServerImpl<ServerImpl>(

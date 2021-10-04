@@ -18,9 +18,7 @@ struct ChannelTransport {
   using TransportObject = zx::channel;
   using ServerEnd = typename ::fidl::ServerEnd<Protocol>;
 
-  static zx::channel TakeTransportObject(::fidl::ServerEnd<Protocol>& s) {
-      return s.TakeChannel();
-  }
+  static zx::channel TakeTransportObject(::fidl::ServerEnd<Protocol>& s) { return s.TakeChannel(); }
 };
 
 // Temp
