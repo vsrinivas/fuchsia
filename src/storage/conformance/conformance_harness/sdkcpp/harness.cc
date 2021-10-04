@@ -32,25 +32,25 @@ class SdkCppHarness : public fuchsia::io::test::Io1Harness {
   ~SdkCppHarness() override = default;
 
   void GetConfig(GetConfigCallback callback) final {
-    fuchsia::io::test::Io1Config config;
+    fuchsia::io::test::Io1Config config{};
 
     // Supported configuration options:
-    config.set_immutable_file(false);  // Files are mutable.
-    config.set_no_remote_dir(false);   // vfs::RemoteDir
-    config.set_no_vmofile(false);      // vfs::VmoFile
+    config.mutable_file = true;  // Files are mutable.
+    config.remote_dir = true;    // vfs::RemoteDir
+    config.vmo_file = true;      // vfs::VmoFile
 
     // Unsupported configuration options:
-    config.set_immutable_dir(true);                 // OPEN_FLAG_CREATE is not supported.
-    config.set_no_admin(true);                      // Admin flag is not supported.
-    config.set_no_rename(true);                     // vfs::PseudoDir does not support Rename.
-    config.set_no_link(true);                       // Link/Unlink is not supported.
-    config.set_no_set_attr(true);                   // SetAttr is not supported.
-    config.set_no_get_token(true);                  // GetToken is unsupported.
-    config.set_non_conformant_path_handling(true);  // Path handling is currently inconsistent.
+    config.mutable_dir = false;               // OPEN_FLAG_CREATE is not supported.
+    config.admin = false;                     // Admin flag is not supported.
+    config.rename = false;                    // vfs::PseudoDir does not support Rename.
+    config.link = false;                      // Link/Unlink is not supported.
+    config.set_attr = false;                  // SetAttr is not supported.
+    config.get_token = false;                 // GetToken is unsupported.
+    config.conformant_path_handling = false;  // Path handling is currently inconsistent.
 
     // TODO(fxbug.dev/45287): Support ExecFile, and GetBuffer.
-    config.set_no_execfile(true);
-    config.set_no_get_buffer(true);
+    config.exec_file = false;
+    config.get_buffer = false;
 
     callback(std::move(config));
   }

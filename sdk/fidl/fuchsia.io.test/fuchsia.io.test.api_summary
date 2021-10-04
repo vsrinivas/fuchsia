@@ -11,19 +11,19 @@ table fuchsia.io.test/ExecutableFile
 table/member fuchsia.io.test/File.contents vector<uint8>
 table/member fuchsia.io.test/File.name string
 table fuchsia.io.test/File
-table/member fuchsia.io.test/Io1Config.immutable_dir bool
-table/member fuchsia.io.test/Io1Config.immutable_file bool
-table/member fuchsia.io.test/Io1Config.no_admin bool
-table/member fuchsia.io.test/Io1Config.no_execfile bool
-table/member fuchsia.io.test/Io1Config.no_get_buffer bool
-table/member fuchsia.io.test/Io1Config.no_get_token bool
-table/member fuchsia.io.test/Io1Config.no_link bool
-table/member fuchsia.io.test/Io1Config.no_remote_dir bool
-table/member fuchsia.io.test/Io1Config.no_rename bool
-table/member fuchsia.io.test/Io1Config.no_set_attr bool
-table/member fuchsia.io.test/Io1Config.no_vmofile bool
-table/member fuchsia.io.test/Io1Config.non_conformant_path_handling bool
-table fuchsia.io.test/Io1Config
+struct/member fuchsia.io.test/Io1Config.admin bool true
+struct/member fuchsia.io.test/Io1Config.conformant_path_handling bool true
+struct/member fuchsia.io.test/Io1Config.exec_file bool true
+struct/member fuchsia.io.test/Io1Config.get_buffer bool true
+struct/member fuchsia.io.test/Io1Config.get_token bool true
+struct/member fuchsia.io.test/Io1Config.link bool true
+struct/member fuchsia.io.test/Io1Config.mutable_dir bool true
+struct/member fuchsia.io.test/Io1Config.mutable_file bool true
+struct/member fuchsia.io.test/Io1Config.remote_dir bool true
+struct/member fuchsia.io.test/Io1Config.rename bool true
+struct/member fuchsia.io.test/Io1Config.set_attr bool true
+struct/member fuchsia.io.test/Io1Config.vmo_file bool true
+struct fuchsia.io.test/Io1Config
 protocol/member fuchsia.io.test/Io1Harness.GetConfig() -> (fuchsia.io.test/Io1Config config)
 protocol/member fuchsia.io.test/Io1Harness.GetDirectory(fuchsia.io.test/Directory root,uint32 flags,server_end:fuchsia.io/Directory directory_request)
 protocol/member fuchsia.io.test/Io1Harness.GetDirectoryWithRemoteDirectory(fuchsia.io/Directory remote_directory,string name,uint32 flags,server_end:fuchsia.io/Directory directory_request)

@@ -111,24 +111,24 @@ async fn run(mut stream: Io1HarnessRequestStream) -> Result<(), Error> {
     while let Some(request) = stream.try_next().await.context("error running harness server")? {
         let (dir, flags, directory_request) = match request {
             Io1HarnessRequest::GetConfig { responder } => {
-                let config = Io1Config {
-                    immutable_dir: Some(false),
-                    immutable_file: Some(false),
-                    no_vmofile: Some(false),
-                    no_execfile: Some(false),
-                    no_get_buffer: Some(false),
-                    no_rename: Some(false),
+                let mut config = Io1Config {
+                    mutable_dir: true,
+                    mutable_file: true,
+                    vmo_file: true,
+                    exec_file: true,
+                    get_buffer: true,
+                    rename: true,
+                    conformant_path_handling: true,
                     // Link is actually supported, but not using a pseudo filesystem.
-                    no_link: Some(true),
-                    no_remote_dir: Some(false),
-                    no_get_token: Some(false),
+                    link: false,
+                    remote_dir: true,
+                    get_token: true,
                     // TODO(fxbug.dev/72801): SetAttr doesn't seem to work, but should?
-                    no_set_attr: Some(true),
+                    set_attr: false,
                     // Admin is not supported:
-                    no_admin: Some(true),
-                    ..Io1Config::EMPTY
+                    admin: false,
                 };
-                responder.send(config)?;
+                responder.send(&mut config)?;
                 continue;
             }
             Io1HarnessRequest::GetDirectory {
