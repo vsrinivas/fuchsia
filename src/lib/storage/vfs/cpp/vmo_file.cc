@@ -144,6 +144,10 @@ zx_status_t VmoFile::AcquireVmo(zx_rights_t rights, zx::vmo* out_vmo, size_t* ou
 }
 
 zx_status_t VmoFile::DuplicateVmo(zx_rights_t rights, zx::vmo* out_vmo, size_t* out_offset) {
+  // As size changes are currently untracked, we remove WRITE and SET_PROPERTY rights before
+  // duplicating the VMO handle. If this restriction needs to be eased in the future, size
+  // changes need to be tracked accordingly, or a fixed-size child slice should be provided.
+  rights &= ~(ZX_RIGHT_WRITE | ZX_RIGHT_SET_PROPERTY);
   zx_status_t status = zx_handle_duplicate(vmo_handle_, rights, out_vmo->reset_and_get_address());
   if (status != ZX_OK)
     return status;

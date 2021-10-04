@@ -37,6 +37,9 @@ class VmoFile : public Vnode {
     // This mode is significantly more efficient than |CLONE| and |CLONE_COW| and should be
     // preferred when file spans the whole VMO or when the VMO's entire content is safe for clients
     // to read.
+    //
+    // As size changes are currently untracked, all handles given out in this mode will lack
+    // ZX_RIGHT_WRITE and ZX_RIGHT_SET_PROPERTY.
     DUPLICATE,
 
     // The VMO range spanned by the file is cloned on demand, using copy-on-write semantics to

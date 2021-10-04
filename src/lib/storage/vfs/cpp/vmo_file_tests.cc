@@ -384,20 +384,15 @@ TEST(VmoFile, GetNodeInfo) {
     zx::vmo vmo = std::move(memory.vmo);
     EXPECT_NE(abc.get(), vmo.get());
     EXPECT_EQ(GetKoid(abc.get()), GetKoid(vmo.get()));
-    EXPECT_EQ(ZX_RIGHTS_BASIC | ZX_RIGHT_MAP | ZX_RIGHT_READ | ZX_RIGHT_WRITE,
-              GetRights(vmo.get()));
+
+    // As the VmoFile implementation does not currently track size changes, we ensure that the
+    // handle provided in DUPLICATE sharing mode is not writable.
+    EXPECT_EQ(ZX_RIGHTS_BASIC | ZX_RIGHT_MAP | ZX_RIGHT_READ, GetRights(vmo.get()));
     EXPECT_EQ(PAGE_1 - 5u, memory.offset);
     EXPECT_EQ(23u, memory.length);
 
     CheckVmo(vmo, PAGE_1 - 5u, 5u, 'A');
     CheckVmo(vmo, PAGE_1, 18u, 'B');
-
-    FillVmo(vmo, PAGE_1 - 5u, 23u, '!');
-
-    CheckVmo(abc, 0u, zx_system_get_page_size() - 5u, 'A');
-    CheckVmo(abc, PAGE_1 - 5u, 23u, '!');
-    CheckVmo(abc, PAGE_1 + 18u, zx_system_get_page_size() - 18u, 'B');
-    CheckVmo(abc, PAGE_2, zx_system_get_page_size(), 'C');
   }
 
   // sharing = VmoSharing::DUPLICATE, write only
@@ -414,16 +409,11 @@ TEST(VmoFile, GetNodeInfo) {
     zx::vmo vmo = std::move(memory.vmo);
     EXPECT_NE(abc.get(), vmo.get());
     EXPECT_EQ(GetKoid(abc.get()), GetKoid(vmo.get()));
-    EXPECT_EQ(ZX_RIGHTS_BASIC | ZX_RIGHT_MAP | ZX_RIGHT_WRITE, GetRights(vmo.get()));
+    // As the VmoFile implementation does not currently track size changes, we ensure that the
+    // handle provided in DUPLICATE sharing mode is not writable.
+    EXPECT_EQ(ZX_RIGHTS_BASIC | ZX_RIGHT_MAP, GetRights(vmo.get()));
     EXPECT_EQ(PAGE_1 - 5u, memory.offset);
     EXPECT_EQ(23u, memory.length);
-
-    FillVmo(vmo, PAGE_1 - 5u, 23u, '!');
-
-    CheckVmo(abc, 0u, zx_system_get_page_size() - 5u, 'A');
-    CheckVmo(abc, PAGE_1 - 5u, 23u, '!');
-    CheckVmo(abc, PAGE_1 + 18u, zx_system_get_page_size() - 18u, 'B');
-    CheckVmo(abc, PAGE_2, zx_system_get_page_size(), 'C');
   }
 
   // sharing = VmoSharing::CLONE_COW, read only
