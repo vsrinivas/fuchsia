@@ -21,7 +21,7 @@ source_set("factoryfs") {
   public_deps = [
     "//src/lib/storage/vfs/cpp",
     "//src/lib/storage/vfs/cpp/transaction",
-    "//zircon/public/lib/bitmap",
+    "//zircon/system/ulib/bitmap",
     "//zircon/system/ulib/storage/buffer",
     "//zircon/system/ulib/zxc",
   ]

@@ -90,7 +90,7 @@ source_set("mlme") {
     "//src/lib/mundane",
     "//src/lib/timekeeper",
     "//src/lib/timekeeper:system",
-    "//zircon/public/lib/bitmap",
+    "//zircon/system/ulib/bitmap",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/zx",
   ]

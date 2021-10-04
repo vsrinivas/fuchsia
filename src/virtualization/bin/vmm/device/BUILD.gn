@@ -86,7 +86,7 @@ source_set("block") {
     ":device",
     "//sdk/fidl/fuchsia.io",
     "//sdk/lib/syslog/cpp",
-    "//zircon/public/lib/bitmap",
+    "//zircon/system/ulib/bitmap",
     "//zircon/system/ulib/trace",
   ]
 }
