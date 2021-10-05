@@ -4,7 +4,7 @@
 
 use fuchsia_zircon::{self as zx, AsHandleRef, HandleBased};
 use once_cell::sync::OnceCell;
-use parking_lot::RwLock;
+use parking_lot::{Mutex, RwLock};
 use std::ffi::CStr;
 use std::sync::Arc;
 
@@ -42,6 +42,12 @@ pub struct Kernel {
     pub sys_fs: OnceCell<FileSystemHandle>,
     // Owned by selinux.rs
     pub selinux_fs: OnceCell<FileSystemHandle>,
+
+    /// The outgoing directory for the component that is being run. This is used to serve a
+    /// `ViewProvider` on behalf of the component, if the component displays graphics.
+    ///
+    /// Note: This assumes there is only one component running in the Kernel.
+    pub outgoing_dir: Mutex<Option<fidl::Channel>>,
 }
 
 impl Kernel {
@@ -58,6 +64,7 @@ impl Kernel {
             socket_fs: OnceCell::new(),
             sys_fs: OnceCell::new(),
             selinux_fs: OnceCell::new(),
+            outgoing_dir: Mutex::new(None),
         }
     }
 

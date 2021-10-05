@@ -300,6 +300,8 @@ fn start_component(
     }?;
     let mut kernel = Kernel::new(&kernel_name)?;
     kernel.cmdline = cmdline.as_bytes().to_vec();
+    *kernel.outgoing_dir.lock() =
+        start_info.outgoing_dir.map(|server_end| server_end.into_channel());
     let kernel = Arc::new(kernel);
 
     let ns = start_info.ns.ok_or_else(|| anyhow!("Missing namespace"))?;
