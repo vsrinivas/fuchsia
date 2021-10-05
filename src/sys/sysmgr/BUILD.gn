@@ -90,6 +90,10 @@ cfg("router_config") {
   name = "router.config"
 }
 
+cfg("sshd_host_config") {
+  name = "sshd_host.config"
+}
+
 config("update_packages_config") {
   defines = [ "AUTO_UPDATE_PACKAGES" ]
 }

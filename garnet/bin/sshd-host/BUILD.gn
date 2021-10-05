@@ -84,9 +84,3 @@ fuchsia_unittest_package("sshd-host-tests") {
     }
   }
 }
-
-config_data("sysmgr_config") {
-  for_pkg = "sysmgr"
-  sources = [ "services.config" ]
-  outputs = [ "sshd-host-services.config" ]
-}
