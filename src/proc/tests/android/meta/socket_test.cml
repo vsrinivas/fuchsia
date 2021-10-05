@@ -2,6 +2,6 @@
     include: [ "//src/proc/tests/android/gvisor.shard.cml" ],
     program: {
         binary: "/data/tests/socket_test",
-        args: [ "--gunit_filter=-SocketTest.ProtocolInet" ],
+        args: [ "--gunit_filter=-SocketTest.ProtocolInet:SocketTest.UnixSCMRightsOnlyPassedOnce" ],
     },
 }

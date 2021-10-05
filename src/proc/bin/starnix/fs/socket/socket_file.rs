@@ -58,29 +58,29 @@ impl SocketFile {
         task: &Task,
         file: &FileObject,
         data: &[UserBuffer],
-        control_bytes: Option<Vec<u8>>,
+        mut ancillary_data: Option<AncillaryData>,
     ) -> Result<usize, Errno> {
         let requested = UserBuffer::get_total_length(data);
         let mut actual = 0;
         let mut user_buffers = UserBufferIterator::new(data);
-        let mut control_message: Option<AncillaryData> = control_bytes.map(|bytes| bytes.into());
         file.blocking_op(
             task,
             || {
                 let socket = self.socket.lock();
 
-                let bytes_written =
-                    match socket.write(task, &mut user_buffers, &mut control_message) {
-                        Err(e) if e == ENOTCONN && actual > 0 => {
-                            // If the error is ENOTCONN (that is, the write failed because the socket was
-                            // disconnected), then return the amount of bytes that were written before
-                            // the disconnect.
-                            return Ok(actual);
-                        }
-                        result => result,
-                    }?;
+                let bytes_written = match socket.write(task, &mut user_buffers, &mut ancillary_data)
+                {
+                    Err(e) if e == ENOTCONN && actual > 0 => {
+                        // If the error is ENOTCONN (that is, the write failed because the socket was
+                        // disconnected), then return the amount of bytes that were written before
+                        // the disconnect.
+                        return Ok(actual);
+                    }
+                    result => result,
+                }?;
 
                 actual += bytes_written;
+
                 if actual < requested {
                     return error!(EAGAIN);
                 }

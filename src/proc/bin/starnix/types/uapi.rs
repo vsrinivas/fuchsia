@@ -117,6 +117,35 @@ pub const SOCK_DGRAM: u32 = 2;
 pub const SOCK_RAW: u32 = 3;
 pub const SOCK_SEQPACKET: u32 = 5;
 
+pub const SCM_RIGHTS: u32 = 1;
+pub const SCM_CREDENTIALS: u32 = 2;
+pub const SCM_SECURITY: u32 = 3;
+/// The maximum number of bytes that the file descriptor array can occupy.
+pub const SCM_MAX_FD: usize = 253;
+
+pub const MSG_PEEK: u64 = 2;
+pub const MSG_DONTROUTE: u64 = 4;
+pub const MSG_TRYHARD: u64 = 4;
+pub const MSG_CTRUNC: u64 = 8;
+pub const MSG_PROBE: u32 = 0x10;
+pub const MSG_TRUNC: u32 = 0x20;
+pub const MSG_DONTWAIT: u32 = 0x40;
+pub const MSG_EOR: u32 = 0x80;
+pub const MSG_WAITALL: u32 = 0x100;
+pub const MSG_FIN: u32 = 0x200;
+pub const MSG_SYN: u32 = 0x400;
+pub const MSG_CONFIRM: u32 = 0x800;
+pub const MSG_RST: u32 = 0x1000;
+pub const MSG_ERRQUEUE: u32 = 0x2000;
+pub const MSG_NOSIGNAL: u32 = 0x4000;
+pub const MSG_MORE: u32 = 0x8000;
+pub const MSG_WAITFORONE: u32 = 0x10000;
+pub const MSG_BATCH: u32 = 0x40000;
+pub const MSG_FASTOPEN: u32 = 0x20000000;
+pub const MSG_CMSG_CLOEXEC: u32 = 0x40000000;
+pub const MSG_EOF: u32 = MSG_FIN;
+pub const MSG_CMSG_COMPAT: u32 = 0;
+
 #[repr(C)]
 #[derive(Debug, Copy, Clone, AsBytes, FromBytes)]
 pub struct sockaddr_un {
@@ -132,6 +161,14 @@ impl Default for sockaddr_un {
 
 pub type socklen_t = u32;
 
+#[derive(Clone, Debug, Default, PartialEq, AsBytes, FromBytes)]
+#[repr(C)]
+pub struct ucred {
+    pid: pid_t,
+    uid: uid_t,
+    gid: gid_t,
+}
+
 #[derive(Debug, Default, Clone, AsBytes, FromBytes)]
 #[repr(C)]
 pub struct msghdr {
@@ -140,8 +177,35 @@ pub struct msghdr {
     pub msg_iov: UserAddress,
     pub msg_iovlen: u64,
     pub msg_control: UserAddress,
-    pub msg_controllen: u64,
+    pub msg_controllen: usize,
     pub msg_flags: u64,
+}
+
+#[derive(AsBytes, FromBytes)]
+#[repr(packed)]
+pub struct cmsghdr {
+    pub cmsg_len: usize,
+    pub cmsg_level: u32,
+    pub cmsg_type: u32,
+    pub cmsg_data: [u8; SCM_MAX_FD * 4],
+}
+
+impl cmsghdr {
+    /// The header length (i.e., the length of the fixed fields in the struct).
+    pub fn header_length() -> usize {
+        std::mem::size_of::<u32>() * 2 + std::mem::size_of::<usize>()
+    }
+
+    /// Returns the length of the data contained in this control message (excluding header length).
+    pub fn data_length(&self) -> usize {
+        self.cmsg_len - cmsghdr::header_length()
+    }
+}
+
+impl Default for cmsghdr {
+    fn default() -> Self {
+        cmsghdr { cmsg_len: 0, cmsg_level: 0, cmsg_type: 0, cmsg_data: [0u8; SCM_MAX_FD * 4] }
+    }
 }
 
 pub const EFD_CLOEXEC: u32 = O_CLOEXEC;

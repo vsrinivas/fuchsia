@@ -5,10 +5,12 @@
 use fuchsia_cprng::cprng_draw;
 use std::convert::TryInto;
 use std::sync::Arc;
+use zerocopy::AsBytes;
 
 use super::*;
 use crate::errno;
 use crate::error;
+use crate::fs::buffers::*;
 use crate::fs::*;
 use crate::mode;
 use crate::not_implemented;
@@ -337,12 +339,33 @@ pub fn sys_recvmsg(
 
     let iovec = ctx.task.mm.read_iovec(message_header.msg_iov, message_header.msg_iovlen as i32)?;
     let socket_ops = file.downcast_file::<SocketFile>().unwrap();
-    let (bytes_read, _address, control) = socket_ops.recvmsg(ctx.task, &file, &iovec)?;
+    let (bytes_read, _address, ancillary_data) = socket_ops.recvmsg(ctx.task, &file, &iovec)?;
 
-    if let Some(control) = control {
-        let max_bytes = std::cmp::min(control.len(), message_header.msg_controllen as usize);
-        ctx.task.mm.write_memory(message_header.msg_control, &control.bytes()[..max_bytes])?;
-        message_header.msg_controllen = max_bytes as u64;
+    if let Some(ancillary_data) = ancillary_data {
+        let mut num_bytes_to_write = message_header.msg_controllen as usize;
+        if !ancillary_data.can_fit_all_data(num_bytes_to_write) {
+            // If not all data can fit, set the MSG_CTRUNC flag.
+            message_header.msg_flags = MSG_CTRUNC;
+            if !ancillary_data.can_fit_any_data(num_bytes_to_write) {
+                // If the length is not large enough to fit any real data, set the number of bytes
+                // to write to 0.
+                num_bytes_to_write = 0;
+            }
+        }
+
+        let mut control_message_header = ancillary_data.into_cmsghdr(ctx.task)?;
+
+        // Cap the number of bytes to write at the actual length of the control message.
+        num_bytes_to_write = std::cmp::min(num_bytes_to_write, control_message_header.cmsg_len);
+        // Set the cmsg_len to the actual number of bytes written.
+        control_message_header.cmsg_len = num_bytes_to_write;
+
+        ctx.task.mm.write_memory(
+            message_header.msg_control,
+            &control_message_header.as_bytes()[..num_bytes_to_write],
+        )?;
+
+        message_header.msg_controllen = num_bytes_to_write;
     } else {
         // If there is no control message, make sure to clear the length.
         message_header.msg_controllen = 0;
@@ -406,17 +429,20 @@ pub fn sys_sendmsg(
 
     let mut message_header = msghdr::default();
     ctx.task.mm.read_object(user_message_header, &mut message_header)?;
-    let control = if message_header.msg_controllen > 0 {
-        let mut bytes = vec![0u8; message_header.msg_controllen as usize];
-        ctx.task.mm.read_memory(message_header.msg_control, &mut bytes)?;
-        Some(bytes)
+
+    let ancillary_data = if message_header.msg_controllen > 0 {
+        let mut control_message_header = cmsghdr::default();
+        ctx.task
+            .mm
+            .read_object(UserRef::new(message_header.msg_control), &mut control_message_header)?;
+        Some(AncillaryData::new(ctx.task, control_message_header)?)
     } else {
         None
     };
 
     let iovec = ctx.task.mm.read_iovec(message_header.msg_iov, message_header.msg_iovlen as i32)?;
     let socket_ops = file.downcast_file::<SocketFile>().unwrap();
-    let bytes_sent = socket_ops.sendmsg(ctx.task, &file, &iovec, control)?;
+    let bytes_sent = socket_ops.sendmsg(ctx.task, &file, &iovec, ancillary_data)?;
     Ok(bytes_sent.into())
 }
 
