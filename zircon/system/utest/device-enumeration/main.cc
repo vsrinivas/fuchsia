@@ -11,6 +11,7 @@
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
+#include <lib/stdcompat/span.h>
 #include <stdlib.h>
 #include <unistd.h>
 #include <zircon/status.h>
@@ -18,7 +19,6 @@
 #include <iterator>
 
 #include <fbl/algorithm.h>
-#include <fbl/span.h>
 #include <fbl/string.h>
 #include <fbl/unique_fd.h>
 #include <zxtest/base/log-sink.h>
@@ -58,7 +58,7 @@ void RecursiveWaitFor(std::string full_path, size_t slash_index, fit::function<v
       }));
 }
 
-void WaitForOne(fbl::Span<const char*> device_paths) {
+void WaitForOne(cpp20::span<const char*> device_paths) {
   async::Loop loop = async::Loop(&kAsyncLoopConfigAttachToCurrentThread);
 
   std::vector<std::unique_ptr<fsl::DeviceWatcher>> watchers;
@@ -310,7 +310,7 @@ TEST_F(DeviceEnumerationTest, AstroTest) {
       "ft3x27-touch/focaltouch HidDevice/hid-device-000",
   };
   ASSERT_NO_FATAL_FAILURES(
-      WaitForOne(fbl::Span(kTouchscreenDevicePaths, std::size(kTouchscreenDevicePaths))));
+      WaitForOne(cpp20::span(kTouchscreenDevicePaths, std::size(kTouchscreenDevicePaths))));
 }
 
 TEST_F(DeviceEnumerationTest, NelsonTest) {

@@ -20,7 +20,6 @@
 #include <string_view>
 
 #include <fbl/array.h>
-#include <fbl/span.h>
 #include <fbl/unique_fd.h>
 
 namespace device_enumeration {

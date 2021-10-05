@@ -3,6 +3,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <lib/stdcompat/span.h>
 #include <lib/test-exceptions/exception-catcher.h>
 #include <lib/test-exceptions/exception-handling.h>
 #include <lib/zx/clock.h>
@@ -23,7 +24,6 @@
 
 #include <atomic>
 
-#include <fbl/span.h>
 #include <mini-process/mini-process.h>
 #include <runtime/thread.h>
 #include <zxtest/zxtest.h>
@@ -192,7 +192,7 @@ static bool start_thread(zxr_thread_entry_t entry, void* arg, zxr_thread_t* thre
 
 // Wait until |thread| is in one of the specified |states|.
 // We wait forever and let Unittest's watchdog handle errors.
-static void wait_thread_state(zx_handle_t thread, fbl::Span<zx_thread_state_t> states) {
+static void wait_thread_state(zx_handle_t thread, cpp20::span<zx_thread_state_t> states) {
   while (true) {
     zx_info_thread_t info;
     ASSERT_TRUE(get_thread_info(thread, &info));
@@ -208,7 +208,7 @@ static void wait_thread_state(zx_handle_t thread, fbl::Span<zx_thread_state_t> s
 // Wait for |thread| to enter blocked state |reason|.
 // We wait forever and let Unittest's watchdog handle errors.
 static void wait_thread_blocked(zx_handle_t thread, zx_thread_state_t reason) {
-  wait_thread_state(thread, fbl::Span(&reason, 1));
+  wait_thread_state(thread, cpp20::span(&reason, 1));
 }
 
 static bool CpuMaskBitSet(const zx_cpu_set_t& set, uint32_t i) {
@@ -556,7 +556,7 @@ TEST(Threads, SuspendSleeping) {
       ZX_THREAD_STATE_DYING,
       ZX_THREAD_STATE_DEAD,
   };
-  wait_thread_state(thread_h, fbl::Span(states));
+  wait_thread_state(thread_h, cpp20::span(states));
 
   // Suspend the thread.
   zx_handle_t suspend_token = ZX_HANDLE_INVALID;
