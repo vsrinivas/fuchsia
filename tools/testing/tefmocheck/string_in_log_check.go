@@ -192,6 +192,12 @@ func StringInLogsChecks() []FailureModeCheck {
 		&stringInLogCheck{String: "/dev/net/tun (qemu): Device or resource busy", Type: swarmingOutputType},
 		// For fxbug.dev/85596
 		&stringInLogCheck{String: "connect: no route to host", Type: swarmingOutputType},
+		// For fxbug.dev/85875
+		// This is printed by Swarming after a Swarming task's command completes, and
+		// suggests that a test leaked a subprocess that modified one of the task's
+		// output files after the task's command completed but before Swarming finished
+		// uploading outputs.
+		&stringInLogCheck{String: "error: blob size changed while uploading", Type: swarmingOutputType},
 		// For fxbug.dev/53854.
 		driverHostCrash("composite-device", ""),
 		driverHostCrash("pci", ""),
