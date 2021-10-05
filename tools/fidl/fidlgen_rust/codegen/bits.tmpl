@@ -1,10 +1,9 @@
+{{/*
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
+*/}}
 
-package codegen
-
-const bitsTmpl = `
 {{- define "BitsDeclaration" -}}
 bitflags! {
 	{{- range .DocComments}}
@@ -22,13 +21,13 @@ bitflags! {
 
 impl {{ .Name }} {
 {{- if .IsStrict }}
-	#[deprecated = "Strict bits should not use {{ Backtick }}has_unknown_bits{{ Backtick }}"]
+	#[deprecated = "Strict bits should not use `has_unknown_bits`"]
 	#[inline(always)]
 	pub fn has_unknown_bits(&self) -> bool {
 		false
 	}
 
-	#[deprecated = "Strict bits should not use {{ Backtick }}get_unknown_bits{{ Backtick }}"]
+	#[deprecated = "Strict bits should not use `get_unknown_bits`"]
 	#[inline(always)]
 	pub fn get_unknown_bits(&self) -> {{ .Type }} {
 		0
@@ -61,4 +60,4 @@ fidl_bits! {
 	{{- end }}
 }
 {{ end }}
-`
+

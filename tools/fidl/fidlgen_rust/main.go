@@ -64,9 +64,9 @@ func main() {
 		log.Fatal(err)
 	}
 
-	generator := codegen.NewGenerator()
+	generator := codegen.NewGenerator(*flags.rustfmtPath, *flags.rustfmtConfigPath)
 	err = generator.GenerateFidl(
-		root, *flags.outputFilenamePath, *flags.rustfmtPath, *flags.rustfmtConfigPath)
+		root, *flags.outputFilenamePath)
 	if err != nil {
 		log.Fatalf("Error running generator: %v", err)
 	}

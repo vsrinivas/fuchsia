@@ -1,10 +1,9 @@
+{{/*
 // Copyright 2018 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
+*/}}
 
-package codegen
-
-const tableTmpl = `
 {{- define "TableDeclaration" }}
 {{- range .DocComments}}
 ///{{ . }}
@@ -18,9 +17,9 @@ pub struct {{ .Name }} {
 	pub {{ .Name }}: Option<{{ .Type }}>,
 	{{- end }}
 	/// (FIDL-generated) Unknown fields encountered during decoding, stored as a
-	/// map from ordinals to raw data. The {{ Backtick }}Some{{ Backtick }} case is always nonempty.
+	/// map from ordinals to raw data. The `Some` case is always nonempty.
 	pub unknown_data: Option<std::collections::BTreeMap<u64, {{ if .IsResourceType }}fidl::UnknownData{{ else }}Vec<u8>{{ end }}>>,
-	#[deprecated = "Use {{ Backtick }}..{{ .Name }}::EMPTY{{ Backtick }} to construct and {{ Backtick }}..{{ Backtick }} to match."]
+	#[deprecated = "Use `..{{ .Name }}::EMPTY` to construct and `..` to match."]
 	#[doc(hidden)]
 	pub __non_exhaustive: (),
 }
@@ -39,7 +38,7 @@ impl {{ .Name }} {
 		tables because overwiting heap allocated values (even when wrapped in
 		Option<_> and set to None) will first drop them, which is not const.
 	*/}}
-	/// An empty table with every field set to {{ Backtick }}None{{ Backtick }}.
+	/// An empty table with every field set to `None`.
 	#[allow(deprecated)]
 	pub const EMPTY: Self = Self {
 		{{- range .Members }}
@@ -73,4 +72,4 @@ fidl_table! {
 	{{ if .IsResourceType }}resource{{ else }}value{{ end }}_unknown_member: unknown_data,
 }
 {{ end }}
-`
+

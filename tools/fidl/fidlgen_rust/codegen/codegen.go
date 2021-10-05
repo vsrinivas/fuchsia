@@ -5,67 +5,28 @@
 package codegen
 
 import (
-	"io"
-	"os"
-	"path/filepath"
+	"embed"
 	"text/template"
 
 	"go.fuchsia.dev/fuchsia/tools/fidl/lib/fidlgen"
 )
 
-type Generator struct {
-	tmpls *template.Template
-}
+//go:embed *.tmpl
+var templates embed.FS
 
-func NewGenerator() *Generator {
-	tmpls := template.New("RustTemplates")
-	tmpls.Funcs(template.FuncMap{
-		"Backtick": func() string { return "`" },
-	})
-	template.Must(tmpls.Parse(sourceFileTmpl))
-	template.Must(tmpls.Parse(bitsTmpl))
-	template.Must(tmpls.Parse(constTmpl))
-	template.Must(tmpls.Parse(enumTmpl))
-	template.Must(tmpls.Parse(protocolTmpl))
-	template.Must(tmpls.Parse(handleMetadataWrapperTmpl))
-	template.Must(tmpls.Parse(serviceTmpl))
-	template.Must(tmpls.Parse(structTmpl))
-	template.Must(tmpls.Parse(unionTmpl))
-	template.Must(tmpls.Parse(tableTmpl))
-	template.Must(tmpls.Parse(resultTmpl))
-	template.Must(tmpls.Parse(bitsTmpl))
-	return &Generator{
-		tmpls: tmpls,
-	}
-}
+type Generator struct{ *fidlgen.Generator }
 
-func (gen *Generator) GenerateImpl(wr io.Writer, tree Root) error {
-	return gen.tmpls.ExecuteTemplate(wr, "GenerateSourceFile", tree)
-}
-
-func (gen *Generator) GenerateFidl(ir fidlgen.Root, outputFilename, rustfmtPath, rustfmtConfigPath string) error {
-	tree := Compile(ir)
-	if err := os.MkdirAll(filepath.Dir(outputFilename), os.ModePerm); err != nil {
-		return err
-	}
-
-	generated, err := fidlgen.NewLazyWriter(outputFilename)
-	if err != nil {
-		return err
-	}
-
+func NewGenerator(rustfmtPath, rustfmtConfigPath string) *Generator {
 	var args []string
 	if rustfmtConfigPath != "" {
 		args = append(args, "--config-path", rustfmtConfigPath)
 	}
-	generatedPipe, err := fidlgen.NewFormatter(rustfmtPath, args...).FormatPipe(generated)
-	if err != nil {
-		return err
-	}
+	formatter := fidlgen.NewFormatter(rustfmtPath, args...)
 
-	if err := gen.GenerateImpl(generatedPipe, tree); err != nil {
-		return err
-	}
+	return &Generator{fidlgen.NewGenerator("RustTemplates", templates, formatter, template.FuncMap{})}
+}
 
-	return generatedPipe.Close()
+func (gen *Generator) GenerateFidl(ir fidlgen.Root, outputFilename string) error {
+	tree := Compile(ir)
+	return gen.GenerateFile(outputFilename, "GenerateSourceFile", tree)
 }

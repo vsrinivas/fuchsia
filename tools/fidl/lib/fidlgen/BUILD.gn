@@ -9,6 +9,7 @@ import("//tools/fidl/lib/fidlgentest/fidlgentest_go_test.gni")
 go_library("fidlgen") {
   sources = [
     "formatter.go",
+    "generator.go",
     "identifiers.go",
     "lazywriter.go",
     "names.go",

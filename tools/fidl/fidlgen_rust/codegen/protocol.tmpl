@@ -1,10 +1,9 @@
+{{/*
 // Copyright 2018 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
+*/}}
 
-package codegen
-
-const protocolTmpl = `
 {{- define "ResponseType" -}}
 {{ if .Result }}
 {{ .Result.Name }}HandleWrapper
@@ -893,9 +892,9 @@ pub struct {{ $protocol.Name }}{{ $method.CamelName }}Responder {
 	ordinal: u64,
 }
 
-/// Set the the channel to be shutdown (see [{{ Backtick }}{{ $protocol.Name }}ControlHandle::shutdown{{ Backtick }}])
+/// Set the the channel to be shutdown (see [`{{ $protocol.Name }}ControlHandle::shutdown`])
 /// if the responder is dropped without sending a response, so that the client
-/// doesn't hang. To prevent this behavior, call {{ Backtick }}drop_without_shutdown{{ Backtick }}.
+/// doesn't hang. To prevent this behavior, call `drop_without_shutdown`.
 impl std::ops::Drop for {{ $protocol.Name }}{{ $method.CamelName }}Responder {
 	fn drop(&mut self) {
 		self.control_handle.shutdown();
@@ -1019,4 +1018,4 @@ impl {{ $protocol.Name }}{{ $method.CamelName }}Responder {
 {{- end -}}
 {{- end -}}
 {{- end -}}
-`
+
