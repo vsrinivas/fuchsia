@@ -381,7 +381,6 @@ static zx_status_t handle_data_abort(uint32_t iss, GuestState* guest_state,
       if (data_abort.read) {
         return ZX_ERR_NOT_SUPPORTED;
       }
-      *packet = {};
       packet->key = trap->key();
       packet->type = ZX_PKT_TYPE_GUEST_BELL;
       packet->guest_bell.addr = guest_paddr;
@@ -393,7 +392,6 @@ static zx_status_t handle_data_abort(uint32_t iss, GuestState* guest_state,
       if (!data_abort.valid) {
         return ZX_ERR_IO_DATA_INTEGRITY;
       }
-      *packet = {};
       packet->key = trap->key();
       packet->type = ZX_PKT_TYPE_GUEST_MEM;
       packet->guest_mem.addr = guest_paddr;
@@ -490,7 +488,8 @@ zx_status_t vmexit_handler(uint64_t* hcr, GuestState* guest_state, GichState* gi
     case ZX_ERR_NEXT:
     case ZX_ERR_STOP:
     case ZX_ERR_UNAVAILABLE:
-    case ZX_ERR_CANCELED:
+    case ZX_ERR_INTERNAL_INTR_RETRY:
+    case ZX_ERR_INTERNAL_INTR_KILLED:
       break;
     default:
       dprintf(CRITICAL, "VM exit handler for %u (%s) in EL%u at %#lx returned %d\n",

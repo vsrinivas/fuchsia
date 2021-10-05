@@ -51,6 +51,11 @@ zx_status_t VcpuDispatcher::Enter(zx_port_packet_t* packet) {
   return vcpu_->Enter(packet);
 }
 
+void VcpuDispatcher::Kick() {
+  canary_.Assert();
+  vcpu_->Kick();
+}
+
 void VcpuDispatcher::PhysicalInterrupt(uint32_t vector) {
   canary_.Assert();
   vcpu_->Interrupt(vector, hypervisor::InterruptType::PHYSICAL);
@@ -74,4 +79,9 @@ zx_status_t VcpuDispatcher::WriteState(const zx_vcpu_state_t& vcpu_state) {
 zx_status_t VcpuDispatcher::WriteState(const zx_vcpu_io_t& io_state) {
   canary_.Assert();
   return vcpu_->WriteState(io_state);
+}
+
+void VcpuDispatcher::GetInfo(zx_info_vcpu_t* info) {
+  canary_.Assert();
+  vcpu_->GetInfo(info);
 }

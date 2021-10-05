@@ -34,6 +34,7 @@
 #include <object/stream_dispatcher.h>
 #include <object/thread_dispatcher.h>
 #include <object/timer_dispatcher.h>
+#include <object/vcpu_dispatcher.h>
 #include <object/vm_address_region_dispatcher.h>
 #include <object/vm_object_dispatcher.h>
 #include <vm/pmm.h>
@@ -919,6 +920,20 @@ zx_status_t sys_object_get_info(zx_handle_t handle, uint32_t topic, user_out_ptr
 
       zx_info_msi_t info = {};
       allocation->GetInfo(&info);
+
+      return single_record_result(_buffer, buffer_size, _actual, _avail, info);
+    }
+
+    case ZX_INFO_VCPU: {
+      fbl::RefPtr<VcpuDispatcher> vcpu;
+      zx_status_t status =
+          up->handle_table().GetDispatcherWithRights(handle, ZX_RIGHT_INSPECT, &vcpu);
+      if (status != ZX_OK) {
+        return status;
+      }
+
+      zx_info_vcpu_t info = {};
+      vcpu->GetInfo(&info);
 
       return single_record_result(_buffer, buffer_size, _actual, _avail, info);
     }

@@ -1,10 +1,10 @@
-# zx_vcpu_interrupt
+# zx_vcpu_kick
 
 ## NAME
 
 <!-- Contents of this heading updated by update-docs-from-fidl, do not edit. -->
 
-Raise an interrupt on a VCPU.
+Kick a VCPU, causing it to stop execution.
 
 ## SYNOPSIS
 
@@ -13,33 +13,33 @@ Raise an interrupt on a VCPU.
 ```c
 #include <zircon/syscalls.h>
 
-zx_status_t zx_vcpu_interrupt(zx_handle_t handle, uint32_t vector);
+zx_status_t zx_vcpu_kick(zx_handle_t handle);
 ```
 
 ## DESCRIPTION
 
-`zx_vcpu_interrupt()` raises an interrupt of *vector* on *handle*, and may be
-called from any thread.
+`zx_vcpu_kick()` forces the current or next execution of `zx_vcpu_enter()` on
+*handle* to return immediately with **ZX_ERR_CANCELED**.
+
+`zx_vcpu_kick()` may be called multiple times on *handle*, but will only affect
+the current or next execution of `zx_vcpu_enter()`.
 
 ## RIGHTS
 
 <!-- Contents of this heading updated by update-docs-from-fidl, do not edit. -->
 
-*handle* must be of type **ZX_OBJ_TYPE_VCPU** and have **ZX_RIGHT_SIGNAL**.
+*handle* must be of type **ZX_OBJ_TYPE_VCPU** and have **ZX_RIGHT_EXECUTE**.
 
 ## RETURN VALUE
 
-`zx_vcpu_interrupt()` returns **ZX_OK** on success. On failure, an error value is
+`zx_vcpu_kick()` returns **ZX_OK** on success. On failure, an error value is
 returned.
 
 ## ERRORS
 
-**ZX_ERR_ACCESS_DENIED** *handle* does not have the **ZX_RIGHT_SIGNAL** right.
+**ZX_ERR_ACCESS_DENIED** *handle* does not have the **ZX_RIGHT_EXECUTE** right.
 
 **ZX_ERR_BAD_HANDLE** *handle* is an invalid handle.
-
-**ZX_ERR_OUT_OF_RANGE** *vector* is outside of the range interrupts supported by
-the current architecture.
 
 **ZX_ERR_WRONG_TYPE** *handle* is not a handle to a VCPU.
 
@@ -49,7 +49,7 @@ the current architecture.
  - [`zx_guest_set_trap()`]
  - [`zx_vcpu_create()`]
  - [`zx_vcpu_enter()`]
- - [`zx_vcpu_kick()`]
+ - [`zx_vcpu_interrupt()`]
  - [`zx_vcpu_read_state()`]
  - [`zx_vcpu_write_state()`]
 
@@ -59,6 +59,6 @@ the current architecture.
 [`zx_guest_set_trap()`]: guest_set_trap.md
 [`zx_vcpu_create()`]: vcpu_create.md
 [`zx_vcpu_enter()`]: vcpu_enter.md
-[`zx_vcpu_kick()`]: vcpu_kick.md
+[`zx_vcpu_interrupt()`]: vcpu_interrupt.md
 [`zx_vcpu_read_state()`]: vcpu_read_state.md
 [`zx_vcpu_write_state()`]: vcpu_write_state.md

@@ -147,6 +147,7 @@
 ## Virtual CPUs
 + [vcpu_create](vcpu_create.md) - create a VCPU
 + [vcpu_enter](vcpu_enter.md) - enter a VCPU, and start or continue execution
++ [vcpu_kick](vcpu_kick.md) - kick a VCPU, and stop execution
 + [vcpu_interrupt](vcpu_interrupt.md) - raise an interrupt on a VCPU
 + [vcpu_read_state](vcpu_read_state.md) - read state from a VCPU
 + [vcpu_write_state](vcpu_write_state.md) - write state to a VCPU

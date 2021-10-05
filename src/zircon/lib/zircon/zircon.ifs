@@ -168,6 +168,7 @@ Symbols:
   - { Name: _zx_vcpu_create, Type: Func }
   - { Name: _zx_vcpu_enter, Type: Func }
   - { Name: _zx_vcpu_interrupt, Type: Func }
+  - { Name: _zx_vcpu_kick, Type: Func }
   - { Name: _zx_vcpu_read_state, Type: Func }
   - { Name: _zx_vcpu_write_state, Type: Func }
   - { Name: _zx_vmar_allocate, Type: Func }
@@ -354,6 +355,7 @@ Symbols:
   - { Name: zx_vcpu_create, Type: Func, Weak: true }
   - { Name: zx_vcpu_enter, Type: Func, Weak: true }
   - { Name: zx_vcpu_interrupt, Type: Func, Weak: true }
+  - { Name: zx_vcpu_kick, Type: Func, Weak: true }
   - { Name: zx_vcpu_read_state, Type: Func, Weak: true }
   - { Name: zx_vcpu_write_state, Type: Func, Weak: true }
   - { Name: zx_vmar_allocate, Type: Func, Weak: true }

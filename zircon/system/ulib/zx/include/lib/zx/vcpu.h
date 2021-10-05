@@ -33,6 +33,8 @@ class vcpu final : public object<vcpu> {
 
   zx_status_t enter(zx_port_packet_t* packet) const { return zx_vcpu_enter(get(), packet); }
 
+  zx_status_t kick() const { return zx_vcpu_kick(get()); }
+
   zx_status_t interrupt(uint32_t interrupt) const { return zx_vcpu_interrupt(get(), interrupt); }
 
   zx_status_t read_state(uint32_t kind, void* buf, size_t len) const {

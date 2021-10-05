@@ -65,6 +65,7 @@ executing *handle*.
  - [`zx_guest_create()`]
  - [`zx_guest_set_trap()`]
  - [`zx_vcpu_create()`]
+ - [`zx_vcpu_kick()`]
  - [`zx_vcpu_interrupt()`]
  - [`zx_vcpu_read_state()`]
  - [`zx_vcpu_write_state()`]
@@ -74,6 +75,7 @@ executing *handle*.
 [`zx_guest_create()`]: guest_create.md
 [`zx_guest_set_trap()`]: guest_set_trap.md
 [`zx_vcpu_create()`]: vcpu_create.md
+[`zx_vcpu_kick()`]: vcpu_kick.md
 [`zx_vcpu_interrupt()`]: vcpu_interrupt.md
 [`zx_vcpu_read_state()`]: vcpu_read_state.md
 [`zx_vcpu_write_state()`]: vcpu_write_state.md

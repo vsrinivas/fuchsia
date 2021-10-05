@@ -20,6 +20,7 @@
 namespace {
 
 DECLARE_TEST_FUNCTION(vcpu_enter)
+DECLARE_TEST_FUNCTION(vcpu_wait)
 DECLARE_TEST_FUNCTION(vcpu_always_exit)
 DECLARE_TEST_FUNCTION(guest_set_trap)
 
@@ -28,6 +29,25 @@ TEST(Guest, VcpuEnter) {
   ASSERT_NO_FATAL_FAILURE(SetupGuest(&test, vcpu_enter_start, vcpu_enter_end));
 
   ASSERT_NO_FATAL_FAILURE(EnterAndCleanExit(&test));
+}
+
+TEST(Guest, VcpuKick) {
+  TestCase test;
+  std::promise<void> barrier;
+  auto future = barrier.get_future();
+
+  // Create and run a VCPU on a different thread.
+  std::thread thread([&test, barrier = std::move(barrier)]() mutable {
+    ASSERT_NO_FATAL_FAILURE(SetupGuest(&test, vcpu_wait_start, vcpu_wait_end));
+    barrier.set_value();
+    zx_port_packet_t packet = {};
+    ASSERT_EQ(test.vcpu.enter(&packet), ZX_ERR_CANCELED);
+  });
+
+  future.wait();
+
+  ASSERT_EQ(test.vcpu.kick(), ZX_OK);
+  thread.join();
 }
 
 TEST(Guest, VcpuInvalidThreadReuse) {

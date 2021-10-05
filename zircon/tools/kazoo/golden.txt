@@ -871,6 +871,10 @@ TEXT ·Sys_vcpu_create(SB),NOSPLIT,$0
 TEXT ·Sys_vcpu_enter(SB),NOSPLIT,$0
 	JMP runtime·vdsoCall_zx_vcpu_enter(SB)
 
+// func Sys_vcpu_kick(handle Handle) Status
+TEXT ·Sys_vcpu_kick(SB),NOSPLIT,$0
+	JMP runtime·vdsoCall_zx_vcpu_kick(SB)
+
 // func Sys_vcpu_interrupt(handle Handle, vector uint32) Status
 TEXT ·Sys_vcpu_interrupt(SB),NOSPLIT,$0
 	JMP runtime·vdsoCall_zx_vcpu_interrupt(SB)
@@ -1647,6 +1651,10 @@ func Sys_vcpu_enter(handle Handle, packet *int) Status
 
 //go:noescape
 //go:nosplit
+func Sys_vcpu_kick(handle Handle) Status
+
+//go:noescape
+//go:nosplit
 func Sys_vcpu_interrupt(handle Handle, vector uint32) Status
 
 //go:noescape
@@ -2416,6 +2424,10 @@ TEXT ·Sys_vcpu_create(SB),NOSPLIT,$0
 // func Sys_vcpu_enter(handle Handle, packet *int) Status
 TEXT ·Sys_vcpu_enter(SB),NOSPLIT,$0
 	JMP runtime·vdsoCall_zx_vcpu_enter(SB)
+
+// func Sys_vcpu_kick(handle Handle) Status
+TEXT ·Sys_vcpu_kick(SB),NOSPLIT,$0
+	JMP runtime·vdsoCall_zx_vcpu_kick(SB)
 
 // func Sys_vcpu_interrupt(handle Handle, vector uint32) Status
 TEXT ·Sys_vcpu_interrupt(SB),NOSPLIT,$0
@@ -5664,6 +5676,22 @@ TEXT runtime·vdsoCall_zx_vcpu_enter(SB),NOSPLIT,$0-20
 	MOVD $0, m_vdsoSP(R21)
 	RET
 
+// func vdsoCall_zx_vcpu_kick(handle uint32) int32
+TEXT runtime·vdsoCall_zx_vcpu_kick(SB),NOSPLIT,$0-12
+	GO_ARGS
+	NO_LOCAL_POINTERS
+	MOVD g_m(g), R21
+	MOVD LR, m_vdsoPC(R21)
+	DMB $0xe
+	MOVD RSP, R20
+	MOVD R20, m_vdsoSP(R21)
+	MOVW handle+0(FP), R0
+	BL vdso_zx_vcpu_kick(SB)
+	MOVW R0, ret+8(FP)
+	MOVD g_m(g), R21
+	MOVD $0, m_vdsoSP(R21)
+	RET
+
 // func vdsoCall_zx_vcpu_interrupt(handle uint32, vector uint32) int32
 TEXT runtime·vdsoCall_zx_vcpu_interrupt(SB),NOSPLIT,$0-12
 	GO_ARGS
@@ -6237,6 +6265,7 @@ var vdsoSymbolKeys = []vdsoSymbolKey{
 	{"_zx_timer_cancel", 0x9308c91b, &vdso_zx_timer_cancel},
 	{"_zx_vcpu_create", 0x458b1fc6, &vdso_zx_vcpu_create},
 	{"_zx_vcpu_enter", 0xa5267710, &vdso_zx_vcpu_enter},
+	{"_zx_vcpu_kick", 0xcc64db4, &vdso_zx_vcpu_kick},
 	{"_zx_vcpu_interrupt", 0x4ddc6df, &vdso_zx_vcpu_interrupt},
 	{"_zx_vcpu_read_state", 0xaa78032e, &vdso_zx_vcpu_read_state},
 	{"_zx_vcpu_write_state", 0xd0006c1d, &vdso_zx_vcpu_write_state},
@@ -6429,6 +6458,7 @@ var vdsoSymbolKeys = []vdsoSymbolKey{
 //go:cgo_import_dynamic vdso_zx_timer_cancel zx_timer_cancel
 //go:cgo_import_dynamic vdso_zx_vcpu_create zx_vcpu_create
 //go:cgo_import_dynamic vdso_zx_vcpu_enter zx_vcpu_enter
+//go:cgo_import_dynamic vdso_zx_vcpu_kick zx_vcpu_kick
 //go:cgo_import_dynamic vdso_zx_vcpu_interrupt zx_vcpu_interrupt
 //go:cgo_import_dynamic vdso_zx_vcpu_read_state zx_vcpu_read_state
 //go:cgo_import_dynamic vdso_zx_vcpu_write_state zx_vcpu_write_state
@@ -6620,6 +6650,7 @@ var vdsoSymbolKeys = []vdsoSymbolKey{
 //go:linkname vdso_zx_timer_cancel vdso_zx_timer_cancel
 //go:linkname vdso_zx_vcpu_create vdso_zx_vcpu_create
 //go:linkname vdso_zx_vcpu_enter vdso_zx_vcpu_enter
+//go:linkname vdso_zx_vcpu_kick vdso_zx_vcpu_kick
 //go:linkname vdso_zx_vcpu_interrupt vdso_zx_vcpu_interrupt
 //go:linkname vdso_zx_vcpu_read_state vdso_zx_vcpu_read_state
 //go:linkname vdso_zx_vcpu_write_state vdso_zx_vcpu_write_state
@@ -7323,6 +7354,10 @@ func vdsoCall_zx_vcpu_enter(handle uint32, packet unsafe.Pointer) int32
 
 //go:noescape
 //go:nosplit
+func vdsoCall_zx_vcpu_kick(handle uint32) int32
+
+//go:noescape
+//go:nosplit
 func vdsoCall_zx_vcpu_interrupt(handle uint32, vector uint32) int32
 
 //go:noescape
@@ -7572,6 +7607,7 @@ var (
 	vdso_zx_timer_cancel uintptr
 	vdso_zx_vcpu_create uintptr
 	vdso_zx_vcpu_enter uintptr
+	vdso_zx_vcpu_kick uintptr
 	vdso_zx_vcpu_interrupt uintptr
 	vdso_zx_vcpu_read_state uintptr
 	vdso_zx_vcpu_write_state uintptr
@@ -11486,6 +11522,26 @@ TEXT runtime·vdsoCall_zx_vcpu_enter(SB),NOSPLIT,$8-20
 	CALL AX
 	MOVL AX, ret+16(FP)
 	CALL runtime·exitsyscall(SB)
+	POPQ R14
+	MOVQ $0, m_vdsoSP(R14)
+	RET
+
+// func vdsoCall_zx_vcpu_kick(handle uint32) int32
+TEXT runtime·vdsoCall_zx_vcpu_kick(SB),NOSPLIT,$8-12
+	GO_ARGS
+	NO_LOCAL_POINTERS
+	get_tls(CX)
+	MOVQ g(CX), AX
+	MOVQ g_m(AX), R14
+	PUSHQ R14
+	MOVQ 24(SP), DX
+	MOVQ DX, m_vdsoPC(R14)
+	LEAQ 24(SP), DX
+	MOVQ DX, m_vdsoSP(R14)
+	MOVL handle+0(FP), DI
+	MOVQ vdso_zx_vcpu_kick(SB), AX
+	CALL AX
+	MOVL AX, ret+8(FP)
 	POPQ R14
 	MOVQ $0, m_vdsoSP(R14)
 	RET
@@ -18723,6 +18779,28 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
       "return_type": "zx_status_t"
     },
     {
+      "name": "vcpu_kick",
+      "attributes": [
+        "*"
+      ],
+      "top_description": [
+        "Kick", "a", "VCPU", ",", "causing", "it", "to", "stop", "execution", "."
+      ],
+      "requirements": [
+        "handle", "must", "be", "of", "type", "ZX_OBJ_TYPE_VCPU", "and", "have", "ZX_RIGHT_EXECUTE", "."
+      ],
+      "arguments": [
+        {
+          "name": "handle",
+          "type": "zx_handle_t",
+          "is_array": false,
+          "attributes": [
+          ]
+        }
+      ],
+      "return_type": "zx_status_t"
+    },
+    {
       "name": "vcpu_interrupt",
       "attributes": [
         "*"
@@ -20679,6 +20757,10 @@ BLOCKING_SYSCALL(vcpu_enter, zx_status_t, /* no attributes */, 2,
     _ZX_SYSCALL_ANNO(use_handle("Fuchsia")) zx_handle_t handle,
     user_out_ptr<zx_port_packet_t> packet))
 
+KERNEL_SYSCALL(vcpu_kick, zx_status_t, /* no attributes */, 1,
+    (handle), (
+    _ZX_SYSCALL_ANNO(use_handle("Fuchsia")) zx_handle_t handle))
+
 KERNEL_SYSCALL(vcpu_interrupt, zx_status_t, /* no attributes */, 2,
     (handle, vector), (
     _ZX_SYSCALL_ANNO(use_handle("Fuchsia")) zx_handle_t handle,
@@ -22004,6 +22086,12 @@ syscall_result wrapper_vcpu_enter(SafeSyscallArgument<zx_handle_t>::RawType hand
         return result;
     });
 }
+syscall_result wrapper_vcpu_kick(SafeSyscallArgument<zx_handle_t>::RawType handle, uint64_t pc) {
+    return do_syscall(ZX_SYS_vcpu_kick, pc, &VDso::ValidSyscallPC::vcpu_kick, [&](ProcessDispatcher* current_process) -> uint64_t {
+        auto result = sys_vcpu_kick(SafeSyscallArgument<zx_handle_t>::Sanitize(handle));
+        return result;
+    });
+}
 syscall_result wrapper_vcpu_interrupt(SafeSyscallArgument<zx_handle_t>::RawType handle, SafeSyscallArgument<uint32_t>::RawType vector, uint64_t pc) {
     return do_syscall(ZX_SYS_vcpu_interrupt, pc, &VDso::ValidSyscallPC::vcpu_interrupt, [&](ProcessDispatcher* current_process) -> uint64_t {
         auto result = sys_vcpu_interrupt(SafeSyscallArgument<zx_handle_t>::Sanitize(handle), SafeSyscallArgument<uint32_t>::Sanitize(vector));
@@ -23273,6 +23361,10 @@ BLOCKING_SYSCALL(vcpu_enter, zx_status_t, /* no attributes */, 2,
     _ZX_SYSCALL_ANNO(use_handle("Fuchsia")) zx_handle_t handle,
     zx_port_packet_t* packet))
 
+KERNEL_SYSCALL(vcpu_kick, zx_status_t, /* no attributes */, 1,
+    (handle), (
+    _ZX_SYSCALL_ANNO(use_handle("Fuchsia")) zx_handle_t handle))
+
 KERNEL_SYSCALL(vcpu_interrupt, zx_status_t, /* no attributes */, 2,
     (handle, vector), (
     _ZX_SYSCALL_ANNO(use_handle("Fuchsia")) zx_handle_t handle,
@@ -24379,6 +24471,10 @@ _ZX_SYSCALL_DECL(vcpu_enter, zx_status_t, /* no attributes */, 2,
     (handle, packet), (
     _ZX_SYSCALL_ANNO(use_handle("Fuchsia")) zx_handle_t handle,
     zx_port_packet_t* packet))
+
+_ZX_SYSCALL_DECL(vcpu_kick, zx_status_t, /* no attributes */, 1,
+    (handle), (
+    _ZX_SYSCALL_ANNO(use_handle("Fuchsia")) zx_handle_t handle))
 
 _ZX_SYSCALL_DECL(vcpu_interrupt, zx_status_t, /* no attributes */, 2,
     (handle, vector), (
@@ -25591,6 +25687,10 @@ extern {
         packet: *mut zx_port_packet_t
         ) -> zx_status_t;
 
+    pub fn zx_vcpu_kick(
+        handle: zx_handle_t
+        ) -> zx_status_t;
+
     pub fn zx_vcpu_interrupt(
         handle: zx_handle_t,
         vector: u32
@@ -25892,27 +25992,28 @@ extern {
 #define ZX_SYS_timer_cancel 151
 #define ZX_SYS_vcpu_create 152
 #define ZX_SYS_vcpu_enter 153
-#define ZX_SYS_vcpu_interrupt 154
-#define ZX_SYS_vcpu_read_state 155
-#define ZX_SYS_vcpu_write_state 156
-#define ZX_SYS_vmar_allocate 157
-#define ZX_SYS_vmar_destroy 158
-#define ZX_SYS_vmar_map 159
-#define ZX_SYS_vmar_unmap 160
-#define ZX_SYS_vmar_protect 161
-#define ZX_SYS_vmar_op_range 162
-#define ZX_SYS_vmo_create 163
-#define ZX_SYS_vmo_read 164
-#define ZX_SYS_vmo_write 165
-#define ZX_SYS_vmo_get_size 166
-#define ZX_SYS_vmo_set_size 167
-#define ZX_SYS_vmo_op_range 168
-#define ZX_SYS_vmo_create_child 169
-#define ZX_SYS_vmo_set_cache_policy 170
-#define ZX_SYS_vmo_replace_as_executable 171
-#define ZX_SYS_vmo_create_contiguous 172
-#define ZX_SYS_vmo_create_physical 173
-#define ZX_SYS_COUNT 174
+#define ZX_SYS_vcpu_kick 154
+#define ZX_SYS_vcpu_interrupt 155
+#define ZX_SYS_vcpu_read_state 156
+#define ZX_SYS_vcpu_write_state 157
+#define ZX_SYS_vmar_allocate 158
+#define ZX_SYS_vmar_destroy 159
+#define ZX_SYS_vmar_map 160
+#define ZX_SYS_vmar_unmap 161
+#define ZX_SYS_vmar_protect 162
+#define ZX_SYS_vmar_op_range 163
+#define ZX_SYS_vmo_create 164
+#define ZX_SYS_vmo_read 165
+#define ZX_SYS_vmo_write 166
+#define ZX_SYS_vmo_get_size 167
+#define ZX_SYS_vmo_set_size 168
+#define ZX_SYS_vmo_op_range 169
+#define ZX_SYS_vmo_create_child 170
+#define ZX_SYS_vmo_set_cache_policy 171
+#define ZX_SYS_vmo_replace_as_executable 172
+#define ZX_SYS_vmo_create_contiguous 173
+#define ZX_SYS_vmo_create_physical 174
+#define ZX_SYS_COUNT 175
 ----- syscall-numbers.h END -----
 
 

@@ -213,7 +213,7 @@ zx_status_t Vcpu::Create(Guest* guest, zx_vaddr_t entry, ktl::unique_ptr<Vcpu>* 
 }
 
 Vcpu::Vcpu(Guest* guest, uint8_t vpid, Thread* thread)
-    : guest_(guest), vpid_(vpid), thread_(thread), last_cpu_(thread->LastCpu()) {
+    : guest_(guest), vpid_(vpid), last_cpu_(thread->LastCpu()), thread_(thread) {
   thread->set_vcpu(true);
   // We have to disable thread safety analysis because it's not smart enough to
   // realize that SetMigrateFn will always be called with the ThreadLock.
@@ -242,12 +242,12 @@ Vcpu::~Vcpu() {
 void Vcpu::MigrateCpu(Thread* thread, Thread::MigrateStage stage) {
   switch (stage) {
     case Thread::MigrateStage::Before:
-      last_cpu_.store(INVALID_CPU);
+      last_cpu_ = INVALID_CPU;
       break;
     case Thread::MigrateStage::After:
       // After thread migration, update the |last_cpu_| for Vcpu::Interrupt().
-      DEBUG_ASSERT(last_cpu_.load() == INVALID_CPU);
-      last_cpu_.store(thread->LastCpuLocked());
+      DEBUG_ASSERT(last_cpu_ == INVALID_CPU);
+      last_cpu_ = thread->LastCpuLocked();
       break;
     case Thread::MigrateStage::Exiting:
       // The |thread_| is exiting and so we must clear our reference to it.
@@ -278,11 +278,25 @@ zx_status_t Vcpu::Enter(zx_port_packet_t* packet) {
     {
       AutoGich auto_gich(ich_state, gich_state_.Pending());
 
+      // We check whether a kick was requested before entering the guest so that:
+      // 1. When we enter the syscall, we can return immediately without entering
+      //    the guest.
+      // 2. If we have already exited the guest to handle a packet, it allows us
+      //    to return and gives user-space a chance to handle that packet, without
+      //    the request to kick interfering with the packet in-flight.
+      //
+      // We also do this after we have disabled interrupts, so if an interrupt was
+      // fired before we disabled interrupts, we have the opportunity to check
+      // whether a kick was requested, but the interrupt was lost. If an interrupt
+      // is fired after we have disabled interrupts, when we enter the guest we
+      // will exit due to the interrupt, and run this check again.
+      if (kicked_.exchange(false)) {
+        return ZX_ERR_CANCELED;
+      }
+
       ktrace(TAG_VCPU_ENTER, 0, 0, 0, 0);
       GUEST_STATS_INC(vm_entries);
-      running_.store(true);
       status = arm64_el2_enter(vttbr, el2_state_.PhysicalAddress(), hcr_);
-      running_.store(false);
       GUEST_STATS_INC(vm_exits);
     }
     gich_state_.TrackAllListRegisters(ich_state);
@@ -303,10 +317,36 @@ zx_status_t Vcpu::Enter(zx_port_packet_t* packet) {
   return status == ZX_ERR_NEXT ? ZX_OK : status;
 }
 
+void Vcpu::Kick() {
+  kicked_.store(true);
+  // Check if the VCPU is running and whether to send an IPI. We hold the thread
+  // lock to guard against thread migration between CPUs during the check.
+  //
+  // NOTE: `last_cpu_` may be currently set to `INVALID_CPU` due to thread
+  // migration between CPUs.
+  {
+    Guard<MonitoredSpinLock, IrqSave> guard{ThreadLock::Get(), SOURCE_TAG};
+    auto t = thread_.load();
+    if (t != nullptr && t->state() == THREAD_RUNNING && last_cpu_ != INVALID_CPU) {
+      mp_interrupt(MP_IPI_TARGET_MASK, cpu_num_to_mask(last_cpu_));
+      return;
+    }
+  }
+  // If the VCPU was not running, cancel any wait-for-interrupts.
+  gich_state_.Cancel();
+}
+
 void Vcpu::Interrupt(uint32_t vector, hypervisor::InterruptType type) {
   gich_state_.Interrupt(vector, type);
-  if (running_.load()) {
-    mp_interrupt(MP_IPI_TARGET_MASK, cpu_num_to_mask(last_cpu_.load()));
+  // Check if the VCPU is running and whether to send an IPI. We hold the thread
+  // lock to guard against thread migration between CPUs during the check.
+  //
+  // NOTE: `last_cpu_` may be currently set to `INVALID_CPU` due to thread
+  // migration between CPUs.
+  Guard<MonitoredSpinLock, IrqSave> guard{ThreadLock::Get(), SOURCE_TAG};
+  auto t = thread_.load();
+  if (t != nullptr && t->state() == THREAD_RUNNING && last_cpu_ != INVALID_CPU) {
+    mp_interrupt(MP_IPI_TARGET_MASK, cpu_num_to_mask(last_cpu_));
   }
 }
 
@@ -332,4 +372,10 @@ zx_status_t Vcpu::WriteState(const zx_vcpu_state_t& state) {
   el2_state_->guest_state.system_state.sp_el1 = state.sp;
   el2_state_->guest_state.system_state.spsr_el2 |= state.cpsr & kSpsrNzcv;
   return ZX_OK;
+}
+
+void Vcpu::GetInfo(zx_info_vcpu_t* info) {
+  if (kicked_.load()) {
+    info->flags |= ZX_INFO_VCPU_FLAG_KICKED;
+  }
 }

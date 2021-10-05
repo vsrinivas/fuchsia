@@ -1008,7 +1008,6 @@ static zx_status_t handle_trap(const ExitInfo& exit_info, AutoVmcs* vmcs, bool r
       if (read) {
         return ZX_ERR_NOT_SUPPORTED;
       }
-      *packet = {};
       packet->key = trap->key();
       packet->type = ZX_PKT_TYPE_GUEST_BELL;
       packet->guest_bell.addr = guest_paddr;
@@ -1017,7 +1016,6 @@ static zx_status_t handle_trap(const ExitInfo& exit_info, AutoVmcs* vmcs, bool r
       }
       return trap->Queue(*packet, vmcs);
     case ZX_GUEST_TRAP_MEM: {
-      *packet = {};
       packet->key = trap->key();
       packet->type = ZX_PKT_TYPE_GUEST_MEM;
       packet->guest_mem.addr = guest_paddr;
@@ -1249,7 +1247,8 @@ zx_status_t vmexit_handler(AutoVmcs* vmcs, GuestState* guest_state,
   switch (status) {
     case ZX_OK:
     case ZX_ERR_NEXT:
-    case ZX_ERR_CANCELED:
+    case ZX_ERR_INTERNAL_INTR_RETRY:
+    case ZX_ERR_INTERNAL_INTR_KILLED:
       break;
     default:
       dprintf(CRITICAL, "VM exit handler for %s (%u) returned %d\n",

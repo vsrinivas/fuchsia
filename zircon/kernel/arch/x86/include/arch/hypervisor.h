@@ -96,24 +96,27 @@ class Vcpu {
   DISALLOW_COPY_ASSIGN_AND_MOVE(Vcpu);
 
   zx_status_t Enter(zx_port_packet_t* packet);
+  void Kick();
   void Interrupt(uint32_t vector, hypervisor::InterruptType type);
   zx_status_t ReadState(zx_vcpu_state_t* vcpu_state);
   zx_status_t WriteState(const zx_vcpu_state_t& vcpu_state);
   zx_status_t WriteState(const zx_vcpu_io_t& io_state);
 
+  void GetInfo(zx_info_vcpu_t* info);
+
  private:
   Guest* const guest_;
   const uint16_t vpid_;
-  // |thread_| will be set to nullptr when the thread exits.
-  ktl::atomic<Thread*> thread_;
-  ktl::atomic<bool> running_;
   // |last_cpu_| contains the CPU dedicated to holding the guest's VMCS state,
   // or INVALID_CPU if there is no such VCPU. If this Vcpu is actively running,
   // then |last_cpu_| will point to that CPU.
   //
   // The VMCS state of this Vcpu must not be loaded prior to |last_cpu_| being
   // set, nor must |last_cpu_| be modified prior to the VMCS state being cleared.
-  ktl::atomic<cpu_num_t> last_cpu_;
+  cpu_num_t last_cpu_ TA_GUARDED(ThreadLock::Get());
+  // |thread_| will be set to nullptr when the thread exits.
+  ktl::atomic<Thread*> thread_;
+  ktl::atomic<bool> kicked_ = false;
   LocalApicState local_apic_state_;
   PvClockState pv_clock_state_;
   VmxState vmx_state_;

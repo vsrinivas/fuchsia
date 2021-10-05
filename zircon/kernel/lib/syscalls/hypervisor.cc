@@ -114,6 +114,19 @@ zx_status_t sys_vcpu_enter(zx_handle_t handle, user_out_ptr<zx_port_packet_t> us
   return ZX_OK;
 }
 
+zx_status_t sys_vcpu_kick(zx_handle_t handle) {
+  auto up = ProcessDispatcher::GetCurrent();
+
+  fbl::RefPtr<VcpuDispatcher> vcpu;
+  zx_status_t status = up->handle_table().GetDispatcherWithRights(handle, ZX_RIGHT_EXECUTE, &vcpu);
+  if (status != ZX_OK) {
+    return status;
+  }
+
+  vcpu->Kick();
+  return ZX_OK;
+}
+
 zx_status_t sys_vcpu_interrupt(zx_handle_t handle, uint32_t vector) {
   auto up = ProcessDispatcher::GetCurrent();
 

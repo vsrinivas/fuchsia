@@ -179,6 +179,12 @@ FUNCTION vcpu_enter
     movq $0, (EXIT_TEST_ADDR)
 END_FUNCTION
 
+FUNCTION vcpu_wait
+1:
+    hlt
+    jmp  1b
+END_FUNCTION
+
 // Test vcpu_read_state and vcpu_write_state.
 FUNCTION vcpu_read_write_state
     add $1, %rax

@@ -201,6 +201,12 @@ FUNCTION vcpu_enter
     test_complete
 END_FUNCTION
 
+FUNCTION vcpu_wait
+1:
+    wfi
+    b 1b
+END_FUNCTION
+
 // Test vcpu_read_state and vcpu_write_state.
 FUNCTION vcpu_read_write_state
     add x1, x1, #1

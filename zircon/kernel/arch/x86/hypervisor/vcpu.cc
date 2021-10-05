@@ -748,8 +748,8 @@ zx_status_t Vcpu::Create(Guest* guest, zx_vaddr_t entry, ktl::unique_ptr<Vcpu>* 
 Vcpu::Vcpu(Guest* guest, uint16_t vpid, Thread* thread)
     : guest_(guest),
       vpid_(vpid),
-      thread_(thread),
       last_cpu_(thread->LastCpu()),
+      thread_(thread),
       vmx_state_(/* zero-init */) {
   thread->set_vcpu(true);
 }
@@ -757,6 +757,7 @@ Vcpu::Vcpu(Guest* guest, uint16_t vpid, Thread* thread)
 Vcpu::~Vcpu() {
   local_apic_state_.timer.Cancel();
 
+  cpu_num_t cpu;
   {
     // Taking the ThreadLock guarantees that thread_ isn't going to be freed
     // while we access it.
@@ -768,16 +769,17 @@ Vcpu::~Vcpu() {
       // |this| after destruction of the VCPU.
       thread->SetMigrateFnLocked(nullptr);
     }
+    cpu = last_cpu_;
   }
 
-  if (vmcs_page_.IsAllocated() && last_cpu_ != INVALID_CPU) {
+  if (vmcs_page_.IsAllocated() && cpu != INVALID_CPU) {
     // Clear VMCS state from the CPU.
     //
     // The destructor may be called from a different thread, therefore we must
     // IPI the CPU that last run the thread.
     paddr_t paddr = vmcs_page_.PhysicalAddress();
     mp_sync_exec(
-        MP_IPI_TARGET_MASK, cpu_num_to_mask(last_cpu_),
+        MP_IPI_TARGET_MASK, cpu_num_to_mask(cpu),
         [](void* paddr) {
           zx_status_t status = vmclear(reinterpret_cast<paddr_t>(paddr));
           DEBUG_ASSERT(status == ZX_OK);
@@ -808,7 +810,7 @@ void Vcpu::MigrateCpu(Thread* thread, Thread::MigrateStage stage) {
       DEBUG_ASSERT(status == ZX_OK);
       // Now that vmclear has been done last_cpu_ can be cleared to indicate this vcpu is both not
       // presently running, and it's state is not loaded anywhere.
-      last_cpu_.store(INVALID_CPU);
+      last_cpu_ = INVALID_CPU;
       break;
     }
     // * Copy the VMCS region from one memory location to another location. This
@@ -829,8 +831,8 @@ void Vcpu::MigrateCpu(Thread* thread, Thread::MigrateStage stage) {
       // state tracking. It is assumed that the `Thread::MigrateStage::Before` stage already
       // happened and that a vmclear has been performed on last_cpu_, hence the previous value of
       // last_cpu_ can be safely discarded now.
-      DEBUG_ASSERT(last_cpu_.load() == INVALID_CPU);
-      last_cpu_.store(thread->LastCpuLocked());
+      DEBUG_ASSERT(last_cpu_ == INVALID_CPU);
+      last_cpu_ = thread->LastCpuLocked();
 
       // Load the VMCS on the destination processor.
       __UNUSED zx_status_t status = vmptrld(vmcs_page_.PhysicalAddress());
@@ -989,6 +991,23 @@ zx_status_t Vcpu::Enter(zx_port_packet_t* packet) {
       return status;
     }
     AutoVmcs vmcs(vmcs_page_.PhysicalAddress());
+
+    // We check whether a kick was requested before entering the guest so that:
+    // 1. When we enter the syscall, we can return immediately without entering
+    //    the guest.
+    // 2. If we have already exited the guest to handle a packet, it allows us
+    //    to return and gives user-space a chance to handle that packet, without
+    //    the request to kick interfering with the packet in-flight.
+    //
+    // We also do this after we have disabled interrupts, so if an interrupt was
+    // fired before we disabled interrupts, we have the opportunity to check
+    // whether a kick was requested, but the interrupt was lost. If an interrupt
+    // is fired after we have disabled interrupts, when we enter the guest we
+    // will exit due to the interrupt, and run this check again.
+    if (kicked_.exchange(false)) {
+      return ZX_ERR_CANCELED;
+    }
+
     status = local_apic_maybe_interrupt(&vmcs, &local_apic_state_);
     if (status != ZX_OK) {
       return status;
@@ -1011,9 +1030,7 @@ zx_status_t Vcpu::Enter(zx_port_packet_t* packet) {
 
     ktrace(TAG_VCPU_ENTER, 0, 0, 0, 0);
     GUEST_STATS_INC(vm_entries);
-    running_.store(true);
     status = vmx_enter(&vmx_state_);
-    running_.store(false);
     GUEST_STATS_INC(vm_exits);
 
     SaveGuestExtendedRegisters(current_thread, vmcs.Read(VmcsFieldXX::GUEST_CR4));
@@ -1045,10 +1062,36 @@ zx_status_t Vcpu::Enter(zx_port_packet_t* packet) {
   return status == ZX_ERR_NEXT ? ZX_OK : status;
 }
 
+void Vcpu::Kick() {
+  kicked_.store(true);
+  // Check if the VCPU is running and whether to send an IPI. We hold the thread
+  // lock to guard against thread migration between CPUs during the check.
+  //
+  // NOTE: `last_cpu_` may be currently set to `INVALID_CPU` due to thread
+  // migration between CPUs.
+  {
+    Guard<MonitoredSpinLock, IrqSave> guard{ThreadLock::Get(), SOURCE_TAG};
+    auto t = thread_.load();
+    if (t != nullptr && t->state() == THREAD_RUNNING && last_cpu_ != INVALID_CPU) {
+      mp_interrupt(MP_IPI_TARGET_MASK, cpu_num_to_mask(last_cpu_));
+      return;
+    }
+  }
+  // If the VCPU was not running, cancel any wait-for-interrupts.
+  local_apic_state_.interrupt_tracker.Cancel();
+}
+
 void Vcpu::Interrupt(uint32_t vector, hypervisor::InterruptType type) {
   local_apic_state_.interrupt_tracker.Interrupt(vector, type);
-  if (running_.load()) {
-    mp_interrupt(MP_IPI_TARGET_MASK, cpu_num_to_mask(last_cpu_.load()));
+  // Check if the VCPU is running and whether to send an IPI. We hold the thread
+  // lock to guard against thread migration between CPUs during the check.
+  //
+  // NOTE: `last_cpu_` may be currently set to `INVALID_CPU` due to thread
+  // migration between CPUs.
+  Guard<MonitoredSpinLock, IrqSave> guard{ThreadLock::Get(), SOURCE_TAG};
+  auto t = thread_.load();
+  if (t != nullptr && t->state() == THREAD_RUNNING && last_cpu_ != INVALID_CPU) {
+    mp_interrupt(MP_IPI_TARGET_MASK, cpu_num_to_mask(last_cpu_));
   }
 }
 
@@ -1107,4 +1150,10 @@ zx_status_t Vcpu::WriteState(const zx_vcpu_io_t& io_state) {
   static_assert(sizeof(vmx_state_.guest_state.rax) >= 4);
   memcpy(&vmx_state_.guest_state.rax, io_state.data, io_state.access_size);
   return ZX_OK;
+}
+
+void Vcpu::GetInfo(zx_info_vcpu_t* info) {
+  if (kicked_.load()) {
+    info->flags |= ZX_INFO_VCPU_FLAG_KICKED;
+  }
 }

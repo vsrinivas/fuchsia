@@ -53,6 +53,7 @@ typedef uint32_t zx_object_info_topic_t;
 #define ZX_INFO_TASK_RUNTIME_V1             __ZX_INFO_TOPIC(30u, 0)        // zx_info_task_runtime_t[1]
 #define ZX_INFO_TASK_RUNTIME                __ZX_INFO_TOPIC(30u, 1)        // zx_info_task_runtime_t[1]
 #define ZX_INFO_KMEM_STATS_EXTENDED         ((zx_object_info_topic_t) 31u) // zx_info_kmem_stats_extended_t[1]
+#define ZX_INFO_VCPU                        ((zx_object_info_topic_t) 32u) // zx_info_vcpu_t[1]
 
 // Return codes set when a task is killed.
 #define ZX_TASK_RETCODE_SYSCALL_KILL            ((int64_t) -1024)   // via zx_task_kill().
@@ -762,17 +763,24 @@ typedef struct zx_info_resource {
 } zx_info_resource_t;
 
 typedef struct zx_info_msi {
-  // The target adress for write transactions.
-  uint64_t target_addr;
-  // The data that the device will write when triggering an IRQ.
-  uint32_t target_data;
-  // The first IRQ in the allocated block.
-  uint32_t base_irq_id;
-  // The number of IRQs in the allocated block.
-  uint32_t num_irq;
-  // The number of outstanding interrupt objects created off this Msi object.
-  uint32_t interrupt_count;
+    // The target address for write transactions.
+    uint64_t target_addr;
+    // The data that the device will write when triggering an IRQ.
+    uint32_t target_data;
+    // The first IRQ in the allocated block.
+    uint32_t base_irq_id;
+    // The number of IRQs in the allocated block.
+    uint32_t num_irq;
+    // The number of outstanding interrupt objects created off this Msi object.
+    uint32_t interrupt_count;
 } zx_info_msi_t;
+
+typedef struct zx_info_vcpu {
+    // Bitwise OR of ZX_INFO_VCPU_FLAG_* values.
+    uint32_t flags;
+} zx_info_vcpu_t;
+
+#define ZX_INFO_VCPU_FLAG_KICKED            ((uint32_t) (1u<<0))
 
 #define ZX_INFO_CPU_STATS_FLAG_ONLINE       (1u<<0)
 

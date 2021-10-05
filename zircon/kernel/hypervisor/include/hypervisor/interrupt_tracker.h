@@ -145,6 +145,12 @@ class InterruptTracker {
   // Tracks the given virtual interrupt, and signals any waiters.
   void VirtualInterrupt(uint32_t vector) { Interrupt(vector, hypervisor::InterruptType::VIRTUAL); }
 
+  // Cancels a wait for an interrupt.
+  //
+  // We signal `ZX_ERR_INTERNAL_INTR_RETRY`, so that if the status is propagated
+  // to the syscall-layer, we will retry the syscall.
+  void Cancel() { event_.Signal(ZX_ERR_INTERNAL_INTR_RETRY); }
+
   // Waits for an interrupt.
   zx_status_t Wait(zx_time_t deadline, StateInvalidator* invalidator) {
     if (invalidator != nullptr) {
@@ -159,15 +165,9 @@ class InterruptTracker {
           continue;
         case ZX_ERR_TIMED_OUT:
           // If the event timed out, return ZX_OK to resume the VCPU.
-        case ZX_ERR_INTERNAL_INTR_RETRY:
-          // If the thread was suspended, return ZX_OK to resume the VCPU once
-          // the thread is resumed.
           return ZX_OK;
-        case ZX_ERR_INTERNAL_INTR_KILLED:
-          // If the thread was killed, return ZX_ERR_CANCELED.
-          return ZX_ERR_CANCELED;
         default:
-          // Otherwise, return the status requested by Event::Signal().
+          // Otherwise, return the status.
           return status;
       }
     } while (!Pending());

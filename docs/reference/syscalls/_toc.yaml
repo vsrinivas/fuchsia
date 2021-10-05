@@ -275,6 +275,8 @@ toc:
     path: /docs/reference/syscalls/vcpu_create.md
   - title: "zx_vcpu_enter"
     path: /docs/reference/syscalls/vcpu_enter.md
+  - title: "zx_vcpu_kick"
+    path: /docs/reference/syscalls/vcpu_kick.md
   - title: "zx_vcpu_interrupt"
     path: /docs/reference/syscalls/vcpu_interrupt.md
   - title: "zx_vcpu_read_state"
