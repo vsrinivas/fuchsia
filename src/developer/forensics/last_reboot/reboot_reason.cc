@@ -224,7 +224,7 @@ std::optional<fuchsia::feedback::RebootReason> ToFidlRebootReason(const RebootRe
     case RebootReason::kCriticalComponentFailure:
       return fuchsia::feedback::RebootReason::CRITICAL_COMPONENT_FAILURE;
     case RebootReason::kFdr:
-      return fuchsia::feedback::RebootReason::FACTORY_DATA_RESET;
+      return fuchsia::feedback::RebootReason::SYSTEM_UPDATE;
     case RebootReason::kCold:
       return fuchsia::feedback::RebootReason::COLD;
     case RebootReason::kSpontaneous:

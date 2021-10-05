@@ -171,7 +171,7 @@ TEST(RebootReasonTest, FDR) {
 
   EXPECT_FALSE(IsCrash(reason));
   EXPECT_EQ(ToCobaltLastRebootReason(reason), cobalt::LastRebootReason::kFactoryDataReset);
-  EXPECT_EQ(ToFidlRebootReason(reason), fuchsia::feedback::RebootReason::FACTORY_DATA_RESET);
+  EXPECT_EQ(ToFidlRebootReason(reason), fuchsia::feedback::RebootReason::SYSTEM_UPDATE);
 }
 
 }  // namespace
