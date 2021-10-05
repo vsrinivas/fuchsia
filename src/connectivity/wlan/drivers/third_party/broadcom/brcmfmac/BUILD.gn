@@ -42,9 +42,8 @@ visibility = [ "./*" ]
 #
 # See the targets ":fuchsia_driver" and ":test_fuchsia_driver" to see how this is done.
 
-# Sources for driver debug logging.
+# Sources set for driver logging.
 source_set("debug") {
-  sources = [ "debug.cc" ]
   public = [ "debug.h" ]
   public_deps = [
     "//src/connectivity/wlan/drivers/lib/log/cpp",

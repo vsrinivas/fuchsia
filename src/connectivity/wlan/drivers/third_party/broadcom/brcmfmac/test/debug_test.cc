@@ -29,30 +29,6 @@ TEST(DebugTest, Logging) {
   BRCMF_ERR("baz %s", "baz");
 }
 
-// This is a simple test to verify that printing various sized buffers doesn't crash. Since
-// debugging is typically disabled by default, this gives us some indication that it hasn't
-// broken.
-TEST(DebugTest, DumpNoCrash) {
-  size_t buffer_size = kMaxStringDumpBytes + 1;
-  uint8_t buffer[buffer_size];
-  for (size_t i = 0; i < buffer_size; i++) {
-    // Put some arbitrary bytes in the buffer, it's OK to cast to smaller type.
-    buffer[i] = static_cast<uint8_t>(i);
-  }
-  buffer[buffer_size - 1] = 0;
-
-  // First test all sizes from [0,100]
-  size_t max_test_size = std::min<size_t>(100, buffer_size);
-  for (size_t i = 0; i < max_test_size; i++) {
-    BRCMF_DBG_STRING_DUMP(true, buffer, i, "string size of %zu", i);
-  }
-
-  // Test upper limits of string dump
-  for (size_t i = kMaxStringDumpBytes - 1; i < kMaxStringDumpBytes + 2; i++) {
-    BRCMF_DBG_STRING_DUMP(true, buffer, i, "string size of %zu", i);
-  }
-};
-
 TEST(DebugTest, ThrottleMacrosCompile) {
   BRCMF_ERR_THROTTLE("Throttled error message: %d", 42);
   BRCMF_WARN_THROTTLE("Throttled warning message: %s", "scary");

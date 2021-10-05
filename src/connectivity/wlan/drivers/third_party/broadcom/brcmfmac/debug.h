@@ -90,15 +90,6 @@
     }                                                         \
   } while (0)
 
-constexpr size_t kMaxStringDumpBytes = 256;  // point at which output will be truncated
-#define BRCMF_DBG_STRING_DUMP(condition, data, length, fmt, ...)            \
-  do {                                                                      \
-    if (condition) {                                                        \
-      zxlogf(INFO, "(%s): " fmt, __func__, ##__VA_ARGS__);                  \
-      ::wlan::brcmfmac::Debug::PrintStringDump(DDK_LOG_INFO, data, length); \
-    }                                                                       \
-  } while (0)
-
 #define BRCMF_IS_ON(filter) \
   ::wlan::brcmfmac::Debug::IsFilterOn(::wlan::brcmfmac::Debug::Filter::k##filter)
 
@@ -173,9 +164,6 @@ class Debug {
   static constexpr bool IsFilterOn(Filter filter) {
     return (static_cast<uint32_t>(filter) & kBrcmfMsgFilter) != 0;
   }
-
-  // Print a string dump to the debugging output.
-  static void PrintStringDump(uint32_t flag, const void* data, size_t length);
 
   // Create a memory dump.
   static void CreateMemoryDump(const void* data, size_t length);

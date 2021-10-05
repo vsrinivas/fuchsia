@@ -2508,11 +2508,7 @@ static void brcmf_iedump(uint8_t* ies, size_t total_len) {
       if (offset + elem_len > total_len) {
         break;
       }
-      if (elem_type == 0) {
-        BRCMF_DBG_STRING_DUMP(true, ies + offset, elem_len, "IE 0 (name), len %d:", elem_len);
-      } else {
-        BRCMF_DBG_HEX_DUMP(true, ies + offset, elem_len, "IE %d, len %d:", elem_type, elem_len);
-      }
+      BRCMF_DBG_HEX_DUMP(true, ies + offset, elem_len, "IE %d, len %d:", elem_type, elem_len);
       offset += elem_len;
     }
     if (offset != total_len) {
