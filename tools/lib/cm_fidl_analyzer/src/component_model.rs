@@ -248,6 +248,7 @@ impl ModelBuilderForAnalyzer {
         let instance = Arc::new(ComponentInstanceForAnalyzer {
             abs_moniker,
             decl: node.decl.clone(),
+            url: node.url().clone(),
             parent: WeakExtendedInstanceInterface::from(&parent),
             children: RwLock::new(HashMap::new()),
             environment,
@@ -564,6 +565,7 @@ impl ComponentModelForAnalyzer {
 pub struct ComponentInstanceForAnalyzer {
     abs_moniker: AbsoluteMoniker,
     decl: ComponentDecl,
+    url: String,
     parent: WeakExtendedInstanceInterface<ComponentInstanceForAnalyzer>,
     children: RwLock<HashMap<PartialChildMoniker, Arc<ComponentInstanceForAnalyzer>>>,
     environment: Arc<EnvironmentForAnalyzer>,
@@ -682,6 +684,10 @@ impl ComponentInstanceInterface for ComponentInstanceForAnalyzer {
 
     fn abs_moniker(&self) -> &AbsoluteMoniker {
         &self.abs_moniker
+    }
+
+    fn url(&self) -> &str {
+        &self.url
     }
 
     fn environment(&self) -> &dyn EnvironmentInterface<Self> {

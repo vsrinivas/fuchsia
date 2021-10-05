@@ -40,6 +40,9 @@ pub trait ComponentInstanceInterface: Sized + Send + Sync {
     /// Returns this `ComponentInstanceInterface`'s absolute moniker.
     fn abs_moniker(&self) -> &AbsoluteMoniker;
 
+    /// Returns this `ComponentInstanceInterface`'s component URL.
+    fn url(&self) -> &str;
+
     /// Returns a representation of this `ComponentInstanceInterface`'s environment.
     fn environment(&self) -> &dyn EnvironmentInterface<Self>;
 

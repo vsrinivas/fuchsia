@@ -26,6 +26,10 @@ pub enum ComponentInstanceError {
     PolicyCheckerNotFound { moniker: PartialAbsoluteMoniker },
     #[error("component ID index not found for component instance {}", moniker)]
     ComponentIdIndexNotFound { moniker: PartialAbsoluteMoniker },
+    #[error("malformed url {} for component instance {}", url, moniker)]
+    MalformedUrl { url: String, moniker: PartialAbsoluteMoniker },
+    #[error("url {} for component {} does not resolve to an absolute url", url, moniker)]
+    NoAbsoluteUrl { url: String, moniker: PartialAbsoluteMoniker },
     // The capability routing static analyzer never produces this error subtype, so we don't need
     // to serialize it.
     #[cfg_attr(feature = "serde", serde(skip))]

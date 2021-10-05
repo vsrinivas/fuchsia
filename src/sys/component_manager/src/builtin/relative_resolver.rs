@@ -5,7 +5,7 @@
 use {
     crate::model::component::ComponentInstance,
     crate::model::resolver::{ResolvedComponent, Resolver, ResolverError},
-    ::routing::component_instance::ExtendedInstanceInterface,
+    ::routing::{environment::find_first_absolute_ancestor_url, error::ComponentInstanceError},
     anyhow::anyhow,
     async_trait::async_trait,
     clonable_error::ClonableError,
@@ -14,38 +14,6 @@ use {
 };
 
 pub static SCHEME: &str = "";
-
-fn component_has_relative_url(component: &Arc<ComponentInstance>) -> bool {
-    Url::parse(&component.component_url) == Err(url::ParseError::RelativeUrlWithoutBase)
-}
-
-fn find_first_absolute_ancestor_url(
-    component: &Arc<ComponentInstance>,
-) -> Result<Url, ResolverError> {
-    let mut parent = component
-        .parent
-        .upgrade()
-        .map_err(|e| ResolverError::Internal(anyhow::Error::from(e).into()))?;
-    loop {
-        match parent {
-            ExtendedInstanceInterface::Component(parent_component) => {
-                if !component_has_relative_url(&parent_component) {
-                    let parent_url = Url::parse(&parent_component.component_url)
-                        .map_err(|e| ResolverError::malformed_url(e))?;
-                    return Ok(parent_url);
-                }
-                parent = parent_component.parent.upgrade().map_err(|e| {
-                    ResolverError::Internal(ClonableError::from(anyhow::Error::from(e)))
-                })?;
-            }
-            ExtendedInstanceInterface::AboveRoot(_) => {
-                return Err(ResolverError::Internal(ClonableError::from(anyhow!(
-                    "No non-relative component URLs found"
-                ))));
-            }
-        }
-    }
-}
 
 fn validate_relative_url(url: &str) -> Result<(), ResolverError> {
     if url.len() == 0 {
@@ -92,7 +60,21 @@ impl RelativeResolver {
         target: &Arc<ComponentInstance>,
     ) -> Result<ResolvedComponent, ResolverError> {
         validate_relative_url(component_url)?;
-        let absolute_url = find_first_absolute_ancestor_url(target)?;
+        let absolute_url = find_first_absolute_ancestor_url(target).map_err(|e| match e {
+            ComponentInstanceError::MalformedUrl { url, moniker } => {
+                ResolverError::malformed_url(ComponentInstanceError::MalformedUrl {
+                    url: url.clone(),
+                    moniker: moniker.clone(),
+                })
+            }
+            ComponentInstanceError::NoAbsoluteUrl { url, moniker } => {
+                ResolverError::internal(ComponentInstanceError::NoAbsoluteUrl {
+                    url: url.clone(),
+                    moniker: moniker.clone(),
+                })
+            }
+            _ => ResolverError::Internal(ClonableError::from(anyhow::Error::from(e))),
+        })?;
         let rebased_url = absolute_url.join(component_url).unwrap();
 
         target.environment.resolve(rebased_url.as_str(), target).await

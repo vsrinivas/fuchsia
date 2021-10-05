@@ -999,6 +999,10 @@ impl ComponentInstanceInterface for ComponentInstance {
         &self.abs_moniker
     }
 
+    fn url(&self) -> &str {
+        &self.component_url
+    }
+
     fn environment(&self) -> &dyn EnvironmentInterface<Self> {
         self.environment.as_ref()
     }

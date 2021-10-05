@@ -44,6 +44,7 @@ rustc_library("routing") {
     "//third_party/rust_crates:matches",
     "//third_party/rust_crates:tempfile",
     "//third_party/rust_crates:thiserror",
+    "//third_party/rust_crates:url",
   ]
 
   sources = [

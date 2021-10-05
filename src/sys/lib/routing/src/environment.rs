@@ -13,7 +13,9 @@ use {
         CapabilityName, RegistrationDeclCommon, RegistrationSource, RunnerRegistration, SourceName,
     },
     fidl_fuchsia_sys2 as fsys,
-    std::collections::HashMap,
+    moniker::AbsoluteMonikerBase,
+    std::{collections::HashMap, sync::Arc},
+    url::Url,
 };
 
 #[cfg(feature = "serde")]
@@ -190,5 +192,37 @@ impl From<Vec<cm_rust::DebugRegistration>> for DebugRegistry {
 impl DebugRegistry {
     pub fn get_capability(&self, name: &CapabilityName) -> Option<&DebugRegistration> {
         self.debug_capabilities.get(name)
+    }
+}
+
+pub fn component_has_relative_url<C: ComponentInstanceInterface>(component: &Arc<C>) -> bool {
+    Url::parse(component.url()) == Err(url::ParseError::RelativeUrlWithoutBase)
+}
+
+pub fn find_first_absolute_ancestor_url<C: ComponentInstanceInterface>(
+    component: &Arc<C>,
+) -> Result<Url, ComponentInstanceError> {
+    let mut parent = component.try_get_parent()?;
+    loop {
+        match parent {
+            ExtendedInstanceInterface::Component(parent_component) => {
+                if !component_has_relative_url(&parent_component) {
+                    let parent_url = Url::parse(parent_component.url()).map_err(|_| {
+                        ComponentInstanceError::MalformedUrl {
+                            url: parent_component.url().to_string(),
+                            moniker: parent_component.abs_moniker().to_partial(),
+                        }
+                    })?;
+                    return Ok(parent_url);
+                }
+                parent = parent_component.try_get_parent()?;
+            }
+            ExtendedInstanceInterface::AboveRoot(_) => {
+                return Err(ComponentInstanceError::NoAbsoluteUrl {
+                    url: component.url().to_string(),
+                    moniker: component.abs_moniker().to_partial(),
+                });
+            }
+        }
     }
 }
