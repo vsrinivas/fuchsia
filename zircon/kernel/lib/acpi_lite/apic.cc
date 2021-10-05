@@ -11,7 +11,6 @@
 #include <zircon/types.h>
 
 #include <fbl/function.h>
-#include <fbl/span.h>
 
 #include "binary_reader.h"
 #include "debug.h"

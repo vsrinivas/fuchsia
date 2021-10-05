@@ -10,7 +10,6 @@
 
 #include <vector>
 
-#include <fbl/span.h>
 #include <fuzzer/FuzzedDataProvider.h>
 
 namespace acpi_lite::testing {

@@ -10,8 +10,6 @@
 
 #include <initializer_list>
 
-#include <fbl/span.h>
-
 namespace acpi_lite::testing {
 
 // Pixelbook Eve : APIC table.
