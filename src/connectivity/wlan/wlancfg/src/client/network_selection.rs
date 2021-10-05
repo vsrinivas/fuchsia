@@ -27,7 +27,6 @@ use {
     fuchsia_zircon as zx,
     futures::lock::Mutex,
     log::{debug, error, info, trace},
-    rand::Rng,
     std::{collections::HashMap, convert::TryInto as _, sync::Arc},
     wlan_common::{channel::Channel, hasher::WlanHasher},
     wlan_inspect::wrappers::InspectWlanChan,
@@ -216,6 +215,7 @@ impl NetworkSelector {
     pub fn new(
         saved_network_manager: Arc<dyn SavedNetworksManagerApi>,
         cobalt_api: CobaltSender,
+        hasher: WlanHasher,
         inspect_node: InspectNode,
         telemetry_sender: TelemetrySender,
     ) -> Self {
@@ -230,7 +230,7 @@ impl NetworkSelector {
                 results: Vec::new(),
             })),
             cobalt_api: Arc::new(Mutex::new(cobalt_api)),
-            hasher: WlanHasher::new(rand::thread_rng().gen::<u64>().to_le_bytes()),
+            hasher,
             _inspect_node_root: Arc::new(Mutex::new(inspect_node)),
             inspect_node_for_network_selections: Arc::new(Mutex::new(
                 inspect_node_for_network_selection,
@@ -653,8 +653,8 @@ mod tests {
             access_point::state_machine as ap_fsm,
             config_management::SavedNetworksManager,
             util::testing::{
-                create_mock_cobalt_sender_and_receiver, generate_channel, generate_random_bss,
-                generate_random_scan_result,
+                create_mock_cobalt_sender_and_receiver, create_wlan_hasher, generate_channel,
+                generate_random_bss, generate_random_scan_result,
                 poll_for_and_validate_sme_scan_request_and_send_results,
                 validate_sme_scan_request_and_send_results,
             },
@@ -703,6 +703,7 @@ mod tests {
         let network_selector = Arc::new(NetworkSelector::new(
             saved_network_manager.clone(),
             cobalt_api,
+            create_wlan_hasher(),
             inspect_node,
             TelemetrySender::new(telemetry_sender),
         ));

@@ -25,8 +25,10 @@ use {
     },
     log::{error, info, warn},
     pin_utils::pin_mut,
+    rand::Rng,
     std::sync::Arc,
     void::Void,
+    wlan_common::hasher::WlanHasher,
     wlan_metrics_registry::{self as metrics},
     wlancfg_lib::{
         access_point::AccessPoint,
@@ -236,16 +238,30 @@ async fn run_all_futures() -> Result<(), Error> {
         error!("create_metric_event_logger failure: {}", e);
     }
 
+    // According to doc, ThreadRng is cryptographically secure:
+    // https://docs.rs/rand/0.5.0/rand/rngs/struct.ThreadRng.html
+    //
+    // The hash key is different from other components, making us not able to correlate
+    // the same SSID and BSSID logged by each WLAN component.
+    // TODO(fxbug.dev/70385): Share the hash key across wlanstack and wlancfg. This TODO
+    //                        can also be closed once PII redaction for Inspect is
+    //                        supported. (see fxbug.dev/fxbug.dev/71903)
+    let hasher = WlanHasher::new(rand::thread_rng().gen::<u64>().to_le_bytes());
+    let external_inspect_node = component::inspector().root().create_child("external");
     let (telemetry_sender, telemetry_fut) = serve_telemetry(
         wlan_svc.clone(),
         cobalt_1dot1_proxy,
+        hasher.clone(),
         component::inspector().root().create_child("client_stats"),
+        external_inspect_node.create_child("client_stats"),
     );
+    component::inspector().root().record(external_inspect_node);
 
     let saved_networks = Arc::new(SavedNetworksManager::new(cobalt_api.clone()).await?);
     let network_selector = Arc::new(NetworkSelector::new(
         saved_networks.clone(),
         cobalt_api.clone(),
+        hasher,
         component::inspector().root().create_child("network_selector"),
         telemetry_sender.clone(),
     ));

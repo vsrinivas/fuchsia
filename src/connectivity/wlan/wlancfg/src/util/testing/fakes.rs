@@ -16,7 +16,9 @@ use {
     fuchsia_zircon as zx,
     futures::lock::Mutex,
     log::info,
+    rand::Rng,
     std::{collections::HashMap, sync::Arc},
+    wlan_common::hasher::WlanHasher,
 };
 
 pub struct FakeSavedNetworksManager {
@@ -209,4 +211,8 @@ impl SavedNetworksManagerApi for FakeSavedNetworksManager {
     ) -> Option<RssiData> {
         unimplemented!();
     }
+}
+
+pub fn create_wlan_hasher() -> WlanHasher {
+    WlanHasher::new(rand::thread_rng().gen::<u64>().to_le_bytes())
 }

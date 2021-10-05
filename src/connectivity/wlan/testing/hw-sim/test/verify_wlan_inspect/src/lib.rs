@@ -54,6 +54,7 @@ const WSC_IE_BODY: &'static [u8] = &[
 // The moniker must match the component name as defined in the manifest
 const DEVICEMONITOR_MONIKER: &'static str = "wlandevicemonitor";
 const WLANSTACK_MONIKER: &'static str = "wlanstack";
+const POLICY_MONIKER: &'static str = "wlancfg";
 const DISCONNECT_CTX_SELECTOR: &'static str =
     "core/wlanstack:root/iface-0/state_events/*/disconnect_ctx";
 
@@ -141,8 +142,9 @@ async fn verify_wlan_inspect() {
             .await;
     }
 
-    let hierarchy = get_inspect_hierarchy(WLANSTACK_MONIKER).await.expect("expect Inspect data");
-    assert_data_tree!(hierarchy, root: contains {
+    let wlanstack_hierarchy =
+        get_inspect_hierarchy(WLANSTACK_MONIKER).await.expect("expect Inspect data");
+    assert_data_tree!(wlanstack_hierarchy, root: contains {
         latest_active_client_iface: 0u64,
         client_stats: contains {
             connect: {
@@ -179,6 +181,20 @@ async fn verify_wlan_inspect() {
             },
         }
     });
+
+    let properties = select_properties(wlanstack_hierarchy, DISCONNECT_CTX_SELECTOR);
+    assert!(properties.is_empty(), "there should not be a disconnect_ctx yet");
+
+    let policy_hierarchy =
+        get_inspect_hierarchy(POLICY_MONIKER).await.expect("expect Inspect data");
+    assert_data_tree!(policy_hierarchy, root: contains {
+        external: {
+            client_stats: contains {
+                disconnect_events: {},
+            },
+        },
+    });
+
     let monitor_hierarchy =
         get_inspect_hierarchy(DEVICEMONITOR_MONIKER).await.expect("expect Inspect data");
     assert_data_tree!(monitor_hierarchy, root: contains {
@@ -187,17 +203,15 @@ async fn verify_wlan_inspect() {
         },
     });
 
-    let properties = select_properties(hierarchy, DISCONNECT_CTX_SELECTOR);
-    assert!(properties.is_empty(), "there should not be a disconnect_ctx yet");
-
     remove_network(&client_controller, &AP_SSID, fidl_policy::SecurityType::None, None).await;
     wait_until_client_state(&mut client_state_update_stream, |update| {
         has_ssid_and_state(update, &AP_SSID, fidl_policy::ConnectionState::Disconnected)
     })
     .await;
 
-    let hierarchy = get_inspect_hierarchy(WLANSTACK_MONIKER).await.expect("expect Inspect data");
-    assert_data_tree!(hierarchy, root: contains {
+    let wlanstack_hierarchy =
+        get_inspect_hierarchy(WLANSTACK_MONIKER).await.expect("expect Inspect data");
+    assert_data_tree!(wlanstack_hierarchy, root: contains {
         latest_active_client_iface: 0u64,
         client_stats: contains {
             connect: {
@@ -260,15 +274,8 @@ async fn verify_wlan_inspect() {
             },
         }
     });
-    let monitor_hierarchy =
-        get_inspect_hierarchy(DEVICEMONITOR_MONIKER).await.expect("expect Inspect data");
-    assert_data_tree!(monitor_hierarchy, root: contains {
-        device_events: contains {
-            "0": contains {},
-        },
-    });
 
-    let properties = select_properties(hierarchy, DISCONNECT_CTX_SELECTOR);
+    let properties = select_properties(wlanstack_hierarchy, DISCONNECT_CTX_SELECTOR);
     let node_paths: HashSet<&str> =
         properties.iter().map(|p| p.property_node_path.as_str()).collect();
     assert_eq!(node_paths.len(), 1, "only one disconnect ctx is expected");
@@ -279,6 +286,35 @@ async fn verify_wlan_inspect() {
             _ => panic!("expect `reason_code` or `locally_initiated` property"),
         }
     }
+
+    let policy_hierarchy =
+        get_inspect_hierarchy(POLICY_MONIKER).await.expect("expect Inspect data");
+    assert_data_tree!(policy_hierarchy, root: contains {
+        external: {
+            client_stats: contains {
+                disconnect_events: {
+                    "0": {
+                        "@time": AnyProperty,
+                        network: {
+                            channel: {
+                                primary: 1u64,
+                            },
+                        },
+                        reason_code: AnyProperty,
+                        locally_initiated: true,
+                    }
+                }
+            }
+        },
+    });
+
+    let monitor_hierarchy =
+        get_inspect_hierarchy(DEVICEMONITOR_MONIKER).await.expect("expect Inspect data");
+    assert_data_tree!(monitor_hierarchy, root: contains {
+        device_events: contains {
+            "0": contains {},
+        },
+    });
 
     helper.stop().await;
 }

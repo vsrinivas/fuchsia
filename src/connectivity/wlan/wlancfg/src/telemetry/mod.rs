@@ -13,7 +13,10 @@ use {
     fidl_fuchsia_wlan_stats::MlmeStats,
     fuchsia_async as fasync,
     fuchsia_inspect::{Inspector, Node as InspectNode, NumericProperty, UintProperty},
-    fuchsia_inspect_contrib::inspect_insert,
+    fuchsia_inspect_contrib::{
+        inspect_insert, inspect_log, log::InspectBytes, make_inspect_loggable,
+        nodes::BoundedListNode,
+    },
     fuchsia_zircon::{self as zx, DurationNum},
     futures::{channel::mpsc, select, Future, FutureExt, StreamExt},
     log::{info, warn},
@@ -29,7 +32,7 @@ use {
             Arc,
         },
     },
-    wlan_common::{bss::BssDescription, format::MacFmt},
+    wlan_common::{bss::BssDescription, format::MacFmt, hasher::WlanHasher},
     wlan_metrics_registry as metrics,
 };
 
@@ -80,9 +83,71 @@ impl TelemetrySender {
 pub struct DisconnectInfo {
     pub connected_duration: zx::Duration,
     pub is_sme_reconnecting: bool,
-    pub reason_code: u16,
-    pub disconnect_source: fidl_sme::DisconnectSource,
+    pub disconnect_source: DisconnectSource,
     pub latest_ap_state: BssDescription,
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct DisconnectSource {
+    disconnect_source: fidl_sme::DisconnectSource,
+    reason_code: u16,
+}
+
+impl DisconnectSource {
+    pub fn new(disconnect_source: fidl_sme::DisconnectSource, reason_code: u16) -> Self {
+        Self { disconnect_source, reason_code }
+    }
+
+    pub fn inspect_string(&self) -> String {
+        match self.disconnect_source {
+            fidl_sme::DisconnectSource::User => {
+                match fidl_sme::UserDisconnectReason::from_primitive(self.reason_code.into()) {
+                    Some(reason) => format!("source: user, reason: {:?}", reason),
+                    None => format!("source: user, reason: {}", self.reason_code),
+                }
+            }
+            fidl_sme::DisconnectSource::Ap => {
+                match fidl_ieee80211::ReasonCode::from_primitive(self.reason_code) {
+                    Some(reason) => format!("source: ap, reason: {:?}", reason),
+                    None => format!("source: ap, reason: {}", self.reason_code),
+                }
+            }
+            // TODO(fxbug.dev/84892): Include MLME event name like we did in wlanstack
+            fidl_sme::DisconnectSource::Mlme => {
+                match fidl_ieee80211::ReasonCode::from_primitive(self.reason_code) {
+                    Some(reason) => format!("source: mlme, reason: {:?}", reason),
+                    None => format!("source: mlme, reason: {}", self.reason_code),
+                }
+            }
+        }
+    }
+
+    /// If disconnect comes from AP, then get the 802.11 reason code.
+    /// If disconnect comes from MLME, return (1u32 << 17) + reason code.
+    /// If disconnect comes from user, return (1u32 << 16) + user disconnect reason.
+    /// This is mainly used for metric.
+    pub fn flattened_reason_code(&self) -> u32 {
+        match self.disconnect_source {
+            fidl_sme::DisconnectSource::Ap => self.reason_code as u32,
+            fidl_sme::DisconnectSource::User => (1u32 << 16) + self.reason_code as u32,
+            fidl_sme::DisconnectSource::Mlme => (1u32 << 17) + self.reason_code as u32,
+        }
+    }
+
+    pub fn source(&self) -> fidl_sme::DisconnectSource {
+        self.disconnect_source
+    }
+
+    pub fn raw_reason_code(&self) -> u16 {
+        self.reason_code
+    }
+
+    pub fn locally_initiated(&self) -> bool {
+        match self.disconnect_source {
+            fidl_sme::DisconnectSource::Ap => false,
+            fidl_sme::DisconnectSource::Mlme | fidl_sme::DisconnectSource::User => true,
+        }
+    }
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -161,7 +226,9 @@ const TELEMETRY_QUERY_INTERVAL: zx::Duration = zx::Duration::from_seconds(15);
 pub fn serve_telemetry(
     dev_svc_proxy: fidl_fuchsia_wlan_device_service::DeviceServiceProxy,
     cobalt_1dot1_proxy: fidl_fuchsia_metrics::MetricEventLoggerProxy,
+    hasher: WlanHasher,
     inspect_node: InspectNode,
+    external_inspect_node: InspectNode,
 ) -> (TelemetrySender, impl Future<Output = ()>) {
     let (sender, mut receiver) = mpsc::channel::<TelemetryEvent>(TELEMETRY_EVENT_BUFFER_SIZE);
     let fut = async move {
@@ -172,7 +239,13 @@ pub fn serve_telemetry(
             (ONE_HOUR.into_nanos() / TELEMETRY_QUERY_INTERVAL.into_nanos()) as u64;
         const INTERVAL_TICKS_PER_DAY: u64 = INTERVAL_TICKS_PER_HR * 24;
         let mut interval_tick = 0u64;
-        let mut telemetry = Telemetry::new(dev_svc_proxy, cobalt_1dot1_proxy, inspect_node);
+        let mut telemetry = Telemetry::new(
+            dev_svc_proxy,
+            cobalt_1dot1_proxy,
+            hasher,
+            inspect_node,
+            external_inspect_node,
+        );
         loop {
             select! {
                 event = receiver.next() => {
@@ -296,20 +369,52 @@ macro_rules! log_cobalt_1dot1_batch {
     }};
 }
 
+const INSPECT_DISCONNECT_EVENTS_LIMIT: usize = 7;
+const INSPECT_EXTERNAL_DISCONNECT_EVENTS_LIMIT: usize = 2;
+
+/// Inspect node with properties queried by external entities.
+/// Do not change or remove existing properties that are still used.
+pub struct ExternalInspectNode {
+    _inspect_node: InspectNode,
+    disconnect_events: Mutex<BoundedListNode>,
+}
+
+impl ExternalInspectNode {
+    pub fn new(inspect_node: InspectNode) -> Self {
+        let disconnect_events = inspect_node.create_child("disconnect_events");
+        Self {
+            _inspect_node: inspect_node,
+            disconnect_events: Mutex::new(BoundedListNode::new(
+                disconnect_events,
+                INSPECT_EXTERNAL_DISCONNECT_EVENTS_LIMIT,
+            )),
+        }
+    }
+}
+
 pub struct Telemetry {
     dev_svc_proxy: fidl_fuchsia_wlan_device_service::DeviceServiceProxy,
     connection_state: ConnectionState,
     last_checked_connection_state: fasync::Time,
     stats_logger: StatsLogger,
+
+    // For hashing SSID and BSSID before outputting into Inspect
+    hasher: WlanHasher,
+
+    // Inspect properties/nodes that telemetry hangs onto
     _inspect_node: InspectNode,
     get_iface_stats_fail_count: UintProperty,
+    disconnect_events_node: Mutex<BoundedListNode>,
+    external_inspect_node: ExternalInspectNode,
 }
 
 impl Telemetry {
     pub fn new(
         dev_svc_proxy: fidl_fuchsia_wlan_device_service::DeviceServiceProxy,
         cobalt_1dot1_proxy: fidl_fuchsia_metrics::MetricEventLoggerProxy,
+        hasher: WlanHasher,
         inspect_node: InspectNode,
+        external_inspect_node: InspectNode,
     ) -> Self {
         let stats_logger = StatsLogger::new(cobalt_1dot1_proxy);
         record_inspect_counters(
@@ -323,13 +428,21 @@ impl Telemetry {
             Arc::clone(&stats_logger.last_7d_stats),
         );
         let get_iface_stats_fail_count = inspect_node.create_uint("get_iface_stats_fail_count", 0);
+        let disconnect_events = inspect_node.create_child("disconnect_events");
+        let external_inspect_node = ExternalInspectNode::new(external_inspect_node);
         Self {
             dev_svc_proxy,
             connection_state: ConnectionState::Idle(IdleState { connect_start_time: None }),
             last_checked_connection_state: fasync::Time::now(),
             stats_logger,
+            hasher,
             _inspect_node: inspect_node,
             get_iface_stats_fail_count,
+            disconnect_events_node: Mutex::new(BoundedListNode::new(
+                disconnect_events,
+                INSPECT_DISCONNECT_EVENTS_LIMIT,
+            )),
+            external_inspect_node,
         }
     }
 
@@ -509,6 +622,8 @@ impl Telemetry {
                 }
             }
             TelemetryEvent::Disconnected { track_subsequent_downtime, info } => {
+                self.log_disconnect_event_inspect(&info);
+
                 self.stats_logger.log_stat(StatOp::AddDisconnectCount).await;
                 self.stats_logger.log_disconnect_cobalt_metrics(&info).await;
 
@@ -566,6 +681,49 @@ impl Telemetry {
                 }
             }
         }
+    }
+
+    pub fn log_disconnect_event_inspect(&self, info: &DisconnectInfo) {
+        inspect_log!(self.disconnect_events_node.lock(), {
+            connected_duration: info.connected_duration.into_nanos(),
+            disconnect_source: info.disconnect_source.inspect_string(),
+            network: {
+                rssi_dbm: info.latest_ap_state.rssi_dbm,
+                snr_db: info.latest_ap_state.snr_db,
+                bssid: info.latest_ap_state.bssid.0.to_mac_string(),
+                bssid_hash: self.hasher.hash_mac_addr(&info.latest_ap_state.bssid.0),
+                ssid: info.latest_ap_state.ssid.to_string(),
+                ssid_hash: self.hasher.hash_ssid(&info.latest_ap_state.ssid),
+                protection: format!("{:?}", info.latest_ap_state.protection()),
+                channel: {
+                    primary: info.latest_ap_state.channel.primary,
+                    cbw: format!("{:?}", info.latest_ap_state.channel.cbw),
+                    secondary80: info.latest_ap_state.channel.secondary80,
+                },
+                ht_cap?: info.latest_ap_state.raw_ht_cap().map(|cap| InspectBytes(cap.bytes)),
+                vht_cap?: info.latest_ap_state.raw_vht_cap().map(|cap| InspectBytes(cap.bytes)),
+                wsc?: match &info.latest_ap_state.probe_resp_wsc() {
+                    None => None,
+                    Some(wsc) => Some(make_inspect_loggable!(
+                        device_name: String::from_utf8_lossy(&wsc.device_name[..]).to_string(),
+                        manufacturer: String::from_utf8_lossy(&wsc.manufacturer[..]).to_string(),
+                        model_name: String::from_utf8_lossy(&wsc.model_name[..]).to_string(),
+                        model_number: String::from_utf8_lossy(&wsc.model_number[..]).to_string(),
+                    )),
+                },
+                is_wmm_assoc: info.latest_ap_state.find_wmm_param().is_some(),
+                wmm_param?: info.latest_ap_state.find_wmm_param().map(|bytes| InspectBytes(bytes)),
+            }
+        });
+        inspect_log!(self.external_inspect_node.disconnect_events.lock(), {
+            reason_code: info.disconnect_source.flattened_reason_code(),
+            locally_initiated: info.disconnect_source.locally_initiated(),
+            network: {
+                channel: {
+                    primary: info.latest_ap_state.channel.primary,
+                },
+            },
+        });
     }
 
     pub async fn log_daily_cobalt_metrics(&mut self) {
@@ -1247,10 +1405,13 @@ impl StatsLogger {
         });
 
         let disconnect_source_dim =
-            convert::convert_disconnect_source(&disconnect_info.disconnect_source);
+            convert::convert_disconnect_source(&disconnect_info.disconnect_source.source());
         metric_events.push(MetricEvent {
             metric_id: metrics::DISCONNECT_BREAKDOWN_BY_REASON_CODE_METRIC_ID,
-            event_codes: vec![disconnect_info.reason_code as u32, disconnect_source_dim as u32],
+            event_codes: vec![
+                disconnect_info.disconnect_source.raw_reason_code() as u32,
+                disconnect_source_dim as u32,
+            ],
             payload: MetricEventPayload::Count(1),
         });
 
@@ -1362,13 +1523,16 @@ impl StatsLogger {
         disconnect_info: &DisconnectInfo,
     ) {
         let disconnect_source_dim =
-            convert::convert_disconnect_source(&disconnect_info.disconnect_source);
+            convert::convert_disconnect_source(&disconnect_info.disconnect_source.source());
         log_cobalt_1dot1!(
             self.cobalt_1dot1_proxy,
             log_integer,
             metrics::DOWNTIME_BREAKDOWN_BY_DISCONNECT_REASON_METRIC_ID,
             downtime.into_micros(),
-            &[disconnect_info.reason_code as u32, disconnect_source_dim as u32],
+            &[
+                disconnect_info.disconnect_source.raw_reason_code() as u32,
+                disconnect_source_dim as u32
+            ],
         );
     }
 
@@ -1701,6 +1865,7 @@ impl ConnectAttemptsCounter {
 mod tests {
     use {
         super::*,
+        crate::util::testing::create_wlan_hasher,
         fidl::endpoints::create_proxy_and_stream,
         fidl_fuchsia_metrics::{MetricEvent, MetricEventLoggerRequest, MetricEventPayload},
         fidl_fuchsia_wlan_common as fidl_common,
@@ -1725,7 +1890,7 @@ mod tests {
         assert_eq!(test_helper.exec.run_until_stalled(&mut test_fut), Poll::Pending);
 
         test_helper.advance_by(24.hours() - TELEMETRY_QUERY_INTERVAL, test_fut.as_mut());
-        assert_data_tree!(test_helper.inspector, root: {
+        assert_data_tree!(test_helper.inspector, root: contains {
             stats: contains {
                 "1d_counters": contains {
                     total_duration: (24.hours() - TELEMETRY_QUERY_INTERVAL).into_nanos(),
@@ -1739,7 +1904,7 @@ mod tests {
         });
 
         test_helper.advance_to_next_telemetry_checkpoint(test_fut.as_mut());
-        assert_data_tree!(test_helper.inspector, root: {
+        assert_data_tree!(test_helper.inspector, root: contains {
             stats: contains {
                 "1d_counters": contains {
                     // The first hour window is now discarded, so it only shows 23 hours
@@ -1755,7 +1920,7 @@ mod tests {
         });
 
         test_helper.advance_by(2.hours(), test_fut.as_mut());
-        assert_data_tree!(test_helper.inspector, root: {
+        assert_data_tree!(test_helper.inspector, root: contains {
             stats: contains {
                 "1d_counters": contains {
                     total_duration: 23.hours().into_nanos(),
@@ -1776,7 +1941,7 @@ mod tests {
         assert_eq!(test_helper.exec.run_until_stalled(&mut test_fut), Poll::Pending);
 
         test_helper.advance_by(8.hours(), test_fut.as_mut());
-        assert_data_tree!(test_helper.inspector, root: {
+        assert_data_tree!(test_helper.inspector, root: contains {
             stats: contains {
                 "1d_counters": contains {
                     total_duration: 23.hours().into_nanos(),
@@ -1793,7 +1958,7 @@ mod tests {
         // The 7d counters do not decrease before the 7th day
         test_helper.advance_by(14.hours(), test_fut.as_mut());
         test_helper.advance_by((5 * 24).hours() - TELEMETRY_QUERY_INTERVAL, test_fut.as_mut());
-        assert_data_tree!(test_helper.inspector, root: {
+        assert_data_tree!(test_helper.inspector, root: contains {
             stats: contains {
                 "1d_counters": contains {
                     total_duration: (24.hours() - TELEMETRY_QUERY_INTERVAL).into_nanos(),
@@ -1808,7 +1973,7 @@ mod tests {
 
         // On the 7th day, the first window is removed (24 hours of duration is deducted)
         test_helper.advance_to_next_telemetry_checkpoint(test_fut.as_mut());
-        assert_data_tree!(test_helper.inspector, root: {
+        assert_data_tree!(test_helper.inspector, root: contains {
             stats: contains {
                 "1d_counters": contains {
                     total_duration: 23.hours().into_nanos(),
@@ -1857,7 +2022,7 @@ mod tests {
         let (mut test_helper, mut test_fut) = setup_test();
 
         test_helper.advance_by(30.minutes(), test_fut.as_mut());
-        assert_data_tree!(test_helper.inspector, root: {
+        assert_data_tree!(test_helper.inspector, root: contains {
             stats: contains {
                 "1d_counters": contains {
                     total_duration: 30.minutes().into_nanos(),
@@ -1869,7 +2034,7 @@ mod tests {
         });
 
         test_helper.advance_by(30.minutes(), test_fut.as_mut());
-        assert_data_tree!(test_helper.inspector, root: {
+        assert_data_tree!(test_helper.inspector, root: contains {
             stats: contains {
                 "1d_counters": contains {
                     total_duration: 1.hour().into_nanos(),
@@ -1886,7 +2051,7 @@ mod tests {
         let (mut test_helper, mut test_fut) = setup_test();
 
         test_helper.advance_by(30.minutes(), test_fut.as_mut());
-        assert_data_tree!(test_helper.inspector, root: {
+        assert_data_tree!(test_helper.inspector, root: contains {
             stats: contains {
                 "1d_counters": contains {
                     connected_duration: 0i64,
@@ -1902,7 +2067,7 @@ mod tests {
         });
 
         test_helper.advance_by(30.minutes(), test_fut.as_mut());
-        assert_data_tree!(test_helper.inspector, root: {
+        assert_data_tree!(test_helper.inspector, root: contains {
             stats: contains {
                 "1d_counters": contains {
                     connected_duration: 0i64,
@@ -1925,7 +2090,7 @@ mod tests {
         assert_eq!(test_helper.exec.run_until_stalled(&mut test_fut), Poll::Pending);
 
         test_helper.advance_by(30.minutes(), test_fut.as_mut());
-        assert_data_tree!(test_helper.inspector, root: {
+        assert_data_tree!(test_helper.inspector, root: contains {
             stats: contains {
                 "1d_counters": contains {
                     connected_duration: 30.minutes().into_nanos(),
@@ -1941,7 +2106,7 @@ mod tests {
         });
 
         test_helper.advance_by(30.minutes(), test_fut.as_mut());
-        assert_data_tree!(test_helper.inspector, root: {
+        assert_data_tree!(test_helper.inspector, root: contains {
             stats: contains {
                 "1d_counters": contains {
                     connected_duration: 1.hour().into_nanos(),
@@ -1970,7 +2135,7 @@ mod tests {
 
         test_helper.advance_by(10.minutes(), test_fut.as_mut());
 
-        assert_data_tree!(test_helper.inspector, root: {
+        assert_data_tree!(test_helper.inspector, root: contains {
             stats: contains {
                 "1d_counters": contains {
                     connected_duration: 0i64,
@@ -1994,7 +2159,7 @@ mod tests {
 
         test_helper.advance_by(15.minutes(), test_fut.as_mut());
 
-        assert_data_tree!(test_helper.inspector, root: {
+        assert_data_tree!(test_helper.inspector, root: contains {
             stats: contains {
                 "1d_counters": contains {
                     connected_duration: 0i64,
@@ -2026,7 +2191,7 @@ mod tests {
         assert_eq!(test_helper.exec.run_until_stalled(&mut test_fut), Poll::Pending);
 
         // The 5 seconds connected duration is not accounted for yet.
-        assert_data_tree!(test_helper.inspector, root: {
+        assert_data_tree!(test_helper.inspector, root: contains {
             stats: contains {
                 "1d_counters": contains {
                     connected_duration: 0i64,
@@ -2044,7 +2209,7 @@ mod tests {
         // At next telemetry checkpoint, `test_fut` updates the connected and downtime durations.
         let downtime_start = fasync::Time::now();
         test_helper.advance_to_next_telemetry_checkpoint(test_fut.as_mut());
-        assert_data_tree!(test_helper.inspector, root: {
+        assert_data_tree!(test_helper.inspector, root: contains {
             stats: contains {
                 "1d_counters": contains {
                     connected_duration: 5.seconds().into_nanos(),
@@ -2083,7 +2248,7 @@ mod tests {
         assert_eq!(test_helper.exec.run_until_stalled(&mut test_fut), Poll::Pending);
 
         test_helper.advance_to_next_telemetry_checkpoint(test_fut.as_mut());
-        assert_data_tree!(test_helper.inspector, root: {
+        assert_data_tree!(test_helper.inspector, root: contains {
             stats: contains {
                 "1d_counters": contains {
                     connected_duration: 0i64,
@@ -2099,7 +2264,7 @@ mod tests {
         });
 
         test_helper.advance_to_next_telemetry_checkpoint(test_fut.as_mut());
-        assert_data_tree!(test_helper.inspector, root: {
+        assert_data_tree!(test_helper.inspector, root: contains {
             stats: contains {
                 "1d_counters": contains {
                     connected_duration: 0i64,
@@ -2124,7 +2289,7 @@ mod tests {
         assert_eq!(test_helper.exec.run_until_stalled(&mut test_fut), Poll::Pending);
 
         // `downtime_no_saved_neighbor_duration` counter is not updated right away.
-        assert_data_tree!(test_helper.inspector, root: {
+        assert_data_tree!(test_helper.inspector, root: contains {
             stats: contains {
                 "1d_counters": contains {
                     connected_duration: 0i64,
@@ -2141,7 +2306,7 @@ mod tests {
 
         // At the next checkpoint, both downtime counters are updated together.
         test_helper.advance_to_next_telemetry_checkpoint(test_fut.as_mut());
-        assert_data_tree!(test_helper.inspector, root: {
+        assert_data_tree!(test_helper.inspector, root: contains {
             stats: contains {
                 "1d_counters": contains {
                     connected_duration: 0i64,
@@ -2172,7 +2337,7 @@ mod tests {
         test_helper.advance_to_next_telemetry_checkpoint(test_fut.as_mut());
 
         // However, this time neither of the downtime counters should be incremented
-        assert_data_tree!(test_helper.inspector, root: {
+        assert_data_tree!(test_helper.inspector, root: contains {
             stats: contains {
                 "1d_counters": contains {
                     connected_duration: 0i64,
@@ -2205,7 +2370,7 @@ mod tests {
         test_helper.send_connected_event(random_bss_description!(Wpa2));
         test_helper.drain_cobalt_events(&mut test_fut);
 
-        assert_data_tree!(test_helper.inspector, root: {
+        assert_data_tree!(test_helper.inspector, root: contains {
             stats: contains {
                 "1d_counters": contains {
                     connect_attempts_count: 11u64,
@@ -2225,7 +2390,7 @@ mod tests {
         test_helper.send_connected_event(random_bss_description!(Wpa2));
         assert_eq!(test_helper.exec.run_until_stalled(&mut test_fut), Poll::Pending);
 
-        assert_data_tree!(test_helper.inspector, root: {
+        assert_data_tree!(test_helper.inspector, root: contains {
             stats: contains {
                 "1d_counters": contains {
                     disconnect_count: 0u64,
@@ -2242,7 +2407,7 @@ mod tests {
             .send(TelemetryEvent::Disconnected { track_subsequent_downtime: true, info });
         test_helper.drain_cobalt_events(&mut test_fut);
 
-        assert_data_tree!(test_helper.inspector, root: {
+        assert_data_tree!(test_helper.inspector, root: contains {
             stats: contains {
                 "1d_counters": contains {
                     disconnect_count: 1u64,
@@ -2259,7 +2424,7 @@ mod tests {
             .send(TelemetryEvent::Disconnected { track_subsequent_downtime: false, info });
         test_helper.drain_cobalt_events(&mut test_fut);
 
-        assert_data_tree!(test_helper.inspector, root: {
+        assert_data_tree!(test_helper.inspector, root: contains {
             stats: contains {
                 "1d_counters": contains {
                     disconnect_count: 2u64,
@@ -2278,7 +2443,7 @@ mod tests {
         assert_eq!(test_helper.exec.run_until_stalled(&mut test_fut), Poll::Pending);
 
         test_helper.advance_by(1.hour(), test_fut.as_mut());
-        assert_data_tree!(test_helper.inspector, root: {
+        assert_data_tree!(test_helper.inspector, root: contains {
             stats: contains {
                 get_iface_stats_fail_count: 0u64,
                 "1d_counters": contains {
@@ -2324,7 +2489,7 @@ mod tests {
         assert_eq!(test_helper.exec.run_until_stalled(&mut test_fut), Poll::Pending);
 
         test_helper.advance_by(1.hour(), test_fut.as_mut());
-        assert_data_tree!(test_helper.inspector, root: {
+        assert_data_tree!(test_helper.inspector, root: contains {
             stats: contains {
                 get_iface_stats_fail_count: 0u64,
                 "1d_counters": contains {
@@ -2372,7 +2537,7 @@ mod tests {
         assert_eq!(test_helper.exec.run_until_stalled(&mut test_fut), Poll::Pending);
 
         test_helper.advance_by(1.hour(), test_fut.as_mut());
-        assert_data_tree!(test_helper.inspector, root: {
+        assert_data_tree!(test_helper.inspector, root: contains {
             stats: contains {
                 get_iface_stats_fail_count: 0u64,
                 "1d_counters": contains {
@@ -2423,7 +2588,7 @@ mod tests {
         assert_eq!(test_helper.exec.run_until_stalled(&mut test_fut), Poll::Pending);
 
         test_helper.advance_by(1.hour(), test_fut.as_mut());
-        assert_data_tree!(test_helper.inspector, root: {
+        assert_data_tree!(test_helper.inspector, root: contains {
             stats: contains {
                 get_iface_stats_fail_count: 0u64,
                 "1d_counters": contains {
@@ -2471,7 +2636,7 @@ mod tests {
         assert_eq!(test_helper.exec.run_until_stalled(&mut test_fut), Poll::Pending);
 
         test_helper.advance_by(1.hour(), test_fut.as_mut());
-        assert_data_tree!(test_helper.inspector, root: {
+        assert_data_tree!(test_helper.inspector, root: contains {
             stats: contains {
                 get_iface_stats_fail_count: 0u64,
                 "1d_counters": contains {
@@ -2507,7 +2672,7 @@ mod tests {
         assert_eq!(test_helper.exec.run_until_stalled(&mut test_fut), Poll::Pending);
 
         test_helper.advance_by(1.hour(), test_fut.as_mut());
-        assert_data_tree!(test_helper.inspector, root: {
+        assert_data_tree!(test_helper.inspector, root: contains {
             stats: contains {
                 get_iface_stats_fail_count: NonZeroUintProperty,
                 "1d_counters": contains {
@@ -3010,8 +3175,7 @@ mod tests {
         let latest_ap_state = random_bss_description!(Wpa2, channel: channel);
         let info = DisconnectInfo {
             connected_duration: 5.hours(),
-            reason_code: 3,
-            disconnect_source: fidl_sme::DisconnectSource::Mlme,
+            disconnect_source: DisconnectSource::new(fidl_sme::DisconnectSource::Mlme, 3),
             latest_ap_state,
             ..fake_disconnect_info()
         };
@@ -3523,8 +3687,7 @@ mod tests {
         test_helper.drain_cobalt_events(&mut test_fut);
 
         let info = DisconnectInfo {
-            reason_code: 3,
-            disconnect_source: fidl_sme::DisconnectSource::Mlme,
+            disconnect_source: DisconnectSource::new(fidl_sme::DisconnectSource::Mlme, 3),
             ..fake_disconnect_info()
         };
         test_helper
@@ -3575,8 +3738,7 @@ mod tests {
         test_helper.drain_cobalt_events(&mut test_fut);
 
         let info = DisconnectInfo {
-            reason_code: 3,
-            disconnect_source: fidl_sme::DisconnectSource::Mlme,
+            disconnect_source: DisconnectSource::new(fidl_sme::DisconnectSource::Mlme, 3),
             ..fake_disconnect_info()
         };
         test_helper
@@ -4169,8 +4331,15 @@ mod tests {
 
         let inspector = Inspector::new();
         let inspect_node = inspector.root().create_child("stats");
-        let (telemetry_sender, test_fut) =
-            serve_telemetry(dev_svc_proxy, cobalt_1dot1_proxy, inspect_node);
+        let external_inspect_node = inspector.root().create_child("external");
+        let (telemetry_sender, test_fut) = serve_telemetry(
+            dev_svc_proxy,
+            cobalt_1dot1_proxy,
+            create_wlan_hasher(),
+            inspect_node,
+            external_inspect_node.create_child("stats"),
+        );
+        inspector.root().record(external_inspect_node);
         let mut test_fut = Box::pin(test_fut);
 
         assert_eq!(exec.run_until_stalled(&mut test_fut), Poll::Pending);
@@ -4293,8 +4462,10 @@ mod tests {
         DisconnectInfo {
             connected_duration: 6.hours(),
             is_sme_reconnecting: fidl_disconnect_info.is_sme_reconnecting,
-            reason_code: fidl_disconnect_info.reason_code,
-            disconnect_source: fidl_disconnect_info.disconnect_source,
+            disconnect_source: DisconnectSource::new(
+                fidl_disconnect_info.disconnect_source,
+                fidl_disconnect_info.reason_code,
+            ),
             latest_ap_state: random_bss_description!(Wpa2),
         }
     }

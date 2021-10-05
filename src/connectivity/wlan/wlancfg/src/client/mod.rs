@@ -475,7 +475,9 @@ mod tests {
             access_point::state_machine as ap_fsm,
             config_management::{Credential, NetworkConfig, SecurityType, WPA_PSK_BYTE_LEN},
             telemetry::{TelemetryEvent, TelemetrySender},
-            util::testing::{create_mock_cobalt_sender, fakes::FakeSavedNetworksManager},
+            util::testing::{
+                create_mock_cobalt_sender, create_wlan_hasher, fakes::FakeSavedNetworksManager,
+            },
         },
         async_trait::async_trait,
         fidl::endpoints::{create_proxy, create_request_stream, Proxy},
@@ -714,6 +716,7 @@ mod tests {
         let network_selector = Arc::new(network_selection::NetworkSelector::new(
             saved_networks.clone(),
             create_mock_cobalt_sender(),
+            create_wlan_hasher(),
             inspect::Inspector::new().root().create_child("network_selector"),
             TelemetrySender::new(telemetry_sender),
         ));
@@ -1267,6 +1270,7 @@ mod tests {
         let network_selector = Arc::new(network_selection::NetworkSelector::new(
             saved_networks.clone(),
             create_mock_cobalt_sender(),
+            create_wlan_hasher(),
             inspect::Inspector::new().root().create_child("network_selector"),
             TelemetrySender::new(telemetry_sender),
         ));
@@ -1329,6 +1333,7 @@ mod tests {
         let network_selector = Arc::new(network_selection::NetworkSelector::new(
             saved_networks.clone(),
             create_mock_cobalt_sender(),
+            create_wlan_hasher(),
             inspect::Inspector::new().root().create_child("network_selector"),
             TelemetrySender::new(telemetry_sender),
         ));
@@ -1407,6 +1412,7 @@ mod tests {
         let network_selector = Arc::new(network_selection::NetworkSelector::new(
             saved_networks.clone(),
             create_mock_cobalt_sender(),
+            create_wlan_hasher(),
             inspect::Inspector::new().root().create_child("network_selector"),
             TelemetrySender::new(telemetry_sender),
         ));
@@ -1480,6 +1486,7 @@ mod tests {
         let network_selector = Arc::new(network_selection::NetworkSelector::new(
             saved_networks.clone(),
             create_mock_cobalt_sender(),
+            create_wlan_hasher(),
             inspect::Inspector::new().root().create_child("network_selector"),
             TelemetrySender::new(telemetry_sender),
         ));
@@ -1545,6 +1552,7 @@ mod tests {
         let network_selector = Arc::new(network_selection::NetworkSelector::new(
             saved_networks.clone(),
             create_mock_cobalt_sender(),
+            create_wlan_hasher(),
             inspect::Inspector::new().root().create_child("network_selector"),
             TelemetrySender::new(telemetry_sender),
         ));
@@ -1687,6 +1695,7 @@ mod tests {
         let network_selector = Arc::new(network_selection::NetworkSelector::new(
             saved_networks.clone(),
             create_mock_cobalt_sender(),
+            create_wlan_hasher(),
             inspect::Inspector::new().root().create_child("network_selector"),
             TelemetrySender::new(telemetry_sender),
         ));
@@ -2021,6 +2030,7 @@ mod tests {
         let network_selector = Arc::new(network_selection::NetworkSelector::new(
             saved_networks.clone(),
             create_mock_cobalt_sender(),
+            create_wlan_hasher(),
             inspect::Inspector::new().root().create_child("network_selector"),
             TelemetrySender::new(telemetry_sender),
         ));

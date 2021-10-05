@@ -6,7 +6,7 @@ use {
     crate::{
         client::{network_selection, sme_credential_from_policy, types},
         config_management::SavedNetworksManagerApi,
-        telemetry::{DisconnectInfo, TelemetryEvent, TelemetrySender},
+        telemetry::{DisconnectInfo, DisconnectSource, TelemetryEvent, TelemetrySender},
         util::{
             listener::{
                 ClientListenerMessageSender, ClientNetworkState, ClientStateUpdate,
@@ -681,8 +681,7 @@ async fn connected_state(
                             let info = DisconnectInfo {
                                 connected_duration: now - connect_start_time,
                                 is_sme_reconnecting: fidl_info.is_sme_reconnecting,
-                                reason_code: fidl_info.reason_code,
-                                disconnect_source: fidl_info.disconnect_source,
+                                disconnect_source: DisconnectSource::new(fidl_info.disconnect_source, fidl_info.reason_code),
                                 latest_ap_state: (*options.latest_ap_state).clone(),
                             };
                             common_options.telemetry_sender.send(TelemetryEvent::Disconnected { track_subsequent_downtime: true, info });
@@ -776,8 +775,7 @@ async fn connected_state(
                         let info = DisconnectInfo {
                             connected_duration: now - connect_start_time,
                             is_sme_reconnecting: false,
-                            reason_code: options.reason as u16,
-                            disconnect_source: fidl_sme::DisconnectSource::User,
+                            disconnect_source: DisconnectSource::new(fidl_sme::DisconnectSource::User, options.reason as u16),
                             latest_ap_state: *latest_ap_state,
                         };
                         common_options.telemetry_sender.send(TelemetryEvent::Disconnected { track_subsequent_downtime: false, info });
@@ -813,8 +811,7 @@ async fn connected_state(
                             let info = DisconnectInfo {
                                 connected_duration: now - connect_start_time,
                                 is_sme_reconnecting: false,
-                                reason_code: options.reason as u16,
-                                disconnect_source: fidl_sme::DisconnectSource::User,
+                                disconnect_source: DisconnectSource::new(fidl_sme::DisconnectSource::User, options.reason as u16),
                                 latest_ap_state: *latest_ap_state,
                             };
                             common_options.telemetry_sender.send(TelemetryEvent::Disconnected { track_subsequent_downtime: false, info });
@@ -853,7 +850,7 @@ mod tests {
                 listener,
                 testing::{
                     create_mock_cobalt_sender, create_mock_cobalt_sender_and_receiver,
-                    generate_disconnect_info, poll_sme_req,
+                    create_wlan_hasher, generate_disconnect_info, poll_sme_req,
                     validate_sme_scan_request_and_send_results, FakeSavedNetworksManager,
                 },
             },
@@ -902,6 +899,7 @@ mod tests {
         let network_selector = Arc::new(network_selection::NetworkSelector::new(
             saved_networks_manager.clone(),
             create_mock_cobalt_sender(),
+            create_wlan_hasher(),
             inspect::Inspector::new().root().create_child("network_selector"),
             telemetry_sender.clone(),
         ));
@@ -1133,6 +1131,7 @@ mod tests {
         let network_selector = Arc::new(network_selection::NetworkSelector::new(
             saved_networks_manager.clone(),
             create_mock_cobalt_sender(),
+            create_wlan_hasher(),
             inspect::Inspector::new().root().create_child("network_selector"),
             telemetry_sender.clone(),
         ));
@@ -1340,6 +1339,7 @@ mod tests {
         let network_selector = Arc::new(network_selection::NetworkSelector::new(
             saved_networks_manager.clone(),
             create_mock_cobalt_sender(),
+            create_wlan_hasher(),
             inspect::Inspector::new().root().create_child("network_selector"),
             telemetry_sender.clone(),
         ));
@@ -1621,6 +1621,7 @@ mod tests {
         let network_selector = Arc::new(network_selection::NetworkSelector::new(
             saved_networks_manager.clone(),
             create_mock_cobalt_sender(),
+            create_wlan_hasher(),
             inspect::Inspector::new().root().create_child("network_selector"),
             telemetry_sender.clone(),
         ));
@@ -1821,6 +1822,7 @@ mod tests {
         let network_selector = Arc::new(network_selection::NetworkSelector::new(
             saved_networks_manager.clone(),
             create_mock_cobalt_sender(),
+            create_wlan_hasher(),
             inspect::Inspector::new().root().create_child("network_selector"),
             telemetry_sender.clone(),
         ));
@@ -1972,6 +1974,7 @@ mod tests {
         let network_selector = Arc::new(network_selection::NetworkSelector::new(
             saved_networks_manager.clone(),
             create_mock_cobalt_sender(),
+            create_wlan_hasher(),
             inspect::Inspector::new().root().create_child("network_selector"),
             telemetry_sender.clone(),
         ));
@@ -2682,8 +2685,7 @@ mod tests {
                 assert_eq!(info, DisconnectInfo {
                     connected_duration: 12.hours(),
                     is_sme_reconnecting: false,
-                    reason_code: fidl_sme::UserDisconnectReason::FidlStopClientConnectionsRequest as u16,
-                    disconnect_source: fidl_sme::DisconnectSource::User,
+                    disconnect_source: DisconnectSource::new(fidl_sme::DisconnectSource::User, fidl_sme::UserDisconnectReason::FidlStopClientConnectionsRequest as u16),
                     latest_ap_state: bss_description,
                 });
             });
@@ -2765,8 +2767,7 @@ mod tests {
                 assert_eq!(info, DisconnectInfo {
                     connected_duration: 12.hours(),
                     is_sme_reconnecting,
-                    reason_code: fidl_disconnect_info.reason_code,
-                    disconnect_source: fidl_disconnect_info.disconnect_source,
+                    disconnect_source: DisconnectSource::new(fidl_disconnect_info.disconnect_source, fidl_disconnect_info.reason_code),
                     latest_ap_state: bss_description,
                 });
             });
@@ -2882,6 +2883,7 @@ mod tests {
         let network_selector = Arc::new(network_selection::NetworkSelector::new(
             saved_networks_manager.clone(),
             create_mock_cobalt_sender(),
+            create_wlan_hasher(),
             inspect::Inspector::new().root().create_child("network_selector"),
             TelemetrySender::new(telemetry_sender),
         ));
@@ -3177,8 +3179,7 @@ mod tests {
                 assert_eq!(info, DisconnectInfo {
                     connected_duration: 12.hours(),
                     is_sme_reconnecting: false,
-                    reason_code: fidl_sme::UserDisconnectReason::ProactiveNetworkSwitch as u16,
-                    disconnect_source: fidl_sme::DisconnectSource::User,
+                    disconnect_source: DisconnectSource::new(fidl_sme::DisconnectSource::User, fidl_sme::UserDisconnectReason::ProactiveNetworkSwitch as u16),
                     latest_ap_state: bss_description.clone(),
                 });
             });
@@ -3266,6 +3267,7 @@ mod tests {
         let network_selector = Arc::new(network_selection::NetworkSelector::new(
             saved_networks_manager.clone(),
             create_mock_cobalt_sender(),
+            create_wlan_hasher(),
             inspect::Inspector::new().root().create_child("network_selector"),
             telemetry_sender.clone(),
         ));
@@ -3527,6 +3529,7 @@ mod tests {
         let network_selector = Arc::new(network_selection::NetworkSelector::new(
             saved_networks_manager.clone(),
             create_mock_cobalt_sender(),
+            create_wlan_hasher(),
             inspect::Inspector::new().root().create_child("network_selector"),
             TelemetrySender::new(telemetry_sender),
         ));
