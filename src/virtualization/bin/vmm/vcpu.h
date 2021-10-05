@@ -10,6 +10,7 @@
 #include <zircon/syscalls/port.h>
 
 #include <future>
+#include <optional>
 
 using zx_vcpu_state_t = struct zx_vcpu_state;
 
@@ -21,6 +22,7 @@ class Vcpu {
   Vcpu(const Vcpu&) = delete;
   Vcpu& operator=(const Vcpu&) = delete;
   Vcpu(uint64_t id, Guest* guest, zx_gpaddr_t entry, zx_gpaddr_t boot_ptr, async::Loop* loop);
+  ~Vcpu();
 
   // Begin VCPU execution.
   zx_status_t Start();
@@ -58,6 +60,7 @@ class Vcpu {
   async::Loop* const loop_;
 
   zx::vcpu vcpu_;
+  std::optional<std::thread> thread_;
 };
 
 #endif  // SRC_VIRTUALIZATION_BIN_VMM_VCPU_H_

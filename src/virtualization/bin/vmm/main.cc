@@ -14,6 +14,7 @@
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
 #include <lib/fdio/namespace.h>
+#include <lib/fit/defer.h>
 #include <lib/sys/cpp/component_context.h>
 #include <lib/syslog/cpp/log_settings.h>
 #include <lib/trace-provider/provider.h>
@@ -113,7 +114,9 @@ int main(int argc, char** argv) {
     }
   }
 
-  Guest guest;
+  std::optional guest_opt = std::make_optional<Guest>();
+  Guest& guest = guest_opt.value();
+
   status = guest.Init(cfg.memory());
   if (status != ZX_OK) {
     return status;
@@ -456,6 +459,11 @@ int main(int argc, char** argv) {
     FX_PLOGS(ERROR, status) << "Failed to load kernel";
     return status;
   }
+
+  // Destroy the guest before anything else we have on the stack; the guest has ownership of VCPU
+  // threads that may attempt to access various stack-allocated objects through the guest and its
+  // destructor joins those threads, avoiding stack-use-after-scope.
+  auto destroy_guest = fit::defer([&guest_opt]() { guest_opt.reset(); });
 
   // Setup primary VCPU.
   status = guest.StartVcpu(0 /* id */, entry, boot_ptr, &loop);

@@ -98,7 +98,7 @@ class IoMapping {
   const zx_gpaddr_t base_;
   const size_t size_;
   const zx_gpaddr_t off_;
-  IoHandler* handler_;
+  IoHandler* const handler_;
   async::GuestBellTrapMethod<IoMapping, &IoMapping::CallIoHandlerAsync> async_trap_;
 };
 

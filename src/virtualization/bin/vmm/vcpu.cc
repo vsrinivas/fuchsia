@@ -5,14 +5,8 @@
 #include "src/virtualization/bin/vmm/vcpu.h"
 
 #include <lib/fit/defer.h>
-#include <lib/fit/function.h>
 #include <lib/syslog/cpp/macros.h>
-#include <lib/trace/event.h>
 #include <lib/zx/thread.h>
-#include <limits.h>
-#include <stdio.h>
-#include <string.h>
-#include <zircon/process.h>
 #include <zircon/status.h>
 #include <zircon/syscalls.h>
 #include <zircon/syscalls/hypervisor.h>
@@ -27,10 +21,18 @@ static thread_local Vcpu* thread_vcpu = nullptr;
 Vcpu::Vcpu(uint64_t id, Guest* guest, zx_gpaddr_t entry, zx_gpaddr_t boot_ptr, async::Loop* loop)
     : id_(id), guest_(guest), entry_(entry), boot_ptr_(boot_ptr), loop_(loop) {}
 
+Vcpu::~Vcpu() {
+  if (thread_.has_value()) {
+    vcpu_.kick();
+    thread_.value().join();
+  }
+}
+
 zx_status_t Vcpu::Start() {
+  FX_DCHECK(!thread_.has_value()) << "VCPU already has a thread";
   std::promise<zx_status_t> barrier;
   std::future<zx_status_t> barrier_future = barrier.get_future();
-  std::thread(fit::bind_member(this, &Vcpu::Loop), std::move(barrier)).detach();
+  thread_ = std::thread(fit::bind_member(this, &Vcpu::Loop), std::move(barrier));
   barrier_future.wait();
   return barrier_future.get();
 }
@@ -94,6 +96,9 @@ zx_status_t Vcpu::Loop(std::promise<zx_status_t> barrier) {
     switch (status) {
       case ZX_OK:
         break;
+      case ZX_ERR_CANCELED:
+        FX_LOGS(INFO) << "Stopping VCPU " << id_;
+        return ZX_OK;
       default:
         FX_LOGS(ERROR) << "Fatal error attempting to enter VCPU " << id_ << ": "
                        << zx_status_get_string(status) << ". Shutting down VM.";
