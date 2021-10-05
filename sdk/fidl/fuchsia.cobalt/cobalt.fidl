@@ -23,8 +23,8 @@
 /// system being managed by the Cobalt team is currently intended to be used by
 /// software engineers at Google in order to collect metrics in a way that
 /// preserves our users' privacy. If you are a Google software engineer
-/// please see our internal [user guide](go/fuchsia-cobalt-userguide) or
-/// ask for assistance from the Cobalt [team](go/fuchsia-cobalt#comms).
+/// please see our internal [user guide](http://go/fuchsia-cobalt-userguide) or
+/// ask for assistance from the Cobalt [team](http://go/fuchsia-cobalt#comms).
 ///
 /// Usage: First use LoggerFactory to get a Logger for your
 /// project. Then you log Events using the Log*() methods.
