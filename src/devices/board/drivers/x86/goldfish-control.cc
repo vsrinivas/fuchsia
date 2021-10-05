@@ -9,46 +9,13 @@
 
 #include <array>
 
+#include "src/devices/board/drivers/x86/goldfish_control_2_bind.h"
 #include "src/devices/board/drivers/x86/x86.h"
 
 #define PCI_VID_GOLDFISH_ADDRESS_SPACE 0x607D
 #define PCI_DID_GOLDFISH_ADDRESS_SPACE 0xF153
 
 namespace x86 {
-
-static const zx_bind_inst_t goldfish_pipe_match[] = {
-    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_GOLDFISH_PIPE),
-    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_GOOGLE),
-    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_PID, PDEV_PID_GOLDFISH),
-    BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_GOLDFISH_PIPE_CONTROL),
-};
-
-static const zx_bind_inst_t goldfish_address_space_match[] = {
-    BI_MATCH_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_GOLDFISH_ADDRESS_SPACE),
-};
-
-static const zx_bind_inst_t goldfish_sync_match[] = {
-    BI_MATCH_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_GOLDFISH_SYNC),
-};
-
-static const device_fragment_part_t goldfish_pipe_fragment[] = {
-    {std::size(goldfish_pipe_match), goldfish_pipe_match},
-};
-
-static const device_fragment_part_t goldfish_address_space_fragment[] = {
-    {std::size(goldfish_address_space_match), goldfish_address_space_match},
-};
-
-static const device_fragment_part_t goldfish_sync_fragment[] = {
-    {std::size(goldfish_sync_match), goldfish_sync_match},
-};
-
-static const device_fragment_t goldfish_control_fragments[] = {
-    {"goldfish-pipe", std::size(goldfish_pipe_fragment), goldfish_pipe_fragment},
-    {"goldfish-address-space", std::size(goldfish_address_space_fragment),
-     goldfish_address_space_fragment},
-    {"goldfish-sync", std::size(goldfish_sync_fragment), goldfish_sync_fragment},
-};
 
 constexpr zx_device_prop_t props[] = {
     {BIND_PLATFORM_DEV_VID, 0, PDEV_VID_GOOGLE},
@@ -59,8 +26,8 @@ constexpr zx_device_prop_t props[] = {
 static const composite_device_desc_t comp_desc = {
     .props = props,
     .props_count = std::size(props),
-    .fragments = goldfish_control_fragments,
-    .fragments_count = std::size(goldfish_control_fragments),
+    .fragments = goldfish_control_2_fragments,
+    .fragments_count = std::size(goldfish_control_2_fragments),
     .primary_fragment = "goldfish-pipe",
     .spawn_colocated = false,
 };

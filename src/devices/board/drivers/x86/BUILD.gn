@@ -59,6 +59,16 @@ driver_bind_rules("x64-bind") {
   ]
 }
 
+driver_bind_rules("goldfish_control_2_bind") {
+  rules = "bind/goldfish_control_2.bind"
+  header_output = "goldfish_control_2_bind.h"
+  bind_output = "goldfish_control_2_bind.bc"
+  deps = [
+    "//src/devices/bind/fuchsia.goldfish",
+    "//src/devices/bind/fuchsia.google.platform",
+  ]
+}
+
 fuchsia_driver("platform-bus-x86-driver") {
   output_name = "platform-bus-x86"
   configs += [
@@ -109,6 +119,7 @@ fuchsia_driver("platform-bus-x86-driver") {
   }
   configs += [ ":config" ]
   deps = [
+    ":goldfish_control_2_bind_header",
     ":smbios",
     ":x64-bind",
     "acpi",

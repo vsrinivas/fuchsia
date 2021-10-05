@@ -1,0 +1,24 @@
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file
+
+composite goldfish_control_2;
+
+using fuchsia.goldfish;
+using fuchsia.google.platform;
+
+primary node "goldfish-pipe" {
+    fuchsia.BIND_PROTOCOL == fuchsia.goldfish.BIND_PROTOCOL.PIPE;
+    fuchsia.BIND_PLATFORM_DEV_VID == fuchsia.google.platform.BIND_PLATFORM_DEV_VID.GOOGLE;
+    fuchsia.BIND_PLATFORM_DEV_PID == fuchsia.google.platform.BIND_PLATFORM_DEV_PID.GOLDFISH;
+    fuchsia.BIND_PLATFORM_DEV_DID == fuchsia.google.platform.BIND_PLATFORM_DEV_DID.GOLDFISH_PIPE_CONTROL;
+}
+
+node "goldfish-address-space" {
+    fuchsia.BIND_PROTOCOL == fuchsia.goldfish.BIND_PROTOCOL.ADDRESS_SPACE;
+}
+
+node "goldfish-sync" {
+    fuchsia.BIND_PROTOCOL == fuchsia.goldfish.BIND_PROTOCOL.SYNC;
+}
+
