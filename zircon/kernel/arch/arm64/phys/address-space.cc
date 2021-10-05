@@ -121,21 +121,32 @@ void CreateBootstrapPageTable() {
     ZX_PANIC("Failed to create an AddressSpaceBuilder.");
   }
 
-  MapUart(*builder, pool);
+  bool map_device_memory = gBootOptions->phys_map_all_device_memory;
 
-  // Maps in the given range, doing nothing if it is not free RAM.
-  auto map_if_ram = [&builder](const memalloc::MemRange& range) {
-    if (range.type != memalloc::Type::kFreeRam) {
+  // If we are mapping in all peripheral ranges, then the UART page will be
+  // mapped below along with the rest.
+  if (!map_device_memory) {
+    MapUart(*builder, pool);
+  }
+
+  auto map = [map_device_memory, &builder](const memalloc::MemRange& range) {
+    if (range.type == memalloc::Type::kReserved ||
+        (range.type == memalloc::Type::kPeripheral && !map_device_memory)) {
       return;
     }
+
     auto result = builder->MapRegion(Vaddr(range.addr), Paddr(range.addr), range.size,
-                                     page_table::CacheAttributes::kNormal);
+                                     range.type == memalloc::Type::kPeripheral
+                                         ? page_table::CacheAttributes::kDevice
+                                         : page_table::CacheAttributes::kNormal);
     if (result != ZX_OK) {
       ZX_PANIC("Failed to map in range.");
     }
   };
 
-  // Map in all RAM as normal memory.
+  // Map in all RAM as normal memory and, depending on the value of
+  // kernel.arm64.phys.map-all-device-memory, all peripheral ranges as device
+  // memory.
   //
   // We merge ranges of kFreeRam or extended type on the fly, mapping the
   // previously constructed range when we have hit a hole or the end.
@@ -156,12 +167,12 @@ void CreateBootstrapPageTable() {
     } else if (prev->end() == range.addr && prev->type == range.type) {
       prev->size += range.size;
     } else {
-      map_if_ram(*prev);
+      map(*prev);
       prev = range;
     }
   }
   ZX_DEBUG_ASSERT(prev);
-  map_if_ram(*prev);
+  map(*prev);
 
   // Enable the MMU and switch to the new page table.
   EnablePaging(builder->root_paddr());

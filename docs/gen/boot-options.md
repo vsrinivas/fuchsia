@@ -679,6 +679,12 @@ for a specific architecture.
 
 Note: The default value may vary for each architechture.
 
+### kernel.arm64.phys.map-all-device-memory=\<bool>
+**Default:** `false`
+
+Whether to map all peripheral ranges in as device memory. If false, only the ranges actually used
+by physboot (e.g., the UART's) will be mapped.
+
 ### kernel.arm64.phys.mmu=\<bool>
 **Default:** `true`
 

@@ -42,6 +42,11 @@ for a specific architecture.
 Note: The default value may vary for each architechture.
 )""")
 
+DEFINE_OPTION("kernel.arm64.phys.map-all-device-memory", bool, phys_map_all_device_memory, {false}, R"""(
+Whether to map all peripheral ranges in as device memory. If false, only the ranges actually used
+by physboot (e.g., the UART's) will be mapped.
+)""")
+
 DEFINE_OPTION("kernel.arm64.phys.mmu", bool, phys_mmu, {true}, R"""(
 This enables use of the MMU and caches during the kernel's early boot phase.
 )""")
