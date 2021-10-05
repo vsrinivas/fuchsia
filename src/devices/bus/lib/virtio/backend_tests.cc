@@ -2,8 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <lib/device-protocol/pci.h>
 #include <lib/fake-bti/bti.h>
 #include <lib/fake_ddk/fake_ddk.h>
+#include <lib/mmio/mmio.h>
 #include <lib/virtio/backends/pci.h>
 #include <lib/virtio/driver_utils.h>
 #include <lib/virtio/ring.h>
@@ -11,6 +13,7 @@
 #include <lib/zx/vmo.h>
 #include <zircon/errors.h>
 #include <zircon/hw/pci.h>
+#include <zircon/status.h>
 
 #include <ddktl/device.h>
 #include <virtio/virtio.h>
@@ -75,48 +78,52 @@ constexpr virtio_pci_cap_t kCapabilities[5] = {
 
 class TestLegacyIoInterface : public virtio::PciLegacyIoInterface {
  public:
-  explicit TestLegacyIoInterface(zx::vmo& vmo) : vmo_(vmo) {}
+  explicit TestLegacyIoInterface(ddk::MmioView view) : view_(view) {}
   ~TestLegacyIoInterface() override = default;
 
   void Read(uint16_t offset, uint8_t* val) const final {
-    ZX_ASSERT(vmo_.read(val, offset, sizeof(*val)) == ZX_OK);
+    *val = view_.Read8(offset);
     zxlogf(TRACE, "%s: %#x -> %#x", __PRETTY_FUNCTION__, offset, *val);
   }
   void Read(uint16_t offset, uint16_t* val) const final {
-    ZX_ASSERT(vmo_.read(val, offset, sizeof(*val)) == ZX_OK);
+    *val = view_.Read16(offset);
     zxlogf(TRACE, "%s: %#x -> %#x", __PRETTY_FUNCTION__, offset, *val);
   }
   void Read(uint16_t offset, uint32_t* val) const final {
-    ZX_ASSERT(vmo_.read(val, offset, sizeof(*val)) == ZX_OK);
+    *val = view_.Read32(offset);
     zxlogf(TRACE, "%s: %#x -> %#x", __PRETTY_FUNCTION__, offset, *val);
   }
   void Write(uint16_t offset, uint8_t val) const final {
-    ZX_ASSERT(vmo_.write(&val, offset, sizeof(val)) == ZX_OK);
+    view_.Write8(val, offset);
     zxlogf(TRACE, "%s: %#x <- %#x", __PRETTY_FUNCTION__, offset, val);
   }
   void Write(uint16_t offset, uint16_t val) const final {
-    ZX_ASSERT(vmo_.write(&val, offset, sizeof(val)) == ZX_OK);
+    view_.Write16(val, offset);
     zxlogf(TRACE, "%s: %#x <- %#x", __PRETTY_FUNCTION__, offset, val);
   }
   void Write(uint16_t offset, uint32_t val) const final {
-    ZX_ASSERT(vmo_.write(&val, offset, sizeof(val)) == ZX_OK);
+    view_.Write32(val, offset);
     zxlogf(TRACE, "%s: %#x <- %#x", __PRETTY_FUNCTION__, offset, val);
   }
 
  private:
-  zx::vmo& vmo_;
+  ddk::MmioView view_;
 };
 
 fx_log_severity_t kTestLogLevel = FX_LOG_INFO;
 class VirtioTests : public fake_ddk::Bind, public zxtest::Test {
  public:
   static constexpr uint16_t kQueueSize = 1u;
+  static constexpr uint32_t kLegacyBar = 0u;
+  static constexpr uint32_t kModernBar = 4u;
 
  protected:
   void SetUp() final { fake_ddk::kMinLogSeverity = kTestLogLevel; }
 
   void TearDown() final { fake_pci_.Reset(); }
   pci::FakePciProtocol& fake_pci() { return fake_pci_; }
+  std::array<std::optional<ddk::MmioBuffer>, PCI_MAX_BAR_REGS>& bars() { return bars_; }
+
   void CleanUp() {
     DeviceAsyncRemove(fake_ddk::kFakeDevice);
     EXPECT_TRUE(Ok());
@@ -125,7 +132,12 @@ class VirtioTests : public fake_ddk::Bind, public zxtest::Test {
   void SetUpModernBars() {
     size_t bar_size = 0x3000 + 0x1000;  // 0x3000 is the offset of the last capability in the bar,
                                         // and 0x1000 is the length.
-    fake_pci_.CreateBar(4, bar_size, /*is_mmio=*/true);
+    fake_pci_.CreateBar(kModernBar, bar_size, /*is_mmio=*/true);
+
+    ddk::Pci pci(fake_pci().get_protocol());
+    ZX_ASSERT(pci.is_valid());
+    ZX_ASSERT(pci.MapMmio(kModernBar, ZX_CACHE_POLICY_UNCACHED_DEVICE, &bars_[kModernBar]) ==
+              ZX_OK);
   }
 
   void SetUpModernCapabilities() {
@@ -141,9 +153,8 @@ class VirtioTests : public fake_ddk::Bind, public zxtest::Test {
 
   void SetUpModernQueue() {
     auto& common_cfg_cap = kCapabilities[4];
-    zx::vmo& bar = fake_pci().GetBar(common_cfg_cap.bar);
     uint32_t queue_offset = offsetof(virtio_pci_common_cfg_t, queue_size);
-    bar.write(&kQueueSize, common_cfg_cap.offset + queue_offset, sizeof(kQueueSize));
+    bars_[kModernBar]->Write(kQueueSize, common_cfg_cap.offset + queue_offset);
   }
 
   void SetUpModernMsiX() {
@@ -154,15 +165,25 @@ class VirtioTests : public fake_ddk::Bind, public zxtest::Test {
     // configuration capability. We use the structures above to figure out what
     // bar that is in, and what offset it's at.
     auto& common_cfg_cap = kCapabilities[4];
-    zx::vmo& bar = fake_pci().GetBar(common_cfg_cap.bar);
     uint16_t msix_config_val = 0xFFFF;  // Set to no MSI-X vector allocated.
     uint32_t msix_offset = offsetof(virtio_pci_common_cfg_t, config_msix_vector);
-    bar.write(&msix_config_val, common_cfg_cap.offset + msix_offset, sizeof(msix_config_val));
+    bars_[kModernBar]->Write(msix_config_val, common_cfg_cap.offset + msix_offset);
   }
 
   void SetUpLegacyBar() {
     size_t bar_size = 0x64;  // Matches the bar size on GCE for Bar0.
-    fake_pci_.CreateBar(0, bar_size, /*is_mmio=*/false);
+    fake_pci_.CreateBar(kLegacyBar, bar_size, /*is_mmio=*/false);
+
+    // Legacy BARs identified as IO in PCI cannot be mapped by pci::MapMmio, so we need to do it by
+    // hand.
+    zx::vmo vmo{};
+    ZX_ASSERT(fake_pci().GetBar(kLegacyBar).duplicate(ZX_RIGHT_SAME_RIGHTS, &vmo) == ZX_OK);
+    size_t size = 0;
+    vmo.get_size(&size);
+    zx_status_t status = ddk::MmioBuffer::Create(
+        0, size, std::move(vmo), ZX_CACHE_POLICY_UNCACHED_DEVICE, &bars_[kLegacyBar]);
+    ZX_ASSERT_MSG(status == ZX_OK, "Mapping BAR %u failed: %s", kLegacyBar,
+                  zx_status_get_string(status));
   }
 
   // Even in the fake device we have to deal with registers being in different
@@ -172,11 +193,10 @@ class VirtioTests : public fake_ddk::Bind, public zxtest::Test {
                                                            : VIRTIO_PCI_CONFIG_OFFSET_NOMSIX;
   }
 
-  zx_status_t SetUpLegacyQueue() {
-    return fake_pci().GetBar(0).write(&kQueueSize, VIRTIO_PCI_QUEUE_SIZE, sizeof(kQueueSize));
-  }
+  void SetUpLegacyQueue() { bars_[kLegacyBar]->Write(kQueueSize, VIRTIO_PCI_QUEUE_SIZE); }
 
  private:
+  std::array<std::optional<ddk::MmioBuffer>, PCI_MAX_BAR_REGS> bars_;
   pci::FakePciProtocol fake_pci_;
 };
 
@@ -268,7 +288,7 @@ TEST_F(VirtioTests, DISABLED_LegacyIoBackendError) {
   fake_pci().AddLegacyInterrupt();
   SetUpProtocol();
   SetUpLegacyBar();
-  ASSERT_OK(SetUpLegacyQueue());
+  SetUpLegacyQueue();
   auto backend_result = virtio::GetBtiAndBackend(fake_ddk::kFakeParent);
   ASSERT_OK(backend_result.status_value());
   // This should fail on x64 because of failure to access IO ports.
@@ -283,7 +303,7 @@ TEST_F(VirtioTests, LegacyIoBackendSuccess) {
   fake_pci().AddLegacyInterrupt();
   SetUpProtocol();
   SetUpLegacyBar();
-  ASSERT_OK(SetUpLegacyQueue());
+  SetUpLegacyQueue();
 
   // With a manually crafted backend using the test interface it should succeed.
   ddk::PciProtocolClient pci(fake_ddk::kFakeParent);
@@ -295,7 +315,7 @@ TEST_F(VirtioTests, LegacyIoBackendSuccess) {
 
   // Feed the same vmo backing FakePci's BAR 0 into the interface so the view
   // from PCI, Virtio, and the test all align.
-  TestLegacyIoInterface interface(fake_pci().GetBar(0));
+  TestLegacyIoInterface interface(bars()[kLegacyBar]->View(0));
   auto backend = std::make_unique<virtio::PciLegacyBackend>(pci, info, &interface);
   ASSERT_OK(backend->Bind());
 
@@ -308,7 +328,7 @@ TEST_F(VirtioTests, LegacyMsiX) {
   fake_pci().AddMsixInterrupt();
   SetUpProtocol();
   SetUpLegacyBar();
-  ASSERT_OK(SetUpLegacyQueue());
+  SetUpLegacyQueue();
 
   ddk::PciProtocolClient pci(fake_ddk::kFakeParent);
   ASSERT_TRUE(pci.is_valid());
@@ -317,7 +337,7 @@ TEST_F(VirtioTests, LegacyMsiX) {
   zx::bti bti{};
   ASSERT_OK(fake_bti_create(bti.reset_and_get_address()));
 
-  TestLegacyIoInterface interface(fake_pci().GetBar(0));
+  TestLegacyIoInterface interface(bars()[kLegacyBar]->View(0));
   auto backend = std::make_unique<virtio::PciLegacyBackend>(pci, info, &interface);
   ASSERT_OK(backend->Bind());
 
@@ -327,9 +347,9 @@ TEST_F(VirtioTests, LegacyMsiX) {
   // Verify MSI-X state
   ASSERT_EQ(fake_pci().GetIrqMode(), PCI_IRQ_MODE_MSI_X);
   uint16_t value{};
-  ASSERT_OK(fake_pci().GetBar(0).read(&value, VIRTIO_PCI_MSI_CONFIG_VECTOR, sizeof(value)));
+  value = bars()[kLegacyBar]->Read16(VIRTIO_PCI_MSI_CONFIG_VECTOR);
   ASSERT_EQ(value, virtio::PciBackend::kMsiConfigVector);
-  ASSERT_OK(fake_pci().GetBar(0).read(&value, VIRTIO_PCI_MSI_QUEUE_VECTOR, sizeof(value)));
+  value = bars()[kLegacyBar]->Read16(VIRTIO_PCI_MSI_QUEUE_VECTOR);
   ASSERT_EQ(value, virtio::PciBackend::kMsiQueueVector);
 }
 
