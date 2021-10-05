@@ -11,5 +11,25 @@ ffx_plugin("ffx_pdk_update") {
 
   args_sources = [ "src/args.rs" ]
 
-  sources = [ "src/lib.rs" ]
+  sources = [
+    "src/groups.rs",
+    "src/lib.rs",
+    "src/spec.rs",
+  ]
+
+  deps = [
+    "//src/developer/ffx/plugins/pdk/lib:ffx_pdk_lib",
+    "//src/lib/fuchsia-hyper",
+    "//third_party/rust_crates:futures",
+    "//third_party/rust_crates:hyper",
+    "//third_party/rust_crates:serde",
+    "//third_party/rust_crates:serde_json",
+    "//third_party/rust_crates:serde_json5",
+  ]
+
+  inputs = [
+    "test_data/artifact_spec.json",
+    "test_data/artifact_groups.json",
+    "test_data/artifact_groups2.json",
+  ]
 }

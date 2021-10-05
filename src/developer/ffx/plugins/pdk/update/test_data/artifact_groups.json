@@ -1,0 +1,30 @@
+{
+  "schema_version": "v1",
+  "artifact_groups": [
+    {
+      "artifacts": [
+        {
+          "name": "twentyfortyeight/0",
+          "merkle": "10ded35b8849e64b074a1c3b3be85a521f11ab041c4a807a40caaca25f27833f",
+          "sha256": "21eed6894588a21998c3b7b3f79bfb34e2feba21583fb6b050b593dde06005e4",
+          "type": "package"
+        },
+        {
+          "name": "flutter_aot_product_runner/0",
+          "merkle": "46ae86ed0a14dc0c894ec3f8982ce54dbed9bb69a46593903b037f0167cd1d91",
+          "sha256": "bc0cf2adba6b27f07c9c1d6c0108f04272345b7b616a3c5947273a1e30bf950c",
+          "type": "package"
+        }
+      ],
+      "attributes": {
+        "architecture": "x64",
+        "branch": "release",
+        "creation_time": "2021-09-06T11:37:36.054281",
+        "sdk_version": "5.20210630.1.1",
+        "user": "turquoise-npm-releaser@system.gserviceaccount.com",
+        "version": "turquoise_npm_20210701_0330"
+      },
+      "name": "5bc31e08-4890-4855-9f89-3337273c3b89"
+    }
+  ]
+}

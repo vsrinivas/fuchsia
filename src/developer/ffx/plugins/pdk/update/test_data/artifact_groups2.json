@@ -1,0 +1,24 @@
+{
+  "schema_version": "v1",
+  "artifact_groups": [
+    {
+      "artifacts": [
+        {
+          "merkle": "65675a6ad7600c924549bd28a6b26b40691fcb213bb943d60e812912c737ccb4",
+          "sha256": "21eed6894588a21998c3b7b3f79bfb34e2feba21583fb6b050b593dde06005e4",
+          "name": "config-file",
+          "type": "package"
+        }
+      ],
+      "attributes": {
+        "architecture": "x64",
+        "branch": "release",
+        "creation_time": 1625136890.83762,
+        "sdk_version": "5.20210630.1.1",
+        "user": "turquoise-npm-releaser@system.gserviceaccount.com",
+        "version": "turquoise_npm_20210701_0330"
+      },
+      "name": "78c31e08-4890-4855-9f89-3337273c3b89"
+    }
+  ]
+}

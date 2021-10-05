@@ -3,8 +3,7 @@
 // found in the LICENSE file.
 
 use serde::{Deserialize, Serialize};
-use serde_json::Value;
-use std::collections::BTreeMap;
+use serde_json::{Map, Value};
 
 #[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize)]
 pub struct ArtifactLock {
@@ -16,7 +15,7 @@ pub struct Artifact {
     pub name: String,
     pub r#type: ArtifactType,
     pub artifact_store: ArtifactStore,
-    pub attributes: BTreeMap<String, Value>,
+    pub attributes: Map<String, Value>,
     pub merkle: String,
     pub blobs: Vec<String>,
 }
@@ -25,7 +24,7 @@ pub struct Artifact {
 pub struct ArtifactStore {
     pub name: String,
     pub r#type: ArtifactStoreType,
-    pub repo: String,
+    pub repo: Option<String>,
     pub artifact_group_name: String,
     pub content_address_storage: Option<String>,
 }

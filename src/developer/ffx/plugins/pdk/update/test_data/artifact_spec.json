@@ -1,0 +1,39 @@
+// Demonstration spec file.
+{
+  product: 'workstation',
+  artifact_groups: [
+    {
+      artifact_store: {
+        name: 'workstation_local_repo',
+        type: 'local',
+        path: 'artifact_groups.json'
+      },
+      attributes: {
+        architecture: 'x64'
+      },
+      artifacts: [
+        {
+          name: 'flutter_aot_product_runner/0'
+        },
+        {
+          name: 'twentyfortyeight/0'
+        }
+      ]
+    },
+    {
+      artifact_store: {
+        name: 'config_file_local_repo',
+        type: 'local',
+        path: 'artifact_groups2.json'
+      },
+      attributes: {
+        architecture: 'x64'
+      },
+      artifacts: [
+        {
+          name: 'config-file'
+        }
+      ]
+    }
+  ]
+}
