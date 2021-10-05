@@ -19,13 +19,15 @@
 namespace fuzzing {
 
 void Input::Allocate(size_t capacity, const void* data, size_t size) {
-  size_ = std::min(capacity, size);
-  capacity_ = capacity;
-  if (capacity_) {
-    data_ = std::make_unique<uint8_t[]>(capacity_);
-  } else {
-    data_.reset();
+  if (capacity_ != capacity) {
+    capacity_ = capacity;
+    if (capacity_) {
+      data_ = std::make_unique<uint8_t[]>(capacity_);
+    } else {
+      data_.reset();
+    }
   }
+  size_ = std::min(capacity, size);
   if (data && size_) {
     memcpy(data_.get(), data, size_);
   }
@@ -36,6 +38,7 @@ Input& Input::operator=(Input&& other) noexcept {
   capacity_ = other.capacity_;
   size_ = other.size_;
   num_features_ = other.num_features_;
+  other.data_.reset();
   other.capacity_ = 0;
   other.size_ = 0;
   other.num_features_ = 0;
@@ -68,6 +71,11 @@ Input Input::Duplicate() const {
   other.Allocate(size_, data_.get(), size_);
   other.num_features_ = num_features_;
   return other;
+}
+
+void Input::Duplicate(const Input& other) {
+  Allocate(other.size_, other.data_.get(), other.size_);
+  num_features_ = other.num_features_;
 }
 
 void Input::Reserve(size_t capacity) {

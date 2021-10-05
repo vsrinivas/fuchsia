@@ -27,6 +27,8 @@ struct InputComparator {
   }
 };
 
+const uintptr_t kTimeout = std::numeric_limits<uintptr_t>::max();
+
 }  // namespace
 
 RunnerImpl::RunnerImpl() {
@@ -95,19 +97,18 @@ zx_status_t RunnerImpl::AddToCorpus(CorpusType corpus_type, Input input) {
 }
 
 Input RunnerImpl::ReadFromCorpus(CorpusType corpus_type, size_t offset) {
-  Input* input = nullptr;
+  Input input;
   switch (corpus_type) {
     case CorpusType::SEED:
-      input = seed_corpus_->At(offset);
+      seed_corpus_->At(offset, &input);
       break;
     case CorpusType::LIVE:
-      input = live_corpus_->At(offset);
-      FX_LOGS(WARNING) << "live_corpus_[" << offset << "]=" << (input ? input->ToHex() : "null");
+      live_corpus_->At(offset, &input);
       break;
     default:
       FX_NOTREACHED();
   }
-  return input ? input->Duplicate() : Input();
+  return input;
 }
 
 zx_status_t RunnerImpl::ParseDictionary(const Input& input) {
@@ -123,47 +124,16 @@ zx_status_t RunnerImpl::ParseDictionary(const Input& input) {
 Input RunnerImpl::GetDictionaryAsInput() const { return mutagen_.dictionary().AsInput(); }
 
 ///////////////////////////////////////////////////////////////
-// Timer methods.
-
-void RunnerImpl::StartTimer() {
-  auto max_total_time = zx::duration(options_->max_total_time());
-  start_ = zx::clock::get_monotonic();
-  deadline_ = max_total_time.get() ? zx::deadline_after(max_total_time) : zx::time::infinite();
-  ResetTimer();
-}
-
-void RunnerImpl::ResetTimer() {
-  auto run_limit = zx::duration(options_->run_limit());
-  run_deadline_ = run_limit.get() ? zx::deadline_after(run_limit) : zx::time::infinite();
-  sync_completion_signal(&timer_sync_);
-}
-
-void RunnerImpl::StopTimer() {
-  run_deadline_ = zx::time::infinite();
-  sync_completion_signal(&timer_sync_);
-}
-
-void RunnerImpl::Timer() {
-  while (run_deadline_ != zx::time::infinite_past()) {
-    if (run_deadline_ < zx::clock::get_monotonic()) {
-      OnError(std::make_unique<Error>());
-      sync_completion_wait(&timer_sync_, ZX_TIME_INFINITE);
-    } else {
-      sync_completion_wait_deadline(&timer_sync_, run_deadline_.get());
-    }
-    sync_completion_reset(&timer_sync_);
-  }
-}
-
-///////////////////////////////////////////////////////////////
 // Synchronous workflows.
 
 zx_status_t RunnerImpl::SyncExecute(const Input& input) {
+  auto scope = SyncScope();
   TestOne(input);
   return ZX_OK;
 }
 
 zx_status_t RunnerImpl::SyncMinimize(const Input& input) {
+  auto scope = SyncScope();
   TestOne(input);
   if (result() == Result::NO_ERRORS) {
     FX_LOGS(WARNING) << "Test input did not trigger an error.";
@@ -177,7 +147,6 @@ zx_status_t RunnerImpl::SyncMinimize(const Input& input) {
     FX_LOGS(INFO) << "'max_total_time' and 'runs' are both not set. Defaulting to 10 minutes.";
     options_->set_max_total_time(zx::min(10).get());
   }
-  UpdateMonitors(UpdateReason::INIT);
   while (true) {
     if (minimized.size() < 2) {
       FX_LOGS(INFO) << "Input is " << minimized.size() << " byte(s); will not minimize further.";
@@ -192,6 +161,9 @@ zx_status_t RunnerImpl::SyncMinimize(const Input& input) {
     live_corpus_->Configure(options_);
     auto status = live_corpus_->Add(std::move(next_input));
     FX_DCHECK(status == ZX_OK) << zx_status_get_string(status);
+    // Imitate libFuzzer and count from 0 so long as errors are found.
+    ClearErrors();
+    run_ = 0;
     FuzzLoop();
     if (result() == Result::NO_ERRORS) {
       FX_LOGS(INFO) << "Did not reduce error input beyond " << minimized.size()
@@ -205,7 +177,6 @@ zx_status_t RunnerImpl::SyncMinimize(const Input& input) {
     }
     minimized = result_input();
   }
-  UpdateMonitors(UpdateReason::DONE);
   set_result_input(minimized);
   pool_->Clear();
   live_corpus_ = saved_corpus;
@@ -214,6 +185,7 @@ zx_status_t RunnerImpl::SyncMinimize(const Input& input) {
 }
 
 zx_status_t RunnerImpl::SyncCleanse(const Input& input) {
+  auto scope = SyncScope();
   auto cleansed = input.Duplicate();
   const std::vector<uint8_t> kClean = {' ', 0xff};
   auto clean = kClean.begin();
@@ -274,32 +246,32 @@ zx_status_t RunnerImpl::SyncCleanse(const Input& input) {
 }
 
 zx_status_t RunnerImpl::SyncFuzz() {
-  run_ = 0;
+  auto scope = SyncScope();
   pool_->Clear();
-  UpdateMonitors(UpdateReason::INIT);
-  // Add seed corpus to live and measure it.
-  size_t offset = 0;
-  Input* input;
-  while ((input = seed_corpus_->At(offset++))) {
-    live_corpus_->Add(input->Duplicate());
+  // Add seed corpus to live corpus.
+  for (size_t offset = 0; offset < seed_corpus_->num_inputs(); ++offset) {
+    Input input;
+    seed_corpus_->At(offset, &input);
+    live_corpus_->Add(std::move(input));
   }
-  offset = 0;
-  FuzzLoopStrict(
-      /* next_input */ [this, &offset](bool first) { return live_corpus_->At(offset++); },
-      /* finish_run */ [this](const Input* last_input) { pool_->Accumulate(); });
   FuzzLoop();
-  UpdateMonitors(UpdateReason::DONE);
   return ZX_OK;
 }
 
 zx_status_t RunnerImpl::SyncMerge() {
+  auto scope = SyncScope();
   // Measure the coverage of the seed corpus.
   pool_->Clear();
   // TODO(fxbug.dev/84364): |FuzzLoopRelaxed| is preferred here and elsewhere in this function, but
   // using that causes some test flake. Switch to that version once the source of it is resolved.
   size_t offset = 0;
+  Input input;
+  Input* next_input = &input;
   FuzzLoopStrict(
-      /* next_input */ [this, &offset](bool first) { return seed_corpus_->At(offset++); },
+      /* next_input */
+      [this, &offset, next_input](bool first) {
+        return seed_corpus_->At(offset++, next_input) ? next_input : nullptr;
+      },
       /* finish_run */ [this](const Input* last_input) { pool_->Accumulate(); });
   if (result() != Result::NO_ERRORS) {
     FX_LOGS(WARNING) << "Seed corpus input triggered an error.";
@@ -311,7 +283,10 @@ zx_status_t RunnerImpl::SyncMerge() {
   std::vector<Input> inputs;
   offset = 0;
   FuzzLoopStrict(
-      /* next_input */ [this, &offset](bool first) { return live_corpus_->At(offset++); },
+      /* next_input */
+      [this, &offset, next_input](bool first) {
+        return live_corpus_->At(offset++, next_input) ? next_input : nullptr;
+      },
       /* finish_run */
       [this, &error_inputs, &inputs](Input* last_input) {
         if (result() != Result::NO_ERRORS) {
@@ -363,7 +338,6 @@ void RunnerImpl::TestOne(const Input& input) {
 }
 
 void RunnerImpl::FuzzLoop() {
-  run_ = 0;
   // Use two pre-allocated inputs, and swap the pointers between them each iteration, i.e. the old
   // |next_input| becomes |prev_input|, and the old |prev_input| is recycled to a new |next_input|.
   Input inputs[2];
@@ -383,8 +357,9 @@ void RunnerImpl::FuzzLoop() {
                    // Change the input after |options_->mutation_depth()| mutations. Doing so
                    // resets the recorded sequence of mutations.
                    if (first || mutagen_.mutations().size() == options_->mutation_depth()) {
-                     mutagen_.set_input(live_corpus_->Pick());
-                     mutagen_.set_crossover(live_corpus_->Pick());
+                     mutagen_.reset_mutations();
+                     live_corpus_->Pick(mutagen_.base_input());
+                     live_corpus_->Pick(mutagen_.crossover());
                    }
                    mutagen_.Mutate(next_input);
                    return next_input;
@@ -392,7 +367,7 @@ void RunnerImpl::FuzzLoop() {
                  /* finish_run */
                  [this](Input* last_input) {
                    if (pool_->Accumulate()) {
-                     live_corpus_->Add(std::move(*last_input));
+                     live_corpus_->Add(last_input->Duplicate());
                      UpdateMonitors(UpdateReason::NEW);
                    } else if (zx::clock::get_monotonic() >= next_pulse_) {
                      UpdateMonitors(UpdateReason::PULSE);
@@ -482,9 +457,6 @@ void RunnerImpl::RunLoop(bool ignore_errors) {
 
   Input* test_input = nullptr;
   stopped_ = false;
-  ClearErrors();
-  StartTimer();
-
   while (!stopped_) {
     bool has_error = false;
     // Signal proxies that a run is about to begin.
@@ -576,7 +548,6 @@ void RunnerImpl::RunLoop(bool ignore_errors) {
     last_input_ = test_input;
     sync_completion_signal(&last_input_ready_);
   }
-  StopTimer();
   stopped_ = true;
   sync_completion_signal(&next_input_taken_);
   sync_completion_signal(&last_input_ready_);
@@ -584,7 +555,7 @@ void RunnerImpl::RunLoop(bool ignore_errors) {
 
 void RunnerImpl::ClearErrors() {
   Runner::ClearErrors();
-  error_ = nullptr;
+  error_ = 0;
   sync_completion_reset(&adapter_sync_);
   sync_completion_reset(&process_sync_);
 }
@@ -605,9 +576,11 @@ fidl::InterfaceRequestHandler<ProcessProxy> RunnerImpl::GetProcessProxyHandler(
     proxy->Configure(options_);
     {
       std::lock_guard<std::mutex> lock(mutex_);
-      proxy->SetHandlers(
-          [this]() { OnSignal(); },
-          [this](ProcessProxyImpl* exited) { OnError(std::make_unique<Error>(exited)); });
+      proxy->SetHandlers([this]() { OnSignal(); },
+                         [this](ProcessProxyImpl* exited) {
+                           auto error = reinterpret_cast<uintptr_t>(exited);
+                           OnError(error);
+                         });
       proxies_.push_back(std::move(proxy));
     }
   };
@@ -636,13 +609,10 @@ bool RunnerImpl::OnSignal() {
   return true;
 }
 
-void RunnerImpl::OnError(std::unique_ptr<Error> error) {
+void RunnerImpl::OnError(uintptr_t error) {
   // Only the first proxy to detect an error awakens the |RunLoop|. Subsequent errors are dropped.
-  Error* expected = nullptr;
-  if (error_.compare_exchange_strong(expected, error.get())) {
-    // NOLINTNEXTLINE(bugprone-unused-return-value)
-    error.release();  // error_ now owns the struct.
-    StopTimer();
+  uintptr_t expected = 0;
+  if (error_.compare_exchange_strong(expected, error)) {
     sync_completion_signal(&adapter_sync_);
     sync_completion_signal(&process_sync_);
   }
@@ -657,14 +627,15 @@ void RunnerImpl::ResetSyncIfNoPendingError(sync_completion_t* sync) {
 }
 
 bool RunnerImpl::HasError(const Input* last_input) {
-  auto* error = error_.load();
+  auto error = error_.load();
   if (!error) {
     return false;
   }
   std::lock_guard<std::mutex> lock(mutex_);
-  if (error->exited) {
+  if (error != kTimeout) {
     // Almost every error causes the process to exit...
-    set_result(error->exited->Join());
+    auto* exited = reinterpret_cast<ProcessProxyImpl*>(error);
+    set_result(exited->Join());
   } else {
     /// .. except for timeouts.
     set_result(Result::TIMEOUT);
@@ -677,9 +648,10 @@ bool RunnerImpl::HasError(const Input* last_input) {
   }
   // If it's an ignored exit(),just remove that one proxy and treat it like a signal.
   if (result() == Result::EXIT && !options_->detect_exits()) {
+    auto exited = reinterpret_cast<ProcessProxyImpl*>(error);
     proxies_.erase(std::remove_if(proxies_.begin(), proxies_.end(),
-                                  [error](const std::unique_ptr<ProcessProxyImpl>& proxy) {
-                                    return proxy.get() == error->exited;
+                                  [exited](const std::unique_ptr<ProcessProxyImpl>& proxy) {
+                                    return proxy.get() == exited;
                                   }),
                    proxies_.end());
     ClearErrors();
@@ -694,12 +666,50 @@ bool RunnerImpl::HasError(const Input* last_input) {
   if (last_input) {
     set_result_input(*last_input);
   }
-  error_ = nullptr;
+  error_ = 0;
   return true;
 }
 
 ///////////////////////////////////////////////////////////////
+// Timer methods. See also |SyncScope| below.
+
+void RunnerImpl::ResetTimer() {
+  auto run_limit = zx::duration(options_->run_limit());
+  run_deadline_ = run_limit.get() ? zx::deadline_after(run_limit) : zx::time::infinite();
+  sync_completion_signal(&timer_sync_);
+}
+
+void RunnerImpl::Timer() {
+  while (run_deadline_ != zx::time::infinite_past()) {
+    if (run_deadline_ < zx::clock::get_monotonic()) {
+      OnError(kTimeout);
+      sync_completion_wait(&timer_sync_, ZX_TIME_INFINITE);
+    } else {
+      sync_completion_wait_deadline(&timer_sync_, run_deadline_.get());
+    }
+    sync_completion_reset(&timer_sync_);
+  }
+}
+
+///////////////////////////////////////////////////////////////
 // Status-related methods.
+
+fit::deferred_action<fit::closure> RunnerImpl::SyncScope() {
+  ClearErrors();
+  run_ = 0;
+  auto max_time = zx::duration(options_->max_total_time());
+  start_ = zx::clock::get_monotonic();
+  deadline_ = max_time.get() ? zx::deadline_after(max_time) : zx::time::infinite();
+  ResetTimer();
+  stopped_ = false;
+  UpdateMonitors(UpdateReason::INIT);
+  return fit::defer<fit::closure>([this]() {
+    run_deadline_ = zx::time::infinite();
+    sync_completion_signal(&timer_sync_);
+    stopped_ = true;
+    UpdateMonitors(UpdateReason::DONE);
+  });
+}
 
 Status RunnerImpl::CollectStatusLocked() {
   Status status;

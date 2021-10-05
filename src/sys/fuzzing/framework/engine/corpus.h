@@ -43,13 +43,13 @@ class Corpus final {
   // specified by the options; ZX_OK otherwise.
   zx_status_t Add(Input input) FXL_LOCKS_EXCLUDED(mutex_);
 
-  // Returns the input at |offset| in the corpus, or null if |offset| is not less than the number of
-  // inputs.
-  Input* At(size_t offset) FXL_LOCKS_EXCLUDED(mutex_);
+  // Returns true and the input at |offset| in the corpus via |out| if |offset| is less than the
+  // number of inputs; otherwise returns false and sets |out| to an empty input.
+  bool At(size_t offset, Input* out) FXL_LOCKS_EXCLUDED(mutex_);
 
-  // Returns a random element from the corpus. This will always succeed, as this method can pick the
-  // implicitly included empty element.
-  Input* Pick() FXL_LOCKS_EXCLUDED(mutex_);
+  // Returns a random element from the corpus via |out| This will always succeed, as this method
+  // can pick the implicitly included empty element.
+  void Pick(Input* out) FXL_LOCKS_EXCLUDED(mutex_);
 
  private:
   std::shared_ptr<Options> options_;

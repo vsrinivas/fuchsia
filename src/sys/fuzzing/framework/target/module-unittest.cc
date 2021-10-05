@@ -19,7 +19,7 @@ TEST(ModuleTest, Identifier) {
   // Prepare a fixed module.
   std::vector<Module::PC> pc_table1;
   for (size_t i = 0; i < FakeModule::kNumPCs; ++i) {
-    pc_table1.emplace_back(Module::PC{0x1000 + i * 0x10, (i % 8) == 0});
+    pc_table1.emplace_back(0x1000 + i * 0x10, (i % 8) == 0);
   }
   FakeModule module1(std::move(pc_table1));
   Identifier expected = {9595151602815918885ULL, 10676851608648082213ULL};
@@ -29,7 +29,7 @@ TEST(ModuleTest, Identifier) {
   // independent of where it is mapped in memory.
   std::vector<Module::PC> pc_table2;
   for (size_t i = 0; i < FakeModule::kNumPCs; ++i) {
-    pc_table2.emplace_back(Module::PC{0xdeadbeef + i * 0x10, (i % 8) == 0});
+    pc_table2.emplace_back(0xdeadbeef + i * 0x10, (i % 8) == 0);
   }
   FakeModule module2(std::move(pc_table2));
   EXPECT_EQ(module1.id(), module2.id());

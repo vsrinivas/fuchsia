@@ -38,7 +38,7 @@ constexpr uint32_t kNumModules = 4;
 std::vector<FakeModule> CreateModulesAndInitFirst() {
   std::vector<FakeModule> modules;
   for (uint32_t i = 0; i < kNumModules; ++i) {
-    modules.emplace_back(FakeModule(i + 1));
+    modules.emplace_back(i + 1);
   }
   __sanitizer_cov_8bit_counters_init(modules[0].counters(), modules[0].counters_end());
   __sanitizer_cov_pcs_init(modules[0].pcs(), modules[0].pcs_end());

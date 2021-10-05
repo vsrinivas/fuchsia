@@ -27,6 +27,10 @@ class Module final {
   struct PC {
     uintptr_t pc;
     uintptr_t flags;
+
+    PC() = default;
+    PC(uintptr_t pc_, uintptr_t flags_) : pc(pc_), flags(flags_) {}
+    ~PC() = default;
   };
 
   // Returns a unique, position-independent identifier for the module.

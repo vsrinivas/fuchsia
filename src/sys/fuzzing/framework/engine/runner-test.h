@@ -32,7 +32,6 @@ class RunnerImplTest : public RunnerTest {
   void SetFeedback(const Coverage& coverage, Result result, bool leak) override;
 
   // Unit test implementations and overrides.
-  void RunAllForCleanseTwoBytes() override;
   void RunAllForFuzzUntilTime() override;
   void MergeSeedError(Runner* runner) override;
   void RunAllForMerge() override;

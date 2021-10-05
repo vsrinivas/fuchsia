@@ -7,6 +7,7 @@
 
 #include <fuchsia/fuzzer/cpp/fidl.h>
 #include <lib/fidl/cpp/interface_request.h>
+#include <lib/fit/defer.h>
 #include <lib/fit/function.h>
 #include <lib/sync/completion.h>
 #include <lib/zx/eventpair.h>
@@ -41,18 +42,6 @@ using ::fuchsia::fuzzer::TargetAdapterSyncPtr;
 using ::fuchsia::fuzzer::UpdateReason;
 using CorpusType = ::fuchsia::fuzzer::Corpus;
 
-// Represents the different types of fuzzing-ending errors. The runner below includes an atomic
-// pointer to an instance of this struct. If an input results in multiple errors from different
-// processes, only the first assignment to that pointer is handled as the primary error.
-struct Error {
-  ProcessProxyImpl* exited = nullptr;
-  bool timeout = false;
-
-  explicit Error(ProcessProxyImpl* source) : exited(source) {}
-  Error() : timeout(true){};
-  ~Error() = default;
-};
-
 // The concrete implementation of |Runner|.
 class RunnerImpl final : public Runner {
  public:
@@ -73,10 +62,16 @@ class RunnerImpl final : public Runner {
   fidl::InterfaceRequestHandler<ProcessProxy> GetProcessProxyHandler(
       const std::shared_ptr<Dispatcher>& dispatcher);
 
-  // Callbacks for signals received from the target adapter and process proxies that are used to
-  // notify the runner that they have started, finished, or encountered an error.
+  // Callback for signals received from the target adapter and process proxies that are used to
+  // notify the runner that they have started or finished.
   bool OnSignal();
-  void OnError(std::unique_ptr<Error> error);
+
+  // Callback for signals received from the target adapter and process proxies that are used to
+  // notify the runner that they have encountered an error. Error values are interpreted as:
+  //   * 0: -          no error.
+  //   * UINTPTR_MAX:  timeout
+  //   * other:        pointer to process proxy with error.
+  void OnError(uintptr_t error);
 
  protected:
   // Fuzzing workflow implementations.
@@ -91,17 +86,15 @@ class RunnerImpl final : public Runner {
   void ClearErrors() override;
 
  private:
-  // Configure both the run and overall deadlines, and sets an alarm for the run deadline on the
-  // timer thread. When it expires, a TIMEOUT error is triggered.
-  void StartTimer();
+  // Creates and returns a scope object for a synchronous workflow. This will reset errors,
+  // deadlines, and run counts, and update monitors with an INIT update. When the object falls out
+  // of scope, it will ensure the fuzzer is stopped, disable timers, and send a DONE update. Each
+  // fuzzing workflow should begin with a call to this function.
+  fit::deferred_action<fit::closure> SyncScope();
 
   // Resets the timer thread's alarm, setting a new run deadline and delaying how long until the
   // TIMEOUT error is triggered.
   void ResetTimer();
-
-  // Clears the timer thread's alarm, removing the run deadline. No TIMEOUT errors will occur unless
-  // |StartTimer| or |ResetTimer| are called again.
-  void StopTimer();
 
   // The timer thread body.
   void Timer();
@@ -195,7 +188,10 @@ class RunnerImpl final : public Runner {
   std::vector<std::unique_ptr<ProcessProxyImpl>> proxies_ FXL_GUARDED_BY(mutex_);
   std::atomic<size_t> pending_proxy_signals_ = 0;
   sync_completion_t process_sync_;
-  std::atomic<Error*> error_ = nullptr;
+
+  // Represents the different types of fuzzing-ending errors. If an input results in multiple errors
+  // from different processes, only the first assignment is handled as the primary error.
+  std::atomic<uintptr_t> error_ = 0;
 
   FXL_DISALLOW_COPY_ASSIGN_AND_MOVE(RunnerImpl);
 };

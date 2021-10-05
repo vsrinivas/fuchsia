@@ -57,7 +57,7 @@ class Response final {
   // Respond with the appropriate combination of |status|, |result|, and |input|, depending on
   // the callback provided when the object was constructed. It is an error to call either version of
   // |send| after calling this method.
-  void Send(zx_status_t status, Result result, const Input& input);
+  void Send(zx_status_t status, Result result, Input input);
 
  private:
   void SendImpl(zx_status_t status, Result result, FidlInput input);

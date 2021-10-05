@@ -55,20 +55,28 @@ TEST(TransceiverTest, Receive) {
   sync_completion_wait(&sync, ZX_TIME_INFINITE);
   EXPECT_EQ(rx_result, ZX_OK);
   EXPECT_EQ(rx_input, input);
+
+  // Try to receive after shutdown.
+  FidlInput fidl_input3;
+  sync_completion_reset(&sync);
+  fidl_input3.size = input.size();
+  EXPECT_EQ(zx::socket::create(ZX_SOCKET_STREAM, &sender, &fidl_input3.socket), ZX_OK);
+  transceiver.Shutdown();
+  transceiver.Receive(std::move(fidl_input3), [&](zx_status_t result, Input received) {
+    rx_result = result;
+    sync_completion_signal(&sync);
+  });
+
+  sync_completion_wait(&sync, ZX_TIME_INFINITE);
+  EXPECT_EQ(rx_result, ZX_ERR_BAD_STATE);
 }
 
 TEST(TransceiverTest, Transmit) {
   Transceiver transceiver;
   Input input({0xfe, 0xed, 0xfa, 0xce});
-  sync_completion_t sync;
 
   FidlInput fidl_input;
-  transceiver.Transmit(input, [&fidl_input, &sync](FidlInput result) {
-    fidl_input = std::move(result);
-    sync_completion_signal(&sync);
-  });
-  sync_completion_wait(&sync, ZX_TIME_INFINITE);
-
+  EXPECT_EQ(transceiver.Transmit(input.Duplicate(), &fidl_input), ZX_OK);
   EXPECT_EQ(fidl_input.size, input.size());
   auto* data = input.data();
   for (size_t i = 0; i < input.size(); ++i) {
@@ -79,6 +87,10 @@ TEST(TransceiverTest, Transmit) {
     EXPECT_EQ(fidl_input.socket.read(0, &u8, sizeof(u8), nullptr), ZX_OK);
     EXPECT_EQ(data[i], u8);
   }
+
+  // Try to transmit after shutdown.
+  transceiver.Shutdown();
+  EXPECT_EQ(transceiver.Transmit(input.Duplicate(), &fidl_input), ZX_ERR_BAD_STATE);
 }
 
 }  // namespace

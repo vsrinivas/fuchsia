@@ -26,7 +26,7 @@ namespace fuzzing {
 
 using ::fuchsia::fuzzer::Controller;
 using ::fuchsia::fuzzer::CorpusReader;
-using ::fuchsia::fuzzer::CorpusReaderPtr;
+using ::fuchsia::fuzzer::CorpusReaderSyncPtr;
 using ::fuchsia::fuzzer::Monitor;
 using ::fuchsia::fuzzer::ProcessProxy;
 using ::fuchsia::fuzzer::TargetAdapter;
@@ -83,7 +83,7 @@ class ControllerImpl : public Controller {
                       fit::function<void(Input, Response)> callback);
 
   // Thread body for the corpus reader client.
-  void ReadCorpusImpl() FXL_LOCKS_EXCLUDED(mutex_);
+  void ReadCorpusLoop() FXL_LOCKS_EXCLUDED(mutex_);
 
   Binding<Controller> binding_;
 
@@ -96,7 +96,7 @@ class ControllerImpl : public Controller {
   std::shared_ptr<Transceiver> transceiver_;
 
   // CorpusReader requests are handled by a designated thread to avoid blocking the FIDL dispatcher.
-  using CorpusReaderRequest = std::pair<CorpusType, CorpusReaderPtr>;
+  using CorpusReaderRequest = std::pair<CorpusType, CorpusReaderSyncPtr>;
   std::mutex mutex_;
   std::thread reader_;
   std::deque<CorpusReaderRequest> readers_ FXL_GUARDED_BY(mutex_);

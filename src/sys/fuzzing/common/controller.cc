@@ -16,7 +16,7 @@ ControllerImpl::ControllerImpl() : binding_(this, std::make_shared<Dispatcher>()
   dispatcher_ = binding_.dispatcher();
   options_ = std::make_shared<Options>();
   transceiver_ = std::make_shared<Transceiver>();
-  reader_ = std::thread([this]() { ReadCorpusImpl(); });
+  reader_ = std::thread([this]() { ReadCorpusLoop(); });
 }
 
 ControllerImpl::~ControllerImpl() {
@@ -88,62 +88,55 @@ void ControllerImpl::AddToCorpus(CorpusType corpus_type, FidlInput fidl_input,
 
 void ControllerImpl::ReadCorpus(CorpusType corpus_type, fidl::InterfaceHandle<CorpusReader> reader,
                                 ReadCorpusCallback callback) {
-  CorpusReaderPtr ptr;
-  auto status = ptr.Bind(std::move(reader), dispatcher_->get());
-  if (status != ZX_OK) {
-    FX_LOGS(WARNING) << "Failed to bind to CorpusReader: " << zx_status_get_string(status);
-    return;
-  }
+  CorpusReaderSyncPtr ptr;
+  ptr.Bind(std::move(reader));
   {
     std::lock_guard<std::mutex> lock(mutex_);
     if (reading_) {
-      readers_.emplace_back(std::make_pair(corpus_type, std::move(ptr)));
+      readers_.emplace_back(corpus_type, std::move(ptr));
       sync_completion_signal(&pending_readers_);
     }
   }
-  // If |!reading|, the |ptr| will be dropped, signalling no further inputs to the |CorpusReader|.
+  // If |!reading|, the |ptr| will be dropped, signalling the controller is shutting down..
   callback();
 }
 
-void ControllerImpl::ReadCorpusImpl() {
+void ControllerImpl::ReadCorpusLoop() {
   while (true) {
     // |pending_readers_| will be signalled on object destruction.
     sync_completion_wait(&pending_readers_, ZX_TIME_INFINITE);
-    CorpusReaderRequest request;
+    CorpusType corpus_type;
+    CorpusReaderSyncPtr reader;
     {
       std::lock_guard<std::mutex> lock(mutex_);
       if (readers_.empty()) {
         return;
       }
-      request = std::move(readers_.front());
+      auto& request = readers_.front();
+      corpus_type = request.first;
+      reader = std::move(request.second);
       readers_.pop_front();
       if (reading_ && readers_.empty()) {
         sync_completion_reset(&pending_readers_);
       }
     }
-    CorpusType corpus_type = request.first;
-    CorpusReaderPtr reader = std::move(request.second);
-    sync_completion_t sync;
     size_t offset = 1;
     for (bool has_more = true; has_more;) {
       auto input = runner_->ReadFromCorpus(corpus_type, offset++);
-      zx_status_t result;
-      auto status = transceiver_->Transmit(input, [&reader, &result, &sync](FidlInput fidl_input) {
-        reader->Next(std::move(fidl_input), [&result, &sync](zx_status_t tx_result) {
-          result = tx_result;
-          sync_completion_signal(&sync);
-        });
-      });
-      if (status == ZX_OK) {
-        sync_completion_wait(&sync, ZX_TIME_INFINITE);
-        sync_completion_reset(&sync);
-        status = result;
-      }
-      if (status != ZX_OK) {
-        FX_LOGS(WARNING) << "Failed to read from corpus: " << zx_status_get_string(status);
+      has_more = input.size() != 0;
+      FidlInput next;
+      // Only error from the transceiver is |ZX_ERR_BAD_STATE| if it is shutting down.
+      if (transceiver_->Transmit(std::move(input), &next) != ZX_OK) {
         break;
       }
-      has_more = input.size() != 0;
+      zx_status_t result;
+      auto status = reader->Next(std::move(next), &result);
+      status = status == ZX_OK ? result : status;
+      if (status != ZX_OK) {
+        FX_LOGS(WARNING) << "Failed to send next input from corpus: "
+                         << zx_status_get_string(status);
+        break;
+      }
     }
   }
 }

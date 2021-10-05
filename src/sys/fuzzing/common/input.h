@@ -54,6 +54,9 @@ class Input final {
   // Creates a copy of this input.
   Input Duplicate() const;
 
+  // Makes this object a copy of the |other|.
+  void Duplicate(const Input& other);
+
   // Ensures the input has at least the given |capacity|.
   void Reserve(size_t capacity);
 

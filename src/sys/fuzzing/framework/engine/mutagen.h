@@ -63,12 +63,16 @@ class Mutagen final {
 
   const Dictionary& dictionary() const { return dictionary_; }
 
+  // Callers can write data into the returned inputs.
+  Input* base_input() { return &base_input_; }
+  Input* crossover() { return &crossover_; }
+
   // The sequence of mutations since the input was last set.
   const std::vector<Mutation>& mutations() const { return mutations_; }
 
-  void set_input(const Input* input);
-  void set_crossover(const Input* crossover) { crossover_ = crossover; }
   void set_dictionary(Dictionary dictionary) { dictionary_ = std::move(dictionary); }
+
+  void reset_mutations() { mutations_.clear(); }
 
   // Lets this objects add defaults to unspecified options.
   static void AddDefaults(Options* options);
@@ -153,8 +157,8 @@ class Mutagen final {
  private:
   std::shared_ptr<Options> options_;
   std::minstd_rand prng_;
-  const Input* input_;
-  const Input* crossover_;
+  Input base_input_;
+  Input crossover_;
   Dictionary dictionary_;
   std::vector<Mutation> mutations_;
 

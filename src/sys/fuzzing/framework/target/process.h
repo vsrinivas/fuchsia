@@ -106,18 +106,18 @@ class Process {
 
   // Options provided by the engine.
   Options options_;
-  bool connected_;
-  bool can_detect_leaks_;  // Is LSan available and is options.deteck_leaks == true?
-  size_t malloc_limit_;
+  bool connected_ = false;
+  bool can_detect_leaks_ = false;  // Is LSan available and is options.deteck_leaks == true?
+  size_t malloc_limit_ = 0;
 
   // Module feedback.
   std::mutex mutex_;
   std::vector<Module> modules_ FXL_GUARDED_BY(mutex_);
 
   // Memory tracking.
-  bool detecting_leaks_;  // Was the current iteration started with |kStartLeakCheck|?
-  std::atomic<uint64_t> num_mallocs_;
-  std::atomic<uint64_t> num_frees_;
+  bool detecting_leaks_ = false;  // Was the current iteration started with |kStartLeakCheck|?
+  std::atomic<uint64_t> num_mallocs_ = 0;
+  std::atomic<uint64_t> num_frees_ = 0;
   zx::time next_purge_;
 
   FXL_DISALLOW_COPY_ASSIGN_AND_MOVE(Process);

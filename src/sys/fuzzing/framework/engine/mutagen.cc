@@ -47,11 +47,6 @@ void WriteAfter(size_t offset, const uint8_t* data, size_t size, Input* out) {
 
 }  // namespace
 
-void Mutagen::set_input(const Input* input) {
-  input_ = input;
-  mutations_.clear();
-}
-
 void Mutagen::AddDefaults(Options* options) {
   Dictionary::AddDefaults(options);
   if (!options->has_seed()) {
@@ -75,8 +70,8 @@ void Mutagen::Mutate(Input* out) {
   if (!max_size) {
     return;  // Empty input is the only valid possibility.
   }
-  auto* data = input_->data();
-  auto size = input_->size();
+  auto* data = base_input_.data();
+  auto size = base_input_.size();
   // See the note on |Mutation|. This relies on the ordering of the enum to constrain which
   // mutations can be selected for the current input size and output capacity.
   uint8_t mutation, min, max;
@@ -128,14 +123,14 @@ void Mutagen::Mutate(Input* out) {
         mutated = ReplaceNum(data, size, out);
         break;
       case kMergeReplace:
-        mutated = MergeReplace(data, size, crossover_->data(), crossover_->size(), out);
+        mutated = MergeReplace(data, size, crossover_.data(), crossover_.size(), out);
         break;
       // 0 < size < capacity
       case kInsertSome:
         mutated = InsertSome(data, size, max_size, out);
         break;
       case kMergeInsert:
-        mutated = MergeInsert(data, size, crossover_->data(), crossover_->size(), max_size, out);
+        mutated = MergeInsert(data, size, crossover_.data(), crossover_.size(), max_size, out);
         break;
       // 0 <= size < capacity
       case kInsertOne:

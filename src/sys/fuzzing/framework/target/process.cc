@@ -80,7 +80,7 @@ void __sanitizer_cov_pcs_init(const uintptr_t* start, const uintptr_t* stop) {
 
 namespace fuzzing {
 
-Process::Process() : connected_(false) {
+Process::Process() : next_purge_(zx::time::infinite()) {
   FX_CHECK(!gContext.process);
   gContext.process = this;
   AddDefaults(&options_);

@@ -45,9 +45,15 @@ TEST(InputTest, ToHex) {
 TEST(InputTest, Duplicate) {
   Input input1({0xfe, 0xed, 0xfa, 0xce});
   input1.set_num_features(5);
+
   auto input2 = input1.Duplicate();
   EXPECT_EQ(input1.ToHex(), input2.ToHex());
   EXPECT_EQ(input2.num_features(), 5U);
+
+  Input input3;
+  input3.Duplicate(input1);
+  EXPECT_EQ(input1.ToHex(), input3.ToHex());
+  EXPECT_EQ(input3.num_features(), 5U);
 }
 
 TEST(InputTest, StringConstructor) {

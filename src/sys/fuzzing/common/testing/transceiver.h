@@ -21,7 +21,7 @@ class FakeTransceiver final {
   ~FakeTransceiver() = default;
 
   // Synchronously send an |Input|. The input can be read from the returned |FidlInput|.
-  FidlInput Transmit(const Input& input) FXL_LOCKS_EXCLUDED(mutex_);
+  FidlInput Transmit(Input input) FXL_LOCKS_EXCLUDED(mutex_);
 
   // Synchronously receives and returns an |Input| from a provided |FidlInput|.
   Input Receive(FidlInput fidl_input) FXL_LOCKS_EXCLUDED(mutex_);

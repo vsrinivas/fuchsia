@@ -102,7 +102,6 @@ class RunnerTest : public ::testing::Test {
   // Partial unit test implementations deferred to derived classes.
 
   // Provides runner-specific sequences of runs for individual unit tests.
-  virtual void RunAllForCleanseTwoBytes() = 0;
   virtual void RunAllForFuzzUntilTime() = 0;
   virtual void RunAllForMerge() = 0;
 

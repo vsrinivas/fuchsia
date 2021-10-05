@@ -77,23 +77,7 @@ void RunnerImplTest::SetFeedback(const Coverage& coverage, Result result, bool l
   }
 }
 
-void RunnerImplTest::RunAllForCleanseTwoBytes() {
-  EXPECT_EQ(RunOne().ToHex(), "201828");  // 1st attempt.
-  EXPECT_EQ(RunOne().ToHex(), "ff1828");
-  EXPECT_EQ(RunOne().ToHex(), "082028");
-  EXPECT_EQ(RunOne().ToHex(), "08ff28");
-  EXPECT_EQ(RunOne().ToHex(), "081820");
-  EXPECT_EQ(RunOne().ToHex(), "0818ff");  // Error on 2nd replacement of 3rd byte.
-  EXPECT_EQ(RunOne().ToHex(), "2018ff");  // 2nd attempt; error on 1st replacement of 1st byte.
-  EXPECT_EQ(RunOne().ToHex(), "2020ff");
-  EXPECT_EQ(RunOne().ToHex(), "20ffff");
-  EXPECT_EQ(RunOne().ToHex(), "2020ff");  // Third attempt.
-  EXPECT_EQ(RunOne().ToHex(), "20ffff");
-}
-
 void RunnerImplTest::RunAllForFuzzUntilTime() {
-  // Seed corpus is executed first. It has one input.
-  RunOne();
   RunOne({{1, 2}});
   zx::nanosleep(zx::deadline_after(zx::msec(200)));
   RunOne();

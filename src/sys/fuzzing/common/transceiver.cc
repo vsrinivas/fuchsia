@@ -43,20 +43,26 @@ Transceiver::Transceiver() {
   worker_ = std::thread([this]() { Worker(); });
 }
 
-Transceiver::~Transceiver() {
-  Pend(std::make_unique<Request>());
-  sync_completion_signal(&sync_);
-  if (worker_.joinable()) {
-    worker_.join();
-  }
-}
+Transceiver::~Transceiver() { Shutdown(); }
 
-void Transceiver::Pend(std::unique_ptr<Request> request) {
+zx_status_t Transceiver::Pend(std::unique_ptr<Request> request) {
+  bool stopped;
   {
     std::lock_guard<std::mutex> lock(mutex_);
-    requests_.push_back(std::move(request));
-    sync_completion_signal(&sync_);
+    stopped = stopped_;
+    if (!stopped) {
+      stopped_ = request->type == Request::kStop;
+      requests_.push_back(std::move(request));
+      sync_completion_signal(&sync_);
+    }
   }
+  if (stopped) {
+    if (request->type == Request::kReceive) {
+      request->rx_callback(ZX_ERR_BAD_STATE, Input());
+    }
+    return ZX_ERR_BAD_STATE;
+  }
+  return ZX_OK;
 }
 
 void Transceiver::Worker() {
@@ -112,7 +118,7 @@ void Transceiver::ReceiveImpl(FidlInput&& fidl_input, Transceiver::ReceiveCallba
   callback(ZX_OK, std::move(input));
 }
 
-void Transceiver::Transmit(const Input& input, fit::function<void(FidlInput&&)> callback) {
+zx_status_t Transceiver::Transmit(Input input, FidlInput* out_fidl_input) {
   zx::socket sender;
   FidlInput receiver;
   receiver.size = input.size();
@@ -120,8 +126,11 @@ void Transceiver::Transmit(const Input& input, fit::function<void(FidlInput&&)> 
   FX_DCHECK(status == ZX_OK) << zx_status_get_string(status);
   receiver.socket.shutdown(ZX_SOCKET_SHUTDOWN_WRITE);
   FX_DCHECK(status == ZX_OK) << zx_status_get_string(status);
-  Pend(std::make_unique<Request>(input.Duplicate(), std::move(sender)));
-  callback(std::move(receiver));
+  status = Pend(std::make_unique<Request>(std::move(input), std::move(sender)));
+  if (status == ZX_OK) {
+    *out_fidl_input = std::move(receiver);
+  }
+  return status;
 }
 
 void Transceiver::TransmitImpl(const Input& input, zx::socket sender) {
@@ -138,6 +147,13 @@ void Transceiver::TransmitImpl(const Input& input, zx::socket sender) {
       return;
     }
     offset += actual;
+  }
+}
+
+void Transceiver::Shutdown() {
+  Pend(std::make_unique<Request>());
+  if (worker_.joinable()) {
+    worker_.join();
   }
 }
 

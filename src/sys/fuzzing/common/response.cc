@@ -97,14 +97,12 @@ Response& Response::operator=(Response&& other) noexcept {
 
 void Response::Send(zx_status_t status) { SendImpl(status, Result::NO_ERRORS, FidlInput()); }
 
-void Response::Send(zx_status_t status, Result result, const Input& input) {
+void Response::Send(zx_status_t status, Result result, Input input) {
+  FidlInput fidl_input;
   if (status == ZX_OK) {
-    transceiver_->Transmit(input, [this, result](FidlInput&& fidl_input) {
-      SendImpl(ZX_OK, result, std::move(fidl_input));
-    });
-  } else {
-    SendImpl(status, Result::NO_ERRORS, FidlInput());
+    status = transceiver_->Transmit(std::move(input), &fidl_input);
   }
+  SendImpl(status, result, std::move(fidl_input));
 }
 
 void Response::SendImpl(zx_status_t status, Result result, FidlInput fidl_input) {

@@ -10,15 +10,11 @@
 
 namespace fuzzing {
 
-FidlInput FakeTransceiver::Transmit(const Input& input) {
+FidlInput FakeTransceiver::Transmit(Input input) {
   std::lock_guard<std::mutex> lock(mutex_);
-  sync_completion_t sync;
   FidlInput fidl_input;
-  transceiver_.Transmit(input, [&](FidlInput response) {
-    fidl_input = std::move(response);
-    sync_completion_signal(&sync);
-  });
-  sync_completion_wait(&sync, ZX_TIME_INFINITE);
+  auto status = transceiver_.Transmit(std::move(input), &fidl_input);
+  FX_DCHECK(status == ZX_OK) << zx_status_get_string(status);
   return fidl_input;
 }
 

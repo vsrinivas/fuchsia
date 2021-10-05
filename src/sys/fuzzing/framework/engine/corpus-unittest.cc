@@ -77,20 +77,32 @@ TEST(CorpusTest, At) {
   corpus.Configure(DefaultOptions());
 
   // Empty input is always present.
-  EXPECT_EQ(corpus.At(0)->ToHex(), input0().ToHex());
+  Input input;
+  EXPECT_TRUE(corpus.At(0, &input));
+  EXPECT_EQ(input.ToHex(), input0().ToHex());
 
   // Add some elements.
   AddAllToCorpus(&corpus);
 
   // Access them in a different order.
-  EXPECT_EQ(corpus.At(0)->ToHex(), input0().ToHex());
-  EXPECT_EQ(corpus.At(3)->ToHex(), input3().ToHex());
-  EXPECT_EQ(corpus.At(1)->ToHex(), input1().ToHex());
-  EXPECT_EQ(corpus.At(2)->ToHex(), input2().ToHex());
-  EXPECT_EQ(corpus.At(4)->ToHex(), input4().ToHex());
+  EXPECT_TRUE(corpus.At(0, &input));
+  EXPECT_EQ(input.ToHex(), input0().ToHex());
 
-  // Out-of-bounds returns null.
-  EXPECT_EQ(corpus.At(5), nullptr);
+  EXPECT_TRUE(corpus.At(3, &input));
+  EXPECT_EQ(input.ToHex(), input3().ToHex());
+
+  EXPECT_TRUE(corpus.At(1, &input));
+  EXPECT_EQ(input.ToHex(), input1().ToHex());
+
+  EXPECT_TRUE(corpus.At(2, &input));
+  EXPECT_EQ(input.ToHex(), input2().ToHex());
+
+  EXPECT_TRUE(corpus.At(4, &input));
+  EXPECT_EQ(input.ToHex(), input4().ToHex());
+
+  // Out-of-bounds returns empty input.
+  EXPECT_FALSE(corpus.At(5, &input));
+  EXPECT_EQ(input.ToHex(), input0().ToHex());
 }
 
 TEST(CorpusTest, Pick) {
@@ -103,20 +115,24 @@ TEST(CorpusTest, Pick) {
   corpus.Configure(options);
 
   // Corpus always has an empty input.
-  EXPECT_EQ(corpus.Pick()->ToHex(), input0().ToHex());
+  Input input;
+  corpus.Pick(&input);
+  EXPECT_EQ(input.ToHex(), input0().ToHex());
 
   // |Pick| doesn't exhaust, but does shuffle.
   AddAllToCorpus(&corpus);
-  std::vector<Input *> ordered_a;
+  std::vector<std::string> ordered_a;
   for (size_t i = 0; i < 100; ++i) {
-    ordered_a.push_back(corpus.Pick());
+    corpus.Pick(&input);
+    ordered_a.push_back(input.ToHex());
   }
-  std::vector<Input *> ordered_b;
+  std::vector<std::string> ordered_b;
   for (size_t i = 0; i < 100; ++i) {
-    ordered_b.push_back(corpus.Pick());
+    corpus.Pick(&input);
+    ordered_b.push_back(input.ToHex());
   }
-  std::unordered_set<Input *> unique_a(ordered_a.begin(), ordered_a.end());
-  std::unordered_set<Input *> unique_b(ordered_b.begin(), ordered_b.end());
+  std::unordered_set<std::string> unique_a(ordered_a.begin(), ordered_a.end());
+  std::unordered_set<std::string> unique_b(ordered_b.begin(), ordered_b.end());
 
   // The loop above should pick all inputs, but in different order. These assertions are very likely
   // but not guaranteed for an arbitrary seed. For the given seed, they work.
@@ -139,8 +155,13 @@ TEST(CorpusTest, PickIsDeterministic) {
   // Same seed and inputs should produce same order.
   AddAllToCorpus(&corpus1);
   AddAllToCorpus(&corpus2);
+
+  Input input1;
+  Input input2;
   for (size_t i = 0; i < 100; ++i) {
-    EXPECT_EQ(corpus1.Pick()->ToHex(), corpus2.Pick()->ToHex());
+    corpus1.Pick(&input1);
+    corpus2.Pick(&input2);
+    EXPECT_EQ(input1.ToHex(), input2.ToHex());
   }
 }
 

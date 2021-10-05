@@ -17,7 +17,7 @@ FakeModule::FakeModule(uint32_t seed) {
   uintptr_t pc = prng();
   for (size_t i = 0; i < kNumPCs; ++i) {
     pc += prng() % 512;
-    pc_table_.emplace_back(Module::PC{pc, (prng() % 8) == 0});
+    pc_table_.emplace_back(pc, (prng() % 8) == 0);
   }
   module_ = std::make_unique<Module>(counters_.data(),
                                      reinterpret_cast<const uintptr_t*>(pc_table_.data()), kNumPCs);

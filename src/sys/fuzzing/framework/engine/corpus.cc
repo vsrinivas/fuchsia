@@ -12,7 +12,7 @@ namespace fuzzing {
 
 // Public methods
 
-Corpus::Corpus() { inputs_.emplace_back(Input()); }
+Corpus::Corpus() { inputs_.emplace_back(); }
 
 Corpus& Corpus::operator=(Corpus&& other) noexcept {
   options_ = other.options_;
@@ -22,7 +22,7 @@ Corpus& Corpus::operator=(Corpus&& other) noexcept {
     std::lock_guard<std::mutex> lock(mutex_);
     std::lock_guard<std::mutex> other_lock(other.mutex_);
     inputs_ = std::move(other.inputs_);
-    other.inputs_.emplace_back(Input());
+    other.inputs_.emplace_back();
     total_size_ = other.total_size_;
     other.total_size_ = 0;
   }
@@ -68,12 +68,17 @@ zx_status_t Corpus::Add(Input input) {
   return ZX_OK;
 }
 
-Input* Corpus::At(size_t offset) {
+bool Corpus::At(size_t offset, Input* out) {
+  out->Clear();
   std::lock_guard<std::mutex> lock(mutex_);
-  return offset < inputs_.size() ? &inputs_[offset] : nullptr;
+  if (offset >= inputs_.size()) {
+    return false;
+  }
+  out->Duplicate(inputs_[offset]);
+  return true;
 }
 
-Input* Corpus::Pick() {
+void Corpus::Pick(Input* out) {
   std::lock_guard<std::mutex> lock(mutex_);
   // Use rejection sampling to get uniform distribution.
   // NOLINTNEXTLINE(google-runtime-int)
@@ -87,7 +92,7 @@ Input* Corpus::Pick() {
   do {
     offset = prng_() % mod;
   } while (offset >= size);
-  return &inputs_[offset];
+  out->Duplicate(inputs_[offset]);
 }
 
 }  // namespace fuzzing

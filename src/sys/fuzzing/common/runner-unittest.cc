@@ -223,7 +223,19 @@ void RunnerTest::CleanseTwoBytes(Runner* runner) {
   SetResult(input2, Result::DEATH);
 
   runner->Cleanse(input0.Duplicate(), [&](zx_status_t status) { SetStatus(status); });
-  RunAllForCleanseTwoBytes();
+
+  EXPECT_EQ(RunOne().ToHex(), "201828");  // 1st attempt.
+  EXPECT_EQ(RunOne().ToHex(), "ff1828");
+  EXPECT_EQ(RunOne().ToHex(), "082028");
+  EXPECT_EQ(RunOne().ToHex(), "08ff28");
+  EXPECT_EQ(RunOne().ToHex(), "081820");
+  EXPECT_EQ(RunOne().ToHex(), "0818ff");  // Error on 2nd replacement of 3rd byte.
+  EXPECT_EQ(RunOne().ToHex(), "2018ff");  // 2nd attempt; error on 1st replacement of 1st byte.
+  EXPECT_EQ(RunOne().ToHex(), "2020ff");
+  EXPECT_EQ(RunOne().ToHex(), "20ffff");
+  EXPECT_EQ(RunOne().ToHex(), "2020ff");  // Third attempt.
+  EXPECT_EQ(RunOne().ToHex(), "20ffff");
+
   EXPECT_EQ(GetStatus(), ZX_OK);
   EXPECT_EQ(runner->result_input().ToHex(), "2018ff");
 }
@@ -245,14 +257,26 @@ void RunnerTest::FuzzUntilRuns(Runner* runner) {
   auto options = RunnerTest::DefaultOptions(runner);
   options->set_runs(3);
   Configure(runner, options);
+
+  // Add some seed corpus elements.
+  Input input1({0x01, 0x11});
+  Input input2({0x02, 0x22});
+  Input input3({0x03, 0x33});
+  EXPECT_EQ(runner->AddToCorpus(CorpusType::SEED, input1.Duplicate()), ZX_OK);
+  EXPECT_EQ(runner->AddToCorpus(CorpusType::SEED, input2.Duplicate()), ZX_OK);
+  EXPECT_EQ(runner->AddToCorpus(CorpusType::SEED, input3.Duplicate()), ZX_OK);
+
   runner->Fuzz([&](zx_status_t status) { SetStatus(status); });
-  // Seed corpus is run first. It has one element.
-  RunOne(Result::NO_ERRORS);
   for (size_t i = 0; i < 3; ++i) {
     RunOne(Result::NO_ERRORS);
   }
   EXPECT_EQ(GetStatus(), ZX_OK);
   EXPECT_EQ(runner->result(), Result::NO_ERRORS);
+
+  // The seed corpus elements should be included in the live corpus.
+  EXPECT_EQ(runner->ReadFromCorpus(CorpusType::LIVE, 1).ToHex(), input1.ToHex());
+  EXPECT_EQ(runner->ReadFromCorpus(CorpusType::LIVE, 2).ToHex(), input2.ToHex());
+  EXPECT_EQ(runner->ReadFromCorpus(CorpusType::LIVE, 3).ToHex(), input3.ToHex());
 }
 
 void RunnerTest::FuzzUntilTime(Runner* runner) {
@@ -266,9 +290,46 @@ void RunnerTest::FuzzUntilTime(Runner* runner) {
   runner->Fuzz([&](zx_status_t status) { SetStatus(status); });
   RunAllForFuzzUntilTime();
   EXPECT_EQ(GetStatus(), ZX_OK);
-  EXPECT_EQ(size_t(monitor.NextReason()), UpdateReason::INIT);
-  EXPECT_EQ(size_t(monitor.NextReason()), UpdateReason::NEW);
-  EXPECT_EQ(size_t(monitor.NextReason()), UpdateReason::DONE);
+
+  UpdateReason reason;
+  auto status = monitor.NextStatus(&reason);
+  EXPECT_EQ(size_t(reason), UpdateReason::INIT);
+  ASSERT_TRUE(status.has_running());
+  EXPECT_TRUE(status.running());
+  ASSERT_TRUE(status.has_runs());
+  auto runs = status.runs();
+  ASSERT_TRUE(status.has_elapsed());
+  EXPECT_GT(status.elapsed(), 0U);
+  auto elapsed = status.elapsed();
+  ASSERT_TRUE(status.has_covered_pcs());
+  EXPECT_GE(status.covered_pcs(), 0U);
+  auto covered_pcs = status.covered_pcs();
+
+  status = monitor.NextStatus(&reason);
+  EXPECT_EQ(size_t(reason), UpdateReason::NEW);
+  ASSERT_TRUE(status.has_running());
+  EXPECT_TRUE(status.running());
+  ASSERT_TRUE(status.has_runs());
+  EXPECT_GT(status.runs(), runs);
+  runs = status.runs();
+  ASSERT_TRUE(status.has_elapsed());
+  EXPECT_GT(status.elapsed(), elapsed);
+  elapsed = status.elapsed();
+  ASSERT_TRUE(status.has_covered_pcs());
+  EXPECT_GT(status.covered_pcs(), covered_pcs);
+  covered_pcs = status.covered_pcs();
+
+  status = monitor.NextStatus(&reason);
+  EXPECT_EQ(size_t(reason), UpdateReason::DONE);
+  ASSERT_TRUE(status.has_running());
+  EXPECT_FALSE(status.running());
+  ASSERT_TRUE(status.has_runs());
+  EXPECT_GE(status.runs(), runs);
+  ASSERT_TRUE(status.has_elapsed());
+  EXPECT_GE(status.elapsed(), options->max_total_time());
+  ASSERT_TRUE(status.has_covered_pcs());
+  EXPECT_GE(status.covered_pcs(), covered_pcs);
+
   EXPECT_EQ(runner->result(), Result::NO_ERRORS);
 }
 

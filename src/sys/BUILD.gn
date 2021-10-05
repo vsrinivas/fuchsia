@@ -23,6 +23,7 @@ group("tests") {
     "component_manager:tests",
     "component_test_runner:tests",
     "device_settings:tests",
+    "fuzzing:tests",
     "installer:tests",
     "lib:tests",
     "live_usb:tests",

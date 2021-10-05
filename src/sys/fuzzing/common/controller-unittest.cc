@@ -4,7 +4,6 @@
 
 #include "src/sys/fuzzing/common/controller.h"
 
-#include <lib/sync/completion.h>
 #include <lib/syslog/cpp/macros.h>
 #include <zircon/status.h>
 
@@ -21,7 +20,7 @@
 namespace fuzzing {
 namespace {
 
-using fuchsia::fuzzer::ControllerPtr;
+using fuchsia::fuzzer::ControllerSyncPtr;
 using fuchsia::fuzzer::ProcessProxySyncPtr;
 using fuchsia::fuzzer::UpdateReason;
 
@@ -30,19 +29,15 @@ using fuchsia::fuzzer::UpdateReason;
 // Base class for |Controller| unit tests.
 class ControllerTest : public ::testing::Test {
  public:
-  void SetUp() override { dispatcher_ = std::make_shared<Dispatcher>(); }
-
-  const std::shared_ptr<Dispatcher>& dispatcher() const { return dispatcher_; }
-
   // Implicitly tests |Controller::SetRunner| and |Controller::Bind|.
-  ControllerPtr Bind() {
+  ControllerSyncPtr Bind() {
     // The shared_ptr will be responsible for deleting the FakeRunner memory.
     auto runner = std::make_shared<FakeRunner>();
     runner_ = runner.get();
     controller_.SetRunner(runner);
 
-    ControllerPtr controller;
-    controller_.Bind(controller.NewRequest(dispatcher_->get()));
+    ControllerSyncPtr controller;
+    controller_.Bind(controller.NewRequest());
     return controller;
   }
 
@@ -61,16 +56,13 @@ class ControllerTest : public ::testing::Test {
   void SetStatus(Status status) { runner_->set_status(std::move(status)); }
   void UpdateMonitors(UpdateReason reason) { runner_->UpdateMonitors(reason); }
 
-  FidlInput Transmit(const Input& input) { return transceiver_.Transmit(input); }
+  FidlInput Transmit(const Input& input) { return transceiver_.Transmit(input.Duplicate()); }
 
   // Synchronously receives and returns an |Input| from a provided |FidlInput|.
   Input Receive(FidlInput fidl_input) { return transceiver_.Receive(std::move(fidl_input)); }
 
-  void TearDown() override { dispatcher_->Shutdown(); }
-
  private:
   ControllerImpl controller_;
-  std::shared_ptr<Dispatcher> dispatcher_;
   FakeRunner* runner_;
   FakeTransceiver transceiver_;
 };
@@ -79,16 +71,10 @@ class ControllerTest : public ::testing::Test {
 
 TEST_F(ControllerTest, ConfigureAndGetOptions) {
   auto controller = Bind();
-  sync_completion_t sync;
 
   // GetOptions without Configure.
   Options options1;
-  controller->GetOptions([&](Options result) {
-    options1 = std::move(result);
-    sync_completion_signal(&sync);
-  });
-  sync_completion_wait(&sync, ZX_TIME_INFINITE);
-  sync_completion_reset(&sync);
+  EXPECT_EQ(controller->GetOptions(&options1), ZX_OK);
   EXPECT_NE(options1.seed(), 0U);
 
   // Configure.
@@ -110,12 +96,7 @@ TEST_F(ControllerTest, ConfigureAndGetOptions) {
   options1.set_run_limit(run_limit.get());
   zx_status_t status;
   auto options2 = CopyOptions(options1);
-  controller->Configure(std::move(options1), [&](zx_status_t result) {
-    status = result;
-    sync_completion_signal(&sync);
-  });
-  sync_completion_wait(&sync, ZX_TIME_INFINITE);
-  sync_completion_reset(&sync);
+  EXPECT_EQ(controller->Configure(std::move(options1), &status), ZX_OK);
   EXPECT_EQ(status, ZX_OK);
 
   // Can Configure again.
@@ -135,22 +116,12 @@ TEST_F(ControllerTest, ConfigureAndGetOptions) {
   options2.set_leak_exitcode(leak_exitcode);
   options2.set_oom_exitcode(oom_exitcode);
   options2.set_pulse_interval(pulse_interval.get());
-  controller->Configure(std::move(options2), [&](zx_status_t result) {
-    status = result;
-    sync_completion_signal(&sync);
-  });
-  sync_completion_wait(&sync, ZX_TIME_INFINITE);
-  sync_completion_reset(&sync);
+  EXPECT_EQ(controller->Configure(std::move(options2), &status), ZX_OK);
   EXPECT_EQ(status, ZX_OK);
 
   // Changes are reflected.
   Options options3;
-  controller->GetOptions([&](Options result) {
-    options3 = std::move(result);
-    sync_completion_signal(&sync);
-  });
-  sync_completion_wait(&sync, ZX_TIME_INFINITE);
-  sync_completion_reset(&sync);
+  EXPECT_EQ(controller->GetOptions(&options3), ZX_OK);
   EXPECT_EQ(options3.runs(), runs);
   EXPECT_EQ(options3.max_total_time(), max_total_time.get());
   EXPECT_EQ(options3.seed(), seed);
@@ -170,8 +141,7 @@ TEST_F(ControllerTest, ConfigureAndGetOptions) {
 }
 
 TEST_F(ControllerTest, AddToCorpus) {
-  ControllerPtr controller = Bind();
-  sync_completion_t sync;
+  auto controller = Bind();
   Input input0;
   Input seed_input1({0xde, 0xad});
   Input seed_input2({0xbe, 0xef});
@@ -180,32 +150,14 @@ TEST_F(ControllerTest, AddToCorpus) {
   zx_status_t result;
 
   // Interleave the calls.
-  controller->AddToCorpus(CorpusType::LIVE, Transmit(live_input3), [&](zx_status_t response) {
-    result = response;
-    sync_completion_signal(&sync);
-  });
-  sync_completion_wait(&sync, ZX_TIME_INFINITE);
-  sync_completion_reset(&sync);
-  controller->AddToCorpus(CorpusType::SEED, Transmit(seed_input1), [&](zx_status_t response) {
-    result = response;
-    sync_completion_signal(&sync);
-  });
-  sync_completion_wait(&sync, ZX_TIME_INFINITE);
-  sync_completion_reset(&sync);
-
-  controller->AddToCorpus(CorpusType::SEED, Transmit(seed_input2), [&](zx_status_t response) {
-    result = response;
-    sync_completion_signal(&sync);
-  });
-  sync_completion_wait(&sync, ZX_TIME_INFINITE);
-  sync_completion_reset(&sync);
-
-  controller->AddToCorpus(CorpusType::LIVE, Transmit(live_input4), [&](zx_status_t response) {
-    result = response;
-    sync_completion_signal(&sync);
-  });
-  sync_completion_wait(&sync, ZX_TIME_INFINITE);
-  sync_completion_reset(&sync);
+  EXPECT_EQ(controller->AddToCorpus(CorpusType::LIVE, Transmit(live_input3), &result), ZX_OK);
+  EXPECT_EQ(result, ZX_OK);
+  EXPECT_EQ(controller->AddToCorpus(CorpusType::SEED, Transmit(seed_input1), &result), ZX_OK);
+  EXPECT_EQ(result, ZX_OK);
+  EXPECT_EQ(controller->AddToCorpus(CorpusType::SEED, Transmit(seed_input2), &result), ZX_OK);
+  EXPECT_EQ(result, ZX_OK);
+  EXPECT_EQ(controller->AddToCorpus(CorpusType::LIVE, Transmit(live_input4), &result), ZX_OK);
+  EXPECT_EQ(result, ZX_OK);
 
   EXPECT_EQ(ReadFromCorpus(CorpusType::SEED, 0).ToHex(), input0.ToHex());
   EXPECT_EQ(ReadFromCorpus(CorpusType::SEED, 1).ToHex(), seed_input1.ToHex());
@@ -219,8 +171,7 @@ TEST_F(ControllerTest, AddToCorpus) {
 }
 
 TEST_F(ControllerTest, ReadCorpus) {
-  ControllerPtr controller = Bind();
-  sync_completion_t sync;
+  auto controller = Bind();
   Input input0;
   Input input1({0xde, 0xad});
   Input input2({0xbe, 0xef});
@@ -233,17 +184,11 @@ TEST_F(ControllerTest, ReadCorpus) {
   AddToCorpus(CorpusType::LIVE, input3.Duplicate());
   AddToCorpus(CorpusType::LIVE, input4.Duplicate());
 
-  FakeCorpusReader seed_reader(dispatcher());
-  FakeCorpusReader live_reader(dispatcher());
-  controller->ReadCorpus(CorpusType::SEED, seed_reader.NewBinding(),
-                         [&]() { sync_completion_signal(&sync); });
-  sync_completion_wait(&sync, ZX_TIME_INFINITE);
-  sync_completion_reset(&sync);
-
-  controller->ReadCorpus(CorpusType::LIVE, live_reader.NewBinding(),
-                         [&]() { sync_completion_signal(&sync); });
-  sync_completion_wait(&sync, ZX_TIME_INFINITE);
-  sync_completion_reset(&sync);
+  auto dispatcher = std::make_shared<Dispatcher>();
+  FakeCorpusReader seed_reader(dispatcher);
+  FakeCorpusReader live_reader(dispatcher);
+  EXPECT_EQ(controller->ReadCorpus(CorpusType::SEED, seed_reader.NewBinding()), ZX_OK);
+  EXPECT_EQ(controller->ReadCorpus(CorpusType::LIVE, live_reader.NewBinding()), ZX_OK);
 
   // Interleave the calls.
   ASSERT_TRUE(live_reader.AwaitNext());
@@ -258,54 +203,37 @@ TEST_F(ControllerTest, ReadCorpus) {
   ASSERT_TRUE(seed_reader.AwaitNext());
   EXPECT_EQ(seed_reader.GetNext().ToHex(), input2.ToHex());
 
-  // The connection is closed after all inputs have been sent.
+  // All inputs have been sent.
   EXPECT_FALSE(live_reader.AwaitNext());
   EXPECT_FALSE(live_reader.AwaitNext());
 }
 
 TEST_F(ControllerTest, WriteDictionary) {
-  ControllerPtr controller = Bind();
-  sync_completion_t sync;
+  auto controller = Bind();
   auto invalid = FakeRunner::invalid_dictionary();
   auto valid = FakeRunner::valid_dictionary();
   zx_status_t result;
 
-  controller->WriteDictionary(Transmit(invalid), [&](zx_status_t response) {
-    result = response;
-    sync_completion_signal(&sync);
-  });
-  sync_completion_wait(&sync, ZX_TIME_INFINITE);
-  sync_completion_reset(&sync);
+  EXPECT_EQ(controller->WriteDictionary(Transmit(invalid), &result), ZX_OK);
   EXPECT_EQ(result, ZX_ERR_INVALID_ARGS);
 
-  controller->WriteDictionary(Transmit(valid), [&](zx_status_t response) {
-    result = response;
-    sync_completion_signal(&sync);
-  });
-  sync_completion_wait(&sync, ZX_TIME_INFINITE);
-  sync_completion_reset(&sync);
+  EXPECT_EQ(controller->WriteDictionary(Transmit(valid), &result), ZX_OK);
   EXPECT_EQ(result, ZX_OK);
 }
 
 TEST_F(ControllerTest, ReadDictionary) {
-  ControllerPtr controller = Bind();
-  sync_completion_t sync;
+  auto controller = Bind();
   FidlInput result;
 
   auto dict = FakeRunner::valid_dictionary();
   EXPECT_EQ(ParseDictionary(dict), ZX_OK);
-  controller->ReadDictionary([&](FidlInput response) {
-    result = std::move(response);
-    sync_completion_signal(&sync);
-  });
-  sync_completion_wait(&sync, ZX_TIME_INFINITE);
-  sync_completion_reset(&sync);
-  EXPECT_EQ(Receive(std::move(result)).ToHex(), dict.ToHex());
+  EXPECT_EQ(controller->ReadDictionary(&result), ZX_OK);
+  auto received = Receive(std::move(result));
+  EXPECT_EQ(received.ToHex(), dict.ToHex());
 }
 
 TEST_F(ControllerTest, GetStatus) {
-  ControllerPtr controller = Bind();
-  sync_completion_t sync;
+  auto controller = Bind();
   Status result;
 
   Status status;
@@ -319,12 +247,7 @@ TEST_F(ControllerTest, GetStatus) {
   auto expected = CopyStatus(status);
   SetStatus(std::move(status));
 
-  controller->GetStatus([&](Status response) {
-    result = std::move(response);
-    sync_completion_signal(&sync);
-  });
-  sync_completion_wait(&sync, ZX_TIME_INFINITE);
-  sync_completion_reset(&sync);
+  EXPECT_EQ(controller->GetStatus(&result), ZX_OK);
   EXPECT_EQ(result.running(), expected.running());
   EXPECT_EQ(result.runs(), expected.runs());
   EXPECT_EQ(result.elapsed(), expected.elapsed());
@@ -335,18 +258,14 @@ TEST_F(ControllerTest, GetStatus) {
 }
 
 TEST_F(ControllerTest, AddMonitor) {
-  ControllerPtr controller = Bind();
-  sync_completion_t sync;
+  auto controller = Bind();
   FakeMonitor monitor;
 
   Status status;
   status.set_runs(13);
   auto expected = CopyStatus(status);
   SetStatus(std::move(status));
-  controller->AddMonitor(monitor.NewBinding(), [&]() { sync_completion_signal(&sync); });
-  sync_completion_wait(&sync, ZX_TIME_INFINITE);
-  sync_completion_reset(&sync);
-
+  EXPECT_EQ(controller->AddMonitor(monitor.NewBinding()), ZX_OK);
   UpdateMonitors(UpdateReason::PULSE);
 
   UpdateReason reason;
@@ -356,163 +275,108 @@ TEST_F(ControllerTest, AddMonitor) {
 }
 
 TEST_F(ControllerTest, GetResults) {
-  ControllerPtr controller = Bind();
-  sync_completion_t sync;
+  auto controller = Bind();
   Result result;
   FidlInput fidl_input;
   Input result_input({0xde, 0xad, 0xbe, 0xef});
 
   SetResult(Result::DEATH);
   SetResultInput(result_input);
-  controller->GetResults([&](Result response_result, FidlInput response_fidl_input) {
-    result = response_result;
-    fidl_input = std::move(response_fidl_input);
-    sync_completion_signal(&sync);
-  });
-  sync_completion_wait(&sync, ZX_TIME_INFINITE);
-  sync_completion_reset(&sync);
+  EXPECT_EQ(controller->GetResults(&result, &fidl_input), ZX_OK);
   EXPECT_EQ(result, Result::DEATH);
-  EXPECT_EQ(Receive(std::move(fidl_input)).ToHex(), result_input.ToHex());
+  auto received = Receive(std::move(fidl_input));
+  EXPECT_EQ(received.ToHex(), result_input.ToHex());
 }
 
 TEST_F(ControllerTest, Execute) {
-  ControllerPtr controller = Bind();
-  sync_completion_t sync;
-  fit::result<Result, zx_status_t> result;
+  auto controller = Bind();
+  ::fuchsia::fuzzer::Controller_Execute_Result result;
   Input input({0xde, 0xad, 0xbe, 0xef});
 
   SetError(ZX_ERR_WRONG_TYPE);
-  controller->Execute(Transmit(input), [&](fit::result<Result, zx_status_t> response) {
-    result = std::move(response);
-    sync_completion_signal(&sync);
-  });
-  sync_completion_wait(&sync, ZX_TIME_INFINITE);
-  sync_completion_reset(&sync);
-  EXPECT_TRUE(result.is_error());
-  EXPECT_EQ(result.error(), ZX_ERR_WRONG_TYPE);
+  EXPECT_EQ(controller->Execute(Transmit(input), &result), ZX_OK);
+  ASSERT_TRUE(result.is_err());
+  EXPECT_EQ(result.err(), ZX_ERR_WRONG_TYPE);
 
   SetError(ZX_OK);
   SetResult(Result::OOM);
-  controller->Execute(Transmit(input), [&](fit::result<Result, zx_status_t> response) {
-    result = std::move(response);
-    sync_completion_signal(&sync);
-  });
-  sync_completion_wait(&sync, ZX_TIME_INFINITE);
-  sync_completion_reset(&sync);
-  EXPECT_TRUE(result.is_ok());
-  EXPECT_EQ(result.value(), Result::OOM);
+  EXPECT_EQ(controller->Execute(Transmit(input), &result), ZX_OK);
+  ASSERT_TRUE(result.is_response());
+  auto& response = result.response();
+  EXPECT_EQ(response.result, Result::OOM);
 }
 
 TEST_F(ControllerTest, Minimize) {
-  ControllerPtr controller = Bind();
-  sync_completion_t sync;
-  fit::result<FidlInput, zx_status_t> result;
+  auto controller = Bind();
+  ::fuchsia::fuzzer::Controller_Minimize_Result result;
   Input input({0xde, 0xad, 0xbe, 0xef});
   Input minimized({0xde, 0xbe});
 
   SetError(ZX_ERR_WRONG_TYPE);
-  controller->Minimize(Transmit(input), [&](fit::result<FidlInput, zx_status_t> response) {
-    result = std::move(response);
-    sync_completion_signal(&sync);
-  });
-  sync_completion_wait(&sync, ZX_TIME_INFINITE);
-  sync_completion_reset(&sync);
-  EXPECT_TRUE(result.is_error());
-  EXPECT_EQ(result.error(), ZX_ERR_WRONG_TYPE);
+  EXPECT_EQ(controller->Minimize(Transmit(input), &result), ZX_OK);
+  ASSERT_TRUE(result.is_err());
+  EXPECT_EQ(result.err(), ZX_ERR_WRONG_TYPE);
 
   SetError(ZX_OK);
   SetResultInput(minimized);
-  controller->Minimize(Transmit(input), [&](fit::result<FidlInput, zx_status_t> response) {
-    result = std::move(response);
-    sync_completion_signal(&sync);
-  });
-  sync_completion_wait(&sync, ZX_TIME_INFINITE);
-  sync_completion_reset(&sync);
-  EXPECT_TRUE(result.is_ok());
-  EXPECT_EQ(Receive(std::move(result.value())).ToHex(), minimized.ToHex());
+  EXPECT_EQ(controller->Minimize(Transmit(input), &result), ZX_OK);
+  ASSERT_TRUE(result.is_response());
+  auto& response = result.response();
+  auto received = Receive(std::move(response.minimized));
+  EXPECT_EQ(received.ToHex(), minimized.ToHex());
 }
 
 TEST_F(ControllerTest, Cleanse) {
-  ControllerPtr controller = Bind();
-  sync_completion_t sync;
-  fit::result<FidlInput, zx_status_t> result;
+  auto controller = Bind();
+  ::fuchsia::fuzzer::Controller_Cleanse_Result result;
   Input input({0xde, 0xad, 0xbe, 0xef});
   Input cleansed({0x20, 0x20, 0xbe, 0xff});
 
   SetError(ZX_ERR_WRONG_TYPE);
-  controller->Cleanse(Transmit(input), [&](fit::result<FidlInput, zx_status_t> response) {
-    result = std::move(response);
-    sync_completion_signal(&sync);
-  });
-  sync_completion_wait(&sync, ZX_TIME_INFINITE);
-  sync_completion_reset(&sync);
-  EXPECT_TRUE(result.is_error());
-  EXPECT_EQ(result.error(), ZX_ERR_WRONG_TYPE);
+  EXPECT_EQ(controller->Cleanse(Transmit(input), &result), ZX_OK);
+  ASSERT_TRUE(result.is_err());
+  EXPECT_EQ(result.err(), ZX_ERR_WRONG_TYPE);
 
   SetError(ZX_OK);
   SetResultInput(cleansed);
-  controller->Cleanse(Transmit(input), [&](fit::result<FidlInput, zx_status_t> response) {
-    result = std::move(response);
-    sync_completion_signal(&sync);
-  });
-  sync_completion_wait(&sync, ZX_TIME_INFINITE);
-  sync_completion_reset(&sync);
-  EXPECT_TRUE(result.is_ok());
-  EXPECT_EQ(Receive(std::move(result.value())).ToHex(), cleansed.ToHex());
+  EXPECT_EQ(controller->Cleanse(Transmit(input), &result), ZX_OK);
+  ASSERT_TRUE(result.is_response());
+  auto& response = result.response();
+  auto received = Receive(std::move(response.cleansed));
+  EXPECT_EQ(received.ToHex(), cleansed.ToHex());
 }
 
 TEST_F(ControllerTest, Fuzz) {
-  ControllerPtr controller = Bind();
-  sync_completion_t sync;
-  fit::result<std::tuple<Result, FidlInput>, zx_status_t> fuzz_result;
+  auto controller = Bind();
+  ::fuchsia::fuzzer::Controller_Fuzz_Result result;
   Input fuzzed({0xde, 0xad, 0xbe, 0xef});
 
   SetError(ZX_ERR_WRONG_TYPE);
-  controller->Fuzz([&](fit::result<std::tuple<Result, FidlInput>, zx_status_t> response) {
-    fuzz_result = std::move(response);
-    sync_completion_signal(&sync);
-  });
-  sync_completion_wait(&sync, ZX_TIME_INFINITE);
-  sync_completion_reset(&sync);
-  EXPECT_TRUE(fuzz_result.is_error());
-  EXPECT_EQ(fuzz_result.error(), ZX_ERR_WRONG_TYPE);
+  EXPECT_EQ(controller->Fuzz(&result), ZX_OK);
+  ASSERT_TRUE(result.is_err());
+  EXPECT_EQ(result.err(), ZX_ERR_WRONG_TYPE);
 
   SetError(ZX_OK);
   SetResult(Result::CRASH);
   SetResultInput(fuzzed);
-  controller->Fuzz([&](fit::result<std::tuple<Result, FidlInput>, zx_status_t> response) {
-    fuzz_result = std::move(response);
-    sync_completion_signal(&sync);
-  });
-  sync_completion_wait(&sync, ZX_TIME_INFINITE);
-  sync_completion_reset(&sync);
-  EXPECT_TRUE(fuzz_result.is_ok());
-  auto [result, result_input] = std::move(fuzz_result.value());
-  EXPECT_EQ(result, Result::CRASH);
-  EXPECT_EQ(Receive(std::move(result_input)).ToHex(), fuzzed.ToHex());
+  EXPECT_EQ(controller->Fuzz(&result), ZX_OK);
+  ASSERT_TRUE(result.is_response());
+  auto& response = result.response();
+  EXPECT_EQ(response.result, Result::CRASH);
+  auto received = Receive(std::move(response.error_input));
+  EXPECT_EQ(received.ToHex(), fuzzed.ToHex());
 }
 
 TEST_F(ControllerTest, Merge) {
-  ControllerPtr controller = Bind();
-  sync_completion_t sync;
+  auto controller = Bind();
   zx_status_t result;
 
   SetError(ZX_ERR_WRONG_TYPE);
-  controller->Merge([&](zx_status_t response) {
-    result = response;
-    sync_completion_signal(&sync);
-  });
-  sync_completion_wait(&sync, ZX_TIME_INFINITE);
-  sync_completion_reset(&sync);
+  EXPECT_EQ(controller->Merge(&result), ZX_OK);
   EXPECT_EQ(result, ZX_ERR_WRONG_TYPE);
 
   SetError(ZX_OK);
-  controller->Merge([&](zx_status_t response) {
-    result = response;
-    sync_completion_signal(&sync);
-  });
-  sync_completion_wait(&sync, ZX_TIME_INFINITE);
-  sync_completion_reset(&sync);
+  EXPECT_EQ(controller->Merge(&result), ZX_OK);
   EXPECT_EQ(result, ZX_OK);
 }
 

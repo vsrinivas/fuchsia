@@ -30,12 +30,12 @@ class MutagenTest : public ::testing::Test {
     const auto* data = reinterpret_cast<const uint8_t*>(str);
     auto size = strlen(str);
     ASSERT_LT(patterns_.size(), 63U);
-    patterns_.emplace_back(Input(std::vector<uint8_t>(data, data + size)));
+    patterns_.emplace_back(std::vector<uint8_t>(data, data + size));
   }
 
   void AddPattern(const std::initializer_list<uint8_t>& bytes) {
     ASSERT_LT(patterns_.size(), 63U);
-    patterns_.emplace_back(Input(bytes));
+    patterns_.emplace_back(bytes);
   }
 
   // bool Mutator(Input* out);
@@ -85,8 +85,8 @@ TEST_F(MutagenTest, Mutate) {
   // Should track mutations.
   Input u = {0, 1, '2', '3'};
   Input v = {4, 5, 6, 7};
-  mutagen1.set_input(&u);
-  mutagen1.set_crossover(&v);
+  mutagen1.base_input()->Duplicate(u);
+  mutagen1.crossover()->Duplicate(v);
   EXPECT_EQ(mutagen1.mutations().size(), 0U);
 
   Input out1;
@@ -97,7 +97,7 @@ TEST_F(MutagenTest, Mutate) {
   mutagen1.Mutate(&out1);
   EXPECT_EQ(mutagen1.mutations().size(), 2U);
 
-  mutagen1.set_input(&u);
+  mutagen1.reset_mutations();
   EXPECT_EQ(mutagen1.mutations().size(), 0U);
 
   // Same seed should produce same mutations.
@@ -105,8 +105,8 @@ TEST_F(MutagenTest, Mutate) {
   Mutagen mutagen2;
   mutagen1.Configure(options);
   mutagen2.Configure(options);
-  mutagen2.set_input(&u);
-  mutagen2.set_crossover(&v);
+  mutagen2.base_input()->Duplicate(u);
+  mutagen2.crossover()->Duplicate(v);
   Input out2;
   out2.Reserve(kBufSize);
 
