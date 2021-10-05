@@ -365,6 +365,14 @@ DEPRECATED:  Remove when no boards set a value for these.
 
 From //build/images/vbmeta.gni:49
 
+### board_fastboot_unlock_credentials
+A list of paths to the unlock credentials file necessary to unlock this
+board's fastboot protocol.
+
+**Current value (from the default):** `[]`
+
+From //build/board.gni:47
+
 ### board_has_libvulkan_arm_mali
 Board files can set this to true if they have a package with a mali libvulkan VCD.
 
@@ -859,19 +867,19 @@ From //build/config/clang/crash_diagnostics.gni:7
 
 **Current value (from the default):** `"fuchsia"`
 
-From [//third_party/crashpad/build/crashpad_buildconfig.gni:22](https://fuchsia.googlesource.com/third_party/crashpad/+/ed430e140569cdac225939fc1ce3f2dc2b07ad71/build/crashpad_buildconfig.gni#22)
+From [//third_party/crashpad/build/crashpad_buildconfig.gni:22](https://fuchsia.googlesource.com/third_party/crashpad/+/378a3f2fc00fdad2bac00007cc271889e265296d/build/crashpad_buildconfig.gni#22)
 
 ### crashpad_http_transport_impl
 
 **Current value (from the default):** `"libcurl"`
 
-From [//third_party/crashpad/util/net/tls.gni:21](https://fuchsia.googlesource.com/third_party/crashpad/+/ed430e140569cdac225939fc1ce3f2dc2b07ad71/util/net/tls.gni#21)
+From [//third_party/crashpad/util/net/tls.gni:21](https://fuchsia.googlesource.com/third_party/crashpad/+/378a3f2fc00fdad2bac00007cc271889e265296d/util/net/tls.gni#21)
 
 ### crashpad_use_boringssl_for_http_transport_socket
 
 **Current value (from the default):** `true`
 
-From [//third_party/crashpad/util/net/tls.gni:30](https://fuchsia.googlesource.com/third_party/crashpad/+/ed430e140569cdac225939fc1ce3f2dc2b07ad71/util/net/tls.gni#30)
+From [//third_party/crashpad/util/net/tls.gni:30](https://fuchsia.googlesource.com/third_party/crashpad/+/378a3f2fc00fdad2bac00007cc271889e265296d/util/net/tls.gni#30)
 
 ### cts_version
 Name of the CTS version.
@@ -3605,6 +3613,9 @@ core_limit(number): maximum size (in bytes) allocated for the core system and/or
 This is sort of a "catch all" component that consists of all the area / packages that weren't
 specified in the components list below.
 
+core_creep_limit(number): maximum size creep (in bytes) per-CL allocated for the core system and/or services.
+This may be enforced by Gerrit.
+
 components(object array): a list of component objects. Each object should contain the following keys:
 
   component(string): name of the component.
@@ -3619,29 +3630,58 @@ components(object array): a list of component objects. Each object should contai
   The $for_pkg corresponds to the $for_pkg field in config.gni.
 
   limit(number): maximum size (in bytes) allocated for the component.
+  creep_limit(number): maxmium size creep (in bytes) per-CL allocated for the component.
+  This may be enforced by Gerrit.
+
+distributed_shlibs(string array): a list of shared libraries which are distributed in the Fuchsia SDK for
+partners to use in their prebuilt packages.
+
+distributed_shlibs_limit(number): maximum size (in bytes) allocated for distributed shared libraries.
+
+distributed_shlibs_creep_limit(number): maximum size creep (in bytes) allocated for distributed shared
+libraries. This may be enforced by Gerrit.
+
+icu_data(string array): a list of files which contribute to the ICU data limit.
+
+icu_data_limit(number): maximum size (in bytes) allocated to ICU data files.
+
+icu_data_creep_limit(number): maximum size creep (in bytes) allocated to ICU data files. This may be
+enforced by Gerrit.
 
 Example:
 size_checker_input = {
   asset_ext = [ ".ttf" ]
   asset_limit = 10240
   core_limit = 10240
+  core_creep_limit = 320
+  distributed_shlibs = [
+    "lib/ld.so.1",
+    "lib/libc++.so.2",
+  ]
+  distributed_shlibs_limit = 10240
+  distributed_shlibs_creep_limit = 320
+  icu_data = [ "icudtl.dat" ]
+  icu_data_limit = 20480
+  icu_data_creep_limit = 320
   components = [
     {
       component = "Foo"
       src = [ "topaz/runtime/foo_runner" ]
       limit = 10240
+      creep_limit = 320
     },
     {
       component = "Bar"
       src = [ "build/images" ]
       limit = 20480
+      creep_limit = 640
     },
   ]
 }
 
 **Current value (from the default):** `{ }`
 
-From //tools/size_checker/cmd/BUILD.gn:52
+From //tools/size_checker/cmd/BUILD.gn:84
 
 ### smp_max_cpus
 
@@ -3920,14 +3960,6 @@ From //src/chromium/build_args.gni:14
 **Current value (from the default):** `false`
 
 From //src/graphics/lib/gbm/gbm.gni:6
-
-### use_direct_for_carnelian_examples
-Include a config in the example packages to attempt to use view mode
-direct.
-
-**Current value (from the default):** `false`
-
-From //src/lib/ui/carnelian/BUILD.gn:29
 
 ### use_goma
 Set to true to enable distributed compilation using Goma.
