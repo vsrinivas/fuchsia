@@ -36,7 +36,7 @@ mod task;
 pub mod update;
 
 /// A request made to the Peer that should be passed along to the PeerTask
-#[cfg_attr(test, derive(Debug))]
+#[derive(Debug)]
 pub enum PeerRequest {
     Profile(ProfileEvent),
     Handle(PeerHandlerProxy),

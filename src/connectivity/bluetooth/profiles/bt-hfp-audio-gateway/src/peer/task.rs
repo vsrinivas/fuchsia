@@ -407,8 +407,8 @@ impl PeerTask {
                         let result = h.query_operator().await;
                         if let Err(err) = &result {
                             warn!(
-                                "Got error attempting to retrieve operator name from AG: {:}",
-                                err
+                                "Got error attempting to retrieve operator name from AG: {:} for peer {:}",
+                                err, self.id
                             );
                         };
                         result.ok().flatten()
@@ -456,19 +456,22 @@ impl PeerTask {
             }
             SlcRequest::Answer { response } => {
                 let result = self.calls.answer().map_err(|e| {
-                    warn!("Unexpected Answer from Hands Free: {}", e);
+                    warn!("Unexpected Answer from Hands Free for peer {}: {}", self.id, e);
                 });
                 self.connection.receive_ag_request(marker, response(result)).await;
             }
             SlcRequest::HangUp { response } => {
                 let result = self.calls.hang_up().map_err(|e| {
-                    warn!("Unexpected Hang Up from Hands Free: {}", e);
+                    warn!("Unexpected Hang Up from Hands Free for peer {}: {}", self.id, e);
                 });
                 self.connection.receive_ag_request(marker, response(result)).await;
             }
             SlcRequest::Hold { command, response } => {
                 let result = self.calls.hold(command).map_err(|e| {
-                    warn!("Unexpected Action {:?} from Hands Free: {}", command, e);
+                    warn!(
+                        "Unexpected Action {:?} from Hands Free for peer {}: {}",
+                        command, self.id, e
+                    );
                 });
                 self.connection.receive_ag_request(marker, response(result)).await;
             }
@@ -477,7 +480,10 @@ impl PeerTask {
                     Some(h) => match h.request_outgoing_call(&mut call_action.into()).await {
                         Ok(Ok(())) => Ok(()),
                         err => {
-                            warn!("Error initiating outgoing call by number: {:?}", err);
+                            warn!(
+                                "Error initiating outgoing call by number for peer {}: {:?}",
+                                self.id, err
+                            );
                             Err(())
                         }
                     },
@@ -498,11 +504,14 @@ impl PeerTask {
                         .connection
                         .get_selected_codec()
                         .map_or(vec![CodecId::CVSD], |c| vec![c]);
+                    debug!("About to connect SCO for peer {:}.", self.id);
                     let setup_result = self.sco_connector.connect(self.id.clone(), codecs).await;
+                    debug!("About to finish connecting SCO for peer {:}.", self.id);
                     let finish_result = match setup_result {
                         Ok(conn) => self.finish_sco_connection(conn).await,
                         Err(err) => Err(err.into()),
                     };
+                    debug!("SCO set up for peer {:} with result {:?}", self.id, finish_result);
                     let result = finish_result
                         .map_err(|e| warn!("Error setting up audio connection: {:?}", e));
                     self.connection.receive_ag_request(marker, response(result)).await;
@@ -518,6 +527,7 @@ impl PeerTask {
     pub async fn run(mut self, mut task_channel: mpsc::Receiver<PeerRequest>) -> Self {
         loop {
             let mut active_sco_closed_fut = self.on_active_sco_closed().fuse();
+            debug!("Beginning select for peer {:?}, SCO state is {:?}", self.id, self.sco_state);
             let mut sco_connection_fut = match &mut self.sco_state {
                 ScoState::AwaitingRemote(ref mut fut) => fut.fuse(),
                 _ => Fuse::terminated(),
@@ -525,24 +535,25 @@ impl PeerTask {
             select! {
                 // New request coming from elsewhere in the component
                 request = task_channel.next() => {
+                    info!("Handling peer request {:?} for peer {}", request, self.id);
                     if let Some(request) = request {
                         if let Err(e) = self.peer_request(request).await {
-                            warn!("Error handling peer request: {}", e);
+                            warn!("Error handling peer request {} for peer {}", e, self.id);
                             break;
                         }
                     } else {
-                        debug!("Peer task channel closed");
+                        debug!("Peer task channel closed for peer {}", self.id);
                         break;
                     }
                 }
                 // New request on the gain control protocol
                 request = self.gain_control.select_next_some() => {
-                    info!("Handling {:?}", request);
+                    info!("Handling gain control {:?} for peer {}", request, self.id);
                     self.connection.receive_ag_request(ProcedureMarker::VolumeControl, request.into()).await;
                 },
                 // A new call state has been received from the call service
                 update = self.calls.select_next_some() => {
-                    info!("Handling {:?}", update);
+                    info!("Handling call {:?} for peer {}", update, self.id);
                     // TODO(fxbug.dev/75538): for in-band ring  setup audio if should_ring is true
                     self.ringer.ring(self.calls.should_ring());
                     if update.callwaiting {
@@ -559,53 +570,57 @@ impl PeerTask {
                 }
                 // SCO connection has closed.
                 _ = active_sco_closed_fut => {
-                    info!("SCO Connection closed, transferring call to AG.");
+                    info!("Handling SCO Connection closed for peer {}, transferring call to AG.", self.id);
                     self.sco_state = ScoState::TearingDown;
                     let call_transfer_res = self.calls.transfer_to_ag();
                     if let Err(err) = call_transfer_res {
-                        warn!("Transfer to AG failed with {:}", err)
+                        warn!("Transfer to AG failed with {:} for peer {}", err, self.id)
                     }
                 }
                 // Wait until the HF sets up a SCO connection.
                 conn_res = sco_connection_fut => {
+                    info!("Handling SCO Connection accepted for peer {}.", self.id);
                     match conn_res {
                         Ok(sco) if !sco.is_closed() => {
                             let finish_sco_res = self.finish_sco_connection(sco).await;
                             if let Err(err) = finish_sco_res {
-                                warn!("Failed to finish SCO connection with: {:}", err)
+                                warn!("Failed to finish SCO connection with {:} for peer {}", err, self.id)
                             }
                             let call_transfer_res = self.calls.transfer_to_hf();
                             if let Err(err) = call_transfer_res {
-                                warn!("Transfer to HF failed with {:}", err)
+                                warn!("Transfer to HF failed with {:} for peer {}", err, self.id)
                             }
                         },
                         // This can occur if the HF opens and closes a SCO connection immediately.
-                        Ok(_) => warn!("Got already closed SCO connection.", ),
-                        Err(err) => warn!("Got error waiting for SCO connection: {:}", err)
+                        Ok(_) => warn!("Got already closed SCO connection for peer {}.", self.id),
+                        Err(err) => warn!("Got error waiting for SCO connection {:} for peer {}", err, self.id)
                     }
                 }
                 request = self.connection.next() => {
+                    info!("Handling SLC request {:?} for peer {}.", request, self.id);
                     if let Some(request) = request {
                         match request {
                             Ok(r) => self.procedure_request(r).await,
                             Err(e) => {
-                                warn!("SLC stream error: {:?}", e);
+                                warn!("SLC stream error {:?} for peer {}", e, self.id);
                                 break;
                             }
                         }
                     } else {
-                        debug!("Peer task channel closed");
+                        debug!("Peer task channel closed for peer {}", self.id);
                         break;
                     }
                 }
                 update = self.network_updates.next() => {
-                    if let Some(update) = stream_item_map_or_log(update, "PeerHandler::WatchNetworkUpdate") {
+                    info!("Handling network update {:?} for peer {}", update, self.id);
+                    if let Some(update) = stream_item_map_or_log(update, "PeerHandler::WatchNetworkUpdate", &self.id) {
                         self.handle_network_update(update).await
                     } else {
                         break;
                     }
                 }
                 _ = self.ringer.select_next_some() => {
+                    info!("Handling ring for peer {}.", self.id);
                     if let Some(call) = self.calls.ringing() {
                         self.ring_update(call).await;
                     } else {
@@ -625,12 +640,15 @@ impl PeerTask {
     fn hf_indicator_update(&mut self, indicator: HfIndicator) {
         match indicator {
             ind @ HfIndicator::EnhancedSafety(_) => {
-                debug!("Received EnhancedSafety HF Indicator update: {:?}", ind);
+                debug!(
+                    "Received EnhancedSafety HF Indicator update {:?} for peer {}",
+                    ind, self.id
+                );
             }
             HfIndicator::BatteryLevel(v) => {
                 if let Some(handler) = &mut self.handler {
                     if let Err(e) = handler.report_headset_battery_level(v) {
-                        warn!("Couldn't report headset battery level: {:?}", e);
+                        warn!("Couldn't report headset battery level {:?} for peer {}", e, self.id);
                     }
                 }
             }
@@ -660,6 +678,8 @@ impl PeerTask {
         }
 
         let previous_sco_state = &self.sco_state;
+
+        debug!("Updating SCO state for peer {}.  Call active: {}, Call transferred: {}, Previous SCO state: {:?}", self.id, call_active, call_transferred, previous_sco_state);
 
         if call_active {
             match previous_sco_state {
@@ -712,17 +732,27 @@ impl PeerTask {
             self.sco_state = ScoState::Inactive
         };
 
+        debug!(
+            "Finished updating SCO state for peer {}; SCO state is now {:?}",
+            self.id, self.sco_state
+        );
+
         Ok(())
     }
 
     async fn finish_sco_connection(&mut self, sco_connection: ScoConnection) -> Result<(), Error> {
+        let peer_id = self.id.clone();
+        debug!("Finishing SCO connection for peer {:}.", peer_id);
         let res = self.a2dp_control.pause(Some(self.id.clone())).await;
         let pause_token = match res {
             Err(e) => {
-                warn!("Couldn't pause A2DP Audio: {:?}", e);
+                warn!("Couldn't pause A2DP Audio: {:?} for peer {:}", e, peer_id);
                 None
             }
-            Ok(token) => Some(token),
+            Ok(token) => {
+                debug!("Successfully paused aduio for peer {:}.", peer_id);
+                Some(token)
+            }
         };
         let params = sco_connection.params.clone();
         {
@@ -732,8 +762,13 @@ impl PeerTask {
                 // Cancel the SCO connection, we can't send audio.
                 // TODO(fxbug.dev/79784): this probably means we should just cancel out of HFP and
                 // this peer's connection entirely.
-                warn!("Couldn't start Audio DAI ({:?}) - dropping audio connection", e);
+                warn!(
+                    "Couldn't start Audio DAI ({:?}) for peer {:} - dropping audio connection",
+                    self.id, e
+                );
                 return Err(Error::system(format!("Couldn't start audio DAI"), e));
+            } else {
+                debug!("Successfully started Audio DAI for peer {:}.", peer_id);
             }
         }
 
@@ -741,11 +776,11 @@ impl PeerTask {
         Vigil::watch(&vigil, {
             let control = self.audio_control.clone();
             move |_| match control.lock().stop() {
-                Err(e) => warn!("Couldn't stop audio: {:?}", e),
-                Ok(()) => info!("Stopped HFP Audio"),
+                Err(e) => warn!("Couldn't stop audio for peer {:}: {:?}", peer_id, e),
+                Ok(()) => info!("Stopped HFP Audio for peer {:}", peer_id),
             }
         });
-        debug!("In finish_sco_connection, SCO state is {:?}", vigil);
+        debug!("In finish_sco_connection for peer {:}, SCO state is {:?}", peer_id, vigil);
         self.sco_state = ScoState::Active(vigil);
 
         Ok(())
@@ -817,15 +852,16 @@ fn update_table_entry<T: PartialEq + Clone>(dst: &mut Option<T>, src: &Option<T>
 fn stream_item_map_or_log<T, E: fmt::Debug>(
     item: Option<Result<T, E>>,
     stream_name: &str,
+    peer_id: &PeerId,
 ) -> Option<T> {
     match item {
         Some(Ok(value)) => Some(value),
         Some(Err(e)) => {
-            warn!("Error on stream {}: {:?}", stream_name, e);
+            warn!("Error on stream {} for peer {:}: {:?}", stream_name, peer_id, e);
             None
         }
         None => {
-            info!("Stream {} closed", stream_name);
+            info!("Stream {} closed for peer {:}", stream_name, peer_id);
             None
         }
     }
