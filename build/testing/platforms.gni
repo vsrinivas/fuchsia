@@ -119,6 +119,12 @@ test_platforms = [
     pool = "fuchsia.tests.thermal"
     device_type = "Astro"
   },
+  {
+    testbed = "sherlock_thermal"
+    cpu = "arm64"
+    pool = "fuchsia.tests.thermal"
+    device_type = "Sherlock"
+  },
 
   # Experimental/FYI.
   # fxbug.dev/43946
