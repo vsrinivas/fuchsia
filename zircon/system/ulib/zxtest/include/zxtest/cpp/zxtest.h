@@ -106,7 +106,8 @@
 #define INSTANTIATE_TEST_SUITE_P(Prefix, TestSuite, ...)                                        \
   static void _ZXTEST_REGISTER_FN(Prefix, TestSuite)(void) __attribute__((constructor));        \
   void _ZXTEST_REGISTER_FN(Prefix, TestSuite)(void) {                                           \
-    static auto provider = _ZXTEST_EXPAND_(_ZXTEST_GET_FIRST_(__VA_ARGS__));                    \
+    static zxtest::internal::ValueProvider<TestSuite::ParamType> provider(                      \
+        _ZXTEST_EXPAND_(_ZXTEST_GET_FIRST_(__VA_ARGS__)));                                      \
     zxtest::Runner::GetInstance()->AddInstantiation<TestSuite, TestSuite::ParamType>(           \
         std::make_unique<                                                                       \
             zxtest::internal::AddInstantiationDelegateImpl<TestSuite, TestSuite::ParamType>>(), \

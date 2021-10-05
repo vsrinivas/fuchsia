@@ -52,6 +52,13 @@ TEST_P(ParamTestChild, SameName) {}
 
 INSTANTIATE_TEST_SUITE_P(SomePrefix, ParamTestChild, ::zxtest::testing::Values(1, 3, 5, 7, 8))
 
+enum __enum_type {
+  VALUE_1 = 1,
+  VALUE_2 = 2,
+};
+
+INSTANTIATE_TEST_SUITE_P(Enum, ParamTestChild, ::zxtest::testing::Values(VALUE_1, VALUE_2))
+
 using StringAndBool = std::tuple<std::string, bool>;
 class StringAndBoolParent : public zxtest::TestWithParam<StringAndBool> {};
 class StringAndBoolChild : public StringAndBoolParent {};

@@ -32,6 +32,15 @@ class ValueProvider {
   ValueProvider(Callback accessor, size_t size) : accessor_(std::move(accessor)), size_(size) {}
   ValueProvider(const ValueProvider&) = delete;
   ValueProvider(ValueProvider&&) noexcept = default;
+  template <typename U, typename std::enable_if_t<std::is_convertible_v<U, T> &&
+                                                  !std::is_same_v<U, T>>* = nullptr>
+  ValueProvider(ValueProvider<U>&& other)
+      : accessor_([cb = std::move(other.accessor_)](size_t index) -> const T& {
+          static T tmp;
+          tmp = cb(index);
+          return tmp;
+        }),
+        size_(other.size_) {}
   ValueProvider& operator=(ValueProvider&&) noexcept = default;
   ~ValueProvider() = default;
 
@@ -43,6 +52,9 @@ class ValueProvider {
   size_t size() const { return size_; }
 
  private:
+  template <typename U>
+  friend class ValueProvider;
+
   Callback accessor_ = nullptr;
   size_t size_ = 0;
 };

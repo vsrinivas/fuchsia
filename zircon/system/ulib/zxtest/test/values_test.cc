@@ -350,5 +350,4 @@ void TestTuplesCombine() {
     ZX_ASSERT(std::get<3>(e5[i]) == std::get<3>(c5[i]));
   }
 }
-
 }  // namespace zxtest::test

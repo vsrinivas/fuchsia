@@ -208,5 +208,16 @@ void TestAddParameterizedInstaniations() {
 
   ::zxtest::RunnerTestPeer::DeleteParameterizedTestInfo(runner, type);
 }
+
+enum __enum_type {
+  VALUE_1 = 1,
+  VALUE_2 = 2,
+};
+
+void TestInexactTypeMatchup() {
+  // The error being tested is at compile-time.
+  ::zxtest::internal::ValueProvider<ParameterizedTestSuite1::ParamType> p1(
+      ::zxtest::testing::Values(VALUE_1, VALUE_2));
+}
 }  // namespace test
 }  // namespace zxtest
