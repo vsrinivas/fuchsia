@@ -95,7 +95,6 @@ if (toolchain_environment == "kernel") {
       "relocation_tests.cc",
       "resource_tests.cc",
       "sleep_tests.cc",
-      "span_tests.cc",
       "string_file_tests.cc",
       "string_tests.cc",
       "sync_ipi_tests.cc",

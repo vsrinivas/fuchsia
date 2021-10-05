@@ -43,7 +43,6 @@ zx_library("fbl") {
     "fbl/ring_buffer.h",
     "fbl/slab_allocator.h",
     "fbl/slab_malloc.h",
-    "fbl/span.h",
     "fbl/string_buffer.h",
     "fbl/string.h",
     "fbl/string_printf.h",

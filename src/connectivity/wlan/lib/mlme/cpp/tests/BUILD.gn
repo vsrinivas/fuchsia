@@ -218,7 +218,6 @@ test("common_tests") {
     "device_caps_unittest.cc",
     "moving_average_unittest.cc",
     "rates_elements_unittest.cc",
-    "span_unittest.cc",
     "stats_unittest.cc",
   ]
 
