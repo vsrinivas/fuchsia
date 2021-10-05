@@ -463,6 +463,41 @@ driver_bind_rules("ernie-woofer-bind") {
   deps = [ "//src/devices/bind/fuchsia.i2c" ]
 }
 
+driver_bind_rules("luis-power-domain-bind") {
+  rules = "bind/luis-power-domain.bind"
+  header_output = "luis-power-domain-bind.h"
+  bind_output = "luis-power-domain-bind.bc"
+  deps = [ "//src/devices/bind/fuchsia.power" ]
+}
+
+driver_bind_rules("luis-power-impl-bind") {
+  rules = "bind/luis-power-impl.bind"
+  header_output = "luis-power-impl-bind.h"
+  bind_output = "luis-power-impl-bind.bc"
+  deps = [
+    "//src/devices/bind/fuchsia.amlogic.platform",
+    "//src/devices/bind/fuchsia.amlogic.platform.t931",
+    "//src/devices/bind/fuchsia.google.platform",
+    "//src/devices/bind/fuchsia.platform",
+    "//src/devices/bind/fuchsia.pwm",
+    "//src/devices/bind/fuchsia.vreg",
+  ]
+}
+
+driver_bind_rules("luis-0p8-ee-buck-bind") {
+  rules = "bind/luis-0p8-ee-buck.bind"
+  header_output = "luis-0p8-ee-buck-bind.h"
+  bind_output = "luis-0p8-ee-buck-bind.bc"
+  deps = [ "//src/devices/bind/fuchsia.i2c" ]
+}
+
+driver_bind_rules("luis-cpu-a-buck-bind") {
+  rules = "bind/luis-cpu-a-buck.bind"
+  header_output = "luis-cpu-a-buck-bind.h"
+  bind_output = "luis-cpu-a-buck-bind.bc"
+  deps = [ "//src/devices/bind/fuchsia.i2c" ]
+}
+
 template("sherlock_driver") {
   fuchsia_driver(target_name + "-driver") {
     output_name = invoker.target_name
@@ -530,8 +565,12 @@ template("sherlock_driver") {
       ":ernie-woofer-bind_header",
       ":gpio-light-bind_header",
       ":imx227-sensor-bind_header",
+      ":luis-0p8-ee-buck-bind_header",
       ":luis-codec-bind_header",
+      ":luis-cpu-a-buck-bind_header",
       ":luis-cpu-bind_header",
+      ":luis-power-domain-bind_header",
+      ":luis-power-impl-bind_header",
       ":luis-touch-bind_header",
       ":sherlock-backlight-bind_header",
       ":sherlock-bluetooth-bind_header",

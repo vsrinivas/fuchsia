@@ -1,0 +1,31 @@
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+composite luis_power_impl;
+
+using fuchsia.amlogic.platform;
+using fuchsia.amlogic.platform.t931;
+using fuchsia.google.platform;
+using fuchsia.pwm;
+using fuchsia.platform;
+using fuchsia.vreg;
+
+primary node "pdev" {
+  fuchsia.BIND_PROTOCOL == fuchsia.platform.BIND_PROTOCOL.DEVICE;
+  fuchsia.BIND_PLATFORM_DEV_VID == fuchsia.google.platform.BIND_PLATFORM_DEV_VID.GOOGLE;
+  fuchsia.BIND_PLATFORM_DEV_PID == fuchsia.google.platform.BIND_PLATFORM_DEV_PID.LUIS;
+  fuchsia.BIND_PLATFORM_DEV_DID == fuchsia.amlogic.platform.BIND_PLATFORM_DEV_DID.POWER;
+  fuchsia.BIND_PLATFORM_DEV_INSTANCE_ID == 0;
+}
+
+node "pwm-ao-d" {
+  fuchsia.BIND_PROTOCOL == fuchsia.pwm.BIND_PROTOCOL.PWM;
+  fuchsia.BIND_PWM_ID == fuchsia.amlogic.platform.t931.BIND_PWM_ID.PWM_AO_D;
+}
+
+node "vreg-pp1000-cpu-a" {
+  fuchsia.BIND_PROTOCOL == fuchsia.vreg.BIND_PROTOCOL.DEVICE;
+  fuchsia.BIND_I2C_BUS_ID == 2; // SHERLOCK_I2C_3
+  fuchsia.BIND_I2C_ADDRESS == 0x60;
+}

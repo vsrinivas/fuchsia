@@ -136,7 +136,8 @@ class Sherlock : public SherlockType {
   int Thread();
 
   zx_status_t EnableWifi32K(void);
-  zx_status_t LuisPowerPublishBuck(const char* name, uint32_t bus_id, uint16_t address);
+  zx_status_t LuisPowerPublishBuck(const char* name, uint32_t bus_id, uint16_t address,
+                                   const device_fragment_t* fragments, size_t fragments_count);
 
   ddk::PBusProtocolClient pbus_;
   ddk::IommuProtocolClient iommu_;

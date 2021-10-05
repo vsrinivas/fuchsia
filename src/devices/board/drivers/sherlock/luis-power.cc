@@ -15,6 +15,10 @@
 #include <soc/aml-t931/t931-pwm.h>
 
 #include "sherlock.h"
+#include "src/devices/board/drivers/sherlock/luis-0p8-ee-buck-bind.h"
+#include "src/devices/board/drivers/sherlock/luis-cpu-a-buck-bind.h"
+#include "src/devices/board/drivers/sherlock/luis-power-domain-bind.h"
+#include "src/devices/board/drivers/sherlock/luis-power-impl-bind.h"
 #include "src/devices/lib/fidl-metadata/i2c.h"
 
 namespace sherlock {
@@ -47,20 +51,8 @@ const pbus_metadata_t power_impl_metadata[] = {
     },
 };
 
-constexpr zx_bind_inst_t power_impl_driver_match[] = {
-    BI_MATCH_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_POWER_IMPL),
-};
-
-constexpr device_fragment_part_t power_impl_fragment[] = {
-    {countof(power_impl_driver_match), power_impl_driver_match},
-};
-
 zx_device_prop_t power_domain_arm_core_props[] = {
     {BIND_POWER_DOMAIN_COMPOSITE, 0, PDEV_DID_POWER_DOMAIN_COMPOSITE},
-};
-
-constexpr device_fragment_t power_domain_arm_core_fragments[] = {
-    {"power", countof(power_impl_fragment), power_impl_fragment},
 };
 
 constexpr power_domain_t big_domain[] = {
@@ -78,8 +70,8 @@ constexpr device_metadata_t power_domain_big_core[] = {
 constexpr composite_device_desc_t power_domain_big_core_desc = {
     .props = power_domain_arm_core_props,
     .props_count = countof(power_domain_arm_core_props),
-    .fragments = power_domain_arm_core_fragments,
-    .fragments_count = countof(power_domain_arm_core_fragments),
+    .fragments = luis_power_domain_fragments,
+    .fragments_count = countof(luis_power_domain_fragments),
     .primary_fragment = "power",
     .spawn_colocated = true,
     .metadata_list = power_domain_big_core,
@@ -101,36 +93,12 @@ constexpr device_metadata_t power_domain_little_core[] = {
 constexpr composite_device_desc_t power_domain_little_core_desc = {
     .props = power_domain_arm_core_props,
     .props_count = countof(power_domain_arm_core_props),
-    .fragments = power_domain_arm_core_fragments,
-    .fragments_count = countof(power_domain_arm_core_fragments),
+    .fragments = luis_power_domain_fragments,
+    .fragments_count = countof(luis_power_domain_fragments),
     .primary_fragment = "power",
     .spawn_colocated = true,
     .metadata_list = power_domain_little_core,
     .metadata_count = countof(power_domain_little_core),
-};
-
-constexpr zx_bind_inst_t pwm_ao_d_match[] = {
-    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_PWM),
-    BI_MATCH_IF(EQ, BIND_PWM_ID, T931_PWM_AO_D),
-};
-
-constexpr device_fragment_part_t pwm_ao_d_fragment[] = {
-    {countof(pwm_ao_d_match), pwm_ao_d_match},
-};
-
-constexpr zx_bind_inst_t vreg_pp1000_cpu_a_match[] = {
-    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_VREG),
-    BI_ABORT_IF(NE, BIND_I2C_BUS_ID, SHERLOCK_I2C_3),
-    BI_MATCH_IF(EQ, BIND_I2C_ADDRESS, 0x60),
-};
-
-constexpr device_fragment_part_t vreg_pp1000_cpu_a_fragment[] = {
-    {countof(vreg_pp1000_cpu_a_match), vreg_pp1000_cpu_a_match},
-};
-
-constexpr device_fragment_t power_impl_fragments[] = {
-    {"pwm-ao-d", countof(pwm_ao_d_fragment), pwm_ao_d_fragment},
-    {"vreg-pp1000-cpu-a", countof(vreg_pp1000_cpu_a_fragment), vreg_pp1000_cpu_a_fragment},
 };
 
 }  // namespace
@@ -146,21 +114,9 @@ static const pbus_dev_t power_dev = []() {
   return dev;
 }();
 
-zx_status_t Sherlock::LuisPowerPublishBuck(const char* name, uint32_t bus_id, uint16_t address) {
-  const zx_bind_inst_t i2c_match[] = {
-      BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_I2C),
-      BI_ABORT_IF(NE, BIND_I2C_BUS_ID, bus_id),
-      BI_MATCH_IF(EQ, BIND_I2C_ADDRESS, address),
-  };
-
-  const device_fragment_part_t i2c_fragment[] = {
-      {countof(i2c_match), i2c_match},
-  };
-
-  const device_fragment_t fragments[] = {
-      {"i2c", countof(i2c_fragment), i2c_fragment},
-  };
-
+zx_status_t Sherlock::LuisPowerPublishBuck(const char* name, uint32_t bus_id, uint16_t address,
+                                           const device_fragment_t* fragments,
+                                           size_t fragments_count) {
   const zx_device_prop_t props[] = {
       {BIND_PLATFORM_DEV_VID, 0, PDEV_VID_SILERGY},
       {BIND_PLATFORM_DEV_PID, 0, PDEV_PID_SILERGY_SYBUCK},
@@ -191,7 +147,7 @@ zx_status_t Sherlock::LuisPowerPublishBuck(const char* name, uint32_t bus_id, ui
       .props = props,
       .props_count = countof(props),
       .fragments = fragments,
-      .fragments_count = countof(fragments),
+      .fragments_count = fragments_count,
       .primary_fragment = "i2c",
       .spawn_colocated = true,
       .metadata_list = metadata,
@@ -214,22 +170,24 @@ zx_status_t Sherlock::LuisPowerInit() {
     return st;
   }
 
-  st = LuisPowerPublishBuck("0p8_ee_buck", SHERLOCK_I2C_A0_0, 0x60);
+  st = LuisPowerPublishBuck("0p8_ee_buck", SHERLOCK_I2C_A0_0, 0x60, ee_buck_fragments,
+                            countof(ee_buck_fragments));
   if (st != ZX_OK) {
     zxlogf(ERROR, "Failed to publish sy8827 0P8_EE_BUCK device, st = %d", st);
     return st;
   }
 
-  st = LuisPowerPublishBuck("cpu_a_buck", SHERLOCK_I2C_3, 0x60);
+  st = LuisPowerPublishBuck("cpu_a_buck", SHERLOCK_I2C_3, 0x60, cpu_a_buck_fragments,
+                            countof(cpu_a_buck_fragments));
   if (st != ZX_OK) {
     zxlogf(ERROR, "Failed to publish sy8827 CPU_A_BUCK device, st = %d", st);
     return st;
   }
 
-  st = pbus_.CompositeDeviceAdd(&power_dev, reinterpret_cast<uint64_t>(power_impl_fragments),
-                                countof(power_impl_fragments), nullptr);
+  st = pbus_.AddComposite(&power_dev, reinterpret_cast<uint64_t>(luis_power_impl_fragments),
+                          countof(luis_power_impl_fragments), "pdev");
   if (st != ZX_OK) {
-    zxlogf(ERROR, "%s: CompositeDeviceAdd for powerimpl failed, st = %d", __FUNCTION__, st);
+    zxlogf(ERROR, "%s: AddComposite for powerimpl failed, st = %d", __FUNCTION__, st);
     return st;
   }
 
