@@ -64,9 +64,9 @@ type Client struct {
 
 	mu struct {
 		sync.RWMutex
-		closed     bool
-		didCallRun bool
-		ports      map[PortId]*Port
+		closed      bool
+		runningChan chan struct{}
+		ports       map[PortId]*Port
 	}
 }
 
@@ -266,20 +266,28 @@ func (p *Port) Close() error {
 	return multierr.Combine(p.port.Close(), p.watcher.Close(), err)
 }
 
-func (c *Client) Run(ctx context.Context) error {
+func (c *Client) Run(ctx context.Context) {
 	c.mu.Lock()
-	hadCalledRun := c.mu.didCallRun
-	c.mu.didCallRun = true
+	closed := c.mu.closed
+	oldRunningChan := c.mu.runningChan
+	runningChan := make(chan struct{})
+	c.mu.runningChan = runningChan
+	defer func() {
+		close(runningChan)
+	}()
 	c.mu.Unlock()
-	if hadCalledRun {
+	if oldRunningChan != nil {
 		panic("can't call Run twice on the same client")
+	}
+	if closed {
+		panic("can't call Run on a client that is already closed")
 	}
 
 	ctx, cancel := context.WithCancel(ctx)
 	detachWithError := func(reason error) {
 		cancel()
 		c.handler.DetachTx()
-		if err := c.Close(); err != nil {
+		if _, err := c.closeInner(); err != nil {
 			_ = syslog.WarnTf(tag, "error closing device on detach (%s): %s", reason, err)
 		} else {
 			_ = syslog.WarnTf(tag, "closed device: %s", reason)
@@ -360,10 +368,6 @@ func (c *Client) Run(ctx context.Context) error {
 	}()
 
 	wg.Wait()
-
-	// We can only close the VMOs after all the goroutines here have ended to
-	// prevent any references into the VMO after it's unmapped.
-	return multierr.Combine(c.data.Close(), c.descriptors.Close())
 }
 
 func (p *Port) IsAttached() bool {
@@ -474,26 +478,28 @@ func (p *Port) DeviceClass() network.DeviceClass {
 
 // Close closes the client and disposes of all its resources.
 func (c *Client) Close() error {
-	ports, err := func() (map[PortId]*Port, error) {
+	running, err := c.closeInner()
+	if running != nil {
+		<-running
+	}
+
+	// NB: descriptors and data VMOs are closed only after all the goroutines
+	// in Run are closed to prevent data races.
+	return multierr.Combine(err, c.data.Close(), c.descriptors.Close())
+}
+
+func (c *Client) closeInner() (chan struct{}, error) {
+	runningChan, ports, err := func() (chan struct{}, map[PortId]*Port, error) {
 		c.mu.Lock()
 		defer c.mu.Unlock()
 		if c.mu.closed {
-			return nil, nil
+			return c.mu.runningChan, nil, nil
 		}
 		c.mu.closed = true
 		ports := c.mu.ports
 		c.mu.ports = nil
 
-		// NB: descriptors and data VMOs are closed only after all the goroutines
-		// in Run are closed to prevent data races.
-		// If Run was not called, close them here.
-		var err error
-		if !c.mu.didCallRun {
-			err = multierr.Combine(c.data.Close(), c.descriptors.Close())
-		}
-
-		return ports, multierr.Combine(
-			err,
+		return c.mu.runningChan, ports, multierr.Combine(
 			c.device.Close(),
 			// Session also has a Close method, make sure we're calling the ChannelProxy
 			// one.
@@ -507,7 +513,7 @@ func (c *Client) Close() error {
 		err = multierr.Append(err, port.Close())
 	}
 
-	return err
+	return runningChan, err
 }
 
 // getDescriptor returns the shared memory representing the descriptor indexed

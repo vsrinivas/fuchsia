@@ -325,10 +325,8 @@ func runClient(t *testing.T, client *Client) {
 	var wg sync.WaitGroup
 	wg.Add(1)
 	go func() {
-		if err := client.Run(ctx); err != nil {
-			t.Errorf("client.Run(_) = %s", err)
-		}
-		wg.Done()
+		defer wg.Done()
+		client.Run(ctx)
 	}()
 	t.Cleanup(func() {
 		cancel()
@@ -814,10 +812,8 @@ func TestShutdown(t *testing.T) {
 			ctx, cancel := context.WithCancel(ctx)
 			clientClosed := make(chan struct{})
 			go func() {
-				if err := client.Run(ctx); err != nil {
-					t.Errorf("client.Run(_) = %s", err)
-				}
-				close(clientClosed)
+				defer close(clientClosed)
+				client.Run(ctx)
 			}()
 			t.Cleanup(func() {
 				// Always cleanup goroutine in case of early exit.
