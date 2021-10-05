@@ -448,7 +448,9 @@ void UsbHubDevice::DdkUnbind(ddk::UnbindTxn txn) {
 zx_status_t UsbHubDevice::Shutdown() {
   shutting_down_ = true;
   zx_status_t status = usb_.CancelAll(interrupt_endpoint_.b_endpoint_address);
-  if (status != ZX_OK) {
+  if (status == ZX_ERR_IO_NOT_PRESENT) {
+    zxlogf(DEBUG, "CancelAll() for endpoint of disconnected device");
+  } else if (status != ZX_OK) {
     // Fatal -- unable to shut down properly
     zxlogf(ERROR, "CancelAll() error: %s", zx_status_get_string(status));
     return status;

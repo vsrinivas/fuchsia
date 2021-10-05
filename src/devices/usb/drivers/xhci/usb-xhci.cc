@@ -1471,7 +1471,7 @@ zx_status_t UsbXhci::UsbHciCancelAll(uint32_t device_id, uint8_t ep_address) {
 TRBPromise UsbXhci::UsbHciCancelAllAsync(uint32_t device_id, uint8_t ep_address) {
   auto* state = GetDeviceState(device_id);
   if (!state) {
-    return fpromise::make_error_promise(ZX_ERR_IO);
+    return fpromise::make_error_promise(ZX_ERR_IO_NOT_PRESENT);
   }
   StopEndpoint stop;
   {
