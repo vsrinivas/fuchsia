@@ -69,12 +69,15 @@ AudioBuffer<SampleFormat> GenerateSequentialAudio(
 // each channel is assigned a duplicate value.
 //
 // Restated: |freq| is the number of **complete sinusoidal periods** that should perfectly fit into
-// the buffer; |magn| is a multiplier applied to the output (default value is 1.0); |phase| is an
-// offset (default value 0.0) which shifts the signal along the x-axis (value expressed in radians,
-// so runs from -M_PI to +M_PI).
+// the buffer; |magn| is a multiplier applied to the output (default value is the largest that fits
+// into the int container, or 1.0 for float); |phase| is an offset (default value 0.0) which shifts
+// the signal along the x-axis (value expressed in radians, so runs from -M_PI to +M_PI).
 template <fuchsia::media::AudioSampleFormat SampleFormat>
-AudioBuffer<SampleFormat> GenerateCosineAudio(TypedFormat<SampleFormat> format, int64_t num_frames,
-                                              double freq, double magn = 1.0, double phase = 0.0) {
+AudioBuffer<SampleFormat> GenerateCosineAudio(
+    TypedFormat<SampleFormat> format, int64_t num_frames, double freq,
+    double magn = SampleFormatTraits<SampleFormat>::kUnityValue -
+                  SampleFormatTraits<SampleFormat>::kSilentValue,
+    double phase = 0.0) {
   // If frequency is 0 (constant val), phase offset causes reduced amplitude
   FX_CHECK(freq > 0.0 || (freq == 0.0 && phase == 0.0));
 

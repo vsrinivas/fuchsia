@@ -43,6 +43,7 @@ executable("unittest-bin") {
   sources = [
     "audio_buffer_unittest.cc",
     "format_unittest.cc",
+    "traits_unittest.cc",
   ]
 
   deps = [

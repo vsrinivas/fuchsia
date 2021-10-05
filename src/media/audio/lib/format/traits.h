@@ -20,6 +20,7 @@ template <fuchsia::media::AudioSampleFormat SampleFormat>
 struct SampleFormatTraits {
   // type SampleT = type of an individual sample
   // SampleT kSilentValue = when repeated, produces silent audio
+  // SampleT kUnityValue = full-scale amplitude
   // float ToFloat(SampleT) = convert from SampleT to float
   // std::string ToString(SampleT) = convert from SampleT to text
   // size_t CharsPerSample = width of a ToString value
@@ -29,6 +30,7 @@ template <>
 struct SampleFormatTraits<fuchsia::media::AudioSampleFormat::UNSIGNED_8> {
   using SampleT = uint8_t;
   static constexpr SampleT kSilentValue = 0x80;
+  static constexpr SampleT kUnityValue = 0xFF;
   static float ToFloat(SampleT sample) {
     return static_cast<float>(static_cast<int8_t>(sample - kSilentValue)) * kInt8ToFloat;
   }
@@ -40,6 +42,7 @@ template <>
 struct SampleFormatTraits<fuchsia::media::AudioSampleFormat::SIGNED_16> {
   using SampleT = int16_t;
   static constexpr SampleT kSilentValue = 0;
+  static constexpr SampleT kUnityValue = 0x7FFF;
   static float ToFloat(SampleT sample) { return static_cast<float>(sample) * kInt16ToFloat; }
   static std::string ToString(SampleT sample) {
     return fxl::StringPrintf("%04X", static_cast<uint16_t>(sample));
@@ -51,6 +54,7 @@ template <>
 struct SampleFormatTraits<fuchsia::media::AudioSampleFormat::SIGNED_24_IN_32> {
   using SampleT = int32_t;
   static constexpr SampleT kSilentValue = 0;
+  static constexpr SampleT kUnityValue = 0x7FFFFF00;
   static float ToFloat(SampleT sample) { return static_cast<float>((sample >> 8) * kInt24ToFloat); }
   static std::string ToString(SampleT sample) { return fxl::StringPrintf("%08X", sample); }
   static constexpr size_t kCharsPerSample = 8;
@@ -60,6 +64,7 @@ template <>
 struct SampleFormatTraits<fuchsia::media::AudioSampleFormat::FLOAT> {
   using SampleT = float;
   static constexpr SampleT kSilentValue = 0;
+  static constexpr SampleT kUnityValue = 1.0f;
   static float ToFloat(SampleT sample) { return sample; }
   static std::string ToString(SampleT sample) { return fxl::StringPrintf("%9.6f", sample); }
   static constexpr size_t kCharsPerSample = 9;
