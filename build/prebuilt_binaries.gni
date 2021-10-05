@@ -11,16 +11,11 @@ import("//build/toolchain/breakpad.gni")
 #   build_id_dir (required)
 #     Path to the .build-id directory to consume.
 #
-#   debug_archive (optional)
-#     Path to archive containing a .build-id tarball.
-#     TODO(fxbug.dev/41478): Delete me.
-#
 #   testonly (optional)
 #     Usual GN meanings.
 #
 template("prebuilt_binaries") {
-  assert(defined(invoker.build_id_dir) || defined(invoker.debug_archive),
-         "build_id_dir or debug_archive is required")
+  assert(defined(invoker.build_id_dir), "build_id_dir is required")
 
   binary_manifest = "$target_gen_dir/${target_name}_binaries.json"
 
@@ -50,26 +45,16 @@ template("prebuilt_binaries") {
       rebase_path(depfile, root_build_dir),
     ]
 
-    if (defined(invoker.debug_archive)) {
-      args += [
-        "-debug-archive",
-        rebase_path(invoker.debug_archive),
-      ]
-    } else {
-      args += [
-        "-build-id-dir-in",
-        rebase_path(invoker.build_id_dir),
-      ]
-    }
+    args += [
+      "-build-id-dir-in",
+      rebase_path(invoker.build_id_dir),
+    ]
 
     metadata = {
       prebuilt_binaries = [
         {
           name = target_name
           manifest = rebase_path(binary_manifest, root_build_dir)
-          if (defined(invoker.debug_archive)) {
-            debug_archive = rebase_path(invoker.debug_archive, root_build_dir)
-          }
         },
       ]
     }

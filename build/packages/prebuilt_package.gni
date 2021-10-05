@@ -5,24 +5,11 @@
 import("//build/packages/package_metadata.gni")
 import("//build/prebuilt_binaries.gni")
 
-declare_args() {
-  # To ensure that everything can be built without debug symbols present we
-  # gate weather or not these are consumed on a build argument. When set,
-  # unpack_debug_archives creates an additional build step that unpacks
-  # debug archives in tar.bzip2 format into the .build-id directory
-  unpack_debug_archives = false
-}
-
-# Generate a signed, sealed package file from a prebuilt archive.
 #
 # Parameters
 #
 #   archive (required)
 #     Path to archive containing a package.
-#
-#   debug_archive (optional)
-#     Path to archive containing a .build-id directory for the package.
-#     TODO(fxbug.dev/41478): Delete me.
 #
 #   package_name (optional)
 #     Name of the package.
@@ -50,29 +37,16 @@ template("prebuilt_package") {
 
   unpack_action_name = target_name + ".debug-archive"
 
-  if (defined(invoker.debug_archive) && unpack_debug_archives) {
-    prebuilt_binaries(unpack_action_name) {
-      forward_variables_from(invoker,
-                             [
-                               "debug_archive",
-                               "testonly",
-                             ])
-    }
-  } else {
-    if (defined(invoker.debug_archive)) {
-      not_needed(invoker, [ "debug_archive" ])
-    }
-    group(unpack_action_name) {
-      metadata = {
-        prebuilt_packages = [
-          {
-            archive = invoker.archive
-            if (defined(invoker.package_name)) {
-              package_name = invoker.package_name
-            }
-          },
-        ]
-      }
+  group(unpack_action_name) {
+    metadata = {
+      prebuilt_packages = [
+        {
+          archive = invoker.archive
+          if (defined(invoker.package_name)) {
+            package_name = invoker.package_name
+          }
+        },
+      ]
     }
   }
 

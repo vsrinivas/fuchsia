@@ -92,8 +92,6 @@ declare_args() {
 #      production_safe (optional, boolean, default: false)
 #        If not set to true, the flavor is marked with
 #        //build/validate:non_production_tag
-#      debug_archive (optional)
-#        Path to archive containing a .build-id directory for this flavor
 #      deps (optional)
 #        Extra dependencies specific to this flavor.
 #
@@ -174,7 +172,6 @@ template("prebuilt_package_with_flavors") {
                              "visibility",
                              "package_name",
                            ])
-    forward_variables_from(flavor_to_use, [ "debug_archive" ])
 
     # setup the non-production-safe status of the package
     if (!production_safe) {
