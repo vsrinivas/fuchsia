@@ -5,6 +5,7 @@
 #ifndef SRC_VIRTUALIZATION_BIN_VMM_PCI_H_
 #define SRC_VIRTUALIZATION_BIN_VMM_PCI_H_
 
+#include <lib/stdcompat/span.h>
 #include <lib/zx/status.h>
 #include <zircon/compiler.h>
 #include <zircon/types.h>
@@ -14,7 +15,6 @@
 #include <vector>
 
 #include <fbl/array.h>
-#include <fbl/span.h>
 
 #include "src/virtualization/bin/vmm/bits.h"
 #include "src/virtualization/bin/vmm/guest.h"
@@ -189,7 +189,7 @@ class PciDevice {
     static_assert(std::is_pod<T>::value, "Type T should be POD.");
     static_assert(std::has_unique_object_representations<T>::value,
                   "Type T should not contain implicit padding.");
-    return AddCapability(fbl::Span(reinterpret_cast<const uint8_t*>(&capability), sizeof(T)));
+    return AddCapability(cpp20::span(reinterpret_cast<const uint8_t*>(&capability), sizeof(T)));
   }
 
   // Install the given PciBar in the next available slot, returning the index
@@ -202,7 +202,7 @@ class PciDevice {
   friend class PciBus;
 
   // Install a capability from the given payload.
-  zx_status_t AddCapability(fbl::Span<const uint8_t> payload);
+  zx_status_t AddCapability(cpp20::span<const uint8_t> payload);
 
   // Setup traps and handlers for accesses to BAR regions.
   zx_status_t SetupBarTraps(Guest* guest, bool skip_bell, async_dispatcher_t* dispatcher);

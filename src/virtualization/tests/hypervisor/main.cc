@@ -102,7 +102,7 @@ void SetupGuest(TestCase* test, const char* start, const char* end) {
   ASSERT_EQ(zx::vmo::create(VMO_SIZE, 0, &test->vmo), ZX_OK);
   ASSERT_EQ(zx::vmar::root_self()->map(kHostMapFlags, 0, test->vmo, 0, VMO_SIZE, &test->host_addr),
             ZX_OK);
-  fbl::Span<uint8_t> guest_memory(reinterpret_cast<uint8_t*>(test->host_addr), VMO_SIZE);
+  cpp20::span<uint8_t> guest_memory(reinterpret_cast<uint8_t*>(test->host_addr), VMO_SIZE);
 
   // Add ZX_RIGHT_EXECUTABLE so we can map into guest address space.
   zx::resource vmex_resource;

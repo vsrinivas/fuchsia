@@ -420,7 +420,7 @@ zx_status_t PciBus::ConfigureDtb(void* dtb) const {
 
 PciDevice::PciDevice(const Attributes& attrs) : attrs_(attrs) {}
 
-zx_status_t PciDevice::AddCapability(fbl::Span<const uint8_t> payload) {
+zx_status_t PciDevice::AddCapability(cpp20::span<const uint8_t> payload) {
   std::lock_guard<std::mutex> lock(mutex_);
 
   // PCI Local Bus Spec v3.0 Section 6.7: Each capability must be DWORD aligned.

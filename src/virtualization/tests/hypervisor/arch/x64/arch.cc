@@ -4,7 +4,8 @@
 
 #include "src/virtualization/tests/hypervisor/arch.h"
 
-#include <fbl/span.h>
+#include <lib/stdcompat/span.h>
+#include <zircon/assert.h>
 
 #include "src/virtualization/tests/hypervisor/hypervisor_tests.h"
 
@@ -15,7 +16,7 @@ enum {
   X86_PTE_PS = 0x80,  // PS   Page size
 };
 
-void SetUpGuestPageTable(fbl::Span<uint8_t> guest_memory) {
+void SetUpGuestPageTable(cpp20::span<uint8_t> guest_memory) {
   ZX_ASSERT(guest_memory.size() >= 2ul * PAGE_SIZE);
 
   // Construct a page table consisting of two levels:

@@ -5,9 +5,9 @@
 #include "src/virtualization/tests/hypervisor/arch.h"
 
 #include <lib/page-table/builder.h>
+#include <lib/stdcompat/span.h>
 
 #include <fbl/algorithm.h>
-#include <fbl/span.h>
 
 #include "lib/page-table/arch/arm64/builder.h"
 #include "lib/page-table/arch/arm64/mmu.h"
@@ -24,7 +24,7 @@ using GuestVaddr = page_table::Vaddr;
 // for page tables.
 class GuestMemoryManager : public page_table::MemoryManager {
  public:
-  GuestMemoryManager(fbl::Span<uint8_t> guest_memory, GuestPaddr allocation_addr,
+  GuestMemoryManager(cpp20::span<uint8_t> guest_memory, GuestPaddr allocation_addr,
                      size_t free_region_size)
       : guest_memory_(guest_memory),
         next_allocation_(allocation_addr),
@@ -68,12 +68,12 @@ class GuestMemoryManager : public page_table::MemoryManager {
   }
 
  private:
-  fbl::Span<uint8_t> guest_memory_;
+  cpp20::span<uint8_t> guest_memory_;
   GuestPaddr next_allocation_;
   GuestPaddr free_region_end_;
 };
 
-void SetUpGuestPageTable(fbl::Span<uint8_t> guest_memory) {
+void SetUpGuestPageTable(cpp20::span<uint8_t> guest_memory) {
   page_table::arm64::PageTableLayout layout = {
       .granule_size = page_table::arm64::GranuleSize::k4KiB,
       .region_size_bits = REGION_SIZE_BITS,
