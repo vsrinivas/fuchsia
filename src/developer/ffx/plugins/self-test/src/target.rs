@@ -82,7 +82,7 @@ pub mod include_target {
     pub(crate) async fn test_get_ssh_address_includes_port() -> Result<()> {
         let target_nodename = get_target_nodename().await?;
 
-        let isolate = Isolate::new("get-ssh-address")?;
+        let isolate = Isolate::new("target-get-ssh-address-includes-port")?;
 
         let out = isolate
             .ffx(&["--target", &target_nodename, "target", "get-ssh-address", "-t", "5"])

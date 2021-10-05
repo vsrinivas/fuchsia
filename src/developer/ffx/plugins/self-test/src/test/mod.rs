@@ -82,6 +82,7 @@ pub struct CommandOutput {
 pub struct Isolate {
     _tmpdir: TempDir,
 
+    own_path: PathBuf,
     home_dir: PathBuf,
     xdg_config_home: PathBuf,
     pub ascendd_path: PathBuf,
@@ -142,14 +143,19 @@ impl Isolate {
             ))?,
         )?;
 
-        Ok(Isolate { _tmpdir: tmpdir, home_dir, xdg_config_home, ascendd_path })
+        let own_path = Isolate::get_own_path();
+
+        Ok(Isolate { _tmpdir: tmpdir, own_path, home_dir, xdg_config_home, ascendd_path })
+    }
+
+    fn get_own_path() -> PathBuf {
+        let ffx_path = env::current_exe().expect("could not determine own path");
+        // when we daemonize, our path will change to /, so get the canonical path before that occurs.
+        std::fs::canonicalize(ffx_path).expect("could not canonicalize own path")
     }
 
     fn ffx_cmd(&self, args: &[&str]) -> std::process::Command {
-        let mut ffx_path = env::current_exe().expect("could not determine own path");
-        // when we daemonize, our path will change to /, so get the canonical path before that occurs.
-        ffx_path = std::fs::canonicalize(ffx_path).expect("could not canonicalize own path");
-        let mut cmd = Command::new(ffx_path);
+        let mut cmd = Command::new(&self.own_path);
         cmd.args(args);
         cmd.env_clear();
 
@@ -195,13 +201,33 @@ impl Isolate {
 
 impl Drop for Isolate {
     fn drop(&mut self) {
-        if is_daemon_running_at_path(self.ascendd_path.to_string_lossy().to_string()) {
+        let path = self.ascendd_path.to_string_lossy().to_string();
+        if is_daemon_running_at_path(path) {
             let mut cmd = self.ffx_cmd(&["daemon", "stop"]);
             cmd.stdin(Stdio::null());
             cmd.stdout(Stdio::null());
             cmd.stderr(Stdio::null());
-            let _ = cmd.spawn().map(|mut child| child.wait());
+            match cmd.spawn().map(|mut child| child.wait()) {
+                Ok(_) => {}
+                Err(e) => log::info!("Failure calling daemon stop: {:#?}", e),
+            }
         }
+    }
+}
+
+/// cleanup runs pkill to ensure no daemons are left running.
+async fn cleanup() -> Result<()> {
+    // Daemon stop waits 20ms before exiting so we try to avoid a race by waiting 80ms here
+    fuchsia_async::Timer::new(Duration::from_millis(80)).await;
+
+    let status = Command::new("pkill").arg("-f").arg("(^|/)ffx (-.* )?daemon start$").status()?;
+    if status.success() {
+        // Success here means that pkill was able to find something to kill so that means a daemon
+        // was still running that we did not expect to be running. We return an error here to make
+        // this a failure of the test suite as a whole to find out when this is happening.
+        ffx_bail!("A daemon was killed that was not supposed to be running")
+    } else {
+        Ok(())
     }
 }
 
@@ -220,7 +246,7 @@ pub async fn run(
         SSH_KEY_PATH.set(path).map_err(|_| anyhow!("Attempted to set SSH_KEY_PATH twice"))?;
     }
 
-    async {
+    let test_result = async {
         let num_tests = tests.len();
 
         writeln!(&mut writer, "1..{}", num_tests)?;
@@ -272,7 +298,11 @@ pub async fn run(
         Ok(())
     }
     .on_timeout(timeout, || ffx_bail!("timed out after {:?}", timeout))
-    .await
+    .await;
+
+    let cleanup_result = cleanup().await;
+
+    test_result.and(cleanup_result)
 }
 
 fn green(color: bool) -> &'static str {
