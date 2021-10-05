@@ -7,6 +7,7 @@
 #include <fuchsia/media/cpp/fidl.h>
 #include <fuchsia/thermal/cpp/fidl.h>
 #include <lib/syslog/cpp/macros.h>
+#include <lib/zx/time.h>
 #include <zircon/types.h>
 
 #include <array>
@@ -17,8 +18,6 @@
 #include <string>
 
 #include <test/thermal/cpp/fidl.h>
-
-#include "lib/zx/time.h"
 
 #include "src/lib/fxl/strings/string_printf.h"
 #include "src/media/audio/lib/analysis/analysis.h"
@@ -208,12 +207,14 @@ AudioBuffer<OutputFormat> HermeticFidelityTest::GetRendererOutput(
 
     renderer->PlaySynchronized(this, device, 0);
     renderer->WaitForPackets(this, packets);
+    Unbind(renderer);
   } else {
     auto renderer = CreateAudioRenderer(input_format, input_buffer_frames, usage);
     auto packets = renderer->AppendPackets({&input});
 
     renderer->PlaySynchronized(this, device, 0);
     renderer->WaitForPackets(this, packets);
+    Unbind(renderer);
   }
 
   // Extract it from the VAD ring-buffer.
@@ -275,7 +276,6 @@ void HermeticFidelityTest::VerifyResults(const TestCase<InputFormat, OutputForma
     }
   }
 }
-
 
 // Additional fidelity assessments, potentially added in the future:
 // (1) Dynamic range (1kHz input at -30/60/90 db: measure level, sinad. Overall gain sensitivity)
