@@ -194,13 +194,12 @@ to indicate it comes from a fragment.
 
 ```c++
 auto parent = MockDevice::FakeRootParent();
-void* ctx = reinterpret_cast<void*>(0x10),
-void* ops = nullptr,
 // Mock-ddk uses the same call as adding a
 // normal parent protocol:
-parent->AddProtocol(0, ops, ctx, "fragment-1");
-parent->AddProtocol(1, ops, ctx, "fragment-1");
-parent->AddProtocol(2, ops, ctx, "fragment-2");
+parent->AddProtocol(ZX_PROTOCOL_GPIO, gpio.GetProto()->ops, gpio.GetProto()->ctx, "fragment-1");
+parent->AddProtocol(ZX_PROTOCOL_I2C, i2c.GetProto()->ops, i2c.GetProto()->ctx, "fragment-2");
+parent->AddProtocol(ZX_PROTOCOL_CODEC, codec.GetProto()->ops, codec.GetProto()->ctx, "fragment-3");
+// gpio, i2c, and codec are device objects with mocked/faked HW interfaces.
 ```
 
 #### Mocking FIDL connections
@@ -218,14 +217,12 @@ MyDevice* test_dev = child_dev->GetDeviceContext<MyDevice>();
 
 async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
 auto endpoints = fidl::CreateEndpoints<fidl_proto>();
-std::optional<fidl::ServerBindingRef<fidl_proto>> binding;
-binding = fidl::BindServer(loop_.dispatcher(),
-                            std::move(endpoints->server),
-                            child->GetDeviceContext<RpmbDevice>());
-loop.StartThread("thread-name")
-fidl::Client<fidl_proto> fidl_client;
-fidl_client.Bind(std::move(endpoints->client), loop_.dispatcher());
-// fidl_client can be used as long as loop and binding are not deleted.
+std::optional<fidl::ServerBindingRef<fidl_proto>> fidl_server;
+fidl_server = fidl::BindServer<fidl::WireServer<fidl_proto>>(
+    loop.dispatcher(), std::move(endpoints->server), test_dev);
+loop.StartThread("thread-name");
+auto fidl_client = fidl::BindSyncClient(std::move(endpoints->client));
+// fidl_client can be used synchronously.
 ```
 
 
