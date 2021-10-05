@@ -20,7 +20,7 @@ use {
 use serde::{Deserialize, Serialize};
 
 /// A trait providing data from a component instance's environment.
-pub trait EnvironmentInterface<C>
+pub trait EnvironmentInterface<C>: Send + Sync
 where
     C: ComponentInstanceInterface,
 {

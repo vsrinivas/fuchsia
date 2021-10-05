@@ -34,6 +34,7 @@ use {
         component_id_index::ComponentIdIndex,
         component_instance::ComponentInstanceInterface,
         config::{AllowlistEntry, CapabilityAllowlistKey, RuntimeConfig, SecurityPolicy},
+        environment::RunnerRegistry,
         error::RoutingError,
         rights::{READ_RIGHTS, WRITE_RIGHTS},
         RegistrationDecl,
@@ -60,6 +61,7 @@ pub struct RoutingTestBuilderForAnalyzer {
     decls_by_url: HashMap<String, ComponentDecl>,
     namespace_capabilities: Vec<CapabilityDecl>,
     builtin_capabilities: Vec<CapabilityDecl>,
+    builtin_runner_registrations: Vec<RunnerRegistration>,
     capability_policy: HashMap<CapabilityAllowlistKey, HashSet<AllowlistEntry>>,
     debug_capability_policy: HashMap<CapabilityAllowlistKey, HashSet<(AbsoluteMoniker, String)>>,
     component_id_index_path: Option<String>,
@@ -81,6 +83,7 @@ impl RoutingTestModelBuilder for RoutingTestBuilderForAnalyzer {
             decls_by_url,
             namespace_capabilities: Vec::new(),
             builtin_capabilities: Vec::new(),
+            builtin_runner_registrations: Vec::new(),
             capability_policy: HashMap::new(),
             debug_capability_policy: HashMap::new(),
             component_id_index_path: None,
@@ -93,6 +96,15 @@ impl RoutingTestModelBuilder for RoutingTestBuilderForAnalyzer {
 
     fn set_builtin_capabilities(&mut self, caps: Vec<CapabilityDecl>) {
         self.builtin_capabilities = caps;
+    }
+
+    fn register_mock_builtin_runner(&mut self, runner: &str) {
+        let runner_name = CapabilityName(runner.into());
+        self.builtin_runner_registrations.push(RunnerRegistration {
+            source_name: runner_name.clone(),
+            target_name: runner_name.clone(),
+            source: RegistrationSource::Self_,
+        });
     }
 
     /// Add a custom capability security policy to restrict routing of certain caps.
@@ -136,7 +148,12 @@ impl RoutingTestModelBuilder for RoutingTestBuilderForAnalyzer {
         };
 
         let build_model_result = ModelBuilderForAnalyzer::new(self.root_url)
-            .build(self.decls_by_url, Arc::new(config), Arc::new(component_id_index))
+            .build(
+                self.decls_by_url,
+                Arc::new(config),
+                Arc::new(component_id_index),
+                RunnerRegistry::from_decl(&self.builtin_runner_registrations),
+            )
             .await;
         let model = build_model_result.model.expect("failed to build ComponentModelForAnalyzer");
         RoutingTestForAnalyzer { model }

@@ -80,6 +80,7 @@ pub struct RoutingTestBuilder {
     additional_hooks: Vec<HooksRegistration>,
     outgoing_paths: HashMap<String, HashMap<CapabilityPath, Arc<dyn DirectoryEntry>>>,
     builtin_runners: HashMap<CapabilityName, Arc<dyn BuiltinRunnerFactory>>,
+    mock_builtin_runners: HashSet<CapabilityName>,
     namespace_capabilities: Vec<CapabilityDecl>,
     builtin_capabilities: Vec<CapabilityDecl>,
     component_id_index_path: Option<String>,
@@ -139,6 +140,8 @@ impl RoutingTestBuilder {
         self
     }
 
+    /// Set the list of built-in capabilities that are provided from component manager.
+    /// The `test_runner` capability is always provided.
     pub fn set_builtin_capabilities(mut self, caps: Vec<CapabilityDecl>) -> Self {
         self.builtin_capabilities = caps;
         self
@@ -198,6 +201,10 @@ impl RoutingTestModelBuilder for RoutingTestBuilder {
 
     fn set_builtin_capabilities(&mut self, caps: Vec<CapabilityDecl>) {
         self.builtin_capabilities = caps;
+    }
+
+    fn register_mock_builtin_runner(&mut self, runner: &str) {
+        self.mock_builtin_runners.insert(runner.into());
     }
 
     fn add_capability_policy(
@@ -283,6 +290,12 @@ impl RoutingTest {
 
         let echo_service = Arc::new(EchoService::new());
 
+        // Add the `test_runner` capability as a built-in.
+        builder.builtin_capabilities.push(CapabilityDecl::Runner(RunnerDecl {
+            name: TEST_RUNNER_NAME.into(),
+            source_path: None,
+        }));
+
         let config = RuntimeConfig {
             namespace_capabilities: builder.namespace_capabilities,
             builtin_capabilities: builder.builtin_capabilities,
@@ -305,6 +318,9 @@ impl RoutingTest {
             .set_runtime_config(config)
             .add_resolver("test".to_string(), Box::new(mock_resolver))
             .add_runner(TEST_RUNNER_NAME.into(), mock_runner.clone());
+        for name in builder.mock_builtin_runners.clone() {
+            env_builder = env_builder.add_runner(name, mock_runner.clone())
+        }
         for (name, runner) in builder.builtin_runners.clone() {
             env_builder = env_builder.add_runner(name, runner);
         }

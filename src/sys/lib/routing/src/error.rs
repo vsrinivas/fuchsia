@@ -136,11 +136,19 @@ pub enum RoutingError {
     ComponentNotInIdIndex { moniker: PartialAbsoluteMoniker },
 
     #[error(
-        "A `use from parent` declaration was found at `/` for `{}`, \
+        "A `use from parent` declaration was found at `/` for `{}`, or a `register from parent` \
+        declaration was found in the root environment or one of the root component's declared environments, \
         but no built-in capability matches",
         capability_id
     )]
     UseFromComponentManagerNotFound { capability_id: String },
+
+    #[error(
+        "A `register from parent` declaration was found at `/` or in one of the root component's declared \
+        environments for `{}` but no built-in capability matches",
+        capability_id
+    )]
+    RegisterFromComponentManagerNotFound { capability_id: String },
 
     #[error(
         "An `offer from parent` declaration was found at `/` for `{}`, \
@@ -474,6 +482,10 @@ impl RoutingError {
 
     pub fn use_from_component_manager_not_found(capability_id: impl Into<String>) -> Self {
         Self::UseFromComponentManagerNotFound { capability_id: capability_id.into() }
+    }
+
+    pub fn register_from_component_manager_not_found(capability_id: impl Into<String>) -> Self {
+        Self::RegisterFromComponentManagerNotFound { capability_id: capability_id.into() }
     }
 
     pub fn offer_from_component_manager_not_found(capability_id: impl Into<String>) -> Self {

@@ -13,6 +13,11 @@
             ],
         },
     ],
+    builtin_capabilities: [
+        {
+           runner: "elf"
+        },
+    ],
     builtin_pkg_resolver: "appmgr_bridge",
     reboot_on_terminate_enabled: true,
     security_policy: {

@@ -22,7 +22,9 @@ use {
             CapabilitySourceInterface, ComponentCapability, InternalCapability,
             StorageCapabilitySource,
         },
-        component_instance::{ComponentInstanceInterface, ExtendedInstanceInterface},
+        component_instance::{
+            ComponentInstanceInterface, ExtendedInstanceInterface, TopInstanceInterface,
+        },
         environment::DebugRegistration,
         error::RoutingError,
         event::{EventFilter, EventModeSet},
@@ -30,7 +32,7 @@ use {
         rights::{Rights, READ_RIGHTS, WRITE_RIGHTS},
         router::{
             AllowedSourcesBuilder, CapabilityVisitor, ErrorNotFoundFromParent,
-            ErrorNotFoundInChild, ExposeVisitor, OfferVisitor, RoutingStrategy,
+            ErrorNotFoundInChild, ExposeVisitor, OfferVisitor, RoutingStrategy, Sources,
         },
         walk_state::WalkState,
     },
@@ -711,42 +713,46 @@ async fn route_runner<C>(
 where
     C: ComponentInstanceInterface + 'static,
 {
-    // Find the component instance in which the runner was registered with the environment.
-    let (env_component_instance, registration_decl) =
-        match target.environment().get_registered_runner(&runner)? {
-            Some((
-                ExtendedInstanceInterface::Component(env_component_instance),
-                registration_decl,
-            )) => (env_component_instance, registration_decl),
-            Some((ExtendedInstanceInterface::AboveRoot(top_instance), reg)) => {
-                // Root environment.
-                return Ok(RouteSource::Runner(CapabilitySourceInterface::Builtin {
-                    capability: InternalCapability::Runner(reg.source_name.clone()),
-                    top_instance: Arc::downgrade(&top_instance),
-                }));
-            }
-            None => {
-                return Err(RoutingError::UseFromEnvironmentNotFound {
-                    moniker: target.abs_moniker().to_partial(),
-                    capability_name: runner.clone(),
-                    capability_type: "runner".to_string(),
-                }
-                .into());
-            }
-        };
     let allowed_sources = AllowedSourcesBuilder::new().builtin().component();
-    let source = RoutingStrategy::new()
-        .registration::<RunnerRegistration>()
-        .offer::<OfferRunnerDecl>()
-        .expose::<ExposeRunnerDecl>()
-        .route(
-            registration_decl,
-            env_component_instance,
-            allowed_sources,
-            &mut RunnerVisitor,
-            mapper,
-        )
-        .await?;
+    let source = match target.environment().get_registered_runner(&runner)? {
+        // The runner was registered in the environment of some component instance..
+        Some((ExtendedInstanceInterface::Component(env_component_instance), registration_decl)) => {
+            RoutingStrategy::new()
+                .registration::<RunnerRegistration>()
+                .offer::<OfferRunnerDecl>()
+                .expose::<ExposeRunnerDecl>()
+                .route(
+                    registration_decl,
+                    env_component_instance,
+                    allowed_sources,
+                    &mut RunnerVisitor,
+                    mapper,
+                )
+                .await
+        }
+        // The runner was registered in the root environment.
+        Some((ExtendedInstanceInterface::AboveRoot(top_instance), reg)) => {
+            let internal_capability = allowed_sources
+                .find_builtin_source(
+                    reg.source_name(),
+                    top_instance.builtin_capabilities(),
+                    &mut RunnerVisitor,
+                    mapper,
+                )?
+                .ok_or(RoutingError::register_from_component_manager_not_found(
+                    reg.source_name().to_string(),
+                ))?;
+            Ok(CapabilitySourceInterface::Builtin {
+                capability: internal_capability,
+                top_instance: Arc::downgrade(&top_instance),
+            })
+        }
+        None => Err(RoutingError::UseFromEnvironmentNotFound {
+            moniker: target.abs_moniker().to_partial(),
+            capability_name: runner.clone(),
+            capability_type: "runner".to_string(),
+        }),
+    }?;
 
     target.try_get_policy_checker()?.can_route_capability(&source, target.abs_moniker())?;
     Ok(RouteSource::Runner(source))

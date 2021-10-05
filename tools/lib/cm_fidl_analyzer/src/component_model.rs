@@ -14,8 +14,7 @@ use {
     async_trait::async_trait,
     cm_rust::{
         CapabilityDecl, CapabilityName, CapabilityPath, CollectionDecl, ComponentDecl, ExposeDecl,
-        OfferDecl, ProgramDecl, RegistrationSource, ResolverRegistration, RunnerRegistration,
-        UseDecl,
+        OfferDecl, ProgramDecl, RegistrationSource, ResolverRegistration, UseDecl,
     },
     fidl::endpoints::ProtocolMarker,
     fidl_fuchsia_component_internal as component_internal, fidl_fuchsia_sys2 as fsys,
@@ -55,9 +54,6 @@ static BOOT_SCHEME: &str = "fuchsia-boot";
 static PKG_RESOLVER_NAME: &str = "package_resolver";
 static PKG_SCHEME: &str = "fuchsia-pkg";
 
-static ELF_RUNNER_NAME: &str = "elf";
-
-static REALM_BUILDER_RUNNER_NAME: &str = "realm_builder";
 static REALM_BUILDER_RESOLVER_NAME: &str = "realm_builder_resolver";
 static REALM_BUILDER_SCHEME: &str = "realm-builder";
 
@@ -118,6 +114,7 @@ impl ModelBuilderForAnalyzer {
         decls_by_url: HashMap<String, ComponentDecl>,
         runtime_config: Arc<RuntimeConfig>,
         component_id_index: Arc<ComponentIdIndex>,
+        runner_registry: RunnerRegistry,
     ) -> BuildModelResult {
         let mut result = BuildModelResult::new();
 
@@ -126,7 +123,7 @@ impl ModelBuilderForAnalyzer {
             None => self.default_root_url.clone().into(),
         };
         let build_tree_result = ComponentTreeBuilder::new(decls_by_url)
-            .build(root_url, self.build_root_environment(&runtime_config));
+            .build(root_url, self.build_root_environment(&runtime_config, runner_registry));
 
         result.errors = build_tree_result
             .errors
@@ -173,8 +170,11 @@ impl ModelBuilderForAnalyzer {
     // setup will do for now, but is fragile and should be replaced soon. In particular, it doesn't provide a
     // way to register builtin runners or resolvers that appear in the `builtin_capabilities` field of the
     // RuntimeConfig but are not one of these hard-coded built-ins.
-    fn build_root_environment(&self, runtime_config: &Arc<RuntimeConfig>) -> NodeEnvironment {
-        let mut runners = Vec::new();
+    fn build_root_environment(
+        &self,
+        runtime_config: &Arc<RuntimeConfig>,
+        runner_registry: RunnerRegistry,
+    ) -> NodeEnvironment {
         let mut resolver_registry = ResolverRegistry::default();
 
         // Register the boot resolver, if any
@@ -206,21 +206,9 @@ impl ModelBuilderForAnalyzer {
             component_internal::BuiltinBootResolver::None => {}
         };
 
-        // Register the ELF runner
-        runners.push(RunnerRegistration {
-            source_name: ELF_RUNNER_NAME.into(),
-            target_name: ELF_RUNNER_NAME.into(),
-            source: RegistrationSource::Self_,
-        });
-
         // Register the RealmBuilder resolver and runner, if any
         match runtime_config.realm_builder_resolver_and_runner {
             component_internal::RealmBuilderResolverAndRunner::Namespace => {
-                runners.push(RunnerRegistration {
-                    source_name: REALM_BUILDER_RUNNER_NAME.into(),
-                    target_name: REALM_BUILDER_RUNNER_NAME.into(),
-                    source: RegistrationSource::Self_,
-                });
                 assert!(
                     resolver_registry
                         .register(&ResolverRegistration {
@@ -235,11 +223,7 @@ impl ModelBuilderForAnalyzer {
             component_internal::RealmBuilderResolverAndRunner::None => {}
         }
 
-        NodeEnvironment::new_root(
-            RunnerRegistry::from_decl(&runners),
-            resolver_registry,
-            DebugRegistry::default(),
-        )
+        NodeEnvironment::new_root(runner_registry, resolver_registry, DebugRegistry::default())
     }
 
     fn build_realm(
@@ -895,7 +879,12 @@ mod tests {
         let config = Arc::new(RuntimeConfig::default());
         let build_model_result = block_on(async {
             ModelBuilderForAnalyzer::new(root_url.clone())
-                .build(decls, config, Arc::new(ComponentIdIndex::default()))
+                .build(
+                    decls,
+                    config,
+                    Arc::new(ComponentIdIndex::default()),
+                    RunnerRegistry::default(),
+                )
                 .await
         });
         assert_eq!(build_model_result.errors.len(), 0);
@@ -1008,6 +997,7 @@ mod tests {
             debug_capabilities: vec![],
             stop_timeout_ms: None,
         };
+
         let mut child_decl = new_child_decl(&child_name, &child_url);
         child_decl.environment = Some(child_env_name.clone());
         let mut root_decl = new_component_decl(vec![], vec![], vec![], vec![], vec![child_decl]);
@@ -1018,13 +1008,25 @@ mod tests {
         decls.insert(child_url, new_component_decl(vec![], vec![], vec![], vec![], vec![]));
 
         // Set up the RuntimeConfig to register the `fuchsia-boot` resolver as a built-in,
-        // in addition to the ELF runner.
+        // in addition to `builtin_runner`.
         let mut config = RuntimeConfig::default();
         config.builtin_boot_resolver = component_internal::BuiltinBootResolver::Boot;
 
+        let builtin_runner_name = CapabilityName("builtin_runner".into());
+        let builtin_runner_registration = RunnerRegistration {
+            source_name: builtin_runner_name.clone(),
+            source: RegistrationSource::Self_,
+            target_name: builtin_runner_name.clone(),
+        };
+
         let build_model_result = block_on(async {
             ModelBuilderForAnalyzer::new(root_url.clone())
-                .build(decls, Arc::new(config), Arc::new(ComponentIdIndex::default()))
+                .build(
+                    decls,
+                    Arc::new(config),
+                    Arc::new(ComponentIdIndex::default()),
+                    RunnerRegistry::from_decl(&vec![builtin_runner_registration]),
+                )
                 .await
         });
         assert_eq!(build_model_result.errors.len(), 0);
@@ -1066,12 +1068,12 @@ mod tests {
 
         let get_builtin_runner_result = child_instance
             .environment
-            .get_registered_runner(&CapabilityName::from(ELF_RUNNER_NAME))?;
+            .get_registered_runner(&CapabilityName::from(builtin_runner_name))?;
         assert!(get_builtin_runner_result.is_some());
         let (builtin_runner_registrar, _builtin_runner) = get_builtin_runner_result.unwrap();
         match builtin_runner_registrar {
             ExtendedInstanceInterface::Component(_) => {
-                panic!("expected ELF runner to be registered above the root")
+                panic!("expected builtin runner to be registered above the root")
             }
             ExtendedInstanceInterface::AboveRoot(_) => {}
         }

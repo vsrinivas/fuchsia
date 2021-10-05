@@ -250,6 +250,9 @@ pub trait RoutingTestModelBuilder {
     /// Set the capabilities that should be available as built-in capabilities.
     fn set_builtin_capabilities(&mut self, caps: Vec<CapabilityDecl>);
 
+    /// Register a mock `runner` in the built-in environment.
+    fn register_mock_builtin_runner(&mut self, runner: &str);
+
     /// Add a custom capability security policy to restrict routing of certain caps.
     fn add_capability_policy(
         &mut self,
@@ -332,7 +335,9 @@ macro_rules! instantiate_common_routing_tests {
             test_route_runner_from_inherited_environment,
             test_route_runner_from_environment_not_found,
             test_route_builtin_runner,
+            test_route_builtin_runner_from_root_env,
             test_route_builtin_runner_not_found,
+            test_route_builtin_runner_from_root_env_registration_not_found,
         }
     };
     ($builder_impl:path, $test:ident, $($remaining:ident),+ $(,)?) => {
@@ -4820,6 +4825,7 @@ impl<T: RoutingTestModelBuilder> CommonRoutingTest<T> {
             name: "elf".into(),
             source_path: None,
         })]);
+        builder.register_mock_builtin_runner("elf");
         let model = builder.build().await;
 
         let b_component = model.look_up_instance(&vec!["b"].into()).await.expect("b instance");
@@ -4842,11 +4848,45 @@ impl<T: RoutingTestModelBuilder> CommonRoutingTest<T> {
         };
     }
 
+    ///   a
+    ///
+    /// a: uses built-in runner "elf" from the root environment.
+    pub async fn test_route_builtin_runner_from_root_env(&self) {
+        let components = vec![("a", ComponentDeclBuilder::new().build())];
+
+        let mut builder = T::new("a", components);
+        builder.set_builtin_capabilities(vec![CapabilityDecl::Runner(RunnerDecl {
+            name: "elf".into(),
+            source_path: None,
+        })]);
+        builder.register_mock_builtin_runner("elf");
+        let model = builder.build().await;
+
+        let a_component = model.look_up_instance(&vec![].into()).await.expect("a instance");
+        let (source, _route) = route_capability(RouteRequest::Runner("elf".into()), &a_component)
+            .await
+            .expect("failed to route runner");
+
+        // Verify this is a built-in source.
+        match source {
+            RouteSource::Runner(CapabilitySourceInterface::<
+                <<T as RoutingTestModelBuilder>::Model as RoutingTestModel>::C,
+            >::Builtin {
+                capability: InternalCapability::Runner(name),
+                ..
+            }) => {
+                assert_eq!(name, CapabilityName("elf".into()));
+            }
+            _ => panic!("bad capability source"),
+        };
+    }
+
     ///  a
     ///   \
     ///    b
     ///
-    /// a: registers non-existant built-in runner "elf" from realm in environment as "hobbit".
+    /// a: registers built-in runner "elf" from realm in environment as "hobbit". The ELF runner is
+    ///    registered in the root environment, but not declared as a built-in capability.
     /// b: uses runner "hobbit"; should fail.
     pub async fn test_route_builtin_runner_not_found(&self) {
         let components = vec![
@@ -4870,19 +4910,54 @@ impl<T: RoutingTestModelBuilder> CommonRoutingTest<T> {
             ("b", ComponentDeclBuilder::new_empty_component().add_program("hobbit").build()),
         ];
 
-        let model = T::new("a", components).build().await;
+        let mut builder = T::new("a", components);
+        builder.register_mock_builtin_runner("elf");
+
+        let model = builder.build().await;
         let b_component = model.look_up_instance(&vec!["b"].into()).await.expect("b instance");
         let route_result =
             route_capability(RouteRequest::Runner("hobbit".into()), &b_component).await;
 
         assert_matches!(
             route_result,
-            Err(RoutingError::UseFromComponentManagerNotFound {
+            Err(RoutingError::RegisterFromComponentManagerNotFound {
                     capability_id,
                 }
-
             )
                 if capability_id == "elf".to_string()
+        );
+    }
+
+    ///   a
+    ///
+    /// a: Attempts to use unregistered runner "hobbit" from the root environment.
+    ///    The runner is provided as a built-in capability, but not registered in
+    ///    the root environment.
+    pub async fn test_route_builtin_runner_from_root_env_registration_not_found(&self) {
+        let components = vec![("a", ComponentDeclBuilder::new().build())];
+
+        let mut builder = T::new("a", components);
+        builder.set_builtin_capabilities(vec![CapabilityDecl::Runner(RunnerDecl {
+            name: "hobbit".into(),
+            source_path: None,
+        })]);
+        let model = builder.build().await;
+
+        let a_component = model.look_up_instance(&vec![].into()).await.expect("a instance");
+        let route_result =
+            route_capability(RouteRequest::Runner("hobbit".into()), &a_component).await;
+
+        assert_matches!(
+            route_result,
+            Err(RoutingError::UseFromEnvironmentNotFound {
+                    moniker,
+                    capability_type,
+                    capability_name,
+                }
+            )
+                if moniker == a_component.abs_moniker().to_partial()
+                && capability_type == "runner".to_string()
+                && capability_name == CapabilityName("hobbit".into())
         );
     }
 }

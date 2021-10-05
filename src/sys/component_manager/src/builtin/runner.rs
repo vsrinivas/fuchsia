@@ -135,6 +135,7 @@ mod tests {
             },
         },
         anyhow::Error,
+        cm_rust::{CapabilityDecl, RunnerDecl},
         cm_rust_testing::*,
         futures::{lock::Mutex, prelude::*},
         matches::assert_matches,
@@ -286,6 +287,10 @@ mod tests {
 
         // Set up the system.
         let universe = RoutingTestBuilder::new("a", components)
+            .set_builtin_capabilities(vec![CapabilityDecl::Runner(RunnerDecl {
+                name: "my_runner".into(),
+                source_path: None,
+            })])
             .add_builtin_runner("my_runner", mock_runner.clone())
             .build()
             .await;
@@ -322,6 +327,10 @@ mod tests {
 
         // Set up the system.
         let universe = RoutingTestBuilder::new("a", components)
+            .set_builtin_capabilities(vec![CapabilityDecl::Runner(RunnerDecl {
+                name: "elf".into(),
+                source_path: None,
+            })])
             .add_builtin_runner("elf", mock_runner.clone())
             .build()
             .await;

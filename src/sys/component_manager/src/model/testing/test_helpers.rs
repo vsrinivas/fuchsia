@@ -19,7 +19,10 @@ use {
         },
     },
     anyhow::{Context, Error},
-    cm_rust::{CapabilityName, ChildDecl, ComponentDecl, EventMode, NativeIntoFidl},
+    cm_rust::{
+        CapabilityDecl, CapabilityName, ChildDecl, ComponentDecl, EventMode, NativeIntoFidl,
+        RunnerDecl,
+    },
     cm_types::Url,
     diagnostics_message::{LoggerMessage, MonikerWithUrl},
     fidl::endpoints::{self, ProtocolMarker, Proxy},
@@ -342,6 +345,10 @@ impl TestEnvironmentBuilder {
 
         self.runtime_config.root_component_url =
             Some(Url::new(format!("test:///{}", self.root_component)).unwrap());
+        self.runtime_config.builtin_capabilities.push(CapabilityDecl::Runner(RunnerDecl {
+            name: TEST_RUNNER_NAME.into(),
+            source_path: None,
+        }));
 
         let builtin_environment = Arc::new(Mutex::new(
             BuiltinEnvironmentBuilder::new()

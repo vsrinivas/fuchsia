@@ -962,7 +962,7 @@ where
                             },
                         ));
                     }
-                    Err(RoutingError::use_from_component_manager_not_found(
+                    Err(RoutingError::register_from_component_manager_not_found(
                         registration.source_name().to_string(),
                     ))
                 }
