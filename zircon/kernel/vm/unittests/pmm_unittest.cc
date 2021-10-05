@@ -859,14 +859,20 @@ static bool pq_rotate_queue() {
   EXPECT_TRUE(pq.QueueCounts() == ((PageQueues::Counts){{0, 0, 1, 0}, 0, 0, 1, 0}));
   EXPECT_TRUE(pq.GetActiveInactiveCounts() == ((PageQueues::ActiveInactiveCounts){false, 0, 1}));
   pq.RotatePagerBackedQueues();
-  EXPECT_TRUE(pq.QueueCounts() == ((PageQueues::Counts){{0, 0, 0, 1}, 0, 0, 1, 0}));
+  // Further rotations might cause the page to be visible in the same queue, or an older one,
+  // depending on whether the lru processing already ran in preparation of the next aging event.
+  const PageQueues::Counts counts_last = (PageQueues::Counts){{0, 0, 0, 1}, 0, 0, 1, 0};
+  const PageQueues::Counts counts_second_last = (PageQueues::Counts){{0, 0, 1, 0}, 0, 0, 1, 0};
+  PageQueues::Counts counts = pq.QueueCounts();
+  EXPECT_TRUE(counts == counts_last || counts == counts_second_last);
   EXPECT_TRUE(pq.GetActiveInactiveCounts() == ((PageQueues::ActiveInactiveCounts){false, 0, 1}));
 
   // Further rotations should not move the page.
   pq.RotatePagerBackedQueues();
   EXPECT_TRUE(pq.DebugPageIsWired(&wired_page));
   EXPECT_TRUE(pq.DebugPageIsPagerBacked(&pager_page));
-  EXPECT_TRUE(pq.QueueCounts() == ((PageQueues::Counts){{0, 0, 0, 1}, 0, 0, 1, 0}));
+  counts = pq.QueueCounts();
+  EXPECT_TRUE(counts == counts_last || counts == counts_second_last);
   EXPECT_TRUE(pq.GetActiveInactiveCounts() == ((PageQueues::ActiveInactiveCounts){false, 0, 1}));
 
   // Moving the page should bring it back to the first queue.
