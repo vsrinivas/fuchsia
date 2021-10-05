@@ -102,6 +102,24 @@ void main() {
       }
     }
 
+    metricsSpecs
+      ..add(MetricsSpec(name: 'duration', extraArgs: {
+        'eventName': 'UncontendedSnapshotTree/4K',
+        'outputTestName': 'UncontendedSnapshotTree/4K'
+      }))
+      ..add(MetricsSpec(name: 'duration', extraArgs: {
+        'eventName': 'UncontendedSnapshotTree/64K',
+        'outputTestName': 'UncontendedSnapshotTree/64K'
+      }))
+      ..add(MetricsSpec(name: 'duration', extraArgs: {
+        'eventName': 'UncontendedSnapshotTree/256K',
+        'outputTestName': 'UncontendedSnapshotTree/256K'
+      }))
+      ..add(MetricsSpec(name: 'duration', extraArgs: {
+        'eventName': 'UncontendedSnapshotTree/1M',
+        'outputTestName': 'UncontendedSnapshotTree/1M'
+      }));
+
     await helper.performance.processTrace(
       MetricsSpecSet(metricsSpecs: metricsSpecs, testName: _testName),
       jsonTraceFile,

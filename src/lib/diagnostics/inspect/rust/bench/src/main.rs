@@ -343,6 +343,7 @@ fn single_iteration_fuchsia_inspect_tree() {
     // Force TLB shootdown for following writes on the local inspector
     let _ = proxy.vmo();
 
+    ftrace::duration!("benchmark", "Node::IntProperty::CoW::Add");
     for i in nodes {
         i.add(1);
     }
@@ -450,8 +451,30 @@ fn spawn_server(inspector: Inspector) -> Result<TreeProxy, Error> {
     Ok(tree)
 }
 
-// Generates a function for benchmarking reads of a TreeProxy.
-macro_rules! reader_snapshot_tree_bench_fn {
+// Generates a function for benchmarking uncontended reads of a TreeProxy.
+macro_rules! reader_tree_uncontended_bench_fn {
+    ($name:ident, $size:expr,  $label:expr) => {
+        async fn $name(iterations: usize) {
+            let inspector = Inspector::new_with_size($size);
+            // inspector clones all refer to same VMO
+            let proxy = spawn_server(inspector.clone()).unwrap();
+
+            for _ in 0..iterations {
+                ftrace::duration!("benchmark", $label);
+
+                loop {
+                    ftrace::duration!("benchmark", "TryFromTreeProxy");
+                    if let Ok(_) = SnapshotTree::try_from(&proxy).await {
+                        break;
+                    }
+                }
+            }
+        }
+    };
+}
+
+// Generates a function for benchmarking contended reads of a TreeProxy.
+macro_rules! reader_tree_bench_fn {
     ($name:ident, $size:expr, $freq:expr, $label:expr) => {
         async fn $name(iterations: usize) {
             let inspector = Inspector::new_with_size($size);
@@ -499,21 +522,42 @@ macro_rules! reader_bench_fn {
     };
 }
 
-reader_snapshot_tree_bench_fn!(snapshot_tree_4k_1hz, 4096, 1, "SnapshotTree/4K/1hz");
-reader_snapshot_tree_bench_fn!(snapshot_tree_4k_10hz, 4096, 10, "SnapshotTree/4K/10hz");
-reader_snapshot_tree_bench_fn!(snapshot_tree_4k_100hz, 4096, 100, "SnapshotTree/4K/100hz");
-reader_snapshot_tree_bench_fn!(snapshot_tree_4k_1khz, 4096, 1000, "SnapshotTree/4K/1khz");
-reader_snapshot_tree_bench_fn!(snapshot_tree_4k_10khz, 4096, 10000, "SnapshotTree/4K/10khz");
-reader_snapshot_tree_bench_fn!(snapshot_tree_4k_100khz, 4096, 100000, "SnapshotTree/4K/100khz");
-reader_snapshot_tree_bench_fn!(snapshot_tree_4k_1mhz, 4096, 1000000, "SnapshotTree/4K/1mhz");
-reader_snapshot_tree_bench_fn!(snapshot_tree_256k_1hz, 4096 * 64, 1, "SnapshotTree/256K/1hz");
-reader_snapshot_tree_bench_fn!(snapshot_tree_256k_10hz, 4096 * 64, 10, "SnapshotTree/256K/10hz");
-reader_snapshot_tree_bench_fn!(snapshot_tree_256k_100hz, 4096 * 64, 100, "SnapshotTree/256K/100hz");
-reader_snapshot_tree_bench_fn!(snapshot_tree_256k_1khz, 4096 * 64, 1000, "SnapshotTree/256K/1khz");
-reader_snapshot_tree_bench_fn!(snapshot_tree_1m_1hz, 4096 * 256, 1, "SnapshotTree/1M/1hz");
-reader_snapshot_tree_bench_fn!(snapshot_tree_1m_10hz, 4096 * 256, 10, "SnapshotTree/1M/10hz");
-reader_snapshot_tree_bench_fn!(snapshot_tree_1m_100hz, 4096 * 256, 100, "SnapshotTree/1M/100hz");
-reader_snapshot_tree_bench_fn!(snapshot_tree_1m_1khz, 4096 * 256, 1000, "SnapshotTree/1M/1khz");
+reader_tree_uncontended_bench_fn!(uncontended_snapshot_tree_4k, 4096, "UncontendedSnapshotTree/4K");
+reader_tree_uncontended_bench_fn!(
+    uncontended_snapshot_tree_64k,
+    4096 * 4,
+    "UncontendedSnapshotTree/64K"
+);
+reader_tree_uncontended_bench_fn!(
+    uncontended_snapshot_tree_256k,
+    4096 * 64,
+    "UncontendedSnapshotTree/256K"
+);
+reader_tree_uncontended_bench_fn!(
+    uncontended_snapshot_tree_1m,
+    4096 * 256,
+    "UncontendedSnapshotTree/1M"
+);
+
+reader_tree_bench_fn!(snapshot_tree_4k_1hz, 4096, 1, "SnapshotTree/4K/1hz");
+reader_tree_bench_fn!(snapshot_tree_4k_10hz, 4096, 10, "SnapshotTree/4K/10hz");
+reader_tree_bench_fn!(snapshot_tree_4k_100hz, 4096, 100, "SnapshotTree/4K/100hz");
+reader_tree_bench_fn!(snapshot_tree_4k_1khz, 4096, 1000, "SnapshotTree/4K/1khz");
+reader_tree_bench_fn!(snapshot_tree_4k_10khz, 4096, 10000, "SnapshotTree/4K/10khz");
+reader_tree_bench_fn!(snapshot_tree_4k_100khz, 4096, 100000, "SnapshotTree/4K/100khz");
+reader_tree_bench_fn!(snapshot_tree_4k_1mhz, 4096, 1000000, "SnapshotTree/4K/1mhz");
+reader_tree_bench_fn!(snapshot_tree_64k_1hz, 4096 * 4, 1, "SnapshotTree/64K/1hz");
+reader_tree_bench_fn!(snapshot_tree_64k_10hz, 4096 * 4, 10, "SnapshotTree/64K/10hz");
+reader_tree_bench_fn!(snapshot_tree_64k_100hz, 4096 * 4, 100, "SnapshotTree/64K/100hz");
+reader_tree_bench_fn!(snapshot_tree_64k_1khz, 4096 * 4, 1000, "SnapshotTree/64K/1khz");
+reader_tree_bench_fn!(snapshot_tree_256k_1hz, 4096 * 64, 1, "SnapshotTree/256K/1hz");
+reader_tree_bench_fn!(snapshot_tree_256k_10hz, 4096 * 64, 10, "SnapshotTree/256K/10hz");
+reader_tree_bench_fn!(snapshot_tree_256k_100hz, 4096 * 64, 100, "SnapshotTree/256K/100hz");
+reader_tree_bench_fn!(snapshot_tree_256k_1khz, 4096 * 64, 1000, "SnapshotTree/256K/1khz");
+reader_tree_bench_fn!(snapshot_tree_1m_1hz, 4096 * 256, 1, "SnapshotTree/1M/1hz");
+reader_tree_bench_fn!(snapshot_tree_1m_10hz, 4096 * 256, 10, "SnapshotTree/1M/10hz");
+reader_tree_bench_fn!(snapshot_tree_1m_100hz, 4096 * 256, 100, "SnapshotTree/1M/100hz");
+reader_tree_bench_fn!(snapshot_tree_1m_1khz, 4096 * 256, 1000, "SnapshotTree/1M/1khz");
 
 reader_bench_fn!(bench_4k_1hz, 4096, 1, "Snapshot/4K/1hz");
 reader_bench_fn!(bench_4k_10hz, 4096, 10, "Snapshot/4K/10hz");
@@ -558,6 +602,10 @@ async fn reader_benchmark(iterations: usize) {
     snapshot_tree_4k_10khz(iterations).await;
     snapshot_tree_4k_100khz(iterations).await;
     snapshot_tree_4k_1mhz(iterations).await;
+    snapshot_tree_64k_1hz(iterations).await;
+    snapshot_tree_64k_10hz(iterations).await;
+    snapshot_tree_64k_100hz(iterations).await;
+    snapshot_tree_64k_1khz(iterations).await;
     snapshot_tree_256k_1hz(iterations).await;
     snapshot_tree_256k_10hz(iterations).await;
     snapshot_tree_256k_100hz(iterations).await;
@@ -566,6 +614,11 @@ async fn reader_benchmark(iterations: usize) {
     snapshot_tree_1m_10hz(iterations).await;
     snapshot_tree_1m_100hz(iterations).await;
     snapshot_tree_1m_1khz(iterations).await;
+
+    uncontended_snapshot_tree_4k(iterations).await;
+    uncontended_snapshot_tree_64k(iterations).await;
+    uncontended_snapshot_tree_256k(iterations).await;
+    uncontended_snapshot_tree_1m(iterations).await;
 }
 
 fn writer_benchmark(iterations: usize) {
