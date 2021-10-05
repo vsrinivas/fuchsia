@@ -1,0 +1,30 @@
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+library fuchsia.component.decl;
+
+using fuchsia.data;
+
+/// A program declaration.
+///
+/// This declaration is set by executable components to designate the runner to
+/// use and pass runner-specific program information to it.
+///
+/// To learn more about runners, see:
+/// https://fuchsia.dev/fuchsia-src/glossary#runner
+type Program = table {
+    /// The name of the runner to use to run the component. Must match a
+    /// `RunnerRegistration` in the component's environment.
+    ///
+    /// This may be absent if a `UseRunnerDecl` is set instead.
+    // TODO(fxbug.dev/68827): Replace `UseRunnerDecl` with this.
+    1: runner name;
+
+    /// Information about the program to run when the component is executed. The
+    /// component manager provides the contents of this dictionary to the runner
+    /// when executing this program.
+    ///
+    /// For instance, this might contain a path to the program's executable
+    /// image, or program arguments.
+    2: info fuchsia.data.Dictionary;
+};

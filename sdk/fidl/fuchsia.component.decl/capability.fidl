@@ -1,0 +1,121 @@
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+library fuchsia.component.decl;
+
+using fuchsia.io2;
+
+/// Declares a capability defined by this component.
+type Capability = flexible union {
+    1: service Service;
+    2: protocol Protocol;
+    3: directory Directory;
+    4: storage Storage;
+    5: runner Runner;
+    6: resolver Resolver;
+    7: event Event;
+};
+
+/// Declares a service capability backed by this component.
+///
+/// To learn more about services, see:
+/// https://fuchsia.dev/fuchsia-src/glossary#service
+type Service = table {
+    /// The name of this service.
+    1: name name;
+
+    /// The path to the service in the component's outgoing directory.
+    2: source_path string:MAX_PATH_LENGTH;
+};
+
+/// Declares a protocol capability backed by this component.
+///
+/// To learn more about protocols, see:
+/// https://fuchsia.dev/fuchsia-src/glossary#protocol
+type Protocol = table {
+    /// The name of this protocol.
+    1: name name;
+
+    /// The path to the protocol in the component's outgoing directory.
+    2: source_path string:MAX_PATH_LENGTH;
+};
+
+/// Declares a directory capability backed by this component.
+///
+/// To learn more about directories, see:
+/// https://fuchsia.dev/fuchsia-src/glossary#directory
+type Directory = table {
+    /// The name of this directory.
+    1: name name;
+
+    /// The path to the directory in the component's outgoing directory.
+    2: source_path string:MAX_PATH_LENGTH;
+
+    /// The maximum rights that can be set by a component using this directory.
+    3: rights fuchsia.io2.Rights;
+};
+
+/// Declares a storage capability backed by a directory from which data, cache,
+/// or meta storage can be offered.
+type Storage = table {
+    /// The name of this storage
+    1: name name;
+
+    /// The provider of the backing directory capability relative to the
+    /// component itself. Must be `parent`, `self`, or `child`.
+    2: source Ref;
+
+    /// The name of the directory capability from `source` that backs the
+    /// storage.
+    3: backing_dir name;
+
+    /// The subdirectory of the source directory that will back the storage
+    4: subdir string:MAX_PATH_LENGTH;
+
+    /// This enum determines how to key a component's isolated storage directory.
+    /// Each option corresponds to a different key'ing strategy.
+    /// This field is required.
+    5: storage_id StorageId;
+};
+
+/// Declares which identifier to use to key a component's isolated storage directory.
+type StorageId = strict enum {
+    /// Isolated storage directories are keyed using a component's instance ID specified in the
+    /// component ID index. Components which are not listed in the index cannot use or open this
+    /// storage capability.
+    STATIC_INSTANCE_ID = 1;
+    /// Isolated storage directories are keyed using a component's instance ID if one is specified
+    /// in the component ID index. Otherwise, a component's relative moniker from the storage
+    /// capability is used to key its isolated storage directory.
+    STATIC_INSTANCE_ID_OR_MONIKER = 2;
+};
+
+/// Declares a runner capability backed by a service.
+type Runner = table {
+    /// The name of this runner.
+    /// Must be non-empty, unique among runners declared in the same `ComponentDecl`.
+    1: name name;
+
+    /// The path to the runner protocol in the component's outgoing directory.
+    2: source_path string:MAX_PATH_LENGTH;
+};
+
+/// Declares a resolver which is responsible for resolving component URLs to actual components.
+/// See `fuchsia.sys2.ComponentResolver` for the protocol resolvers are expected to implement.
+type Resolver = table {
+    /// The name of this resolver.
+    /// Must be non-empty, unique among resolvers declared in the same `ComponentDecl`.
+    1: name name;
+
+    /// The path to the resolver protocol in the component's outgoing directory
+    2: source_path string:MAX_PATH_LENGTH;
+};
+
+/// Declares an event capability which component instances may subscribe to.
+/// This type cannot be used in `fuchsia.sys2.ComponentDecl`. It is only used for
+/// the framework's built-in capabilities declared in `internal.Config`.
+type Event = table {
+    /// The name of this event.
+    /// Must be non-empty, unique among built-in capabilities.
+    1: name name;
+};

@@ -1,0 +1,120 @@
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+library fuchsia.component.decl;
+
+using fuchsia.io2;
+
+/// Declares a capability used by a component, which was offered to it.
+type Use = flexible union {
+    1: service UseService;
+    2: protocol UseProtocol;
+    3: directory UseDirectory;
+    4: storage UseStorage;
+};
+
+/// Declares a service used by a component, which was offered to it.
+///
+/// To learn more about services, see:
+/// https://fuchsia.dev/fuchsia-src/glossary#service
+type UseService = table {
+    /// The provider of the service relative to the component itself. Must
+    /// be `parent` or `framework`.
+    1: source Ref;
+
+    /// Name identifying the service, by which it was presented to this
+    /// component.
+    2: source_name name;
+
+    /// The path where the capability should be installed in the component's
+    /// namespace.
+    ///
+    /// Must be an absolute path starting with /.
+    3: target_path string:MAX_PATH_LENGTH;
+
+    /// The dependency type this use represents.
+    ///
+    /// A component which offers a capability to a child from itself and uses a
+    /// capability from the same child, must mark the dependency as `weak`.  A
+    /// `weak` dependency implies that the capability may become unavailable at
+    /// any point. Taking a strong dependency on a child's capability will
+    /// cause this the child to shut down before its parent. When using a weak
+    /// dependency, the parent shuts down before the child.
+    4: dependency_type DependencyType;
+};
+
+/// Declares a protocol used by a component, which was offered to it.
+///
+/// A protocol is a service with a single instance, provided by a single FIDL
+/// protocol.
+type UseProtocol = table {
+    /// The provider of the protocol relative to the component itself.
+    /// Must be `parent`, `framework`, `debug` or `capability`.
+    1: source Ref;
+
+    /// Name identifying the protocol, by which it was presented to this
+    /// component.
+    2: source_name name;
+
+    /// The path where the capability should be installed in the component's
+    /// namespace.
+    ///
+    /// Must be an absolute path starting with /.
+    3: target_path string:MAX_PATH_LENGTH;
+
+    /// The dependency type this use represents.
+    ///
+    /// A component which offers a capability to a child from itself and uses a
+    /// capability from the same child, must mark the dependency as `weak`.  A
+    /// `weak` dependency implies that the capability may become unavailable at
+    /// any point. Taking a strong dependency on a child's capability will
+    /// cause this the child to shut down before its parent. When using a weak
+    /// dependency, the parent shuts down before the child.
+    4: dependency_type DependencyType;
+};
+
+/// Declares a directory used by a component, which was offered to it.
+type UseDirectory = table {
+    /// The provider of the directory relative to the component itself. Must
+    /// be `parent` or `framework`.
+    1: source Ref;
+
+    /// Name identifying the directory, by which it was presented to this
+    /// component.
+    2: source_name name;
+
+    /// The path where the capability should be installed in the component's
+    /// namespace.
+    ///
+    /// Must be an absolute path starting with /.
+    3: target_path string:MAX_PATH_LENGTH;
+
+    /// The rights required by the component to use this directory.
+    4: rights fuchsia.io2.Rights;
+
+    /// The subdirectory of this directory to use instead of the root. Optional.
+    5: subdir string:MAX_PATH_LENGTH;
+
+    /// The dependency type this use represents.
+    ///
+    /// A component which offers a capability to a child from itself and uses a
+    /// capability from the same child, must mark the dependency as `weak`.  A
+    /// `weak` dependency implies that the capability may become unavailable at
+    /// any point. Taking a strong dependency on a child's capability will
+    /// cause this the child to shut down before its parent. When using a weak
+    /// dependency, the parent shuts down before the child.
+    6: dependency_type DependencyType;
+};
+
+/// Declares storage used by a component, which was offered to it.
+type UseStorage = table {
+    /// Name identifying the storage, by which it was presented to this
+    /// component.
+    1: source_name name;
+
+    /// The path where the capability should be installed in the component's
+    /// namespace.
+    ///
+    /// Must be an absolute path starting with /.
+    2: target_path string:MAX_PATH_LENGTH;
+};

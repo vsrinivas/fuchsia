@@ -1,7 +1,7 @@
 // Copyright 2021 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-library fuchsia.component;
+library fuchsia.component.decl;
 
 using fuchsia.io2;
 using fuchsia.data;
@@ -9,14 +9,14 @@ using fuchsia.data;
 /// Declares a capability offered by a component to one of its children, which
 /// may have been offered by the component's containing realm, the component
 /// itself, or one of its other children.
-type OfferDecl = flexible union {
-    1: service OfferServiceDecl;
-    2: protocol OfferProtocolDecl;
-    3: directory OfferDirectoryDecl;
-    4: storage OfferStorageDecl;
-    5: runner OfferRunnerDecl;
-    6: resolver OfferResolverDecl;
-    7: event OfferEventDecl;
+type Offer = flexible union {
+    1: service OfferService;
+    2: protocol OfferProtocol;
+    3: directory OfferDirectory;
+    4: storage OfferStorage;
+    5: runner OfferRunner;
+    6: resolver OfferResolver;
+    7: event OfferEvent;
 };
 
 /// Describes the type of dependency implied by the capability.
@@ -38,7 +38,7 @@ type DependencyType = strict enum {
 ///
 /// To learn more about services, see:
 /// https://fuchsia.dev/fuchsia-src/glossary#service
-type OfferServiceDecl = table {
+type OfferService = table {
     /// The provider of the capability relative to the component itself. Must be
     /// `parent`, `self`, or `child`.
     1: source Ref;
@@ -59,7 +59,7 @@ type OfferServiceDecl = table {
 ///
 /// To learn more about protocols, see:
 /// https://fuchsia.dev/fuchsia-src/glossary#protocol
-type OfferProtocolDecl = table {
+type OfferProtocol = table {
     /// The provider of the capability relative to the component itself. Must be
     /// `parent`, `self`, or `child`.
     1: source Ref;
@@ -82,7 +82,7 @@ type OfferProtocolDecl = table {
 /// Declares a directory offered by a component to one of its children, which
 /// may have been offered by the component's containing realm, the component
 /// itself, or one of its other children.
-type OfferDirectoryDecl = table {
+type OfferDirectory = table {
     /// The provider of the capability relative to the component itself. Must be
     /// `parent`, `self`, or `child`.
     1: source Ref;
@@ -113,7 +113,7 @@ type OfferDirectoryDecl = table {
 /// Declares a storage capability offered by a component to one of its children,
 /// such as meta storage offered by the component's containing realm or cache
 /// storage offered by the component itself.
-type OfferStorageDecl = table {
+type OfferStorage = table {
     /// The name of the storage capability being offered
     1: source_name name;
 
@@ -131,7 +131,7 @@ type OfferStorageDecl = table {
 /// Declares a runner offered by a component to one of its children, which may
 /// have been offered by the component's containing realm, the component itself,
 /// or one of its other children.
-type OfferRunnerDecl = table {
+type OfferRunner = table {
     /// The provider of the capability relative to the component itself. Must be
     /// `parent`, `self`, or `child`.
     1: source Ref;
@@ -150,7 +150,7 @@ type OfferRunnerDecl = table {
 /// Declares a resolver capability offered by a component to one of its children, which
 /// may have been offered by the component's containing realm, the component itself,
 /// or one of its other children.
-type OfferResolverDecl = table {
+type OfferResolver = table {
     /// The provider of the capability relative to the component itself. Must be
     /// `parent`, `self`, or `child`.
     1: source Ref;
@@ -167,7 +167,7 @@ type OfferResolverDecl = table {
 };
 
 /// Declares an event offered by a component.
-type OfferEventDecl = table {
+type OfferEvent = table {
     /// The provider of the event. Must be `parent`.
     1: source Ref;
 

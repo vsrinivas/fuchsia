@@ -1,10 +1,10 @@
 // Copyright 2021 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-library fuchsia.component;
+library fuchsia.component.decl;
 
 /// Statically declares a component instance collection.
-type CollectionDecl = table {
+type Collection = table {
     /// The name of the collection. Instances created in the collection are
     /// scoped to this name.
     1: name name;

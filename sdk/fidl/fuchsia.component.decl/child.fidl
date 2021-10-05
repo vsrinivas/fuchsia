@@ -1,12 +1,12 @@
 // Copyright 2021 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-library fuchsia.component;
+library fuchsia.component.decl;
 
 using fuchsia.url;
 
 /// Statically declares a child component instance.
-type ChildDecl = table {
+type Child = table {
     /// The name assigned to the child by its parent.
     ///
     /// Must be non-empty, unique among all siblings, and contain only the

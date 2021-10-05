@@ -24,7 +24,7 @@ use {
     cm_fidl_validator,
     cm_rust::{CapabilityName, FidlIntoNative},
     fidl::endpoints::ServerEnd,
-    fidl_fuchsia_component as fcomponent,
+    fidl_fuchsia_component as fcomponent, fidl_fuchsia_component_decl as fdecl,
     fidl_fuchsia_io::DirectoryMarker,
     fidl_fuchsia_sys2 as fsys, fuchsia_async as fasync, fuchsia_zircon as zx,
     futures::prelude::*,
@@ -152,12 +152,12 @@ macro_rules! serve_request_stream_fn {
 // `label` is used to generate method name in the format `list_$label_children`.
 // `namespace` is a Rust crate for the FIDL bindings of the target namespace.
 macro_rules! list_children_fn {
-    ($label:ident, $namespace:ident) => {
+    ($label:ident, $namespace:ident, $decl:ident) => {
         paste::paste! {
             async fn [<list _ $label _ children>](
                 component: &WeakComponentInstance,
                 batch_size: usize,
-                collection: $namespace::CollectionRef,
+                collection: $decl::CollectionRef,
                 iter: ServerEnd<$namespace::ChildIteratorMarker>,
             ) -> Result<(), fcomponent::Error> {
                 let component = component.upgrade().map_err(|_| fcomponent::Error::InstanceDied)?;
@@ -174,7 +174,7 @@ macro_rules! list_children_fn {
                     .filter_map(|(m, _)| match m.collection() {
                         Some(c) => {
                             if c == collection.name {
-                                Some($namespace::ChildRef {
+                                Some($decl::ChildRef {
                                     name: m.name().to_string(),
                                     collection: m.collection().map(|s| s.to_string()),
                                 })
@@ -208,7 +208,7 @@ macro_rules! list_children_fn {
             }
 
             async fn [<serve _ $label _ child _ iterator>](
-                mut children: Vec<$namespace::ChildRef>,
+                mut children: Vec<$decl::ChildRef>,
                 mut stream: $namespace::ChildIteratorRequestStream,
                 batch_size: usize,
             ) -> Result<(), Error> {
@@ -250,8 +250,8 @@ impl RealmCapabilityHost {
     serve_request_stream_fn!(internal, fsys);
     serve_request_stream_fn!(sdk, fcomponent);
 
-    list_children_fn!(internal, fsys);
-    list_children_fn!(sdk, fcomponent);
+    list_children_fn!(internal, fsys, fsys);
+    list_children_fn!(sdk, fcomponent, fdecl);
 
     async fn handle_sdk_request(
         &self,
@@ -554,6 +554,7 @@ mod tests {
         super::*,
         crate::{
             builtin_environment::BuiltinEnvironment,
+            convert::decl as fdecl,
             model::{
                 binding::Binder,
                 component::{BindReason, ComponentInstance},
@@ -588,7 +589,7 @@ mod tests {
     // is complete, this test suite will maintain test coverage parity for both
     // namespaces.
     macro_rules! realm_test_suite {
-    ($label:ident, $namespace:ident) => {
+    ($label:ident, $namespace:ident, $decl:ident) => {
     paste::paste! {
         struct [<$label:camel RealmCapabilityTest>] {
             builtin_environment: Option<Arc<Mutex<BuiltinEnvironment>>>,
@@ -669,14 +670,14 @@ mod tests {
             }
         }
 
-        fn [<$label _ child _ decl>](name: &str) -> $namespace::ChildDecl {
-            $namespace::ChildDecl {
+        fn [<$label _ child _ decl>](name: &str) -> $decl::ChildDecl {
+            $decl::ChildDecl {
                 name: Some(name.to_owned()),
                 url: Some(format!("test:///{}", name)),
-                startup: Some($namespace::StartupMode::Lazy),
+                startup: Some($decl::StartupMode::Lazy),
                 environment: None,
                 on_terminate: None,
-                ..$namespace::ChildDecl::EMPTY
+                ..$decl::ChildDecl::EMPTY
             }
         }
 
@@ -696,7 +697,7 @@ mod tests {
                 test.new_event_stream(vec![EventType::Discovered.into()], EventMode::Sync).await;
 
             // Create children "a" and "b" in collection. Expect a Discovered event for each.
-            let mut collection_ref = $namespace::CollectionRef { name: "coll".to_string() };
+            let mut collection_ref = $decl::CollectionRef { name: "coll".to_string() };
             for (name, moniker) in [("a", "coll:a:1"), ("b", "coll:b:2")] {
                 let mut create = fasync::Task::spawn(test.realm_proxy.create_child(
                     &mut collection_ref,
@@ -751,13 +752,13 @@ mod tests {
 
             // Invalid arguments.
             {
-                let mut collection_ref = $namespace::CollectionRef { name: "coll".to_string() };
-                let child_decl = $namespace::ChildDecl {
+                let mut collection_ref = $decl::CollectionRef { name: "coll".to_string() };
+                let child_decl = $decl::ChildDecl {
                     name: Some("a".to_string()),
                     url: None,
-                    startup: Some($namespace::StartupMode::Lazy),
+                    startup: Some($decl::StartupMode::Lazy),
                     environment: None,
-                    ..$namespace::ChildDecl::EMPTY
+                    ..$decl::ChildDecl::EMPTY
                 };
                 let err = test
                     .realm_proxy
@@ -768,13 +769,13 @@ mod tests {
                 assert_eq!(err, fcomponent::Error::InvalidArguments);
             }
             {
-                let mut collection_ref = $namespace::CollectionRef { name: "coll".to_string() };
-                let child_decl = $namespace::ChildDecl {
+                let mut collection_ref = $decl::CollectionRef { name: "coll".to_string() };
+                let child_decl = $decl::ChildDecl {
                     name: Some("a".to_string()),
                     url: Some("test:///a".to_string()),
-                    startup: Some($namespace::StartupMode::Lazy),
+                    startup: Some($decl::StartupMode::Lazy),
                     environment: Some("env".to_string()),
-                    ..$namespace::ChildDecl::EMPTY
+                    ..$decl::ChildDecl::EMPTY
                 };
                 let err = test
                     .realm_proxy
@@ -787,13 +788,13 @@ mod tests {
 
             // Instance already exists.
             {
-                let mut collection_ref = $namespace::CollectionRef { name: "coll".to_string() };
+                let mut collection_ref = $decl::CollectionRef { name: "coll".to_string() };
                 let res = test
                     .realm_proxy
                     .create_child(&mut collection_ref, [<$label _ child _ decl>]("a"), $namespace::CreateChildArgs::EMPTY)
                     .await;
                 let _ = res.expect("failed to create child a");
-                let mut collection_ref = $namespace::CollectionRef { name: "coll".to_string() };
+                let mut collection_ref = $decl::CollectionRef { name: "coll".to_string() };
                 let err = test
                     .realm_proxy
                     .create_child(&mut collection_ref, [<$label _ child _ decl>]("a"), $namespace::CreateChildArgs::EMPTY)
@@ -805,7 +806,7 @@ mod tests {
 
             // Collection not found.
             {
-                let mut collection_ref = $namespace::CollectionRef { name: "nonexistent".to_string() };
+                let mut collection_ref = $decl::CollectionRef { name: "nonexistent".to_string() };
                 let err = test
                     .realm_proxy
                     .create_child(&mut collection_ref, [<$label _ child _ decl>]("a"), $namespace::CreateChildArgs::EMPTY)
@@ -817,7 +818,7 @@ mod tests {
 
             // Unsupported.
             {
-                let mut collection_ref = $namespace::CollectionRef { name: "pcoll".to_string() };
+                let mut collection_ref = $decl::CollectionRef { name: "pcoll".to_string() };
                 let err = test
                     .realm_proxy
                     .create_child(&mut collection_ref, [<$label _ child _ decl>]("a"), $namespace::CreateChildArgs::EMPTY)
@@ -827,13 +828,13 @@ mod tests {
                 assert_eq!(err, fcomponent::Error::Unsupported);
             }
             {
-                let mut collection_ref = $namespace::CollectionRef { name: "coll".to_string() };
-                let child_decl = $namespace::ChildDecl {
+                let mut collection_ref = $decl::CollectionRef { name: "coll".to_string() };
+                let child_decl = $decl::ChildDecl {
                     name: Some("b".to_string()),
                     url: Some("test:///b".to_string()),
-                    startup: Some($namespace::StartupMode::Eager),
+                    startup: Some($decl::StartupMode::Eager),
                     environment: None,
-                    ..$namespace::ChildDecl::EMPTY
+                    ..$decl::ChildDecl::EMPTY
                 };
                 let err = test
                     .realm_proxy
@@ -846,13 +847,13 @@ mod tests {
 
             // Disallowed dynamic offers specified.
             {
-                let mut collection_ref = $namespace::CollectionRef { name: "coll".to_string() };
-                let child_decl = $namespace::ChildDecl {
+                let mut collection_ref = $decl::CollectionRef { name: "coll".to_string() };
+                let child_decl = $decl::ChildDecl {
                     name: Some("b".to_string()),
                     url: Some("test:///b".to_string()),
-                    startup: Some($namespace::StartupMode::Lazy),
+                    startup: Some($decl::StartupMode::Lazy),
                     environment: None,
-                    ..$namespace::ChildDecl::EMPTY
+                    ..$decl::ChildDecl::EMPTY
                 };
                 let err = test
                     .realm_proxy
@@ -860,12 +861,12 @@ mod tests {
                         &mut collection_ref,
                         child_decl,
                         $namespace::CreateChildArgs {
-                            dynamic_offers: Some(vec![$namespace::OfferDecl::Protocol(
-                                $namespace::OfferProtocolDecl {
-                                    source: Some($namespace::Ref::Parent($namespace::ParentRef {})),
+                            dynamic_offers: Some(vec![$decl::OfferDecl::Protocol(
+                                $decl::OfferProtocolDecl {
+                                    source: Some($decl::Ref::Parent($decl::ParentRef {})),
                                     source_name: Some("foo".to_string()),
                                     target_name: Some("foo".to_string()),
-                                    ..$namespace::OfferProtocolDecl::EMPTY
+                                    ..$decl::OfferProtocolDecl::EMPTY
                                 },
                             )]),
                             ..$namespace::CreateChildArgs::EMPTY
@@ -880,13 +881,13 @@ mod tests {
             // Instance died.
             {
                 test.drop_component();
-                let mut collection_ref = $namespace::CollectionRef { name: "coll".to_string() };
-                let child_decl = $namespace::ChildDecl {
+                let mut collection_ref = $decl::CollectionRef { name: "coll".to_string() };
+                let child_decl = $decl::ChildDecl {
                     name: Some("b".to_string()),
                     url: Some("test:///b".to_string()),
-                    startup: Some($namespace::StartupMode::Lazy),
+                    startup: Some($decl::StartupMode::Lazy),
                     environment: None,
-                    ..$namespace::ChildDecl::EMPTY
+                    ..$decl::ChildDecl::EMPTY
                 };
                 let err = test
                     .realm_proxy
@@ -925,7 +926,7 @@ mod tests {
 
             // Create children "a" and "b" in collection, and bind to them.
             for name in &["a", "b"] {
-                let mut collection_ref = $namespace::CollectionRef { name: "coll".to_string() };
+                let mut collection_ref = $decl::CollectionRef { name: "coll".to_string() };
                 let res = test
                     .realm_proxy
                     .create_child(&mut collection_ref, [<$label _ child _ decl>](name), $namespace::CreateChildArgs::EMPTY)
@@ -934,7 +935,7 @@ mod tests {
                     .unwrap_or_else(|_| panic!("failed to create child {}", name))
                     .unwrap_or_else(|_| panic!("failed to create child {}", name));
                 let mut child_ref =
-                    $namespace::ChildRef { name: name.to_string(), collection: Some("coll".to_string()) };
+                    $decl::ChildRef { name: name.to_string(), collection: Some("coll".to_string()) };
                 let (exposed_dir, server_end) = endpoints::create_proxy::<DirectoryMarker>().unwrap();
                 let () = test
                     .realm_proxy
@@ -956,7 +957,7 @@ mod tests {
             // Destroy "a". "a" is no longer live from the client's perspective, although it's still
             // being destroyed.
             let mut child_ref =
-                $namespace::ChildRef { name: "a".to_string(), collection: Some("coll".to_string()) };
+                $decl::ChildRef { name: "a".to_string(), collection: Some("coll".to_string()) };
             let (f, destroy_handle) = test.realm_proxy.destroy_child(&mut child_ref).remote_handle();
             fasync::Task::spawn(f).detach();
 
@@ -1013,13 +1014,13 @@ mod tests {
 
             // Recreate "a" and verify "a" is back (but it's a different "a"). The old "a" is gone
             // from the client's point of view, but it hasn't been cleaned up yet.
-            let mut collection_ref = $namespace::CollectionRef { name: "coll".to_string() };
-            let child_decl = $namespace::ChildDecl {
+            let mut collection_ref = $decl::CollectionRef { name: "coll".to_string() };
+            let child_decl = $decl::ChildDecl {
                 name: Some("a".to_string()),
                 url: Some("test:///a_alt".to_string()),
-                startup: Some($namespace::StartupMode::Lazy),
+                startup: Some($decl::StartupMode::Lazy),
                 environment: None,
-                ..$namespace::ChildDecl::EMPTY
+                ..$decl::ChildDecl::EMPTY
             };
             let res = test
                 .realm_proxy
@@ -1046,7 +1047,7 @@ mod tests {
             .await;
 
             // Create child "a" in collection.
-            let mut collection_ref = $namespace::CollectionRef { name: "coll".to_string() };
+            let mut collection_ref = $decl::CollectionRef { name: "coll".to_string() };
             let res = test
                 .realm_proxy
                 .create_child(&mut collection_ref, [<$label _ child _ decl>]("a"), $namespace::CreateChildArgs::EMPTY)
@@ -1055,7 +1056,7 @@ mod tests {
 
             // Invalid arguments.
             {
-                let mut child_ref = $namespace::ChildRef { name: "a".to_string(), collection: None };
+                let mut child_ref = $decl::ChildRef { name: "a".to_string(), collection: None };
                 let err = test
                     .realm_proxy
                     .destroy_child(&mut child_ref)
@@ -1068,7 +1069,7 @@ mod tests {
             // Instance not found.
             {
                 let mut child_ref =
-                    $namespace::ChildRef { name: "b".to_string(), collection: Some("coll".to_string()) };
+                    $decl::ChildRef { name: "b".to_string(), collection: Some("coll".to_string()) };
                 let err = test
                     .realm_proxy
                     .destroy_child(&mut child_ref)
@@ -1082,7 +1083,7 @@ mod tests {
             {
                 test.drop_component();
                 let mut child_ref =
-                    $namespace::ChildRef { name: "a".to_string(), collection: Some("coll".to_string()) };
+                    $decl::ChildRef { name: "a".to_string(), collection: Some("coll".to_string()) };
                 let err = test
                     .realm_proxy
                     .destroy_child(&mut child_ref)
@@ -1114,7 +1115,7 @@ mod tests {
                 .await;
 
             // Create child "a" in collection. Expect a Started event.
-            let mut collection_ref = $namespace::CollectionRef { name: "coll".to_string() };
+            let mut collection_ref = $decl::CollectionRef { name: "coll".to_string() };
             let create_a = fasync::Task::spawn(test.realm_proxy.create_child(
                 &mut collection_ref,
                 [<$label _ child _ decl>]("a"),
@@ -1163,7 +1164,7 @@ mod tests {
 
             // Collection not found.
             {
-                let mut collection_ref = $namespace::CollectionRef { name: "nonexistent".to_string() };
+                let mut collection_ref = $decl::CollectionRef { name: "nonexistent".to_string() };
                 let (_, server_end) = endpoints::create_proxy().unwrap();
                 let err = test
                     .realm_proxy
@@ -1177,7 +1178,7 @@ mod tests {
             // Instance died.
             {
                 test.drop_component();
-                let mut collection_ref = $namespace::CollectionRef { name: "coll".to_string() };
+                let mut collection_ref = $decl::CollectionRef { name: "coll".to_string() };
                 let (_, server_end) = endpoints::create_proxy().unwrap();
                 let err = test
                     .realm_proxy
@@ -1221,7 +1222,7 @@ mod tests {
             test.mock_runner.add_host_fn("test:///system_resolved", out_dir.host_fn());
 
             // Open exposed directory of child.
-            let mut child_ref = $namespace::ChildRef { name: "system".to_string(), collection: None };
+            let mut child_ref = $decl::ChildRef { name: "system".to_string(), collection: None };
             let (dir_proxy, server_end) = endpoints::create_proxy::<DirectoryMarker>().unwrap();
             let res = test.realm_proxy.open_exposed_dir(&mut child_ref, server_end).await;
             let _ = res.expect("open_exposed_dir() failed").expect("open_exposed_dir() failed");
@@ -1291,7 +1292,7 @@ mod tests {
             test.mock_runner.add_host_fn("test:///system_resolved", out_dir.host_fn());
 
             // Add "system" to collection.
-            let mut collection_ref = $namespace::CollectionRef { name: "coll".to_string() };
+            let mut collection_ref = $decl::CollectionRef { name: "coll".to_string() };
             let res = test
                 .realm_proxy
                 .create_child(&mut collection_ref, [<$label _ child _ decl>]("system"), $namespace::CreateChildArgs::EMPTY)
@@ -1300,7 +1301,7 @@ mod tests {
 
             // Open exposed directory of child.
             let mut child_ref =
-                $namespace::ChildRef { name: "system".to_string(), collection: Some("coll".to_owned()) };
+                $decl::ChildRef { name: "system".to_string(), collection: Some("coll".to_owned()) };
             let (dir_proxy, server_end) = endpoints::create_proxy::<DirectoryMarker>().unwrap();
             let res = test.realm_proxy.open_exposed_dir(&mut child_ref, server_end).await;
             let _ = res.expect("open_exposed_dir() failed").expect("open_exposed_dir() failed");
@@ -1361,7 +1362,7 @@ mod tests {
 
             // Instance not found.
             {
-                let mut child_ref = $namespace::ChildRef { name: "missing".to_string(), collection: None };
+                let mut child_ref = $decl::ChildRef { name: "missing".to_string(), collection: None };
                 let (_, server_end) = endpoints::create_proxy::<DirectoryMarker>().unwrap();
                 let err = test
                     .realm_proxy
@@ -1375,7 +1376,7 @@ mod tests {
             // Instance cannot resolve.
             {
                 let mut child_ref =
-                    $namespace::ChildRef { name: "unresolvable".to_string(), collection: None };
+                    $decl::ChildRef { name: "unresolvable".to_string(), collection: None };
                 let (_, server_end) = endpoints::create_proxy::<DirectoryMarker>().unwrap();
                 let err = test
                     .realm_proxy
@@ -1388,7 +1389,7 @@ mod tests {
 
             // Instance can't run.
             {
-                let mut child_ref = $namespace::ChildRef { name: "unrunnable".to_string(), collection: None };
+                let mut child_ref = $decl::ChildRef { name: "unrunnable".to_string(), collection: None };
                 let (dir_proxy, server_end) = endpoints::create_proxy::<DirectoryMarker>().unwrap();
                 let res = test.realm_proxy.open_exposed_dir(&mut child_ref, server_end).await;
                 let _ = res.expect("open_exposed_dir() failed").expect("open_exposed_dir() failed");
@@ -1407,7 +1408,7 @@ mod tests {
             // Instance died.
             {
                 test.drop_component();
-                let mut child_ref = $namespace::ChildRef { name: "system".to_string(), collection: None };
+                let mut child_ref = $decl::ChildRef { name: "system".to_string(), collection: None };
                 let (_, server_end) = endpoints::create_proxy::<DirectoryMarker>().unwrap();
                 let err = test
                     .realm_proxy
@@ -1421,6 +1422,6 @@ mod tests {
 
     }}}
 
-    realm_test_suite!(internal, fsys);
-    realm_test_suite!(sdk, fcomponent);
+    realm_test_suite!(internal, fsys, fsys);
+    realm_test_suite!(sdk, fcomponent, fdecl);
 }

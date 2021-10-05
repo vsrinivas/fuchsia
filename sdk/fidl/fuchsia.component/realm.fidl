@@ -5,6 +5,7 @@ library fuchsia.component;
 
 using fuchsia.io;
 using fuchsia.process;
+using fuchsia.component.decl;
 
 /// The maximum number of handles that can be passed to a created component.
 const MAX_HANDLE_COUNT uint32 = 128;
@@ -46,7 +47,7 @@ protocol Realm {
     /// - `INSTANCE_CANNOT_RESOLVE`: `child`'s component declaration failed to resolve.
     /// - `INSTANCE_DIED`: This realm no longer exists.
     OpenExposedDir(resource struct {
-        child ChildRef;
+        child fuchsia.component.decl.ChildRef;
         exposed_dir server_end:fuchsia.io.Directory;
     }) -> (struct {}) error Error;
 
@@ -66,8 +67,8 @@ protocol Realm {
     /// - `NO_SPACE`: Could not allocate storage for the new instance.
     /// - `INSTANCE_DIED`: This realm no longer exists.
     CreateChild(resource struct {
-        collection CollectionRef;
-        decl ChildDecl;
+        collection fuchsia.component.decl.CollectionRef;
+        decl fuchsia.component.decl.Child;
         args CreateChildArgs;
     }) -> (struct {}) error Error;
 
@@ -83,7 +84,7 @@ protocol Realm {
     /// - `COLLECTION_NOT_FOUND`: `collection` does not exist.
     /// - `INSTANCE_DIED`: This realm no longer exists.
     DestroyChild(struct {
-        child ChildRef;
+        child fuchsia.component.decl.ChildRef;
     }) -> (struct {}) error Error;
 
     /// Returns an iterator that lists all instances in a collection.
@@ -100,7 +101,7 @@ protocol Realm {
     /// - If `iter` does not have standard channel rights, this function may
     ///   return `ACCESS_DENIED` or component manager may close `iter`.
     ListChildren(resource struct {
-        collection CollectionRef;
+        collection fuchsia.component.decl.CollectionRef;
         iter server_end:ChildIterator;
     }) -> (struct {}) error Error;
 };
@@ -141,7 +142,7 @@ type CreateChildArgs = resource table {
     /// `ComponentDecl.allowed_offers = STATIC_AND_DYNAMIC`.
     ///
     /// TODO(fxbug.dev/81109): Implementation is in progress.
-    2: dynamic_offers vector<OfferDecl>:MAX_DYNAMIC_OFFER_COUNT;
+    2: dynamic_offers vector<fuchsia.component.decl.Offer>:MAX_DYNAMIC_OFFER_COUNT;
 };
 
 /// A protocol to iterate over the list of children in a realm.
@@ -151,6 +152,6 @@ protocol ChildIterator {
     /// Returns a vector of `ChildRef`. Returns an empty vector when there are
     /// no more children.
     Next() -> (struct {
-        children vector<ChildRef>:MAX_CHILD_COUNT;
+        children vector<fuchsia.component.decl.ChildRef>:MAX_CHILD_COUNT;
     });
 };

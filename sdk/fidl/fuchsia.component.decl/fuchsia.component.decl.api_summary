@@ -1,0 +1,234 @@
+enum/member fuchsia.component.decl/AllowedOffers.STATIC_AND_DYNAMIC 2
+enum/member fuchsia.component.decl/AllowedOffers.STATIC_ONLY 1
+strict enum fuchsia.component.decl/AllowedOffers uint32
+union/member fuchsia.component.decl/Capability.directory fuchsia.component.decl/Directory
+union/member fuchsia.component.decl/Capability.event fuchsia.component.decl/Event
+union/member fuchsia.component.decl/Capability.protocol fuchsia.component.decl/Protocol
+union/member fuchsia.component.decl/Capability.resolver fuchsia.component.decl/Resolver
+union/member fuchsia.component.decl/Capability.runner fuchsia.component.decl/Runner
+union/member fuchsia.component.decl/Capability.service fuchsia.component.decl/Service
+union/member fuchsia.component.decl/Capability.storage fuchsia.component.decl/Storage
+flexible union fuchsia.component.decl/Capability
+struct/member fuchsia.component.decl/CapabilityRef.name string:100
+struct fuchsia.component.decl/CapabilityRef
+table/member fuchsia.component.decl/Child.environment string:100
+table/member fuchsia.component.decl/Child.name string:100
+table/member fuchsia.component.decl/Child.on_terminate fuchsia.component.decl/OnTerminate
+table/member fuchsia.component.decl/Child.startup fuchsia.component.decl/StartupMode
+table/member fuchsia.component.decl/Child.url string:4096
+table fuchsia.component.decl/Child
+struct/member fuchsia.component.decl/ChildRef.collection string:<100,optional>
+struct/member fuchsia.component.decl/ChildRef.name string:100
+struct fuchsia.component.decl/ChildRef
+table/member fuchsia.component.decl/Collection.allowed_offers fuchsia.component.decl/AllowedOffers
+table/member fuchsia.component.decl/Collection.durability fuchsia.component.decl/Durability
+table/member fuchsia.component.decl/Collection.environment string:100
+table/member fuchsia.component.decl/Collection.name string:100
+table fuchsia.component.decl/Collection
+struct/member fuchsia.component.decl/CollectionRef.name string:100
+struct fuchsia.component.decl/CollectionRef
+table/member fuchsia.component.decl/Component.capabilities vector<fuchsia.component.decl/Capability>
+table/member fuchsia.component.decl/Component.children vector<fuchsia.component.decl/Child>
+table/member fuchsia.component.decl/Component.collections vector<fuchsia.component.decl/Collection>
+table/member fuchsia.component.decl/Component.environments vector<fuchsia.component.decl/Environment>
+table/member fuchsia.component.decl/Component.exposes vector<fuchsia.component.decl/Expose>
+table/member fuchsia.component.decl/Component.facets fuchsia.data/Dictionary
+table/member fuchsia.component.decl/Component.offers vector<fuchsia.component.decl/Offer>
+table/member fuchsia.component.decl/Component.program fuchsia.component.decl/Program
+table/member fuchsia.component.decl/Component.uses vector<fuchsia.component.decl/Use>
+table fuchsia.component.decl/Component
+table/member fuchsia.component.decl/DebugProtocolRegistration.source fuchsia.component.decl/Ref
+table/member fuchsia.component.decl/DebugProtocolRegistration.source_name string:100
+table/member fuchsia.component.decl/DebugProtocolRegistration.target_name string:100
+table fuchsia.component.decl/DebugProtocolRegistration
+struct fuchsia.component.decl/DebugRef
+union/member fuchsia.component.decl/DebugRegistration.protocol fuchsia.component.decl/DebugProtocolRegistration
+flexible union fuchsia.component.decl/DebugRegistration
+enum/member fuchsia.component.decl/DependencyType.STRONG 1
+enum/member fuchsia.component.decl/DependencyType.WEAK 2
+enum/member fuchsia.component.decl/DependencyType.WEAK_FOR_MIGRATION 3
+strict enum fuchsia.component.decl/DependencyType uint32
+table/member fuchsia.component.decl/Directory.name string:100
+table/member fuchsia.component.decl/Directory.rights fuchsia.io2/Operations
+table/member fuchsia.component.decl/Directory.source_path string:1024
+table fuchsia.component.decl/Directory
+enum/member fuchsia.component.decl/Durability.PERSISTENT 1
+enum/member fuchsia.component.decl/Durability.SINGLE_RUN 3
+enum/member fuchsia.component.decl/Durability.TRANSIENT 2
+strict enum fuchsia.component.decl/Durability uint32
+table/member fuchsia.component.decl/Environment.debug_capabilities vector<fuchsia.component.decl/DebugRegistration>
+table/member fuchsia.component.decl/Environment.extends fuchsia.component.decl/EnvironmentExtends
+table/member fuchsia.component.decl/Environment.name string:100
+table/member fuchsia.component.decl/Environment.resolvers vector<fuchsia.component.decl/ResolverRegistration>
+table/member fuchsia.component.decl/Environment.runners vector<fuchsia.component.decl/RunnerRegistration>
+table/member fuchsia.component.decl/Environment.stop_timeout_ms uint32
+table fuchsia.component.decl/Environment
+enum/member fuchsia.component.decl/EnvironmentExtends.NONE 0
+enum/member fuchsia.component.decl/EnvironmentExtends.REALM 1
+strict enum fuchsia.component.decl/EnvironmentExtends uint32
+table/member fuchsia.component.decl/Event.name string:100
+table fuchsia.component.decl/Event
+enum/member fuchsia.component.decl/EventMode.ASYNC 0
+enum/member fuchsia.component.decl/EventMode.SYNC 1
+strict enum fuchsia.component.decl/EventMode uint32
+union/member fuchsia.component.decl/Expose.directory fuchsia.component.decl/ExposeDirectory
+union/member fuchsia.component.decl/Expose.protocol fuchsia.component.decl/ExposeProtocol
+union/member fuchsia.component.decl/Expose.resolver fuchsia.component.decl/ExposeResolver
+union/member fuchsia.component.decl/Expose.runner fuchsia.component.decl/ExposeRunner
+union/member fuchsia.component.decl/Expose.service fuchsia.component.decl/ExposeService
+flexible union fuchsia.component.decl/Expose
+table/member fuchsia.component.decl/ExposeDirectory.rights fuchsia.io2/Operations
+table/member fuchsia.component.decl/ExposeDirectory.source fuchsia.component.decl/Ref
+table/member fuchsia.component.decl/ExposeDirectory.source_name string:100
+table/member fuchsia.component.decl/ExposeDirectory.subdir string:1024
+table/member fuchsia.component.decl/ExposeDirectory.target fuchsia.component.decl/Ref
+table/member fuchsia.component.decl/ExposeDirectory.target_name string:100
+table fuchsia.component.decl/ExposeDirectory
+table/member fuchsia.component.decl/ExposeProtocol.source fuchsia.component.decl/Ref
+table/member fuchsia.component.decl/ExposeProtocol.source_name string:100
+table/member fuchsia.component.decl/ExposeProtocol.target fuchsia.component.decl/Ref
+table/member fuchsia.component.decl/ExposeProtocol.target_name string:100
+table fuchsia.component.decl/ExposeProtocol
+table/member fuchsia.component.decl/ExposeResolver.source fuchsia.component.decl/Ref
+table/member fuchsia.component.decl/ExposeResolver.source_name string:100
+table/member fuchsia.component.decl/ExposeResolver.target fuchsia.component.decl/Ref
+table/member fuchsia.component.decl/ExposeResolver.target_name string:100
+table fuchsia.component.decl/ExposeResolver
+table/member fuchsia.component.decl/ExposeRunner.source fuchsia.component.decl/Ref
+table/member fuchsia.component.decl/ExposeRunner.source_name string:100
+table/member fuchsia.component.decl/ExposeRunner.target fuchsia.component.decl/Ref
+table/member fuchsia.component.decl/ExposeRunner.target_name string:100
+table fuchsia.component.decl/ExposeRunner
+table/member fuchsia.component.decl/ExposeService.source fuchsia.component.decl/Ref
+table/member fuchsia.component.decl/ExposeService.source_name string:100
+table/member fuchsia.component.decl/ExposeService.target fuchsia.component.decl/Ref
+table/member fuchsia.component.decl/ExposeService.target_name string:100
+table fuchsia.component.decl/ExposeService
+struct fuchsia.component.decl/FrameworkRef
+const fuchsia.component.decl/MAX_MONIKER_LENGTH uint32 4096
+const fuchsia.component.decl/MAX_NAME_LENGTH uint32 100
+const fuchsia.component.decl/MAX_PATH_LENGTH uint32 1024
+const fuchsia.component.decl/MAX_URL_SCHEME_LENGTH uint32 100
+union/member fuchsia.component.decl/Offer.directory fuchsia.component.decl/OfferDirectory
+union/member fuchsia.component.decl/Offer.event fuchsia.component.decl/OfferEvent
+union/member fuchsia.component.decl/Offer.protocol fuchsia.component.decl/OfferProtocol
+union/member fuchsia.component.decl/Offer.resolver fuchsia.component.decl/OfferResolver
+union/member fuchsia.component.decl/Offer.runner fuchsia.component.decl/OfferRunner
+union/member fuchsia.component.decl/Offer.service fuchsia.component.decl/OfferService
+union/member fuchsia.component.decl/Offer.storage fuchsia.component.decl/OfferStorage
+flexible union fuchsia.component.decl/Offer
+table/member fuchsia.component.decl/OfferDirectory.dependency_type fuchsia.component.decl/DependencyType
+table/member fuchsia.component.decl/OfferDirectory.rights fuchsia.io2/Operations
+table/member fuchsia.component.decl/OfferDirectory.source fuchsia.component.decl/Ref
+table/member fuchsia.component.decl/OfferDirectory.source_name string:100
+table/member fuchsia.component.decl/OfferDirectory.subdir string:1024
+table/member fuchsia.component.decl/OfferDirectory.target fuchsia.component.decl/Ref
+table/member fuchsia.component.decl/OfferDirectory.target_name string:100
+table fuchsia.component.decl/OfferDirectory
+table/member fuchsia.component.decl/OfferEvent.filter fuchsia.data/Dictionary
+table/member fuchsia.component.decl/OfferEvent.mode fuchsia.component.decl/EventMode
+table/member fuchsia.component.decl/OfferEvent.source fuchsia.component.decl/Ref
+table/member fuchsia.component.decl/OfferEvent.source_name string:100
+table/member fuchsia.component.decl/OfferEvent.target fuchsia.component.decl/Ref
+table/member fuchsia.component.decl/OfferEvent.target_name string:100
+table fuchsia.component.decl/OfferEvent
+table/member fuchsia.component.decl/OfferProtocol.dependency_type fuchsia.component.decl/DependencyType
+table/member fuchsia.component.decl/OfferProtocol.source fuchsia.component.decl/Ref
+table/member fuchsia.component.decl/OfferProtocol.source_name string:100
+table/member fuchsia.component.decl/OfferProtocol.target fuchsia.component.decl/Ref
+table/member fuchsia.component.decl/OfferProtocol.target_name string:100
+table fuchsia.component.decl/OfferProtocol
+table/member fuchsia.component.decl/OfferResolver.source fuchsia.component.decl/Ref
+table/member fuchsia.component.decl/OfferResolver.source_name string:100
+table/member fuchsia.component.decl/OfferResolver.target fuchsia.component.decl/Ref
+table/member fuchsia.component.decl/OfferResolver.target_name string:100
+table fuchsia.component.decl/OfferResolver
+table/member fuchsia.component.decl/OfferRunner.source fuchsia.component.decl/Ref
+table/member fuchsia.component.decl/OfferRunner.source_name string:100
+table/member fuchsia.component.decl/OfferRunner.target fuchsia.component.decl/Ref
+table/member fuchsia.component.decl/OfferRunner.target_name string:100
+table fuchsia.component.decl/OfferRunner
+table/member fuchsia.component.decl/OfferService.source fuchsia.component.decl/Ref
+table/member fuchsia.component.decl/OfferService.source_name string:100
+table/member fuchsia.component.decl/OfferService.target fuchsia.component.decl/Ref
+table/member fuchsia.component.decl/OfferService.target_name string:100
+table fuchsia.component.decl/OfferService
+table/member fuchsia.component.decl/OfferStorage.source fuchsia.component.decl/Ref
+table/member fuchsia.component.decl/OfferStorage.source_name string:100
+table/member fuchsia.component.decl/OfferStorage.target fuchsia.component.decl/Ref
+table/member fuchsia.component.decl/OfferStorage.target_name string:100
+table fuchsia.component.decl/OfferStorage
+enum/member fuchsia.component.decl/OnTerminate.NONE 0
+enum/member fuchsia.component.decl/OnTerminate.REBOOT 1
+strict enum fuchsia.component.decl/OnTerminate uint32
+struct fuchsia.component.decl/ParentRef
+table/member fuchsia.component.decl/Program.info fuchsia.data/Dictionary
+table/member fuchsia.component.decl/Program.runner string:100
+table fuchsia.component.decl/Program
+table/member fuchsia.component.decl/Protocol.name string:100
+table/member fuchsia.component.decl/Protocol.source_path string:1024
+table fuchsia.component.decl/Protocol
+union/member fuchsia.component.decl/Ref.capability fuchsia.component.decl/CapabilityRef
+union/member fuchsia.component.decl/Ref.child fuchsia.component.decl/ChildRef
+union/member fuchsia.component.decl/Ref.collection fuchsia.component.decl/CollectionRef
+union/member fuchsia.component.decl/Ref.debug fuchsia.component.decl/DebugRef
+union/member fuchsia.component.decl/Ref.framework fuchsia.component.decl/FrameworkRef
+union/member fuchsia.component.decl/Ref.parent fuchsia.component.decl/ParentRef
+union/member fuchsia.component.decl/Ref.self fuchsia.component.decl/SelfRef
+flexible union fuchsia.component.decl/Ref
+table/member fuchsia.component.decl/Resolver.name string:100
+table/member fuchsia.component.decl/Resolver.source_path string:1024
+table fuchsia.component.decl/Resolver
+table/member fuchsia.component.decl/ResolverRegistration.resolver string:100
+table/member fuchsia.component.decl/ResolverRegistration.scheme string:100
+table/member fuchsia.component.decl/ResolverRegistration.source fuchsia.component.decl/Ref
+table fuchsia.component.decl/ResolverRegistration
+table/member fuchsia.component.decl/Runner.name string:100
+table/member fuchsia.component.decl/Runner.source_path string:1024
+table fuchsia.component.decl/Runner
+table/member fuchsia.component.decl/RunnerRegistration.source fuchsia.component.decl/Ref
+table/member fuchsia.component.decl/RunnerRegistration.source_name string:100
+table/member fuchsia.component.decl/RunnerRegistration.target_name string:100
+table fuchsia.component.decl/RunnerRegistration
+struct fuchsia.component.decl/SelfRef
+table/member fuchsia.component.decl/Service.name string:100
+table/member fuchsia.component.decl/Service.source_path string:1024
+table fuchsia.component.decl/Service
+enum/member fuchsia.component.decl/StartupMode.EAGER 1
+enum/member fuchsia.component.decl/StartupMode.LAZY 0
+strict enum fuchsia.component.decl/StartupMode uint32
+table/member fuchsia.component.decl/Storage.backing_dir string:100
+table/member fuchsia.component.decl/Storage.name string:100
+table/member fuchsia.component.decl/Storage.source fuchsia.component.decl/Ref
+table/member fuchsia.component.decl/Storage.storage_id fuchsia.component.decl/StorageId
+table/member fuchsia.component.decl/Storage.subdir string:1024
+table fuchsia.component.decl/Storage
+enum/member fuchsia.component.decl/StorageId.STATIC_INSTANCE_ID 1
+enum/member fuchsia.component.decl/StorageId.STATIC_INSTANCE_ID_OR_MONIKER 2
+strict enum fuchsia.component.decl/StorageId uint32
+union/member fuchsia.component.decl/Use.directory fuchsia.component.decl/UseDirectory
+union/member fuchsia.component.decl/Use.protocol fuchsia.component.decl/UseProtocol
+union/member fuchsia.component.decl/Use.service fuchsia.component.decl/UseService
+union/member fuchsia.component.decl/Use.storage fuchsia.component.decl/UseStorage
+flexible union fuchsia.component.decl/Use
+table/member fuchsia.component.decl/UseDirectory.dependency_type fuchsia.component.decl/DependencyType
+table/member fuchsia.component.decl/UseDirectory.rights fuchsia.io2/Operations
+table/member fuchsia.component.decl/UseDirectory.source fuchsia.component.decl/Ref
+table/member fuchsia.component.decl/UseDirectory.source_name string:100
+table/member fuchsia.component.decl/UseDirectory.subdir string:1024
+table/member fuchsia.component.decl/UseDirectory.target_path string:1024
+table fuchsia.component.decl/UseDirectory
+table/member fuchsia.component.decl/UseProtocol.dependency_type fuchsia.component.decl/DependencyType
+table/member fuchsia.component.decl/UseProtocol.source fuchsia.component.decl/Ref
+table/member fuchsia.component.decl/UseProtocol.source_name string:100
+table/member fuchsia.component.decl/UseProtocol.target_path string:1024
+table fuchsia.component.decl/UseProtocol
+table/member fuchsia.component.decl/UseService.dependency_type fuchsia.component.decl/DependencyType
+table/member fuchsia.component.decl/UseService.source fuchsia.component.decl/Ref
+table/member fuchsia.component.decl/UseService.source_name string:100
+table/member fuchsia.component.decl/UseService.target_path string:1024
+table fuchsia.component.decl/UseService
+table/member fuchsia.component.decl/UseStorage.source_name string:100
+table/member fuchsia.component.decl/UseStorage.target_path string:1024
+table fuchsia.component.decl/UseStorage
+library fuchsia.component.decl

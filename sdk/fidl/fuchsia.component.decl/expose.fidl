@@ -1,0 +1,122 @@
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+library fuchsia.component.decl;
+
+using fuchsia.io2;
+
+/// Declares a capability exposed to either a component's containing realm or to the framework.
+/// For example, a legacy service exposed by the component at runtime.
+type Expose = flexible union {
+    1: service ExposeService;
+    2: protocol ExposeProtocol;
+    3: directory ExposeDirectory;
+    4: runner ExposeRunner;
+    5: resolver ExposeResolver;
+};
+
+/// Declares a service exposed to a component's containing realm, such as a
+/// service exposed by the component or one of its children at runtime.
+///
+/// To learn more about services, see:
+/// https://fuchsia.dev/fuchsia-src/glossary#service
+type ExposeService = table {
+    /// The provider of the capability relative to the component itself. Must
+    /// be `self` or `child`.
+    1: source Ref;
+
+    /// Name identifying the service, by which it was presented to this
+    /// component.
+    2: source_name name;
+
+    /// The destination to which the service is exposed: either the component's realm or the
+    /// framework.
+    3: target Ref;
+
+    /// The name by which the capability is being exposed.
+    4: target_name name;
+};
+
+/// Declares a protocol exposed to a component's containing realm, such as
+/// a protocol exposed by the component or one of its children at runtime.
+///
+/// To learn more about protocols, see:
+/// https://fuchsia.dev/fuchsia-src/glossary#protocol
+type ExposeProtocol = table {
+    /// The provider of the capability relative to the component itself. Must
+    /// be `self` or `child`.
+    1: source Ref;
+
+    /// Name identifying the protocol, by which it was presented to this
+    /// component.
+    2: source_name name;
+
+    /// The destination to which the protocol is exposed: either the component's
+    /// realm or the framework.
+    3: target Ref;
+
+    /// The name by which the capability is being exposed.
+    4: target_name name;
+};
+
+/// Declares a directory exposed to a component's containing realm, such as a
+/// directory exposed by the component or one of its children at runtime.
+type ExposeDirectory = table {
+    /// The provider of the capability relative to the component itself. Must
+    /// be `self` or `child`.
+    1: source Ref;
+
+    /// Name identifying the directory, by which it was presented to this
+    /// component.
+    2: source_name name;
+
+    /// The destination to which the directory is exposed: either the component's realm or the
+    /// framework.
+    3: target Ref;
+
+    /// The name by which the capability is being exposed.
+    4: target_name name;
+
+    /// The maximum rights that can be set by a component using this directory,
+    /// required iff `source == self`.
+    5: rights fuchsia.io2.Rights;
+
+    /// The subdirectory of this directory to expose instead of the root. Optional.
+    6: subdir string:MAX_PATH_LENGTH;
+};
+
+/// Declares a runner exposed to a component's containing realm, such as a
+/// runner exposed by the component or one of its children at runtime.
+type ExposeRunner = table {
+    /// The provider of the capability relative to the component itself. Must
+    /// be `self` or `child`.
+    1: source Ref;
+
+    /// The name of the runner, by which it was presented to this component.
+    2: source_name name;
+
+    /// The destination to which the runner is exposed: either the component's realm or the
+    /// framework.
+    3: target Ref;
+
+    /// The name by which the capability is being exposed.
+    4: target_name name;
+};
+
+/// Declares a resolver exposed to a component's containing realm, such as a
+/// resolver exposed by the component or one of its children at runtime.
+type ExposeResolver = table {
+    /// The provider of the capability relative to the component itself. Must
+    /// be `self` or `child`.
+    1: source Ref;
+
+    /// The name of the resolver, by which it was presented to this component.
+    2: source_name name;
+
+    /// The destination to which the resolver is exposed: either the component's realm or the
+    /// framework.
+    3: target Ref;
+
+    /// The name by which the capability is being exposed.
+    4: target_name name;
+};

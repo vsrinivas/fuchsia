@@ -1,0 +1,11 @@
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+library fuchsia.component.decl;
+
+const MAX_NAME_LENGTH uint32 = 100;
+const MAX_PATH_LENGTH uint32 = 1024;
+const MAX_MONIKER_LENGTH uint32 = 4096;
+const MAX_URL_SCHEME_LENGTH uint32 = 100;
+alias name = string:MAX_NAME_LENGTH;
+alias url_scheme = string:MAX_URL_SCHEME_LENGTH;

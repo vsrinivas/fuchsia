@@ -6,7 +6,8 @@
 /// namespace.
 use {
     anyhow::{format_err, Error},
-    fidl_fuchsia_component as fcomponent, fidl_fuchsia_sys2 as fsys,
+    fidl_fuchsia_component as fcomponent, fidl_fuchsia_component_decl as fdecl,
+    fidl_fuchsia_sys2 as fsys,
 };
 
 // Temporary mappings until migration from fuchsia.sys2 -> fuchsia.component is complete.
@@ -24,15 +25,15 @@ macro_rules! enum_to_fsys {
 }
 
 // Generates `startup_mode_to_fsys`.
-enum_to_fsys!(startup_mode, fcomponent::StartupMode, fsys::StartupMode, Lazy, Eager);
+enum_to_fsys!(startup_mode, fdecl::StartupMode, fsys::StartupMode, Lazy, Eager);
 
 // Generates `on_terminate_to_fsys`.
-enum_to_fsys!(on_terminate, fcomponent::OnTerminate, fsys::OnTerminate, None, Reboot);
+enum_to_fsys!(on_terminate, fdecl::OnTerminate, fsys::OnTerminate, None, Reboot);
 
 // Generates `dependency_type_to_fsys`
 enum_to_fsys!(
     dependency_type,
-    fcomponent::DependencyType,
+    fdecl::DependencyType,
     fsys::DependencyType,
     Strong,
     Weak,
@@ -40,9 +41,9 @@ enum_to_fsys!(
 );
 
 // Generates `event_mode_to_fsys`
-enum_to_fsys!(event_mode, fcomponent::EventMode, fsys::EventMode, Async, Sync);
+enum_to_fsys!(event_mode, fdecl::EventMode, fsys::EventMode, Async, Sync);
 
-pub fn child_decl_to_fsys(input: fcomponent::ChildDecl) -> fsys::ChildDecl {
+pub fn child_decl_to_fsys(input: fdecl::Child) -> fsys::ChildDecl {
     fsys::ChildDecl {
         name: input.name,
         url: input.url,
@@ -53,22 +54,22 @@ pub fn child_decl_to_fsys(input: fcomponent::ChildDecl) -> fsys::ChildDecl {
     }
 }
 
-pub fn ref_to_fsys(input: fcomponent::Ref) -> Result<fsys::Ref, Error> {
+pub fn ref_to_fsys(input: fdecl::Ref) -> Result<fsys::Ref, Error> {
     Ok(match input {
-        fcomponent::Ref::Parent(_) => fsys::Ref::Parent(fsys::ParentRef {}),
-        fcomponent::Ref::Self_(_) => fsys::Ref::Self_(fsys::SelfRef {}),
-        fcomponent::Ref::Child(child_ref) => fsys::Ref::Child(fsys::ChildRef {
+        fdecl::Ref::Parent(_) => fsys::Ref::Parent(fsys::ParentRef {}),
+        fdecl::Ref::Self_(_) => fsys::Ref::Self_(fsys::SelfRef {}),
+        fdecl::Ref::Child(child_ref) => fsys::Ref::Child(fsys::ChildRef {
             name: child_ref.name,
             collection: child_ref.collection,
         }),
-        fcomponent::Ref::Collection(collection_ref) => {
+        fdecl::Ref::Collection(collection_ref) => {
             fsys::Ref::Collection(fsys::CollectionRef { name: collection_ref.name })
         }
-        fcomponent::Ref::Framework(_) => fsys::Ref::Framework(fsys::FrameworkRef {}),
-        fcomponent::Ref::Capability(capability_ref) => {
+        fdecl::Ref::Framework(_) => fsys::Ref::Framework(fsys::FrameworkRef {}),
+        fdecl::Ref::Capability(capability_ref) => {
             fsys::Ref::Capability(fsys::CapabilityRef { name: capability_ref.name })
         }
-        fcomponent::Ref::Debug(_) => fsys::Ref::Debug(fsys::DebugRef {}),
+        fdecl::Ref::Debug(_) => fsys::Ref::Debug(fsys::DebugRef {}),
         _ => {
             return Err(format_err!(
                 "Received unknowned fuchsia.component.Ref variant: {:?}",
@@ -78,9 +79,9 @@ pub fn ref_to_fsys(input: fcomponent::Ref) -> Result<fsys::Ref, Error> {
     })
 }
 
-pub fn offer_decl_to_fsys(input: fcomponent::OfferDecl) -> Result<fsys::OfferDecl, Error> {
+pub fn offer_decl_to_fsys(input: fdecl::Offer) -> Result<fsys::OfferDecl, Error> {
     Ok(match input {
-        fcomponent::OfferDecl::Service(offer_service_decl) => {
+        fdecl::Offer::Service(offer_service_decl) => {
             fsys::OfferDecl::Service(fsys::OfferServiceDecl {
                 source: offer_service_decl.source.map(ref_to_fsys).transpose()?,
                 source_name: offer_service_decl.source_name,
@@ -89,7 +90,7 @@ pub fn offer_decl_to_fsys(input: fcomponent::OfferDecl) -> Result<fsys::OfferDec
                 ..fsys::OfferServiceDecl::EMPTY
             })
         }
-        fcomponent::OfferDecl::Protocol(offer_protocol_decl) => {
+        fdecl::Offer::Protocol(offer_protocol_decl) => {
             fsys::OfferDecl::Protocol(fsys::OfferProtocolDecl {
                 source: offer_protocol_decl.source.map(ref_to_fsys).transpose()?,
                 source_name: offer_protocol_decl.source_name,
@@ -99,7 +100,7 @@ pub fn offer_decl_to_fsys(input: fcomponent::OfferDecl) -> Result<fsys::OfferDec
                 ..fsys::OfferProtocolDecl::EMPTY
             })
         }
-        fcomponent::OfferDecl::Directory(offer_directory_decl) => {
+        fdecl::Offer::Directory(offer_directory_decl) => {
             fsys::OfferDecl::Directory(fsys::OfferDirectoryDecl {
                 source: offer_directory_decl.source.map(ref_to_fsys).transpose()?,
                 source_name: offer_directory_decl.source_name,
@@ -111,7 +112,7 @@ pub fn offer_decl_to_fsys(input: fcomponent::OfferDecl) -> Result<fsys::OfferDec
                 ..fsys::OfferDirectoryDecl::EMPTY
             })
         }
-        fcomponent::OfferDecl::Storage(offer_storage_decl) => {
+        fdecl::Offer::Storage(offer_storage_decl) => {
             fsys::OfferDecl::Storage(fsys::OfferStorageDecl {
                 source: offer_storage_decl.source.map(ref_to_fsys).transpose()?,
                 source_name: offer_storage_decl.source_name,
@@ -120,16 +121,14 @@ pub fn offer_decl_to_fsys(input: fcomponent::OfferDecl) -> Result<fsys::OfferDec
                 ..fsys::OfferStorageDecl::EMPTY
             })
         }
-        fcomponent::OfferDecl::Runner(offer_runner_decl) => {
-            fsys::OfferDecl::Runner(fsys::OfferRunnerDecl {
-                source: offer_runner_decl.source.map(ref_to_fsys).transpose()?,
-                source_name: offer_runner_decl.source_name,
-                target: offer_runner_decl.target.map(ref_to_fsys).transpose()?,
-                target_name: offer_runner_decl.target_name,
-                ..fsys::OfferRunnerDecl::EMPTY
-            })
-        }
-        fcomponent::OfferDecl::Resolver(offer_resolver_decl) => {
+        fdecl::Offer::Runner(offer_runner_decl) => fsys::OfferDecl::Runner(fsys::OfferRunnerDecl {
+            source: offer_runner_decl.source.map(ref_to_fsys).transpose()?,
+            source_name: offer_runner_decl.source_name,
+            target: offer_runner_decl.target.map(ref_to_fsys).transpose()?,
+            target_name: offer_runner_decl.target_name,
+            ..fsys::OfferRunnerDecl::EMPTY
+        }),
+        fdecl::Offer::Resolver(offer_resolver_decl) => {
             fsys::OfferDecl::Resolver(fsys::OfferResolverDecl {
                 source: offer_resolver_decl.source.map(ref_to_fsys).transpose()?,
                 source_name: offer_resolver_decl.source_name,
@@ -138,17 +137,15 @@ pub fn offer_decl_to_fsys(input: fcomponent::OfferDecl) -> Result<fsys::OfferDec
                 ..fsys::OfferResolverDecl::EMPTY
             })
         }
-        fcomponent::OfferDecl::Event(offer_event_decl) => {
-            fsys::OfferDecl::Event(fsys::OfferEventDecl {
-                source: offer_event_decl.source.map(ref_to_fsys).transpose()?,
-                source_name: offer_event_decl.source_name,
-                target: offer_event_decl.target.map(ref_to_fsys).transpose()?,
-                target_name: offer_event_decl.target_name,
-                mode: offer_event_decl.mode.map(event_mode_to_fsys),
-                filter: offer_event_decl.filter,
-                ..fsys::OfferEventDecl::EMPTY
-            })
-        }
+        fdecl::Offer::Event(offer_event_decl) => fsys::OfferDecl::Event(fsys::OfferEventDecl {
+            source: offer_event_decl.source.map(ref_to_fsys).transpose()?,
+            source_name: offer_event_decl.source_name,
+            target: offer_event_decl.target.map(ref_to_fsys).transpose()?,
+            target_name: offer_event_decl.target_name,
+            mode: offer_event_decl.mode.map(event_mode_to_fsys),
+            filter: offer_event_decl.filter,
+            ..fsys::OfferEventDecl::EMPTY
+        }),
         _ => {
             return Err(format_err!(
                 "Received unknowned fuchsia.component.OfferDecl variant: {:?}",
@@ -161,16 +158,6 @@ pub fn offer_decl_to_fsys(input: fcomponent::OfferDecl) -> Result<fsys::OfferDec
 pub fn child_args_to_fsys(
     input: fcomponent::CreateChildArgs,
 ) -> Result<fsys::CreateChildArgs, Error> {
-    // let dynamic_offers = match input.dynamic_offers {
-    //     Some(dynamic_offers) => Some(
-    //         dynamic_offers
-    //             .into_iter()
-    //             .map(offer_decl_to_fsys)
-    //             .collect::<Result<Vec<_>, Error>>()?,
-    //     ),
-    //     None => None,
-    // };
-
     Ok(fsys::CreateChildArgs {
         numbered_handles: input.numbered_handles,
         dynamic_offers: input
@@ -183,19 +170,38 @@ pub fn child_args_to_fsys(
     })
 }
 
-pub fn collection_ref_to_fsys(input: fcomponent::CollectionRef) -> fsys::CollectionRef {
+pub fn collection_ref_to_fsys(input: fdecl::CollectionRef) -> fsys::CollectionRef {
     fsys::CollectionRef { name: input.name }
 }
 
-pub fn child_ref_to_fsys(input: fcomponent::ChildRef) -> fsys::ChildRef {
+pub fn child_ref_to_fsys(input: fdecl::ChildRef) -> fsys::ChildRef {
     fsys::ChildRef { name: input.name, collection: input.collection }
+}
+
+// To seamlessly map between
+// `fuchsia.sys2.ChildDecl` -> `fuchsia.component.decl.Child` (and `OfferDecl` types)
+// this crate offers aliases that match old name.
+#[allow(dead_code)] // The 'Offer*Decl' types are only used for tests below.
+pub(crate) mod decl {
+    #[allow(unused_imports)]
+    pub(crate) use fidl_fuchsia_component_decl::*;
+
+    pub(crate) type ChildDecl = fidl_fuchsia_component_decl::Child;
+    pub(crate) type OfferDecl = fidl_fuchsia_component_decl::Offer;
+    pub(crate) type OfferStorageDecl = fidl_fuchsia_component_decl::OfferStorage;
+    pub(crate) type OfferResolverDecl = fidl_fuchsia_component_decl::OfferResolver;
+    pub(crate) type OfferRunnerDecl = fidl_fuchsia_component_decl::OfferRunner;
+    pub(crate) type OfferServiceDecl = fidl_fuchsia_component_decl::OfferService;
+    pub(crate) type OfferProtocolDecl = fidl_fuchsia_component_decl::OfferProtocol;
+    pub(crate) type OfferDirectoryDecl = fidl_fuchsia_component_decl::OfferDirectory;
+    pub(crate) type OfferEventDecl = fidl_fuchsia_component_decl::OfferEvent;
 }
 
 #[cfg(test)]
 mod tests {
     use {
-        super::*, fidl_fuchsia_component as fcomponent, fidl_fuchsia_data as fdata,
-        fidl_fuchsia_io2 as fio2, fidl_fuchsia_sys2 as fsys, test_case::test_case,
+        super::decl as fdecl, super::*, fidl_fuchsia_data as fdata, fidl_fuchsia_io2 as fio2,
+        fidl_fuchsia_sys2 as fsys, test_case::test_case,
     };
 
     // Generates OfferDecl variant for Service, Storage, Runner, and Resolver.
@@ -284,10 +290,10 @@ mod tests {
     }
 
     #[test_case(
-        offer_decl!(fcomponent, Service, {
-            source: fcomponent::Ref::Self_(fcomponent::SelfRef {}),
+        offer_decl!(fdecl, Service, {
+            source: fdecl::Ref::Self_(fdecl::SelfRef {}),
             source_name: "self",
-            target: fcomponent::Ref::Parent(fcomponent::ParentRef {}),
+            target: fdecl::Ref::Parent(fdecl::ParentRef {}),
             target_name: "parent",
         }),
         offer_decl!(fsys, Service, {
@@ -299,10 +305,10 @@ mod tests {
         ; "when decl is service")]
     #[test_case(
 
-        offer_decl!(fcomponent, Storage, {
-            source: fcomponent::Ref::Self_(fcomponent::SelfRef {}),
+        offer_decl!(fdecl, Storage, {
+            source: fdecl::Ref::Self_(fdecl::SelfRef {}),
             source_name: "self",
-            target: fcomponent::Ref::Parent(fcomponent::ParentRef {}),
+            target: fdecl::Ref::Parent(fdecl::ParentRef {}),
             target_name: "parent",
         }),
         offer_decl!(fsys, Storage, {
@@ -315,10 +321,10 @@ mod tests {
     )]
     #[test_case(
 
-        offer_decl!(fcomponent, Resolver, {
-            source: fcomponent::Ref::Self_(fcomponent::SelfRef {}),
+        offer_decl!(fdecl, Resolver, {
+            source: fdecl::Ref::Self_(fdecl::SelfRef {}),
             source_name: "self",
-            target: fcomponent::Ref::Parent(fcomponent::ParentRef {}),
+            target: fdecl::Ref::Parent(fdecl::ParentRef {}),
             target_name: "parent",
         }),
         offer_decl!(fsys, Resolver, {
@@ -330,10 +336,10 @@ mod tests {
         ; "when decl is resolver"
     )]
     #[test_case(
-        offer_decl!(fcomponent, Runner, {
-            source: fcomponent::Ref::Self_(fcomponent::SelfRef {}),
+        offer_decl!(fdecl, Runner, {
+            source: fdecl::Ref::Self_(fdecl::SelfRef {}),
             source_name: "self",
-            target: fcomponent::Ref::Parent(fcomponent::ParentRef {}),
+            target: fdecl::Ref::Parent(fdecl::ParentRef {}),
             target_name: "parent",
         }),
         offer_decl!(fsys, Runner, {
@@ -345,12 +351,12 @@ mod tests {
         ; "when decl is runner"
     )]
     #[test_case(
-        offer_protocol_decl!(fcomponent, {
-            source: fcomponent::Ref::Self_(fcomponent::SelfRef {}),
+        offer_protocol_decl!(fdecl, {
+            source: fdecl::Ref::Self_(fdecl::SelfRef {}),
             source_name: "self",
-            target: fcomponent::Ref::Parent(fcomponent::ParentRef {}),
+            target: fdecl::Ref::Parent(fdecl::ParentRef {}),
             target_name: "parent",
-            dependency_type: fcomponent::DependencyType::Weak,
+            dependency_type: fdecl::DependencyType::Weak,
         }),
         offer_protocol_decl!(fsys, {
             source: fsys::Ref::Self_(fsys::SelfRef {}),
@@ -362,14 +368,14 @@ mod tests {
         ; "when decl is protocol"
     )]
     #[test_case(
-        offer_directory_decl!(fcomponent, {
-            source: fcomponent::Ref::Self_(fcomponent::SelfRef {}),
+        offer_directory_decl!(fdecl, {
+            source: fdecl::Ref::Self_(fdecl::SelfRef {}),
             source_name: "self",
-            target: fcomponent::Ref::Parent(fcomponent::ParentRef {}),
+            target: fdecl::Ref::Parent(fdecl::ParentRef {}),
             target_name: "parent",
             rights: fio2::Operations::Connect | fio2::Operations::ReadBytes,
             subdir: "config",
-            dependency_type: fcomponent::DependencyType::Weak,
+            dependency_type: fdecl::DependencyType::Weak,
         }),
         offer_directory_decl!(fsys, {
             source: fsys::Ref::Self_(fsys::SelfRef {}),
@@ -383,12 +389,12 @@ mod tests {
         ; "when decl is directory"
     )]
     #[test_case(
-        offer_event_decl!(fcomponent, {
-            source: fcomponent::Ref::Self_(fcomponent::SelfRef {}),
+        offer_event_decl!(fdecl, {
+            source: fdecl::Ref::Self_(fdecl::SelfRef {}),
             source_name: "self",
-            target: fcomponent::Ref::Parent(fcomponent::ParentRef {}),
+            target: fdecl::Ref::Parent(fdecl::ParentRef {}),
             target_name: "parent",
-            mode: fcomponent::EventMode::Async,
+            mode: fdecl::EventMode::Async,
             filter: fdata::Dictionary::EMPTY,
         }),
         offer_event_decl!(fsys, {
@@ -402,7 +408,7 @@ mod tests {
         ; "when decl is event"
     )]
     #[test]
-    fn test_offer_decl_to_fsys(input: fcomponent::OfferDecl, expected: fsys::OfferDecl) {
+    fn test_offer_decl_to_fsys(input: fdecl::OfferDecl, expected: fsys::OfferDecl) {
         let actual = offer_decl_to_fsys(input);
 
         assert_eq!(actual.expect("expected Ok Result"), expected);
