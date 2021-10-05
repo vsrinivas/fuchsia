@@ -6,13 +6,14 @@
 
 #include <fuchsia/hardware/gpio/cpp/banjo-mock.h>
 #include <lib/ddk/metadata.h>
-#include <lib/fake_ddk/fake_ddk.h>
 #include <lib/mock-i2c/mock-i2c.h>
 #include <lib/simple-codec/simple-codec-client.h>
 #include <lib/simple-codec/simple-codec-helper.h>
 #include <lib/sync/completion.h>
 
 #include <zxtest/zxtest.h>
+
+#include "src/devices/testing/mock-ddk/mock-device.h"
 
 namespace audio {
 
@@ -28,8 +29,7 @@ audio::DaiFormat GetDefaultDaiFormat() {
   };
 }
 
-class Tas5720Test : public zxtest::Test {
- public:
+struct Tas5720Test : public zxtest::Test {
   void SetUp() override {
     // Reset by the TAS driver initialization.
     mock_i2c_.ExpectWrite({0x01})
@@ -59,33 +59,32 @@ class Tas5720Test : public zxtest::Test {
 };
 
 struct Tas5720Codec : public Tas5720 {
-  explicit Tas5720Codec(ddk::I2cChannel i2c) : Tas5720(fake_ddk::kFakeParent, std::move(i2c)) {}
+  explicit Tas5720Codec(zx_device_t* parent, ddk::I2cChannel i2c)
+      : Tas5720(parent, std::move(i2c)) {}
   codec_protocol_t GetProto() { return {&this->codec_protocol_ops_, this}; }
 };
 
 TEST_F(Tas5720Test, CodecInitGood) {
-  fake_ddk::Bind tester;
+  auto fake_parent = MockDevice::FakeRootParent();
   uint32_t instance_count = 0;
-  tester.SetMetadata(DEVICE_METADATA_PRIVATE, &instance_count, sizeof(instance_count));
-  auto codec = SimpleCodecServer::Create<Tas5720Codec>(mock_i2c_.GetProto());
-  ASSERT_NOT_NULL(codec);
-  auto codec_proto = codec->GetProto();
-  SimpleCodecClient client;
-  client.SetProtocol(&codec_proto);
+  fake_parent->SetMetadata(DEVICE_METADATA_PRIVATE, &instance_count, sizeof(instance_count));
+
+  auto owned = SimpleCodecServer::Create<Tas5720Codec>(fake_parent.get(), mock_i2c_.GetProto());
+  [[maybe_unused]] auto unused_raw_pointer = owned.release();  // codec release managed by the DDK.
+  auto* child_dev = fake_parent->GetLatestChild();
+  ASSERT_NOT_NULL(child_dev);
 
   // Shutdown.
   mock_i2c_.ExpectWrite({0x01}).ExpectReadStop({0xff}).ExpectWriteStop({0x01, 0xfe});
 
-  codec->DdkAsyncRemove();
-  ASSERT_TRUE(tester.Ok());
-  codec.release()->DdkRelease();  // codec release managed by the DDK
+  child_dev->ReleaseOp();
   mock_i2c_.VerifyAndClear();
 }
 
 TEST(Tas5720Test, CodecInitBad) {
-  fake_ddk::Bind tester;
+  auto fake_parent = MockDevice::FakeRootParent();
   uint32_t instance_count = 0;
-  tester.SetMetadata(DEVICE_METADATA_PRIVATE, &instance_count, sizeof(instance_count));
+  fake_parent->SetMetadata(DEVICE_METADATA_PRIVATE, &instance_count, sizeof(instance_count));
 
   mock_i2c::MockI2c mock_i2c;
   // Bad replies (2 retries) to enter shutdown (part of reset).
@@ -97,17 +96,22 @@ TEST(Tas5720Test, CodecInitBad) {
   mock_i2c.ExpectWrite({0x01}).ExpectReadStop({0xff}, ZX_ERR_TIMED_OUT);  // Retry 1.
   mock_i2c.ExpectWrite({0x01}).ExpectReadStop({0xff}, ZX_ERR_TIMED_OUT);  // Retry 2.
 
-  auto codec = SimpleCodecServer::Create<Tas5720Codec>(mock_i2c.GetProto());
-  ASSERT_NULL(codec);
+  auto owned = SimpleCodecServer::Create<Tas5720Codec>(fake_parent.get(), mock_i2c.GetProto());
+  [[maybe_unused]] auto unused_raw_pointer = owned.release();  // codec release managed by the DDK.
+
   mock_i2c.VerifyAndClear();
 }
 
 TEST_F(Tas5720Test, CodecGetInfo) {
-  fake_ddk::Bind tester;
+  auto fake_parent = MockDevice::FakeRootParent();
   uint32_t instance_count = 0;
-  tester.SetMetadata(DEVICE_METADATA_PRIVATE, &instance_count, sizeof(instance_count));
-  auto codec = SimpleCodecServer::Create<Tas5720Codec>(mock_i2c_.GetProto());
-  ASSERT_NOT_NULL(codec);
+  fake_parent->SetMetadata(DEVICE_METADATA_PRIVATE, &instance_count, sizeof(instance_count));
+
+  auto owned = SimpleCodecServer::Create<Tas5720Codec>(fake_parent.get(), mock_i2c_.GetProto());
+  [[maybe_unused]] auto unused_raw_pointer = owned.release();  // codec release managed by the DDK.
+  auto* child_dev = fake_parent->GetLatestChild();
+  ASSERT_NOT_NULL(child_dev);
+  auto codec = child_dev->GetDeviceContext<Tas5720Codec>();
   auto codec_proto = codec->GetProto();
   SimpleCodecClient client;
   client.SetProtocol(&codec_proto);
@@ -120,16 +124,14 @@ TEST_F(Tas5720Test, CodecGetInfo) {
   // Shutdown.
   mock_i2c_.ExpectWrite({0x01}).ExpectReadStop({0xff}).ExpectWriteStop({0x01, 0xfe});
 
-  codec->DdkAsyncRemove();
-  ASSERT_TRUE(tester.Ok());
-  codec.release()->DdkRelease();  // codec release managed by the DDK
+  child_dev->ReleaseOp();
   mock_i2c_.VerifyAndClear();
 }
 
 TEST_F(Tas5720Test, CodecReset) {
-  fake_ddk::Bind tester;
+  auto fake_parent = MockDevice::FakeRootParent();
   uint32_t instance_count = 0;
-  tester.SetMetadata(DEVICE_METADATA_PRIVATE, &instance_count, sizeof(instance_count));
+  fake_parent->SetMetadata(DEVICE_METADATA_PRIVATE, &instance_count, sizeof(instance_count));
 
   // We complete all i2c mock setup before executing server methods in a different thread.
   // Reset by the call to Reset.
@@ -158,26 +160,30 @@ TEST_F(Tas5720Test, CodecReset) {
 
   mock_i2c_.ExpectWrite({0x01}).ExpectReadStop({0xff}).ExpectWriteStop({0x01, 0xfe});  // Shutdown.
 
-  auto codec = SimpleCodecServer::Create<Tas5720Codec>(mock_i2c_.GetProto());
-  ASSERT_NOT_NULL(codec);
+  auto owned = SimpleCodecServer::Create<Tas5720Codec>(fake_parent.get(), mock_i2c_.GetProto());
+  [[maybe_unused]] auto unused_raw_pointer = owned.release();  // codec release managed by the DDK.
+  auto* child_dev = fake_parent->GetLatestChild();
+  ASSERT_NOT_NULL(child_dev);
+  auto codec = child_dev->GetDeviceContext<Tas5720Codec>();
   auto codec_proto = codec->GetProto();
   SimpleCodecClient client;
   client.SetProtocol(&codec_proto);
   ASSERT_OK(client.Reset());
 
-  codec->DdkAsyncRemove();
-  ASSERT_TRUE(tester.Ok());
-  codec.release()->DdkRelease();  // codec release managed by the DDK
+  child_dev->ReleaseOp();
   mock_i2c_.VerifyAndClear();
 }
 
 TEST_F(Tas5720Test, CodecBridgedMode) {
-  fake_ddk::Bind tester;
+  auto fake_parent = MockDevice::FakeRootParent();
   uint32_t instance_count = 0;
-  tester.SetMetadata(DEVICE_METADATA_PRIVATE, &instance_count, sizeof(instance_count));
+  fake_parent->SetMetadata(DEVICE_METADATA_PRIVATE, &instance_count, sizeof(instance_count));
 
-  auto codec = SimpleCodecServer::Create<Tas5720Codec>(mock_i2c_.GetProto());
-  ASSERT_NOT_NULL(codec);
+  auto owned = SimpleCodecServer::Create<Tas5720Codec>(fake_parent.get(), mock_i2c_.GetProto());
+  [[maybe_unused]] auto unused_raw_pointer = owned.release();  // codec release managed by the DDK.
+  auto* child_dev = fake_parent->GetLatestChild();
+  ASSERT_NOT_NULL(child_dev);
+  auto codec = child_dev->GetDeviceContext<Tas5720Codec>();
   auto codec_proto = codec->GetProto();
   SimpleCodecClient client;
   client.SetProtocol(&codec_proto);
@@ -190,18 +196,20 @@ TEST_F(Tas5720Test, CodecBridgedMode) {
   // Shutdown.
   mock_i2c_.ExpectWrite({0x01}).ExpectReadStop({0xff}).ExpectWriteStop({0x01, 0xfe});
 
-  codec->DdkAsyncRemove();
-  ASSERT_TRUE(tester.Ok());
-  codec.release()->DdkRelease();  // codec release managed by the DDK
+  child_dev->ReleaseOp();
   mock_i2c_.VerifyAndClear();
 }
 
 TEST_F(Tas5720Test, CodecDaiFormat) {
-  fake_ddk::Bind tester;
+  auto fake_parent = MockDevice::FakeRootParent();
   uint32_t instance_count = 0;
-  tester.SetMetadata(DEVICE_METADATA_PRIVATE, &instance_count, sizeof(instance_count));
-  auto codec = SimpleCodecServer::Create<Tas5720Codec>(mock_i2c_.GetProto());
-  ASSERT_NOT_NULL(codec);
+  fake_parent->SetMetadata(DEVICE_METADATA_PRIVATE, &instance_count, sizeof(instance_count));
+
+  auto owned = SimpleCodecServer::Create<Tas5720Codec>(fake_parent.get(), mock_i2c_.GetProto());
+  [[maybe_unused]] auto unused_raw_pointer = owned.release();  // codec release managed by the DDK.
+  auto* child_dev = fake_parent->GetLatestChild();
+  ASSERT_NOT_NULL(child_dev);
+  auto codec = child_dev->GetDeviceContext<Tas5720Codec>();
   auto codec_proto = codec->GetProto();
   SimpleCodecClient client;
   client.SetProtocol(&codec_proto);
@@ -285,18 +293,20 @@ TEST_F(Tas5720Test, CodecDaiFormat) {
     ASSERT_NOT_OK(client.SetDaiFormat(std::move(format)));
   }
 
-  codec->DdkAsyncRemove();
-  ASSERT_TRUE(tester.Ok());
-  codec.release()->DdkRelease();  // codec release managed by the DDK
+  child_dev->ReleaseOp();
   mock_i2c_.VerifyAndClear();
 }
 
 TEST_F(Tas5720Test, CodecGain) {
-  fake_ddk::Bind tester;
+  auto fake_parent = MockDevice::FakeRootParent();
   uint32_t instance_count = 0;
-  tester.SetMetadata(DEVICE_METADATA_PRIVATE, &instance_count, sizeof(instance_count));
-  auto codec = SimpleCodecServer::Create<Tas5720Codec>(mock_i2c_.GetProto());
-  ASSERT_NOT_NULL(codec);
+  fake_parent->SetMetadata(DEVICE_METADATA_PRIVATE, &instance_count, sizeof(instance_count));
+
+  auto owned = SimpleCodecServer::Create<Tas5720Codec>(fake_parent.get(), mock_i2c_.GetProto());
+  [[maybe_unused]] auto unused_raw_pointer = owned.release();  // codec release managed by the DDK.
+  auto* child_dev = fake_parent->GetLatestChild();
+  ASSERT_NOT_NULL(child_dev);
+  auto codec = child_dev->GetDeviceContext<Tas5720Codec>();
   auto codec_proto = codec->GetProto();
   SimpleCodecClient client;
   client.SetProtocol(&codec_proto);
@@ -346,18 +356,20 @@ TEST_F(Tas5720Test, CodecGain) {
   auto unused = client.GetInfo();
   static_cast<void>(unused);
 
-  codec->DdkAsyncRemove();
-  ASSERT_TRUE(tester.Ok());       // Guarantees Unbind called so we can test for shutdown.
-  codec.release()->DdkRelease();  // codec release managed by the DDK.
+  child_dev->ReleaseOp();
   mock_i2c_.VerifyAndClear();
 }
 
 TEST_F(Tas5720Test, CodecPlugState) {
-  fake_ddk::Bind tester;
+  auto fake_parent = MockDevice::FakeRootParent();
   uint32_t instance_count = 0;
-  tester.SetMetadata(DEVICE_METADATA_PRIVATE, &instance_count, sizeof(instance_count));
-  auto codec = SimpleCodecServer::Create<Tas5720Codec>(mock_i2c_.GetProto());
-  ASSERT_NOT_NULL(codec);
+  fake_parent->SetMetadata(DEVICE_METADATA_PRIVATE, &instance_count, sizeof(instance_count));
+
+  auto owned = SimpleCodecServer::Create<Tas5720Codec>(fake_parent.get(), mock_i2c_.GetProto());
+  [[maybe_unused]] auto unused_raw_pointer = owned.release();  // codec release managed by the DDK.
+  auto* child_dev = fake_parent->GetLatestChild();
+  ASSERT_NOT_NULL(child_dev);
+  auto codec = child_dev->GetDeviceContext<Tas5720Codec>();
   auto codec_proto = codec->GetProto();
   SimpleCodecClient client;
   client.SetProtocol(&codec_proto);
@@ -365,20 +377,17 @@ TEST_F(Tas5720Test, CodecPlugState) {
   // Shutdown.
   mock_i2c_.ExpectWrite({0x01}).ExpectReadStop({0xff}).ExpectWriteStop({0x01, 0xfe});
 
-  codec->DdkAsyncRemove();
-  ASSERT_TRUE(tester.Ok());
-  codec.release()->DdkRelease();  // codec release managed by the DDK
+  child_dev->ReleaseOp();
   mock_i2c_.VerifyAndClear();
 }
 
 TEST(Tas5720Test, InstanceCount) {
-  fake_ddk::Bind tester;
+  auto fake_parent = MockDevice::FakeRootParent();
   uint32_t instance_count = 2;
-  tester.SetMetadata(DEVICE_METADATA_PRIVATE, &instance_count, sizeof(instance_count));
-
-  mock_i2c::MockI2c mock_i2c;
+  fake_parent->SetMetadata(DEVICE_METADATA_PRIVATE, &instance_count, sizeof(instance_count));
 
   // Reset by the TAS driver initialization setting slot to 2.
+  mock_i2c::MockI2c mock_i2c;
   mock_i2c.ExpectWrite({0x01})
       .ExpectReadStop({0xff})
       .ExpectWriteStop({0x01, 0xfe})  // Enter shutdown (part of reset).
@@ -402,15 +411,15 @@ TEST(Tas5720Test, InstanceCount) {
       .ExpectReadStop({0x80})
       .ExpectWriteStop({0x03, 0x90});  // Muted.
 
-  auto codec = SimpleCodecServer::Create<Tas5720Codec>(mock_i2c.GetProto());
-  ASSERT_NOT_NULL(codec);
+  auto owned = SimpleCodecServer::Create<Tas5720Codec>(fake_parent.get(), mock_i2c.GetProto());
+  [[maybe_unused]] auto unused_raw_pointer = owned.release();  // codec release managed by the DDK.
+  auto* child_dev = fake_parent->GetLatestChild();
+  ASSERT_NOT_NULL(child_dev);
 
   // Shutdown.
   mock_i2c.ExpectWrite({0x01}).ExpectReadStop({0xff}).ExpectWriteStop({0x01, 0xfe});
 
-  codec->DdkAsyncRemove();
-  ASSERT_TRUE(tester.Ok());
-  codec.release()->DdkRelease();  // codec release managed by the DDK
+  child_dev->ReleaseOp();
   mock_i2c.VerifyAndClear();
 }
 
