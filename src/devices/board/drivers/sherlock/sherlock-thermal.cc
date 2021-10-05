@@ -91,29 +91,30 @@ constexpr fuchsia_hardware_thermal_ThermalTemperatureInfo TripPoint(float temp_c
  * PASSIVE COOLING - For Sherlock, we have DVFS support added
  *
  * Below is the operating point information for Small cluster
- * Operating point 0  - Freq 0.1000 Ghz Voltage 0.7310 V
- * Operating point 1  - Freq 0.2500 Ghz Voltage 0.7310 V
- * Operating point 2  - Freq 0.5000 Ghz Voltage 0.7310 V
- * Operating point 3  - Freq 0.6670 Ghz Voltage 0.7310 V
- * Operating point 4  - Freq 1.0000 Ghz Voltage 0.7310 V
- * Operating point 5  - Freq 1.2000 Ghz Voltage 0.7310 V
- * Operating point 6  - Freq 1.3980 Ghz Voltage 0.7610 V
- * Operating point 7  - Freq 1.5120 Ghz Voltage 0.7910 V
- * Operating point 8  - Freq 1.6080 Ghz Voltage 0.8310 V
- * Operating point 9  - Freq 1.7040 Ghz Voltage 0.8610 V
- * Operating point 10 - Freq 1.8960 Ghz Voltage 0.9810 V
+ * Operating point 0  - Freq 0.1000 GHz Voltage 0.7310 V
+ * Operating point 1  - Freq 0.2500 GHz Voltage 0.7310 V
+ * Operating point 2  - Freq 0.5000 GHz Voltage 0.7310 V
+ * Operating point 3  - Freq 0.6670 GHz Voltage 0.7310 V
+ * Operating point 4  - Freq 1.0000 GHz Voltage 0.7310 V
+ * Operating point 5  - Freq 1.2000 GHz Voltage 0.7310 V
+ * Operating point 6  - Freq 1.3980 GHz Voltage 0.7610 V
+ * Operating point 7  - Freq 1.5120 GHz Voltage 0.7910 V
+ * Operating point 8  - Freq 1.6080 GHz Voltage 0.8310 V
+ * Operating point 9  - Freq 1.7040 GHz Voltage 0.8610 V
+ * Operating point 10 - Freq 1.8960 GHz Voltage 0.9810 V
  *
  * Below is the operating point information for Big cluster
- * Operating point 0  - Freq 0.1000 Ghz Voltage 0.7510 V
- * Operating point 1  - Freq 0.2500 Ghz Voltage 0.7510 V
- * Operating point 2  - Freq 0.5000 Ghz Voltage 0.7510 V
- * Operating point 3  - Freq 0.6670 Ghz Voltage 0.7510 V
- * Operating point 4  - Freq 1.0000 Ghz Voltage 0.7710 V
- * Operating point 5  - Freq 1.2000 Ghz Voltage 0.7710 V
- * Operating point 6  - Freq 1.3980 Ghz Voltage 0.7910 V
- * Operating point 7  - Freq 1.5120 Ghz Voltage 0.8210 V
- * Operating point 8  - Freq 1.6080 Ghz Voltage 0.8610 V
- * Operating point 9  - Freq 1.7040 Ghz Voltage 0.8910 V
+ * Operating point 0  - Freq 0.1000 GHz Voltage 0.7510 V
+ * Operating point 1  - Freq 0.2500 GHz Voltage 0.7510 V
+ * Operating point 2  - Freq 0.5000 GHz Voltage 0.7510 V
+ * Operating point 3  - Freq 0.6670 GHz Voltage 0.7510 V
+ * Operating point 4  - Freq 1.0000 GHz Voltage 0.7710 V
+ * Operating point 5  - Freq 1.2000 GHz Voltage 0.7710 V
+ * Operating point 6  - Freq 1.3980 GHz Voltage 0.7910 V
+ * Operating point 7  - Freq 1.5120 GHz Voltage 0.8210 V
+ * Operating point 8  - Freq 1.6080 GHz Voltage 0.8610 V
+ * Operating point 9  - Freq 1.7040 GHz Voltage 0.8910 V
+ * Operating point 10 - Freq 1.9080 GHz Voltage 1.0220 V
  *
  * GPU_CLK_FREQUENCY_SOURCE -
  * 0 - 285.7 MHz
@@ -157,10 +158,10 @@ fuchsia_hardware_thermal_ThermalDeviceInfo thermal_config_pll = {
                             {.freq_hz = 1'512'000'000, .volt_uv = 821'000},
                             {.freq_hz = 1'608'000'000, .volt_uv = 861'000},
                             {.freq_hz = 1'704'000'000, .volt_uv = 891'000},
-                            {.freq_hz = 1'704'000'000, .volt_uv = 891'000},
+                            {.freq_hz = 1'908'000'000, .volt_uv = 1'022'000},
                         },
                     .latency = 0,
-                    .count = 10,
+                    .count = 11,
                 },
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wc99-designator"
