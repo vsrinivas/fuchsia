@@ -42,8 +42,13 @@ typedef struct buffer_descriptor {
 
   // Frame's device port identifier.
   uint8_t port_id;
+
   // Reserved for future expansion. Maintains 64-bit word alignment.
-  uint8_t _reserved[7];
+  uint8_t _reserved[3];
+
+  // Scratch space for the client, the device must not modify this field or depend
+  // on its value.
+  uint8_t client_opaque_data[4];
 
   // Buffer offset in data VMO
   uint64_t offset;
