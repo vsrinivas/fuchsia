@@ -6,8 +6,8 @@
 #define SRC_LIB_STORAGE_VFS_CPP_JOURNAL_HEADER_VIEW_H_
 
 #include <lib/fpromise/result.h>
-
-#include <fbl/span.h>
+#include <lib/stdcompat/span.h>
+#include <zircon/assert.h>
 
 #include "src/lib/storage/vfs/cpp/journal/format.h"
 
@@ -17,15 +17,15 @@ class JournalHeaderView {
  public:
   // Creates header view created from the block. This may or may not be a valid header. Useful when
   // inspecting a disk. Asserts on finding |block| to be at smaller than kJournalBlockSize bytes.
-  explicit JournalHeaderView(fbl::Span<uint8_t> block);
+  explicit JournalHeaderView(cpp20::span<uint8_t> block);
 
   // Returns HeaderView on finding a valid journal entry header in |block|.
-  static fpromise::result<JournalHeaderView, zx_status_t> Create(fbl::Span<uint8_t> block,
+  static fpromise::result<JournalHeaderView, zx_status_t> Create(cpp20::span<uint8_t> block,
                                                                  uint64_t sequence_number);
 
   // Initializes |block| with valid header and sets payload blocks and sequence number. Asserts on
   // finding |block| to be at smaller than kJournalBlockSize bytes.
-  JournalHeaderView(fbl::Span<uint8_t> block, uint64_t payload_blocks, uint64_t sequence_number);
+  JournalHeaderView(cpp20::span<uint8_t> block, uint64_t payload_blocks, uint64_t sequence_number);
 
   // Returns the block number where |index| block in the payload will be written to.
   uint64_t TargetBlock(uint32_t index) const {

@@ -15,13 +15,13 @@ namespace fs {
 
 JournalEntryView::JournalEntryView(storage::BlockBufferView view)
     : view_(std::move(view)),
-      header_(fbl::Span<uint8_t>(reinterpret_cast<uint8_t*>(view_.Data(0)), view_.BlockSize())) {}
+      header_(cpp20::span<uint8_t>(reinterpret_cast<uint8_t*>(view_.Data(0)), view_.BlockSize())) {}
 
 JournalEntryView::JournalEntryView(storage::BlockBufferView view,
                                    const std::vector<storage::BufferedOperation>& operations,
                                    uint64_t sequence_number)
     : view_(std::move(view)),
-      header_(fbl::Span<uint8_t>(reinterpret_cast<uint8_t*>(view_.Data(0)), view_.BlockSize()),
+      header_(cpp20::span<uint8_t>(reinterpret_cast<uint8_t*>(view_.Data(0)), view_.BlockSize()),
               view_.length() - kEntryMetadataBlocks, sequence_number) {
   Encode(operations, sequence_number);
 }

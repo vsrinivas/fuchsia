@@ -456,8 +456,8 @@ TEST_F(ParseJournalTest, EntryModifiedHeaderDropped) {
 
   // Before we replay, flip some bits in the header.
   storage::BlockBufferView buffer_view(journal_buffer(), 0, kEntryLength);
-  JournalHeaderView raw_block(
-      fbl::Span<uint8_t>(reinterpret_cast<uint8_t*>(buffer_view.Data(0)), buffer_view.BlockSize()));
+  JournalHeaderView raw_block(cpp20::span<uint8_t>(reinterpret_cast<uint8_t*>(buffer_view.Data(0)),
+                                                   buffer_view.BlockSize()));
   raw_block.SetTargetBlock(16, ~(raw_block.TargetBlock(16)));
 
   // As a result, there are no entries identified as replayable.

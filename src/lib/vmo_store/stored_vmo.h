@@ -7,12 +7,12 @@
 
 #include <lib/fzl/pinned-vmo.h>
 #include <lib/fzl/vmo-mapper.h>
+#include <lib/stdcompat/span.h>
 #include <lib/zx/vmo.h>
 
 #include <utility>
 
 #include <fbl/alloc_checker.h>
-#include <fbl/span.h>
 
 namespace vmo_store {
 
@@ -108,8 +108,8 @@ class StoredVmo {
 
   // Accesses mapped VMO data.
   // An empty span is returned if the VMO was not mapped to virtual memory.
-  fbl::Span<uint8_t> data() {
-    return fbl::Span<uint8_t>(static_cast<uint8_t*>(mapper_.start()), mapper_.size());
+  cpp20::span<uint8_t> data() {
+    return cpp20::span<uint8_t>(static_cast<uint8_t*>(mapper_.start()), mapper_.size());
   }
 
   // Get an unowned handle to the VMO.

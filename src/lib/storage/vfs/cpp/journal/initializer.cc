@@ -13,7 +13,7 @@
 namespace fs {
 namespace {
 
-void InitJournalBlock(fbl::Span<uint8_t> block) {
+void InitJournalBlock(cpp20::span<uint8_t> block) {
   memset(block.data(), 0, block.size());
   JournalInfo* info = reinterpret_cast<JournalInfo*>(block.data());
   info->magic = kJournalMagic;
@@ -30,7 +30,7 @@ void InitJournalBlock(fbl::Span<uint8_t> block) {
 
 zx_status_t MakeJournal(uint64_t journal_blocks, const WriteBlocksFn& WriteBlocks) {
   uint8_t block[kJournalBlockSize];
-  fbl::Span<uint8_t> buffer(block, sizeof(block));
+  cpp20::span<uint8_t> buffer(block, sizeof(block));
   InitJournalBlock(buffer);
 
   auto status = WriteBlocks(buffer, 0, 1);
@@ -50,7 +50,7 @@ zx_status_t MakeJournal(uint64_t journal_blocks, const WriteBlocksFn& WriteBlock
     return ZX_ERR_NO_MEMORY;
   }
 
-  fbl::Span<const uint8_t> buffers(static_cast<const uint8_t*>(blocks), map_length);
+  cpp20::span<const uint8_t> buffers(static_cast<const uint8_t*>(blocks), map_length);
   status = WriteBlocks(buffers, kJournalMetadataBlocks, block_count);
 
   if (munmap(blocks, map_length) != 0) {

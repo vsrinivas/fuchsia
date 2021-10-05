@@ -38,12 +38,12 @@ bool IsHeader(const JournalHeaderBlock* header, uint64_t sequence_number) {
 
 }  // namespace
 
-JournalHeaderView::JournalHeaderView(fbl::Span<uint8_t> block)
+JournalHeaderView::JournalHeaderView(cpp20::span<uint8_t> block)
     : header_(reinterpret_cast<JournalHeaderBlock*>(block.data())) {
   ZX_ASSERT(block.size_bytes() >= kJournalBlockSize);
 }
 
-JournalHeaderView::JournalHeaderView(fbl::Span<uint8_t> block, uint64_t payload_blocks,
+JournalHeaderView::JournalHeaderView(cpp20::span<uint8_t> block, uint64_t payload_blocks,
                                      uint64_t sequence_number)
     : header_(reinterpret_cast<JournalHeaderBlock*>(block.data())) {
   ZX_ASSERT(block.size_bytes() >= kJournalBlockSize);
@@ -59,7 +59,7 @@ void JournalHeaderView::Encode(uint64_t payload_blocks, uint64_t sequence_number
 }
 
 fpromise::result<JournalHeaderView, zx_status_t> JournalHeaderView::Create(
-    fbl::Span<uint8_t> block, uint64_t sequence_number) {
+    cpp20::span<uint8_t> block, uint64_t sequence_number) {
   if (block.size_bytes() < kJournalBlockSize) {
     return fpromise::error(ZX_ERR_BUFFER_TOO_SMALL);
   }

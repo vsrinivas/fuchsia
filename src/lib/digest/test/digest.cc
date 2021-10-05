@@ -4,13 +4,13 @@
 
 #include "src/lib/digest/digest.h"
 
+#include <lib/stdcompat/span.h>
 #include <stdlib.h>
 #include <zircon/assert.h>
 #include <zircon/status.h>
 
 #include <utility>
 
-#include <fbl/span.h>
 #include <fbl/string.h>
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
@@ -67,7 +67,7 @@ TEST(DigestTest, Zero) {
   Digest actual, expected;
   ASSERT_OK(expected.Parse(kZeroDigest));
   actual.Hash(nullptr, 0);
-  EXPECT_THAT(fbl::Span(actual.get(), kSha256Length),
+  EXPECT_THAT(cpp20::span(actual.get(), kSha256Length),
               ElementsAreArray(expected.get(), kSha256Length));
 }
 
@@ -78,7 +78,7 @@ TEST(DigestTest, Self) {
   uint8_t buf[kSha256Length];
   actual.CopyTo(buf, sizeof(buf));
   actual.Hash(buf, kSha256Length);
-  EXPECT_THAT(fbl::Span(actual.get(), kSha256Length),
+  EXPECT_THAT(cpp20::span(actual.get(), kSha256Length),
               ElementsAreArray(expected.get(), kSha256Length));
 }
 
@@ -92,7 +92,7 @@ TEST(DigestTest, Split) {
     actual.Update(kZeroDigest, i);
     actual.Update(kZeroDigest + i, n - i);
     actual.Final();
-    EXPECT_THAT(fbl::Span(actual.get(), kSha256Length),
+    EXPECT_THAT(cpp20::span(actual.get(), kSha256Length),
                 ElementsAreArray(expected.get(), kSha256Length));
   }
 }
@@ -195,28 +195,28 @@ TEST(DigestTest, Move) {
     EXPECT_EQ(digest1, uninitialized_digest);
 
     Digest digest2(std::move(digest1));
-    EXPECT_THAT(fbl::Span(digest1.get(), kSha256Length),
+    EXPECT_THAT(cpp20::span(digest1.get(), kSha256Length),
                 ElementsAreArray(uninitialized_digest.get(), kSha256Length));
-    EXPECT_THAT(fbl::Span(digest2.get(), kSha256Length),
+    EXPECT_THAT(cpp20::span(digest2.get(), kSha256Length),
                 ElementsAreArray(uninitialized_digest.get(), kSha256Length));
   }
 
   // Start a hash operation in digest1, verify that this does not update the
   // initial hash value.
   digest1.Init();
-  EXPECT_THAT(fbl::Span(digest1.get(), kSha256Length),
+  EXPECT_THAT(cpp20::span(digest1.get(), kSha256Length),
               ElementsAreArray(uninitialized_digest.get(), kSha256Length));
 
   // Hash some nothing into the hash.  Again verify the digest is still
   // valid, but that the internal result is still full of nothing.
   digest1.Update(nullptr, 0);
-  EXPECT_THAT(fbl::Span(digest1.get(), kSha256Length),
+  EXPECT_THAT(cpp20::span(digest1.get(), kSha256Length),
               ElementsAreArray(uninitialized_digest.get(), kSha256Length));
 
   // Move the hash into digest2.  Verify that the context goes with the move
   // operation.
   Digest digest2(std::move(digest1));
-  EXPECT_THAT(fbl::Span(digest1.get(), kSha256Length),
+  EXPECT_THAT(cpp20::span(digest1.get(), kSha256Length),
               ElementsAreArray(uninitialized_digest.get(), kSha256Length));
 
   // Finish the hash operation started in digest1 which was moved into
@@ -225,15 +225,15 @@ TEST(DigestTest, Move) {
   Digest zero_digest;
   ASSERT_OK(zero_digest.Parse(kZeroDigest));
   digest2.Final();
-  EXPECT_THAT(fbl::Span(digest2.get(), kSha256Length),
+  EXPECT_THAT(cpp20::span(digest2.get(), kSha256Length),
               ElementsAreArray(zero_digest.get(), kSha256Length));
 
   // Move the result of the hash into a new digest3.  Verify that neither is
   // valid, but that the result was properly moved.
   Digest digest3(std::move(digest2));
-  EXPECT_THAT(fbl::Span(digest2.get(), kSha256Length),
+  EXPECT_THAT(cpp20::span(digest2.get(), kSha256Length),
               ElementsAreArray(uninitialized_digest.get(), kSha256Length));
-  EXPECT_THAT(fbl::Span(digest3.get(), kSha256Length),
+  EXPECT_THAT(cpp20::span(digest3.get(), kSha256Length),
               ElementsAreArray(zero_digest.get(), kSha256Length));
 }
 

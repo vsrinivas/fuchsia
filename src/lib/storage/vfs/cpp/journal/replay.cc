@@ -44,7 +44,7 @@ std::optional<const JournalEntryView> ParseEntry(storage::VmoBuffer* journal_buf
   // To know how much of the journal we need to parse, first observe only one block.
   storage::BlockBufferView small_view(journal_buffer, start, 1);
   const auto header = JournalHeaderView::Create(
-      fbl::Span<uint8_t>(static_cast<uint8_t*>(small_view.Data(0)), small_view.BlockSize()),
+      cpp20::span<uint8_t>(static_cast<uint8_t*>(small_view.Data(0)), small_view.BlockSize()),
       sequence_number);
 
   // This is not a header block.

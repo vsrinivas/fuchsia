@@ -4,11 +4,11 @@
 
 #include "src/lib/digest/node-digest.h"
 
+#include <lib/stdcompat/span.h>
 #include <stdlib.h>
 #include <zircon/assert.h>
 #include <zircon/status.h>
 
-#include <fbl/span.h>
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
@@ -103,14 +103,14 @@ TEST(NodeDigest, ResetAndAppend) {
     // All at once
     EXPECT_OK(node_digest.Reset(data_off, data_off + data_len));
     EXPECT_EQ(node_digest.Append(data, SIZE_MAX), data_len);
-    EXPECT_THAT(fbl::Span(actual.get(), kSha256Length),
+    EXPECT_THAT(cpp20::span(actual.get(), kSha256Length),
                 ElementsAreArray(expected.get(), kSha256Length));
     // Byte by byte
     EXPECT_OK(node_digest.Reset(data_off, data_off + data_len));
     for (size_t i = data_off; i < data_len; ++i) {
       EXPECT_EQ(node_digest.Append(data, 1), 1ul);
     }
-    EXPECT_THAT(fbl::Span(actual.get(), kSha256Length),
+    EXPECT_THAT(cpp20::span(actual.get(), kSha256Length),
                 ElementsAreArray(expected.get(), kSha256Length));
   }
 }
