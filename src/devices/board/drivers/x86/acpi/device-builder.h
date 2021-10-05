@@ -7,11 +7,12 @@
 
 #include <fidl/fuchsia.hardware.i2c/cpp/wire.h>
 #include <fidl/fuchsia.hardware.spi/cpp/wire.h>
-#include <lib/ddk/driver.h>
+#include <lib/ddk/binding.h>
+#include <lib/ddk/device.h>
 #include <stdint.h>
 
 #include "src/devices/board/drivers/x86/acpi/acpi.h"
-#include "src/devices/board/drivers/x86/acpi/device.h"
+#include "src/devices/board/drivers/x86/acpi/bus-type.h"
 
 namespace acpi {
 
@@ -88,8 +89,7 @@ class DeviceBuilder {
     return builder;
   }
 
-  zx::status<zx_device_t*> Build(acpi::Acpi* acpi, zx_device_t* platform_bus,
-                                 fidl::AnyArena& allocator);
+  zx::status<zx_device_t*> Build(acpi::Manager* acpi, zx_device_t* platform_bus);
 
   void SetBusType(BusType t) {
     ZX_ASSERT(bus_type_ == kUnknown || bus_type_ == t);
@@ -147,8 +147,8 @@ class DeviceBuilder {
   // Special HID/CID value for using a device tree "compatible" property. See
   // https://www.kernel.org/doc/html/latest/firmware-guide/acpi/enumeration.html#device-tree-namespace-link-device-id
   constexpr static const char* kDeviceTreeLinkID = "PRP0001";
-  zx::status<std::vector<uint8_t>> FidlEncodeMetadata(fidl::AnyArena& allocator);
-  zx::status<> BuildComposite(acpi::Acpi* acpi, zx_device_t* platform_bus,
+  zx::status<std::vector<uint8_t>> FidlEncodeMetadata();
+  zx::status<> BuildComposite(acpi::Manager* acpi, zx_device_t* platform_bus,
                               std::vector<zx_device_str_prop_t>& str_props);
   std::vector<zx_bind_inst_t> GetFragmentBindInsnsForChild(size_t child_index);
   std::vector<zx_bind_inst_t> GetFragmentBindInsnsForSelf();

@@ -32,6 +32,7 @@
 
 #include "acpi-private.h"
 #include "acpi/acpi.h"
+#include "acpi/manager.h"
 #include "errors.h"
 #include "methods.h"
 #include "src/devices/board/drivers/x86/acpi/resources.h"
@@ -427,8 +428,8 @@ zx_status_t pci_root_host_init(acpi::Acpi* acpi) {
 }
 
 zx_status_t pci_init(zx_device_t* parent, ACPI_HANDLE object, ACPI_DEVICE_INFO* info,
-                     acpi::Acpi* acpi, std::vector<pci_bdf_t> acpi_bdfs) {
-  zx_status_t status = pci_root_host_init(acpi);
+                     acpi::Manager* manager, std::vector<pci_bdf_t> acpi_bdfs) {
+  zx_status_t status = pci_root_host_init(manager->acpi());
   if (status != ZX_OK) {
     zxlogf(ERROR, "Error initializing PCI root host: %s", zx_status_get_string(status));
     return status;
@@ -444,7 +445,7 @@ zx_status_t pci_init(zx_device_t* parent, ACPI_HANDLE object, ACPI_DEVICE_INFO* 
   // ACPI names are stored as 4 bytes in a u32
   memcpy(dev_ctx.name, &info->Name, 4);
 
-  status = pci_init_segment_and_ecam(acpi, object, &dev_ctx);
+  status = pci_init_segment_and_ecam(manager->acpi(), object, &dev_ctx);
   if (status != ZX_OK) {
     zxlogf(ERROR, "Initializing %.*s ecam and bus information failed: %s",
            static_cast<int>(sizeof(dev_ctx.name)), dev_ctx.name, zx_status_get_string(status));

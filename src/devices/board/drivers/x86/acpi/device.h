@@ -7,26 +7,18 @@
 #include <fidl/fuchsia.hardware.acpi/cpp/wire.h>
 #include <fuchsia/hardware/acpi/cpp/banjo.h>
 #include <fuchsia/hardware/pciroot/cpp/banjo.h>
-#include <lib/async-loop/cpp/loop.h>
 #include <lib/ddk/binding.h>
 
 #include <utility>
 
 #include <acpica/acpi.h>
-#include <bind/fuchsia/acpi/cpp/fidl.h>
 #include <ddktl/device.h>
 #include <fbl/mutex.h>
 
+#include "src/devices/board/drivers/x86/acpi/manager.h"
 #include "src/devices/board/drivers/x86/acpi/resources.h"
 
 namespace acpi {
-enum BusType {
-  kUnknown = bind::fuchsia::acpi::BIND_ACPI_BUS_TYPE_UNKNOWN,
-  kPci = bind::fuchsia::acpi::BIND_ACPI_BUS_TYPE_PCI,
-  kSpi = bind::fuchsia::acpi::BIND_ACPI_BUS_TYPE_SPI,
-  kI2c = bind::fuchsia::acpi::BIND_ACPI_BUS_TYPE_I2C,
-};
-
 const char* BusTypeToString(BusType t);
 
 struct DevicePioResource {
@@ -82,29 +74,31 @@ using DeviceType = ddk::Device<::acpi::Device, ddk::Initializable,
                                ddk::Messageable<fuchsia_hardware_acpi::Device>::Mixin>;
 class Device : public DeviceType, public ddk::AcpiProtocol<Device, ddk::base_protocol> {
  public:
-  Device(acpi::Acpi* acpi, zx_device_t* parent, ACPI_HANDLE acpi_handle, zx_device_t* platform_bus)
+  Device(acpi::Manager* manager, zx_device_t* parent, ACPI_HANDLE acpi_handle,
+         zx_device_t* platform_bus)
       : DeviceType{parent},
-        loop_(&kAsyncLoopConfigNeverAttachToThread),
-        acpi_{acpi},
+        manager_{manager},
+        acpi_{manager->acpi()},
         acpi_handle_{acpi_handle},
         platform_bus_{platform_bus} {}
 
-  Device(acpi::Acpi* acpi, zx_device_t* parent, ACPI_HANDLE acpi_handle, zx_device_t* platform_bus,
-         std::vector<uint8_t> metadata, BusType bus_type, uint32_t bus_id)
+  Device(acpi::Manager* manager, zx_device_t* parent, ACPI_HANDLE acpi_handle,
+         zx_device_t* platform_bus, std::vector<uint8_t> metadata, BusType bus_type,
+         uint32_t bus_id)
       : DeviceType{parent},
-        loop_(&kAsyncLoopConfigNeverAttachToThread),
-        acpi_{acpi},
+        manager_{manager},
+        acpi_{manager->acpi()},
         acpi_handle_{acpi_handle},
         platform_bus_{platform_bus},
         metadata_{std::move(metadata)},
         bus_type_{bus_type},
         bus_id_{bus_id} {}
 
-  Device(acpi::Acpi* acpi, zx_device_t* parent, ACPI_HANDLE acpi_handle, zx_device_t* platform_bus,
-         std::vector<pci_bdf_t> pci_bdfs)
+  Device(acpi::Manager* manager, zx_device_t* parent, ACPI_HANDLE acpi_handle,
+         zx_device_t* platform_bus, std::vector<pci_bdf_t> pci_bdfs)
       : DeviceType{parent},
-        loop_(&kAsyncLoopConfigNeverAttachToThread),
-        acpi_{acpi},
+        manager_{manager},
+        acpi_{manager->acpi()},
         acpi_handle_{acpi_handle},
         platform_bus_{platform_bus},
         pci_bdfs_{std::move(pci_bdfs)} {}
@@ -134,8 +128,7 @@ class Device : public DeviceType, public ddk::AcpiProtocol<Device, ddk::base_pro
   std::vector<pci_bdf_t>& pci_bdfs() { return pci_bdfs_; }
 
  private:
-  bool started_loop_ = false;
-  async::Loop loop_;
+  acpi::Manager* manager_;
   acpi::Acpi* acpi_;
   // Handle to the corresponding ACPI node
   ACPI_HANDLE acpi_handle_;

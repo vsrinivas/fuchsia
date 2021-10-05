@@ -11,7 +11,9 @@
 #include <fbl/string_printf.h>
 
 #include "src/devices/board/drivers/x86/acpi/acpi.h"
+#include "src/devices/board/drivers/x86/acpi/device.h"
 #include "src/devices/board/drivers/x86/acpi/manager.h"
+#include "src/devices/board/drivers/x86/acpi/resources.h"
 #include "src/devices/lib/acpi/util.h"
 
 namespace acpi {
@@ -151,8 +153,7 @@ acpi::status<> DeviceBuilder::InferBusTypes(acpi::Acpi* acpi, fidl::AnyArena& al
   return result;
 }
 
-zx::status<zx_device_t*> DeviceBuilder::Build(acpi::Acpi* acpi, zx_device_t* platform_bus,
-                                              fidl::AnyArena& allocator) {
+zx::status<zx_device_t*> DeviceBuilder::Build(acpi::Manager* manager, zx_device_t* platform_bus) {
   if (parent_->zx_device_ == nullptr) {
     zxlogf(ERROR, "Parent has not been added to the tree yet!");
     return zx::error(ZX_ERR_BAD_STATE);
@@ -163,15 +164,15 @@ zx::status<zx_device_t*> DeviceBuilder::Build(acpi::Acpi* acpi, zx_device_t* pla
   }
   std::unique_ptr<Device> device;
   if (HasBusId() && bus_type_ != BusType::kPci) {
-    zx::status<std::vector<uint8_t>> metadata = FidlEncodeMetadata(allocator);
+    zx::status<std::vector<uint8_t>> metadata = FidlEncodeMetadata();
     if (metadata.is_error()) {
       zxlogf(ERROR, "Error while encoding metadata for '%s': %s", name(), metadata.status_string());
       return metadata.take_error();
     }
-    device = std::make_unique<Device>(acpi, parent_->zx_device_, handle_, platform_bus,
+    device = std::make_unique<Device>(manager, parent_->zx_device_, handle_, platform_bus,
                                       std::move(*metadata), bus_type_, GetBusId());
   } else {
-    device = std::make_unique<Device>(acpi, parent_->zx_device_, handle_, platform_bus);
+    device = std::make_unique<Device>(manager, parent_->zx_device_, handle_, platform_bus);
   }
 
   // Narrow our custom type down to zx_device_str_prop_t.
@@ -205,7 +206,7 @@ zx::status<zx_device_t*> DeviceBuilder::Build(acpi::Acpi* acpi, zx_device_t* pla
     return zx::error(result);
   }
   zx_device_ = device.release()->zxdev();
-  auto status = BuildComposite(acpi, platform_bus, str_props_for_ddkadd);
+  auto status = BuildComposite(manager, platform_bus, str_props_for_ddkadd);
   if (status.is_error()) {
     zxlogf(WARNING, "failed to publish composite acpi device '%s-composite': %d", name(),
            status.error_value());
@@ -215,9 +216,10 @@ zx::status<zx_device_t*> DeviceBuilder::Build(acpi::Acpi* acpi, zx_device_t* pla
   return zx::ok(zx_device_);
 }
 
-zx::status<std::vector<uint8_t>> DeviceBuilder::FidlEncodeMetadata(fidl::AnyArena& allocator) {
+zx::status<std::vector<uint8_t>> DeviceBuilder::FidlEncodeMetadata() {
   using SpiChannel = fuchsia_hardware_spi::wire::SpiChannel;
   using I2CChannel = fuchsia_hardware_i2c::wire::I2CChannel;
+  fidl::Arena<> allocator;
   return std::visit(
       [this, &allocator](auto&& arg) -> zx::status<std::vector<uint8_t>> {
         using T = std::decay_t<decltype(arg)>;
@@ -249,7 +251,7 @@ zx::status<std::vector<uint8_t>> DeviceBuilder::FidlEncodeMetadata(fidl::AnyAren
       bus_children_);
 }
 
-zx::status<> DeviceBuilder::BuildComposite(acpi::Acpi* acpi, zx_device_t* platform_bus,
+zx::status<> DeviceBuilder::BuildComposite(acpi::Manager* manager, zx_device_t* platform_bus,
                                            std::vector<zx_device_str_prop_t>& str_props) {
   if (!has_address_ || buses_.empty()) {
     // If a device doesn't have any bus resources or doesn't have an address on any of its buses,
@@ -323,7 +325,7 @@ zx::status<> DeviceBuilder::BuildComposite(acpi::Acpi* acpi, zx_device_t* platfo
   auto composite_name = fbl::StringPrintf("%s-composite", name());
   // Don't worry about any metadata, since it's present in the "acpi" parent.
   auto composite_device =
-      std::make_unique<Device>(acpi, parent_->zx_device_, handle_, platform_bus);
+      std::make_unique<Device>(manager, parent_->zx_device_, handle_, platform_bus);
   zx_status_t status = composite_device->DdkAddComposite(composite_name.data(), &composite_desc);
 
   if (status == ZX_OK) {

@@ -105,16 +105,23 @@ acpi::status<> Manager::ConfigureDiscoveredDevices() {
 }
 
 acpi::status<> Manager::PublishDevices(zx_device_t* platform_bus) {
+  zx_status_t result = StartFidlLoop();
+  if (result != ZX_OK) {
+    zxlogf(ERROR, "Failed to launch thread for ACPI FIDL requests: %s",
+           zx_status_get_string(result));
+    return acpi::error(AE_ERROR);
+  }
   for (auto handle : device_publish_order_) {
     DeviceBuilder* d = LookupDevice(handle);
     if (d == nullptr) {
       continue;
     }
 
-    auto status = d->Build(acpi_, platform_bus, allocator_);
+    auto status = d->Build(this, platform_bus);
     if (status.is_error()) {
       return acpi::error(AE_ERROR);
     }
+    zx_devices_.emplace(handle, status.value());
 
     uint32_t bus_type = d->GetBusType();
     if (bus_type == BusType::kPci) {
@@ -226,7 +233,7 @@ acpi::status<> Manager::PublishPciBus(zx_device_t* platform_bus, DeviceBuilder* 
     }
   }
 
-  if (pci_init(platform_bus, device->handle(), info.value().get(), acpi_, std::move(bdfs)) ==
+  if (pci_init(platform_bus, device->handle(), info.value().get(), this, std::move(bdfs)) ==
       ZX_OK) {
     published_pci_bus_ = true;
   }

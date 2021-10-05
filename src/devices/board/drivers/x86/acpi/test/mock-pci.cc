@@ -14,7 +14,7 @@ std::vector<pci_bdf_t> GetAcpiBdfs() { return std::move(stored_acpi_bdfs); }
 }  // namespace acpi::test
 
 zx_status_t pci_init(zx_device_t* platform_bus, ACPI_HANDLE object, ACPI_DEVICE_INFO* info,
-                     acpi::Acpi* acpi, std::vector<pci_bdf_t> acpi_bdfs) {
+                     acpi::Manager* acpi, std::vector<pci_bdf_t> acpi_bdfs) {
   acpi::test::stored_acpi_bdfs = std::move(acpi_bdfs);
   return ZX_OK;
 }

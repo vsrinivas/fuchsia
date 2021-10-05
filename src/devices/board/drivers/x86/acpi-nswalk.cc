@@ -147,13 +147,14 @@ zx_status_t acpi_suspend(uint8_t requested_state, bool enable_wake, uint8_t susp
   };
 }
 
-zx_status_t publish_acpi_devices(acpi::Acpi* acpi, zx_device_t* platform_bus,
+zx_status_t publish_acpi_devices(acpi::Manager* manager, zx_device_t* platform_bus,
                                  zx_device_t* acpi_root) {
   zx_status_t status = pwrbtn_init(acpi_root);
   if (status != ZX_OK) {
     zxlogf(ERROR, "acpi: failed to initialize pwrbtn device: %d", status);
   }
 
+  acpi::Acpi* acpi = manager->acpi();
   // TODO(fxbug.dev/81684): remove this once we have a proper solution for managing power of ACPI
   // devices.
   acpi::status<> acpi_status = acpi->WalkNamespace(
@@ -181,16 +182,15 @@ zx_status_t publish_acpi_devices(acpi::Acpi* acpi, zx_device_t* platform_bus,
     zxlogf(WARNING, "acpi: Error (%d) during fixup and metadata pass", acpi_status.error_value());
   }
 
-  acpi::Manager manager(acpi, acpi_root);
-  auto result = manager.DiscoverDevices();
+  auto result = manager->DiscoverDevices();
   if (result.is_error()) {
     zxlogf(INFO, "discover devices failed");
   }
-  result = manager.ConfigureDiscoveredDevices();
+  result = manager->ConfigureDiscoveredDevices();
   if (result.is_error()) {
     zxlogf(INFO, "configure failed");
   }
-  result = manager.PublishDevices(platform_bus);
+  result = manager->PublishDevices(platform_bus);
 
   // Now walk the ACPI namespace looking for devices we understand, and publish
   // them.  For now, publish only the first PCI bus we encounter.

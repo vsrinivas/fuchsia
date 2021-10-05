@@ -12,8 +12,9 @@
 #include <acpica/acpi.h>
 
 #include "src/devices/board/drivers/x86/acpi/acpi.h"
+#include "src/devices/board/drivers/x86/acpi/manager.h"
 
 zx_status_t pci_init(zx_device_t* parent, ACPI_HANDLE object, ACPI_DEVICE_INFO* info,
-                     acpi::Acpi* acpi, std::vector<pci_bdf_t> acpi_bdfs);
+                     acpi::Manager* acpi, std::vector<pci_bdf_t> acpi_bdfs);
 
 #endif  // SRC_DEVICES_BOARD_DRIVERS_X86_ACPI_PCI_H_

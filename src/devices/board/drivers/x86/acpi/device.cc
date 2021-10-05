@@ -14,6 +14,7 @@
 #include <fbl/auto_lock.h>
 
 #include "src/devices/board/drivers/x86/acpi/fidl.h"
+#include "src/devices/board/drivers/x86/acpi/manager.h"
 #include "src/devices/board/drivers/x86/include/errors.h"
 #include "src/devices/board/drivers/x86/include/sysmem.h"
 #include "src/devices/lib/iommu/iommu.h"
@@ -258,18 +259,14 @@ zx_status_t Device::AcpiRegisterSysmemHeap(uint64_t heap, zx::channel connection
 
 void Device::AcpiConnectServer(zx::channel server) {
   zx_status_t status = ZX_OK;
-  if (!started_loop_) {
-    status = loop_.StartThread("acpi-fidl-thread");
-  }
   if (status != ZX_OK) {
     zxlogf(ERROR, "Failed to start FIDL thread: %s", zx_status_get_string(status));
     return;
   }
 
-  started_loop_ = true;
-
   status = fidl::BindSingleInFlightOnly(
-      loop_.dispatcher(), fidl::ServerEnd<fuchsia_hardware_acpi::Device>(std::move(server)), this);
+      manager_->fidl_dispatcher(),
+      fidl::ServerEnd<fuchsia_hardware_acpi::Device>(std::move(server)), this);
   if (status != ZX_OK) {
     zxlogf(ERROR, "Failed to bind channel: %s", zx_status_get_string(status));
   }

@@ -10,15 +10,19 @@
 #include <zxtest/zxtest.h>
 
 #include "lib/fidl/llcpp/wire_messaging.h"
+#include "src/devices/board/drivers/x86/acpi/manager.h"
 #include "src/devices/board/drivers/x86/acpi/test/device.h"
 #include "src/devices/board/drivers/x86/acpi/test/mock-acpi.h"
 #include "src/devices/testing/mock-ddk/mock-device.h"
 
 class AcpiDeviceTest : public zxtest::Test {
  public:
-  AcpiDeviceTest() : mock_root_(MockDevice::FakeRootParent()) {}
+  AcpiDeviceTest() : mock_root_(MockDevice::FakeRootParent()), manager_(&acpi_, mock_root_.get()) {}
 
-  void SetUp() override { acpi_.SetDeviceRoot(std::make_unique<acpi::test::Device>("\\")); }
+  void SetUp() override {
+    acpi_.SetDeviceRoot(std::make_unique<acpi::test::Device>("\\"));
+    ASSERT_OK(manager_.StartFidlLoop());
+  }
 
   void SetUpFidlServer(std::unique_ptr<acpi::Device> device) {
     ASSERT_OK(device->DdkAdd("test-acpi-device"));
@@ -39,13 +43,14 @@ class AcpiDeviceTest : public zxtest::Test {
 
  protected:
   std::shared_ptr<MockDevice> mock_root_;
+  acpi::Manager manager_;
   acpi::test::MockAcpi acpi_;
   fidl::WireSyncClient<fuchsia_hardware_acpi::Device> fidl_client_;
 };
 
 TEST_F(AcpiDeviceTest, TestBanjoConnectServer) {
-  auto device =
-      std::make_unique<acpi::Device>(&acpi_, mock_root_.get(), ACPI_ROOT_OBJECT, mock_root_.get());
+  auto device = std::make_unique<acpi::Device>(&manager_, mock_root_.get(), ACPI_ROOT_OBJECT,
+                                               mock_root_.get());
   SetUpFidlServer(std::move(device));
 
   auto result = fidl_client_.GetBusId();
@@ -55,8 +60,8 @@ TEST_F(AcpiDeviceTest, TestBanjoConnectServer) {
 }
 
 TEST_F(AcpiDeviceTest, TestBanjoConnectServerTwice) {
-  auto device =
-      std::make_unique<acpi::Device>(&acpi_, mock_root_.get(), ACPI_ROOT_OBJECT, mock_root_.get());
+  auto device = std::make_unique<acpi::Device>(&manager_, mock_root_.get(), ACPI_ROOT_OBJECT,
+                                               mock_root_.get());
   SetUpFidlServer(std::move(device));
   {
     auto result = fidl_client_.GetBusId();
@@ -84,9 +89,9 @@ TEST_F(AcpiDeviceTest, TestBanjoConnectServerTwice) {
 }
 
 TEST_F(AcpiDeviceTest, TestGetBusId) {
-  auto device =
-      std::make_unique<acpi::Device>(&acpi_, mock_root_.get(), ACPI_ROOT_OBJECT, mock_root_.get(),
-                                     std::vector<uint8_t>(), acpi::BusType::kI2c, 37);
+  auto device = std::make_unique<acpi::Device>(&manager_, mock_root_.get(), ACPI_ROOT_OBJECT,
+                                               mock_root_.get(), std::vector<uint8_t>(),
+                                               acpi::BusType::kI2c, 37);
   SetUpFidlServer(std::move(device));
 
   auto result = fidl_client_.GetBusId();

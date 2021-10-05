@@ -551,10 +551,10 @@ zx_protocol_device_t acpi_device_proto = [] {
 // This pci_init initializes the kernel pci driver and is not compiled in at the same time as the
 // userspace pci driver under development.
 zx_status_t pci_init(zx_device_t* platform_bus, ACPI_HANDLE object, ACPI_DEVICE_INFO* info,
-                     acpi::Acpi* acpi, std::vector<pci_bdf_t> acpi_bdfs) {
+                     acpi::Manager* manager, std::vector<pci_bdf_t> acpi_bdfs) {
   // Report current resources to kernel PCI driver
   // Please do not use get_root_resource() in new code. See fxbug.dev/31358.
-  zx_status_t status = pci_report_current_resources(acpi, get_root_resource());
+  zx_status_t status = pci_report_current_resources(manager->acpi(), get_root_resource());
   if (status != ZX_OK) {
     zxlogf(ERROR, "acpi: WARNING: ACPI failed to report all current resources!");
   }
@@ -562,7 +562,7 @@ zx_status_t pci_init(zx_device_t* platform_bus, ACPI_HANDLE object, ACPI_DEVICE_
   // Initialize kernel PCI driver
   zx_pci_init_arg_t* arg;
   uint32_t arg_size;
-  status = get_pci_init_arg(acpi, &arg, &arg_size);
+  status = get_pci_init_arg(manager->acpi(), &arg, &arg_size);
   if (status != ZX_OK) {
     zxlogf(ERROR, "acpi: erorr %d in get_pci_init_arg", status);
     return AE_ERROR;
@@ -583,7 +583,7 @@ zx_status_t pci_init(zx_device_t* platform_bus, ACPI_HANDLE object, ACPI_DEVICE_
   device_add_args_t args{
       .name = "pci",
   };
-  auto device = std::make_unique<acpi::Device>(acpi, platform_bus, object, platform_bus,
+  auto device = std::make_unique<acpi::Device>(manager, platform_bus, object, platform_bus,
                                                std::move(acpi_bdfs));
 
   args.version = DEVICE_ADD_ARGS_VERSION;

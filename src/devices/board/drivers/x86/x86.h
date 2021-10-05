@@ -18,6 +18,7 @@
 #include <fbl/vector.h>
 
 #include "acpi/acpi.h"
+#include "acpi/manager.h"
 #include "src/devices/lib/iommu/iommu.h"
 
 namespace x86 {
@@ -55,6 +56,8 @@ class X86 : public DeviceType {
   // Requires that ACPI has been initialised.
   zx_status_t GetAcpiTableEntries(fbl::Vector<fuchsia_hardware_acpi::wire::TableInfo>* entries);
 
+  acpi::Acpi* acpi() { return acpi_.get(); }
+
  private:
   X86(const X86&) = delete;
   X86(X86&&) = delete;
@@ -79,6 +82,7 @@ class X86 : public DeviceType {
 
   thrd_t thread_;
 
+  std::unique_ptr<acpi::Manager> acpi_manager_;
   std::unique_ptr<acpi::Acpi> acpi_;
   // Whether the global ACPICA initialization has been performed or not
   bool acpica_initialized_ = false;

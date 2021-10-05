@@ -49,7 +49,7 @@ int X86::Thread() {
     return status;
   }
 
-  status = publish_acpi_devices(acpi_.get(), parent(), zxdev());
+  status = publish_acpi_devices(acpi_manager_.get(), parent(), zxdev());
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s: publish_acpi_devices() failed: %d", __func__, status);
     return status;
@@ -177,6 +177,9 @@ zx_status_t X86::Bind() {
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s: Could not register suspend callback: %d", __func__, status);
   }
+
+  // Create the ACPI manager.
+  acpi_manager_ = std::make_unique<acpi::Manager>(acpi_.get(), zxdev());
 
   // Start up our protocol helpers and platform devices.
   return Start();

@@ -11,8 +11,11 @@
 
 #include "acpi/acpi-impl.h"
 #include "acpi/acpi.h"
+#include "acpi/manager.h"
+#include "x86.h"
 
-zx_status_t publish_acpi_devices(acpi::Acpi* acpi, zx_device_t* parent, zx_device_t* acpi_root);
+zx_status_t publish_acpi_devices(acpi::Manager* manager, zx_device_t* parent,
+                                 zx_device_t* acpi_root);
 zx_status_t acpi_suspend(uint8_t requested_state, bool enable_wake, uint8_t suspend_reason,
                          uint8_t* out_state);
 
