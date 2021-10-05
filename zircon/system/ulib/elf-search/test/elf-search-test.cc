@@ -26,7 +26,7 @@
 
 namespace {
 
-void WriteHeaders(const fbl::Span<const Elf64_Phdr>& phdrs, const zx::vmo& vmo) {
+void WriteHeaders(const cpp20::span<const Elf64_Phdr>& phdrs, const zx::vmo& vmo) {
   const Elf64_Ehdr ehdr = {
 #if defined(__clang__)
 #pragma GCC diagnostic push
@@ -66,7 +66,7 @@ void WriteHeaders(const fbl::Span<const Elf64_Phdr>& phdrs, const zx::vmo& vmo) 
 
 // TODO(jakehehrlich): Switch all uses of uint8_t to std::byte once libc++ lands.
 
-void WriteBuildID(fbl::Span<const uint8_t> build_id, const zx::vmo& vmo, uint64_t note_offset) {
+void WriteBuildID(cpp20::span<const uint8_t> build_id, const zx::vmo& vmo, uint64_t note_offset) {
   uint8_t buf[64];
   const Elf64_Nhdr nhdr = {
       .n_namesz = sizeof(ELF_NOTE_GNU),
@@ -86,8 +86,8 @@ void WriteBuildID(fbl::Span<const uint8_t> build_id, const zx::vmo& vmo, uint64_
 
 struct Module {
   std::string_view name;
-  fbl::Span<const Elf64_Phdr> phdrs;
-  fbl::Span<const uint8_t> build_id;
+  cpp20::span<const Elf64_Phdr> phdrs;
+  cpp20::span<const uint8_t> build_id;
   zx::vmo vmo;
 };
 

@@ -31,7 +31,6 @@ zx_library("zbitl") {
     "//zircon/third_party/ulib/cksum:headers",
 
     # <lib/zbitl/items/bootfs.h> has #include <fbl/alloc_checker.h>.
-    # <lib/zbitl/items/mem_config.h> has #include <fbl/span.h>.
     "//zircon/system/ulib/fbl:headers",
 
     # <lib/zbitl/view.h> has #include <lib/fitx/result.h>.
@@ -81,9 +80,6 @@ source_set("internal.decompress-zstd") {
 
     # <lib/zbitl/decompress.h> has #include <lib/fitx/result.h>.
     "//zircon/system/ulib/zxc",
-
-    # <lib/zbitl/decompress.h> has #include <fbl/span.h>.
-    "//zircon/system/ulib/fbl",
   ]
   include_dirs = [ "include" ]
 

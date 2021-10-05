@@ -5,12 +5,11 @@
 #include "relocation.h"
 
 #include <lib/static-pie/static-pie.h>
+#include <lib/stdcompat/span.h>
 
 #include <atomic>
 #include <climits>
 #include <cstdint>
-
-#include <fbl/span.h>
 
 #include "elf-types.h"
 
@@ -28,7 +27,7 @@ void ApplyFixup(const Program& program, LinkTimeAddr addr, F&& fixup) {
   program.WriteWord(addr, fixed_word.value());
 }
 
-void ApplyRelaRelocs(const Program& program, fbl::Span<const Elf64RelaEntry> table) {
+void ApplyRelaRelocs(const Program& program, cpp20::span<const Elf64RelaEntry> table) {
   // We require that all entries in the table are `R_RELATIVE` entries.
   for (const Elf64RelaEntry& entry : table) {
     ZX_DEBUG_ASSERT(entry.info.type() == ElfRelocType::kRelative);
@@ -41,7 +40,7 @@ void ApplyRelaRelocs(const Program& program, fbl::Span<const Elf64RelaEntry> tab
   }
 }
 
-void ApplyRelRelocs(const Program& program, fbl::Span<const Elf64RelEntry> table) {
+void ApplyRelRelocs(const Program& program, cpp20::span<const Elf64RelEntry> table) {
   // We require that all entries in the table are `R_RELATIVE` entries.
   for (const Elf64RelEntry& entry : table) {
     ZX_DEBUG_ASSERT(entry.info.type() == ElfRelocType::kRelative);
@@ -53,7 +52,7 @@ void ApplyRelRelocs(const Program& program, fbl::Span<const Elf64RelEntry> table
   }
 }
 
-void ApplyRelrRelocs(const Program& program, fbl::Span<const uint64_t> table) {
+void ApplyRelrRelocs(const Program& program, cpp20::span<const uint64_t> table) {
   LinkTimeAddr address = LinkTimeAddr(0);
 
   for (uint64_t value : table) {
@@ -91,7 +90,7 @@ void ApplyRelrRelocs(const Program& program, fbl::Span<const uint64_t> table) {
   }
 }
 
-void ApplyDynamicRelocs(Program& program, fbl::Span<const Elf64DynamicEntry> table) {
+void ApplyDynamicRelocs(Program& program, cpp20::span<const Elf64DynamicEntry> table) {
   // Locations and sizes of the rel, rela, and relr tables.
   struct RelocationTable {
     LinkTimeAddr start = LinkTimeAddr(0);  // Address of the table.
@@ -155,18 +154,18 @@ void ApplyDynamicRelocs(Program& program, fbl::Span<const Elf64DynamicEntry> tab
 
   // Apply any relocations.
   {
-    fbl::Span<const uint64_t> relr_span =
+    cpp20::span<const uint64_t> relr_span =
         program.MapRegion<const uint64_t>(relr_table.start, relr_table.size_bytes);
     ApplyRelrRelocs(program, relr_span);
   }
   {
-    fbl::Span<const Elf64RelaEntry> rela_span =
+    cpp20::span<const Elf64RelaEntry> rela_span =
         program.MapRegion<const Elf64RelaEntry>(rela_table.start, rela_table.size_bytes);
     // Only the first `num_relative_relocs` will be R_RELATIVE entries.
     ApplyRelaRelocs(program, rela_span.subspan(0, rela_table.num_relative_relocs));
   }
   {
-    fbl::Span<const Elf64RelEntry> rel_span =
+    cpp20::span<const Elf64RelEntry> rel_span =
         program.MapRegion<const Elf64RelEntry>(rel_table.start, rel_table.size_bytes);
     // Only the first `num_relative_relocs` will be R_RELATIVE entries.
     ApplyRelRelocs(program, rel_span.subspan(0, rel_table.num_relative_relocs));

@@ -4,14 +4,15 @@
 
 #include "relocation.h"
 
-#include <fbl/span.h>
+#include <lib/stdcompat/span.h>
+
 #include <gtest/gtest.h>
 
 namespace static_pie {
 namespace {
 
 TEST(ApplyRelRelocs, EmptyTable) {
-  Program program{fbl::Span<std::byte>{}, LinkTimeAddr(0), RunTimeAddr(0)};
+  Program program{cpp20::span<std::byte>{}, LinkTimeAddr(0), RunTimeAddr(0)};
   ApplyRelRelocs(program, {});
 }
 
@@ -26,7 +27,7 @@ TEST(ApplyRelRelocs, ApplyRelocs) {
       {LinkTimeAddr(8), Elf64RelInfo::OfType(ElfRelocType::kRelative)},
       {LinkTimeAddr(24), Elf64RelInfo::OfType(ElfRelocType::kRelative)},
   };
-  ApplyRelRelocs(Program(fbl::as_writable_bytes(fbl::Span(program)), LinkTimeAddr(0),
+  ApplyRelRelocs(Program(cpp20::as_writable_bytes(cpp20::span(program)), LinkTimeAddr(0),
                          RunTimeAddr{0xaaaaaaaa'aaaaaaaa}),
                  entries);
 
@@ -39,7 +40,7 @@ TEST(ApplyRelRelocs, ApplyRelocs) {
 }
 
 TEST(ApplyRelaRelocs, EmptyTable) {
-  Program program{fbl::Span<std::byte>{}, LinkTimeAddr(0), RunTimeAddr(0)};
+  Program program{cpp20::span<std::byte>{}, LinkTimeAddr(0), RunTimeAddr(0)};
   ApplyRelaRelocs(program, {});
 }
 
@@ -53,7 +54,7 @@ TEST(ApplyRelaRelocs, ApplyRelocs) {
   constexpr Elf64RelaEntry entries[] = {
       {LinkTimeAddr(8), Elf64RelInfo::OfType(ElfRelocType::kRelative), 0x11111111'11111111},
       {LinkTimeAddr(24), Elf64RelInfo::OfType(ElfRelocType::kRelative), 0x33333333'33333333}};
-  ApplyRelaRelocs(Program(fbl::as_writable_bytes(fbl::Span(program)), LinkTimeAddr(0),
+  ApplyRelaRelocs(Program(cpp20::as_writable_bytes(cpp20::span(program)), LinkTimeAddr(0),
                           RunTimeAddr(0xaaaaaaaa'aaaaaaaa)),
                   entries);
 
@@ -66,7 +67,7 @@ TEST(ApplyRelaRelocs, ApplyRelocs) {
 }
 
 TEST(ApplyRelrRelocs, EmptyTable) {
-  Program program{fbl::Span<std::byte>{}, LinkTimeAddr(0), RunTimeAddr(0)};
+  Program program{cpp20::span<std::byte>{}, LinkTimeAddr(0), RunTimeAddr(0)};
   ApplyRelrRelocs(program, {});
 }
 
@@ -79,7 +80,7 @@ TEST(ApplyRelrRelocs, SingleReloc) {
   constexpr uint64_t relocs[] = {
       0x00000000'00000008,
   };
-  ApplyRelrRelocs(Program(fbl::as_writable_bytes(fbl::Span(program)), LinkTimeAddr(0),
+  ApplyRelrRelocs(Program(cpp20::as_writable_bytes(cpp20::span(program)), LinkTimeAddr(0),
                           RunTimeAddr(0xffffffff'00000000)),
                   relocs);
   EXPECT_EQ(program[1], 0xffffffff'00000001u);
@@ -96,7 +97,7 @@ TEST(ApplyRelrRelocs, NoBitmaps) {
       0x00000000'00000018,  // update index 3.
       0x00000000'00000028,  // update index 5.
   };
-  ApplyRelrRelocs(Program(fbl::as_writable_bytes(fbl::Span(program)), LinkTimeAddr(0),
+  ApplyRelrRelocs(Program(cpp20::as_writable_bytes(cpp20::span(program)), LinkTimeAddr(0),
                           RunTimeAddr(0xffffffff'00000000)),
                   relocs);
 
@@ -118,7 +119,7 @@ TEST(ApplyRelrRelocs, SingleBitmap) {
       0x00000000'00000008,  // update index 1.
       0x00000000'00000015,  // 0b10101 ; update index {prev + 2, prev + 4}.
   };
-  ApplyRelrRelocs(Program(fbl::as_writable_bytes(fbl::Span(program)), LinkTimeAddr(0),
+  ApplyRelrRelocs(Program(cpp20::as_writable_bytes(cpp20::span(program)), LinkTimeAddr(0),
                           RunTimeAddr(0xffffffff'00000000)),
                   relocs);
   EXPECT_EQ(program[0], 0x00000000'00000000u);
@@ -143,7 +144,7 @@ TEST(ApplyRelrRelocs, MultipleBitmaps) {
       0x55555555'55555555,  // 0b0101010 ... 101010101
       0xaaaaaaaa'aaaaaaab,  // 0b1010101 ... 010101011
   };
-  ApplyRelrRelocs(Program(fbl::as_writable_bytes(fbl::Span(program.data(), program.size())),
+  ApplyRelrRelocs(Program(cpp20::as_writable_bytes(cpp20::span(program.data(), program.size())),
                           LinkTimeAddr(0), RunTimeAddr(0xffffffff'00000000)),
                   relocs);
 
@@ -158,7 +159,7 @@ TEST(ApplyRelrRelocs, MultipleBitmaps) {
 }
 
 TEST(ApplyDynamicRelocs, EmptyTable) {
-  Program program{fbl::Span<std::byte>{}, LinkTimeAddr(0), RunTimeAddr(0)};
+  Program program{cpp20::span<std::byte>{}, LinkTimeAddr(0), RunTimeAddr(0)};
   ApplyDynamicRelocs(program, {});
 }
 
@@ -179,7 +180,7 @@ class BinaryWriter {
     return link_addr_ + offset;
   }
 
-  fbl::Span<std::byte> data() { return {data_.data(), data_.size()}; }
+  cpp20::span<std::byte> data() { return {data_.data(), data_.size()}; }
 
  private:
   std::vector<std::byte> data_;

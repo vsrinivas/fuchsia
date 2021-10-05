@@ -12,11 +12,11 @@ namespace static_pie {
 extern "C" __LOCAL const Elf64DynamicEntry _DYNAMIC[];
 
 void ApplyDynamicRelocationsToSelf(uintptr_t link_address, uintptr_t load_address) {
-  Program program(fbl::Span(reinterpret_cast<std::byte*>(load_address), SIZE_MAX),
+  Program program(cpp20::span(reinterpret_cast<std::byte*>(load_address), SIZE_MAX),
                   LinkTimeAddr(link_address), RunTimeAddr(load_address));
 
   // Apply relocations.
-  ApplyDynamicRelocs(program, fbl::Span<const Elf64DynamicEntry>(_DYNAMIC, SIZE_MAX));
+  ApplyDynamicRelocs(program, cpp20::span<const Elf64DynamicEntry>(_DYNAMIC, SIZE_MAX));
 
   // Compiler barrier. Ensure stores are committed prior to return.
   std::atomic_signal_fence(std::memory_order_seq_cst);

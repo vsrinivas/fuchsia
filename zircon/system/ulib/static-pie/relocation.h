@@ -6,9 +6,9 @@
 #define ZIRCON_SYSTEM_ULIB_STATIC_PIE_RELOCATION_H_
 
 #include <lib/static-pie/static-pie.h>
+#include <lib/stdcompat/span.h>
 
 #include <fbl/hard_int.h>
-#include <fbl/span.h>
 
 #include "elf-types.h"
 
@@ -18,7 +18,7 @@ namespace static_pie {
 // Represents an ELF program mapped into memory at some offset.
 class Program {
  public:
-  explicit Program(fbl::Span<std::byte> program, LinkTimeAddr link_addr, RunTimeAddr load_addr)
+  explicit Program(cpp20::span<std::byte> program, LinkTimeAddr link_addr, RunTimeAddr load_addr)
       : base_(program.data()), link_addr_(link_addr), load_addr_(load_addr) {
     ZX_DEBUG_ASSERT(IsAlignedFor<uint64_t>(base_));
   }
@@ -35,11 +35,11 @@ class Program {
     *reinterpret_cast<uint64_t*>(base_ + (address - link_addr_)) = value;
   }
 
-  // Return an fbl::Span<T> to the given region of memory.
+  // Return an cpp20::span<T> to the given region of memory.
   template <typename T>
-  fbl::Span<T> MapRegion(LinkTimeAddr address, size_t size) {
+  cpp20::span<T> MapRegion(LinkTimeAddr address, size_t size) {
     ZX_DEBUG_ASSERT(IsAlignedFor<T>(base_ + (address - link_addr_)));
-    return fbl::Span<T>(reinterpret_cast<T*>(base_ + (address - link_addr_)), size / sizeof(T));
+    return cpp20::span<T>(reinterpret_cast<T*>(base_ + (address - link_addr_)), size / sizeof(T));
   }
 
   // Link and load address of this program.
@@ -62,12 +62,12 @@ class Program {
 };
 
 // Apply relocations in the given Rel/Rela/Relr table.
-void ApplyRelaRelocs(const Program& program, fbl::Span<const Elf64RelaEntry> table);
-void ApplyRelRelocs(const Program& program, fbl::Span<const Elf64RelEntry> table);
-void ApplyRelrRelocs(const Program& program, fbl::Span<const uint64_t> table);
+void ApplyRelaRelocs(const Program& program, cpp20::span<const Elf64RelaEntry> table);
+void ApplyRelRelocs(const Program& program, cpp20::span<const Elf64RelEntry> table);
+void ApplyRelrRelocs(const Program& program, cpp20::span<const uint64_t> table);
 
 // Apply the relocations specified in the given ".dynamic" table.
-void ApplyDynamicRelocs(Program& program, fbl::Span<const Elf64DynamicEntry> table);
+void ApplyDynamicRelocs(Program& program, cpp20::span<const Elf64DynamicEntry> table);
 
 }  // namespace static_pie
 
