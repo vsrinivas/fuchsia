@@ -19,7 +19,7 @@ type LogsIterator = flexible resource union {
 };
 
 /// Error for `LaunchSuite` call.
-type LaunchError = strict enum {
+type LaunchError = flexible enum {
     /// There were insufficient resources to perform the operation.
     RESOURCE_UNAVAILABLE = 1;
 
@@ -51,7 +51,7 @@ type Case = table {
 
 /// Iterator for listing available test cases.
 protocol CaseIterator {
-    /// Returns the next batch of test cases. 
+    /// Returns the next batch of test cases.
     /// Empty vector if no more test cases.
     GetNext() -> (struct {
         cases vector<Case>:MAX;
@@ -177,7 +177,7 @@ type RunEvent = resource table {
 /// Various events for run execution. The first event for a test run will
 /// always be `run_started`. `run_stopped` fires when the test run stops
 /// and will always fire after `run_started`.
-type RunEventPayload = strict resource union {
+type RunEventPayload = flexible resource union {
     /// The test run started execution.
     1: run_started RunStarted;
     /// The test run stopped executing.
@@ -225,7 +225,7 @@ type SuiteEvent = resource table {
 /// order. There can be some `case_artifact` between `case_stopped` and
 /// `case_finished`. `suite_stopped` event will always fire when the whole
 /// suite has finished executing. Note `suite_artifact` may fire at any time.
-type SuiteEventPayload = strict resource union {
+type SuiteEventPayload = flexible resource union {
     /// A case was found.
     1: case_found CaseFound;
 

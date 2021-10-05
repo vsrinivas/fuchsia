@@ -9,7 +9,7 @@ use {
     fidl_fuchsia_io as fio,
     fidl_fuchsia_test_manager::{
         self as ftest_manager, SuiteControllerProxy, SuiteEvent as FidlSuiteEvent,
-        SuiteEventPayload as FidlSuiteEventPayload,
+        SuiteEventPayload as FidlSuiteEventPayload, SuiteEventPayloadUnknown,
     },
     fuchsia_async as fasync,
     futures::{channel::mpsc, prelude::*},
@@ -545,6 +545,7 @@ impl FidlSuiteEventProcessor {
                 }),
             }
             .into(),
+            SuiteEventPayloadUnknown!() => panic!("Unrecognized SuiteEvent"),
         };
         if let Some(item) = e {
             sender.send(item).await.context("Cannot send event")?;
@@ -589,6 +590,7 @@ impl From<ftest_manager::LaunchError> for SuiteLaunchError {
             }
             ftest_manager::LaunchError::CaseEnumeration => SuiteLaunchError::CaseEnumeration,
             ftest_manager::LaunchError::InternalError => SuiteLaunchError::InternalError,
+            ftest_manager::LaunchErrorUnknown!() => panic!("Encountered unknown launch error"),
         }
     }
 }

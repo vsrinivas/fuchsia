@@ -129,6 +129,7 @@ pub fn convert_launch_error_to_str(e: ftest_manager::LaunchError) -> &'static st
             https://fuchsia.dev/fuchsia-src/development/components/v2/troubleshooting#troubleshoot-test"
         }
         ftest_manager::LaunchError::InternalError => "Internal error, please file bug",
+        ftest_manager::LaunchErrorUnknown!() => "Unrecognized launch error",
     }
 }
 
@@ -572,6 +573,9 @@ async fn collect_results_for_suite(
                                     return Err(anyhow::anyhow!("outcome '{:?}' not supported", e));
                                 }
                             };
+                        }
+                        ftest_manager::SuiteEventPayloadUnknown!() => {
+                            warn!("Encountered unrecognized suite event");
                         }
                     }
                 }
