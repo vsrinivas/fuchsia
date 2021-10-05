@@ -333,9 +333,9 @@ impl FlatlandViewStrategy {
             buffer_count: None,
             image_id,
             image_index,
+            frame_buffer: None,
             app_sender,
             mouse_cursor_position: None,
-            display_info: None,
         }
     }
 

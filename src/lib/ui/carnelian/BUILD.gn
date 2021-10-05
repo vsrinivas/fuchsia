@@ -23,10 +23,6 @@ declare_args() {
 
   # Include a config in the example packages to attempt to use Spinel
   use_spinel_for_carnelian_examples = false
-
-  # Include a config in the example packages to attempt to use view mode
-  # direct.
-  use_direct_for_carnelian_examples = false
 }
 
 rustc_library("carnelian") {
@@ -145,8 +141,8 @@ rustc_library("carnelian") {
     "src/view.rs",
     "src/view/strategies.rs",
     "src/view/strategies/base.rs",
-    "src/view/strategies/display_direct.rs",
     "src/view/strategies/flatland.rs",
+    "src/view/strategies/framebuffer.rs",
     "src/view/strategies/scenic.rs",
   ]
 
@@ -512,16 +508,6 @@ resource("spinel_config") {
   outputs = [ "data/config/carnelian.toml" ]
 }
 
-resource("direct_config") {
-  sources = [ "config/direct_config.toml" ]
-  outputs = [ "data/config/carnelian.toml" ]
-}
-
-resource("spinel_direct_config") {
-  sources = [ "config/spinel_direct_config.toml" ]
-  outputs = [ "data/config/carnelian.toml" ]
-}
-
 # TODO: add example that makes use of a pre-copy shader.
 # resource("shaders") {
 #  sources = [
@@ -537,12 +523,8 @@ template("carnelian_example") {
   if (carnelian_enable_vulkan_validation) {
     example_deps += [ "//src/lib/vulkan/validation_layers" ]
   }
-  if (use_spinel_for_carnelian_examples && use_direct_for_carnelian_examples) {
-    example_deps += [ ":spinel_direct_config" ]
-  } else if (use_spinel_for_carnelian_examples) {
+  if (use_spinel_for_carnelian_examples) {
     example_deps += [ ":spinel_config" ]
-  } else if (use_direct_for_carnelian_examples) {
-    example_deps += [ ":direct_config" ]
   }
   fuchsia_package_with_single_component(target_name) {
     forward_variables_from(invoker, [ "manifest" ])
