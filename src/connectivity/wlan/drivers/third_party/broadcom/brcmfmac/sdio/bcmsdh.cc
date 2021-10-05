@@ -50,7 +50,6 @@
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/defs.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/device.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/linuxisms.h"
-#include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/macros.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/netbuf.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/sdio/sdio.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/soc.h"
@@ -112,7 +111,7 @@ zx_status_t brcmf_sdiod_get_bootloader_macaddr(struct brcmf_sdio_dev* sdiodev, u
   memcpy(macaddr, bootloader_macaddr, 6);
   BRCMF_DBG(SDIO, "got bootloader mac address");
 #if !defined(NDEBUG)
-  BRCMF_DBG(SDIO, "  address: " MAC_FMT_STR, MAC_FMT_ARGS(macaddr));
+  BRCMF_DBG(SDIO, "  address: " FMT_MAC, FMT_MAC_ARGS(macaddr));
 #endif /* !defined(NDEBUG) */
   return ZX_OK;
 }

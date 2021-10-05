@@ -1,6 +1,9 @@
 // Copyright 2021 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be found in the LICENSE file.
 
+// Test code for anything related to string formating for logging.
+// Example: formatting for ssid, mac address, etc.
+
 #include <fuchsia/wlan/ieee80211/cpp/fidl.h>
 
 #include "log_test.h"
@@ -58,5 +61,12 @@ TEST(SsidText, FMTTest) {
   char ssid[strlen(exp_ssid) + 1];
   snprintf(ssid, sizeof(ssid), FMT_SSID, "test");
   EXPECT_STREQ(exp_ssid, ssid);
+}
+
+TEST(MacTest, FMTTest) {
+  uint8_t mac_addr[6] = {0, 1, 2, 3, 4, 5};
+  char mac_str[20];
+  sprintf(mac_str, FMT_MAC, FMT_MAC_ARGS(mac_addr));
+  EXPECT_STREQ("00:01:02:03:04:05", mac_str);
 }
 }  // namespace wlan::drivers

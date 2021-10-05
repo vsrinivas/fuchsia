@@ -98,4 +98,7 @@ class Log {
 #define FMT_SSID_VECT(ssid) wlan::drivers::Log::SsidVect2Str(ssid).c_str()
 #define FMT_SSID_BYTES(ssid, len) wlan::drivers::Log::SsidBytes2Str(ssid, len).c_str()
 
+#define FMT_MAC "%02x:%02x:%02x:%02x:%02x:%02x"
+#define FMT_MAC_ARGS(arr) (arr)[0], (arr)[1], (arr)[2], (arr)[3], (arr)[4], (arr)[5]
+
 #endif  // SRC_CONNECTIVITY_WLAN_DRIVERS_LIB_LOG_CPP_INCLUDE_WLAN_DRIVERS_LOG_H_

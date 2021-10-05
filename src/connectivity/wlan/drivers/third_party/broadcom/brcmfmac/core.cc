@@ -39,7 +39,6 @@
 #include "fwil_types.h"
 #include "inspect/device_inspect.h"
 #include "linuxisms.h"
-#include "macros.h"
 #include "netbuf.h"
 #include "proto.h"
 #include "workqueue.h"

@@ -26,7 +26,6 @@
 #include "debug.h"
 #include "fwil.h"
 #include "linuxisms.h"
-#include "macros.h"
 #include "proto.h"
 #include "third_party/bcmdhd/crossdriver/wlioctl.h"
 #include "workqueue.h"
@@ -211,8 +210,8 @@ void brcmf_fweh_handle_if_event(struct brcmf_pub* drvr, struct brcmf_event_msg* 
   ifp = drvr->iflist[ifevent->bsscfgidx];
 
   if (ifevent->action == BRCMF_E_IF_ADD) {
-    BRCMF_DBG(EVENT, "adding ifname '%s' with mac " MAC_FMT_STR, emsg->ifname,
-              MAC_FMT_ARGS(emsg->addr));
+    BRCMF_DBG(EVENT, "adding ifname '%s' with mac " FMT_MAC, emsg->ifname,
+              FMT_MAC_ARGS(emsg->addr));
     err = brcmf_add_if(drvr, ifevent->bsscfgidx, ifevent->ifidx, emsg->ifname, emsg->addr, &ifp);
     if (err != ZX_OK) {
       return;
@@ -281,10 +280,9 @@ static void brcmf_fweh_handle_event(brcmf_pub* drvr, struct brcmf_fweh_queue_ite
 
   BRCMF_DBG(
       EVENT,
-      "event %s (%u) version %u ifidx %u bsscfg %u status %d reason %d flags 0x%x addr" MAC_FMT_STR
-      "",
+      "event %s (%u) version %u ifidx %u bsscfg %u status %d reason %d flags 0x%x addr" FMT_MAC "",
       brcmf_fweh_event_name(event_info->code), emsg.event_code, emsg.version, emsg.ifidx,
-      emsg.bsscfgidx, emsg.status, emsg.reason, emsg.flags, MAC_FMT_ARGS(emsg.addr));
+      emsg.bsscfgidx, emsg.status, emsg.reason, emsg.flags, FMT_MAC_ARGS(emsg.addr));
 
   BRCMF_DBG_HEX_DUMP(BRCMF_IS_ON(EVENT), event->data, std::min<uint32_t>(emsg.datalen, 64),
                      "event payload, len=%d", emsg.datalen);

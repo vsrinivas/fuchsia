@@ -39,7 +39,6 @@
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/debug.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/fweh.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/fwil.h"
-#include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/macros.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/sim/sim.h"
 #include "third_party/bcmdhd/crossdriver/include/proto/802.11.h"
 #include "zircon/errors.h"
@@ -794,7 +793,7 @@ zx_status_t SimFirmware::BusGetBootloaderMacAddr(uint8_t* mac_addr) {
       return status;
     }
 
-    BRCMF_INFO("Generated random mac address: " MAC_FMT_STR, MAC_FMT_ARGS(fixed_random_macaddr));
+    BRCMF_INFO("Generated random mac address: " FMT_MAC, FMT_MAC_ARGS(fixed_random_macaddr));
     memoized = true;
   }
 
@@ -2336,7 +2335,7 @@ zx_status_t SimFirmware::IovarWmeApsdGet(SimIovarGetReq* req) {
 // If setting for the first time, save it as system mac address as well
 zx_status_t SimFirmware::SetMacAddr(uint16_t ifidx, const uint8_t* mac_addr) {
   if (mac_addr_set_ == false) {
-    BRCMF_DBG(SIM, "Setting system mac addr: " MAC_FMT_STR, MAC_FMT_ARGS(mac_addr));
+    BRCMF_DBG(SIM, "Setting system mac addr: " FMT_MAC, FMT_MAC_ARGS(mac_addr));
     memcpy(mac_addr_.data(), mac_addr, ETH_ALEN);
     memcpy(pfn_mac_addr_.byte, mac_addr, ETH_ALEN);
     mac_addr_set_ = true;
@@ -2344,7 +2343,7 @@ zx_status_t SimFirmware::SetMacAddr(uint16_t ifidx, const uint8_t* mac_addr) {
   memcpy(iface_tbl_[ifidx].mac_addr.byte, mac_addr, ETH_ALEN);
   iface_tbl_[ifidx].mac_addr_set = true;
 
-  BRCMF_DBG(SIM, "Setting mac addr ifidx: %d: " MAC_FMT_STR, ifidx, MAC_FMT_ARGS(mac_addr));
+  BRCMF_DBG(SIM, "Setting mac addr ifidx: %d: " FMT_MAC, ifidx, FMT_MAC_ARGS(mac_addr));
   return ZX_OK;
 }
 
@@ -2445,8 +2444,8 @@ void SimFirmware::ScanContinue() {
 // Clean up state after a scan request is finished
 void SimFirmware::ScanComplete(brcmf_fweh_event_status_t status) {
   if (scan_state_.opts->is_active) {
-    BRCMF_DBG(SIM, "Resetting pfn_mac_addr_ to system mac addr: " MAC_FMT_STR,
-              MAC_FMT_ARGS(mac_addr_.data()));
+    BRCMF_DBG(SIM, "Resetting pfn_mac_addr_ to system mac addr: " FMT_MAC,
+              FMT_MAC_ARGS(mac_addr_.data()));
     memcpy(pfn_mac_addr_.byte, mac_addr_.data(), ETH_ALEN);
   }
   hw_.DisableRx();

@@ -33,7 +33,6 @@
 #include "fwil.h"
 #include "fwil_types.h"
 #include "linuxisms.h"
-#include "macros.h"
 
 #define BRCMF_DEFAULT_SCAN_CHANNEL_TIME 40
 #define BRCMF_DEFAULT_SCAN_UNASSOC_TIME 40
@@ -198,7 +197,7 @@ static zx_status_t brcmf_set_macaddr(struct brcmf_if* ifp) {
     }
     BRCMF_ERR("random mac address to be assigned.");
 #if !defined(NDEBUG)
-    BRCMF_ERR("  address: " MAC_FMT_STR, MAC_FMT_ARGS(mac_addr));
+    BRCMF_ERR("  address: " FMT_MAC, FMT_MAC_ARGS(mac_addr));
 #endif /* !defined(NDEBUG) */
   }
 

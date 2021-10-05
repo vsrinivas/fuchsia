@@ -22,7 +22,6 @@
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/debug.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/feature.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/fwil.h"
-#include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/macros.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/wlan_interface.h"
 
 namespace wlan {
@@ -107,7 +106,7 @@ zx_status_t Device::WlanphyImplCreateIface(const wlanphy_impl_create_iface_req_t
   if (req->has_init_sta_addr) {
     BRCMF_DBG(WLANPHY, "Creating %s interface", role);
 #if !defined(NDEBUG)
-    BRCMF_DBG(WLANPHY, "  address: " MAC_FMT_STR, MAC_FMT_ARGS(req->init_sta_addr));
+    BRCMF_DBG(WLANPHY, "  address: " FMT_MAC, FMT_MAC_ARGS(req->init_sta_addr));
 #endif /* !defined(NDEBUG) */
   } else {
     BRCMF_DBG(WLANPHY, "Creating %s interface", role);
@@ -190,7 +189,7 @@ zx_status_t Device::WlanphyImplCreateIface(const wlanphy_impl_create_iface_req_t
   BRCMF_DBG(WLANPHY, "Created %s iface with netdev:%s id:%d", role, ndev->name, iface_id);
 #if !defined(NDEBUG)
   const uint8_t* mac_addr = ndev_to_if(ndev)->mac_addr;
-  BRCMF_DBG(WLANPHY, "  address: " MAC_FMT_STR, MAC_FMT_ARGS(mac_addr));
+  BRCMF_DBG(WLANPHY, "  address: " FMT_MAC, FMT_MAC_ARGS(mac_addr));
 #endif /* !defined(NDEBUG) */
   return ZX_OK;
 }
