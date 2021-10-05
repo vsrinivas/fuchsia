@@ -1707,3 +1707,16 @@
   reviewers: ['jeremymanson@google.com','abarth@google.com','yifeit@google.com','bprosnitz@google.com']
   submitted: '2021-06-15'
   reviewed: '2021-09-29'
+
+- name: 'RFC-0133'
+  title: 'Software Delivery Goals'
+  short_description: 'A set of long-term goals for the Software Delivery area.'
+  authors: ['wittrock@google.com']
+  file: '0133_swd_goals.md'
+  area: ['Software Delivery']
+  issue: ['']
+  gerrit_change_id: ['578622']
+  status: 'Accepted'
+  reviewers: ['abarth@google.com', 'amathes@google.com', 'computerdruid@google.com', 'hjfreyer@google.com', 'ampearce@google.com']
+  submitted: '2021-09-08'
+  reviewed: '2021-10-04'

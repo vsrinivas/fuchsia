@@ -949,6 +949,15 @@ environment to form a full SDK."
   related_guides: [""]
   area: ["Components"]
 
+- term: "OTA"
+  short_description: "Over-the-air update."
+  full_description: "Over-the-air updates are changes made to device software (generally the full
+  system, but possibly smaller modules as well) without re-initializing the device's disk via a pave
+  or flash."
+  see_also: [""]
+  related_guides: ["<a href=/docs/concepts/packages/ota.md>System OTA documentation</a>"]
+  area: ["System"]
+
 - term: "Package"
   short_description: "A unit of software distribution in Fuchsia."
   full_description: "A unit of software distribution in Fuchsia. It is a collection of

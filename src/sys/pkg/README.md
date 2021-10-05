@@ -1,6 +1,16 @@
-# Contributing to the Software Delivery Stack
+# Software Delivery README
 
 ## Overview
+
+The Software Delivery (SWD) stack is responsible for all updates of runnable
+software on a Fuchsia device, including system updates and individual package
+updates.
+
+This document serves as a jumping-off point for the SWD codebase, and a
+contribution guide.
+
+Before starting, you may wish to read some [documentation][packaging-docs] on
+Fuchsia software packaging, or the [long term SWD goals][goals].
 
 ### Software Delivery (SWD) Subsystems
 
@@ -111,9 +121,6 @@ local development host. To run a component in a package you’ve built locally,
 you can run something like `fx shell run
 fuchsia-pkg://fuchsia.com/<package_name>#meta/<component_name>.cmx`
 
-TODO(wittrock): is there a global package repository we can use as a repo for
-this example?
-
 ### FAQs
 
 #### How do I run a hosted package server?
@@ -129,3 +136,7 @@ See the instructions on
 *   [Package metadata](/docs/concepts/packages/package.md)
 *   [Package URLs](/docs/concepts/packages/package_url.md)
 *   [Software updates](/docs/concepts/system/software_update_system.md)
+
+
+[packaging-docs]: /docs/concepts/packages/package.md
+[goals]: /docs/contribute/governance/rfcs/0133_swd_goals.md
