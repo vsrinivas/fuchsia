@@ -1140,6 +1140,15 @@ config("Wno-unused-but-set-variable") {
   ]
 }
 
+# Config to suppress Wbitwise-instead-of-logical warning in the third party code
+# that doesn't comply with.
+config("Wno-bitwise-instead-of-logical") {
+  if (clang_has_bitwise_bool_warning) {
+    cflags = [ "-Wno-bitwise-instead-of-logical" ]
+  }
+  visibility = [ "//third_party/zstd:*" ]
+}
+
 config("symbol_visibility_hidden") {
   # Disable libc++ visibility annotations to make sure that the compiler option
   # has effect on symbols defined in libc++ headers. Note that we don't want to

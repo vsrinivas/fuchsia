@@ -43,3 +43,29 @@ if (is_fuchsia) {
                                 "trim string",
                                 [])
 }
+
+# TODO(fxbug.dev/85893): Remove this after migration completes.
+# This is a string identifying the particular toolchain version in use.  Its
+# only purpose is to be unique enough that it changes when switching to a new
+# toolchain, so that recompilations with the new compiler can be triggered.
+#
+# When using the prebuilt, the CIPD instance ID of the prebuilt is perfect.
+# When not using the prebuilt, there isn't a quick way to extract the compiler
+# version.  But at least changing the setting to a different compiler will
+# change the string.
+clang_version_string = ""
+if (clang_prefix == default_clang_prefix) {
+  _prebuilt_clang_dir = "//prebuilt/third_party/clang/$host_platform"
+  clang_tool_dir = "${_prebuilt_clang_dir}/bin"
+  _prebuilt_cipd_version =
+      read_file("$_prebuilt_clang_dir/.versions/clang.cipd_version", "json")
+  clang_version_string = _prebuilt_cipd_version.instance_id
+}
+
+clang_has_bitwise_bool_warning = false
+if (clang_version_string != "FMLihg51sSNvqIi8NvP9oVfFAYy5DnKP4SSo6TSeV_oC" &&
+    clang_version_string != "8j4e7yPafRXla1fmTR9VaBfIexNRvK4kDnAaf6zqLwcC" &&
+    clang_version_string != "KP-N5ruFeLjj1oFUPn4i0_BP2ThkpDYJh7yprjt0JLIC" &&
+    clang_version_string != "bCexHs32fXkpYOr0eT40J48oT-xzUCbZ7KQV-OAzReoC") {
+  clang_has_bitwise_bool_warning = true
+}
