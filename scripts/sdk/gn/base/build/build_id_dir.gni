@@ -91,6 +91,12 @@ template("build_id_dir") {
       "--stamp",
       rebase_path(_stamp, root_build_dir),
     ]
+    if (fuchsia_sdk_readelf_exec != "") {
+      args += [
+        "--readelf-exec",
+        rebase_path("${fuchsia_sdk_readelf_exec}", root_build_dir),
+      ]
+    }
     foreach(dir, _build_id_paths) {
       args += [
         "--build-id-dir",

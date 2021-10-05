@@ -28,6 +28,15 @@ declare_args() {
   }
 }
 
+declare_args() {
+  # Specify a readelf_exec path to use, otherwise the default is the system installed readelf.
+  # Passed to populate_build_id_dir.py and prepare_package_inputs.py via the --readelf-exec flag.
+  # Use a GN path, do not use absolute paths, since this is adjusted with rebase_path().
+  if (!defined(fuchsia_sdk_readelf_exec)) {
+    fuchsia_sdk_readelf_exec = ""
+  }
+}
+
 if (fuchsia_sdk_id == "") {
   # Note: If we need to expose more than just the id in the future,
   # we should consider exposing the entire json object for the metadata vs.

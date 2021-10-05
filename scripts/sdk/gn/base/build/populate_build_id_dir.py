@@ -13,7 +13,7 @@ import subprocess
 import sys
 
 
-def populate_build_id_dir(ids_txt_path, output_dir, build_id_dirs, filenames):
+def populate_build_id_dir(readelf_exec, ids_txt_path, output_dir, build_id_dirs, filenames):
     """
   Processes an ids.txt file, populating the output .build-id directory.
 
@@ -51,7 +51,7 @@ def populate_build_id_dir(ids_txt_path, output_dir, build_id_dirs, filenames):
             continue
 
         # Exclude stripped binaries (indicated by their lack of symbol tables).
-        readelf_args = ['readelf', '-S', symbol_source_path]
+        readelf_args = [readelf_exec, '-S', symbol_source_path]
         readelf_output = subprocess.check_output(readelf_args, universal_newlines=True)
         if not '.symtab' in readelf_output:
             continue
@@ -95,6 +95,8 @@ def main(args):
         '--depfile', type=str, required=True, help='Path to the depfile.')
     parser.add_argument(
         '--stamp', type=str, required=True, help='Path to stamp file.')
+    parser.add_argument(
+        '--readelf-exec', default='readelf', help='readelf executable to use.')
     args = parser.parse_args(args)
 
     # If the output directory already exists, wipe it, so the directory does
@@ -108,8 +110,7 @@ def main(args):
 
     filenames = set()
     for ids_txt_path in ids_txt_paths:
-        populate_build_id_dir(
-            ids_txt_path, args.output_dir, args.build_id_dir, filenames)
+        populate_build_id_dir(args.readelf_exec, ids_txt_path, args.output_dir, args.build_id_dir, filenames)
 
     with open(args.depfile, 'w') as f:
         f.writelines('%s: %s\n' % (args.stamp, ' '.join(sorted(filenames))))

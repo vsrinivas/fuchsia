@@ -150,6 +150,12 @@ template("fuchsia_package") {
       "--json-file",
       rebase_path(_packaged_components_metadata_file),
     ]
+    if (fuchsia_sdk_readelf_exec != "") {
+      args += [
+        "--readelf-exec",
+        rebase_path(fuchsia_sdk_readelf_exec, root_build_dir),
+      ]
+    }
 
     if (defined(excluded_files)) {
       foreach(filename, excluded_files) {

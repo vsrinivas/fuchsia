@@ -74,7 +74,7 @@ def _is_binary(path):
     return file_tag == b'\x7fELF'
 
 
-def _write_build_ids_txt(binary_paths, ids_txt_path):
+def _write_build_ids_txt(readelf_exec, binary_paths, ids_txt_path):
     """Writes an index text file mapping build IDs to unstripped binaries."""
 
     READELF_FILE_PREFIX = 'File: '
@@ -96,7 +96,7 @@ def _write_build_ids_txt(binary_paths, ids_txt_path):
         # Create a set to dedupe stripped binary paths in case both the stripped and
         # unstripped versions of a binary are specified.
         readelf_stdout = subprocess.check_output(
-            ['readelf', '-n'] + sorted(unprocessed_binary_paths)).decode('utf8')
+            [readelf_exec, '-n'] + sorted(unprocessed_binary_paths)).decode('utf8')
 
         if len(binary_paths) == 1:
             # Readelf won't report a binary's path if only one was provided to the
@@ -292,7 +292,7 @@ def _build_manifest(args):
             manifest.write('%s=%s\n' % (key, manifest_entries[key]))
 
     binaries = [f for f in expanded_files if _is_binary(f)]
-    _write_build_ids_txt(sorted(binaries), args.build_ids_file)
+    _write_build_ids_txt(args.readelf_exec, sorted(binaries), args.build_ids_file)
 
     # Omit any excluded_files from the expanded_files written to the depfile.
     gen_dir = os.path.normpath(os.path.join(args.out_dir, 'gen'))
@@ -333,6 +333,8 @@ def main():
     parser.add_argument('--json-file', required=True)
     parser.add_argument(
         '--package-version', default='0', help='Version of the package')
+    parser.add_argument(
+        '--readelf-exec', default='readelf', help='readelf executable to use.')
 
     args = parser.parse_args()
 
