@@ -12,13 +12,18 @@ use {
     fidl_fuchsia_wlan_sme as fidl_sme,
     fidl_fuchsia_wlan_stats::MlmeStats,
     fuchsia_async as fasync,
-    fuchsia_inspect::{Inspector, Node as InspectNode, NumericProperty, UintProperty},
+    fuchsia_inspect::{
+        ArrayProperty, InspectType, Inspector, Node as InspectNode, NumericProperty, UintProperty,
+    },
     fuchsia_inspect_contrib::{
         inspect_insert, inspect_log, log::InspectBytes, make_inspect_loggable,
         nodes::BoundedListNode,
     },
     fuchsia_zircon::{self as zx, DurationNum},
-    futures::{channel::mpsc, select, Future, FutureExt, StreamExt},
+    futures::{
+        channel::{mpsc, oneshot},
+        select, Future, FutureExt, StreamExt,
+    },
     log::{info, warn},
     num_traits::SaturatingAdd,
     parking_lot::Mutex,
@@ -150,8 +155,12 @@ impl DisconnectSource {
     }
 }
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Debug)]
 pub enum TelemetryEvent {
+    /// Request telemetry for the latest status
+    QueryStatus {
+        sender: oneshot::Sender<QueryStatusResult>,
+    },
     /// Notify the telemetry event loop that the process of establishing connection is started
     StartEstablishConnection {
         /// If set to true, use the current time as the start time of the establish connection
@@ -205,6 +214,17 @@ pub enum TelemetryEvent {
 }
 
 #[derive(Clone, Debug, PartialEq)]
+pub struct QueryStatusResult {
+    connected_info: Option<ConnectedInfo>,
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct ConnectedInfo {
+    iface_id: u16,
+    latest_ap_state: BssDescription,
+}
+
+#[derive(Clone, Debug, PartialEq)]
 pub enum NetworkSelectionType {
     /// Looking for the best BSS from any saved networks
     Undirected,
@@ -231,6 +251,8 @@ pub fn serve_telemetry(
     external_inspect_node: InspectNode,
 ) -> (TelemetrySender, impl Future<Output = ()>) {
     let (sender, mut receiver) = mpsc::channel::<TelemetryEvent>(TELEMETRY_EVENT_BUFFER_SIZE);
+    let sender = TelemetrySender::new(sender);
+    let cloned_sender = sender.clone();
     let fut = async move {
         let mut report_interval_stream = fasync::Interval::new(TELEMETRY_QUERY_INTERVAL);
         const ONE_HOUR: zx::Duration = zx::Duration::from_hours(1);
@@ -240,6 +262,7 @@ pub fn serve_telemetry(
         const INTERVAL_TICKS_PER_DAY: u64 = INTERVAL_TICKS_PER_HR * 24;
         let mut interval_tick = 0u64;
         let mut telemetry = Telemetry::new(
+            cloned_sender,
             dev_svc_proxy,
             cobalt_1dot1_proxy,
             hasher,
@@ -273,7 +296,7 @@ pub fn serve_telemetry(
             }
         }
     };
-    (TelemetrySender::new(sender), fut)
+    (sender, fut)
 }
 
 #[derive(Debug, Clone)]
@@ -301,7 +324,7 @@ struct ConnectedState {
 }
 
 #[derive(Debug, Clone)]
-struct DisconnectedState {
+pub struct DisconnectedState {
     disconnected_since: fasync::Time,
     disconnect_info: DisconnectInfo,
     connect_start_time: Option<fasync::Time>,
@@ -345,6 +368,147 @@ fn record_inspect_counters(
     });
 }
 
+fn record_inspect_histograms(
+    external_inspect_node: &ExternalInspectNode,
+    telemetry_sender: TelemetrySender,
+    dev_svc_proxy: fidl_fuchsia_wlan_device_service::DeviceServiceProxy,
+) {
+    external_inspect_node.node.record_lazy_child("histograms", move || {
+        let telemetry_sender = telemetry_sender.clone();
+        let dev_svc_proxy = dev_svc_proxy.clone();
+        async move {
+            let inspector = Inspector::new();
+            let (sender, receiver) = oneshot::channel();
+            telemetry_sender.send(TelemetryEvent::QueryStatus { sender });
+            let connected_info = match receiver.await {
+                Ok(result) => result.connected_info,
+                Err(e) => {
+                    warn!("Unable to query data for Inspect external node: {}", e);
+                    None
+                }
+            };
+
+            if let Some(connected_info) = connected_info {
+                match dev_svc_proxy.get_iface_stats(connected_info.iface_id).await {
+                    Ok((zx::sys::ZX_OK, Some(stats))) => {
+                        if let Some(mlme_stats) = &stats.mlme_stats {
+                            if let fidl_fuchsia_wlan_stats::MlmeStats::ClientMlmeStats(mlme_stats) =
+                                mlme_stats.as_ref()
+                            {
+                                let mut histograms = HistogramsSubtrees::new();
+                                histograms.log_per_antenna_snr_histograms(
+                                    &mlme_stats.snr_histograms[..],
+                                    &inspector,
+                                );
+                                histograms.log_per_antenna_rx_rate_histograms(
+                                    &mlme_stats.rx_rate_index_histograms[..],
+                                    &inspector,
+                                );
+                                histograms.log_per_antenna_noise_floor_histograms(
+                                    &mlme_stats.noise_floor_histograms[..],
+                                    &inspector,
+                                );
+                                histograms.log_per_antenna_rssi_histograms(
+                                    &mlme_stats.rssi_histograms[..],
+                                    &inspector,
+                                );
+
+                                inspector.root().record(histograms);
+                            }
+                        }
+                    }
+                    _ => (),
+                }
+            }
+            Ok(inspector)
+        }
+        .boxed()
+    });
+}
+
+struct HistogramsSubtrees {
+    antenna_nodes: HashMap<fidl_fuchsia_wlan_stats::AntennaId, InspectNode>,
+}
+
+impl InspectType for HistogramsSubtrees {}
+
+macro_rules! fn_log_per_antenna_histograms {
+    ($name:ident, $field:ident, $histogram_ty:ty, $sample:ident => $sample_index_expr:expr) => {
+        paste::paste! {
+            pub fn [<log_per_antenna_ $name _histograms>](
+                &mut self,
+                histograms: &[$histogram_ty],
+                inspector: &Inspector
+            ) {
+                for histogram in histograms {
+                    // Only antenna histograms are logged (STATION scope histograms are discarded)
+                    let antenna_id = match &histogram.antenna_id {
+                        Some(id) => **id,
+                        None => continue,
+                    };
+                    let antenna_node = self.create_or_get_antenna_node(antenna_id, inspector);
+
+                    let samples = &histogram.$field;
+                    let histogram_prop_name = concat!(stringify!($name), "_histogram");
+                    let histogram_prop =
+                        antenna_node.create_int_array(histogram_prop_name, samples.len() * 2);
+                    for (i, sample) in samples.iter().enumerate() {
+                        let $sample = sample;
+                        histogram_prop.set(i * 2, $sample_index_expr);
+                        histogram_prop.set(i * 2 + 1, $sample.num_samples as i64);
+                    }
+
+                    let invalid_samples_name = concat!(stringify!($name), "_invalid_samples");
+                    let invalid_samples =
+                        antenna_node.create_uint(invalid_samples_name, histogram.invalid_samples);
+
+                    antenna_node.record(histogram_prop);
+                    antenna_node.record(invalid_samples);
+                }
+            }
+        }
+    };
+}
+
+impl HistogramsSubtrees {
+    pub fn new() -> Self {
+        Self { antenna_nodes: HashMap::new() }
+    }
+
+    // fn log_per_antenna_snr_histograms
+    fn_log_per_antenna_histograms!(snr, snr_samples, fidl_fuchsia_wlan_stats::SnrHistogram,
+                                   sample => sample.bucket_index as i64);
+    // fn log_per_antenna_rx_rate_histograms
+    fn_log_per_antenna_histograms!(rx_rate, rx_rate_index_samples,
+                                   fidl_fuchsia_wlan_stats::RxRateIndexHistogram,
+                                   sample => sample.bucket_index as i64);
+    // fn log_per_antenna_noise_floor_histograms
+    fn_log_per_antenna_histograms!(noise_floor, noise_floor_samples,
+                                   fidl_fuchsia_wlan_stats::NoiseFloorHistogram,
+                                   sample => sample.bucket_index as i64 - 255);
+    // fn log_per_antenna_rssi_histograms
+    fn_log_per_antenna_histograms!(rssi, rssi_samples, fidl_fuchsia_wlan_stats::RssiHistogram,
+                                   sample => sample.bucket_index as i64 - 255);
+
+    fn create_or_get_antenna_node(
+        &mut self,
+        antenna_id: fidl_fuchsia_wlan_stats::AntennaId,
+        inspector: &Inspector,
+    ) -> &mut InspectNode {
+        self.antenna_nodes.entry(antenna_id).or_insert_with(|| {
+            let freq = match antenna_id.freq {
+                fidl_fuchsia_wlan_stats::AntennaFreq::Antenna2G => "2Ghz",
+                fidl_fuchsia_wlan_stats::AntennaFreq::Antenna5G => "5Ghz",
+            };
+            let node =
+                inspector.root().create_child(format!("antenna{}_{}", antenna_id.index, freq));
+            node.record_uint("antenna_index", antenna_id.index as u64);
+            node.record_string("antenna_freq", freq);
+            node
+        })
+    }
+}
+
 // Macro wrapper for logging simple events (occurrence, integer, histogram, string)
 // and log a warning when the status is not Ok
 macro_rules! log_cobalt_1dot1 {
@@ -375,15 +539,15 @@ const INSPECT_EXTERNAL_DISCONNECT_EVENTS_LIMIT: usize = 2;
 /// Inspect node with properties queried by external entities.
 /// Do not change or remove existing properties that are still used.
 pub struct ExternalInspectNode {
-    _inspect_node: InspectNode,
+    node: InspectNode,
     disconnect_events: Mutex<BoundedListNode>,
 }
 
 impl ExternalInspectNode {
-    pub fn new(inspect_node: InspectNode) -> Self {
-        let disconnect_events = inspect_node.create_child("disconnect_events");
+    pub fn new(node: InspectNode) -> Self {
+        let disconnect_events = node.create_child("disconnect_events");
         Self {
-            _inspect_node: inspect_node,
+            node,
             disconnect_events: Mutex::new(BoundedListNode::new(
                 disconnect_events,
                 INSPECT_EXTERNAL_DISCONNECT_EVENTS_LIMIT,
@@ -410,6 +574,7 @@ pub struct Telemetry {
 
 impl Telemetry {
     pub fn new(
+        telemetry_sender: TelemetrySender,
         dev_svc_proxy: fidl_fuchsia_wlan_device_service::DeviceServiceProxy,
         cobalt_1dot1_proxy: fidl_fuchsia_metrics::MetricEventLoggerProxy,
         hasher: WlanHasher,
@@ -430,6 +595,7 @@ impl Telemetry {
         let get_iface_stats_fail_count = inspect_node.create_uint("get_iface_stats_fail_count", 0);
         let disconnect_events = inspect_node.create_child("disconnect_events");
         let external_inspect_node = ExternalInspectNode::new(external_inspect_node);
+        record_inspect_histograms(&external_inspect_node, telemetry_sender, dev_svc_proxy.clone());
         Self {
             dev_svc_proxy,
             connection_state: ConnectionState::Idle(IdleState { connect_start_time: None }),
@@ -494,6 +660,16 @@ impl Telemetry {
     pub async fn handle_telemetry_event(&mut self, event: TelemetryEvent) {
         let now = fasync::Time::now();
         match event {
+            TelemetryEvent::QueryStatus { sender } => {
+                let connected_info = match &self.connection_state {
+                    ConnectionState::Connected(state) => Some(ConnectedInfo {
+                        iface_id: state.iface_id,
+                        latest_ap_state: state.latest_ap_state.clone(),
+                    }),
+                    _ => None,
+                };
+                let _result = sender.send(QueryStatusResult { connected_info });
+            }
             TelemetryEvent::StartEstablishConnection { reset_start_time } => match &mut self
                 .connection_state
             {
@@ -1873,7 +2049,7 @@ mod tests {
             DeviceServiceGetIfaceStatsResponder, DeviceServiceRequest,
         },
         fidl_fuchsia_wlan_stats::{self, ClientMlmeStats, Counter, PacketCounter},
-        fuchsia_inspect::{assert_data_tree, testing::NonZeroUintProperty, Inspector},
+        fuchsia_inspect::{testing::NonZeroUintProperty, Inspector},
         futures::{pin_mut, task::Poll, TryStreamExt},
         std::{cmp::min, pin::Pin},
         test_case::test_case,
@@ -1883,6 +2059,44 @@ mod tests {
     const STEP_INCREMENT: zx::Duration = zx::Duration::from_seconds(1);
     const IFACE_ID: u16 = 1;
 
+    // Macro rule for testing Inspect data tree. When we query for Inspect data, the LazyNode
+    // will make a stats query req that we need to respond to in order to unblock the test.
+    macro_rules! assert_data_tree_with_respond_blocking_req {
+        ($test_helper:expr, $test_fut:expr, $($rest:tt)+) => {{
+            use {
+                fuchsia_inspect::{assert_data_tree, reader},
+            };
+
+            let read_fut = reader::read(&$test_helper.inspector);
+            pin_mut!(read_fut);
+            loop {
+                match $test_helper.exec.run_until_stalled(&mut read_fut) {
+                    Poll::Pending => {
+                        // Run telemetry test future so it can respond to QueryStatus request,
+                        // while clearing out any potentially blocking Cobalt events
+                        drain_cobalt_events(
+                            &mut $test_helper.exec,
+                            &mut $test_helper.cobalt_1dot1_stream,
+                            &mut $test_helper.cobalt_events,
+                            &mut $test_fut,
+                        );
+                        // Manually respond to iface stats request
+                        respond_iface_stats_req(
+                            &mut $test_helper.exec,
+                            &mut $test_helper.dev_svc_stream,
+                            &mut $test_helper.iface_stats_req_handler
+                        );
+                    }
+                    Poll::Ready(result) => {
+                        let hierarchy = result.expect("failed to get hierarchy");
+                        assert_data_tree!(hierarchy, $($rest)+);
+                        break
+                    }
+                }
+            }
+        }}
+    }
+
     #[fuchsia::test]
     fn test_stat_cycles() {
         let (mut test_helper, mut test_fut) = setup_test();
@@ -1890,7 +2104,7 @@ mod tests {
         assert_eq!(test_helper.exec.run_until_stalled(&mut test_fut), Poll::Pending);
 
         test_helper.advance_by(24.hours() - TELEMETRY_QUERY_INTERVAL, test_fut.as_mut());
-        assert_data_tree!(test_helper.inspector, root: contains {
+        assert_data_tree_with_respond_blocking_req!(test_helper, test_fut, root: contains {
             stats: contains {
                 "1d_counters": contains {
                     total_duration: (24.hours() - TELEMETRY_QUERY_INTERVAL).into_nanos(),
@@ -1904,7 +2118,7 @@ mod tests {
         });
 
         test_helper.advance_to_next_telemetry_checkpoint(test_fut.as_mut());
-        assert_data_tree!(test_helper.inspector, root: contains {
+        assert_data_tree_with_respond_blocking_req!(test_helper, test_fut, root: contains {
             stats: contains {
                 "1d_counters": contains {
                     // The first hour window is now discarded, so it only shows 23 hours
@@ -1920,7 +2134,7 @@ mod tests {
         });
 
         test_helper.advance_by(2.hours(), test_fut.as_mut());
-        assert_data_tree!(test_helper.inspector, root: contains {
+        assert_data_tree_with_respond_blocking_req!(test_helper, test_fut, root: contains {
             stats: contains {
                 "1d_counters": contains {
                     total_duration: 23.hours().into_nanos(),
@@ -1941,7 +2155,7 @@ mod tests {
         assert_eq!(test_helper.exec.run_until_stalled(&mut test_fut), Poll::Pending);
 
         test_helper.advance_by(8.hours(), test_fut.as_mut());
-        assert_data_tree!(test_helper.inspector, root: contains {
+        assert_data_tree_with_respond_blocking_req!(test_helper, test_fut, root: contains {
             stats: contains {
                 "1d_counters": contains {
                     total_duration: 23.hours().into_nanos(),
@@ -1958,7 +2172,7 @@ mod tests {
         // The 7d counters do not decrease before the 7th day
         test_helper.advance_by(14.hours(), test_fut.as_mut());
         test_helper.advance_by((5 * 24).hours() - TELEMETRY_QUERY_INTERVAL, test_fut.as_mut());
-        assert_data_tree!(test_helper.inspector, root: contains {
+        assert_data_tree_with_respond_blocking_req!(test_helper, test_fut, root: contains {
             stats: contains {
                 "1d_counters": contains {
                     total_duration: (24.hours() - TELEMETRY_QUERY_INTERVAL).into_nanos(),
@@ -1973,7 +2187,7 @@ mod tests {
 
         // On the 7th day, the first window is removed (24 hours of duration is deducted)
         test_helper.advance_to_next_telemetry_checkpoint(test_fut.as_mut());
-        assert_data_tree!(test_helper.inspector, root: contains {
+        assert_data_tree_with_respond_blocking_req!(test_helper, test_fut, root: contains {
             stats: contains {
                 "1d_counters": contains {
                     total_duration: 23.hours().into_nanos(),
@@ -2022,7 +2236,7 @@ mod tests {
         let (mut test_helper, mut test_fut) = setup_test();
 
         test_helper.advance_by(30.minutes(), test_fut.as_mut());
-        assert_data_tree!(test_helper.inspector, root: contains {
+        assert_data_tree_with_respond_blocking_req!(test_helper, test_fut, root: contains {
             stats: contains {
                 "1d_counters": contains {
                     total_duration: 30.minutes().into_nanos(),
@@ -2034,7 +2248,7 @@ mod tests {
         });
 
         test_helper.advance_by(30.minutes(), test_fut.as_mut());
-        assert_data_tree!(test_helper.inspector, root: contains {
+        assert_data_tree_with_respond_blocking_req!(test_helper, test_fut, root: contains {
             stats: contains {
                 "1d_counters": contains {
                     total_duration: 1.hour().into_nanos(),
@@ -2051,7 +2265,7 @@ mod tests {
         let (mut test_helper, mut test_fut) = setup_test();
 
         test_helper.advance_by(30.minutes(), test_fut.as_mut());
-        assert_data_tree!(test_helper.inspector, root: contains {
+        assert_data_tree_with_respond_blocking_req!(test_helper, test_fut, root: contains {
             stats: contains {
                 "1d_counters": contains {
                     connected_duration: 0i64,
@@ -2067,7 +2281,7 @@ mod tests {
         });
 
         test_helper.advance_by(30.minutes(), test_fut.as_mut());
-        assert_data_tree!(test_helper.inspector, root: contains {
+        assert_data_tree_with_respond_blocking_req!(test_helper, test_fut, root: contains {
             stats: contains {
                 "1d_counters": contains {
                     connected_duration: 0i64,
@@ -2090,7 +2304,7 @@ mod tests {
         assert_eq!(test_helper.exec.run_until_stalled(&mut test_fut), Poll::Pending);
 
         test_helper.advance_by(30.minutes(), test_fut.as_mut());
-        assert_data_tree!(test_helper.inspector, root: contains {
+        assert_data_tree_with_respond_blocking_req!(test_helper, test_fut, root: contains {
             stats: contains {
                 "1d_counters": contains {
                     connected_duration: 30.minutes().into_nanos(),
@@ -2106,7 +2320,7 @@ mod tests {
         });
 
         test_helper.advance_by(30.minutes(), test_fut.as_mut());
-        assert_data_tree!(test_helper.inspector, root: contains {
+        assert_data_tree_with_respond_blocking_req!(test_helper, test_fut, root: contains {
             stats: contains {
                 "1d_counters": contains {
                     connected_duration: 1.hour().into_nanos(),
@@ -2135,7 +2349,7 @@ mod tests {
 
         test_helper.advance_by(10.minutes(), test_fut.as_mut());
 
-        assert_data_tree!(test_helper.inspector, root: contains {
+        assert_data_tree_with_respond_blocking_req!(test_helper, test_fut, root: contains {
             stats: contains {
                 "1d_counters": contains {
                     connected_duration: 0i64,
@@ -2159,7 +2373,7 @@ mod tests {
 
         test_helper.advance_by(15.minutes(), test_fut.as_mut());
 
-        assert_data_tree!(test_helper.inspector, root: contains {
+        assert_data_tree_with_respond_blocking_req!(test_helper, test_fut, root: contains {
             stats: contains {
                 "1d_counters": contains {
                     connected_duration: 0i64,
@@ -2191,7 +2405,7 @@ mod tests {
         assert_eq!(test_helper.exec.run_until_stalled(&mut test_fut), Poll::Pending);
 
         // The 5 seconds connected duration is not accounted for yet.
-        assert_data_tree!(test_helper.inspector, root: contains {
+        assert_data_tree_with_respond_blocking_req!(test_helper, test_fut, root: contains {
             stats: contains {
                 "1d_counters": contains {
                     connected_duration: 0i64,
@@ -2209,7 +2423,7 @@ mod tests {
         // At next telemetry checkpoint, `test_fut` updates the connected and downtime durations.
         let downtime_start = fasync::Time::now();
         test_helper.advance_to_next_telemetry_checkpoint(test_fut.as_mut());
-        assert_data_tree!(test_helper.inspector, root: contains {
+        assert_data_tree_with_respond_blocking_req!(test_helper, test_fut, root: contains {
             stats: contains {
                 "1d_counters": contains {
                     connected_duration: 5.seconds().into_nanos(),
@@ -2248,7 +2462,7 @@ mod tests {
         assert_eq!(test_helper.exec.run_until_stalled(&mut test_fut), Poll::Pending);
 
         test_helper.advance_to_next_telemetry_checkpoint(test_fut.as_mut());
-        assert_data_tree!(test_helper.inspector, root: contains {
+        assert_data_tree_with_respond_blocking_req!(test_helper, test_fut, root: contains {
             stats: contains {
                 "1d_counters": contains {
                     connected_duration: 0i64,
@@ -2264,7 +2478,7 @@ mod tests {
         });
 
         test_helper.advance_to_next_telemetry_checkpoint(test_fut.as_mut());
-        assert_data_tree!(test_helper.inspector, root: contains {
+        assert_data_tree_with_respond_blocking_req!(test_helper, test_fut, root: contains {
             stats: contains {
                 "1d_counters": contains {
                     connected_duration: 0i64,
@@ -2289,7 +2503,7 @@ mod tests {
         assert_eq!(test_helper.exec.run_until_stalled(&mut test_fut), Poll::Pending);
 
         // `downtime_no_saved_neighbor_duration` counter is not updated right away.
-        assert_data_tree!(test_helper.inspector, root: contains {
+        assert_data_tree_with_respond_blocking_req!(test_helper, test_fut, root: contains {
             stats: contains {
                 "1d_counters": contains {
                     connected_duration: 0i64,
@@ -2306,7 +2520,7 @@ mod tests {
 
         // At the next checkpoint, both downtime counters are updated together.
         test_helper.advance_to_next_telemetry_checkpoint(test_fut.as_mut());
-        assert_data_tree!(test_helper.inspector, root: contains {
+        assert_data_tree_with_respond_blocking_req!(test_helper, test_fut, root: contains {
             stats: contains {
                 "1d_counters": contains {
                     connected_duration: 0i64,
@@ -2337,7 +2551,7 @@ mod tests {
         test_helper.advance_to_next_telemetry_checkpoint(test_fut.as_mut());
 
         // However, this time neither of the downtime counters should be incremented
-        assert_data_tree!(test_helper.inspector, root: contains {
+        assert_data_tree_with_respond_blocking_req!(test_helper, test_fut, root: contains {
             stats: contains {
                 "1d_counters": contains {
                     connected_duration: 0i64,
@@ -2370,7 +2584,7 @@ mod tests {
         test_helper.send_connected_event(random_bss_description!(Wpa2));
         test_helper.drain_cobalt_events(&mut test_fut);
 
-        assert_data_tree!(test_helper.inspector, root: contains {
+        assert_data_tree_with_respond_blocking_req!(test_helper, test_fut, root: contains {
             stats: contains {
                 "1d_counters": contains {
                     connect_attempts_count: 11u64,
@@ -2390,7 +2604,7 @@ mod tests {
         test_helper.send_connected_event(random_bss_description!(Wpa2));
         assert_eq!(test_helper.exec.run_until_stalled(&mut test_fut), Poll::Pending);
 
-        assert_data_tree!(test_helper.inspector, root: contains {
+        assert_data_tree_with_respond_blocking_req!(test_helper, test_fut, root: contains {
             stats: contains {
                 "1d_counters": contains {
                     disconnect_count: 0u64,
@@ -2407,7 +2621,7 @@ mod tests {
             .send(TelemetryEvent::Disconnected { track_subsequent_downtime: true, info });
         test_helper.drain_cobalt_events(&mut test_fut);
 
-        assert_data_tree!(test_helper.inspector, root: contains {
+        assert_data_tree_with_respond_blocking_req!(test_helper, test_fut, root: contains {
             stats: contains {
                 "1d_counters": contains {
                     disconnect_count: 1u64,
@@ -2424,7 +2638,7 @@ mod tests {
             .send(TelemetryEvent::Disconnected { track_subsequent_downtime: false, info });
         test_helper.drain_cobalt_events(&mut test_fut);
 
-        assert_data_tree!(test_helper.inspector, root: contains {
+        assert_data_tree_with_respond_blocking_req!(test_helper, test_fut, root: contains {
             stats: contains {
                 "1d_counters": contains {
                     disconnect_count: 2u64,
@@ -2443,7 +2657,7 @@ mod tests {
         assert_eq!(test_helper.exec.run_until_stalled(&mut test_fut), Poll::Pending);
 
         test_helper.advance_by(1.hour(), test_fut.as_mut());
-        assert_data_tree!(test_helper.inspector, root: contains {
+        assert_data_tree_with_respond_blocking_req!(test_helper, test_fut, root: contains {
             stats: contains {
                 get_iface_stats_fail_count: 0u64,
                 "1d_counters": contains {
@@ -2489,7 +2703,7 @@ mod tests {
         assert_eq!(test_helper.exec.run_until_stalled(&mut test_fut), Poll::Pending);
 
         test_helper.advance_by(1.hour(), test_fut.as_mut());
-        assert_data_tree!(test_helper.inspector, root: contains {
+        assert_data_tree_with_respond_blocking_req!(test_helper, test_fut, root: contains {
             stats: contains {
                 get_iface_stats_fail_count: 0u64,
                 "1d_counters": contains {
@@ -2537,7 +2751,7 @@ mod tests {
         assert_eq!(test_helper.exec.run_until_stalled(&mut test_fut), Poll::Pending);
 
         test_helper.advance_by(1.hour(), test_fut.as_mut());
-        assert_data_tree!(test_helper.inspector, root: contains {
+        assert_data_tree_with_respond_blocking_req!(test_helper, test_fut, root: contains {
             stats: contains {
                 get_iface_stats_fail_count: 0u64,
                 "1d_counters": contains {
@@ -2588,7 +2802,7 @@ mod tests {
         assert_eq!(test_helper.exec.run_until_stalled(&mut test_fut), Poll::Pending);
 
         test_helper.advance_by(1.hour(), test_fut.as_mut());
-        assert_data_tree!(test_helper.inspector, root: contains {
+        assert_data_tree_with_respond_blocking_req!(test_helper, test_fut, root: contains {
             stats: contains {
                 get_iface_stats_fail_count: 0u64,
                 "1d_counters": contains {
@@ -2636,7 +2850,7 @@ mod tests {
         assert_eq!(test_helper.exec.run_until_stalled(&mut test_fut), Poll::Pending);
 
         test_helper.advance_by(1.hour(), test_fut.as_mut());
-        assert_data_tree!(test_helper.inspector, root: contains {
+        assert_data_tree_with_respond_blocking_req!(test_helper, test_fut, root: contains {
             stats: contains {
                 get_iface_stats_fail_count: 0u64,
                 "1d_counters": contains {
@@ -2672,7 +2886,7 @@ mod tests {
         assert_eq!(test_helper.exec.run_until_stalled(&mut test_fut), Poll::Pending);
 
         test_helper.advance_by(1.hour(), test_fut.as_mut());
-        assert_data_tree!(test_helper.inspector, root: contains {
+        assert_data_tree_with_respond_blocking_req!(test_helper, test_fut, root: contains {
             stats: contains {
                 get_iface_stats_fail_count: NonZeroUintProperty,
                 "1d_counters": contains {
@@ -2689,6 +2903,39 @@ mod tests {
                     rx_very_high_packet_drop_duration: 0i64,
                     tx_very_high_packet_drop_duration: 0i64,
                 },
+            }
+        });
+    }
+
+    #[fuchsia::test]
+    fn test_log_signal_histograms_inspect() {
+        let (mut test_helper, mut test_fut) = setup_test();
+        test_helper.send_connected_event(random_bss_description!(Wpa2));
+        test_helper.drain_cobalt_events(&mut test_fut);
+
+        // Default iface stats responder in `test_helper` already mock these histograms.
+        assert_data_tree_with_respond_blocking_req!(test_helper, test_fut, root: contains {
+            external: contains {
+                stats: contains {
+                    "histograms": {
+                        antenna0_2Ghz: {
+                            antenna_index: 0u64,
+                            antenna_freq: "2Ghz",
+                            snr_histogram: vec![30i64, 999],
+                            snr_invalid_samples: 11u64,
+                            noise_floor_histogram: vec![-55i64, 999],
+                            noise_floor_invalid_samples: 44u64,
+                            rssi_histogram: vec![-25i64, 999],
+                            rssi_invalid_samples: 55u64,
+                        },
+                        antenna1_5Ghz: {
+                            antenna_index: 1u64,
+                            antenna_freq: "5Ghz",
+                            rx_rate_histogram: vec![100i64, 1500],
+                            rx_rate_invalid_samples: 33u64,
+                        },
+                    }
+                }
             }
         });
     }
@@ -4124,33 +4371,11 @@ mod tests {
                 let _ = self.exec.wake_expired_timers();
                 assert_eq!(self.exec.run_until_stalled(&mut test_fut), Poll::Pending);
 
-                let dev_svc_req_fut = self.dev_svc_stream.try_next();
-                pin_mut!(dev_svc_req_fut);
-                if let Poll::Ready(Ok(Some(request))) =
-                    self.exec.run_until_stalled(&mut dev_svc_req_fut)
-                {
-                    match request {
-                        DeviceServiceRequest::GetIfaceStats { iface_id, responder } => {
-                            // Telemetry should make stats request to the client iface that's
-                            // connected.
-                            assert_eq!(iface_id, IFACE_ID);
-
-                            match self.iface_stats_req_handler.as_mut() {
-                                Some(handle_iface_stats_req) => handle_iface_stats_req(responder),
-                                None => {
-                                    let seed = fasync::Time::now().into_nanos() as u64;
-                                    let mut iface_stats = fake_iface_stats(seed);
-                                    responder
-                                        .send(zx::sys::ZX_OK, Some(&mut iface_stats))
-                                        .expect("expect sending IfaceStats response to succeed");
-                                }
-                            }
-                        }
-                        _ => {
-                            panic!("unexpected request: {:?}", request);
-                        }
-                    }
-                }
+                respond_iface_stats_req(
+                    &mut self.exec,
+                    &mut self.dev_svc_stream,
+                    &mut self.iface_stats_req_handler,
+                );
 
                 // Respond to any potential Cobalt request, draining their payloads to
                 // `self.cobalt_events`.
@@ -4185,18 +4410,12 @@ mod tests {
         /// Continually execute the future and respond to any incoming Cobalt request with Ok.
         /// Append each metric request payload into `self.cobalt_events`.
         fn drain_cobalt_events(&mut self, test_fut: &mut (impl Future + Unpin)) {
-            let mut made_progress = true;
-            while made_progress {
-                let _result = self.exec.run_until_stalled(test_fut);
-                made_progress = false;
-                while let Poll::Ready(Some(Ok(req))) =
-                    self.exec.run_until_stalled(&mut self.cobalt_1dot1_stream.next())
-                {
-                    self.cobalt_events
-                        .append(&mut req.respond_to_metric_req(fidl_fuchsia_metrics::Status::Ok));
-                    made_progress = true;
-                }
-            }
+            drain_cobalt_events(
+                &mut self.exec,
+                &mut self.cobalt_1dot1_stream,
+                &mut self.cobalt_events,
+                test_fut,
+            )
         }
 
         fn get_logged_metrics(&self, metric_id: u32) -> Vec<MetricEvent> {
@@ -4211,6 +4430,57 @@ mod tests {
                 latest_ap_state,
             };
             self.telemetry_sender.send(event);
+        }
+    }
+
+    fn drain_cobalt_events(
+        executor: &mut fasync::TestExecutor,
+        cobalt_1dot1_stream: &mut fidl_fuchsia_metrics::MetricEventLoggerRequestStream,
+        cobalt_events: &mut Vec<MetricEvent>,
+        test_fut: &mut (impl Future + Unpin),
+    ) {
+        let mut made_progress = true;
+        while made_progress {
+            let _result = executor.run_until_stalled(test_fut);
+            made_progress = false;
+            while let Poll::Ready(Some(Ok(req))) =
+                executor.run_until_stalled(&mut cobalt_1dot1_stream.next())
+            {
+                cobalt_events
+                    .append(&mut req.respond_to_metric_req(fidl_fuchsia_metrics::Status::Ok));
+                made_progress = true;
+            }
+        }
+    }
+
+    fn respond_iface_stats_req(
+        executor: &mut fasync::TestExecutor,
+        dev_svc_stream: &mut fidl_fuchsia_wlan_device_service::DeviceServiceRequestStream,
+        iface_stats_req_handler: &mut Option<Box<dyn FnMut(DeviceServiceGetIfaceStatsResponder)>>,
+    ) {
+        let dev_svc_req_fut = dev_svc_stream.try_next();
+        pin_mut!(dev_svc_req_fut);
+        if let Poll::Ready(Ok(Some(request))) = executor.run_until_stalled(&mut dev_svc_req_fut) {
+            match request {
+                DeviceServiceRequest::GetIfaceStats { iface_id, responder } => {
+                    // Telemetry should make stats request to the client iface that's
+                    // connected.
+                    assert_eq!(iface_id, IFACE_ID);
+                    match iface_stats_req_handler.as_mut() {
+                        Some(handle_iface_stats_req) => handle_iface_stats_req(responder),
+                        None => {
+                            let seed = fasync::Time::now().into_nanos() as u64;
+                            let mut iface_stats = fake_iface_stats(seed);
+                            responder
+                                .send(zx::sys::ZX_OK, Some(&mut iface_stats))
+                                .expect("expect sending IfaceStats response to succeed");
+                        }
+                    }
+                }
+                _ => {
+                    panic!("unexpected request: {:?}", request);
+                }
+            }
         }
     }
 
@@ -4395,63 +4665,74 @@ mod tests {
         fidl_fuchsia_wlan_stats::RssiStats { hist: vec![nth_req] }
     }
 
-    fn fake_antenna_id() -> Option<Box<fidl_fuchsia_wlan_stats::AntennaId>> {
-        Some(Box::new(fidl_fuchsia_wlan_stats::AntennaId {
-            freq: fidl_fuchsia_wlan_stats::AntennaFreq::Antenna5G,
-            index: 0,
-        }))
-    }
-
     fn fake_noise_floor_histograms() -> Vec<fidl_fuchsia_wlan_stats::NoiseFloorHistogram> {
         vec![fidl_fuchsia_wlan_stats::NoiseFloorHistogram {
             hist_scope: fidl_fuchsia_wlan_stats::HistScope::PerAntenna,
-            antenna_id: fake_antenna_id(),
-            // Noise floor bucket_index 165 indicates -90 dBm.
+            antenna_id: Some(Box::new(fidl_fuchsia_wlan_stats::AntennaId {
+                freq: fidl_fuchsia_wlan_stats::AntennaFreq::Antenna2G,
+                index: 0,
+            })),
             noise_floor_samples: vec![fidl_fuchsia_wlan_stats::HistBucket {
-                bucket_index: 165,
-                num_samples: 10,
+                bucket_index: 200,
+                num_samples: 999,
             }],
-            invalid_samples: 0,
+            invalid_samples: 44,
         }]
     }
 
     fn fake_rssi_histograms() -> Vec<fidl_fuchsia_wlan_stats::RssiHistogram> {
         vec![fidl_fuchsia_wlan_stats::RssiHistogram {
             hist_scope: fidl_fuchsia_wlan_stats::HistScope::PerAntenna,
-            antenna_id: fake_antenna_id(),
-            // RSSI bucket_index 225 indicates -30 dBm.
+            antenna_id: Some(Box::new(fidl_fuchsia_wlan_stats::AntennaId {
+                freq: fidl_fuchsia_wlan_stats::AntennaFreq::Antenna2G,
+                index: 0,
+            })),
             rssi_samples: vec![fidl_fuchsia_wlan_stats::HistBucket {
-                bucket_index: 225,
-                num_samples: 10,
+                bucket_index: 230,
+                num_samples: 999,
             }],
-            invalid_samples: 0,
+            invalid_samples: 55,
         }]
     }
 
     fn fake_rx_rate_index_histograms() -> Vec<fidl_fuchsia_wlan_stats::RxRateIndexHistogram> {
-        vec![fidl_fuchsia_wlan_stats::RxRateIndexHistogram {
-            hist_scope: fidl_fuchsia_wlan_stats::HistScope::PerAntenna,
-            antenna_id: fake_antenna_id(),
-            // Rate bucket_index 74 indicates HT BW40 MCS 14 SGI, which is 802.11n 270 Mb/s.
-            // Rate bucket_index 75 indicates HT BW40 MCS 15 SGI, which is 802.11n 300 Mb/s.
-            rx_rate_index_samples: vec![
-                fidl_fuchsia_wlan_stats::HistBucket { bucket_index: 74, num_samples: 5 },
-                fidl_fuchsia_wlan_stats::HistBucket { bucket_index: 75, num_samples: 5 },
-            ],
-            invalid_samples: 0,
-        }]
+        vec![
+            fidl_fuchsia_wlan_stats::RxRateIndexHistogram {
+                hist_scope: fidl_fuchsia_wlan_stats::HistScope::Station,
+                antenna_id: None,
+                rx_rate_index_samples: vec![fidl_fuchsia_wlan_stats::HistBucket {
+                    bucket_index: 99,
+                    num_samples: 1400,
+                }],
+                invalid_samples: 22,
+            },
+            fidl_fuchsia_wlan_stats::RxRateIndexHistogram {
+                hist_scope: fidl_fuchsia_wlan_stats::HistScope::PerAntenna,
+                antenna_id: Some(Box::new(fidl_fuchsia_wlan_stats::AntennaId {
+                    freq: fidl_fuchsia_wlan_stats::AntennaFreq::Antenna5G,
+                    index: 1,
+                })),
+                rx_rate_index_samples: vec![fidl_fuchsia_wlan_stats::HistBucket {
+                    bucket_index: 100,
+                    num_samples: 1500,
+                }],
+                invalid_samples: 33,
+            },
+        ]
     }
 
     fn fake_snr_histograms() -> Vec<fidl_fuchsia_wlan_stats::SnrHistogram> {
         vec![fidl_fuchsia_wlan_stats::SnrHistogram {
             hist_scope: fidl_fuchsia_wlan_stats::HistScope::PerAntenna,
-            antenna_id: fake_antenna_id(),
-            // Signal to noise ratio bucket_index 60 indicates 60 dB.
+            antenna_id: Some(Box::new(fidl_fuchsia_wlan_stats::AntennaId {
+                freq: fidl_fuchsia_wlan_stats::AntennaFreq::Antenna2G,
+                index: 0,
+            })),
             snr_samples: vec![fidl_fuchsia_wlan_stats::HistBucket {
-                bucket_index: 60,
-                num_samples: 10,
+                bucket_index: 30,
+                num_samples: 999,
             }],
-            invalid_samples: 0,
+            invalid_samples: 11,
         }]
     }
 

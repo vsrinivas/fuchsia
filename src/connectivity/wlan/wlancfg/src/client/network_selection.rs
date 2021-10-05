@@ -2325,7 +2325,7 @@ mod tests {
 
         // Verify that NetworkSelectionDecision telemetry event is sent
         assert_variant!(telemetry_receiver.try_next(), Ok(Some(event)) => {
-            assert_eq!(event, TelemetryEvent::NetworkSelectionDecision {
+            assert_variant!(event, TelemetryEvent::NetworkSelectionDecision {
                 network_selection_type: telemetry::NetworkSelectionType::Undirected,
                 num_candidates: Ok(2),
                 selected_any: true,
@@ -2537,7 +2537,7 @@ mod tests {
 
         // Verify that NetworkSelectionDecision telemetry event is sent
         assert_variant!(telemetry_receiver.try_next(), Ok(Some(event)) => {
-            assert_eq!(event, TelemetryEvent::NetworkSelectionDecision {
+            assert_variant!(event, TelemetryEvent::NetworkSelectionDecision {
                 network_selection_type: telemetry::NetworkSelectionType::Directed,
                 num_candidates: Ok(1),
                 selected_any: true,
@@ -2592,7 +2592,7 @@ mod tests {
 
         // Verify that NetworkSelectionDecision telemetry event is sent
         assert_variant!(telemetry_receiver.try_next(), Ok(Some(event)) => {
-            assert_eq!(event, TelemetryEvent::NetworkSelectionDecision {
+            assert_variant!(event, TelemetryEvent::NetworkSelectionDecision {
                 network_selection_type: telemetry::NetworkSelectionType::Directed,
                 num_candidates: Err(()),
                 selected_any: false,

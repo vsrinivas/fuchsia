@@ -2775,7 +2775,7 @@ mod tests {
         assert_variant!(telemetry_receiver.try_next(), Ok(Some(event)) => {
             // StartEstablishConnection event sent (because the state machine will attempt
             // to reconnect)
-            assert_eq!(event, TelemetryEvent::StartEstablishConnection { reset_start_time: false });
+            assert_variant!(event, TelemetryEvent::StartEstablishConnection { reset_start_time: false });
         });
     }
 

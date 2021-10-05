@@ -191,6 +191,7 @@ async fn verify_wlan_inspect() {
         external: {
             client_stats: contains {
                 disconnect_events: {},
+                histograms: contains {},
             },
         },
     });
@@ -303,7 +304,8 @@ async fn verify_wlan_inspect() {
                         reason_code: AnyProperty,
                         locally_initiated: true,
                     }
-                }
+                },
+                histograms: contains {},
             }
         },
     });

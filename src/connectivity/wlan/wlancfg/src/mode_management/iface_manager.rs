@@ -1957,7 +1957,7 @@ mod tests {
 
         // Verify that telemetry event has been sent.
         let event = assert_variant!(test_values.telemetry_receiver.try_next(), Ok(Some(ev)) => ev);
-        assert_eq!(event, TelemetryEvent::StartEstablishConnection { reset_start_time: true });
+        assert_variant!(event, TelemetryEvent::StartEstablishConnection { reset_start_time: true });
 
         // Verify that the oneshot has been acked.
         pin_mut!(connect_response_fut);
@@ -2753,7 +2753,7 @@ mod tests {
 
         // Verify that telemetry event has been sent
         let event = assert_variant!(test_values.telemetry_receiver.try_next(), Ok(Some(ev)) => ev);
-        assert_eq!(event, TelemetryEvent::ClearEstablishConnectionStartTime);
+        assert_variant!(event, TelemetryEvent::ClearEstablishConnectionStartTime);
 
         // Ensure no metric was logged.
         assert_variant!(test_values.cobalt_receiver.try_next(), Err(_));
@@ -4830,7 +4830,10 @@ mod tests {
 
         // Verify telemetry event has been sent.
         let event = assert_variant!(test_values.telemetry_receiver.try_next(), Ok(Some(ev)) => ev);
-        assert_eq!(event, TelemetryEvent::StartEstablishConnection { reset_start_time: false });
+        assert_variant!(
+            event,
+            TelemetryEvent::StartEstablishConnection { reset_start_time: false }
+        );
 
         // Acknowledge the disconnection attempt.
         assert_variant!(
@@ -5062,7 +5065,7 @@ mod tests {
             NetworkSelectionMissingAttribute::AllAttributesPresent => {
                 let event =
                     assert_variant!(test_values.telemetry_receiver.try_next(), Ok(Some(ev)) => ev);
-                assert_eq!(
+                assert_variant!(
                     event,
                     TelemetryEvent::StartEstablishConnection { reset_start_time: false }
                 );

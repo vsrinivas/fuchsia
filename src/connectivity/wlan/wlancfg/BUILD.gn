@@ -68,6 +68,7 @@ rustc_library("lib") {
     "//third_party/rust_crates:log",
     "//third_party/rust_crates:num-traits",
     "//third_party/rust_crates:parking_lot",
+    "//third_party/rust_crates:paste",
     "//third_party/rust_crates:pin-utils",
     "//third_party/rust_crates:rand",
     "//third_party/rust_crates:serde",
