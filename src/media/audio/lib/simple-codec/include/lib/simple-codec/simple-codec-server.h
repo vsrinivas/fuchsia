@@ -5,6 +5,7 @@
 #ifndef SRC_MEDIA_AUDIO_LIB_SIMPLE_CODEC_INCLUDE_LIB_SIMPLE_CODEC_SIMPLE_CODEC_SERVER_H_
 #define SRC_MEDIA_AUDIO_LIB_SIMPLE_CODEC_INCLUDE_LIB_SIMPLE_CODEC_SIMPLE_CODEC_SERVER_H_
 
+#include <fidl/fuchsia.hardware.audio/cpp/wire.h>
 #include <fuchsia/hardware/audio/cpp/banjo.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
@@ -24,7 +25,8 @@
 namespace audio {
 
 class SimpleCodecServer;
-using SimpleCodecServerDeviceType = ddk::Device<SimpleCodecServer>;
+using SimpleCodecServerDeviceType =
+    ddk::Device<SimpleCodecServer, ddk::Messageable<::fuchsia_hardware_audio::CodecConnect>::Mixin>;
 
 // This class provides an implementation of the audio codec protocol to be subclassed by codec
 // drivers. The subclass must implement all the virtual methods and use Create() for construction.
@@ -61,6 +63,12 @@ class SimpleCodecServer : public SimpleCodecServerDeviceType,
     Shutdown();
     state_.Set("released");
     delete this;
+  }
+
+  // |fuchsia.hardware.audio.CodecConnect| implementation.
+  void Connect(ConnectRequestView request, ConnectCompleter::Sync& completer) override {
+    BindClient(request->codec_protocol.TakeChannel(), loop_->dispatcher());
+    ZX_DEBUG_ASSERT(!completer.is_reply_needed());
   }
 
   // Hooks for driver implementation.

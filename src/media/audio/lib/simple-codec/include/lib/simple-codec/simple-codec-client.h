@@ -84,7 +84,6 @@ class SimpleCodecClient {
     zx_status_t status;
   };
 
-  zx::unowned_channel Connect();
   void UpdateGainState(
       fidl::WireResponse<::fuchsia_hardware_audio::Codec::WatchGainState>* response);
 

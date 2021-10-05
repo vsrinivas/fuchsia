@@ -5,6 +5,7 @@
 #ifndef SRC_MEDIA_AUDIO_LIB_SIMPLE_CODEC_INCLUDE_LIB_SIMPLE_CODEC_SIMPLE_CODEC_SERVER_INTERNAL_H_
 #define SRC_MEDIA_AUDIO_LIB_SIMPLE_CODEC_INCLUDE_LIB_SIMPLE_CODEC_SIMPLE_CODEC_SERVER_INTERNAL_H_
 
+#include <fidl/fuchsia.hardware.audio/cpp/wire.h>
 #include <lib/simple-codec/simple-codec-types.h>
 #include <lib/zircon-internal/thread_annotations.h>
 
