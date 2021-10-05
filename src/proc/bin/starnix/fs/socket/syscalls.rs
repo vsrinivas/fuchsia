@@ -177,7 +177,7 @@ pub fn sys_accept(
     ctx: &SyscallContext<'_>,
     fd: FdNumber,
     user_socket_address: UserAddress,
-    user_address_length: UserRef<usize>,
+    user_address_length: UserRef<socklen_t>,
 ) -> Result<SyscallResult, Errno> {
     sys_accept4(ctx, fd, user_socket_address, user_address_length, 0)
 }
@@ -185,8 +185,8 @@ pub fn sys_accept(
 pub fn sys_accept4(
     ctx: &SyscallContext<'_>,
     fd: FdNumber,
-    _user_socket_address: UserAddress,
-    _user_address_length: UserRef<usize>,
+    user_socket_address: UserAddress,
+    user_address_length: UserRef<socklen_t>,
     flags: u32,
 ) -> Result<SyscallResult, Errno> {
     let file = ctx.task.files.get(fd)?;
@@ -196,11 +196,14 @@ pub fn sys_accept4(
         || socket.lock().accept(),
         FdEvents::POLLIN | FdEvents::POLLHUP,
     )?;
+
+    if !user_socket_address.is_null() {
+        let address_bytes = accepted_socket.lock().getpeername()?;
+        write_socket_address(&ctx.task, user_socket_address, user_address_length, &address_bytes)?;
+    }
+
     let open_flags = socket_flags_to_open_flags(flags);
     let accepted_socket_file = Socket::new_file(ctx.kernel(), accepted_socket, open_flags);
-
-    // TODO: Copy out to user_socket_address.
-
     let fd_flags = if flags & SOCK_CLOEXEC != 0 { FdFlags::CLOEXEC } else { FdFlags::empty() };
     let accepted_fd = ctx.task.files.add_with_flags(accepted_socket_file, fd_flags)?;
     Ok(accepted_fd.into())
@@ -246,6 +249,9 @@ fn write_socket_address(
 ) -> Result<(), Errno> {
     let mut address_length = 0;
     task.mm.read_object(user_address_length, &mut address_length)?;
+    if address_length > i32::MAX as socklen_t {
+        return error!(EINVAL);
+    }
     let byte_count = std::cmp::min(address_bytes.len(), address_length as usize);
     task.mm.write_memory(user_socket_address, &address_bytes[..byte_count])?;
     let len = address_bytes.len() as socklen_t;
