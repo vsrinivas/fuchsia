@@ -84,6 +84,7 @@ const OPEN_FLAGS: &[(u32, &'static str)] = &flag_list![
     CLONE_FLAG_SAME_RIGHTS,
 ];
 
+#[derive(PartialEq, Eq)]
 struct OpenFlags(u32);
 
 impl Debug for OpenFlags {

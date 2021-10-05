@@ -173,3 +173,10 @@ used with mutation APIs.
 
 pkgfs hands out tokens via `GetToken()`, but they can't subsequently be used for
 any other operation.
+
+### `NodeGetFlags()` is supported on directories
+
+package-directory supports `NodeGetFlags()` on directories in addition to files.
+
+pkgfs responds with a `ZX_ERR_NOT_SUPPORTED` status when `NodeGetFlags()` is
+called on a directory.

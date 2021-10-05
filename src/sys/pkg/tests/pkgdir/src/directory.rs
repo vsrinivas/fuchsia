@@ -1353,6 +1353,47 @@ async fn get_token_per_package_source(source: PackageSource) {
 }
 
 #[fuchsia::test]
+async fn node_get_flags() {
+    for source in dirs_to_test().await {
+        node_get_flags_per_package_source(source).await
+    }
+}
+
+async fn node_get_flags_per_package_source(source: PackageSource) {
+    // Test get_flags APIs for root directory and subdirectory.
+    assert_node_get_flags_directory_calls(&source, ".").await;
+    assert_node_get_flags_directory_calls(&source, "dir").await;
+
+    // Test get_flags APIs for meta directory and subdirectory.
+    assert_node_get_flags_directory_calls(&source, "meta").await;
+    assert_node_get_flags_directory_calls(&source, "meta/dir").await;
+}
+
+async fn assert_node_get_flags_directory_calls(source: &PackageSource, path: &str) {
+    let package_root = &source.dir;
+    let dir = io_util::directory::open_directory(
+        package_root,
+        path,
+        OPEN_RIGHT_READABLE | OPEN_FLAG_DIRECTORY | OPEN_FLAG_POSIX,
+    )
+    .await
+    .expect("open directory");
+
+    let (status, flags) = dir.node_get_flags().await.unwrap();
+    let status = zx::Status::ok(status);
+
+    if source.is_pkgdir() {
+        // "NodeGetFlags() is supported on directories"
+        let result = status.map(|()| OpenFlags(flags));
+        assert_eq!(result, Ok(OpenFlags(OPEN_RIGHT_READABLE | OPEN_RIGHT_EXECUTABLE)))
+    } else {
+        // Verify nodeGetFlags() is not supported.
+        assert_eq!(status, Err(zx::Status::NOT_SUPPORTED));
+        assert_eq!(flags, 0);
+    }
+}
+
+#[fuchsia::test]
 async fn unsupported() {
     for source in just_pkgfs_for_now().await {
         unsupported_per_package_source(source).await
@@ -1412,11 +1453,6 @@ async fn assert_unsupported_directory_calls(
         zx::Status::from_raw(parent.watch(0, 0, h0).await.unwrap()),
         zx::Status::NOT_SUPPORTED
     );
-
-    // Verify nodeGetFlags() is not supported.
-    let (status, flags) = parent.node_get_flags().await.unwrap();
-    assert_eq!(zx::Status::from_raw(status), zx::Status::NOT_SUPPORTED);
-    assert_eq!(flags, 0);
 
     // Verify nodeSetFlags() is not supported.
     assert_eq!(
