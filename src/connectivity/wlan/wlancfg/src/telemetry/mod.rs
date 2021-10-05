@@ -545,6 +545,7 @@ macro_rules! log_cobalt_1dot1_batch {
     }};
 }
 
+const INSPECT_CONNECT_EVENTS_LIMIT: usize = 7;
 const INSPECT_DISCONNECT_EVENTS_LIMIT: usize = 7;
 const INSPECT_EXTERNAL_DISCONNECT_EVENTS_LIMIT: usize = 2;
 
@@ -580,6 +581,7 @@ pub struct Telemetry {
     // Inspect properties/nodes that telemetry hangs onto
     _inspect_node: InspectNode,
     get_iface_stats_fail_count: UintProperty,
+    connect_events_node: Mutex<BoundedListNode>,
     disconnect_events_node: Mutex<BoundedListNode>,
     external_inspect_node: ExternalInspectNode,
 }
@@ -605,6 +607,7 @@ impl Telemetry {
             Arc::clone(&stats_logger.last_7d_stats),
         );
         let get_iface_stats_fail_count = inspect_node.create_uint("get_iface_stats_fail_count", 0);
+        let connect_events = inspect_node.create_child("connect_events");
         let disconnect_events = inspect_node.create_child("disconnect_events");
         let external_inspect_node = ExternalInspectNode::new(external_inspect_node);
         record_inspect_external_data(
@@ -620,6 +623,10 @@ impl Telemetry {
             hasher,
             _inspect_node: inspect_node,
             get_iface_stats_fail_count,
+            connect_events_node: Mutex::new(BoundedListNode::new(
+                connect_events,
+                INSPECT_CONNECT_EVENTS_LIMIT,
+            )),
             disconnect_events_node: Mutex::new(BoundedListNode::new(
                 disconnect_events,
                 INSPECT_DISCONNECT_EVENTS_LIMIT,
@@ -771,6 +778,7 @@ impl Telemetry {
                     .await;
                 self.stats_logger.log_stat(StatOp::AddConnectAttemptsCount).await;
                 if result.code == fidl_ieee80211::StatusCode::Success {
+                    self.log_connect_event_inspect(&latest_ap_state, multiple_bss_candidates);
                     self.stats_logger.log_stat(StatOp::AddConnectSuccessfulCount).await;
 
                     self.stats_logger
@@ -873,6 +881,22 @@ impl Telemetry {
                 }
             }
         }
+    }
+
+    pub fn log_connect_event_inspect(
+        &self,
+        latest_ap_state: &BssDescription,
+        multiple_bss_candidates: bool,
+    ) {
+        inspect_log!(self.connect_events_node.lock(), {
+            bssid: latest_ap_state.bssid.0.to_mac_string(),
+            bssid_hash: self.hasher.hash_mac_addr(&latest_ap_state.bssid.0),
+            ssid: latest_ap_state.ssid.to_string(),
+            ssid_hash: self.hasher.hash_ssid(&latest_ap_state.ssid),
+            rssi_dbm: latest_ap_state.rssi_dbm,
+            snr_db: latest_ap_state.snr_db,
+            multiple_bss_candidates: multiple_bss_candidates,
+        });
     }
 
     pub fn log_disconnect_event_inspect(&self, info: &DisconnectInfo) {
