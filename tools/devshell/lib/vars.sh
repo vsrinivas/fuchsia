@@ -435,14 +435,6 @@ function get-device-addr-url {
   get-device-addr-resource | sed 's#%#%25#'
 }
 
-function fx-command-exists {
-  local -r command_name="$1"
-  path=$(find_executable "${command_name}")
-  if [ "$path" == "" ]; then
-    return 1
-  fi
-}
-
 function fx-command-run {
   local -r command_name="$1"
   local command_path

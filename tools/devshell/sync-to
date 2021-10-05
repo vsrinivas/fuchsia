@@ -7,7 +7,7 @@
 # this one once feature parity is reached.
 
 #### CATEGORY=Source tree
-### [EXPERIMENTAL] Sync the local Fuchsia source tree to a given state
+### Sync the local Fuchsia source tree to a given state
 
 import argparse
 import enum
@@ -24,10 +24,7 @@ from typing import Union
 import urllib.parse
 
 HELP = """\
-## usage: fx new-sync-to [-h|--help] <STATE>
-##
-## THIS COMMAND IS EXPERIMENTAL. It's recommended to use the internal `fx
-## sync-to` command instead until this command reaches stability.
+## usage: fx sync-to [-h|--help] <STATE>
 ##
 ## To reproduce builds at a given repo state, or bisect bugs among a series of
 ## checkins, this command synchronizes the local Fuchsia source tree to a given
@@ -71,25 +68,25 @@ HELP = """\
 ## Examples:
 ##
 ## # Sync to the source used by build https://ci.chromium.org/b/8835832080588336881
-## fx new-sync-to 8835832080588336881
+## fx sync-to 8835832080588336881
 ##
 ## # Sync to the source tagged as release 0.20210822.2.5:
-## fx new-sync-to releases/0.20210822.2.5
+## fx sync-to releases/0.20210822.2.5
 ##
 ## # Sync to the same tree updated in 2021-08-28T14:26:22-07:00 (this is
 ## # local to your local tree - to reproduce, look for timestamps in your
 ## # own .jiri_root/update_history directory):
-## fx new-sync-to 2021-08-28T14:26:22-07:00
+## fx sync-to 2021-08-28T14:26:22-07:00
 ##
 ## # Sync to integration commit 901ed5b
 ## # (https://fuchsia.googlesource.com/integration/+/901ed5bf7db253bb6feb4832ac1a752248e2361d):
-## fx new-sync-to 901ed5b
+## fx sync-to 901ed5b
 ##
 ## # Sync to release branch f1:
-## fx new-sync-to refs/heads/releases/f1
+## fx sync-to refs/heads/releases/f1
 ##
 ## # Restore your source to the top of the tree:
-## fx new-sync-to reset
+## fx sync-to reset
 ##
 """
 
@@ -342,7 +339,8 @@ class SyncToCommand:
                 f" checkout remote {local_remote!r}."
                 "\nIf this is a public build, you may need to create a"
                 " separate public checkout for the public source code:"
-                " https://fuchsia.dev/fuchsia-src/get-started/get_fuchsia_source")
+                " https://fuchsia.dev/fuchsia-src/get-started/get_fuchsia_source"
+            )
 
     def assert_correct_integration_manifest(self, manifest: str) -> None:
         jiri_manifest = self.fuchsia_dir.joinpath(".jiri_manifest")
@@ -524,9 +522,7 @@ class SyncToCommand:
 
     def print_synced_revision(self) -> None:
         print()
-        print(
-            "Success! To switch back to the latest, use `fx new-sync-to reset`."
-        )
+        print("Success! To switch back to the latest, use `fx sync-to reset`.")
         print("//integration HEAD is now at:")
         self.run_command(
             "git",

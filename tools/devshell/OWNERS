@@ -25,8 +25,8 @@ per-file             list-packages,get-src-dir                            = file
 per-file             repro = olivernewman@google.com
 # per-file-COMPONENT repro = Build>Workflow
 
-per-file             new-sync-to = olivernewman@google.com
-# per-file-COMPONENT new-sync-to = Infra>Platform
+per-file             sync-to = olivernewman@google.com
+# per-file-COMPONENT sync-to = Infra>Platform
 
 per-file             set = olivernewman@google.com
 # per-file-COMPONENT set = Tools>Fx
