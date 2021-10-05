@@ -901,7 +901,7 @@ mod tests {
 
     #[test]
     fn test_receive_gratuitous_arp_response() {
-        // Test that, when we receive a gratuitous ARP request, we cache the
+        // Test that, when we receive a gratuitous ARP response, we cache the
         // sender's address information, and we do not send a response.
 
         let mut ctx = DummyCtx::default();
