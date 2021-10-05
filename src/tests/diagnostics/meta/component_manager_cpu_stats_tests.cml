@@ -35,6 +35,9 @@
 
             // Component manager exposes cpu stats processing times.
             "<component_manager>:root/cpu_stats:processing_times_ns WHERE [a] UnhandledType(a)",
+
+            // Component manager exposes cpu histograms.
+            "<component_manager>:root/cpu_stats/histograms:\\/bootstrap\\/archivist WHERE [a] UnhandledType(a)",
         ],
     },
 }

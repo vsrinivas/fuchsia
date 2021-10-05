@@ -64,12 +64,12 @@ mod test {
     fn verify_test_mode() {
         let time = FakeTime::new();
         let mut tracker = DelayTracker::new(&time, &Mode::Test);
-        time.set(1);
+        time.set_ticks(1);
         let trigger_slow = SnapshotTrigger { signature: "slow".to_string(), interval: 10 };
         let trigger_fast = SnapshotTrigger { signature: "fast".to_string(), interval: 1 };
         let ok_slow_1 = tracker.ok_to_send(&trigger_slow);
         let ok_fast_1 = tracker.ok_to_send(&trigger_fast);
-        time.set(3);
+        time.set_ticks(3);
         let ok_slow_2 = tracker.ok_to_send(&trigger_slow);
         let ok_fast_2 = tracker.ok_to_send(&trigger_fast);
         // This one should obviously succeed.

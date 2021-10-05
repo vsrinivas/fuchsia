@@ -49,6 +49,7 @@ template("component_manager") {
     "//src/lib/fuchsia-component",
     "//src/lib/fuchsia-runtime",
     "//src/lib/fuchsia-url",
+    "//src/lib/injectable-time",
     "//src/lib/process_builder",
     "//src/lib/scoped_task",
     "//src/lib/storage/vfs/rust:vfs",

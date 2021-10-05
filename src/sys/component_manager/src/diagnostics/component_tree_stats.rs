@@ -11,7 +11,7 @@ use {
             runtime_stats_source::{
                 DiagnosticsReceiverProvider, RuntimeStatsContainer, RuntimeStatsSource,
             },
-            task_info::TaskInfo,
+            task_info::{create_cpu_histogram, TaskInfo},
         },
         model::error::ModelError,
         model::hooks::{Event, EventPayload, EventType, HasEventType, Hook, HooksRegistration},
@@ -24,6 +24,7 @@ use {
     fuchsia_zircon::{self as zx, HandleBased},
     fuchsia_zircon_sys as zx_sys,
     futures::{channel::oneshot, lock::Mutex, FutureExt},
+    injectable_time::MonotonicTime,
     log::warn,
     moniker::{AbsoluteMoniker, AbsoluteMonikerBase, ExtendedMoniker},
     std::{
@@ -50,16 +51,19 @@ pub struct ComponentTreeStats<T: RuntimeStatsSource> {
 
     /// Stores all the tasks we know about. This provides direct access for updating a task's
     /// children.
-    tasks: Mutex<BTreeMap<zx_sys::zx_koid_t, Weak<Mutex<TaskInfo<T>>>>>,
+    tasks: Mutex<BTreeMap<zx_sys::zx_koid_t, Weak<Mutex<TaskInfo<T, MonotonicTime>>>>>,
 
     /// The root of the tree stats.
     node: inspect::Node,
+
+    /// The node under which CPU usage histograms will be stored.
+    histograms_node: inspect::Node,
 
     /// A histogram storing stats about the time it took to process the CPU stats measurements.
     processing_times: inspect::IntExponentialHistogramProperty,
 
     /// The task that takes CPU samples every minute.
-    task: Mutex<Option<fasync::Task<()>>>,
+    sampler_task: Mutex<Option<fasync::Task<()>>>,
 
     /// Aggregated CPU stats.
     totals: Mutex<AggregatedStats>,
@@ -77,18 +81,19 @@ impl<T: 'static + RuntimeStatsSource + Send + Sync> ComponentTreeStats<T> {
             },
         );
 
+        let histograms_node = node.create_child("histograms");
         let totals = AggregatedStats::new(node.create_child("@total"));
         let this = Arc::new(Self {
             tree: Mutex::new(BTreeMap::new()),
             tasks: Mutex::new(BTreeMap::new()),
             node,
+            histograms_node,
             processing_times,
-            task: Mutex::new(None),
+            sampler_task: Mutex::new(None),
             totals: Mutex::new(totals),
         });
 
         let weak_self = Arc::downgrade(&this);
-        *(this.task.lock().await) = Some(Self::spawn_measuring_task(weak_self.clone()));
 
         let weak_self_for_fut = weak_self.clone();
         this.node.record_lazy_child("measurements", move || {
@@ -102,7 +107,7 @@ impl<T: 'static + RuntimeStatsSource + Send + Sync> ComponentTreeStats<T> {
             }
             .boxed()
         });
-
+        let weak_self_clone = weak_self.clone();
         this.node.record_lazy_child("recent_usage", move || {
             let weak_self_clone = weak_self.clone();
             async move {
@@ -116,13 +121,15 @@ impl<T: 'static + RuntimeStatsSource + Send + Sync> ComponentTreeStats<T> {
         });
 
         this.measure().await;
+        *(this.sampler_task.lock().await) = Some(Self::spawn_measuring_task(weak_self_clone));
 
         this
     }
 
     /// Initializes a new component stats with the given task.
     async fn track_ready(&self, moniker: ExtendedMoniker, task: T) {
-        if let Ok(task_info) = TaskInfo::try_from(task) {
+        let histogram = create_cpu_histogram(&self.histograms_node, &moniker);
+        if let Ok(task_info) = TaskInfo::try_from(task, Some(histogram)) {
             let koid = task_info.koid();
             let stats = ComponentStats::ready(task_info);
             self.tasks.lock().await.insert(koid, Arc::downgrade(&stats.tasks()[0]));
@@ -218,7 +225,7 @@ impl<T: 'static + RuntimeStatsSource + Send + Sync> ComponentTreeStats<T> {
     fn spawn_measuring_task(weak_self: Weak<Self>) -> fasync::Task<()> {
         fasync::Task::spawn(async move {
             loop {
-                fasync::Timer::new(CPU_SAMPLE_PERIOD_SECONDS).await;
+                fasync::Timer::new(CPU_SAMPLE_PERIOD).await;
                 match weak_self.upgrade() {
                     None => break,
                     Some(this) => {
@@ -260,13 +267,15 @@ impl<T: 'static + RuntimeStatsSource + Send + Sync> ComponentTreeStats<T> {
         let this = maybe_return!(weak_self.upgrade());
         let mut tree_lock = this.tree.lock().await;
         let stats = maybe_return!(tree_lock.get_mut(&moniker));
+        let histogram = create_cpu_histogram(&this.histograms_node, &moniker);
         let mut task_info = maybe_return!(source
             .take_component_task()
-            .and_then(|task| TaskInfo::try_from(task).ok()));
+            .and_then(|task| TaskInfo::try_from(task, Some(histogram)).ok()));
 
+        let histogram = create_cpu_histogram(&this.histograms_node, &moniker);
         let parent_koid = source
             .take_parent_task()
-            .and_then(|task| TaskInfo::try_from(task).ok())
+            .and_then(|task| TaskInfo::try_from(task, Some(histogram)).ok())
             .map(|task| task.koid());
         let koid = task_info.koid();
         let mut task_guard = this.tasks.lock().await;

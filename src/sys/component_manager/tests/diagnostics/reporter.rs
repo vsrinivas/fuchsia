@@ -47,11 +47,11 @@ async fn main() {
             measurements: {
                 task_count: 3u64,
                 "fuchsia.inspect.Stats": {
-                    current_size: 4096u64,
-                    maximum_size: 2097152u64,
-                    total_dynamic_children: 0u64,
-                    allocated_blocks: 39u64,
-                    deallocated_blocks: 0u64,
+                    current_size: AnyProperty,
+                    maximum_size: AnyProperty,
+                    total_dynamic_children: AnyProperty,
+                    allocated_blocks: AnyProperty,
+                    deallocated_blocks: AnyProperty,
                     failed_allocations: 0u64,
                 },
                 components: {
@@ -82,11 +82,11 @@ async fn main() {
             },
         },
         "fuchsia.inspect.Stats": {
-            current_size: 4096u64,
-            maximum_size: 262144u64,
-            total_dynamic_children: 3u64,
-            allocated_blocks: 40u64,
-            deallocated_blocks: 1u64,
+            current_size: AnyProperty,
+            maximum_size: AnyProperty,
+            total_dynamic_children: AnyProperty,
+            allocated_blocks: AnyProperty,
+            deallocated_blocks: AnyProperty,
             failed_allocations: 0u64,
         }
     });

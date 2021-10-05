@@ -4,5 +4,5 @@
 
 use std::time::Duration;
 
-pub const CPU_SAMPLE_PERIOD_SECONDS: Duration = Duration::from_secs(60);
+pub const CPU_SAMPLE_PERIOD: Duration = Duration::from_secs(60);
 pub const COMPONENT_CPU_MAX_SAMPLES: usize = 60;

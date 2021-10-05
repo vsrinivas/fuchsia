@@ -8,12 +8,13 @@ use {
     },
     fuchsia_async as fasync, fuchsia_inspect as inspect, fuchsia_zircon_sys as zx_sys,
     futures::lock::Mutex,
+    injectable_time::MonotonicTime,
     std::sync::Arc,
 };
 
 /// Tracks the tasks associated to some component and provides utilities for measuring them.
 pub struct ComponentStats<T: RuntimeStatsSource> {
-    tasks: Vec<Arc<Mutex<TaskInfo<T>>>>,
+    tasks: Vec<Arc<Mutex<TaskInfo<T, MonotonicTime>>>>,
     _task: Option<fasync::Task<()>>,
     is_measuring: bool,
 }
@@ -26,13 +27,13 @@ impl<T: RuntimeStatsSource + Send + Sync> ComponentStats<T> {
     }
 
     /// Creates a new `ComponentStats` and starts taking measurements.
-    pub fn ready(task_info: TaskInfo<T>) -> Self {
+    pub fn ready(task_info: TaskInfo<T, MonotonicTime>) -> Self {
         let ready_tasks = vec![Arc::new(Mutex::new(task_info))];
         Self { tasks: ready_tasks, is_measuring: true, _task: None }
     }
 
     /// Associate a task with this component.
-    pub async fn add_task(&mut self, task: Arc<Mutex<TaskInfo<T>>>) {
+    pub async fn add_task(&mut self, task: Arc<Mutex<TaskInfo<T, MonotonicTime>>>) {
         self.tasks.push(task);
         self.is_measuring = true;
     }
@@ -98,7 +99,7 @@ impl<T: RuntimeStatsSource + Send + Sync> ComponentStats<T> {
     }
 
     /// Get a reference to the tasks tracked by these stats.
-    pub fn tasks(&self) -> &[Arc<Mutex<TaskInfo<T>>>] {
+    pub fn tasks(&self) -> &[Arc<Mutex<TaskInfo<T, MonotonicTime>>>] {
         &self.tasks
     }
 
@@ -112,7 +113,7 @@ impl<T: RuntimeStatsSource + Send + Sync> ComponentStats<T> {
     }
 
     #[cfg(test)]
-    pub fn tasks_mut(&mut self) -> &mut [Arc<Mutex<TaskInfo<T>>>] {
+    pub fn tasks_mut(&mut self) -> &mut [Arc<Mutex<TaskInfo<T, MonotonicTime>>>] {
         &mut self.tasks
     }
 }

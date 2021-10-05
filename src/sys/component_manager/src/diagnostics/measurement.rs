@@ -80,8 +80,14 @@ impl SubAssign<&Measurement> for Measurement {
 
 impl From<zx::TaskRuntimeInfo> for Measurement {
     fn from(info: zx::TaskRuntimeInfo) -> Self {
+        Measurement::from_runtime_info(info, zx::Time::get_monotonic())
+    }
+}
+
+impl Measurement {
+    pub(crate) fn from_runtime_info(info: zx::TaskRuntimeInfo, timestamp: zx::Time) -> Self {
         Self {
-            timestamp: zx::Time::get_monotonic(),
+            timestamp,
             cpu_time: zx::Duration::from_nanos(info.cpu_time),
             queue_time: zx::Duration::from_nanos(info.queue_time),
         }

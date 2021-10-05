@@ -4,7 +4,8 @@
 
 #[cfg(target_os = "fuchsia")]
 use fuchsia_zircon as zx;
-use std::cell::RefCell;
+use parking_lot::Mutex;
+use std::sync::Arc;
 
 /// TimeSource provides the current time in nanoseconds since the Unix epoch.
 /// A `&'a dyn TimeSource` can be injected into a data structure.
@@ -14,24 +15,30 @@ pub trait TimeSource {
     fn now(&self) -> i64;
 }
 
-/// FakeTime instances return the last value that was `set()` by testing code.
-/// Upon initialization, they return 0.
+/// FakeTime instances return the last value that was configured by testing code via `set_ticks()`
+///  or `add_ticks()`. Upon initialization, they return 0.
+#[derive(Clone)]
 pub struct FakeTime {
-    time: RefCell<i64>,
+    time: Arc<Mutex<i64>>,
 }
 
 impl TimeSource for FakeTime {
     fn now(&self) -> i64 {
-        *self.time.borrow()
+        *self.time.lock()
     }
 }
 
 impl FakeTime {
     pub fn new() -> FakeTime {
-        FakeTime { time: RefCell::new(0) }
+        FakeTime { time: Arc::new(Mutex::new(0)) }
     }
-    pub fn set(&self, now: i64) {
-        *self.time.borrow_mut() = now;
+
+    pub fn set_ticks(&self, now: i64) {
+        *self.time.lock() = now;
+    }
+
+    pub fn add_ticks(&self, ticks: i64) {
+        *self.time.lock() += ticks;
     }
 }
 
@@ -128,18 +135,26 @@ mod test {
         let time_holder = TimeHolder::new(&time_source);
 
         // Fake time is 0 on initialization.
-        let first_time = time_holder.now();
-        time_source.set(1000);
-        let second_time = time_holder.now();
+        let time_0 = time_holder.now();
+        time_source.set_ticks(1000);
+        let time_1000 = time_holder.now();
         // Fake time does not auto-increment.
-        let third_time = time_holder.now();
+        let time_1000_2 = time_holder.now();
         // Fake time can go backward.
-        time_source.set(500);
-        let fourth_time = time_holder.now();
+        time_source.set_ticks(500);
+        let time_500 = time_holder.now();
+        // add_ticks() works.
+        time_source.add_ticks(123);
+        let time_623 = time_holder.now();
+        // add_ticks() can take a negative value
+        time_source.add_ticks(-23);
+        let time_600 = time_holder.now();
 
-        assert_eq!(first_time, 0);
-        assert_eq!(second_time, 1000);
-        assert_eq!(third_time, 1000);
-        assert_eq!(fourth_time, 500);
+        assert_eq!(time_0, 0);
+        assert_eq!(time_1000, 1000);
+        assert_eq!(time_1000_2, 1000);
+        assert_eq!(time_500, 500);
+        assert_eq!(time_623, 623);
+        assert_eq!(time_600, 600);
     }
 }
