@@ -10,6 +10,7 @@ use crate::audio::ModifiedCounters;
 pub enum AudioSettingSource {
     User,
     System,
+    SystemWithFeedback,
 }
 
 #[derive(PartialEq, Debug, Clone, Copy, Serialize, Deserialize, Hash, Eq)]

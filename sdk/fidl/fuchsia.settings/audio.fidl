@@ -37,6 +37,11 @@ type AudioStreamSettingSource = strict enum {
     /// The system takes control of the volume. This is used when the system constantly
     /// calculates and changes the volume. The volume is not stored for this source.
     SYSTEM = 1;
+
+    /// The system takes control of the volume. This is used when the system changes
+    /// the volume, but we still want to play feedback sounds for these changes. The
+    /// volume is not stored for this source.
+    SYSTEM_WITH_FEEDBACK = 2;
 };
 
 type Volume = table {

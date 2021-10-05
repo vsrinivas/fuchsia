@@ -88,6 +88,7 @@ impl From<AudioStreamSettingSource> for AudioSettingSource {
         match source {
             AudioStreamSettingSource::User => AudioSettingSource::User,
             AudioStreamSettingSource::System => AudioSettingSource::System,
+            AudioStreamSettingSource::SystemWithFeedback => AudioSettingSource::SystemWithFeedback,
         }
     }
 }
@@ -97,6 +98,7 @@ impl From<AudioSettingSource> for AudioStreamSettingSource {
         match source {
             AudioSettingSource::User => AudioStreamSettingSource::User,
             AudioSettingSource::System => AudioStreamSettingSource::System,
+            AudioSettingSource::SystemWithFeedback => AudioStreamSettingSource::SystemWithFeedback,
         }
     }
 }

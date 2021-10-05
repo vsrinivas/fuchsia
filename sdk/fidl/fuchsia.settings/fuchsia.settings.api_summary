@@ -21,6 +21,7 @@ table/member fuchsia.settings/AudioSettings.input fuchsia.settings/AudioInput
 table/member fuchsia.settings/AudioSettings.streams vector<fuchsia.settings/AudioStreamSettings>:5
 table fuchsia.settings/AudioSettings
 enum/member fuchsia.settings/AudioStreamSettingSource.SYSTEM 1
+enum/member fuchsia.settings/AudioStreamSettingSource.SYSTEM_WITH_FEEDBACK 2
 enum/member fuchsia.settings/AudioStreamSettingSource.USER 0
 strict enum fuchsia.settings/AudioStreamSettingSource uint32
 table/member fuchsia.settings/AudioStreamSettings.source fuchsia.settings/AudioStreamSettingSource
