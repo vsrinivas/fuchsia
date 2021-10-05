@@ -7,13 +7,12 @@
 
 #include <lib/inspect/cpp/inspect.h>
 #include <lib/inspect/cpp/vmo/types.h>
+#include <lib/stdcompat/span.h>
 
 #include <map>
 #include <string>
 #include <string_view>
 #include <vector>
-
-#include <fbl/span.h>
 
 namespace ftl {
 

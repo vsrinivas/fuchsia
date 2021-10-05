@@ -8,6 +8,7 @@
 #include <fuchsia/hardware/nand/c/banjo.h>
 #include <lib/fpromise/result.h>
 #include <lib/fzl/owned-vmo-mapper.h>
+#include <lib/stdcompat/span.h>
 #include <lib/sync/completion.h>
 #include <lib/zx/status.h>
 
@@ -15,7 +16,6 @@
 #include <vector>
 
 #include <fbl/macros.h>
-#include <fbl/span.h>
 
 #include "oob_doubler.h"
 
@@ -29,7 +29,7 @@ class NandOperation {
   // this method will queue all operations before waiting, and will return once all successfully
   // queued operations are signalled.
   static std::vector<zx::status<>> ExecuteBatch(
-      OobDoubler* parent, fbl::Span<std::unique_ptr<NandOperation>> operation);
+      OobDoubler* parent, cpp20::span<std::unique_ptr<NandOperation>> operation);
 
   explicit NandOperation(size_t op_size) : op_size_(op_size) {}
   ~NandOperation() {}

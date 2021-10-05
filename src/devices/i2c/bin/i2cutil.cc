@@ -7,12 +7,12 @@
 #include <fidl/fuchsia.hardware.i2c/cpp/wire.h>
 #include <lib/fdio/fdio.h>
 #include <lib/fdio/unsafe.h>
+#include <lib/stdcompat/span.h>
 #include <stdio.h>
 #include <zircon/status.h>
 
 #include <filesystem>
 
-#include <fbl/span.h>
 #include <fbl/unique_fd.h>
 
 static void usage(char* prog) {
@@ -41,7 +41,7 @@ static zx_status_t convert_args(char** argv, size_t length, uint8_t* buffer) {
 }
 
 static zx_status_t write_bytes(fidl::WireSyncClient<fuchsia_hardware_i2c::Device2> client,
-                               fbl::Span<uint8_t> write_buffer) {
+                               cpp20::span<uint8_t> write_buffer) {
   bool is_write[] = {true};
   auto segments_is_write = fidl::VectorView<bool>::FromExternal(is_write);
 
@@ -60,7 +60,7 @@ static zx_status_t write_bytes(fidl::WireSyncClient<fuchsia_hardware_i2c::Device
 }
 
 static zx_status_t read_byte(fidl::WireSyncClient<fuchsia_hardware_i2c::Device2> client,
-                             fbl::Span<uint8_t> address, uint8_t* out_byte) {
+                             cpp20::span<uint8_t> address, uint8_t* out_byte) {
   bool is_write[] = {true, false};
   auto segments_is_write = fidl::VectorView<bool>::FromExternal(is_write);
   auto write_segment = fidl::VectorView<uint8_t>::FromExternal(address.data(), address.size());
@@ -248,7 +248,7 @@ static int device_cmd(int argc, char** argv, bool print_out) {
       }
 
       status =
-          write_bytes(std::move(client), fbl::Span<uint8_t>(write_buffer.get(), n_write_bytes));
+          write_bytes(std::move(client), cpp20::span<uint8_t>(write_buffer.get(), n_write_bytes));
       if (status == ZX_OK && print_out) {
         printf("Write: ");
         for (size_t i = 0; i < n_write_bytes; ++i) {
@@ -274,7 +274,7 @@ static int device_cmd(int argc, char** argv, bool print_out) {
       }
 
       uint8_t out_byte = 0;
-      status = read_byte(std::move(client), fbl::Span<uint8_t>(write_buffer.get(), n_write_bytes),
+      status = read_byte(std::move(client), cpp20::span<uint8_t>(write_buffer.get(), n_write_bytes),
                          &out_byte);
       if (status == ZX_OK && print_out) {
         printf("Read from");

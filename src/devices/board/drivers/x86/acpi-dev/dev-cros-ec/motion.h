@@ -6,6 +6,7 @@
 #define SRC_DEVICES_BOARD_DRIVERS_X86_ACPI_DEV_DEV_CROS_EC_MOTION_H_
 
 #include <fuchsia/hardware/hidbus/cpp/banjo.h>
+#include <lib/stdcompat/span.h>
 #include <zircon/compiler.h>
 #include <zircon/types.h>
 
@@ -19,7 +20,6 @@
 #include <fbl/mutex.h>
 #include <fbl/ref_counted.h>
 #include <fbl/ref_ptr.h>
-#include <fbl/span.h>
 #include <fbl/vector.h>
 
 #include "acpi.h"
@@ -120,7 +120,7 @@ class AcpiCrOsEcMotionDevice
 };
 
 // Build a HID descriptor reporting information about the given set of sensors.
-zx_status_t BuildHidDescriptor(fbl::Span<const SensorInfo> sensors, fbl::Array<uint8_t>* result);
+zx_status_t BuildHidDescriptor(cpp20::span<const SensorInfo> sensors, fbl::Array<uint8_t>* result);
 
 }  // namespace cros_ec
 

@@ -8,6 +8,7 @@ source_set("clocktree") {
     "clocktree.cc",
   ]
   deps = [
+    "//sdk/lib/stdcompat",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/zx",
   ]

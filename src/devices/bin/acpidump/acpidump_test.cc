@@ -14,7 +14,7 @@ namespace {
 
 // Wrapper around "ParseArgs" to simplify calling from tests.
 bool ParseArgs(std::initializer_list<const char*> args, Args* result) {
-  return ParseArgs(fbl::Span<const char* const>(args.begin(), args.size()), result);
+  return ParseArgs(cpp20::span<const char* const>(args.begin(), args.size()), result);
 }
 
 TEST(ParseArgs, Table) {

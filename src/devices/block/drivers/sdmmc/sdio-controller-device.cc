@@ -336,8 +336,7 @@ zx_status_t SdioControllerDevice::SdioEnableFnIntr(uint8_t fn_idx) {
   uint8_t intr_byte;
   st = SdioDoRwByteLocked(false, 0, SDIO_CIA_CCCR_IEN_INTR_EN_ADDR, 0, &intr_byte);
   if (st != ZX_OK) {
-    zxlogf(ERROR, "Failed to enable interrupt for fn: %d status: %d", fn_idx,
-           st);
+    zxlogf(ERROR, "Failed to enable interrupt for fn: %d status: %d", fn_idx, st);
     return st;
   }
 
@@ -348,8 +347,7 @@ zx_status_t SdioControllerDevice::SdioEnableFnIntr(uint8_t fn_idx) {
 
   st = SdioDoRwByteLocked(true, 0, SDIO_CIA_CCCR_IEN_INTR_EN_ADDR, intr_byte, nullptr);
   if (st != ZX_OK) {
-    zxlogf(ERROR, "Failed to enable interrupt for fn: %d status: %d", fn_idx,
-           st);
+    zxlogf(ERROR, "Failed to enable interrupt for fn: %d status: %d", fn_idx, st);
     return st;
   }
 
@@ -376,8 +374,7 @@ zx_status_t SdioControllerDevice::SdioDisableFnIntr(uint8_t fn_idx) {
   uint8_t intr_byte;
   st = SdioDoRwByteLocked(false, 0, SDIO_CIA_CCCR_IEN_INTR_EN_ADDR, 0, &intr_byte);
   if (st != ZX_OK) {
-    zxlogf(ERROR, "Failed reading intr enable reg. func: %d status: %d",
-           fn_idx, st);
+    zxlogf(ERROR, "Failed reading intr enable reg. func: %d status: %d", fn_idx, st);
     return st;
   }
 
@@ -389,8 +386,7 @@ zx_status_t SdioControllerDevice::SdioDisableFnIntr(uint8_t fn_idx) {
 
   st = SdioDoRwByteLocked(true, 0, SDIO_CIA_CCCR_IEN_INTR_EN_ADDR, intr_byte, nullptr);
   if (st != ZX_OK) {
-    zxlogf(ERROR, "Error writing to intr enable reg. func: %d status: %d",
-           fn_idx, st);
+    zxlogf(ERROR, "Error writing to intr enable reg. func: %d status: %d", fn_idx, st);
     return st;
   }
 
@@ -422,8 +418,7 @@ zx_status_t SdioControllerDevice::SdioUpdateBlockSizeLocked(uint8_t fn_idx, uint
   zx_status_t st =
       WriteData16(0, SDIO_CIA_FBR_BASE_ADDR(fn_idx) + SDIO_CIA_FBR_BLK_SIZE_ADDR, blk_sz);
   if (st != ZX_OK) {
-    zxlogf(ERROR, "Error setting blk size.fn: %d blk_sz: %d ret: %d",
-           fn_idx, blk_sz, st);
+    zxlogf(ERROR, "Error setting blk size.fn: %d blk_sz: %d ret: %d", fn_idx, blk_sz, st);
     return st;
   }
 
@@ -437,8 +432,7 @@ zx_status_t SdioControllerDevice::SdioGetBlockSize(uint8_t fn_idx, uint16_t* out
   zx_status_t st =
       ReadData16(0, SDIO_CIA_FBR_BASE_ADDR(fn_idx) + SDIO_CIA_FBR_BLK_SIZE_ADDR, out_cur_blk_size);
   if (st != ZX_OK) {
-    zxlogf(ERROR, "Failed to get block size for fn: %d ret: %d", fn_idx,
-           st);
+    zxlogf(ERROR, "Failed to get block size for fn: %d ret: %d", fn_idx, st);
   }
   return st;
 }
@@ -477,8 +471,8 @@ zx_status_t SdioControllerDevice::SdioDoRwTxn(uint8_t fn_idx, sdio_rw_txn_t* txn
   const uint32_t func_blk_size = funcs_[fn_idx].cur_blk_size;
 
   if (max_host_transfer_size < func_blk_size && max_host_transfer_size < data_size) {
-    zxlogf(ERROR, "block size (%u) is greater than max host transfer size (%lu)",
-           func_blk_size, max_host_transfer_size);
+    zxlogf(ERROR, "block size (%u) is greater than max host transfer size (%lu)", func_blk_size,
+           max_host_transfer_size);
     return ZX_ERR_NOT_SUPPORTED;
   }
 
@@ -751,14 +745,14 @@ zx::status<SdioControllerDevice::SdioTxnPosition> SdioControllerDevice::DoOneRwT
     // We know the entire buffers list is being used because the max transfer size is always at
     // least the block size. The first buffer may have had the size adjusted, so use the local
     // buffers array.
-    fbl::Span txn_buffers(buffers, current_position.buffers.size());
+    cpp20::span txn_buffers(buffers, current_position.buffers.size());
     status = sdmmc_.SdioIoRwExtended(hw_info_.caps, txn.write, fn_idx, current_position.address,
                                      txn.incr, 1, static_cast<uint32_t>(total_size), txn_buffers);
     last_block_buffer_index = current_position.buffers.size();
   } else {
     txn_size = static_cast<uint32_t>(block_count * func_blk_size);
 
-    fbl::Span txn_buffers(buffers, last_block_buffer_index + 1);
+    cpp20::span txn_buffers(buffers, last_block_buffer_index + 1);
     txn_buffers[last_block_buffer_index].size = last_block_buffer_size;
     status = sdmmc_.SdioIoRwExtended(hw_info_.caps, txn.write, fn_idx, current_position.address,
                                      txn.incr, static_cast<uint32_t>(block_count), func_blk_size,
@@ -796,7 +790,7 @@ zx_status_t SdioControllerDevice::SdioDoRwTxnNew(uint8_t fn_idx, const sdio_rw_t
 
   fbl::AutoLock lock(&lock_);
   SdioTxnPosition current_position = {
-      .buffers = fbl::Span(txn->buffers_list, txn->buffers_count),
+      .buffers = cpp20::span(txn->buffers_list, txn->buffers_count),
       .first_buffer_offset = 0,
       .address = txn->addr,
   };
@@ -1002,8 +996,7 @@ zx_status_t SdioControllerDevice::ParseFuncExtTuple(uint8_t fn_idx, const SdioFu
   }
 
   if (tup.tuple_body_size < SDIO_CIS_TPL_FUNCx_FUNCE_MIN_BDY_SZ) {
-    zxlogf(ERROR, "Invalid body size: %d for func_ext tuple",
-           tup.tuple_body_size);
+    zxlogf(ERROR, "Invalid body size: %d for func_ext tuple", tup.tuple_body_size);
     return ZX_ERR_IO;
   }
   func->hw_info.max_blk_size =
@@ -1209,8 +1202,8 @@ zx_status_t SdioControllerDevice::Enable4BitBus() {
     return st;
   }
   if ((st = sdmmc_.host().SetBusWidth(SDMMC_BUS_WIDTH_FOUR)) != ZX_OK) {
-    zxlogf(ERROR, "failed to switch the host bus width to %d, retcode = %d",
-           SDMMC_BUS_WIDTH_FOUR, st);
+    zxlogf(ERROR, "failed to switch the host bus width to %d, retcode = %d", SDMMC_BUS_WIDTH_FOUR,
+           st);
     return ZX_ERR_INTERNAL;
   }
 

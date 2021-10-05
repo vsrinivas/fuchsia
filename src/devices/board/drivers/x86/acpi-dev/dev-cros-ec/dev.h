@@ -6,6 +6,7 @@
 #define SRC_DEVICES_BOARD_DRIVERS_X86_ACPI_DEV_DEV_CROS_EC_DEV_H_
 
 #include <fuchsia/hardware/hidbus/cpp/banjo.h>
+#include <lib/stdcompat/span.h>
 #include <lib/zircon-internal/thread_annotations.h>
 #include <zircon/compiler.h>
 #include <zircon/types.h>
@@ -20,7 +21,6 @@
 #include <fbl/mutex.h>
 #include <fbl/ref_counted.h>
 #include <fbl/ref_ptr.h>
-#include <fbl/span.h>
 #include <fbl/vector.h>
 
 namespace cros_ec {

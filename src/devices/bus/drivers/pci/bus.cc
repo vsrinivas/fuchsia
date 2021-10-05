@@ -10,6 +10,7 @@
 #include <lib/ddk/device.h>
 #include <lib/ddk/mmio-buffer.h>
 #include <lib/ddk/platform-defs.h>
+#include <lib/stdcompat/span.h>
 #include <lib/zx/time.h>
 #include <zircon/hw/pci.h>
 #include <zircon/status.h>
@@ -20,7 +21,6 @@
 
 #include <fbl/array.h>
 #include <fbl/auto_lock.h>
-#include <fbl/span.h>
 #include <fbl/vector.h>
 
 #include "src/devices/bus/drivers/pci/bridge.h"
@@ -86,10 +86,10 @@ zx_status_t Bus::Initialize() {
   // pciroot protocol.
   root_ = std::unique_ptr<PciRoot>(new PciRoot(info_.start_bus_num, pciroot_));
 
-  acpi_devices_ = fbl::Span<const pci_bdf_t>(info_.acpi_bdfs_list, info_.acpi_bdfs_count);
-  irqs_ = fbl::Span<const pci_legacy_irq>(info_.legacy_irqs_list, info_.legacy_irqs_count);
+  acpi_devices_ = cpp20::span<const pci_bdf_t>(info_.acpi_bdfs_list, info_.acpi_bdfs_count);
+  irqs_ = cpp20::span<const pci_legacy_irq>(info_.legacy_irqs_list, info_.legacy_irqs_count);
   irq_routing_entries_ =
-      fbl::Span<const pci_irq_routing_entry_t>(info_.irq_routing_list, info_.irq_routing_count);
+      cpp20::span<const pci_irq_routing_entry_t>(info_.irq_routing_list, info_.irq_routing_count);
 
   // Begin our bus scan starting at our root
   ScanDownstream();

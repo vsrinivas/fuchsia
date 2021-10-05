@@ -7,8 +7,7 @@
 
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/fdio/namespace.h>
-
-#include <fbl/span.h>
+#include <lib/stdcompat/span.h>
 
 #include "src/devices/bin/driver_manager/coordinator.h"
 #include "src/lib/storage/vfs/cpp/managed_vfs.h"
@@ -21,7 +20,7 @@ class DirectoryFilter {
       : root_dir_(fbl::MakeRefCounted<fs::PseudoDir>()), vfs_(dispatcher) {}
   ~DirectoryFilter();
 
-  zx_status_t Initialize(zx::channel forwarding_dir, fbl::Span<const char*> allow_filter);
+  zx_status_t Initialize(zx::channel forwarding_dir, cpp20::span<const char*> allow_filter);
 
   zx_status_t Serve(fidl::ServerEnd<fuchsia_io::Directory> request) {
     return vfs_.ServeDirectory(root_dir_, std::move(request));

@@ -25,7 +25,7 @@ DirectoryFilter::~DirectoryFilter() {
 }
 
 zx_status_t DirectoryFilter::Initialize(zx::channel forwarding_directory,
-                                        fbl::Span<const char*> allow_filter) {
+                                        cpp20::span<const char*> allow_filter) {
   forwarding_dir_ = std::move(forwarding_directory);
   for (const auto& name : allow_filter) {
     zx_status_t status = root_dir_->AddEntry(
@@ -149,5 +149,5 @@ zx_status_t SystemInstance::InitializeDriverHostSvcDir() {
       "fuchsia.scheduler.ProfileProvider",
       "fuchsia.tracing.provider.Registry",
   };
-  return driver_host_svc_->Initialize(std::move(incoming_services), fbl::Span(kAllowedServices));
+  return driver_host_svc_->Initialize(std::move(incoming_services), cpp20::span(kAllowedServices));
 }

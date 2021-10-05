@@ -268,9 +268,9 @@ TEST_F(TransferRingHarness, First) {
   ContiguousTRBInfo info;
   TRB a;
   TRB b;
-  info.trbs = fbl::Span(&a, 1);
+  info.trbs = cpp20::span(&a, 1);
   ASSERT_EQ(info.first().data(), &a);
-  info.nop = fbl::Span(&b, 1);
+  info.nop = cpp20::span(&b, 1);
   ASSERT_EQ(info.first().data(), &b);
 }
 

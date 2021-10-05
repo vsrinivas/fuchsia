@@ -50,7 +50,7 @@ zx_status_t FakeSdmmcDevice::SdmmcRequest(sdmmc_req_t* req) {
         return ZX_ERR_IO;
       }
 
-      Write(req->arg * kBlockSize, fbl::Span<const uint8_t>(virt_buffer, req_size));
+      Write(req->arg * kBlockSize, cpp20::span<const uint8_t>(virt_buffer, req_size));
       break;
     }
     case MMC_ERASE_GROUP_START:
@@ -126,7 +126,7 @@ zx_status_t FakeSdmmcDevice::SdmmcRequest(sdmmc_req_t* req) {
       const uint32_t transfer_size =
           block_mode ? (block_size * blocks) : (blocks == 0 ? 512 : blocks);
       if (req->arg & SDIO_IO_RW_DIRECT_RW_FLAG) {
-        Write(address, fbl::Span<const uint8_t>(virt_buffer, transfer_size), function);
+        Write(address, cpp20::span<const uint8_t>(virt_buffer, transfer_size), function);
       } else {
         memcpy(virt_buffer, Read(address, transfer_size, function).data(), transfer_size);
       }
@@ -186,7 +186,7 @@ zx_status_t FakeSdmmcDevice::SdmmcRequestNew(const sdmmc_req_new_t* req, uint32_
     return ZX_ERR_OUT_OF_RANGE;
   }
 
-  fbl::Span buffers{req->buffers_list, req->buffers_count};
+  cpp20::span buffers{req->buffers_list, req->buffers_count};
   SdmmcVmoStore& owned_vmos = *registered_vmos_[req->client_id];
 
   fzl::VmoMapper linear_vmo;
@@ -265,7 +265,7 @@ std::vector<uint8_t> FakeSdmmcDevice::Read(size_t address, size_t size, uint8_t 
   return ret;
 }
 
-void FakeSdmmcDevice::Write(size_t address, fbl::Span<const uint8_t> data, uint8_t func) {
+void FakeSdmmcDevice::Write(size_t address, cpp20::span<const uint8_t> data, uint8_t func) {
   std::map<size_t, std::unique_ptr<uint8_t[]>>& sectors = sectors_[func];
 
   const uint8_t* data_ptr = data.data();
@@ -305,7 +305,7 @@ void FakeSdmmcDevice::TriggerInBandInterrupt() const {
   interrupt_cb_.ops->callback(interrupt_cb_.ctx);
 }
 
-zx_status_t FakeSdmmcDevice::CopySdmmcRegions(fbl::Span<const sdmmc_buffer_region_t> regions,
+zx_status_t FakeSdmmcDevice::CopySdmmcRegions(cpp20::span<const sdmmc_buffer_region_t> regions,
                                               SdmmcVmoStore& vmos, uint8_t* buffer,
                                               const bool copy_to_regions) {
   for (const sdmmc_buffer_region_t& region : regions) {

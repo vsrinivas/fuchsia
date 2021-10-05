@@ -11,6 +11,7 @@
 #include <lib/ddk/phys-iter.h>
 #include <lib/inspect/cpp/inspect.h>
 #include <lib/mmio/mmio.h>
+#include <lib/stdcompat/span.h>
 #include <lib/zircon-internal/thread_annotations.h>
 #include <lib/zx/interrupt.h>
 #include <lib/zx/status.h>
@@ -22,7 +23,6 @@
 #include <ddktl/device.h>
 #include <fbl/auto_lock.h>
 #include <fbl/condition_variable.h>
-#include <fbl/span.h>
 #include <soc/aml-common/aml-sdmmc.h>
 
 #include "src/lib/vmo_store/vmo_store.h"
@@ -112,9 +112,9 @@ class AmlSdmmc : public AmlSdmmcType, public ddk::SdmmcProtocol<AmlSdmmc, ddk::b
 
   zx_status_t TuningDoTransfer(uint8_t* tuning_res, size_t blk_pattern_size,
                                uint32_t tuning_cmd_idx);
-  bool TuningTestSettings(fbl::Span<const uint8_t> tuning_blk, uint32_t tuning_cmd_idx);
+  bool TuningTestSettings(cpp20::span<const uint8_t> tuning_blk, uint32_t tuning_cmd_idx);
   template <typename SetParamCallback>
-  TuneWindow TuneDelayParam(fbl::Span<const uint8_t> tuning_blk, uint32_t tuning_cmd_idx,
+  TuneWindow TuneDelayParam(cpp20::span<const uint8_t> tuning_blk, uint32_t tuning_cmd_idx,
                             uint32_t param_max, SetParamCallback& set_param);
 
   void SetAdjDelay(uint32_t adj_delay);

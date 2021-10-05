@@ -417,7 +417,7 @@ zx_status_t SdmmcDevice::SdioIoRwExtended(uint32_t caps, bool write, uint32_t fn
 zx_status_t SdmmcDevice::SdioIoRwExtended(uint32_t caps, bool write, uint8_t fn_idx,
                                           uint32_t reg_addr, bool incr, uint32_t blk_count,
                                           uint32_t blk_size,
-                                          fbl::Span<const sdmmc_buffer_region_t> buffers) {
+                                          cpp20::span<const sdmmc_buffer_region_t> buffers) {
   uint32_t cmd_arg = 0;
   if (write) {
     cmd_arg |= SDIO_IO_RW_EXTD_RW_FLAG;

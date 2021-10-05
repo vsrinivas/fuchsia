@@ -4,6 +4,7 @@
 
 #include <lib/fake-bti/bti.h>
 #include <lib/fake-object/object.h>
+#include <lib/stdcompat/span.h>
 #include <lib/zircon-internal/thread_annotations.h>
 #include <lib/zx/status.h>
 #include <lib/zx/vmo.h>
@@ -18,7 +19,6 @@
 #include <fbl/mutex.h>
 #include <fbl/ref_counted.h>
 #include <fbl/ref_ptr.h>
-#include <fbl/span.h>
 #include <fbl/vector.h>
 
 // Normally just defined in the kernel:
@@ -29,7 +29,7 @@ class Bti final : public fake_object::Object {
  public:
   virtual ~Bti() = default;
 
-  static zx_status_t Create(fbl::Span<const zx_paddr_t> paddrs,
+  static zx_status_t Create(cpp20::span<const zx_paddr_t> paddrs,
                             fbl::RefPtr<fake_object::Object>* out) {
     *out = fbl::AdoptRef(new Bti(paddrs));
     return ZX_OK;
@@ -95,7 +95,7 @@ class Bti final : public fake_object::Object {
 
  private:
   Bti() = default;
-  explicit Bti(fbl::Span<const zx_paddr_t> paddrs) : paddrs_(paddrs) {}
+  explicit Bti(cpp20::span<const zx_paddr_t> paddrs) : paddrs_(paddrs) {}
 
   struct PinnedVmoInfo {
     zx::vmo vmo;
@@ -108,7 +108,7 @@ class Bti final : public fake_object::Object {
 
   fbl::Mutex lock_;
   fbl::Vector<PinnedVmoInfo> pinned_vmos_ TA_GUARDED(lock_);
-  fbl::Span<const zx_paddr_t> paddrs_ = {};
+  cpp20::span<const zx_paddr_t> paddrs_ = {};
   size_t paddrs_index_ = 0;
   uint64_t pmo_count_ = 0;
 };
@@ -193,7 +193,7 @@ zx_status_t fake_bti_create(zx_handle_t* out) {
 zx_status_t fake_bti_create_with_paddrs(const zx_paddr_t* paddrs, size_t paddr_count,
                                         zx_handle_t* out) {
   fbl::RefPtr<fake_object::Object> new_bti;
-  zx_status_t status = Bti::Create(fbl::Span(paddrs, paddr_count), &new_bti);
+  zx_status_t status = Bti::Create(cpp20::span(paddrs, paddr_count), &new_bti);
   if (status != ZX_OK) {
     return status;
   }

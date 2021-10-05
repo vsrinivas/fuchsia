@@ -130,8 +130,8 @@ class SdioControllerDevice : public SdioControllerDeviceType,
   zx::status<uint8_t> ReadCccrByte(uint32_t addr) TA_REQ(lock_);
 
   struct SdioTxnPosition {
-    fbl::Span<const sdmmc_buffer_region_t> buffers;  // The buffers remaining to be processed.
-    uint64_t first_buffer_offset;                    // The offset into the first buffer.
+    cpp20::span<const sdmmc_buffer_region_t> buffers;  // The buffers remaining to be processed.
+    uint64_t first_buffer_offset;                      // The offset into the first buffer.
     uint32_t address;  // The current SDIO address, fixed if txn.incr is false.
   };
 

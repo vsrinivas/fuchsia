@@ -2,20 +2,21 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "clocktree.h"
+
 #include <zircon/types.h>
+
 #include <zxtest/zxtest.h>
 
 #include "baseclock.h"
-#include "clocktree.h"
-#include "types.h"
-
 #include "testclock.h"
+#include "types.h"
 
 namespace clk {
 
 namespace {
 
-bool AnyDescendentsEnabled(uint32_t id, fbl::Span<BaseClock*> clocks) {
+bool AnyDescendentsEnabled(uint32_t id, cpp20::span<BaseClock*> clocks) {
   for (BaseClock* self : clocks) {
     // Skip any clocks that aren't children of the clock under test.
     if (self->ParentId() != id) {
@@ -38,8 +39,7 @@ bool AnyDescendentsEnabled(uint32_t id, fbl::Span<BaseClock*> clocks) {
   return false;
 }
 
-void ClockTreeConsistencyCheck(fbl::Span<BaseClock*> clocks,
-                               fbl::Span<BaseClock*> leaves) {
+void ClockTreeConsistencyCheck(cpp20::span<BaseClock*> clocks, cpp20::span<BaseClock*> leaves) {
   // Validate that a number of constraints on a clock tree are met.
 
   // If a clock is Enabled, make sure all its parents leading to the root are

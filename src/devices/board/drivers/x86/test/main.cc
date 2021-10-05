@@ -6,6 +6,7 @@
 #include <fidl/fuchsia.hardware.acpi/cpp/wire.h>
 #include <lib/fdio/cpp/caller.h>
 #include <lib/fdio/directory.h>
+#include <lib/stdcompat/span.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/vmo.h>
 #include <stdio.h>
@@ -14,7 +15,6 @@
 #include <unistd.h>
 
 #include <fbl/array.h>
-#include <fbl/span.h>
 #include <fbl/unique_fd.h>
 #include <zxtest/zxtest.h>
 

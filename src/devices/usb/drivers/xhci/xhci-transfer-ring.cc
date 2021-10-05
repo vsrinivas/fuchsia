@@ -456,13 +456,13 @@ zx::status<ContiguousTRBInfo> TransferRing::AllocateContiguous(size_t count) {
       count--;
     }
     ContiguousTRBInfo info;
-    info.nop = fbl::Span<TRB>(nop, nop_count);
-    info.trbs = fbl::Span<TRB>(contig, orig_count);
+    info.nop = cpp20::span<TRB>(nop, nop_count);
+    info.trbs = cpp20::span<TRB>(contig, orig_count);
     return zx::ok(info);
   }
   // Already contiguous
   ContiguousTRBInfo info;
-  info.trbs = fbl::Span<TRB>(nop, orig_count);
+  info.trbs = cpp20::span<TRB>(nop, orig_count);
   return zx::ok(info);
 }
 

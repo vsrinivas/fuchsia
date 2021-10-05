@@ -6,6 +6,7 @@
 #define SRC_DEVICES_BOARD_DRIVERS_X86_ACPI_DEV_DEV_CROS_EC_USB_PD_H_
 
 #include <fidl/fuchsia.hardware.power/cpp/wire.h>
+#include <lib/stdcompat/span.h>
 #include <lib/zx/event.h>
 #include <zircon/status.h>
 #include <zircon/types.h>
@@ -18,7 +19,6 @@
 #include <fbl/mutex.h>
 #include <fbl/ref_counted.h>
 #include <fbl/ref_ptr.h>
-#include <fbl/span.h>
 #include <fbl/vector.h>
 
 #include "acpi.h"

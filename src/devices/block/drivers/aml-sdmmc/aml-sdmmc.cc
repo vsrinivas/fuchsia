@@ -1045,7 +1045,7 @@ zx_status_t AmlSdmmc::TuningDoTransfer(uint8_t* tuning_res, size_t blk_pattern_s
   return AmlSdmmc::SdmmcRequest(&tuning_req);
 }
 
-bool AmlSdmmc::TuningTestSettings(fbl::Span<const uint8_t> tuning_blk, uint32_t tuning_cmd_idx) {
+bool AmlSdmmc::TuningTestSettings(cpp20::span<const uint8_t> tuning_blk, uint32_t tuning_cmd_idx) {
   zx_status_t status = ZX_OK;
   size_t n;
   for (n = 0; n < AML_SDMMC_TUNING_TEST_ATTEMPTS; n++) {
@@ -1059,7 +1059,7 @@ bool AmlSdmmc::TuningTestSettings(fbl::Span<const uint8_t> tuning_blk, uint32_t 
 }
 
 template <typename SetParamCallback>
-AmlSdmmc::TuneWindow AmlSdmmc::TuneDelayParam(fbl::Span<const uint8_t> tuning_blk,
+AmlSdmmc::TuneWindow AmlSdmmc::TuneDelayParam(cpp20::span<const uint8_t> tuning_blk,
                                               uint32_t tuning_cmd_idx, uint32_t param_max,
                                               SetParamCallback& set_param) {
   TuneWindow best_window, current_window;
@@ -1155,15 +1155,15 @@ uint32_t AmlSdmmc::max_delay() const {
 }
 
 zx_status_t AmlSdmmc::SdmmcPerformTuning(uint32_t tuning_cmd_idx) {
-  fbl::Span<const uint8_t> tuning_blk;
+  cpp20::span<const uint8_t> tuning_blk;
 
   uint32_t bw = AmlSdmmcCfg::Get().ReadFrom(&mmio_).bus_width();
   if (bw == AmlSdmmcCfg::kBusWidth4Bit) {
-    tuning_blk = fbl::Span<const uint8_t>(aml_sdmmc_tuning_blk_pattern_4bit,
-                                          sizeof(aml_sdmmc_tuning_blk_pattern_4bit));
+    tuning_blk = cpp20::span<const uint8_t>(aml_sdmmc_tuning_blk_pattern_4bit,
+                                            sizeof(aml_sdmmc_tuning_blk_pattern_4bit));
   } else if (bw == AmlSdmmcCfg::kBusWidth8Bit) {
-    tuning_blk = fbl::Span<const uint8_t>(aml_sdmmc_tuning_blk_pattern_8bit,
-                                          sizeof(aml_sdmmc_tuning_blk_pattern_8bit));
+    tuning_blk = cpp20::span<const uint8_t>(aml_sdmmc_tuning_blk_pattern_8bit,
+                                            sizeof(aml_sdmmc_tuning_blk_pattern_8bit));
   } else {
     AML_SDMMC_ERROR("Tuning at wrong buswidth: %d", bw);
     return ZX_ERR_INTERNAL;

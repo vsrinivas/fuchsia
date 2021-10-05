@@ -32,7 +32,7 @@ bool use_hardware_iommu(void) {
 // table, based on that Length. The type T of the record can be used to get a more convenient span
 // and will cause the alignment etc to ber checked.
 template <typename T, bool HEADER = true, typename TABLE>
-std::optional<fbl::Span<const T>> record_span(const TABLE* table) {
+std::optional<cpp20::span<const T>> record_span(const TABLE* table) {
   const uintptr_t records_start = reinterpret_cast<uintptr_t>(table) + sizeof(*table);
   size_t size;
   if constexpr (HEADER) {
@@ -46,7 +46,7 @@ std::optional<fbl::Span<const T>> record_span(const TABLE* table) {
   if ((byte_len % sizeof(T)) != 0 || (records_start % std::alignment_of_v<T>) != 0) {
     return std::nullopt;
   }
-  return fbl::Span<const T>{reinterpret_cast<const T*>(records_start), byte_len / sizeof(T)};
+  return cpp20::span<const T>{reinterpret_cast<const T*>(records_start), byte_len / sizeof(T)};
 }
 
 // Given a TABLE this will iterate over all the variable length records that might follow it.
@@ -54,7 +54,7 @@ std::optional<fbl::Span<const T>> record_span(const TABLE* table) {
 // record that is found.
 template <typename RECORD, typename TABLE, typename FUNC>
 zx_status_t for_each_record(const TABLE* table, FUNC func) {
-  fbl::Span<const uint8_t> records;
+  cpp20::span<const uint8_t> records;
   if (auto r = record_span<uint8_t>(table)) {
     records = std::move(*r);
   } else {
@@ -119,7 +119,7 @@ zx_status_t acpi_scope_to_desc(const ACPI_DMAR_DEVICE_SCOPE* acpi_scope,
     return ZX_ERR_IO_DATA_INTEGRITY;
   }
 
-  fbl::Span<const uint16_t> hops;
+  cpp20::span<const uint16_t> hops;
   if (auto h = record_span<uint16_t, false>(acpi_scope)) {
     hops = std::move(*h);
   } else {
@@ -314,7 +314,7 @@ zx_status_t IommuDesc::CreateDesc(const ACPI_TABLE_DMAR* table, uint64_t base, u
     return status;
   }
 
-  fbl::Span<uint8_t> reserved = ReservedMem();
+  cpp20::span<uint8_t> reserved = ReservedMem();
   zx_iommu_desc_intel_reserved_memory_t* last_mem = nullptr;
   status = process_reserved_mem(
       table, pci_segment, whole_segment, scope_func,

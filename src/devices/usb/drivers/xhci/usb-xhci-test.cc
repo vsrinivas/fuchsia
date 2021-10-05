@@ -493,7 +493,7 @@ zx::status<ContiguousTRBInfo> TransferRing::AllocateContiguous(size_t count) {
   trbs_->ptr = 0;
   trbs_->status = pcs_;
   ContiguousTRBInfo info;
-  info.trbs = fbl::Span(trbs_, count);
+  info.trbs = cpp20::span(trbs_, count);
   return zx::ok(info);
 }
 

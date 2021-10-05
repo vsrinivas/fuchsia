@@ -129,7 +129,7 @@ class IommuTest : public zxtest::Test {
       EXPECT_EQ(scope.dev_func[i], expected.hops[i]);
     }
   }
-  void CompareScopes(fbl::Span<zx_iommu_desc_intel_scope_t> scopes,
+  void CompareScopes(cpp20::span<zx_iommu_desc_intel_scope_t> scopes,
                      const std::vector<Scope> &expected) {
     EXPECT_EQ(scopes.size(), expected.size());
     auto it1 = scopes.begin();
@@ -159,7 +159,7 @@ class IommuTest : public zxtest::Test {
                 sizeof(zx_iommu_desc_intel_reserved_memory) + mem->scope_bytes);
       auto scope_span =
           reserved_mem.subspan(sizeof(zx_iommu_desc_intel_reserved_memory), mem->scope_bytes);
-      auto scopes = fbl::Span<zx_iommu_desc_intel_scope_t>(
+      auto scopes = cpp20::span<zx_iommu_desc_intel_scope_t>(
           reinterpret_cast<zx_iommu_desc_intel_scope_t *>(scope_span.data()),
           scope_span.size() / sizeof(zx_iommu_desc_intel_scope_t));
       reserved_mem =

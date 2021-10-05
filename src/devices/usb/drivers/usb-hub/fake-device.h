@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_DEVICES_USB_DRIVERS_USB_HUB_REWRITE_FAKE_DEVICE_H_
-#define SRC_DEVICES_USB_DRIVERS_USB_HUB_REWRITE_FAKE_DEVICE_H_
+#ifndef SRC_DEVICES_USB_DRIVERS_USB_HUB_FAKE_DEVICE_H_
+#define SRC_DEVICES_USB_DRIVERS_USB_HUB_FAKE_DEVICE_H_
 
 enum class OperationType {
   kSetOpTable,
@@ -116,26 +116,26 @@ enum class EmulationMode {
 
 struct EmulationMetadata {
   uint8_t port_count = 0;
-  fbl::Span<const uint8_t> device_descriptor;
-  fbl::Span<const uint8_t> secondary_descriptor;
-  fbl::Span<const uint8_t> descriptor;
+  cpp20::span<const uint8_t> device_descriptor;
+  cpp20::span<const uint8_t> secondary_descriptor;
+  cpp20::span<const uint8_t> descriptor;
   usb_speed_t speed;
   EmulationMode mode;
   explicit EmulationMetadata(EmulationMode mode) : mode(mode) {
     switch (mode) {
       case EmulationMode::Smays:
-        descriptor = fbl::Span(kSmaysHubDescriptor, sizeof(kSmaysHubDescriptor));
-        secondary_descriptor = fbl::Span(kSmaysHubDescriptor2, sizeof(kSmaysHubDescriptor2));
-        device_descriptor = fbl::Span(kSmaysDeviceDescriptor, sizeof(kSmaysDeviceDescriptor));
+        descriptor = cpp20::span(kSmaysHubDescriptor, sizeof(kSmaysHubDescriptor));
+        secondary_descriptor = cpp20::span(kSmaysHubDescriptor2, sizeof(kSmaysHubDescriptor2));
+        device_descriptor = cpp20::span(kSmaysDeviceDescriptor, sizeof(kSmaysDeviceDescriptor));
         port_count = 4;
         speed = USB_SPEED_HIGH;
         break;
       case EmulationMode::Unbranded:
-        descriptor = fbl::Span(kUnbrandedHubDescriptor, sizeof(kUnbrandedHubDescriptor));
+        descriptor = cpp20::span(kUnbrandedHubDescriptor, sizeof(kUnbrandedHubDescriptor));
         device_descriptor =
-            fbl::Span(kUnbrandedDeviceDescriptor, sizeof(kUnbrandedDeviceDescriptor));
+            cpp20::span(kUnbrandedDeviceDescriptor, sizeof(kUnbrandedDeviceDescriptor));
         secondary_descriptor =
-            fbl::Span(kUnbrandedHubDescriptor2, sizeof(kUnbrandedHubDescriptor2));
+            cpp20::span(kUnbrandedHubDescriptor2, sizeof(kUnbrandedHubDescriptor2));
         port_count = 4;
         speed = USB_SPEED_SUPER;
         break;
@@ -915,4 +915,4 @@ class FakeDevice : public ddk::UsbBusProtocol<FakeDevice>, public ddk::UsbProtoc
       request_callback_;
 };
 
-#endif  // SRC_DEVICES_USB_DRIVERS_USB_HUB_REWRITE_FAKE_DEVICE_H_
+#endif  // SRC_DEVICES_USB_DRIVERS_USB_HUB_FAKE_DEVICE_H_

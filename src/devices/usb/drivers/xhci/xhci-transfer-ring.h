@@ -6,11 +6,10 @@
 #define SRC_DEVICES_USB_DRIVERS_XHCI_XHCI_TRANSFER_RING_H_
 
 #include <fuchsia/hardware/usb/request/c/banjo.h>
+#include <lib/stdcompat/span.h>
 #include <lib/zx/status.h>
 
 #include <map>
-
-#include <fbl/span.h>
 
 #include "xhci-context.h"
 #include "xhci-event-ring.h"
@@ -20,9 +19,9 @@ namespace usb_xhci {
 class UsbXhci;
 
 struct ContiguousTRBInfo {
-  fbl::Span<TRB> nop;   // Optional page of NOPs
-  fbl::Span<TRB> trbs;  // Contiguous TRBs
-  fbl::Span<TRB> first() {
+  cpp20::span<TRB> nop;   // Optional page of NOPs
+  cpp20::span<TRB> trbs;  // Contiguous TRBs
+  cpp20::span<TRB> first() {
     if (!nop.empty()) {
       return nop;
     }

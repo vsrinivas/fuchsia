@@ -10,6 +10,7 @@
 #include <lib/cmdline/args_parser.h>
 #include <lib/fdio/cpp/caller.h>
 #include <lib/fidl/llcpp/vector_view.h>
+#include <lib/stdcompat/span.h>
 #include <lib/zx/time.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -24,7 +25,6 @@
 #include <string_view>
 
 #include <fbl/array.h>
-#include <fbl/span.h>
 #include <fbl/string_printf.h>
 #include <fbl/unique_fd.h>
 
@@ -66,7 +66,7 @@ void PrintUsage(const char* prog_name) {
           prog_name);
 }
 
-bool ParseArgs(fbl::Span<const char* const> args, Args* result) {
+bool ParseArgs(cpp20::span<const char* const> args, Args* result) {
   *result = Args{};
 
   // Parse the args.
@@ -295,7 +295,7 @@ zx_status_t AcpiDump(const Args& args) {
 
 int Main(int argc, const char** argv) {
   Args args;
-  if (!ParseArgs(fbl::Span<const char*>(argv, argc), &args)) {
+  if (!ParseArgs(cpp20::span<const char*>(argv, argc), &args)) {
     PrintUsage(argv[0]);
     return 1;
   }

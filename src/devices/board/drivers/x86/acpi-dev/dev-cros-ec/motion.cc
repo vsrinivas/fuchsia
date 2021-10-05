@@ -17,6 +17,7 @@
 #include "motion.h"
 
 #include <lib/ddk/debug.h>
+#include <lib/stdcompat/span.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <zircon/status.h>
@@ -34,7 +35,6 @@
 #include <fbl/auto_lock.h>
 #include <fbl/mutex.h>
 #include <fbl/ref_ptr.h>
-#include <fbl/span.h>
 #include <hid/descriptor.h>
 
 #include "../../include/errors.h"
@@ -464,7 +464,7 @@ zx_status_t AcpiCrOsEcMotionDevice::Bind(zx_device_t* parent, fbl::RefPtr<Embedd
   }
 
   // Populate hid_descriptor_ based on available sensors.
-  status = BuildHidDescriptor(fbl::Span(dev->sensors_.begin(), dev->sensors_.end()),
+  status = BuildHidDescriptor(cpp20::span(dev->sensors_.begin(), dev->sensors_.end()),
                               &dev->hid_descriptor_);
   if (status != ZX_OK) {
     zxlogf(ERROR, "acpi-cros-ec-motion: failed to construct hid desc: %s",
@@ -707,7 +707,7 @@ static_assert(std::size(kHidDescSensorBlock) == MOTIONSENSE_TYPE_MAX, "");
 
 }  // namespace
 
-zx_status_t BuildHidDescriptor(fbl::Span<const SensorInfo> sensors, fbl::Array<uint8_t>* result) {
+zx_status_t BuildHidDescriptor(cpp20::span<const SensorInfo> sensors, fbl::Array<uint8_t>* result) {
   // We build out a descriptor with one top-level Application Collection for
   // each sensor location, and within each of these collections we have one
   // Physical Collection per sensor.

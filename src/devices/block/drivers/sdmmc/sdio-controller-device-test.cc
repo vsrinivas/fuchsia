@@ -283,7 +283,7 @@ TEST_F(SdioControllerDeviceTest, SdioDoRwTxn) {
   EXPECT_BYTES_EQ(read_data.data(), buffer + sizeof(buffer) - 4, 4);
   EXPECT_BYTES_EQ(read_data.data() + 4, buffer + sizeof(buffer) - 8, 4);
 
-  sdmmc_.Write(0x12308, fbl::Span<const uint8_t>(kTestData, sizeof(kTestData)), 3);
+  sdmmc_.Write(0x12308, cpp20::span<const uint8_t>(kTestData, sizeof(kTestData)), 3);
   memset(buffer, 0, sizeof(buffer));
   txn = {
       .addr = 0x12308,
@@ -345,7 +345,7 @@ TEST_F(SdioControllerDeviceTest, SdioDoRwTxnMultiBlock) {
 
   uint8_t buffer[sizeof(kTestData)] = {};
 
-  sdmmc_.Write(0x1ab08, fbl::Span<const uint8_t>(kTestData, sizeof(kTestData)), 7);
+  sdmmc_.Write(0x1ab08, cpp20::span<const uint8_t>(kTestData, sizeof(kTestData)), 7);
   sdio_rw_txn_t txn = {
       .addr = 0x1ab08,
       .data_size = 68,
@@ -1006,7 +1006,7 @@ TEST_F(SdioScatterGatherTest, ScatterGatherBlockMode) {
   buffers[1] = MakeBufferRegion(vmo2_, 4, 3);
   buffers[2] = MakeBufferRegion(3, 10, 5);
 
-  sdmmc_.Write(0x5000, fbl::Span(kTestData1, countof(kTestData1)), 3);
+  sdmmc_.Write(0x5000, cpp20::span(kTestData1, countof(kTestData1)), 3);
 
   sdio_rw_txn_new_t txn = {
       .addr = 0x5000,
@@ -1105,7 +1105,7 @@ TEST_F(SdioScatterGatherTest, ScatterGatherBlockModeNoMultiBlock) {
 TEST_F(SdioScatterGatherTest, ScatterGatherBlockModeMultipleFinalBuffers) {
   Init(1, true);
 
-  sdmmc_.Write(0x3000, fbl::Span(kTestData1, countof(kTestData1)), 1);
+  sdmmc_.Write(0x3000, cpp20::span(kTestData1, countof(kTestData1)), 1);
 
   sdmmc_buffer_region_t buffers[4];
   buffers[0] = MakeBufferRegion(1, 8, 7);

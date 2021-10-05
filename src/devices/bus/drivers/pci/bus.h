@@ -11,6 +11,7 @@
 #include <lib/ddk/mmio-buffer.h>
 #include <lib/inspect/cpp/inspector.h>
 #include <lib/mmio/mmio.h>
+#include <lib/stdcompat/span.h>
 #include <lib/zx/interrupt.h>
 #include <lib/zx/msi.h>
 #include <lib/zx/thread.h>
@@ -27,7 +28,6 @@
 #include <ddktl/protocol/empty-protocol.h>
 #include <fbl/intrusive_double_list.h>
 #include <fbl/intrusive_wavl_tree.h>
-#include <fbl/span.h>
 #include <fbl/vector.h>
 
 #include "src/devices/bus/drivers/pci/bridge.h"
@@ -139,9 +139,9 @@ class Bus : public PciBusType,
   ddk::PcirootProtocolClient pciroot_;
   const pci_platform_info_t info_;
   std::optional<ddk::MmioBuffer> ecam_;
-  fbl::Span<const pci_legacy_irq> irqs_{};
-  fbl::Span<const pci_bdf_t> acpi_devices_{};
-  fbl::Span<const pci_irq_routing_entry_t> irq_routing_entries_{};
+  cpp20::span<const pci_legacy_irq> irqs_{};
+  cpp20::span<const pci_bdf_t> acpi_devices_{};
+  cpp20::span<const pci_irq_routing_entry_t> irq_routing_entries_{};
 
   // All devices hang off of this Bus's root port.
   std::unique_ptr<PciRoot> root_;

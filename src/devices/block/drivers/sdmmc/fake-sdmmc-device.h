@@ -8,13 +8,13 @@
 #include <fuchsia/hardware/sdio/cpp/banjo.h>
 #include <fuchsia/hardware/sdmmc/cpp/banjo.h>
 #include <lib/ddk/binding.h>
+#include <lib/stdcompat/span.h>
 
 #include <array>
 #include <map>
 #include <vector>
 
 #include <ddktl/device.h>
-#include <fbl/span.h>
 
 #include "src/lib/vmo_store/vmo_store.h"
 
@@ -87,10 +87,10 @@ class FakeSdmmcDevice : public ddk::SdmmcProtocol<FakeSdmmcDevice> {
   zx_status_t SdmmcRequestNew(const sdmmc_req_new_t* req, uint32_t out_response[4]);
 
   std::vector<uint8_t> Read(size_t address, size_t size, uint8_t func = 0);
-  void Write(size_t address, fbl::Span<const uint8_t> data, uint8_t func = 0);
+  void Write(size_t address, cpp20::span<const uint8_t> data, uint8_t func = 0);
   template <typename T>
   void Write(size_t address, const T& data, uint8_t func = 0) {
-    Write(address, fbl::Span<const uint8_t>(data.data(), data.size() * sizeof(data[0])), func);
+    Write(address, cpp20::span<const uint8_t>(data.data(), data.size() * sizeof(data[0])), func);
   }
   void Erase(size_t address, size_t size, uint8_t func = 0);
 
@@ -119,7 +119,7 @@ class FakeSdmmcDevice : public ddk::SdmmcProtocol<FakeSdmmcDevice> {
 
   using SdmmcVmoStore = vmo_store::VmoStore<vmo_store::HashTableStorage<uint32_t, OwnedVmoInfo>>;
 
-  static zx_status_t CopySdmmcRegions(fbl::Span<const sdmmc_buffer_region_t> regions,
+  static zx_status_t CopySdmmcRegions(cpp20::span<const sdmmc_buffer_region_t> regions,
                                       SdmmcVmoStore& vmos, uint8_t* buffer, bool copy_to_regions);
 
   const sdmmc_protocol_t proto_;

@@ -5,11 +5,12 @@
 #ifndef SRC_DEVICES_BIN_ACPIDUMP_ACPIDUMP_H_
 #define SRC_DEVICES_BIN_ACPIDUMP_ACPIDUMP_H_
 
+#include <lib/stdcompat/span.h>
+
 #include <optional>
 #include <string>
 
 #include <fbl/array.h>
-#include <fbl/span.h>
 
 namespace acpidump {
 
@@ -31,7 +32,7 @@ struct Args {
 // Parse the given set of arguments.
 //
 // On success, fills in |result| with parsed arguments and returns true.
-bool ParseArgs(fbl::Span<const char* const> args, Args* result);
+bool ParseArgs(cpp20::span<const char* const> args, Args* result);
 
 // Print the given data in hex to the given file.
 void PrintHex(const char* name, const fbl::Array<uint8_t>& data);

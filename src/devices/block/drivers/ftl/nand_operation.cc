@@ -75,7 +75,7 @@ zx_status_t NandOperation::GetVmo(size_t num_bytes) {
 }
 
 std::vector<zx::status<>> NandOperation::ExecuteBatch(
-    OobDoubler* parent, fbl::Span<std::unique_ptr<NandOperation>> operations) {
+    OobDoubler* parent, cpp20::span<std::unique_ptr<NandOperation>> operations) {
   std::vector<zx::status<>> results(operations.size(), zx::ok());
   for (auto& operation : operations) {
     parent->Queue(operation->GetOperation(), &OnCompletion, static_cast<void*>(operation.get()));

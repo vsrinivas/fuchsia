@@ -63,8 +63,9 @@ void AmlSpi::DumpState() {
 
 #undef dump_reg
 
-zx::status<fbl::Span<uint8_t>> AmlSpi::GetVmoSpan(uint32_t chip_select, uint32_t vmo_id,
-                                                  uint64_t offset, uint64_t size, uint32_t right) {
+zx::status<cpp20::span<uint8_t>> AmlSpi::GetVmoSpan(uint32_t chip_select, uint32_t vmo_id,
+                                                    uint64_t offset, uint64_t size,
+                                                    uint32_t right) {
   vmo_store::StoredVmo<OwnedVmoInfo>* const vmo_info =
       chips_[chip_select].registered_vmos.GetVmo(vmo_id);
   if (!vmo_info) {
@@ -337,7 +338,7 @@ zx_status_t AmlSpi::SpiImplTransmitVmo(uint32_t chip_select, uint32_t vmo_id, ui
     return ZX_ERR_OUT_OF_RANGE;
   }
 
-  zx::status<fbl::Span<const uint8_t>> buffer =
+  zx::status<cpp20::span<const uint8_t>> buffer =
       GetVmoSpan(chip_select, vmo_id, offset, size, SPI_VMO_RIGHT_READ);
   if (buffer.is_error()) {
     return buffer.error_value();
@@ -352,7 +353,7 @@ zx_status_t AmlSpi::SpiImplReceiveVmo(uint32_t chip_select, uint32_t vmo_id, uin
     return ZX_ERR_OUT_OF_RANGE;
   }
 
-  zx::status<fbl::Span<uint8_t>> buffer =
+  zx::status<cpp20::span<uint8_t>> buffer =
       GetVmoSpan(chip_select, vmo_id, offset, size, SPI_VMO_RIGHT_WRITE);
   if (buffer.is_error()) {
     return buffer.error_value();
@@ -367,13 +368,13 @@ zx_status_t AmlSpi::SpiImplExchangeVmo(uint32_t chip_select, uint32_t tx_vmo_id,
     return ZX_ERR_OUT_OF_RANGE;
   }
 
-  zx::status<fbl::Span<uint8_t>> tx_buffer =
+  zx::status<cpp20::span<uint8_t>> tx_buffer =
       GetVmoSpan(chip_select, tx_vmo_id, tx_offset, size, SPI_VMO_RIGHT_READ);
   if (tx_buffer.is_error()) {
     return tx_buffer.error_value();
   }
 
-  zx::status<fbl::Span<uint8_t>> rx_buffer =
+  zx::status<cpp20::span<uint8_t>> rx_buffer =
       GetVmoSpan(chip_select, rx_vmo_id, rx_offset, size, SPI_VMO_RIGHT_WRITE);
   if (rx_buffer.is_error()) {
     return rx_buffer.error_value();

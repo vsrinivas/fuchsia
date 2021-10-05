@@ -6,6 +6,7 @@
 #include <fuchsia/hardware/gpio/cpp/banjo.h>
 #include <fuchsia/hardware/spiimpl/cpp/banjo.h>
 #include <lib/mmio/mmio.h>
+#include <lib/stdcompat/span.h>
 #include <lib/zx/profile.h>
 #include <lib/zx/status.h>
 
@@ -13,7 +14,6 @@
 
 #include <ddktl/device.h>
 #include <fbl/array.h>
-#include <fbl/span.h>
 #include <soc/aml-common/aml-spi.h>
 
 #include "src/lib/vmo_store/vmo_store.h"
@@ -90,8 +90,8 @@ class AmlSpi : public DeviceType, public ddk::SpiImplProtocol<AmlSpi, ddk::base_
   // Checks size against the registered VMO size and returns a Span with offset applied. Returns a
   // Span with data set to nullptr if vmo_id wasn't found. Returns a Span with size set to zero if
   // offset and/or size are invalid.
-  zx::status<fbl::Span<uint8_t>> GetVmoSpan(uint32_t chip_select, uint32_t vmo_id, uint64_t offset,
-                                            uint64_t size, uint32_t right);
+  zx::status<cpp20::span<uint8_t>> GetVmoSpan(uint32_t chip_select, uint32_t vmo_id,
+                                              uint64_t offset, uint64_t size, uint32_t right);
 
   ddk::MmioBuffer mmio_;
   std::optional<fidl::WireSyncClient<fuchsia_hardware_registers::Device>> reset_;

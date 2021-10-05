@@ -2,15 +2,17 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef CLOCKTREE_CLOCKTREE_H_
-#define CLOCKTREE_CLOCKTREE_H_
+#ifndef SRC_DEVICES_CLOCK_LIB_CLOCKTREE_INCLUDE_CLOCKTREE_H_
+#define SRC_DEVICES_CLOCK_LIB_CLOCKTREE_INCLUDE_CLOCKTREE_H_
 
+#include <lib/stdcompat/span.h>
 #include <lib/zircon-internal/thread_annotations.h>
 #include <stdint.h>
 #include <zircon/types.h>
 
 #include <fbl/mutex.h>
-#include <fbl/span.h>
+
+#include "types.h"
 
 namespace clk {
 
@@ -43,8 +45,8 @@ class Tree {
   //      allocate the clock array.
   //  (2) While the `Tree` class is in scope, it is not safe to manipulate the underlying clocks
   //      array. While the lifetime of the `clocks` array is the responsibility of the caller, the
-  //      `Tree` class maintains exclusive access to the array for the duration of its lifespan. 
-  explicit Tree(fbl::Span<BaseClock*> clocks, const uint32_t count)
+  //      `Tree` class maintains exclusive access to the array for the duration of its lifespan.
+  explicit Tree(cpp20::span<BaseClock*> clocks, const uint32_t count)
       : clocks_(clocks), count_(count) {}
 
   zx_status_t Enable(const uint32_t id) TA_EXCL(topology_mutex_);
@@ -75,7 +77,7 @@ class Tree {
 
   bool InRange(const uint32_t index) const;
 
-  fbl::Span<BaseClock*> clocks_ TA_GUARDED(topology_mutex_);
+  cpp20::span<BaseClock*> clocks_ TA_GUARDED(topology_mutex_);
   const uint32_t count_;
 
   // Guards topology changes to the clock tree.
@@ -84,4 +86,4 @@ class Tree {
 
 }  // namespace clk
 
-#endif  // CLOCKTREE_CLOCKTREE_H_
+#endif  // SRC_DEVICES_CLOCK_LIB_CLOCKTREE_INCLUDE_CLOCKTREE_H_

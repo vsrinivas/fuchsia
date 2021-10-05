@@ -9,6 +9,7 @@
 #include <fuchsia/hardware/usb/request/c/banjo.h>
 #include <lib/fake_ddk/fake_ddk.h>
 #include <lib/fit/defer.h>
+#include <lib/stdcompat/span.h>
 #include <lib/synchronous-executor/executor.h>
 #include <lib/zx/clock.h>
 #include <lib/zx/time.h>
@@ -26,7 +27,6 @@
 
 #include <fbl/condition_variable.h>
 #include <fbl/ref_ptr.h>
-#include <fbl/span.h>
 #include <zxtest/zxtest.h>
 
 #include "fake-device.h"

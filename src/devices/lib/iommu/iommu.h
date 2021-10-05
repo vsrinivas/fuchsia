@@ -6,6 +6,7 @@
 #define SRC_DEVICES_LIB_IOMMU_IOMMU_H_
 
 #include <lib/fit/function.h>
+#include <lib/stdcompat/span.h>
 #include <lib/syslog/logger.h>
 #include <lib/zx/iommu.h>
 #include <zircon/syscalls/iommu.h>
@@ -13,7 +14,6 @@
 #include <acpica/acpi.h>
 #include <fbl/array.h>
 #include <fbl/mutex.h>
-#include <fbl/span.h>
 
 namespace x86 {
 
@@ -47,7 +47,7 @@ class IommuDesc {
 
   // Returns a Span of the scopes in the descriptor data. Only valid to be called after one of the
   // Create*Desc initializers has returned with ZX_OK.
-  fbl::Span<zx_iommu_desc_intel_scope_t> Scopes() {
+  cpp20::span<zx_iommu_desc_intel_scope_t> Scopes() {
     // The scopes live just after the desc header.
     return {
         reinterpret_cast<zx_iommu_desc_intel_scope_t*>(desc_.get() + sizeof(zx_iommu_desc_intel_t)),
@@ -66,7 +66,7 @@ class IommuDesc {
   zx_status_t AllocDesc(const ACPI_TABLE_DMAR* table, uint16_t pci_segment, bool whole_segment,
                         F scope_func);
 
-  fbl::Span<uint8_t> ReservedMem() {
+  cpp20::span<uint8_t> ReservedMem() {
     // The reserved memory information starts at the end of the scopes.
     return {reinterpret_cast<uint8_t*>(Scopes().end()), Desc().reserved_memory_bytes};
   }
