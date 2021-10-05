@@ -1,0 +1,6 @@
+{
+    include: [ "//src/proc/tests/android/gvisor.shard.cml" ],
+    program: {
+        binary: "/data/tests/accept_bind_stream_test",
+    },
+}

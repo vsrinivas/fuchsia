@@ -90,7 +90,7 @@ template("wayland_test_component") {
 
 # Commented out tests exist as binaries in the tree but are not run (yet!).
 gvisor_tests = [
-  # "accept_bind_stream_test",
+  "accept_bind_stream_test",
   "accept_bind_test",
   "access_test",
   "bind_test",
