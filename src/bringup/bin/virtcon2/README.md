@@ -19,25 +19,14 @@ while maintaining minimal hardware requirements.
 
 * Minimal resource usage.
 * Maximize code reuse with Terminal app.
-* Splash screen mode for startup and shutdown.
+* Boot animation for startup and shutdown.
 * Runtime product configuration.
 * Flicker free single framebuffer mode.
 
 ### Roadmap
 
-1. Improve splash screen mode.
-2. Implement all features of legacy Virtcon.
-3. Enable new Virtcon by default.
-4. Remove legacy Virtcon code and dependencies.
-
-## Using new Virtcon
-
-Configure, and build
-
-    fx set core.x64 --args use_legacy_virtcon=false # or similar
-    fx build
-
-then pave and boot.
+1. Boot animation chime support.
+2. Silent boot system for runtime suppression of chime.
 
 ## Testing
 
