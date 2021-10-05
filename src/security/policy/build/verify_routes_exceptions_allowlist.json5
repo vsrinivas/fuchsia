@@ -200,6 +200,20 @@
                         },
                     },
                 },
+
+                // Not all products (eg. core) include CodecFactory
+                {
+                    capability: "fuchsia.mediacodec.CodecFactory",
+                    using_node: "/core/appmgr",
+                    error: {
+                        error: {
+                            offer_decl_not_found: [
+                                "/core",
+                                "fuchsia.mediacodec.CodecFactory",
+                            ],
+                        },
+                    },
+                },
             ],
         },
     },

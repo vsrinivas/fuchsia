@@ -1,0 +1,47 @@
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    children: [
+        {
+            name: "codec_factory",
+            url: "fuchsia-pkg://fuchsia.com/codec_factory#meta/codec_factory.cm",
+        },
+    ],
+    offer: [
+        {
+            directory: "dev",
+            from: "parent",
+            as: "dev-mediacodec",
+            to: "#codec_factory",
+            subdir: "class/media-codec",
+        },
+        {
+            protocol: "fuchsia.cobalt.LoggerFactory",
+            from: "#cobalt",
+            to: "#codec_factory",
+        },
+        {
+            protocol: [
+                "fuchsia.sysmem.Allocator",
+                "fuchsia.tracing.provider.Registry",
+            ],
+            from: "#appmgr",
+            to: "#codec_factory",
+            dependency: "weak_for_migration",
+        },
+        {
+            protocol: [
+                "fuchsia.logger.LogSink",
+                "fuchsia.sysinfo.SysInfo",
+            ],
+            from: "parent",
+            to: "#codec_factory",
+        },
+        {
+            protocol: "fuchsia.mediacodec.CodecFactory",
+            from: "#codec_factory",
+            to: "#appmgr",
+        },
+    ],
+}

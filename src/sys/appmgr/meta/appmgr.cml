@@ -56,6 +56,9 @@
                 "fuchsia.media.sessions2.Discovery",
                 "fuchsia.media.sessions2.Publisher",
                 "fuchsia.media.UsageReporter",
+
+                // During transition (fxbug.dev/78647) continue exposing this
+                // until all products use the v2 component
                 "fuchsia.mediacodec.CodecFactory",
                 "fuchsia.memorypressure.Provider",
                 "fuchsia.overnet.Overnet",
@@ -718,6 +721,12 @@
             protocol: "fuchsia.exception.ProcessLimbo",
             path: "/svc_for_sys/fuchsia.exception.ProcessLimbo",
         },
+
+        // From codec factory
+        {
+            protocol: "fuchsia.mediacodec.CodecFactory",
+            path: "/svc_for_sys/fuchsia.mediacodec.CodecFactory",
+        },
     ],
     expose: [
         {
@@ -743,6 +752,9 @@
                 "fuchsia.media.sessions2.Discovery",
                 "fuchsia.media.sessions2.Publisher",
                 "fuchsia.media.UsageReporter",
+
+                // During transition (fxbug.dev/78647) continue exposing this
+                // until all products use the v2 component
                 "fuchsia.mediacodec.CodecFactory",
                 "fuchsia.memorypressure.Provider",
                 "fuchsia.overnet.Overnet",

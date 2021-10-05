@@ -4,6 +4,7 @@
 
 import("//build/components.gni")
 import("//build/config.gni")
+import("//src/sys/core/build/core_shard.gni")
 
 group("codec") {
   testonly = true
@@ -44,6 +45,10 @@ group("tests") {
     "//src/media/codec/factory:codec_detect_hw_decode_test",
     "//src/media/codec/factory:codec_detect_hw_decode_test_v2",
   ]
+}
+
+core_shard("codec_factory_shard") {
+  shard_file = "factory/meta/codec_factory.core_shard.cml"
 }
 
 group("hw_dependent_tests") {
