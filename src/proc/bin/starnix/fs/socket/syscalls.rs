@@ -116,6 +116,13 @@ fn generate_autobind_address() -> Vec<u8> {
     format!("\0{:05x}", value).into_bytes()
 }
 
+fn translate_fs_error(errno: Errno) -> Errno {
+    match errno {
+        errno if errno == EACCES || errno == EPERM || errno == EINTR => errno,
+        _ => errno!(ECONNREFUSED),
+    }
+}
+
 pub fn sys_bind(
     ctx: &SyscallContext<'_>,
     fd: FdNumber,
@@ -139,8 +146,10 @@ pub fn sys_bind(
                 ctx.task.abstract_socket_namespace.bind(name, socket)?;
             } else {
                 let mode = ctx.task.fs.apply_umask(mode!(IFSOCK, 0o765));
-                // TODO: Is lookup_parent_at returning the right errors?
-                let (parent, basename) = ctx.task.lookup_parent_at(FdNumber::AT_FDCWD, &name)?;
+                let (parent, basename) = ctx
+                    .task
+                    .lookup_parent_at(FdNumber::AT_FDCWD, &name)
+                    .map_err(translate_fs_error)?;
 
                 let _dir_entry = parent
                     .entry
@@ -217,8 +226,9 @@ pub fn sys_connect(
                 ctx.task.abstract_socket_namespace.lookup(&name)?
             } else {
                 let (parent, basename) = ctx.task.lookup_parent_at(FdNumber::AT_FDCWD, &name)?;
-                let name =
-                    parent.lookup_child(&mut LookupContext::default(), ctx.task, basename)?;
+                let name = parent
+                    .lookup_child(&mut LookupContext::default(), ctx.task, basename)
+                    .map_err(translate_fs_error)?;
                 name.entry.node.socket().ok_or_else(|| errno!(ECONNREFUSED))?.clone()
             }
         }

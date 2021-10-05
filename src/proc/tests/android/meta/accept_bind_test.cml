@@ -2,6 +2,6 @@
     include: [ "//src/proc/tests/android/gvisor.shard.cml" ],
     program: {
         binary: "/data/tests/accept_bind_test",
-        args: [ "--gunit_filter=-*.ConnectWithWrongType/*:*.ConnectToFilePath/*:*.AcceptNegativeAddrLen/*:*.AcceptLargePositiveAddrLen/*:*.AcceptVeryLargePositiveAddrLen/*:*.GetRemoteAddress/*:*.BoundGetLocalAddress/*:*.BoundSenderAddr/*:*.BindAfterConnectSenderAddr/*:*.BindAfterAcceptSenderAddr/*" ],
+        args: [ "--gunit_filter=-*.ConnectWithWrongType/*:*.AcceptNegativeAddrLen/*:*.AcceptLargePositiveAddrLen/*:*.AcceptVeryLargePositiveAddrLen/*:*.GetRemoteAddress/*:*.BoundGetLocalAddress/*:*.BoundSenderAddr/*:*.BindAfterConnectSenderAddr/*:*.BindAfterAcceptSenderAddr/*" ],
     },
 }
