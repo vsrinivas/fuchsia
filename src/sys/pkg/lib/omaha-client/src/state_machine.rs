@@ -240,7 +240,7 @@ where
             .await;
         self.context.schedule.next_update_time = Some(timing);
 
-        co.yield_(StateMachineEvent::ScheduleChange(self.context.schedule.clone())).await;
+        co.yield_(StateMachineEvent::ScheduleChange(self.context.schedule)).await;
         info!("Calculated check timing: {}", timing);
         timing
     }
@@ -635,7 +635,7 @@ where
                 }
             };
 
-        co.yield_(StateMachineEvent::ScheduleChange(self.context.schedule.clone())).await;
+        co.yield_(StateMachineEvent::ScheduleChange(self.context.schedule)).await;
         co.yield_(StateMachineEvent::ProtocolStateChange(self.context.state.clone())).await;
         co.yield_(StateMachineEvent::UpdateCheckResult(result)).await;
 
@@ -670,10 +670,9 @@ where
 
         if success {
             storage.remove_or_log(CONSECUTIVE_FAILED_INSTALL_ATTEMPTS).await;
-        } else {
-            if let Err(e) = storage.set_int(CONSECUTIVE_FAILED_INSTALL_ATTEMPTS, attempts).await {
-                error!("Unable to persist {}: {}", CONSECUTIVE_FAILED_INSTALL_ATTEMPTS, e);
-            }
+        } else if let Err(e) = storage.set_int(CONSECUTIVE_FAILED_INSTALL_ATTEMPTS, attempts).await
+        {
+            error!("Unable to persist {}: {}", CONSECUTIVE_FAILED_INSTALL_ATTEMPTS, e);
         }
     }
 
@@ -1036,18 +1035,19 @@ where
 
     /// Report the given |event| to Omaha, errors occurred during reporting are logged but not
     /// acted on.
+    #[allow(clippy::too_many_arguments)]
     async fn report_omaha_event_and_update_context<'a>(
         &'a mut self,
         request_params: &'a RequestParams,
         event: Event,
-        apps: &'a Vec<App>,
+        apps: &[App],
         session_id: &GUID,
         next_versions: Vec<Option<String>>,
         install_duration: Option<Duration>,
         co: &mut async_generator::Yield<StateMachineEvent>,
     ) {
         let config = self.config.clone();
-        let mut request_builder = RequestBuilder::new(&config, &request_params);
+        let mut request_builder = RequestBuilder::new(&config, request_params);
         for (app, next_version) in apps.iter().zip(next_versions) {
             let event = Event {
                 previous_version: Some(app.version.to_string()),
@@ -1102,7 +1102,7 @@ where
         // Even though this is a ping, we should still update the last_update_time for
         // policy to compute the next ping time.
         self.context.schedule.last_update_time = Some(self.time_source.now().into());
-        co.yield_(StateMachineEvent::ScheduleChange(self.context.schedule.clone())).await;
+        co.yield_(StateMachineEvent::ScheduleChange(self.context.schedule)).await;
 
         let result = Self::make_response(response, update_check::Action::NoUpdate);
 
@@ -1185,7 +1185,7 @@ where
     /// struct, returning all of the various errors that can occur in that process as a consolidated
     /// error enum.
     fn parse_omaha_response(data: &[u8]) -> Result<Response, ResponseParseError> {
-        parse_json_response(&data).map_err(ResponseParseError::Json)
+        parse_json_response(data).map_err(ResponseParseError::Json)
     }
 
     /// Utility to extract pairs of app id => omaha status response, to make it easier to ask
@@ -1194,10 +1194,7 @@ where
         response
             .apps
             .iter()
-            .filter_map(|app| match &app.update_check {
-                None => None,
-                Some(u) => Some((app.id.as_str(), &u.status)),
-            })
+            .filter_map(|app| app.update_check.as_ref().map(|u| (app.id.as_str(), &u.status)))
             .collect()
     }
 
@@ -1230,7 +1227,7 @@ where
         state: State,
         co: &mut async_generator::Yield<StateMachineEvent>,
     ) {
-        self.state = state.clone();
+        self.state = state;
         co.yield_(StateMachineEvent::StateChange(state)).await;
     }
 

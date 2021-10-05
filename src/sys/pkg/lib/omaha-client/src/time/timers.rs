@@ -135,6 +135,12 @@ mod mock {
         }
     }
 
+    impl Default for MockTimer {
+        fn default() -> Self {
+            Self::new()
+        }
+    }
+
     impl Timer for MockTimer {
         /// Wait until at least one of the given time bounds has been reached.
         fn wait_until(&mut self, time: impl Into<PartialComplexTime>) -> BoxFuture<'static, ()> {

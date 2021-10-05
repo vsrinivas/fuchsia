@@ -56,7 +56,9 @@ impl Cohort {
     /// A validation function to test that a given Cohort hint or name is valid per the Omaha spec:
     ///  1-1024 ascii characters, with values in the range [\u20-\u7e].
     pub fn validate_name(name: &str) -> bool {
-        name.len() > 0 && name.len() <= 1024 && name.chars().all(|c| c >= '\u{20}' && c <= '\u{7e}')
+        !name.is_empty()
+            && name.len() <= 1024
+            && name.chars().all(|c| ('\u{20}'..='\u{7e}').contains(&c))
     }
 }
 

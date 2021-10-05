@@ -103,9 +103,7 @@ impl From<AppEntry> for ProtocolApp {
             );
         }
         let ping = if entry.ping {
-            let days = match entry.app.user_counting {
-                UserCounting::ClientRegulatedByDate(days) => days,
-            };
+            let UserCounting::ClientRegulatedByDate(days) = entry.app.user_counting;
             Some(Ping { date_last_active: days, date_last_roll_call: days })
         } else {
             None
@@ -257,7 +255,7 @@ impl<'a> RequestBuilder<'a> {
             headers.push((HEADER_APP_ID, main_app.app.id.clone()));
         }
 
-        let apps = self.app_entries.iter().cloned().map(|entry| ProtocolApp::from(entry)).collect();
+        let apps = self.app_entries.iter().cloned().map(ProtocolApp::from).collect();
 
         Intermediate {
             uri: self.config.service_url.clone(),

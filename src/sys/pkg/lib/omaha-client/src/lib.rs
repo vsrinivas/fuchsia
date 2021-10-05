@@ -5,6 +5,7 @@
 //! This is for Omaha client binaries written in Rust.
 
 #![recursion_limit = "256"]
+#![warn(clippy::all)]
 
 pub mod clock;
 pub mod common;

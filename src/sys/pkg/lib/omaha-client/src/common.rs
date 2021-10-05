@@ -196,12 +196,12 @@ impl App {
     /// Get the current channel name from cohort name, returns empty string if no cohort name set
     /// for the app.
     pub fn get_current_channel(&self) -> &str {
-        self.cohort.name.as_ref().map(|s| s.as_str()).unwrap_or("")
+        self.cohort.name.as_deref().unwrap_or("")
     }
 
     /// Get the target channel name from cohort hint, fallback to current channel if no hint.
     pub fn get_target_channel(&self) -> &str {
-        self.cohort.hint.as_ref().map(|s| s.as_str()).unwrap_or_else(|| self.get_current_channel())
+        self.cohort.hint.as_deref().unwrap_or_else(|| self.get_current_channel())
     }
 
     /// Set the cohort hint to |channel|.
@@ -287,7 +287,7 @@ impl AppSet {
     }
 
     /// Update the cohort and user counting for each app from Omaha app response.
-    pub async fn update_from_omaha(&mut self, app_responses: &Vec<AppResponse>) {
+    pub async fn update_from_omaha(&mut self, app_responses: &[AppResponse]) {
         let mut apps = self.apps.lock().await;
 
         for app_response in app_responses {

@@ -60,6 +60,7 @@ where
     ST: 'a + Storage,
 {
     /// Creates a new `StateMachineBuilder` using the given trait implementations.
+    #[allow(clippy::too_many_arguments)]
     pub fn new(
         policy_engine: PE,
         http: HR,
