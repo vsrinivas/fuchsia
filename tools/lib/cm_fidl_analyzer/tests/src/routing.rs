@@ -1180,6 +1180,10 @@ mod tests {
         assert_eq!(
             route_map,
             RouteMap::from_segments(vec![
+                RouteSegment::RequireRunner {
+                    node_path: NodePath::absolute_from_vec(vec!["b"]),
+                    runner: "hobbit".into(),
+                },
                 RouteSegment::RegisterBy {
                     node_path: NodePath::absolute_from_vec(vec![]),
                     capability: RegistrationDecl::Runner(runner_reg)
@@ -1695,6 +1699,46 @@ mod tests {
                     node_path: NodePath::absolute_from_vec(vec![]),
                     capability: CapabilityDecl::Resolver(resolver_decl)
                 }
+            ])
+        );
+    }
+
+    /// a: is provided with the built-in ELF runner, and requires that runner
+    ///    in its `ProgramDecl`.
+    #[fuchsia::test]
+    async fn route_map_program_runner_from_builtin_environment() {
+        let elf_runner_decl = CapabilityDecl::Runner(RunnerDecl {
+            name: "elf".into(),
+            source_path: Some("/builtin/source/path".parse().unwrap()),
+        });
+        let component_decl = ComponentDeclBuilder::new_empty_component().add_program("elf").build();
+
+        let components = vec![("a", component_decl.clone())];
+
+        let mut builder = RoutingTestBuilderForAnalyzer::new("a", components);
+        builder.set_builtin_capabilities(vec![elf_runner_decl.clone()]);
+        builder.register_mock_builtin_runner("elf");
+        let test = builder.build().await;
+        let a_component = test.look_up_instance(&vec![].into()).await.expect("a instance");
+
+        let route_map = test
+            .model
+            .check_program_runner(
+                &component_decl.program.expect("expected ProgramDecl for a"),
+                &a_component,
+            )
+            .await
+            .expect("expected OK route")
+            .expect("expected program runner route");
+
+        assert_eq!(
+            route_map,
+            RouteMap::from_segments(vec![
+                RouteSegment::RequireRunner {
+                    node_path: NodePath::absolute_from_vec(vec![]),
+                    runner: "elf".into(),
+                },
+                RouteSegment::ProvideAsBuiltin { capability: elf_runner_decl }
             ])
         );
     }

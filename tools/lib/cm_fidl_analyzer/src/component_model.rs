@@ -399,16 +399,18 @@ impl ComponentModelForAnalyzer {
         target: &Arc<ComponentInstanceForAnalyzer>,
     ) -> Result<Option<RouteMap>, AnalyzerModelError> {
         match program_decl.runner {
-            Some(ref runner_name) => {
-                match route_capability::<ComponentInstanceForAnalyzer>(
-                    RouteRequest::Runner(runner_name.clone()),
+            Some(ref runner) => {
+                let mut route = RouteMap::from_segments(vec![RouteSegment::RequireRunner {
+                    node_path: target.node_path(),
+                    runner: runner.clone(),
+                }]);
+                let (_source, mut segments) = route_capability::<ComponentInstanceForAnalyzer>(
+                    RouteRequest::Runner(runner.clone()),
                     target,
                 )
-                .await
-                {
-                    Ok((_source, route)) => Ok(Some(route)),
-                    Err(err) => Err(AnalyzerModelError::RoutingError(err)),
-                }
+                .await?;
+                route.append(&mut segments);
+                Ok(Some(route))
             }
             None => Ok(None),
         }

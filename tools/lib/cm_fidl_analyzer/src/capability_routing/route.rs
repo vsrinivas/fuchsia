@@ -20,6 +20,14 @@ pub enum RouteSegment {
         capability: UseDecl,
     },
 
+    /// A `ComponentNode` requires a runner in its `ProgramDecl`.
+    RequireRunner {
+        /// The `NodePath` of the component instance that requires the runner.
+        node_path: NodePath,
+        /// The name of the required runner.
+        runner: CapabilityName,
+    },
+
     /// A `ComponentNode` requires the resolver capability to resolve a child component URL.
     RequireResolver {
         /// The `NodePath` of the component node that requires the resolver.
@@ -88,6 +96,7 @@ impl RouteSegment {
     pub fn node_path<'a>(&'a self) -> Option<&'a NodePath> {
         match self {
             Self::UseBy { node_path, .. }
+            | Self::RequireRunner { node_path, .. }
             | Self::RequireResolver { node_path, .. }
             | Self::OfferBy { node_path, .. }
             | Self::ExposeBy { node_path, .. }
