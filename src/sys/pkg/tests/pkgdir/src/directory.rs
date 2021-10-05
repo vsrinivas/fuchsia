@@ -1327,22 +1327,28 @@ async fn assert_rewind_no_overflow(dir: &DirectoryProxy) {
 
 #[fuchsia::test]
 async fn get_token() {
-    for source in just_pkgfs_for_now().await {
+    for source in dirs_to_test().await {
         get_token_per_package_source(source).await
     }
 }
 
 async fn get_token_per_package_source(source: PackageSource) {
-    let root_dir = source.dir;
+    let root_dir = &source.dir;
     for path in [".", "dir", "meta", "meta/dir"] {
-        let dir = io_util::directory::open_directory(&root_dir, path, 0).await.unwrap();
+        let dir = io_util::directory::open_directory(root_dir, path, 0).await.unwrap();
 
         let (status, token) = dir.get_token().await.unwrap();
-
-        zx::Status::ok(status).expect("status ok");
-        // We can't do anything meaningful with this token beyond checking it's Some because
-        // all the IO APIs that consume tokens are unsupported.
-        let _token = token.expect("token present");
+        let status = zx::Status::ok(status);
+        if source.is_pkgdir() {
+            // "GetToken() not supported"
+            assert_eq!(status, Err(zx::Status::NOT_SUPPORTED));
+            assert!(token.is_none(), "token should be absent");
+        } else {
+            status.expect("status ok");
+            // We can't do anything meaningful with this token beyond checking it's Some because
+            // all the IO APIs that consume tokens are unsupported.
+            let _token = token.expect("token present");
+        }
     }
 }
 

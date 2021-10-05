@@ -164,3 +164,12 @@ OPEN_RIGHT_EXECUTABLE, as putting executable files in meta.far is not supported.
 pkgfs has the same restrictions, except it allows one to open meta/ itself (as a
 file or directory) with `OPEN_RIGHT_EXECUTABLE`, even though that does not
 ultimately allow for the opening of files in meta/ with `OPEN_RIGHT_EXECUTABLE`.
+
+### `GetToken()` not supported
+
+package-directory responds with `ZX_STATUS_NOT_SUPPORTED` for calls to
+`GetToken()`, because it represents an immutable directory and tokens are only
+used with mutation APIs.
+
+pkgfs hands out tokens via `GetToken()`, but they can't subsequently be used for
+any other operation.
