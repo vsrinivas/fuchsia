@@ -29,6 +29,7 @@ sdk_source_set("zxtest") {
     "include/zxtest/base/types.h",
     "include/zxtest/base/values.h",
     "include/zxtest/c/zxtest.h",
+    "include/zxtest/cpp/assert.h",
     "include/zxtest/cpp/internal.h",
     "include/zxtest/cpp/zxtest.h",
     "include/zxtest/zxtest.h",
@@ -36,6 +37,7 @@ sdk_source_set("zxtest") {
   non_public_headers = [
     # These headers are not intended to be included directly into user code.
     "include/zxtest/c/zxtest.h",
+    "include/zxtest/cpp/assert.h",
     "include/zxtest/cpp/zxtest.h",
   ]
 

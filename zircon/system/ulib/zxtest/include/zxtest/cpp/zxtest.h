@@ -27,6 +27,8 @@
 #include <zxtest/base/death-statement.h>
 #endif
 
+#include <zxtest/cpp/assert.h>
+
 // Macro definitions for usage within CPP.
 #define _ZXTEST_EXPAND_(arg) arg
 #define _ZXTEST_GET_FIRST_(first, ...) first
@@ -97,11 +99,6 @@
 #define _ZXTEST_AUTO_VAR_TYPE(var) decltype(var)
 
 #define _ZXTEST_TEST_HAS_ERRORS zxtest::Runner::GetInstance()->CurrentTestHasFailures()
-
-#define _ZXTEST_CHECK_RUNNING()                                                                \
-  do {                                                                                         \
-    ZX_ASSERT_MSG(zxtest::Runner::GetInstance()->IsRunning(), "See Context Check in README."); \
-  } while (0)
 
 #define INSTANTIATE_TEST_SUITE_P(Prefix, TestSuite, ...)                                        \
   static void _ZXTEST_REGISTER_FN(Prefix, TestSuite)(void) __attribute__((constructor));        \
@@ -181,82 +178,6 @@
     return zxtest::internal::ToHex(static_cast<const void*>(val), byte_count); \
   }
 
-// Basic assert macro implementation.
-#define _ASSERT_VAR(op, expected, actual, fatal, file, line, desc, ...)                          \
-  do {                                                                                           \
-    _ZXTEST_CHECK_RUNNING();                                                                     \
-    if (!zxtest::internal::EvaluateCondition(actual, expected, #actual, #expected,               \
-                                             {.filename = file, .line_number = line}, fatal,     \
-                                             _DESC_PROVIDER(desc, __VA_ARGS__), _COMPARE_FN(op), \
-                                             _DEFAULT_PRINTER, _DEFAULT_PRINTER)) {              \
-      _RETURN_IF_FATAL(fatal);                                                                   \
-    }                                                                                            \
-  } while (0)
-
-#define _ASSERT_VAR_STATUS(op, expected, actual, fatal, file, line, desc, ...)                    \
-  do {                                                                                            \
-    _ZXTEST_CHECK_RUNNING();                                                                      \
-    if (!zxtest::internal::EvaluateStatusCondition(                                               \
-            actual, expected, #actual, #expected, {.filename = file, .line_number = line}, fatal, \
-            _DESC_PROVIDER(desc, __VA_ARGS__), _COMPARE_FN(op), _STATUS_PRINTER,                  \
-            _STATUS_PRINTER)) {                                                                   \
-      _RETURN_IF_FATAL(fatal);                                                                    \
-    }                                                                                             \
-  } while (0)
-
-#define _ASSERT_VAR_COERCE(op, expected, actual, coerce_type, fatal, file, line, desc, ...)        \
-  do {                                                                                             \
-    _ZXTEST_CHECK_RUNNING();                                                                       \
-    auto buffer_compare = [&](const auto& expected_, const auto& actual_) {                        \
-      using DecayType = typename std::decay<coerce_type>::type;                                    \
-      return op(static_cast<const DecayType&>(actual_), static_cast<const DecayType&>(expected_)); \
-    };                                                                                             \
-    if (!zxtest::internal::EvaluateCondition(actual, expected, #actual, #expected,                 \
-                                             {.filename = file, .line_number = line}, fatal,       \
-                                             _DESC_PROVIDER(desc, __VA_ARGS__), buffer_compare,    \
-                                             _DEFAULT_PRINTER, _DEFAULT_PRINTER)) {                \
-      _RETURN_IF_FATAL(fatal);                                                                     \
-    }                                                                                              \
-  } while (0)
-
-#define _ASSERT_VAR_BYTES(op, expected, actual, size, fatal, file, line, desc, ...)              \
-  do {                                                                                           \
-    _ZXTEST_CHECK_RUNNING();                                                                     \
-    size_t byte_count = size;                                                                    \
-    if (!zxtest::internal::EvaluateCondition(                                                    \
-            zxtest::internal::ToPointer(actual), zxtest::internal::ToPointer(expected), #actual, \
-            #expected, {.filename = file, .line_number = line}, fatal,                           \
-            _DESC_PROVIDER(desc, __VA_ARGS__), _COMPARE_3_FN(op, byte_count),                    \
-            _HEXDUMP_PRINTER(byte_count), _HEXDUMP_PRINTER(byte_count))) {                       \
-      _RETURN_IF_FATAL(fatal);                                                                   \
-    }                                                                                            \
-  } while (0)
-
-#define _ZXTEST_FAIL_NO_RETURN(fatal, desc, ...)                                    \
-  do {                                                                              \
-    _ZXTEST_CHECK_RUNNING();                                                        \
-    zxtest::Runner::GetInstance()->NotifyAssertion(                                 \
-        zxtest::Assertion(_DESC_PROVIDER(desc, __VA_ARGS__)(),                      \
-                          {.filename = __FILE__, .line_number = __LINE__}, fatal)); \
-  } while (0)
-
-#define _ZXTEST_ASSERT_ERROR(has_errors, fatal, desc, ...) \
-  do {                                                     \
-    _ZXTEST_CHECK_RUNNING();                               \
-    if (has_errors) {                                      \
-      _ZXTEST_FAIL_NO_RETURN(fatal, desc, ##__VA_ARGS__);  \
-      _RETURN_IF_FATAL(fatal);                             \
-    }                                                      \
-  } while (0)
-
-#define ZXTEST_SKIP(desc, ...)                                                                  \
-  do {                                                                                          \
-    _ZXTEST_CHECK_RUNNING();                                                                    \
-    zxtest::Runner::GetInstance()->SkipCurrent(zxtest::Message(                                 \
-        _DESC_PROVIDER(desc, __VA_ARGS__)(), {.filename = __FILE__, .line_number = __LINE__})); \
-    return;                                                                                     \
-  } while (0)
-
 #ifdef __Fuchsia__
 #define _ZXTEST_DEATH_STATUS_COMPLETE zxtest::internal::DeathStatement::State::kSuccess
 #define _ZXTEST_DEATH_STATUS_EXCEPTION zxtest::internal::DeathStatement::State::kException
@@ -276,6 +197,6 @@
       }                                                                                    \
     }                                                                                      \
   } while (0)
-#endif
+#endif  // __Fuchsia__
 
 #endif  // ZXTEST_CPP_ZXTEST_H_

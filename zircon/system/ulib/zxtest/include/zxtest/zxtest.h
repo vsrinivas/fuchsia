@@ -217,12 +217,6 @@ static inline void unittest_fails(void) {}
   _ASSERT_VAR(_BOOL, false, val, false, __FILE__, __LINE__, "Expected " #val " is false.", \
               ##__VA_ARGS__)
 
-#define FAIL(...)                                    \
-  do {                                               \
-    _ZXTEST_FAIL_NO_RETURN(true, "", ##__VA_ARGS__); \
-    return;                                          \
-  } while (0)
-
 #define ADD_FAILURE(...) _ZXTEST_FAIL_NO_RETURN(false, "", ##__VA_ARGS__)
 
 #define ADD_FATAL_FAILURE(...) _ZXTEST_FAIL_NO_RETURN(true, "", ##__VA_ARGS__)

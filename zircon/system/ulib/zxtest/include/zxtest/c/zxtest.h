@@ -294,6 +294,13 @@ static void zxtest_clean_buffer(char** buffer) { free(*buffer); }
     }                                                      \
   } while (0)
 
+#define FAIL(...)                                    \
+  do {                                               \
+    _ZXTEST_CHECK_RUNNING();                         \
+    _ZXTEST_FAIL_NO_RETURN(true, "", ##__VA_ARGS__); \
+    return;                                          \
+  } while (0)
+
 #define ZXTEST_SKIP(desc, ...)                                       \
   do {                                                               \
     _ZXTEST_CHECK_RUNNING();                                         \
