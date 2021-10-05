@@ -86,6 +86,9 @@ const (
 	// The ELF sizes manifest.
 	elfSizesManifestName = "elf_sizes.json"
 
+	// A mapping of fidl mangled names to api functions.
+	fidlMangledToApiMappingManifestName = "fidl_mangled_to_api_mapping.json"
+
 	// Constants for upload retries.
 	uploadRetryBackoff = 1 * time.Second
 	maxUploadAttempts  = 4
@@ -268,6 +271,11 @@ func (cmd upCommand) execute(ctx context.Context, buildDir string) error {
 		{
 			Source:      path.Join(buildDir, elfSizesManifestName),
 			Destination: path.Join(packageNamespaceDir, elfSizesManifestName),
+		},
+		// Used for CTS test coverage.
+		{
+			Source:      path.Join(buildDir, fidlMangledToApiMappingManifestName),
+			Destination: path.Join(buildsNamespaceDir, fidlMangledToApiMappingManifestName),
 		},
 	}
 
