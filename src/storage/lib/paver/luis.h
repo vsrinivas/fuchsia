@@ -2,6 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#ifndef SRC_STORAGE_LIB_PAVER_LUIS_H_
+#define SRC_STORAGE_LIB_PAVER_LUIS_H_
+
 #include "src/storage/lib/paver/abr-client.h"
 #include "src/storage/lib/paver/device-partitioner.h"
 #include "src/storage/lib/paver/gpt.h"
@@ -59,3 +62,5 @@ class LuisAbrClientFactory : public abr::ClientFactory {
       std::shared_ptr<paver::Context> context) final;
 };
 }  // namespace paver
+
+#endif  // SRC_STORAGE_LIB_PAVER_LUIS_H_

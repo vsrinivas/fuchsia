@@ -2,6 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#ifndef SRC_STORAGE_VOLUME_IMAGE_UTILS_BOUNDED_WRITER_H_
+#define SRC_STORAGE_VOLUME_IMAGE_UTILS_BOUNDED_WRITER_H_
+
 #include <lib/fpromise/result.h>
 #include <lib/stdcompat/span.h>
 
@@ -38,3 +41,5 @@ class BoundedWriter final : public Writer {
 };
 
 }  // namespace storage::volume_image
+
+#endif  // SRC_STORAGE_VOLUME_IMAGE_UTILS_BOUNDED_WRITER_H_

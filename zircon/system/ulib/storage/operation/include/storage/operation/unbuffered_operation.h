@@ -5,10 +5,10 @@
 #ifndef STORAGE_OPERATION_UNBUFFERED_OPERATION_H_
 #define STORAGE_OPERATION_UNBUFFERED_OPERATION_H_
 
+#include <lib/stdcompat/span.h>
 #include <lib/zx/vmo.h>
 #include <zircon/device/block.h>
 
-#include <fbl/span.h>
 #include <storage/operation/operation.h>
 
 namespace storage {
@@ -34,7 +34,7 @@ struct UnbufferedOperation {
 
 // Sums the |length| of all requests. It will assert if overflow occurs; the caller is responsible
 // for making sure this does not happen.
-uint64_t BlockCount(fbl::Span<const UnbufferedOperation> operations);
+uint64_t BlockCount(cpp20::span<const UnbufferedOperation> operations);
 
 }  // namespace storage
 

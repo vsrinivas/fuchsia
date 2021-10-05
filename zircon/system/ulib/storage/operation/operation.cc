@@ -26,7 +26,7 @@ const char* OperationTypeToString(OperationType type) {
 }
 
 template <typename T>
-uint64_t BlockCountImpl(fbl::Span<const T> operations) {
+uint64_t BlockCountImpl(cpp20::span<const T> operations) {
   safemath::CheckedNumeric<uint64_t> total_length = 0;
   for (const auto& operation : operations) {
     total_length += operation.op.length;
@@ -34,12 +34,12 @@ uint64_t BlockCountImpl(fbl::Span<const T> operations) {
   return total_length.ValueOrDie();
 }
 
-uint64_t BlockCount(fbl::Span<const BufferedOperation> operations) {
+uint64_t BlockCount(cpp20::span<const BufferedOperation> operations) {
   return BlockCountImpl(operations);
 }
 
 #ifdef __Fuchsia__
-uint64_t BlockCount(fbl::Span<const UnbufferedOperation> operations) {
+uint64_t BlockCount(cpp20::span<const UnbufferedOperation> operations) {
   return BlockCountImpl(operations);
 }
 #endif
@@ -52,7 +52,7 @@ std::ostream& operator<<(std::ostream& stream, const BufferedOperation& operatio
 }
 
 std::ostream& operator<<(std::ostream& stream,
-                         const fbl::Span<const BufferedOperation>& operations) {
+                         const cpp20::span<const BufferedOperation>& operations) {
   stream << "[";
   for (size_t i = 0; i < operations.size(); ++i) {
     if (i < operations.size() - 1) {

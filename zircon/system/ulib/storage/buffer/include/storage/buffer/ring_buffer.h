@@ -9,12 +9,12 @@
 #error Fuchsia-only Header
 #endif
 
+#include <lib/stdcompat/span.h>
 #include <lib/zx/status.h>
 
 #include <vector>
 
 #include <fbl/mutex.h>
-#include <fbl/span.h>
 #include <fbl/vector.h>
 #include <storage/buffer/block_buffer_view.h>
 #include <storage/buffer/vmo_buffer.h>
@@ -139,7 +139,7 @@ class RingBufferReservation {
   // - The reservation must be large enough to copy |requests|:
   //  - offset + BlockCount(in_requests) <= length()
   // - |Reserved()| must be true.
-  zx::status<uint64_t> CopyRequests(fbl::Span<const storage::UnbufferedOperation> in_operations,
+  zx::status<uint64_t> CopyRequests(cpp20::span<const storage::UnbufferedOperation> in_operations,
                                     size_t offset,
                                     std::vector<storage::BufferedOperation>* out_operations);
 
