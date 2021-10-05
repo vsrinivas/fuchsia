@@ -51,10 +51,18 @@ class PageQueues {
   static constexpr zx_time_t kDefaultMinMruRotateTime = ZX_SEC(10);
   static constexpr zx_time_t kDefaultMaxMruRotateTime = ZX_SEC(10);
 
+  // This is presently an arbitrary constant, since the min and max mru rotate time are currently
+  // fixed at the same value, meaning that the active ratio can not presently trigger, or prevent,
+  // aging.
+  static constexpr uint64_t kDefaultActiveRatioMultiplier = 2;
+
   // Initializes the page queues with custom values for the options. This is intended for testing to
   // construct a PageQueues that has infinite rotation time outs.
-  PageQueues(zx_duration_t min_mru_rotate_time, zx_duration_t max_mru_rotate_time);
-  PageQueues() : PageQueues(kDefaultMinMruRotateTime, kDefaultMaxMruRotateTime) {}
+  PageQueues(zx_duration_t min_mru_rotate_time, zx_duration_t max_mru_rotate_time,
+             uint64_t active_ratio_multiplier);
+  PageQueues()
+      : PageQueues(kDefaultMinMruRotateTime, kDefaultMaxMruRotateTime,
+                   kDefaultActiveRatioMultiplier) {}
   ~PageQueues();
 
   DISALLOW_COPY_ASSIGN_AND_MOVE(PageQueues);
@@ -141,6 +149,8 @@ class PageQueues {
     None,
     // Aging occurred due to the maximum timeout being reached before any other reason could trigger
     Timeout,
+    // The allowable ratio of active versus inactive pages was exceeded.
+    ActiveRatio,
     // An explicit call to RotatePagerBackedQueues caused aging. This would typically occur due to
     // test code or via the kernel debug console.
     Manual,
@@ -542,6 +552,7 @@ class PageQueues {
   // Queue rotation parameters set at construction.
   const zx_duration_t min_mru_rotate_time_;
   const zx_duration_t max_mru_rotate_time_;
+  const uint64_t active_ratio_multiplier_;
 };
 
 #endif  // ZIRCON_KERNEL_VM_INCLUDE_VM_PAGE_QUEUES_H_

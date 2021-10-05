@@ -822,7 +822,7 @@ static bool pq_move_self_queue() {
 static bool pq_rotate_queue() {
   BEGIN_TEST;
 
-  PageQueues pq(0, ZX_TIME_INFINITE);
+  PageQueues pq(0, ZX_TIME_INFINITE, 0);
 
   pq.StartThreads();
 
