@@ -11,7 +11,7 @@ test("simple-codec-unittest-bin") {
   deps = [
     "//sdk/banjo/fuchsia.hardware.audio:fuchsia.hardware.audio_banjo_cpp",
     "//sdk/lib/inspect/testing/cpp:zxtest",
-    "//src/devices/testing/fake_ddk",
+    "//src/devices/testing/mock-ddk",
     "//src/lib/ddktl",
     "//src/media/audio/lib/simple-codec",
     "//zircon/public/lib/zircon-internal",

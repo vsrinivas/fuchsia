@@ -2,13 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <lib/fake_ddk/fake_ddk.h>
 #include <lib/simple-codec/simple-codec-client.h>
 #include <lib/simple-codec/simple-codec-server.h>
 #include <lib/sync/completion.h>
 
 #include <sdk/lib/inspect/testing/cpp/zxtest/inspect.h>
 #include <zxtest/zxtest.h>
+
+#include "src/devices/testing/mock-ddk/mock-device.h"
 
 namespace {
 static const char* kTestId = "test id";
@@ -20,20 +21,12 @@ namespace audio {
 
 namespace audio_fidl = ::fuchsia::hardware::audio;
 
-class SimpleCodecTest : public inspect::InspectTestHelper, public zxtest::Test {
- public:
-  void SetUp() override {}
-
-  void TearDown() override {}
-
- protected:
-  fake_ddk::Bind ddk_;
-};
+class SimpleCodecTest : public inspect::InspectTestHelper, public zxtest::Test {};
 
 // Server tests.
 struct TestCodec : public SimpleCodecServer {
-  explicit TestCodec()
-      : SimpleCodecServer(fake_ddk::kFakeParent), proto_({&codec_protocol_ops_, this}) {}
+  explicit TestCodec(zx_device_t* parent)
+      : SimpleCodecServer(parent), proto_({&codec_protocol_ops_, this}) {}
   codec_protocol_t GetProto() { return {&this->codec_protocol_ops_, this}; }
 
   zx_status_t Shutdown() override { return ZX_OK; }
@@ -62,8 +55,13 @@ struct TestCodec : public SimpleCodecServer {
 };
 
 TEST_F(SimpleCodecTest, ChannelConnection) {
-  auto codec = SimpleCodecServer::Create<TestCodec>();
-  ASSERT_NOT_NULL(codec);
+  auto fake_parent = MockDevice::FakeRootParent();
+
+  auto owned = SimpleCodecServer::Create<TestCodec>(fake_parent.get());
+  [[maybe_unused]] auto unused_raw_pointer = owned.release();  // codec release managed by the DDK.
+  auto* child_dev = fake_parent->GetLatestChild();
+  ASSERT_NOT_NULL(child_dev);
+  auto codec = child_dev->GetDeviceContext<TestCodec>();
   auto codec_proto = codec->GetProto();
   SimpleCodecClient client;
   ASSERT_OK(client.SetProtocol(&codec_proto));
@@ -73,15 +71,16 @@ TEST_F(SimpleCodecTest, ChannelConnection) {
   ASSERT_EQ(info->unique_id.compare(kTestId), 0);
   ASSERT_EQ(info->manufacturer.compare(kTestManufacturer), 0);
   ASSERT_EQ(info->product_name.compare(kTestProduct), 0);
-
-  codec->DdkAsyncRemove();
-  ASSERT_TRUE(ddk_.Ok());
-  codec.release()->DdkRelease();  // codec release managed by the DDK
 }
 
 TEST_F(SimpleCodecTest, GainState) {
-  auto codec = SimpleCodecServer::Create<TestCodec>();
-  ASSERT_NOT_NULL(codec);
+  auto fake_parent = MockDevice::FakeRootParent();
+
+  auto owned = SimpleCodecServer::Create<TestCodec>(fake_parent.get());
+  [[maybe_unused]] auto unused_raw_pointer = owned.release();  // codec release managed by the DDK.
+  auto* child_dev = fake_parent->GetLatestChild();
+  ASSERT_NOT_NULL(child_dev);
+  auto codec = child_dev->GetDeviceContext<TestCodec>();
   auto codec_proto = codec->GetProto();
   SimpleCodecClient client;
   ASSERT_OK(client.SetProtocol(&codec_proto));
@@ -115,15 +114,16 @@ TEST_F(SimpleCodecTest, GainState) {
     ASSERT_EQ(state->agc_enabled, true);
     ASSERT_EQ(state->gain, 1.23f);
   }
-
-  codec->DdkAsyncRemove();
-  ASSERT_TRUE(ddk_.Ok());
-  codec.release()->DdkRelease();  // codec release managed by the DDK
 }
 
 TEST_F(SimpleCodecTest, SetDaiFormat) {
-  auto codec = SimpleCodecServer::Create<TestCodec>();
-  ASSERT_NOT_NULL(codec);
+  auto fake_parent = MockDevice::FakeRootParent();
+
+  auto owned = SimpleCodecServer::Create<TestCodec>(fake_parent.get());
+  [[maybe_unused]] auto unused_raw_pointer = owned.release();  // codec release managed by the DDK.
+  auto* child_dev = fake_parent->GetLatestChild();
+  ASSERT_NOT_NULL(child_dev);
+  auto codec = child_dev->GetDeviceContext<TestCodec>();
   auto codec_proto = codec->GetProto();
   SimpleCodecClient client;
   client.SetProtocol(&codec_proto);
@@ -132,15 +132,16 @@ TEST_F(SimpleCodecTest, SetDaiFormat) {
                       .frame_format = FrameFormat::I2S};
   zx::status<CodecFormatInfo> codec_format_info = client.SetDaiFormat(std::move(format));
   ASSERT_EQ(codec_format_info.status_value(), ZX_ERR_NOT_SUPPORTED);
-
-  codec->DdkAsyncRemove();
-  ASSERT_TRUE(ddk_.Ok());
-  codec.release()->DdkRelease();  // codec release managed by the DDK
 }
 
 TEST_F(SimpleCodecTest, PlugState) {
-  auto codec = SimpleCodecServer::Create<TestCodec>();
-  ASSERT_NOT_NULL(codec);
+  auto fake_parent = MockDevice::FakeRootParent();
+
+  auto owned = SimpleCodecServer::Create<TestCodec>(fake_parent.get());
+  [[maybe_unused]] auto unused_raw_pointer = owned.release();  // codec release managed by the DDK.
+  auto* child_dev = fake_parent->GetLatestChild();
+  ASSERT_NOT_NULL(child_dev);
+  auto codec = child_dev->GetDeviceContext<TestCodec>();
   auto codec_proto = codec->GetProto();
   ddk::CodecProtocolClient codec_proto2(&codec_proto);
 
@@ -159,15 +160,16 @@ TEST_F(SimpleCodecTest, PlugState) {
   ASSERT_OK(codec_client->WatchPlugState(&out_plug_state));
   ASSERT_EQ(out_plug_state.plugged(), true);
   ASSERT_GT(out_plug_state.plug_state_time(), 0);
-
-  codec->DdkAsyncRemove();
-  ASSERT_TRUE(ddk_.Ok());
-  codec.release()->DdkRelease();  // codec release managed by the DDK
 }
 
 TEST_F(SimpleCodecTest, Inspect) {
-  auto codec = SimpleCodecServer::Create<TestCodec>();
-  ASSERT_NOT_NULL(codec);
+  auto fake_parent = MockDevice::FakeRootParent();
+
+  auto owned = SimpleCodecServer::Create<TestCodec>(fake_parent.get());
+  [[maybe_unused]] auto unused_raw_pointer = owned.release();  // codec release managed by the DDK.
+  auto* child_dev = fake_parent->GetLatestChild();
+  ASSERT_NOT_NULL(child_dev);
+  auto codec = child_dev->GetDeviceContext<TestCodec>();
   auto codec_proto = codec->GetProto();
   ddk::CodecProtocolClient codec_proto2(&codec_proto);
 
@@ -188,22 +190,24 @@ TEST_F(SimpleCodecTest, Inspect) {
       CheckProperty(simple_codec->node(), "start_time", inspect::IntPropertyValue(0)));
   ASSERT_NO_FATAL_FAILURES(
       CheckProperty(simple_codec->node(), "unique_id", inspect::StringPropertyValue("test id")));
-
-  codec->DdkAsyncRemove();
-  ASSERT_TRUE(ddk_.Ok());
-  codec.release()->DdkRelease();  // codec release managed by the DDK
 }
 
 TEST_F(SimpleCodecTest, InspectNoUniqueId) {
   struct TestCodecNoUniqueId : public TestCodec {
+    explicit TestCodecNoUniqueId(zx_device_t* parent) : TestCodec(parent) {}
     zx::status<DriverIds> Initialize() override {
       return zx::ok(
           DriverIds{.vendor_id = 0, .device_id = 0, .instance_count = kTestInstanceCount});
     }
     Info GetInfo() override { return {}; }
   };
-  auto codec = SimpleCodecServer::Create<TestCodecNoUniqueId>();
-  ASSERT_NOT_NULL(codec);
+  auto fake_parent = MockDevice::FakeRootParent();
+
+  auto owned = SimpleCodecServer::Create<TestCodecNoUniqueId>(fake_parent.get());
+  [[maybe_unused]] auto unused_raw_pointer = owned.release();  // codec release managed by the DDK.
+  auto* child_dev = fake_parent->GetLatestChild();
+  ASSERT_NOT_NULL(child_dev);
+  auto codec = child_dev->GetDeviceContext<TestCodec>();
   auto codec_proto = codec->GetProto();
   ddk::CodecProtocolClient codec_proto2(&codec_proto);
 
@@ -225,15 +229,16 @@ TEST_F(SimpleCodecTest, InspectNoUniqueId) {
   ASSERT_NO_FATAL_FAILURES(
       CheckProperty(simple_codec->node(), "unique_id",
                     inspect::StringPropertyValue(std::to_string(kTestInstanceCount))));
-
-  codec->DdkAsyncRemove();
-  ASSERT_TRUE(ddk_.Ok());
-  codec.release()->DdkRelease();  // codec release managed by the DDK
 }
 
 TEST_F(SimpleCodecTest, MultipleClients) {
-  auto codec = SimpleCodecServer::Create<TestCodec>();
-  ASSERT_NOT_NULL(codec);
+  auto fake_parent = MockDevice::FakeRootParent();
+
+  auto owned = SimpleCodecServer::Create<TestCodec>(fake_parent.get());
+  [[maybe_unused]] auto unused_raw_pointer = owned.release();  // codec release managed by the DDK.
+  auto* child_dev = fake_parent->GetLatestChild();
+  ASSERT_NOT_NULL(child_dev);
+  auto codec = child_dev->GetDeviceContext<TestCodec>();
   auto codec_proto = codec->GetProto();
   ddk::CodecProtocolClient codec_proto2(&codec_proto);
 
@@ -286,15 +291,16 @@ TEST_F(SimpleCodecTest, MultipleClients) {
     EXPECT_EQ(state->agc_enabled, true);
     EXPECT_EQ(state->gain, 5.67f);
   }
-
-  codec->DdkAsyncRemove();
-  ASSERT_TRUE(ddk_.Ok());
-  codec.release()->DdkRelease();  // codec release managed by the DDK
 }
 
 TEST_F(SimpleCodecTest, MoveClient) {
-  auto codec = SimpleCodecServer::Create<TestCodec>();
-  ASSERT_NOT_NULL(codec);
+  auto fake_parent = MockDevice::FakeRootParent();
+
+  auto owned = SimpleCodecServer::Create<TestCodec>(fake_parent.get());
+  [[maybe_unused]] auto unused_raw_pointer = owned.release();  // codec release managed by the DDK.
+  auto* child_dev = fake_parent->GetLatestChild();
+  ASSERT_NOT_NULL(child_dev);
+  auto codec = child_dev->GetDeviceContext<TestCodec>();
   auto codec_proto = codec->GetProto();
   ddk::CodecProtocolClient codec_proto2(&codec_proto);
 
@@ -315,15 +321,16 @@ TEST_F(SimpleCodecTest, MoveClient) {
     EXPECT_EQ(state->agc_enabled, false);
     EXPECT_EQ(state->gain, 1.23f);
   }
-
-  codec->DdkAsyncRemove();
-  ASSERT_TRUE(ddk_.Ok());
-  codec.release()->DdkRelease();  // codec release managed by the DDK
 }
 
 TEST_F(SimpleCodecTest, CloseChannel) {
-  auto codec = SimpleCodecServer::Create<TestCodec>();
-  ASSERT_NOT_NULL(codec);
+  auto fake_parent = MockDevice::FakeRootParent();
+
+  auto owned = SimpleCodecServer::Create<TestCodec>(fake_parent.get());
+  [[maybe_unused]] auto unused_raw_pointer = owned.release();  // codec release managed by the DDK.
+  auto* child_dev = fake_parent->GetLatestChild();
+  ASSERT_NOT_NULL(child_dev);
+  auto codec = child_dev->GetDeviceContext<TestCodec>();
   auto codec_proto = codec->GetProto();
   ddk::CodecProtocolClient codec_proto2(&codec_proto);
 
@@ -347,15 +354,16 @@ TEST_F(SimpleCodecTest, CloseChannel) {
 
   // This should fail now that our channel has been closed.
   EXPECT_NOT_OK(codec_client.Start());
-
-  codec->DdkAsyncRemove();
-  ASSERT_TRUE(ddk_.Ok());
-  codec.release()->DdkRelease();  // codec release managed by the DDK
 }
 
 TEST_F(SimpleCodecTest, RebindClient) {
-  auto codec = SimpleCodecServer::Create<TestCodec>();
-  ASSERT_NOT_NULL(codec);
+  auto fake_parent = MockDevice::FakeRootParent();
+
+  auto owned = SimpleCodecServer::Create<TestCodec>(fake_parent.get());
+  [[maybe_unused]] auto unused_raw_pointer = owned.release();  // codec release managed by the DDK.
+  auto* child_dev = fake_parent->GetLatestChild();
+  ASSERT_NOT_NULL(child_dev);
+  auto codec = child_dev->GetDeviceContext<TestCodec>();
   auto codec_proto = codec->GetProto();
   ddk::CodecProtocolClient codec_proto2(&codec_proto);
 
@@ -385,18 +393,19 @@ TEST_F(SimpleCodecTest, RebindClient) {
     EXPECT_EQ(state->agc_enabled, false);
     EXPECT_EQ(state->gain, 1.23f);
   }
-
-  codec->DdkAsyncRemove();
-  ASSERT_TRUE(ddk_.Ok());
-  codec.release()->DdkRelease();  // codec release managed by the DDK
 }
 
 TEST_F(SimpleCodecTest, MoveClientWithDispatcherProvided) {
   async::Loop loop(&kAsyncLoopConfigNeverAttachToThread);
   ASSERT_OK(loop.StartThread("SimpleCodecClient test thread"));
 
-  auto codec = SimpleCodecServer::Create<TestCodec>();
-  ASSERT_NOT_NULL(codec);
+  auto fake_parent = MockDevice::FakeRootParent();
+
+  auto owned = SimpleCodecServer::Create<TestCodec>(fake_parent.get());
+  [[maybe_unused]] auto unused_raw_pointer = owned.release();  // codec release managed by the DDK.
+  auto* child_dev = fake_parent->GetLatestChild();
+  ASSERT_NOT_NULL(child_dev);
+  auto codec = child_dev->GetDeviceContext<TestCodec>();
   auto codec_proto = codec->GetProto();
   ddk::CodecProtocolClient codec_proto2(&codec_proto);
 
@@ -417,10 +426,6 @@ TEST_F(SimpleCodecTest, MoveClientWithDispatcherProvided) {
     EXPECT_EQ(state->agc_enabled, false);
     EXPECT_EQ(state->gain, 1.23f);
   }
-
-  codec->DdkAsyncRemove();
-  ASSERT_TRUE(ddk_.Ok());
-  codec.release()->DdkRelease();  // codec release managed by the DDK
 }
 
 }  // namespace audio
