@@ -174,7 +174,7 @@ do
       extern)
         extern_path=$(expr "X$opt" : '[^=]*=\(.*\)')
         # Sometimes, --extern names only a single crate without =path.
-        test -z "$extern_path" || extern_paths+=("$(realpath --relative-to="$project_root" "$extern_path")")
+        test -z "$extern_path" || extern_paths+=("$build_subdir/$extern_path")
         dep_only_command+=( "$dep_only_token" )
         rustc_command+=( "$opt" )
         ;;
@@ -297,7 +297,7 @@ EOF
 
     # Link arguments that reference .o or .a files need to be uploaded.
     -Clink-arg=*.o | -Clink-arg=*.a | -Clink-arg=*.so | -Clink-arg=*.so.debug)
-        link_arg="$(realpath --relative-to="$project_root" "$optarg")"
+        link_arg="$build_subdir/$optarg"
         debug_var "[from -Clink-arg]" "$link_arg"
         link_arg_files+=("$link_arg")
         ;;
@@ -322,13 +322,21 @@ EOF
           # There are also directories that contain only .o files.
           # It is safe to over-specify inputs, so for now, we grab them all.
           #
-          # || : to ignore exit code of ls.
-          objs=($(ls "$optarg"/*.{so,a,o} 2> /dev/null)) || :
-          objs_rel=($(echo "${objs[@]}" | grep . | xargs -n 1 realpath --relative-to="$project_root"))
+          objs_unfiltered=( "$optarg"/*.{so,a,o} )
+          objs_rel=()
+          # Remove elements with a literal "*" in them, which occurs when *.x
+          # matches nothing.
+          for f in "${objs_unfiltered[@]}"
+          do case "$f" in
+            *\** ) ;;
+            # prefix each element with "$build_subdir/"
+            *) objs_rel+=("$build_subdir/$f") ;;
+          esac
+          done
           debug_var "[from -Lnative (dir:$optarg)]" "${objs_rel[@]}"
           link_arg_files+=("${objs_rel[@]}")
         else
-          link_arg="$(realpath --relative-to="$project_root" "$optarg")"
+          link_arg="$build_subdir/$optarg"
           debug_var "[from -Lnative (file:$optarg)]" "$link_arg"
           link_arg_files+=("$link_arg")
         fi
@@ -350,7 +358,7 @@ EOF
     *.rs) test -n "$first_source" || first_source="$opt" ;;
 
     *.a | *.o | *.so | *.so.debug)
-        link_arg_files+=("$(realpath --relative-to="$project_root" "$opt")")
+        link_arg_files+=("$build_subdir/$opt")
         ;;
 
     # Preserve all other tokens.
@@ -447,8 +455,9 @@ trace_depfile_scanning_prefix=(
   debug_var "[$script: dep-info]" "${dep_only_command[@]}"
   exit "$status"
 }
+# Convert depfile absolute paths to relative.
 mapfile -t depfile_inputs < <(depfile_inputs_by_line "$depfile.nolink" | \
-  xargs -n 1 realpath --relative-to="$project_root")
+  xargs -n 1 realpath --relative-to="$project_root" )
 # Done with temporary depfile, remove it.
 rm -f "$depfile.nolink"
 
@@ -458,7 +467,7 @@ if [[ "$log" == 1 ]]
 then
   log_wrapper+=("$script_dir"/log-it.sh --log "$logfile" -- )
   extra_inputs+=("$script_dir"/log-it.sh)
-  extra_outputs+=($(realpath --relative-to="$project_root" "$logfile"))
+  extra_outputs+=( "$build_subdir/$logfile" )
 fi
 
 test "$save_analysis" = 0 || {
@@ -506,8 +515,8 @@ remote_inputs=(
 remote_inputs_joined="$(IFS=, ; echo "${remote_inputs[*]}")"
 
 # Outputs include the declared output file and a depfile.
-outputs=("$(realpath --relative-to="$project_root" "$output")")
-test -z "$depfile" || outputs+=("$(realpath --relative-to="$project_root" "$depfile")")
+outputs=("$build_subdir/$output")
+test -z "$depfile" || outputs+=("$build_subdir/$depfile")
 outputs+=("${extra_outputs[@]}")
 # Removing outputs these avoids any unintended reuse of them.
 rm -f "${outputs[@]}"
