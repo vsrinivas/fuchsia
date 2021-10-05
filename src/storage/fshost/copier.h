@@ -8,8 +8,9 @@
 #include <lib/zx/status.h>
 
 #include <filesystem>
+#include <list>
 #include <memory>
-#include <utility>
+#include <string>
 #include <variant>
 #include <vector>
 
@@ -19,6 +20,18 @@ namespace fshost {
 
 class Copier {
  public:
+  struct File {
+    std::string name;
+    std::string contents;
+  };
+  struct Directory;
+  using DirectoryEntry = std::variant<File, Directory>;
+  using DirectoryEntries = std::list<DirectoryEntry>;
+  struct Directory {
+    std::string name;
+    DirectoryEntries entries;
+  };
+
   // Reads all the data at |root_fd| except for the files and directories that match
   // |excluded_paths|.
   static zx::status<Copier> Read(fbl::unique_fd root_fd,
@@ -31,12 +44,10 @@ class Copier {
   // Writes all data to the given root fd.
   zx_status_t Write(fbl::unique_fd root_fd) const;
 
- private:
-  struct Tree {
-    std::vector<std::pair<std::string, std::variant<std::string, std::unique_ptr<Tree>>>> tree;
-  };
+  const DirectoryEntries& entries() const { return entries_; }
 
-  Tree tree_;
+ private:
+  DirectoryEntries entries_;
 };
 
 }  // namespace fshost

@@ -412,6 +412,7 @@ test("fshost_integration_test") {
     "//sdk/fidl/fuchsia.device:fuchsia.device_llcpp",
     "//sdk/fidl/fuchsia.hardware.block.volume:fuchsia.hardware.block.volume_llcpp",
     "//sdk/fidl/fuchsia.sys2",
+    "//sdk/lib/inspect/testing/cpp",
     "//src/developer/forensics/testing/fakes:fuchsia.feedback.testing_llcpp",
     "//src/lib/files",
     "//src/lib/fxl/test:gtest_main",

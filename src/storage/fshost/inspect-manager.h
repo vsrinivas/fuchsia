@@ -44,6 +44,7 @@ class InspectManager {
     // The upgrade finished writing the new data partition.
     kFinished,
   };
+  static const char* MinfsUpgradeStateString(MinfsUpgradeState state);
   // Creates an inspect node indicating that the minfs upgrade entered a given state.
   // Each state creates a separate node, so the full set of states entered can be observed.
   void LogMinfsUpgradeProgress(MinfsUpgradeState state);

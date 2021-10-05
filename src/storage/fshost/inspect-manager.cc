@@ -12,26 +12,6 @@
 namespace fio = fuchsia_io;
 
 namespace fshost {
-namespace {
-
-constexpr const char* MinfsUpgradeStateString(const InspectManager::MinfsUpgradeState& state) {
-  switch (state) {
-    case InspectManager::MinfsUpgradeState::kUnknown:
-      return "unknown";
-    case InspectManager::MinfsUpgradeState::kSkipped:
-      return "skipped";
-    case InspectManager::MinfsUpgradeState::kDetectedFailedUpgrade:
-      return "detected_failed_upgrade";
-    case InspectManager::MinfsUpgradeState::kReadOldPartition:
-      return "1_read_old";
-    case InspectManager::MinfsUpgradeState::kWriteNewPartition:
-      return "2_write_new";
-    case InspectManager::MinfsUpgradeState::kFinished:
-      return "3_finished";
-  }
-}
-
-}  // namespace
 
 zx_status_t OpenNode(fidl::UnownedClientEnd<fio::Directory> root, const std::string& path,
                      uint32_t mode, fidl::ClientEnd<fio::Node>* result) {
@@ -87,6 +67,23 @@ void InspectManager::ServeStats(const std::string& name, fbl::RefPtr<fs::Vnode> 
         return fpromise::make_result_promise(fpromise::ok(std::move(insp)));
       },
       &inspector_);
+}
+
+const char* InspectManager::MinfsUpgradeStateString(MinfsUpgradeState state) {
+  switch (state) {
+    case InspectManager::MinfsUpgradeState::kUnknown:
+      return "unknown";
+    case InspectManager::MinfsUpgradeState::kSkipped:
+      return "skipped";
+    case InspectManager::MinfsUpgradeState::kDetectedFailedUpgrade:
+      return "detected_failed_upgrade";
+    case InspectManager::MinfsUpgradeState::kReadOldPartition:
+      return "1_read_old";
+    case InspectManager::MinfsUpgradeState::kWriteNewPartition:
+      return "2_write_new";
+    case InspectManager::MinfsUpgradeState::kFinished:
+      return "3_finished";
+  }
 }
 
 void InspectManager::LogMinfsUpgradeProgress(MinfsUpgradeState state) {

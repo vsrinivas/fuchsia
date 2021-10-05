@@ -13,6 +13,7 @@
 #include <filesystem>
 #include <memory>
 #include <string>
+#include <variant>
 #include <vector>
 
 #include <fbl/unique_fd.h>
@@ -68,7 +69,7 @@ zx::status<Copier> Copier::Read(fbl::unique_fd root_fd,
                                 const std::vector<std::filesystem::path>& excluded_paths) {
   struct PendingRead {
     UniqueDir dir;
-    Tree* tree;
+    DirectoryEntries* entries;
     // The path relative to |root_fd|.
     std::filesystem::path path;
   };
@@ -81,7 +82,7 @@ zx::status<Copier> Copier::Read(fbl::unique_fd root_fd,
       return zx::error(ZX_ERR_BAD_STATE);
     pending.push_back({
         .dir = std::move(dir),
-        .tree = &copier.tree_,
+        .entries = &copier.entries_,
         .path = "",
     });
   }
@@ -108,22 +109,21 @@ zx::status<Copier> Copier::Read(fbl::unique_fd root_fd,
           if (!files::ReadFileDescriptorToString(fd.get(), &buf)) {
             return zx::error(ZX_ERR_BAD_STATE);
           }
-          current.tree->tree.emplace_back(std::move(name), std::move(buf));
+          current.entries->push_back(File{std::move(name), std::move(buf)});
           break;
         }
         case DT_DIR: {
           if (name == "." || name == "..")
             continue;
-          auto child_tree = std::make_unique<Tree>();
           UniqueDir child_dir = OpenDir(std::move(fd));
           if (!child_dir)
             return zx::error(ZX_ERR_BAD_STATE);
+          current.entries->push_back(Directory{std::move(name), {}});
           pending.push_back({
               .dir = std::move(child_dir),
-              .tree = child_tree.get(),
+              .entries = &std::get<Directory>(current.entries->back()).entries,
               .path = std::move(path),
           });
-          current.tree->tree.emplace_back(std::move(name), std::move(child_tree));
           break;
         }
       }
@@ -133,31 +133,34 @@ zx::status<Copier> Copier::Read(fbl::unique_fd root_fd,
 }
 
 zx_status_t Copier::Write(fbl::unique_fd root_fd) const {
-  std::vector<std::pair<fbl::unique_fd, const Tree*>> pending;
-  pending.emplace_back(std::move(root_fd), &tree_);
+  std::vector<std::pair<fbl::unique_fd, const DirectoryEntries*>> pending;
+  pending.emplace_back(std::move(root_fd), &entries_);
   while (!pending.empty()) {
     fbl::unique_fd fd = std::move(pending.back().first);
-    const Tree* tree = pending.back().second;
+    const DirectoryEntries* entries = pending.back().second;
     pending.pop_back();
-    for (const auto& [name, child] : tree->tree) {
-      auto child_data = std::get_if<0>(&child);
-      if (child_data) {
-        if (!files::WriteFileAt(fd.get(), name, child_data->data(),
-                                static_cast<ssize_t>(child_data->size()))) {
-          FX_LOGS(ERROR) << "Unable to write to " << name;
+    // Fail to compile if extra types are added.
+    static_assert(std::variant_size_v<DirectoryEntry> == 2);
+    for (const auto& entry : *entries) {
+      if (std::holds_alternative<File>(entry)) {
+        const File& file = std::get<File>(entry);
+        if (!files::WriteFileAt(fd.get(), file.name, file.contents.data(),
+                                static_cast<ssize_t>(file.contents.size()))) {
+          FX_LOGS(ERROR) << "Unable to write to " << file.name;
           return ZX_ERR_BAD_STATE;
         }
-      } else {
-        if (!files::CreateDirectoryAt(fd.get(), name)) {
-          FX_LOGS(ERROR) << "Unable to make directory " << name;
+      } else if (std::holds_alternative<Directory>(entry)) {
+        const Directory& directory = std::get<Directory>(entry);
+        if (!files::CreateDirectoryAt(fd.get(), directory.name)) {
+          FX_LOGS(ERROR) << "Unable to make directory " << directory.name;
           return ZX_ERR_BAD_STATE;
         }
-        fbl::unique_fd child_fd(openat(fd.get(), name.c_str(), O_RDONLY));
+        fbl::unique_fd child_fd(openat(fd.get(), directory.name.c_str(), O_RDONLY));
         if (!child_fd) {
-          FX_LOGS(ERROR) << "Unable to open directory " << name;
+          FX_LOGS(ERROR) << "Unable to open directory " << directory.name;
           return ZX_ERR_BAD_STATE;
         }
-        pending.emplace_back(std::move(child_fd), std::get<1>(child).get());
+        pending.emplace_back(std::move(child_fd), &directory.entries);
       }
     }
   }

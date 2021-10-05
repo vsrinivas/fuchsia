@@ -15,6 +15,7 @@
 #include <fbl/unique_fd.h>
 
 #include "src/storage/fshost/copier.h"
+#include "src/storage/fshost/inspect-manager.h"
 
 namespace fshost {
 
@@ -28,11 +29,16 @@ std::vector<std::filesystem::path> ParseExcludedPaths(std::string_view excluded_
 // For a given block |device| formatted with minfs, resizes minfs if it's not the correct size.
 //
 // "correct size" is defined as: the size of the minfs partition is less than or equal to
-// |size_limit| and the number of inodes in minfs is equal to |required_inodes|.
+// |partition_size_limit| and the number of inodes in minfs is equal to |required_inodes|.
+//
+// The resize won't be done if the amount of data in minfs is greater than |data_size_limit| after
+// filtering out all of the files and directories that match |excluded_paths|.
 //
 // This method is slow and may destroy files or corrupt minfs. Not tolerant to power interruptions.
-zx::status<> MaybeResizeMinfs(zx::channel device, uint64_t size_limit, uint64_t required_inodes,
-                              const std::vector<std::filesystem::path>& excluded_paths);
+zx::status<> MaybeResizeMinfs(zx::channel device, uint64_t partition_size_limit,
+                              uint64_t required_inodes, uint64_t data_size_limit,
+                              const std::vector<std::filesystem::path>& excluded_paths,
+                              InspectManager& inspect);
 
 // RAII wrapper around a mounted minfs that unmounts minfs when destroyed.
 class MountedMinfs {

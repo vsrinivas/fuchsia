@@ -21,8 +21,9 @@
 
 #include <cstdint>
 #include <string_view>
+#include <variant>
 
-#include <block-client/cpp/remote-block-device.h>
+#include <fbl/algorithm.h>
 #include <fbl/unique_fd.h>
 #include <fs-management/admin.h>
 #include <fs-management/format.h>
@@ -32,7 +33,7 @@
 #include "src/lib/files/file_descriptor.h"
 #include "src/lib/fxl/strings/split_string.h"
 #include "src/storage/fshost/copier.h"
-#include "src/storage/fvm/client.h"
+#include "src/storage/minfs/format.h"
 
 namespace fshost {
 namespace {
@@ -43,17 +44,6 @@ zx::channel CloneDeviceChannel(const zx::channel& device) {
   return zx::channel(fdio_service_clone(device.get()));
 }
 
-zx::status<std::unique_ptr<block_client::RemoteBlockDevice>> GetRemoteBlockDevice(
-    zx::channel device) {
-  std::unique_ptr<block_client::RemoteBlockDevice> block_device;
-  if (zx_status_t status =
-          block_client::RemoteBlockDevice::Create(std::move(device), &block_device);
-      status != ZX_OK) {
-    return zx::error(status);
-  }
-  return zx::ok(std::move(block_device));
-}
-
 zx::status<> FormatMinfs(zx::channel device) {
   const char* argv[] = {"/pkg/bin/minfs", "mkfs", nullptr};
   zx_handle_t handles[] = {device.release()};
@@ -61,13 +51,11 @@ zx::status<> FormatMinfs(zx::channel device) {
   return zx::make_status(launch_stdio_sync(/*argc=*/2, argv, handles, ids, /*len=*/1));
 }
 
-zx::status<> ClearPartition(zx::channel device, uint32_t device_block_size) {
-  // Overwrite the start of the block device which should contain the minfs magic. If freeing the
-  // slices partially fails or mkfs fails after this then without the correct magic minfs won't be
-  // mounted in a corrupted state.
+zx::status<> CorruptMinfs(zx::channel device, uint32_t device_block_size) {
+  // Overwrite the start of the block device where the minfs magic is located. This will prevent
+  // this instance of minfs from being mounted again.
   fbl::unique_fd device_fd;
-  if (zx_status_t status =
-          fdio_fd_create(CloneDeviceChannel(device).release(), device_fd.reset_and_get_address());
+  if (zx_status_t status = fdio_fd_create(device.release(), device_fd.reset_and_get_address());
       status != ZX_OK) {
     return zx::error(status);
   }
@@ -78,18 +66,33 @@ zx::status<> ClearPartition(zx::channel device, uint32_t device_block_size) {
   if (!fxl::WriteFileDescriptor(device_fd.get(), zeros.data(), device_block_size)) {
     return zx::error(ZX_ERR_IO);
   }
-
-  auto remoteblock_device = GetRemoteBlockDevice(std::move(device));
-  if (remoteblock_device.is_error()) {
-    return remoteblock_device.take_error();
-  }
-  FX_LOGS(INFO) << "Resizing minfs";
-  if (zx_status_t status = fvm::ResetAllSlices((*remoteblock_device).get()); status != ZX_OK) {
-    FX_LOGS(ERROR) << "Failed to reset all of the slices in minfs: "
-                   << zx_status_get_string(status);
-    return zx::error(status);
-  }
   return zx::ok();
+}
+
+uint64_t EstimateMinfsRequiredSpace(const Copier& copier) {
+  std::vector<const Copier::DirectoryEntries*> pending;
+  pending.push_back(&copier.entries());
+  uint64_t estimate = 0;
+  while (!pending.empty()) {
+    const Copier::DirectoryEntries* entries = pending.back();
+    pending.pop_back();
+    // Each directory will typically only use a single block for storing directory entries. A single
+    // block can hold at least 30 entries and in practice will hold significantly more. Most
+    // directories don't contain 30 entries so this should rarely under estimate.
+    estimate += minfs::kMinfsBlockSize;
+
+    // Fail to compile if extra types are added.
+    static_assert(std::variant_size_v<Copier::DirectoryEntry> == 2);
+    for (const auto& entry : *entries) {
+      if (std::holds_alternative<Copier::File>(entry)) {
+        estimate +=
+            fbl::round_up(std::get<Copier::File>(entry).contents.size(), minfs::kMinfsBlockSize);
+      } else if (std::holds_alternative<Copier::Directory>(entry)) {
+        pending.push_back(&std::get<Copier::Directory>(entry).entries);
+      }
+    }
+  }
+  return estimate;
 }
 
 }  // namespace
@@ -119,8 +122,10 @@ std::vector<std::filesystem::path> ParseExcludedPaths(std::string_view excluded_
   return paths;
 }
 
-zx::status<> MaybeResizeMinfs(zx::channel device, uint64_t size_limit, uint64_t required_inodes,
-                              const std::vector<std::filesystem::path>& excluded_paths) {
+zx::status<> MaybeResizeMinfs(zx::channel device, uint64_t partition_size_limit,
+                              uint64_t required_inodes, uint64_t data_size_limit,
+                              const std::vector<std::filesystem::path>& excluded_paths,
+                              InspectManager& inspect) {
   zx::status<MountedMinfs> minfs = MountedMinfs::Mount(CloneDeviceChannel(device));
   if (minfs.is_error()) {
     FX_LOGS(ERROR) << "Failed to mount minfs: " << minfs.status_string();
@@ -133,6 +138,7 @@ zx::status<> MaybeResizeMinfs(zx::channel device, uint64_t size_limit, uint64_t 
   // check happens before checking if minfs is mis-sized and will run at every boot. We don't want a
   // transient error to cause a device to get wiped.
   if (!previously_failed_while_writing.is_error() && *previously_failed_while_writing) {
+    inspect.LogMinfsUpgradeProgress(InspectManager::MinfsUpgradeState::kDetectedFailedUpgrade);
     FX_LOGS(INFO)
         << "Minfs was previously resized and failed while writing data, reformatting minfs now";
     // Unmount the currently mounted minfs and reformat minfs again. Although we lose data it's
@@ -142,6 +148,7 @@ zx::status<> MaybeResizeMinfs(zx::channel device, uint64_t size_limit, uint64_t 
       FX_LOGS(ERROR) << "Failed to unmount minfs: " << status.status_string();
       return status;
     }
+    // TODO(fxbug.dev/84885): Shred zxcrypt instead.
     return FormatMinfs(std::move(device));
   }
 
@@ -157,19 +164,24 @@ zx::status<> MaybeResizeMinfs(zx::channel device, uint64_t size_limit, uint64_t 
   }
   uint64_t block_device_size = block_device_info->block_size * block_device_info->block_count;
 
-  if (block_device_size <= size_limit && minfs_info->total_nodes == required_inodes) {
+  if (block_device_size <= partition_size_limit && minfs_info->total_nodes == required_inodes) {
     // Minfs is already sized correctly.
+    inspect.LogMinfsUpgradeProgress(InspectManager::MinfsUpgradeState::kSkipped);
     return zx::ok();
   }
 
   // Copy all of minfs into ram.
-  // TODO(fxbug.dev/84885): Check that the copied files will fit in the new minfs before destroying
-  // minfs.
+  inspect.LogMinfsUpgradeProgress(InspectManager::MinfsUpgradeState::kReadOldPartition);
   zx::status<Copier> copier = minfs->ReadFilesystem(excluded_paths);
   if (copier.is_error()) {
     FX_LOGS(ERROR) << "Failed to read the contents minfs into memory: " << copier.status_string();
     // Minfs wasn't modified yet. Try again on next boot.
     return copier.take_error();
+  }
+  if (EstimateMinfsRequiredSpace(*copier) > data_size_limit) {
+    FX_LOGS(INFO) << "Too much data, not resizing minfs";
+    inspect.LogMinfsUpgradeProgress(InspectManager::MinfsUpgradeState::kSkipped);
+    return zx::ok();
   }
 
   if (zx::status<> status = MountedMinfs::Unmount(*std::move(minfs)); status.is_error()) {
@@ -178,15 +190,17 @@ zx::status<> MaybeResizeMinfs(zx::channel device, uint64_t size_limit, uint64_t 
     return status;
   }
 
+  inspect.LogMinfsUpgradeProgress(InspectManager::MinfsUpgradeState::kWriteNewPartition);
   // No turning back point.
-  if (zx::status<> status =
-          ClearPartition(CloneDeviceChannel(device), block_device_info->block_size);
+  // Corrupt the minfs partition so we won't try and mount it again if the following mkfs fails.
+  if (zx::status<> status = CorruptMinfs(CloneDeviceChannel(device), block_device_info->block_size);
       status.is_error()) {
-    // All files are likely lost.
+    // All files may be lost.
     return status;
   }
 
-  // Recreate minfs.
+  // Recreate minfs. During mkfs, minfs deallocates all fvm slices from the partition before
+  // re-allocating which will correctly resize the partition.
   if (zx::status<> status = FormatMinfs(CloneDeviceChannel(device)); status.is_error()) {
     FX_LOGS(ERROR) << "Failed to format minfs: " << status.status_string();
     // fsck should fail on the next boot and formatting will be attempted again. All files are lost.
@@ -206,6 +220,7 @@ zx::status<> MaybeResizeMinfs(zx::channel device, uint64_t size_limit, uint64_t 
     // TODO(fxbug.dev/84885): Recover from failed writes.
     return status;
   }
+  inspect.LogMinfsUpgradeProgress(InspectManager::MinfsUpgradeState::kFinished);
   FX_LOGS(INFO) << "Minfs was successfully resized";
 
   return zx::ok();
