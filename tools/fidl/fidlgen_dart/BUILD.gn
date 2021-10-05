@@ -16,16 +16,16 @@ if (is_host) {
 
     deps = [ "//tools/fidl/lib/fidlgen" ]
     sources = [
-      "codegen/bits.tmpl.go",
-      "codegen/const.tmpl.go",
-      "codegen/enum.tmpl.go",
+      "codegen/bits.tmpl",
+      "codegen/const.tmpl",
+      "codegen/enum.tmpl",
       "codegen/generator.go",
-      "codegen/interface.tmpl.go",
+      "codegen/interface.tmpl",
       "codegen/ir.go",
-      "codegen/library.tmpl.go",
-      "codegen/struct.tmpl.go",
-      "codegen/table.tmpl.go",
-      "codegen/union.tmpl.go",
+      "codegen/library.tmpl",
+      "codegen/struct.tmpl",
+      "codegen/table.tmpl",
+      "codegen/union.tmpl",
       "main.go",
     ]
   }

@@ -67,11 +67,11 @@ func main() {
 	}
 	tree := codegen.Compile(fidl)
 
-	generator := codegen.NewFidlGenerator()
+	generator := codegen.NewFidlGenerator(*flags.dart)
 
 	outAsyncPath := *flags.outAsyncPath
 	if outAsyncPath != "" {
-		err := generator.GenerateAsyncFile(tree, outAsyncPath, *flags.dart)
+		err := generator.GenerateAsyncFile(tree, outAsyncPath)
 		if err != nil {
 			log.Fatalf("Error: %v", err)
 		}
@@ -79,7 +79,7 @@ func main() {
 
 	outTestPath := *flags.outTestPath
 	if outTestPath != "" {
-		err := generator.GenerateTestFile(tree, outTestPath, *flags.dart)
+		err := generator.GenerateTestFile(tree, outTestPath)
 		if err != nil {
 			log.Fatalf("Error: %v", err)
 		}
