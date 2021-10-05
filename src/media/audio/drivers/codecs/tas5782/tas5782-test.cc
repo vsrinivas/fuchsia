@@ -5,12 +5,13 @@
 #include "tas5782.h"
 
 #include <fuchsia/hardware/gpio/cpp/banjo-mock.h>
-#include <lib/fake_ddk/fake_ddk.h>
 #include <lib/mock-i2c/mock-i2c.h>
 #include <lib/simple-codec/simple-codec-client.h>
 #include <lib/sync/completion.h>
 
 #include <zxtest/zxtest.h>
+
+#include "src/devices/testing/mock-ddk/mock-device.h"
 
 namespace audio {
 
@@ -30,22 +31,26 @@ audio::DaiFormat GetDefaultDaiFormat() {
 }  // namespace
 
 struct Tas5782Codec : public Tas5782 {
-  explicit Tas5782Codec(const ddk::I2cChannel& i2c, const ddk::GpioProtocolClient& codec_reset,
+  explicit Tas5782Codec(zx_device_t* parent, const ddk::I2cChannel& i2c,
+                        const ddk::GpioProtocolClient& codec_reset,
                         const ddk::GpioProtocolClient& codec_mute)
-      : Tas5782(fake_ddk::kFakeParent, i2c, codec_reset, codec_mute) {
+      : Tas5782(parent, i2c, codec_reset, codec_mute) {
     initialized_ = true;
   }
   codec_protocol_t GetProto() { return {&this->codec_protocol_ops_, this}; }
 };
 
 TEST(Tas5782Test, GoodSetDai) {
-  fake_ddk::Bind tester;
+  auto fake_parent = MockDevice::FakeRootParent();
   mock_i2c::MockI2c mock_i2c;
   ddk::GpioProtocolClient unused_gpio0, unused_gpio1;
 
-  auto codec = SimpleCodecServer::Create<Tas5782Codec>(mock_i2c.GetProto(), std::move(unused_gpio0),
-                                                       std::move(unused_gpio1));
-  ASSERT_NOT_NULL(codec);
+  auto owned = SimpleCodecServer::Create<Tas5782Codec>(
+      fake_parent.get(), mock_i2c.GetProto(), std::move(unused_gpio0), std::move(unused_gpio1));
+  [[maybe_unused]] auto unused_raw_pointer = owned.release();  // codec release managed by the DDK.
+  auto* child_dev = fake_parent->GetLatestChild();
+  ASSERT_NOT_NULL(child_dev);
+  auto codec = child_dev->GetDeviceContext<Tas5782Codec>();
   auto codec_proto = codec->GetProto();
   SimpleCodecClient client;
   client.SetProtocol(&codec_proto);
@@ -53,20 +58,20 @@ TEST(Tas5782Test, GoodSetDai) {
   DaiFormat format = GetDefaultDaiFormat();
   ASSERT_OK(client.SetDaiFormat(std::move(format)));
 
-  codec->DdkAsyncRemove();
-  ASSERT_TRUE(tester.Ok());
-  codec.release()->DdkRelease();  // codec release managed by the DDK
   mock_i2c.VerifyAndClear();
 }
 
 TEST(Tas5782Test, BadSetDai) {
-  fake_ddk::Bind tester;
+  auto fake_parent = MockDevice::FakeRootParent();
   mock_i2c::MockI2c mock_i2c;
   ddk::GpioProtocolClient unused_gpio0, unused_gpio1;
 
-  auto codec = SimpleCodecServer::Create<Tas5782Codec>(mock_i2c.GetProto(), std::move(unused_gpio0),
-                                                       std::move(unused_gpio1));
-  ASSERT_NOT_NULL(codec);
+  auto owned = SimpleCodecServer::Create<Tas5782Codec>(
+      fake_parent.get(), mock_i2c.GetProto(), std::move(unused_gpio0), std::move(unused_gpio1));
+  [[maybe_unused]] auto unused_raw_pointer = owned.release();  // codec release managed by the DDK.
+  auto* child_dev = fake_parent->GetLatestChild();
+  ASSERT_NOT_NULL(child_dev);
+  auto codec = child_dev->GetDeviceContext<Tas5782Codec>();
   auto codec_proto = codec->GetProto();
   SimpleCodecClient client;
   client.SetProtocol(&codec_proto);
@@ -84,20 +89,20 @@ TEST(Tas5782Test, BadSetDai) {
     EXPECT_EQ(ZX_ERR_NOT_SUPPORTED, codec_state.status_value());
   }
 
-  codec->DdkAsyncRemove();
-  ASSERT_TRUE(tester.Ok());
-  codec.release()->DdkRelease();  // codec release managed by the DDK
   mock_i2c.VerifyAndClear();
 }
 
 TEST(Tas5782Test, GetDai) {
-  fake_ddk::Bind tester;
+  auto fake_parent = MockDevice::FakeRootParent();
   mock_i2c::MockI2c mock_i2c;
   ddk::GpioProtocolClient unused_gpio0, unused_gpio1;
 
-  auto codec = SimpleCodecServer::Create<Tas5782Codec>(mock_i2c.GetProto(), std::move(unused_gpio0),
-                                                       std::move(unused_gpio1));
-  ASSERT_NOT_NULL(codec);
+  auto owned = SimpleCodecServer::Create<Tas5782Codec>(
+      fake_parent.get(), mock_i2c.GetProto(), std::move(unused_gpio0), std::move(unused_gpio1));
+  [[maybe_unused]] auto unused_raw_pointer = owned.release();  // codec release managed by the DDK.
+  auto* child_dev = fake_parent->GetLatestChild();
+  ASSERT_NOT_NULL(child_dev);
+  auto codec = child_dev->GetDeviceContext<Tas5782Codec>();
   auto codec_proto = codec->GetProto();
   SimpleCodecClient client;
   client.SetProtocol(&codec_proto);
@@ -115,19 +120,20 @@ TEST(Tas5782Test, GetDai) {
   EXPECT_EQ(formats.value().bits_per_slot[0], 32);
   EXPECT_EQ(formats.value().bits_per_sample.size(), 1);
   EXPECT_EQ(formats.value().bits_per_sample[0], 32);
-  codec->DdkAsyncRemove();
-  ASSERT_TRUE(tester.Ok());
-  codec.release()->DdkRelease();  // codec release managed by the DDK
   mock_i2c.VerifyAndClear();
 }
 
 TEST(Tas5782Test, GetInfo) {
-  fake_ddk::Bind tester;
+  auto fake_parent = MockDevice::FakeRootParent();
   mock_i2c::MockI2c unused_i2c;
   ddk::GpioProtocolClient unused_gpio0, unused_gpio1;
-  auto codec = SimpleCodecServer::Create<Tas5782Codec>(
-      unused_i2c.GetProto(), std::move(unused_gpio0), std::move(unused_gpio1));
-  ASSERT_NOT_NULL(codec);
+
+  auto owned = SimpleCodecServer::Create<Tas5782Codec>(
+      fake_parent.get(), unused_i2c.GetProto(), std::move(unused_gpio0), std::move(unused_gpio1));
+  [[maybe_unused]] auto unused_raw_pointer = owned.release();  // codec release managed by the DDK.
+  auto* child_dev = fake_parent->GetLatestChild();
+  ASSERT_NOT_NULL(child_dev);
+  auto codec = child_dev->GetDeviceContext<Tas5782Codec>();
   auto codec_proto = codec->GetProto();
   SimpleCodecClient client;
   client.SetProtocol(&codec_proto);
@@ -136,36 +142,38 @@ TEST(Tas5782Test, GetInfo) {
   EXPECT_EQ(info.value().unique_id.compare(""), 0);
   EXPECT_EQ(info.value().manufacturer.compare("Texas Instruments"), 0);
   EXPECT_EQ(info.value().product_name.compare("TAS5782m"), 0);
-  codec->DdkAsyncRemove();
-  ASSERT_TRUE(tester.Ok());
-  codec.release()->DdkRelease();  // codec release managed by the DDK
 }
 
 TEST(Tas5782Test, BridgedMode) {
-  fake_ddk::Bind tester;
+  auto fake_parent = MockDevice::FakeRootParent();
   mock_i2c::MockI2c unused_i2c;
   ddk::GpioProtocolClient unused_gpio0, unused_gpio1;
-  auto codec = SimpleCodecServer::Create<Tas5782Codec>(
-      unused_i2c.GetProto(), std::move(unused_gpio0), std::move(unused_gpio1));
-  ASSERT_NOT_NULL(codec);
+
+  auto owned = SimpleCodecServer::Create<Tas5782Codec>(
+      fake_parent.get(), unused_i2c.GetProto(), std::move(unused_gpio0), std::move(unused_gpio1));
+  [[maybe_unused]] auto unused_raw_pointer = owned.release();  // codec release managed by the DDK.
+  auto* child_dev = fake_parent->GetLatestChild();
+  ASSERT_NOT_NULL(child_dev);
+  auto codec = child_dev->GetDeviceContext<Tas5782Codec>();
   auto codec_proto = codec->GetProto();
   SimpleCodecClient client;
   client.SetProtocol(&codec_proto);
 
   auto bridgeable = client.IsBridgeable();
   ASSERT_FALSE(bridgeable.value());
-  codec->DdkAsyncRemove();
-  ASSERT_TRUE(tester.Ok());
-  codec.release()->DdkRelease();  // codec release managed by the DDK
 }
 
 TEST(Tas5782Test, GetGainFormat) {
-  fake_ddk::Bind tester;
+  auto fake_parent = MockDevice::FakeRootParent();
   mock_i2c::MockI2c unused_i2c;
   ddk::GpioProtocolClient unused_gpio0, unused_gpio1;
-  auto codec = SimpleCodecServer::Create<Tas5782Codec>(
-      unused_i2c.GetProto(), std::move(unused_gpio0), std::move(unused_gpio1));
-  ASSERT_NOT_NULL(codec);
+
+  auto owned = SimpleCodecServer::Create<Tas5782Codec>(
+      fake_parent.get(), unused_i2c.GetProto(), std::move(unused_gpio0), std::move(unused_gpio1));
+  [[maybe_unused]] auto unused_raw_pointer = owned.release();  // codec release managed by the DDK.
+  auto* child_dev = fake_parent->GetLatestChild();
+  ASSERT_NOT_NULL(child_dev);
+  auto codec = child_dev->GetDeviceContext<Tas5782Codec>();
   auto codec_proto = codec->GetProto();
   SimpleCodecClient client;
   client.SetProtocol(&codec_proto);
@@ -174,13 +182,10 @@ TEST(Tas5782Test, GetGainFormat) {
   EXPECT_EQ(format.value().min_gain, -103.0);
   EXPECT_EQ(format.value().max_gain, 24.0);
   EXPECT_EQ(format.value().gain_step, 0.5);
-  codec->DdkAsyncRemove();
-  ASSERT_TRUE(tester.Ok());
-  codec.release()->DdkRelease();  // codec release managed by the DDK
 }
 
 TEST(Tas5782Test, Init) {
-  fake_ddk::Bind tester;
+  auto fake_parent = MockDevice::FakeRootParent();
   mock_i2c::MockI2c mock_i2c;
   mock_i2c
       .ExpectWriteStop({0x02, 0x10},
@@ -203,18 +208,20 @@ TEST(Tas5782Test, Init) {
   mock_gpio0.ExpectWrite(ZX_OK, 0);  // Reset, set to 0 and then to 1.
   mock_gpio1.ExpectWrite(ZX_OK, 0);  // Set to mute.
 
-  auto codec =
-      SimpleCodecServer::Create<Tas5782Codec>(std::move(i2c), std::move(gpio0), std::move(gpio1));
-  ASSERT_NOT_NULL(codec);
+  auto owned = SimpleCodecServer::Create<Tas5782Codec>(fake_parent.get(), std::move(i2c),
+                                                       std::move(gpio0), std::move(gpio1));
+  [[maybe_unused]] auto unused_raw_pointer = owned.release();  // codec release managed by the DDK.
+  auto* child_dev = fake_parent->GetLatestChild();
+  ASSERT_NOT_NULL(child_dev);
+  auto codec = child_dev->GetDeviceContext<Tas5782Codec>();
   auto codec_proto = codec->GetProto();
   SimpleCodecClient client;
   client.SetProtocol(&codec_proto);
 
   zx::nanosleep(zx::deadline_after(zx::msec(100)));
   client.Reset();
-  codec->DdkAsyncRemove();
-  ASSERT_TRUE(tester.Ok());
-  codec.release()->DdkRelease();  // codec release managed by the DDK
+
+  child_dev->ReleaseOp();
   mock_i2c.VerifyAndClear();
   mock_gpio0.VerifyAndClear();
   mock_gpio1.VerifyAndClear();
