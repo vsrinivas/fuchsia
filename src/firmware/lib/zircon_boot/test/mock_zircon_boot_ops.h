@@ -6,6 +6,7 @@
 #ifndef SRC_FIRMWARE_LIB_ZIRCON_BOOT_TEST_MOCK_ZIRCON_BOOT_OPS_H_
 #define SRC_FIRMWARE_LIB_ZIRCON_BOOT_TEST_MOCK_ZIRCON_BOOT_OPS_H_
 
+#include <lib/stdcompat/span.h>
 #include <lib/zbi/zbi.h>
 #include <lib/zircon_boot/zircon_boot.h>
 #include <lib/zx/status.h>
@@ -14,8 +15,6 @@
 #include <string>
 #include <unordered_map>
 #include <vector>
-
-#include <fbl/span.h>
 
 class MockZirconBootOps {
  public:
@@ -62,7 +61,7 @@ class MockZirconBootOps {
   std::function<bool(zbi_header_t*, size_t, AbrSlotIndex)> add_zbi_items_;
   AvbAtxPermanentAttributes permanent_attributes_;
 
-  zx::status<fbl::Span<uint8_t>> GetPartitionSpan(const char* name, size_t offset, size_t size);
+  zx::status<cpp20::span<uint8_t>> GetPartitionSpan(const char* name, size_t offset, size_t size);
 
   // For assigning to ZirconBootOps
   static bool ReadFromPartition(ZirconBootOps* ops, const char* part, size_t offset, size_t size,

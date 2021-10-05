@@ -299,7 +299,7 @@ void PrettyTypeManager::AddDefaultFuchsiaCppPrettyTypes() {
                                                     {"length", FBL_STRING_LENGTH_EXPRESSION},
                                                     {"size", FBL_STRING_LENGTH_EXPRESSION},
                                                     {"empty", "!" FBL_STRING_LENGTH_EXPRESSION}}));
-  cpp_.emplace_back(InternalGlob("fbl::Span<*>"),
+  cpp_.emplace_back(InternalGlob("cpp20::span<*>"),
                     std::make_unique<PrettyArray>(
                         "ptr_", "size_",
                         GetterList{{"size", "size_"}, {"data", "ptr_"}, {"empty", "size_ == 0"}}));

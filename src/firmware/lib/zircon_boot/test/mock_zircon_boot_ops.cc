@@ -10,8 +10,8 @@
 
 #include "src/lib/digest/digest.h"
 
-zx::status<fbl::Span<uint8_t>> MockZirconBootOps::GetPartitionSpan(const char* part_name,
-                                                                   size_t offset, size_t size) {
+zx::status<cpp20::span<uint8_t>> MockZirconBootOps::GetPartitionSpan(const char* part_name,
+                                                                     size_t offset, size_t size) {
   auto part = partitions_.find(part_name);
   if (part == partitions_.end()) {
     return zx::error(ZX_ERR_NOT_FOUND);
@@ -20,7 +20,7 @@ zx::status<fbl::Span<uint8_t>> MockZirconBootOps::GetPartitionSpan(const char* p
   if (offset > data.size() || data.size() - offset < size) {
     return zx::error(ZX_ERR_OUT_OF_RANGE);
   }
-  return zx::ok(fbl::Span<uint8_t>(data.data() + offset, size));
+  return zx::ok(cpp20::span<uint8_t>(data.data() + offset, size));
 }
 
 zx::status<> MockZirconBootOps::ReadFromPartition(const char* part_name, size_t offset, size_t size,

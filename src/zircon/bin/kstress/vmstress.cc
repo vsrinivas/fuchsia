@@ -8,6 +8,7 @@
 #include <getopt.h>
 #include <inttypes.h>
 #include <lib/fit/defer.h>
+#include <lib/stdcompat/span.h>
 #include <lib/zx/bti.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/clock.h>
@@ -47,7 +48,6 @@
 #include <fbl/mutex.h>
 #include <fbl/ref_counted.h>
 #include <fbl/ref_ptr.h>
-#include <fbl/span.h>
 
 #include "stress_test.h"
 
@@ -1071,7 +1071,7 @@ class MultiVmoTestInstance : public TestInstance {
     auto rng = RngGen();
 
     zx::pmt pmt;
-    std::optional<fbl::Span<uint8_t>> mapping;
+    std::optional<cpp20::span<uint8_t>> mapping;
     auto unmap_mapping = [&mapping]() {
       if (auto span = mapping) {
         zx::vmar::root_self()->unmap(reinterpret_cast<uintptr_t>(span->data()), span->size_bytes());
@@ -1218,7 +1218,7 @@ class MultiVmoTestInstance : public TestInstance {
               if (op_off + op_size <= vmo_size &&
                   zx::vmar::root_self()->map(options, 0, vmo, op_off, op_size, &addr) == ZX_OK) {
                 unmap_mapping();
-                mapping = fbl::Span<uint8_t>{reinterpret_cast<uint8_t*>(addr), op_size};
+                mapping = cpp20::span<uint8_t>{reinterpret_cast<uint8_t*>(addr), op_size};
               }
             } else {
               unmap_mapping();
