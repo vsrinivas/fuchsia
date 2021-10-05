@@ -177,20 +177,38 @@ fidl("fuchsia.fxfs") {
   ]
 }
 
+fs_test_config("fxfs") {
+  timestamp_granularity = 1
+  supports_hard_links = true
+  supports_resize = true
+  max_file_size = 9223372036854775807
+}
+
 fs_test_suite("fxfs") {
-  deps = [ "//src/storage/fxfs" ]
-  config = {
-    timestamp_granularity = 1
-    supports_hard_links = true
-    supports_resize = true
-    max_file_size = 9223372036854775807
-  }
+  deps = [
+    ":fxfs_fs_test_config",
+    "//src/storage/fxfs",
+  ]
+}
+
+slow_fs_test_suite("fxfs") {
+  deps = [
+    ":fxfs_fs_test_config",
+    "//src/storage/fxfs",
+  ]
+  omit_components = [
+    # TODO(jfsulliv): Fix and enable these tests.
+    ":fxfs-directory-large-tests",
+    ":fxfs-max-file-tests",
+    ":fxfs-sparse-large-tests",
+  ]
 }
 
 group("tests") {
   testonly = true
   deps = [
     ":fxfs-fs-tests",
+    ":fxfs-slow-fs-tests",
     ":fxfs-tests",
     ":lib_test($host_toolchain)",
     "//src/storage/testing:storage-isolated-devmgr",

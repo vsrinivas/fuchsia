@@ -81,9 +81,10 @@ pub const RECLAIM_SIZE: u64 = 262_144;
 // used in the journal file but cannot be deallocated yet because we are flushing.
 pub const RESERVED_SPACE: u64 = 1_048_576;
 
-// After replaying the journal, it's possible that the stream doesn't end cleanly, in which case the
-// next journal block needs to indicate this.  This is done by pretending the previous block's
-// checksum is xored with this value, and using that as the seed for the next journal block.
+// Whenever the journal is replayed (i.e. the system is unmounted and remounted), we reset the
+// journal stream, at which point any half-complete transactions are discarded.  We indicate a
+// journal reset by XORing the previous block's checksum with this mask, and using that value as a
+// seed for the next journal block.
 const RESET_XOR: u64 = 0xffffffffffffffff;
 
 type Checksum = u64;
@@ -130,6 +131,14 @@ pub enum JournalRecord {
     // Discard all mutations with offsets greater than or equal to the given offset.
     Discard(u64),
     // Indicates the device was flushed at the given journal offset.
+    // Note that this really means that at this point in the journal offset, we can be certain that
+    // there's no remaining buffered data in the block device; the buffers and the disk contents are
+    // consistent.
+    // We insert one of these records *after* a flush along with the *next* transaction to go
+    // through.  If that never comes (either due to graceful or hard shutdown), the journal reset
+    // on the next mount will serve the same purpose and count as a flush, although it is necessary
+    // to defensively flush the device before replaying the journal (if possible, i.e. not
+    // read-only) in case the block device connection was reused.
     DidFlushDevice(u64),
 }
 
@@ -348,23 +357,25 @@ impl Journal {
             JournalReader::new(handle, self.block_size(), &super_block.journal_checkpoint);
         let mut transactions = Vec::new();
         let mut current_transaction = None;
-        let mut end_block = false;
         let mut device_flushed_offset = super_block.super_block_journal_file_offset;
         loop {
             let current_checkpoint = reader.journal_file_checkpoint();
-            match reader.deserialize().await? {
+            let result = reader.deserialize().await?;
+            match result {
                 ReadResult::Reset => {
                     if current_transaction.is_some() {
                         current_transaction = None;
                         transactions.pop();
                     }
+                    let offset = current_checkpoint.file_offset;
+                    if offset > device_flushed_offset {
+                        device_flushed_offset = offset;
+                    }
                 }
                 ReadResult::Some(record) => {
-                    end_block = false;
                     match record {
                         JournalRecord::EndBlock => {
                             reader.skip_to_end_of_block();
-                            end_block = true;
                         }
                         JournalRecord::Mutation { object_id, mutation } => {
                             let current_transaction = match current_transaction.as_mut() {
@@ -494,17 +505,11 @@ impl Journal {
             .await?;
             let _ = self.handle.set(handle);
             let mut inner = self.inner.lock().unwrap();
-            // If the last entry wasn't an end_block, then we need to reset the stream.
             let mut reader_checkpoint = reader.journal_file_checkpoint();
-            if !end_block {
-                reader_checkpoint.checksum ^= RESET_XOR;
-            }
+            // Reset the stream to indicate that we've remounted the journal.
+            reader_checkpoint.checksum ^= RESET_XOR;
             inner.flushed_offset = reader_checkpoint.file_offset;
-            // We don't use `device_flushed_offset` here since that informs us after which point we
-            // need to perform checksums.  Going forward, device_flushed_offset needs to be tied to
-            // wherever the journal happens to be, which isn't necessarily the same as
-            // `device_flushed_offset`.
-            inner.device_flushed_offset = reader_checkpoint.file_offset;
+            inner.device_flushed_offset = device_flushed_offset;
             inner.writer.seek_to_checkpoint(reader_checkpoint);
             if last_checkpoint.file_offset < inner.flushed_offset {
                 inner.discard_offset = Some(last_checkpoint.file_offset);

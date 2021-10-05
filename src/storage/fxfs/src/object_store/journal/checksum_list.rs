@@ -13,6 +13,7 @@ use {
     storage_device::Device,
 };
 
+#[derive(Debug)]
 struct ChecksumEntry {
     journal_offset: u64,
     device_range: Range<u64>,

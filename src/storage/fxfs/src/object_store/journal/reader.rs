@@ -430,7 +430,7 @@ mod tests {
         reader.skip_to_end_of_block();
         assert_eq!(
             reader.deserialize::<u32>().await.expect("deserialize failed"),
-            ReadResult::Reset
+            ReadResult::Reset,
         );
         assert_eq!(
             reader.deserialize().await.expect("deserialize failed"),

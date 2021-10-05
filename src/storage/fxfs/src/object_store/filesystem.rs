@@ -209,6 +209,11 @@ impl FxFilesystem {
             read_only: options.read_only,
             crypt,
         });
+        if !options.read_only {
+            // See comment in JournalRecord::DidFlushDevice for why we need to flush the device
+            // before replay.
+            device.flush().await?;
+        }
         filesystem.device.set(device).unwrap_or_else(|_| unreachable!());
         filesystem.journal.replay(filesystem.clone()).await?;
         if !options.read_only {
