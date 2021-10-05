@@ -58,7 +58,7 @@ fuchsia_system_package("pkg") {
   allowed_in_extra_deps = true
 }
 
-test("unit-tests") {
+test("my-driver-cpp-unit-tests") {
   sources = [
     "my_driver_cpp.cc",
     "my_driver_cpp.h",
@@ -68,7 +68,7 @@ test("unit-tests") {
     ":bind",
     "//sdk/lib/inspect/testing/cpp:zxtest",
     "//src/devices/lib/driver",
-    "//src/devices/testing/fake_ddk",
+    "//src/devices/testing/mock-ddk",
     "//src/lib/ddktl",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/inspect",
@@ -78,5 +78,5 @@ test("unit-tests") {
 }
 
 fuchsia_unittest_package("my-driver-cpp-tests") {
-  deps = [ ":unit-tests" ]
+  deps = [ ":my-driver-cpp-unit-tests" ]
 }
