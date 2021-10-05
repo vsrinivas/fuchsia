@@ -16,8 +16,13 @@
   <string name="radio_button_selected">{name}, bouton radio sélectionné</string>
   <string name="radio_button_unselected">{name}, bouton radio désélectionné</string>
   <string name="role_table">Tableau</string>
+  <string name="role_table_row">Ligne</string>
+  <string name="role_table_row_header">En-tête de ligne</string>
+  <string name="role_table_column_header">En-tête de colonne</string>
+  <string name="role_table_cell">Cellule</string>
   <string name="table_summary">{table_name},        {table_rows} sur {table_columns}</string>
   <string name="cell_summary">Ligne {row_index} colonne {column_index}</string>
+  <string name="row_summary">Rangée {row_index}</string>
   <string name="element_checked">Coché</string>
   <string name="element_not_checked">Non coché</string>
   <string name="element_partially_checked">Partiellement coché</string>
@@ -99,4 +104,7 @@
   <string name="right_square_bracket_symbol_name">crochet fermant</string>
   <string name="inverted_exclamation_point_symbol_name">point d\'exclamation renversé</string>
   <string name="inverted_question_mark_symbol_name">point d\'interrogation renversé</string>
+  <string name="role_text_field">Champ de texte</string>
+  <string name="role_search_box">Boîte de recherche</string>
+  <string name="is_editing">modifie</string>
 </resources>

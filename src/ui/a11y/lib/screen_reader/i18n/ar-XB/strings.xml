@@ -16,8 +16,13 @@
   <string name="radio_button_selected">{name}, ‏‮radio‬‏ ‏‮button‬‏ ‏‮selected‬‏</string>
   <string name="radio_button_unselected">{name}, ‏‮radio‬‏ ‏‮button‬‏ ‏‮unselected‬‏</string>
   <string name="role_table">‏‮Table‬‏</string>
+  <string name="role_table_row">‏‮Row‬‏</string>
+  <string name="role_table_row_header">‏‮Row‬‏ ‏‮header‬‏</string>
+  <string name="role_table_column_header">‏‮Column‬‏ ‏‮header‬‏</string>
+  <string name="role_table_cell">‏‮Cell‬‏</string>
   <string name="table_summary">{table_name},        {table_rows} ‏‮by‬‏ {table_columns}</string>
   <string name="cell_summary">‏‮Row‬‏ {row_index} ‏‮column‬‏ {column_index}</string>
+  <string name="row_summary">‏‮Row‬‏ {row_index}</string>
   <string name="element_checked">‏‮Checked‬‏</string>
   <string name="element_not_checked">‏‮Not‬‏ ‏‮checked‬‏</string>
   <string name="element_partially_checked">‏‮Partially‬‏ ‏‮checked‬‏</string>
@@ -99,4 +104,7 @@
   <string name="right_square_bracket_symbol_name">‏‮right‬‏ ‏‮bracket‬‏</string>
   <string name="inverted_exclamation_point_symbol_name">‏‮inverted‬‏ ‏‮exclamation‬‏ ‏‮mark‬‏</string>
   <string name="inverted_question_mark_symbol_name">‏‮inverted‬‏ ‏‮question‬‏ ‏‮mark‬‏</string>
+  <string name="role_text_field">‏‮Text‬‏ ‏‮field‬‏</string>
+  <string name="role_search_box">‏‮Search‬‏ ‏‮box‬‏</string>
+  <string name="is_editing">‏‮Is‬‏ ‏‮editing‬‏</string>
 </resources>

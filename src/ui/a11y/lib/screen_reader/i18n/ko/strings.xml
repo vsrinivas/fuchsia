@@ -16,8 +16,13 @@
   <string name="radio_button_selected">{name}, 버튼 선택됨</string>
   <string name="radio_button_unselected">{name}, 라디오 버튼 선택 해제됨</string>
   <string name="role_table">표</string>
+  <string name="role_table_row">행</string>
+  <string name="role_table_row_header">행 헤더</string>
+  <string name="role_table_column_header">열 헤더</string>
+  <string name="role_table_cell">셀</string>
   <string name="table_summary">{table_name},        {table_rows}행 {table_columns}열</string>
   <string name="cell_summary">{row_index}행 {column_index}열</string>
+  <string name="row_summary">{row_index}행</string>
   <string name="element_checked">선택됨</string>
   <string name="element_not_checked">선택되지 않음</string>
   <string name="element_partially_checked">일부 선택됨</string>
@@ -99,4 +104,7 @@
   <string name="right_square_bracket_symbol_name">오른쪽 대괄호</string>
   <string name="inverted_exclamation_point_symbol_name">역느낌표</string>
   <string name="inverted_question_mark_symbol_name">역물음표</string>
+  <string name="role_text_field">텍스트 입력란</string>
+  <string name="role_search_box">검색창</string>
+  <string name="is_editing">수정 중</string>
 </resources>

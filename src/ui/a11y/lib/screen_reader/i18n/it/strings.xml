@@ -16,8 +16,13 @@
   <string name="radio_button_selected">{name}, pulsante di opzione selezionato</string>
   <string name="radio_button_unselected">{name}, pulsante di opzione deselezionato</string>
   <string name="role_table">Tabella</string>
+  <string name="role_table_row">Riga</string>
+  <string name="role_table_row_header">Intestazione di riga</string>
+  <string name="role_table_column_header">Intestazione di colonna</string>
+  <string name="role_table_cell">Cella</string>
   <string name="table_summary">{table_name},        {table_rows} per {table_columns}</string>
   <string name="cell_summary">Riga {row_index} colonna {column_index}</string>
+  <string name="row_summary">Riga {row_index}</string>
   <string name="element_checked">Elemento selezionato</string>
   <string name="element_not_checked">Elemento non selezionato</string>
   <string name="element_partially_checked">Elemento parzialmente selezionato</string>
@@ -99,4 +104,7 @@
   <string name="right_square_bracket_symbol_name">parentesi quadra chiusa</string>
   <string name="inverted_exclamation_point_symbol_name">punto esclamativo invertito</string>
   <string name="inverted_question_mark_symbol_name">punto interrogativo invertito</string>
+  <string name="role_text_field">Campo di testo</string>
+  <string name="role_search_box">Casella di ricerca</string>
+  <string name="is_editing">Sta modificando</string>
 </resources>

@@ -16,8 +16,13 @@
   <string name="radio_button_selected">{name}, case d\'option sélectionnée</string>
   <string name="radio_button_unselected">{name}, case d\'option non sélectionnée</string>
   <string name="role_table">Tableau</string>
+  <string name="role_table_row">Ligne</string>
+  <string name="role_table_row_header">En-tête de ligne</string>
+  <string name="role_table_column_header">En-tête de colonne</string>
+  <string name="role_table_cell">Cellule</string>
   <string name="table_summary">{table_name},        {table_rows} lignes et {table_columns} colonnes</string>
   <string name="cell_summary">Ligne {row_index}, colonne {column_index}</string>
+  <string name="row_summary">Ligne {row_index}</string>
   <string name="element_checked">Élément coché</string>
   <string name="element_not_checked">Élément non coché</string>
   <string name="element_partially_checked">Élément coché en partie</string>
@@ -33,7 +38,7 @@
   <string name="role_list_item">Élément de liste</string>
   <string name="role_ordered_list">Liste numérotée</string>
   <string name="role_list">Liste</string>
-  <string name="list_items">{num_items,plural, =0{sans aucun élément}=1{avec 1 élément}one{with # items}other{avec # éléments}}</string>
+  <string name="list_items">{num_items,plural, =0{sans aucun élément}=1{avec 1 élément}one{avec # élément}other{avec # éléments}}</string>
   <string name="normal_navigation_granularity">Navigation normale</string>
   <string name="default_navigation_granularity">Par défaut</string>
   <string name="adjust_value_granularity">Ajuster la valeur</string>
@@ -99,4 +104,7 @@
   <string name="right_square_bracket_symbol_name">crochet fermant</string>
   <string name="inverted_exclamation_point_symbol_name">point d\'exclamation inversé</string>
   <string name="inverted_question_mark_symbol_name">point d\'interrogation inversé</string>
+  <string name="role_text_field">Champ de texte</string>
+  <string name="role_search_box">Champ de recherche</string>
+  <string name="is_editing">Modifie</string>
 </resources>

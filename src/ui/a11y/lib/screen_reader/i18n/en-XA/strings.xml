@@ -16,8 +16,13 @@
   <string name="radio_button_selected">[ᐅ{name}ᐊ, ŕåðîö бûţţöñ šéļéçţéð one two three four five six]</string>
   <string name="radio_button_unselected">[ᐅ{name}ᐊ, ŕåðîö бûţţöñ ûñšéļéçţéð one two three four five six]</string>
   <string name="role_table">[Ţåбļé one]</string>
+  <string name="role_table_row">[Ŕöŵ one]</string>
+  <string name="role_table_row_header">[Ŕöŵ ĥéåðéŕ one two]</string>
+  <string name="role_table_column_header">[Çöļûmñ ĥéåðéŕ one two]</string>
+  <string name="role_table_cell">[Çéļļ one]</string>
   <string name="table_summary">[ᐅ{table_name}ᐊ,        ᐅ{table_rows}ᐊ бý ᐅ{table_columns}ᐊ one two three four five]</string>
   <string name="cell_summary">[Ŕöŵ ᐅ{row_index}ᐊ çöļûmñ ᐅ{column_index}ᐊ one two three four]</string>
+  <string name="row_summary">[Ŕöŵ ᐅ{row_index}ᐊ one two]</string>
   <string name="element_checked">[Çĥéçķéð one]</string>
   <string name="element_not_checked">[Ñöţ çĥéçķéð one two]</string>
   <string name="element_partially_checked">[Þåŕţîåļļý çĥéçķéð one two three]</string>
@@ -99,4 +104,7 @@
   <string name="right_square_bracket_symbol_name">[ŕîĝĥţ бŕåçķéţ one two]</string>
   <string name="inverted_exclamation_point_symbol_name">[îñvéŕţéð éxçļåmåţîöñ måŕķ one two three]</string>
   <string name="inverted_question_mark_symbol_name">[îñvéŕţéð qûéšţîöñ måŕķ one two three]</string>
+  <string name="role_text_field">[Ţéxţ ƒîéļð one two]</string>
+  <string name="role_search_box">[Šéåŕçĥ бöx one two]</string>
+  <string name="is_editing">[Îš éðîţîñĝ one two]</string>
 </resources>

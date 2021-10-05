@@ -16,8 +16,13 @@
   <string name="radio_button_selected">{name}、選択されたラジオ ボタン</string>
   <string name="radio_button_unselected">{name}、選択されていないラジオボタン</string>
   <string name="role_table">表</string>
+  <string name="role_table_row">行</string>
+  <string name="role_table_row_header">行見出し</string>
+  <string name="role_table_column_header">列見出し</string>
+  <string name="role_table_cell">セル</string>
   <string name="table_summary">{table_name}、{table_rows} × {table_columns}</string>
   <string name="cell_summary">{row_index} 行、{column_index} 列</string>
+  <string name="row_summary">{row_index}行目</string>
   <string name="element_checked">オン</string>
   <string name="element_not_checked">オフ</string>
   <string name="element_partially_checked">一部オン</string>
@@ -99,4 +104,7 @@
   <string name="right_square_bracket_symbol_name">右大かっこ</string>
   <string name="inverted_exclamation_point_symbol_name">倒立感嘆符</string>
   <string name="inverted_question_mark_symbol_name">倒立疑問符</string>
+  <string name="role_text_field">テキスト フィールド</string>
+  <string name="role_search_box">検索ボックス</string>
+  <string name="is_editing">は編集中です</string>
 </resources>

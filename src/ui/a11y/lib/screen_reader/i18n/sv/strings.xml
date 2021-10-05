@@ -16,8 +16,13 @@
   <string name="radio_button_selected">{name}, alternativknapp markerad</string>
   <string name="radio_button_unselected">{name}, alternativknapp inte markerad</string>
   <string name="role_table">Tabell</string>
+  <string name="role_table_row">Rad</string>
+  <string name="role_table_row_header">Radrubrik</string>
+  <string name="role_table_column_header">Kolumnrubrik</string>
+  <string name="role_table_cell">Cell</string>
   <string name="table_summary">{table_name},        {table_rows} gånger {table_columns}</string>
   <string name="cell_summary">Rad {row_index} kolumn {column_index}</string>
+  <string name="row_summary">Rad {row_index}</string>
   <string name="element_checked">Markerad</string>
   <string name="element_not_checked">Inte markerad</string>
   <string name="element_partially_checked">Delvis markerad</string>
@@ -99,4 +104,7 @@
   <string name="right_square_bracket_symbol_name">höger hakparentes</string>
   <string name="inverted_exclamation_point_symbol_name">upp och nedvänt utropstecken</string>
   <string name="inverted_question_mark_symbol_name">upp och nedvänt frågetecken</string>
+  <string name="role_text_field">Textfält</string>
+  <string name="role_search_box">Sökruta</string>
+  <string name="is_editing">Redigerar</string>
 </resources>
