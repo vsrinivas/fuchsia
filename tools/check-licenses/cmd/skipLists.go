@@ -83,8 +83,8 @@ var additionalSkipDirs = []string{
 
 	// None of these binaries end up in Fuchsia images.
 	"prebuilt/third_party/sysroot/linux",
-	"prebuilt/touch", // b/178714414
-	"prebuilt/audio", // b/178712044
+	"prebuilt/touch",
+	"prebuilt/audio",
 
 	// Skip generated protocol buffers. These trip the checker because third_party is in the path.
 	"third_party/grpc/src/core/ext/upb-generated/third_party",
