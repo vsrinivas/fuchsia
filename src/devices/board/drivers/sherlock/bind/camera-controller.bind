@@ -1,0 +1,26 @@
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+composite camera_controller;
+
+using fuchsia.isp;
+using fuchsia.gdc;
+using fuchsia.ge2d;
+using fuchsia.sysmem;
+
+primary node "isp" {
+  fuchsia.BIND_PROTOCOL == fuchsia.isp.BIND_PROTOCOL.DEVICE;
+}
+
+node "gdc" {
+  fuchsia.BIND_PROTOCOL == fuchsia.gdc.BIND_PROTOCOL.DEVICE;
+}
+
+node "ge2d" {
+  fuchsia.BIND_PROTOCOL == fuchsia.ge2d.BIND_PROTOCOL.DEVICE;
+}
+
+node "sysmem" {
+  fuchsia.BIND_PROTOCOL == fuchsia.sysmem.BIND_PROTOCOL.DEVICE;
+}

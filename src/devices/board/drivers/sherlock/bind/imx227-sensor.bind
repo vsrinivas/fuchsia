@@ -1,0 +1,53 @@
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+composite imx227_sensor;
+
+using fuchsia.amlogic.platform.meson;
+using fuchsia.amlogic.platform.t931;
+using fuchsia.clock;
+using fuchsia.gpio;
+using fuchsia.i2c;
+using fuchsia.mipicsi;
+using fuchsia.platform;
+using fuchsia.sony.platform;
+
+primary node "mipicsi" {
+  fuchsia.BIND_PROTOCOL == fuchsia.mipicsi.BIND_PROTOCOL.DEVICE;
+}
+
+node "pdev" {
+  fuchsia.BIND_PROTOCOL == fuchsia.platform.BIND_PROTOCOL.DEVICE;
+  fuchsia.BIND_PLATFORM_DEV_VID == fuchsia.sony.platform.BIND_PLATFORM_DEV_VID.SONY;
+  fuchsia.BIND_PLATFORM_DEV_PID == fuchsia.sony.platform.BIND_PLATFORM_DEV_PID.IMX227;
+  fuchsia.BIND_PLATFORM_DEV_DID == fuchsia.sony.platform.BIND_PLATFORM_DEV_DID.CAMERA_SENSOR;
+  fuchsia.BIND_PLATFORM_DEV_INSTANCE_ID == 0;
+}
+
+node "i2c" {
+  fuchsia.BIND_PROTOCOL == fuchsia.i2c.BIND_PROTOCOL.DEVICE;
+  fuchsia.BIND_I2C_BUS_ID == 2; // SHERLOCK_I2C_3
+  fuchsia.BIND_I2C_ADDRESS == 0x36; // SHERLOCK
+}
+
+node "gpio-reset" {
+  fuchsia.BIND_PROTOCOL == fuchsia.gpio.BIND_PROTOCOL.DEVICE;
+  fuchsia.BIND_GPIO_PIN ==  fuchsia.amlogic.platform.t931.GPIOZ_PIN_ID.PIN_0; // GPIO_CAM_RESET
+}
+
+node "gpio-vana" {
+  fuchsia.BIND_PROTOCOL == fuchsia.gpio.BIND_PROTOCOL.DEVICE;
+  fuchsia.BIND_GPIO_PIN == fuchsia.amlogic.platform.t931.GPIOA_PIN_ID.PIN_6; // GPIO_VANA_ENABLE
+}
+
+node "gpio-vdig" {
+  fuchsia.BIND_PROTOCOL == fuchsia.gpio.BIND_PROTOCOL.DEVICE;
+  fuchsia.BIND_GPIO_PIN == fuchsia.amlogic.platform.t931.GPIOZ_PIN_ID.PIN_12; // GPIO_VDIG_ENABLE
+}
+
+node "clock-sensor" {
+  fuchsia.BIND_PROTOCOL == fuchsia.clock.BIND_PROTOCOL.DEVICE;
+  fuchsia.BIND_CLOCK_ID == fuchsia.amlogic.platform.meson.G12B_CLK_ID.CLK_CAM_INCK_24M;
+}
+

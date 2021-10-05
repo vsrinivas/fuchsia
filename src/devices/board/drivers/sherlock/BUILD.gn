@@ -358,6 +358,69 @@ driver_bind_rules("sherlock-wifi-bind") {
   ]
 }
 
+driver_bind_rules("imx227-sensor-bind") {
+  rules = "bind/imx227-sensor.bind"
+  header_output = "imx227-sensor-bind.h"
+  bind_output = "imx227-sensor-bind.bc"
+  deps = [
+    "//src/devices/bind/fuchsia.amlogic.platform.meson",
+    "//src/devices/bind/fuchsia.amlogic.platform.t931",
+    "//src/devices/bind/fuchsia.clock",
+    "//src/devices/bind/fuchsia.gpio",
+    "//src/devices/bind/fuchsia.i2c",
+    "//src/devices/bind/fuchsia.mipicsi",
+    "//src/devices/bind/fuchsia.platform",
+    "//src/devices/bind/fuchsia.sony.platform",
+  ]
+}
+
+driver_bind_rules("camera-gdc-bind") {
+  rules = "bind/camera-gdc.bind"
+  header_output = "camera-gdc-bind.h"
+  bind_output = "camera-gdc-bind.bc"
+  deps = [
+    "//src/devices/bind/fuchsia.arm.platform",
+    "//src/devices/bind/fuchsia.camerasensor2",
+    "//src/devices/bind/fuchsia.platform",
+  ]
+}
+
+driver_bind_rules("camera-ge2d-bind") {
+  rules = "bind/camera-ge2d.bind"
+  header_output = "camera-ge2d-bind.h"
+  bind_output = "camera-ge2d-bind.bc"
+  deps = [
+    "//src/devices/bind/fuchsia.amlogic.platform",
+    "//src/devices/bind/fuchsia.camerasensor2",
+    "//src/devices/bind/fuchsia.platform",
+  ]
+}
+
+driver_bind_rules("camera-isp-bind") {
+  rules = "bind/camera-isp.bind"
+  header_output = "camera-isp-bind.h"
+  bind_output = "camera-isp-bind.bc"
+  deps = [
+    "//src/devices/bind/fuchsia.amlogic.platform",
+    "//src/devices/bind/fuchsia.arm.platform",
+    "//src/devices/bind/fuchsia.camerasensor2",
+    "//src/devices/bind/fuchsia.platform",
+    "//src/devices/bind/fuchsia.registers",
+  ]
+}
+
+driver_bind_rules("camera-controller-bind") {
+  rules = "bind/camera-controller.bind"
+  header_output = "camera-controller-bind.h"
+  bind_output = "camera-controller-bind.bc"
+  deps = [
+    "//src/devices/bind/fuchsia.gdc",
+    "//src/devices/bind/fuchsia.ge2d",
+    "//src/devices/bind/fuchsia.isp",
+    "//src/devices/bind/fuchsia.sysmem",
+  ]
+}
+
 template("sherlock_driver") {
   fuchsia_driver(target_name + "-driver") {
     output_name = invoker.target_name
@@ -416,8 +479,13 @@ template("sherlock_driver") {
 
     deps = [
       ":aml-usb-phy-v2-bind_header",
+      ":camera-controller-bind_header",
+      ":camera-gdc-bind_header",
+      ":camera-ge2d-bind_header",
+      ":camera-isp-bind_header",
       ":dwc2-phy-bind_header",
       ":gpio-light-bind_header",
+      ":imx227-sensor-bind_header",
       ":luis-cpu-bind_header",
       ":luis-touch-bind_header",
       ":sherlock-backlight-bind_header",

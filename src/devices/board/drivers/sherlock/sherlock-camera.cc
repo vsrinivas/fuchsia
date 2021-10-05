@@ -17,6 +17,11 @@
 
 #include "sherlock-gpios.h"
 #include "sherlock.h"
+#include "src/devices/board/drivers/sherlock/camera-controller-bind.h"
+#include "src/devices/board/drivers/sherlock/camera-gdc-bind.h"
+#include "src/devices/board/drivers/sherlock/camera-ge2d-bind.h"
+#include "src/devices/board/drivers/sherlock/camera-isp-bind.h"
+#include "src/devices/board/drivers/sherlock/imx227-sensor-bind.h"
 
 namespace sherlock {
 
@@ -162,133 +167,6 @@ static pbus_dev_t isp_dev = []() {
   return dev;
 }();
 
-// Composite binding rules for ARM ISP
-
-static const zx_bind_inst_t reset_register_match[] = {
-    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_REGISTERS),
-    BI_MATCH_IF(EQ, BIND_REGISTER_ID, aml_registers::REGISTER_ISP_RESET),
-};
-
-static const zx_bind_inst_t camera_sensor_match[] = {
-    BI_MATCH_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_CAMERA_SENSOR2),
-};
-
-static const zx_bind_inst_t amlogiccanvas_match[] = {
-    BI_MATCH_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_AMLOGIC_CANVAS),
-};
-
-static const device_fragment_part_t reset_register_fragment[] = {
-    {countof(reset_register_match), reset_register_match},
-};
-
-static const device_fragment_part_t camera_sensor_fragment[] = {
-    {countof(camera_sensor_match), camera_sensor_match},
-};
-
-static const device_fragment_t isp_fragments[] = {
-    {"camera-sensor", countof(camera_sensor_fragment), camera_sensor_fragment},
-    {"register-reset", countof(reset_register_fragment), reset_register_fragment},
-};
-
-// Compisite binding rules for GDC
-static const device_fragment_t gdc_fragments[] = {
-    {"camera-sensor", countof(camera_sensor_fragment), camera_sensor_fragment},
-};
-
-static const device_fragment_part_t amlogiccanvas_fragment[] = {
-    {countof(amlogiccanvas_match), amlogiccanvas_match},
-};
-
-// Composite binding rules for GE2D
-static const device_fragment_t ge2d_fragments[] = {
-    {"camera-sensor", countof(camera_sensor_fragment), camera_sensor_fragment},
-    {"canvas", countof(amlogiccanvas_fragment), amlogiccanvas_fragment},
-};
-
-// Composite binding rules for camera modules.
-static const zx_bind_inst_t i2c_match[] = {
-    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_I2C),
-    BI_ABORT_IF(NE, BIND_I2C_BUS_ID, SHERLOCK_I2C_3),
-    BI_MATCH_IF(EQ, BIND_I2C_ADDRESS, 0x36),  // sherlock
-};
-static const zx_bind_inst_t gpio_reset_match[] = {
-    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_GPIO),
-    BI_MATCH_IF(EQ, BIND_GPIO_PIN, GPIO_CAM_RESET),
-};
-static const zx_bind_inst_t gpio_vana_match[] = {
-    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_GPIO),
-    BI_MATCH_IF(EQ, BIND_GPIO_PIN, GPIO_VANA_ENABLE),
-};
-static const zx_bind_inst_t gpio_vdig_match[] = {
-    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_GPIO),
-    BI_MATCH_IF(EQ, BIND_GPIO_PIN, GPIO_VDIG_ENABLE),
-};
-static const zx_bind_inst_t clk_sensor_match[] = {
-    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_CLOCK),
-    BI_MATCH_IF(EQ, BIND_CLOCK_ID, g12b_clk::G12B_CLK_CAM_INCK_24M),
-};
-static const zx_bind_inst_t mipicsi_match[] = {
-    BI_MATCH_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_MIPI_CSI),
-};
-static const device_fragment_part_t i2c_fragment[] = {
-    {countof(i2c_match), i2c_match},
-};
-static const device_fragment_part_t gpio_reset_fragment[] = {
-    {countof(gpio_reset_match), gpio_reset_match},
-};
-static const device_fragment_part_t gpio_vana_fragment[] = {
-    {countof(gpio_vana_match), gpio_vana_match},
-};
-static const device_fragment_part_t gpio_vdig_fragment[] = {
-    {countof(gpio_vdig_match), gpio_vdig_match},
-};
-static const device_fragment_part_t clk_sensor_fragment[] = {
-    {countof(clk_sensor_match), clk_sensor_match},
-};
-static const device_fragment_part_t mipicsi_fragment[] = {
-    {countof(mipicsi_match), mipicsi_match},
-};
-static const device_fragment_t imx227_sensor_fragments[] = {
-    {"mipicsi", countof(mipicsi_fragment), mipicsi_fragment},
-    {"i2c", countof(i2c_fragment), i2c_fragment},
-    {"gpio-vana", countof(gpio_vana_fragment), gpio_vana_fragment},
-    {"gpio-vdig", countof(gpio_vdig_fragment), gpio_vdig_fragment},
-    {"gpio-reset", countof(gpio_reset_fragment), gpio_reset_fragment},
-    {"clock-sensor", countof(clk_sensor_fragment), clk_sensor_fragment},
-};
-
-// Composite device binding rules for Camera Controller
-static const zx_bind_inst_t isp_match[] = {
-    BI_MATCH_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_ISP),
-};
-static const zx_bind_inst_t gdc_match[] = {
-    BI_MATCH_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_GDC),
-};
-static const zx_bind_inst_t ge2d_match[] = {
-    BI_MATCH_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_GE2D),
-};
-static const zx_bind_inst_t sysmem_match[] = {
-    BI_MATCH_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_SYSMEM),
-};
-static const device_fragment_part_t isp_fragment[] = {
-    {countof(isp_match), isp_match},
-};
-static const device_fragment_part_t gdc_fragment[] = {
-    {countof(gdc_match), gdc_match},
-};
-static const device_fragment_part_t ge2d_fragment[] = {
-    {countof(ge2d_match), ge2d_match},
-};
-static const device_fragment_part_t sysmem_fragment[] = {
-    {countof(sysmem_match), sysmem_match},
-};
-static const device_fragment_t camera_controller_fragments[] = {
-    {"isp", countof(isp_fragment), isp_fragment},
-    {"gdc", countof(gdc_fragment), gdc_fragment},
-    {"ge2d", countof(ge2d_fragment), ge2d_fragment},
-    {"sysmem", countof(sysmem_fragment), sysmem_fragment},
-};
-
 constexpr pbus_mmio_t mipi_mmios[] = {
     // CSI PHY0
     {
@@ -373,31 +251,31 @@ zx_status_t Sherlock::CameraInit() {
     return status;
   }
 
-  status = pbus_.CompositeDeviceAdd(&sensor_dev_sherlock,
-                                    reinterpret_cast<uint64_t>(imx227_sensor_fragments),
-                                    countof(imx227_sensor_fragments), "mipicsi");
+  status =
+      pbus_.AddComposite(&sensor_dev_sherlock, reinterpret_cast<uint64_t>(imx227_sensor_fragments),
+                         countof(imx227_sensor_fragments), "mipicsi");
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s: Camera Sensor DeviceAdd failed %d", __func__, status);
     return status;
   }
 
-  status = pbus_.CompositeDeviceAdd(&gdc_dev, reinterpret_cast<uint64_t>(gdc_fragments),
-                                    countof(gdc_fragments), "camera-sensor");
+  status = pbus_.AddComposite(&gdc_dev, reinterpret_cast<uint64_t>(gdc_fragments),
+                              countof(gdc_fragments), "camera-sensor");
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s: GDC DeviceAdd failed %d", __func__, status);
     return status;
   }
 
-  status = pbus_.CompositeDeviceAdd(&ge2d_dev, reinterpret_cast<uint64_t>(ge2d_fragments),
-                                    countof(ge2d_fragments), "camera-sensor");
+  status = pbus_.AddComposite(&ge2d_dev, reinterpret_cast<uint64_t>(ge2d_fragments),
+                              countof(ge2d_fragments), "camera-sensor");
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s: GE2D DeviceAdd failed %d", __func__, status);
     return status;
   }
 
   // Add a composite device for ARM ISP
-  status = pbus_.CompositeDeviceAdd(&isp_dev, reinterpret_cast<uint64_t>(isp_fragments),
-                                    countof(isp_fragments), "camera-sensor");
+  status = pbus_.AddComposite(&isp_dev, reinterpret_cast<uint64_t>(isp_fragments),
+                              countof(isp_fragments), "camera-sensor");
 
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s: ISP DeviceAdd failed %d", __func__, status);
