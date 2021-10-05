@@ -840,7 +840,7 @@ zx_status_t Controller::DisplayControllerImplImportImage(image_t* image, zx_unow
   }
   auto result = fidl::WireCall(fidl::UnownedClientEnd<fuchsia_sysmem::BufferCollection>(
                                    zx::unowned_channel(handle)))
-                    .WaitForBuffersAllocated();
+                    ->WaitForBuffersAllocated();
   if (!result.ok()) {
     zxlogf(ERROR, "Failed to wait for buffers allocated, %s", result.FormatDescription().c_str());
     return result.status();
@@ -1831,7 +1831,7 @@ zx_status_t Controller::DisplayControllerImplSetBufferCollectionConstraints(
 
   auto result = fidl::WireCall(fidl::UnownedClientEnd<fuchsia_sysmem::BufferCollection>(
                                    zx::unowned_channel(collection)))
-                    .SetConstraints(true, constraints);
+                    ->SetConstraints(true, constraints);
 
   if (!result.ok()) {
     zxlogf(ERROR, "Failed to set constraints, %s", result.FormatDescription().c_str());

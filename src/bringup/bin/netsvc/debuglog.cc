@@ -72,7 +72,7 @@ zx_status_t debuglog_init() {
   if (client_end.is_error()) {
     return client_end.status_value();
   }
-  fidl::WireResult result = fidl::WireCall(client_end.value()).Get();
+  fidl::WireResult result = fidl::WireCall(client_end.value())->Get();
   if (!result.ok()) {
     return result.status();
   }

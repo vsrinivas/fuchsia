@@ -44,7 +44,7 @@ zx::eventpair MakeEvent(zx_time_t deadline) {
   zx::eventpair l, r;
   ZX_ASSERT(zx::eventpair::create(0, &l, &r) == ZX_OK);
   ZX_ASSERT(fidl::WireCall<fake_clock::FakeClock>(GetService())
-                .RegisterEvent(std::move(r), deadline)
+                ->RegisterEvent(std::move(r), deadline)
                 .ok());
   return l;
 }
@@ -70,7 +70,7 @@ __EXPORT zx_status_t zx_channel_call(zx_handle_t handle, uint32_t options, zx_ti
 }
 
 __EXPORT zx_time_t zx_clock_get_monotonic() {
-  auto result = fidl::WireCall<fake_clock::FakeClock>(GetService()).Get();
+  auto result = fidl::WireCall<fake_clock::FakeClock>(GetService())->Get();
   ZX_ASSERT(result.ok());
   return result.value().time;
 }
@@ -231,7 +231,7 @@ __EXPORT zx_status_t zx_timer_set(zx_handle_t handle, zx_time_t deadline, zx_dur
   }
   // reschedule the event with the fake clock service:
   ZX_ASSERT(fidl::WireCall<fake_clock::FakeClock>(GetService())
-                .RescheduleEvent(std::move(e), deadline)
+                ->RescheduleEvent(std::move(e), deadline)
                 .ok());
   return ZX_OK;
 }
@@ -243,7 +243,7 @@ __EXPORT zx_status_t zx_timer_cancel(zx_handle_t handle) {
       ZX_OK) {
     return status;
   }
-  ZX_ASSERT(fidl::WireCall<fake_clock::FakeClock>(GetService()).CancelEvent(std::move(e)).ok());
+  ZX_ASSERT(fidl::WireCall<fake_clock::FakeClock>(GetService())->CancelEvent(std::move(e)).ok());
   return ZX_OK;
 }
 
@@ -253,7 +253,7 @@ __EXPORT bool create_named_deadline(char* component, size_t component_len, char*
   id.component_id = fidl::StringView::FromExternal(component, component_len);
   id.code = fidl::StringView::FromExternal(code, code_len);
   auto result = fidl::WireCall<fake_clock::FakeClock>(GetService())
-                    .CreateNamedDeadline(std::move(id), duration);
+                    ->CreateNamedDeadline(std::move(id), duration);
   ZX_ASSERT(result.ok());
   *out = result->deadline;
   return true;

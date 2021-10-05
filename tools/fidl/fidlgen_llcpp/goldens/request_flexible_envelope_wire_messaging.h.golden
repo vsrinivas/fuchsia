@@ -1144,53 +1144,26 @@ class ::fidl::WireUnownedResult<::fidl_test_requestflexibleenvelope::Protocol::
 // |fidl::ClientEnd<::fidl_test_requestflexibleenvelope::Protocol>|, avoiding
 // setting up a client.
 template <>
-class ::fidl::internal::WireCaller<
+class ::fidl::internal::WireSyncClientImpl<
     ::fidl_test_requestflexibleenvelope::Protocol>
-    final {
+    final : public ::fidl::internal::SyncEndpointVeneer<
+                ::fidl::internal::WireSyncClientImpl<
+                    ::fidl_test_requestflexibleenvelope::Protocol>> {
  public:
-  explicit WireCaller(
-      ::fidl::UnownedClientEnd<::fidl_test_requestflexibleenvelope::Protocol>
-          client_end)
-      : client_end_(client_end) {}
-
-  // Request is heap-allocated. Response is heap-allocated.
-  static ::fidl::WireResult<::fidl_test_requestflexibleenvelope::Protocol::
-                                RequestStrictResponseFlexible>
-  RequestStrictResponseFlexible(
-      ::fidl::UnownedClientEnd<::fidl_test_requestflexibleenvelope::Protocol>
-          _client_end,
-      ::fidl_test_requestflexibleenvelope::wire::StrictFoo s) {
-    return ::fidl::WireResult<::fidl_test_requestflexibleenvelope::Protocol::
-                                  RequestStrictResponseFlexible>(_client_end,
-                                                                 s);
-  }
+  using ::fidl::internal::SyncEndpointVeneer<
+      ::fidl::internal::WireSyncClientImpl<
+          ::fidl_test_requestflexibleenvelope::Protocol>>::SyncEndpointVeneer;
 
   // Request is heap-allocated. Response is heap-allocated.
   ::fidl::WireResult<::fidl_test_requestflexibleenvelope::Protocol::
                          RequestStrictResponseFlexible>
   RequestStrictResponseFlexible(
-      ::fidl_test_requestflexibleenvelope::wire::StrictFoo s) && {
+      ::fidl_test_requestflexibleenvelope::wire::StrictFoo s) {
     return ::fidl::WireResult<::fidl_test_requestflexibleenvelope::Protocol::
-                                  RequestStrictResponseFlexible>(client_end_,
+                                  RequestStrictResponseFlexible>(_client_end(),
                                                                  s);
   }
 
-  // Caller provides the backing storage for FIDL message via request and
-  // response buffers.
-  static ::fidl::WireUnownedResult<::fidl_test_requestflexibleenvelope::
-                                       Protocol::RequestStrictResponseFlexible>
-  RequestStrictResponseFlexible(
-      ::fidl::UnownedClientEnd<::fidl_test_requestflexibleenvelope::Protocol>
-          _client_end,
-      ::fidl::BufferSpan _request_buffer,
-      ::fidl_test_requestflexibleenvelope::wire::StrictFoo s,
-      ::fidl::BufferSpan _response_buffer) {
-    return ::fidl::WireUnownedResult<
-        ::fidl_test_requestflexibleenvelope::Protocol::
-            RequestStrictResponseFlexible>(
-        _client_end, _request_buffer.data, _request_buffer.capacity, s,
-        _response_buffer.data, _response_buffer.capacity);
-  }
   // Caller provides the backing storage for FIDL message via request and
   // response buffers.
   ::fidl::WireUnownedResult<::fidl_test_requestflexibleenvelope::Protocol::
@@ -1198,52 +1171,24 @@ class ::fidl::internal::WireCaller<
   RequestStrictResponseFlexible(
       ::fidl::BufferSpan _request_buffer,
       ::fidl_test_requestflexibleenvelope::wire::StrictFoo s,
-      ::fidl::BufferSpan _response_buffer) && {
+      ::fidl::BufferSpan _response_buffer) {
     return ::fidl::WireUnownedResult<
         ::fidl_test_requestflexibleenvelope::Protocol::
             RequestStrictResponseFlexible>(
-        client_end_, _request_buffer.data, _request_buffer.capacity, s,
+        _client_end(), _request_buffer.data, _request_buffer.capacity, s,
         _response_buffer.data, _response_buffer.capacity);
-  }
-
-  // Request is heap-allocated. Response is heap-allocated.
-  static ::fidl::WireResult<::fidl_test_requestflexibleenvelope::Protocol::
-                                RequestFlexibleResponseStrict>
-  RequestFlexibleResponseStrict(
-      ::fidl::UnownedClientEnd<::fidl_test_requestflexibleenvelope::Protocol>
-          _client_end,
-      ::fidl_test_requestflexibleenvelope::wire::FlexibleFoo s) {
-    return ::fidl::WireResult<::fidl_test_requestflexibleenvelope::Protocol::
-                                  RequestFlexibleResponseStrict>(_client_end,
-                                                                 s);
   }
 
   // Request is heap-allocated. Response is heap-allocated.
   ::fidl::WireResult<::fidl_test_requestflexibleenvelope::Protocol::
                          RequestFlexibleResponseStrict>
   RequestFlexibleResponseStrict(
-      ::fidl_test_requestflexibleenvelope::wire::FlexibleFoo s) && {
+      ::fidl_test_requestflexibleenvelope::wire::FlexibleFoo s) {
     return ::fidl::WireResult<::fidl_test_requestflexibleenvelope::Protocol::
-                                  RequestFlexibleResponseStrict>(client_end_,
+                                  RequestFlexibleResponseStrict>(_client_end(),
                                                                  s);
   }
 
-  // Caller provides the backing storage for FIDL message via request and
-  // response buffers.
-  static ::fidl::WireUnownedResult<::fidl_test_requestflexibleenvelope::
-                                       Protocol::RequestFlexibleResponseStrict>
-  RequestFlexibleResponseStrict(
-      ::fidl::UnownedClientEnd<::fidl_test_requestflexibleenvelope::Protocol>
-          _client_end,
-      ::fidl::BufferSpan _request_buffer,
-      ::fidl_test_requestflexibleenvelope::wire::FlexibleFoo s,
-      ::fidl::BufferSpan _response_buffer) {
-    return ::fidl::WireUnownedResult<
-        ::fidl_test_requestflexibleenvelope::Protocol::
-            RequestFlexibleResponseStrict>(
-        _client_end, _request_buffer.data, _request_buffer.capacity, s,
-        _response_buffer.data, _response_buffer.capacity);
-  }
   // Caller provides the backing storage for FIDL message via request and
   // response buffers.
   ::fidl::WireUnownedResult<::fidl_test_requestflexibleenvelope::Protocol::
@@ -1251,17 +1196,20 @@ class ::fidl::internal::WireCaller<
   RequestFlexibleResponseStrict(
       ::fidl::BufferSpan _request_buffer,
       ::fidl_test_requestflexibleenvelope::wire::FlexibleFoo s,
-      ::fidl::BufferSpan _response_buffer) && {
+      ::fidl::BufferSpan _response_buffer) {
     return ::fidl::WireUnownedResult<
         ::fidl_test_requestflexibleenvelope::Protocol::
             RequestFlexibleResponseStrict>(
-        client_end_, _request_buffer.data, _request_buffer.capacity, s,
+        _client_end(), _request_buffer.data, _request_buffer.capacity, s,
         _response_buffer.data, _response_buffer.capacity);
   }
 
  private:
   ::fidl::UnownedClientEnd<::fidl_test_requestflexibleenvelope::Protocol>
-      client_end_;
+  _client_end() const {
+    return ::fidl::UnownedClientEnd<
+        ::fidl_test_requestflexibleenvelope::Protocol>(_channel());
+  }
 };
 template <>
 class ::fidl::internal::WireEventHandlerInterface<

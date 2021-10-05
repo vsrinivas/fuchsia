@@ -88,7 +88,8 @@ zx_status_t fdio_open_at(zx_handle_t dir, const char* path, uint32_t flags,
   }
 
   return fidl::WireCall(directory)
-      .Open(flags, kArbitraryMode, fidl::StringView::FromExternal(path, length), std::move(request))
+      ->Open(flags, kArbitraryMode, fidl::StringView::FromExternal(path, length),
+             std::move(request))
       .status();
 }
 
@@ -175,5 +176,5 @@ zx_status_t fdio_service_clone_to(zx_handle_t handle, zx_handle_t request_raw) {
     return ZX_ERR_INVALID_ARGS;
   }
   uint32_t flags = ZX_FS_FLAG_CLONE_SAME_RIGHTS;
-  return fidl::WireCall(node).Clone(flags, std::move(request)).status();
+  return fidl::WireCall(node)->Clone(flags, std::move(request)).status();
 }

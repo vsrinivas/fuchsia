@@ -81,7 +81,7 @@ TEST_P(WatcherTest, Add) {
   fdio_cpp::FdioCaller caller(fbl::unique_fd(dirfd(dir)));
 
   auto watch_result = fidl::WireCall<fio::Directory>(caller.channel())
-                          .Watch(fio::wire::kWatchMaskAdded, 0, std::move(server));
+                          ->Watch(fio::wire::kWatchMaskAdded, 0, std::move(server));
   ASSERT_EQ(watch_result.status(), ZX_OK);
   ASSERT_EQ(watch_result.Unwrap()->s, ZX_OK);
 
@@ -145,7 +145,7 @@ TEST_P(WatcherTest, Existing) {
       fio::wire::kWatchMaskAdded | fio::wire::kWatchMaskExisting | fio::wire::kWatchMaskIdle;
   {
     auto watch_result =
-        fidl::WireCall<fio::Directory>(caller.channel()).Watch(mask, 0, std::move(server));
+        fidl::WireCall<fio::Directory>(caller.channel())->Watch(mask, 0, std::move(server));
     ASSERT_EQ(watch_result.status(), ZX_OK);
     ASSERT_EQ(watch_result.Unwrap()->s, ZX_OK);
   }
@@ -173,7 +173,7 @@ TEST_P(WatcherTest, Existing) {
   ASSERT_EQ(zx::channel::create(0, &client2, &server), ZX_OK);
   {
     auto watch_result =
-        fidl::WireCall<fio::Directory>(caller.channel()).Watch(mask, 0, std::move(server));
+        fidl::WireCall<fio::Directory>(caller.channel())->Watch(mask, 0, std::move(server));
     ASSERT_EQ(watch_result.status(), ZX_OK);
     ASSERT_EQ(watch_result.Unwrap()->s, ZX_OK);
   }
@@ -213,7 +213,7 @@ TEST_P(WatcherTest, Removed) {
   fdio_cpp::FdioCaller caller(fbl::unique_fd(dirfd(dir)));
 
   auto watch_result =
-      fidl::WireCall<fio::Directory>(caller.channel()).Watch(mask, 0, std::move(server));
+      fidl::WireCall<fio::Directory>(caller.channel())->Watch(mask, 0, std::move(server));
   ASSERT_EQ(watch_result.status(), ZX_OK);
   ASSERT_EQ(watch_result.Unwrap()->s, ZX_OK);
 
@@ -260,7 +260,7 @@ TEST_P(WatcherTest, DirectoryDeleted) {
     ASSERT_EQ(zx::channel::create(0, &client, &server), ZX_OK);
     fdio_cpp::FdioCaller caller(fbl::unique_fd(dirfd(dir)));
     auto watch_result = fidl::WireCall<fio::Directory>(caller.channel())
-                            .Watch(fio::wire::kWatchMaskDeleted, 0, std::move(server));
+                            ->Watch(fio::wire::kWatchMaskDeleted, 0, std::move(server));
     ASSERT_EQ(watch_result.status(), ZX_OK);
     ASSERT_EQ(watch_result.Unwrap()->s, ZX_OK);
     std::string dir2_name = GetPath("dir2");
@@ -280,7 +280,7 @@ TEST_P(WatcherTest, DirectoryDeleted) {
   ASSERT_EQ(zx::channel::create(0, &client, &server), ZX_OK);
   fdio_cpp::FdioCaller caller(fbl::unique_fd(dirfd(dir)));
   auto watch_result = fidl::WireCall<fio::Directory>(caller.channel())
-                          .Watch(fio::wire::kWatchMaskDeleted, 0, std::move(server));
+                          ->Watch(fio::wire::kWatchMaskDeleted, 0, std::move(server));
   ASSERT_EQ(watch_result.status(), ZX_OK);
   ASSERT_EQ(watch_result.Unwrap()->s, ZX_OK);
 

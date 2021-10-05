@@ -441,9 +441,9 @@ TEST(MiscTestCase, TestOutput) {
       BindDriverTestOutput(controller_endpoints->server, std::move(test_endpoints->server)));
   loop.RunUntilIdle();
 
-  ASSERT_OK(fidl::WireCall(test_endpoints->client).LogMessage(kLogMessage).status());
+  ASSERT_OK(fidl::WireCall(test_endpoints->client)->LogMessage(kLogMessage).status());
   ASSERT_OK(fidl::WireCall(test_endpoints->client)
-                .LogTestCase(kLogTestCaseName, kLogTestCaseResult)
+                ->LogTestCase(kLogTestCaseName, kLogTestCaseResult)
                 .status());
   loop.RunUntilIdle();
 

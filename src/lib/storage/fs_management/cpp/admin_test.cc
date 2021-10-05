@@ -221,8 +221,8 @@ TEST_F(OutgoingDirectoryMinfs, CannotWriteToOutgoingDirectory) {
   uint32_t file_flags =
       fio::wire::kOpenRightReadable | fio::wire::kOpenRightWritable | fio::wire::kOpenFlagCreate;
   ASSERT_EQ(fidl::WireCall<fio::Directory>(std::move(export_root))
-                .Open(file_flags, 0, fidl::StringView::FromExternal(test_file_name),
-                      std::move(test_file_server))
+                ->Open(file_flags, 0, fidl::StringView::FromExternal(test_file_name),
+                       std::move(test_file_server))
                 .status(),
             ZX_OK);
 

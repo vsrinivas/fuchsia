@@ -103,7 +103,7 @@ TEST_F(UsbQmiTest, RequestImei) {
   ASSERT_EQ(zx::channel::create(0, &channel_local, &channel_remote), ZX_OK);
   auto result =
       fidl::WireCall<fuchsia_hardware_telephony_transport::Qmi>(qmi_fdio_caller_.channel())
-          .SetChannel(std::move(channel_remote));
+          ->SetChannel(std::move(channel_remote));
   ASSERT_EQ(result.status(), ZX_OK);
   ASSERT_EQ(result->result.is_err(), false);
   ASSERT_EQ(zx::port::create(0, &channel_port), ZX_OK);

@@ -86,7 +86,7 @@ zx_status_t FdToBlockDevice(fbl::unique_fd& fd, std::unique_ptr<block_client::Bl
   }
   fdio_cpp::UnownedFdioCaller caller(fd.get());
   status = fidl::WireCall<fuchsia_io::Node>(zx::unowned_channel(caller.borrow_channel()))
-               .Clone(fuchsia_io::wire::kCloneFlagSameRights, std::move(server))
+               ->Clone(fuchsia_io::wire::kCloneFlagSameRights, std::move(server))
                .status();
   if (status != ZX_OK) {
     return status;

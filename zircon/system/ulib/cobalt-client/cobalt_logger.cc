@@ -63,7 +63,7 @@ bool CobaltLogger::TryObtainLogger() {
   auto [logger_client, logger_server] = *std::move(logger_endpoints);
   auto create_logger_result =
       fidl::WireCall(logger_factory_client)
-          .CreateLoggerFromProjectId(options_.project_id, std::move(logger_server));
+          ->CreateLoggerFromProjectId(options_.project_id, std::move(logger_server));
   if (create_logger_result.status() == ZX_OK &&
       create_logger_result->status == fuchsia_cobalt::wire::Status::kOk) {
     logger_ = fidl::BindSyncClient(std::move(logger_client));

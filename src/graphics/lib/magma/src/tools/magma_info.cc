@@ -52,7 +52,7 @@ int main(int argc, char** argv) {
 
   auto result = fidl::WireCall<fuchsia_gpu_magma::Device>(
                     zx::unowned_channel(fdio_unsafe_borrow_channel(fdio)))
-                    .DumpState(dump_type);
+                    ->DumpState(dump_type);
   fdio_unsafe_release(fdio);
 
   if (result.status() != ZX_OK) {

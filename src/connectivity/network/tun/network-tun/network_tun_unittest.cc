@@ -34,7 +34,7 @@ zx::status<fidl::ClientEnd<fuchsia_hardware_network::StatusWatcher>> GetStatusWa
   }
   {
     fidl::WireResult result =
-        fidl::WireCall(device).GetPort(port, std::move(port_endpoints->server));
+        fidl::WireCall(device)->GetPort(port, std::move(port_endpoints->server));
     if (!result.ok()) {
       return zx::error(result.status());
     }
@@ -47,7 +47,7 @@ zx::status<fidl::ClientEnd<fuchsia_hardware_network::StatusWatcher>> GetStatusWa
 
   {
     fidl::WireResult result = fidl::WireCall(port_endpoints->client)
-                                  .GetStatusWatcher(std::move(watcher_endpoints->server), buffer);
+                                  ->GetStatusWatcher(std::move(watcher_endpoints->server), buffer);
     if (!result.ok()) {
       return zx::error(result.status());
     }
@@ -76,12 +76,12 @@ zx::status<fidl::ClientEnd<fuchsia_hardware_network::MacAddressing>> GetMacAddre
     return zx::error(status);
   }
   if (zx_status_t status =
-          fidl::WireCall(device->client).GetPort(port_id, std::move(port->server)).status();
+          fidl::WireCall(device->client)->GetPort(port_id, std::move(port->server)).status();
       status != ZX_OK) {
     return zx::error(status);
   }
   if (zx_status_t status =
-          fidl::WireCall(port->client).GetMac(std::move(endpoints->server)).status();
+          fidl::WireCall(port->client)->GetMac(std::move(endpoints->server)).status();
       status != ZX_OK) {
     return zx::error(status);
   }
@@ -96,7 +96,7 @@ zx::status<fidl::ClientEnd<fuchsia_hardware_network::PortWatcher>> GetPortWatche
     return endpoints.take_error();
   }
   {
-    fidl::WireResult result = fidl::WireCall(device).GetPortWatcher(std::move(endpoints->server));
+    fidl::WireResult result = fidl::WireCall(device)->GetPortWatcher(std::move(endpoints->server));
     if (!result.ok()) {
       return zx::error(result.status());
     }
@@ -366,7 +366,7 @@ class SimpleClient {
     }
     bool online = false;
     while (!online) {
-      fidl::WireResult result = fidl::WireCall(watcher.value()).WatchStatus();
+      fidl::WireResult result = fidl::WireCall(watcher.value())->WatchStatus();
       if (!result.ok()) {
         return result.status();
       }
@@ -565,7 +565,7 @@ class TunTest : public gtest::RealLoopFixture {
       return pair_status.take_error();
     }
     fidl::ClientEnd<fuchsia_net_tun::DevicePair>& pair = pair_status.value();
-    fidl::WireResult result = fidl::WireCall(pair).AddPort(std::move(port_config));
+    fidl::WireResult result = fidl::WireCall(pair)->AddPort(std::move(port_config));
     if (result.status() != ZX_OK) {
       return zx::error(result.status());
     }
@@ -696,12 +696,12 @@ TEST_F(TunTest, Teardown) {
   ASSERT_OK(tun.GetDevice(std::move(device_endpoints->server)).status());
 
   ASSERT_OK(fidl::WireCall(device_endpoints->client)
-                .GetPort(kDefaultTestPort, std::move(port_endpoints->server))
+                ->GetPort(kDefaultTestPort, std::move(port_endpoints->server))
                 .status());
   ASSERT_OK(
-      fidl::WireCall(port_endpoints->client).GetMac(std::move(mac_endpoints->server)).status());
+      fidl::WireCall(port_endpoints->client)->GetMac(std::move(mac_endpoints->server)).status());
   // Perform a synchronous call on Mac, which validates all the pipelined calls above succeeded.
-  ASSERT_OK(fidl::WireCall(mac_endpoints->client).GetUnicastAddress().status());
+  ASSERT_OK(fidl::WireCall(mac_endpoints->client)->GetUnicastAddress().status());
 
   CapturingEventHandler<fuchsia_hardware_network::Device> device_handler;
   CapturingEventHandler<fuchsia_hardware_network::Port> port_handler;

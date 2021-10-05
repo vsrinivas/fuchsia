@@ -55,7 +55,7 @@ static zx_status_t netifc_open_cb(int dirfd, int event, const char* filename, vo
     char buf[1024];
     size_t actual_len;
     auto resp = fidl::WireCall<fuchsia_device::Controller>(zx::unowned_channel(netsvc))
-                    .GetTopologicalPath();
+                    ->GetTopologicalPath();
     status = resp.status();
     if (status == ZX_OK) {
       if (resp->result.is_err()) {

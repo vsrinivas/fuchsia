@@ -179,7 +179,7 @@ int main(int argc, const char** argv) {
     fdio_cpp::FdioCaller caller(std::move(fd));
     auto result = fidl::WireCall(fidl::UnownedClientEnd<fuchsia_io_admin::DirectoryAdmin>(
                                      caller.borrow_channel()))
-                      .QueryFilesystem();
+                      ->QueryFilesystem();
     if (!result.ok() || result->s != ZX_OK) {
       print_fs_type(dirs[i], &options, nullptr, "Unknown; cannot query filesystem");
       continue;
@@ -189,7 +189,7 @@ int main(int argc, const char** argv) {
 
     auto result2 = fidl::WireCall(fidl::UnownedClientEnd<fuchsia_io_admin::DirectoryAdmin>(
                                       caller.borrow_channel()))
-                       .GetDevicePath();
+                       ->GetDevicePath();
     std::string path(std::string("I/O failure: ") + result2.status_string());
     if (result2.ok()) {
       if (result2->s == ZX_OK) {

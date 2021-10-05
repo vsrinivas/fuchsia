@@ -106,7 +106,7 @@ TEEC_Result CheckGlobalPlatformCompliance(
       return TEEC_ERROR_COMMUNICATION;
     }
     auto result = fidl::WireCall(std::move(maybe_device_connector))
-                      .ConnectToDeviceInfo(std::move(server_end.value()));
+                      ->ConnectToDeviceInfo(std::move(server_end.value()));
     if (!result.ok()) {
       return TEEC_ERROR_NOT_SUPPORTED;
     }
@@ -118,7 +118,7 @@ TEEC_Result CheckGlobalPlatformCompliance(
     device_info = std::move(result.value());
   }
 
-  auto result = fidl::WireCall(device_info).GetOsInfo();
+  auto result = fidl::WireCall(device_info)->GetOsInfo();
   if (!result.ok() || !result->info.has_is_global_platform_compliant() ||
       !result->info.is_global_platform_compliant()) {
     return TEEC_ERROR_NOT_SUPPORTED;
@@ -714,7 +714,7 @@ TEEC_Result ConnectApplicationViaDeviceConnector(
 
   auto result =
       fidl::WireCall(std::move(device_connector))
-          .ConnectToApplication(
+          ->ConnectToApplication(
               app_uuid, fidl::ClientEnd<::fuchsia_tee_manager::Provider>() /* service_provider */,
               std::move(app_ends->server));
   if (!result.ok()) {
@@ -918,7 +918,7 @@ TEEC_Result TEEC_OpenSession(TEEC_Context* context, TEEC_Session* session,
     return result;
   }
 
-  auto result = fidl::WireCall(app_client_end).OpenSession2(std::move(parameter_set));
+  auto result = fidl::WireCall(app_client_end)->OpenSession2(std::move(parameter_set));
   zx_status_t status = result.status();
 
   if (status != ZX_OK) {
@@ -982,7 +982,7 @@ void TEEC_CloseSession(TEEC_Session* session) {
   }
 
   // TEEC_CloseSession simply swallows errors, so no need to check here.
-  fidl::WireCall(GetApplicationFromSession(session)).CloseSession(session->imp.session_id);
+  fidl::WireCall(GetApplicationFromSession(session))->CloseSession(session->imp.session_id);
   session->imp.application_channel = ZX_HANDLE_INVALID;
 }
 
@@ -1007,7 +1007,7 @@ TEEC_Result TEEC_InvokeCommand(TEEC_Session* session, uint32_t commandID, TEEC_O
   }
 
   auto result = fidl::WireCall(GetApplicationFromSession(session))
-                    .InvokeCommand(session->imp.session_id, commandID, std::move(parameter_set));
+                    ->InvokeCommand(session->imp.session_id, commandID, std::move(parameter_set));
   zx_status_t status = result.status();
   if (status != ZX_OK) {
     if (returnOrigin) {

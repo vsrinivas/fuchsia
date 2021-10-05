@@ -358,7 +358,7 @@ NetworkDeviceClient::WatchStatus(uint8_t port_id, StatusCallback callback, uint3
     }
   }
   fidl::Result result = fidl::WireCall(port_endpoints->client)
-                            .GetStatusWatcher(std::move(watcher_endpoints->server), buffer);
+                            ->GetStatusWatcher(std::move(watcher_endpoints->server), buffer);
   if (!result.ok()) {
     return zx::error(result.status());
   }

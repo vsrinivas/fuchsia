@@ -173,7 +173,7 @@ void FvmTest::CreateFVM(uint64_t block_size, uint64_t block_count, uint64_t slic
   ASSERT_OK(fdio_get_service_handle(fd.get(), fvm_channel.reset_and_get_address()));
 
   auto resp = fidl::WireCall<fuchsia_device::Controller>(zx::unowned_channel(fvm_channel.get()))
-                  .Bind(::fidl::StringView(FVM_DRIVER_LIB));
+                  ->Bind(::fidl::StringView(FVM_DRIVER_LIB));
   ASSERT_OK(resp.status());
   ASSERT_TRUE(resp->result.is_response());
   fvm_channel.reset();
@@ -187,7 +187,7 @@ void FvmTest::FVMRebind(const partition_entry_t* entries, size_t entry_count) {
 
   auto resp =
       fidl::WireCall<fuchsia_device::Controller>(zx::unowned_channel(disk_caller.borrow_channel()))
-          .Rebind(::fidl::StringView(FVM_DRIVER_LIB));
+          ->Rebind(::fidl::StringView(FVM_DRIVER_LIB));
   ASSERT_OK(resp.status());
   ASSERT_TRUE(resp->result.is_response());
 
@@ -537,7 +537,7 @@ TEST_F(FvmTest, TestLarge) {
   ASSERT_EQ(fvm_init(fd.get(), slice_size), ZX_OK);
 
   auto resp = fidl::WireCall<fuchsia_device::Controller>(zx::unowned_channel(channel->get()))
-                  .Bind(::fidl::StringView(FVM_DRIVER_LIB));
+                  ->Bind(::fidl::StringView(FVM_DRIVER_LIB));
   ASSERT_OK(resp.status());
   ASSERT_TRUE(resp->result.is_response());
 
@@ -2182,7 +2182,7 @@ TEST_F(FvmTest, TestMounting) {
   fdio_cpp::FdioCaller caller(std::move(rootfd));
   auto result = fidl::WireCall(fidl::UnownedClientEnd<fuchsia_io_admin::DirectoryAdmin>(
                                    caller.borrow_channel()))
-                    .QueryFilesystem();
+                    ->QueryFilesystem();
   ASSERT_TRUE(result.ok());
   const char* kFsName = "minfs";
   const char* name = reinterpret_cast<const char*>(result.value().info->name.data());
@@ -2260,7 +2260,7 @@ TEST_F(FvmTest, TestMkfs) {
   fdio_cpp::FdioCaller caller(std::move(rootfd));
   auto result = fidl::WireCall(fidl::UnownedClientEnd<fuchsia_io_admin::DirectoryAdmin>(
                                    caller.borrow_channel()))
-                    .QueryFilesystem();
+                    ->QueryFilesystem();
   ASSERT_TRUE(result.ok());
   const char* kFsName = "minfs";
   const char* name = reinterpret_cast<const char*>(result.value().info->name.data());
@@ -2558,7 +2558,7 @@ TEST_F(FvmTest, TestAbortDriverLoadSmallDevice) {
 
   // Bind should return ZX_ERR_IO when the load of a driver fails.
   auto resp = fidl::WireCall<fuchsia_device::Controller>(zx::unowned_channel(fvm_channel.get()))
-                  .Bind(::fidl::StringView(FVM_DRIVER_LIB));
+                  ->Bind(::fidl::StringView(FVM_DRIVER_LIB));
   ASSERT_OK(resp.status());
   ASSERT_FALSE(resp->result.is_response());
   ASSERT_EQ(resp->result.err(), ZX_ERR_INTERNAL);
@@ -2571,7 +2571,7 @@ TEST_F(FvmTest, TestAbortDriverLoadSmallDevice) {
   // the device is removed. Controller::Rebind ensures nothing is
   // bound to the device, before it tries to bind the driver again.
   auto resp2 = fidl::WireCall<fuchsia_device::Controller>(zx::unowned_channel(fvm_channel.get()))
-                   .Rebind(::fidl::StringView(FVM_DRIVER_LIB));
+                   ->Rebind(::fidl::StringView(FVM_DRIVER_LIB));
   ASSERT_OK(resp2.status());
   ASSERT_TRUE(resp2->result.is_response());
   char fvm_path[PATH_MAX];

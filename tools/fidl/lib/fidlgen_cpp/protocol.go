@@ -111,7 +111,7 @@ var (
 	WireEventSender           = fidlNs.member("WireEventSender")
 	WireWeakEventSender       = internalNs.member("WireWeakEventSender")
 	WireClientImpl            = internalNs.member("WireClientImpl")
-	WireCaller                = internalNs.member("WireCaller")
+	WireSyncClientImpl        = internalNs.member("WireSyncClientImpl")
 	WireServerDispatcher      = internalNs.member("WireServerDispatcher")
 
 	// MethodRelated
@@ -141,7 +141,7 @@ type wireTypeNames struct {
 	WireEventSender           name
 	WireWeakEventSender       name
 	WireClientImpl            name
-	WireCaller                name
+	WireSyncClientImpl        name
 	WireServerDispatcher      name
 }
 
@@ -158,7 +158,7 @@ func newWireTypeNames(protocolVariants nameVariants) wireTypeNames {
 		WireEventSender:           WireEventSender.template(p),
 		WireWeakEventSender:       WireWeakEventSender.template(p),
 		WireClientImpl:            WireClientImpl.template(p),
-		WireCaller:                WireCaller.template(p),
+		WireSyncClientImpl:        WireSyncClientImpl.template(p),
 		WireServerDispatcher:      WireServerDispatcher.template(p),
 	}
 }

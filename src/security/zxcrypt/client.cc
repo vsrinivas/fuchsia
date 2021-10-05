@@ -343,7 +343,7 @@ zx_status_t VolumeManager::OpenClientWithCaller(fdio_cpp::UnownedFdioCaller& cal
     // driver and waiting for it to appear.
     auto resp =
         fidl::WireCall<fuchsia_device::Controller>(zx::unowned_channel(caller.borrow_channel()))
-            .Bind(::fidl::StringView::FromExternal(kDriverLib));
+            ->Bind(::fidl::StringView::FromExternal(kDriverLib));
     rc = resp.status();
     if (rc == ZX_OK) {
       if (resp->result.is_err()) {
@@ -387,7 +387,7 @@ zx_status_t VolumeManager::RelativeTopologicalPath(fdio_cpp::UnownedFdioCaller& 
   size_t path_len;
   auto resp =
       fidl::WireCall<fuchsia_device::Controller>(zx::unowned_channel(caller.borrow_channel()))
-          .GetTopologicalPath();
+          ->GetTopologicalPath();
   rc = resp.status();
   if (rc == ZX_OK) {
     if (resp->result.is_err()) {

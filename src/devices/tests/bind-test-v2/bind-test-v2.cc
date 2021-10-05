@@ -63,7 +63,7 @@ class BindCompilerV2Test : public testing::Test {
 
     // Bind the test driver to the new device.
     auto response =
-        fidl::WireCall(endpoints->client).Bind(::fidl::StringView::FromExternal(kDriverLibname));
+        fidl::WireCall(endpoints->client)->Bind(::fidl::StringView::FromExternal(kDriverLibname));
     status = response.status();
     if (status == ZX_OK) {
       if (response->result.is_err()) {

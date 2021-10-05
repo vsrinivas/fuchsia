@@ -184,7 +184,7 @@ class FakeDdkSysmem : public zxtest::Test {
     fidl::WireResult result =
         fidl::WireCall(
             fidl::UnownedClientEnd<fuchsia_sysmem::DriverConnector>(zx::unowned(ddk_.FidlClient())))
-            .Connect(std::move(allocator_server_end));
+            ->Connect(std::move(allocator_server_end));
     EXPECT_OK(result);
     return std::move(allocator_client_end);
   }

@@ -16,6 +16,12 @@
 
 #endif  // __Fuchsia__
 
+// # Wire messaging layer
+//
+// This header contains forward definitions that support sending and receiving
+// wire domain objects over Zircon channels for IPC. The code generator should
+// populate the implementation by generating template specializations for each
+// class over FIDL method/protocol markers.
 namespace fidl {
 
 template <typename FidlMethod>
@@ -80,11 +86,12 @@ class WireWeakEventSender;
 template <typename FidlProtocol>
 class WireClientImpl;
 
+// |WireSyncClientImpl| implements synchronous FIDL calls with managed buffers.
 template <typename FidlProtocol>
-class WireEventHandlerInterface;
+class WireSyncClientImpl;
 
 template <typename FidlProtocol>
-class WireCaller;
+class WireEventHandlerInterface;
 
 template <typename FidlProtocol>
 struct WireServerDispatcher;
@@ -111,25 +118,6 @@ template <typename FidlMethod>
 using WireCompleter = typename fidl::internal::WireMethodTypes<FidlMethod>::Completer;
 
 }  // namespace internal
-
-// |WireCall| is used to make method calls directly on a |fidl::ClientEnd|
-// without having to set up a client. Call it like:
-//
-//     fidl::WireCall(client_end).Method(args...);
-template <typename FidlProtocol>
-fidl::internal::WireCaller<FidlProtocol> WireCall(const fidl::ClientEnd<FidlProtocol>& client_end) {
-  return fidl::internal::WireCaller<FidlProtocol>(client_end.borrow());
-}
-
-// |WireCall| is used to make method calls directly on a |fidl::ClientEnd|
-// without having to set up a client. Call it like:
-//
-//     fidl::WireCall(client_end).Method(args...);
-template <typename FidlProtocol>
-fidl::internal::WireCaller<FidlProtocol> WireCall(
-    const fidl::UnownedClientEnd<FidlProtocol>& client_end) {
-  return fidl::internal::WireCaller<FidlProtocol>(client_end);
-}
 
 enum class DispatchResult;
 

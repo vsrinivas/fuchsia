@@ -28,8 +28,8 @@ void OpenHelper(const zx::channel& directory, const char* path, zx::channel* res
   zx::channel client, server;
   ASSERT_OK(zx::channel::create(0, &client, &server));
   auto result = fidl::WireCall<fio::Directory>(zx::unowned_channel(directory))
-                    .Open(fio::wire::kOpenRightReadable | fio::wire::kOpenFlagDescribe, 0,
-                          fidl::StringView::FromExternal(path), std::move(server));
+                    ->Open(fio::wire::kOpenRightReadable | fio::wire::kOpenFlagDescribe, 0,
+                           fidl::StringView::FromExternal(path), std::move(server));
   ASSERT_EQ(result.status(), ZX_OK);
   zx_signals_t pending;
   ASSERT_EQ(
@@ -151,7 +151,7 @@ TEST(FidlTestCase, Basic) {
     zx::channel client, server;
     ASSERT_OK(zx::channel::create(0, &client, &server));
     ASSERT_OK(fdio_service_connect("/dev/class", server.release()));
-    auto result = fidl::WireCall<fio::File>(zx::unowned_channel(client)).Describe();
+    auto result = fidl::WireCall<fio::File>(zx::unowned_channel(client))->Describe();
     ASSERT_OK(result.status());
     ASSERT_TRUE(result->info.is_directory());
   }
@@ -160,7 +160,7 @@ TEST(FidlTestCase, Basic) {
     zx::channel client, server;
     ASSERT_OK(zx::channel::create(0, &client, &server));
     ASSERT_OK(fdio_service_connect("/dev/zero", server.release()));
-    auto result = fidl::WireCall<fio::File>(zx::unowned_channel(client)).Describe();
+    auto result = fidl::WireCall<fio::File>(zx::unowned_channel(client))->Describe();
     auto info = std::move(result->info);
     ASSERT_TRUE(info.is_device());
     ASSERT_NE(info.device().event, ZX_HANDLE_INVALID);
@@ -220,7 +220,7 @@ TEST(FidlTestCase, DirectoryWatcherExisting) {
   ASSERT_OK(fdio_service_connect("/dev/class", request.release()));
 
   auto result = fidl::WireCall<fio::Directory>(zx::unowned_channel(h))
-                    .Watch(fio::wire::kWatchMaskAll, 0, std::move(remote_watcher));
+                    ->Watch(fio::wire::kWatchMaskAll, 0, std::move(remote_watcher));
   ASSERT_EQ(result.status(), ZX_OK);
   ASSERT_OK(result->s);
 
@@ -254,7 +254,7 @@ TEST(FidlTestCase, DirectoryWatcherWithClosedHalf) {
 
   {
     auto result = fidl::WireCall<fio::Directory>(zx::unowned_channel(h))
-                      .Watch(fio::wire::kWatchMaskAll, 0, std::move(remote_watcher));
+                      ->Watch(fio::wire::kWatchMaskAll, 0, std::move(remote_watcher));
     ASSERT_EQ(result.status(), ZX_OK);
     ASSERT_OK(result->s);
     // If we're here and usermode didn't crash, we didn't hit the bug.
@@ -264,7 +264,7 @@ TEST(FidlTestCase, DirectoryWatcherWithClosedHalf) {
     // Create a new watcher, and see if it's functional at all
     ASSERT_OK(zx::channel::create(0, &watcher, &remote_watcher));
     auto result = fidl::WireCall<fio::Directory>(zx::unowned_channel(h))
-                      .Watch(fio::wire::kWatchMaskAll, 0, std::move(remote_watcher));
+                      ->Watch(fio::wire::kWatchMaskAll, 0, std::move(remote_watcher));
     ASSERT_EQ(result.status(), ZX_OK);
     ASSERT_OK(result->s);
   }

@@ -134,7 +134,7 @@ zx::status<fidl::ClientEnd<partition::Partition>> OpenBlockPartition(
 
   auto cb = [&](const zx::channel& chan) {
     if (type_guid) {
-      auto result = fidl::WireCall<partition::Partition>(zx::unowned(chan)).GetTypeGuid();
+      auto result = fidl::WireCall<partition::Partition>(zx::unowned(chan))->GetTypeGuid();
       if (!result.ok()) {
         return true;
       }
@@ -144,7 +144,7 @@ zx::status<fidl::ClientEnd<partition::Partition>> OpenBlockPartition(
       }
     }
     if (unique_guid) {
-      auto result = fidl::WireCall<partition::Partition>(zx::unowned(chan)).GetInstanceGuid();
+      auto result = fidl::WireCall<partition::Partition>(zx::unowned(chan))->GetInstanceGuid();
       if (!result.ok()) {
         return true;
       }
@@ -164,7 +164,7 @@ constexpr char kSkipBlockDevPath[] = "class/skip-block/";
 zx::status<fidl::ClientEnd<skipblock::SkipBlock>> OpenSkipBlockPartition(
     const fbl::unique_fd& devfs_root, const Uuid& type_guid, zx_duration_t timeout) {
   auto cb = [&](const zx::channel& chan) {
-    auto result = fidl::WireCall<skipblock::SkipBlock>(zx::unowned(chan)).GetPartitionInfo();
+    auto result = fidl::WireCall<skipblock::SkipBlock>(zx::unowned(chan))->GetPartitionInfo();
     if (!result.ok()) {
       return true;
     }
@@ -245,7 +245,7 @@ zx::status<> IsBoard(const fbl::unique_fd& devfs_root, std::string_view board_na
     return status.take_error();
   }
 
-  auto result = fidl::WireCall<fuchsia_sysinfo::SysInfo>(zx::unowned(local)).GetBoardName();
+  auto result = fidl::WireCall<fuchsia_sysinfo::SysInfo>(zx::unowned(local))->GetBoardName();
   status = zx::make_status(result.ok() ? result->status : result.status());
   if (status.is_error()) {
     return status.take_error();
@@ -271,7 +271,7 @@ zx::status<> IsBootloader(const fbl::unique_fd& devfs_root, std::string_view ven
     return status.take_error();
   }
 
-  auto result = fidl::WireCall<fuchsia_sysinfo::SysInfo>(zx::unowned(local)).GetBootloaderVendor();
+  auto result = fidl::WireCall<fuchsia_sysinfo::SysInfo>(zx::unowned(local))->GetBootloaderVendor();
   status = zx::make_status(result.ok() ? result->status : result.status());
   if (status.is_error()) {
     return status.take_error();

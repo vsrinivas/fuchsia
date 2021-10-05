@@ -50,7 +50,7 @@ class TestDeviceBase {
   // requires sandbox access to /dev/sys.
   fidl::ClientEnd<fuchsia_device::Controller> GetParentDevice() {
     char path[fuchsia_device::wire::kMaxDevicePathLen + 1];
-    auto res = fidl::WireCall<fuchsia_device::Controller>(device_controller_).GetTopologicalPath();
+    auto res = fidl::WireCall<fuchsia_device::Controller>(device_controller_)->GetTopologicalPath();
 
     EXPECT_EQ(ZX_OK, res.status());
     EXPECT_TRUE(res->result.is_response());
@@ -70,7 +70,7 @@ class TestDeviceBase {
   }
 
   void ShutdownDevice() {
-    auto res = fidl::WireCall<fuchsia_device::Controller>(device_controller_).ScheduleUnbind();
+    auto res = fidl::WireCall<fuchsia_device::Controller>(device_controller_)->ScheduleUnbind();
     EXPECT_EQ(ZX_OK, res.status());
     EXPECT_TRUE(res->result.is_response());
   }
@@ -91,7 +91,7 @@ class TestDeviceBase {
       // Don't use rebind because we need the recreate delay above. Also, the parent device may have
       // other children that shouldn't be unbound.
       auto res = fidl::WireCall<fuchsia_device::Controller>(parent_device)
-                     .Bind(fidl::StringView::FromExternal(path));
+                     ->Bind(fidl::StringView::FromExternal(path));
       ASSERT_EQ(ZX_OK, res.status());
       if (res->result.is_err() && res->result.err() == ZX_ERR_ALREADY_BOUND) {
         zx::nanosleep(zx::deadline_after(zx::msec(10)));

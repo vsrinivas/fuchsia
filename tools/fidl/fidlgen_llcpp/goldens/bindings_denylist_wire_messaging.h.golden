@@ -579,41 +579,33 @@ class ::fidl::WireUnownedResult<
 // |fidl::ClientEnd<::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps>|,
 // avoiding setting up a client.
 template <>
-class ::fidl::internal::WireCaller<
+class ::fidl::internal::WireSyncClientImpl<
     ::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps>
-    final {
+    final : public ::fidl::internal::SyncEndpointVeneer<
+                ::fidl::internal::WireSyncClientImpl<
+                    ::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps>> {
  public:
-  explicit WireCaller(::fidl::UnownedClientEnd<
-                      ::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps>
-                          client_end)
-      : client_end_(client_end) {}
-
-  // Allocates 32 bytes of message buffer on the stack. No heap allocation
-  // necessary.
-  static ::fidl::WireResult<::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps::
-                                LibfuzzerNeedsNonemptyProtocol>
-  LibfuzzerNeedsNonemptyProtocol(
-      ::fidl::UnownedClientEnd<
-          ::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps>
-          _client_end) {
-    return ::fidl::WireResult<
-        ::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps::
-            LibfuzzerNeedsNonemptyProtocol>(_client_end);
-  }
+  using ::fidl::internal::SyncEndpointVeneer<
+      ::fidl::internal::WireSyncClientImpl<
+          ::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps>>::
+      SyncEndpointVeneer;
 
   // Allocates 32 bytes of message buffer on the stack. No heap allocation
   // necessary.
   ::fidl::WireResult<::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps::
                          LibfuzzerNeedsNonemptyProtocol>
-  LibfuzzerNeedsNonemptyProtocol() && {
+  LibfuzzerNeedsNonemptyProtocol() {
     return ::fidl::WireResult<
         ::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps::
-            LibfuzzerNeedsNonemptyProtocol>(client_end_);
+            LibfuzzerNeedsNonemptyProtocol>(_client_end());
   }
 
  private:
   ::fidl::UnownedClientEnd<::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps>
-      client_end_;
+  _client_end() const {
+    return ::fidl::UnownedClientEnd<
+        ::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps>(_channel());
+  }
 };
 template <>
 class ::fidl::internal::WireEventHandlerInterface<
@@ -792,17 +784,22 @@ struct ::fidl::internal::WireServerDispatcher<
 // |fidl::ClientEnd<::fidl_test_bindingsdenylist::OnlyCppAndDeps>|, avoiding
 // setting up a client.
 template <>
-class ::fidl::internal::WireCaller<::fidl_test_bindingsdenylist::OnlyCppAndDeps>
-    final {
+class ::fidl::internal::WireSyncClientImpl<
+    ::fidl_test_bindingsdenylist::OnlyCppAndDeps>
+    final : public ::fidl::internal::SyncEndpointVeneer<
+                ::fidl::internal::WireSyncClientImpl<
+                    ::fidl_test_bindingsdenylist::OnlyCppAndDeps>> {
  public:
-  explicit WireCaller(
-      ::fidl::UnownedClientEnd<::fidl_test_bindingsdenylist::OnlyCppAndDeps>
-          client_end)
-      : client_end_(client_end) {}
+  using ::fidl::internal::SyncEndpointVeneer<
+      ::fidl::internal::WireSyncClientImpl<
+          ::fidl_test_bindingsdenylist::OnlyCppAndDeps>>::SyncEndpointVeneer;
 
  private:
   ::fidl::UnownedClientEnd<::fidl_test_bindingsdenylist::OnlyCppAndDeps>
-      client_end_;
+  _client_end() const {
+    return ::fidl::UnownedClientEnd<
+        ::fidl_test_bindingsdenylist::OnlyCppAndDeps>(_channel());
+  }
 };
 template <>
 class ::fidl::internal::WireEventHandlerInterface<

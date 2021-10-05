@@ -25,8 +25,8 @@ TEST(UnsafeTest, BorrowChannel) {
   auto endpoints = fidl::CreateEndpoints<fuchsia_io::Node>();
   ASSERT_OK(endpoints.status_value());
 
-  auto result = fidl::WireCall(dir).Clone(fuchsia_io::wire::kCloneFlagSameRights,
-                                          std::move(endpoints->server));
+  auto result = fidl::WireCall(dir)->Clone(fuchsia_io::wire::kCloneFlagSameRights,
+                                           std::move(endpoints->server));
   ASSERT_OK(result.status());
 
   fdio_unsafe_release(io);

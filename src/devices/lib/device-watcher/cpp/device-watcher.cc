@@ -28,7 +28,7 @@ zx_status_t DirWatcher::Create(fbl::unique_fd dir_fd,
   }
   fdio_cpp::FdioCaller caller(std::move(dir_fd));
   auto result = fidl::WireCall(fidl::UnownedClientEnd<fio::Directory>(caller.borrow_channel()))
-                    .Watch(fio::wire::kWatchMaskRemoved, 0, zx::channel(server.release()));
+                    ->Watch(fio::wire::kWatchMaskRemoved, 0, zx::channel(server.release()));
   if (!result.ok()) {
     return result.status();
   }

@@ -38,7 +38,7 @@ zx_status_t GetTopologicalPath(int fd, std::string* out) {
   fdio_cpp::UnownedFdioCaller connection(fd);
   auto resp = fidl::WireCall(
                   ::fidl::UnownedClientEnd<fuchsia_device::Controller>(connection.borrow_channel()))
-                  .GetTopologicalPath();
+                  ->GetTopologicalPath();
   zx_status_t status = resp.status();
   if (status != ZX_OK) {
     return status;

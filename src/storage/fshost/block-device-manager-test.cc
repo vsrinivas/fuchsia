@@ -161,14 +161,14 @@ TEST_F(BlockDeviceManagerIntegration, MaxSize) {
   // Query the minfs partition instance guid. This is needed to query the limit later on.
   fdio_cpp::UnownedFdioCaller partition_caller(partition_fd.get());
   namespace volume = fuchsia_hardware_block_volume;
-  auto guid_result = fidl::WireCall<volume::Volume>(partition_caller.channel()).GetInstanceGuid();
+  auto guid_result = fidl::WireCall<volume::Volume>(partition_caller.channel())->GetInstanceGuid();
   ASSERT_EQ(ZX_OK, guid_result.status());
   ASSERT_EQ(ZX_OK, guid_result->status);
 
   // Query the partition limit for the minfs partition.
   fdio_cpp::UnownedFdioCaller fvm_caller(fvm_fd.get());
   auto limit_result = fidl::WireCall<volume::VolumeManager>(fvm_caller.channel())
-                          .GetPartitionLimit(*guid_result->guid);
+                          ->GetPartitionLimit(*guid_result->guid);
   ASSERT_EQ(ZX_OK, limit_result.status());
   ASSERT_EQ(ZX_OK, limit_result->status);
 

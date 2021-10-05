@@ -102,7 +102,7 @@ class FakePaver : public fidl::WireServer<fuchsia_paver::Paver>,
                       UseBlockDeviceCompleter::Sync& _completer) override {
     auto result = fidl::WireCall(fidl::UnownedClientEnd<fuchsia_device::Controller>(
                                      request->block_device.borrow().channel()))
-                      .GetTopologicalPath();
+                      ->GetTopologicalPath();
     if (!result.ok() || result->result.is_err()) {
       return;
     }

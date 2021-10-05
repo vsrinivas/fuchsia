@@ -71,7 +71,7 @@ zx::status<vc_t*> SessionManager::CreateSession(fidl::ServerEnd<fpty::Device> se
     return client_end.take_error();
   }
 
-  auto result = fidl::WireCall(client_end->borrow()).OpenClient(0, std::move(session));
+  auto result = fidl::WireCall(client_end->borrow())->OpenClient(0, std::move(session));
   if (result.status() != ZX_OK) {
     return zx::error(result.status());
   }

@@ -142,7 +142,7 @@ int Paver::StreamBuffer() {
 
   // Blocks until paving is complete.
   fidl::WireResult res2 =
-      fidl::WireCall(data_sink->client).WriteVolumes(std::move(payload_stream->client));
+      fidl::WireCall(data_sink->client)->WriteVolumes(std::move(payload_stream->client));
   zx_status_t status = res2.ok() ? res2.value().status : res2.status();
 
   exit_code_.store(status);

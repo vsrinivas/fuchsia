@@ -410,7 +410,7 @@ zx_status_t PlatformBus::DdkGetProtocol(uint32_t proto_id, void* out) {
 
 zx_status_t PlatformBus::GetBootItem(uint32_t type, uint32_t extra, zx::vmo* vmo,
                                      uint32_t* length) {
-  auto result = fidl::WireCall<fuchsia_boot::Items>(zx::unowned(items_svc_)).Get(type, extra);
+  auto result = fidl::WireCall<fuchsia_boot::Items>(zx::unowned(items_svc_))->Get(type, extra);
   if (result.ok()) {
     *vmo = std::move(result->payload);
     *length = result->length;

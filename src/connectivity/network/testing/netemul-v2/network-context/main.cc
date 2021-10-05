@@ -46,8 +46,8 @@ int main(int argc, const char** argv) {
     });
 
     zx_status_t status = fidl::WireCall(devfs_root.directory())
-                             .Clone(fuchsia_io::wire::kCloneFlagSameRights,
-                                    fidl::ServerEnd<fuchsia_io::Node>(std::move(req)))
+                             ->Clone(fuchsia_io::wire::kCloneFlagSameRights,
+                                     fidl::ServerEnd<fuchsia_io::Node>(std::move(req)))
                              .status();
     if (status != ZX_OK) {
       FX_LOGS(ERROR) << "failed to connect request to /dev: " << zx_status_get_string(status);

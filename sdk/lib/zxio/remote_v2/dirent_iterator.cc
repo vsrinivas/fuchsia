@@ -32,7 +32,7 @@ class DirentIteratorImpl {
     RemoteV2 dir(directory);
     auto status =
         fidl::WireCall(fidl::UnownedClientEnd<fio2::Directory>(dir.control()))
-            .Enumerate(fio2::wire::DirectoryEnumerateOptions(), std::move(iterator_ends->server))
+            ->Enumerate(fio2::wire::DirectoryEnumerateOptions(), std::move(iterator_ends->server))
             .status();
     if (status != ZX_OK) {
       return status;

@@ -23,7 +23,7 @@ const char* kDriverLib = "/boot/driver/block-verity.so";
 zx_status_t BindVerityDriver(zx::unowned_channel block_dev_chan) {
   zx_status_t rc;
   auto resp = fidl::WireCall<fuchsia_device::Controller>(std::move(block_dev_chan))
-                  .Bind(::fidl::StringView::FromExternal(kDriverLib));
+                  ->Bind(::fidl::StringView::FromExternal(kDriverLib));
   rc = resp.status();
   if (rc == ZX_OK) {
     if (resp->result.is_err()) {
@@ -40,8 +40,8 @@ zx_status_t RelativeTopologicalPath(zx::unowned_channel channel, fbl::String* ou
   fbl::StringBuffer<PATH_MAX> path;
   path.Resize(path.capacity());
   size_t path_len;
-  auto resp =
-      fidl::WireCall<fuchsia_device::Controller>(zx::unowned_channel(channel)).GetTopologicalPath();
+  auto resp = fidl::WireCall<fuchsia_device::Controller>(zx::unowned_channel(channel))
+                  ->GetTopologicalPath();
   rc = resp.status();
   if (rc == ZX_OK) {
     if (resp->result.is_err()) {
@@ -154,7 +154,7 @@ zx_status_t VerifiedVolumeClient::OpenForAuthoring(const zx::duration& timeout,
   // Request the device be opened for writes
   auto open_resp = fidl::WireCall<fuchsia_hardware_block_verified::DeviceManager>(
                        zx::unowned_channel(verity_chan_))
-                       .OpenForWrite(std::move(config));
+                       ->OpenForWrite(std::move(config));
   if (open_resp.status() != ZX_OK) {
     return open_resp.status();
   }
@@ -202,7 +202,7 @@ zx_status_t VerifiedVolumeClient::Close() {
   // Close the device cleanly
   auto close_resp = fidl::WireCall<fuchsia_hardware_block_verified::DeviceManager>(
                         zx::unowned_channel(verity_chan_))
-                        .Close();
+                        ->Close();
   if (close_resp.status() != ZX_OK) {
     return close_resp.status();
   }
@@ -224,7 +224,7 @@ zx_status_t VerifiedVolumeClient::CloseAndGenerateSeal(
   // function returns.
   auto seal_resp = fidl::WireCall<fuchsia_hardware_block_verified::DeviceManager>(
                        zx::unowned_channel(verity_chan_))
-                       .CloseAndGenerateSeal(seal_response_buffer->view());
+                       ->CloseAndGenerateSeal(seal_response_buffer->view());
   if (seal_resp.status() != ZX_OK) {
     return seal_resp.status();
   }
@@ -255,7 +255,7 @@ zx_status_t VerifiedVolumeClient::OpenForVerifiedRead(const digest::Digest& expe
   // Request the device be opened for verified read
   auto open_resp = fidl::WireCall<fuchsia_hardware_block_verified::DeviceManager>(
                        zx::unowned_channel(verity_chan_))
-                       .OpenForVerifiedRead(std::move(config), std::move(seal_to_send));
+                       ->OpenForVerifiedRead(std::move(config), std::move(seal_to_send));
   if (open_resp.status() != ZX_OK) {
     return open_resp.status();
   }

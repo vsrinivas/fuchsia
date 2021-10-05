@@ -244,7 +244,7 @@ class Result {
   // This is meant be used by subclasses to accommodate a usage style that is
   // similar to |fitx::result| types:
   //
-  //   fidl::WireResult bar = fidl::WireCall(foo_client_end).GetBar();
+  //   fidl::WireResult bar = fidl::WireCall(foo_client_end)->GetBar();
   //   if (!bar.ok()) {
   //     FX_LOGS(ERROR) << "GetBar failed: " << bar.error();
   //   }

@@ -121,7 +121,7 @@ class NetDeviceTest : public gtest::RealLoopFixture {
       return port_endpoints.take_error();
     }
     fidl::WireResult result =
-        fidl::WireCall(client).AddPort(std::move(config), std::move(port_endpoints->server));
+        fidl::WireCall(client)->AddPort(std::move(config), std::move(port_endpoints->server));
     if (result.status() != ZX_OK) {
       return zx::error(result.status());
     }

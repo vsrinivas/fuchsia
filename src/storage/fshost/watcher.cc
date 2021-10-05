@@ -65,7 +65,8 @@ zx_status_t Watcher::ReinitWatcher() {
   if (ignore_existing_) {
     mask &= ~fio::wire::kWatchMaskExisting;
   }
-  auto result = fidl::WireCall<fio::Directory>(caller_.channel()).Watch(mask, 0, std::move(server));
+  auto result =
+      fidl::WireCall<fio::Directory>(caller_.channel())->Watch(mask, 0, std::move(server));
   if (!result.ok()) {
     FX_LOGS(ERROR) << "failed to send watch: " << result.error();
     return result.status();

@@ -75,7 +75,7 @@ static void populate_topo_path(fidl::UnownedClientEnd<fuchsia_device::Controller
                                blkinfo_t* info) {
   size_t path_len;
 
-  auto resp = fidl::WireCall(client).GetTopologicalPath();
+  auto resp = fidl::WireCall(client)->GetTopologicalPath();
 
   if (resp.status() != ZX_OK || resp->result.is_err()) {
     strcpy(info->topo, "UNKNOWN");
@@ -118,7 +118,7 @@ static int cmd_list_blk(void) {
 
     fuchsia_block::wire::BlockInfo block_info;
 
-    auto info_resp = fidl::WireCall(caller.borrow_as<fuchsia_block::Block>()).GetInfo();
+    auto info_resp = fidl::WireCall(caller.borrow_as<fuchsia_block::Block>())->GetInfo();
 
     if (info_resp.ok() && info_resp->status == ZX_OK && info_resp->info) {
       block_info = *info_resp->info;
@@ -127,12 +127,13 @@ static int cmd_list_blk(void) {
     }
 
     std::string type;
-    auto guid_resp = fidl::WireCall(caller.borrow_as<fuchsia_partition::Partition>()).GetTypeGuid();
+    auto guid_resp =
+        fidl::WireCall(caller.borrow_as<fuchsia_partition::Partition>())->GetTypeGuid();
     if (guid_resp.ok() && guid_resp->status == ZX_OK && guid_resp->guid) {
       type = gpt::KnownGuid::TypeDescription(guid_resp->guid->value.data());
     }
 
-    auto name_resp = fidl::WireCall(caller.borrow_as<fuchsia_partition::Partition>()).GetName();
+    auto name_resp = fidl::WireCall(caller.borrow_as<fuchsia_partition::Partition>())->GetName();
     if (name_resp.ok() && name_resp->status == ZX_OK) {
       size_t truncated_name_len = name_resp->name.size() <= sizeof(info.label) - 1
                                       ? name_resp->name.size()
@@ -183,7 +184,7 @@ static int cmd_list_skip_blk(void) {
 
     std::string type;
     auto result =
-        fidl::WireCall(caller.borrow_as<fuchsia_skipblock::SkipBlock>()).GetPartitionInfo();
+        fidl::WireCall(caller.borrow_as<fuchsia_skipblock::SkipBlock>())->GetPartitionInfo();
     if (result.ok() && result->status == ZX_OK) {
       size_to_cstring(
           info.sizestr, sizeof(info.sizestr),
@@ -203,7 +204,8 @@ static int try_read_skip_blk(const fdio_cpp::UnownedFdioCaller& caller, off_t of
   // check that count and offset are aligned to block size
   uint64_t blksize;
   zx_status_t status;
-  auto result = fidl::WireCall(caller.borrow_as<fuchsia_skipblock::SkipBlock>()).GetPartitionInfo();
+  auto result =
+      fidl::WireCall(caller.borrow_as<fuchsia_skipblock::SkipBlock>())->GetPartitionInfo();
   if (result.status() != ZX_OK) {
     return result.status();
   }
@@ -241,7 +243,7 @@ static int try_read_skip_blk(const fdio_cpp::UnownedFdioCaller& caller, off_t of
 
   // read the data
   auto read_result = fidl::WireCall(caller.borrow_as<fuchsia_skipblock::SkipBlock>())
-                         .Read(fuchsia_skipblock::wire::ReadWriteOperation{
+                         ->Read(fuchsia_skipblock::wire::ReadWriteOperation{
                              .vmo = std::move(dup),
                              .vmo_offset = 0,
                              .block = static_cast<uint32_t>(offset / blksize),
@@ -324,7 +326,7 @@ static int cmd_stats(const char* dev, bool clear) {
     return -1;
   }
   fdio_cpp::FdioCaller caller(std::move(fd));
-  auto result = fidl::WireCall(caller.borrow_as<fuchsia_block::Block>()).GetStats(clear);
+  auto result = fidl::WireCall(caller.borrow_as<fuchsia_block::Block>())->GetStats(clear);
   if (!result.ok() || result->status != ZX_OK) {
     fprintf(stderr, "Error getting stats for %s\n", dev);
     return -1;

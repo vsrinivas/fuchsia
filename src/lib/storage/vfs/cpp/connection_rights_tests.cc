@@ -95,8 +95,8 @@ TEST(ConnectionRightsTest, RightsBehaveAsExpected) {
 
       // Call FileGetBuffer on the channel with the testcase's request flags. Check that we get the
       // expected result.
-      auto result =
-          fidl::WireCall<fio::File>(zx::unowned_channel(client.get())).GetBuffer(row.request_flags);
+      auto result = fidl::WireCall<fio::File>(zx::unowned_channel(client.get()))
+                        ->GetBuffer(row.request_flags);
       EXPECT_EQ(result.status(), ZX_OK);
 
       // Verify that the result matches the value in our test table.

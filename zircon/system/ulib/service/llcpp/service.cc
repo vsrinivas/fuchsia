@@ -102,8 +102,8 @@ namespace internal {
   constexpr uint32_t flags =
       fuchsia_io::wire::kOpenRightReadable | fuchsia_io::wire::kOpenRightWritable;
   fidl::WireResult<fuchsia_io::Directory::Open> result =
-      fidl::WireCall<fuchsia_io::Directory>(dir).Open(flags, uint32_t(0755), std::move(path),
-                                                      std::move(remote));
+      fidl::WireCall<fuchsia_io::Directory>(dir)->Open(flags, uint32_t(0755), path,
+                                                       std::move(remote));
   return ::zx::make_status(result.status());
 }
 

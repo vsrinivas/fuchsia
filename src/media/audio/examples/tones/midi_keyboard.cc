@@ -44,7 +44,7 @@ std::unique_ptr<MidiKeyboard> MidiKeyboard::Create(Tones* owner) {
     }
     fidl::ClientEnd<fuchsia_hardware_midi::Device> client(std::move(result.value()));
 
-    auto info_result = fidl::WireCall(client).GetInfo();
+    auto info_result = fidl::WireCall(client)->GetInfo();
     if (info_result.status() != ZX_OK) {
       FX_LOGS(WARNING) << "fuchsia.hardware.midi.Device/GetInfo failed for \"" << devname << "\"";
       return nullptr;

@@ -89,7 +89,7 @@ static zx_status_t open_client(const fbl::unique_fd& fd, uint32_t client_id, int
   }
 
   auto result = fidl::WireCall(io.borrow_as<fpty::Device>())
-                    .OpenClient(client_id, std::move(endpoints->server));
+                    ->OpenClient(client_id, std::move(endpoints->server));
 
   if (result.status() != ZX_OK) {
     return result.status();
@@ -173,7 +173,7 @@ TEST(PtyTests, pty_test) {
   ASSERT_SIGNALS(fd_signals(pc, POLLOUT, zx::time{}), POLLOUT);
 
   // verify no events pending
-  auto result1 = fidl::WireCall(pc_io.borrow_as<fpty::Device>()).ReadEvents();
+  auto result1 = fidl::WireCall(pc_io.borrow_as<fpty::Device>())->ReadEvents();
 
   ASSERT_OK(result1.status());
   ASSERT_OK(result1->status);
@@ -183,13 +183,13 @@ TEST(PtyTests, pty_test) {
   ASSERT_EQ(write(ps.get(), "\x03", 1), 1, "%s", strerror(errno));
 
   // should be an event now
-  auto result2 = fidl::WireCall(pc_io.borrow_as<fpty::Device>()).ReadEvents();
+  auto result2 = fidl::WireCall(pc_io.borrow_as<fpty::Device>())->ReadEvents();
   ASSERT_OK(result2.status());
   ASSERT_OK(result2->status);
   ASSERT_EQ(result2->events, fpty::wire::kEventInterrupt);
 
   // should vanish once we read it
-  auto result3 = fidl::WireCall(pc_io.borrow_as<fpty::Device>()).ReadEvents();
+  auto result3 = fidl::WireCall(pc_io.borrow_as<fpty::Device>())->ReadEvents();
   ASSERT_OK(result3.status());
   ASSERT_OK(result3->status);
   ASSERT_EQ(result3->events, 0u);
@@ -200,12 +200,12 @@ TEST(PtyTests, pty_test) {
   ASSERT_EQ(write(ps.get(), "hello\x03world", 11), 6, "%s", strerror(errno));
   ASSERT_EQ(read(pc.get(), tmp, 6), 5, "%s", strerror(errno));
   ASSERT_SUBSTR(tmp, "hello");
-  auto result4 = fidl::WireCall(pc_io.borrow_as<fpty::Device>()).ReadEvents();
+  auto result4 = fidl::WireCall(pc_io.borrow_as<fpty::Device>())->ReadEvents();
   ASSERT_OK(result4.status());
   ASSERT_OK(result4->status);
   ASSERT_EQ(result4->events, fpty::wire::kEventInterrupt);
 
-  auto ws_result1 = fidl::WireCall(pc_io.borrow_as<fpty::Device>()).GetWindowSize();
+  auto ws_result1 = fidl::WireCall(pc_io.borrow_as<fpty::Device>())->GetWindowSize();
   ASSERT_OK(ws_result1.status());
   ASSERT_OK(ws_result1->status);
   ASSERT_EQ(ws_result1->size.width, 0u, "%s", strerror(errno));
@@ -214,10 +214,10 @@ TEST(PtyTests, pty_test) {
   fpty::wire::WindowSize ws;
   ws.width = 80;
   ws.height = 25;
-  auto result5 = fidl::WireCall(pc_io.borrow_as<fpty::Device>()).SetWindowSize(ws);
+  auto result5 = fidl::WireCall(pc_io.borrow_as<fpty::Device>())->SetWindowSize(ws);
   ASSERT_OK(result5.status());
   ASSERT_OK(result5->status);
-  auto ws_result2 = fidl::WireCall(pc_io.borrow_as<fpty::Device>()).GetWindowSize();
+  auto ws_result2 = fidl::WireCall(pc_io.borrow_as<fpty::Device>())->GetWindowSize();
   ASSERT_OK(ws_result2.status());
   ASSERT_OK(ws_result2->status);
   ASSERT_EQ(ws_result2->size.width, 80u, "%s", strerror(errno));
@@ -225,14 +225,14 @@ TEST(PtyTests, pty_test) {
 
   // verify that we don't get events for special chars in raw mode
   auto result6 =
-      fidl::WireCall(pc_io.borrow_as<fpty::Device>()).ClrSetFeature(0, fpty::wire::kFeatureRaw);
+      fidl::WireCall(pc_io.borrow_as<fpty::Device>())->ClrSetFeature(0, fpty::wire::kFeatureRaw);
   ASSERT_OK(result6.status());
   ASSERT_OK(result6->status);
   ASSERT_EQ(result6->features & fpty::wire::kFeatureRaw, fpty::wire::kFeatureRaw);
   ASSERT_EQ(write(ps.get(), "\x03", 1), 1, "%s", strerror(errno));
   ASSERT_EQ(read(pc.get(), tmp, 1), 1, "%s", strerror(errno));
   ASSERT_EQ(tmp[0], '\x03', "%s", strerror(errno));
-  auto result7 = fidl::WireCall(pc_io.borrow_as<fpty::Device>()).ReadEvents();
+  auto result7 = fidl::WireCall(pc_io.borrow_as<fpty::Device>())->ReadEvents();
   ASSERT_OK(result7.status());
   ASSERT_OK(result7->status);
   ASSERT_EQ(result7->events, 0u);
@@ -252,18 +252,18 @@ TEST(PtyTests, pty_test) {
   ASSERT_EQ(errno, EAGAIN, "%s", strerror(errno));
 
   uint32_t n = 2;
-  auto result8 = fidl::WireCall(pc_io.borrow_as<fpty::Device>()).MakeActive(n);
+  auto result8 = fidl::WireCall(pc_io.borrow_as<fpty::Device>())->MakeActive(n);
   ASSERT_EQ(result8.status(), ZX_OK);
   ASSERT_STATUS(result8->status, ZX_ERR_NOT_FOUND);
 
   // non-controlling client cannot change active client
-  auto result9 = fidl::WireCall(pc1_io.borrow_as<fpty::Device>()).MakeActive(n);
+  auto result9 = fidl::WireCall(pc1_io.borrow_as<fpty::Device>())->MakeActive(n);
   ASSERT_EQ(result9.status(), ZX_OK);
   ASSERT_STATUS(result9->status, ZX_ERR_ACCESS_DENIED);
 
   // but controlling client can
   n = 1;
-  auto result10 = fidl::WireCall(pc_io.borrow_as<fpty::Device>()).MakeActive(n);
+  auto result10 = fidl::WireCall(pc_io.borrow_as<fpty::Device>())->MakeActive(n);
   ASSERT_OK(result10.status());
   ASSERT_OK(result10->status);
   ASSERT_SIGNALS(fd_signals(pc, 0, zx::time{}), 0);
@@ -276,7 +276,7 @@ TEST(PtyTests, pty_test) {
   pc1_io.reset();
   pc1.reset();
   ASSERT_SIGNALS(fd_signals(pc, POLLHUP | POLLPRI, zx::time::infinite()), POLLHUP | POLLPRI);
-  auto result11 = fidl::WireCall(pc_io.borrow_as<fpty::Device>()).ReadEvents();
+  auto result11 = fidl::WireCall(pc_io.borrow_as<fpty::Device>())->ReadEvents();
   ASSERT_OK(result11.status());
   ASSERT_OK(result11->status);
   ASSERT_EQ(result11->events, fpty::wire::kEventHangup);
@@ -298,7 +298,7 @@ TEST(PtyTests, not_a_pty_test) {
 
   // Sending pty messages such as 'get window size' should fail
   // properly on things that are not ptys.
-  auto result = fidl::WireCall(io.borrow_as<fpty::Device>()).GetWindowSize();
+  auto result = fidl::WireCall(io.borrow_as<fpty::Device>())->GetWindowSize();
   ASSERT_STATUS(result.status(), ZX_ERR_BAD_HANDLE);
 
   io.reset();

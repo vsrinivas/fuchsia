@@ -821,7 +821,7 @@ TEST_F(BlockWatcherTest, TestBlockWatcherAdd) {
 }
 
 TEST_F(BlockWatcherTest, TestBlockWatcherUnmatchedResume) {
-  auto result = fidl::WireCall<fuchsia_fshost::BlockWatcher>(watcher_channel().borrow()).Resume();
+  auto result = fidl::WireCall<fuchsia_fshost::BlockWatcher>(watcher_channel().borrow())->Resume();
   ASSERT_EQ(result.status(), ZX_OK);
   ASSERT_EQ(result->status, ZX_ERR_BAD_STATE);
 }

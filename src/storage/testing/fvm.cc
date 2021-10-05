@@ -23,7 +23,7 @@ constexpr uint8_t kTestUniqueGUID[] = {0xFF, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06,
 
 zx::status<> BindFvm(int fd) {
   fdio_cpp::UnownedFdioCaller caller(fd);
-  auto resp = fidl::WireCall(caller.borrow_as<fuchsia_device::Controller>()).Bind("fvm.so");
+  auto resp = fidl::WireCall(caller.borrow_as<fuchsia_device::Controller>())->Bind("fvm.so");
   auto status = zx::make_status(resp.status());
   if (status.is_ok()) {
     if (resp->result.is_err()) {

@@ -121,7 +121,7 @@ zx_status_t expr_topo(const char* arg, int fd) {
   size_t path_len;
   auto resp = fidl::WireCall<fuchsia_device::Controller>(
                   zx::unowned_channel(fdio_unsafe_borrow_channel(io)))
-                  .GetTopologicalPath();
+                  ->GetTopologicalPath();
   zx_status_t status = resp.status();
 
   if (resp->result.is_err()) {

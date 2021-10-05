@@ -51,7 +51,7 @@ Boards GetBoard() {
     return UNKNOWN_BOARD;
   }
   fdio_cpp::FdioCaller caller_sysinfo(std::move(sysinfo_fd));
-  auto result = fidl::WireCall(caller_sysinfo.borrow_as<sysinfo::SysInfo>()).GetBoardName();
+  auto result = fidl::WireCall(caller_sysinfo.borrow_as<sysinfo::SysInfo>())->GetBoardName();
   if (!result.ok() || result.value().status != ZX_OK) {
     return UNKNOWN_BOARD;
   }

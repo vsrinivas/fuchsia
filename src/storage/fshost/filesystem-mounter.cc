@@ -81,7 +81,7 @@ zx::status<zx::channel> FilesystemMounter::MountFilesystem(
     return zx::error(status);
   }
 
-  auto result = fidl::WireCall(export_root).Describe();
+  auto result = fidl::WireCall(export_root)->Describe();
   if (!result.ok()) {
     return zx::error(result.status());
   }
@@ -92,8 +92,8 @@ zx::status<zx::channel> FilesystemMounter::MountFilesystem(
   }
 
   if (auto resp = fidl::WireCall<fio::Directory>(zx::unowned_channel(export_root.channel()))
-                      .Open(fio::wire::kOpenRightReadable | fio::wire::kOpenFlagPosix, 0,
-                            fidl::StringView("root"), std::move(root_server));
+                      ->Open(fio::wire::kOpenRightReadable | fio::wire::kOpenFlagPosix, 0,
+                             fidl::StringView("root"), std::move(root_server));
       !resp.ok()) {
     return zx::error(resp.status());
   }

@@ -54,7 +54,7 @@ class LifecycleTest : public zxtest::Test {
     ASSERT_OK(endpoints.status_value());
     auto [local, remote] = *std::move(endpoints);
 
-    auto result = fidl::WireCall<TestDevice>(chan_).SubscribeToLifecycle(std::move(remote));
+    auto result = fidl::WireCall<TestDevice>(chan_)->SubscribeToLifecycle(std::move(remote));
     ASSERT_OK(result.status());
     ASSERT_FALSE(result->result.is_err());
     lifecycle_chan_ = std::move(local);
@@ -101,8 +101,8 @@ TEST_F(LifecycleTest, ChildPreRelease) {
   std::vector<uint64_t> child_ids;
   const uint32_t num_children = 10;
   for (unsigned int i = 0; i < num_children; i++) {
-    auto result = fidl::WireCall<TestDevice>(chan_).AddChild(true /* complete_init */,
-                                                             ZX_OK /* init_status */);
+    auto result = fidl::WireCall<TestDevice>(chan_)->AddChild(true /* complete_init */,
+                                                              ZX_OK /* init_status */);
     ASSERT_OK(result.status());
     ASSERT_FALSE(result->result.is_err());
     child_ids.push_back(result->result.response().child_id);
@@ -110,7 +110,7 @@ TEST_F(LifecycleTest, ChildPreRelease) {
 
   // Remove the child devices and check the test device received the pre-release notifications.
   for (auto child_id : child_ids) {
-    auto result = fidl::WireCall<TestDevice>(chan_).RemoveChild(child_id);
+    auto result = fidl::WireCall<TestDevice>(chan_)->RemoveChild(child_id);
     ASSERT_OK(result.status());
     ASSERT_FALSE(result->result.is_err());
 
@@ -122,17 +122,17 @@ TEST_F(LifecycleTest, ChildPreRelease) {
 TEST_F(LifecycleTest, Init) {
   // Add a child device that does not complete its init hook yet.
   uint64_t child_id;
-  auto result = fidl::WireCall<TestDevice>(chan_).AddChild(false /* complete_init */,
-                                                           ZX_OK /* init_status */);
+  auto result = fidl::WireCall<TestDevice>(chan_)->AddChild(false /* complete_init */,
+                                                            ZX_OK /* init_status */);
   ASSERT_OK(result.status());
   ASSERT_FALSE(result->result.is_err());
   child_id = result->result.response().child_id;
 
-  auto remove_result = fidl::WireCall<TestDevice>(chan_).RemoveChild(child_id);
+  auto remove_result = fidl::WireCall<TestDevice>(chan_)->RemoveChild(child_id);
   ASSERT_OK(remove_result.status());
   ASSERT_FALSE(remove_result->result.is_err());
 
-  auto init_result = fidl::WireCall<TestDevice>(chan_).CompleteChildInit(child_id);
+  auto init_result = fidl::WireCall<TestDevice>(chan_)->CompleteChildInit(child_id);
   ASSERT_OK(init_result.status());
   ASSERT_FALSE(init_result->result.is_err());
 
@@ -141,8 +141,8 @@ TEST_F(LifecycleTest, Init) {
 }
 
 TEST_F(LifecycleTest, CloseAllConnectionsOnInstanceUnbind) {
-  auto result =
-      fidl::WireCall<TestDevice>(chan_).AddChild(true /* complete_init */, ZX_OK /* init_status */);
+  auto result = fidl::WireCall<TestDevice>(chan_)->AddChild(true /* complete_init */,
+                                                            ZX_OK /* init_status */);
   ASSERT_OK(result.status());
   ASSERT_FALSE(result->result.is_err());
   auto child_id = result->result.response().child_id;
@@ -153,7 +153,7 @@ TEST_F(LifecycleTest, CloseAllConnectionsOnInstanceUnbind) {
   ASSERT_TRUE(fd.get() > 0);
   zx::channel chan;
   fdio_get_service_handle(fd.get(), chan.reset_and_get_address());
-  ASSERT_TRUE(fidl::WireCall<TestDevice>(chan_).RemoveChild(child_id).ok());
+  ASSERT_TRUE(fidl::WireCall<TestDevice>(chan_)->RemoveChild(child_id).ok());
   zx_signals_t closed;
   ASSERT_OK(chan.wait_one(ZX_CHANNEL_PEER_CLOSED, zx::time::infinite(), &closed));
   ASSERT_TRUE(closed & ZX_CHANNEL_PEER_CLOSED);
@@ -162,8 +162,8 @@ TEST_F(LifecycleTest, CloseAllConnectionsOnInstanceUnbind) {
 }
 
 TEST_F(LifecycleTest, ReadCallFailsDuringUnbind) {
-  auto result =
-      fidl::WireCall<TestDevice>(chan_).AddChild(true /* complete_init */, ZX_OK /* init_status */);
+  auto result = fidl::WireCall<TestDevice>(chan_)->AddChild(true /* complete_init */,
+                                                            ZX_OK /* init_status */);
   ASSERT_OK(result.status());
   ASSERT_FALSE(result->result.is_err());
   auto child_id = result->result.response().child_id;
@@ -176,16 +176,16 @@ TEST_F(LifecycleTest, ReadCallFailsDuringUnbind) {
   fidl::ClientEnd<File> chan;
   fdio_get_service_handle(fd.get(), chan.channel().reset_and_get_address());
 
-  ASSERT_TRUE(fidl::WireCall<TestDevice>(chan_).AsyncRemoveChild(child_id).ok());
-  ASSERT_EQ(fidl::WireCall<File>(chan).Read(10).value().s, ZX_ERR_IO_NOT_PRESENT);
+  ASSERT_TRUE(fidl::WireCall<TestDevice>(chan_)->AsyncRemoveChild(child_id).ok());
+  ASSERT_EQ(fidl::WireCall<File>(chan)->Read(10).value().s, ZX_ERR_IO_NOT_PRESENT);
   std::array<uint8_t, 5> array;
   ASSERT_EQ(
-      fidl::WireCall<File>(chan).Write(fidl::VectorView<uint8_t>::FromExternal(array)).value().s,
+      fidl::WireCall<File>(chan)->Write(fidl::VectorView<uint8_t>::FromExternal(array)).value().s,
       ZX_ERR_IO_NOT_PRESENT);
   int fd2 = open("sys/platform/11:10:0/ddk-lifecycle-test/ddk-lifecycle-test-child", O_RDWR);
   ASSERT_EQ(fd2, -1);
   ASSERT_EQ(fidl::WireCall<Device>(fidl::UnownedClientEnd<Device>(chan.channel().borrow()))
-                .GetClass()
+                ->GetClass()
                 .status(),
             ZX_ERR_PEER_CLOSED);
   struct Epitaph {
@@ -207,7 +207,7 @@ TEST_F(LifecycleTest, ReadCallFailsDuringUnbind) {
 
 TEST_F(LifecycleTest, CloseAllConnectionsOnUnbind) {
   fidl::WireCall<Controller>(fidl::UnownedClientEnd<Controller>(chan_.channel().borrow()))
-      .ScheduleUnbind();
+      ->ScheduleUnbind();
   zx_signals_t closed;
   ASSERT_OK(chan_.channel().wait_one(ZX_CHANNEL_PEER_CLOSED, zx::time::infinite(), &closed));
   ASSERT_TRUE(closed & ZX_CHANNEL_PEER_CLOSED);
@@ -216,8 +216,8 @@ TEST_F(LifecycleTest, CloseAllConnectionsOnUnbind) {
 // Tests that the child device is removed if init fails.
 TEST_F(LifecycleTest, FailedInit) {
   uint64_t child_id;
-  auto result = fidl::WireCall<TestDevice>(chan_).AddChild(true /* complete_init */,
-                                                           ZX_ERR_BAD_STATE /* init_status */);
+  auto result = fidl::WireCall<TestDevice>(chan_)->AddChild(true /* complete_init */,
+                                                            ZX_ERR_BAD_STATE /* init_status */);
   ASSERT_OK(result.status());
   ASSERT_FALSE(result->result.is_err());
   child_id = result->result.response().child_id;

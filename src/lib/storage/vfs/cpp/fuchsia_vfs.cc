@@ -456,8 +456,8 @@ zx_status_t FuchsiaVfs::ForwardOpenRemote(fbl::RefPtr<Vnode> vn, fidl::ServerEnd
   }
 
   auto r = fidl::WireCall(h)
-               .Open(options.ToIoV1Flags(), mode, fidl::StringView::FromExternal(path),
-                     std::move(channel))
+               ->Open(options.ToIoV1Flags(), mode, fidl::StringView::FromExternal(path),
+                      std::move(channel))
                .status();
   if (r == ZX_ERR_PEER_CLOSED) {
     fidl::ClientEnd<fio::Directory> c;

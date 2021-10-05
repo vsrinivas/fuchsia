@@ -54,7 +54,7 @@ TEST(DebugDataTest, PublishData) {
   zx::channel token_client, token_server;
   ASSERT_OK(zx::channel::create(0, &token_client, &token_server));
   ASSERT_OK(fidl::WireCall<fuchsia_debugdata::DebugData>(zx::unowned_channel(client))
-                .Publish(kTestSink, std::move(vmo), std::move(token_server))
+                ->Publish(kTestSink, std::move(vmo), std::move(token_server))
                 .status());
   // close the client channel to indicate the VMO is ready to process.
   token_client.reset();
@@ -90,7 +90,7 @@ TEST(DebugDataTest, DrainData) {
   zx::channel token_client, token_server;
   ASSERT_OK(zx::channel::create(0, &token_client, &token_server));
   ASSERT_OK(fidl::WireCall<fuchsia_debugdata::DebugData>(zx::unowned_channel(client))
-                .Publish(kTestSink, std::move(vmo), std::move(token_server))
+                ->Publish(kTestSink, std::move(vmo), std::move(token_server))
                 .status());
 
   ASSERT_OK(loop.RunUntilIdle());
@@ -147,7 +147,7 @@ TEST(DebugDataTest, LoadConfig) {
   const auto path = (directory / filename).string();
 
   auto result = fidl::WireCall<fuchsia_debugdata::DebugData>(zx::unowned_channel(client))
-                    .LoadConfig(fidl::StringView::FromExternal(path));
+                    ->LoadConfig(fidl::StringView::FromExternal(path));
   ASSERT_OK(result.status());
   zx::vmo vmo = std::move(result->config);
 

@@ -130,7 +130,7 @@ zx_status_t CheckIfAstro(const fbl::unique_fd& devfs_root) {
   if (!caller) {
     return ZX_ERR_IO;
   }
-  auto result = fidl::WireCall<fuchsia_sysinfo::SysInfo>(caller.channel()).GetBoardName();
+  auto result = fidl::WireCall<fuchsia_sysinfo::SysInfo>(caller.channel())->GetBoardName();
   zx_status_t status = result.ok() ? result->status : result.status();
   if (status != ZX_OK) {
     return status;

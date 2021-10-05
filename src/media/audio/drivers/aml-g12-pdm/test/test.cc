@@ -123,7 +123,7 @@ struct AudioStreamInTest : public inspect::InspectTestHelper, public zxtest::Tes
 
     // To make sure we have initialized in the server make a sync call
     // (we know the server is single threaded, initialization is completed if received a reply).
-    auto props = fidl::WireCall<audio_fidl::RingBuffer>(local).GetProperties();
+    auto props = fidl::WireCall<audio_fidl::RingBuffer>(local)->GetProperties();
     ASSERT_OK(props.status());
 
     server->DdkAsyncRemove();
@@ -156,7 +156,7 @@ struct AudioStreamInTest : public inspect::InspectTestHelper, public zxtest::Tes
 
     client.CreateRingBuffer(std::move(format), std::move(remote));
 
-    auto vmo = fidl::WireCall<audio_fidl::RingBuffer>(local).GetVmo(frames_req, 0);
+    auto vmo = fidl::WireCall<audio_fidl::RingBuffer>(local)->GetVmo(frames_req, 0);
     ASSERT_OK(vmo.status());
     ASSERT_EQ(vmo.Unwrap()->result.response().num_frames, frames_expected);
 
@@ -224,7 +224,7 @@ TEST_F(AudioStreamInTest, Inspect) {
 
   client.CreateRingBuffer(std::move(format), std::move(remote));
 
-  auto props = fidl::WireCall<audio_fidl::RingBuffer>(local).GetProperties();
+  auto props = fidl::WireCall<audio_fidl::RingBuffer>(local)->GetProperties();
   ASSERT_OK(props.status());
 
   // Check inspect state.

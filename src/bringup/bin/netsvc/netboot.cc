@@ -300,7 +300,7 @@ static zx_status_t reboot() {
     return client_end.status_value();
   }
   fidl::WireResult response =
-      fidl::WireCall(client_end.value()).Reboot(statecontrol::wire::RebootReason::kUserRequest);
+      fidl::WireCall(client_end.value())->Reboot(statecontrol::wire::RebootReason::kUserRequest);
   if (response.status() != ZX_OK) {
     return response.status();
   }

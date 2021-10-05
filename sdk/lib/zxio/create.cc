@@ -91,7 +91,7 @@ zx_status_t zxio_create_with_info(zx_handle_t raw_handle, const zx_info_handle_b
   switch (handle_info->type) {
     case ZX_OBJ_TYPE_CHANNEL: {
       fidl::ClientEnd<fio::Node> node(zx::channel(std::move(handle)));
-      fidl::WireResult result = fidl::WireCall(node).Describe();
+      fidl::WireResult result = fidl::WireCall(node)->Describe();
       zx_status_t status = result.status();
       if (status != ZX_OK) {
         return status;
@@ -207,7 +207,7 @@ zx_status_t zxio_create_with_nodeinfo(fidl::ClientEnd<fio::Node> node, fio::wire
     case fio::wire::NodeInfo::Tag::kVmofile: {
       auto& file = info.mutable_vmofile();
       auto control = fidl::ClientEnd<fio::File>(node.TakeChannel());
-      auto result = fidl::WireCall(control.borrow()).Seek(0, fio::wire::SeekOrigin::kStart);
+      auto result = fidl::WireCall(control.borrow())->Seek(0, fio::wire::SeekOrigin::kStart);
       zx_status_t status = result.status();
       if (status != ZX_OK) {
         return status;

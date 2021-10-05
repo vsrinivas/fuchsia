@@ -465,7 +465,7 @@ void QueryInfo(fs_test::TestFilesystem& fs, size_t expected_nodes, size_t expect
   auto client_end = service::ConnectAt<fuchsia_fs::Query>(svc);
   ASSERT_TRUE(client_end.is_ok());
   const auto& query_result =
-      fidl::WireCall(client_end->borrow()).GetInfo(fuchsia_fs::wire::FilesystemInfoQuery::kMask);
+      fidl::WireCall(client_end->borrow())->GetInfo(fuchsia_fs::wire::FilesystemInfoQuery::kMask);
   ASSERT_TRUE(query_result.ok());
 
   const fuchsia_fs::wire::FilesystemInfo& info = query_result.value().result.response().info;
@@ -982,7 +982,7 @@ TEST_P(BlobfsIntegrationTest, InvalidOperations) {
   ASSERT_EQ(ZX_ERR_PEER_CLOSED,
             fidl::WireCall(fidl::UnownedClientEnd<fuchsia_io_admin::DirectoryAdmin>(
                                zx::unowned_channel(canary_channel)))
-                .Unmount()
+                ->Unmount()
                 .status());
   zx_signals_t pending;
   EXPECT_EQ(canary_channel.wait_one(ZX_CHANNEL_PEER_CLOSED, zx::time::infinite_past(), &pending),
@@ -1086,7 +1086,7 @@ zx_status_t DirectoryAdminGetDevicePath(fbl::unique_fd directory, std::string* p
   fdio_cpp::FdioCaller caller(std::move(directory));
   auto result = fidl::WireCall(fidl::UnownedClientEnd<fuchsia_io_admin::DirectoryAdmin>(
                                    zx::unowned_channel(caller.borrow_channel())))
-                    .GetDevicePath();
+                    ->GetDevicePath();
   if (result.status() != ZX_OK) {
     return result.status();
   }
@@ -1150,7 +1150,7 @@ void OpenBlockDevice(const std::string& path,
   fdio_cpp::FdioCaller caller(std::move(fd));
   ASSERT_EQ(fidl::WireCall(
                 fidl::UnownedClientEnd<fio::Node>(zx::unowned_channel(caller.borrow_channel())))
-                .Clone(fio::wire::kCloneFlagSameRights, std::move(server))
+                ->Clone(fio::wire::kCloneFlagSameRights, std::move(server))
                 .status(),
             ZX_OK);
   ASSERT_EQ(block_client::RemoteBlockDevice::Create(channel.TakeChannel(), block_device), ZX_OK);

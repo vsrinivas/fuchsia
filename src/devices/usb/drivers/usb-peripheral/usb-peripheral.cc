@@ -333,7 +333,7 @@ zx_status_t UsbPeripheral::FunctionRegistered() {
   zxlogf(DEBUG, "usb_device_function_registered functions_registered = true");
   functions_registered_ = true;
   if (listener_) {
-    fidl::WireCall<peripheral::Events>(zx::unowned_channel(listener_.get())).FunctionRegistered();
+    fidl::WireCall<peripheral::Events>(zx::unowned_channel(listener_.get()))->FunctionRegistered();
   }
   return DeviceStateChanged();
 }
@@ -613,7 +613,7 @@ void UsbPeripheral::ClearFunctionsComplete() {
   DeviceStateChanged();
 
   if (listener_) {
-    fidl::WireCall<peripheral::Events>(zx::unowned_channel(listener_.get())).FunctionsCleared();
+    fidl::WireCall<peripheral::Events>(zx::unowned_channel(listener_.get()))->FunctionsCleared();
   }
 }
 

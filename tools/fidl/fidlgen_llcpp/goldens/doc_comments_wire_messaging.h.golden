@@ -428,36 +428,31 @@ class ::fidl::WireUnownedResult<::fidl_test_doccomments::Interface::Method>
 // const reference to a |fidl::ClientEnd<::fidl_test_doccomments::Interface>|,
 // avoiding setting up a client.
 template <>
-class ::fidl::internal::WireCaller<::fidl_test_doccomments::Interface> final {
+class ::fidl::internal::WireSyncClientImpl<::fidl_test_doccomments::Interface>
+    final : public ::fidl::internal::SyncEndpointVeneer<
+                ::fidl::internal::WireSyncClientImpl<
+                    ::fidl_test_doccomments::Interface>> {
  public:
-  explicit WireCaller(
-      ::fidl::UnownedClientEnd<::fidl_test_doccomments::Interface> client_end)
-      : client_end_(client_end) {}
+  using ::fidl::internal::SyncEndpointVeneer<
+      ::fidl::internal::WireSyncClientImpl<
+          ::fidl_test_doccomments::Interface>>::SyncEndpointVeneer;
 
   /// method comment #1
   ///
   /// method comment #3
   // Allocates 16 bytes of message buffer on the stack. No heap allocation
   // necessary.
-  static ::fidl::WireResult<::fidl_test_doccomments::Interface::Method> Method(
-      ::fidl::UnownedClientEnd<::fidl_test_doccomments::Interface>
-          _client_end) {
+  ::fidl::WireResult<::fidl_test_doccomments::Interface::Method> Method() {
     return ::fidl::WireResult<::fidl_test_doccomments::Interface::Method>(
-        _client_end);
-  }
-
-  /// method comment #1
-  ///
-  /// method comment #3
-  // Allocates 16 bytes of message buffer on the stack. No heap allocation
-  // necessary.
-  ::fidl::WireResult<::fidl_test_doccomments::Interface::Method> Method() && {
-    return ::fidl::WireResult<::fidl_test_doccomments::Interface::Method>(
-        client_end_);
+        _client_end());
   }
 
  private:
-  ::fidl::UnownedClientEnd<::fidl_test_doccomments::Interface> client_end_;
+  ::fidl::UnownedClientEnd<::fidl_test_doccomments::Interface> _client_end()
+      const {
+    return ::fidl::UnownedClientEnd<::fidl_test_doccomments::Interface>(
+        _channel());
+  }
 };
 template <>
 class ::fidl::internal::WireEventHandlerInterface<

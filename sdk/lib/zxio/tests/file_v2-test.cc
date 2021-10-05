@@ -85,7 +85,7 @@ class FileV2 : public zxtest::Test {
     }
 
     auto result =
-        fidl::WireCall(ends->client).Describe(fio2::wire::ConnectionInfoQuery::kRepresentation);
+        fidl::WireCall(ends->client)->Describe(fio2::wire::ConnectionInfoQuery::kRepresentation);
 
     if (result.status() != ZX_OK) {
       return status;

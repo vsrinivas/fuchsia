@@ -30,7 +30,7 @@ TEST(NameProviderTest, GetDeviceName) {
   zx::status client_end = service::Connect<fuchsia_device::NameProvider>();
   ASSERT_OK(client_end.status_value());
 
-  fidl::WireResult response = fidl::WireCall(client_end.value()).GetDeviceName();
+  fidl::WireResult response = fidl::WireCall(client_end.value())->GetDeviceName();
   ASSERT_OK(response.status());
   fuchsia_device::wire::NameProviderGetDeviceNameResult& result = response.value().result;
   switch (result.which()) {

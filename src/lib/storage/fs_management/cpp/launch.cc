@@ -62,7 +62,7 @@ zx_handle_t RetriveWriteOnlyDebuglogHandle() {
     return ZX_HANDLE_INVALID;
   }
 
-  auto resp = fidl::WireCall<fboot::WriteOnlyLog>(zx::unowned(local)).Get();
+  auto resp = fidl::WireCall<fboot::WriteOnlyLog>(zx::unowned(local))->Get();
   if (!resp.ok()) {
     fprintf(stderr, "fs-management: WriteOnlyLogGet failed: %d (%s)\n", resp.status(),
             zx_status_get_string(resp.status()));

@@ -64,7 +64,7 @@ TEST_F(FvmVPartitionLoadTest, LoadPartitionWithPlaceHolderGuidIsUpdated) {
                               &vpartition));
   // Get the device topological path
   auto topo_result =
-      fidl::WireCall<fuchsia_device::Controller>(vpartition->channel()).GetTopologicalPath();
+      fidl::WireCall<fuchsia_device::Controller>(vpartition->channel())->GetTopologicalPath();
   ASSERT_TRUE(topo_result.ok());
   ASSERT_TRUE(topo_result->result.is_response());
   auto partition_path = std::string(topo_result->result.response().path.begin() + strlen("/dev/"),
@@ -81,7 +81,7 @@ TEST_F(FvmVPartitionLoadTest, LoadPartitionWithPlaceHolderGuidIsUpdated) {
     fdio_cpp::UnownedFdioCaller caller(fvmfd.get());
     auto result =
         fidl::WireCall<fuchsia_hardware_block_partition::Partition>(caller.channel()->borrow())
-            .GetInstanceGuid();
+            ->GetInstanceGuid();
     ASSERT_OK(result.status());
     ASSERT_OK(result->status);
     EXPECT_FALSE(memcmp(result->guid.get(), kPlaceHolderInstanceGuid.data(),
@@ -99,7 +99,7 @@ TEST_F(FvmVPartitionLoadTest, LoadPartitionWithPlaceHolderGuidIsUpdated) {
     fdio_cpp::UnownedFdioCaller caller(fvmfd.get());
     auto result =
         fidl::WireCall<fuchsia_hardware_block_partition::Partition>(caller.channel()->borrow())
-            .GetInstanceGuid();
+            ->GetInstanceGuid();
     ASSERT_OK(result.status());
     ASSERT_OK(result->status);
     EXPECT_TRUE(

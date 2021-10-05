@@ -246,7 +246,7 @@ migrating a `zx::unowned_channel`:
   ```c++
   // |client| should speak the |fuchsia.foobar/Baz| protocol.
   zx_status_t DoThing(zx::unowned_channel client, int64_t args) {
-    return fidl::WireCall<fuchsia_foobar::Baz>(std::move(client)).Method(args).status();
+    return fidl::WireCall<fuchsia_foobar::Baz>(std::move(client))->Method(args).status();
   }
   ```
 
@@ -255,7 +255,7 @@ migrating a `zx::unowned_channel`:
   ```c++
   // The intended protocol is encoded in the type system. No need for comment.
   zx_status_t DoThing(fidl::UnownedClientEnd<fuchsia_foobar::Baz> client, int64_t args) {
-    return fidl::WireCall(client).Method(args).status();
+    return fidl::WireCall(client)->Method(args).status();
   }
   ```
 

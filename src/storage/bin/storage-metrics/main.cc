@@ -93,7 +93,7 @@ zx_status_t GetFsMetrics(const char* path, MinfsFidlMetrics* out_metrics) {
   }
 
   fdio_cpp::FdioCaller caller(std::move(fd));
-  auto result = fidl::WireCall<fuchsia_minfs::Minfs>(caller.channel()).GetMetrics();
+  auto result = fidl::WireCall<fuchsia_minfs::Minfs>(caller.channel())->GetMetrics();
   if (!result.ok()) {
     fprintf(stderr, "Error getting metrics for %s, status %d\n", path, result.status());
     return result.status();
@@ -215,7 +215,7 @@ void RunBlockMetrics(const char* path, const StorageMetricOptions options) {
 
   auto result = fidl::WireCall(fidl::UnownedClientEnd<fuchsia_io_admin::DirectoryAdmin>(
                                    caller.borrow_channel()))
-                    .GetDevicePath();
+                    ->GetDevicePath();
 
   zx_status_t rc;
   fuchsia_hardware_block_BlockStats stats;

@@ -55,8 +55,9 @@ int ParseArgs(int argc, char** argv, fidl::UnownedClientEnd<fuchsia_io::Director
       fidl::StringView{"zircon.namegen"},
   };
   std::string namegen_str("");
-  auto string_resp = fidl::WireCall(client_end.value())
-                         .GetStrings(fidl::VectorView<fidl::StringView>::FromExternal(string_keys));
+  auto string_resp =
+      fidl::WireCall(client_end.value())
+          ->GetStrings(fidl::VectorView<fidl::StringView>::FromExternal(string_keys));
   if (string_resp.ok()) {
     auto& values = string_resp->values;
     out->interface = std::string{values[0].data(), values[0].size()};

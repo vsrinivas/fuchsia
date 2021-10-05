@@ -104,12 +104,12 @@ TEST_P(DotDotTest, RawOpenDotDirectoryCreate) {
   zx::channel local, remote;
   ASSERT_EQ(zx::channel::create(0, &local, &remote), ZX_OK);
   auto result = fidl::WireCall<fio::Directory>(caller.channel())
-                    .Open(fio::wire::kOpenRightReadable | fio::wire::kOpenRightWritable |
-                              fio::wire::kOpenFlagCreate,
-                          0755, fidl::StringView("."), std::move(remote));
+                    ->Open(fio::wire::kOpenRightReadable | fio::wire::kOpenRightWritable |
+                               fio::wire::kOpenFlagCreate,
+                           0755, fidl::StringView("."), std::move(remote));
   ASSERT_EQ(result.status(), ZX_OK);
 
-  auto close_result = fidl::WireCall<fio::Directory>(local.borrow()).Close();
+  auto close_result = fidl::WireCall<fio::Directory>(local.borrow())->Close();
   // Can't get an epitaph with LLCPP bindings, so this will do for now.
   ASSERT_EQ(close_result.status(), ZX_ERR_PEER_CLOSED);
 }
@@ -124,12 +124,12 @@ TEST_P(DotDotTest, RawOpenDotDirectoryCreateIfAbsent) {
   zx::channel local, remote;
   ASSERT_EQ(zx::channel::create(0, &local, &remote), ZX_OK);
   auto result = fidl::WireCall<fio::Directory>(caller.channel())
-                    .Open(fio::wire::kOpenRightReadable | fio::wire::kOpenRightWritable |
-                              fio::wire::kOpenFlagCreate | fio::wire::kOpenFlagCreateIfAbsent,
-                          0755, fidl::StringView("."), std::move(remote));
+                    ->Open(fio::wire::kOpenRightReadable | fio::wire::kOpenRightWritable |
+                               fio::wire::kOpenFlagCreate | fio::wire::kOpenFlagCreateIfAbsent,
+                           0755, fidl::StringView("."), std::move(remote));
   ASSERT_EQ(result.status(), ZX_OK);
 
-  auto close_result2 = fidl::WireCall<fio::Directory>(local.borrow()).Close();
+  auto close_result2 = fidl::WireCall<fio::Directory>(local.borrow())->Close();
   // Can't get an epitaph with LLCPP bindings, so this will do for now.
   ASSERT_EQ(close_result2.status(), ZX_ERR_PEER_CLOSED);
 }

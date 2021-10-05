@@ -15,7 +15,7 @@ namespace {
 
 [[maybe_unused]] static bool IsChromebook(
     fidl::UnownedClientEnd<fuchsia_sysinfo::SysInfo> sysinfo) {
-  fidl::WireResult result = fidl::WireCall(sysinfo).GetBootloaderVendor();
+  fidl::WireResult result = fidl::WireCall(sysinfo)->GetBootloaderVendor();
   zx_status_t status = result.ok() ? result->status : result.status();
   if (status != ZX_OK) {
     return status;
@@ -25,7 +25,7 @@ namespace {
 
 zx_status_t GetBoardName(fidl::UnownedClientEnd<fuchsia_sysinfo::SysInfo> sysinfo,
                          char* real_board_name) {
-  fidl::WireResult result = fidl::WireCall(sysinfo).GetBoardName();
+  fidl::WireResult result = fidl::WireCall(sysinfo)->GetBoardName();
   if (!result.ok()) {
     return false;
   }
@@ -55,7 +55,7 @@ zx_status_t GetBoardName(fidl::UnownedClientEnd<fuchsia_sysinfo::SysInfo> sysinf
 
 zx_status_t GetBoardRevision(fidl::UnownedClientEnd<fuchsia_sysinfo::SysInfo> sysinfo,
                              uint32_t* board_revision) {
-  fidl::WireResult result = fidl::WireCall(sysinfo).GetBoardRevision();
+  fidl::WireResult result = fidl::WireCall(sysinfo)->GetBoardRevision();
   if (!result.ok()) {
     return false;
   }

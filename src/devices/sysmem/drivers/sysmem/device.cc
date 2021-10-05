@@ -641,7 +641,7 @@ zx_status_t Device::SysmemRegisterSecureMem(zx::channel secure_mem_connection) {
         }
         auto set_result =
             fidl::WireCall<fuchsia_sysmem::SecureMem>(zx::unowned_channel(secure_mem_->channel()))
-                .SetPhysicalSecureHeaps(std::move(sysmem_configured_heaps));
+                ->SetPhysicalSecureHeaps(std::move(sysmem_configured_heaps));
         // For now the FIDL IPC failing is fatal.  Among the reasons is without that
         // call succeeding, we haven't told the HW to secure/protect the physical
         // range. However we still allow it to fail if the secure mem device
@@ -665,7 +665,7 @@ zx_status_t Device::SysmemRegisterSecureMem(zx::channel secure_mem_connection) {
         // Now we get the secure heaps that are configured via the TEE.
         auto get_result =
             fidl::WireCall<fuchsia_sysmem::SecureMem>(zx::unowned_channel(secure_mem_->channel()))
-                .GetPhysicalSecureHeaps();
+                ->GetPhysicalSecureHeaps();
         if (!get_result.ok()) {
           // For now this is fatal, since this case is very unexpected, and in this case rebooting
           // is the most plausible way to get back to a working state anyway.

@@ -89,7 +89,7 @@ TEST(HotReloadIntegrationTest, TestRestartOneDriver) {
   ASSERT_TRUE(chan_driver.is_valid());
 
   // Get pid of driver before restarting.
-  auto result_before = fidl::WireCall<TestDevice>(zx::unowned(chan_driver)).GetPid();
+  auto result_before = fidl::WireCall<TestDevice>(zx::unowned(chan_driver))->GetPid();
   ASSERT_OK(result_before.status());
   ASSERT_FALSE(result_before->result.is_err(), "GetPid failed: %s",
                zx_status_get_string(result_before->result.err()));
@@ -116,7 +116,7 @@ TEST(HotReloadIntegrationTest, TestRestartOneDriver) {
   ASSERT_NE(chan_driver.get(), ZX_HANDLE_INVALID);
   ASSERT_TRUE(chan_driver.is_valid());
 
-  auto result_after = fidl::WireCall<TestDevice>(zx::unowned(chan_driver)).GetPid();
+  auto result_after = fidl::WireCall<TestDevice>(zx::unowned(chan_driver))->GetPid();
   ASSERT_OK(result_after.status());
   ASSERT_FALSE(result_after->result.is_err(), "GetPid failed: %s",
                zx_status_get_string(result_after->result.err()));
@@ -166,7 +166,7 @@ TEST(HotReloadIntegrationTest, TestRestartTwoDriversParent) {
   ASSERT_TRUE(chan_child.is_valid());
 
   // Get pid of parent driver before restarting.
-  auto parent_before = fidl::WireCall<TestDevice>(zx::unowned(chan_parent)).GetPid();
+  auto parent_before = fidl::WireCall<TestDevice>(zx::unowned(chan_parent))->GetPid();
   ASSERT_OK(parent_before.status());
   ASSERT_FALSE(parent_before->result.is_err(), "GetPid for parent failed: %s",
                zx_status_get_string(parent_before->result.err()));
@@ -195,7 +195,7 @@ TEST(HotReloadIntegrationTest, TestRestartTwoDriversParent) {
   ASSERT_TRUE(chan_parent.is_valid());
 
   // Get pid of parent driver after restarting.
-  auto parent_after = fidl::WireCall<TestDevice>(zx::unowned(chan_parent)).GetPid();
+  auto parent_after = fidl::WireCall<TestDevice>(zx::unowned(chan_parent))->GetPid();
   ASSERT_OK(parent_after.status());
   ASSERT_FALSE(parent_after->result.is_err(), "GetPid for parent failed: %s",
                zx_status_get_string(parent_after->result.err()));
@@ -261,7 +261,7 @@ TEST(HotReloadIntegrationTest, TestRestartTwoDriversChild) {
   ASSERT_OK(devmgr_integration_test::DirWatcher::Create(std::move(fd_watcher), &watcher));
 
   // Get pid of parent driver before restarting.
-  auto parent_before = fidl::WireCall<TestDevice>(zx::unowned(chan_parent)).GetPid();
+  auto parent_before = fidl::WireCall<TestDevice>(zx::unowned(chan_parent))->GetPid();
   ASSERT_OK(parent_before.status());
   ASSERT_FALSE(parent_before->result.is_err(), "GetPid for parent failed: %s",
                zx_status_get_string(parent_before->result.err()));
@@ -284,7 +284,7 @@ TEST(HotReloadIntegrationTest, TestRestartTwoDriversChild) {
   ASSERT_TRUE(chan_parent.is_valid());
 
   // Get pid of parent driver after restarting.
-  auto parent_after = fidl::WireCall<TestDevice>(zx::unowned(chan_parent)).GetPid();
+  auto parent_after = fidl::WireCall<TestDevice>(zx::unowned(chan_parent))->GetPid();
   ASSERT_OK(parent_after.status());
   ASSERT_FALSE(parent_after->result.is_err(), "GetPid for parent failed: %s",
                zx_status_get_string(parent_after->result.err()));

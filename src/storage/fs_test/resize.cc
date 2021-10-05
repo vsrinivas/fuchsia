@@ -45,7 +45,7 @@ class ResizeTest : public BaseFilesystemTest, public testing::WithParamInterface
     ASSERT_TRUE(fd);
     fdio_cpp::FdioCaller caller(std::move(fd));
     auto query_result =
-        fidl::WireCall<fuchsia_io_admin::DirectoryAdmin>(caller.channel()).QueryFilesystem();
+        fidl::WireCall<fuchsia_io_admin::DirectoryAdmin>(caller.channel())->QueryFilesystem();
     ASSERT_EQ(query_result.status(), ZX_OK);
     ASSERT_NE(query_result.Unwrap()->info, nullptr);
     fuchsia_io_admin::wire::FilesystemInfo* info = query_result.Unwrap()->info.get();
@@ -243,4 +243,4 @@ GTEST_ALLOW_UNINSTANTIATED_PARAMETERIZED_TEST(MaxDataTest);
 }  // namespace
 }  // namespace fs_test
 
-#endif // !__has_feature(address_sanitizer)
+#endif  // !__has_feature(address_sanitizer)

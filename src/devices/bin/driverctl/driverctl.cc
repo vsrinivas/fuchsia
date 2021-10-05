@@ -69,7 +69,7 @@ int main(int argc, char** argv) {
 
   if (argc == 3) {
     auto response = fidl::WireCall<fuchsia_device::Controller>(zx::unowned_channel(device))
-                        .GetMinDriverLogSeverity();
+                        ->GetMinDriverLogSeverity();
     if (response.status() != ZX_OK || response->status != ZX_OK) {
       fprintf(stderr, "GetDriverLogFlags failed for %s\n", path);
       return -1;
@@ -120,7 +120,7 @@ int main(int argc, char** argv) {
     return -1;
   }
   auto response = fidl::WireCall<fuchsia_device::Controller>(zx::unowned_channel(device))
-                      .SetMinDriverLogSeverity(flags);
+                      ->SetMinDriverLogSeverity(flags);
   if (response.status() != ZX_OK || response->status != ZX_OK) {
     fprintf(stderr, "SetDriverLogFlags failed for %s\n", path);
   }

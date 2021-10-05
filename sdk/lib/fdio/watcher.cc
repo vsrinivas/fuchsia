@@ -32,8 +32,8 @@ zx_status_t fdio_watch_directory(int dirfd, watchdir_func_t cb, zx_time_t deadli
     return endpoints.status_value();
   }
 
-  auto result =
-      fidl::WireCall(directory).Watch(fio::wire::kWatchMaskAll, 0, endpoints->client.TakeChannel());
+  auto result = fidl::WireCall(directory)->Watch(fio::wire::kWatchMaskAll, 0,
+                                                 endpoints->client.TakeChannel());
   if (zx_status_t status = result.status(); status != ZX_OK) {
     return status;
   }

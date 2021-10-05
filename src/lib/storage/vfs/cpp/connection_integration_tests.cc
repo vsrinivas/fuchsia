@@ -142,19 +142,19 @@ TEST_F(ConnectionTest, NodeGetSetFlagsOnFile) {
   ASSERT_OK(fdio_open_at(client_end.get(), "file", fio::wire::kOpenRightReadable, fc2.release()));
 
   // Use NodeGetFlags to get current flags and rights
-  auto file_get_result = fidl::WireCall<fio::Node>(zx::unowned_channel(fc1)).NodeGetFlags();
+  auto file_get_result = fidl::WireCall<fio::Node>(zx::unowned_channel(fc1))->NodeGetFlags();
   EXPECT_OK(file_get_result.status());
   EXPECT_EQ(fio::wire::kOpenRightReadable, file_get_result.Unwrap()->flags);
   {
     // Make modifications to flags with NodeSetFlags: Note this only works for kOpenFlagAppend
     // based on posix standard
     auto file_set_result = fidl::WireCall<fio::Node>(zx::unowned_channel(fc1))
-                               .NodeSetFlags(fio::wire::kOpenFlagAppend);
+                               ->NodeSetFlags(fio::wire::kOpenFlagAppend);
     EXPECT_OK(file_set_result.Unwrap()->s);
   }
   {
     // Check that the new flag is saved
-    auto file_get_result = fidl::WireCall<fio::Node>(zx::unowned_channel(fc1)).NodeGetFlags();
+    auto file_get_result = fidl::WireCall<fio::Node>(zx::unowned_channel(fc1))->NodeGetFlags();
     EXPECT_OK(file_get_result.Unwrap()->s);
     EXPECT_EQ(fio::wire::kOpenRightReadable | fio::wire::kOpenFlagAppend,
               file_get_result.Unwrap()->flags);
@@ -175,16 +175,16 @@ TEST_F(ConnectionTest, NodeGetSetFlagsOnDirectory) {
                          dc2.release()));
 
   // Read/write/read directory flags; same as for file
-  auto dir_get_result = fidl::WireCall<fio::Node>(zx::unowned_channel(dc1)).NodeGetFlags();
+  auto dir_get_result = fidl::WireCall<fio::Node>(zx::unowned_channel(dc1))->NodeGetFlags();
   EXPECT_OK(dir_get_result.Unwrap()->s);
   EXPECT_EQ(fio::wire::kOpenRightReadable | fio::wire::kOpenRightWritable,
             dir_get_result.Unwrap()->flags);
 
   auto dir_set_result =
-      fidl::WireCall<fio::Node>(zx::unowned_channel(dc1)).NodeSetFlags(fio::wire::kOpenFlagAppend);
+      fidl::WireCall<fio::Node>(zx::unowned_channel(dc1))->NodeSetFlags(fio::wire::kOpenFlagAppend);
   EXPECT_OK(dir_set_result.Unwrap()->s);
 
-  auto dir_get_result_2 = fidl::WireCall<fio::Node>(zx::unowned_channel(dc1)).NodeGetFlags();
+  auto dir_get_result_2 = fidl::WireCall<fio::Node>(zx::unowned_channel(dc1))->NodeGetFlags();
   EXPECT_OK(dir_get_result_2.Unwrap()->s);
   EXPECT_EQ(
       fio::wire::kOpenRightReadable | fio::wire::kOpenRightWritable | fio::wire::kOpenFlagAppend,
@@ -212,7 +212,7 @@ TEST_F(ConnectionTest, PosixFlagDirectoryRightExpansion) {
                            dc2.release()));
 
     // Ensure flags match those which we expect.
-    auto dir_get_result = fidl::WireCall<fio::Node>(zx::unowned_channel(dc1)).NodeGetFlags();
+    auto dir_get_result = fidl::WireCall<fio::Node>(zx::unowned_channel(dc1))->NodeGetFlags();
     EXPECT_OK(dir_get_result.Unwrap()->s);
     auto dir_flags = dir_get_result.Unwrap()->flags;
     EXPECT_NE(fio::wire::kOpenRightReadable & dir_flags, 0);
@@ -227,7 +227,7 @@ TEST_F(ConnectionTest, PosixFlagDirectoryRightExpansion) {
     ASSERT_OK(zx::channel::create(0u, &fc1, &fc2));
     ASSERT_OK(fdio_open_at(client_end.get(), "file", fio::wire::kOpenRightReadable | OPEN_FLAGS,
                            fc2.release()));
-    auto file_get_result = fidl::WireCall<fio::File>(zx::unowned_channel(fc1)).GetFlags();
+    auto file_get_result = fidl::WireCall<fio::File>(zx::unowned_channel(fc1))->GetFlags();
     EXPECT_OK(file_get_result.status());
     EXPECT_EQ(fio::wire::kOpenRightReadable, file_get_result.Unwrap()->flags);
   }
@@ -246,7 +246,7 @@ TEST_F(ConnectionTest, FileGetSetFlagsOnFile) {
 
   {
     // Use NodeGetFlags to get current flags and rights
-    auto file_get_result = fidl::WireCall<fio::File>(zx::unowned_channel(fc1)).GetFlags();
+    auto file_get_result = fidl::WireCall<fio::File>(zx::unowned_channel(fc1))->GetFlags();
     EXPECT_OK(file_get_result.status());
     EXPECT_EQ(fio::wire::kOpenRightReadable, file_get_result.Unwrap()->flags);
   }
@@ -254,12 +254,12 @@ TEST_F(ConnectionTest, FileGetSetFlagsOnFile) {
     // Make modifications to flags with NodeSetFlags: Note this only works for kOpenFlagAppend
     // based on posix standard
     auto file_set_result =
-        fidl::WireCall<fio::File>(zx::unowned_channel(fc1)).SetFlags(fio::wire::kOpenFlagAppend);
+        fidl::WireCall<fio::File>(zx::unowned_channel(fc1))->SetFlags(fio::wire::kOpenFlagAppend);
     EXPECT_OK(file_set_result.Unwrap()->s);
   }
   {
     // Check that the new flag is saved
-    auto file_get_result = fidl::WireCall<fio::File>(zx::unowned_channel(fc1)).GetFlags();
+    auto file_get_result = fidl::WireCall<fio::File>(zx::unowned_channel(fc1))->GetFlags();
     EXPECT_OK(file_get_result.Unwrap()->s);
     EXPECT_EQ(fio::wire::kOpenRightReadable | fio::wire::kOpenFlagAppend,
               file_get_result.Unwrap()->flags);
@@ -280,7 +280,7 @@ TEST_F(ConnectionTest, FileGetSetFlagsDirectory) {
                            fio::wire::kOpenRightReadable | fio::wire::kOpenRightWritable,
                            dc2.release()));
 
-    auto dir_get_result = fidl::WireCall<fio::File>(zx::unowned_channel(dc1)).GetFlags();
+    auto dir_get_result = fidl::WireCall<fio::File>(zx::unowned_channel(dc1))->GetFlags();
     EXPECT_NOT_OK(dir_get_result.status());
   }
 
@@ -292,7 +292,7 @@ TEST_F(ConnectionTest, FileGetSetFlagsDirectory) {
                            dc2.release()));
 
     auto dir_set_result =
-        fidl::WireCall<fio::File>(zx::unowned_channel(dc1)).SetFlags(fio::wire::kOpenFlagAppend);
+        fidl::WireCall<fio::File>(zx::unowned_channel(dc1))->SetFlags(fio::wire::kOpenFlagAppend);
     EXPECT_NOT_OK(dir_set_result.status());
   }
 }
@@ -309,9 +309,9 @@ TEST_F(ConnectionTest, NegotiateProtocol) {
   zx::channel dc1, dc2;
   ASSERT_OK(zx::channel::create(0u, &dc1, &dc2));
   ASSERT_OK(fidl::WireCall<fio::Directory>(zx::unowned_channel(client_end))
-                .Open(fio::wire::kOpenRightReadable | fio::wire::kOpenFlagDescribe |
-                          fio::wire::kOpenFlagDirectory,
-                      kOpenMode, fidl::StringView("file_or_dir"), std::move(dc2))
+                ->Open(fio::wire::kOpenRightReadable | fio::wire::kOpenFlagDescribe |
+                           fio::wire::kOpenFlagDirectory,
+                       kOpenMode, fidl::StringView("file_or_dir"), std::move(dc2))
                 .status());
   zx::status<fio::wire::NodeInfo> dir_info = GetOnOpenResponse(zx::unowned_channel(dc1));
   ASSERT_OK(dir_info);
@@ -321,9 +321,9 @@ TEST_F(ConnectionTest, NegotiateProtocol) {
   zx::channel fc1, fc2;
   ASSERT_OK(zx::channel::create(0u, &fc1, &fc2));
   ASSERT_OK(fidl::WireCall<fio::Directory>(zx::unowned_channel(client_end))
-                .Open(fio::wire::kOpenRightReadable | fio::wire::kOpenFlagDescribe |
-                          fio::wire::kOpenFlagNotDirectory,
-                      kOpenMode, fidl::StringView("file_or_dir"), std::move(fc2))
+                ->Open(fio::wire::kOpenRightReadable | fio::wire::kOpenFlagDescribe |
+                           fio::wire::kOpenFlagNotDirectory,
+                       kOpenMode, fidl::StringView("file_or_dir"), std::move(fc2))
                 .status());
   zx::status<fio::wire::NodeInfo> file_info = GetOnOpenResponse(zx::unowned_channel(fc1));
   ASSERT_OK(file_info);
@@ -344,9 +344,10 @@ TEST_F(ConnectionTest, PrevalidateFlagsOpenFailure) {
   zx::channel dc1, dc2;
   ASSERT_OK(zx::channel::create(0u, &dc1, &dc2));
   // Ensure that invalid flag combination returns INVALID_ARGS.
-  ASSERT_OK(fidl::WireCall<fio::Directory>(zx::unowned_channel(client_end))
-                .Open(kInvalidFlagCombo, kOpenMode, fidl::StringView("file_or_dir"), std::move(dc2))
-                .status());
+  ASSERT_OK(
+      fidl::WireCall<fio::Directory>(zx::unowned_channel(client_end))
+          ->Open(kInvalidFlagCombo, kOpenMode, fidl::StringView("file_or_dir"), std::move(dc2))
+          .status());
   ASSERT_EQ(GetOnOpenResponse(zx::unowned_channel(dc1)).status_value(), ZX_ERR_INVALID_ARGS);
 }
 
@@ -417,8 +418,8 @@ TEST_F(ConnectionClosingTest, ClosingChannelImpliesClosingNode) {
     zx::channel fc1, fc2;
     ASSERT_OK(zx::channel::create(0u, &fc1, &fc2));
     ASSERT_OK(fidl::WireCall<fio::Directory>(zx::unowned_channel(client_end))
-                  .Open(fio::wire::kOpenRightReadable, kOpenMode,
-                        fidl::StringView("count_outstanding_open_vnode"), std::move(fc2))
+                  ->Open(fio::wire::kOpenRightReadable, kOpenMode,
+                         fidl::StringView("count_outstanding_open_vnode"), std::move(fc2))
                   .status());
     clients.push_back(std::move(fc1));
   }
@@ -446,7 +447,7 @@ TEST_F(ConnectionClosingTest, ClosingNodeLeadsToClosingServerEndChannel) {
   ASSERT_FALSE(observed & ZX_CHANNEL_PEER_CLOSED);
 
   ASSERT_OK(loop().StartThread());
-  auto result = fidl::WireCall<fio::Node>(zx::unowned_channel(client_end)).Close();
+  auto result = fidl::WireCall<fio::Node>(zx::unowned_channel(client_end))->Close();
   ASSERT_OK(result.status());
   ASSERT_OK(result->s);
 

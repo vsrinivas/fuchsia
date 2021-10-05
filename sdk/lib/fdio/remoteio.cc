@@ -136,7 +136,7 @@ zx::status<fdio_ptr> fdio::create(fidl::ClientEnd<fio::Node> node, fio::wire::No
 }
 
 zx::status<fdio_ptr> fdio::create_with_describe(fidl::ClientEnd<fio::Node> node) {
-  auto response = fidl::WireCall(node).Describe();
+  auto response = fidl::WireCall(node)->Describe();
   zx_status_t status = response.status();
   if (status != ZX_OK) {
     return zx::error(status);

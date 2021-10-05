@@ -142,7 +142,7 @@ void TestDevice::BindFvmDriver() {
   ASSERT_NOT_NULL(io);
   auto resp = fidl::WireCall<fuchsia_device::Controller>(
                   zx::unowned_channel(fdio_unsafe_borrow_channel(io)))
-                  .Bind(fidl::StringView::FromExternal(kFvmDriver));
+                  ->Bind(fidl::StringView::FromExternal(kFvmDriver));
   zx_status_t status = resp.status();
   fdio_unsafe_release(io);
   ASSERT_EQ(status, ZX_OK);
@@ -167,7 +167,7 @@ void TestDevice::Rebind() {
     ;
     auto resp = fidl::WireCall<fuchsia_device::Controller>(
                     zx::unowned_channel(fdio_unsafe_borrow_channel(io)))
-                    .Rebind(fidl::StringView::FromExternal(kFvmDriver));
+                    ->Rebind(fidl::StringView::FromExternal(kFvmDriver));
     zx_status_t status = resp.status();
     if (resp->result.is_err()) {
       call_status = resp->result.err();
@@ -359,7 +359,7 @@ void TestDevice::CreateFvmPart(size_t device_size, size_t block_size) {
   zx_status_t call_status;
   auto resp =
       fidl::WireCall<fuchsia_device::Controller>(zx::unowned_channel(parent_channel()->get()))
-          .GetTopologicalPath();
+          ->GetTopologicalPath();
   status = resp.status();
 
   if (resp->result.is_err()) {

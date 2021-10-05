@@ -35,7 +35,7 @@ class DirentIteratorImpl {
   }
 
   ~DirentIteratorImpl() {
-    fidl::WireCall(fidl::UnownedClientEnd<fio::Directory>(io_->control)).Rewind();
+    fidl::WireCall(fidl::UnownedClientEnd<fio::Directory>(io_->control))->Rewind();
   }
 
   zx_status_t Next(zxio_dirent_t** out_entry) {
@@ -101,8 +101,8 @@ class DirentIteratorImpl {
  private:
   zx_status_t RemoteReadDirents() {
     auto result = fidl::WireCall(fidl::UnownedClientEnd<fio::Directory>(io_->control))
-                      .ReadDirents(boxed_->request_buffer.view(), kBufferSize,
-                                   boxed_->response_buffer.view());
+                      ->ReadDirents(boxed_->request_buffer.view(), kBufferSize,
+                                    boxed_->response_buffer.view());
     if (result.status() != ZX_OK) {
       return result.status();
     }
@@ -202,7 +202,7 @@ class Remote {
 
   zx::status<bool> IsATty() {
     fidl::WireResult result =
-        fidl::WireCall(fidl::UnownedClientEnd<fio::Node>(control())).Describe();
+        fidl::WireCall(fidl::UnownedClientEnd<fio::Node>(control()))->Describe();
     if (result.status() != ZX_OK) {
       return zx::error(result.status());
     }
@@ -464,14 +464,14 @@ void zxio_remote_wait_end(zxio_t* io, zx_signals_t zx_signals, zxio_signals_t* o
 
 zx_status_t zxio_remote_sync(zxio_t* io) {
   Remote rio(io);
-  auto result = fidl::WireCall(fidl::UnownedClientEnd<fio::Node>(rio.control())).Sync();
+  auto result = fidl::WireCall(fidl::UnownedClientEnd<fio::Node>(rio.control()))->Sync();
   return result.ok() ? result.Unwrap()->s : result.status();
 }
 
 template <typename ToZxioAbilities>
 zx_status_t zxio_common_attr_get(zx::unowned_channel control, ToZxioAbilities to_zxio,
                                  zxio_node_attributes_t* out_attr) {
-  auto result = fidl::WireCall(fidl::UnownedClientEnd<fio::Node>(control)).GetAttr();
+  auto result = fidl::WireCall(fidl::UnownedClientEnd<fio::Node>(control))->GetAttr();
   if (result.status() != ZX_OK) {
     return result.status();
   }
@@ -500,7 +500,7 @@ zx_status_t zxio_common_attr_set(zx::unowned_channel control, ToIo1ModePermissio
     return ZX_ERR_NOT_SUPPORTED;
   }
   auto result = fidl::WireCall(fidl::UnownedClientEnd<fio::Node>(control))
-                    .SetAttr(flags, ToNodeAttributes(*attr, to_io1));
+                    ->SetAttr(flags, ToNodeAttributes(*attr, to_io1));
   return result.ok() ? result.Unwrap()->s : result.status();
 }
 
@@ -535,7 +535,7 @@ zx_status_t zxio_common_advisory_lock(zx::unowned_channel control, advisory_lock
   lock_req.set_type(allocator, lock_type);
   lock_req.set_wait(allocator, req->wait);
   auto result = fidl::WireCall(fidl::UnownedClientEnd<fio2::AdvisoryLocking>(control))
-                    .AdvisoryLock(std::move(lock_req));
+                    ->AdvisoryLock(std::move(lock_req));
   if (!result.ok()) {
     return result.status();
   }
@@ -590,7 +590,7 @@ zx_status_t zxio_remote_readv(zxio_t* io, const zx_iovec_t* vector, size_t vecto
         fidl::Buffer<fidl::WireRequest<fio::File::Read>> request_buffer;
         fidl::Buffer<fidl::WireResponse<fio::File::Read>> response_buffer;
         auto result = fidl::WireCall(fidl::UnownedClientEnd<fio::File>(control))
-                          .Read(request_buffer.view(), capacity, response_buffer.view());
+                          ->Read(request_buffer.view(), capacity, response_buffer.view());
         zx_status_t status;
         if ((status = result.status()) != ZX_OK) {
           return status;
@@ -626,7 +626,7 @@ zx_status_t zxio_remote_readv_at(zxio_t* io, zx_off_t offset, const zx_iovec_t* 
         fidl::Buffer<fidl::WireRequest<fio::File::ReadAt>> request_buffer;
         fidl::Buffer<fidl::WireResponse<fio::File::ReadAt>> response_buffer;
         auto result = fidl::WireCall(fidl::UnownedClientEnd<fio::File>(control))
-                          .ReadAt(request_buffer.view(), capacity, offset, response_buffer.view());
+                          ->ReadAt(request_buffer.view(), capacity, offset, response_buffer.view());
         zx_status_t status;
         if ((status = result.status()) != ZX_OK) {
           return status;
@@ -664,9 +664,9 @@ zx_status_t zxio_remote_writev(zxio_t* io, const zx_iovec_t* vector, size_t vect
         fidl::Buffer<fidl::WireRequest<fio::File::Write>> request_buffer;
         fidl::Buffer<fidl::WireResponse<fio::File::Write>> response_buffer;
         auto result = fidl::WireCall(fidl::UnownedClientEnd<fio::File>(control))
-                          .Write(request_buffer.view(),
-                                 fidl::VectorView<uint8_t>::FromExternal(buffer, capacity),
-                                 response_buffer.view());
+                          ->Write(request_buffer.view(),
+                                  fidl::VectorView<uint8_t>::FromExternal(buffer, capacity),
+                                  response_buffer.view());
         zx_status_t status;
         if ((status = result.status()) != ZX_OK) {
           return status;
@@ -701,9 +701,9 @@ zx_status_t zxio_remote_writev_at(zxio_t* io, zx_off_t offset, const zx_iovec_t*
         fidl::Buffer<fidl::WireRequest<fio::File::WriteAt>> request_buffer;
         fidl::Buffer<fidl::WireResponse<fio::File::WriteAt>> response_buffer;
         auto result = fidl::WireCall(fidl::UnownedClientEnd<fio::File>(control))
-                          .WriteAt(request_buffer.view(),
-                                   fidl::VectorView<uint8_t>::FromExternal(buffer, capacity),
-                                   offset, response_buffer.view());
+                          ->WriteAt(request_buffer.view(),
+                                    fidl::VectorView<uint8_t>::FromExternal(buffer, capacity),
+                                    offset, response_buffer.view());
         zx_status_t status;
         if ((status = result.status()) != ZX_OK) {
           return status;
@@ -729,7 +729,7 @@ zx_status_t zxio_remote_seek(zxio_t* io, zxio_seek_origin_t start, int64_t offse
   }
 
   auto result = fidl::WireCall(fidl::UnownedClientEnd<fio::File>(rio.control()))
-                    .Seek(offset, static_cast<fio::wire::SeekOrigin>(start));
+                    ->Seek(offset, static_cast<fio::wire::SeekOrigin>(start));
   if (result.status() != ZX_OK) {
     return result.status();
   }
@@ -742,13 +742,13 @@ zx_status_t zxio_remote_seek(zxio_t* io, zxio_seek_origin_t start, int64_t offse
 
 zx_status_t zxio_remote_truncate(zxio_t* io, uint64_t length) {
   Remote rio(io);
-  auto result = fidl::WireCall(fidl::UnownedClientEnd<fio::File>(rio.control())).Truncate(length);
+  auto result = fidl::WireCall(fidl::UnownedClientEnd<fio::File>(rio.control()))->Truncate(length);
   return result.ok() ? result.Unwrap()->s : result.status();
 }
 
 zx_status_t zxio_remote_flags_get(zxio_t* io, uint32_t* out_flags) {
   Remote rio(io);
-  auto result = fidl::WireCall(fidl::UnownedClientEnd<fio::File>(rio.control())).GetFlags();
+  auto result = fidl::WireCall(fidl::UnownedClientEnd<fio::File>(rio.control()))->GetFlags();
   if (result.status() != ZX_OK) {
     return result.status();
   }
@@ -761,14 +761,14 @@ zx_status_t zxio_remote_flags_get(zxio_t* io, uint32_t* out_flags) {
 
 zx_status_t zxio_remote_flags_set(zxio_t* io, uint32_t flags) {
   Remote rio(io);
-  auto result = fidl::WireCall(fidl::UnownedClientEnd<fio::File>(rio.control())).SetFlags(flags);
+  auto result = fidl::WireCall(fidl::UnownedClientEnd<fio::File>(rio.control()))->SetFlags(flags);
   return result.ok() ? result.Unwrap()->s : result.status();
 }
 
 zx_status_t zxio_remote_vmo_get(zxio_t* io, uint32_t flags, zx_handle_t* out_vmo,
                                 size_t* out_size) {
   Remote rio(io);
-  auto result = fidl::WireCall(fidl::UnownedClientEnd<fio::File>(rio.control())).GetBuffer(flags);
+  auto result = fidl::WireCall(fidl::UnownedClientEnd<fio::File>(rio.control()))->GetBuffer(flags);
   if (result.status() != ZX_OK) {
     return result.status();
   }
@@ -802,8 +802,8 @@ zx_status_t zxio_dir_open(zxio_t* io, uint32_t flags, uint32_t mode, const char*
   auto [node_client_end, node_server_end] = std::move(node_ends.value());
 
   fidl::Result result = fidl::WireCall(fidl::UnownedClientEnd<fio::Directory>(rio.control()))
-                            .Open(flags, mode, fidl::StringView::FromExternal(path, path_len),
-                                  std::move(node_server_end));
+                            ->Open(flags, mode, fidl::StringView::FromExternal(path, path_len),
+                                   std::move(node_server_end));
   if (result.status() != ZX_OK) {
     return result.status();
   }
@@ -815,8 +815,8 @@ zx_status_t zxio_remote_open_async(zxio_t* io, uint32_t flags, uint32_t mode, co
   Remote rio(io);
   auto node_request = fidl::ServerEnd<fio::Node>(zx::channel(request));
   fidl::WireResult result = fidl::WireCall(fidl::UnownedClientEnd<fio::Directory>(rio.control()))
-                                .Open(flags, mode, fidl::StringView::FromExternal(path, path_len),
-                                      std::move(node_request));
+                                ->Open(flags, mode, fidl::StringView::FromExternal(path, path_len),
+                                       std::move(node_request));
   return result.status();
 }
 
@@ -826,8 +826,8 @@ zx_status_t zxio_remote_add_inotify_filter(zxio_t* io, const char* path, size_t 
   Remote rio(io);
   fio2::wire::InotifyWatchMask inotify_mask = static_cast<fio2::wire::InotifyWatchMask>(mask);
   auto result = fidl::WireCall(fidl::UnownedClientEnd<fio::Directory>(rio.control()))
-                    .AddInotifyFilter(fidl::StringView::FromExternal(path, path_len), inotify_mask,
-                                      watch_descriptor, zx::socket(socket_handle));
+                    ->AddInotifyFilter(fidl::StringView::FromExternal(path, path_len), inotify_mask,
+                                       watch_descriptor, zx::socket(socket_handle));
   return result.status();
 }
 
@@ -840,7 +840,7 @@ zx_status_t zxio_remote_unlink(zxio_t* io, const char* name, int flags) {
     options.set_flags(fidl::ObjectView<decltype(io_flags)>::FromExternal(&io_flags));
   }
   auto result = fidl::WireCall(fidl::UnownedClientEnd<fio::Directory>(rio.control()))
-                    .Unlink(fidl::StringView::FromExternal(name), options);
+                    ->Unlink(fidl::StringView::FromExternal(name), options);
   if (result.status() != ZX_OK) {
     return result.status();
   }
@@ -850,7 +850,7 @@ zx_status_t zxio_remote_unlink(zxio_t* io, const char* name, int flags) {
 
 zx_status_t zxio_remote_token_get(zxio_t* io, zx_handle_t* out_token) {
   Remote rio(io);
-  auto result = fidl::WireCall(fidl::UnownedClientEnd<fio::Directory>(rio.control())).GetToken();
+  auto result = fidl::WireCall(fidl::UnownedClientEnd<fio::Directory>(rio.control()))->GetToken();
   if (result.status() != ZX_OK) {
     return result.status();
   }
@@ -865,8 +865,8 @@ zx_status_t zxio_remote_rename(zxio_t* io, const char* src_path, zx_handle_t dst
                                const char* dst_path) {
   Remote rio(io);
   auto result = fidl::WireCall(fidl::UnownedClientEnd<fio::Directory>(rio.control()))
-                    .Rename2(fidl::StringView::FromExternal(src_path), zx::event(dst_token),
-                             fidl::StringView::FromExternal(dst_path));
+                    ->Rename2(fidl::StringView::FromExternal(src_path), zx::event(dst_token),
+                              fidl::StringView::FromExternal(dst_path));
   if (!result.ok()) {
     return result.status();
   }
@@ -880,8 +880,8 @@ zx_status_t zxio_remote_link(zxio_t* io, const char* src_path, zx_handle_t dst_t
                              const char* dst_path) {
   Remote rio(io);
   auto result = fidl::WireCall(fidl::UnownedClientEnd<fio::Directory>(rio.control()))
-                    .Link(fidl::StringView::FromExternal(src_path), zx::handle(dst_token),
-                          fidl::StringView::FromExternal(dst_path));
+                    ->Link(fidl::StringView::FromExternal(src_path), zx::handle(dst_token),
+                           fidl::StringView::FromExternal(dst_path));
   return result.ok() ? result.Unwrap()->s : result.status();
 }
 
@@ -923,7 +923,7 @@ zx_status_t zxio_remote_get_window_size(zxio_t* io, uint32_t* width, uint32_t* h
   if (!device.is_valid()) {
     return ZX_ERR_BAD_STATE;
   }
-  fidl::WireResult result = fidl::WireCall(device).GetWindowSize();
+  fidl::WireResult result = fidl::WireCall(device)->GetWindowSize();
   if (result.status() != ZX_OK || result->status != ZX_OK) {
     return ZX_ERR_NOT_SUPPORTED;
   }
@@ -952,7 +952,7 @@ zx_status_t zxio_remote_set_window_size(zxio_t* io, uint32_t width, uint32_t hei
       .height = height,
   };
 
-  auto result = fidl::WireCall(device).SetWindowSize(size);
+  auto result = fidl::WireCall(device)->SetWindowSize(size);
   if (result.status() != ZX_OK || result->status != ZX_OK) {
     return ZX_ERR_NOT_SUPPORTED;
   }
@@ -1173,7 +1173,7 @@ uint32_t zxio_get_posix_mode(zxio_node_protocols_t protocols, zxio_abilities_t a
 }
 
 zx_status_t zxio_raw_remote_close(zx::unowned_channel control) {
-  auto result = fidl::WireCall(fidl::UnownedClientEnd<fio::Node>(control)).Close();
+  auto result = fidl::WireCall(fidl::UnownedClientEnd<fio::Node>(control))->Close();
   if (result.status() != ZX_OK) {
     return result.status();
   }
@@ -1187,7 +1187,7 @@ zx_status_t zxio_raw_remote_clone(zx::unowned_channel source, zx_handle_t* out_h
   }
   uint32_t flags = fio::wire::kCloneFlagSameRights;
   auto result = fidl::WireCall(fidl::UnownedClientEnd<fio::Node>(source))
-                    .Clone(flags, std::move(ends->server));
+                    ->Clone(flags, std::move(ends->server));
   if (result.status() != ZX_OK) {
     return result.status();
   }

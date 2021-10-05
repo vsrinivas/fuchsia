@@ -15,8 +15,8 @@ void FidlBlobCorruptionNotifier::NotifyCorruptBlob(const digest::Digest& digest)
 
   if (corruption_handler_.is_valid()) {
     fidl::WireCall(corruption_handler_)
-        .CorruptBlob(fidl::VectorView<uint8_t>::FromExternal(const_cast<uint8_t*>(digest.get()),
-                                                             digest.len()));
+        ->CorruptBlob(fidl::VectorView<uint8_t>::FromExternal(const_cast<uint8_t*>(digest.get()),
+                                                              digest.len()));
   } else {
     // We normally expect the updater system to be registered for corrupted blobs.
     FX_LOGS(INFO) << "No corruption handler registered while processing corrupt blob.";

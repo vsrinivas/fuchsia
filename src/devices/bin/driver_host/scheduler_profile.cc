@@ -31,7 +31,7 @@ zx_status_t connect_scheduler_profile_provider() {
 zx_status_t get_scheduler_profile(uint32_t priority, const char* name, zx_handle_t* profile) {
   fidl::WireResult result =
       fidl::WireCall(scheduler_profile_provider)
-          .GetProfile(priority, fidl::StringView::FromExternal(name, strlen(name)));
+          ->GetProfile(priority, fidl::StringView::FromExternal(name, strlen(name)));
   if (!result.ok()) {
     return result.status();
   }
@@ -47,8 +47,8 @@ zx_status_t get_scheduler_deadline_profile(uint64_t capacity, uint64_t deadline,
                                            const char* name, zx_handle_t* profile) {
   fidl::WireResult result =
       fidl::WireCall(scheduler_profile_provider)
-          .GetDeadlineProfile(capacity, deadline, period,
-                              fidl::StringView::FromExternal(name, strlen(name)));
+          ->GetDeadlineProfile(capacity, deadline, period,
+                               fidl::StringView::FromExternal(name, strlen(name)));
   if (!result.ok()) {
     return result.status();
   }
@@ -70,8 +70,8 @@ zx_status_t set_scheduler_profile_by_role(zx_handle_t thread, const char* role, 
   }
 
   fidl::WireResult result = fidl::WireCall(scheduler_profile_provider)
-                                .SetProfileByRole(std::move(duplicate_thread),
-                                                  fidl::StringView::FromExternal(role, role_size));
+                                ->SetProfileByRole(std::move(duplicate_thread),
+                                                   fidl::StringView::FromExternal(role, role_size));
   if (!result.ok()) {
     return result.status();
   }

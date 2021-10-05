@@ -354,8 +354,8 @@ zx_status_t KeyboardWatcher::Setup(async_dispatcher_t* dispatcher, keypress_hand
 
   dir_caller_ = fdio_cpp::FdioCaller(std::move(fd));
 
-  auto result =
-      fidl::WireCall(dir_caller_.directory()).Watch(fio::wire::kWatchMaskAll, 0, std::move(server));
+  auto result = fidl::WireCall(dir_caller_.directory())
+                    ->Watch(fio::wire::kWatchMaskAll, 0, std::move(server));
   if (result.status() != ZX_OK) {
     return result.status();
   }

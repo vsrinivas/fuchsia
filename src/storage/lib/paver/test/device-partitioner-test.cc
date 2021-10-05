@@ -442,7 +442,7 @@ class GptDevicePartitionerTests : public zxtest::Test {
 
     fdio_cpp::UnownedFdioCaller caller(gpt_dev->fd());
     auto result = fidl::WireCall<fuchsia_device::Controller>(caller.channel())
-                      .Rebind(fidl::StringView("/boot/driver/gpt.so"));
+                      ->Rebind(fidl::StringView("/boot/driver/gpt.so"));
     ASSERT_TRUE(result.ok());
     ASSERT_FALSE(result->result.is_err());
   }
@@ -717,7 +717,7 @@ TEST_F(EfiDevicePartitionerTests, FindOldBootloaderPartitionName) {
 
   fdio_cpp::UnownedFdioCaller caller(gpt_dev->fd());
   auto result = fidl::WireCall<fuchsia_device::Controller>(caller.channel())
-                    .Rebind(fidl::StringView("/boot/driver/gpt.so"));
+                    ->Rebind(fidl::StringView("/boot/driver/gpt.so"));
   ASSERT_TRUE(result.ok());
   ASSERT_FALSE(result->result.is_err());
 
@@ -1431,7 +1431,7 @@ TEST_F(SherlockPartitionerTests, InitializePartitionTable) {
 
   fdio_cpp::UnownedFdioCaller caller(gpt_dev->fd());
   auto result = fidl::WireCall<fuchsia_device::Controller>(caller.channel())
-                    .Rebind(fidl::StringView("/boot/driver/gpt.so"));
+                    ->Rebind(fidl::StringView("/boot/driver/gpt.so"));
   ASSERT_TRUE(result.ok());
   ASSERT_FALSE(result->result.is_err());
 

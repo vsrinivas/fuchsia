@@ -145,7 +145,7 @@ zx_status_t RamdiskRef::Grow(uint64_t target_size) {
 
 void BlockDeviceAdapter::WriteAt(const fbl::Array<uint8_t>& data, uint64_t offset) {
   fidl::WireResult<fuchsia_io::File::WriteAt> result =
-      fidl::WireCall<fuchsia_io::File>(device()->channel()).WriteAt(ToFidlVector(data), offset);
+      fidl::WireCall<fuchsia_io::File>(device()->channel())->WriteAt(ToFidlVector(data), offset);
 
   ASSERT_OK(result.status(), "Failed to communicate with block device.");
   ASSERT_OK(result->s);
@@ -154,7 +154,7 @@ void BlockDeviceAdapter::WriteAt(const fbl::Array<uint8_t>& data, uint64_t offse
 
 void BlockDeviceAdapter::ReadAt(uint64_t offset, fbl::Array<uint8_t>* out_data) {
   fidl::WireResult<fuchsia_io::File::ReadAt> result =
-      fidl::WireCall<fuchsia_io::File>(device()->channel()).ReadAt(out_data->size(), offset);
+      fidl::WireCall<fuchsia_io::File>(device()->channel())->ReadAt(out_data->size(), offset);
 
   ASSERT_OK(result.status(), "Failed to communicate with block device.");
   ASSERT_OK(result->s);
@@ -273,7 +273,7 @@ std::unique_ptr<FvmAdapter> FvmAdapter::CreateGrowable(const fbl::unique_fd& dev
   zx_status_t status = ZX_OK;
   auto resp =
       fidl::WireCall<fuchsia_device::Controller>(zx::unowned_channel(device->channel()->get()))
-          .Bind(::fidl::StringView(kFvmDriverLib));
+          ->Bind(::fidl::StringView(kFvmDriverLib));
   zx_status_t fidl_status = resp.status();
   if (resp->result.is_err()) {
     status = resp->result.err();
@@ -349,7 +349,7 @@ zx_status_t FvmAdapter::Rebind(fbl::Vector<VPartitionAdapter*> vpartitions) {
 
   auto resp = fidl::WireCall<fuchsia_device::Controller>(
                   zx::unowned_channel(block_device_->channel()->get()))
-                  .Bind(::fidl::StringView(kFvmDriverLib));
+                  ->Bind(::fidl::StringView(kFvmDriverLib));
   zx_status_t fidl_status = resp.status();
   status = ZX_OK;
   if (resp->result.is_err()) {

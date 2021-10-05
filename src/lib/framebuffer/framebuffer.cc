@@ -92,9 +92,9 @@ static zx::status<fidl::WireSyncClient<sysmem::BufferCollection>> create_buffer_
     return display_token.take_error();
   }
   CHECKED_CALL(fidl::WireCall(token->client)
-                   .Duplicate(ZX_RIGHT_SAME_RIGHTS, std::move(display_token->server)),
+                   ->Duplicate(ZX_RIGHT_SAME_RIGHTS, std::move(display_token->server)),
                "Failed to duplicate token");
-  CHECKED_CALL(fidl::WireCall(token->client).Sync(), "Failed to sync token");
+  CHECKED_CALL(fidl::WireCall(token->client)->Sync(), "Failed to sync token");
 
   fidl::WireResult import_rsp =
       dc_client->ImportBufferCollection(kCollectionId, std::move(display_token->client));
@@ -206,7 +206,7 @@ zx_status_t fb_bind(bool single_buffer, const char** err_msg_out) {
   fdio_cpp::FdioCaller caller(std::move(dc_fd));
   fidl::WireResult open_status =
       fidl::WireCall(caller.borrow_as<fhd::Provider>())
-          .OpenController(std::move(device_server), std::move(dc->server));
+          ->OpenController(std::move(device_server), std::move(dc->server));
   if (open_status.status() != ZX_OK) {
     *err_msg_out = "Failed to call service handle";
     return open_status.status();

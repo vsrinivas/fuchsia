@@ -53,14 +53,21 @@ struct ::fidl::internal::WireServerDispatcher<::fidl_test_handles::SomeProtocol>
 // const reference to a |fidl::ClientEnd<::fidl_test_handles::SomeProtocol>|,
 // avoiding setting up a client.
 template <>
-class ::fidl::internal::WireCaller<::fidl_test_handles::SomeProtocol> final {
+class ::fidl::internal::WireSyncClientImpl<::fidl_test_handles::SomeProtocol>
+    final : public ::fidl::internal::SyncEndpointVeneer<
+                ::fidl::internal::WireSyncClientImpl<
+                    ::fidl_test_handles::SomeProtocol>> {
  public:
-  explicit WireCaller(
-      ::fidl::UnownedClientEnd<::fidl_test_handles::SomeProtocol> client_end)
-      : client_end_(client_end) {}
+  using ::fidl::internal::SyncEndpointVeneer<
+      ::fidl::internal::WireSyncClientImpl<::fidl_test_handles::SomeProtocol>>::
+      SyncEndpointVeneer;
 
  private:
-  ::fidl::UnownedClientEnd<::fidl_test_handles::SomeProtocol> client_end_;
+  ::fidl::UnownedClientEnd<::fidl_test_handles::SomeProtocol> _client_end()
+      const {
+    return ::fidl::UnownedClientEnd<::fidl_test_handles::SomeProtocol>(
+        _channel());
+  }
 };
 template <>
 class ::fidl::internal::WireEventHandlerInterface<

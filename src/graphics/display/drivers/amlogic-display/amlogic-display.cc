@@ -152,7 +152,7 @@ zx_status_t AmlogicDisplay::DisplayControllerImplImportImage(image_t* image,
   }
 
   auto result = fidl::WireCall<sysmem::BufferCollection>(zx::unowned_channel(handle))
-                    .WaitForBuffersAllocated();
+                    ->WaitForBuffersAllocated();
   if (!result.ok()) {
     return result.status();
   }
@@ -560,13 +560,13 @@ zx_status_t AmlogicDisplay::DisplayControllerImplSetBufferCollectionConstraints(
   // application priorities.
   constexpr uint32_t kNamePriority = 10;
   auto name_res = fidl::WireCall<sysmem::BufferCollection>(zx::unowned_channel(collection))
-                      .SetName(kNamePriority, fidl::StringView::FromExternal(buffer_name));
+                      ->SetName(kNamePriority, fidl::StringView::FromExternal(buffer_name));
   if (!name_res.ok()) {
     DISP_ERROR("Failed to set name: %d", name_res.status());
     return name_res.status();
   }
   auto res = fidl::WireCall<sysmem::BufferCollection>(zx::unowned_channel(collection))
-                 .SetConstraints(true, constraints);
+                 ->SetConstraints(true, constraints);
 
   if (!res.ok()) {
     DISP_ERROR("Failed to set constraints: %d", res.status());
@@ -592,7 +592,7 @@ zx_status_t AmlogicDisplay::DisplayCaptureImplImportImageForCapture(zx_unowned_h
   }
   fbl::AutoLock lock(&capture_lock_);
   auto result = fidl::WireCall<sysmem::BufferCollection>(zx::unowned_channel(collection))
-                    .WaitForBuffersAllocated();
+                    ->WaitForBuffersAllocated();
   if (!result.ok()) {
     return result.status();
   }

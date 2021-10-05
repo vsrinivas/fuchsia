@@ -108,7 +108,7 @@ void InstanceLifecycleTest::VerifyPostOpenLifecycleViaRemove(
   ASSERT_OK(endpoints.status_value());
   auto [instance_lifecycle_chan, remote] = *std::move(endpoints);
   {
-    auto result = fidl::WireCall(instance_client).SubscribeToLifecycle(std::move(remote));
+    auto result = fidl::WireCall(instance_client)->SubscribeToLifecycle(std::move(remote));
     ASSERT_OK(result.status());
     ASSERT_FALSE(result->result.is_err());
   }
@@ -119,7 +119,7 @@ void InstanceLifecycleTest::VerifyPostOpenLifecycleViaRemove(
 
   // Request the device begin removal
   {
-    auto result = fidl::WireCall(instance_client).RemoveDevice();
+    auto result = fidl::WireCall(instance_client)->RemoveDevice();
     ASSERT_OK(result.status());
   }
 
@@ -139,7 +139,7 @@ void InstanceLifecycleTest::VerifyPostOpenLifecycleViaClose(
   ASSERT_OK(endpoints.status_value());
   auto [instance_lifecycle_chan, remote] = *std::move(endpoints);
   {
-    auto result = fidl::WireCall(instance_client).SubscribeToLifecycle(std::move(remote));
+    auto result = fidl::WireCall(instance_client)->SubscribeToLifecycle(std::move(remote));
     ASSERT_OK(result.status());
     ASSERT_FALSE(result->result.is_err());
   }
@@ -162,7 +162,7 @@ TEST_F(InstanceLifecycleTest, NonPipelinedClientClose) {
   ASSERT_OK(endpoints.status_value());
   auto [lifecycle_chan, remote] = *std::move(endpoints);
 
-  auto result = fidl::WireCall(device_).CreateDevice(std::move(remote), zx::channel{});
+  auto result = fidl::WireCall(device_)->CreateDevice(std::move(remote), zx::channel{});
   ASSERT_OK(result.status());
   ASSERT_FALSE(result->result.is_err());
 
@@ -194,8 +194,8 @@ TEST_F(InstanceLifecycleTest, PipelinedClientClose) {
   ASSERT_OK(instance_endpoints.status_value());
   auto [instance_client, instance_client_remote] = *std::move(instance_endpoints);
 
-  auto result = fidl::WireCall(device_).CreateDevice(std::move(lifecycle_remote),
-                                                     instance_client_remote.TakeChannel());
+  auto result = fidl::WireCall(device_)->CreateDevice(std::move(lifecycle_remote),
+                                                      instance_client_remote.TakeChannel());
   ASSERT_OK(result.status());
   ASSERT_FALSE(result->result.is_err());
 
@@ -210,7 +210,7 @@ TEST_F(InstanceLifecycleTest, NonPipelinedClientRemoveAndClose) {
   ASSERT_OK(endpoints.status_value());
   auto [lifecycle_chan, remote] = *std::move(endpoints);
 
-  auto result = fidl::WireCall(device_).CreateDevice(std::move(remote), zx::channel{});
+  auto result = fidl::WireCall(device_)->CreateDevice(std::move(remote), zx::channel{});
   ASSERT_OK(result.status());
   ASSERT_FALSE(result->result.is_err());
 
@@ -242,8 +242,8 @@ TEST_F(InstanceLifecycleTest, PipelinedClientRemoveAndClose) {
   ASSERT_OK(instance_endpoints.status_value());
   auto [instance_client, instance_client_remote] = *std::move(instance_endpoints);
 
-  auto result = fidl::WireCall(device_).CreateDevice(std::move(lifecycle_remote),
-                                                     instance_client_remote.TakeChannel());
+  auto result = fidl::WireCall(device_)->CreateDevice(std::move(lifecycle_remote),
+                                                      instance_client_remote.TakeChannel());
   ASSERT_OK(result.status());
   ASSERT_FALSE(result->result.is_err());
 

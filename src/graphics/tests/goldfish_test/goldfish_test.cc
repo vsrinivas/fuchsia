@@ -378,8 +378,8 @@ TEST(GoldfishControlTests, GoldfishControlTest_HostVisible_MultiClients) {
   EXPECT_TRUE(allocator.AllocateSharedCollection(std::move(token_server[0])).ok());
 
   fidl::WireCall<fuchsia_sysmem::BufferCollectionToken>(token_client[0].borrow())
-      .Duplicate(0, std::move(token_server[1]));
-  fidl::WireCall<fuchsia_sysmem::BufferCollectionToken>(token_client[0].borrow()).Sync();
+      ->Duplicate(0, std::move(token_server[1]));
+  fidl::WireCall<fuchsia_sysmem::BufferCollectionToken>(token_client[0].borrow())->Sync();
 
   for (size_t i = 0; i < kNumClients; i++) {
     EXPECT_EQ(zx::channel::create(0, &collection_client[i], &collection_server[i]), ZX_OK);

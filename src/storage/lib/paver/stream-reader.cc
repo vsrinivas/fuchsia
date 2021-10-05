@@ -23,8 +23,8 @@ zx::status<std::unique_ptr<StreamReader>> StreamReader::Create(zx::channel strea
     ERROR("Unable to duplicate vmo.\n");
     return status.take_error();
   }
-  auto result =
-      fidl::WireCall<fuchsia_paver::PayloadStream>(zx::unowned(stream)).RegisterVmo(std::move(dup));
+  auto result = fidl::WireCall<fuchsia_paver::PayloadStream>(zx::unowned(stream))
+                    ->RegisterVmo(std::move(dup));
   status = zx::make_status(result.ok() ? result.value().status : result.status());
   if (status.is_error()) {
     ERROR("Unable to register vmo: %d\n", status.error_value());

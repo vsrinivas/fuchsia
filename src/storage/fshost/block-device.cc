@@ -180,7 +180,7 @@ void Unmount(const fidl::ClientEnd<fuchsia_io::Directory>& export_root) {
   }
 
   // Ignore errors; there's nothing we can do.
-  auto resp = fidl::WireCall(admin_or->client).Shutdown();
+  auto resp = fidl::WireCall(admin_or->client)->Shutdown();
   if (resp.status() != ZX_OK)
     FX_LOGS(ERROR) << "Unmount failed: " << resp.status();
 }
@@ -214,7 +214,7 @@ Copier TryReadingMinfs(fidl::ClientEnd<fuchsia_io::Node> device) {
   }
 
   fidl::ClientEnd<fuchsia_io_admin::DirectoryAdmin> root_dir_client((zx::channel(root_dir_handle)));
-  auto unmount = fit::defer([&root_dir_client] { fidl::WireCall(root_dir_client).Unmount(); });
+  auto unmount = fit::defer([&root_dir_client] { fidl::WireCall(root_dir_client)->Unmount(); });
 
   if (auto copier_or = Copier::Read(std::move(fd)); copier_or.is_error()) {
     FX_LOGS(ERROR) << "Copier::Read: " << copier_or.status_string();
@@ -230,7 +230,7 @@ std::string GetTopologicalPath(int fd) {
   fdio_cpp::UnownedFdioCaller disk_connection(fd);
   auto resp = fidl::WireCall<fuchsia_device::Controller>(
                   zx::unowned_channel(disk_connection.borrow_channel()))
-                  .GetTopologicalPath();
+                  ->GetTopologicalPath();
   if (resp.status() != ZX_OK) {
     FX_LOGS(WARNING) << "Unable to get topological path (fidl error): "
                      << zx_status_get_string(resp.status());
@@ -351,7 +351,7 @@ zx_status_t BlockDevice::AttachDriver(const std::string_view& driver) {
   zx_status_t call_status = ZX_OK;
   auto resp =
       fidl::WireCall<fuchsia_device::Controller>(zx::unowned_channel(connection.borrow_channel()))
-          .Bind(::fidl::StringView::FromExternal(driver));
+          ->Bind(::fidl::StringView::FromExternal(driver));
   zx_status_t io_status = resp.status();
   if (io_status != ZX_OK) {
     return io_status;
@@ -824,7 +824,7 @@ zx::status<fidl::ClientEnd<fuchsia_io::Node>> BlockDevice::GetDeviceEndPoint() c
   fdio_cpp::UnownedFdioCaller caller(fd_);
   if (zx_status_t status =
           fidl::WireCall<fuchsia_io::Node>(zx::unowned_channel(caller.borrow_channel()))
-              .Clone(fuchsia_io::wire::kCloneFlagSameRights, std::move(end_points_or->server))
+              ->Clone(fuchsia_io::wire::kCloneFlagSameRights, std::move(end_points_or->server))
               .status();
       status != ZX_OK) {
     return zx::error(status);
@@ -878,7 +878,7 @@ zx_status_t BlockDevice::FormatCustomFilesystem(const std::string& binary_path) 
   fidl::UnownedClientEnd<fuchsia_hardware_block_volume::Volume> volume_client(
       device.channel().borrow());
 
-  auto query_result = fidl::WireCall(volume_client).Query();
+  auto query_result = fidl::WireCall(volume_client)->Query();
   if (query_result.status() != ZX_OK) {
     FX_LOGS(ERROR) << "Unable to query FVM information: "
                    << zx_status_get_string(query_result.status());
@@ -904,7 +904,7 @@ zx_status_t BlockDevice::FormatCustomFilesystem(const std::string& binary_path) 
   // using a slice so high.
   while (slice < fvm::kMaxVSlices - 1) {
     auto query_result = fidl::WireCall(volume_client)
-                            .QuerySlices(fidl::VectorView<uint64_t>::FromExternal(&slice, 1));
+                            ->QuerySlices(fidl::VectorView<uint64_t>::FromExternal(&slice, 1));
     if (query_result.status() != ZX_OK) {
       FX_LOGS(ERROR) << "Unable to query slices (slice: " << slice << ", max: " << fvm::kMaxVSlices
                      << "): " << zx_status_get_string(query_result.status());
@@ -925,7 +925,7 @@ zx_status_t BlockDevice::FormatCustomFilesystem(const std::string& binary_path) 
     for (uint64_t i = 0; i < query_response->response_count; ++i) {
       if (query_response->response[i].allocated) {
         auto shrink_result =
-            fidl::WireCall(volume_client).Shrink(slice, query_response->response[i].count);
+            fidl::WireCall(volume_client)->Shrink(slice, query_response->response[i].count);
         if (zx_status_t status = shrink_result.status() == ZX_OK ? shrink_result.Unwrap()->status
                                                                  : shrink_result.status();
             status != ZX_OK) {
@@ -942,7 +942,7 @@ zx_status_t BlockDevice::FormatCustomFilesystem(const std::string& binary_path) 
       device_config_->ReadUint64OptionValue(Config::kMinfsMaxBytes, 0) / slice_size - 1;
 
   if (slice_count < 0) {
-    auto query_result = fidl::WireCall(volume_client).Query();
+    auto query_result = fidl::WireCall(volume_client)->Query();
     if (query_result.status() != ZX_OK)
       return query_result.status();
     const auto* response = query_result.Unwrap();
@@ -957,7 +957,7 @@ zx_status_t BlockDevice::FormatCustomFilesystem(const std::string& binary_path) 
 
   auto extend_result =
       fidl::WireCall(volume_client)
-          .Extend(1, slice_count - 1);  // Another -1 here because we get the first slice for free.
+          ->Extend(1, slice_count - 1);  // Another -1 here because we get the first slice for free.
   if (zx_status_t status =
           extend_result.status() == ZX_OK ? extend_result.Unwrap()->status : extend_result.status();
       status != ZX_OK) {
@@ -1009,9 +1009,10 @@ zx_status_t BlockDevice::FormatCustomFilesystem(const std::string& binary_path) 
   if (zx_status_t status = zx::channel::create(0, &root_client, &root_server); status != ZX_OK)
     return status;
 
-  if (auto resp = fidl::WireCall(export_root_or->client)
-                      .Open(fuchsia_io::wire::kOpenRightReadable | fuchsia_io::wire::kOpenFlagPosix,
-                            0, fidl::StringView("root"), std::move(root_server));
+  if (auto resp =
+          fidl::WireCall(export_root_or->client)
+              ->Open(fuchsia_io::wire::kOpenRightReadable | fuchsia_io::wire::kOpenFlagPosix, 0,
+                     fidl::StringView("root"), std::move(root_server));
       !resp.ok()) {
     return resp.status();
   }

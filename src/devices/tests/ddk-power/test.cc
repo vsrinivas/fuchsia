@@ -72,8 +72,7 @@ class PowerTestCase : public zxtest::Test {
     auto perf_power_states =
         ::fidl::VectorView<DevicePerformanceStateInfo>::FromExternal(perf_states, perf_state_count);
     auto response = fidl::WireCall<TestDevice>(zx::unowned(child_device_handle))
-                        .AddDeviceWithPowerArgs(std::move(power_states),
-                                                std::move(perf_power_states), add_invisible);
+                        ->AddDeviceWithPowerArgs(power_states, perf_power_states, add_invisible);
     ASSERT_OK(response.status());
     zx_status_t call_status = ZX_OK;
     if (response->result.is_err()) {
@@ -92,7 +91,7 @@ class PowerTestCase : public zxtest::Test {
 
   void WaitForDeviceSuspendCompletion(zx::unowned_channel device_chan) {
     auto response =
-        fidl::WireCall<TestDevice>(zx::unowned(device_chan)).GetSuspendCompletionEvent();
+        fidl::WireCall<TestDevice>(zx::unowned(device_chan))->GetSuspendCompletionEvent();
     ASSERT_OK(response.status());
     zx_status_t call_status = ZX_OK;
     if (response->result.is_err()) {
@@ -127,8 +126,8 @@ TEST_F(PowerTestCase, InvalidDevicePowerCaps_Less) {
   states[0].is_supported = true;
   auto response =
       fidl::WireCall<TestDevice>(zx::unowned(child_device_handle))
-          .AddDeviceWithPowerArgs(fidl::VectorView<DevicePowerStateInfo>::FromExternal(states),
-                                  ::fidl::VectorView<DevicePerformanceStateInfo>(), false);
+          ->AddDeviceWithPowerArgs(fidl::VectorView<DevicePowerStateInfo>::FromExternal(states),
+                                   ::fidl::VectorView<DevicePerformanceStateInfo>(), false);
   ASSERT_OK(response.status());
   zx_status_t call_status = ZX_OK;
   if (response->result.is_err()) {
@@ -145,8 +144,8 @@ TEST_F(PowerTestCase, InvalidDevicePowerCaps_More) {
   }
   auto response =
       fidl::WireCall<TestDevice>(zx::unowned(child_device_handle))
-          .AddDeviceWithPowerArgs(fidl::VectorView<DevicePowerStateInfo>::FromExternal(states),
-                                  ::fidl::VectorView<DevicePerformanceStateInfo>(), false);
+          ->AddDeviceWithPowerArgs(fidl::VectorView<DevicePowerStateInfo>::FromExternal(states),
+                                   ::fidl::VectorView<DevicePerformanceStateInfo>(), false);
   ASSERT_OK(response.status());
   zx_status_t call_status = ZX_OK;
   if (response->result.is_err()) {
@@ -165,8 +164,8 @@ TEST_F(PowerTestCase, InvalidDevicePowerCaps_MissingRequired) {
   }
   auto response =
       fidl::WireCall<TestDevice>(zx::unowned(child_device_handle))
-          .AddDeviceWithPowerArgs(fidl::VectorView<DevicePowerStateInfo>::FromExternal(states),
-                                  ::fidl::VectorView<DevicePerformanceStateInfo>(), false);
+          ->AddDeviceWithPowerArgs(fidl::VectorView<DevicePowerStateInfo>::FromExternal(states),
+                                   ::fidl::VectorView<DevicePerformanceStateInfo>(), false);
   ASSERT_OK(response.status());
   zx_status_t call_status = ZX_OK;
   if (response->result.is_err()) {
@@ -187,8 +186,8 @@ TEST_F(PowerTestCase, InvalidDevicePowerCaps_DuplicateCaps) {
   states[2].is_supported = true;
   auto response =
       fidl::WireCall<TestDevice>(zx::unowned(child_device_handle))
-          .AddDeviceWithPowerArgs(fidl::VectorView<DevicePowerStateInfo>::FromExternal(states),
-                                  ::fidl::VectorView<DevicePerformanceStateInfo>(), false);
+          ->AddDeviceWithPowerArgs(fidl::VectorView<DevicePowerStateInfo>::FromExternal(states),
+                                   ::fidl::VectorView<DevicePerformanceStateInfo>(), false);
   ASSERT_OK(response.status());
   zx_status_t call_status = ZX_OK;
   if (response->result.is_err()) {
@@ -206,8 +205,8 @@ TEST_F(PowerTestCase, AddDevicePowerCaps_Success) {
   states[1].is_supported = true;
   auto response =
       fidl::WireCall<TestDevice>(zx::unowned(child_device_handle))
-          .AddDeviceWithPowerArgs(fidl::VectorView<DevicePowerStateInfo>::FromExternal(states),
-                                  ::fidl::VectorView<DevicePerformanceStateInfo>(), false);
+          ->AddDeviceWithPowerArgs(fidl::VectorView<DevicePowerStateInfo>::FromExternal(states),
+                                   ::fidl::VectorView<DevicePerformanceStateInfo>(), false);
   ASSERT_OK(response.status());
   zx_status_t call_status = ZX_OK;
   if (response->result.is_err()) {
@@ -244,7 +243,7 @@ TEST_F(PowerTestCase, AddDevicePowerCaps_MakeVisible_Success) {
 
   const DevicePowerStateInfo *out_dpstates;
   auto response2 =
-      fidl::WireCall<Controller>(zx::unowned(child2_device_handle)).GetDevicePowerCaps();
+      fidl::WireCall<Controller>(zx::unowned(child2_device_handle))->GetDevicePowerCaps();
   ASSERT_OK(response2.status());
   zx_status_t call_status = ZX_OK;
   if (response2->result.is_err()) {
@@ -268,7 +267,7 @@ TEST_F(PowerTestCase, AddDevicePowerCaps_MakeVisible_Success) {
       1000);
   const DevicePerformanceStateInfo *out_perf_states;
   auto response =
-      fidl::WireCall<Controller>(zx::unowned(child2_device_handle)).GetDevicePerformanceStates();
+      fidl::WireCall<Controller>(zx::unowned(child2_device_handle))->GetDevicePerformanceStates();
   ASSERT_OK(response.status());
   out_perf_states = &response->states[0];
 
@@ -294,7 +293,7 @@ TEST_F(PowerTestCase, InvalidDevicePerformanceCaps_MissingRequired) {
 
   auto response =
       fidl::WireCall<TestDevice>(zx::unowned(child_device_handle))
-          .AddDeviceWithPowerArgs(
+          ->AddDeviceWithPowerArgs(
               fidl::VectorView<DevicePowerStateInfo>::FromExternal(states),
               fidl::VectorView<DevicePerformanceStateInfo>::FromExternal(perf_states), false);
   ASSERT_OK(response.status());
@@ -323,7 +322,7 @@ TEST_F(PowerTestCase, InvalidDevicePerformanceCaps_Duplicate) {
 
   auto response =
       fidl::WireCall<TestDevice>(zx::unowned(child_device_handle))
-          .AddDeviceWithPowerArgs(
+          ->AddDeviceWithPowerArgs(
               fidl::VectorView<DevicePowerStateInfo>::FromExternal(states),
               fidl::VectorView<DevicePerformanceStateInfo>::FromExternal(perf_states), false);
   ASSERT_OK(response.status());
@@ -349,7 +348,7 @@ TEST_F(PowerTestCase, InvalidDevicePerformanceCaps_More) {
   }
   auto response =
       fidl::WireCall<TestDevice>(zx::unowned(child_device_handle))
-          .AddDeviceWithPowerArgs(
+          ->AddDeviceWithPowerArgs(
               fidl::VectorView<DevicePowerStateInfo>::FromExternal(states),
               fidl::VectorView<DevicePerformanceStateInfo>::FromExternal(perf_states), false);
   ASSERT_OK(response.status());
@@ -372,8 +371,8 @@ TEST_F(PowerTestCase, AddDevicePerformanceCaps_NoCaps) {
   // This is the default case. By default, the devhost fills in the fully performance state.
   auto response =
       fidl::WireCall<TestDevice>(zx::unowned(child_device_handle))
-          .AddDeviceWithPowerArgs(std::move(power_states),
-                                  ::fidl::VectorView<DevicePerformanceStateInfo>(), false);
+          ->AddDeviceWithPowerArgs(std::move(power_states),
+                                   ::fidl::VectorView<DevicePerformanceStateInfo>(), false);
   ASSERT_OK(response.status());
   zx_status_t call_status = ZX_OK;
   if (response->result.is_err()) {
@@ -401,7 +400,7 @@ TEST_F(PowerTestCase, AddDevicePerformanceCaps_Success) {
 
   auto response =
       fidl::WireCall<TestDevice>(zx::unowned(child_device_handle))
-          .AddDeviceWithPowerArgs(std::move(power_states), std::move(performance_states), false);
+          ->AddDeviceWithPowerArgs(std::move(power_states), std::move(performance_states), false);
   ASSERT_OK(response.status());
   zx_status_t call_status = ZX_OK;
   if (response->result.is_err()) {
@@ -426,7 +425,7 @@ TEST_F(PowerTestCase, GetDevicePowerCaps_Success) {
 
   const DevicePowerStateInfo *out_dpstates;
   auto response2 =
-      fidl::WireCall<Controller>(zx::unowned(child2_device_handle)).GetDevicePowerCaps();
+      fidl::WireCall<Controller>(zx::unowned(child2_device_handle))->GetDevicePowerCaps();
   ASSERT_OK(response2.status());
   zx_status_t call_status = ZX_OK;
   if (response2->result.is_err()) {
@@ -476,7 +475,7 @@ TEST_F(PowerTestCase, GetDevicePerformanceStates_Success) {
 
   const DevicePerformanceStateInfo *out_dpstates;
   auto response =
-      fidl::WireCall<Controller>(zx::unowned(child2_device_handle)).GetDevicePerformanceStates();
+      fidl::WireCall<Controller>(zx::unowned(child2_device_handle))->GetDevicePerformanceStates();
   ASSERT_OK(response.status());
   out_dpstates = &response->states[0];
 
@@ -509,14 +508,14 @@ TEST_F(PowerTestCase, SetPerformanceState_Success) {
   AddChildWithPowerArgs(states, std::size(states), perf_states, std::size(perf_states));
 
   auto perf_change_result =
-      fidl::WireCall<Controller>(zx::unowned(child2_device_handle)).SetPerformanceState(1);
+      fidl::WireCall<Controller>(zx::unowned(child2_device_handle))->SetPerformanceState(1);
   ASSERT_OK(perf_change_result.status());
   const auto &perf_change_response = perf_change_result.value();
   ASSERT_OK(perf_change_response.status);
   ASSERT_EQ(perf_change_response.out_state, 1);
 
   auto response2 =
-      fidl::WireCall<Controller>(zx::unowned(child2_device_handle)).GetCurrentPerformanceState();
+      fidl::WireCall<Controller>(zx::unowned(child2_device_handle))->GetCurrentPerformanceState();
   ASSERT_OK(response2.status());
   ASSERT_EQ(response2->out_state, 1);
 }
@@ -524,7 +523,7 @@ TEST_F(PowerTestCase, SetPerformanceState_Success) {
 TEST_F(PowerTestCase, SetPerformanceStateFail_HookNotPresent) {
   // Parent does not support SetPerformanceState hook.
   auto perf_change_result =
-      fidl::WireCall<Controller>(zx::unowned(parent_device_handle)).SetPerformanceState(0);
+      fidl::WireCall<Controller>(zx::unowned(parent_device_handle))->SetPerformanceState(0);
   ASSERT_OK(perf_change_result.status());
   const auto &perf_change_response = perf_change_result.value();
   ASSERT_EQ(perf_change_response.status, ZX_ERR_NOT_SUPPORTED);
@@ -549,7 +548,7 @@ TEST_F(PowerTestCase, SetPerformanceStateFail_UnsupportedState) {
   AddChildWithPowerArgs(states, std::size(states), perf_states, std::size(perf_states));
 
   auto perf_change_result =
-      fidl::WireCall<Controller>(zx::unowned(child2_device_handle)).SetPerformanceState(2);
+      fidl::WireCall<Controller>(zx::unowned(child2_device_handle))->SetPerformanceState(2);
   ASSERT_OK(perf_change_result.status());
   const auto &perf_change_response = perf_change_result.value();
   ASSERT_EQ(perf_change_response.status, ZX_ERR_INVALID_ARGS);
@@ -570,14 +569,14 @@ TEST_F(PowerTestCase, Suspend_Success) {
   AddChildWithPowerArgs(states, std::size(states), nullptr, 0);
 
   auto suspend_result = fidl::WireCall<Controller>(zx::unowned(child2_device_handle))
-                            .Suspend(DevicePowerState::kDevicePowerStateD3Cold);
+                            ->Suspend(DevicePowerState::kDevicePowerStateD3Cold);
   ASSERT_OK(suspend_result.status());
   const auto &suspend_response = suspend_result.value();
   ASSERT_OK(suspend_response.status);
   ASSERT_EQ(suspend_response.out_state, DevicePowerState::kDevicePowerStateD3Cold);
 
   auto response2 =
-      fidl::WireCall<TestDevice>(zx::unowned(child2_device_handle)).GetCurrentDevicePowerState();
+      fidl::WireCall<TestDevice>(zx::unowned(child2_device_handle))->GetCurrentDevicePowerState();
   ASSERT_OK(response2.status());
   zx_status_t call_status = ZX_OK;
   if (response2->result.is_err()) {
@@ -602,13 +601,13 @@ TEST_F(PowerTestCase, AutoSuspend_Enable) {
   AddChildWithPowerArgs(states, std::size(states), nullptr, 0);
 
   auto suspend_result = fidl::WireCall<Controller>(zx::unowned(child2_device_handle))
-                            .ConfigureAutoSuspend(true, DevicePowerState::kDevicePowerStateD1);
+                            ->ConfigureAutoSuspend(true, DevicePowerState::kDevicePowerStateD1);
   ASSERT_OK(suspend_result.status());
   const auto &suspend_response = suspend_result.value();
   ASSERT_OK(suspend_response.status);
 
   auto response2 = fidl::WireCall<TestDevice>(zx::unowned(child2_device_handle))
-                       .GetCurrentDeviceAutoSuspendConfig();
+                       ->GetCurrentDeviceAutoSuspendConfig();
   ASSERT_OK(response2.status());
   zx_status_t call_status = ZX_OK;
   if (response2->result.is_err()) {
@@ -636,7 +635,7 @@ TEST_F(PowerTestCase, AutoSuspend_Disable) {
 
   {
     auto suspend_result = fidl::WireCall<Controller>(zx::unowned(child2_device_handle))
-                              .ConfigureAutoSuspend(true, DevicePowerState::kDevicePowerStateD1);
+                              ->ConfigureAutoSuspend(true, DevicePowerState::kDevicePowerStateD1);
     ASSERT_OK(suspend_result.status());
     const auto &suspend_response = suspend_result.value();
     ASSERT_OK(suspend_response.status);
@@ -644,7 +643,7 @@ TEST_F(PowerTestCase, AutoSuspend_Disable) {
 
   {
     auto response = fidl::WireCall<TestDevice>(zx::unowned(child2_device_handle))
-                        .GetCurrentDeviceAutoSuspendConfig();
+                        ->GetCurrentDeviceAutoSuspendConfig();
     ASSERT_OK(response.status());
     zx_status_t call_status = ZX_OK;
     if (response->result.is_err()) {
@@ -658,7 +657,7 @@ TEST_F(PowerTestCase, AutoSuspend_Disable) {
 
   {
     auto suspend_result = fidl::WireCall<Controller>(zx::unowned(child2_device_handle))
-                              .ConfigureAutoSuspend(false, DevicePowerState::kDevicePowerStateD0);
+                              ->ConfigureAutoSuspend(false, DevicePowerState::kDevicePowerStateD0);
     ASSERT_OK(suspend_result.status());
     auto &suspend_response = suspend_result.value();
     ASSERT_OK(suspend_response.status);
@@ -666,7 +665,7 @@ TEST_F(PowerTestCase, AutoSuspend_Disable) {
 
   {
     auto response = fidl::WireCall<TestDevice>(zx::unowned(child2_device_handle))
-                        .GetCurrentDeviceAutoSuspendConfig();
+                        ->GetCurrentDeviceAutoSuspendConfig();
     ASSERT_OK(response.status());
     auto call_status = ZX_OK;
     if (response->result.is_err()) {
@@ -693,7 +692,7 @@ TEST_F(PowerTestCase, AutoSuspend_DefaultDisabled) {
   AddChildWithPowerArgs(states, std::size(states), nullptr, 0);
 
   auto response2 = fidl::WireCall<TestDevice>(zx::unowned(child2_device_handle))
-                       .GetCurrentDeviceAutoSuspendConfig();
+                       ->GetCurrentDeviceAutoSuspendConfig();
   ASSERT_OK(response2.status());
   zx_status_t call_status = ZX_OK;
   if (response2->result.is_err()) {
@@ -719,14 +718,15 @@ TEST_F(PowerTestCase, DeviceSuspend_AutoSuspendEnabled) {
   states[2].restore_latency = 1000;
   AddChildWithPowerArgs(states, std::size(states), nullptr, 0);
 
-  auto auto_suspend_result = fidl::WireCall<Controller>(zx::unowned(child2_device_handle))
-                                 .ConfigureAutoSuspend(true, DevicePowerState::kDevicePowerStateD1);
+  auto auto_suspend_result =
+      fidl::WireCall<Controller>(zx::unowned(child2_device_handle))
+          ->ConfigureAutoSuspend(true, DevicePowerState::kDevicePowerStateD1);
   ASSERT_OK(auto_suspend_result.status());
   const auto &auto_suspend_response = auto_suspend_result.value();
   ASSERT_OK(auto_suspend_response.status);
 
   auto response2 = fidl::WireCall<TestDevice>(zx::unowned(child2_device_handle))
-                       .GetCurrentDeviceAutoSuspendConfig();
+                       ->GetCurrentDeviceAutoSuspendConfig();
   ASSERT_OK(response2.status());
   zx_status_t call_status = ZX_OK;
   if (response2->result.is_err()) {
@@ -739,7 +739,7 @@ TEST_F(PowerTestCase, DeviceSuspend_AutoSuspendEnabled) {
 
   {
     auto suspend_result = fidl::WireCall<Controller>(zx::unowned(child2_device_handle))
-                              .Suspend(DevicePowerState::kDevicePowerStateD3Cold);
+                              ->Suspend(DevicePowerState::kDevicePowerStateD3Cold);
     ASSERT_OK(suspend_result.status());
     const auto &suspend_response = suspend_result.value();
     // Device suspend is not supported when auto suspend is configured.
@@ -750,13 +750,13 @@ TEST_F(PowerTestCase, DeviceSuspend_AutoSuspendEnabled) {
     // Disable autosuspend and try again
     auto auto_suspend_result =
         fidl::WireCall<Controller>(zx::unowned(child2_device_handle))
-            .ConfigureAutoSuspend(false, DevicePowerState::kDevicePowerStateD0);
+            ->ConfigureAutoSuspend(false, DevicePowerState::kDevicePowerStateD0);
     ASSERT_OK(auto_suspend_result.status());
     auto &auto_suspend_response = auto_suspend_result.value();
     ASSERT_OK(auto_suspend_response.status);
 
     auto suspend_result = fidl::WireCall<Controller>(zx::unowned(child2_device_handle))
-                              .Suspend(DevicePowerState::kDevicePowerStateD3Cold);
+                              ->Suspend(DevicePowerState::kDevicePowerStateD3Cold);
     ASSERT_OK(suspend_result.status());
     ASSERT_OK(suspend_result.value().status);
   }
@@ -783,7 +783,7 @@ TEST_F(PowerTestCase, SystemSuspend_AutoSuspendEnabled) {
   }
 
   auto update_result = fidl::WireCall<Controller>(zx::unowned(child2_device_handle))
-                           .UpdatePowerStateMapping(mapping);
+                           ->UpdatePowerStateMapping(mapping);
   ASSERT_OK(update_result.status());
   zx_status_t call_status = ZX_OK;
   if (update_result->result.is_err()) {
@@ -794,22 +794,23 @@ TEST_F(PowerTestCase, SystemSuspend_AutoSuspendEnabled) {
   zx::channel local, remote;
   ASSERT_OK(zx::channel::create(0, &local, &remote));
 
-  auto auto_suspend_result = fidl::WireCall<Controller>(zx::unowned(child2_device_handle))
-                                 .ConfigureAutoSuspend(true, DevicePowerState::kDevicePowerStateD2);
+  auto auto_suspend_result =
+      fidl::WireCall<Controller>(zx::unowned(child2_device_handle))
+          ->ConfigureAutoSuspend(true, DevicePowerState::kDevicePowerStateD2);
   ASSERT_OK(auto_suspend_result.status());
   const auto &auto_suspend_response = auto_suspend_result.value();
   ASSERT_OK(auto_suspend_response.status);
 
   // Verify systemsuspend overrides autosuspend
   ASSERT_NE(devmgr.component_lifecycle_svc().channel(), ZX_HANDLE_INVALID);
-  auto result = fidl::WireCall<lifecycle_fidl::Lifecycle>(devmgr.component_lifecycle_svc()).Stop();
+  auto result = fidl::WireCall<lifecycle_fidl::Lifecycle>(devmgr.component_lifecycle_svc())->Stop();
   ASSERT_OK(result.status());
 
   // Wait till child2's suspend event is called.
   WaitForDeviceSuspendCompletion(zx::unowned(child2_device_handle));
 
   auto child_dev_suspend_response =
-      fidl::WireCall<TestDevice>(zx::unowned(child2_device_handle)).GetCurrentDevicePowerState();
+      fidl::WireCall<TestDevice>(zx::unowned(child2_device_handle))->GetCurrentDevicePowerState();
   ASSERT_OK(child_dev_suspend_response.status());
   call_status = ZX_OK;
   if (child_dev_suspend_response->result.is_err()) {
@@ -822,7 +823,7 @@ TEST_F(PowerTestCase, SystemSuspend_AutoSuspendEnabled) {
   // Wait till parent's suspend event is called.
   WaitForDeviceSuspendCompletion(zx::unowned(parent_device_handle));
   auto parent_dev_suspend_response =
-      fidl::WireCall<TestDevice>(zx::unowned(parent_device_handle)).GetCurrentDevicePowerState();
+      fidl::WireCall<TestDevice>(zx::unowned(parent_device_handle))->GetCurrentDevicePowerState();
   ASSERT_OK(parent_dev_suspend_response.status());
   call_status = ZX_OK;
   if (parent_dev_suspend_response->result.is_err()) {
@@ -848,14 +849,14 @@ TEST_F(PowerTestCase, SelectiveResume_Success) {
   AddChildWithPowerArgs(states, std::size(states), nullptr, 0);
 
   auto suspend_result = fidl::WireCall<Controller>(zx::unowned(child2_device_handle))
-                            .Suspend(DevicePowerState::kDevicePowerStateD3Cold);
+                            ->Suspend(DevicePowerState::kDevicePowerStateD3Cold);
   ASSERT_OK(suspend_result.status());
   const auto &suspend_response = suspend_result.value();
   ASSERT_OK(suspend_response.status);
   ASSERT_EQ(suspend_response.out_state, DevicePowerState::kDevicePowerStateD3Cold);
 
   auto response2 =
-      fidl::WireCall<TestDevice>(zx::unowned(child2_device_handle)).GetCurrentDevicePowerState();
+      fidl::WireCall<TestDevice>(zx::unowned(child2_device_handle))->GetCurrentDevicePowerState();
   ASSERT_OK(response2.status());
   zx_status_t call_status = ZX_OK;
   if (response2->result.is_err()) {
@@ -864,7 +865,7 @@ TEST_F(PowerTestCase, SelectiveResume_Success) {
   ASSERT_OK(call_status);
   ASSERT_EQ(response2->result.response().cur_state, DevicePowerState::kDevicePowerStateD3Cold);
 
-  auto resume_result = fidl::WireCall<Controller>(zx::unowned(child2_device_handle)).Resume();
+  auto resume_result = fidl::WireCall<Controller>(zx::unowned(child2_device_handle))->Resume();
   ASSERT_OK(resume_result.status());
 
   const auto &resume_response = resume_result.value();
@@ -873,7 +874,7 @@ TEST_F(PowerTestCase, SelectiveResume_Success) {
   ASSERT_EQ(resume_response.out_perf_state, kDevicePerformanceStateP0);
 
   auto response3 =
-      fidl::WireCall<TestDevice>(zx::unowned(child2_device_handle)).GetCurrentDevicePowerState();
+      fidl::WireCall<TestDevice>(zx::unowned(child2_device_handle))->GetCurrentDevicePowerState();
   ASSERT_OK(response3.status());
   call_status = ZX_OK;
   if (response3->result.is_err()) {
@@ -899,7 +900,7 @@ TEST_F(PowerTestCase, DefaultSystemPowerStatesMapping) {
 
   const SystemPowerStateInfo *states_mapping;
   auto response2 =
-      fidl::WireCall<Controller>(zx::unowned(child2_device_handle)).GetPowerStateMapping();
+      fidl::WireCall<Controller>(zx::unowned(child2_device_handle))->GetPowerStateMapping();
   ASSERT_OK(response2.status());
   zx_status_t call_status = ZX_OK;
   if (response2->result.is_err()) {
@@ -937,7 +938,7 @@ TEST_F(PowerTestCase, UpdatePowerStatesMapping_UnsupportedDeviceState) {
   }
 
   auto update_result = fidl::WireCall<Controller>(zx::unowned(child2_device_handle))
-                           .UpdatePowerStateMapping(mapping);
+                           ->UpdatePowerStateMapping(mapping);
   ASSERT_OK(update_result.status());
   zx_status_t call_status = ZX_OK;
   if (update_result->result.is_err()) {
@@ -947,7 +948,7 @@ TEST_F(PowerTestCase, UpdatePowerStatesMapping_UnsupportedDeviceState) {
 
   const SystemPowerStateInfo *states_mapping;
   auto response2 =
-      fidl::WireCall<Controller>(zx::unowned(child2_device_handle)).GetPowerStateMapping();
+      fidl::WireCall<Controller>(zx::unowned(child2_device_handle))->GetPowerStateMapping();
   ASSERT_OK(response2.status());
   call_status = ZX_OK;
   if (response2->result.is_err()) {
@@ -983,7 +984,7 @@ TEST_F(PowerTestCase, UpdatePowerStatesMapping_UnsupportedWakeConfig) {
   }
 
   auto update_result = fidl::WireCall<Controller>(zx::unowned(child2_device_handle))
-                           .UpdatePowerStateMapping(mapping);
+                           ->UpdatePowerStateMapping(mapping);
   ASSERT_OK(update_result.status());
   zx_status_t call_status = ZX_OK;
   if (update_result->result.is_err()) {
@@ -993,7 +994,7 @@ TEST_F(PowerTestCase, UpdatePowerStatesMapping_UnsupportedWakeConfig) {
 
   const SystemPowerStateInfo *states_mapping;
   auto response2 =
-      fidl::WireCall<Controller>(zx::unowned(child2_device_handle)).GetPowerStateMapping();
+      fidl::WireCall<Controller>(zx::unowned(child2_device_handle))->GetPowerStateMapping();
   ASSERT_OK(response2.status());
   call_status = ZX_OK;
   if (response2->result.is_err()) {
@@ -1028,7 +1029,7 @@ TEST_F(PowerTestCase, UpdatePowerStatesMapping_Success) {
   }
 
   auto update_result = fidl::WireCall<Controller>(zx::unowned(child2_device_handle))
-                           .UpdatePowerStateMapping(mapping);
+                           ->UpdatePowerStateMapping(mapping);
   ASSERT_OK(update_result.status());
   zx_status_t call_status = ZX_OK;
   if (update_result->result.is_err()) {
@@ -1038,7 +1039,7 @@ TEST_F(PowerTestCase, UpdatePowerStatesMapping_Success) {
 
   const SystemPowerStateInfo *states_mapping;
   auto response2 =
-      fidl::WireCall<Controller>(zx::unowned(child2_device_handle)).GetPowerStateMapping();
+      fidl::WireCall<Controller>(zx::unowned(child2_device_handle))->GetPowerStateMapping();
   ASSERT_OK(response2.status());
   call_status = ZX_OK;
   if (response2->result.is_err()) {
@@ -1073,7 +1074,7 @@ TEST_F(PowerTestCase, SystemSuspend_SuspendReasonReboot) {
   }
 
   auto update_result = fidl::WireCall<Controller>(zx::unowned(child2_device_handle))
-                           .UpdatePowerStateMapping(mapping);
+                           ->UpdatePowerStateMapping(mapping);
   ASSERT_OK(update_result.status());
   zx_status_t call_status = ZX_OK;
   if (update_result->result.is_err()) {
@@ -1085,14 +1086,14 @@ TEST_F(PowerTestCase, SystemSuspend_SuspendReasonReboot) {
   zx::channel local, remote;
   ASSERT_OK(zx::channel::create(0, &local, &remote));
   ASSERT_NE(devmgr.component_lifecycle_svc().channel(), ZX_HANDLE_INVALID);
-  auto result = fidl::WireCall<lifecycle_fidl::Lifecycle>(devmgr.component_lifecycle_svc()).Stop();
+  auto result = fidl::WireCall<lifecycle_fidl::Lifecycle>(devmgr.component_lifecycle_svc())->Stop();
   ASSERT_OK(result.status());
 
   // Wait till child2's suspend event is called.
   WaitForDeviceSuspendCompletion(zx::unowned(child2_device_handle));
 
   auto child_dev_suspend_response =
-      fidl::WireCall<TestDevice>(zx::unowned(child2_device_handle)).GetCurrentDevicePowerState();
+      fidl::WireCall<TestDevice>(zx::unowned(child2_device_handle))->GetCurrentDevicePowerState();
   ASSERT_OK(child_dev_suspend_response.status());
   call_status = ZX_OK;
   if (child_dev_suspend_response->result.is_err()) {
@@ -1104,7 +1105,7 @@ TEST_F(PowerTestCase, SystemSuspend_SuspendReasonReboot) {
 
   // Verify that the suspend reason is received correctly
   auto suspend_reason_response =
-      fidl::WireCall<TestDevice>(zx::unowned(child2_device_handle)).GetCurrentSuspendReason();
+      fidl::WireCall<TestDevice>(zx::unowned(child2_device_handle))->GetCurrentSuspendReason();
   ASSERT_OK(suspend_reason_response.status());
   call_status = ZX_OK;
   if (suspend_reason_response->result.is_err()) {
@@ -1118,7 +1119,7 @@ TEST_F(PowerTestCase, SystemSuspend_SuspendReasonReboot) {
   WaitForDeviceSuspendCompletion(zx::unowned(parent_device_handle));
 
   auto parent_dev_suspend_response =
-      fidl::WireCall<TestDevice>(zx::unowned(parent_device_handle)).GetCurrentDevicePowerState();
+      fidl::WireCall<TestDevice>(zx::unowned(parent_device_handle))->GetCurrentDevicePowerState();
   ASSERT_OK(parent_dev_suspend_response.status());
   call_status = ZX_OK;
   if (parent_dev_suspend_response->result.is_err()) {
@@ -1150,7 +1151,7 @@ TEST_F(PowerTestCase, SystemSuspend_SuspendReasonRebootRecovery) {
   }
 
   auto update_result = fidl::WireCall<Controller>(zx::unowned(child2_device_handle))
-                           .UpdatePowerStateMapping(mapping);
+                           ->UpdatePowerStateMapping(mapping);
   ASSERT_OK(update_result.status());
   zx_status_t call_status = ZX_OK;
   if (update_result->result.is_err()) {
@@ -1163,14 +1164,14 @@ TEST_F(PowerTestCase, SystemSuspend_SuspendReasonRebootRecovery) {
   zx::channel local, remote;
   ASSERT_OK(zx::channel::create(0, &local, &remote));
   ASSERT_NE(devmgr.component_lifecycle_svc().channel(), ZX_HANDLE_INVALID);
-  auto result = fidl::WireCall<lifecycle_fidl::Lifecycle>(devmgr.component_lifecycle_svc()).Stop();
+  auto result = fidl::WireCall<lifecycle_fidl::Lifecycle>(devmgr.component_lifecycle_svc())->Stop();
   ASSERT_OK(result.status());
 
   // Wait till child2's suspend event is called.
   WaitForDeviceSuspendCompletion(zx::unowned(child2_device_handle));
 
   auto child_dev_suspend_response =
-      fidl::WireCall<TestDevice>(zx::unowned(child2_device_handle)).GetCurrentDevicePowerState();
+      fidl::WireCall<TestDevice>(zx::unowned(child2_device_handle))->GetCurrentDevicePowerState();
   ASSERT_OK(child_dev_suspend_response.status());
   call_status = ZX_OK;
   if (child_dev_suspend_response->result.is_err()) {
@@ -1181,7 +1182,7 @@ TEST_F(PowerTestCase, SystemSuspend_SuspendReasonRebootRecovery) {
             DevicePowerState::kDevicePowerStateD2);
 
   auto suspend_reason_response =
-      fidl::WireCall<TestDevice>(zx::unowned(child2_device_handle)).GetCurrentSuspendReason();
+      fidl::WireCall<TestDevice>(zx::unowned(child2_device_handle))->GetCurrentSuspendReason();
   ASSERT_OK(suspend_reason_response.status());
   call_status = ZX_OK;
   if (suspend_reason_response->result.is_err()) {
@@ -1194,7 +1195,7 @@ TEST_F(PowerTestCase, SystemSuspend_SuspendReasonRebootRecovery) {
   // Wait till parent's suspend event is called.
   WaitForDeviceSuspendCompletion(zx::unowned(parent_device_handle));
   auto parent_dev_suspend_response =
-      fidl::WireCall<TestDevice>(zx::unowned(parent_device_handle)).GetCurrentDevicePowerState();
+      fidl::WireCall<TestDevice>(zx::unowned(parent_device_handle))->GetCurrentDevicePowerState();
   ASSERT_OK(parent_dev_suspend_response.status());
   call_status = ZX_OK;
   if (parent_dev_suspend_response->result.is_err()) {
@@ -1227,27 +1228,27 @@ TEST_F(PowerTestCase, SelectiveResume_AfterSetPerformanceState) {
   AddChildWithPowerArgs(states, std::size(states), perf_states, std::size(perf_states));
 
   auto perf_change_result =
-      fidl::WireCall<Controller>(zx::unowned(child2_device_handle)).SetPerformanceState(1);
+      fidl::WireCall<Controller>(zx::unowned(child2_device_handle))->SetPerformanceState(1);
   ASSERT_OK(perf_change_result.status());
   const auto &perf_change_response = perf_change_result.value();
   ASSERT_OK(perf_change_response.status);
   ASSERT_EQ(perf_change_response.out_state, 1);
 
   auto response2 =
-      fidl::WireCall<Controller>(zx::unowned(child2_device_handle)).GetCurrentPerformanceState();
+      fidl::WireCall<Controller>(zx::unowned(child2_device_handle))->GetCurrentPerformanceState();
   ASSERT_OK(response2.status());
   ASSERT_EQ(response2->out_state, 1);
 
   // Suspend and resume the device. Test if device resumes to saved performance state.
   auto suspend_result = fidl::WireCall<Controller>(zx::unowned(child2_device_handle))
-                            .Suspend(DevicePowerState::kDevicePowerStateD3Cold);
+                            ->Suspend(DevicePowerState::kDevicePowerStateD3Cold);
   ASSERT_OK(suspend_result.status());
   const auto &suspend_response = suspend_result.value();
   ASSERT_OK(suspend_response.status);
   ASSERT_EQ(suspend_response.out_state, DevicePowerState::kDevicePowerStateD3Cold);
 
   auto response3 =
-      fidl::WireCall<TestDevice>(zx::unowned(child2_device_handle)).GetCurrentDevicePowerState();
+      fidl::WireCall<TestDevice>(zx::unowned(child2_device_handle))->GetCurrentDevicePowerState();
   ASSERT_OK(response3.status());
   zx_status_t call_status = ZX_OK;
   if (response3->result.is_err()) {
@@ -1257,7 +1258,7 @@ TEST_F(PowerTestCase, SelectiveResume_AfterSetPerformanceState) {
   ASSERT_EQ(response3->result.response().cur_state, DevicePowerState::kDevicePowerStateD3Cold);
 
   // Resume
-  auto resume_result = fidl::WireCall<Controller>(zx::unowned(child2_device_handle)).Resume();
+  auto resume_result = fidl::WireCall<Controller>(zx::unowned(child2_device_handle))->Resume();
   ASSERT_OK(resume_result.status());
 
   const auto &resume_response = resume_result.value();
@@ -1288,27 +1289,27 @@ TEST_F(PowerTestCase, SelectiveResume_FailedToResumeToWorking) {
   AddChildWithPowerArgs(states, std::size(states), perf_states, std::size(perf_states));
 
   auto perf_change_result =
-      fidl::WireCall<Controller>(zx::unowned(child2_device_handle)).SetPerformanceState(1);
+      fidl::WireCall<Controller>(zx::unowned(child2_device_handle))->SetPerformanceState(1);
   ASSERT_OK(perf_change_result.status());
   const auto &perf_change_response = perf_change_result.value();
   ASSERT_OK(perf_change_response.status);
   ASSERT_EQ(perf_change_response.out_state, 1);
 
   auto response2 =
-      fidl::WireCall<Controller>(zx::unowned(child2_device_handle)).GetCurrentPerformanceState();
+      fidl::WireCall<Controller>(zx::unowned(child2_device_handle))->GetCurrentPerformanceState();
   ASSERT_OK(response2.status());
   ASSERT_EQ(response2->out_state, 1);
 
   // Suspend
   auto suspend_result = fidl::WireCall<Controller>(zx::unowned(child2_device_handle))
-                            .Suspend(DevicePowerState::kDevicePowerStateD3Cold);
+                            ->Suspend(DevicePowerState::kDevicePowerStateD3Cold);
   ASSERT_OK(suspend_result.status());
   const auto &suspend_response = suspend_result.value();
   ASSERT_OK(suspend_response.status);
   ASSERT_EQ(suspend_response.out_state, DevicePowerState::kDevicePowerStateD3Cold);
 
   auto response3 =
-      fidl::WireCall<TestDevice>(zx::unowned(child2_device_handle)).GetCurrentDevicePowerState();
+      fidl::WireCall<TestDevice>(zx::unowned(child2_device_handle))->GetCurrentDevicePowerState();
   ASSERT_OK(response3.status());
   zx_status_t call_status = ZX_OK;
   if (response3->result.is_err()) {
@@ -1322,7 +1323,7 @@ TEST_F(PowerTestCase, SelectiveResume_FailedToResumeToWorking) {
   info.out_power_state = static_cast<uint8_t>(DevicePowerState::kDevicePowerStateD3Cold);
   info.out_performance_state = 1;
   auto response4 =
-      fidl::WireCall<TestDevice>(zx::unowned(child2_device_handle)).SetTestStatusInfo(info);
+      fidl::WireCall<TestDevice>(zx::unowned(child2_device_handle))->SetTestStatusInfo(info);
   call_status = ZX_OK;
   ASSERT_OK(response4.status());
   if (response4->result.is_err()) {
@@ -1331,7 +1332,7 @@ TEST_F(PowerTestCase, SelectiveResume_FailedToResumeToWorking) {
   ASSERT_OK(call_status);
 
   // Resume
-  auto resume_result = fidl::WireCall<Controller>(zx::unowned(child2_device_handle)).Resume();
+  auto resume_result = fidl::WireCall<Controller>(zx::unowned(child2_device_handle))->Resume();
   ASSERT_OK(resume_result.status());
 
   const auto &resume_response = resume_result.value();
@@ -1361,27 +1362,27 @@ TEST_F(PowerTestCase, SelectiveResume_FailedToResumeToPerformanceState) {
   AddChildWithPowerArgs(states, std::size(states), perf_states, std::size(perf_states));
 
   auto perf_change_result =
-      fidl::WireCall<Controller>(zx::unowned(child2_device_handle)).SetPerformanceState(1);
+      fidl::WireCall<Controller>(zx::unowned(child2_device_handle))->SetPerformanceState(1);
   ASSERT_OK(perf_change_result.status());
   const auto &perf_change_response = perf_change_result.value();
   ASSERT_OK(perf_change_response.status);
   ASSERT_EQ(perf_change_response.out_state, 1);
 
   auto response2 =
-      fidl::WireCall<Controller>(zx::unowned(child2_device_handle)).GetCurrentPerformanceState();
+      fidl::WireCall<Controller>(zx::unowned(child2_device_handle))->GetCurrentPerformanceState();
   ASSERT_OK(response2.status());
   ASSERT_EQ(response2->out_state, 1);
 
   // Suspend
   auto suspend_result = fidl::WireCall<Controller>(zx::unowned(child2_device_handle))
-                            .Suspend(DevicePowerState::kDevicePowerStateD3Cold);
+                            ->Suspend(DevicePowerState::kDevicePowerStateD3Cold);
   ASSERT_OK(suspend_result.status());
   const auto &suspend_response = suspend_result.value();
   ASSERT_OK(suspend_response.status);
   ASSERT_EQ(suspend_response.out_state, DevicePowerState::kDevicePowerStateD3Cold);
 
   auto response3 =
-      fidl::WireCall<TestDevice>(zx::unowned(child2_device_handle)).GetCurrentDevicePowerState();
+      fidl::WireCall<TestDevice>(zx::unowned(child2_device_handle))->GetCurrentDevicePowerState();
   ASSERT_OK(response3.status());
   zx_status_t call_status = ZX_OK;
   if (response3->result.is_err()) {
@@ -1396,7 +1397,7 @@ TEST_F(PowerTestCase, SelectiveResume_FailedToResumeToPerformanceState) {
   // The previous performance_state set was 1.
   info.out_performance_state = 2;
   auto response4 =
-      fidl::WireCall<TestDevice>(zx::unowned(child2_device_handle)).SetTestStatusInfo(info);
+      fidl::WireCall<TestDevice>(zx::unowned(child2_device_handle))->SetTestStatusInfo(info);
   call_status = ZX_OK;
   ASSERT_OK(response4.status());
   if (response4->result.is_err()) {
@@ -1405,7 +1406,7 @@ TEST_F(PowerTestCase, SelectiveResume_FailedToResumeToPerformanceState) {
   ASSERT_OK(call_status);
 
   // Resume
-  auto resume_result = fidl::WireCall<Controller>(zx::unowned(child2_device_handle)).Resume();
+  auto resume_result = fidl::WireCall<Controller>(zx::unowned(child2_device_handle))->Resume();
   ASSERT_OK(resume_result.status());
 
   const auto &resume_response = resume_result.value();
@@ -1415,7 +1416,7 @@ TEST_F(PowerTestCase, SelectiveResume_FailedToResumeToPerformanceState) {
 
   // The performance state has to be updated to the state that the device resumed to.
   auto response5 =
-      fidl::WireCall<Controller>(zx::unowned(child2_device_handle)).GetCurrentPerformanceState();
+      fidl::WireCall<Controller>(zx::unowned(child2_device_handle))->GetCurrentPerformanceState();
   ASSERT_OK(response5.status());
   ASSERT_EQ(response5->out_state, info.out_performance_state);
 }
@@ -1437,7 +1438,7 @@ TEST_F(PowerTestCase, DeviceResume_AutoSuspendEnabled) {
   {
     auto auto_suspend_result =
         fidl::WireCall<Controller>(zx::unowned(child2_device_handle))
-            .ConfigureAutoSuspend(true, DevicePowerState::kDevicePowerStateD1);
+            ->ConfigureAutoSuspend(true, DevicePowerState::kDevicePowerStateD1);
     ASSERT_OK(auto_suspend_result.status());
     const auto &auto_suspend_response = auto_suspend_result.value();
     ASSERT_OK(auto_suspend_response.status);
@@ -1445,7 +1446,7 @@ TEST_F(PowerTestCase, DeviceResume_AutoSuspendEnabled) {
 
   {
     auto response = fidl::WireCall<TestDevice>(zx::unowned(child2_device_handle))
-                        .GetCurrentDeviceAutoSuspendConfig();
+                        ->GetCurrentDeviceAutoSuspendConfig();
     ASSERT_OK(response.status());
     zx_status_t call_status = ZX_OK;
     if (response->result.is_err()) {
@@ -1458,7 +1459,7 @@ TEST_F(PowerTestCase, DeviceResume_AutoSuspendEnabled) {
   }
 
   {
-    auto resume_result = fidl::WireCall<Controller>(zx::unowned(child2_device_handle)).Resume();
+    auto resume_result = fidl::WireCall<Controller>(zx::unowned(child2_device_handle))->Resume();
     ASSERT_OK(resume_result.status());
     // Device resume is not supported when auto suspend is configured.
     ASSERT_EQ(resume_result.value().status, ZX_ERR_NOT_SUPPORTED);
@@ -1468,7 +1469,7 @@ TEST_F(PowerTestCase, DeviceResume_AutoSuspendEnabled) {
   {
     auto auto_suspend_result =
         fidl::WireCall<Controller>(zx::unowned(child2_device_handle))
-            .ConfigureAutoSuspend(false, DevicePowerState::kDevicePowerStateD0);
+            ->ConfigureAutoSuspend(false, DevicePowerState::kDevicePowerStateD0);
     ASSERT_OK(auto_suspend_result.status());
     auto &auto_suspend_response = auto_suspend_result.value();
     ASSERT_OK(auto_suspend_response.status);
@@ -1476,13 +1477,13 @@ TEST_F(PowerTestCase, DeviceResume_AutoSuspendEnabled) {
 
   {
     auto suspend_result = fidl::WireCall<Controller>(zx::unowned(child2_device_handle))
-                              .Suspend(DevicePowerState::kDevicePowerStateD3Cold);
+                              ->Suspend(DevicePowerState::kDevicePowerStateD3Cold);
     ASSERT_OK(suspend_result.status());
     ASSERT_OK(suspend_result.value().status);
   }
 
   {
-    auto resume_result = fidl::WireCall<Controller>(zx::unowned(child2_device_handle)).Resume();
+    auto resume_result = fidl::WireCall<Controller>(zx::unowned(child2_device_handle))->Resume();
     ASSERT_OK(resume_result.status());
     ASSERT_OK(resume_result.value().status);
   }

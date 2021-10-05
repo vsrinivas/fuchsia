@@ -262,31 +262,29 @@ class ::fidl::WireUnownedResult<
 // const reference to a |fidl::ClientEnd<::fidl_test_service::SecondProtocol>|,
 // avoiding setting up a client.
 template <>
-class ::fidl::internal::WireCaller<::fidl_test_service::SecondProtocol> final {
+class ::fidl::internal::WireSyncClientImpl<::fidl_test_service::SecondProtocol>
+    final : public ::fidl::internal::SyncEndpointVeneer<
+                ::fidl::internal::WireSyncClientImpl<
+                    ::fidl_test_service::SecondProtocol>> {
  public:
-  explicit WireCaller(
-      ::fidl::UnownedClientEnd<::fidl_test_service::SecondProtocol> client_end)
-      : client_end_(client_end) {}
-
-  // Allocates 16 bytes of message buffer on the stack. No heap allocation
-  // necessary.
-  static ::fidl::WireResult<::fidl_test_service::SecondProtocol::MethodOnSecond>
-  MethodOnSecond(::fidl::UnownedClientEnd<::fidl_test_service::SecondProtocol>
-                     _client_end) {
-    return ::fidl::WireResult<
-        ::fidl_test_service::SecondProtocol::MethodOnSecond>(_client_end);
-  }
+  using ::fidl::internal::SyncEndpointVeneer<
+      ::fidl::internal::WireSyncClientImpl<
+          ::fidl_test_service::SecondProtocol>>::SyncEndpointVeneer;
 
   // Allocates 16 bytes of message buffer on the stack. No heap allocation
   // necessary.
   ::fidl::WireResult<::fidl_test_service::SecondProtocol::MethodOnSecond>
-  MethodOnSecond() && {
+  MethodOnSecond() {
     return ::fidl::WireResult<
-        ::fidl_test_service::SecondProtocol::MethodOnSecond>(client_end_);
+        ::fidl_test_service::SecondProtocol::MethodOnSecond>(_client_end());
   }
 
  private:
-  ::fidl::UnownedClientEnd<::fidl_test_service::SecondProtocol> client_end_;
+  ::fidl::UnownedClientEnd<::fidl_test_service::SecondProtocol> _client_end()
+      const {
+    return ::fidl::UnownedClientEnd<::fidl_test_service::SecondProtocol>(
+        _channel());
+  }
 };
 template <>
 class ::fidl::internal::WireEventHandlerInterface<
@@ -619,31 +617,29 @@ class ::fidl::WireUnownedResult<
 // const reference to a |fidl::ClientEnd<::fidl_test_service::FirstProtocol>|,
 // avoiding setting up a client.
 template <>
-class ::fidl::internal::WireCaller<::fidl_test_service::FirstProtocol> final {
+class ::fidl::internal::WireSyncClientImpl<::fidl_test_service::FirstProtocol>
+    final : public ::fidl::internal::SyncEndpointVeneer<
+                ::fidl::internal::WireSyncClientImpl<
+                    ::fidl_test_service::FirstProtocol>> {
  public:
-  explicit WireCaller(
-      ::fidl::UnownedClientEnd<::fidl_test_service::FirstProtocol> client_end)
-      : client_end_(client_end) {}
-
-  // Allocates 16 bytes of message buffer on the stack. No heap allocation
-  // necessary.
-  static ::fidl::WireResult<::fidl_test_service::FirstProtocol::MethodOnFirst>
-  MethodOnFirst(::fidl::UnownedClientEnd<::fidl_test_service::FirstProtocol>
-                    _client_end) {
-    return ::fidl::WireResult<
-        ::fidl_test_service::FirstProtocol::MethodOnFirst>(_client_end);
-  }
+  using ::fidl::internal::SyncEndpointVeneer<
+      ::fidl::internal::WireSyncClientImpl<
+          ::fidl_test_service::FirstProtocol>>::SyncEndpointVeneer;
 
   // Allocates 16 bytes of message buffer on the stack. No heap allocation
   // necessary.
   ::fidl::WireResult<::fidl_test_service::FirstProtocol::MethodOnFirst>
-  MethodOnFirst() && {
+  MethodOnFirst() {
     return ::fidl::WireResult<
-        ::fidl_test_service::FirstProtocol::MethodOnFirst>(client_end_);
+        ::fidl_test_service::FirstProtocol::MethodOnFirst>(_client_end());
   }
 
  private:
-  ::fidl::UnownedClientEnd<::fidl_test_service::FirstProtocol> client_end_;
+  ::fidl::UnownedClientEnd<::fidl_test_service::FirstProtocol> _client_end()
+      const {
+    return ::fidl::UnownedClientEnd<::fidl_test_service::FirstProtocol>(
+        _channel());
+  }
 };
 template <>
 class ::fidl::internal::WireEventHandlerInterface<

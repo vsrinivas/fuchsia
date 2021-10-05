@@ -88,7 +88,7 @@ zx::status<> InitNativeFs(const char* binary, zx::channel device, const InitOpti
 
   if (options.wait_until_ready) {
     // Wait until the filesystem is ready to take incoming requests
-    auto result = fidl::WireCall<fio::Node>(outgoing_directory.client).Describe();
+    auto result = fidl::WireCall<fio::Node>(outgoing_directory.client)->Describe();
     switch (result.status()) {
       case ZX_OK:
         break;
@@ -112,7 +112,7 @@ zx::status<zx::channel> GetFsRootHandle(zx::unowned_channel export_root, uint32_
   }
 
   auto resp = fidl::WireCall<fio::Directory>(zx::unowned_channel(export_root))
-                  .Open(flags, 0, fidl::StringView("root"), std::move(root_server));
+                  ->Open(flags, 0, fidl::StringView("root"), std::move(root_server));
   if (!resp.ok()) {
     return zx::error(resp.status());
   }

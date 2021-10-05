@@ -448,7 +448,7 @@ void devfs_open(Devnode* dirdn, async_dispatcher_t* dispatcher, fidl::ServerEnd<
       dir_path = current_dir;
     }
     fidl::WireCall(*diagnostics_channel)
-        .Open(flags, 0, fidl::StringView::FromExternal(dir_path), std::move(ipc));
+        ->Open(flags, 0, fidl::StringView::FromExternal(dir_path), std::move(ipc));
   } else {
     if (!strcmp(path, ".")) {
       path = nullptr;
@@ -484,7 +484,7 @@ void devfs_open(Devnode* dirdn, async_dispatcher_t* dispatcher, fidl::ServerEnd<
       describe(zx::ok(std::move(node_info)));
       DcIostate::Bind(std::move(ios), std::move(ipc));
     } else if (dn->service_node) {
-      fidl::WireCall(dn->service_node).Clone(flags, std::move(ipc));
+      fidl::WireCall(dn->service_node)->Clone(flags, std::move(ipc));
     } else {
       dn->device->device_controller()->Open(flags, 0, ".", std::move(ipc));
     }
@@ -898,7 +898,7 @@ zx_status_t devfs_export(Devnode* dn, fidl::ClientEnd<fuchsia_io::Node> service_
     }
     out.back()->service_node = std::move(endpoints->client);
     auto result = fidl::WireCall(dn->service_node)
-                      .Clone(ZX_FS_FLAG_CLONE_SAME_RIGHTS, std::move(endpoints->server));
+                      ->Clone(ZX_FS_FLAG_CLONE_SAME_RIGHTS, std::move(endpoints->server));
     if (!result.ok()) {
       return result.status();
     }

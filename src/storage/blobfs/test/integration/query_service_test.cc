@@ -143,7 +143,7 @@ TEST_F(QueryServiceTest, IsNodeInFilesystemPositiveCase) {
   // Get a token corresponding to the root directory.
   fdio_cpp::UnownedFdioCaller caller(root_fd());
   auto token_result =
-      fidl::WireCall(fidl::UnownedClientEnd<fio::Directory>(caller.channel())).GetToken();
+      fidl::WireCall(fidl::UnownedClientEnd<fio::Directory>(caller.channel()))->GetToken();
   ASSERT_EQ(token_result.status(), ZX_OK);
   ASSERT_EQ(token_result->s, ZX_OK);
   zx::handle token_raw = std::move(token_result->token);

@@ -84,8 +84,8 @@ int main(int argc, char** argv) {
     return -1;
   }
 
-  auto resp =
-      fidl::WireCall<fuchsia_device::Controller>(zx::unowned_channel(local.get())).ScheduleUnbind();
+  auto resp = fidl::WireCall<fuchsia_device::Controller>(zx::unowned_channel(local.get()))
+                  ->ScheduleUnbind();
   status = resp.status();
 
   if (status == ZX_OK) {

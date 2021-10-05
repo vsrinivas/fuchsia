@@ -48,7 +48,7 @@ void QueryInfo(const TestFilesystem& fs, fuchsia_io_admin::wire::FilesystemInfo*
 
   fdio_cpp::FdioCaller caller(std::move(root_fd));
   auto result =
-      fidl::WireCall<fuchsia_io_admin::DirectoryAdmin>(caller.channel()).QueryFilesystem();
+      fidl::WireCall<fuchsia_io_admin::DirectoryAdmin>(caller.channel())->QueryFilesystem();
   ASSERT_EQ(result.status(), ZX_OK);
   ASSERT_EQ(result.Unwrap()->s, ZX_OK);
   ASSERT_NE(result.Unwrap()->info, nullptr);

@@ -189,7 +189,7 @@ class FactoryResetTest : public Test {
     zx_status_t call_status = ZX_OK;
     auto resp =
         fidl::WireCall<fuchsia_device::Controller>(zx::unowned_channel(connection.borrow_channel()))
-            .Bind(::fidl::StringView::FromExternal(driver.data(), driver.length()));
+            ->Bind(::fidl::StringView::FromExternal(driver.data(), driver.length()));
     zx_status_t io_status = resp.status();
     if (io_status != ZX_OK) {
       return io_status;

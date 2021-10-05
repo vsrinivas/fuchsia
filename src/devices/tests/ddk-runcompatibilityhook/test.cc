@@ -58,7 +58,7 @@ TEST(DeviceControllerIntegrationTest, RunCompatibilityHookSuccess) {
 
   uint32_t call_status;
   auto resp = fidl::WireCall<Controller>(zx::unowned_channel(parent_device_handle.get()))
-                  .RunCompatibilityTests(zx::duration::infinite().get());
+                  ->RunCompatibilityTests(zx::duration::infinite().get());
   status = resp.status();
   call_status = resp->status;
 
@@ -98,7 +98,7 @@ TEST(DeviceControllerIntegrationTest, RunCompatibilityHookMissingAddInBind) {
 
   uint32_t call_status;
   auto resp = fidl::WireCall<Controller>(zx::unowned_channel(parent_device_handle.get()))
-                  .RunCompatibilityTests(zx::duration(zx::msec(2000)).get());
+                  ->RunCompatibilityTests(zx::duration(zx::msec(2000)).get());
   status = resp.status();
   call_status = resp->status;
 
@@ -138,7 +138,7 @@ TEST(DeviceControllerIntegrationTest, RunCompatibilityHookMissingRemoveInUnbind)
 
   uint32_t call_status;
   auto resp = fidl::WireCall<Controller>(zx::unowned_channel(parent_device_handle.get()))
-                  .RunCompatibilityTests(zx::duration(zx::msec(2000)).get());
+                  ->RunCompatibilityTests(zx::duration(zx::msec(2000)).get());
   status = resp.status();
   call_status = resp->status;
 

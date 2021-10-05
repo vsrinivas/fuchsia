@@ -42,7 +42,7 @@ const char* kDriverLib = "/boot/driver/block-verity.so";
 zx_status_t BindVerityDriver(zx::unowned_channel ramdisk_chan) {
   zx_status_t rc;
   auto resp = fidl::WireCall<fuchsia_device::Controller>(std::move(ramdisk_chan))
-                  .Bind(::fidl::StringView::FromExternal(kDriverLib));
+                  ->Bind(::fidl::StringView::FromExternal(kDriverLib));
   rc = resp.status();
   if (rc == ZX_OK) {
     if (resp->result.is_err()) {

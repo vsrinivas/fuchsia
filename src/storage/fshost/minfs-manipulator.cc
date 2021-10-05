@@ -128,7 +128,7 @@ uint64_t EstimateMinfsRequiredSpace(const Copier& copier) {
 zx::status<fuchsia_hardware_block::wire::BlockInfo> GetBlockDeviceInfo(
     const zx::unowned_channel& device) {
   fidl::UnownedClientEnd<fuchsia_hardware_block::Block> client(device);
-  auto result = fidl::WireCall(client).GetInfo();
+  auto result = fidl::WireCall(client)->GetInfo();
   if (result.status() != ZX_OK) {
     return zx::error(result.status());
   }
@@ -327,7 +327,7 @@ zx::status<> MountedMinfs::Unmount(MountedMinfs fs) { return fs.Unmount(); }
 
 zx::status<fuchsia_io_admin::wire::FilesystemInfo> MountedMinfs::GetFilesystemInfo() const {
   fidl::UnownedClientEnd<fuchsia_io_admin::DirectoryAdmin> directory_admin(root_.borrow());
-  auto query_result = fidl::WireCall(directory_admin).QueryFilesystem();
+  auto query_result = fidl::WireCall(directory_admin)->QueryFilesystem();
   if (query_result.status() != ZX_OK) {
     return zx::error(query_result.status());
   }
@@ -373,7 +373,7 @@ MountedMinfs::MountedMinfs(zx::channel root) : root_(std::move(root)) {}
 zx::status<> MountedMinfs::Unmount() {
   // Take |root_| so the destructor doesn't try to unmount again.
   fidl::ClientEnd<fuchsia_io_admin::DirectoryAdmin> directory_admin(std::move(root_));
-  auto result = fidl::WireCall(directory_admin).Unmount();
+  auto result = fidl::WireCall(directory_admin)->Unmount();
   if (result.status() != ZX_OK) {
     return zx::error(result.status());
   }

@@ -9,7 +9,7 @@
 namespace fpty = fuchsia_hardware_pty;
 
 zx_status_t pty_read_events(zx_handle_t handle, uint32_t* out_events) {
-  auto result = fidl::WireCall<fpty::Device>(zx::unowned_channel(handle)).ReadEvents();
+  auto result = fidl::WireCall<fpty::Device>(zx::unowned_channel(handle))->ReadEvents();
   if (result.status() != ZX_OK) {
     return result.status();
   }

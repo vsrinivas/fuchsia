@@ -2141,7 +2141,7 @@ TEST_F(NetworkDeviceTest, PortWatcherEnforcesQueueLimit) {
   fidl::ClientEnd watcher = std::move(endpoints->client);
   // Call watch once to observe the idle event and ensure no races between watcher binding and
   // adding ports will happen.
-  fidl::WireResult result = fidl::WireCall(watcher).Watch();
+  fidl::WireResult result = fidl::WireCall(watcher)->Watch();
   ASSERT_OK(result.status());
   ASSERT_EQ(result.value().event.which(), netdev::wire::DevicePortEvent::Tag::kIdle);
 

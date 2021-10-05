@@ -84,7 +84,7 @@ TEST_F(InspectTestCase, ReadInspectData) {
       CheckProperty(hierarchy().node(), "testBeforeDdkAdd", inspect::StringPropertyValue("OK")));
 
   // Call test-driver to modify inspect data
-  auto result = fidl::WireCall<TestInspect>(channel()).ModifyInspect();
+  auto result = fidl::WireCall<TestInspect>(channel())->ModifyInspect();
   ASSERT_OK(result.status());
   ASSERT_FALSE(result->result.is_err());
 

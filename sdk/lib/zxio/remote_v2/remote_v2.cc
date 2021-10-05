@@ -86,7 +86,7 @@ fio2::wire::NodeAttributes ToIo2NodeAttributes(fidl::AnyArena& allocator,
 zx_status_t zxio_remote_v2_close(zxio_t* io) {
   RemoteV2 rio(io);
   zx_status_t status = [&]() {
-    auto result = fidl::WireCall(fidl::UnownedClientEnd<fio2::Node>(rio.control())).Close();
+    auto result = fidl::WireCall(fidl::UnownedClientEnd<fio2::Node>(rio.control()))->Close();
     // TODO(yifeit): The |Node.Close| method is one-way. In order to catch
     // any server-side error during close, we should wait for an epitaph.
     if (result.status() != ZX_OK) {
@@ -111,7 +111,7 @@ zx_status_t zxio_remote_v2_clone(zxio_t* io, zx_handle_t* out_handle) {
     return ends.status_value();
   }
   auto result = fidl::WireCall(fidl::UnownedClientEnd<fio2::Node>(rio.control()))
-                    .Reopen(fio2::wire::ConnectionOptions(), ends->server.TakeChannel());
+                    ->Reopen(fio2::wire::ConnectionOptions(), ends->server.TakeChannel());
   if (result.status() != ZX_OK) {
     return result.status();
   }
@@ -179,7 +179,7 @@ void zxio_remote_v2_wait_end(zxio_t* io, zx_signals_t zx_signals,
 
 zx_status_t zxio_remote_sync(zxio_t* io) {
   RemoteV2 rio(io);
-  auto result = fidl::WireCall(fidl::UnownedClientEnd<fio2::Node>(rio.control())).Sync();
+  auto result = fidl::WireCall(fidl::UnownedClientEnd<fio2::Node>(rio.control()))->Sync();
   if (result.status() != ZX_OK) {
     return result.status();
   }
@@ -192,7 +192,7 @@ zx_status_t zxio_remote_sync(zxio_t* io) {
 zx_status_t zxio_remote_v2_attr_get(zxio_t* io, zxio_node_attributes_t* out_attr) {
   RemoteV2 rio(io);
   auto result = fidl::WireCall(fidl::UnownedClientEnd<fio2::Node>(rio.control()))
-                    .GetAttributes(fio2::wire::NodeAttributesQuery::kMask);
+                    ->GetAttributes(fio2::wire::NodeAttributesQuery::kMask);
   if (result.status() != ZX_OK) {
     return result.status();
   }
@@ -209,7 +209,7 @@ zx_status_t zxio_remote_v2_attr_set(zxio_t* io, const zxio_node_attributes_t* at
   auto attributes = ToIo2NodeAttributes(allocator, *attr);
   RemoteV2 rio(io);
   auto result = fidl::WireCall(fidl::UnownedClientEnd<fio2::Node>(rio.control()))
-                    .UpdateAttributes(std::move(attributes));
+                    ->UpdateAttributes(attributes);
   if (result.status() != ZX_OK) {
     return result.status();
   }
@@ -361,7 +361,7 @@ zx_status_t zxio_remote_v2_readv(zxio_t* io, const zx_iovec_t* vector, size_t ve
         fidl::Buffer<fidl::WireRequest<fio2::File::Read>> request_buffer;
         fidl::Buffer<fidl::WireResponse<fio2::File::Read>> response_buffer;
         auto result = fidl::WireCall(fidl::UnownedClientEnd<fio2::File>(control))
-                          .Read(request_buffer.view(), capacity, response_buffer.view());
+                          ->Read(request_buffer.view(), capacity, response_buffer.view());
         zx_status_t status;
         if ((status = result.status()) != ZX_OK) {
           return status;
@@ -397,7 +397,7 @@ zx_status_t zxio_remote_v2_readv_at(zxio_t* io, zx_off_t offset, const zx_iovec_
         fidl::Buffer<fidl::WireRequest<fio2::File::ReadAt>> request_buffer;
         fidl::Buffer<fidl::WireResponse<fio2::File::ReadAt>> response_buffer;
         auto result = fidl::WireCall(fidl::UnownedClientEnd<fio2::File>(control))
-                          .ReadAt(request_buffer.view(), capacity, offset, response_buffer.view());
+                          ->ReadAt(request_buffer.view(), capacity, offset, response_buffer.view());
         zx_status_t status;
         if ((status = result.status()) != ZX_OK) {
           return status;
@@ -435,9 +435,9 @@ zx_status_t zxio_remote_v2_writev(zxio_t* io, const zx_iovec_t* vector, size_t v
         fidl::Buffer<fidl::WireRequest<fio2::File::Write>> request_buffer;
         fidl::Buffer<fidl::WireResponse<fio2::File::Write>> response_buffer;
         auto result = fidl::WireCall(fidl::UnownedClientEnd<fio2::File>(control))
-                          .Write(request_buffer.view(),
-                                 fidl::VectorView<uint8_t>::FromExternal(buffer, capacity),
-                                 response_buffer.view());
+                          ->Write(request_buffer.view(),
+                                  fidl::VectorView<uint8_t>::FromExternal(buffer, capacity),
+                                  response_buffer.view());
         zx_status_t status;
         if ((status = result.status()) != ZX_OK) {
           return status;
@@ -472,9 +472,9 @@ zx_status_t zxio_remote_v2_writev_at(zxio_t* io, zx_off_t offset, const zx_iovec
         fidl::Buffer<fidl::WireRequest<fio2::File::WriteAt>> request_buffer;
         fidl::Buffer<fidl::WireResponse<fio2::File::WriteAt>> response_buffer;
         auto result = fidl::WireCall(fidl::UnownedClientEnd<fio2::File>(control))
-                          .WriteAt(request_buffer.view(),
-                                   fidl::VectorView<uint8_t>::FromExternal(buffer, capacity),
-                                   offset, response_buffer.view());
+                          ->WriteAt(request_buffer.view(),
+                                    fidl::VectorView<uint8_t>::FromExternal(buffer, capacity),
+                                    offset, response_buffer.view());
         zx_status_t status;
         if ((status = result.status()) != ZX_OK) {
           return status;
@@ -500,7 +500,7 @@ zx_status_t zxio_remote_v2_seek(zxio_t* io, zxio_seek_origin_t start, int64_t of
   }
 
   auto result = fidl::WireCall(fidl::UnownedClientEnd<fio2::File>(rio.control()))
-                    .Seek(static_cast<fio2::wire::SeekOrigin>(start), offset);
+                    ->Seek(static_cast<fio2::wire::SeekOrigin>(start), offset);
   if (result.status() != ZX_OK) {
     return result.status();
   }

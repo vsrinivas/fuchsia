@@ -55,7 +55,7 @@ void IntelDspStream::CreateRingBuffer(StreamChannel* channel, audio_fidl::wire::
 // Pass-through.
 void IntelDspStream::GetProperties(GetPropertiesRequestView request,
                                    GetPropertiesCompleter::Sync& completer) {
-  auto result = fidl::WireCall(ring_buffer_).GetProperties();
+  auto result = fidl::WireCall(ring_buffer_)->GetProperties();
   if (result.status() != ZX_OK) {
     LOG(ERROR, "Error on GetProperties res = %d", result.status());
     completer.Close(result.status());
@@ -67,7 +67,7 @@ void IntelDspStream::GetProperties(GetPropertiesRequestView request,
 // Pass-through.
 void IntelDspStream::GetVmo(GetVmoRequestView request, GetVmoCompleter::Sync& completer) {
   auto result = fidl::WireCall(ring_buffer_)
-                    .GetVmo(request->min_frames, request->clock_recovery_notifications_per_ring);
+                    ->GetVmo(request->min_frames, request->clock_recovery_notifications_per_ring);
   if (result.status() != ZX_OK) {
     LOG(ERROR, "Error on GetVmo res = %d", result.status());
     completer.ReplyError(audio_fidl::wire::GetVmoError::kInternalError);
@@ -80,7 +80,7 @@ void IntelDspStream::GetVmo(GetVmoRequestView request, GetVmoCompleter::Sync& co
 // Not just pass-through, we also start the DSP pipeline.
 void IntelDspStream::Start(StartRequestView request, StartCompleter::Sync& completer) {
   fbl::AutoLock lock(obj_lock());
-  auto result = fidl::WireCall(ring_buffer_).Start();
+  auto result = fidl::WireCall(ring_buffer_)->Start();
   if (result.status() != ZX_OK) {
     LOG(ERROR, "Error on Start res = %d", result.status());
     completer.Close(result.status());
@@ -108,7 +108,7 @@ void IntelDspStream::Stop(StopRequestView request, StopCompleter::Sync& complete
     return;
   }
 
-  auto result = fidl::WireCall(ring_buffer_).Stop();
+  auto result = fidl::WireCall(ring_buffer_)->Stop();
   if (result.status() != ZX_OK) {
     LOG(ERROR, "Error on Stop res = %d", result.status());
     completer.Close(result.status());
@@ -121,7 +121,7 @@ void IntelDspStream::Stop(StopRequestView request, StopCompleter::Sync& complete
 void IntelDspStream::WatchClockRecoveryPositionInfo(
     WatchClockRecoveryPositionInfoRequestView request,
     WatchClockRecoveryPositionInfoCompleter::Sync& completer) {
-  auto result = fidl::WireCall(ring_buffer_).WatchClockRecoveryPositionInfo();
+  auto result = fidl::WireCall(ring_buffer_)->WatchClockRecoveryPositionInfo();
   if (result.status() != ZX_OK) {
     LOG(ERROR, "Error on Watch clock recovery position res = %d", result.status());
   }

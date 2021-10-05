@@ -498,7 +498,7 @@ void Device::SnoopQmiMsgSend(uint8_t* msg_arr, uint32_t msg_arr_len,
   memcpy(qmi_msg.opaque_bytes.data_, msg_arr, current_length);
   telephony_snoop::wire::Message snoop_msg = telephony_snoop::wire::Message::WithQmiMessage(
       fidl::ObjectView<telephony_snoop::wire::QmiMessage>::FromExternal(&qmi_msg));
-  fidl::WireCall(snoop_client_end_).SendMessage(std::move(snoop_msg));
+  fidl::WireCall(snoop_client_end_)->SendMessage(std::move(snoop_msg));
 }
 
 static void qmi_interrupt_cb(void* ctx, usb_request_t* req) {

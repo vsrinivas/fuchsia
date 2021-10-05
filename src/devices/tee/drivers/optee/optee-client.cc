@@ -179,8 +179,8 @@ static zx::status<fidl::ClientEnd<fuchsia_io::Node>> OpenObjectInDirectory(
 
   auto [client_end, server_end] = std::move(endpoints.value());
 
-  auto result = fidl::WireCall(root).Open(flags, mode, fidl::StringView::FromExternal(path),
-                                          std::move(server_end));
+  auto result = fidl::WireCall(root)->Open(flags, mode, fidl::StringView::FromExternal(path),
+                                           std::move(server_end));
   if (!result.ok()) {
     LOG(ERROR, "could not call fuchsia.io.Directory/Open (status: %s)", result.status_string());
     return zx::error(result.status());
@@ -221,7 +221,7 @@ static zx::status<fidl::ClientEnd<fuchsia_io::Directory>> RecursivelyWalkPath(
     auto [client_end, server_end] = std::move(endpoints.value());
 
     auto result =
-        fidl::WireCall(root).Clone(fuchsia_io::wire::kCloneFlagSameRights, std::move(server_end));
+        fidl::WireCall(root)->Clone(fuchsia_io::wire::kCloneFlagSameRights, std::move(server_end));
     if (!result.ok()) {
       return zx::error(result.status());
     }
@@ -1406,8 +1406,8 @@ zx_status_t OpteeClient::HandleRpcCommandFileSystemReadFile(ReadFileFileSystemRp
     uint64_t read_chunk_request = std::min(bytes_left, fuchsia_io::wire::kMaxBuf);
     uint64_t read_chunk_actual = 0;
 
-    auto result = fidl::WireCall(file).ReadAt(request_buffer.view(), read_chunk_request, offset,
-                                              response_buffer.view());
+    auto result = fidl::WireCall(file)->ReadAt(request_buffer.view(), read_chunk_request, offset,
+                                               response_buffer.view());
     if (!result.ok()) {
       LOG(ERROR, "failed to read from file (FIDL error: %s)", result.FormatDescription().c_str());
       message->set_return_code(TEEC_ERROR_GENERIC);
@@ -1467,7 +1467,7 @@ zx_status_t OpteeClient::HandleRpcCommandFileSystemWriteFile(
   while (bytes_left > 0) {
     uint64_t write_chunk_request = std::min(bytes_left, fuchsia_io::wire::kMaxBuf);
 
-    auto result = fidl::WireCall(file).WriteAt(
+    auto result = fidl::WireCall(file)->WriteAt(
         fidl::VectorView<uint8_t>::FromExternal(buffer, write_chunk_request), offset);
     if (!result.ok()) {
       LOG(ERROR, "failed to write to file (FIDL error: %s)", result.FormatDescription().c_str());
@@ -1503,7 +1503,7 @@ zx_status_t OpteeClient::HandleRpcCommandFileSystemTruncateFile(
     return ZX_ERR_NOT_FOUND;
   }
 
-  auto result = fidl::WireCall(maybe_file.value()).Truncate(message->target_file_size());
+  auto result = fidl::WireCall(maybe_file.value())->Truncate(message->target_file_size());
   if (!result.ok()) {
     LOG(ERROR, "failed to truncate file (FIDL error: %s)", result.FormatDescription().c_str());
     message->set_return_code(TEEC_ERROR_GENERIC);
@@ -1549,7 +1549,7 @@ zx_status_t OpteeClient::HandleRpcCommandFileSystemRemoveFile(
   std::string filename = path.filename().string();
   auto result =
       fidl::WireCall(storage_dir.value().borrow())
-          .Unlink(fidl::StringView::FromExternal(filename), fuchsia_io2::wire::UnlinkOptions{});
+          ->Unlink(fidl::StringView::FromExternal(filename), fuchsia_io2::wire::UnlinkOptions{});
   if (!result.ok()) {
     LOG(ERROR, "failed to remove file (FIDL status: %s)", result.status_string());
     message->set_return_code(TEEC_ERROR_GENERIC);
@@ -1629,7 +1629,7 @@ zx_status_t OpteeClient::HandleRpcCommandFileSystemRenameFile(
     return old_storage.status_value();
   }
 
-  auto token_result = fidl::WireCall(new_storage.value().borrow()).GetToken();
+  auto token_result = fidl::WireCall(new_storage.value().borrow())->GetToken();
   if (!token_result.ok()) {
     LOG(ERROR, "could not get destination directory's storage token (FIDL status: %s)",
         token_result.status_string());
@@ -1644,9 +1644,9 @@ zx_status_t OpteeClient::HandleRpcCommandFileSystemRenameFile(
   }
 
   auto rename_result = fidl::WireCall(old_storage.value().borrow())
-                           .Rename2(fidl::StringView::FromExternal(old_name),
-                                    zx::event(std::move(token_result->token)),
-                                    fidl::StringView::FromExternal(new_name));
+                           ->Rename2(fidl::StringView::FromExternal(old_name),
+                                     zx::event(std::move(token_result->token)),
+                                     fidl::StringView::FromExternal(new_name));
   if (!rename_result.ok()) {
     LOG(ERROR, "failed to rename file (FIDL status: %s)", rename_result.status_string());
     message->set_return_code(TEEC_ERROR_GENERIC);

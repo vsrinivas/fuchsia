@@ -76,7 +76,7 @@ class MountTestTemplate : public testing::Test {
     // using the admin service found within the export directory.
     EXPECT_EQ(
         fidl::WireCall<fuchsia_io_admin::DirectoryAdmin>(zx::unowned_channel(root_client_end()))
-            .Unmount()
+            ->Unmount()
             .status(),
         ZX_OK);
     unmounted_ = true;
@@ -105,7 +105,7 @@ class MountTestTemplate : public testing::Test {
     zx::channel clone_root_client_end, clone_root_server_end;
     ZX_ASSERT(zx::channel::create(0, &clone_root_client_end, &clone_root_server_end) == ZX_OK);
     ZX_ASSERT(fidl::WireCall<fio::Node>(zx::unowned_channel(root_client_end()))
-                  .Clone(fio::wire::kCloneFlagSameRights, std::move(clone_root_server_end))
+                  ->Clone(fio::wire::kCloneFlagSameRights, std::move(clone_root_server_end))
                   .ok());
     return clone_root_client_end;
   }
@@ -150,7 +150,7 @@ TEST_F(MountTest, ServeDataRootCheckInode) {
   ASSERT_EQ(MountAndServe(minfs::ServeLayout::kDataRootOnly), ZX_OK);
 
   // Verify that |root_client_end| corresponds to the root of the filesystem.
-  auto attr_result = fidl::WireCall<fio::Node>(zx::unowned_channel(root_client_end())).GetAttr();
+  auto attr_result = fidl::WireCall<fio::Node>(zx::unowned_channel(root_client_end()))->GetAttr();
   ASSERT_EQ(attr_result.status(), ZX_OK);
   ASSERT_EQ(attr_result->s, ZX_OK);
   EXPECT_EQ(attr_result->attributes.id, minfs::kMinfsRootIno);

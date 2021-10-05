@@ -207,7 +207,7 @@ bool NandBroker::LoadBroker() {
   const char kBroker[] = "/boot/driver/nand-broker.so";
   auto resp = fidl::WireCall<fuchsia_device::Controller>(
                   zx::unowned_channel(fdio_unsafe_borrow_channel(io)))
-                  .Bind(::fidl::StringView(kBroker));
+                  ->Bind(::fidl::StringView(kBroker));
   auto status = resp.status();
   if (resp->result.is_err()) {
     call_status = resp->result.err();

@@ -830,7 +830,7 @@ std::unique_ptr<magma::PlatformHandle> PlatformConnectionClient::RetrieveAccessT
     return DRETP(nullptr, "No channel");
   auto rsp = fidl::WireCall<fuchsia_gpu_magma::PerformanceCounterAccess>(
                  zx::unowned_channel(static_cast<const ZirconPlatformHandle*>(channel)->get()))
-                 .GetPerformanceCountToken();
+                 ->GetPerformanceCountToken();
   if (!rsp.ok()) {
     return DRETP(nullptr, "GetPerformanceCountToken failed");
   }

@@ -131,9 +131,9 @@ TEST(Service, ServiceNodeIsNotDirectory) {
   loop.StartThread();
 
   auto open_result = fidl::WireCall<fio::Directory>(zx::unowned_channel(client_end))
-                         .Open(fio::wire::kOpenFlagDescribe | fio::wire::kOpenFlagDirectory |
-                                   fio::wire::kOpenRightReadable | fio::wire::kOpenRightWritable,
-                               0755, fidl::StringView("abc"), std::move(abc_server_end));
+                         ->Open(fio::wire::kOpenFlagDescribe | fio::wire::kOpenFlagDirectory |
+                                    fio::wire::kOpenRightReadable | fio::wire::kOpenRightWritable,
+                                0755, fidl::StringView("abc"), std::move(abc_server_end));
   EXPECT_EQ(open_result.status(), ZX_OK);
   class EventHandler : public fidl::WireSyncEventHandler<fio::Node> {
    public:
@@ -177,13 +177,13 @@ TEST(Service, OpeningServiceWithNodeReferenceFlag) {
   loop.StartThread();
 
   auto open_result = fidl::WireCall<fio::Directory>(zx::unowned_channel(client_end))
-                         .Open(fio::wire::kOpenFlagNodeReference, 0755, fidl::StringView("abc"),
-                               std::move(abc_server_end));
+                         ->Open(fio::wire::kOpenFlagNodeReference, 0755, fidl::StringView("abc"),
+                                std::move(abc_server_end));
   EXPECT_EQ(open_result.status(), ZX_OK);
 
   // The channel should speak |fuchsia.io/Node| instead of the custom service FIDL protocol. We
   // verify it by calling describe on it, which should return correctly.
-  auto describe_result = fidl::WireCall<fio::Node>(zx::unowned_channel(abc_client_end)).Describe();
+  auto describe_result = fidl::WireCall<fio::Node>(zx::unowned_channel(abc_client_end))->Describe();
   ASSERT_EQ(ZX_OK, describe_result.status());
   ASSERT_EQ(fio::wire::NodeInfo::Tag::kService, describe_result->info.which());
 

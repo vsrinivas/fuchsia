@@ -187,7 +187,7 @@ void StorageWatchdog::PurgeCache() {
 zx_status_t StorageWatchdog::GetFilesystemInfo(zx_handle_t directory,
                                                fuchsia_io_admin::wire::FilesystemInfo* out_info) {
   auto result = fidl::WireCall(fidl::UnownedClientEnd<fuchsia_io_admin::DirectoryAdmin>(directory))
-                    .QueryFilesystem();
+                    ->QueryFilesystem();
   if (result.ok())
     *out_info = *result->info;
   return !result.ok() ? result.status() : result->s;

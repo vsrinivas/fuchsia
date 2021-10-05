@@ -78,7 +78,7 @@ bool FindPartitionLabelByGuid(const fbl::unique_fd& devfs_root, const uint8_t* g
     }
     fdio_cpp::FdioCaller caller(std::move(fd));
 
-    auto result = fidl::WireCall<partition::Partition>(caller.channel()).GetInstanceGuid();
+    auto result = fidl::WireCall<partition::Partition>(caller.channel())->GetInstanceGuid();
     if (!result.ok()) {
       continue;
     }
@@ -90,7 +90,7 @@ bool FindPartitionLabelByGuid(const fbl::unique_fd& devfs_root, const uint8_t* g
       continue;
     }
 
-    auto result2 = fidl::WireCall<partition::Partition>(caller.channel()).GetName();
+    auto result2 = fidl::WireCall<partition::Partition>(caller.channel())->GetName();
     if (!result2.ok()) {
       continue;
     }

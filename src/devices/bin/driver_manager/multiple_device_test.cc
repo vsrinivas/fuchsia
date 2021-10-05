@@ -390,7 +390,7 @@ TEST_F(MultipleDeviceTestCase, SetTerminationSystemState_fidl) {
                                        std::move(endpoints->server), &state_mgr));
   coordinator().set_system_state_manager(std::move(state_mgr));
   auto response = fidl::WireCall(endpoints->client)
-                      .SetTerminationSystemState(
+                      ->SetTerminationSystemState(
                           fuchsia_hardware_power_statecontrol::wire::SystemPowerState::kPoweroff);
 
   ASSERT_OK(response.status());
@@ -420,7 +420,7 @@ TEST_F(MultipleDeviceTestCase, SetTerminationSystemState_svchost_fidl) {
   ASSERT_OK(client_end.status_value());
 
   auto response = fidl::WireCall(*client_end)
-                      .SetTerminationSystemState(
+                      ->SetTerminationSystemState(
                           fuchsia_hardware_power_statecontrol::wire::SystemPowerState::kMexec);
   ASSERT_OK(response.status());
   zx_status_t call_status = ZX_OK;
@@ -445,7 +445,7 @@ TEST_F(MultipleDeviceTestCase, SetTerminationSystemState_fidl_wrong_state) {
   coordinator().set_system_state_manager(std::move(state_mgr));
 
   auto response = fidl::WireCall(endpoints->client)
-                      .SetTerminationSystemState(
+                      ->SetTerminationSystemState(
                           fuchsia_hardware_power_statecontrol::wire::SystemPowerState::kFullyOn);
 
   ASSERT_OK(response.status());

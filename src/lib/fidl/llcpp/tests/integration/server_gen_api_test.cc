@@ -81,7 +81,7 @@ TEST(BindServerTestCase, SyncReply) {
   fidl::BindServer(loop.dispatcher(), std::move(remote), server.get(), std::move(on_unbound));
 
   // Sync client call.
-  auto result = WireCall(local).Echo(kExpectedReply);
+  auto result = fidl::WireCall(local)->Echo(kExpectedReply);
   EXPECT_OK(result.status());
   EXPECT_EQ(result->reply, kExpectedReply);
 
@@ -128,7 +128,7 @@ TEST(BindServerTestCase, AsyncReply) {
   fidl::BindServer(main.dispatcher(), std::move(remote), server.get(), std::move(on_unbound));
 
   // Sync client call.
-  auto result = WireCall(local).Echo(kExpectedReply);
+  auto result = fidl::WireCall(local)->Echo(kExpectedReply);
   EXPECT_OK(result.status());
   EXPECT_EQ(result->reply, kExpectedReply);
 
@@ -187,7 +187,7 @@ TEST(BindServerTestCase, MultipleAsyncReplies) {
   for (uint32_t i = 0; i < kNumberOfAsyncs; ++i) {
     auto client = std::make_unique<async::Loop>(&kAsyncLoopConfigNoAttachToCurrentThread);
     async::PostTask(client->dispatcher(), [local = local.borrow(), &done]() {
-      auto result = WireCall(local).Echo(kExpectedReply);
+      auto result = fidl::WireCall(local)->Echo(kExpectedReply);
       ASSERT_EQ(result->reply, kExpectedReply);
       static std::atomic<int> count;
       if (++count == kNumberOfAsyncs) {
@@ -270,7 +270,7 @@ TEST(BindServerTestCase, MultipleAsyncRepliesOnePeerClose) {
   for (uint32_t i = 0; i < kNumberOfAsyncs; ++i) {
     auto client = std::make_unique<async::Loop>(&kAsyncLoopConfigNoAttachToCurrentThread);
     async::PostTask(client->dispatcher(), [local = local.borrow(), client = client.get()]() {
-      auto result = WireCall(local).Echo(kExpectedReply);
+      auto result = fidl::WireCall(local)->Echo(kExpectedReply);
       if (result.status() != ZX_OK && result.status() != ZX_ERR_PEER_CLOSED) {
         FAIL();
       }
@@ -368,7 +368,7 @@ TEST(BindServerTestCase, CallbackErrorClientTriggered) {
   // Client launches a thread so we can hold the transaction in progress.
   auto client = std::make_unique<async::Loop>(&kAsyncLoopConfigNoAttachToCurrentThread);
   async::PostTask(client->dispatcher(), [local = local.borrow(), client = client.get()]() {
-    auto result = WireCall(local).Echo(kExpectedReply);
+    auto result = fidl::WireCall(local)->Echo(kExpectedReply);
     if (result.status() != ZX_ERR_CANCELED) {  // Client closes the channel before server replies.
       FAIL();
     }
@@ -432,7 +432,7 @@ TEST(BindServerTestCase, DestroyBindingWithPendingCancel) {
   // Client launches a thread so we can hold the transaction in progress.
   auto client = std::make_unique<async::Loop>(&kAsyncLoopConfigNoAttachToCurrentThread);
   async::PostTask(client->dispatcher(), [local = local.borrow(), client = client.get()]() {
-    auto result = WireCall(local).Echo(kExpectedReply);
+    auto result = fidl::WireCall(local)->Echo(kExpectedReply);
     if (result.status() != ZX_ERR_CANCELED) {  // Client closes the channel before server replies.
       FAIL();
     }
@@ -506,7 +506,7 @@ TEST(BindServerTestCase, CallbackErrorServerTriggered) {
   // Client1 launches a thread so we can hold its transaction in progress.
   auto client1 = std::make_unique<async::Loop>(&kAsyncLoopConfigNoAttachToCurrentThread);
   async::PostTask(client1->dispatcher(),
-                  [local = local.borrow()]() { WireCall(local).Echo(kExpectedReply); });
+                  [local = local.borrow()]() { fidl::WireCall(local)->Echo(kExpectedReply); });
   ASSERT_OK(client1->StartThread());
 
   // Wait until worker_start so we have an in-flight transaction.
@@ -516,7 +516,7 @@ TEST(BindServerTestCase, CallbackErrorServerTriggered) {
   auto client2 = std::make_unique<async::Loop>(&kAsyncLoopConfigNoAttachToCurrentThread);
   async::PostTask(client2->dispatcher(), [local = local.borrow()]() {
     // Server will close the channel, on_unbound is not called.
-    auto result = WireCall(local).Close();
+    auto result = fidl::WireCall(local)->Close();
     if (result.status() != ZX_ERR_PEER_CLOSED) {
       FAIL();
     }
@@ -558,7 +558,7 @@ TEST(BindServerTestCase, CallbackDestroyOnServerClose) {
   fidl::BindServer(loop.dispatcher(), std::move(remote), server.release(), std::move(on_unbound));
   ASSERT_FALSE(sync_completion_signaled(&destroyed));
 
-  auto result = WireCall(local).Close();
+  auto result = fidl::WireCall(local)->Close();
   EXPECT_EQ(result.status(), ZX_ERR_PEER_CLOSED);
 
   ASSERT_OK(sync_completion_wait(&destroyed, ZX_TIME_INFINITE));
@@ -629,7 +629,7 @@ TEST(BindServerTestCase, ExplicitUnbindWithPendingTransaction) {
   // Client launches a thread so we can hold the transaction in progress.
   auto client = std::make_unique<async::Loop>(&kAsyncLoopConfigNoAttachToCurrentThread);
   async::PostTask(client->dispatcher(), [local = local.borrow(), client = client.get()]() {
-    WireCall(local).Echo(kExpectedReply);
+    fidl::WireCall(local)->Echo(kExpectedReply);
   });
   ASSERT_OK(client->StartThread());
 
@@ -796,7 +796,7 @@ TEST(BindServerTestCase, ConcurrentSyncReply) {
   std::vector<std::thread> threads;
   for (int i = 0; i < kMaxReqs; ++i) {
     threads.emplace_back([local = local.borrow()] {
-      auto result = WireCall(local).Echo(kExpectedReply);
+      auto result = fidl::WireCall(local)->Echo(kExpectedReply);
       EXPECT_EQ(result.status(), ZX_OK);
     });
   }
@@ -850,7 +850,7 @@ TEST(BindServerTestCase, ConcurrentIdempotentClose) {
   std::vector<std::thread> threads;
   for (int i = 0; i < kMaxReqs; ++i) {
     threads.emplace_back([local = local.borrow()] {
-      auto result = WireCall(local).Close();
+      auto result = fidl::WireCall(local)->Close();
       EXPECT_EQ(result.status(), ZX_ERR_PEER_CLOSED);
     });
   }
@@ -910,8 +910,8 @@ TEST(BindServerTestCase, EnableNextDispatchInLongRunningHandler) {
 
   // Issue two requests. The second request should initiate binding teardown.
   std::vector<std::thread> threads;
-  threads.emplace_back([local = local.borrow()] { WireCall(local).Close(); });
-  threads.emplace_back([local = local.borrow()] { WireCall(local).Close(); });
+  threads.emplace_back([local = local.borrow()] { fidl::WireCall(local)->Close(); });
+  threads.emplace_back([local = local.borrow()] { fidl::WireCall(local)->Close(); });
 
   // Teardown should not complete unless |long_operation| completes.
   ASSERT_STATUS(ZX_ERR_TIMED_OUT, unbound.Wait(zx::msec(100)));
@@ -1073,7 +1073,7 @@ TEST(BindServerTestCase, UnbindInfoErrorSendingReply) {
   UnbindObserver<Example> observer(fidl::Reason::kTransportError, ZX_ERR_ACCESS_DENIED);
   fidl::BindServer(loop.dispatcher(), std::move(remote), server.get(), observer.GetCallback());
 
-  fidl::WireResult result = WireCall(local).TwoWay("");
+  fidl::WireResult result = fidl::WireCall(local)->TwoWay("");
   EXPECT_EQ(ZX_ERR_PEER_CLOSED, result.status());
 
   ASSERT_OK(observer.completion().Wait());
@@ -1133,7 +1133,7 @@ TEST(BindServerTestCase, DrainAllMessageInPeerClosedSendErrorEvent) {
       fidl::BindServer(loop.dispatcher(), std::move(remote), server.get(), observer.GetCallback());
 
   // Make a call and close the client endpoint.
-  ASSERT_OK(fidl::WireCall(local).OneWay(kData).status());
+  ASSERT_OK(fidl::WireCall(local)->OneWay(kData).status());
   local.reset();
 
   // Sending event fails due to client endpoint closing.
@@ -1296,7 +1296,7 @@ TEST(BindServerTestCase, ReplyNotRequiredAfterUnbound) {
 
   // Start another thread to make the outgoing call.
   std::thread([local = std::move(local)]() mutable {
-    auto result = WireCall(local).Echo(kExpectedReply);
+    auto result = fidl::WireCall(local)->Echo(kExpectedReply);
     EXPECT_EQ(ZX_ERR_PEER_CLOSED, result.status());
   }).detach();
 
@@ -1376,7 +1376,7 @@ TEST(BindServerTestCase, MultipleInheritanceServer) {
                    std::move(on_unbound));
   ASSERT_FALSE(sync_completion_signaled(&destroyed));
 
-  auto result = WireCall(local).Close();
+  auto result = fidl::WireCall(local)->Close();
   EXPECT_EQ(result.status(), ZX_ERR_PEER_CLOSED);
 
   ASSERT_OK(sync_completion_wait(&destroyed, ZX_TIME_INFINITE));

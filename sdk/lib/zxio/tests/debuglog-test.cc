@@ -23,7 +23,7 @@ zx::status<zx::debuglog> GetDebugLogHandle() {
   if (!log_service.is_ok()) {
     return zx::error(log_service.status_value());
   }
-  auto response = fidl::WireCall(*log_service).Get();
+  auto response = fidl::WireCall(*log_service)->Get();
   if (!response.ok()) {
     return zx::error(response.status());
   }

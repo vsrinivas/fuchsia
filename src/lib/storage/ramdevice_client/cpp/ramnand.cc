@@ -104,7 +104,7 @@ __EXPORT
 RamNand::~RamNand() {
   if (unbind && fd_) {
     fdio_cpp::FdioCaller caller(std::move(fd_));
-    auto resp = fidl::WireCall(caller.borrow_as<fuchsia_device::Controller>()).ScheduleUnbind();
+    auto resp = fidl::WireCall(caller.borrow_as<fuchsia_device::Controller>())->ScheduleUnbind();
     zx_status_t status = resp.status();
     if (status == ZX_OK && resp->result.is_err()) {
       status = resp->result.err();

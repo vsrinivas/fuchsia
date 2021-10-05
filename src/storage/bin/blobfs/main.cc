@@ -44,7 +44,7 @@ zx::resource AttemptToGetVmexResource() {
     return zx::resource();
   }
 
-  auto result = fidl::WireCall(*client_end_or).Get();
+  auto result = fidl::WireCall(*client_end_or)->Get();
   if (!result.ok()) {
     FX_LOGS(WARNING) << "fuchsia.kernel.VmexResource.Get() failed: " << result.error();
     return zx::resource();

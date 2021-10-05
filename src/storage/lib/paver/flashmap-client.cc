@@ -34,7 +34,7 @@ static zx::status<fidl::ClientEnd<fuchsia_nand::Broker>> ConnectToBroker(
     const fbl::unique_fd& devfs_root, zx::channel& device) {
   // Get the topological path of the NAND device so we can figure out where the broker is.
   auto path = fidl::WireCall(fidl::UnownedClientEnd<fuchsia_device::Controller>(device.borrow()))
-                  .GetTopologicalPath();
+                  ->GetTopologicalPath();
   if (!path.ok() || path->result.is_err()) {
     return zx::error(path.ok() ? path->result.err() : path.status());
   }
