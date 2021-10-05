@@ -121,9 +121,9 @@ void TestRange() {
 
 void TestValuesSimilarTypes() {
   // Failure would be a compilation error.
-  ::zxtest::testing::internal::ValueProvider<std::string> p1 =
+  ::zxtest::internal::ValueProvider<std::string> p1 =
       ::zxtest::testing::Values("A", std::string("B"));
-  ::zxtest::testing::internal::ValueProvider<long> p2 = ::zxtest::testing::Values(7, 1l, 5);
+  ::zxtest::internal::ValueProvider<long> p2 = ::zxtest::testing::Values(7, 1l, 5);
 }
 
 void TestValuesCombine() {

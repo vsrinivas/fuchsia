@@ -121,7 +121,7 @@ class AddInstantiationDelegate {
   virtual bool AddInstantiation(ParameterizedTestCaseInfo* base,
                                 const fbl::String& instantiation_name,
                                 const SourceLocation& location,
-                                zxtest::testing::internal::ValueProvider<ParamType>& provider) = 0;
+                                zxtest::internal::ValueProvider<ParamType>& provider) = 0;
 };
 
 }  // namespace internal

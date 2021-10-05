@@ -38,7 +38,7 @@ class ParameterizedTestCaseInfoImpl : public ParameterizedTestCaseInfo {
   TypeId GetFixtureId() const final { return TypeIdProvider<FixtureType>::Get(); }
 
   void AddInstantiation(const fbl::String& instantiation_name,
-                        zxtest::testing::internal::ValueProvider<ParamType>& provider,
+                        zxtest::internal::ValueProvider<ParamType>& provider,
                         const SourceLocation& location) {
     instantiation_fns_.push_back([this, provider = std::move(provider), location,
                                   instantiation_name](Runner* runner) mutable {
@@ -76,7 +76,7 @@ class ParameterizedTestCaseInfoImpl : public ParameterizedTestCaseInfo {
 
   template <typename TestImpl, typename ValueType>
   void Instantiate(const fbl::String& instantiation_name, const SourceLocation& location,
-                   zxtest::testing::internal::ValueProvider<ValueType>& provider, Runner* runner) {
+                   zxtest::internal::ValueProvider<ValueType>& provider, Runner* runner) {
     for (size_t i = 0; i < provider.size(); ++i) {
       for (auto& test_entry : test_entries_) {
         // Add method for instantiation name as a param, and let the reporter decide how to
@@ -123,7 +123,7 @@ class AddInstantiationDelegateImpl : public AddInstantiationDelegate<Type> {
  public:
   bool AddInstantiation(ParameterizedTestCaseInfo* base, const fbl::String& instantiation_name,
                         const SourceLocation& location,
-                        zxtest::testing::internal::ValueProvider<Type>& provider) final {
+                        zxtest::internal::ValueProvider<Type>& provider) final {
     ParameterizedTestCaseInfoImpl<SuiteClass, Type>* suite_impl =
         reinterpret_cast<ParameterizedTestCaseInfoImpl<SuiteClass, Type>*>(base);
     // ValueProvider<Type>& provider =

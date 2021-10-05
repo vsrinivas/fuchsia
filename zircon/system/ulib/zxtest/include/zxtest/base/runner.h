@@ -212,7 +212,7 @@ class Runner {
   template <typename SuiteClass, typename ParamType>
   bool AddInstantiation(std::unique_ptr<internal::AddInstantiationDelegate<ParamType>> delegate,
                         const fbl::String& instantiation_name, const SourceLocation& location,
-                        zxtest::testing::internal::ValueProvider<ParamType>& provider) {
+                        zxtest::internal::ValueProvider<ParamType>& provider) {
     auto fixture_id = internal::TypeIdProvider<SuiteClass>::Get();
     bool found_match = false;
     for (auto& test_info : parameterized_test_info_) {
