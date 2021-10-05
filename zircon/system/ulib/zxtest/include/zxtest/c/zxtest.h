@@ -245,7 +245,7 @@ static void zxtest_clean_buffer(char** buffer) { free(*buffer); }
 
 #define _RETURN_IF_FATAL(fatal) _RETURN_IF_FATAL_##fatal
 
-#define _ASSERT_VAR_BYTES(op, expected, actual, size, fatal, file, line, desc, ...)          \
+#define _CHECK_VAR_BYTES(op, expected, actual, size, fatal, file, line, desc, ...)           \
   do {                                                                                       \
     _ZXTEST_CHECK_RUNNING();                                                                 \
     const void* _actual = (const void*)(actual);                                             \
@@ -260,7 +260,7 @@ static void zxtest_clean_buffer(char** buffer) { free(*buffer); }
     }                                                                                        \
   } while (0)
 
-#define _ASSERT_VAR_COERCE(op, expected, actual, type, fatal, file, line, desc, ...)         \
+#define _CHECK_VAR_COERCE(op, expected, actual, type, fatal, file, line, desc, ...)          \
   do {                                                                                       \
     _ZXTEST_CHECK_RUNNING();                                                                 \
     const type _actual = (const type)(actual);                                               \
@@ -275,9 +275,9 @@ static void zxtest_clean_buffer(char** buffer) { free(*buffer); }
     }                                                                                        \
   } while (0)
 
-#define _ASSERT_VAR(op, expected, actual, fatal, file, line, desc, ...)                        \
-  _ASSERT_VAR_COERCE(op, expected, actual, _ZXTEST_AUTO_VAR_TYPE(expected), fatal, file, line, \
-                     desc, ##__VA_ARGS__)
+#define _CHECK_VAR(op, expected, actual, fatal, file, line, desc, ...)                        \
+  _CHECK_VAR_COERCE(op, expected, actual, _ZXTEST_AUTO_VAR_TYPE(expected), fatal, file, line, \
+                    desc, ##__VA_ARGS__)
 
 #define _ZXTEST_FAIL_NO_RETURN(fatal, desc, ...)                            \
   do {                                                                      \
@@ -310,7 +310,7 @@ static void zxtest_clean_buffer(char** buffer) { free(*buffer); }
   } while (0)
 
 #ifdef __Fuchsia__
-#define _ASSERT_VAR_STATUS(op, expected, actual, fatal, file, line, desc, ...)        \
+#define _CHECK_VAR_STATUS(op, expected, actual, fatal, file, line, desc, ...)         \
   do {                                                                                \
     _ZXTEST_CHECK_RUNNING();                                                          \
     const zx_status_t _actual = (const zx_status_t)(actual);                          \
@@ -336,7 +336,7 @@ static void zxtest_clean_buffer(char** buffer) { free(*buffer); }
   } while (0)
 
 #else
-#define _ASSERT_VAR_STATUS(...) _ASSERT_VAR(__VA_ARGS__)
+#define _CHECK_VAR_STATUS(...) _CHECK_VAR(__VA_ARGS__)
 #endif
 
 #endif  // ZXTEST_C_ZXTEST_H_

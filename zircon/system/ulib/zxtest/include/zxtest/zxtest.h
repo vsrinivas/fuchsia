@@ -50,172 +50,172 @@ static inline void unittest_fails(void) {}
 //
 //  For more detailed information check README.
 
-#define _ASSERT_PTR(op, expected, actual, fatal, file, line, desc, ...)                            \
-  _ASSERT_VAR_COERCE(op, expected, actual, _ZXTEST_AUTO_VAR_TYPE(actual), fatal, file, line, desc, \
-                     ##__VA_ARGS__)
+#define _CHECK_PTR(op, expected, actual, fatal, file, line, desc, ...)                            \
+  _CHECK_VAR_COERCE(op, expected, actual, _ZXTEST_AUTO_VAR_TYPE(actual), fatal, file, line, desc, \
+                    ##__VA_ARGS__)
 
-#define ASSERT_EQ(val2, val1, ...)                                                           \
-  _ASSERT_VAR(_EQ, val2, val1, true, __FILE__, __LINE__, "Expected " #val1 " == " #val2 ".", \
-              ##__VA_ARGS__)
+#define ASSERT_EQ(val2, val1, ...)                                                          \
+  _CHECK_VAR(_EQ, val2, val1, true, __FILE__, __LINE__, "Expected " #val1 " == " #val2 ".", \
+             ##__VA_ARGS__)
 
-#define ASSERT_NE(val2, val1, ...)                                                           \
-  _ASSERT_VAR(_NE, val2, val1, true, __FILE__, __LINE__, "Expected " #val1 " != " #val2 ".", \
-              ##__VA_ARGS__)
+#define ASSERT_NE(val2, val1, ...)                                                          \
+  _CHECK_VAR(_NE, val2, val1, true, __FILE__, __LINE__, "Expected " #val1 " != " #val2 ".", \
+             ##__VA_ARGS__)
 
-#define EXPECT_EQ(val2, val1, ...)                                                            \
-  _ASSERT_VAR(_EQ, val2, val1, false, __FILE__, __LINE__, "Expected " #val1 " == " #val2 ".", \
-              ##__VA_ARGS__)
+#define EXPECT_EQ(val2, val1, ...)                                                           \
+  _CHECK_VAR(_EQ, val2, val1, false, __FILE__, __LINE__, "Expected " #val1 " == " #val2 ".", \
+             ##__VA_ARGS__)
 
-#define EXPECT_NE(val2, val1, ...)                                                            \
-  _ASSERT_VAR(_NE, val2, val1, false, __FILE__, __LINE__, "Expected " #val1 " != " #val2 ".", \
-              ##__VA_ARGS__)
+#define EXPECT_NE(val2, val1, ...)                                                           \
+  _CHECK_VAR(_NE, val2, val1, false, __FILE__, __LINE__, "Expected " #val1 " != " #val2 ".", \
+             ##__VA_ARGS__)
 
-#define ASSERT_LT(val1, val2, ...)                                                          \
-  _ASSERT_VAR(_LT, val2, val1, true, __FILE__, __LINE__, "Expected " #val1 " < " #val2 ".", \
-              ##__VA_ARGS__)
+#define ASSERT_LT(val1, val2, ...)                                                         \
+  _CHECK_VAR(_LT, val2, val1, true, __FILE__, __LINE__, "Expected " #val1 " < " #val2 ".", \
+             ##__VA_ARGS__)
 
-#define ASSERT_LE(val1, val2, ...)                                                           \
-  _ASSERT_VAR(_LE, val2, val1, true, __FILE__, __LINE__, "Expected " #val1 " <= " #val2 ".", \
-              ##__VA_ARGS__)
+#define ASSERT_LE(val1, val2, ...)                                                          \
+  _CHECK_VAR(_LE, val2, val1, true, __FILE__, __LINE__, "Expected " #val1 " <= " #val2 ".", \
+             ##__VA_ARGS__)
 
-#define EXPECT_LT(val1, val2, ...)                                                           \
-  _ASSERT_VAR(_LT, val2, val1, false, __FILE__, __LINE__, "Expected " #val1 " < " #val2 ".", \
-              ##__VA_ARGS__)
+#define EXPECT_LT(val1, val2, ...)                                                          \
+  _CHECK_VAR(_LT, val2, val1, false, __FILE__, __LINE__, "Expected " #val1 " < " #val2 ".", \
+             ##__VA_ARGS__)
 
-#define EXPECT_LE(val1, val2, ...)                                                            \
-  _ASSERT_VAR(_LE, val2, val1, false, __FILE__, __LINE__, "Expected " #val1 " <= " #val2 ".", \
-              ##__VA_ARGS__)
+#define EXPECT_LE(val1, val2, ...)                                                           \
+  _CHECK_VAR(_LE, val2, val1, false, __FILE__, __LINE__, "Expected " #val1 " <= " #val2 ".", \
+             ##__VA_ARGS__)
 
-#define ASSERT_GT(val1, val2, ...)                                                          \
-  _ASSERT_VAR(_GT, val2, val1, true, __FILE__, __LINE__, "Expected " #val1 " > " #val2 ".", \
-              ##__VA_ARGS__)
+#define ASSERT_GT(val1, val2, ...)                                                         \
+  _CHECK_VAR(_GT, val2, val1, true, __FILE__, __LINE__, "Expected " #val1 " > " #val2 ".", \
+             ##__VA_ARGS__)
 
-#define ASSERT_GE(val1, val2, ...)                                                           \
-  _ASSERT_VAR(_GE, val2, val1, true, __FILE__, __LINE__, "Expected " #val1 " >= " #val2 ".", \
-              ##__VA_ARGS__)
+#define ASSERT_GE(val1, val2, ...)                                                          \
+  _CHECK_VAR(_GE, val2, val1, true, __FILE__, __LINE__, "Expected " #val1 " >= " #val2 ".", \
+             ##__VA_ARGS__)
 
-#define EXPECT_GT(val1, val2, ...)                                                           \
-  _ASSERT_VAR(_GT, val2, val1, false, __FILE__, __LINE__, "Expected " #val1 " > " #val2 ".", \
-              ##__VA_ARGS__)
+#define EXPECT_GT(val1, val2, ...)                                                          \
+  _CHECK_VAR(_GT, val2, val1, false, __FILE__, __LINE__, "Expected " #val1 " > " #val2 ".", \
+             ##__VA_ARGS__)
 
-#define EXPECT_GE(val1, val2, ...)                                                            \
-  _ASSERT_VAR(_GE, val2, val1, false, __FILE__, __LINE__, "Expected " #val1 " >= " #val2 ".", \
-              ##__VA_ARGS__)
+#define EXPECT_GE(val1, val2, ...)                                                           \
+  _CHECK_VAR(_GE, val2, val1, false, __FILE__, __LINE__, "Expected " #val1 " >= " #val2 ".", \
+             ##__VA_ARGS__)
 
-#define ASSERT_STR_EQ(val2, val1, ...)                      \
-  _ASSERT_VAR(_STREQ, val2, val1, true, __FILE__, __LINE__, \
-              "Expected strings " #val1 " == " #val2 ".", ##__VA_ARGS__)
+#define ASSERT_STR_EQ(val2, val1, ...)                     \
+  _CHECK_VAR(_STREQ, val2, val1, true, __FILE__, __LINE__, \
+             "Expected strings " #val1 " == " #val2 ".", ##__VA_ARGS__)
 
-#define EXPECT_STR_EQ(val2, val1, ...)                       \
-  _ASSERT_VAR(_STREQ, val2, val1, false, __FILE__, __LINE__, \
-              "Expected strings " #val1 " == " #val2 ".", ##__VA_ARGS__)
+#define EXPECT_STR_EQ(val2, val1, ...)                      \
+  _CHECK_VAR(_STREQ, val2, val1, false, __FILE__, __LINE__, \
+             "Expected strings " #val1 " == " #val2 ".", ##__VA_ARGS__)
 
-#define ASSERT_STR_NE(val2, val1, ...)                      \
-  _ASSERT_VAR(_STRNE, val2, val1, true, __FILE__, __LINE__, \
-              "Expected strings " #val1 " != " #val2 ".", ##__VA_ARGS__)
+#define ASSERT_STR_NE(val2, val1, ...)                     \
+  _CHECK_VAR(_STRNE, val2, val1, true, __FILE__, __LINE__, \
+             "Expected strings " #val1 " != " #val2 ".", ##__VA_ARGS__)
 
-#define EXPECT_STR_NE(val2, val1, ...)                       \
-  _ASSERT_VAR(_STRNE, val2, val1, false, __FILE__, __LINE__, \
-              "Expected strings " #val1 " != " #val2 ".", ##__VA_ARGS__)
+#define EXPECT_STR_NE(val2, val1, ...)                      \
+  _CHECK_VAR(_STRNE, val2, val1, false, __FILE__, __LINE__, \
+             "Expected strings " #val1 " != " #val2 ".", ##__VA_ARGS__)
 
-#define ASSERT_SUBSTR(str, substr, ...)                       \
-  _ASSERT_VAR(_SUBSTR, substr, str, true, __FILE__, __LINE__, \
-              "Expected string " #str " to contain substring " #substr ".", ##__VA_ARGS__)
+#define ASSERT_SUBSTR(str, substr, ...)                      \
+  _CHECK_VAR(_SUBSTR, substr, str, true, __FILE__, __LINE__, \
+             "Expected string " #str " to contain substring " #substr ".", ##__VA_ARGS__)
 
-#define EXPECT_SUBSTR(str, substr, ...)                        \
-  _ASSERT_VAR(_SUBSTR, substr, str, false, __FILE__, __LINE__, \
-              "Expected string " #str " to contain substring " #substr ".", ##__VA_ARGS__)
+#define EXPECT_SUBSTR(str, substr, ...)                       \
+  _CHECK_VAR(_SUBSTR, substr, str, false, __FILE__, __LINE__, \
+             "Expected string " #str " to contain substring " #substr ".", ##__VA_ARGS__)
 
-#define ASSERT_NOT_SUBSTR(str, substr, ...)                    \
-  _ASSERT_VAR(!_SUBSTR, substr, str, true, __FILE__, __LINE__, \
-              "Expected string " #str " to not contain substring " #substr ".", ##__VA_ARGS__)
+#define ASSERT_NOT_SUBSTR(str, substr, ...)                   \
+  _CHECK_VAR(!_SUBSTR, substr, str, true, __FILE__, __LINE__, \
+             "Expected string " #str " to not contain substring " #substr ".", ##__VA_ARGS__)
 
-#define EXPECT_NOT_SUBSTR(str, substr, ...)                     \
-  _ASSERT_VAR(!_SUBSTR, substr, str, false, __FILE__, __LINE__, \
-              "Expected string " #str " to not contain substring " #substr ".", ##__VA_ARGS__)
+#define EXPECT_NOT_SUBSTR(str, substr, ...)                    \
+  _CHECK_VAR(!_SUBSTR, substr, str, false, __FILE__, __LINE__, \
+             "Expected string " #str " to not contain substring " #substr ".", ##__VA_ARGS__)
 
 // Used to evaluate _ZXTEST_NULLPTR to an actual value.
-#define _ASSERT_PTR_DELEGATE(...) _ASSERT_PTR(__VA_ARGS__)
+#define _CHECK_PTR_DELEGATE(...) _CHECK_PTR(__VA_ARGS__)
 
-#define ASSERT_NULL(val1, ...)                                               \
-  _ASSERT_PTR_DELEGATE(_EQ, _ZXTEST_NULLPTR, val1, true, __FILE__, __LINE__, \
-                       "Expected " #val1 " is null pointer.", ##__VA_ARGS__)
+#define ASSERT_NULL(val1, ...)                                              \
+  _CHECK_PTR_DELEGATE(_EQ, _ZXTEST_NULLPTR, val1, true, __FILE__, __LINE__, \
+                      "Expected " #val1 " is null pointer.", ##__VA_ARGS__)
 
-#define EXPECT_NULL(val1, ...)                                                \
-  _ASSERT_PTR_DELEGATE(_EQ, _ZXTEST_NULLPTR, val1, false, __FILE__, __LINE__, \
-                       "Expected " #val1 " is null pointer.", ##__VA_ARGS__)
+#define EXPECT_NULL(val1, ...)                                               \
+  _CHECK_PTR_DELEGATE(_EQ, _ZXTEST_NULLPTR, val1, false, __FILE__, __LINE__, \
+                      "Expected " #val1 " is null pointer.", ##__VA_ARGS__)
 
-#define ASSERT_NOT_NULL(val1, ...)                                           \
-  _ASSERT_PTR_DELEGATE(_NE, _ZXTEST_NULLPTR, val1, true, __FILE__, __LINE__, \
-                       "Expected " #val1 " non null pointer.", ##__VA_ARGS__)
+#define ASSERT_NOT_NULL(val1, ...)                                          \
+  _CHECK_PTR_DELEGATE(_NE, _ZXTEST_NULLPTR, val1, true, __FILE__, __LINE__, \
+                      "Expected " #val1 " non null pointer.", ##__VA_ARGS__)
 
-#define EXPECT_NOT_NULL(val1, ...)                                            \
-  _ASSERT_PTR_DELEGATE(_NE, _ZXTEST_NULLPTR, val1, false, __FILE__, __LINE__, \
-                       "Expected " #val1 " non null pointer.", ##__VA_ARGS__)
+#define EXPECT_NOT_NULL(val1, ...)                                           \
+  _CHECK_PTR_DELEGATE(_NE, _ZXTEST_NULLPTR, val1, false, __FILE__, __LINE__, \
+                      "Expected " #val1 " non null pointer.", ##__VA_ARGS__)
 
-#define ASSERT_STATUS(val1, val2, ...)                          \
-  _ASSERT_VAR_STATUS(_EQ, val2, val1, true, __FILE__, __LINE__, \
-                     "Expected " #val1 " is " #val2 ".", ##__VA_ARGS__)
+#define ASSERT_STATUS(val1, val2, ...)                                                             \
+  _CHECK_VAR_STATUS(_EQ, val2, val1, true, __FILE__, __LINE__, "Expected " #val1 " is " #val2 ".", \
+                    ##__VA_ARGS__)
 
-#define ASSERT_NOT_STATUS(val1, val2, ...)                      \
-  _ASSERT_VAR_STATUS(_NE, val2, val1, true, __FILE__, __LINE__, \
-                     "Expected " #val1 " is " #val2 ".", ##__VA_ARGS__)
+#define ASSERT_NOT_STATUS(val1, val2, ...)                                                         \
+  _CHECK_VAR_STATUS(_NE, val2, val1, true, __FILE__, __LINE__, "Expected " #val1 " is " #val2 ".", \
+                    ##__VA_ARGS__)
 
-#define EXPECT_STATUS(val1, val2, ...)                           \
-  _ASSERT_VAR_STATUS(_EQ, val2, val1, false, __FILE__, __LINE__, \
-                     "Expected " #val1 " is " #val2 ".", ##__VA_ARGS__)
+#define EXPECT_STATUS(val1, val2, ...)                          \
+  _CHECK_VAR_STATUS(_EQ, val2, val1, false, __FILE__, __LINE__, \
+                    "Expected " #val1 " is " #val2 ".", ##__VA_ARGS__)
 
-#define EXPECT_NOT_STATUS(val1, val2, ...)                       \
-  _ASSERT_VAR_STATUS(_NE, val2, val1, false, __FILE__, __LINE__, \
-                     "Expected " #val1 " is " #val2 ".", ##__VA_ARGS__)
+#define EXPECT_NOT_STATUS(val1, val2, ...)                      \
+  _CHECK_VAR_STATUS(_NE, val2, val1, false, __FILE__, __LINE__, \
+                    "Expected " #val1 " is " #val2 ".", ##__VA_ARGS__)
 
-#define ASSERT_OK(val1, ...)                                                                     \
-  _ASSERT_VAR_STATUS(_EQ, ZX_OK, val1, true, __FILE__, __LINE__, "Expected " #val1 " is ZX_OK.", \
-                     ##__VA_ARGS__)
+#define ASSERT_OK(val1, ...)                                                                    \
+  _CHECK_VAR_STATUS(_EQ, ZX_OK, val1, true, __FILE__, __LINE__, "Expected " #val1 " is ZX_OK.", \
+                    ##__VA_ARGS__)
 
-#define EXPECT_OK(val1, ...)                                                                      \
-  _ASSERT_VAR_STATUS(_EQ, ZX_OK, val1, false, __FILE__, __LINE__, "Expected " #val1 " is ZX_OK.", \
-                     ##__VA_ARGS__)
+#define EXPECT_OK(val1, ...)                                                                     \
+  _CHECK_VAR_STATUS(_EQ, ZX_OK, val1, false, __FILE__, __LINE__, "Expected " #val1 " is ZX_OK.", \
+                    ##__VA_ARGS__)
 
-#define ASSERT_NOT_OK(val1, ...)                                 \
-  _ASSERT_VAR_STATUS(_NE, ZX_OK, val1, true, __FILE__, __LINE__, \
-                     "Expected " #val1 " is not ZX_OK.", ##__VA_ARGS__)
+#define ASSERT_NOT_OK(val1, ...)                                \
+  _CHECK_VAR_STATUS(_NE, ZX_OK, val1, true, __FILE__, __LINE__, \
+                    "Expected " #val1 " is not ZX_OK.", ##__VA_ARGS__)
 
-#define EXPECT_NOT_OK(val1, ...)                                  \
-  _ASSERT_VAR_STATUS(_NE, ZX_OK, val1, false, __FILE__, __LINE__, \
-                     "Expected " #val1 " is not ZX_OK.", ##__VA_ARGS__)
+#define EXPECT_NOT_OK(val1, ...)                                 \
+  _CHECK_VAR_STATUS(_NE, ZX_OK, val1, false, __FILE__, __LINE__, \
+                    "Expected " #val1 " is not ZX_OK.", ##__VA_ARGS__)
 
-#define ASSERT_BYTES_EQ(val1, val2, size, ...)                           \
-  _ASSERT_VAR_BYTES(_BYTEEQ, val2, val1, size, true, __FILE__, __LINE__, \
-                    "Expected " #val1 " same bytes as " #val2 ".", ##__VA_ARGS__)
+#define ASSERT_BYTES_EQ(val1, val2, size, ...)                          \
+  _CHECK_VAR_BYTES(_BYTEEQ, val2, val1, size, true, __FILE__, __LINE__, \
+                   "Expected " #val1 " same bytes as " #val2 ".", ##__VA_ARGS__)
 
-#define EXPECT_BYTES_EQ(val1, val2, size, ...)                            \
-  _ASSERT_VAR_BYTES(_BYTEEQ, val2, val1, size, false, __FILE__, __LINE__, \
-                    "Expected " #val1 " same bytes as " #val2 ".", ##__VA_ARGS__)
+#define EXPECT_BYTES_EQ(val1, val2, size, ...)                           \
+  _CHECK_VAR_BYTES(_BYTEEQ, val2, val1, size, false, __FILE__, __LINE__, \
+                   "Expected " #val1 " same bytes as " #val2 ".", ##__VA_ARGS__)
 
-#define ASSERT_BYTES_NE(val1, val2, size, ...)                           \
-  _ASSERT_VAR_BYTES(_BYTENE, val2, val1, size, true, __FILE__, __LINE__, \
-                    "Expected " #val1 " same bytes as " #val2 ".", ##__VA_ARGS__)
+#define ASSERT_BYTES_NE(val1, val2, size, ...)                          \
+  _CHECK_VAR_BYTES(_BYTENE, val2, val1, size, true, __FILE__, __LINE__, \
+                   "Expected " #val1 " same bytes as " #val2 ".", ##__VA_ARGS__)
 
-#define EXPECT_BYTES_NE(val1, val2, size, ...)                            \
-  _ASSERT_VAR_BYTES(_BYTENE, val2, val1, size, false, __FILE__, __LINE__, \
-                    "Expected " #val1 " same bytes as " #val2 ".", ##__VA_ARGS__)
+#define EXPECT_BYTES_NE(val1, val2, size, ...)                           \
+  _CHECK_VAR_BYTES(_BYTENE, val2, val1, size, false, __FILE__, __LINE__, \
+                   "Expected " #val1 " same bytes as " #val2 ".", ##__VA_ARGS__)
 
-#define ASSERT_TRUE(val, ...)                                                           \
-  _ASSERT_VAR(_BOOL, true, val, true, __FILE__, __LINE__, "Expected " #val " is true.", \
-              ##__VA_ARGS__)
+#define ASSERT_TRUE(val, ...)                                                          \
+  _CHECK_VAR(_BOOL, true, val, true, __FILE__, __LINE__, "Expected " #val " is true.", \
+             ##__VA_ARGS__)
 
-#define ASSERT_FALSE(val, ...)                                                            \
-  _ASSERT_VAR(_BOOL, false, val, true, __FILE__, __LINE__, "Expected " #val " is false.", \
-              ##__VA_ARGS__)
+#define ASSERT_FALSE(val, ...)                                                           \
+  _CHECK_VAR(_BOOL, false, val, true, __FILE__, __LINE__, "Expected " #val " is false.", \
+             ##__VA_ARGS__)
 
-#define EXPECT_TRUE(val, ...)                                                            \
-  _ASSERT_VAR(_BOOL, true, val, false, __FILE__, __LINE__, "Expected " #val " is true.", \
-              ##__VA_ARGS__)
+#define EXPECT_TRUE(val, ...)                                                           \
+  _CHECK_VAR(_BOOL, true, val, false, __FILE__, __LINE__, "Expected " #val " is true.", \
+             ##__VA_ARGS__)
 
-#define EXPECT_FALSE(val, ...)                                                             \
-  _ASSERT_VAR(_BOOL, false, val, false, __FILE__, __LINE__, "Expected " #val " is false.", \
-              ##__VA_ARGS__)
+#define EXPECT_FALSE(val, ...)                                                            \
+  _CHECK_VAR(_BOOL, false, val, false, __FILE__, __LINE__, "Expected " #val " is false.", \
+             ##__VA_ARGS__)
 
 #define ADD_FAILURE(...) _ZXTEST_FAIL_NO_RETURN(false, "", ##__VA_ARGS__)
 

@@ -8,7 +8,7 @@
 #include <zxtest/cpp/internal.h>
 
 // Basic assert macro implementation.
-#define _ASSERT_VAR(op, expected, actual, fatal, file, line, desc, ...)                          \
+#define _CHECK_VAR(op, expected, actual, fatal, file, line, desc, ...)                           \
   do {                                                                                           \
     _ZXTEST_CHECK_RUNNING();                                                                     \
     if (!zxtest::internal::EvaluateCondition(actual, expected, #actual, #expected,               \
@@ -19,7 +19,7 @@
     }                                                                                            \
   } while (0)
 
-#define _ASSERT_VAR_STATUS(op, expected, actual, fatal, file, line, desc, ...)                    \
+#define _CHECK_VAR_STATUS(op, expected, actual, fatal, file, line, desc, ...)                     \
   do {                                                                                            \
     _ZXTEST_CHECK_RUNNING();                                                                      \
     if (!zxtest::internal::EvaluateStatusCondition(                                               \
@@ -30,7 +30,7 @@
     }                                                                                             \
   } while (0)
 
-#define _ASSERT_VAR_COERCE(op, expected, actual, coerce_type, fatal, file, line, desc, ...)        \
+#define _CHECK_VAR_COERCE(op, expected, actual, coerce_type, fatal, file, line, desc, ...)         \
   do {                                                                                             \
     _ZXTEST_CHECK_RUNNING();                                                                       \
     auto buffer_compare = [&](const auto& expected_, const auto& actual_) {                        \
@@ -45,7 +45,7 @@
     }                                                                                              \
   } while (0)
 
-#define _ASSERT_VAR_BYTES(op, expected, actual, size, fatal, file, line, desc, ...)              \
+#define _CHECK_VAR_BYTES(op, expected, actual, size, fatal, file, line, desc, ...)               \
   do {                                                                                           \
     _ZXTEST_CHECK_RUNNING();                                                                     \
     size_t byte_count = size;                                                                    \
