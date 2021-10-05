@@ -6,6 +6,7 @@
         {
             name: "codec_factory",
             url: "fuchsia-pkg://fuchsia.com/codec_factory#meta/codec_factory.cm",
+            environment: "#full-resolver-env",
         },
     ],
     offer: [
