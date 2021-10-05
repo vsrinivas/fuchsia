@@ -42,9 +42,9 @@ fuchsia_driver("fuchsia_driver") {
     "//src/devices/lib/driver",
     "//src/lib/ddk",
     "//zircon/public/lib/async-cpp",
-    "//zircon/public/lib/sync",
     "//zircon/system/ulib/async-default",
     "//zircon/system/ulib/fbl",
+    "//zircon/system/ulib/sync",
     "//zircon/system/ulib/zx",
   ]
 

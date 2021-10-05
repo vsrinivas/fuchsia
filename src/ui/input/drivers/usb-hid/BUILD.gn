@@ -54,9 +54,9 @@ fuchsia_driver("usb-hid-driver") {
     "//src/devices/usb/lib/usb",
     "//src/lib/ddk",
     "//src/lib/ddktl",
-    "//zircon/public/lib/sync",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/pretty",
+    "//zircon/system/ulib/sync",
   ]
 }
 
@@ -84,10 +84,10 @@ fuchsia_driver("usb-one-endpoint-hid-fake-usb-driver") {
     "//src/devices/usb/lib/usb",
     "//src/lib/ddk",
     "//src/lib/ddktl",
-    "//zircon/public/lib/sync",
     "//zircon/public/lib/zircon-internal",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/hid",
+    "//zircon/system/ulib/sync",
   ]
 }
 
@@ -115,10 +115,10 @@ fuchsia_driver("usb-two-endpoint-hid-fake-usb-driver") {
     "//src/devices/usb/lib/usb",
     "//src/lib/ddk",
     "//src/lib/ddktl",
-    "//zircon/public/lib/sync",
     "//zircon/public/lib/zircon-internal",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/hid",
+    "//zircon/system/ulib/sync",
   ]
 }
 

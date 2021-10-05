@@ -31,10 +31,10 @@ test("simplehid") {
     "//src/devices/testing/no_ddk",
     "//src/lib/ddk",
     "//src/lib/ddktl",
-    "//zircon/public/lib/sync",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/fzl",
     "//zircon/system/ulib/simplehid",
+    "//zircon/system/ulib/sync",
     "//zircon/system/ulib/zx",
     "//zircon/system/ulib/zxtest",
   ]

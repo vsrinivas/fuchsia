@@ -17,7 +17,7 @@ source_set("mock-ddk") {
   deps = [
     "//sdk/lib/fdio",
     "//src/lib/ddk",
-    "//zircon/public/lib/sync",
+    "//zircon/system/ulib/sync",
     "//zircon/system/ulib/zx",
   ]
   public_deps = [
@@ -28,8 +28,8 @@ source_set("mock-ddk") {
 
     # mock_ddk.h has #include <lib/sync/completion.h>.
     "//zircon/public/lib/async",
-    "//zircon/public/lib/sync",
     "//zircon/system/ulib/svc",
+    "//zircon/system/ulib/sync",
   ]
 }
 

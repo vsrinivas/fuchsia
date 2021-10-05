@@ -29,8 +29,8 @@ test("intel-hda-utils-test") {
   deps = [
     "//sdk/lib/fdio",
     "//src/media/audio/drivers/lib/intel-hda",
-    "//zircon/public/lib/sync",
     "//zircon/system/ulib/fbl",
+    "//zircon/system/ulib/sync",
     "//zircon/system/ulib/zx",
     "//zircon/system/ulib/zxtest",
   ]

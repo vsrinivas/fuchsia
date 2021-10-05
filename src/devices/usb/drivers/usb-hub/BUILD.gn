@@ -37,10 +37,10 @@ fuchsia_driver("usb-hub-driver") {
     "//src/lib/ddk",
     "//zircon/public/lib/async",
     "//zircon/public/lib/async-cpp",
-    "//zircon/public/lib/sync",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/inspect",
+    "//zircon/system/ulib/sync",
     "//zircon/system/ulib/zxc",
   ]
 }

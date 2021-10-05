@@ -62,7 +62,7 @@ sdk_static_library("ddk") {
     "//zircon/system/ulib/trace-engine",
   ]
 
-  deps = [ "//zircon/public/lib/sync" ]
+  deps = [ "//zircon/system/ulib/sync" ]
 
   # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
   configs += [ "//build/config:Wno-conversion" ]

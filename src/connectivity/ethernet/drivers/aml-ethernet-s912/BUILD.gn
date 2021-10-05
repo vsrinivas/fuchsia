@@ -37,10 +37,10 @@ fuchsia_driver("aml-ethernet-s912-driver") {
     "//src/devices/usb/lib/usb",
     "//src/lib/ddk",
     "//src/lib/ddktl",
-    "//zircon/public/lib/sync",
     "//zircon/public/lib/zircon-internal",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/pretty",
+    "//zircon/system/ulib/sync",
     "//zircon/system/ulib/zx",
   ]
 }

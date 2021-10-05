@@ -24,13 +24,13 @@ zx_library("fake_ddk") {
     "//src/lib/ddktl",
     "//zircon/public/lib/async",
     "//zircon/public/lib/async-cpp",
-    "//zircon/public/lib/sync",
     "//zircon/system/ulib/async-loop",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/fidl:fidl-llcpp",
     "//zircon/system/ulib/fidl-async",
     "//zircon/system/ulib/fidl-async:fidl-async-cpp",
+    "//zircon/system/ulib/sync",
     "//zircon/system/ulib/zx",
   ]
   public_deps = [
@@ -50,7 +50,7 @@ zx_library("fake_ddk") {
     "//zircon/system/ulib/fidl:fidl-llcpp",
 
     # <lib/fake_ddk/fake_ddk.h> has #include <lib/sync/completion.h>.
-    "//zircon/public/lib/sync",
+    "//zircon/system/ulib/sync",
   ]
 
   # TODO(fxbug.dev/69585): This target uses raw zx::channel with LLCPP which is deprecated.

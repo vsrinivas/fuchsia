@@ -55,9 +55,9 @@ executable("hidctl-test") {
     "//src/devices/testing/fake_ddk",
     "//src/lib/ddk",
     "//src/lib/ddktl",
-    "//zircon/public/lib/sync",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/pretty",
+    "//zircon/system/ulib/sync",
     "//zircon/system/ulib/zxtest",
   ]
 }

@@ -41,7 +41,7 @@ fuchsia_driver("gpt-driver") {
     "//src/devices/lib/driver",
     "//src/lib/ddk",
     "//src/storage/gpt",
-    "//zircon/public/lib/sync",
+    "//zircon/system/ulib/sync",
     "//zircon/third_party/ulib/cksum",
   ]
 }
@@ -67,8 +67,8 @@ test("gpt-device-test-bin") {
     "//src/lib/ddk",
     "//src/lib/ddktl",
     "//src/storage/gpt",
-    "//zircon/public/lib/sync",
     "//zircon/public/lib/zircon-internal",
+    "//zircon/system/ulib/sync",
     "//zircon/system/ulib/zx",
     "//zircon/system/ulib/zxtest",
     "//zircon/third_party/ulib/cksum",

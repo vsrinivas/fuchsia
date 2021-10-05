@@ -138,7 +138,7 @@ test("pthread-detach-idempotent-test") {
   sources = [ "pthread_detach_idempotent.cc" ]
   deps = [
     "//sdk/lib/fdio",
-    "//zircon/public/lib/sync",
+    "//zircon/system/ulib/sync",
     "//zircon/system/ulib/zx",
     "//zircon/system/ulib/zxtest",
   ]

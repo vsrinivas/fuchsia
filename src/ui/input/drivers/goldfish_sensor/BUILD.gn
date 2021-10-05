@@ -95,7 +95,7 @@ test("goldfish-sensor-unittest") {
            "//src/lib/testing/loop_fixture",
            "//src/ui/input/lib/input-report-reader",
            "//zircon/system/ulib/mock-function",
-           "//zircon/public/lib/sync",
+           "//zircon/system/ulib/sync",
            "//zircon/public/lib/zircon-internal",
            "//zircon/system/ulib/zx",
          ]

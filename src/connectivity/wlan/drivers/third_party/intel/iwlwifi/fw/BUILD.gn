@@ -72,7 +72,7 @@ source_set("fw") {
     ":api",
     "//src/connectivity/wlan/drivers/third_party/intel/iwlwifi:core",
     "//src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform",
-    "//zircon/public/lib/sync",
     "//zircon/system/public",
+    "//zircon/system/ulib/sync",
   ]
 }

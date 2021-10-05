@@ -41,8 +41,8 @@ test("driver_runtime_test") {
   deps = [
     ":driver_runtime_impl",
     "//sdk/lib/driver_runtime",
-    "//zircon/public/lib/sync",
     "//zircon/system/ulib/fidl:fidl-llcpp",
+    "//zircon/system/ulib/sync",
     "//zircon/system/ulib/zxtest",
   ]
 }

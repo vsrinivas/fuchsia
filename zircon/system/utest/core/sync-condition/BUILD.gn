@@ -9,7 +9,7 @@ source_set("sync-condition") {
   sources = [ "condition.cc" ]
   deps = [
     "//sdk/lib/fdio",
-    "//zircon/public/lib/sync",
+    "//zircon/system/ulib/sync",
     "//zircon/system/ulib/zxtest",
   ]
 }

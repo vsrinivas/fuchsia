@@ -21,8 +21,8 @@ test("ftdi-i2c-test") {
     "//src/devices/usb/lib/usb",
     "//src/lib/ddk",
     "//src/lib/ddktl",
-    "//zircon/public/lib/sync",
     "//zircon/system/ulib/fbl",
+    "//zircon/system/ulib/sync",
     "//zircon/system/ulib/zxtest",
   ]
 }
@@ -49,8 +49,8 @@ source_set("common") {
     "//src/lib/ddk",
     "//src/lib/ddk:ddk-metadata-headers",
     "//src/lib/ddktl",
-    "//zircon/public/lib/sync",
     "//zircon/system/ulib/fbl",
+    "//zircon/system/ulib/sync",
   ]
 }
 

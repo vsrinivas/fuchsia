@@ -47,9 +47,9 @@ fuchsia_driver("platform-bus-driver") {
     # TODO(fxb/38132): Migrate to the new bind rules and delete the below
     "//src/lib/ddk:ddk-deprecated-binding-headers",
     "//src/lib/ddktl",
-    "//zircon/public/lib/sync",
     "//zircon/public/lib/zircon-internal",
     "//zircon/system/ulib/fbl",
+    "//zircon/system/ulib/sync",
     "//zircon/system/ulib/zx",
   ]
 
@@ -73,9 +73,9 @@ fuchsia_driver("platform-bus.proxy-driver") {
     "//src/devices/lib/driver",
     "//src/lib/ddk",
     "//src/lib/ddktl",
-    "//zircon/public/lib/sync",
     "//zircon/public/lib/zircon-internal",
     "//zircon/system/ulib/fbl",
+    "//zircon/system/ulib/sync",
     "//zircon/system/ulib/zx",
   ]
 }
@@ -114,9 +114,9 @@ test("platform-bus-unittest") {
     # TODO(fxb/38132): Migrate to the new bind rules and delete the below
     "//src/lib/ddk:ddk-deprecated-binding-headers",
     "//src/lib/ddktl",
-    "//zircon/public/lib/sync",
     "//zircon/public/lib/zircon-internal",
     "//zircon/system/ulib/fbl",
+    "//zircon/system/ulib/sync",
     "//zircon/system/ulib/zx",
     "//zircon/system/ulib/zxtest",
   ]

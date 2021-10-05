@@ -16,11 +16,11 @@ source_set("pager") {
   ]
   deps = [
     "//sdk/lib/fdio",
-    "//zircon/public/lib/sync",
     "//zircon/system/ulib/elf-search",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/fzl",
     "//zircon/system/ulib/inspector",
+    "//zircon/system/ulib/sync",
     "//zircon/system/ulib/zx",
     "//zircon/system/ulib/zxtest",
   ]

@@ -29,9 +29,9 @@ static_library("zxcrypt-dev") {
     "//sdk/banjo/fuchsia.hardware.block.volume:fuchsia.hardware.block.volume_banjo_cpp",
     "//src/lib/ddk",
     "//third_party/boringssl",
-    "//zircon/public/lib/sync",
     "//zircon/public/lib/zircon-internal",
     "//zircon/system/ulib/fbl",
+    "//zircon/system/ulib/sync",
     "//zircon/system/ulib/zx",
   ]
   configs += [ "//build/config/fuchsia:static_cpp_standard_library" ]

@@ -53,9 +53,9 @@ source_set("sources") {
     "//src/devices/lib/mmio",
     "//src/lib/ddk",
     "//src/lib/ddktl",
-    "//zircon/public/lib/sync",
     "//zircon/system/ulib/fidl-utils",
     "//zircon/system/ulib/inspect",
+    "//zircon/system/ulib/sync",
     "//zircon/system/ulib/trace:trace-driver",
   ]
 

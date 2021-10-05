@@ -32,9 +32,9 @@ fuchsia_driver("ssd1306_driver-driver") {
     "//src/devices/lib/driver",
     "//src/lib/ddk",
     "//src/lib/ddktl",
-    "//zircon/public/lib/sync",
     "//zircon/public/lib/zircon-internal",
     "//zircon/system/ulib/fbl",
+    "//zircon/system/ulib/sync",
   ]
 }
 
@@ -70,8 +70,8 @@ test("ssd1306-test") {
     "//src/devices/testing/mock-ddk",
     "//src/lib/ddk",
     "//src/lib/ddktl",
-    "//zircon/public/lib/sync",
     "//zircon/public/lib/zircon-internal",
+    "//zircon/system/ulib/sync",
     "//zircon/system/ulib/zxtest",
   ]
 

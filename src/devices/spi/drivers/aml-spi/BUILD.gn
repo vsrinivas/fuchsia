@@ -32,9 +32,9 @@ group("common") {
     "//src/lib/ddk",
     "//src/lib/ddktl",
     "//src/lib/vmo_store",
-    "//zircon/public/lib/sync",
     "//zircon/system/ulib/fzl",
     "//zircon/system/ulib/hwreg",
+    "//zircon/system/ulib/sync",
     "//zircon/system/ulib/zxc",
   ]
 }

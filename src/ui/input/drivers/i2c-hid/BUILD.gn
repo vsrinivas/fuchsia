@@ -36,9 +36,9 @@ fuchsia_driver("i2c-hid-driver") {
     "//src/devices/lib/acpi",
     "//src/devices/lib/driver",
     "//src/lib/ddk",
-    "//zircon/public/lib/sync",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/hid",
+    "//zircon/system/ulib/sync",
     "//zircon/system/ulib/trace:trace-driver",
   ]
 }
@@ -71,11 +71,11 @@ test("i2c-hid-test") {
     "//src/devices/testing/fake_ddk",
     "//src/lib/ddk",
     "//src/ui/input/testing/fake-hidbus-ifc",
-    "//zircon/public/lib/sync",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/fidl-async:fidl-async-cpp",
     "//zircon/system/ulib/hid",
+    "//zircon/system/ulib/sync",
     "//zircon/system/ulib/trace:trace-driver",
     "//zircon/system/ulib/zxtest",
   ]

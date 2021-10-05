@@ -35,7 +35,7 @@ fuchsia_driver("ddk-environment-test-driver") {
     "//src/lib/ddk",
     "//src/lib/ddktl",
     "//src/lib/files",
-    "//zircon/public/lib/sync",
+    "//zircon/system/ulib/sync",
   ]
 }
 

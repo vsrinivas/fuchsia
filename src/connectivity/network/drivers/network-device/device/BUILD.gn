@@ -40,12 +40,12 @@ ddk_source_split("device") {
     "//sdk/fidl/fuchsia.hardware.network:fuchsia.hardware.network_llcpp",
     "//src/lib/vmo_store",
     "//zircon/public/lib/async-cpp",
-    "//zircon/public/lib/sync",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/fidl",
     "//zircon/system/ulib/fidl-async:fidl-async-cpp",
     "//zircon/system/ulib/fidl-utils",
     "//zircon/system/ulib/fzl",
+    "//zircon/system/ulib/sync",
     "//zircon/system/ulib/zxc",
   ]
 
@@ -69,8 +69,8 @@ test("test_bin") {
     ":device",
     "//src/lib/fxl/test:gtest_main",
     "//src/lib/testing/predicates",
-    "//zircon/public/lib/sync",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/sync",
   ]
 }
 

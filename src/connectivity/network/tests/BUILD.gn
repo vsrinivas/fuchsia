@@ -81,8 +81,8 @@ test("netstack_fuchsia_c_api_test") {
     "//sdk/lib/fdio",
     "//src/lib/fxl/test:gtest_main",
     "//src/lib/testing/predicates",
-    "//zircon/public/lib/sync",
     "//zircon/system/ulib/fbl",
+    "//zircon/system/ulib/sync",
   ]
 }
 

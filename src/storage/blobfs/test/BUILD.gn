@@ -105,12 +105,12 @@ test("blobfs_unittest") {
     "//src/storage/blobfs:fuchsia.blobfs.internal",
     "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",
-    "//zircon/public/lib/sync",
     "//zircon/system/ulib/block-client:fake-device",
     "//zircon/system/ulib/cobalt-client:in-memory-logger",
     "//zircon/system/ulib/fidl-utils",
     "//zircon/system/ulib/storage/buffer",
     "//zircon/system/ulib/storage/operation",
+    "//zircon/system/ulib/sync",
     "//zircon/third_party/ulib/cksum",
     "//zircon/third_party/ulib/safemath",
   ]

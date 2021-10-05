@@ -46,9 +46,9 @@ source_set("common") {
     "//src/devices/lib/mmio",
     "//src/lib/ddk",
     "//src/lib/ddktl",
-    "//zircon/public/lib/sync",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/fzl",
+    "//zircon/system/ulib/sync",
     "//zircon/system/ulib/zx",
   ]
 }

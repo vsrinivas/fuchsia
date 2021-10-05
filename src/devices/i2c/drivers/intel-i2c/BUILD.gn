@@ -47,9 +47,9 @@ fuchsia_driver("intel-i2c-driver") {
     "//src/devices/pci/lib/pci",
     "//src/lib/ddk",
     "//src/lib/ddk:ddk-metadata-headers",
-    "//zircon/public/lib/sync",
     "//zircon/public/lib/zircon-internal",
     "//zircon/system/ulib/fbl",
+    "//zircon/system/ulib/sync",
   ]
 
   # TODO(fxbug.dev/58161): delete the below and fix compiler warnings

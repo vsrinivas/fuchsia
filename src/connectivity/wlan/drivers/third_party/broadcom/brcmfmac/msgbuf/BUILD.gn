@@ -23,7 +23,7 @@ source_set("msgbuf") {
     "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac:debug",
     "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac:util",
     "//src/connectivity/wlan/lib/common/cpp:common",
-    "//zircon/public/lib/sync",
+    "//zircon/system/ulib/sync",
     "//zircon/system/ulib/zx",
   ]
   public_deps = [

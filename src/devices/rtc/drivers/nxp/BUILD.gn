@@ -28,9 +28,9 @@ fuchsia_driver("nxp-driver") {
     "//src/devices/rtc/lib/rtc",
     "//src/lib/ddk",
     "//src/lib/ddktl",
-    "//zircon/public/lib/sync",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/hid",
+    "//zircon/system/ulib/sync",
     "//zircon/system/ulib/zx",
   ]
 }

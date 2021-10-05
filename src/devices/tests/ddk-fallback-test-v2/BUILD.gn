@@ -29,7 +29,7 @@ fuchsia_driver("ddk-fallback-test-driver-module") {
     "//src/lib/ddk",
     "//src/lib/ddktl",
     "//src/lib/files",
-    "//zircon/public/lib/sync",
+    "//zircon/system/ulib/sync",
   ]
 }
 

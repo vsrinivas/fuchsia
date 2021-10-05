@@ -47,12 +47,12 @@ test("print-input-report-test-bin") {
     "//src/lib/fxl/test:gtest_main",
     "//src/ui/input/lib/hid-input-report",
     "//src/ui/input/testing/fake_input_report_device",
-    "//zircon/public/lib/sync",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/fidl-async:fidl-async-cpp",
     "//zircon/system/ulib/hid-parser",
+    "//zircon/system/ulib/sync",
     "//zircon/system/ulib/trace",
   ]
 }

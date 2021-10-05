@@ -37,7 +37,7 @@ zx_library("memfs-cpp") {
     "//sdk/lib/syslog/cpp",
     "//zircon/public/lib/async",
     "//zircon/public/lib/async-cpp",
-    "//zircon/public/lib/sync",
+    "//zircon/system/ulib/sync",
   ]
 
   # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
@@ -59,7 +59,7 @@ zx_library("memfs") {
     "//zircon/public/lib/async",
 
     # <lib/memfs/memfs.h> has #include <lib/sync/completion.h>.
-    "//zircon/public/lib/sync",
+    "//zircon/system/ulib/sync",
   ]
   deps = [
     ":memfs-cpp",

@@ -39,9 +39,9 @@ fuchsia_driver("nandpart-driver") {
     "//src/lib/ddk",
     "//src/lib/ddk:ddk-metadata-headers",
     "//src/lib/ddktl",
-    "//zircon/public/lib/sync",
     "//zircon/public/lib/zircon-internal",
     "//zircon/system/ulib/fbl",
+    "//zircon/system/ulib/sync",
     "//zircon/system/ulib/zx",
   ]
 }
@@ -71,10 +71,10 @@ test("nandpart-test-bin") {
     "//src/devices/testing/no_ddk",
     "//src/lib/ddk",
     "//src/lib/ddktl",
-    "//zircon/public/lib/sync",
     "//zircon/public/lib/zircon-internal",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/fzl",
+    "//zircon/system/ulib/sync",
     "//zircon/system/ulib/zx",
     "//zircon/system/ulib/zxtest",
   ]

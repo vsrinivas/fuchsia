@@ -34,8 +34,8 @@ fuchsia_driver("nand-broker-driver") {
     "//src/devices/lib/nand",
     "//src/lib/ddk",
     "//src/lib/ddktl",
-    "//zircon/public/lib/sync",
     "//zircon/system/ulib/fbl",
+    "//zircon/system/ulib/sync",
     "//zircon/system/ulib/zx",
   ]
 }

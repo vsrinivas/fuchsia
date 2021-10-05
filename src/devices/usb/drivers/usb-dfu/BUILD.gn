@@ -39,9 +39,9 @@ fuchsia_driver("usb-dfu-driver") {
     "//src/devices/usb/lib/usb",
     "//src/lib/ddk",
     "//src/lib/ddktl",
-    "//zircon/public/lib/sync",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/fidl",
+    "//zircon/system/ulib/sync",
     "//zircon/system/ulib/zx",
   ]
 }

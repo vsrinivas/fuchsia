@@ -45,10 +45,10 @@ fuchsia_driver("asix-88179-driver") {
     "//src/devices/usb/lib/usb",
     "//src/devices/usb/lib/usb",
     "//src/lib/ddk",
-    "//zircon/public/lib/sync",
     "//zircon/public/lib/zircon-internal",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/pretty",
+    "//zircon/system/ulib/sync",
     "//zircon/third_party/ulib/cksum",
   ]
 }
@@ -84,11 +84,11 @@ fuchsia_driver("fake-asix-88179-driver") {
     "//src/devices/usb/lib/usb",
     "//src/lib/ddk",
     "//src/lib/ddktl",
-    "//zircon/public/lib/sync",
     "//zircon/public/lib/zircon-internal",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/inet6",
+    "//zircon/system/ulib/sync",
   ]
 }
 

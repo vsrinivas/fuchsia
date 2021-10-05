@@ -173,11 +173,11 @@ executable("threads") {
   deps = [
     "//sdk/fidl/fuchsia.boot:fuchsia.boot_c",
     "//sdk/lib/fdio",
-    "//zircon/public/lib/sync",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/fzl",
     "//zircon/system/ulib/inspector",
     "//zircon/system/ulib/pretty",
+    "//zircon/system/ulib/sync",
     "//zircon/system/ulib/task-utils",
     "//zircon/system/ulib/zx",
     "//zircon/system/ulib/zxc",

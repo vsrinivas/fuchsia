@@ -31,10 +31,10 @@ fuchsia_driver("sdhci-driver") {
     "//src/devices/lib/driver",
     "//src/devices/lib/mmio",
     "//src/lib/ddk",
-    "//zircon/public/lib/sync",
     "//zircon/public/lib/zircon-internal",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/hwreg",
+    "//zircon/system/ulib/sync",
     "//zircon/system/ulib/zx",
   ]
 }
@@ -63,12 +63,12 @@ test("sdhci-test-bin") {
     "//src/devices/testing/fake-bti",
     "//src/devices/testing/fake_ddk",
     "//src/lib/ddk",
-    "//zircon/public/lib/sync",
     "//zircon/public/lib/zircon-internal",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/hwreg",
     "//zircon/system/ulib/mmio-ptr:mmio-ptr-fake",
     "//zircon/system/ulib/mock-function",
+    "//zircon/system/ulib/sync",
     "//zircon/system/ulib/zx",
     "//zircon/system/ulib/zxtest",
   ]

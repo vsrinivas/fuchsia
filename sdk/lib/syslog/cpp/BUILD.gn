@@ -150,9 +150,9 @@ sdk_static_library("backend_fuchsia_lib_rust") {
     "//sdk/lib/stdcompat",
     "//sdk/lib/syslog/streams/cpp:streams-encoder",
     "//zircon/public/lib/async-cpp",
-    "//zircon/public/lib/sync",
     "//zircon/system/ulib/async:async-cpp",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/sync",
   ]
 
   data_deps = [ "//sdk/lib/syslog:client_includes" ]
@@ -186,9 +186,9 @@ sdk_source_set("backend_fuchsia_lib") {
     "//sdk/lib/stdcompat",
     "//sdk/lib/syslog/streams/cpp:streams-encoder",
     "//zircon/public/lib/async-cpp",
-    "//zircon/public/lib/sync",
     "//zircon/system/ulib/async:async-cpp",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/sync",
     "//zircon/system/ulib/syslog",
   ]
 
@@ -222,9 +222,9 @@ sdk_source_set("backend_fuchsia_compat") {
     "//sdk/lib/stdcompat",
     "//sdk/lib/syslog/streams/cpp:streams-encoder",
     "//zircon/public/lib/async-cpp",
-    "//zircon/public/lib/sync",
     "//zircon/system/ulib/async:async-cpp",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/sync",
   ]
 
   data_deps = [ "//sdk/lib/syslog:client_includes" ]

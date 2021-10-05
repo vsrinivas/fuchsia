@@ -42,7 +42,7 @@ sdk_source_set("ddktl") {
   ]
   deps = [
     "//src/lib/ddk",
-    "//zircon/public/lib/sync",
+    "//zircon/system/ulib/sync",
     "//zircon/system/ulib/zx",
   ]
 }

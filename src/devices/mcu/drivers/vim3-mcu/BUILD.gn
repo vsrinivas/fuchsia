@@ -58,8 +58,8 @@ test("vim3-mcu-test-bin") {
     "//src/devices/i2c/testing/mock-i2c",
     "//src/devices/testing/no_ddk",
     "//src/lib/ddktl",
-    "//zircon/public/lib/sync",
     "//zircon/system/ulib/fbl",
+    "//zircon/system/ulib/sync",
     "//zircon/system/ulib/zx",
     "//zircon/system/ulib/zxtest",
   ]

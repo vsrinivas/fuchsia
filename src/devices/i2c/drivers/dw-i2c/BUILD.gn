@@ -34,9 +34,9 @@ fuchsia_driver("dw-i2c-driver") {
     "//src/devices/lib/mmio",
     "//src/lib/ddk",
     "//src/lib/ddktl",
-    "//zircon/public/lib/sync",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/hwreg",
+    "//zircon/system/ulib/sync",
   ]
 }
 
@@ -65,9 +65,9 @@ test("dw-i2c-test-bin") {
     "//src/devices/testing/mock-mmio-reg",
     "//src/lib/ddk",
     "//src/lib/ddktl",
-    "//zircon/public/lib/sync",
     "//zircon/system/ulib/hwreg",
     "//zircon/system/ulib/mock-function",
+    "//zircon/system/ulib/sync",
     "//zircon/system/ulib/zx",
     "//zircon/system/ulib/zxtest",
   ]

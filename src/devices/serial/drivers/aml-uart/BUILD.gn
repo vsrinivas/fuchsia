@@ -37,10 +37,10 @@ fuchsia_driver("aml-uart-driver") {
     "//src/devices/lib/mmio",
     "//src/lib/ddk",
     "//src/lib/ddktl",
-    "//zircon/public/lib/sync",
     "//zircon/public/lib/zircon-internal",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/hwreg",
+    "//zircon/system/ulib/sync",
     "//zircon/system/ulib/zx",
   ]
 }

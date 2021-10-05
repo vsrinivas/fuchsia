@@ -37,11 +37,11 @@ fuchsia_driver("aml-g12-pdm-driver") {
     "//src/media/audio/drivers/lib/audio-driver-proto",
     "//src/media/audio/drivers/lib/audio-proto-utils",
     "//src/media/audio/lib/simple-audio-stream",
-    "//zircon/public/lib/sync",
     "//zircon/public/lib/zircon-internal",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/fzl",
     "//zircon/system/ulib/inspect",
+    "//zircon/system/ulib/sync",
     "//zircon/system/ulib/zx",
   ]
 }

@@ -40,8 +40,8 @@ test("pipe_io_unittest") {
     "//src/lib/testing/loop_fixture",
     "//third_party/googletest:gtest",
     "//third_party/googletest:gtest_main",
-    "//zircon/public/lib/sync",
     "//zircon/public/lib/zircon-internal",
+    "//zircon/system/ulib/sync",
     "//zircon/system/ulib/zx",
   ]
 

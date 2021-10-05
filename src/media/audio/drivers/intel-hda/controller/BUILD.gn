@@ -81,11 +81,11 @@ source_set("src") {
     "//sdk/lib/fit",
     "//src/lib/ddk:ddk-deprecated-binding-headers",
     "//src/media/audio/drivers/lib/intel-hda",
-    "//zircon/public/lib/sync",
     "//zircon/public/lib/zircon-internal",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/fzl",
     "//zircon/system/ulib/refcount",
+    "//zircon/system/ulib/sync",
     "//zircon/system/ulib/zx",
   ]
 

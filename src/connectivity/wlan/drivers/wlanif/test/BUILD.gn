@@ -53,7 +53,7 @@ test("device_unittest") {
     "//src/devices/testing/mock-ddk",
     "//src/lib/ddk",
     "//src/lib/fxl/test:gtest_main",
-    "//zircon/public/lib/sync",
+    "//zircon/system/ulib/sync",
     "//zircon/system/ulib/zx",
   ]
 

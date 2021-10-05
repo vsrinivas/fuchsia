@@ -84,7 +84,7 @@ test("goldfish-pipe-device-test") {
            "//zircon/system/ulib/mmio-ptr:mmio-ptr-fake",
            "//zircon/system/ulib/fidl-async:fidl-async-cpp",
            "//zircon/system/ulib/mock-function",
-           "//zircon/public/lib/sync",
+           "//zircon/system/ulib/sync",
            "//zircon/public/lib/zircon-internal",
            "//zircon/system/ulib/zx",
            "//zircon/system/ulib/zxtest",

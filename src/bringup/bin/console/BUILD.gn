@@ -76,7 +76,7 @@ test("console-test") {
   deps = [
     ":common",
     "//sdk/fidl/fuchsia.io:fuchsia.io_llcpp",
-    "//zircon/public/lib/sync",
+    "//zircon/system/ulib/sync",
     "//zircon/system/ulib/zxtest",
   ]
 }

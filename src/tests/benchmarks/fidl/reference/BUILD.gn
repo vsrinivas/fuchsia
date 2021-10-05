@@ -38,10 +38,10 @@ executable("bin") {
   deps = [
     ":benchmark_suite_reference",
     "//src/zircon/lib/zircon",
-    "//zircon/public/lib/sync",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/fidl",
     "//zircon/system/ulib/perftest",
+    "//zircon/system/ulib/sync",
   ]
 }
 

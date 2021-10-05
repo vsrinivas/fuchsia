@@ -44,7 +44,6 @@ source_set("test_sources") {
     "//sdk/lib/fit",
     "//zircon/public/lib/async",
     "//zircon/public/lib/async-cpp",
-    "//zircon/public/lib/sync",
     "//zircon/system/ulib/async-loop",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
@@ -52,6 +51,7 @@ source_set("test_sources") {
     "//zircon/system/ulib/fidl",
     "//zircon/system/ulib/fidl:fidl-llcpp",
     "//zircon/system/ulib/fidl-async",
+    "//zircon/system/ulib/sync",
     "//zircon/system/ulib/zx",
     "//zircon/system/ulib/zxtest",
   ]

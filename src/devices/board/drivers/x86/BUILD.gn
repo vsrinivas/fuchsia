@@ -200,10 +200,10 @@ test("x86-lid-test") {
     "//src/lib/ddktl",
     "//src/ui/input/testing/mock-hidbus-ifc",
     "//third_party/acpica",
-    "//zircon/public/lib/sync",
     "//zircon/public/lib/zircon-internal",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/hid",
+    "//zircon/system/ulib/sync",
     "//zircon/system/ulib/zxtest",
   ]
 }
@@ -306,7 +306,6 @@ test("x86-cros-ec-test") {
     "//src/lib/ddktl",
     "//src/ui/input/testing/mock-hidbus-ifc",
     "//third_party/acpica",
-    "//zircon/public/lib/sync",
     "//zircon/public/lib/zircon-internal",
     "//zircon/system/ulib/async-loop",
     "//zircon/system/ulib/async-loop:async-loop-default",
@@ -314,6 +313,7 @@ test("x86-cros-ec-test") {
     "//zircon/system/ulib/hid",
     "//zircon/system/ulib/hid-parser",
     "//zircon/system/ulib/service:service-llcpp",
+    "//zircon/system/ulib/sync",
     "//zircon/system/ulib/zxtest",
     "//zircon/third_party/ulib/chromiumos-platform-ec",
   ]

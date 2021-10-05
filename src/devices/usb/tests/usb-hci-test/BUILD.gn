@@ -81,8 +81,8 @@ fuchsia_driver("fuchsia_driver") {
     "//src/devices/usb/lib/usb",
     "//src/lib/ddk",
     "//src/lib/ddktl",
-    "//zircon/public/lib/sync",
     "//zircon/system/ulib/fbl",
+    "//zircon/system/ulib/sync",
     "//zircon/system/ulib/zx",
   ]
   configs += [ "//build/config/fuchsia:enable_zircon_asserts" ]

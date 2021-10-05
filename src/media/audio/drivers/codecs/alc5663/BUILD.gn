@@ -27,9 +27,9 @@ source_set("shared") {
     "//src/devices/i2c/lib/device-protocol-i2c",
     "//src/devices/i2c/lib/device-protocol-i2c-channel",
     "//src/lib/ddktl",
-    "//zircon/public/lib/sync",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/hwreg",
+    "//zircon/system/ulib/sync",
     "//zircon/system/ulib/zx",
   ]
 }

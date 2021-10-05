@@ -36,12 +36,12 @@ fuchsia_driver("ti-lp8556-driver") {
     "//src/devices/lib/mmio",
     "//src/lib/ddk",
     "//src/lib/ddktl",
-    "//zircon/public/lib/sync",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/fidl",
     "//zircon/system/ulib/hwreg",
     "//zircon/system/ulib/inspect",
     "//zircon/system/ulib/pretty",
+    "//zircon/system/ulib/sync",
     "//zircon/system/ulib/zx",
   ]
 
@@ -80,7 +80,6 @@ test("ti-lp8556-test") {
     "//src/devices/testing/mock-mmio-reg",
     "//src/lib/ddk",
     "//src/lib/ddktl",
-    "//zircon/public/lib/sync",
     "//zircon/system/ulib/async-loop",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
@@ -89,6 +88,7 @@ test("ti-lp8556-test") {
     "//zircon/system/ulib/hwreg",
     "//zircon/system/ulib/inspect",
     "//zircon/system/ulib/pretty",
+    "//zircon/system/ulib/sync",
     "//zircon/system/ulib/zx",
     "//zircon/system/ulib/zxtest",
   ]

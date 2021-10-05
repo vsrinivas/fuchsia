@@ -64,11 +64,11 @@ test("ethertap-unittest") {
     "//src/devices/testing/mock-ddk",
     "//src/lib/ddk",
     "//src/lib/ddktl",
-    "//zircon/public/lib/sync",
     "//zircon/system/ulib/fidl:fidl_base",
     "//zircon/system/ulib/fidl-utils",
     "//zircon/system/ulib/fzl",
     "//zircon/system/ulib/pretty",
+    "//zircon/system/ulib/sync",
     "//zircon/system/ulib/zxtest",
   ]
 }

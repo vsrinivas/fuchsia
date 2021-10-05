@@ -33,8 +33,8 @@ fuchsia_driver("usb-cdc-function-driver") {
     "//src/devices/lib/driver",
     "//src/devices/usb/lib/usb",
     "//src/lib/ddk",
-    "//zircon/public/lib/sync",
     "//zircon/system/ulib/fbl",
+    "//zircon/system/ulib/sync",
   ]
 }
 

@@ -353,7 +353,6 @@ sdk_molecule("core_lib") {
     "//src/storage/memfs:memfs_sdk",
     "//zircon/public/lib/async:async_sdk",
     "//zircon/public/lib/async-cpp:async-cpp_sdk",
-    "//zircon/public/lib/sync:sync_sdk",
     "//zircon/system/ulib/async-default:async-default_sdk",
     "//zircon/system/ulib/async-loop:async-loop-cpp_sdk",
     "//zircon/system/ulib/async-loop:async-loop-default_sdk",
@@ -361,6 +360,7 @@ sdk_molecule("core_lib") {
     "//zircon/system/ulib/async-loop/testing:async-loop-testing_sdk",
     "//zircon/system/ulib/async-testing:async-testing_sdk",
     "//zircon/system/ulib/inspect:inspect_sdk",
+    "//zircon/system/ulib/sync:sync_sdk",
     "//zircon/system/ulib/syslog:syslog_sdk",
     "//zircon/system/ulib/trace:trace_sdk",
     "//zircon/system/ulib/trace-engine:trace-engine_sdk",
@@ -479,8 +479,8 @@ sdk("bootstrap") {
     "//sdk/lib/fdio:fdio_sdk",
     "//zircon/public/lib/async:async_sdk",
     "//zircon/public/lib/async-cpp:async-cpp_sdk",
-    "//zircon/public/lib/sync:sync_sdk",
     "//zircon/public/sysroot/sdk:sysroot_sdk",
+    "//zircon/system/ulib/sync:sync_sdk",
     "//zircon/system/ulib/zx:zx_sdk",
   ]
 }

@@ -19,7 +19,7 @@ sdk_source_set("driver_runtime") {
   ]
   public_configs = [ ":include" ]
   deps = [
-    "//zircon/public/lib/sync",
+    "//zircon/system/ulib/sync",
     "//zircon/system/ulib/zx",
   ]
 }

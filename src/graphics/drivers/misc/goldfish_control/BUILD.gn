@@ -91,7 +91,7 @@ test("goldfish-control-device-test") {
            "//src/devices/testing/fake-bti",
            "//src/devices/testing/fake-object",
            "//zircon/system/ulib/mock-function",
-           "//zircon/public/lib/sync",
+           "//zircon/system/ulib/sync",
            "//zircon/public/lib/zircon-internal",
            "//zircon/system/ulib/zx",
          ]

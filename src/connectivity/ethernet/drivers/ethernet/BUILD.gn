@@ -33,12 +33,12 @@ fuchsia_driver("ethernet-driver") {
     "//src/devices/lib/driver",
     "//src/lib/ddk",
     "//src/lib/ddktl",
-    "//zircon/public/lib/sync",
     "//zircon/public/lib/zircon-internal",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/fidl",
     "//zircon/system/ulib/fidl-utils",
     "//zircon/system/ulib/fzl",
+    "//zircon/system/ulib/sync",
   ]
 }
 
@@ -75,7 +75,7 @@ test("ethernet-unittest") {
     ":ethernet_bind",
     ":test_util",
     "//sdk/lib/fidl/cpp:cpp_base",
-    "//zircon/public/lib/sync",
+    "//zircon/system/ulib/sync",
     "//zircon/system/ulib/zxtest",
   ]
 }

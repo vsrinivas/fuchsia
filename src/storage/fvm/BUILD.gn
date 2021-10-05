@@ -52,9 +52,9 @@ static_library("fvm") {
     deps += [
       "//sdk/fidl/fuchsia.hardware.block.volume:fuchsia.hardware.block.volume_c",
       "//src/storage/gpt",
-      "//zircon/public/lib/sync",
       "//zircon/system/ulib/block-client",
       "//zircon/system/ulib/fzl",
+      "//zircon/system/ulib/sync",
       "//zircon/system/ulib/zx",
     ]
   } else {

@@ -34,10 +34,10 @@ fuchsia_driver("lp50xx-light-driver") {
     "//src/lib/ddk",
     "//src/lib/ddk:ddk-metadata-headers",
     "//src/lib/ddktl",
-    "//zircon/public/lib/sync",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/fidl",
     "//zircon/system/ulib/hwreg-i2c",
+    "//zircon/system/ulib/sync",
     "//zircon/system/ulib/zx",
   ]
 }
@@ -67,10 +67,10 @@ test("lp50xx-light-test") {
     "//src/lib/ddk",
     "//src/lib/ddk:ddk-metadata-headers",
     "//src/lib/ddktl",
-    "//zircon/public/lib/sync",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/fidl",
     "//zircon/system/ulib/hwreg-i2c",
+    "//zircon/system/ulib/sync",
     "//zircon/system/ulib/zx",
     "//zircon/system/ulib/zxtest",
   ]

@@ -34,7 +34,7 @@ fuchsia_driver("bt-transport-uart-driver") {
     "//sdk/fidl/fuchsia.hardware.serial:fuchsia.hardware.serial_c",
     "//src/devices/lib/driver",
     "//src/lib/ddk",
-    "//zircon/public/lib/sync",
+    "//zircon/system/ulib/sync",
   ]
 
   # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings

@@ -31,10 +31,10 @@ fuchsia_driver("bt-hci-mediatek-driver") {
     "//src/devices/lib/driver",
     "//src/lib/ddk",
     "//src/lib/ddktl",
-    "//zircon/public/lib/sync",
     "//zircon/public/lib/zircon-internal",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/fzl",
+    "//zircon/system/ulib/sync",
     "//zircon/system/ulib/zx",
   ]
   data_deps = [ ":firmware" ]
@@ -67,11 +67,11 @@ test("bt-hci-mediatek-test-bin") {
     "//src/devices/testing/fake_ddk",
     "//src/lib/ddk",
     "//src/lib/ddktl",
-    "//zircon/public/lib/sync",
     "//zircon/public/lib/zircon-internal",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/fzl",
     "//zircon/system/ulib/mock-function",
+    "//zircon/system/ulib/sync",
     "//zircon/system/ulib/zx",
     "//zircon/system/ulib/zxtest",
   ]

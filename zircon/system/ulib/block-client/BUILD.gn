@@ -49,8 +49,8 @@ zx_library("block-client") {
     "//sdk/lib/syslog/cpp",
     "//src/lib/ddk",
     "//src/lib/storage/vfs/cpp",
-    "//zircon/public/lib/sync",
     "//zircon/system/ulib/fbl",
+    "//zircon/system/ulib/sync",
     "//zircon/system/ulib/zx",
   ]
 

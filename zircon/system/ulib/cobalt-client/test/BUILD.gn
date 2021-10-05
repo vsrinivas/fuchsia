@@ -21,7 +21,6 @@ source_set("collector-test") {
     "//sdk/fidl/fuchsia.cobalt:fuchsia.cobalt_llcpp",
     "//sdk/lib/fit",
     "//zircon/public/lib/async-cpp",
-    "//zircon/public/lib/sync",
     "//zircon/system/ulib/async-default",
     "//zircon/system/ulib/async-loop",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
@@ -29,6 +28,7 @@ source_set("collector-test") {
     "//zircon/system/ulib/cobalt-client:cobalt-collector",
     "//zircon/system/ulib/cobalt-client:in-memory-logger",
     "//zircon/system/ulib/fidl-async:fidl-async-cpp",
+    "//zircon/system/ulib/sync",
     "//zircon/system/ulib/zxtest",
   ]
 }
@@ -44,11 +44,11 @@ source_set("metrics-test") {
   include_dirs = [ "../include/" ]
   deps = [
     "//sdk/lib/fit",
-    "//zircon/public/lib/sync",
     "//zircon/system/ulib/cobalt-client:cobalt-collector",
     "//zircon/system/ulib/cobalt-client:cobalt-metrics",
     "//zircon/system/ulib/cobalt-client:cobalt-types-internal",
     "//zircon/system/ulib/cobalt-client:in-memory-logger",
+    "//zircon/system/ulib/sync",
     "//zircon/system/ulib/zxtest",
   ]
 }

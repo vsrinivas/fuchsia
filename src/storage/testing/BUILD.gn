@@ -48,9 +48,9 @@ source_set("storage_driver_test_support") {
     "//sdk/lib/syslog/cpp",
     "//src/security/zxcrypt:zxcrypt-client",
     "//src/storage/lib/utils:topological_path",
-    "//zircon/public/lib/sync",
     "//zircon/system/ulib/fdio-caller",
     "//zircon/system/ulib/fs-management",
+    "//zircon/system/ulib/sync",
   ]
   public_deps = [
     "//src/lib/isolated_devmgr/v2_component:client",

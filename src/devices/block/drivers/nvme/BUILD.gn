@@ -36,7 +36,7 @@ fuchsia_driver("nvme-driver") {
     "//src/devices/pci/lib/device-protocol-pci",
     "//src/devices/pci/lib/pci",
     "//src/lib/ddk",
-    "//zircon/public/lib/sync",
+    "//zircon/system/ulib/sync",
   ]
 
   # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings

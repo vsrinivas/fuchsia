@@ -51,11 +51,11 @@ source_set("block") {
     "//src/devices/usb/lib/usb",
     "//src/lib/ddk",
     "//src/lib/ddktl",
-    "//zircon/public/lib/sync",
     "//zircon/system/ulib/async-loop",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/fidl-async",
     "//zircon/system/ulib/fzl",
+    "//zircon/system/ulib/sync",
     "//zircon/system/ulib/zx",
   ]
 }

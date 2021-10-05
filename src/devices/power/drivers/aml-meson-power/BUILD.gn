@@ -38,10 +38,10 @@ fuchsia_driver("aml-meson-power-driver") {
     "//src/devices/lib/driver",
     "//src/lib/ddk",
     "//src/lib/ddktl",
-    "//zircon/public/lib/sync",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/fidl",
     "//zircon/system/ulib/hwreg",
+    "//zircon/system/ulib/sync",
     "//zircon/system/ulib/zx",
   ]
 }
@@ -80,12 +80,12 @@ test("aml-meson-power-test-bin") {
     "//src/devices/testing/no_ddk",
     "//src/lib/ddk",
     "//src/lib/ddktl",
-    "//zircon/public/lib/sync",
     "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/fidl-utils",
     "//zircon/system/ulib/hwreg",
     "//zircon/system/ulib/mock-function",
+    "//zircon/system/ulib/sync",
     "//zircon/system/ulib/zx",
     "//zircon/system/ulib/zxtest",
   ]

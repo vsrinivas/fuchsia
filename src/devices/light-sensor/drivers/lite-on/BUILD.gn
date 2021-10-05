@@ -38,10 +38,10 @@ fuchsia_driver("lite-on-driver") {
     "//src/devices/lib/mmio",
     "//src/lib/ddk",
     "//src/lib/ddktl",
-    "//zircon/public/lib/sync",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/hid",
     "//zircon/system/ulib/simplehid",
+    "//zircon/system/ulib/sync",
     "//zircon/system/ulib/zx",
   ]
 }
@@ -78,10 +78,10 @@ test("ltr-578als-test-bin") {
     "//src/devices/testing/no_ddk",
     "//src/lib/ddktl",
     "//src/ui/input/testing/mock-hidbus-ifc",
-    "//zircon/public/lib/sync",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/hid",
     "//zircon/system/ulib/simplehid",
+    "//zircon/system/ulib/sync",
     "//zircon/system/ulib/zx",
     "//zircon/system/ulib/zxtest",
   ]

@@ -52,8 +52,8 @@ executable("flow_ring_handler_test") {
     "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/test:stub_netbuf",
     "//src/connectivity/wlan/lib/common/cpp:common",
     "//src/devices/testing/no_ddk",
-    "//zircon/public/lib/sync",
     "//zircon/system/public",
+    "//zircon/system/ulib/sync",
     "//zircon/system/ulib/zxtest",
   ]
 
@@ -73,8 +73,8 @@ executable("flow_ring_test") {
     "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/test:stub_netbuf",
     "//src/connectivity/wlan/lib/common/cpp:common",
     "//src/devices/testing/no_ddk",
-    "//zircon/public/lib/sync",
     "//zircon/system/public",
+    "//zircon/system/ulib/sync",
     "//zircon/system/ulib/zxtest",
   ]
 

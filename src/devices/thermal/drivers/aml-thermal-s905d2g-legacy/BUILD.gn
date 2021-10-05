@@ -45,12 +45,12 @@ fuchsia_driver("aml-thermal-s905d2g-legacy-driver") {
     "//src/devices/lib/mmio",
     "//src/lib/ddk",
     "//src/lib/ddktl",
-    "//zircon/public/lib/sync",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/fidl-utils",
     "//zircon/system/ulib/hwreg",
+    "//zircon/system/ulib/sync",
     "//zircon/system/ulib/zx",
   ]
 }
@@ -92,12 +92,12 @@ test("aml-thermal-s905d2g-legacy-test-bin") {
     "//src/devices/testing/no_ddk",
     "//src/lib/ddk",
     "//src/lib/ddktl",
-    "//zircon/public/lib/sync",
     "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/fidl-utils",
     "//zircon/system/ulib/hwreg",
     "//zircon/system/ulib/mock-function",
+    "//zircon/system/ulib/sync",
     "//zircon/system/ulib/zx",
     "//zircon/system/ulib/zxtest",
   ]
