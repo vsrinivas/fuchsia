@@ -329,9 +329,6 @@ pub struct LogsMetadata {
     /// Severity of the message.
     pub severity: Severity,
 
-    /// Size of the original message on the wire, in bytes.
-    pub size_bytes: usize,
-
     /// Tags to add at the beginning of the message
     pub tags: Option<Vec<String>>,
 
@@ -349,6 +346,12 @@ pub struct LogsMetadata {
 
     /// Number of dropped messages
     pub dropped: Option<u64>,
+
+    /// Size of the original message on the wire, in bytes.
+    // TODO(fxbug.dev/85755): once ffx has rolled for 6 weeks (after Oct 5th, 2021) and most users
+    // of ffx are using a version that includes this changes, make this `skip`.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub size_bytes: Option<usize>,
 }
 
 /// Severities a log message can have, often called the log's "level".
@@ -764,7 +767,7 @@ impl Data<Logs> {
                 timestamp: timestamp_nanos.into(),
                 component_url: component_url,
                 severity: severity.into(),
-                size_bytes,
+                size_bytes: Some(size_bytes),
                 errors,
                 dropped: None,
                 file: None,
@@ -1522,5 +1525,50 @@ mod tests {
         .build();
 
         assert_eq!("[00012.345678][123][456][moniker] INFO: some message", format!("{}", data))
+    }
+
+    // TODO(fxbug.dev/85755): once ffx has rolled for 6 weeks (after Oct 5th, 2021) and most users
+    // of ffx are using a version that includes this changes. We'll make size_bytes=None the
+    // default. At that point, we can refactor this test to instead test backwards compatibility --
+    // deserializing a json value with size_bytes.
+    #[test]
+    fn deserialize_no_size_bytes() {
+        let original_json = json!({
+          "moniker": "a/b",
+          "version": 1,
+          "data_source": "Logs",
+          "payload": {
+            "root": {
+              "message":{}
+            }
+          },
+          "metadata": {
+            "errors": [],
+            "component_url": "url",
+              "dropped": 0,
+              "errors": null,
+              "file": null,
+              "line": null,
+              "pid": null,
+              "severity": "INFO",
+              "tags": [],
+              "tid": null,
+
+            "timestamp": 123,
+          }
+        });
+        let mut expected_data = LogsDataBuilder::new(BuilderArgs {
+            component_url: Some("url".to_string()),
+            moniker: String::from("a/b"),
+            severity: Severity::Info,
+            timestamp_nanos: 123.into(),
+            size_bytes: 3,
+        })
+        .build();
+        // Remove the size_bytes from expected_data. Currently all the code is expected to set the
+        // value, therefore we still require it in BuilderArgs.
+        expected_data.metadata.size_bytes = None;
+        let original_data: LogsData = serde_json::from_value(original_json).unwrap();
+        assert_eq!(original_data, expected_data);
     }
 }

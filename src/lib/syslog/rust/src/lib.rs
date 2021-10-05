@@ -505,7 +505,7 @@ mod test {
         assert_eq!(msg.metadata.severity, Severity::Error);
         // For some reason the socket read size does *not* match the recorded
         // metadata size
-        assert_eq!(msg.metadata.size_bytes, read_len - 2);
+        assert_eq!(msg.metadata.size_bytes, Some(read_len - 2));
         assert_data_tree!(msg.payload.as_ref().expect("message had no payload"),
             root: contains {
                 "tag": tags[0],
