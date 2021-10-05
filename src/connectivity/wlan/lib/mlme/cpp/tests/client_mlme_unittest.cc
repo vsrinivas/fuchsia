@@ -75,8 +75,8 @@ struct ClientTest : public ::testing::Test {
     auto body = msg.cloned_body();
     ZX_ASSERT(SerializeServiceMsg(&enc, &body) == ZX_OK);
     return client.HandleEncodedMlmeMsg(
-        fbl::Span{reinterpret_cast<const uint8_t*>(enc.GetMessage().bytes().data()),
-                  enc.GetMessage().bytes().size()});
+        cpp20::span{reinterpret_cast<const uint8_t*>(enc.GetMessage().bytes().data()),
+                    enc.GetMessage().bytes().size()});
   }
 
   void Join(bool rsne = true) {
@@ -204,7 +204,7 @@ struct ClientTest : public ::testing::Test {
     EXPECT_EQ(std::memcmp(frame.hdr()->addr2.byte, kClientAddress, 6), 0);
     EXPECT_EQ(std::memcmp(frame.hdr()->addr3.byte, kBssid1, 6), 0);
     auto assoc_req_frame = frame.NextFrame();
-    fbl::Span<const uint8_t> ie_chain{assoc_req_frame.body_data()};
+    cpp20::span<const uint8_t> ie_chain{assoc_req_frame.body_data()};
     ASSERT_TRUE(ValidateFrame("invalid assoc request", *pkt.pkt));
 
     bool has_ssid = false;
@@ -241,7 +241,7 @@ struct ClientTest : public ::testing::Test {
     unsigned char more_data = 0;
   };
 
-  void AssertDataFrameSentToAp(WlanPacket pkt, fbl::Span<const uint8_t> expected_payload,
+  void AssertDataFrameSentToAp(WlanPacket pkt, cpp20::span<const uint8_t> expected_payload,
                                DataFrameAssert asserts = {.protected_frame = 0, .more_data = 0}) {
     auto frame = TypeCheckWlanFrame<DataFrameView<LlcHeader>>(pkt.pkt.get());
     ASSERT_TRUE(frame);
@@ -645,8 +645,8 @@ TEST_F(ClientTest, ProcessEmptyDataFrames) {
 
 TEST_F(ClientTest, ProcessAmsduDataFrame) {
   const uint8_t payload_data[10] = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
-  fbl::Span<const uint8_t> payload(payload_data);
-  std::vector<fbl::Span<const uint8_t>> payloads;
+  cpp20::span<const uint8_t> payload(payload_data);
+  std::vector<cpp20::span<const uint8_t>> payloads;
   for (size_t payload_len = 1; payload_len <= 10; ++payload_len) {
     payloads.push_back(payload.subspan(0, payload_len));
   }
@@ -655,7 +655,7 @@ TEST_F(ClientTest, ProcessAmsduDataFrame) {
   client.HandleFramePacket(CreateAmsduDataFramePacket(payloads));
   ASSERT_EQ(device.eth_queue.size(), payloads.size());
   for (size_t i = 0; i < payloads.size(); ++i) {
-    auto eth_payload = fbl::Span<const uint8_t>(device.eth_queue[i]).subspan(sizeof(EthernetII));
+    auto eth_payload = cpp20::span<const uint8_t>(device.eth_queue[i]).subspan(sizeof(EthernetII));
     EXPECT_RANGES_EQ(eth_payload, payloads[i]);
   }
 }

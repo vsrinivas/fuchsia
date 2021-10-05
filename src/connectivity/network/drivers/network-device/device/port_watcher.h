@@ -28,7 +28,7 @@ class PortWatcher : public fbl::DoublyLinkedListable<std::unique_ptr<PortWatcher
   // |existing_ports| contains the port identifiers to be included in the watcher's existing ports
   // list.
   // |closed_callback| is called when the watcher is closed by the peer or by a call to |Unbind|.
-  zx_status_t Bind(async_dispatcher_t* dispatcher, fbl::Span<const uint8_t> existing_ports,
+  zx_status_t Bind(async_dispatcher_t* dispatcher, cpp20::span<const uint8_t> existing_ports,
                    fidl::ServerEnd<netdev::PortWatcher> channel, ClosedCallback closed_callback);
   // Unbinds the port watcher if currently bound.
   void Unbind();

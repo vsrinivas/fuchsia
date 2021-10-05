@@ -5,17 +5,17 @@
 #ifndef SRC_CONNECTIVITY_WLAN_LIB_COMMON_CPP_INCLUDE_WLAN_COMMON_BUFFER_WRITER_H_
 #define SRC_CONNECTIVITY_WLAN_LIB_COMMON_CPP_INCLUDE_WLAN_COMMON_BUFFER_WRITER_H_
 
+#include <lib/stdcompat/span.h>
+#include <zircon/assert.h>
 #include <zircon/types.h>
 
 #include <cstring>
-
-#include <fbl/span.h>
 
 namespace wlan {
 
 class BufferWriter {
  public:
-  explicit BufferWriter(fbl::Span<uint8_t> buf) : buf_(buf) { ZX_ASSERT(buf.data() != nullptr); }
+  explicit BufferWriter(cpp20::span<uint8_t> buf) : buf_(buf) { ZX_ASSERT(buf.data() != nullptr); }
 
   void WriteByte(uint8_t byte) {
     ZX_ASSERT(buf_.size() >= offset_ + 1);
@@ -25,7 +25,7 @@ class BufferWriter {
 
   template <typename T>
   void WriteValue(const T& value) {
-    Write(as_bytes(fbl::Span<const T>(&value, 1)));
+    Write(as_bytes(cpp20::span<const T>(&value, 1)));
   }
 
   template <typename T>
@@ -38,9 +38,9 @@ class BufferWriter {
     return data;
   }
 
-  void Write(fbl::Span<const uint8_t> buf) { Write(as_bytes(buf)); }
+  void Write(cpp20::span<const uint8_t> buf) { Write(as_bytes(buf)); }
 
-  void Write(fbl::Span<const std::byte> buf) {
+  void Write(cpp20::span<const std::byte> buf) {
     if (buf.empty()) {
       return;
     }
@@ -50,14 +50,14 @@ class BufferWriter {
     offset_ += buf.size();
   }
 
-  fbl::Span<const uint8_t> WrittenData() const { return buf_.subspan(0, offset_); }
+  cpp20::span<const uint8_t> WrittenData() const { return buf_.subspan(0, offset_); }
   size_t WrittenBytes() const { return offset_; }
   size_t RemainingBytes() const { return buf_.size() - offset_; }
-  fbl::Span<uint8_t> RemainingBuffer() { return buf_.subspan(offset_); }
+  cpp20::span<uint8_t> RemainingBuffer() { return buf_.subspan(offset_); }
 
  private:
   size_t offset_ = 0;
-  fbl::Span<uint8_t> buf_;
+  cpp20::span<uint8_t> buf_;
 };
 
 }  // namespace wlan

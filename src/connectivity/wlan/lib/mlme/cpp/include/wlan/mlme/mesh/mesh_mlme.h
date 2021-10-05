@@ -28,7 +28,7 @@ class MeshMlme : public Mlme {
 
   // Mlme interface methods.
   zx_status_t Init() override;
-  zx_status_t HandleEncodedMlmeMsg(fbl::Span<const uint8_t> msg) override;
+  zx_status_t HandleEncodedMlmeMsg(cpp20::span<const uint8_t> msg) override;
   zx_status_t HandleMlmeMsg(const BaseMlmeMsg& msg) override;
   zx_status_t HandleFramePacket(std::unique_ptr<Packet> pkt) override;
   zx_status_t HandleTimeout(const ObjectId id) override;
@@ -62,7 +62,7 @@ class MeshMlme : public Mlme {
 
   void HandleDataFrame(std::unique_ptr<Packet> packet);
   bool ShouldDeliverData(const common::ParsedDataFrameHeader& header);
-  void DeliverData(const common::ParsedMeshDataHeader& header, fbl::Span<uint8_t> wlan_frame,
+  void DeliverData(const common::ParsedMeshDataHeader& header, cpp20::span<uint8_t> wlan_frame,
                    size_t payload_offset);
   std::optional<common::MacAddr> GetNextHopForForwarding(
       const common::ParsedMeshDataHeader& header);

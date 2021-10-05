@@ -9,7 +9,7 @@ namespace wlan {
 namespace common {
 
 // TODO(hahnr): Support dot11MultiBSSIDActivated is true.
-bool IsTrafficBuffered(uint16_t aid, const TimHeader& tim_hdr, fbl::Span<const uint8_t> bitmap) {
+bool IsTrafficBuffered(uint16_t aid, const TimHeader& tim_hdr, cpp20::span<const uint8_t> bitmap) {
   size_t n1 = tim_hdr.bmp_ctrl.offset() * 2;
 
   size_t octet = aid / 8;
@@ -21,7 +21,7 @@ bool IsTrafficBuffered(uint16_t aid, const TimHeader& tim_hdr, fbl::Span<const u
   return bitmap[octet - n1] & (1 << (aid % 8));
 }
 
-std::optional<ParsedTim> FindAndParseTim(fbl::Span<const uint8_t> ies) {
+std::optional<ParsedTim> FindAndParseTim(cpp20::span<const uint8_t> ies) {
   auto splitter = common::ElementSplitter{ies};
   auto it = std::find_if(splitter.begin(), splitter.end(), [](auto elem) {
     return std::get<element_id::ElementId>(elem) == element_id::kTim;

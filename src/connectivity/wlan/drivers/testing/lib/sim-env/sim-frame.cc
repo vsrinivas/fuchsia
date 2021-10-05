@@ -104,7 +104,7 @@ void SimManagementFrame::AddCsaIe(const wlan_channel_t& channel, uint8_t channel
   AddIe(InformationElement::IE_TYPE_CSA, ie);
 }
 
-void SimManagementFrame::AddRawIes(fbl::Span<const uint8_t> raw_ies) {
+void SimManagementFrame::AddRawIes(cpp20::span<const uint8_t> raw_ies) {
   raw_ies_.insert(raw_ies_.end(), raw_ies.begin(), raw_ies.end());
 }
 
@@ -232,7 +232,7 @@ SimManagementFrame::SimMgmtFrameType SimAuthFrame::MgmtFrameType() const { retur
 
 SimFrame* SimAuthFrame::CopyFrame() const { return new SimAuthFrame(*this); }
 
-void SimAuthFrame::AddChallengeText(fbl::Span<const uint8_t> text) {
+void SimAuthFrame::AddChallengeText(cpp20::span<const uint8_t> text) {
   // Clear the existing challenge text before setting new one.
   payload_.clear();
   payload_.insert(payload_.begin(), text.begin(), text.end());

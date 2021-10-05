@@ -959,7 +959,7 @@ void AssocTest::SendAssocRespWithWmm() {
       0x42, 0x43, 0x5e, 0x00,                          // Video AC params
       0x62, 0x32, 0x2f, 0x00,                          // Voice AC params
   };
-  assoc_resp_frame.AddRawIes(fbl::Span(raw_ies, sizeof(raw_ies)));
+  assoc_resp_frame.AddRawIes(cpp20::span(raw_ies, sizeof(raw_ies)));
 
   env_->Tx(assoc_resp_frame, context_.tx_info, this);
 }

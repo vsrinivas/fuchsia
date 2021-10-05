@@ -848,12 +848,12 @@ void NetworkDeviceClient::BufferRegion::CapLength(uint32_t len) {
 
 uint32_t NetworkDeviceClient::BufferRegion::len() const { return desc_->data_length; }
 
-fbl::Span<uint8_t> NetworkDeviceClient::BufferRegion::data() {
-  return fbl::Span(static_cast<uint8_t*>(base_), len());
+cpp20::span<uint8_t> NetworkDeviceClient::BufferRegion::data() {
+  return cpp20::span(static_cast<uint8_t*>(base_), len());
 }
 
-fbl::Span<const uint8_t> NetworkDeviceClient::BufferRegion::data() const {
-  return fbl::Span(static_cast<const uint8_t*>(base_), len());
+cpp20::span<const uint8_t> NetworkDeviceClient::BufferRegion::data() const {
+  return cpp20::span(static_cast<const uint8_t*>(base_), len());
 }
 
 size_t NetworkDeviceClient::BufferRegion::Write(const void* src, size_t len, size_t offset) {
@@ -885,8 +885,8 @@ size_t NetworkDeviceClient::BufferRegion::Write(size_t offset, const BufferRegio
 size_t NetworkDeviceClient::BufferRegion::PadTo(size_t size) {
   if (size > desc_->data_length) {
     size -= desc_->data_length;
-    fbl::Span<uint8_t> pad(static_cast<uint8_t*>(base_) + desc_->head_length + desc_->data_length,
-                           std::min(size, static_cast<size_t>(desc_->tail_length)));
+    cpp20::span<uint8_t> pad(static_cast<uint8_t*>(base_) + desc_->head_length + desc_->data_length,
+                             std::min(size, static_cast<size_t>(desc_->tail_length)));
     memset(pad.data(), 0x00, pad.size());
     desc_->data_length += pad.size();
     desc_->tail_length -= pad.size();

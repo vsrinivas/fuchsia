@@ -99,7 +99,7 @@ void DeviceAdapter::NetworkDeviceImplGetInfo(device_info_t* out_info) { *out_inf
 void DeviceAdapter::NetworkDeviceImplQueueTx(const tx_buffer_t* buf_list, size_t buf_count) {
   {
     fbl::AutoLock tx_lock(&tx_lock_);
-    fbl::Span buffers(buf_list, buf_count);
+    cpp20::span buffers(buf_list, buf_count);
     if (!tx_available_) {
       FX_VLOGF(1, "tun", "Discarding %d tx buffers, tx queue is invalid", tx_available_);
       for (const tx_buffer_t& b : buffers) {
@@ -125,7 +125,7 @@ void DeviceAdapter::NetworkDeviceImplQueueRxSpace(const rx_space_buffer_t* buf_l
   bool has_buffers;
   {
     fbl::AutoLock lock(&rx_lock_);
-    fbl::Span buffers(buf_list, buf_count);
+    cpp20::span buffers(buf_list, buf_count);
     if (!rx_available_) {
       for (const rx_space_buffer_t& space : buffers) {
         rx_buffer_part_t part = {

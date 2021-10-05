@@ -5,9 +5,10 @@
 #ifndef SRC_CONNECTIVITY_WLAN_LIB_MLME_CPP_INCLUDE_WLAN_MLME_RUST_UTILS_H_
 #define SRC_CONNECTIVITY_WLAN_LIB_MLME_CPP_INCLUDE_WLAN_MLME_RUST_UTILS_H_
 
+#include <lib/stdcompat/span.h>
+
 #include <memory>
 
-#include <fbl/span.h>
 #include <src/connectivity/wlan/lib/mlme/rust/c-binding/bindings.h>
 #include <wlan/common/macaddr.h>
 
@@ -22,7 +23,7 @@ SequenceManager NewSequenceManager();
 ApStation NewApStation(mlme_device_ops_t device, mlme_buffer_provider_ops_t buf_provider,
                        wlan_scheduler_ops_t scheduler, common::MacAddr bssid);
 
-static inline constexpr wlan_span_t AsWlanSpan(fbl::Span<const uint8_t> span) {
+static inline constexpr wlan_span_t AsWlanSpan(cpp20::span<const uint8_t> span) {
   return wlan_span_t{.data = span.data(), .size = span.size_bytes()};
 }
 

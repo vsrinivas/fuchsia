@@ -587,9 +587,9 @@ TEST_F(NetDeviceTest, PadTxFrames) {
   // Send three frames: one too small, one exactly minimum length, and one larger than minimum
   // length.
   for (auto& frame : {
-           fbl::Span(kPayload, kSmallPayloadLength),
-           fbl::Span(kPayload, kMinBufferLength),
-           fbl::Span(kPayload),
+           cpp20::span(kPayload, kSmallPayloadLength),
+           cpp20::span(kPayload, kMinBufferLength),
+           cpp20::span<const uint8_t>(kPayload),
        }) {
     auto tx = client->AllocTx();
     // Pollute buffer data first to check zero-padding.

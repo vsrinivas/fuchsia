@@ -72,8 +72,8 @@ TEST(MlmeMsg, CorruptedPacket) {
   common::kBcastMac.CopyTo(fidl_msg->peer_sta_address.data());
   fidl::Encoder enc(42);
   SerializeServiceMsg(&enc, fidl_msg.get());
-  fbl::Span<uint8_t> span(enc.GetMessage().bytes());
-  fbl::Span<uint8_t> invalid_span(span.data(), span.size() - 1);
+  cpp20::span<uint8_t> span(enc.GetMessage().bytes());
+  cpp20::span<uint8_t> invalid_span(span.data(), span.size() - 1);
 
   // Verify correctness.
   auto mlme_msg = MlmeMsg<wlan_mlme::DeauthenticateRequest>::Decode(invalid_span, 0);

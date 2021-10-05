@@ -181,14 +181,14 @@ std::unique_ptr<Packet> CreateDeauthFrame(common::MacAddr client_addr);
 std::unique_ptr<Packet> CreateBeaconFrame(common::MacAddr bssid);
 std::unique_ptr<Packet> CreateProbeRequest();
 std::unique_ptr<Packet> CreateAssocReqFrame(common::MacAddr client_addr,
-                                            fbl::Span<const uint8_t> ssid, bool rsn);
+                                            cpp20::span<const uint8_t> ssid, bool rsn);
 std::unique_ptr<Packet> CreateAssocRespFrame(const wlan_assoc_ctx_t& ap_assoc_ctx = kDdkAssocCtx);
 std::unique_ptr<Packet> CreateDisassocFrame(common::MacAddr client_addr);
-std::unique_ptr<Packet> CreateDataFrame(fbl::Span<const uint8_t> payload);
+std::unique_ptr<Packet> CreateDataFrame(cpp20::span<const uint8_t> payload);
 DataFrame<> CreateNullDataFrame();
-std::unique_ptr<Packet> CreateEthFrame(fbl::Span<const uint8_t> payload);
+std::unique_ptr<Packet> CreateEthFrame(cpp20::span<const uint8_t> payload);
 std::unique_ptr<Packet> CreateAmsduDataFramePacket(
-    const std::vector<fbl::Span<const uint8_t>>& payloads);
+    const std::vector<cpp20::span<const uint8_t>>& payloads);
 
 }  // namespace wlan
 

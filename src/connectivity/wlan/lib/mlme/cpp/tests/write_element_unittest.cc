@@ -16,7 +16,7 @@ struct Buf {
   BufferWriter w{data};
 };
 
-static bool equal(fbl::Span<const uint8_t> a, fbl::Span<const uint8_t> b) {
+static bool equal(cpp20::span<const uint8_t> a, cpp20::span<const uint8_t> b) {
   return std::equal(a.begin(), a.end(), b.begin(), b.end());
 }
 

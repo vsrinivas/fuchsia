@@ -9,11 +9,11 @@
 #include <lib/async/cpp/executor.h>
 #include <lib/async/cpp/wait.h>
 #include <lib/fzl/vmo-mapper.h>
+#include <lib/stdcompat/span.h>
 #include <zircon/device/network.h>
 
 #include <queue>
 
-#include <fbl/span.h>
 #include <src/lib/fxl/macros.h>
 
 namespace network {
@@ -178,8 +178,8 @@ class NetworkDeviceClient : public internal::DeviceEventHandlerProxy<NetworkDevi
     // If the buffer's length is smaller than `len`, `CapLength` does nothing.
     void CapLength(uint32_t len);
     uint32_t len() const;
-    fbl::Span<uint8_t> data();
-    fbl::Span<const uint8_t> data() const;
+    cpp20::span<uint8_t> data();
+    cpp20::span<const uint8_t> data() const;
     // Writes `len` bytes from `src` into this region starting at `offset`.
     //
     // Returns the number of bytes that were written.

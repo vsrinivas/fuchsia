@@ -7,10 +7,9 @@
 
 #include <fidl/fuchsia.net.tun/cpp/wire.h>
 #include <fuchsia/hardware/network/device/cpp/banjo.h>
+#include <lib/stdcompat/span.h>
 
 #include <array>
-
-#include <fbl/span.h>
 
 #include "src/lib/vmo_store/vmo_store.h"
 
@@ -95,7 +94,7 @@ class VmoStore {
   RxBuffer MakeEmptyRxBuffer();
 
  private:
-  zx::status<fbl::Span<uint8_t>> GetMappedVmo(uint8_t id);
+  zx::status<cpp20::span<uint8_t>> GetMappedVmo(uint8_t id);
   vmo_store::VmoStore<vmo_store::SlabStorage<uint8_t>> store_;
 };
 
@@ -136,8 +135,8 @@ class Buffer {
   void PushPart(const BufferPart& part);
   explicit Buffer(VmoStore* vmo_store) : vmo_store_(vmo_store) {}
 
-  fbl::Span<BufferPart> parts() { return fbl::Span(parts_.data(), parts_count_); }
-  fbl::Span<const BufferPart> parts() const { return fbl::Span(parts_.data(), parts_count_); }
+  cpp20::span<BufferPart> parts() { return cpp20::span(parts_.data(), parts_count_); }
+  cpp20::span<const BufferPart> parts() const { return cpp20::span(parts_.data(), parts_count_); }
 
  private:
   // Pointer to parent VMO store, not owned.

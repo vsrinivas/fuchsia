@@ -4,13 +4,13 @@
 
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/fzl/vmo-mapper.h>
+#include <lib/stdcompat/span.h>
 #include <lib/sync/completion.h>
 #include <lib/syslog/global.h>
 #include <lib/zx/time.h>
 #include <zircon/device/network.h>
 #include <zircon/status.h>
 
-#include <fbl/span.h>
 #include <gmock/gmock.h>
 
 #include "src/lib/testing/loop_fixture/real_loop_fixture.h"
@@ -260,8 +260,8 @@ class SimpleClient {
     return static_cast<buffer_descriptor_t*>(descriptors_.start()) + index;
   }
 
-  fbl::Span<uint8_t> data(const buffer_descriptor_t* desc) {
-    return fbl::Span(static_cast<uint8_t*>(data_.start()) + desc->offset, desc->data_length);
+  cpp20::span<uint8_t> data(const buffer_descriptor_t* desc) {
+    return cpp20::span(static_cast<uint8_t*>(data_.start()) + desc->offset, desc->data_length);
   }
 
   void MintData(uint16_t didx, uint32_t len = 0) {

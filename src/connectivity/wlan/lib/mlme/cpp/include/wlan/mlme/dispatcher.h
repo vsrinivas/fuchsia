@@ -29,7 +29,7 @@ class Dispatcher {
 
   zx_status_t HandlePacket(std::unique_ptr<Packet>);
   zx_status_t HandlePortPacket(uint64_t key);
-  zx_status_t HandleAnyMlmeMessage(fbl::Span<uint8_t> span);
+  zx_status_t HandleAnyMlmeMessage(cpp20::span<uint8_t> span);
 
   // Called when the hardware reports an indication such as Pre-TBTT.
   void HwIndication(uint32_t ind);
@@ -40,7 +40,7 @@ class Dispatcher {
  private:
   template <typename Message>
   zx_status_t HandleMinstrelPeerList(uint64_t ordinal, zx_txid_t txid) const;
-  zx_status_t HandleMinstrelTxStats(fbl::Span<uint8_t> span, uint64_t ordinal,
+  zx_status_t HandleMinstrelTxStats(cpp20::span<uint8_t> span, uint64_t ordinal,
                                     zx_txid_t txid) const;
   template <typename T>
   zx_status_t SendServiceMessage(uint64_t ordinal, T* msg) const;

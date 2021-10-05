@@ -35,7 +35,7 @@ zx::status<std::vector<uint8_t>> TxBuffer::GetData(const VmoProvider& vmo_provid
   return zx::ok(std::move(copy));
 }
 
-zx_status_t RxBuffer::WriteData(fbl::Span<const uint8_t> data, const VmoProvider& vmo_provider) {
+zx_status_t RxBuffer::WriteData(cpp20::span<const uint8_t> data, const VmoProvider& vmo_provider) {
   if (!vmo_provider) {
     return ZX_ERR_INTERNAL;
   }
@@ -218,7 +218,7 @@ void FakeNetworkDeviceImpl::NetworkDeviceImplQueueTx(const tx_buffer_t* buf_list
   ASSERT_TRUE(device_client_.is_valid());
 
   fbl::AutoLock lock(&lock_);
-  fbl::Span buffers(buf_list, buf_count);
+  cpp20::span buffers(buf_list, buf_count);
   if (immediate_return_tx_ || !device_started_) {
     const zx_status_t return_status = device_started_ ? ZX_OK : ZX_ERR_UNAVAILABLE;
     ASSERT_TRUE(buf_count < kTxDepth);
@@ -246,7 +246,7 @@ void FakeNetworkDeviceImpl::NetworkDeviceImplQueueRxSpace(const rx_space_buffer_
   ASSERT_TRUE(device_client_.is_valid());
 
   fbl::AutoLock lock(&lock_);
-  fbl::Span buffers(buf_list, buf_count);
+  cpp20::span buffers(buf_list, buf_count);
   if (immediate_return_rx_ || !device_started_) {
     const uint32_t length = device_started_ ? kAutoReturnRxLength : 0;
     ASSERT_TRUE(buf_count < kTxDepth);
@@ -329,7 +329,7 @@ zx::status<std::unique_ptr<NetworkDeviceInterface>> FakeNetworkDeviceImpl::Creat
 zx_status_t AttachSessionPort(TestSession& session, FakeNetworkPortImpl& impl) {
   std::vector<netdev::wire::FrameType> rx_types;
   for (uint8_t frame_type :
-       fbl::Span(impl.port_info().rx_types_list, impl.port_info().rx_types_count)) {
+       cpp20::span(impl.port_info().rx_types_list, impl.port_info().rx_types_count)) {
     rx_types.push_back(static_cast<netdev::wire::FrameType>(frame_type));
   }
   return session.AttachPort(impl.id(), std::move(rx_types));

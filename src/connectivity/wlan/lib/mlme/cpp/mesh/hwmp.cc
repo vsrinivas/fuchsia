@@ -181,7 +181,7 @@ static std::unique_ptr<Packet> MakeOriginalPrep(const MacHeaderWriter& header_wr
 static std::unique_ptr<Packet> MakeForwardedPreq(const MacHeaderWriter& mac_header_writer,
                                                  const common::ParsedPreq& incoming_preq,
                                                  uint32_t last_hop_metric,
-                                                 fbl::Span<const PreqPerTarget> to_forward) {
+                                                 cpp20::span<const PreqPerTarget> to_forward) {
   auto packet = GetWlanPacket(kMaxHwmpFrameSize);
   if (!packet) {
     return {};
@@ -424,7 +424,7 @@ static void WriteForwardedPerrDestination(const common::ParsedPerrDestination& i
 static std::unique_ptr<Packet> MakeForwardedPerr(const MacHeaderWriter& mac_header_writer,
                                                  const common::ParsedPerr& incoming_perr,
                                                  uint8_t num_destinations,
-                                                 fbl::Span<const uint8_t> destinations) {
+                                                 cpp20::span<const uint8_t> destinations) {
   auto packet = GetWlanPacket(kMaxHwmpFrameSize);
   if (!packet) {
     return {};
@@ -502,7 +502,7 @@ static void HandlePerr(const common::MacAddr& perr_transmitter_addr, const commo
   }
 }
 
-PacketQueue HandleHwmpAction(fbl::Span<const uint8_t> elements,
+PacketQueue HandleHwmpAction(cpp20::span<const uint8_t> elements,
                              const common::MacAddr& action_transmitter_addr,
                              const common::MacAddr& self_addr, uint32_t last_hop_metric,
                              const MacHeaderWriter& mac_header_writer, HwmpState* state,

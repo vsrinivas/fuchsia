@@ -11,10 +11,10 @@ namespace wlan::common {
 
 struct Item {
   uint8_t id;
-  fbl::Span<const uint8_t> body;
+  cpp20::span<const uint8_t> body;
 };
 
-static std::vector<Item> RunSplitter(fbl::Span<const uint8_t> buffer) {
+static std::vector<Item> RunSplitter(cpp20::span<const uint8_t> buffer) {
   std::vector<Item> ret;
   for (auto [id, body] : ElementSplitter(buffer)) {
     ret.push_back(Item{static_cast<uint8_t>(id), body});

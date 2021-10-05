@@ -47,7 +47,7 @@ struct Context {
 
   void SendClientDeauthFrame() { ap->HandleFramePacket(CreateDeauthFrame(client_addr)); }
 
-  void SendClientAssocReqFrame(fbl::Span<const uint8_t> ssid = kSsid, bool rsne = true) {
+  void SendClientAssocReqFrame(cpp20::span<const uint8_t> ssid = kSsid, bool rsne = true) {
     ap->HandleFramePacket(CreateAssocReqFrame(client_addr, ssid, rsne));
   }
 
@@ -65,7 +65,7 @@ struct Context {
     ap->HandleFramePacket(frame.Take());
   }
 
-  void SendDataFrame(fbl::Span<const uint8_t> payload) {
+  void SendDataFrame(cpp20::span<const uint8_t> payload) {
     auto pkt = CreateDataFrame(payload);
     auto hdr = pkt->mut_field<DataFrameHeader>(0);
     common::MacAddr bssid(kBssid1);
@@ -77,7 +77,7 @@ struct Context {
     ap->HandleFramePacket(std::move(pkt));
   }
 
-  void SendEthFrame(fbl::Span<const uint8_t> payload) {
+  void SendEthFrame(cpp20::span<const uint8_t> payload) {
     auto pkt = CreateEthFrame(payload);
     auto hdr = pkt->mut_field<EthernetII>(0);
     hdr->src = common::MacAddr(kBssid1);
@@ -97,8 +97,8 @@ struct Context {
     auto body = *msg.body();
     ZX_ASSERT(SerializeServiceMsg(&enc, &body) == ZX_OK);
     ap->HandleEncodedMlmeMsg(
-        fbl::Span{reinterpret_cast<const uint8_t*>(enc.GetMessage().bytes().data()),
-                  enc.GetMessage().bytes().size()});
+        cpp20::span{reinterpret_cast<const uint8_t*>(enc.GetMessage().bytes().data()),
+                    enc.GetMessage().bytes().size()});
   }
 
   void StartAp(bool protected_ap = true) {
@@ -183,7 +183,7 @@ struct Context {
     unsigned char more_data = 0;
   };
 
-  void AssertDataFrameSentToClient(WlanPacket pkt, fbl::Span<const uint8_t> expected_payload,
+  void AssertDataFrameSentToClient(WlanPacket pkt, cpp20::span<const uint8_t> expected_payload,
                                    DataFrameAssert asserts = {.protected_frame = 1,
                                                               .more_data = 0}) {
     auto frame = TypeCheckWlanFrame<DataFrameView<LlcHeader>>(pkt.pkt.get());
@@ -198,7 +198,7 @@ struct Context {
     EXPECT_RANGES_EQ(llc_frame.body_data(), expected_payload);
   }
 
-  void AssertEthFrame(fbl::Span<const uint8_t> pkt, fbl::Span<const uint8_t> expected_payload) {
+  void AssertEthFrame(cpp20::span<const uint8_t> pkt, cpp20::span<const uint8_t> expected_payload) {
     BufferReader rdr(pkt);
     auto hdr = rdr.Read<EthernetII>();
     ASSERT_NE(hdr, nullptr);
@@ -501,7 +501,7 @@ TEST_F(ApInfraBssTest, Associate_EmptySsid) {
   ctx.AuthenticateClient();
 
   // Send association request frame without an SSID
-  auto ssid = fbl::Span<uint8_t>();
+  auto ssid = cpp20::span<uint8_t>();
   ctx.SendClientAssocReqFrame(ssid, true);
   ctx.device->AssertNextMsgFromSmeChannel<wlan_mlme::AssociateIndication>();
 

@@ -5,9 +5,10 @@
 #ifndef SRC_CONNECTIVITY_WLAN_LIB_COMMON_CPP_INCLUDE_WLAN_COMMON_ELEMENT_SPLITTER_H_
 #define SRC_CONNECTIVITY_WLAN_LIB_COMMON_CPP_INCLUDE_WLAN_COMMON_ELEMENT_SPLITTER_H_
 
+#include <lib/stdcompat/span.h>
+
 #include <tuple>
 
-#include <fbl/span.h>
 #include <wlan/common/element_id.h>
 
 namespace wlan {
@@ -23,26 +24,26 @@ class ElementIterator {
   friend bool wlan::common::operator==(const ElementIterator& a, const ElementIterator& b);
   friend bool wlan::common::operator!=(const ElementIterator& a, const ElementIterator& b);
 
-  explicit ElementIterator(fbl::Span<const uint8_t> buffer);
+  explicit ElementIterator(cpp20::span<const uint8_t> buffer);
 
-  std::tuple<element_id::ElementId, fbl::Span<const uint8_t>> operator*() const;
+  std::tuple<element_id::ElementId, cpp20::span<const uint8_t>> operator*() const;
 
   ElementIterator& operator++();
 
  private:
-  fbl::Span<const uint8_t> remaining_;
+  cpp20::span<const uint8_t> remaining_;
 };
 
 class ElementSplitter {
  public:
-  explicit ElementSplitter(fbl::Span<const uint8_t> buffer) : buffer_(buffer) {}
+  explicit ElementSplitter(cpp20::span<const uint8_t> buffer) : buffer_(buffer) {}
 
   ElementIterator begin() const { return ElementIterator(buffer_); }
 
   ElementIterator end() const { return ElementIterator(buffer_.subspan(buffer_.size())); }
 
  private:
-  fbl::Span<const uint8_t> buffer_;
+  cpp20::span<const uint8_t> buffer_;
 };
 
 }  // namespace common

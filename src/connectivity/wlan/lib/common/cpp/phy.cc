@@ -9,7 +9,7 @@
 namespace wlan {
 namespace common {
 
-std::string Alpha2ToStr(fbl::Span<const uint8_t> alpha2) {
+std::string Alpha2ToStr(cpp20::span<const uint8_t> alpha2) {
   if (alpha2.size() != WLANPHY_ALPHA2_LEN) {
     return "Invalid alpha2 length";
   }

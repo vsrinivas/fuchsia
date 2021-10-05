@@ -30,11 +30,11 @@ DevicePort::DevicePort(async_dispatcher_t* dispatcher, uint8_t id,
   port_class_ = static_cast<netdev::wire::DeviceClass>(info.port_class);
 
   supported_rx_count_ = 0;
-  for (const uint8_t& rx_support : fbl::Span(info.rx_types_list, info.rx_types_count)) {
+  for (const uint8_t& rx_support : cpp20::span(info.rx_types_list, info.rx_types_count)) {
     supported_rx_[supported_rx_count_++] = static_cast<netdev::wire::FrameType>(rx_support);
   }
   supported_tx_count_ = 0;
-  for (const tx_support_t& tx_support : fbl::Span(info.tx_types_list, info.tx_types_count)) {
+  for (const tx_support_t& tx_support : cpp20::span(info.tx_types_list, info.tx_types_count)) {
     supported_tx_[supported_tx_count_++] = {
         .type = static_cast<netdev::wire::FrameType>(tx_support.type),
         .features = tx_support.features,
@@ -165,13 +165,13 @@ void DevicePort::NotifySessionCount(size_t new_count) {
 }
 
 bool DevicePort::IsValidRxFrameType(netdev::wire::FrameType frame_type) const {
-  fbl::Span rx_types(supported_rx_.begin(), supported_rx_count_);
+  cpp20::span rx_types(supported_rx_.begin(), supported_rx_count_);
   return std::any_of(rx_types.begin(), rx_types.end(),
                      [frame_type](const netdev::wire::FrameType& t) { return t == frame_type; });
 }
 
 bool DevicePort::IsValidTxFrameType(netdev::wire::FrameType frame_type) const {
-  fbl::Span tx_types(supported_tx_.begin(), supported_tx_count_);
+  cpp20::span tx_types(supported_tx_.begin(), supported_tx_count_);
   return std::any_of(
       tx_types.begin(), tx_types.end(),
       [frame_type](const netdev::wire::FrameTypeSupport& t) { return t.type == frame_type; });

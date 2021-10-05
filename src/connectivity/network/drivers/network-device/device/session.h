@@ -10,6 +10,7 @@
 #include <lib/fidl/llcpp/server.h>
 #include <lib/fzl/pinned-vmo.h>
 #include <lib/fzl/vmo-mapper.h>
+#include <lib/stdcompat/span.h>
 #include <lib/zx/event.h>
 #include <lib/zx/fifo.h>
 #include <lib/zx/vmo.h>
@@ -19,7 +20,6 @@
 #include <fbl/array.h>
 #include <fbl/intrusive_double_list.h>
 #include <fbl/ref_counted.h>
-#include <fbl/span.h>
 
 #include "data_structs.h"
 #include "definitions.h"
@@ -50,15 +50,15 @@ class AttachedPort {
   }
 
   // Returns the Rx frame types we're subscribed to on this attached port.
-  fbl::Span<const netdev::wire::FrameType> frame_types() const {
-    return fbl::Span(frame_types_.begin(), frame_type_count_);
+  cpp20::span<const netdev::wire::FrameType> frame_types() const {
+    return cpp20::span(frame_types_.begin(), frame_type_count_);
   }
 
  protected:
   friend DeviceInterface;
 
   AttachedPort(DeviceInterface* parent, DevicePort* port,
-               fbl::Span<const netdev::wire::FrameType> frame_types)
+               cpp20::span<const netdev::wire::FrameType> frame_types)
       : parent_(parent),
         port_(port),
         frame_types_([&frame_types]() {
@@ -130,7 +130,7 @@ class Session : public fbl::DoublyLinkedListable<std::unique_ptr<Session>>,
   void Detach(DetachRequestView request, DetachCompleter::Sync& _completer) override;
   void Close(CloseRequestView request, CloseCompleter::Sync& _completer) override;
 
-  zx_status_t AttachPort(uint8_t port_id, fbl::Span<const netdev::wire::FrameType> frame_types);
+  zx_status_t AttachPort(uint8_t port_id, cpp20::span<const netdev::wire::FrameType> frame_types);
   zx_status_t DetachPort(uint8_t port_id);
 
   // Sets the return code for a tx descriptor.
@@ -234,7 +234,7 @@ class Session : public fbl::DoublyLinkedListable<std::unique_ptr<Session>>,
   const buffer_descriptor_t* checked_descriptor(uint16_t index) const;
   buffer_descriptor_t& descriptor(uint16_t index);
   const buffer_descriptor_t& descriptor(uint16_t index) const;
-  fbl::Span<uint8_t> data_at(uint64_t offset, uint64_t len) const;
+  cpp20::span<uint8_t> data_at(uint64_t offset, uint64_t len) const;
   // Loads a completed rx buffer information back into the descriptor with the provided index.
   zx_status_t LoadRxInfo(const RxFrameInfo& info) __TA_REQUIRES(parent_->rx_lock());
   // Loads all rx descriptors that are already available into the given transaction.

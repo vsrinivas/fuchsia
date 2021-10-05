@@ -35,7 +35,7 @@ struct HwmpState {
   explicit HwmpState(std::unique_ptr<Timer> timer);
 };
 
-PacketQueue HandleHwmpAction(fbl::Span<const uint8_t> elements,
+PacketQueue HandleHwmpAction(cpp20::span<const uint8_t> elements,
                              const common::MacAddr& action_transmitter_addr,
                              const common::MacAddr& self_addr, uint32_t last_hop_metric,
                              const MacHeaderWriter& mac_header_writer, HwmpState* state,

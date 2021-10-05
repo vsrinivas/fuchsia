@@ -24,7 +24,7 @@ struct RequiredIes {
   bool have_all() const { return have_supp_rates && have_mesh_id && have_mesh_config && have_mpm; }
 };
 
-static void HandleCommonMpElement(element_id::ElementId id, fbl::Span<const uint8_t> raw_body,
+static void HandleCommonMpElement(element_id::ElementId id, cpp20::span<const uint8_t> raw_body,
                                   wlan_mlme::MeshPeeringCommon* out, RequiredIes* required_ies) {
   switch (id) {
     case element_id::kSuppRates:

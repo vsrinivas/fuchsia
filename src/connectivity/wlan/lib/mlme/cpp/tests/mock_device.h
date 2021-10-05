@@ -65,7 +65,7 @@ struct FidlMessage {
             .num_handles = actual_handles};
   }
 
-  fbl::Span<uint8_t> data() { return {bytes, actual_bytes}; }
+  cpp20::span<uint8_t> data() { return {bytes, actual_bytes}; }
 
   FIDL_ALIGNDECL uint8_t bytes[256];
   zx_handle_info_t handles[256];
@@ -115,8 +115,8 @@ struct MockDevice : public DeviceInterface {
 
   zx_handle_t GetSmeChannelRef() final { return mlme_.get(); }
 
-  zx_status_t DeliverEthernet(fbl::Span<const uint8_t> eth_frame) final {
-    eth_queue.push_back({eth_frame.cbegin(), eth_frame.cend()});
+  zx_status_t DeliverEthernet(cpp20::span<const uint8_t> eth_frame) final {
+    eth_queue.push_back({eth_frame.begin(), eth_frame.end()});
     return ZX_OK;
   }
 
@@ -128,8 +128,8 @@ struct MockDevice : public DeviceInterface {
     return ZX_OK;
   }
 
-  zx_status_t SendService(fbl::Span<const uint8_t> span) final {
-    std::vector<uint8_t> msg(span.cbegin(), span.cend());
+  zx_status_t SendService(cpp20::span<const uint8_t> span) final {
+    std::vector<uint8_t> msg(span.begin(), span.end());
     svc_queue.push_back(msg);
     return ZX_OK;
   }
@@ -242,7 +242,7 @@ struct MockDevice : public DeviceInterface {
     zx_status_t status = sme_.read(0, buf, nullptr, ZX_CHANNEL_MAX_MSG_BYTES, 0, &read, nullptr);
     ZX_ASSERT(status == ZX_OK);
 
-    return MlmeMsg<T>::Decode(fbl::Span{buf, read}, ordinal);
+    return MlmeMsg<T>::Decode(cpp20::span{buf, read}, ordinal);
   }
 
   template <typename T>
@@ -257,7 +257,7 @@ struct MockDevice : public DeviceInterface {
     zx_status_t status = sme_.read(0, buf, nullptr, ZX_CHANNEL_MAX_MSG_BYTES, 0, &read, nullptr);
     ZX_ASSERT(status == ZX_OK);
 
-    auto msg = MlmeMsg<T>::Decode(fbl::Span{buf, read}, ordinal);
+    auto msg = MlmeMsg<T>::Decode(cpp20::span{buf, read}, ordinal);
     ZX_ASSERT(msg.has_value());
     return std::move(msg).value();
   }

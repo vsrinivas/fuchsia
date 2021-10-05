@@ -49,7 +49,7 @@ zx::status<zx_status_t> WaitClosedAndReadEpitaph(const zx::channel& channel) {
   return zx::ok(epitaph.error);
 }
 
-std::string toHexString(fbl::Span<const uint8_t> data) {
+std::string toHexString(cpp20::span<const uint8_t> data) {
   std::stringstream ss;
   for (const uint8_t& b : data) {
     ss << std::setw(2) << std::setfill('0') << std::hex << static_cast<int>(b);
@@ -535,7 +535,7 @@ TEST_F(NetworkDeviceTest, TxBufferBuild) {
   {
     uint16_t descriptor = 2;
     for (const buffer_region_t& region :
-         fbl::Span(tx->buffer().data_list, tx->buffer().data_count)) {
+         cpp20::span(tx->buffer().data_list, tx->buffer().data_count)) {
       SCOPED_TRACE(descriptor);
       buffer_descriptor_t& d = session.descriptor(descriptor++);
       ASSERT_EQ(region.offset, d.offset);
@@ -1387,7 +1387,7 @@ TEST_F(NetworkDeviceTest, OnlyReceiveOnSubscribedPorts) {
     // 13.
     uint8_t port_id = kPort13 + static_cast<uint8_t>(i);
     // Write some data so the buffer makes it into the session.
-    ASSERT_OK(rx_space->WriteData(fbl::Span(&port_id, sizeof(port_id)), impl_.VmoGetter()));
+    ASSERT_OK(rx_space->WriteData(cpp20::span(&port_id, sizeof(port_id)), impl_.VmoGetter()));
     std::unique_ptr ret = std::make_unique<RxReturn>(std::move(rx_space), port_id);
     return_session.Enqueue(std::move(ret));
   }
@@ -1718,7 +1718,7 @@ TEST_P(RxTxBufferReturnTest, TestRaceFramesWithDeviceStop) {
       }
     }
 
-    fbl::Span vmos = impl_.vmos();
+    cpp20::span vmos = impl_.vmos();
     for (auto vmo = vmos.begin(); vmo != vmos.end(); vmo++) {
       ASSERT_FALSE(vmo->is_valid())
           << "unreleased VMO found at " << std::distance(vmo, vmos.begin());
@@ -1891,26 +1891,26 @@ TEST_F(NetworkDeviceTest, MultiplePortsAndSessions) {
     TestSession session;
     const char* const name;
     const netdev::wire::SessionFlags flags;
-    const fbl::Span<FakeNetworkPortImpl> attach_ports;
+    const cpp20::span<FakeNetworkPortImpl> attach_ports;
   } sessions[] = {
       {
           .name = "primary first port",
           .flags = netdev::wire::SessionFlags::kPrimary,
-          .attach_ports = fbl::Span(ports.begin(), 1),
+          .attach_ports = cpp20::span(ports.begin(), 1),
       },
       {
           .name = "primary both ports",
           .flags = netdev::wire::SessionFlags::kPrimary,
-          .attach_ports = fbl::Span(ports.begin(), ports.end()),
+          .attach_ports = cpp20::span(ports.begin(), ports.end()),
       },
       {
           .name = "nonprimary first port",
-          .attach_ports = fbl::Span(ports.begin(), 1),
+          .attach_ports = cpp20::span(ports.begin(), 1),
       },
       {
           .name = "listen second port",
           .flags = netdev::wire::SessionFlags::kListenTx,
-          .attach_ports = fbl::Span(ports.begin() + 1, 1),
+          .attach_ports = cpp20::span(ports.begin() + 1, 1),
       },
   };
 
@@ -1940,7 +1940,7 @@ TEST_F(NetworkDeviceTest, MultiplePortsAndSessions) {
     std::unique_ptr rx_space = impl_.PopRxBuffer();
     uint8_t port_id = port.id();
     // Write some data so the buffer makes it into the session.
-    ASSERT_OK(rx_space->WriteData(fbl::Span(&port_id, sizeof(port_id)), impl_.VmoGetter()));
+    ASSERT_OK(rx_space->WriteData(cpp20::span(&port_id, sizeof(port_id)), impl_.VmoGetter()));
     std::unique_ptr ret = std::make_unique<RxReturn>(std::move(rx_space), port_id);
     return_session.Enqueue(std::move(ret));
   }
@@ -2413,8 +2413,8 @@ TEST_F(NetworkDeviceTest, SecondarySessionWithRxOffsetAndChaining) {
       }
       ASSERT_EQ(static_cast<size_t>(std::distance(std::begin(received), wr_iter)),
                 b.reference_data.size());
-      ASSERT_EQ(toHexString(fbl::Span(received, b.reference_data.size())),
-                toHexString(fbl::Span(b.reference_data.data(), b.reference_data.size())));
+      ASSERT_EQ(toHexString(cpp20::span(received, b.reference_data.size())),
+                toHexString(cpp20::span(b.reference_data.data(), b.reference_data.size())));
     }
   }
 }
@@ -2447,7 +2447,7 @@ TEST_F(NetworkDeviceTest, BufferChainingOnListenTx) {
   tx_desc.data_length = kTxLen;
   tx_desc.head_length = kTxHeadLen;
   uint8_t b = 0;
-  fbl::Span tx_data(primary.buffer(tx_desc.offset + kTxHeadLen), kTxLen);
+  cpp20::span tx_data(primary.buffer(tx_desc.offset + kTxHeadLen), kTxLen);
   for (uint8_t& d : tx_data) {
     d = b++;
   }
@@ -2463,9 +2463,9 @@ TEST_F(NetworkDeviceTest, BufferChainingOnListenTx) {
     SCOPED_TRACE(i);
     buffer_descriptor_t& rx_desc = listen.descriptor(rx_desc_index);
     ASSERT_EQ(rx_desc.chain_length, expect_chain_length--);
-    fbl::Span data(listen.buffer(rx_desc.offset), rx_desc.data_length);
+    cpp20::span data(listen.buffer(rx_desc.offset), rx_desc.data_length);
     ASSERT_EQ(data.size(), std::min(kRxDescriptorLen, kTxLen - offset));
-    ASSERT_EQ(toHexString(fbl::Span(data.begin(), data.size())),
+    ASSERT_EQ(toHexString(cpp20::span(data.begin(), data.size())),
               toHexString(tx_data.subspan(offset, data.size())));
     rx_desc_index = rx_desc.nxt;
     offset += rx_desc.data_length;

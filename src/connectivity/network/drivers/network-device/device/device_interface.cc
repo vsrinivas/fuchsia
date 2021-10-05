@@ -138,12 +138,12 @@ zx_status_t DeviceInterface::Init(const char* parent_name) {
   }
   // Copy the vectors of supported acceleration flags.
   {
-    fbl::Span span(device_info_.rx_accel_list, device_info_.rx_accel_count);
+    cpp20::span span(device_info_.rx_accel_list, device_info_.rx_accel_count);
     std::transform(span.begin(), span.end(), accel_rx_.begin(),
                    [](uint8_t v) { return static_cast<netdev::wire::RxAcceleration>(v); });
   }
   {
-    fbl::Span span(device_info_.tx_accel_list, device_info_.tx_accel_count);
+    cpp20::span span(device_info_.tx_accel_list, device_info_.tx_accel_count);
     std::transform(span.begin(), span.end(), accel_tx_.begin(),
                    [](uint8_t v) { return static_cast<netdev::wire::TxAcceleration>(v); });
   }
@@ -453,7 +453,7 @@ void DeviceInterface::GetPortWatcher(GetPortWatcherRequestView request,
     }
   }
 
-  zx_status_t status = watcher->Bind(dispatcher_, fbl::Span(port_ids.begin(), port_id_count),
+  zx_status_t status = watcher->Bind(dispatcher_, cpp20::span(port_ids.begin(), port_id_count),
                                      std::move(request->watcher), [this](PortWatcher& watcher) {
                                        fbl::AutoLock lock(&control_lock_);
                                        port_watchers_.erase(watcher);
@@ -827,7 +827,7 @@ bool DeviceInterface::ContinueTeardown(network::internal::DeviceInterface::Teard
 }
 
 zx::status<AttachedPort> DeviceInterface::AcquirePort(
-    uint8_t port_id, fbl::Span<const netdev::wire::FrameType> rx_frame_types) {
+    uint8_t port_id, cpp20::span<const netdev::wire::FrameType> rx_frame_types) {
   return WithPort(
       port_id,
       [this, &rx_frame_types](const std::unique_ptr<DevicePort>& port) -> zx::status<AttachedPort> {
@@ -1050,7 +1050,7 @@ void DeviceInterface::CopySessionData(const Session& owner, const RxFrameInfo& f
 }
 
 void DeviceInterface::ListenSessionData(const Session& owner,
-                                        fbl::Span<const uint16_t> descriptors) {
+                                        cpp20::span<const uint16_t> descriptors) {
   if ((device_info_.device_features & FEATURE_NO_AUTO_SNOOP) ||
       !has_listen_sessions_.load(std::memory_order_relaxed)) {
     // Avoid walking through sessions and acquiring Rx lock if we know no listen sessions are

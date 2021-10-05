@@ -468,7 +468,7 @@ zx_status_t Device::GetTimer(uint64_t id, std::unique_ptr<Timer>* timer) {
   return ZX_OK;
 }
 
-zx_status_t Device::DeliverEthernet(fbl::Span<const uint8_t> eth_frame) {
+zx_status_t Device::DeliverEthernet(cpp20::span<const uint8_t> eth_frame) {
   if (eth_frame.size() > ETH_FRAME_MAX_SIZE) {
     errorf("Attempted to deliver an ethernet frame of invalid length: %zu\n", eth_frame.size());
     return ZX_ERR_INVALID_ARGS;
@@ -566,7 +566,7 @@ zx_status_t Device::SendWlan(std::unique_ptr<Packet> packet, uint32_t flags) {
 // the syscall fails, and we return an error.
 // TODO(tkilbourn): consider refactoring this so we don't have to abandon the
 // safety analysis.
-zx_status_t Device::SendService(fbl::Span<const uint8_t> span) __TA_NO_THREAD_SAFETY_ANALYSIS {
+zx_status_t Device::SendService(cpp20::span<const uint8_t> span) __TA_NO_THREAD_SAFETY_ANALYSIS {
   if (channel_.is_valid()) {
     return channel_.write(0u, span.data(), span.size(), nullptr, 0);
   }

@@ -44,7 +44,7 @@ struct SessionRxBuffer {
 // Used to cache common calculation and reduce number of arguments in functions.
 struct RxFrameInfo {
   const buffer_metadata_t& meta;
-  fbl::Span<const SessionRxBuffer> buffers;
+  cpp20::span<const SessionRxBuffer> buffers;
   uint32_t total_length;
 };
 
@@ -117,7 +117,7 @@ class DeviceInterface : public fidl::WireServer<netdev::Device>,
       __TA_REQUIRES_SHARED(control_lock_) __TA_REQUIRES(rx_lock_);
   // Notifies all listening sessions of a new tx transaction from session `owner` and descriptor
   // `owner_index`.
-  void ListenSessionData(const Session& owner, fbl::Span<const uint16_t> descriptors)
+  void ListenSessionData(const Session& owner, cpp20::span<const uint16_t> descriptors)
       __TA_REQUIRES(tx_lock_) __TA_EXCLUDES(control_lock_, rx_lock_);
 
   // Notifies that a batch of Tx frames has been returned.
@@ -165,7 +165,7 @@ class DeviceInterface : public fidl::WireServer<netdev::Device>,
   // NB: The validity of the returned AttachedPort is not really guaranteed by the type system, but
   // by the fact that DeviceInterface will detach all ports from sessions before continuing.
   zx::status<AttachedPort> AcquirePort(uint8_t port_id,
-                                       fbl::Span<const netdev::wire::FrameType> rx_frame_types)
+                                       cpp20::span<const netdev::wire::FrameType> rx_frame_types)
       __TA_REQUIRES(control_lock_);
 
  private:

@@ -83,7 +83,7 @@ MeshMlme::MeshMlme(DeviceInterface* device) : device_(device), seq_mgr_(NewSeque
 
 zx_status_t MeshMlme::Init() { return ZX_OK; }
 
-zx_status_t MeshMlme::HandleEncodedMlmeMsg(fbl::Span<const uint8_t> msg) {
+zx_status_t MeshMlme::HandleEncodedMlmeMsg(cpp20::span<const uint8_t> msg) {
   return ZX_ERR_NOT_SUPPORTED;
 }
 
@@ -549,7 +549,7 @@ bool MeshMlme::ShouldDeliverData(const common::ParsedDataFrameHeader& header) {
 }
 
 void MeshMlme::DeliverData(const common::ParsedMeshDataHeader& header,
-                           fbl::Span<uint8_t> wlan_frame, size_t payload_offset) {
+                           cpp20::span<uint8_t> wlan_frame, size_t payload_offset) {
   ZX_ASSERT(payload_offset >= sizeof(EthernetII));
   auto eth_frame = wlan_frame.subspan(payload_offset - sizeof(EthernetII));
   ZX_ASSERT(eth_frame.size() >= sizeof(EthernetII));

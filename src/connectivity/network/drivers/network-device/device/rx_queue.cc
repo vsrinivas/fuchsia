@@ -195,7 +195,7 @@ void RxQueue::CompleteRxList(const rx_buffer_t* rx_buffer_list, size_t count) {
   fbl::AutoLock lock(&parent_->rx_lock());
   SharedAutoLock control_lock(&parent_->control_lock());
   device_buffer_count_ -= count;
-  for (const auto& rx_buffer : fbl::Span(rx_buffer_list, count)) {
+  for (const auto& rx_buffer : cpp20::span(rx_buffer_list, count)) {
     ZX_ASSERT_MSG(rx_buffer.data_count <= MAX_BUFFER_PARTS,
                   "too many buffer parts in rx buffer: %ld", rx_buffer.data_count);
 
@@ -205,7 +205,7 @@ void RxQueue::CompleteRxList(const rx_buffer_t* rx_buffer_list, size_t count) {
     uint32_t total_length = 0;
 
     Session* primary_session = nullptr;
-    fbl::Span rx_parts(rx_buffer.data_list, rx_buffer.data_count);
+    cpp20::span rx_parts(rx_buffer.data_list, rx_buffer.data_count);
     for (const rx_buffer_part_t& rx_part : rx_parts) {
       InFlightBuffer& in_flight_buffer = in_flight_->Get(rx_part.id);
 
@@ -257,7 +257,7 @@ void RxQueue::CompleteRxList(const rx_buffer_t* rx_buffer_list, size_t count) {
 
     const RxFrameInfo frame_info = {
         .meta = rx_buffer.meta,
-        .buffers = fbl::Span(session_parts.begin(), session_parts_iter),
+        .buffers = cpp20::span(session_parts.begin(), session_parts_iter),
         .total_length = total_length,
     };
     primary_session->AssertParentControlLockShared(*parent_);

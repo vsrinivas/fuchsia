@@ -70,10 +70,10 @@ class RxBuffer : public fbl::DoublyLinkedListable<std::unique_ptr<RxBuffer>> {
         }) {}
 
   zx_status_t WriteData(const std::vector<uint8_t>& data, const VmoProvider& vmo_provider) {
-    return WriteData(fbl::Span(data.data(), data.size()), vmo_provider);
+    return WriteData(cpp20::span(data.data(), data.size()), vmo_provider);
   }
 
-  zx_status_t WriteData(fbl::Span<const uint8_t> data, const VmoProvider& vmo_provider);
+  zx_status_t WriteData(cpp20::span<const uint8_t> data, const VmoProvider& vmo_provider);
 
   rx_buffer_part_t& return_part() { return return_part_; }
   rx_space_buffer_t& space() { return space_; }
@@ -278,7 +278,7 @@ class FakeNetworkDeviceImpl : public ddk::NetworkDeviceImplProtocol<FakeNetworkD
 
   ddk::NetworkDeviceIfcProtocolClient& client() { return device_client_; }
 
-  fbl::Span<const zx::vmo> vmos() { return fbl::Span(vmos_.begin(), vmos_.end()); }
+  cpp20::span<const zx::vmo> vmos() { return cpp20::span(vmos_.begin(), vmos_.end()); }
 
  private:
   DISALLOW_COPY_ASSIGN_AND_MOVE(FakeNetworkDeviceImpl);

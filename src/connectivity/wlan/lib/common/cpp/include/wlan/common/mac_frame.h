@@ -6,6 +6,7 @@
 #define SRC_CONNECTIVITY_WLAN_LIB_COMMON_CPP_INCLUDE_WLAN_COMMON_MAC_FRAME_H_
 
 #include <endian.h>
+#include <lib/stdcompat/span.h>
 #include <lib/zx/time.h>
 #include <zircon/compiler.h>
 #include <zircon/types.h>
@@ -14,7 +15,6 @@
 #include <type_traits>
 
 #include <fbl/algorithm.h>
-#include <fbl/span.h>
 #include <wlan/common/action_frame.h>
 #include <wlan/common/bitfield.h>
 #include <wlan/common/element.h>

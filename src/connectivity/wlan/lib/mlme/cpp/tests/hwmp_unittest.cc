@@ -2,8 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <gtest/gtest.h>
 #include <lib/timekeeper/test_clock.h>
+
+#include <gtest/gtest.h>
 #include <wlan/mlme/mesh/hwmp.h>
 
 #include "test_timer.h"
@@ -101,7 +102,7 @@ TEST_F(HwmpTest, HandlePreqAddressedToUs) {
             0x07, 0x00, 0x00, 0x00, // originator hwmp seqno
         };
     // clang-format on
-    EXPECT_RANGES_EQ(expected_prep_frame, fbl::Span<const uint8_t>(*packet));
+    EXPECT_RANGES_EQ(expected_prep_frame, cpp20::span<const uint8_t>(*packet));
   }
 
   // 2. Expect the path table to be updated with the path to the originator
@@ -185,7 +186,7 @@ TEST_F(HwmpTest, ForwardPreq) {
     };
   // clang-format on
 
-  EXPECT_RANGES_EQ(expected_preq_frame, fbl::Span<const uint8_t>(*packet));
+  EXPECT_RANGES_EQ(expected_preq_frame, cpp20::span<const uint8_t>(*packet));
 }
 
 // IEEE 802.11-2016, 14.10.10.3, Case C
@@ -246,7 +247,7 @@ TEST_F(HwmpTest, ReplyToPreqOnBehalfOfAnotherNode) {
 
   // Expect us to reply to the PREQ on behalf of the target
   auto packet = packets_to_tx.Dequeue();
-  EXPECT_RANGES_EQ(expected_prep_frame, fbl::Span<const uint8_t>(*packet));
+  EXPECT_RANGES_EQ(expected_prep_frame, cpp20::span<const uint8_t>(*packet));
 
   // clang-format off
     const uint8_t expected_preq_frame[] = {
@@ -280,7 +281,7 @@ TEST_F(HwmpTest, ReplyToPreqOnBehalfOfAnotherNode) {
   // Expect the original PREQ to be forwarded, with 'target only' overwritten to
   // 1
   packet = packets_to_tx.Dequeue();
-  EXPECT_RANGES_EQ(expected_preq_frame, fbl::Span<const uint8_t>(*packet));
+  EXPECT_RANGES_EQ(expected_preq_frame, cpp20::span<const uint8_t>(*packet));
 }
 
 TEST_F(HwmpTest, DontReplyToPreqOnBehalfOfAnotherNode) {
@@ -341,7 +342,7 @@ TEST_F(HwmpTest, DontReplyToPreqOnBehalfOfAnotherNode) {
   // Expect the original PREQ to be forwarded, with 'target only' still set to 0
   // since we didn't reply.
   auto packet = packets_to_tx.Dequeue();
-  EXPECT_RANGES_EQ(expected_preq_frame, fbl::Span<const uint8_t>(*packet));
+  EXPECT_RANGES_EQ(expected_preq_frame, cpp20::span<const uint8_t>(*packet));
 }
 
 TEST_F(HwmpTest, PreqTimeToDie) {
@@ -413,7 +414,7 @@ TEST_F(HwmpTest, PathDiscoveryWithRetry) {
 
     ASSERT_EQ(1u, packets_to_tx.size());
     auto packet = packets_to_tx.Dequeue();
-    EXPECT_RANGES_EQ(expected_preq_frame(1), fbl::Span<const uint8_t>(*packet));
+    EXPECT_RANGES_EQ(expected_preq_frame(1), cpp20::span<const uint8_t>(*packet));
   }
 
   // 2. Trigger a timeout and verify that another PREQ is sent
@@ -426,7 +427,7 @@ TEST_F(HwmpTest, PathDiscoveryWithRetry) {
 
     ASSERT_EQ(1u, packets_to_tx.size());
     auto packet = packets_to_tx.Dequeue();
-    EXPECT_RANGES_EQ(expected_preq_frame(2), fbl::Span<const uint8_t>(*packet));
+    EXPECT_RANGES_EQ(expected_preq_frame(2), cpp20::span<const uint8_t>(*packet));
   }
 
   // 3. Reply with a PREP and verify that we have a path now
@@ -511,7 +512,7 @@ TEST_F(HwmpTest, ForwardPrep) {
         0x02, 0x00, 0x00, 0x00, // originator hwmp seqno
     };
   // clang-format on
-  EXPECT_RANGES_EQ(expected_prep_frame, fbl::Span<const uint8_t>(*packet));
+  EXPECT_RANGES_EQ(expected_prep_frame, cpp20::span<const uint8_t>(*packet));
 }
 
 TEST_F(HwmpTest, PrepTimeToDie) {
@@ -627,7 +628,7 @@ TEST_F(HwmpTest, HandlePerrDestinationUnreachable) {
         63, 00, // error code: destination unreachable
     };
   // clang-format on
-  EXPECT_RANGES_EQ(expected_forwarded_frame, fbl::Span<const uint8_t>(*packet));
+  EXPECT_RANGES_EQ(expected_forwarded_frame, cpp20::span<const uint8_t>(*packet));
 }
 
 TEST_F(HwmpTest, HandlePerrNoForwardingInfo) {
@@ -729,7 +730,7 @@ TEST_F(HwmpTest, HandlePerrNoForwardingInfo) {
             62, 00, // error code: no forwarding info
     };
   // clang-format on
-  EXPECT_RANGES_EQ(expected_forwarded_frame, fbl::Span<const uint8_t>(*packet));
+  EXPECT_RANGES_EQ(expected_forwarded_frame, cpp20::span<const uint8_t>(*packet));
 }
 
 TEST_F(HwmpTest, PerrTimeToDie) {

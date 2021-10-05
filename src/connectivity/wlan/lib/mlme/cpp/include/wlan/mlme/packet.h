@@ -6,6 +6,7 @@
 #define SRC_CONNECTIVITY_WLAN_LIB_MLME_CPP_INCLUDE_WLAN_MLME_PACKET_H_
 
 #include <lib/operation/ethernet.h>
+#include <lib/stdcompat/span.h>
 #include <zircon/types.h>
 
 #include <algorithm>
@@ -17,7 +18,6 @@
 
 #include <fbl/intrusive_double_list.h>
 #include <fbl/slab_allocator.h>
-#include <fbl/span.h>
 #include <src/connectivity/wlan/lib/mlme/rust/c-binding/bindings.h>
 #include <wlan/common/logging.h>
 #include <wlan/mlme/wlan.h>

@@ -127,7 +127,7 @@ zx_status_t ApMlme::HandleTimeout(const ObjectId id) {
   });
 }
 
-zx_status_t ApMlme::HandleEncodedMlmeMsg(fbl::Span<const uint8_t> msg) {
+zx_status_t ApMlme::HandleEncodedMlmeMsg(cpp20::span<const uint8_t> msg) {
   debugfn();
   return ap_sta_handle_mlme_msg(rust_ap_.get(), AsWlanSpan(msg));
 }

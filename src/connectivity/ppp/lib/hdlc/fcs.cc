@@ -34,7 +34,7 @@ static constexpr std::array<uint16_t, kTableSize> kTable = {
     0x3de3, 0x2c6a, 0x1ef1, 0x0f78,
 };
 
-uint16_t ppp::Fcs(uint16_t current, fbl::Span<const uint8_t> data) {
+uint16_t ppp::Fcs(uint16_t current, cpp20::span<const uint8_t> data) {
   size_t len = data.size();
   const uint8_t* p = data.data();
   while (len-- != 0) {

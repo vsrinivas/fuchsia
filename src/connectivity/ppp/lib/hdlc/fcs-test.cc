@@ -4,9 +4,9 @@
 
 #include "fcs.h"
 
-#include <zxtest/zxtest.h>
-
 #include <vector>
+
+#include <zxtest/zxtest.h>
 
 namespace {
 
@@ -16,7 +16,7 @@ TEST(FcsTestCase, Blank) {
 
   const uint16_t fcs = ppp::Fcs(
       ppp::kFrameCheckSequenceInit,
-      fbl::Span<const uint8_t>(reinterpret_cast<const uint8_t*>(data.data()), data.size()));
+      cpp20::span<const uint8_t>(reinterpret_cast<const uint8_t*>(data.data()), data.size()));
 
   ASSERT_EQ(fcs, expect);
 }
@@ -27,7 +27,7 @@ TEST(FcsTestCase, Single) {
 
   const uint16_t fcs = ppp::Fcs(
       ppp::kFrameCheckSequenceInit,
-      fbl::Span<const uint8_t>(reinterpret_cast<const uint8_t*>(data.data()), data.size()));
+      cpp20::span<const uint8_t>(reinterpret_cast<const uint8_t*>(data.data()), data.size()));
 
   ASSERT_EQ(fcs, expect);
 }
@@ -38,7 +38,7 @@ TEST(FcsTestCase, Digits) {
 
   const uint16_t fcs = ppp::Fcs(
       ppp::kFrameCheckSequenceInit,
-      fbl::Span<const uint8_t>(reinterpret_cast<const uint8_t*>(data.data()), data.size()));
+      cpp20::span<const uint8_t>(reinterpret_cast<const uint8_t*>(data.data()), data.size()));
 
   ASSERT_EQ(fcs, expect);
 }
@@ -49,7 +49,7 @@ TEST(FcsTestCase, Alphabet) {
 
   const uint16_t fcs = ppp::Fcs(
       ppp::kFrameCheckSequenceInit,
-      fbl::Span<const uint8_t>(reinterpret_cast<const uint8_t*>(data.data()), data.size()));
+      cpp20::span<const uint8_t>(reinterpret_cast<const uint8_t*>(data.data()), data.size()));
 
   ASSERT_EQ(fcs, expect);
 }

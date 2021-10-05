@@ -8,8 +8,8 @@
 
 #include <algorithm>
 
-#include "fbl/span.h"
 #include "fcs.h"
+#include "lib/stdcompat/span.h"
 
 namespace ppp {
 
@@ -36,13 +36,13 @@ static void PushEscaped(std::vector<uint8_t>* buffer, uint8_t b) {
 
 static uint16_t FrameCheck(FrameView frame) {
   uint16_t fcs = kFrameCheckSequenceInit;
-  fcs = Fcs(fcs, fbl::Span<const uint8_t>(&kAllStationsAddress, 1));
-  fcs = Fcs(fcs, fbl::Span<const uint8_t>(&kControlField, 1));
+  fcs = Fcs(fcs, cpp20::span<const uint8_t>(&kAllStationsAddress, 1));
+  fcs = Fcs(fcs, cpp20::span<const uint8_t>(&kControlField, 1));
 
   const uint8_t protocol_upper = static_cast<uint16_t>(frame.protocol) >> 8;
   const uint8_t protocol_lower = static_cast<uint16_t>(frame.protocol) & 0xff;
-  fcs = Fcs(fcs, fbl::Span<const uint8_t>(&protocol_upper, 1));
-  fcs = Fcs(fcs, fbl::Span<const uint8_t>(&protocol_lower, 1));
+  fcs = Fcs(fcs, cpp20::span<const uint8_t>(&protocol_upper, 1));
+  fcs = Fcs(fcs, cpp20::span<const uint8_t>(&protocol_lower, 1));
 
   fcs = Fcs(fcs, frame.information);
   return fcs;
@@ -80,7 +80,8 @@ std::vector<uint8_t> SerializeFrame(FrameView frame) {
   return buffer;
 }
 
-fpromise::result<Frame, DeserializationError> DeserializeFrame(fbl::Span<const uint8_t> raw_frame) {
+fpromise::result<Frame, DeserializationError> DeserializeFrame(
+    cpp20::span<const uint8_t> raw_frame) {
   std::vector<uint8_t> buffer;
   buffer.reserve(raw_frame.size());
 
@@ -139,7 +140,7 @@ fpromise::result<Frame, DeserializationError> DeserializeFrame(fbl::Span<const u
   const auto protocol = static_cast<Protocol>((protocol_upper << 8) | protocol_lower);
 
   const uint16_t fcs =
-      Fcs(kFrameCheckSequenceInit, fbl::Span<const uint8_t>(begin_frame, frame_size));
+      Fcs(kFrameCheckSequenceInit, cpp20::span<const uint8_t>(begin_frame, frame_size));
   if (fcs != kFrameCheckSequence) {
     return fpromise::error(DeserializationError::FailedFrameCheckSequence);
   }

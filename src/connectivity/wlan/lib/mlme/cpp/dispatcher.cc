@@ -116,7 +116,7 @@ zx_status_t Dispatcher::HandlePortPacket(uint64_t key) {
   return ZX_OK;
 }
 
-zx_status_t Dispatcher::HandleAnyMlmeMessage(fbl::Span<uint8_t> span) {
+zx_status_t Dispatcher::HandleAnyMlmeMessage(cpp20::span<uint8_t> span) {
   debugfn();
   // Attempt to process encoded message in MLME.
   auto hdr = FromBytes<fidl_message_header_t>(span);

@@ -1349,7 +1349,7 @@ zx_status_t SimFirmware::LocalUpdateExternalSaeStatus(uint16_t seq_num,
 
   auth_req_frame.status_ = status_code;
   auth_req_frame.seq_num_ = seq_num;
-  auth_req_frame.AddChallengeText(fbl::Span(sae_payload, text_len));
+  auth_req_frame.AddChallengeText(cpp20::span(sae_payload, text_len));
   auth_req_frame.sec_proto_type_ = auth_state_.sec_type;
 
   hw_.RequestCallback(std::bind(&SimFirmware::AssocHandleFailure, this,

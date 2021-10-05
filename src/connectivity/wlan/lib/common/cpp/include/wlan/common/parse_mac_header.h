@@ -25,7 +25,7 @@ std::optional<ParsedDataFrameHeader> ParseDataFrameHeader(BufferReader* r);
 struct ParsedMeshDataHeader {
   ParsedDataFrameHeader mac_header;
   const MeshControl* mesh_ctrl;
-  fbl::Span<const common::MacAddr> addr_ext;  // length 0, 1 or 2
+  cpp20::span<const common::MacAddr> addr_ext;  // length 0, 1 or 2
   const LlcHeader* llc;
 };
 

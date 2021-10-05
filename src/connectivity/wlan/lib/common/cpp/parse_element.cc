@@ -15,7 +15,7 @@ namespace common {
 
 namespace {
 template <typename T>
-const T* ParseFixedSized(fbl::Span<const uint8_t> raw_body) {
+const T* ParseFixedSized(cpp20::span<const uint8_t> raw_body) {
   if (raw_body.size() != sizeof(T)) {
     return nullptr;
   }
@@ -23,15 +23,15 @@ const T* ParseFixedSized(fbl::Span<const uint8_t> raw_body) {
 }
 }  // namespace
 
-std::optional<fbl::Span<const uint8_t>> ParseSsid(fbl::Span<const uint8_t> raw_body) {
+std::optional<cpp20::span<const uint8_t>> ParseSsid(cpp20::span<const uint8_t> raw_body) {
   if (raw_body.size() > wlan_ieee80211::MAX_SSID_BYTE_LEN) {
     return {};
   }
   return {raw_body};
 }
 
-std::optional<fbl::Span<const SupportedRate>> ParseSupportedRates(
-    fbl::Span<const uint8_t> raw_body) {
+std::optional<cpp20::span<const SupportedRate>> ParseSupportedRates(
+    cpp20::span<const uint8_t> raw_body) {
   if (raw_body.empty() || raw_body.size() > kMaxSupportedRatesLen) {
     return {};
   }
@@ -40,15 +40,15 @@ std::optional<fbl::Span<const SupportedRate>> ParseSupportedRates(
   return {{rates, raw_body.size()}};
 }
 
-const DsssParamSet* ParseDsssParamSet(fbl::Span<const uint8_t> raw_body) {
+const DsssParamSet* ParseDsssParamSet(cpp20::span<const uint8_t> raw_body) {
   return ParseFixedSized<DsssParamSet>(raw_body);
 }
 
-const CfParamSet* ParseCfParamSet(fbl::Span<const uint8_t> raw_body) {
+const CfParamSet* ParseCfParamSet(cpp20::span<const uint8_t> raw_body) {
   return ParseFixedSized<CfParamSet>(raw_body);
 }
 
-std::optional<ParsedTim> ParseTim(fbl::Span<const uint8_t> raw_body) {
+std::optional<ParsedTim> ParseTim(cpp20::span<const uint8_t> raw_body) {
   auto header = FromBytes<TimHeader>(raw_body);
   if (header == nullptr) {
     return {};
@@ -60,7 +60,7 @@ std::optional<ParsedTim> ParseTim(fbl::Span<const uint8_t> raw_body) {
   return {{*header, bitmap}};
 }
 
-std::optional<ParsedCountry> ParseCountry(fbl::Span<const uint8_t> raw_body) {
+std::optional<ParsedCountry> ParseCountry(cpp20::span<const uint8_t> raw_body) {
   auto country = FromBytes<Country>(raw_body);
   if (country == nullptr) {
     return {};
@@ -70,8 +70,8 @@ std::optional<ParsedCountry> ParseCountry(fbl::Span<const uint8_t> raw_body) {
   return {{*country, {reinterpret_cast<const SubbandTriplet*>(remaining.data()), num_triplets}}};
 }
 
-std::optional<fbl::Span<const SupportedRate>> ParseExtendedSupportedRates(
-    fbl::Span<const uint8_t> raw_body) {
+std::optional<cpp20::span<const SupportedRate>> ParseExtendedSupportedRates(
+    cpp20::span<const uint8_t> raw_body) {
   if (raw_body.empty()) {
     return {};
   }
@@ -80,42 +80,42 @@ std::optional<fbl::Span<const SupportedRate>> ParseExtendedSupportedRates(
   return {{rates, raw_body.size()}};
 }
 
-const MeshConfiguration* ParseMeshConfiguration(fbl::Span<const uint8_t> raw_body) {
+const MeshConfiguration* ParseMeshConfiguration(cpp20::span<const uint8_t> raw_body) {
   return ParseFixedSized<MeshConfiguration>(raw_body);
 }
 
-std::optional<fbl::Span<const uint8_t>> ParseMeshId(fbl::Span<const uint8_t> raw_body) {
+std::optional<cpp20::span<const uint8_t>> ParseMeshId(cpp20::span<const uint8_t> raw_body) {
   if (raw_body.size() > wlan_ieee80211::MAX_MESH_ID_BYTE_LEN) {
     return {};
   }
   return {raw_body};
 }
 
-const QosInfo* ParseQosCapability(fbl::Span<const uint8_t> raw_body) {
+const QosInfo* ParseQosCapability(cpp20::span<const uint8_t> raw_body) {
   return ParseFixedSized<QosInfo>(raw_body);
 }
 
-const common::MacAddr* ParseGcrGroupAddress(fbl::Span<const uint8_t> raw_body) {
+const common::MacAddr* ParseGcrGroupAddress(cpp20::span<const uint8_t> raw_body) {
   return ParseFixedSized<common::MacAddr>(raw_body);
 }
 
-const HtCapabilities* ParseHtCapabilities(fbl::Span<const uint8_t> raw_body) {
+const HtCapabilities* ParseHtCapabilities(cpp20::span<const uint8_t> raw_body) {
   return ParseFixedSized<HtCapabilities>(raw_body);
 }
 
-const HtOperation* ParseHtOperation(fbl::Span<const uint8_t> raw_body) {
+const HtOperation* ParseHtOperation(cpp20::span<const uint8_t> raw_body) {
   return ParseFixedSized<HtOperation>(raw_body);
 }
 
-const VhtCapabilities* ParseVhtCapabilities(fbl::Span<const uint8_t> raw_body) {
+const VhtCapabilities* ParseVhtCapabilities(cpp20::span<const uint8_t> raw_body) {
   return ParseFixedSized<VhtCapabilities>(raw_body);
 }
 
-const VhtOperation* ParseVhtOperation(fbl::Span<const uint8_t> raw_body) {
+const VhtOperation* ParseVhtOperation(cpp20::span<const uint8_t> raw_body) {
   return ParseFixedSized<VhtOperation>(raw_body);
 }
 
-std::optional<ParsedMpmOpen> ParseMpmOpen(fbl::Span<const uint8_t> raw_body) {
+std::optional<ParsedMpmOpen> ParseMpmOpen(cpp20::span<const uint8_t> raw_body) {
   auto r = BufferReader{raw_body};
   auto header = r.ReadValue<MpmHeader>();
   if (!header) {
@@ -130,7 +130,7 @@ std::optional<ParsedMpmOpen> ParseMpmOpen(fbl::Span<const uint8_t> raw_body) {
   return {{*header, pmk}};
 }
 
-std::optional<ParsedMpmConfirm> ParseMpmConfirm(fbl::Span<const uint8_t> raw_body) {
+std::optional<ParsedMpmConfirm> ParseMpmConfirm(cpp20::span<const uint8_t> raw_body) {
   auto r = BufferReader{raw_body};
   auto header = r.ReadValue<MpmHeader>();
   if (!header) {
@@ -150,7 +150,7 @@ std::optional<ParsedMpmConfirm> ParseMpmConfirm(fbl::Span<const uint8_t> raw_bod
   return {{*header, *peer_link_id, pmk}};
 }
 
-std::optional<ParsedMpmClose> ParseMpmClose(fbl::Span<const uint8_t> raw_body) {
+std::optional<ParsedMpmClose> ParseMpmClose(cpp20::span<const uint8_t> raw_body) {
   auto r = BufferReader{raw_body};
   auto header = r.ReadValue<MpmHeader>();
   if (!header) {
@@ -175,7 +175,7 @@ std::optional<ParsedMpmClose> ParseMpmClose(fbl::Span<const uint8_t> raw_body) {
   return {{*header, peer_link_id, *reason_code, pmk}};
 }
 
-std::optional<ParsedPreq> ParsePreq(fbl::Span<const uint8_t> raw_body) {
+std::optional<ParsedPreq> ParsePreq(cpp20::span<const uint8_t> raw_body) {
   ParsedPreq ret{};
   auto r = BufferReader{raw_body};
   ret.header = r.Read<PreqHeader>();
@@ -207,7 +207,7 @@ std::optional<ParsedPreq> ParsePreq(fbl::Span<const uint8_t> raw_body) {
   return {ret};
 }
 
-std::optional<ParsedPrep> ParsePrep(fbl::Span<const uint8_t> raw_body) {
+std::optional<ParsedPrep> ParsePrep(cpp20::span<const uint8_t> raw_body) {
   ParsedPrep ret{};
   auto r = BufferReader{raw_body};
   ret.header = r.Read<PrepHeader>();
@@ -234,7 +234,7 @@ std::optional<ParsedPrep> ParsePrep(fbl::Span<const uint8_t> raw_body) {
   return {ret};
 }
 
-std::optional<ParsedPerr> ParsePerr(fbl::Span<const uint8_t> raw_body) {
+std::optional<ParsedPerr> ParsePerr(cpp20::span<const uint8_t> raw_body) {
   ParsedPerr ret{};
   auto r = BufferReader{raw_body};
 

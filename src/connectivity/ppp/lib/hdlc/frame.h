@@ -6,13 +6,12 @@
 #define SRC_CONNECTIVITY_PPP_LIB_HDLC_FRAME_H_
 
 #include <lib/fpromise/result.h>
+#include <lib/stdcompat/span.h>
 
 #include <cstddef>
 #include <cstdint>
 #include <optional>
 #include <vector>
-
-#include <fbl/span.h>
 
 #include "lib/common/ppp.h"
 
@@ -21,10 +20,10 @@ namespace ppp {
 static constexpr uint8_t kFlagSequence = 0x7e;
 
 struct FrameView {
-  FrameView(Protocol protocol, fbl::Span<const uint8_t> information)
+  FrameView(Protocol protocol, cpp20::span<const uint8_t> information)
       : protocol(protocol), information(information) {}
   Protocol protocol;
-  fbl::Span<const uint8_t> information;
+  cpp20::span<const uint8_t> information;
 };
 
 struct Frame {
@@ -43,7 +42,8 @@ enum class DeserializationError {
 
 std::vector<uint8_t> SerializeFrame(FrameView frame);
 
-fpromise::result<Frame, DeserializationError> DeserializeFrame(fbl::Span<const uint8_t> raw_frame);
+fpromise::result<Frame, DeserializationError> DeserializeFrame(
+    cpp20::span<const uint8_t> raw_frame);
 
 }  // namespace ppp
 

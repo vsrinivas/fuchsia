@@ -416,7 +416,7 @@ std::unique_ptr<Packet> CreateDeauthFrame(common::MacAddr client_addr) {
 }
 
 std::unique_ptr<Packet> CreateAssocReqFrame(common::MacAddr client_addr,
-                                            fbl::Span<const uint8_t> ssid, bool rsn) {
+                                            cpp20::span<const uint8_t> ssid, bool rsn) {
   common::MacAddr bssid(kBssid1);
 
   // arbitrarily large reserved len; will shrink down later
@@ -532,7 +532,7 @@ std::unique_ptr<Packet> CreateDisassocFrame(common::MacAddr client_addr) {
   return packet;
 }
 
-std::unique_ptr<Packet> CreateDataFrame(fbl::Span<const uint8_t> payload) {
+std::unique_ptr<Packet> CreateDataFrame(cpp20::span<const uint8_t> payload) {
   common::MacAddr bssid(kBssid1);
   common::MacAddr client(kClientAddress);
 
@@ -568,11 +568,11 @@ std::unique_ptr<Packet> CreateDataFrame(fbl::Span<const uint8_t> payload) {
 }
 
 std::unique_ptr<Packet> CreateAmsduDataFramePacket(
-    const std::vector<fbl::Span<const uint8_t>>& payloads) {
+    const std::vector<cpp20::span<const uint8_t>>& payloads) {
   common::MacAddr bssid(kBssid1);
   common::MacAddr client(kClientAddress);
   const uint8_t padding[]{0, 0, 0};
-  fbl::Span<const uint8_t> padding_span(padding);
+  cpp20::span<const uint8_t> padding_span(padding);
 
   size_t buf_len = DataFrameHeader::max_len();
   for (auto span : payloads) {
@@ -645,7 +645,7 @@ DataFrame<> CreateNullDataFrame() {
   return DataFrame<>(std::move(packet));
 }
 
-std::unique_ptr<Packet> CreateEthFrame(fbl::Span<const uint8_t> payload) {
+std::unique_ptr<Packet> CreateEthFrame(cpp20::span<const uint8_t> payload) {
   common::MacAddr bssid(kBssid1);
   common::MacAddr client(kClientAddress);
 

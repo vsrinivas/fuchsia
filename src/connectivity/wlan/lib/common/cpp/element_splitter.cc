@@ -9,20 +9,20 @@
 namespace wlan {
 namespace common {
 
-static void SkipIfTooShort(fbl::Span<const uint8_t>* span) {
+static void SkipIfTooShort(cpp20::span<const uint8_t>* span) {
   const ElementHeader* header = FromBytes<ElementHeader>(*span);
   if (header == nullptr || header->len + sizeof(ElementHeader) > span->size()) {
     // If there is not enough remaining bytes to hold the full element,
     // move the iterator to the end
-    *span = fbl::Span{span->data() + span->size(), static_cast<size_t>(0u)};
+    *span = cpp20::span{span->data() + span->size(), static_cast<size_t>(0u)};
   }
 }
 
-ElementIterator::ElementIterator(fbl::Span<const uint8_t> buffer) : remaining_(buffer) {
+ElementIterator::ElementIterator(cpp20::span<const uint8_t> buffer) : remaining_(buffer) {
   SkipIfTooShort(&remaining_);
 }
 
-std::tuple<element_id::ElementId, fbl::Span<const uint8_t>> ElementIterator::operator*() const {
+std::tuple<element_id::ElementId, cpp20::span<const uint8_t>> ElementIterator::operator*() const {
   const ElementHeader* header = FromBytes<ElementHeader>(remaining_);
   ZX_ASSERT(header != nullptr);
   return {
@@ -39,7 +39,7 @@ ElementIterator& ElementIterator::operator++() {
   return *this;
 }
 
-static bool SpansHaveSameEnd(fbl::Span<const uint8_t> a, fbl::Span<const uint8_t> b) {
+static bool SpansHaveSameEnd(cpp20::span<const uint8_t> a, cpp20::span<const uint8_t> b) {
   return a.data() + a.size() == b.data() + b.size();
 }
 

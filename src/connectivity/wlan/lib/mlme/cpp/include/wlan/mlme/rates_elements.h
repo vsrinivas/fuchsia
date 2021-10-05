@@ -5,7 +5,8 @@
 #ifndef SRC_CONNECTIVITY_WLAN_LIB_MLME_CPP_INCLUDE_WLAN_MLME_RATES_ELEMENTS_H_
 #define SRC_CONNECTIVITY_WLAN_LIB_MLME_CPP_INCLUDE_WLAN_MLME_RATES_ELEMENTS_H_
 
-#include <fbl/span.h>
+#include <lib/stdcompat/span.h>
+
 #include <wlan/common/buffer_writer.h>
 #include <wlan/common/element.h>
 
@@ -15,14 +16,14 @@ namespace wlan {
 
 class RatesWriter {
  public:
-  explicit RatesWriter(fbl::Span<const SupportedRate> all_rates) : all_rates_(all_rates) {}
+  explicit RatesWriter(cpp20::span<const SupportedRate> all_rates) : all_rates_(all_rates) {}
 
   void WriteSupportedRates(BufferWriter* w) const;
 
   void WriteExtendedSupportedRates(BufferWriter* w) const;
 
  private:
-  fbl::Span<const SupportedRate> all_rates_;
+  cpp20::span<const SupportedRate> all_rates_;
 };
 
 }  // namespace wlan

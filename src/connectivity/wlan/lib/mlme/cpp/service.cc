@@ -61,8 +61,8 @@ zx_status_t SendDeauthIndication(DeviceInterface* device, const common::MacAddr&
 }
 
 zx_status_t SendAssocIndication(DeviceInterface* device, const common::MacAddr& peer_sta,
-                                uint16_t listen_interval, fbl::Span<const uint8_t> ssid,
-                                std::optional<fbl::Span<const uint8_t>> rsne_body) {
+                                uint16_t listen_interval, cpp20::span<const uint8_t> ssid,
+                                std::optional<cpp20::span<const uint8_t>> rsne_body) {
   debugfn();
   wlan_mlme::AssociateIndication ind;
   peer_sta.CopyTo(ind.peer_sta_address.data());

@@ -20,35 +20,13 @@ namespace wlan {
 namespace test_utils {
 
 template <typename T>
-struct IteratorTypes {
-  typedef typename T::iterator iterator;
-  typedef typename T::const_iterator const_iterator;
-};
-
-template <typename T, size_t N>
-struct IteratorTypes<T[N]> {
-  typedef T* iterator;
-  typedef const T* const_iterator;
-};
-
-template <typename T, size_t N>
-struct IteratorTypes<std::array<T, N>> {
-  typedef T* iterator;
-  typedef const T* const_iterator;
-};
-
-template <typename T>
 struct RangeWrapper {
   explicit RangeWrapper(const T& range) : range(range) {}
 
-  typedef typename IteratorTypes<T>::iterator iterator;
-  typedef typename IteratorTypes<T>::const_iterator const_iterator;
-
   const T& range;
 
-  const_iterator begin() const { return std::begin(range); }
-
-  const_iterator end() const { return std::end(range); }
+  auto begin() const { return std::begin(range); }
+  auto end() const { return std::end(range); }
 
   template <typename U>
   bool operator==(const RangeWrapper<U>& other) const {

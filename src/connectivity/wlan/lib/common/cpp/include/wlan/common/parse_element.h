@@ -5,7 +5,8 @@
 #ifndef SRC_CONNECTIVITY_WLAN_LIB_COMMON_CPP_INCLUDE_WLAN_COMMON_PARSE_ELEMENT_H_
 #define SRC_CONNECTIVITY_WLAN_LIB_COMMON_CPP_INCLUDE_WLAN_COMMON_PARSE_ELEMENT_H_
 
-#include <fbl/span.h>
+#include <lib/stdcompat/span.h>
+
 #include <wlan/common/element.h>
 
 namespace wlan {
@@ -13,12 +14,12 @@ namespace common {
 
 struct ParsedTim {
   TimHeader header;
-  fbl::Span<const uint8_t> bitmap;
+  cpp20::span<const uint8_t> bitmap;
 };
 
 struct ParsedCountry {
   Country country;
-  fbl::Span<const SubbandTriplet> triplets;
+  cpp20::span<const SubbandTriplet> triplets;
 };
 
 struct ParsedMpmOpen {
@@ -43,7 +44,7 @@ struct ParsedPreq {
   const PreqHeader* header;
   const common::MacAddr* originator_external_addr;  // null if absent
   const PreqMiddle* middle;
-  fbl::Span<const PreqPerTarget> per_target;
+  cpp20::span<const PreqPerTarget> per_target;
 };
 
 struct ParsedPrep {
@@ -54,38 +55,38 @@ struct ParsedPrep {
 
 struct ParsedPerr {
   const PerrHeader* header;
-  fbl::Span<const uint8_t> destinations;  // can be parsed with PerrDestinationParser
+  cpp20::span<const uint8_t> destinations;  // can be parsed with PerrDestinationParser
 };
 
-std::optional<fbl::Span<const uint8_t>> ParseSsid(fbl::Span<const uint8_t> raw_body);
-std::optional<fbl::Span<const SupportedRate>> ParseSupportedRates(
-    fbl::Span<const uint8_t> raw_body);
-const DsssParamSet* ParseDsssParamSet(fbl::Span<const uint8_t> raw_body);
-const CfParamSet* ParseCfParamSet(fbl::Span<const uint8_t> raw_body);
-std::optional<ParsedTim> ParseTim(fbl::Span<const uint8_t> raw_body);
-std::optional<ParsedCountry> ParseCountry(fbl::Span<const uint8_t> raw_body);
-std::optional<fbl::Span<const SupportedRate>> ParseExtendedSupportedRates(
-    fbl::Span<const uint8_t> raw_body);
-const MeshConfiguration* ParseMeshConfiguration(fbl::Span<const uint8_t> raw_body);
-std::optional<fbl::Span<const uint8_t>> ParseMeshId(fbl::Span<const uint8_t> raw_body);
-const QosInfo* ParseQosCapability(fbl::Span<const uint8_t> raw_body);
-const common::MacAddr* ParseGcrGroupAddress(fbl::Span<const uint8_t> raw_body);
-const HtCapabilities* ParseHtCapabilities(fbl::Span<const uint8_t> raw_body);
-const HtOperation* ParseHtOperation(fbl::Span<const uint8_t> raw_body);
-const VhtCapabilities* ParseVhtCapabilities(fbl::Span<const uint8_t> raw_body);
-const VhtOperation* ParseVhtOperation(fbl::Span<const uint8_t> raw_body);
+std::optional<cpp20::span<const uint8_t>> ParseSsid(cpp20::span<const uint8_t> raw_body);
+std::optional<cpp20::span<const SupportedRate>> ParseSupportedRates(
+    cpp20::span<const uint8_t> raw_body);
+const DsssParamSet* ParseDsssParamSet(cpp20::span<const uint8_t> raw_body);
+const CfParamSet* ParseCfParamSet(cpp20::span<const uint8_t> raw_body);
+std::optional<ParsedTim> ParseTim(cpp20::span<const uint8_t> raw_body);
+std::optional<ParsedCountry> ParseCountry(cpp20::span<const uint8_t> raw_body);
+std::optional<cpp20::span<const SupportedRate>> ParseExtendedSupportedRates(
+    cpp20::span<const uint8_t> raw_body);
+const MeshConfiguration* ParseMeshConfiguration(cpp20::span<const uint8_t> raw_body);
+std::optional<cpp20::span<const uint8_t>> ParseMeshId(cpp20::span<const uint8_t> raw_body);
+const QosInfo* ParseQosCapability(cpp20::span<const uint8_t> raw_body);
+const common::MacAddr* ParseGcrGroupAddress(cpp20::span<const uint8_t> raw_body);
+const HtCapabilities* ParseHtCapabilities(cpp20::span<const uint8_t> raw_body);
+const HtOperation* ParseHtOperation(cpp20::span<const uint8_t> raw_body);
+const VhtCapabilities* ParseVhtCapabilities(cpp20::span<const uint8_t> raw_body);
+const VhtOperation* ParseVhtOperation(cpp20::span<const uint8_t> raw_body);
 
 // It is impossible to parse the Mesh Peering Management element without knowing
 // the context, i.e. whether it belongs to Open, Confirm or Close action. The
 // following three functions parse it for each of the three contexts,
 // respectively.
-std::optional<ParsedMpmOpen> ParseMpmOpen(fbl::Span<const uint8_t> raw_body);
-std::optional<ParsedMpmConfirm> ParseMpmConfirm(fbl::Span<const uint8_t> raw_body);
-std::optional<ParsedMpmClose> ParseMpmClose(fbl::Span<const uint8_t> raw_body);
+std::optional<ParsedMpmOpen> ParseMpmOpen(cpp20::span<const uint8_t> raw_body);
+std::optional<ParsedMpmConfirm> ParseMpmConfirm(cpp20::span<const uint8_t> raw_body);
+std::optional<ParsedMpmClose> ParseMpmClose(cpp20::span<const uint8_t> raw_body);
 
-std::optional<ParsedPreq> ParsePreq(fbl::Span<const uint8_t> raw_body);
-std::optional<ParsedPrep> ParsePrep(fbl::Span<const uint8_t> raw_body);
-std::optional<ParsedPerr> ParsePerr(fbl::Span<const uint8_t> raw_body);
+std::optional<ParsedPreq> ParsePreq(cpp20::span<const uint8_t> raw_body);
+std::optional<ParsedPrep> ParsePrep(cpp20::span<const uint8_t> raw_body);
+std::optional<ParsedPerr> ParsePerr(cpp20::span<const uint8_t> raw_body);
 
 }  // namespace common
 }  // namespace wlan

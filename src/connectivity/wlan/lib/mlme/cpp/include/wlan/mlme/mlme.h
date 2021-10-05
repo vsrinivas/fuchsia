@@ -6,11 +6,11 @@
 #define SRC_CONNECTIVITY_WLAN_LIB_MLME_CPP_INCLUDE_WLAN_MLME_MLME_H_
 
 #include <fuchsia/wlan/stats/cpp/fidl.h>
+#include <lib/stdcompat/span.h>
 #include <zircon/types.h>
 
 #include <memory>
 
-#include <fbl/span.h>
 #include <wlan/common/bitfield.h>
 #include <wlan/mlme/mac_frame.h>
 #include <wlan/protocol/mac.h>
@@ -55,7 +55,7 @@ class Mlme {
   virtual zx_status_t Init() = 0;
 
   // Temporary function to support processing inbound MLME messages in C++ and Rust.
-  virtual zx_status_t HandleEncodedMlmeMsg(fbl::Span<const uint8_t> msg) = 0;
+  virtual zx_status_t HandleEncodedMlmeMsg(cpp20::span<const uint8_t> msg) = 0;
 
   virtual zx_status_t HandleMlmeMsg(const BaseMlmeMsg& msg) = 0;
   virtual zx_status_t HandleFramePacket(std::unique_ptr<Packet> pkt) = 0;

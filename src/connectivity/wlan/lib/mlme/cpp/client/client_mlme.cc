@@ -156,7 +156,7 @@ void ClientMlme::HwScanComplete(uint8_t result_code) {
   client_mlme_hw_scan_complete(rust_mlme_.get(), result_code);
 }
 
-zx_status_t ClientMlme::HandleEncodedMlmeMsg(fbl::Span<const uint8_t> msg) {
+zx_status_t ClientMlme::HandleEncodedMlmeMsg(cpp20::span<const uint8_t> msg) {
   debugfn();
   return client_mlme_handle_mlme_msg(rust_mlme_.get(), AsWlanSpan(msg));
 }
@@ -169,7 +169,7 @@ zx_status_t ClientMlme::HandleFramePacket(std::unique_ptr<Packet> pkt) {
       return client_mlme_handle_eth_frame(rust_mlme_.get(), AsWlanSpan({pkt->data(), pkt->len()}));
     }
     case Packet::Peer::kWlan: {
-      auto frame_span = fbl::Span<uint8_t>{pkt->data(), pkt->len()};
+      auto frame_span = cpp20::span<uint8_t>{pkt->data(), pkt->len()};
       const wlan_rx_info_t* rx_info = nullptr;
       if (pkt->has_ctrl_data<wlan_rx_info_t>()) {
         rx_info = pkt->ctrl_data<wlan_rx_info_t>();

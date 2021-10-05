@@ -8,13 +8,12 @@
 #include <fuchsia/wlan/common/c/banjo.h>
 #include <fuchsia/wlan/ieee80211/c/banjo.h>
 #include <fuchsia/wlan/ieee80211/cpp/fidl.h>
+#include <lib/stdcompat/span.h>
 #include <zircon/types.h>
 
 #include <list>
 #include <memory>
 #include <optional>
-
-#include <fbl/span.h>
 
 #include "src/connectivity/wlan/drivers/testing/lib/sim-env/sim-sta-ifc.h"
 #include "src/connectivity/wlan/lib/common/cpp/include/wlan/common/mac_frame.h"
@@ -135,7 +134,7 @@ class SimManagementFrame : public SimFrame {
   virtual SimMgmtFrameType MgmtFrameType() const = 0;
   void AddSsidIe(const cssid_t& ssid);
   void AddCsaIe(const wlan_channel_t& channel, uint8_t channel_switch_count);
-  void AddRawIes(fbl::Span<const uint8_t> raw_ies);
+  void AddRawIes(cpp20::span<const uint8_t> raw_ies);
   std::shared_ptr<InformationElement> FindIe(InformationElement::SimIeType ie_type) const;
   void RemoveIe(InformationElement::SimIeType);
 
@@ -271,7 +270,7 @@ class SimAuthFrame : public SimManagementFrame {
   SimMgmtFrameType MgmtFrameType() const override;
 
   SimFrame* CopyFrame() const override;
-  void AddChallengeText(fbl::Span<const uint8_t> text);
+  void AddChallengeText(cpp20::span<const uint8_t> text);
 
   uint16_t seq_num_;
   SimAuthType auth_type_;

@@ -2,9 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <lib/stdcompat/span.h>
+
 #include <array>
 
-#include <fbl/span.h>
 #include <wlan/common/buffer_reader.h>
 #include <wlan/common/mac_frame.h>
 
@@ -351,7 +352,7 @@ static constexpr AllowedElement kTimingAdElements[] = {
     // clang-format on
 };
 
-static void ValidateFixedSizeElement(size_t offset, fbl::Span<const uint8_t> body,
+static void ValidateFixedSizeElement(size_t offset, cpp20::span<const uint8_t> body,
                                      size_t expected_size, const char* element_name,
                                      ErrorAccumulator* errors) {
   if (body.size() != expected_size) {
@@ -360,7 +361,7 @@ static void ValidateFixedSizeElement(size_t offset, fbl::Span<const uint8_t> bod
   }
 }
 
-static void ValidateElement(size_t offset, ElementId id, fbl::Span<const uint8_t> body,
+static void ValidateElement(size_t offset, ElementId id, cpp20::span<const uint8_t> body,
                             ErrorAccumulator* errors) {
   switch (id) {
     case kSsid:
@@ -443,7 +444,7 @@ static void ValidateElement(size_t offset, ElementId id, fbl::Span<const uint8_t
   }
 }
 
-static void ValidateElements(BufferReader* r, fbl::Span<const AllowedElement> allowed,
+static void ValidateElements(BufferReader* r, cpp20::span<const AllowedElement> allowed,
                              ErrorAccumulator* errors) {
   bool seen[allowed.size()];
   std::fill_n(seen, allowed.size(), false);
@@ -501,7 +502,7 @@ static void ValidateElements(BufferReader* r, fbl::Span<const AllowedElement> al
 
 static void ValidateFrameWithElements(BufferReader* r, size_t fixed_header_len,
                                       const char* frame_name,
-                                      fbl::Span<const AllowedElement> allowed_elements,
+                                      cpp20::span<const AllowedElement> allowed_elements,
                                       ErrorAccumulator* errors) {
   if (fixed_header_len != 0 && r->Read(fixed_header_len).empty()) {
     errors->Add(r->ReadBytes(), "Expected a %s header but the frame is too short", frame_name);
@@ -578,7 +579,7 @@ static void ValidateMgmtFrame(BufferReader* r, ErrorAccumulator* errors) {
   }
 }
 
-static void DoValidateFrame(fbl::Span<const uint8_t> data, ErrorAccumulator* errors) {
+static void DoValidateFrame(cpp20::span<const uint8_t> data, ErrorAccumulator* errors) {
   BufferReader r{data};
   auto fc = r.Peek<FrameControl>();
 
@@ -600,7 +601,7 @@ static void DoValidateFrame(fbl::Span<const uint8_t> data, ErrorAccumulator* err
   }
 }
 
-bool ValidateFrame(const char* context_msg, fbl::Span<const uint8_t> data) {
+bool ValidateFrame(const char* context_msg, cpp20::span<const uint8_t> data) {
   ErrorAccumulator errors;
   DoValidateFrame(data, &errors);
   if (errors.HaveErrors()) {

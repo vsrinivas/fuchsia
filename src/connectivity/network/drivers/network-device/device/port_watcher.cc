@@ -11,7 +11,7 @@
 namespace network::internal {
 
 zx_status_t PortWatcher::Bind(async_dispatcher_t* dispatcher,
-                              fbl::Span<const uint8_t> existing_ports,
+                              cpp20::span<const uint8_t> existing_ports,
                               fidl::ServerEnd<netdev::PortWatcher> channel,
                               ClosedCallback closed_callback) {
   fbl::AutoLock lock(&lock_);

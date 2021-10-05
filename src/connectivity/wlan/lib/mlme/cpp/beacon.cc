@@ -79,7 +79,7 @@ static void WriteHtOperation(BufferWriter* w, const BeaconConfig& config) {
 
 static void WriteRsne(BufferWriter* w, const BeaconConfig& config) {
   if (config.rsne != nullptr) {
-    w->Write({config.rsne, config.rsne_len});
+    w->Write(cpp20::span{config.rsne, config.rsne_len});
   }
 }
 

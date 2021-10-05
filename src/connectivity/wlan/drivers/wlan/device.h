@@ -68,9 +68,9 @@ class Device : public DeviceInterface {
   // DeviceInterface methods
   zx_handle_t GetSmeChannelRef() final;
   zx_status_t GetTimer(uint64_t id, std::unique_ptr<Timer>* timer) final;
-  zx_status_t DeliverEthernet(fbl::Span<const uint8_t> eth_frame) final;
+  zx_status_t DeliverEthernet(cpp20::span<const uint8_t> eth_frame) final;
   zx_status_t SendWlan(std::unique_ptr<Packet> packet, uint32_t flags) final;
-  zx_status_t SendService(fbl::Span<const uint8_t> span) final;
+  zx_status_t SendService(cpp20::span<const uint8_t> span) final;
   zx_status_t SetChannel(wlan_channel_t channel) final;
   zx_status_t SetStatus(uint32_t status) final;
   zx_status_t ConfigureBss(bss_config_t* cfg) final;

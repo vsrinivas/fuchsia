@@ -359,7 +359,7 @@ zx_status_t Session::FetchTx() {
     return status;
   }
 
-  fbl::Span descriptors(fetch_buffer, read);
+  cpp20::span descriptors(fetch_buffer, read);
   // Let other sessions know of tx data.
   transaction.AssertParentTxLock(*parent_);
   parent_->ListenSessionData(*this, descriptors);
@@ -546,7 +546,7 @@ const buffer_descriptor_t& Session::descriptor(uint16_t index) const {
   return *desc;
 }
 
-fbl::Span<uint8_t> Session::data_at(uint64_t offset, uint64_t len) const {
+cpp20::span<uint8_t> Session::data_at(uint64_t offset, uint64_t len) const {
   auto mapped = data_vmo_->data();
   uint64_t max_len = mapped.size();
   offset = std::min(offset, max_len);
@@ -566,7 +566,7 @@ void Session::ResumeTx() {
 }
 
 zx_status_t Session::AttachPort(uint8_t port_id,
-                                fbl::Span<const netdev::wire::FrameType> frame_types) {
+                                cpp20::span<const netdev::wire::FrameType> frame_types) {
   size_t attached_count;
   {
     fbl::AutoLock lock(&parent_->control_lock());
@@ -655,7 +655,7 @@ bool Session::OnPortDestroyed(uint8_t port_id) {
 
 void Session::Attach(AttachRequestView request, AttachCompleter::Sync& completer) {
   zx_status_t status =
-      AttachPort(request->port, fbl::Span(request->rx_frames.data(), request->rx_frames.count()));
+      AttachPort(request->port, cpp20::span(request->rx_frames.data(), request->rx_frames.count()));
   if (status == ZX_OK) {
     completer.ReplySuccess();
   } else {
@@ -897,7 +897,7 @@ bool Session::CompleteRxWith(const Session& owner, const RxFrameInfo& frame_info
     remaining -= session_buffer.length;
   }
 
-  fbl::Span<const SessionRxBuffer> parts(parts_storage.begin(), parts_iter);
+  cpp20::span<const SessionRxBuffer> parts(parts_storage.begin(), parts_iter);
   zx_status_t status = LoadRxInfo(RxFrameInfo{
       .meta = frame_info.meta,
       .buffers = parts,
@@ -938,8 +938,9 @@ bool Session::CompleteRxWith(const Session& owner, const RxFrameInfo& frame_info
     uint32_t owner_len = owner_rx_buffer.length - owner_off;
     uint32_t self_len = desc.data_length - self_off;
     uint32_t copy_len = owner_len >= self_len ? self_len : owner_len;
-    fbl::Span target = data_at(desc.offset + desc.head_length + self_off, copy_len);
-    fbl::Span src = owner.data_at(owner_vmo_offset + owner_rx_buffer.offset + owner_off, copy_len);
+    cpp20::span target = data_at(desc.offset + desc.head_length + self_off, copy_len);
+    cpp20::span src =
+        owner.data_at(owner_vmo_offset + owner_rx_buffer.offset + owner_off, copy_len);
     std::copy_n(src.begin(), std::min(target.size(), src.size()), target.begin());
 
     owner_off += copy_len;
@@ -1030,7 +1031,7 @@ bool Session::ListenFromTx(const Session& owner, uint16_t owner_index) {
 
   return CompleteRxWith(owner, RxFrameInfo{
                                    .meta = frame_meta,
-                                   .buffers = fbl::Span(parts.begin(), parts_iter),
+                                   .buffers = cpp20::span(parts.begin(), parts_iter),
                                    .total_length = total_length,
                                });
 }
@@ -1128,7 +1129,7 @@ bool Session::IsSubscribedToFrameType(uint8_t port, netdev::wire::FrameType fram
   if (!slot.has_value()) {
     return false;
   }
-  fbl::Span subscribed = slot.value().frame_types();
+  cpp20::span subscribed = slot.value().frame_types();
   return std::any_of(subscribed.begin(), subscribed.end(),
                      [frame_type](const netdev::wire::FrameType& t) { return t == frame_type; });
 }

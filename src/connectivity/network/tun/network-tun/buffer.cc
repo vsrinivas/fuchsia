@@ -10,7 +10,7 @@
 namespace network {
 namespace tun {
 
-zx::status<fbl::Span<uint8_t>> VmoStore::GetMappedVmo(uint8_t id) {
+zx::status<cpp20::span<uint8_t>> VmoStore::GetMappedVmo(uint8_t id) {
   auto* stored_vmo = store_.GetVmo(id);
   if (!stored_vmo) {
     return zx::error(ZX_ERR_NOT_FOUND);
@@ -112,8 +112,8 @@ zx::status<size_t> Buffer::CopyFrom(Buffer& other) {
   uint64_t offset_me = 0;
   uint64_t offset_other = 0;
 
-  fbl::Span parts_other = other.parts();
-  fbl::Span parts_me = parts();
+  cpp20::span parts_other = other.parts();
+  cpp20::span parts_me = parts();
 
   auto part_me = parts_me.begin();
   for (auto part_o = parts_other.begin(); part_o != parts_other.end();) {
@@ -156,7 +156,7 @@ TxBuffer::TxBuffer(const tx_buffer_t& tx, bool get_meta, VmoStore* vmo_store)
       frame_type_(static_cast<fuchsia_hardware_network::wire::FrameType>(tx.meta.frame_type)) {
   // Enforce the banjo contract.
   ZX_ASSERT(tx.data_count <= MAX_BUFFER_PARTS);
-  for (const buffer_region_t& region : fbl::Span(tx.data_list, tx.data_count)) {
+  for (const buffer_region_t& region : cpp20::span(tx.data_list, tx.data_count)) {
     PushPart(BufferPart{
         .buffer_id = tx.id,
         .region = region,

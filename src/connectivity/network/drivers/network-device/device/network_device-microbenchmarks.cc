@@ -59,7 +59,7 @@ class FakeDeviceImpl : public ddk::NetworkPortProtocol<FakeDeviceImpl>,
     perftest_state_->NextStep();
     std::array<tx_result_t, kDepth> result;
     auto iter = result.begin();
-    for (auto& buff : fbl::Span(buf_list, buf_count)) {
+    for (auto& buff : cpp20::span(buf_list, buf_count)) {
       *iter++ = {
           .id = buff.id,
           .status = ZX_OK,
@@ -78,7 +78,7 @@ class FakeDeviceImpl : public ddk::NetworkPortProtocol<FakeDeviceImpl>,
     std::array<rx_buffer_part_t, kDepth> parts;
     auto result_iter = result.begin();
     auto part_iter = parts.begin();
-    for (auto& buff : fbl::Span(buf_list, buf_count)) {
+    for (auto& buff : cpp20::span(buf_list, buf_count)) {
       auto& part = *part_iter++;
       part = {
           .id = buff.id,

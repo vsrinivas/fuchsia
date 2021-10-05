@@ -6,16 +6,15 @@
 #define SRC_CONNECTIVITY_WLAN_LIB_COMMON_CPP_INCLUDE_WLAN_COMMON_PHY_H_
 
 #include <fuchsia/hardware/wlanphyimpl/c/banjo.h>
+#include <lib/stdcompat/span.h>
 
 #include <array>
 #include <string>
 
-#include <fbl/span.h>
-
 namespace wlan {
 namespace common {
 
-std::string Alpha2ToStr(fbl::Span<const uint8_t> alpha2);
+std::string Alpha2ToStr(cpp20::span<const uint8_t> alpha2);
 
 }  // namespace common
 }  // namespace wlan

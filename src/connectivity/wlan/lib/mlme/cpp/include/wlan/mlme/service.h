@@ -9,9 +9,9 @@
 #include <fuchsia/wlan/mlme/cpp/fidl.h>
 #include <lib/fidl/cpp/decoder.h>
 #include <lib/fidl/cpp/message.h>
+#include <lib/stdcompat/span.h>
 #include <zircon/fidl.h>
 
-#include <fbl/span.h>
 #include <wlan/common/buffer_reader.h>
 #include <wlan/common/energy.h>
 #include <wlan/common/macaddr.h>
@@ -95,7 +95,8 @@ class MlmeMsg : public BaseMlmeMsg {
   ~MlmeMsg() override = default;
 
   static constexpr uint64_t kNoOrdinal = 0;  // Not applicable or does not matter
-  static std::optional<MlmeMsg<M>> Decode(fbl::Span<uint8_t> span, uint64_t ordinal = kNoOrdinal) {
+  static std::optional<MlmeMsg<M>> Decode(cpp20::span<uint8_t> span,
+                                          uint64_t ordinal = kNoOrdinal) {
     BufferReader reader(span);
     auto h = reader.Read<fidl_message_header_t>();
     if (h == nullptr) {
@@ -153,8 +154,8 @@ zx_status_t SendDeauthConfirm(DeviceInterface* device, const common::MacAddr& pe
 zx_status_t SendDeauthIndication(DeviceInterface* device, const common::MacAddr& peer_sta,
                                  ::fuchsia::wlan::ieee80211::ReasonCode code);
 zx_status_t SendAssocIndication(DeviceInterface* device, const common::MacAddr& peer_sta,
-                                uint16_t listen_interval, fbl::Span<const uint8_t> ssid,
-                                std::optional<fbl::Span<const uint8_t>> rsn_body);
+                                uint16_t listen_interval, cpp20::span<const uint8_t> ssid,
+                                std::optional<cpp20::span<const uint8_t>> rsn_body);
 zx_status_t SendDisassociateIndication(DeviceInterface* device, const common::MacAddr& peer_sta,
                                        ::fuchsia::wlan::ieee80211::ReasonCode code);
 
