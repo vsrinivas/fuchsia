@@ -39,6 +39,8 @@ Options:
       This file lists all source files needed for this crate.
       [default: this is inferred from --emit=dep-info=FILE]
 
+  All other options before -- are forwarded to rewrapper.
+
 If the rust-command contains --remote-inputs=..., those will be interpreted
 as extra --inputs to upload, and removed from the command prior to local and
 remote execution.
@@ -56,6 +58,7 @@ local_only=0
 dry_run=0
 verbose=0
 log=0
+rewrapper_options=()
 
 # Extract script options before --
 for opt
@@ -87,7 +90,8 @@ do
     --depfile) prev_opt=depfile ;;
     # stop option processing
     --) shift; break ;;
-    *) echo "Unknown option: $opt"; usage; exit 1 ;;
+    # Forward all other options to rewrapper
+    *) rewrapper_options+=("$opt") ;;
   esac
   shift
 done
@@ -555,7 +559,9 @@ remote_rustc_command=(
   "$script_dir"/fuchsia-rbe-action.sh
   --exec_root="$project_root"
   --inputs="$remote_inputs_joined"
-  --output_files="$outputs_joined" --
+  --output_files="$outputs_joined"
+  "${rewrapper_options[@]}"
+  --
   "${log_wrapper[@]}"
   "${rustc_command[@]}"
 )
