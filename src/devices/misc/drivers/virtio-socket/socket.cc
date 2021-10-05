@@ -23,6 +23,7 @@
 
 #include <fbl/algorithm.h>
 #include <fbl/alloc_checker.h>
+#include <fbl/array.h>
 #include <fbl/auto_lock.h>
 #include <pretty/hexdump.h>
 #include <virtio/virtio.h>
@@ -1111,16 +1112,16 @@ zx_status_t SocketDevice::Connection::VmoWalker::Set(zx::bti& bti, zx::vmo vmo, 
   base_addr_ = fbl::round_down(offset, contiguity_);
   // Determine an extended range to take into account the rounding amount
   uint64_t full_range = fbl::round_up((offset - base_addr_) + len, contiguity_);
-  num_paddr_ = full_range / contiguity_;
+  size_t num_paddr = full_range / contiguity_;
 
   fbl::AllocChecker ac;
-  paddrs_ = new (&ac) zx_paddr_t[num_paddr_];
+  paddrs_ = fbl::MakeArray<zx_paddr_t>(&ac, num_paddr);
   if (!ac.check()) {
     return ZX_ERR_NO_MEMORY;
   }
 
   zx_status_t status = bti.pin(ZX_BTI_PERM_READ | ZX_BTI_COMPRESS, vmo_, base_addr_, full_range,
-                               paddrs_, num_paddr_, &pinned_pages_);
+                               paddrs_.data(), paddrs_.size(), &pinned_pages_);
   if (status != ZX_OK) {
     Release();
   }
@@ -1134,10 +1135,7 @@ void SocketDevice::Connection::VmoWalker::Release() {
   pinned_pages_.reset();
   vmo_.reset();
   final_paddr_ = 0;
-  if (paddrs_) {
-    delete[] paddrs_;
-    paddrs_ = nullptr;
-  }
+  paddrs_.reset();
 }
 
 uint64_t SocketDevice::Connection::VmoWalker::NextChunkLen(uint64_t max) {

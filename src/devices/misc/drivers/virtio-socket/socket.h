@@ -23,6 +23,7 @@
 
 #include <ddktl/device.h>
 #include <ddktl/protocol/empty-protocol.h>
+#include <fbl/array.h>
 #include <fbl/auto_lock.h>
 #include <fbl/function.h>
 #include <fbl/intrusive_double_list.h>
@@ -288,9 +289,8 @@ class SocketDevice : public Device,
       zx::pmt pinned_pages_;
       zx::vmo vmo_;
       uint64_t contiguity_;
-      size_t num_paddr_;
       uint64_t base_addr_;
-      zx_paddr_t* paddrs_;
+      fbl::Array<zx_paddr_t> paddrs_;
 
       uint64_t transfer_offset_;
       uint64_t transfer_length_;
