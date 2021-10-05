@@ -105,6 +105,9 @@ class SimpleAudioStream : public SimpleAudioStreamBase,
   // Public properties.
   bool is_input() const { return SimpleAudioStreamProtocol::is_input(); }
 
+  // Public for unit testing.
+  inspect::Inspector& inspect() { return inspect_; }
+
   // User facing shutdown method.  Implementers with shutdown requirements
   // should overload ShutdownHook.
   void Shutdown() __TA_EXCLUDES(domain_token());
@@ -120,7 +123,6 @@ class SimpleAudioStream : public SimpleAudioStreamBase,
 
   SimpleAudioStream(zx_device_t* parent, bool is_input);
   virtual ~SimpleAudioStream() = default;
-  inspect::Inspector& inspect() { return inspect_; }
 
   // Hooks for driver implementation.
 
