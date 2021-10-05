@@ -292,7 +292,6 @@ created and destroyed at runtime.
 
 Create a new instance of the `echo-args` component using the following command:
 
-
 ```posix-terminal
 ffx component create /core/ffx-laboratory:echo-args \
     fuchsia-pkg://fuchsia.com/echo-args#meta/echo_args.cm
@@ -306,8 +305,29 @@ This command accepts two parameters:
  **component URL**, indicating how Fuchsia should resolve the component from the
  package server.
 
-Bind to the new instance of the `echo-args` component using the following command:
+A new component instance named `echo-args` now exists in the topology. Show the
+details of the new instance using the following command:
 
+```posix-terminal
+ffx component show echo-args
+```
+
+You should see the following output:
+
+```none {:.devsite-disable-click-to-copy}
+Moniker: /core/ffx-laboratory:echo-args
+URL: fuchsia-pkg://fuchsia.com/echo-args#meta/echo_args.cm
+Type: CML dynamic component
+Component State: Unresolved
+Execution State: Stopped
+```
+
+Notice that the instance has been created, but the component URL has not been
+resolved. Resolution happens when the framework attempts to start the instance.
+
+### Start the component instance
+
+Bind to the new `echo-args` component instance using the following command:
 
 ```posix-terminal
 ffx component bind /core/ffx-laboratory:echo-args
@@ -318,8 +338,9 @@ This command accepts one parameter:
 * `/core/ffx-laboratory:echo-args`: This is the **component moniker**,
   representing the path inside the component topology for the component instance.
 
-The component instance is now running. Open a new terminal window and filter the
-device logs for messages from the example:
+This causes the component instance to start, print a greeting to the log,
+then exit. Open a new terminal window and filter the device logs for messages
+from the example:
 
 ```posix-terminal
 fx log --only echo
@@ -330,6 +351,31 @@ You should see the following output in the device logs:
 ```none {:.devsite-disable-click-to-copy}
 [ffx-laboratory:echo-args][I] Hello, Alice, Bob, Spot!
 ```
+
+### Explore the instance
+
+Show the details of the `echo-args` instance again using the following command:
+
+```posix-terminal
+ffx component show echo-args
+```
+
+You should now see the following output:
+
+```none {:.devsite-disable-click-to-copy}
+Moniker: /core/ffx-laboratory:echo-args
+URL: fuchsia-pkg://fuchsia.com/echo-args#meta/echo_args.cm
+Type: CML dynamic component
+Component State: Resolved
+Incoming Capabilities (1):
+  fuchsia.logger.LogSink
+Exposed Capabilities (1):
+  diagnostics
+Execution State: Stopped
+```
+
+The component state has changed to `Resolved` and you can see more details
+about the component's capabilities.
 
 Components have no ambient capabilities to access other parts of the system.
 Every capability a component requires must be explicitly routed to it through
