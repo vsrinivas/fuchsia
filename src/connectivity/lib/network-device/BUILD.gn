@@ -26,8 +26,5 @@ fuchsia_test_package("netdev-client-tests") {
 group("tests") {
   testonly = true
 
-  deps = [
-    ":netdev-client-tests",
-    "rust:tests",
-  ]
+  deps = [ ":netdev-client-tests" ]
 }
