@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 use std::collections::VecDeque;
-use zerocopy::AsBytes;
 
 use super::*;
 
@@ -66,7 +65,7 @@ impl Socket {
     /// # Parameters
     /// - `domain`: The domain of the socket (e.g., `AF_UNIX`).
     pub fn new(domain: SocketDomain, socket_type: SocketType) -> SocketHandle {
-        new_handle(Socket::Unbound(SocketEndpoint::new(domain, socket_type)))
+        new_handle(Socket::Unbound(SocketEndpoint::new(domain, socket_type, None)))
     }
 
     /// Creates a pair of connected sockets.
@@ -75,8 +74,8 @@ impl Socket {
     /// - `domain`: The domain of the socket (e.g., `AF_UNIX`).
     /// - `socket_type`: The type of the socket (e.g., `SOCK_STREAM`).
     pub fn new_pair(domain: SocketDomain, socket_type: SocketType) -> (SocketHandle, SocketHandle) {
-        let left_endpoint = SocketEndpoint::new(domain, socket_type);
-        let right_endpoint = SocketEndpoint::new(domain, socket_type);
+        let left_endpoint = SocketEndpoint::new(domain, socket_type, None);
+        let right_endpoint = SocketEndpoint::new(domain, socket_type, None);
         let (left, right) = SocketConnection::connect(left_endpoint, right_endpoint);
         (new_handle(left), new_handle(right))
     }
@@ -338,17 +337,21 @@ pub enum SocketAddress {
     Unix(FsString),
 }
 
+pub const SA_FAMILY_SIZE: usize = std::mem::size_of::<uapi::__kernel_sa_family_t>();
+
 impl SocketAddress {
     pub fn to_bytes(&self) -> Vec<u8> {
         match self {
             SocketAddress::Unspecified => AF_UNSPEC.to_ne_bytes().to_vec(),
             SocketAddress::Unix(name) => {
                 if name.len() > 0 {
-                    let mut address = sockaddr_un::default();
-                    let length = std::cmp::min(address.sun_path.len() - 1, name.len());
-                    address.sun_family = AF_UNIX;
-                    address.sun_path[..length].copy_from_slice(&name[..length]);
-                    address.as_bytes().to_vec()
+                    let template = sockaddr_un::default();
+                    let path_length = std::cmp::min(template.sun_path.len() - 1, name.len());
+                    let mut bytes = vec![0u8; SA_FAMILY_SIZE + path_length + 1];
+                    bytes[..SA_FAMILY_SIZE].copy_from_slice(&AF_UNIX.to_ne_bytes());
+                    bytes[SA_FAMILY_SIZE..(SA_FAMILY_SIZE + path_length)]
+                        .copy_from_slice(&name[..path_length]);
+                    bytes
                 } else {
                     AF_UNIX.to_ne_bytes().to_vec()
                 }
@@ -413,13 +416,17 @@ impl SocketEndpoint {
     /// Creates a new socket endpoint within the specified socket domain.
     ///
     /// The socket endpoint's address is set to a default value for the specified domain.
-    pub fn new(domain: SocketDomain, socket_type: SocketType) -> SocketEndpointHandle {
+    fn new(
+        domain: SocketDomain,
+        socket_type: SocketType,
+        address: Option<SocketAddress>,
+    ) -> SocketEndpointHandle {
         Arc::new(Mutex::new(SocketEndpoint {
             messages: MessageQueue::new(usize::MAX),
             waiters: WaitQueue::default(),
             domain,
             socket_type,
-            address: None,
+            address,
             readable: true,
             writable: true,
         }))
@@ -552,7 +559,8 @@ impl ListeningSocketEndpoint {
             return error!(EAGAIN);
         }
 
-        let server_endpoint = SocketEndpoint::new(active.domain, active.socket_type);
+        let server_endpoint =
+            SocketEndpoint::new(active.domain, active.socket_type, passive.address.clone());
         let (client, server) =
             SocketConnection::connect(client_endpoint.clone(), server_endpoint.clone());
         queue.sockets.push_back(new_handle(server));

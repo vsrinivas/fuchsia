@@ -68,22 +68,21 @@ fn parse_socket_address(
     user_socket_address: UserAddress,
     address_length: usize,
 ) -> Result<SocketAddress, Errno> {
-    const ADDRESS_FAMILY_SIZE: usize = std::mem::size_of::<uapi::__kernel_sa_family_t>();
-    if address_length < ADDRESS_FAMILY_SIZE {
+    if address_length < SA_FAMILY_SIZE {
         return error!(EINVAL);
     }
 
     let mut address = vec![0u8; address_length];
     task.mm.read_memory(user_socket_address, &mut address)?;
 
-    let mut family_bytes = [0u8; ADDRESS_FAMILY_SIZE];
-    family_bytes[..ADDRESS_FAMILY_SIZE].copy_from_slice(&address[..ADDRESS_FAMILY_SIZE]);
+    let mut family_bytes = [0u8; SA_FAMILY_SIZE];
+    family_bytes[..SA_FAMILY_SIZE].copy_from_slice(&address[..SA_FAMILY_SIZE]);
     let family = uapi::__kernel_sa_family_t::from_ne_bytes(family_bytes);
 
     let address = match family {
         AF_UNIX => {
             let template = sockaddr_un::default();
-            let sun_path = &address[ADDRESS_FAMILY_SIZE..];
+            let sun_path = &address[SA_FAMILY_SIZE..];
             if sun_path.len() > template.sun_path.len() {
                 return error!(EINVAL);
             }
@@ -247,15 +246,15 @@ fn write_socket_address(
     user_address_length: UserRef<socklen_t>,
     address_bytes: &[u8],
 ) -> Result<(), Errno> {
-    let mut address_length = 0;
-    task.mm.read_object(user_address_length, &mut address_length)?;
-    if address_length > i32::MAX as socklen_t {
+    let mut capacity = 0;
+    task.mm.read_object(user_address_length, &mut capacity)?;
+    if capacity > i32::MAX as socklen_t {
         return error!(EINVAL);
     }
-    let byte_count = std::cmp::min(address_bytes.len(), address_length as usize);
-    task.mm.write_memory(user_socket_address, &address_bytes[..byte_count])?;
-    let len = address_bytes.len() as socklen_t;
-    task.mm.write_object(user_address_length, &len)?;
+    let length = address_bytes.len() as socklen_t;
+    let actual = std::cmp::min(length, capacity) as usize;
+    task.mm.write_memory(user_socket_address, &address_bytes[..actual])?;
+    task.mm.write_object(user_address_length, &length)?;
     Ok(())
 }
 
