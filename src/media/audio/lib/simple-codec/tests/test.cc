@@ -57,8 +57,7 @@ struct TestCodec : public SimpleCodecServer {
 TEST_F(SimpleCodecTest, ChannelConnection) {
   auto fake_parent = MockDevice::FakeRootParent();
 
-  auto owned = SimpleCodecServer::Create<TestCodec>(fake_parent.get());
-  [[maybe_unused]] auto unused_raw_pointer = owned.release();  // codec release managed by the DDK.
+  ASSERT_OK(SimpleCodecServer::CreateAndAddToDdk<TestCodec>(fake_parent.get()));
   auto* child_dev = fake_parent->GetLatestChild();
   ASSERT_NOT_NULL(child_dev);
   auto codec = child_dev->GetDeviceContext<TestCodec>();
@@ -76,8 +75,7 @@ TEST_F(SimpleCodecTest, ChannelConnection) {
 TEST_F(SimpleCodecTest, GainState) {
   auto fake_parent = MockDevice::FakeRootParent();
 
-  auto owned = SimpleCodecServer::Create<TestCodec>(fake_parent.get());
-  [[maybe_unused]] auto unused_raw_pointer = owned.release();  // codec release managed by the DDK.
+  ASSERT_OK(SimpleCodecServer::CreateAndAddToDdk<TestCodec>(fake_parent.get()));
   auto* child_dev = fake_parent->GetLatestChild();
   ASSERT_NOT_NULL(child_dev);
   auto codec = child_dev->GetDeviceContext<TestCodec>();
@@ -119,8 +117,7 @@ TEST_F(SimpleCodecTest, GainState) {
 TEST_F(SimpleCodecTest, SetDaiFormat) {
   auto fake_parent = MockDevice::FakeRootParent();
 
-  auto owned = SimpleCodecServer::Create<TestCodec>(fake_parent.get());
-  [[maybe_unused]] auto unused_raw_pointer = owned.release();  // codec release managed by the DDK.
+  ASSERT_OK(SimpleCodecServer::CreateAndAddToDdk<TestCodec>(fake_parent.get()));
   auto* child_dev = fake_parent->GetLatestChild();
   ASSERT_NOT_NULL(child_dev);
   auto codec = child_dev->GetDeviceContext<TestCodec>();
@@ -137,8 +134,7 @@ TEST_F(SimpleCodecTest, SetDaiFormat) {
 TEST_F(SimpleCodecTest, PlugState) {
   auto fake_parent = MockDevice::FakeRootParent();
 
-  auto owned = SimpleCodecServer::Create<TestCodec>(fake_parent.get());
-  [[maybe_unused]] auto unused_raw_pointer = owned.release();  // codec release managed by the DDK.
+  ASSERT_OK(SimpleCodecServer::CreateAndAddToDdk<TestCodec>(fake_parent.get()));
   auto* child_dev = fake_parent->GetLatestChild();
   ASSERT_NOT_NULL(child_dev);
   auto codec = child_dev->GetDeviceContext<TestCodec>();
@@ -165,8 +161,7 @@ TEST_F(SimpleCodecTest, PlugState) {
 TEST_F(SimpleCodecTest, Inspect) {
   auto fake_parent = MockDevice::FakeRootParent();
 
-  auto owned = SimpleCodecServer::Create<TestCodec>(fake_parent.get());
-  [[maybe_unused]] auto unused_raw_pointer = owned.release();  // codec release managed by the DDK.
+  ASSERT_OK(SimpleCodecServer::CreateAndAddToDdk<TestCodec>(fake_parent.get()));
   auto* child_dev = fake_parent->GetLatestChild();
   ASSERT_NOT_NULL(child_dev);
   auto codec = child_dev->GetDeviceContext<TestCodec>();
@@ -203,8 +198,7 @@ TEST_F(SimpleCodecTest, InspectNoUniqueId) {
   };
   auto fake_parent = MockDevice::FakeRootParent();
 
-  auto owned = SimpleCodecServer::Create<TestCodecNoUniqueId>(fake_parent.get());
-  [[maybe_unused]] auto unused_raw_pointer = owned.release();  // codec release managed by the DDK.
+  SimpleCodecServer::CreateAndAddToDdk<TestCodecNoUniqueId>(fake_parent.get());
   auto* child_dev = fake_parent->GetLatestChild();
   ASSERT_NOT_NULL(child_dev);
   auto codec = child_dev->GetDeviceContext<TestCodec>();
@@ -234,8 +228,7 @@ TEST_F(SimpleCodecTest, InspectNoUniqueId) {
 TEST_F(SimpleCodecTest, MultipleClients) {
   auto fake_parent = MockDevice::FakeRootParent();
 
-  auto owned = SimpleCodecServer::Create<TestCodec>(fake_parent.get());
-  [[maybe_unused]] auto unused_raw_pointer = owned.release();  // codec release managed by the DDK.
+  ASSERT_OK(SimpleCodecServer::CreateAndAddToDdk<TestCodec>(fake_parent.get()));
   auto* child_dev = fake_parent->GetLatestChild();
   ASSERT_NOT_NULL(child_dev);
   auto codec = child_dev->GetDeviceContext<TestCodec>();
@@ -296,8 +289,7 @@ TEST_F(SimpleCodecTest, MultipleClients) {
 TEST_F(SimpleCodecTest, MoveClient) {
   auto fake_parent = MockDevice::FakeRootParent();
 
-  auto owned = SimpleCodecServer::Create<TestCodec>(fake_parent.get());
-  [[maybe_unused]] auto unused_raw_pointer = owned.release();  // codec release managed by the DDK.
+  ASSERT_OK(SimpleCodecServer::CreateAndAddToDdk<TestCodec>(fake_parent.get()));
   auto* child_dev = fake_parent->GetLatestChild();
   ASSERT_NOT_NULL(child_dev);
   auto codec = child_dev->GetDeviceContext<TestCodec>();
@@ -326,8 +318,7 @@ TEST_F(SimpleCodecTest, MoveClient) {
 TEST_F(SimpleCodecTest, CloseChannel) {
   auto fake_parent = MockDevice::FakeRootParent();
 
-  auto owned = SimpleCodecServer::Create<TestCodec>(fake_parent.get());
-  [[maybe_unused]] auto unused_raw_pointer = owned.release();  // codec release managed by the DDK.
+  ASSERT_OK(SimpleCodecServer::CreateAndAddToDdk<TestCodec>(fake_parent.get()));
   auto* child_dev = fake_parent->GetLatestChild();
   ASSERT_NOT_NULL(child_dev);
   auto codec = child_dev->GetDeviceContext<TestCodec>();
@@ -359,8 +350,7 @@ TEST_F(SimpleCodecTest, CloseChannel) {
 TEST_F(SimpleCodecTest, RebindClient) {
   auto fake_parent = MockDevice::FakeRootParent();
 
-  auto owned = SimpleCodecServer::Create<TestCodec>(fake_parent.get());
-  [[maybe_unused]] auto unused_raw_pointer = owned.release();  // codec release managed by the DDK.
+  ASSERT_OK(SimpleCodecServer::CreateAndAddToDdk<TestCodec>(fake_parent.get()));
   auto* child_dev = fake_parent->GetLatestChild();
   ASSERT_NOT_NULL(child_dev);
   auto codec = child_dev->GetDeviceContext<TestCodec>();
@@ -401,8 +391,7 @@ TEST_F(SimpleCodecTest, MoveClientWithDispatcherProvided) {
 
   auto fake_parent = MockDevice::FakeRootParent();
 
-  auto owned = SimpleCodecServer::Create<TestCodec>(fake_parent.get());
-  [[maybe_unused]] auto unused_raw_pointer = owned.release();  // codec release managed by the DDK.
+  ASSERT_OK(SimpleCodecServer::CreateAndAddToDdk<TestCodec>(fake_parent.get()));
   auto* child_dev = fake_parent->GetLatestChild();
   ASSERT_NOT_NULL(child_dev);
   auto codec = child_dev->GetDeviceContext<TestCodec>();

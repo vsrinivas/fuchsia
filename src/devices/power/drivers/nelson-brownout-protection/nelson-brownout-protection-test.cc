@@ -90,8 +90,7 @@ TEST(NelsonBrownoutProtectionTest, Test) {
 
   async::Loop loop(&kAsyncLoopConfigNeverAttachToThread);
 
-  auto owned = audio::SimpleCodecServer::Create<FakeCodec>(fake_parent.get());
-  [[maybe_unused]] auto unused_raw_pointer = owned.release();  // codec release managed by the DDK.
+  ASSERT_OK(audio::SimpleCodecServer::CreateAndAddToDdk<FakeCodec>(fake_parent.get()));
   auto* child_dev = fake_parent->GetLatestChild();
   ASSERT_NOT_NULL(child_dev);
   auto codec = child_dev->GetDeviceContext<FakeCodec>();

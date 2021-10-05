@@ -492,11 +492,7 @@ zx_status_t tas27xx_bind(void* ctx, zx_device_t* parent) {
     return ZX_ERR_NOT_SUPPORTED;
   }
 
-  auto dev = SimpleCodecServer::Create<Tas27xx>(parent, i2c, gpio, false, false);
-
-  // devmgr is now in charge of the memory for dev.
-  dev.release();
-  return ZX_OK;
+  return SimpleCodecServer::CreateAndAddToDdk<Tas27xx>(parent, i2c, gpio, false, false);
 }
 
 static zx_driver_ops_t driver_ops = []() {

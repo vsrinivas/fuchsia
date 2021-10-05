@@ -196,8 +196,7 @@ struct AmlG12I2sOutTest : public AmlG12TdmStream {
 TEST(AmlG12Tdm, InitializeI2sOut) {
   auto fake_parent = MockDevice::FakeRootParent();
 
-  auto owned = SimpleCodecServer::Create<CodecTest>(fake_parent.get());
-  [[maybe_unused]] auto unused_raw_pointer = owned.release();  // codec release managed by the DDK.
+  ASSERT_OK(SimpleCodecServer::CreateAndAddToDdk<CodecTest>(fake_parent.get()));
   auto* child_dev = fake_parent->GetLatestChild();
   ASSERT_NOT_NULL(child_dev);
   auto codec = child_dev->GetDeviceContext<CodecTest>();
@@ -256,8 +255,7 @@ struct AmlG12PcmOutTest : public AmlG12I2sOutTest {
 TEST(AmlG12Tdm, InitializePcmOut) {
   auto fake_parent = MockDevice::FakeRootParent();
 
-  auto owned = SimpleCodecServer::Create<CodecTest>(fake_parent.get());
-  [[maybe_unused]] auto unused_raw_pointer = owned.release();  // codec release managed by the DDK.
+  ASSERT_OK(SimpleCodecServer::CreateAndAddToDdk<CodecTest>(fake_parent.get()));
   auto* child_dev = fake_parent->GetLatestChild();
   ASSERT_NOT_NULL(child_dev);
   auto codec = child_dev->GetDeviceContext<CodecTest>();
@@ -314,8 +312,7 @@ struct AmlG12LjtOutTest : public AmlG12I2sOutTest {
 TEST(AmlG12Tdm, InitializeLeftJustifiedOut) {
   auto fake_parent = MockDevice::FakeRootParent();
 
-  auto owned = SimpleCodecServer::Create<CodecTest>(fake_parent.get());
-  [[maybe_unused]] auto unused_raw_pointer = owned.release();  // codec release managed by the DDK.
+  ASSERT_OK(SimpleCodecServer::CreateAndAddToDdk<CodecTest>(fake_parent.get()));
   auto* child_dev = fake_parent->GetLatestChild();
   ASSERT_NOT_NULL(child_dev);
   auto codec = child_dev->GetDeviceContext<CodecTest>();
@@ -371,8 +368,7 @@ struct AmlG12Tdm1OutTest : public AmlG12I2sOutTest {
 TEST(AmlG12Tdm, InitializeTdm1Out) {
   auto fake_parent = MockDevice::FakeRootParent();
 
-  auto owned = SimpleCodecServer::Create<CodecTest>(fake_parent.get());
-  [[maybe_unused]] auto unused_raw_pointer = owned.release();  // codec release managed by the DDK.
+  ASSERT_OK(SimpleCodecServer::CreateAndAddToDdk<CodecTest>(fake_parent.get()));
   auto* child_dev = fake_parent->GetLatestChild();
   ASSERT_NOT_NULL(child_dev);
   auto codec = child_dev->GetDeviceContext<CodecTest>();
@@ -414,17 +410,13 @@ TEST(AmlG12Tdm, InitializeTdm1Out) {
 TEST(AmlG12Tdm, I2sOutCodecsStartedAndMuted) {
   auto fake_parent = MockDevice::FakeRootParent();
 
-  auto owned1 = SimpleCodecServer::Create<CodecTest>(fake_parent.get());
-  [[maybe_unused]] auto unused_raw_pointer1 =
-      owned1.release();  // codec release managed by the DDK.
+  ASSERT_OK(SimpleCodecServer::CreateAndAddToDdk<CodecTest>(fake_parent.get()));
   auto* child_dev1 = fake_parent->GetLatestChild();
   ASSERT_NOT_NULL(child_dev1);
   auto codec1 = child_dev1->GetDeviceContext<CodecTest>();
   auto codec1_proto = codec1->GetProto();
 
-  auto owned2 = SimpleCodecServer::Create<CodecTest>(fake_parent.get());
-  [[maybe_unused]] auto unused_raw_pointer2 =
-      owned2.release();  // codec release managed by the DDK.
+  ASSERT_OK(SimpleCodecServer::CreateAndAddToDdk<CodecTest>(fake_parent.get()));
   auto* child_dev2 = fake_parent->GetLatestChild();
   ASSERT_NOT_NULL(child_dev2);
   auto codec2 = child_dev2->GetDeviceContext<CodecTest>();
@@ -489,17 +481,13 @@ TEST(AmlG12Tdm, I2sOutCodecsStartedAndMuted) {
 TEST(AmlG12Tdm, I2sOutCodecsTurnOnDelay) {
   auto fake_parent = MockDevice::FakeRootParent();
 
-  auto owned1 = SimpleCodecServer::Create<CodecTest>(fake_parent.get());
-  [[maybe_unused]] auto unused_raw_pointer1 =
-      owned1.release();  // codec release managed by the DDK.
+  ASSERT_OK(SimpleCodecServer::CreateAndAddToDdk<CodecTest>(fake_parent.get()));
   auto* child_dev1 = fake_parent->GetLatestChild();
   ASSERT_NOT_NULL(child_dev1);
   auto codec1 = child_dev1->GetDeviceContext<CodecTest>();
   auto codec1_proto = codec1->GetProto();
 
-  auto owned2 = SimpleCodecServer::Create<CodecTest>(fake_parent.get());
-  [[maybe_unused]] auto unused_raw_pointer2 =
-      owned2.release();  // codec release managed by the DDK.
+  ASSERT_OK(SimpleCodecServer::CreateAndAddToDdk<CodecTest>(fake_parent.get()));
   auto* child_dev2 = fake_parent->GetLatestChild();
   ASSERT_NOT_NULL(child_dev2);
   auto codec2 = child_dev2->GetDeviceContext<CodecTest>();
@@ -553,17 +541,13 @@ TEST(AmlG12Tdm, I2sOutCodecsTurnOnDelay) {
 TEST(AmlG12Tdm, I2sOutSetGainState) {
   auto fake_parent = MockDevice::FakeRootParent();
 
-  auto owned1 = SimpleCodecServer::Create<CodecTest>(fake_parent.get());
-  [[maybe_unused]] auto unused_raw_pointer1 =
-      owned1.release();  // codec release managed by the DDK.
+  ASSERT_OK(SimpleCodecServer::CreateAndAddToDdk<CodecTest>(fake_parent.get()));
   auto* child_dev1 = fake_parent->GetLatestChild();
   ASSERT_NOT_NULL(child_dev1);
   auto codec1 = child_dev1->GetDeviceContext<CodecTest>();
   auto codec1_proto = codec1->GetProto();
 
-  auto owned2 = SimpleCodecServer::Create<CodecTest>(fake_parent.get());
-  [[maybe_unused]] auto unused_raw_pointer2 =
-      owned2.release();  // codec release managed by the DDK.
+  ASSERT_OK(SimpleCodecServer::CreateAndAddToDdk<CodecTest>(fake_parent.get()));
   auto* child_dev2 = fake_parent->GetLatestChild();
   ASSERT_NOT_NULL(child_dev2);
   auto codec2 = child_dev2->GetDeviceContext<CodecTest>();
@@ -734,17 +718,13 @@ TEST(AmlG12Tdm, I2sOutOneCodecCantAgc) {
 
   auto fake_parent = MockDevice::FakeRootParent();
 
-  auto owned1 = SimpleCodecServer::Create<CodecTest>(fake_parent.get());
-  [[maybe_unused]] auto unused_raw_pointer1 =
-      owned1.release();  // codec release managed by the DDK.
+  ASSERT_OK(SimpleCodecServer::CreateAndAddToDdk<CodecTest>(fake_parent.get()));
   auto* child_dev1 = fake_parent->GetLatestChild();
   ASSERT_NOT_NULL(child_dev1);
   auto codec1 = child_dev1->GetDeviceContext<CodecTest>();
   auto codec1_proto = codec1->GetProto();
 
-  auto owned2 = SimpleCodecServer::Create<CodecCantAgcTest>(fake_parent.get());
-  [[maybe_unused]] auto unused_raw_pointer2 =
-      owned2.release();  // codec release managed by the DDK.
+  ASSERT_OK(SimpleCodecServer::CreateAndAddToDdk<CodecCantAgcTest>(fake_parent.get()));
   auto* child_dev2 = fake_parent->GetLatestChild();
   ASSERT_NOT_NULL(child_dev2);
   auto codec2 = child_dev2->GetDeviceContext<CodecCantAgcTest>();
@@ -802,17 +782,13 @@ TEST(AmlG12Tdm, I2sOutOneCodecCantMute) {
 
   auto fake_parent = MockDevice::FakeRootParent();
 
-  auto owned1 = SimpleCodecServer::Create<CodecTest>(fake_parent.get());
-  [[maybe_unused]] auto unused_raw_pointer1 =
-      owned1.release();  // codec release managed by the DDK.
+  ASSERT_OK(SimpleCodecServer::CreateAndAddToDdk<CodecTest>(fake_parent.get()));
   auto* child_dev1 = fake_parent->GetLatestChild();
   ASSERT_NOT_NULL(child_dev1);
   auto codec1 = child_dev1->GetDeviceContext<CodecTest>();
   auto codec1_proto = codec1->GetProto();
 
-  auto owned2 = SimpleCodecServer::Create<CodecCantMuteTest>(fake_parent.get());
-  [[maybe_unused]] auto unused_raw_pointer2 =
-      owned2.release();  // codec release managed by the DDK.
+  ASSERT_OK(SimpleCodecServer::CreateAndAddToDdk<CodecCantMuteTest>(fake_parent.get()));
   auto* child_dev2 = fake_parent->GetLatestChild();
   ASSERT_NOT_NULL(child_dev2);
   auto codec2 = child_dev2->GetDeviceContext<CodecCantMuteTest>();
@@ -860,25 +836,19 @@ TEST(AmlG12Tdm, I2sOutCodecsStop) {
   // Setup a system with 3 codecs.
   auto fake_parent = MockDevice::FakeRootParent();
 
-  auto owned1 = SimpleCodecServer::Create<CodecTest>(fake_parent.get());
-  [[maybe_unused]] auto unused_raw_pointer1 =
-      owned1.release();  // codec release managed by the DDK.
+  ASSERT_OK(SimpleCodecServer::CreateAndAddToDdk<CodecTest>(fake_parent.get()));
   auto* child_dev1 = fake_parent->GetLatestChild();
   ASSERT_NOT_NULL(child_dev1);
   auto codec1 = child_dev1->GetDeviceContext<CodecTest>();
   auto codec1_proto = codec1->GetProto();
 
-  auto owned2 = SimpleCodecServer::Create<CodecTest>(fake_parent.get());
-  [[maybe_unused]] auto unused_raw_pointer2 =
-      owned2.release();  // codec release managed by the DDK.
+  ASSERT_OK(SimpleCodecServer::CreateAndAddToDdk<CodecTest>(fake_parent.get()));
   auto* child_dev2 = fake_parent->GetLatestChild();
   ASSERT_NOT_NULL(child_dev2);
   auto codec2 = child_dev2->GetDeviceContext<CodecTest>();
   auto codec2_proto = codec2->GetProto();
 
-  auto owned3 = SimpleCodecServer::Create<CodecTest>(fake_parent.get());
-  [[maybe_unused]] auto unused_raw_pointer3 =
-      owned3.release();  // codec release managed by the DDK.
+  ASSERT_OK(SimpleCodecServer::CreateAndAddToDdk<CodecTest>(fake_parent.get()));
   auto* child_dev3 = fake_parent->GetLatestChild();
   auto codec3 = child_dev3->GetDeviceContext<CodecTest>();
   auto codec3_proto = codec3->GetProto();
@@ -949,25 +919,19 @@ TEST(AmlG12Tdm, I2sOutCodecsChannelsActive) {
   // Setup a system with 3 codecs.
   auto fake_parent = MockDevice::FakeRootParent();
 
-  auto owned1 = SimpleCodecServer::Create<CodecTest>(fake_parent.get());
-  [[maybe_unused]] auto unused_raw_pointer1 =
-      owned1.release();  // codec release managed by the DDK.
+  ASSERT_OK(SimpleCodecServer::CreateAndAddToDdk<CodecTest>(fake_parent.get()));
   auto* child_dev1 = fake_parent->GetLatestChild();
   ASSERT_NOT_NULL(child_dev1);
   auto codec1 = child_dev1->GetDeviceContext<CodecTest>();
   auto codec1_proto = codec1->GetProto();
 
-  auto owned2 = SimpleCodecServer::Create<CodecTest>(fake_parent.get());
-  [[maybe_unused]] auto unused_raw_pointer2 =
-      owned2.release();  // codec release managed by the DDK.
+  ASSERT_OK(SimpleCodecServer::CreateAndAddToDdk<CodecTest>(fake_parent.get()));
   auto* child_dev2 = fake_parent->GetLatestChild();
   ASSERT_NOT_NULL(child_dev2);
   auto codec2 = child_dev2->GetDeviceContext<CodecTest>();
   auto codec2_proto = codec2->GetProto();
 
-  auto owned3 = SimpleCodecServer::Create<CodecTest>(fake_parent.get());
-  [[maybe_unused]] auto unused_raw_pointer3 =
-      owned3.release();  // codec release managed by the DDK.
+  ASSERT_OK(SimpleCodecServer::CreateAndAddToDdk<CodecTest>(fake_parent.get()));
   auto* child_dev3 = fake_parent->GetLatestChild();
   auto codec3 = child_dev3->GetDeviceContext<CodecTest>();
   auto codec3_proto = codec3->GetProto();
@@ -1072,17 +1036,13 @@ TEST(AmlG12Tdm, I2sOutCodecsChannelsActive) {
 TEST(AmlG12Tdm, I2sOutChangeRate96K) {
   auto fake_parent = MockDevice::FakeRootParent();
 
-  auto owned1 = SimpleCodecServer::Create<CodecTest>(fake_parent.get());
-  [[maybe_unused]] auto unused_raw_pointer1 =
-      owned1.release();  // codec release managed by the DDK.
+  ASSERT_OK(SimpleCodecServer::CreateAndAddToDdk<CodecTest>(fake_parent.get()));
   auto* child_dev1 = fake_parent->GetLatestChild();
   ASSERT_NOT_NULL(child_dev1);
   auto codec1 = child_dev1->GetDeviceContext<CodecTest>();
   auto codec1_proto = codec1->GetProto();
 
-  auto owned2 = SimpleCodecServer::Create<CodecTest>(fake_parent.get());
-  [[maybe_unused]] auto unused_raw_pointer2 =
-      owned2.release();  // codec release managed by the DDK.
+  ASSERT_OK(SimpleCodecServer::CreateAndAddToDdk<CodecTest>(fake_parent.get()));
   auto* child_dev2 = fake_parent->GetLatestChild();
   ASSERT_NOT_NULL(child_dev2);
   auto codec2 = child_dev2->GetDeviceContext<CodecTest>();
@@ -1186,8 +1146,7 @@ TEST(AmlG12Tdm, I2sOutChangeRate96K) {
 TEST(AmlG12Tdm, PcmChangeRates) {
   auto fake_parent = MockDevice::FakeRootParent();
 
-  auto owned = SimpleCodecServer::Create<CodecTest>(fake_parent.get());
-  [[maybe_unused]] auto unused_raw_pointer = owned.release();  // codec release managed by the DDK.
+  ASSERT_OK(SimpleCodecServer::CreateAndAddToDdk<CodecTest>(fake_parent.get()));
   auto* child_dev = fake_parent->GetLatestChild();
   ASSERT_NOT_NULL(child_dev);
   auto codec = child_dev->GetDeviceContext<CodecTest>();
@@ -1317,8 +1276,7 @@ TEST(AmlG12Tdm, PcmChangeRates) {
 TEST(AmlG12Tdm, EnableAndMuteChannelsPcm1Channel) {
   auto fake_parent = MockDevice::FakeRootParent();
 
-  auto owned = SimpleCodecServer::Create<CodecTest>(fake_parent.get());
-  [[maybe_unused]] auto unused_raw_pointer = owned.release();  // codec release managed by the DDK.
+  ASSERT_OK(SimpleCodecServer::CreateAndAddToDdk<CodecTest>(fake_parent.get()));
   auto* child_dev = fake_parent->GetLatestChild();
   ASSERT_NOT_NULL(child_dev);
   auto codec = child_dev->GetDeviceContext<CodecTest>();
@@ -1451,8 +1409,7 @@ TEST(AmlG12Tdm, EnableAndMuteChannelsTdm2Lanes) {
     }
   };
 
-  auto owned = SimpleCodecServer::Create<CodecTest>(fake_parent.get());
-  [[maybe_unused]] auto unused_raw_pointer = owned.release();  // codec release managed by the DDK.
+  ASSERT_OK(SimpleCodecServer::CreateAndAddToDdk<CodecTest>(fake_parent.get()));
   auto* child_dev = fake_parent->GetLatestChild();
   ASSERT_NOT_NULL(child_dev);
   auto codec = child_dev->GetDeviceContext<CodecTest>();
@@ -1606,8 +1563,7 @@ TEST(AmlG12Tdm, EnableAndMuteChannelsTdm2Lanes) {
 TEST(AmlG12Tdm, EnableAndMuteChannelsTdm1Lane) {
   auto fake_parent = MockDevice::FakeRootParent();
 
-  auto owned = SimpleCodecServer::Create<CodecTest>(fake_parent.get());
-  [[maybe_unused]] auto unused_raw_pointer = owned.release();  // codec release managed by the DDK.
+  ASSERT_OK(SimpleCodecServer::CreateAndAddToDdk<CodecTest>(fake_parent.get()));
   auto* child_dev = fake_parent->GetLatestChild();
   ASSERT_NOT_NULL(child_dev);
   auto codec = child_dev->GetDeviceContext<CodecTest>();

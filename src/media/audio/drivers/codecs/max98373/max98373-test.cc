@@ -46,15 +46,11 @@ struct Max98373Codec : public Max98373 {
 TEST_F(Max98373Test, GetInfo) {
   std::shared_ptr<MockDevice> fake_parent = MockDevice::FakeRootParent();
   ddk::GpioProtocolClient unused_gpio;
-  auto codec = SimpleCodecServer::Create<Max98373Codec>(mock_i2c_.GetProto(),
-                                                        std::move(unused_gpio), fake_parent.get());
-  ASSERT_NOT_NULL(codec);
-  // TODO(fxbug.dev/82160): SimpleCodecServer::Create should not return a unique_ptr to an object it
-  // does not own.  We release it now, because we don't own it.
-  // Recommended way to get the codec_ptr:
-  // auto codec_ptr = fake_parent.GetLatestChild()->GetDeviceContext<Max98373Codec>();
-  auto codec_ptr = codec.release();
-  auto codec_proto = codec_ptr->GetProto();
+  ASSERT_OK(SimpleCodecServer::CreateAndAddToDdk<Max98373Codec>(
+      mock_i2c_.GetProto(), std::move(unused_gpio), fake_parent.get()));
+  auto* child_dev = fake_parent->GetLatestChild();
+  auto codec = child_dev->GetDeviceContext<Max98373Codec>();
+  auto codec_proto = codec->GetProto();
   SimpleCodecClient client;
   client.SetProtocol(&codec_proto);
 
@@ -86,13 +82,11 @@ TEST_F(Max98373Test, Reset) {
   ddk::MockGpio mock_gpio;
   mock_gpio.ExpectWrite(ZX_OK, 0).ExpectWrite(ZX_OK, 1);  // Reset, set to 0 and then to 1.
   ddk::GpioProtocolClient gpio(mock_gpio.GetProto());
-  auto codec = SimpleCodecServer::Create<Max98373Codec>(mock_i2c_.GetProto(), std::move(gpio),
-                                                        fake_parent.get());
-  ASSERT_NOT_NULL(codec);
-  // TODO(fxbug.dev/82160): SimpleCodecServer::Create should not return a unique_ptr to an object it
-  // does not own.  We release it now, because we don't own it.
-  auto codec_ptr = codec.release();
-  auto codec_proto = codec_ptr->GetProto();
+  ASSERT_OK(SimpleCodecServer::CreateAndAddToDdk<Max98373Codec>(
+      mock_i2c_.GetProto(), std::move(gpio), fake_parent.get()));
+  auto* child_dev = fake_parent->GetLatestChild();
+  auto codec = child_dev->GetDeviceContext<Max98373Codec>();
+  auto codec_proto = codec->GetProto();
   SimpleCodecClient client;
   client.SetProtocol(&codec_proto);
 
@@ -108,11 +102,11 @@ TEST_F(Max98373Test, GoodSetDai) {
   ddk::MockGpio mock_gpio;
   mock_gpio.ExpectWrite(ZX_OK, 0).ExpectWrite(ZX_OK, 1);  // Reset, set to 0 and then to 1.
   ddk::GpioProtocolClient gpio(mock_gpio.GetProto());
-  auto codec = SimpleCodecServer::Create<Max98373Codec>(mock_i2c_.GetProto(), std::move(gpio),
-                                                        fake_parent.get());
-  ASSERT_NOT_NULL(codec);
-  auto codec_ptr = codec.release();
-  auto codec_proto = codec_ptr->GetProto();
+  ASSERT_OK(SimpleCodecServer::CreateAndAddToDdk<Max98373Codec>(
+      mock_i2c_.GetProto(), std::move(gpio), fake_parent.get()));
+  auto* child_dev = fake_parent->GetLatestChild();
+  auto codec = child_dev->GetDeviceContext<Max98373Codec>();
+  auto codec_proto = codec->GetProto();
   SimpleCodecClient client;
   client.SetProtocol(&codec_proto);
 
@@ -206,13 +200,11 @@ TEST_F(Max98373Test, SetGainGood) {
   mock_i2c_.ExpectWriteStop({0x20, 0x3d, 0x40});  // -32dB.
 
   ddk::GpioProtocolClient unused_gpio;
-  auto codec = SimpleCodecServer::Create<Max98373Codec>(mock_i2c_.GetProto(),
-                                                        std::move(unused_gpio), fake_parent.get());
-  ASSERT_NOT_NULL(codec);
-  // TODO(fxbug.dev/82160): SimpleCodecServer::Create should not return a unique_ptr to an object it
-  // does not own.  We release it now, because we don't own it.
-  auto codec_ptr = codec.release();
-  auto codec_proto = codec_ptr->GetProto();
+  ASSERT_OK(SimpleCodecServer::CreateAndAddToDdk<Max98373Codec>(
+      mock_i2c_.GetProto(), std::move(unused_gpio), fake_parent.get()));
+  auto* child_dev = fake_parent->GetLatestChild();
+  auto codec = child_dev->GetDeviceContext<Max98373Codec>();
+  auto codec_proto = codec->GetProto();
   SimpleCodecClient client;
   client.SetProtocol(&codec_proto);
 
@@ -232,13 +224,11 @@ TEST_F(Max98373Test, SetGainOurOfRangeLow) {
   mock_i2c_.ExpectWriteStop({0x20, 0x3d, 0x7f});  // -63.5dB.
 
   ddk::GpioProtocolClient unused_gpio;
-  auto codec = SimpleCodecServer::Create<Max98373Codec>(mock_i2c_.GetProto(),
-                                                        std::move(unused_gpio), fake_parent.get());
-  ASSERT_NOT_NULL(codec);
-  // TODO(fxbug.dev/82160): SimpleCodecServer::Create should not return a unique_ptr to an object it
-  // does not own.  We release it now, because we don't own it.
-  auto codec_ptr = codec.release();
-  auto codec_proto = codec_ptr->GetProto();
+  ASSERT_OK(SimpleCodecServer::CreateAndAddToDdk<Max98373Codec>(
+      mock_i2c_.GetProto(), std::move(unused_gpio), fake_parent.get()));
+  auto* child_dev = fake_parent->GetLatestChild();
+  auto codec = child_dev->GetDeviceContext<Max98373Codec>();
+  auto codec_proto = codec->GetProto();
   SimpleCodecClient client;
   client.SetProtocol(&codec_proto);
 
@@ -258,13 +248,11 @@ TEST_F(Max98373Test, SetGainOurOfRangeHigh) {
   mock_i2c_.ExpectWriteStop({0x20, 0x3d, 0x00});  // 0dB.
 
   ddk::GpioProtocolClient unused_gpio;
-  auto codec = SimpleCodecServer::Create<Max98373Codec>(mock_i2c_.GetProto(),
-                                                        std::move(unused_gpio), fake_parent.get());
-  ASSERT_NOT_NULL(codec);
-  // TODO(fxbug.dev/82160): SimpleCodecServer::Create should not return a unique_ptr to an object it
-  // does not own.  We release it now, because we don't own it.
-  auto codec_ptr = codec.release();
-  auto codec_proto = codec_ptr->GetProto();
+  ASSERT_OK(SimpleCodecServer::CreateAndAddToDdk<Max98373Codec>(
+      mock_i2c_.GetProto(), std::move(unused_gpio), fake_parent.get()));
+  auto* child_dev = fake_parent->GetLatestChild();
+  auto codec = child_dev->GetDeviceContext<Max98373Codec>();
+  auto codec_proto = codec->GetProto();
   SimpleCodecClient client;
   client.SetProtocol(&codec_proto);
 

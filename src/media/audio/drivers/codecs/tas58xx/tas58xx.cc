@@ -182,11 +182,7 @@ zx_status_t Tas58xx::Create(zx_device_t* parent) {
     return ZX_ERR_NO_RESOURCES;
   }
 
-  auto dev = SimpleCodecServer::Create<Tas58xx>(parent, i2c);
-
-  // devmgr is now in charge of the memory for dev.
-  dev.release();
-  return ZX_OK;
+  return SimpleCodecServer::CreateAndAddToDdk<Tas58xx>(parent, i2c);
 }
 
 Info Tas58xx::GetInfo() {

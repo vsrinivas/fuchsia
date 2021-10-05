@@ -17,7 +17,7 @@ namespace audio {
 
 namespace audio_fidl = ::fuchsia::hardware::audio;
 
-zx_status_t SimpleCodecServer::CreateInternal() {
+zx_status_t SimpleCodecServer::CreateAndAddToDdkInternal() {
   simple_codec_ = inspect_.GetRoot().CreateChild("simple_codec");
   state_ = simple_codec_.CreateString("state", "created");
   start_time_ = simple_codec_.CreateInt("start_time", 0);

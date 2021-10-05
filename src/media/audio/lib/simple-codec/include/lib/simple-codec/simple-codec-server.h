@@ -41,18 +41,19 @@ class SimpleCodecServer : public SimpleCodecServerDeviceType,
   // auto codec = SimpleCodecServer::Create<MyCodec>(arg1, arg2, ...);
   //
   template <typename T, typename... ConstructorSignature>
-  static std::unique_ptr<T> Create(ConstructorSignature&&... args) {
+  static zx_status_t CreateAndAddToDdk(ConstructorSignature&&... args) {
     static_assert(std::is_base_of<SimpleCodecServer, T>::value,
                   "Class must derive from SimpleCodecServer!");
 
-    auto ret = std::make_unique<T>(std::forward<ConstructorSignature>(args)...);
+    auto dev = std::make_unique<T>(std::forward<ConstructorSignature>(args)...);
 
-    if (ret->CreateInternal() != ZX_OK) {
-      ret->Shutdown();
-      return nullptr;
+    zx_status_t status = dev->CreateAndAddToDdkInternal();
+    if (status != ZX_OK) {
+      dev->Shutdown();
+      return status;
     }
-
-    return ret;
+    dev.release();  // Managed by the DDK.
+    return ZX_OK;
   }
   virtual ~SimpleCodecServer() = default;
   void DdkRelease() {
@@ -118,7 +119,7 @@ class SimpleCodecServer : public SimpleCodecServerDeviceType,
   friend class std::default_delete<SimpleCodecServer>;
   friend class SimpleCodecServerInternal;
 
-  zx_status_t CreateInternal();
+  zx_status_t CreateAndAddToDdkInternal();
 
   DriverIds driver_ids_;
   std::optional<async::Loop> loop_;

@@ -49,9 +49,8 @@ TEST_F(Tas27xxTest, CodecInitGood) {
   ddk::MockGpio mock_fault;
   mock_fault.ExpectGetInterrupt(ZX_OK, ZX_INTERRUPT_MODE_EDGE_LOW, std::move(irq));
 
-  auto owned = SimpleCodecServer::Create<Tas27xxCodec>(fake_parent.get(), mock_i2c.GetProto(),
-                                                       mock_fault.GetProto());
-  [[maybe_unused]] auto unused_raw_pointer = owned.release();  // codec release managed by the DDK.
+  ASSERT_OK(SimpleCodecServer::CreateAndAddToDdk<Tas27xxCodec>(
+      fake_parent.get(), mock_i2c.GetProto(), mock_fault.GetProto()));
 
   mock_i2c.VerifyAndClear();
   mock_fault.VerifyAndClear();
@@ -67,9 +66,8 @@ TEST_F(Tas27xxTest, CodecInitBad) {
   // Error when getting the interrupt.
   mock_fault.ExpectGetInterrupt(ZX_ERR_INTERNAL, ZX_INTERRUPT_MODE_EDGE_LOW, std::move(irq));
 
-  auto owned = SimpleCodecServer::Create<Tas27xxCodec>(fake_parent.get(), mock_i2c.GetProto(),
-                                                       mock_fault.GetProto());
-  [[maybe_unused]] auto unused_raw_pointer = owned.release();  // codec release managed by the DDK.
+  ASSERT_EQ(ZX_ERR_INTERNAL, SimpleCodecServer::CreateAndAddToDdk<Tas27xxCodec>(
+                                 fake_parent.get(), mock_i2c.GetProto(), mock_fault.GetProto()));
 
   mock_i2c.VerifyAndClear();
   mock_fault.VerifyAndClear();
@@ -84,9 +82,8 @@ TEST_F(Tas27xxTest, CodecGetInfo) {
   ddk::MockGpio mock_fault;
   mock_fault.ExpectGetInterrupt(ZX_OK, ZX_INTERRUPT_MODE_EDGE_LOW, std::move(irq));
 
-  auto owned = SimpleCodecServer::Create<Tas27xxCodec>(fake_parent.get(), mock_i2c.GetProto(),
-                                                       mock_fault.GetProto());
-  [[maybe_unused]] auto unused_raw_pointer = owned.release();  // codec release managed by the DDK.
+  ASSERT_OK(SimpleCodecServer::CreateAndAddToDdk<Tas27xxCodec>(
+      fake_parent.get(), mock_i2c.GetProto(), mock_fault.GetProto()));
   auto* child_dev = fake_parent->GetLatestChild();
   ASSERT_NOT_NULL(child_dev);
   auto codec = child_dev->GetDeviceContext<Tas27xxCodec>();
@@ -134,9 +131,8 @@ TEST_F(Tas27xxTest, CodecReset) {
   ddk::MockGpio mock_fault;
   mock_fault.ExpectGetInterrupt(ZX_OK, ZX_INTERRUPT_MODE_EDGE_LOW, std::move(irq));
 
-  auto owned = SimpleCodecServer::Create<Tas27xxCodec>(fake_parent.get(), mock_i2c.GetProto(),
-                                                       mock_fault.GetProto());
-  [[maybe_unused]] auto unused_raw_pointer = owned.release();  // codec release managed by the DDK.
+  ASSERT_OK(SimpleCodecServer::CreateAndAddToDdk<Tas27xxCodec>(
+      fake_parent.get(), mock_i2c.GetProto(), mock_fault.GetProto()));
   auto* child_dev = fake_parent->GetLatestChild();
   ASSERT_NOT_NULL(child_dev);
   auto codec = child_dev->GetDeviceContext<Tas27xxCodec>();
@@ -227,9 +223,8 @@ TEST_F(Tas27xxTest, DISABLED_CodecResetDueToErrorState) {
   ddk::MockGpio mock_fault;
   mock_fault.ExpectGetInterrupt(ZX_OK, ZX_INTERRUPT_MODE_EDGE_LOW, std::move(irq));
 
-  auto owned = SimpleCodecServer::Create<Tas27xxCodec>(fake_parent.get(), mock_i2c.GetProto(),
-                                                       mock_fault.GetProto());
-  [[maybe_unused]] auto unused_raw_pointer = owned.release();  // codec release managed by the DDK.
+  ASSERT_OK(SimpleCodecServer::CreateAndAddToDdk<Tas27xxCodec>(
+      fake_parent.get(), mock_i2c.GetProto(), mock_fault.GetProto()));
   auto* child_dev = fake_parent->GetLatestChild();
   ASSERT_NOT_NULL(child_dev);
   auto codec = child_dev->GetDeviceContext<Tas27xxCodec>();
@@ -313,9 +308,8 @@ TEST_F(Tas27xxTest, ExternalConfig) {
   ddk::MockGpio mock_fault;
   mock_fault.ExpectGetInterrupt(ZX_OK, ZX_INTERRUPT_MODE_EDGE_LOW, std::move(irq));
 
-  auto owned = SimpleCodecServer::Create<Tas27xxCodec>(fake_parent.get(), mock_i2c.GetProto(),
-                                                       mock_fault.GetProto());
-  [[maybe_unused]] auto unused_raw_pointer = owned.release();  // codec release managed by the DDK.
+  ASSERT_OK(SimpleCodecServer::CreateAndAddToDdk<Tas27xxCodec>(
+      fake_parent.get(), mock_i2c.GetProto(), mock_fault.GetProto()));
   auto* child_dev = fake_parent->GetLatestChild();
   ASSERT_NOT_NULL(child_dev);
   auto codec = child_dev->GetDeviceContext<Tas27xxCodec>();
@@ -337,9 +331,8 @@ TEST_F(Tas27xxTest, CodecBridgedMode) {
   ddk::MockGpio mock_fault;
   mock_fault.ExpectGetInterrupt(ZX_OK, ZX_INTERRUPT_MODE_EDGE_LOW, std::move(irq));
 
-  auto owned = SimpleCodecServer::Create<Tas27xxCodec>(fake_parent.get(), mock_i2c.GetProto(),
-                                                       mock_fault.GetProto());
-  [[maybe_unused]] auto unused_raw_pointer = owned.release();  // codec release managed by the DDK.
+  ASSERT_OK(SimpleCodecServer::CreateAndAddToDdk<Tas27xxCodec>(
+      fake_parent.get(), mock_i2c.GetProto(), mock_fault.GetProto()));
   auto* child_dev = fake_parent->GetLatestChild();
   ASSERT_NOT_NULL(child_dev);
   auto codec = child_dev->GetDeviceContext<Tas27xxCodec>();
@@ -365,9 +358,8 @@ TEST_F(Tas27xxTest, CodecDaiFormat) {
   ddk::MockGpio mock_fault;
   mock_fault.ExpectGetInterrupt(ZX_OK, ZX_INTERRUPT_MODE_EDGE_LOW, std::move(irq));
 
-  auto owned = SimpleCodecServer::Create<Tas27xxCodec>(fake_parent.get(), mock_i2c.GetProto(),
-                                                       mock_fault.GetProto());
-  [[maybe_unused]] auto unused_raw_pointer = owned.release();  // codec release managed by the DDK.
+  ASSERT_OK(SimpleCodecServer::CreateAndAddToDdk<Tas27xxCodec>(
+      fake_parent.get(), mock_i2c.GetProto(), mock_fault.GetProto()));
   auto* child_dev = fake_parent->GetLatestChild();
   ASSERT_NOT_NULL(child_dev);
   auto codec = child_dev->GetDeviceContext<Tas27xxCodec>();
@@ -458,9 +450,8 @@ TEST_F(Tas27xxTest, CodecGain) {
   ddk::MockGpio mock_fault;
   mock_fault.ExpectGetInterrupt(ZX_OK, ZX_INTERRUPT_MODE_EDGE_LOW, std::move(irq));
 
-  auto owned = SimpleCodecServer::Create<Tas27xxCodec>(fake_parent.get(), mock_i2c.GetProto(),
-                                                       mock_fault.GetProto());
-  [[maybe_unused]] auto unused_raw_pointer = owned.release();  // codec release managed by the DDK.
+  ASSERT_OK(SimpleCodecServer::CreateAndAddToDdk<Tas27xxCodec>(
+      fake_parent.get(), mock_i2c.GetProto(), mock_fault.GetProto()));
   auto* child_dev = fake_parent->GetLatestChild();
   ASSERT_NOT_NULL(child_dev);
   auto codec = child_dev->GetDeviceContext<Tas27xxCodec>();
