@@ -7,18 +7,19 @@
 #include <fuchsia/hardware/gpio/cpp/banjo-mock.h>
 #include <fuchsia/hardware/power/sensor/cpp/banjo.h>
 #include <lib/async-loop/cpp/loop.h>
-#include <lib/fake_ddk/fake_ddk.h>
 #include <lib/simple-codec/simple-codec-server.h>
 
 #include <optional>
 
 #include <zxtest/zxtest.h>
 
+#include "src/devices/testing/mock-ddk/mock-device.h"
+
 namespace brownout_protection {
 
 class FakeCodec : public audio::SimpleCodecServer {
  public:
-  FakeCodec() : SimpleCodecServer(fake_ddk::kFakeParent) {}
+  FakeCodec(zx_device_t* parent) : SimpleCodecServer(parent) {}
   codec_protocol_t GetProto() { return {&this->codec_protocol_ops_, this}; }
 
   zx_status_t Shutdown() override { return ZX_OK; }
@@ -84,80 +85,19 @@ class FakePowerSensor : public ddk::PowerSensorProtocol<FakePowerSensor, ddk::ba
   std::optional<fidl::ServerBindingRef<fuchsia_hardware_power_sensor::Device>> binding_;
 };
 
-class Bind : public fake_ddk::Bind {
- public:
-  ~Bind() override {
-    // Manually delete in case RemoveDevice() wasn't called.
-    if (device_) {
-      device_->DdkRelease();
-      device_ = nullptr;
-    }
-  }
-
-  zx_status_t DeviceAdd(zx_driver_t* drv, zx_device_t* parent, device_add_args_t* args,
-                        zx_device_t** out) override {
-    if (args->proto_id == ZX_PROTOCOL_CODEC) {
-      // Ignore the codec which will also call device_add().
-      return ZX_OK;
-    }
-
-    device_ = reinterpret_cast<NelsonBrownoutProtection*>(args->ctx);
-    return fake_ddk::Bind::DeviceAdd(drv, parent, args, out);
-  }
-
-  void RemoveDevice() {
-    device_async_remove(fake_ddk::kFakeDevice);
-    if (device_) {
-      device_->DdkRelease();
-      device_ = nullptr;
-    }
-  }
-
- private:
-  NelsonBrownoutProtection* device_ = nullptr;
-};
-
 TEST(NelsonBrownoutProtectionTest, Test) {
+  auto fake_parent = MockDevice::FakeRootParent();
+
   async::Loop loop(&kAsyncLoopConfigNeverAttachToThread);
 
-  std::unique_ptr<FakeCodec> codec = audio::SimpleCodecServer::Create<FakeCodec>();
+  auto owned = audio::SimpleCodecServer::Create<FakeCodec>(fake_parent.get());
+  [[maybe_unused]] auto unused_raw_pointer = owned.release();  // codec release managed by the DDK.
+  auto* child_dev = fake_parent->GetLatestChild();
+  ASSERT_NOT_NULL(child_dev);
+  auto codec = child_dev->GetDeviceContext<FakeCodec>();
   codec->SetGainState({10.0f, false, false});
   FakePowerSensor power_sensor(loop.dispatcher());
   ddk::MockGpio alert_gpio;
-
-  fbl::Array<fake_ddk::FragmentEntry> fragments(new fake_ddk::FragmentEntry[3], 3);
-  fragments[0].name = "codec";
-  fragments[0].protocols.push_back(fake_ddk::ProtocolEntry{
-      .id = ZX_PROTOCOL_CODEC,
-      .proto =
-          {
-              .ops = codec->GetProto().ops,
-              .ctx = codec->GetProto().ctx,
-          },
-  });
-
-  fragments[1].name = "power-sensor";
-  fragments[1].protocols.push_back(fake_ddk::ProtocolEntry{
-      .id = ZX_PROTOCOL_POWER_SENSOR,
-      .proto =
-          {
-              .ops = power_sensor.GetProto()->ops,
-              .ctx = power_sensor.GetProto()->ctx,
-          },
-  });
-
-  fragments[2].name = "alert-gpio";
-  fragments[2].protocols.push_back(fake_ddk::ProtocolEntry{
-      .id = ZX_PROTOCOL_GPIO,
-      .proto =
-          {
-              .ops = alert_gpio.GetProto()->ops,
-              .ctx = alert_gpio.GetProto()->ctx,
-          },
-  });
-
-  Bind bind;
-  bind.SetFragments(std::move(fragments));
 
   zx::interrupt alert_gpio_interrupt;
   ASSERT_OK(zx::interrupt::create(zx::resource(), 0, ZX_INTERRUPT_VIRTUAL, &alert_gpio_interrupt));
@@ -170,7 +110,17 @@ TEST(NelsonBrownoutProtectionTest, Test) {
   }
 
   ASSERT_OK(loop.StartThread());
-  ASSERT_OK(NelsonBrownoutProtection::Create(nullptr, fake_ddk::kFakeParent));
+  fake_parent->AddProtocol(ZX_PROTOCOL_CODEC, codec->GetProto().ops, codec->GetProto().ctx,
+                           "codec");
+  fake_parent->AddProtocol(ZX_PROTOCOL_POWER_SENSOR, power_sensor.GetProto()->ops,
+                           power_sensor.GetProto()->ctx, "power-sensor");
+  fake_parent->AddProtocol(ZX_PROTOCOL_GPIO, alert_gpio.GetProto()->ops, alert_gpio.GetProto()->ctx,
+                           "alert-gpio");
+
+  ASSERT_OK(NelsonBrownoutProtection::Create(nullptr, fake_parent.get()));
+  auto* child_dev2 = fake_parent->GetLatestChild();
+  ASSERT_NOT_NULL(child_dev2);
+  child_dev2->InitOp();
   EXPECT_FALSE(codec->GetGainState().agc_enabled);
 
   power_sensor.set_voltage(10.0f);  // Must be less than 11.5 to stay in the brownout state.
@@ -192,11 +142,6 @@ TEST(NelsonBrownoutProtectionTest, Test) {
   EXPECT_FALSE(codec->GetGainState().muted);
 
   ASSERT_NO_FATAL_FAILURES(alert_gpio.VerifyAndClear());
-  bind.RemoveDevice();
-  EXPECT_TRUE(bind.Ok());
-
-  codec->DdkRelease();
-  __UNUSED auto* _ = codec.release();  // Freed by the previous call.
 }
 
 }  // namespace brownout_protection
