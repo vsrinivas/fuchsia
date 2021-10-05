@@ -605,12 +605,13 @@ impl<B: ByteSlice> ParsablePacket<B, ()> for Ipv6PacketRaw<B> {
         let fixed_hdr = buffer
             .take_obj_front::<FixedHeader>()
             .ok_or_else(debug_err_fn!(ParseError::Format, "too few bytes for header"))?;
-        let pl_len = usize::from(fixed_hdr.payload_len.get());
-        if buffer.len() > pl_len {
-            // get rid of any extra padding that may be at the end of the buffer
-            // unwrapping is safe because of the check above.
-            let _: B = buffer.take_back(buffer.len() - pl_len).unwrap();
-        }
+        let payload_len = fixed_hdr.payload_len.get().into();
+        // Trim the buffer if it exceeds the length specified in the header.
+        let _: Option<B> = buffer.len().checked_sub(payload_len).map(|padding| {
+            buffer.take_back(padding).unwrap_or_else(|| {
+                panic!("buffer.len()={} padding={}", buffer.len(), padding);
+            })
+        });
 
         let mut extension_hdr_context = Ipv6ExtensionHeaderParsingContext::new(fixed_hdr.next_hdr);
 
@@ -641,7 +642,7 @@ impl<B: ByteSlice> ParsablePacket<B, ()> for Ipv6PacketRaw<B> {
             let proto = Ipv6Proto::from(extension_hdr_context.next_header);
             let body = MaybeParsed::new_with_min_len(
                 buffer.into_rest(),
-                pl_len.saturating_sub(extension_hdrs.len()),
+                payload_len.saturating_sub(extension_hdrs.len()),
             );
             Ok((body, proto))
         } else {
