@@ -698,12 +698,15 @@ zx_status_t BlockDevice::MountData(MountOptions* options) {
           device_config_->ReadStringOptionValue(Config::kMinfsResizeExcludedPaths));
       constexpr uint64_t kMinfsResizeRequiredInodes = 4096;
       constexpr uint64_t kMinfsResizeDataSizeLimit = 10223616;  // 9.75 * 1024 * 1024
-      if (zx::status<> status = MaybeResizeMinfs(
-              CloneDeviceChannel(), minfs_max_size, kMinfsResizeRequiredInodes,
-              kMinfsResizeDataSizeLimit, excluded_paths, mounter_->inspect_manager());
-          status.is_error()) {
-        FX_LOGS(ERROR) << "Failed to resize minfs";
-        // Continue on and hope that minfs can be still be mounted.
+      MaybeResizeMinfsResult result =
+          MaybeResizeMinfs(CloneDeviceChannel(), minfs_max_size, kMinfsResizeRequiredInodes,
+                           kMinfsResizeDataSizeLimit, excluded_paths, mounter_->inspect_manager());
+      switch (result) {
+        case MaybeResizeMinfsResult::kMinfsMountable:
+          break;
+        case MaybeResizeMinfsResult::kRebootRequired:
+          // TODO(fxbug.dev/84885): Reboot the device.
+          return ZX_ERR_CANCELED;
       }
     }
     return mounter_->MountData(std::move(block_device), *options);
@@ -786,6 +789,10 @@ zx_status_t BlockDeviceInterface::Add(bool format_on_corruption) {
       }
       if (zx_status_t status = MountFilesystem(); status != ZX_OK) {
         FX_LOGS(ERROR) << "failed to mount filesystem: " << zx_status_get_string(status);
+        if (status == ZX_ERR_CANCELED) {
+          // If mounting was canceled then don't try to format minfs or mount again.
+          return status;
+        }
         if (!format_on_corruption) {
           FX_LOGS(ERROR) << "formatting minfs on this target is disabled";
           return status;

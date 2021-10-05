@@ -5,8 +5,11 @@
 #include "src/storage/fshost/minfs-manipulator.h"
 
 #include <fcntl.h>
+#include <fidl/fuchsia.device/cpp/wire.h>
+#include <fidl/fuchsia.hardware.block.encrypted/cpp/wire.h>
 #include <fidl/fuchsia.hardware.block/cpp/wire.h>
 #include <fidl/fuchsia.io.admin/cpp/wire.h>
+#include <lib/fdio/cpp/caller.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
 #include <lib/fdio/vfs.h>
@@ -51,22 +54,47 @@ zx::status<> FormatMinfs(zx::channel device) {
   return zx::make_status(launch_stdio_sync(/*argc=*/2, argv, handles, ids, /*len=*/1));
 }
 
-zx::status<> CorruptMinfs(zx::channel device, uint32_t device_block_size) {
-  // Overwrite the start of the block device where the minfs magic is located. This will prevent
-  // this instance of minfs from being mounted again.
-  fbl::unique_fd device_fd;
-  if (zx_status_t status = fdio_fd_create(device.release(), device_fd.reset_and_get_address());
-      status != ZX_OK) {
-    return zx::error(status);
+zx::status<> ShredZxcrypt(const zx::unowned_channel& device) {
+  fidl::UnownedClientEnd<fuchsia_device::Controller> controller_client(device);
+  auto x = fidl::WireCall(controller_client).GetTopologicalPath();
+  if (x.status() != ZX_OK) {
+    return zx::error(x.status());
   }
-  if (lseek(device_fd.get(), 0, SEEK_SET) != 0) {
-    return zx::error(ZX_ERR_IO);
+  if (x->result.is_err()) {
+    return zx::error(x->result.err());
   }
-  std::vector<char> zeros(device_block_size, 0);
-  if (!fxl::WriteFileDescriptor(device_fd.get(), zeros.data(), device_block_size)) {
-    return zx::error(ZX_ERR_IO);
+
+  std::filesystem::path path(x->result.response().path.get());
+  // |path| should look like
+  // "/dev/<device-drivers>/block/fvm/<data-partition>/block/zxcrypt/unsealed/block" and the zxcrypt
+  // DeviceManager will be served from the zxcrypt directory.
+  if (path.filename() != "block") {
+    FX_LOGS(ERROR) << "Failed to find zxcrypt in: " << path;
+    return zx::error(ZX_ERR_BAD_STATE);
   }
-  return zx::ok();
+  path = path.parent_path();
+  if (path.filename() != "unsealed") {
+    FX_LOGS(ERROR) << "Failed to find zxcrypt in: " << path;
+    return zx::error(ZX_ERR_BAD_STATE);
+  }
+  path = path.parent_path();
+  if (path.filename() != "zxcrypt") {
+    FX_LOGS(ERROR) << "Failed to find zxcrypt in: " << path;
+    return zx::error(ZX_ERR_BAD_STATE);
+  }
+
+  fbl::unique_fd zxcrypt_fd(open(path.c_str(), O_RDWR));
+  if (!zxcrypt_fd.is_valid()) {
+    return zx::error(ZX_ERR_NOT_SUPPORTED);
+  }
+  fdio_cpp::UnownedFdioCaller zxcrypt_caller(zxcrypt_fd);
+  fidl::UnownedClientEnd<fuchsia_hardware_block_encrypted::DeviceManager> zxcrypt_client(
+      zxcrypt_caller.channel());
+  auto result = fidl::WireCall(zxcrypt_client).Shred();
+  if (result.status() != ZX_OK) {
+    return zx::error(result.status());
+  }
+  return zx::make_status(result->status);
 }
 
 uint64_t EstimateMinfsRequiredSpace(const Copier& copier) {
@@ -122,14 +150,15 @@ std::vector<std::filesystem::path> ParseExcludedPaths(std::string_view excluded_
   return paths;
 }
 
-zx::status<> MaybeResizeMinfs(zx::channel device, uint64_t partition_size_limit,
-                              uint64_t required_inodes, uint64_t data_size_limit,
-                              const std::vector<std::filesystem::path>& excluded_paths,
-                              InspectManager& inspect) {
+MaybeResizeMinfsResult MaybeResizeMinfs(zx::channel device, uint64_t partition_size_limit,
+                                        uint64_t required_inodes, uint64_t data_size_limit,
+                                        const std::vector<std::filesystem::path>& excluded_paths,
+                                        InspectManager& inspect) {
   zx::status<MountedMinfs> minfs = MountedMinfs::Mount(CloneDeviceChannel(device));
   if (minfs.is_error()) {
     FX_LOGS(ERROR) << "Failed to mount minfs: " << minfs.status_string();
-    return minfs.take_error();
+    // Hopefully the caller will have better luck.
+    return MaybeResizeMinfsResult::kMinfsMountable;
   }
 
   // Check if minfs was already resized but failed while writing the data to the new minfs instance.
@@ -139,91 +168,116 @@ zx::status<> MaybeResizeMinfs(zx::channel device, uint64_t partition_size_limit,
   // transient error to cause a device to get wiped.
   if (!previously_failed_while_writing.is_error() && *previously_failed_while_writing) {
     inspect.LogMinfsUpgradeProgress(InspectManager::MinfsUpgradeState::kDetectedFailedUpgrade);
-    FX_LOGS(INFO)
-        << "Minfs was previously resized and failed while writing data, reformatting minfs now";
-    // Unmount the currently mounted minfs and reformat minfs again. Although we lose data it's
-    // safer to start from an empty minfs than to have partially written data and potentially put
-    // components in unknown and untested states.
-    if (zx::status<> status = MountedMinfs::Unmount(*std::move(minfs)); status.is_error()) {
-      FX_LOGS(ERROR) << "Failed to unmount minfs: " << status.status_string();
-      return status;
+    FX_LOGS(INFO) << "Minfs was previously resized and failed while writing data";
+    // Shred zxcrypt then reboot. Although we lose data it's safer to start from scratch than to
+    // have partially written data and potentially put components in unknown and untested states.
+    if (zx::status<> status = ShredZxcrypt(device.borrow()); status.is_error()) {
+      FX_LOGS(ERROR) << "Failed to shred zxcrypt: " << status.status_string();
+      // Reboot to try again.
+      return MaybeResizeMinfsResult::kRebootRequired;
     }
-    // TODO(fxbug.dev/84885): Shred zxcrypt instead.
-    return FormatMinfs(std::move(device));
+    // Technically we could Seal and Format the zxcrypt partition from here which would destroy the
+    // current block |device| and create a new one. The new block device would get picked up by
+    // fshost and formatted with minfs then the system could continue to boot. Rebooting the device
+    // achieves the same thing though and is simpler.
+    return MaybeResizeMinfsResult::kRebootRequired;
   }
 
   auto minfs_info = minfs->GetFilesystemInfo();
   if (minfs_info.is_error()) {
     FX_LOGS(ERROR) << "Failed to get minfs filesystem info: " << minfs_info.status_string();
-    return minfs_info.take_error();
+    // Minfs hasn't been modified. Continue as normal and try again at next reboot.
+    return MaybeResizeMinfsResult::kMinfsMountable;
   }
 
   auto block_device_info = GetBlockDeviceInfo(device.borrow());
   if (block_device_info.is_error()) {
-    return block_device_info.take_error();
+    FX_LOGS(ERROR) << "Failed to get block device info: " << block_device_info.status_string();
+    // Minfs hasn't been modified. Continue as normal and try again at next reboot.
+    return MaybeResizeMinfsResult::kMinfsMountable;
   }
   uint64_t block_device_size = block_device_info->block_size * block_device_info->block_count;
 
-  if (block_device_size <= partition_size_limit && minfs_info->total_nodes == required_inodes) {
-    // Minfs is already sized correctly.
+  bool is_within_partition_size_limit = block_device_size <= partition_size_limit;
+  bool has_correct_inode_count = minfs_info->total_nodes == required_inodes;
+  if (is_within_partition_size_limit && has_correct_inode_count) {
+    FX_LOGS(INFO) << "minfs already has " << required_inodes << " inodes and is only using "
+                  << block_device_size << " bytes of its " << partition_size_limit << " byte limit";
     inspect.LogMinfsUpgradeProgress(InspectManager::MinfsUpgradeState::kSkipped);
-    return zx::ok();
+    // Minfs is already sized correctly. Continue as normal.
+    return MaybeResizeMinfsResult::kMinfsMountable;
+  }
+  if (!has_correct_inode_count) {
+    FX_LOGS(INFO) << "minfs has " << minfs_info->total_nodes << " inodes when it requires exactly "
+                  << required_inodes << " inodes and needs to be resized";
+  }
+  if (!is_within_partition_size_limit) {
+    FX_LOGS(INFO) << "minfs is using " << block_device_size << " bytes of its "
+                  << partition_size_limit << " byte limit and needs to be resized";
   }
 
   // Copy all of minfs into ram.
   inspect.LogMinfsUpgradeProgress(InspectManager::MinfsUpgradeState::kReadOldPartition);
   zx::status<Copier> copier = minfs->ReadFilesystem(excluded_paths);
   if (copier.is_error()) {
-    FX_LOGS(ERROR) << "Failed to read the contents minfs into memory: " << copier.status_string();
-    // Minfs wasn't modified yet. Try again on next boot.
-    return copier.take_error();
+    FX_LOGS(ERROR) << "Failed to read the contents of minfs into memory: "
+                   << copier.status_string();
+    // Minfs hasn't been modified. Continue as normal and try again at next reboot.
+    return MaybeResizeMinfsResult::kMinfsMountable;
   }
-  if (EstimateMinfsRequiredSpace(*copier) > data_size_limit) {
-    FX_LOGS(INFO) << "Too much data, not resizing minfs";
+
+  uint64_t required_space_estimate = EstimateMinfsRequiredSpace(*copier);
+  if (required_space_estimate > data_size_limit) {
+    FX_LOGS(INFO)
+        << "minfs will likely require " << required_space_estimate
+        << " bytes to hold all of the data after resizing which is greater than the limit of "
+        << data_size_limit << " bytes";
     inspect.LogMinfsUpgradeProgress(InspectManager::MinfsUpgradeState::kSkipped);
-    return zx::ok();
+    // Minfs hasn't been modified. Continue as normal and try again at next reboot.
+    return MaybeResizeMinfsResult::kMinfsMountable;
   }
+  FX_LOGS(INFO)
+      << "minfs will likely require " << required_space_estimate
+      << " bytes to hold all of the data after resizing which should fit within the limit of "
+      << data_size_limit << " bytes in the new minfs";
 
   if (zx::status<> status = MountedMinfs::Unmount(*std::move(minfs)); status.is_error()) {
     FX_LOGS(ERROR) << "Failed to unmount minfs: " << status.status_string();
-    // Minfs wasn't modified yet. Try again on next boot.
-    return status;
+    // Minfs hasn't been modified but we don't want 2 minfs instances mounted on the same block
+    // device so recommend a reboot.
+    return MaybeResizeMinfsResult::kRebootRequired;
   }
 
-  inspect.LogMinfsUpgradeProgress(InspectManager::MinfsUpgradeState::kWriteNewPartition);
   // No turning back point.
-  // Corrupt the minfs partition so we won't try and mount it again if the following mkfs fails.
-  if (zx::status<> status = CorruptMinfs(CloneDeviceChannel(device), block_device_info->block_size);
-      status.is_error()) {
-    // All files may be lost.
-    return status;
-  }
+  inspect.LogMinfsUpgradeProgress(InspectManager::MinfsUpgradeState::kWriteNewPartition);
 
   // Recreate minfs. During mkfs, minfs deallocates all fvm slices from the partition before
   // re-allocating which will correctly resize the partition.
   if (zx::status<> status = FormatMinfs(CloneDeviceChannel(device)); status.is_error()) {
     FX_LOGS(ERROR) << "Failed to format minfs: " << status.status_string();
-    // fsck should fail on the next boot and formatting will be attempted again. All files are lost.
-    return status;
+    // fsck should fail on the next boot and formatting will be attempted again provided
+    // format-minfs-on-corruption is set. All files are lost.
+    return MaybeResizeMinfsResult::kRebootRequired;
   }
 
   // Mount the new minfs and copy the files back to it.
   minfs = MountedMinfs::Mount(CloneDeviceChannel(device));
   if (minfs.is_error()) {
     FX_LOGS(ERROR) << "Failed to mount minfs: " << minfs.status_string();
-    // If minfs was corrupt then fsck should fail on next boot and minfs will be reformated again.
-    // All files are lost.
-    return minfs.take_error();
+    // If minfs was corrupt then fsck should fail on next boot and minfs will be reformated provided
+    // format-minfs-on-corruption is set. All files are lost.
+    return MaybeResizeMinfsResult::kRebootRequired;
   }
   if (zx::status<> status = minfs->PopulateFilesystem(*std::move(copier)); status.is_error()) {
     FX_LOGS(ERROR) << "Failed to write data back to minfs: " << status.status_string();
-    // TODO(fxbug.dev/84885): Recover from failed writes.
-    return status;
+    // Triggering a reboot here will land the device back at the top of this function which handles
+    // incomplete writes. All files are lost.
+    return MaybeResizeMinfsResult::kRebootRequired;
   }
+
   inspect.LogMinfsUpgradeProgress(InspectManager::MinfsUpgradeState::kFinished);
   FX_LOGS(INFO) << "Minfs was successfully resized";
-
-  return zx::ok();
+  return MaybeResizeMinfsResult::kMinfsMountable;
 }
 
 MountedMinfs::~MountedMinfs() {

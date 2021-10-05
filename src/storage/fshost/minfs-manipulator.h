@@ -26,6 +26,15 @@ zx::status<fuchsia_hardware_block::wire::BlockInfo> GetBlockDeviceInfo(
 // Parses |excluded_paths| into a list of paths. White space and empty paths are removed.
 std::vector<std::filesystem::path> ParseExcludedPaths(std::string_view excluded_paths);
 
+enum class MaybeResizeMinfsResult {
+  // Minfs was either not resized or successfully resized and can be mounted as it normally would
+  // be.
+  kMinfsMountable,
+  // Minfs was likely corrupted while resizing and the device should be rebooted to trigger a
+  // factory reset.
+  kRebootRequired,
+};
+
 // For a given block |device| formatted with minfs, resizes minfs if it's not the correct size.
 //
 // "correct size" is defined as: the size of the minfs partition is less than or equal to
@@ -35,10 +44,10 @@ std::vector<std::filesystem::path> ParseExcludedPaths(std::string_view excluded_
 // filtering out all of the files and directories that match |excluded_paths|.
 //
 // This method is slow and may destroy files or corrupt minfs. Not tolerant to power interruptions.
-zx::status<> MaybeResizeMinfs(zx::channel device, uint64_t partition_size_limit,
-                              uint64_t required_inodes, uint64_t data_size_limit,
-                              const std::vector<std::filesystem::path>& excluded_paths,
-                              InspectManager& inspect);
+[[nodiscard]] MaybeResizeMinfsResult MaybeResizeMinfs(
+    zx::channel device, uint64_t partition_size_limit, uint64_t required_inodes,
+    uint64_t data_size_limit, const std::vector<std::filesystem::path>& excluded_paths,
+    InspectManager& inspect);
 
 // RAII wrapper around a mounted minfs that unmounts minfs when destroyed.
 class MountedMinfs {
