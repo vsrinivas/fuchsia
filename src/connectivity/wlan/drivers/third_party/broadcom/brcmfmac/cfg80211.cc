@@ -980,7 +980,7 @@ static zx_status_t brcmf_escan_prep(struct brcmf_cfg80211_info* cfg,
         } else {
           BRCMF_DBG(SCAN, "%d: Targeted scan", i);
 #if !defined(NDEBUG)
-          BRCMF_DBG(SCAN, "  ssid:" SSID_FMT_STR, SSID_FMT_BYTES(ssid_le.SSID, ssid_le.SSID_len));
+          BRCMF_DBG(SCAN, "  ssid:" FMT_SSID, FMT_SSID_BYTES(ssid_le.SSID, ssid_le.SSID_len));
 #endif /* !defined(NDEBUG) */
         }
         memcpy(ptr, &ssid_le, sizeof(ssid_le));
@@ -2556,7 +2556,7 @@ static void brcmf_return_scan_result(struct net_device* ndev, uint16_t channel,
   BRCMF_DBG(SCAN, "Returning scan result id: %lu, channel: %d, dbm: %d", result.txn_id, channel,
             result.bss.rssi_dbm);
 #if !defined(NDEBUG)
-  BRCMF_DBG(SCAN, "  ssid: " SSID_FMT_STR, SSID_FMT_VECTOR(ssid));
+  BRCMF_DBG(SCAN, "  ssid: " FMT_SSID, FMT_SSID_VECT(ssid));
 #endif /* !defined(NDEBUG) */
   ndev->scan_num_results++;
   wlanif_impl_ifc_on_scan_result(&ndev->if_proto, &result);
@@ -3118,9 +3118,8 @@ static uint8_t brcmf_cfg80211_start_ap(struct net_device* ndev, const wlanif_sta
   }
 
   BRCMF_DBG(TRACE,
-            "ssid: " SSID_FMT_STR
-            "  beacon period: %d  dtim_period: %d  channel: %d  rsne_len: %zd",
-            SSID_FMT_BYTES(req->ssid.data, req->ssid.len), req->beacon_period, req->dtim_period,
+            "ssid: " FMT_SSID "  beacon period: %d  dtim_period: %d  channel: %d  rsne_len: %zd",
+            FMT_SSID_BYTES(req->ssid.data, req->ssid.len), req->beacon_period, req->dtim_period,
             req->channel, req->rsne_len);
 
   wlan_channel_t channel = {};
@@ -3380,8 +3379,8 @@ void brcmf_if_join_req(net_device* ndev, const wlanif_join_req_t* req) {
   if (!ssid.empty()) {
     BRCMF_IFDBG(WLANIF, ndev, "Join request from SME.");
 #if !defined(NDEBUG)
-    BRCMF_IFDBG(WLANIF, ndev, "  ssid: " SSID_FMT_STR ", bssid: " MAC_FMT_STR ", channel: %u",
-                SSID_FMT_VECTOR(ssid), MAC_FMT_ARGS(sme_bss.bssid), sme_bss.channel.primary);
+    BRCMF_IFDBG(WLANIF, ndev, "  ssid: " FMT_SSID ", bssid: " MAC_FMT_STR ", channel: %u",
+                FMT_SSID_VECT(ssid), MAC_FMT_ARGS(sme_bss.bssid), sme_bss.channel.primary);
 #endif /* !defined(NDEBUG) */
 
     memcpy(&ifp->bss, &sme_bss, sizeof(ifp->bss));
@@ -3690,7 +3689,7 @@ void brcmf_if_start_req(net_device* ndev, const wlanif_start_req_t* req) {
   BRCMF_IFDBG(WLANIF, ndev, "Start AP request from SME. rsne_len: %zu, channel: %u", req->rsne_len,
               req->channel);
 #if !defined(NDEBUG)
-  BRCMF_DBG(WLANIF, "  ssid: " SSID_FMT_STR, SSID_FMT_BYTES(req->ssid.data, req->ssid.len));
+  BRCMF_DBG(WLANIF, "  ssid: " FMT_SSID, FMT_SSID_BYTES(req->ssid.data, req->ssid.len));
 #endif /* !defined(NDEBUG) */
 
   uint8_t result_code = brcmf_cfg80211_start_ap(ndev, req);
@@ -3709,7 +3708,7 @@ void brcmf_if_stop_req(net_device* ndev, const wlanif_stop_req_t* req) {
 
   BRCMF_IFDBG(WLANIF, ndev, "Stop AP request from SME.");
 #if !defined(NDEBUG)
-  BRCMF_DBG(WLANIF, "  ssid: " SSID_FMT_STR, SSID_FMT_BYTES(req->ssid.data, req->ssid.len));
+  BRCMF_DBG(WLANIF, "  ssid: " FMT_SSID, FMT_SSID_BYTES(req->ssid.data, req->ssid.len));
 #endif /* !defined(NDEBUG) */
 
   uint8_t result_code = brcmf_cfg80211_stop_ap(ndev);

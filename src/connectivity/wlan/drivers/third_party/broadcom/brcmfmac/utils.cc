@@ -414,28 +414,3 @@ void brcmu_set_rx_rate_index_hist_rx11ac(
     out_rx_rate[i + start] = rx11ac[1][1][2][i];
   }
 }
-
-std::string brcmu_ssid_format_vector(const std::vector<uint8_t>& ssid) {
-  return brcmu_ssid_format_bytes(ssid.data(), ssid.size());
-}
-
-std::string brcmu_ssid_format_bytes(uint8_t const ssid_bytes[], size_t ssid_len) {
-  size_t ssid_num_bytes =
-      std::min(static_cast<size_t>(wlan_ieee80211::MAX_SSID_BYTE_LEN), ssid_len);
-  char buf[SSID_PREFIX_LEN + (wlan_ieee80211::MAX_SSID_BYTE_LEN * 2) + SSID_SUFFIX_LEN + 1];
-  char* p = buf;
-
-  // Write SSID_PREFIX
-  strncpy(p, SSID_PREFIX, SSID_PREFIX_LEN + 1);
-  p += SSID_PREFIX_LEN;
-
-  // Write ssid_bytes in hexadecimal characters
-  for (size_t i = 0; i < ssid_num_bytes; i++) {
-    snprintf(p, 3, "%02x", ssid_bytes[i]);
-    p += 2;
-  }
-
-  // Write SSID_SUFFIX
-  strncpy(p, SSID_SUFFIX, SSID_SUFFIX_LEN + 1);
-  return buf;
-}

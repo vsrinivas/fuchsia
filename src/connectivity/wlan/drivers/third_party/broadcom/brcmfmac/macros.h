@@ -18,8 +18,5 @@
 #include "brcmu_utils.h"
 #define MAC_FMT_STR "%02x:%02x:%02x:%02x:%02x:%02x"
 #define MAC_FMT_ARGS(arr) arr[0], arr[1], arr[2], arr[3], arr[4], arr[5]
-#define SSID_FMT_STR "%s"
-#define SSID_FMT_VECTOR(ssid) brcmu_ssid_format_vector(ssid).c_str()
-#define SSID_FMT_BYTES(ssid_bytes, ssid_len) brcmu_ssid_format_bytes(ssid_bytes, ssid_len).c_str()
 
 #endif  // SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_BROADCOM_BRCMFMAC_MACROS_H_
