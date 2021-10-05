@@ -159,6 +159,15 @@ core_shard("bt-headset-core-shard") {
   shard_file = "meta/bt-headset.core_shard.cml"
 }
 
+# This core realm shard to be used by product integrator.
+# This shard should be included in configurations that require A2DP, HFP Audio
+# Gateway, and where CodecFactory is a v2 component.
+# TODO(fxbug.dev/78467) This should be the default and only shard once products
+# are migrated off legacy CodecFactory.
+core_shard("bt-headset-core-shard-v2") {
+  shard_file = "meta/bt-headset-mediacodec.core_shard.cml"
+}
+
 config_data("service_config") {
   for_pkg = "sysmgr"
   outputs = [ "bt-hfp-audio-gateway-service.config" ]

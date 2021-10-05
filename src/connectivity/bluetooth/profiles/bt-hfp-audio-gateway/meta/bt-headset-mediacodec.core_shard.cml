@@ -1,0 +1,17 @@
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    include: [
+        "//src/connectivity/bluetooth/profiles/bt-a2dp/meta/bt-a2dp-base.core_shard.cml",
+        "//src/connectivity/bluetooth/profiles/bt-a2dp/meta/bt-a2dp-mediacodec.core_shard.cml",
+        "//src/connectivity/bluetooth/profiles/bt-hfp-audio-gateway/meta/bt-hfp-audio-gateway.core_shard.cml",
+    ],
+    offer: [
+        {
+            protocol: [ "fuchsia.bluetooth.internal.a2dp.Controller" ],
+            from: "#bt-a2dp",
+            to: [ "#bt-hfp-audio-gateway" ],
+        },
+    ],
+}
