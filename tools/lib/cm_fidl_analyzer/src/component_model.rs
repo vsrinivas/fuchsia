@@ -33,7 +33,10 @@ use {
             TopInstanceInterface, WeakExtendedInstanceInterface,
         },
         config::RuntimeConfig,
-        environment::{DebugRegistry, EnvironmentExtends, EnvironmentInterface, RunnerRegistry},
+        environment::{
+            component_has_relative_url, find_first_absolute_ancestor_url, DebugRegistry,
+            EnvironmentExtends, EnvironmentInterface, RunnerRegistry,
+        },
         error::{ComponentInstanceError, RoutingError},
         policy::GlobalPolicyChecker,
         route_capability, route_storage_and_backing_directory, DebugRouteMapper, RegistrationDecl,
@@ -45,19 +48,20 @@ use {
         sync::{Arc, RwLock},
     },
     thiserror::Error,
+    url::Url,
 };
 
 // Constants used to set up the built-in environment.
-static BOOT_RESOLVER_NAME: &str = "boot_resolver";
-static BOOT_SCHEME: &str = "fuchsia-boot";
+pub static BOOT_RESOLVER_NAME: &str = "boot_resolver";
+pub static BOOT_SCHEME: &str = "fuchsia-boot";
 
-static PKG_RESOLVER_NAME: &str = "package_resolver";
-static PKG_SCHEME: &str = "fuchsia-pkg";
+pub static PKG_RESOLVER_NAME: &str = "package_resolver";
+pub static PKG_SCHEME: &str = "fuchsia-pkg";
 
 static REALM_BUILDER_RESOLVER_NAME: &str = "realm_builder_resolver";
 static REALM_BUILDER_SCHEME: &str = "realm-builder";
 
-#[derive(Debug, Error, Deserialize, Serialize, PartialEq)]
+#[derive(Clone, Debug, Error, Deserialize, Serialize, PartialEq)]
 #[serde(rename_all = "snake_case")]
 pub enum AnalyzerModelError {
     #[error("the source instance `{0}` is not executable")]
@@ -68,6 +72,9 @@ pub enum AnalyzerModelError {
 
     #[error("uses Event capability `{0}` without using the EventSource protocol")]
     MissingEventSourceProtocol(String),
+
+    #[error("no resolver found in environment for scheme `{0}`")]
+    MissingResolverForScheme(String),
 
     #[error(transparent)]
     ComponentInstanceError(#[from] ComponentInstanceError),
@@ -82,6 +89,7 @@ impl AnalyzerModelError {
             Self::SourceInstanceNotExecutable(_) => zx_status::Status::UNAVAILABLE,
             Self::InvalidSourceCapability(_, _) => zx_status::Status::UNAVAILABLE,
             Self::MissingEventSourceProtocol(_) => zx_status::Status::UNAVAILABLE,
+            Self::MissingResolverForScheme(_) => zx_status::Status::NOT_FOUND,
             Self::ComponentInstanceError(err) => err.as_zx_status(),
             Self::RoutingError(err) => err.as_zx_status(),
         }
@@ -287,7 +295,7 @@ impl ModelBuilderForAnalyzer {
     }
 }
 
-/// `ComponentModelForAnalzyer` owns a representation of each v2 component instance and
+/// `ComponentModelForAnalyzer` owns a representation of each v2 component instance and
 /// supports lookup by `NodePath`.
 pub struct ComponentModelForAnalyzer {
     top_instance: Arc<TopInstanceForAnalyzer>,
@@ -403,6 +411,150 @@ impl ComponentModelForAnalyzer {
                 }
             }
             None => Ok(None),
+        }
+    }
+
+    /// Given a component instance, extracts the URL scheme of each child of that instance. Then
+    /// checks that each scheme corresponds to a unique resolver in the component's scope, and
+    /// checks that each resolver has a valid capability route. Returns the results of those checks
+    /// in sorted order by URL scheme name. If any URL parsing errors occurred, they appear at the
+    /// beginning of the vector of results.
+    pub async fn check_child_resolvers(
+        self: &Arc<Self>,
+        target: &Arc<ComponentInstanceForAnalyzer>,
+    ) -> Vec<Result<RouteMap, AnalyzerModelError>> {
+        let mut results = Vec::new();
+        // Results of checks so far, keyed by URL scheme.
+        let mut checked = HashMap::new();
+        for child in target.decl.children.iter() {
+            match Self::get_absolute_child_url(&child.url, target) {
+                Ok(absolute_url) => {
+                    let scheme = absolute_url.scheme();
+                    if checked.get(scheme).is_none() {
+                        let mut route =
+                            RouteMap::from_segments(vec![RouteSegment::RequireResolver {
+                                node_path: target.node_path(),
+                                scheme: scheme.to_string(),
+                            }]);
+                        let check_result = match self
+                            .check_resolver_for_scheme(scheme, &child.environment, target)
+                            .await
+                        {
+                            Ok(mut segments) => {
+                                route.append(&mut segments);
+                                Ok(route)
+                            }
+                            Err(err) => Err(err),
+                        };
+                        checked.insert(scheme.to_string(), check_result);
+                    }
+                }
+                Err(err) => {
+                    results.push(Err(err));
+                }
+            }
+        }
+        let mut results_by_scheme =
+            checked.drain().collect::<Vec<(String, Result<RouteMap, AnalyzerModelError>)>>();
+        results_by_scheme.sort_by(|x, y| x.0.cmp(&y.0));
+
+        results.append(&mut results_by_scheme.into_iter().map(|(_, route)| route).collect());
+        results
+    }
+
+    /// Looks for a resolver for `scheme` in one of two places. If `environment` contains an
+    /// environment name, looks first for an environment defined by `target` with that name
+    /// and attempts to find the resolver there. If not found, or if `environment` is None,
+    /// looks for the resolver in the environment offered to `target`.
+    ///
+    /// After finding a resolver, checks that it is routed correctly.
+    async fn check_resolver_for_scheme(
+        self: &Arc<Self>,
+        scheme: &str,
+        environment: &Option<String>,
+        target: &Arc<ComponentInstanceForAnalyzer>,
+    ) -> Result<RouteMap, AnalyzerModelError> {
+        // The child was declared with a named environment. A resolver for the child's url
+        // scheme can be sourced from that environment, if a matching resolver is present.
+        if let Some(env_name) = environment {
+            if let Some(env) = target.decl.environments.iter().find(|e| &e.name == env_name) {
+                if let Some(resolver) = env.resolvers.iter().find(|r| r.scheme == scheme) {
+                    let (_source, route) = route_capability::<ComponentInstanceForAnalyzer>(
+                        RouteRequest::Resolver(resolver.clone()),
+                        target,
+                    )
+                    .await?;
+                    return Ok(route);
+                }
+            }
+        }
+        // Either the child was not declared with a named environment, or that environment
+        // did not provide a matching resolver. The resolver, if any, must be available in
+        // `target`'s own environment.
+        match target.environment.get_registered_resolver(scheme)? {
+            Some((ExtendedInstanceInterface::Component(instance), resolver)) => {
+                let (_source, route) = route_capability::<ComponentInstanceForAnalyzer>(
+                    RouteRequest::Resolver(resolver),
+                    &instance,
+                )
+                .await?;
+                Ok(route)
+            }
+            Some((ExtendedInstanceInterface::AboveRoot(_), resolver)) => {
+                let decl = self.get_builtin_resolver_decl(&resolver)?;
+                let mut route = RouteMap::new();
+                route.push(RouteSegment::ProvideAsBuiltin { capability: decl });
+                Ok(route)
+            }
+            None => Err(AnalyzerModelError::MissingResolverForScheme(scheme.to_string())),
+        }
+    }
+
+    // Retrieves the `CapabilityDecl` for a built-in resolver from its registration, or an
+    // error if the resolver is not provided as a built-in capability.
+    fn get_builtin_resolver_decl(
+        &self,
+        resolver: &ResolverRegistration,
+    ) -> Result<CapabilityDecl, AnalyzerModelError> {
+        match self.top_instance.builtin_capabilities().iter().find(|&decl| {
+            if let CapabilityDecl::Resolver(resolver_decl) = decl {
+                resolver_decl.name == resolver.resolver
+            } else {
+                false
+            }
+        }) {
+            Some(decl) => Ok(decl.clone()),
+            None => Err(AnalyzerModelError::RoutingError(
+                RoutingError::use_from_component_manager_not_found(resolver.resolver.to_string()),
+            )),
+        }
+    }
+
+    // Given a component instance `target` and the url `child_url` of a child of that instance,
+    // returns an absolute url for the child.
+    fn get_absolute_child_url(
+        child_url: &str,
+        target: &Arc<ComponentInstanceForAnalyzer>,
+    ) -> Result<Url, AnalyzerModelError> {
+        match Url::parse(&child_url) {
+            Ok(url) => Ok(url),
+            Err(url::ParseError::RelativeUrlWithoutBase) => {
+                let absolute_prefix = match component_has_relative_url(target) {
+                    true => find_first_absolute_ancestor_url(target),
+                    false => {
+                        Url::parse(target.url()).map_err(|_| ComponentInstanceError::MalformedUrl {
+                            url: target.url().to_string(),
+                            moniker: target.abs_moniker().to_partial(),
+                        })
+                    }
+                }?;
+                Ok(absolute_prefix.join(child_url).unwrap())
+            }
+            _ => Err(ComponentInstanceError::MalformedUrl {
+                url: target.url().to_string(),
+                moniker: target.abs_moniker().to_partial(),
+            }
+            .into()),
         }
     }
 
@@ -579,6 +731,12 @@ impl ComponentInstanceForAnalyzer {
     pub fn decl_for_testing(&self) -> &ComponentDecl {
         &self.decl
     }
+
+    fn node_path(&self) -> NodePath {
+        NodePath::absolute_from_vec(
+            self.abs_moniker().to_partial().path().into_iter().map(|m| m.as_str()).collect(),
+        )
+    }
 }
 
 /// A representation of `ComponentManager`'s instance, providing a set of capabilities to
@@ -604,6 +762,10 @@ impl RouteMap {
 
     pub fn push(&mut self, segment: RouteSegment) {
         self.0.push(segment)
+    }
+
+    pub fn append(&mut self, other: &mut Self) {
+        self.0.append(&mut other.0)
     }
 }
 

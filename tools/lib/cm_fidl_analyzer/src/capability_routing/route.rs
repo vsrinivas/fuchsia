@@ -20,6 +20,14 @@ pub enum RouteSegment {
         capability: UseDecl,
     },
 
+    /// A `ComponentNode` requires the resolver capability to resolve a child component URL.
+    RequireResolver {
+        /// The `NodePath` of the component node that requires the resolver.
+        node_path: NodePath,
+        /// The URL scheme of the resolver.
+        scheme: String,
+    },
+
     /// A `ComponentNode` offers the routed capability.
     OfferBy {
         /// The `NodePath` of the offering `ComponentNode`.
@@ -80,6 +88,7 @@ impl RouteSegment {
     pub fn node_path<'a>(&'a self) -> Option<&'a NodePath> {
         match self {
             Self::UseBy { node_path, .. }
+            | Self::RequireResolver { node_path, .. }
             | Self::OfferBy { node_path, .. }
             | Self::ExposeBy { node_path, .. }
             | Self::DeclareBy { node_path, .. }
