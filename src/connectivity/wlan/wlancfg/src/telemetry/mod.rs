@@ -368,12 +368,12 @@ fn record_inspect_counters(
     });
 }
 
-fn record_inspect_histograms(
+fn record_inspect_external_data(
     external_inspect_node: &ExternalInspectNode,
     telemetry_sender: TelemetrySender,
     dev_svc_proxy: fidl_fuchsia_wlan_device_service::DeviceServiceProxy,
 ) {
-    external_inspect_node.node.record_lazy_child("histograms", move || {
+    external_inspect_node.node.record_lazy_child("connection_status", move || {
         let telemetry_sender = telemetry_sender.clone();
         let dev_svc_proxy = dev_svc_proxy.clone();
         async move {
@@ -389,28 +389,40 @@ fn record_inspect_histograms(
             };
 
             if let Some(connected_info) = connected_info {
+                let latest_ap_state = connected_info.latest_ap_state;
+                inspect_insert!(inspector.root(), connected_network: {
+                    rssi_dbm: latest_ap_state.rssi_dbm,
+                    snr_db: latest_ap_state.snr_db,
+                    wsc?: match &latest_ap_state.probe_resp_wsc() {
+                        None => None,
+                        Some(wsc) => Some(make_inspect_loggable!(
+                            device_name: String::from_utf8_lossy(&wsc.device_name[..]).to_string(),
+                            manufacturer: String::from_utf8_lossy(&wsc.manufacturer[..]).to_string(),
+                            model_name: String::from_utf8_lossy(&wsc.model_name[..]).to_string(),
+                            model_number: String::from_utf8_lossy(&wsc.model_number[..]).to_string(),
+                        )),
+                    },
+                });
+
                 match dev_svc_proxy.get_iface_stats(connected_info.iface_id).await {
                     Ok((zx::sys::ZX_OK, Some(stats))) => {
                         if let Some(mlme_stats) = &stats.mlme_stats {
                             if let fidl_fuchsia_wlan_stats::MlmeStats::ClientMlmeStats(mlme_stats) =
                                 mlme_stats.as_ref()
                             {
-                                let mut histograms = HistogramsSubtrees::new();
-                                histograms.log_per_antenna_snr_histograms(
-                                    &mlme_stats.snr_histograms[..],
-                                    &inspector,
+                                let mut histograms = HistogramsNode::new(
+                                    inspector.root().create_child("histograms"),
                                 );
+                                histograms
+                                    .log_per_antenna_snr_histograms(&mlme_stats.snr_histograms[..]);
                                 histograms.log_per_antenna_rx_rate_histograms(
                                     &mlme_stats.rx_rate_index_histograms[..],
-                                    &inspector,
                                 );
                                 histograms.log_per_antenna_noise_floor_histograms(
                                     &mlme_stats.noise_floor_histograms[..],
-                                    &inspector,
                                 );
                                 histograms.log_per_antenna_rssi_histograms(
                                     &mlme_stats.rssi_histograms[..],
-                                    &inspector,
                                 );
 
                                 inspector.root().record(histograms);
@@ -426,11 +438,12 @@ fn record_inspect_histograms(
     });
 }
 
-struct HistogramsSubtrees {
+struct HistogramsNode {
+    node: InspectNode,
     antenna_nodes: HashMap<fidl_fuchsia_wlan_stats::AntennaId, InspectNode>,
 }
 
-impl InspectType for HistogramsSubtrees {}
+impl InspectType for HistogramsNode {}
 
 macro_rules! fn_log_per_antenna_histograms {
     ($name:ident, $field:ident, $histogram_ty:ty, $sample:ident => $sample_index_expr:expr) => {
@@ -438,7 +451,6 @@ macro_rules! fn_log_per_antenna_histograms {
             pub fn [<log_per_antenna_ $name _histograms>](
                 &mut self,
                 histograms: &[$histogram_ty],
-                inspector: &Inspector
             ) {
                 for histogram in histograms {
                     // Only antenna histograms are logged (STATION scope histograms are discarded)
@@ -446,7 +458,7 @@ macro_rules! fn_log_per_antenna_histograms {
                         Some(id) => **id,
                         None => continue,
                     };
-                    let antenna_node = self.create_or_get_antenna_node(antenna_id, inspector);
+                    let antenna_node = self.create_or_get_antenna_node(antenna_id);
 
                     let samples = &histogram.$field;
                     let histogram_prop_name = concat!(stringify!($name), "_histogram");
@@ -470,9 +482,9 @@ macro_rules! fn_log_per_antenna_histograms {
     };
 }
 
-impl HistogramsSubtrees {
-    pub fn new() -> Self {
-        Self { antenna_nodes: HashMap::new() }
+impl HistogramsNode {
+    pub fn new(node: InspectNode) -> Self {
+        Self { node, antenna_nodes: HashMap::new() }
     }
 
     // fn log_per_antenna_snr_histograms
@@ -493,15 +505,15 @@ impl HistogramsSubtrees {
     fn create_or_get_antenna_node(
         &mut self,
         antenna_id: fidl_fuchsia_wlan_stats::AntennaId,
-        inspector: &Inspector,
     ) -> &mut InspectNode {
+        let histograms_node = &self.node;
         self.antenna_nodes.entry(antenna_id).or_insert_with(|| {
             let freq = match antenna_id.freq {
                 fidl_fuchsia_wlan_stats::AntennaFreq::Antenna2G => "2Ghz",
                 fidl_fuchsia_wlan_stats::AntennaFreq::Antenna5G => "5Ghz",
             };
             let node =
-                inspector.root().create_child(format!("antenna{}_{}", antenna_id.index, freq));
+                histograms_node.create_child(format!("antenna{}_{}", antenna_id.index, freq));
             node.record_uint("antenna_index", antenna_id.index as u64);
             node.record_string("antenna_freq", freq);
             node
@@ -595,7 +607,11 @@ impl Telemetry {
         let get_iface_stats_fail_count = inspect_node.create_uint("get_iface_stats_fail_count", 0);
         let disconnect_events = inspect_node.create_child("disconnect_events");
         let external_inspect_node = ExternalInspectNode::new(external_inspect_node);
-        record_inspect_histograms(&external_inspect_node, telemetry_sender, dev_svc_proxy.clone());
+        record_inspect_external_data(
+            &external_inspect_node,
+            telemetry_sender,
+            dev_svc_proxy.clone(),
+        );
         Self {
             dev_svc_proxy,
             connection_state: ConnectionState::Idle(IdleState { connect_start_time: None }),
@@ -2917,23 +2933,25 @@ mod tests {
         assert_data_tree_with_respond_blocking_req!(test_helper, test_fut, root: contains {
             external: contains {
                 stats: contains {
-                    "histograms": {
-                        antenna0_2Ghz: {
-                            antenna_index: 0u64,
-                            antenna_freq: "2Ghz",
-                            snr_histogram: vec![30i64, 999],
-                            snr_invalid_samples: 11u64,
-                            noise_floor_histogram: vec![-55i64, 999],
-                            noise_floor_invalid_samples: 44u64,
-                            rssi_histogram: vec![-25i64, 999],
-                            rssi_invalid_samples: 55u64,
-                        },
-                        antenna1_5Ghz: {
-                            antenna_index: 1u64,
-                            antenna_freq: "5Ghz",
-                            rx_rate_histogram: vec![100i64, 1500],
-                            rx_rate_invalid_samples: 33u64,
-                        },
+                    connection_status: contains {
+                        histograms: {
+                            antenna0_2Ghz: {
+                                antenna_index: 0u64,
+                                antenna_freq: "2Ghz",
+                                snr_histogram: vec![30i64, 999],
+                                snr_invalid_samples: 11u64,
+                                noise_floor_histogram: vec![-55i64, 999],
+                                noise_floor_invalid_samples: 44u64,
+                                rssi_histogram: vec![-25i64, 999],
+                                rssi_invalid_samples: 55u64,
+                            },
+                            antenna1_5Ghz: {
+                                antenna_index: 1u64,
+                                antenna_freq: "5Ghz",
+                                rx_rate_histogram: vec![100i64, 1500],
+                                rx_rate_invalid_samples: 33u64,
+                            },
+                        }
                     }
                 }
             }

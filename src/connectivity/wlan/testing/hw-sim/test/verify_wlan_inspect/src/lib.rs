@@ -191,7 +191,18 @@ async fn verify_wlan_inspect() {
         external: {
             client_stats: contains {
                 disconnect_events: {},
-                histograms: contains {},
+                connection_status: contains {
+                    connected_network: {
+                        rssi_dbm: AnyProperty,
+                        snr_db: AnyProperty,
+                        wsc: {
+                            device_name: "ASUS Router",
+                            manufacturer: "ASUSTek Computer Inc.",
+                            model_name: "RT-AC58U",
+                            model_number: "123",
+                        }
+                    }
+                }
             },
         },
     });
@@ -305,7 +316,7 @@ async fn verify_wlan_inspect() {
                         locally_initiated: true,
                     }
                 },
-                histograms: contains {},
+                connection_status: contains {},
             }
         },
     });
