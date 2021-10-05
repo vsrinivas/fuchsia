@@ -146,7 +146,7 @@ Memory test options:
 )");
 }
 
-fitx::result<std::string, CommandLineArgs> ParseArgs(fbl::Span<const char* const> args) {
+fitx::result<std::string, CommandLineArgs> ParseArgs(cpp20::span<const char* const> args) {
   CommandLineArgs result;
   StressTest subcommand;
 
@@ -177,7 +177,7 @@ fitx::result<std::string, CommandLineArgs> ParseArgs(fbl::Span<const char* const
             .c_str());
   }
 
-  fbl::Span other_args = args.subspan(1);  // Strip first element.
+  cpp20::span other_args = args.subspan(1);  // Strip first element.
 
   std::unique_ptr<cmdline::ArgsParser<CommandLineArgs>> parser = GetParser();
   std::vector<std::string> params;

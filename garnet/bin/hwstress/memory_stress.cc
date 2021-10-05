@@ -7,6 +7,7 @@
 #include <endian.h>
 #include <fuchsia/kernel/cpp/fidl.h>
 #include <lib/fitx/result.h>
+#include <lib/stdcompat/span.h>
 #include <lib/zx/clock.h>
 #include <lib/zx/time.h>
 #include <stdio.h>
@@ -18,8 +19,6 @@
 #include <random>
 #include <string>
 #include <thread>
-
-#include <fbl/span.h>
 
 #include "compiler.h"
 #include "memory_patterns.h"
@@ -170,7 +169,7 @@ MemoryWorkload MakeRowHammerWorkload(std::string_view name, uint64_t pattern) {
 }  // namespace
 
 template <typename PatternGenerator>
-void VerifyPatternOrDie(fbl::Span<uint8_t> range, PatternGenerator pattern) {
+void VerifyPatternOrDie(cpp20::span<uint8_t> range, PatternGenerator pattern) {
   std::optional<std::string> result = VerifyPattern(range, pattern);
   if (unlikely(result.has_value())) {
     ZX_PANIC("Detected memory error: %s\n", result->c_str());

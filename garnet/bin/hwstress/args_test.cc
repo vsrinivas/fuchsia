@@ -4,6 +4,7 @@
 
 #include "args.h"
 
+#include <lib/stdcompat/span.h>
 #include <stdio.h>
 #include <zircon/status.h>
 #include <zircon/syscalls.h>
@@ -11,7 +12,6 @@
 #include <string>
 #include <variant>
 
-#include <fbl/span.h>
 #include <gtest/gtest.h>
 
 namespace hwstress {

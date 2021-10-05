@@ -5,6 +5,7 @@
 #ifndef GARNET_BIN_HWSTRESS_MEMORY_RANGE_H_
 #define GARNET_BIN_HWSTRESS_MEMORY_RANGE_H_
 
+#include <lib/stdcompat/span.h>
 #include <lib/zx/status.h>
 #include <lib/zx/vmo.h>
 #include <zircon/assert.h>
@@ -12,8 +13,6 @@
 #include <zircon/types.h>
 
 #include <memory>
-
-#include <fbl/span.h>
 
 #include "compiler.h"
 
@@ -41,8 +40,8 @@ class MemoryRange {
   // Get the cache mode of the memory.
   CacheMode cache() const { return cache_mode_; }
 
-  // Get the memory range as a fbl::Span.
-  fbl::Span<uint8_t> span() const { return fbl::Span<uint8_t>(addr_, size_); }
+  // Get the memory range as a cpp20::span.
+  cpp20::span<uint8_t> span() const { return cpp20::span<uint8_t>(addr_, size_); }
 
   // Get a raw pointer to the memory represented in bytes.
   uint8_t* bytes() const ASSUME_ALIGNED(ZX_MIN_PAGE_SIZE) { return addr_; }

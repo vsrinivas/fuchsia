@@ -2,13 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef GARNET_BIN_HWSTRESS_MEMORY_PATTERNS_H_
+#define GARNET_BIN_HWSTRESS_MEMORY_PATTERNS_H_
 
 #include <endian.h>
+#include <lib/stdcompat/span.h>
 
 #include <optional>
-
-#include <fbl/span.h>
 
 #include "src/lib/fxl/strings/string_printf.h"
 #include "util.h"
@@ -68,7 +68,7 @@ inline auto MultiWordPattern(std::vector<uint64_t> pattern) {
 // Patterns are written out in native-endian format. If a particular
 // endian conversion is required, it must be converted by the PatternGenerator.
 template <typename PatternGenerator>
-void WritePattern(fbl::Span<uint8_t> range, PatternGenerator pattern) {
+void WritePattern(cpp20::span<uint8_t> range, PatternGenerator pattern) {
   auto* __restrict start = reinterpret_cast<uint64_t*>(range.begin());
   size_t words = range.size_bytes() / sizeof(uint64_t);
 
@@ -79,7 +79,7 @@ void WritePattern(fbl::Span<uint8_t> range, PatternGenerator pattern) {
 
 // Verify the given pattern is in memory.
 template <typename PatternGenerator>
-std::optional<std::string> VerifyPattern(fbl::Span<uint8_t> range, PatternGenerator pattern) {
+std::optional<std::string> VerifyPattern(cpp20::span<uint8_t> range, PatternGenerator pattern) {
   auto* __restrict start = reinterpret_cast<uint64_t*>(range.begin());
   size_t words = range.size_bytes() / sizeof(uint64_t);
 
@@ -98,3 +98,5 @@ std::optional<std::string> VerifyPattern(fbl::Span<uint8_t> range, PatternGenera
 }
 
 }  // namespace hwstress
+
+#endif  // GARNET_BIN_HWSTRESS_MEMORY_PATTERNS_H_

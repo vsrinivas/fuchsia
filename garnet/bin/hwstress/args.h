@@ -7,14 +7,13 @@
 
 #include <lib/cmdline/args_parser.h>
 #include <lib/fitx/result.h>
+#include <lib/stdcompat/span.h>
 
 #include <istream>
 #include <optional>
 #include <string>
 #include <variant>
 #include <vector>
-
-#include <fbl/span.h>
 
 namespace hwstress {
 
@@ -103,7 +102,7 @@ struct CommandLineArgs {
 void PrintUsage();
 
 // Parse args, returning failure or the parsed arguments.
-fitx::result<std::string, CommandLineArgs> ParseArgs(fbl::Span<const char* const> args);
+fitx::result<std::string, CommandLineArgs> ParseArgs(cpp20::span<const char* const> args);
 
 }  // namespace hwstress
 
