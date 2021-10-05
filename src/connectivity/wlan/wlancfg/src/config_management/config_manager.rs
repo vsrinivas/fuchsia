@@ -10,10 +10,7 @@ use {
         },
         stash_conversion::*,
     },
-    crate::{
-        client::types,
-        legacy::known_ess_store::{self, EssJsonRead, KnownEss, KnownEssStore},
-    },
+    crate::client::types,
     anyhow::format_err,
     async_trait::async_trait,
     fidl_fuchsia_wlan_common::ScanType,
@@ -21,13 +18,12 @@ use {
     fuchsia_cobalt::CobaltSender,
     fuchsia_zircon as zx,
     futures::lock::Mutex,
-    log::{error, info, warn},
+    log::{error, info},
     rand::Rng,
     std::{
         clone::Clone,
         collections::{hash_map::Entry, HashMap},
-        convert::TryInto,
-        fs, io,
+        fs,
         path::Path,
     },
     wlan_metrics_registry::{
@@ -43,6 +39,8 @@ const MAX_CONFIGS_PER_SSID: usize = 1;
 // TODO(fxbug.dev/84870): Tune smoothing factor.
 const EWMA_SMOOTHING_FACTOR: u8 = 25;
 
+pub const LEGACY_KNOWN_NETWORKS_PATH: &str = "/data/known_networks.json";
+
 /// The Saved Network Manager keeps track of saved networks and provides thread-safe access to
 /// saved networks. Networks are saved by NetworkConfig and accessed by their NetworkIdentifier
 /// (SSID and security protocol). Network configs are saved in-memory, and part of each network
@@ -51,7 +49,6 @@ const EWMA_SMOOTHING_FACTOR: u8 = 25;
 pub struct SavedNetworksManager {
     saved_networks: Mutex<NetworkConfigMap>,
     stash: Mutex<Stash>,
-    legacy_store: KnownEssStore,
     cobalt_api: Mutex<CobaltSender>,
 }
 
@@ -181,36 +178,23 @@ pub trait SavedNetworksManagerApi: Send + Sync {
 
 impl SavedNetworksManager {
     /// Initializes a new Saved Network Manager by reading saved networks from a secure storage
-    /// (stash) or from a legacy storage file (from KnownEssStore) if stash is empty. In either
-    /// case it initializes in-memory storage and persistent storage with stash to remember
-    /// networks.
+    /// (stash). It initializes in-memory storage and persistent storage with stash.
     pub async fn new(cobalt_api: CobaltSender) -> Result<Self, anyhow::Error> {
-        let path = known_ess_store::KNOWN_NETWORKS_PATH;
-        let tmp_path = known_ess_store::TMP_KNOWN_NETWORKS_PATH;
-        Self::new_with_stash_or_paths(
-            POLICY_STASH_ID,
-            Path::new(path),
-            Path::new(tmp_path),
-            cobalt_api,
-        )
-        .await
+        let path = LEGACY_KNOWN_NETWORKS_PATH;
+        Self::new_with_stash_or_paths(POLICY_STASH_ID, Path::new(path), cobalt_api).await
     }
 
-    /// Load from persistent data from 1 of 2 places: stash or the file created by KnownEssStore.
-    /// For now we need to support reading from the the legacy version (KnownEssStore) as well
-    /// from stash. And we need to keep the legacy version temporarily so we will decide where to
-    /// read based on whether stash has been used.
-    /// TODO(fxbug.dev/44184) Eventually delete logic for handling legacy storage from KnownEssStore and
-    /// update comments once all users have migrated.
+    /// Load from persistent data from stash. The path for the legacy storage is used to remove the
+    /// legacy storage if it exists.
+    /// TODO(fxbug.dev/85337) Eventually delete logic for deleting legacy storage
     pub async fn new_with_stash_or_paths(
         stash_id: impl AsRef<str>,
         legacy_path: impl AsRef<Path>,
-        legacy_tmp_path: impl AsRef<Path>,
         cobalt_api: CobaltSender,
     ) -> Result<Self, anyhow::Error> {
-        let mut stash = Stash::new_with_id(stash_id.as_ref())?;
+        let stash = Stash::new_with_id(stash_id.as_ref())?;
         let stashed_networks = stash.load().await?;
-        let mut saved_networks: HashMap<NetworkIdentifier, Vec<NetworkConfig>> = stashed_networks
+        let saved_networks: HashMap<NetworkIdentifier, Vec<NetworkConfig>> = stashed_networks
             .iter()
             .map(|(network_id, persistent_data)| {
                 (
@@ -230,25 +214,20 @@ impl SavedNetworksManager {
             })
             .collect();
 
-        // Don't read legacy if stash is not empty; we have already migrated.
-        if saved_networks.is_empty() {
-            Self::migrate_legacy(legacy_path.as_ref(), &mut stash, &mut saved_networks).await?;
+        // Clean up the legacy storage file since it is no longer used.
+        if let Err(e) = Self::delete_from_path(legacy_path.as_ref()) {
+            info!("Failed to delete legacy storage file: {}", e);
         }
-        // KnownEssStore will internally load from the correct path.
-        let legacy_store = KnownEssStore::new_with_paths(
-            legacy_path.as_ref().to_path_buf(),
-            legacy_tmp_path.as_ref().to_path_buf(),
-        )?;
 
         Ok(Self {
             saved_networks: Mutex::new(saved_networks),
             stash: Mutex::new(stash),
-            legacy_store,
             cobalt_api: Mutex::new(cobalt_api),
         })
     }
 
-    /// Creates a new config at a random path, ensuring a clean environment for an individual test
+    /// Creates a new config with a random stash ID, ensuring a clean environment for an individual
+    /// test
     #[cfg(test)]
     pub async fn new_for_test() -> Result<Self, anyhow::Error> {
         use crate::util::testing::cobalt::create_mock_cobalt_sender;
@@ -256,24 +235,14 @@ impl SavedNetworksManager {
 
         let stash_id: String = thread_rng().sample_iter(&Alphanumeric).take(20).collect();
         let path: String = thread_rng().sample_iter(&Alphanumeric).take(20).collect();
-        let tmp_path: String = thread_rng().sample_iter(&Alphanumeric).take(20).collect();
-        Self::new_with_stash_or_paths(
-            stash_id,
-            Path::new(&path),
-            Path::new(&tmp_path),
-            create_mock_cobalt_sender(),
-        )
-        .await
+        Self::new_with_stash_or_paths(stash_id, Path::new(&path), create_mock_cobalt_sender()).await
     }
 
     /// Creates a new SavedNetworksManager and hands back the other end of the stash proxy used.
     /// This should be used when a test does something that will interact with stash and uses the
     /// executor to step through futures.
     #[cfg(test)]
-    pub async fn new_and_stash_server(
-        legacy_path: impl AsRef<Path>,
-        legacy_tmp_path: impl AsRef<Path>,
-    ) -> (Self, fidl_fuchsia_stash::StoreAccessorRequestStream) {
+    pub async fn new_and_stash_server() -> (Self, fidl_fuchsia_stash::StoreAccessorRequestStream) {
         use crate::util::testing::cobalt::create_mock_cobalt_sender;
         use rand::{distributions::Alphanumeric, thread_rng};
 
@@ -285,109 +254,32 @@ impl SavedNetworksManager {
         let (store, accessor_server) = create_proxy::<fidl_fuchsia_stash::StoreAccessorMarker>()
             .expect("failed to create accessor proxy");
         let stash = Stash::new_with_stash(store);
-        let legacy_store = KnownEssStore::new_with_paths(
-            legacy_path.as_ref().to_path_buf(),
-            legacy_tmp_path.as_ref().to_path_buf(),
-        )
-        .expect("failed to create legacy store");
 
         (
             Self {
                 saved_networks: Mutex::new(NetworkConfigMap::new()),
                 stash: Mutex::new(stash),
-                legacy_store,
                 cobalt_api: Mutex::new(create_mock_cobalt_sender()),
             },
             accessor_server.into_stream().expect("failed to create stash request stream"),
         )
     }
 
-    /// Read from the old persistent storage of network configs, then write them into the new
-    /// storage, both in the hashmap and the stash that stores them persistently.
-    async fn migrate_legacy(
-        legacy_storage_path: impl AsRef<Path>,
-        stash: &mut Stash,
-        saved_networks: &mut NetworkConfigMap,
-    ) -> Result<(), anyhow::Error> {
-        info!("Attempting to migrate saved networks from legacy implementation to stash");
-        match Self::load_from_path(&legacy_storage_path) {
-            Ok(legacy_saved_networks) => {
-                for (net_id, configs) in legacy_saved_networks {
-                    stash
-                        .write(
-                            &net_id.clone().into(),
-                            &network_config_vec_to_persistent_data(&configs),
-                        )
-                        .await?;
-                    if let Some(_) = saved_networks.insert(net_id, configs) {
-                        warn!("Overwriting saved network with one from legacy config file");
-                    };
-                }
-            }
-            Err(e) => {
-                format_err!("Failed to load legacy networks: {}", e);
-            }
+    /// Delete the legacy storage file at the specified path
+    fn delete_from_path(storage_path: impl AsRef<Path>) -> Result<(), anyhow::Error> {
+        if storage_path.as_ref().exists() {
+            fs::remove_file(storage_path)
+                .map_err(|e| format_err!("Failed to delete legacy storage: {}", e))
+        } else {
+            Ok(())
         }
-        Ok(())
-    }
-
-    /// Handles reading networks persisted by the previous version of network storage
-    /// (KnownEssStore) for the new store.
-    fn load_from_path(storage_path: impl AsRef<Path>) -> Result<NetworkConfigMap, anyhow::Error> {
-        // Temporarily read from memory the same way EssStore does.
-        let config_list: Vec<EssJsonRead> = match fs::File::open(&storage_path) {
-            Ok(file) => match serde_json::from_reader(io::BufReader::new(file)) {
-                Ok(list) => list,
-                Err(e) => {
-                    error!(
-                        "Failed to parse the list of known wireless networks from JSONin {}: {}. \
-                         Starting with an empty list.",
-                        storage_path.as_ref().display(),
-                        e
-                    );
-                    fs::remove_file(&storage_path).map_err(|e| {
-                        format_err!("Failed to delete {}: {}", storage_path.as_ref().display(), e)
-                    })?;
-                    Vec::new()
-                }
-            },
-            Err(e) => match e.kind() {
-                io::ErrorKind::NotFound => Vec::new(),
-                _ => {
-                    return Err(format_err!(
-                        "Failed to open {}: {}",
-                        storage_path.as_ref().display(),
-                        e
-                    ))
-                }
-            },
-        };
-        let mut saved_networks = HashMap::<NetworkIdentifier, Vec<NetworkConfig>>::new();
-        for config in config_list {
-            // Choose appropriate unknown values based on password and how known ESS have been used
-            // for connections. Credential cannot be read in as PSK - PSK's were not supported by
-            // before the new storage was in place.
-            let credential = Credential::from_bytes(config.password);
-            let network_id =
-                NetworkIdentifier::new(config.ssid.try_into()?, credential.derived_security_type());
-            if let Ok(network_config) = NetworkConfig::new(network_id.clone(), credential, false) {
-                saved_networks.entry(network_id).or_default().push(network_config);
-            } else {
-                error!(
-                    "Error creating network config from loaded data for SSID {}",
-                    String::from_utf8_lossy(&network_id.ssid.clone())
-                );
-            }
-        }
-        Ok(saved_networks)
     }
 
     /// Clear the in memory storage and the persistent storage. Also clear the legacy storage.
     #[cfg(test)]
     pub async fn clear(&self) -> Result<(), anyhow::Error> {
         self.saved_networks.lock().await.clear();
-        self.stash.lock().await.clear().await?;
-        self.legacy_store.clear()
+        self.stash.lock().await.clear().await
     }
 }
 
@@ -404,7 +296,6 @@ impl SavedNetworksManagerApi for SavedNetworksManager {
             let original_len = network_configs.len();
             // Keep the configs that don't match provided NetworkIdentifier and Credential.
             network_configs.retain(|cfg| cfg.credential != credential);
-            // Update stash and legacy storage if there was a change
             if original_len != network_configs.len() {
                 self.stash
                     .lock()
@@ -415,9 +306,6 @@ impl SavedNetworksManagerApi for SavedNetworksManager {
                     )
                     .await
                     .map_err(|_| NetworkConfigError::StashWriteError)?;
-                self.legacy_store
-                    .remove(network_id.ssid.to_vec(), credential.into_bytes())
-                    .map_err(|_| NetworkConfigError::LegacyWriteError)?;
                 return Ok(true);
             } else {
                 info!("No matching network with the provided credential was found to remove.");
@@ -428,6 +316,7 @@ impl SavedNetworksManagerApi for SavedNetworksManager {
         Ok(false)
     }
 
+    /// Get the count of networks in store, including multiple values with same SSID
     async fn known_network_count(&self) -> usize {
         self.saved_networks.lock().await.values().into_iter().flatten().count()
     }
@@ -487,19 +376,6 @@ impl SavedNetworksManagerApi for SavedNetworksManager {
             .await
             .map_err(|_| NetworkConfigError::StashWriteError)?;
 
-        // Write saved networks to the legacy store only if they are WPA2 or Open, as legacy store
-        // does not support more types. Do not write PSK to legacy storage.
-        if let Credential::Psk(_) = credential {
-            return Ok(evicted_config);
-        }
-        if network_id.security_type == SecurityType::Wpa2
-            || network_id.security_type == SecurityType::None
-        {
-            let ess = KnownEss { password: credential.into_bytes() };
-            self.legacy_store
-                .store(network_id.ssid.clone(), ess)
-                .map_err(|_| NetworkConfigError::LegacyWriteError)?;
-        }
         Ok(evicted_config)
     }
 
@@ -837,7 +713,7 @@ mod tests {
         futures::{task::Poll, TryStreamExt},
         pin_utils::pin_mut,
         rand::{distributions::Alphanumeric, thread_rng, Rng},
-        std::{convert::TryFrom, io::Write, mem},
+        std::{convert::TryFrom, io::Write},
         tempfile::TempDir,
         test_case::test_case,
         test_util::{assert_gt, assert_lt},
@@ -849,11 +725,7 @@ mod tests {
         let stash_id = "store_and_lookup";
         let temp_dir = TempDir::new().expect("failed to create temporary directory");
         let path = temp_dir.path().join("networks.json");
-        let tmp_path = temp_dir.path().join("tmp.json");
-
-        // Expect the store to be constructed successfully even if the file doesn't
-        // exist yet
-        let saved_networks = create_saved_networks(stash_id, &path, &tmp_path).await;
+        let saved_networks = create_saved_networks(stash_id, &path).await;
         let network_id_foo = NetworkIdentifier::try_from("foo", SecurityType::Wpa2).unwrap();
 
         assert!(saved_networks.lookup(network_id_foo.clone()).await.is_empty());
@@ -903,7 +775,6 @@ mod tests {
         let saved_networks = SavedNetworksManager::new_with_stash_or_paths(
             stash_id,
             &path,
-            tmp_path,
             create_mock_cobalt_sender(),
         )
         .await
@@ -918,14 +789,9 @@ mod tests {
 
     #[fuchsia::test]
     async fn store_twice() {
-        let stash_id = "store_twice";
-        let temp_dir = TempDir::new().expect("failed to create temporary directory");
-        let path = temp_dir.path().join("networks.json");
-        let tmp_path = temp_dir.path().join("tmp.json");
-
-        // Expect the store to be constructed successfully even if the file doesn't
-        // exist yet
-        let saved_networks = create_saved_networks(stash_id, &path, &tmp_path).await;
+        let saved_networks = SavedNetworksManager::new_for_test()
+            .await
+            .expect("Failed to create SavedNetworksManager");
         let network_id = NetworkIdentifier::try_from("foo", SecurityType::Wpa2).unwrap();
 
         assert!(saved_networks
@@ -946,15 +812,10 @@ mod tests {
 
     #[fuchsia::test]
     async fn store_many_same_ssid() {
-        let stash_id = "store_many_same_ssid";
-        let temp_dir = TempDir::new().expect("failed to create temporary directory");
-        let path = temp_dir.path().join("networks.json");
-        let tmp_path = temp_dir.path().join("tmp.json");
-
-        // Expect the store to be constructed successfully even if the file doesn't
-        // exist yet
         let network_id = NetworkIdentifier::try_from("foo", SecurityType::Wpa2).unwrap();
-        let saved_networks = create_saved_networks(stash_id, &path, &tmp_path).await;
+        let saved_networks = SavedNetworksManager::new_for_test()
+            .await
+            .expect("Failed to create SavedNetworksManager");
 
         // save max + 1 networks with same SSID and different credentials
         for i in 0..MAX_CONFIGS_PER_SSID + 1 {
@@ -980,8 +841,7 @@ mod tests {
         let stash_id = "store_and_remove";
         let temp_dir = TempDir::new().expect("failed to create temporary directory");
         let path = temp_dir.path().join("networks.json");
-        let tmp_path = temp_dir.path().join("tmp.json");
-        let saved_networks = create_saved_networks(stash_id, &path, &tmp_path).await;
+        let saved_networks = create_saved_networks(stash_id, &path).await;
 
         let network_id = NetworkIdentifier::try_from("foo", SecurityType::Wpa2).unwrap();
         let credential = Credential::Password(b"qwertyuio".to_vec());
@@ -1034,7 +894,6 @@ mod tests {
         let saved_networks = SavedNetworksManager::new_with_stash_or_paths(
             stash_id,
             &path,
-            &tmp_path,
             create_mock_cobalt_sender(),
         )
         .await
@@ -1067,12 +926,9 @@ mod tests {
 
     #[fuchsia::test]
     async fn lookup_compatible_returns_both_compatible_configs() {
-        let stash_id = rand_string();
-        let temp_dir = TempDir::new().expect("failed to create temporary directory");
-        let path = temp_dir.path().join("networks.json");
-        let tmp_path = temp_dir.path().join("tmp.json");
-
-        let saved_networks = create_saved_networks(stash_id, &path, &tmp_path).await;
+        let saved_networks = SavedNetworksManager::new_for_test()
+            .await
+            .expect("Failed to create SavedNetworksManager");
 
         // Store a couple of network configs that could both be use to connect to a WPA2/WPA3
         // network.
@@ -1118,13 +974,9 @@ mod tests {
         wpa3_detailed_security: types::SecurityTypeDetailed,
     ) {
         let mut exec = fasync::TestExecutor::new().expect("failed to create executor");
-        let stash_id = rand_string();
-        let temp_dir = TempDir::new().expect("failed to create temporary directory");
-        let path = temp_dir.path().join("networks.json");
-        let tmp_path = temp_dir.path().join("tmp.json");
-
-        let saved_networks =
-            exec.run_singlethreaded(create_saved_networks(stash_id, &path, &tmp_path));
+        let saved_networks = exec
+            .run_singlethreaded(SavedNetworksManager::new_for_test())
+            .expect("Failed to create SavedNetworksManager");
 
         // Store a WPA3 config with a password that will match and a PSK config that won't match
         // to a WPA3 network.
@@ -1160,9 +1012,8 @@ mod tests {
         let stash_id = "connect_network";
         let temp_dir = TempDir::new().expect("failed to create temporary directory");
         let path = temp_dir.path().join("networks.json");
-        let tmp_path = temp_dir.path().join("tmp.json");
 
-        let saved_networks = create_saved_networks(stash_id, &path, &tmp_path).await;
+        let saved_networks = create_saved_networks(stash_id, &path).await;
 
         let network_id = NetworkIdentifier::try_from("bar", SecurityType::Wpa2).unwrap();
         let credential = Credential::Password(b"password".to_vec());
@@ -1242,7 +1093,6 @@ mod tests {
         let saved_networks = SavedNetworksManager::new_with_stash_or_paths(
             stash_id,
             &path,
-            &tmp_path,
             create_mock_cobalt_sender(),
         )
         .await
@@ -1254,11 +1104,9 @@ mod tests {
 
     #[fuchsia::test]
     async fn test_record_connect_updates_one() {
-        let stash_id = rand_string();
-        let temp_dir = TempDir::new().expect("failed to create temporary directory");
-        let path = temp_dir.path().join("networks.json");
-        let tmp_path = temp_dir.path().join("tmp.json");
-        let saved_networks = create_saved_networks(stash_id, &path, &tmp_path).await;
+        let saved_networks = SavedNetworksManager::new_for_test()
+            .await
+            .expect("Failed to create SavedNetworksManager");
         let net_id = NetworkIdentifier::try_from("foo", SecurityType::Wpa2).unwrap();
         let net_id_also_valid = NetworkIdentifier::try_from("foo", SecurityType::Wpa).unwrap();
         let credential = Credential::Password(b"some_password".to_vec());
@@ -1297,11 +1145,9 @@ mod tests {
 
     #[fuchsia::test]
     async fn test_record_connect_failure() {
-        let stash_id = "test_record_connect_failure";
-        let temp_dir = TempDir::new().expect("failed to create temporary directory");
-        let path = temp_dir.path().join("networks.json");
-        let tmp_path = temp_dir.path().join("tmp.json");
-        let saved_networks = create_saved_networks(stash_id, &path, &tmp_path).await;
+        let saved_networks = SavedNetworksManager::new_for_test()
+            .await
+            .expect("Failed to create SavedNetworksManager");
         let network_id = NetworkIdentifier::try_from("foo", SecurityType::None).unwrap();
         let credential = Credential::None;
         let bssid = types::Bssid([1; 6]);
@@ -1378,11 +1224,9 @@ mod tests {
 
     #[fuchsia::test]
     async fn test_record_connect_cancelled_ignored() {
-        let stash_id = "test_record_connect_failure";
-        let temp_dir = TempDir::new().expect("failed to create temporary directory");
-        let path = temp_dir.path().join("networks.json");
-        let tmp_path = temp_dir.path().join("tmp.json");
-        let saved_networks = create_saved_networks(stash_id, &path, &tmp_path).await;
+        let saved_networks = SavedNetworksManager::new_for_test()
+            .await
+            .expect("Failed to create SavedNetworksManager");
         let network_id = NetworkIdentifier::try_from("foo", SecurityType::None).unwrap();
         let credential = Credential::None;
         let bssid = types::Bssid([0; 6]);
@@ -1436,11 +1280,9 @@ mod tests {
 
     #[fuchsia::test]
     async fn test_record_disconnect() {
-        let stash_id = "test_record_connect_failure";
-        let temp_dir = TempDir::new().expect("failed to create temporary directory");
-        let path = temp_dir.path().join("networks.json");
-        let tmp_path = temp_dir.path().join("tmp.json");
-        let saved_networks = create_saved_networks(stash_id, &path, &tmp_path).await;
+        let saved_networks = SavedNetworksManager::new_for_test()
+            .await
+            .expect("Failed to create SavedNetworksManager");
         let id = NetworkIdentifier::try_from("foo", SecurityType::Wpa2).unwrap();
         let credential = Credential::Psk(vec![1; 32]);
         let bssid = types::Bssid([1; 6]);
@@ -1475,11 +1317,9 @@ mod tests {
 
     #[fuchsia::test]
     async fn test_record_passive_scan() {
-        let stash_id = rand_string();
-        let temp_dir = TempDir::new().expect("failed to create temporary directory");
-        let path = temp_dir.path().join("networks.json");
-        let tmp_path = temp_dir.path().join("tmp.json");
-        let saved_networks = create_saved_networks(stash_id, &path, &tmp_path).await;
+        let saved_networks = SavedNetworksManager::new_for_test()
+            .await
+            .expect("Failed to create SavedNetworksManager");
         let saved_seen_id = NetworkIdentifier::try_from("foo", SecurityType::None).unwrap();
         let saved_seen_network = types::NetworkIdentifierDetailed {
             ssid: saved_seen_id.ssid.clone(),
@@ -1522,11 +1362,9 @@ mod tests {
     async fn test_record_undirected_scan_with_upgraded_security() {
         // Test that if we see a different compatible (higher) scan result for a saved network that
         // could be used to connect, recording the scan results will change the hidden probability.
-        let stash_id = rand_string();
-        let temp_dir = TempDir::new().expect("failed to create temporary directory");
-        let path = temp_dir.path().join("networks.json");
-        let tmp_path = temp_dir.path().join("tmp.json");
-        let saved_networks = create_saved_networks(stash_id, &path, &tmp_path).await;
+        let saved_networks = SavedNetworksManager::new_for_test()
+            .await
+            .expect("Failed to create SavedNetworksManager");
         let id = NetworkIdentifier::try_from("foobar", SecurityType::Wpa2).unwrap();
         let credential = Credential::Password(b"credential".to_vec());
 
@@ -1553,11 +1391,9 @@ mod tests {
     async fn test_record_undirected_scan_incompatible_credential() {
         // Test that if we see a different compatible (higher) scan result for a saved network that
         // could be used to connect, recording the scan results will change the hidden probability.
-        let stash_id = rand_string();
-        let temp_dir = TempDir::new().expect("failed to create temporary directory");
-        let path = temp_dir.path().join("networks.json");
-        let tmp_path = temp_dir.path().join("tmp.json");
-        let saved_networks = create_saved_networks(stash_id, &path, &tmp_path).await;
+        let saved_networks = SavedNetworksManager::new_for_test()
+            .await
+            .expect("Failed to create SavedNetworksManager");
         let id = NetworkIdentifier::try_from("foobar", SecurityType::Wpa2).unwrap();
         let credential = Credential::Psk(vec![8; 32]);
 
@@ -1585,11 +1421,9 @@ mod tests {
     async fn test_record_directed_scan_for_upgraded_security() {
         // Test that if we see a different compatible (higher) scan result for a saved network that
         // could be used to connect in a directed scan, the hidden probability will not be lowered.
-        let stash_id = rand_string();
-        let temp_dir = TempDir::new().expect("failed to create temporary directory");
-        let path = temp_dir.path().join("networks.json");
-        let tmp_path = temp_dir.path().join("tmp.json");
-        let saved_networks = create_saved_networks(stash_id, &path, &tmp_path).await;
+        let saved_networks = SavedNetworksManager::new_for_test()
+            .await
+            .expect("Failed to create SavedNetworksManager");
         let id = NetworkIdentifier::try_from("foobar", SecurityType::Wpa).unwrap();
         let credential = Credential::Password(b"credential".to_vec());
 
@@ -1625,11 +1459,9 @@ mod tests {
         // Test that if we see a network that is not compatible because of the saved credential
         // (but is otherwise compatible), the directed scan is not considered successful and the
         // hidden probability of the config is lowered.
-        let stash_id = rand_string();
-        let temp_dir = TempDir::new().expect("failed to create temporary directory");
-        let path = temp_dir.path().join("networks.json");
-        let tmp_path = temp_dir.path().join("tmp.json");
-        let saved_networks = create_saved_networks(stash_id, &path, &tmp_path).await;
+        let saved_networks = SavedNetworksManager::new_for_test()
+            .await
+            .expect("Failed to create SavedNetworksManager");
         let id = NetworkIdentifier::try_from("foo", SecurityType::Wpa2).unwrap();
         let credential = Credential::Psk(vec![11; 32]);
 
@@ -1665,11 +1497,9 @@ mod tests {
     async fn test_record_directed_scan_no_ssid_match() {
         // Test that recording directed active scan results does not mistakenly match a config with
         // a network with a different SSID.
-        let stash_id = rand_string();
-        let temp_dir = TempDir::new().expect("failed to create temporary directory");
-        let path = temp_dir.path().join("networks.json");
-        let tmp_path = temp_dir.path().join("tmp.json");
-        let saved_networks = create_saved_networks(stash_id, &path, &tmp_path).await;
+        let saved_networks = SavedNetworksManager::new_for_test()
+            .await
+            .expect("Failed to create SavedNetworksManager");
         let id = NetworkIdentifier::try_from("foo", SecurityType::Wpa2).unwrap();
         let credential = Credential::Psk(vec![11; 32]);
         let diff_ssid = types::Ssid::try_from("other-ssid").unwrap();
@@ -1704,11 +1534,9 @@ mod tests {
         // Test that if we see two networks with the same SSID but only one is compatible, the scan
         // is recorded as successful for the config. In other words it isn't mistakenly recorded as
         // a failure because of the config that isn't compatible.
-        let stash_id = rand_string();
-        let temp_dir = TempDir::new().expect("failed to create temporary directory");
-        let path = temp_dir.path().join("networks.json");
-        let tmp_path = temp_dir.path().join("tmp.json");
-        let saved_networks = create_saved_networks(stash_id, &path, &tmp_path).await;
+        let saved_networks = SavedNetworksManager::new_for_test()
+            .await
+            .expect("Failed to create SavedNetworksManager");
         let id = NetworkIdentifier::try_from("foo", SecurityType::Wpa2).unwrap();
         let credential = Credential::Password(b"foo-pass".to_vec());
 
@@ -1785,19 +1613,14 @@ mod tests {
         let stash_id = "clear";
         let temp_dir = TempDir::new().expect("failed to create temporary directory");
         let path = temp_dir.path().join("networks.json");
-        let tmp_path = temp_dir.path().join("tmp.json");
-
-        // Expect the store to be constructed successfully even if the file doesn't
-        // exist yet
         let network_id = NetworkIdentifier::try_from("foo", SecurityType::Wpa2).unwrap();
-        let saved_networks = create_saved_networks(stash_id, &path, &tmp_path).await;
+        let saved_networks = create_saved_networks(stash_id, &path).await;
 
         assert!(saved_networks
             .store(network_id.clone(), Credential::Password(b"qwertyuio".to_vec()))
             .await
             .expect("storing 'foo' failed")
             .is_none());
-        assert!(path.exists());
         assert_eq!(
             vec![network_config("foo", "qwertyuio")],
             saved_networks.lookup(network_id).await
@@ -1811,7 +1634,6 @@ mod tests {
         let saved_networks = SavedNetworksManager::new_with_stash_or_paths(
             stash_id,
             &path,
-            &tmp_path,
             create_mock_cobalt_sender(),
         )
         .await
@@ -1820,44 +1642,8 @@ mod tests {
         assert_eq!(0, saved_networks.known_network_count().await);
     }
 
-    #[fuchsia::test]
-    async fn ignore_legacy_file_bad_format() {
-        let temp_dir = TempDir::new().expect("failed to create temporary directory");
-        let path = temp_dir.path().join("networks.json");
-        let tmp_path = temp_dir.path().join("tmp.json");
-        let mut file = fs::File::create(&path).expect("failed to open file for writing");
-        // Write invalid JSON and close the file
-        assert_eq!(file.write(b"{").expect("failed to write broken json into file"), 1);
-        mem::drop(file);
-        assert!(path.exists());
-        // Constructing a saved network config store should still succeed,
-        // but the invalid file should be gone now
-        let stash_id = rand_string();
-        let saved_networks = SavedNetworksManager::new_with_stash_or_paths(
-            &stash_id,
-            &path,
-            &tmp_path,
-            create_mock_cobalt_sender(),
-        )
-        .await
-        .expect("failed to create saved networks store");
-        // KnownEssStore deletes the file if it can't read it, as in this case.
-        assert!(!path.exists());
-        // Writing an entry should not create the file yet because networks configs don't persist.
-        assert_eq!(0, saved_networks.known_network_count().await);
-        let network_id = NetworkIdentifier::try_from("foo", SecurityType::Wpa2).unwrap();
-        assert!(saved_networks
-            .store(network_id.clone(), Credential::Password(b"qwertyuio".to_vec()))
-            .await
-            .expect("storing 'foo' failed")
-            .is_none());
-
-        // There should be a file here again since we stored a network, so one will be created.
-        assert!(path.exists());
-    }
-
-    #[fuchsia::test]
-    async fn read_network_from_legacy_storage() {
+    #[fasync::run_singlethreaded(test)]
+    async fn do_not_read_network_from_legacy_storage_and_delete_file() {
         // Possible contents of a file generated from KnownEssStore, with networks foo and bar with
         // passwords foobar and password respecitively. Network foo should not be read into new
         // saved network manager because the password is too short for a valid network password.
@@ -1865,7 +1651,6 @@ mod tests {
             {\"ssid\":[98,97,114],\"password\":[112, 97, 115, 115, 119, 111, 114, 100]}]";
         let temp_dir = TempDir::new().expect("failed to create temporary directory");
         let path = temp_dir.path().join("networks.json");
-        let tmp_path = temp_dir.path().join("tmp.json");
         let mut file = fs::File::create(&path).expect("failed to open file for writing");
 
         assert_eq!(file.write(contents).expect("Failed to write to file"), contents.len());
@@ -1875,197 +1660,21 @@ mod tests {
         let saved_networks = SavedNetworksManager::new_with_stash_or_paths(
             stash_id,
             &path,
-            &tmp_path,
             create_mock_cobalt_sender(),
         )
         .await
         .expect("failed to create saved networks store");
 
-        // We should not delete the file while creating SavedNetworksManager.
-        assert!(path.exists());
-
-        // Network bar should have been read into the saved networks manager because it is valid
-        assert_eq!(1, saved_networks.known_network_count().await);
-        let bar_id = NetworkIdentifier::try_from("bar", SecurityType::Wpa2).unwrap();
-        let bar_config =
-            NetworkConfig::new(bar_id.clone(), Credential::Password(b"password".to_vec()), false)
-                .expect("failed to create network config");
-        assert_eq!(vec![bar_config], saved_networks.lookup(bar_id).await);
-
-        // Network foo should not have been read into saved networks manager because it is invalid.
-        let foo_id = NetworkIdentifier::try_from("foo", SecurityType::Wpa2).unwrap();
-        assert!(saved_networks.lookup(foo_id).await.is_empty());
-
-        assert!(path.exists());
-    }
-
-    #[fuchsia::test]
-    async fn do_not_migrate_networks_twice() {
-        let contents = b"[{\"ssid\":[102,111,111],\"password\":[102,111,111,98,97,114]},
-            {\"ssid\":[98,97,114],\"password\":[112, 97, 115, 115, 119, 111, 114, 100]}]";
-        let temp_dir = TempDir::new().expect("failed to create temporary directory");
-        let path = temp_dir.path().join("networks.json");
-        let tmp_path = temp_dir.path().join("tmp.json");
-        let mut file = fs::File::create(&path).expect("failed to open file for writing");
-
-        assert_eq!(file.write(contents).expect("Failed to write to file"), contents.len());
-        file.flush().expect("failed to flush contents of file");
-
-        let stash_id = rand_string();
-        let saved_networks = SavedNetworksManager::new_with_stash_or_paths(
-            &stash_id,
-            &path,
-            &tmp_path,
-            create_mock_cobalt_sender(),
-        )
-        .await
-        .expect("failed to create saved networks store");
-
-        // We should not have deleted the file while creating SavedNetworksManager.
-        assert!(path.exists());
-
-        // Verify the network config loaded from legacy storage
-        let net_id = NetworkIdentifier::try_from("bar", SecurityType::Wpa2).unwrap();
-        let net_config =
-            NetworkConfig::new(net_id.clone(), Credential::Password(b"password".to_vec()), false)
-                .expect("failed to create network config");
-        assert_eq!(vec![net_config.clone()], saved_networks.lookup(net_id.clone()).await);
-
-        // Replace the network 'bar' that was read from legacy version storage
-        let popped_network = saved_networks
-            .store(net_id.clone(), Credential::Password(b"foobarbaz".to_vec()))
-            .await
-            .expect("failed to store network");
-        assert_eq!(popped_network, Some(net_config));
-        let new_net_config =
-            NetworkConfig::new(net_id.clone(), Credential::Password(b"foobarbaz".to_vec()), false)
-                .expect("failed to create network config");
-        assert_eq!(vec![new_net_config.clone()], saved_networks.lookup(net_id.clone()).await);
-
-        // Recreate the SavedNetworksManager again, as would happen when the device restasts
-        let saved_networks = SavedNetworksManager::new_with_stash_or_paths(
-            stash_id,
-            &path,
-            &tmp_path,
-            create_mock_cobalt_sender(),
-        )
-        .await
-        .expect("failed to create saved networks store");
-
-        // We should not have deleted the file while creating SavedNetworksManager the first time.
-        assert!(path.exists());
-        // Expect to see the replaced network 'bar'
-        assert_eq!(1, saved_networks.known_network_count().await);
-        assert_eq!(vec![new_net_config], saved_networks.lookup(net_id).await);
-    }
-
-    #[fuchsia::test]
-    async fn ignore_legacy_if_stash_exists() {
-        let contents = b"[{\"ssid\":[102,111,111],\"password\":[102,111,111,98,97,114]},
-            {\"ssid\":[98,97,114],\"password\":[112, 97, 115, 115, 119, 111, 114, 100]}]";
-        let temp_dir = TempDir::new().expect("failed to create temporary directory");
-        let path = temp_dir.path().join("networks.json");
-        let tmp_path = temp_dir.path().join("tmp.json");
-        let mut file = fs::File::create(&path).expect("failed to open file for writing");
-
-        assert_eq!(file.write(contents).expect("Failed to write to file"), contents.len());
-        file.flush().expect("failed to flush contents of file");
-
-        let stash_id = rand_string();
-        let saved_networks = SavedNetworksManager::new_with_stash_or_paths(
-            &stash_id,
-            &path,
-            &tmp_path,
-            create_mock_cobalt_sender(),
-        )
-        .await
-        .expect("failed to create saved networks store");
-
-        // We should not delete the file while creating SavedNetworksManager.
-        assert!(path.exists());
-
-        // Verify the network config loaded from legacy storage
-        let net_id = NetworkIdentifier::try_from("bar", SecurityType::Wpa2).unwrap();
-        let net_config =
-            NetworkConfig::new(net_id.clone(), Credential::Password(b"password".to_vec()), false)
-                .expect("failed to create network config");
-        assert_eq!(vec![net_config.clone()], saved_networks.lookup(net_id.clone()).await);
-
-        // Replace the network 'bar' that was read from legacy version storage
-        let popped_network = saved_networks
-            .store(net_id.clone(), Credential::Password(b"foobarbaz".to_vec()))
-            .await
-            .expect("failed to store network");
-        assert_eq!(popped_network, Some(net_config));
-        let new_net_config =
-            NetworkConfig::new(net_id.clone(), Credential::Password(b"foobarbaz".to_vec()), false)
-                .expect("failed to create network config");
-        assert_eq!(vec![new_net_config.clone()], saved_networks.lookup(net_id.clone()).await);
-
-        // Add legacy store file again as if we had failed to delete it
-        let mut file = fs::File::create(&path).expect("failed to open file for writing");
-        assert_eq!(file.write(contents).expect("Failed to write to file"), contents.len());
-        file.flush().expect("failed to flush contents of file");
-
-        // Recreate the SavedNetworksManager again, as would happen when the device restasts
-        let saved_networks = SavedNetworksManager::new_with_stash_or_paths(
-            stash_id,
-            &path,
-            &tmp_path,
-            create_mock_cobalt_sender(),
-        )
-        .await
-        .expect("failed to create saved networks store");
-
-        // We should ignore the legacy file since there is something in the stash.
-        assert_eq!(1, saved_networks.known_network_count().await);
-        assert_eq!(vec![new_net_config], saved_networks.lookup(net_id).await);
-    }
-
-    #[fuchsia::test]
-    async fn write_and_load_legacy() {
-        let stash_id = "write_and_load_legacy";
-        let temp_dir = TempDir::new().expect("failed to create temporary directory");
-        let path = temp_dir.path().join("networks.json");
-        let tmp_path = temp_dir.path().join("tmp.json");
-        let saved_networks = create_saved_networks(stash_id, &path, &tmp_path).await;
-
-        // Save a network, which should write to the legacy store
-        let net_id = NetworkIdentifier::try_from("bar", SecurityType::Wpa2).unwrap();
-        assert!(saved_networks
-            .store(net_id.clone(), Credential::Password(b"foobarbaz".to_vec()))
-            .await
-            .expect("failed to store network")
-            .is_none());
-
-        // Explicitly clear just the stash
-        saved_networks.stash.lock().await.clear().await.expect("failed to clear the stash");
-
-        // Create the saved networks manager again to trigger reading from persistent storage
-        let saved_networks = SavedNetworksManager::new_with_stash_or_paths(
-            stash_id,
-            &path,
-            tmp_path,
-            create_mock_cobalt_sender(),
-        )
-        .await
-        .expect("failed to create saved networks store");
-
-        // Verify that the network was read in from legacy store.
-        let net_config =
-            NetworkConfig::new(net_id.clone(), Credential::Password(b"foobarbaz".to_vec()), false)
-                .expect("failed to create network config");
-        assert_eq!(vec![net_config.clone()], saved_networks.lookup(net_id.clone()).await);
+        // Network should not be read. The backing file should be deleted.
+        assert_eq!(0, saved_networks.known_network_count().await);
+        assert!(!path.exists());
     }
 
     #[fuchsia::test]
     fn test_store_waits_for_stash() {
         let mut exec = fasync::TestExecutor::new().expect("failed to create executor");
-        let temp_dir = TempDir::new().expect("failed to create temporary directory");
-        let path = temp_dir.path().join(rand_string());
-        let tmp_path = temp_dir.path().join(rand_string());
         let (saved_networks, mut stash_server) =
-            exec.run_singlethreaded(SavedNetworksManager::new_and_stash_server(path, tmp_path));
+            exec.run_singlethreaded(SavedNetworksManager::new_and_stash_server());
 
         let network_id = NetworkIdentifier::try_from("foo", SecurityType::None).unwrap();
         let save_fut = saved_networks.store(network_id, Credential::None);
@@ -2091,12 +1700,10 @@ mod tests {
     async fn create_saved_networks(
         stash_id: impl AsRef<str>,
         path: impl AsRef<Path>,
-        tmp_path: impl AsRef<Path>,
     ) -> SavedNetworksManager {
         let saved_networks = SavedNetworksManager::new_with_stash_or_paths(
             stash_id,
             &path,
-            &tmp_path,
             create_mock_cobalt_sender(),
         )
         .await
@@ -2124,11 +1731,10 @@ mod tests {
         let stash_id = rand_string();
         let temp_dir = TempDir::new().expect("failed to create temporary directory");
         let path = temp_dir.path().join("networks.json");
-        let tmp_path = temp_dir.path().join("tmp.json");
         let (cobalt_api, mut cobalt_events) = create_mock_cobalt_sender_and_receiver();
 
         let saved_networks =
-            SavedNetworksManager::new_with_stash_or_paths(&stash_id, &path, &tmp_path, cobalt_api)
+            SavedNetworksManager::new_with_stash_or_paths(&stash_id, &path, cobalt_api)
                 .await
                 .unwrap();
         let network_id_foo = NetworkIdentifier::try_from("foo", SecurityType::Wpa2).unwrap();
@@ -2342,11 +1948,9 @@ mod tests {
     async fn test_record_not_seen_active_scan() {
         // Test that if we update that we haven't seen a couple of networks in active scans, their
         // hidden probability is updated.
-        let stash_id = rand_string();
-        let temp_dir = TempDir::new().expect("failed to create temporary directory");
-        let path = temp_dir.path().join("networks.json");
-        let tmp_path = temp_dir.path().join("tmp.json");
-        let saved_networks = create_saved_networks(stash_id, &path, &tmp_path).await;
+        let saved_networks = SavedNetworksManager::new_for_test()
+            .await
+            .expect("Failed to create SavedNetworksManager");
 
         // Seen in active scans
         let id_1 = NetworkIdentifier::try_from("foo", SecurityType::Wpa).unwrap();
@@ -2421,11 +2025,9 @@ mod tests {
 
     #[fuchsia::test]
     async fn test_record_connection_quality_data() {
-        let stash_id = rand_string();
-        let temp_dir = TempDir::new().expect("failed to create temporary directory");
-        let path = temp_dir.path().join("networks.json");
-        let tmp_path = temp_dir.path().join("tmp.json");
-        let saved_networks = create_saved_networks(stash_id, &path, &tmp_path).await;
+        let saved_networks = SavedNetworksManager::new_for_test()
+            .await
+            .expect("Failed to create SavedNetworksManager");
         let net_id = NetworkIdentifier::try_from("foo", SecurityType::Wpa2).unwrap();
         let net_id_also_valid = NetworkIdentifier::try_from("foo", SecurityType::Wpa).unwrap();
         let credential = Credential::Password(b"some_password".to_vec());

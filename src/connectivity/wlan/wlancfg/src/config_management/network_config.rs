@@ -6,7 +6,6 @@ use {
     crate::client::types as client_types,
     arbitrary::Arbitrary,
     fidl_fuchsia_wlan_policy as fidl_policy, fuchsia_zircon as zx,
-    serde::{Deserialize, Serialize},
     std::{
         collections::{HashMap, VecDeque},
         convert::TryFrom,
@@ -271,7 +270,7 @@ impl From<&NetworkConfig> for fidl_policy::NetworkConfig {
 
 /// The credential of a network connection. It mirrors the fidl_fuchsia_wlan_policy Credential
 #[derive(Arbitrary)] // Derive Arbitrary for fuzzer
-#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
+#[derive(Clone, Debug, PartialEq)]
 pub enum Credential {
     None,
     Password(Vec<u8>),
@@ -337,7 +336,7 @@ impl From<Credential> for fidl_policy::Credential {
 }
 
 #[derive(Arbitrary)] // Derive Arbitrary for fuzzer
-#[derive(Clone, Copy, Debug, Deserialize, Eq, Hash, PartialEq, Serialize)]
+#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
 pub enum SecurityType {
     None,
     Wep,

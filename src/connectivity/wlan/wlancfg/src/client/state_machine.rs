@@ -866,7 +866,6 @@ mod tests {
         fuchsia_zircon::prelude::*,
         futures::{task::Poll, Future},
         pin_utils::pin_mut,
-        rand::{distributions::Alphanumeric, thread_rng, Rng},
         std::convert::TryFrom,
         test_case::test_case,
         wlan_common::{
@@ -953,20 +952,13 @@ mod tests {
         );
     }
 
-    fn rand_string() -> String {
-        thread_rng().sample_iter(&Alphanumeric).take(20).collect()
-    }
-
     #[fuchsia::test]
     fn connecting_state_successfully_connects() {
         let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let mut test_values = test_setup();
         // Do SavedNetworksManager set up manually to get functionality and stash server
-        let temp_dir = tempfile::TempDir::new().expect("failed to create temporary directory");
-        let path = temp_dir.path().join(rand_string());
-        let tmp_path = temp_dir.path().join(rand_string());
         let (saved_networks, mut stash_server) =
-            exec.run_singlethreaded(SavedNetworksManager::new_and_stash_server(path, tmp_path));
+            exec.run_singlethreaded(SavedNetworksManager::new_and_stash_server());
         let saved_networks_manager = Arc::new(saved_networks);
         test_values.common_options.saved_networks_manager = saved_networks_manager.clone();
         let next_network_ssid = types::Ssid::try_from("bar").unwrap();
@@ -1118,11 +1110,8 @@ mod tests {
             create_proxy::<fidl_sme::ClientSmeMarker>().expect("failed to create an sme channel");
         let mut sme_req_stream =
             sme_server.into_stream().expect("could not create SME request stream");
-        let temp_dir = tempfile::TempDir::new().expect("failed to create temporary directory");
-        let path = temp_dir.path().join(rand_string());
-        let tmp_path = temp_dir.path().join(rand_string());
         let (saved_networks, mut stash_server) =
-            exec.run_singlethreaded(SavedNetworksManager::new_and_stash_server(path, tmp_path));
+            exec.run_singlethreaded(SavedNetworksManager::new_and_stash_server());
         let saved_networks_manager = Arc::new(saved_networks);
         let (cobalt_api, mut cobalt_events) = create_mock_cobalt_sender_and_receiver();
         let (telemetry_sender, mut telemetry_receiver) = mpsc::channel::<TelemetryEvent>(100);
@@ -1326,11 +1315,8 @@ mod tests {
             create_proxy::<fidl_sme::ClientSmeMarker>().expect("failed to create an sme channel");
         let mut sme_req_stream =
             sme_server.into_stream().expect("could not create SME request stream");
-        let temp_dir = tempfile::TempDir::new().expect("failed to create temporary directory");
-        let path = temp_dir.path().join(rand_string());
-        let tmp_path = temp_dir.path().join(rand_string());
         let (saved_networks, mut stash_server) =
-            exec.run_singlethreaded(SavedNetworksManager::new_and_stash_server(path, tmp_path));
+            exec.run_singlethreaded(SavedNetworksManager::new_and_stash_server());
         let saved_networks_manager = Arc::new(saved_networks);
         let (cobalt_api, _cobalt_events) = create_mock_cobalt_sender_and_receiver();
         let (telemetry_sender, _telemetry_receiver) = mpsc::channel::<TelemetryEvent>(100);
@@ -1608,11 +1594,8 @@ mod tests {
         let (sme_proxy, sme_server) =
             create_proxy::<fidl_sme::ClientSmeMarker>().expect("failed to create an sme channel");
         let sme_req_stream = sme_server.into_stream().expect("could not create SME request stream");
-        let temp_dir = tempfile::TempDir::new().expect("failed to create temporary directory");
-        let path = temp_dir.path().join(rand_string());
-        let tmp_path = temp_dir.path().join(rand_string());
         let (saved_networks, mut stash_server) =
-            exec.run_singlethreaded(SavedNetworksManager::new_and_stash_server(path, tmp_path));
+            exec.run_singlethreaded(SavedNetworksManager::new_and_stash_server());
         let saved_networks_manager = Arc::new(saved_networks);
         let (cobalt_api, mut cobalt_events) = create_mock_cobalt_sender_and_receiver();
         let (telemetry_sender, _telemetry_receiver) = mpsc::channel::<TelemetryEvent>(100);
@@ -1801,18 +1784,9 @@ mod tests {
         let (sme_proxy, sme_server) =
             create_proxy::<fidl_sme::ClientSmeMarker>().expect("failed to create an sme channel");
         let sme_req_stream = sme_server.into_stream().expect("could not create SME request stream");
-        let stash_id = "connecting_state_fails_to_connect_at_max_retries";
-        let temp_dir = tempfile::TempDir::new().expect("failed to create temporary directory");
-        let path = temp_dir.path().join("networks.json");
-        let tmp_path = temp_dir.path().join("tmp.json");
         let saved_networks_manager = Arc::new(
-            exec.run_singlethreaded(SavedNetworksManager::new_with_stash_or_paths(
-                stash_id,
-                path,
-                tmp_path,
-                create_mock_cobalt_sender(),
-            ))
-            .expect("Failed to create saved networks manager"),
+            exec.run_singlethreaded(SavedNetworksManager::new_for_test())
+                .expect("Failed to create saved networks manager"),
         );
         let (_client_req_sender, client_req_stream) = mpsc::channel(1);
         let (cobalt_api, mut cobalt_events) = create_mock_cobalt_sender_and_receiver();
@@ -1953,18 +1927,9 @@ mod tests {
         let (sme_proxy, sme_server) =
             create_proxy::<fidl_sme::ClientSmeMarker>().expect("failed to create an sme channel");
         let sme_req_stream = sme_server.into_stream().expect("could not create SME request stream");
-        let stash_id = "connecting_state_fails_to_connect_with_bad_credentials";
-        let temp_dir = tempfile::TempDir::new().expect("failed to create temporary directory");
-        let path = temp_dir.path().join("networks.json");
-        let tmp_path = temp_dir.path().join("tmp.json");
         let saved_networks_manager = Arc::new(
-            exec.run_singlethreaded(SavedNetworksManager::new_with_stash_or_paths(
-                stash_id,
-                path,
-                tmp_path,
-                create_mock_cobalt_sender(),
-            ))
-            .expect("Failed to create saved networks manager"),
+            exec.run_singlethreaded(SavedNetworksManager::new_for_test())
+                .expect("Failed to create saved networks manager"),
         );
         let (_client_req_sender, client_req_stream) = mpsc::channel(1);
         let (cobalt_api, mut cobalt_events) = create_mock_cobalt_sender_and_receiver();
@@ -2872,11 +2837,8 @@ mod tests {
     fn connected_state_records_unexpected_disconnect_unspecified_bss() {
         let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let mut test_values = test_setup();
-        let temp_dir = tempfile::TempDir::new().expect("failed to create temporary directory");
-        let path = temp_dir.path().join(rand_string());
-        let tmp_path = temp_dir.path().join(rand_string());
         let (saved_networks, mut stash_server) =
-            exec.run_singlethreaded(SavedNetworksManager::new_and_stash_server(path, tmp_path));
+            exec.run_singlethreaded(SavedNetworksManager::new_and_stash_server());
         let saved_networks_manager = Arc::new(saved_networks);
         test_values.common_options.saved_networks_manager = saved_networks_manager.clone();
         let (telemetry_sender, _telemetry_receiver) = mpsc::channel::<TelemetryEvent>(100);
@@ -3254,11 +3216,8 @@ mod tests {
         let (sme_proxy, sme_server) =
             create_proxy::<fidl_sme::ClientSmeMarker>().expect("failed to create an sme channel");
         let sme_req_stream = sme_server.into_stream().expect("could not create SME request stream");
-        let temp_dir = tempfile::TempDir::new().expect("failed to create temporary directory");
-        let path = temp_dir.path().join(rand_string());
-        let tmp_path = temp_dir.path().join(rand_string());
         let (saved_networks, mut stash_server) =
-            exec.run_singlethreaded(SavedNetworksManager::new_and_stash_server(path, tmp_path));
+            exec.run_singlethreaded(SavedNetworksManager::new_and_stash_server());
         let saved_networks_manager = Arc::new(saved_networks);
         let (cobalt_api, mut cobalt_events) = create_mock_cobalt_sender_and_receiver();
         let (telemetry_sender, _telemetry_receiver) = mpsc::channel::<TelemetryEvent>(100);
@@ -3518,11 +3477,8 @@ mod tests {
     fn connected_state_notified_of_network_disconnect_sme_reconnect_unsuccessfully() {
         let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let mut test_values = test_setup();
-        let temp_dir = tempfile::TempDir::new().expect("failed to create temporary directory");
-        let path = temp_dir.path().join(rand_string());
-        let tmp_path = temp_dir.path().join(rand_string());
         let (saved_networks, mut stash_server) =
-            exec.run_singlethreaded(SavedNetworksManager::new_and_stash_server(path, tmp_path));
+            exec.run_singlethreaded(SavedNetworksManager::new_and_stash_server());
         let saved_networks_manager = Arc::new(saved_networks);
         test_values.common_options.saved_networks_manager = saved_networks_manager.clone();
         let (telemetry_sender, _telemetry_receiver) = mpsc::channel::<TelemetryEvent>(100);

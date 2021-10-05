@@ -1316,9 +1316,7 @@ mod tests {
         },
         lazy_static::lazy_static,
         pin_utils::pin_mut,
-        rand::{distributions::Alphanumeric, thread_rng, Rng},
         std::convert::TryFrom,
-        tempfile::TempDir,
         test_case::test_case,
         wlan_common::{
             assert_variant,
@@ -1390,10 +1388,6 @@ mod tests {
         pub telemetry_receiver: mpsc::Receiver<TelemetryEvent>,
         pub stats_sender: ConnectionStatsSender,
         pub stats_receiver: ConnectionStatsReceiver,
-    }
-
-    fn rand_string() -> String {
-        thread_rng().sample_iter(&Alphanumeric).take(20).collect()
     }
 
     /// Create a TestValues for a unit test.
@@ -1980,12 +1974,8 @@ mod tests {
         let mut test_values = test_setup(&mut exec);
         let (mut iface_manager, mut _sme_stream) =
             create_iface_manager_with_client(&test_values, false);
-
-        let temp_dir = TempDir::new().expect("failed to create temporary directory");
-        let path = temp_dir.path().join(rand_string());
-        let tmp_path = temp_dir.path().join(rand_string());
         let (saved_networks, mut stash_server) =
-            exec.run_singlethreaded(SavedNetworksManager::new_and_stash_server(path, tmp_path));
+            exec.run_singlethreaded(SavedNetworksManager::new_and_stash_server());
         test_values.saved_networks = Arc::new(saved_networks);
 
         // Add credentials for the test network to the saved networks.
@@ -2088,11 +2078,8 @@ mod tests {
             create_iface_manager_with_client(&test_values, false);
         iface_manager.clients[0].driver_features.push(wpa3_feature);
 
-        let temp_dir = TempDir::new().expect("failed to create temporary directory");
-        let path = temp_dir.path().join(rand_string());
-        let tmp_path = temp_dir.path().join(rand_string());
         let (saved_networks, mut stash_server) =
-            exec.run_singlethreaded(SavedNetworksManager::new_and_stash_server(path, tmp_path));
+            exec.run_singlethreaded(SavedNetworksManager::new_and_stash_server());
         test_values.saved_networks = Arc::new(saved_networks);
 
         // Add credentials for the test network to the saved networks.
@@ -4783,11 +4770,8 @@ mod tests {
             expected_connect_request: None,
         }));
 
-        let temp_dir = TempDir::new().expect("failed to create temporary directory");
-        let path = temp_dir.path().join(rand_string());
-        let tmp_path = temp_dir.path().join(rand_string());
         let (saved_networks, mut stash_server) =
-            exec.run_singlethreaded(SavedNetworksManager::new_and_stash_server(path, tmp_path));
+            exec.run_singlethreaded(SavedNetworksManager::new_and_stash_server());
         test_values.saved_networks = Arc::new(saved_networks);
 
         // Update the saved networks with knowledge of the test SSID and credentials.
@@ -4929,11 +4913,8 @@ mod tests {
             expected_connect_request: None,
         }));
 
-        let temp_dir = TempDir::new().expect("failed to create temporary directory");
-        let path = temp_dir.path().join(rand_string());
-        let tmp_path = temp_dir.path().join(rand_string());
         let (saved_networks, mut stash_server) =
-            exec.run_singlethreaded(SavedNetworksManager::new_and_stash_server(path, tmp_path));
+            exec.run_singlethreaded(SavedNetworksManager::new_and_stash_server());
         test_values.saved_networks = Arc::new(saved_networks);
 
         // Update the saved networks with knowledge of the test SSID and credentials.
@@ -4981,11 +4962,8 @@ mod tests {
         let network_id = NetworkIdentifier::new(TEST_SSID.clone(), SecurityType::Wpa);
         let credential = Credential::Password(TEST_PASSWORD.as_bytes().to_vec());
         let mut stash_server = {
-            let temp_dir = TempDir::new().expect("failed to create temporary directory");
-            let path = temp_dir.path().join(rand_string());
-            let tmp_path = temp_dir.path().join(rand_string());
             let (saved_networks, mut stash_server) =
-                exec.run_singlethreaded(SavedNetworksManager::new_and_stash_server(path, tmp_path));
+                exec.run_singlethreaded(SavedNetworksManager::new_and_stash_server());
             test_values.saved_networks = Arc::new(saved_networks);
 
             // Update the saved networks with knowledge of the test SSID and credentials.
@@ -5270,11 +5248,8 @@ mod tests {
         // Create a fake network entry so that a reconnect will be attempted.
         let network_id = NetworkIdentifier::new(TEST_SSID.clone(), SecurityType::Wpa);
         let credential = Credential::Password(TEST_PASSWORD.as_bytes().to_vec());
-        let temp_dir = TempDir::new().expect("failed to create temporary directory");
-        let path = temp_dir.path().join(rand_string());
-        let tmp_path = temp_dir.path().join(rand_string());
         let (saved_networks, mut stash_server) =
-            exec.run_singlethreaded(SavedNetworksManager::new_and_stash_server(path, tmp_path));
+            exec.run_singlethreaded(SavedNetworksManager::new_and_stash_server());
         test_values.saved_networks = Arc::new(saved_networks);
 
         // Update the saved networks with knowledge of the test SSID and credentials.
