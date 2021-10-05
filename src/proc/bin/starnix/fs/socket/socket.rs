@@ -19,8 +19,7 @@ use std::sync::Arc;
 
 /// A `Socket` represents one endpoint of a bidirectional communication channel.
 ///
-/// The `Socket` enum represents the state that the socket is in. When a socket is created it is
-/// `Unbound`, when the socket is bound (e.g., via `sys_bind`) `Bound`, etc.
+/// The `Socket` enum represents the state that the socket is in.
 ///
 /// A `Socket` always contains a local `SocketEndpoint`. Most of the socket's state is stored in
 /// its `SocketEndpoint`.
@@ -28,12 +27,8 @@ use std::sync::Arc;
 /// When a socket is connected, the remote `SocketEndpoint` can be retrieved from its
 /// `SocketConnection`. This can be used to, for example, write to the remote socket.
 pub enum Socket {
-    /// A socket that is `Unbound` has just been created, but not been bound to an address or
-    /// connected.
-    Unbound(SocketEndpointHandle),
-
-    /// A `Bound` socket has been bound to a address, but is not listening.
-    Bound(SocketEndpointHandle),
+    /// A socket that is neither listening for connections nor connected to another socket.
+    Disconnected(SocketEndpointHandle),
 
     /// A `Listening` socket is a passive socket that is waiting for incoming connections.
     Listening(ListeningSocketEndpoint),
@@ -65,7 +60,7 @@ impl Socket {
     /// # Parameters
     /// - `domain`: The domain of the socket (e.g., `AF_UNIX`).
     pub fn new(domain: SocketDomain, socket_type: SocketType) -> SocketHandle {
-        new_handle(Socket::Unbound(SocketEndpoint::new(domain, socket_type, None)))
+        new_handle(Socket::Disconnected(SocketEndpoint::new(domain, socket_type, None)))
     }
 
     /// Creates a pair of connected sockets.
@@ -105,20 +100,13 @@ impl Socket {
 
     /// Binds this socket to a `socket_address`.
     ///
-    /// After this call, the socket can be put into a listening state.
-    ///
     /// Returns an error if the socket could not be bound.
     pub fn bind(&mut self, socket_address: SocketAddress) -> Result<(), Errno> {
-        let endpoint = match self {
-            Socket::Unbound(endpoint) => Ok(endpoint),
-            _ => error!(EINVAL),
-        }?;
-        {
-            let mut locked_endpoint = endpoint.lock();
-            locked_endpoint.address = Some(socket_address);
+        let mut endpoint = self.local_endpoint().lock();
+        if endpoint.address.is_some() {
+            return error!(EINVAL);
         }
-        *self = Socket::Bound(endpoint.clone());
-
+        endpoint.address = Some(socket_address);
         Ok(())
     }
 
@@ -127,7 +115,10 @@ impl Socket {
     /// Returns an error if the socket is not bound.
     pub fn listen(&mut self, backlog: u32) -> Result<(), Errno> {
         match self {
-            Socket::Bound(endpoint) => {
+            Socket::Disconnected(endpoint) => {
+                if endpoint.lock().address.is_none() {
+                    return error!(EINVAL);
+                }
                 *self = ListeningSocketEndpoint::new(endpoint.clone(), backlog);
                 Ok(())
             }
@@ -167,9 +158,8 @@ impl Socket {
     /// of the sockets is already connected).
     pub fn connect(&mut self, socket: &mut Socket) -> Result<(), Errno> {
         let client = match self {
+            Socket::Disconnected(endpoint) => Ok(endpoint),
             Socket::Connected(_) => error!(EISCONN),
-            Socket::Unbound(endpoint) => Ok(endpoint),
-            Socket::Bound(endpoint) => Ok(endpoint),
             _ => error!(ECONNREFUSED),
         }?;
         let passive = match socket {
@@ -196,8 +186,7 @@ impl Socket {
     /// `Connected`).
     fn local_endpoint(&self) -> &SocketEndpointHandle {
         match self {
-            Socket::Unbound(endpoint) => endpoint,
-            Socket::Bound(endpoint) => endpoint,
+            Socket::Disconnected(endpoint) => endpoint,
             Socket::Listening(passive) => &passive.endpoint,
             Socket::Connected(connection) => &connection.local,
             Socket::Shutdown(endpoint) => endpoint,
