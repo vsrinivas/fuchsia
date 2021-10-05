@@ -215,13 +215,14 @@ pub enum TelemetryEvent {
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct QueryStatusResult {
-    connected_info: Option<ConnectedInfo>,
+    connection_state: ConnectionStateInfo,
 }
 
 #[derive(Clone, Debug, PartialEq)]
-pub struct ConnectedInfo {
-    iface_id: u16,
-    latest_ap_state: BssDescription,
+pub enum ConnectionStateInfo {
+    Idle,
+    Disconnected,
+    Connected { iface_id: u16, latest_ap_state: BssDescription },
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -335,7 +336,7 @@ pub struct DisconnectedState {
     accounted_no_saved_neighbor_duration: zx::Duration,
 }
 
-fn record_inspect_counters(
+fn inspect_record_counters(
     inspect_node: &InspectNode,
     child_name: &str,
     counters: Arc<Mutex<WindowedStats<StatCounters>>>,
@@ -368,7 +369,67 @@ fn record_inspect_counters(
     });
 }
 
-fn record_inspect_external_data(
+fn inspect_record_connection_status(
+    inspect_node: &InspectNode,
+    hasher: WlanHasher,
+    telemetry_sender: TelemetrySender,
+) {
+    inspect_node.record_lazy_child("connection_status", move|| {
+        let hasher = hasher.clone();
+        let telemetry_sender = telemetry_sender.clone();
+        async move {
+            let inspector = Inspector::new();
+            let (sender, receiver) = oneshot::channel();
+            telemetry_sender.send(TelemetryEvent::QueryStatus { sender });
+            let info = match receiver.await {
+                Ok(result) => result.connection_state,
+                Err(e) => {
+                    warn!("Unable to query data for Inspect connection status node: {}", e);
+                    return Ok(inspector)
+                }
+            };
+
+            inspector.root().record_string("status_string", match &info {
+                ConnectionStateInfo::Idle => "idle".to_string(),
+                ConnectionStateInfo::Disconnected => "disconnected".to_string(),
+                ConnectionStateInfo::Connected { .. } => "connected".to_string(),
+            });
+            if let ConnectionStateInfo::Connected { latest_ap_state, .. } = info {
+                inspect_insert!(inspector.root(), connected_network: {
+                    rssi_dbm: latest_ap_state.rssi_dbm,
+                    snr_db: latest_ap_state.snr_db,
+                    bssid: latest_ap_state.bssid.0.to_mac_string(),
+                    bssid_hash: hasher.hash_mac_addr(&latest_ap_state.bssid.0),
+                    ssid: latest_ap_state.ssid.to_string(),
+                    ssid_hash: hasher.hash_ssid(&latest_ap_state.ssid),
+                    protection: format!("{:?}", latest_ap_state.protection()),
+                    channel: {
+                        primary: latest_ap_state.channel.primary,
+                        cbw: format!("{:?}", latest_ap_state.channel.cbw),
+                        secondary80: latest_ap_state.channel.secondary80,
+                    },
+                    ht_cap?: latest_ap_state.raw_ht_cap().map(|cap| InspectBytes(cap.bytes)),
+                    vht_cap?: latest_ap_state.raw_vht_cap().map(|cap| InspectBytes(cap.bytes)),
+                    wsc?: match &latest_ap_state.probe_resp_wsc() {
+                        None => None,
+                        Some(wsc) => Some(make_inspect_loggable!(
+                            device_name: String::from_utf8_lossy(&wsc.device_name[..]).to_string(),
+                            manufacturer: String::from_utf8_lossy(&wsc.manufacturer[..]).to_string(),
+                            model_name: String::from_utf8_lossy(&wsc.model_name[..]).to_string(),
+                            model_number: String::from_utf8_lossy(&wsc.model_number[..]).to_string(),
+                        )),
+                    },
+                    is_wmm_assoc: latest_ap_state.find_wmm_param().is_some(),
+                    wmm_param?: latest_ap_state.find_wmm_param().map(|bytes| InspectBytes(bytes)),
+                });
+            }
+            Ok(inspector)
+        }
+        .boxed()
+    });
+}
+
+fn inspect_record_external_data(
     external_inspect_node: &ExternalInspectNode,
     telemetry_sender: TelemetrySender,
     dev_svc_proxy: fidl_fuchsia_wlan_device_service::DeviceServiceProxy,
@@ -380,16 +441,15 @@ fn record_inspect_external_data(
             let inspector = Inspector::new();
             let (sender, receiver) = oneshot::channel();
             telemetry_sender.send(TelemetryEvent::QueryStatus { sender });
-            let connected_info = match receiver.await {
-                Ok(result) => result.connected_info,
+            let info = match receiver.await {
+                Ok(result) => result.connection_state,
                 Err(e) => {
                     warn!("Unable to query data for Inspect external node: {}", e);
-                    None
+                    return Ok(inspector);
                 }
             };
 
-            if let Some(connected_info) = connected_info {
-                let latest_ap_state = connected_info.latest_ap_state;
+            if let ConnectionStateInfo::Connected { iface_id, latest_ap_state } = info {
                 inspect_insert!(inspector.root(), connected_network: {
                     rssi_dbm: latest_ap_state.rssi_dbm,
                     snr_db: latest_ap_state.snr_db,
@@ -404,7 +464,7 @@ fn record_inspect_external_data(
                     },
                 });
 
-                match dev_svc_proxy.get_iface_stats(connected_info.iface_id).await {
+                match dev_svc_proxy.get_iface_stats(iface_id).await {
                     Ok((zx::sys::ZX_OK, Some(stats))) => {
                         if let Some(mlme_stats) = &stats.mlme_stats {
                             if let fidl_fuchsia_wlan_stats::MlmeStats::ClientMlmeStats(mlme_stats) =
@@ -596,21 +656,22 @@ impl Telemetry {
         external_inspect_node: InspectNode,
     ) -> Self {
         let stats_logger = StatsLogger::new(cobalt_1dot1_proxy);
-        record_inspect_counters(
+        inspect_record_counters(
             &inspect_node,
             "1d_counters",
             Arc::clone(&stats_logger.last_1d_stats),
         );
-        record_inspect_counters(
+        inspect_record_counters(
             &inspect_node,
             "7d_counters",
             Arc::clone(&stats_logger.last_7d_stats),
         );
+        inspect_record_connection_status(&inspect_node, hasher.clone(), telemetry_sender.clone());
         let get_iface_stats_fail_count = inspect_node.create_uint("get_iface_stats_fail_count", 0);
         let connect_events = inspect_node.create_child("connect_events");
         let disconnect_events = inspect_node.create_child("disconnect_events");
         let external_inspect_node = ExternalInspectNode::new(external_inspect_node);
-        record_inspect_external_data(
+        inspect_record_external_data(
             &external_inspect_node,
             telemetry_sender,
             dev_svc_proxy.clone(),
@@ -684,14 +745,15 @@ impl Telemetry {
         let now = fasync::Time::now();
         match event {
             TelemetryEvent::QueryStatus { sender } => {
-                let connected_info = match &self.connection_state {
-                    ConnectionState::Connected(state) => Some(ConnectedInfo {
+                let info = match &self.connection_state {
+                    ConnectionState::Idle(..) => ConnectionStateInfo::Idle,
+                    ConnectionState::Disconnected(..) => ConnectionStateInfo::Disconnected,
+                    ConnectionState::Connected(state) => ConnectionStateInfo::Connected {
                         iface_id: state.iface_id,
                         latest_ap_state: state.latest_ap_state.clone(),
-                    }),
-                    _ => None,
+                    },
                 };
-                let _result = sender.send(QueryStatusResult { connected_info });
+                let _result = sender.send(QueryStatusResult { connection_state: info });
             }
             TelemetryEvent::StartEstablishConnection { reset_start_time } => match &mut self
                 .connection_state
