@@ -18,6 +18,12 @@
 
 #include "sherlock-gpios.h"
 #include "sherlock.h"
+#include "src/devices/board/drivers/sherlock/ernie-tweeter-bind.h"
+#include "src/devices/board/drivers/sherlock/ernie-woofer-bind.h"
+#include "src/devices/board/drivers/sherlock/luis-codec-bind.h"
+#include "src/devices/board/drivers/sherlock/sherlock-tweeter-left-bind.h"
+#include "src/devices/board/drivers/sherlock/sherlock-tweeter-right-bind.h"
+#include "src/devices/board/drivers/sherlock/sherlock-woofer-bind.h"
 
 // Enables BT PCM audio.
 #define ENABLE_BT
@@ -78,39 +84,16 @@ zx_status_t Sherlock::AudioInit() {
   const char* product_name = is_sherlock ? "sherlock" : (is_ernie ? "ernie" : "luis");
   constexpr size_t device_name_max_length = 32;
 
+  // TODO(fxb/84194): Migrate remaining fragments once a solution for
+  // dynamic binding is figured out.
   constexpr zx_bind_inst_t enable_gpio_match[] = {
       BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_GPIO),
       BI_MATCH_IF(EQ, BIND_GPIO_PIN, GPIO_SOC_AUDIO_EN),
-  };
-  constexpr zx_bind_inst_t woofer_i2c_match[] = {
-      BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_I2C),
-      BI_ABORT_IF(NE, BIND_I2C_BUS_ID, SHERLOCK_I2C_A0_0),
-      BI_MATCH_IF(EQ, BIND_I2C_ADDRESS, 0x6f),
-  };
-  constexpr zx_bind_inst_t tweeter_left_i2c_match[] = {
-      BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_I2C),
-      BI_ABORT_IF(NE, BIND_I2C_BUS_ID, SHERLOCK_I2C_A0_0),
-      BI_MATCH_IF(EQ, BIND_I2C_ADDRESS, 0x6c),
-  };
-  constexpr zx_bind_inst_t tweeter_right_i2c_match[] = {
-      BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_I2C),
-      BI_ABORT_IF(NE, BIND_I2C_BUS_ID, SHERLOCK_I2C_A0_0),
-      BI_MATCH_IF(EQ, BIND_I2C_ADDRESS, 0x6d),
   };
   constexpr zx_bind_inst_t luis_codec_i2c_match[] = {
       BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_I2C),
       BI_ABORT_IF(NE, BIND_I2C_BUS_ID, SHERLOCK_I2C_A0_0),
       BI_MATCH_IF(EQ, BIND_I2C_ADDRESS, 0x4c),
-  };
-  constexpr zx_bind_inst_t ernie_woofer_codec_i2c_match[] = {
-      BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_I2C),
-      BI_ABORT_IF(NE, BIND_I2C_BUS_ID, SHERLOCK_I2C_A0_0),
-      BI_MATCH_IF(EQ, BIND_I2C_ADDRESS, 0x4c),
-  };
-  constexpr zx_bind_inst_t ernie_tweeter_codec_i2c_match[] = {
-      BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_I2C),
-      BI_ABORT_IF(NE, BIND_I2C_BUS_ID, SHERLOCK_I2C_A0_0),
-      BI_MATCH_IF(EQ, BIND_I2C_ADDRESS, 0x2d),
   };
   constexpr zx_bind_inst_t codec_woofer_match[] = {
       BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_CODEC),
@@ -152,24 +135,8 @@ zx_status_t Sherlock::AudioInit() {
       {countof(enable_gpio_match), enable_gpio_match},
   };
 
-  // I2C matches to be used by the codec fragments below.
-  const device_fragment_part_t woofer_i2c_fragment[] = {
-      {countof(woofer_i2c_match), woofer_i2c_match},
-  };
-  const device_fragment_part_t tweeter_left_i2c_fragment[] = {
-      {countof(tweeter_left_i2c_match), tweeter_left_i2c_match},
-  };
-  const device_fragment_part_t tweeter_right_i2c_fragment[] = {
-      {countof(tweeter_right_i2c_match), tweeter_right_i2c_match},
-  };
   const device_fragment_part_t luis_codec_i2c_fragment[] = {
       {countof(luis_codec_i2c_match), luis_codec_i2c_match},
-  };
-  const device_fragment_part_t ernie_woofer_codec_i2c_fragment[] = {
-      {countof(ernie_woofer_codec_i2c_match), ernie_woofer_codec_i2c_match},
-  };
-  const device_fragment_part_t ernie_tweeter_codec_i2c_fragment[] = {
-      {countof(ernie_tweeter_codec_i2c_match), ernie_tweeter_codec_i2c_match},
   };
 
   // Fragment to be used by the controller, pointing to the codecs.
@@ -192,24 +159,8 @@ zx_status_t Sherlock::AudioInit() {
       {countof(ernie_codec_tweeter_match), ernie_codec_tweeter_match},
   };
 
-  // Fragments to be used by the codecs.
-  const device_fragment_t woofer_fragments[] = {
-      {"i2c", countof(woofer_i2c_fragment), woofer_i2c_fragment},
-  };
-  const device_fragment_t tweeter_left_fragments[] = {
-      {"i2c", countof(tweeter_left_i2c_fragment), tweeter_left_i2c_fragment},
-  };
-  const device_fragment_t tweeter_right_fragments[] = {
-      {"i2c", countof(tweeter_right_i2c_fragment), tweeter_right_i2c_fragment},
-  };
   const device_fragment_t luis_codec_fragments[] = {
       {"i2c", countof(luis_codec_i2c_fragment), luis_codec_i2c_fragment},
-  };
-  const device_fragment_t ernie_woofer_fragments[] = {
-      {"i2c", countof(ernie_woofer_codec_i2c_fragment), ernie_woofer_codec_i2c_fragment},
-  };
-  const device_fragment_t ernie_tweeter_fragments[] = {
-      {"i2c", countof(ernie_tweeter_codec_i2c_fragment), ernie_tweeter_codec_i2c_fragment},
   };
 
   const device_fragment_t sherlock_tdm_i2s_fragments[] = {
@@ -301,8 +252,8 @@ zx_status_t Sherlock::AudioInit() {
     comp_desc.props = props;
     comp_desc.props_count = countof(props);
     comp_desc.spawn_colocated = false;
-    comp_desc.fragments = woofer_fragments;
-    comp_desc.fragments_count = countof(woofer_fragments);
+    comp_desc.fragments = audio_tas5720_woofer_fragments;
+    comp_desc.fragments_count = countof(audio_tas5720_woofer_fragments);
     comp_desc.primary_fragment = "i2c";
     comp_desc.metadata_list = codec_metadata;
     comp_desc.metadata_count = countof(codec_metadata);
@@ -314,8 +265,8 @@ zx_status_t Sherlock::AudioInit() {
 
     instance_count = 2;
     props[2].value = 2;
-    comp_desc.fragments = tweeter_left_fragments;
-    comp_desc.fragments_count = countof(tweeter_left_fragments);
+    comp_desc.fragments = audio_tas5720_tweeter_left_fragments;
+    comp_desc.fragments_count = countof(audio_tas5720_tweeter_left_fragments);
     status = DdkAddComposite("audio-tas5720-left-tweeter", &comp_desc);
     if (status != ZX_OK) {
       zxlogf(ERROR, "%s DdkAddComposite left tweeter failed %d", __FILE__, status);
@@ -324,8 +275,8 @@ zx_status_t Sherlock::AudioInit() {
 
     instance_count = 3;
     props[2].value = 3;
-    comp_desc.fragments = tweeter_right_fragments;
-    comp_desc.fragments_count = countof(tweeter_right_fragments);
+    comp_desc.fragments = audio_tas5720_tweeter_right_fragments;
+    comp_desc.fragments_count = countof(audio_tas5720_tweeter_right_fragments);
     status = DdkAddComposite("audio-tas5720-right-tweeter", &comp_desc);
     if (status != ZX_OK) {
       zxlogf(ERROR, "%s DdkAddComposite right tweeter failed %d", __FILE__, status);

@@ -421,6 +421,48 @@ driver_bind_rules("camera-controller-bind") {
   ]
 }
 
+driver_bind_rules("luis-codec-bind") {
+  rules = "bind/luis-codec.bind"
+  header_output = "luis-codec-bind.h"
+  bind_output = "luis-codec-bind.bc"
+  deps = [ "//src/devices/bind/fuchsia.i2c" ]
+}
+
+driver_bind_rules("sherlock-woofer-bind") {
+  rules = "bind/sherlock-woofer.bind"
+  header_output = "sherlock-woofer-bind.h"
+  bind_output = "sherlock-woofer-bind.bc"
+  deps = [ "//src/devices/bind/fuchsia.i2c" ]
+}
+
+driver_bind_rules("sherlock-tweeter-left-bind") {
+  rules = "bind/sherlock-tweeter-left.bind"
+  header_output = "sherlock-tweeter-left-bind.h"
+  bind_output = "sherlock-tweeter-left-bind.bc"
+  deps = [ "//src/devices/bind/fuchsia.i2c" ]
+}
+
+driver_bind_rules("sherlock-tweeter-right-bind") {
+  rules = "bind/sherlock-tweeter-right.bind"
+  header_output = "sherlock-tweeter-right-bind.h"
+  bind_output = "sherlock-tweeter-right-bind.bc"
+  deps = [ "//src/devices/bind/fuchsia.i2c" ]
+}
+
+driver_bind_rules("ernie-tweeter-bind") {
+  rules = "bind/ernie-tweeter.bind"
+  header_output = "ernie-tweeter-bind.h"
+  bind_output = "ernie-tweeter-bind.bc"
+  deps = [ "//src/devices/bind/fuchsia.i2c" ]
+}
+
+driver_bind_rules("ernie-woofer-bind") {
+  rules = "bind/ernie-woofer.bind"
+  header_output = "ernie-woofer-bind.h"
+  bind_output = "ernie-woofer-bind.bc"
+  deps = [ "//src/devices/bind/fuchsia.i2c" ]
+}
+
 template("sherlock_driver") {
   fuchsia_driver(target_name + "-driver") {
     output_name = invoker.target_name
@@ -484,8 +526,11 @@ template("sherlock_driver") {
       ":camera-ge2d-bind_header",
       ":camera-isp-bind_header",
       ":dwc2-phy-bind_header",
+      ":ernie-tweeter-bind_header",
+      ":ernie-woofer-bind_header",
       ":gpio-light-bind_header",
       ":imx227-sensor-bind_header",
+      ":luis-codec-bind_header",
       ":luis-cpu-bind_header",
       ":luis-touch-bind_header",
       ":sherlock-backlight-bind_header",
@@ -506,9 +551,12 @@ template("sherlock_driver") {
       ":sherlock-tee-bind_header",
       ":sherlock-thermal-bind_header",
       ":sherlock-touch-bind_header",
+      ":sherlock-tweeter-left-bind_header",
+      ":sherlock-tweeter-right-bind_header",
       ":sherlock-video-bind_header",
       ":sherlock-video-enc-bind_header",
       ":sherlock-wifi-bind_header",
+      ":sherlock-woofer-bind_header",
       ":xhci-bind_header",
       "//sdk/banjo/fuchsia.hardware.clock:fuchsia.hardware.clock_banjo_cpp",
       "//sdk/banjo/fuchsia.hardware.clockimpl:fuchsia.hardware.clockimpl_banjo_cpp",
