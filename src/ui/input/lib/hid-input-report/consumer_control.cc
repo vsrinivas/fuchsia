@@ -4,11 +4,11 @@
 
 #include "src/ui/input/lib/hid-input-report/consumer_control.h"
 
+#include <lib/stdcompat/span.h>
 #include <stdint.h>
 
 #include <set>
 
-#include <fbl/span.h>
 #include <hid-parser/parser.h>
 #include <hid-parser/report.h>
 #include <hid-parser/units.h>

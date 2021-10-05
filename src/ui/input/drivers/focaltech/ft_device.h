@@ -11,6 +11,7 @@
 #include <lib/device-protocol/i2c-channel.h>
 #include <lib/focaltech/focaltech.h>
 #include <lib/inspect/cpp/inspect.h>
+#include <lib/stdcompat/span.h>
 #include <lib/zx/interrupt.h>
 #include <lib/zx/status.h>
 #include <threads.h>
@@ -21,7 +22,6 @@
 
 #include <ddktl/device.h>
 #include <fbl/mutex.h>
-#include <fbl/span.h>
 #include <hid/ft3x27.h>
 #include <hid/ft5726.h>
 #include <hid/ft6336.h>
@@ -120,7 +120,7 @@ class FtDevice : public ddk::Device<FtDevice, ddk::Unbindable>,
   zx::status<bool> WaitForFlashStatus(uint16_t expected_value, int tries, zx::duration retry_sleep);
 
   zx_status_t EraseFlash(size_t firmware_size);
-  zx_status_t SendFirmware(fbl::Span<const uint8_t> firmware);
+  zx_status_t SendFirmware(cpp20::span<const uint8_t> firmware);
   zx_status_t SendFirmwarePacket(uint32_t address, const uint8_t* buffer, size_t size);
   zx_status_t CheckFirmwareEcc(size_t size, uint8_t expected_ecc);
 

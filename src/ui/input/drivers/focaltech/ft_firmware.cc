@@ -90,12 +90,12 @@ zx_status_t FtDevice::UpdateFirmwareIfNeeded(const FocaltechMetadata& metadata) 
     return ZX_OK;
   }
 
-  fbl::Span<const uint8_t> firmware;
-  const fbl::Span<const FirmwareEntry> entries(kFirmwareEntries, kNumFirmwareEntries);
+  cpp20::span<const uint8_t> firmware;
+  const cpp20::span<const FirmwareEntry> entries(kFirmwareEntries, kNumFirmwareEntries);
   for (const auto& entry : entries) {
     if (entry.display_vendor == metadata.display_vendor &&
         entry.ddic_version == metadata.ddic_version) {
-      firmware = fbl::Span(entry.firmware_data, entry.firmware_size);
+      firmware = cpp20::span(entry.firmware_data, entry.firmware_size);
       break;
     }
   }
@@ -321,7 +321,7 @@ zx_status_t FtDevice::EraseFlash(const size_t size) {
   return ZX_OK;
 }
 
-zx_status_t FtDevice::SendFirmware(fbl::Span<const uint8_t> firmware) {
+zx_status_t FtDevice::SendFirmware(cpp20::span<const uint8_t> firmware) {
   const size_t firmware_size = firmware.size();
 
   uint32_t address = 0;

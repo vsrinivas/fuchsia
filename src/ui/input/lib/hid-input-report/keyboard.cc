@@ -4,9 +4,9 @@
 
 #include "src/ui/input/lib/hid-input-report/keyboard.h"
 
+#include <lib/stdcompat/span.h>
 #include <stdint.h>
 
-#include <fbl/span.h>
 #include <hid-parser/parser.h>
 #include <hid-parser/report.h>
 #include <hid-parser/units.h>
@@ -137,7 +137,7 @@ ParseResult Keyboard::CreateDescriptor(fidl::AnyArena& allocator,
 
     size_t leds_index = 0;
     fidl::VectorView<fuchsia_input_report::wire::LedType> leds(allocator, num_leds_);
-    for (hid::ReportField& field : fbl::Span(led_fields_.data(), num_leds_)) {
+    for (hid::ReportField& field : cpp20::span(led_fields_.data(), num_leds_)) {
       zx_status_t status = HidLedUsageToLlcppLedType(
           static_cast<hid::usage::LEDs>(field.attr.usage.usage), &leds[leds_index++]);
       if (status != ZX_OK) {
@@ -164,7 +164,7 @@ ParseResult Keyboard::ParseInputReport(const uint8_t* data, size_t len, fidl::An
   size_t num_pressed_keys_3 = 0;
   std::array<fuchsia_input::wire::Key, fuchsia_input_report::wire::kKeyboardMaxNumKeys>
       pressed_keys_3;
-  for (hid::ReportField& field : fbl::Span(key_fields_.data(), num_key_fields_)) {
+  for (hid::ReportField& field : cpp20::span(key_fields_.data(), num_key_fields_)) {
     double val_out_double;
     if (!ExtractAsUnitType(data, len, field.attr, &val_out_double)) {
       continue;

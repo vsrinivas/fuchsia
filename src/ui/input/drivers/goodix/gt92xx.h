@@ -11,6 +11,7 @@
 #include <lib/device-protocol/i2c-channel.h>
 #include <lib/fzl/vmo-mapper.h>
 #include <lib/inspect/cpp/inspect.h>
+#include <lib/stdcompat/span.h>
 #include <lib/zx/interrupt.h>
 #include <lib/zx/status.h>
 #include <threads.h>
@@ -21,7 +22,6 @@
 
 #include <ddktl/device.h>
 #include <fbl/mutex.h>
-#include <fbl/span.h>
 #include <fbl/vector.h>
 #include <hid/gt92xx.h>
 
@@ -173,20 +173,20 @@ class Gt92xxDevice : public ddk::Device<Gt92xxDevice, ddk::Unbindable>,
   bool IsFirmwareApplicable(const fzl::VmoMapper& firmware_mapper);
   zx_status_t EnterUpdateMode();
   void LeaveUpdateMode();
-  zx_status_t WritePayload(uint16_t address, fbl::Span<const uint8_t> data);
-  zx_status_t VerifyPayload(uint16_t address, fbl::Span<const uint8_t> data);
+  zx_status_t WritePayload(uint16_t address, cpp20::span<const uint8_t> data);
+  zx_status_t VerifyPayload(uint16_t address, cpp20::span<const uint8_t> data);
   zx_status_t WaitUntilNotBusy();
-  zx_status_t WriteDspIsp(fbl::Span<const uint8_t> dsp_isp);
-  zx_status_t WriteGwakeOrLinkSection(SectionInfo section_info, fbl::Span<const uint8_t> section);
-  zx_status_t WriteGwake(fbl::Span<const uint8_t> section);
-  zx_status_t WriteSs51Section(uint8_t section_number, fbl::Span<const uint8_t> section);
-  zx_status_t WriteSs51(fbl::Span<const uint8_t> section);
-  zx_status_t WriteDsp(fbl::Span<const uint8_t> section);
-  zx_status_t WriteBootOrBootIsp(SectionInfo section_info, fbl::Span<const uint8_t> section);
-  zx_status_t WriteBoot(fbl::Span<const uint8_t> section);
-  zx_status_t WriteBootIsp(fbl::Span<const uint8_t> section);
-  zx_status_t WriteLink(fbl::Span<const uint8_t> section);
-  zx_status_t WriteLinkSection(uint8_t section_number, fbl::Span<const uint8_t> section);
+  zx_status_t WriteDspIsp(cpp20::span<const uint8_t> dsp_isp);
+  zx_status_t WriteGwakeOrLinkSection(SectionInfo section_info, cpp20::span<const uint8_t> section);
+  zx_status_t WriteGwake(cpp20::span<const uint8_t> section);
+  zx_status_t WriteSs51Section(uint8_t section_number, cpp20::span<const uint8_t> section);
+  zx_status_t WriteSs51(cpp20::span<const uint8_t> section);
+  zx_status_t WriteDsp(cpp20::span<const uint8_t> section);
+  zx_status_t WriteBootOrBootIsp(SectionInfo section_info, cpp20::span<const uint8_t> section);
+  zx_status_t WriteBoot(cpp20::span<const uint8_t> section);
+  zx_status_t WriteBootIsp(cpp20::span<const uint8_t> section);
+  zx_status_t WriteLink(cpp20::span<const uint8_t> section);
+  zx_status_t WriteLinkSection(uint8_t section_number, cpp20::span<const uint8_t> section);
 
   zx_status_t UpdateFirmwareIfNeeded();
 

@@ -335,8 +335,8 @@ zx_status_t Gt6853Device::DownloadConfigIfNeeded() {
 
   zxlogf(INFO, "Found %u-byte config at offset %lu", config_size, config_offset.value());
 
-  fbl::Span<const uint8_t> config{config_data + config_offset.value() + kConfigDataOffset,
-                                  config_size - kConfigDataOffset};
+  cpp20::span<const uint8_t> config{config_data + config_offset.value() + kConfigDataOffset,
+                                    config_size - kConfigDataOffset};
   return SendConfig(config);
 }
 
@@ -442,7 +442,7 @@ zx_status_t Gt6853Device::SendCommand(const HostCommand command) {
   return ZX_OK;
 }
 
-zx_status_t Gt6853Device::SendConfig(fbl::Span<const uint8_t> config) {
+zx_status_t Gt6853Device::SendConfig(cpp20::span<const uint8_t> config) {
   zx_status_t status = PollCommandRegister(DeviceCommand::kDeviceIdle);
   if (status != ZX_OK) {
     zxlogf(ERROR, "Device not idle before config download");
@@ -513,7 +513,7 @@ zx_status_t Gt6853Device::UpdateFirmwareIfNeeded() {
     return entry_count.error_value();
   }
 
-  fbl::Span<const FirmwareSubsysInfo> subsys_span(subsys_entries, entry_count.value());
+  cpp20::span<const FirmwareSubsysInfo> subsys_span(subsys_entries, entry_count.value());
   if ((status = PrepareFirmwareUpdate(subsys_span)) != ZX_OK) {
     return status;
   }
@@ -601,7 +601,7 @@ zx::status<size_t> Gt6853Device::ParseFirmwareInfo(const fzl::VmoMapper& mapped_
 }
 
 zx_status_t Gt6853Device::PrepareFirmwareUpdate(
-    fbl::Span<const FirmwareSubsysInfo> subsys_entries) {
+    cpp20::span<const FirmwareSubsysInfo> subsys_entries) {
   constexpr zx::duration kResetHoldTime = zx::msec(10);
   constexpr int kHoldSs51Tries = 20;
   constexpr zx::duration kHoldSs51TryInterval = zx::msec(20);

@@ -12,11 +12,11 @@
 #include <lib/fake_ddk/fake_ddk.h>
 #include <lib/inspect/cpp/reader.h>
 #include <lib/mock-i2c/mock-i2c.h>
+#include <lib/stdcompat/span.h>
 #include <math.h>
 
 #include <map>
 
-#include <fbl/span.h>
 #include <mock-mmio-reg/mock-mmio-reg.h>
 #include <zxtest/zxtest.h>
 

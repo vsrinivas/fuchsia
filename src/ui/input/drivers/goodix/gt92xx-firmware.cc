@@ -88,7 +88,7 @@ void Gt92xxDevice::LogFirmwareStatus() {
   };
   status = Read(GT_REG_FW_VERSION, fw_buffer, sizeof(fw_buffer));
   if (status == ZX_OK) {
-    const uint8_t fw_buffer_rev[] = { fw_buffer[1], fw_buffer[0] };
+    const uint8_t fw_buffer_rev[] = {fw_buffer[1], fw_buffer[0]};
     node_.CreateByteVector("FW_VERSION", fw_buffer_rev, &values_);
     fw_version = le16toh(fw_version);
     zxlogf(INFO, "  FW_VERSION: 0x%04x", fw_version);
@@ -309,7 +309,7 @@ void Gt92xxDevice::LeaveUpdateMode() {
   zx::nanosleep(zx::deadline_after(zx::msec(50)));
 }
 
-zx_status_t Gt92xxDevice::WritePayload(uint16_t address, fbl::Span<const uint8_t> data) {
+zx_status_t Gt92xxDevice::WritePayload(uint16_t address, cpp20::span<const uint8_t> data) {
   int retries = 0;
   while (!data.empty()) {
     const size_t send_size = std::min(kMaxI2cAccessSize, data.size());
@@ -352,7 +352,7 @@ zx_status_t Gt92xxDevice::WritePayload(uint16_t address, fbl::Span<const uint8_t
   return ZX_OK;
 }
 
-zx_status_t Gt92xxDevice::VerifyPayload(uint16_t address, fbl::Span<const uint8_t> data) {
+zx_status_t Gt92xxDevice::VerifyPayload(uint16_t address, cpp20::span<const uint8_t> data) {
   while (!data.empty()) {
     const size_t send_size = std::min(kMaxI2cAccessSize, data.size());
 
@@ -389,7 +389,7 @@ zx_status_t Gt92xxDevice::WaitUntilNotBusy() {
   }
 }
 
-zx_status_t Gt92xxDevice::WriteDspIsp(fbl::Span<const uint8_t> dsp_isp) {
+zx_status_t Gt92xxDevice::WriteDspIsp(cpp20::span<const uint8_t> dsp_isp) {
   zx_status_t status = DisableWdt();  // 1. Disable WDT
   if (status != ZX_OK) {
     return status;
@@ -431,7 +431,7 @@ zx_status_t Gt92xxDevice::WriteDspIsp(fbl::Span<const uint8_t> dsp_isp) {
 }
 
 zx_status_t Gt92xxDevice::WriteGwakeOrLinkSection(SectionInfo section_info,
-                                                  fbl::Span<const uint8_t> section) {
+                                                  cpp20::span<const uint8_t> section) {
   zx_status_t status = HoldSs51AndDsp();  // a. Hold SS51 and DSP
   if (status != ZX_OK) {
     return status;
@@ -470,7 +470,7 @@ zx_status_t Gt92xxDevice::WriteGwakeOrLinkSection(SectionInfo section_info,
   return ZX_OK;
 }
 
-zx_status_t Gt92xxDevice::WriteGwake(fbl::Span<const uint8_t> section) {
+zx_status_t Gt92xxDevice::WriteGwake(cpp20::span<const uint8_t> section) {
   zx_status_t status = WriteCopyCommand(0);  // 1. Clear copy command
   if (status != ZX_OK) {
     return status;
@@ -488,7 +488,7 @@ zx_status_t Gt92xxDevice::WriteGwake(fbl::Span<const uint8_t> section) {
 }
 
 zx_status_t Gt92xxDevice::WriteSs51Section(uint8_t section_number,
-                                           fbl::Span<const uint8_t> section) {
+                                           cpp20::span<const uint8_t> section) {
   const auto section_info = kSs51Sections[section_number];
 
   zx_status_t status = HoldSs51AndDsp();  // a. Hold SS51 and DSP
@@ -545,7 +545,7 @@ zx_status_t Gt92xxDevice::WriteSs51Section(uint8_t section_number,
   return ZX_OK;
 }
 
-zx_status_t Gt92xxDevice::WriteSs51(fbl::Span<const uint8_t> section) {
+zx_status_t Gt92xxDevice::WriteSs51(cpp20::span<const uint8_t> section) {
   // 1. Clear copy command
   zx_status_t status = WriteCopyCommand(0);
   if (status != ZX_OK) {
@@ -575,7 +575,7 @@ zx_status_t Gt92xxDevice::WriteSs51(fbl::Span<const uint8_t> section) {
   return ZX_OK;
 }
 
-zx_status_t Gt92xxDevice::WriteDsp(fbl::Span<const uint8_t> section) {
+zx_status_t Gt92xxDevice::WriteDsp(cpp20::span<const uint8_t> section) {
   zx_status_t status = SetSramBank(kDspSection.sram_bank);  // 1. Select bank
   if (status != ZX_OK) {
     return status;
@@ -613,7 +613,7 @@ zx_status_t Gt92xxDevice::WriteDsp(fbl::Span<const uint8_t> section) {
 }
 
 zx_status_t Gt92xxDevice::WriteBootOrBootIsp(SectionInfo section_info,
-                                             fbl::Span<const uint8_t> section) {
+                                             cpp20::span<const uint8_t> section) {
   zx_status_t status = HoldSs51AndDsp();  // 1. Hold SS51 and DSP
   if (status != ZX_OK) {
     return status;
@@ -654,15 +654,15 @@ zx_status_t Gt92xxDevice::WriteBootOrBootIsp(SectionInfo section_info,
   return ZX_OK;
 }
 
-zx_status_t Gt92xxDevice::WriteBoot(fbl::Span<const uint8_t> section) {
+zx_status_t Gt92xxDevice::WriteBoot(cpp20::span<const uint8_t> section) {
   return WriteBootOrBootIsp(kBootSection, section);
 }
 
-zx_status_t Gt92xxDevice::WriteBootIsp(fbl::Span<const uint8_t> section) {
+zx_status_t Gt92xxDevice::WriteBootIsp(cpp20::span<const uint8_t> section) {
   return WriteBootOrBootIsp(kBootIspSection, section);
 }
 
-zx_status_t Gt92xxDevice::WriteLink(fbl::Span<const uint8_t> section) {
+zx_status_t Gt92xxDevice::WriteLink(cpp20::span<const uint8_t> section) {
   zx_status_t status =
       WriteGwakeOrLinkSection(kLinkSections[0], section.subspan(0, kLinkSection1Size));
   if (status != ZX_OK) {
@@ -696,12 +696,12 @@ zx_status_t Gt92xxDevice::UpdateFirmwareIfNeeded() {
     return status;
   }
 
-  fbl::Span<const uint8_t> firmware(
+  cpp20::span<const uint8_t> firmware(
       reinterpret_cast<const uint8_t*>(firmware_mapper.value().start()) + kFirmwareHeaderSize,
       firmware_mapper.value().size() - kFirmwareHeaderSize);
 
   // 6. Write DSP ISP
-  const fbl::Span dsp_isp = firmware.subspan(firmware.size() - kDspIspSize);
+  const cpp20::span dsp_isp = firmware.subspan(firmware.size() - kDspIspSize);
   if ((status = WriteDspIsp(dsp_isp)) != ZX_OK) {
     return status;
   }
@@ -715,7 +715,7 @@ zx_status_t Gt92xxDevice::UpdateFirmwareIfNeeded() {
   firmware = firmware.subspan(0, firmware.size() - kFirmwareTotalSectionSize);
 
   // 8. Write SS51
-  const fbl::Span ss51_first_section = firmware.subspan(0, kFirmwareSectionSize);
+  const cpp20::span ss51_first_section = firmware.subspan(0, kFirmwareSectionSize);
   if ((status = WriteSs51(firmware.subspan(0, kFirmwareTotalSectionSize))) != ZX_OK) {
     return ZX_OK;
   }

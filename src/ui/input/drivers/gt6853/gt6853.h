@@ -11,13 +11,13 @@
 #include <lib/async-loop/default.h>
 #include <lib/device-protocol/i2c-channel.h>
 #include <lib/fzl/vmo-mapper.h>
+#include <lib/stdcompat/span.h>
 #include <lib/zircon-internal/thread_annotations.h>
 #include <lib/zx/status.h>
 #include <threads.h>
 
 #include <ddktl/device.h>
 #include <ddktl/protocol/empty-protocol.h>
-#include <fbl/span.h>
 
 #include "src/ui/input/lib/input-report-reader/reader.h"
 
@@ -129,13 +129,13 @@ class Gt6853Device : public DeviceType, public ddk::EmptyProtocol<ZX_PROTOCOL_IN
                                               uint8_t sensor_id);
   zx_status_t PollCommandRegister(DeviceCommand command);
   zx_status_t SendCommand(HostCommand command);
-  zx_status_t SendConfig(fbl::Span<const uint8_t> config);
+  zx_status_t SendConfig(cpp20::span<const uint8_t> config);
 
   zx_status_t UpdateFirmwareIfNeeded();
   // Returns the number of subsys entries found and populated.
   static zx::status<size_t> ParseFirmwareInfo(const fzl::VmoMapper& mapped_fw,
                                               FirmwareSubsysInfo* out_subsys_entries);
-  zx_status_t PrepareFirmwareUpdate(fbl::Span<const FirmwareSubsysInfo> subsys_entries);
+  zx_status_t PrepareFirmwareUpdate(cpp20::span<const FirmwareSubsysInfo> subsys_entries);
   zx_status_t LoadIsp(const FirmwareSubsysInfo& isp_info);
   zx_status_t FlashSubsystem(const FirmwareSubsysInfo& subsys_info);
   static uint16_t Checksum16(const uint8_t* data, size_t size);
