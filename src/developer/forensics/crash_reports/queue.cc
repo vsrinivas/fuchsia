@@ -223,6 +223,16 @@ void Queue::Upload() {
     active_report_->SetReport(store_.Get(active_report_->report_id));
   }
 
+  // The upload will fail if the annotations are empty.
+  if (active_report_->report->Annotations().Raw().empty()) {
+    FX_LOGST(INFO, tags_->Get(active_report_->report_id))
+        << "Dropping report with empty annotations";
+    Retire(std::move(*active_report_), RetireReason::kGarbageCollected);
+    active_report_ = std::nullopt;
+    Upload();
+    return;
+  }
+
   metrics_.IncrementUploadAttempts(active_report_->report_id);
   crash_server_->MakeRequest(
       *active_report_->report, snapshot_manager_->GetSnapshot(active_report_->snapshot_uuid),

@@ -97,18 +97,26 @@ std::optional<std::string> DeleteReportFromStore() {
 
 AnnotationMap MakeAnnotations() { return {{kAnnotationKey, kAnnotationValue}}; }
 
-Report MakeReport(const std::size_t report_id) {
+Report MakeReport(const std::size_t report_id, const bool empty_annotations = false) {
+  AnnotationMap annotations;
+  if (!empty_annotations) {
+    annotations = MakeAnnotations();
+  }
   std::optional<Report> report =
-      Report::MakeReport(report_id, fxl::StringPrintf("program_%ld", report_id), MakeAnnotations(),
+      Report::MakeReport(report_id, fxl::StringPrintf("program_%ld", report_id), annotations,
                          MakeAttachments(), kSnapshotUuidValue, BuildAttachment(kMinidumpValue));
   FX_CHECK(report.has_value());
   return std::move(report.value());
 }
 
-Report MakeHourlyReport(const std::size_t report_id) {
+Report MakeHourlyReport(const std::size_t report_id, const bool empty_annotations = false) {
+  AnnotationMap annotations;
+  if (!empty_annotations) {
+    annotations = MakeAnnotations();
+  }
   std::optional<Report> report = Report::MakeReport(
-      report_id, kHourlySnapshotProgramName, MakeAnnotations(), MakeAttachments(),
-      kSnapshotUuidValue, BuildAttachment(kMinidumpValue), /*is_hourly_report=*/true);
+      report_id, kHourlySnapshotProgramName, annotations, MakeAttachments(), kSnapshotUuidValue,
+      BuildAttachment(kMinidumpValue), /*is_hourly_report=*/true);
   FX_CHECK(report.has_value());
   return std::move(report.value());
 }
@@ -164,9 +172,11 @@ class QueueTest : public UnitTestFixture {
     queue_->WatchNetwork(&network_watcher_);
   }
 
-  std::optional<ReportId> AddNewReport(const bool is_hourly_report) {
+  std::optional<ReportId> AddNewReport(const bool is_hourly_report,
+                                       const bool empty_annotations = false) {
     ++report_id_;
-    Report report = (is_hourly_report) ? MakeHourlyReport(report_id_) : MakeReport(report_id_);
+    Report report = (is_hourly_report) ? MakeHourlyReport(report_id_, empty_annotations)
+                                       : MakeReport(report_id_, empty_annotations);
 
     if (queue_->Add(std::move(report))) {
       return report_id_;
@@ -319,6 +329,28 @@ TEST_F(QueueTest, Upload) {
                   cobalt::Event(cobalt::UploadAttemptState::kUploaded, 1u),
                   cobalt::Event(cobalt::UploadAttemptState::kUploaded, 1u),
               }));
+}
+
+TEST_F(QueueTest, SkipEmptyAnnotationUpload) {
+  SetUpQueue({});
+
+  reporting_policy_watcher_.Set(ReportingPolicy::kUpload);
+  std::vector<ReportId> report_ids;
+  for (size_t i = 0; i < 4; ++i) {
+    const auto report_id = AddNewReport(/*is_hourly_report=*/false, /*empty_annotations=*/true);
+    ASSERT_TRUE(report_id);
+    ASSERT_FALSE(queue_->Contains(*report_id));
+    report_ids.push_back(*report_id);
+  }
+
+  RunLoopFor(kUploadResponseDelay * report_ids.size());
+
+  EXPECT_THAT(ReceivedCobaltEvents(), UnorderedElementsAreArray({
+                                          cobalt::Event(cobalt::CrashState::kGarbageCollected),
+                                          cobalt::Event(cobalt::CrashState::kGarbageCollected),
+                                          cobalt::Event(cobalt::CrashState::kGarbageCollected),
+                                          cobalt::Event(cobalt::CrashState::kGarbageCollected),
+                                      }));
 }
 
 TEST_F(QueueTest, StopUploading) {

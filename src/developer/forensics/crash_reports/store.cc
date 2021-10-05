@@ -109,6 +109,11 @@ bool ReadAnnotations(const std::string& path, AnnotationMap* annotations) {
     local_annotations[member.name.GetString()] = member.value.GetString();
   }
 
+  // Empty annotations will be rejected by the crash server.
+  if (local_annotations.empty()) {
+    return false;
+  }
+
   *annotations = AnnotationMap(std::move(local_annotations));
   return true;
 }
