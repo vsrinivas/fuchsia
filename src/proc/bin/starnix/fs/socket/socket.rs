@@ -347,6 +347,13 @@ impl SocketAddress {
             }
         }
     }
+
+    fn is_abstract_unix(&self) -> bool {
+        match self {
+            SocketAddress::Unix(name) => name.first() == Some(&b'\0'),
+            _ => false,
+        }
+    }
 }
 
 /// A `SocketConnection` contains two connected sockets.
@@ -540,6 +547,13 @@ impl ListeningSocketEndpoint {
         let mut active = client_endpoint.lock();
 
         if active.domain != passive.domain || active.socket_type != passive.socket_type {
+            // According to ConnectWithWrongType in accept_bind_test, abstract
+            // UNIX domain sockets return ECONNREFUSED rather than EPROTOTYPE.
+            if let Some(address) = &passive.address {
+                if address.is_abstract_unix() {
+                    return error!(ECONNREFUSED);
+                }
+            }
             return error!(EPROTOTYPE);
         }
 
