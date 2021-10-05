@@ -4,9 +4,11 @@
 
 #include <lib/zx/port.h>
 #include <lib/zx/resource.h>
+#include <lib/zx/thread.h>
 #include <lib/zx/vcpu.h>
 #include <zircon/syscalls/hypervisor.h>
 #include <zircon/syscalls/port.h>
+#include <zircon/threads.h>
 
 #include <future>
 #include <string>
@@ -48,6 +50,57 @@ TEST(Guest, VcpuKick) {
 
   ASSERT_EQ(test.vcpu.kick(), ZX_OK);
   thread.join();
+}
+
+TEST(Guest, VcpuSuspendThread) {
+  TestCase test;
+  std::atomic<bool> thread_suspended = false;
+  std::promise<void> barrier;
+  auto future = barrier.get_future();
+
+  // Create and run a VCPU on a different thread.
+  std::thread std_thread([&test, &thread_suspended, barrier = std::move(barrier)]() mutable {
+    ASSERT_NO_FATAL_FAILURE(SetupGuest(&test, vcpu_wait_start, vcpu_wait_end));
+    barrier.set_value();
+    zx_port_packet_t packet = {};
+    ASSERT_EQ(test.vcpu.enter(&packet), ZX_ERR_CANCELED);
+    EXPECT_TRUE(thread_suspended.load());
+  });
+
+  future.wait();
+
+  // Suspend the thread the VCPU is being run on.
+  zx::unowned_thread thread(native_thread_get_zx_handle(std_thread.native_handle()));
+  zx::suspend_token token;
+  ASSERT_EQ(thread->suspend(&token), ZX_OK);
+  zx_signals_t pending;
+  ASSERT_EQ(thread->wait_one(ZX_THREAD_SUSPENDED, zx::time::infinite(), &pending), ZX_OK);
+  EXPECT_EQ(pending & ZX_THREAD_SUSPENDED, ZX_THREAD_SUSPENDED);
+  thread_suspended.store(true);
+  token.reset();
+
+  ASSERT_EQ(test.vcpu.kick(), ZX_OK);
+  std_thread.join();
+}
+
+TEST(Guest, VcpuProcessDestruction) {
+  std::promise<void> barrier;
+  auto future = barrier.get_future();
+
+  std::thread thread([barrier = std::move(barrier)]() mutable {
+    TestCase test;
+    ASSERT_NO_FATAL_FAILURE(SetupGuest(&test, vcpu_wait_start, vcpu_wait_end));
+    barrier.set_value();
+    zx_port_packet_t packet = {};
+    ASSERT_EQ(test.vcpu.enter(&packet), ZX_ERR_CANCELED);
+  });
+
+  future.wait();
+
+  // Detach the thread that is running the VCPU. The VCPU will be destroyed via
+  // process destruction in the kernel. This verifies the kernel does not panic,
+  // and correctly handles the condition.
+  thread.detach();
 }
 
 TEST(Guest, VcpuInvalidThreadReuse) {
