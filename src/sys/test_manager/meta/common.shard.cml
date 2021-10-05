@@ -186,7 +186,13 @@
             to: [ "#legacy_test_runner" ],
         },
         {
-            protocol: "fuchsia.kernel.VmexResource",
+            protocol: [
+                "fuchsia.kernel.VmexResource",
+                "fuchsia.tracing.provider.Registry",
+                "fuchsia.ui.composition.Flatland",
+                "fuchsia.ui.input3.Keyboard",
+                "fuchsia.ui.scenic.Scenic",
+            ],
             from: "parent",
             to: [
                 "#starnix_test_runner",

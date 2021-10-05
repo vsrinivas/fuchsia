@@ -5,6 +5,12 @@
         binary: "bin/starnix_runner",
         job_policy_create_raw_processes: "true",
     },
+    children: [
+        {
+            name: "wayland_bridge",
+            url: "fuchsia-pkg://fuchsia.com/wayland_bridge#meta/wayland_bridge_v2.cm",
+        },
+    ],
     capabilities: [
         {
             runner: "starnix",
@@ -25,6 +31,27 @@
                 "fuchsia.sys2.Realm",
             ],
             from: "parent",
+        },
+        {
+            protocol: [
+                "fuchsia.virtualization.WaylandDispatcher",
+                "fuchsia.wayland.ViewProducer",
+            ],
+            from: "#wayland_bridge",
+        },
+    ],
+    offer: [
+        {
+            protocol: [
+                "fuchsia.logger.LogSink",
+                "fuchsia.tracing.provider.Registry",
+                "fuchsia.ui.composition.Flatland",
+                "fuchsia.ui.input3.Keyboard",
+                "fuchsia.ui.scenic.Scenic",
+                "fuchsia.virtualization.Manager",
+            ],
+            from: "parent",
+            to: "#wayland_bridge",
         },
     ],
     expose: [

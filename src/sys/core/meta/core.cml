@@ -627,6 +627,17 @@
             to: "#starnix_manager",
         },
         {
+            protocol: [
+                "fuchsia.tracing.provider.Registry",
+                "fuchsia.ui.composition.Flatland",
+                "fuchsia.ui.input3.Keyboard",
+                "fuchsia.ui.scenic.Scenic",
+            ],
+            from: "#appmgr",
+            to: "#starnix_manager",
+            dependency: "weak_for_migration",
+        },
+        {
             protocol: [ "fuchsia.starnix.developer.Manager" ],
             from: "#starnix_manager",
             to: "#appmgr",
