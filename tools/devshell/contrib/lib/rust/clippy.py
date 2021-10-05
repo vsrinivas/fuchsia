@@ -85,7 +85,11 @@ def main():
             jq + [dedup + select + rendered] + [build_dir / p for p in clippy_outputs]
         )
     else:
-        targets = [rust.GnTarget(t + ".clippy") for t in args.input]
+        targets = []
+        for t in args.input:
+            gn_target = rust.GnTarget(t)
+            gn_target.label_name += ".clippy"
+            targets.append(gn_target)
         subprocess.run(ninja + [t.ninja_target for t in targets], stdout=sys.stderr)
         clippy_outputs = [t.gen_dir.joinpath(t.label_name) for t in targets]
         subprocess.run(jq + [dedup + rendered] + clippy_outputs)
