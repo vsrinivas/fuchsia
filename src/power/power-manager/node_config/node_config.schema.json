@@ -243,6 +243,9 @@
               "cpu_device_handlers": {
                 "type": "array",
                 "minItems": 1
+              },
+              "syscall_handler": {
+                "type": "string"
               }
             },
             "additionalProperties": false,

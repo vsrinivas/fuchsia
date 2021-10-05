@@ -20,6 +20,10 @@
     }
   },
   {
+    "type": "SyscallHandler",
+    "name": "syscall_handler"
+  },
+  {
     "type": "CrashReportHandler",
     "name": "crash_handler"
   },
@@ -31,53 +35,238 @@
     }
   },
   {
-    "type": "DeviceControlHandler",
-    "name": "big_cluster_dev",
+    "type": "CpuDeviceHandler",
+    "name": "big_cluster_handler",
     "config": {
       "driver_path": "/dev/class/cpu-ctrl/000"
     }
   },
   {
-    "type": "CpuControlHandler",
-    "name": "big_cluster_control",
-    "config": {
-      "driver_path": "/dev/class/cpu-ctrl/000",
-      "capacitance": 4.6E-10,
-      "logical_cpu_numbers": [
-        2,
-        3,
-        4,
-        5
-      ],
-      "min_cpu_clock_speed": 1000000000.0
-    },
-    "dependencies": {
-      "cpu_stats_handler_node": "cpu_stats",
-      "cpu_dev_handler_node": "big_cluster_dev"
-    }
-  },
-  {
-    "type": "DeviceControlHandler",
-    "name": "little_cluster_dev",
+    "type": "CpuDeviceHandler",
+    "name": "little_cluster_handler",
     "config": {
       "driver_path": "/dev/class/cpu-ctrl/001"
     }
   },
   {
-    "type": "CpuControlHandler",
-    "name": "little_cluster_control",
+    "type": "CpuManager",
+    "name": "cpu_manager",
     "config": {
-      "driver_path": "/dev/class/cpu-ctrl/001",
-      "capacitance": 1.2E-10,
-      "logical_cpu_numbers": [
-        0,
-        1
+      "clusters": [
+        {
+          "name": "big_cluster",
+          "cluster_index": 0,
+          "handler": "big_cluster_handler",
+          "logical_cpu_numbers": [2, 3, 4, 5],
+          "normperfs_per_ghz": 0.5868544600938967
+        },
+        {
+          "name": "little_cluster",
+          "cluster_index": 1,
+          "handler": "little_cluster_handler",
+          "logical_cpu_numbers": [0, 1],
+          "normperfs_per_ghz": 0.26371308016877637
+        }
       ],
-      "min_cpu_clock_speed": 1000000000.0
+      "thermal_states": [
+        {
+          "cluster_pstates": [
+            0,
+            0
+          ],
+          "min_performance_normperfs": 0.0,
+          "static_power_w": 0.07,
+          "dynamic_power_per_normperf_w": 0.754
+        },
+        {
+          "cluster_pstates": [
+            0,
+            1
+          ],
+          "min_performance_normperfs": 1.57,
+          "static_power_w": 0.05,
+          "dynamic_power_per_normperf_w": 0.728
+        },
+        {
+          "cluster_pstates": [
+            0,
+            2
+          ],
+          "min_performance_normperfs": 4.89,
+          "static_power_w": 0.05,
+          "dynamic_power_per_normperf_w": 0.726
+        },
+        {
+          "cluster_pstates": [
+            0,
+            3
+          ],
+          "min_performance_normperfs": 4.83,
+          "static_power_w": 0.05,
+          "dynamic_power_per_normperf_w": 0.723
+        },
+        {
+          "cluster_pstates": [
+            1,
+            0
+          ],
+          "min_performance_normperfs": 0.64,
+          "static_power_w": 0.07,
+          "dynamic_power_per_normperf_w": 0.689
+        },
+        {
+          "cluster_pstates": [
+            1,
+            1
+          ],
+          "min_performance_normperfs": 1.5,
+          "static_power_w": 0.05,
+          "dynamic_power_per_normperf_w": 0.661
+        },
+        {
+          "cluster_pstates": [
+            1,
+            2
+          ],
+          "min_performance_normperfs": 4.67,
+          "static_power_w": 0.05,
+          "dynamic_power_per_normperf_w": 0.658
+        },
+        {
+          "cluster_pstates": [
+            1,
+            3
+          ],
+          "min_performance_normperfs": 4.59,
+          "static_power_w": 0.05,
+          "dynamic_power_per_normperf_w": 0.655
+        },
+        {
+          "cluster_pstates": [
+            2,
+            0
+          ],
+          "min_performance_normperfs": 0.31,
+          "static_power_w": 0.07,
+          "dynamic_power_per_normperf_w": 0.621
+        },
+        {
+          "cluster_pstates": [
+            2,
+            1
+          ],
+          "min_performance_normperfs": 0.68,
+          "static_power_w": 0.05,
+          "dynamic_power_per_normperf_w": 0.589
+        },
+        {
+          "cluster_pstates": [
+            2,
+            2
+          ],
+          "min_performance_normperfs": 4.45,
+          "static_power_w": 0.05,
+          "dynamic_power_per_normperf_w": 0.585
+        },
+        {
+          "cluster_pstates": [
+            2,
+            3
+          ],
+          "min_performance_normperfs": 4.36,
+          "static_power_w": 0.05,
+          "dynamic_power_per_normperf_w": 0.581
+        },
+        {
+          "cluster_pstates": [
+            3,
+            0
+          ],
+          "min_performance_normperfs": 4.03,
+          "static_power_w": 0.07,
+          "dynamic_power_per_normperf_w": 0.574
+        },
+        {
+          "cluster_pstates": [
+            3,
+            1
+          ],
+          "min_performance_normperfs": 3.82,
+          "static_power_w": 0.05,
+          "dynamic_power_per_normperf_w": 0.539
+        },
+        {
+          "cluster_pstates": [
+            3,
+            2
+          ],
+          "min_performance_normperfs": 4.18,
+          "static_power_w": 0.05,
+          "dynamic_power_per_normperf_w": 0.535
+        },
+        {
+          "cluster_pstates": [
+            3,
+            4
+          ],
+          "min_performance_normperfs": 0.1,
+          "static_power_w": 0.05,
+          "dynamic_power_per_normperf_w": 0.53
+        },
+        {
+          "cluster_pstates": [
+            4,
+            1
+          ],
+          "min_performance_normperfs": 0.0,
+          "static_power_w": 0.0,
+          "dynamic_power_per_normperf_w": 0.51
+        },
+        {
+          "cluster_pstates": [
+            4,
+            2
+          ],
+          "min_performance_normperfs": 3.71,
+          "static_power_w": 0.0,
+          "dynamic_power_per_normperf_w": 0.504
+        },
+        {
+          "cluster_pstates": [
+            4,
+            4
+          ],
+          "min_performance_normperfs": 3.1,
+          "static_power_w": 0.0,
+          "dynamic_power_per_normperf_w": 0.497
+        },
+        {
+          "cluster_pstates": [
+            5,
+            2
+          ],
+          "min_performance_normperfs": 3.27,
+          "static_power_w": 0.0,
+          "dynamic_power_per_normperf_w": 0.495
+        },
+        {
+          "cluster_pstates": [
+            5,
+            4
+          ],
+          "min_performance_normperfs": 1.71,
+          "static_power_w": 0.0,
+          "dynamic_power_per_normperf_w": 0.486
+        }
+      ]
     },
     "dependencies": {
-      "cpu_stats_handler_node": "cpu_stats",
-      "cpu_dev_handler_node": "little_cluster_dev"
+      "cpu_device_handlers": [
+        "big_cluster_handler",
+        "little_cluster_handler"
+      ],
+      "cpu_stats_handler": "cpu_stats",
+      "syscall_handler": "syscall_handler"
     }
   },
   {
@@ -109,8 +298,7 @@
       "crash_report_handler_node": "crash_handler",
       "temperature_handler_node": "temperature_soc_pll",
       "cpu_control_nodes": [
-        "little_cluster_control",
-        "big_cluster_control"
+        "cpu_manager"
       ],
       "system_power_handler_node": "sys_shutdown",
       "thermal_limiter_node": "thermal_limiter",
@@ -121,9 +309,9 @@
         "sample_interval": 1.0,
         "filter_time_constant": 5.0,
         "target_temperature": 90.0,
-        "e_integral_min": -25.0,
+        "e_integral_min": -32.5,
         "e_integral_max": 0.0,
-        "sustainable_power": 2.96,
+        "sustainable_power": 3.9,
         "proportional_gain": 0.0,
         "integral_gain": 0.12
       },

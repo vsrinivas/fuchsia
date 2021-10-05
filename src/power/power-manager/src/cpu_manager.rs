@@ -37,6 +37,10 @@ use std::rc::Rc;
 ///
 /// FIDL dependencies: No direct dependencies
 
+// NOTE(fxbug.dev/85815): The thermal state configuration for Sherlock is generated using a process
+// described in this bug.
+// TODO(fxbug/dev/85813): Move this comment to the sherlock node config.
+
 #[derive(Clone, Copy, Debug)]
 struct Range<T: Clone + Copy + Debug> {
     upper: T,
