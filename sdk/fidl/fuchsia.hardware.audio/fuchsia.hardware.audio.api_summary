@@ -19,6 +19,8 @@ protocol/member fuchsia.hardware.audio/Codec.Stop() -> (int64 start_time)
 protocol/member fuchsia.hardware.audio/Codec.WatchGainState() -> (fuchsia.hardware.audio/GainState gain_state)
 protocol/member fuchsia.hardware.audio/Codec.WatchPlugState() -> (fuchsia.hardware.audio/PlugState plug_state)
 protocol fuchsia.hardware.audio/Codec
+protocol/member fuchsia.hardware.audio/CodecConnect.Connect(server_end:fuchsia.hardware.audio/Codec codec_protocol)
+protocol fuchsia.hardware.audio/CodecConnect
 table/member fuchsia.hardware.audio/CodecFormatInfo.external_delay int64
 table/member fuchsia.hardware.audio/CodecFormatInfo.turn_off_delay int64
 table/member fuchsia.hardware.audio/CodecFormatInfo.turn_on_delay int64

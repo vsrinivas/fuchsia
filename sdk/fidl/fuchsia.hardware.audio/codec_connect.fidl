@@ -1,0 +1,15 @@
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+library fuchsia.hardware.audio;
+
+/// For an overview of the Codec protocols see
+/// [Codec Interface](//docs/concepts/drivers/driver_architectures/audio_drivers/audio_codec.md)
+protocol CodecConnect {
+    /// Connect to a Codec protocol server.
+    /// This indirection into the Codec protocol allows us to support independent codec client
+    /// connections.
+    Connect(resource struct {
+        codec_protocol server_end:Codec;
+    });
+};
