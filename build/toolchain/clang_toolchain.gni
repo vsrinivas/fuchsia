@@ -120,11 +120,18 @@ template("clang_toolchain") {
       _use_rbe = false
     }
     if (_use_rbe) {
-      _rustc_wrapper =
-          rebase_path(rustc_remote_wrapper, root_build_dir) + " -- "
+      assert(rbe_exec_strategy == "remote" || rbe_exec_strategy == "local",
+             "Unsupported RBE exec_strategy: \"$rbe_exec_strategy\".")
+      if (rbe_exec_strategy == "remote") {
+        _rewrapper_flags = " --exec_strategy=remote"
 
-      # Use remote-worker parallelism
-      _rust_concurrent_jobs = concurrent_jobs.goma
+        # Use remote-worker parallelism
+        _rust_concurrent_jobs = concurrent_jobs.goma
+      } else if (rbe_exec_strategy == "local") {
+        _rewrapper_flags = " --exec_strategy=local --remote_update_cache=false"
+      }
+      _rustc_wrapper = rebase_path(rustc_remote_wrapper, root_build_dir) +
+                       _rewrapper_flags + " -- "
     }
 
     rebased_rust_sysroot = rebase_path(rust_sysroot, root_build_dir)

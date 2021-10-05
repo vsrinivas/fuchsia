@@ -26,4 +26,13 @@ rust_rbe_deps = rbe_common_tools + rbe_common_scripts + [ rustc_remote_wrapper ]
 declare_args() {
   # Set to true to enable distributed compilation using RBE.
   enable_rbe = false
+
+  # One of {local,remote}:
+  #   * remote: Execute action remotely on cache miss.
+  #         The remote cache is always updated with this result.
+  #   * local: Lookup action in the remote cache, but execute action
+  #         locally on cache miss.  The locally produced result is
+  #         not uploaded to the remote cache.
+  #   (There are other rewrapper options that are not exposed.)
+  rbe_exec_strategy = "remote"
 }
