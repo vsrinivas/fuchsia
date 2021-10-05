@@ -77,6 +77,14 @@ class I2cMetadataTest : public zxtest::Test {
  public:
   void SetUp() override { fake_root_ = MockDevice::FakeRootParent(); }
 
+  void TearDown() override {
+    for (auto& device : fake_root_->children()) {
+      device_async_remove(device.get());
+    }
+
+    mock_ddk::ReleaseFlaggedDevices(fake_root_.get());
+  }
+
  protected:
   std::shared_ptr<zx_device> fake_root_;
 };

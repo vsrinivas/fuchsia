@@ -70,6 +70,15 @@ zx_status_t I2cBus::Start() {
   return ZX_OK;
 }
 
+void I2cBus::AsyncStop() {
+  mutex_.Acquire();
+  shutdown_ = true;
+  mutex_.Release();
+  sync_completion_signal(&txn_signal_);
+}
+
+void I2cBus::WaitForStop() { thrd_join(thread_, nullptr); }
+
 int I2cBus::I2cThread() {
   fbl::AllocChecker ac;
   fbl::Array<uint8_t> read_buffer(new (&ac) uint8_t[I2C_MAX_TOTAL_TRANSFER],
@@ -85,6 +94,10 @@ int I2cBus::I2cThread() {
     I2cTxn* txn;
 
     mutex_.Acquire();
+    if (shutdown_) {
+      mutex_.Release();
+      break;
+    }
     while ((txn = list_remove_head_type(&queued_txns_, I2cTxn, node)) != nullptr) {
       mutex_.Release();
 
@@ -134,6 +147,7 @@ int I2cBus::I2cThread() {
     }
     mutex_.Release();
   }
+
   return 0;
 }
 

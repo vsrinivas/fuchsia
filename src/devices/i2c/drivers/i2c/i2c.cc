@@ -22,7 +22,20 @@
 
 namespace i2c {
 
-void I2cDevice::DdkRelease() { delete this; }
+void I2cDevice::DdkUnbind(ddk::UnbindTxn txn) {
+  for (auto& bus : i2c_buses_) {
+    bus->AsyncStop();
+  }
+
+  txn.Reply();
+}
+
+void I2cDevice::DdkRelease() {
+  for (auto& bus : i2c_buses_) {
+    bus->WaitForStop();
+  }
+  delete this;
+}
 
 zx_status_t I2cDevice::Create(void* ctx, zx_device_t* parent) {
   i2c_impl_protocol_t i2c;

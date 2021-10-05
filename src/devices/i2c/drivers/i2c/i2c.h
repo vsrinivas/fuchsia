@@ -17,7 +17,7 @@
 namespace i2c {
 
 class I2cDevice;
-using I2cDeviceType = ddk::Device<I2cDevice>;
+using I2cDeviceType = ddk::Device<I2cDevice, ddk::Unbindable>;
 
 class I2cDevice : public I2cDeviceType {
  public:
@@ -27,6 +27,7 @@ class I2cDevice : public I2cDeviceType {
   static zx_status_t Create(void* ctx, zx_device_t* parent);
 
   void DdkRelease();
+  void DdkUnbind(ddk::UnbindTxn txn);
 
  private:
   zx_status_t Init(ddk::I2cImplProtocolClient i2c);

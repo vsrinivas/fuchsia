@@ -23,6 +23,8 @@ class I2cBus : public fbl::RefCounted<I2cBus> {
   explicit I2cBus(zx_device_t* parent, ddk::I2cImplProtocolClient i2c, uint32_t bus_id);
   virtual ~I2cBus() = default;
   zx_status_t Start();
+  void AsyncStop();
+  void WaitForStop();
   virtual void Transact(uint16_t address, const i2c_op_t* op_list, size_t op_count,
                         i2c_transact_callback callback, void* cookie);
 
@@ -51,6 +53,7 @@ class I2cBus : public fbl::RefCounted<I2cBus> {
   list_node_t free_txns_ __TA_GUARDED(mutex_);
   sync_completion_t txn_signal_;
 
+  bool shutdown_ __TA_GUARDED(mutex_) = false;
   thrd_t thread_;
   fbl::Mutex mutex_;
 };
