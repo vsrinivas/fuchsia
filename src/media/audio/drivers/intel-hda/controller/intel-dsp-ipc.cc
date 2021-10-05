@@ -5,6 +5,7 @@
 #include "intel-dsp-ipc.h"
 
 #include <lib/fit/defer.h>
+#include <lib/stdcompat/span.h>
 #include <lib/zx/time.h>
 #include <string.h>
 
@@ -12,7 +13,6 @@
 
 #include <fbl/alloc_checker.h>
 #include <fbl/auto_lock.h>
-#include <fbl/span.h>
 #include <fbl/string_printf.h>
 #include <intel-hda/utils/intel-hda-registers.h>
 #include <intel-hda/utils/status.h>
@@ -45,8 +45,8 @@ class HardwareDspChannel : public DspChannel {
   void Shutdown() override TA_EXCL(lock_);
   void ProcessIrq() override;
   Status Send(uint32_t primary, uint32_t extension) override;
-  Status SendWithData(uint32_t primary, uint32_t extension, fbl::Span<const uint8_t> payload,
-                      fbl::Span<uint8_t> recv_buffer, size_t* bytes_received) override;
+  Status SendWithData(uint32_t primary, uint32_t extension, cpp20::span<const uint8_t> payload,
+                      cpp20::span<uint8_t> recv_buffer, size_t* bytes_received) override;
 
   // Return true if at least one operation is pending.
   bool IsOperationPending() const override;
@@ -180,8 +180,8 @@ void HardwareDspChannel::Shutdown() {
 }
 
 Status HardwareDspChannel::SendWithData(uint32_t primary, uint32_t extension,
-                                        fbl::Span<const uint8_t> payload,
-                                        fbl::Span<uint8_t> recv_buffer, size_t* bytes_received) {
+                                        cpp20::span<const uint8_t> payload,
+                                        cpp20::span<uint8_t> recv_buffer, size_t* bytes_received) {
   if (payload.size() > MAILBOX_SIZE) {
     return Status(ZX_ERR_INVALID_ARGS);
   }
@@ -212,7 +212,7 @@ Status HardwareDspChannel::SendWithData(uint32_t primary, uint32_t extension,
 }
 
 Status HardwareDspChannel::Send(uint32_t primary, uint32_t extension) {
-  return SendWithData(primary, extension, fbl::Span<uint8_t>(), fbl::Span<uint8_t>(), nullptr);
+  return SendWithData(primary, extension, cpp20::span<uint8_t>(), cpp20::span<uint8_t>(), nullptr);
 }
 
 bool HardwareDspChannel::IsOperationPending() const {

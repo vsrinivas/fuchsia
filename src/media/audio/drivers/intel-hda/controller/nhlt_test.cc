@@ -138,7 +138,7 @@ TEST(Nhlt, DefaultInitializer) {
 }
 
 TEST(Nhlt, ParseEmpty) {
-  fbl::Span<uint8_t> empty{};
+  cpp20::span<uint8_t> empty{};
   EXPECT_FALSE(Nhlt::FromBuffer(empty).ok());
 }
 

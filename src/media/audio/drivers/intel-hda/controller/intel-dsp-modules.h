@@ -5,6 +5,7 @@
 #ifndef SRC_MEDIA_AUDIO_DRIVERS_INTEL_HDA_CONTROLLER_INTEL_DSP_MODULES_H_
 #define SRC_MEDIA_AUDIO_DRIVERS_INTEL_HDA_CONTROLLER_INTEL_DSP_MODULES_H_
 
+#include <lib/stdcompat/span.h>
 #include <zircon/types.h>
 
 #include <cstdint>
@@ -12,7 +13,6 @@
 #include <unordered_map>
 #include <vector>
 
-#include <fbl/span.h>
 #include <intel-hda/utils/intel-audio-dsp-ipc.h>
 #include <intel-hda/utils/status.h>
 #include <intel-hda/utils/status_or.h>
@@ -59,7 +59,7 @@ class DspModuleController {
   //
   // Returns the ID of the created module on success.
   StatusOr<DspModuleId> CreateModule(DspModuleType type, DspPipelineId parent_pipeline,
-                                     ProcDomain scheduling_domain, fbl::Span<const uint8_t> data);
+                                     ProcDomain scheduling_domain, cpp20::span<const uint8_t> data);
 
   // Connect an output pin of one module to the input pin of another.
   Status BindModules(DspModuleId source_module, uint8_t src_output_pin, DspModuleId dest_module,
@@ -97,7 +97,7 @@ StatusOr<DspPipelineId> CreateSimplePipeline(DspModuleController* controller,
 
 // Exposed for testing.
 StatusOr<std::map<fbl::String, std::unique_ptr<ModuleEntry>>> ParseModules(
-    fbl::Span<const uint8_t> data);
+    cpp20::span<const uint8_t> data);
 
 }  // namespace intel_hda
 }  // namespace audio

@@ -5,10 +5,11 @@
 #ifndef SRC_MEDIA_AUDIO_DRIVERS_INTEL_HDA_CONTROLLER_BINARY_DECODER_H_
 #define SRC_MEDIA_AUDIO_DRIVERS_INTEL_HDA_CONTROLLER_BINARY_DECODER_H_
 
+#include <lib/stdcompat/span.h>
+
 #include <cstdint>
 #include <type_traits>
 
-#include <fbl/span.h>
 #include <fbl/string_printf.h>
 #include <intel-hda/utils/status.h>
 #include <intel-hda/utils/status_or.h>
@@ -27,7 +28,7 @@ namespace audio::intel_hda {
 // A typical use will be as follows:
 //
 //   // Give the decoder a reference to binary data.
-//   BinaryDecoder decoder(fbl::Span<const uint8_t>(...));
+//   BinaryDecoder decoder(cpp20::span<const uint8_t>(...));
 //
 //   // Read some structures.
 //   StatusOr<int32_t> a = decoder.Read<int32_t>();
@@ -35,21 +36,21 @@ namespace audio::intel_hda {
 //   StatusOr<OtherStruct> c = decoder.Read<OtherStruct>();
 //
 //   // Read off a range of 16 bytes.
-//   StatusOr<fbl::Span<const uint8_t>> bytes = decoder.Read(16);
+//   StatusOr<cpp20::span<const uint8_t>> bytes = decoder.Read(16);
 //
 //   // Read off a struct that encodes its length as a field.
 //   //
 //   // The result will consist of a "MyStruct" and additional payload data
 //   // as a byte range.
-//   StatusOr<std::tuple<MyStruct, fbl::Span<const uint8_t>>> data
+//   StatusOr<std::tuple<MyStruct, cpp20::span<const uint8_t>>> data
 //       = decoder.VariableLengthRead<MyStruct>(&MyStruct::length);
 //
 class BinaryDecoder {
  public:
-  explicit BinaryDecoder(fbl::Span<const uint8_t> data) : buffer_(data) {}
+  explicit BinaryDecoder(cpp20::span<const uint8_t> data) : buffer_(data) {}
 
   // Read off the given number of bytes from the beginning of the buffer.
-  StatusOr<fbl::Span<const uint8_t>> Read(size_t size) {
+  StatusOr<cpp20::span<const uint8_t>> Read(size_t size) {
     if (size > buffer_.size_bytes()) {
       return Status(
           ZX_ERR_OUT_OF_RANGE,
@@ -57,7 +58,7 @@ class BinaryDecoder {
               "Input data has been truncated: expected %ld bytes, but only %ld available.", size,
               buffer_.size_bytes()));
     }
-    fbl::Span<const uint8_t> result = buffer_.subspan(0, size);
+    cpp20::span<const uint8_t> result = buffer_.subspan(0, size);
     buffer_ = buffer_.subspan(size);
     return result;
   }
@@ -70,11 +71,11 @@ class BinaryDecoder {
   template <typename T>
   Status Read(T* result) {
     static_assert(std::is_pod<T>::value, "Function only supports POD types.");
-    StatusOr<fbl::Span<const uint8_t>> maybe_bytes = Read(sizeof(T));
+    StatusOr<cpp20::span<const uint8_t>> maybe_bytes = Read(sizeof(T));
     if (!maybe_bytes.ok()) {
       return maybe_bytes.status();
     }
-    fbl::Span<const uint8_t> bytes = maybe_bytes.ValueOrDie();
+    cpp20::span<const uint8_t> bytes = maybe_bytes.ValueOrDie();
     ZX_DEBUG_ASSERT(bytes.size_bytes() == sizeof(T));
     memcpy(result, bytes.data(), sizeof(T));
     return OkStatus();
@@ -100,8 +101,8 @@ class BinaryDecoder {
   //
   // |T::length_field| must be castable to size_t.
   template <typename T, typename F>
-  StatusOr<std::tuple<T, fbl::Span<const uint8_t>>> VariableLengthRead(F T::*length_field) {
-    fbl::Span<const uint8_t> orig_buffer = buffer_;
+  StatusOr<std::tuple<T, cpp20::span<const uint8_t>>> VariableLengthRead(F T::*length_field) {
+    cpp20::span<const uint8_t> orig_buffer = buffer_;
 
     // Read header.
     auto maybe_header = Read<T>();
@@ -136,7 +137,7 @@ class BinaryDecoder {
   }
 
  private:
-  fbl::Span<const uint8_t> buffer_;
+  cpp20::span<const uint8_t> buffer_;
 };
 
 // Parse a string in an array, where the string may either:

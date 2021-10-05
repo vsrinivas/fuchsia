@@ -37,7 +37,7 @@ std::vector<std::vector<uint8_t>> SplitNalUnits(const uint8_t* start_data, uint3
   }
 }
 
-uint8_t GetNalUnitType(fbl::Span<const uint8_t> nal_unit) {
+uint8_t GetNalUnitType(cpp20::span<const uint8_t> nal_unit) {
   // Also works with 4-byte startcodes.
   uint8_t start_code[3] = {0, 0, 1};
   uint8_t* this_start = static_cast<uint8_t*>(

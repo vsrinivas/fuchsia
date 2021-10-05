@@ -16,7 +16,7 @@ namespace audio::intel_hda {
 namespace {
 
 TEST(BinaryDecoder, Empty) {
-  BinaryDecoder decoder{fbl::Span<uint8_t>()};
+  BinaryDecoder decoder{cpp20::span<uint8_t>()};
 
   // Empty read.
   auto empty_read = decoder.Read(0);
@@ -29,7 +29,7 @@ TEST(BinaryDecoder, Empty) {
 
 TEST(BinaryDecoder, NonEmptyRead) {
   std::array<uint8_t, 5> buffer;
-  BinaryDecoder decoder{fbl::Span<uint8_t>(buffer.begin(), buffer.size())};
+  BinaryDecoder decoder{cpp20::span<uint8_t>(buffer.begin(), buffer.size())};
 
   // Successful read.
   auto a = decoder.Read(1);
@@ -62,7 +62,7 @@ TEST(BinaryDecoder, ReadStruct) {
   // Can't read from too small a buffer.
   {
     std::array<uint8_t, 1> small_buffer = {1};
-    BinaryDecoder decoderA{fbl::Span<uint8_t>(small_buffer.begin(), small_buffer.size())};
+    BinaryDecoder decoderA{cpp20::span<uint8_t>(small_buffer.begin(), small_buffer.size())};
     ASSERT_EQ(decoderA.Read<MyStruct>().status().code(), ZX_ERR_OUT_OF_RANGE);
   }
 
@@ -70,7 +70,7 @@ TEST(BinaryDecoder, ReadStruct) {
   {
     std::array<uint8_t, 2> correct_buffer = {1, 2};
 
-    BinaryDecoder decoderB{fbl::Span<uint8_t>(correct_buffer.begin(), correct_buffer.size())};
+    BinaryDecoder decoderB{cpp20::span<uint8_t>(correct_buffer.begin(), correct_buffer.size())};
     auto value = decoderB.Read<MyStruct>();
     ASSERT_TRUE(value.ok());
     EXPECT_EQ(value.ValueOrDie().a, 1);
@@ -82,7 +82,7 @@ TEST(BinaryDecoder, ReadStruct) {
   {
     std::array<uint8_t, 3> big_buffer = {1, 2, 3};
 
-    BinaryDecoder decoderC{fbl::Span<uint8_t>(big_buffer.begin(), big_buffer.size())};
+    BinaryDecoder decoderC{cpp20::span<uint8_t>(big_buffer.begin(), big_buffer.size())};
     auto value = decoderC.Read<MyStruct>();
     ASSERT_TRUE(value.ok());
     EXPECT_EQ(value.ValueOrDie().a, 1);
@@ -97,7 +97,7 @@ TEST(BinaryDecoder, ReadIntoPointerSuccess) {
   };
 
   std::array<uint8_t, 2> correct_buffer = {1, 2};
-  BinaryDecoder decoderB{fbl::Span<uint8_t>(correct_buffer.begin(), correct_buffer.size())};
+  BinaryDecoder decoderB{cpp20::span<uint8_t>(correct_buffer.begin(), correct_buffer.size())};
   MyStruct value;
   EXPECT_TRUE(decoderB.Read<MyStruct>(&value).ok());
   EXPECT_EQ(value.a, 1);
@@ -110,7 +110,7 @@ TEST(BinaryDecoder, ReadIntoPointerFailure) {
   };
 
   std::array<uint8_t, 1> small_buffer = {1};
-  BinaryDecoder decoderC{fbl::Span<uint8_t>(small_buffer.begin(), small_buffer.size())};
+  BinaryDecoder decoderC{cpp20::span<uint8_t>(small_buffer.begin(), small_buffer.size())};
   MyStruct value;
   EXPECT_FALSE(decoderC.Read<MyStruct>(&value).ok());
 }
@@ -123,14 +123,14 @@ TEST(BinaryDecoder, VarLengthRead) {
 
   // Insufficient data available.
   {
-    BinaryDecoder d{fbl::Span<uint8_t>()};
+    BinaryDecoder d{cpp20::span<uint8_t>()};
     ASSERT_FALSE((d.VariableLengthRead<VarLength>(&VarLength::size).ok()));
   }
 
   // Length is smaller than the header structure.
   {
     std::array<uint8_t, 3> buffer = {/*size=*/1, /*data=*/2, /*payload=*/3};
-    BinaryDecoder d{fbl::Span<uint8_t>(buffer.begin(), buffer.size())};
+    BinaryDecoder d{cpp20::span<uint8_t>(buffer.begin(), buffer.size())};
     EXPECT_EQ(d.VariableLengthRead<VarLength>(&VarLength::size).status().code(),
               ZX_ERR_OUT_OF_RANGE);
   }
@@ -138,7 +138,7 @@ TEST(BinaryDecoder, VarLengthRead) {
   // Length is larger than the buffer.
   {
     std::array<uint8_t, 3> buffer = {/*size=*/4, /*data=*/2, /*payload=*/3};
-    BinaryDecoder d{fbl::Span<uint8_t>(buffer.begin(), buffer.size())};
+    BinaryDecoder d{cpp20::span<uint8_t>(buffer.begin(), buffer.size())};
     EXPECT_EQ(d.VariableLengthRead<VarLength>(&VarLength::size).status().code(),
               ZX_ERR_OUT_OF_RANGE);
   }
@@ -146,7 +146,7 @@ TEST(BinaryDecoder, VarLengthRead) {
   // Successful read.
   {
     std::array<uint8_t, 3> buffer = {/*size=*/3, /*data=*/2, /*payload=*/1};
-    BinaryDecoder d{fbl::Span<uint8_t>(buffer.begin(), buffer.size())};
+    BinaryDecoder d{cpp20::span<uint8_t>(buffer.begin(), buffer.size())};
     auto maybe_val = d.VariableLengthRead<VarLength>(&VarLength::size);
     ASSERT_TRUE(maybe_val.ok());
     auto [val, payload] = maybe_val.ValueOrDie();

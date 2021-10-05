@@ -43,12 +43,12 @@ class FakeDspChannel : public DspChannel {
   bool IsOperationPending() const override { return false; }
 
   Status Send(uint32_t primary, uint32_t extension) override {
-    return SendWithData(primary, extension, fbl::Span<const uint8_t>(), fbl::Span<uint8_t>(),
+    return SendWithData(primary, extension, cpp20::span<const uint8_t>(), cpp20::span<uint8_t>(),
                         nullptr);
   }
 
-  Status SendWithData(uint32_t primary, uint32_t extension, fbl::Span<const uint8_t> payload,
-                      fbl::Span<uint8_t> recv_buffer, size_t* bytes_received) override {
+  Status SendWithData(uint32_t primary, uint32_t extension, cpp20::span<const uint8_t> payload,
+                      cpp20::span<uint8_t> recv_buffer, size_t* bytes_received) override {
     ipcs_.push_back(Ipc{primary, extension, std::vector<uint8_t>(payload.begin(), payload.end())});
     return OkStatus();
   }
@@ -246,7 +246,7 @@ TEST(ParseModules, TruncatedData) {
     ModulesInfo info{};
     info.module_count = 1;
     memcpy(buff, &info, sizeof(ModulesInfo));
-    EXPECT_TRUE(!ParseModules(fbl::Span<uint8_t>(buff)).ok());
+    EXPECT_TRUE(!ParseModules(cpp20::span<uint8_t>(buff)).ok());
   }
 }
 
@@ -266,7 +266,7 @@ TEST(ParseModules, RealData) {
   data.entry2.module_id = 17;
 
   // Parse the modules.
-  auto result = ParseModules(fbl::Span(reinterpret_cast<const uint8_t*>(&data), sizeof(data)))
+  auto result = ParseModules(cpp20::span(reinterpret_cast<const uint8_t*>(&data), sizeof(data)))
                     .ConsumeValueOrDie();
 
   // Ensure both module entries appear in the output.

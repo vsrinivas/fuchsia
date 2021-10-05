@@ -6,6 +6,7 @@
 #define SRC_MEDIA_AUDIO_DRIVERS_INTEL_HDA_CONTROLLER_INTEL_DSP_IPC_H_
 
 #include <lib/fit/function.h>
+#include <lib/stdcompat/span.h>
 #include <lib/sync/completion.h>
 #include <lib/zircon-internal/thread_annotations.h>
 #include <lib/zx/time.h>
@@ -15,7 +16,6 @@
 
 #include <fbl/intrusive_double_list.h>
 #include <fbl/mutex.h>
-#include <fbl/span.h>
 #include <fbl/string.h>
 #include <intel-hda/utils/intel-audio-dsp-ipc.h>
 #include <intel-hda/utils/intel-hda-registers.h>
@@ -53,7 +53,7 @@ class DspChannel {
   // and writing.
   virtual Status Send(uint32_t primary, uint32_t extension) = 0;
   virtual Status SendWithData(uint32_t primary, uint32_t extension,
-                              fbl::Span<const uint8_t> payload, fbl::Span<uint8_t> recv_buffer,
+                              cpp20::span<const uint8_t> payload, cpp20::span<uint8_t> recv_buffer,
                               size_t* bytes_received) = 0;
 
   // Return true if at least one operation is pending.

@@ -4,6 +4,7 @@
 
 #include "nhlt.h"
 
+#include <lib/stdcompat/span.h>
 #include <zircon/assert.h>
 #include <zircon/errors.h>
 
@@ -13,7 +14,6 @@
 
 #include <fbl/alloc_checker.h>
 #include <fbl/array.h>
-#include <fbl/span.h>
 #include <fbl/string_printf.h>
 #include <fbl/vector.h>
 #include <intel-hda/utils/nhlt.h>
@@ -38,13 +38,13 @@ StatusOr<fbl::Vector<uint8_t>> ReadSpecificConfig(BinaryDecoder* decoder) {
   uint32_t length = maybe_length.ValueOrDie();
 
   // Read payload.
-  StatusOr<fbl::Span<const uint8_t>> maybe_payload = decoder->Read(length);
+  StatusOr<cpp20::span<const uint8_t>> maybe_payload = decoder->Read(length);
   if (!maybe_payload.ok()) {
     return maybe_payload.status();
   }
 
   // Copy bytes into vector.
-  const fbl::Span<const uint8_t>& payload = maybe_payload.ValueOrDie();
+  const cpp20::span<const uint8_t>& payload = maybe_payload.ValueOrDie();
   fbl::Vector<uint8_t> result;
   fbl::AllocChecker ac;
   result.reserve(length, &ac);
@@ -66,7 +66,7 @@ StatusOr<fbl::Vector<uint8_t>> ReadSpecificConfig(BinaryDecoder* decoder) {
 //   * A byte specifying the number of formats.
 //   * N format blocks.
 StatusOr<EndPointConfig> ParseDescriptor(const nhlt_descriptor_t& header,
-                                         fbl::Span<const uint8_t> additional_bytes) {
+                                         cpp20::span<const uint8_t> additional_bytes) {
   EndPointConfig config;
   config.header = header;
   config.bus_id = header.virtual_bus_id;
@@ -115,7 +115,7 @@ StatusOr<EndPointConfig> ParseDescriptor(const nhlt_descriptor_t& header,
   return config;
 }
 
-StatusOr<std::unique_ptr<Nhlt>> Nhlt::FromBuffer(fbl::Span<const uint8_t> buffer) {
+StatusOr<std::unique_ptr<Nhlt>> Nhlt::FromBuffer(cpp20::span<const uint8_t> buffer) {
   // Create output object.
   fbl::AllocChecker ac;
   auto result = fbl::make_unique_checked<Nhlt>(&ac);
@@ -208,7 +208,7 @@ void Nhlt::Dump() const {
 }
 
 void Nhlt::DumpNhlt(const uint8_t* data, size_t length) {
-  auto maybe_nhlt = Nhlt::FromBuffer(fbl::Span<const uint8_t>(data, length));
+  auto maybe_nhlt = Nhlt::FromBuffer(cpp20::span<const uint8_t>(data, length));
   if (!maybe_nhlt.ok()) {
     GLOBAL_LOG(ERROR, "Failed to parse NHLT: %s", maybe_nhlt.status().ToString().c_str());
     return;

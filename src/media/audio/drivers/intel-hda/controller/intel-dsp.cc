@@ -126,7 +126,7 @@ Status IntelDsp::ParseNhlt() {
   memcpy(buffer.begin(), static_cast<uint8_t*>(mapper.start()) + resource.offset, buffer.size());
   // Parse NHLT.
   StatusOr<std::unique_ptr<Nhlt>> nhlt =
-      Nhlt::FromBuffer(fbl::Span<const uint8_t>(buffer.begin(), buffer.end()));
+      Nhlt::FromBuffer(cpp20::span<const uint8_t>(buffer.begin(), buffer.end()));
   if (!nhlt.ok()) {
     return nhlt.status();
   }

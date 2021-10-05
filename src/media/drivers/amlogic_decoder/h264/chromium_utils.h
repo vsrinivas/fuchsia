@@ -8,7 +8,7 @@
 #include <memory>
 #include <optional>
 
-#include <fbl/span.h>
+#include <lib/stdcompat/span.h>
 #include <safemath/checked_math.h>
 #include <zircon/compiler.h>
 
@@ -73,7 +73,7 @@ constexpr size_t size(const T (&array)[N]) noexcept {
 
 // base/span.h
 template <typename T>
-using span = fbl::Span<T>;
+using span = cpp20::span<T>;
 
 // base/numerics/checked_math.h
 template <typename T>

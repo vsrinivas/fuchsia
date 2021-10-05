@@ -4,11 +4,12 @@
 
 #include "intel-dsp-modules.h"
 
+#include <lib/stdcompat/span.h>
+
 #include <cstdint>
 #include <map>
 #include <unordered_map>
 
-#include <fbl/span.h>
 #include <fbl/string_printf.h>
 #include <intel-hda/utils/intel-audio-dsp-ipc.h>
 #include <intel-hda/utils/intel-hda-registers.h>
@@ -32,7 +33,7 @@ constexpr int kMaxPipelines = 255;
 
 namespace {
 zx_status_t LargeConfigGet(DspChannel* ipc, uint16_t module_id, uint8_t instance_id,
-                           BaseFWParamType large_param_id, fbl::Span<uint8_t> buffer,
+                           BaseFWParamType large_param_id, cpp20::span<uint8_t> buffer,
                            size_t* bytes_received) {
   GLOBAL_LOG(TRACE, "LARGE_CONFIG_GET (mod %u inst %u large_param_id %u)", module_id, instance_id,
              to_underlying(large_param_id));
@@ -47,7 +48,7 @@ zx_status_t LargeConfigGet(DspChannel* ipc, uint16_t module_id, uint8_t instance
                                 ModuleMsgType::LARGE_CONFIG_GET, instance_id, module_id),
                         IPC_LARGE_CONFIG_EXT(true, false, to_underlying(large_param_id),
                                              static_cast<uint32_t>(buffer.size())),
-                        fbl::Span<const uint8_t>(), buffer, &bytes_received_local);
+                        cpp20::span<const uint8_t>(), buffer, &bytes_received_local);
   if (!result.ok()) {
     GLOBAL_LOG(ERROR, "LARGE_CONFIG_GET (mod %u inst %u large_param_id %u) failed: %s", module_id,
                instance_id, to_underlying(large_param_id), result.ToString().c_str());
@@ -66,7 +67,7 @@ zx_status_t LargeConfigGet(DspChannel* ipc, uint16_t module_id, uint8_t instance
 
 // Parse the module list returned from the DSP.
 StatusOr<std::map<fbl::String, std::unique_ptr<ModuleEntry>>> ParseModules(
-    fbl::Span<const uint8_t> data) {
+    cpp20::span<const uint8_t> data) {
   BinaryDecoder decoder(data);
 
   // Parse returned module information.
@@ -106,7 +107,7 @@ DspModuleController::DspModuleController(DspChannel* channel) : channel_(channel
 StatusOr<DspModuleId> DspModuleController::CreateModule(DspModuleType type,
                                                         DspPipelineId parent_pipeline,
                                                         ProcDomain scheduling_domain,
-                                                        fbl::Span<const uint8_t> data) {
+                                                        cpp20::span<const uint8_t> data) {
   // Ensure data is not too large or non-word sized.
   if ((data.size() % kIpcInitInstanceExtBytesPerWord) ||
       data.size() >= std::numeric_limits<uint16_t>::max()) {
@@ -126,7 +127,7 @@ StatusOr<DspModuleId> DspModuleController::CreateModule(DspModuleType type,
               instance_id.ValueOrDie(), type),
       IPC_INIT_INSTANCE_EXT(scheduling_domain, /*core_id=*/0, parent_pipeline.id,
                             static_cast<uint16_t>((data.size()) / kIpcInitInstanceExtBytesPerWord)),
-      data, fbl::Span<uint8_t>(), nullptr);
+      data, cpp20::span<uint8_t>(), nullptr);
   if (!result.ok()) {
     GLOBAL_LOG(TRACE, "CreateModule failed: %s", result.ToString().c_str());
     return PrependMessage(fbl::StringPrintf("Failed to create module of type %u (instance #%u)",
@@ -208,7 +209,7 @@ StatusOr<std::map<fbl::String, std::unique_ptr<ModuleEntry>>>
 DspModuleController::ReadModuleDetails() {
   constexpr int kMaxModules = 64;
   uint8_t buffer[sizeof(ModulesInfo) + (kMaxModules * sizeof(ModuleEntry))];
-  fbl::Span data{buffer};
+  cpp20::span data{buffer};
 
   // Fetch module information.
   size_t bytes_received;

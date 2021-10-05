@@ -7,6 +7,7 @@
 
 #include <stdint.h>
 
+#include <zircon/assert.h>
 #include <string>
 
 #include "chromium_utils.h"

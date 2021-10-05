@@ -5,11 +5,11 @@
 #include "src/media/audio/audio_core/driver_output.h"
 
 #include <lib/fzl/vmo-mapper.h>
+#include <lib/stdcompat/span.h>
 #include <lib/syslog/cpp/macros.h>
 #include <zircon/status.h>
 
 #include <fbl/ref_ptr.h>
-#include <fbl/span.h>
 #include <gmock/gmock.h>
 
 #include "src/media/audio/audio_core/audio_device_manager.h"
@@ -111,7 +111,7 @@ class DriverOutputTest : public testing::ThreadingModelFixture {
 
   // Use len = -1 for the end of the buffer.
   template <typename T>
-  fbl::Span<T> RingBufferSlice(size_t first, ssize_t maybe_len) const {
+  cpp20::span<T> RingBufferSlice(size_t first, ssize_t maybe_len) const {
     assert(RingBufferSizeBytes() % sizeof(T) == 0);
     T* array = static_cast<T*>(ring_buffer_mapper_.start());
     size_t len = maybe_len >= 0 ? maybe_len : (RingBufferSizeBytes() / sizeof(T)) - first;
@@ -120,7 +120,7 @@ class DriverOutputTest : public testing::ThreadingModelFixture {
   }
 
   template <typename T>
-  fbl::Span<T> RingBuffer() const {
+  cpp20::span<T> RingBuffer() const {
     return RingBufferSlice<T>(0, RingBufferSizeBytes() / sizeof(T));
   }
 
