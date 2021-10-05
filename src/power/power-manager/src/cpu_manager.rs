@@ -155,6 +155,13 @@ impl CpuCluster {
         syscall_handler: &Rc<dyn Node>,
         index: usize,
     ) -> Result<(), PowerManagerError> {
+        fuchsia_trace::counter!(
+            "power_manager",
+            "CpuManager P-state",
+            self.cluster_index as u64,
+            &self.name => index as u32
+        );
+
         // If the current P-state is known and equal to the new one, no update is needed.
         if let RangedValue::Known(current) = self.current_pstate.get() {
             if current == index {
@@ -262,17 +269,37 @@ struct ThermalState {
     performance_capacity: NormPerfs,
 }
 
-/// Estimates the power that the provided thermal state will consume at the desired performance
-/// (which may not be attained if it exceeds the capacity of the thermal state).
-fn estimate_power(state: &ThermalState, desired_performance: NormPerfs) -> Watts {
-    let performance = NormPerfs::min(state.performance_capacity, desired_performance);
-    let dynamic_power = state.dynamic_power_per_normperf.mul_scalar(performance.0);
-    state.static_power + dynamic_power
+struct PerfAndPower {
+    performance: NormPerfs,
+    power: Watts,
 }
 
-/// Validates that thermal states are in order of decreasing power use for any desired performance.
+impl ThermalState {
+    /// Estimates the performance and power of this thermal state for the given model of desired
+    /// performance.
+    fn estimate_perf_and_power(&self, performance_model: PerformanceModel) -> PerfAndPower {
+        let performance = match performance_model {
+            Saturated => self.performance_capacity,
+            FixedValue(p) => NormPerfs::min(self.performance_capacity, p),
+        };
+        let dynamic_power = self.dynamic_power_per_normperf.mul_scalar(performance.0);
+
+        PerfAndPower { performance, power: self.static_power + dynamic_power }
+    }
+
+    /// Like `estimate_perf_and_power`, but returns only the power estimate.
+    fn estimate_power(&self, performance_model: PerformanceModel) -> Watts {
+        self.estimate_perf_and_power(performance_model).power
+    }
+}
+
+/// Validates that a list of thermal states are valid, meeting the criteria:
+///  - State 0 has min_performance of 0.0;
+///  - For any input `desired_performance`, the admissible states (states for which
+///    `state.min_performance <= desired_performance`) are in order of strictly decreasing modeled
+///    power.
 ///
-/// First, some definitions:
+/// To address the power criterion, two further definitions are necessary:
 ///  - Power is modeled as
 ///
 ///    ```
@@ -280,9 +307,6 @@ fn estimate_power(state: &ThermalState, desired_performance: NormPerfs) -> Watts
 ///              + dynamic_power_per_normperf * min(desired_performance, performance_capacity).
 ///    ```
 ///
-///  - A thermal state `state` is *admissible* at `desired_performance` if and only if
-///    `state.min_performance <= desired_performance`. That is, a state's min_performance defines
-///    the smallest performance value at which it will be utilized.
 ///  - Two states are *adjacent* at `desired_performance` if and only if they are both admissible at
 ///    `desired_performance`, and no state between them in the full list of states is admissible.
 ///
@@ -294,10 +318,16 @@ fn estimate_power(state: &ThermalState, desired_performance: NormPerfs) -> Watts
 ///
 /// The first two conditions guarantee that the power delta between a lower-index state and a
 /// higher-index state is non-decreasing with respect to performance. The third condition implies
-/// that the power delta between any two adjacent states is initially positive; since the delta
-/// is non-decreasing by the first two conditions, it will continue to be positive for all
-/// subsequent performance values.
+/// that the power delta between any two adjacent states is initially positive; since the delta is
+/// non-decreasing by the first two conditions, it will continue to be positive for all subsequent
+/// performance values.
 fn validate_thermal_states(states: &Vec<ThermalState>) -> Result<(), Error> {
+    anyhow::ensure!(
+        states[0].min_performance == NormPerfs(0.0),
+        "State 0 ({:?}) must have min_performance == 0.0.",
+        states[0]
+    );
+
     for i in 0..states.len() - 1 {
         let state = &states[i];
         let next_state = &states[i + 1];
@@ -322,9 +352,9 @@ fn validate_thermal_states(states: &Vec<ThermalState>) -> Result<(), Error> {
         // performance.
         for adjacent_state in &states[i + 1..] {
             let first_shared_performance =
-                NormPerfs::max(state.min_performance, adjacent_state.min_performance);
-            let power = estimate_power(state, first_shared_performance);
-            let adjacent_power = estimate_power(adjacent_state, first_shared_performance);
+                FixedValue(NormPerfs::max(state.min_performance, adjacent_state.min_performance));
+            let power = state.estimate_power(first_shared_performance);
+            let adjacent_power = adjacent_state.estimate_power(first_shared_performance);
 
             anyhow::ensure!(
                 adjacent_power < power,
@@ -506,22 +536,24 @@ impl<'a> CpuManagerBuilder<'a> {
         let inspect_data = InspectData::new(inspect_root, "CpuManager", cluster_names);
         inspect_data.set_thermal_states(&thermal_states);
 
-        // Retrieve the total number of CPUs, and confirm that it is consistent with the logical
-        // CPU numbers for each cluster.
+        // Retrieve the total number of CPUs, and ensure that clusters' logical CPU numbers exactly
+        // span 0..num_cpus.
         let num_cpus = match self.syscall_handler.handle_message(&Message::GetNumCpus).await {
             Ok(MessageReturn::GetNumCpus(n)) => n,
             other => bail!("Unexpected GetNumCpus response: {:?}", other),
         };
-        for cluster in &clusters {
-            if num_cpus <= *cluster.logical_cpu_numbers.iter().max().unwrap_or(&0) {
-                bail!(
-                    "Cluster {}'s logical CPU numbers {:?} are inconsistent with num CPUs {}",
-                    cluster.name,
-                    cluster.logical_cpu_numbers,
-                    num_cpus
-                );
-            }
-        }
+        let mut covered_cpu_numbers = clusters
+            .iter()
+            .map(|c| c.logical_cpu_numbers.iter())
+            .flatten()
+            .map(|v| *v)
+            .collect::<Vec<_>>();
+        covered_cpu_numbers.sort();
+        anyhow::ensure!(
+            covered_cpu_numbers == (0..num_cpus).collect::<Vec<_>>(),
+            "Clusters' logical CPU numbers must exactly span 0..{}",
+            num_cpus
+        );
 
         let cpu_manager = Rc::new(CpuManager {
             clusters,
@@ -565,6 +597,26 @@ pub struct CpuManager {
     inspect: InspectData,
 }
 
+/// A performance model for a future time interval.
+#[derive(Copy, Clone, Debug)]
+enum PerformanceModel {
+    /// Models performance to be a fixed value.
+    FixedValue(NormPerfs),
+
+    /// Models the CPUs to be saturated regardless of frequency.
+    Saturated,
+}
+use PerformanceModel::{FixedValue, Saturated};
+
+impl PerformanceModel {
+    /// Indicates whether a fractional CPU load is considered saturated.
+    fn cpu_load_is_saturated(load: f32) -> bool {
+        debug_assert!(load <= 1.0);
+        const CPU_SATURATION_FRACTION: f32 = 0.99;
+        load > CPU_SATURATION_FRACTION
+    }
+}
+
 impl CpuManager {
     // Returns a Vec of all CPU loads as fractional utilizations.
     async fn get_cpu_loads(&self) -> Result<Vec<f32>, Error> {
@@ -578,35 +630,38 @@ impl CpuManager {
         }
     }
 
-    // Determines the thermal state that should be used for the given available power and projected
-    // performance, also returning the power we expect to dissipate at that state.
-    fn select_thermal_state_and_power(
+    // Determines the thermal state that should be used for the given available power and
+    // performance model, as well as its estimated performance and power.
+    fn select_thermal_state(
         &self,
         available_power: Watts,
-        projected_performance: NormPerfs,
-    ) -> (usize, Watts) {
-        // Track the maximum index allowed by minimum performance constraints, i.e. the index of the
-        // lowest-power state allowed, to serve as a fallback if no states meet the power
-        // constraint.
-        let mut max_allowed_index = 0;
-
-        for (i, thermal_state) in self.thermal_states.iter().enumerate() {
-            if thermal_state.min_performance > projected_performance {
-                continue;
-            }
-
-            max_allowed_index = i;
-
-            let power = estimate_power(thermal_state, projected_performance);
-            if power < available_power {
-                return (i, power);
-            }
+        performance_model: PerformanceModel,
+    ) -> (usize, PerfAndPower) {
+        // State 0 is guaranteed to be admissible. If it meets the power criterion, we return it.
+        // Otherwise, we use it to initialize the fallback -- the lowest-index admissible state,
+        // which will be used if no states meet the power criterion.
+        debug_assert_eq!(self.thermal_states[0].min_performance, NormPerfs(0.0));
+        let mut fallback = (0, self.thermal_states[0].estimate_perf_and_power(performance_model));
+        if fallback.1.power < available_power {
+            return fallback;
         }
 
-        (
-            max_allowed_index,
-            estimate_power(&self.thermal_states[max_allowed_index], projected_performance),
-        )
+        for (i, thermal_state) in self.thermal_states.iter().enumerate().skip(1) {
+            if let FixedValue(performance) = performance_model {
+                if thermal_state.min_performance > performance {
+                    continue;
+                }
+            }
+
+            let estimate = thermal_state.estimate_perf_and_power(performance_model);
+            if estimate.power < available_power {
+                return (i, estimate);
+            }
+
+            fallback = (i, estimate);
+        }
+
+        fallback
     }
 
     // Updates the current thermal state.
@@ -686,30 +741,60 @@ impl CpuManager {
 
             fuchsia_trace::counter!(
                 "power_manager",
-                "cluster load",
+                "CpuManager cluster_load",
                 cluster.cluster_index as u64,
                 &cluster.name => load as f64
             );
             self.inspect.last_cluster_loads[cluster.cluster_index].set(load as f64);
         }
         self.inspect.last_performance.set(last_performance.0);
+        fuchsia_trace::counter!(
+            "power_manager",
+            "CpuManager last_performance",
+            0,
+            "value (NormPerfs)" => last_performance.0
+        );
+
+        let cpus_saturated = cpu_loads.iter().all(|l| PerformanceModel::cpu_load_is_saturated(*l));
+        let performance_model =
+            if cpus_saturated { Saturated } else { FixedValue(last_performance) };
 
         // Determine the next thermal state, updating if needed. We use the performance over the
         // last interval as an estimate of performance over the next interval; in principle a more
         // sophisticated estimate could be used.
-        let (new_thermal_state_index, power) =
-            self.select_thermal_state_and_power(available_power, last_performance);
+        let (new_thermal_state_index, estimate) =
+            self.select_thermal_state(available_power, performance_model);
+        fuchsia_trace::counter!(
+            "power_manager",
+            "CpuManager new_thermal_state_index",
+            0,
+            "value" => new_thermal_state_index as u32
+        );
 
         if let Err(e) = self.update_thermal_state(new_thermal_state_index).await {
             self.inspect.last_error.set(&e.to_string());
             return Err(e);
         }
 
-        self.inspect.projected_power.set(power.0);
+        fuchsia_trace::counter!(
+            "power_manager",
+            "CpuManager projected_performance",
+            0,
+            "value (NormPerfs)" => estimate.performance.0
+        );
+        self.inspect.projected_performance.set(estimate.performance.0);
+
+        fuchsia_trace::counter!(
+            "power_manager",
+            "CpuManager projected_power",
+            0,
+            "value (W)" => estimate.power.0
+        );
+        self.inspect.projected_power.set(estimate.power.0);
 
         // Bubble up any error that may have occurred while querying CPU load.
         match load_query_error {
-            None => Ok(MessageReturn::SetMaxPowerConsumption(power)),
+            None => Ok(MessageReturn::SetMaxPowerConsumption(estimate.power)),
             Some(e) => Err(e.into()),
         }
     }
@@ -739,6 +824,7 @@ struct InspectData {
     last_performance: inspect::DoubleProperty,
     last_cluster_loads: Vec<inspect::DoubleProperty>,
     available_power: inspect::DoubleProperty,
+    projected_performance: inspect::DoubleProperty,
     projected_power: inspect::DoubleProperty,
     last_error: inspect::StringProperty,
 }
@@ -757,6 +843,8 @@ impl InspectData {
             cluster_names.into_iter().map(|n| last_loads_node.create_double(n, 0.0)).collect();
 
         let available_power = state_node.create_double("available_power (W)", 0.0);
+        let projected_performance =
+            state_node.create_double("projected_performance (NormPerfs)", 0.0);
         let projected_power = state_node.create_double("projected_power (W)", 0.0);
 
         let last_error = state_node.create_string("last_error", "<None>");
@@ -770,6 +858,7 @@ impl InspectData {
             last_performance,
             last_cluster_loads,
             available_power,
+            projected_performance,
             projected_power,
             last_error,
         }
@@ -813,6 +902,7 @@ mod tests {
     use fuchsia_async as fasync;
     use inspect::assert_data_tree;
     use matches::assert_matches;
+    use test_util::assert_lt;
 
     // Common test configurations for big and little clusters.
     static BIG_CPU_NUMBERS: [u32; 2] = [0, 1];
@@ -830,6 +920,25 @@ mod tests {
         PState { frequency: Hertz(0.8e9), voltage: Volts(0.3) },
     ];
     static LITTLE_PERFORMANCE_PER_GHZ: NormPerfs = NormPerfs(0.5);
+
+    fn make_default_cluster_configs() -> Vec<ClusterConfig> {
+        vec![
+            ClusterConfig {
+                name: "big_cluster".to_string(),
+                cluster_index: 0,
+                handler: "<unused>".to_string(),
+                logical_cpu_numbers: BIG_CPU_NUMBERS[..].to_vec(),
+                normperfs_per_ghz: BIG_PERFORMANCE_PER_GHZ.0,
+            },
+            ClusterConfig {
+                name: "little_cluster".to_string(),
+                cluster_index: 1,
+                handler: "<unused>".to_string(),
+                logical_cpu_numbers: LITTLE_CPU_NUMBERS[..].to_vec(),
+                normperfs_per_ghz: LITTLE_PERFORMANCE_PER_GHZ.0,
+            },
+        ]
+    }
 
     // Convenience struct to manage mocks of the handlers on which CpuManager depends.
     struct Handlers {
@@ -962,7 +1071,7 @@ mod tests {
                 "thermal_states": [
                     {
                       "cluster_pstates": [0, 0],
-                      "min_performance_normperfs": 1.0,
+                      "min_performance_normperfs": 0.0,
                       "static_power_w": 0.9,
                       "dynamic_power_per_normperf_w": 0.6
                     }
@@ -979,7 +1088,7 @@ mod tests {
         });
 
         let builder = CpuManagerBuilder::new_from_json(json_data, &nodes);
-        assert!(builder.build().await.is_ok());
+        builder.build().await.unwrap();
     }
 
     // Verifies that thermal states are properly validated.
@@ -1018,22 +1127,7 @@ mod tests {
             }
         }
 
-        let cluster_configs = vec![
-            ClusterConfig {
-                name: "big_cluster".to_string(),
-                cluster_index: 0,
-                handler: "<unused>".to_string(),
-                logical_cpu_numbers: BIG_CPU_NUMBERS[..].to_vec(),
-                normperfs_per_ghz: 1.0,
-            },
-            ClusterConfig {
-                name: "little_cluster".to_string(),
-                cluster_index: 1,
-                handler: "<unused>".to_string(),
-                logical_cpu_numbers: LITTLE_CPU_NUMBERS[..].to_vec(),
-                normperfs_per_ghz: 0.5,
-            },
-        ];
+        let cluster_configs = make_default_cluster_configs();
 
         // Not allowed: Increasing dynamic power.
         let handlers = Handlers::new_for_failed_validation();
@@ -1138,27 +1232,57 @@ mod tests {
         assert!(builder.build().await.is_err());
     }
 
+    // Tests that CpuManagerBuilder requires that clusters are configured to exactly span the space
+    // of all logical CPU numbers.
+    #[fasync::run_singlethreaded(test)]
+    async fn test_validate_all_cpus_spanned() {
+        let mut mock_maker = MockNodeMaker::new();
+
+        // The big and little cluster handlers are initially queried for all performance states.
+        let big_cluster_handler = mock_maker.make(
+            "big_cluster_handler",
+            vec![(
+                msg_eq!(GetCpuPerformanceStates),
+                msg_ok_return!(GetCpuPerformanceStates(Vec::from(&BIG_PSTATES[..]))),
+            )],
+        );
+        let little_cluster_handler = mock_maker.make(
+            "little_cluster_handler",
+            vec![(
+                msg_eq!(GetCpuPerformanceStates),
+                msg_ok_return!(GetCpuPerformanceStates(Vec::from(&LITTLE_PSTATES[..]))),
+            )],
+        );
+
+        // Configure the syscall handler to report one more CPU than is spanned by the clusters.
+        let num_cpus = BIG_CPU_NUMBERS.len() + LITTLE_CPU_NUMBERS.len() + 1;
+        let syscall_handler = mock_maker.make(
+            "syscall_handler",
+            vec![(msg_eq!(GetNumCpus), msg_ok_return!(GetNumCpus(num_cpus as u32)))],
+        );
+
+        let cpu_stats_handler = mock_maker.make("cpu_stats_handler", Vec::new());
+
+        let thermal_state_configs = vec![ThermalStateConfig {
+            cluster_pstates: vec![0, 0],
+            min_performance_normperfs: 0.0,
+            static_power_w: 2.0,
+            dynamic_power_per_normperf_w: 1.0,
+        }];
+        let builder = CpuManagerBuilder::new(
+            make_default_cluster_configs(),
+            vec![big_cluster_handler, little_cluster_handler],
+            thermal_state_configs,
+            syscall_handler,
+            cpu_stats_handler,
+        );
+        assert!(builder.build().await.is_err());
+    }
+
     // Verify that CpuManager responds as expected to SetMaxPowerConsumption messages.
     #[fasync::run_singlethreaded(test)]
     async fn test_set_max_power_consumption() {
         let handlers = Handlers::new();
-
-        let cluster_configs = vec![
-            ClusterConfig {
-                name: "big_cluster".to_string(),
-                cluster_index: 0,
-                handler: "<unused>".to_string(),
-                logical_cpu_numbers: BIG_CPU_NUMBERS[..].to_vec(),
-                normperfs_per_ghz: 1.0,
-            },
-            ClusterConfig {
-                name: "little_cluster".to_string(),
-                cluster_index: 1,
-                handler: "<unused>".to_string(),
-                logical_cpu_numbers: LITTLE_CPU_NUMBERS[..].to_vec(),
-                normperfs_per_ghz: 0.5,
-            },
-        ];
 
         let thermal_state_configs = vec![
             ThermalStateConfig {
@@ -1182,7 +1306,7 @@ mod tests {
         ];
 
         let node = CpuManagerBuilder::new(
-            cluster_configs,
+            make_default_cluster_configs(),
             vec![handlers.big_cluster.clone(), handlers.little_cluster.clone()],
             thermal_state_configs,
             handlers.syscall.clone(),
@@ -1200,7 +1324,7 @@ mod tests {
         // This is within the 3W budget, so there are no P-state changes.
         handlers.enqueue_cpu_loads(vec![0.1; 4]);
         let result = node.handle_message(&Message::SetMaxPowerConsumption(Watts(3.0))).await;
-        assert!(result.is_ok());
+        result.unwrap();
 
         // The current P-state is 0, so with 0.25 fractional utililzation per core, we have:
         //   Big cluster: 0.5 cores load -> 1GHz utilized -> 1 NormPerfs
@@ -1212,7 +1336,7 @@ mod tests {
         handlers.enqueue_cpu_loads(vec![0.25; 4]);
         handlers.expect_little_pstate(1);
         let result = node.handle_message(&Message::SetMaxPowerConsumption(Watts(3.0))).await;
-        assert!(result.is_ok());
+        result.unwrap();
 
         // CPU load stays the same, but the power budget drops to 2.4W, below allocation for thermal
         // state 1. This pushes us to thermal state 2, with big P-state 1 and little P-state 2.
@@ -1220,7 +1344,7 @@ mod tests {
         handlers.expect_big_pstate(1);
         handlers.expect_little_pstate(2);
         let result = node.handle_message(&Message::SetMaxPowerConsumption(Watts(2.4))).await;
-        assert!(result.is_ok());
+        result.unwrap();
 
         // The power budget is 1.4W, which is below the static power for thermal state 1. However,
         // at 0.05 fractional utilization per core, the projected performance is 0.25 Perfs, which
@@ -1229,37 +1353,87 @@ mod tests {
         handlers.expect_big_pstate(0);
         handlers.expect_little_pstate(1);
         let result = node.handle_message(&Message::SetMaxPowerConsumption(Watts(1.4))).await;
-        assert!(result.is_ok());
+        result.unwrap();
 
         // At 0.01 fractional utilization per core, the projected performance is 0.05 Perfs, so now
         // thermal state 1 is inadmissible. This drives us to thermal state 0.
         handlers.enqueue_cpu_loads(vec![0.01; 4]);
         handlers.expect_little_pstate(0);
         let result = node.handle_message(&Message::SetMaxPowerConsumption(Watts(1.4))).await;
-        assert!(result.is_ok());
+        result.unwrap();
+    }
+
+    // Verify that CPU saturation is handled as expected.
+    #[fasync::run_singlethreaded(test)]
+    async fn test_cpu_saturation() {
+        let handlers = Handlers::new();
+
+        let thermal_state_configs = vec![
+            ThermalStateConfig {
+                cluster_pstates: vec![0, 0],
+                min_performance_normperfs: 0.0,
+                static_power_w: 2.0,
+                dynamic_power_per_normperf_w: 1.0,
+            },
+            ThermalStateConfig {
+                cluster_pstates: vec![1, 1],
+                min_performance_normperfs: 4.5,
+                static_power_w: 1.5,
+                dynamic_power_per_normperf_w: 0.8,
+            },
+            ThermalStateConfig {
+                cluster_pstates: vec![2, 2],
+                min_performance_normperfs: 0.0,
+                static_power_w: 1.0,
+                dynamic_power_per_normperf_w: 0.6,
+            },
+        ];
+
+        let node = CpuManagerBuilder::new(
+            make_default_cluster_configs(),
+            vec![handlers.big_cluster.clone(), handlers.little_cluster.clone()],
+            thermal_state_configs.clone(),
+            handlers.syscall.clone(),
+            handlers.cpu_stats.clone(),
+        )
+        .build()
+        .await
+        .unwrap();
+
+        // Start with low power to force thermal state 2.
+        handlers.enqueue_cpu_loads(vec![0.1; 4]);
+        handlers.expect_big_pstate(2);
+        handlers.expect_little_pstate(2);
+        let result = node.handle_message(&Message::SetMaxPowerConsumption(Watts(1.0))).await;
+        result.unwrap();
+
+        // Now saturate the CPUs. This corresponds to 4.4 NormPerfs.
+        handlers.enqueue_cpu_loads(vec![1.0; 4]);
+
+        // We choose a max power above state 1's max and below state 0's.
+        let state = &node.thermal_states[1];
+        let state_1_max_power = state.estimate_power(Saturated);
+        let max_power = state_1_max_power + Watts(0.1);
+        assert_lt!(max_power, node.thermal_states[0].estimate_power(Saturated));
+
+        // Now we confirm that:
+        //  - State 1 is selected, verifying that its min performance was disregarded due to CPU
+        //    saturation.
+        //  - The expected power consumption corresponds to the max power of state 1.
+        handlers.expect_big_pstate(1);
+        handlers.expect_little_pstate(1);
+        match node.handle_message(&Message::SetMaxPowerConsumption(max_power)).await {
+            Ok(MessageReturn::SetMaxPowerConsumption(p)) => {
+                assert_eq!(p, state_1_max_power);
+            }
+            other => panic!("Unexpected result: {:?}", other),
+        }
     }
 
     // Verify that Inspect data is populated as expected.
     #[fasync::run_singlethreaded(test)]
     async fn test_inspect_data() {
         let handlers = Handlers::new();
-
-        let cluster_configs = vec![
-            ClusterConfig {
-                name: "big_cluster".to_string(),
-                cluster_index: 0,
-                handler: "<unused>".to_string(),
-                logical_cpu_numbers: BIG_CPU_NUMBERS[..].to_vec(),
-                normperfs_per_ghz: BIG_PERFORMANCE_PER_GHZ.0,
-            },
-            ClusterConfig {
-                name: "little_cluster".to_string(),
-                cluster_index: 1,
-                handler: "<unused>".to_string(),
-                logical_cpu_numbers: LITTLE_CPU_NUMBERS[..].to_vec(),
-                normperfs_per_ghz: LITTLE_PERFORMANCE_PER_GHZ.0,
-            },
-        ];
 
         let thermal_states = vec![
             ThermalStateConfig {
@@ -1278,7 +1452,7 @@ mod tests {
 
         let inspector = inspect::Inspector::new();
         let builder = CpuManagerBuilder::new(
-            cluster_configs,
+            make_default_cluster_configs(),
             vec![handlers.big_cluster.clone(), handlers.little_cluster.clone()],
             thermal_states,
             handlers.syscall.clone(),
@@ -1295,6 +1469,8 @@ mod tests {
         let result = node.handle_message(&Message::SetMaxPowerConsumption(Watts(1.0))).await;
         assert_matches!(result, Ok(_));
 
+        let estimate = node.thermal_states[1].estimate_perf_and_power(Saturated);
+
         assert_data_tree!(
             inspector,
             root: {
@@ -1307,7 +1483,8 @@ mod tests {
                             "little_cluster": 2.0
                         },
                         "available_power (W)": 1.0,
-                        "projected_power (W)": 5.18,
+                        "projected_performance (NormPerfs)": estimate.performance.0,
+                        "projected_power (W)": estimate.power.0,
                         "last_error": "<None>",
                     },
                     "thermal_states": {
