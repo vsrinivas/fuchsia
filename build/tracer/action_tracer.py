@@ -776,7 +776,9 @@ def main():
     trace_output_dir = os.path.dirname(args.trace_output)
     os.makedirs(trace_output_dir, exist_ok=True)
 
-    os.environ["FSAT_BUF_SIZE"] = "5000000"
+    # fsatrace output buffer size is chosen empirically to be large enough for
+    # all CI/CQ builds.
+    os.environ["FSAT_BUF_SIZE"] = "6000000"
     retval = subprocess.call(
         [
             args.fsatrace_path,
