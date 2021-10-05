@@ -4,9 +4,8 @@
 
 #include <fidl/fuchsia.io/cpp/wire.h>
 #include <lib/fdio/watcher.h>
+#include <lib/stdcompat/span.h>
 #include <zircon/types.h>
-
-#include <fbl/span.h>
 
 #include "fdio_unistd.h"
 
@@ -60,7 +59,7 @@ zx_status_t fdio_watch_directory(int dirfd, watchdir_func_t cb, zx_time_t deadli
     }
 
     // Message Format: { OP, LEN, DATA[LEN] }
-    fbl::Span span(bytes, num_bytes);
+    cpp20::span span(bytes, num_bytes);
     auto it = span.begin();
     for (;;) {
       if (std::distance(it, span.end()) < 2) {
