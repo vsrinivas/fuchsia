@@ -97,6 +97,14 @@ fuchsia_component("wayland_bridge") {
   ]
 }
 
+fuchsia_component("wayland_bridge_v2") {
+  manifest = "meta/wayland_bridge.cml"
+  deps = [
+    ":bin",
+    ":keymap",
+  ]
+}
+
 fuchsia_component("legacy_wayland_bridge") {
   manifest = "meta/legacy_wayland_bridge.cmx"
   deps = [
@@ -110,6 +118,7 @@ fuchsia_package("bridge") {
   deps = [
     ":legacy_wayland_bridge",
     ":wayland_bridge",
+    ":wayland_bridge_v2",
   ]
 }
 

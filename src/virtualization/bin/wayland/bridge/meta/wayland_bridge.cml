@@ -1,0 +1,39 @@
+{
+    include: [ "syslog/client.shard.cml" ],
+    program: {
+        runner: "elf",
+        binary: "bin/wayland_bridge",
+    },
+    capabilities: [
+        {
+            protocol: [
+                "fuchsia.virtualization.WaylandDispatcher",
+                "fuchsia.wayland.ViewProducer",
+            ],
+        },
+    ],
+    use: [
+        {
+            protocol: [ "fuchsia.sys.Launcher" ],
+            from: "framework",
+        },
+        {
+            protocol: [
+                "fuchsia.tracing.provider.Registry",
+                "fuchsia.ui.composition.Flatland",
+                "fuchsia.ui.input3.Keyboard",
+                "fuchsia.ui.scenic.Scenic",
+            ],
+            from: "parent",
+        },
+    ],
+    expose: [
+        {
+            protocol: [
+                "fuchsia.virtualization.WaylandDispatcher",
+                "fuchsia.wayland.ViewProducer",
+            ],
+            from: "self",
+        },
+    ],
+}
