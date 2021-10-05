@@ -809,6 +809,15 @@ Selects the Cobalt environment to send data to. Choices:
 
 From //src/cobalt/bin/app/BUILD.gn:14
 
+### codec_factory_v1
+Whether to use v1, if this is set to false, make sure that the v2 shard
+is somehow being included.
+TODO(fxbug.dev/78647) Remove once v2 migration is complete.
+
+**Current value (from the default):** `true`
+
+From //src/media/codec/bundles/BUILD.gn:9
+
 ### compress_blobs
 Whether to compress the blobfs image.
 
@@ -867,19 +876,19 @@ From //build/config/clang/crash_diagnostics.gni:7
 
 **Current value (from the default):** `"fuchsia"`
 
-From [//third_party/crashpad/build/crashpad_buildconfig.gni:22](https://fuchsia.googlesource.com/third_party/crashpad/+/378a3f2fc00fdad2bac00007cc271889e265296d/build/crashpad_buildconfig.gni#22)
+From [//third_party/crashpad/build/crashpad_buildconfig.gni:22](https://fuchsia.googlesource.com/third_party/crashpad/+/c515101de801c932017d667a31d0f5d6a0ded90f/build/crashpad_buildconfig.gni#22)
 
 ### crashpad_http_transport_impl
 
 **Current value (from the default):** `"libcurl"`
 
-From [//third_party/crashpad/util/net/tls.gni:21](https://fuchsia.googlesource.com/third_party/crashpad/+/378a3f2fc00fdad2bac00007cc271889e265296d/util/net/tls.gni#21)
+From [//third_party/crashpad/util/net/tls.gni:21](https://fuchsia.googlesource.com/third_party/crashpad/+/c515101de801c932017d667a31d0f5d6a0ded90f/util/net/tls.gni#21)
 
 ### crashpad_use_boringssl_for_http_transport_socket
 
 **Current value (from the default):** `true`
 
-From [//third_party/crashpad/util/net/tls.gni:30](https://fuchsia.googlesource.com/third_party/crashpad/+/378a3f2fc00fdad2bac00007cc271889e265296d/util/net/tls.gni#30)
+From [//third_party/crashpad/util/net/tls.gni:30](https://fuchsia.googlesource.com/third_party/crashpad/+/c515101de801c932017d667a31d0f5d6a0ded90f/util/net/tls.gni#30)
 
 ### cts_version
 Name of the CTS version.
@@ -3191,6 +3200,19 @@ A list of binary labels to include in the system_image package.
 **Current value (from the default):** `[]`
 
 From //build/product.gni:10
+
+### rbe_exec_strategy
+One of {local,remote}:
+  * remote: Execute action remotely on cache miss.
+        The remote cache is always updated with this result.
+  * local: Lookup action in the remote cache, but execute action
+        locally on cache miss.  The locally produced result is
+        not uploaded to the remote cache.
+  (There are other rewrapper options that are not exposed.)
+
+**Current value (from the default):** `"remote"`
+
+From //build/toolchain/rbe.gni:37
 
 ### recovery_label
 Allows a product to specify the recovery image used in the zirconr slot.
