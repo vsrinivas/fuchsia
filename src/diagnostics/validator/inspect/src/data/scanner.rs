@@ -7,9 +7,9 @@ use {
     crate::metrics::{BlockMetrics, BlockStatus},
     anyhow::{bail, format_err, Error},
     diagnostics_hierarchy::LinkNodeDisposition,
-    fuchsia_inspect::reader as ireader,
+    fuchsia_inspect::{reader as ireader, reader::snapshot::ScannedBlock},
     fuchsia_zircon::Vmo,
-    inspect_format::{constants::MIN_ORDER_SIZE, ArrayFormat, Block, BlockType, PropertyFormat},
+    inspect_format::{constants::MIN_ORDER_SIZE, ArrayFormat, BlockType, PropertyFormat},
     std::{
         self,
         cmp::min,
@@ -110,7 +110,7 @@ fn order_to_size(order: usize) -> usize {
 // Checks if these bits (start...end) are 0. Restricts the range checked to the given block.
 fn check_zero_bits(
     buffer: &[u8],
-    block: &Block<&[u8]>,
+    block: &ScannedBlock<'_>,
     start: usize,
     end: usize,
 ) -> Result<(), Error> {
@@ -202,7 +202,7 @@ impl Scanner {
     }
 
     fn scan(mut self, snapshot: ireader::snapshot::Snapshot, buffer: &[u8]) -> Result<Self, Error> {
-        let mut link_blocks: Vec<Block<&[u8]>> = Vec::new();
+        let mut link_blocks: Vec<ScannedBlock<'_>> = Vec::new();
         let mut string_references: Vec<ScannedStringReference> = Vec::new();
         for block in snapshot.scan() {
             match block.block_type_or() {
@@ -351,29 +351,29 @@ impl Scanner {
     // Note: process_ functions are only called from the scan() iterator on the
     // VMO's blocks, so indexes of the blocks themselves will never be duplicated; that's one
     // thing we don't have to verify.
-    fn process_free(&mut self, block: Block<&[u8]>) -> Result<(), Error> {
+    fn process_free(&mut self, block: ScannedBlock<'_>) -> Result<(), Error> {
         // TODO(fxbug.dev/39975): Uncomment or delete this line depending on the resolution of fxbug.dev/40012.
         // check_zero_bits(buffer, &block, 64, MAX_BLOCK_BITS)?;
         self.metrics.process(block)?;
         Ok(())
     }
 
-    fn process_header(&mut self, block: Block<&[u8]>) -> Result<(), Error> {
+    fn process_header(&mut self, block: ScannedBlock<'_>) -> Result<(), Error> {
         self.metrics.process(block)?;
         Ok(())
     }
 
-    fn process_tombstone(&mut self, block: Block<&[u8]>) -> Result<(), Error> {
+    fn process_tombstone(&mut self, block: ScannedBlock<'_>) -> Result<(), Error> {
         self.metrics.process(block)?;
         Ok(())
     }
 
-    fn process_reserved(&mut self, block: Block<&[u8]>) -> Result<(), Error> {
+    fn process_reserved(&mut self, block: ScannedBlock<'_>) -> Result<(), Error> {
         self.metrics.process(block)?;
         Ok(())
     }
 
-    fn process_extent(&mut self, block: Block<&[u8]>, buffer: &[u8]) -> Result<(), Error> {
+    fn process_extent(&mut self, block: ScannedBlock<'_>, buffer: &[u8]) -> Result<(), Error> {
         check_zero_bits(buffer, &block, 40, 63)?;
         self.extents.insert(
             block.index(),
@@ -386,7 +386,7 @@ impl Scanner {
         Ok(())
     }
 
-    fn process_name(&mut self, block: Block<&[u8]>, buffer: &[u8]) -> Result<(), Error> {
+    fn process_name(&mut self, block: ScannedBlock<'_>, buffer: &[u8]) -> Result<(), Error> {
         check_zero_bits(buffer, &block, 28, 63)?;
         self.names.insert(
             block.index(),
@@ -395,7 +395,7 @@ impl Scanner {
         Ok(())
     }
 
-    fn process_node(&mut self, block: Block<&[u8]>) -> Result<(), Error> {
+    fn process_node(&mut self, block: ScannedBlock<'_>) -> Result<(), Error> {
         let parent = block.parent_index()?;
         let id = block.index();
         let name = block.name_index()?;
@@ -449,7 +449,7 @@ impl Scanner {
 
     fn build_scanned_payload(
         &mut self,
-        block: &Block<&[u8]>,
+        block: &ScannedBlock<'_>,
         block_type: BlockType,
     ) -> Result<ScannedPayload, Error> {
         Ok(match block_type {
@@ -521,7 +521,7 @@ impl Scanner {
 
     fn process_string_reference(
         &mut self,
-        block: Block<&[u8]>,
+        block: ScannedBlock<'_>,
     ) -> Result<ScannedStringReference, Error> {
         let scanned = ScannedStringReference {
             index: block.index(),
@@ -534,7 +534,7 @@ impl Scanner {
         Ok(scanned)
     }
 
-    fn process_property(&mut self, block: Block<&[u8]>, buffer: &[u8]) -> Result<(), Error> {
+    fn process_property(&mut self, block: ScannedBlock<'_>, buffer: &[u8]) -> Result<(), Error> {
         if block.block_type_or()? == BlockType::ArrayValue {
             check_zero_bits(buffer, &block, 80, 127)?;
         }
@@ -712,7 +712,8 @@ mod tests {
         super::*,
         crate::*,
         fidl_test_inspect_validate::Number,
-        inspect_format::{constants, BlockHeader, BlockType, Payload as BlockPayload},
+        fuchsia_inspect::reader::snapshot::BackingBuffer,
+        inspect_format::{constants, Block, BlockHeader, BlockType, Payload as BlockPayload},
     };
 
     // TODO(fxbug.dev/39975): Depending on the resolution of fxbug.dev/40012, move this const out of mod test.
@@ -1037,7 +1038,8 @@ mod tests {
             buffer[byte] = 0xff;
         }
         {
-            let block = Block::new(&buffer[..], 1);
+            let backing_buffer = BackingBuffer::from(buffer.to_vec());
+            let block = Block::new(&backing_buffer, 1);
             assert!(check_zero_bits(&buffer, &block, 1, 0).is_err());
             assert!(check_zero_bits(&buffer, &block, 0, 0).is_ok());
             assert!(check_zero_bits(&buffer, &block, 0, MAX_BLOCK_BITS).is_ok());
@@ -1049,7 +1051,8 @@ mod tests {
         // Now bit 8 of the block is 1. Checking any range that includes bit 8 should give an
         // error (even single-bit 8...8). Other ranges should succeed.
         {
-            let block = Block::new(&buffer[..], 1);
+            let backing_buffer = BackingBuffer::from(buffer.to_vec());
+            let block = Block::new(&backing_buffer, 1);
             assert!(check_zero_bits(&buffer, &block, 8, 8).is_err());
             assert!(check_zero_bits(&buffer, &block, 8, MAX_BLOCK_BITS).is_err());
             assert!(check_zero_bits(&buffer, &block, 9, MAX_BLOCK_BITS).is_ok());
@@ -1058,7 +1061,8 @@ mod tests {
         // Now bits 8 and 23 are 1. The range 9...MAX_BLOCK_BITS that succeeded before should fail.
         // 9...22 and 24...MAX_BLOCK_BITS should succeed. So should 24...63.
         {
-            let block = Block::new(&buffer[..], 1);
+            let backing_buffer = BackingBuffer::from(buffer.to_vec());
+            let block = Block::new(&backing_buffer, 1);
             assert!(check_zero_bits(&buffer, &block, 9, MAX_BLOCK_BITS).is_err());
             assert!(check_zero_bits(&buffer, &block, 9, 22).is_ok());
             assert!(check_zero_bits(&buffer, &block, 24, MAX_BLOCK_BITS).is_ok());
@@ -1067,7 +1071,8 @@ mod tests {
         buffer[2 + 16] = 0x20;
         // Now bits 8 and 21 are 1. This tests bit-checks in the middle of the byte.
         {
-            let block = Block::new(&buffer[..], 1);
+            let backing_buffer = BackingBuffer::from(buffer.to_vec());
+            let block = Block::new(&backing_buffer, 1);
             assert!(check_zero_bits(&buffer, &block, 16, 20).is_ok());
             assert!(check_zero_bits(&buffer, &block, 21, 21).is_err());
             assert!(check_zero_bits(&buffer, &block, 22, 63).is_ok());
@@ -1075,7 +1080,8 @@ mod tests {
         buffer[7 + 16] = 0x80;
         // Now bits 8, 21, and 63 are 1. Checking 22...63 should fail; 22...62 should succeed.
         {
-            let block = Block::new(&buffer[..], 1);
+            let backing_buffer = BackingBuffer::from(buffer.to_vec());
+            let block = Block::new(&backing_buffer, 1);
             assert!(check_zero_bits(&buffer, &block, 22, 63).is_err());
             assert!(check_zero_bits(&buffer, &block, 22, 62).is_ok());
         }
@@ -1083,32 +1089,37 @@ mod tests {
         // Here I'm testing whether 1 bits in the bytes between the ends of the range are also
         // detected (cause the check to fail) (to make sure my loop doesn't have an off by 1 error).
         {
-            let block = Block::new(&buffer[..], 1);
+            let backing_buffer = BackingBuffer::from(buffer.to_vec());
+            let block = Block::new(&backing_buffer, 1);
             assert!(check_zero_bits(&buffer, &block, 22, 62).is_err());
         }
         buffer[3 + 16] = 0;
         buffer[4 + 16] = 0x10;
         {
-            let block = Block::new(&buffer[..], 1);
+            let backing_buffer = BackingBuffer::from(buffer.to_vec());
+            let block = Block::new(&backing_buffer, 1);
             assert!(check_zero_bits(&buffer, &block, 22, 62).is_err());
         }
         buffer[4 + 16] = 0;
         buffer[5 + 16] = 0x10;
         {
-            let block = Block::new(&buffer[..], 1);
+            let backing_buffer = BackingBuffer::from(buffer.to_vec());
+            let block = Block::new(&backing_buffer, 1);
             assert!(check_zero_bits(&buffer, &block, 22, 62).is_err());
         }
         buffer[5 + 16] = 0;
         buffer[6 + 16] = 0x10;
         {
-            let block = Block::new(&buffer[..], 1);
+            let backing_buffer = BackingBuffer::from(buffer.to_vec());
+            let block = Block::new(&backing_buffer, 1);
             assert!(check_zero_bits(&buffer, &block, 22, 62).is_err());
         }
         buffer[1 + 16] = 0x81;
         // Testing whether I can correctly ignore 1 bits within a single byte that are outside
         // the specified range, and detect 1 bits that are inside the range.
         {
-            let block = Block::new(&buffer[..], 1);
+            let backing_buffer = BackingBuffer::from(buffer.to_vec());
+            let block = Block::new(&backing_buffer, 1);
             assert!(check_zero_bits(&buffer, &block, 9, 14).is_ok());
             assert!(check_zero_bits(&buffer, &block, 8, 14).is_err());
             assert!(check_zero_bits(&buffer, &block, 9, 15).is_err());
