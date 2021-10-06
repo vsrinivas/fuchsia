@@ -1,0 +1,31 @@
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    children: [
+        {
+            name: "configurator",
+            url: "fuchsia-pkg://fuchsia.com/configurator#meta/configurator.cm",
+            startup: "eager",
+        },
+    ],
+    offer: [
+        {
+            protocol: [ "fuchsia.logger.LogSink" ],
+            from: "parent",
+            to: [ "#configurator" ],
+        },
+        {
+            protocol: [ "fuchsia.media.AudioDeviceEnumerator" ],
+            from: "#appmgr",
+            to: [ "#configurator" ],
+        },
+        {
+            directory: "dev",
+            from: "parent",
+            as: "dev-codec",
+            to: [ "#configurator" ],
+            subdir: "class/codec",
+        },
+    ],
+}

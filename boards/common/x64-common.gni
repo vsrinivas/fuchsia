@@ -73,6 +73,7 @@ board_system_image_deps += [
 board_package_labels += [
   "//src/power/thermd",
   "//src/power/thermd:config",
+  "//src/media/audio/drivers/configurator",
   "//garnet/packages/prod:drivers-support",
   "//src/hwinfo:default_board_config",
   "//src/graphics/lib/magma/gnbuild/magma-intel-gen:libvulkan_intel_gen",

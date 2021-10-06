@@ -5,8 +5,10 @@
 import("//products/terminal.gni")
 
 core_realm_package_name = "core-workstation"
-core_realm_shards +=
-    [ "//src/power/battery-manager:battery-manager-core-shard" ]
+core_realm_shards += [
+  "//src/power/battery-manager:battery-manager-core-shard",
+  "//src/media/audio/drivers/configurator:configurator_provider_shard",
+]
 
 base_package_labels -= [
   "//src/ui/bin/root_presenter",

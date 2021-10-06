@@ -1,0 +1,33 @@
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+// configurator component manifest.
+// For information on manifest format and features,
+// see https://fuchsia.dev/fuchsia-src/concepts/components/component_manifests.
+{
+    include: [
+        "inspect/client.shard.cml",
+        "syslog/client.shard.cml",
+    ],
+
+    // Information about the program to run.
+    program: {
+        // Use the built-in ELF runner to run ELF binaries.
+        runner: "elf",
+
+        // The binary to run for this component.
+        binary: "bin/configurator",
+    },
+    use: [
+        {
+            protocol: [ "fuchsia.media.AudioDeviceEnumerator" ],
+            from: "parent",
+        },
+        {
+            directory: "dev-codec",
+            rights: [ "rw*" ],
+            path: "/dev/class/codec",
+        },
+    ],
+}
