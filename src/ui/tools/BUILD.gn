@@ -25,7 +25,6 @@ group("tools") {
     ":screencap",
     "paper_shader_compiler",
     "print-input-report",
-    "simple-touch",
     "tiles",
     "tiles_ctl",
   ]

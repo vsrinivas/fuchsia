@@ -26,7 +26,6 @@ group("tests") {
     "//src/devices/tests/devcoordinator-namespace:devcoordinator-namespace-bootfs-test",
     "//src/devices/tests/devfs:devfs-bootfs-test",
     "//src/devices/usb/tests/usb:usb-bootfs-test",  # HW-required.
-    "//src/lib/framebuffer/test:framebuffer-test-bootfs-test",
     "//src/zircon/tests/entropy:entropy-bootfs-test",
     "//src/zircon/tests/exception:exception-bootfs-test",
     "//src/zircon/tests/futex-ownership:futex-ownership-bootfs-test",
