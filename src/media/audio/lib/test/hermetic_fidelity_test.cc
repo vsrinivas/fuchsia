@@ -22,6 +22,7 @@
 #include "src/lib/fxl/strings/string_printf.h"
 #include "src/media/audio/lib/analysis/analysis.h"
 #include "src/media/audio/lib/analysis/generators.h"
+#include "src/media/audio/lib/clock/clone_mono.h"
 #include "src/media/audio/lib/format/audio_buffer.h"
 #include "src/media/audio/lib/test/renderer_shim.h"
 
@@ -231,7 +232,7 @@ zx_status_t HermeticFidelityTest::ConfigurePipelineForThermal(uint32_t thermal_s
 template <ASF InputFormat, ASF OutputFormat>
 AudioBuffer<OutputFormat> HermeticFidelityTest::GetRendererOutput(
     TypedFormat<InputFormat> input_format, int64_t input_buffer_frames, RenderPath path,
-    AudioBuffer<InputFormat> input, VirtualOutput<OutputFormat>* device) {
+    AudioBuffer<InputFormat> input, VirtualOutput<OutputFormat>* device, ClockMode clock_mode) {
   FX_CHECK(input_format.frames_per_second() == 96000);
 
   fuchsia::media::AudioRenderUsage usage = fuchsia::media::AudioRenderUsage::MEDIA;
@@ -249,7 +250,38 @@ AudioBuffer<OutputFormat> HermeticFidelityTest::GetRendererOutput(
     renderer->WaitForPackets(this, packets);
     Unbind(renderer);
   } else {
-    auto renderer = CreateAudioRenderer(input_format, input_buffer_frames, usage);
+    std::optional<zx::clock> clock;
+    zx::clock::update_args args;
+    zx::clock offset_clock;
+    zx::time now;
+    switch (clock_mode) {
+      case ClockMode::Default:
+        break;
+      case ClockMode::Flexible:
+        clock = zx::clock(ZX_HANDLE_INVALID);
+        break;
+      case ClockMode::Monotonic:
+        clock = audio::clock::CloneOfMonotonic();
+        break;
+      case ClockMode::Offset:
+        // Set a reference clock with an offset of +20usec.
+        EXPECT_EQ(zx::clock::create(ZX_CLOCK_OPT_MONOTONIC | ZX_CLOCK_OPT_CONTINUOUS, nullptr,
+                                    &offset_clock),
+                  ZX_OK)
+            << "Offset clock could not be created";
+        now = zx::clock::get_monotonic();
+        args.reset().set_both_values(now, now + zx::usec(20));
+        EXPECT_EQ(offset_clock.update(args), ZX_OK) << "clock.update with set_both_values failed";
+        clock = std::move(offset_clock);
+        break;
+      case ClockMode::RateAdjusted:
+        clock = audio::clock::AdjustableCloneOfMonotonic();
+        args.reset().set_rate_adjust(100);
+        EXPECT_EQ(clock->update(args), ZX_OK) << "Could not rate-adjust a custom clock";
+        break;
+    }
+    auto renderer = CreateAudioRenderer(input_format, input_buffer_frames, usage, std::move(clock));
+
     auto packets = renderer->AppendPackets({&input});
 
     renderer->PlaySynchronized(this, device, 0);
@@ -332,6 +364,11 @@ void HermeticFidelityTest::Run(
   // Translate from input frame number to output frame number.
   auto input_frame_to_output_frame = [](int64_t input_frame) { return input_frame; };
 
+  if (tc.path == RenderPath::Ultrasound) {
+    ASSERT_EQ(tc.renderer_clock_mode, ClockMode::Default)
+        << "Ultrasound path cannot be tested with a non-default clock";
+  }
+
   //
   // Compute input signal length: it should first include time to ramp in, then the number of frames
   // that we actually analyze, and then time to ramp out.
@@ -371,9 +408,12 @@ void HermeticFidelityTest::Run(
       << "output_buffer_frames_needed (" << output_buffer_frames_needed
       << ") must not exceed output_buffer_size (" << output_buffer_size << ")";
 
-  auto device =
-      CreateOutput(AUDIO_STREAM_UNIQUE_ID_BUILTIN_SPEAKERS, tc.output_format,
-                   output_buffer_frames_needed, std::nullopt, tc.pipeline.output_device_gain_db);
+  audio_stream_unique_id_t device_id = AUDIO_STREAM_UNIQUE_ID_BUILTIN_SPEAKERS;
+  if (tc.device_id.has_value()) {
+    device_id = tc.device_id.value();
+  }
+  auto device = CreateOutput(device_id, tc.output_format, output_buffer_frames_needed, std::nullopt,
+                             tc.pipeline.output_device_gain_db);
 
   if (tc.thermal_state.has_value()) {
     if (ConfigurePipelineForThermal(tc.thermal_state.value()) != ZX_OK) {
@@ -458,8 +498,8 @@ void HermeticFidelityTest::Run(
     }
 
     // Set up the renderer, run it and retrieve the output.
-    auto ring_buffer =
-        GetRendererOutput(tc.input_format, total_input_frames, tc.path, input, device);
+    auto ring_buffer = GetRendererOutput(tc.input_format, total_input_frames, tc.path, input,
+                                         device, tc.renderer_clock_mode);
 
     // Loop here on each channel to measure...
     for (const auto& channel_spec : tc.channels_to_measure) {

@@ -33,6 +33,26 @@ class HermeticFidelityTest : public HermeticPipelineTest {
     Communications = 1,
     Ultrasound = 2,
   };
+
+  // Test renderers that use various reference clocks.  These options include:
+  enum class ClockMode {
+    // Client wants to use the reference clock we provide to clients that do not specify one. This
+    // is not strongly specified, so clients using timestamps must call GetReferenceClock.
+    Default,
+    // Client set a ref clock that is intentionally invalid, to signal that they want the clock
+    // created/maintained by AudioCore to smoothly track targeted audio device(s).
+    Flexible,
+    // Client sets a literal clone of CLOCK_MONOTONIC as the renderer's reference clock. "Clone"
+    // means the clock has the same rate and offset as CLOCK_MONOTONIC.
+    Monotonic,
+    // Client sets a clock with monotonic rate and non-zero offset (NOT a CLOCK_MONOTONIC clone).
+    // For these tests, the actual offset value does not matter, as long as it is non-zero.
+    Offset,
+    // Client sets a ref clock with rate other than CLOCK_MONOTONIC. Currently, no test uses this
+    // option: it exists only to differentiate from Offset (which runs at monotonic rate).
+    RateAdjusted,
+  };
+
   // Specify an output channel to measure, and thresholds against which to compare it.
   struct ChannelMeasurement {
     int32_t channel;
@@ -59,6 +79,7 @@ class HermeticFidelityTest : public HermeticPipelineTest {
     TypedFormat<InputFormat> input_format;
     RenderPath path;
     const std::set<int32_t> channels_to_play;
+    ClockMode renderer_clock_mode = ClockMode::Default;
 
     PipelineConstants pipeline;
     // TODO(fxbug.dev/85960): Add mechanism to specify that a single frequency should be tested.
@@ -66,6 +87,7 @@ class HermeticFidelityTest : public HermeticPipelineTest {
     int32_t low_pass_frequency = fuchsia::media::MAX_PCM_FRAMES_PER_SECOND;
     std::optional<uint32_t> thermal_state = std::nullopt;
 
+    std::optional<audio_stream_unique_id_t> device_id = std::nullopt;
     TypedFormat<OutputFormat> output_format;
     const std::set<ChannelMeasurement> channels_to_measure;
 
@@ -94,7 +116,8 @@ class HermeticFidelityTest : public HermeticPipelineTest {
   AudioBuffer<OutputFormat> GetRendererOutput(TypedFormat<InputFormat> input_format,
                                               int64_t input_buffer_frames, RenderPath path,
                                               AudioBuffer<InputFormat> input,
-                                              VirtualOutput<OutputFormat>* device);
+                                              VirtualOutput<OutputFormat>* device,
+                                              ClockMode clock_mode);
 
   // Display results for this path, in tabular form for each compare/copy to existing limits.
   template <fuchsia::media::AudioSampleFormat InputFormat,
