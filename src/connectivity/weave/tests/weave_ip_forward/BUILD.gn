@@ -54,6 +54,9 @@ fuchsia_test_package("weave-ip-fwd-tests") {
     # netstack is under test.
     "//src/connectivity/network/netstack:component-debug-legacy",
 
+    # netstack-cfg is used to set up test environments.
+    "//src/connectivity/network/testing/netemul/runner:netstack-cfg",
+
     # TODO(jiamingw): figure out what this test should be doing and move it back to test_components.
     ":weave-ip-fwd-test-wpan-subnet-6",
   ]

@@ -145,6 +145,7 @@ fuchsia_test_package("netemul-sandbox-test") {
     "dummy_proc",
     "dummy_proc:dummy_proc_with_dev",
     "//src/connectivity/network/netstack:component-legacy",
+    "//src/connectivity/network/testing/netemul/runner:netstack-cfg",
   ]
 }
 
@@ -244,5 +245,6 @@ fuchsia_package("netemul-guest-test") {
     ":setup_linux_client",
     ":setup_linux_router",
     ":test_script",
+    "//src/connectivity/network/testing/netemul/runner:netstack-cfg",
   ]
 }

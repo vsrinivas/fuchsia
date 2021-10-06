@@ -197,7 +197,6 @@ fuchsia_package("netemul-sandbox") {
     ":mock-device-settings",
     ":netemul-devmgr",
     ":netemul-sandbox-component",
-    ":netstack-cfg",
     ":netstack-intermediary",
   ]
 }

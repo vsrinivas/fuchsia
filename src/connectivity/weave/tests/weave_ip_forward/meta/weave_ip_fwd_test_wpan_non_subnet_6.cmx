@@ -17,7 +17,7 @@
                                     "-g",
                                     "fdce:da10:7616:1::abcd"
                                 ],
-                                "url": "fuchsia-pkg://fuchsia.com/netemul-sandbox#meta/netstack-cfg.cmx"
+                                "url": "fuchsia-pkg://fuchsia.com/weave-ip-fwd-tests#meta/netstack-cfg.cmx"
                             }
                         ],
                         "test": [
@@ -43,7 +43,7 @@
                                     "-g",
                                     "fdd3:b786:54dc::abcd"
                                 ],
-                                "url": "fuchsia-pkg://fuchsia.com/netemul-sandbox#meta/netstack-cfg.cmx"
+                                "url": "fuchsia-pkg://fuchsia.com/weave-ip-fwd-tests#meta/netstack-cfg.cmx"
                             }
                         ],
                         "test": [
@@ -73,7 +73,7 @@
                                     "-i",
                                     "fdce:da10:7616:6::abcd"
                                 ],
-                                "url": "fuchsia-pkg://fuchsia.com/netemul-sandbox#meta/netstack-cfg.cmx"
+                                "url": "fuchsia-pkg://fuchsia.com/weave-ip-fwd-tests#meta/netstack-cfg.cmx"
                             },
                             {
                                 "arguments": [
@@ -82,7 +82,7 @@
                                     "-i",
                                     "fdce:da10:7616:1::abcd"
                                 ],
-                                "url": "fuchsia-pkg://fuchsia.com/netemul-sandbox#meta/netstack-cfg.cmx"
+                                "url": "fuchsia-pkg://fuchsia.com/weave-ip-fwd-tests#meta/netstack-cfg.cmx"
                             },
                             {
                                 "arguments": [
@@ -91,7 +91,7 @@
                                     "-i",
                                     "fdd3:b786:54dc::abcd"
                                 ],
-                                "url": "fuchsia-pkg://fuchsia.com/netemul-sandbox#meta/netstack-cfg.cmx"
+                                "url": "fuchsia-pkg://fuchsia.com/weave-ip-fwd-tests#meta/netstack-cfg.cmx"
                             }
                         ],
                         "test": [
@@ -120,7 +120,7 @@
                             "-g",
                             "fdce:da10:7616:6::abcd"
                         ],
-                        "url": "fuchsia-pkg://fuchsia.com/netemul-sandbox#meta/netstack-cfg.cmx"
+                        "url": "fuchsia-pkg://fuchsia.com/weave-ip-fwd-tests#meta/netstack-cfg.cmx"
                     },
                     {
                         "arguments": [
@@ -131,7 +131,7 @@
                             "-g",
                             "fdce:da10:7616:6::abcd"
                         ],
-                        "url": "fuchsia-pkg://fuchsia.com/netemul-sandbox#meta/netstack-cfg.cmx"
+                        "url": "fuchsia-pkg://fuchsia.com/weave-ip-fwd-tests#meta/netstack-cfg.cmx"
                     }
                 ],
                 "test": [

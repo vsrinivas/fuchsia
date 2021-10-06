@@ -285,7 +285,7 @@ operations.
 
 The `netstack_cfg` helper is a CLI-like tool that uses the *NetworkContext* service to retrieve
 emulated endpoints and attach them to netstack instances in an emulated environment. You can launch
-it by using its package url: `fuchsia-pkg://fuchsia.com/netemul-sandbox#meta/netstack-cfg.cmx`.
+it by using its package url: `fuchsia-pkg://fuchsia.com/<your-package>#meta/netstack-cfg.cmx`.
 It receives the command line arguments shown below and is typically used as a "setup" process in an
 [environment's facet definition](#environment).
 
