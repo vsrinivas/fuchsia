@@ -19,9 +19,8 @@
 
 namespace sysmem = fuchsia_sysmem;
 
-static void empty_callback(void* ctx, uint32_t master_interrupt_control, uint64_t timestamp) {}
-
 namespace {
+
 class MockNoCpuBufferCollection : public fuchsia_sysmem::testing::BufferCollection_TestBase {
  public:
   bool set_constraints_called() const { return set_constraints_called_; }
@@ -119,19 +118,6 @@ TEST(IntelI915Display, SysmemInvalidType) {
 
   loop.RunUntilIdle();
   EXPECT_FALSE(collection.set_constraints_called());
-}
-
-TEST(IntelI915Display, SetInterruptCallback) {
-  i915::Controller controller(nullptr);
-
-  // Allocate Interrupts into non-zero memory
-  std::aligned_storage_t<sizeof(i915::Interrupts), alignof(i915::Interrupts)> mem;
-  memset(&mem, 0xff, sizeof(i915::Interrupts));
-  auto interrupts = new (&mem) i915::Interrupts(&controller);
-
-  intel_gpu_core_interrupt_t callback = {.callback = empty_callback, .ctx = nullptr};
-  EXPECT_EQ(ZX_OK, interrupts->SetInterruptCallback(&callback, 0 /* interrupt_mask */));
-  interrupts->~Interrupts();
 }
 
 TEST(IntelI915Display, BacklightValue) {

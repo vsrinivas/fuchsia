@@ -76,13 +76,13 @@ test("intel-i915-test") {
   ]
   sources = [
     "gtt-unittest.cc",
-    "intel-i915-test-interrupts.cc",
     "intel-i915-test.cc",
+    "interrupts-unittest.cc",
   ]
   deps = [
     ":common_srcs",
     "//src/devices/pci/testing:pci-protocol-fake",
-    "//src/devices/testing/no_ddk",
+    "//src/devices/testing/mock-ddk",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/fidl-async:fidl-async-cpp",

@@ -139,9 +139,7 @@ class Controller : public DeviceType,
   bool DpcdRead(registers::Ddi ddi, uint32_t addr, uint8_t* buf, size_t size);
   bool DpcdWrite(registers::Ddi ddi, uint32_t addr, const uint8_t* buf, size_t size);
 
-  pci_protocol_t* pci() { return &pci_; }
   ddk::MmioBuffer* mmio_space() { return mmio_space_.has_value() ? &*mmio_space_ : nullptr; }
-  Gtt* gtt() { return &gtt_; }
   Interrupts* interrupts() { return &interrupts_; }
   uint16_t device_id() const { return device_id_; }
   const IgdOpRegion& igd_opregion() const { return igd_opregion_; }
@@ -161,7 +159,6 @@ class Controller : public DeviceType,
   const dpll_state_t* GetDpllState(registers::Dpll dpll);
 
   void SetMmioForTesting(ddk::MmioBuffer mmio_space) { mmio_space_ = std::move(mmio_space); }
-  void SetPciForTesting(pci_protocol_t pci) { pci_ = pci; }
 
   void ResetMmioSpaceForTesting() { mmio_space_.reset(); }
 
