@@ -114,7 +114,11 @@ impl Serialize for CapabilityPath {
     where
         S: Serializer,
     {
-        let path = format!("{}/{}", self.dirname, self.basename);
+        let path = if self.dirname == "/" {
+            format!("/{}", self.basename)
+        } else {
+            format!("{}/{}", self.dirname, self.basename)
+        };
         serializer.serialize_str(&path)
     }
 }
@@ -210,10 +214,25 @@ mod tests {
             deserialize_fio2_operations, deserialize_opt_fio2_operations,
             serialize_fio2_operations, serialize_opt_fio2_operations,
         },
+        crate::CapabilityPath,
         fidl_fuchsia_io2 as fio2,
-        serde_json::{Deserializer, Serializer},
-        std::str::from_utf8,
+        serde_json::{self, Deserializer, Serializer},
+        std::str::{from_utf8, FromStr},
     };
+
+    #[test]
+    fn capability_path_symmetry() {
+        let cps_to_serialize = vec!["/path", "/multi/path"]
+            .into_iter()
+            .map(CapabilityPath::from_str)
+            .collect::<Result<Vec<CapabilityPath>, _>>()
+            .unwrap();
+        for cp_to_serialize in cps_to_serialize.into_iter() {
+            let cp_json_str = serde_json::to_string_pretty(&cp_to_serialize).unwrap();
+            let cp_deserialized: CapabilityPath = serde_json::from_str(&cp_json_str).unwrap();
+            assert_eq!(cp_to_serialize, cp_deserialized);
+        }
+    }
 
     #[test]
     fn test_deserialize_opt_fio2_operations_some() {
