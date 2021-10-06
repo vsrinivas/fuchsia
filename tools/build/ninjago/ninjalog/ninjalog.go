@@ -59,6 +59,11 @@ func (s Step) Duration() time.Duration {
 	return s.End - s.Start
 }
 
+// AllOutputs return all outputs of this step.
+func (s Step) AllOutputs() []string {
+	return append(s.Outs, s.Out)
+}
+
 var pythonRE = regexp.MustCompile(`^python(\d(\.\d+)?)?$`)
 
 // extractPythonScript returns the first python script in input tokens.

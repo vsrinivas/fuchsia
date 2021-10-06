@@ -846,3 +846,32 @@ func TestSlowestSteps(t *testing.T) {
 		})
 	}
 }
+
+func TestAllOutputs(t *testing.T) {
+	for _, tc := range []struct {
+		name string
+		s    Step
+		want []string
+	}{
+		{
+			name: "no extra outputs",
+			s:    Step{Out: "out"},
+			want: []string{"out"},
+		},
+		{
+			name: "with extra outputs",
+			s: Step{
+				Out:  "out",
+				Outs: []string{"foo", "bar", "baz"},
+			},
+			want: []string{"foo", "bar", "baz", "out"},
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			got := tc.s.AllOutputs()
+			if diff := cmp.Diff(tc.want, got); diff != "" {
+				t.Errorf("AllOutputs() of step %#v got diff (-want +got):\n%s", tc.s, diff)
+			}
+		})
+	}
+}

@@ -25,11 +25,12 @@ func toTrace(step Step, pid int, tid int) chrometrace.Trace {
 		DurationMicros:  int(step.Duration() / time.Microsecond),
 		ProcessID:       pid,
 		ThreadID:        tid,
+		Args: map[string]interface{}{
+			"outputs":     step.AllOutputs(),
+			"total float": step.TotalFloat.String(),
+		},
 	}
 
-	tr.Args = map[string]interface{}{
-		"total float": step.TotalFloat.String(),
-	}
 	if step.Command != nil {
 		tr.Args["command"] = step.Command.Command
 	}
