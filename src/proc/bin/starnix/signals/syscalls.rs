@@ -151,7 +151,7 @@ pub fn sys_sigaltstack(
 }
 
 pub fn sys_rt_sigsuspend(
-    ctx: &SyscallContext<'_>,
+    ctx: &mut SyscallContext<'_>,
     user_mask: UserRef<sigset_t>,
     sigset_size: usize,
 ) -> Result<SyscallResult, Errno> {
@@ -163,18 +163,8 @@ pub fn sys_rt_sigsuspend(
     ctx.task.mm.read_object(user_mask, &mut mask)?;
 
     let waiter = Waiter::new();
-    // This block is important to release the signal state lock while waiting.
-    let old_mask = {
-        let mut signal_state = ctx.task.signals.write();
-        let old_mask = signal_state.mask;
-        signal_state.mask = mask & !(Signal::SIGSTOP.mask() | Signal::SIGKILL.mask());
-        old_mask
-    };
-    let result = waiter.wait(&ctx.task);
-    // TODO(tbodt): There's a window right here where another thread can see an empty
-    // signals.waiter and the wrong mask. Unsure if this is actually a problem.
-    ctx.task.signals.write().mask = old_mask;
-    result?;
+    waiter.wait_with_mask(ctx, mask)?;
+
     Ok(SUCCESS)
 }
 
@@ -925,7 +915,7 @@ mod tests {
         let first_task_id = first_task_clone.id;
 
         let thread = std::thread::spawn(move || {
-            let ctx = SyscallContext::new(&task_owner.task);
+            let mut ctx = SyscallContext::new(&task_owner.task);
             let addr = map_memory(&ctx, UserAddress::default(), *PAGE_SIZE);
             let user_ref = UserRef::<sigset_t>::new(addr);
 
@@ -933,7 +923,7 @@ mod tests {
             ctx.task.mm.write_object(user_ref, &sigset).expect("failed to set action");
 
             assert_eq!(
-                sys_rt_sigsuspend(&ctx, user_ref, std::mem::size_of::<sigset_t>()),
+                sys_rt_sigsuspend(&mut ctx, user_ref, std::mem::size_of::<sigset_t>()),
                 error!(EINTR)
             );
         });

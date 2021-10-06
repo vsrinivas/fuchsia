@@ -6,6 +6,9 @@ use crate::error;
 use crate::fs::FdEvents;
 use crate::logging::*;
 use crate::signals::signal_handling::are_signals_pending;
+use crate::signals::signal_handling::*;
+use crate::signals::*;
+use crate::syscalls::SyscallContext;
 use crate::task::Task;
 use crate::types::Errno;
 use crate::types::*;
@@ -66,6 +69,30 @@ impl Waiter {
         self.wait_until(current_task, zx::Time::INFINITE)
     }
 
+    /// Waits until the waiter is woken up, assigning a temporary signal mask for the task.
+    ///
+    /// # Parameters
+    /// - `ctx`: The syscall context that is used to dequeue signals.
+    /// - `signal_mask`: The temporary signal mask to assign the task while waiting.
+    pub fn wait_with_mask(
+        self: &Arc<Self>,
+        ctx: &mut SyscallContext<'_>,
+        signal_mask: u64,
+    ) -> Result<(), Errno> {
+        let result =
+            match self.wait_with_mask_internal(ctx.task, Some(signal_mask), zx::Time::INFINITE) {
+                Err(e) if e == EINTR => {
+                    // There was a pending signal that passed the temporary mask. This must be handled
+                    // before the signal mask is restored.
+                    dequeue_signal(ctx);
+                    error!(EINTR)
+                }
+                result => result,
+            };
+
+        result
+    }
+
     /// Wait until the given deadline has passed or the waiter is woken up.
     ///
     /// If the wait is interrupted (seee interrupt), this function returns
@@ -75,17 +102,44 @@ impl Waiter {
         current_task: &Task,
         deadline: zx::Time,
     ) -> Result<(), Errno> {
-        {
+        self.wait_with_mask_internal(current_task, None, deadline)
+    }
+
+    /// Waits until the given deadline has passed or the waiter is woken up.
+    ///
+    /// # Parameters
+    /// - `curent_task`: The task that is waiting.
+    /// - `signal_mask`: The signal mask that will be applied for the duration of the wait.
+    /// - `deadline`: The deadline for waking up.
+    pub fn wait_with_mask_internal(
+        self: &Arc<Self>,
+        current_task: &Task,
+        signal_mask: Option<u64>,
+        deadline: zx::Time,
+    ) -> Result<(), Errno> {
+        let old_mask = {
             let mut signal_state = current_task.signals.write();
-            if are_signals_pending(&signal_state) {
-                return Err(EINTR);
+
+            let old_mask = signal_state.mask;
+            if let Some(signal_mask) = signal_mask {
+                signal_state.mask =
+                    signal_mask & !(Signal::SIGSTOP.mask() | Signal::SIGKILL.mask());
             }
+
+            if are_signals_pending(&signal_state) {
+                return error!(EINTR);
+            }
+
             signal_state.waiter = Some(Arc::clone(self));
-        }
+
+            old_mask
+        };
+
         scopeguard::defer! {
             let mut signal_state = current_task.signals.write();
             assert!(Arc::ptr_eq(signal_state.waiter.as_ref().unwrap(), self), "SignalState waiter changed while waiting!");
             signal_state.waiter = None;
+            signal_state.mask = old_mask;
         }
 
         match self.port.wait(deadline) {

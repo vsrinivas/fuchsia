@@ -4,8 +4,7 @@
         binary: "system/bin/sh",
         args: [
             "-c",
-            "toybox",
-            "help",
+            "ls && ls",
         ],
     },
 }
