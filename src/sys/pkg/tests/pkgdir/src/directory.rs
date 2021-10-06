@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    crate::{dirs_to_test, just_pkgfs_for_now, repeat_by_n, OpenFlags, PackageSource},
+    crate::{dirs_to_test, repeat_by_n, OpenFlags, PackageSource},
     anyhow::{anyhow, Context as _, Error},
     fidl::{endpoints::create_proxy, AsHandleRef},
     fidl_fuchsia_io::{
@@ -1395,33 +1395,32 @@ async fn assert_node_get_flags_directory_calls(source: &PackageSource, path: &st
 
 #[fuchsia::test]
 async fn unsupported() {
-    for source in just_pkgfs_for_now().await {
+    for source in dirs_to_test().await {
         unsupported_per_package_source(source).await
     }
 }
 
 async fn unsupported_per_package_source(source: PackageSource) {
-    let root_dir = source.dir;
     // Test unsupported APIs for root directory and subdirectory.
-    assert_unsupported_directory_calls(&root_dir, ".", "file").await;
-    assert_unsupported_directory_calls(&root_dir, ".", "dir").await;
-    assert_unsupported_directory_calls(&root_dir, ".", "meta").await;
-    assert_unsupported_directory_calls(&root_dir, "dir", "file").await;
-    assert_unsupported_directory_calls(&root_dir, "dir", "dir").await;
+    assert_unsupported_directory_calls(&source, ".", "file").await;
+    assert_unsupported_directory_calls(&source, ".", "dir").await;
+    assert_unsupported_directory_calls(&source, ".", "meta").await;
+    assert_unsupported_directory_calls(&source, "dir", "file").await;
+    assert_unsupported_directory_calls(&source, "dir", "dir").await;
 
     // Test unsupported APIs for meta directory and subdirectory.
-    assert_unsupported_directory_calls(&root_dir, "meta", "file").await;
-    assert_unsupported_directory_calls(&root_dir, "meta", "dir").await;
-    assert_unsupported_directory_calls(&root_dir, "meta/dir", "file").await;
-    assert_unsupported_directory_calls(&root_dir, "meta/dir", "dir").await;
+    assert_unsupported_directory_calls(&source, "meta", "file").await;
+    assert_unsupported_directory_calls(&source, "meta", "dir").await;
+    assert_unsupported_directory_calls(&source, "meta/dir", "file").await;
+    assert_unsupported_directory_calls(&source, "meta/dir", "dir").await;
 }
 
 async fn assert_unsupported_directory_calls(
-    package_root: &DirectoryProxy,
+    source: &PackageSource,
     parent_path: &str,
     child_base_path: &str,
 ) {
-    let parent = io_util::directory::open_directory(package_root, parent_path, 0)
+    let parent = io_util::directory::open_directory(&source.dir, parent_path, 0)
         .await
         .expect("open parent directory");
 
@@ -1432,18 +1431,34 @@ async fn assert_unsupported_directory_calls(
     );
 
     // Verify link() is not supported.
-    let (status, token) = parent.get_token().await.unwrap();
-    zx::Status::ok(status).expect("status ok");
+    let token: zx::Handle = if source.is_pkgdir() {
+        // "GetToken() not supported"
+        // Since we can't call GetToken, we can't construct a valid token to pass here.
+        // But we can at least test what it does with an arbitrary event object.
+        zx::Event::create().unwrap().into()
+    } else {
+        let (status, token) = parent.get_token().await.unwrap();
+        zx::Status::ok(status).expect("status ok");
+        token.unwrap()
+    };
     assert_eq!(
-        zx::Status::from_raw(parent.link(child_base_path, token.unwrap(), "link").await.unwrap()),
+        zx::Status::from_raw(parent.link(child_base_path, token, "link").await.unwrap()),
         zx::Status::NOT_SUPPORTED
     );
 
     // Verify rename() is not supported.
-    let (status, token) = parent.get_token().await.unwrap();
-    zx::Status::ok(status).expect("status ok");
+    let token = if source.is_pkgdir() {
+        // "GetToken() not supported"
+        // Since we can't call GetToken, we can't construct a valid token to pass here.
+        // But we can at least test what it does with an arbitrary event object.
+        zx::Event::create().unwrap()
+    } else {
+        let (status, token) = parent.get_token().await.unwrap();
+        zx::Status::ok(status).expect("status ok");
+        zx::Event::from(token.unwrap())
+    };
     assert_eq!(
-        parent.rename2(child_base_path, zx::Event::from(token.unwrap()), "renamed").await.unwrap(),
+        parent.rename2(child_base_path, token, "renamed").await.unwrap(),
         Err(zx::sys::ZX_ERR_NOT_SUPPORTED)
     );
 
