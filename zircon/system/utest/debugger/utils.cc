@@ -10,6 +10,7 @@
 #include <stdarg.h>
 #include <stdlib.h>
 #include <string.h>
+#include <zircon/assert.h>
 #include <zircon/compiler.h>
 #include <zircon/process.h>
 #include <zircon/processargs.h>
@@ -72,102 +73,83 @@ uint32_t get_uint32_property(zx_handle_t handle, uint32_t prop) {
   return value;
 }
 
-// These return "bool" because they use ASSERT_*.
-
 bool send_request(zx_handle_t handle, const request_message_t& rqst) {
-  BEGIN_HELPER;
   unittest_printf("sending request %d on handle %u\n", rqst.type, handle);
   zx_status_t status = zx_channel_write(handle, 0, &rqst, sizeof(rqst), NULL, 0);
-  ASSERT_EQ(status, ZX_OK);
-  END_HELPER;
+  ZX_ASSERT(status == ZX_OK);
+  return true;
 }
 
 bool send_simple_request(zx_handle_t handle, request_t type) {
-  BEGIN_HELPER;
   unittest_printf("sending request %d on handle %u\n", type, handle);
   zx_status_t status = zx_channel_write(handle, 0, &type, sizeof(type), NULL, 0);
-  ASSERT_EQ(status, ZX_OK);
-  END_HELPER;
+  ZX_ASSERT(status == ZX_OK);
+  return true;
 }
 
 bool send_response(zx_handle_t handle, const response_message_t& resp) {
-  BEGIN_HELPER;
   unittest_printf("sending response %d on handle %u\n", resp.type, handle);
   zx_status_t status = zx_channel_write(handle, 0, &resp, sizeof(resp), NULL, 0);
-  ASSERT_EQ(status, ZX_OK);
-  END_HELPER;
+  ZX_ASSERT(status == ZX_OK);
+  return true;
 }
 
 bool send_response_with_handle(zx_handle_t handle, const response_message_t& resp,
                                zx_handle_t resp_handle) {
-  BEGIN_HELPER;
   unittest_printf("sending response %d on handle %u\n", resp.type, handle);
   zx_status_t status = zx_channel_write(handle, 0, &resp, sizeof(resp), &resp_handle, 1);
-  ASSERT_EQ(status, ZX_OK);
-  END_HELPER;
+  ZX_ASSERT(status == ZX_OK);
+  return true;
 }
 
 bool send_simple_response(zx_handle_t handle, response_t type) {
-  BEGIN_HELPER;
   unittest_printf("sending response %d on handle %u\n", type, handle);
   zx_status_t status = zx_channel_write(handle, 0, &type, sizeof(type), NULL, 0);
-  ASSERT_EQ(status, ZX_OK);
-  END_HELPER;
+  ZX_ASSERT(status == ZX_OK);
+  return true;
 }
 
-// This returns "bool" because it uses ASSERT_*.
-
 bool recv_request(zx_handle_t handle, request_message_t* rqst) {
-  BEGIN_HELPER;
-
   unittest_printf("waiting for request on handle %u\n", handle);
 
-  ASSERT_TRUE(tu_channel_wait_readable(handle), "peer closed while trying to read message");
+  ZX_ASSERT_MSG(tu_channel_wait_readable(handle), "peer closed while trying to read message");
 
   uint32_t num_bytes = sizeof(*rqst);
   zx_status_t status = zx_channel_read(handle, 0, rqst, nullptr, num_bytes, 0, &num_bytes, nullptr);
-  ASSERT_EQ(status, ZX_OK);
-  ASSERT_LE(num_bytes, sizeof(*rqst), "unexpected request size");
+  ZX_ASSERT(status == ZX_OK);
+  ZX_ASSERT_MSG(num_bytes <= sizeof(*rqst), "unexpected request size");
 
-  END_HELPER;
+  return true;
 }
 
-// This returns "bool" because it uses ASSERT_*.
-
 bool recv_response(zx_handle_t handle, response_message_t* resp) {
-  BEGIN_HELPER;
-
   unittest_printf("waiting for response on handle %u\n", handle);
 
-  ASSERT_TRUE(tu_channel_wait_readable(handle), "peer closed while trying to read message");
+  ZX_ASSERT_MSG(tu_channel_wait_readable(handle), "peer closed while trying to read message");
 
   uint32_t num_bytes = sizeof(*resp);
   zx_handle_t resp_handle = ZX_HANDLE_INVALID;
   uint32_t num_handles = 1;
   zx_status_t status = zx_channel_read(handle, 0, resp, &resp_handle, num_bytes, num_handles,
                                        &num_bytes, &num_handles);
-  ASSERT_EQ(status, ZX_OK);
-  ASSERT_LE(num_bytes, sizeof(*resp), "unexpected response size");
+  ZX_ASSERT(status == ZX_OK);
+  ZX_ASSERT_MSG(num_bytes <= sizeof(*resp), "unexpected response size");
   if (num_handles > 0) {
-    EXPECT_EQ(num_handles, 1, "");
-    EXPECT_NE(resp_handle, ZX_HANDLE_INVALID, "");
+    ZX_ASSERT(num_handles == 1);
+    ZX_ASSERT(resp_handle != ZX_HANDLE_INVALID);
     resp->handle = resp_handle;
   }
 
-  END_HELPER;
+  return true;
 }
 
-// This returns "bool" because it uses ASSERT_*.
-
 bool recv_simple_response(zx_handle_t handle, response_t expected_type) {
-  BEGIN_HELPER;
-
   response_message_t response;
-  ASSERT_TRUE(recv_response(handle, &response), "");
+  ZX_ASSERT(recv_response(handle, &response));
   unittest_printf("received message %d\n", response.type);
-  EXPECT_EQ(response.type, expected_type, "");
+  ZX_ASSERT(response.type == expected_type);
 
-  END_HELPER;
+  return true;
 }
 
 bool verify_inferior_running(zx_handle_t channel) {
