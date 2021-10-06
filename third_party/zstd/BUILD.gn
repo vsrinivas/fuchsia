@@ -128,7 +128,7 @@ config("internal.config") {
     "ZSTDLIB_VISIBILITY=",
   ]
 
-  if (is_host) {
+  if (!is_fuchsia) {
     defines += [ "ZSTD_MULTITHREAD" ]
   }
 
