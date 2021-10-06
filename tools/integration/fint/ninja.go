@@ -59,6 +59,7 @@ var (
 		"/usr/bin/env",
 		"/bin/ln",
 		"/bin/bash",
+		"/bin/sh",
 	}
 
 	// The following tests should never be considered affected. These tests use
