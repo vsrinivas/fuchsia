@@ -10,6 +10,7 @@ group("tests") {
   deps = [
     ":zxtest-context($host_toolchain)",
     ":zxtest-integration($host_toolchain)",
+    ":zxtest-integration-stream-test-pkg",
     ":zxtest-integration-test-pkg",
   ]
 }
@@ -34,7 +35,6 @@ test("zxtest-integration") {
     }
   }
   sources = [
-    "assertions_streams_test.cc",
     "assertions_test.c",
     "assertions_test.cc",
     "helper.cc",
@@ -57,7 +57,40 @@ test("zxtest-integration") {
   }
 }
 
+test("zxtest-integration-streams") {
+  output_name = "zxtest-integration-streams-test"
+  if (is_fuchsia) {
+    configs += [ "//build/unification/config:zircon-migrated" ]
+  }
+  if (is_fuchsia) {
+    fdio_config = [ "//build/config/fuchsia:fdio_config" ]
+    if (configs + fdio_config - fdio_config != configs) {
+      configs -= fdio_config
+    }
+  }
+  sources = [
+    "assertions_streams_test.cc",
+    "helper.cc",
+    "main.cc",
+  ]
+  deps = [
+    "//zircon/system/ulib/fbl",
+    "//zircon/system/ulib/zxtest:zxtest-streams",
+  ]
+  if (is_fuchsia) {
+    deps += [
+      "//sdk/lib/fdio",
+      "//zircon/system/ulib/zx",
+    ]
+  }
+}
+
 fuchsia_unittest_package("zxtest-integration-test-pkg") {
   package_name = "zxtest-integration-test"
   deps = [ ":zxtest-integration" ]
+}
+
+fuchsia_unittest_package("zxtest-integration-stream-test-pkg") {
+  package_name = "zxtest-integration-stream-test"
+  deps = [ ":zxtest-integration-streams" ]
 }

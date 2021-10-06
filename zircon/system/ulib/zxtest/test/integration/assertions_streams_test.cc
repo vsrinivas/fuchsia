@@ -5,7 +5,6 @@
 #include <zircon/assert.h>
 #include <zircon/types.h>
 
-#define ZXTEST_USE_STREAMABLE_MACROS
 #include <zxtest/cpp/internal.h>
 #include <zxtest/zxtest.h>
 

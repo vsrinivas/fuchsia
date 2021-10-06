@@ -4,79 +4,99 @@
 
 import("//build/zircon/migrated_targets.gni")
 
+config("zxtest_enable_streamable_assertions") {
+  defines = [ "ZXTEST_USE_STREAMABLE_MACROS" ]
+}
+
+zxtest_headers = [
+  "include/zxtest/base/assertion.h",
+  "include/zxtest/base/death-statement.h",
+  "include/zxtest/base/environment.h",
+  "include/zxtest/base/event-broadcaster.h",
+  "include/zxtest/base/log-sink.h",
+  "include/zxtest/base/message.h",
+  "include/zxtest/base/observer.h",
+  "include/zxtest/base/parameterized-value-impl.h",
+  "include/zxtest/base/parameterized-value.h",
+  "include/zxtest/base/reporter.h",
+  "include/zxtest/base/runner.h",
+  "include/zxtest/base/test-case.h",
+  "include/zxtest/base/test-driver.h",
+  "include/zxtest/base/test-info.h",
+  "include/zxtest/base/test-internal.h",
+  "include/zxtest/base/test.h",
+  "include/zxtest/base/types.h",
+  "include/zxtest/base/values.h",
+  "include/zxtest/c/zxtest.h",
+  "include/zxtest/cpp/assert.h",
+  "include/zxtest/cpp/assert_streams.h",
+  "include/zxtest/cpp/internal.h",
+  "include/zxtest/cpp/zxtest.h",
+  "include/zxtest/zxtest.h",
+]
+
+non_public_headers = [
+  # These headers are not intended to be included directly into user code.
+  "include/zxtest/c/zxtest.h",
+  "include/zxtest/cpp/assert.h",
+  "include/zxtest/cpp/assert_streams.h",
+  "include/zxtest/cpp/zxtest.h",
+]
+
+zxtest_sources = [
+  "assertion.cc",
+  "c-wrappers.cc",
+  "event-broadcaster.cc",
+  "file-log-sink.cc",
+  "message.cc",
+  "reporter.cc",
+  "runner-options.cc",
+  "runner.cc",
+  "test-case.cc",
+  "test-info.cc",
+  "test.cc",
+  "zxtest-main.cc",
+]
+
+zxtest_public_deps = [
+  "//sdk/lib/fit",
+
+  # Needed for <zircon/status.h>
+  "//src/zircon/lib/zircon",
+
+  # Needed for cpp17::string_view.
+  "//sdk/lib/stdcompat",
+
+  # Needed for <fbl/string.h>, <fbl/vector.h> and <fbl/function.h>
+  "//zircon/system/ulib/fbl",
+]
+
+zxtest_deps = [
+  "//sdk/lib/fit",
+  "//zircon/system/ulib/fbl",
+]
+
+if (is_fuchsia) {
+  zxtest_metadata = {
+    # Used by the fuchsia_test_component_manifest() template.
+    test_component_manifest_cml = [
+      {
+        include = [ "//src/sys/test_runners/elf/default.shard.cml" ]
+      },
+    ]
+  }
+}
+
 sdk_source_set("zxtest") {
   sdk_name = "zxtest"
   category = "cts"
   build_as_static = true
 
-  public = [
-    "include/zxtest/base/assertion.h",
-    "include/zxtest/base/death-statement.h",
-    "include/zxtest/base/environment.h",
-    "include/zxtest/base/event-broadcaster.h",
-    "include/zxtest/base/log-sink.h",
-    "include/zxtest/base/message.h",
-    "include/zxtest/base/observer.h",
-    "include/zxtest/base/parameterized-value-impl.h",
-    "include/zxtest/base/parameterized-value.h",
-    "include/zxtest/base/reporter.h",
-    "include/zxtest/base/runner.h",
-    "include/zxtest/base/test-case.h",
-    "include/zxtest/base/test-driver.h",
-    "include/zxtest/base/test-info.h",
-    "include/zxtest/base/test-internal.h",
-    "include/zxtest/base/test.h",
-    "include/zxtest/base/types.h",
-    "include/zxtest/base/values.h",
-    "include/zxtest/c/zxtest.h",
-    "include/zxtest/cpp/assert.h",
-    "include/zxtest/cpp/assert_streams.h",
-    "include/zxtest/cpp/internal.h",
-    "include/zxtest/cpp/zxtest.h",
-    "include/zxtest/zxtest.h",
-  ]
-  non_public_headers = [
-    # These headers are not intended to be included directly into user code.
-    "include/zxtest/c/zxtest.h",
-    "include/zxtest/cpp/assert.h",
-    "include/zxtest/cpp/assert_streams.h",
-    "include/zxtest/cpp/zxtest.h",
-  ]
-
-  sources = [
-    "assertion.cc",
-    "c-wrappers.cc",
-    "event-broadcaster.cc",
-    "file-log-sink.cc",
-    "message.cc",
-    "reporter.cc",
-    "runner-options.cc",
-    "runner.cc",
-    "test-case.cc",
-    "test-info.cc",
-    "test.cc",
-    "zxtest-main.cc",
-  ]
-
-  public_deps = [
-    "//sdk/lib/fit",
-
-    # Needed for <zircon/status.h>
-    "//src/zircon/lib/zircon",
-
-    # Needed for cpp17::string_view.
-    "//sdk/lib/stdcompat",
-
-    # Needed for <fbl/string.h>, <fbl/vector.h> and <fbl/function.h>
-    "//zircon/system/ulib/fbl",
-  ]
-
+  public = zxtest_headers
+  sources = zxtest_sources
+  public_deps = zxtest_public_deps
   public_configs = [ ":prod_config" ]
-
-  deps = [
-    "//sdk/lib/fit",
-    "//zircon/system/ulib/fbl",
-  ]
+  deps = zxtest_deps
 
   if (is_fuchsia) {
     sources += [ "death-statement.cc" ]
@@ -87,15 +107,36 @@ sdk_source_set("zxtest") {
       "//src/zircon/lib/zircon",
       "//zircon/system/ulib/zx",
     ]
-  }
 
-  metadata = {
-    # Used by the fuchsia_test_component_manifest() template.
-    test_component_manifest_cml = [
-      {
-        include = [ "//src/sys/test_runners/elf/default.shard.cml" ]
-      },
+    metadata = zxtest_metadata
+  }
+}
+
+sdk_source_set("zxtest-streams") {
+  sdk_name = "zxtest"
+  category = "cts"
+  build_as_static = true
+
+  public = zxtest_headers
+  sources = zxtest_sources
+  public_deps = zxtest_public_deps
+  public_configs = [
+    ":prod_config",
+    ":zxtest_enable_streamable_assertions",
+  ]
+  deps = zxtest_deps
+
+  if (is_fuchsia) {
+    sources += [ "death-statement.cc" ]
+
+    public_deps += [ "//zircon/system/ulib/zx" ]
+
+    deps += [
+      "//src/zircon/lib/zircon",
+      "//zircon/system/ulib/zx",
     ]
+
+    metadata = zxtest_metadata
   }
 }
 
