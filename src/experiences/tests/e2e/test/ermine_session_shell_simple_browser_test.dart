@@ -32,7 +32,7 @@ const testserverUrl =
 // 3: Text input field test
 // 4: Audio test
 // 5: Keyboard shortcut test.
-const skipTests = [false, true, true, true, true, true];
+const skipTests = [false, true, true, false, true, true];
 
 void main() {
   late Sl4f sl4f;
@@ -117,11 +117,13 @@ void main() {
       await browser.waitFor(find.text(stopUrl), timeout: _timeoutTenSec);
       print('Shut down the test server.');
       await browser.close();
+
+      await ermine.threeKeyShortcut(Key.leftCtrl, Key.leftShift, Key.w);
+      await ermine.driver
+          .waitUntilNoTransientCallbacks(timeout: _timeoutTenSec);
+      expect(await _browserViewMatchesPresentationStatus(false), true);
+      print('Closed the browser');
     }
-    await ermine.driver.requestData('close');
-    await ermine.driver.waitUntilNoTransientCallbacks(timeout: _timeoutTenSec);
-    expect(await _browserViewMatchesPresentationStatus(false), true);
-    print('Closed the browser');
 
     await webDriverConnector.tearDown();
     await ermine.tearDown();
@@ -393,7 +395,7 @@ void main() {
     const blueUrl = 'http://127.0.0.1:8080/blue.html';
 
     // Opens red.html in the second tab leaving the first tab as an empty tab.
-    await input.text(redUrl);
+    await input.text(redUrl, keyEventDuration: Duration(milliseconds: 10));
     await input.keyPress(kEnterKey);
     await browser.waitUntilNoTransientCallbacks(timeout: _timeoutTenSec);
     await browser.waitFor(redTabFinder, timeout: _timeoutTenSec);
@@ -403,7 +405,7 @@ void main() {
     await browser.tap(find.byValueKey('new_tab'));
     await browser.waitFor(find.text(newTabHintText), timeout: _timeoutTenSec);
 
-    await input.text(greenUrl);
+    await input.text(greenUrl, keyEventDuration: Duration(milliseconds: 10));
     await input.keyPress(kEnterKey);
     await browser.waitUntilNoTransientCallbacks(timeout: _timeoutTenSec);
     await browser.waitFor(greenTabFinder, timeout: _timeoutTenSec);
@@ -413,7 +415,7 @@ void main() {
     await browser.tap(find.byValueKey('new_tab'));
     await browser.waitFor(find.text(newTabHintText), timeout: _timeoutTenSec);
 
-    await input.text(blueUrl);
+    await input.text(blueUrl, keyEventDuration: Duration(milliseconds: 10));
     await input.keyPress(kEnterKey);
     await browser.waitUntilNoTransientCallbacks(timeout: _timeoutTenSec);
     await browser.waitFor(blueTabFinder, timeout: _timeoutTenSec);
@@ -484,10 +486,10 @@ void main() {
 
     // TODO(fxb/70265): Test closing an unfocused tab once fxb/68689 is done.
 
-    await ermine.driver.requestData('close');
-    await ermine.driver.waitForAbsent(find.text('simple-browser.cmx'));
-    expect(await ermine.isStopped(simpleBrowserUrl), isTrue);
     await browser.close();
+    await ermine.threeKeyShortcut(Key.leftCtrl, Key.leftShift, Key.w);
+    await ermine.driver.waitUntilNoTransientCallbacks(timeout: _timeoutTenSec);
+    expect(await _browserViewMatchesPresentationStatus(false), true);
     print('Closed the browser');
   }, skip: skipTests[2]);
 
@@ -517,6 +519,7 @@ void main() {
     await ermine.waitFor(() async {
       return webdriver.activeElement!.equals(textField);
     }, timeout: _timeoutTenSec);
+
     print('The textfield is now focused.');
 
     // TODO(fxb/74070): Sl4f.Input currently does not work for web elements.
@@ -529,13 +532,13 @@ void main() {
     print('Text is entered into the textfield.');
 
     await browser.close();
-    await ermine.driver.requestData('close');
-    await ermine.driver.waitForAbsent(find.text('simple-browser.cmx'));
-    expect(await ermine.isStopped(simpleBrowserUrl), isTrue);
+    await ermine.threeKeyShortcut(Key.leftCtrl, Key.leftShift, Key.w);
+    await ermine.driver.waitUntilNoTransientCallbacks(timeout: _timeoutTenSec);
+    expect(await _browserViewMatchesPresentationStatus(false), true);
     print('Closed the browser');
   }, skip: skipTests[3]);
 
-  test('Should be able play audios on web', () async {
+  test('Should be able to play audios on web', () async {
     FlutterDriver browser;
     browser = await ermine.launchAndWaitForSimpleBrowser();
 
@@ -608,7 +611,7 @@ void main() {
     browser = await ermine.launchAndWaitForSimpleBrowser();
 
     // Opens index.html
-    await input.text(indexUrl);
+    await input.text(indexUrl, keyEventDuration: Duration(milliseconds: 10));
     await input.keyPress(kEnterKey);
     await browser.waitUntilNoTransientCallbacks(timeout: _timeoutTenSec);
     await browser.waitFor(indexTabFinder, timeout: _timeoutTenSec);
@@ -684,7 +687,7 @@ void main() {
     // Opens blue.html
     const blueUrl = 'http://127.0.0.1:8080/blue.html';
     const nextUrl = 'http://127.0.0.1:8080/next.html';
-    await input.text(blueUrl);
+    await input.text(blueUrl, keyEventDuration: Duration(milliseconds: 10));
     await input.keyPress(kEnterKey);
     await browser.waitUntilNoTransientCallbacks(timeout: _timeoutTenSec);
     await browser.waitFor(blueTabFinder, timeout: _timeoutTenSec);
@@ -722,9 +725,9 @@ void main() {
     print('The index tab is focused');
 
     await browser.close();
-    await ermine.driver.requestData('close');
-    await ermine.driver.waitForAbsent(find.text('simple-browser.cmx'));
-    expect(await ermine.isStopped(simpleBrowserUrl), isTrue);
+    await ermine.threeKeyShortcut(Key.leftCtrl, Key.leftShift, Key.w);
+    await ermine.driver.waitUntilNoTransientCallbacks(timeout: _timeoutTenSec);
+    expect(await _browserViewMatchesPresentationStatus(false), true);
     print('Closed the browser');
   }, skip: skipTests[5]);
 }
