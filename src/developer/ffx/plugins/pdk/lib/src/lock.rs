@@ -2,43 +2,33 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use serde::{Deserialize, Serialize};
-use serde_json::{Map, Value};
+use {
+    crate::groups::ArtifactStoreType,
+    crate::spec::SpecArtifactStoreKind,
+    serde::{Deserialize, Serialize},
+    serde_json::{Map, Value},
+};
 
 #[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize)]
-pub struct ArtifactLock {
-    pub artifacts: Vec<Artifact>,
+pub struct Lock {
+    pub artifacts: Vec<LockArtifact>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize)]
-pub struct Artifact {
+pub struct LockArtifact {
     pub name: String,
-    pub r#type: ArtifactType,
-    pub artifact_store: ArtifactStore,
+    pub r#type: ArtifactStoreType,
+    pub artifact_store: LockArtifactStore,
     pub attributes: Map<String, Value>,
     pub merkle: String,
     pub blobs: Vec<String>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize)]
-pub struct ArtifactStore {
+pub struct LockArtifactStore {
     pub name: String,
-    pub r#type: ArtifactStoreType,
+    pub r#type: SpecArtifactStoreKind,
     pub repo: Option<String>,
     pub artifact_group_name: String,
     pub content_address_storage: Option<String>,
-}
-
-#[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize)]
-pub enum ArtifactType {
-    #[serde(rename = "package")]
-    Package,
-}
-
-#[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize)]
-pub enum ArtifactStoreType {
-    #[serde(rename = "tuf")]
-    TUF,
-    #[serde(rename = "local")]
-    Local,
 }

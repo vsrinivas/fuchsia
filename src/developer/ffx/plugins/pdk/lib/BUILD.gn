@@ -15,7 +15,9 @@ rustc_library("ffx_pdk_lib") {
   ]
 
   sources = [
+    "src/groups.rs",
     "src/lib.rs",
     "src/lock.rs",
+    "src/spec.rs",
   ]
 }

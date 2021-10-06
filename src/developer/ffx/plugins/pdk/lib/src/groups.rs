@@ -4,7 +4,6 @@
 
 use {
     // TODO - switch dependency
-    ffx_pdk_lib::lock::ArtifactType,
     serde::{Deserialize, Serialize},
     serde_json::Value,
 };
@@ -12,7 +11,7 @@ use {
 // The artifact_groups.json file format for a artifact store
 
 #[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize)]
-pub struct ArtifactStoreGroups {
+pub struct ArtifactStore {
     pub schema_version: String,
     pub artifact_groups: Vec<ArtifactStoreGroup>,
 }
@@ -32,19 +31,11 @@ pub struct ArtifactStoreEntry {
     pub hash: String,
     pub sha256: String,
     pub name: String,
-    pub r#type: ArtifactType,
+    pub r#type: ArtifactStoreType,
 }
 
-// tests
-#[cfg(test)]
-mod test {
-    use {super::*, serde_json};
-
-    /// Test parsing a generic artifact_groups
-    #[test]
-    fn test_groups() {
-        let data = include_str!("../test_data/artifact_groups.json");
-        let v: ArtifactStoreGroups = serde_json::from_str(data).unwrap();
-        assert_eq!(v.schema_version, "v1");
-    }
+#[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize)]
+pub enum ArtifactStoreType {
+    #[serde(rename = "package")]
+    Package,
 }

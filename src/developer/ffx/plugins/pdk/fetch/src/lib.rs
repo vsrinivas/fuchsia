@@ -6,7 +6,7 @@ use anyhow::Result;
 use errors::ffx_bail;
 use ffx_core::ffx_plugin;
 use ffx_pdk_fetch_args::FetchCommand;
-use ffx_pdk_lib::lock::ArtifactLock;
+use ffx_pdk_lib::lock::Lock;
 use fuchsia_hyper::{new_https_client, HttpsClient};
 use futures_lite::io::AsyncWriteExt;
 use hyper::body::HttpBody;
@@ -28,7 +28,7 @@ pub async fn cmd_update(cmd: FetchCommand) -> Result<()> {
         println!("Reading lock file from : {:#?}", &lock_file_path.display());
     }
 
-    let artifact_lock: ArtifactLock =
+    let artifact_lock: Lock =
         File::open(&lock_file_path).map(BufReader::new).map(serde_json::from_reader)??;
 
     let mut tasks = Vec::new();

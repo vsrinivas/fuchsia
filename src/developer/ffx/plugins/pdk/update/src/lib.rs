@@ -3,13 +3,12 @@
 // found in the LICENSE file.
 
 use {
-    crate::groups::{ArtifactStoreEntry, ArtifactStoreGroup, ArtifactStoreGroups},
-    crate::spec::{ArtifactStore, Spec},
     anyhow::Result,
     errors::{ffx_bail, ffx_error},
     ffx_core::ffx_plugin,
-    ffx_pdk_lib::lock,
-    ffx_pdk_lib::lock::{ArtifactLock, ArtifactStoreType},
+    ffx_pdk_lib::groups::{ArtifactStore, ArtifactStoreEntry, ArtifactStoreGroup},
+    ffx_pdk_lib::lock::{Lock, LockArtifact, LockArtifactStore},
+    ffx_pdk_lib::spec::{Spec, SpecArtifactStore, SpecArtifactStoreKind},
     ffx_pdk_update_args::UpdateCommand,
     fuchsia_hyper::new_https_client,
     hyper::{body, StatusCode, Uri},
@@ -19,9 +18,6 @@ use {
     std::fs::{read_to_string, File, OpenOptions},
     std::io::BufReader,
 };
-
-mod groups;
-mod spec;
 
 // Outputs artifacts to a lock file based on a general specification.
 //
@@ -172,14 +168,14 @@ fn get_artifact(
     artifact_store_group.artifacts.iter().find(|&a| a.name == name).and_then(|a| Some(a.clone()))
 }
 
-/// Return artifact_groups.json for different types of artifact stores.
+/// Return artifact_groups.json for different kinds of artifact stores.
 ///
 async fn read_artifact_groups(
-    store: &ArtifactStore,
+    store: &SpecArtifactStore,
     cmd: &UpdateCommand,
-) -> Result<ArtifactStoreGroups> {
+) -> Result<ArtifactStore> {
     match store.r#type {
-        ArtifactStoreType::TUF => {
+        SpecArtifactStoreKind::TUF => {
             if store.repo.is_none() {
                 ffx_bail!("Missing repo field in artifact store")
             }
@@ -194,9 +190,9 @@ async fn read_artifact_groups(
             let body = String::from_utf8(bytes.to_vec()).expect("response was not valid utf-8");
             Ok(serde_json::from_str(&body)?)
         }
-        ArtifactStoreType::Local => {
+        SpecArtifactStoreKind::Local => {
             if store.path.is_none() {
-                ffx_bail!("Missing path field in store type");
+                ffx_bail!("Missing path field in store kind");
             }
             let path_suffix = store.path.as_ref().unwrap();
             if cmd.artifact_root.is_none() {
@@ -276,7 +272,7 @@ fn merge(a: &Option<Map<String, Value>>, b: &Option<Map<String, Value>>) -> Map<
 /// Main processing of a spec file
 ///
 async fn process_spec(spec: &Spec, cmd: &UpdateCommand) -> Result<()> {
-    let mut lock_artifacts = Vec::<lock::Artifact>::new();
+    let mut lock_artifacts = Vec::<LockArtifact>::new();
     for spec_artifact_group in spec.artifact_groups.iter() {
         // SpecArtifactGroup has a store and list of artifacts
         let spec_artifact_store = &spec_artifact_group.artifact_store;
@@ -297,13 +293,12 @@ async fn process_spec(spec: &Spec, cmd: &UpdateCommand) -> Result<()> {
             let artifact_store_group_entry =
                 get_artifact(matching_group, name).expect("missing artifiact");
 
-            let artifact_output = lock::Artifact {
+            let artifact_output = LockArtifact {
                 name: name.to_owned(),
                 r#type: artifact_store_group_entry.r#type,
-                artifact_store: lock::ArtifactStore {
+                artifact_store: LockArtifactStore {
                     name: spec_artifact_store.name.to_string(),
                     artifact_group_name: matching_group.name.to_string(),
-                    // TODO: align types
                     r#type: spec_artifact_store.r#type.clone(),
                     repo: spec_artifact_store.repo.clone(),
                     content_address_storage: matching_group.content_address_storage.clone(),
@@ -316,7 +311,7 @@ async fn process_spec(spec: &Spec, cmd: &UpdateCommand) -> Result<()> {
             lock_artifacts.push(artifact_output);
         }
     }
-    let lock = ArtifactLock { artifacts: lock_artifacts };
+    let lock = Lock { artifacts: lock_artifacts };
     let file = OpenOptions::new().create(true).write(true).truncate(true).open(cmd.out.clone())?;
 
     // write file
@@ -348,7 +343,7 @@ mod test {
           }"#;
 
         // Parse the test data
-        let v: groups::ArtifactStoreGroup = serde_json5::from_str(data).unwrap();
+        let v: ArtifactStoreGroup = serde_json5::from_str(data).unwrap();
         assert_eq!(get_artifact(&v, "one").unwrap().hash, "hash_1");
     }
 
@@ -380,7 +375,7 @@ mod test {
     //
     #[test]
     fn test_find_min_max() {
-        let store: ArtifactStoreGroups = serde_json::from_str(
+        let store: ArtifactStore = serde_json::from_str(
             r#"
           {
             "schema_version": "v1",

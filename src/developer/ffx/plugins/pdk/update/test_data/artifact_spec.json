@@ -5,7 +5,7 @@
     {
       artifact_store: {
         name: 'workstation_local_repo',
-        type: 'local',
+        kind: 'local',
         path: 'artifact_groups.json'
       },
       attributes: {
@@ -23,7 +23,7 @@
     {
       artifact_store: {
         name: 'config_file_local_repo',
-        type: 'local',
+        kind: 'local',
         path: 'artifact_groups2.json'
       },
       attributes: {

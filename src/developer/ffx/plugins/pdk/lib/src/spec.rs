@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 use {
-    ffx_pdk_lib::lock::ArtifactStoreType,
     serde::{Deserialize, Serialize},
     serde_json::{Map, Value},
 };
@@ -20,16 +19,16 @@ pub struct Spec {
 
 #[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize)]
 pub struct SpecArtifactGroup {
-    pub artifact_store: ArtifactStore,
+    pub artifact_store: SpecArtifactStore,
     pub name: Option<String>,
     pub attributes: Option<Map<String, Value>>,
-    pub artifacts: Vec<Artifact>,
+    pub artifacts: Vec<SpecArtifact>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize)]
-pub struct ArtifactStore {
+pub struct SpecArtifactStore {
     pub name: String,
-    pub r#type: ArtifactStoreType,
+    pub r#type: SpecArtifactStoreKind,
     // other fields
     pub path: Option<String>,
     pub repo: Option<String>,
@@ -48,22 +47,15 @@ pub struct ConstraintEqual {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize)]
-pub struct Artifact {
+pub struct SpecArtifact {
     pub name: String,
     pub attribtues: Option<Map<String, Value>>,
 }
 
-// tests
-
-#[cfg(test)]
-mod test {
-    use {super::*, serde_json5};
-
-    /// Test parsing a generic spec
-    #[test]
-    fn test_spec() {
-        let data = include_str!("../test_data/artifact_spec.json");
-        let v: Spec = serde_json5::from_str(data).unwrap();
-        assert_eq!(v.product, "workstation");
-    }
+#[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize)]
+pub enum SpecArtifactStoreKind {
+    #[serde(rename = "tuf")]
+    TUF,
+    #[serde(rename = "local")]
+    Local,
 }

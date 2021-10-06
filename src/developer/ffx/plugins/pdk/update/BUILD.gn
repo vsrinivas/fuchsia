@@ -11,11 +11,7 @@ ffx_plugin("ffx_pdk_update") {
 
   args_sources = [ "src/args.rs" ]
 
-  sources = [
-    "src/groups.rs",
-    "src/lib.rs",
-    "src/spec.rs",
-  ]
+  sources = [ "src/lib.rs" ]
 
   deps = [
     "//src/developer/ffx/plugins/pdk/lib:ffx_pdk_lib",
