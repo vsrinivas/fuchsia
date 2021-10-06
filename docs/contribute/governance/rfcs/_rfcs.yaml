@@ -1708,6 +1708,19 @@
   submitted: '2021-06-15'
   reviewed: '2021-09-29'
 
+- name: 'RFC-0132'
+  title: 'FIDL table size limit'
+  short_description: 'This RFC limits FIDL tables to at most 64 entries.'
+  authors: ['bprosnitz@google.com']
+  file: '0132_fidl_table_size_limit.md'
+  area: ['FIDL']
+  issue: ['']
+  gerrit_change_id: ['583341']
+  status: 'Accepted'
+  reviewers: ['pascallouis@google.com', 'mkember@google.com', 'yifeit@google.com']
+  submitted: '2021-09-20'
+  reviewed: '2021-10-04'
+
 - name: 'RFC-0133'
   title: 'Software Delivery Goals'
   short_description: 'A set of long-term goals for the Software Delivery area.'

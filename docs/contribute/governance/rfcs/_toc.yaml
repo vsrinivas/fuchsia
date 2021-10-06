@@ -277,3 +277,5 @@ toc:
   path: /docs/contribute/governance/rfcs/0131_fidl_wire_format_principles.md
 - title: "RFC-0133: Software delivery goals"
   path: /docs/contribute/governance/rfcs/0133_swd_goals.md
+- title: "RFC-0132: FIDL table size limit"
+  path: /docs/contribute/governance/rfcs/0132_fidl_table_size_limit.md
