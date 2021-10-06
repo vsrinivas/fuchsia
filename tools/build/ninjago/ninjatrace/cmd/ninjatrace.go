@@ -10,6 +10,7 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"flag"
 	"fmt"
@@ -22,16 +23,22 @@ import (
 	"go.fuchsia.dev/fuchsia/tools/build/ninjago/compdb"
 	"go.fuchsia.dev/fuchsia/tools/build/ninjago/ninjagraph"
 	"go.fuchsia.dev/fuchsia/tools/build/ninjago/ninjalog"
+	"go.fuchsia.dev/fuchsia/tools/build/ninjago/rbetrace"
 )
 
 var (
 	ninjalogPath = flag.String("ninjalog", "", "path of .ninja_log")
 	compdbPath   = flag.String("compdb", "", "path of JSON compilation database")
 	graphPath    = flag.String("graph", "", "path of graphviz dot file for ninja targets")
-	criticalPath = flag.Bool("critical-path", false, "whether only include critical path in the trace, --graph must be set for this to work")
-	buildDir     = flag.String("build-dir", "", "path of the directory where ninja is run; when non-empty, ninjatrace will look for subtraces in this directory to interleave in the main trace")
-	granularity  = flag.Duration("granularity", 100*time.Millisecond, "time granularity used to filter short events in interleaved sub traces, for example traces from clang and rustc; this flag does NOT affect the main trace")
+	criticalPath = flag.Bool("critical-path", false, "whether to highlight critical path in this build, --graph must be set for this to work")
 
+	// Flags for interleaving subtraces.
+	buildDir      = flag.String("build-dir", "", "path of the directory where ninja is run; when non-empty, ninjatrace will look for subtraces in this directory to interleave in the main trace")
+	granularity   = flag.Duration("granularity", 100*time.Millisecond, "time granularity used to filter short events in interleaved sub traces, for example traces from clang and rustc; this flag does NOT affect the main trace")
+	rbeRPLPath    = flag.String("rbe-rpl-path", "", "path to the RPL file containing performance metrics from RBE, if set, ninjatrace will interleave RBE traces into the main trace")
+	rpl2TracePath = flag.String("rpl2trace-path", "", "path to rpl2trace binary for parsing RBE's RPL files, must be set if --rbe-rpl-path is set; this flag has no effect if --rbe-rpl-path is not set")
+
+	// Flags controlling outputs.
 	traceJSON  = flag.String("trace-json", "trace.json", "output path of trace.json")
 	cpuprofile = flag.String("cpuprofile", "", "file to write cpu profile")
 )
@@ -128,6 +135,7 @@ func createAndWriteTrace(path string, traces []chrometrace.Trace) (err error) {
 
 func main() {
 	flag.Parse()
+	ctx := context.Background()
 
 	if *ninjalogPath == "" {
 		log.Fatalf("--ninjalog is required")
@@ -168,6 +176,25 @@ func main() {
 			log.Fatalf("Failed to interleave clang trace: %v", err)
 		}
 		traces = append(traces, interleaved...)
+	}
+
+	if *rbeRPLPath != "" {
+		if *rpl2TracePath == "" {
+			log.Fatal("--rpl2trace-path is empty, must be set when --rbe-rpl-path is set")
+		}
+
+		tmpDir, err := os.MkdirTemp(os.TempDir(), "ninjatrace")
+		if err != nil {
+			log.Fatalf("Failed to make temporary directory for RPL to Chrome trace conversion: %v", err)
+		}
+		rbeTrace, err := rbetrace.FromRPLFile(ctx, *rpl2TracePath, *rbeRPLPath, tmpDir)
+		if err != nil {
+			log.Fatalf("Failed to parse RBE's RPL file: %v", err)
+		}
+		traces, err = rbetrace.Interleave(traces, rbeTrace)
+		if err != nil {
+			log.Fatalf("Failed to interleave RBE traces: %v", err)
+		}
 	}
 
 	if *traceJSON != "" {
