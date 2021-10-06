@@ -40,7 +40,7 @@ bool FakeAudioRenderer::expected() const {
     }
 
     if (!expecter_done) {
-      FX_LOGS(ERROR) << "Expected packets did not arrive.";
+      FX_LOGS(WARNING) << "Expected packets did not arrive.";
       for (auto& expecter : packet_expecters_) {
         expecter.LogExpectation();
       }
@@ -50,7 +50,7 @@ bool FakeAudioRenderer::expected() const {
   }
 
   if ((delay_packet_retirement_pts_ != fuchsia::media::NO_TIMESTAMP) && !packet_queue_.empty()) {
-    FX_LOGS(ERROR) << "Packet queue not empty, contains " << packet_queue_.size() << " packets.";
+    FX_LOGS(WARNING) << "Packet queue not empty, contains " << packet_queue_.size() << " packets.";
     return false;
   }
 
@@ -270,12 +270,13 @@ bool FakeAudioRenderer::PacketExpecter::IsExpected(const fuchsia::media::StreamP
 
 void FakeAudioRenderer::PacketExpecter::LogExpectation() const {
   if (iter_ == info_.end()) {
-    FX_LOGS(ERROR) << "    expected no packet";
+    FX_LOGS(WARNING) << "    expected no packet";
     return;
   }
 
-  FX_LOGS(ERROR) << "    expected { " << iter_->pts() << ", " << iter_->size() << ", 0x" << std::hex
-                 << std::setw(16) << std::setfill('0') << iter_->hash() << std::dec << " }";
+  FX_LOGS(WARNING) << "    expected { " << iter_->pts() << ", " << iter_->size() << ", 0x"
+                   << std::hex << std::setw(16) << std::setfill('0') << iter_->hash() << std::dec
+                   << " }";
 }
 
 }  // namespace test
