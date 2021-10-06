@@ -443,13 +443,16 @@ impl FileObject {
     where
         Op: FnMut() -> Result<T, Errno>,
     {
+        match op() {
+            Err(errno) if errno == EAGAIN && !self.flags().contains(OpenFlags::NONBLOCK) => {}
+            result => return result,
+        }
+
         let waiter = Waiter::new();
         loop {
+            self.ops().wait_async(self, &waiter, events, WaitCallback::none());
             match op() {
-                Err(errno) if errno == EAGAIN && !self.flags().contains(OpenFlags::NONBLOCK) => {
-                    self.ops().wait_async(self, &waiter, events, WaitCallback::none());
-                    waiter.wait(task)?;
-                }
+                Err(errno) if errno == EAGAIN => waiter.wait(task)?,
                 result => return result,
             }
         }
