@@ -19,7 +19,6 @@
 #include <zxtest/base/runner.h>
 #include <zxtest/base/test.h>
 #include <zxtest/base/values.h>
-#include <zxtest/cpp/internal.h>
 
 #ifdef __Fuchsia__
 #include <zircon/status.h>
@@ -27,7 +26,27 @@
 #include <zxtest/base/death-statement.h>
 #endif
 
+// Pre-processor magic to allow EXPECT_ macros not enforce a return type on helper functions.
+#define _RETURN_IF_FATAL_true     \
+  do {                            \
+    unittest_fails();             \
+    if (_ZXTEST_ABORT_IF_ERROR) { \
+      return;                     \
+    }                             \
+  } while (0)
+
+#define _RETURN_IF_FATAL_false \
+  do {                         \
+    unittest_fails();          \
+  } while (0)
+
+#define _RETURN_IF_FATAL(fatal) _RETURN_IF_FATAL_##fatal
+
+#ifdef ZXTEST_USE_STREAMABLE_MACROS
+#include <zxtest/cpp/assert_streams.h>
+#else
 #include <zxtest/cpp/assert.h>
+#endif
 
 // Macro definitions for usage within CPP.
 #define _ZXTEST_EXPAND_(arg) arg
@@ -110,22 +129,6 @@
             zxtest::internal::AddInstantiationDelegateImpl<TestSuite, TestSuite::ParamType>>(), \
         #Prefix, {.filename = __FILE__, .line_number = __LINE__}, provider);                    \
   }
-
-// Pre-processor magic to allow EXPECT_ macros not enforce a return type on helper functions.
-#define _RETURN_IF_FATAL_true     \
-  do {                            \
-    unittest_fails();             \
-    if (_ZXTEST_ABORT_IF_ERROR) { \
-      return;                     \
-    }                             \
-  } while (0)
-
-#define _RETURN_IF_FATAL_false \
-  do {                         \
-    unittest_fails();          \
-  } while (0)
-
-#define _RETURN_IF_FATAL(fatal) _RETURN_IF_FATAL_##fatal
 
 // Definition of operations used to evaluate assertion conditions.
 #define _EQ(actual, expected) \

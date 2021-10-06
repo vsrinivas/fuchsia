@@ -47,14 +47,18 @@ class ParamTestParent : public zxtest::TestWithParam<int> {};
 
 class ParamTestChild : public ParamTestParent {};
 
-TEST_P(ParamTestChild, EmptyTest1) {}
+TEST_P(ParamTestChild, BasicTest) {
+  TEST_EXPECTATION(CHECKPOINT_REACHED, HAS_ERRORS, "Aborted test execution with no failures.");
+  EXPECT_EQ(2, GetParam());
+  TEST_CHECKPOINT();
+}
 TEST_P(ParamTestChild, SameName) {}
 
 INSTANTIATE_TEST_SUITE_P(SomePrefix, ParamTestChild, ::zxtest::testing::Values(1, 3, 5, 7, 8))
 
 enum __enum_type {
   VALUE_1 = 1,
-  VALUE_2 = 2,
+  VALUE_2 = 3,
 };
 
 INSTANTIATE_TEST_SUITE_P(Enum, ParamTestChild, ::zxtest::testing::Values(VALUE_1, VALUE_2))
