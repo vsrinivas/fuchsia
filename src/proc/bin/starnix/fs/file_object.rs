@@ -443,7 +443,7 @@ impl FileObject {
     where
         Op: FnMut() -> Result<T, Errno>,
     {
-        let waiter = Waiter::for_task(task);
+        let waiter = Waiter::new();
         loop {
             match op() {
                 Err(errno) if errno == EAGAIN && !self.flags().contains(OpenFlags::NONBLOCK) => {

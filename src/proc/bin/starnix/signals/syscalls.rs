@@ -162,7 +162,7 @@ pub fn sys_rt_sigsuspend(
     let mut mask = sigset_t::default();
     ctx.task.mm.read_object(user_mask, &mut mask)?;
 
-    let waiter = Waiter::for_task(&ctx.task);
+    let waiter = Waiter::new();
     // This block is important to release the signal state lock while waiting.
     let old_mask = {
         let mut signal_state = ctx.task.signals.write();

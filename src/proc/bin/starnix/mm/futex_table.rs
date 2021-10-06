@@ -37,7 +37,7 @@ impl FutexTable {
     ) -> Result<(), Errno> {
         let user_current = UserRef::<u32>::new(addr);
         let mut current = 0;
-        let waiter = Waiter::for_task(task);
+        let waiter = Waiter::new();
         {
             let waiters = self.get_waiters(addr);
             let mut waiters = waiters.lock();

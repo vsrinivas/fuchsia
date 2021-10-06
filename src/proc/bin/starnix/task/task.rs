@@ -86,9 +86,6 @@ pub struct Task {
     /// signal sending and delivery.
     pub signals: RwLock<SignalState>,
 
-    /// The default Waiter. Use Waiter::for_task instead of directly accessing this field.
-    pub default_waiter: Arc<Waiter>,
-
     /// The signal this task generates on exit.
     pub exit_signal: Option<Signal>,
 
@@ -158,7 +155,6 @@ impl Task {
                 clear_child_tid: Mutex::new(UserRef::default()),
                 signal_actions,
                 signals: Default::default(),
-                default_waiter: Waiter::new(),
                 exit_signal,
                 exit_code: Mutex::new(None),
                 zombie_children: Mutex::new(vec![]),

@@ -125,13 +125,14 @@ pub fn sys_nanosleep(
     let mut request = timespec::default();
     ctx.task.mm.read_object(user_request, &mut request)?;
     let deadline = zx::Time::after(duration_from_timespec(request)?);
-    match Waiter::for_task(&ctx.task).wait_until(&ctx.task, deadline) {
+    match Waiter::new().wait_until(&ctx.task, deadline) {
         Err(err) if err == EINTR => {
             let now = zx::Time::get_monotonic();
             let remaining =
                 timespec_from_duration(std::cmp::max(zx::Duration::from_nanos(0), deadline - now));
             ctx.task.mm.write_object(user_remaining, &remaining)?;
         }
+        Err(err) if err == ETIMEDOUT => return Ok(SUCCESS),
         non_eintr => non_eintr?,
     }
     Ok(SUCCESS)

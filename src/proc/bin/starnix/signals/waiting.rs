@@ -18,7 +18,7 @@ pub fn wait_on_pid(
     selector: TaskSelector,
     should_hang: bool,
 ) -> Result<Option<ZombieTask>, Errno> {
-    let waiter = Waiter::for_task(current_task);
+    let waiter = Waiter::new();
     loop {
         let mut wait_queue = current_task.thread_group.child_exit_waiters.lock();
         if let Some(zombie) = current_task.get_zombie_child(selector) {

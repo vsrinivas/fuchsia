@@ -58,13 +58,6 @@ impl Waiter {
         })
     }
 
-    /// Return a cached waiter for the task. This can be used for one-off waits to avoid the cost
-    /// of creating a new Waiter. Not all blocking operations should use this (notably, an epoll
-    /// has its own Waiter).
-    pub fn for_task(task: &Task) -> &Arc<Waiter> {
-        &task.default_waiter
-    }
-
     /// Wait until the waiter is woken up.
     ///
     /// If the wait is interrupted (see interrupt), this function returns
