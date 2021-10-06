@@ -411,7 +411,7 @@ From //boards/arm64.gni:31
 
 From //build/board.gni:18
 
-**Current value for `target_cpu = "x64"`:** `["//src/power/thermd", "//src/power/thermd:config", "//garnet/packages/prod:drivers-support", "//src/hwinfo:default_board_config", "//src/graphics/lib/magma/gnbuild/magma-intel-gen:libvulkan_intel_gen", "//src/graphics/lib/goldfish-vulkan/gnbuild:goldfish-vulkan"]`
+**Current value for `target_cpu = "x64"`:** `["//src/power/thermd", "//src/power/thermd:config", "//src/media/audio/drivers/configurator", "//garnet/packages/prod:drivers-support", "//src/hwinfo:default_board_config", "//src/graphics/lib/magma/gnbuild/magma-intel-gen:libvulkan_intel_gen", "//src/graphics/lib/goldfish-vulkan/gnbuild:goldfish-vulkan"]`
 
 From //boards/common/x64-common.gni:73
 
@@ -876,19 +876,19 @@ From //build/config/clang/crash_diagnostics.gni:7
 
 **Current value (from the default):** `"fuchsia"`
 
-From [//third_party/crashpad/build/crashpad_buildconfig.gni:22](https://fuchsia.googlesource.com/third_party/crashpad/+/c515101de801c932017d667a31d0f5d6a0ded90f/build/crashpad_buildconfig.gni#22)
+From [//third_party/crashpad/build/crashpad_buildconfig.gni:22](https://fuchsia.googlesource.com/third_party/crashpad/+/93baaa5fd33b8af57ba61437351ab529ac1e4f43/build/crashpad_buildconfig.gni#22)
 
 ### crashpad_http_transport_impl
 
 **Current value (from the default):** `"libcurl"`
 
-From [//third_party/crashpad/util/net/tls.gni:21](https://fuchsia.googlesource.com/third_party/crashpad/+/c515101de801c932017d667a31d0f5d6a0ded90f/util/net/tls.gni#21)
+From [//third_party/crashpad/util/net/tls.gni:21](https://fuchsia.googlesource.com/third_party/crashpad/+/93baaa5fd33b8af57ba61437351ab529ac1e4f43/util/net/tls.gni#21)
 
 ### crashpad_use_boringssl_for_http_transport_socket
 
 **Current value (from the default):** `true`
 
-From [//third_party/crashpad/util/net/tls.gni:30](https://fuchsia.googlesource.com/third_party/crashpad/+/c515101de801c932017d667a31d0f5d6a0ded90f/util/net/tls.gni#30)
+From [//third_party/crashpad/util/net/tls.gni:30](https://fuchsia.googlesource.com/third_party/crashpad/+/93baaa5fd33b8af57ba61437351ab529ac1e4f43/util/net/tls.gni#30)
 
 ### cts_version
 Name of the CTS version.
@@ -3918,16 +3918,6 @@ From //out/not-default/args.gn:12
 **Overridden from the default:** `[]`
 
 From //BUILD.gn:54
-
-### unpack_debug_archives
-To ensure that everything can be built without debug symbols present we
-gate weather or not these are consumed on a build argument. When set,
-unpack_debug_archives creates an additional build step that unpacks
-debug archives in tar.bzip2 format into the .build-id directory
-
-**Current value (from the default):** `false`
-
-From //build/packages/prebuilt_package.gni:13
 
 ### unstable_feature_use_f2fs
 
