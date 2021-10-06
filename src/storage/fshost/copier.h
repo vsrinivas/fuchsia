@@ -7,8 +7,10 @@
 
 #include <lib/zx/status.h>
 
+#include <filesystem>
+#include <list>
 #include <memory>
-#include <utility>
+#include <string>
 #include <variant>
 #include <vector>
 
@@ -18,8 +20,22 @@ namespace fshost {
 
 class Copier {
  public:
-  // Reads all the data at root fd.
-  static zx::status<Copier> Read(fbl::unique_fd root_fd);
+  struct File {
+    std::string name;
+    std::string contents;
+  };
+  struct Directory;
+  using DirectoryEntry = std::variant<File, Directory>;
+  using DirectoryEntries = std::list<DirectoryEntry>;
+  struct Directory {
+    std::string name;
+    DirectoryEntries entries;
+  };
+
+  // Reads all the data at |root_fd| except for the files and directories that match
+  // |excluded_paths|.
+  static zx::status<Copier> Read(fbl::unique_fd root_fd,
+                                 const std::vector<std::filesystem::path>& excluded_paths = {});
 
   Copier() = default;
   Copier(Copier&&) = default;
@@ -28,13 +44,15 @@ class Copier {
   // Writes all data to the given root fd.
   zx_status_t Write(fbl::unique_fd root_fd) const;
 
- private:
-  struct Tree {
-    std::vector<std::pair<std::string, std::variant<std::vector<uint8_t>, std::unique_ptr<Tree>>>>
-        tree;
-  };
+  // Inserts a file into the in-memory structure creating parent directories as necessary.
+  // Returns an error if the file already exists or a directory could not be created because a file
+  // with the same name already exists.
+  zx::status<> InsertFile(const std::filesystem::path& path, std::string contents);
 
-  Tree tree_;
+  const DirectoryEntries& entries() const { return entries_; }
+
+ private:
+  DirectoryEntries entries_;
 };
 
 }  // namespace fshost

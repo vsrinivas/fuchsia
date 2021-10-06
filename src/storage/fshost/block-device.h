@@ -57,6 +57,9 @@ class BlockDevice final : public BlockDeviceInterface {
   zx_status_t FormatFxfs() const;
 
  private:
+  zx_status_t MountData(mount_options_t* options);
+  zx::channel CloneDeviceChannel() const;
+
   FilesystemMounter* mounter_ = nullptr;
   fbl::unique_fd fd_;
   const Config* device_config_;
