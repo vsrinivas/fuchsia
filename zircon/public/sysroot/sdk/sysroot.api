@@ -123,6 +123,7 @@
   "include/sys/fcntl.h": "65d1ba03bcbc6b15f9ae459a57b39f62",
   "include/sys/file.h": "0740796852a2ff57ae28823825d2c4b0",
   "include/sys/fsuid.h": "75deb535814aa171bad8188f6f83378e",
+  "include/sys/inotify.h": "4ea8f3aca6f60f6619416823f695fe49",
   "include/sys/io.h": "fd8c461c91a804b926b1ba0347b3b99d",
   "include/sys/ioctl.h": "6fbe8452770bf1e786df7b86873d6d1c",
   "include/sys/ipc.h": "ae9829b8bc92124be581170781620f43",

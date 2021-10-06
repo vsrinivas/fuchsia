@@ -273,6 +273,7 @@ sysroot_uninstrumented_libc_entries = [
         "sys/fsuid.h",
         "sys/io.h",
         "sys/ioctl.h",
+        "sys/inotify.h",
         "sys/ipc.h",
         "sys/klog.h",
         "sys/mman.h",
