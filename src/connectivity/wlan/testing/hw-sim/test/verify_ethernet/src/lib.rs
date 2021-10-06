@@ -28,8 +28,9 @@ async fn verify_ethernet() {
         if client.is_some() {
             break;
         }
-        let slept = retry.sleep_unless_timed_out().await;
-        assert!(slept, "No ethernet client with mac_addr {:?} found in time", &CLIENT_MAC_ADDR);
+        retry.sleep_unless_after_deadline().await.unwrap_or_else(|_| {
+            panic!("No ethernet client with mac_addr {:?} found in time", &CLIENT_MAC_ADDR)
+        });
     }
     helper.stop().await;
 }

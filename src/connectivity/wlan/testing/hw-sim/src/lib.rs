@@ -905,8 +905,9 @@ pub async fn loop_until_iface_is_found() {
 
         match scan_proxy.get_next().await.expect("getting scan results") {
             Err(_) => {
-                let slept = retry.sleep_unless_timed_out().await;
-                assert!(slept, "Wlanstack did not recognize the interface in time");
+                retry.sleep_unless_after_deadline().await.unwrap_or_else(|_| {
+                    panic!("Wlanstack did not recognize the interface in time")
+                });
             }
             Ok(_) => return,
         }

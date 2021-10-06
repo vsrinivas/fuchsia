@@ -63,7 +63,7 @@ pub async fn get_first_matching_iface_id<F: Fn(&QueryIfaceResponse) -> bool>(
                 }
             }
         }
-        assert!(infinite_timeout.sleep_unless_timed_out().await);
+        infinite_timeout.sleep_unless_after_deadline().await.unwrap();
     }
 }
 

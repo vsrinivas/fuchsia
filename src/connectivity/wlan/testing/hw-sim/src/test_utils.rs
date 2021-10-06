@@ -183,7 +183,7 @@ impl Drop for TestHelper {
 pub struct RetryWithBackoff {
     deadline: Time,
     prev_delay: zx::Duration,
-    delay: zx::Duration,
+    next_delay: zx::Duration,
     max_delay: zx::Duration,
 }
 impl RetryWithBackoff {
@@ -191,28 +191,66 @@ impl RetryWithBackoff {
         RetryWithBackoff {
             deadline: Time::after(timeout),
             prev_delay: 0.millis(),
-            delay: 1.millis(),
+            next_delay: 1.millis(),
             max_delay: std::i64::MAX.nanos(),
         }
     }
     pub fn infinite_with_max_interval(max_delay: zx::Duration) -> Self {
         Self { deadline: Time::INFINITE, max_delay, ..Self::new(0.nanos()) }
     }
-    /// Sleep (in async term) a little longer (following Fibonacci series) after each call until
-    /// timeout is reached.
-    /// Return whether it has run past the deadline.
-    pub async fn sleep_unless_timed_out(&mut self) -> bool {
-        if Time::after(0.millis()) > self.deadline {
-            false
-        } else {
-            let () = Timer::new(::std::cmp::min(Time::after(self.delay), self.deadline)).await;
-            if self.delay < self.max_delay {
-                let new_delay = std::cmp::min(self.max_delay, self.prev_delay + self.delay);
-                self.prev_delay = self.delay;
-                self.delay = new_delay;
+
+    /// Return Err if the deadline was exceeded when this function was called.
+    /// Otherwise, sleep for a little longer (following Fibonacci series) or up
+    /// to the deadline, whichever is soonest. If a sleep occurred, this function
+    /// returns Ok. The value contained in both Ok and Err is the zx::Duration
+    /// until or after the deadline when the function returns.
+    async fn sleep_unless_after_deadline_(
+        &mut self,
+        verbose: bool,
+    ) -> Result<zx::Duration, zx::Duration> {
+        // Add an inner scope up to just after Timer::new to ensure all
+        // time assignments are dropped after the sleep occurs. This
+        // prevents misusing them after the sleep since they are all
+        // no longer correct after the clock moves.
+        {
+            if Time::after(0.millis()) > self.deadline {
+                if verbose {
+                    info!("Skipping sleep. Deadline exceeded.");
+                }
+                return Err(self.deadline - Time::now());
             }
-            true
+
+            let sleep_deadline = std::cmp::min(Time::after(self.next_delay), self.deadline);
+            if verbose {
+                let micros = sleep_deadline.into_nanos() / 1_000;
+                info!("Sleeping until {}.{} 😴", micros / 1_000_000, micros % 1_000_000);
+            }
+
+            Timer::new(sleep_deadline).await;
         }
+
+        // If the next delay interval exceeds max_delay (even if by overflow),
+        // then saturate at max_delay.
+        if self.next_delay < self.max_delay {
+            let next_delay = std::cmp::min(
+                self.max_delay,
+                self.prev_delay.into_nanos().saturating_add(self.next_delay.into_nanos()).nanos(),
+            );
+            self.prev_delay = self.next_delay;
+            self.next_delay = next_delay;
+        }
+
+        Ok(self.deadline - Time::now())
+    }
+
+    pub async fn sleep_unless_after_deadline(&mut self) -> Result<zx::Duration, zx::Duration> {
+        self.sleep_unless_after_deadline_(false).await
+    }
+
+    pub async fn sleep_unless_after_deadline_verbose(
+        &mut self,
+    ) -> Result<zx::Duration, zx::Duration> {
+        self.sleep_unless_after_deadline_(true).await
     }
 }
 pub struct ScanTestBeacon {

@@ -123,8 +123,7 @@ pub async fn start_ap_and_wait_for_confirmation(network_config: NetworkConfigBui
             _ => (),
         }
 
-        let slept = retry.sleep_unless_timed_out().await;
-        assert!(slept, "unable to create AP iface");
+        retry.sleep_unless_after_deadline().await.expect("unable to create AP iface");
     }
 
     // Wait until the policy service notifies that the AP has started.
