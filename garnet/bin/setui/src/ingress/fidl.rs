@@ -234,9 +234,10 @@ impl Interface {
                             });
                     }
                     Interface::Privacy => {
+                        let seeder = seeder.clone();
                         let _ =
                             service_dir.add_fidl_service(move |stream: PrivacyRequestStream| {
-                                crate::privacy::fidl_io::spawn(delegate.clone(), stream);
+                                seeder.seed(stream);
                             });
                     }
                     Interface::Setup => {
@@ -265,7 +266,7 @@ impl Interface {
 
 #[cfg(test)]
 mod tests {
-    use fidl_fuchsia_settings::PrivacyMarker;
+    use fidl_fuchsia_settings::{PrivacyMarker, SetupMarker};
     use fuchsia_async as fasync;
     use fuchsia_component::server::ServiceFs;
     use futures::StreamExt;
@@ -274,6 +275,7 @@ mod tests {
     use crate::base::{Dependency, Entity, SettingType};
     use crate::handler::base::{Payload, Request};
     use crate::ingress::registration::Registrant;
+    use crate::job::manager::Manager;
     use crate::job::source::Seeder;
     use crate::message::base::MessengerType;
     use crate::message::MessageHubUtil;
@@ -295,6 +297,51 @@ mod tests {
             .get_signature();
         let job_seeder = Seeder::new(&delegate, job_manager_signature).await;
 
+        let setting_type = SettingType::Setup;
+
+        let registrant: Registrant = Interface::Setup.registrant();
+
+        // Verify dependencies properly derived from the interface.
+        assert!(registrant
+            .get_dependencies()
+            .contains(&Dependency::Entity(Entity::Handler(setting_type))));
+
+        // Create handler to intercept messages.
+        let mut rx = delegate
+            .create(MessengerType::Addressable(service::Address::Handler(setting_type)))
+            .await
+            .expect("messenger should be created")
+            .1;
+
+        // Register and consume Registrant.
+        registrant.register(&delegate, &job_seeder, &mut fs.root_dir());
+
+        // Spawn nested environment.
+        let nested_environment =
+            fs.create_salted_nested_environment(ENV_NAME).expect("should create environment");
+        fasync::Task::spawn(fs.collect()).detach();
+
+        // Connect to the Setup interface and request watching.
+        let setup_proxy = nested_environment
+            .connect_to_protocol::<SetupMarker>()
+            .expect("should connect to protocol");
+        fasync::Task::spawn(async move {
+            let _ = setup_proxy.watch().await;
+        })
+        .detach();
+
+        // Ensure handler receives request.
+        assert_matches!(rx.next_of::<Payload>().await, Ok((Payload::Request(Request::Listen), _)));
+    }
+
+    #[fuchsia_async::run_until_stalled(test)]
+    async fn test_fidl_seeder_bringup() {
+        let mut fs = ServiceFs::new();
+        let delegate = service::MessageHub::create_hub();
+        let job_manager_signature = Manager::spawn(&delegate).await;
+        let job_seeder = Seeder::new(&delegate, job_manager_signature).await;
+
+        // Using privacy since it uses a seeder for its fidl registration.
         let setting_type = SettingType::Privacy;
 
         let registrant: Registrant = Interface::Privacy.registrant();
