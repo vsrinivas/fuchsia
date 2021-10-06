@@ -12,8 +12,8 @@ guest_packages = [
   "//src/virtualization/packages",
 ]
 
-guest_environments = [
-                       nuc_env,
+# TODO(fxbug.dev/50820): Fix on ASan and switch back to [ nuc_env ].
+guest_environments = nuc_env_fails_on_asan + [
                        sherlock_env,
                        vim3_env,
                      ] + chromebook_envs

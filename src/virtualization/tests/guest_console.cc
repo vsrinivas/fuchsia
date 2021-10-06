@@ -113,7 +113,7 @@ zx_status_t GuestConsole::ExecuteBlocking(const std::string& command, const std:
   status = WaitForMarker(footer + "\n", deadline, result);
   if (status != ZX_OK) {
     FX_LOGS(ERROR) << "Failed to wait for command footer: " << zx_status_get_string(status);
-    if (result != nullptr && !result->empty()) {
+    if (result != nullptr) {
       FX_LOGS(ERROR) << "Received: \"" << *result << "\"";
     }
     return status;
