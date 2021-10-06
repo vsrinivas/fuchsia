@@ -16,10 +16,9 @@ UserMemory::~UserMemory() {
 }
 
 // static
-ktl::unique_ptr<UserMemory> UserMemory::Create(fbl::RefPtr<VmObject> vmo) {
+ktl::unique_ptr<UserMemory> UserMemory::CreateInAspace(fbl::RefPtr<VmObject> vmo,
+                                                       fbl::RefPtr<VmAspace> &aspace) {
   size_t size = vmo->size();
-
-  fbl::RefPtr<VmAspace> aspace(Thread::Current::Get()->aspace());
 
   DEBUG_ASSERT(aspace);
   DEBUG_ASSERT(aspace->is_user());
@@ -54,6 +53,14 @@ ktl::unique_ptr<UserMemory> UserMemory::Create(fbl::RefPtr<VmObject> vmo) {
   unmap.cancel();
 
   return mem;
+}
+
+// static
+ktl::unique_ptr<UserMemory> UserMemory::Create(fbl::RefPtr<VmObject> vmo) {
+  fbl::RefPtr<VmAspace> aspace(Thread::Current::Get()->aspace());
+  DEBUG_ASSERT(aspace);
+
+  return CreateInAspace(ktl::move(vmo), aspace);
 }
 
 // static

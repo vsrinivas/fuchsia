@@ -289,28 +289,79 @@ static bool vmaspace_free_unaccessed_page_tables_test() {
   constexpr size_t kMiddleOffset = kMiddlePage * PAGE_SIZE;
   ASSERT_OK(VmObjectPaged::Create(PMM_ALLOC_FLAG_ANY, 0u, PAGE_SIZE * kNumPages, &vmo));
 
-  auto mem = testing::UserMemory::Create(vmo);
+  // Construct an additional aspace to use for mappings and touching pages. This allows us to
+  // control whether the aspace is considered active, which can effect reclamation and scanning.
+  fbl::RefPtr<VmAspace> aspace = VmAspace::Create(0, "test-aspace");
+  ASSERT_NONNULL(aspace);
+
+  auto cleanup_aspace = fit::defer([&aspace]() { aspace->Destroy(); });
+
+  auto mem = testing::UserMemory::CreateInAspace(vmo, aspace);
+
+  // Put the state we need to share in a struct so we can easily share it with the thread.
+  struct State {
+    testing::UserMemory* mem = nullptr;
+    AutounsignalEvent touch_event;
+    AutounsignalEvent complete_event;
+    ktl::atomic<bool> running = true;
+  } state;
+  state.mem = &*mem;
+
+  // Spin up a kernel thread in the aspace we made. This thread will just continuously wait on an
+  // event, touching the mapping whenever it is signaled.
+  auto thread_body = [](void* arg) -> int {
+    State* state = static_cast<State*>(arg);
+
+    while (state->running) {
+      state->touch_event.Wait(Deadline::infinite());
+      // Check running again so we do not try and touch mem if attempting to shutdown suddenly.
+      if (state->running) {
+        state->mem->put<char>(42, kMiddleOffset);
+        // Signal the event back
+        state->complete_event.Signal();
+      }
+    }
+    return 0;
+  };
+
+  Thread* thread = Thread::Create("test-thread", thread_body, &state, DEFAULT_PRIORITY);
+  ASSERT_NONNULL(thread);
+  aspace->AttachToThread(thread);
+  thread->Resume();
+
+  auto cleanup_thread = fit::defer([&state, thread]() {
+    state.running = false;
+    state.touch_event.Signal();
+    thread->Join(nullptr, ZX_TIME_INFINITE);
+  });
+
+  // Helper to synchronously wait for the thread to perform a touch.
+  auto touch = [&state]() {
+    state.touch_event.Signal();
+    state.complete_event.Wait(Deadline::infinite());
+  };
+
   EXPECT_OK(mem->CommitAndMap(PAGE_SIZE, kMiddleOffset));
 
   // Touch the mapping to ensure its accessed.
-  mem->put<char>(42, kMiddleOffset);
+  touch();
 
   // Attempting to map should fail, as it's already mapped.
   EXPECT_EQ(ZX_ERR_ALREADY_EXISTS, mem->CommitAndMap(PAGE_SIZE, kMiddleOffset));
 
-  mem->put<char>(42, kMiddleOffset);
+  touch();
   // Harvest the accessed information, this should not actually unmap it, even if we ask it to.
   harvest_access_bits(VmAspace::NonTerminalAction::FreeUnaccessed);
   EXPECT_EQ(ZX_ERR_ALREADY_EXISTS, mem->CommitAndMap(PAGE_SIZE, kMiddleOffset));
 
-  mem->put<char>(42, kMiddleOffset);
+  touch();
   // Harvest the accessed information, then attempt to do it again so that it gets unmapped.
   harvest_access_bits(VmAspace::NonTerminalAction::FreeUnaccessed);
   harvest_access_bits(VmAspace::NonTerminalAction::FreeUnaccessed);
   EXPECT_OK(mem->CommitAndMap(PAGE_SIZE, kMiddleOffset));
 
   // Touch the mapping to ensure its accessed.
-  mem->put<char>(42, kMiddleOffset);
+  touch();
 
   // Harvest the page accessed information, but retain the non-terminals.
   harvest_access_bits(VmAspace::NonTerminalAction::Retain);

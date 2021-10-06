@@ -31,6 +31,8 @@ class UserMemory {
  public:
   static ktl::unique_ptr<UserMemory> Create(size_t size);
   static ktl::unique_ptr<UserMemory> Create(fbl::RefPtr<VmObject> vmo);
+  static ktl::unique_ptr<UserMemory> CreateInAspace(fbl::RefPtr<VmObject> vmo,
+                                                    fbl::RefPtr<VmAspace>& aspace);
   virtual ~UserMemory();
 
   vaddr_t base() const { return mapping_->base(); }
