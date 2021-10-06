@@ -12,18 +12,6 @@ group("test") {
     ":netemul-sandbox-test",
     ":sandbox-service_spec",
     ":sandbox-unittest_spec",
-    "dummy_proc",
-    "dynamic_devices",
-    "easy_netstack_cfg",
-    "env_build",
-    "guest",
-    "guest_grpc_stress",
-    "inheritance",
-    "netstack_socks",
-    "network_device",
-    "sandbox_service",
-    "svc_list",
-    "virtual_device_directory",
   ]
 }
 
