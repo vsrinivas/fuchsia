@@ -111,7 +111,7 @@ All components in the system are composed into a single rooted
 aspects of component behavior.
 
 
-![components organizes into an instance tree](images/component-organization.png)
+![components organizes into an instance tree](images/component-organization.png){: width="712"}
 
 Parent components in the tree are responsible for creating instances of
 other components as their children and providing them with the necessary
@@ -156,7 +156,7 @@ component providing that capability. This is known as **capability routing**.
 Component Manager can only resolve capabilities that are **exposed** and
 **offered** within the same realm.
 
-![capabilities routed through the component instance tree](images/capability-routing.png)
+![capabilities routed through the component instance tree](images/capability-routing.png){: width="614"}
 
 <aside class="key-point">
 You will explore more about capabilities and building components later on.

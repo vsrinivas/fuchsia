@@ -5,7 +5,7 @@ capabilities. For components that are distributed in packages, the declaration
 is expressed using a **component manifest file** and loaded with the help of a
 **component resolver**.
 
-![component manifest formats](images/component-manifest.png)
+![component manifest formats](images/component-manifest.png){: width="836"}
 
 You declare components using component manifest language (CML) files. At build
 time, the Component Manifest Compiler (`cmc`) tool validates and compiles the

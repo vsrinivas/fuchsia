@@ -93,7 +93,7 @@ The Fuchsia build system defines the baseline configuration for a Fuchsia build
 as a combination of a **product** and **board**. Together, these elements form
 the build configuration you provide to `fx set`.
 
-![board and product configuration sets](images/build-configuration.png)
+![board and product configuration sets](images/build-configuration.png){: width="570"}
 
 Boards define the architecture that the build targets, which may affect what
 drivers are included and influence device specific kernel parameters.

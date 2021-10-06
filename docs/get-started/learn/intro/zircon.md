@@ -13,7 +13,7 @@ running in the system to a few core functions:
 * Scheduling
 * Inter-process communication
 
-![operating system kernel services](images/kernel-services.png)
+![operating system kernel services](images/kernel-services.png){: width="799"}
 
 ## System calls
 
@@ -72,7 +72,7 @@ Zircon exposes three main kernel objects for running code:
 * [Job](/docs/reference/kernel_objects/job.md):
   Group of related processes and jobs. All jobs form a single rooted tree.
 
-![hierarchy of jobs and processes](images/processes-jobs.png)
+![hierarchy of jobs and processes](images/processes-jobs.png){: width="549"}
 
 Processes form the basis for system capabilities. Each process is granted a set
 of capabilities through the various handles it holds.
@@ -108,7 +108,7 @@ be transferred from one process to another. When handles are written into a
 channel, they are removed from the sending process. When a message with handles
 is read from a channel, the handles are added to the receiving process.
 
-![Fuchsia inter-process communication](images/ipc.png)
+![Fuchsia inter-process communication](images/ipc.png){: width="582"}
 
 Note: You can find more of Zircon's deep technical details in the
 [kernel documentation](/docs/concepts/kernel/README.md).

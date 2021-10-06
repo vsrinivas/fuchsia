@@ -8,7 +8,7 @@ of platform components and product-specific elements to serve the unique needs
 of the device hardware and user experience. In this section, you'll explore how
 Fuchsia builds on components to enable product-level customization.
 
-![Fuchsia product frameworks](images/product.png)
+![Fuchsia product frameworks](images/product.png){: width="582"}
 
 ## Session framework
 

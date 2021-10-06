@@ -1,6 +1,6 @@
 # Fuchsia architecture
 
-![Fuchsia architecture](images/fuchsia-architecture.png)
+![Fuchsia architecture](images/fuchsia-architecture.png){: width="1080"}
 
 The following architectural principles guide Fuchsia's design and development:
 

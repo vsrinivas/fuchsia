@@ -19,7 +19,7 @@ idioms such as structured types and synchronous execution. The compiler generate
 bindings for each supported language so providers do not need to maintain client
 libraries.
 
-![FIDL connects processes](images/fuchsia-interface.png)
+![FIDL connects processes](images/fuchsia-interface.png){: width="870"}
 
 ## Prerequisites
 

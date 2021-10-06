@@ -33,7 +33,7 @@ following two items:
 * `meta/contents`: A map of the human-readable file names in a package to
   their content-addresses.
 
-![package metadata and associated content blobs](images/meta-far.png)
+![package metadata and associated content blobs](images/meta-far.png){: width="544"}
 
 If two or more packages share the same content (such as a library dependency,
 or font resource), their metadata will point to the same content-address for
@@ -68,7 +68,7 @@ fuchsia-pkg://{{ '<var>' }}repo-hostname{{ '</var>' }}[/{{ '<var>' }}pkg-name{{ 
 * `resource-path`: Resource contained within the package, such as a component
   manifest.
 
-![package development workflow](images/package-resolver.png)
+![package development workflow](images/package-resolver.png){: width="751"}
 
 Requests for software on a Fuchsia device are handled by the
 **package resolver**. The package resolver determines if the system already has
@@ -83,7 +83,7 @@ to be **de-duplicated** across all packages and
 **cryptographically verified** using their hash. Fuchsia runs the `pkg-cache`
 service on top of `blobfs` to facilitate package management.
 
-![package cache relies on blobfs](images/blobfs.png)
+![package cache relies on blobfs](images/blobfs.png){: width="632"}
 
 The `pkg-cache` layer tracks which packages in the system are currently
 active. **Packages are not explicitly installed or removed in Fuchsia**.

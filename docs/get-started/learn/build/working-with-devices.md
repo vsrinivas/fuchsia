@@ -98,7 +98,7 @@ ffx target remove {{ "<var>" }}device-ip{{ "</var>" }}:{{ "<var>" }}device-port{
 Once a device is tracked in the target list, `ffx` interacts with the Remove
 Control Service (RCS) on the target to enable you to send additional commands.
 
-![ffx interaction with RCS](images/ffx-rcs.png)
+![ffx interaction with RCS](images/ffx-rcs.png){: width="591"}
 
 
 Note: For a complete list of the developer commands supported by `ffx`, see

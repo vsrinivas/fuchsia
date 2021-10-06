@@ -92,7 +92,7 @@ on the target device. You can use the `zxdb` commands to configure the
 session is attached to a running process, `zxdb` allows you to step through the
 code and inspect the stack frames.
 
-![zxdb connection to debug agent](images/zxdb.png)
+![zxdb connection to debug agent](images/zxdb.png){: width="591"}
 
 Setting up the debug session requires the following high-level steps:
 

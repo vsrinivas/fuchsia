@@ -12,8 +12,7 @@ component's namespace.
 
 Consider the following example for a `fuchsia.example.Foo` protocol:
 
-![capability routing and protocol serving](images/protocol-serving.png)
-
+![capability routing and protocol serving](images/protocol-serving.png){: width="629"}
 
 The diagram highlights the main elements involved in performing the connection:
 

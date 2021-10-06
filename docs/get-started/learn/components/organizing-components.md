@@ -13,7 +13,7 @@ out of its sub-tree of components, creating a capability boundary. This
 encapsulation allows the realm to be reorganized internally without affecting
 external components dependent on its exposed capabilities.
 
-![component instance tree](images/component-topology.png)
+![component instance tree](images/component-topology.png){: width="616"}
 
 In the above diagram, a protocol capability for `fuchsia.example.Foo` is routed
 through the component instance tree from the provider to the client. Components
@@ -273,7 +273,7 @@ component's `runner`), or the framework may stop the component as part of
 system shutdown. Before being destroyed, the framework moves components to a
 **shutdown** state to indicate that it cannot be started again.
 
-![component lifecycle states](images/component-lifecycle.png)
+![component lifecycle states](images/component-lifecycle.png){: width="662"}
 
 Note: For more details on component states and execution, see
 [component lifecycle](/docs/concepts/components/v2/lifecycle.md).
