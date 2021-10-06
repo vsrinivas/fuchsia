@@ -233,8 +233,6 @@ template <ASF InputFormat, ASF OutputFormat>
 AudioBuffer<OutputFormat> HermeticFidelityTest::GetRendererOutput(
     TypedFormat<InputFormat> input_format, int64_t input_buffer_frames, RenderPath path,
     AudioBuffer<InputFormat> input, VirtualOutput<OutputFormat>* device, ClockMode clock_mode) {
-  FX_CHECK(input_format.frames_per_second() == 96000);
-
   fuchsia::media::AudioRenderUsage usage = fuchsia::media::AudioRenderUsage::MEDIA;
 
   if (path == RenderPath::Communications) {
@@ -356,25 +354,51 @@ void HermeticFidelityTest::VerifyResults(const TestCase<InputFormat, OutputForma
 template <ASF InputFormat, ASF OutputFormat>
 void HermeticFidelityTest::Run(
     const HermeticFidelityTest::TestCase<InputFormat, OutputFormat>& tc) {
-  // TODO(mpuryear): support source frequencies other than 96k, when necessary
-  FX_CHECK(tc.input_format.frames_per_second() == 96000)
-      << "For now, non-96k renderer frame rates are disallowed in this test";
-  FX_CHECK(tc.output_format.frames_per_second() == 96000)
-      << "For now, non-96k device frame rates are disallowed in this test";
   // Translate from input frame number to output frame number.
-  auto input_frame_to_output_frame = [](int64_t input_frame) { return input_frame; };
+  // Return a double-precision float; let the caller decide whether/how to reduce it to int.
+  auto input_frame_to_output_frame = [tc](int64_t input_frame) {
+    return static_cast<double>(input_frame * tc.output_format.frames_per_second()) /
+           static_cast<double>(tc.input_format.frames_per_second());
+  };
+  // Translate from output frame number to input frame number.
+  auto output_frame_to_input_frame = [tc](int64_t output_frame) {
+    return static_cast<double>(output_frame * tc.input_format.frames_per_second()) /
+           static_cast<double>(tc.output_format.frames_per_second());
+  };
 
   if (tc.path == RenderPath::Ultrasound) {
     ASSERT_EQ(tc.renderer_clock_mode, ClockMode::Default)
         << "Ultrasound path cannot be tested with a non-default clock";
   }
 
+  // We will analyze a specific number of output frames (our 'analysis section'). Depending on
+  // rate-conversion, this translates to a different number of input signal frames.
   //
-  // Compute input signal length: it should first include time to ramp in, then the number of frames
-  // that we actually analyze, and then time to ramp out.
-  int64_t input_signal_frames_to_measure =
-      std::ceil(static_cast<double>(kFreqTestBufSize * tc.input_format.frames_per_second()) /
-                tc.output_format.frames_per_second());
+  // We'll need this potentially-fractional input-signal-length value later.
+  auto input_signal_frames_to_measure_double = output_frame_to_input_frame(kFreqTestBufSize);
+
+  // Buffers are of course integral in length, but frequencies need not be. We want a specific
+  // (integer) number of signal wavelengths to fit within the output buffer analysis section, which
+  // (regardless of rate-conversion ratio) translates into the SAME integer of signal wavelengths in
+  // our input signal (input_signal_frames_to_measure). However, buffers must have integral length!
+  // If our ideal input buffer length would be fractional, then we adjust the length and compensate
+  // for it later on. So (1) we choose to make it slightly too-large rather than too-small (although
+  // quality is approx. equivalent either way), and (2) we adjust the frequency correspondingly, so
+  // that effectively that same integer number of signal wavelengths fits perfectly in a FRACTIONAL
+  // input length. Post-rate-conversion, we'll again see a perfectly integral frequency within an
+  // integral output buffer.
+
+  // Here's the actual input-signal-buffer-length value that we use.
+  auto input_signal_frames_to_measure =
+      static_cast<int64_t>(std::ceil(input_signal_frames_to_measure_double));
+
+  //
+  // Compute the full input signal length: it should first include time to ramp in, then the number
+  // of frames that we actually analyze, and then time to ramp out.
+  //
+  // Although we do not analyze the ramp-in and ramp-out sections in the OUTPUT buffer, they are
+  // essential to include in the SOURCE buffer as they contribute significantly to output values
+  // near the analysis section's leading and trailing edges.
   auto input_signal_frames =
       tc.pipeline.neg_filter_width + input_signal_frames_to_measure + tc.pipeline.pos_filter_width;
 
@@ -401,12 +425,11 @@ void HermeticFidelityTest::Run(
 
   //
   // Then, calculate the length of the output signal and set up the VAD, with a 1-sec ring-buffer.
+  // We round up any partial frames, to guarantee we have adequate space for the full signal
+  // including initial silence, full ramp-in, the signal to be analyzed, and full ramp-out.
+  //
   auto output_buffer_frames_needed =
-      static_cast<int64_t>(input_frame_to_output_frame(total_input_frames));
-  auto output_buffer_size = tc.output_format.frames_per_second();
-  FX_CHECK(output_buffer_frames_needed <= output_buffer_size)
-      << "output_buffer_frames_needed (" << output_buffer_frames_needed
-      << ") must not exceed output_buffer_size (" << output_buffer_size << ")";
+      static_cast<int64_t>(std::ceil(input_frame_to_output_frame(total_input_frames)));
 
   audio_stream_unique_id_t device_id = AUDIO_STREAM_UNIQUE_ID_BUILTIN_SPEAKERS;
   if (tc.device_id.has_value()) {
@@ -431,18 +454,27 @@ void HermeticFidelityTest::Run(
   // Generate rate-specific internal frequency values for our power-of-two-sized analysis buffer.
   TranslateReferenceFrequencies(tc.output_format.frames_per_second());
 
+  // This is the factor mentioned earlier (where we set input_signal_frames_to_measure_double). We
+  // apply this adjustment to freq, to perfectly fit an integral number of wavelengths into the
+  // intended FRACTIONAL input buffer length. (This fractional input length is translated via
+  // rate-conversion into the exact integral output buffer length we need for our analysis.)
+  double source_freq_adjustment_factor =
+      input_signal_frames_to_measure / input_signal_frames_to_measure_double;
   //
   // Now iterate through the spectrum, completely processing one frequency at a time.
   for (auto freq_idx = 0u; freq_idx < kNumReferenceFreqs; ++freq_idx) {
     auto freq = translated_ref_freqs_[freq_idx];  // The frequency within our power-of-two buffer
     auto freq_for_display = kReferenceFrequencies[freq_idx];
+    if (freq_for_display * 2 > tc.input_format.frames_per_second()) {
+      continue;
+    }
 
     // Write input signal to input buffer. Start with silence for pre-ramping, which aligns the
     // input and output WAV files (if enabled). Prepend / append signal to account for ramp-in/out.
     // We could include trailing silence to flush out any cached values and show decay, but there is
     // no need to do so for these tests.
-    auto signal_section =
-        GenerateCosineAudio(input_type_mono, input_signal_frames_to_measure, freq);
+    auto signal_section = GenerateCosineAudio(input_type_mono, input_signal_frames_to_measure,
+                                              source_freq_adjustment_factor * freq);
     auto input_mono = bookend_silence;
     input_mono.Append(AudioBufferSlice(
         &signal_section, input_signal_frames_to_measure - tc.pipeline.neg_filter_width,
@@ -505,9 +537,13 @@ void HermeticFidelityTest::Run(
     for (const auto& channel_spec : tc.channels_to_measure) {
       auto ring_buffer_chan = AudioBufferSlice(&ring_buffer).GetChannel(channel_spec.channel);
 
-      // Analyze the results
-      auto output_analysis_start =
-          input_frame_to_output_frame(input_signal_start + tc.pipeline.neg_filter_width);
+      // Analyze the results. Round our output position, so we start as close as possible to the
+      // input signal start. That said, being off by one in either direction is still OK since the
+      // analysis section is bookended by full ramps in/out on either side, containing identical
+      // data (i.e. the analysis section's first value is repeated immediately after the section
+      // ends; conversely its final value is "pre-repeated" immediately prior to section start).
+      auto output_analysis_start = static_cast<int64_t>(std::round(
+          input_frame_to_output_frame(input_signal_start + tc.pipeline.neg_filter_width)));
       auto output = AudioBufferSlice(&ring_buffer_chan, output_analysis_start,
                                      output_analysis_start + kFreqTestBufSize);
 
@@ -628,7 +664,12 @@ void HermeticFidelityTest::Run(
   }
 }
 
-// We only run the pipeline fidelity tests with FLOAT inputs/outputs, for full data precision.
+template void HermeticFidelityTest::Run<ASF::UNSIGNED_8, ASF::FLOAT>(
+    const TestCase<ASF::UNSIGNED_8, ASF::FLOAT>& tc);
+template void HermeticFidelityTest::Run<ASF::SIGNED_16, ASF::FLOAT>(
+    const TestCase<ASF::SIGNED_16, ASF::FLOAT>& tc);
+template void HermeticFidelityTest::Run<ASF::SIGNED_24_IN_32, ASF::FLOAT>(
+    const TestCase<ASF::SIGNED_24_IN_32, ASF::FLOAT>& tc);
 template void HermeticFidelityTest::Run<ASF::FLOAT, ASF::FLOAT>(
     const TestCase<ASF::FLOAT, ASF::FLOAT>& tc);
 
