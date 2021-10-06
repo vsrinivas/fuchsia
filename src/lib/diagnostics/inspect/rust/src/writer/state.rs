@@ -909,10 +909,7 @@ mod tests {
     use super::*;
     use crate::{
         assert_data_tree,
-        reader::{
-            snapshot::{ScannedBlock, Snapshot},
-            PartialNodeHierarchy,
-        },
+        reader::{snapshot::Snapshot, PartialNodeHierarchy},
         writer::testing_utils::get_state,
         Inspector,
     };
@@ -923,7 +920,7 @@ mod tests {
     fn test_create() {
         let state = get_state(4096);
         let snapshot = Snapshot::try_from(state.copy_vmo_bytes()).unwrap();
-        let blocks: Vec<ScannedBlock<'_>> = snapshot.scan().collect();
+        let blocks: Vec<Block<&[u8]>> = snapshot.scan().collect();
         assert_eq!(blocks.len(), 9);
         assert_eq!(blocks[0].block_type(), BlockType::Header);
         assert!(blocks[1..].iter().all(|b| b.block_type() == BlockType::Free));
@@ -962,7 +959,7 @@ mod tests {
 
         // Verify blocks.
         let snapshot = Snapshot::try_from(core_state.copy_vmo_bytes()).unwrap();
-        let blocks: Vec<ScannedBlock<'_>> = snapshot.scan().collect();
+        let blocks: Vec<Block<&[u8]>> = snapshot.scan().collect();
         assert_eq!(blocks.len(), 9);
         assert_eq!(blocks[0].block_type(), BlockType::Header);
         assert_eq!(blocks[1].block_type(), BlockType::NodeValue);
@@ -998,7 +995,7 @@ mod tests {
             assert!(state.free_value(block.index()).is_ok());
         }
         let snapshot = Snapshot::try_from(core_state.copy_vmo_bytes()).unwrap();
-        let blocks: Vec<ScannedBlock<'_>> = snapshot.scan().collect();
+        let blocks: Vec<Block<&[u8]>> = snapshot.scan().collect();
         assert!(blocks[1..].iter().all(|b| b.block_type() == BlockType::Free));
     }
 
@@ -1024,7 +1021,7 @@ mod tests {
         };
 
         let snapshot = Snapshot::try_from(core_state.copy_vmo_bytes()).unwrap();
-        let blocks: Vec<ScannedBlock<'_>> = snapshot.scan().collect();
+        let blocks: Vec<Block<&[u8]>> = snapshot.scan().collect();
         assert_eq!(blocks.len(), 10);
         assert_eq!(blocks[0].block_type(), BlockType::Header);
         assert_eq!(blocks[1].block_type(), BlockType::IntValue);
@@ -1054,7 +1051,7 @@ mod tests {
             assert!(state.free_value(block.index()).is_ok());
         }
         let snapshot = Snapshot::try_from(core_state.copy_vmo_bytes()).unwrap();
-        let blocks: Vec<ScannedBlock<'_>> = snapshot.scan().collect();
+        let blocks: Vec<Block<&[u8]>> = snapshot.scan().collect();
         assert!(blocks[1..].iter().all(|b| b.block_type() == BlockType::Free));
     }
 
@@ -1080,7 +1077,7 @@ mod tests {
             block
         };
         let snapshot = Snapshot::try_from(core_state.copy_vmo_bytes()).unwrap();
-        let blocks: Vec<ScannedBlock<'_>> = snapshot.scan().collect();
+        let blocks: Vec<Block<&[u8]>> = snapshot.scan().collect();
         assert_eq!(blocks.len(), 10);
         assert_eq!(blocks[0].block_type(), BlockType::Header);
         assert_eq!(blocks[1].block_type(), BlockType::UintValue);
@@ -1110,7 +1107,7 @@ mod tests {
             assert!(state.free_value(block.index()).is_ok());
         }
         let snapshot = Snapshot::try_from(core_state.copy_vmo_bytes()).unwrap();
-        let blocks: Vec<ScannedBlock<'_>> = snapshot.scan().collect();
+        let blocks: Vec<Block<&[u8]>> = snapshot.scan().collect();
         assert!(blocks[1..].iter().all(|b| b.block_type() == BlockType::Free));
     }
 
@@ -1136,7 +1133,7 @@ mod tests {
         };
 
         let snapshot = Snapshot::try_from(core_state.copy_vmo_bytes()).unwrap();
-        let blocks: Vec<ScannedBlock<'_>> = snapshot.scan().collect();
+        let blocks: Vec<Block<&[u8]>> = snapshot.scan().collect();
         assert_eq!(blocks.len(), 10);
         assert_eq!(blocks[0].block_type(), BlockType::Header);
         assert_eq!(blocks[1].block_type(), BlockType::DoubleValue);
@@ -1159,7 +1156,7 @@ mod tests {
             assert!(state.free_value(block.index()).is_ok());
         }
         let snapshot = Snapshot::try_from(core_state.copy_vmo_bytes()).unwrap();
-        let blocks: Vec<ScannedBlock<'_>> = snapshot.scan().collect();
+        let blocks: Vec<Block<&[u8]>> = snapshot.scan().collect();
         assert!(blocks[1..].iter().all(|b| b.block_type() == BlockType::Free));
     }
 
@@ -1196,7 +1193,7 @@ mod tests {
         }
 
         let snapshot = Snapshot::try_from(core_state.copy_vmo_bytes()).unwrap();
-        let blocks: Vec<ScannedBlock<'_>> = snapshot.scan().collect();
+        let blocks: Vec<Block<&[u8]>> = snapshot.scan().collect();
         assert_eq!(blocks[0].block_type(), BlockType::Header);
         assert!(blocks[1..].iter().all(|b| b.block_type() == BlockType::Free));
     }
@@ -1286,7 +1283,7 @@ mod tests {
         };
 
         let snapshot = Snapshot::try_from(core_state.copy_vmo_bytes()).unwrap();
-        let blocks: Vec<ScannedBlock<'_>> = snapshot.scan().collect();
+        let blocks: Vec<Block<&[u8]>> = snapshot.scan().collect();
         assert_eq!(blocks.len(), 11);
         assert_eq!(blocks[0].block_type(), BlockType::Header);
         assert_eq!(blocks[1].block_type(), BlockType::BufferValue);
@@ -1301,7 +1298,7 @@ mod tests {
             assert!(state.free_property(block.index()).is_ok());
         }
         let snapshot = Snapshot::try_from(core_state.copy_vmo_bytes()).unwrap();
-        let blocks: Vec<ScannedBlock<'_>> = snapshot.scan().collect();
+        let blocks: Vec<Block<&[u8]>> = snapshot.scan().collect();
         assert!(blocks[1..].iter().all(|b| b.block_type() == BlockType::Free));
     }
 
@@ -1338,7 +1335,7 @@ mod tests {
         };
 
         let snapshot = Snapshot::try_from(core_state.copy_vmo_bytes()).unwrap();
-        let blocks: Vec<ScannedBlock<'_>> = snapshot.scan().collect();
+        let blocks: Vec<Block<&[u8]>> = snapshot.scan().collect();
         assert_eq!(blocks.len(), 11);
         assert_eq!(blocks[0].block_type(), BlockType::Header);
         assert_eq!(blocks[1].block_type(), BlockType::BufferValue);
@@ -1353,7 +1350,7 @@ mod tests {
             assert!(state.free_property(block.index()).is_ok());
         }
         let snapshot = Snapshot::try_from(core_state.copy_vmo_bytes()).unwrap();
-        let blocks: Vec<ScannedBlock<'_>> = snapshot.scan().collect();
+        let blocks: Vec<Block<&[u8]>> = snapshot.scan().collect();
         assert!(blocks[1..].iter().all(|b| b.block_type() == BlockType::Free));
     }
 
@@ -1379,7 +1376,7 @@ mod tests {
         };
 
         let snapshot = Snapshot::try_from(core_state.copy_vmo_bytes()).unwrap();
-        let blocks: Vec<ScannedBlock<'_>> = snapshot.scan().collect();
+        let blocks: Vec<Block<&[u8]>> = snapshot.scan().collect();
         assert_eq!(blocks.len(), 10);
         assert_eq!(blocks[0].block_type(), BlockType::Header);
         assert_eq!(blocks[1].block_type(), BlockType::BoolValue);
@@ -1392,7 +1389,7 @@ mod tests {
             assert!(state.free_value(block.index()).is_ok());
         }
         let snapshot = Snapshot::try_from(core_state.copy_vmo_bytes()).unwrap();
-        let blocks: Vec<ScannedBlock<'_>> = snapshot.scan().collect();
+        let blocks: Vec<Block<&[u8]>> = snapshot.scan().collect();
         assert!(blocks[1..].iter().all(|b| b.block_type() == BlockType::Free));
     }
 
@@ -1426,7 +1423,7 @@ mod tests {
         };
 
         let snapshot = Snapshot::try_from(core_state.copy_vmo_bytes()).unwrap();
-        let blocks: Vec<ScannedBlock<'_>> = snapshot.scan().collect();
+        let blocks: Vec<Block<&[u8]>> = snapshot.scan().collect();
         assert_eq!(blocks[0].block_type(), BlockType::Header);
         assert_eq!(blocks[1].block_type(), BlockType::StringReference);
         assert_eq!(blocks[2].block_type(), BlockType::Free);
@@ -1439,7 +1436,7 @@ mod tests {
             assert!(state.free_value(block.index()).is_ok());
         }
         let snapshot = Snapshot::try_from(core_state.copy_vmo_bytes()).unwrap();
-        let blocks: Vec<ScannedBlock<'_>> = snapshot.scan().collect();
+        let blocks: Vec<Block<&[u8]>> = snapshot.scan().collect();
         assert!(blocks[1..].iter().all(|b| b.block_type() == BlockType::Free));
     }
 
@@ -1497,7 +1494,7 @@ mod tests {
         };
 
         let snapshot = Snapshot::try_from(core_state.copy_vmo_bytes()).unwrap();
-        let blocks: Vec<ScannedBlock<'_>> = snapshot.scan().collect();
+        let blocks: Vec<Block<&[u8]>> = snapshot.scan().collect();
         assert_eq!(blocks.len(), 12);
         assert_eq!(blocks[0].block_type(), BlockType::Header);
         assert_eq!(blocks[1].block_type(), BlockType::BufferValue);
@@ -1513,7 +1510,7 @@ mod tests {
             assert!(state.free_property(block.index()).is_ok());
         }
         let snapshot = Snapshot::try_from(core_state.copy_vmo_bytes()).unwrap();
-        let blocks: Vec<ScannedBlock<'_>> = snapshot.scan().collect();
+        let blocks: Vec<Block<&[u8]>> = snapshot.scan().collect();
         assert!(blocks[1..].iter().all(|b| b.block_type() == BlockType::Free));
     }
 
@@ -1566,7 +1563,7 @@ mod tests {
 
         // Current expected layout of VMO:
         let snapshot = Snapshot::try_from(core_state.copy_vmo_bytes()).unwrap();
-        let blocks: Vec<ScannedBlock<'_>> = snapshot.scan().collect();
+        let blocks: Vec<Block<&[u8]>> = snapshot.scan().collect();
 
         assert_eq!(blocks[0].block_type(), BlockType::Header);
         assert_eq!(blocks[1].block_type(), BlockType::NodeValue);
@@ -1600,7 +1597,7 @@ mod tests {
         };
 
         let snapshot = Snapshot::try_from(core_state.copy_vmo_bytes()).unwrap();
-        let blocks: Vec<ScannedBlock<'_>> = snapshot.scan().collect();
+        let blocks: Vec<Block<&[u8]>> = snapshot.scan().collect();
 
         // Note that the way Extents get allocated means that they aren't necessarily
         // put in the buffer where it would seem they should based on the literal order of allocation.
@@ -1618,7 +1615,7 @@ mod tests {
             assert!(state.free_value(child_block.index()).is_ok());
         }
         let snapshot = Snapshot::try_from(core_state.copy_vmo_bytes()).unwrap();
-        let blocks: Vec<ScannedBlock<'_>> = snapshot.scan().collect();
+        let blocks: Vec<Block<&[u8]>> = snapshot.scan().collect();
         assert!(blocks[1..].iter().all(|b| b.block_type() == BlockType::Free));
     }
 
@@ -1698,7 +1695,7 @@ mod tests {
 
         // Verfiy all the VMO blocks.
         let snapshot = Snapshot::try_from(state.copy_vmo_bytes()).unwrap();
-        let blocks: Vec<ScannedBlock<'_>> = snapshot.scan().collect();
+        let blocks: Vec<Block<&[u8]>> = snapshot.scan().collect();
         assert_eq!(blocks.len(), 10);
         assert_eq!(blocks[0].block_type(), BlockType::Header);
         assert_eq!(blocks[1].block_type(), BlockType::LinkValue);
@@ -1715,7 +1712,7 @@ mod tests {
             assert!(state_guard.callbacks().get("link-name-0").is_none());
         }
         let snapshot = Snapshot::try_from(state.copy_vmo_bytes()).unwrap();
-        let blocks: Vec<ScannedBlock<'_>> = snapshot.scan().collect();
+        let blocks: Vec<Block<&[u8]>> = snapshot.scan().collect();
         assert!(blocks[1..].iter().all(|b| b.block_type() == BlockType::Free));
 
         // Verify adding another link generates a different ID regardless of the params.

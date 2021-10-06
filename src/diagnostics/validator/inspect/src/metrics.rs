@@ -4,8 +4,7 @@
 
 use {
     anyhow::Error,
-    fuchsia_inspect::reader::snapshot::ScannedBlock,
-    inspect_format::{BlockType, PropertyFormat},
+    inspect_format::{Block, BlockType, PropertyFormat},
     serde::Serialize,
     std::{self, collections::HashMap},
 };
@@ -105,7 +104,7 @@ trait Description {
 }
 
 // Describes the block, distinguishing array and histogram types.
-impl Description for ScannedBlock<'_> {
+impl Description for Block<&[u8]> {
     fn description(&self) -> Result<String, Error> {
         match self.block_type_or()? {
             BlockType::ArrayValue => {
@@ -140,12 +139,12 @@ impl Metrics {
 
     // Process (in a single operation) a block of a type that will never be part of the Inspect
     // data tree.
-    pub fn process(&mut self, block: ScannedBlock<'_>) -> Result<(), Error> {
+    pub fn process(&mut self, block: Block<&[u8]>) -> Result<(), Error> {
         self.record(&Metrics::analyze(block)?, BlockStatus::Used);
         Ok(())
     }
 
-    pub fn analyze(block: ScannedBlock<'_>) -> Result<BlockMetrics, Error> {
+    pub fn analyze(block: Block<&[u8]>) -> Result<BlockMetrics, Error> {
         let description = block.description()?;
         let block_type = block.block_type_or()?;
 

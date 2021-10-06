@@ -225,7 +225,7 @@ impl Heap {
 mod tests {
     use {
         super::*,
-        crate::reader::snapshot::{BackingBuffer, BlockIterator},
+        crate::reader::snapshot::BlockIterator,
         inspect_format::{BlockHeader, Payload},
     };
 
@@ -236,8 +236,7 @@ mod tests {
     }
 
     fn validate(expected: &[BlockDebug], heap: &Heap) {
-        let buffer = BackingBuffer::from(heap.bytes());
-        let actual: Vec<BlockDebug> = BlockIterator::from(&buffer)
+        let actual: Vec<BlockDebug> = BlockIterator::from(&heap.bytes()[..])
             .map(|block| BlockDebug {
                 order: block.order(),
                 index: block.index(),
@@ -314,8 +313,9 @@ mod tests {
         ];
         validate(&expected, &heap);
         assert!(heap.free_head_per_order.iter().enumerate().skip(2).all(|(i, &j)| (1 << i) == j));
-        let buffer = BackingBuffer::from(heap.bytes());
-        assert!(BlockIterator::from(&buffer).skip(2).all(|b| b.free_next_index().unwrap() == 0));
+        assert!(BlockIterator::from(&heap.bytes()[..])
+            .skip(2)
+            .all(|b| b.free_next_index().unwrap() == 0));
 
         // Ensure a large block takes the first free large one.
         assert!(heap.free_block(heap.get_block(0).unwrap()).is_ok());
@@ -424,8 +424,9 @@ mod tests {
         ];
         validate(&expected, &heap);
         assert!(heap.free_head_per_order.iter().enumerate().skip(3).all(|(i, &j)| (1 << i) == j));
-        let buffer = BackingBuffer::from(heap.bytes());
-        assert!(BlockIterator::from(&buffer).skip(3).all(|b| b.free_next_index().unwrap() == 0));
+        assert!(BlockIterator::from(&heap.bytes()[..])
+            .skip(3)
+            .all(|b| b.free_next_index().unwrap() == 0));
         assert_eq!(heap.free_head_per_order[1], 0);
         assert_eq!(heap.free_head_per_order[0], 2);
         assert_eq!(heap.get_block(0).unwrap().free_next_index().unwrap(), 0);
