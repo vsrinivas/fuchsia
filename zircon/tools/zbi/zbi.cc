@@ -649,8 +649,14 @@ class Compressor final {
         fprintf(stderr, "out of memory\n");
         exit(1);
       }
+
+      // Per <zstd/zstd.h> ZSTD_CCtx_setParameter will error on some inputs if
+      // the parameter is outside the range specified by ZSTD_cParam_getBounds.
+      ZSTD_bounds bounds = ZSTD_cParam_getBounds(ZSTD_c_nbWorkers);
+      auto upper_bound = static_cast<unsigned int>(bounds.upperBound);
+
       ZstdCall("nbWorkers", ZSTD_CCtx_setParameter, ctx_, ZSTD_c_nbWorkers,
-               std::thread::hardware_concurrency());
+               std::min(std::thread::hardware_concurrency(), upper_bound));
       ZstdCall("compressionLevel", ZSTD_CCtx_setParameter, ctx_, ZSTD_c_compressionLevel, level);
       if (level >= DefaultLevel()) {
         ZstdCall("enableLongDistanceMatching", ZSTD_CCtx_setParameter, ctx_,
