@@ -8,6 +8,7 @@ use crate::{
     utils,
 };
 use component_events::{events::*, matcher::*};
+use diagnostics_data::Lifecycle;
 use diagnostics_reader::{assert_data_tree, ArchiveReader, Data, Logs};
 use fasync::Task;
 use fidl::endpoints::ServerEnd;
@@ -52,6 +53,8 @@ async fn serve_mocks(
     Ok(())
 }
 
+const LOG_AND_EXIT_COMPONENT: &str = "log_and_exit";
+
 #[fuchsia::test]
 async fn test_logs_with_hanging_log_connector() {
     let (mut before_response_snd, before_response_recv) = mpsc::unbounded();
@@ -78,7 +81,7 @@ async fn test_logs_with_hanging_log_connector() {
             targets: vec![RouteEndpoint::component("test/archivist")],
         })
         .unwrap();
-    test_topology::add_component(&mut builder, "log_and_exit", LOG_AND_EXIT_COMPONENT_URL)
+    test_topology::add_component(&mut builder, LOG_AND_EXIT_COMPONENT, LOG_AND_EXIT_COMPONENT_URL)
         .await
         .expect("add log_and_exit");
     let mut realm = builder.build();
@@ -107,7 +110,7 @@ async fn test_logs_with_hanging_log_connector() {
         instance.root.child_name()
     );
 
-    let mut child_ref = ChildRef { name: "log_and_exit".to_string(), collection: None };
+    let mut child_ref = ChildRef { name: LOG_AND_EXIT_COMPONENT.to_string(), collection: None };
     reader.retry_if_empty(true);
     let (exposed_dir, server_end) = fidl::endpoints::create_proxy::<DirectoryMarker>().unwrap();
     let realm = instance.root.connect_to_protocol_at_exposed_dir::<RealmMarker>().unwrap();
@@ -124,12 +127,57 @@ async fn test_logs_with_hanging_log_connector() {
     after_response_recv.next().await.unwrap();
 }
 
+async fn wait_for_log_sink_connected_event(reader: &mut ArchiveReader) {
+    let results = reader.snapshot::<Lifecycle>().await.unwrap();
+    let result_contains_component = results.into_iter().any(|result| {
+        result.metadata.lifecycle_event_type == diagnostics_data::LifecycleType::LogSinkConnected
+            && result.moniker.contains(LOG_AND_EXIT_COMPONENT)
+    });
+    assert!(result_contains_component);
+}
+
+#[fuchsia::test]
+async fn log_sink_connected_event_test() {
+    let mut builder = test_topology::create(test_topology::Options::default())
+        .await
+        .expect("create base topology");
+    test_topology::add_component(&mut builder, LOG_AND_EXIT_COMPONENT, LOG_AND_EXIT_COMPONENT_URL)
+        .await
+        .expect("add log_and_exit");
+
+    // Currently RealmBuilder doesn't support to expose a capability from framework, therefore we
+    // manually update the decl that the builder creates.
+    let mut realm = builder.build();
+    test_topology::expose_test_realm_protocol(&mut realm).await;
+
+    let instance = realm.create().await.expect("create instance");
+    let accessor =
+        instance.root.connect_to_protocol_at_exposed_dir::<ArchiveAccessorMarker>().unwrap();
+
+    let mut reader = ArchiveReader::new();
+    reader
+        .with_archive(accessor)
+        .with_minimum_schema_count(2) // we want this to return when all events (started, log connected) have happened.
+        .retry_if_empty(true);
+
+    let mut child_ref = ChildRef { name: LOG_AND_EXIT_COMPONENT.to_string(), collection: None };
+    // launch our child and wait for it to exit before asserting on its logs
+    let (exposed_dir, server_end) = fidl::endpoints::create_proxy::<DirectoryMarker>().unwrap();
+    let realm = instance.root.connect_to_protocol_at_exposed_dir::<RealmMarker>().unwrap();
+    realm.open_exposed_dir(&mut child_ref, server_end).await.unwrap().unwrap();
+
+    let _ =
+        client::connect_to_protocol_at_dir_root::<fcomponent::BinderMarker>(&exposed_dir).unwrap();
+
+    wait_for_log_sink_connected_event(&mut reader).await;
+}
+
 #[fuchsia::test]
 async fn test_logs_lifecycle() {
     let mut builder = test_topology::create(test_topology::Options::default())
         .await
         .expect("create base topology");
-    test_topology::add_component(&mut builder, "log_and_exit", LOG_AND_EXIT_COMPONENT_URL)
+    test_topology::add_component(&mut builder, LOG_AND_EXIT_COMPONENT, LOG_AND_EXIT_COMPONENT_URL)
         .await
         .expect("add log_and_exit");
 
@@ -168,7 +216,7 @@ async fn test_logs_lifecycle() {
         .await
         .unwrap();
 
-    let mut child_ref = ChildRef { name: "log_and_exit".to_string(), collection: None };
+    let mut child_ref = ChildRef { name: LOG_AND_EXIT_COMPONENT.to_string(), collection: None };
     reader.retry_if_empty(true);
     for i in 1..100 {
         // launch our child and wait for it to exit before asserting on its logs
@@ -181,7 +229,7 @@ async fn test_logs_lifecycle() {
 
         utils::wait_for_component_stopped_event(
             &instance.root.child_name(),
-            "log_and_exit",
+            LOG_AND_EXIT_COMPONENT,
             ExitStatusMatcher::Clean,
             &mut event_stream,
         )
