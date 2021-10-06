@@ -58,7 +58,6 @@ pub enum LifecycleType {
     Stopped,
     Running,
     DiagnosticsReady,
-    LogSinkConnected,
 }
 
 /// Metadata contained in a `DiagnosticsData` object.

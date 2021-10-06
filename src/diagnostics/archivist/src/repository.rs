@@ -455,13 +455,6 @@ impl DataRepoState {
                             ));
                         }
 
-                        if let Some(log_artifacts) = &diagnostics_artifacts_container.logs {
-                            acc.push(LifecycleDataContainer::from_logs_sink_connected_artifact(
-                                log_artifacts,
-                                diagnostics_artifacts_container.identity.clone(),
-                            ));
-                        }
-
                         acc
                     }
                 }

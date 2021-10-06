@@ -21,7 +21,6 @@ use fidl_fuchsia_logger::{
     LogInterestSelector, LogSinkControlHandle, LogSinkRequest, LogSinkRequestStream,
 };
 use fuchsia_async::Task;
-use fuchsia_zircon as zx;
 use futures::{channel::mpsc, prelude::*};
 use parking_lot::Mutex;
 use std::sync::Arc;
@@ -43,10 +42,6 @@ pub struct LogsArtifactsContainer {
 
     /// Mutable state for the container.
     state: Mutex<ContainerState>,
-
-    /// The time when the container was created by the logging
-    /// framework.
-    pub event_timestamp: zx::Time,
 }
 
 struct ContainerState {
@@ -85,7 +80,6 @@ impl LogsArtifactsContainer {
                 interest: Interest::EMPTY,
             }),
             stats: Arc::new(stats),
-            event_timestamp: zx::Time::get_monotonic(),
         };
 
         // there are no control handles so this won't notify anyone

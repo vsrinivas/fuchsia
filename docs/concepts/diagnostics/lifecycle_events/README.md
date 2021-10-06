@@ -99,15 +99,10 @@ manager and appmgr, which also provide the time.
 
 These are the valid values for lifecycle event types:
 
-- DiagnosticsReady (diagnostics data for the component
-is ready).
-- Started (the component has started)
-- Stopped (the component has stopped)
-- Running (the component is running)
-- LogSinkConnected (a client at some point connected to the LogSink protocol).
-
-Note: Drivers do not support log severity change
-events.
+- DiagnosticsReady
+- Started
+- Stopped
+- Running
 
 #### Component URL
 
