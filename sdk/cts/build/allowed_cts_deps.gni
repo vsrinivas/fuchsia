@@ -20,7 +20,30 @@ ALLOWED_CTS_DEPS = [
 ]
 
 # Individual Rust dependencies that correspond to an SDK element.
-ALLOWED_RUST_DEPS = [ "//src/lib/fuchsia-async:fuchsia-async" ]
+ALLOWED_RUST_DEPS = [
+  "//sdk/fidl/fuchsia.sys2:fuchsia.sys2-rustc",
+  "//src/lib/fidl/rust/fidl:fidl",
+  "//src/lib/fuchsia-async:fuchsia-async",
+  "//src/lib/fuchsia-component-test:fuchsia-component-test",
+  "//src/lib/fuchsia-component:fuchsia-component",
+  "//src/lib/fuchsia:fuchsia",
+  "//src/lib/zircon/rust:fuchsia-zircon",
+  "//third_party/rust_crates:anyhow",
+  "//third_party/rust_crates:futures",
+  "//third_party/rust_crates:log",
+  "//third_party/rust_crates:matches",
+
+  # Needed by the reboot_on_terminate test.
+  "//examples/components/routing/echo_server:echo_server_component",
+  "//examples/components/routing/fidl:echo-rustc",
+  "//examples/hello_world/rust:hello-world-rust-component",
+  "//sdk/fidl/fuchsia.device.manager:fuchsia.device.manager-rustc",
+  "//src/power/shutdown-shim/tests:shutdown_shim_component",
+  "//src/sys/component_manager/tests/fidl:components-rustc",
+  "//src/sys/component_manager/tests/reboot_on_terminate:config",
+  "//src/sys/component_manager:bin",
+  "//src/sys/lib/cm_rust:cm_rust",
+]
 
 # All targets in these directories and their subdirectories are approved for use in CTS.
 ALLOWED_CTS_DIRS = [

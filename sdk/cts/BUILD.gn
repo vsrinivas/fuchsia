@@ -89,6 +89,7 @@ sdk_molecule("cts_tests") {
     ":test_manifest",
     "tests:test_sdks",
     "//sdk/testing/fidl:test_sdks",
+    "//src/sys/component_manager/tests/reboot_on_terminate:test_sdks",
   ]
 
   # Prevents us from adding example tests to the archive.
