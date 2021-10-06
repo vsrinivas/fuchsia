@@ -12,5 +12,6 @@ group("tests") {
     "ninjagraph:ninjagraph_tests($host_toolchain)",
     "ninjalog:ninjalog_tests($host_toolchain)",
     "ninjatrace:ninjatrace_tests($host_toolchain)",
+    "rbetrace:rbetrace_test($host_toolchain)",
   ]
 }
