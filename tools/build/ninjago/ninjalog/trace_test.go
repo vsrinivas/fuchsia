@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/google/go-cmp/cmp"
+	"go.fuchsia.dev/fuchsia/tools/build/ninjago/chrometrace"
 	"go.fuchsia.dev/fuchsia/tools/build/ninjago/compdb"
 	"go.fuchsia.dev/fuchsia/tools/lib/jsonutil"
 )
@@ -19,7 +20,7 @@ func TestTrace(t *testing.T) {
 		desc         string
 		flow         [][]Step
 		criticalPath []Step
-		want         []Trace
+		want         []chrometrace.Trace
 	}{
 		{
 			desc: "empty",
@@ -96,11 +97,11 @@ func TestTrace(t *testing.T) {
 					},
 				},
 			},
-			want: []Trace{
+			want: []chrometrace.Trace{
 				{
 					Name:            "resources/inspector/devtools_extension_api.js",
 					Category:        "unknown",
-					EventType:       completeEvent,
+					EventType:       chrometrace.CompleteEvent,
 					TimestampMicros: 76 * 1000,
 					DurationMicros:  (187 - 76) * 1000,
 					ProcessID:       1,
@@ -110,7 +111,7 @@ func TestTrace(t *testing.T) {
 				{
 					Name:            "gen/angle/commit_id.py",
 					Category:        "unknown",
-					EventType:       completeEvent,
+					EventType:       chrometrace.CompleteEvent,
 					TimestampMicros: 78 * 1000,
 					DurationMicros:  (286 - 78) * 1000,
 					ProcessID:       1,
@@ -120,7 +121,7 @@ func TestTrace(t *testing.T) {
 				{
 					Name:            "gen/angle/copy_compiler_dll.bat",
 					Category:        "unknown",
-					EventType:       completeEvent,
+					EventType:       chrometrace.CompleteEvent,
 					TimestampMicros: 79 * 1000,
 					DurationMicros:  (287 - 79) * 1000,
 					ProcessID:       1,
@@ -130,7 +131,7 @@ func TestTrace(t *testing.T) {
 				{
 					Name:            "gen/autofill_regex_constants.cc",
 					Category:        "unknown",
-					EventType:       completeEvent,
+					EventType:       chrometrace.CompleteEvent,
 					TimestampMicros: 80 * 1000,
 					DurationMicros:  (284 - 80) * 1000,
 					ProcessID:       1,
@@ -140,7 +141,7 @@ func TestTrace(t *testing.T) {
 				{
 					Name:            "PepperFlash/manifest.json",
 					Category:        "unknown",
-					EventType:       completeEvent,
+					EventType:       chrometrace.CompleteEvent,
 					TimestampMicros: 141 * 1000,
 					DurationMicros:  (287 - 141) * 1000,
 					ProcessID:       1,
@@ -150,7 +151,7 @@ func TestTrace(t *testing.T) {
 				{
 					Name:            "PepperFlash/libpepflashplayer.so",
 					Category:        "unknown",
-					EventType:       completeEvent,
+					EventType:       chrometrace.CompleteEvent,
 					TimestampMicros: 142 * 1000,
 					DurationMicros:  (288 - 142) * 1000,
 					ProcessID:       1,
@@ -160,7 +161,7 @@ func TestTrace(t *testing.T) {
 				{
 					Name:            "obj/third_party/pdfium/core/src/fpdfdoc/fpdfdoc.doc_formfield.o",
 					Category:        "gomacc",
-					EventType:       completeEvent,
+					EventType:       chrometrace.CompleteEvent,
 					TimestampMicros: 187 * 1000,
 					DurationMicros:  (21304 - 187) * 1000,
 					ProcessID:       1,
@@ -173,7 +174,7 @@ func TestTrace(t *testing.T) {
 				{
 					Name:            "obj/third_party/angle/src/copy_scripts.actions_rules_copies.stamp",
 					Category:        "touch",
-					EventType:       completeEvent,
+					EventType:       chrometrace.CompleteEvent,
 					TimestampMicros: 287 * 1000,
 					DurationMicros:  (290 - 287) * 1000,
 					ProcessID:       1,
@@ -227,11 +228,11 @@ func TestTrace(t *testing.T) {
 					},
 				},
 			},
-			want: []Trace{
+			want: []chrometrace.Trace{
 				{
 					Name:            "a",
 					Category:        "unknown",
-					EventType:       completeEvent,
+					EventType:       chrometrace.CompleteEvent,
 					TimestampMicros: 0,
 					DurationMicros:  5,
 					ProcessID:       1,
@@ -241,7 +242,7 @@ func TestTrace(t *testing.T) {
 				{
 					Name:            "b",
 					Category:        "unknown",
-					EventType:       completeEvent,
+					EventType:       chrometrace.CompleteEvent,
 					TimestampMicros: 1,
 					DurationMicros:  1,
 					ProcessID:       1,
@@ -252,7 +253,7 @@ func TestTrace(t *testing.T) {
 				{
 					Name:            "critical_a",
 					Category:        "unknown,critical_path",
-					EventType:       completeEvent,
+					EventType:       chrometrace.CompleteEvent,
 					TimestampMicros: 3,
 					DurationMicros:  2,
 					ProcessID:       1,
@@ -266,7 +267,7 @@ func TestTrace(t *testing.T) {
 					// Flow event going out of critical_a.
 					Name:            "critical_path",
 					Category:        "critical_path",
-					EventType:       flowEventStart,
+					EventType:       chrometrace.FlowEventStart,
 					TimestampMicros: 4,
 					ProcessID:       1,
 					ThreadID:        1,
@@ -276,7 +277,7 @@ func TestTrace(t *testing.T) {
 				{
 					Name:            "critical_b",
 					Category:        "unknown,critical_path",
-					EventType:       completeEvent,
+					EventType:       chrometrace.CompleteEvent,
 					TimestampMicros: 5,
 					DurationMicros:  5,
 					ProcessID:       1,
@@ -290,7 +291,7 @@ func TestTrace(t *testing.T) {
 					// Flow event going out of critical_b.
 					Name:            "critical_path",
 					Category:        "critical_path",
-					EventType:       flowEventStart,
+					EventType:       chrometrace.FlowEventStart,
 					TimestampMicros: 7,
 					ProcessID:       1,
 					ThreadID:        1,
@@ -300,7 +301,7 @@ func TestTrace(t *testing.T) {
 					// Flow event pointing to critical_b.
 					Name:            "critical_path",
 					Category:        "critical_path",
-					EventType:       flowEventEnd,
+					EventType:       chrometrace.FlowEventEnd,
 					TimestampMicros: 7,
 					ProcessID:       1,
 					ThreadID:        1,
@@ -311,7 +312,7 @@ func TestTrace(t *testing.T) {
 				{
 					Name:            "critical_c",
 					Category:        "unknown,critical_path",
-					EventType:       completeEvent,
+					EventType:       chrometrace.CompleteEvent,
 					TimestampMicros: 10,
 					DurationMicros:  10,
 					ProcessID:       1,
@@ -325,7 +326,7 @@ func TestTrace(t *testing.T) {
 					// Flow event pointing to critical_c.
 					Name:            "critical_path",
 					Category:        "critical_path",
-					EventType:       flowEventEnd,
+					EventType:       chrometrace.FlowEventEnd,
 					TimestampMicros: 15,
 					ProcessID:       1,
 					ThreadID:        0,
@@ -347,10 +348,10 @@ func TestTrace(t *testing.T) {
 func TestClangTracesToInterleave(t *testing.T) {
 	for _, tc := range []struct {
 		desc        string
-		traces      []Trace
+		traces      []chrometrace.Trace
 		granularity time.Duration
 		clangTraces map[string]clangTrace
-		want        []Trace
+		want        []chrometrace.Trace
 		wantErr     bool
 	}{
 		{
@@ -358,33 +359,33 @@ func TestClangTracesToInterleave(t *testing.T) {
 		},
 		{
 			desc: "successfully interleave",
-			traces: []Trace{
+			traces: []chrometrace.Trace{
 				{TimestampMicros: 42, DurationMicros: 1000, Name: "output.cc.o", ProcessID: 123, ThreadID: 321},
 			},
 			granularity: 100 * time.Microsecond,
 			clangTraces: map[string]clangTrace{
 				"output.cc.json": {
-					TraceEvents: []Trace{
-						{TimestampMicros: 0, DurationMicros: 1000, Name: "ExecuteCompiler", EventType: completeEvent, ProcessID: 789, ThreadID: 1},
-						{TimestampMicros: 0, DurationMicros: 100, Name: "Source", EventType: completeEvent, ProcessID: 789, ThreadID: 2},
-						{TimestampMicros: 100, DurationMicros: 120, Name: "Source", EventType: completeEvent, ProcessID: 789, ThreadID: 2},
-						{TimestampMicros: 300, DurationMicros: 420, Name: "Frontend", EventType: completeEvent, ProcessID: 789, ThreadID: 3},
+					TraceEvents: []chrometrace.Trace{
+						{TimestampMicros: 0, DurationMicros: 1000, Name: "ExecuteCompiler", EventType: chrometrace.CompleteEvent, ProcessID: 789, ThreadID: 1},
+						{TimestampMicros: 0, DurationMicros: 100, Name: "Source", EventType: chrometrace.CompleteEvent, ProcessID: 789, ThreadID: 2},
+						{TimestampMicros: 100, DurationMicros: 120, Name: "Source", EventType: chrometrace.CompleteEvent, ProcessID: 789, ThreadID: 2},
+						{TimestampMicros: 300, DurationMicros: 420, Name: "Frontend", EventType: chrometrace.CompleteEvent, ProcessID: 789, ThreadID: 3},
 						// Events below should be filtered.
 						{TimestampMicros: 0, DurationMicros: 800, Name: "NotComplete", ProcessID: 789, ThreadID: 4},
-						{TimestampMicros: 0, DurationMicros: 10, Name: "TooShort", EventType: completeEvent, ProcessID: 789, ThreadID: 5},
+						{TimestampMicros: 0, DurationMicros: 10, Name: "TooShort", EventType: chrometrace.CompleteEvent, ProcessID: 789, ThreadID: 5},
 					},
 				},
 			},
-			want: []Trace{
-				{TimestampMicros: 42, DurationMicros: 1000, Name: "ExecuteCompiler", EventType: completeEvent, ProcessID: 123, ThreadID: 321},
-				{TimestampMicros: 42, DurationMicros: 100, Name: "Source", EventType: completeEvent, ProcessID: 123, ThreadID: 321},
-				{TimestampMicros: 142, DurationMicros: 120, Name: "Source", EventType: completeEvent, ProcessID: 123, ThreadID: 321},
-				{TimestampMicros: 342, DurationMicros: 420, Name: "Frontend", EventType: completeEvent, ProcessID: 123, ThreadID: 321},
+			want: []chrometrace.Trace{
+				{TimestampMicros: 42, DurationMicros: 1000, Name: "ExecuteCompiler", EventType: chrometrace.CompleteEvent, ProcessID: 123, ThreadID: 321},
+				{TimestampMicros: 42, DurationMicros: 100, Name: "Source", EventType: chrometrace.CompleteEvent, ProcessID: 123, ThreadID: 321},
+				{TimestampMicros: 142, DurationMicros: 120, Name: "Source", EventType: chrometrace.CompleteEvent, ProcessID: 123, ThreadID: 321},
+				{TimestampMicros: 342, DurationMicros: 420, Name: "Frontend", EventType: chrometrace.CompleteEvent, ProcessID: 123, ThreadID: 321},
 			},
 		},
 		{
 			desc: "outputs missing clang traces are skipped",
-			traces: []Trace{
+			traces: []chrometrace.Trace{
 				{TimestampMicros: 42, DurationMicros: 1000, Name: "output.cc.o", ProcessID: 123, ThreadID: 321},
 				{TimestampMicros: 100, DurationMicros: 2000, Name: "missing_trace.cc.o", ProcessID: 234, ThreadID: 432},
 				{TimestampMicros: 200, DurationMicros: 900, Name: "another_output.cc.o", ProcessID: 345, ThreadID: 543},
@@ -392,31 +393,31 @@ func TestClangTracesToInterleave(t *testing.T) {
 			granularity: 100 * time.Microsecond,
 			clangTraces: map[string]clangTrace{
 				"output.cc.json": {
-					TraceEvents: []Trace{
-						{TimestampMicros: 0, DurationMicros: 1000, Name: "ExecuteCompiler", EventType: completeEvent, ProcessID: 789, ThreadID: 1},
+					TraceEvents: []chrometrace.Trace{
+						{TimestampMicros: 0, DurationMicros: 1000, Name: "ExecuteCompiler", EventType: chrometrace.CompleteEvent, ProcessID: 789, ThreadID: 1},
 					},
 				},
 				"another_output.cc.json": {
-					TraceEvents: []Trace{
-						{TimestampMicros: 100, DurationMicros: 200, Name: "ExecuteCompiler", EventType: completeEvent, ProcessID: 789, ThreadID: 1},
+					TraceEvents: []chrometrace.Trace{
+						{TimestampMicros: 100, DurationMicros: 200, Name: "ExecuteCompiler", EventType: chrometrace.CompleteEvent, ProcessID: 789, ThreadID: 1},
 					},
 				},
 			},
-			want: []Trace{
-				{TimestampMicros: 42, DurationMicros: 1000, Name: "ExecuteCompiler", EventType: completeEvent, ProcessID: 123, ThreadID: 321},
-				{TimestampMicros: 300, DurationMicros: 200, Name: "ExecuteCompiler", EventType: completeEvent, ProcessID: 345, ThreadID: 543},
+			want: []chrometrace.Trace{
+				{TimestampMicros: 42, DurationMicros: 1000, Name: "ExecuteCompiler", EventType: chrometrace.CompleteEvent, ProcessID: 123, ThreadID: 321},
+				{TimestampMicros: 300, DurationMicros: 200, Name: "ExecuteCompiler", EventType: chrometrace.CompleteEvent, ProcessID: 345, ThreadID: 543},
 			},
 		},
 		{
 			desc: "sub event longer than main step",
-			traces: []Trace{
+			traces: []chrometrace.Trace{
 				{TimestampMicros: 42, DurationMicros: 1000, Name: "output.cc.o", ProcessID: 123, ThreadID: 321},
 			},
 			granularity: 100 * time.Microsecond,
 			clangTraces: map[string]clangTrace{
 				"output.cc.json": {
-					TraceEvents: []Trace{
-						{TimestampMicros: 0, DurationMicros: 999999, Name: "ExecuteCompiler", EventType: completeEvent, ProcessID: 789, ThreadID: 1},
+					TraceEvents: []chrometrace.Trace{
+						{TimestampMicros: 0, DurationMicros: 999999, Name: "ExecuteCompiler", EventType: chrometrace.CompleteEvent, ProcessID: 789, ThreadID: 1},
 					},
 				},
 			},

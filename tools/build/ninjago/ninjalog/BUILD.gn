@@ -15,6 +15,7 @@ go_library("ninjalog") {
   ]
   deps = [
     "//third_party/golibs:github.com/google/shlex",
+    "//tools/build/ninjago/chrometrace",
     "//tools/build/ninjago/compdb",
     "//tools/lib/jsonutil",
   ]

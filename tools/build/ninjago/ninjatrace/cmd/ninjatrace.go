@@ -18,6 +18,7 @@ import (
 	"runtime/pprof"
 	"time"
 
+	"go.fuchsia.dev/fuchsia/tools/build/ninjago/chrometrace"
 	"go.fuchsia.dev/fuchsia/tools/build/ninjago/compdb"
 	"go.fuchsia.dev/fuchsia/tools/build/ninjago/ninjagraph"
 	"go.fuchsia.dev/fuchsia/tools/build/ninjago/ninjalog"
@@ -108,7 +109,7 @@ func readArtifacts(logPath, compdbPath, graphPath string) (artifacts, error) {
 	return ret, nil
 }
 
-func createAndWriteTrace(path string, traces []ninjalog.Trace) (err error) {
+func createAndWriteTrace(path string, traces []chrometrace.Trace) (err error) {
 	f, err := os.Create(*traceJSON)
 	if err != nil {
 		return fmt.Errorf("creating trace output file %q: %v", path, err)

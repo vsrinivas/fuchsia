@@ -12,43 +12,15 @@ import (
 	"sort"
 	"strings"
 	"time"
+
+	"go.fuchsia.dev/fuchsia/tools/build/ninjago/chrometrace"
 )
 
-// Trace is an entry of trace format.
-// https://code.google.com/p/trace-viewer/
-type Trace struct {
-	Name            string                 `json:"name"`
-	Category        string                 `json:"cat"`
-	EventType       string                 `json:"ph"`
-	TimestampMicros int                    `json:"ts"`
-	DurationMicros  int                    `json:"dur"`
-	ProcessID       int                    `json:"pid"`
-	ThreadID        int                    `json:"tid"`
-	Args            map[string]interface{} `json:"args,omitempty"`
-	ID              int                    `json:"id,omitempty"`
-	BindingPoint    string                 `json:"bp,omitempty"`
-}
-
-// Event types used in conversions.
-//
-// https://docs.google.com/document/d/1CvAClvFfyA5R-PhYUmn5OOQtYMH4h6I0nSsKchNAySU/edit#heading=h.puwqg050lyuy
-const (
-	completeEvent  = "X"
-	flowEventStart = "s"
-	flowEventEnd   = "f"
-)
-
-type traceByStart []Trace
-
-func (t traceByStart) Len() int           { return len(t) }
-func (t traceByStart) Swap(i, j int)      { t[i], t[j] = t[j], t[i] }
-func (t traceByStart) Less(i, j int) bool { return t[i].TimestampMicros < t[j].TimestampMicros }
-
-func toTrace(step Step, pid int, tid int) Trace {
-	tr := Trace{
+func toTrace(step Step, pid int, tid int) chrometrace.Trace {
+	tr := chrometrace.Trace{
 		Name:            step.Out,
 		Category:        step.Category(),
-		EventType:       completeEvent,
+		EventType:       chrometrace.CompleteEvent,
 		TimestampMicros: int(step.Start / time.Microsecond),
 		DurationMicros:  int(step.Duration() / time.Microsecond),
 		ProcessID:       pid,
@@ -75,12 +47,12 @@ func toTrace(step Step, pid int, tid int) Trace {
 	return tr
 }
 
-func toFlowEvents(from, to Step, id int, pid int, tids map[string]int) []Trace {
-	return []Trace{
+func toFlowEvents(from, to Step, id int, pid int, tids map[string]int) []chrometrace.Trace {
+	return []chrometrace.Trace{
 		{
 			Name:      "critical_path",
 			Category:  "critical_path",
-			EventType: flowEventStart,
+			EventType: chrometrace.FlowEventStart,
 			// Start flow event arrow from the middle of the "from" event.
 			TimestampMicros: int((from.Start + from.Duration()/2) / time.Microsecond),
 			ProcessID:       pid,
@@ -90,7 +62,7 @@ func toFlowEvents(from, to Step, id int, pid int, tids map[string]int) []Trace {
 		{
 			Name:      "critical_path",
 			Category:  "critical_path",
-			EventType: flowEventEnd,
+			EventType: chrometrace.FlowEventEnd,
 			// Point flow event arrow to the middle of the "to" event.
 			TimestampMicros: int((to.Start + to.Duration()/2) / time.Microsecond),
 			ProcessID:       pid,
@@ -110,7 +82,7 @@ func toFlowEvents(from, to Step, id int, pid int, tids map[string]int) []Trace {
 // If a non-empty `criticalPath` is provided, steps on the critical path will
 // have "critical_path" in their category to enable quick searching and
 // highlighting.
-func ToTraces(steps [][]Step, pid int) []Trace {
+func ToTraces(steps [][]Step, pid int) []chrometrace.Trace {
 	var criticalThreads, nonCriticalThreads [][]Step
 Outer:
 	for _, thread := range steps {
@@ -126,7 +98,7 @@ Outer:
 	steps = append(criticalThreads, nonCriticalThreads...)
 
 	var criticalPath []Step
-	var traces []Trace
+	var traces []chrometrace.Trace
 	// Record `tid`s of all critical steps for generating flow events later.
 	tids := make(map[string]int)
 	for tid, thread := range steps {
@@ -145,7 +117,7 @@ Outer:
 		traces = append(traces, toFlowEvents(criticalPath[i-1], criticalPath[i], i, pid, tids)...)
 	}
 
-	sort.Sort(traceByStart(traces))
+	sort.Sort(chrometrace.ByStart(traces))
 	return traces
 }
 
@@ -153,7 +125,7 @@ Outer:
 // enabled.
 type clangTrace struct {
 	// TraceEvents contains all events in this trace.
-	TraceEvents []Trace
+	TraceEvents []chrometrace.Trace
 	// BeginningOfTimeMicros identifies the time when this clang command started,
 	// using microseconds since epoch.
 	BeginningOfTimeMicros int `json:"beginningOfTime"`
@@ -169,8 +141,8 @@ type clangTrace struct {
 //
 // Clang traces include events with very short durations, so `granularity` is
 // provided to filter them and reduce the size of returned slice.
-func ClangTracesToInterleave(mainTraces []Trace, buildRoot string, granularity time.Duration) ([]Trace, error) {
-	var interleaved []Trace
+func ClangTracesToInterleave(mainTraces []chrometrace.Trace, buildRoot string, granularity time.Duration) ([]chrometrace.Trace, error) {
+	var interleaved []chrometrace.Trace
 
 	for _, mainTrace := range mainTraces {
 		if !strings.HasSuffix(mainTrace.Name, ".o") {
@@ -202,7 +174,7 @@ func ClangTracesToInterleave(mainTraces []Trace, buildRoot string, granularity t
 			// type, for example: "Total Frontend". They are used to form a bar chart
 			// in clang traces, so they always stat from time 0 on separate threads.
 			// We exclude them so they don't cause interleaved events to misalign.
-			if strings.HasPrefix(t.Name, "Total ") || t.EventType != completeEvent || t.DurationMicros < int(granularity/time.Microsecond) {
+			if strings.HasPrefix(t.Name, "Total ") || t.EventType != chrometrace.CompleteEvent || t.DurationMicros < int(granularity/time.Microsecond) {
 				continue
 			}
 
