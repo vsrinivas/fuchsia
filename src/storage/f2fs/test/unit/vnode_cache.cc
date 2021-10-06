@@ -13,22 +13,15 @@
 namespace f2fs {
 namespace {
 
-TEST(VnodeCache, Basic) {
-  std::unique_ptr<Bcache> bc;
-  FileTester::MkfsOnFakeDev(&bc);
+class VnodeCacheTest : public F2fsFakeDevTestFixture {
+ public:
+  VnodeCacheTest()
+      : F2fsFakeDevTestFixture(TestOptions{.mount_options = {{kOptInlineDentry, 0}}}) {}
+};
 
-  std::unique_ptr<F2fs> fs;
-  MountOptions options{};
-  ASSERT_EQ(options.SetValue(options.GetNameView(kOptInlineDentry), 0), ZX_OK);
-  async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
-  FileTester::MountWithOptions(loop.dispatcher(), options, &bc, &fs);
-
-  fbl::RefPtr<VnodeF2fs> root;
-  FileTester::CreateRoot(fs.get(), &root);
-  fbl::RefPtr<Dir> root_dir = fbl::RefPtr<Dir>::Downcast(std::move(root));
-
+TEST_F(VnodeCacheTest, Basic) {
   fbl::RefPtr<fs::Vnode> test_dir;
-  ASSERT_EQ(root_dir->Create("test", S_IFDIR, &test_dir), ZX_OK);
+  ASSERT_EQ(root_dir_->Create("test", S_IFDIR, &test_dir), ZX_OK);
 
   fbl::RefPtr<VnodeF2fs> test_dir_vn = fbl::RefPtr<VnodeF2fs>::Downcast(std::move(test_dir));
 
@@ -38,7 +31,7 @@ TEST(VnodeCache, Basic) {
   std::vector<ino_t> child_ino_set(0);
   std::vector<std::string> deleted_child_set(0);
 
-  // create	a, b, c, d, e in test
+  // create a, b, c, d, e in test
   for (auto iter : child_set) {
     FileTester::CreateChild(test_dir_ptr, S_IFDIR, iter);
   }
@@ -59,10 +52,10 @@ TEST(VnodeCache, Basic) {
   ASSERT_EQ(test_dir_vn->GetSize(), kPageCacheSize);
 
   // flush dirty vnodes.
-  fs->WriteCheckpoint(false, false);
+  fs_->WriteCheckpoint(false, false);
 
   // check if dirty vnodes are removed from dirty_list_
-  ASSERT_TRUE(fs->GetVCache().IsDirtyListEmpty());
+  ASSERT_TRUE(fs_->GetVCache().IsDirtyListEmpty());
   for (auto iter : child_set) {
     fbl::RefPtr<fs::Vnode> vn;
     FileTester::Lookup(test_dir_ptr, iter, &vn);
@@ -81,7 +74,7 @@ TEST(VnodeCache, Basic) {
   deleted_child_set.push_back("d");
 
   // free nids for b and d.
-  fs->WriteCheckpoint(false, false);
+  fs_->WriteCheckpoint(false, false);
 
   // check if nodemgr and vnode cache remove b and d.
   int i = 0;
@@ -93,9 +86,9 @@ TEST(VnodeCache, Basic) {
       ASSERT_FALSE(vn);
       ino_t ino = child_ino_set.at(i);
       fbl::RefPtr<VnodeF2fs> vn2;
-      ASSERT_EQ(fs->GetVCache().Lookup(ino, &vn2), ZX_ERR_NOT_FOUND);
+      ASSERT_EQ(fs_->GetVCache().Lookup(ino, &vn2), ZX_ERR_NOT_FOUND);
       NodeInfo ni;
-      fs->GetNodeManager().GetNodeInfo(ino, ni);
+      fs_->GetNodeManager().GetNodeInfo(ino, ni);
       ASSERT_FALSE(ni.blk_addr);
     } else {
       ASSERT_TRUE(vn);
@@ -106,9 +99,9 @@ TEST(VnodeCache, Basic) {
       vn->Close();
       ino_t ino = child_ino_set.at(i);
       fbl::RefPtr<VnodeF2fs> vn2;
-      ASSERT_EQ(fs->GetVCache().Lookup(ino, &vn2), ZX_OK);
+      ASSERT_EQ(fs_->GetVCache().Lookup(ino, &vn2), ZX_OK);
       NodeInfo ni;
-      fs->GetNodeManager().GetNodeInfo(ino, ni);
+      fs_->GetNodeManager().GetNodeInfo(ino, ni);
       ASSERT_TRUE(ni.blk_addr);
     }
     i++;
@@ -116,10 +109,6 @@ TEST(VnodeCache, Basic) {
 
   ASSERT_EQ(test_dir_vn->Close(), ZX_OK);
   test_dir_vn = nullptr;
-  ASSERT_EQ(root_dir->Close(), ZX_OK);
-  root_dir = nullptr;
-
-  FileTester::Unmount(std::move(fs), &bc);
 }
 
 }  // namespace

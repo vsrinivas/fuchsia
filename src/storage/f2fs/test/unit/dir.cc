@@ -13,22 +13,14 @@
 namespace f2fs {
 namespace {
 
-TEST(DirTest, DentryReuse) {
-  std::unique_ptr<Bcache> bc;
-  FileTester::MkfsOnFakeDev(&bc);
+class DirectoryTest : public F2fsFakeDevTestFixture {
+ public:
+  DirectoryTest() : F2fsFakeDevTestFixture(TestOptions{.mount_options = {{kOptInlineDentry, 0}}}) {}
+};
 
-  std::unique_ptr<F2fs> fs;
-  MountOptions options{};
-  ASSERT_EQ(options.SetValue(options.GetNameView(kOptInlineDentry), 0), ZX_OK);
-  async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
-  FileTester::MountWithOptions(loop.dispatcher(), options, &bc, &fs);
-
-  fbl::RefPtr<VnodeF2fs> root;
-  FileTester::CreateRoot(fs.get(), &root);
-  fbl::RefPtr<Dir> root_dir = fbl::RefPtr<Dir>::Downcast(std::move(root));
-
+TEST_F(DirectoryTest, DentryReuse) {
   fbl::RefPtr<fs::Vnode> test_dir;
-  ASSERT_EQ(root_dir->Create("test", S_IFDIR, &test_dir), ZX_OK);
+  ASSERT_EQ(root_dir_->Create("test", S_IFDIR, &test_dir), ZX_OK);
 
   fbl::RefPtr<VnodeF2fs> test_dir_vn = fbl::RefPtr<VnodeF2fs>::Downcast(std::move(test_dir));
 
@@ -98,28 +90,11 @@ TEST(DirTest, DentryReuse) {
 
   ASSERT_EQ(test_dir_vn->Close(), ZX_OK);
   test_dir_vn = nullptr;
-  ASSERT_EQ(root_dir->Close(), ZX_OK);
-  root_dir = nullptr;
-
-  FileTester::Unmount(std::move(fs), &bc);
 }
 
-TEST(DirTest, DentryBucket) {
-  std::unique_ptr<Bcache> bc;
-  FileTester::MkfsOnFakeDev(&bc);
-
-  std::unique_ptr<F2fs> fs;
-  MountOptions options{};
-  ASSERT_EQ(options.SetValue(options.GetNameView(kOptInlineDentry), 0), ZX_OK);
-  async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
-  FileTester::MountWithOptions(loop.dispatcher(), options, &bc, &fs);
-
-  fbl::RefPtr<VnodeF2fs> root;
-  FileTester::CreateRoot(fs.get(), &root);
-  fbl::RefPtr<Dir> root_dir = fbl::RefPtr<Dir>::Downcast(std::move(root));
-
+TEST_F(DirectoryTest, DentryBucket) {
   fbl::RefPtr<fs::Vnode> test_dir;
-  ASSERT_EQ(root_dir->Create("test", S_IFDIR, &test_dir), ZX_OK);
+  ASSERT_EQ(root_dir_->Create("test", S_IFDIR, &test_dir), ZX_OK);
 
   fbl::RefPtr<VnodeF2fs> test_dir_vn = fbl::RefPtr<VnodeF2fs>::Downcast(std::move(test_dir));
 
@@ -181,32 +156,15 @@ TEST(DirTest, DentryBucket) {
 
   ASSERT_EQ(test_dir_vn->Close(), ZX_OK);
   test_dir_vn = nullptr;
-  ASSERT_EQ(root_dir->Close(), ZX_OK);
-  root_dir = nullptr;
-
-  FileTester::Unmount(std::move(fs), &bc);
 }
 
-TEST(DirTest, MultiSlotDentry) {
+TEST_F(DirectoryTest, MultiSlotDentry) {
   auto seed = testing::GTEST_FLAG(random_seed);
   srand(seed);
   std::cout << "Random seed for DirTest.MultiSlotDentry: " << seed << std::endl;
 
-  std::unique_ptr<Bcache> bc;
-  FileTester::MkfsOnFakeDev(&bc);
-
-  std::unique_ptr<F2fs> fs;
-  MountOptions options{};
-  ASSERT_EQ(options.SetValue(options.GetNameView(kOptInlineDentry), 0), ZX_OK);
-  async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
-  FileTester::MountWithOptions(loop.dispatcher(), options, &bc, &fs);
-
-  fbl::RefPtr<VnodeF2fs> root;
-  FileTester::CreateRoot(fs.get(), &root);
-  fbl::RefPtr<Dir> root_dir = fbl::RefPtr<Dir>::Downcast(std::move(root));
-
   fbl::RefPtr<fs::Vnode> test_dir;
-  ASSERT_EQ(root_dir->Create("test", S_IFDIR, &test_dir), ZX_OK);
+  ASSERT_EQ(root_dir_->Create("test", S_IFDIR, &test_dir), ZX_OK);
 
   fbl::RefPtr<VnodeF2fs> test_dir_vn = fbl::RefPtr<VnodeF2fs>::Downcast(std::move(test_dir));
 
@@ -276,28 +234,11 @@ TEST(DirTest, MultiSlotDentry) {
 
   ASSERT_EQ(test_dir_vn->Close(), ZX_OK);
   test_dir_vn = nullptr;
-  ASSERT_EQ(root_dir->Close(), ZX_OK);
-  root_dir = nullptr;
-
-  FileTester::Unmount(std::move(fs), &bc);
 }
 
-TEST(DirTest, SetDentryLevel1DoWriteAndRead) {
-  std::unique_ptr<Bcache> bc;
-  FileTester::MkfsOnFakeDev(&bc);
-
-  std::unique_ptr<F2fs> fs;
-  MountOptions options{};
-  ASSERT_EQ(options.SetValue(options.GetNameView(kOptInlineDentry), 0), ZX_OK);
-  async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
-  FileTester::MountWithOptions(loop.dispatcher(), options, &bc, &fs);
-
-  fbl::RefPtr<VnodeF2fs> root;
-  FileTester::CreateRoot(fs.get(), &root);
-  fbl::RefPtr<Dir> root_dir = fbl::RefPtr<Dir>::Downcast(std::move(root));
-
+TEST_F(DirectoryTest, SetDentryLevel1DoWriteAndRead) {
   fbl::RefPtr<fs::Vnode> test_dir;
-  ASSERT_EQ(root_dir->Create("test", S_IFDIR, &test_dir), ZX_OK);
+  ASSERT_EQ(root_dir_->Create("test", S_IFDIR, &test_dir), ZX_OK);
 
   fbl::RefPtr<VnodeF2fs> test_dir_vn = fbl::RefPtr<VnodeF2fs>::Downcast(std::move(test_dir));
 
@@ -347,10 +288,6 @@ TEST(DirTest, SetDentryLevel1DoWriteAndRead) {
 
   ASSERT_EQ(test_dir_vn->Close(), ZX_OK);
   test_dir_vn = nullptr;
-  ASSERT_EQ(root_dir->Close(), ZX_OK);
-  root_dir = nullptr;
-
-  FileTester::Unmount(std::move(fs), &bc);
 }
 
 }  // namespace

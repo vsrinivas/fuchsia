@@ -13,10 +13,32 @@ namespace f2fs {
 
 using block_client::FakeBlockDevice;
 
-void FileTester::MkfsOnFakeDev(std::unique_ptr<Bcache> *bc, uint64_t blockCount, uint32_t blockSize,
-                               bool btrim) {
+F2fsFakeDevTestFixture::F2fsFakeDevTestFixture(const TestOptions options)
+    : block_count_(options.block_count),
+      block_size_(options.block_size)
+
+{
+  for (auto opt : options.mount_options) {
+    options_.SetValue(options_.GetNameView(opt.first), opt.second);
+  }
+
+  fbl::RefPtr<VnodeF2fs> root;
+  FileTester::MkfsOnFakeDev(&bc_, block_count_);
+  FileTester::MountWithOptions(loop_.dispatcher(), options_, &bc_, &fs_);
+  FileTester::CreateRoot(fs_.get(), &root);
+  root_dir_ = fbl::RefPtr<Dir>::Downcast(std::move(root));
+}
+
+F2fsFakeDevTestFixture::~F2fsFakeDevTestFixture() {
+  root_dir_->Close();
+  root_dir_ = nullptr;
+  FileTester::Unmount(std::move(fs_), &bc_);
+}
+
+void FileTester::MkfsOnFakeDev(std::unique_ptr<Bcache> *bc, uint64_t block_count,
+                               uint32_t block_size, bool btrim) {
   auto device = std::make_unique<FakeBlockDevice>(FakeBlockDevice::Config{
-      .block_count = blockCount, .block_size = blockSize, .supports_trim = btrim});
+      .block_count = block_count, .block_size = block_size, .supports_trim = btrim});
   bool readonly_device = false;
   ASSERT_EQ(CreateBcache(std::move(device), &readonly_device, bc), ZX_OK);
 
@@ -304,8 +326,8 @@ void MapTester::CheckBlkaddrsInuse(F2fs *fs, std::unordered_set<block_t> &blkadd
 
 void MapTester::CheckDnodeOfData(DnodeOfData *dn, nid_t exp_nid, pgoff_t exp_index, bool is_inode) {
   ASSERT_EQ(dn->nid, exp_nid);
-  ASSERT_EQ(dn->ofs_in_node, static_cast<uint64_t>(1));
-  ASSERT_EQ(dn->data_blkaddr, static_cast<block_t>(0));
+  ASSERT_EQ(dn->ofs_in_node, uint64_t{1});
+  ASSERT_EQ(dn->data_blkaddr, block_t{0});
 
   if (is_inode) {
     ASSERT_TRUE(dn->inode_page_locked);

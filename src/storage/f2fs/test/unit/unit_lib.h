@@ -7,17 +7,40 @@
 
 #include <unordered_set>
 
+#include <gtest/gtest.h>
+
 #include "src/storage/f2fs/f2fs.h"
 
 namespace f2fs {
 
+struct TestOptions {
+  uint64_t block_count = 819200;
+  uint64_t block_size = kDefaultSectorSize;
+  std::vector<std::pair<uint32_t, uint32_t>> mount_options;
+};
+
+class F2fsFakeDevTestFixture : public testing::Test {
+ public:
+  F2fsFakeDevTestFixture(TestOptions options = TestOptions());
+  ~F2fsFakeDevTestFixture();
+
+ protected:
+  uint64_t block_count_;
+  uint64_t block_size_;
+  MountOptions options_{};
+  std::unique_ptr<f2fs::Bcache> bc_;
+  std::unique_ptr<F2fs> fs_;
+  fbl::RefPtr<Dir> root_dir_;
+  async::Loop loop_ = async::Loop(&kAsyncLoopConfigAttachToCurrentThread);
+};
+
 class FileTester {
  public:
-  static void MkfsOnFakeDev(std::unique_ptr<Bcache> *bc, uint64_t blockCount = 819200,
-                            uint32_t blockSize = kDefaultSectorSize, bool btrim = true);
+  static void MkfsOnFakeDev(std::unique_ptr<Bcache> *bc, uint64_t block_count = 819200,
+                            uint32_t block_size = kDefaultSectorSize, bool btrim = true);
   static void MkfsOnFakeDevWithOptions(std::unique_ptr<Bcache> *bc, MkfsOptions &options,
-                                       uint64_t blockCount = 819200,
-                                       uint32_t blockSize = kDefaultSectorSize, bool btrim = true);
+                                       uint64_t block_count = 819200,
+                                       uint32_t block_size = kDefaultSectorSize, bool btrim = true);
   static void MountWithOptions(async_dispatcher_t *dispatcher, MountOptions &options,
                                std::unique_ptr<Bcache> *bc, std::unique_ptr<F2fs> *fs);
   static void Unmount(std::unique_ptr<F2fs> fs, std::unique_ptr<Bcache> *bc);
