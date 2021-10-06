@@ -7,7 +7,6 @@
 
 use {
     crate::{reader::error::ReaderError, Inspector},
-    fuchsia_zircon as zx,
     fuchsia_zircon::Vmo,
     inspect_format::{constants, utils, Block, BlockType, ReadableBlockContainer},
     mapped_vmo::Mapping,
@@ -60,14 +59,6 @@ impl Snapshot {
         let generation = header_generation_count(&header_bytes[..]);
 
         if let Some(gen) = generation {
-            if gen == constants::VMO_FROZEN {
-                match BackingBuffer::try_from(vmo) {
-                    Ok(buffer) => return Ok(Snapshot { buffer }),
-                    // on error, try and read via the full snapshot algo
-                    Err(_) => {}
-                }
-            }
-
             // Read the buffer
             let size = vmo.get_size().map_err(ReaderError::Vmo)?;
             let mut buffer = vec![0u8; size as usize];
@@ -245,19 +236,6 @@ impl ReadableBlockContainer for &BackingBuffer {
     }
 }
 
-impl TryFrom<&Vmo> for BackingBuffer {
-    type Error = zx::Status;
-    fn try_from(vmo: &zx::Vmo) -> Result<Self, Self::Error> {
-        let mapped = Arc::new(Mapping::create_from_vmo(
-            vmo,
-            vmo.get_size()? as usize,
-            zx::VmarFlags::PERM_READ,
-        )?);
-
-        return Ok(BackingBuffer::from(mapped));
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use {
@@ -398,24 +376,5 @@ mod tests {
         assert!(Snapshot::try_from(values).is_err());
         assert!(Snapshot::try_from(vec![]).is_err());
         assert!(Snapshot::try_from(vec![0u8, 1, 2, 3, 4]).is_err());
-    }
-
-    #[test]
-    fn snapshot_frozen_vmo() -> Result<(), Error> {
-        let (mapping, vmo) = Mapping::allocate(4096)?;
-        let mapping_ref = Arc::new(mapping);
-        let mut header = Block::new_free(mapping_ref.clone(), 0, 0, 0)?;
-        header.become_reserved()?;
-        header.become_header()?;
-        vmo.write(&[0xFE, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF], 8).unwrap();
-
-        let snapshot = Snapshot::try_from(&vmo)?;
-        assert!(matches!(snapshot.buffer, BackingBuffer::Map(_)));
-
-        vmo.write(&[2u8; 8], 8).unwrap();
-        let snapshot = Snapshot::try_from(&vmo)?;
-        assert!(matches!(snapshot.buffer, BackingBuffer::Vector(_)));
-
-        Ok(())
     }
 }
