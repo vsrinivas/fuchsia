@@ -213,10 +213,23 @@ async fn destroy_iface(phys: &PhyMap, ifaces: &IfaceMap, id: u16) -> Result<(), 
         error!("Error sending 'DestroyIface' request to phy {:?}: {}", phy_ownership, e);
         zx::Status::INTERNAL
     })?;
-    let () = zx::Status::ok(r.status)?;
 
-    ifaces.remove(&id);
-    Ok(())
+    // If the removal is successful or the interface cannot be found, update the internal
+    // accounting.
+    match r.status {
+        zx::sys::ZX_OK => ifaces.remove(&id),
+        zx::sys::ZX_ERR_NOT_FOUND => {
+            if ifaces.get_snapshot().contains_key(&id) {
+                info!(
+                    "Encountered NOT_FOUND while removing iface #{} potentially due to recovery.",
+                    id
+                );
+                ifaces.remove(&id);
+            }
+        }
+        _ => {}
+    }
+    zx::Status::ok(r.status)
 }
 
 fn into_status_and_opt<T>(r: Result<T, zx::Status>) -> (zx::Status, Option<T>) {
@@ -1097,6 +1110,39 @@ mod tests {
 
         // Verify iface was not removed from available ifaces.
         assert!(test_values.ifaces.get(&42u16).is_some(), "iface expected to not be deleted");
+    }
+
+    #[test]
+    fn destroy_iface_recovery() {
+        let mut exec = fasync::TestExecutor::new().expect("Failed to create an executor");
+        let test_values = test_setup();
+        let mut phy_stream = fake_destroy_iface_env(&test_values.phys, &test_values.ifaces);
+
+        let destroy_fut = super::destroy_iface(&test_values.phys, &test_values.ifaces, 42);
+        pin_mut!(destroy_fut);
+        assert_eq!(Poll::Pending, exec.run_until_stalled(&mut destroy_fut));
+
+        let (req, responder) = assert_variant!(exec.run_until_stalled(&mut phy_stream.next()),
+            Poll::Ready(Some(Ok(fidl_dev::PhyRequest::DestroyIface { req, responder }))) => (req, responder)
+        );
+
+        // Verify the destroy iface request to the corresponding PHY is correct.
+        assert_eq!(0, req.id);
+
+        // In the recovery scenario, the interface will have already been destroyed and the PHY
+        // will have no record of it and will reply to the destruction request with a
+        // ZX_ERR_NOT_FOUND.  In this case, we should verify that the internal accounting is still
+        // updated.
+        responder
+            .send(&mut fidl_dev::DestroyIfaceResponse { status: zx::sys::ZX_ERR_NOT_FOUND })
+            .expect("failed to send DestroyIfaceResponse");
+        assert_eq!(
+            Poll::Ready(Err(zx::Status::NOT_FOUND)),
+            exec.run_until_stalled(&mut destroy_fut)
+        );
+
+        // Verify iface was removed from available ifaces.
+        assert!(test_values.ifaces.get(&42u16).is_none(), "iface should have been removed.");
     }
 
     #[test]
