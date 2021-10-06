@@ -1,98 +1,110 @@
-//! This crate provides traits for describing funcionality of cryptographic hash
+//! This crate provides traits which describe functionality of cryptographic hash
 //! functions.
 //!
-//! By default std functionality in this crate disabled. (e.g. method for
-//! hashing `Read`ers) To enable it turn on `std` feature in your `Cargo.toml`
-//! for this crate.
-#![cfg_attr(not(feature = "std"), no_std)]
-pub extern crate generic_array;
+//! Traits in this repository are organized into high-level convenience traits,
+//! mid-level traits which expose more fine-grained functionality, and
+//! low-level traits intended to only be used by algorithm implementations:
+//!
+//! - **High-level convenience traits**: [`Digest`], [`DynDigest`]. They are wrappers
+//!   around lower-level traits for most common hash-function use-cases.
+//! - **Mid-level traits**: [`Update`], [`BlockInput`], [`Reset`], [`FixedOutput`],
+//!   [`VariableOutput`], [`ExtendableOutput`]. These traits atomically describe
+//!   available functionality of hash function implementations.
+//! - **Low-level traits**: [`FixedOutputDirty`], [`VariableOutputDirty`],
+//!   [`ExtendableOutputDirty`]. These traits are intended to be implemented by
+//!   low-level algorithm providers only and simplify the amount of work
+//!   implementers need to do and therefore shouldn't be used in
+//!   application-level code.
+//!
+//! Additionally hash functions implement traits from the standard library:
+//! `Default`, `Clone`, `Write`. The latter is feature-gated behind `std` feature,
+//! which is usually enabled by default by hash implementation crates.
+//!
+//! The [`Digest`] trait is the most commonly used trait.
+
+#![no_std]
+#![cfg_attr(docsrs, feature(doc_cfg))]
+#![forbid(unsafe_code)]
+#![doc(html_logo_url = "https://raw.githubusercontent.com/RustCrypto/meta/master/logo_small.png")]
+#![warn(missing_docs, rust_2018_idioms)]
+
+#[cfg(feature = "alloc")]
+#[macro_use]
+extern crate alloc;
 
 #[cfg(feature = "std")]
-use std as core;
-use generic_array::{GenericArray, ArrayLength};
+extern crate std;
 
-mod digest;
-mod errors;
 #[cfg(feature = "dev")]
+#[cfg_attr(docsrs, doc(cfg(feature = "dev")))]
 pub mod dev;
 
-pub use errors::{InvalidOutputSize, InvalidBufferLength};
-pub use digest::Digest;
+mod digest;
+mod dyn_digest;
+mod errors;
+mod fixed;
+mod variable;
+mod xof;
 
-// `process` is choosen to not overlap with `input` method in the digest trait
-// change it on trait alias stabilization
+pub use crate::digest::{Digest, Output};
+pub use crate::errors::InvalidOutputSize;
+pub use crate::fixed::{FixedOutput, FixedOutputDirty};
+pub use crate::variable::{VariableOutput, VariableOutputDirty};
+pub use crate::xof::{ExtendableOutput, ExtendableOutputDirty, XofReader};
+pub use generic_array::{self, typenum::consts};
 
-/// Trait for processing input data
-pub trait Input {
-    /// Digest input data. This method can be called repeatedly
-    /// for use with streaming messages.
-    fn process(&mut self, input: &[u8]);
+#[cfg(feature = "alloc")]
+pub use dyn_digest::DynDigest;
+
+use generic_array::ArrayLength;
+
+/// Trait for updating digest state with input data.
+pub trait Update {
+    /// Digest input data.
+    ///
+    /// This method can be called repeatedly, e.g. for processing streaming
+    /// messages.
+    fn update(&mut self, data: impl AsRef<[u8]>);
+
+    /// Digest input data in a chained manner.
+    fn chain(mut self, data: impl AsRef<[u8]>) -> Self
+    where
+        Self: Sized,
+    {
+        self.update(data);
+        self
+    }
 }
 
 /// Trait to indicate that digest function processes data in blocks of size
-/// `BlockSize`. Main usage of this trait is for implementing HMAC generically.
+/// `BlockSize`.
+///
+/// The main usage of this trait is for implementing HMAC generically.
 pub trait BlockInput {
+    /// Block size
     type BlockSize: ArrayLength<u8>;
 }
 
-/// Trait for returning digest result with the fixed size
-pub trait FixedOutput {
-    type OutputSize: ArrayLength<u8>;
-
-    /// Retrieve the digest result. This method consumes digest instance.
-    fn fixed_result(self) -> GenericArray<u8, Self::OutputSize>;
+/// Trait for resetting hash instances
+pub trait Reset {
+    /// Reset hasher instance to its initial state and return current state.
+    fn reset(&mut self);
 }
 
-/// The error type for variable digest output
-#[derive(Clone, Copy, Debug, Default, Eq, Hash, Ord, PartialEq, PartialOrd)]
-pub struct InvalidLength;
-
-/// Trait for returning digest result with the varaible size
-pub trait VariableOutput: core::marker::Sized {
-    /// Create new hasher instance with given output size. Will return
-    /// `Err(InvalidLength)` in case if hasher can not work with the given
-    /// output size. Will always return an error if output size equals to zero.
-    fn new(output_size: usize) -> Result<Self, InvalidLength>;
-
-    /// Get output size of the hasher instance provided to the `new` method
-    fn output_size(&self) -> usize;
-
-    /// Retrieve the digest result into provided buffer. Length of the buffer
-    /// must be equal to output size provided to the `new` method, otherwise
-    /// `Err(InvalidLength)` will be returned
-    fn variable_result(self, buffer: &mut [u8]) -> Result<&[u8], InvalidLength>;
-}
-
-/// Trait for decribing readers which are used to extract extendable output
-/// from the resulting state of hash function.
-pub trait XofReader {
-    /// Read output into the `buffer`. Can be called unlimited number of times.
-    fn read(&mut self, buffer: &mut [u8]);
-}
-
-/// Trait which describes extendable output (XOF) of hash functions. Using this
-/// trait you first need to get structure which implements `XofReader`, using
-/// which you can read extendable output.
-pub trait ExtendableOutput {
-    type Reader: XofReader;
-
-    /// Finalize hash function and return XOF reader
-    fn xof_result(self) -> Self::Reader;
-}
-
-/// Macro for defining opaque `Debug` implementation. It will use the following
-/// format: "HasherName { ... }". While it's convinient to have it
-/// (e.g. for including in other structs), it could be undesirable to leak
-/// internall state, which can happen for example through uncareful logging.
 #[macro_export]
-macro_rules! impl_opaque_debug {
-    ($state:ty) => {
-        impl ::core::fmt::Debug for $state {
-            fn fmt(&self, f: &mut ::core::fmt::Formatter)
-                -> Result<(), ::core::fmt::Error>
-            {
-                write!(f, concat!(stringify!($state), " {{ ... }}"))
+/// Implements `std::io::Write` trait for implementer of [`Update`]
+macro_rules! impl_write {
+    ($hasher:ident) => {
+        #[cfg(feature = "std")]
+        impl std::io::Write for $hasher {
+            fn write(&mut self, buf: &[u8]) -> std::io::Result<usize> {
+                Update::update(self, buf);
+                Ok(buf.len())
+            }
+
+            fn flush(&mut self) -> std::io::Result<()> {
+                Ok(())
             }
         }
-    }
+    };
 }

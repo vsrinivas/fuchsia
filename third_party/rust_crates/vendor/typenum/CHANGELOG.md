@@ -2,13 +2,59 @@
 
 This project follows semantic versioning.
 
+The MSRV (Minimum Supported Rust Version) is 1.37.0, and typenum is tested
+against this Rust version.
+
+### Unreleased
+
+### 1.14.0 (2021-09-01)
+- [changed] Sealed all marker traits. Documentation already stated that these
+  should not be implemented outside the crate, so this is not considered a
+  breaking change.
+
+### 1.13.0 (2021-03-12)
+- [changed] MSRV from 1.22.0 to 1.37.0.
+- [fixed] `op` macro with 2018 edition import.
+- [changed] Allowed calling `assert_type_eq` and `assert_type` at top level.
+- [added] Marker trait `Zero` for `Z0`, `U0`, and `B0`.
+- [added] Implementation of `Pow` trait for f32 and f64 with negative exponent.
+- [added] Trait `ToInt`.
+
+### 1.12.0 (2020-04-13)
+- [added] Feature `force_unix_path_separator` to support building without Cargo.
+- [added] Greatest common divisor operator `Gcd` with alias `Gcf`.
+- [added] `gcd` to the `op!` macro.
+- [changed] Added `Copy` bound to `Rhs` of `Mul<Rhs>` impl for `<TArr<V, A>`.
+- [changed] Added `Copy` bound to `Rhs` of `Div<Rhs>` impl for `<TArr<V, A>`.
+- [changed] Added `Copy` bound to `Rhs` of `PartialDiv<Rhs>` impl for `<TArr<V, A>`.
+- [changed] Added `Copy` bound to `Rhs` of `Rem<Rhs>` impl for `<TArr<V, A>`.
+- [fixed] Make all functions #[inline].
+
+### 1.11.2 (2019-08-26)
+- [fixed] Cross compilation from Linux to Windows.
+
+### 1.11.1 (2019-08-25)
+- [fixed] Builds on earlier Rust builds again and added Rust 1.22.0 to Travis to
+  prevent future breakage.
+
+### 1.11.0 (2019-08-25)
+- [added] Integer `log2` to the `op!` macro.
+- [added] Integer binary logarithm operator `Logarithm2` with alias `Log2`.
+- [changed] Removed `feature(i128_type)` when running with the `i128`
+  feature. Kept the feature flag.  for typenum to maintain compatibility with
+  old Rust versions.
+- [added] Integer `sqrt` to the `op!` macro.
+- [added] Integer square root operator `SquareRoot` with alias `Sqrt`.
+- [fixed] Bug with attempting to create U1024 type alias twice.
+
 ### 1.10.0 (2018-03-11)
 - [added] The `PowerOfTwo` marker trait.
 - [added] Associated constants for `Bit`, `Unsigned`, and `Integer`.
 
 ### 1.9.0 (2017-05-14)
 - [added] The `Abs` type operater and corresponding `AbsVal` alias.
-- [added] The feature `i128` that enables creating 128-bit integers from typenums.
+- [added] The feature `i128` that enables creating 128-bit integers from
+  typenums.
 - [added] The `assert_type!` and `assert_type_eq!` macros.
 - [added] Operators to the `op!` macro, including those performed by `cmp!`.
 - [fixed] Bug in `op!` macro involving functions and convoluted expressions.
@@ -20,13 +66,14 @@ This project follows semantic versioning.
 - [added] Some comparison type-operators that are used by the `cmp!` macro.
 
 ### 1.7.0 (2017-03-24)
-- [added] Type operators `Min` and `Max` with accompanying aliases `Minimum` and `Maximum`
+- [added] Type operators `Min` and `Max` with accompanying aliases `Minimum` and
+  `Maximum`
 
 ### 1.6.0 (2017-02-24)
 - [fixed] Bug in `Array` division.
 - [fixed] Bug where `Rem` would sometimes exit early with the wrong answer.
-- [added] `PartialDiv` operator that performs division as a partial function -- it's defined only
-  when there is no remainder.
+- [added] `PartialDiv` operator that performs division as a partial function --
+  it's defined only when there is no remainder.
 
 ### 1.5.2 (2017-02-04)
 - [fixed] Bug between `Div` implementation and type system.
@@ -35,9 +82,9 @@ This project follows semantic versioning.
 - [fixed] Expanded implementation of `Pow` for primitives.
 
 ### 1.5.0 (2016-11-03)
-- [added] Functions to the `Pow` and `Len` traits. This is *technically* a breaking change, but it
-  would only break someone's code if they have a custom impl for `Pow`. I would be very surprised
-  if that is anyone other than me.
+- [added] Functions to the `Pow` and `Len` traits. This is *technically* a
+  breaking change, but it would only break someone's code if they have a custom
+  impl for `Pow`. I would be very surprised if that is anyone other than me.
 
 ### 1.4.0 (2016-10-29)
 - [added] Type-level arrays of type-level integers. (PR #66)
@@ -53,4 +100,5 @@ This project follows semantic versioning.
 ### 1.2.0 (2016-01-03)
 - [added] This change log!
 - [added] Convenience type aliases for operators. (Issue #48, PR #50)
-- [added] Types in this crate now derive all possible traits. (Issue #42, PR #51)
+- [added] Types in this crate now derive all possible traits. (Issue #42, PR
+  #51)

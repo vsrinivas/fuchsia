@@ -696,6 +696,10 @@ if (!(current_os == "fuchsia")) {
   }
 }
 
+group("sha2") {
+  deps = [ ":sha2-v0_9_8" ]
+}
+
 if (!(current_os == "fuchsia")) {
   group("shared_child") {
     deps = [ ":shared_child-v0_3_5" ]
@@ -1714,6 +1718,28 @@ rust_library("bitflags-v1_2_1") {
   ]
 }
 
+rust_library("block-buffer-v0_9_0") {
+  crate_name = "block_buffer"
+  crate_root = "//third_party/rust_crates/vendor/block-buffer/src/lib.rs"
+  output_name = "block_buffer-6c7dd64c8b827040"
+  configs -= [
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
+  ]
+
+  deps = []
+  deps += [ ":generic-array-v0_14_4" ]
+
+  rustenv = []
+
+  rustflags = [
+    "--cap-lints=allow",
+    "--edition=2018",
+    "-Cmetadata=6c7dd64c8b827040",
+    "-Cextra-filename=-6c7dd64c8b827040",
+  ]
+}
+
 rust_library("blocking-v1_0_2") {
   crate_name = "blocking"
   crate_root = "//third_party/rust_crates/vendor/blocking/src/lib.rs"
@@ -2339,6 +2365,33 @@ rust_library("core-foundation-sys-v0_7_0") {
   if (current_os == "mac") {
     rustflags += [ "-lframework=CoreFoundation" ]
   }
+}
+
+rust_library("cpufeatures-v0_2_1") {
+  crate_name = "cpufeatures"
+  crate_root = "//third_party/rust_crates/vendor/cpufeatures/src/lib.rs"
+  output_name = "cpufeatures-2ca0d32e43ea13"
+  configs -= [
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
+  ]
+
+  deps = []
+  if (current_cpu == "arm64" && current_os == "mac") {
+    deps += [ ":libc-v0_2_101" ]
+  }
+  if (current_cpu == "arm64" && current_os == "linux") {
+    deps += [ ":libc-v0_2_101" ]
+  }
+
+  rustenv = []
+
+  rustflags = [
+    "--cap-lints=allow",
+    "--edition=2018",
+    "-Cmetadata=2ca0d32e43ea13",
+    "-Cextra-filename=-2ca0d32e43ea13",
+  ]
 }
 
 rust_library("crc-v1_8_1") {
@@ -3211,6 +3264,30 @@ rust_library("difference-v2_0_0") {
   ]
 }
 
+rust_library("digest-v0_9_0") {
+  crate_name = "digest"
+  crate_root = "//third_party/rust_crates/vendor/digest/src/lib.rs"
+  output_name = "digest-4e2cfe1cbd6ef02d"
+  configs -= [
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
+  ]
+
+  deps = []
+  deps += [ ":generic-array-v0_14_4" ]
+
+  rustenv = []
+
+  rustflags = [
+    "--cap-lints=allow",
+    "--edition=2018",
+    "-Cmetadata=4e2cfe1cbd6ef02d",
+    "-Cextra-filename=-4e2cfe1cbd6ef02d",
+    "--cfg=feature=\"alloc\"",
+    "--cfg=feature=\"std\"",
+  ]
+}
+
 rust_library("downcast-v0_10_0") {
   crate_name = "downcast"
   crate_root = "//third_party/rust_crates/vendor/downcast/src/lib.rs"
@@ -3996,6 +4073,29 @@ rust_library("futures-util-v0_3_15") {
     "--cfg=feature=\"slab\"",
     "--cfg=feature=\"std\"",
     "--cfg=fn_like_proc_macro",
+  ]
+}
+
+rust_library("generic-array-v0_14_4") {
+  crate_name = "generic_array"
+  crate_root = "//third_party/rust_crates/vendor/generic-array/src/lib.rs"
+  output_name = "generic_array-2b5f1072d48211af"
+  configs -= [
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
+  ]
+
+  deps = []
+  deps += [ ":typenum-v1_14_0" ]
+
+  rustenv = []
+
+  rustflags = [
+    "--cap-lints=allow",
+    "--edition=2015",
+    "-Cmetadata=2b5f1072d48211af",
+    "-Cextra-filename=-2b5f1072d48211af",
+    "--cfg=relaxed_coherence",
   ]
 }
 
@@ -5891,6 +5991,27 @@ rust_library("once_cell-v1_5_2") {
     "--cfg=feature=\"default\"",
     "--cfg=feature=\"parking_lot\"",
     "--cfg=feature=\"std\"",
+  ]
+}
+
+rust_library("opaque-debug-v0_3_0") {
+  crate_name = "opaque_debug"
+  crate_root = "//third_party/rust_crates/vendor/opaque-debug/src/lib.rs"
+  output_name = "opaque_debug-56835c6b9238e559"
+  configs -= [
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
+  ]
+
+  deps = []
+
+  rustenv = []
+
+  rustflags = [
+    "--cap-lints=allow",
+    "--edition=2018",
+    "-Cmetadata=56835c6b9238e559",
+    "-Cextra-filename=-56835c6b9238e559",
   ]
 }
 
@@ -8906,6 +9027,36 @@ rust_library("sha1-v0_6_0") {
   ]
 }
 
+rust_library("sha2-v0_9_8") {
+  crate_name = "sha2"
+  crate_root = "//third_party/rust_crates/vendor/sha2/src/lib.rs"
+  output_name = "sha2-8c9d2086aa45c77d"
+  configs -= [
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
+  ]
+
+  deps = []
+  deps += [ ":block-buffer-v0_9_0" ]
+  deps += [ ":cfg-if-v1_0_0" ]
+  deps += [ ":digest-v0_9_0" ]
+  deps += [ ":opaque-debug-v0_3_0" ]
+  if (current_cpu == "arm64" || current_cpu == "x64" || false) {
+    deps += [ ":cpufeatures-v0_2_1" ]
+  }
+
+  rustenv = []
+
+  rustflags = [
+    "--cap-lints=allow",
+    "--edition=2018",
+    "-Cmetadata=8c9d2086aa45c77d",
+    "-Cextra-filename=-8c9d2086aa45c77d",
+    "--cfg=feature=\"default\"",
+    "--cfg=feature=\"std\"",
+  ]
+}
+
 rust_library("sharded-slab-v0_0_9") {
   crate_name = "sharded_slab"
   crate_root = "//third_party/rust_crates/vendor/sharded-slab/src/lib.rs"
@@ -10462,6 +10613,30 @@ rust_library("typed-arena-v1_4_1") {
     "-Cextra-filename=-18c1bf68df33fe8c",
     "--cfg=feature=\"default\"",
     "--cfg=feature=\"std\"",
+  ]
+}
+
+rust_library("typenum-v1_14_0") {
+  crate_name = "typenum"
+  crate_root = "//third_party/rust_crates/vendor/typenum/src/lib.rs"
+  output_name = "typenum-bd565a80ebea3198"
+  configs -= [
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
+  ]
+
+  deps = []
+
+  rustenv = [
+    "TYPENUM_BUILD_CONSTS=../../../compat/typenum/consts.rs",
+    "TYPENUM_BUILD_OP=../../../compat/typenum/op.rs",
+  ]
+
+  rustflags = [
+    "--cap-lints=allow",
+    "--edition=2018",
+    "-Cmetadata=bd565a80ebea3198",
+    "-Cextra-filename=-bd565a80ebea3198",
   ]
 }
 

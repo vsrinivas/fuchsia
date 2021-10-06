@@ -15,11 +15,11 @@
 //! ```
 //!
 
-use {ArrayLength, GenericArray};
-use core::fmt;
-use core::ops::Add;
-use core::str;
+use core::{fmt, str, ops::Add, cmp::min};
+
 use typenum::*;
+
+use crate::{ArrayLength, GenericArray};
 
 static LOWER_CHARS: &'static [u8] = b"0123456789abcdef";
 static UPPER_CHARS: &'static [u8] = b"0123456789ABCDEF";
@@ -29,33 +29,35 @@ where
     T: Add<T>,
     <T as Add<T>>::Output: ArrayLength<u8>,
 {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let max_digits = f.precision().unwrap_or_else(|| self.len());
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let max_digits = f.precision().unwrap_or_else(|| self.len() * 2);
+        let max_hex = (max_digits >> 1) + (max_digits & 1);
 
-        if T::to_usize() < 1024 {
+        if T::USIZE < 1024 {
             // For small arrays use a stack allocated
             // buffer of 2x number of bytes
             let mut res = GenericArray::<u8, Sum<T, T>>::default();
 
-            for (i, c) in self.iter().take(max_digits).enumerate() {
+            self.iter().take(max_hex).enumerate().for_each(|(i, c)| {
                 res[i * 2] = LOWER_CHARS[(c >> 4) as usize];
                 res[i * 2 + 1] = LOWER_CHARS[(c & 0xF) as usize];
-            }
-            f.write_str(
-                unsafe { str::from_utf8_unchecked(&res[..max_digits * 2]) },
-            )?;
+            });
+
+            f.write_str(unsafe { str::from_utf8_unchecked(&res[..max_digits]) })?;
         } else {
             // For large array use chunks of up to 1024 bytes (2048 hex chars)
             let mut buf = [0u8; 2048];
+            let mut digits_left = max_digits;
 
-            for chunk in self[..max_digits].chunks(1024) {
-                for (i, c) in chunk.iter().enumerate() {
+            for chunk in self[..max_hex].chunks(1024) {
+                chunk.iter().enumerate().for_each(|(i, c)| {
                     buf[i * 2] = LOWER_CHARS[(c >> 4) as usize];
                     buf[i * 2 + 1] = LOWER_CHARS[(c & 0xF) as usize];
-                }
-                f.write_str(unsafe {
-                    str::from_utf8_unchecked(&buf[..chunk.len() * 2])
-                })?;
+                });
+
+                let n = min(chunk.len() * 2, digits_left);
+                f.write_str(unsafe { str::from_utf8_unchecked(&buf[..n]) })?;
+                digits_left -= n;
             }
         }
         Ok(())
@@ -67,33 +69,35 @@ where
     T: Add<T>,
     <T as Add<T>>::Output: ArrayLength<u8>,
 {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let max_digits = f.precision().unwrap_or_else(|| self.len());
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let max_digits = f.precision().unwrap_or_else(|| self.len() * 2);
+        let max_hex = (max_digits >> 1) + (max_digits & 1);
 
-        if T::to_usize() < 1024 {
+        if T::USIZE < 1024 {
             // For small arrays use a stack allocated
             // buffer of 2x number of bytes
             let mut res = GenericArray::<u8, Sum<T, T>>::default();
 
-            for (i, c) in self.iter().take(max_digits).enumerate() {
+            self.iter().take(max_hex).enumerate().for_each(|(i, c)| {
                 res[i * 2] = UPPER_CHARS[(c >> 4) as usize];
                 res[i * 2 + 1] = UPPER_CHARS[(c & 0xF) as usize];
-            }
-            f.write_str(
-                unsafe { str::from_utf8_unchecked(&res[..max_digits * 2]) },
-            )?;
+            });
+
+            f.write_str(unsafe { str::from_utf8_unchecked(&res[..max_digits]) })?;
         } else {
             // For large array use chunks of up to 1024 bytes (2048 hex chars)
             let mut buf = [0u8; 2048];
+            let mut digits_left = max_digits;
 
-            for chunk in self[..max_digits].chunks(1024) {
-                for (i, c) in chunk.iter().enumerate() {
+            for chunk in self[..max_hex].chunks(1024) {
+                chunk.iter().enumerate().for_each(|(i, c)| {
                     buf[i * 2] = UPPER_CHARS[(c >> 4) as usize];
                     buf[i * 2 + 1] = UPPER_CHARS[(c & 0xF) as usize];
-                }
-                f.write_str(unsafe {
-                    str::from_utf8_unchecked(&buf[..chunk.len() * 2])
-                })?;
+                });
+
+                let n = min(chunk.len() * 2, digits_left);
+                f.write_str(unsafe { str::from_utf8_unchecked(&buf[..n]) })?;
+                digits_left -= n;
             }
         }
         Ok(())
