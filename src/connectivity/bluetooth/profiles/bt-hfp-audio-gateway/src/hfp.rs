@@ -271,9 +271,11 @@ mod tests {
     };
 
     use crate::audio::TestAudioControl;
+    use bt_rfcomm::{profile::build_rfcomm_protocol, ServerChannel};
     use fidl_fuchsia_bluetooth_bredr as bredr;
     use fuchsia_bluetooth::types::Uuid;
     use fuchsia_zircon as zx;
+    use std::convert::TryFrom;
 
     #[fuchsia::test(allow_stalls = false)]
     async fn profile_error_propagates_error_from_hfp_run() {
@@ -379,7 +381,12 @@ mod tests {
             ..bredr::Channel::EMPTY
         };
 
-        let mut proto = rfcomm_protocol();
+        // Random RFCOMM protocol.
+        let mut proto: Vec<bredr::ProtocolDescriptor> =
+            build_rfcomm_protocol(ServerChannel::try_from(10).unwrap())
+                .iter()
+                .map(Into::into)
+                .collect();
         server
             .receiver
             .as_ref()
@@ -547,20 +554,6 @@ mod tests {
         Ok(stream)
     }
 
-    fn rfcomm_protocol() -> Vec<bredr::ProtocolDescriptor> {
-        let sc = 10;
-        vec![
-            bredr::ProtocolDescriptor {
-                protocol: bredr::ProtocolIdentifier::L2Cap,
-                params: vec![],
-            },
-            bredr::ProtocolDescriptor {
-                protocol: bredr::ProtocolIdentifier::Rfcomm,
-                params: vec![bredr::DataElement::Uint8(sc)],
-            },
-        ]
-    }
-
     /// Respond to all FIDL messages expected during the initialization of the Hfp main run loop and
     /// during the simulation of a new `Peer` search result event.
     ///
@@ -570,7 +563,12 @@ mod tests {
         connect_from_search: bool,
     ) -> Result<LocalProfileTestServer, anyhow::Error> {
         server.complete_registration().await;
-        let mut proto = rfcomm_protocol();
+        // Random RFCOMM protocol.
+        let mut proto: Vec<bredr::ProtocolDescriptor> =
+            build_rfcomm_protocol(ServerChannel::try_from(10).unwrap())
+                .iter()
+                .map(Into::into)
+                .collect();
 
         // Send search result
         server
