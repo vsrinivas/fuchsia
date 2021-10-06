@@ -29,40 +29,81 @@ using ASF = fuchsia::media::AudioSampleFormat;
 
 namespace media::audio::test {
 
-namespace {
-struct ResultsIndex {
-  HermeticFidelityTest::RenderPath path;
-  int32_t channel;
-  uint32_t thermal_state;
+// Value related to cmdline flags
+//
+// Saving all input|output files (if --save-input-and-output specified) consumes too much
+// on-device storage. These tests save only the input|output files for this specified frequency.
+static constexpr int32_t kFrequencyForSavedWavFiles = 1000;
 
-  bool operator<(const ResultsIndex& rhs) const {
-    return std::tie(path, channel, thermal_state) <
-           std::tie(rhs.path, rhs.channel, rhs.thermal_state);
-  }
-};
+// Custom build-time flags
+//
+// For normal CQ operation, the below should be FALSE.
+//
+// Debug positioning and values of the renderer's input buffer, by showing certain sections.
+static constexpr bool kDebugInputBuffer = false;
 
-};  // namespace
+// Debug positioning and values of the output ring buffer snapshot, by showing certain sections.
+static constexpr bool kDebugOutputBuffer = false;
 
-// For each path|channel|thermal_state, we maintain two results arrays: Frequency Response and
+// If debugging input/output ring buffer contents, display buffer sections for ALL frequencies.
+static constexpr bool kDebugBuffersAtAllFrequencies = false;
+
+// Retain/display worst-case single-test-case results in a looped run. Used to update limits.
+static constexpr bool kRetainWorstCaseResults = false;
+
+// Show results at test-end in tabular form, for copy/compare to hermetic_fidelity_result.cc.
+static constexpr bool kDisplaySummaryResults = false;
+
+// For normal CQ operation, the below should be TRUE.
+// These aid in debugging sporadic failures.
+//
+// Displaying results on-the-fly helps correlate an UNDERFLOW with the affected frequency.
+static constexpr bool kDisplayInProgressResults = true;
+
+// Upon significant SINAD failure, display relevant sections of the output buffer before moving on.
+static constexpr bool kDebugOutputBufferOnSinadFailure = true;
+
+// Consts related to fidelity testing thresholds
+//
+// The power-of-two size of our spectrum analysis buffer, and our frequency spectrum set.
+static constexpr int64_t kFreqTestBufSize = 65536;
+
+// When testing fidelity, we compare actual measured dB to expected dB. These tests are designed
+// to pass if 'actual >= expected', OR less but within the following tolerance. This tolerance
+// also sets the digits of precision for 'expected' values, when stored or displayed.
+static constexpr double kFidelityDbTolerance = 0.001;
+static constexpr double kDebugOutputBufferOnSinadFailureDbTolerance = 20.0;
+
+static constexpr int32_t kFrequencyForBufferDebugging = 8000;
+
+// For each test_name|channel, we maintain two results arrays: Frequency Response and
 // Signal-to-Noise-and-Distortion (sinad). A map of array results is saved as a function-local
 // static variable. If kRetainWorstCaseResults is set, we persist results across repeated test runs.
 //
-// Note: two test cases must not collide on the same path/channel/thermal_state. Thus, this must be
-// refactored if two test cases need to specify the same path|output_channels|thermal_state (an
-// example would be Dynamic Range testing -- the same measurements, but at different volumes).
+// Note: two test cases must not collide on the same test_name/channel. Thus, test cases must take
+// care not to reuse test_name upon copy-and-paste.
+namespace {
+struct ResultsIndex {
+  std::string test_name;
+  int32_t channel;
+
+  bool operator<(const ResultsIndex& rhs) const {
+    return std::tie(test_name, channel) < std::tie(rhs.test_name, rhs.channel);
+  }
+};
+};  // namespace
 
 // static
 // Retrieve (initially allocating, if necessary) the array of level results for this path|channel.
 std::array<double, HermeticFidelityTest::kNumReferenceFreqs>& HermeticFidelityTest::level_results(
-    RenderPath path, int32_t channel, uint32_t thermal_state) {
+    std::string test_name, int32_t channel) {
   // Allocated only when first needed, and automatically cleaned up when process exits.
   static auto results_level_db =
       new std::map<ResultsIndex, std::array<double, HermeticFidelityTest::kNumReferenceFreqs>>();
 
   ResultsIndex index{
-      .path = path,
+      .test_name = test_name,
       .channel = channel,
-      .thermal_state = thermal_state,
   };
   if (results_level_db->find(index) == results_level_db->end()) {
     auto& results = (*results_level_db)[index];
@@ -76,15 +117,14 @@ std::array<double, HermeticFidelityTest::kNumReferenceFreqs>& HermeticFidelityTe
 // Retrieve (initially allocating, if necessary) the array of sinad results for this path|channel.
 // A map of these array results is saved as a function-local static variable.
 std::array<double, HermeticFidelityTest::kNumReferenceFreqs>& HermeticFidelityTest::sinad_results(
-    RenderPath path, int32_t channel, uint32_t thermal_state) {
+    std::string test_name, int32_t channel) {
   // Allocated only when first needed, and automatically cleaned up when process exits.
   static auto results_sinad_db =
       new std::map<ResultsIndex, std::array<double, HermeticFidelityTest::kNumReferenceFreqs>>();
 
   ResultsIndex index{
-      .path = path,
+      .test_name = test_name,
       .channel = channel,
-      .thermal_state = thermal_state,
   };
   if (results_sinad_db->find(index) == results_sinad_db->end()) {
     auto& results = (*results_sinad_db)[index];
@@ -200,7 +240,7 @@ AudioBuffer<OutputFormat> HermeticFidelityTest::GetRendererOutput(
     usage = fuchsia::media::AudioRenderUsage::COMMUNICATION;
   }
 
-  // Render input such that first input frame will be rendered into first ring buffer frame.
+  // Render source such that first input frame will be rendered into first ring buffer frame.
   if (path == RenderPath::Ultrasound) {
     auto renderer = CreateUltrasoundRenderer(input_format, input_buffer_frames, true);
     auto packets = renderer->AppendPackets({&input});
@@ -227,22 +267,23 @@ void HermeticFidelityTest::DisplaySummaryResults(
   // Loop by channel, displaying summary results, in a separate loop from checking each result.
   for (const auto& channel_spec : test_case.channels_to_measure) {
     // Show results in tabular forms, for easy copy into hermetic_fidelity_results.cc.
-    const auto& chan_level_results_db =
-        level_results(test_case.path, channel_spec.channel, test_case.thermal_state.value_or(0));
+    // We don't enforce greater-than-unity response if it occurs, so clamp these to a max of 0.0.
+    const auto& chan_level_results_db = level_results(test_case.test_name, channel_spec.channel);
     printf("\n\tFull-spectrum Frequency Response - %s - output channel %d",
            test_case.test_name.c_str(), channel_spec.channel);
     for (auto freq_idx = 0u; freq_idx < kNumReferenceFreqs; ++freq_idx) {
-      printf(" %s%8.3f,", (freq_idx % 10 == 0 ? "\n" : ""),
-             floor(chan_level_results_db[freq_idx] / kFidelityDbTolerance) * kFidelityDbTolerance);
+      printf("%s %8.3f,", (freq_idx % 10 == 0 ? "\n " : ""),
+             std::min(floor(chan_level_results_db[freq_idx] / kFidelityDbTolerance) *
+                          kFidelityDbTolerance,
+                      0.0));
     }
     printf("\n");
 
-    const auto& chan_sinad_results_db =
-        sinad_results(test_case.path, channel_spec.channel, test_case.thermal_state.value_or(0));
+    const auto& chan_sinad_results_db = sinad_results(test_case.test_name, channel_spec.channel);
     printf("\n\tSignal-to-Noise and Distortion -   %s - output channel %d",
            test_case.test_name.c_str(), channel_spec.channel);
     for (auto freq_idx = 0u; freq_idx < kNumReferenceFreqs; ++freq_idx) {
-      printf(" %s%8.3f,", (freq_idx % 10 == 0 ? "\n" : ""),
+      printf("%s %8.3f,", (freq_idx % 10 == 0 ? "\n " : ""),
              floor(chan_sinad_results_db[freq_idx] / kFidelityDbTolerance) * kFidelityDbTolerance);
     }
     printf("\n\n");
@@ -253,8 +294,7 @@ template <ASF InputFormat, ASF OutputFormat>
 void HermeticFidelityTest::VerifyResults(const TestCase<InputFormat, OutputFormat>& test_case) {
   // Loop by channel_to_measure
   for (const auto& channel_spec : test_case.channels_to_measure) {
-    const auto& chan_level_results_db =
-        level_results(test_case.path, channel_spec.channel, test_case.thermal_state.value_or(0));
+    const auto& chan_level_results_db = level_results(test_case.test_name, channel_spec.channel);
     for (auto freq_idx = 0u; freq_idx < kNumReferenceFreqs; ++freq_idx) {
       EXPECT_GE(chan_level_results_db[freq_idx],
                 channel_spec.freq_resp_lower_limits_db[freq_idx] - kFidelityDbTolerance)
@@ -264,8 +304,7 @@ void HermeticFidelityTest::VerifyResults(const TestCase<InputFormat, OutputForma
           << floor(chan_level_results_db[freq_idx] / kFidelityDbTolerance) * kFidelityDbTolerance;
     }
 
-    const auto& chan_sinad_results_db =
-        sinad_results(test_case.path, channel_spec.channel, test_case.thermal_state.value_or(0));
+    const auto& chan_sinad_results_db = sinad_results(test_case.test_name, channel_spec.channel);
     for (auto freq_idx = 0u; freq_idx < kNumReferenceFreqs; ++freq_idx) {
       EXPECT_GE(chan_sinad_results_db[freq_idx],
                 channel_spec.sinad_lower_limits_db[freq_idx] - kFidelityDbTolerance)
@@ -342,9 +381,10 @@ void HermeticFidelityTest::Run(
     }
   }
 
-  for (auto ec : tc.effect_configs) {
+  for (auto effect_config : tc.effect_configs) {
     fuchsia::media::audio::EffectsController_UpdateEffect_Result result;
-    auto status = effects_controller()->UpdateEffect(ec.name, ec.config, &result);
+    auto status =
+        effects_controller()->UpdateEffect(effect_config.name, effect_config.config, &result);
     ASSERT_EQ(status, ZX_OK);
   }
 
@@ -370,7 +410,7 @@ void HermeticFidelityTest::Run(
     input_mono.Append(AudioBufferSlice(&signal_section));
     input_mono.Append(AudioBufferSlice(&signal_section, 0, tc.pipeline.pos_filter_width));
     FX_CHECK(input_mono.NumFrames() == static_cast<int64_t>(total_input_frames))
-        << "Miscalculated input_mono length: testcode error";
+        << "Incorrect input_mono length: testcode logic error";
 
     auto silence_mono = GenerateSilentAudio(input_type_mono, total_input_frames);
 
@@ -384,7 +424,7 @@ void HermeticFidelityTest::Run(
     }
     auto input = AudioBuffer<InputFormat>::Interleave(channels);
     FX_CHECK(input.NumFrames() == static_cast<int64_t>(total_input_frames))
-        << "Miscalculated input length: testcode error";
+        << "Incorrect input length: testcode logic error";
 
     if constexpr (kDebugInputBuffer) {
       if (kDebugBuffersAtAllFrequencies || freq_for_display == kFrequencyForBufferDebugging) {
@@ -433,16 +473,21 @@ void HermeticFidelityTest::Run(
 
       if constexpr (kDebugOutputBuffer) {
         if (kDebugBuffersAtAllFrequencies || freq_for_display == kFrequencyForBufferDebugging) {
+          // For debugging, show critical locations in the output buffer we retrieved.
           std::string tag = "\nOutput buffer for " + std::to_string(freq_for_display) + " Hz [" +
                             std::to_string(freq_idx) + "], channel " +
                             std::to_string(channel_spec.channel);
-          // For debugging, show critical locations in the output buffer we retrieved.
           ring_buffer_chan.Display(0, 16, tag);
-          ring_buffer_chan.Display(output_analysis_start - 16, output_analysis_start + 16,
-                                   "Startof output analysis section");
+          ring_buffer_chan.Display(output_analysis_start - 16, output_analysis_start,
+                                   "Leading up to the analysis section");
+          ring_buffer_chan.Display(output_analysis_start, output_analysis_start + 16,
+                                   "Start of analysis section");
           ring_buffer_chan.Display(output_analysis_start + kFreqTestBufSize - 16,
+                                   output_analysis_start + kFreqTestBufSize,
+                                   "Final row of analysis section");
+          ring_buffer_chan.Display(output_analysis_start + kFreqTestBufSize,
                                    output_analysis_start + kFreqTestBufSize + 16,
-                                   "End of output analysis section");
+                                   "Immediately following the analysis section");
           ring_buffer_chan.Display(ring_buffer_chan.NumFrames() - 16, ring_buffer_chan.NumFrames(),
                                    "End of output buffer");
         }
@@ -458,7 +503,7 @@ void HermeticFidelityTest::Run(
         // which is measured as the sinad(all frequencies), assuming a full-scale input.
         sinad_db = DoubleToDb(1.0 / MeasureAudioFreqs(output, {}).total_magn_other);
 
-        if constexpr (!kSuppressInProgressResults) {
+        if constexpr (kDisplayInProgressResults) {
           FX_LOGS(INFO) << "Channel " << channel_spec.channel << ": " << std::setw(5)
                         << freq_for_display << " Hz [" << std::setw(2) << freq_idx
                         << "] --       out-of-band rejection " << std::fixed << std::setprecision(4)
@@ -475,7 +520,7 @@ void HermeticFidelityTest::Run(
           sinad_db = DoubleToDb(result.magnitudes[freq] / result.total_magn_other);
         }
 
-        if constexpr (!kSuppressInProgressResults) {
+        if constexpr (kDisplayInProgressResults) {
           FX_LOGS(INFO) << "Channel " << channel_spec.channel << ": " << std::setw(5)
                         << freq_for_display << " Hz [" << std::setw(2) << freq_idx << "] --  level "
                         << std::fixed << std::setprecision(4) << std::setw(9) << level_db
@@ -493,16 +538,40 @@ void HermeticFidelityTest::Run(
       }
 
       // Retrieve the arrays of measurements for this path and channel
-      auto& curr_level_db =
-          level_results(tc.path, channel_spec.channel, tc.thermal_state.value_or(0));
-      auto& curr_sinad_db =
-          sinad_results(tc.path, channel_spec.channel, tc.thermal_state.value_or(0));
+      auto& curr_level_db = level_results(tc.test_name, channel_spec.channel);
+      auto& curr_sinad_db = sinad_results(tc.test_name, channel_spec.channel);
       if constexpr (kRetainWorstCaseResults) {
         curr_level_db[freq_idx] = std::min(curr_level_db[freq_idx], level_db);
         curr_sinad_db[freq_idx] = std::min(curr_sinad_db[freq_idx], sinad_db);
       } else {
         curr_level_db[freq_idx] = level_db;
         curr_sinad_db[freq_idx] = sinad_db;
+      }
+
+      if constexpr (kDebugOutputBufferOnSinadFailure) {
+        if (!out_of_band) {
+          // If sinad fails by a very large amount, display important sections of the output
+          // analysis section before we destroy the buffer and move on.
+          double required_sinad =
+              channel_spec.sinad_lower_limits_db[freq_idx] - kFidelityDbTolerance;
+          if (!isinf(sinad_db) &&
+              sinad_db + kDebugOutputBufferOnSinadFailureDbTolerance < required_sinad) {
+            std::string tag = "\nFAILURE (sinad " + std::to_string(sinad_db) +
+                              "dB, should have been " + std::to_string(required_sinad) +
+                              "dB): \nOutput buffer for " + std::to_string(freq_for_display) +
+                              " Hz [" + std::to_string(freq_idx) + "], channel " +
+                              std::to_string(channel_spec.channel);
+            ring_buffer_chan.Display(output_analysis_start - 32, output_analysis_start, tag);
+            ring_buffer_chan.Display(output_analysis_start, output_analysis_start + 32,
+                                     "Start of analysis section (should start with max value)");
+            ring_buffer_chan.Display(output_analysis_start + kFreqTestBufSize - 32,
+                                     output_analysis_start + kFreqTestBufSize,
+                                     "Final rows of analysis section");
+            ring_buffer_chan.Display(output_analysis_start + kFreqTestBufSize,
+                                     output_analysis_start + kFreqTestBufSize + 32,
+                                     "Ring-out (should start with max value");
+          }
+        }
       }
     }
   }

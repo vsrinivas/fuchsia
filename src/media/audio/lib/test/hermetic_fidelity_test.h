@@ -7,6 +7,7 @@
 
 #include <fuchsia/media/cpp/fidl.h>
 
+#include <optional>
 #include <set>
 #include <string>
 
@@ -26,7 +27,7 @@ class HermeticFidelityTest : public HermeticPipelineTest {
   // The actual frequencies (within a buffer of kFreqTestBufSize) are found in kRefFreqsInternal.
   static const std::array<int32_t, kNumReferenceFreqs> kReferenceFrequencies;
 
-  // Test the three render paths present in today's effects configuration.
+  // Test the three render paths present in common effects configurations.
   enum class RenderPath {
     Media = 0,
     Communications = 1,
@@ -52,6 +53,7 @@ class HermeticFidelityTest : public HermeticPipelineTest {
   template <fuchsia::media::AudioSampleFormat InputFormat,
             fuchsia::media::AudioSampleFormat OutputFormat>
   struct TestCase {
+    // This string must be unique among the different cases in this test suite.
     std::string test_name;
 
     TypedFormat<InputFormat> input_format;
@@ -59,12 +61,14 @@ class HermeticFidelityTest : public HermeticPipelineTest {
     const std::set<int32_t> channels_to_play;
 
     PipelineConstants pipeline;
+    // TODO(fxbug.dev/85960): Add mechanism to specify that a single frequency should be tested.
     int32_t low_cut_frequency = 0;
     int32_t low_pass_frequency = fuchsia::media::MAX_PCM_FRAMES_PER_SECOND;
     std::optional<uint32_t> thermal_state = std::nullopt;
 
     TypedFormat<OutputFormat> output_format;
     const std::set<ChannelMeasurement> channels_to_measure;
+
     std::vector<EffectConfig> effect_configs;
   };
 
@@ -75,50 +79,12 @@ class HermeticFidelityTest : public HermeticPipelineTest {
   void Run(const TestCase<InputFormat, OutputFormat>& tc);
 
  protected:
-  // Custom build-time flags
-  //
-  // These could become cmdline flags. For normal CQ operation, all should be false.
-  //
-  // Debug positioning and values of the renderer's input buffer, by showing certain locations.
-  static constexpr bool kDebugInputBuffer = false;
-
-  // Debug positioning and values of the output ring buffer snapshot, by showing certain locations.
-  static constexpr bool kDebugOutputBuffer = false;
-
-  // If debugging input/output ring buffer contents, display buffer sections for ALL frequencies.
-  static constexpr bool kDebugBuffersAtAllFrequencies = false;
-  static constexpr int32_t kFrequencyForBufferDebugging = 16000;
-
-  // No verbose results (in-progress results help correlate UNDERFLOW with affected frequency).
-  static constexpr bool kSuppressInProgressResults = false;
-
-  // Retain and display the worst-case results in a multi-repeat run. Helpful for updating limits.
-  static constexpr bool kRetainWorstCaseResults = false;
-
-  // Show results at test-end in tabular form, for copy/compare to hermetic_fidelity_result.cc.
-  static constexpr bool kDisplaySummaryResults = false;
-
-  // Consts related to fidelity testing
-  //
-  // When testing fidelity, we compare the actual measured value to an expected value. These tests
-  // are designed so that they pass if 'actual' is greater than or equal to 'expected' -- or if
-  // 'actual' is less than 'expected' by (at most) the following tolerance. This tolerance also
-  // determines the number of digits of precision for 'expected' values, when stored or displayed.
-  static constexpr double kFidelityDbTolerance = 0.001;
-
-  // The power-of-two size of our spectrum analysis buffer.
-  static constexpr int64_t kFreqTestBufSize = 65536;
-
-  // Saving all input|output files (if --save-input-and-output specified) consumes too much
-  // on-device storage. These tests save only the input|output files for this specified frequency.
-  static constexpr int32_t kFrequencyForSavedWavFiles = 1000;
-
   static inline double DoubleToDb(double val) { return std::log10(val) * 20.0; }
 
   static std::array<double, HermeticFidelityTest::kNumReferenceFreqs>& level_results(
-      RenderPath path, int32_t channel, uint32_t thermal_state);
+      std::string test_name, int32_t channel);
   static std::array<double, HermeticFidelityTest::kNumReferenceFreqs>& sinad_results(
-      RenderPath path, int32_t channel, uint32_t thermal_state);
+      std::string test_name, int32_t channel);
 
   void TranslateReferenceFrequencies(int32_t device_frame_rate);
 
