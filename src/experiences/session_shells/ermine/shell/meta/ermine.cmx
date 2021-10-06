@@ -40,7 +40,8 @@
             "fuchsia.ui.scenic.Scenic",
             "fuchsia.ui.shortcut.Registry",
             "fuchsia.update.Manager",
-            "fuchsia.update.channelcontrol.ChannelControl"
+            "fuchsia.update.channelcontrol.ChannelControl",
+            "fuchsia.wlan.policy"
         ]
     }
 }

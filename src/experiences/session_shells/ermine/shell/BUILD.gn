@@ -54,6 +54,7 @@ dart_library("lib") {
     "src/services/settings/network_address_service.dart",
     "src/services/settings/task_service.dart",
     "src/services/settings/timezone_service.dart",
+    "src/services/settings/wifi_service.dart",
   ]
 
   states = [
@@ -118,6 +119,7 @@ dart_library("lib") {
     "//sdk/fidl/fuchsia.ui.views",
     "//sdk/fidl/fuchsia.update",
     "//sdk/fidl/fuchsia.update.channelcontrol",
+    "//sdk/fidl/fuchsia.wlan.policy",
     "//src/experiences/session_shells/ermine/internationalization",
     "//src/experiences/session_shells/ermine/keyboard_shortcuts",
     "//src/experiences/session_shells/ermine/settings",
