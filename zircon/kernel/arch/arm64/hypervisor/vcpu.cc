@@ -319,21 +319,18 @@ zx_status_t Vcpu::Enter(zx_port_packet_t* packet) {
 
 void Vcpu::Kick() {
   kicked_.store(true);
+  // If the VCPU was not running, cancel any wait-for-interrupts.
+  gich_state_.Cancel();
   // Check if the VCPU is running and whether to send an IPI. We hold the thread
   // lock to guard against thread migration between CPUs during the check.
   //
   // NOTE: `last_cpu_` may be currently set to `INVALID_CPU` due to thread
   // migration between CPUs.
-  {
-    Guard<MonitoredSpinLock, IrqSave> guard{ThreadLock::Get(), SOURCE_TAG};
-    auto t = thread_.load();
-    if (t != nullptr && t->state() == THREAD_RUNNING && last_cpu_ != INVALID_CPU) {
-      mp_interrupt(MP_IPI_TARGET_MASK, cpu_num_to_mask(last_cpu_));
-      return;
-    }
+  Guard<MonitoredSpinLock, IrqSave> guard{ThreadLock::Get(), SOURCE_TAG};
+  auto t = thread_.load();
+  if (t != nullptr && t->state() == THREAD_RUNNING && last_cpu_ != INVALID_CPU) {
+    mp_interrupt(MP_IPI_TARGET_MASK, cpu_num_to_mask(last_cpu_));
   }
-  // If the VCPU was not running, cancel any wait-for-interrupts.
-  gich_state_.Cancel();
 }
 
 void Vcpu::Interrupt(uint32_t vector, hypervisor::InterruptType type) {
