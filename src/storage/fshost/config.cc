@@ -87,6 +87,10 @@ const char Config::kUseSyslog[] = "use-syslog";
 // Wait for data before launching pkgfs.
 const char Config::kWaitForData[] = "wait-for-data";
 
+// Comma separated list of files and directories that don't need to be preserved when resizing
+// minfs.
+const char Config::kMinfsResizeExcludedPaths[] = "minfs-resize-excluded-paths";
+
 Config::Options Config::ReadOptions(std::istream& stream) {
   Options options;
   for (std::string line; std::getline(stream, line);) {
@@ -132,6 +136,13 @@ uint64_t Config::ReadUint64OptionValue(std::string_view key, uint64_t default_va
   }
 
   return value;
+}
+
+std::string Config::ReadStringOptionValue(std::string_view key) const {
+  auto found = options_.find(key);
+  if (found == options_.end())
+    return {};
+  return found->second;
 }
 
 std::ostream& operator<<(std::ostream& stream, const Config::Options& options) {

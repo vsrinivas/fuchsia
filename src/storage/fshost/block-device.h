@@ -28,8 +28,7 @@ namespace devmgr {
 // incoming block devices.
 class BlockDevice final : public BlockDeviceInterface {
  public:
-  BlockDevice(FilesystemMounter* mounter, fbl::unique_fd fd,
-              const Config* device_config);
+  BlockDevice(FilesystemMounter* mounter, fbl::unique_fd fd, const Config* device_config);
   BlockDevice(const BlockDevice&) = delete;
   BlockDevice& operator=(const BlockDevice&) = delete;
 
@@ -55,6 +54,9 @@ class BlockDevice final : public BlockDeviceInterface {
   const std::string& partition_name() const final;
 
  private:
+  zx_status_t MountData(mount_options_t* options);
+  zx::channel CloneDeviceChannel() const;
+
   FilesystemMounter* mounter_ = nullptr;
   fbl::unique_fd fd_;
   const Config* device_config_;
