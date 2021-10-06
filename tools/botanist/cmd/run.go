@@ -181,8 +181,8 @@ func (r *RunCommand) execute(ctx context.Context, args []string) error {
 			if err != nil {
 				return err
 			}
-			defer serialLog.Close()
-			sOpts.AuxiliaryOutput = serialLog
+			sOpts.AuxiliaryOutput = serialLog.Name()
+			serialLog.Close()
 		}
 
 		s := serial.NewServer(t0.Serial(), sOpts)

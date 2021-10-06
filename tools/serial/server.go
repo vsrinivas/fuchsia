@@ -26,9 +26,8 @@ type Server struct {
 
 // ServerOptions provide options that parametrize the server's behavior.
 type ServerOptions struct {
-	// AuxiliaryOutput is an optional serial output sink. It will be closed before
-	// server.Run returns. It is dup'd for each incoming socket.
-	AuxiliaryOutput *os.File
+	// AuxiliaryOutput is an optional path to a serial output sink.
+	AuxiliaryOutput string
 
 	// StartAtEnd instructs each connection to begin streaming at the end
 	// of the aux file.
@@ -52,14 +51,23 @@ func (s *Server) Run(ctx context.Context, listener net.Listener) error {
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
 
-	if s.AuxiliaryOutput == nil {
+	var auxOutput *os.File
+	if s.AuxiliaryOutput == "" {
 		f, err := ioutil.TempFile("", "tools-serial-aux-output")
 		if err != nil {
 			return err
 		}
-		s.AuxiliaryOutput = f
-		defer os.Remove(s.AuxiliaryOutput.Name())
+		auxOutput = f
+		s.AuxiliaryOutput = f.Name()
+		defer os.Remove(f.Name())
+	} else {
+		f, err := os.OpenFile(s.AuxiliaryOutput, os.O_RDWR|os.O_CREATE, os.ModePerm)
+		if err != nil {
+			return err
+		}
+		auxOutput = f
 	}
+	defer auxOutput.Close()
 
 	go func() {
 		for {
@@ -84,12 +92,12 @@ func (s *Server) Run(ctx context.Context, listener net.Listener) error {
 				for {
 					l, err := b.ReadString('\n')
 					if err != nil {
-						logger.Errorf(ctx, "serial: conn read: %s", err)
+						logger.Warningf(ctx, "serial: conn read: %s", err)
 						return
 					}
 					_, err = io.WriteString(s.serial, l)
 					if err != nil {
-						logger.Errorf(ctx, "serial: write: %s", err)
+						logger.Warningf(ctx, "serial: write: %s", err)
 						return
 					}
 				}
@@ -98,7 +106,7 @@ func (s *Server) Run(ctx context.Context, listener net.Listener) error {
 			go func() {
 				defer conn.Close()
 
-				f, err := os.Open(s.AuxiliaryOutput.Name())
+				f, err := os.Open(s.AuxiliaryOutput)
 				if err != nil {
 					logger.Errorf(ctx, "serial: %s", err)
 				}
@@ -141,7 +149,7 @@ func (s *Server) Run(ctx context.Context, listener net.Listener) error {
 	go func() {
 		buf := make([]byte, 4096)
 		for {
-			_, err := io.CopyBuffer(s.AuxiliaryOutput, s.serial, buf)
+			_, err := io.CopyBuffer(auxOutput, s.serial, buf)
 			if err != nil {
 				errs <- err
 				return

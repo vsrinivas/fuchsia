@@ -58,7 +58,7 @@ func TestServerAuxOutput(t *testing.T) {
 	serial, device := serialAndDevice()
 	aux := mkTempFile(t)
 
-	s := NewServer(serial, ServerOptions{AuxiliaryOutput: aux})
+	s := NewServer(serial, ServerOptions{AuxiliaryOutput: aux.Name()})
 
 	ctx, cancel := context.WithCancel(context.Background())
 
@@ -100,7 +100,7 @@ func TestServerSocketOutput(t *testing.T) {
 	serial, device := serialAndDevice()
 	aux := mkTempFile(t)
 
-	s := NewServer(serial, ServerOptions{AuxiliaryOutput: aux})
+	s := NewServer(serial, ServerOptions{AuxiliaryOutput: aux.Name()})
 
 	ctx, cancel := context.WithCancel(context.Background())
 
@@ -160,7 +160,7 @@ func TestServerSerialWrites(t *testing.T) {
 	serial, device := serialAndDevice()
 	aux := mkTempFile(t)
 
-	s := NewServer(serial, ServerOptions{AuxiliaryOutput: aux})
+	s := NewServer(serial, ServerOptions{AuxiliaryOutput: aux.Name()})
 
 	ctx, cancel := context.WithCancel(context.Background())
 
@@ -226,7 +226,7 @@ func TestServerSerialClosing(t *testing.T) {
 	serial, _ := serialAndDevice()
 	aux := mkTempFile(t)
 
-	s := NewServer(serial, ServerOptions{AuxiliaryOutput: aux})
+	s := NewServer(serial, ServerOptions{AuxiliaryOutput: aux.Name()})
 
 	ctx := context.Background()
 
