@@ -3,7 +3,9 @@
 # found in the LICENSE file.
 
 import("//build/component/config.gni")
-import("//sdk/cts/build/cts.gni")
+import("//build/components.gni")
+import("//build/rust/rustc_binary.gni")
+import("//build/rust/rustc_test.gni")
 
 group("tests") {
   testonly = true
@@ -17,19 +19,7 @@ group("tests") {
   }
 }
 
-# The CTS changes the package_name when releasing the canary tests.
-#
-# TODO(fxbug.dev/86057): Use a relative URL when the component manager can load the manifest
-# from its own package.
-config("env") {
-  package_url = "fuchsia-pkg://fuchsia.com/reboot_on_terminate_test"
-  if (cts_version != "") {
-    package_url += "_${cts_version}"
-  }
-  rustenv = [ "REBOOT_ON_TERMINATE_PACKAGE=$package_url" ]
-}
-
-cts_rustc_test("reboot_on_terminate_test_bin") {
+rustc_test("reboot_on_terminate_test_bin") {
   edition = "2018"
   deps = [
     "//sdk/fidl/fuchsia.data:fuchsia.data-rustc",
@@ -47,10 +37,9 @@ cts_rustc_test("reboot_on_terminate_test_bin") {
 
   source_root = "src/integration_test.rs"
   sources = [ "src/integration_test.rs" ]
-  configs += [ ":env" ]
 }
 
-cts_rustc_binary("reboot_on_terminate_success_bin") {
+rustc_binary("reboot_on_terminate_success_bin") {
   testonly = true
   edition = "2018"
   deps = [
@@ -69,7 +58,7 @@ cts_rustc_binary("reboot_on_terminate_success_bin") {
   sources = [ "src/reboot_on_terminate_success.rs" ]
 }
 
-cts_rustc_binary("reboot_on_terminate_policy_bin") {
+rustc_binary("reboot_on_terminate_policy_bin") {
   testonly = true
   edition = "2018"
   deps = [
@@ -90,15 +79,13 @@ cts_rustc_binary("reboot_on_terminate_policy_bin") {
   sources = [ "src/reboot_on_terminate_policy.rs" ]
 }
 
-cts_fuchsia_component("reboot_on_terminate_success") {
-  prebuilt_only = true
+fuchsia_component("reboot_on_terminate_success") {
   testonly = true
   manifest = "meta/reboot_on_terminate_success.cml"
   deps = [ ":reboot_on_terminate_success_bin" ]
 }
 
-cts_fuchsia_component("reboot_on_terminate_policy") {
-  prebuilt_only = true
+fuchsia_component("reboot_on_terminate_policy") {
   testonly = true
   manifest = "meta/reboot_on_terminate_policy.cml"
   deps = [ ":reboot_on_terminate_policy_bin" ]
@@ -110,8 +97,7 @@ component_config("config") {
   dest = "data/component_manager_config"
 }
 
-cts_fuchsia_component("component_manager") {
-  prebuilt_only = true
+fuchsia_component("component_manager") {
   testonly = true
   manifest = "meta/component_manager.cml"
   deps = [
@@ -120,21 +106,7 @@ cts_fuchsia_component("component_manager") {
   ]
 }
 
-cts_fuchsia_component("reboot_on_terminate_test_component") {
-  testonly = true
-  prebuilt_only = true
-  component_name = "reboot_on_terminate_test"
-  manifest = "meta/integration_test.cml"
-
-  deps = [
-    ":component_manager",
-    ":reboot_on_terminate_policy",
-    ":reboot_on_terminate_success",
-    ":reboot_on_terminate_test_bin",
-  ]
-}
-
-cts_fuchsia_test_package("reboot_on_terminate_test") {
+fuchsia_unittest_package("reboot_on_terminate_test") {
   # It's possible for nested component_manager to panic after the test
   # passes.
   #
@@ -147,16 +119,14 @@ cts_fuchsia_test_package("reboot_on_terminate_test") {
       max_severity = "FATAL"
     }
   }
-  package_name = "reboot_on_terminate_test"
-  test_components = [ ":reboot_on_terminate_test_component" ]
+  manifest = "meta/integration_test.cml"
   deps = [
+    ":component_manager",
+    ":reboot_on_terminate_policy",
+    ":reboot_on_terminate_success",
+    ":reboot_on_terminate_test_bin",
     "//examples/components/routing/echo_server:echo_server_component",
     "//examples/hello_world/rust:hello-world-rust-component",
     "//src/power/shutdown-shim/tests:shutdown_shim_component",
   ]
-}
-
-sdk_molecule("test_sdks") {
-  testonly = true
-  deps = [ ":reboot_on_terminate_test_sdk" ]
 }
