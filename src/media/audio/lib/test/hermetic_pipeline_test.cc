@@ -35,8 +35,7 @@ bool HermeticPipelineTest::save_input_and_output_files_ = false;
 //    <testname>_output.wav          - portion of the output ring buffer expected to be non-silent
 //    <testname>_expected_output.wav - expected contents of <testname>_output.wav
 //
-// See
-// ./hermetic_golden_test_update_goldens.sh for a semi-automated process.
+// See ./hermetic_golden_test_update_goldens.sh for a semi-automated process.
 void set_save_pipeline_test_inputs_and_outputs(bool save_input_and_output_files) {
   HermeticPipelineTest::save_input_and_output_files_ = save_input_and_output_files;
 }

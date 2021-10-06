@@ -77,8 +77,7 @@ source_set("hermetic_audio_test") {
   ]
 }
 
-# Main entry point for tests that use hermetic_pipeline_test.h.
-source_set("hermetic_pipeline_test_main") {
+source_set("hermetic_pipeline_test") {
   testonly = true
 
   sources = [
@@ -91,7 +90,6 @@ source_set("hermetic_pipeline_test_main") {
     "hermetic_impulse_test.h",
     "hermetic_pipeline_test.cc",
     "hermetic_pipeline_test.h",
-    "hermetic_pipeline_test_main.cc",
   ]
 
   deps = [
@@ -104,6 +102,21 @@ source_set("hermetic_pipeline_test_main") {
 
   # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
   configs += [ "//build/config:Wno-conversion" ]
+}
+
+# Main entry point for tests that use hermetic_pipeline_test.h.
+source_set("hermetic_pipeline_test_main") {
+  testonly = true
+
+  sources = [ "hermetic_pipeline_test_main.cc" ]
+
+  deps = [
+    "//sdk/fidl/fuchsia.media",
+    "//src/lib/fxl",
+    "//src/lib/fxl/test:test_settings",
+  ]
+
+  public_deps = [ ":hermetic_pipeline_test" ]
 }
 
 # Flexible utility class for channel-based communication (such as to drivers or device services).
