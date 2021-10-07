@@ -586,6 +586,12 @@
             to: "#driver_manager",
         },
         {
+            // TODO(fxbug.dev/84885) This is only needed for resizing minfs.
+            protocol: "fuchsia.hardware.power.statecontrol.Admin",
+            from: "#shutdown_shim",
+            to: "#fshost",
+        },
+        {
             // TODO(fxb/65708) This is only needed for an ordered shutdown.
             // Console should outlive driver_manager so that logs at the end of the boot process
             // can still be seen.

@@ -10,17 +10,21 @@
 #include <fidl/fuchsia.fs/cpp/wire.h>
 #include <fidl/fuchsia.hardware.block.partition/cpp/wire.h>
 #include <fidl/fuchsia.hardware.block.volume/cpp/wire.h>
+#include <fidl/fuchsia.hardware.power.statecontrol/cpp/wire.h>
 #include <fuchsia/device/c/fidl.h>
 #include <fuchsia/hardware/block/c/fidl.h>
 #include <fuchsia/hardware/block/partition/c/fidl.h>
 #include <fuchsia/hardware/block/volume/c/fidl.h>
 #include <inttypes.h>
+#include <lib/async-loop/cpp/loop.h>
 #include <lib/fdio/cpp/caller.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
 #include <lib/fdio/unsafe.h>
 #include <lib/fdio/watcher.h>
+#include <lib/fidl/llcpp/client.h>
+#include <lib/fidl/llcpp/client_end.h>
 #include <lib/fzl/time.h>
 #include <lib/service/llcpp/service.h>
 #include <lib/syslog/cpp/macros.h>
@@ -222,6 +226,35 @@ Copier TryReadingMinfs(fidl::ClientEnd<fuchsia_io::Node> device) {
   } else {
     return std::move(copier_or).value();
   }
+}
+
+// Sends a message requesting that the device be rebooted without waiting for a response. Returns an
+// error if the message could not be sent.
+zx::status<> RebootDevice() {
+  using fuchsia_hardware_power_statecontrol::Admin;
+  using fuchsia_hardware_power_statecontrol::wire::RebootReason;
+
+  auto svc = service::OpenServiceRoot();
+  if (svc.is_error()) {
+    FX_LOGS(ERROR) << "Failed to open service root: " << svc.status_string();
+    return svc.take_error();
+  }
+  auto client_end = service::ConnectAt<Admin>(*svc);
+  if (client_end.is_error()) {
+    FX_LOGS(ERROR) << "Failed to connect to fuchsia.hardware.power.statecontrol/Admin: "
+                   << client_end.status_string();
+    return client_end.take_error();
+  }
+  // Create an async loop for sending an async Reboot request. Return without running the loop
+  // because we cannot wait for the response. The Reboot call waits for component-manager to do an
+  // orderly shutdown which includes stopping fshost. If fshost is waiting for the response then it
+  // won't shutdown. Component-manager has a 20 minute timeout for shutting down fshost that would
+  // be reached if the response was waited for.
+  async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
+  fidl::WireClient client(*std::move(client_end), loop.dispatcher());
+  client->Reboot(RebootReason::kFactoryDataReset,
+                 [](fidl::WireResponse<Admin::Reboot>*) { /*ignored*/ });
+  return zx::ok();
 }
 
 }  // namespace
@@ -705,7 +738,8 @@ zx_status_t BlockDevice::MountData(MountOptions* options) {
         case MaybeResizeMinfsResult::kMinfsMountable:
           break;
         case MaybeResizeMinfsResult::kRebootRequired:
-          // TODO(fxbug.dev/84885): Reboot the device.
+          // fshost if a critical process so if requesting a reboot fails then try crashing fshost.
+          ZX_ASSERT_MSG(RebootDevice().is_ok(), "Failed to request a reboot");
           return ZX_ERR_CANCELED;
       }
     }
