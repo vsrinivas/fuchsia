@@ -105,6 +105,27 @@ func TestConstructNinjaTargets(t *testing.T) {
 			},
 		},
 		{
+			name: "netboot images and scripts excluded when paving",
+			staticSpec: &fintpb.Static{
+				Pave:            true,
+				IncludeImages:   true,
+				IncludeArchives: true,
+			},
+			modules: fakeBuildModules{
+				images: []build.Image{
+					{Name: "netboot", Path: "netboot.zbi", Type: "zbi"},
+					{Name: "netboot-script", Path: "netboot.sh", Type: "script"},
+					{Name: "foo", Path: "foo.sh", Type: "script"},
+				},
+			},
+			expectedTargets: append(extraTargetsForImages, "foo.sh"),
+			expectedArtifacts: &fintpb.BuildArtifacts{
+				BuiltImages: []*structpb.Struct{
+					mustStructPB(t, build.Image{Name: "foo", Path: "foo.sh", Type: "script"}),
+				},
+			},
+		},
+		{
 			name: "default ninja target included",
 			staticSpec: &fintpb.Static{
 				IncludeDefaultNinjaTarget: true,

@@ -390,6 +390,12 @@ func isTestingImage(image build.Image, pave bool) bool {
 		// In order for a user to provision without Zedboot the scripts are
 		// needed too, so we want to include them such that artifactory can
 		// upload them. This covers scripts like "pave.sh", "flash.sh", etc.
+		if pave && strings.Contains(image.Name, "netboot") {
+			// If we're paving then we shouldn't build any netboot scripts,
+			// because they would pull netboot images into the build graph that
+			// take a while to build and that we don't actually need.
+			return false
+		}
 		return true
 	// Allow-list a specific set of zbi images that are used for testing.
 	case image.Type == "zbi" && image.Name == "overnet":
