@@ -293,7 +293,9 @@ zx_status_t VmObjectPaged::CreateContiguous(uint32_t pmm_alloc_flags, uint64_t s
   status = vmo->cow_pages_locked()->PinRangeLocked(0, size);
   if (status != ZX_OK) {
     // Decommit the range so the destructor doesn't attempt to unpin.
-    vmo->DecommitRangeLocked(0, size);
+    zx_status_t decommit_status = vmo->DecommitRangeLocked(0, size);
+    ASSERT_MSG(decommit_status == ZX_OK,
+               "Decommit of a known committed range of size %zu failed with %d", size, status);
     return status;
   }
 
