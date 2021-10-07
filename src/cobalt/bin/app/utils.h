@@ -13,19 +13,12 @@
 
 #include "third_party/cobalt/src/lib/util/status.h"
 #include "third_party/cobalt/src/logger/status.h"
-#include "third_party/cobalt/src/observation_store/observation_store.h"
 
 namespace cobalt {
-
-// Maps an ObservationStore::StoreStatus to a fuchsia::cobalt::Status.
-fuchsia::cobalt::Status ToCobaltStatus(observation_store::ObservationStore::StoreStatus s);
 
 fuchsia::cobalt::Status ToCobaltStatus(logger::Status s);
 
 fuchsia::cobalt::Status ToCobaltStatus(util::Status s);
-
-// Maps an ObservationStore::StoreStatus to a fuchsia::metrics::Status.
-fuchsia::metrics::Status ToMetricsStatus(observation_store::ObservationStore::StoreStatus s);
 
 fuchsia::metrics::Status ToMetricsStatus(logger::Status s);
 

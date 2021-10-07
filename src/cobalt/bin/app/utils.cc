@@ -11,24 +11,6 @@
 
 namespace cobalt {
 
-using observation_store::ObservationStore;
-
-fuchsia::cobalt::Status ToCobaltStatus(ObservationStore::StoreStatus s) {
-  switch (s) {
-    case ObservationStore::kOk:
-      return fuchsia::cobalt::Status::OK;
-
-    case ObservationStore::kObservationTooBig:
-      return fuchsia::cobalt::Status::EVENT_TOO_BIG;
-
-    case ObservationStore::kStoreFull:
-      return fuchsia::cobalt::Status::BUFFER_FULL;
-
-    case ObservationStore::kWriteFailed:
-      return fuchsia::cobalt::Status::INTERNAL_ERROR;
-  }
-}
-
 fuchsia::cobalt::Status ToCobaltStatus(logger::Status s) {
   switch (s) {
     case logger::Status::kOK:
@@ -77,22 +59,6 @@ fuchsia::cobalt::Status ToCobaltStatus(util::Status s) {
     case util::StatusCode::UNAUTHENTICATED:
     default:
       return fuchsia::cobalt::Status::INTERNAL_ERROR;
-  }
-}
-
-fuchsia::metrics::Status ToMetricsStatus(ObservationStore::StoreStatus s) {
-  switch (s) {
-    case ObservationStore::kOk:
-      return fuchsia::metrics::Status::OK;
-
-    case ObservationStore::kObservationTooBig:
-      return fuchsia::metrics::Status::EVENT_TOO_BIG;
-
-    case ObservationStore::kStoreFull:
-      return fuchsia::metrics::Status::BUFFER_FULL;
-
-    case ObservationStore::kWriteFailed:
-      return fuchsia::metrics::Status::INTERNAL_ERROR;
   }
 }
 
