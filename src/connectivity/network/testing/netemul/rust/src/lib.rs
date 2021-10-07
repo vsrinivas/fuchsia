@@ -34,6 +34,9 @@ type Result<T = ()> = std::result::Result<T, anyhow::Error>;
 /// The default MTU used in in netemul endpoint configurations.
 pub const DEFAULT_MTU: u16 = 1500;
 
+/// The port identifier used by netemul for [`NetworkDevice`] endpoints.
+pub const PORT_ID: u8 = fnetemul_network::PORT_ID;
+
 /// Abstraction for different endpoint backing types.
 pub trait Endpoint: Copy + Clone {
     /// The backing [`EndpointBacking`] for this `Endpoint`.
@@ -608,14 +611,14 @@ impl<'a> TestEndpoint<'a> {
         fidl::endpoints::ClientEnd<fnetwork::DeviceMarker>,
         fidl::endpoints::ClientEnd<fnetwork::MacAddressingMarker>,
     )> {
-        // TODO(http://fxbug.dev/64310): Do not automatically connect to port 0 once Netstack
-        // exposes FIDL that is port-aware.
-        const PORT0: u8 = 0;
+        // TODO(http://fxbug.dev/85061): Do not automatically connect to port
+        // once Netstack exposes FIDL that is port-aware and we've migrated to
+        // fuchsia.net.interfaces.admin to add devices to the stack.
         let netdevice: fnetwork::DeviceInstanceProxy = netdevice.into_proxy()?;
         let (device, device_server_end) =
             fidl::endpoints::create_proxy::<fnetwork::DeviceMarker>()?;
         let (port, port_server_end) = fidl::endpoints::create_proxy::<fnetwork::PortMarker>()?;
-        let () = device.get_port(PORT0, port_server_end)?;
+        let () = device.get_port(PORT_ID, port_server_end)?;
         let (mac, mac_server_end) =
             fidl::endpoints::create_endpoints::<fnetwork::MacAddressingMarker>()?;
         let () = netdevice.get_device(device_server_end)?;

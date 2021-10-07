@@ -34,6 +34,7 @@ import (
 	"fidl/fuchsia/logger"
 	"fidl/fuchsia/net/debug"
 	"fidl/fuchsia/net/interfaces"
+	"fidl/fuchsia/net/interfaces/admin"
 	"fidl/fuchsia/net/neighbor"
 	"fidl/fuchsia/net/routes"
 	"fidl/fuchsia/net/stack"
@@ -512,6 +513,19 @@ func Main() {
 			func(ctx context.Context, c zx.Channel) error {
 				go component.ServeExclusive(ctx, &stub, c, func(err error) {
 					_ = syslog.WarnTf(interfaces.StateName, "%s", err)
+				})
+				return nil
+			},
+		)
+	}
+
+	{
+		stub := admin.InstallerWithCtxStub{Impl: &interfacesAdminInstallerImpl{ns: ns}}
+		appCtx.OutgoingService.AddService(
+			admin.InstallerName,
+			func(ctx context.Context, c zx.Channel) error {
+				go component.ServeExclusive(ctx, &stub, c, func(err error) {
+					_ = syslog.WarnTf(admin.InstallerName, "%s", err)
 				})
 				return nil
 			},

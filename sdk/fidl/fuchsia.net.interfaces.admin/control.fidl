@@ -6,6 +6,8 @@ library fuchsia.net.interfaces.admin;
 
 using zx;
 using fuchsia.net;
+using fuchsia.hardware.network;
+using fuchsia.net.interfaces;
 
 // TODO(https://fxbug.dev/81579): Tie the lifetime of this protocol to the
 // interface.
@@ -46,4 +48,69 @@ protocol Control {
     RemoveAddress(struct {
         address fuchsia.net.InterfaceAddress;
     }) -> (struct {}) error zx.status;
+
+    /// Gets the interface identifier.
+    ///
+    /// - response `id` the interface identifier.
+    GetId() -> (struct {
+        id fuchsia.net.interface_id;
+    });
+};
+
+/// Installs devices on the network stack.
+@discoverable
+protocol Installer {
+    /// Installs a device on the network stack.
+    ///
+    /// + request `device` the device to install on the network stack.
+    /// + request `device_control` grants access to the installed device.
+    InstallDevice(resource struct {
+        device client_end:fuchsia.hardware.network.Device;
+        device_control server_end:DeviceControl;
+    });
+};
+
+/// Administrative control over an installed device on the network stack.
+///
+/// An instance of `DeviceControl` maps to an instance of
+/// [`fuchsia.hardware.network/Session`]. All interfaces generated from a single
+/// `DeviceControl` instance share the same `Session` and set of device buffers;
+/// and are therefore subject to backpressure over the same pool of resources.
+///
+/// By the same measure, creating multiple `DeviceControl` instances attached to
+/// the same underlying device causes data copies, because each `DeviceControl`
+/// starts a new `Session`. For that reason, users should avoid creating
+/// multiple `DeviceControl` instances for the same device and prefer
+/// instantiating ports into interfaces from a single `DeviceControl` instance
+/// per device.
+///
+/// This protocol encodes the underlying device's lifetime in both
+/// directions; the device exists iff both ends of the protocol are open.
+/// That is:
+///
+/// - Closing the client end causes the device to be removed, including all
+///   interfaces created from it.
+/// - Observing a closure of the server end indicates the device (and all
+///   interfaces created from it) no longer exists.
+protocol DeviceControl {
+    /// Creates an interface on the network stack.
+    ///
+    /// + request `port` the device's port to instantiate as an interface.
+    /// + request `control` grants access to the created interface.
+    CreateInterface(resource struct {
+        port fuchsia.hardware.network.port_id;
+        control server_end:Control;
+        options table {
+            /// New interface name.
+            ///
+            /// If not set, an implementation-defined name will be selected.
+            1: name fuchsia.net.interfaces.name;
+            /// The default metric value used for routes through this interface.
+            ///
+            /// If not set, interpreted as 0.
+            // TODO(...) alias this type from fuchsia.net.routes
+            // when it exists or remove if we decide against it?
+            2: metric uint32;
+        };
+    });
 };

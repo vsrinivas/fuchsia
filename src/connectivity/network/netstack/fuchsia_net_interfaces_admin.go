@@ -16,22 +16,28 @@ import (
 	"syscall/zx"
 	"syscall/zx/fidl"
 
+	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/link/netdevice"
+	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/routes"
 	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/time"
 	"go.fuchsia.dev/fuchsia/src/lib/component"
 	syslog "go.fuchsia.dev/fuchsia/src/lib/syslog/go"
 
+	"fidl/fuchsia/hardware/network"
 	"fidl/fuchsia/net"
 	"fidl/fuchsia/net/interfaces/admin"
 
 	"gvisor.dev/gvisor/pkg/tcpip"
 	"gvisor.dev/gvisor/pkg/tcpip/header"
+	"gvisor.dev/gvisor/pkg/tcpip/link/ethernet"
 	"gvisor.dev/gvisor/pkg/tcpip/network/ipv4"
 	"gvisor.dev/gvisor/pkg/tcpip/network/ipv6"
+	"gvisor.dev/gvisor/pkg/tcpip/stack"
 )
 
 const (
 	addressStateProviderName = "fuchsia.net.interfaces.admin/AddressStateProvider"
 	controlName              = "fuchsia.net.interfaces.admin/Control"
+	deviceControlName        = "fuchsia.net.interfaces.admin/DeviceControl"
 )
 
 type addressStateProviderCollection struct {
@@ -384,6 +390,10 @@ func (ci *adminControlImpl) RemoveAddress(_ fidl.Context, address net.InterfaceA
 	return admin.ControlRemoveAddressResultWithResponse(admin.ControlRemoveAddressResponse{}), nil
 }
 
+func (ci *adminControlImpl) GetId(fidl.Context) (uint64, error) {
+	return uint64(ci.nicid), nil
+}
+
 type adminControlCollection struct {
 	ns *Netstack
 
@@ -404,6 +414,7 @@ func (c *adminControlCollection) onInterfaceRemove() {
 	}
 }
 
+// TODO(https://fxbug.dev/81579): Tie the lifetime of admin collection to interface.
 func (c *adminControlCollection) addImpl(ctx context.Context, impl *adminControlImpl, request admin.ControlWithCtxInterfaceRequest) {
 	c.mu.Lock()
 	c.mu.controls[impl] = struct{}{}
@@ -411,11 +422,117 @@ func (c *adminControlCollection) addImpl(ctx context.Context, impl *adminControl
 
 	go func() {
 		component.ServeExclusive(ctx, &admin.ControlWithCtxStub{Impl: impl}, request.Channel, func(err error) {
-			_ = syslog.WarnTf("fuchsia.net.interfaces.admin/Control", "%s", err)
+			_ = syslog.WarnTf(controlName, "%s", err)
 		})
 
 		c.mu.Lock()
 		delete(c.mu.controls, impl)
 		c.mu.Unlock()
 	}()
+}
+
+var _ admin.InstallerWithCtx = (*interfacesAdminInstallerImpl)(nil)
+
+type interfacesAdminInstallerImpl struct {
+	ns *Netstack
+}
+
+func (i *interfacesAdminInstallerImpl) InstallDevice(_ fidl.Context, device network.DeviceWithCtxInterface, deviceControl admin.DeviceControlWithCtxInterfaceRequest) error {
+
+	client, err := netdevice.NewClient(context.Background(), &device, &netdevice.SimpleSessionConfigFactory{})
+	if err != nil {
+		_ = syslog.WarnTf(controlName, "InstallDevice: %s", err)
+		_ = deviceControl.Close()
+	}
+
+	ctx, cancel := context.WithCancel(context.Background())
+	impl := &interfacesAdminDeviceControlImpl{
+		ns:           i.ns,
+		deviceClient: client,
+		cancelServe:  cancel,
+	}
+
+	// Running the device client and serving the FIDL are tied to the same
+	// context because their lifecycles are linked.
+	go impl.deviceClient.Run(ctx)
+
+	go func() {
+		component.ServeExclusive(ctx, &admin.DeviceControlWithCtxStub{Impl: impl}, deviceControl.Channel, func(err error) {
+			_ = syslog.WarnTf(deviceControlName, "%s", err)
+		})
+
+		// Device lifecycle is tied to channel lifetime.
+		if err := impl.deviceClient.Close(); err != nil {
+			_ = syslog.ErrorTf(deviceControlName, "deviceClient.Close() = %s", err)
+		}
+	}()
+
+	return nil
+}
+
+var _ admin.DeviceControlWithCtx = (*interfacesAdminDeviceControlImpl)(nil)
+
+type interfacesAdminDeviceControlImpl struct {
+	ns           *Netstack
+	deviceClient *netdevice.Client
+	cancelServe  context.CancelFunc
+}
+
+func (d *interfacesAdminDeviceControlImpl) CreateInterface(_ fidl.Context, portId uint8, control admin.ControlWithCtxInterfaceRequest, options admin.Options) error {
+	closeControl := true
+	defer func() {
+		if closeControl {
+			_ = control.Close()
+		}
+	}()
+	port, err := d.deviceClient.NewPort(context.Background(), portId)
+	if err != nil {
+		_ = syslog.WarnTf(deviceControlName, "NewPort(_, %d) failed: %s", portId, err)
+		return nil
+	}
+	defer func() {
+		if port != nil {
+			_ = port.Close()
+		}
+	}()
+
+	var namePrefix string
+	var linkEndpoint stack.LinkEndpoint
+	switch mode := port.Mode(); mode {
+	case netdevice.PortModeEthernet:
+		namePrefix = "eth"
+		linkEndpoint = ethernet.New(port)
+	case netdevice.PortModeIp:
+		namePrefix = "ip"
+		linkEndpoint = port
+	default:
+		panic(fmt.Sprintf("unknown port mode %d", mode))
+	}
+
+	ifs, err := d.ns.addEndpoint(
+		makeEndpointName(namePrefix, options.GetNameWithDefault("")),
+		linkEndpoint,
+		port,
+		port,
+		routes.Metric(options.GetMetricWithDefault(0)),
+	)
+	if err != nil {
+		_ = syslog.WarnTf(deviceControlName, "addEndpoint failed: %s", err)
+		return nil
+	}
+
+	ctx, cancel := context.WithCancel(context.Background())
+	impl := adminControlImpl{
+		ns:          ifs.ns,
+		nicid:       ifs.nicid,
+		cancelServe: cancel,
+	}
+
+	ifs.adminControls.addImpl(ctx, &impl, control)
+
+	// Prevent deferred cleanup from running.
+	closeControl = false
+	port = nil
+
+	return nil
 }

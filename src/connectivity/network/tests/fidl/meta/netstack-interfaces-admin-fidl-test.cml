@@ -10,4 +10,10 @@
     program: {
         binary: "bin/netstack_interfaces_admin_fidl_test",
     },
+    use: [
+        {
+            protocol: [ "fuchsia.net.tun.Control" ],
+            from: "#sandbox",
+        },
+    ],
 }

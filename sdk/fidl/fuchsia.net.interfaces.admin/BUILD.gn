@@ -13,7 +13,9 @@ fidl("fuchsia.net.interfaces.admin") {
   ]
 
   public_deps = [
+    "//sdk/fidl/fuchsia.hardware.network",
     "//sdk/fidl/fuchsia.net",
+    "//sdk/fidl/fuchsia.net.interfaces",
     "//zircon/vdso/zx",
   ]
 }

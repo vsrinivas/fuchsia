@@ -24,7 +24,7 @@ class Endpoint : public fuchsia::netemul::network::Endpoint,
                  public fuchsia::netemul::network::DeviceProxy {
  public:
   // The port identifier to use when creating netemul endpoints.
-  static constexpr uint8_t kPortId = 0;
+  static constexpr uint8_t kPortId = fuchsia::netemul::network::PORT_ID;
   // The network device frame type used by netemul endpoints.
   static constexpr fuchsia::hardware::network::FrameType kFrameType =
       fuchsia::hardware::network::FrameType::ETHERNET;
