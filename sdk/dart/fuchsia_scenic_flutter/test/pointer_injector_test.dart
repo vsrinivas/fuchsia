@@ -5,7 +5,6 @@
 // ignore_for_file: avoid_as, dead_code, null_check_always_fails
 
 import 'dart:async';
-import 'dart:ui';
 
 import 'package:fidl/fidl.dart';
 import 'package:fidl_fuchsia_ui_pointerinjector/fidl_async.dart';

@@ -17,7 +17,6 @@ import 'package:fuchsia_webview_flutter/src/fuchsia_web_services.dart';
 import 'package:fuchsia_webview_flutter/src/fuchsia_webview_platform_controller.dart';
 import 'package:fuchsia_webview_flutter/webview.dart';
 import 'package:mockito/mockito.dart';
-import 'package:webview_flutter/platform_interface.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 
 // ignore_for_file: implementation_imports

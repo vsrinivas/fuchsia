@@ -6,7 +6,6 @@
 // @dart=2.9
 
 import 'package:logging/logging.dart';
-import 'package:sl4f/sl4f.dart';
 import 'package:sl4f/trace_processing.dart';
 import 'package:test/test.dart';
 
