@@ -720,13 +720,10 @@ PageQueues::PagerCounts PageQueues::GetPagerQueueCounts() const {
 
   counts.total = 0;
   for (uint32_t index = lru; index <= mru; index++) {
-    // Distance to the MRU determines the bucket the count goes into, with 'newest' having a
-    // distance of 0 and 'oldest' having a distance of kNumPagerBacked - 1.
-    uint32_t age = mru - index;
     uint64_t count = page_queue_counts_[gen_to_queue(index)].load(ktl::memory_order_relaxed);
-    if (age == 0) {
+    if (index == mru) {
       counts.newest = count;
-    } else if (age == kNumPagerBacked - 1) {
+    } else if (index == lru) {
       counts.oldest = count;
     }
     counts.total += count;
