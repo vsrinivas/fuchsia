@@ -177,8 +177,6 @@ class ElfLib {
   // invalid.
   MemoryRegion GetSectionData(size_t section);
 
-  const AddressMode address_mode_;
-
   // Get the contents of the symbol table. Return nullptr if it is not present
   // or we do not have the means to locate it. Size is number of structs, not
   // number of bytes.
@@ -202,6 +200,11 @@ class ElfLib {
   // information. Returns true unless an error occurred.
   bool LoadDynamicSymbols();
 
+  // Translate a mapped address to an ELF offset, if the address mode is kFile.
+  // Do nothing if the address mode is kProcess.
+  uint64_t MappedAddressToOffset(uint64_t mapped_address);
+
+  const AddressMode address_mode_;
   bool did_load_dynamic_symbols_ = false;
 
   std::unique_ptr<MemoryAccessor> memory_;

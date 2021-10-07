@@ -7,6 +7,7 @@
 #include <zircon/assert.h>
 
 #include <algorithm>
+#include <limits>
 
 namespace elflib {
 namespace {
@@ -187,6 +188,9 @@ std::unique_ptr<ElfLib> ElfLib::Create(FILE* fp, ElfLib::Ownership owned) {
       if (!file_) {
         return nullptr;
       }
+      if (offset > std::numeric_limits<long>::max()) {
+        return nullptr;
+      }
 
       auto& ret = data_[std::make_pair(offset, size)];
       if (ret.size() == size) {
@@ -195,7 +199,7 @@ std::unique_ptr<ElfLib> ElfLib::Create(FILE* fp, ElfLib::Ownership owned) {
 
       ret.resize(size);
 
-      fseek(file_, offset, SEEK_SET);
+      fseek(file_, static_cast<long>(offset), SEEK_SET);
       if (fread(ret.data(), 1, size, file_) != size) {
         return nullptr;
       }
@@ -568,14 +572,14 @@ bool ElfLib::LoadDynamicSymbols() {
           continue;
         }
 
-        dynstr_.offset = dyn->d_un.d_ptr;
+        dynstr_.offset = MappedAddressToOffset(dyn->d_un.d_ptr);
       } else if (dyn->d_tag == DT_SYMTAB) {
         if (dynsym_.offset) {
           Warn("Multiple DT_SYMTAB entries found.");
           continue;
         }
 
-        dynsym_.offset = dyn->d_un.d_ptr;
+        dynsym_.offset = MappedAddressToOffset(dyn->d_un.d_ptr);
       } else if (dyn->d_tag == DT_STRSZ) {
         if (dynstr_.size) {
           Warn("Multiple DT_STRSZ entries found.");
@@ -606,7 +610,7 @@ bool ElfLib::LoadDynamicSymbols() {
 
         static_assert(sizeof(Header) == 16);
 
-        auto data = memory_->GetMemory(addr, sizeof(header));
+        auto data = memory_->GetMemory(MappedAddressToOffset(addr), sizeof(header));
 
         if (!data) {
           continue;
@@ -618,7 +622,7 @@ bool ElfLib::LoadDynamicSymbols() {
         addr += 8 * header.bloom_size;
 
         size_t bucket_bytes = 4 * header.nbuckets;
-        auto bucket_data = memory_->GetMemory(addr, bucket_bytes);
+        auto bucket_data = memory_->GetMemory(MappedAddressToOffset(addr), bucket_bytes);
 
         if (!bucket_data) {
           continue;
@@ -636,7 +640,7 @@ bool ElfLib::LoadDynamicSymbols() {
         addr += (max_bucket - header.symoffset) * 4;
 
         for (uint32_t nsyms = max_bucket + 1;; nsyms++, addr += 4) {
-          auto chain_entry_data = memory_->GetMemory(addr, 4);
+          auto chain_entry_data = memory_->GetMemory(MappedAddressToOffset(addr), 4);
 
           if (!chain_entry_data) {
             break;
@@ -1015,6 +1019,21 @@ bool ElfLib::ProbeHasProgramBits() {
   }
 
   return false;
+}
+
+uint64_t ElfLib::MappedAddressToOffset(uint64_t mapped_address) {
+  if (address_mode_ == AddressMode::kProcess) {
+    return mapped_address;
+  }
+
+  for (const auto& segment : GetSegmentHeaders()) {
+    if (mapped_address >= segment.p_vaddr && mapped_address < segment.p_vaddr + segment.p_memsz) {
+      return mapped_address - segment.p_vaddr + segment.p_offset;
+    }
+  }
+
+  // No segment covering the mapped_address. Return an invalid offset that fails GetMemory().
+  return -1;
 }
 
 }  // namespace elflib
