@@ -102,7 +102,7 @@ void FidlBoundVirtualKeyboardCoordinator::RequestTypeAndVisibility(
     bool is_visible) {
   FX_LOGS(INFO) << __FUNCTION__;
   if (manager_binding_) {
-    manager_binding_->impl()->OnTypeOrVisibilityChange(text_type, is_visible);
+    manager_binding_->impl()->SetTypeAndVisibility(text_type, is_visible);
   } else {
     pending_manager_config_ = {text_type, is_visible};
   }
@@ -121,8 +121,8 @@ void FidlBoundVirtualKeyboardCoordinator::BindManager(
   auto manager = std::make_unique<VirtualKeyboardManager>(
       GetWeakPtr(), fuchsia::input::virtualkeyboard::TextType::ALPHANUMERIC);
   if (pending_manager_config_) {
-    manager->OnTypeOrVisibilityChange(pending_manager_config_->text_type,
-                                      pending_manager_config_->is_visible);
+    manager->SetTypeAndVisibility(pending_manager_config_->text_type,
+                                  pending_manager_config_->is_visible);
     pending_manager_config_.reset();
   }
   manager_binding_.emplace(std::move(manager), std::move(request));

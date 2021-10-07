@@ -56,9 +56,23 @@ void VirtualKeyboardManager::Notify(bool is_visible,
   callback();
 }
 
-void VirtualKeyboardManager::OnTypeOrVisibilityChange(
+void VirtualKeyboardManager::SetTypeAndVisibility(
     fuchsia::input::virtualkeyboard::TextType text_type, bool is_visible) {
   const KeyboardConfig proposed_config = {.text_type = text_type, .is_visible = is_visible};
+  if (last_sent_config_ != proposed_config) {
+    pending_config_ = proposed_config;
+    MaybeNotifyWatcher();
+  }
+}
+
+void VirtualKeyboardManager::SetVisibility(bool is_visible) {
+  FX_DCHECK(pending_config_.has_value() || last_sent_config_.has_value());
+  const KeyboardConfig proposed_config = {
+      .text_type = pending_config_.has_value() ? pending_config_.value().text_type
+                   : last_sent_config_.has_value()
+                       ? last_sent_config_.value().text_type
+                       : fuchsia::input::virtualkeyboard::TextType::ALPHANUMERIC,
+      .is_visible = is_visible};
   if (last_sent_config_ != proposed_config) {
     pending_config_ = proposed_config;
     MaybeNotifyWatcher();

@@ -31,8 +31,13 @@ class VirtualKeyboardManager : public fuchsia::input::virtualkeyboard::Manager {
   // responds to the hanging get to WatchTypeAndVisibility(), if one exists.
   //
   // Called by VirtualKeyboardCoordinator.
-  void OnTypeOrVisibilityChange(fuchsia::input::virtualkeyboard::TextType text_type,
-                                bool is_visible);
+  void SetTypeAndVisibility(fuchsia::input::virtualkeyboard::TextType text_type, bool is_visible);
+
+  // Updates the desired visibility of the virtual keyboard, and responds
+  // to the hanging get to WatchTypeAndVisibility(), if one exists.
+  //
+  // Called by VirtualKeyboardCoordinator.
+  void SetVisibility(bool is_visible);
 
  private:
   struct KeyboardConfig {
@@ -59,9 +64,10 @@ class VirtualKeyboardManager : public fuchsia::input::virtualkeyboard::Manager {
   //
   // * Used to buffer configuration changes when there is no pending
   //   WatchTypeAndVisibility() call.
-  // * Equal to `nullopt`, except in the transient state where `this` has
-  //   responded to WatchTypeAndVisibility(), received a configuration change,
-  //   but not received another call to WatchTypeAndVsibility().
+  // * Equal to `nullopt`, except in the transient states where `this`
+  //   * has not received the first call to WatchTypeAndVisibility() call, OR
+  //   * has responded to WatchTypeAndVisibility(), and received a configuration
+  //     change, but not received another call to WatchTypeAndVisibility().
   std::optional<KeyboardConfig> pending_config_;
 
   fxl::WeakPtr<VirtualKeyboardCoordinator> coordinator_;

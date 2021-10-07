@@ -102,11 +102,11 @@ TEST_F(VirtualKeyboardManagerTest, SecondWatchHangsUntilChange) {
   ASSERT_FALSE(was_called);
 
   // Make a no-op request. WatchTypeAndVisibility() should _not_ invoke its callback yet.
-  manager.OnTypeOrVisibilityChange(fuchsia::input::virtualkeyboard::TextType::ALPHANUMERIC, false);
+  manager.SetTypeAndVisibility(fuchsia::input::virtualkeyboard::TextType::ALPHANUMERIC, false);
   ASSERT_FALSE(was_called);
 
   // Change visibility. Now, Manager should invoke its callback.
-  manager.OnTypeOrVisibilityChange(fuchsia::input::virtualkeyboard::TextType::PHONE, false);
+  manager.SetTypeAndVisibility(fuchsia::input::virtualkeyboard::TextType::PHONE, false);
   ASSERT_TRUE(was_called);
 }
 
@@ -120,7 +120,7 @@ TEST_F(VirtualKeyboardManagerTest, SecondWatchReturnsImmediatelyIfAlreadyChanged
       [](fuchsia::input::virtualkeyboard::TextType text_type, bool is_visibile) {});
 
   // Make a change before invoking WatchTypeAndVisibility() again.
-  manager.OnTypeOrVisibilityChange(fuchsia::input::virtualkeyboard::TextType::PHONE, true);
+  manager.SetTypeAndVisibility(fuchsia::input::virtualkeyboard::TextType::PHONE, true);
 
   // Invoke WatchTypeAndVisibility() again. The callback should be invoked immediately.
   bool was_called = false;
@@ -138,7 +138,7 @@ TEST_F(VirtualKeyboardManagerTest, FirstWatchCallbackIsOnlyInvokedOnce) {
                                             bool is_visible) { ++n_calls; });
   ASSERT_EQ(1u, n_calls);
 
-  manager.OnTypeOrVisibilityChange(fuchsia::input::virtualkeyboard::TextType::PHONE, false);
+  manager.SetTypeAndVisibility(fuchsia::input::virtualkeyboard::TextType::PHONE, false);
   ASSERT_EQ(1u, n_calls);
 }
 
@@ -154,11 +154,11 @@ TEST_F(VirtualKeyboardManagerTest, SecondWatchCallbackIsOnlyInvokedOnce) {
   size_t n_callbacks = 0;
   manager.WatchTypeAndVisibility(
       [&](fuchsia::input::virtualkeyboard::TextType text_type, bool visibility) { ++n_callbacks; });
-  manager.OnTypeOrVisibilityChange(fuchsia::input::virtualkeyboard::TextType::PHONE, false);
+  manager.SetTypeAndVisibility(fuchsia::input::virtualkeyboard::TextType::PHONE, false);
   ASSERT_EQ(1u, n_callbacks);
 
   // Watches are one-shot, so another should _not_ trigger another callback.
-  manager.OnTypeOrVisibilityChange(fuchsia::input::virtualkeyboard::TextType::PHONE, true);
+  manager.SetTypeAndVisibility(fuchsia::input::virtualkeyboard::TextType::PHONE, true);
   ASSERT_EQ(1u, n_callbacks);
 }
 
@@ -194,7 +194,7 @@ TEST_P(VirtualKeyboardManagerWatchTestFixture, WatchProvidesCorrectValues) {
   std::optional<bool> actual_visibility;
   VirtualKeyboardManager manager(coordinator(),
                                  fuchsia::input::virtualkeyboard::TextType::ALPHANUMERIC);
-  manager.OnTypeOrVisibilityChange(expected_text_type, expected_visibility);
+  manager.SetTypeAndVisibility(expected_text_type, expected_visibility);
   manager.WatchTypeAndVisibility(
       [&](fuchsia::input::virtualkeyboard::TextType text_type, bool is_visible) {
         actual_text_type = text_type;
@@ -249,6 +249,62 @@ INSTANTIATE_TEST_SUITE_P(
         ::testing::Values(false, true),
         ::testing::Values(fuchsia::input::virtualkeyboard::VisibilityChangeReason::USER_INTERACTION,
                           fuchsia::input::virtualkeyboard::VisibilityChangeReason::PROGRAMMATIC)));
+
+TEST_F(VirtualKeyboardManagerTest, SetVisibilityUpdatesVisibilityAndPreservesInitialTextType) {
+  VirtualKeyboardManager manager(
+      coordinator(), fuchsia::input::virtualkeyboard::TextType::NUMERIC /* non-zero value */);
+  std::optional<fuchsia::input::virtualkeyboard::TextType> text_type;
+  std::optional<bool> is_visible;
+
+  // With no previous call to SetTypeAndVisility() or WatchTypeAndVisibility(), the call below
+  // should receive the initial TextType passed to the manager ctor.
+  manager.SetVisibility(true);
+  manager.WatchTypeAndVisibility([&](fuchsia::input::virtualkeyboard::TextType ttype, bool is_vis) {
+    text_type = ttype;
+    is_visible = is_vis;
+  });
+  EXPECT_EQ(fuchsia::input::virtualkeyboard::TextType::NUMERIC, text_type);
+  EXPECT_EQ(true, is_visible);
+}
+
+TEST_F(VirtualKeyboardManagerTest, SetVisibilityUpdatesVisibilityAndPreservesPendingTextType) {
+  VirtualKeyboardManager manager(coordinator(),
+                                 fuchsia::input::virtualkeyboard::TextType::ALPHANUMERIC);
+  std::optional<fuchsia::input::virtualkeyboard::TextType> text_type;
+  std::optional<bool> is_visible;
+  manager.SetTypeAndVisibility(fuchsia::input::virtualkeyboard::TextType::NUMERIC, true);
+
+  // With a previous call to SetTypeAndVisility(), but no previous call to WatchTypeAndVisibility(),
+  // the call below should receive the TextType passed to SetTypeAndVisibiilty() above.
+  manager.SetVisibility(false);
+  manager.WatchTypeAndVisibility([&](fuchsia::input::virtualkeyboard::TextType ttype, bool is_vis) {
+    text_type = ttype;
+    is_visible = is_vis;
+  });
+  EXPECT_EQ(fuchsia::input::virtualkeyboard::TextType::NUMERIC, text_type);
+  EXPECT_EQ(false, is_visible);
+}
+
+TEST_F(VirtualKeyboardManagerTest, SetVisibilityUpdatesVisibilityAndPreservesLastSentTextType) {
+  VirtualKeyboardManager manager(coordinator(),
+                                 fuchsia::input::virtualkeyboard::TextType::ALPHANUMERIC);
+  std::optional<fuchsia::input::virtualkeyboard::TextType> text_type;
+  std::optional<bool> is_visible;
+  manager.SetTypeAndVisibility(fuchsia::input::virtualkeyboard::TextType::NUMERIC, true);
+  manager.WatchTypeAndVisibility(
+      [](fuchsia::input::virtualkeyboard::TextType ttype, bool is_vis) {});
+
+  // With a previous call to SetTypeAndVisility(), and a previous call to WatchTypeAndVisibility(),
+  // the call below should receive the same value as the previous call to WatchTypeAndVisibiility().
+  manager.SetVisibility(false);
+  manager.WatchTypeAndVisibility([&](fuchsia::input::virtualkeyboard::TextType ttype, bool is_vis) {
+    text_type = ttype;
+    is_visible = is_vis;
+  });
+  EXPECT_EQ(fuchsia::input::virtualkeyboard::TextType::NUMERIC, text_type);
+  EXPECT_EQ(false, is_visible);
+}
+
 }  // namespace
 }  // namespace virtual_keyboard_manager
 }  // namespace root_presenter
