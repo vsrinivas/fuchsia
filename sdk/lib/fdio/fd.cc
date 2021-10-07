@@ -4,6 +4,8 @@
 
 #include <lib/fdio/fdio.h>
 
+#include <variant>
+
 #include <fbl/auto_lock.h>
 
 #include "fdio_unistd.h"
@@ -48,9 +50,23 @@ zx_status_t fdio_fd_transfer(int fd, zx_handle_t* out_handle) {
   if (io == nullptr) {
     return ZX_ERR_INVALID_ARGS;
   }
-  std::optional ptr = GetLastReference(std::move(io));
-  if (ptr.has_value()) {
-    return ptr.value().unwrap(out_handle);
+  std::variant reference = GetLastReference(std::move(io));
+  auto* ptr = std::get_if<fdio::last_reference>(&reference);
+  if (ptr) {
+    return ptr->unwrap(out_handle);
   }
   return ZX_ERR_UNAVAILABLE;
+}
+
+__EXPORT
+zx_status_t fdio_fd_transfer_or_clone(int fd, zx_handle_t* out_handle) {
+  fdio_ptr io = unbind_from_fd(fd);
+  if (io == nullptr) {
+    return ZX_ERR_INVALID_ARGS;
+  }
+  return std::visit(fdio::overloaded{[out_handle](fdio::last_reference reference) {
+                                       return reference.unwrap(out_handle);
+                                     },
+                                     [out_handle](fdio_ptr ptr) { return ptr->clone(out_handle); }},
+                    GetLastReference(std::move(io)));
 }

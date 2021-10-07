@@ -89,6 +89,30 @@ zx_status_t fdio_fd_clone(int fd, zx_handle_t* out_handle);
 // object.
 zx_status_t fdio_fd_transfer(int fd, zx_handle_t* out_handle);
 
+// Prepares a file descriptor for transfer, or falls-back to cloning it if
+// the descriptor is not transferrable (e.g. it is an FD that has been dup()ed).
+//
+// Upon return, the given file descriptor has been removed from the file
+// descriptor table for this process.
+//
+// Upon success, |out_handle| contains a handle that represents the given file
+// descriptor.
+//
+// # Errors
+//
+// ZX_ERR_INVALID_ARGS: |fd| is not a valid file descriptor.
+//
+// ZX_ERR_UNAVAILABLE: |fd| is busy.
+//
+// ZX_ERR_NOT_SUPPORTED: |fd| cannot be represented as a |zx_handle_t|.
+//
+// ZX_ERR_BAD_STATE: |fd| cannot be transferred to another process in its
+// current state.
+//
+// ZX_ERR_ACCESS_DENIED: |fd| has insufficient rights to clone the underlying
+// object.
+zx_status_t fdio_fd_transfer_or_clone(int fd, zx_handle_t* out_handle);
+
 __END_CDECLS
 
 #endif  // LIB_FDIO_INCLUDE_LIB_FDIO_FD_H_

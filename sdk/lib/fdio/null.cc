@@ -122,9 +122,9 @@ zx_status_t fdio::sendmsg(const struct msghdr* msg, int flags, size_t* out_actua
 
 zx_status_t fdio::shutdown(int how, int16_t* out_code) { return ZX_ERR_WRONG_TYPE; }
 
-std::optional<fdio::last_reference> GetLastReference(fdio_ptr io) {
+std::variant<fdio::last_reference, fdio_ptr> GetLastReference(fdio_ptr io) {
   if (io->IsLastReference()) {
-    return std::make_optional<fdio::last_reference>(fbl::ExportToRawPtr(&io));
+    return fdio::last_reference(fbl::ExportToRawPtr(&io));
   }
-  return std::nullopt;
+  return std::move(io);
 }

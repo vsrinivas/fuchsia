@@ -32,15 +32,6 @@ static zx_status_t fdio_waitable_close(zxio_t* io) {
   return ZX_OK;
 }
 
-// helper type for the visitor #4
-template <class... Ts>
-struct overloaded : Ts... {
-  using Ts::operator()...;
-};
-// explicit deduction guide (not needed as of C++20)
-template <class... Ts>
-overloaded(Ts...) -> overloaded<Ts...>;
-
 static void fdio_waitable_wait_begin(zxio_t* io, zxio_signals_t zxio_signals,
                                      zx_handle_t* out_handle, zx_signals_t* out_zx_signals) {
   fdio_waitable_t* waitable = reinterpret_cast<fdio_waitable_t*>(io);
@@ -51,7 +42,7 @@ static void fdio_waitable_wait_begin(zxio_t* io, zxio_signals_t zxio_signals,
   if (zxio_signals & ZXIO_SIGNAL_WRITABLE) {
     zx_signals |= waitable->writable;
   }
-  std::visit(overloaded{
+  std::visit(fdio::overloaded{
                  [out_handle](zx::handle& handle) { *out_handle = handle.get(); },
                  [out_handle](zx::unowned_handle& handle) { *out_handle = handle->get(); },
              },

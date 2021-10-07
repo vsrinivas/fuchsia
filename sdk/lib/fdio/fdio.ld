@@ -37,6 +37,7 @@
 		fdio_fd_create;
 		fdio_fd_create_null;
 		fdio_fd_transfer;
+		fdio_fd_transfer_or_clone;
 		fdio_get_service_handle;
 		fdio_get_vmo_clone;
 		fdio_get_vmo_copy;

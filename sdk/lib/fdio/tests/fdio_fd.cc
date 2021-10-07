@@ -211,7 +211,58 @@ TEST(FileDescriptorTest, TransferAfterDup) {
   ASSERT_EQ(ZX_ERR_UNAVAILABLE, fdio_fd_transfer(fd, &handle));
   ASSERT_EQ(ZX_HANDLE_INVALID, handle);
 
-  // fdio_fd_transfer consumes |fd| when it returns ZX_ERR_UNAVAILABLE.
+  // fdio_fd_transfer always consumes |fd|.
+  EXPECT_EQ(close(fd), -1);
+  EXPECT_ERRNO(EBADF);
+  EXPECT_EQ(close(fd2), 0);
+}
+
+TEST(FileDescriptorTest, TransferOrCloneError) {
+  zx::handle handle;
+  EXPECT_EQ(ZX_ERR_INVALID_ARGS, fdio_fd_transfer_or_clone(151465, handle.reset_and_get_address()));
+}
+
+TEST(FileDescriptorTest, TransferOrCloneTransfers) {
+  zx::socket h1, h2;
+  ASSERT_OK(zx::socket::create(0, &h1, &h2));
+
+  int fd = -1;
+  const zx_handle_t original_handle = h1.get();
+  ASSERT_OK(fdio_fd_create(h1.release(), &fd));
+  ASSERT_LE(0, fd);
+
+  zx::handle handle;
+  ASSERT_OK(fdio_fd_transfer_or_clone(fd, handle.reset_and_get_address()));
+
+  // Handle should be the same as the one that the FD was created with.
+  EXPECT_EQ(original_handle, handle.get());
+
+  // fdio_fd_transfer_or_clone() always consumes |fd|.
+  EXPECT_EQ(close(fd), -1);
+  EXPECT_ERRNO(EBADF);
+}
+
+TEST(FileDescriptorTest, TransferOrCloneAfterDup) {
+  zx::socket h1, h2;
+  ASSERT_OK(zx::socket::create(0, &h1, &h2));
+
+  int fd = -1;
+  const zx_handle_t original_handle = h1.get();
+  ASSERT_OK(fdio_fd_create(h1.release(), &fd));
+  ASSERT_LE(0, fd);
+
+  int fd2 = dup(fd);
+  ASSERT_LE(0, fd2);
+
+  zx::handle handle;
+  ASSERT_OK(fdio_fd_transfer_or_clone(fd, handle.reset_and_get_address()));
+  ASSERT_NE(ZX_HANDLE_INVALID, handle);
+
+  // Duplicated FDs must be cloned, so the handle should differ from the one
+  // used to create the original FD.
+  EXPECT_NE(original_handle, handle);
+
+  // fdio_fd_transfer_or_clone() always consumes |fd|.
   EXPECT_EQ(close(fd), -1);
   EXPECT_ERRNO(EBADF);
   EXPECT_EQ(close(fd2), 0);

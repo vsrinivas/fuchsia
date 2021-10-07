@@ -5,6 +5,8 @@
 #include <lib/fdio/fdio.h>
 #include <lib/zxio/ops.h>
 
+#include <variant>
+
 #include <fbl/auto_lock.h>
 
 #include "fdio_unistd.h"
@@ -17,14 +19,16 @@ fdio_t* fdio_null_create(void) {
   if (io.is_error()) {
     return nullptr;
   }
-  return GetLastReference(std::move(io.value())).value().ExportToRawPtr();
+  std::variant reference = GetLastReference(std::move(io.value()));
+  return std::get<fdio::last_reference>(reference).ExportToRawPtr();
 }
 
 __EXPORT
 zx_status_t fdio_create(zx_handle_t h, fdio_t** out_io) {
   zx::status io = fdio::create(zx::handle(h));
   if (io.is_ok()) {
-    *out_io = GetLastReference(std::move(io.value())).value().ExportToRawPtr();
+    std::variant reference = GetLastReference(std::move(io.value()));
+    *out_io = std::get<fdio::last_reference>(reference).ExportToRawPtr();
   }
   return io.status_value();
 }
@@ -78,9 +82,10 @@ zx_status_t fdio_unbind_from_fd(int fd, fdio_t** out) {
   if (io == nullptr) {
     return ZX_ERR_INVALID_ARGS;
   }
-  std::optional ptr = GetLastReference(std::move(io));
-  if (ptr.has_value()) {
-    *out = ptr.value().ExportToRawPtr();
+  std::variant reference = GetLastReference(std::move(io));
+  auto* ptr = std::get_if<fdio::last_reference>(&reference);
+  if (ptr) {
+    *out = ptr->ExportToRawPtr();
     return ZX_OK;
   }
   return ZX_ERR_UNAVAILABLE;
@@ -92,9 +97,10 @@ zx_status_t fdio_get_service_handle(int fd, zx_handle_t* out) {
   if (io == nullptr) {
     return ZX_ERR_NOT_FOUND;
   }
-  std::optional ptr = GetLastReference(std::move(io));
-  if (ptr.has_value()) {
-    return ptr.value().unwrap(out);
+  std::variant reference = GetLastReference(std::move(io));
+  auto* ptr = std::get_if<fdio::last_reference>(&reference);
+  if (ptr) {
+    return ptr->unwrap(out);
   }
   return ZX_ERR_UNAVAILABLE;
 }
@@ -106,5 +112,6 @@ fdio_t* fdio_zxio_create(zxio_storage_t** out_storage) {
     return nullptr;
   }
   *out_storage = &io->zxio_storage();
-  return GetLastReference(std::move(io.value())).value().ExportToRawPtr();
+  std::variant reference = GetLastReference(std::move(io.value()));
+  return std::get<fdio::last_reference>(reference).ExportToRawPtr();
 }

@@ -222,6 +222,9 @@ struct fdio : protected fbl::RefCounted<fdio>, protected fbl::Recyclable<fdio> {
       }
     }
 
+    last_reference(last_reference&& other) = default;
+    last_reference& operator=(last_reference&& other) = default;
+
     fdio_t* ExportToRawPtr() { return ptr_.release(); }
 
     zx_status_t unwrap(zx_handle_t* out_handle) { return ptr_->unwrap(out_handle); }
@@ -234,6 +237,16 @@ struct fdio : protected fbl::RefCounted<fdio>, protected fbl::Recyclable<fdio> {
     std::unique_ptr<fdio_t, void (*)(fdio_t*)> ptr_;
   };
 
+  // Helpers from the reference documentation for std::visit<>, to allow
+  // visit-by-overload of the std::variant<> returned by GetLastReference():
+  template <class... Ts>
+  struct overloaded : Ts... {
+    using Ts::operator()...;
+  };
+  // explicit deduction guide (not needed as of C++20)
+  template <class... Ts>
+  overloaded(Ts...) -> overloaded<Ts...>;
+
  protected:
   friend class fbl::internal::MakeRefCountedHelper<fdio>;
   // TODO(tamird/johngro): can we bury ExportToRawPtr? The only user outside of |fdio_slot| and
@@ -243,7 +256,10 @@ struct fdio : protected fbl::RefCounted<fdio>, protected fbl::Recyclable<fdio> {
   // |fdio_bind_to_fd| and |fdio_unsafe_release|.
   friend class fbl::RefPtr<fdio>;
   friend class fbl::Recyclable<fdio>;
-  friend std::optional<last_reference> GetLastReference(fdio_ptr io);
+
+  // Returns the supplied |io| if it is not the last reference to the underlying
+  // resource.
+  friend std::variant<last_reference, fdio_ptr> GetLastReference(fdio_ptr io);
 
   static void deleter(fdio_t* ptr) { delete ptr; }
 

@@ -34,6 +34,7 @@
 #include <cstdarg>
 #include <thread>
 #include <utility>
+#include <variant>
 
 #include <fbl/auto_lock.h>
 
@@ -810,9 +811,10 @@ int close(int fd) {
   if (io == nullptr) {
     return ERRNO(EBADF);
   }
-  std::optional ptr = GetLastReference(std::move(io));
-  if (ptr.has_value()) {
-    return STATUS(ptr.value().Close());
+  std::variant reference = GetLastReference(std::move(io));
+  auto* ptr = std::get_if<fdio::last_reference>(&reference);
+  if (ptr) {
+    return STATUS(ptr->Close());
   }
   return 0;
 }
