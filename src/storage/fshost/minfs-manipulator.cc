@@ -33,6 +33,7 @@
 #include <fs-management/launch.h>
 #include <fs-management/mount.h>
 
+#include "src/lib/files/file.h"
 #include "src/lib/files/file_descriptor.h"
 #include "src/lib/fxl/strings/split_string.h"
 #include "src/storage/fshost/copier.h"
@@ -52,6 +53,34 @@ zx::status<> FormatMinfs(zx::channel device) {
   zx_handle_t handles[] = {device.release()};
   uint32_t ids[] = {FS_HANDLE_BLOCK_DEVICE_ID};
   return zx::make_status(launch_stdio_sync(/*argc=*/2, argv, handles, ids, /*len=*/1));
+}
+
+zx::status<> CopyGracefulRebootReason(const MountedMinfs& minfs, Copier& copier) {
+  zx::status<fbl::unique_fd> minfs_root = minfs.GetRootFd();
+  if (minfs_root.is_error()) {
+    return minfs_root.take_error();
+  }
+
+  fbl::unique_fd fd(openat(minfs_root->get(), kGracefulRebootReasonFilePath, O_RDONLY));
+  if (!fd.is_valid()) {
+    if (errno == ENOENT) {
+      // If the file doesn't exist then it doesn't need to be copied.
+      return zx::ok();
+    }
+    return zx::error(ZX_ERR_IO);
+  }
+
+  std::string graceful_reboot_reason;
+  if (!files::ReadFileDescriptorToString(fd.get(), &graceful_reboot_reason)) {
+    return zx::error(ZX_ERR_IO);
+  }
+  zx::status<> status = copier.InsertFile(kGracefulRebootReasonFilePath, graceful_reboot_reason);
+  if (status.status_value() == ZX_ERR_ALREADY_EXISTS) {
+    // If the file already exists then it probably wasn't excluded and didn't need to be copied
+    // separately.
+    return zx::ok();
+  }
+  return status;
 }
 
 zx::status<> ShredZxcrypt(const zx::unowned_channel& device) {
@@ -222,6 +251,11 @@ MaybeResizeMinfsResult MaybeResizeMinfs(zx::channel device, uint64_t partition_s
   if (copier.is_error()) {
     FX_LOGS(ERROR) << "Failed to read the contents of minfs into memory: "
                    << copier.status_string();
+    // Minfs hasn't been modified. Continue as normal and try again at next reboot.
+    return MaybeResizeMinfsResult::kMinfsMountable;
+  }
+  if (zx::status<> status = CopyGracefulRebootReason(*minfs, *copier); status.is_error()) {
+    FX_LOGS(ERROR) << "Failed to read graceful_reboot_reason.txt: " << copier.status_string();
     // Minfs hasn't been modified. Continue as normal and try again at next reboot.
     return MaybeResizeMinfsResult::kMinfsMountable;
   }

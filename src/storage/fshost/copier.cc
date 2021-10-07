@@ -63,6 +63,15 @@ bool IsPathExcluded(const std::vector<std::filesystem::path>& excluded_paths,
   return false;
 }
 
+Copier::DirectoryEntry* GetEntry(Copier::DirectoryEntries& entries, const std::string& name) {
+  for (auto& entry : entries) {
+    if (std::visit([&name](auto& entry) { return entry.name == name; }, entry)) {
+      return &entry;
+    }
+  }
+  return nullptr;
+}
+
 }  // namespace
 
 zx::status<Copier> Copier::Read(fbl::unique_fd root_fd,
@@ -165,6 +174,32 @@ zx_status_t Copier::Write(fbl::unique_fd root_fd) const {
     }
   }
   return ZX_OK;
+}
+
+zx::status<> Copier::InsertFile(const std::filesystem::path& path, std::string contents) {
+  if (path.filename().empty() || path.is_absolute()) {
+    // |path| was either empty, ended with '/', or started with '/'.
+    return zx::error(ZX_ERR_INVALID_ARGS);
+  }
+  DirectoryEntries* entries = &entries_;
+  for (const auto& parent : path.parent_path()) {
+    DirectoryEntry* entry = GetEntry(*entries, parent);
+    if (entry == nullptr) {
+      entries->push_back(Directory{parent, {}});
+      entries = &std::get<Directory>(entries->back()).entries;
+    } else if (Directory* child_dir = std::get_if<Directory>(entry); child_dir != nullptr) {
+      entries = &child_dir->entries;
+    } else {
+      // A file exists where a directory needed to be created.
+      return zx::error(ZX_ERR_BAD_STATE);
+    }
+  }
+  if (GetEntry(*entries, path.filename()) != nullptr) {
+    // The file already exists.
+    return zx::error(ZX_ERR_ALREADY_EXISTS);
+  }
+  entries->push_back(File{path.filename(), std::move(contents)});
+  return zx::ok();
 }
 
 }  // namespace fshost

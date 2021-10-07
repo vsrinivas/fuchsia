@@ -197,6 +197,23 @@ bool CreateSizedFileAt(int dir, const char* filename, ssize_t file_size) {
   return true;
 }
 
+bool CreateFileAndParentDirectories(const fbl::unique_fd& root_dir,
+                                    const std::filesystem::path& path,
+                                    const std::string& contents) {
+  fbl::unique_fd dir = root_dir.duplicate();
+  for (const auto& dir_name : path.parent_path()) {
+    if (!files::CreateDirectoryAt(dir.get(), dir_name)) {
+      return false;
+    }
+    dir.reset(openat(dir.get(), dir_name.c_str(), O_RDONLY));
+    if (!dir.is_valid()) {
+      return false;
+    }
+  }
+  return files::WriteFileAt(dir.get(), path.filename(), contents.c_str(),
+                            static_cast<ssize_t>(contents.size()));
+}
+
 TEST_F(MinfsManipulatorTest, MaybeResizeMinfsWithAcceptableSizeDoesNothing) {
   constexpr char kFilename[] = "1MiBfile";
   zx::status<uint64_t> initialize_size = GetBlockDeviceSize();
@@ -568,6 +585,71 @@ TEST_F(MinfsManipulatorTest, MaybeResizeMinfsFailingToFormatMinfsLeavesMinfsUnmo
       MinfsUpgradeState::kReadOldPartition,
       MinfsUpgradeState::kWriteNewPartition,
   });
+}
+
+TEST_F(MinfsManipulatorTest, MaybeResizeMinfsRebootReasonIsPreserved) {
+  constexpr char kRebootReason[] = "FACTORY DATA RESET";
+  constexpr char kOtherCacheFilePath[] = "cache/cache-file";
+  {
+    zx::status<MountedMinfs> minfs = MountedMinfs::Mount(device());
+    ASSERT_OK(minfs.status_value());
+    zx::status<fbl::unique_fd> root = minfs->GetRootFd();
+    ASSERT_OK(root.status_value());
+    ASSERT_TRUE(
+        CreateFileAndParentDirectories(*root, kGracefulRebootReasonFilePath, kRebootReason));
+    // Create an extra cache file to verify that the rest of the cache was cleared.
+    ASSERT_TRUE(files::WriteFileAt(root->get(), kOtherCacheFilePath, "contents", 8));
+  }
+
+  // The graceful reboot reason file is in the cache but it should still be preserved even when
+  // excluded.
+  std::vector<std::filesystem::path> exclude_cache = {"cache"};
+  MaybeResizeMinfsResult result =
+      MaybeResizeMinfs(device(), kMinfsPartitionSizeLimit, kForceResizeInodeCount,
+                       kMinfsDataSizeLimit, exclude_cache, inspect());
+  ASSERT_EQ(result, MaybeResizeMinfsResult::kMinfsMountable);
+
+  zx::status<MountedMinfs> minfs = MountedMinfs::Mount(device());
+  ASSERT_OK(minfs.status_value());
+  zx::status<fbl::unique_fd> root = minfs->GetRootFd();
+  ASSERT_OK(root.status_value());
+
+  std::string contents;
+  EXPECT_TRUE(files::ReadFileToStringAt(root->get(), kGracefulRebootReasonFilePath, &contents));
+  EXPECT_EQ(contents, kRebootReason);
+  EXPECT_FALSE(files::ReadFileToStringAt(root->get(), kOtherCacheFilePath, &contents));
+}
+
+TEST_F(MinfsManipulatorTest, MaybeResizeMinfsRebootReasonAlreadyCopied) {
+  constexpr char kRebootReason[] = "FACTORY DATA RESET";
+  constexpr char kExcludedFilePath[] = "exclude/file";
+  {
+    zx::status<MountedMinfs> minfs = MountedMinfs::Mount(device());
+    ASSERT_OK(minfs.status_value());
+    zx::status<fbl::unique_fd> root = minfs->GetRootFd();
+    ASSERT_OK(root.status_value());
+    ASSERT_TRUE(
+        CreateFileAndParentDirectories(*root, kGracefulRebootReasonFilePath, kRebootReason));
+    ASSERT_TRUE(CreateFileAndParentDirectories(*root, kExcludedFilePath, "contents"));
+  }
+
+  // The graceful reboot reason file isn't excluded and an attempt to explicitly copy it will be
+  // made that shouldn't cause an error.
+  std::vector<std::filesystem::path> excluded_paths = {"exclude"};
+  MaybeResizeMinfsResult result =
+      MaybeResizeMinfs(device(), kMinfsPartitionSizeLimit, kForceResizeInodeCount,
+                       kMinfsDataSizeLimit, excluded_paths, inspect());
+  ASSERT_EQ(result, MaybeResizeMinfsResult::kMinfsMountable);
+
+  zx::status<MountedMinfs> minfs = MountedMinfs::Mount(device());
+  ASSERT_OK(minfs.status_value());
+  zx::status<fbl::unique_fd> root = minfs->GetRootFd();
+  ASSERT_OK(root.status_value());
+
+  std::string contents;
+  EXPECT_TRUE(files::ReadFileToStringAt(root->get(), kGracefulRebootReasonFilePath, &contents));
+  EXPECT_EQ(contents, kRebootReason);
+  EXPECT_FALSE(files::ReadFileToStringAt(root->get(), kExcludedFilePath, &contents));
 }
 
 TEST(ParseExcludedPaths, WithEmptyStringProducesEmptyList) {

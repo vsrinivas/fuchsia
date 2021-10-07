@@ -44,6 +44,11 @@ class Copier {
   // Writes all data to the given root fd.
   zx_status_t Write(fbl::unique_fd root_fd) const;
 
+  // Inserts a file into the in-memory structure creating parent directories as necessary.
+  // Returns an error if the file already exists or a directory could not be created because a file
+  // with the same name already exists.
+  zx::status<> InsertFile(const std::filesystem::path& path, std::string contents);
+
   const DirectoryEntries& entries() const { return entries_; }
 
  private:

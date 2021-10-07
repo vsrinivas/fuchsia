@@ -5,10 +5,12 @@
 #include "src/storage/fshost/copier.h"
 
 #include <unistd.h>
+#include <zircon/errors.h>
 
 #include <cerrno>
 #include <filesystem>
 
+#include <fbl/unique_fd.h>
 #include <gtest/gtest.h>
 
 #include "src/lib/files/directory.h"
@@ -207,6 +209,59 @@ TEST_F(CopierTest, ReadWithExclusionDoesNotMatchSuffixes) {
   EXPECT_EQ(data_or->Write(std::move(fd)), ZX_OK);
 
   EXPECT_TRUE(DoesFileExist(dst_path("dir/file")));
+}
+
+TEST_F(CopierTest, InsertFileWorks) {
+  Copier copier;
+  // File at root.
+  EXPECT_EQ(copier.InsertFile("file1.txt", "hello1").status_value(), ZX_OK);
+  // Create a parent directory.
+  EXPECT_EQ(copier.InsertFile("dir1/file2.txt", "hello2").status_value(), ZX_OK);
+  // Create a file in an existing directory.
+  EXPECT_EQ(copier.InsertFile("dir1/file3.txt", "hello3").status_value(), ZX_OK);
+  // Create a parent directory in another directory.
+  EXPECT_EQ(copier.InsertFile("dir1/dir2/file4.txt", "hello4").status_value(), ZX_OK);
+
+  fbl::unique_fd fd = fbl::unique_fd(open(dst_dir().c_str(), O_RDONLY));
+  ASSERT_TRUE(fd);
+  EXPECT_EQ(copier.Write(std::move(fd)), ZX_OK);
+
+  EXPECT_EQ(GetFileContents(dst_path("file1.txt")), "hello1");
+  EXPECT_EQ(GetFileContents(dst_path("dir1/file2.txt")), "hello2");
+  EXPECT_EQ(GetFileContents(dst_path("dir1/file3.txt")), "hello3");
+  EXPECT_EQ(GetFileContents(dst_path("dir1/dir2/file4.txt")), "hello4");
+}
+
+TEST_F(CopierTest, InsertFileWithExistingFileIsAnError) {
+  Copier copier;
+  EXPECT_EQ(copier.InsertFile("file1.txt", "hello1").status_value(), ZX_OK);
+  EXPECT_EQ(copier.InsertFile("file1.txt", "hello2").status_value(), ZX_ERR_ALREADY_EXISTS);
+
+  EXPECT_EQ(copier.InsertFile("dir1/file2.txt", "hello3").status_value(), ZX_OK);
+  EXPECT_EQ(copier.InsertFile("dir1/file2.txt", "hello4").status_value(), ZX_ERR_ALREADY_EXISTS);
+
+  fbl::unique_fd fd = fbl::unique_fd(open(dst_dir().c_str(), O_RDONLY));
+  ASSERT_TRUE(fd);
+  EXPECT_EQ(copier.Write(std::move(fd)), ZX_OK);
+
+  EXPECT_EQ(GetFileContents(dst_path("file1.txt")), "hello1");
+  EXPECT_EQ(GetFileContents(dst_path("dir1/file2.txt")), "hello3");
+}
+
+TEST_F(CopierTest, InsertFileWithFileAtParentDirectoryIsAnError) {
+  Copier copier;
+  EXPECT_EQ(copier.InsertFile("foo", "hello1").status_value(), ZX_OK);
+  EXPECT_EQ(copier.InsertFile("foo/file1.txt", "hello1").status_value(), ZX_ERR_BAD_STATE);
+}
+
+TEST_F(CopierTest, InsertFileWithEndingSlashIsAnError) {
+  Copier copier;
+  EXPECT_EQ(copier.InsertFile("file1/", "hello1").status_value(), ZX_ERR_INVALID_ARGS);
+}
+
+TEST_F(CopierTest, InsertFileWithAbsolutePathIsAnError) {
+  Copier copier;
+  EXPECT_EQ(copier.InsertFile("/file1.txt", "hello1").status_value(), ZX_ERR_INVALID_ARGS);
 }
 
 }  // namespace

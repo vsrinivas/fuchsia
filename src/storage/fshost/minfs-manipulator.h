@@ -19,6 +19,10 @@
 
 namespace fshost {
 
+constexpr char kGracefulRebootReasonFilePath[] =
+    "cache/de3e6f95d17b22bcc6b8bb5389301dc9fa60a16e2c5a4d35eb4a35dd9ac571c3/"
+    "graceful_reboot_reason.txt";
+
 // Gets the BlockInfo from |device|.
 zx::status<fuchsia_hardware_block::wire::BlockInfo> GetBlockDeviceInfo(
     const zx::unowned_channel& device);
