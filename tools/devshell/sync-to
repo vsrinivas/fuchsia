@@ -587,6 +587,10 @@ class SyncToCommand:
         # Check if any repo has uncommitted changes and exit early if so,
         # because we can't sync without discarding the uncommitted changes,
         # which could be bad.
+        #
+        # First we must update all indexes; otherwise `diff-index` might report
+        # false positive diffs.
+        self.jiri("runp", "git update-index --refresh")
         output = self.jiri(
             "runp", "git diff-index --quiet HEAD",
             capture_output=True).stdout or ""
