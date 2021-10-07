@@ -88,6 +88,7 @@
                 "fuchsia.ui.shortcut.Manager",
                 "fuchsia.ui.views.ViewRefInstalled",
                 "fuchsia.virtualization.Manager",
+                "fuchsia.weave.Signer",
             ],
         },
 
@@ -783,6 +784,7 @@
                 "fuchsia.ui.shortcut.Manager",
                 "fuchsia.ui.views.ViewRefInstalled",
                 "fuchsia.virtualization.Manager",
+                "fuchsia.weave.Signer",
             ],
             from: "self",
         },
