@@ -55,6 +55,7 @@ protocol/member fuchsia.io/Directory.NodeSetFlags(uint32 flags) -> (int32 s)
 protocol/member fuchsia.io/Directory.OnConnectionInfo -> (fuchsia.io/ConnectionInfo info)
 protocol/member fuchsia.io/Directory.OnOpen -> (int32 s,fuchsia.io/NodeInfo:optional info)
 protocol/member fuchsia.io/Directory.Open(uint32 flags,uint32 mode,string:4096 path,server_end:fuchsia.io/Node object)
+protocol/member fuchsia.io/Directory.Open2(string:4095 path,fuchsia.io/OpenMode mode,fuchsia.io/ConnectionOptions options,zx/handle:CHANNEL object_request)
 protocol/member fuchsia.io/Directory.ReadDirents(uint64 max_bytes) -> (int32 s,vector<uint8>:8192 dirents)
 protocol/member fuchsia.io/Directory.Rename2(string:255 src,zx/handle:EVENT dst_parent_token,string:255 dst) -> (fuchsia.io/Directory_Rename2_Result result)
 protocol/member fuchsia.io/Directory.Reopen(fuchsia.io/ConnectionOptions options,zx/handle:CHANNEL object_request)
@@ -160,6 +161,7 @@ const fuchsia.io/INO_UNKNOWN uint64 18446744073709551615
 const fuchsia.io/MAX_BUF uint64 8192
 const fuchsia.io/MAX_FILENAME uint64 255
 const fuchsia.io/MAX_PATH uint64 4096
+const fuchsia.io/MAX_PATH_LENGTH uint64 4095
 const fuchsia.io/MAX_TRANSFER_SIZE uint64 8192
 const fuchsia.io/MODE_PROTECTION_MASK uint32 4095
 const fuchsia.io/MODE_TYPE_BLOCK_DEVICE uint32 24576
@@ -272,6 +274,11 @@ const fuchsia.io/OPEN_RIGHT_ADMIN uint32 4
 const fuchsia.io/OPEN_RIGHT_EXECUTABLE uint32 8
 const fuchsia.io/OPEN_RIGHT_READABLE uint32 1
 const fuchsia.io/OPEN_RIGHT_WRITABLE uint32 2
+enum/member fuchsia.io/OpenMode.ALWAYS_CREATE 3
+enum/member fuchsia.io/OpenMode.MAYBE_CREATE 2
+enum/member fuchsia.io/OpenMode.OPEN_EXISTING 1
+enum/member fuchsia.io/OpenMode.OPEN_MOUNT_POINT 268435456
+strict enum fuchsia.io/OpenMode uint32
 bits/member fuchsia.io/Operations.ADMIN 72057594037927936
 bits/member fuchsia.io/Operations.CONNECT 1
 bits/member fuchsia.io/Operations.ENUMERATE 64

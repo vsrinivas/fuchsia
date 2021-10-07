@@ -179,6 +179,48 @@ protocol DirectoryWatcher {
     });
 };
 
+/// A path is a string of one or more components, separated by "/".
+/// E.g. `foo/bar/baz`
+///
+/// ## Invariants
+///
+/// A valid path must meet the following criteria:
+///
+/// * It cannot be empty.
+/// * It cannot be longer than [`MAX_PATH_LENGTH`].
+/// * It cannot have a leading "/".
+/// * It cannot have a trailing "/".
+/// * Each component must be a valid [`Name`].
+///
+/// Paths should be transformed into their canonical forms at client side.
+/// For example, a client should convert `"foo/bar/.././baz/"` to `"foo/baz"`
+/// before using it as a path.
+alias Path = string:MAX_PATH_LENGTH;
+
+/// The maximum length, in bytes, of a filesystem path.
+const MAX_PATH_LENGTH uint64 = 4095;
+
+/// Options related to node creation during [`Directory.Open`].
+type OpenMode = strict enum : uint32 {
+    /// Only succeed if the object exists.
+    OPEN_EXISTING = 1;
+
+    /// Create the object if it does not exist, otherwise open existing.
+    /// The check and the creation are performed in one atomic step.
+    MAYBE_CREATE = 2;
+
+    /// Assert that the object does not exist, then create it.
+    /// The assertion and creation are performed in one atomic step.
+    ALWAYS_CREATE = 3;
+
+    /// If the object is a mount point, open the local directory
+    /// instead of forwarding the request. The object must be a directory.
+    ///
+    /// This option implies the behavior of `OPEN_EXISTING`.
+    @deprecated("Mount points will be replaced by components.")
+    OPEN_MOUNT_POINT = 0x10000000;
+};
+
 /// Directory defines a node which is capable of containing other Objects.
 protocol Directory {
     compose Node;
@@ -222,6 +264,42 @@ protocol Directory {
         mode uint32;
         path string:MAX_PATH;
         object server_end:Node;
+    });
+
+    /// Opens or creates a new node relative to this directory node.
+    ///
+    /// + `path` identifies the node to open.
+    ///   If `path` contains multiple segments, then the directory is traversed,
+    ///   one segment at a time, relative to the directory represented by this
+    ///   connection.
+    ///   See [`fuchsia.io2/Path`] for what constitutes a valid path.
+    ///   To open another connection to the current directory, use
+    ///   [`fuchsia.io2/Node.Reopen`] instead.
+    /// + `mode` controls whether to open existing/create new etc.
+    /// + `options` additional options applicable to both `Open` and `Reopen`,
+    ///   including negotiating protocol and restricting rights.
+    ///   See [`fuchsia.io2/ConnectionOptions`].
+    /// + `object_request` is the server end of a channel created for the new
+    ///   connection. The caller may proceed to send messages on the
+    ///   corresponding client end right away.
+    ///
+    /// This method requires the following rights on the current connection:
+    ///
+    /// * [`Rights.ENUMERATE`]
+    /// * [`Rights.TRAVERSE`]
+    ///
+    /// Errors are presented as an epitaph on the `object_request` channel.
+    ///
+    /// * error `ZX_ERR_ACCESS_DENIED` if the requested rights exceeds
+    ///   what is allowed.
+    /// * error `ZX_ERR_BAD_PATH` if `path` is invalid.
+    @transitional
+    @selector("fuchsia.io/Directory.Open")
+    Open2(resource struct {
+        path Path;
+        mode OpenMode;
+        options ConnectionOptions;
+        object_request zx.handle:CHANNEL;
     });
 
     /// Adds a new inotify filter for an object relative to this directory object.
