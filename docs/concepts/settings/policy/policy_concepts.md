@@ -28,49 +28,58 @@ brightness value. In that case, a client of the policy API would need to specify
 which display that their minimum brightness limit applies to. The policy API
 calls this identifier a **target**, specifying an aspect of a setting.
 
-## Policy API example
+## Policy API example {#policy-example-table}
 
-<a name="policy-example-table"></a>
-
-```rust
+```fidl
 library fuchsia.settings.policy;
 
 alias PolicyId = uint32;
 
-[Discoverable]
+@discoverable
 protocol VolumePolicyController {
-    GetProperties() -> (vector<Property>:MAX properties);
-    AddPolicy(Target target, PolicyParameters parameters) -> (PolicyId policy_id) error Error;
-    RemovePolicy(PolicyId policy_id) -> () error Error;
+    GetProperties() -> (struct {
+        properties vector<Property>:MAX;
+    });
+
+    AddPolicy(struct {
+        target Target;
+        parameters PolicyParameters;
+    }) -> (struct {
+        policy_id PolicyId;
+    }) error Error;
+
+    RemovePolicy(struct {
+        policy_id PolicyId;
+    }) -> (struct {}) error Error;
 };
 
-table Property {
-    1: Target target;
-    2: vector<Transform>:MAX available_transforms;
-    3: vector<Policy>:MAX active_policies;
+type Property = table {
+    1: target Target;
+    2: available_transforms vector<Transform>:MAX;
+    3: active_policies vector<Policy>:MAX;
 };
 
-union Target {
-    1: fuchsia.media.AudioRenderUsage stream;
+type Target = strict union {
+    1: stream fuchsia.media.AudioRenderUsage;
 };
 
-enum Transform : uint8 {
+type Transform = strict enum : uint8 {
     MAX = 1;
     MIN = 2;
 };
 
-table Policy {
-    1: PolicyId policy_id;
-    2: PolicyParameters parameters;
+type Policy = table {
+    1: policy_id PolicyId;
+    2: parameters PolicyParameters;
 };
 
-union PolicyParameters {
-    1: Volume min;
-    2: Volume max;
+type PolicyParameters = strict union {
+    1: min Volume;
+    2: max Volume;
 };
 
-table Volume {
-    1: float32 volume;
+type Volume = table {
+    1: volume float32;
 };
 ```
 
@@ -144,6 +153,6 @@ The following is a recap of policy API concepts:
   A property contains information about what transforms are possible on a given
   target, and what policies are active
 
-<!--xrefs-->
+<!-- link labels -->
 [volume_policy_fidl]: /sdk/fidl/fuchsia.settings.policy/volume_policy.fidl
 [hanging-get]: /docs/concepts/api/fidl.md#hanging-get

@@ -66,10 +66,10 @@ connect to the Setting Service. The following example connects to
 [fuchsia.settings.accessibility][accessibility]:
 
 ```rust
-let proxy = connect_to_service::<AccessibilityMarker>().context(“failed to connect to Settings”);
+let proxy = connect_to_protocol::<AccessibilityMarker>().context("failed to connect to Settings");
 ```
 
-In the above example, `connect_to_service` and `AccessibilityMarker` are
+In the above example, `connect_to_protocol` and `AccessibilityMarker` are
 provided through the SDK.
 
 Clients should communicate with each Setting protocol over a single connection.
@@ -88,25 +88,25 @@ example, `AccessibilitySettings` captures relevant details:
 
 ```fidl
 /// Supported accessibility settings.
-table AccessibilitySettings {
+type AccessibilitySettings = table {
     /// For videos, use an alternative audio track (akin to changing languages)
     /// that explains what is happening visually while there is no dialogue.
-    1: bool audio_description;
+    1: audio_description bool;
 
     /// Read aloud elements of the screen selected by the user.
-    2: bool screen_reader;
+    2: screen_reader bool;
 
     /// Invert colors on the screen.
-    3: bool color_inversion;
+    3: color_inversion bool;
 
     /// Interpret triple-tap on the touchscreen as a command to zoom in.
-    4: bool enable_magnification;
+    4: enable_magnification bool;
 
     /// What type of color-blindness, if any, to correct for.
-    5: ColorBlindnessType color_correction;
+    5: color_correction ColorBlindnessType;
 
     /// What kind of sources get closed captions, and how they look.
-    6: CaptionsSettings captions_settings;
+    6: captions_settings CaptionsSettings;
 };
 ```
 
@@ -115,7 +115,9 @@ information. This is the declaration for
 [fuchsia.settings.accessibility][accessibility]:
 
 ```fidl
-Watch() -> (AccessibilitySettings settings);
+Watch() -> (struct {
+    settings AccessibilitySettings;
+});
 ```
 
 `Watch` follows the [hanging get pattern][hanging-get], returning the current
@@ -129,7 +131,7 @@ In the Accessibility example, call `Watch` to determine if the screen reader is
 enabled:
 
 ```rust
-let settings = proxy.watch().expect(“settings retrieved”);
+let settings = proxy.watch().expect("settings retrieved");
 let screen_reader_enabled = settings.screen_reader.ok_or(false);
 ```
 
@@ -140,7 +142,9 @@ for reading data. Each mutable protocol offers a counterpart method to `Watch`
 called `Set`, which takes [AccessibilitySettings](#a11y-table) as an argument:
 
 ```fidl
-Set(AccessibilitySettings settings) -> () error Error;
+Set(struct {
+    settings AccessibilitySettings;
+}) -> (struct {}) error Error;
 ```
 
 Changes are conveyed by specifying the desired final state in the table fields.
@@ -153,7 +157,7 @@ following code:
 ```rust
 let new_settings = AccessibilitySettings::EMPTY;
 new_settings.screen_reader = Some(true);
-proxy.set(new_settings).await.expect(“request completed”).expect(“request succeeded”);
+proxy.set(new_settings).await.expect("request completed").expect("request succeeded");
 ```
 
 ## Debugging
@@ -164,7 +168,7 @@ them to see how their application affects and is affected by Settings. SetUI
 Client can be included in a build by specifying its package in the build
 environment:
 
-```bash
+```posix-terminal
 fx set core.x64 --with //garnet/packages/prod:setui_client
 ```
 
@@ -174,24 +178,24 @@ information can be retrieved by calling SetUI client with the protocol's name as
 an argument. For example, the following command retrieves information about
 Accessibility:
 
-```bash
+```posix-terminal
 fx shell run fuchsia-pkg://fuchsia.com/setui_client#meta/setui_client.cmx accessibility
 ```
 
 SetUI Client can also modify Settings. The utility's help command details the
 specific modification syntax per protocol:
 
-```bash
+```posix-terminal
 fx shell run fuchsia-pkg://fuchsia.com/setui_client#meta/setui_client.cmx accessibility help
 ```
 
 Finishing the example, the SetUI Client can be done as follows:
 
-```bash
+```posix-terminal
 fx shell run fuchsia-pkg://fuchsia.com/setui_client#meta/setui_client.cmx accessibility -s true
 ```
 
-<!-- xrefs -->
+<!-- link labels -->
 [sdk]: /sdk/fidl/fuchsia.settings/
 [fidl]: /docs/concepts/fidl/overview.md
 [build]: /docs/concepts/build_system/fuchsia_build_system_overview.md
