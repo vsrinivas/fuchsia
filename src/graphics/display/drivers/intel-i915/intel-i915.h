@@ -61,19 +61,27 @@ typedef struct dpll_state {
 } dpll_state_t;
 
 class Controller;
-using DeviceType = ddk::Device<Controller, ddk::Unbindable, ddk::Suspendable, ddk::Resumable,
-                               ddk::GetProtocolable, ddk::ChildPreReleaseable>;
+using DeviceType = ddk::Device<Controller, ddk::Initializable, ddk::Unbindable, ddk::Suspendable,
+                               ddk::Resumable, ddk::GetProtocolable, ddk::ChildPreReleaseable>;
 
 class Controller : public DeviceType,
                    public ddk::DisplayControllerImplProtocol<Controller, ddk::base_protocol>,
                    public ddk::IntelGpuCoreProtocol<Controller> {
  public:
-  Controller(zx_device_t* parent);
+  explicit Controller(zx_device_t* parent);
   ~Controller();
+
+  // Perform short-running initialization of all subcomponents and instruct the DDK to publish the
+  // device. On success, returns ZX_OK and the owernship of the Controller instance is claimed by
+  // the DDK.
+  //
+  // Long-running initialization is performed in the DdkInit hook.
+  static zx_status_t Create(zx_device_t* parent);
 
   static bool CompareDpllStates(const dpll_state_t& a, const dpll_state_t& b);
 
   // DDK ops
+  void DdkInit(ddk::InitTxn txn);
   void DdkUnbind(ddk::UnbindTxn txn);
   void DdkRelease();
   zx_status_t DdkGetProtocol(uint32_t proto_id, void* out);
@@ -89,7 +97,6 @@ class Controller : public DeviceType,
       }
     }
   }
-  zx_status_t Bind(std::unique_ptr<i915::Controller>* controller_ptr);
 
   // display controller protocol ops
   void DisplayControllerImplSetDisplayControllerInterface(
@@ -148,7 +155,6 @@ class Controller : public DeviceType,
   void HandleHotplug(registers::Ddi ddi, bool long_pulse);
   void HandlePipeVsync(registers::Pipe pipe, zx_time_t timestamp);
 
-  void FinishInit();
   void ResetPipe(registers::Pipe pipe) __TA_NO_THREAD_SAFETY_ANALYSIS;
   bool ResetTrans(registers::Trans trans);
   bool ResetDdi(registers::Ddi ddi);
@@ -163,6 +169,13 @@ class Controller : public DeviceType,
   void ResetMmioSpaceForTesting() { mmio_space_.reset(); }
 
  private:
+  // Perform short-running initialization of all subcomponents and instruct the DDK to publish the
+  // device. On success, returns ZX_OK and the ownership of the Controller instance is claimed by
+  // the DDK.
+  //
+  // Long-running initialization is performed in the DdkInit hook.
+  zx_status_t Init();
+
   void EnableBacklight(bool enable);
   void InitDisplays();
   std::unique_ptr<DisplayDevice> QueryDisplay(registers::Ddi ddi) __TA_REQUIRES(display_lock_);
@@ -284,8 +297,6 @@ class Controller : public DeviceType,
   bool ddi_a_lane_capability_control_;
   bool sblc_polarity_;
 
-  bool init_thrd_started_ = false;
-  thrd_t init_thread_;
   std::optional<uint64_t> eld_display_id_;
 };
 

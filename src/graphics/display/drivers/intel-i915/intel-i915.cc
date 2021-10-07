@@ -25,6 +25,7 @@
 #include <zircon/types.h>
 
 #include <algorithm>
+#include <future>
 #include <iterator>
 #include <memory>
 #include <utility>
@@ -105,11 +106,6 @@ static i2c_impl_protocol_ops_t i2c_ops = {
     .set_bitrate = set_bitrate,
     .transact = transact,
 };
-
-static int finish_init(void* arg) {
-  static_cast<i915::Controller*>(arg)->FinishInit();
-  return 0;
-}
 
 const display_config_t* find_config(uint64_t display_id, const display_config_t** display_configs,
                                     size_t display_count) {
@@ -2006,6 +2002,38 @@ bool Controller::DpcdWrite(registers::Ddi ddi, uint32_t addr, const uint8_t* buf
 
 // Ddk methods
 
+void Controller::DdkInit(ddk::InitTxn txn) {
+  auto f = std::async(std::launch::async, [this, txn = std::move(txn)]() mutable {
+    zxlogf(TRACE, "i915: initializing displays");
+
+    for (auto& pipe : pipes_) {
+      pipe.Init();
+    }
+
+    InitDisplays();
+
+    {
+      fbl::AutoLock lock(&display_lock_);
+      uint32_t size = static_cast<uint32_t>(display_devices_.size());
+      if (size && dc_intf_.is_valid()) {
+        DisplayDevice* added_displays[registers::kDdiCount];
+        for (unsigned i = 0; i < size; i++) {
+          added_displays[i] = display_devices_[i].get();
+        }
+        CallOnDisplaysChanged(added_displays, size, NULL, 0);
+      }
+
+      ready_for_callback_ = true;
+    }
+
+    interrupts_.FinishInit();
+    EnableBacklight(true);
+
+    zxlogf(TRACE, "i915: display initialization done");
+    txn.Reply(ZX_OK);
+  });
+}
+
 void Controller::DdkUnbind(ddk::UnbindTxn txn) {
   device_async_remove(zx_gpu_dev_);
 
@@ -2130,40 +2158,7 @@ void Controller::DdkResume(ddk::ResumeTxn txn) {
   txn.Reply(ZX_OK, DEV_POWER_STATE_D0, txn.requested_state());
 }
 
-// TODO(stevensd): Move this back into ::Bind once long-running binds don't
-// break devmgr's suspend/mexec.
-void Controller::FinishInit() {
-  zxlogf(TRACE, "i915: initializing displays");
-
-  for (auto& pipe : pipes_) {
-    pipe.Init();
-  }
-
-  InitDisplays();
-
-  {
-    fbl::AutoLock lock(&display_lock_);
-    uint32_t size = static_cast<uint32_t>(display_devices_.size());
-    if (size && dc_intf_.is_valid()) {
-      DisplayDevice* added_displays[registers::kDdiCount];
-      for (unsigned i = 0; i < size; i++) {
-        added_displays[i] = display_devices_[i].get();
-      }
-      CallOnDisplaysChanged(added_displays, size, NULL, 0);
-    }
-
-    ready_for_callback_ = true;
-  }
-
-  interrupts_.FinishInit();
-
-  // TODO remove when the gfxconsole moves to user space
-  EnableBacklight(true);
-
-  zxlogf(TRACE, "i915: initialization done");
-}
-
-zx_status_t Controller::Bind(std::unique_ptr<i915::Controller>* controller_ptr) {
+zx_status_t Controller::Init() {
   zxlogf(TRACE, "Binding to display controller");
 
   zx_status_t status = ZX_ERR_NOT_FOUND;
@@ -2225,12 +2220,12 @@ zx_status_t Controller::Bind(std::unique_ptr<i915::Controller>* controller_ptr) 
                                        .ReadFrom(mmio_space())
                                        .ddi_a_lane_capability_control();
 
-  zxlogf(TRACE, "Initialzing hotplug");
+  zxlogf(TRACE, "Initializing interrupts");
   status = interrupts_.Init(fit::bind_member(this, &Controller::HandlePipeVsync),
                             fit::bind_member(this, &Controller::HandleHotplug), parent(), &pci_,
                             mmio_space());
   if (status != ZX_OK) {
-    zxlogf(ERROR, "Failed to init hotplugging");
+    zxlogf(ERROR, "Failed to initialize interrupts");
     return status;
   }
 
@@ -2258,9 +2253,6 @@ zx_status_t Controller::Bind(std::unique_ptr<i915::Controller>* controller_ptr) 
     zxlogf(ERROR, "Failed to add controller device");
     return status;
   }
-  // DevMgr now owns this pointer, release it to avoid destroying the object
-  // when device goes out of scope.
-  __UNUSED auto ptr = controller_ptr->release();
 
   i915_gpu_core_device_proto.version = DEVICE_OPS_VERSION;
   i915_gpu_core_device_proto.release = gpu_release;
@@ -2282,14 +2274,6 @@ zx_status_t Controller::Bind(std::unique_ptr<i915::Controller>* controller_ptr) 
 
   zxlogf(TRACE, "bind done");
 
-  status = thrd_create_with_name(&init_thread_, finish_init, this, "i915-init-thread");
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "Failed to create init thread");
-    DdkAsyncRemove();
-    return status;
-  }
-  init_thrd_started_ = true;
-
   return ZX_OK;
 }
 
@@ -2300,10 +2284,6 @@ Controller::Controller(zx_device_t* parent) : DeviceType(parent), power_(this) {
 }
 
 Controller::~Controller() {
-  if (init_thrd_started_) {
-    thrd_join(init_thread_, nullptr);
-  }
-
   interrupts_.Destroy();
   if (mmio_space()) {
     EnableBacklight(false);
@@ -2335,24 +2315,29 @@ Controller::~Controller() {
   }
 }
 
-}  // namespace i915
-
-zx_status_t intel_i915_bind(void* ctx, zx_device_t* parent) {
+// static
+zx_status_t Controller::Create(zx_device_t* parent) {
   fbl::AllocChecker ac;
-  std::unique_ptr<i915::Controller> controller(new (&ac) i915::Controller(parent));
+  std::unique_ptr<i915::Controller> dev(new (&ac) i915::Controller(parent));
   if (!ac.check()) {
     return ZX_ERR_NO_MEMORY;
   }
 
-  return controller->Bind(&controller);
+  zx_status_t status = dev->Init();
+  if (status == ZX_OK) {
+    // devmgr now owns the memory for |dev|.
+    dev.release();
+  }
+
+  return status;
 }
 
-#define INTEL_I915_VID (0x8086)
+}  // namespace i915
 
 static constexpr zx_driver_ops_t intel_i915_driver_ops = []() {
   zx_driver_ops_t ops = {};
   ops.version = DRIVER_OPS_VERSION;
-  ops.bind = intel_i915_bind;
+  ops.bind = [](void* ctx, zx_device_t* parent) { return i915::Controller::Create(parent); };
   return ops;
 }();
 
