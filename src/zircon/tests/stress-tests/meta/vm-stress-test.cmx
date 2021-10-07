@@ -12,7 +12,7 @@
     "program": {
         "args": [
             "-t",
-            "79200"
+            "21600"
         ],
         "binary": "bin/kstress"
     },

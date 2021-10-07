@@ -9,9 +9,9 @@
     program: {
         binary: "bin/fvm_stressor",
         args: [
-            // 22 hour time limit
+            // 6 hour time limit
             "--time-limit-secs",
-            "79200",
+            "21600",
         ],
     },
     children: [

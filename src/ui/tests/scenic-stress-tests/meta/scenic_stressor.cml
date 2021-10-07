@@ -11,7 +11,7 @@
         binary: "bin/scenic_stressor",
         args: [
             "--time-limit-secs",
-            "79200",
+            "21600",
         ],
     },
     children: [
