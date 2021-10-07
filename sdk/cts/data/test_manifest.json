@@ -43,5 +43,10 @@
         "archive_name": "fuchsia-element-tests",
         "component_name": "fuchsia-element-test.cm",
         "package": "fuchsia-element-tests"
+    },
+    {
+        "archive_name": "reboot_on_terminate_test",
+        "component_name": "reboot_on_terminate_test.cm",
+        "package": "reboot_on_terminate_test"
     }
 ]
