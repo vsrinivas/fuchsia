@@ -99,8 +99,13 @@ TEST_F(VirtualKeyboardCoordinatorTest, NotifyVisibilityChangeDoesNotPropagatePro
 
 TEST_F(VirtualKeyboardCoordinatorTest, RequestTypeAndVisibilityDoesNotCrash) {
   FidlBoundVirtualKeyboardCoordinator coordinator(context_provider()->context());
-  coordinator.RequestTypeAndVisibility(fuchsia::input::virtualkeyboard::TextType::ALPHANUMERIC,
-                                       true);
+  scenic::ViewRefPair view_ref_pair = scenic::ViewRefPair::New();
+  zx_info_handle_basic_t view_ref_info{};
+  ASSERT_EQ(ZX_OK,
+            view_ref_pair.view_ref.reference.get_info(ZX_INFO_HANDLE_BASIC, &view_ref_info,
+                                                      sizeof(view_ref_info), nullptr, nullptr));
+  coordinator.RequestTypeAndVisibility(
+      view_ref_info.koid, fuchsia::input::virtualkeyboard::TextType::ALPHANUMERIC, true);
 }
 
 }  // namespace

@@ -30,7 +30,7 @@ class VirtualKeyboardController : public fuchsia::input::virtualkeyboard::Contro
 class FidlBoundVirtualKeyboardController : public VirtualKeyboardController {
  public:
   FidlBoundVirtualKeyboardController(fxl::WeakPtr<VirtualKeyboardCoordinator> coordinator,
-                                     fuchsia::ui::views::ViewRef view_ref,
+                                     zx_koid_t view_koid,
                                      fuchsia::input::virtualkeyboard::TextType text_type);
   ~FidlBoundVirtualKeyboardController() override;
 
@@ -57,6 +57,8 @@ class FidlBoundVirtualKeyboardController : public VirtualKeyboardController {
   void NotifyCoordinator();
 
   fxl::WeakPtr<VirtualKeyboardCoordinator> coordinator_;
+
+  zx_koid_t view_koid_{};
 
   // The type of text for which `this` wants to enable input.
   //

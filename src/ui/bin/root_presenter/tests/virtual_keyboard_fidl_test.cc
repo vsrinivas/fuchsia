@@ -38,7 +38,8 @@ class VirtualKeyboardFidlTest : public gtest::TestLoopFixture {
     return client;
   }
 
-  std::tuple<fuchsia::input::virtualkeyboard::ControllerPtr, fuchsia::ui::views::ViewRefControl>
+  std::tuple<fuchsia::input::virtualkeyboard::ControllerPtr, fuchsia::ui::views::ViewRef,
+             fuchsia::ui::views::ViewRefControl>
   CreateControllerClient(fuchsia::input::virtualkeyboard::TextType initial_text_type =
                              fuchsia::input::virtualkeyboard::TextType::ALPHANUMERIC) {
     // Connect to `ControllerCreator` protocol.
@@ -48,10 +49,11 @@ class VirtualKeyboardFidlTest : public gtest::TestLoopFixture {
     // Create a `Controller`.
     fuchsia::input::virtualkeyboard::ControllerPtr controller;
     auto view_ref_pair = scenic::ViewRefPair::New();
-    controller_creator->Create(std::move(view_ref_pair.view_ref), initial_text_type,
+    controller_creator->Create(fidl::Clone(view_ref_pair.view_ref), initial_text_type,
                                controller.NewRequest());
 
-    return {std::move(controller), std::move(view_ref_pair.control_ref)};
+    return {std::move(controller), std::move(view_ref_pair.view_ref),
+            std::move(view_ref_pair.control_ref)};
   }
 
  private:
@@ -125,14 +127,14 @@ TEST_F(VirtualKeyboardFidlTest, ClosingCreatorDoesNotCloseController) {
 TEST_F(VirtualKeyboardFidlTest, MultipleControllersAreSupported) {
   // Create first controller.
   zx_status_t controller1_status = ZX_OK;
-  auto [controller1, view_ref_control1] = CreateControllerClient();
+  auto [controller1, view_ref1, view_ref_control1] = CreateControllerClient();
   controller1.set_error_handler(
       [&controller1_status](zx_status_t stat) { controller1_status = stat; });
   RunLoopUntilIdle();
 
   // Create second controller.
   zx_status_t controller2_status = ZX_OK;
-  auto [controller2, view_ref_control2] = CreateControllerClient();
+  auto [controller2, view_ref2, view_ref_control2] = CreateControllerClient();
   controller2.set_error_handler(
       [&controller2_status](zx_status_t stat) { controller2_status = stat; });
   RunLoopUntilIdle();
@@ -162,7 +164,7 @@ namespace fuchsia_input_virtualkeyboard_controller_methods {
 TEST_F(VirtualKeyboardFidlTest, SetTextTypeDoesNotError) {
   // Create controller.
   zx_status_t controller_status = ZX_OK;
-  auto [controller, view_ref_control] = CreateControllerClient();
+  auto [controller, view_ref, view_ref_control] = CreateControllerClient();
   controller.set_error_handler(
       [&controller_status](zx_status_t stat) { controller_status = stat; });
 
@@ -175,7 +177,7 @@ TEST_F(VirtualKeyboardFidlTest, SetTextTypeDoesNotError) {
 TEST_F(VirtualKeyboardFidlTest, RequestShowDoesNotError) {
   // Create controller.
   zx_status_t controller_status = ZX_OK;
-  auto [controller, view_ref_control] = CreateControllerClient();
+  auto [controller, view_ref, view_ref_control] = CreateControllerClient();
   controller.set_error_handler(
       [&controller_status](zx_status_t stat) { controller_status = stat; });
 
@@ -188,7 +190,7 @@ TEST_F(VirtualKeyboardFidlTest, RequestShowDoesNotError) {
 TEST_F(VirtualKeyboardFidlTest, RequestHideDoesNotError) {
   // Create controller.
   zx_status_t controller_status = ZX_OK;
-  auto [controller, view_ref_control] = CreateControllerClient();
+  auto [controller, view_ref, view_ref_control] = CreateControllerClient();
   controller.set_error_handler(
       [&controller_status](zx_status_t stat) { controller_status = stat; });
 
@@ -200,7 +202,7 @@ TEST_F(VirtualKeyboardFidlTest, RequestHideDoesNotError) {
 
 TEST_F(VirtualKeyboardFidlTest, WatchVisibility_FirstCallReturnsImmediately) {
   // Create controller.
-  auto [controller, view_ref_control] = CreateControllerClient();
+  auto [controller, view_ref, view_ref_control] = CreateControllerClient();
 
   // Send watch.
   bool got_watch_visibility_result = false;
@@ -215,7 +217,7 @@ TEST_F(VirtualKeyboardFidlTest, WatchVisibility_FirstCallReturnsImmediately) {
 TEST_F(VirtualKeyboardFidlTest, WatchVisibility_SecondCallHangs) {
   // Create controller.
   zx_status_t controller_status = ZX_OK;
-  auto [controller, view_ref_control] = CreateControllerClient();
+  auto [controller, view_ref, view_ref_control] = CreateControllerClient();
   controller.set_error_handler(
       [&controller_status](zx_status_t stat) { controller_status = stat; });
 
@@ -234,7 +236,7 @@ TEST_F(VirtualKeyboardFidlTest, WatchVisibility_SecondCallHangs) {
 
 TEST_F(VirtualKeyboardFidlTest, WatchVisibility_SecondCallIsResolvedByOwnRequestShow) {
   // Create controller.
-  auto [controller, view_ref_control] = CreateControllerClient();
+  auto [controller, view_ref, view_ref_control] = CreateControllerClient();
 
   // Send first watch, which completes immediately.
   controller->WatchVisibility([](bool vis) {});
@@ -262,7 +264,7 @@ TEST_F(VirtualKeyboardFidlTest, WatchVisibility_SecondCallIsResolvedByOwnRequest
 TEST_F(VirtualKeyboardFidlTest, WatchVisibility_SecondCallIsNotResolvedByOwnRequestHide) {
   // Create controller.
   zx_status_t controller_status = ZX_OK;
-  auto [controller, view_ref_control] = CreateControllerClient();
+  auto [controller, view_ref, view_ref_control] = CreateControllerClient();
   controller.set_error_handler(
       [&controller_status](zx_status_t stat) { controller_status = stat; });
 
@@ -289,7 +291,7 @@ TEST_F(VirtualKeyboardFidlTest, WatchVisibility_SecondCallIsNotResolvedByOwnRequ
 TEST_F(VirtualKeyboardFidlTest,
        WatchVisibility_SecondCallIsResolvedByManagerReportOfUserInteraction) {
   // Create controller.
-  auto [controller, view_ref_control] = CreateControllerClient();
+  auto [controller, view_ref, view_ref_control] = CreateControllerClient();
 
   // Send first watch, which completes immediately.
   controller->WatchVisibility([](bool vis) {});
@@ -313,8 +315,8 @@ TEST_F(VirtualKeyboardFidlTest,
 
 TEST_F(VirtualKeyboardFidlTest, WatchVisibility_AllControllersAreToldOfUserInteraction) {
   // Create controller.
-  auto [controller1, view_ref_control1] = CreateControllerClient();
-  auto [controller2, view_ref_control2] = CreateControllerClient();
+  auto [controller1, view_ref1, view_ref_control1] = CreateControllerClient();
+  auto [controller2, view_ref2, view_ref_control2] = CreateControllerClient();
 
   // Send first watch for each controller, which completes immediately.
   controller1->WatchVisibility([](bool vis) {});
@@ -451,7 +453,7 @@ TEST_F(VirtualKeyboardFidlTest, ManagerDisconnectsOnConcurrentWatches) {
 
 TEST_F(VirtualKeyboardFidlTest, ClientDisconnectionNotifiesControllersThatKeyboardIsHidden) {
   // Create controller, and set visibility to true.
-  auto [controller, view_ref_control] = CreateControllerClient();
+  auto [controller, view_ref, view_ref_control] = CreateControllerClient();
   controller->RequestShow();
   RunLoopUntilIdle();
 
@@ -557,7 +559,7 @@ TEST_F(VirtualKeyboardFidlTest, WatchTypeAndVisibility_SecondCallIsResolvedByReq
 
   // Create a Controller, and ask for the keyboard to be shown. This changes the state of
   // the keyboard, since the default state is hidden.
-  auto [controller, view_ref_control] = CreateControllerClient();
+  auto [controller, view_ref, view_ref_control] = CreateControllerClient();
   controller->RequestShow();
   RunLoopUntilIdle();
 
@@ -582,7 +584,7 @@ TEST_F(VirtualKeyboardFidlTest, WatchTypeAndVisibility_SecondCallIsNotResolvedBy
 
   // Create a Controller, and ask for the keyboard to be hidden. This does _not_ change the
   // state of the keyboard, since the default state is also hidden.
-  auto [controller, view_ref_control] = CreateControllerClient();
+  auto [controller, view_ref, view_ref_control] = CreateControllerClient();
   controller->RequestHide();
   RunLoopUntilIdle();
 
@@ -605,7 +607,7 @@ TEST_F(VirtualKeyboardFidlTest, WatchTypeAndVisibility_SecondCallIsResolvedBySet
   RunLoopUntilIdle();
 
   // Create a Controller, then change the text type.
-  auto [controller, view_ref_control] =
+  auto [controller, view_ref, view_ref_control] =
       CreateControllerClient(fuchsia::input::virtualkeyboard::TextType::NUMERIC);
   controller->SetTextType(fuchsia::input::virtualkeyboard::TextType::PHONE);
   RunLoopUntilIdle();
@@ -615,7 +617,7 @@ TEST_F(VirtualKeyboardFidlTest, WatchTypeAndVisibility_SecondCallIsResolvedBySet
 
 TEST_F(VirtualKeyboardFidlTest, WatchTypeAndVisibility_ReceivesConfigSetBeforeManagerConnection) {
   // Create a Controller, and request that the keyboard be shown.
-  auto [controller, view_ref_control] =
+  auto [controller, view_ref, view_ref_control] =
       CreateControllerClient(fuchsia::input::virtualkeyboard::TextType::NUMERIC);
   controller->RequestShow();
   RunLoopUntilIdle();
@@ -635,7 +637,7 @@ TEST_F(VirtualKeyboardFidlTest, WatchTypeAndVisibility_ReceivesConfigSetBeforeMa
 TEST_F(VirtualKeyboardFidlTest,
        WatchTypeAndVisibility_SecondNewManagerDoesNotReceiveBufferedConfig) {
   // Create a Controller, and request that the keyboard be shown.
-  auto [controller, view_ref_control] =
+  auto [controller, view_ref, view_ref_control] =
       CreateControllerClient(fuchsia::input::virtualkeyboard::TextType::NUMERIC);
   controller->RequestShow();
   RunLoopUntilIdle();
@@ -666,7 +668,7 @@ TEST_F(VirtualKeyboardFidlTest,
 TEST_F(VirtualKeyboardFidlTest,
        WatchTypeAndVisibility_GetsCorrectVisibilityAfterRaceOnProgrammaticChangeNotification) {
   // Create controller and manager.
-  auto [controller, view_ref_control] =
+  auto [controller, view_ref, view_ref_control] =
       CreateControllerClient(fuchsia::input::virtualkeyboard::TextType::NUMERIC);
   auto manager = CreateManagerClient();
 

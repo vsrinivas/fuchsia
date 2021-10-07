@@ -5,6 +5,7 @@
 #include "src/ui/bin/root_presenter/virtual_keyboard_controller.h"
 
 #include <lib/syslog/cpp/macros.h>
+#include <zircon/types.h>
 
 #include <memory>
 #include <utility>
@@ -14,9 +15,12 @@
 namespace root_presenter {
 
 FidlBoundVirtualKeyboardController::FidlBoundVirtualKeyboardController(
-    fxl::WeakPtr<VirtualKeyboardCoordinator> coordinator, fuchsia::ui::views::ViewRef view_ref,
+    fxl::WeakPtr<VirtualKeyboardCoordinator> coordinator, zx_koid_t view_koid,
     fuchsia::input::virtualkeyboard::TextType text_type)
-    : coordinator_(std::move(coordinator)), text_type_(text_type), want_visible_(false) {}
+    : coordinator_(std::move(coordinator)),
+      view_koid_(view_koid),
+      text_type_(text_type),
+      want_visible_(false) {}
 
 FidlBoundVirtualKeyboardController::~FidlBoundVirtualKeyboardController() {}
 
@@ -68,6 +72,10 @@ void FidlBoundVirtualKeyboardController::OnUserAction(UserAction action) {
 
 void FidlBoundVirtualKeyboardController::MaybeNotifyWatcher() {
   FX_LOGS(INFO) << __FUNCTION__;
+  FX_LOGS(DEBUG) << __FUNCTION__ << " want_visible_=" << want_visible_ << " last_sent_visibile_="
+                 << (last_sent_visible_.has_value()
+                         ? (last_sent_visible_.value() ? "true" : "false")
+                         : "(unset)");
   if (watch_callback_ && want_visible_ != last_sent_visible_) {
     watch_callback_(want_visible_);
     watch_callback_ = {};
@@ -77,7 +85,7 @@ void FidlBoundVirtualKeyboardController::MaybeNotifyWatcher() {
 
 void FidlBoundVirtualKeyboardController::NotifyCoordinator() {
   if (coordinator_) {
-    coordinator_->RequestTypeAndVisibility(text_type_, want_visible_);
+    coordinator_->RequestTypeAndVisibility(view_koid_, text_type_, want_visible_);
   } else {
     FX_LOGS(WARNING) << "Ignoring RequestShow()/RequestHide(): no `coordinator_`";
   }

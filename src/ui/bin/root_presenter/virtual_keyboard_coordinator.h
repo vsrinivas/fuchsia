@@ -34,7 +34,8 @@ class VirtualKeyboardCoordinator : public FocusListener {
       bool is_visible, fuchsia::input::virtualkeyboard::VisibilityChangeReason reason) = 0;
 
   // Requests a change in the visibility and/or text type of the virtual keyboard.
-  virtual void RequestTypeAndVisibility(fuchsia::input::virtualkeyboard::TextType text_type,
+  virtual void RequestTypeAndVisibility(zx_koid_t requestor_view_koid,
+                                        fuchsia::input::virtualkeyboard::TextType text_type,
                                         bool is_visibile) = 0;
 
   // Reports an error from the Manager. The coordinator should close the corresponding FIDL
@@ -74,7 +75,8 @@ class FidlBoundVirtualKeyboardCoordinator
   void NotifyVisibilityChange(
       bool is_visible, fuchsia::input::virtualkeyboard::VisibilityChangeReason reason) override;
   void NotifyManagerError(zx_status_t error) override;
-  void RequestTypeAndVisibility(fuchsia::input::virtualkeyboard::TextType text_type,
+  void RequestTypeAndVisibility(zx_koid_t requestor_view_koid,
+                                fuchsia::input::virtualkeyboard::TextType text_type,
                                 bool is_visible) override;
   void NotifyFocusChange(fuchsia::ui::views::ViewRef focused_view) override;
 

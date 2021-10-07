@@ -6,6 +6,7 @@
 
 #include <lib/syslog/cpp/macros.h>
 #include <zircon/status.h>
+#include <zircon/types.h>
 
 #include <memory>
 
@@ -30,7 +31,7 @@ FidlBoundVirtualKeyboardCoordinator::FidlBoundVirtualKeyboardCoordinator(
   component_context->outgoing()->AddPublicService<fuchsia::input::virtualkeyboard::Manager>(
       [this](fidl::InterfaceRequest<fuchsia::input::virtualkeyboard::Manager> request) {
         if (manager_binding_) {
-          FX_LOGS(WARNING) << "Ignoring interface request; already bound";
+          FX_LOGS(WARNING) << "Ignoring Manager interface request; already bound";
         } else {
           BindManager(std::move(request));
         }
@@ -44,11 +45,24 @@ void FidlBoundVirtualKeyboardCoordinator::Create(
     fuchsia::ui::views::ViewRef view_ref, fuchsia::input::virtualkeyboard::TextType text_type,
     fidl::InterfaceRequest<fuchsia::input::virtualkeyboard::Controller> controller_request) {
   FX_LOGS(INFO) << "ControllerCreator.Create";
-  controller_bindings_.AddBinding(std::make_unique<FidlBoundVirtualKeyboardController>(
-                                      GetWeakPtr(), std::move(view_ref), text_type),
-                                  std::move(controller_request), nullptr, [](zx_status_t status) {
-                                    FX_LOGS(INFO) << "controller closed with status=" << status
-                                                  << " (" << zx_status_get_string(status) << ")";
+  zx_info_handle_basic_t view_ref_info{};
+  zx_koid_t view_koid = ZX_KOID_INVALID;
+  if (auto status = view_ref.reference.get_info(ZX_INFO_HANDLE_BASIC, &view_ref_info,
+                                                sizeof(view_ref_info), nullptr, nullptr);
+      status != ZX_OK) {
+    FX_LOGS(ERROR) << __FUNCTION__ << ": failed to get koid for view ref ("
+                   << zx_status_get_string(status) << ")";
+    return;
+  }
+  view_koid = view_ref_info.koid;
+
+  auto controller =
+      std::make_unique<FidlBoundVirtualKeyboardController>(GetWeakPtr(), view_koid, text_type);
+  controller_bindings_.AddBinding(std::move(controller), std::move(controller_request), nullptr,
+                                  [view_koid](zx_status_t status) {
+                                    FX_LOGS(INFO) << "controller for view_koid=" << view_koid
+                                                  << " closed with status=" << status << " ("
+                                                  << zx_status_get_string(status) << ")";
                                   });
 }
 
@@ -56,7 +70,7 @@ void FidlBoundVirtualKeyboardCoordinator::NotifyVisibilityChange(
     bool is_visible, fuchsia::input::virtualkeyboard::VisibilityChangeReason reason) {
   FX_LOGS(INFO) << __FUNCTION__;
   if (reason.IsUnknown()) {
-    FX_LOGS(WARNING) << "Ignorning visibility change with reason = " << reason;
+    FX_LOGS(WARNING) << __FUNCTION__ << ": ignorning visibility change with reason = " << reason;
     return;
   }
 
@@ -84,7 +98,8 @@ void FidlBoundVirtualKeyboardCoordinator::NotifyManagerError(zx_status_t error) 
 }
 
 void FidlBoundVirtualKeyboardCoordinator::RequestTypeAndVisibility(
-    fuchsia::input::virtualkeyboard::TextType text_type, bool is_visible) {
+    zx_koid_t requestor_view_koid, fuchsia::input::virtualkeyboard::TextType text_type,
+    bool is_visible) {
   FX_LOGS(INFO) << __FUNCTION__;
   if (manager_binding_) {
     manager_binding_->impl()->OnTypeOrVisibilityChange(text_type, is_visible);
@@ -116,8 +131,8 @@ void FidlBoundVirtualKeyboardCoordinator::BindManager(
 }
 
 void FidlBoundVirtualKeyboardCoordinator::HandleManagerBindingError(zx_status_t status) {
-  FX_LOGS(WARNING) << "manager closed with status=" << status << " ("
-                   << zx_status_get_string(status) << ")";
+  FX_LOGS(WARNING) << __FUNCTION__ << ": status=" << status << " (" << zx_status_get_string(status)
+                   << ")";
   manager_binding_.reset();
   // The VirtualKeyboardManager's demise implies that the keyboard is no
   // longer shown. Inform any listening `VirtualKeyboardController`s about
