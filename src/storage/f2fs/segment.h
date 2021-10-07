@@ -163,7 +163,7 @@ class SegmentManager {
   SegmentManager &operator=(SegmentManager &&) = delete;
   SegmentManager() = delete;
   SegmentManager(F2fs *fs);
-  SegmentManager(SbInfo *info) { sbi_ = info; }
+  SegmentManager(SuperblockInfo *info) { superblock_info_ = info; }
 
   zx_status_t BuildSegmentManager();
   void DestroySegmentManager();
@@ -321,12 +321,18 @@ class SegmentManager {
   }
 
   bool IsCurSec(uint32_t secno) {
-    return ((secno == CURSEG_I(CursegType::kCursegHotData)->segno / sbi_->segs_per_sec) ||
-            (secno == CURSEG_I(CursegType::kCursegWarmData)->segno / sbi_->segs_per_sec) ||
-            (secno == CURSEG_I(CursegType::kCursegColdData)->segno / sbi_->segs_per_sec) ||
-            (secno == CURSEG_I(CursegType::kCursegHotNode)->segno / sbi_->segs_per_sec) ||
-            (secno == CURSEG_I(CursegType::kCursegWarmNode)->segno / sbi_->segs_per_sec) ||
-            (secno == CURSEG_I(CursegType::kCursegColdNode)->segno / sbi_->segs_per_sec));
+    return ((secno ==
+             CURSEG_I(CursegType::kCursegHotData)->segno / superblock_info_->GetSegsPerSec()) ||
+            (secno ==
+             CURSEG_I(CursegType::kCursegWarmData)->segno / superblock_info_->GetSegsPerSec()) ||
+            (secno ==
+             CURSEG_I(CursegType::kCursegColdData)->segno / superblock_info_->GetSegsPerSec()) ||
+            (secno ==
+             CURSEG_I(CursegType::kCursegHotNode)->segno / superblock_info_->GetSegsPerSec()) ||
+            (secno ==
+             CURSEG_I(CursegType::kCursegWarmNode)->segno / superblock_info_->GetSegsPerSec()) ||
+            (secno ==
+             CURSEG_I(CursegType::kCursegColdNode)->segno / superblock_info_->GetSegsPerSec()));
   }
 
   // L: Logical segment nunmber in volume, R: Relative segment number in main area
@@ -341,7 +347,7 @@ class SegmentManager {
             (t == CursegType::kCursegWarmNode));
   }
   block_t StartBlock(uint32_t segno) {
-    return (seg0_blkaddr_ + (GetR2LSegNo(segno) << sbi_->log_blocks_per_seg));
+    return (seg0_blkaddr_ + (GetR2LSegNo(segno) << superblock_info_->GetLogBlocksPerSeg()));
   }
   block_t NextFreeBlkAddr(CursegType type) {
     CursegInfo *curseg = CURSEG_I(type);
@@ -349,16 +355,16 @@ class SegmentManager {
   }
   block_t GetSegOffFromSeg0(block_t blk_addr) { return blk_addr - GetSegment0StartBlock(); }
   uint32_t GetSegNoFromSeg0(block_t blk_addr) {
-    return GetSegOffFromSeg0(blk_addr) >> sbi_->log_blocks_per_seg;
+    return GetSegOffFromSeg0(blk_addr) >> superblock_info_->GetLogBlocksPerSeg();
   }
   uint32_t GetSegNo(block_t blk_addr) {
     return ((blk_addr == kNullAddr) || (blk_addr == kNewAddr))
                ? kNullSegNo
                : GetL2RSegNo(GetSegNoFromSeg0(blk_addr));
   }
-  uint32_t GetSecNo(uint32_t segno) { return segno / sbi_->segs_per_sec; }
+  uint32_t GetSecNo(uint32_t segno) { return segno / superblock_info_->GetSegsPerSec(); }
   uint32_t GetZoneNoFromSegNo(uint32_t segno) {
-    return segno / sbi_->segs_per_sec / sbi_->secs_per_zone;
+    return segno / superblock_info_->GetSegsPerSec() / superblock_info_->GetSecsPerZone();
   }
   block_t GetSumBlock(uint32_t segno) { return ssa_blkaddr_ + segno; }
   uint32_t SitEntryOffset(uint32_t segno) { return segno % sit_info_->sents_per_block; }
@@ -402,7 +408,7 @@ class SegmentManager {
 
  private:
   F2fs *fs_ = nullptr;
-  SbInfo *sbi_ = nullptr;
+  SuperblockInfo *superblock_info_ = nullptr;
 
   std::unique_ptr<SitInfo> sit_info_;             // whole segment information
   std::unique_ptr<FreeSegmapInfo> free_info_;     // free segment information

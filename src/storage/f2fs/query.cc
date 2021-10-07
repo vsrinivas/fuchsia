@@ -23,7 +23,8 @@ void QueryService::GetInfo(GetInfoRequestView request, GetInfoCompleter::Sync& c
   fuchsia_fs::wire::FilesystemInfo filesystem_info(allocator);
 
   if (request->query & FilesystemInfoQuery::kTotalBytes) {
-    filesystem_info.set_total_bytes(allocator, f2fs_->GetSbInfo().user_block_count * kBlockSize);
+    filesystem_info.set_total_bytes(allocator,
+                                    f2fs_->GetSuperblockInfo().GetUserBlockCount() * kBlockSize);
   }
 
   if (request->query & FilesystemInfoQuery::kUsedBytes) {
@@ -31,7 +32,7 @@ void QueryService::GetInfo(GetInfoRequestView request, GetInfoCompleter::Sync& c
   }
 
   if (request->query & FilesystemInfoQuery::kTotalNodes) {
-    filesystem_info.set_total_nodes(allocator, f2fs_->GetSbInfo().total_node_count);
+    filesystem_info.set_total_nodes(allocator, f2fs_->GetSuperblockInfo().GetTotalNodeCount());
   }
 
   if (request->query & FilesystemInfoQuery::kUsedNodes) {

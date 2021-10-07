@@ -17,17 +17,17 @@ using SegmentManagerTest = F2fsFakeDevTestFixture;
 
 TEST_F(SegmentManagerTest, BlkChaining) {
   Page *root_node_page = nullptr;
-  SbInfo &sbi = fs_->GetSbInfo();
+  SuperblockInfo &superblock_info = fs_->GetSuperblockInfo();
 
   // read the node block where the root inode is stored
-  fs_->GetNodeManager().GetNodePage(RootIno(&sbi), &root_node_page);
+  fs_->GetNodeManager().GetNodePage(superblock_info.GetRootIno(), &root_node_page);
   ASSERT_TRUE(root_node_page);
 
   // retrieve the lba for root inode
   std::vector<block_t> blk_chain(0);
   int nwritten = kDefaultBlocksPerSegment * 2;
   NodeInfo ni;
-  fs_->GetNodeManager().GetNodeInfo(RootIno(&sbi), ni);
+  fs_->GetNodeManager().GetNodeInfo(superblock_info.GetRootIno(), ni);
   ASSERT_NE(ni.blk_addr, kNullAddr);
   ASSERT_NE(ni.blk_addr, kNewAddr);
   block_t alloc_addr = ni.blk_addr;
@@ -40,7 +40,8 @@ TEST_F(SegmentManagerTest, BlkChaining) {
     Page *read_page = GrabCachePage(nullptr, 0, 0);
     ASSERT_TRUE(read_page);
 
-    fs_->GetSegmentManager().WriteNodePage(root_node_page, RootIno(&sbi), old_addr, &alloc_addr);
+    fs_->GetSegmentManager().WriteNodePage(root_node_page, superblock_info.GetRootIno(), old_addr,
+                                           &alloc_addr);
     blk_chain.push_back(alloc_addr);
     ASSERT_NE(alloc_addr, kNullAddr);
     ASSERT_EQ(fs_->GetBc().Readblk(blk_chain[i], read_page->data), ZX_OK);
@@ -54,8 +55,8 @@ TEST_F(SegmentManagerTest, BlkChaining) {
 TEST_F(SegmentManagerTest, DirtyToFree) {
   // read the root inode block
   Page *root_node_page = nullptr;
-  SbInfo &sbi = fs_->GetSbInfo();
-  fs_->GetNodeManager().GetNodePage(RootIno(&sbi), &root_node_page);
+  SuperblockInfo &superblock_info = fs_->GetSuperblockInfo();
+  fs_->GetNodeManager().GetNodePage(superblock_info.GetRootIno(), &root_node_page);
   ASSERT_TRUE(root_node_page);
 
   // check the precond. before making dirty segments
@@ -63,7 +64,7 @@ TEST_F(SegmentManagerTest, DirtyToFree) {
   int nwritten = kDefaultBlocksPerSegment * 2;
   uint32_t nprefree = 0;
   NodeInfo ni;
-  fs_->GetNodeManager().GetNodeInfo(RootIno(&sbi), ni);
+  fs_->GetNodeManager().GetNodeInfo(superblock_info.GetRootIno(), ni);
   ASSERT_NE(ni.blk_addr, kNullAddr);
   ASSERT_NE(ni.blk_addr, kNewAddr);
   block_t alloc_addr = ni.blk_addr;
@@ -75,7 +76,8 @@ TEST_F(SegmentManagerTest, DirtyToFree) {
   // write the root inode repeatedly as much as 2 segments
   for (int i = 0; i < nwritten; i++) {
     block_t old_addr = alloc_addr;
-    fs_->GetSegmentManager().WriteNodePage(root_node_page, RootIno(&sbi), old_addr, &alloc_addr);
+    fs_->GetSegmentManager().WriteNodePage(root_node_page, superblock_info.GetRootIno(), old_addr,
+                                           &alloc_addr);
     if (fs_->GetSegmentManager().GetValidBlocks(fs_->GetSegmentManager().GetSegNo(old_addr), 0) ==
         0) {
       prefree_array.push_back(fs_->GetSegmentManager().GetSegNo(old_addr));

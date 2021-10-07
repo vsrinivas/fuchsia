@@ -10,13 +10,13 @@
 namespace f2fs {
 
 zx_status_t Dir::NewInode(uint32_t mode, fbl::RefPtr<VnodeF2fs> *out) {
-  SbInfo &sbi = Vfs()->GetSbInfo();
+  SuperblockInfo &superblock_info = Vfs()->GetSuperblockInfo();
   nid_t ino;
   fbl::RefPtr<VnodeF2fs> vnode_refptr;
   VnodeF2fs *vnode = nullptr;
 
   do {
-    fs::SharedLock rlock(sbi.fs_lock[static_cast<int>(LockType::kFileOp)]);
+    fs::SharedLock rlock(superblock_info.GetFsLock(LockType::kFileOp));
     if (!Vfs()->GetNodeManager().AllocNid(&ino)) {
       Iput(vnode);
       return ZX_ERR_NO_SPACE;
@@ -47,9 +47,10 @@ zx_status_t Dir::NewInode(uint32_t mode, fbl::RefPtr<VnodeF2fs> *out) {
   vnode->SetATime(cur_time);
   vnode->SetCTime(cur_time);
   vnode->SetMTime(cur_time);
-  vnode->SetGeneration(sbi.s_next_generation++);
+  vnode->SetGeneration(superblock_info.GetNextGeneration());
+  superblock_info.IncNextGeneration();
 
-  if (TestOpt(&sbi, kMountInlineDentry) && vnode->IsDir())
+  if (superblock_info.TestOpt(kMountInlineDentry) && vnode->IsDir())
     vnode->SetFlag(InodeInfoFlag::kInlineDentry);
 
   vnode->SetFlag(InodeInfoFlag::kNewInode);
@@ -97,7 +98,7 @@ inline void Dir::SetColdFile(VnodeF2fs *vnode) {
 }
 
 zx_status_t Dir::DoCreate(std::string_view name, uint32_t mode, fbl::RefPtr<fs::Vnode> *out) {
-  SbInfo &sbi = Vfs()->GetSbInfo();
+  SuperblockInfo &superblock_info = Vfs()->GetSuperblockInfo();
   fbl::RefPtr<VnodeF2fs> vnode_refptr;
   VnodeF2fs *vnode = nullptr;
 
@@ -107,12 +108,12 @@ zx_status_t Dir::DoCreate(std::string_view name, uint32_t mode, fbl::RefPtr<fs::
 
   vnode->SetName(name);
 
-  if (!TestOpt(&sbi, kMountDisableExtIdentify))
+  if (!superblock_info.TestOpt(kMountDisableExtIdentify))
     SetColdFile(vnode);
 
   vnode->SetFlag(InodeInfoFlag::kIncLink);
   {
-    fs::SharedLock rlock(sbi.fs_lock[static_cast<int>(LockType::kFileOp)]);
+    fs::SharedLock rlock(superblock_info.GetFsLock(LockType::kFileOp));
     if (zx_status_t err = AddLink(name, vnode); err != ZX_OK) {
       vnode->ClearNlink();
       vnode->UnlockNewInode();
@@ -125,7 +126,7 @@ zx_status_t Dir::DoCreate(std::string_view name, uint32_t mode, fbl::RefPtr<fs::
   Vfs()->GetNodeManager().AllocNidDone(vnode->Ino());
 
 #if 0  // porting needed
-  // if (!sbi.por_doing)
+  // if (!superblock_info.IsOnRecovery())
   //   d_instantiate(dentry, inode);
 #endif
   vnode->UnlockNewInode();
@@ -161,8 +162,7 @@ zx_status_t Dir::Link(std::string_view name, fbl::RefPtr<fs::Vnode> _target) {
   // AtomicInc(&inode->i_count);
 #endif
   {
-    SbInfo &sbi = Vfs()->GetSbInfo();
-    fs::SharedLock rlock(sbi.fs_lock[static_cast<int>(LockType::kFileOp)]);
+    fs::SharedLock rlock(Vfs()->GetSuperblockInfo().GetFsLock(LockType::kFileOp));
     target->SetFlag(InodeInfoFlag::kIncLink);
     if (zx_status_t err = AddLink(name, target); err != ZX_OK) {
       target->ClearFlag(InodeInfoFlag::kIncLink);
@@ -234,8 +234,7 @@ zx_status_t Dir::DoUnlink(VnodeF2fs *vnode, std::string_view name) {
   }
 
   {
-    SbInfo &sbi = Vfs()->GetSbInfo();
-    fs::SharedLock rlock(sbi.fs_lock[static_cast<int>(LockType::kFileOp)]);
+    fs::SharedLock rlock(Vfs()->GetSuperblockInfo().GetFsLock(LockType::kFileOp));
     if (zx_status_t err = Vfs()->CheckOrphanSpace(); err != ZX_OK) {
 #if 0  // porting needed
     // if (!f2fs_has_inline_dentry(dir))
@@ -306,8 +305,8 @@ zx_status_t Dir::Mkdir(std::string_view name, uint32_t mode, fbl::RefPtr<fs::Vno
 
   vnode->SetFlag(InodeInfoFlag::kIncLink);
   {
-    SbInfo &sbi = Vfs()->GetSbInfo();
-    fs::SharedLock rlock(sbi.fs_lock[static_cast<int>(LockType::kFileOp)]);
+    SuperblockInfo &superblock_info = Vfs()->GetSuperblockInfo();
+    fs::SharedLock rlock(superblock_info.GetFsLock(LockType::kFileOp));
     if (zx_status_t err = AddLink(name, vnode); err != ZX_OK) {
       vnode->ClearFlag(InodeInfoFlag::kIncLink);
       vnode->ClearNlink();
@@ -377,7 +376,7 @@ zx::status<bool> Dir::IsSubdir(Dir *possible_dir) {
   Dir *vn = possible_dir;
   fbl::RefPtr<VnodeF2fs> parent = nullptr;
 
-  while (vn->Ino() != RootIno(&Vfs()->GetSbInfo())) {
+  while (vn->Ino() != Vfs()->GetSuperblockInfo().GetRootIno()) {
     if (vn->Ino() == Ino()) {
       return zx::ok(true);
     }
@@ -393,7 +392,6 @@ zx::status<bool> Dir::IsSubdir(Dir *possible_dir) {
 
 zx_status_t Dir::Rename(fbl::RefPtr<fs::Vnode> _newdir, std::string_view oldname,
                         std::string_view newname, bool src_must_be_dir, bool dst_must_be_dir) {
-  SbInfo &sbi = Vfs()->GetSbInfo();
   fbl::RefPtr<VnodeF2fs> old_vn_ref;
   fbl::RefPtr<VnodeF2fs> new_vn_ref;
   Dir *old_dir = this;
@@ -468,7 +466,7 @@ zx_status_t Dir::Rename(fbl::RefPtr<fs::Vnode> _newdir, std::string_view oldname
   }
 
   do {
-    fs::SharedLock rlock(sbi.fs_lock[static_cast<int>(LockType::kFileOp)]);
+    fs::SharedLock rlock(Vfs()->GetSuperblockInfo().GetFsLock(LockType::kFileOp));
 
     new_entry = new_dir->FindEntry(newname, &new_page);
     if (new_entry) {

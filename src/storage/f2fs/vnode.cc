@@ -68,7 +68,7 @@ void VnodeF2fs::Allocate(F2fs *fs, ino_t ino, uint32_t mode, fbl::RefPtr<VnodeF2
 zx_status_t VnodeF2fs::Create(F2fs *fs, ino_t ino, fbl::RefPtr<VnodeF2fs> *out) {
   Page *node_page = nullptr;
 
-  if (ino == NodeIno(&fs->GetSbInfo()) || ino == MetaIno(&fs->GetSbInfo())) {
+  if (ino == fs->GetSuperblockInfo().GetNodeIno() || ino == fs->GetSuperblockInfo().GetMetaIno()) {
     *out = fbl::MakeRefCounted<VnodeF2fs>(fs, ino);
     return ZX_OK;
   }
@@ -107,12 +107,12 @@ zx_status_t VnodeF2fs::Create(F2fs *fs, ino_t ino, fbl::RefPtr<VnodeF2fs> *out) 
   vnode->SetXattrNid(LeToCpu(ri.i_xattr_nid));
   vnode->SetInodeFlags(LeToCpu(ri.i_flags));
   vnode->SetDirLevel(ri.i_dir_level);
-  vnode->fi_.data_version = LeToCpu(GetCheckpoint(&fs->GetSbInfo())->checkpoint_ver) - 1;
+  vnode->fi_.data_version = LeToCpu(fs->GetSuperblockInfo().GetCheckpoint().checkpoint_ver) - 1;
   vnode->SetAdvise(ri.i_advise);
   vnode->GetExtentInfo(ri.i_ext);
   std::string_view name(reinterpret_cast<char *>(ri.i_name), std::min(kMaxNameLen, ri.i_namelen));
   if (ri.i_namelen != name.length() ||
-      (ino != RootIno(&fs->GetSbInfo()) && !fs::IsValidName(name))) {
+      (ino != fs->GetSuperblockInfo().GetRootIno() && !fs::IsValidName(name))) {
     // TODO: Need to repair the file or set NeedFsck flag when fsck supports repair feature.
     // For now, we set kBad and clear link, so that it can be deleted without purging.
     fbl::RefPtr<VnodeF2fs> failed = std::move(*out);
@@ -267,8 +267,9 @@ zx_status_t VnodeF2fs::Vget(F2fs *fs, ino_t ino, fbl::RefPtr<VnodeF2fs> *out) {
     return status;
   }
 
-  if (!(ino == NodeIno(&fs->GetSbInfo()) || ino == MetaIno(&fs->GetSbInfo()))) {
-    if (!fs->GetSbInfo().por_doing && vnode_refptr->GetNlink() == 0) {
+  if (!(ino == fs->GetSuperblockInfo().GetNodeIno() ||
+        ino == fs->GetSuperblockInfo().GetMetaIno())) {
+    if (!fs->GetSuperblockInfo().IsOnRecovery() && vnode_refptr->GetNlink() == 0) {
       return ZX_ERR_NOT_FOUND;
     }
   }
@@ -340,11 +341,11 @@ void VnodeF2fs::UpdateInode(Page *node_page) {
 }
 
 int VnodeF2fs::WriteInode(WritebackControl *wbc) {
-  SbInfo &sbi = Vfs()->GetSbInfo();
+  SuperblockInfo &superblock_info = Vfs()->GetSuperblockInfo();
   Page *node_page = nullptr;
   zx_status_t ret = ZX_OK;
 
-  if (ino_ == NodeIno(&sbi) || ino_ == MetaIno(&sbi)) {
+  if (ino_ == superblock_info.GetNodeIno() || ino_ == superblock_info.GetMetaIno()) {
     return ret;
   }
 
@@ -353,7 +354,7 @@ int VnodeF2fs::WriteInode(WritebackControl *wbc) {
   }
 
   {
-    fs::SharedLock rlock(sbi.fs_lock[static_cast<int>(LockType::kNodeOp)]);
+    fs::SharedLock rlock(superblock_info.GetFsLock(LockType::kNodeOp));
     if (ret = Vfs()->GetNodeManager().GetNodePage(ino_, &node_page); ret != ZX_OK)
       return ret;
     UpdateInode(node_page);
@@ -436,8 +437,8 @@ void VnodeF2fs::TruncatePartialDataPage(uint64_t from) {
 }
 
 zx_status_t VnodeF2fs::TruncateBlocks(uint64_t from) {
-  SbInfo &sbi = Vfs()->GetSbInfo();
-  unsigned int blocksize = sbi.blocksize;
+  SuperblockInfo &superblock_info = Vfs()->GetSuperblockInfo();
+  unsigned int blocksize = superblock_info.GetBlocksize();
   DnodeOfData dn;
   int count = 0;
   zx_status_t err;
@@ -445,10 +446,11 @@ zx_status_t VnodeF2fs::TruncateBlocks(uint64_t from) {
   if (from > GetSize())
     return ZX_OK;
 
-  pgoff_t free_from = static_cast<pgoff_t>((from + blocksize - 1) >> (sbi.log_blocksize));
+  pgoff_t free_from =
+      static_cast<pgoff_t>((from + blocksize - 1) >> (superblock_info.GetLogBlocksize()));
 
   {
-    fs::SharedLock rlock(sbi.fs_lock[static_cast<int>(LockType::kFileOp)]);
+    fs::SharedLock rlock(superblock_info.GetFsLock(LockType::kFileOp));
     std::lock_guard write_lock(io_lock_);
 
     do {
@@ -518,11 +520,11 @@ void VnodeF2fs::TruncateToSize() {
 
 // Called at Recycle if nlink_ is zero
 void VnodeF2fs::EvictVnode() {
-  SbInfo &sbi = Vfs()->GetSbInfo();
+  SuperblockInfo &superblock_info = Vfs()->GetSuperblockInfo();
   // [TODO] currently, there is no cache for node blocks
   // truncate_inode_pages(&inode->i_data, 0);
 
-  if (ino_ == NodeIno(&sbi) || ino_ == MetaIno(&sbi))
+  if (ino_ == superblock_info.GetNodeIno() || ino_ == superblock_info.GetMetaIno())
     return;
 
   // BUG_ON(AtomicRead(&fi.->dirty_dents));
@@ -538,7 +540,7 @@ void VnodeF2fs::EvictVnode() {
     TruncateToSize();
 
   {
-    fs::SharedLock rlock(sbi.fs_lock[static_cast<int>(LockType::kFileOp)]);
+    fs::SharedLock rlock(superblock_info.GetFsLock(LockType::kFileOp));
     Vfs()->GetNodeManager().RemoveInodePage(this);
   }
   Vfs()->EvictVnode(this);
@@ -570,16 +572,16 @@ void VnodeF2fs::Sync(SyncCallback closure) {
 }
 
 zx_status_t VnodeF2fs::QueryFilesystem(fuchsia_io_admin::wire::FilesystemInfo *info) {
-  SbInfo &sbi = Vfs()->GetSbInfo();
+  SuperblockInfo &superblock_info = Vfs()->GetSuperblockInfo();
   *info = {};
   info->block_size = kBlockSize;
   info->max_filename_size = kMaxNameLen;
   info->fs_type = VFS_TYPE_F2FS;
   info->fs_id = Vfs()->GetFsIdLegacy();
-  info->total_bytes = sbi.user_block_count * kBlockSize;
+  info->total_bytes = superblock_info.GetUserBlockCount() * kBlockSize;
   info->used_bytes = Vfs()->ValidUserBlocks() * kBlockSize;
-  info->total_nodes = sbi.total_node_count;
-  info->used_nodes = sbi.total_valid_inode_count;
+  info->total_nodes = superblock_info.GetTotalNodeCount();
+  info->used_nodes = superblock_info.GetTotalValidInodeCount();
 
   constexpr std::string_view kFsName = "f2fs";
   static_assert(kFsName.size() + 1 < fuchsia_io_admin::wire::kMaxFsNameBuffer,
@@ -593,7 +595,7 @@ zx_status_t VnodeF2fs::QueryFilesystem(fuchsia_io_admin::wire::FilesystemInfo *i
 }
 
 zx_status_t VnodeF2fs::SyncFile(loff_t start, loff_t end, int datasync) {
-  SbInfo &sbi = Vfs()->GetSbInfo();
+  SuperblockInfo &superblock_info = Vfs()->GetSuperblockInfo();
   __UNUSED uint64_t cur_version;
   zx_status_t ret = 0;
   bool need_cp = false;
@@ -618,8 +620,8 @@ zx_status_t VnodeF2fs::SyncFile(loff_t start, loff_t end, int datasync) {
 #endif
 
   {
-    fbl::AutoLock cplock(&sbi.cp_mutex);
-    cur_version = LeToCpu(GetCheckpoint(&sbi)->checkpoint_ver);
+    fbl::AutoLock cplock(&superblock_info.GetCheckpointMutex());
+    cur_version = LeToCpu(superblock_info.GetCheckpoint().checkpoint_ver);
   }
 
 #if 0  // porting needed
@@ -636,7 +638,7 @@ zx_status_t VnodeF2fs::SyncFile(loff_t start, loff_t end, int datasync) {
     need_cp = true;
   if (!Vfs()->SpaceForRollForward())
     need_cp = true;
-  if (TestOpt(&sbi, kMountDisableRollForward) || NeedToSyncDir())
+  if (superblock_info.TestOpt(kMountDisableRollForward) || NeedToSyncDir())
     need_cp = true;
 
   // TODO: it intended to update cached page for this, but
@@ -667,7 +669,7 @@ zx_status_t VnodeF2fs::SyncFile(loff_t start, loff_t end, int datasync) {
 #if 0  // porting needed
     // while (Vfs()->GetNodeManager().SyncNodePages(Ino(), &wbc) == 0)
     //   WriteInode(nullptr);
-    // filemap_fdatawait_range(nullptr,//sbi->node_inode->i_mapping,
+    // filemap_fdatawait_range(nullptr,//superblock_info->node_inode->i_mapping,
     //           0, LONG_MAX);
 #endif
   }

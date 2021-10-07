@@ -10,7 +10,7 @@ namespace f2fs {
 Page *F2fs::GrabMetaPage(pgoff_t index) {
   Page *page = nullptr;
 
-  while (!(page = GrabCachePage(nullptr, MetaIno(sbi_.get()), index))) {
+  while (!(page = GrabCachePage(nullptr, superblock_info_->GetMetaIno(), index))) {
 #if 0  // porting needed
     // cond_resched();
 #endif
@@ -24,7 +24,7 @@ Page *F2fs::GrabMetaPage(pgoff_t index) {
 Page *F2fs::GetMetaPage(pgoff_t index) {
   Page *page = nullptr;
 repeat:
-  page = GrabCachePage(nullptr, MetaIno(sbi_.get()), index);
+  page = GrabCachePage(nullptr, superblock_info_->GetMetaIno(), index);
   if (!page) {
 #if 0  // porting needed
     // cond_resched();
@@ -59,7 +59,7 @@ zx_status_t F2fs::F2fsWriteMetaPage(Page *page, WritebackControl *wbc) {
 #endif
   }
 
-  DecPageCount(&GetSbInfo(), CountType::kDirtyMeta);
+  GetSuperblockInfo().DecPageCount(CountType::kDirtyMeta);
 
   /* In this case, we should not unlock this page */
 #if 0  // porting needed
@@ -71,19 +71,19 @@ zx_status_t F2fs::F2fsWriteMetaPage(Page *page, WritebackControl *wbc) {
 
 #if 0  // porting needed
 // int F2fs::F2fsWriteMetaPages(address_space *mapping, WritebackControl *wbc) {
-//   struct block_device *bdev = sbi_->sb->s_bdev;
+//   struct block_device *bdev = superblock_info_->sb->s_bdev;
 //   long written;
 
 //   if (wbc->for_kupdate)
 //   	return 0;
 
-//   if (GetPages(sbi_, CountType::kDirtyMeta) == 0)
+//   if (superblock_info_->GetPages(CountType::kDirtyMeta) == 0)
 //   	return 0;
 
 //   /* if mounting is failed, skip writing node pages */
-//   mtx_lock(&sbi_->cp_mutex);
-//   written = sync_meta_pages(sbi_.get(), META, bio_get_nr_vecs(bdev));
-//   mtx_unlock(&sbi_->cp_mutex);
+//   mtx_lock(&superblock_info_->GetCheckpointMutex());
+//   written = sync_meta_pages(superblock_info_.get(), META, bio_get_nr_vecs(bdev));
+//   mtx_unlock(&superblock_info_->GetCheckpointMutex());
 //   wbc->nr_to_write -= written;
 //   return 0;
 // }
@@ -91,7 +91,7 @@ zx_status_t F2fs::F2fsWriteMetaPage(Page *page, WritebackControl *wbc) {
 
 int64_t F2fs::SyncMetaPages(PageType type, int64_t nr_to_write) {
 #if 0  // porting needed
-  // address_space *mapping = sbi->meta_inode->i_mapping;
+  // address_space *mapping = superblock_info->meta_inode->i_mapping;
   // pgoff_t index = 0, end = LONG_MAX;
   // pagevec pvec;
   // int64_t nwritten = 0;
@@ -124,7 +124,7 @@ int64_t F2fs::SyncMetaPages(PageType type, int64_t nr_to_write) {
   // }
 
   // if (nwritten)
-  // 	f2fs_submit_bio(sbi, type, nr_to_write == LONG_MAX);
+  // 	f2fs_submit_bio(superblock_info, type, nr_to_write == LONG_MAX);
 
   // return nwritten;
 #else
@@ -138,8 +138,8 @@ int64_t F2fs::SyncMetaPages(PageType type, int64_t nr_to_write) {
 //   if (!PageDirty(page)) {
 //     // __set_page_dirty_nobuffers(page);
 //     FlushDirtyMetaPage(this, page);
-//     IncPageCount(&GetSbInfo(), CountType::kDirtyMeta);
-//     SetSbDirt(&GetSbInfo());
+//     GetSuperblockInfo().IncPageCount(CountType::kDirtyMeta);
+//     GetSuperblockInfo().SetDirty();
 //     return 1;
 //   }
 //   return 0;
@@ -147,7 +147,7 @@ int64_t F2fs::SyncMetaPages(PageType type, int64_t nr_to_write) {
 #endif
 
 zx_status_t F2fs::CheckOrphanSpace() {
-  SbInfo &sbi = GetSbInfo();
+  SuperblockInfo &superblock_info = GetSuperblockInfo();
   uint32_t max_orphans;
   zx_status_t err = 0;
 
@@ -157,9 +157,9 @@ zx_status_t F2fs::CheckOrphanSpace() {
    * orphan entries with the limitation one reserved segment
    * for cp pack we can have max 1020*507 orphan entries
    */
-  max_orphans = (sbi.blocks_per_seg - 5) * kOrphansPerBlock;
-  std::lock_guard lock(sbi.orphan_inode_mutex);
-  if (sbi.n_orphans >= max_orphans)
+  max_orphans = (superblock_info.GetBlocksPerSeg() - 5) * kOrphansPerBlock;
+  std::lock_guard lock(superblock_info.GetOrphanInodeMutex());
+  if (superblock_info.GetOrphanCount() >= max_orphans)
     err = ZX_ERR_NO_SPACE;
   return err;
 }
@@ -175,11 +175,11 @@ void F2fs::AddOrphanInode(VnodeF2fs *vnode) {
 }
 
 void F2fs::AddOrphanInode(nid_t ino) {
-  SbInfo &sbi = GetSbInfo();
+  SuperblockInfo &superblock_info = GetSuperblockInfo();
   OrphanInodeEntry *new_entry = nullptr, *orphan = nullptr;
 
-  std::lock_guard lock(sbi.orphan_inode_mutex);
-  list_node_t *head = &sbi.orphan_inode_list, *this_node;
+  std::lock_guard lock(superblock_info.GetOrphanInodeMutex());
+  list_node_t *head = &superblock_info.GetOrphanInodeList(), *this_node;
   list_for_every(head, this_node) {
     orphan = containerof(this_node, OrphanInodeEntry, list);
     if (orphan->ino == ino)
@@ -211,16 +211,16 @@ void F2fs::AddOrphanInode(nid_t ino) {
   } else {
     list_add_tail(head, &new_entry->list);
   }
-  sbi.n_orphans++;
+  superblock_info.IncNrOrphans();
 }
 
 void F2fs::RemoveOrphanInode(nid_t ino) {
-  SbInfo &sbi = GetSbInfo();
+  SuperblockInfo &superblock_info = GetSuperblockInfo();
   list_node_t *this_node, *next, *head;
   OrphanInodeEntry *orphan;
 
-  std::lock_guard lock(sbi.orphan_inode_mutex);
-  head = &sbi.orphan_inode_list;
+  std::lock_guard lock(superblock_info.GetOrphanInodeMutex());
+  head = &superblock_info.GetOrphanInodeList();
   list_for_every_safe(head, this_node, next) {
     orphan = containerof(this_node, OrphanInodeEntry, list);
     if (orphan->ino == ino) {
@@ -229,7 +229,7 @@ void F2fs::RemoveOrphanInode(nid_t ino) {
       // kmem_cache_free(orphan_entry_slab, orphan);
 #endif
       delete orphan;
-      sbi.n_orphans--;
+      superblock_info.DecNrOrphans();
       break;
     }
   }
@@ -248,14 +248,14 @@ void F2fs::RecoverOrphanInode(nid_t ino) {
 }
 
 zx_status_t F2fs::RecoverOrphanInodes() {
-  SbInfo &sbi = GetSbInfo();
+  SuperblockInfo &superblock_info = GetSuperblockInfo();
   block_t start_blk, orphan_blkaddr, i, j;
 
-  if (!(GetCheckpoint(&sbi)->ckpt_flags & kCpOrphanPresentFlag))
+  if (!(superblock_info.GetCheckpoint().ckpt_flags & kCpOrphanPresentFlag))
     return ZX_OK;
-  sbi.por_doing = 1;
-  start_blk = StartCpAddr(&sbi) + 1;
-  orphan_blkaddr = StartSumAddr(&sbi) - 1;
+  superblock_info.SetOnRecovery();
+  start_blk = superblock_info.StartCpAddr() + 1;
+  orphan_blkaddr = superblock_info.StartSumAddr() - 1;
 
   for (i = 0; i < orphan_blkaddr; i++) {
     Page *page = GetMetaPage(start_blk + i);
@@ -273,13 +273,13 @@ zx_status_t F2fs::RecoverOrphanInodes() {
     F2fsPutPage(page, 1);
   }
   // clear Orphan Flag
-  GetCheckpoint(&sbi)->ckpt_flags &= (~kCpOrphanPresentFlag);
-  sbi.por_doing = 0;
+  superblock_info.GetCheckpoint().ckpt_flags &= (~kCpOrphanPresentFlag);
+  superblock_info.ClearOnRecovery();
   return ZX_OK;
 }
 
 void F2fs::WriteOrphanInodes(block_t start_blk) {
-  SbInfo &sbi = GetSbInfo();
+  SuperblockInfo &superblock_info = GetSuperblockInfo();
   list_node_t *head, *this_node, *next;
   OrphanBlock *orphan_blk = nullptr;
   Page *page = nullptr;
@@ -287,11 +287,11 @@ void F2fs::WriteOrphanInodes(block_t start_blk) {
   uint16_t index = 1;
   uint16_t orphan_blocks;
 
-  orphan_blocks =
-      static_cast<uint16_t>((sbi.n_orphans + (kOrphansPerBlock - 1)) / kOrphansPerBlock);
+  orphan_blocks = static_cast<uint16_t>(
+      (superblock_info.GetOrphanCount() + (kOrphansPerBlock - 1)) / kOrphansPerBlock);
 
-  std::lock_guard lock(sbi.orphan_inode_mutex);
-  head = &sbi.orphan_inode_list;
+  std::lock_guard lock(superblock_info.GetOrphanInodeMutex());
+  head = &superblock_info.GetOrphanInodeList();
 
   /* loop for each orphan inode entry and write them in Jornal block */
   list_for_every_safe(head, this_node, next) {
@@ -341,7 +341,7 @@ void F2fs::WriteOrphanInodes(block_t start_blk) {
 
 Page *F2fs::ValidateCheckpoint(block_t cp_addr, uint64_t *version) {
   Page *cp_page_1 = nullptr, *cp_page_2 = nullptr;
-  uint64_t blk_size = sbi_->blocksize;
+  uint64_t blk_size = superblock_info_->GetBlocksize();
   Checkpoint *cp_block;
   uint64_t cur_version = 0, pre_version = 0;
   uint32_t crc = 0;
@@ -393,13 +393,10 @@ zx_status_t F2fs::GetValidCheckpoint() {
   Checkpoint *cp_block;
   SuperBlock &fsb = RawSb();
   Page *cp1 = nullptr, *cp2 = nullptr, *cur_page = nullptr;
-  uint64_t blk_size = sbi_->blocksize;
+  uint64_t blk_size = superblock_info_->GetBlocksize();
   uint64_t cp1_version = 0, cp2_version = 0;
   block_t cp_start_blk_no;
 
-  sbi_->ckpt = reinterpret_cast<Checkpoint *>(new FsBlock);
-  if (!sbi_->ckpt)
-    return -ENOMEM;
   /*
    * Finding out valid cp block involves read both
    * sets( cp pack1 and cp pack 2)
@@ -426,7 +423,7 @@ zx_status_t F2fs::GetValidCheckpoint() {
   }
 
   cp_block = static_cast<Checkpoint *>(PageAddress(cur_page));
-  memcpy(sbi_->ckpt, cp_block, blk_size);
+  memcpy(&superblock_info_->GetCheckpoint(), cp_block, blk_size);
 
 #ifdef F2FS_BU_DEBUG
   FX_LOGS(DEBUG) << "F2fs::GetValidCheckpoint" << std::endl;
@@ -446,14 +443,13 @@ zx_status_t F2fs::GetValidCheckpoint() {
   return 0;
 
 fail_no_cp:
-  delete reinterpret_cast<FsBlock *>(sbi_->ckpt);
-  return -EINVAL;
+  return ZX_ERR_INVALID_ARGS;
 }
 
 #if 0  // porting needed
 // void F2fs::SetDirtyDirPage(VnodeF2fs *vnode, Page *page) {
-//   SbInfo &sbi = GetSbInfo();
-//   list_node_t *head = &sbi.dir_inode_list;
+//   SuperblockInfo &superblock_info = GetSuperblockInfo();
+//   list_node_t *head = &superblock_info.dir_inode_list;
 //   DirInodeEntry *new_entry;
 //   list_node_t *this_node;
 
@@ -469,7 +465,7 @@ fail_no_cp:
 //   new_entry->vnode = vnode;
 //   list_initialize(&new_entry->list);
 
-//   SpinLock(&sbi.dir_inode_lock);
+//   SpinLock(&superblock_info.GetDirInodeLock());
 //   list_for_every(head, this_node) {
 //     DirInodeEntry *entry;
 //     entry = containerof(this_node, DirInodeEntry, list);
@@ -480,26 +476,26 @@ fail_no_cp:
 //     }
 //   }
 //   list_add_tail(&new_entry->list, head);
-//   sbi.n_dirty_dirs++;
+//   superblock_info.n_dirty_dirs++;
 
 //   BUG_ON(!S_ISDIR(inode->i_mode));
 // out:
-//   IncPageCount(&sbi, CountType::kDirtyDents);
+//   superblock_info.IncPageCount(CountType::kDirtyDents);
 //   InodeIncDirtyDents(vnode);
 //   // SetPagePrivate(page);
 
-//   SpinUnlock(&sbi.dir_inode_lock);
+//   SpinUnlock(&superblock_info.GetDirInodeLock());
 // }
 
 // void F2fs::RemoveDirtyDirInode(VnodeF2fs *vnode) {
-//   SbInfo &sbi = GetSbInfo();
-//   list_node_t *head = &sbi.dir_inode_list;
+//   SuperblockInfo &superblock_info = GetSuperblockInfo();
+//   list_node_t *head = &superblock_info.dir_inode_list;
 //   list_node_t *this_node;
 
 //   if (!vnode->IsDir())
 //     return;
 
-//   SpinLock(&sbi.dir_inode_lock);
+//   SpinLock(&superblock_info.GetDirInodeLock());
 //   // if (AtomicRead(&F2FS_I(vnode)->dirty_dents))
 //   if (vnode->fi_.dirty_dents)
 //     goto out;
@@ -511,12 +507,12 @@ fail_no_cp:
 //       list_delete(&entry->list);
 //       // kmem_cache_free(inode_entry_slab, entry);
 //       delete entry;
-//       sbi.n_dirty_dirs--;
+//       superblock_info.n_dirty_dirs--;
 //       break;
 //     }
 //   }
 // out:
-//   SpinUnlock(&sbi.dir_inode_lock);
+//   SpinUnlock(&superblock_info.GetDirInodeLock());
 // }
 #endif
 
@@ -539,19 +535,19 @@ void F2fs::SyncDirtyDirInodes() {
 
   // TODO: Do flush dirty entry blocks when pager is available.
 #if 0  // porting needed
-  SbInfo &sbi = GetSbInfo();
-  list_node_t *head = &sbi.dir_inode_list;
+  SuperblockInfo &superblock_info = GetSuperblockInfo();
+  list_node_t *head = &superblock_info.GetDirInodeList();
   DirInodeEntry *entry;
   fbl::RefPtr<VnodeF2fs> vnode;
 
   while (true) {
-		fbl::AutoLock lock(&sbi.dir_inode_lock);
+		fbl::AutoLock lock(&superblock_info.GetDirInodeLock());
     if (list_is_empty(head)) {
       break;
     }
     entry = containerof(head->next, DirInodeEntry, list);
     vnode.reset(static_cast<VnodeF2fs *>(Igrab(entry->vnode)));
-    SpinUnlock(&sbi.dir_inode_lock);
+    SpinUnlock(&superblock_info.GetDirInodeLock());
     if (vnode) {
     // filemap_flush(vnode->i_mapping);
       Iput(vnode.get());
@@ -572,7 +568,7 @@ void F2fs::SyncDirtyDirInodes() {
  * Freeze all the FS-operations for checkpoint.
  */
 void F2fs::BlockOperations() TA_NO_THREAD_SAFETY_ANALYSIS {
-  SbInfo &sbi = GetSbInfo();
+  SuperblockInfo &superblock_info = GetSuperblockInfo();
   struct WritebackControl wbc = {
 #if 0  // porting needed
       // .nr_to_write = LONG_MAX,
@@ -587,9 +583,9 @@ retry_dents:
   SyncDirtyDirInodes();
 
   // Stop file operation
-  mutex_lock_op(&sbi, LockType::kFileOp);
-  if (GetPages(&sbi, CountType::kDirtyDents)) {
-    mutex_unlock_op(&sbi, LockType::kFileOp);
+  superblock_info.mutex_lock_op(LockType::kFileOp);
+  if (superblock_info.GetPages(CountType::kDirtyDents)) {
+    superblock_info.mutex_unlock_op(LockType::kFileOp);
     goto retry_dents;
   }
 
@@ -598,23 +594,23 @@ retry_dents:
 retry:
   GetNodeManager().SyncNodePages(0, &wbc);
 
-  mutex_lock_op(&sbi, LockType::kNodeOp);
+  superblock_info.mutex_lock_op(LockType::kNodeOp);
 
-  if (GetPages(&sbi, CountType::kDirtyNodes)) {
-    mutex_unlock_op(&sbi, LockType::kNodeOp);
+  if (superblock_info.GetPages(CountType::kDirtyNodes)) {
+    superblock_info.mutex_unlock_op(LockType::kNodeOp);
     goto retry;
   }
 }
 
 void F2fs::UnblockOperations() TA_NO_THREAD_SAFETY_ANALYSIS {
-  SbInfo &sbi = GetSbInfo();
-  mutex_unlock_op(&sbi, LockType::kNodeOp);
-  mutex_unlock_op(&sbi, LockType::kFileOp);
+  SuperblockInfo &superblock_info = GetSuperblockInfo();
+  superblock_info.mutex_unlock_op(LockType::kNodeOp);
+  superblock_info.mutex_unlock_op(LockType::kFileOp);
 }
 
 void F2fs::DoCheckpoint(bool is_umount) {
-  SbInfo &sbi = GetSbInfo();
-  Checkpoint *ckpt = GetCheckpoint(&sbi);
+  SuperblockInfo &superblock_info = GetSuperblockInfo();
+  Checkpoint &ckpt = superblock_info.GetCheckpoint();
   nid_t last_nid = 0;
   block_t start_blk;
   Page *cp_page = nullptr;
@@ -624,7 +620,7 @@ void F2fs::DoCheckpoint(bool is_umount) {
   int i;
 
   /* Flush all the NAT/SIT pages */
-  while (GetPages(&sbi, CountType::kDirtyMeta))
+  while (superblock_info.GetPages(CountType::kDirtyMeta))
     SyncMetaPages(PageType::kMeta, LONG_MAX);
 
   GetNodeManager().NextFreeNid(&last_nid);
@@ -633,78 +629,79 @@ void F2fs::DoCheckpoint(bool is_umount) {
    * modify checkpoint
    * version number is already updated
    */
-  ckpt->elapsed_time = CpuToLe(static_cast<uint64_t>(GetSegmentManager().GetMtime()));
-  ckpt->valid_block_count = CpuToLe(ValidUserBlocks());
-  ckpt->free_segment_count = CpuToLe(GetSegmentManager().FreeSegments());
+  ckpt.elapsed_time = CpuToLe(static_cast<uint64_t>(GetSegmentManager().GetMtime()));
+  ckpt.valid_block_count = CpuToLe(ValidUserBlocks());
+  ckpt.free_segment_count = CpuToLe(GetSegmentManager().FreeSegments());
   for (i = 0; i < 3; i++) {
-    ckpt->cur_node_segno[i] =
+    ckpt.cur_node_segno[i] =
         CpuToLe(GetSegmentManager().CursegSegno(i + static_cast<int>(CursegType::kCursegHotNode)));
-    ckpt->cur_node_blkoff[i] =
+    ckpt.cur_node_blkoff[i] =
         CpuToLe(GetSegmentManager().CursegBlkoff(i + static_cast<int>(CursegType::kCursegHotNode)));
-    ckpt->alloc_type[i + static_cast<int>(CursegType::kCursegHotNode)] =
+    ckpt.alloc_type[i + static_cast<int>(CursegType::kCursegHotNode)] =
         GetSegmentManager().CursegAllocType(i + static_cast<int>(CursegType::kCursegHotNode));
   }
   for (i = 0; i < 3; i++) {
-    ckpt->cur_data_segno[i] =
+    ckpt.cur_data_segno[i] =
         CpuToLe(GetSegmentManager().CursegSegno(i + static_cast<int>(CursegType::kCursegHotData)));
-    ckpt->cur_data_blkoff[i] =
+    ckpt.cur_data_blkoff[i] =
         CpuToLe(GetSegmentManager().CursegBlkoff(i + static_cast<int>(CursegType::kCursegHotData)));
-    ckpt->alloc_type[i + static_cast<int>(CursegType::kCursegHotData)] =
+    ckpt.alloc_type[i + static_cast<int>(CursegType::kCursegHotData)] =
         GetSegmentManager().CursegAllocType(i + static_cast<int>(CursegType::kCursegHotData));
 
 #ifdef F2FS_BU_DEBUG
     FX_LOGS(DEBUG) << std::endl << "F2fs::DoCheckpoint ";
-    FX_LOGS(DEBUG) << "[" << i << "] cur_data_segno " << ckpt->cur_data_segno[i]
-                   << ", cur_data_blkoff=" << ckpt->cur_data_blkoff[i];
+    FX_LOGS(DEBUG) << "[" << i << "] cur_data_segno " << ckpt.cur_data_segno[i]
+                   << ", cur_data_blkoff=" << ckpt.cur_data_blkoff[i];
 
-    FX_LOGS(DEBUG) << "[" << i << "] cur_node_segno " << ckpt->cur_node_segno[i]
-                   << ", cur_node_blkoff=" << ckpt->cur_node_blkoff[i];
+    FX_LOGS(DEBUG) << "[" << i << "] cur_node_segno " << ckpt.cur_node_segno[i]
+                   << ", cur_node_blkoff=" << ckpt.cur_node_blkoff[i];
 #endif
   }
 
-  ckpt->valid_node_count = CpuToLe(ValidNodeCount());
-  ckpt->valid_inode_count = CpuToLe(ValidInodeCount());
-  ckpt->next_free_nid = CpuToLe(last_nid);
+  ckpt.valid_node_count = CpuToLe(ValidNodeCount());
+  ckpt.valid_inode_count = CpuToLe(ValidInodeCount());
+  ckpt.next_free_nid = CpuToLe(last_nid);
 
   /* 2 cp  + n data seg summary + orphan inode blocks */
   data_sum_blocks = GetSegmentManager().NpagesForSummaryFlush();
   if (data_sum_blocks < 3) {
-    ckpt->ckpt_flags |= kCpCompactSumFlag;
+    ckpt.ckpt_flags |= kCpCompactSumFlag;
   } else {
-    ckpt->ckpt_flags &= (~kCpCompactSumFlag);
+    ckpt.ckpt_flags &= (~kCpCompactSumFlag);
   }
 
-  orphan_blocks = static_cast<uint32_t>((sbi.n_orphans + kOrphansPerBlock - 1) / kOrphansPerBlock);
-  ckpt->cp_pack_start_sum = 1 + orphan_blocks;
-  ckpt->cp_pack_total_block_count = 2 + data_sum_blocks + orphan_blocks;
+  orphan_blocks = static_cast<uint32_t>((superblock_info.GetOrphanCount() + kOrphansPerBlock - 1) /
+                                        kOrphansPerBlock);
+  ckpt.cp_pack_start_sum = 1 + orphan_blocks;
+  ckpt.cp_pack_total_block_count = 2 + data_sum_blocks + orphan_blocks;
 
   if (is_umount) {
-    ckpt->ckpt_flags |= kCpUmountFlag;
-    ckpt->cp_pack_total_block_count += kNrCursegNodeType;
+    ckpt.ckpt_flags |= kCpUmountFlag;
+    ckpt.cp_pack_total_block_count += kNrCursegNodeType;
   } else {
-    ckpt->ckpt_flags &= (~kCpUmountFlag);
+    ckpt.ckpt_flags &= (~kCpUmountFlag);
   }
 
-  if (sbi.n_orphans) {
-    ckpt->ckpt_flags |= kCpOrphanPresentFlag;
+  if (superblock_info.GetOrphanCount() > 0) {
+    ckpt.ckpt_flags |= kCpOrphanPresentFlag;
   } else {
-    ckpt->ckpt_flags &= (~kCpOrphanPresentFlag);
+    ckpt.ckpt_flags &= (~kCpOrphanPresentFlag);
   }
 
   /* update SIT/NAT bitmap */
-  GetSegmentManager().GetSitBitmap(BitmapPrt(&sbi, MetaBitmap::kSitBitmap));
-  GetNodeManager().GetNatBitmap(BitmapPrt(&sbi, MetaBitmap::kNatBitmap));
+  GetSegmentManager().GetSitBitmap(superblock_info.BitmapPtr(MetaBitmap::kSitBitmap));
+  GetNodeManager().GetNatBitmap(superblock_info.BitmapPtr(MetaBitmap::kNatBitmap));
 
-  crc32 = F2fsCrc32(ckpt, LeToCpu(ckpt->checksum_offset));
-  *reinterpret_cast<uint32_t *>(reinterpret_cast<uint8_t *>(ckpt) +
-                                LeToCpu(ckpt->checksum_offset)) = CpuToLe(crc32);
+  crc32 = CpuToLe(F2fsCrc32(&ckpt, LeToCpu(ckpt.checksum_offset)));
+  memcpy(reinterpret_cast<uint8_t *>(&ckpt) + LeToCpu(ckpt.checksum_offset), &crc32,
+         sizeof(uint32_t));
 
-  start_blk = StartCpAddr(&sbi);
+  start_blk = superblock_info.StartCpAddr();
 
   /* write out checkpoint buffer at block 0 */
   cp_page = GrabMetaPage(start_blk++);
   kaddr = PageAddress(cp_page);
-  memcpy(kaddr, ckpt, (1 << sbi.log_blocksize));
+  memcpy(kaddr, &ckpt, (1 << superblock_info.GetLogBlocksize()));
 #if 0  // porting needed
   // set_page_dirty(cp_page, this);
 #else
@@ -712,7 +709,7 @@ void F2fs::DoCheckpoint(bool is_umount) {
 #endif
   F2fsPutPage(cp_page, 1);
 
-  if (sbi.n_orphans) {
+  if (superblock_info.GetOrphanCount() > 0) {
     WriteOrphanInodes(start_blk);
     start_blk += orphan_blocks;
   }
@@ -727,7 +724,7 @@ void F2fs::DoCheckpoint(bool is_umount) {
   /* writeout checkpoint block */
   cp_page = GrabMetaPage(start_blk);
   kaddr = PageAddress(cp_page);
-  memcpy(kaddr, ckpt, (1 << sbi.log_blocksize));
+  memcpy(kaddr, &ckpt, (1 << superblock_info.GetLogBlocksize()));
 #if 0  // porting needed
   // set_page_dirty(cp_page, this);
 #else
@@ -737,36 +734,36 @@ void F2fs::DoCheckpoint(bool is_umount) {
 
   /* wait for previous submitted node/meta pages writeback */
 #if 0  // porting needed
-  // while (GetPages(&sbi, kWriteback))
+  // while (superblock_info.GetPages(kWriteback))
   //	congestion_wait(BLK_RW_ASYNC, HZ / 50);
 
-  // filemap_fdatawait_range(sbi.node_inode->i_mapping, 0, LONG_MAX);
-  // filemap_fdatawait_range(sbi.meta_inode->i_mapping, 0, LONG_MAX);
+  // filemap_fdatawait_range(superblock_info.node_inode->i_mapping, 0, LONG_MAX);
+  // filemap_fdatawait_range(superblock_info.meta_inode->i_mapping, 0, LONG_MAX);
 #endif
 
   /* update user_block_counts */
-  sbi.last_valid_block_count = sbi.total_valid_block_count;
-  sbi.alloc_valid_block_count = 0;
+  superblock_info.SetLastValidBlockCount(superblock_info.GetTotalValidBlockCount());
+  superblock_info.SetAllocValidBlockCount(0);
 
   /* Here, we only have one bio having CP pack */
 #if 0  // porting needed
-  // if (sbi.ckpt->ckpt_flags & kCpErrorFlag)
-  //	sbi->sb->s_flags |= MS_RDONLY;
+  // if (superblock_info.ckpt.ckpt_flags & kCpErrorFlag)
+  //	superblock_info->sb->s_flags |= MS_RDONLY;
   // else
 #endif
   SyncMetaPages(PageType::kMetaFlush, LONG_MAX);
 
   GetSegmentManager().ClearPrefreeSegments();
-  ResetSbDirt(&sbi);
+  superblock_info.ClearDirty();
 }
 
 // We guarantee that this checkpoint procedure should not fail.
 void F2fs::WriteCheckpoint(bool blocked, bool is_umount) {
-  SbInfo &sbi = GetSbInfo();
-  Checkpoint *ckpt = GetCheckpoint(&sbi);
+  SuperblockInfo &superblock_info = GetSuperblockInfo();
+  Checkpoint &ckpt = superblock_info.GetCheckpoint();
   uint64_t ckpt_ver;
 
-  fbl::AutoLock cp_lock(&sbi.cp_mutex);
+  fbl::AutoLock cp_lock(&superblock_info.GetCheckpointMutex());
   BlockOperations();
 
 #if 0  // porting needed (bio[type] is empty)
@@ -778,8 +775,8 @@ void F2fs::WriteCheckpoint(bool blocked, bool is_umount) {
   // update checkpoint pack index
   // Increase the version number so that
   // SIT entries and seg summaries are written at correct place
-  ckpt_ver = LeToCpu(ckpt->checkpoint_ver);
-  ckpt->checkpoint_ver = CpuToLe(static_cast<uint64_t>(++ckpt_ver));
+  ckpt_ver = LeToCpu(ckpt.checkpoint_ver);
+  ckpt.checkpoint_ver = CpuToLe(static_cast<uint64_t>(++ckpt_ver));
 
   // write cached NAT/SIT entries to NAT/SIT area
   GetNodeManager().FlushNatEntries();
@@ -794,9 +791,9 @@ void F2fs::WriteCheckpoint(bool blocked, bool is_umount) {
 }
 
 void F2fs::InitOrphanInfo() {
-  SbInfo &sbi = GetSbInfo();
-  list_initialize(&sbi.orphan_inode_list);
-  sbi.n_orphans = 0;
+  SuperblockInfo &superblock_info = GetSuperblockInfo();
+  list_initialize(&superblock_info.GetOrphanInodeList());
+  superblock_info.ResetNrOrphans();
 }
 
 #if 0  // porting needed

@@ -504,8 +504,7 @@ TEST(FormatFilesystemTest, BlockSize) {
 
       SuperBlock &fsb = fs->RawSb();
       ASSERT_EQ(1 << fsb.log_sectorsize, static_cast<const int32_t>(block_size));
-      SbInfo &sbi = fs->GetSbInfo();
-      ASSERT_EQ(1 << sbi.log_sectors_per_block,
+      ASSERT_EQ(1 << fs->GetSuperblockInfo().GetLogSectorsPerBlock(),
                 static_cast<const int32_t>((1 << kMaxLogSectorSize) / block_size));
 
       ASSERT_EQ(root_dir->Close(), ZX_OK);

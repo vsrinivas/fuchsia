@@ -21,33 +21,33 @@ constexpr uint32_t kMountActiveLogsTest = 2;
 
 void MountTestVerifyOptions(F2fs *fs, MountOptions &options) {
   uint32_t value;
-  SbInfo &sbi = fs->GetSbInfo();
+  SuperblockInfo &superblock_info = fs->GetSuperblockInfo();
   for (uint32_t i = 0; i < kOptMaxNum; i++) {
     ASSERT_EQ(options.GetValue(i, &value), ZX_OK);
     switch (i) {
       case kOptActiveLogs:
-        ASSERT_EQ(static_cast<uint32_t>(sbi.active_logs), value);
+        ASSERT_EQ(static_cast<uint32_t>(superblock_info.GetActiveLogs()), value);
         break;
       case kOptDiscard:
-        ASSERT_EQ((value == 0), (TestOpt(&sbi, kMountDiscard) == 0));
+        ASSERT_EQ((value == 0), (superblock_info.TestOpt(kMountDiscard) == 0));
         break;
       case kOptBgGcOff:
-        ASSERT_EQ((value == 0), (TestOpt(&sbi, kMountBgGcOff) == 0));
+        ASSERT_EQ((value == 0), (superblock_info.TestOpt(kMountBgGcOff) == 0));
         break;
       case kOptNoHeap:
-        ASSERT_EQ((value == 0), (TestOpt(&sbi, kMountNoheap) == 0));
+        ASSERT_EQ((value == 0), (superblock_info.TestOpt(kMountNoheap) == 0));
         break;
       case kOptDisableExtIdentify:
-        ASSERT_EQ((value == 0), (TestOpt(&sbi, kMountDisableExtIdentify) == 0));
+        ASSERT_EQ((value == 0), (superblock_info.TestOpt(kMountDisableExtIdentify) == 0));
         break;
       case kOptNoUserXAttr:
-        ASSERT_EQ((value == 0), (TestOpt(&sbi, kMountNoXAttr) == 0));
+        ASSERT_EQ((value == 0), (superblock_info.TestOpt(kMountNoXAttr) == 0));
         break;
       case kOptNoAcl:
-        ASSERT_EQ((value == 0), (TestOpt(&sbi, kMountNoAcl) == 0));
+        ASSERT_EQ((value == 0), (superblock_info.TestOpt(kMountNoAcl) == 0));
         break;
       case kOptDisableRollForward:
-        ASSERT_EQ((value == 0), (TestOpt(&sbi, kMountDisableRollForward) == 0));
+        ASSERT_EQ((value == 0), (superblock_info.TestOpt(kMountDisableRollForward) == 0));
         break;
     };
   }
@@ -92,7 +92,7 @@ void TestSegmentType(F2fs *fs, Dir *root_dir, const std::string_view name, bool 
   F2fsPutPage(page, 1);
 
   // Dnode block test
-  page = GrabCachePage(nullptr, NodeIno(&fs->GetSbInfo()), vn->Ino());
+  page = GrabCachePage(nullptr, fs->GetSuperblockInfo().GetNodeIno(), vn->Ino());
   NodeManager::FillNodeFooter(*page, static_cast<nid_t>(page->index), vn->Ino(), inode_ofs, true);
   NodeManager::SetColdNode(*vn, *page);
   type = fs->GetSegmentManager().GetSegmentType(page, PageType::kNode);
@@ -100,7 +100,7 @@ void TestSegmentType(F2fs *fs, Dir *root_dir, const std::string_view name, bool 
   F2fsPutPage(page, 1);
 
   // indirect node block test
-  page = GrabCachePage(nullptr, NodeIno(&fs->GetSbInfo()), nid);
+  page = GrabCachePage(nullptr, fs->GetSuperblockInfo().GetNodeIno(), nid);
   NodeManager::FillNodeFooter(*page, static_cast<nid_t>(page->index), vn->Ino(), indirect_node_ofs,
                               true);
   NodeManager::SetColdNode(*vn, *page);

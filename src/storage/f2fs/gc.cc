@@ -14,9 +14,9 @@ uint32_t SegmentManager::GetGcCost(uint32_t segno, VictimSelPolicy *p) {
 #if 0  // porting needed
   /* alloc_mode == kLFS */
   if (p->gc_mode == kGcGreedy)
-    return get_valid_blocks(sbi_, segno, sbi_->segs_per_sec);
+    return get_valid_blocks(superblock_info_, segno, superblock_info_->GetSegsPerSec());
   else
-    return get_cb_cost(sbi_, segno);
+    return get_cb_cost(superblock_info_, segno);
 #endif
 }
 
@@ -30,16 +30,16 @@ void SegmentManager::SelectPolicy(GcType gc_type, CursegType type, VictimSelPoli
 #if 0  // porting needed
   p->gc_mode = select_gc_type(gc_type);
   p->dirty_segmap = dirty_i->dirty_segmap[DIRTY].get();
-  p->ofs_unit = sbi_->segs_per_sec;
+  p->ofs_unit = superblock_info_->GetSegsPerSec();
 #endif
   }
 
-  p->offset = sbi_->last_victim[static_cast<int>(p->gc_mode)];
+  p->offset = superblock_info_->GetLastVictim(static_cast<int>(p->gc_mode));
 }
 
 uint32_t SegmentManager::GetMaxCost(VictimSelPolicy *p) {
   if (p->gc_mode == GcMode::kGcGreedy)
-    return (1 << sbi_->log_blocks_per_seg) * p->ofs_unit;
+    return (1 << superblock_info_->GetLogBlocksPerSeg()) * p->ofs_unit;
   else if (p->gc_mode == GcMode::kGcCb)
     return kUint32Max;
   return 0;
@@ -59,7 +59,7 @@ bool SegmentManager::GetVictimByDefault(GcType gc_type, CursegType type, AllocMo
 
 #if 0  // porting needed
 	if (p.alloc_mode == AllocMode::kLFS && gc_type == GcType::kFgGC) {
-		p.min_segno = check_bg_victims(sbi_;
+		p.min_segno = check_bg_victims(superblock_info_;
 		if (p.min_segno != kNullSegNo)
 			goto got_it;
 	}
@@ -70,8 +70,8 @@ bool SegmentManager::GetVictimByDefault(GcType gc_type, CursegType type, AllocMo
   while (1) {
     uint32_t segno = FindNextBit(p.dirty_segmap, TotalSegs(), p.offset);
     if (segno >= TotalSegs()) {
-      if (sbi_->last_victim[static_cast<int>(p.gc_mode)]) {
-        sbi_->last_victim[static_cast<int>(p.gc_mode)] = 0;
+      if (superblock_info_->GetLastVictim(static_cast<int>(p.gc_mode))) {
+        superblock_info_->SetLastVictim(static_cast<int>(p.gc_mode), 0);
         p.offset = 0;
         continue;
       }
@@ -98,7 +98,7 @@ bool SegmentManager::GetVictimByDefault(GcType gc_type, CursegType type, AllocMo
       continue;
 
     if (nsearched++ >= kMaxSearchLimit) {
-      sbi_->last_victim[static_cast<int>(p.gc_mode)] = segno;
+      superblock_info_->SetLastVictim(static_cast<int>(p.gc_mode), segno);
       break;
     }
   }

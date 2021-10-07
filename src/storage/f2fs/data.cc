@@ -49,8 +49,7 @@ zx_status_t VnodeF2fs::ReserveNewBlock(DnodeOfData *dn) {
 //           buffer_head *bh_result)
 // {
 //   Inode_info *fi = F2FS_I(inode);
-//   //SbInfo *sbi = F2FS_SB(inode->i_sb);
-//   SbInfo *sbi = F2FS_SB(inode->i_sb);
+//   SuperblockInfo *superblock_info = F2FS_SB(inode->i_sb);
 //   pgoff_t start_fofs, end_fofs;
 //   block_t start_blkaddr;
 
@@ -60,7 +59,7 @@ zx_status_t VnodeF2fs::ReserveNewBlock(DnodeOfData *dn) {
 //     return 0;
 //   }
 
-//   sbi->total_hit_ext++;
+//   superblock_info->total_hit_ext++;
 //   start_fofs = fi->ext.fofs;
 //   end_fofs = fi->ext.fofs + fi->ext.len - 1;
 //   start_blkaddr = fi->ext.blk_addr;
@@ -78,7 +77,7 @@ zx_status_t VnodeF2fs::ReserveNewBlock(DnodeOfData *dn) {
 //     else
 //       bh_result->b_size = UINT_MAX;
 
-//     sbi->read_hit_ext++;
+//     superblock_info->read_hit_ext++;
 //     ReadUnlock(&fi->ext.ext_lock);
 //     return 1;
 //   }
@@ -321,7 +320,7 @@ zx_status_t VnodeF2fs::GetNewDataPage(pgoff_t index, bool new_i_size, Page **out
  */
 zx_status_t VnodeF2fs::Readpage(F2fs *fs, Page *page, block_t blk_addr, int type) {
 #if 0  // porting needed
-  //   block_device *bdev = sbi->sb->s_bdev;
+  //   block_device *bdev = superblock_info->sb->s_bdev;
   //   bool sync = (type == kReadSync);
   //   bio *bio;
 
@@ -332,10 +331,10 @@ zx_status_t VnodeF2fs::Readpage(F2fs *fs, Page *page, block_t blk_addr, int type
   //     return 0;
   //   }
 
-  //   down_read(&sbi->bio_sem);
+  //   down_read(&superblock_info->bio_sem);
 
   //   /* Allocate a new bio */
-  //   bio = f2fs_bio_alloc(bdev, blk_addr << (sbi->log_blocksize - 9),
+  //   bio = f2fs_bio_alloc(bdev, blk_addr << (superblock_info->GetLogBlocksize() - 9),
   //         1, GFP_NOFS | __GFP_HIGH);
 
   //   /* Initialize the bio */
@@ -343,12 +342,12 @@ zx_status_t VnodeF2fs::Readpage(F2fs *fs, Page *page, block_t blk_addr, int type
   //   if (bio_add_page(bio, page, kPageCacheSize, 0) < kPageCacheSize) {
   //     kfree(bio->bi_private);
   //     bio_put(bio);
-  //     up_read(&sbi->bio_sem);
+  //     up_read(&superblock_info->bio_sem);
   //     return -EFAULT;
   //   }
 
   //   submit_bio(type, bio);
-  //   up_read(&sbi->bio_sem);
+  //   up_read(&superblock_info->bio_sem);
 
   //   /* wait for read completion if sync */
   //   if (sync) {
@@ -435,7 +434,6 @@ zx_status_t VnodeF2fs::DoWriteDataPage(Page *page) {
 #if 0  // porting needed
   // inode *inode = page->mapping->host;
 #endif
-  SbInfo &sbi = Vfs()->GetSbInfo();
   block_t old_blk_addr, new_blk_addr;
   DnodeOfData dn;
 
@@ -463,7 +461,7 @@ zx_status_t VnodeF2fs::DoWriteDataPage(Page *page) {
   } else {
     Vfs()->GetSegmentManager().WriteDataPage(this, page, &dn, old_blk_addr, &new_blk_addr);
     UpdateExtentCache(new_blk_addr, &dn);
-    fi_.data_version = LeToCpu(GetCheckpoint(&sbi)->checkpoint_ver);
+    fi_.data_version = LeToCpu(Vfs()->GetSuperblockInfo().GetCheckpoint().checkpoint_ver);
   }
 
   F2fsPutDnode(&dn);
@@ -471,7 +469,7 @@ zx_status_t VnodeF2fs::DoWriteDataPage(Page *page) {
 }
 
 zx_status_t VnodeF2fs::WriteDataPageReq(Page *page, WritebackControl *wbc) {
-  SbInfo &sbi = Vfs()->GetSbInfo();
+  SuperblockInfo &superblock_info = Vfs()->GetSuperblockInfo();
   const pgoff_t end_index = (GetSize() >> kPageCacheShift);
   unsigned offset;
   zx_status_t err;
@@ -482,7 +480,7 @@ zx_status_t VnodeF2fs::WriteDataPageReq(Page *page, WritebackControl *wbc) {
     offset = GetSize() & (kPageCacheSize - 1);
     if ((page->index >= end_index + 1) || !offset) {
       if (IsDir()) {
-        DecPageCount(&sbi, CountType::kDirtyDents);
+        superblock_info.DecPageCount(CountType::kDirtyDents);
 #if 0  // porting needed
        // inode_dec_dirty_dents(inode);
 #endif
@@ -497,7 +495,7 @@ zx_status_t VnodeF2fs::WriteDataPageReq(Page *page, WritebackControl *wbc) {
     ZeroUserSegment(page, offset, kPageCacheSize);
   }
 
-  if (sbi.por_doing) {
+  if (superblock_info.IsOnRecovery()) {
 #if 0  // porting needed
     // wbc->pages_skipped++;
     // set_page_dirty(page);
@@ -513,9 +511,9 @@ zx_status_t VnodeF2fs::WriteDataPageReq(Page *page, WritebackControl *wbc) {
 #endif
 
   do {
-    fs::SharedLock rlock(sbi.fs_lock[static_cast<int>(LockType::kFileOp)]);
+    fs::SharedLock rlock(superblock_info.GetFsLock(LockType::kFileOp));
     if (IsDir()) {
-      DecPageCount(&sbi, CountType::kDirtyDents);
+      superblock_info.DecPageCount(CountType::kDirtyDents);
 #if 0  // porting needed
       // inode_dec_dirty_dents(inode);
 #endif
@@ -532,7 +530,7 @@ zx_status_t VnodeF2fs::WriteDataPageReq(Page *page, WritebackControl *wbc) {
 
 #if 0  // porting needed
   // if (wbc->for_reclaim)
-  //   f2fs_submit_bio(sbi, DATA, true);
+  //   f2fs_submit_bio(superblock_info, DATA, true);
 #endif
 
   if (err == ZX_ERR_NOT_FOUND) {
@@ -558,7 +556,7 @@ zx_status_t VnodeF2fs::WriteDataPageReq(Page *page, WritebackControl *wbc) {
 // int VnodeF2fs::F2fsWriteDataPages(/*address_space *mapping,*/
 //                                   WritebackControl *wbc) {
 //   // inode *inode = mapping->host;
-//   // SbInfo &sbi = Vfs()->GetSbInfo();
+//   // SuperblockInfo &superblock_info = Vfs()->GetSuperblockInfo();
 //   int ret;
 //   // long excess_nrtw = 0, desired_nrtw;
 
@@ -569,11 +567,11 @@ zx_status_t VnodeF2fs::WriteDataPageReq(Page *page, WritebackControl *wbc) {
 //   // }
 
 //   // if (!IsDir())
-//   //   mutex_lock(&sbi->writepages);
+//   //   mutex_lock(&superblock_info->writepages);
 //   // ret = generic_writepages(mapping, wbc);
 //   ret = 0;
 //   // if (!IsDir())
-//   //   mutex_unlock(&sbi->writepages);
+//   //   mutex_unlock(&superblock_info->writepages);
 //   // Vfs()->GetSegmentManager().SubmitBio(DATA, (wbc->sync_mode == WB_SYNC_ALL));
 
 //   Vfs()->RemoveDirtyDirInode(this);
@@ -584,7 +582,6 @@ zx_status_t VnodeF2fs::WriteDataPageReq(Page *page, WritebackControl *wbc) {
 #endif
 
 zx_status_t VnodeF2fs::WriteBegin(size_t pos, size_t len, Page **pagep) {
-  SbInfo &sbi = Vfs()->GetSbInfo();
   pgoff_t index = (static_cast<uint64_t>(pos)) >> kPageCacheShift;
   DnodeOfData dn;
 
@@ -598,7 +595,7 @@ zx_status_t VnodeF2fs::WriteBegin(size_t pos, size_t len, Page **pagep) {
     return ZX_ERR_NO_MEMORY;
 #endif
 
-  fs::SharedLock rlock(sbi.fs_lock[static_cast<int>(LockType::kFileOp)]);
+  fs::SharedLock rlock(Vfs()->GetSuperblockInfo().GetFsLock(LockType::kFileOp));
   std::lock_guard write_lock(io_lock_);
   do {
     NodeManager::SetNewDnode(dn, this, nullptr, nullptr, 0);
@@ -652,9 +649,9 @@ zx_status_t VnodeF2fs::WriteBegin(size_t pos, size_t len, Page **pagep) {
 // {
 //   // inode *inode = page->mapping->host;
 //   inode *inode = new inode();
-//   SbInfo *sbi = F2FS_SB(inode->i_sb);
+//   SuperblockInfo *superblock_info = F2FS_SB(inode->i_sb);
 //   if (inode->IsDir() && PageDirty(page)) {
-//     DecPageCount(sbi, CountType::kDirtyDents);
+//     superblock_info->DecPageCount(CountType::kDirtyDents);
 //     InodeDecDirtyDents(inode);
 //   }
 //   ClearPagePrivate(page);

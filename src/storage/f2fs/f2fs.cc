@@ -29,7 +29,7 @@ namespace f2fs {
 F2fs::F2fs(async_dispatcher_t* dispatcher, std::unique_ptr<f2fs::Bcache> bc, SuperBlock* sb,
            const MountOptions& mount_options)
     : fs::ManagedVfs(dispatcher), bc_(std::move(bc)), mount_options_(mount_options) {
-  raw_sb_ = std::unique_ptr<SuperBlock>(sb);
+  raw_sb_.reset(sb);
 
   zx::event event;
   if (zx_status_t status = zx::event::create(0, &event); status == ZX_OK) {
@@ -170,60 +170,58 @@ void F2fs::Shutdown(fs::FuchsiaVfs::ShutdownCallback cb) {
 }
 
 void F2fs::DecValidBlockCount(VnodeF2fs* vnode, block_t count) {
-  fbl::AutoLock lock(&sbi_->stat_lock);
-  ZX_ASSERT(sbi_->total_valid_block_count >= count);
+  fbl::AutoLock lock(&superblock_info_->GetStatLock());
+  ZX_ASSERT(superblock_info_->GetTotalValidBlockCount() >= count);
   vnode->DecBlocks(count);
-  sbi_->total_valid_block_count -= count;
+  superblock_info_->SetTotalValidBlockCount(superblock_info_->GetTotalValidBlockCount() - count);
 }
 
 zx_status_t F2fs::IncValidBlockCount(VnodeF2fs* vnode, block_t count) {
   block_t valid_block_count;
-  fbl::AutoLock lock(&sbi_->stat_lock);
-  valid_block_count = sbi_->total_valid_block_count + count;
-  if (valid_block_count > sbi_->user_block_count) {
+  fbl::AutoLock lock(&superblock_info_->GetStatLock());
+  valid_block_count = superblock_info_->GetTotalValidBlockCount() + count;
+  if (valid_block_count > superblock_info_->GetUserBlockCount()) {
     return ZX_ERR_NO_SPACE;
   }
   vnode->IncBlocks(count);
-  sbi_->total_valid_block_count = valid_block_count;
-  sbi_->alloc_valid_block_count += count;
+  superblock_info_->SetTotalValidBlockCount(valid_block_count);
+  superblock_info_->SetAllocValidBlockCount(superblock_info_->GetAllocValidBlockCount() + count);
   return ZX_OK;
 }
 
 block_t F2fs::ValidUserBlocks() {
-  fbl::AutoLock lock(&sbi_->stat_lock);
-  return sbi_->total_valid_block_count;
+  fbl::AutoLock lock(&superblock_info_->GetStatLock());
+  return superblock_info_->GetTotalValidBlockCount();
 }
 
 uint32_t F2fs::ValidNodeCount() {
-  fbl::AutoLock lock(&sbi_->stat_lock);
-  return sbi_->total_valid_node_count;
+  fbl::AutoLock lock(&superblock_info_->GetStatLock());
+  return superblock_info_->GetTotalValidNodeCount();
 }
 
 void F2fs::IncValidInodeCount() {
-  fbl::AutoLock lock(&sbi_->stat_lock);
-  ZX_ASSERT(sbi_->total_valid_inode_count != sbi_->total_node_count);
-  sbi_->total_valid_inode_count++;
+  fbl::AutoLock lock(&superblock_info_->GetStatLock());
+  ZX_ASSERT(superblock_info_->GetTotalValidInodeCount() != superblock_info_->GetTotalNodeCount());
+  superblock_info_->SetTotalValidInodeCount(superblock_info_->GetTotalValidInodeCount() + 1);
 }
 
 void F2fs::DecValidInodeCount() {
-  fbl::AutoLock lock(&sbi_->stat_lock);
-  ZX_ASSERT(sbi_->total_valid_inode_count);
-  sbi_->total_valid_inode_count--;
+  fbl::AutoLock lock(&superblock_info_->GetStatLock());
+  ZX_ASSERT(superblock_info_->GetTotalValidInodeCount());
+  superblock_info_->SetTotalValidInodeCount(superblock_info_->GetTotalValidInodeCount() - 1);
 }
 
 uint32_t F2fs::ValidInodeCount() {
-  fbl::AutoLock lock(&sbi_->stat_lock);
-  return sbi_->total_valid_inode_count;
+  fbl::AutoLock lock(&superblock_info_->GetStatLock());
+  return superblock_info_->GetTotalValidInodeCount();
 }
 
 zx_status_t FlushDirtyNodePage(F2fs* fs, Page* page) {
-  SbInfo& sbi = fs->GetSbInfo();
-
   if (!page)
     return ZX_OK;
 
   ZX_ASSERT(page->host == nullptr);
-  ZX_ASSERT(page->host_nid == NodeIno(&sbi));
+  ZX_ASSERT(page->host_nid == fs->GetSuperblockInfo().GetNodeIno());
 
   if (zx_status_t ret = fs->GetNodeManager().F2fsWriteNodePage(*page, nullptr); ret != ZX_OK) {
     FX_LOGS(ERROR) << "Node page write error " << ret;
@@ -239,13 +237,11 @@ zx_status_t F2fs::GetFsId(zx::event* out_fs_id) const {
 }
 
 zx_status_t FlushDirtyMetaPage(F2fs* fs, Page* page) {
-  SbInfo& sbi = fs->GetSbInfo();
-
   if (!page)
     return ZX_OK;
 
   ZX_ASSERT(page->host == nullptr);
-  ZX_ASSERT(page->host_nid == MetaIno(&sbi));
+  ZX_ASSERT(page->host_nid == fs->GetSuperblockInfo().GetMetaIno());
 
   if (zx_status_t ret = fs->F2fsWriteMetaPage(page, nullptr); ret != ZX_OK) {
     FX_LOGS(ERROR) << "Meta page write error " << ret;

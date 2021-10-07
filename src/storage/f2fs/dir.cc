@@ -495,7 +495,6 @@ void Dir::DeleteEntry(DirEntry *dentry, Page *page, VnodeF2fs *vnode) {
 #if 0  // porting needed
   // address_space *mapping = page->mapping;
 #endif
-  SbInfo &sbi = Vfs()->GetSbInfo();
   int slots = (LeToCpu(dentry->name_len) + kNameLen - 1) / kNameLen;
   void *kaddr = PageAddress(page);
   int i;
@@ -561,7 +560,7 @@ void Dir::DeleteEntry(DirEntry *dentry, Page *page, VnodeF2fs *vnode) {
 #if 0  // porting needed
     // ClearPageUptodate(page);
 #endif
-    DecPageCount(&sbi, CountType::kDirtyDents);
+    Vfs()->GetSuperblockInfo().DecPageCount(CountType::kDirtyDents);
     InodeDecDirtyDents(this);
     page_offset = page->index << kPageCacheShift;
   }

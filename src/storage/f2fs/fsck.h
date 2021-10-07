@@ -104,7 +104,7 @@ class FsckWorker {
   void ChkDentryBlk(uint32_t block_address, uint32_t *child_cnt, uint32_t *child_files,
                     int last_blk);
 
-  void PrintRawSbInfo();
+  void PrintRawSuperblockInfo();
   void PrintCkptInfo();
   void PrintNodeInfo(Node *node_block);
   void PrintInodeInfo(Inode *inode);
@@ -141,7 +141,7 @@ class FsckWorker {
   zx_status_t Run();
   zx_status_t ReadBlock(void *data, uint64_t bno);
 
-  void InitSbInfo();
+  void InitSuperblockInfo();
   void *ValidateCheckpoint(block_t cp_addr, uint64_t *version);
   zx_status_t SanityCheckRawSuper(const SuperBlock *raw_super);
   zx_status_t ValidateSuperblock(block_t block);
@@ -179,15 +179,16 @@ class FsckWorker {
   inline bool IsValidSsaDataBlk(uint32_t block_address, uint32_t parent_nid, uint16_t idx_in_node,
                                 uint8_t version);
   inline bool IsValidNid(uint32_t nid) {
-    ZX_ASSERT(nid <= (kNatEntryPerBlock * RawSuper(&sbi_)->segment_count_nat
-                      << (sbi_.log_blocks_per_seg - 1)));
+    ZX_ASSERT(nid <= (kNatEntryPerBlock * superblock_info_.GetRawSuperblock().segment_count_nat
+                      << (superblock_info_.GetLogBlocksPerSeg() - 1)));
     return true;
   }
   inline bool IsValidBlkAddr(uint32_t addr) {
-    if (addr >= RawSuper(&sbi_)->block_count || addr < segment_manager_->GetMainAreaStartBlock()) {
-      ZX_ASSERT_MSG(addr < RawSuper(&sbi_)->block_count,
+    if (addr >= superblock_info_.GetRawSuperblock().block_count ||
+        addr < segment_manager_->GetMainAreaStartBlock()) {
+      ZX_ASSERT_MSG(addr < superblock_info_.GetRawSuperblock().block_count,
                     "block[0x%x] should be less than [0x%lx]\n", addr,
-                    RawSuper(&sbi_)->block_count);
+                    superblock_info_.GetRawSuperblock().block_count);
       ZX_ASSERT_MSG(addr >= segment_manager_->GetMainAreaStartBlock(),
                     "block[0x%x] should be larger than [0x%x]\n", addr,
                     segment_manager_->GetMainAreaStartBlock());
@@ -196,11 +197,12 @@ class FsckWorker {
   }
 
   inline block_t StartSumBlock() {
-    return StartCpAddr(&sbi_) + LeToCpu(GetCheckpoint(&sbi_)->cp_pack_start_sum);
+    return superblock_info_.StartCpAddr() +
+           LeToCpu(superblock_info_.GetCheckpoint().cp_pack_start_sum);
   }
   inline block_t SumBlkAddr(int base, int type) {
-    return StartCpAddr(&sbi_) + LeToCpu(GetCheckpoint(&sbi_)->cp_pack_total_block_count) -
-           (base + 1) + type;
+    return superblock_info_.StartCpAddr() +
+           LeToCpu(superblock_info_.GetCheckpoint().cp_pack_total_block_count) - (base + 1) + type;
   }
   inline void NodeInfoFromRawNat(NodeInfo *ni, RawNatEntry *raw_nat) {
     ni->ino = LeToCpu(raw_nat->ino);
@@ -210,15 +212,15 @@ class FsckWorker {
 
 #if 0  // porting needed
   int FsckChkXattrBlk(uint32_t ino, uint32_t x_nid, uint32_t *blk_cnt);
-  void sit_dump(SbInfo *sbi, int start_sit, int end_sit);
-  void ssa_dump(SbInfo *sbi, int start_ssa, int end_ssa);
-  int dump_node(SbInfo *sbi, nid_t nid);
-  int dump_inode_from_blkaddr(SbInfo *sbi, uint32_t blk_addr);
+  void sit_dump(SuperblockInfo *sbi, int start_sit, int end_sit);
+  void ssa_dump(SuperblockInfo *sbi, int start_ssa, int end_ssa);
+  int dump_node(SuperblockInfo *sbi, nid_t nid);
+  int dump_inode_from_blkaddr(SuperblockInfo *sbi, uint32_t blk_addr);
 #endif
 
  private:
   FsckInfo fsck_;
-  SbInfo sbi_;
+  SuperblockInfo superblock_info_;
   std::unique_ptr<NodeManager> node_manager_;
   std::unique_ptr<SegmentManager> segment_manager_;
   Bcache *bc_;

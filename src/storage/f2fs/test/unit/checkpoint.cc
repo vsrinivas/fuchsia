@@ -44,8 +44,7 @@ constexpr uint32_t kOrphanInodeBlockCnt = 10;
 
 void ReadCheckpoint(F2fs *fs, block_t cp_addr, Page **cp_out) {
   Page *cp_page[2] = {nullptr, nullptr};  // cp_page[0]: header, cp_page[1]: footer
-  SbInfo &sbi = fs->GetSbInfo();
-  uint64_t blk_size = sbi.blocksize;
+  uint64_t blk_size = fs->GetSuperblockInfo().GetBlocksize();
   Checkpoint *cp_block;
   uint64_t version[2];  // version[0]: header, version[1]: footer
   uint32_t crc;
@@ -129,7 +128,7 @@ void GetLastCheckpoint(F2fs *fs, uint32_t expect_cp_position, bool after_mkfs, P
   }
 }
 
-inline void *GetBitmapPrt(Checkpoint *ckpt, MetaBitmap flag) {
+inline void *GetBitmapPtr(Checkpoint *ckpt, MetaBitmap flag) {
   uint32_t offset = (flag == MetaBitmap::kNatBitmap) ? ckpt->sit_ver_bitmap_bytesize : 0;
   return &ckpt->sit_nat_version_bitmap + offset;
 }
@@ -165,7 +164,7 @@ void CreateFiles(F2fs *fs, int file_cnt, uint64_t version) {
 }
 
 void DoWriteSit(F2fs *fs, block_t *new_blkaddr, CursegType type, uint32_t exp_segno) {
-  SbInfo &sbi = fs->GetSbInfo();
+  SuperblockInfo &superblock_info = fs->GetSuperblockInfo();
   SitInfo &sit_i = fs->GetSegmentManager().GetSitInfo();
 
   if (!fs->GetSegmentManager().HasCursegSpace(type)) {
@@ -182,7 +181,7 @@ void DoWriteSit(F2fs *fs, block_t *new_blkaddr, CursegType type, uint32_t exp_se
 
   fbl::AutoLock sentry_lock(&sit_i.sentry_lock);
   fs->GetSegmentManager().RefreshNextBlkoff(curseg);
-  sbi.block_count[curseg->alloc_type]++;
+  superblock_info.IncBlockCount(curseg->alloc_type);
 
   fs->GetSegmentManager().RefreshSitEntry(kNullSegNo, *new_blkaddr);
   fs->GetSegmentManager().LocateDirtySegment(old_cursegno);
@@ -216,7 +215,7 @@ void CheckpointTestNatBitmap(F2fs *fs, uint32_t expect_cp_position, uint32_t exp
   ASSERT_EQ(cp->checkpoint_ver, expect_cp_ver);
 
   // 2. Get NAT version bitmap
-  uint8_t *version_bitmap = static_cast<uint8_t *>(GetBitmapPrt(cp, MetaBitmap::kNatBitmap));
+  uint8_t *version_bitmap = static_cast<uint8_t *>(GetBitmapPtr(cp, MetaBitmap::kNatBitmap));
   ASSERT_NE(version_bitmap, nullptr);
 
   if (pre_bitmap == nullptr)
@@ -279,7 +278,7 @@ void CheckpointTestSitBitmap(F2fs *fs, uint32_t expect_cp_position, uint32_t exp
   ASSERT_EQ(cp->checkpoint_ver, expect_cp_ver);
 
   // 2. Get SIT version bitmap
-  version_bitmap = static_cast<uint8_t *>(GetBitmapPrt(cp, MetaBitmap::kSitBitmap));
+  version_bitmap = static_cast<uint8_t *>(GetBitmapPtr(cp, MetaBitmap::kSitBitmap));
   ASSERT_NE(version_bitmap, nullptr);
 
   if (pre_bitmap == nullptr)
@@ -377,7 +376,7 @@ void CheckpointTestAddOrphanInode(F2fs *fs, uint32_t expect_cp_position, uint32_
     fs->AddOrphanInode(ino);
   }
 
-  ASSERT_EQ(fs->GetSbInfo().n_orphans, orphan_inos);
+  ASSERT_EQ(fs->GetSuperblockInfo().GetOrphanCount(), orphan_inos);
 
   // Add duplicate orphan inodes
   std::vector<uint32_t> dup_inos(orphan_inos / 10);
@@ -450,7 +449,7 @@ void CheckpointTestRemoveOrphanInode(F2fs *fs, uint32_t expect_cp_position, uint
     for (auto ino : inos) {
       fs->AddOrphanInode(ino);
     }
-    ASSERT_EQ(fs->GetSbInfo().n_orphans, orphan_inos);
+    ASSERT_EQ(fs->GetSuperblockInfo().GetOrphanCount(), orphan_inos);
   }
 
   // 5. Remove orphan inodes
@@ -531,7 +530,7 @@ void CheckpointTestRecoverOrphanInode(F2fs *fs, uint32_t expect_cp_position, uin
     vnode_refptr.reset();
   }
 
-  ASSERT_EQ(fs->GetSbInfo().n_orphans, orphan_inos);
+  ASSERT_EQ(fs->GetSuperblockInfo().GetOrphanCount(), orphan_inos);
 
   F2fsPutPage(cp_page, 1);
 }
@@ -778,7 +777,7 @@ void CheckpointTestSitJournal(F2fs *fs, uint32_t expect_cp_position, uint32_t ex
 
 void CheckpointTestNatJournal(F2fs *fs, uint32_t expect_cp_position, uint32_t expect_cp_ver,
                               bool after_mkfs, std::vector<uint32_t> &nids) {
-  SbInfo &sbi = fs->GetSbInfo();
+  SuperblockInfo &superblock_info = fs->GetSuperblockInfo();
   NodeManager &node_manager = fs->GetNodeManager();
   Page *cp_page = nullptr;
   CursegInfo *curseg = fs->GetSegmentManager().CURSEG_I(CursegType::kCursegHotData);
@@ -811,8 +810,8 @@ void CheckpointTestNatJournal(F2fs *fs, uint32_t expect_cp_position, uint32_t ex
     // Clear NAT journal
     if (NatsInCursum(curseg->sum_blk) >= static_cast<int>(kNatJournalEntries)) {
       // Add dummy dirty NAT entries
-      MapTester::DoWriteNat(fs, kNatJournalEntries + RootIno(&sbi) + 1, kNatJournalEntries,
-                            static_cast<uint8_t>(cp->checkpoint_ver));
+      MapTester::DoWriteNat(fs, kNatJournalEntries + superblock_info.GetRootIno() + 1,
+                            kNatJournalEntries, static_cast<uint8_t>(cp->checkpoint_ver));
 
       // Move journal sentries to dirty sentries
       ASSERT_TRUE(fs->GetNodeManager().FlushNatsInJournal());
@@ -832,7 +831,8 @@ void CheckpointTestNatJournal(F2fs *fs, uint32_t expect_cp_position, uint32_t ex
   nids.shrink_to_fit();
 
   // Fill NAT journal
-  for (uint32_t i = RootIno(&sbi) + 1; i < kNatJournalEntries + RootIno(&sbi) + 1; i++) {
+  for (uint32_t i = superblock_info.GetRootIno() + 1;
+       i < kNatJournalEntries + superblock_info.GetRootIno() + 1; i++) {
     MapTester::DoWriteNat(fs, i, i, static_cast<uint8_t>(cp->checkpoint_ver));
     nids.push_back(i);
   }

@@ -17,7 +17,7 @@ File::File(F2fs *fs, ino_t ino) : VnodeF2fs(fs, ino) {}
 //   return 0;
 //   //   Page *page = vmf->page;
 //   //   VnodeF2fs *vnode = this;
-//   //   // SbInfo &sbi = Vfs()->GetSbInfo();
+//   //   // SuperblockInfo &superblock_info = Vfs()->GetSuperblockInfo();
 //   //   Page *node_page;
 //   //   block_t old_blk_addr;
 //   //   DnodeOfData dn;
@@ -27,13 +27,13 @@ File::File(F2fs *fs, ino_t ino) : VnodeF2fs(fs, ino) {}
 
 //   //   sb_start_pagefault(nullptr);
 
-//   //   // mutex_lock_op(sbi, LockType::kDataNew);
+//   //   // superblock_info->mutex_lock_op(LockType::kDataNew);
 
 //   //   /* block allocation */
 //   //   SetNewDnode(&dn, vnode, nullptr, nullptr, 0);
 //   //   err = Vfs()->GetNodeManager().GetDnodeOfData(&dn, page->index, 0);
 //   //   if (err) {
-//   //     // mutex_unlock_op(sbi, LockType::kDataNew);
+//   //     // superblock_info->mutex_unlock_op(LockType::kDataNew);
 //   //     goto out;
 //   //   }
 
@@ -44,13 +44,13 @@ File::File(F2fs *fs, ino_t ino) : VnodeF2fs(fs, ino) {}
 //   //     err = VnodeF2fs::ReserveNewBlock(&dn);
 //   //     if (err) {
 //   //       F2fsPutDnode(&dn);
-//   //       // mutex_unlock_op(sbi, LockType::kDataNew);
+//   //       // superblock_info->mutex_unlock_op(LockType::kDataNew);
 //   //       goto out;
 //   //     }
 //   //   }
 //   //   F2fsPutDnode(&dn);
 
-//   //   // mutex_unlock_op(sbi, LockType::kDataNew);
+//   //   // superblock_info->mutex_unlock_op(LockType::kDataNew);
 
 //   //   // lock_page(page);
 //   //   // if (page->mapping != inode->i_mapping ||
@@ -156,7 +156,7 @@ File::File(F2fs *fs, ino_t ino) : VnodeF2fs(fs, ino) {}
 // }
 
 // int File::ExpandInodeData(loff_t offset, off_t len, int mode) {
-//   SbInfo &sbi = Vfs()->GetSbInfo();
+//   SuperblockInfo &superblock_info = Vfs()->GetSuperblockInfo();
 //   pgoff_t index, pg_start, pg_end;
 //   loff_t new_size = i_size;
 //   loff_t off_start, off_end;
@@ -177,12 +177,12 @@ File::File(F2fs *fs, ino_t ino) : VnodeF2fs(fs, ino) {}
 //   for (index = pg_start; index <= pg_end; index++) {
 //     DnodeOfData dn;
 
-//     mutex_lock_op(&sbi, LockType::kDataNew);
+//     superblock_info.mutex_lock_op(LockType::kDataNew);
 
 //     SetNewDnode(&dn, this, nullptr, nullptr, 0);
 //     ret = Vfs()->GetNodeManager().GetDnodeOfData(&dn, index, 0);
 //     if (ret) {
-//       mutex_unlock_op(&sbi, LockType::kDataNew);
+//       superblock_info.mutex_unlock_op(LockType::kDataNew);
 //       break;
 //     }
 
@@ -190,13 +190,13 @@ File::File(F2fs *fs, ino_t ino) : VnodeF2fs(fs, ino) {}
 //       ret = ReserveNewBlock(&dn);
 //       if (ret) {
 //         F2fsPutDnode(&dn);
-//         mutex_unlock_op(&sbi, LockType::kDataNew);
+//         superblock_info.mutex_unlock_op(LockType::kDataNew);
 //         break;
 //       }
 //     }
 //     F2fsPutDnode(&dn);
 
-//     mutex_unlock_op(&sbi, LockType::kDataNew);
+//     superblock_info.mutex_unlock_op(LockType::kDataNew);
 
 //     if (pg_start == pg_end)
 //       new_size = offset + len;

@@ -120,7 +120,7 @@ class F2fs : public fs::ManagedVfs {
   };
   Bcache &GetBc() { return *bc_; }
   SuperBlock &RawSb() { return *raw_sb_; }
-  SbInfo &GetSbInfo() { return *sbi_; }
+  SuperblockInfo &GetSuperblockInfo() { return *superblock_info_; }
   SegmentManager &GetSegmentManager() { return *segment_manager_; }
   NodeManager &GetNodeManager() { return *node_manager_; }
 
@@ -129,7 +129,7 @@ class F2fs : public fs::ManagedVfs {
   zx_status_t SyncFs(int sync);
   zx_status_t SanityCheckRawSuper();
   zx_status_t SanityCheckCkpt();
-  void InitSbInfo();
+  void InitSuperblockInfo();
   zx_status_t FillSuper();
   void ParseOptions();
   void Reset();
@@ -209,8 +209,8 @@ class F2fs : public fs::ManagedVfs {
   fbl::Closure on_unmount_{};
   MountOptions mount_options_{};
 
-  std::unique_ptr<SuperBlock> raw_sb_;
-  std::unique_ptr<SbInfo> sbi_;
+  std::shared_ptr<SuperBlock> raw_sb_;
+  std::unique_ptr<SuperblockInfo> superblock_info_;
   std::unique_ptr<SegmentManager> segment_manager_;
   std::unique_ptr<NodeManager> node_manager_;
 

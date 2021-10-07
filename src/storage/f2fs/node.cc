@@ -26,24 +26,25 @@ bool NodeManager::IncValidNodeCount(VnodeF2fs *vnode, uint32_t count) {
   block_t valid_block_count;
   uint32_t ValidNodeCount;
 
-  fbl::AutoLock stat_lock(&sbi_->stat_lock);
+  fbl::AutoLock stat_lock(&GetSuperblockInfo().GetStatLock());
 
-  valid_block_count = sbi_->total_valid_block_count + static_cast<block_t>(count);
-  sbi_->alloc_valid_block_count += static_cast<block_t>(count);
-  ValidNodeCount = sbi_->total_valid_node_count + count;
+  valid_block_count = GetSuperblockInfo().GetTotalValidBlockCount() + static_cast<block_t>(count);
+  GetSuperblockInfo().SetAllocValidBlockCount(GetSuperblockInfo().GetAllocValidBlockCount() +
+                                              static_cast<block_t>(count));
+  ValidNodeCount = GetSuperblockInfo().GetTotalValidNodeCount() + count;
 
-  if (valid_block_count > sbi_->user_block_count) {
+  if (valid_block_count > GetSuperblockInfo().GetUserBlockCount()) {
     return false;
   }
 
-  if (ValidNodeCount > sbi_->total_node_count) {
+  if (ValidNodeCount > GetSuperblockInfo().GetTotalNodeCount()) {
     return false;
   }
 
   if (vnode)
     vnode->IncBlocks(count);
-  sbi_->total_valid_node_count = ValidNodeCount;
-  sbi_->total_valid_block_count = valid_block_count;
+  GetSuperblockInfo().SetTotalValidNodeCount(ValidNodeCount);
+  GetSuperblockInfo().SetTotalValidBlockCount(valid_block_count);
 
   return true;
 }
@@ -69,13 +70,14 @@ pgoff_t NodeManager::CurrentNatAddr(nid_t start) {
   pgoff_t seg_off;
 
   block_off = NatBlockOffset(start);
-  seg_off = block_off >> sbi_->log_blocks_per_seg;
+  seg_off = block_off >> GetSuperblockInfo().GetLogBlocksPerSeg();
 
-  block_addr = static_cast<pgoff_t>(nat_blkaddr_ + (seg_off << sbi_->log_blocks_per_seg << 1) +
-                                    (block_off & ((1 << sbi_->log_blocks_per_seg) - 1)));
+  block_addr = static_cast<pgoff_t>(
+      nat_blkaddr_ + (seg_off << GetSuperblockInfo().GetLogBlocksPerSeg() << 1) +
+      (block_off & ((1 << GetSuperblockInfo().GetLogBlocksPerSeg()) - 1)));
 
   if (TestValidBitmap(block_off, nat_bitmap_.get()))
-    block_addr += sbi_->blocks_per_seg;
+    block_addr += GetSuperblockInfo().GetBlocksPerSeg();
 
   return block_addr;
 }
@@ -91,10 +93,10 @@ bool NodeManager::IsUpdatedNatPage(nid_t start) {
 
 pgoff_t NodeManager::NextNatAddr(pgoff_t block_addr) {
   block_addr -= nat_blkaddr_;
-  if ((block_addr >> sbi_->log_blocks_per_seg) % 2)
-    block_addr -= sbi_->blocks_per_seg;
+  if ((block_addr >> GetSuperblockInfo().GetLogBlocksPerSeg()) % 2)
+    block_addr -= GetSuperblockInfo().GetBlocksPerSeg();
   else
-    block_addr += sbi_->blocks_per_seg;
+    block_addr += GetSuperblockInfo().GetBlocksPerSeg();
 
   return block_addr + nat_blkaddr_;
 }
@@ -127,10 +129,10 @@ void NodeManager::CopyNodeFooter(Page &dst, Page &src) {
 }
 
 void NodeManager::FillNodeFooterBlkaddr(Page *page, block_t blkaddr) {
-  Checkpoint *ckpt = GetCheckpoint(sbi_);
+  Checkpoint &ckpt = GetSuperblockInfo().GetCheckpoint();
   void *kaddr = PageAddress(page);
   Node *rn = static_cast<Node *>(kaddr);
-  rn->footer.cp_ver = ckpt->checkpoint_ver;
+  rn->footer.cp_ver = ckpt.checkpoint_ver;
   rn->footer.next_blkaddr = blkaddr;
 }
 
@@ -290,23 +292,20 @@ void NodeManager::SetDentryMark(Page &page, int mark) {
 }
 
 void NodeManager::DecValidNodeCount(VnodeF2fs *vnode, uint32_t count) {
-  fbl::AutoLock stat_lock(&sbi_->stat_lock);
+  fbl::AutoLock stat_lock(&GetSuperblockInfo().GetStatLock());
 
-  ZX_ASSERT(!(sbi_->total_valid_block_count < count));
-  ZX_ASSERT(!(sbi_->total_valid_node_count < count));
+  ZX_ASSERT(!(GetSuperblockInfo().GetTotalValidBlockCount() < count));
+  ZX_ASSERT(!(GetSuperblockInfo().GetTotalValidNodeCount() < count));
 
   vnode->DecBlocks(count);
-  sbi_->total_valid_node_count -= count;
-  sbi_->total_valid_block_count -= count;
+  GetSuperblockInfo().SetTotalValidNodeCount(GetSuperblockInfo().GetTotalValidNodeCount() - count);
+  GetSuperblockInfo().SetTotalValidBlockCount(GetSuperblockInfo().GetTotalValidBlockCount() -
+                                              count);
 }
 
-NodeManager::NodeManager(F2fs *fs) : fs_(fs) {
-  if (fs) {
-    sbi_ = &fs->GetSbInfo();
-  }
-}
+NodeManager::NodeManager(F2fs *fs) : fs_(fs) {}
 
-NodeManager::NodeManager(SbInfo *sbi) : sbi_(sbi) {}
+NodeManager::NodeManager(SuperblockInfo *sbi) : superblock_info_(sbi) {}
 
 void NodeManager::ClearNodePageDirty(Page *page) {
 #if 0  // porting needed
@@ -324,7 +323,7 @@ void NodeManager::ClearNodePageDirty(Page *page) {
     // SpinUnlock_irqrestore(&mapping->tree_lock, flags);
 #endif
     ClearPageDirtyForIo(page);
-    DecPageCount(sbi_, CountType::kDirtyNodes);
+    GetSuperblockInfo().DecPageCount(CountType::kDirtyNodes);
   }
   ClearPageUptodate(page);
 }
@@ -383,7 +382,7 @@ void NodeManager::RaNatPages(nid_t nid) {
       nid = 0;
     index = CurrentNatAddr(nid);
 
-    page = GrabCachePage(nullptr, MetaIno(sbi_), index);
+    page = GrabCachePage(nullptr, GetSuperblockInfo().GetMetaIno(), index);
     if (!page)
       continue;
     if (VnodeF2fs::Readpage(fs_, page, static_cast<block_t>(index), 0 /*READ*/)) {
@@ -770,7 +769,7 @@ void NodeManager::TruncateNode(DnodeOfData &dn) {
   }
 
   ClearNodePageDirty(dn.node_page);
-  SetSbDirt(sbi_);
+  GetSuperblockInfo().SetDirty();
 
   F2fsPutPage(dn.node_page, 1);
   dn.node_page = nullptr;
@@ -1087,7 +1086,7 @@ zx_status_t NodeManager::NewNodePage(DnodeOfData &dn, uint32_t ofs, Page **out) 
   if (dn.vnode->TestFlag(InodeInfoFlag::kNoAlloc))
     return ZX_ERR_ACCESS_DENIED;
 
-  page = GrabCachePage(nullptr, NodeIno(sbi_), dn.nid);
+  page = GrabCachePage(nullptr, GetSuperblockInfo().GetNodeIno(), dn.nid);
   if (!page)
     return ZX_ERR_NO_MEMORY;
 
@@ -1152,10 +1151,10 @@ zx_status_t NodeManager::GetNodePage(nid_t nid, Page **out) {
   int err;
   Page *page = nullptr;
 #if 0  // porting needed
-  // address_space *mapping = sbi_->node_inode->i_mapping;
+  // address_space *mapping = GetSuperblockInfo().node_inode->i_mapping;
 #endif
 
-  page = GrabCachePage(nullptr, NodeIno(sbi_), nid);
+  page = GrabCachePage(nullptr, GetSuperblockInfo().GetNodeIno(), nid);
   if (!page)
     return ZX_ERR_NO_MEMORY;
 
@@ -1222,8 +1221,8 @@ int NodeManager::SyncNodePages(nid_t ino, WritebackControl *wbc) {
   }
 
 #if 0  // porting needed
-  // SbInfo &sbi = fs_->GetSbInfo();
-  // //address_space *mapping = sbi.node_inode->i_mapping;
+  // SuperblockInfo &superblock_info = GetSuperblockInfo();
+  // //address_space *mapping = superblock_info.node_inode->i_mapping;
   // pgoff_t index, end;
   // // TODO: IMPL
   // //pagevec pvec;
@@ -1291,7 +1290,7 @@ int NodeManager::SyncNodePages(nid_t ino, WritebackControl *wbc) {
 
   // 			/* called by fsync() */
   // 			if (ino && IS_DNODE(page)) {
-  // 				int mark = !IsCheckpointedNode(sbi, ino);
+  // 				int mark = !IsCheckpointedNode(superblock_info, ino);
   // 				SetFsyncMark(page, 1);
   // 				if (IsInode(page))
   // 					SetDentryMark(page, mark);
@@ -1321,7 +1320,7 @@ int NodeManager::SyncNodePages(nid_t ino, WritebackControl *wbc) {
   // 	}
 
   // 	if (wrote)
-  // 		f2fs_submit_bio(sbi, NODE, wbc->sync_mode == WB_SYNC_ALL);
+  // 		f2fs_submit_bio(superblock_info, NODE, wbc->sync_mode == WB_SYNC_ALL);
 
   //	return nwritten;
 #endif
@@ -1336,7 +1335,7 @@ zx_status_t NodeManager::F2fsWriteNodePage(Page &page, WritebackControl *wbc) {
 
 #if 0  // porting needed
   // 	if (wbc->for_reclaim) {
-  // 		DecPageCount(&sbi, CountType::kDirtyNodes);
+  // 		superblock_info.DecPageCount(CountType::kDirtyNodes);
   // 		wbc->pages_skipped++;
   //		// set_page_dirty(page);
   //		FlushDirtyNodePage(fs_, page);
@@ -1358,13 +1357,13 @@ zx_status_t NodeManager::F2fsWriteNodePage(Page &page, WritebackControl *wbc) {
   }
 
   {
-    fs::SharedLock rlock(sbi_->fs_lock[static_cast<int>(LockType::kNodeOp)]);
+    fs::SharedLock rlock(GetSuperblockInfo().GetFsLock(LockType::kNodeOp));
     SetPageWriteback(&page);
 
     // insert node offset
     fs_->GetSegmentManager().WriteNodePage(&page, nid, ni.blk_addr, &new_addr);
     SetNodeAddr(ni, new_addr);
-    DecPageCount(sbi_, CountType::kDirtyNodes);
+    GetSuperblockInfo().DecPageCount(CountType::kDirtyNodes);
   }
 
   // TODO: IMPL
@@ -1374,24 +1373,24 @@ zx_status_t NodeManager::F2fsWriteNodePage(Page &page, WritebackControl *wbc) {
 
 #if 0  // porting needed
 int NodeManager::F2fsWriteNodePages(struct address_space *mapping, WritebackControl *wbc) {
-  // struct SbInfo *sbi = F2FS_SB(mapping->host->i_sb);
-  // struct block_device *bdev = sbi->sb->s_bdev;
+  // struct SuperblockInfo *superblock_info = F2FS_SB(mapping->host->i_sb);
+  // struct block_device *bdev = superblock_info->sb->s_bdev;
   // long nr_to_write = wbc->nr_to_write;
 
   // if (wbc->for_kupdate)
   // 	return 0;
 
-  // if (GetPages(sbi, CountType::kDirtyNodes) == 0)
+  // if (superblock_info->GetPages(CountType::kDirtyNodes) == 0)
   // 	return 0;
 
-  // if (try_to_free_nats(sbi, kNatEntryPerBlock)) {
-  // 	write_checkpoint(sbi, false, false);
+  // if (try_to_free_nats(superblock_info, kNatEntryPerBlock)) {
+  // 	write_checkpoint(superblock_info, false, false);
   // 	return 0;
   // }
 
   // /* if mounting is failed, skip writing node pages */
   // wbc->nr_to_write = bio_get_nr_vecs(bdev);
-  // sync_node_pages(sbi, 0, wbc);
+  // sync_node_pages(superblock_info, 0, wbc);
   // wbc->nr_to_write = nr_to_write -
   // 	(bio_get_nr_vecs(bdev) - wbc->nr_to_write);
   // return 0;
@@ -1401,13 +1400,11 @@ int NodeManager::F2fsWriteNodePages(struct address_space *mapping, WritebackCont
 
 #if 0  // porting needed
 int NodeManager::F2fsSetNodePageDirty(Page *page) {
-  SbInfo &sbi = fs_->GetSbInfo();
-
   SetPageUptodate(page);
   if (!PageDirty(page)) {
     // __set_page_dirty_nobuffers(page);
     FlushDirtyNodePage(fs_, page);
-    IncPageCount(&sbi, CountType::kDirtyNodes);
+    GetSuperblockInfo().IncPageCount(CountType::kDirtyNodes);
     // SetPagePrivate(page);
     return 1;
   }
@@ -1417,10 +1414,8 @@ int NodeManager::F2fsSetNodePageDirty(Page *page) {
 
 #if 0  // porting needed
 void NodeManager::F2fsInvalidateNodePage(Page *page, uint64_t offset) {
-  SbInfo &sbi = fs_->GetSbInfo();
-
   if (PageDirty(page))
-    DecPageCount(&sbi, CountType::kDirtyNodes);
+    GetSuperblockInfo().DecPageCount(CountType::kDirtyNodes);
   ClearPagePrivate(page);
 }
 #endif
@@ -1634,13 +1629,13 @@ void NodeManager::RecoverNodePage(Page &page, Summary &sum, NodeInfo &ni, block_
 }
 
 zx_status_t NodeManager::RecoverInodePage(Page &page) {
-  //[[maybe_unused]] address_space *mapping = sbi.node_inode->i_mapping;
+  //[[maybe_unused]] address_space *mapping = superblock_info.node_inode->i_mapping;
   Node *src, *dst;
   nid_t ino = InoOfNode(page);
   NodeInfo old_ni, new_ni;
   Page *ipage = nullptr;
 
-  ipage = GrabCachePage(nullptr, NodeIno(sbi_), ino);
+  ipage = GrabCachePage(nullptr, GetSuperblockInfo().GetNodeIno(), ino);
   if (!ipage)
     return ZX_ERR_NO_MEMORY;
 
@@ -1679,10 +1674,10 @@ zx_status_t NodeManager::RestoreNodeSummary(F2fs &fs, uint32_t segno, SummaryBlo
   Page *page = nullptr;
   block_t addr;
   int i, last_offset;
-  SbInfo &sbi = fs.GetSbInfo();
+  SuperblockInfo &superblock_info = fs.GetSuperblockInfo();
 
   // scan the node segment
-  last_offset = sbi.blocks_per_seg;
+  last_offset = superblock_info.GetBlocksPerSeg();
   addr = fs.GetSegmentManager().StartBlock(segno);
   sum_entry = &sum.entries[0];
 
@@ -1690,7 +1685,7 @@ zx_status_t NodeManager::RestoreNodeSummary(F2fs &fs, uint32_t segno, SummaryBlo
   // alloc temporal page for read node
   // page = alloc_page(GFP_NOFS | __GFP_ZERO);
 #endif
-  page = GrabCachePage(nullptr, NodeIno(&sbi), addr);
+  page = GrabCachePage(nullptr, superblock_info.GetNodeIno(), addr);
   if (page == nullptr)
     return ZX_ERR_NO_MEMORY;
 #if 0  // porting needed
@@ -1866,23 +1861,23 @@ void NodeManager::FlushNatEntries() {
 }
 
 zx_status_t NodeManager::InitNodeManager() {
-  const SuperBlock *sb_raw = RawSuper(sbi_);
+  const SuperBlock &sb_raw = GetSuperblockInfo().GetRawSuperblock();
   uint8_t *version_bitmap;
   uint32_t nat_segs, nat_blocks;
 
-  nat_blkaddr_ = LeToCpu(sb_raw->nat_blkaddr);
+  nat_blkaddr_ = LeToCpu(sb_raw.nat_blkaddr);
   // segment_count_nat includes pair segment so divide to 2
-  nat_segs = LeToCpu(sb_raw->segment_count_nat) >> 1;
-  nat_blocks = nat_segs << LeToCpu(sb_raw->log_blocks_per_seg);
+  nat_segs = LeToCpu(sb_raw.segment_count_nat) >> 1;
+  nat_blocks = nat_segs << LeToCpu(sb_raw.log_blocks_per_seg);
   max_nid_ = kNatEntryPerBlock * nat_blocks;
   free_nid_count_ = 0;
   nat_entries_count_ = 0;
 
   list_initialize(&free_nid_list_);
 
-  nat_bitmap_size_ = BitmapSize(sbi_, MetaBitmap::kNatBitmap);
-  init_scan_nid_ = LeToCpu(sbi_->ckpt->next_free_nid);
-  next_scan_nid_ = LeToCpu(sbi_->ckpt->next_free_nid);
+  nat_bitmap_size_ = GetSuperblockInfo().BitmapSize(MetaBitmap::kNatBitmap);
+  init_scan_nid_ = LeToCpu(GetSuperblockInfo().GetCheckpoint().next_free_nid);
+  next_scan_nid_ = LeToCpu(GetSuperblockInfo().GetCheckpoint().next_free_nid);
 
   nat_bitmap_ = std::make_unique<uint8_t[]>(nat_bitmap_size_);
   memset(nat_bitmap_.get(), 0, nat_bitmap_size_);
@@ -1891,7 +1886,7 @@ zx_status_t NodeManager::InitNodeManager() {
 
   if (!nat_bitmap_)
     return ZX_ERR_NO_MEMORY;
-  version_bitmap = static_cast<uint8_t *>(BitmapPrt(sbi_, MetaBitmap::kNatBitmap));
+  version_bitmap = static_cast<uint8_t *>(GetSuperblockInfo().BitmapPtr(MetaBitmap::kNatBitmap));
   if (!version_bitmap)
     return ZX_ERR_INVALID_ARGS;
 
@@ -1971,6 +1966,13 @@ block_t NodeManager::StartBidxOfNode(Page &node_page) {
   if (start_bidx)
     start_bidx = bidx * kAddrsPerBlock + kAddrsPerInode;
   return start_bidx;
+}
+
+SuperblockInfo &NodeManager::GetSuperblockInfo() {
+  if (fs_ != nullptr) {
+    return fs_->GetSuperblockInfo();
+  }
+  return *superblock_info_;
 }
 
 }  // namespace f2fs

@@ -143,114 +143,305 @@ enum class PageType {
   kMetaFlush,
 };
 
-struct SbInfo {
-  const SuperBlock *raw_super = nullptr;  // raw super block pointer
-  int s_dirty = 0;                        // dirty flag for checkpoint
+class SuperblockInfo {
+ public:
+  // Not copyable or moveable
+  SuperblockInfo(const SuperblockInfo &) = delete;
+  SuperblockInfo &operator=(const SuperblockInfo &) = delete;
+  SuperblockInfo(SuperblockInfo &&) = delete;
+  SuperblockInfo &operator=(SuperblockInfo &&) = delete;
 
-  fbl::RefPtr<VnodeF2fs> node_vnode;
+  SuperblockInfo() = default;
 
-  struct bio *bio[static_cast<int>(PageType::kNrPageType)];             // bios to merge
-  sector_t last_block_in_bio[static_cast<int>(PageType::kNrPageType)];  // last block number
+  SuperBlock &GetRawSuperblock() { return *raw_superblock_; }
+  void SetRawSuperblock(std::shared_ptr<SuperBlock> &raw_sb) { raw_superblock_ = raw_sb; }
+  void SetRawSuperblock(SuperBlock *raw_sb_ptr) { raw_superblock_.reset(raw_sb_ptr); }
+
+  bool IsDirty() const { return is_dirty_; }
+  void SetDirty() { is_dirty_ = true; }
+  void ClearDirty() { is_dirty_ = false; }
+
+  Checkpoint &GetCheckpoint() { return checkpoint_block_.checkpoint_; }
+
+  fbl::Mutex &GetCheckpointMutex() { return checkpoint_mutex_; };
+
+  fs::SharedMutex &GetFsLock(LockType type) { return fs_lock_[static_cast<int>(type)]; }
+
+  void mutex_lock_op(LockType t) __TA_ACQUIRE(&fs_lock_[static_cast<int>(t)]) {
+    fs_lock_[static_cast<int>(t)].lock();
+  }
+
+  void mutex_unlock_op(LockType t) __TA_RELEASE(&fs_lock_[static_cast<int>(t)]) {
+    fs_lock_[static_cast<int>(t)].unlock();
+  }
+
+  bool IsOnRecovery() const { return on_recovery_; }
+
+  void SetOnRecovery() { on_recovery_ = true; }
+
+  void ClearOnRecovery() { on_recovery_ = false; }
+
+  list_node_t &GetOrphanInodeList() { return orphan_inode_list_; }
+
+  fs::SharedMutex &GetOrphanInodeMutex() { return orphan_inode_mutex_; }
+
+  uint64_t GetOrphanCount() const { return n_orphans_; }
+
+  void IncNrOrphans();
+  void DecNrOrphans();
+  void ResetNrOrphans() { n_orphans_ = 0; }
+
+  list_node_t &GetDirInodeList() { return dir_inode_list_; }
+
+  fbl::Mutex &GetDirInodeLock() { return dir_inode_lock_; };
+
+  block_t GetLogSectorsPerBlock() const { return log_sectors_per_block_; }
+
+  void SetLogSectorsPerBlock(block_t log_sectors_per_block) {
+    log_sectors_per_block_ = log_sectors_per_block;
+  }
+
+  block_t GetLogBlocksize() const { return log_blocksize_; }
+
+  void SetLogBlocksize(block_t log_blocksize) { log_blocksize_ = log_blocksize; }
+
+  block_t GetBlocksize() const { return blocksize_; }
+
+  void SetBlocksize(block_t blocksize) { blocksize_ = blocksize; }
+
+  uint32_t GetRootIno() const { return root_ino_num_; }
+  void SetRootIno(uint32_t root_ino) { root_ino_num_ = root_ino; }
+  uint32_t GetNodeIno() const { return node_ino_num_; }
+  void SetNodeIno(uint32_t node_ino) { node_ino_num_ = node_ino; }
+  uint32_t GetMetaIno() const { return meta_ino_num_; }
+  void SetMetaIno(uint32_t meta_ino) { meta_ino_num_ = meta_ino; }
+
+  block_t GetLogBlocksPerSeg() const { return log_blocks_per_seg_; }
+
+  void SetLogBlocksPerSeg(block_t log_blocks_per_seg) { log_blocks_per_seg_ = log_blocks_per_seg; }
+
+  block_t GetBlocksPerSeg() const { return blocks_per_seg_; }
+
+  void SetBlocksPerSeg(block_t blocks_per_seg) { blocks_per_seg_ = blocks_per_seg; }
+
+  block_t GetSegsPerSec() const { return segs_per_sec_; }
+
+  void SetSegsPerSec(block_t segs_per_sec) { segs_per_sec_ = segs_per_sec; }
+
+  block_t GetSecsPerZone() const { return secs_per_zone_; }
+
+  void SetSecsPerZone(block_t secs_per_zone) { secs_per_zone_ = secs_per_zone; }
+
+  block_t GetTotalSections() const { return total_sections_; }
+
+  void SetTotalSections(block_t total_sections) { total_sections_ = total_sections; }
+
+  nid_t GetTotalNodeCount() const { return total_node_count_; }
+
+  void SetTotalNodeCount(nid_t total_node_count) { total_node_count_ = total_node_count; }
+
+  nid_t GetTotalValidNodeCount() const { return total_valid_node_count_; }
+
+  void SetTotalValidNodeCount(nid_t total_valid_node_count) {
+    total_valid_node_count_ = total_valid_node_count;
+  }
+
+  nid_t GetTotalValidInodeCount() const { return total_valid_inode_count_; }
+
+  void SetTotalValidInodeCount(nid_t total_valid_inode_count) {
+    total_valid_inode_count_ = total_valid_inode_count;
+  }
+
+  int GetActiveLogs() const { return active_logs_; }
+
+  void SetActiveLogs(int active_logs) { active_logs_ = active_logs; }
+
+  block_t GetUserBlockCount() const { return user_block_count_; }
+
+  void SetUserBlockCount(block_t user_block_count) { user_block_count_ = user_block_count; }
+
+  block_t GetTotalValidBlockCount() const { return total_valid_block_count_; }
+
+  void SetTotalValidBlockCount(block_t total_valid_block_count) {
+    total_valid_block_count_ = total_valid_block_count;
+  }
+
+  block_t GetAllocValidBlockCount() const { return alloc_valid_block_count_; }
+
+  void SetAllocValidBlockCount(block_t alloc_valid_block_count) {
+    alloc_valid_block_count_ = alloc_valid_block_count;
+  }
+
+  block_t GetLastValidBlockCount() const { return last_valid_block_count_; }
+
+  void SetLastValidBlockCount(block_t last_valid_block_count) {
+    last_valid_block_count_ = last_valid_block_count;
+  }
+
+  uint32_t GetNextGeneration() const { return s_next_generation_; }
+
+  void IncNextGeneration() { ++s_next_generation_; }
+
+  atomic_t &GetNrPages(int type) { return nr_pages_[type]; }
+
+  void ClearOpt(uint64_t option) { mount_opt_ &= ~option; }
+  void SetOpt(uint64_t option) { mount_opt_ |= option; }
+  bool TestOpt(uint64_t option) { return ((mount_opt_ & option) != 0); }
+
+  void IncSegmentCount(int type) { ++segment_count_[type]; }
+
+  void IncBlockCount(int type) { ++block_count_[type]; }
+
+  uint32_t GetLastVictim(int mode) const { return last_victim_[mode]; }
+
+  void SetLastVictim(int mode, uint32_t last_victim) { last_victim_[mode] = last_victim; }
+
+  fbl::Mutex &GetStatLock() { return stat_lock_; };
+
+  void IncPageCount(int count_type) {
+    // TODO: IMPL
+    // AtomicInc(&nr_pages_[count_type]);
+    SetDirty();
+  }
+
+  void DecPageCount(CountType count_type) {
+    // TODO: IMPL
+    // AtomicDec(&nr_pages_[count_type]);
+  }
+
+  int GetPages(CountType count_type) const {
+    // TODO: IMPL
+    // return AtomicRead(&nr_pages_[count_type]);
+    return 0;
+  }
+
+  uint32_t BitmapSize(MetaBitmap flag) {
+    // return NAT or SIT bitmap
+    if (flag == MetaBitmap::kNatBitmap)
+      return LeToCpu(checkpoint_block_.checkpoint_.nat_ver_bitmap_bytesize);
+    else if (flag == MetaBitmap::kSitBitmap)
+      return LeToCpu(checkpoint_block_.checkpoint_.sit_ver_bitmap_bytesize);
+
+    return 0;
+  }
+
+  void *BitmapPtr(MetaBitmap flag) {
+    int offset = (flag == MetaBitmap::kNatBitmap)
+                     ? checkpoint_block_.checkpoint_.sit_ver_bitmap_bytesize
+                     : 0;
+    return &checkpoint_block_.checkpoint_.sit_nat_version_bitmap + offset;
+  }
+
+  block_t StartCpAddr() {
+    block_t start_addr;
+    uint64_t ckpt_version = LeToCpu(checkpoint_block_.checkpoint_.checkpoint_ver);
+
+    start_addr = LeToCpu(raw_superblock_->cp_blkaddr);
+
+    // odd numbered checkpoint should at cp segment 0
+    // and even segent must be at cp segment 1
+    if (!(ckpt_version & 1)) {
+      start_addr += blocks_per_seg_;
+    }
+
+    return start_addr;
+  }
+
+  block_t StartSumAddr() { return LeToCpu(checkpoint_block_.checkpoint_.cp_pack_start_sum); }
+
+ private:
+  std::shared_ptr<SuperBlock> raw_superblock_;  // raw super block pointer
+  bool is_dirty_ = false;                       // dirty flag for checkpoint
+#if 0                                           // porting needed
+  // fbl::RefPtr<VnodeF2fs> node_vnode;
+#endif
+
+#if 0  // porting needed
+  // struct bio *bio[static_cast<int>(PageType::kNrPageType)];             // bios to merge
+  // sector_t last_block_in_bio[static_cast<int>(PageType::kNrPageType)];  // last block number
   // rw_semaphore bio_sem;		// IO semaphore
 
-  // for checkpoint
-  Checkpoint *ckpt = nullptr;  // raw checkpoint pointer
   // inode *meta_inode;		// cache meta blocks
-  fbl::RefPtr<VnodeF2fs> meta_vnode;
-  fbl::Mutex cp_mutex;                                               // for checkpoint procedure
-  fs::SharedMutex fs_lock[static_cast<int>(LockType::kNrLockType)];  // for blocking FS operations
-  fbl::Mutex writepages;                                             // mutex for writepages()
-  int por_doing = 0;                                                 // recovery is doing or not
+  // fbl::RefPtr<VnodeF2fs> meta_vnode;
+#endif
+
+  union CheckpointBlock {
+    Checkpoint checkpoint_;
+    FsBlock fsblock_;
+    CheckpointBlock() {}
+  } checkpoint_block_;
+  fbl::Mutex checkpoint_mutex_;                                       // for checkpoint procedure
+  fs::SharedMutex fs_lock_[static_cast<int>(LockType::kNrLockType)];  // for blocking FS operations
+
+#if 0  // porting needed
+  // fbl::Mutex writepages;                                             // mutex for writepages()
+#endif
+  bool on_recovery_ = false;  // recovery is doing or not
 
   // for orphan inode management
-  list_node_t orphan_inode_list;       // orphan inode list
-  fs::SharedMutex orphan_inode_mutex;  // for orphan inode list
-  uint64_t n_orphans = 0;              // # of orphan inodes
+  list_node_t orphan_inode_list_;       // orphan inode list
+  fs::SharedMutex orphan_inode_mutex_;  // for orphan inode list
+  uint64_t n_orphans_ = 0;              // # of orphan inodes
 
   // for directory inode management
-  list_node_t dir_inode_list;  // dir inode list
-  fbl::Mutex dir_inode_lock;   // for dir inode list lock
-  uint64_t n_dirty_dirs = 0;   // # of dir inodes
+  list_node_t dir_inode_list_;  // dir inode list
+  fbl::Mutex dir_inode_lock_;   // for dir inode list lock
+#if 0                           // porting needed
+  // uint64_t n_dirty_dirs = 0;   // # of dir inodes
+#endif
 
   // basic file system units
-  block_t log_sectors_per_block = 0;  // log2 sectors per block
-  block_t log_blocksize = 0;          // log2 block size
-  block_t blocksize = 0;              // block size
-  nid_t root_ino_num = 0;             // root inode numbe
-  nid_t node_ino_num = 0;             // node inode numbe
-  nid_t meta_ino_num = 0;             // meta inode numbe
-  block_t log_blocks_per_seg = 0;     // log2 blocks per segment
-  block_t blocks_per_seg = 0;         // blocks per segment
-  block_t segs_per_sec = 0;           // segments per section
-  block_t secs_per_zone = 0;          // sections per zone
-  block_t total_sections = 0;         // total section count
-  nid_t total_node_count = 0;         // total node block count
-  nid_t total_valid_node_count = 0;   // valid node block count
-  nid_t total_valid_inode_count = 0;  // valid inode count
-  int active_logs = 0;                // # of active logs
+  block_t log_sectors_per_block_ = 0;  // log2 sectors per block
+  block_t log_blocksize_ = 0;          // log2 block size
+  block_t blocksize_ = 0;              // block size
+  nid_t root_ino_num_ = 0;             // root inode numbe
+  nid_t node_ino_num_ = 0;             // node inode numbe
+  nid_t meta_ino_num_ = 0;             // meta inode numbe
+  block_t log_blocks_per_seg_ = 0;     // log2 blocks per segment
+  block_t blocks_per_seg_ = 0;         // blocks per segment
+  block_t segs_per_sec_ = 0;           // segments per section
+  block_t secs_per_zone_ = 0;          // sections per zone
+  block_t total_sections_ = 0;         // total section count
+  nid_t total_node_count_ = 0;         // total node block count
+  nid_t total_valid_node_count_ = 0;   // valid node block count
+  nid_t total_valid_inode_count_ = 0;  // valid inode count
+  int active_logs_ = 0;                // # of active logs
 
-  block_t user_block_count = 0;                                  // # of user blocks
-  block_t total_valid_block_count = 0;                           // # of valid blocks
-  block_t alloc_valid_block_count = 0;                           // # of allocated blocks
-  block_t last_valid_block_count = 0;                            // for recovery
-  uint32_t s_next_generation = 0;                                // for NFS support
-  atomic_t nr_pages[static_cast<int>(CountType::kNrCountType)];  // # of pages, see count_type
+  block_t user_block_count_ = 0;                                  // # of user blocks
+  block_t total_valid_block_count_ = 0;                           // # of valid blocks
+  block_t alloc_valid_block_count_ = 0;                           // # of allocated blocks
+  block_t last_valid_block_count_ = 0;                            // for recovery
+  uint32_t s_next_generation_ = 0;                                // for NFS support
+  atomic_t nr_pages_[static_cast<int>(CountType::kNrCountType)];  // # of pages, see count_type
 
-  uint64_t mount_opt = 0;  // set with kMountOptxxxx bits according to F2fs::mount_options_
+  uint64_t mount_opt_ = 0;  // set with kMountOptxxxx bits according to F2fs::mount_options_
 
   // for cleaning operations
-  fs::SharedMutex gc_mutex;                    // mutex for GC
-  struct F2fsGc_kthread *gc_thread = nullptr;  // GC thread
+#if 0  // porting needed
+  // fs::SharedMutex gc_mutex;                    // mutex for GC
+  // struct F2fsGc_kthread *gc_thread = nullptr;  // GC thread
+#endif
 
   // for stat information.
   // one is for the LFS mode, and the other is for the SSR mode.
-  struct f2fs_stat_info *stat_info = nullptr;  // FS status information
-  uint64_t segment_count[2];                   // # of allocated segments
-  uint64_t block_count[2];                     // # of allocated blocks
-  uint32_t last_victim[2];                     // last victim segment #
-  int total_hit_ext = 0, read_hit_ext = 0;     // extent cache hit ratio
-  int bg_gc = 0;                               // background gc calls
-  fbl::Mutex stat_lock;                        // lock for stat operations
+#if 0  // porting needed
+  // struct f2fs_stat_info *stat_info = nullptr;  // FS status information
+#endif
+  uint64_t segment_count_[2] = {0};  // # of allocated segments
+  uint64_t block_count_[2] = {0};    // # of allocated blocks
+  uint32_t last_victim_[2] = {0};    // last victim segment #
+#if 0                                // porting needed
+  // int total_hit_ext = 0, read_hit_ext = 0;     // extent cache hit ratio
+  // int bg_gc = 0;                               // background gc calls
+#endif
+  fbl::Mutex stat_lock_;  // lock for stat operations
 };
 
-static inline const SuperBlock *RawSuper(SbInfo *sbi) {
-  return static_cast<const SuperBlock *>(sbi->raw_super);
-}
-
-static inline Checkpoint *GetCheckpoint(SbInfo *sbi) {
-  return static_cast<Checkpoint *>(sbi->ckpt);
-}
-
-static inline void SetSbDirt(SbInfo *sbi) { sbi->s_dirty = 1; }
-
-static inline void ResetSbDirt(SbInfo *sbi) { sbi->s_dirty = 0; }
-
-static inline void mutex_lock_op(SbInfo *sbi, LockType t)
-    TA_ACQ(&sbi->fs_lock[static_cast<int>(t)]) {
-  sbi->fs_lock[static_cast<int>(t)].lock();
-}
-
-static inline void mutex_unlock_op(SbInfo *sbi, LockType t)
-    TA_REL(&sbi->fs_lock[static_cast<int>(t)]) {
-  sbi->fs_lock[static_cast<int>(t)].unlock();
-}
-
 constexpr uint32_t kDefaultAllocatedBlocks = 1;
-
-[[maybe_unused]] static inline void IncPageCount(SbInfo *sbi, int count_type) {
-  // TODO: IMPL
-  // AtomicInc(&sbi->nr_pages[count_type]);
-  SetSbDirt(sbi);
-}
 
 static inline void InodeIncDirtyDents(VnodeF2fs *vnode) {
   //   //TODO: IMPL
   // 	//AtomicInc(&F2FS_I(inode)->dirty_dents);
-}
-
-static inline void DecPageCount(SbInfo *sbi, CountType count_type) {
-  // TODO: IMPL
-  // AtomicDec(&sbi->nr_pages[count_type]);
 }
 
 static inline void InodeDecDirtyDents(void *vnode) {
@@ -258,52 +449,9 @@ static inline void InodeDecDirtyDents(void *vnode) {
   // 	//AtomicDec(&F2FS_I(inode)->dirty_dents);
 }
 
-static inline int GetPages(SbInfo *sbi, CountType count_type) {
-  // TODO: IMPL
-  // return AtomicRead(&sbi->nr_pages[count_type]);
-  return 0;
-}
-
-static inline uint32_t BitmapSize(SbInfo *sbi, MetaBitmap flag) {
-  Checkpoint *ckpt = GetCheckpoint(sbi);
-
-  // return NAT or SIT bitmap
-  if (flag == MetaBitmap::kNatBitmap)
-    return LeToCpu(ckpt->nat_ver_bitmap_bytesize);
-  else if (flag == MetaBitmap::kSitBitmap)
-    return LeToCpu(ckpt->sit_ver_bitmap_bytesize);
-
-  return 0;
-}
-
-static inline void *BitmapPrt(SbInfo *sbi, MetaBitmap flag) {
-  Checkpoint *ckpt = GetCheckpoint(sbi);
-  int offset = (flag == MetaBitmap::kNatBitmap) ? ckpt->sit_ver_bitmap_bytesize : 0;
-  return &ckpt->sit_nat_version_bitmap + offset;
-}
-
 static inline bool IsSetCkptFlags(Checkpoint *cp, uint32_t f) {
   uint32_t ckpt_flags = LeToCpu(cp->ckpt_flags);
   return ckpt_flags & f;
-}
-
-static inline block_t StartCpAddr(SbInfo *sbi) {
-  block_t start_addr;
-  Checkpoint *ckpt = GetCheckpoint(sbi);
-  uint64_t ckpt_version = LeToCpu(ckpt->checkpoint_ver);
-
-  start_addr = LeToCpu(RawSuper(sbi)->cp_blkaddr);
-
-  // odd numbered checkpoint should at cp segment 0
-  // and even segent must be at cp segment 1
-  if (!(ckpt_version & 1))
-    start_addr += sbi->blocks_per_seg;
-
-  return start_addr;
-}
-
-[[maybe_unused]] static inline block_t StartSumAddr(SbInfo *sbi) {
-  return LeToCpu(GetCheckpoint(sbi)->cp_pack_start_sum);
 }
 
 inline void F2fsPutPage(Page *&page, int unlock) {
@@ -412,10 +560,6 @@ enum class InodeInfoFlag {
   return 0;
 }
 #endif
-
-inline uint32_t RootIno(SbInfo *sbi) { return sbi->root_ino_num; }
-inline uint32_t NodeIno(SbInfo *sbi) { return sbi->node_ino_num; }
-inline uint32_t MetaIno(SbInfo *sbi) { return sbi->meta_ino_num; }
 
 }  // namespace f2fs
 

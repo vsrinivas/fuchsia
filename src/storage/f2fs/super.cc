@@ -4,43 +4,43 @@
 
 #include <string.h>
 
+#include <safemath/checked_math.h>
+
 #include "src/storage/f2fs/f2fs.h"
 
 namespace f2fs {
 
 void F2fs::PutSuper() {
 #if 0  // porting needed
-  // DestroyStats(sbi_.get());
-  // StopGcThread(sbi_.get());
+  // DestroyStats(superblock_info_.get());
+  // StopGcThread(superblock_info_.get());
 #endif
 
   WriteCheckpoint(false, true);
   GetVCache().Reset();
 
 #if 0  // porting needed
-  // Iput(sbi_->node_inode);
-  // Iput(sbi_->meta_inode);
+  // Iput(superblock_info_->node_inode);
+  // Iput(superblock_info_->meta_inode);
 #endif
 
   /* destroy f2fs internal modules */
   node_manager_->DestroyNodeManager();
   segment_manager_->DestroySegmentManager();
 
-  delete reinterpret_cast<FsBlock *>(sbi_->ckpt);
-
   node_manager_.reset();
   segment_manager_.reset();
   raw_sb_.reset();
-  sbi_.reset();
+  superblock_info_.reset();
 }
 
 zx_status_t F2fs::SyncFs(int sync) {
 #ifdef F2FS_BU_DEBUG
-  FX_LOGS(DEBUG) << "F2fs::SyncFs, sbi_->s_dirty=" << sbi_->s_dirty;
+  FX_LOGS(DEBUG) << "F2fs::SyncFs, superblock_info_.IsDirty()=" << superblock_info_.IsDirty();
 #endif
 
 #if 0  // porting needed
-  //if (!sbi_->s_dirty && !GetPages(sbi_.get(), CountType::kDirtyNodes))
+  //if (!superblock_info_.IsDirty() && !superblock_info_->GetPages(CountType::kDirtyNodes))
   //  return 0;
 #endif
 
@@ -53,23 +53,23 @@ zx_status_t F2fs::SyncFs(int sync) {
 #if 0  // porting needed
 // int F2fs::F2fsStatfs(dentry *dentry /*, kstatfs *buf*/) {
   // super_block *sb = dentry->d_sb;
-  // SbInfo *sbi = F2FS_SB(sb);
+  // SuperblockInfo *superblock_info = F2FS_SB(sb);
   // u64 id = huge_encode_dev(sb->s_bdev->bd_dev);
   // block_t total_count, user_block_count, start_count, ovp_count;
 
-  // total_count = LeToCpu(sbi->raw_super->block_count);
-  // user_block_count = sbi->user_block_count;
-  // start_count = LeToCpu(sbi->raw_super->segment0_blkaddr);
-  // ovp_count = GetSmInfo(sbi)->ovp_segments << sbi->log_blocks_per_seg;
+  // total_count = LeToCpu(superblock_info->raw_super->block_count);
+  // user_block_count = superblock_info->GetUserBlockCount();
+  // start_count = LeToCpu(superblock_info->raw_super->segment0_blkaddr);
+  // ovp_count = GetSmInfo(superblock_info).ovp_segments << superblock_info->GetLogBlocksPerSeg();
   // buf->f_type = kF2fsSuperMagic;
-  // buf->f_bsize = sbi->blocksize;
+  // buf->f_bsize = superblock_info->GetBlocksize();
 
   // buf->f_blocks = total_count - start_count;
-  // buf->f_bfree = buf->f_blocks - ValidUserBlocks(sbi) - ovp_count;
-  // buf->f_bavail = user_block_count - ValidUserBlocks(sbi);
+  // buf->f_bfree = buf->f_blocks - ValidUserBlocks(superblock_info) - ovp_count;
+  // buf->f_bavail = user_block_count - ValidUserBlocks(superblock_info);
 
-  // buf->f_files = ValidInodeCount(sbi);
-  // buf->f_ffree = sbi->total_node_count - ValidNodeCount(sbi);
+  // buf->f_files = ValidInodeCount(superblock_info);
+  // buf->f_ffree = superblock_info->GetTotalNodeCount() - ValidNodeCount(superblock_info);
 
   // buf->f_namelen = kMaxNameLen;
   // buf->f_fsid.val[0] = (u32)id;
@@ -83,7 +83,7 @@ zx_status_t F2fs::SyncFs(int sync) {
 //   VnodeF2fs *vnode = nullptr;
 //   int err;
 
-//   if (ino < RootIno(sbi_.get()))
+//   if (ino < superblock_info_->GetRootIno())
 //     return (VnodeF2fs *)ErrPtr(-ESTALE);
 
 //   /*
@@ -122,47 +122,47 @@ void F2fs::ParseOptions() {
     if (mount_options_.GetValue(i, &value) == ZX_OK) {
       switch (i) {
         case kOptActiveLogs:
-          sbi_->active_logs = value;
+          superblock_info_->SetActiveLogs(value);
           break;
         case kOptDiscard:
           if (value)
-            SetOpt(sbi_.get(), kMountDiscard);
+            superblock_info_->SetOpt(kMountDiscard);
           break;
         case kOptBgGcOff:
           if (value)
-            SetOpt(sbi_.get(), kMountBgGcOff);
+            superblock_info_->SetOpt(kMountBgGcOff);
           break;
         case kOptNoHeap:
           if (value)
-            SetOpt(sbi_.get(), kMountNoheap);
+            superblock_info_->SetOpt(kMountNoheap);
           break;
         case kOptDisableExtIdentify:
           if (value)
-            SetOpt(sbi_.get(), kMountDisableExtIdentify);
+            superblock_info_->SetOpt(kMountDisableExtIdentify);
           break;
         case kOptNoUserXAttr:
           if (value)
-            SetOpt(sbi_.get(), kMountNoXAttr);
+            superblock_info_->SetOpt(kMountNoXAttr);
           break;
         case kOptNoAcl:
           if (value)
-            SetOpt(sbi_.get(), kMountNoAcl);
+            superblock_info_->SetOpt(kMountNoAcl);
           break;
         case kOptDisableRollForward:
           if (value)
-            SetOpt(sbi_.get(), kMountDisableRollForward);
+            superblock_info_->SetOpt(kMountDisableRollForward);
           break;
         case kOptInlineXattr:
           if (value)
-            SetOpt(sbi_.get(), kMountInlineXattr);
+            superblock_info_->SetOpt(kMountInlineXattr);
           break;
         case kOptInlineData:
           if (value)
-            SetOpt(sbi_.get(), kMountInlineData);
+            superblock_info_->SetOpt(kMountInlineData);
           break;
         case kOptInlineDentry:
           if (value)
-            SetOpt(sbi_.get(), kMountInlineDentry);
+            superblock_info_->SetOpt(kMountInlineDentry);
           break;
         default:
           FX_LOGS(WARNING) << mount_options_.GetNameView(i) << " is not supported.";
@@ -217,7 +217,7 @@ zx_status_t F2fs::SanityCheckCkpt() {
   fsmeta = LeToCpu(raw_sb_->segment_count_ckpt);
   fsmeta += LeToCpu(raw_sb_->segment_count_sit);
   fsmeta += LeToCpu(raw_sb_->segment_count_nat);
-  fsmeta += LeToCpu(sbi_->ckpt->rsvd_segment_count);
+  fsmeta += LeToCpu(superblock_info_->GetCheckpoint().rsvd_segment_count);
   fsmeta += LeToCpu(raw_sb_->segment_count_ssa);
 
   if (fsmeta >= total) {
@@ -231,34 +231,34 @@ zx_status_t F2fs::SanityCheckCkpt() {
   block_t nat_blocks = (LeToCpu(raw_sb_->segment_count_nat) >> 1)
                        << LeToCpu(raw_sb_->log_blocks_per_seg);
 
-  if (sbi_->ckpt->sit_ver_bitmap_bytesize != sit_ver_bitmap_bytesize ||
-      sbi_->ckpt->nat_ver_bitmap_bytesize != nat_ver_bitmap_bytesize ||
-      sbi_->ckpt->next_free_nid >= kNatEntryPerBlock * nat_blocks) {
+  if (superblock_info_->GetCheckpoint().sit_ver_bitmap_bytesize != sit_ver_bitmap_bytesize ||
+      superblock_info_->GetCheckpoint().nat_ver_bitmap_bytesize != nat_ver_bitmap_bytesize ||
+      superblock_info_->GetCheckpoint().next_free_nid >= kNatEntryPerBlock * nat_blocks) {
     return ZX_ERR_BAD_STATE;
   }
 
   return ZX_OK;
 }
 
-void F2fs::InitSbInfo() {
+void F2fs::InitSuperblockInfo() {
   int i;
 
-  sbi_->log_sectors_per_block = LeToCpu(RawSb().log_sectors_per_block);
-  sbi_->log_blocksize = LeToCpu(RawSb().log_blocksize);
-  sbi_->blocksize = 1 << sbi_->log_blocksize;
-  sbi_->log_blocks_per_seg = LeToCpu(RawSb().log_blocks_per_seg);
-  sbi_->blocks_per_seg = 1 << sbi_->log_blocks_per_seg;
-  sbi_->segs_per_sec = LeToCpu(RawSb().segs_per_sec);
-  sbi_->secs_per_zone = LeToCpu(RawSb().secs_per_zone);
-  sbi_->total_sections = LeToCpu(RawSb().section_count);
-  sbi_->total_node_count =
-      (LeToCpu(RawSb().segment_count_nat) / 2) * sbi_->blocks_per_seg * kNatEntryPerBlock;
-  sbi_->root_ino_num = LeToCpu(RawSb().root_ino);
-  sbi_->node_ino_num = LeToCpu(RawSb().node_ino);
-  sbi_->meta_ino_num = LeToCpu(RawSb().meta_ino);
+  superblock_info_->SetLogSectorsPerBlock(LeToCpu(RawSb().log_sectors_per_block));
+  superblock_info_->SetLogBlocksize(LeToCpu(RawSb().log_blocksize));
+  superblock_info_->SetBlocksize(1 << superblock_info_->GetLogBlocksize());
+  superblock_info_->SetLogBlocksPerSeg(LeToCpu(RawSb().log_blocks_per_seg));
+  superblock_info_->SetBlocksPerSeg(1 << superblock_info_->GetLogBlocksPerSeg());
+  superblock_info_->SetSegsPerSec(LeToCpu(RawSb().segs_per_sec));
+  superblock_info_->SetSecsPerZone(LeToCpu(RawSb().secs_per_zone));
+  superblock_info_->SetTotalSections(LeToCpu(RawSb().section_count));
+  superblock_info_->SetTotalNodeCount((LeToCpu(RawSb().segment_count_nat) / 2) *
+                                      superblock_info_->GetBlocksPerSeg() * kNatEntryPerBlock);
+  superblock_info_->SetRootIno(LeToCpu(RawSb().root_ino));
+  superblock_info_->SetNodeIno(LeToCpu(RawSb().node_ino));
+  superblock_info_->SetMetaIno(LeToCpu(RawSb().meta_ino));
 
   for (i = 0; i < static_cast<int>(CountType::kNrCountType); i++)
-    AtomicSet(&sbi_->nr_pages[i], 0);
+    AtomicSet(&superblock_info_->GetNrPages(i), 0);
 }
 
 void F2fs::Reset() {
@@ -273,11 +273,8 @@ void F2fs::Reset() {
     segment_manager_->DestroySegmentManager();
     segment_manager_.reset();
   }
-  if (sbi_->ckpt) {
-    delete reinterpret_cast<FsBlock *>(sbi_->ckpt);
-  }
-  if (sbi_) {
-    sbi_.reset();
+  if (superblock_info_) {
+    superblock_info_.reset();
   }
 }
 
@@ -286,7 +283,7 @@ zx_status_t F2fs::FillSuper() {
   auto reset = fit::defer([&] { Reset(); });
 
   // allocate memory for f2fs-specific super block info
-  if (sbi_ = std::make_unique<SbInfo>(); sbi_ == nullptr) {
+  if (superblock_info_ = std::make_unique<SuperblockInfo>(); superblock_info_ == nullptr) {
     return ZX_ERR_NO_MEMORY;
   }
 
@@ -297,12 +294,13 @@ zx_status_t F2fs::FillSuper() {
     return err;
   }
 
-  sbi_->raw_super = raw_sb_.get();
-  sbi_->por_doing = 0;
-  InitSbInfo();
+  superblock_info_->SetRawSuperblock(raw_sb_);
+  superblock_info_->ClearOnRecovery();
+  InitSuperblockInfo();
 
   // TODO: Create node/meta vnode when impl dirty cache
-  // if (err = VnodeF2fs::Vget(this, MetaIno(sbi_), &sbi_->meta_vnode); err) {
+  // if (err = VnodeF2fs::Vget(this, superblock_info->GetMetaIno(), &superblock_info_->meta_vnode);
+  // err) {
   //   goto free_sb_buf;
   // }
 
@@ -315,13 +313,17 @@ zx_status_t F2fs::FillSuper() {
     return err;
   }
 
-  sbi_->total_valid_node_count = LeToCpu(sbi_->ckpt->valid_node_count);
-  sbi_->total_valid_inode_count = LeToCpu(sbi_->ckpt->valid_inode_count);
-  sbi_->user_block_count = static_cast<block_t>(LeToCpu(sbi_->ckpt->user_block_count));
-  sbi_->total_valid_block_count = static_cast<block_t>(LeToCpu(sbi_->ckpt->valid_block_count));
-  sbi_->last_valid_block_count = sbi_->total_valid_block_count;
-  sbi_->alloc_valid_block_count = 0;
-  list_initialize(&sbi_->dir_inode_list);
+  superblock_info_->SetTotalValidNodeCount(
+      LeToCpu(superblock_info_->GetCheckpoint().valid_node_count));
+  superblock_info_->SetTotalValidInodeCount(
+      LeToCpu(superblock_info_->GetCheckpoint().valid_inode_count));
+  superblock_info_->SetUserBlockCount(
+      static_cast<block_t>(LeToCpu(superblock_info_->GetCheckpoint().user_block_count)));
+  superblock_info_->SetTotalValidBlockCount(
+      static_cast<block_t>(LeToCpu(superblock_info_->GetCheckpoint().valid_block_count)));
+  superblock_info_->SetLastValidBlockCount(superblock_info_->GetTotalValidBlockCount());
+  superblock_info_->SetAllocValidBlockCount(0);
+  list_initialize(&superblock_info_->GetDirInodeList());
 
   InitOrphanInfo();
 
@@ -344,7 +346,7 @@ zx_status_t F2fs::FillSuper() {
   }
 
   // TODO: Enable gc after impl dirty data cache
-  // BuildGcManager(sbi);
+  // BuildGcManager(superblock_info);
 
   // if there are nt orphan nodes free them
   if (err = RecoverOrphanInodes(); err != ZX_OK) {
@@ -352,7 +354,7 @@ zx_status_t F2fs::FillSuper() {
   }
 
   // read root inode and dentry
-  if (err = VnodeF2fs::Vget(this, RootIno(sbi_.get()), &root_vnode_); err != ZX_OK) {
+  if (err = VnodeF2fs::Vget(this, superblock_info_->GetRootIno(), &root_vnode_); err != ZX_OK) {
     err = ZX_ERR_NO_MEMORY;
     return err;
   }
@@ -365,17 +367,21 @@ zx_status_t F2fs::FillSuper() {
   // TODO: handling dentry cache
   // TODO: recover fsynced data every mount time
   // enable roll forward recovery when node dirty cache is impl.
-  if (!TestOpt(sbi_.get(), kMountDisableRollForward)) {
+  if (!superblock_info_->TestOpt(kMountDisableRollForward)) {
     RecoverFsyncData();
   }
 
   // After POR, we can run background GC thread
   // TODO: Enable wb thread first, and then impl gc thread
-  // err = StartGcThread(sbi);
+  // err = StartGcThread(superblock_info);
   // if (err)
   //   goto fail;
   reset.cancel();
   return err;
 }
+
+void SuperblockInfo::IncNrOrphans() { n_orphans_ = safemath::CheckAdd(n_orphans_, 1).ValueOrDie(); }
+
+void SuperblockInfo::DecNrOrphans() { n_orphans_ = safemath::CheckSub(n_orphans_, 1).ValueOrDie(); }
 
 }  // namespace f2fs

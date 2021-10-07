@@ -170,7 +170,7 @@ class NodeManager {
   void CheckNidRange(const nid_t &nid) { ZX_ASSERT(nid < max_nid_); }
 
   // members for fsck and unit tests
-  NodeManager(SbInfo *sb);
+  NodeManager(SuperblockInfo *sb);
   void SetMaxNid(const nid_t value) { max_nid_ = value; }
   nid_t GetMaxNid() const { return max_nid_; }
   void SetNatAddress(const block_t value) { nat_blkaddr_ = value; }
@@ -192,6 +192,8 @@ class NodeManager {
   void SetNatBitmap(const uint8_t *bitmap) { memcpy(nat_bitmap_.get(), bitmap, nat_bitmap_size_); }
   uint8_t *GetNatBitmap() const { return nat_bitmap_.get(); }
   void GetNatBitmap(void *addr);
+
+  SuperblockInfo &GetSuperblockInfo();
 
  private:
   friend class MapTester;
@@ -251,7 +253,7 @@ class NodeManager {
   zx_status_t InitNodeManager();
 
   F2fs *fs_ = nullptr;
-  SbInfo *sbi_ = nullptr;
+  SuperblockInfo *superblock_info_ = nullptr;
   block_t nat_blkaddr_ = 0;   // starting block address of NAT
   nid_t max_nid_ = 0;         // the maximum number of node ids
   nid_t init_scan_nid_ = 0;   // the first nid to be scanned

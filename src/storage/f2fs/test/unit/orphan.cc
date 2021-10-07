@@ -29,13 +29,11 @@ TEST(OrphanInode, RecoverOrphanInode) {
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
   FileTester::MountWithOptions(loop.dispatcher(), options, &bc, &fs);
 
-  SbInfo &sbi = fs->GetSbInfo();
-
   fbl::RefPtr<VnodeF2fs> root;
   FileTester::CreateRoot(fs.get(), &root);
   fbl::RefPtr<Dir> root_dir = fbl::RefPtr<Dir>::Downcast(std::move(root));
 
-  ASSERT_FALSE(GetCheckpoint(&sbi)->ckpt_flags & kCpOrphanPresentFlag);
+  ASSERT_FALSE(fs->GetSuperblockInfo().GetCheckpoint().ckpt_flags & kCpOrphanPresentFlag);
 
   // 1. Create files
   std::vector<fbl::RefPtr<VnodeF2fs>> vnodes;
@@ -58,9 +56,9 @@ TEST(OrphanInode, RecoverOrphanInode) {
   }
 
   // 2. Make orphan inodes
-  ASSERT_EQ(fs->GetSbInfo().n_orphans, static_cast<uint64_t>(0));
+  ASSERT_EQ(fs->GetSuperblockInfo().GetOrphanCount(), static_cast<uint64_t>(0));
   FileTester::DeleteChildren(vnodes, root_dir, kOrphanCnt);
-  ASSERT_EQ(fs->GetSbInfo().n_orphans, kOrphanCnt);
+  ASSERT_EQ(fs->GetSuperblockInfo().GetOrphanCount(), kOrphanCnt);
 
   for (const auto &iter : vnodes) {
     ASSERT_EQ(iter->GetNlink(), (uint32_t)0);
@@ -83,7 +81,7 @@ TEST(OrphanInode, RecoverOrphanInode) {
   // 4. Remount and recover orphan inodes
   FileTester::MountWithOptions(loop.dispatcher(), options, &bc, &fs);
 
-  ASSERT_EQ(fs->GetSbInfo().n_orphans, static_cast<uint64_t>(0));
+  ASSERT_EQ(fs->GetSuperblockInfo().GetOrphanCount(), static_cast<uint64_t>(0));
 
   ASSERT_EQ(fs->ValidInodeCount(), static_cast<uint64_t>(1));
   ASSERT_EQ(fs->ValidNodeCount(), static_cast<uint64_t>(1));

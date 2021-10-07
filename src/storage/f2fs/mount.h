@@ -54,9 +54,6 @@ class MountOptions {
   MountOpt opt_[kOptMaxNum];
 };
 
-inline void ClearOpt(SbInfo *sbi, uint64_t option) { sbi->mount_opt &= ~option; }
-inline void SetOpt(SbInfo *sbi, uint64_t option) { sbi->mount_opt |= option; }
-inline bool TestOpt(SbInfo *sbi, uint64_t option) { return ((sbi->mount_opt & option) != 0); }
 zx_status_t Mount(const MountOptions &options, std::unique_ptr<f2fs::Bcache> bc);
 
 }  // namespace f2fs

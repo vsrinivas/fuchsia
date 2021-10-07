@@ -7,8 +7,9 @@
 namespace f2fs {
 
 bool F2fs::SpaceForRollForward() {
-  SbInfo &sbi = GetSbInfo();
-  if (sbi.last_valid_block_count + sbi.alloc_valid_block_count > sbi.user_block_count)
+  SuperblockInfo &superblock_info = GetSuperblockInfo();
+  if (superblock_info.GetLastValidBlockCount() + superblock_info.GetAllocValidBlockCount() >
+      superblock_info.GetUserBlockCount())
     return false;
   return true;
 }
@@ -83,8 +84,8 @@ zx_status_t F2fs::RecoverInode(VnodeF2fs *vnode, Page *node_page) {
 }
 
 zx_status_t F2fs::FindFsyncDnodes(list_node_t *head) {
-  SbInfo &sbi = GetSbInfo();
-  uint64_t cp_ver = LeToCpu(sbi.ckpt->checkpoint_ver);
+  SuperblockInfo &superblock_info = GetSuperblockInfo();
+  uint64_t cp_ver = LeToCpu(superblock_info.GetCheckpoint().checkpoint_ver);
   fbl::RefPtr<VnodeF2fs> vnode_refptr;
   zx_status_t err = ZX_OK;
 
@@ -94,7 +95,7 @@ zx_status_t F2fs::FindFsyncDnodes(list_node_t *head) {
   block_t blkaddr = segment_manager_->StartBlock(curseg->segno) + curseg->next_blkoff;
 
   // create a page for a read buffer
-  Page *page = GrabCachePage(nullptr, NodeIno(sbi_.get()), 0);
+  Page *page = GrabCachePage(nullptr, superblock_info_->GetNodeIno(), 0);
   if (!page)
     return ZX_ERR_NO_MEMORY;
 #if 0  // porting needed
@@ -190,11 +191,11 @@ void F2fs::DestroyFsyncDnodes(list_node_t *head) {
 }
 
 void F2fs::CheckIndexInPrevNodes(block_t blkaddr) {
-  SbInfo &sbi = GetSbInfo();
+  SuperblockInfo &superblock_info = GetSuperblockInfo();
   SegmentEntry *sentry;
   uint32_t segno = segment_manager_->GetSegNo(blkaddr);
   uint16_t blkoff = static_cast<uint16_t>(segment_manager_->GetSegOffFromSeg0(blkaddr) &
-                                          (sbi.blocks_per_seg - 1));
+                                          (superblock_info.GetBlocksPerSeg() - 1));
   Summary sum;
   nid_t ino;
   void *kaddr;
@@ -315,15 +316,15 @@ void F2fs::DoRecoverData(VnodeF2fs *vnode, Page *page, block_t blkaddr) {
 }
 
 void F2fs::RecoverData(list_node_t *head, CursegType type) {
-  SbInfo &sbi = GetSbInfo();
-  uint64_t cp_ver = LeToCpu(sbi.ckpt->checkpoint_ver);
+  SuperblockInfo &superblock_info = GetSuperblockInfo();
+  uint64_t cp_ver = LeToCpu(superblock_info.GetCheckpoint().checkpoint_ver);
   Page *page = nullptr;
   block_t blkaddr;
 
   blkaddr = segment_manager_->NextFreeBlkAddr(type);
 
   /* read node page */
-  page = GrabCachePage(nullptr, NodeIno(sbi_.get()), 0);
+  page = GrabCachePage(nullptr, superblock_info_->GetNodeIno(), 0);
   if (page == nullptr)
     return;
 #if 0  // porting needed
@@ -371,7 +372,7 @@ out:
 }
 
 void F2fs::RecoverFsyncData() {
-  SbInfo &sbi = GetSbInfo();
+  SuperblockInfo &superblock_info = GetSuperblockInfo();
   list_node_t inode_list;
 
 #if 0  // porting needed
@@ -393,9 +394,9 @@ void F2fs::RecoverFsyncData() {
   }
 
   /* step #2: recover data */
-  sbi.por_doing = 1;
+  superblock_info.SetOnRecovery();
   RecoverData(&inode_list, CursegType::kCursegWarmNode);
-  sbi.por_doing = 0;
+  superblock_info.ClearOnRecovery();
   ZX_ASSERT(list_is_empty(&inode_list));
 out:
   DestroyFsyncDnodes(&inode_list);
