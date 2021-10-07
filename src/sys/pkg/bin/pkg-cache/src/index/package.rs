@@ -13,7 +13,10 @@ use {
     fuchsia_inspect as finspect,
     fuchsia_pkg::PackagePath,
     futures::lock::Mutex,
-    std::{collections::HashSet, sync::Arc},
+    std::{
+        collections::{HashMap, HashSet},
+        sync::Arc,
+    },
 };
 
 /// The index of packages known to pkg-cache.
@@ -21,7 +24,6 @@ use {
 pub struct PackageIndex {
     dynamic: DynamicIndex,
     retained: RetainedIndex,
-    // TODO(fxbug.dev/84729)
     #[allow(unused)]
     node: finspect::Node,
 }
@@ -49,7 +51,7 @@ impl PackageIndex {
     }
 
     #[cfg(test)]
-    fn new_test() -> Self {
+    pub(crate) fn new_test() -> Self {
         let inspector = finspect::Inspector::new();
         Self::new(inspector.root().create_child("index"))
     }
@@ -119,6 +121,11 @@ impl PackageIndex {
         self.retained.replace(index);
     }
 
+    /// Returns a snapshot of all active dynamic packages and their hashes.
+    pub fn active_packages(&self) -> HashMap<PackagePath, Hash> {
+        self.dynamic.active_packages()
+    }
+
     /// Returns all blobs protected by the dynamic and retained indices.
     pub fn all_blobs(&self) -> HashSet<Hash> {
         let mut all = self.dynamic.all_blobs();
@@ -165,6 +172,19 @@ pub async fn set_retained_index(
     // Then, atomically, merge in available data from the dynamic/retained indices and swap in
     // the new retained index.
     index.lock().await.set_retained_index(new_retained);
+}
+
+#[cfg(test)]
+pub async fn register_dynamic_package(
+    index: &Arc<Mutex<PackageIndex>>,
+    path: PackagePath,
+    hash: Hash,
+) {
+    let mut index = index.lock().await;
+
+    index.start_install(hash);
+    index.fulfill_meta_far(hash, path, HashSet::new()).unwrap();
+    index.complete_install(hash).unwrap();
 }
 
 #[cfg(test)]

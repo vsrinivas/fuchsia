@@ -6,7 +6,7 @@ use crate::errors::ParsePackagePathError;
 pub use fuchsia_url::pkg_url::{PackageName, PackageVariant, MAX_PACKAGE_PATH_SEGMENT_BYTES};
 
 /// A Fuchsia Package Path. Paths must currently be "{name}/{variant}".
-#[derive(PartialEq, Eq, Debug, Clone, Hash)]
+#[derive(PartialEq, Eq, PartialOrd, Ord, Debug, Clone, Hash)]
 pub struct PackagePath {
     name: PackageName,
     variant: PackageVariant,

@@ -19,6 +19,9 @@ pub use package::{
     FulfillMetaFarError, PackageIndex,
 };
 
+#[cfg(test)]
+pub use package::register_dynamic_package;
+
 #[derive(thiserror::Error, Debug)]
 pub enum QueryPackageMetadataError {
     #[error("failed to open blob")]

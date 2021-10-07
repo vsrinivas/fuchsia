@@ -20,6 +20,7 @@ use {
 
 mod blob_location;
 mod cache_service;
+mod compat;
 mod gc_service;
 mod index;
 mod pkgfs_inspect;

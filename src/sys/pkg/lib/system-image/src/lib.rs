@@ -7,7 +7,7 @@ mod non_static_allowlist;
 mod path_hash_mapping;
 
 pub use crate::{
-    errors::PathHashMappingError,
+    errors::{AllowListError, PathHashMappingError},
     non_static_allowlist::NonStaticAllowList,
     path_hash_mapping::{CachePackages, StaticPackages},
 };

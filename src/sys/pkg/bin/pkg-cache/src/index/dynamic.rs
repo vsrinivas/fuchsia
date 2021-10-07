@@ -53,7 +53,7 @@ impl DynamicIndex {
         package_map
     }
 
-    #[cfg(test)]
+    /// Returns a snapshot of all active packages and their hashes.
     pub fn active_packages(&self) -> HashMap<PackagePath, Hash> {
         self.active_packages.clone()
     }
@@ -442,7 +442,7 @@ mod tests {
                 },
             }
         );
-        assert_eq!(dynamic_index.active_packages, hashmap! { path => hash });
+        assert_eq!(dynamic_index.active_packages(), hashmap! { path => hash });
     }
 
     #[test]
@@ -569,7 +569,7 @@ mod tests {
         dynamic_index.add_package(hash, package.clone());
         dynamic_index.cancel_install(&hash);
         assert_eq!(dynamic_index.packages(), hashmap! { hash => package });
-        assert_eq!(dynamic_index.active_packages, hashmap! { path => hash });
+        assert_eq!(dynamic_index.active_packages(), hashmap! { path => hash });
     }
 
     #[test]
@@ -692,7 +692,7 @@ mod tests {
             }
         );
         assert_eq!(
-            dynamic_index.active_packages,
+            dynamic_index.active_packages(),
             hashmap! {
                 fake_package_path => fake_package_hash,
                 share_blob_package_path => share_blob_package_hash
@@ -736,7 +736,7 @@ mod tests {
                 }
             }
         );
-        assert_eq!(dynamic_index.active_packages, hashmap! {});
+        assert_eq!(dynamic_index.active_packages(), hashmap! {});
     }
 
     #[fasync::run_singlethreaded(test)]

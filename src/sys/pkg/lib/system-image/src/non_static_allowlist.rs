@@ -20,7 +20,7 @@ pub struct NonStaticAllowList {
 impl NonStaticAllowList {
     /// Parses a `NonStaticAllowList` from a utf8-encoded list of package names, separated with \n.
     /// Ignores empty lines and lines beginning with '#'.
-    pub fn from_reader(source: &[u8]) -> Result<Self, AllowListError> {
+    pub fn parse(source: &[u8]) -> Result<Self, AllowListError> {
         let contents = std::str::from_utf8(source)?
             .split("\n")
             .filter(|line| !(line.is_empty() || line.starts_with("#")))
@@ -29,9 +29,9 @@ impl NonStaticAllowList {
         return Ok(Self { contents });
     }
 
-    /// Get the contents of the allowlist.
-    pub fn contents(&self) -> &HashSet<PackageName> {
-        &self.contents
+    /// Determines if this allowlist allows the given package.
+    pub fn allows(&self, name: &PackageName) -> bool {
+        self.contents.contains(name)
     }
 }
 
@@ -47,13 +47,22 @@ mod tests {
             .unwrap()
     }
 
+    fn allowlist_allows(allowlist: &NonStaticAllowList, name: &str) -> bool {
+        let name = PackageName::from_str(name).unwrap();
+        allowlist.allows(&name)
+    }
+
     macro_rules! success_tests {
         ($($test_name:ident: $input:expr, $expected:expr,)*) => {
             $(
                 #[test]
                 fn $test_name() {
-                    let allowlist = NonStaticAllowList::from_reader($input.as_bytes()).unwrap();
-                    assert_eq!(allowlist.contents, into_hashset(&$expected));
+                    let allowlist = NonStaticAllowList::parse($input.as_bytes()).unwrap();
+                    let expected = into_hashset(&$expected);
+                    for name in &expected {
+                        assert!(allowlist.allows(name));
+                    }
+                    assert_eq!(allowlist.contents, expected);
                 }
             )*
         }
@@ -72,10 +81,20 @@ mod tests {
     }
 
     #[test]
+    fn allows_is_contains() {
+        let allowlist = NonStaticAllowList { contents: into_hashset(&["foo", "bar"]) };
+        assert!(allowlist_allows(&allowlist, "foo"));
+        assert!(allowlist_allows(&allowlist, "bar"));
+
+        assert!(!allowlist_allows(&allowlist, "foobar"));
+        assert!(!allowlist_allows(&allowlist, "baz"));
+    }
+
+    #[test]
     fn invalid_package_name() {
         let contents = "invalid!NAME".as_bytes();
         assert_matches!(
-            NonStaticAllowList::from_reader(contents),
+            NonStaticAllowList::parse(contents),
             Err(AllowListError::PackageName(PackagePathSegmentError::InvalidCharacter {
                 character
             })) if character == '!'
@@ -86,9 +105,6 @@ mod tests {
     fn invalid_utf8_encoding() {
         // Invalid utf8 sequence.
         let contents = [0x80];
-        assert_matches!(
-            NonStaticAllowList::from_reader(&contents),
-            Err(AllowListError::Encoding(_))
-        );
+        assert_matches!(NonStaticAllowList::parse(&contents), Err(AllowListError::Encoding(_)));
     }
 }
