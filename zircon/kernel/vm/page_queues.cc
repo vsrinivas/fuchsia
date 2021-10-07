@@ -888,8 +888,11 @@ PageQueues::ActiveInactiveCounts PageQueues::GetActiveInactiveCountsLocked() con
   } else {
     // With use_cached_queue_counts_ false the counts should have been updated to remove any
     // negative values that might have been caused by races.
-    ASSERT(active_queue_count_ >= 0);
-    ASSERT(inactive_queue_count_ >= 0);
+    // TODO(fxbug.dev/86174): These asserts are spuriously triggering, possibly due to
+    // fxbug.dev/85768, as active ratio triggering is not presently used and so these values do not
+    // presently matter, these asserts are disabled.
+    // ASSERT(active_queue_count_ >= 0);
+    // ASSERT(inactive_queue_count_ >= 0);
     return ActiveInactiveCounts{.cached = false,
                                 .active = static_cast<uint64_t>(active_queue_count_),
                                 .inactive = static_cast<uint64_t>(inactive_queue_count_)};
