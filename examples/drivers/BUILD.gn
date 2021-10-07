@@ -5,3 +5,11 @@
 group("sample") {
   deps = [ "fifo" ]
 }
+
+group("tests") {
+  testonly = true
+  deps = [
+    "driver_test_realm:tests",
+    "fifo:tests",
+  ]
+}

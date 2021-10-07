@@ -30,7 +30,7 @@ group("tests") {
     "components:tests",
     "dart:tests",
     "diagnostics:tests",
-    "drivers/fifo:tests",
+    "drivers:tests",
     "fidl:tests",
     "fuzzers:tests",
     "hello_world:tests",
