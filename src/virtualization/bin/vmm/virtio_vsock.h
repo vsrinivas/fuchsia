@@ -133,11 +133,9 @@ class VirtioVsock
       __TA_REQUIRES(mutex_);
   Connection* GetConnectionLocked(ConnectionKey key) __TA_REQUIRES(mutex_);
 
-  // If `status` is an error, remove the connection and notify all bound
+  // Release resources associated with the given connection, and notify all bound
   // GuestVsockEndpoint's of the termination.
-  //
-  // Returns true if `status` was an error.
-  bool EraseOnErrorLocked(ConnectionKey key, zx_status_t status) __TA_REQUIRES(mutex_);
+  void RemoveConnectionLocked(ConnectionKey key) __TA_REQUIRES(mutex_);
 
   void WaitOnQueueLocked(ConnectionKey key) __TA_REQUIRES(mutex_);
 

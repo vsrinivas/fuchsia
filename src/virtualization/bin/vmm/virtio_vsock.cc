@@ -683,12 +683,7 @@ VirtioVsock::Connection* VirtioVsock::GetConnectionLocked(ConnectionKey key) {
   return it == connections_.end() ? nullptr : it->second.get();
 }
 
-bool VirtioVsock::EraseOnErrorLocked(ConnectionKey key, zx_status_t status) {
-  // If there was no error, don't erase the connection.
-  if (status == ZX_OK) {
-    return false;
-  }
-
+void VirtioVsock::RemoveConnectionLocked(ConnectionKey key) {
   // Find the connection.
   auto it = connections_.find(key);
   FX_CHECK(it != connections_.end()) << "Attempted to erase unknown connection.";
@@ -702,15 +697,13 @@ bool VirtioVsock::EraseOnErrorLocked(ConnectionKey key, zx_status_t status) {
 
   // Remove the connection.
   connections_.erase(it);
-
-  return true;
 }
 
 void VirtioVsock::WaitOnQueueLocked(ConnectionKey key) {
   zx_status_t status = rx_queue_wait_.Begin(dispatcher_);
   if (status != ZX_OK && status != ZX_ERR_ALREADY_EXISTS) {
     FX_LOGS(ERROR) << "Failed to wait on queue " << status;
-    EraseOnErrorLocked(key, status);
+    RemoveConnectionLocked(key);
     return;
   }
   readable_.insert(key);
@@ -790,8 +783,8 @@ bool VirtioVsock::ProcessReadyConnection(ConnectionKey key) {
       break;
     case ZX_ERR_UNAVAILABLE: {
       zx_status_t status = conn->WaitOnTransmit(ZX_OK);
-      if (EraseOnErrorLocked(key, status)) {
-        return true;
+      if (status != ZX_OK) {
+        RemoveConnectionLocked(key);
       }
       break;
     }
@@ -805,8 +798,12 @@ bool VirtioVsock::ProcessReadyConnection(ConnectionKey key) {
   zx_status_t status = transmit(conn, rx_queue(), chain->header(), chain->desc(), &used);
   chain->Return(/*used=*/used + sizeof(virtio_vsock_hdr_t));
 
+  // Notify when the connection next has data pending.
   status = conn->WaitOnReceive(status);
-  EraseOnErrorLocked(key, status);
+  if (status != ZX_OK) {
+    RemoveConnectionLocked(key);
+  }
+
   return true;
 }
 
@@ -954,7 +951,9 @@ void VirtioVsock::ProcessIncomingPacket(const VsockChain& chain) {
       break;
     default:
       status = conn->WaitOnTransmit(status);
-      EraseOnErrorLocked(key, status);
+      if (status != ZX_OK) {
+        RemoveConnectionLocked(key);
+      }
       break;
   }
 }
