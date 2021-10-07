@@ -208,10 +208,6 @@ fuchsia_test_package("wlancfg-tests") {
     log_settings = {
       max_severity = "ERROR"
     }
-    if (is_coverage) {
-      # For some reason, running single threaded is faster on EMU
-      parallel = 1
-    }
   }
 }
 

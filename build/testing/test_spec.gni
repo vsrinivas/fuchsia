@@ -112,6 +112,22 @@ template("test_spec") {
     assert(_max_severity_allowed_val + [ _log_settings.max_severity ] -
                [ _log_settings.max_severity ] != _max_severity_allowed_val,
            "Invalid 'log_settings.max_severity': " + _log_settings.max_severity)
+
+    if (defined(invoker.package_url)) {
+      s = string_split(invoker.package_url, ".cm")
+      is_v2_component = false
+      foreach(s, string_split(invoker.package_url, ".cm")) {
+        is_v2_component = s == ""
+      }
+
+      # Running test cases in parallel is slow (https://fxbug.dev/86107) for
+      # "coverage" variant. Run cases serially for that variant by default.
+      # Also let devs override the default if needed.
+      if (!defined(invoker.parallel) && is_v2_component &&
+          select_variant + [ "coverage" ] - [ "coverage" ] != select_variant) {
+        _parallel = 1
+      }
+    }
   } else {
     not_needed(invoker, [ "log_settings" ])
   }
@@ -120,12 +136,8 @@ template("test_spec") {
     assert(is_fuchsia, "'parallel' can only be used when target is fuchsia.")
     assert(invoker.parallel > 0)
     assert(defined(invoker.package_url))
-    s = string_split(invoker.package_url, ".cm")
-    is_v2_component = false
-    foreach(s, string_split(invoker.package_url, ".cm")) {
-      is_v2_component = s == ""
-    }
     assert(is_v2_component, "'parallel' only works for v2 test components.")
+    _parallel = invoker.parallel
   }
 
   # Call "expanding" the operation that takes a scope
@@ -300,8 +312,10 @@ template("test_spec") {
                                "path",
                                "package_url",
                                "package_label",
-                               "parallel",
                              ])
+      if (defined(_parallel)) {
+        parallel = _parallel
+      }
       label = invoker.target
       assert(label == get_label_info(label, "label_with_toolchain"),
              "target '${label}' must be a label_with_toolchain.")
