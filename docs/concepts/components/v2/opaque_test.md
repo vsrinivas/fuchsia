@@ -36,18 +36,20 @@ To test the behavior of a v2 component, OpaqueTest lets you:
 For the OpaqueTest framework to function correctly, the test cmx manifest
 must specify (at minimum) the following features and services:
 
-```rust
-"include": [ "syslog/client.shard.cmx" ],
-"sandbox": {
-    "features": [
-        "hub"
-    ],
-    "services": [
-        "fuchsia.process.Launcher",
-        "fuchsia.sys.Environment",
-        "fuchsia.sys.Launcher"
-    ]
-},
+```json
+{
+    "include": [ "syslog/client.shard.cmx" ],
+    "sandbox": {
+        "features": [
+            "hub"
+        ],
+        "services": [
+            "fuchsia.process.Launcher",
+            "fuchsia.sys.Environment",
+            "fuchsia.sys.Launcher"
+        ]
+    }
+}
 ```
 
 These services and features ensure that OpaqueTest can set up a hermetic
