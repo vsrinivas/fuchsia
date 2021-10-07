@@ -207,5 +207,80 @@ TEST_F(FvmVolumeManagerApiTest, PartitionLimit) {
   EXPECT_EQ(last_get_result->byte_count, 0, "Expected 0 limit on new partition.");
 }
 
+TEST_F(FvmVolumeManagerApiTest, SetPartitionName) {
+  constexpr uint64_t kBlockCount = (50 * kSliceSize) / kBlockSize;
+  constexpr uint64_t kMaxBlockCount = 1024 * kSliceSize / kBlockSize;
+
+  std::unique_ptr<RamdiskRef> ramdisk =
+      RamdiskRef::Create(devmgr_->devfs_root(), kBlockSize, kBlockCount);
+  ASSERT_TRUE(ramdisk);
+
+  std::unique_ptr<FvmAdapter> fvm = FvmAdapter::CreateGrowable(
+      devmgr_->devfs_root(), kBlockSize, kBlockCount, kMaxBlockCount, kSliceSize, ramdisk.get());
+  ASSERT_TRUE(fvm);
+
+  // Type GUID for partition.
+  fuchsia_hardware_block_partition::wire::Guid type_guid;
+  std::fill(std::begin(type_guid.value), std::end(type_guid.value), 0x11);
+
+  // Instance GUID for partition.
+  fuchsia_hardware_block_partition::wire::Guid guid;
+  std::fill(std::begin(guid.value), std::end(guid.value), 0x12);
+
+  // Create the partition inside FVM with one slice.
+  const char kPartitionName[] = "mypart";
+  auto alloc_result = fidl::WireCall<VolumeManager>(fvm->device()->channel())
+                          .AllocatePartition(1, type_guid, guid, kPartitionName, 0);
+  ASSERT_OK(alloc_result.status(), "Transport layer error");
+  ASSERT_OK(alloc_result->status, "Service returned error.");
+
+  constexpr std::string_view kNewPartitionName = "new-name";
+  auto set_partition_name_result =
+      fidl::WireCall<VolumeManager>(fvm->device()->channel())
+          .SetPartitionName(guid, fidl::StringView::FromExternal(kNewPartitionName));
+  ASSERT_OK(set_partition_name_result.status(), "Transport layer error");
+  ASSERT_FALSE(set_partition_name_result->result.is_err(), "Service returned error.");
+
+  // Find the partition we just created. It will still have the original path:
+  // "<ramdisk-path>/fvm/mypart-p-1/block"
+  fbl::unique_fd volume_fd;
+  std::string device_name(ramdisk->path());
+  device_name.append("/fvm/");
+  device_name.append(kPartitionName);
+  device_name.append("-p-1/block");
+  ASSERT_OK(devmgr_integration_test::RecursiveWaitForFile(devmgr_->devfs_root(),
+                                                          device_name.c_str(), &volume_fd));
+  fdio_cpp::UnownedFdioCaller volume(volume_fd.get());
+
+  {
+    auto get_name_result =
+        fidl::WireCall(fidl::UnownedClientEnd<Volume>(volume.borrow_channel())).GetName();
+    ASSERT_OK(get_name_result.status(), "Transport layer error");
+    ASSERT_OK(get_name_result->status, "Service returned error.");
+
+    ASSERT_EQ(get_name_result->name.get(), kNewPartitionName);
+  }
+
+  // Make sure that the change was persisted.
+  volume_fd.reset();
+  ASSERT_OK(fvm->Rebind({}));
+
+  // This time, the path should include the new name.
+  device_name = ramdisk->path();
+  device_name.append("/fvm/");
+  device_name.append(kNewPartitionName);
+  device_name.append("-p-1/block");
+  ASSERT_OK(devmgr_integration_test::RecursiveWaitForFile(devmgr_->devfs_root(),
+                                                          device_name.c_str(), &volume_fd));
+  volume.reset(volume_fd.get());
+
+  auto get_name_result =
+      fidl::WireCall(fidl::UnownedClientEnd<Volume>(volume.borrow_channel())).GetName();
+  ASSERT_OK(get_name_result.status(), "Transport layer error");
+  ASSERT_OK(get_name_result->status, "Service returned error.");
+
+  ASSERT_EQ(get_name_result->name.get(), kNewPartitionName);
+}
+
 }  // namespace
 }  // namespace fvm

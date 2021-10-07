@@ -695,6 +695,23 @@ zx_status_t VPartitionManager::SetPartitionLimitInternal(const uint8_t* guid, ui
   return ZX_ERR_NOT_FOUND;
 }
 
+zx_status_t VPartitionManager::SetPartitionNameInternal(const uint8_t* guid,
+                                                        std::string_view name) {
+  fbl::AutoLock lock(&lock_);
+  const size_t partition = GetPartitionNumberLocked(guid);
+  if (!partition) {
+    // The partition GUID will already have been logged by GetPartitionNumberLocked().
+    zxlogf(ERROR, "Unable set partition name to %s, partition not found.",
+           std::string(name).c_str());
+    return ZX_ERR_NOT_FOUND;
+  }
+  VPartitionEntry* entry = GetVPartEntryLocked(partition);
+  zxlogf(INFO, "Renaming partition #%zu from %s to %s", partition, entry->name().c_str(),
+         std::string(name).c_str());
+  entry->set_name(name);
+  return WriteFvmLocked();
+}
+
 void VPartitionManager::FreePhysicalSlice(VPartition* vp, uint64_t pslice) {
   auto entry = GetSliceEntryLocked(pslice);
   ZX_DEBUG_ASSERT_MSG(entry->IsAllocated(), "Freeing already-free slice");
@@ -867,6 +884,16 @@ void VPartitionManager::GetPartitionLimit(GetPartitionLimitRequestView request,
 void VPartitionManager::SetPartitionLimit(SetPartitionLimitRequestView request,
                                           SetPartitionLimitCompleter::Sync& completer) {
   completer.Reply(SetPartitionLimitInternal(request->guid.value.data(), request->byte_count));
+}
+
+void VPartitionManager::SetPartitionName(SetPartitionNameRequestView request,
+                                         SetPartitionNameCompleter::Sync& completer) {
+  zx_status_t status = SetPartitionNameInternal(request->guid.value.data(), request->name.get());
+  if (status == ZX_OK) {
+    completer.ReplySuccess();
+  } else {
+    completer.ReplyError(status);
+  }
 }
 
 void VPartitionManager::DdkUnbind(ddk::UnbindTxn txn) {

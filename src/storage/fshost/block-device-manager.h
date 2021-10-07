@@ -16,9 +16,6 @@
 
 namespace fshost {
 
-// This needs to match whatever our imaging tools do.
-inline constexpr std::string_view kDataPartitionLabel = "data";
-
 // BlockDeviceManager contains the logic that decides what to do with devices that appear, i.e. what
 // drivers to attach and what filesystems should be mounted.
 class BlockDeviceManager {

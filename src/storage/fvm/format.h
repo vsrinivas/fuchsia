@@ -391,6 +391,11 @@ struct VPartitionEntry {
   void SetActive(bool is_active);
 
   std::string name() const { return StringFromArray(unsafe_name); }
+  void set_name(std::string_view name) {
+    std::fill(std::copy_n(name.begin(), std::min(name.size(), kMaxVPartitionNameLength),
+                          std::begin(unsafe_name)),
+              std::end(unsafe_name), 0);
+  }
 
   // Mirrors GPT value.
   uint8_t type[kGuidSize] = {0};
@@ -407,7 +412,7 @@ struct VPartitionEntry {
   // Partition name. The name is counted until the first null byte or the end of the static buffer
   // (it is not null terminated in this case). Prefer to use the name() accessor above which
   // abstracts this handling.
-  uint8_t unsafe_name[fvm::kMaxVPartitionNameLength] = {0};
+  uint8_t unsafe_name[kMaxVPartitionNameLength] = {0};
 };
 
 // Outputs a single-line description of the partition entry.
@@ -478,7 +483,7 @@ constexpr size_t AllocTableByteSizeForUsableSliceCount(size_t slice_count) {
   //
   // This multiply shouldn't overflow since slice_count should be <= kMaxVSlices which leaves many
   // spare bits.
-  return fbl::round_up(sizeof(SliceEntry) * (slice_count + 1), fvm::kBlockSize);
+  return fbl::round_up(sizeof(SliceEntry) * (slice_count + 1), kBlockSize);
 }
 
 constexpr size_t BlocksToSlices(size_t slice_size, size_t block_size, size_t block_count) {
@@ -502,7 +507,7 @@ constexpr size_t SlicesToBlocks(size_t slice_size, size_t block_size, size_t sli
 static constexpr uint64_t kMaxPartitionTableByteSize =
     PartitionTableByteSizeForUsablePartitionCount(kMaxUsablePartitions);
 static constexpr uint64_t kMaxAllocationTableByteSize =
-    fbl::round_up(sizeof(SliceEntry) * kMaxVSlices, fvm::kBlockSize);
+    fbl::round_up(sizeof(SliceEntry) * kMaxVSlices, kBlockSize);
 static constexpr uint64_t kMaxMetadataByteSize =
     kBlockSize + kMaxPartitionTableByteSize + kMaxAllocationTableByteSize;
 

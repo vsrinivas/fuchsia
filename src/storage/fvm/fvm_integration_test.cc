@@ -5,6 +5,8 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <fidl/fuchsia.device/cpp/wire.h>
+#include <fidl/fuchsia.hardware.block.partition/cpp/wire.h>
+#include <fidl/fuchsia.hardware.block.volume/cpp/wire.h>
 #include <fidl/fuchsia.io.admin/cpp/wire.h>
 #include <fidl/fuchsia.io/cpp/wire.h>
 #include <fuchsia/device/c/fidl.h>
@@ -486,16 +488,17 @@ void CheckDeadConnection(int fd) {
 
 void Upgrade(const fdio_cpp::FdioCaller& caller, const uint8_t* old_guid, const uint8_t* new_guid,
              zx_status_t result) {
-  fuchsia_hardware_block_partition_GUID old_guid_fidl;
-  memcpy(&old_guid_fidl.value, old_guid, fuchsia_hardware_block_partition_GUID_LENGTH);
-  fuchsia_hardware_block_partition_GUID new_guid_fidl;
-  memcpy(&new_guid_fidl.value, new_guid, fuchsia_hardware_block_partition_GUID_LENGTH);
+  fuchsia_hardware_block_partition::wire::Guid old_guid_fidl;
+  memcpy(&old_guid_fidl.value, old_guid, fuchsia_hardware_block_partition::wire::kGuidLength);
+  fuchsia_hardware_block_partition::wire::Guid new_guid_fidl;
+  memcpy(&new_guid_fidl.value, new_guid, fuchsia_hardware_block_partition::wire::kGuidLength);
 
-  zx_status_t status;
-  zx_status_t io_status = fuchsia_hardware_block_volume_VolumeManagerActivate(
-      caller.borrow_channel(), &old_guid_fidl, &new_guid_fidl, &status);
-  ASSERT_EQ(ZX_OK, io_status);
-  ASSERT_EQ(result, status);
+  auto response =
+      fidl::WireCall(fidl::UnownedClientEnd<fuchsia_hardware_block_volume::VolumeManager>(
+                         caller.borrow_channel()))
+          .Activate(old_guid_fidl, new_guid_fidl);
+  ASSERT_EQ(ZX_OK, response.status());
+  ASSERT_EQ(result, response->status);
 }
 
 /////////////////////// Actual tests:

@@ -6,6 +6,7 @@
 
 #include <fcntl.h>
 #include <fidl/fuchsia.device/cpp/wire.h>
+#include <fidl/fuchsia.hardware.block.volume/cpp/wire.h>
 #include <fuchsia/hardware/power/statecontrol/cpp/fidl.h>
 #include <fuchsia/hardware/power/statecontrol/cpp/fidl_test_base.h>
 #include <lib/async-loop/cpp/loop.h>
@@ -38,7 +39,7 @@ const uint32_t kBlockCount = 1024 * 256;
 const uint32_t kBlockSize = 512;
 const uint32_t kSliceSize = (1 << 20);
 const size_t kDeviceSize = kBlockCount * kBlockSize;
-const char* kDataName = "fdr-data";
+constexpr std::string_view kDataName = "fdr-data";
 const char* kRamCtlPath = "sys/platform/00:00:2d/ramctl";
 const size_t kKeyBytes = 32;  // Generate a 256-bit key for the zxcrypt volume
 
@@ -82,7 +83,7 @@ class FactoryResetTest : public Test {
   void TearDown() override { ASSERT_EQ(ramdisk_destroy(ramdisk_client_), ZX_OK); }
 
   bool PartitionHasFormat(disk_format_t format) {
-    fbl::unique_fd fd(openat(devmgr_->devfs_root().get(), fvm_block_path_, O_RDONLY));
+    fbl::unique_fd fd(openat(devmgr_->devfs_root().get(), fvm_block_path_.c_str(), O_RDONLY));
     return detect_disk_format(fd.get()) == format;
   }
 
@@ -153,7 +154,7 @@ class FactoryResetTest : public Test {
     char data_block_path[PATH_MAX];
     // Second, wait for the data partition to be formatted.
     snprintf(data_block_path, sizeof(data_block_path), "%s/zxcrypt/unsealed/block",
-             fvm_block_path_);
+             fvm_block_path_.c_str());
     fbl::unique_fd fd;
     WaitForDevice(data_block_path, &fd);
   }
@@ -220,33 +221,37 @@ class FactoryResetTest : public Test {
     static const uint8_t data_guid[GPT_GUID_LEN] = GUID_DATA_VALUE;
     memcpy(req.type, data_guid, BLOCK_GUID_LEN);
 
-    fuchsia_hardware_block_partition_GUID type_guid;
-    memcpy(type_guid.value, req.type, BLOCK_GUID_LEN);
-    fuchsia_hardware_block_partition_GUID instance_guid;
-    memcpy(instance_guid.value, req.guid, BLOCK_GUID_LEN);
+    fuchsia_hardware_block_partition::wire::Guid type_guid;
+    memcpy(type_guid.value.data(), req.type, BLOCK_GUID_LEN);
+    fuchsia_hardware_block_partition::wire::Guid instance_guid;
+    memcpy(instance_guid.value.data(), req.guid, BLOCK_GUID_LEN);
 
     fdio_cpp::UnownedFdioCaller caller(fvm_fd.get());
-    zx_status_t status;
-    ASSERT_EQ(fuchsia_hardware_block_volume_VolumeManagerAllocatePartition(
-                  caller.borrow_channel(), req.slice_count, &type_guid, &instance_guid, kDataName,
-                  strlen(kDataName), req.flags, &status),
-              ZX_OK);
-    ASSERT_EQ(status, ZX_OK);
+    auto response =
+        fidl::WireCall(fidl::UnownedClientEnd<fuchsia_hardware_block_volume::VolumeManager>(
+                           caller.borrow_channel()))
+            .AllocatePartition(req.slice_count, type_guid, instance_guid,
+                               fidl::StringView::FromExternal(kDataName), req.flags);
+    ASSERT_EQ(response.status(), ZX_OK);
+    ASSERT_EQ(response->status, ZX_OK);
 
-    snprintf(fvm_block_path_, sizeof(fvm_block_path_), "%s/%s-p-1/block", fvm_path, kDataName);
+    fvm_block_path_ = fvm_path;
+    fvm_block_path_.append("/");
+    fvm_block_path_.append(kDataName);
+    fvm_block_path_.append("-p-1/block");
     fbl::unique_fd fd;
     WaitForDevice(fvm_block_path_, &fd);
   }
 
-  void WaitForDevice(const char* path, fbl::unique_fd* fd) {
-    printf("wait for device %s\n", path);
-    ASSERT_EQ(devmgr_integration_test::RecursiveWaitForFile(devfs_root(), path, fd), ZX_OK);
+  void WaitForDevice(const std::string& path, fbl::unique_fd* fd) {
+    printf("wait for device %s\n", path.c_str());
+    ASSERT_EQ(devmgr_integration_test::RecursiveWaitForFile(devfs_root(), path.c_str(), fd), ZX_OK);
 
     ASSERT_TRUE(*fd);
   }
 
   ramdisk_client_t* ramdisk_client_;
-  char fvm_block_path_[PATH_MAX];
+  std::string fvm_block_path_;
   std::unique_ptr<IsolatedDevmgr> devmgr_;
 };
 

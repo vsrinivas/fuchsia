@@ -13,6 +13,7 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
+#include "src/storage/fshost/constants.h"
 #include "src/storage/fshost/filesystem-mounter.h"
 #include "src/storage/fshost/fs-manager.h"
 #include "src/storage/fshost/fshost_integration_test.h"
@@ -108,8 +109,6 @@ TEST(BlockDeviceManager, ReadOptions) {
 // which in turn sets the fshost variable kMinfsMaxBytes. This test is checking that this setting
 // actually was sent to fshost and applies to FVM.
 TEST_F(BlockDeviceManagerIntegration, MaxSize) {
-  namespace fio = fuchsia_io;
-
   constexpr uint32_t kBlockCount = 9 * 1024 * 256;
   constexpr uint32_t kBlockSize = 512;
   constexpr uint32_t kSliceSize = 32'768;
@@ -175,6 +174,65 @@ TEST_F(BlockDeviceManagerIntegration, MaxSize) {
   // The partition limit should match the value set in the integration test fshost configuration
   // (see the BUILD.gn file).
   EXPECT_EQ(limit_result->byte_count, 117440512u);
+}
+
+TEST_F(BlockDeviceManagerIntegration, SetPartitionName) {
+  constexpr uint32_t kBlockCount = 9 * 1024 * 256;
+  constexpr uint32_t kBlockSize = 512;
+  constexpr uint32_t kSliceSize = 32'768;
+  constexpr size_t kDeviceSize = kBlockCount * kBlockSize;
+
+  PauseWatcher();  // Pause whilst we create a ramdisk.
+
+  // Create a ramdisk with an unformatted minfs partitition.
+  zx::vmo vmo;
+  ASSERT_EQ(zx::vmo::create(kDeviceSize, 0, &vmo), ZX_OK);
+
+  // Create a child VMO so that we can keep hold of the original.
+  zx::vmo child_vmo;
+  ASSERT_EQ(vmo.create_child(ZX_VMO_CHILD_SLICE, 0, kDeviceSize, &child_vmo), ZX_OK);
+
+  // Now create the ram-disk with a single FVM partition.
+  {
+    auto ramdisk_or = storage::RamDisk::CreateWithVmo(std::move(child_vmo), kBlockSize);
+    ASSERT_EQ(ramdisk_or.status_value(), ZX_OK);
+    storage::FvmOptions options{
+        .name = "minfs",  // Use a legacy name
+        .type = std::array<uint8_t, BLOCK_GUID_LEN>{GUID_DATA_VALUE},
+    };
+    auto fvm_partition_or = storage::CreateFvmPartition(ramdisk_or->path(), kSliceSize, options);
+    ASSERT_EQ(fvm_partition_or.status_value(), ZX_OK);
+  }
+
+  ResumeWatcher();
+
+  // Now reattach the ram-disk and fshost should format it.
+  auto ramdisk_or = storage::RamDisk::CreateWithVmo(std::move(vmo), kBlockSize);
+  ASSERT_EQ(ramdisk_or.status_value(), ZX_OK);
+  auto [fd, fs_type] = WaitForMount("minfs");
+  ASSERT_TRUE(fd);
+  EXPECT_TRUE(fs_type == VFS_TYPE_MINFS || fs_type == VFS_TYPE_FXFS);
+
+  // FVM will be at something like "/dev/sys/platform/00:00:2d/ramctl/ramdisk-1/block/fvm"
+  std::string fvm_path = ramdisk_or.value().path() + "/fvm";
+  fbl::unique_fd fvm_fd(open(fvm_path.c_str(), O_RDONLY));
+  ASSERT_TRUE(fvm_fd);
+
+  // The minfs partition will be the only one inside FVM.
+  std::string partition_path = fvm_path + "/minfs-p-1/block";
+  fbl::unique_fd partition_fd(open(partition_path.c_str(), O_RDONLY));
+  ASSERT_TRUE(partition_fd);
+
+  // Query the partition name.
+  fdio_cpp::UnownedFdioCaller partition_caller(partition_fd.get());
+  auto result = fidl::WireCall(fidl::UnownedClientEnd<fuchsia_hardware_block_volume::Volume>(
+                                   partition_caller.borrow_channel()))
+                    .GetName();
+  ASSERT_EQ(result.status(), ZX_OK);
+  ASSERT_EQ(result->status, ZX_OK);
+
+  // It should be the preferred name.
+  ASSERT_EQ(result->name.get(), kDataPartitionLabel);
 }
 
 }  // namespace

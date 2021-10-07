@@ -38,6 +38,7 @@ if (is_fuchsia) {
       "//sdk/fidl/fuchsia.hardware.block:fuchsia.hardware.block_llcpp",
       "//sdk/fidl/fuchsia.hardware.block.partition:fuchsia.hardware.block.partition_c",
       "//sdk/fidl/fuchsia.hardware.block.volume:fuchsia.hardware.block.volume_c",
+      "//sdk/fidl/fuchsia.hardware.block.volume:fuchsia.hardware.block.volume_llcpp",
       "//src/lib/digest",
       "//src/lib/storage/vfs/cpp",
       "//src/storage/fvm",

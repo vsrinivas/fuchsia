@@ -56,6 +56,10 @@ group("tests") {
   ]
 }
 
+source_set("headers") {
+  sources = [ "constants.h" ]
+}
+
 source_set("launcher") {
   visibility = [ ":*" ]
   sources = [ "fdio.cc" ]
@@ -86,6 +90,7 @@ source_set("fshost-registry") {
     "//sdk/fidl/fuchsia.device.manager:fuchsia.device.manager_llcpp",
     "//sdk/fidl/fuchsia.feedback:fuchsia.feedback_llcpp",
     "//sdk/fidl/fuchsia.fshost:fuchsia.fshost_llcpp",
+    "//sdk/fidl/fuchsia.hardware.block.partition:fuchsia.hardware.block.partition_llcpp",
     "//sdk/fidl/fuchsia.process.lifecycle:fuchsia.process.lifecycle_llcpp",
     "//sdk/lib/fit",
     "//sdk/lib/vfs/cpp",
@@ -196,6 +201,7 @@ source_set("block-watcher") {
     "//zircon/system/ulib/zx",
   ]
   deps = [
+    ":headers",
     "//sdk/fidl/fuchsia.boot:fuchsia.boot_c",
     "//sdk/fidl/fuchsia.boot:fuchsia.boot_llcpp",
     "//sdk/fidl/fuchsia.device:fuchsia.device_c",
@@ -409,6 +415,7 @@ test("fshost_integration_test") {
   ]
   deps = [
     ":block-watcher",
+    ":headers",
     ":metrics_cobalt",
     "//sdk/fidl/fuchsia.boot:fuchsia.boot_llcpp",
     "//sdk/fidl/fuchsia.device:fuchsia.device_llcpp",

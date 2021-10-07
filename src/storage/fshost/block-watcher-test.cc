@@ -15,13 +15,14 @@
 #include <gtest/gtest.h>
 #include <ramdevice-client/ramdisk.h>
 
-#include "block-device-interface.h"
-#include "block-device-manager.h"
-#include "block-watcher-test-data.h"
-#include "encrypted-volume-interface.h"
-#include "mock-block-device.h"
 #include "src/lib/files/glob.h"
+#include "src/storage/fshost/block-device-interface.h"
+#include "src/storage/fshost/block-device-manager.h"
+#include "src/storage/fshost/block-watcher-test-data.h"
+#include "src/storage/fshost/constants.h"
+#include "src/storage/fshost/encrypted-volume-interface.h"
 #include "src/storage/fshost/fshost_integration_test.h"
+#include "src/storage/fshost/mock-block-device.h"
 #include "src/storage/testing/ram_disk.h"
 
 namespace fshost {
@@ -213,8 +214,8 @@ TEST(AddDeviceTestCase, AddFormattedBlockVerityDeviceInAuthoringMode) {
 TEST(AddDeviceTestCase, AddNoGUIDBlobDevice) {
   class BlobDeviceWithInvalidTypeGuid : public MockBlobfsDevice {
    public:
-    const fuchsia_hardware_block_partition_GUID& GetTypeGuid() const final {
-      static fuchsia_hardware_block_partition_GUID guid = GUID_TEST_VALUE;
+    const fuchsia_hardware_block_partition::wire::Guid& GetTypeGuid() const final {
+      static fuchsia_hardware_block_partition::wire::Guid guid = GUID_TEST_VALUE;
       return guid;
     }
   };
@@ -279,8 +280,8 @@ TEST(AddDeviceTestCase, AddNoGUIDMinfsDevice) {
    public:
     using MockBlockDevice::MockBlockDevice;
 
-    const fuchsia_hardware_block_partition_GUID& GetTypeGuid() const final {
-      static fuchsia_hardware_block_partition_GUID guid = GUID_TEST_VALUE;
+    const fuchsia_hardware_block_partition::wire::Guid& GetTypeGuid() const final {
+      static fuchsia_hardware_block_partition::wire::Guid guid = GUID_TEST_VALUE;
       return guid;
     }
   };
@@ -480,8 +481,8 @@ TEST(AddDeviceTestCase, AddValidDurableDevice) {
               .partition_name = GPT_DURABLE_NAME,
           }) {}
 
-    const fuchsia_hardware_block_partition_GUID& GetTypeGuid() const final {
-      static fuchsia_hardware_block_partition_GUID guid = GPT_DURABLE_TYPE_GUID;
+    const fuchsia_hardware_block_partition::wire::Guid& GetTypeGuid() const final {
+      static fuchsia_hardware_block_partition::wire::Guid guid = GPT_DURABLE_TYPE_GUID;
       return guid;
     }
   };
@@ -489,8 +490,8 @@ TEST(AddDeviceTestCase, AddValidDurableDevice) {
    public:
     using MockBlockDevice::MockBlockDevice;
 
-    const fuchsia_hardware_block_partition_GUID& GetTypeGuid() const final {
-      static fuchsia_hardware_block_partition_GUID guid = GPT_DURABLE_TYPE_GUID;
+    const fuchsia_hardware_block_partition::wire::Guid& GetTypeGuid() const final {
+      static fuchsia_hardware_block_partition::wire::Guid guid = GPT_DURABLE_TYPE_GUID;
       return guid;
     }
     zx_status_t CheckFilesystem() final {

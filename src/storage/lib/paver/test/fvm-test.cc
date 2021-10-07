@@ -154,7 +154,7 @@ TEST_F(FvmTest, AllocateEmptyPartitions) {
   ASSERT_TRUE(blob.is_valid());
 
   fbl::unique_fd data(openat(devfs_root().get(),
-                             "sys/platform/00:00:2d/ramctl/ramdisk-0/block/fvm/minfs-p-2/block",
+                             "sys/platform/00:00:2d/ramctl/ramdisk-0/block/fvm/data-p-2/block",
                              O_RDONLY));
   ASSERT_TRUE(data.is_valid());
 }
@@ -173,7 +173,7 @@ TEST_F(FvmTest, Unbind) {
   ASSERT_TRUE(blob.is_valid());
 
   fbl::unique_fd data(openat(devfs_root().get(),
-                             "sys/platform/00:00:2d/ramctl/ramdisk-0/block/fvm/minfs-p-2/block",
+                             "sys/platform/00:00:2d/ramctl/ramdisk-0/block/fvm/data-p-2/block",
                              O_RDONLY));
   ASSERT_TRUE(data.is_valid());
   ASSERT_OK(paver::FvmUnbind(devfs_root(), "/dev/sys/platform/00:00:2d/ramctl/ramdisk-0/block"));
@@ -196,7 +196,7 @@ TEST_F(FvmTest, UnbindInvalidPath) {
   ASSERT_TRUE(blob.is_valid());
 
   fbl::unique_fd data(openat(devfs_root().get(),
-                             "sys/platform/00:00:2d/ramctl/ramdisk-0/block/fvm/minfs-p-2/block",
+                             "sys/platform/00:00:2d/ramctl/ramdisk-0/block/fvm/data-p-2/block",
                              O_RDONLY));
   ASSERT_TRUE(data.is_valid());
 

@@ -7,6 +7,7 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <fidl/fuchsia.device/cpp/wire.h>
+#include <fidl/fuchsia.hardware.block.volume/cpp/wire.h>
 #include <fidl/fuchsia.io/cpp/wire.h>
 #include <fuchsia/hardware/block/partition/c/fidl.h>
 #include <lib/devmgr-integration-test/fixture.h>
@@ -65,7 +66,7 @@ fidl::VectorView<uint8_t> ToFidlVector(const fbl::Array<uint8_t>& data) {
   return fidl::VectorView<uint8_t>::FromExternal(const_cast<uint8_t*>(data.data()), data.size());
 }
 
-using FidlGuid = fuchsia_hardware_block_partition_GUID;
+using FidlGuid = fuchsia_hardware_block_partition::wire::Guid;
 
 zx::unowned_channel GetChannel(int fd) {
   if (fd < 0) {
@@ -307,28 +308,27 @@ FvmAdapter::~FvmAdapter() { fvm_destroy_with_devfs(devfs_root_, block_device_->p
 zx_status_t FvmAdapter::AddPartition(const fbl::unique_fd& devfs_root, const std::string& name,
                                      const Guid& guid, const Guid& type, uint64_t slice_count,
                                      std::unique_ptr<VPartitionAdapter>* out_partition) {
-  zx_status_t status;
   FidlGuid fidl_guid, fidl_type;
-  memcpy(fidl_guid.value, guid.data(), guid.size());
-  memcpy(fidl_type.value, type.data(), type.size());
+  memcpy(fidl_guid.value.data(), guid.data(), guid.size());
+  memcpy(fidl_type.value.data(), type.data(), type.size());
 
-  zx_status_t fidl_status = fuchsia_hardware_block_volume_VolumeManagerAllocatePartition(
-      channel_->get(), slice_count, &fidl_type, &fidl_guid, name.c_str(), name.size(), 0u, &status);
-  if (fidl_status != ZX_OK) {
-    return fidl_status;
+  auto response =
+      fidl::WireCall(fidl::UnownedClientEnd<fuchsia_hardware_block_volume::VolumeManager>(channel_))
+          .AllocatePartition(slice_count, fidl_type, fidl_guid,
+                             fidl::StringView::FromExternal(name), 0u);
+  if (response.status() != ZX_OK) {
+    return response.status();
   }
 
-  if (status != ZX_OK) {
-    return status;
+  if (response->status != ZX_OK) {
+    return response->status;
   }
 
   auto vpartition = VPartitionAdapter::Create(devfs_root, name, guid, type);
   if (vpartition == nullptr) {
     return ZX_ERR_INVALID_ARGS;
   }
-  status = vpartition->WaitUntilVisible();
-
-  if (status != ZX_OK) {
+  if (zx_status_t status = vpartition->WaitUntilVisible(); status != ZX_OK) {
     return status;
   }
 
@@ -336,7 +336,7 @@ zx_status_t FvmAdapter::AddPartition(const fbl::unique_fd& devfs_root, const std
     *out_partition = std::move(vpartition);
   }
 
-  return status;
+  return ZX_OK;
 }
 
 zx_status_t FvmAdapter::Rebind(fbl::Vector<VPartitionAdapter*> vpartitions) {

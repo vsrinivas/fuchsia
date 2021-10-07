@@ -1708,7 +1708,7 @@ TEST_F(PaverServiceSkipBlockTest, WipeVolumeCreatesFvm) {
   EXPECT_EQ(kBufferSize, pread(blob_device.get(), buffer, kBufferSize, 0));
   EXPECT_BYTES_EQ(kEmptyData, buffer, kBufferSize);
 
-  std::string data_path = path + "/minfs-p-2/block";
+  std::string data_path = path + "/data-p-2/block";
   fbl::unique_fd data_device(openat(device_->devfs_root().get(), data_path.c_str(), O_RDONLY));
   ASSERT_TRUE(data_device);
 

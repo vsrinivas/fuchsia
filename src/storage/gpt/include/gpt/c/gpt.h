@@ -30,22 +30,22 @@ char* utf16_to_cstring(char* dst, const uint16_t* src, size_t len);
 void uint8_to_guid_string(char* dst, const uint8_t* src);
 
 // determines whether guid is system guid
-bool gpt_is_sys_guid(uint8_t* guid, ssize_t len);
+bool gpt_is_sys_guid(const uint8_t* guid, ssize_t len);
 
 // determines whether guid is data guid
-bool gpt_is_data_guid(uint8_t* guid, ssize_t len);
+bool gpt_is_data_guid(const uint8_t* guid, ssize_t len);
 
 // determines whether guid is install guid
-bool gpt_is_install_guid(uint8_t* guid, ssize_t len);
+bool gpt_is_install_guid(const uint8_t* guid, ssize_t len);
 
 // determines whether guid is durable guid
-bool gpt_is_durable_guid(uint8_t* guid, ssize_t len);
+bool gpt_is_durable_guid(const uint8_t* guid, ssize_t len);
 
 // determines whether guid is efi guid
-bool gpt_is_efi_guid(uint8_t* guid, ssize_t len);
+bool gpt_is_efi_guid(const uint8_t* guid, ssize_t len);
 
 // determines whether guid is factory guid
-bool gpt_is_factory_guid(uint8_t* guid, ssize_t len);
+bool gpt_is_factory_guid(const uint8_t* guid, ssize_t len);
 
 void gpt_set_debug_output_enabled(bool enabled);
 

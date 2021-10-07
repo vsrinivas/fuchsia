@@ -7,6 +7,7 @@
 #include <dirent.h>
 #include <errno.h>
 #include <fcntl.h>
+#include <fidl/fuchsia.hardware.block.volume/cpp/wire.h>
 #include <fuchsia/hardware/block/c/fidl.h>
 #include <fuchsia/hardware/block/partition/c/fidl.h>
 #include <fuchsia/hardware/block/volume/c/fidl.h>
@@ -298,10 +299,10 @@ zx_status_t fvm_destroy_with_devfs(int devfs_root_fd, const char* relative_path)
 int fvm_allocate_partition_impl(int fvm_fd, const alloc_req_t* request) {
   fdio_cpp::UnownedFdioCaller caller(fvm_fd);
 
-  fuchsia_hardware_block_partition_GUID type_guid;
-  memcpy(type_guid.value, request->type, BLOCK_GUID_LEN);
-  fuchsia_hardware_block_partition_GUID instance_guid;
-  memcpy(instance_guid.value, request->guid, BLOCK_GUID_LEN);
+  fuchsia_hardware_block_partition::wire::Guid type_guid;
+  memcpy(type_guid.value.data(), request->type, BLOCK_GUID_LEN);
+  fuchsia_hardware_block_partition::wire::Guid instance_guid;
+  memcpy(instance_guid.value.data(), request->guid, BLOCK_GUID_LEN);
 
   // TODO(fxbug.dev/52757): Add name_size to alloc_req_t.
   //
@@ -315,11 +316,12 @@ int fvm_allocate_partition_impl(int fvm_fd, const alloc_req_t* request) {
       break;
     }
   }
-  zx_status_t status;
-  zx_status_t io_status = fuchsia_hardware_block_volume_VolumeManagerAllocatePartition(
-      caller.borrow_channel(), request->slice_count, &type_guid, &instance_guid, request->name,
-      request_name_size, request->flags, &status);
-  if (io_status != ZX_OK || status != ZX_OK) {
+  fidl::UnownedClientEnd<fuchsia_hardware_block_volume::VolumeManager> client(
+      caller.borrow_channel());
+  auto response = fidl::WireCall(client).AllocatePartition(
+      request->slice_count, type_guid, instance_guid,
+      fidl::StringView::FromExternal(request->name, request_name_size), request->flags);
+  if (response.status() != ZX_OK || response->status != ZX_OK) {
     return -1;
   }
   return 0;
@@ -349,13 +351,17 @@ __EXPORT
 zx_status_t fvm_query(int fvm_fd, fuchsia_hardware_block_volume_VolumeInfo* out) {
   fdio_cpp::UnownedFdioCaller caller(fvm_fd);
 
-  zx_status_t status;
-  zx_status_t io_status =
-      fuchsia_hardware_block_volume_VolumeManagerQuery(caller.borrow_channel(), &status, out);
-  if (io_status != ZX_OK) {
-    return io_status;
-  }
-  return status;
+  auto response =
+      fidl::WireCall(fidl::UnownedClientEnd<fuchsia_hardware_block_volume::VolumeManager>(
+                         caller.borrow_channel()))
+          .Query();
+
+  if (response.status() != ZX_OK)
+    return response.status();
+  if (response->status != ZX_OK)
+    return response->status;
+  *out = reinterpret_cast<fuchsia_hardware_block_volume_VolumeInfo&>(*response->info);
+  return ZX_OK;
 }
 
 // Takes ownership of |dir|.

@@ -82,6 +82,7 @@ class VPartitionManager : public ManagerDeviceType {
 
   zx_status_t GetPartitionLimitInternal(const uint8_t* guid, uint64_t* byte_count) const;
   zx_status_t SetPartitionLimitInternal(const uint8_t* guid, uint64_t byte_count);
+  zx_status_t SetPartitionNameInternal(const uint8_t* guid, std::string_view name);
 
   size_t DiskSize() const { return info_.block_count * info_.block_size; }
   size_t slice_size() const { return slice_size_; }
@@ -112,14 +113,16 @@ class VPartitionManager : public ManagerDeviceType {
 
  private:
   void AllocatePartition(AllocatePartitionRequestView request,
-                         AllocatePartitionCompleter::Sync& completer);
-  void Query(QueryRequestView request, QueryCompleter::Sync& completer);
-  void GetInfo(GetInfoRequestView request, GetInfoCompleter::Sync& completer);
-  void Activate(ActivateRequestView request, ActivateCompleter::Sync& completer);
+                         AllocatePartitionCompleter::Sync& completer) override;
+  void Query(QueryRequestView request, QueryCompleter::Sync& completer) override;
+  void GetInfo(GetInfoRequestView request, GetInfoCompleter::Sync& completer) override;
+  void Activate(ActivateRequestView request, ActivateCompleter::Sync& completer) override;
   void GetPartitionLimit(GetPartitionLimitRequestView request,
-                         GetPartitionLimitCompleter::Sync& completer);
+                         GetPartitionLimitCompleter::Sync& completer) override;
   void SetPartitionLimit(SetPartitionLimitRequestView request,
-                         SetPartitionLimitCompleter::Sync& completer);
+                         SetPartitionLimitCompleter::Sync& completer) override;
+  void SetPartitionName(SetPartitionNameRequestView request,
+                        SetPartitionNameCompleter::Sync& completer) override;
 
   // Marks the partition with instance GUID |old_guid| as inactive,
   // and marks partitions with instance GUID |new_guid| as active.

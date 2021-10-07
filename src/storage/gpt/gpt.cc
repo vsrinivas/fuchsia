@@ -204,32 +204,32 @@ char* utf16_to_cstring(char* dst, const uint16_t* src, size_t len) {
   return dst;
 }
 
-bool gpt_is_sys_guid(uint8_t* guid, ssize_t len) {
+bool gpt_is_sys_guid(const uint8_t* guid, ssize_t len) {
   static const uint8_t sys_guid[GPT_GUID_LEN] = GUID_SYSTEM_VALUE;
   return len == GPT_GUID_LEN && !memcmp(guid, sys_guid, GPT_GUID_LEN);
 }
 
-bool gpt_is_data_guid(uint8_t* guid, ssize_t len) {
+bool gpt_is_data_guid(const uint8_t* guid, ssize_t len) {
   static const uint8_t data_guid[GPT_GUID_LEN] = GUID_DATA_VALUE;
   return len == GPT_GUID_LEN && !memcmp(guid, data_guid, GPT_GUID_LEN);
 }
 
-bool gpt_is_install_guid(uint8_t* guid, ssize_t len) {
+bool gpt_is_install_guid(const uint8_t* guid, ssize_t len) {
   static const uint8_t install_guid[GPT_GUID_LEN] = GUID_INSTALL_VALUE;
   return len == GPT_GUID_LEN && !memcmp(guid, install_guid, GPT_GUID_LEN);
 }
 
-bool gpt_is_durable_guid(uint8_t* guid, ssize_t len) {
+bool gpt_is_durable_guid(const uint8_t* guid, ssize_t len) {
   static const uint8_t durable_guid[GPT_GUID_LEN] = GPT_DURABLE_TYPE_GUID;
   return len == GPT_GUID_LEN && !memcmp(guid, durable_guid, GPT_GUID_LEN);
 }
 
-bool gpt_is_efi_guid(uint8_t* guid, ssize_t len) {
+bool gpt_is_efi_guid(const uint8_t* guid, ssize_t len) {
   static const uint8_t efi_guid[GPT_GUID_LEN] = GUID_EFI_VALUE;
   return len == GPT_GUID_LEN && !memcmp(guid, efi_guid, GPT_GUID_LEN);
 }
 
-bool gpt_is_factory_guid(uint8_t* guid, ssize_t len) {
+bool gpt_is_factory_guid(const uint8_t* guid, ssize_t len) {
   static const uint8_t factory_guid[GPT_GUID_LEN] = GPT_FACTORY_TYPE_GUID;
   return len == GPT_GUID_LEN && !memcmp(guid, factory_guid, GPT_GUID_LEN);
 }

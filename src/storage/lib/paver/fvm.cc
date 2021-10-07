@@ -36,6 +36,7 @@
 #include "pave-logging.h"
 #include "src/lib/uuid/uuid.h"
 #include "src/security/zxcrypt/client.h"
+#include "src/storage/fshost/constants.h"
 #include "src/storage/fvm/format.h"
 #include "src/storage/fvm/fvm.h"
 #include "src/storage/fvm/fvm_sparse.h"
@@ -600,26 +601,41 @@ zx_status_t AllocatePartitions(const fbl::unique_fd& devfs_root, const fbl::uniq
 // for a PartitionDescriptor, in reality it treats that as a descriptor followed by a bunch of
 // extents, so this copes with that de-facto pattern.
 struct FvmPartition {
+  // Returns an FVM partition with no real information about extents.  In order to
+  // use the partitions, they should be formatted with the appropriate filesystem.
+  static FvmPartition Make(const std::array<uint8_t, fvm::kGuidSize> partition_type,
+                           std::string_view name) {
+    FvmPartition partition{.extent = {
+                               .slice_count = 1,
+                           }};
+    std::copy(std::begin(partition_type), std::end(partition_type),
+              std::begin(partition.descriptor.type));
+    std::copy(name.begin(), name.end(), std::begin(partition.descriptor.name));
+    return partition;
+  }
+
   fvm::PartitionDescriptor descriptor;
   fvm::ExtentDescriptor extent;
 };
-
-// Description of the basic FVM partitions, with no real information about extents.
-// In order to use the partitions, they should be formatted with the appropriate
-// filesystem.
-constexpr FvmPartition kBasicPartitions[] = {{{0, GUID_BLOB_VALUE, "blobfs", 0, 0}, {0, 0, 1, 0}},
-                                             {{0, GUID_DATA_VALUE, "minfs", 0, 0}, {0, 0, 1, 0}}};
 
 }  // namespace
 
 zx::status<> AllocateEmptyPartitions(const fbl::unique_fd& devfs_root,
                                      const fbl::unique_fd& fvm_fd) {
-  fbl::Array<PartitionInfo> partitions(new PartitionInfo[2], 2);
-  partitions[0].pd = const_cast<fvm::PartitionDescriptor*>(&kBasicPartitions[0].descriptor);
-  partitions[1].pd = const_cast<fvm::PartitionDescriptor*>(&kBasicPartitions[1].descriptor);
-  partitions[0].active = true;
-  partitions[1].active = true;
-
+  FvmPartition fvm_partitions[] = {
+      FvmPartition::Make(std::array<uint8_t, fvm::kGuidSize>(GUID_BLOB_VALUE),
+                         fshost::kBlobfsPartitionLabel),
+      FvmPartition::Make(std::array<uint8_t, fvm::kGuidSize>(GUID_DATA_VALUE),
+                         fshost::kDataPartitionLabel)};
+  fbl::Array<PartitionInfo> partitions(new PartitionInfo[2]{{
+                                                                .pd = &fvm_partitions[0].descriptor,
+                                                                .active = true,
+                                                            },
+                                                            {
+                                                                .pd = &fvm_partitions[1].descriptor,
+                                                                .active = true,
+                                                            }},
+                                       2);
   return zx::make_status(AllocatePartitions(devfs_root, fvm_fd, &partitions));
 }
 

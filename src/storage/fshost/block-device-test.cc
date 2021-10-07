@@ -133,7 +133,7 @@ TEST_F(BlockDeviceTest, TestBadHandleDevice) {
   EXPECT_EQ(device.GetFormat(), DISK_FORMAT_UNKNOWN);
   fuchsia_hardware_block_BlockInfo info;
   EXPECT_EQ(device.GetInfo(&info), ZX_ERR_BAD_HANDLE);
-  fuchsia_hardware_block_partition_GUID null_guid{};
+  fuchsia_hardware_block_partition::wire::Guid null_guid{};
   EXPECT_EQ(memcmp(&device.GetTypeGuid(), &null_guid, sizeof(null_guid)), 0);
   EXPECT_EQ(device.AttachDriver("/foobar"), ZX_ERR_BAD_HANDLE);
 
@@ -168,7 +168,7 @@ TEST_F(BlockDeviceTest, TestEmptyDevice) {
   EXPECT_EQ(info.block_count, kBlockCount);
   EXPECT_EQ(info.block_size, kBlockSize);
 
-  static constexpr fuchsia_hardware_block_partition_GUID expected_guid = GUID_DATA_VALUE;
+  static constexpr fuchsia_hardware_block_partition::wire::Guid expected_guid = GUID_DATA_VALUE;
   EXPECT_EQ(memcmp(&device.GetTypeGuid(), &expected_guid, sizeof(expected_guid)), 0);
 
   EXPECT_EQ(device.FormatFilesystem(), ZX_ERR_NOT_SUPPORTED);

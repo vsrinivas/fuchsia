@@ -47,7 +47,6 @@ type VolumeManagerInfo = struct {
 const ALLOCATE_PARTITION_FLAG_INACTIVE uint32 = 0x00000001;
 
 /// VolumeManager controls a collection of Volumes.
-@for_deprecated_c_bindings
 protocol VolumeManager {
     /// Allocates a virtual partition with the requested features.
     ///
@@ -127,6 +126,14 @@ protocol VolumeManager {
     }) -> (struct {
         status zx.status;
     });
+
+    /// Renames the specified partition. Any existing devices that include the name of the partition
+    /// in their topological path might *not* reflect the name change until the next time that the
+    /// device is instantiated.
+    SetPartitionName(struct {
+        guid partition.GUID;
+        name string:<partition.NAME_LENGTH>;
+    }) -> (struct {}) error zx.status;
 };
 
 /// An arbitrary cap on the number of slices which may be requested when querying

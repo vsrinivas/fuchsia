@@ -12,6 +12,7 @@
 #include <gtest/gtest.h>
 
 #include "src/storage/fshost/block-device-interface.h"
+#include "src/storage/fshost/constants.h"
 
 namespace fshost {
 
@@ -53,14 +54,15 @@ class MockBlockDevice : public BlockDeviceInterface {
     };
   }
 
-  explicit MockBlockDevice(const Options& options = Options::Default()) : options_(options) {}
+  explicit MockBlockDevice(const Options& options = Options::Default())
+      : options_(options), partition_name_(options_.partition_name) {}
 
   // Returns the value SetPartitionMaxSize() was called with. Will be a nullopt if uncalled.
   const std::optional<uint64_t>& max_size() const { return max_size_; }
 
   disk_format_t content_format() const override { return options_.content_format; }
   const std::string& topological_path() const override { return options_.topological_path; }
-  const std::string& partition_name() const override { return options_.partition_name; }
+  const std::string& partition_name() const override { return partition_name_; }
   disk_format_t GetFormat() final { return format_; }
   void SetFormat(disk_format_t format) final { format_ = format; }
   zx_status_t GetInfo(fuchsia_hardware_block_BlockInfo* out_info) const override {
@@ -71,14 +73,14 @@ class MockBlockDevice : public BlockDeviceInterface {
     *out_info = info;
     return ZX_OK;
   }
-  const fuchsia_hardware_block_partition_GUID& GetInstanceGuid() const override {
+  const fuchsia_hardware_block_partition::wire::Guid& GetInstanceGuid() const override {
     ADD_FAILURE() << "Test should not invoke function " << __FUNCTION__;
-    static fuchsia_hardware_block_partition_GUID null_guid{};
+    static fuchsia_hardware_block_partition::wire::Guid null_guid{};
     return null_guid;
   }
-  const fuchsia_hardware_block_partition_GUID& GetTypeGuid() const override {
+  const fuchsia_hardware_block_partition::wire::Guid& GetTypeGuid() const override {
     ADD_FAILURE() << "Test should not invoke function " << __FUNCTION__;
-    static fuchsia_hardware_block_partition_GUID null_guid;
+    static fuchsia_hardware_block_partition::wire::Guid null_guid;
     return null_guid;
   }
   zx_status_t AttachDriver(const std::string_view& driver) override {
@@ -127,6 +129,10 @@ class MockBlockDevice : public BlockDeviceInterface {
     max_size_ = max_size;
     return ZX_OK;
   }
+  zx_status_t SetPartitionName(const std::string& fvm_path, std::string_view name) override {
+    partition_name_ = name;
+    return ZX_OK;
+  }
 
   bool IsNand() const override { return options_.is_nand; }
 
@@ -138,6 +144,7 @@ class MockBlockDevice : public BlockDeviceInterface {
   bool attached_ = false;
 
   std::optional<uint64_t> max_size_;
+  std::string partition_name_;
 };
 
 class MockBlockVerityDevice : public MockBlockDevice {
@@ -150,8 +157,8 @@ class MockBlockVerityDevice : public MockBlockDevice {
 
   MockBlockVerityDevice(bool allow_authoring, const Options& options = VerityOptions())
       : MockBlockDevice(options), allow_authoring_(allow_authoring) {}
-  const fuchsia_hardware_block_partition_GUID& GetTypeGuid() const final {
-    static fuchsia_hardware_block_partition_GUID guid = GPT_FACTORY_TYPE_GUID;
+  const fuchsia_hardware_block_partition::wire::Guid& GetTypeGuid() const final {
+    static fuchsia_hardware_block_partition::wire::Guid guid = GPT_FACTORY_TYPE_GUID;
     return guid;
   }
   bool ShouldAllowAuthoringFactory() override { return allow_authoring_; }
@@ -189,8 +196,8 @@ class MockFactoryfsDevice : public MockBlockDevice {
 
   MockFactoryfsDevice() : MockBlockDevice(FactoryfsOptions()) {}
 
-  const fuchsia_hardware_block_partition_GUID& GetTypeGuid() const final {
-    static fuchsia_hardware_block_partition_GUID guid = GPT_FACTORY_TYPE_GUID;
+  const fuchsia_hardware_block_partition::wire::Guid& GetTypeGuid() const final {
+    static fuchsia_hardware_block_partition::wire::Guid guid = GPT_FACTORY_TYPE_GUID;
     return guid;
   }
   zx_status_t CheckFilesystem() override {
@@ -220,14 +227,14 @@ class MockBlobfsDevice : public MockBlockDevice {
   static Options BlobfsOptions() {
     return {
         .topological_path = MockBlockDevice::BaseTopologicalPath() + "/fvm/blobfs-p-1/block",
-        .partition_name = "blobfs",
+        .partition_name = std::string(kBlobfsPartitionLabel),
     };
   }
 
   MockBlobfsDevice() : MockBlockDevice(BlobfsOptions()) {}
 
-  const fuchsia_hardware_block_partition_GUID& GetTypeGuid() const override {
-    static fuchsia_hardware_block_partition_GUID guid = GUID_BLOB_VALUE;
+  const fuchsia_hardware_block_partition::wire::Guid& GetTypeGuid() const override {
+    static fuchsia_hardware_block_partition::wire::Guid guid = GUID_BLOB_VALUE;
     return guid;
   }
   zx_status_t CheckFilesystem() override {
@@ -265,8 +272,8 @@ class MockZxcryptDevice : public MockBlockDevice {
 
   MockZxcryptDevice(const Options& options = ZxcryptOptions()) : MockBlockDevice(options) {}
 
-  const fuchsia_hardware_block_partition_GUID& GetTypeGuid() const override {
-    static fuchsia_hardware_block_partition_GUID guid = GUID_DATA_VALUE;
+  const fuchsia_hardware_block_partition::wire::Guid& GetTypeGuid() const override {
+    static fuchsia_hardware_block_partition::wire::Guid guid = GUID_DATA_VALUE;
     return guid;
   }
   zx_status_t FormatZxcrypt() final {
@@ -291,8 +298,8 @@ class MockMinfsDevice : public MockBlockDevice {
 
   MockMinfsDevice(Options options = MinfsOptions()) : MockBlockDevice(options) {}
 
-  const fuchsia_hardware_block_partition_GUID& GetTypeGuid() const final {
-    static fuchsia_hardware_block_partition_GUID guid = GUID_DATA_VALUE;
+  const fuchsia_hardware_block_partition::wire::Guid& GetTypeGuid() const final {
+    static fuchsia_hardware_block_partition::wire::Guid guid = GUID_DATA_VALUE;
     return guid;
   }
   zx_status_t CheckFilesystem() override {

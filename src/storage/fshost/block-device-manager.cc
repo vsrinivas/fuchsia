@@ -15,6 +15,8 @@
 
 #include <fs-management/format.h>
 
+#include "src/storage/fshost/constants.h"
+
 namespace fshost {
 namespace {
 
@@ -162,7 +164,7 @@ std::string GetFvmPathForPartitionMap(const PartitionMapMatcher& matcher) {
 class SimpleMatcher : public BlockDeviceManager::Matcher {
  public:
   SimpleMatcher(PartitionMapMatcher& map, std::string partition_name,
-                const fuchsia_hardware_block_partition_GUID& type_guid, disk_format_t format,
+                const fuchsia_hardware_block_partition::wire::Guid& type_guid, disk_format_t format,
                 PartitionLimit limit)
       : map_(map),
         partition_name_(partition_name),
@@ -194,7 +196,7 @@ class SimpleMatcher : public BlockDeviceManager::Matcher {
  private:
   const PartitionMapMatcher& map_;
   const std::string partition_name_;
-  const fuchsia_hardware_block_partition_GUID type_guid_;
+  const fuchsia_hardware_block_partition::wire::Guid type_guid_;
   const disk_format_t format_;
   const PartitionLimit limit_;
 };
@@ -220,10 +222,12 @@ class MinfsMatcher : public BlockDeviceManager::Matcher {
   static constexpr std::string_view kZxcryptSuffix = "/zxcrypt/unsealed/block";
 
   MinfsMatcher(const PartitionMapMatcher& map, PartitionNames partition_names,
-               const fuchsia_hardware_block_partition_GUID& type_guid, Variant variant,
+               std::string_view preferred_name,
+               const fuchsia_hardware_block_partition::wire::Guid& type_guid, Variant variant,
                PartitionLimit limit)
       : map_(map),
         partition_names_(std::move(partition_names)),
+        preferred_name_(preferred_name),
         type_guid_(type_guid),
         variant_(variant),
         limit_(limit) {}
@@ -273,6 +277,19 @@ class MinfsMatcher : public BlockDeviceManager::Matcher {
       }
     }
 
+    if (expected_inner_path_.empty() && !preferred_name_.empty() &&
+        device.partition_name() != preferred_name_) {
+      if (zx_status_t status =
+              device.SetPartitionName(GetFvmPathForPartitionMap(map_), preferred_name_);
+          status != ZX_OK) {
+        FX_LOGS(ERROR) << "Failed to change data partition name to '" << preferred_name_
+                       << "': " << zx_status_get_string(status);
+        // Continue since not fatal...
+      } else {
+        FX_LOGS(INFO) << "Changed data partition name to '" << preferred_name_ << "'";
+      }
+    }
+
     // If the volume doesn't appear to be zxcrypt, assume that it's because it was never formatted
     // as such, or the keys have been shredded, so skip straight to reformatting.  Strictly
     // speaking, it's not necessary, because attempting to unseal should trigger the same
@@ -312,7 +329,8 @@ class MinfsMatcher : public BlockDeviceManager::Matcher {
  private:
   const PartitionMapMatcher& map_;
   const PartitionNames partition_names_;
-  const fuchsia_hardware_block_partition_GUID type_guid_;
+  const std::string preferred_name_;
+  const fuchsia_hardware_block_partition::wire::Guid type_guid_;
   const Variant variant_;
   const PartitionLimit limit_;
 
@@ -331,7 +349,7 @@ class FactoryfsMatcher : public BlockDeviceManager::Matcher {
   FactoryfsMatcher(const PartitionMapMatcher& map) : map_(map) {}
 
   disk_format_t Match(const BlockDeviceInterface& device) override {
-    static constexpr fuchsia_hardware_block_partition_GUID factory_type_guid =
+    static constexpr fuchsia_hardware_block_partition::wire::Guid factory_type_guid =
         GPT_FACTORY_TYPE_GUID;
     if (base_path_.empty()) {
       if (map_.IsChild(device) &&
@@ -386,7 +404,7 @@ MinfsMatcher::PartitionNames GetMinfsPartitionNames(bool include_legacy) {
 }  // namespace
 
 BlockDeviceManager::BlockDeviceManager(const Config* config) : config_(*config) {
-  static constexpr fuchsia_hardware_block_partition_GUID minfs_type_guid = GUID_DATA_VALUE;
+  static constexpr fuchsia_hardware_block_partition::wire::Guid minfs_type_guid = GUID_DATA_VALUE;
 
   if (config_.is_set(Config::kBootpart)) {
     matchers_.push_back(std::make_unique<BootpartMatcher>());
@@ -414,11 +432,11 @@ BlockDeviceManager::BlockDeviceManager(const Config* config) : config_(*config) 
   if (!config_.is_set(Config::kNetboot)) {
     // GPT partitions:
     if (config_.is_set(Config::kDurable)) {
-      static constexpr fuchsia_hardware_block_partition_GUID durable_type_guid =
+      static constexpr fuchsia_hardware_block_partition::wire::Guid durable_type_guid =
           GPT_DURABLE_TYPE_GUID;
       matchers_.push_back(std::make_unique<MinfsMatcher>(
-          *gpt, MinfsMatcher::PartitionNames{GPT_DURABLE_NAME}, durable_type_guid,
-          MinfsMatcher::GetVariantFromConfig(config_), PartitionLimit()));
+          *gpt, MinfsMatcher::PartitionNames{GPT_DURABLE_NAME}, std::string_view(),
+          durable_type_guid, MinfsMatcher::GetVariantFromConfig(config_), PartitionLimit()));
       gpt_required = true;
     }
     if (config_.is_set(Config::kFactory)) {
@@ -428,15 +446,18 @@ BlockDeviceManager::BlockDeviceManager(const Config* config) : config_(*config) 
 
     // FVM partitions:
     if (config_.is_set(Config::kBlobfs)) {
-      static constexpr fuchsia_hardware_block_partition_GUID blobfs_type_guid = GUID_BLOB_VALUE;
-      matchers_.push_back(std::make_unique<SimpleMatcher>(*fvm, "blobfs", blobfs_type_guid,
-                                                          DISK_FORMAT_BLOBFS, blobfs_limit));
+      static constexpr fuchsia_hardware_block_partition::wire::Guid blobfs_type_guid =
+          GUID_BLOB_VALUE;
+      matchers_.push_back(std::make_unique<SimpleMatcher>(*fvm, std::string(kBlobfsPartitionLabel),
+                                                          blobfs_type_guid, DISK_FORMAT_BLOBFS,
+                                                          blobfs_limit));
       fvm_required = true;
     }
     if (config_.is_set(Config::kMinfs)) {
       matchers_.push_back(std::make_unique<MinfsMatcher>(
           *fvm, GetMinfsPartitionNames(config_.is_set(Config::kAllowLegacyDataPartitionNames)),
-          minfs_type_guid, MinfsMatcher::GetVariantFromConfig(config_), minfs_limit));
+          kDataPartitionLabel, minfs_type_guid, MinfsMatcher::GetVariantFromConfig(config_),
+          minfs_limit));
       fvm_required = true;
     }
   }
@@ -454,7 +475,7 @@ BlockDeviceManager::BlockDeviceManager(const Config* config) : config_(*config) 
         matchers_.push_back(std::make_unique<MinfsMatcher>(
             *non_ramdisk_fvm,
             GetMinfsPartitionNames(config_.is_set(Config::kAllowLegacyDataPartitionNames)),
-            minfs_type_guid,
+            kDataPartitionLabel, minfs_type_guid,
             MinfsMatcher::Variant{.zxcrypt = MinfsMatcher::ZxcryptVariant::kZxcryptOnly},
             minfs_limit));
       }

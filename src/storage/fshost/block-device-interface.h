@@ -5,8 +5,8 @@
 #ifndef SRC_STORAGE_FSHOST_BLOCK_DEVICE_INTERFACE_H_
 #define SRC_STORAGE_FSHOST_BLOCK_DEVICE_INTERFACE_H_
 
+#include <fidl/fuchsia.hardware.block.partition/cpp/wire.h>
 #include <fuchsia/hardware/block/c/fidl.h>
-#include <fuchsia/hardware/block/partition/c/fidl.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/status.h>
 #include <zircon/types.h>
@@ -61,8 +61,8 @@ class BlockDeviceInterface {
   // Queries (using the partition interface) for the instance/type GUID of the underlying device.
   // Returns a GUID with all 0 bytes on failure, normally this means the device doesn't support the
   // Partition interface.
-  virtual const fuchsia_hardware_block_partition_GUID& GetInstanceGuid() const = 0;
-  virtual const fuchsia_hardware_block_partition_GUID& GetTypeGuid() const = 0;
+  virtual const fuchsia_hardware_block_partition::wire::Guid& GetInstanceGuid() const = 0;
+  virtual const fuchsia_hardware_block_partition::wire::Guid& GetTypeGuid() const = 0;
 
   // Attempts to directly bind a driver to the device. This is typically used
   // by partition drivers, which may be loaded on top of a device exposing the
@@ -103,6 +103,9 @@ class BlockDeviceInterface {
 
   // Queries if the device is a block device or a NAND device.
   virtual bool IsNand() const = 0;
+
+  // Sets the partitio name in FVM (at the given device path) for this device.
+  virtual zx_status_t SetPartitionName(const std::string& fvm_path, std::string_view name) = 0;
 };
 
 }  // namespace fshost

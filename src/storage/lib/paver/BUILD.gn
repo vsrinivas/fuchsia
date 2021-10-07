@@ -42,6 +42,7 @@ source_set("paver-core") {
     "//sdk/lib/fdio",
     "//src/lib/storage/fs_management",
     "//src/security/zxcrypt:zxcrypt-client",
+    "//src/storage/fshost:headers",
     "//src/storage/gpt",
     "//zircon/system/ulib/fdio-caller",
     "//zircon/system/ulib/fidl",

@@ -26,7 +26,7 @@ async fn format_disk(paver: PaverProxy) -> Result<(String, String), Error> {
 
     let base_path = device_get_topo_path(&file)?;
 
-    Ok((format!("{}/blobfs-p-1/block", base_path), format!("{}/minfs-p-2/block", base_path)))
+    Ok((format!("{}/blobfs-p-1/block", base_path), format!("{}/data-p-2/block", base_path)))
 }
 
 /// Required functionality from an fs::Filesystem.
@@ -292,7 +292,7 @@ mod tests {
             }
         };
         assert!(blobfs_path.ends_with("/blobfs-p-1/block"));
-        assert!(minfs_path.ends_with("/minfs-p-2/block"));
+        assert!(minfs_path.ends_with("/data-p-2/block"));
     }
 
     /// Tests that creating minfs works.

@@ -8,13 +8,10 @@
 #include <fcntl.h>
 #include <fidl/fuchsia.device/cpp/wire.h>
 #include <fidl/fuchsia.fs/cpp/wire.h>
-#include <fidl/fuchsia.hardware.block.partition/cpp/wire.h>
 #include <fidl/fuchsia.hardware.block.volume/cpp/wire.h>
 #include <fidl/fuchsia.hardware.power.statecontrol/cpp/wire.h>
 #include <fuchsia/device/c/fidl.h>
 #include <fuchsia/hardware/block/c/fidl.h>
-#include <fuchsia/hardware/block/partition/c/fidl.h>
-#include <fuchsia/hardware/block/volume/c/fidl.h>
 #include <inttypes.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/fdio/cpp/caller.h>
@@ -57,6 +54,7 @@
 #include "extract-metadata.h"
 #include "pkgfs-launcher.h"
 #include "src/devices/block/drivers/block-verity/verified-volume-client.h"
+#include "src/lib/uuid/uuid.h"
 #include "src/storage/fshost/block-device-interface.h"
 #include "src/storage/fshost/copier.h"
 #include "src/storage/fshost/fshost-fs-provider.h"
@@ -64,7 +62,6 @@
 #include "src/storage/fvm/format.h"
 #include "src/storage/minfs/fsck.h"
 #include "src/storage/minfs/minfs.h"
-#include "src/lib/uuid/uuid.h"
 
 namespace fshost {
 namespace {
@@ -336,7 +333,7 @@ zx_status_t BlockDevice::GetInfo(fuchsia_hardware_block_BlockInfo* out_info) con
   return call_status;
 }
 
-const fuchsia_hardware_block_partition_GUID& BlockDevice::GetInstanceGuid() const {
+const fuchsia_hardware_block_partition::wire::Guid& BlockDevice::GetInstanceGuid() const {
   if (instance_guid_) {
     return *instance_guid_;
   }
@@ -344,21 +341,22 @@ const fuchsia_hardware_block_partition_GUID& BlockDevice::GetInstanceGuid() cons
   fdio_cpp::UnownedFdioCaller connection(fd_.get());
   // The block device might not support the partition protocol in which case the connection will be
   // closed, so clone the channel in case that happens.
-  zx::channel channel(fdio_service_clone(connection.borrow_channel()));
-  zx_status_t io_status, call_status;
-  io_status = fuchsia_hardware_block_partition_PartitionGetInstanceGuid(channel.get(), &call_status,
-                                                                        &instance_guid_.value());
-  if (io_status != ZX_OK) {
+  auto response = fidl::WireCall(fidl::ClientEnd<fuchsia_hardware_block_partition::Partition>(
+                                     zx::channel(fdio_service_clone(connection.borrow_channel()))))
+                      .GetInstanceGuid();
+  if (response.status() != ZX_OK) {
     FX_LOGS(ERROR) << "Unable to get partition instance GUID (fidl error: "
-                   << zx_status_get_string(io_status) << ")";
-  } else if (call_status != ZX_OK) {
+                   << zx_status_get_string(response.status()) << ")";
+  } else if (response->status != ZX_OK) {
     FX_LOGS(ERROR) << "Unable to get partition instance GUID: "
-                   << zx_status_get_string(call_status);
+                   << zx_status_get_string(response->status);
+  } else {
+    *instance_guid_ = *response->guid;
   }
   return *instance_guid_;
 }
 
-const fuchsia_hardware_block_partition_GUID& BlockDevice::GetTypeGuid() const {
+const fuchsia_hardware_block_partition::wire::Guid& BlockDevice::GetTypeGuid() const {
   if (type_guid_) {
     return *type_guid_;
   }
@@ -366,15 +364,17 @@ const fuchsia_hardware_block_partition_GUID& BlockDevice::GetTypeGuid() const {
   fdio_cpp::UnownedFdioCaller connection(fd_.get());
   // The block device might not support the partition protocol in which case the connection will be
   // closed, so clone the channel in case that happens.
-  zx::channel channel(fdio_service_clone(connection.borrow_channel()));
-  zx_status_t io_status, call_status;
-  io_status = fuchsia_hardware_block_partition_PartitionGetTypeGuid(channel.get(), &call_status,
-                                                                    &type_guid_.value());
-  if (io_status != ZX_OK) {
+  auto response = fidl::WireCall(fidl::ClientEnd<fuchsia_hardware_block_partition::Partition>(
+                                     zx::channel(fdio_service_clone(connection.borrow_channel()))))
+                      .GetTypeGuid();
+  if (response.status() != ZX_OK) {
     FX_LOGS(ERROR) << "Unable to get partition type GUID (fidl error: "
-                   << zx_status_get_string(io_status) << ")";
-  } else if (call_status != ZX_OK) {
-    FX_LOGS(ERROR) << "Unable to get partition type GUID: " << zx_status_get_string(call_status);
+                   << zx_status_get_string(response.status()) << ")";
+  } else if (response->status != ZX_OK) {
+    FX_LOGS(ERROR) << "Unable to get partition type GUID: "
+                   << zx_status_get_string(response->status);
+  } else {
+    *type_guid_ = *response->guid;
   }
   return *type_guid_;
 }
@@ -398,7 +398,7 @@ zx_status_t BlockDevice::AttachDriver(const std::string_view& driver) {
 
 zx_status_t BlockDevice::UnsealZxcrypt() {
   FX_LOGS(INFO) << "unsealing zxcrypt with UUID "
-                << uuid::Uuid(GetInstanceGuid().value).ToString();
+                << uuid::Uuid(GetInstanceGuid().value.data()).ToString();
   // Bind and unseal the driver from a separate thread, since we
   // have to wait for a number of devices to do I/O and settle,
   // and we don't want to block block-watcher for any nontrivial
@@ -470,7 +470,7 @@ bool BlockDevice::ShouldAllowAuthoringFactory() {
 
 zx_status_t BlockDevice::SetPartitionMaxSize(const std::string& fvm_path, uint64_t max_size) {
   // Get the partition GUID for talking to FVM.
-  const fuchsia_hardware_block_partition_GUID& instance_guid = GetInstanceGuid();
+  const fuchsia_hardware_block_partition::wire::Guid& instance_guid = GetInstanceGuid();
   if (std::all_of(std::begin(instance_guid.value), std::end(instance_guid.value),
                   [](auto val) { return val == 0; }))
     return ZX_ERR_NOT_SUPPORTED;  // Not a partition, nothing to do.
@@ -481,15 +481,50 @@ zx_status_t BlockDevice::SetPartitionMaxSize(const std::string& fvm_path, uint64
 
   // Actually set the limit.
   fdio_cpp::UnownedFdioCaller caller(fvm_fd.get());
-  zx_status_t set_status;
-  if (zx_status_t fidl_status = fuchsia_hardware_block_volume_VolumeManagerSetPartitionLimit(
-          caller.channel()->get(), &instance_guid, max_size, &set_status);
-      fidl_status != ZX_OK || set_status != ZX_OK) {
+  auto response =
+      fidl::WireCall(fidl::UnownedClientEnd<fuchsia_hardware_block_volume::VolumeManager>(
+                         caller.borrow_channel()))
+          .SetPartitionLimit(instance_guid, max_size);
+  if (response.status() != ZX_OK || response->status != ZX_OK) {
     FX_LOGS(ERROR) << "Unable to set partition limit for " << topological_path() << " to "
                    << max_size << " bytes.";
-    FX_LOGS(ERROR) << "  FIDL error: " << zx_status_get_string(fidl_status)
-                   << " FVM error: " << zx_status_get_string(set_status);
-    return fidl_status != ZX_OK ? fidl_status : set_status;
+    if (response.status() != ZX_OK) {
+      FX_LOGS(ERROR) << "  FIDL error: " << zx_status_get_string(response.status());
+      return response.status();
+    }
+    FX_LOGS(ERROR) << " FVM error: " << zx_status_get_string(response->status);
+    return response->status;
+  }
+
+  return ZX_OK;
+}
+
+zx_status_t BlockDevice::SetPartitionName(const std::string& fvm_path, std::string_view name) {
+  // Get the partition GUID for talking to FVM.
+  const fuchsia_hardware_block_partition::wire::Guid& instance_guid = GetInstanceGuid();
+  if (std::all_of(std::begin(instance_guid.value), std::end(instance_guid.value),
+                  [](auto val) { return val == 0; }))
+    return ZX_ERR_NOT_SUPPORTED;  // Not a partition, nothing to do.
+
+  fbl::unique_fd fvm_fd(open(fvm_path.c_str(), O_RDONLY));
+  if (!fvm_fd)
+    return ZX_ERR_NOT_SUPPORTED;  // Not in FVM, nothing to do.
+
+  // Actually set the name.
+  fdio_cpp::UnownedFdioCaller caller(fvm_fd.get());
+  auto response =
+      fidl::WireCall(fidl::UnownedClientEnd<fuchsia_hardware_block_volume::VolumeManager>(
+                         caller.borrow_channel()))
+          .SetPartitionName(instance_guid, fidl::StringView::FromExternal(name));
+  if (response.status() != ZX_OK || response->result.is_err()) {
+    FX_LOGS(ERROR) << "Unable to set partition name for " << topological_path() << " to '" << name
+                   << "'.";
+    if (response.status() != ZX_OK) {
+      FX_LOGS(ERROR) << "  FIDL error: " << zx_status_get_string(response.status());
+      return response.status();
+    }
+    FX_LOGS(ERROR) << " FVM error: " << zx_status_get_string(response->result.err());
+    return response->result.err();
   }
 
   return ZX_OK;
@@ -711,21 +746,11 @@ zx_status_t BlockDevice::MountFilesystem() {
 // ZX_ERR_NOT_SUPPORTED if the GUID is a system GUID. Returns ZX_OK if an
 // attempt to mount is made, without checking mount success.
 zx_status_t BlockDevice::MountData(MountOptions* options) {
-  fuchsia_hardware_block_partition_GUID type_guid;
-  zx_status_t io_status, status;
-  zx::channel block_device = CloneDeviceChannel();
-  io_status = fuchsia_hardware_block_partition_PartitionGetTypeGuid(block_device.get(), &status,
-                                                                    &type_guid);
-  if (io_status != ZX_OK) {
-    return io_status;
-  }
-  if (status != ZX_OK) {
-    return status;
-  }
+  const uint8_t* guid = GetTypeGuid().value.data();
 
-  if (gpt_is_sys_guid(type_guid.value, GPT_GUID_LEN)) {
+  if (gpt_is_sys_guid(guid, GPT_GUID_LEN)) {
     return ZX_ERR_NOT_SUPPORTED;
-  } else if (gpt_is_data_guid(type_guid.value, GPT_GUID_LEN)) {
+  } else if (gpt_is_data_guid(guid, GPT_GUID_LEN)) {
     uint64_t minfs_max_size = device_config_->ReadUint64OptionValue(Config::kMinfsMaxBytes, 0);
     bool using_custom_fs = device_config_->is_set(Config::kDataFilesystemBinaryPath);
     if (!using_custom_fs && minfs_max_size > 0) {
@@ -745,12 +770,12 @@ zx_status_t BlockDevice::MountData(MountOptions* options) {
           return ZX_ERR_CANCELED;
       }
     }
-    return mounter_->MountData(std::move(block_device), *options);
-  } else if (gpt_is_install_guid(type_guid.value, GPT_GUID_LEN)) {
+    return mounter_->MountData(CloneDeviceChannel(), *options);
+  } else if (gpt_is_install_guid(guid, GPT_GUID_LEN)) {
     options->readonly = true;
-    return mounter_->MountInstall(std::move(block_device), *options);
-  } else if (gpt_is_durable_guid(type_guid.value, GPT_GUID_LEN)) {
-    return mounter_->MountDurable(std::move(block_device), *options);
+    return mounter_->MountInstall(CloneDeviceChannel(), *options);
+  } else if (gpt_is_durable_guid(guid, GPT_GUID_LEN)) {
+    return mounter_->MountDurable(CloneDeviceChannel(), *options);
   }
   FX_LOGS(ERROR) << "Unrecognized partition GUID for data partition; not mounting";
   return ZX_ERR_WRONG_TYPE;

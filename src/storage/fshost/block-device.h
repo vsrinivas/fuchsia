@@ -38,8 +38,8 @@ class BlockDevice : public BlockDeviceInterface {
   disk_format_t GetFormat() override;
   void SetFormat(disk_format_t format) override;
   zx_status_t GetInfo(fuchsia_hardware_block_BlockInfo* out_info) const override;
-  const fuchsia_hardware_block_partition_GUID& GetInstanceGuid() const override;
-  const fuchsia_hardware_block_partition_GUID& GetTypeGuid() const override;
+  const fuchsia_hardware_block_partition::wire::Guid& GetInstanceGuid() const override;
+  const fuchsia_hardware_block_partition::wire::Guid& GetTypeGuid() const override;
   zx_status_t AttachDriver(const std::string_view& driver) override;
   zx_status_t UnsealZxcrypt() override;
   zx_status_t FormatZxcrypt() override;
@@ -52,6 +52,7 @@ class BlockDevice : public BlockDeviceInterface {
   bool ShouldAllowAuthoringFactory() override;
   zx_status_t SetPartitionMaxSize(const std::string& fvm_path, uint64_t max_size) override;
   bool IsNand() const override { return false; }
+  zx_status_t SetPartitionName(const std::string& fvm_path, std::string_view name) override;
 
   disk_format_t content_format() const override;
   const std::string& topological_path() const override { return topological_path_; }
@@ -72,8 +73,8 @@ class BlockDevice : public BlockDeviceInterface {
   disk_format_t format_ = DISK_FORMAT_UNKNOWN;
   std::string topological_path_;
   mutable std::string partition_name_;
-  mutable std::optional<fuchsia_hardware_block_partition_GUID> instance_guid_;
-  mutable std::optional<fuchsia_hardware_block_partition_GUID> type_guid_;
+  mutable std::optional<fuchsia_hardware_block_partition::wire::Guid> instance_guid_;
+  mutable std::optional<fuchsia_hardware_block_partition::wire::Guid> type_guid_;
 };
 
 }  // namespace fshost
