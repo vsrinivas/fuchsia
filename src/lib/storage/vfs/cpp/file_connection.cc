@@ -57,7 +57,7 @@ void FileConnection::Close2(Close2RequestView request, Close2Completer::Sync& co
   if (result.is_error()) {
     completer.ReplyError(result.error());
   } else {
-    completer.Reply({});
+    completer.ReplySuccess();
   }
 }
 
@@ -114,20 +114,30 @@ void FileConnection::NodeSetFlags(NodeSetFlagsRequestView request,
   }
 }
 
-void FileConnection::Truncate(TruncateRequestView request, TruncateCompleter::Sync& completer) {
+zx_status_t FileConnection::ResizeInternal(uint64_t length) {
   FS_PRETTY_TRACE_DEBUG("[FileTruncate] options: ", options());
 
   if (options().flags.node_reference) {
-    completer.Reply(ZX_ERR_BAD_HANDLE);
-    return;
+    return ZX_ERR_BAD_HANDLE;
   }
   if (!options().rights.write) {
-    completer.Reply(ZX_ERR_BAD_HANDLE);
-    return;
+    return ZX_ERR_BAD_HANDLE;
   }
 
-  zx_status_t status = vnode()->Truncate(request->length);
-  completer.Reply(status);
+  return vnode()->Truncate(length);
+}
+
+void FileConnection::Truncate(TruncateRequestView request, TruncateCompleter::Sync& completer) {
+  completer.Reply(ResizeInternal(request->length));
+}
+
+void FileConnection::Resize(ResizeRequestView request, ResizeCompleter::Sync& completer) {
+  zx_status_t result = ResizeInternal(request->length);
+  if (result != ZX_OK) {
+    completer.ReplyError(result);
+  } else {
+    completer.ReplySuccess();
+  }
 }
 
 void FileConnection::GetFlags(GetFlagsRequestView request, GetFlagsCompleter::Sync& completer) {

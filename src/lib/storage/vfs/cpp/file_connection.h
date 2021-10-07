@@ -50,6 +50,7 @@ class FileConnection : public Connection, public fidl::WireServer<fuchsia_io::Fi
   //
 
   void Truncate(TruncateRequestView request, TruncateCompleter::Sync& completer) final;
+  void Resize(ResizeRequestView request, ResizeCompleter::Sync& completer) final;
   void GetFlags(GetFlagsRequestView request, GetFlagsCompleter::Sync& completer) final;
   void SetFlags(SetFlagsRequestView request, SetFlagsCompleter::Sync& completer) final;
   void GetBuffer(GetBufferRequestView request, GetBufferCompleter::Sync& completer) final;
@@ -60,6 +61,9 @@ class FileConnection : public Connection, public fidl::WireServer<fuchsia_io::Fi
 
   void AdvisoryLock(fidl::WireServer<fuchsia_io::File>::AdvisoryLockRequestView request,
                     AdvisoryLockCompleter::Sync& _completer) final;
+
+ private:
+  zx_status_t ResizeInternal(uint64_t length);
 };
 
 }  // namespace internal

@@ -38,165 +38,248 @@ RemoteFileConnection::RemoteFileConnection(fs::FuchsiaVfs* vfs, fbl::RefPtr<fs::
                                            VnodeProtocol protocol, VnodeConnectionOptions options)
     : FileConnection(vfs, std::move(vnode), protocol, options) {}
 
-void RemoteFileConnection::Read(ReadRequestView request, ReadCompleter::Sync& completer) {
+zx_status_t RemoteFileConnection::ReadInternal(void* data, size_t len, size_t* out_actual) {
   FS_PRETTY_TRACE_DEBUG("[FileRead] options: ", options());
 
   if (options().flags.node_reference) {
-    completer.Reply(ZX_ERR_BAD_HANDLE, fidl::VectorView<uint8_t>());
-    return;
+    return ZX_ERR_BAD_HANDLE;
   }
   if (!options().rights.read) {
-    completer.Reply(ZX_ERR_BAD_HANDLE, fidl::VectorView<uint8_t>());
-    return;
+    return ZX_ERR_BAD_HANDLE;
   }
-  if (request->count > fio::wire::kMaxBuf) {
-    completer.Reply(ZX_ERR_INVALID_ARGS, fidl::VectorView<uint8_t>());
-    return;
+  if (len > fio::wire::kMaxBuf) {
+    return ZX_ERR_INVALID_ARGS;
   }
-  uint8_t data[fio::wire::kMaxBuf];
-  size_t actual = 0;
-  zx_status_t status = vnode()->Read(data, request->count, offset_, &actual);
+
+  zx_status_t status = vnode()->Read(data, len, offset_, out_actual);
   if (status == ZX_OK) {
-    ZX_DEBUG_ASSERT(actual <= request->count);
-    offset_ += actual;
+    ZX_DEBUG_ASSERT(*out_actual <= len);
+    offset_ += *out_actual;
   }
-  completer.Reply(status, fidl::VectorView<uint8_t>::FromExternal(data, actual));
+  return status;
 }
 
-void RemoteFileConnection::ReadAt(ReadAtRequestView request, ReadAtCompleter::Sync& completer) {
+void RemoteFileConnection::Read(ReadRequestView request, ReadCompleter::Sync& completer) {
+  uint8_t data[fio::wire::kMaxBuf];
+  size_t actual = 0;
+  zx_status_t status = ReadInternal(data, request->count, &actual);
+  if (status != ZX_OK) {
+    completer.Reply(status, fidl::VectorView<uint8_t>());
+  } else {
+    completer.Reply(status, fidl::VectorView<uint8_t>::FromExternal(data, actual));
+  }
+}
+
+void RemoteFileConnection::Read2(Read2RequestView request, Read2Completer::Sync& completer) {
+  uint8_t data[fio::wire::kMaxBuf];
+  size_t actual = 0;
+  zx_status_t status = ReadInternal(data, request->count, &actual);
+  if (status != ZX_OK) {
+    completer.ReplyError(status);
+  } else {
+    completer.ReplySuccess(fidl::VectorView<uint8_t>::FromExternal(data, actual));
+  }
+}
+
+zx_status_t RemoteFileConnection::ReadAtInternal(void* data, size_t len, size_t offset,
+                                                 size_t* out_actual) {
   FS_PRETTY_TRACE_DEBUG("[FileReadAt] options: ", options());
 
   if (options().flags.node_reference) {
-    completer.Reply(ZX_ERR_BAD_HANDLE, fidl::VectorView<uint8_t>());
-    return;
+    return ZX_ERR_BAD_HANDLE;
   }
   if (!options().rights.read) {
-    completer.Reply(ZX_ERR_BAD_HANDLE, fidl::VectorView<uint8_t>());
-    return;
+    return ZX_ERR_BAD_HANDLE;
   }
-  if (request->count > fio::wire::kMaxBuf) {
-    completer.Reply(ZX_ERR_INVALID_ARGS, fidl::VectorView<uint8_t>());
-    return;
+  if (len > fio::wire::kMaxBuf) {
+    return ZX_ERR_INVALID_ARGS;
   }
-  uint8_t data[fio::wire::kMaxBuf];
-  size_t actual = 0;
-  zx_status_t status = vnode()->Read(data, request->count, request->offset, &actual);
+  zx_status_t status = vnode()->Read(data, len, offset, out_actual);
   if (status == ZX_OK) {
-    ZX_DEBUG_ASSERT(actual <= request->count);
+    ZX_DEBUG_ASSERT(*out_actual <= len);
   }
-  completer.Reply(status, fidl::VectorView<uint8_t>::FromExternal(data, actual));
+  return status;
 }
 
-void RemoteFileConnection::Write(WriteRequestView request, WriteCompleter::Sync& completer) {
+void RemoteFileConnection::ReadAt(ReadAtRequestView request, ReadAtCompleter::Sync& completer) {
+  uint8_t data[fio::wire::kMaxBuf];
+  size_t actual = 0;
+  zx_status_t status = ReadAtInternal(data, request->count, request->offset, &actual);
+  if (status != ZX_OK) {
+    completer.Reply(status, fidl::VectorView<uint8_t>());
+  } else {
+    completer.Reply(status, fidl::VectorView<uint8_t>::FromExternal(data, actual));
+  }
+}
+
+void RemoteFileConnection::ReadAt2(ReadAt2RequestView request, ReadAt2Completer::Sync& completer) {
+  uint8_t data[fio::wire::kMaxBuf];
+  size_t actual = 0;
+  zx_status_t status = ReadAtInternal(data, request->count, request->offset, &actual);
+  if (status != ZX_OK) {
+    completer.ReplyError(status);
+  } else {
+    completer.ReplySuccess(fidl::VectorView<uint8_t>::FromExternal(data, actual));
+  }
+}
+
+zx_status_t RemoteFileConnection::WriteInternal(const void* data, size_t len, size_t* out_actual) {
   FS_PRETTY_TRACE_DEBUG("[FileWrite] options: ", options());
 
   if (options().flags.node_reference) {
-    completer.Reply(ZX_ERR_BAD_HANDLE, 0);
-    return;
+    return ZX_ERR_BAD_HANDLE;
   }
   if (!options().rights.write) {
-    completer.Reply(ZX_ERR_BAD_HANDLE, 0);
-    return;
+    return ZX_ERR_BAD_HANDLE;
   }
-  size_t actual = 0u;
   zx_status_t status;
   if (options().flags.append) {
     size_t end = 0u;
-    status = vnode()->Append(request->data.data(), request->data.count(), &end, &actual);
+    status = vnode()->Append(data, len, &end, out_actual);
     if (status == ZX_OK) {
       offset_ = end;
     }
   } else {
-    status = vnode()->Write(request->data.data(), request->data.count(), offset_, &actual);
+    status = vnode()->Write(data, len, offset_, out_actual);
     if (status == ZX_OK) {
-      offset_ += actual;
+      offset_ += *out_actual;
     }
   }
-  ZX_DEBUG_ASSERT(actual <= request->data.count());
+  if (status == ZX_OK) {
+    ZX_DEBUG_ASSERT(*out_actual <= len);
+  }
+  return status;
+}
+
+void RemoteFileConnection::Write(WriteRequestView request, WriteCompleter::Sync& completer) {
+  size_t actual = 0u;
+  zx_status_t status = WriteInternal(request->data.data(), request->data.count(), &actual);
   completer.Reply(status, actual);
 }
 
-void RemoteFileConnection::WriteAt(WriteAtRequestView request, WriteAtCompleter::Sync& completer) {
+void RemoteFileConnection::Write2(Write2RequestView request, Write2Completer::Sync& completer) {
+  size_t actual = 0u;
+  zx_status_t status = WriteInternal(request->data.data(), request->data.count(), &actual);
+  if (status != ZX_OK) {
+    completer.ReplyError(status);
+  } else {
+    completer.ReplySuccess(actual);
+  }
+}
+
+zx_status_t RemoteFileConnection::WriteAtInternal(const void* data, size_t len, size_t offset,
+                                                  size_t* out_actual) {
   FS_PRETTY_TRACE_DEBUG("[FileWriteAt] options: ", options());
 
   if (options().flags.node_reference) {
-    completer.Reply(ZX_ERR_BAD_HANDLE, 0);
-    return;
+    return ZX_ERR_BAD_HANDLE;
   }
   if (!options().rights.write) {
-    completer.Reply(ZX_ERR_BAD_HANDLE, 0);
-    return;
+    return ZX_ERR_BAD_HANDLE;
   }
+  zx_status_t status = vnode()->Write(data, len, offset, out_actual);
+  if (status == ZX_OK) {
+    ZX_DEBUG_ASSERT(*out_actual <= len);
+  }
+  return status;
+}
+
+void RemoteFileConnection::WriteAt(WriteAtRequestView request, WriteAtCompleter::Sync& completer) {
   size_t actual = 0;
   zx_status_t status =
-      vnode()->Write(request->data.data(), request->data.count(), request->offset, &actual);
-  ZX_DEBUG_ASSERT(actual <= request->data.count());
+      WriteAtInternal(request->data.data(), request->data.count(), request->offset, &actual);
   completer.Reply(status, actual);
 }
 
-void RemoteFileConnection::Seek(SeekRequestView request, SeekCompleter::Sync& completer) {
+void RemoteFileConnection::WriteAt2(WriteAt2RequestView request,
+                                    WriteAt2Completer::Sync& completer) {
+  size_t actual = 0;
+  zx_status_t status =
+      WriteAtInternal(request->data.data(), request->data.count(), request->offset, &actual);
+  if (status != ZX_OK) {
+    completer.ReplyError(status);
+  } else {
+    completer.ReplySuccess(actual);
+  }
+}
+
+zx_status_t RemoteFileConnection::SeekInternal(fuchsia_io::wire::SeekOrigin origin,
+                                               int64_t requested_offset) {
   FS_PRETTY_TRACE_DEBUG("[FileSeek] options: ", options());
 
   if (options().flags.node_reference) {
-    completer.Reply(ZX_ERR_BAD_HANDLE, offset_);
-    return;
+    return ZX_ERR_BAD_HANDLE;
   }
   fs::VnodeAttributes attr;
   zx_status_t r;
   if ((r = vnode()->GetAttributes(&attr)) < 0) {
-    return completer.Close(r);
+    return ZX_ERR_STOP;
   }
   size_t n;
-  switch (request->start) {
+  switch (origin) {
     case fio::wire::SeekOrigin::kStart:
-      if (request->offset < 0) {
-        completer.Reply(ZX_ERR_INVALID_ARGS, offset_);
-        return;
+      if (requested_offset < 0) {
+        return ZX_ERR_INVALID_ARGS;
       }
-      n = request->offset;
+      n = requested_offset;
       break;
     case fio::wire::SeekOrigin::kCurrent:
-      n = offset_ + request->offset;
-      if (request->offset < 0) {
+      n = offset_ + requested_offset;
+      if (requested_offset < 0) {
         // if negative seek
         if (n > offset_) {
           // wrapped around. attempt to seek before start
-          completer.Reply(ZX_ERR_INVALID_ARGS, offset_);
-          return;
+          return ZX_ERR_INVALID_ARGS;
         }
       } else {
         // positive seek
         if (n < offset_) {
           // wrapped around. overflow
-          completer.Reply(ZX_ERR_INVALID_ARGS, offset_);
-          return;
+          return ZX_ERR_INVALID_ARGS;
         }
       }
       break;
     case fio::wire::SeekOrigin::kEnd:
-      n = attr.content_size + request->offset;
-      if (request->offset < 0) {
+      n = attr.content_size + requested_offset;
+      if (requested_offset < 0) {
         // if negative seek
         if (n > attr.content_size) {
           // wrapped around. attempt to seek before start
-          completer.Reply(ZX_ERR_INVALID_ARGS, offset_);
-          return;
+          return ZX_ERR_INVALID_ARGS;
         }
       } else {
         // positive seek
         if (n < attr.content_size) {
           // wrapped around
-          completer.Reply(ZX_ERR_INVALID_ARGS, offset_);
-          return;
+          return ZX_ERR_INVALID_ARGS;
         }
       }
       break;
     default:
-      completer.Reply(ZX_ERR_INVALID_ARGS, offset_);
-      return;
+      return ZX_ERR_INVALID_ARGS;
   }
   offset_ = n;
-  completer.Reply(ZX_OK, offset_);
+  return ZX_OK;
+}
+
+void RemoteFileConnection::Seek(SeekRequestView request, SeekCompleter::Sync& completer) {
+  zx_status_t status = SeekInternal(request->start, request->offset);
+  if (status == ZX_ERR_STOP) {
+    completer.Close(ZX_ERR_INTERNAL);
+  } else {
+    completer.Reply(status, offset_);
+  }
+}
+
+void RemoteFileConnection::Seek2(Seek2RequestView request, Seek2Completer::Sync& completer) {
+  zx_status_t status = SeekInternal(request->origin, request->offset);
+  if (status == ZX_ERR_STOP) {
+    completer.Close(ZX_ERR_INTERNAL);
+  } else if (status != ZX_OK) {
+    completer.ReplyError(status);
+  } else {
+    completer.ReplySuccess(offset_);
+  }
 }
 
 }  // namespace internal

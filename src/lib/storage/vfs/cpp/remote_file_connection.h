@@ -34,10 +34,21 @@ class RemoteFileConnection final : public FileConnection {
   //
 
   void Read(ReadRequestView request, ReadCompleter::Sync& completer) final;
+  void Read2(Read2RequestView request, Read2Completer::Sync& completer) final;
   void ReadAt(ReadAtRequestView request, ReadAtCompleter::Sync& completer) final;
+  void ReadAt2(ReadAt2RequestView request, ReadAt2Completer::Sync& completer) final;
   void Write(WriteRequestView request, WriteCompleter::Sync& completer) final;
+  void Write2(Write2RequestView request, Write2Completer::Sync& completer) final;
   void WriteAt(WriteAtRequestView request, WriteAtCompleter::Sync& completer) final;
+  void WriteAt2(WriteAt2RequestView request, WriteAt2Completer::Sync& completer) final;
   void Seek(SeekRequestView request, SeekCompleter::Sync& completer) final;
+  void Seek2(Seek2RequestView request, Seek2Completer::Sync& completer) final;
+
+  zx_status_t ReadInternal(void* data, size_t len, size_t* out_actual);
+  zx_status_t ReadAtInternal(void* data, size_t len, size_t offset, size_t* out_actual);
+  zx_status_t WriteInternal(const void* data, size_t len, size_t* out_actual);
+  zx_status_t WriteAtInternal(const void* data, size_t len, size_t offset, size_t* out_actual);
+  zx_status_t SeekInternal(fuchsia_io::wire::SeekOrigin origin, int64_t offset);
 
   // Current seek offset.
   size_t offset_ = 0;

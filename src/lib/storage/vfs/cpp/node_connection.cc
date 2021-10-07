@@ -56,7 +56,7 @@ void NodeConnection::Close2(Close2RequestView request, Close2Completer::Sync& co
   if (result.is_error()) {
     completer.ReplyError(result.error());
   } else {
-    completer.Reply({});
+    completer.ReplySuccess();
   }
 }
 
