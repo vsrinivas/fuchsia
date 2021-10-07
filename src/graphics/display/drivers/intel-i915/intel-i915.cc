@@ -2234,14 +2234,21 @@ zx_status_t Controller::Init() {
     // The bootloader framebuffer is located at the start of the BAR that gets mapped by GTT.
     // Prevent clients from allocating memory in this region by telling |gtt_| to exclude it from
     // the region allocator.
+    uint32_t offset = 0u;
     auto fb = GetFramebufferInfo();
     if (fb.is_error()) {
-      zxlogf(ERROR, "Failed to obtain framebuffer size (%s)", fb.status_string());
-      return fb.error_value();
+      zxlogf(INFO, "Failed to obtain framebuffer size (%s)", fb.status_string());
+      // It is possible for zx_framebuffer_get_info to fail in a headless system as the bootloader
+      // framebuffer information will be left uninitialized. Tolerate this failure by assuming
+      // that the stolen memory contents won't be shown on any screen and map the global GTT at
+      // offset 0.
+      offset = 0u;
+    } else {
+      offset = fb.value().size;
     }
 
     fbl::AutoLock lock(&gtt_lock_);
-    status = gtt_.Init(&pci_, mmio_space()->View(GTT_BASE_OFFSET), fb.value().size);
+    status = gtt_.Init(&pci_, mmio_space()->View(GTT_BASE_OFFSET), offset);
     if (status != ZX_OK) {
       zxlogf(ERROR, "Failed to init gtt (%s)", zx_status_get_string(status));
       return status;

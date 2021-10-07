@@ -243,13 +243,18 @@ TEST_F(IntegrationTest, BindAndInit) {
   EXPECT_EQ(0, dev->child_count());
 }
 
-// Tests that the device fails to initialize if bootloader framebuffer information cannot be
-// obtained.
+// Tests that the device can initialize even if bootloader framebuffer information is not available
+// and global GTT allocations start at offset 0.
 TEST_F(IntegrationTest, InitFailsIfBootloaderGetInfoFails) {
-  g_framebuffer.status = ZX_ERR_NOT_SUPPORTED;
+  SetFramebuffer({.status = ZX_ERR_INVALID_ARGS});
 
-  EXPECT_EQ(ZX_ERR_NOT_SUPPORTED, i915::Controller::Create(parent()));
-  EXPECT_EQ(0u, parent()->children().size());
+  ASSERT_EQ(ZX_OK, i915::Controller::Create(parent()));
+  auto dev = parent()->GetLatestChild();
+  i915::Controller* ctx = dev->GetDeviceContext<i915::Controller>();
+
+  uint64_t addr;
+  EXPECT_EQ(ZX_OK, ctx->IntelGpuCoreGttAlloc(1, &addr));
+  EXPECT_EQ(0u, addr);
 }
 
 // TODO(fxbug.dev/85836): Add test for display initialization by InitOp.
