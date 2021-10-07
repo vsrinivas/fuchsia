@@ -8,6 +8,9 @@
 
 set -o pipefail
 
+# exit when any command fails
+set -e
+
 declare -r TERMINA_GUEST_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 declare -r FUCHSIA_DIR="${TERMINA_GUEST_DIR}/../../../../"
 
@@ -21,19 +24,19 @@ print_usage_and_exit() {
   echo "Build Termina images for Machina."
   echo ""
   echo "Usage:"
-  echo "  update_cipd_prebuilts.sh work_dir (x64|arm64) -r [TERMINA_REVISION] [-n] [-f]"
+  echo "  update_cipd_prebuilts.sh work_dir (x64|arm64) -r TERMINA_REVISION [-n] [-f]"
   echo ""
   echo "Where:"
   echo "      work_dir - An empty directory to place source trees and build artifacts."
   echo "      Note: script may generate contents of ~125 GB"
   echo ""
-  echo "   -r [TERMINA_REVISION] - Version of termina to publish to CIPD. This will"
+  echo "   -r TERMINA_REVISION - Version of termina to publish to CIPD. This will"
   echo "      be a string that looks something like 'R90-13816.B'."
   echo ""
-  echo "   -n - Dry run. Don't actually upload anything, just show what would be"
+  echo "   -n Dry run. Don't actually upload anything, just show what would be"
   echo "      uploaded."
   echo ""
-  echo "   -f - Force. Script will refuse to upload unless this flag is specified."
+  echo "   -f Force. Script will refuse to upload unless this flag is specified."
 
   exit $1
 }
@@ -166,14 +169,6 @@ build_termina_image() {
   popd
 }
 
-# Returns the most recent revision for a given board.
-#
-# $1 - Board requested.
-latest_revision_for_board() {
-  local -r board="$1"
-  curl -s https://storage.googleapis.com/chromeos-image-archive/${board}/LATEST-master
-}
-
 main() {
   work_dir="$1"
   shift
@@ -210,6 +205,11 @@ main() {
   declare -r force=${force}
   declare jiri_entries="    <!-- termina guest images -->"
 
+  # Ensure revision is specified
+  if [ "$termina_revision_requested" == "" ]; then
+    print_usage_and_exit 1
+  fi
+
   # Ensure one of "dry-run" or "force" is given.
   if [ "$dry_run" == "$force" ];
   then
@@ -219,7 +219,7 @@ main() {
   check_depot_tools
 
   board=`board_for_arch ${arch}`
-  termina_revision=${termina_revision_requested:-`latest_revision_for_board ${board}`}
+  termina_revision=${termina_revision_requested}
 
   jiri_entries="${jiri_entries}
   <package name=\"fuchsia_internal/linux/termina-${arch}\"
