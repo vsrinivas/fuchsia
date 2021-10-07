@@ -75,6 +75,7 @@ source_set("fshost-registry") {
     ":metrics",
     "//sdk/fidl/fuchsia.boot:fuchsia.boot_llcpp",
     "//sdk/fidl/fuchsia.device.manager:fuchsia.device.manager_llcpp",
+    "//sdk/fidl/fuchsia.feedback:fuchsia.feedback_llcpp",
     "//sdk/fidl/fuchsia.fshost:fuchsia.fshost_llcpp",
     "//sdk/fidl/fuchsia.process.lifecycle:fuchsia.process.lifecycle_llcpp",
     "//sdk/lib/fit",
@@ -95,6 +96,7 @@ source_set("fshost-registry") {
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/zircon-internal",
     "//zircon/system/ulib/fidl-async:fidl-async-cpp",
+    "//zircon/system/ulib/service:service-llcpp",
   ]
 
   # TODO(fxbug.dev/69585): This target uses raw zx::channel with LLCPP which is deprecated.

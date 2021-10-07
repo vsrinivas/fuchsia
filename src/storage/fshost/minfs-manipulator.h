@@ -15,7 +15,7 @@
 #include <fbl/unique_fd.h>
 
 #include "src/storage/fshost/copier.h"
-#include "src/storage/fshost/inspect-manager.h"
+#include "src/storage/fshost/fs-manager.h"
 
 namespace fshost {
 
@@ -51,7 +51,7 @@ enum class MaybeResizeMinfsResult {
 [[nodiscard]] MaybeResizeMinfsResult MaybeResizeMinfs(
     zx::channel device, uint64_t partition_size_limit, uint64_t required_inodes,
     uint64_t data_size_limit, const std::vector<std::filesystem::path>& excluded_paths,
-    InspectManager& inspect);
+    FsManager& manager);
 
 // RAII wrapper around a mounted minfs that unmounts minfs when destroyed.
 class MountedMinfs {

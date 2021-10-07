@@ -114,6 +114,20 @@ class FsManager {
   // directory of the given filesystem previously installed via |InstallFs()| at |point|.
   zx_status_t ForwardFsService(MountPoint point, const char* service_name);
 
+  // Disables reporting.  Future calls to |FileReport| will be NOPs.
+  void DisableCrashReporting() { file_crash_report_ = false; }
+
+  // Note that additional reasons should be added sparingly, and only in cases where the data is
+  // useful and it would be difficult to debug the issue otherwise.
+  enum ReportReason {
+    kMinfsCorrupted,
+    kMinfsNotUpgradeable,
+  };
+
+  // Files a synthetic crash report.  This is done in the background on a new thread, so never
+  // blocks. Note that there is no indication if the reporting fails.
+  void FileReport(ReportReason reason);
+
  private:
   zx_status_t SetupOutgoingDirectory(fidl::ServerEnd<fuchsia_io::Directory> dir_request,
                                      std::shared_ptr<loader::LoaderServiceBase> loader,
@@ -152,6 +166,8 @@ class FsManager {
 
   // Serves inspect data.
   InspectManager inspect_;
+
+  bool file_crash_report_ = true;
 
   // Used to lookup configuration options stored in fuchsia.boot.Arguments
   std::shared_ptr<fshost::FshostBootArgs> boot_args_;

@@ -5,6 +5,7 @@
 #include "fs-manager.h"
 
 #include <fcntl.h>
+#include <fuchsia/feedback/llcpp/fidl.h>
 #include <fuchsia/fshost/llcpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
@@ -40,6 +41,7 @@
 #include "fshost-boot-args.h"
 #include "fuchsia/ldsvc/llcpp/fidl.h"
 #include "lib/async/cpp/task.h"
+#include "lib/service/llcpp/service.h"
 #include "lifecycle.h"
 #include "metrics.h"
 #include "src/lib/storage/vfs/cpp/remote_dir.h"
@@ -49,6 +51,19 @@
 #define ZXDEBUG 0
 
 namespace fshost {
+
+namespace {
+
+const char* ReportReasonStr(const FsManager::ReportReason& reason) {
+  switch (reason) {
+    case FsManager::ReportReason::kMinfsCorrupted:
+      return "fuchsia-minfs-corruption";
+    case FsManager::ReportReason::kMinfsNotUpgradeable:
+      return "fuchsia-minfs-not-upgraded";
+  }
+}
+
+}  // namespace
 
 FsManager::FsManager(std::shared_ptr<FshostBootArgs> boot_args,
                      std::unique_ptr<FsHostMetrics> metrics)
@@ -384,6 +399,43 @@ zx_status_t FsManager::ForwardFsService(MountPoint point, const char* service_na
                                        request.release());
       });
   return svc_dir_->AddEntry(service_name, std::move(service_node));
+}
+
+void FsManager::FileReport(ReportReason reason) {
+  if (!file_crash_report_) {
+    FX_LOGS(INFO) << "Not filing a crash report for " << ReportReasonStr(reason) << " (disabled)";
+    return;
+  }
+  FX_LOGS(INFO) << "Filing a crash report for " << ReportReasonStr(reason);
+  // This thread accesses no state in the SyntheticCrashReporter, so is thread-safe even if the
+  // reporter is destroyed.
+  std::thread t([reason]() {
+    auto client_end = service::Connect<fuchsia_feedback::CrashReporter>();
+    if (client_end.is_error()) {
+      FX_LOGS(WARNING) << "Unable to connect to crash reporting service: "
+                       << client_end.status_string();
+      return;
+    }
+    auto client = fidl::BindSyncClient(std::move(*client_end));
+
+    fidl::FidlAllocator allocator;
+    fuchsia_feedback::wire::CrashReport report(allocator);
+    report.set_program_name(allocator, allocator, "minfs");
+    report.set_crash_signature(allocator, allocator, ReportReasonStr(reason));
+    report.set_is_fatal(allocator, false);
+
+    auto res = client.File(report);
+    if (!res.ok()) {
+      FX_LOGS(WARNING) << "Unable to send crash report (fidl error): " << res.status_string();
+    }
+    if (res->result.is_err()) {
+      FX_LOGS(WARNING) << "Failed to file crash report: "
+                       << zx_status_get_string(res->result.err());
+    } else {
+      FX_LOGS(INFO) << "Crash report successfully filed";
+    }
+  });
+  t.detach();
 }
 
 }  // namespace fshost
