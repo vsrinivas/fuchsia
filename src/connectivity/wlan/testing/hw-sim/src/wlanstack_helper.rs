@@ -8,6 +8,7 @@ use {
     fidl_fuchsia_wlan_sme::{ApSmeProxy, ClientSmeProxy},
     fidl_fuchsia_wlan_tap::WlantapPhyConfig,
     fuchsia_zircon::{sys::ZX_OK, DurationNum},
+    log::info,
 };
 
 pub struct CreateDeviceHelper<'a> {
@@ -51,10 +52,15 @@ pub async fn get_first_matching_iface_id<F: Fn(&QueryIfaceResponse) -> bool>(
     // Sleep between queries to make main future yield.
     let mut infinite_timeout =
         super::test_utils::RetryWithBackoff::infinite_with_max_interval(10.seconds());
+    // Verbose logging of DeviceServiceProxy calls inserted to assist debugging
+    // flakes such as https://fxbug.dev/85468.
+    let mut attempt = 1;
     loop {
+        info!("Calling list_ifaces(): attempt {}", attempt);
         let ifaces = svc.list_ifaces().await.expect("getting iface list").ifaces;
         {
             for iface in ifaces {
+                info!("Calling query_iface({})", iface.iface_id);
                 let (status, resp) =
                     svc.query_iface(iface.iface_id).await.expect("querying iface info");
                 assert_eq!(status, ZX_OK, "query_iface {} failed: {}", iface.iface_id, status);
@@ -63,7 +69,10 @@ pub async fn get_first_matching_iface_id<F: Fn(&QueryIfaceResponse) -> bool>(
                 }
             }
         }
-        infinite_timeout.sleep_unless_after_deadline().await.unwrap();
+        info!("Failed to find a suitable iface.");
+        // unwrap() will never fail since there is an infinite deadline.
+        infinite_timeout.sleep_unless_after_deadline_verbose().await.unwrap();
+        attempt += 1;
     }
 }
 
