@@ -7,6 +7,8 @@
 use fidl_fuchsia_sysmem as fsysmem;
 use zerocopy::{AsBytes, FromBytes};
 
+// TODO(fxbug.dev/86097): Move to library that is shared with other clients.
+
 /// The default image format constraints for allocating buffers.
 pub const IMAGE_FORMAT_CONSTRAINTS_DEFAULT: fsysmem::ImageFormatConstraints =
     fsysmem::ImageFormatConstraints {
