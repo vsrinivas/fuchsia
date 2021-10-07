@@ -17,7 +17,7 @@ use {
         DaemonEvent, TargetConnectionState, TargetEvent, TargetInfo, WireTrafficType,
     },
     ffx_daemon_services::create_service_register_map,
-    ffx_daemon_target::fastboot::{spawn_fastboot_discovery, Fastboot},
+    ffx_daemon_target::fastboot::Fastboot,
     ffx_daemon_target::logger::streamer::{DiagnosticsStreamer, GenericDiagnosticsStreamer},
     ffx_daemon_target::manual_targets,
     ffx_daemon_target::target::{
@@ -391,7 +391,6 @@ impl Daemon {
         // TODO: these tasks could and probably should be managed by the daemon
         // instead of being detached.
         Daemon::spawn_onet_discovery(self.event_queue.clone());
-        spawn_fastboot_discovery(self.event_queue.clone());
         self.tasks.push(Rc::new(zedboot_discovery(self.event_queue.clone())?));
         Ok(())
     }

@@ -3,6 +3,15 @@
 // found in the LICENSE file.
 library fuchsia.developer.bridge;
 
+// Covers the FFX Daemon Fastboot protocol. For information about how the fastboot
+// protocol works, see:
+// https://android.googlesource.com/platform/system/core/+/HEAD/fastboot/
+// for the most up-to-date information.
+
+/// The maximum size of a fastboot response is 256 bytes, minus
+/// four bytes for the header defining the type of message.
+const MAX_FASTBOOT_MESSAGE_SIZE uint32 = 252;
+
 type FastbootError = strict enum {
     PROTOCOL_ERROR = 1;
     COMMUNICATION_ERROR = 2;
@@ -80,4 +89,18 @@ protocol Fastboot {
     Oem(struct {
         command string:64;
     }) -> (struct {}) error FastbootError;
+};
+
+type FastbootTarget = table {
+    /// The fastboot serial number of the target.
+    1: serial string:MAX_FASTBOOT_MESSAGE_SIZE;
+};
+
+@discoverable
+protocol FastbootTargetStream {
+    /// Gets the next target from the protocol. Intended to be used as a hanging get
+    /// on the client side.
+    GetNext() -> (struct {
+        target FastbootTarget;
+    });
 };

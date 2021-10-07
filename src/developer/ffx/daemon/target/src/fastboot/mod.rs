@@ -11,7 +11,6 @@ use {
         },
     },
     crate::target::Target,
-    crate::FASTBOOT_CHECK_INTERVAL,
     anyhow::{anyhow, bail, Context, Result},
     async_trait::async_trait,
     chrono::Duration,
@@ -21,14 +20,12 @@ use {
         send, send_with_listener, send_with_timeout, upload, SendError,
     },
     ffx_config::get,
-    ffx_daemon_core::events,
-    ffx_daemon_events::{DaemonEvent, FastbootInterface, TargetInfo, WireTrafficType},
+    ffx_daemon_events::FastbootInterface,
     fidl::endpoints::ClientEnd,
     fidl_fuchsia_developer_bridge::{
         FastbootRequestStream, UploadProgressListenerMarker, UploadProgressListenerProxy,
         VariableListenerMarker, VariableListenerProxy,
     },
-    fuchsia_async::Timer,
     futures::{
         io::{AsyncRead, AsyncWrite},
         lock::Mutex,
@@ -436,28 +433,4 @@ pub async fn oem<T: AsyncRead + AsyncWrite + Unpin>(interface: &mut T, cmd: &Str
         Reply::Fail(s) => bail!("Failed to oem \"{}\": {}", cmd, s),
         _ => bail!("Unexpected reply from fastboot device for oem command \"{}\"", cmd),
     }
-}
-
-pub fn spawn_fastboot_discovery(queue: events::Queue<DaemonEvent>) {
-    fuchsia_async::Task::local(async move {
-        loop {
-            log::trace!("Looking for fastboot devices");
-            let fastboot_devices = find_devices().await;
-            for dev in fastboot_devices {
-                // Add to target collection
-                queue
-                    .push(DaemonEvent::WireTraffic(WireTrafficType::Fastboot(TargetInfo {
-                        nodename: Option::<String>::None,
-                        serial: Some(dev.serial),
-                        ..Default::default()
-                    })))
-                    .unwrap_or_else(|err| {
-                        log::warn!("Fastboot discovery failed to enqueue event: {}", err)
-                    });
-            }
-            // Sleep
-            Timer::new(FASTBOOT_CHECK_INTERVAL).await;
-        }
-    })
-    .detach();
 }

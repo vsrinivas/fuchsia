@@ -165,23 +165,47 @@ impl FidlService for TargetCollectionService {
 
     async fn start(&mut self, cx: &Context) -> Result<()> {
         let mdns = cx.open_service_proxy::<bridge::MdnsMarker>().await?;
+        let fastboot = cx.open_service_proxy::<bridge::FastbootTargetStreamMarker>().await?;
         let tc = cx.get_target_collection().await?;
+        let tc_clone = tc.clone();
         self.tasks.spawn(async move {
             while let Ok(Some(e)) = mdns.get_next_event().await {
                 match *e {
                     bridge::MdnsEventType::TargetFound(t)
                     | bridge::MdnsEventType::TargetRediscovered(t) => {
-                        handle_mdns_event(&tc, t).await;
+                        handle_mdns_event(&tc_clone, t);
                     }
                     _ => {}
                 }
+            }
+        });
+        self.tasks.spawn(async move {
+            while let Ok(target) = fastboot.get_next().await {
+                handle_fastboot_target(&tc, target);
             }
         });
         Ok(())
     }
 }
 
-async fn handle_mdns_event(tc: &Rc<TargetCollection>, t: bridge::Target) {
+fn handle_fastboot_target(tc: &Rc<TargetCollection>, target: bridge::FastbootTarget) {
+    if let Some(ref serial) = target.serial {
+        log::trace!("Found new target via fastboot: {}", serial);
+    } else {
+        log::trace!("Fastboot target has no serial number. Not able to merge.");
+        return;
+    }
+    let t = TargetInfo { serial: target.serial, ..Default::default() };
+    let target = tc.merge_insert(Target::from_target_info(t.into()));
+    target.update_connection_state(|s| match s {
+        TargetConnectionState::Disconnected | TargetConnectionState::Fastboot(_) => {
+            TargetConnectionState::Fastboot(Instant::now())
+        }
+        _ => s,
+    });
+}
+
+fn handle_mdns_event(tc: &Rc<TargetCollection>, t: bridge::Target) {
     let t = TargetInfo {
         nodename: t.nodename,
         addresses: t
@@ -201,7 +225,7 @@ async fn handle_mdns_event(tc: &Rc<TargetCollection>, t: bridge::Target) {
     };
     if t.fastboot_interface.is_some() {
         log::trace!(
-            "Found new target via fastboot: {}",
+            "Found new fastboot target via mdns: {}",
             t.nodename.clone().unwrap_or("<unknown>".to_string())
         );
         let target = tc.merge_insert(match Target::from_fastboot_target_info(t) {
@@ -247,8 +271,7 @@ mod tests {
         handle_mdns_event(
             &tc,
             bridge::Target { nodename: Some(t.nodename().unwrap()), ..bridge::Target::EMPTY },
-        )
-        .await;
+        );
         assert!(t.is_host_pipe_running());
         assert_matches!(t.get_connection_state(), TargetConnectionState::Mdns(t) if t > before_update);
     }
@@ -268,8 +291,7 @@ mod tests {
                 fastboot_interface: Some(bridge::FastbootInterface::Tcp),
                 ..bridge::Target::EMPTY
             },
-        )
-        .await;
+        );
         assert!(!t.is_host_pipe_running());
         assert_matches!(t.get_connection_state(), TargetConnectionState::Fastboot(t) if t > before_update);
     }
@@ -320,6 +342,24 @@ mod tests {
         res
     }
 
+    #[derive(Default)]
+    struct FakeFastboot {}
+
+    #[async_trait(?Send)]
+    impl FidlService for FakeFastboot {
+        type Service = bridge::FastbootTargetStreamMarker;
+        type StreamHandler = FidlStreamHandler<Self>;
+
+        async fn handle(
+            &self,
+            _cx: &Context,
+            _req: bridge::FastbootTargetStreamRequest,
+        ) -> Result<()> {
+            fuchsia_async::futures::future::pending::<()>().await;
+            Ok(())
+        }
+    }
+
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_service_integration() {
         const NAME: &'static str = "foooooo";
@@ -329,6 +369,7 @@ mod tests {
             Rc::new(RefCell::new(FakeMdns { call_started: call_started_sender, next_event: r }));
         let fake_daemon = FakeDaemonBuilder::new()
             .inject_fidl_service(mdns_service)
+            .register_fidl_service::<FakeFastboot>()
             .register_fidl_service::<TargetCollectionService>()
             .build();
         let tc = fake_daemon.open_proxy::<bridge::TargetCollectionMarker>().await;
@@ -346,5 +387,25 @@ mod tests {
         let res = list_targets(&tc).await;
         assert_eq!(res.len(), 1, "received: {:?}", res);
         assert_eq!(res[0].nodename.as_ref().unwrap(), NAME);
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_handle_fastboot_target_no_serial() {
+        let tc = Rc::new(TargetCollection::new());
+        handle_fastboot_target(&tc, bridge::FastbootTarget::EMPTY);
+        assert_eq!(tc.targets().len(), 0, "target collection should remain empty");
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_handle_fastboot_target() {
+        let tc = Rc::new(TargetCollection::new());
+        handle_fastboot_target(
+            &tc,
+            bridge::FastbootTarget {
+                serial: Some("12345".to_string()),
+                ..bridge::FastbootTarget::EMPTY
+            },
+        );
+        assert_eq!(tc.targets()[0].serial().as_deref(), Some("12345"));
     }
 }
