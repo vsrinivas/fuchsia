@@ -215,6 +215,7 @@ source_set("block-watcher") {
     "//src/lib/loader_service",
     "//src/lib/storage/fs_management",
     "//src/lib/storage/vfs/cpp",
+    "//src/lib/uuid:uuid",
     "//src/security/zxcrypt:zxcrypt-client",
     "//src/storage/gpt",
     "//src/storage/minfs",

@@ -64,6 +64,7 @@
 #include "src/storage/fvm/format.h"
 #include "src/storage/minfs/fsck.h"
 #include "src/storage/minfs/minfs.h"
+#include "src/lib/uuid/uuid.h"
 
 namespace fshost {
 namespace {
@@ -396,7 +397,8 @@ zx_status_t BlockDevice::AttachDriver(const std::string_view& driver) {
 }
 
 zx_status_t BlockDevice::UnsealZxcrypt() {
-  FX_LOGS(INFO) << "unsealing zxcrypt";
+  FX_LOGS(INFO) << "unsealing zxcrypt with UUID "
+                << uuid::Uuid(GetInstanceGuid().value).ToString();
   // Bind and unseal the driver from a separate thread, since we
   // have to wait for a number of devices to do I/O and settle,
   // and we don't want to block block-watcher for any nontrivial
