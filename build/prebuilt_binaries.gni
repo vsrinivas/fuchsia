@@ -10,19 +10,13 @@ import("//build/toolchain/breakpad.gni")
 #
 #   build_id_dir (required)
 #     Path to the .build-id directory to consume.
-#
-#   testonly (optional)
-#     Usual GN meanings.
-#
 template("prebuilt_binaries") {
   assert(defined(invoker.build_id_dir), "build_id_dir is required")
 
   binary_manifest = "$target_gen_dir/${target_name}_binaries.json"
 
   compiled_action(target_name) {
-    # TODO(fxbug.dev/41478) Make unconditionally testonly once separated from
-    # prebuilt_package() instances.
-    forward_variables_from(invoker, [ "testonly" ])
+    testonly = true
     hermetic_deps = false
 
     tool = "//tools/debug/unpack_debug_symbols"
@@ -31,6 +25,8 @@ template("prebuilt_binaries") {
     depfile = "$target_gen_dir/$target_name.d"
 
     args = [
+      "-build-id-dir-in",
+      rebase_path(invoker.build_id_dir),
       "-build-id-dir-out",
       rebase_path("$root_build_dir/.build-id", root_build_dir),
       "-cpu",
@@ -43,11 +39,6 @@ template("prebuilt_binaries") {
       breakpad_dump_syms,
       "-depfile",
       rebase_path(depfile, root_build_dir),
-    ]
-
-    args += [
-      "-build-id-dir-in",
-      rebase_path(invoker.build_id_dir),
     ]
 
     metadata = {

@@ -17,11 +17,9 @@ group("prebuilt") {
 }
 
 prebuilt_binaries("latest_or_generic") {
-  testonly = true
   build_id_dir = "//prebuilt/.build-id"
 }
 
 prebuilt_binaries("stable") {
-  testonly = true
   build_id_dir = "//prebuilt/stable/.build-id"
 }
