@@ -2,9 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-library fuchsia.ui.observation;
+library fuchsia.ui.observation.geometry;
 
-using fuchsia.math as m;
+using fuchsia.math as math;
 using zx;
 
 const BUFFER_SIZE uint32 = 512;
@@ -42,7 +42,7 @@ type Error = flexible enum {
 /// sit quietly.
 ///
 /// Lifecycle: The server endpoint is closed when the context view dies.
-protocol Geometry {
+protocol Provider {
     /// A method of obtaining view tree snapshots for a particular view.
     ///
     /// This call is formulated as a "hanging get" pattern: the client asks for
@@ -56,8 +56,10 @@ protocol Geometry {
     ///
     /// Client pacing. The server will dispatch snapshots to the caller on a
     /// lossless, best-effort basis, but the caller must allocate enough time to
-    /// keep up with new snapshots. If Error.BUFFER_OVERFLOW is returned, the
-    /// client may try again.
+    /// keep up with new snapshots.
+    ///
+    /// In case of BUFFER_OVERFLOW, the most recent updates are returned. If
+    /// Error.BUFFER_OVERFLOW is returned, the client may try again.
     Watch() -> (struct {
         epoch_end zx.time;
         updates vector<ViewTreeSnapshot>:BUFFER_SIZE;
@@ -95,10 +97,10 @@ type ViewTreeSnapshot = table {
 /// The size is: (abs(max.x - min.x), abs(max.y - min.y)).
 type AlignedExtent = struct {
     /// The minimal position of the view's bounding box.
-    min m.PointF;
+    min math.PointF;
 
     /// The maximal position of the view's bounding box.
-    max m.PointF;
+    max math.PointF;
 };
 
 /// A view bounding box, described in another view's coordinate system.
@@ -123,7 +125,7 @@ type AlignedExtent = struct {
 /// computation may give only approximate results.
 type RotatableExtent = struct {
     /// The origin point of V's bounding box, in W's coordinate system.
-    origin m.PointF;
+    origin math.PointF;
 
     /// The width of V's bounding box (along the direction where V's x axis
     /// increases), in W's coordinate system.
@@ -160,21 +162,7 @@ type Layout = struct {
 
     /// The offset data for the view's bounding box, in the coordinate system of
     /// that view.
-    inset m.InsetF;
-};
-
-/// The direct descendants of a view.
-type Child = struct {
-    /// The child view's identifier.
-    view_ref_koid zx.koid;
-
-    /// The space occupied within the parent view's coordinate system.
-    /// It does NOT describe the child view's logical size.
-    extent_in_parent RotatableExtent;
-
-    /// The position of this |Child| in the parent |ViewDescriptor|'s |children|
-    /// field.
-    index_in_parent uint32;
+    inset math.InsetF;
 };
 
 /// Data for a particular view: identifier, position, and children.
@@ -182,7 +170,17 @@ type ViewDescriptor = table {
     /// This view's fuchsia.ui.views.ViewRef koid.
     1: view_ref_koid zx.koid;
 
+    /// This view's origin, logical size, pixel scale, and inset data, in the view's
+    /// own coordinate system.
+    ///
+    /// Limitations. Data consistency between server and client depend on the
+    /// specific graphics API. Some APIs provide weak consistency, where the
+    /// server-side data (this data) and the client-side data (in the view's UI
+    /// client) are allowed to diverge for some time.
+    2: layout Layout;
+
     /// This view's extent, in the context view's coordinate system.
+    /// It does NOT describe the child view's logical size.
     ///
     /// This describes the "ground truth" position of this view within the context
     /// view, regardless of view tree depth, or specific layout state of
@@ -192,17 +190,17 @@ type ViewDescriptor = table {
     /// whether the view has opacity applied, or is not occluded by another view),
     /// and it does NOT describe whether the view is "hittable" (e.g., whether the
     /// view is positioned fully inside of every ancestor view's bounding box).
-    2: extent_in_context RotatableExtent;
+    3: extent_in_context RotatableExtent;
 
-    /// This view's origin, size, pixel scale, and inset data, in the view's own
-    /// coordinate system.
+    /// The space occupied within the parent view's coordinate system.
+    /// It does NOT describe the child view's logical size.
+    4: extent_in_parent RotatableExtent;
+
+    /// The list of child views, in the order known to the graphics API.
     ///
-    /// Limitations. Data consistency between server and client depend on the
-    /// specific graphics API. Some APIs provide weak consistency, where the
-    /// server-side data (this data) and the client-side data (in the view's UI
-    /// client) are allowed to diverge for some time.
-    3: layout Layout;
-
+    /// Each integer in this vector refers to the child's position in the
+    /// |views| or |incomplete| vector that the parent is in.
+    ///
     /// The identity, position, and size of each child view. Position and size are
     /// described by the extent of the child view within the parent view's
     /// coordinate system.
@@ -210,11 +208,11 @@ type ViewDescriptor = table {
     /// The view tree topology is reliable. A child placed here is equivalent to
     /// the parent view receiving a "child view connected" signal.
     ///
-    /// Limitations. A child's extent is described in the parent view's coordinate
-    /// system, which is subject to weak consistency (depending on the graphics
-    /// API). That is, when a parent view has a change in size or metrics, the
-    /// context view may observe a "jump" as the parent view incorporates those
+    /// Limitations. A child's view boundary is described in the parent view's
+    /// coordinate system, which is subject to weak consistency (depending on the
+    /// graphics API). That is, when a parent view has a change in size or metrics,
+    /// the context view may observe a "jump" as the parent view incorporates those
     /// data. In such cases, a new ViewTreeSnapshot is issued to describe the
     /// change in position, relative to the context view.
-    4: children vector<Child>:MAX_VIEW_COUNT;
+    5: children vector<uint32>:MAX_VIEW_COUNT;
 };

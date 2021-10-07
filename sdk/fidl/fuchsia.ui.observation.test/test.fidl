@@ -4,7 +4,7 @@
 
 library fuchsia.ui.observation.test;
 
-using fuchsia.ui.observation;
+using fuchsia.ui.observation.geometry;
 
 /// *** ONLY FOR USE IN TESTS ***
 /// This is a sensitive protocol. It provides unlimited access to the global
@@ -23,7 +23,7 @@ protocol Registry {
     /// Flow control. The caller is allowed at most one in-flight call at a
     /// time. Subsequent calls must wait until the acknowledgment returns.
     /// Non-compliance results in channel closure.
-    RegisterGlobalGeometryObserver(resource struct {
-        provider server_end:fuchsia.ui.observation.Geometry;
+    RegisterGlobalGeometryProvider(resource struct {
+        provider server_end:fuchsia.ui.observation.geometry.Provider;
     }) -> ();
 };

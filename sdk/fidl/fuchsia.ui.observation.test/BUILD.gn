@@ -8,7 +8,7 @@ fidl("fuchsia.ui.observation.test") {
   sdk_category = "internal"
   sources = [ "test.fidl" ]
   public_deps = [
-    "//sdk/fidl/fuchsia.ui.observation",
+    "//sdk/fidl/fuchsia.ui.observation.geometry",
     "//zircon/vdso/zx",
   ]
 }

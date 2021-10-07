@@ -15,9 +15,9 @@ namespace view_tree {
 // This is a sensitive protocol, so it should only be used in tests.
 class Registry : public fuchsia::ui::observation::test::Registry {
   // |fuchsia.ui.observation.test.Registry|
-  void RegisterGlobalGeometryObserver(
-      fidl::InterfaceRequest<fuchsia::ui::observation::Geometry> request,
-      Registry::RegisterGlobalGeometryObserverCallback callback) override;
+  void RegisterGlobalGeometryProvider(
+      fidl::InterfaceRequest<fuchsia::ui::observation::geometry::Provider> request,
+      Registry::RegisterGlobalGeometryProviderCallback callback) override;
 };
 
 }  // namespace view_tree
