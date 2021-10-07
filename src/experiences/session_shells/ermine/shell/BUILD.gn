@@ -54,6 +54,7 @@ dart_library("lib") {
     "src/services/settings/network_address_service.dart",
     "src/services/settings/task_service.dart",
     "src/services/settings/timezone_service.dart",
+    "src/services/settings/volume_service.dart",
     "src/services/settings/wifi_service.dart",
   ]
 
@@ -103,6 +104,7 @@ dart_library("lib") {
     "//sdk/fidl/fuchsia.device.manager",
     "//sdk/fidl/fuchsia.element",
     "//sdk/fidl/fuchsia.intl",
+    "//sdk/fidl/fuchsia.media.audio",
     "//sdk/fidl/fuchsia.memory",
     "//sdk/fidl/fuchsia.net.interfaces",
     "//sdk/fidl/fuchsia.power",
