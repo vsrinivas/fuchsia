@@ -9,19 +9,39 @@ use {
     fidl_fuchsia_net::SocketAddress,
     fidl_fuchsia_net_ext::SocketAddress as SocketAddressExt,
     futures::{future::join, AsyncReadExt as _, AsyncWriteExt as _, StreamExt as _},
+    serde::{Deserialize, Serialize},
+    serde_json::{self, Value},
     services::prelude::*,
+    std::sync::Arc,
 };
 
 #[ffx_service]
 #[derive(Default)]
-pub struct Forward;
+pub struct Forward(Arc<tasks::TaskManager>);
+
+#[derive(Deserialize, Serialize)]
+enum ForwardConfigType {
+    Tcp,
+}
+
+#[derive(Deserialize, Serialize)]
+struct ForwardConfig {
+    #[serde(rename = "type")]
+    ty: ForwardConfigType,
+    target: String,
+    host_address: std::net::SocketAddr,
+    target_address: std::net::SocketAddr,
+}
+
+const TUNNEL_CFG: &'static str = "tunnels";
 
 impl Forward {
     async fn port_forward_task(
         cx: Context,
-        target: Option<String>,
+        target: String,
         mut target_address: SocketAddress,
         listener: TcpListener,
+        tasks: Arc<tasks::TaskManager>,
     ) {
         let mut incoming = listener.incoming();
         while let Some(conn) = incoming.next().await {
@@ -33,7 +53,7 @@ impl Forward {
                 }
             };
 
-            let target = match cx.open_remote_control(target.clone()).await {
+            let target = match cx.open_remote_control(Some(target.clone())).await {
                 Ok(t) => t,
                 Err(e) => {
                     log::error!("Could not connect to proxy for TCP forwarding: {:?}", e);
@@ -96,7 +116,7 @@ impl Forward {
                 }
             };
             let forward = join(read_write, write_read);
-            fuchsia_async::Task::local(async move {
+            tasks.spawn(async move {
                 match forward.await {
                     (Err(a), Err(b)) => {
                         log::warn!("Port forward closed with errors:\n  {:?}\n  {:?}", a, b)
@@ -106,9 +126,14 @@ impl Forward {
                     }
                     _ => (),
                 }
-            })
-            .detach();
+            });
         }
+    }
+
+    async fn bind_or_log(addr: std::net::SocketAddr) -> Result<TcpListener, ()> {
+        TcpListener::bind(addr).await.map_err(|e| {
+            log::error!("Could not listen on {:?}: {:?}", addr, e);
+        })
     }
 }
 
@@ -129,23 +154,38 @@ impl FidlService for Forward {
             } => {
                 let host_address: SocketAddressExt = host_address.into();
                 let host_address = host_address.0;
-                let listener = match TcpListener::bind(host_address).await {
+                let target_address_cfg: SocketAddressExt = target_address.clone().into();
+                let target_address_cfg = target_address_cfg.0;
+                let listener = match Self::bind_or_log(host_address).await {
                     Ok(t) => t,
-                    Err(e) => {
-                        log::error!("Could not listen on {:?}: {:?}", host_address, e);
+                    Err(_) => {
                         return responder
                             .send(&mut Err(bridge::TunnelError::CouldNotListen))
                             .context("error sending response");
                     }
                 };
 
-                fuchsia_async::Task::local(Self::port_forward_task(
+                let tasks = Arc::clone(&self.0);
+                self.0.spawn(Self::port_forward_task(
                     cx,
-                    target,
+                    target.clone(),
                     target_address,
                     listener,
-                ))
-                .detach();
+                    tasks,
+                ));
+
+                let cfg = serde_json::to_value(ForwardConfig {
+                    ty: ForwardConfigType::Tcp,
+                    target,
+                    host_address,
+                    target_address: target_address_cfg,
+                })?;
+
+                if let Err(e) =
+                    ffx_config::add((TUNNEL_CFG, ffx_config::ConfigLevel::User), cfg).await
+                {
+                    log::warn!("Failed to persist tunnel configuration: {:?}", e);
+                }
 
                 responder.send(&mut Ok(())).context("error sending response")?;
                 Ok(())
@@ -153,8 +193,38 @@ impl FidlService for Forward {
         }
     }
 
-    async fn start(&mut self, _cx: &Context) -> Result<()> {
+    async fn start(&mut self, cx: &Context) -> Result<()> {
         log::info!("started port forwarding service");
+
+        let tunnels: Vec<Value> = ffx_config::get(TUNNEL_CFG).await.unwrap_or_else(|_| Vec::new());
+
+        for tunnel in tunnels {
+            let tunnel: ForwardConfig = match serde_json::from_value(tunnel) {
+                Ok(tunnel) => tunnel,
+                Err(e) => {
+                    log::warn!("Malformed tunnel config: {:?}", e);
+                    continue;
+                }
+            };
+
+            match tunnel.ty {
+                ForwardConfigType::Tcp => {
+                    let target_address = SocketAddressExt(tunnel.target_address);
+                    let listener = match Self::bind_or_log(tunnel.host_address).await {
+                        Ok(t) => t,
+                        Err(_) => continue,
+                    };
+                    let tasks = Arc::clone(&self.0);
+                    self.0.spawn(Self::port_forward_task(
+                        cx.clone(),
+                        tunnel.target,
+                        target_address.into(),
+                        listener,
+                        tasks,
+                    ));
+                }
+            }
+        }
         Ok(())
     }
 

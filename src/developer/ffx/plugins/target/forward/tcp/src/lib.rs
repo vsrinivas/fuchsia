@@ -3,13 +3,32 @@
 // found in the LICENSE file.
 
 use {
-    anyhow::Result, errors::ffx_bail, ffx_core::ffx_plugin,
-    ffx_target_forward_tcp_args::TcpCommand, fidl_fuchsia_developer_bridge as bridge,
+    anyhow::{Context as _, Result},
+    errors::ffx_bail,
+    ffx_core::ffx_plugin,
+    ffx_target_forward_tcp_args::TcpCommand,
+    fidl_fuchsia_developer_bridge as bridge,
 };
 
 #[ffx_plugin(bridge::TunnelProxy = "daemon::service")]
-pub async fn forward_tcp(forward_port: bridge::TunnelProxy, mut cmd: TcpCommand) -> Result<()> {
-    match forward_port.forward_port(None, &mut cmd.host_address, &mut cmd.target_address).await? {
+pub async fn forward_tcp(forward_port: bridge::TunnelProxy, cmd: TcpCommand) -> Result<()> {
+    let target: Option<String> =
+        ffx_config::get("target.default").await.context("getting default target from config")?;
+    let target = if let Some(target) = target {
+        target
+    } else {
+        ffx_bail!("Specify a target or configure a default target")
+    };
+
+    forward_tcp_impl(&target, forward_port, cmd).await
+}
+
+pub async fn forward_tcp_impl(
+    target: &str,
+    forward_port: bridge::TunnelProxy,
+    mut cmd: TcpCommand,
+) -> Result<()> {
+    match forward_port.forward_port(target, &mut cmd.host_address, &mut cmd.target_address).await? {
         Ok(()) => Ok(()),
         Err(bridge::TunnelError::CouldNotListen) => {
             ffx_bail!("Could not listen on address {:?}", cmd.host_address)
@@ -20,7 +39,7 @@ pub async fn forward_tcp(forward_port: bridge::TunnelProxy, mut cmd: TcpCommand)
 #[cfg(test)]
 mod test {
     use super::*;
-    use {anyhow::Context as _, fidl_fuchsia_net as net};
+    use fidl_fuchsia_net as net;
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_forward() {
@@ -43,7 +62,7 @@ mod test {
                     target_address,
                     responder,
                 } => {
-                    assert!(target.is_none());
+                    assert_eq!("dummy_target", target);
                     assert_eq!(host_address_test, host_address);
                     assert_eq!(target_address_test, target_address);
                     responder.send(&mut Ok(())).context("sending response").expect("should send")
@@ -51,7 +70,8 @@ mod test {
             }
         });
 
-        forward_tcp(
+        forward_tcp_impl(
+            "dummy_target",
             forward_port_proxy,
             TcpCommand {
                 host_address: host_address_test.clone(),

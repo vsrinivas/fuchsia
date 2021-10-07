@@ -14,7 +14,7 @@ type TunnelError = strict enum {
 protocol Tunnel {
     /// Forwards a TCP port on the host to the target address, from the target node.
     ForwardPort(struct {
-        target string:<fuchsia.device.DEVICE_NAME_MAX, optional>;
+        target string:<fuchsia.device.DEVICE_NAME_MAX>;
         host_address fuchsia.net.SocketAddress;
         target_address fuchsia.net.SocketAddress;
     }) -> (struct {}) error TunnelError;
