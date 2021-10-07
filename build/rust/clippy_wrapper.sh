@@ -12,7 +12,9 @@ output="$1"
 # after that the positional args are the clippy-driver command and args set
 # in the clippy GN template
 
-sort -u "$output.transdeps" | cat - "$output.deps" | xargs -d '\n' \
-    "${@:2}" -Cpanic=abort -Zpanic_abort_tests -Zno_codegen \
+deps=( $(<"$output.deps") )
+transdeps=( $(sort -u "$output.transdeps") )
+
+"${@:2}" -Cpanic=abort -Zpanic_abort_tests -Zno_codegen ${deps[@]} ${transdeps[@]} \
     --emit metadata="$output.rmeta" --emit dep-info="$output.d" \
     --error-format=json --json=diagnostic-rendered-ansi 2>"$output"

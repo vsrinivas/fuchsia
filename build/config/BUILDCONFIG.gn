@@ -2880,7 +2880,12 @@ template("rust_proc_macro") {
     if (!defined(output_dir)) {
       output_dir = get_label_info(":$target_name", "target_out_dir")
     }
-    _rlib = rebase_path("$output_dir/lib${output_name}.so", root_build_dir)
+    output_extension = "so"
+    if (host_os == "mac") {
+      output_extension = "dylib"
+    }
+    _rlib = rebase_path("$output_dir/lib$output_name.$output_extension",
+                        root_build_dir)
     _searchdir = rebase_path(output_dir, root_build_dir)
     metadata = {
       rlib = [ "--extern=$crate_name=$_rlib" ]
