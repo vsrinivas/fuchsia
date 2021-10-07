@@ -69,6 +69,28 @@ class VsockChain {
   VirtioDescriptor desc_{};       // Head descriptor.
 };
 
+// ConnectionKey stores the source/destination cid/ports of a connection.
+struct ConnectionKey {
+  // The host-side of the connection is represented by local_cid and
+  // local_port.
+  uint32_t local_cid;
+  uint32_t local_port;
+
+  // The guest-side of the connection is represented by remote_cid and
+  // remote_port.
+  uint32_t remote_cid;
+  uint32_t remote_port;
+
+  bool operator==(const ConnectionKey& key) const {
+    return local_cid == key.local_cid && local_port == key.local_port &&
+           remote_cid == key.remote_cid && remote_port == key.remote_port;
+  }
+
+  struct Hash {
+    size_t operator()(const ConnectionKey& key) const;
+  };
+};
+
 class VirtioVsock
     : public VirtioInprocessDevice<VIRTIO_ID_VSOCK, kVirtioVsockNumQueues, virtio_vsock_config_t>,
       public fuchsia::virtualization::GuestVsockEndpoint,
@@ -96,28 +118,9 @@ class VirtioVsock
   class ChannelConnection;
 
  private:
-  struct ConnectionKey {
-    // The host-side of the connection is represented by local_cid and
-    // local_port.
-    uint32_t local_cid;
-    uint32_t local_port;
-    // The guest-side of the connection is represented by guest_cid and
-    // remote_port.
-    uint32_t remote_port;
-    bool operator==(const ConnectionKey& key) const {
-      return local_cid == key.local_cid && local_port == key.local_port &&
-             remote_port == key.remote_port;
-    }
-  };
-  struct ConnectionHash {
-    size_t operator()(const ConnectionKey& key) const {
-      return ((static_cast<size_t>(key.local_cid) << 32) | key.local_port) ^
-             (key.remote_port << 16);
-    }
-  };
   using ConnectionMap =
-      std::unordered_map<ConnectionKey, std::unique_ptr<Connection>, ConnectionHash>;
-  using ConnectionSet = std::unordered_set<ConnectionKey, ConnectionHash>;
+      std::unordered_map<ConnectionKey, std::unique_ptr<Connection>, ConnectionKey::Hash>;
+  using ConnectionSet = std::unordered_set<ConnectionKey, ConnectionKey::Hash>;
 
   // |fuchsia::virtualization::GuestVsockEndpoint|
   void SetContextId(

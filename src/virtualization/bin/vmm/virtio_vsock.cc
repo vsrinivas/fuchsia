@@ -7,6 +7,7 @@
 #include <lib/async/cpp/task.h>
 #include <lib/async/task.h>
 #include <lib/fit/defer.h>
+#include <lib/stdcompat/bit.h>
 #include <zircon/status.h>
 #include <zircon/syscalls/object.h>
 #include <zircon/types.h>
@@ -78,6 +79,12 @@ void VsockChain::Return(uint32_t used) {
   queue_->Return(index_, used);
   Release();
 }
+
+// Hash a ConnectionKey.
+size_t ConnectionKey::Hash::operator()(const ConnectionKey& key) const {
+  return ((static_cast<size_t>(key.local_cid) << 32) | key.local_port) ^
+         (cpp20::rotl(static_cast<size_t>(key.remote_cid) << 32 | key.remote_port, 16));
+};
 
 // We take a |queue_callback| to decouple the connection from the device. This
 // allows a connection to wait on a Virtio queue and update the device state,
@@ -558,7 +565,7 @@ uint32_t VirtioVsock::guest_cid() const {
 }
 
 bool VirtioVsock::HasConnection(uint32_t src_cid, uint32_t src_port, uint32_t dst_port) const {
-  ConnectionKey key{src_cid, src_port, dst_port};
+  ConnectionKey key{src_cid, src_port, guest_cid(), dst_port};
   std::lock_guard<std::mutex> lock(mutex_);
   return connections_.find(key) != connections_.end();
 }
@@ -604,7 +611,7 @@ void VirtioVsock::Accept(uint32_t src_cid, uint32_t src_port, uint32_t port, zx:
     callback(ZX_ERR_ALREADY_BOUND);
     return;
   }
-  ConnectionKey key{src_cid, src_port, port};
+  ConnectionKey key{src_cid, src_port, guest_cid(), port};
   auto conn = create_connection(std::move(handle), dispatcher_, std::move(callback), [this, key] {
     std::lock_guard<std::mutex> lock(mutex_);
     WaitOnQueueLocked(key);
@@ -884,9 +891,10 @@ void VirtioVsock::ProcessIncomingPacket(const VsockChain& chain) {
 
   // Fetch the connection associated with this packet.
   ConnectionKey key{
-      static_cast<uint32_t>(header->dst_cid),
-      header->dst_port,
-      header->src_port,
+      .local_cid = static_cast<uint32_t>(header->dst_cid),
+      .local_port = header->dst_port,
+      .remote_cid = guest_cid(),
+      .remote_port = header->src_port,
   };
   Connection* conn = GetConnectionLocked(key);
   if (header->op == VIRTIO_VSOCK_OP_REQUEST) {
