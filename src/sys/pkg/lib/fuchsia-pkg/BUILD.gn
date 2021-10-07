@@ -47,6 +47,7 @@ rustc_library("fuchsia-pkg") {
     "src/package.rs",
     "src/package_directory.rs",
     "src/package_manifest.rs",
+    "src/package_manifest_list.rs",
     "src/path.rs",
     "src/test.rs",
   ]
