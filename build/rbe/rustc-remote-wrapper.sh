@@ -592,6 +592,12 @@ then
   for f in "${remote_depfile_inputs[@]}"
   do
     case "$f" in
+      # With --exec_strategy=local, it is ok to have absolute paths under
+      # $project_root because the remote cache is not by this depfile.
+      # Remotely generated depfiles will not match this case because they
+      # operate in a different environment, so there is no need to condition
+      # this case further.
+      "$project_root"/*) ;;
       /*) abs_deps+=("$f") ;;
     esac
   done
