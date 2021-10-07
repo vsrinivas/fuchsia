@@ -3,8 +3,8 @@
 // found in the LICENSE file.
 
 use crate::{constants::*, logs::utils::Listener, test_topology};
-use archivist_lib::logs::message::fx_log_packet_t;
 use diagnostics_hierarchy::assert_data_tree;
+use diagnostics_message::message::fx_log_packet_t;
 use diagnostics_reader::{ArchiveReader, Logs, Severity};
 use fidl::{Socket, SocketOpts};
 use fidl_fuchsia_diagnostics::ArchiveAccessorMarker;

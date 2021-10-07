@@ -14,8 +14,8 @@ use {
             debuglog::{DebugLog, DebugLogBridge, KERNEL_IDENTITY},
             error::LogsError,
             listener::{pretend_scary_listener_is_safe, Listener, ListenerError},
+            message::MessageWithStats,
             multiplex::{Multiplexer, MultiplexerHandle},
-            Message,
         },
     },
     anyhow::{format_err, Error},
@@ -165,7 +165,7 @@ impl DataRepo {
     pub fn logs_cursor(
         &self,
         mode: StreamMode,
-    ) -> impl Stream<Item = Arc<Message>> + Send + 'static {
+    ) -> impl Stream<Item = Arc<MessageWithStats>> + Send + 'static {
         let mut repo = self.write();
         let (merged, mpx_handle) = Multiplexer::new();
         repo.data_directories
@@ -542,13 +542,13 @@ impl DataRepoState {
 /// Ensures that BatchIterators get access to logs from newly started components.
 #[derive(Default)]
 pub struct MultiplexerBroker {
-    live_iterators: Vec<(StreamMode, MultiplexerHandle<Arc<Message>>)>,
+    live_iterators: Vec<(StreamMode, MultiplexerHandle<Arc<MessageWithStats>>)>,
 }
 
 impl MultiplexerBroker {
     /// A new BatchIterator has been created and must be notified when future log containers are
     /// created.
-    fn add(&mut self, mode: StreamMode, recipient: MultiplexerHandle<Arc<Message>>) {
+    fn add(&mut self, mode: StreamMode, recipient: MultiplexerHandle<Arc<MessageWithStats>>) {
         match mode {
             // snapshot streams only want to know about what's currently available
             StreamMode::Snapshot => recipient.close(),

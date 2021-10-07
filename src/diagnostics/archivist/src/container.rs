@@ -10,7 +10,7 @@ use {
         inspect::container::InspectArtifactsContainer,
         lifecycle::container::LifecycleArtifactsContainer,
         logs::{
-            budget::BudgetManager, container::LogsArtifactsContainer, message::Message,
+            budget::BudgetManager, container::LogsArtifactsContainer, message::MessageWithStats,
             multiplex::PinStream, stats::LogStreamStats,
         },
         repository::MultiplexerBroker,
@@ -188,7 +188,7 @@ impl ComponentDiagnostics {
     }
 
     /// Return a cursor over messages from this component with the given `mode`.
-    pub fn logs_cursor(&self, mode: StreamMode) -> Option<PinStream<Arc<Message>>> {
+    pub fn logs_cursor(&self, mode: StreamMode) -> Option<PinStream<Arc<MessageWithStats>>> {
         self.logs.as_ref().map(|l| l.cursor(mode))
     }
 

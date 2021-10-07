@@ -19,6 +19,7 @@ use {
     ::routing_test_helpers::{generate_storage_path, RoutingTestModel, RoutingTestModelBuilder},
     async_trait::async_trait,
     cm_rust::*,
+    cm_rust_testing::TEST_RUNNER_NAME,
     cm_types::Url,
     fidl::{
         self,

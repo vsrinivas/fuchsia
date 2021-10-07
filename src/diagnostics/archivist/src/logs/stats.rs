@@ -2,8 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use super::message::Severity;
-use diagnostics_data::LogsData;
+use diagnostics_data::{LogsData, Severity};
 use fuchsia_inspect::{IntProperty, Node, NumericProperty, Property, UintProperty};
 use fuchsia_inspect_derive::Inspect;
 

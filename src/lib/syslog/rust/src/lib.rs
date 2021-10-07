@@ -462,11 +462,8 @@ pub fn is_enabled(severity: levels::LogLevel) -> bool {
 #[cfg(test)]
 mod test {
     use super::*;
-
-    use archivist_lib::{
-        container::ComponentIdentity, events::types::ComponentIdentifier, logs::Message,
-    };
     use diagnostics_data::{assert_data_tree, Severity};
+    use diagnostics_message::message::{Message, MonikerWithUrl};
     use log::{debug, error, info, trace, warn};
     use std::fs::File;
     use std::io::Read;
@@ -490,15 +487,12 @@ mod test {
         // component identity.
         let mut buffer: [u8; 1024] = [0; 1024];
         let read_len = tx.read(&mut buffer).expect("socket read failed");
-        let src_id = ComponentIdentity::from_identifier_and_url(
-            &ComponentIdentifier::Legacy {
-                moniker: vec!["fake-test-env", "test-component.cmx"].into(),
-                instance_id: "".into(),
-            },
-            "fuchsia-pkg://fuchsia.com/testing123#test-component.cm",
-        );
+        let src_id = MonikerWithUrl {
+            moniker: "fake-test-env/test-component.cmx".to_string(),
+            url: "fuchsia-pkg://fuchsia.com/testing123#test-component.cm".to_string(),
+        };
 
-        let msg = Message::from_logger(&src_id, &buffer[..read_len])
+        let msg = Message::from_logger(src_id.clone(), &buffer[..read_len])
             .expect("couldn't decode message from buffer");
 
         // Check metadata and payload

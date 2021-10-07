@@ -8,10 +8,10 @@ use crate::{
         budget::BudgetHandle,
         buffer::{ArcList, LazyItem},
         error::StreamError,
+        message::MessageWithStats,
         multiplex::PinStream,
         socket::{Encoding, LogMessageSocket},
         stats::LogStreamStats,
-        Message,
     },
 };
 use fidl::endpoints::RequestStream;
@@ -37,7 +37,7 @@ pub struct LogsArtifactsContainer {
     budget: BudgetHandle,
 
     /// Buffer for all log messages.
-    buffer: ArcList<Message>,
+    buffer: ArcList<MessageWithStats>,
 
     /// Mutable state for the container.
     state: Mutex<ContainerState>,
@@ -94,7 +94,7 @@ impl LogsArtifactsContainer {
     /// When messages are evicted from our internal buffers before a client can read them, they
     /// are surfaced here as an `LazyItem::ItemsDropped` variant. We report these as synthesized
     /// messages with the timestamp populated as the most recent timestamp from the stream.
-    pub fn cursor(&self, mode: StreamMode) -> PinStream<Arc<Message>> {
+    pub fn cursor(&self, mode: StreamMode) -> PinStream<Arc<MessageWithStats>> {
         let identity = self.identity.clone();
         let earliest_timestamp =
             self.buffer.peek_front().map(|f| *f.metadata.timestamp as i64).unwrap_or(0);
@@ -104,9 +104,11 @@ impl LogsArtifactsContainer {
                     *last_timestamp = m.metadata.timestamp.into();
                     m
                 }
-                LazyItem::ItemsDropped(n) => {
-                    Arc::new(Message::for_dropped(n, &identity, *last_timestamp))
-                }
+                LazyItem::ItemsDropped(n) => Arc::new(MessageWithStats::for_dropped(
+                    n,
+                    identity.as_ref().into(),
+                    *last_timestamp,
+                )),
             }))
         }))
     }
@@ -197,7 +199,7 @@ impl LogsArtifactsContainer {
     }
 
     /// Updates log stats in inspect and push the message onto the container's buffer.
-    pub fn ingest_message(&self, message: Message) {
+    pub fn ingest_message(&self, message: MessageWithStats) {
         self.budget.allocate(message.metadata.size_bytes);
         self.stats.ingest_message(&message);
         self.buffer.push_back(message);
@@ -237,7 +239,7 @@ impl LogsArtifactsContainer {
     }
 
     /// Remove the oldest message from this buffer, returning it.
-    pub fn pop(&self) -> Option<Arc<Message>> {
+    pub fn pop(&self) -> Option<Arc<MessageWithStats>> {
         self.buffer.pop_front()
     }
 
@@ -263,7 +265,7 @@ impl LogsArtifactsContainer {
     }
 
     #[cfg(test)]
-    pub fn buffer(&self) -> &ArcList<Message> {
+    pub fn buffer(&self) -> &ArcList<MessageWithStats> {
         &self.buffer
     }
 }

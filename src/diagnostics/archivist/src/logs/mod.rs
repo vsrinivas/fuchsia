@@ -17,17 +17,15 @@ pub mod stats;
 pub mod testing;
 
 pub use debuglog::{convert_debuglog_to_log_message, KernelDebugLog};
-pub use message::Message;
 
 #[cfg(test)]
 mod tests {
     use crate::{
-        container::ComponentIdentity,
-        events::types::ComponentIdentifier,
-        logs::{message::LegacySeverity, testing::*},
+        container::ComponentIdentity, events::types::ComponentIdentifier, logs::testing::*,
     };
     use diagnostics_data::{DROPPED_LABEL, MESSAGE_LABEL, PID_LABEL, TAG_LABEL, TID_LABEL};
     use diagnostics_log_encoding::{Argument, Record, Severity as StreamSeverity, Value};
+    use diagnostics_message::message::LegacySeverity;
     use fidl_fuchsia_logger::{LogFilterOptions, LogLevelFilter, LogMessage};
     use fuchsia_inspect::{assert_data_tree, testing::AnyProperty};
     use fuchsia_zircon as zx;

@@ -7,15 +7,13 @@
 use crate::{
     container::ComponentIdentity,
     events::types::ComponentIdentifier,
-    logs::{
-        error::LogsError,
-        message::{Message, Severity, METADATA_SIZE},
-    },
+    logs::{error::LogsError, message::MessageWithStats},
 };
 use async_trait::async_trait;
 use byteorder::{ByteOrder, LittleEndian};
-use diagnostics_data::{BuilderArgs, LogsDataBuilder};
+use diagnostics_data::{BuilderArgs, LogsDataBuilder, Severity};
 use fidl::endpoints::ServiceMarker;
+use diagnostics_message::message::METADATA_SIZE;
 use fidl_fuchsia_boot::ReadOnlyLogMarker;
 use fuchsia_async as fasync;
 use fuchsia_component::client::connect_to_protocol;
@@ -81,7 +79,7 @@ impl<K: DebugLog> DebugLogBridge<K> {
         DebugLogBridge { debug_log, buf: Vec::with_capacity(zx::sys::ZX_LOG_RECORD_MAX) }
     }
 
-    async fn read_log(&mut self) -> Result<Message, zx::Status> {
+    async fn read_log(&mut self) -> Result<MessageWithStats, zx::Status> {
         loop {
             self.debug_log.read(&mut self.buf).await?;
             if let Some(message) = convert_debuglog_to_log_message(self.buf.as_slice()) {
@@ -90,7 +88,7 @@ impl<K: DebugLog> DebugLogBridge<K> {
         }
     }
 
-    pub async fn existing_logs<'a>(&'a mut self) -> Result<Vec<Message>, zx::Status> {
+    pub async fn existing_logs<'a>(&'a mut self) -> Result<Vec<MessageWithStats>, zx::Status> {
         unfold(self, move |klogger| async move {
             match klogger.read_log().await {
                 Err(zx::Status::SHOULD_WAIT) => None,
@@ -101,7 +99,7 @@ impl<K: DebugLog> DebugLogBridge<K> {
         .await
     }
 
-    pub fn listen(self) -> impl Stream<Item = Result<Message, zx::Status>> {
+    pub fn listen(self) -> impl Stream<Item = Result<MessageWithStats, zx::Status>> {
         unfold((true, self), move |(mut is_readable, mut klogger)| async move {
             loop {
                 if !is_readable {
@@ -124,7 +122,7 @@ impl<K: DebugLog> DebugLogBridge<K> {
 
 /// Parses a raw debug log read from the kernel.  Returns the parsed message and
 /// its size in memory on success, and None if parsing fails.
-pub fn convert_debuglog_to_log_message(buf: &[u8]) -> Option<Message> {
+pub fn convert_debuglog_to_log_message(buf: &[u8]) -> Option<MessageWithStats> {
     if buf.len() < 32 {
         return None;
     }
@@ -170,7 +168,7 @@ pub fn convert_debuglog_to_log_message(buf: &[u8]) -> Option<Message> {
     };
 
     let size = METADATA_SIZE + 5 /*'klog' tag*/ + contents.len() + 1;
-    Some(Message::from(
+    Some(MessageWithStats::from(
         LogsDataBuilder::new(BuilderArgs {
             timestamp_nanos: time.into(),
             component_url: KERNEL_IDENTITY.url.to_string(),
@@ -201,7 +199,7 @@ mod tests {
         let log_message = convert_debuglog_to_log_message(&klog.to_vec()).unwrap();
         assert_eq!(
             log_message,
-            Message::from(
+            MessageWithStats::from(
                 LogsDataBuilder::new(BuilderArgs {
                     timestamp_nanos: klog.timestamp.into(),
                     component_url: KERNEL_IDENTITY.url.clone(),
@@ -235,7 +233,7 @@ mod tests {
         let log_message = convert_debuglog_to_log_message(&klog.to_vec()).unwrap();
         assert_eq!(
             log_message,
-            Message::from(
+            MessageWithStats::from(
                 LogsDataBuilder::new(BuilderArgs {
                     timestamp_nanos: klog.timestamp.into(),
                     component_url: KERNEL_IDENTITY.url.clone(),
@@ -258,7 +256,7 @@ mod tests {
         let log_message = convert_debuglog_to_log_message(&klog.to_vec()).unwrap();
         assert_eq!(
             log_message,
-            Message::from(
+            MessageWithStats::from(
                 LogsDataBuilder::new(BuilderArgs {
                     timestamp_nanos: klog.timestamp.into(),
                     component_url: KERNEL_IDENTITY.url.clone(),
@@ -297,7 +295,7 @@ mod tests {
 
         assert_eq!(
             log_bridge.existing_logs().await.unwrap(),
-            vec![Message::from(
+            vec![MessageWithStats::from(
                 LogsDataBuilder::new(BuilderArgs {
                     timestamp_nanos: klog.timestamp.into(),
                     component_url: KERNEL_IDENTITY.url.clone(),

@@ -5,16 +5,14 @@
 use crate::{
     container::ComponentIdentity,
     events::types::{ComponentEvent, LogSinkRequestedEvent},
-    logs::{
-        budget::BudgetManager,
-        message::{fx_log_packet_t, EMPTY_IDENTITY, MAX_DATAGRAM_LEN},
-    },
+    logs::budget::BudgetManager,
     repository::DataRepo,
 };
 use async_trait::async_trait;
 use byteorder::{ByteOrder, LittleEndian};
 use diagnostics_log_encoding::{encode::Encoder, Record};
 use fidl::endpoints::ServiceMarker;
+use diagnostics_message::message::{fx_log_packet_t, MAX_DATAGRAM_LEN};
 use fidl_fuchsia_io::DirectoryProxy;
 use fidl_fuchsia_logger::{
     LogFilterOptions, LogLevelFilter, LogMarker, LogMessage, LogProxy, LogSinkMarker, LogSinkProxy,
@@ -154,7 +152,7 @@ impl TestHarness {
         };
         let mut lm2 = copy_log_message(&lm1);
         let mut lm3 = copy_log_message(&lm1);
-        let mut stream = self.create_stream(Arc::new(EMPTY_IDENTITY.clone()));
+        let mut stream = self.create_stream(Arc::new(ComponentIdentity::unknown()));
         stream.write_packet(&mut p);
 
         p.metadata.severity = LogLevelFilter::Info.into_primitive().into();
