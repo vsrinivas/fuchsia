@@ -1476,28 +1476,70 @@ impl<DS: SpinelDeviceClient, NI: NetworkInterface> LowpanDriver for SpinelDriver
     }
 
     async fn get_counters(&self) -> ZxResult<AllCounters> {
-        let res = self.get_property_simple::<AllMacCounters, _>(PropCntr::AllMacCounters).await?;
+        // Wait until we are ready.
+        self.wait_for_state(DriverState::is_initialized).await;
 
-        if res.tx_counters.len() != 17 || res.rx_counters.len() != 17 {
-            fx_log_err!(
-                "get_counters: Unexpected counter length: {} tx counters and \
-                 {} rx counters",
-                res.tx_counters.len(),
-                res.rx_counters.len()
-            );
-            return Err(ZxStatus::INTERNAL);
+        let mut ret = AllCounters::EMPTY;
+
+        if self.driver_state.lock().has_cap(Cap::Counters) {
+            let future = self.get_property_simple::<AllMacCounters, _>(PropCntr::AllMacCounters);
+            ret.update_from(future.await?);
         }
 
-        Ok(res.into())
+        if self.driver_state.lock().has_cap(Cap::Ot(CapOt::RadioCoex)) {
+            let update =
+                self.get_property_simple::<RadioCoexMetrics, _>(PropPhy::RadioCoexMetrics).await?;
+
+            let mut driver_state = self.driver_state.lock();
+            driver_state
+                .radio_coex_metrics
+                .update(update)
+                .map_err(|e| ZxStatus::from(ErrorAdapter(e)))?;
+
+            ret.update_from(&driver_state.radio_coex_metrics);
+        }
+
+        Ok(ret)
     }
 
     async fn reset_counters(&self) -> ZxResult<AllCounters> {
-        self.frame_handler
-            .send_request(CmdPropValueSet(PropCntr::AllMacCounters.into(), 0u8))
-            .await
-            .map_err(|e| ZxStatus::from(ErrorAdapter(e)))?;
+        let mut ret = AllCounters::EMPTY;
 
-        self.get_counters().await
+        if self.driver_state.lock().has_cap(Cap::Counters) {
+            let future = self
+                .get_property_simple::<AllMacCounters, _>(PropCntr::AllMacCounters)
+                .and_then(move |x| {
+                    async move {
+                        // Now that we've fetched the above values, we must
+                        // immediately clear the counters.
+                        self.frame_handler
+                            .send_request_ignore_response(CmdPropValueSet(
+                                PropCntr::AllMacCounters.into(),
+                                0u8,
+                            ))
+                            .map_err(|e| ZxStatus::from(ErrorAdapter(e)))
+                            .await?;
+                        Ok(x)
+                    }
+                });
+            ret.update_from(future.await?);
+        }
+
+        if self.driver_state.lock().has_cap(Cap::Ot(CapOt::RadioCoex)) {
+            let update =
+                self.get_property_simple::<RadioCoexMetrics, _>(PropPhy::RadioCoexMetrics).await?;
+
+            let mut driver_state = self.driver_state.lock();
+            driver_state
+                .radio_coex_metrics
+                .update(update)
+                .map_err(|e| ZxStatus::from(ErrorAdapter(e)))?;
+
+            ret.update_from(&driver_state.radio_coex_metrics);
+            driver_state.radio_coex_metrics = RadioCoexMetrics::default();
+        }
+
+        Ok(ret)
     }
 }
 

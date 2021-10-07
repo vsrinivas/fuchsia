@@ -688,13 +688,15 @@ impl FakeSpinelDevice {
             Prop::Caps => {
                 spinel_write!(
                     &mut response,
-                    "Ciiiii",
+                    "Ciiiiiii",
                     frame.header,
                     Cmd::PropValueIs,
                     prop,
                     CapConfig::Ftd,
                     CapNet::Thread(1, 1),
                     Cap::NetSave,
+                    Cap::Counters,
+                    Cap::Ot(CapOt::RadioCoex),
                 )
                 .unwrap();
             }
@@ -808,6 +810,21 @@ impl FakeSpinelDevice {
                 )
                 .unwrap();
             }
+            Prop::Phy(PropPhy::RadioCoexMetrics) => {
+                spinel_write!(
+                    &mut response,
+                    "CiiddbL",
+                    frame.header,
+                    Cmd::PropValueIs,
+                    prop,
+                    vec![201, 202, 203, 204, 205, 206, 207, 208],
+                    vec![301, 302, 303, 304, 305, 306, 307, 308, 309],
+                    false,
+                    400
+                )
+                .unwrap();
+            }
+
             prop => {
                 let properties = self.properties.lock();
                 if let Some(value) = properties.get(&prop) {

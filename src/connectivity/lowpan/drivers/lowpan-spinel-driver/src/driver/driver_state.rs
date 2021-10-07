@@ -76,6 +76,8 @@ pub(super) struct DriverState {
 
     /// Current regulatory domain, if known.
     pub(super) regulatory_domain: Option<RegionCode>,
+
+    pub(super) radio_coex_metrics: RadioCoexMetrics,
 }
 
 impl Clone for DriverState {
@@ -98,6 +100,7 @@ impl Clone for DriverState {
             mac_addr: self.mac_addr.clone(),
             assisting_state: self.assisting_state.clone(),
             regulatory_domain: self.regulatory_domain.clone(),
+            radio_coex_metrics: self.radio_coex_metrics.clone(),
         }
     }
 }
@@ -150,6 +153,7 @@ impl Default for DriverState {
             mac_addr: Default::default(),
             assisting_state: Default::default(),
             regulatory_domain: Default::default(),
+            radio_coex_metrics: Default::default(),
         }
     }
 }

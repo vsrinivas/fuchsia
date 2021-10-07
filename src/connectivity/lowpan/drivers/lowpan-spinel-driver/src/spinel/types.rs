@@ -8,7 +8,7 @@ use crate::driver::Ipv6PacketDebug;
 use anyhow::{format_err, Context as _};
 use core::convert::{TryFrom, TryInto};
 use fidl_fuchsia_lowpan::JoinerCommissioningParams;
-use fidl_fuchsia_lowpan_device::{AllCounters, MacCounters};
+use fidl_fuchsia_lowpan_device::{AllCounters, CoexCounters, MacCounters};
 use hex;
 use net_types::ip::IpAddress;
 use spinel_pack::*;
@@ -617,6 +617,10 @@ pub struct NeighborTableEntry {
 
 pub type NeighborTable = Vec<NeighborTableEntry>;
 
+pub trait AllCountersUpdate<T> {
+    fn update_from<R: AsRef<T>>(&mut self, data: R);
+}
+
 #[spinel_packed("dd")]
 #[derive(Debug, Hash, Clone, Eq, PartialEq)]
 pub struct AllMacCounters {
@@ -624,51 +628,157 @@ pub struct AllMacCounters {
     pub rx_counters: Vec<u32>,
 }
 
+impl AsRef<AllMacCounters> for AllMacCounters {
+    fn as_ref(&self) -> &AllMacCounters {
+        self
+    }
+}
+
+impl AllCountersUpdate<AllMacCounters> for AllCounters {
+    fn update_from<R: AsRef<AllMacCounters>>(&mut self, data: R) {
+        let data = data.as_ref();
+        self.mac_tx = Some(MacCounters {
+            total: data.tx_counters.get(0).cloned(),
+            unicast: data.tx_counters.get(1).cloned(),
+            broadcast: data.tx_counters.get(2).cloned(),
+            ack_requested: data.tx_counters.get(3).cloned(),
+            acked: data.tx_counters.get(4).cloned(),
+            no_ack_requested: data.tx_counters.get(5).cloned(),
+            data: data.tx_counters.get(6).cloned(),
+            data_poll: data.tx_counters.get(7).cloned(),
+            beacon: data.tx_counters.get(8).cloned(),
+            beacon_request: data.tx_counters.get(9).cloned(),
+            other: data.tx_counters.get(10).cloned(),
+            retries: data.tx_counters.get(11).cloned(),
+            direct_max_retry_expiry: data.tx_counters.get(15).cloned(),
+            indirect_max_retry_expiry: data.tx_counters.get(16).cloned(),
+            err_cca: data.tx_counters.get(12).cloned(),
+            err_abort: data.tx_counters.get(13).cloned(),
+            err_busy_channel: data.tx_counters.get(14).cloned(),
+            ..MacCounters::EMPTY
+        });
+        self.mac_rx = Some(MacCounters {
+            total: data.rx_counters.get(0).cloned(),
+            unicast: data.rx_counters.get(1).cloned(),
+            broadcast: data.rx_counters.get(2).cloned(),
+            data: data.rx_counters.get(3).cloned(),
+            data_poll: data.rx_counters.get(4).cloned(),
+            beacon: data.rx_counters.get(5).cloned(),
+            beacon_request: data.rx_counters.get(6).cloned(),
+            other: data.rx_counters.get(7).cloned(),
+            address_filtered: data.rx_counters.get(8).cloned(),
+            dest_addr_filtered: data.rx_counters.get(9).cloned(),
+            duplicated: data.rx_counters.get(10).cloned(),
+            err_no_frame: data.rx_counters.get(11).cloned(),
+            err_unknown_neighbor: data.rx_counters.get(12).cloned(),
+            err_invalid_src_addr: data.rx_counters.get(13).cloned(),
+            err_sec: data.rx_counters.get(14).cloned(),
+            err_fcs: data.rx_counters.get(15).cloned(),
+            err_other: data.rx_counters.get(16).cloned(),
+            ..MacCounters::EMPTY
+        });
+    }
+}
+
 impl std::convert::Into<AllCounters> for AllMacCounters {
     fn into(self) -> AllCounters {
-        AllCounters {
-            mac_tx: Some(MacCounters {
-                total: Some(self.tx_counters[0]),
-                unicast: Some(self.tx_counters[1]),
-                broadcast: Some(self.tx_counters[2]),
-                ack_requested: Some(self.tx_counters[3]),
-                acked: Some(self.tx_counters[4]),
-                no_ack_requested: Some(self.tx_counters[5]),
-                data: Some(self.tx_counters[6]),
-                data_poll: Some(self.tx_counters[7]),
-                beacon: Some(self.tx_counters[8]),
-                beacon_request: Some(self.tx_counters[9]),
-                other: Some(self.tx_counters[10]),
-                retries: Some(self.tx_counters[11]),
-                direct_max_retry_expiry: Some(self.tx_counters[15]),
-                indirect_max_retry_expiry: Some(self.tx_counters[16]),
-                err_cca: Some(self.tx_counters[12]),
-                err_abort: Some(self.tx_counters[13]),
-                err_busy_channel: Some(self.tx_counters[14]),
-                ..MacCounters::EMPTY
-            }),
-            mac_rx: Some(MacCounters {
-                total: Some(self.rx_counters[0]),
-                unicast: Some(self.rx_counters[1]),
-                broadcast: Some(self.rx_counters[2]),
-                data: Some(self.rx_counters[3]),
-                data_poll: Some(self.rx_counters[4]),
-                beacon: Some(self.rx_counters[5]),
-                beacon_request: Some(self.rx_counters[6]),
-                other: Some(self.rx_counters[7]),
-                address_filtered: Some(self.rx_counters[8]),
-                dest_addr_filtered: Some(self.rx_counters[9]),
-                duplicated: Some(self.rx_counters[10]),
-                err_no_frame: Some(self.rx_counters[11]),
-                err_unknown_neighbor: Some(self.rx_counters[12]),
-                err_invalid_src_addr: Some(self.rx_counters[13]),
-                err_sec: Some(self.rx_counters[14]),
-                err_fcs: Some(self.rx_counters[15]),
-                err_other: Some(self.rx_counters[16]),
-                ..MacCounters::EMPTY
-            }),
-            ..AllCounters::EMPTY
+        let mut ret = AllCounters::EMPTY;
+        ret.update_from(self);
+        return ret;
+    }
+}
+
+#[spinel_packed("ddbL")]
+#[derive(Debug, Hash, Clone, Eq, PartialEq, Default)]
+pub struct RadioCoexMetrics {
+    pub tx: Vec<u32>,
+    pub rx: Vec<u32>,
+    pub stopped: bool,
+    pub grant_glitches: u32,
+}
+const AVG_DELAY_REQUEST_TO_GRANT_INDEX: usize = 7;
+
+impl RadioCoexMetrics {
+    pub fn update<R: AsRef<RadioCoexMetrics>>(&mut self, data: R) -> Result<(), anyhow::Error> {
+        let data = data.as_ref();
+        if self.tx.len() == data.tx.len() {
+            for i in 0..self.tx.len() {
+                *self.tx.get_mut(i).unwrap() = if i == AVG_DELAY_REQUEST_TO_GRANT_INDEX {
+                    *data.tx.get(i).unwrap()
+                } else {
+                    *self.tx.get(i).unwrap() + *data.tx.get(i).unwrap()
+                };
+            }
+        } else if self.tx.is_empty() {
+            self.tx = data.tx.clone();
+        } else {
+            return Err(format_err!("Field size mismatch"));
         }
+
+        if self.rx.len() == data.rx.len() {
+            for i in 0..self.rx.len() {
+                *self.rx.get_mut(i).unwrap() = if i == AVG_DELAY_REQUEST_TO_GRANT_INDEX {
+                    *data.rx.get(i).unwrap()
+                } else {
+                    *self.rx.get(i).unwrap() + *data.rx.get(i).unwrap()
+                };
+            }
+        } else if self.rx.is_empty() {
+            self.rx = data.rx.clone();
+        } else {
+            return Err(format_err!("Field size mismatch"));
+        }
+
+        self.stopped = self.stopped | data.stopped;
+        self.grant_glitches = self.grant_glitches + data.grant_glitches;
+        Ok(())
+    }
+}
+
+impl AsRef<RadioCoexMetrics> for RadioCoexMetrics {
+    fn as_ref(&self) -> &RadioCoexMetrics {
+        self
+    }
+}
+
+impl AllCountersUpdate<RadioCoexMetrics> for AllCounters {
+    fn update_from<R: AsRef<RadioCoexMetrics>>(&mut self, data: R) {
+        let data = data.as_ref();
+
+        self.coex_tx = Some(CoexCounters {
+            requests: data.tx.get(0).cloned().map(Into::into),
+            grant_immediate: data.tx.get(1).cloned().map(Into::into),
+            grant_wait: data.tx.get(2).cloned().map(Into::into),
+            grant_wait_activated: data.tx.get(3).cloned().map(Into::into),
+            grant_wait_timeout: data.tx.get(4).cloned().map(Into::into),
+            grant_deactivated_during_request: data.tx.get(5).cloned().map(Into::into),
+            delayed_grant: data.tx.get(6).cloned().map(Into::into),
+            avg_delay_request_to_grant_usec: data.tx.get(7).cloned(),
+            ..CoexCounters::EMPTY
+        });
+        self.coex_rx = Some(CoexCounters {
+            requests: data.rx.get(0).cloned().map(Into::into),
+            grant_immediate: data.rx.get(1).cloned().map(Into::into),
+            grant_wait: data.rx.get(2).cloned().map(Into::into),
+            grant_wait_activated: data.rx.get(3).cloned().map(Into::into),
+            grant_wait_timeout: data.rx.get(4).cloned().map(Into::into),
+            grant_deactivated_during_request: data.rx.get(5).cloned().map(Into::into),
+            delayed_grant: data.rx.get(6).cloned().map(Into::into),
+            avg_delay_request_to_grant_usec: data.rx.get(7).cloned(),
+            grant_none: data.rx.get(8).cloned().map(Into::into),
+            ..CoexCounters::EMPTY
+        });
+        if self.coex_saturated != Some(true) {
+            self.coex_saturated = Some(data.stopped);
+        }
+    }
+}
+
+impl std::convert::Into<AllCounters> for RadioCoexMetrics {
+    fn into(self) -> AllCounters {
+        let mut ret = AllCounters::EMPTY;
+        ret.update_from(self);
+        return ret;
     }
 }
 

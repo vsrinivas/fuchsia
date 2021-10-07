@@ -10,7 +10,7 @@ use mock::*;
 
 use crate::spinel::mock::{PROP_DEBUG_LOGGING_TEST, PROP_DEBUG_SAVED_PANID_TEST};
 use fidl_fuchsia_lowpan::{Credential, Identity, ProvisioningParams, NET_TYPE_THREAD_1_X};
-use fidl_fuchsia_lowpan_device::{AllCounters, MacCounters};
+use fidl_fuchsia_lowpan_device::{AllCounters, CoexCounters, MacCounters};
 use fidl_fuchsia_lowpan_test::NeighborInfo;
 use lowpan_driver_common::Driver as _;
 use std::str::FromStr;
@@ -36,7 +36,7 @@ async fn test_spinel_lowpan_driver() {
         driver.wait_for_state(DriverState::is_initialized).await;
 
         // Verify that our capabilities have been set by this point.
-        assert_eq!(driver.get_driver_state_snapshot().caps.len(), 3);
+        assert_eq!(driver.get_driver_state_snapshot().caps.len(), 5, "Capability size mismatch");
 
         let mut device_state_stream = driver.watch_device_state();
         let mut identity_stream = driver.watch_identity();
@@ -128,121 +128,186 @@ async fn test_spinel_lowpan_driver() {
                 }
             );
 
+            // Make sure we reset the counter values so we have consistent results
+            driver.driver_state.lock().radio_coex_metrics = Default::default();
+
+            let expected_counters = AllCounters {
+                mac_tx: Some(MacCounters {
+                    total: Some(0),
+                    unicast: Some(1),
+                    broadcast: Some(2),
+                    ack_requested: Some(3),
+                    acked: Some(4),
+                    no_ack_requested: Some(5),
+                    data: Some(6),
+                    data_poll: Some(7),
+                    beacon: Some(8),
+                    beacon_request: Some(9),
+                    other: Some(10),
+                    address_filtered: None,
+                    retries: Some(11),
+                    direct_max_retry_expiry: Some(15),
+                    indirect_max_retry_expiry: Some(16),
+                    dest_addr_filtered: None,
+                    duplicated: None,
+                    err_no_frame: None,
+                    err_unknown_neighbor: None,
+                    err_invalid_src_addr: None,
+                    err_sec: None,
+                    err_fcs: None,
+                    err_cca: Some(12),
+                    err_abort: Some(13),
+                    err_busy_channel: Some(14),
+                    err_other: None,
+                    ..MacCounters::EMPTY
+                }),
+                mac_rx: Some(MacCounters {
+                    total: Some(100),
+                    unicast: Some(101),
+                    broadcast: Some(102),
+                    ack_requested: None,
+                    acked: None,
+                    no_ack_requested: None,
+                    data: Some(103),
+                    data_poll: Some(104),
+                    beacon: Some(105),
+                    beacon_request: Some(106),
+                    other: Some(107),
+                    address_filtered: Some(108),
+                    retries: None,
+                    direct_max_retry_expiry: None,
+                    indirect_max_retry_expiry: None,
+                    dest_addr_filtered: Some(109),
+                    duplicated: Some(110),
+                    err_no_frame: Some(111),
+                    err_unknown_neighbor: Some(112),
+                    err_invalid_src_addr: Some(113),
+                    err_sec: Some(114),
+                    err_fcs: Some(115),
+                    err_cca: None,
+                    err_abort: None,
+                    err_busy_channel: None,
+                    err_other: Some(116),
+                    ..MacCounters::EMPTY
+                }),
+                coex_tx: Some(CoexCounters {
+                    requests: Some(201),
+                    grant_immediate: Some(202),
+                    grant_wait: Some(203),
+                    grant_wait_activated: Some(204),
+                    grant_wait_timeout: Some(205),
+                    grant_deactivated_during_request: Some(206),
+                    delayed_grant: Some(207),
+                    avg_delay_request_to_grant_usec: Some(208),
+                    ..CoexCounters::EMPTY
+                }),
+                coex_rx: Some(CoexCounters {
+                    requests: Some(301),
+                    grant_immediate: Some(302),
+                    grant_wait: Some(303),
+                    grant_wait_activated: Some(304),
+                    grant_wait_timeout: Some(305),
+                    grant_deactivated_during_request: Some(306),
+                    delayed_grant: Some(307),
+                    avg_delay_request_to_grant_usec: Some(308),
+                    grant_none: Some(309),
+                    ..CoexCounters::EMPTY
+                }),
+                coex_saturated: Some(false),
+                ..AllCounters::EMPTY
+            };
             let mac_counters = driver.get_counters().await;
             traceln!("app_task: mac_counters: {:?}", mac_counters);
-            assert_eq!(
-                mac_counters,
-                Ok(AllCounters {
-                    mac_tx: Some(MacCounters {
-                        total: Some(0),
-                        unicast: Some(1),
-                        broadcast: Some(2),
-                        ack_requested: Some(3),
-                        acked: Some(4),
-                        no_ack_requested: Some(5),
-                        data: Some(6),
-                        data_poll: Some(7),
-                        beacon: Some(8),
-                        beacon_request: Some(9),
-                        other: Some(10),
-                        address_filtered: None,
-                        retries: Some(11),
-                        direct_max_retry_expiry: Some(15),
-                        indirect_max_retry_expiry: Some(16),
-                        dest_addr_filtered: None,
-                        duplicated: None,
-                        err_no_frame: None,
-                        err_unknown_neighbor: None,
-                        err_invalid_src_addr: None,
-                        err_sec: None,
-                        err_fcs: None,
-                        err_cca: Some(12),
-                        err_abort: Some(13),
-                        err_busy_channel: Some(14),
-                        err_other: None,
-                        ..MacCounters::EMPTY
-                    }),
-                    mac_rx: Some(MacCounters {
-                        total: Some(100),
-                        unicast: Some(101),
-                        broadcast: Some(102),
-                        ack_requested: None,
-                        acked: None,
-                        no_ack_requested: None,
-                        data: Some(103),
-                        data_poll: Some(104),
-                        beacon: Some(105),
-                        beacon_request: Some(106),
-                        other: Some(107),
-                        address_filtered: Some(108),
-                        retries: None,
-                        direct_max_retry_expiry: None,
-                        indirect_max_retry_expiry: None,
-                        dest_addr_filtered: Some(109),
-                        duplicated: Some(110),
-                        err_no_frame: Some(111),
-                        err_unknown_neighbor: Some(112),
-                        err_invalid_src_addr: Some(113),
-                        err_sec: Some(114),
-                        err_fcs: Some(115),
-                        err_cca: None,
-                        err_abort: None,
-                        err_busy_channel: None,
-                        err_other: Some(116),
-                        ..MacCounters::EMPTY
-                    }),
-                    ..AllCounters::EMPTY
-                })
-            );
+            assert_eq!(mac_counters, Ok(expected_counters.clone()));
 
+            let expected_counters = AllCounters {
+                mac_tx: Some(MacCounters {
+                    total: Some(0),
+                    unicast: Some(1),
+                    broadcast: Some(2),
+                    ack_requested: Some(3),
+                    acked: Some(4),
+                    no_ack_requested: Some(5),
+                    data: Some(6),
+                    data_poll: Some(7),
+                    beacon: Some(8),
+                    beacon_request: Some(9),
+                    other: Some(10),
+                    address_filtered: None,
+                    retries: Some(11),
+                    direct_max_retry_expiry: Some(15),
+                    indirect_max_retry_expiry: Some(16),
+                    dest_addr_filtered: None,
+                    duplicated: None,
+                    err_no_frame: None,
+                    err_unknown_neighbor: None,
+                    err_invalid_src_addr: None,
+                    err_sec: None,
+                    err_fcs: None,
+                    err_cca: Some(12),
+                    err_abort: Some(13),
+                    err_busy_channel: Some(14),
+                    err_other: None,
+                    ..MacCounters::EMPTY
+                }),
+                mac_rx: Some(MacCounters {
+                    total: Some(100),
+                    unicast: Some(101),
+                    broadcast: Some(102),
+                    ack_requested: None,
+                    acked: None,
+                    no_ack_requested: None,
+                    data: Some(103),
+                    data_poll: Some(104),
+                    beacon: Some(105),
+                    beacon_request: Some(106),
+                    other: Some(107),
+                    address_filtered: Some(108),
+                    retries: None,
+                    direct_max_retry_expiry: None,
+                    indirect_max_retry_expiry: None,
+                    dest_addr_filtered: Some(109),
+                    duplicated: Some(110),
+                    err_no_frame: Some(111),
+                    err_unknown_neighbor: Some(112),
+                    err_invalid_src_addr: Some(113),
+                    err_sec: Some(114),
+                    err_fcs: Some(115),
+                    err_cca: None,
+                    err_abort: None,
+                    err_busy_channel: None,
+                    err_other: Some(116),
+                    ..MacCounters::EMPTY
+                }),
+                coex_tx: Some(CoexCounters {
+                    requests: Some(201 * 2),
+                    grant_immediate: Some(202 * 2),
+                    grant_wait: Some(203 * 2),
+                    grant_wait_activated: Some(204 * 2),
+                    grant_wait_timeout: Some(205 * 2),
+                    grant_deactivated_during_request: Some(206 * 2),
+                    delayed_grant: Some(207 * 2),
+                    avg_delay_request_to_grant_usec: Some(208),
+                    ..CoexCounters::EMPTY
+                }),
+                coex_rx: Some(CoexCounters {
+                    requests: Some(301 * 2),
+                    grant_immediate: Some(302 * 2),
+                    grant_wait: Some(303 * 2),
+                    grant_wait_activated: Some(304 * 2),
+                    grant_wait_timeout: Some(305 * 2),
+                    grant_deactivated_during_request: Some(306 * 2),
+                    delayed_grant: Some(307 * 2),
+                    avg_delay_request_to_grant_usec: Some(308),
+                    grant_none: Some(309 * 2),
+                    ..CoexCounters::EMPTY
+                }),
+                coex_saturated: Some(false),
+                ..AllCounters::EMPTY
+            };
             let mac_counters = driver.reset_counters().await;
             traceln!("app_task: reset_counters: {:?}", mac_counters);
-            assert_eq!(
-                mac_counters,
-                Ok(AllCounters {
-                    mac_tx: Some(MacCounters {
-                        total: Some(0),
-                        unicast: Some(1),
-                        broadcast: Some(2),
-                        ack_requested: Some(3),
-                        acked: Some(4),
-                        no_ack_requested: Some(5),
-                        data: Some(6),
-                        data_poll: Some(7),
-                        beacon: Some(8),
-                        beacon_request: Some(9),
-                        other: Some(10),
-                        retries: Some(11),
-                        direct_max_retry_expiry: Some(15),
-                        indirect_max_retry_expiry: Some(16),
-                        err_cca: Some(12),
-                        err_abort: Some(13),
-                        err_busy_channel: Some(14),
-                        ..MacCounters::EMPTY
-                    }),
-                    mac_rx: Some(MacCounters {
-                        total: Some(100),
-                        unicast: Some(101),
-                        broadcast: Some(102),
-                        data: Some(103),
-                        data_poll: Some(104),
-                        beacon: Some(105),
-                        beacon_request: Some(106),
-                        other: Some(107),
-                        address_filtered: Some(108),
-                        dest_addr_filtered: Some(109),
-                        duplicated: Some(110),
-                        err_no_frame: Some(111),
-                        err_unknown_neighbor: Some(112),
-                        err_invalid_src_addr: Some(113),
-                        err_sec: Some(114),
-                        err_fcs: Some(115),
-                        err_other: Some(116),
-                        ..MacCounters::EMPTY
-                    }),
-                    ..AllCounters::EMPTY
-                })
-            );
+            assert_eq!(mac_counters, Ok(expected_counters.clone()));
 
             traceln!("app_task: Attempting a reset...");
             assert_eq!(driver.reset().await, Ok(()));
