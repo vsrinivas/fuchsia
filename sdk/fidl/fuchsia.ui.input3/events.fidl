@@ -96,4 +96,13 @@ type KeyEvent = table {
 
     /// Meaning of the key.
     5: key_meaning KeyMeaning;
+
+    /// The sequence number of this `KeyEvent` in the sequence of autorepeated
+    /// keys.
+    ///
+    /// Unset if this event has been generated in the immediate response to an
+    /// input from the keyboard driver.  If the `KeyEvent` has been generated
+    /// through the autorepeat mechanism, this property is set and is
+    /// incremented by one for each successive generated key event.
+    6: repeat_sequence uint32;
 };

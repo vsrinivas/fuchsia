@@ -1,6 +1,7 @@
 table/member fuchsia.ui.input3/KeyEvent.key fuchsia.input/Key
 table/member fuchsia.ui.input3/KeyEvent.key_meaning fuchsia.ui.input3/KeyMeaning
 table/member fuchsia.ui.input3/KeyEvent.modifiers fuchsia.ui.input3/Modifiers
+table/member fuchsia.ui.input3/KeyEvent.repeat_sequence uint32
 table/member fuchsia.ui.input3/KeyEvent.timestamp int64
 table/member fuchsia.ui.input3/KeyEvent.type fuchsia.ui.input3/KeyEventType
 table fuchsia.ui.input3/KeyEvent
