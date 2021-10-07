@@ -285,13 +285,14 @@ zx_status_t Lp8556Device::Init() {
   root_ = inspector_.GetRoot().CreateChild("ti-lp8556");
   double brightness_nits = 0.0;
   size_t actual;
-  zx_status_t status = device_get_metadata(parent(), DEVICE_METADATA_BACKLIGHT_MAX_BRIGHTNESS_NITS,
-                                           &brightness_nits, sizeof(brightness_nits), &actual);
+  zx_status_t status =
+      device_get_fragment_metadata(parent(), "pdev", DEVICE_METADATA_BACKLIGHT_MAX_BRIGHTNESS_NITS,
+                                   &brightness_nits, sizeof(brightness_nits), &actual);
   if (status == ZX_OK && actual == sizeof(brightness_nits)) {
     SetMaxAbsoluteBrightnessNits(brightness_nits);
   }
-  status = device_get_metadata(parent(), DEVICE_METADATA_PRIVATE, &metadata_, sizeof(metadata_),
-                               &actual);
+  status = device_get_fragment_metadata(parent(), "pdev", DEVICE_METADATA_PRIVATE, &metadata_,
+                                        sizeof(metadata_), &actual);
   // Supplying this metadata is optional.
   if (status == ZX_OK) {
     if (metadata_.register_count % (2 * sizeof(uint8_t)) != 0) {

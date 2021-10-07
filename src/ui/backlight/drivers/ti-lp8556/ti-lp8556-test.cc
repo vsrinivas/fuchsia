@@ -167,6 +167,13 @@ TEST_F(Lp8556DeviceTest, InitRegisters) {
   // };
 
   fake_ddk::Bind ddk;
+  static constexpr const uint32_t kNumberOfFragments = 1;
+  fbl::Array<fake_ddk::FragmentEntry> fragments(new fake_ddk::FragmentEntry[kNumberOfFragments],
+                                                kNumberOfFragments);
+  fragments[0].name = "pdev";
+  fragments[0].protocols.emplace_back(
+      fake_ddk::ProtocolEntry{ZX_PROTOCOL_PDEV, fake_ddk::Protocol{nullptr, nullptr}});
+  ddk.SetFragments(std::move(fragments));
   ddk.SetMetadata(DEVICE_METADATA_PRIVATE, &kDeviceMetadata, sizeof(kDeviceMetadata));
 
   mock_i2c_.ExpectWriteStop({0x01, 0x85})
@@ -221,6 +228,13 @@ TEST_F(Lp8556DeviceTest, InitInvalidRegisters) {
   };
 
   fake_ddk::Bind ddk;
+  static constexpr const uint32_t kNumberOfFragments = 1;
+  fbl::Array<fake_ddk::FragmentEntry> fragments(new fake_ddk::FragmentEntry[kNumberOfFragments],
+                                                kNumberOfFragments);
+  fragments[0].name = "pdev";
+  fragments[0].protocols.emplace_back(
+      fake_ddk::ProtocolEntry{ZX_PROTOCOL_PDEV, fake_ddk::Protocol{nullptr, nullptr}});
+  ddk.SetFragments(std::move(fragments));
   ddk.SetMetadata(DEVICE_METADATA_PRIVATE, kInitialRegisterValues, sizeof(kInitialRegisterValues));
 
   EXPECT_NOT_OK(dev_->Init());
@@ -233,6 +247,13 @@ TEST_F(Lp8556DeviceTest, InitTooManyRegisters) {
   constexpr uint8_t kInitialRegisterValues[514] = {};
 
   fake_ddk::Bind ddk;
+  static constexpr const uint32_t kNumberOfFragments = 1;
+  fbl::Array<fake_ddk::FragmentEntry> fragments(new fake_ddk::FragmentEntry[kNumberOfFragments],
+                                                kNumberOfFragments);
+  fragments[0].name = "pdev";
+  fragments[0].protocols.emplace_back(
+      fake_ddk::ProtocolEntry{ZX_PROTOCOL_PDEV, fake_ddk::Protocol{nullptr, nullptr}});
+  ddk.SetFragments(std::move(fragments));
   ddk.SetMetadata(DEVICE_METADATA_PRIVATE, kInitialRegisterValues, sizeof(kInitialRegisterValues));
 
   EXPECT_NOT_OK(dev_->Init());
@@ -258,6 +279,13 @@ TEST_F(Lp8556DeviceTest, OverwriteStickyRegister) {
   };
 
   fake_ddk::Bind ddk;
+  static constexpr const uint32_t kNumberOfFragments = 1;
+  fbl::Array<fake_ddk::FragmentEntry> fragments(new fake_ddk::FragmentEntry[kNumberOfFragments],
+                                                kNumberOfFragments);
+  fragments[0].name = "pdev";
+  fragments[0].protocols.emplace_back(
+      fake_ddk::ProtocolEntry{ZX_PROTOCOL_PDEV, fake_ddk::Protocol{nullptr, nullptr}});
+  ddk.SetFragments(std::move(fragments));
   ddk.SetMetadata(DEVICE_METADATA_PRIVATE, &kDeviceMetadata, sizeof(kDeviceMetadata));
 
   mock_i2c_.ExpectWriteStop({kBacklightBrightnessLsbReg, 0xab})
@@ -305,6 +333,13 @@ TEST_F(Lp8556DeviceTest, ReadDefaultCurrentScale) {
   };
 
   fake_ddk::Bind ddk;
+  static constexpr const uint32_t kNumberOfFragments = 1;
+  fbl::Array<fake_ddk::FragmentEntry> fragments(new fake_ddk::FragmentEntry[kNumberOfFragments],
+                                                kNumberOfFragments);
+  fragments[0].name = "pdev";
+  fragments[0].protocols.emplace_back(
+      fake_ddk::ProtocolEntry{ZX_PROTOCOL_PDEV, fake_ddk::Protocol{nullptr, nullptr}});
+  ddk.SetFragments(std::move(fragments));
   ddk.SetMetadata(DEVICE_METADATA_PRIVATE, &kDeviceMetadata, sizeof(kDeviceMetadata));
 
   mock_i2c_.ExpectWrite({kCfg2Reg})
@@ -340,6 +375,13 @@ TEST_F(Lp8556DeviceTest, SetCurrentScale) {
   };
 
   fake_ddk::Bind ddk;
+  static constexpr const uint32_t kNumberOfFragments = 1;
+  fbl::Array<fake_ddk::FragmentEntry> fragments(new fake_ddk::FragmentEntry[kNumberOfFragments],
+                                                kNumberOfFragments);
+  fragments[0].name = "pdev";
+  fragments[0].protocols.emplace_back(
+      fake_ddk::ProtocolEntry{ZX_PROTOCOL_PDEV, fake_ddk::Protocol{nullptr, nullptr}});
+  ddk.SetFragments(std::move(fragments));
   ddk.SetMetadata(DEVICE_METADATA_PRIVATE, &kDeviceMetadata, sizeof(kDeviceMetadata));
 
   mock_i2c_.ExpectWrite({kCfg2Reg})
@@ -384,6 +426,13 @@ TEST_F(Lp8556DeviceTest, SetAbsoluteBrightnessScaleReset) {
   };
 
   fake_ddk::Bind ddk;
+  static constexpr const uint32_t kNumberOfFragments = 1;
+  fbl::Array<fake_ddk::FragmentEntry> fragments(new fake_ddk::FragmentEntry[kNumberOfFragments],
+                                                kNumberOfFragments);
+  fragments[0].name = "pdev";
+  fragments[0].protocols.emplace_back(
+      fake_ddk::ProtocolEntry{ZX_PROTOCOL_PDEV, fake_ddk::Protocol{nullptr, nullptr}});
+  ddk.SetFragments(std::move(fragments));
   ddk.SetMetadata(DEVICE_METADATA_PRIVATE, &kDeviceMetadata, sizeof(kDeviceMetadata));
 
   constexpr double kMaxBrightnessInNits = 350.0;
