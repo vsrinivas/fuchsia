@@ -560,8 +560,8 @@ All other types are value types.
 Value types must not contain resource types. For example, this is incorrect:
 
 ```fidl
-struct Foo { // ERROR: must be "resource struct Foo"
-    zx.handle h;
+type Foo = struct { // ERROR: must be "resource struct Foo"
+    h zx.handle;
 };
 ```
 
