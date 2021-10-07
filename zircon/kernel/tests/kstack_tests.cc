@@ -53,61 +53,76 @@ bool kstack_interrupt_depth_test_no_safestack() {
 }
 #endif
 
-static unsigned get_num_cpus_online() {
-  unsigned count = 0;
-  cpu_mask_t online = mp_get_online_mask();
-  while (online) {
-    online >>= 1;
-    ++count;
+// Removes one CPU from the mask and returns its ID.
+//
+// Returns INVALID_CPU if the mask is empty.
+cpu_num_t RemoveCpuFromMask(cpu_mask_t& mask) {
+  if (mask == 0) {
+    return INVALID_CPU;
   }
-  return count;
+  cpu_num_t index_of_lowest_set_bit = __builtin_ffsl(mask) - 1;
+  mask &= ~cpu_num_to_mask(index_of_lowest_set_bit);
+  return index_of_lowest_set_bit;
 }
 
-struct context {
-  cpu_num_t cpu_to_wake;
-  ktl::atomic<bool> cpu_to_wake_ok;
-  ktl::atomic<bool> wake;
-};
-static int waiter_thread(void* arg) {
-  constexpr size_t kSize = DEFAULT_STACK_SIZE / 2;
-  volatile uint8_t buffer[kSize] = {};
-
-  context* const deferred = reinterpret_cast<context*>(arg);
-  AutoPreemptDisabler preempt_disable;
-  // Lock our thread to the current CPU.
-  Thread::Current::Get()->SetCpuAffinity(cpu_num_to_mask(arch_curr_cpu_num()));
-  deferred->cpu_to_wake = arch_curr_cpu_num();
-  deferred->cpu_to_wake_ok.store(true);
-  buffer[1] = buffer[0];  // Touch the buffer to ensure it is not optimized out
-  for (;;) {
-    // Wait for a bit while we have a large, active buffer on the kernel stack.
-    // mp_sync_exec()'s callback will run on our CPU; we want to check that it succeeds even when
-    // kSize bytes of kernel stack space are consumed by (this) thread context.
-    if (deferred->wake.load() == true)
-      break;
-    arch::Yield();
-  }
-
-  return 0;
-}
 // Test that we can handle an mp_sync_exec callback while half the kernel stack is used.
 bool kstack_mp_sync_exec_test() {
   BEGIN_TEST;
-  // We need 2 or more CPUs for this test.
-  if (get_num_cpus_online() < 2) {
-    printf("not enough online cpus\n");
+
+  // We need 2 or more CPUs for this test, CPU-A and CPU-B.  The thread calling into this test will
+  // be pinned to CPU-A and the thread spawned by this test will be pinned to CPU-B.
+  cpu_mask_t mask = mp_get_active_mask();
+  const cpu_num_t cpu_a = RemoveCpuFromMask(mask);
+  const cpu_num_t cpu_b = RemoveCpuFromMask(mask);
+  if (cpu_a == INVALID_CPU || cpu_b == INVALID_CPU) {
+    printf("not enough active cpus; skipping test\n");
     END_TEST;
   }
 
-  context deferred = { };
-  Thread* const thread = Thread::CreateEtc(nullptr, "waiter", waiter_thread, &deferred,
-                                           DEFAULT_PRIORITY, nullptr);
+  struct Context {
+    ktl::atomic<bool> ready;
+    ktl::atomic<bool> done;
+  };
+  Context context = {};
+
+  thread_start_routine spin_fn = [](void* arg) {
+    // Ensure that no other thread runs on this CPU for the duration of the test.  The goal here is
+    // have the IPI interrupt *this* thread and push its frame onto *this* thread's stack.
+    AutoPreemptDisabler preempt_disable;
+
+    constexpr size_t kSize = DEFAULT_STACK_SIZE / 2;
+    volatile uint8_t buffer[kSize] = {};
+
+    Context* const context = reinterpret_cast<Context*>(arg);
+    context->ready.store(true);
+    buffer[1] = buffer[0];  // Touch the buffer to ensure it is not optimized out
+    while (!context->done.load()) {
+      // Wait for a bit while we have a large, active buffer on the kernel stack.
+      // mp_sync_exec()'s callback will run on our CPU; we want to check that it succeeds even when
+      // kSize bytes of kernel stack space are consumed by (this) thread context.
+      arch::Yield();
+    }
+    return 0;
+  };
+
+  // Current thread runs on CPU-A...
+  Thread::Current::Get()->SetCpuAffinity(cpu_num_to_mask(cpu_a));
+
+  // and |spin_fn| runs on CPU-B.
+  Thread* const thread =
+      Thread::CreateEtc(nullptr, "waiter", spin_fn, &context, DEFAULT_PRIORITY, nullptr);
+  thread->SetCpuAffinity(cpu_num_to_mask(cpu_b));
   thread->Resume();
-  while (deferred.cpu_to_wake_ok.load() == false);
-  mp_sync_exec(MP_IPI_TARGET_MASK, cpu_num_to_mask(deferred.cpu_to_wake),
-               [](void* arg) { reinterpret_cast<ktl::atomic<bool>*>(arg)->store(true); }, &deferred.wake);
+
+  while (!context.ready.load()) {
+    arch::Yield();
+  }
+  mp_sync_exec(
+      MP_IPI_TARGET_MASK, cpu_num_to_mask(cpu_b),
+      [](void* arg) { reinterpret_cast<Context*>(arg)->done.store(true); }, &context);
 
   thread->Join(nullptr, ZX_TIME_INFINITE);
+
   END_TEST;
 }
 
