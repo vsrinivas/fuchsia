@@ -28,6 +28,11 @@ template("generate_chromium_targets") {
       ":web_engine",
       ":web_runner",
     ]
+    # TODO(fxbug.dev/81925): Uncomment once this will not fail without
+    # `-fetch-optional=chrome-browser`.
+    # if (target_cpu == "amd64") {
+    #   public_deps += [ ":chrome_browser", ]
+    # }
   }
 
   group("web_engine") {
@@ -39,6 +44,8 @@ template("generate_chromium_targets") {
   }
 
   # TODO(fxbug.dev/70573): Remove when use_chromium_canary is deprecated.
+  # TODO(fxbug.dev/81925): Remove else condition when release chrome is
+  # available.
   if (use_chromium_canary) {
     package_flavor_selections += [
       {
@@ -53,9 +60,22 @@ template("generate_chromium_targets") {
         name = "web_runner_pkg"
         flavor = "canary"
       },
+      {
+        name = "chrome_browser_pkg"
+        flavor = "canary"
+      },
+    ]
+  } else {
+    package_flavor_selections += [
+      {
+        name = "chrome_browser_pkg"
+        flavor = "canary"
+      },
     ]
   }
 
+  # Setting chromium_build_dir in args.gn allows using chromium packages built
+  # directly in Chromium source.
   if (chromium_build_dir != "") {
     package_flavor_selections += [
       {
@@ -68,6 +88,10 @@ template("generate_chromium_targets") {
       },
       {
         name = "web_runner_pkg"
+        flavor = "custom"
+      },
+      {
+        name = "chrome_browser_pkg"
         flavor = "custom"
       },
     ]
@@ -127,6 +151,26 @@ template("generate_chromium_targets") {
     for_pkg = "appmgr"
     sources = [ "//src/chromium/config/http_scheme_map.config" ]
     outputs = [ "scheme_map/http.config" ]
+  }
+
+  if (target_cpu == "amd64") {
+    group("chrome_browser") {
+      deps = [
+        ":chrome_browser_pkg",
+        ":tzdata_for_chrome_browser",
+      ]
+    }
+
+    icu_tzdata_config_data("tzdata_for_chrome_browser") {
+      for_pkg = "chrome_browser"
+    }
+
+    generate_package_flavors("chrome_browser") {
+      prebuilt_archive_base_path = "${prebuilt_archive_root_path}/chrome"
+      custom_package_path =
+          "${build_output_gen_base_path}/chrome/app/chrome/chrome.far"
+      selections = package_flavor_selections
+    }
   }
 
   # TODO(fxbug.dev/71642): Migrate the uses of this variable below to
