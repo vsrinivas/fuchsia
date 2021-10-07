@@ -183,6 +183,10 @@ void SpiChild::SpiConnectServer(zx::channel server) {
   spi_parent_.ConnectServer(std::move(server), this);
 }
 
-void SpiChild::DdkRelease() { __UNUSED bool dummy = Release(); }
+void SpiChild::DdkRelease() {
+  // The DDK is releasing its reference to this object, so create a RefPtr to it without
+  // incrementing the counter. When it goes out of scope this object will be freed if needed.
+  fbl::RefPtr<SpiChild> thiz = fbl::ImportFromRawPtr(this);
+}
 
 }  // namespace spi

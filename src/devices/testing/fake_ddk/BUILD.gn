@@ -121,7 +121,6 @@ zx_library("fake_ddk") {
     "//src/devices/serial/drivers/ftdi/test/*",
     "//src/devices/serial/drivers/serial-async/tests/*",
     "//src/devices/spi/drivers/aml-spi/*",
-    "//src/devices/spi/drivers/spi/*",
     "//src/devices/sysmem/drivers/sysmem/*",
     "//src/devices/sysmem/tests/sysmem/fuzz/*",
     "//src/devices/tee/drivers/optee/*",

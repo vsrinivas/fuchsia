@@ -128,6 +128,8 @@ void SpiDevice::AddChildren() {
       return;
     }
 
+    dev->AddRef();  // DdkAdd succeeded -- increment the counter now that the DDK has a reference.
+
     // save a reference for cleanup
     children_.push_back(dev);
   }
