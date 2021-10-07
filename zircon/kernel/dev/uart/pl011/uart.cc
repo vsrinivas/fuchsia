@@ -86,8 +86,12 @@ static inline void pl011_mask_tx() { uartreg_and_eq(uart_base, UART_IMSC, ~(1 <<
 static inline void pl011_unmask_tx() { uartreg_or_eq(uart_base, UART_IMSC, (1 << 5)); }
 
 // clear and set rtim and rxim (receive timeout and interrupt mask)
-static inline void pl011_mask_rx() { uartreg_and_eq(uart_base, UART_IMSC, ~((1 << 6) | (1 << 4))); }
-static inline void pl011_unmask_rx() { uartreg_or_eq(uart_base, UART_IMSC, (1 << 6) | (1 << 4)); }
+static inline void pl011_mask_rx() TA_REQ(uart_spinlock::Get()) {
+  uartreg_and_eq(uart_base, UART_IMSC, ~((1 << 6) | (1 << 4)));
+}
+static inline void pl011_unmask_rx() TA_REQ(uart_spinlock::Get()) {
+  uartreg_or_eq(uart_base, UART_IMSC, (1 << 6) | (1 << 4));
+}
 
 static interrupt_eoi pl011_uart_irq(void* arg) {
   /* read interrupt status and mask */
@@ -97,9 +101,34 @@ static interrupt_eoi pl011_uart_irq(void* arg) {
     /* while fifo is not empty, read chars out of it */
     while ((UARTREG(uart_base, UART_FR) & (1 << 4)) == 0) {
       /* if we're out of rx buffer, mask the irq instead of handling it */
-      if (uart_rx_buf.Full()) {
-        pl011_mask_rx();
-        break;
+      {
+        /*
+         * This critical section is paired with the one in |pl011_uart_getc|
+         * where RX is unmasked. This is necessary to avoid the following race
+         * condition:
+         *
+         * Assume we have two threads, a reader R and a writer W, and the
+         * buffer is full. For simplicity, let us assume the buffer size is 1;
+         * the same process applies with a larger buffer and more readers.
+         *
+         * W: Observes the buffer is full.
+         * R: Reads a character. The buffer is now empty.
+         * R: Unmasks RX.
+         * W: Masks RX.
+         *
+         * At this point, we have an empty buffer and RX interrupts are masked -
+         * we're stuck! Thus, to avoid this, we acquire the spinlock before
+         * checking if the buffer is full, and release after (conditionally)
+         * masking RX interrupts. By pairing this with the acquisition of the
+         * same lock around unmasking RX interrupts, we prevent the writer above
+         * from being interrupted by a read-and-unmask.
+         *
+         */
+        Guard<MonitoredSpinLock, NoIrqSave> guard{uart_spinlock::Get(), SOURCE_TAG};
+        if (uart_rx_buf.Full()) {
+          pl011_mask_rx();
+          break;
+        }
       }
 
       char c = static_cast<char>(UARTREG(uart_base, UART_DR));
@@ -107,18 +136,14 @@ static interrupt_eoi pl011_uart_irq(void* arg) {
     }
   }
 
-  bool signal;
-  {
-    Guard<MonitoredSpinLock, NoIrqSave> guard{uart_spinlock::Get(), SOURCE_TAG};
-    signal = isr & (1 << 5);  // txmis
-  }
-  // Drop the uart_spinlock before calling |Event::Signal| to avoid creating an invalid lock
-  // dependency between uart_spinlock and any locks Event::Signal may acquire.
-  if (signal) {
-    /*
-     * Signal any waiting Tx and mask Tx interrupts once we
-     * wakeup any blocked threads
-     */
+  const bool should_signal = isr & (1 << 5);
+  if (should_signal) {
+    // It's important we're not holding the |uart_spinlock| while calling
+    // |Event::Signal|.  Otherwise we'd create an invalid lock dependency
+    // between |uart_spinlock| and any locks |Event::Signal| may acquire.
+    //
+    // Signal any waiting Tx and mask Tx interrupts once we wakeup any
+    // blocked threads.
     uart_dputc_event.Signal();
     pl011_mask_tx();
   }
@@ -162,7 +187,11 @@ static void pl011_uart_init(const void* driver_data, uint32_t length) {
 static int pl011_uart_getc(bool wait) {
   zx::status<char> result = uart_rx_buf.ReadChar(wait);
   if (result.is_ok()) {
-    pl011_unmask_rx();
+    {
+      // See the comment on the critical section in |pl011_uart_irq|.
+      Guard<MonitoredSpinLock, IrqSave> guard{uart_spinlock::Get(), SOURCE_TAG};
+      pl011_unmask_rx();
+    }
     return result.value();
   }
 
