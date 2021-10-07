@@ -11,6 +11,7 @@
 #include <lib/zx/channel.h>
 #include <lib/zx/socket.h>
 
+#include <deque>
 #include <unordered_map>
 #include <unordered_set>
 
@@ -91,6 +92,42 @@ struct ConnectionKey {
   };
 };
 
+// Allows direct sends to a VirtIO queue, buffering if required.
+//
+// Buffered packets will not automatically be sent, but will be retried
+// next time StartWrite(), Write() or Drain() are called.
+class VsockSendQueue {
+ public:
+  explicit VsockSendQueue(VirtioQueue* queue);
+
+  // Return a VsockChain to the virtio queue if available.
+  //
+  // Drains buffered packets first to ensure FIFO ordering is maintained.
+  std::optional<VsockChain> StartWrite();
+
+  // Write a header-only packet to the queue, buffering it if no descriptors
+  // are available.
+  void Write(const virtio_vsock_hdr_t& header);
+
+  // Write out buffered packets.
+  //
+  // Return true if all buffered packets packets have been successfully
+  // sent.
+  bool Drain();
+
+  // Get the number of buffered packets waiting to be sent.
+  size_t buffered_packets() const { return send_buffer_.size(); }
+
+ private:
+  // Attempt to write the header-only packet to the queue.
+  //
+  // Returns true on success.
+  bool TryWritePacket(const virtio_vsock_hdr_t& packet);
+
+  VirtioQueue* queue_;
+  std::deque<virtio_vsock_hdr_t> send_buffer_;  // Buffered metadata packets for sending.
+};
+
 class VirtioVsock
     : public VirtioInprocessDevice<VIRTIO_ID_VSOCK, kVirtioVsockNumQueues, virtio_vsock_config_t>,
       public fuchsia::virtualization::GuestVsockEndpoint,
@@ -113,7 +150,6 @@ class VirtioVsock
   VirtioQueue* tx_queue() { return queue(1); }
 
   class Connection;
-  class NullConnection;
   class SocketConnection;
   class ChannelConnection;
 
@@ -156,6 +192,9 @@ class VirtioVsock
   void Mux(async_dispatcher_t*, async::WaitBase*, zx_status_t, const zx_packet_signal_t*);
   void Demux(async_dispatcher_t*, async::WaitBase*, zx_status_t, const zx_packet_signal_t*);
 
+  // Return true if the number of buffered messages exceeds a maximum threshold.
+  bool is_send_queue_full() const;
+
   async_dispatcher_t* const dispatcher_;
 
   // Waiter objects notifying us when the TX/RX virtio queues are ready.
@@ -171,22 +210,18 @@ class VirtioVsock
   fidl::BindingSet<fuchsia::virtualization::GuestVsockEndpoint> endpoint_bindings_;
   fidl::BindingSet<fuchsia::virtualization::GuestVsockAcceptor> acceptor_bindings_;
   fuchsia::virtualization::HostVsockConnectorPtr connector_;
+
+  VsockSendQueue send_queue_;
 };
 
 class VirtioVsock::Connection {
  public:
-  enum class Type {
-    kStandard,  // Standard connection, established by/to an endpoint.
-    kInternal,  // Connection internal to vsock-device. Endpoints are not aware of this.
-  };
-
   Connection(async_dispatcher_t* dispatcher,
              fuchsia::virtualization::GuestVsockAcceptor::AcceptCallback accept_callback,
-             fit::closure queue_callback, Type type);
+             fit::closure queue_callback);
   virtual ~Connection();
   virtual zx_status_t Init() = 0;
 
-  Type type() const { return type_; }
   uint32_t flags() const { return flags_; }
   uint16_t op() const {
     std::lock_guard<std::mutex> lock(op_update_mutex_);
@@ -217,7 +252,6 @@ class VirtioVsock::Connection {
   zx_status_t WaitOnReceive();
 
  protected:
-  Type type_;
   uint32_t flags_ = 0;
   uint32_t rx_cnt_ = 0;
   uint32_t tx_cnt_ = 0;
@@ -239,25 +273,6 @@ class VirtioVsock::Connection {
 
   fuchsia::virtualization::GuestVsockAcceptor::AcceptCallback accept_callback_;
   fit::closure queue_callback_;
-};
-
-// An connection used for internal book-keeping by the virtio-vsock device.
-class VirtioVsock::NullConnection final : public VirtioVsock::Connection {
- public:
-  NullConnection() : Connection(nullptr, nullptr, nullptr, Type::kInternal) {}
-
-  zx_status_t Init() override { return ZX_OK; }
-  zx_status_t WriteCredit(virtio_vsock_hdr_t* header) override { return ZX_OK; }
-
-  zx_status_t Shutdown(uint32_t flags) override { return ZX_ERR_NOT_SUPPORTED; }
-  zx_status_t Read(VirtioQueue* queue, virtio_vsock_hdr_t* header, const VirtioDescriptor& desc,
-                   uint32_t* used) override {
-    return ZX_ERR_NOT_SUPPORTED;
-  }
-  zx_status_t Write(VirtioQueue* queue, virtio_vsock_hdr_t* header,
-                    const VirtioDescriptor& desc) override {
-    return ZX_ERR_NOT_SUPPORTED;
-  }
 };
 
 class VirtioVsock::SocketConnection final : public VirtioVsock::Connection {

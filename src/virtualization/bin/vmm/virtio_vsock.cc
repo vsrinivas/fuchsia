@@ -14,6 +14,29 @@
 
 #include "src/lib/fsl/handles/object_info.h"
 
+namespace {
+
+// Maximum number of unprocessed control packets the guest is allowed to cause
+// us to generate before we stop emitting packets.
+//
+// In normal operation, this limit should never be reached: we only enqueue at
+// most one outgoing packet per incoming packet, and the virtio protocol
+// requires the guest to process received packets prior to sending any more.
+constexpr size_t kMaxQueuedPackets = 10'000;
+
+void SendResetPacket(VsockSendQueue& queue, const ConnectionKey& key) {
+  queue.Write(virtio_vsock_hdr_t{
+      .src_cid = key.local_cid,
+      .dst_cid = key.remote_cid,
+      .src_port = key.local_port,
+      .dst_port = key.remote_port,
+      .type = VIRTIO_VSOCK_TYPE_STREAM,
+      .op = VIRTIO_VSOCK_OP_RST,
+  });
+}
+
+}  // namespace
+
 std::optional<VsockChain> VsockChain::FromQueue(VirtioQueue* queue, bool writable) {
   VirtioDescriptor desc;
   uint16_t index;
@@ -86,15 +109,58 @@ size_t ConnectionKey::Hash::operator()(const ConnectionKey& key) const {
          (cpp20::rotl(static_cast<size_t>(key.remote_cid) << 32 | key.remote_port, 16));
 };
 
+VsockSendQueue::VsockSendQueue(VirtioQueue* queue) : queue_(queue) {}
+
+std::optional<VsockChain> VsockSendQueue::StartWrite() {
+  // Attempt to drain all queued packets.
+  if (!Drain()) {
+    return std::nullopt;
+  }
+
+  // Start a new transmit.
+  return VsockChain::FromQueue(queue_, /*writable=*/true);
+}
+
+void VsockSendQueue::Write(const virtio_vsock_hdr_t& header) {
+  // If we are able to drain all existing packets and another guest RX
+  // descriptor is available, send the packet directly.
+  if (Drain() && TryWritePacket(header)) {
+    return;
+  }
+
+  // Otherwise, buffer the packet.
+  send_buffer_.emplace_back(header);
+}
+
+bool VsockSendQueue::Drain() {
+  while (!send_buffer_.empty()) {
+    if (!TryWritePacket(send_buffer_.front())) {
+      return false;
+    }
+    send_buffer_.pop_front();
+  }
+  return true;
+}
+
+bool VsockSendQueue::TryWritePacket(const virtio_vsock_hdr_t& packet) {
+  std::optional<VsockChain> chain = VsockChain::FromQueue(queue_, /*writable=*/true);
+  if (!chain.has_value()) {
+    return false;
+  }
+
+  *chain->header() = packet;
+  chain->Return(/*used=*/sizeof(virtio_vsock_hdr_t));
+  return true;
+}
+
 // We take a |queue_callback| to decouple the connection from the device. This
 // allows a connection to wait on a Virtio queue and update the device state,
 // without having direct access to the device.
 VirtioVsock::Connection::Connection(
     async_dispatcher_t* dispatcher,
     fuchsia::virtualization::GuestVsockAcceptor::AcceptCallback accept_callback,
-    fit::closure queue_callback, Type type)
-    : type_(type),
-      dispatcher_(dispatcher),
+    fit::closure queue_callback)
+    : dispatcher_(dispatcher),
       accept_callback_(std::move(accept_callback)),
       queue_callback_(std::move(queue_callback)) {}
 
@@ -230,8 +296,7 @@ VirtioVsock::SocketConnection::SocketConnection(
     zx::handle handle, async_dispatcher_t* dispatcher,
     fuchsia::virtualization::GuestVsockAcceptor::AcceptCallback accept_callback,
     fit::closure queue_callback)
-    : Connection(dispatcher, std::move(accept_callback), std::move(queue_callback),
-                 Type::kStandard),
+    : Connection(dispatcher, std::move(accept_callback), std::move(queue_callback)),
       socket_(std::move(handle)) {}
 
 VirtioVsock::SocketConnection::~SocketConnection() {
@@ -405,8 +470,7 @@ VirtioVsock::ChannelConnection::ChannelConnection(
     zx::handle handle, async_dispatcher_t* dispatcher,
     fuchsia::virtualization::GuestVsockAcceptor::AcceptCallback accept_callback,
     fit::closure queue_callback)
-    : Connection(dispatcher, std::move(accept_callback), std::move(queue_callback),
-                 Type::kStandard),
+    : Connection(dispatcher, std::move(accept_callback), std::move(queue_callback)),
       channel_(std::move(handle)) {}
 
 VirtioVsock::ChannelConnection::~ChannelConnection() {
@@ -535,7 +599,8 @@ VirtioVsock::VirtioVsock(sys::ComponentContext* context, const PhysMem& phys_mem
     : VirtioInprocessDevice("Virtio Vsock", phys_mem, 0 /* device_features */),
       dispatcher_(dispatcher),
       rx_queue_wait_(this, rx_queue()->event(), VirtioQueue::SIGNAL_QUEUE_AVAIL),
-      tx_queue_wait_(this, tx_queue()->event(), VirtioQueue::SIGNAL_QUEUE_AVAIL) {
+      tx_queue_wait_(this, tx_queue()->event(), VirtioQueue::SIGNAL_QUEUE_AVAIL),
+      send_queue_(rx_queue()) {
   config_.guest_cid = 0;
 
   if (context) {
@@ -630,24 +695,30 @@ void VirtioVsock::Accept(uint32_t src_cid, uint32_t src_port, uint32_t port, zx:
 
 void VirtioVsock::ConnectCallback(ConnectionKey key, zx_status_t status, zx::handle handle,
                                   uint32_t buf_alloc, uint32_t fwd_cnt) {
-  auto new_conn = create_connection(std::move(handle), dispatcher_, nullptr, [this, key] {
+  // If the connection request resulted in an error, send a reset.
+  if (status != ZX_OK) {
     std::lock_guard<std::mutex> lock(mutex_);
-    WaitOnQueueLocked(key);
-  });
-  if (!new_conn) {
-    new_conn = std::make_unique<NullConnection>();
+    SendResetPacket(send_queue_, key);
+    return;
   }
-  Connection* conn = new_conn.get();
 
+  // Create a new connection object to track this virtio socket.
+  std::unique_ptr<VirtioVsock::Connection> new_conn =
+      create_connection(std::move(handle), dispatcher_, nullptr, [this, key] {
+        std::lock_guard<std::mutex> lock(mutex_);
+        WaitOnQueueLocked(key);
+      });
+  if (!new_conn) {
+    std::lock_guard<std::mutex> lock(mutex_);
+    SendResetPacket(send_queue_, key);
+    return;
+  }
+
+  Connection* conn = new_conn.get();
   {
     std::lock_guard<std::mutex> lock(mutex_);
     zx_status_t add_status = AddConnectionLocked(key, std::move(new_conn));
     if (add_status != ZX_OK) {
-      return;
-    }
-    if (status != ZX_OK) {
-      conn->UpdateOp(VIRTIO_VSOCK_OP_RST);
-      WaitOnQueueLocked(key);
       return;
     }
   }
@@ -681,11 +752,9 @@ void VirtioVsock::RemoveConnectionLocked(ConnectionKey key) {
   auto it = connections_.find(key);
   FX_CHECK(it != connections_.end()) << "Attempted to erase unknown connection.";
 
-  // If this is not an internal connection, notify endpoints that it has been terminated.
-  if (it->second->type() != Connection::Type::kInternal) {
-    for (auto& binding : endpoint_bindings_.bindings()) {
-      binding->events().OnShutdown(key.local_cid, key.local_port, guest_cid(), key.remote_port);
-    }
+  // Notify endpoints that it has been terminated.
+  for (auto& binding : endpoint_bindings_.bindings()) {
+    binding->events().OnShutdown(key.local_cid, key.local_port, guest_cid(), key.remote_port);
   }
 
   // Remove the connection.
@@ -748,7 +817,7 @@ bool VirtioVsock::ProcessReadyConnection(ConnectionKey key) {
   }
 
   // Read an available chain.
-  std::optional<VsockChain> chain = VsockChain::FromQueue(rx_queue(), /*writable=*/true);
+  std::optional<VsockChain> chain = send_queue_.StartWrite();
   if (!chain.has_value()) {
     return false;
   }
@@ -815,17 +884,21 @@ void VirtioVsock::Mux(async_dispatcher_t*, async::WaitBase*, zx_status_t status,
 
   std::lock_guard<std::mutex> lock(mutex_);
 
+  // Send any buffered control packets.
+  send_queue_.Drain();
+
   // Process all connections that are ready to transmit, until we run out
   // of connections or descriptors in the guest's RX queue.
   for (auto i = readable_.begin(), end = readable_.end(); i != end; i = readable_.erase(i)) {
     bool continue_sending = ProcessReadyConnection(/*key=*/*i);
-    if (!continue_sending) {
+    if (!continue_sending || is_send_queue_full()) {
       break;
     }
   }
 
-  // If we still have connections waiting to send, wait on more descriptors to arrive.
-  if (!readable_.empty()) {
+  // If we still have queued packets or connections waiting to send,
+  // wait on more descriptors to arrive.
+  if (!readable_.empty() || send_queue_.buffered_packets() > 0) {
     zx_status_t status = rx_queue_wait_.Begin(dispatcher_);
     if (status != ZX_OK && status != ZX_ERR_ALREADY_EXISTS) {
       FX_LOGS(ERROR) << "Failed to wait on RX queue: " << status;
@@ -882,20 +955,21 @@ static zx_status_t receive(VirtioVsock::Connection* conn, VirtioQueue* queue,
 
 void VirtioVsock::ProcessIncomingPacket(const VsockChain& chain) {
   virtio_vsock_hdr_t* header = chain.header();
-
-  // Reject packets with unknown socket types.
-  if (header->type != VIRTIO_VSOCK_TYPE_STREAM) {
-    set_shutdown(header);
-    FX_LOGS(ERROR) << "Only stream sockets are supported";
-  }
-
-  // Fetch the connection associated with this packet.
   ConnectionKey key{
       .local_cid = static_cast<uint32_t>(header->dst_cid),
       .local_port = header->dst_port,
       .remote_cid = guest_cid(),
       .remote_port = header->src_port,
   };
+
+  // Reject packets with unknown socket types.
+  if (header->type != VIRTIO_VSOCK_TYPE_STREAM) {
+    FX_LOGS(ERROR) << "Guest sent socket packet with unknown type 0x" << std::hex << header->type;
+    SendResetPacket(send_queue_, key);
+    return;
+  }
+
+  // Fetch the connection associated with this packet.
   Connection* conn = GetConnectionLocked(key);
   if (header->op == VIRTIO_VSOCK_OP_REQUEST) {
     if (conn != nullptr) {
@@ -924,19 +998,18 @@ void VirtioVsock::ProcessIncomingPacket(const VsockChain& chain) {
     }
   }
 
+  // Reject packets unrelated to any connection.
   if (conn == nullptr) {
-    // If we received a spurious reset, just ignore the request.
-    if (header->op == VIRTIO_VSOCK_OP_RST) {
-      return;
-    }
+    FX_LOGS(WARNING) << "Received spurious packet from guest";
 
-    // Build a connection to send a connection reset.
-    auto new_conn = std::make_unique<NullConnection>();
-    conn = new_conn.get();
-    AddConnectionLocked(key, std::move(new_conn));
-    set_shutdown(header);
-    FX_LOGS(ERROR) << "Connection does not exist";
-  } else if (conn->op() == VIRTIO_VSOCK_OP_RW && conn->flags() & VIRTIO_VSOCK_FLAG_SHUTDOWN_SEND) {
+    // Send a reset, unless the spurious packet itself was a reset.
+    if (header->op != VIRTIO_VSOCK_OP_RST) {
+      SendResetPacket(send_queue_, key);
+    }
+    return;
+  }
+
+  if (conn->op() == VIRTIO_VSOCK_OP_RW && conn->flags() & VIRTIO_VSOCK_FLAG_SHUTDOWN_SEND) {
     // We are receiving a write, but send was shutdown.
     set_shutdown(header);
     FX_LOGS(ERROR) << "Send was shutdown";
@@ -972,8 +1045,18 @@ void VirtioVsock::Demux(async_dispatcher_t*, async::WaitBase*, zx_status_t statu
 
   std::lock_guard<std::mutex> lock(mutex_);
 
+  // If our outgoing queue is full, abort.
+  //
+  // Processing more incoming packets may cause even more outgoing packets to be
+  // generated, and at this point the guest is unreasonably behind.
+  if (is_send_queue_full()) {
+    FX_LOGS(WARNING) << "Guest " << guest_cid()
+                     << " not responding to sent vsock packets. Stopping receive.";
+    return;
+  }
+
   // Process all packets in the guest's TX queue.
-  while (true) {
+  do {
     std::optional<VsockChain> chain = VsockChain::FromQueue(tx_queue(), /*writable=*/false);
     if (!chain.has_value()) {
       break;
@@ -982,7 +1065,7 @@ void VirtioVsock::Demux(async_dispatcher_t*, async::WaitBase*, zx_status_t statu
     ProcessIncomingPacket(*chain);
 
     chain->Return(/*used=*/0);
-  }
+  } while (!is_send_queue_full());
 
   // Schedule this function to be called again next time the queue receives
   // a packet.
@@ -990,4 +1073,8 @@ void VirtioVsock::Demux(async_dispatcher_t*, async::WaitBase*, zx_status_t statu
   if (status != ZX_OK && status != ZX_ERR_ALREADY_EXISTS) {
     FX_LOGS(ERROR) << "Failed to wait on TX queue: " << status;
   }
+}
+
+bool VirtioVsock::is_send_queue_full() const {
+  return send_queue_.buffered_packets() >= kMaxQueuedPackets;
 }
