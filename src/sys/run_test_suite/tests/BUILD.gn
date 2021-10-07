@@ -98,7 +98,7 @@ fuchsia_component("error_logging_test") {
 }
 
 fuchsia_unittest_package("run_test_suite_integration_tests") {
-  manifest = "meta/run_test_suite_integration_tests.cmx"
+  manifest = "meta/run_test_suite_integration_tests.cml"
   deps = [
     ":error_logging_test",
     ":logging_test",

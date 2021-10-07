@@ -1,0 +1,41 @@
+{
+    include: [
+        "//src/sys/test_runners/rust/default.shard.cml",
+        "//src/sys/test_runners/tmp_storage.shard.cml",
+        "syslog/client.shard.cml",
+    ],
+    program: {
+        binary: "bin/run_test_suite_integration_tests",
+    },
+    children: [
+        {
+            name: "test_manager",
+            url: "fuchsia-pkg://fuchsia.com/test_manager#meta/test_manager_for_tests.cm",
+        },
+    ],
+    use: [
+        {
+            protocol: "fuchsia.test.manager.RunBuilder",
+            from: "#test_manager",
+        },
+    ],
+    offer: [
+        {
+            protocol: [
+                "fuchsia.logger.LogSink",
+                "fuchsia.process.Launcher",
+                "fuchsia.sys.Environment",
+                "fuchsia.sys.Loader",
+                "fuchsia.sys2.EventSource",
+            ],
+            from: "parent",
+            to: "#test_manager",
+        },
+        {
+            storage: "tmp",
+            from: "parent",
+            to: "#test_manager",
+            rights: [ "rw*" ],
+        },
+    ],
+}
