@@ -29,7 +29,7 @@ pub struct SnapshotTree {
 
 impl SnapshotTree {
     /// Loads a snapshot tree from the given inspect tree.
-    pub async fn try_from(tree: &TreeProxy) -> Result<Self, ReaderError> {
+    pub async fn try_from(tree: &TreeProxy) -> Result<SnapshotTree, ReaderError> {
         load_snapshot_tree(tree).await
     }
 }
@@ -91,7 +91,7 @@ where
     load_snapshot_tree(tree).await?.try_into()
 }
 
-fn load_snapshot_tree<'a, T>(tree: &T) -> BoxFuture<'_, Result<SnapshotTree, ReaderError>>
+fn load_snapshot_tree<T>(tree: &T) -> BoxFuture<'_, Result<SnapshotTree, ReaderError>>
 where
     T: ReadableTree + Send + Sync,
 {
@@ -110,7 +110,7 @@ where
     .boxed()
 }
 
-async fn load<'a, T>(tree: T) -> Result<SnapshotTree, ReaderError>
+async fn load<T>(tree: T) -> Result<SnapshotTree, ReaderError>
 where
     T: ReadableTree + Send + Sync,
 {

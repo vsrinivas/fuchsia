@@ -8,8 +8,10 @@
 use {
     crate::{reader::error::ReaderError, Inspector},
     fuchsia_zircon::Vmo,
-    inspect_format::{constants, utils, Block, BlockType},
+    inspect_format::{constants, utils, Block, BlockType, ReadableBlockContainer},
+    mapped_vmo::Mapping,
     std::convert::TryFrom,
+    std::sync::Arc,
 };
 
 pub use crate::reader::tree_reader::SnapshotTree;
@@ -17,18 +19,18 @@ pub use crate::reader::tree_reader::SnapshotTree;
 /// Enables to scan all the blocks in a given buffer.
 pub struct Snapshot {
     /// The buffer read from an Inspect VMO.
-    buffer: Vec<u8>,
+    buffer: BackingBuffer,
 }
 
 /// A scanned block.
-pub type ScannedBlock<'a> = Block<&'a [u8]>;
+pub type ScannedBlock<'a> = Block<&'a BackingBuffer>;
 
 const SNAPSHOT_TRIES: u64 = 1024;
 
 impl Snapshot {
     /// Returns an iterator that returns all the Blocks in the buffer.
     pub fn scan(&self) -> BlockIterator<'_> {
-        BlockIterator::from(self.buffer.as_ref())
+        BlockIterator::from(&self.buffer)
     }
 
     /// Gets the block at the given |index|.
@@ -73,7 +75,7 @@ impl Snapshot {
                 Some(new_generation) if new_generation != gen => {
                     return Err(ReaderError::InconsistentSnapshot);
                 }
-                Some(_) => return Ok(Snapshot { buffer }),
+                Some(_) => return Ok(Snapshot { buffer: BackingBuffer::from(buffer) }),
             }
         }
 
@@ -101,7 +103,7 @@ impl Snapshot {
     // Used for snapshot tests.
     #[cfg(test)]
     pub fn build(bytes: &[u8]) -> Self {
-        Snapshot { buffer: bytes.to_vec() }
+        Snapshot { buffer: BackingBuffer::from(bytes.to_vec()) }
     }
 }
 
@@ -129,7 +131,7 @@ impl TryFrom<&[u8]> for Snapshot {
 
     fn try_from(bytes: &[u8]) -> Result<Self, Self::Error> {
         if header_generation_count(&bytes).is_some() {
-            Ok(Snapshot { buffer: bytes.to_vec() })
+            Ok(Snapshot { buffer: BackingBuffer::from(bytes.to_vec()) })
         } else {
             return Err(ReaderError::MissingHeaderOrLocked);
         }
@@ -168,34 +170,69 @@ impl TryFrom<&Inspector> for Snapshot {
 
 /// Iterates over a byte array containing Inspect API blocks and returns the
 /// blocks in order.
-pub struct BlockIterator<'h> {
+pub struct BlockIterator<'a> {
     /// Current offset at which the iterator is reading.
     offset: usize,
 
     /// The bytes being read.
-    container: &'h [u8],
+    container: &'a BackingBuffer,
 }
 
-impl<'a> From<&'a [u8]> for BlockIterator<'a> {
-    fn from(container: &'a [u8]) -> Self {
+impl<'a> From<&'a BackingBuffer> for BlockIterator<'a> {
+    fn from(container: &'a BackingBuffer) -> Self {
         BlockIterator { offset: 0, container }
     }
 }
 
-impl<'h> Iterator for BlockIterator<'h> {
-    type Item = Block<&'h [u8]>;
+impl<'a> Iterator for BlockIterator<'a> {
+    type Item = ScannedBlock<'a>;
 
-    fn next(&mut self) -> Option<Block<&'h [u8]>> {
+    fn next(&mut self) -> Option<Self::Item> {
         if self.offset >= self.container.len() {
             return None;
         }
         let index = utils::index_for_offset(self.offset);
-        let block = Block::new(self.container.clone(), index);
+        let block = Block::new(self.container, index);
         if self.container.len() - self.offset < utils::order_to_size(block.order()) {
             return None;
         }
         self.offset += utils::order_to_size(block.order());
         Some(block)
+    }
+}
+
+pub enum BackingBuffer {
+    Map(Arc<Mapping>),
+    Vector(Vec<u8>),
+}
+
+impl From<Vec<u8>> for BackingBuffer {
+    fn from(v: Vec<u8>) -> Self {
+        BackingBuffer::Vector(v)
+    }
+}
+
+impl From<Arc<Mapping>> for BackingBuffer {
+    fn from(m: Arc<Mapping>) -> Self {
+        BackingBuffer::Map(m)
+    }
+}
+
+impl BackingBuffer {
+    pub fn len(&self) -> usize {
+        match &self {
+            BackingBuffer::Map(m) => m.len(),
+            BackingBuffer::Vector(v) => v.len(),
+        }
+    }
+}
+
+impl ReadableBlockContainer for &BackingBuffer {
+    fn read_bytes(&self, offset: usize, bytes: &mut [u8]) -> usize {
+        match self {
+            BackingBuffer::Map(m) => m.read_bytes(offset, bytes),
+            BackingBuffer::Vector(b) => (b.as_ref() as &[u8]).read_bytes(offset, bytes),
+        }
     }
 }
 
