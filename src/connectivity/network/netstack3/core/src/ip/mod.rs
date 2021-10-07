@@ -67,8 +67,6 @@ const DEFAULT_TTL: NonZeroU8 = nonzero!(64u8);
 /// `IpPacketFromArgs` is used as the metadata for the [`FrameContext`] bound
 /// required by [`BufferTransportIpContext`]. It allows sending an IP packet
 /// from a particular source address.
-// TODO(rheacock): remove `allow(dead_code)` when this is used.
-#[allow(dead_code)]
 pub struct IpPacketFromArgs<I: IpExt> {
     pub(crate) src_ip: SpecifiedAddr<I::Addr>,
     pub(crate) dst_ip: SpecifiedAddr<I::Addr>,
