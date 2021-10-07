@@ -15,7 +15,7 @@ FakeProcessProxy::FakeProcessProxy(const std::shared_ptr<Dispatcher>& dispatcher
                                    const std::shared_ptr<ModulePool>& pool)
     : binding_(this, dispatcher), pool_(std::move(pool)) {}
 
-bool FakeProcessProxy::has_module(FakeModule* module) const {
+bool FakeProcessProxy::has_module(FakeFrameworkModule* module) const {
   auto id = module->id();
   auto iter = ids_.find(id[0]);
   return iter != ids_.end() && iter->second == id[1];

@@ -17,21 +17,21 @@ namespace {
 
 TEST(ModuleTest, Identifier) {
   // Prepare a fixed module.
-  std::vector<Module::PC> pc_table1;
-  for (size_t i = 0; i < FakeModule::kNumPCs; ++i) {
+  std::vector<ModulePC> pc_table1;
+  for (size_t i = 0; i < FakeFrameworkModule::kNumPCs; ++i) {
     pc_table1.emplace_back(0x1000 + i * 0x10, (i % 8) == 0);
   }
-  FakeModule module1(std::move(pc_table1));
+  FakeFrameworkModule module1(std::move(pc_table1));
   Identifier expected = {9595151602815918885ULL, 10676851608648082213ULL};
   EXPECT_EQ(module1.id(), expected);
 
   // Shifting all the PCs by a random basis does not affect the source ID, i.e., the ID is
   // independent of where it is mapped in memory.
-  std::vector<Module::PC> pc_table2;
-  for (size_t i = 0; i < FakeModule::kNumPCs; ++i) {
+  std::vector<ModulePC> pc_table2;
+  for (size_t i = 0; i < FakeFrameworkModule::kNumPCs; ++i) {
     pc_table2.emplace_back(0xdeadbeef + i * 0x10, (i % 8) == 0);
   }
-  FakeModule module2(std::move(pc_table2));
+  FakeFrameworkModule module2(std::move(pc_table2));
   EXPECT_EQ(module1.id(), module2.id());
 
   // Changing the counters has no effect on identifiers.
@@ -41,13 +41,13 @@ TEST(ModuleTest, Identifier) {
   // Check for collisions. This isn't exhaustive; it is simply a smoke test to check if things are
   // very broken.
   for (uint32_t i = 0; i < 100; ++i) {
-    FakeModule moduleN(/* seed */ i);
+    FakeFrameworkModule moduleN(/* seed */ i);
     EXPECT_NE(moduleN.id(), expected);
   }
 }
 
 TEST(ModuleTest, UpdateAndClear) {
-  FakeModule module;
+  FakeFrameworkModule module;
   std::minstd_rand prng(1);
 
   // Initial contents are shared.

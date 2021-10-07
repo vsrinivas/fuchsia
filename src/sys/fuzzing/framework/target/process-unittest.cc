@@ -35,8 +35,8 @@ constexpr uint32_t kNumModules = 4;
 
 // Generates some simple |modules|. |Collect| requires at least one module, so this initializes the
 // first one. This method should be called *before* instantiating a |TestProcess|.
-std::vector<FakeModule> CreateModulesAndInitFirst() {
-  std::vector<FakeModule> modules;
+std::vector<FakeFrameworkModule> CreateModulesAndInitFirst() {
+  std::vector<FakeFrameworkModule> modules;
   for (uint32_t i = 0; i < kNumModules; ++i) {
     modules.emplace_back(i + 1);
   }

@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_SYS_FUZZING_FRAMEWORK_TARGET_SANCOV_H_
-#define SRC_SYS_FUZZING_FRAMEWORK_TARGET_SANCOV_H_
+#ifndef SRC_SYS_FUZZING_COMMON_SANCOV_H_
+#define SRC_SYS_FUZZING_COMMON_SANCOV_H_
 
 // The following are symbols that SanitizerCoverage expects the runtime to provide.
 
@@ -19,4 +19,4 @@ void __sanitizer_cov_pcs_init(const uintptr_t* start, const uintptr_t* stop);
 
 }  // extern "C"
 
-#endif  // SRC_SYS_FUZZING_FRAMEWORK_TARGET_SANCOV_H_
+#endif  // SRC_SYS_FUZZING_COMMON_SANCOV_H_

@@ -13,7 +13,7 @@
 #include "src/sys/fuzzing/common/dispatcher.h"
 #include "src/sys/fuzzing/common/options.h"
 #include "src/sys/fuzzing/common/runner-unittest.h"
-#include "src/sys/fuzzing/common/testing/coverage.h"
+#include "src/sys/fuzzing/common/testing/module.h"
 #include "src/sys/fuzzing/framework/engine/runner.h"
 #include "src/sys/fuzzing/framework/testing/adapter.h"
 #include "src/sys/fuzzing/framework/testing/process.h"

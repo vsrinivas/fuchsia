@@ -30,7 +30,7 @@ source_set("testing") {
 
 executable("target") {
   output_name = "component_fuzzing_test_target"
-  visibility = [ "../*" ]
+  visibility = [ "//src/sys/fuzzing/*" ]
   testonly = true
   sources = [ "target-main.cc" ]
   deps = [

@@ -23,16 +23,6 @@ using Identifier = std::array<uint64_t, 2>;
 // code coverage) for the fuzzer engine.
 class Module final {
  public:
-  // The array presented by |__sanitizer_cov_pcs_init| is actually a table of PCs and flags.
-  struct PC {
-    uintptr_t pc;
-    uintptr_t flags;
-
-    PC() = default;
-    PC(uintptr_t pc_, uintptr_t flags_) : pc(pc_), flags(flags_) {}
-    ~PC() = default;
-  };
-
   // Returns a unique, position-independent identifier for the module.
   static Identifier Identify(const uintptr_t* pcs, size_t num_pcs);
 

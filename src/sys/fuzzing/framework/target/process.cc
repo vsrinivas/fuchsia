@@ -9,6 +9,7 @@
 #include <stddef.h>
 #include <stdlib.h>
 
+#include "src/sys/fuzzing/common/module.h"
 #include "src/sys/fuzzing/common/options.h"
 #include "src/sys/fuzzing/framework/target/weak-symbols.h"
 
@@ -226,7 +227,7 @@ void Process::AddModulesLocked() {
     FX_DCHECK(info.counters_len);
     FX_DCHECK(info.pcs);
     FX_DCHECK(info.pcs_len);
-    if (info.counters_len == info.pcs_len * sizeof(uintptr_t) / sizeof(Module::PC)) {
+    if (info.counters_len == info.pcs_len * sizeof(uintptr_t) / sizeof(ModulePC)) {
       Module module(info.counters, info.pcs, info.counters_len);
       Feedback feedback;
       feedback.set_id(module.id());

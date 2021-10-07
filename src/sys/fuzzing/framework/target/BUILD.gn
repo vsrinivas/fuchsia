@@ -23,6 +23,7 @@ source_set("no_hooks") {
     "weak-symbols.h",
   ]
   public_deps = [
+    "//src/lib/fxl",
     "//src/sys/fuzzing/common",
     "//src/sys/fuzzing/fidl:fuchsia.fuzzer",
   ]

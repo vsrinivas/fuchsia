@@ -11,50 +11,26 @@
 #include <memory>
 
 #include "src/lib/fxl/macros.h"
-#include "src/sys/fuzzing/common/testing/coverage.h"
+#include "src/sys/fuzzing/common/testing/module.h"
 #include "src/sys/fuzzing/framework/target/module.h"
 
 namespace fuzzing {
 
 // Wraps a |Module| and automatically provides fake counters and PC tables based on a seed value.
-class FakeModule final {
+class FakeFrameworkModule final : public FakeModule {
  public:
-  static constexpr size_t kNumPCs = 256;
-
   // Make a fake module with randomized PCs.
-  explicit FakeModule(uint32_t seed = 1);
+  explicit FakeFrameworkModule(uint32_t seed = 1);
 
   // Make a fake module with the given PCs.
-  explicit FakeModule(std::vector<Module::PC>&& pc_table);
+  explicit FakeFrameworkModule(std::vector<ModulePC>&& pc_table) noexcept;
 
-  FakeModule(FakeModule&& other) { *this = std::move(other); }
-  ~FakeModule() = default;
+  FakeFrameworkModule(FakeFrameworkModule&& other) { *this = std::move(other); }
+  ~FakeFrameworkModule() override = default;
 
-  FakeModule& operator=(FakeModule&& other) noexcept;
-
-  // Returns a reference to a counter location. |index| must be less than |kNumPCs|.
-  uint8_t& operator[](size_t index);
+  FakeFrameworkModule& operator=(FakeFrameworkModule&& other) noexcept;
 
   Identifier id() const;
-
-  size_t num_pcs() const { return counters_.size(); }
-
-  const uint8_t* counters() const { return counters_.data(); }
-  uint8_t* counters() { return counters_.data(); }
-
-  const uint8_t* counters_end() const { return counters() + num_pcs(); }
-  uint8_t* counters_end() { return counters() + num_pcs(); }
-
-  const uintptr_t* pcs() const { return reinterpret_cast<const uintptr_t*>(pc_table()); }
-
-  const uintptr_t* pcs_end() const { return reinterpret_cast<const uintptr_t*>(pc_table_end()); }
-
-  const Module::PC* pc_table() const { return pc_table_.data(); }
-
-  const Module::PC* pc_table_end() const { return pc_table() + num_pcs(); }
-
-  // Sets the inline, 8-bit code coverage counters.
-  void SetCoverage(const Coverage& coverage);
 
   // Methods for sharing counters, e.g. via |AddFeedback|.
   Buffer Share();
@@ -63,10 +39,8 @@ class FakeModule final {
 
  private:
   std::unique_ptr<Module> module_;
-  std::vector<uint8_t> counters_;
-  std::vector<Module::PC> pc_table_;
 
-  FXL_DISALLOW_COPY_AND_ASSIGN(FakeModule);
+  FXL_DISALLOW_COPY_AND_ASSIGN(FakeFrameworkModule);
 };
 
 }  // namespace fuzzing

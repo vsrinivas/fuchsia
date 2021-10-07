@@ -6,6 +6,8 @@
 
 #include <lib/syslog/cpp/macros.h>
 
+#include "src/sys/fuzzing/common/module.h"
+
 namespace fuzzing {
 namespace {
 
@@ -16,7 +18,7 @@ constexpr uint64_t kFnv64OffsetBasis = 14695981039346656037ULL;
 
 Identifier Module::Identify(const uintptr_t* pcs, size_t num_pcs) {
   // Make a position independent table from the PCs.
-  auto pc_table = std::make_unique<PC[]>(num_pcs);
+  auto pc_table = std::make_unique<ModulePC[]>(num_pcs);
   for (size_t i = 0; i < num_pcs; ++i) {
     pc_table[i].pc = pcs[i * 2] - pcs[0];
     pc_table[i].flags = pcs[i * 2 + 1];
@@ -27,7 +29,7 @@ Identifier Module::Identify(const uintptr_t* pcs, size_t num_pcs) {
   // The algorithms are taken from http://www.isthe.com/chongo/tech/comp/fnv/index.html
   Identifier id = {kFnv64OffsetBasis, kFnv64OffsetBasis};
   auto* u8 = reinterpret_cast<uint8_t*>(pc_table.get());
-  size_t size = num_pcs * sizeof(PC);
+  size_t size = num_pcs * sizeof(ModulePC);
   while (size-- > 0) {
     // FNV1
     id[0] *= kFnv64Prime;

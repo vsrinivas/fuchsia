@@ -41,7 +41,7 @@ class FakeProcessProxy : public ProcessProxy {
 
   zx_koid_t process_koid() const { return process_koid_; }
   size_t num_modules() const { return ids_.size(); }
-  bool has_module(FakeModule* module) const;
+  bool has_module(FakeFrameworkModule* module) const;
 
   void Configure(const std::shared_ptr<Options>& options);
 

@@ -16,7 +16,7 @@
 #include "src/sys/fuzzing/common/input.h"
 #include "src/sys/fuzzing/common/options.h"
 #include "src/sys/fuzzing/common/runner.h"
-#include "src/sys/fuzzing/common/testing/coverage.h"
+#include "src/sys/fuzzing/common/testing/module.h"
 
 namespace fuzzing {
 

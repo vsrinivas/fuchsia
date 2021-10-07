@@ -56,7 +56,7 @@ class FakeProcess final {
  private:
   void Reset();
 
-  FakeModule module_;
+  FakeFrameworkModule module_;
   ProcessProxySyncPtr proxy_;
   SignalCoordinator coordinator_;
   TestTarget target_;

@@ -16,10 +16,10 @@
 
 #include "src/lib/fxl/macros.h"
 #include "src/lib/fxl/synchronization/thread_annotations.h"
+#include "src/sys/fuzzing/common/sancov.h"
 #include "src/sys/fuzzing/common/signal-coordinator.h"
 #include "src/sys/fuzzing/framework/target/module.h"
 #include "src/sys/fuzzing/framework/target/process.h"
-#include "src/sys/fuzzing/framework/target/sancov.h"
 
 namespace fuzzing {
 
