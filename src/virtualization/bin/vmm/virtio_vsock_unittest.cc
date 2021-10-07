@@ -11,6 +11,7 @@
 #include <gtest/gtest.h>
 
 #include "src/virtualization/bin/vmm/phys_mem_fake.h"
+#include "src/virtualization/bin/vmm/virtio_device_fake.h"
 #include "src/virtualization/bin/vmm/virtio_queue_fake.h"
 
 namespace {
@@ -939,6 +940,73 @@ TEST_F(VirtioVsockTest, InitialCredit) {
   VerifyHeader(rx_buffer, kVirtioVsockHostPort, kVirtioVsockGuestEphemeralPort, expected.size(),
                VIRTIO_VSOCK_OP_RW, 0);
   EXPECT_EQ(memcmp(rx_buffer->data, expected.data(), expected.size()), 0);
+}
+
+TEST(VirtioVsockChain, AllocateAndFree) {
+  VirtioDeviceFake device;
+  VirtioQueue* queue = device.queue();
+  VirtioQueueFake* fake_queue = device.queue_fake();
+
+  // Add an item to the queue.
+  virtio_vsock_hdr_t header = {
+      .src_port = 1234,
+  };
+  uint16_t index;
+  fake_queue->BuildDescriptor().AppendReadable(&header, sizeof(header)).Build(&index);
+
+  // Ensure we can take the item off the queue and read the header value from it.
+  std::optional<VsockChain> chain = VsockChain::FromQueue(queue, /*writable=*/false);
+  ASSERT_TRUE(chain.has_value());
+  EXPECT_EQ(chain->header()->src_port, 1234u);
+  EXPECT_TRUE(!queue->HasAvail());
+
+  // Return the item.
+  chain->Return(/*used=*/0);
+  EXPECT_TRUE(fake_queue->HasUsed());
+}
+
+TEST(VirtioVsockChain, AllocateEmptyQueue) {
+  VirtioDeviceFake device;
+
+  // Attempt to take an item off the queue. It should fail.
+  std::optional<VsockChain> chain = VsockChain::FromQueue(device.queue(), /*writable=*/false);
+  EXPECT_FALSE(chain.has_value());
+}
+
+TEST(VirtioVsockChain, AllocateSkipsBadDescriptors) {
+  VirtioDeviceFake device;
+  VirtioQueue* queue = device.queue();
+  VirtioQueueFake* fake_queue = device.queue_fake();
+
+  // Add a too-short descriptor.
+  uint8_t byte;
+  uint16_t too_small_id;
+  fake_queue->BuildDescriptor().AppendReadable(&byte, sizeof(byte)).Build(&too_small_id);
+
+  // Add a writable descriptor when the caller will ask for a readable descriptor.
+  virtio_vsock_hdr_t writable_header{};
+  uint16_t writable_header_id;
+  fake_queue->BuildDescriptor()
+      .AppendWritable(&writable_header, sizeof(writable_header))
+      .Build(&writable_header_id);
+
+  // Add a valid descriptor.
+  virtio_vsock_hdr_t header{
+      .src_port = 1234,
+  };
+  uint16_t valid_id;
+  fake_queue->BuildDescriptor().AppendReadable(&header, sizeof(header)).Build(&valid_id);
+
+  // Ensure the valid descriptor was read.
+  std::optional<VsockChain> chain = VsockChain::FromQueue(queue, /*writable=*/false);
+  ASSERT_TRUE(chain.has_value());
+  EXPECT_EQ(chain->header()->src_port, 1234u);
+
+  // Ensure the two invalid descriptors were returned.
+  EXPECT_EQ(too_small_id, fake_queue->NextUsed().id);
+  EXPECT_EQ(writable_header_id, fake_queue->NextUsed().id);
+
+  chain->Return(/*used=*/0);
 }
 
 }  // namespace

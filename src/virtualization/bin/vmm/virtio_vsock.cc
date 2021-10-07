@@ -13,6 +13,72 @@
 
 #include "src/lib/fsl/handles/object_info.h"
 
+std::optional<VsockChain> VsockChain::FromQueue(VirtioQueue* queue, bool writable) {
+  VirtioDescriptor desc;
+  uint16_t index;
+
+  // Read through descriptors on the queue until we find one that matches our
+  // criteria, or run out.
+  //
+  // If the guest is functioning reasonably, we expect all incoming
+  // descriptors to match our criteria.
+  while (queue->NextAvail(&index) == ZX_OK) {
+    zx_status_t status = queue->ReadDesc(index, &desc);
+    if (status != ZX_OK) {
+      FX_LOGS(WARNING) << "Failed to read descriptor from queue: " << status;
+      queue->Return(index, /*len=*/0);
+      continue;
+    }
+
+    // Ensure it has the correct read/write mode.
+    if (desc.writable != writable) {
+      FX_LOGS(ERROR) << "Descriptor is not " << (writable ? "writable" : "readable");
+      queue->Return(index, /*len=*/0);
+      continue;
+    }
+
+    // Ensure it is big enough.
+    if (desc.len < sizeof(virtio_vsock_hdr_t)) {
+      FX_LOGS(ERROR) << "Descriptor is too small";
+      queue->Return(index, /*len=*/0);
+      continue;
+    }
+
+    return VsockChain(queue, index, desc);
+  }
+
+  return std::nullopt;
+}
+
+void VsockChain::Release() {
+  queue_ = nullptr;
+  index_ = 0;
+}
+
+VsockChain::VsockChain(VsockChain&& other) noexcept { *this = std::move(other); }
+
+VsockChain::~VsockChain() {
+  FX_CHECK(queue_ == nullptr) << "VsockChain was destroyed without Return() being called.";
+}
+
+VsockChain& VsockChain::operator=(VsockChain&& other) noexcept {
+  queue_ = other.queue_;
+  desc_ = other.desc_;
+  index_ = other.index_;
+  other.Release();
+  return *this;
+}
+
+virtio_vsock_hdr_t* VsockChain::header() const {
+  FX_DCHECK(desc_.len >= sizeof(virtio_vsock_hdr_t));
+  return static_cast<virtio_vsock_hdr_t*>(desc_.addr);
+}
+
+void VsockChain::Return(uint32_t used) {
+  queue_->Return(index_, used);
+  Release();
+}
+
 // We take a |queue_callback| to decouple the connection from the device. This
 // allows a connection to wait on a Virtio queue and update the device state,
 // without having direct access to the device.
@@ -290,35 +356,37 @@ static zx_status_t setup_desc_chain(VirtioQueue* queue, virtio_vsock_hdr_t* head
 }
 
 zx_status_t VirtioVsock::SocketConnection::Read(VirtioQueue* queue, virtio_vsock_hdr_t* header,
-                                                VirtioDescriptor* desc, uint32_t* used) {
-  zx_status_t status = setup_desc_chain(queue, header, desc);
+                                                const VirtioDescriptor& desc, uint32_t* used) {
+  VirtioDescriptor next = desc;
+  zx_status_t status = setup_desc_chain(queue, header, &next);
   while (status == ZX_OK) {
-    size_t len = std::min(desc->len, PeerFree());
+    size_t len = std::min(next.len, PeerFree());
     size_t actual;
-    status = socket_.read(0, desc->addr, len, &actual);
+    status = socket_.read(0, next.addr, len, &actual);
     if (status != ZX_OK) {
       break;
     }
 
     *used += actual;
     tx_cnt_ += actual;
-    if (PeerFree() == 0 || !desc->has_next || actual < desc->len) {
+    if (PeerFree() == 0 || !next.has_next || actual < next.len) {
       break;
     }
 
-    status = queue->ReadDesc(desc->next, desc);
+    status = queue->ReadDesc(next.next, &next);
   }
   header->len = *used;
   return status;
 }
 
 zx_status_t VirtioVsock::SocketConnection::Write(VirtioQueue* queue, virtio_vsock_hdr_t* header,
-                                                 VirtioDescriptor* desc) {
-  zx_status_t status = setup_desc_chain(queue, header, desc);
+                                                 const VirtioDescriptor& desc) {
+  VirtioDescriptor next = desc;
+  zx_status_t status = setup_desc_chain(queue, header, &next);
   while (status == ZX_OK) {
-    uint32_t len = std::min(desc->len, header->len);
+    uint32_t len = std::min(next.len, header->len);
     size_t actual;
-    status = socket_.write(0, desc->addr, len, &actual);
+    status = socket_.write(0, next.addr, len, &actual);
     rx_cnt_ += actual;
     header->len -= actual;
     if (status != ZX_OK || actual < len) {
@@ -331,11 +399,11 @@ zx_status_t VirtioVsock::SocketConnection::Write(VirtioQueue* queue, virtio_vsoc
     }
 
     reported_buf_avail_ -= actual;
-    if (reported_buf_avail_ == 0 || !desc->has_next || header->len == 0) {
+    if (reported_buf_avail_ == 0 || !next.has_next || header->len == 0) {
       return ZX_OK;
     }
 
-    status = queue->ReadDesc(desc->next, desc);
+    status = queue->ReadDesc(next.next, &next);
   }
   return status;
 }
@@ -407,12 +475,13 @@ zx_status_t VirtioVsock::ChannelConnection::WriteCredit(virtio_vsock_hdr_t* head
 zx_status_t VirtioVsock::ChannelConnection::Shutdown(uint32_t flags) { return ZX_OK; }
 
 zx_status_t VirtioVsock::ChannelConnection::Read(VirtioQueue* queue, virtio_vsock_hdr_t* header,
-                                                 VirtioDescriptor* desc, uint32_t* used) {
-  zx_status_t status = setup_desc_chain(queue, header, desc);
+                                                 const VirtioDescriptor& desc, uint32_t* used) {
+  VirtioDescriptor next = desc;
+  zx_status_t status = setup_desc_chain(queue, header, &next);
   while (status == ZX_OK) {
-    uint32_t len = std::min(desc->len, PeerFree());
+    uint32_t len = std::min(next.len, PeerFree());
     uint32_t actual;
-    status = channel_.read(0, desc->addr, nullptr, len, 0, &actual, nullptr);
+    status = channel_.read(0, next.addr, nullptr, len, 0, &actual, nullptr);
     if (status != ZX_OK) {
       // We are handling two different cases in this branch:
       // 1. If the channel is empty.
@@ -425,7 +494,7 @@ zx_status_t VirtioVsock::ChannelConnection::Read(VirtioQueue* queue, virtio_vsoc
       // TODO(fxbug.dev/12377): Figure out the best way to handle channel messages that
       // are larger than a single descriptor.
       if (status == ZX_ERR_SHOULD_WAIT ||
-          (status == ZX_ERR_BUFFER_TOO_SMALL && desc->len > PeerFree())) {
+          (status == ZX_ERR_BUFFER_TOO_SMALL && next.len > PeerFree())) {
         status = ZX_OK;
       } else {
         FX_LOGS(ERROR) << "Failed to read from channel " << status;
@@ -435,34 +504,35 @@ zx_status_t VirtioVsock::ChannelConnection::Read(VirtioQueue* queue, virtio_vsoc
 
     *used += actual;
     tx_cnt_ += actual;
-    if (PeerFree() == 0 || !desc->has_next) {
+    if (PeerFree() == 0 || !next.has_next) {
       break;
     }
 
-    status = queue->ReadDesc(desc->next, desc);
+    status = queue->ReadDesc(next.next, &next);
   }
   header->len = *used;
   return status;
 }
 
 zx_status_t VirtioVsock::ChannelConnection::Write(VirtioQueue* queue, virtio_vsock_hdr_t* header,
-                                                  VirtioDescriptor* desc) {
-  zx_status_t status = setup_desc_chain(queue, header, desc);
+                                                  const VirtioDescriptor& desc) {
+  VirtioDescriptor next = desc;
+  zx_status_t status = setup_desc_chain(queue, header, &next);
   while (status == ZX_OK) {
-    status = channel_.write(0, desc->addr, desc->len, nullptr, 0);
-    rx_cnt_ += desc->len;
-    header->len -= desc->len;
+    status = channel_.write(0, next.addr, next.len, nullptr, 0);
+    rx_cnt_ += next.len;
+    header->len -= next.len;
     if (status != ZX_OK) {
       FX_LOGS(ERROR) << "Failed to write from channel " << status;
       UpdateOp(VIRTIO_VSOCK_OP_RST);
       return ZX_OK;
     }
 
-    if (!desc->has_next || header->len == 0) {
+    if (!next.has_next || header->len == 0) {
       return ZX_OK;
     }
 
-    status = queue->ReadDesc(desc->next, desc);
+    status = queue->ReadDesc(next.next, &next);
   }
   return status;
 }
@@ -646,26 +716,9 @@ void VirtioVsock::WaitOnQueueLocked(ConnectionKey key) {
   readable_.insert(key);
 }
 
-static virtio_vsock_hdr_t* get_header(VirtioQueue* queue, uint16_t index, VirtioDescriptor* desc,
-                                      bool writable) {
-  zx_status_t status = queue->ReadDesc(index, desc);
-  if (status != ZX_OK) {
-    FX_LOGS(ERROR) << "Failed to read descriptor from queue " << status;
-    return nullptr;
-  }
-  if (desc->writable != writable) {
-    FX_LOGS(ERROR) << "Descriptor is not " << (writable ? "writable" : "readable");
-    return nullptr;
-  }
-  if (desc->len < sizeof(virtio_vsock_hdr_t)) {
-    FX_LOGS(ERROR) << "Descriptor is too small";
-    return nullptr;
-  }
-  return static_cast<virtio_vsock_hdr_t*>(desc->addr);
-}
-
 static zx_status_t transmit(VirtioVsock::Connection* conn, VirtioQueue* queue,
-                            virtio_vsock_hdr_t* header, VirtioDescriptor* desc, uint32_t* used) {
+                            virtio_vsock_hdr_t* header, const VirtioDescriptor& desc,
+                            uint32_t* used) {
   switch (conn->op()) {
     case VIRTIO_VSOCK_OP_REQUEST:
       // We are sending a connection request, therefore we move to waiting
@@ -708,21 +761,14 @@ bool VirtioVsock::ProcessReadyConnection(ConnectionKey key) {
     return true;
   }
 
-  // Allocate a descriptor.
-  VirtioDescriptor desc;
-  uint16_t index;
-  zx_status_t status = rx_queue()->NextAvail(&index);
-  if (status != ZX_OK) {
+  // Read an available chain.
+  std::optional<VsockChain> chain = VsockChain::FromQueue(rx_queue(), /*writable=*/true);
+  if (!chain.has_value()) {
     return false;
   }
 
   // Write out the header.
-  virtio_vsock_hdr_t* header = get_header(rx_queue(), index, &desc, true);
-  if (header == nullptr) {
-    FX_LOGS(ERROR) << "Failed to get header from read queue";
-    return false;
-  }
-  *header = {
+  *chain->header() = {
       .src_cid = key.local_cid,
       .dst_cid = guest_cid(),
       .src_port = key.local_port,
@@ -738,16 +784,17 @@ bool VirtioVsock::ProcessReadyConnection(ConnectionKey key) {
     FX_LOGS(ERROR) << "Receive was shutdown";
   }
 
-  zx_status_t write_status = conn->WriteCredit(header);
+  zx_status_t write_status = conn->WriteCredit(chain->header());
   switch (write_status) {
     case ZX_OK:
       break;
-    case ZX_ERR_UNAVAILABLE:
-      status = conn->WaitOnTransmit(ZX_OK);
+    case ZX_ERR_UNAVAILABLE: {
+      zx_status_t status = conn->WaitOnTransmit(ZX_OK);
       if (EraseOnErrorLocked(key, status)) {
         return true;
       }
       break;
+    }
     default:
       conn->UpdateOp(VIRTIO_VSOCK_OP_RST);
       FX_LOGS(ERROR) << "Failed to write credit " << write_status;
@@ -755,8 +802,9 @@ bool VirtioVsock::ProcessReadyConnection(ConnectionKey key) {
   }
 
   uint32_t used = 0;
-  status = transmit(conn, rx_queue(), header, &desc, &used);
-  rx_queue()->Return(index, used + sizeof(*header));
+  zx_status_t status = transmit(conn, rx_queue(), chain->header(), chain->desc(), &used);
+  chain->Return(/*used=*/used + sizeof(virtio_vsock_hdr_t));
+
   status = conn->WaitOnReceive(status);
   EraseOnErrorLocked(key, status);
   return true;
@@ -795,7 +843,7 @@ static void set_shutdown(virtio_vsock_hdr_t* header) {
 }
 
 static zx_status_t receive(VirtioVsock::Connection* conn, VirtioQueue* queue,
-                           virtio_vsock_hdr_t* header, VirtioDescriptor* desc) {
+                           virtio_vsock_hdr_t* header, const VirtioDescriptor& desc) {
   switch (header->op) {
     case VIRTIO_VSOCK_OP_RESPONSE: {
       zx_status_t status = conn->Init();
@@ -836,14 +884,8 @@ static zx_status_t receive(VirtioVsock::Connection* conn, VirtioQueue* queue,
   }
 }
 
-void VirtioVsock::ProcessIncomingPacket(uint16_t index) {
-  // Get incoming descriptor.
-  VirtioDescriptor desc;
-  auto header = get_header(tx_queue(), index, &desc, false);
-  if (header == nullptr) {
-    FX_LOGS(ERROR) << "Failed to get header from write queue";
-    return;
-  }
+void VirtioVsock::ProcessIncomingPacket(const VsockChain& chain) {
+  virtio_vsock_hdr_t* header = chain.header();
 
   // Reject packets with unknown socket types.
   if (header->type != VIRTIO_VSOCK_TYPE_STREAM) {
@@ -904,7 +946,7 @@ void VirtioVsock::ProcessIncomingPacket(uint16_t index) {
   }
 
   conn->ReadCredit(header);
-  zx_status_t status = receive(conn, tx_queue(), header, &desc);
+  zx_status_t status = receive(conn, tx_queue(), header, chain.desc());
   switch (conn->op()) {
     case VIRTIO_VSOCK_OP_RST:
     case VIRTIO_VSOCK_OP_CREDIT_UPDATE:
@@ -927,10 +969,15 @@ void VirtioVsock::Demux(async_dispatcher_t*, async::WaitBase*, zx_status_t statu
   std::lock_guard<std::mutex> lock(mutex_);
 
   // Process all packets in the guest's TX queue.
-  uint16_t index;
-  while (tx_queue()->NextAvail(&index) == ZX_OK) {
-    ProcessIncomingPacket(index);
-    tx_queue()->Return(index, /*len=*/0);
+  while (true) {
+    std::optional<VsockChain> chain = VsockChain::FromQueue(tx_queue(), /*writable=*/false);
+    if (!chain.has_value()) {
+      break;
+    }
+
+    ProcessIncomingPacket(*chain);
+
+    chain->Return(/*used=*/0);
   }
 
   // Schedule this function to be called again next time the queue receives

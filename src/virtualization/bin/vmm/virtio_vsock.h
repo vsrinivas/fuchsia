@@ -22,6 +22,53 @@
 
 static constexpr uint16_t kVirtioVsockNumQueues = 3;
 
+// VsockChain is a thin wrapper around a VirtioDescriptor and associated index.
+//
+// TODO(fxbug.dev/85702): Replace with VirtioChain when possible.
+class VsockChain {
+ public:
+  ~VsockChain();
+
+  // Read a VsockChain from the given queue.
+  //
+  // The function discards any invalid descriptors, returning either a
+  // descriptor or std::nullopt if the no descriptors are available on the queue.
+  //
+  // Return std::nullopt if no descriptors were available on the queue.
+  static std::optional<VsockChain> FromQueue(VirtioQueue* queue, bool writable);
+
+  // Get the head descriptor of this chain.
+  const VirtioDescriptor& desc() const { return desc_; }
+
+  // Get the parent queue of this chain.
+  VirtioQueue* queue() const { return queue_; }
+
+  // Return a pointer to the virtio_vsock_hdr_t header associated with this chain.
+  //
+  // This points to the first sizeof(virtio_vsock_hdr_t) bytes of the chain's payload.
+  virtio_vsock_hdr_t* header() const;
+
+  // Return this chain back to the origin queue.
+  //
+  // Must be called prior to destruction.
+  void Return(uint32_t used);
+
+  // Move only.
+  VsockChain(VsockChain&&) noexcept;
+  VsockChain& operator=(VsockChain&&) noexcept;
+
+ private:
+  VsockChain(VirtioQueue* queue, uint16_t index, const VirtioDescriptor& desc)
+      : queue_(queue), index_(index), desc_(desc) {}
+
+  // Release ownership of the chain.
+  void Release();
+
+  VirtioQueue* queue_ = nullptr;  // Source VirtioQueue.
+  uint16_t index_ = 0;            // Index of the head descriptor.
+  VirtioDescriptor desc_{};       // Head descriptor.
+};
+
 class VirtioVsock
     : public VirtioInprocessDevice<VIRTIO_ID_VSOCK, kVirtioVsockNumQueues, virtio_vsock_config_t>,
       public fuchsia::virtualization::GuestVsockEndpoint,
@@ -95,7 +142,7 @@ class VirtioVsock
   void WaitOnQueueLocked(ConnectionKey key) __TA_REQUIRES(mutex_);
 
   // Process an incoming packet from the guest.
-  void ProcessIncomingPacket(uint16_t index) __TA_REQUIRES(mutex_);
+  void ProcessIncomingPacket(const VsockChain& chain) __TA_REQUIRES(mutex_);
 
   // Process a ready-to-send connection, writing any pending data to the
   // guest's RX queue.
@@ -160,10 +207,10 @@ class VirtioVsock::Connection {
   virtual zx_status_t WriteCredit(virtio_vsock_hdr_t* header) = 0;
 
   virtual zx_status_t Shutdown(uint32_t flags) = 0;
-  virtual zx_status_t Read(VirtioQueue* queue, virtio_vsock_hdr_t* header, VirtioDescriptor* desc,
-                           uint32_t* used) = 0;
+  virtual zx_status_t Read(VirtioQueue* queue, virtio_vsock_hdr_t* header,
+                           const VirtioDescriptor& desc, uint32_t* used) = 0;
   virtual zx_status_t Write(VirtioQueue* queue, virtio_vsock_hdr_t* header,
-                            VirtioDescriptor* desc) = 0;
+                            const VirtioDescriptor& desc) = 0;
 
   zx_status_t WaitOnTransmit(zx_status_t status);
   zx_status_t WaitOnReceive(zx_status_t status);
@@ -202,12 +249,12 @@ class VirtioVsock::NullConnection final : public VirtioVsock::Connection {
   zx_status_t WriteCredit(virtio_vsock_hdr_t* header) override { return ZX_OK; }
 
   zx_status_t Shutdown(uint32_t flags) override { return ZX_ERR_NOT_SUPPORTED; }
-  zx_status_t Read(VirtioQueue* queue, virtio_vsock_hdr_t* header, VirtioDescriptor* desc,
+  zx_status_t Read(VirtioQueue* queue, virtio_vsock_hdr_t* header, const VirtioDescriptor& desc,
                    uint32_t* used) override {
     return ZX_ERR_NOT_SUPPORTED;
   }
   zx_status_t Write(VirtioQueue* queue, virtio_vsock_hdr_t* header,
-                    VirtioDescriptor* desc) override {
+                    const VirtioDescriptor& desc) override {
     return ZX_ERR_NOT_SUPPORTED;
   }
 };
@@ -223,10 +270,10 @@ class VirtioVsock::SocketConnection final : public VirtioVsock::Connection {
   zx_status_t WriteCredit(virtio_vsock_hdr_t* header) override;
 
   zx_status_t Shutdown(uint32_t flags) override;
-  zx_status_t Read(VirtioQueue* queue, virtio_vsock_hdr_t* header, VirtioDescriptor* desc,
+  zx_status_t Read(VirtioQueue* queue, virtio_vsock_hdr_t* header, const VirtioDescriptor& desc,
                    uint32_t* used) override;
   zx_status_t Write(VirtioQueue* queue, virtio_vsock_hdr_t* header,
-                    VirtioDescriptor* desc) override;
+                    const VirtioDescriptor& desc) override;
 
  private:
   void OnReady(zx_status_t status, const zx_packet_signal_t* signal);
@@ -253,10 +300,10 @@ class VirtioVsock::ChannelConnection final : public VirtioVsock::Connection {
   zx_status_t WriteCredit(virtio_vsock_hdr_t* header) override;
 
   zx_status_t Shutdown(uint32_t flags) override;
-  zx_status_t Read(VirtioQueue* queue, virtio_vsock_hdr_t* header, VirtioDescriptor* desc,
+  zx_status_t Read(VirtioQueue* queue, virtio_vsock_hdr_t* header, const VirtioDescriptor& desc,
                    uint32_t* used) override;
   zx_status_t Write(VirtioQueue* queue, virtio_vsock_hdr_t* header,
-                    VirtioDescriptor* desc) override;
+                    const VirtioDescriptor& desc) override;
 
  private:
   void OnReady(zx_status_t status, const zx_packet_signal_t* signal);
