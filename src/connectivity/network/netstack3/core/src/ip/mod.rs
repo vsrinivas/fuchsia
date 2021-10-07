@@ -744,7 +744,7 @@ fn dispatch_receive_ipv6_packet<B: BufferMut, D: BufferDispatcher<B>>(
                 // is no header whatsoever following the last lower-level header
                 // so we stop processing here.
                 Ipv6Proto::NoNextHeader => Ok(()),
-                $($cond => <<Ctx<D> as Ipv4TransportLayerContext>::$ty as BufferIpTransportContext<Ipv6, _, _>>
+                $($cond => <<Ctx<D> as Ipv6TransportLayerContext>::$ty as BufferIpTransportContext<Ipv6, _, _>>
                             ::receive_ip_packet(ctx, device, src_ip, dst_ip, buffer),)*
                 // TODO(joshlf): Once all IP Next Header numbers are covered,
                 // remove this default case.
