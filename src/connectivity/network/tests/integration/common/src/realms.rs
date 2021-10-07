@@ -77,7 +77,7 @@ impl ManagementAgent {
     /// Gets the URL for this network manager component.
     pub fn get_url(&self) -> &'static str {
         match self {
-            ManagementAgent::NetCfg => "#meta/netcfg.cm",
+            ManagementAgent::NetCfg => "#meta/netcfg-basic.cm",
         }
     }
 

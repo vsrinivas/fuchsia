@@ -21,7 +21,7 @@
         },
         {
             name: "netcfg",
-            url: "#meta/netcfg.cm",
+            url: "#meta/netcfg-basic.cm",
             startup: "eager",
         },
         {

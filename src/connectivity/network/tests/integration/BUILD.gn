@@ -70,7 +70,7 @@ fuchsia_test_package("netstack-integration-tests") {
 
     # netcfg integration with netstack is tested.
     ":netcfg-netemul-config",
-    "//src/connectivity/network/netcfg:component",
+    "//src/connectivity/network/netcfg:component-basic",
   ]
 }
 

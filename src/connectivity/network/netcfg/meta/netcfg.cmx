@@ -3,7 +3,7 @@
         "syslog/client.shard.cmx"
     ],
     "program": {
-        "binary": "bin/netcfg"
+        "binary": "bin/netcfg_basic"
     },
     "sandbox": {
         "dev": [

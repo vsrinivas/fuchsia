@@ -12,7 +12,7 @@ fuchsia_component("component") {
     "dhcpv6/client:component",
     "dns:component",
     "http-client:component",
-    "netcfg:component",
+    "netcfg:component-basic",
     "netstack:component",
   ]
 }

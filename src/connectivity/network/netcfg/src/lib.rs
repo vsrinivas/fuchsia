@@ -39,17 +39,22 @@ use fidl_fuchsia_net_interfaces as fnet_interfaces;
 use fidl_fuchsia_net_interfaces_ext::{self as fnet_interfaces_ext, Update as _};
 use fidl_fuchsia_net_name as fnet_name;
 use fidl_fuchsia_net_stack as fnet_stack;
+use fidl_fuchsia_net_virtualization as fnet_virtualization;
 use fidl_fuchsia_netstack as fnetstack;
 use fuchsia_async::DurationExt as _;
 use fuchsia_component::client::{clone_namespace_svc, new_protocol_connector_in_dir};
+use fuchsia_component::server::{ServiceFs, ServiceFsDir};
 use fuchsia_syslog as fsyslog;
 use fuchsia_vfs_watcher as fvfs_watcher;
 use fuchsia_zircon::{self as zx, DurationNum as _};
 
-use anyhow::Context as _;
-use argh::FromArgs;
+use anyhow::{anyhow, Context as _};
+use async_trait::async_trait;
 use dns_server_watcher::{DnsServers, DnsServersUpdateSource, DEFAULT_DNS_PORT};
-use futures::stream::{self, StreamExt as _, TryStreamExt as _};
+use futures::{
+    stream::{self, StreamExt as _, TryStreamExt as _},
+    FutureExt as _,
+};
 use io_util::{open_directory_in_namespace, OPEN_RIGHT_READABLE};
 use log::{debug, error, info, trace, warn};
 use net_declare::fidl_ip_v4;
@@ -166,8 +171,10 @@ impl FromStr for LogLevel {
 /// Network Configuration tool.
 ///
 /// Configures network components in response to events.
-#[derive(FromArgs, Debug)]
+#[derive(argh::FromArgs, Debug)]
 struct Opt {
+    // TODO(https://fxbug.dev/85683): remove once we use netdevice and netcfg no
+    // longer has to differentiate between virtual or physical devices.
     /// should netemul specific configurations be used?
     #[argh(switch)]
     allow_virtual_devices: bool,
@@ -193,11 +200,11 @@ pub struct FilterConfig {
     pub rdr_rules: Vec<String>,
 }
 
-#[derive(Debug, PartialEq, Eq, Hash, Clone)]
+#[derive(Debug, PartialEq, Eq, Hash, Clone, Deserialize)]
+#[serde(rename_all = "lowercase")]
 enum InterfaceType {
-    UNKNOWN(String),
-    ETHERNET,
-    WLAN,
+    Ethernet,
+    Wlan,
 }
 
 #[derive(Debug, Deserialize)]
@@ -206,7 +213,7 @@ struct Config {
     #[serde(deserialize_with = "matchers::InterfaceSpec::parse_as_tuples")]
     pub rules: Vec<matchers::InterfaceSpec>,
     pub filter_config: FilterConfig,
-    pub filter_enabled_interface_types: Vec<String>,
+    pub filter_enabled_interface_types: HashSet<InterfaceType>,
 }
 
 impl Config {
@@ -258,16 +265,6 @@ macro_rules! cas_filter_rules {
     };
 }
 
-impl From<String> for InterfaceType {
-    fn from(s: String) -> InterfaceType {
-        match s.as_ref() {
-            "ethernet" => InterfaceType::ETHERNET,
-            "wlan" => InterfaceType::WLAN,
-            _ => InterfaceType::UNKNOWN(s),
-        }
-    }
-}
-
 fn should_enable_filter(
     filter_enabled_interface_types: &HashSet<InterfaceType>,
     features: &feth::Features,
@@ -275,9 +272,9 @@ fn should_enable_filter(
     if features.contains(feth::Features::Loopback) {
         false
     } else if features.contains(feth::Features::Wlan) {
-        filter_enabled_interface_types.contains(&InterfaceType::WLAN)
+        filter_enabled_interface_types.contains(&InterfaceType::Wlan)
     } else {
-        filter_enabled_interface_types.contains(&InterfaceType::ETHERNET)
+        filter_enabled_interface_types.contains(&InterfaceType::Ethernet)
     }
 }
 
@@ -339,7 +336,7 @@ impl InterfaceState {
 }
 
 /// Network Configuration state.
-struct NetCfg<'a> {
+pub struct NetCfg<'a> {
     stack: fnet_stack::StackProxy,
     netstack: fnetstack::NetstackProxy,
     lookup_admin: fnet_name::LookupAdminProxy,
@@ -455,7 +452,6 @@ fn start_dhcpv6_client(
 }
 
 impl<'a> NetCfg<'a> {
-    /// Returns a new `NetCfg`.
     async fn new(
         allow_virtual_devices: bool,
         default_config_rules: Vec<matchers::InterfaceSpec>,
@@ -605,7 +601,7 @@ impl<'a> NetCfg<'a> {
     ///
     /// The device directory will be monitored for device events and the netstack will be
     /// configured with a new interface on new device discovery.
-    async fn run(mut self) -> Result<(), anyhow::Error> {
+    async fn run(&mut self) -> Result<Never, anyhow::Error> {
         let ethdev_dir_path = &format!("{}/{}", DEV_PATH, devices::EthernetDevice::PATH);
         let mut ethdev_dir_watcher_stream = fvfs_watcher::Watcher::new(
             open_directory_in_namespace(ethdev_dir_path, OPEN_RIGHT_READABLE)
@@ -1416,73 +1412,120 @@ fn get_metric_and_features(wlan: bool) -> (u32, feth::Features) {
     }
 }
 
-#[fuchsia_async::run_singlethreaded]
-async fn main() {
-    // We use a closure so we can grab the error and log it before returning from main.
-    let f = || async {
-        let opt: Opt = argh::from_env();
-        let Opt { allow_virtual_devices, min_severity, config_data } = &opt;
+pub async fn handle_virtualization_control(
+    mut stream: fnet_virtualization::ControlRequestStream,
+) -> Result<(), anyhow::Error> {
+    while let Some(request) = stream.try_next().await? {
+        match request {
+            fnet_virtualization::ControlRequest::CreateNetwork {
+                config: _,
+                network: _,
+                control_handle: _,
+            } => {
+                todo!("https://fxbug.dev/85078: implement fuchsia.net.virtualization/Control")
+            }
+        }
+    }
+    Ok(())
+}
 
-        let () = fuchsia_syslog::init().context("cannot init logger")?;
-        fsyslog::set_severity((*min_severity).into());
+pub type Never = std::convert::Infallible;
 
-        info!("starting");
-        debug!("starting with options = {:?}", opt);
+pub async fn run<M: Mode>() -> Result<Never, anyhow::Error> {
+    let opt: Opt = argh::from_env();
+    let Opt { allow_virtual_devices, min_severity, config_data } = &opt;
 
-        let Config {
-            dns_config: DnsConfig { servers },
-            rules: default_config_rules,
-            filter_config,
-            filter_enabled_interface_types,
-        } = Config::load(config_data)?;
+    let () = fuchsia_syslog::init().context("cannot init logger")?;
+    fuchsia_syslog::set_severity((*min_severity).into());
+    info!("starting");
+    debug!("starting with options = {:?}", opt);
 
-        let filter_enabled_interface_types: HashSet<InterfaceType> =
-            filter_enabled_interface_types.into_iter().map(Into::into).collect();
-        if filter_enabled_interface_types.iter().any(|interface_type| match interface_type {
-            &InterfaceType::UNKNOWN(_) => true,
-            _ => false,
-        }) {
-            return Err(anyhow::anyhow!(
-                "failed to parse filter_enabled_interface_types: {:?}",
-                filter_enabled_interface_types
-            ));
-        };
+    let Config {
+        dns_config: DnsConfig { servers },
+        rules,
+        filter_config,
+        filter_enabled_interface_types,
+    } = Config::load(config_data)?;
 
-        let mut netcfg = NetCfg::new(
-            *allow_virtual_devices,
-            default_config_rules,
-            filter_enabled_interface_types,
-        )
+    let mut netcfg = NetCfg::new(*allow_virtual_devices, rules, filter_enabled_interface_types)
         .await
         .context("error creating new netcfg instance")?;
 
-        let () =
-            netcfg.update_filters(filter_config).await.context("update filters based on config")?;
+    let () =
+        netcfg.update_filters(filter_config).await.context("update filters based on config")?;
 
-        let servers = servers.into_iter().map(static_source_from_ip).collect();
-        debug!("updating default servers to {:?}", servers);
-        let () = netcfg
-            .update_dns_servers(DnsServersUpdateSource::Default, servers)
-            .await
-            .context("error updating default DNS servers")
-            .or_else(|e| match e {
-                errors::Error::NonFatal(e) => {
-                    error!("non-fatal error: {:?}", e);
-                    Ok(())
-                }
-                errors::Error::Fatal(e) => Err(e),
-            })?;
+    let servers = servers.into_iter().map(static_source_from_ip).collect();
+    debug!("updating default servers to {:?}", servers);
+    let () = netcfg
+        .update_dns_servers(DnsServersUpdateSource::Default, servers)
+        .await
+        .context("error updating default DNS servers")
+        .or_else(|e| match e {
+            errors::Error::NonFatal(e) => {
+                error!("non-fatal error: {:?}", e);
+                Ok(())
+            }
+            errors::Error::Fatal(e) => Err(e),
+        })?;
 
-        // Should never return.
-        netcfg.run().await.context("error running eventloop")
-    };
-
-    match f().await {
-        Ok(()) => unreachable! {},
+    match M::run(netcfg).await {
+        Ok(result) => match result {},
         Err(e) => {
             let err_str = format!("fatal error running main: {:?}", e);
             error!("{}", err_str);
-            panic!("{}", err_str);
+            Err(anyhow!(err_str))
+        }
+    }
+}
+
+/// Allows callers of `netcfg::run` to configure at compile time which features
+/// should be enabled.
+///
+/// This trait may be expanded to support combinations of features that can be
+/// assembled together for specific netcfg builds.
+#[async_trait(?Send)]
+pub trait Mode {
+    async fn run(netcfg: NetCfg<'_>) -> Result<Never, anyhow::Error>;
+}
+
+/// In this configuration, netcfg acts as the policy manager for netstack,
+/// watching for device events and configuring the netstack with new interfaces
+/// as needed on new device discovery. It does not implement any FIDL protocols.
+pub enum BasicMode {}
+
+#[async_trait(?Send)]
+impl Mode for BasicMode {
+    async fn run(mut netcfg: NetCfg<'_>) -> Result<Never, anyhow::Error> {
+        netcfg.run().await.context("event loop")
+    }
+}
+
+/// In this configuration, netcfg implements the base functionality included in
+/// `BasicMode`, and also serves the `fuchsia.net.virtualization/Control`
+/// protocol, allowing clients to create virtual networks.
+pub enum VirtualizationEnabled {}
+
+#[async_trait(?Send)]
+impl Mode for VirtualizationEnabled {
+    async fn run(mut netcfg: NetCfg<'_>) -> Result<Never, anyhow::Error> {
+        let mut fs = ServiceFs::new_local();
+        let _: &mut ServiceFsDir<'_, _> =
+            fs.dir("svc").add_fidl_service(|s: fnet_virtualization::ControlRequestStream| s);
+        let _: &mut ServiceFs<_> =
+            fs.take_and_serve_directory_handle().context("take and serve directory handle")?;
+        let mut virtualization_fut = fs
+            .for_each_concurrent(None, |stream| async {
+                handle_virtualization_control(stream)
+                    .await
+                    .unwrap_or_else(|e| error!("error handling request stream: {:?}", e))
+            })
+            .fuse();
+
+        let event_loop = netcfg.run().map(|r| r.context("event loop")).fuse();
+        futures::pin_mut!(event_loop);
+        futures::select! {
+            result = event_loop => result,
+            () = virtualization_fut => Err(anyhow!("virtualization protocol handle closed")),
         }
     }
 }
@@ -2090,26 +2133,20 @@ mod tests {
         assert_eq!(Vec::<String>::new(), nat_rules);
         assert_eq!(Vec::<String>::new(), rdr_rules);
 
-        assert_eq!(vec!["wlan"], filter_enabled_interface_types);
-    }
-
-    #[test]
-    fn test_to_interface_type() {
-        assert_eq!(InterfaceType::ETHERNET, "ethernet".to_string().into());
-        assert_eq!(InterfaceType::WLAN, "wlan".to_string().into());
-        assert_eq!(InterfaceType::UNKNOWN("bluetooth".to_string()), "bluetooth".to_string().into());
-        assert_eq!(InterfaceType::UNKNOWN("Ethernet".to_string()), "Ethernet".to_string().into());
-        assert_eq!(InterfaceType::UNKNOWN("Wlan".to_string()), "Wlan".to_string().into());
+        assert_eq!(
+            IntoIterator::into_iter([InterfaceType::Wlan]).collect::<HashSet<_>>(),
+            filter_enabled_interface_types
+        );
     }
 
     #[test]
     fn test_should_enable_filter() {
         let types_empty: HashSet<InterfaceType> = [].iter().cloned().collect();
         let types_ethernet: HashSet<InterfaceType> =
-            [InterfaceType::ETHERNET].iter().cloned().collect();
-        let types_wlan: HashSet<InterfaceType> = [InterfaceType::WLAN].iter().cloned().collect();
+            [InterfaceType::Ethernet].iter().cloned().collect();
+        let types_wlan: HashSet<InterfaceType> = [InterfaceType::Wlan].iter().cloned().collect();
         let types_ethernet_wlan: HashSet<InterfaceType> =
-            [InterfaceType::ETHERNET, InterfaceType::WLAN].iter().cloned().collect();
+            [InterfaceType::Ethernet, InterfaceType::Wlan].iter().cloned().collect();
 
         let features_wlan = feth::Features::Wlan;
         let features_loopback = feth::Features::Loopback;

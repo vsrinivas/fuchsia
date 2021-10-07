@@ -5,8 +5,9 @@
 import("//build/components.gni")
 import("//build/config.gni")
 import("//build/rust/rustc_binary.gni")
+import("//build/rust/rustc_library.gni")
 
-rustc_binary("bin") {
+rustc_library("lib") {
   name = "netcfg"
   with_unit_tests = true
   edition = "2018"
@@ -47,6 +48,7 @@ rustc_binary("bin") {
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:argh",
     "//third_party/rust_crates:async-trait",
+    "//third_party/rust_crates:async-trait",
     "//third_party/rust_crates:futures",
     "//third_party/rust_crates:log",
     "//third_party/rust_crates:matches",
@@ -65,9 +67,39 @@ rustc_binary("bin") {
     "src/dns.rs",
     "src/errors.rs",
     "src/interface.rs",
-    "src/main.rs",
+    "src/lib.rs",
     "src/matchers.rs",
   ]
+
+  configs -= [ "//build/config/rust:allow_unused_results" ]
+}
+
+rustc_binary("bin-basic") {
+  name = "netcfg_basic"
+  source_root = "src/bin/basic.rs"
+
+  deps = [
+    ":lib",
+    "//src/lib/fuchsia-async",
+    "//third_party/rust_crates:anyhow",
+  ]
+
+  sources = [ "src/bin/basic.rs" ]
+
+  configs -= [ "//build/config/rust:allow_unused_results" ]
+}
+
+rustc_binary("bin-workstation") {
+  name = "netcfg_workstation"
+  source_root = "src/bin/workstation.rs"
+
+  deps = [
+    ":lib",
+    "//src/lib/fuchsia-async",
+    "//third_party/rust_crates:anyhow",
+  ]
+
+  sources = [ "src/bin/workstation.rs" ]
 
   configs -= [ "//build/config/rust:allow_unused_results" ]
 }
@@ -75,13 +107,21 @@ rustc_binary("bin") {
 fuchsia_component("component-legacy") {
   component_name = "netcfg"
   manifest = "meta/netcfg.cmx"
-  deps = [ ":bin" ]
+  deps = [ ":bin-basic" ]
 }
 
-fuchsia_component("component") {
-  component_name = "netcfg"
-  manifest = "meta/netcfg.cml"
-  deps = [ ":bin" ]
+fuchsia_component("component-basic") {
+  component_name = "netcfg-basic"
+  manifest = "meta/netcfg-basic.cml"
+  deps = [ ":bin-basic" ]
+}
+
+# TODO(https://fxbug.dev/85450): use product assembly to include this as the
+# `netcfg` in the workstation product.
+fuchsia_component("component-workstation") {
+  component_name = "netcfg-workstation"
+  manifest = "meta/netcfg-workstation.cml"
+  deps = [ ":bin-workstation" ]
 }
 
 fuchsia_package("netcfg") {
@@ -101,11 +141,20 @@ config_data("config-no-ssh-over-wlan") {
 }
 
 fuchsia_unittest_package("netcfg-tests") {
-  deps = [ ":bin_test" ]
-  manifest = "meta/netcfg_bin_test.cml"
+  deps = [ ":lib_test" ]
+  manifest = "meta/netcfg_lib_test.cml"
+}
+
+# TODO(https://fxbug.dev/85450): remove this group once the workstation variant
+# of netcfg is included in the workstation product build.
+group("compile") {
+  deps = [ ":component-workstation" ]
 }
 
 group("tests") {
   testonly = true
-  deps = [ ":netcfg-tests" ]
+  deps = [
+    ":compile",
+    ":netcfg-tests",
+  ]
 }

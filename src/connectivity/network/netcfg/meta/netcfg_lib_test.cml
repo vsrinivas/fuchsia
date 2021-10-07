@@ -7,7 +7,7 @@
         "syslog/client.shard.cml",
     ],
     program: {
-        binary: "bin/netcfg_bin_test",
+        binary: "bin/netcfg_lib_test",
     },
     use: [
         {
