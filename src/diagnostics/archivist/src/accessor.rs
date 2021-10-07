@@ -297,7 +297,7 @@ impl BatchIterator {
                 result_stats.add_result_error();
             }
 
-            match JsonString::serialize(&d) {
+            match JsonString::serialize(&d, D::DATA_TYPE) {
                 Err(e) => {
                     result_stats.add_result_error();
                     Err(e)
@@ -309,7 +309,7 @@ impl BatchIterator {
                             if maybe_update_budget(
                                 &mut budget_tracker,
                                 &d.moniker,
-                                contents.len(),
+                                contents.size as usize,
                                 x,
                             ) {
                                 Ok(contents)
@@ -324,7 +324,7 @@ impl BatchIterator {
                                 // TODO(66085): If a payload is truncated, cache the
                                 // new schema so that we can reuse if other schemas from
                                 // the same component get dropped.
-                                JsonString::serialize(&new_data)
+                                JsonString::serialize(&new_data, D::DATA_TYPE)
                             }
                         }
                         None => Ok(contents),
@@ -348,7 +348,7 @@ impl BatchIterator {
         stats: Arc<ConnectionStats>,
     ) -> Result<Self, AccessorError>
     where
-        D: Serialize,
+        D: Serialize + Send + 'static,
         S: Stream<Item = D> + Send + Unpin + 'static,
     {
         let data =
