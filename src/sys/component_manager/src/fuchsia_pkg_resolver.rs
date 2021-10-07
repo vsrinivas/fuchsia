@@ -144,7 +144,7 @@ mod tests {
             let (dir_c, dir_s) = zx::Channel::create().unwrap();
             let parsed_url = PkgUrl::parse(&package_url).expect("bad url");
             // Simulate a package server that only contains the "hello-world" package.
-            match parsed_url.name() {
+            match parsed_url.name().as_ref() {
                 "hello-world" => {
                     let path = Path::new("/pkg");
                     io_util::connect_in_namespace(

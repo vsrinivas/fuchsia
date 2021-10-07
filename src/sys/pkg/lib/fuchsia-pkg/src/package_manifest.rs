@@ -4,7 +4,7 @@
 
 use serde::{Deserialize, Serialize};
 
-use crate::{Package, PackageManifestError, PackagePath, PackagePathError};
+use crate::{Package, PackageManifestError, PackageName, PackagePath, PackageVariant};
 
 #[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize)]
 #[serde(transparent)]
@@ -17,35 +17,39 @@ impl PackageManifest {
         }
     }
 
-    pub fn name(&self) -> &str {
+    pub fn name(&self) -> &PackageName {
         match &self.0 {
             VersionedPackageManifest::Version1(manifest) => &manifest.package.name,
         }
     }
 
-    pub fn package_path(&self) -> Result<PackagePath, PackagePathError> {
+    pub fn package_path(&self) -> PackagePath {
         match &self.0 {
             VersionedPackageManifest::Version1(manifest) => PackagePath::from_name_and_variant(
-                manifest.package.name.as_str(),
-                manifest.package.version.as_str(),
+                manifest.package.name.to_owned(),
+                manifest.package.version.to_owned(),
             ),
         }
     }
 
     pub fn from_package(package: Package) -> Result<Self, PackageManifestError> {
-        let blobs = package
-            .blobs()
-            .iter()
-            .map(|(merkle, blob_entry)| BlobInfo {
-                source_path: blob_entry.source_path().into_os_string().into_string().unwrap(),
+        let mut blobs = Vec::with_capacity(package.blobs().len());
+        for (merkle, blob_entry) in package.blobs().iter() {
+            blobs.push(BlobInfo {
+                source_path: blob_entry.source_path().into_os_string().into_string().map_err(
+                    |source_path| PackageManifestError::InvalidBlobPath {
+                        merkle: *merkle,
+                        source_path,
+                    },
+                )?,
                 path: blob_entry.blob_path().to_string(),
                 merkle: *merkle,
                 size: blob_entry.size(),
             })
-            .collect();
+        }
         let package_metadata = PackageMetadata {
-            name: package.meta_package().name().to_string(),
-            version: package.meta_package().variant().to_string(),
+            name: package.meta_package().name().to_owned(),
+            version: package.meta_package().variant().to_owned(),
         };
         let manifest_v1 = PackageManifestV1 { package: package_metadata, blobs };
         Ok(PackageManifest(VersionedPackageManifest::Version1(manifest_v1)))
@@ -67,8 +71,8 @@ struct PackageManifestV1 {
 
 #[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize)]
 struct PackageMetadata {
-    name: String,
-    version: String,
+    name: PackageName,
+    version: PackageVariant,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize)]
@@ -121,7 +125,8 @@ mod tests {
 
     #[test]
     fn test_create_package_manifest_from_package() {
-        let mut package_builder = Package::builder("package-name", "package-variant").unwrap();
+        let mut package_builder =
+            Package::builder("package-name".parse().unwrap(), "package-variant".parse().unwrap());
         package_builder.add_entry(
             String::from("bin/my_prog"),
             Hash::from_str("0000000000000000000000000000000000000000000000000000000000000000")
@@ -131,6 +136,6 @@ mod tests {
         );
         let package = package_builder.build().unwrap();
         let package_manifest = PackageManifest::from_package(package).unwrap();
-        assert_eq!(String::from("package-name"), package_manifest.name());
+        assert_eq!(&"package-name".parse::<PackageName>().unwrap(), package_manifest.name());
     }
 }

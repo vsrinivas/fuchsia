@@ -51,7 +51,7 @@ mod tests {
         serde_json::ser::to_writer(&file, &value).unwrap();
 
         let manifest = pkg_manifest_from_path(file.path()).unwrap();
-        assert_eq!(manifest.name(), "test");
+        assert_eq!(manifest.name().as_ref(), "test");
         let blobs = manifest.into_blobs();
         assert_eq!(blobs.len(), 1);
         assert_eq!(blobs[0].source_path, "path/to/file.txt");

@@ -145,7 +145,7 @@ mod tests {
     #[test]
     fn from_entries_serialize() {
         let static_packages = StaticPackages::from_entries(vec![(
-            PackagePath::from_name_and_variant("name0", "0").unwrap(),
+            PackagePath::from_name_and_variant("name0".parse().unwrap(), "0".parse().unwrap()),
             "0000000000000000000000000000000000000000000000000000000000000000".parse().unwrap(),
         )]);
 
@@ -164,8 +164,10 @@ mod tests {
              "
             .as_bytes();
         let static_packages = StaticPackages::deserialize(bytes).unwrap();
-        let res = static_packages
-            .hash_for_package(&PackagePath::from_name_and_variant("name", "variant").unwrap());
+        let res = static_packages.hash_for_package(&PackagePath::from_name_and_variant(
+            "name".parse().unwrap(),
+            "variant".parse().unwrap(),
+        ));
         assert_eq!(
             res,
             Some(
@@ -181,8 +183,10 @@ mod tests {
              "
             .as_bytes();
         let static_packages = StaticPackages::deserialize(bytes).unwrap();
-        let res = static_packages
-            .hash_for_package(&PackagePath::from_name_and_variant("nope", "variant").unwrap());
+        let res = static_packages.hash_for_package(&PackagePath::from_name_and_variant(
+            "nope".parse().unwrap(),
+            "variant".parse().unwrap(),
+        ));
         assert_eq!(res, None);
     }
 

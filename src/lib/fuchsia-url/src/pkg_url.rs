@@ -11,8 +11,10 @@ use {
 
 pub use {
     crate::{
-        errors::{ParseError, ValidateNameError},
-        parse::{check_resource, is_hash, validate_name},
+        errors::{PackagePathSegmentError, ParseError},
+        parse::{
+            validate_resource_path, PackageName, PackageVariant, MAX_PACKAGE_PATH_SEGMENT_BYTES,
+        },
     },
     fuchsia_hash::Hash,
 };
@@ -35,14 +37,15 @@ pub struct PkgUrl {
     path: String,
     hash: Option<Hash>,
     resource: Option<String>,
-    name: String,
+    name: PackageName,
+    variant: Option<PackageVariant>,
 }
 
 impl PkgUrl {
     pub fn parse(input: &str) -> Result<Self, ParseError> {
         let (url, repo_url) = parse_helper(input)?;
 
-        let (name, _variant) = parse_path(url.path())?;
+        let (name, variant) = parse_path(url.path())?;
 
         let path = url.path().to_string();
 
@@ -51,36 +54,35 @@ impl PkgUrl {
         let resource = if let Some(resource) = url.fragment() {
             let resource = match percent_decode(resource.as_bytes()).decode_utf8() {
                 Ok(resource) => resource,
-                Err(_) => {
-                    return Err(ParseError::InvalidResourcePath);
+                Err(e) => {
+                    return Err(ParseError::ResourcePathPercentDecode(e));
                 }
             };
 
             if resource.is_empty() {
                 None
-            } else if check_resource(&resource) {
-                Some(resource.to_string())
             } else {
-                return Err(ParseError::InvalidResourcePath);
+                let () =
+                    validate_resource_path(&resource).map_err(ParseError::InvalidResourcePath)?;
+                Some(resource.to_string())
             }
         } else {
             None
         };
 
-        Ok(PkgUrl { repo: repo_url, path, hash, resource, name: name.to_string() })
+        Ok(PkgUrl { repo: repo_url, path, hash, resource, name, variant })
     }
 
     pub fn host(&self) -> &str {
         &self.repo.host()
     }
 
-    pub fn name(&self) -> &str {
+    pub fn name(&self) -> &PackageName {
         &self.name
     }
 
-    pub fn variant(&self) -> Option<&str> {
-        // path is always prefixed by a '/'.
-        self.path[1..].split_terminator('/').nth(1)
+    pub fn variant(&self) -> Option<&PackageVariant> {
+        self.variant.as_ref()
     }
 
     /// Produce a string representation of the package referenced by this [PkgUrl].
@@ -109,6 +111,7 @@ impl PkgUrl {
             hash: self.hash.clone(),
             resource: None,
             name: self.name.clone(),
+            variant: self.variant.clone(),
         }
     }
 
@@ -119,7 +122,8 @@ impl PkgUrl {
             path: format!("/{}", self.name()),
             hash: self.hash.clone(),
             resource: self.resource.clone(),
-            name: self.name().to_string(),
+            name: self.name().to_owned(),
+            variant: None,
         }
     }
 
@@ -129,9 +133,8 @@ impl PkgUrl {
         hash: Option<Hash>,
     ) -> Result<PkgUrl, ParseError> {
         let repo = RepoUrl::new(host)?;
-        let (name, _variant) = parse_path(path.as_str())?;
-        let name = name.to_string();
-        Ok(PkgUrl { repo, path, hash, resource: None, name })
+        let (name, variant) = parse_path(path.as_str())?;
+        Ok(PkgUrl { repo, path, hash, resource: None, name, variant })
     }
 
     pub fn new_resource(
@@ -141,9 +144,7 @@ impl PkgUrl {
         resource: String,
     ) -> Result<PkgUrl, ParseError> {
         let mut url = PkgUrl::new_package(host, path, hash)?;
-        if resource.is_empty() || !check_resource(&resource) {
-            return Err(ParseError::InvalidResourcePath);
-        }
+        let () = validate_resource_path(&resource).map_err(ParseError::InvalidResourcePath)?;
         url.resource = Some(resource);
         Ok(url)
     }
@@ -313,7 +314,7 @@ fn parse_helper(input: &str) -> Result<(Url, RepoUrl), ParseError> {
 }
 
 // Returns a valid name and an optional variant on success.
-fn parse_path(mut path: &str) -> Result<(&str, Option<&str>), ParseError> {
+fn parse_path(mut path: &str) -> Result<(PackageName, Option<PackageVariant>), ParseError> {
     if !path.starts_with('/') {
         return Err(ParseError::MissingName);
     }
@@ -323,14 +324,12 @@ fn parse_path(mut path: &str) -> Result<(&str, Option<&str>), ParseError> {
     }
     let mut iter = path.split('/').fuse();
     let name = if let Some(s) = iter.next() {
-        validate_name(s).map_err(ParseError::InvalidName)?;
-        s
+        s.parse().map_err(ParseError::InvalidName)?
     } else {
         return Err(ParseError::MissingName);
     };
     let variant = if let Some(s) = iter.next() {
-        let () = validate_name(s).map_err(ParseError::InvalidVariant)?;
-        Some(s)
+        Some(s.parse().map_err(ParseError::InvalidVariant)?)
     } else {
         None
     };
@@ -348,8 +347,9 @@ fn parse_query_pairs(pairs: url::form_urlencoded::Parse<'_>) -> Result<Option<Ha
                 return Err(ParseError::MultipleHashes);
             }
             query_hash = Some(value.parse().map_err(ParseError::InvalidHash)?);
-            // fuchsia-pkg URLs require lowercase hex characters, which is not enforced by Hash.
-            if !is_hash(&value) {
+            // fuchsia-pkg URLs require lowercase hex characters, but fuchsia_hash::Hash::parse
+            // accepts uppercase A-F.
+            if !value.bytes().all(|b| (b >= b'0' && b <= b'9') || (b >= b'a' && b <= b'f')) {
                 return Err(ParseError::UpperCaseHash);
             }
         } else {
@@ -361,8 +361,7 @@ fn parse_query_pairs(pairs: url::form_urlencoded::Parse<'_>) -> Result<Option<Ha
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use matches::assert_matches;
+    use {super::*, crate::errors::ResourcePathError, matches::assert_matches};
 
     macro_rules! test_parse_ok {
         (
@@ -394,15 +393,22 @@ mod tests {
                                 path: $pkg_path.to_string(),
                                 hash: $pkg_hash.map(|s: &str| s.parse().unwrap()),
                                 resource: $pkg_resource.map(|s: &str| s.to_string()),
-                                name: $pkg_name.to_string()
+                                name: $pkg_name.parse().unwrap(),
+                                variant: $pkg_variant.map(|s: &str| s.parse().unwrap()),
                             })
                         );
 
                         let url = url.unwrap();
                         assert_eq!(url.path(), $pkg_path);
-                        assert_eq!(url.name(), $pkg_name);
-                        assert_eq!(url.variant(), $pkg_variant);
-                        assert_eq!(url.package_hash(), $pkg_hash.map(|s: &str| s.parse().unwrap()).as_ref());
+                        assert_eq!(url.name(), &$pkg_name.parse::<PackageName>().unwrap());
+                        assert_eq!(
+                            url.variant(),
+                            $pkg_variant.map(|s: &str| s.parse().unwrap()).as_ref()
+                        );
+                        assert_eq!(
+                            url.package_hash(),
+                            $pkg_hash.map(|s: &str| s.parse().unwrap()).as_ref()
+                        );
                         assert_eq!(url.resource(), $pkg_resource);
                     }
 
@@ -578,20 +584,20 @@ mod tests {
             urls = [
                 "fuchsia-pkg://fuchsia.com//",
             ],
-            err = ParseError::InvalidName(ValidateNameError::EmptyName),
+            err = ParseError::InvalidName(PackagePathSegmentError::Empty),
         }
         test_parse_name_cannot_be_longer_than_255_chars => {
             urls = [
                 &format!("fuchsia-pkg://fuchsia.com/{}", "a".repeat(256)),
             ],
-            err = ParseError::InvalidName(ValidateNameError::NameTooLong),
+            err = ParseError::InvalidName(PackagePathSegmentError::TooLong(256)),
         }
         test_parse_name_cannot_have_invalid_characters => {
             urls = [
                 "fuchsia-pkg://fuchsia.com/$",
             ],
             err = ParseError::InvalidName(
-                ValidateNameError::InvalidCharacter { character: '$' }
+                PackagePathSegmentError::InvalidCharacter { character: '$' }
             ),
         }
         test_parse_name_cannot_have_invalid_characters_more => {
@@ -599,7 +605,7 @@ mod tests {
                 "fuchsia-pkg://fuchsia.com/foo$bar",
             ],
             err = ParseError::InvalidName(
-                ValidateNameError::InvalidCharacter { character: '$' }
+                PackagePathSegmentError::InvalidCharacter { character: '$' }
             ),
         }
         test_parse_variant_cannot_have_invalid_characters => {
@@ -607,7 +613,7 @@ mod tests {
                 "fuchsia-pkg://fuchsia.com/fonts/$",
             ],
             err = ParseError::InvalidVariant(
-                ValidateNameError::InvalidCharacter { character: '$' }
+                PackagePathSegmentError::InvalidCharacter { character: '$' }
             ),
         }
         test_parse_variant_cannot_have_invalid_characters_more => {
@@ -615,7 +621,7 @@ mod tests {
                 "fuchsia-pkg://fuchsia.com/fonts/foo$bar",
             ],
             err = ParseError::InvalidVariant(
-                ValidateNameError::InvalidCharacter { character: '$' }
+                PackagePathSegmentError::InvalidCharacter { character: '$' }
             ),
         }
         test_parse_hash_cannot_be_empty => {
@@ -660,39 +666,39 @@ mod tests {
             urls = [
                 "fuchsia-pkg://fuchsia.com/fonts#/",
             ],
-            err = ParseError::InvalidResourcePath,
+            err = ParseError::InvalidResourcePath(ResourcePathError::PathStartsWithSlash),
         }
         test_parse_resource_cannot_start_with_slash => {
             urls = [
                 "fuchsia-pkg://fuchsia.com/fonts#/foo",
                 "fuchsia-pkg://fuchsia.com/fonts#/foo/bar",
             ],
-            err = ParseError::InvalidResourcePath,
+            err = ParseError::InvalidResourcePath(ResourcePathError::PathStartsWithSlash),
         }
         test_parse_resource_cannot_end_with_slash => {
             urls = [
                 "fuchsia-pkg://fuchsia.com/fonts#foo/",
                 "fuchsia-pkg://fuchsia.com/fonts#foo/bar/",
             ],
-            err = ParseError::InvalidResourcePath,
+            err = ParseError::InvalidResourcePath(ResourcePathError::PathEndsWithSlash),
         }
         test_parse_resource_cannot_contain_dot_dot => {
             urls = [
                 "fuchsia-pkg://fuchsia.com/fonts#foo/../bar",
             ],
-            err = ParseError::InvalidResourcePath,
+            err = ParseError::InvalidResourcePath(ResourcePathError::NameIsDotDot),
         }
         test_parse_resource_cannot_contain_empty_segments => {
             urls = [
                 "fuchsia-pkg://fuchsia.com/fonts#foo//bar",
             ],
-            err = ParseError::InvalidResourcePath,
+            err = ParseError::InvalidResourcePath(ResourcePathError::NameEmpty),
         }
         test_parse_resource_cannot_contain_percent_encoded_nul_chars => {
             urls = [
                 "fuchsia-pkg://fuchsia.com/fonts#foo%00bar",
             ],
-            err = ParseError::InvalidResourcePath,
+            err = ParseError::InvalidResourcePath(ResourcePathError::NameContainsNull),
         }
         test_parse_resource_rejects_port => {
             urls = [
@@ -769,8 +775,8 @@ mod tests {
         .unwrap();
         assert_eq!("fuchsia.com", url.host());
         assert_eq!("/fonts/stable", url.path());
-        assert_eq!("fonts", url.name());
-        assert_eq!(Some("stable"), url.variant());
+        assert_eq!(&"fonts".parse::<PackageName>().unwrap(), url.name());
+        assert_eq!(Some(&"stable".parse::<PackageVariant>().unwrap()), url.variant());
         assert_eq!(
             Some(
                 "80e8721f4eba5437c8b6e1604f6ee384f42aed2b6dfbfd0b616a864839cd7b4a".parse().unwrap()
@@ -795,7 +801,9 @@ mod tests {
         );
         assert_matches!(
             PkgUrl::new_package("fuchsia.com".to_string(), "/fonts/$".to_string(), None),
-            Err(ParseError::InvalidVariant(ValidateNameError::InvalidCharacter { character: '$' }))
+            Err(ParseError::InvalidVariant(PackagePathSegmentError::InvalidCharacter {
+                character: '$'
+            }))
         );
         let url = PkgUrl::new_package(
             "fuchsia.com".to_string(),
@@ -808,7 +816,7 @@ mod tests {
 
         assert_eq!("fuchsia.com", url.host());
         assert_eq!("/fonts", url.path());
-        assert_eq!("fonts", url.name());
+        assert_eq!(&"fonts".parse::<PackageName>().unwrap(), url.name());
         assert_eq!(None, url.variant());
         assert_eq!(
             Some(
@@ -832,8 +840,8 @@ mod tests {
         .unwrap();
         assert_eq!("fuchsia.com", url.host());
         assert_eq!("/fonts/stable", url.path());
-        assert_eq!("fonts", url.name());
-        assert_eq!(Some("stable"), url.variant());
+        assert_eq!(&"fonts".parse::<PackageName>().unwrap(), url.name());
+        assert_eq!(Some(&"stable".parse::<PackageVariant>().unwrap()), url.variant());
         assert_eq!(
             Some("80e8721f4eba5437c8b6e1604f6ee384f42aed2b6dfbfd0b616a864839cd7b4a")
                 .map(|s| s.parse::<Hash>().unwrap())
@@ -865,7 +873,9 @@ mod tests {
                 None,
                 "foo/bar".to_string()
             ),
-            Err(ParseError::InvalidVariant(ValidateNameError::InvalidCharacter { character: '$' }))
+            Err(ParseError::InvalidVariant(PackagePathSegmentError::InvalidCharacter {
+                character: '$'
+            }))
         );
         let url = PkgUrl::new_resource(
             "fuchsia.com".to_string(),
@@ -878,7 +888,7 @@ mod tests {
         .unwrap();
         assert_eq!("fuchsia.com", url.host());
         assert_eq!("/fonts", url.path());
-        assert_eq!("fonts", url.name());
+        assert_eq!(&"fonts".parse::<PackageName>().unwrap(), url.name());
         assert_eq!(None, url.variant());
         assert_eq!(
             Some("80e8721f4eba5437c8b6e1604f6ee384f42aed2b6dfbfd0b616a864839cd7b4a")
@@ -895,7 +905,7 @@ mod tests {
                 None,
                 "".to_string()
             ),
-            Err(ParseError::InvalidResourcePath)
+            Err(ParseError::InvalidResourcePath(ResourcePathError::PathIsEmpty))
         );
         assert_eq!(
             PkgUrl::new_resource(
@@ -904,7 +914,7 @@ mod tests {
                 None,
                 "a//b".to_string()
             ),
-            Err(ParseError::InvalidResourcePath)
+            Err(ParseError::InvalidResourcePath(ResourcePathError::NameEmpty))
         );
     }
 

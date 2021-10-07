@@ -656,7 +656,10 @@ impl TempDirPkgFs {
         let fake_package_hash: Hash =
             "1111111111111111111111111111111111111111111111111111111111111111".parse().unwrap();
         let static_packages = StaticPackages::from_entries(vec![(
-            PackagePath::from_name_and_variant("fake-package", "0").unwrap(),
+            PackagePath::from_name_and_variant(
+                "fake-package".parse().unwrap(),
+                "0".parse().unwrap(),
+            ),
             fake_package_hash,
         )]);
         let versions_contents = hashmap! {

@@ -34,7 +34,8 @@ pub(crate) async fn verify(proxy: &DirectoryProxy) -> Result<(), VerifyNameError
             .map_err(VerifyNameError::OpenMetaPackage)?;
     let contents = io_util::file::read(&file).await.map_err(VerifyNameError::ReadMetaPackage)?;
 
-    let expected = MetaPackage::from_name_and_variant("update", "0").unwrap();
+    let expected =
+        MetaPackage::from_name_and_variant("update".parse().unwrap(), "0".parse().unwrap());
 
     let actual =
         MetaPackage::deserialize(&mut &contents[..]).map_err(VerifyNameError::ParseMetaPackage)?;
@@ -51,7 +52,8 @@ mod tests {
     use {super::*, crate::TestUpdatePackage, matches::assert_matches};
 
     fn make_meta_package(name: &str, variant: &str) -> Vec<u8> {
-        let meta_package = MetaPackage::from_name_and_variant(name, variant).unwrap();
+        let meta_package =
+            MetaPackage::from_name_and_variant(name.parse().unwrap(), variant.parse().unwrap());
         let mut bytes = vec![];
         let () = meta_package.serialize(&mut bytes).unwrap();
         bytes
@@ -78,7 +80,7 @@ mod tests {
                 .verify_name()
                 .await,
             Err(VerifyNameError::Invalid(actual))
-                if actual == MetaPackage::from_name_and_variant("invalid", "0").unwrap()
+                if actual == MetaPackage::from_name_and_variant("invalid".parse().unwrap(), "0".parse().unwrap())
         );
     }
 
@@ -91,7 +93,7 @@ mod tests {
                 .verify_name()
                 .await,
             Err(VerifyNameError::Invalid(actual))
-                if actual == MetaPackage::from_name_and_variant("update", "42").unwrap()
+                if actual == MetaPackage::from_name_and_variant("update".parse().unwrap(), "42".parse().unwrap())
         );
     }
 
@@ -106,11 +108,8 @@ mod tests {
     #[fuchsia_async::run_singlethreaded(test)]
     async fn rejects_missing_meta_package() {
         assert_matches!(
-            TestUpdatePackage::new()
-                .verify_name()
-                .await,
-            Err(VerifyNameError::OpenMetaPackage(_)) |
-            Err(VerifyNameError::ReadMetaPackage(_))
+            TestUpdatePackage::new().verify_name().await,
+            Err(VerifyNameError::OpenMetaPackage(_)) | Err(VerifyNameError::ReadMetaPackage(_))
         );
     }
 }

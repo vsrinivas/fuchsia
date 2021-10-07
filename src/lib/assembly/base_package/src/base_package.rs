@@ -124,14 +124,14 @@ pub struct BasePackageBuildResults {
     pub generated_files: BTreeMap<String, String>,
 }
 
-// Pulls out the name and merkle from `package` and adds it to `packages` with a name to
+// Pulls out the path and merkle from `package` and adds it to `packages` with a path to
 // merkle mapping.
 fn add_package_to(list: &mut PackageList, package: PackageManifest) -> Result<()> {
-    let name = package.package_path()?.to_string();
+    let path = package.package_path().to_string();
     let meta_blob = package.into_blobs().into_iter().find(|blob| blob.path == "meta/");
     match meta_blob {
-        Some(meta_blob) => Ok(list.insert(name, meta_blob.merkle)),
-        _ => Err(anyhow!("Failed to add package {} to the list, unable to find meta blob", name)),
+        Some(meta_blob) => Ok(list.insert(path, meta_blob.merkle)),
+        _ => Err(anyhow!("Failed to add package {} to the list, unable to find meta blob", path)),
     }
 }
 

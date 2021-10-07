@@ -8,6 +8,7 @@ pub mod boot_url;
 pub mod errors;
 mod parse;
 pub mod pkg_url;
+pub mod test;
 
 use percent_encoding::{AsciiSet, CONTROLS};
 

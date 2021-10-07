@@ -2,70 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use fuchsia_merkle::Hash;
-use std::io;
-use thiserror::Error;
-
-#[derive(Clone, Debug, PartialEq, Eq, Error)]
-pub enum ResourcePathError {
-    #[error("object names must be at least 1 byte")]
-    NameEmpty,
-
-    #[error("object names must be at most 255 bytes")]
-    NameTooLong,
-
-    #[error("object names cannot contain the NULL byte")]
-    NameContainsNull,
-
-    #[error("object names cannot be '.'")]
-    NameIsDot,
-
-    #[error("object names cannot be '..'")]
-    NameIsDotDot,
-
-    #[error("object paths cannot start with '/'")]
-    PathStartsWithSlash,
-
-    #[error("object paths cannot end with '/'")]
-    PathEndsWithSlash,
-
-    #[error("object paths must be at least 1 byte")]
-    PathIsEmpty,
-
-    // TODO(fxbug.dev/22531) allow newline once meta/contents supports it in blob paths
-    #[error(r"object names cannot contain the newline character '\n'")]
-    NameContainsNewline,
-}
-
-#[derive(Debug, Eq, Error, PartialEq)]
-pub enum PackageNameError {
-    #[error("package names cannot be empty")]
-    Empty,
-
-    #[error("package names must be at most 100 latin-1 characters, '{}'", invalid_name)]
-    TooLong { invalid_name: String },
-
-    #[error(
-        "package names must consist of only digits (0 to 9), lower-case letters (a to z), hyphen (-), and period (.), '{}'",
-        invalid_name
-    )]
-    InvalidCharacter { invalid_name: String },
-}
-
-#[derive(Debug, Eq, Error, PartialEq)]
-pub enum PackageVariantError {
-    #[error("package variants cannot be empty")]
-    Empty,
-
-    #[error("package variants must be at most 100 latin-1 characters, '{}'", invalid_variant)]
-    TooLong { invalid_variant: String },
-
-    #[error(
-        "package variants must consist of only digits (0 to 9), lower-case letters (a to z), hyphen (-), and period (.), '{}'",
-        invalid_variant
-    )]
-    InvalidCharacter { invalid_variant: String },
-}
+use {
+    fuchsia_merkle::Hash,
+    fuchsia_url::errors::{PackagePathSegmentError, ResourcePathError},
+    std::io,
+    thiserror::Error,
+};
 
 #[derive(Debug, Error)]
 pub enum CreationManifestError {
@@ -100,8 +42,8 @@ pub enum CreationManifestError {
 
 #[derive(Debug, Error, Eq, PartialEq)]
 pub enum PackageManifestError {
-    #[error("package contains an invalid blob path '{}'. {}", path, merkle.to_string())]
-    InvalidBlobPath { merkle: Hash, path: String },
+    #[error("package contains an invalid blob source path '{source_path:?}'. {merkle}")]
+    InvalidBlobPath { merkle: Hash, source_path: std::ffi::OsString },
 }
 
 #[derive(Debug, Error)]
@@ -134,11 +76,11 @@ pub enum MetaContentsError {
 
 #[derive(Debug, Error)]
 pub enum MetaPackageError {
-    #[error("invalid package name '{}'", _0)]
-    PackageName(#[from] PackageNameError),
+    #[error("invalid package name")]
+    PackageName(#[source] PackagePathSegmentError),
 
-    #[error("invalid package variant '{}'", _0)]
-    PackageVariant(#[from] PackageVariantError),
+    #[error("invalid package variant")]
+    PackageVariant(#[source] PackagePathSegmentError),
 
     #[error("attempted to deserialize meta/package from malformed json: {}", _0)]
     Json(#[from] serde_json::Error),
@@ -160,6 +102,9 @@ pub enum BuildError {
 
     #[error("meta package")]
     MetaPackage(#[from] MetaPackageError),
+
+    #[error("package name")]
+    PackageName(#[source] PackagePathSegmentError),
 
     #[error("package manifest")]
     PackageManifest(#[from] PackageManifestError),
@@ -188,15 +133,9 @@ pub enum ParsePackagePathError {
     #[error("package path has fewer than two segments")]
     TooFewSegments,
 
-    #[error("invalid package path: {0}")]
-    PackagePath(#[from] PackagePathError),
-}
+    #[error("invalid package name")]
+    PackageName(#[source] PackagePathSegmentError),
 
-#[derive(Debug, Error, Eq, PartialEq)]
-pub enum PackagePathError {
-    #[error("invalid package name: {0}")]
-    PackageName(#[from] PackageNameError),
-
-    #[error("invalid package variant: {0}")]
-    PackageVariant(#[from] PackageVariantError),
+    #[error("invalid package variant")]
+    PackageVariant(#[source] PackagePathSegmentError),
 }

@@ -41,7 +41,7 @@ impl UpdatePackageBuilder {
 
     /// Add a package to be updated by its PackageManifest.
     pub fn add_package_by_manifest(&mut self, package: PackageManifest) -> Result<()> {
-        let path = package.package_path()?;
+        let path = package.package_path();
         let meta_blob = package.into_blobs().into_iter().find(|blob| blob.path == "meta/");
         match meta_blob {
             Some(meta_blob) => self.add_package(path, meta_blob.merkle),
@@ -163,7 +163,10 @@ mod tests {
         builder.add_file(test_file.path(), "data/file.txt").unwrap();
         builder
             .add_package(
-                PackagePath::from_name_and_variant("package", "0").unwrap(),
+                PackagePath::from_name_and_variant(
+                    "package".parse().unwrap(),
+                    "0".parse().unwrap(),
+                ),
                 Hash::from_str("0000000000000000000000000000000000000000000000000000000000000000")
                     .unwrap(),
             )

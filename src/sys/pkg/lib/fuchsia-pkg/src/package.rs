@@ -2,9 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::{MetaContents, MetaContentsError, MetaPackage, MetaPackageError};
+use crate::{MetaContents, MetaContentsError, MetaPackage};
 use anyhow::Result;
 use fuchsia_merkle::Hash;
+use fuchsia_url::pkg_url::{PackageName, PackageVariant};
 use std::collections::{BTreeMap, HashMap};
 use std::io::{Read, Seek};
 use std::path::PathBuf;
@@ -33,10 +34,7 @@ impl Package {
     }
 
     /// Create a new `PackageBuilder` from name and variant.
-    pub fn builder(
-        name: impl Into<String>,
-        variant: impl Into<String>,
-    ) -> Result<PackageBuilder, MetaPackageError> {
+    pub fn builder(name: PackageName, variant: PackageVariant) -> PackageBuilder {
         PackageBuilder::new(name, variant)
     }
 
@@ -61,15 +59,12 @@ pub struct PackageBuilder {
 }
 
 impl PackageBuilder {
-    pub fn new(
-        name: impl Into<String>,
-        variant: impl Into<String>,
-    ) -> Result<Self, MetaPackageError> {
-        Ok(Self {
+    pub fn new(name: PackageName, variant: PackageVariant) -> Self {
+        Self {
             contents: HashMap::new(),
-            meta_package: MetaPackage::from_name_and_variant(name, variant)?,
+            meta_package: MetaPackage::from_name_and_variant(name, variant),
             blobs: BTreeMap::new(),
-        })
+        }
     }
 
     pub fn from_meta_package(meta_package: MetaPackage) -> Self {
@@ -129,8 +124,10 @@ mod test_package {
 
     #[test]
     fn test_create_package() {
-        let meta_package =
-            MetaPackage::from_name_and_variant("package-name", "package-variant").unwrap();
+        let meta_package = MetaPackage::from_name_and_variant(
+            "package-name".parse().unwrap(),
+            "package-variant".parse().unwrap(),
+        );
 
         let map = hashmap! {
         "bin/my_prog".to_string() =>
@@ -200,8 +197,10 @@ mod test_package {
         .unwrap();
         let component_manifest_contents = "my_component.cmx contents";
         let mut v = vec![];
-        let meta_package =
-            MetaPackage::from_name_and_variant("my-package-name", "my-package-variant").unwrap();
+        let meta_package = MetaPackage::from_name_and_variant(
+            "my-package-name".parse().unwrap(),
+            "my-package-variant".parse().unwrap(),
+        );
         meta_package.serialize(&mut v).unwrap();
         let file_system = FakeFileSystem {
             content_map: hashmap! {
@@ -230,7 +229,10 @@ mod test_package {
         let package =
             Package::from_meta_far(File::open(&meta_far_path).unwrap(), blobs.clone()).unwrap();
         assert_eq!(blobs, package.blobs());
-        assert_eq!("my-package-name", package.meta_package().name());
+        assert_eq!(
+            &"my-package-name".parse::<PackageName>().unwrap(),
+            package.meta_package().name()
+        );
     }
 
     #[test]

@@ -14,7 +14,10 @@ use {
         ComponentResolverRequestStream,
     },
     fuchsia_component::{client::connect_to_protocol, server::ServiceFs},
-    fuchsia_url::{errors::ParseError as PkgUrlParseError, pkg_url::PkgUrl},
+    fuchsia_url::{
+        errors::{ParseError as PkgUrlParseError, ResourcePathError},
+        pkg_url::PkgUrl,
+    },
     fuchsia_zircon::Status,
     futures::prelude::*,
     log::*,
@@ -100,9 +103,11 @@ async fn resolve_component(
     package_resolver: &PackageResolverProxy,
 ) -> Result<fsys::Component, ResolverError> {
     let package_url = PkgUrl::parse(component_url)?;
-    let cm_path = package_url
-        .resource()
-        .ok_or_else(|| ResolverError::InvalidUrl(PkgUrlParseError::InvalidResourcePath))?;
+    let cm_path = package_url.resource().ok_or_else(|| {
+        ResolverError::InvalidUrl(PkgUrlParseError::InvalidResourcePath(
+            ResourcePathError::PathIsEmpty,
+        ))
+    })?;
     let package_dir = resolve_package(&package_url, package_resolver).await?;
 
     // Read the component manifest (.cm file) from the package directory.

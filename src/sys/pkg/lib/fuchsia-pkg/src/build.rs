@@ -58,7 +58,10 @@ pub fn build_with_file_system<'a>(
         }
         None => return Err(BuildError::MetaPackage(MetaPackageError::MetaPackageMissing)),
     };
-    let mut package_builder = Package::builder(published_name.as_ref(), meta_package.variant())?;
+    let mut package_builder = Package::builder(
+        published_name.as_ref().parse().map_err(BuildError::PackageName)?,
+        meta_package.variant().to_owned(),
+    );
     let external_content_infos =
         get_external_content_infos(creation_manifest.external_contents(), file_system)?;
     for (path, info) in external_content_infos.iter() {
@@ -188,9 +191,10 @@ mod test_build_with_file_system {
             {
                 if resource_path.to_string() == "meta/package".to_string() {
                     let mut v = vec![];
-                    let meta_package =
-                        MetaPackage::from_name_and_variant("my-package-name", "my-package-variant")
-                            .unwrap();
+                    let meta_package = MetaPackage::from_name_and_variant(
+                        "my-package-name".parse().unwrap(),
+                        "my-package-variant".parse().unwrap(),
+                    );
                     meta_package.serialize(&mut v).unwrap();
                     content_map.insert(host_path.to_string(), v);
                 } else {
@@ -235,8 +239,10 @@ mod test_build_with_file_system {
         .unwrap();
         let component_manifest_contents = "my_component.cmx contents";
         let mut v = vec![];
-        let meta_package =
-            MetaPackage::from_name_and_variant("my-package-name", "my-package-variant").unwrap();
+        let meta_package = MetaPackage::from_name_and_variant(
+            "my-package-name".parse().unwrap(),
+            "my-package-variant".parse().unwrap(),
+        );
         meta_package.serialize(&mut v).unwrap();
         let file_system = FakeFileSystem {
             content_map: hashmap! {
@@ -273,8 +279,10 @@ mod test_build_with_file_system {
         )
         .unwrap();
         let mut v = vec![];
-        let meta_package =
-            MetaPackage::from_name_and_variant("my-package-name", "my-package-variant").unwrap();
+        let meta_package = MetaPackage::from_name_and_variant(
+            "my-package-name".parse().unwrap(),
+            "my-package-variant".parse().unwrap(),
+        );
         meta_package.serialize(&mut v).unwrap();
         let file_system = FakeFileSystem {
             content_map: hashmap! {
@@ -432,9 +440,10 @@ mod test_build {
                 fs::create_dir_all(new_host_path.parent().unwrap()).unwrap();
                 let mut f = fs::File::create(&new_host_path).unwrap();
                 if resource_path.to_string() == "meta/package".to_string() {
-                    let meta_package =
-                        MetaPackage::from_name_and_variant("my-package-name", "my-package-variant")
-                            .unwrap();
+                    let meta_package = MetaPackage::from_name_and_variant(
+                        "my-package-name".parse().unwrap(),
+                        "my-package-variant".parse().unwrap(),
+                    );
                     meta_package.serialize(f).unwrap();
                 } else {
                     let file_size = rng.gen_range(0, 6000);

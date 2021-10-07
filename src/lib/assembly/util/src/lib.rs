@@ -4,6 +4,7 @@
 
 use anyhow::{Context, Result};
 use fuchsia_pkg::MetaPackage;
+use std::convert::TryInto as _;
 use std::fs::{create_dir_all, File};
 use std::path::Path;
 
@@ -33,7 +34,8 @@ pub fn create_meta_package_file(
     }
 
     let file = File::create(&meta_package_path)?;
-    let meta_package = MetaPackage::from_name_and_variant(package_name, variant)?;
+    let meta_package =
+        MetaPackage::from_name_and_variant(package_name.try_into()?, variant.into().try_into()?);
     meta_package.serialize(file)?;
     meta_package_path.path_to_string()
 }

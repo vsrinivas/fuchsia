@@ -393,8 +393,10 @@ pub mod for_tests {
                     &self.resolver.cache.pkgfs.root_proxy()?,
                 )
                 .context("opening pkgfs")?;
-                let dir =
-                    client.open_package(package.name(), None).await.context("opening package")?;
+                let dir = client
+                    .open_package(package.name().as_ref(), None)
+                    .await
+                    .context("opening package")?;
                 package
                     .verify_contents(&dir.into_proxy())
                     .await

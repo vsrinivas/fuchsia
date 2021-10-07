@@ -191,7 +191,7 @@ async fn get_system_image_hash_from_update_package(
     let packages = update_package.packages().await?;
     let system_image = packages
         .into_iter()
-        .find(|url| url.name() == "system_image" && url.variant() == Some("0"))
+        .find(|url| url.path() == "/system_image/0")
         .ok_or_else(|| anyhow!("system image not found"))?;
     let hash =
         system_image.package_hash().ok_or_else(|| anyhow!("system image package has no hash"))?;

@@ -16,21 +16,21 @@ mod package_manifest;
 mod package_manifest_list;
 mod path;
 
-pub use crate::{
-    build::{build, build_with_file_system, FileSystem},
-    creation_manifest::CreationManifest,
-    errors::{
-        BuildError, CreationManifestError, MetaContentsError, MetaPackageError,
-        PackageManifestError, PackageNameError, PackagePathError, PackageVariantError,
-        ParsePackagePathError,
+pub use {
+    crate::{
+        build::{build, build_with_file_system, FileSystem},
+        creation_manifest::CreationManifest,
+        errors::{
+            BuildError, CreationManifestError, MetaContentsError, MetaPackageError,
+            PackageManifestError, ParsePackagePathError,
+        },
+        meta_contents::MetaContents,
+        meta_package::MetaPackage,
+        package::{BlobEntry, Package, PackageBuilder},
+        package_directory::{LoadMetaContentsError, OpenRights, PackageDirectory, ReadHashError},
+        package_manifest::PackageManifest,
+        package_manifest_list::PackageManifestList,
+        path::{PackageName, PackagePath, PackageVariant},
     },
-    meta_contents::MetaContents,
-    meta_package::MetaPackage,
-    package::{BlobEntry, Package, PackageBuilder},
-    package_directory::{LoadMetaContentsError, OpenRights, PackageDirectory, ReadHashError},
-    package_manifest::PackageManifest,
-    package_manifest_list::PackageManifestList,
-    path::{
-        check_package_name, check_package_variant, check_resource_path, PackageName, PackagePath,
-    },
+    fuchsia_url::errors::PackagePathSegmentError,
 };

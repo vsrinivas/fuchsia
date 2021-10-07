@@ -2,56 +2,41 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::{
-    errors::MetaPackageError,
-    path::{check_package_name, check_package_variant, PackagePath},
+use {
+    crate::{errors::MetaPackageError, path::PackagePath},
+    fuchsia_url::pkg_url::{PackageName, PackageVariant},
+    serde::{Deserialize, Serialize},
+    std::{convert::TryInto as _, io},
 };
-use serde::{Deserialize, Serialize};
-use std::io;
-
-#[cfg(test)]
-use proptest_derive::Arbitrary;
 
 /// A `MetaPackage` represents the "meta/package" file of a meta.far (which is
 /// a Fuchsia archive file of a Fuchsia package).
 /// It validates that the name and variant (called "version" in json) are valid.
 #[derive(Debug, Eq, PartialEq, Clone)]
-#[cfg_attr(test, derive(Arbitrary))]
 pub struct MetaPackage {
-    #[cfg_attr(test, proptest(regex = r"[-0-9a-z\.]{1,100}"))]
-    name: String,
-
-    #[cfg_attr(test, proptest(regex = r"[-0-9a-z\.]{1,100}"))]
-    variant: String,
+    name: PackageName,
+    variant: PackageVariant,
 }
 
 impl MetaPackage {
     /// Create a `MetaPackage` with `name` and `variant`.
-    pub fn from_name_and_variant(
-        name: impl Into<String>,
-        variant: impl Into<String>,
-    ) -> Result<Self, MetaPackageError> {
-        let name = name.into();
-        let variant = variant.into();
-        check_package_name(&name)?;
-        check_package_variant(&variant)?;
-        Ok(MetaPackage { name, variant })
+    pub fn from_name_and_variant(name: PackageName, variant: PackageVariant) -> Self {
+        Self { name, variant }
     }
 
     /// Returns the package's name.
-    pub fn name(&self) -> &str {
+    pub fn name(&self) -> &PackageName {
         &self.name
     }
 
     /// Returns the package's variant.
-    pub fn variant(&self) -> &str {
+    pub fn variant(&self) -> &PackageVariant {
         &self.variant
     }
 
     /// Convert into PackagePath.
     pub fn into_path(self) -> PackagePath {
-        // unwrap can not fail because the name and variant has already been validated.
-        PackagePath::from_name_and_variant(self.name, self.variant).unwrap()
+        PackagePath::from_name_and_variant(self.name, self.variant)
     }
 
     /// Deserializes a `MetaPackage` from json.
@@ -65,8 +50,10 @@ impl MetaPackage {
     /// assert_eq!(
     ///     MetaPackage::deserialize(json.as_bytes()).unwrap(),
     ///     MetaPackage::from_name_and_variant(
-    ///         "package-name",
-    ///         "package-variant").unwrap());
+    ///         "package-name".parse().unwrap(),
+    ///         "package-variant".parse().unwrap()
+    ///     )
+    /// );
     /// ```
     pub fn deserialize(reader: impl io::BufRead) -> Result<Self, MetaPackageError> {
         MetaPackage::from_v0(serde_json::from_reader(reader)?)
@@ -78,8 +65,8 @@ impl MetaPackage {
     /// ```
     /// # use fuchsia_pkg::MetaPackage;
     /// let meta_package = MetaPackage::from_name_and_variant(
-    ///         "package-name",
-    ///         "package-variant").unwrap();
+    ///         "package-name".parse().unwrap(),
+    ///         "package-variant".parse().unwrap());
     /// let mut v: Vec<u8> = vec![];
     /// meta_package.serialize(&mut v).unwrap();
     /// assert_eq!(std::str::from_utf8(v.as_slice()).unwrap(),
@@ -88,13 +75,16 @@ impl MetaPackage {
     pub fn serialize(&self, writer: impl io::Write) -> Result<(), MetaPackageError> {
         serde_json::to_writer(
             writer,
-            &MetaPackageV0Serialize { name: &self.name, variant: &self.variant },
+            &MetaPackageV0Serialize { name: self.name.as_ref(), variant: self.variant.as_ref() },
         )?;
         Ok(())
     }
 
     fn from_v0(v0: MetaPackageV0Deserialize) -> Result<MetaPackage, MetaPackageError> {
-        MetaPackage::from_name_and_variant(v0.name, v0.variant)
+        Ok(MetaPackage::from_name_and_variant(
+            v0.name.try_into().map_err(MetaPackageError::PackageName)?,
+            v0.variant.try_into().map_err(MetaPackageError::PackageVariant)?,
+        ))
     }
 }
 
@@ -115,53 +105,25 @@ struct MetaPackageV0Serialize<'a> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::errors::{PackageNameError, PackageVariantError};
+    use crate::test::*;
     use lazy_static::lazy_static;
-    use matches::assert_matches;
     use proptest::prelude::*;
     use regex::Regex;
 
     #[test]
-    fn test_reject_invalid_name() {
-        assert_matches!(
-            MetaPackage::from_name_and_variant("name-with-question-mark?", "valid-variant"),
-            Err(MetaPackageError::PackageName(PackageNameError::InvalidCharacter {
-                invalid_name
-            })) if invalid_name == "name-with-question-mark?"
-        );
-    }
-
-    #[test]
-    fn test_reject_invalid_variant() {
-        assert_matches!(
-            MetaPackage::from_name_and_variant("valid-name", "variant-with-question-mark?"),
-            Err(MetaPackageError::PackageVariant(PackageVariantError::InvalidCharacter {
-                invalid_variant
-            })) if invalid_variant == "variant-with-question-mark?"
-        );
-    }
-
-    #[test]
-    fn test_from_name_and_variant() {
-        let name = "package-name";
-        let variant = "package-variant";
-        assert_eq!(
-            MetaPackage::from_name_and_variant(name, variant).unwrap(),
-            MetaPackage { name: name.to_string(), variant: variant.to_string() }
-        );
-    }
-
-    #[test]
     fn test_accessors() {
-        let meta_package = MetaPackage::from_name_and_variant("foo", "bar").unwrap();
-        assert_eq!(meta_package.name(), "foo");
-        assert_eq!(meta_package.variant(), "bar");
+        let meta_package =
+            MetaPackage::from_name_and_variant("foo".parse().unwrap(), "bar".parse().unwrap());
+        assert_eq!(meta_package.name(), &"foo".parse::<PackageName>().unwrap());
+        assert_eq!(meta_package.variant(), &"bar".parse::<PackageVariant>().unwrap());
     }
 
     #[test]
     fn test_serialize() {
-        let meta_package =
-            MetaPackage::from_name_and_variant("package-name", "package-variant").unwrap();
+        let meta_package = MetaPackage::from_name_and_variant(
+            "package-name".parse().unwrap(),
+            "package-variant".parse().unwrap(),
+        );
         let mut v: Vec<u8> = Vec::new();
 
         meta_package.serialize(&mut v).unwrap();
@@ -176,8 +138,8 @@ mod tests {
         assert_eq!(
             MetaPackage::deserialize(json_bytes).unwrap(),
             MetaPackage {
-                name: "package-name".to_string(),
-                variant: "package-variant".to_string()
+                name: "package-name".parse().unwrap(),
+                variant: "package-variant".parse().unwrap()
             }
         );
     }
@@ -185,7 +147,7 @@ mod tests {
     proptest! {
         #[test]
         fn test_serialize_deserialize_is_identity(
-            meta_package: MetaPackage,
+            meta_package in random_meta_package(),
         ) {
             let mut v: Vec<u8> = Vec::new();
             meta_package.serialize(&mut v).unwrap();
@@ -195,7 +157,7 @@ mod tests {
 
         #[test]
         fn test_serialized_contains_no_whitespace(
-            meta_package: MetaPackage,
+            meta_package in random_meta_package(),
         ) {
             lazy_static! {
                 static ref RE: Regex = Regex::new(r"(\p{White_Space})").unwrap();
@@ -203,14 +165,6 @@ mod tests {
             let mut v: Vec<u8> = Vec::new();
             meta_package.serialize(&mut v).unwrap();
             assert!(!RE.is_match(std::str::from_utf8(v.as_slice()).unwrap()));
-        }
-
-        #[test]
-        fn test_from_name_and_variant_no_error_on_valid_inputs(
-            meta_package: MetaPackage,
-        ) {
-            let MetaPackage { name, variant } = meta_package;
-            assert!(MetaPackage::from_name_and_variant(name, variant).is_ok());
         }
     }
 }

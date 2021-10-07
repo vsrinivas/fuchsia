@@ -338,14 +338,20 @@ mod tests {
         dynamic_index.add_package(
             Hash::from([2; 32]),
             Package::WithMetaFar {
-                path: PackagePath::from_name_and_variant("fake-package", "0").unwrap(),
+                path: PackagePath::from_name_and_variant(
+                    "fake-package".parse().unwrap(),
+                    "0".parse().unwrap(),
+                ),
                 required_blobs: hashset! { Hash::from([3; 32]), Hash::from([4; 32]) },
             },
         );
         dynamic_index.add_package(
             Hash::from([5; 32]),
             Package::Active {
-                path: PackagePath::from_name_and_variant("fake-package-2", "0").unwrap(),
+                path: PackagePath::from_name_and_variant(
+                    "fake-package-2".parse().unwrap(),
+                    "0".parse().unwrap(),
+                ),
                 required_blobs: hashset! { Hash::from([6; 32]) },
             },
         );
@@ -371,14 +377,20 @@ mod tests {
         dynamic_index.add_package(
             Hash::from([2; 32]),
             Package::WithMetaFar {
-                path: PackagePath::from_name_and_variant("fake-package", "0").unwrap(),
+                path: PackagePath::from_name_and_variant(
+                    "fake-package".parse().unwrap(),
+                    "0".parse().unwrap(),
+                ),
                 required_blobs: hashset! { Hash::from([3; 32]), Hash::from([4; 32]) },
             },
         );
         dynamic_index.add_package(
             Hash::from([5; 32]),
             Package::Active {
-                path: PackagePath::from_name_and_variant("fake-package-2", "0").unwrap(),
+                path: PackagePath::from_name_and_variant(
+                    "fake-package-2".parse().unwrap(),
+                    "0".parse().unwrap(),
+                ),
                 required_blobs: hashset! { Hash::from([6; 32]) },
             },
         );
@@ -401,7 +413,10 @@ mod tests {
         let mut dynamic_index = DynamicIndex::new(inspector.root().create_child("index"));
 
         let hash = Hash::from([2; 32]);
-        let path = PackagePath::from_name_and_variant("fake-package", "0").unwrap();
+        let path = PackagePath::from_name_and_variant(
+            "fake-package".parse().unwrap(),
+            "0".parse().unwrap(),
+        );
         let required_blobs =
             hashset! { Hash::from([3; 32]), Hash::from([4; 32]), Hash::from([5; 32]) };
         let previous_hash = Hash::from([6; 32]);
@@ -461,7 +476,10 @@ mod tests {
 
         let hash = Hash::from([2; 32]);
         let package = Package::Active {
-            path: PackagePath::from_name_and_variant("fake-package", "0").unwrap(),
+            path: PackagePath::from_name_and_variant(
+                "fake-package".parse().unwrap(),
+                "0".parse().unwrap(),
+            ),
             required_blobs: hashset! { Hash::from([3; 32]), Hash::from([4; 32]) },
         };
         dynamic_index.add_package(hash, package.clone());
@@ -489,7 +507,10 @@ mod tests {
 
         let hash = Hash::from([2; 32]);
         let package = Package::WithMetaFar {
-            path: PackagePath::from_name_and_variant("fake-package", "0").unwrap(),
+            path: PackagePath::from_name_and_variant(
+                "fake-package".parse().unwrap(),
+                "0".parse().unwrap(),
+            ),
             required_blobs: hashset! { Hash::from([3; 32]), Hash::from([4; 32]) },
         };
         dynamic_index.add_package(hash, package.clone());
@@ -520,7 +541,10 @@ mod tests {
         dynamic_index.add_package(
             hash,
             Package::WithMetaFar {
-                path: PackagePath::from_name_and_variant("fake-package", "0").unwrap(),
+                path: PackagePath::from_name_and_variant(
+                    "fake-package".parse().unwrap(),
+                    "0".parse().unwrap(),
+                ),
                 required_blobs: hashset! { Hash::from([3; 32]), Hash::from([4; 32]) },
             },
         );
@@ -534,7 +558,10 @@ mod tests {
         let mut dynamic_index = DynamicIndex::new(inspector.root().create_child("index"));
 
         let hash = Hash::from([2; 32]);
-        let path = PackagePath::from_name_and_variant("fake-package", "0").unwrap();
+        let path = PackagePath::from_name_and_variant(
+            "fake-package".parse().unwrap(),
+            "0".parse().unwrap(),
+        );
         let package = Package::Active {
             path: path.clone(),
             required_blobs: hashset! { Hash::from([3; 32]), Hash::from([4; 32]) },
@@ -603,13 +630,20 @@ mod tests {
     #[fasync::run_singlethreaded(test)]
     async fn test_load_cache_packages() {
         let fake_package_hash = Hash::from([1; 32]);
-        let fake_package_path = PackagePath::from_name_and_variant("fake-package", "0").unwrap();
+        let fake_package_path = PackagePath::from_name_and_variant(
+            "fake-package".parse().unwrap(),
+            "0".parse().unwrap(),
+        );
         let not_present_package_hash = Hash::from([2; 32]);
-        let not_present_package_path =
-            PackagePath::from_name_and_variant("not-present-package", "0").unwrap();
+        let not_present_package_path = PackagePath::from_name_and_variant(
+            "not-present-package".parse().unwrap(),
+            "0".parse().unwrap(),
+        );
         let share_blob_package_hash = Hash::from([3; 32]);
-        let share_blob_package_path =
-            PackagePath::from_name_and_variant("share-blob-package", "1").unwrap();
+        let share_blob_package_path = PackagePath::from_name_and_variant(
+            "share-blob-package".parse().unwrap(),
+            "1".parse().unwrap(),
+        );
         let cache_packages = CachePackages::from_entries(vec![
             (fake_package_path.clone(), fake_package_hash),
             (not_present_package_path, not_present_package_hash),
@@ -682,7 +716,10 @@ mod tests {
         let mut dynamic_index = DynamicIndex::new(inspector.root().create_child("index"));
 
         let hash = Hash::from([2; 32]);
-        let path = PackagePath::from_name_and_variant("fake-package", "0").unwrap();
+        let path = PackagePath::from_name_and_variant(
+            "fake-package".parse().unwrap(),
+            "0".parse().unwrap(),
+        );
         dynamic_index.start_install(hash);
 
         let blob_hash = Hash::from([3; 32]);
@@ -708,7 +745,7 @@ mod tests {
         let mut index = DynamicIndex::new(inspector.root().create_child("index"));
 
         assert_matches!(
-            index.fulfill_meta_far(Hash::from([2; 32]), PackagePath::from_name_and_variant("unknown", "0").unwrap(), hashset!{}),
+            index.fulfill_meta_far(Hash::from([2; 32]), PackagePath::from_name_and_variant("unknown".parse().unwrap(), "0".parse().unwrap()), hashset!{}),
             Err(FulfillNotNeededBlobError{hash, state}) if hash == Hash::from([2; 32]) && state == "missing"
         );
     }
@@ -719,7 +756,10 @@ mod tests {
         let mut index = DynamicIndex::new(inspector.root().create_child("index"));
 
         let hash = Hash::from([2; 32]);
-        let path = PackagePath::from_name_and_variant("with-meta-far-pkg", "0").unwrap();
+        let path = PackagePath::from_name_and_variant(
+            "with-meta-far-pkg".parse().unwrap(),
+            "0".parse().unwrap(),
+        );
         let required_blobs = hashset! { Hash::from([3; 32]), Hash::from([4; 32]) };
         let package =
             Package::WithMetaFar { path: path.clone(), required_blobs: required_blobs.clone() };
@@ -737,7 +777,8 @@ mod tests {
         let mut index = DynamicIndex::new(inspector.root().create_child("index"));
 
         let hash = Hash::from([2; 32]);
-        let path = PackagePath::from_name_and_variant("active", "0").unwrap();
+        let path =
+            PackagePath::from_name_and_variant("active".parse().unwrap(), "0".parse().unwrap());
         let required_blobs = hashset! { Hash::from([3; 32]), Hash::from([4; 32]) };
         let package =
             Package::Active { path: path.clone(), required_blobs: required_blobs.clone() };

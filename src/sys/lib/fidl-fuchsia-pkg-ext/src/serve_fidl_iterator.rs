@@ -323,7 +323,9 @@ mod tests {
     #[fuchsia_async::run_singlethreaded(test)]
     async fn package_index_iterator_paginates_shortest_entries() {
         let names = ('a'..='z').cycle().map(|c| c.to_string());
-        let paths = names.map(|name| PackagePath::from_name_and_variant(name, "0").unwrap());
+        let paths = names.map(|name| {
+            PackagePath::from_name_and_variant(name.parse().unwrap(), "0".parse().unwrap())
+        });
 
         verify_package_index_iterator_pagination(paths, PACKAGE_INDEX_CHUNK_SIZE_MAX).await;
     }
@@ -333,7 +335,9 @@ mod tests {
         let names = ('a'..='z')
             .map(|c| std::iter::repeat(c).take(PackagePath::MAX_NAME_BYTES).collect::<String>())
             .cycle();
-        let paths = names.map(|name| PackagePath::from_name_and_variant(name, "0").unwrap());
+        let paths = names.map(|name| {
+            PackagePath::from_name_and_variant(name.parse().unwrap(), "0".parse().unwrap())
+        });
 
         verify_package_index_iterator_pagination(paths, PACKAGE_INDEX_CHUNK_SIZE_MIN).await;
     }

@@ -456,8 +456,12 @@ pub async fn merkle_for_url<'a>(
     url: &'a PkgUrl,
     mut cobalt_sender: CobaltSender,
 ) -> Result<(BlobId, u64), MerkleForError> {
-    let target_path = TargetPath::new(format!("{}/{}", url.name(), url.variant().unwrap_or("0")))
-        .map_err(MerkleForError::InvalidTargetPath)?;
+    let target_path = TargetPath::new(format!(
+        "{}/{}",
+        url.name(),
+        url.variant().unwrap_or(&fuchsia_url::pkg_url::PackageVariant::zero())
+    ))
+    .map_err(MerkleForError::InvalidTargetPath)?;
     let mut repo = repo.lock().await;
     let res = repo.get_merkle_at_path(&target_path).await;
     cobalt_sender.log_event_count(

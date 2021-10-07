@@ -180,7 +180,7 @@ mod tests {
         Hash::from([n; 32])
     }
     fn path(s: &str) -> PackagePath {
-        PackagePath::from_name_and_variant(s, "0").unwrap()
+        PackagePath::from_name_and_variant(s.parse().unwrap(), "0".parse().unwrap())
     }
 
     #[test]
@@ -412,7 +412,10 @@ mod tests {
     async fn fulfill_meta_far_blob_with_missing_blobs() {
         let mut index = PackageIndex::new_test();
 
-        let path = PackagePath::from_name_and_variant("fake-package", "0").unwrap();
+        let path = PackagePath::from_name_and_variant(
+            "fake-package".parse().unwrap(),
+            "0".parse().unwrap(),
+        );
         index.start_install(hash(2));
 
         let index = Arc::new(Mutex::new(index));

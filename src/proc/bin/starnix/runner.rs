@@ -293,7 +293,7 @@ fn start_component(
 
     let kernel_name = if let Some(ref url) = start_info.resolved_url {
         let url = fuchsia_url::pkg_url::PkgUrl::parse(&url)?;
-        let name = url.resource().unwrap_or(url.name());
+        let name = url.resource().unwrap_or(url.name().as_ref());
         CString::new(if let Some(i) = name.rfind('/') { &name[i + 1..] } else { name })
     } else {
         CString::new("kernel")

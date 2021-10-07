@@ -28,7 +28,7 @@ use {
     fuchsia_pkg::{PackageDirectory, PackagePath},
     fuchsia_syslog::{fx_log_err, fx_log_info, fx_log_warn},
     fuchsia_trace as trace,
-    fuchsia_url::pkg_url::{ParseError, PkgUrl},
+    fuchsia_url::pkg_url::{PackageVariant, ParseError, PkgUrl},
     fuchsia_zircon::Status,
     futures::{future::Future, stream::TryStreamExt as _},
     std::sync::Arc,
@@ -426,19 +426,11 @@ fn hash_from_cache_packages_manifest<'a>(
     }
 
     let variant = match url.variant() {
-        Some("0") => "0",
-        None => "0",
+        Some(variant) if variant.is_zero() => PackageVariant::zero(),
+        None => PackageVariant::zero(),
         _ => return None,
     };
-    let package_path = PackagePath::from_name_and_variant(url.name(), variant)
-        .map_err(|e| {
-            fx_log_err!(
-                "cache fallback: PackagePath::name_and_variant failed for url {}: {:#}",
-                url,
-                anyhow!(e)
-            )
-        })
-        .ok()?;
+    let package_path = PackagePath::from_name_and_variant(url.name().to_owned(), variant);
     let cache_hash = system_cache_list.hash_for_package(&package_path).map(Into::into);
     match (cache_hash, url.package_hash()) {
         // This arm is less useful than (Some, None) b/c generally metadata lookup for pinned URLs
@@ -716,7 +708,7 @@ mod tests {
         let hash =
             "0000000000000000000000000000000000000000000000000000000000000000".parse().unwrap();
         let cache_packages = CachePackages::from_entries(vec![(
-            PackagePath::from_name_and_variant("potato", "0").unwrap(),
+            PackagePath::from_name_and_variant("potato".parse().unwrap(), "0".parse().unwrap()),
             hash,
         )]);
         let empty_cache_packages = CachePackages::from_entries(vec![]);

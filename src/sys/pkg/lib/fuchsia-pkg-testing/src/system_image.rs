@@ -73,7 +73,7 @@ impl<'a> SystemImageBuilder<'a> {
         pkgs.iter()
             .map(|pkg| {
                 (
-                    PackagePath::from_name_and_variant(pkg.name(), "0").unwrap(),
+                    PackagePath::from_name_and_variant(pkg.name().to_owned(), "0".parse().unwrap()),
                     *pkg.meta_far_merkle_root(),
                 )
             })

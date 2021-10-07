@@ -37,7 +37,7 @@ impl NonStaticAllowList {
 
 #[cfg(test)]
 mod tests {
-    use {super::*, fuchsia_pkg::PackageNameError, matches::assert_matches};
+    use {super::*, fuchsia_pkg::PackagePathSegmentError, matches::assert_matches};
 
     fn into_hashset(names: &[&str]) -> HashSet<PackageName> {
         names
@@ -76,9 +76,9 @@ mod tests {
         let contents = "invalid!NAME".as_bytes();
         assert_matches!(
             NonStaticAllowList::from_reader(contents),
-            Err(AllowListError::PackageName(PackageNameError::InvalidCharacter {
-                invalid_name
-            })) if invalid_name == "invalid!NAME"
+            Err(AllowListError::PackageName(PackagePathSegmentError::InvalidCharacter {
+                character
+            })) if character == '!'
         );
     }
 

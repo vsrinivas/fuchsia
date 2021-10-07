@@ -189,8 +189,10 @@ mod test {
         .unwrap();
         let component_manifest_contents = "my_component.cmx contents";
         let mut v = vec![];
-        let meta_package =
-            MetaPackage::from_name_and_variant("my-package-name", "my-package-variant").unwrap();
+        let meta_package = MetaPackage::from_name_and_variant(
+            "my-package-name".parse().unwrap(),
+            "my-package-variant".parse().unwrap(),
+        );
         meta_package.serialize(&mut v).unwrap();
         let file_system = FakeFileSystem {
             content_map: hashmap! {

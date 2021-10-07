@@ -4,6 +4,7 @@
 
 use {
     crate::errors::CreationManifestError,
+    fuchsia_url::pkg_url::validate_resource_path,
     serde::{Deserialize, Serialize},
     std::{
         collections::{btree_map, BTreeMap, HashSet},
@@ -57,7 +58,7 @@ impl CreationManifest {
         far_contents: BTreeMap<String, String>,
     ) -> Result<Self, CreationManifestError> {
         for (resource_path, _) in external_contents.iter().chain(far_contents.iter()) {
-            crate::path::check_resource_path(&resource_path).map_err(|e| {
+            validate_resource_path(&resource_path).map_err(|e| {
                 CreationManifestError::ResourcePath { cause: e, path: resource_path.to_string() }
             })?;
         }
@@ -116,7 +117,7 @@ impl CreationManifest {
         // Validate package resource paths in far contents before "meta/" is prepended
         // for better error messages.
         for (resource_path, host_path) in v1.far_contents.into_iter() {
-            crate::path::check_resource_path(&resource_path).map_err(|e| {
+            validate_resource_path(&resource_path).map_err(|e| {
                 CreationManifestError::ResourcePath { cause: e, path: resource_path.to_string() }
             })?;
             far_contents.insert(format!("meta/{}", resource_path), host_path);
@@ -304,8 +305,8 @@ struct CreationManifestV1 {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::errors::ResourcePathError::PathStartsWithSlash;
     use crate::test::*;
+    use fuchsia_url::errors::ResourcePathError::PathStartsWithSlash;
     use maplit::btreemap;
     use matches::assert_matches;
     use proptest::prelude::*;

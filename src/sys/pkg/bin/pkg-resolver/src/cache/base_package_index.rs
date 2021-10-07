@@ -49,7 +49,7 @@ impl BasePackageIndex {
         // Make sure to strip off a "/0" variant before checking the base index.
         let stripped_url;
         let base_url = match pkg_url.variant() {
-            Some("0") => {
+            Some(variant) if variant.is_zero() => {
                 stripped_url = pkg_url.strip_variant();
                 &stripped_url
             }

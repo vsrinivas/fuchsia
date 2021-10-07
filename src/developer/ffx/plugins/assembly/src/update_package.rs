@@ -84,7 +84,10 @@ pub fn construct_update(
     if let Some(base_package) = &base_package {
         // Add the base package merkle.
         update_pkg_builder.add_package(
-            PackagePath::from_name_and_variant(&board.base_package_name, "0")?,
+            PackagePath::from_name_and_variant(
+                board.base_package_name.parse().context("parse package name")?,
+                "0".parse().context("parse package variant")?,
+            ),
             base_package.merkle,
         )?;
     }

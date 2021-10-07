@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 pub use crate::errors::ParseError;
-pub use crate::parse::{check_resource, validate_name};
+pub use crate::parse::{validate_package_path_segment, validate_resource_path};
 use percent_encoding::percent_decode;
 use std::fmt;
 use url::Url;
@@ -39,7 +39,7 @@ impl BootUrl {
         if !check_path.is_empty() {
             let mut iter = check_path.split('/');
             while let Some(s) = iter.next() {
-                validate_name(s).map_err(ParseError::InvalidPath)?
+                validate_package_path_segment(s).map_err(ParseError::InvalidPathSegment)?
             }
         }
 
@@ -51,14 +51,14 @@ impl BootUrl {
             Some(resource) => {
                 let resource = percent_decode(resource.as_bytes())
                     .decode_utf8()
-                    .map_err(|_| ParseError::InvalidResourcePath)?;
+                    .map_err(ParseError::ResourcePathPercentDecode)?;
 
                 if resource.is_empty() {
                     None
-                } else if check_resource(&resource) {
-                    Some(resource.to_string())
                 } else {
-                    return Err(ParseError::InvalidResourcePath);
+                    let () = validate_resource_path(&resource)
+                        .map_err(ParseError::InvalidResourcePath)?;
+                    Some(resource.into())
                 }
             }
             None => None,
@@ -85,9 +85,7 @@ impl BootUrl {
 
     pub fn new_resource(path: String, resource: String) -> Result<BootUrl, ParseError> {
         let mut url = BootUrl::new_path(path)?;
-        if resource.is_empty() || !check_resource(&resource) {
-            return Err(ParseError::InvalidResourcePath);
-        }
+        let () = validate_resource_path(&resource).map_err(ParseError::InvalidResourcePath)?;
         url.resource = Some(resource);
         Ok(url)
     }
@@ -106,7 +104,10 @@ impl fmt::Display for BootUrl {
 
 #[cfg(test)]
 mod tests {
-    use {super::*, crate::errors::ValidateNameError};
+    use {
+        super::*,
+        crate::errors::{PackagePathSegmentError, ResourcePathError},
+    };
 
     macro_rules! test_parse_ok {
         (
@@ -252,43 +253,43 @@ mod tests {
             urls = [
                 "fuchsia-boot:////",
             ],
-            err = ParseError::InvalidPath(ValidateNameError::EmptyName),
+            err = ParseError::InvalidPathSegment(PackagePathSegmentError::Empty),
         }
         test_parse_invalid_path_another => {
             urls = [
                 "fuchsia-boot:///package:1234",
             ],
-            err = ParseError::InvalidPath(
-                ValidateNameError::InvalidCharacter { character: ':'}),
+            err = ParseError::InvalidPathSegment(
+                PackagePathSegmentError::InvalidCharacter { character: ':'}),
         }
         test_parse_invalid_path_segment => {
             urls = [
                 "fuchsia-boot:///path/foo$bar/baz",
             ],
-            err = ParseError::InvalidPath(
-                ValidateNameError::InvalidCharacter { character: '$' }
+            err = ParseError::InvalidPathSegment(
+                PackagePathSegmentError::InvalidCharacter { character: '$' }
             ),
         }
         test_parse_path_cannot_be_longer_than_255_chars => {
             urls = [
                 &format!("fuchsia-boot:///fuchsia.com/{}", "a".repeat(256)),
             ],
-            err = ParseError::InvalidPath(ValidateNameError::NameTooLong),
+            err = ParseError::InvalidPathSegment(PackagePathSegmentError::TooLong(256)),
         }
         test_parse_path_cannot_have_invalid_characters => {
             urls = [
                 "fuchsia-boot:///$",
             ],
-            err = ParseError::InvalidPath(
-                ValidateNameError::InvalidCharacter { character: '$' }
+            err = ParseError::InvalidPathSegment(
+                PackagePathSegmentError::InvalidCharacter { character: '$' }
             ),
         }
         test_parse_path_cannot_have_invalid_characters_another => {
             urls = [
                 "fuchsia-boot:///foo$bar",
             ],
-            err = ParseError::InvalidPath(
-                ValidateNameError::InvalidCharacter { character: '$' }
+            err = ParseError::InvalidPathSegment(
+                PackagePathSegmentError::InvalidCharacter { character: '$' }
             ),
         }
         test_parse_host_must_be_empty => {
@@ -304,39 +305,39 @@ mod tests {
             urls = [
                 "fuchsia-boot:///package#/",
             ],
-            err = ParseError::InvalidResourcePath,
+            err = ParseError::InvalidResourcePath(ResourcePathError::PathStartsWithSlash),
         }
         test_parse_resource_cannot_start_with_slash => {
             urls = [
                 "fuchsia-boot:///package#/foo",
                 "fuchsia-boot:///package#/foo/bar",
             ],
-            err = ParseError::InvalidResourcePath,
+            err = ParseError::InvalidResourcePath(ResourcePathError::PathStartsWithSlash),
         }
         test_parse_resource_cannot_end_with_slash => {
             urls = [
                 "fuchsia-boot:///package#foo/",
                 "fuchsia-boot:///package#foo/bar/",
             ],
-            err = ParseError::InvalidResourcePath,
+            err = ParseError::InvalidResourcePath(ResourcePathError::PathEndsWithSlash),
         }
         test_parse_resource_cannot_contain_dot_dot => {
             urls = [
                 "fuchsia-boot:///package#foo/../bar",
             ],
-            err = ParseError::InvalidResourcePath,
+            err = ParseError::InvalidResourcePath(ResourcePathError::NameIsDotDot),
         }
         test_parse_resource_cannot_contain_empty_segments => {
             urls = [
                 "fuchsia-boot:///package#foo//bar",
             ],
-            err = ParseError::InvalidResourcePath,
+            err = ParseError::InvalidResourcePath(ResourcePathError::NameEmpty),
         }
         test_parse_resource_cannot_contain_percent_encoded_nul_chars => {
             urls = [
                 "fuchsia-boot:///package#foo%00bar",
             ],
-            err = ParseError::InvalidResourcePath,
+            err = ParseError::InvalidResourcePath(ResourcePathError::NameContainsNull),
         }
         test_parse_rejects_query_params => {
             urls = [

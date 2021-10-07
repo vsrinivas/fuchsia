@@ -14,12 +14,16 @@ rustc_library("fuchsia-url") {
     "//src/sys/pkg/lib/fuchsia-hash",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:percent-encoding",
+    "//third_party/rust_crates:proptest",
     "//third_party/rust_crates:serde",
     "//third_party/rust_crates:thiserror",
     "//third_party/rust_crates:url",
   ]
 
-  test_deps = [ "//third_party/rust_crates:matches" ]
+  test_deps = [
+    "//third_party/rust_crates:matches",
+    "//third_party/rust_crates:serde_json",
+  ]
 
   sources = [
     "src/boot_url.rs",
@@ -27,6 +31,7 @@ rustc_library("fuchsia-url") {
     "src/lib.rs",
     "src/parse.rs",
     "src/pkg_url.rs",
+    "src/test.rs",
   ]
 }
 

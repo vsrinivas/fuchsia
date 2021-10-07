@@ -5,6 +5,7 @@
 use {
     crate::errors::MetaContentsError,
     fuchsia_merkle::Hash,
+    fuchsia_url::pkg_url::validate_resource_path,
     std::{collections::HashMap, io, str::FromStr},
 };
 
@@ -46,7 +47,7 @@ impl MetaContents {
     /// let meta_contents = MetaContents::from_map(map).unwrap();
     pub fn from_map(map: HashMap<String, Hash>) -> Result<Self, MetaContentsError> {
         for resource_path in map.keys() {
-            crate::path::check_resource_path(&resource_path).map_err(|e| {
+            validate_resource_path(&resource_path).map_err(|e| {
                 MetaContentsError::InvalidResourcePath { cause: e, path: resource_path.to_string() }
             })?;
             if resource_path.starts_with("meta/") || resource_path == &"meta" {
@@ -173,7 +174,8 @@ impl MetaContents {
 mod tests {
     use {
         super::*,
-        crate::{errors::ResourcePathError, test::*},
+        crate::test::*,
+        fuchsia_url::{errors::ResourcePathError, test::*},
         maplit::hashmap,
         matches::assert_matches,
         proptest::prelude::*,

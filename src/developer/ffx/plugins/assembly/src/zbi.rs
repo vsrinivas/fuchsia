@@ -52,7 +52,7 @@ pub fn construct_zbi(
             .iter()
             .find_map(|p| {
                 if let Ok(m) = pkg_manifest_from_path(p) {
-                    if m.name() == "pkgfs" {
+                    if m.name().as_ref() == "pkgfs" {
                         return Some(m);
                     }
                 }

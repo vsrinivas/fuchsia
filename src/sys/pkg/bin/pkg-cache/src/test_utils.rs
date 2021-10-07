@@ -5,7 +5,7 @@
 use {
     fuchsia_hash::Hash,
     fuchsia_pkg::{MetaContents, MetaPackage},
-    std::{collections::BTreeMap, io},
+    std::{collections::BTreeMap, convert::TryInto as _, io},
 };
 
 pub fn add_meta_far_to_blobfs(
@@ -29,7 +29,10 @@ pub fn get_meta_far(
     let mut meta_contents_bytes = Vec::new();
     meta_contents.serialize(&mut meta_contents_bytes).unwrap();
 
-    let meta_package = MetaPackage::from_name_and_variant(package_name, "0").unwrap();
+    let meta_package = MetaPackage::from_name_and_variant(
+        package_name.into().try_into().unwrap(),
+        "0".parse().unwrap(),
+    );
     let mut meta_package_bytes = Vec::new();
     meta_package.serialize(&mut meta_package_bytes).unwrap();
 

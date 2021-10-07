@@ -4,7 +4,7 @@
 
 use {
     fuchsia_hash::ParseHashError,
-    fuchsia_pkg::{PackageNameError, ParsePackagePathError},
+    fuchsia_pkg::{PackagePathSegmentError, ParsePackagePathError},
     std::{io, str::Utf8Error},
     thiserror::Error,
 };
@@ -30,5 +30,5 @@ pub enum AllowListError {
     Encoding(#[from] Utf8Error),
 
     #[error("invalid package name")]
-    PackageName(#[from] PackageNameError),
+    PackageName(#[from] PackagePathSegmentError),
 }

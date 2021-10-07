@@ -2,133 +2,29 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::errors::{
-    PackageNameError, PackagePathError, PackageVariantError, ParsePackagePathError,
-    ResourcePathError,
-};
-
-pub const MAX_OBJECT_BYTES: usize = 255;
-pub const MAX_PACKAGE_NAME_BYTES: usize = 255;
-pub const MAX_PACKAGE_VARIANT_BYTES: usize = 100;
-
-/// Checks if `input` is a valid path for a file in a Fuchsia package.
-/// Fuchsia package resource paths are Fuchsia object relative paths without
-/// the limit on maximum path length.
-/// Passes the input through if it is valid.
-pub fn check_resource_path(input: &str) -> Result<&str, ResourcePathError> {
-    if input.is_empty() {
-        return Err(ResourcePathError::PathIsEmpty);
-    }
-    if input.starts_with('/') {
-        return Err(ResourcePathError::PathStartsWithSlash);
-    }
-    if input.ends_with('/') {
-        return Err(ResourcePathError::PathEndsWithSlash);
-    }
-    for segment in input.split('/') {
-        if segment.contains('\0') {
-            return Err(ResourcePathError::NameContainsNull);
-        }
-        if segment == "." {
-            return Err(ResourcePathError::NameIsDot);
-        }
-        if segment == ".." {
-            return Err(ResourcePathError::NameIsDotDot);
-        }
-        if segment.is_empty() {
-            return Err(ResourcePathError::NameEmpty);
-        }
-        if segment.len() > MAX_OBJECT_BYTES {
-            return Err(ResourcePathError::NameTooLong);
-        }
-        // TODO(fxbug.dev/22531) allow newline once meta/contents supports it in blob paths
-        if segment.contains('\n') {
-            return Err(ResourcePathError::NameContainsNewline);
-        }
-    }
-    Ok(input)
-}
-
-/// Checks if `input` is a valid Fuchsia package name.
-/// Passes `input` through if valid.
-pub fn check_package_name(input: &str) -> Result<&str, PackageNameError> {
-    if input.len() > MAX_PACKAGE_NAME_BYTES {
-        return Err(PackageNameError::TooLong { invalid_name: input.to_string() });
-    }
-    if input.is_empty() {
-        return Err(PackageNameError::Empty);
-    }
-    if input.contains(|c: char| {
-        !(c.is_ascii_lowercase() || c.is_ascii_digit() || c == '.' || c == '-' || c == '_')
-    }) {
-        return Err(PackageNameError::InvalidCharacter { invalid_name: input.to_string() });
-    }
-    Ok(input)
-}
-
-/// A Fuchsia Package Name. Package names are the first segment of the path.
-/// https://fuchsia.dev/fuchsia-src/concepts/packages/package_url#package-name
-#[derive(PartialEq, Eq, Debug, Clone, Hash)]
-pub struct PackageName(String);
-
-impl std::str::FromStr for PackageName {
-    type Err = PackageNameError;
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        check_package_name(s)?;
-        Ok(Self(s.into()))
-    }
-}
-
-impl std::fmt::Display for PackageName {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.0)
-    }
-}
-
-/// Checks if `input` is a valid Fuchsia package variant.
-/// Passes `input` through if valid.
-pub fn check_package_variant(input: &str) -> Result<&str, PackageVariantError> {
-    if input.len() > MAX_PACKAGE_VARIANT_BYTES {
-        return Err(PackageVariantError::TooLong { invalid_variant: input.to_string() });
-    }
-    if input.is_empty() {
-        return Err(PackageVariantError::Empty);
-    }
-    if input
-        .contains(|c: char| !(c.is_ascii_lowercase() || c.is_ascii_digit() || c == '.' || c == '-'))
-    {
-        return Err(PackageVariantError::InvalidCharacter { invalid_variant: input.to_string() });
-    }
-    Ok(input)
-}
+use crate::errors::ParsePackagePathError;
+pub use fuchsia_url::pkg_url::{PackageName, PackageVariant, MAX_PACKAGE_PATH_SEGMENT_BYTES};
 
 /// A Fuchsia Package Path. Paths must currently be "{name}/{variant}".
 #[derive(PartialEq, Eq, Debug, Clone, Hash)]
 pub struct PackagePath {
-    name: String,
-    variant: String,
+    name: PackageName,
+    variant: PackageVariant,
 }
 
 impl PackagePath {
-    pub const MAX_NAME_BYTES: usize = MAX_PACKAGE_NAME_BYTES;
-    pub const MAX_VARIANT_BYTES: usize = MAX_PACKAGE_VARIANT_BYTES;
+    pub const MAX_NAME_BYTES: usize = MAX_PACKAGE_PATH_SEGMENT_BYTES;
+    pub const MAX_VARIANT_BYTES: usize = MAX_PACKAGE_PATH_SEGMENT_BYTES;
 
-    pub fn from_name_and_variant(
-        name: impl Into<String>,
-        variant: impl Into<String>,
-    ) -> Result<Self, PackagePathError> {
-        let name = name.into();
-        check_package_name(&name)?;
-        let variant = variant.into();
-        check_package_variant(&variant)?;
-        Ok(Self { name, variant })
+    pub fn from_name_and_variant(name: PackageName, variant: PackageVariant) -> Self {
+        Self { name, variant }
     }
 
-    pub fn name(&self) -> &str {
+    pub fn name(&self) -> &PackageName {
         &self.name
     }
 
-    pub fn variant(&self) -> &str {
+    pub fn variant(&self) -> &PackageVariant {
         &self.variant
     }
 }
@@ -145,7 +41,12 @@ impl std::str::FromStr for PackagePath {
                 return Err(Self::Err::TooFewSegments);
             }
         };
-        Ok(Self::from_name_and_variant(name, &variant_with_leading_slash[1..])?)
+        Ok(Self::from_name_and_variant(
+            name.parse().map_err(ParsePackagePathError::PackageName)?,
+            variant_with_leading_slash[1..]
+                .parse()
+                .map_err(ParsePackagePathError::PackageVariant)?,
+        ))
     }
 }
 
@@ -156,235 +57,22 @@ impl std::fmt::Display for PackagePath {
 }
 
 #[cfg(test)]
-mod check_resource_path_tests {
-    use super::*;
-    use crate::test::*;
-    use proptest::prelude::*;
-
-    // Tests for invalid paths
-    #[test]
-    fn test_empty_string() {
-        assert_eq!(check_resource_path(""), Err(ResourcePathError::PathIsEmpty));
-    }
-
-    proptest! {
-        #[test]
-        fn test_reject_empty_object_name(
-            ref s in random_resource_path_with_regex_segment_str(5, "")) {
-            prop_assume!(!s.starts_with('/') && !s.ends_with('/'));
-            prop_assert_eq!(check_resource_path(s), Err(ResourcePathError::NameEmpty));
-        }
-
-        #[test]
-        fn test_reject_long_object_name(
-            ref s in random_resource_path_with_regex_segment_str(5, r"[[[:ascii:]]--\.--/--\x00]{256}")) {
-            prop_assert_eq!(check_resource_path(s), Err(ResourcePathError::NameTooLong));
-        }
-
-        #[test]
-        fn test_reject_contains_null(
-            ref s in random_resource_path_with_regex_segment_string(
-                5, format!(r"{}{{0,3}}\x00{}{{0,3}}",
-                           ANY_UNICODE_EXCEPT_SLASH_NULL_DOT_OR_NEWLINE,
-                           ANY_UNICODE_EXCEPT_SLASH_NULL_DOT_OR_NEWLINE))) {
-            prop_assert_eq!(check_resource_path(s), Err(ResourcePathError::NameContainsNull));
-        }
-
-        #[test]
-        fn test_reject_name_is_dot(
-            ref s in random_resource_path_with_regex_segment_str(5, r"\.")) {
-            prop_assert_eq!(check_resource_path(s), Err(ResourcePathError::NameIsDot));
-        }
-
-        #[test]
-        fn test_reject_name_is_dot_dot(
-            ref s in random_resource_path_with_regex_segment_str(5, r"\.\.")) {
-            prop_assert_eq!(check_resource_path(s), Err(ResourcePathError::NameIsDotDot));
-        }
-
-        #[test]
-        fn test_reject_starts_with_slash(
-            ref s in format!(
-                "/{}{{1,5}}",
-                ANY_UNICODE_EXCEPT_SLASH_NULL_DOT_OR_NEWLINE).as_str()) {
-            prop_assert_eq!(check_resource_path(s), Err(ResourcePathError::PathStartsWithSlash));
-        }
-
-        #[test]
-        fn test_reject_ends_with_slash(
-            ref s in format!(
-                "{}{{1,5}}/",
-                ANY_UNICODE_EXCEPT_SLASH_NULL_DOT_OR_NEWLINE).as_str()) {
-            prop_assert_eq!(check_resource_path(s), Err(ResourcePathError::PathEndsWithSlash));
-        }
-
-        #[test]
-        fn test_reject_contains_newline(
-            ref s in random_resource_path_with_regex_segment_string(
-                5, format!(r"{}{{0,3}}\x0a{}{{0,3}}",
-                           ANY_UNICODE_EXCEPT_SLASH_NULL_DOT_OR_NEWLINE,
-                           ANY_UNICODE_EXCEPT_SLASH_NULL_DOT_OR_NEWLINE))) {
-            prop_assert_eq!(check_resource_path(s), Err(ResourcePathError::NameContainsNewline));
-        }
-    }
-
-    // Tests for valid paths
-    proptest! {
-        #[test]
-        fn test_name_contains_dot(
-            ref s in random_resource_path_with_regex_segment_string(
-                5, format!(r"{}{{1,4}}\.{}{{1,4}}",
-                           ANY_UNICODE_EXCEPT_SLASH_NULL_DOT_OR_NEWLINE,
-                           ANY_UNICODE_EXCEPT_SLASH_NULL_DOT_OR_NEWLINE)))
-        {
-            prop_assert_eq!(check_resource_path(s), Ok(s.as_str()));
-        }
-
-        #[test]
-        fn test_name_contains_dot_dot(
-            ref s in random_resource_path_with_regex_segment_string(
-                5, format!(r"{}{{1,4}}\.\.{}{{1,4}}",
-                           ANY_UNICODE_EXCEPT_SLASH_NULL_DOT_OR_NEWLINE,
-                           ANY_UNICODE_EXCEPT_SLASH_NULL_DOT_OR_NEWLINE)))
-        {
-            prop_assert_eq!(check_resource_path(s), Ok(s.as_str()));
-        }
-
-        #[test]
-        fn test_single_segment(ref s in always_valid_resource_path_chars(1, 4)) {
-            prop_assert_eq!(check_resource_path(s), Ok(s.as_str()));
-        }
-
-        #[test]
-        fn test_multi_segment(
-            ref s in prop::collection::vec(always_valid_resource_path_chars(1, 4), 1..5))
-        {
-            let path = s.join("/");
-            prop_assert_eq!(check_resource_path(&path), Ok(path.as_str()));
-        }
-
-        #[test]
-        fn test_long_name(
-            ref s in random_resource_path_with_regex_segment_str(
-                5, "[[[:ascii:]]--\0--/--\n]{255}")) // TODO(fxbug.dev/22531) allow newline once meta/contents supports it in blob paths
-        {
-            prop_assert_eq!(check_resource_path(s), Ok(s.as_str()));
-        }
-    }
-}
-
-#[cfg(test)]
-mod package_name_tests {
-    use super::*;
-    use crate::test::random_package_name;
-    use proptest::prelude::*;
-
-    #[test]
-    fn test_reject_empty_name() {
-        assert_eq!(check_package_name(""), Err(PackageNameError::Empty));
-    }
-
-    proptest! {
-        #[test]
-        fn test_reject_name_too_long(ref s in r"[-0-9a-z\.]{256, 300}")
-        {
-            prop_assert_eq!(
-                check_package_name(s),
-                Err(PackageNameError::TooLong{invalid_name: s.to_string()})
-            );
-        }
-
-        #[test]
-        fn test_reject_invalid_character(ref s in r"[-0-9a-z\.]{0, 48}[^-_0-9a-z\.][-0-9a-z\.]{0, 48}")
-        {
-            prop_assert_eq!(
-                check_package_name(s),
-                Err(PackageNameError::InvalidCharacter{invalid_name: s.to_string()})
-            );
-        }
-
-        #[test]
-        fn test_pass_through_valid_name(ref s in random_package_name())
-        {
-            prop_assert_eq!(
-                check_package_name(s),
-                Ok(s.as_str())
-            );
-        }
-    }
-
-    #[test]
-    fn display() {
-        let path: PackageName = "package-name".parse().unwrap();
-        assert_eq!(format!("{}", path), "package-name");
-    }
-}
-
-#[cfg(test)]
-mod check_package_variant_tests {
-    use super::*;
-    use crate::test::random_package_variant;
-    use proptest::prelude::*;
-
-    #[test]
-    fn test_reject_empty_variant() {
-        assert_eq!(check_package_variant(""), Err(PackageVariantError::Empty));
-    }
-
-    proptest! {
-        #[test]
-        fn test_reject_variant_too_long(ref s in r"[-0-9a-z\.]{101, 200}")
-        {
-            prop_assert_eq!(
-                check_package_variant(s),
-                Err(PackageVariantError::TooLong{invalid_variant: s.to_string()})
-            );
-        }
-
-        #[test]
-        fn test_reject_invalid_character(ref s in r"[-0-9a-z\.]{0, 48}[^-0-9a-z\.][-0-9a-z\.]{0, 48}")
-        {
-            prop_assert_eq!(
-                check_package_variant(s),
-                Err(PackageVariantError::InvalidCharacter{invalid_variant: s.to_string()})
-            );
-        }
-
-        #[test]
-        fn test_pass_through_valid_variant(ref s in random_package_variant())
-        {
-            prop_assert_eq!(
-                check_package_variant(s),
-                Ok(s.as_str())
-            );
-        }
-    }
-}
-
-#[cfg(test)]
-mod package_path_tests {
-    use {super::*, crate::test::random_package_path, proptest::prelude::*};
+mod test {
+    use {
+        super::*, crate::test::random_package_path, fuchsia_url::errors::PackagePathSegmentError,
+        proptest::prelude::*,
+    };
 
     #[test]
     fn reject_invalid_name() {
         let res: Result<PackagePath, _> = "/0".parse();
-        assert_eq!(
-            res,
-            Err(ParsePackagePathError::PackagePath(PackagePathError::PackageName(
-                PackageNameError::Empty
-            )))
-        );
+        assert_eq!(res, Err(ParsePackagePathError::PackageName(PackagePathSegmentError::Empty)));
     }
 
     #[test]
     fn reject_invalid_variant() {
         let res: Result<PackagePath, _> = "valid_name/".parse();
-        assert_eq!(
-            res,
-            Err(ParsePackagePathError::PackagePath(PackagePathError::PackageVariant(
-                PackageVariantError::Empty
-            )))
-        );
+        assert_eq!(res, Err(ParsePackagePathError::PackageVariant(PackagePathSegmentError::Empty)));
     }
 
     #[test]
@@ -392,7 +80,10 @@ mod package_path_tests {
         assert_eq!(
             format!(
                 "{}",
-                PackagePath::from_name_and_variant("package-name", "package-variant").unwrap()
+                PackagePath::from_name_and_variant(
+                    "package-name".parse().unwrap(),
+                    "package-variant".parse().unwrap()
+                )
             ),
             "package-name/package-variant"
         );
@@ -400,11 +91,11 @@ mod package_path_tests {
 
     #[test]
     fn accessors() {
-        let name = "package-name";
-        let variant = "package-variant";
-        let path = PackagePath::from_name_and_variant(name, variant).unwrap();
-        assert_eq!(path.name(), name);
-        assert_eq!(path.variant(), variant);
+        let name = "package-name".parse::<PackageName>().unwrap();
+        let variant = "package-variant".parse::<PackageVariant>().unwrap();
+        let path = PackagePath::from_name_and_variant(name.clone(), variant.clone());
+        assert_eq!(path.name(), &name);
+        assert_eq!(path.variant(), &variant);
     }
 
     proptest! {

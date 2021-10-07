@@ -69,7 +69,10 @@ mod tests {
     #[fasync::run_singlethreaded(test)]
     async fn enumerate_package_blobs_and_meta_far_exists() {
         let meta_far_hash = Hash::from([2; 32]);
-        let path = PackagePath::from_name_and_variant("fake-package", "0").unwrap();
+        let path = PackagePath::from_name_and_variant(
+            "fake-package".parse().unwrap(),
+            "0".parse().unwrap(),
+        );
 
         let (blobfs_fake, blobfs) = fuchsia_pkg_testing::blobfs::Fake::new();
 

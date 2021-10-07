@@ -328,8 +328,10 @@ mod tests {
     fn make_test_package() -> (Vec<u8>, Vec<Vec<u8>>) {
         let tmp = tempfile::tempdir().unwrap();
         let mut v = vec![];
-        let meta_package =
-            fuchsia_pkg::MetaPackage::from_name_and_variant("pkgfs-ramdisk-tests", "0").unwrap();
+        let meta_package = fuchsia_pkg::MetaPackage::from_name_and_variant(
+            "pkgfs-ramdisk-tests".parse().unwrap(),
+            "0".parse().unwrap(),
+        );
         meta_package.serialize(&mut v).unwrap();
 
         std::fs::write(tmp.path().join("package"), &v.as_slice()).unwrap();
@@ -364,8 +366,10 @@ mod tests {
         std::fs::write(tmp.path().join("static_index"), static_index.as_bytes()).unwrap();
 
         let mut v = vec![];
-        let meta_package =
-            fuchsia_pkg::MetaPackage::from_name_and_variant("pkgfs-ramdisk-tests", "0").unwrap();
+        let meta_package = fuchsia_pkg::MetaPackage::from_name_and_variant(
+            "pkgfs-ramdisk-tests".parse().unwrap(),
+            "0".parse().unwrap(),
+        );
         meta_package.serialize(&mut v).unwrap();
 
         std::fs::write(tmp.path().join("package"), &v.as_slice()).unwrap();

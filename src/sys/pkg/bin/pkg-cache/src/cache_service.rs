@@ -2859,8 +2859,14 @@ mod serve_base_package_index_tests {
     #[fuchsia_async::run_singlethreaded(test)]
     async fn static_packages_entries_converted_correctly() {
         let static_packages = StaticPackages::from_entries(vec![
-            (PackagePath::from_name_and_variant("name0", "0").unwrap(), Hash::from([0u8; 32])),
-            (PackagePath::from_name_and_variant("name1", "1").unwrap(), Hash::from([1u8; 32])),
+            (
+                PackagePath::from_name_and_variant("name0".parse().unwrap(), "0".parse().unwrap()),
+                Hash::from([0u8; 32]),
+            ),
+            (
+                PackagePath::from_name_and_variant("name1".parse().unwrap(), "1".parse().unwrap()),
+                Hash::from([1u8; 32]),
+            ),
         ]);
 
         let (proxy, stream) =

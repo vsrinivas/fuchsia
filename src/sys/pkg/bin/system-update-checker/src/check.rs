@@ -202,7 +202,7 @@ async fn latest_system_image_merkle(
         update_package.packages().await.map_err(errors::UpdatePackage::ExtractPackagesManifest)?;
     let system_image = packages
         .into_iter()
-        .find(|url| url.name() == "system_image" && url.variant() == Some("0"))
+        .find(|url| url.path() == "/system_image/0")
         .ok_or(errors::UpdatePackage::MissingSystemImage)?;
     let hash = system_image
         .package_hash()
