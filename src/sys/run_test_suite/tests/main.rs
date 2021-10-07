@@ -4,10 +4,13 @@
 
 use async_trait::async_trait;
 use diagnostics_data::Severity;
-use fidl_fuchsia_test_manager::{RunBuilderMarker, RunBuilderProxy};
+use fidl_fuchsia_test_manager::{LaunchError, RunBuilderMarker, RunBuilderProxy};
 use futures::prelude::*;
+use matches::assert_matches;
 use regex::Regex;
-use run_test_suite_lib::{diagnostics, output, Outcome, SuiteRunResult, TestParams};
+use run_test_suite_lib::{
+    diagnostics, output, Outcome, RunTestSuiteError, SuiteRunResult, TestParams,
+};
 use std::io::Write;
 use std::str::from_utf8;
 use test_output_directory::{
@@ -85,7 +88,7 @@ async fn run_test_once<W: Write + Send>(
     test_params: TestParams,
     log_opts: diagnostics::LogCollectionOptions,
     writer: &mut W,
-) -> Result<SuiteRunResult, anyhow::Error> {
+) -> Result<SuiteRunResult, RunTestSuiteError> {
     let test_result = {
         let mut reporter = output::RunReporter::new_noop();
         let streams =
@@ -964,6 +967,18 @@ async fn test_max_severity(max_severity: Severity) {
         }
         _ => unreachable!("Not used"),
     }
+}
+
+#[fuchsia_async::run_singlethreaded(test)]
+async fn test_does_not_resolve() {
+    let mut output: Vec<u8> = vec![];
+    let test_params = new_test_params(
+        "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/nonexistant_test.cm",
+    );
+    let log_opts = diagnostics::LogCollectionOptions::default();
+    let run_err = run_test_once(test_params, log_opts, &mut output).await.unwrap_err();
+    assert_matches!(run_err, RunTestSuiteError::Launch(LaunchError::InstanceCannotResolve));
+    assert!(!run_err.is_internal_error());
 }
 
 #[fuchsia_async::run_singlethreaded(test)]

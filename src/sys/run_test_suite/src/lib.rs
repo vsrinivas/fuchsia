@@ -29,8 +29,10 @@ use {
 
 mod artifact;
 pub mod diagnostics;
+mod error;
 pub mod output;
 
+pub use error::{RunTestSuiteError, UnexpectedEventError};
 use {
     artifact::{Artifact, ArtifactSender},
     output::{
@@ -48,7 +50,13 @@ pub enum Outcome {
     Failed,
     Inconclusive,
     Timedout,
-    Error,
+    Error { internal: bool },
+}
+
+impl Outcome {
+    fn error<E: Into<RunTestSuiteError>>(e: E) -> Self {
+        Self::Error { internal: e.into().is_internal_error() }
+    }
 }
 
 impl fmt::Display for Outcome {
@@ -58,7 +66,7 @@ impl fmt::Display for Outcome {
             Outcome::Failed => write!(f, "FAILED"),
             Outcome::Inconclusive => write!(f, "INCONCLUSIVE"),
             Outcome::Timedout => write!(f, "TIMED OUT"),
-            Outcome::Error => write!(f, "ERROR"),
+            Outcome::Error { .. } => write!(f, "ERROR"),
         }
     }
 }
@@ -113,32 +121,12 @@ pub struct TestParams {
     pub builder_connector: Box<dyn BuilderConnector>,
 }
 
-pub fn convert_launch_error_to_str(e: ftest_manager::LaunchError) -> &'static str {
-    match e {
-        ftest_manager::LaunchError::CaseEnumeration => "Cannot enumerate test. This may mean `fuchsia.test.Suite` was not \
-        configured correctly. Refer to: \
-        https://fuchsia.dev/fuchsia-src/development/components/v2/troubleshooting#troubleshoot-test",
-        ftest_manager::LaunchError::ResourceUnavailable => "Resource unavailable",
-        ftest_manager::LaunchError::InstanceCannotResolve => "Cannot resolve test.",
-        ftest_manager::LaunchError::InvalidArgs => {
-            "Invalid args passed to builder while adding suite. Please file bug"
-        }
-        ftest_manager::LaunchError::FailedToConnectToTestSuite => {
-            "Cannot communicate with the tests. This may mean `fuchsia.test.Suite` was not \
-            configured correctly. Refer to: \
-            https://fuchsia.dev/fuchsia-src/development/components/v2/troubleshooting#troubleshoot-test"
-        }
-        ftest_manager::LaunchError::InternalError => "Internal error, please file bug",
-        ftest_manager::LaunchErrorUnknown!() => "Unrecognized launch error",
-    }
-}
-
 async fn collect_results_for_suite(
     suite_controller: ftest_manager::SuiteControllerProxy,
     mut artifact_sender: ArtifactSender,
     suite_reporter: &SuiteReporter<'_>,
     log_opts: diagnostics::LogCollectionOptions,
-) -> Result<SuiteRunResult, anyhow::Error> {
+) -> Result<SuiteRunResult, RunTestSuiteError> {
     let mut test_cases = HashMap::new();
     let mut test_case_reporters = HashMap::new();
     let mut test_cases_in_progress = HashMap::new();
@@ -156,8 +144,8 @@ async fn collect_results_for_suite(
     loop {
         match suite_controller.get_events().await? {
             Err(e) => {
-                suite_reporter.stopped(&Outcome::Error.into(), Timestamp::Unknown)?;
-                return Err(anyhow::anyhow!(convert_launch_error_to_str(e)));
+                suite_reporter.stopped(&output::ReportedOutcome::Error, Timestamp::Unknown)?;
+                return Err(e.into());
             }
             Ok(events) => {
                 if events.len() == 0 {
@@ -180,20 +168,18 @@ async fn collect_results_for_suite(
                         }) => {
                             let test_case_name = test_cases
                                 .get(&identifier)
-                                .ok_or(anyhow::anyhow!(
-                                    "test case with identifier {} not found",
-                                    identifier
-                                ))?
+                                .ok_or(UnexpectedEventError::CaseStartedButNotFound { identifier })?
                                 .clone();
                             let reporter = test_case_reporters.get(&identifier).unwrap();
                             // TODO(fxbug.dev/79712): Record per-case runtime once we have an
                             // accurate way to measure it.
                             reporter.started(Timestamp::Unknown)?;
                             if test_cases_executed.contains(&identifier) {
-                                return Err(anyhow::anyhow!(
-                                    "test case: '{}' started twice",
-                                    test_case_name
-                                ));
+                                return Err(UnexpectedEventError::CaseStartedTwice {
+                                    test_case_name,
+                                    identifier,
+                                }
+                                .into());
                             };
                             artifact_sender
                                 .send_test_stdout_msg(format!("[RUNNING]\t{}", test_case_name))
@@ -224,10 +210,9 @@ async fn collect_results_for_suite(
                             ftest_manager::Artifact::Stdout(socket) => {
                                 let test_case_name = test_cases
                                     .get(&identifier)
-                                    .ok_or(anyhow::anyhow!(
-                                        "test case with identifier {} not found",
-                                        identifier
-                                    ))?
+                                    .ok_or(UnexpectedEventError::CaseArtifactButNotFound {
+                                        identifier,
+                                    })?
                                     .clone();
                                 let (sender, mut recv) = mpsc::channel(1024);
                                 let t = fuchsia_async::Task::spawn(
@@ -268,10 +253,9 @@ async fn collect_results_for_suite(
                             ftest_manager::Artifact::Stderr(socket) => {
                                 let test_case_name = test_cases
                                     .get(&identifier)
-                                    .ok_or(anyhow::anyhow!(
-                                        "test case with identifier {} not found",
-                                        identifier
-                                    ))?
+                                    .ok_or(UnexpectedEventError::CaseArtifactButNotFound {
+                                        identifier,
+                                    })?
                                     .clone();
                                 let (sender, mut recv) = mpsc::channel(1024);
                                 let t = fuchsia_async::Task::spawn(
@@ -325,10 +309,8 @@ async fn collect_results_for_suite(
                                     // TODO(fxbug.dev/84882): Remove this signal once Overnet
                                     // supports automatically signalling EVENTPAIR_CLOSED when the
                                     // handle is closed.
-                                    token.signal_peer(
-                                        fidl::Signals::empty(),
-                                        fidl::Signals::USER_0,
-                                    )?;
+                                    let _ = token
+                                        .signal_peer(fidl::Signals::empty(), fidl::Signals::USER_0);
                                 }
                             }
                             ftest_manager::ArtifactUnknown!() => {
@@ -339,11 +321,9 @@ async fn collect_results_for_suite(
                             identifier,
                             status,
                         }) => {
-                            let test_case_name =
-                                test_cases.get(&identifier).ok_or(anyhow::anyhow!(
-                                    "test case with identifier {} not found",
-                                    identifier
-                                ))?;
+                            let test_case_name = test_cases.get(&identifier).ok_or(
+                                UnexpectedEventError::CaseStoppedButNotFound { identifier },
+                            )?;
 
                             if let Some(tasks) = test_cases_output.remove(&identifier) {
                                 if status == ftest_manager::CaseStatus::TimedOut {
@@ -375,10 +355,11 @@ async fn collect_results_for_suite(
                             {
                                 excessive_timer_task.cancel().await;
                             } else {
-                                return Err(anyhow::anyhow!(
-                                    "test case: '{}' was never started, still got a stop event",
-                                    test_case_name
-                                ));
+                                return Err(UnexpectedEventError::CaseStoppedButNotStarted {
+                                    test_case_name: test_case_name.clone(),
+                                    identifier,
+                                }
+                                .into());
                             }
 
                             let result_str = match status {
@@ -395,11 +376,12 @@ async fn collect_results_for_suite(
                                     "TIMED_OUT"
                                 }
                                 ftest_manager::CaseStatus::Skipped => "SKIPPED",
-                                e => {
-                                    return Err(anyhow::anyhow!(
-                                        "test status '{:?}' not supported",
-                                        e
-                                    ));
+                                status => {
+                                    return Err(UnexpectedEventError::UnrecognizedCaseStatus {
+                                        status,
+                                        identifier,
+                                    }
+                                    .into());
                                 }
                             };
                             let reporter = test_case_reporters.get(&identifier).unwrap();
@@ -568,9 +550,14 @@ async fn collect_results_for_suite(
                                 ftest_manager::SuiteStatus::DidNotFinish => Outcome::Inconclusive,
                                 ftest_manager::SuiteStatus::TimedOut => Outcome::Timedout,
                                 ftest_manager::SuiteStatus::Stopped => Outcome::Failed,
-                                ftest_manager::SuiteStatus::InternalError => Outcome::Error,
-                                e => {
-                                    return Err(anyhow::anyhow!("outcome '{:?}' not supported", e));
+                                ftest_manager::SuiteStatus::InternalError => {
+                                    Outcome::Error { internal: true }
+                                }
+                                s => {
+                                    return Err(UnexpectedEventError::UnrecognizedSuiteStatus {
+                                        status: s,
+                                    }
+                                    .into());
                                 }
                             };
                         }
@@ -650,7 +637,7 @@ async fn collect_results_for_suite(
     })
 }
 
-type SuiteResults<'a> = LocalBoxStream<'a, Result<SuiteRunResult, anyhow::Error>>;
+type SuiteResults<'a> = LocalBoxStream<'a, Result<SuiteRunResult, RunTestSuiteError>>;
 
 /// Runs the test `count` number of times, and writes logs to writer.
 pub async fn run_test<'a, Out: Write>(
@@ -659,9 +646,15 @@ pub async fn run_test<'a, Out: Write>(
     log_opts: diagnostics::LogCollectionOptions,
     stdout_writer: &'a mut Out,
     run_reporter: &'a mut RunReporter,
-) -> Result<SuiteResults<'a>, anyhow::Error> {
+) -> Result<SuiteResults<'a>, RunTestSuiteError> {
     let timeout: Option<i64> = match test_params.timeout {
-        Some(t) => Some(std::time::Duration::from_secs(t.get().into()).as_nanos().try_into()?),
+        Some(t) => {
+            const NANOS_IN_SEC: u64 = 1_000_000_000;
+            let secs: u32 = t.get();
+            let nanos: u64 = (secs as u64) * NANOS_IN_SEC;
+            // Unwrap okay here as max value (u32::MAX * 1_000_000_000) is 62 bits
+            Some(nanos.try_into().unwrap())
+        }
         None => None,
     };
     let run_options = SuiteRunOptions {
@@ -722,12 +715,7 @@ pub async fn run_test<'a, Out: Write>(
             args.log_opts.clone(),
         );
         let fut2 = async {
-            let mut syslog_writer = match reporter.new_artifact(&ArtifactType::Syslog) {
-                Ok(reporter_syslog) => reporter_syslog,
-                Err(e) => {
-                    return Err(anyhow::anyhow!("cannot collect logs: {:?}", e));
-                }
-            };
+            let mut syslog_writer = reporter.new_artifact(&ArtifactType::Syslog)?;
             while let Some(artifact) = recv.next().await {
                 match artifact {
                     Artifact::SuiteStdoutMessage(msg) | Artifact::SuiteStderrMessage(msg) => {
@@ -743,7 +731,7 @@ pub async fn run_test<'a, Out: Write>(
                     }
                 }
             }
-            Ok(())
+            Result::<_, RunTestSuiteError>::Ok(())
         };
 
         let (result, _) = join!(fut1, fut2);
@@ -759,9 +747,12 @@ pub async fn run_test<'a, Out: Write>(
             println!("WARN: Discarding run events: {:?}", events);
         }
 
-        if result.outcome == Outcome::Timedout || result.outcome == Outcome::Error {
-            // don't run test again
-            next_count = args.count;
+        match &result.outcome {
+            Outcome::Timedout | Outcome::Error { .. } => {
+                // don't run test again
+                next_count = args.count;
+            }
+            _ => (),
         }
 
         args.current_count = next_count;
@@ -783,8 +774,8 @@ async fn collect_results(
     loop {
         match stream.try_next().await {
             Err(e) => {
-                println!("Test suite encountered error trying to run tests: {:?}", e);
-                return Outcome::Error;
+                println!("Test suite encountered error trying to run tests: {}", e);
+                return Outcome::error(e);
             }
             Ok(Some(SuiteRunResult {
                 mut outcome,
@@ -862,7 +853,7 @@ pub async fn run_tests_and_get_outcome(
         Ok(r) => r,
         Err(e) => {
             println!("Test suite encountered error trying to run tests: {:?}", e);
-            return Outcome::Error;
+            return Outcome::error(e);
         }
     };
 
@@ -872,11 +863,8 @@ pub async fn run_tests_and_get_outcome(
         {
             Ok(s) => s,
             Err(e) => {
-                println!(
-                    "Test suite '{}' encountered error trying to run tests: {:?}",
-                    test_url, e
-                );
-                return Outcome::Error;
+                println!("Test suite '{}' encountered error trying to run tests: {}", test_url, e);
+                return Outcome::error(e);
             }
         };
 

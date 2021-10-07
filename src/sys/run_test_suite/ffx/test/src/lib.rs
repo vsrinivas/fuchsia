@@ -144,7 +144,11 @@ async fn run_test(builder_connector: Box<RunBuilderConnector>, cmd: RunCommand) 
         run_test_suite_lib::Outcome::Timedout => ffx_bail!("Tests timed out."),
         run_test_suite_lib::Outcome::Failed => ffx_bail!("Tests failed."),
         run_test_suite_lib::Outcome::Inconclusive => ffx_bail!("Inconclusive test result."),
-        run_test_suite_lib::Outcome::Error => Err(anyhow!("There was an error running tests.")),
+        run_test_suite_lib::Outcome::Error { internal } => match internal {
+            // Using anyhow instead of ffx_bail here prints a message to file a bug.
+            true => Err(anyhow!("There was an internal error running tests.")),
+            false => ffx_bail!("There was an error running tests."),
+        },
     }
 }
 
@@ -158,14 +162,11 @@ async fn get_tests<W: Write>(
 
     log::info!("launching test suite {}", cmd.test_url);
 
-    query_proxy.enumerate(&cmd.test_url, iterator).await.context("enumeration failed")?.map_err(
-        |e| {
-            format_err!(
-                "error launching test: {:?}",
-                run_test_suite_lib::convert_launch_error_to_str(e)
-            )
-        },
-    )?;
+    query_proxy
+        .enumerate(&cmd.test_url, iterator)
+        .await
+        .context("enumeration failed")?
+        .map_err(|e| format_err!("error launching test: {:?}", e))?;
 
     loop {
         let cases = iterator_proxy.get_next().await?;

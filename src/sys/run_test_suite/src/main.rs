@@ -131,7 +131,7 @@ async fn main() {
         }
         run_test_suite_lib::Outcome::Failed
         | run_test_suite_lib::Outcome::Inconclusive
-        | run_test_suite_lib::Outcome::Error => {
+        | run_test_suite_lib::Outcome::Error { .. } => {
             std::process::exit(1);
         }
     }

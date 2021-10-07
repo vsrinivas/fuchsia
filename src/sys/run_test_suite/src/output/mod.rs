@@ -252,7 +252,7 @@ impl From<crate::Outcome> for ReportedOutcome {
             crate::Outcome::Failed => Self::Failed,
             crate::Outcome::Inconclusive => Self::Inconclusive,
             crate::Outcome::Timedout => Self::Timedout,
-            crate::Outcome::Error => Self::Error,
+            crate::Outcome::Error { .. } => Self::Error,
         }
     }
 }
