@@ -121,6 +121,7 @@ sdk_molecule("test_sdks") {
     ":build_sdk",
     ":element-manager-test-bin_sdk",
     ":element-manager-test_sdk",
+    ":fuchsia-element-test_sdk",
     ":fuchsia-element-tests_sdk",
     ":reference-element-bin_sdk",
     ":reference-element_sdk",
