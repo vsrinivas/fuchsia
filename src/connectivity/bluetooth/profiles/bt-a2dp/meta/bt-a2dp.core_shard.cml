@@ -2,13 +2,59 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 {
-    include: [ "//src/connectivity/bluetooth/profiles/bt-a2dp/meta/bt-a2dp-base.core_shard.cml" ],
+    children: [
+        {
+            // TODO(fxbug.dev/79964): Mark as eager. Because A2DP is part of "universe"
+            // in some cases, we run into startup issues for the component. For now, bt-a2dp
+            // will be started when a client requests a capability.
+            name: "bt-a2dp",
+            url: "fuchsia-pkg://fuchsia.com/bt-a2dp#meta/bt-a2dp.cm",
+            environment: "#full-resolver-env",
+        },
+    ],
     offer: [
         {
-            protocol: [ "fuchsia.mediacodec.CodecFactory" ],
+            protocol: [
+                "fuchsia.bluetooth.a2dp.AudioMode",
+                "fuchsia.bluetooth.internal.a2dp.Controller",
+            ],
+            from: "#bt-a2dp",
+            to: [ "#appmgr" ],
+        },
+        {
+            protocol: [
+                "fuchsia.bluetooth.bredr.Profile",
+                "fuchsia.media.AudioDeviceEnumerator",
+                "fuchsia.media.SessionAudioConsumerFactory",
+                "fuchsia.media.sessions2.Discovery",
+                "fuchsia.media.sessions2.Publisher",
+                "fuchsia.settings.Audio",
+                "fuchsia.sysmem.Allocator",
+                "fuchsia.tracing.provider.Registry",
+            ],
             from: "#appmgr",
             to: [ "#bt-a2dp" ],
             dependency: "weak_for_migration",
+        },
+        {
+            protocol: "fuchsia.cobalt.LoggerFactory",
+            from: "#cobalt",
+            to: [ "#bt-a2dp" ],
+        },
+        {
+            protocol: [ "fuchsia.logger.LogSink" ],
+            from: "parent",
+            to: [ "#bt-a2dp" ],
+        },
+        {
+            protocol: [ "fuchsia.bluetooth.avrcp.PeerManager" ],
+            from: "#bt-avrcp",
+            to: [ "#bt-a2dp" ],
+        },
+        {
+            protocol: [ "fuchsia.mediacodec.CodecFactory" ],
+            from: "#codec_factory",
+            to: [ "#bt-a2dp" ],
         },
     ],
 }

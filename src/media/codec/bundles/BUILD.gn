@@ -6,7 +6,7 @@ declare_args() {
   # Whether to use v1, if this is set to false, make sure that the v2 shard
   # is somehow being included.
   # TODO(fxbug.dev/78647) Remove once v2 migration is complete.
-  codec_factory_v1 = true
+  codec_factory_v1 = false
 }
 
 group("services") {
