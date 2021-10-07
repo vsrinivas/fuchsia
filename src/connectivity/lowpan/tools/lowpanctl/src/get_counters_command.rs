@@ -5,7 +5,6 @@
 use crate::context::LowpanCtlContext;
 use anyhow::{Context as _, Error};
 use argh::FromArgs;
-use fidl_fuchsia_lowpan_device::MacCounters;
 
 /// Contains the arguments decoded for the `get-counters` command.
 #[derive(FromArgs, PartialEq, Debug)]
@@ -16,23 +15,66 @@ pub struct GetCountersCommand {
     pub reset: bool,
 }
 
-macro_rules! get_fmt_u32_str {
-    ($c:ident, $i:ident) => {
-        format!("{:^16}", $c.$i.map(|x| x.to_string()).unwrap_or("None".to_string()))
+macro_rules! print_one_counter {
+    ($prefix:expr, $name:expr, $e:expr) => {
+        if let Some(value) = $e.as_ref() {
+            println!("{}.{} = {}", $prefix, $name, value);
+        }
     };
 }
 
-fn format_counter_name(name: &str) -> String {
-    format!("{:^25}", name.to_string())
+macro_rules! print_mac_counters {
+    ($prefix:expr, $table:expr) => {
+        let table: fidl_fuchsia_lowpan_device::MacCounters = $table;
+        print_one_counter!($prefix, "total", table.total);
+        print_one_counter!($prefix, "unicast", table.unicast);
+        print_one_counter!($prefix, "broadcast", table.broadcast);
+        print_one_counter!($prefix, "ack_requested", table.ack_requested);
+        print_one_counter!($prefix, "acked", table.acked);
+        print_one_counter!($prefix, "no_ack_requested", table.no_ack_requested);
+        print_one_counter!($prefix, "data", table.data);
+        print_one_counter!($prefix, "data_poll", table.data_poll);
+        print_one_counter!($prefix, "beacon", table.beacon);
+        print_one_counter!($prefix, "beacon_request", table.beacon_request);
+        print_one_counter!($prefix, "other", table.other);
+        print_one_counter!($prefix, "address_filtered", table.address_filtered);
+        print_one_counter!($prefix, "retries", table.retries);
+        print_one_counter!($prefix, "direct_max_retry_expiry", table.direct_max_retry_expiry);
+        print_one_counter!($prefix, "indirect_max_retry_expiry", table.indirect_max_retry_expiry);
+        print_one_counter!($prefix, "dest_addr_filtered", table.dest_addr_filtered);
+        print_one_counter!($prefix, "duplicated", table.duplicated);
+        print_one_counter!($prefix, "err_no_frame", table.err_no_frame);
+        print_one_counter!($prefix, "err_unknown_neighbor", table.err_unknown_neighbor);
+        print_one_counter!($prefix, "err_invalid_src_addr", table.err_invalid_src_addr);
+        print_one_counter!($prefix, "err_sec", table.err_sec);
+        print_one_counter!($prefix, "err_fcs", table.err_fcs);
+        print_one_counter!($prefix, "err_cca", table.err_cca);
+        print_one_counter!($prefix, "err_abort", table.err_abort);
+        print_one_counter!($prefix, "err_busy_channel", table.err_busy_channel);
+        print_one_counter!($prefix, "err_other", table.err_other);
+    };
 }
 
-macro_rules! print_one_counter {
-    ($nn:expr, $n:ident, $t:ident, $r:ident) => {
-        println!("+---------------------------+------------------+------------------+");
-        let counter_name = format_counter_name($nn);
-        let tx_counter_val = get_fmt_u32_str!($t, $n);
-        let rx_counter_val = get_fmt_u32_str!($r, $n);
-        println!("| {} | {} | {} |", counter_name, tx_counter_val, rx_counter_val);
+macro_rules! print_coex_counters {
+    ($prefix:expr, $table:expr) => {
+        let table: fidl_fuchsia_lowpan_device::CoexCounters = $table;
+        print_one_counter!($prefix, "requests", table.requests);
+        print_one_counter!($prefix, "grant_immediate", table.grant_immediate);
+        print_one_counter!($prefix, "grant_wait", table.grant_wait);
+        print_one_counter!($prefix, "grant_wait_activated", table.grant_wait_activated);
+        print_one_counter!($prefix, "grant_wait_timeout", table.grant_wait_timeout);
+        print_one_counter!(
+            $prefix,
+            "grant_deactivated_during_request",
+            table.grant_deactivated_during_request
+        );
+        print_one_counter!($prefix, "delayed_grant", table.delayed_grant);
+        print_one_counter!(
+            $prefix,
+            "avg_delay_request_to_grant_usec",
+            table.avg_delay_request_to_grant_usec
+        );
+        print_one_counter!($prefix, "grant_none", table.grant_none);
     };
 }
 
@@ -44,49 +86,25 @@ impl GetCountersCommand {
         let result =
             if self.reset { counters_proxy.reset().await? } else { counters_proxy.get().await? };
 
-        println!("+---------------------------+------------------+------------------+");
-        println!("|        Counter Name       |        Tx        |        Rx        |");
-        let tx_counters = result.mac_tx.unwrap_or(MacCounters { ..MacCounters::EMPTY });
-        let rx_counters = result.mac_rx.unwrap_or(MacCounters { ..MacCounters::EMPTY });
+        if let Some(table) = result.mac_tx {
+            print_mac_counters!("mac.tx", table);
+        }
 
-        print_one_counter!("total", total, tx_counters, rx_counters);
-        print_one_counter!("unicast", unicast, tx_counters, rx_counters);
-        print_one_counter!("broadcast", broadcast, tx_counters, rx_counters);
-        print_one_counter!("ack_requested", ack_requested, tx_counters, rx_counters);
-        print_one_counter!("acked", acked, tx_counters, rx_counters);
-        print_one_counter!("no_ack_requested", no_ack_requested, tx_counters, rx_counters);
-        print_one_counter!("data", data, tx_counters, rx_counters);
-        print_one_counter!("data_poll", data_poll, tx_counters, rx_counters);
-        print_one_counter!("beacon", beacon, tx_counters, rx_counters);
-        print_one_counter!("beacon_request", beacon_request, tx_counters, rx_counters);
-        print_one_counter!("other", other, tx_counters, rx_counters);
-        print_one_counter!("address_filtered", address_filtered, tx_counters, rx_counters);
-        print_one_counter!("retries", retries, tx_counters, rx_counters);
-        print_one_counter!(
-            "direct_max_retry_expiry",
-            direct_max_retry_expiry,
-            tx_counters,
-            rx_counters
-        );
-        print_one_counter!(
-            "indirect_max_retry_expiry",
-            indirect_max_retry_expiry,
-            tx_counters,
-            rx_counters
-        );
-        print_one_counter!("dest_addr_filtered", dest_addr_filtered, tx_counters, rx_counters);
-        print_one_counter!("duplicated", duplicated, tx_counters, rx_counters);
-        print_one_counter!("err_no_frame", err_no_frame, tx_counters, rx_counters);
-        print_one_counter!("err_unknown_neighbor", err_unknown_neighbor, tx_counters, rx_counters);
-        print_one_counter!("err_invalid_src_addr", err_invalid_src_addr, tx_counters, rx_counters);
-        print_one_counter!("err_sec", err_sec, tx_counters, rx_counters);
-        print_one_counter!("err_fcs", err_fcs, tx_counters, rx_counters);
-        print_one_counter!("err_cca", err_cca, tx_counters, rx_counters);
-        print_one_counter!("err_abort", err_abort, tx_counters, rx_counters);
-        print_one_counter!("err_busy_channel", err_busy_channel, tx_counters, rx_counters);
-        print_one_counter!("err_other", err_other, tx_counters, rx_counters);
+        if let Some(table) = result.mac_rx {
+            print_mac_counters!("mac.rx", table);
+        }
 
-        println!("+---------------------------+------------------+------------------+");
+        if let Some(table) = result.coex_tx {
+            print_coex_counters!("coex.tx", table);
+        }
+
+        if let Some(table) = result.coex_rx {
+            print_coex_counters!("coex.rx", table);
+        }
+
+        if let Some(value) = result.coex_saturated {
+            println!("coex.saturated = {}", value);
+        }
 
         Ok(())
     }
