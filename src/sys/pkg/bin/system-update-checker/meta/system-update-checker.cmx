@@ -22,6 +22,7 @@
             "fuchsia.pkg.PackageResolver",
             "fuchsia.pkg.RepositoryManager",
             "fuchsia.pkg.rewrite.Engine",
+            "fuchsia.space.Manager",
             "fuchsia.update.CommitStatusProvider",
             "fuchsia.update.installer.Installer"
         ]

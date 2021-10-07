@@ -2,21 +2,24 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::{
-    errors::{self, Error},
-    update_manager::TargetChannelUpdater,
+use {
+    crate::{
+        errors::{self, Error},
+        update_manager::TargetChannelUpdater,
+    },
+    anyhow::{anyhow, Context as _},
+    fidl_fuchsia_paver::{
+        Asset, BootManagerMarker, Configuration, DataSinkMarker, PaverMarker, PaverProxy,
+    },
+    fidl_fuchsia_pkg::{PackageResolverMarker, PackageResolverProxyInterface},
+    fidl_fuchsia_space as fidl_space,
+    fuchsia_component::client::connect_to_protocol,
+    fuchsia_hash::Hash,
+    fuchsia_syslog::{fx_log_err, fx_log_info, fx_log_warn},
+    fuchsia_zircon as zx,
+    std::{cmp::min, convert::TryInto as _, io},
+    update_package::{ImageType, UpdatePackage},
 };
-use anyhow::{anyhow, Context as _};
-use fidl_fuchsia_paver::{
-    Asset, BootManagerMarker, Configuration, DataSinkMarker, PaverMarker, PaverProxy,
-};
-use fidl_fuchsia_pkg::{PackageResolverMarker, PackageResolverProxyInterface};
-use fuchsia_component::client::connect_to_protocol;
-use fuchsia_hash::Hash;
-use fuchsia_syslog::{fx_log_info, fx_log_warn};
-use fuchsia_zircon as zx;
-use std::{cmp::min, convert::TryInto as _, io};
-use update_package::{ImageType, UpdatePackage};
 
 const UPDATE_PACKAGE_URL: &str = "fuchsia-pkg://fuchsia.com/update";
 
@@ -34,6 +37,8 @@ pub async fn check_for_system_update(
     let package_resolver =
         connect_to_protocol::<PackageResolverMarker>().map_err(Error::ConnectPackageResolver)?;
     let paver = connect_to_protocol::<PaverMarker>().map_err(Error::ConnectPaver)?;
+    let space_manager =
+        connect_to_protocol::<fidl_space::ManagerMarker>().map_err(Error::ConnectSpaceManager)?;
 
     check_for_system_update_impl(
         &mut file_system,
@@ -41,6 +46,7 @@ pub async fn check_for_system_update(
         &paver,
         target_channel_manager,
         last_known_update_package,
+        &space_manager,
     )
     .await
 }
@@ -68,8 +74,10 @@ async fn check_for_system_update_impl(
     paver: &PaverProxy,
     target_channel_manager: &dyn TargetChannelUpdater,
     last_known_update_package: Option<&Hash>,
+    space_manager: &fidl_space::ManagerProxy,
 ) -> Result<SystemUpdateStatus, Error> {
-    let update_pkg = latest_update_package(package_resolver, target_channel_manager).await?;
+    let update_pkg =
+        latest_update_package(package_resolver, target_channel_manager, space_manager).await?;
     let latest_update_merkle = update_pkg.hash().await.map_err(errors::UpdatePackage::Hash)?;
     let current_system_image = current_system_image_merkle(file_system)?;
     let latest_system_image = latest_system_image_merkle(&update_pkg).await?;
@@ -133,7 +141,45 @@ fn current_system_image_merkle(file_system: &impl FileSystem) -> Result<Hash, Er
         .map_err(Error::ParseSystemMeta)?)
 }
 
+async fn gc(space_manager: &fidl_space::ManagerProxy) -> Result<(), anyhow::Error> {
+    let () = space_manager
+        .gc()
+        .await
+        .context("while performing gc call")?
+        .map_err(|e| anyhow!("garbage collection responded with {:?}", e))?;
+    Ok(())
+}
+
 async fn latest_update_package(
+    package_resolver: &impl PackageResolverProxyInterface,
+    channel_manager: &dyn TargetChannelUpdater,
+    space_manager: &fidl_space::ManagerProxy,
+) -> Result<UpdatePackage, errors::UpdatePackage> {
+    match latest_update_package_attempt(package_resolver, channel_manager).await {
+        Ok(update_package) => return Ok(update_package),
+        Err(errors::UpdatePackage::Resolve(fidl_fuchsia_pkg_ext::ResolveError::NoSpace)) => {}
+        Err(raw) => return Err(raw),
+    }
+
+    fx_log_info!("No space left for update package.  Attempting to clean up older packages.");
+
+    // If the first attempt fails with NoSpace, perform a GC and retry.
+    if let Err(e) = gc(space_manager).await {
+        fx_log_err!("unable to gc packages: {:#}", anyhow!(e));
+    }
+
+    match latest_update_package_attempt(package_resolver, channel_manager).await {
+        Ok(update_package) => Ok(update_package),
+        Err(raw) => {
+            fx_log_err!(
+                "`latest_update_package_attempt` failed twice to fetch the update package."
+            );
+            Err(raw)
+        }
+    }
+}
+
+async fn latest_update_package_attempt(
     package_resolver: &impl PackageResolverProxyInterface,
     channel_manager: &dyn TargetChannelUpdater,
 ) -> Result<UpdatePackage, errors::UpdatePackage> {
@@ -224,18 +270,22 @@ fn compare_buffer(
 
 #[cfg(test)]
 pub mod test_check_for_system_update_impl {
-    use super::*;
-    use crate::update_manager::tests::FakeTargetChannelUpdater;
-    use fidl_fuchsia_paver::Configuration;
-    use fidl_fuchsia_pkg::{
-        PackageResolverGetHashResult, PackageResolverResolveResult, PackageUrl,
+    use {
+        super::*,
+        crate::update_manager::tests::FakeTargetChannelUpdater,
+        fidl_fuchsia_paver::Configuration,
+        fidl_fuchsia_pkg::{
+            PackageResolverGetHashResult, PackageResolverResolveResult, PackageUrl,
+        },
+        fuchsia_async::{self as fasync, futures::future},
+        futures::{TryFutureExt, TryStreamExt},
+        lazy_static::lazy_static,
+        maplit::hashmap,
+        matches::assert_matches,
+        mock_paver::MockPaverServiceBuilder,
+        parking_lot::Mutex,
+        std::{collections::hash_map::HashMap, fs, sync::Arc},
     };
-    use fuchsia_async::{self as fasync, futures::future};
-    use lazy_static::lazy_static;
-    use maplit::hashmap;
-    use matches::assert_matches;
-    use mock_paver::MockPaverServiceBuilder;
-    use std::{collections::hash_map::HashMap, fs, sync::Arc};
 
     const ACTIVE_SYSTEM_IMAGE_MERKLE: &str =
         "0000000000000000000000000000000000000000000000000000000000000000";
@@ -412,6 +462,44 @@ pub mod test_check_for_system_update_impl {
         }
     }
 
+    struct MockSpaceManagerService {
+        call_count: Mutex<u32>,
+    }
+
+    impl MockSpaceManagerService {
+        fn new() -> Self {
+            Self { call_count: Mutex::new(0) }
+        }
+
+        /// Spawns a new task to serve the space manager protocol.
+        pub fn spawn_gc_service(self: &Arc<Self>) -> fidl_space::ManagerProxy {
+            let (proxy, server_end) =
+                fidl::endpoints::create_proxy_and_stream::<fidl_space::ManagerMarker>().unwrap();
+
+            fasync::Task::spawn(Arc::clone(self).run_gc_service(server_end).unwrap_or_else(|e| {
+                panic!("error running space manager service: {:#}", anyhow!(e))
+            }))
+            .detach();
+
+            proxy
+        }
+
+        async fn run_gc_service(
+            self: Arc<Self>,
+            mut stream: fidl_space::ManagerRequestStream,
+        ) -> Result<(), anyhow::Error> {
+            while let Some(req) = stream.try_next().await? {
+                match req {
+                    fidl_space::ManagerRequest::Gc { responder } => {
+                        *self.call_count.lock() += 1;
+                        responder.send(&mut Ok(())).unwrap()
+                    }
+                }
+            }
+            Ok(())
+        }
+    }
+
     #[fasync::run_singlethreaded(test)]
     async fn test_missing_system_meta_file() {
         let mut file_system = FakeFileSystem { contents: hashmap![] };
@@ -419,12 +507,16 @@ pub mod test_check_for_system_update_impl {
         let mock_paver = Arc::new(MockPaverServiceBuilder::new().build());
         let paver = mock_paver.spawn_paver_service();
 
+        let mock_space_manager = Arc::new(MockSpaceManagerService::new());
+        let space_manager = mock_space_manager.spawn_gc_service();
+
         let result = check_for_system_update_impl(
             &mut file_system,
             &package_resolver,
             &paver,
             &FakeTargetChannelUpdater::new(),
             None,
+            &space_manager,
         )
         .await;
 
@@ -442,12 +534,16 @@ pub mod test_check_for_system_update_impl {
         let mock_paver = Arc::new(MockPaverServiceBuilder::new().build());
         let paver = mock_paver.spawn_paver_service();
 
+        let mock_space_manager = Arc::new(MockSpaceManagerService::new());
+        let space_manager = mock_space_manager.spawn_gc_service();
+
         let result = check_for_system_update_impl(
             &mut file_system,
             &package_resolver,
             &paver,
             &FakeTargetChannelUpdater::new(),
             None,
+            &space_manager,
         )
         .await;
 
@@ -479,6 +575,8 @@ pub mod test_check_for_system_update_impl {
         let package_resolver = PackageResolverProxyFidlError;
         let mock_paver = Arc::new(MockPaverServiceBuilder::new().build());
         let paver = mock_paver.spawn_paver_service();
+        let mock_space_manager = Arc::new(MockSpaceManagerService::new());
+        let space_manager = mock_space_manager.spawn_gc_service();
 
         let result = check_for_system_update_impl(
             &mut file_system,
@@ -486,10 +584,137 @@ pub mod test_check_for_system_update_impl {
             &paver,
             &FakeTargetChannelUpdater::new(),
             None,
+            &space_manager,
         )
         .await;
 
         assert_matches!(result, Err(Error::UpdatePackage(errors::UpdatePackage::ResolveFidl(_))));
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_update_package_garbage_collection_called_no_space() {
+        struct PackageResolverProxyNoSpaceOnce {
+            temp_dir: tempfile::TempDir,
+            expected_package_url: String,
+            call_count: Mutex<u32>,
+        }
+
+        impl PackageResolverProxyNoSpaceOnce {
+            fn new() -> PackageResolverProxyNoSpaceOnce {
+                let package_resolver = PackageResolverProxyTempDirBuilder::new()
+                    .with_packages_json()
+                    .with_system_image_merkle(ACTIVE_SYSTEM_IMAGE_MERKLE)
+                    .build();
+                PackageResolverProxyNoSpaceOnce {
+                    temp_dir: package_resolver.temp_dir,
+                    expected_package_url: package_resolver.expected_package_url,
+                    call_count: Mutex::new(0),
+                }
+            }
+        }
+
+        impl PackageResolverProxyInterface for PackageResolverProxyNoSpaceOnce {
+            type ResolveResponseFut =
+                future::Ready<Result<PackageResolverResolveResult, fidl::Error>>;
+            fn resolve(
+                &self,
+                package_url: &str,
+                selectors: &mut dyn ExactSizeIterator<Item = &str>,
+                dir: fidl::endpoints::ServerEnd<fidl_fuchsia_io::DirectoryMarker>,
+            ) -> Self::ResolveResponseFut {
+                *self.call_count.lock() += 1;
+
+                if *self.call_count.lock() == 1 {
+                    return future::ok(Err(fidl_fuchsia_pkg::ResolveError::NoSpace));
+                }
+
+                assert_eq!(package_url, self.expected_package_url);
+                assert_eq!(selectors.len(), 0);
+                fdio::service_connect(
+                    self.temp_dir.path().to_str().expect("path is utf8"),
+                    dir.into_channel(),
+                )
+                .unwrap();
+                future::ok(Ok(()))
+            }
+            type GetHashResponseFut =
+                future::Ready<Result<PackageResolverGetHashResult, fidl::Error>>;
+            fn get_hash(&self, _package_url: &mut PackageUrl) -> Self::GetHashResponseFut {
+                panic!("get_hash not implemented");
+            }
+        }
+
+        let mut file_system = FakeFileSystem::new_with_valid_system_meta();
+        let package_resolver = PackageResolverProxyNoSpaceOnce::new();
+        let mock_paver = Arc::new(MockPaverServiceBuilder::new().build());
+        let paver = mock_paver.spawn_paver_service();
+        let mock_space_manager = Arc::new(MockSpaceManagerService::new());
+        let space_manager = mock_space_manager.spawn_gc_service();
+
+        let result = check_for_system_update_impl(
+            &mut file_system,
+            &package_resolver,
+            &paver,
+            &FakeTargetChannelUpdater::new(),
+            Some(&UPDATE_PACKAGE_MERKLE),
+            &space_manager,
+        )
+        .await;
+
+        assert_matches!(result, Ok(SystemUpdateStatus::UpToDate { system_image, update_package: _ })
+        if system_image == ACTIVE_SYSTEM_IMAGE_MERKLE
+        .parse()
+        .expect("active system image string literal"));
+
+        assert_matches!(*mock_space_manager.call_count.lock(), 1);
+        assert_matches!(*package_resolver.call_count.lock(), 2);
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_update_package_garbage_collection_succeeds() {
+        struct PackageResolverProxyNoSpaceError;
+        impl PackageResolverProxyInterface for PackageResolverProxyNoSpaceError {
+            type ResolveResponseFut =
+                future::Ready<Result<PackageResolverResolveResult, fidl::Error>>;
+            fn resolve(
+                &self,
+                _package_url: &str,
+                _selectors: &mut dyn ExactSizeIterator<Item = &str>,
+                _dir: fidl::endpoints::ServerEnd<fidl_fuchsia_io::DirectoryMarker>,
+            ) -> Self::ResolveResponseFut {
+                future::ok(Err(fidl_fuchsia_pkg::ResolveError::NoSpace))
+            }
+            type GetHashResponseFut =
+                future::Ready<Result<PackageResolverGetHashResult, fidl::Error>>;
+            fn get_hash(&self, _package_url: &mut PackageUrl) -> Self::GetHashResponseFut {
+                panic!("get_hash not implemented");
+            }
+        }
+
+        let mut file_system = FakeFileSystem::new_with_valid_system_meta();
+        let package_resolver = PackageResolverProxyNoSpaceError;
+        let mock_paver = Arc::new(MockPaverServiceBuilder::new().build());
+        let paver = mock_paver.spawn_paver_service();
+        let mock_space_manager = Arc::new(MockSpaceManagerService::new());
+        let space_manager = mock_space_manager.spawn_gc_service();
+
+        let result = check_for_system_update_impl(
+            &mut file_system,
+            &package_resolver,
+            &paver,
+            &FakeTargetChannelUpdater::new(),
+            None,
+            &space_manager,
+        )
+        .await;
+
+        assert_matches!(
+            result,
+            Err(Error::UpdatePackage(errors::UpdatePackage::Resolve(
+                fidl_fuchsia_pkg_ext::ResolveError::NoSpace
+            )))
+        );
+        assert_matches!(*mock_space_manager.call_count.lock(), 1);
     }
 
     #[fasync::run_singlethreaded(test)]
@@ -517,6 +742,8 @@ pub mod test_check_for_system_update_impl {
         let package_resolver = PackageResolverProxyZxError;
         let mock_paver = Arc::new(MockPaverServiceBuilder::new().build());
         let paver = mock_paver.spawn_paver_service();
+        let mock_space_manager = Arc::new(MockSpaceManagerService::new());
+        let space_manager = mock_space_manager.spawn_gc_service();
 
         let result = check_for_system_update_impl(
             &mut file_system,
@@ -524,6 +751,7 @@ pub mod test_check_for_system_update_impl {
             &paver,
             &FakeTargetChannelUpdater::new(),
             None,
+            &space_manager,
         )
         .await;
 
@@ -555,6 +783,8 @@ pub mod test_check_for_system_update_impl {
         let package_resolver = PackageResolverProxyDirectoryCloser;
         let mock_paver = Arc::new(MockPaverServiceBuilder::new().build());
         let paver = mock_paver.spawn_paver_service();
+        let mock_space_manager = Arc::new(MockSpaceManagerService::new());
+        let space_manager = mock_space_manager.spawn_gc_service();
 
         let result = check_for_system_update_impl(
             &mut file_system,
@@ -562,6 +792,7 @@ pub mod test_check_for_system_update_impl {
             &paver,
             &FakeTargetChannelUpdater::new(),
             None,
+            &space_manager,
         )
         .await;
 
@@ -574,6 +805,8 @@ pub mod test_check_for_system_update_impl {
         let package_resolver = PackageResolverProxyTempDir::new_with_default_meta();
         let mock_paver = Arc::new(MockPaverServiceBuilder::new().build());
         let paver = mock_paver.spawn_paver_service();
+        let mock_space_manager = Arc::new(MockSpaceManagerService::new());
+        let space_manager = mock_space_manager.spawn_gc_service();
 
         let result = check_for_system_update_impl(
             &mut file_system,
@@ -581,6 +814,7 @@ pub mod test_check_for_system_update_impl {
             &paver,
             &FakeTargetChannelUpdater::new(),
             None,
+            &space_manager,
         )
         .await;
 
@@ -596,6 +830,8 @@ pub mod test_check_for_system_update_impl {
         let package_resolver = PackageResolverProxyTempDir::new_with_empty_packages_json();
         let mock_paver = Arc::new(MockPaverServiceBuilder::new().build());
         let paver = mock_paver.spawn_paver_service();
+        let mock_space_manager = Arc::new(MockSpaceManagerService::new());
+        let space_manager = mock_space_manager.spawn_gc_service();
 
         let result = check_for_system_update_impl(
             &mut file_system,
@@ -603,6 +839,7 @@ pub mod test_check_for_system_update_impl {
             &paver,
             &FakeTargetChannelUpdater::new(),
             None,
+            &space_manager,
         )
         .await;
 
@@ -619,6 +856,8 @@ pub mod test_check_for_system_update_impl {
             PackageResolverProxyTempDir::new_with_latest_system_image("bad-merkle");
         let mock_paver = Arc::new(MockPaverServiceBuilder::new().build());
         let paver = mock_paver.spawn_paver_service();
+        let mock_space_manager = Arc::new(MockSpaceManagerService::new());
+        let space_manager = mock_space_manager.spawn_gc_service();
 
         let result = check_for_system_update_impl(
             &mut file_system,
@@ -626,6 +865,7 @@ pub mod test_check_for_system_update_impl {
             &paver,
             &FakeTargetChannelUpdater::new(),
             None,
+            &space_manager,
         )
         .await;
         assert_matches!(
@@ -651,6 +891,8 @@ pub mod test_check_for_system_update_impl {
                 .build(),
         );
         let paver = mock_paver.spawn_paver_service();
+        let mock_space_manager = Arc::new(MockSpaceManagerService::new());
+        let space_manager = mock_space_manager.spawn_gc_service();
 
         let result = check_for_system_update_impl(
             &mut file_system,
@@ -658,6 +900,7 @@ pub mod test_check_for_system_update_impl {
             &paver,
             &FakeTargetChannelUpdater::new(),
             Some(&UPDATE_PACKAGE_MERKLE),
+            &space_manager,
         )
         .await;
 
@@ -687,6 +930,8 @@ pub mod test_check_for_system_update_impl {
                 .build(),
         );
         let paver = mock_paver.spawn_paver_service();
+        let mock_space_manager = Arc::new(MockSpaceManagerService::new());
+        let space_manager = mock_space_manager.spawn_gc_service();
 
         let result = check_for_system_update_impl(
             &mut file_system,
@@ -694,6 +939,7 @@ pub mod test_check_for_system_update_impl {
             &paver,
             &FakeTargetChannelUpdater::new(),
             Some(&UPDATE_PACKAGE_MERKLE),
+            &space_manager,
         )
         .await;
 
@@ -713,6 +959,8 @@ pub mod test_check_for_system_update_impl {
             PackageResolverProxyTempDir::new_with_latest_system_image(NEW_SYSTEM_IMAGE_MERKLE);
         let mock_paver = Arc::new(MockPaverServiceBuilder::new().build());
         let paver = mock_paver.spawn_paver_service();
+        let mock_space_manager = Arc::new(MockSpaceManagerService::new());
+        let space_manager = mock_space_manager.spawn_gc_service();
 
         let result = check_for_system_update_impl(
             &mut file_system,
@@ -720,6 +968,7 @@ pub mod test_check_for_system_update_impl {
             &paver,
             &FakeTargetChannelUpdater::new(),
             None,
+            &space_manager,
         )
         .await;
 
@@ -734,6 +983,7 @@ pub mod test_check_for_system_update_impl {
                     .parse()
                     .expect("new system image string literal")
         );
+        assert_matches!(*mock_space_manager.call_count.lock(), 0);
     }
 
     #[fasync::run_singlethreaded(test)]
@@ -747,6 +997,8 @@ pub mod test_check_for_system_update_impl {
             .build();
         let mock_paver = Arc::new(MockPaverServiceBuilder::new().build());
         let paver = mock_paver.spawn_paver_service();
+        let mock_space_manager = Arc::new(MockSpaceManagerService::new());
+        let space_manager = mock_space_manager.spawn_gc_service();
 
         let result = check_for_system_update_impl(
             &mut file_system,
@@ -754,6 +1006,7 @@ pub mod test_check_for_system_update_impl {
             &paver,
             &FakeTargetChannelUpdater::new_with_update_url(update_url),
             None,
+            &space_manager,
         )
         .await;
 
@@ -777,6 +1030,8 @@ pub mod test_check_for_system_update_impl {
             PackageResolverProxyTempDir::new_with_latest_system_image(ACTIVE_SYSTEM_IMAGE_MERKLE);
         let mock_paver = Arc::new(MockPaverServiceBuilder::new().build());
         let paver = mock_paver.spawn_paver_service();
+        let mock_space_manager = Arc::new(MockSpaceManagerService::new());
+        let space_manager = mock_space_manager.spawn_gc_service();
 
         let previous_update_package = Hash::from([0x44; 32]);
         let result = check_for_system_update_impl(
@@ -785,6 +1040,7 @@ pub mod test_check_for_system_update_impl {
             &paver,
             &FakeTargetChannelUpdater::new(),
             Some(&previous_update_package),
+            &space_manager,
         )
         .await;
 
@@ -815,6 +1071,8 @@ pub mod test_check_for_system_update_impl {
                 .build(),
         );
         let paver = mock_paver.spawn_paver_service();
+        let mock_space_manager = Arc::new(MockSpaceManagerService::new());
+        let space_manager = mock_space_manager.spawn_gc_service();
 
         let result = check_for_system_update_impl(
             &mut file_system,
@@ -822,6 +1080,7 @@ pub mod test_check_for_system_update_impl {
             &paver,
             &FakeTargetChannelUpdater::new(),
             None,
+            &space_manager,
         )
         .await;
 
@@ -855,6 +1114,8 @@ pub mod test_check_for_system_update_impl {
                 .build(),
         );
         let paver = mock_paver.spawn_paver_service();
+        let mock_space_manager = Arc::new(MockSpaceManagerService::new());
+        let space_manager = mock_space_manager.spawn_gc_service();
 
         let result = check_for_system_update_impl(
             &mut file_system,
@@ -862,6 +1123,7 @@ pub mod test_check_for_system_update_impl {
             &paver,
             &FakeTargetChannelUpdater::new(),
             None,
+            &space_manager,
         )
         .await;
 
@@ -895,6 +1157,8 @@ pub mod test_check_for_system_update_impl {
                 .build(),
         );
         let paver = mock_paver.spawn_paver_service();
+        let mock_space_manager = Arc::new(MockSpaceManagerService::new());
+        let space_manager = mock_space_manager.spawn_gc_service();
 
         let result = check_for_system_update_impl(
             &mut file_system,
@@ -902,6 +1166,7 @@ pub mod test_check_for_system_update_impl {
             &paver,
             &FakeTargetChannelUpdater::new(),
             None,
+            &space_manager,
         )
         .await;
 
@@ -931,6 +1196,8 @@ pub mod test_check_for_system_update_impl {
                 .build(),
         );
         let paver = mock_paver.spawn_paver_service();
+        let mock_space_manager = Arc::new(MockSpaceManagerService::new());
+        let space_manager = mock_space_manager.spawn_gc_service();
 
         let result = check_for_system_update_impl(
             &mut file_system,
@@ -938,6 +1205,7 @@ pub mod test_check_for_system_update_impl {
             &paver,
             &FakeTargetChannelUpdater::new(),
             None,
+            &space_manager,
         )
         .await;
 
@@ -971,6 +1239,8 @@ pub mod test_check_for_system_update_impl {
                 .build(),
         );
         let paver = mock_paver.spawn_paver_service();
+        let mock_space_manager = Arc::new(MockSpaceManagerService::new());
+        let space_manager = mock_space_manager.spawn_gc_service();
 
         let result = check_for_system_update_impl(
             &mut file_system,
@@ -978,6 +1248,7 @@ pub mod test_check_for_system_update_impl {
             &paver,
             &FakeTargetChannelUpdater::new(),
             None,
+            &space_manager,
         )
         .await;
 
@@ -1007,6 +1278,8 @@ pub mod test_check_for_system_update_impl {
                 .build(),
         );
         let paver = mock_paver.spawn_paver_service();
+        let mock_space_manager = Arc::new(MockSpaceManagerService::new());
+        let space_manager = mock_space_manager.spawn_gc_service();
 
         let result = check_for_system_update_impl(
             &mut file_system,
@@ -1014,6 +1287,7 @@ pub mod test_check_for_system_update_impl {
             &paver,
             &FakeTargetChannelUpdater::new(),
             None,
+            &space_manager,
         )
         .await;
 
@@ -1047,6 +1321,8 @@ pub mod test_check_for_system_update_impl {
                 .build(),
         );
         let paver = mock_paver.spawn_paver_service();
+        let mock_space_manager = Arc::new(MockSpaceManagerService::new());
+        let space_manager = mock_space_manager.spawn_gc_service();
 
         let result = check_for_system_update_impl(
             &mut file_system,
@@ -1054,6 +1330,7 @@ pub mod test_check_for_system_update_impl {
             &paver,
             &FakeTargetChannelUpdater::new(),
             None,
+            &space_manager,
         )
         .await;
 

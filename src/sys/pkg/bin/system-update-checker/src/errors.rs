@@ -2,8 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use fuchsia_url::pkg_url::PkgUrl;
-use std::io;
+use {fuchsia_url::pkg_url::PkgUrl, std::io};
 
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
@@ -18,6 +17,9 @@ pub enum Error {
 
     #[error("connecting to Paver")]
     ConnectPaver(#[source] anyhow::Error),
+
+    #[error("connecting to SpaceManager")]
+    ConnectSpaceManager(#[source] anyhow::Error),
 
     #[error("system-updater component exited with failure")]
     SystemUpdaterFailed,
