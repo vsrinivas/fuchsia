@@ -1733,3 +1733,16 @@
   reviewers: ['abarth@google.com', 'amathes@google.com', 'computerdruid@google.com', 'hjfreyer@google.com', 'ampearce@google.com']
   submitted: '2021-09-08'
   reviewed: '2021-10-04'
+
+- name: 'RFC-0134'
+  title: 'Software updates time dependency'
+  short_description: 'Removes time synchronization as a dependency of software updates.'
+  authors: ['senj@google.com']
+  file: '0134_software_updates_time_dependency.md'
+  area: ['Software Delivery']
+  issue: ['78423']
+  gerrit_change_id: ['559721']
+  status: 'Accepted'
+  reviewers: ['ampearce@google.com', 'cpu@google.com', 'jsankey@google.com', 'abarth@google.com', 'wittrock@google.com', 'computerdruid@google.com', 'dhobsd@google.com']
+  submitted: '2021-07-24'
+  reviewed: '2021-10-06'

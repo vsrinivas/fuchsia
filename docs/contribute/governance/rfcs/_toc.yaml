@@ -279,3 +279,5 @@ toc:
   path: /docs/contribute/governance/rfcs/0133_swd_goals.md
 - title: "RFC-0132: FIDL table size limit"
   path: /docs/contribute/governance/rfcs/0132_fidl_table_size_limit.md
+- title: "RFC-0134: Software updates time dependency"
+  path: /docs/contribute/governance/rfcs/0134_software_updates_time_dependency.md
