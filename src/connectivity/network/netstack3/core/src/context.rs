@@ -1012,15 +1012,15 @@ pub(crate) mod testutil {
     /// A `DummyNetworkLinks` represents the set of links in a `DummyNetwork`.
     /// It exposes the link information by providing the ability to map from a
     /// frame's sending metadata - including its context, local state, and
-    /// `SendMeta` - to the appropriate context ID, device ID, receive metadata,
-    /// and latency that represent the receiver.
+    /// `SendMeta` - to the set of appropriate receivers, each represented by
+    /// a context ID, device ID, receive metadata, and latency.
     pub(crate) trait DummyNetworkLinks<S, SendMeta, RecvMeta, ContextId, DeviceId> {
         fn map_link(
             &self,
             ctx: ContextId,
             state: &S,
             meta: SendMeta,
-        ) -> (ContextId, DeviceId, RecvMeta, Option<Duration>);
+        ) -> Vec<(ContextId, DeviceId, RecvMeta, Option<Duration>)>;
     }
 
     impl<
@@ -1029,7 +1029,7 @@ pub(crate) mod testutil {
             RecvMeta,
             ContextId,
             DeviceId,
-            F: Fn(ContextId, &S, SendMeta) -> (ContextId, DeviceId, RecvMeta, Option<Duration>),
+            F: Fn(ContextId, &S, SendMeta) -> Vec<(ContextId, DeviceId, RecvMeta, Option<Duration>)>,
         > DummyNetworkLinks<S, SendMeta, RecvMeta, ContextId, DeviceId> for F
     {
         fn map_link(
@@ -1037,7 +1037,7 @@ pub(crate) mod testutil {
             ctx: ContextId,
             state: &S,
             meta: SendMeta,
-        ) -> (ContextId, DeviceId, RecvMeta, Option<Duration>) {
+        ) -> Vec<(ContextId, DeviceId, RecvMeta, Option<Duration>)> {
             (self)(ctx, state, meta)
         }
     }
@@ -1254,15 +1254,21 @@ pub(crate) mod testutil {
 
             for (src_context, frames) in all_frames.into_iter() {
                 for (send_meta, frame) in frames.into_iter() {
-                    let (dst_context, dst_device, recv_meta, latency) = self.links.map_link(
+                    for (dst_context, dst_device, recv_meta, latency) in self.links.map_link(
                         src_context,
                         self.contexts.get(&src_context).unwrap().get_ref(),
                         send_meta,
-                    );
-                    self.pending_frames.push(PendingFrame::new(
-                        self.current_time + latency.unwrap_or(Duration::from_millis(0)),
-                        PendingFrameData { frame, dst_context, dst_device, meta: recv_meta },
-                    ));
+                    ) {
+                        self.pending_frames.push(PendingFrame::new(
+                            self.current_time + latency.unwrap_or(Duration::from_millis(0)),
+                            PendingFrameData {
+                                frame: frame.clone(),
+                                dst_context,
+                                dst_device,
+                                meta: recv_meta,
+                            },
+                        ));
+                    }
                 }
             }
         }

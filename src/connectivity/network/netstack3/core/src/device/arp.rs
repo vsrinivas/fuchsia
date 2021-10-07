@@ -721,11 +721,13 @@ impl<P: Hash + Eq, H> Default for ArpTable<P, H> {
 mod tests {
     use alloc::vec;
     use alloc::vec::Vec;
+    use core::iter;
 
     use net_types::ethernet::Mac;
     use net_types::ip::Ipv4Addr;
     use packet::{ParseBuffer, Serializer};
     use packet_formats::arp::{peek_arp_types, ArpHardwareType, ArpNetworkType, ArpPacketBuilder};
+    use test_case::test_case;
 
     use super::*;
     use crate::assert_empty;
@@ -735,6 +737,7 @@ mod tests {
 
     const TEST_LOCAL_IPV4: Ipv4Addr = Ipv4Addr::new([1, 2, 3, 4]);
     const TEST_REMOTE_IPV4: Ipv4Addr = Ipv4Addr::new([5, 6, 7, 8]);
+    const TEST_ANOTHER_REMOTE_IPV4: Ipv4Addr = Ipv4Addr::new([9, 10, 11, 12]);
     const TEST_LOCAL_MAC: Mac = Mac::new([0, 1, 2, 3, 4, 5]);
     const TEST_REMOTE_MAC: Mac = Mac::new([6, 7, 8, 9, 10, 11]);
     const TEST_INVALID_MAC: Mac = Mac::new([0, 0, 0, 0, 0, 0]);
@@ -1211,99 +1214,193 @@ mod tests {
         assert_eq!(t.lookup(Ipv4Addr::new([10, 0, 0, 2])), None);
     }
 
-    #[test]
-    fn test_address_resolution() {
-        // Test a basic ARP resolution scenario with both sides participating.
+    struct ArpHostConfig<'a> {
+        name: &'a str,
+        proto_addr: Ipv4Addr,
+        hw_addr: Mac,
+    }
+
+    #[test_case(ArpHostConfig {
+                    name: "remote",
+                    proto_addr: TEST_REMOTE_IPV4,
+                    hw_addr: TEST_REMOTE_MAC
+                },
+                vec![]
+    )]
+    #[test_case(ArpHostConfig {
+                    name: "requested_remote",
+                    proto_addr: TEST_REMOTE_IPV4,
+                    hw_addr: TEST_REMOTE_MAC
+                },
+                vec![
+                    ArpHostConfig {
+                        name: "non_requested_remote",
+                        proto_addr: TEST_ANOTHER_REMOTE_IPV4,
+                        hw_addr: TEST_REMOTE_MAC
+                    }
+                ]
+    )]
+    fn test_address_resolution(
+        requested_remote_cfg: ArpHostConfig<'_>,
+        other_remote_cfgs: Vec<ArpHostConfig<'_>>,
+    ) {
+        // Test a basic ARP resolution scenario.
         // We expect the following steps:
         // 1. When a lookup is performed and results in a cache miss, we send an
         //    ARP request and set a request retry timer.
-        // 2. When the remote receives the request, it populates its cache with
+        // 2. When the requested remote receives the request, it populates its cache with
         //    the local's information, and sends an ARP reply.
-        // 3. When the reply is received, the timer is canceled, the table is
+        // 3. Any non-requested remotes will neither populate their caches nor send ARP replies.
+        // 4. When the reply is received, the timer is canceled, the table is
         //    updated, a new entry expiration timer is installed, and the device
         //    layer is notified of the resolution.
 
-        let local = DummyCtx::default();
-        let mut remote = DummyCtx::default();
-        remote.get_mut().hw_addr = TEST_REMOTE_MAC;
-        remote.get_mut().proto_addr = Some(TEST_REMOTE_IPV4);
+        const LOCAL_HOST_CFG: ArpHostConfig<'_> =
+            ArpHostConfig { name: "local", proto_addr: TEST_LOCAL_IPV4, hw_addr: TEST_LOCAL_MAC };
+        let host_iter = other_remote_cfgs
+            .iter()
+            .chain(iter::once(&requested_remote_cfg))
+            .chain(iter::once(&LOCAL_HOST_CFG));
 
         let mut network = DummyNetwork::new(
-            vec![("local", local), ("remote", remote)],
-            |ctx, _state: &DummyArpCtx, _meta| {
-                if ctx == "local" {
-                    ("remote", (), (), None)
-                } else {
-                    ("local", (), (), None)
-                }
+            {
+                host_iter.clone().map(|cfg| {
+                    let ArpHostConfig { name, proto_addr, hw_addr } = cfg;
+                    let mut ctx = DummyCtx::default();
+                    ctx.get_mut().hw_addr = *hw_addr;
+                    ctx.get_mut().proto_addr = Some(*proto_addr);
+                    (*name, ctx)
+                })
+            },
+            |ctx: &str, _state: &DummyArpCtx, _meta| {
+                host_iter
+                    .clone()
+                    .filter_map(|cfg| {
+                        let ArpHostConfig { name, proto_addr: _, hw_addr: _ } = cfg;
+                        if !ctx.eq(*name) {
+                            Some((*name, (), (), None))
+                        } else {
+                            None
+                        }
+                    })
+                    .collect::<Vec<_>>()
             },
         );
 
+        let ArpHostConfig {
+            name: local_name,
+            proto_addr: local_proto_addr,
+            hw_addr: local_hw_addr,
+        } = LOCAL_HOST_CFG;
+
+        let ArpHostConfig {
+            name: requested_remote_name,
+            proto_addr: requested_remote_proto_addr,
+            hw_addr: requested_remote_hw_addr,
+        } = requested_remote_cfg;
+
         // The lookup should fail.
-        assert_eq!(lookup(network.context("local"), (), TEST_LOCAL_MAC, TEST_REMOTE_IPV4), None);
+        assert_eq!(
+            lookup(network.context(local_name), (), local_hw_addr, requested_remote_proto_addr),
+            None
+        );
         // We should have sent an ARP request.
         validate_last_arp_packet(
-            network.context("local"),
+            network.context(local_name),
             1,
             Mac::BROADCAST,
             ArpOp::Request,
-            TEST_LOCAL_IPV4,
-            TEST_REMOTE_IPV4,
-            TEST_LOCAL_MAC,
+            local_proto_addr,
+            requested_remote_proto_addr,
+            local_hw_addr,
             Mac::BROADCAST,
         );
         // We should have installed a retry timer.
         validate_single_retry_timer(
-            network.context("local"),
+            network.context(local_name),
             DEFAULT_ARP_REQUEST_PERIOD,
-            TEST_REMOTE_IPV4,
+            requested_remote_proto_addr,
         );
 
-        // Step once to deliver the ARP request to the remote.
+        // Step once to deliver the ARP request to the remotes.
         let res = network.step::<ArpTimerFrameHandler<EthernetLinkDevice, Ipv4Addr>>();
         assert_eq!(res.timers_fired(), 0);
-        assert_eq!(res.frames_sent(), 1);
 
-        // The remote should have populated its ARP cache with the local's
+        // Our faked broadcast network should deliver frames to every host other
+        // than the sender itself. These should include all non-participating remotes
+        // and either the local or the participating remote, depending on who is
+        // sending the packet.
+        let expected_frames_sent_bcast = other_remote_cfgs.len() + 1;
+        assert_eq!(res.frames_sent(), expected_frames_sent_bcast);
+
+        // The requested remote should have populated its ARP cache with the local's
         // information.
         assert_eq!(
-            network.context("remote").get_ref().arp_state.table.lookup(TEST_LOCAL_IPV4),
-            Some(&TEST_LOCAL_MAC)
+            network
+                .context(requested_remote_name)
+                .get_ref()
+                .arp_state
+                .table
+                .lookup(local_proto_addr),
+            Some(&LOCAL_HOST_CFG.hw_addr)
         );
-        // The remote should have sent an ARP response.
+        // The requested remote should have sent an ARP response.
         validate_last_arp_packet(
-            network.context("remote"),
+            network.context(requested_remote_name),
             1,
-            TEST_LOCAL_MAC,
+            local_hw_addr,
             ArpOp::Response,
-            TEST_REMOTE_IPV4,
-            TEST_LOCAL_IPV4,
-            TEST_REMOTE_MAC,
-            TEST_LOCAL_MAC,
+            requested_remote_proto_addr,
+            local_proto_addr,
+            requested_remote_hw_addr,
+            local_hw_addr,
         );
+
+        other_remote_cfgs.iter().for_each(|non_requested_remote| {
+            let ArpHostConfig { name: unrequested_remote_name, proto_addr: _, hw_addr: _ } =
+                non_requested_remote;
+            // The non-requested_remote should not have populated its ARP cache.
+            assert_eq!(
+                network
+                    .context(*unrequested_remote_name)
+                    .get_ref()
+                    .arp_state
+                    .table
+                    .lookup(local_proto_addr),
+                None
+            );
+
+            // The non-requested_remote should not have sent an ARP response.
+            assert_empty(network.context(*unrequested_remote_name).frames().iter());
+        });
 
         // Step once to deliver the ARP response to the local.
         let res = network.step::<ArpTimerFrameHandler<EthernetLinkDevice, Ipv4Addr>>();
         assert_eq!(res.timers_fired(), 0);
-        assert_eq!(res.frames_sent(), 1);
+        assert_eq!(res.frames_sent(), expected_frames_sent_bcast);
 
         // The local should have populated its cache with the remote's
         // information.
         assert_eq!(
-            network.context("local").get_ref().arp_state.table.lookup(TEST_REMOTE_IPV4),
-            Some(&TEST_REMOTE_MAC)
+            network
+                .context(local_name)
+                .get_ref()
+                .arp_state
+                .table
+                .lookup(requested_remote_proto_addr),
+            Some(&requested_remote_hw_addr)
         );
         // The retry timer should be canceled, and replaced by an entry
         // expiration timer.
         validate_single_entry_timer(
-            network.context("local"),
+            network.context(local_name),
             DEFAULT_ARP_ENTRY_EXPIRATION_PERIOD,
-            TEST_REMOTE_IPV4,
+            requested_remote_proto_addr,
         );
         // The device layer should have been notified.
         assert_eq!(
-            network.context("local").get_ref().addr_resolved.as_slice(),
-            [(TEST_REMOTE_IPV4, TEST_REMOTE_MAC)]
+            network.context(local_name).get_ref().addr_resolved.as_slice(),
+            [(requested_remote_proto_addr, requested_remote_hw_addr)]
         );
     }
 
