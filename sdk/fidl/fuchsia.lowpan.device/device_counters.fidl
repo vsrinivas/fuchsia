@@ -25,6 +25,17 @@ type AllCounters = table {
 
     /// MAC Counters for RX
     2: mac_rx MacCounters;
+
+    /// Coex Counters for TX
+    3: coex_tx CoexCounters;
+
+    /// Coex Counters for RX
+    4: coex_rx CoexCounters;
+
+    /// Coex stats may be incorrect due to internal counter overflow.
+    ///
+    /// Reset the counters to clear this flag.
+    5: coex_saturated bool;
 };
 
 /// Counters associated with the MAC layer.
@@ -122,4 +133,42 @@ type MacCounters = table {
 
     /// The number of frames that encountered some other error.
    26: err_other uint32;
+};
+
+/// Counters associated with RF Coexistance.
+///
+/// Some counters are only valid for RX or TX. See [this][1] for more info.
+///
+/// [1]: https://github.com/openthread/wpantund/blob/4ae4619/third_party/openthread/src/ncp/spinel.h#L1738-L1775
+type CoexCounters = table {
+    /// The number of requests
+    1: requests uint64;
+
+    /// The number of requests while grant was active
+    2: grant_immediate uint64;
+
+    /// The number of requests while grant was inactive
+    3: grant_wait uint64;
+
+    /// The number of requests while grant was inactive that were
+    /// ultimately granted
+    4: grant_wait_activated uint64;
+
+    /// The number of requests while grant was inactive that timed out
+    5: grant_wait_timeout uint64;
+
+    /// The number of requests that were in progress when grant was
+    /// deactivated
+    6: grant_deactivated_during_request uint64;
+
+    /// The number of requests that were not granted within 50µs
+    7: delayed_grant uint64;
+
+    /// The average time in µsec from request to grant
+    8: avg_delay_request_to_grant_usec uint32;
+
+    /// The number of requests that completed without receiving grant.
+    ///
+    /// Receive only.
+    9: grant_none uint64;
 };
