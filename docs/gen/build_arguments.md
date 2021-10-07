@@ -814,7 +814,7 @@ Whether to use v1, if this is set to false, make sure that the v2 shard
 is somehow being included.
 TODO(fxbug.dev/78647) Remove once v2 migration is complete.
 
-**Current value (from the default):** `true`
+**Current value (from the default):** `false`
 
 From //src/media/codec/bundles/BUILD.gn:9
 
