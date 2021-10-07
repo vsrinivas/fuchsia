@@ -1064,7 +1064,7 @@ zx_status_t Vcpu::Enter(zx_port_packet_t* packet) {
 
 void Vcpu::Kick() {
   kicked_.store(true);
-  // If the VCPU was not running, cancel any wait-for-interrupts.
+  // Cancel any pending or upcoming wait-for-interrupts.
   local_apic_state_.interrupt_tracker.Cancel();
   // Check if the VCPU is running and whether to send an IPI. We hold the thread
   // lock to guard against thread migration between CPUs during the check.
