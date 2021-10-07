@@ -4,7 +4,6 @@
 
 library fuchsia.net.interfaces.admin;
 
-using zx;
 using fuchsia.net;
 using fuchsia.hardware.network;
 using fuchsia.net.interfaces;
@@ -43,11 +42,16 @@ protocol Control {
     /// Removes an address from the interface.
     ///
     /// + request `address` the address to remove.
-    /// * error `ZX_ERR_NOT_FOUND` if the provided address is not associated
-    ///     with the interface.
+    /// - response `removed` `true` iff `address` was attached to the interface
+    /// before this call completed.
     RemoveAddress(struct {
         address fuchsia.net.InterfaceAddress;
-    }) -> (struct {}) error zx.status;
+    }) -> (struct {
+        removed bool;
+    }) error flexible enum {
+        // TODO(https://fxbug.dev/85667): This should be an empty enum.
+        RESERVED = 0;
+    };
 
     /// Gets the interface identifier.
     ///

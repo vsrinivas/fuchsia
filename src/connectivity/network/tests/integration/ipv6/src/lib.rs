@@ -724,13 +724,14 @@ async fn duplicate_address_detection<E: netemul::Endpoint>(name: &str) {
         .await
         .expect("failed to wait for address to be UNAVAILBALE");
 
-        let () = control
+        let removed = control
             .remove_address(&mut net::InterfaceAddress::Ipv6(net::Ipv6Address {
                 addr: ipv6_consts::LINK_LOCAL_ADDR.ipv6_bytes(),
             }))
             .await
             .expect("FIDL error removing address")
             .expect("failed to remove address");
+        assert!(removed);
     }
 
     // Add the address while the interface is down.

@@ -384,10 +384,14 @@ func (ci *adminControlImpl) AddAddress(_ fidl.Context, interfaceAddr net.Interfa
 
 func (ci *adminControlImpl) RemoveAddress(_ fidl.Context, address net.InterfaceAddress) (admin.ControlRemoveAddressResult, error) {
 	protocolAddr := interfaceAddressToProtocolAddress(address)
-	if zxErr := ci.ns.removeInterfaceAddress(ci.nicid, protocolAddr, false /* removeRoute */); zxErr != zx.ErrOk {
-		return admin.ControlRemoveAddressResultWithErr(int32(zxErr)), nil
+	switch zxErr := ci.ns.removeInterfaceAddress(ci.nicid, protocolAddr, false /* removeRoute */); zxErr {
+	case zx.ErrOk:
+		return admin.ControlRemoveAddressResultWithResponse(admin.ControlRemoveAddressResponse{Removed: true}), nil
+	case zx.ErrNotFound:
+		return admin.ControlRemoveAddressResultWithResponse(admin.ControlRemoveAddressResponse{Removed: false}), nil
+	default:
+		panic(fmt.Sprintf("removeInterfaceAddress(%d, %v, false) = %s", ci.nicid, protocolAddr, zxErr))
 	}
-	return admin.ControlRemoveAddressResultWithResponse(admin.ControlRemoveAddressResponse{}), nil
 }
 
 func (ci *adminControlImpl) GetId(fidl.Context) (uint64, error) {

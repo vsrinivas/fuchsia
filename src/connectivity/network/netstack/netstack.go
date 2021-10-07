@@ -373,7 +373,7 @@ func (ns *Netstack) removeInterfaceAddress(nic tcpip.NICID, addr tcpip.ProtocolA
 	case *tcpip.ErrBadLocalAddress:
 		return zx.ErrNotFound
 	default:
-		return zx.ErrInternal
+		panic(fmt.Sprintf("stack.RemoveAddress(%d, %s) = %s", nic, addr.AddressWithPrefix.Address, err))
 	}
 
 	ns.onPropertiesChange(nic, nil)
