@@ -43,7 +43,8 @@ zx_status_t VnodeFile::CreateStream(uint32_t stream_options, zx::stream* out_str
 
 void VnodeFile::DidModifyStream() { UpdateModified(); }
 
-zx_status_t VnodeFile::GetVmo(int flags, zx::vmo* out_vmo, size_t* out_size) {
+zx_status_t VnodeFile::GetVmo(fuchsia_io::wire::VmoFlags flags, zx::vmo* out_vmo,
+                              size_t* out_size) {
   zx_status_t status = CreateBackingStoreIfNeeded();
   if (status != ZX_OK) {
     return status;
@@ -51,11 +52,11 @@ zx_status_t VnodeFile::GetVmo(int flags, zx::vmo* out_vmo, size_t* out_size) {
   size_t content_size = GetContentSize();
   // Let clients map and set the names of their VMOs.
   zx_rights_t rights = ZX_RIGHTS_BASIC | ZX_RIGHT_MAP | ZX_RIGHT_GET_PROPERTY;
-  rights |= (flags & fuchsia_io::wire::kVmoFlagRead) ? ZX_RIGHT_READ : 0;
-  rights |= (flags & fuchsia_io::wire::kVmoFlagWrite) ? ZX_RIGHT_WRITE : 0;
-  rights |= (flags & fuchsia_io::wire::kVmoFlagExec) ? ZX_RIGHT_EXECUTE : 0;
+  rights |= (flags & fuchsia_io::wire::VmoFlags::kRead) ? ZX_RIGHT_READ : 0;
+  rights |= (flags & fuchsia_io::wire::VmoFlags::kWrite) ? ZX_RIGHT_WRITE : 0;
+  rights |= (flags & fuchsia_io::wire::VmoFlags::kExecute) ? ZX_RIGHT_EXECUTE : 0;
   zx::vmo result;
-  if (flags & fuchsia_io::wire::kVmoFlagPrivate) {
+  if (flags & fuchsia_io::wire::VmoFlags::kPrivateClone) {
     rights |= ZX_RIGHT_SET_PROPERTY;  // Only allow object_set_property on private VMO.
     if ((status = vmo_.create_child(ZX_VMO_CHILD_SNAPSHOT_AT_LEAST_ON_WRITE, 0, content_size,
                                     &result)) != ZX_OK) {

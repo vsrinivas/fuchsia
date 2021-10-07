@@ -115,7 +115,8 @@ class PagingTestFile : public PagedVnode {
     }
     return ZX_ERR_NOT_SUPPORTED;
   }
-  zx_status_t GetVmo(int flags, zx::vmo* out_vmo, size_t* out_size) override {
+  zx_status_t GetVmo(fuchsia_io::wire::VmoFlags flags, zx::vmo* out_vmo,
+                     size_t* out_size) override {
     std::lock_guard lock(mutex_);
 
     // We need to signal after the VMO was mapped that it changed.

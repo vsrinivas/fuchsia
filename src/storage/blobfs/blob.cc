@@ -1003,8 +1003,8 @@ zx_status_t Blob::QueryFilesystem(fuchsia_io_admin::wire::FilesystemInfo* info) 
 
 zx::status<std::string> Blob::GetDevicePath() const { return blobfs_->Device()->GetDevicePath(); }
 
-zx_status_t Blob::GetVmo(int flags, zx::vmo* out_vmo, size_t* out_size) {
-  TRACE_DURATION("blobfs", "Blob::GetVmo", "flags", flags);
+zx_status_t Blob::GetVmo(fuchsia_io::wire::VmoFlags flags, zx::vmo* out_vmo, size_t* out_size) {
+  TRACE_DURATION("blobfs", "Blob::GetVmo", "flags", static_cast<uint64_t>(flags));
 
   std::lock_guard lock(mutex_);
 
@@ -1012,9 +1012,9 @@ zx_status_t Blob::GetVmo(int flags, zx::vmo* out_vmo, size_t* out_size) {
   // can easily forget to open the blob before getting the VMO.
   ZX_DEBUG_ASSERT(open_count() > 0);
 
-  if (flags & fuchsia_io::wire::kVmoFlagWrite) {
+  if (flags & fuchsia_io::wire::VmoFlags::kWrite) {
     return ZX_ERR_NOT_SUPPORTED;
-  } else if (flags & fuchsia_io::wire::kVmoFlagExact) {
+  } else if (flags & fuchsia_io::wire::VmoFlags::kSharedBuffer) {
     return ZX_ERR_NOT_SUPPORTED;
   }
 
@@ -1022,8 +1022,8 @@ zx_status_t Blob::GetVmo(int flags, zx::vmo* out_vmo, size_t* out_size) {
   zx_rights_t rights = ZX_RIGHTS_BASIC | ZX_RIGHT_MAP | ZX_RIGHTS_PROPERTY;
   // We can ignore fuchsia_io_VMO_FLAG_PRIVATE, since private / shared access to the underlying VMO
   // can both be satisfied with a clone due to the immutability of blobfs blobs.
-  rights |= (flags & fuchsia_io::wire::kVmoFlagRead) ? ZX_RIGHT_READ : 0;
-  rights |= (flags & fuchsia_io::wire::kVmoFlagExec) ? ZX_RIGHT_EXECUTE : 0;
+  rights |= (flags & fuchsia_io::wire::VmoFlags::kRead) ? ZX_RIGHT_READ : 0;
+  rights |= (flags & fuchsia_io::wire::VmoFlags::kExecute) ? ZX_RIGHT_EXECUTE : 0;
   return CloneDataVmo(rights, out_vmo, out_size);
 }
 

@@ -97,7 +97,7 @@ class VnodeFile final : public VnodeMemfs {
   zx_status_t GetAttributes(fs::VnodeAttributes* a) final;
   zx_status_t GetNodeInfoForProtocol(fs::VnodeProtocol protocol, fs::Rights rights,
                                      fs::VnodeRepresentation* info) final;
-  zx_status_t GetVmo(int flags, zx::vmo* out_vmo, size_t* out_size) final;
+  zx_status_t GetVmo(fuchsia_io::wire::VmoFlags flags, zx::vmo* out_vmo, size_t* out_size) final;
 
   zx_status_t CreateBackingStoreIfNeeded();
   size_t GetContentSize() const;
@@ -155,7 +155,7 @@ class VnodeDir final : public VnodeMemfs {
   zx_status_t GetAttributes(fs::VnodeAttributes* a) final;
   zx_status_t GetNodeInfoForProtocol(fs::VnodeProtocol protocol, fs::Rights rights,
                                      fs::VnodeRepresentation* info) final;
-  zx_status_t GetVmo(int flags, zx::vmo* out_vmo, size_t* out_size) final;
+  zx_status_t GetVmo(fuchsia_io::wire::VmoFlags flags, zx::vmo* out_vmo, size_t* out_size) final;
 
   fs::RemoteContainer remoter_;
   fs::WatcherContainer watcher_;
@@ -174,7 +174,7 @@ class VnodeVmo final : public VnodeMemfs {
   zx_status_t GetAttributes(fs::VnodeAttributes* a) final;
   zx_status_t GetNodeInfoForProtocol(fs::VnodeProtocol protocol, fs::Rights rights,
                                      fs::VnodeRepresentation* info) final;
-  zx_status_t GetVmo(int flags, zx::vmo* out_vmo, size_t* out_size) final;
+  zx_status_t GetVmo(fuchsia_io::wire::VmoFlags flags, zx::vmo* out_vmo, size_t* out_size) final;
   zx_status_t MakeLocalClone();
 
   zx_handle_t vmo_ = ZX_HANDLE_INVALID;

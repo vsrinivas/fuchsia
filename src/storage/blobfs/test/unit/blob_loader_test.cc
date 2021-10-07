@@ -116,7 +116,7 @@ class BlobLoaderTest : public TestWithParam<TestParamType> {
 
     zx::vmo vmo;
     size_t size = 0;
-    if (zx_status_t status = blob->GetVmo(fuchsia_io::wire::kVmoFlagRead, &vmo, &size);
+    if (zx_status_t status = blob->GetVmo(fuchsia_io::wire::VmoFlags::kRead, &vmo, &size);
         status != ZX_OK)
       return status;
     EXPECT_TRUE(vmo.is_valid());  // Always expect a valid blob on success.

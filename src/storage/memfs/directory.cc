@@ -73,7 +73,7 @@ zx_status_t VnodeDir::QueryFilesystem(fuchsia_io_admin::wire::FilesystemInfo* in
   return ZX_OK;
 }
 
-zx_status_t VnodeDir::GetVmo(int flags, zx::vmo* out_vmo, size_t* out_size) {
+zx_status_t VnodeDir::GetVmo(fuchsia_io::wire::VmoFlags flags, zx::vmo* out_vmo, size_t* out_size) {
   return ZX_ERR_ACCESS_DENIED;
 }
 

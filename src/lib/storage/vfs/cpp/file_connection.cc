@@ -151,29 +151,62 @@ void FileConnection::SetFlags(SetFlagsRequestView request, SetFlagsCompleter::Sy
   completer.Reply(ZX_OK);
 }
 
+zx_status_t FileConnection::GetBackingMemoryInternal(fuchsia_io::wire::VmoFlags flags,
+                                                     zx::vmo* out_vmo, size_t* out_size) {
+  if (options().flags.node_reference) {
+    return ZX_ERR_BAD_HANDLE;
+  } else if ((flags & fio::wire::VmoFlags::kPrivateClone) &&
+             (flags & fio::wire::VmoFlags::kSharedBuffer)) {
+    return ZX_ERR_INVALID_ARGS;
+  } else if (options().flags.append && (flags & fio::wire::VmoFlags::kWrite)) {
+    return ZX_ERR_ACCESS_DENIED;
+  } else if (!options().rights.write && (flags & fio::wire::VmoFlags::kWrite)) {
+    return ZX_ERR_ACCESS_DENIED;
+  } else if (!options().rights.execute && (flags & fio::wire::VmoFlags::kExecute)) {
+    return ZX_ERR_ACCESS_DENIED;
+  } else if (!options().rights.read) {
+    return ZX_ERR_ACCESS_DENIED;
+  } else {
+    return vnode()->GetVmo(flags, out_vmo, out_size);
+  }
+}
+
 void FileConnection::GetBuffer(GetBufferRequestView request, GetBufferCompleter::Sync& completer) {
   FS_PRETTY_TRACE_DEBUG("[FileGetBuffer] our options: ", options(),
                         ", incoming flags: ", ZxFlags(request->flags));
+  fio::wire::VmoFlags flags;
+  if (request->flags & fio::wire::kVmoFlagRead) {
+    flags |= fio::wire::VmoFlags::kRead;
+  }
+  if (request->flags & fio::wire::kVmoFlagWrite) {
+    flags |= fio::wire::VmoFlags::kWrite;
+  }
+  if (request->flags & fio::wire::kVmoFlagExec) {
+    flags |= fio::wire::VmoFlags::kExecute;
+  }
+  if (request->flags & fio::wire::kVmoFlagPrivate) {
+    flags |= fio::wire::VmoFlags::kPrivateClone;
+  }
+  if (request->flags & fio::wire::kVmoFlagExact) {
+    flags |= fio::wire::VmoFlags::kSharedBuffer;
+  }
 
-  if (options().flags.node_reference) {
-    completer.Reply(ZX_ERR_BAD_HANDLE, nullptr);
-  } else if ((request->flags & fio::wire::kVmoFlagPrivate) &&
-             (request->flags & fio::wire::kVmoFlagExact)) {
-    completer.Reply(ZX_ERR_INVALID_ARGS, nullptr);
-  } else if ((options().flags.append) && (request->flags & fio::wire::kVmoFlagWrite)) {
-    completer.Reply(ZX_ERR_ACCESS_DENIED, nullptr);
-  } else if (!options().rights.write && (request->flags & fio::wire::kVmoFlagWrite)) {
-    completer.Reply(ZX_ERR_ACCESS_DENIED, nullptr);
-  } else if (!options().rights.execute && (request->flags & fio::wire::kVmoFlagExec)) {
-    completer.Reply(ZX_ERR_ACCESS_DENIED, nullptr);
-  } else if (!options().rights.read) {
-    completer.Reply(ZX_ERR_ACCESS_DENIED, nullptr);
+  fuchsia_mem::wire::Buffer buffer;
+  zx_status_t status = GetBackingMemoryInternal(flags, &buffer.vmo, &buffer.size);
+  completer.Reply(status, status == ZX_OK
+                              ? fidl::ObjectView<fuchsia_mem::wire::Buffer>::FromExternal(&buffer)
+                              : nullptr);
+}
+
+void FileConnection::GetBackingMemory(GetBackingMemoryRequestView request,
+                                      GetBackingMemoryCompleter::Sync& completer) {
+  zx::vmo vmo;
+  size_t size = 0;
+  zx_status_t status = GetBackingMemoryInternal(request->flags, &vmo, &size);
+  if (status != ZX_OK) {
+    completer.ReplyError(status);
   } else {
-    fuchsia_mem::wire::Buffer buffer;
-    zx_status_t status = vnode()->GetVmo(request->flags, &buffer.vmo, &buffer.size);
-    completer.Reply(status, status == ZX_OK
-                                ? fidl::ObjectView<fuchsia_mem::wire::Buffer>::FromExternal(&buffer)
-                                : nullptr);
+    completer.ReplySuccess(std::move(vmo));
   }
 }
 

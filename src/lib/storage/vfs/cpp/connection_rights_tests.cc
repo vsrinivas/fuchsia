@@ -38,7 +38,8 @@ TEST(ConnectionRightsTest, RightsBehaveAsExpected) {
       return ZX_OK;
     }
     fs::VnodeProtocolSet GetProtocols() const final { return fs::VnodeProtocol::kFile; }
-    zx_status_t GetVmo(int flags, zx::vmo* out_vmo, size_t* out_size) override {
+    zx_status_t GetVmo(fuchsia_io::wire::VmoFlags flags, zx::vmo* out_vmo,
+                       size_t* out_size) override {
       zx::vmo vmo;
       zx_status_t status = zx::vmo::create(4096, 0u, &vmo);
       EXPECT_EQ(status, ZX_OK);

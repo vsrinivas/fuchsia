@@ -186,7 +186,7 @@ TEST_P(BlobTest, ReadingBlobZerosTail) {
 
   zx::vmo vmo;
   size_t data_size;
-  EXPECT_EQ(file->GetVmo(fio::wire::kVmoFlagRead, &vmo, &data_size), ZX_OK);
+  EXPECT_EQ(file->GetVmo(fio::wire::VmoFlags::kRead, &vmo, &data_size), ZX_OK);
   EXPECT_EQ(data_size, 64ul);
 
   size_t vmo_size;
@@ -286,7 +286,7 @@ TEST_P(BlobTest, UnlinkBlocksUntilNoVmoChildren) {
     TestScopedVnodeOpen open(file);
     zx::vmo vmo = {};
     size_t data_size;
-    EXPECT_EQ(file->GetVmo(fio::wire::kVmoFlagRead, &vmo, &data_size), ZX_OK);
+    EXPECT_EQ(file->GetVmo(fio::wire::VmoFlags::kRead, &vmo, &data_size), ZX_OK);
     EXPECT_EQ(data_size, info->size_data);
     return vmo;
   }();
@@ -323,7 +323,7 @@ TEST_P(BlobTest, VmoChildDeletedTriggersPurging) {
 
     // Open the blob, get the vmo, and close the blob.
     TestScopedVnodeOpen open(file);
-    EXPECT_EQ(file->GetVmo(fio::wire::kVmoFlagRead, &vmo, &data_size), ZX_OK);
+    EXPECT_EQ(file->GetVmo(fio::wire::VmoFlags::kRead, &vmo, &data_size), ZX_OK);
     EXPECT_EQ(data_size, info->size_data);
     return vmo;
   }();
@@ -438,7 +438,7 @@ TEST_P(BlobTest, VmoNameActiveWhileVmoClonesExist) {
 
   zx::vmo vmo;
   size_t size;
-  ASSERT_EQ(blob->GetVmo(fio::wire::kVmoFlagRead, &vmo, &size), ZX_OK);
+  ASSERT_EQ(blob->GetVmo(fio::wire::VmoFlags::kRead, &vmo, &size), ZX_OK);
   ASSERT_EQ(blob->Close(), ZX_OK);
   EXPECT_EQ(GetVmoName(GetPagedVmo(*blob)), active_name);
 

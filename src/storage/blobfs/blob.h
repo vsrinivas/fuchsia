@@ -88,7 +88,8 @@ class Blob final : public CacheNode, fbl::Recyclable<Blob> {
   zx_status_t QueryFilesystem(fuchsia_io_admin::wire::FilesystemInfo* out) final
       __TA_EXCLUDES(mutex_);
   zx::status<std::string> GetDevicePath() const final __TA_EXCLUDES(mutex_);
-  zx_status_t GetVmo(int flags, zx::vmo* out_vmo, size_t* out_size) final __TA_EXCLUDES(mutex_);
+  zx_status_t GetVmo(fuchsia_io::wire::VmoFlags flags, zx::vmo* out_vmo, size_t* out_size) final
+      __TA_EXCLUDES(mutex_);
   void Sync(SyncCallback on_complete) final __TA_EXCLUDES(mutex_);
 
   // fs::PagedVnode implementation.

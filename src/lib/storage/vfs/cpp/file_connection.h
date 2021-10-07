@@ -54,6 +54,8 @@ class FileConnection : public Connection, public fidl::WireServer<fuchsia_io::Fi
   void GetFlags(GetFlagsRequestView request, GetFlagsCompleter::Sync& completer) final;
   void SetFlags(SetFlagsRequestView request, SetFlagsCompleter::Sync& completer) final;
   void GetBuffer(GetBufferRequestView request, GetBufferCompleter::Sync& completer) final;
+  void GetBackingMemory(GetBackingMemoryRequestView request,
+                        GetBackingMemoryCompleter::Sync& completer) final;
 
   //
   // |fuchsia.io2/AdvisoryLocking| operations.
@@ -64,6 +66,8 @@ class FileConnection : public Connection, public fidl::WireServer<fuchsia_io::Fi
 
  private:
   zx_status_t ResizeInternal(uint64_t length);
+  zx_status_t GetBackingMemoryInternal(fuchsia_io::wire::VmoFlags flags, zx::vmo* out_vmo,
+                                       size_t* out_size);
 };
 
 }  // namespace internal

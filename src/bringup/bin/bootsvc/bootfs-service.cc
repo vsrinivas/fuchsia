@@ -174,10 +174,12 @@ zx_status_t BootfsService::Open(const char* path, bool executable, zx::vmo* vmo,
   ZX_ASSERT(open_result.is_ok());
   fbl::RefPtr<fs::Vnode> node = std::move(open_result.ok().vnode);
 
-  // memfs doesn't currently do anything different for VMO_FLAG_PRIVATE, but it may in the future,
+  // memfs doesn't currently do anything different for kPrivateClone, but it may in the future,
   // and this matches the flags used by fdio_get_vmo_clone/exec.
-  uint32_t vmo_flags = fio::wire::kVmoFlagRead | fio::wire::kVmoFlagPrivate;
-  vmo_flags |= executable ? fio::wire::kVmoFlagExec : 0;
+  fio::wire::VmoFlags vmo_flags = fio::wire::VmoFlags::kRead | fio::wire::VmoFlags::kPrivateClone;
+  if (executable) {
+    vmo_flags |= fio::wire::VmoFlags::kExecute;
+  }
   return node->GetVmo(vmo_flags, vmo, size);
 }
 

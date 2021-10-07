@@ -293,7 +293,7 @@ bool Vnode::IsRemote() const { return false; }
 
 #ifdef __Fuchsia__
 
-zx_status_t Vnode::GetVmo(int flags, zx::vmo* out_vmo, size_t* out_size) {
+zx_status_t Vnode::GetVmo(fuchsia_io::wire::VmoFlags flags, zx::vmo* out_vmo, size_t* out_size) {
   return ZX_ERR_NOT_SUPPORTED;
 }
 
