@@ -209,6 +209,10 @@ func StringInLogsChecks() []FailureModeCheck {
 		driverHostCrash("", "pdev:00:00:24"),
 		// For fxbug.dev/55637
 		&stringInLogCheck{String: " in fx_logger::GetSeverity() ", Type: swarmingOutputType},
+		// For fxbug.dev/71784. Do not check for this in swarming output as this does not indicate
+		// an error if logged by unit tests.
+		&stringInLogCheck{String: "intel-i915: No displays detected.", Type: serialLogType},
+		&stringInLogCheck{String: "intel-i915: No displays detected.", Type: syslogType},
 	}
 
 	oopsExceptBlocks := []*logBlock{
@@ -252,8 +256,6 @@ func StringInLogsChecks() []FailureModeCheck {
 			}},
 			&stringInLogCheck{String: "double fault, halting", Type: lt},
 			&stringInLogCheck{String: "entering panic shell loop", Type: lt},
-			// For fxbug.dev/71784.
-			&stringInLogCheck{String: "intel-i915: No displays detected.", Type: lt},
 		}...)
 	}
 
