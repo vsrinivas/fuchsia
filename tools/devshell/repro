@@ -29,31 +29,17 @@ source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/lib/vars.
 
 set -e -o pipefail
 
-function create_builddir_name {
-  if [[ -n "$build_id" ]]; then
-    echo "out/repro_${build_id}"
-  else
-    echo "out/repro_${project}_${bucket}_${builder}"
-  fi
-}
-
 function repro {
-  local project="$1"
-  local bucket="$2"
-  local builder="$3"
-  local build_id="$4"
+  local build_id="$1"
+  local fint_params_file_relative="$2"
 
-  local fint_params_file build_dir_name
-  local fint_params_file_relative
-  local fint_params_file_relative_legacy
+  local can_sync_to=false
 
-  local instructions_file
+  local build_dir_name
+  if [[ -n "$build_id" ]]; then
+    can_sync_to=true
+    build_dir_name="out/repro_${build_id}"
 
-  local can_sync_to=true
-
-  if [[ -z "$build_id" ]]; then
-    can_sync_to=false
-  else
     check_bb_auth
     build=$(get_build "$build_id")
     if [[ -z "$build" ]]; then
@@ -65,38 +51,58 @@ function repro {
     bucket="$(get_builder_field bucket)"
     builder="$(get_builder_field builder)"
 
-    build_url="https://luci-milo.appspot.com/p/${project}/builders/${bucket}/${builder}/b${build_id}"
-  fi
+    local build_url="https://ci.chromium.org/p/${project}/builders/${bucket}/${builder}/b${build_id}"
 
-  fint_params_file_relative="$(get_fint_params_path)"
-  # Older builds don't emit the fint params path as an output property, so we
-  # have to fall back to a more fragile approach for constructing the path.
-  # TODO(olivernewman): Delete this more fragile logic after we no longer need
-  # to reproduce any builds from before fxrev.dev/573872 landed.
-  if [[ -z "$fint_params_file_relative" ]]; then
-    # Note that it's not a strict requirement that a fint params file have the
-    # same name as its builder; it just happens to be the case for most builders
-    # (except the builders that do multiple builds and thus have multiple fint
-    # params files).
-    fint_params_file_relative="integration/infra/config/generated/${project}/fint_params/${bucket}/${builder}.textproto"
-    # Older revisions used the following pattern:
-    fint_params_file_relative_legacy="integration/infra/config/generated/${project}/specs/${bucket}/${builder}.fint.textproto"
-  fi
-  fint_params_file="${FUCHSIA_DIR}/${fint_params_file_relative}"
-  fint_params_file_legacy="${FUCHSIA_DIR}/${fint_params_file_relative_legacy}"
-
-  if [[ ! -f "${fint_params_file}" ]]; then
-    if [[ -f "${fint_params_file_legacy}" ]]; then
-      fint_params_file="$fint_params_file_legacy"
-    else
-      fx-error "Cannot find fint parameters for this build: ${fint_params_file} or ${fint_params_file_legacy}"
-      fx-error "If this is an internal builder, make sure your Fuchsia source tree has the internal"
-      fx-error "integration repository as described in https://fuchsia.dev/internal/intree/development/get-the-source-code"
+    fint_params_file_relative="$(get_fint_params_path)"
+    if [[ -z "$fint_params_file_relative" ]]; then
+      fx-error "This build did not emit a 'fint_params_path' property."
+      fx-error "If the build ran against an old revision, you may need to run"
+      fx-error
+      fx-error "  fx sync-to b${build_id}"
+      fx-error
+      fx-error "to switch to that version of the checkout and then run 'fx repro' again."
       return 1
     fi
+
+    local fint_params_file="${FUCHSIA_DIR}/${fint_params_file_relative}"
+    if [[ ! -f "${fint_params_file}" ]]; then
+      # The fint params file used by the build doesn't exist; this can be for
+      # one of several reasons.
+      if [[ "${fint_params_file_relative}" =~ ^integration/infra/config/generated/[a-z]+/specs/.+\.fint\.textproto$ ]]; then
+        if [[ -n "$build_id" ]]; then
+          fx-error "This build uses an old fint parameters file that's no longer available at HEAD."
+          fx-error "Try switching back to the revision used by the build by running:"
+          fx-error
+          fx-error "  fx sync-to b${build_id}"
+          fx-error
+          fx-error "and then run 'fx repro' again."
+        else
+          fx-error "This is an old fint parameter file that's no longer available at HEAD."
+        fi
+      else
+        fx-error "Cannot find fint parameters for this build: ${fint_params_file_relative}"
+        fx-error "If this is an internal builder, make sure your Fuchsia source tree has the internal"
+        fx-error "integration repository as described in https://fuchsia.dev/internal/intree/development/get-the-source-code"
+      fi
+      return 1
+    fi
+  else
+    if [[ ! -f "${FUCHSIA_DIR}/${fint_params_file_relative}" ]]; then
+      fx-error "Cannot find file ${FUCHSIA_DIR}/${fint_params_file_relative}"
+      usage
+      return 1
+    fi
+    if [[ "${fint_params_file_relative}" =~ ^integration/infra/config/generated/(.+)/fint_params/(.+)/(.+).textproto$ ]]; then
+      project="${BASH_REMATCH[1]}"
+      bucket="${BASH_REMATCH[2]}"
+      builder="${BASH_REMATCH[3]}"
+    else
+      fx-error "Invalid path format for fint params file: ${fint_params_file_relative}"
+      return 1
+    fi
+    build_dir_name="out/repro_${project}_${bucket}_${builder}"
   fi
 
-  build_dir_name="$(create_builddir_name)"
   instructions_file="${FUCHSIA_DIR}/${build_dir_name}.instructions"
 
   fx-config-read
@@ -111,21 +117,21 @@ function repro {
     exit 1
   fi
 
+  # Remove old instructions file if one already exists with the same name.
   rm -f "${instructions_file}"
 
-  print_comment "Fint params file: //$fint_params_file_relative"
+  print_comment "Fint params file: //${fint_params_file_relative}"
   if [[ -n "$build_id" ]]; then
-    print_comment "Build URL: $build_url"
+    print_comment "Build URL: ${build_url}"
   fi
 
-  print_spacer
-
-  print_comment "Sync the Fuchsia source tree to the same commit:"
   if $can_sync_to; then
+    print_spacer
+    print_comment "Sync the Fuchsia source tree to the same commit:"
     print_cmd "fx sync-to ${build_id}"
   fi
-  print_spacer
 
+  print_spacer
   print_comment "Set the build configuration:"
   print_cmd "fx --dir=${build_dir_name} set --fint-params-path '$fint_params_file_relative'"
   print_spacer
@@ -142,9 +148,7 @@ function repro {
   print_spacer
 
   if [[ -n "$build_id" ]]; then
-    print_comment "Run only failed tests:"
     repro_failed_test_commands
-    print_spacer
   fi
 
   if [[ "$(build_has_binary_sizes)" == "true" ]]; then
@@ -177,9 +181,10 @@ function repro_failed_test_commands {
   local status
   status="$(get_build_status)"
   if [[ "$status" != "FAILURE" ]]; then
-    print_comment "Status of this build is $status. Failed tests can only exist in builds with status 'FAILURE'"
     return
   fi
+
+  print_comment "Run only failed tests:"
 
   local failed_tests
   failed_tests="$(get_failed_tests)"
@@ -190,6 +195,7 @@ function repro_failed_test_commands {
     return
   fi
   repro_test_commands "$failed_tests"
+  print_spacer
 }
 
 function repro_test_commands {
@@ -281,46 +287,27 @@ function main {
     return 0
   fi
 
+  local arg="$1"
+  arg="${arg#http://}"
+  arg="${arg#https://}"
 
-  local build_url="$1"
-  build_url="${build_url#http://}"
-  build_url="${build_url#https://}"
-
-  local project="" bucket="" builder="" build_id=""
-  if [[ "${build_url}" =~ ^b?([0-9]+)[?]?$ ]]; then
+  local fint_params_file_relative=""
+  local build_id=""
+  if [[ "${arg}" =~ ^b?([0-9]+)[?]?$ ]]; then
     build_id="${BASH_REMATCH[1]}"
-
-  elif [[ "${build_url}" =~ ^cr-buildbucket.appspot.com/build/b?([0-9]+) ]]; then
+  elif [[ "${arg}" =~ ^cr-buildbucket.appspot.com/build/b?([0-9]+) ]]; then
     build_id="${BASH_REMATCH[1]}"
-
-  elif [[ "${build_url}" =~ -subbuild/ ]]; then
-    fx-error "The URL you pasted is from a subbuild, which doesn't have enough information"
-    fx-error "to reproduce the entire build. Please go back and find the correponding tryjob"
-    fx-error "without the '-subbuild' suffix."
-    return 1
-
-  elif [[ "${build_url}" =~ ^integration/infra/config/generated/(.+)/fint_params/(.+)/(.+).textproto$ ]] ||
-       [[ "${build_url}" =~ ^integration/infra/config/generated/(.+)/specs/(.+)/(.+).fint.textproto$ ]]; then
-    local fint_params="${FUCHSIA_DIR}/${build_url}"
-    if [[ ! -f "${fint_params}" ]]; then
-      fx-error "Cannot find file ${fint_params}"
-      usage
-      return 1
-    fi
-    project="${BASH_REMATCH[1]}"
-    bucket="${BASH_REMATCH[2]}"
-    builder="${BASH_REMATCH[3]}"
-
-  elif [[ "${build_url}" =~ ^(luci-milo.appspot.com|ci.chromium.org)(/ui)?/p/(.+)/builders/(.+)/(.+)/b([0-9]+) ]]; then
+  elif [[ "${arg}" =~ ^(luci-milo.appspot.com|ci.chromium.org)(/ui)?/p/(.+)/builders/(.+)/(.+)/b([0-9]+) ]]; then
     build_id="${BASH_REMATCH[6]}"
-
+  elif [[ "${arg}" == integration/* ]]; then
+    fint_params_file_relative="${arg}"
   else
-    fx-error "Unsupported build ID, build URL or fint params file: ${build_url}"
+    fx-error "Unsupported build ID, build URL or fint params file: ${arg}"
     usage
     return 1
   fi
 
-  repro "$project" "$bucket" "$builder" "$build_id"
+  repro "${build_id}" "${fint_params_file_relative}"
 }
 
 main "$@"
