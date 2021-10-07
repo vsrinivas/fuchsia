@@ -6,7 +6,6 @@
 // @dart=2.9
 
 import 'dart:async';
-import 'dart:ui' show Locale;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';

@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 import 'package:flutter/material.dart';
-import 'package:flutter/rendering.dart';
 import 'layout.dart';
 
 /// Checkbox in the Terminal Chic style for Ermine

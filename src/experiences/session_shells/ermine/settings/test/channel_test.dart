@@ -2,8 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-import 'dart:async';
-
 import 'package:fidl_fuchsia_ui_remotewidgets/fidl_async.dart';
 import 'package:fidl_fuchsia_update_channelcontrol/fidl_async.dart';
 import 'package:flutter_test/flutter_test.dart';

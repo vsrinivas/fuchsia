@@ -5,7 +5,6 @@
 // ignore_for_file: implementation_imports
 
 import 'dart:async';
-import 'dart:ui';
 
 import 'package:ermine/src/states/app_state.dart';
 import 'package:ermine/src/states/view_state.dart';
