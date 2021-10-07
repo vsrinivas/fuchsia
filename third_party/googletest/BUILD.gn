@@ -85,9 +85,6 @@ static_library("gtest") {
       },
     ]
   }
-
-  # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
-  configs += [ "//build/config:Wno-conversion" ]
 }
 
 # Library that defines the FRIEND_TEST macro.
@@ -252,9 +249,6 @@ static_library("gmock") {
   public_configs = [ ":gmock_config" ]
   configs += [ ":gmock_private_config" ]
   deps = [ ":gtest" ]
-
-  # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
-  configs += [ "//build/config:Wno-conversion" ]
 }
 
 static_library("gmock_main") {
