@@ -216,25 +216,53 @@ class VirtioVsock
 
 class VirtioVsock::Connection {
  public:
-  Connection(async_dispatcher_t* dispatcher,
-             fuchsia::virtualization::GuestVsockAcceptor::AcceptCallback accept_callback,
-             fit::closure queue_callback);
   virtual ~Connection();
+
+  // Create a new Connection object.
+  //
+  // The type of object created depends on the type of `handle`, which must
+  // either be a Zircon socket or a Zircon channel.
+  static std::unique_ptr<VirtioVsock::Connection> Create(
+      const ConnectionKey& key, zx::handle handle, async_dispatcher_t* dispatcher,
+      fuchsia::virtualization::GuestVsockAcceptor::AcceptCallback accept_callback,
+      fit::closure queue_callback);
+
   virtual zx_status_t Init() = 0;
 
-  uint32_t flags() const { return flags_; }
   uint16_t op() const {
     std::lock_guard<std::mutex> lock(op_update_mutex_);
     return op_;
   }
 
-  zx_status_t Accept();
+  // Process an incoming packet, updating internal state as required.
+  //
+  // Returns ZX_OK on success. On error, the connection be terminated.
+  zx_status_t Receive(VirtioQueue* queue, virtio_vsock_hdr_t* header, const VirtioDescriptor& desc);
+
+  // Send an outgoing packet to the given descriptor.
+  //
+  // Returns ZX_OK on success. On error, the connection should be shut down.
+  zx_status_t Transmit(VirtioQueue* queue, virtio_vsock_hdr_t* header, const VirtioDescriptor& desc,
+                       uint32_t* used);
+
   void UpdateOp(uint16_t op);
 
+  void SetCredit(uint32_t buf_alloc, uint32_t fwd_cnt);
+
+  zx_status_t WaitOnTransmit();
+  zx_status_t WaitOnReceive();
+
+ protected:
+  Connection(const ConnectionKey& key, async_dispatcher_t* dispatcher,
+             fuchsia::virtualization::GuestVsockAcceptor::AcceptCallback accept_callback,
+             fit::closure queue_callback);
+
+  zx_status_t Accept();
+
   uint32_t PeerFree() const;
+
   // Read credit from the header.
   void ReadCredit(virtio_vsock_hdr_t* header);
-  void SetCredit(uint32_t buf_alloc, uint32_t fwd_cnt);
   // Write credit to the header. If this function returns:
   // - ZX_OK, it indicates to the device that it was successful.
   // - ZX_ERR_UNAVAILABLE, it indicates to the device that there is no buffer
@@ -248,10 +276,6 @@ class VirtioVsock::Connection {
   virtual zx_status_t Write(VirtioQueue* queue, virtio_vsock_hdr_t* header,
                             const VirtioDescriptor& desc) = 0;
 
-  zx_status_t WaitOnTransmit();
-  zx_status_t WaitOnReceive();
-
- protected:
   uint32_t flags_ = 0;
   uint32_t rx_cnt_ = 0;
   uint32_t tx_cnt_ = 0;
@@ -273,11 +297,14 @@ class VirtioVsock::Connection {
 
   fuchsia::virtualization::GuestVsockAcceptor::AcceptCallback accept_callback_;
   fit::closure queue_callback_;
+
+ private:
+  const ConnectionKey key_;
 };
 
 class VirtioVsock::SocketConnection final : public VirtioVsock::Connection {
  public:
-  SocketConnection(zx::handle handle, async_dispatcher_t* dispatcher,
+  SocketConnection(const ConnectionKey& key, zx::handle handle, async_dispatcher_t* dispatcher,
                    fuchsia::virtualization::GuestVsockAcceptor::AcceptCallback accept_callback,
                    fit::closure queue_callback);
   ~SocketConnection() override;
@@ -307,7 +334,7 @@ class VirtioVsock::SocketConnection final : public VirtioVsock::Connection {
 
 class VirtioVsock::ChannelConnection final : public VirtioVsock::Connection {
  public:
-  ChannelConnection(zx::handle handle, async_dispatcher_t* dispatcher,
+  ChannelConnection(const ConnectionKey& key, zx::handle handle, async_dispatcher_t* dispatcher,
                     fuchsia::virtualization::GuestVsockAcceptor::AcceptCallback accept_callback,
                     fit::closure queue_callback);
   ~ChannelConnection() override;
