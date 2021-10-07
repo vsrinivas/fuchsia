@@ -951,13 +951,15 @@ impl Telemetry {
         multiple_bss_candidates: bool,
     ) {
         inspect_log!(self.connect_events_node.lock(), {
-            bssid: latest_ap_state.bssid.0.to_mac_string(),
-            bssid_hash: self.hasher.hash_mac_addr(&latest_ap_state.bssid.0),
-            ssid: latest_ap_state.ssid.to_string(),
-            ssid_hash: self.hasher.hash_ssid(&latest_ap_state.ssid),
-            rssi_dbm: latest_ap_state.rssi_dbm,
-            snr_db: latest_ap_state.snr_db,
             multiple_bss_candidates: multiple_bss_candidates,
+            network: {
+                bssid: latest_ap_state.bssid.0.to_mac_string(),
+                bssid_hash: self.hasher.hash_mac_addr(&latest_ap_state.bssid.0),
+                ssid: latest_ap_state.ssid.to_string(),
+                ssid_hash: self.hasher.hash_ssid(&latest_ap_state.ssid),
+                rssi_dbm: latest_ap_state.rssi_dbm,
+                snr_db: latest_ap_state.snr_db,
+            },
         });
     }
 
