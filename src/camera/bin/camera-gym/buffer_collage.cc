@@ -411,7 +411,6 @@ static std::tuple<float, float> ScaleToFit(float element_width, float element_he
 static std::unique_ptr<scenic::Mesh> BuildMesh(scenic::Session* session, float width, float height,
                                                bool magnify) {
   auto mesh = std::make_unique<scenic::Mesh>(session);
-
   auto format = scenic::NewMeshVertexFormat(fuchsia::ui::gfx::ValueType::kVector3,
                                             fuchsia::ui::gfx::ValueType::kNone,
                                             fuchsia::ui::gfx::ValueType::kVector2);
@@ -428,6 +427,8 @@ static std::unique_ptr<scenic::Mesh> BuildMesh(scenic::Session* session, float w
   const float y4 = y3 + height * kMagnificationSize;
   const float t1 = 0.5f - 0.5f / kMagnificationAmount;
   const float t2 = 0.5f + 0.5f / kMagnificationAmount;
+
+  constexpr size_t kVertexSize = 5;  // 5 float32's (x,y,z,u,v)
 
   // clang-format off
   std::vector<float> vb {
@@ -475,7 +476,7 @@ static std::unique_ptr<scenic::Mesh> BuildMesh(scenic::Session* session, float w
   std::array<float, 3> aabb_max{x2, y2, 0};
 
   mesh->BindBuffers(scenic_ib, fuchsia::ui::gfx::MeshIndexFormat::kUint32, 0, ib.size(), scenic_vb,
-                    format, 0, vb.size(), aabb_min, aabb_max);
+                    format, 0, vb.size() / kVertexSize, aabb_min, aabb_max);
 
   return mesh;
 }
@@ -502,6 +503,8 @@ static std::unique_ptr<scenic::Mesh> BuildHighlightMesh(scenic::Session* session
   constexpr float kWeight = 0.02f;
   constexpr float kSpan = 0.2f;
 
+  constexpr size_t kVertexSize = 5;  // 5 float32's
+
   // clang-format off
   std::vector<std::array<float, 2>> vertices {
     { 0,               0 },
@@ -521,7 +524,7 @@ static std::unique_ptr<scenic::Mesh> BuildHighlightMesh(scenic::Session* session
 
   auto append_mesh = [&](std::vector<float>& vb, std::vector<uint32_t>& ib, bool flip_horizontal,
                          bool flip_vertical) {
-    uint32_t base_index = vb.size() / 5;
+    uint32_t base_index = vb.size() / kVertexSize;
     bool flip_chirality =
         (flip_horizontal && !flip_vertical) || (flip_vertical && !flip_horizontal);
     for (auto& vertex : vertices) {
@@ -567,7 +570,7 @@ static std::unique_ptr<scenic::Mesh> BuildHighlightMesh(scenic::Session* session
   std::array<float, 3> aabb_min{0, 0, 0};
   std::array<float, 3> aabb_max{1, 1, 0};
   mesh->BindBuffers(scenic_ib, fuchsia::ui::gfx::MeshIndexFormat::kUint32, 0, ib.size(), scenic_vb,
-                    format, 0, vb.size(), aabb_min, aabb_max);
+                    format, 0, vb.size() / kVertexSize, aabb_min, aabb_max);
 
   return mesh;
 }
