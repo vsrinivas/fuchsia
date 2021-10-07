@@ -1,0 +1,28 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/components.gni")
+import("//src/diagnostics/archivist/build/archivist.gni")
+
+archivist_optimized_binary("bin") {
+  output_name = "archivist_formatter_benchmarks"
+  edition = "2018"
+
+  deps = [
+    "//sdk/fidl/fuchsia.diagnostics:fuchsia.diagnostics-rustc",
+    "//src/developer/fuchsia-criterion",
+    "//src/diagnostics/archivist:lib",
+    "//src/lib/diagnostics/data/rust",
+    "//src/lib/diagnostics/hierarchy/rust",
+    "//src/lib/fuchsia-async",
+    "//third_party/rust_crates:futures",
+  ]
+
+  sources = [ "src/main.rs" ]
+}
+
+fuchsia_package_with_single_component("archivist-formatter-benchmarks") {
+  deps = [ ":bin" ]
+  manifest = "meta/archivist-formatter-benchmarks.cmx"
+}

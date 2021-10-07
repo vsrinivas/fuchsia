@@ -27,4 +27,12 @@ void main() {
         componentName: 'archivist-logging-benchmarks.cmx',
         commandArgs: PerfTestHelper.componentOutputPath);
   }, timeout: Timeout.none);
+
+  test('archivist_formatter_benchmarks', () async {
+    final helper = await PerfTestHelper.make();
+    await helper.runTestComponent(
+        packageName: 'archivist-formatter-benchmarks',
+        componentName: 'archivist-formatter-benchmarks.cmx',
+        commandArgs: PerfTestHelper.componentOutputPath);
+  }, timeout: Timeout.none);
 }

@@ -121,14 +121,18 @@ impl Deref for JsonString {
 /// into a JSON array in each VMO up to the size limit provided.
 pub struct JsonPacketSerializer<I> {
     items: I,
-    stats: Arc<BatchIteratorConnectionStats>,
+    stats: Option<Arc<BatchIteratorConnectionStats>>,
     max_packet_size: usize,
     overflow: Option<String>,
 }
 
 impl<I> JsonPacketSerializer<I> {
     pub fn new(stats: Arc<BatchIteratorConnectionStats>, max_packet_size: usize, items: I) -> Self {
-        Self { items, stats, max_packet_size, overflow: None }
+        Self { items, stats: Some(stats), max_packet_size, overflow: None }
+    }
+
+    pub fn new_without_stats(max_packet_size: usize, items: I) -> Self {
+        Self { items, max_packet_size, overflow: None, stats: None }
     }
 }
 
@@ -146,7 +150,9 @@ where
 
         if let Some(item) = self.overflow.take() {
             batch.push_str(&item);
-            self.stats.add_result();
+            if let Some(stats) = &self.stats {
+                stats.add_result();
+            }
         }
 
         let mut items_is_pending = false;
@@ -183,7 +189,9 @@ where
                 batch.push_str(",\n");
             }
             batch.push_str(&item);
-            self.stats.add_result();
+            if let Some(stats) = &self.stats {
+                stats.add_result();
+            }
         }
 
         batch.push_str("]");

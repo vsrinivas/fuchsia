@@ -5,6 +5,7 @@
 group("bench") {
   testonly = true
   deps = [
+    "formatter:archivist-formatter-benchmarks",
     "logging:archivist-logging-benchmarks",
     "redaction:archivist-redaction-benchmarks",
   ]
