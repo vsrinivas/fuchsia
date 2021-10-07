@@ -4,6 +4,7 @@
 
 use diagnostics_data::{BuilderArgs, Data, LogsDataBuilder, LogsField, LogsProperty, Severity};
 use diagnostics_hierarchy::{DiagnosticsHierarchy, Property};
+use fidl_fuchsia_diagnostics::DataType;
 use fuchsia_async as fasync;
 use fuchsia_criterion::{
     criterion::{self, Criterion},
@@ -36,7 +37,7 @@ fn bench_json_string(b: &mut criterion::Bencher, n: usize, m: usize) {
     );
 
     b.iter(|| {
-        let _ = criterion::black_box(JsonString::serialize(&data));
+        let _ = criterion::black_box(JsonString::serialize(&data, DataType::Inspect));
     });
 }
 

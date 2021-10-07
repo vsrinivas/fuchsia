@@ -52,6 +52,7 @@ rustc_library("lib") {
     "//src/lib/diagnostics/hierarchy/rust",
     "//src/lib/diagnostics/inspect/contrib/rust",
     "//src/lib/diagnostics/inspect/derive",
+    "//src/lib/diagnostics/inspect/format/rust",
     "//src/lib/diagnostics/inspect/runtime/rust",
     "//src/lib/diagnostics/inspect/rust",
     "//src/lib/diagnostics/log/encoding/rust",

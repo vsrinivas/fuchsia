@@ -52,14 +52,17 @@ pub enum AccessorError {
     #[error("Unable to write to VMO -- we may be OOMing")]
     VmoWrite(#[source] ZxStatus),
 
-    #[error("JSON serialization failure: {}", source)]
-    Serialization {
-        #[from]
-        source: serde_json::Error,
-    },
+    #[error("Unable to get VMO size -- extremely unusual")]
+    VmoSize(#[source] ZxStatus),
+
+    #[error("JSON serialization failure: {0}")]
+    Serialization(#[from] serde_json::Error),
 
     #[error("batch timeout was set on StreamParameter and on PerformanceConfiguration")]
     DuplicateBatchTimeout,
+
+    #[error("IO error: {0}")]
+    Io(#[from] std::io::Error),
 }
 
 impl AccessorError {
@@ -73,13 +76,15 @@ impl AccessorError {
             | AccessorError::InvalidSelectors(_)
             | AccessorError::InvalidLogSelector
             | AccessorError::ParseSelectors(_) => ZxStatus::INVALID_ARGS,
-            AccessorError::VmoCreate(status) | AccessorError::VmoWrite(status) => status,
+            AccessorError::VmoCreate(status)
+            | AccessorError::VmoWrite(status)
+            | AccessorError::VmoSize(status) => status,
             AccessorError::MissingFormat | AccessorError::MissingMode => ZxStatus::INVALID_ARGS,
             AccessorError::UnsupportedFormat | AccessorError::UnsupportedMode => {
                 ZxStatus::WRONG_TYPE
             }
             AccessorError::Serialization { .. } => ZxStatus::BAD_STATE,
-            AccessorError::Ipc { .. } => ZxStatus::IO,
+            AccessorError::Ipc { .. } | AccessorError::Io(_) => ZxStatus::IO,
         };
         control.shutdown_with_epitaph(epitaph);
     }

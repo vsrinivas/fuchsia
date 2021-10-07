@@ -29,7 +29,7 @@ pub const LEGACY_METRICS_ARCHIVE_ACCESSOR_NAME: &str =
 pub const MAXIMUM_SIMULTANEOUS_SNAPSHOTS_PER_READER: usize = 4;
 
 /// The maximum number of bytes in a formatted content VMO.
-pub const FORMATTED_CONTENT_CHUNK_SIZE_TARGET: usize = 1 << 20; // 1 MiB
+pub const FORMATTED_CONTENT_CHUNK_SIZE_TARGET: u64 = 1 << 20; // 1 MiB
 
 /// For production archivist instances this value is retrieved from configuration but we still
 /// provide a default here for internal testing purposes.
