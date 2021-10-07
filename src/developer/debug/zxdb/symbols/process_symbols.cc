@@ -266,8 +266,10 @@ void ProcessSymbols::RetryLoadBuildID(const std::string& name, const std::string
 }
 
 void ProcessSymbols::DoRefreshTargetSymbols() {
+  // Clear the list of ModuleSymbols by taking and discarding its ModuleSymbols.
+  target_symbols_->TakeModules();
+
   // Update the TargetSymbols.
-  target_symbols_->RemoveAllModules();
   for (auto& [base, mod_info] : modules_) {
     if (mod_info.symbols->module_symbols_ref())
       target_symbols_->AddModule(mod_info.symbols->module_symbols_ref());

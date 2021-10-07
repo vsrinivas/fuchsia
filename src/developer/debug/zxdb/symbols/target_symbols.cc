@@ -36,7 +36,12 @@ void TargetSymbols::AddModule(fxl::RefPtr<ModuleSymbols> module) {
   modules_.insert(std::move(module));
 }
 
-void TargetSymbols::RemoveAllModules() { modules_.clear(); }
+std::vector<fxl::RefPtr<ModuleSymbols>> TargetSymbols::TakeModules() {
+  std::vector<fxl::RefPtr<ModuleSymbols>> output;
+  std::move(modules_.begin(), modules_.end(), std::back_inserter(output));
+  modules_.clear();
+  return output;
+}
 
 std::vector<const ModuleSymbols*> TargetSymbols::GetModuleSymbols() const {
   std::vector<const ModuleSymbols*> result;

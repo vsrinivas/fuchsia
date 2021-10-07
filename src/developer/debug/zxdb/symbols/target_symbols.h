@@ -48,7 +48,9 @@ class TargetSymbols {
   // allowed for the same module (this happens when the symbols exist, then the process is started
   // and the module is loaded for real).
   void AddModule(fxl::RefPtr<ModuleSymbols> module);
-  void RemoveAllModules();
+
+  // Returns |modules_| to the caller and clears |module_|.
+  std::vector<fxl::RefPtr<ModuleSymbols>> TakeModules();
 
   // Returns the symbol information for all the modules known for this target.
   std::vector<const ModuleSymbols*> GetModuleSymbols() const;

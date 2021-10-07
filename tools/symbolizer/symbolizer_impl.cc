@@ -137,11 +137,10 @@ void SymbolizerImpl::Reset(bool symbolizing_dart) {
   modules_.clear();
   address_to_module_id_.clear();
   if (target_->GetState() == zxdb::Target::State::kRunning) {
-    // OnProcessExiting() will destroy the Process, ProcessSymbols but we still keep references
-    // to ModuleSymbols in TargetSymbols.
-    //
-    // We should be able to use target_->GetSymbols(). However, it returns a const pointer.
-    target_->GetProcess()->GetSymbols()->target_symbols()->RemoveAllModules();
+    // OnProcessExiting() will destroy the Process, ProcessSymbols.
+    // Retain references to loaded TargetSymbols in |previous_modules_| so that they can be
+    // potentially reused for the subsequent stack trace.
+    previous_modules_ = target_->GetProcess()->GetSymbols()->target_symbols()->TakeModules();
     target_->OnProcessExiting(/*return_code=*/0, /*timestamp=*/0);
   }
 
@@ -274,6 +273,10 @@ void SymbolizerImpl::Backtrace(uint64_t frame_id, uint64_t address, AddressType 
   debug_ipc::StackFrame frame{call_address, 0};
   zxdb::Stack& stack = target_->GetProcess()->GetThreads()[0]->GetStack();
   stack.SetFrames(debug_ipc::ThreadRecord::StackAmount::kFull, {frame});
+
+  // All modules for this stack trace have been loaded by this point, so we can discard retained
+  // data from previously handled stack traces (if any).
+  previous_modules_.clear();
 
   bool symbolized = false;
   for (size_t i = 0; i < stack.size(); i++) {

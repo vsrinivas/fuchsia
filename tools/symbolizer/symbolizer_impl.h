@@ -18,6 +18,7 @@
 #include "src/developer/debug/zxdb/client/session.h"
 #include "src/developer/debug/zxdb/client/system.h"
 #include "src/developer/debug/zxdb/client/system_observer.h"
+#include "src/developer/debug/zxdb/symbols/module_symbols.h"
 #include "tools/symbolizer/analytics.h"
 #include "tools/symbolizer/command_line_options.h"
 #include "tools/symbolizer/printer.h"
@@ -102,6 +103,10 @@ class SymbolizerImpl : public Symbolizer,
   // module_id is usually a sequence from 0 used to associate "mmap" commands with "module"
   // commands. It's different from build_id.
   std::unordered_map<uint64_t, ModuleInfo> modules_;
+
+  // Holds symbol data from the previously handled stack trace.
+  // Replaced immediately once a new stack trace is handled.
+  std::vector<fxl::RefPtr<zxdb::ModuleSymbols>> previous_modules_;
 
   // Mapping from base address of each module to the module_id.
   // Useful when doing binary search for the module from an address.
