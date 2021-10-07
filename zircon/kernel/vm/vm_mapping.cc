@@ -1042,8 +1042,8 @@ void VmMapping::TryMergeNeighborsLocked() {
 
   // First consider merging any mapping on our right, into |this|.
   AssertHeld(parent_->lock_ref());
-  VmAddressRegionOrMapping* right_candidate = parent_->subregions_.FindRegion(base_ + size_);
-  if (right_candidate) {
+  auto right_candidate = parent_->subregions_.RightOf(this);
+  if (right_candidate.IsValid()) {
     // Request mapping as a refptr as we need to hold a refptr across the try merge.
     if (fbl::RefPtr<VmMapping> mapping = right_candidate->as_vm_mapping()) {
       TryMergeRightNeighborLocked(mapping.get());
@@ -1051,12 +1051,9 @@ void VmMapping::TryMergeNeighborsLocked() {
   }
 
   // Now attempt to merge |this| with any left neighbor.
-  if (base_ == 0) {
-    return;
-  }
   AssertHeld(parent_->lock_ref());
-  VmAddressRegionOrMapping* left_candidate = parent_->subregions_.FindRegion(base_ - 1);
-  if (!left_candidate) {
+  auto left_candidate = parent_->subregions_.LeftOf(this);
+  if (!left_candidate.IsValid()) {
     return;
   }
   if (auto mapping = left_candidate->as_vm_mapping()) {

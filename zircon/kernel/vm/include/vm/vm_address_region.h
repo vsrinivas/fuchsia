@@ -202,6 +202,10 @@ class RegionList final {
   // Remove *region* from the list, returns the removed region.
   fbl::RefPtr<T> RemoveRegion(T* region) { return regions_.erase(*region); }
 
+  // Request the region to the left or right of the given region.
+  typename ChildList::iterator LeftOf(T* region) { return --regions_.make_iterator(*region); }
+  typename ChildList::iterator RightOf(T* region) { return ++regions_.make_iterator(*region); }
+
   // Insert *region* to the region list.
   void InsertRegion(fbl::RefPtr<T> region) { regions_.insert(region); }
 
