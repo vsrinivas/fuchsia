@@ -168,7 +168,8 @@ def generate_docs(
         process = subprocess.run(
             [os.path.join(dart_prebuilt_dir, 'pub'), 'get'],
             cwd=package_dir,
-            env=dict(os.environ, PUB_CACHE=tmpdirname),
+            # Pub requires HOME env variable which is wiped from BUILD.
+            env=dict(os.environ, PUB_CACHE=tmpdirname, HOME=tmpdirname),
             capture_output=True,
             universal_newlines=True)
         if process.returncode:

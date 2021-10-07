@@ -172,7 +172,10 @@ import 'package:foo/foo.dart';
                             mock.call(
                                 [os.path.join(prebuilts, 'pub'), 'get'],
                                 cwd=package_dir,
-                                env={"PUB_CACHE": "fakedir"},
+                                env={
+                                    "PUB_CACHE": "fakedir",
+                                    "HOME": "fakedir"
+                                },
                                 capture_output=True,
                                 universal_newlines=True),
                             mock.call(
