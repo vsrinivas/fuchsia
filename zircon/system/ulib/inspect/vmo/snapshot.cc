@@ -46,11 +46,11 @@ zx_status_t Snapshot::Create(std::vector<uint8_t> buffer, Snapshot* out_snapshot
 }
 
 zx_status_t Snapshot::Create(const zx::vmo& vmo, Snapshot* out_snapshot) {
-  return Snapshot::Create(std::move(vmo), kDefaultOptions, out_snapshot);
+  return Snapshot::Create(vmo, kDefaultOptions, out_snapshot);
 }
 
 zx_status_t Snapshot::Create(const zx::vmo& vmo, Options options, Snapshot* out_snapshot) {
-  return Snapshot::Create(std::move(vmo), std::move(options), nullptr, out_snapshot);
+  return Snapshot::Create(vmo, options, nullptr, out_snapshot);
 }
 
 zx_status_t Snapshot::Create(const zx::vmo& vmo, Options options, ReadObserver read_observer,
