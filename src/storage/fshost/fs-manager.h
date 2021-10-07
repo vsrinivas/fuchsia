@@ -114,12 +114,19 @@ class FsManager {
   // directory of the given filesystem previously installed via |InstallFs()| at |point|.
   zx_status_t ForwardFsService(MountPoint point, const char* service_name);
 
-  // Disables filing a crash report when minfs corruptions are detected.
+  // Disables reporting.  Future calls to |FileReport| will be NOPs.
   void DisableCrashReporting() { file_crash_report_ = false; }
 
-  // Reports a new minfs corruption event. This files a crash report with the crash reporting
-  // service and increments a corruption tracking cobalt metric.
-  void ReportMinfsCorruption();
+  // Note that additional reasons should be added sparingly, and only in cases where the data is
+  // useful and it would be difficult to debug the issue otherwise.
+  enum ReportReason {
+    kMinfsCorrupted,
+    kMinfsNotUpgradeable,
+  };
+
+  // Files a synthetic crash report.  This is done in the background on a new thread, so never
+  // blocks. Note that there is no indication if the reporting fails.
+  void FileReport(ReportReason reason);
 
  private:
   zx_status_t SetupOutgoingDirectory(fidl::ServerEnd<fuchsia_io::Directory> dir_request,

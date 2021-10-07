@@ -237,6 +237,12 @@ void FilesystemMounter::TryMountPkgfs() {
   }
 }
 
+void FilesystemMounter::ReportMinfsCorruption() {
+  fshost_.mutable_metrics()->LogMinfsCorruption();
+  fshost_.FlushMetrics();
+  fshost_.FileReport(FsManager::ReportReason::kMinfsCorrupted);
+}
+
 zx::status<fidl::ClientEnd<fuchsia_fxfs::Crypt>> FilesystemMounter::GetCryptClient() {
   if (!config_.is_set(Config::kDataFilesystemUsesCrypt))
     return zx::ok(fidl::ClientEnd<fuchsia_fxfs::Crypt>());

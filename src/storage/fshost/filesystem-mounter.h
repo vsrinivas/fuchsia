@@ -70,7 +70,7 @@ class FilesystemMounter {
   void TryMountPkgfs();
 
   std::shared_ptr<FshostBootArgs> boot_args() { return fshost_.boot_args(); }
-  void ReportMinfsCorruption() { fshost_.ReportMinfsCorruption(); }
+  void ReportMinfsCorruption();
 
   bool BlobMounted() const { return blob_mounted_; }
   bool DataMounted() const { return data_mounted_; }
@@ -82,6 +82,7 @@ class FilesystemMounter {
   // filesystem does not require it, zx::ok({}) is returned.
   zx::status<fidl::ClientEnd<fuchsia_fxfs::Crypt>> GetCryptClient();
 
+  FsManager& manager() { return fshost_; }
   InspectManager& inspect_manager() { return fshost_.inspect_manager(); }
 
  private:

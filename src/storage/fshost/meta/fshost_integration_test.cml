@@ -39,7 +39,10 @@
             from: "framework",
         },
         {
-            protocol: [ "fuchsia.feedback.testing.FakeCrashReporterQuerier" ],
+            protocol: [
+                "fuchsia.feedback.CrashReporter",
+                "fuchsia.feedback.testing.FakeCrashReporterQuerier",
+            ],
             from: "#fake-crash-reporter",
         },
     ],

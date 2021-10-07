@@ -5,6 +5,7 @@
 #include "src/storage/fshost/minfs-manipulator.h"
 
 #include <fcntl.h>
+#include <fidl/fuchsia.feedback.testing/cpp/wire.h>
 #include <fidl/fuchsia.hardware.block.partition/cpp/wire.h>
 #include <fidl/fuchsia.hardware.block.volume/cpp/wire.h>
 #include <lib/fdio/cpp/caller.h>
@@ -13,6 +14,7 @@
 #include <lib/fidl/llcpp/client_end.h>
 #include <lib/inspect/cpp/inspect.h>
 #include <lib/inspect/testing/cpp/inspect.h>
+#include <lib/service/llcpp/service.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/status.h>
 #include <unistd.h>
@@ -20,9 +22,11 @@
 
 #include <cstdint>
 #include <filesystem>
+#include <optional>
 #include <string>
 #include <vector>
 
+#include <cobalt-client/cpp/in_memory_logger.h>
 #include <fbl/unique_fd.h>
 #include <fs-management/admin.h>
 #include <fs-management/format.h>
@@ -33,7 +37,9 @@
 #include "src/lib/files/directory.h"
 #include "src/lib/files/file.h"
 #include "src/lib/testing/predicates/status.h"
+#include "src/storage/fshost/block-watcher.h"
 #include "src/storage/fshost/inspect-manager.h"
+#include "src/storage/fshost/metrics_cobalt.h"
 #include "src/storage/testing/fvm.h"
 #include "src/storage/testing/ram_disk.h"
 #include "src/storage/testing/zxcrypt.h"
@@ -66,8 +72,15 @@ constexpr uint64_t kMinfsDataSizeLimit = 10223616;
 // Minfs will never have exactly 3 inodes which will force a resize to always happen.
 constexpr uint64_t kForceResizeInodeCount = 3;
 
+std::unique_ptr<FsHostMetrics> MakeMetrics() {
+  return std::make_unique<FsHostMetricsCobalt>(std::make_unique<cobalt_client::Collector>(
+      std::make_unique<cobalt_client::InMemoryLogger>()));
+}
+
 class MinfsManipulatorTest : public testing::Test {
  public:
+  MinfsManipulatorTest() : manager_(FshostBootArgs::Create(), MakeMetrics()) {}
+
   const std::vector<std::filesystem::path> kNoExcludedPaths = {};
 
   void SetUp() override {
@@ -94,11 +107,16 @@ class MinfsManipulatorTest : public testing::Test {
     device_ = std::move(device);
     fvm_partition_path_ = *std::move(fvm_partition_path);
     zxcrypt_device_path_ = *std::move(zxcrypt_device_path);
+
+    watcher_.emplace(manager_, &config_);
+    zx::channel dir_request, lifecycle_request;
+    EXPECT_OK(manager_.Initialize(std::move(dir_request), std::move(lifecycle_request),
+                                  zx::channel(), nullptr, *watcher_));
   }
 
   zx::channel device() { return zx::channel(fdio_service_clone(device_.get())); }
 
-  InspectManager& inspect() { return inspect_; }
+  FsManager& manager() { return manager_; }
 
   void ExpectLoggedStates(const std::vector<MinfsUpgradeState>& states) {
     std::vector<Matcher<const inspect::PropertyValue&>> state_matchers;
@@ -106,7 +124,8 @@ class MinfsManipulatorTest : public testing::Test {
     for (const auto& state : states) {
       state_matchers.push_back(BoolIs(InspectManager::MinfsUpgradeStateString(state), true));
     }
-    auto hierarchy_result = inspect::ReadFromVmo(inspect_.inspector().DuplicateVmo());
+    auto hierarchy_result =
+        inspect::ReadFromVmo(manager_.inspect_manager().inspector().DuplicateVmo());
     ASSERT_TRUE(hierarchy_result.is_ok());
     EXPECT_THAT(
         hierarchy_result.take_value(),
@@ -114,6 +133,22 @@ class MinfsManipulatorTest : public testing::Test {
             NodeMatches(NameMatches("root")),
             ChildrenMatch(UnorderedElementsAre(NodeMatches(AllOf(
                 NameMatches("minfs_upgrade"), PropertyList(ElementsAreArray(state_matchers))))))));
+  }
+
+  // Polls the crash report service until exactly |num| reports have been filed.
+  void ExpectCrashReportsFiled(unsigned int num) {
+    auto client_end = service::Connect<fuchsia_feedback_testing::FakeCrashReporterQuerier>();
+    ASSERT_EQ(client_end.status_value(), ZX_OK);
+    auto client = fidl::BindSyncClient(std::move(*client_end));
+    auto res = client.WatchFile();
+    ASSERT_EQ(res.status(), ZX_OK);
+    auto num_filed = res->num_filed;
+    while (num_filed < num) {
+      auto res = client.WatchFile();
+      ASSERT_EQ(res.status(), ZX_OK);
+      num_filed = res->num_filed;
+    }
+    ASSERT_EQ(num_filed, num);
   }
 
   zx::status<> SetPartitionLimit(uint64_t byte_count) {
@@ -174,9 +209,11 @@ class MinfsManipulatorTest : public testing::Test {
  private:
   storage::RamDisk ram_disk_;
   zx::channel device_;
-  InspectManager inspect_;
   std::string fvm_partition_path_;
   std::string zxcrypt_device_path_;
+  Config config_;
+  FsManager manager_;
+  std::optional<BlockWatcher> watcher_;
 };
 
 bool CreateSizedFileAt(int dir, const char* filename, ssize_t file_size) {
@@ -239,7 +276,7 @@ TEST_F(MinfsManipulatorTest, MaybeResizeMinfsWithAcceptableSizeDoesNothing) {
   // Attempt to resize minfs.
   MaybeResizeMinfsResult result =
       MaybeResizeMinfs(device(), kMinfsPartitionSizeLimit, kMinfsDefaultInodeCount,
-                       kMinfsDataSizeLimit, kNoExcludedPaths, inspect());
+                       kMinfsDataSizeLimit, kNoExcludedPaths, manager());
   ASSERT_EQ(result, MaybeResizeMinfsResult::kMinfsMountable);
 
   // If minfs was resized then it would have given back all of its slices to fvm and the block
@@ -250,10 +287,8 @@ TEST_F(MinfsManipulatorTest, MaybeResizeMinfsWithAcceptableSizeDoesNothing) {
   ASSERT_OK(final_size.status_value());
   EXPECT_EQ(*final_size, *filled_size);
 
-  // Nothing should be logged.
-  ExpectLoggedStates({
-      MinfsUpgradeState::kSkipped,
-  });
+  ExpectLoggedStates({MinfsUpgradeState::kSkipped});
+  ExpectCrashReportsFiled(0u);
 }
 
 TEST_F(MinfsManipulatorTest, MaybeResizeMinfsWithTooManyInodesResizes) {
@@ -283,7 +318,7 @@ TEST_F(MinfsManipulatorTest, MaybeResizeMinfsWithTooManyInodesResizes) {
 
   MaybeResizeMinfsResult result =
       MaybeResizeMinfs(device(), kMinfsPartitionSizeLimit, kMinfsDefaultInodeCount,
-                       kMinfsDataSizeLimit, kNoExcludedPaths, inspect());
+                       kMinfsDataSizeLimit, kNoExcludedPaths, manager());
   ASSERT_EQ(result, MaybeResizeMinfsResult::kMinfsMountable);
 
   // Minfs should have the desired number of inodes again.
@@ -298,6 +333,7 @@ TEST_F(MinfsManipulatorTest, MaybeResizeMinfsWithTooManyInodesResizes) {
       MinfsUpgradeState::kWriteNewPartition,
       MinfsUpgradeState::kFinished,
   });
+  ExpectCrashReportsFiled(0u);
 }
 
 TEST_F(MinfsManipulatorTest, MaybeResizeMinfsWithTooManySlicesResizes) {
@@ -325,7 +361,7 @@ TEST_F(MinfsManipulatorTest, MaybeResizeMinfsWithTooManySlicesResizes) {
   // Use |initial_size| as the limit which should cause minfs to be resized.
   MaybeResizeMinfsResult result =
       MaybeResizeMinfs(device(), *initialize_size, kMinfsDefaultInodeCount, kMinfsDataSizeLimit,
-                       kNoExcludedPaths, inspect());
+                       kNoExcludedPaths, manager());
   ASSERT_EQ(result, MaybeResizeMinfsResult::kMinfsMountable);
 
   // If minfs was resized then it should be back to the initial size.
@@ -340,6 +376,7 @@ TEST_F(MinfsManipulatorTest, MaybeResizeMinfsWithTooManySlicesResizes) {
       MinfsUpgradeState::kWriteNewPartition,
       MinfsUpgradeState::kFinished,
   });
+  ExpectCrashReportsFiled(0u);
 }
 
 TEST_F(MinfsManipulatorTest, MaybeResizeMinfsResizingWithNoExcludedPathsPreservesAllFiles) {
@@ -367,7 +404,7 @@ TEST_F(MinfsManipulatorTest, MaybeResizeMinfsResizingWithNoExcludedPathsPreserve
   // Force minfs to resize.
   MaybeResizeMinfsResult result =
       MaybeResizeMinfs(device(), kMinfsPartitionSizeLimit, kForceResizeInodeCount,
-                       kMinfsDataSizeLimit, kNoExcludedPaths, inspect());
+                       kMinfsDataSizeLimit, kNoExcludedPaths, manager());
   ASSERT_EQ(result, MaybeResizeMinfsResult::kMinfsMountable);
 
   // Verify that all of the files were preserved.
@@ -394,6 +431,7 @@ TEST_F(MinfsManipulatorTest, MaybeResizeMinfsResizingWithNoExcludedPathsPreserve
       MinfsUpgradeState::kWriteNewPartition,
       MinfsUpgradeState::kFinished,
   });
+  ExpectCrashReportsFiled(0u);
 }
 
 TEST_F(MinfsManipulatorTest, MaybeResizeMinfsResizingWithExcludedPathsIsCorrect) {
@@ -417,7 +455,7 @@ TEST_F(MinfsManipulatorTest, MaybeResizeMinfsResizingWithExcludedPathsIsCorrect)
   // Force minfs to resize.
   MaybeResizeMinfsResult result =
       MaybeResizeMinfs(device(), kMinfsPartitionSizeLimit, kForceResizeInodeCount,
-                       kMinfsDataSizeLimit, excluded_paths, inspect());
+                       kMinfsDataSizeLimit, excluded_paths, manager());
   ASSERT_EQ(result, MaybeResizeMinfsResult::kMinfsMountable);
 
   zx::status<MountedMinfs> minfs = MountedMinfs::Mount(device());
@@ -439,6 +477,7 @@ TEST_F(MinfsManipulatorTest, MaybeResizeMinfsResizingWithExcludedPathsIsCorrect)
       MinfsUpgradeState::kWriteNewPartition,
       MinfsUpgradeState::kFinished,
   });
+  ExpectCrashReportsFiled(0u);
 }
 
 TEST_F(MinfsManipulatorTest, MaybeResizeMinfsWithResizeInProgressReformatsMinfs) {
@@ -456,12 +495,13 @@ TEST_F(MinfsManipulatorTest, MaybeResizeMinfsWithResizeInProgressReformatsMinfs)
 
   MaybeResizeMinfsResult result =
       MaybeResizeMinfs(device(), kMinfsPartitionSizeLimit, kMinfsDefaultInodeCount,
-                       kMinfsDataSizeLimit, kNoExcludedPaths, inspect());
+                       kMinfsDataSizeLimit, kNoExcludedPaths, manager());
   ASSERT_EQ(result, MaybeResizeMinfsResult::kRebootRequired);
   ExpectThatZxcrypWasShredded();
   ExpectLoggedStates({
       MinfsUpgradeState::kDetectedFailedUpgrade,
   });
+  ExpectCrashReportsFiled(0u);
 }
 
 TEST_F(MinfsManipulatorTest, MaybeResizeMinfsResizeInProgressIsCorrectlyDetected) {
@@ -513,7 +553,7 @@ TEST_F(MinfsManipulatorTest, MaybeResizeMinfsWithLargeDataDoesNotResize) {
   }
   MaybeResizeMinfsResult result =
       MaybeResizeMinfs(device(), kMinfsPartitionSizeLimit, kForceResizeInodeCount,
-                       kMinfsLimitedDataSize, kNoExcludedPaths, inspect());
+                       kMinfsLimitedDataSize, kNoExcludedPaths, manager());
   ASSERT_EQ(result, MaybeResizeMinfsResult::kMinfsMountable);
 
   zx::status<MountedMinfs> minfs = MountedMinfs::Mount(device());
@@ -529,6 +569,7 @@ TEST_F(MinfsManipulatorTest, MaybeResizeMinfsWithLargeDataDoesNotResize) {
       MinfsUpgradeState::kReadOldPartition,
       MinfsUpgradeState::kSkipped,
   });
+  ExpectCrashReportsFiled(1u);
 }
 
 TEST_F(MinfsManipulatorTest, MaybeResizeMinfsWithLargeDataThatIsFilteredOutDoesResize) {
@@ -548,7 +589,7 @@ TEST_F(MinfsManipulatorTest, MaybeResizeMinfsWithLargeDataThatIsFilteredOutDoesR
   // Resize with file2 filtered out.
   MaybeResizeMinfsResult result =
       MaybeResizeMinfs(device(), kMinfsPartitionSizeLimit, kForceResizeInodeCount,
-                       kMinfsLimitedDataSize, {kFile2Name}, inspect());
+                       kMinfsLimitedDataSize, {kFile2Name}, manager());
   ASSERT_EQ(result, MaybeResizeMinfsResult::kMinfsMountable);
 
   zx::status<MountedMinfs> minfs = MountedMinfs::Mount(device());
@@ -566,6 +607,7 @@ TEST_F(MinfsManipulatorTest, MaybeResizeMinfsWithLargeDataThatIsFilteredOutDoesR
       MinfsUpgradeState::kWriteNewPartition,
       MinfsUpgradeState::kFinished,
   });
+  ExpectCrashReportsFiled(0u);
 }
 
 TEST_F(MinfsManipulatorTest, MaybeResizeMinfsFailingToFormatMinfsLeavesMinfsUnmountable) {
@@ -574,7 +616,7 @@ TEST_F(MinfsManipulatorTest, MaybeResizeMinfsFailingToFormatMinfsLeavesMinfsUnmo
   ASSERT_OK(SetPartitionLimit(1024lu * 1024).status_value());
   MaybeResizeMinfsResult result =
       MaybeResizeMinfs(device(), kMinfsPartitionSizeLimit, kForceResizeInodeCount,
-                       kMinfsDataSizeLimit, kNoExcludedPaths, inspect());
+                       kMinfsDataSizeLimit, kNoExcludedPaths, manager());
   ASSERT_EQ(result, MaybeResizeMinfsResult::kRebootRequired);
 
   // Minfs should fail fsck which will cause it be formatted again during the next boot.
@@ -585,6 +627,7 @@ TEST_F(MinfsManipulatorTest, MaybeResizeMinfsFailingToFormatMinfsLeavesMinfsUnmo
       MinfsUpgradeState::kReadOldPartition,
       MinfsUpgradeState::kWriteNewPartition,
   });
+  ExpectCrashReportsFiled(0u);
 }
 
 TEST_F(MinfsManipulatorTest, MaybeResizeMinfsRebootReasonIsPreserved) {
@@ -606,7 +649,7 @@ TEST_F(MinfsManipulatorTest, MaybeResizeMinfsRebootReasonIsPreserved) {
   std::vector<std::filesystem::path> exclude_cache = {"cache"};
   MaybeResizeMinfsResult result =
       MaybeResizeMinfs(device(), kMinfsPartitionSizeLimit, kForceResizeInodeCount,
-                       kMinfsDataSizeLimit, exclude_cache, inspect());
+                       kMinfsDataSizeLimit, exclude_cache, manager());
   ASSERT_EQ(result, MaybeResizeMinfsResult::kMinfsMountable);
 
   zx::status<MountedMinfs> minfs = MountedMinfs::Mount(device());
@@ -638,7 +681,7 @@ TEST_F(MinfsManipulatorTest, MaybeResizeMinfsRebootReasonAlreadyCopied) {
   std::vector<std::filesystem::path> excluded_paths = {"exclude"};
   MaybeResizeMinfsResult result =
       MaybeResizeMinfs(device(), kMinfsPartitionSizeLimit, kForceResizeInodeCount,
-                       kMinfsDataSizeLimit, excluded_paths, inspect());
+                       kMinfsDataSizeLimit, excluded_paths, manager());
   ASSERT_EQ(result, MaybeResizeMinfsResult::kMinfsMountable);
 
   zx::status<MountedMinfs> minfs = MountedMinfs::Mount(device());
