@@ -202,6 +202,26 @@ TEST_F(RealmBuilderTest, RoutesProtocolToMockComponent) {
   EXPECT_TRUE(mock_echo_client.WasCalled());
 }
 
+TEST_F(RealmBuilderTest, ConnectsToChannelDirectly) {
+  static constexpr auto kEchoServer = Moniker{"echo_server"};
+
+  auto realm_builder = Realm::Builder::New(context());
+  realm_builder.AddComponent(kEchoServer, Component{.source = ComponentUrl{kEchoServerUrl}});
+  realm_builder.AddRoute(CapabilityRoute{.capability = Protocol{test::placeholders::Echo::Name_},
+                                         .source = kEchoServer,
+                                         .targets = {AboveRoot()}});
+  auto realm = realm_builder.Build(dispatcher());
+
+  zx::channel controller, request;
+  ASSERT_EQ(zx::channel::create(0, &controller, &request), ZX_OK);
+  fidl::SynchronousInterfacePtr<test::placeholders::Echo> echo;
+  echo.Bind(std::move(controller));
+  ASSERT_EQ(realm.Connect(test::placeholders::Echo::Name_, std::move(request)), ZX_OK);
+  fidl::StringPtr response;
+  ASSERT_EQ(echo->EchoString("hello", &response), ZX_OK);
+  EXPECT_EQ(response, fidl::StringPtr("hello"));
+}
+
 TEST_F(RealmBuilderTest, UsesRandomChildName) {
   std::string child_name_1 = "";
   {

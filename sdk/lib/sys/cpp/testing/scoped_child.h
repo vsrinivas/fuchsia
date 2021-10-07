@@ -82,6 +82,10 @@ class ScopedChild {
     return exposed_dir_.Connect<Interface>(std::move(request));
   }
 
+  // Connect to an interface in the exposed directory using the supplied
+  // channel.
+  zx_status_t Connect(const std::string& interface_name, zx::channel request) const;
+
   // Get the child name of this instance.
   std::string GetChildName() const;
 

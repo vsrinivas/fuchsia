@@ -80,6 +80,10 @@ ScopedChild ScopedChild::New(fuchsia::sys2::RealmSyncPtr realm_proxy, std::strin
                      std::move(exposed_dir));
 }
 
+zx_status_t ScopedChild::Connect(const std::string& interface_name, zx::channel request) const {
+  return this->exposed_dir_.Connect(interface_name, std::move(request));
+}
+
 std::string ScopedChild::GetChildName() const { return child_ref_.name; }
 
 }  // namespace sys::testing

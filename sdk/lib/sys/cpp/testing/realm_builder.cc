@@ -117,6 +117,10 @@ fidl::InterfaceHandle<fuchsia::io::Directory> CreatePkgDirHandle() {
 Realm::Realm(ScopedChild root, std::unique_ptr<internal::MockRunner> mock_runner)
     : root_(std::move(root)), mock_runner_(std::move(mock_runner)) {}
 
+zx_status_t Realm::Connect(const std::string& interface_name, zx::channel request) const {
+  return root_.Connect(interface_name, std::move(request));
+}
+
 std::string Realm::GetChildName() const { return root_.GetChildName(); }
 
 Realm::Builder::Builder(

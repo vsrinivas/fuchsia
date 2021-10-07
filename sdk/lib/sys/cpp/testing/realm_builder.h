@@ -76,6 +76,10 @@ class Realm {
     return root_.Connect<Interface>(std::move(request));
   }
 
+  // Connect to an interface in the exposed directory using the supplied
+  // channel.
+  zx_status_t Connect(const std::string& interface_name, zx::channel request) const;
+
   // Get the child name of the root component.
   std::string GetChildName() const;
 
