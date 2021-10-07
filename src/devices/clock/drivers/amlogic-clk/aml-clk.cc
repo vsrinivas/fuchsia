@@ -828,6 +828,26 @@ void AmlClock::GetCount(GetCountRequestView request, GetCountCompleter::Sync& co
   completer.Reply(static_cast<uint32_t>(clk_table_count_));
 }
 
+void AmlClock::Enable(EnableRequestView request, EnableCompleter::Sync& completer) {
+  zx_status_t result = ClkToggle(request->clock, true);
+
+  if (result == ZX_OK) {
+    completer.ReplySuccess();
+  } else {
+    completer.ReplyError(result);
+  }
+}
+
+void AmlClock::Disable(DisableRequestView request, DisableCompleter::Sync& completer) {
+  zx_status_t result = ClkToggle(request->clock, false);
+
+  if (result == ZX_OK) {
+    completer.ReplySuccess();
+  } else {
+    completer.ReplyError(result);
+  };
+}
+
 void AmlClock::ShutDown() {
   hiu_mmio_.reset();
 

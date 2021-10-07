@@ -3,15 +3,15 @@
 // found in the LICENSE file.
 library fuchsia.hardware.clock;
 
+using zx;
+
 const NAME_LEN uint32 = 30;
 
-@for_deprecated_c_bindings
 type FrequencyInfo = struct {
     name array<uint8, NAME_LEN>;
     frequency uint64;
 };
 
-@for_deprecated_c_bindings
 protocol Device {
     Measure(struct {
         clock uint32;
@@ -21,4 +21,13 @@ protocol Device {
     GetCount() -> (struct {
         count uint32;
     });
+
+    // For debugging
+    Enable(struct {
+        clock uint32;
+    }) -> (struct {}) error zx.status;
+
+    Disable(struct {
+        clock uint32;
+    }) -> (struct {}) error zx.status;
 };

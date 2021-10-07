@@ -57,6 +57,8 @@ static constexpr meson_clk_gate_t g12b_clk_gates[] = {
     // USB gates
     {.reg = kG12bHhiGclkMpeg1, .bit = 26},  // G12B_CLK_USB
     {.reg = kG12bHhiGclkMpeg2, .bit = 8},   // G12B_CLK_USB1_TO_DDR
+
+    {.reg = kG12bHhiXtalDivnCntl, .bit = 12},  // G12B_CLK_25M
 };
 
 static_assert(g12b_clk::CLK_G12B_COUNT == countof(g12b_clk_gates),
