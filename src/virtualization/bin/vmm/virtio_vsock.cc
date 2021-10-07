@@ -107,11 +107,11 @@ zx_status_t VirtioVsock::Connection::Accept() {
     UpdateOp(VIRTIO_VSOCK_OP_RW);
     accept_callback_(ZX_OK);
     accept_callback_ = nullptr;
-    return WaitOnReceive(ZX_OK);
-  } else {
-    UpdateOp(VIRTIO_VSOCK_OP_RST);
-    return ZX_OK;
+    return WaitOnReceive();
   }
+
+  UpdateOp(VIRTIO_VSOCK_OP_RST);
+  return ZX_OK;
 }
 
 // Connection state machine:
@@ -205,32 +205,18 @@ void VirtioVsock::Connection::SetCredit(uint32_t buf_alloc, uint32_t fwd_cnt) {
   peer_fwd_cnt_ = fwd_cnt;
 }
 
-static zx_status_t wait(async_dispatcher_t* dispatcher, async::Wait* wait, zx_status_t status) {
-  if (status == ZX_ERR_SHOULD_WAIT) {
-    status = ZX_OK;
+zx_status_t VirtioVsock::Connection::WaitOnTransmit() {
+  if (tx_wait_.is_pending() || !tx_wait_.has_handler()) {
+    return ZX_OK;
   }
-  if (status == ZX_OK) {
-    if (wait->has_handler() && !wait->is_pending()) {
-      status = wait->Begin(dispatcher);
-    }
-  }
-  if (status != ZX_OK) {
-    if (status != ZX_ERR_STOP) {
-      FX_LOGS(ERROR) << "Failed to wait on socket " << status;
-    }
-    if (status != ZX_ERR_ALREADY_EXISTS) {
-      wait->Cancel();
-    }
-  }
-  return status;
+  return tx_wait_.Begin(dispatcher_);
 }
 
-zx_status_t VirtioVsock::Connection::WaitOnTransmit(zx_status_t status) {
-  return wait(dispatcher_, &tx_wait_, status);
-}
-
-zx_status_t VirtioVsock::Connection::WaitOnReceive(zx_status_t status) {
-  return wait(dispatcher_, &rx_wait_, status);
+zx_status_t VirtioVsock::Connection::WaitOnReceive() {
+  if (rx_wait_.is_pending() || !rx_wait_.has_handler()) {
+    return ZX_OK;
+  }
+  return rx_wait_.Begin(dispatcher_);
 }
 
 VirtioVsock::SocketConnection::SocketConnection(
@@ -259,7 +245,7 @@ zx_status_t VirtioVsock::SocketConnection::Init() {
   tx_wait_.set_handler([this](async_dispatcher_t* dispatcher, async::Wait* wait, zx_status_t status,
                               const zx_packet_signal_t* signal) { OnReady(status, signal); });
 
-  return WaitOnReceive(ZX_OK);
+  return WaitOnReceive();
 }
 
 void VirtioVsock::SocketConnection::OnReady(zx_status_t status, const zx_packet_signal_t* signal) {
@@ -433,7 +419,7 @@ zx_status_t VirtioVsock::ChannelConnection::Init() {
   tx_wait_.set_handler([this](async_dispatcher_t* dispatcher, async::Wait* wait, zx_status_t status,
                               const zx_packet_signal_t* signal) { OnReady(status, signal); });
 
-  return WaitOnReceive(ZX_OK);
+  return WaitOnReceive();
 }
 
 void VirtioVsock::ChannelConnection::OnReady(zx_status_t status, const zx_packet_signal_t* signal) {
@@ -782,7 +768,7 @@ bool VirtioVsock::ProcessReadyConnection(ConnectionKey key) {
     case ZX_OK:
       break;
     case ZX_ERR_UNAVAILABLE: {
-      zx_status_t status = conn->WaitOnTransmit(ZX_OK);
+      zx_status_t status = conn->WaitOnTransmit();
       if (status != ZX_OK) {
         RemoveConnectionLocked(key);
       }
@@ -795,12 +781,18 @@ bool VirtioVsock::ProcessReadyConnection(ConnectionKey key) {
   }
 
   uint32_t used = 0;
-  zx_status_t status = transmit(conn, rx_queue(), chain->header(), chain->desc(), &used);
+  zx_status_t transmit_status = transmit(conn, rx_queue(), chain->header(), chain->desc(), &used);
   chain->Return(/*used=*/used + sizeof(virtio_vsock_hdr_t));
 
+  // If the connection has been closed, remove it.
+  if (transmit_status == ZX_ERR_STOP) {
+    RemoveConnectionLocked(key);
+    return true;
+  }
+
   // Notify when the connection next has data pending.
-  status = conn->WaitOnReceive(status);
-  if (status != ZX_OK) {
+  zx_status_t wait_status = conn->WaitOnReceive();
+  if (wait_status != ZX_OK) {
     RemoveConnectionLocked(key);
   }
 
@@ -944,17 +936,22 @@ void VirtioVsock::ProcessIncomingPacket(const VsockChain& chain) {
 
   conn->ReadCredit(header);
   zx_status_t status = receive(conn, tx_queue(), header, chain.desc());
-  switch (conn->op()) {
-    case VIRTIO_VSOCK_OP_RST:
-    case VIRTIO_VSOCK_OP_CREDIT_UPDATE:
-      WaitOnQueueLocked(key);
-      break;
-    default:
-      status = conn->WaitOnTransmit(status);
-      if (status != ZX_OK) {
-        RemoveConnectionLocked(key);
-      }
-      break;
+  if (status != ZX_OK) {
+    RemoveConnectionLocked(key);
+    return;
+  }
+
+  // If the connection immediately needs to send an outgoing packet, add
+  // the connection to the send queue.
+  if (conn->op() == VIRTIO_VSOCK_OP_RST || conn->op() == VIRTIO_VSOCK_OP_CREDIT_UPDATE) {
+    WaitOnQueueLocked(key);
+    return;
+  }
+
+  // Wake up again when the connection next contains data.
+  status = conn->WaitOnTransmit();
+  if (status != ZX_OK) {
+    RemoveConnectionLocked(key);
   }
 }
 

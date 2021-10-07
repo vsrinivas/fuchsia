@@ -210,8 +210,8 @@ class VirtioVsock::Connection {
   virtual zx_status_t Write(VirtioQueue* queue, virtio_vsock_hdr_t* header,
                             const VirtioDescriptor& desc) = 0;
 
-  zx_status_t WaitOnTransmit(zx_status_t status);
-  zx_status_t WaitOnReceive(zx_status_t status);
+  zx_status_t WaitOnTransmit();
+  zx_status_t WaitOnReceive();
 
  protected:
   Type type_;
