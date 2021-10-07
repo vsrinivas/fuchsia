@@ -30,6 +30,9 @@ declare_args() {
   # If extract_minfs_metadata_on_corruption is true, fshost extracts minfs metadata on finding it
   # corrupted. Setting this flag to true helps debugging corruptions.
   extract_minfs_metadata_on_corruption = false
+
+  # List of files and directories that don't need to be preserved when resizing minfs.
+  minfs_resize_excluded_paths = []
 }
 
 group("tests") {
@@ -137,9 +140,11 @@ source_set("block-watcher") {
     "block-device.cc",
     "block-watcher.cc",
     "config.cc",
+    "copier.cc",
     "encrypted-volume.cc",
     "filesystem-mounter.cc",
     "fshost-fs-provider.cc",
+    "minfs-manipulator.cc",
     "pkgfs-launcher.cc",
     "pkgfs-loader-service.cc",
   ]
@@ -167,6 +172,7 @@ source_set("block-watcher") {
     "//sdk/fidl/fuchsia.device:fuchsia.device_llcpp",
     "//sdk/fidl/fuchsia.hardware.block:fuchsia.hardware.block_c",
     "//sdk/fidl/fuchsia.hardware.block.encrypted:fuchsia.hardware.block.encrypted_c",
+    "//sdk/fidl/fuchsia.hardware.block.encrypted:fuchsia.hardware.block.encrypted_llcpp",
     "//sdk/fidl/fuchsia.hardware.block.partition:fuchsia.hardware.block.partition_c",
     "//sdk/fidl/fuchsia.hardware.block.verified:fuchsia.hardware.block.verified_llcpp",
     "//sdk/fidl/fuchsia.io:fuchsia.io_llcpp",
@@ -174,6 +180,7 @@ source_set("block-watcher") {
     "//sdk/lib/fit",
     "//src/devices/block/drivers/block-verity:verified-volume-client",
     "//src/lib/digest",
+    "//src/lib/files",
     "//src/lib/loader_service",
     "//src/lib/storage/fs_management",
     "//src/lib/storage/vfs/cpp",
@@ -187,6 +194,7 @@ source_set("block-watcher") {
     "//zircon/public/lib/zx",
     "//zircon/system/ulib/fidl-async:fidl-async-cpp",
     "//zircon/system/ulib/ramdevice-client",
+    "//zircon/system/ulib/service:service-llcpp",
     "//zircon/system/ulib/trace",
     "//zircon/system/ulib/trace-engine",
   ]
@@ -347,6 +355,7 @@ test("fshost_integration_test") {
     "fshost-exposed-dir-test.cc",
     "fshost_integration_test.cc",
     "fshost_integration_test.h",
+    "minfs-manipulator-test.cc",
     "mock-block-device.h",
     "recovery-test.cc",
   ]
@@ -356,12 +365,15 @@ test("fshost_integration_test") {
     "//sdk/fidl/fuchsia.device:fuchsia.device_llcpp",
     "//sdk/fidl/fuchsia.hardware.block.volume:fuchsia.hardware.block.volume_llcpp",
     "//sdk/fidl/fuchsia.sys2",
+    "//sdk/lib/inspect/testing/cpp",
     "//src/lib/files",
     "//src/lib/fxl/test:gtest_main",
     "//src/lib/storage/fs_management",
     "//src/lib/storage/vfs/cpp/metrics:metrics-cobalt",
     "//src/lib/testing/predicates",
+    "//src/security/zxcrypt:zxcrypt-fdio",
     "//src/storage/blobfs",
+    "//src/storage/lib/utils:topological_path",
     "//src/storage/minfs",
     "//src/storage/testing:storage_driver_test_support",
     "//src/sys/pkg/fidl/fuchsia.update.verify:fuchsia.update.verify_llcpp",
@@ -488,6 +500,11 @@ template("fshost_config") {
     if (defined(invoker.apply_limits_to_ramdisk) &&
         invoker.apply_limits_to_ramdisk) {
       contents += [ "apply-limits-to-ramdisk" ]
+    }
+
+    if (minfs_resize_excluded_paths != []) {
+      contents += [ "minfs-resize-excluded-paths=" +
+                    string_join(",", minfs_resize_excluded_paths) ]
     }
 
     output_conversion = "list lines"

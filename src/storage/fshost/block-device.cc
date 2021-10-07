@@ -11,14 +11,19 @@
 #include <fuchsia/hardware/block/partition/c/fidl.h>
 #include <fuchsia/hardware/block/partition/llcpp/fidl.h>
 #include <fuchsia/hardware/block/volume/c/fidl.h>
+#include <fuchsia/hardware/power/statecontrol/llcpp/fidl.h>
 #include <inttypes.h>
+#include <lib/async-loop/cpp/loop.h>
 #include <lib/fdio/cpp/caller.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
 #include <lib/fdio/unsafe.h>
 #include <lib/fdio/watcher.h>
+#include <lib/fidl/llcpp/client.h>
+#include <lib/fidl/llcpp/client_end.h>
 #include <lib/fzl/time.h>
+#include <lib/service/llcpp/service.h>
 #include <lib/syslog/cpp/macros.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/status.h>
@@ -28,9 +33,11 @@
 #include <string.h>
 #include <unistd.h>
 #include <zircon/device/block.h>
+#include <zircon/errors.h>
 #include <zircon/processargs.h>
 #include <zircon/status.h>
 #include <zircon/syscalls.h>
+#include <zircon/types.h>
 
 #include <utility>
 
@@ -46,6 +53,11 @@
 #include "extract-metadata.h"
 #include "pkgfs-launcher.h"
 #include "src/devices/block/drivers/block-verity/verified-volume-client.h"
+#include "src/storage/fshost/block-device-interface.h"
+#include "src/storage/fshost/copier.h"
+#include "src/storage/fshost/fshost-fs-provider.h"
+#include "src/storage/fshost/minfs-manipulator.h"
+#include "src/storage/fvm/format.h"
 #include "src/storage/minfs/fsck.h"
 #include "src/storage/minfs/minfs.h"
 
@@ -53,41 +65,6 @@ namespace devmgr {
 namespace {
 
 const char kAllowAuthoringFactoryConfigFile[] = "/boot/config/allow-authoring-factory";
-
-// Attempt to mount the device pointed to be the file descriptor at a known
-// location.
-//
-// Returns ZX_ERR_ALREADY_BOUND if the device could be mounted, but something
-// is already mounted at that location. Returns ZX_ERR_INVALID_ARGS if the
-// GUID of the device does not match a known valid one. Returns
-// ZX_ERR_NOT_SUPPORTED if the GUID is a system GUID. Returns ZX_OK if an
-// attempt to mount is made, without checking mount success.
-zx_status_t MountMinfs(FilesystemMounter* mounter, zx::channel block_device,
-                       mount_options_t* options) {
-  fuchsia_hardware_block_partition_GUID type_guid;
-  zx_status_t io_status, status;
-  io_status = fuchsia_hardware_block_partition_PartitionGetTypeGuid(block_device.get(), &status,
-                                                                    &type_guid);
-  if (io_status != ZX_OK) {
-    return io_status;
-  }
-  if (status != ZX_OK) {
-    return status;
-  }
-
-  if (gpt_is_sys_guid(type_guid.value, GPT_GUID_LEN)) {
-    return ZX_ERR_NOT_SUPPORTED;
-  } else if (gpt_is_data_guid(type_guid.value, GPT_GUID_LEN)) {
-    return mounter->MountData(std::move(block_device), *options);
-  } else if (gpt_is_install_guid(type_guid.value, GPT_GUID_LEN)) {
-    options->readonly = true;
-    return mounter->MountInstall(std::move(block_device), *options);
-  } else if (gpt_is_durable_guid(type_guid.value, GPT_GUID_LEN)) {
-    return mounter->MountDurable(std::move(block_device), *options);
-  }
-  FX_LOGS(ERROR) << "Unrecognized partition GUID for minfs; not mounting";
-  return ZX_ERR_WRONG_TYPE;
-}
 
 // return value is ignored
 int UnsealZxcryptThread(void* arg) {
@@ -126,6 +103,35 @@ int OpenVerityDeviceThread(void* arg) {
     return 1;
   }
   return 0;
+}
+
+// Sends a message requesting that the device be rebooted without waiting for a response. Returns an
+// error if the message could not be sent.
+zx::status<> RebootDevice() {
+  using fuchsia_hardware_power_statecontrol::Admin;
+  using fuchsia_hardware_power_statecontrol::wire::RebootReason;
+
+  auto svc = service::OpenServiceRoot();
+  if (svc.is_error()) {
+    FX_LOGS(ERROR) << "Failed to open service root: " << svc.status_string();
+    return svc.take_error();
+  }
+  auto client_end = service::ConnectAt<Admin>(*svc);
+  if (client_end.is_error()) {
+    FX_LOGS(ERROR) << "Failed to connect to fuchsia.hardware.power.statecontrol/Admin: "
+                   << client_end.status_string();
+    return client_end.take_error();
+  }
+  // Create an async loop for sending an async Reboot request. Return without running the loop
+  // because we cannot wait for the response. The Reboot call waits for component-manager to do an
+  // orderly shutdown which includes stopping fshost. If fshost is waiting for the response then it
+  // won't shutdown. Component-manager has a 20 minute timeout for shutting down fshost that would
+  // be reached if the response was waited for.
+  async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
+  fidl::Client client(*std::move(client_end), loop.dispatcher());
+  client->Reboot(RebootReason::kFactoryDataReset,
+                 [](fidl::WireResponse<Admin::Reboot>*) { /*ignored*/ });
+  return zx::ok();
 }
 
 std::string GetTopologicalPath(int fd) {
@@ -539,8 +545,8 @@ zx_status_t BlockDevice::MountFilesystem() {
     }
     case DISK_FORMAT_MINFS: {
       mount_options_t options = default_mount_options;
-      FX_LOGS(INFO) << "BlockDevice::MountFilesystem(minfs)";
-      zx_status_t status = MountMinfs(mounter_, std::move(block_device), &options);
+      FX_LOGS(INFO) << "BlockDevice::MountFilesystem(data partition)";
+      zx_status_t status = MountData(&options);
       if (status != ZX_OK) {
         FX_LOGS(ERROR) << "Failed to mount minfs partition: " << zx_status_get_string(status)
                        << ".";
@@ -554,6 +560,63 @@ zx_status_t BlockDevice::MountFilesystem() {
       FX_LOGS(ERROR) << "BlockDevice::MountFilesystem(unknown)";
       return ZX_ERR_NOT_SUPPORTED;
   }
+}
+
+// Attempt to mount the device at a known location.
+//
+// Returns ZX_ERR_ALREADY_BOUND if the device could be mounted, but something
+// is already mounted at that location. Returns ZX_ERR_INVALID_ARGS if the
+// GUID of the device does not match a known valid one. Returns
+// ZX_ERR_NOT_SUPPORTED if the GUID is a system GUID. Returns ZX_OK if an
+// attempt to mount is made, without checking mount success.
+zx_status_t BlockDevice::MountData(mount_options_t* options) {
+  fuchsia_hardware_block_partition_GUID type_guid;
+  zx_status_t io_status, status;
+  zx::channel block_device = CloneDeviceChannel();
+  io_status = fuchsia_hardware_block_partition_PartitionGetTypeGuid(block_device.get(), &status,
+                                                                    &type_guid);
+  if (io_status != ZX_OK) {
+    return io_status;
+  }
+  if (status != ZX_OK) {
+    return status;
+  }
+
+  if (gpt_is_sys_guid(type_guid.value, GPT_GUID_LEN)) {
+    return ZX_ERR_NOT_SUPPORTED;
+  } else if (gpt_is_data_guid(type_guid.value, GPT_GUID_LEN)) {
+    uint64_t minfs_max_size = device_config_->ReadUint64OptionValue(Config::kMinfsMaxBytes, 0);
+    if (minfs_max_size > 0) {
+      auto excluded_paths = ParseExcludedPaths(
+          device_config_->ReadStringOptionValue(Config::kMinfsResizeExcludedPaths));
+      constexpr uint64_t kMinfsResizeRequiredInodes = 4096;
+      constexpr uint64_t kMinfsResizeDataSizeLimit = 10223616;  // 9.75 * 1024 * 1024
+      MaybeResizeMinfsResult result =
+          MaybeResizeMinfs(CloneDeviceChannel(), minfs_max_size, kMinfsResizeRequiredInodes,
+                           kMinfsResizeDataSizeLimit, excluded_paths, mounter_->inspect_manager());
+      switch (result) {
+        case MaybeResizeMinfsResult::kMinfsMountable:
+          break;
+        case MaybeResizeMinfsResult::kRebootRequired:
+          // fshost if a critical process so if requesting a reboot fails then try crashing fshost.
+          ZX_ASSERT_MSG(RebootDevice().is_ok(), "Failed to request a reboot");
+          return ZX_ERR_CANCELED;
+      }
+    }
+    return mounter_->MountData(std::move(block_device), *options);
+  } else if (gpt_is_install_guid(type_guid.value, GPT_GUID_LEN)) {
+    options->readonly = true;
+    return mounter_->MountInstall(std::move(block_device), *options);
+  } else if (gpt_is_durable_guid(type_guid.value, GPT_GUID_LEN)) {
+    return mounter_->MountDurable(std::move(block_device), *options);
+  }
+  FX_LOGS(ERROR) << "Unrecognized partition GUID for data partition; not mounting";
+  return ZX_ERR_WRONG_TYPE;
+}
+
+zx::channel BlockDevice::CloneDeviceChannel() const {
+  fdio_cpp::UnownedFdioCaller caller(fd_.get());
+  return zx::channel(fdio_service_clone(caller.borrow_channel()));
 }
 
 zx_status_t BlockDeviceInterface::Add(bool format_on_corruption) {
@@ -617,6 +680,10 @@ zx_status_t BlockDeviceInterface::Add(bool format_on_corruption) {
       }
       if (zx_status_t status = MountFilesystem(); status != ZX_OK) {
         FX_LOGS(ERROR) << "failed to mount filesystem: " << zx_status_get_string(status);
+        if (status == ZX_ERR_CANCELED) {
+          // If mounting was canceled then don't try to format minfs or mount again.
+          return status;
+        }
         if (!format_on_corruption) {
           FX_LOGS(ERROR) << "formatting minfs on this target is disabled";
           return status;

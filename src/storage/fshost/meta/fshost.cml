@@ -141,6 +141,7 @@
                 "fuchsia.boot.WriteOnlyLog",
                 "fuchsia.cobalt.LoggerFactory",
                 "fuchsia.device.manager.Administrator",
+                "fuchsia.hardware.power.statecontrol.Admin",
                 "fuchsia.process.Launcher",
                 "fuchsia.tracing.provider.Registry",
             ],
