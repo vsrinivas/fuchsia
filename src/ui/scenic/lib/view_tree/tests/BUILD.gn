@@ -13,6 +13,7 @@ group("tests") {
 executable("view_tree_test_bin") {
   testonly = true
   sources = [
+    "snapshot_dump_unittest.cc",
     "snapshot_types_unittest.cc",
     "view_ref_installed_impl_unittest.cc",
     "view_tree_snapshotter_unittest.cc",
@@ -20,6 +21,7 @@ executable("view_tree_test_bin") {
   deps = [
     "//sdk/lib/ui/scenic/cpp",
     "//src/lib/fxl/test:gtest_main",
+    "//src/lib/testing/loop_fixture:gtest",
     "//src/ui/scenic/lib/utils",
     "//src/ui/scenic/lib/view_tree:view_ref_installed",
     "//src/ui/scenic/lib/view_tree:view_tree_snapshot",

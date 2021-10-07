@@ -16,6 +16,8 @@ source_set("view_ref_installed") {
 
 source_set("view_tree_snapshot") {
   sources = [
+    "snapshot_dump.cc",
+    "snapshot_dump.h",
     "snapshot_types.cc",
     "snapshot_types.h",
     "view_tree_snapshotter.cc",

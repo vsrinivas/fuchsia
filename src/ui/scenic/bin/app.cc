@@ -21,6 +21,7 @@
 #include "src/ui/scenic/lib/screenshot/screenshot.h"
 #include "src/ui/scenic/lib/screenshot/screenshot_buffer_collection_importer.h"
 #include "src/ui/scenic/lib/utils/helpers.h"
+#include "src/ui/scenic/lib/view_tree/snapshot_dump.h"
 
 namespace {
 
@@ -595,6 +596,15 @@ void App::InitializeHeartbeat() {
                                      std::move(snapshot));
                                },
                            .dispatcher = async_get_default_dispatcher()});
+    if (enable_snapshot_dump_) {
+      subscribers.push_back({.on_new_view_tree =
+                                 [](auto snapshot) {
+                                   view_tree::SnapshotDump::OnNewViewTreeSnapshot(
+                                       std::move(snapshot));
+                                 },
+                             .dispatcher = async_get_default_dispatcher()});
+    }
+
     view_tree_snapshotter_ = std::make_shared<view_tree::ViewTreeSnapshotter>(
         std::move(subtrees_generator_callbacks), std::move(subscribers));
   }

@@ -131,6 +131,8 @@ class App {
   LifecycleControllerImpl lifecycle_controller_impl_;
 
   async::TaskMethod<App, &App::DoPeriodicLogging> periodic_logging_task_{this};
+
+  const bool enable_snapshot_dump_ = false;
 };
 
 }  // namespace scenic_impl
