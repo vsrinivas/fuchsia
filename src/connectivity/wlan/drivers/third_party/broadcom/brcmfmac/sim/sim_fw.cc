@@ -321,6 +321,18 @@ zx_status_t SimFirmware::BusTxCtl(unsigned char* msg, unsigned int len) {
     // If the transmission status is not ZX_OK, return the error for this command transmission.
     return status;
   }
+
+  // If an err event has been injected for this command, then send event to driver and return.
+  brcmf_fweh_event_code ecode;
+  brcmf_fweh_event_status_t estatus;
+  status_code_t reason;
+  uint16_t flags;
+  if (err_inj_.CheckIfErrEventInjCmdEnabled(dcmd->cmd, ecode, estatus, reason, flags, ifidx)) {
+    SendEventToDriver(0, nullptr, ecode, estatus, ifidx, nullptr, flags, reason, kZeroMac,
+                      kAssocEventDelay);
+    return ZX_OK;
+  }
+
   status = ZX_OK;
   switch (dcmd->cmd) {
     // Get/Set a firmware IOVAR. This message is comprised of a NULL-terminated string

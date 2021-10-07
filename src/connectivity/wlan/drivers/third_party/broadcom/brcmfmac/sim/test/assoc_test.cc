@@ -17,6 +17,7 @@
 #include "src/connectivity/wlan/drivers/testing/lib/sim-fake-ap/sim-fake-ap.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/cfg80211.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/common.h"
+#include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/fweh.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/fwil.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/sim/sim.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/sim/test/sim_test.h"
@@ -122,6 +123,7 @@ class AssocTest : public SimTest {
   void DeauthFromAp();
 
   void AssocErrorInject();
+  void AssocErrorEventInject(brcmf_fweh_event_status_t ret_status, status_code_t ret_reason);
 
   void SendStatsQuery();
   void DetailedHistogramErrorInject();
@@ -575,6 +577,13 @@ TEST_F(AssocTest, StatsQueryReqWithoutDetailedHistogramFeatureTest) {
 void AssocTest::AssocErrorInject() {
   brcmf_simdev* sim = device_->GetSim();
   sim->sim_fw->err_inj_.AddErrInjCmd(BRCMF_C_SET_SSID, ZX_OK, BCME_OK, client_ifc_.iface_id_);
+}
+
+void AssocTest::AssocErrorEventInject(brcmf_fweh_event_status_t ret_status,
+                                      status_code_t ret_reason) {
+  brcmf_simdev* sim = device_->GetSim();
+  sim->sim_fw->err_inj_.AddErrEventInjCmd(BRCMF_C_SET_SSID, BRCMF_E_ASSOC, ret_status, ret_reason,
+                                          0, client_ifc_.iface_id_);
 }
 
 void AssocTest::StartDisassoc() {
@@ -1034,6 +1043,19 @@ TEST_F(AssocTest, AssocWithWmm) {
 
   env_->ScheduleNotification(std::bind(&AssocTest::StartAssoc, this), zx::msec(10));
 
+  env_->Run(kTestDuration);
+
+  EXPECT_EQ(context_.assoc_resp_count, 1U);
+}
+
+TEST_F(AssocTest, AssocStatusAndReasonCodeMismatchHandling) {
+  // Create our device instance
+  Init();
+
+  AssocErrorEventInject(BRCMF_E_STATUS_NO_ACK, STATUS_CODE_SUCCESS);
+  context_.expected_results.push_back(STATUS_CODE_REFUSED_REASON_UNSPECIFIED);
+
+  env_->ScheduleNotification(std::bind(&AssocTest::StartAssoc, this), zx::msec(50));
   env_->Run(kTestDuration);
 
   EXPECT_EQ(context_.assoc_resp_count, 1U);

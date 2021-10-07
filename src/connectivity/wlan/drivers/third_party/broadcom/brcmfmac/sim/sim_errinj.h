@@ -27,6 +27,7 @@
 #include "src/connectivity/wlan/drivers/testing/lib/sim-env/sim-env.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/bits.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/debug.h"
+#include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/fweh.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/fwil_types.h"
 
 namespace wlan::brcmfmac {
@@ -52,6 +53,16 @@ class SimErrorInjector {
                                  bcme_status_t* ret_fw_err,
                                  const std::vector<uint8_t>** alt_value_out, uint16_t ifidx);
 
+  // Iovar int command specific
+  void AddErrEventInjCmd(uint32_t cmd, brcmf_fweh_event_code event_code,
+                         brcmf_fweh_event_status_t ret_status, status_code_t ret_reason,
+                         uint16_t flags, std::optional<uint16_t> ifidx = {});
+  void DelErrEventInjCmd(uint32_t cmd);
+  bool CheckIfErrEventInjCmdEnabled(uint32_t cmd, brcmf_fweh_event_code& event_code,
+                                    brcmf_fweh_event_status_t& ret_status,
+                                    status_code_t& ret_reason, uint16_t& flags,
+                                    std::optional<uint16_t> ifidx);
+
   // Configure the mac address as reported by the (simulated) bootloader
   void SetBootloaderMacAddr(const wlan::common::MacAddr& mac_addr) {
     bootloader_mac_addr_ = mac_addr;
@@ -60,13 +71,13 @@ class SimErrorInjector {
 
  private:
   struct ErrInjCmd {
-    std::optional<uint16_t> ifidx;
     uint32_t cmd;
+    std::optional<uint16_t> ifidx;
     zx_status_t ret_status;
     bcme_status_t ret_fw_err;
 
     ErrInjCmd(uint32_t cmd, zx_status_t status, bcme_status_t fw_err, std::optional<uint16_t> ifidx)
-        : ifidx(ifidx), cmd(cmd), ret_status(status), ret_fw_err(fw_err) {}
+        : cmd(cmd), ifidx(ifidx), ret_status(status), ret_fw_err(fw_err) {}
   };
 
   struct ErrInjIovar {
@@ -95,8 +106,29 @@ class SimErrorInjector {
       std::memcpy(iovar.data(), iovar_str, strlen(iovar_str) + 1);
     }
   };
+
+  struct ErrEventInjCmd {
+    uint32_t cmd;
+    std::optional<uint16_t> ifidx;
+    brcmf_fweh_event_code event_code;
+    brcmf_fweh_event_status_t ret_status;
+    status_code_t ret_reason;
+    uint16_t flags;
+
+    ErrEventInjCmd(uint32_t cmd, brcmf_fweh_event_code event_code,
+                   brcmf_fweh_event_status_t ret_status, status_code_t ret_reason, uint16_t flags,
+                   std::optional<uint16_t> ifidx)
+        : cmd(cmd),
+          ifidx(ifidx),
+          event_code(event_code),
+          ret_status(ret_status),
+          ret_reason(ret_reason),
+          flags(flags) {}
+  };
+
   std::list<ErrInjCmd> cmds_;
   std::list<ErrInjIovar> iovars_;
+  std::list<ErrEventInjCmd> event_cmds_;
 
   // If set, overrides the bootloader-reported mac address
   std::optional<wlan::common::MacAddr> bootloader_mac_addr_ = {};

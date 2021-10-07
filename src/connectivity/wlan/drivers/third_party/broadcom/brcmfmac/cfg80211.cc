@@ -1770,7 +1770,6 @@ void brcmf_return_assoc_result(struct net_device* ndev, status_code_t status_cod
   BRCMF_DBG(TEMP, " * Hard-coding association_id to 42; this will likely break something!");
   conf.association_id = 42;  // TODO: Use brcmf_cfg80211_get_station() to get aid
   set_assoc_conf_wmm_param(cfg, &conf);
-
   BRCMF_IFDBG(WLANIF, ndev, "Sending assoc result to SME. result: %" PRIu16 ", aid: %" PRIu16,
               conf.result_code, conf.association_id);
 
@@ -5151,13 +5150,22 @@ static zx_status_t brcmf_handle_assoc_event(struct brcmf_if* ifp, const struct b
   ZX_DEBUG_ASSERT(!brcmf_is_apmode(ifp->vif));
 
   // For this event, e->reason is in the StatusCode enum space.
-  status_code_t assoc_result = e->reason;
+  status_code_t reason_code = e->reason;
+
+  // TODO(fxbug.dev/85446) - This is a work around until we have a resolution for this bug.
+  if ((BRCMF_E_STATUS_SUCCESS != e->status) && (STATUS_CODE_SUCCESS == reason_code)) {
+    BRCMF_WARN(
+        "Reason is SUCCESS while status indicates an error:%u. Overriding reason to "
+        "REASON_UNSPECIFIED.",
+        e->status);
+    reason_code = STATUS_CODE_REFUSED_REASON_UNSPECIFIED;
+  }
 
   return brcmf_bss_connect_done(ifp,
                                 (e->status == BRCMF_E_STATUS_SUCCESS)
                                     ? brcmf_connect_status_t::CONNECTED
                                     : brcmf_connect_status_t::ASSOC_REQ_FAILED,
-                                assoc_result);
+                                reason_code);
 }
 
 // Handler to ASSOC_IND and REASSOC_IND events. These are explicitly meant for SoftAP
