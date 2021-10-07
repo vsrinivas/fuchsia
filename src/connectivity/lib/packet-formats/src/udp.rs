@@ -25,7 +25,7 @@ pub(crate) const HEADER_BYTES: usize = 8;
 const CHECKSUM_OFFSET: usize = 6;
 const CHECKSUM_RANGE: Range<usize> = CHECKSUM_OFFSET..CHECKSUM_OFFSET + 2;
 
-#[derive(FromBytes, AsBytes, Unaligned)]
+#[derive(Debug, FromBytes, AsBytes, Unaligned)]
 #[repr(C)]
 struct Header {
     src_port: U16,
@@ -165,7 +165,7 @@ impl<B: ByteSlice> UdpPacket<B> {
 ///
 /// A `UdpPacketHeader` may be the result of a partially parsed UDP packet in
 /// [`UdpPacketRaw`].
-#[derive(Default, FromBytes, AsBytes, Unaligned)]
+#[derive(Debug, Default, FromBytes, AsBytes, Unaligned, PartialEq)]
 #[repr(C)]
 struct UdpFlowHeader {
     src_port: U16,
@@ -173,7 +173,8 @@ struct UdpFlowHeader {
 }
 
 /// A partially parsed UDP packet header.
-struct PartialHeader<B> {
+#[derive(Debug)]
+struct PartialHeader<B: ByteSlice> {
     flow: LayoutVerified<B, UdpFlowHeader>,
     rest: B,
 }
@@ -191,7 +192,7 @@ struct PartialHeader<B> {
 ///
 /// [`UdpPacket`] provides a [`FromRaw`] implementation that can be used to
 /// validate a `UdpPacketRaw`.
-pub struct UdpPacketRaw<B> {
+pub struct UdpPacketRaw<B: ByteSlice> {
     header: MaybeParsed<LayoutVerified<B, Header>, PartialHeader<B>>,
     body: MaybeParsed<B, B>,
 }
@@ -642,17 +643,21 @@ mod tests {
 
     #[test]
     fn test_partial_parse() {
+        use core::ops::Deref as _;
+
         // Try to get something with only the flow header:
         let buf = [0, 0, 1, 2, 10, 20];
         let mut bv = &buf[..];
         let packet =
             bv.parse_with::<_, UdpPacketRaw<_>>(IpVersionMarker::<Ipv4>::default()).unwrap();
-        let header = packet.header.as_ref().unwrap_incomplete();
-        let body = packet.body.as_ref().unwrap_incomplete();
-        assert_eq!(header.flow.src_port.get(), 0);
-        assert_eq!(header.flow.dst_port.get(), 0x0102);
-        assert_eq!(header.rest, &buf[4..]);
-        assert_eq!(body, &[]);
+        let UdpPacketRaw { header, body } = &packet;
+        let PartialHeader { flow, rest } = header.as_ref().incomplete().unwrap();
+        assert_eq!(
+            flow.deref(),
+            &UdpFlowHeader { src_port: U16::new(0), dst_port: U16::new(0x0102) }
+        );
+        assert_eq!(*rest, &buf[4..]);
+        assert_eq!(body.incomplete().unwrap(), []);
         assert!(UdpPacket::try_from_raw_with(
             packet,
             UdpParseArgs::new(TEST_SRC_IPV4, TEST_DST_IPV4)
@@ -668,10 +673,9 @@ mod tests {
         let mut bv = &buf[..];
         let packet =
             bv.parse_with::<_, UdpPacketRaw<_>>(IpVersionMarker::<Ipv4>::default()).unwrap();
-        let header = packet.header.as_ref().unwrap();
-        let body = packet.body.as_ref().unwrap_incomplete();
-        assert_eq!(header.bytes(), &buf[..8]);
-        assert_eq!(&body[..], &buf[8..]);
+        let UdpPacketRaw { header, body } = &packet;
+        assert_eq!(header.as_ref().complete().unwrap().bytes(), &buf[..8]);
+        assert_eq!(body.incomplete().unwrap(), &buf[8..]);
         assert!(UdpPacket::try_from_raw_with(
             packet,
             UdpParseArgs::new(TEST_SRC_IPV4, TEST_DST_IPV4)
@@ -683,10 +687,9 @@ mod tests {
         let mut bv = &buf[..];
         let packet =
             bv.parse_with::<_, UdpPacketRaw<_>>(IpVersionMarker::<Ipv4>::default()).unwrap();
-        let header = packet.header.as_ref().unwrap();
-        let body = packet.body.as_ref().unwrap_incomplete();
-        assert_eq!(header.bytes(), &buf[..8]);
-        assert_eq!(body, &[]);
+        let UdpPacketRaw { header, body } = &packet;
+        assert_eq!(header.as_ref().complete().unwrap().bytes(), &buf[..8]);
+        assert_eq!(body.incomplete().unwrap(), []);
         assert!(UdpPacket::try_from_raw_with(
             packet,
             UdpParseArgs::new(TEST_SRC_IPV4, TEST_DST_IPV4)
@@ -700,10 +703,9 @@ mod tests {
         let mut bv = &buf[..];
         let packet =
             bv.parse_with::<_, UdpPacketRaw<_>>(IpVersionMarker::<Ipv6>::default()).unwrap();
-        let header = packet.header.as_ref().unwrap();
-        let body = packet.body.as_ref().unwrap_incomplete();
-        assert_eq!(header.bytes(), &buf[..8]);
-        assert_eq!(&body[..], &[]);
+        let UdpPacketRaw { header, body } = &packet;
+        assert_eq!(header.as_ref().complete().unwrap().bytes(), &buf[..8]);
+        assert_eq!(body.incomplete().unwrap(), []);
         // Now try same thing but with a body that's actually big enough to
         // justify len being 0.
         let mut buf = vec![0, 0, 1, 2, 0, 0, 0, 0, 10, 20];
@@ -711,10 +713,9 @@ mod tests {
         let bv = &mut &buf[..];
         let packet =
             bv.parse_with::<_, UdpPacketRaw<_>>(IpVersionMarker::<Ipv6>::default()).unwrap();
-        let header = packet.header.as_ref().unwrap();
-        let body = packet.body.as_ref().unwrap();
-        assert_eq!(header.bytes(), &buf[..8]);
-        assert_eq!(&body[..], &buf[8..]);
+        let UdpPacketRaw { header, body } = &packet;
+        assert_eq!(header.as_ref().complete().unwrap().bytes(), &buf[..8]);
+        assert_eq!(body.complete().unwrap(), &buf[8..]);
     }
 
     #[test]

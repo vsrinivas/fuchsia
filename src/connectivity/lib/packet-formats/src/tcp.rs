@@ -28,7 +28,7 @@ const CHECKSUM_OFFSET: usize = 16;
 const CHECKSUM_RANGE: Range<usize> = CHECKSUM_OFFSET..CHECKSUM_OFFSET + 2;
 pub(crate) const TCP_MIN_HDR_LEN: usize = HDR_PREFIX_LEN;
 
-#[derive(Default, FromBytes, AsBytes, Unaligned)]
+#[derive(Debug, Default, FromBytes, AsBytes, Unaligned, PartialEq)]
 #[repr(C)]
 struct HeaderPrefix {
     src_port: U16,
@@ -281,14 +281,15 @@ impl<B: ByteSlice> TcpSegment<B> {
 ///
 /// A `TcpFlowHeader` may be the result of a partially parsed TCP segment in
 /// [`TcpSegmentRaw`].
-#[derive(Default, FromBytes, AsBytes, Unaligned)]
+#[derive(Debug, Default, FromBytes, AsBytes, Unaligned, PartialEq)]
 #[repr(C)]
 struct TcpFlowHeader {
     src_port: U16,
     dst_port: U16,
 }
 
-struct PartialHeaderPrefix<B> {
+#[derive(Debug)]
+struct PartialHeaderPrefix<B: ByteSlice> {
     flow: LayoutVerified<B, TcpFlowHeader>,
     rest: B,
 }
@@ -306,7 +307,7 @@ struct PartialHeaderPrefix<B> {
 ///
 /// [`TcpSegment`] provides a [`FromRaw`] implementation that can be used to
 /// validate a `TcpSegmentRaw`.
-pub struct TcpSegmentRaw<B> {
+pub struct TcpSegmentRaw<B: ByteSlice> {
     hdr_prefix: MaybeParsed<LayoutVerified<B, HeaderPrefix>, PartialHeaderPrefix<B>>,
     options: MaybeParsed<OptionsRaw<B, TcpOptionsImpl>, B>,
     body: B,
@@ -556,6 +557,7 @@ pub mod options {
     }
 
     /// An implementation of [`OptionsImpl`] for TCP options.
+    #[derive(Debug)]
     pub struct TcpOptionsImpl;
 
     impl OptionsImplLayout for TcpOptionsImpl {
@@ -885,16 +887,24 @@ mod tests {
 
     #[test]
     fn test_partial_parse() {
+        use std::ops::Deref as _;
+
         // Parse options partially:
-        let mut hdr_prefix = new_hdr_prefix();
-        hdr_prefix.set_data_offset(8);
-        let mut bytes = hdr_prefix_to_bytes(hdr_prefix)[..].to_owned();
-        bytes.extend(&[1, 2, 3, 4, 5]);
+        let make_hdr_prefix = || {
+            let mut hdr_prefix = new_hdr_prefix();
+            hdr_prefix.set_data_offset(8);
+            hdr_prefix
+        };
+        let hdr_prefix = hdr_prefix_to_bytes(make_hdr_prefix());
+        let mut bytes = hdr_prefix[..].to_owned();
+        const OPTIONS: &[u8] = &[1, 2, 3, 4, 5];
+        bytes.extend(OPTIONS);
         let mut buf = &bytes[..];
         let packet = buf.parse::<TcpSegmentRaw<_>>().unwrap();
-        assert_eq!(packet.hdr_prefix.as_ref().unwrap().bytes(), &bytes[0..20]);
-        assert_eq!(packet.options.as_ref().unwrap_incomplete().len(), 5);
-        assert_eq!(packet.body.len(), 0);
+        let TcpSegmentRaw { hdr_prefix, options, body } = &packet;
+        assert_eq!(hdr_prefix.as_ref().complete().unwrap().deref(), &make_hdr_prefix());
+        assert_eq!(options.as_ref().incomplete().unwrap(), &OPTIONS);
+        assert_eq!(body, &[]);
         // validation should fail:
         assert!(TcpSegment::try_from_raw_with(
             packet,
@@ -904,15 +914,18 @@ mod tests {
 
         // Parse header partially:
         let hdr_prefix = new_hdr_prefix();
+        let HeaderPrefix { src_port, dst_port, .. } = hdr_prefix;
         let bytes = hdr_prefix_to_bytes(hdr_prefix);
         let mut buf = &bytes[0..10];
+        // Copy the rest portion since the buffer is mutably borrowed after parsing.
+        let bytes_rest = buf[4..].to_owned();
         let packet = buf.parse::<TcpSegmentRaw<_>>().unwrap();
-        let partial = packet.hdr_prefix.as_ref().unwrap_incomplete();
-        assert_eq!(partial.flow.src_port.get(), 1);
-        assert_eq!(partial.flow.dst_port.get(), 2);
-        assert_eq!(partial.rest.len(), 6);
-        assert!(packet.options.is_incomplete());
-        assert_eq!(packet.body.len(), 0);
+        let TcpSegmentRaw { hdr_prefix, options, body } = &packet;
+        let PartialHeaderPrefix { flow, rest } = hdr_prefix.as_ref().incomplete().unwrap();
+        assert_eq!(flow.deref(), &TcpFlowHeader { src_port, dst_port });
+        assert_eq!(*rest, &bytes_rest[..]);
+        assert_eq!(options.as_ref().incomplete().unwrap(), &[]);
+        assert_eq!(body, &[]);
         // validation should fail:
         assert!(TcpSegment::try_from_raw_with(
             packet,

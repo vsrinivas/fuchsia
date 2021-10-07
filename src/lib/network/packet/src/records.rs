@@ -79,6 +79,7 @@ pub struct Records<B, R: RecordsImplLayout> {
 ///
 /// [`Records`] provides an implementation of [`FromRaw`] that can be used to
 /// validate a `RecordsRaw`.
+#[derive(Debug)]
 pub struct RecordsRaw<B, R: RecordsImplLayout> {
     bytes: B,
     context: R::Context,
@@ -1377,8 +1378,10 @@ mod test {
             &mut bv,
             &mut context,
         )
+        .complete()
         .unwrap();
-        assert_eq!(result.bytes.len(), DUMMY_BYTES.len());
+        let RecordsRaw { bytes, context: _ } = &result;
+        assert_eq!(*bytes, &DUMMY_BYTES[..]);
         let parsed = Records::try_from_raw(result).unwrap();
         validate_parsed_stateful_context_records(parsed, context);
     }
@@ -1387,12 +1390,13 @@ mod test {
     fn raw_parse_failure() {
         let mut context = StatefulContext::new();
         let mut bv = &mut &DUMMY_BYTES[0..15];
-        let (result, _) = RecordsRaw::<_, StatefulContextRecordImpl>::parse_raw_with_mut_context(
+        let result = RecordsRaw::<_, StatefulContextRecordImpl>::parse_raw_with_mut_context(
             &mut bv,
             &mut context,
         )
-        .unwrap_incomplete();
-        assert_eq!(result, &DUMMY_BYTES[0..12]);
+        .incomplete()
+        .unwrap();
+        assert_eq!(result, (&DUMMY_BYTES[0..12], ()));
     }
 }
 

@@ -161,7 +161,7 @@ fn ext_hdr_err_fn(hdr: &FixedHeader, err: Ipv6ExtensionHeaderParsingError) -> Ip
 }
 
 #[allow(missing_docs)]
-#[derive(Default, FromBytes, AsBytes, Unaligned)]
+#[derive(Debug, Default, FromBytes, AsBytes, Unaligned, PartialEq)]
 #[repr(C)]
 pub struct FixedHeader {
     version_tc_flowlabel: [u8; 4],
@@ -619,34 +619,41 @@ impl<B: ByteSlice> ParsablePacket<B, ()> for Ipv6PacketRaw<B> {
             RecordsRaw::parse_raw_with_mut_context(&mut buffer, &mut extension_hdr_context)
                 .map_incomplete(|(b, _)| b);
 
-        let body_proto = if extension_hdrs.is_complete() {
-            // If we have extension headers our context's
-            // (`extension_hdr_context`) `next_header` would be updated with the
-            // last extension header's Next Header value. This will also work if
-            // we don't have any extension headers. Let's consider that
-            // scenario: When we have no extension headers, the Next Header
-            // value in the fixed header will be a valid upper layer protocol
-            // value. `parse_bv_with_mut_context` will return almost immediately
-            // without doing any actual work when it checks the context's
-            // (`extension_hdr_context`) `next_header` value and ends parsing
-            // since, according to our context, its data is for an upper layer
-            // protocol. Now, since nothing was parsed, our context was never
-            // modified, so the next header value it was initialized with when
-            // calling `Ipv6ExtensionHeaderParsingContext::new`, will not have
-            // changed. We simply use that value and assign it to proto below.
+        let body_proto = match &extension_hdrs {
+            MaybeParsed::Complete(r) => {
+                let _: &RecordsRaw<B, _> = r;
+                // If we have extension headers our context's
+                // (`extension_hdr_context`) `next_header` would be updated with
+                // the last extension header's Next Header value. This will also
+                // work if we don't have any extension headers. Let's consider
+                // that scenario: When we have no extension headers, the Next
+                // Header value in the fixed header will be a valid upper layer
+                // protocol value.  `parse_bv_with_mut_context` will return
+                // almost immediately without doing any actual work when it
+                // checks the context's (`extension_hdr_context`) `next_header`
+                // value and ends parsing since, according to our context, its
+                // data is for an upper layer protocol. Now, since nothing was
+                // parsed, our context was never modified, so the next header
+                // value it was initialized with when calling
+                // `Ipv6ExtensionHeaderParsingContext::new`, will not have
+                // changed. We simply use that value and assign it to proto
+                // below.
 
-            // Extension header raw parsing only finishes when we have a valid
-            // next header that is meant for the upper layer. The assertion
-            // below enforces that contract.
-            assert!(is_valid_next_header_upper_layer(extension_hdr_context.next_header));
-            let proto = Ipv6Proto::from(extension_hdr_context.next_header);
-            let body = MaybeParsed::new_with_min_len(
-                buffer.into_rest(),
-                payload_len.saturating_sub(extension_hdrs.len()),
-            );
-            Ok((body, proto))
-        } else {
-            Err(ExtHdrParseError)
+                // Extension header raw parsing only finishes when we have a
+                // valid next header that is meant for the upper layer. The
+                // assertion below enforces that contract.
+                assert!(is_valid_next_header_upper_layer(extension_hdr_context.next_header));
+                let proto = Ipv6Proto::from(extension_hdr_context.next_header);
+                let body = MaybeParsed::new_with_min_len(
+                    buffer.into_rest(),
+                    payload_len.saturating_sub(extension_hdrs.len()),
+                );
+                Ok((body, proto))
+            }
+            MaybeParsed::Incomplete(b) => {
+                let _: &B = b;
+                Err(ExtHdrParseError)
+            }
         };
 
         Ok(Ipv6PacketRaw { fixed_hdr, extension_hdrs, body_proto })
@@ -949,8 +956,6 @@ pub(crate) fn reassemble_fragmented_packet<
 
 #[cfg(test)]
 mod tests {
-    use std::ops::Deref;
-
     use packet::{Buf, InnerPacketBuilder, ParseBuffer, Serializer};
 
     use crate::ethernet::{EthernetFrame, EthernetFrameLengthCheck};
@@ -1296,6 +1301,9 @@ mod tests {
 
     #[test]
     fn test_partial_parse() {
+        use std::convert::TryInto as _;
+        use std::ops::Deref as _;
+
         // Can't partial parse extension headers:
         #[rustfmt::skip]
         let mut buf = [
@@ -1304,27 +1312,37 @@ mod tests {
             0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 
             // HopByHop Options Extension Header
-            IpProto::Tcp.into(),             // Next Header
-            0,                                  // Hdr Ext Len (In 8-octet units, not including first 8 octets)
-            0,                                  // Pad1
-            1, 0,                               // Pad2
-            1, 1, 0,                            // Pad3
+            IpProto::Tcp.into(), // Next Header
+            0,                   // Hdr Ext Len (In 8-octet units, not including first 8 octets)
+            0,                   // Pad1
+            1, 0,                // Pad2
+            1, 1, 0,             // Pad3
 
             // Body
             1, 2, 3, 4, 5,
         ];
-        let mut fixed_hdr = new_fixed_hdr();
-        fixed_hdr.next_hdr = Ipv6ExtHdrType::HopByHopOptions.into();
-        fixed_hdr.payload_len = U16::new((buf.len() - IPV6_FIXED_HDR_LEN) as u16);
+        let len = buf.len() - IPV6_FIXED_HDR_LEN;
+        let len = len.try_into().unwrap();
+        let make_fixed_hdr = || {
+            let mut fixed_hdr = new_fixed_hdr();
+            fixed_hdr.next_hdr = Ipv6ExtHdrType::HopByHopOptions.into();
+            fixed_hdr.payload_len = U16::new(len);
+            fixed_hdr
+        };
         // make HopByHop malformed:
-        buf[IPV6_FIXED_HDR_LEN + 1] = 10;
-        let fixed_hdr_buf = fixed_hdr_to_bytes(fixed_hdr);
-        buf[..IPV6_FIXED_HDR_LEN].copy_from_slice(&fixed_hdr_buf);
+        const MALFORMED_BYTE: u8 = 10;
+        buf[IPV6_FIXED_HDR_LEN + 1] = MALFORMED_BYTE;
+        let fixed_hdr = fixed_hdr_to_bytes(make_fixed_hdr());
+        buf[..IPV6_FIXED_HDR_LEN].copy_from_slice(&fixed_hdr);
         let mut buf = &buf[..];
         let partial = buf.parse::<Ipv6PacketRaw<_>>().unwrap();
-        assert_eq!(partial.fixed_hdr.bytes(), &fixed_hdr_buf[..]);
-        assert!(partial.extension_hdrs.is_incomplete());
-        assert_eq!(partial.body_proto(), Err(ExtHdrParseError));
+        let Ipv6PacketRaw { fixed_hdr, extension_hdrs, body_proto } = &partial;
+        assert_eq!(fixed_hdr.deref(), &make_fixed_hdr());
+        assert_eq!(
+            extension_hdrs.as_ref().incomplete().unwrap().deref(),
+            [IpProto::Tcp.into(), MALFORMED_BYTE]
+        );
+        assert_eq!(body_proto, &Err(ExtHdrParseError));
         assert!(Ipv6Packet::try_from_raw(partial).is_err());
 
         // Incomplete body:
@@ -1334,20 +1352,22 @@ mod tests {
             0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, // Body
             1, 2, 3, 4, 5,
         ];
-        let mut fixed_hdr = new_fixed_hdr();
-        fixed_hdr.next_hdr = IpProto::Tcp.into();
-        fixed_hdr.payload_len = U16::new(10);
-        let fixed_hdr_buf = fixed_hdr_to_bytes(fixed_hdr);
-        buf[..IPV6_FIXED_HDR_LEN].copy_from_slice(&fixed_hdr_buf);
+        let make_fixed_hdr = || {
+            let mut fixed_hdr = new_fixed_hdr();
+            fixed_hdr.next_hdr = IpProto::Tcp.into();
+            fixed_hdr.payload_len = U16::new(10);
+            fixed_hdr
+        };
+        let fixed_hdr = fixed_hdr_to_bytes(make_fixed_hdr());
+        buf[..IPV6_FIXED_HDR_LEN].copy_from_slice(&fixed_hdr);
         let mut parsebuff = &buf[..];
         let partial = parsebuff.parse::<Ipv6PacketRaw<_>>().unwrap();
-        assert_eq!(partial.fixed_hdr.bytes(), &fixed_hdr_buf[..]);
-        assert_eq!(partial.extension_hdrs.as_ref().unwrap().deref().len(), 0);
-        assert_eq!(
-            *partial.body().unwrap().as_ref().unwrap_incomplete(),
-            &buf[IPV6_FIXED_HDR_LEN..]
-        );
-        assert_eq!(partial.proto(), Ok(IpProto::Tcp.into()));
+        let Ipv6PacketRaw { fixed_hdr, extension_hdrs, body_proto } = &partial;
+        assert_eq!(fixed_hdr.deref(), &make_fixed_hdr());
+        assert_eq!(extension_hdrs.as_ref().complete().unwrap().deref(), []);
+        let (body, proto) = body_proto.unwrap();
+        assert_eq!(body.incomplete().unwrap(), &buf[IPV6_FIXED_HDR_LEN..]);
+        assert_eq!(proto, IpProto::Tcp.into());
         assert!(Ipv6Packet::try_from_raw(partial).is_err());
     }
 

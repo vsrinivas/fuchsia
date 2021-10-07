@@ -1175,18 +1175,22 @@ mod tests {
 
     #[test]
     fn test_partial_parsing() {
+        use std::ops::Deref as _;
+
         // Try something with only the header, but that would have a larger
         // body:
         let mut hdr_prefix = new_hdr_prefix();
         hdr_prefix.total_len = U16::new(256);
         let mut bytes = hdr_prefix_to_bytes(hdr_prefix)[..].to_owned();
-        bytes.extend(&[1, 2, 3, 4, 5]);
+        const PAYLOAD: &[u8] = &[1, 2, 3, 4, 5];
+        bytes.extend(PAYLOAD);
         let mut buf = &bytes[..];
         let packet = buf.parse::<Ipv4PacketRaw<_>>().unwrap();
-        assert_eq!(packet.hdr_prefix.bytes(), &bytes[0..20]);
-        assert_eq!(packet.options.as_ref().unwrap().len(), 0);
+        let Ipv4PacketRaw { hdr_prefix, options, body } = &packet;
+        assert_eq!(hdr_prefix.bytes(), &bytes[0..20]);
+        assert_eq!(options.as_ref().complete().unwrap().deref(), []);
         // We must've captured the incomplete bytes in body:
-        assert_eq!(packet.body.as_ref().unwrap_incomplete().len(), 5);
+        assert_eq!(body, &MaybeParsed::Incomplete(PAYLOAD));
         // validation should fail:
         assert!(Ipv4Packet::try_from_raw(packet).is_err());
 
@@ -1196,9 +1200,10 @@ mod tests {
         let bytes = hdr_prefix_to_bytes(hdr_prefix);
         let mut buf = &bytes[..];
         let packet = buf.parse::<Ipv4PacketRaw<_>>().unwrap();
-        assert_eq!(packet.hdr_prefix.bytes(), bytes);
-        assert!(packet.options.is_incomplete());
-        assert!(packet.body.is_complete());
+        let Ipv4PacketRaw { hdr_prefix, options, body } = &packet;
+        assert_eq!(hdr_prefix.bytes(), bytes);
+        assert_eq!(options.as_ref().incomplete().unwrap(), &[]);
+        assert_eq!(body.complete().unwrap(), []);
         // validation should fail:
         assert!(Ipv4Packet::try_from_raw(packet).is_err());
 

@@ -125,43 +125,27 @@ impl<C, I> MaybeParsed<C, I> {
         }
     }
 
-    /// Returns `true` if `self` is [`MaybeParsed::Complete`].
-    pub fn is_complete(&self) -> bool {
+    /// Transforms `self` into a [`Result`], mapping the [`Complete`] variant
+    /// into [`Ok`].
+    ///
+    /// [`Complete`]: Self::Complete
+    /// [`Ok`]: Result::Ok
+    pub fn complete(self) -> Result<C, I> {
         match self {
-            MaybeParsed::Incomplete { .. } => false,
-            MaybeParsed::Complete(_) => true,
+            MaybeParsed::Complete(v) => Ok(v),
+            MaybeParsed::Incomplete(v) => Err(v),
         }
     }
 
-    /// Returns `true` if `self` is [`MaybeParsed::Incomplete`].
-    pub fn is_incomplete(&self) -> bool {
+    /// Transforms `self` into a [`Result`], mapping the [`Incomplete`] variant
+    /// into [`Ok`].
+    ///
+    /// [`Incomplete`]: Self::Incomplete
+    /// [`Ok`]: Result::Ok
+    pub fn incomplete(self) -> Result<I, C> {
         match self {
-            MaybeParsed::Incomplete { .. } => true,
-            MaybeParsed::Complete(_) => false,
-        }
-    }
-
-    /// Unwraps the complete value of `self`.
-    ///
-    /// # Panics
-    ///
-    /// Panics if `self` is not [`MaybeParsed::Complete`].
-    pub fn unwrap(self) -> C {
-        match self {
-            MaybeParsed::Incomplete { .. } => panic!("Called unwrap on incomplete MaybeParsed"),
-            MaybeParsed::Complete(v) => v,
-        }
-    }
-
-    /// Unwraps the incomplete value of `self`.
-    ///
-    /// # Panics
-    ///
-    /// Panics if `self` is not [`MaybeParsed::Incomplete`].
-    pub fn unwrap_incomplete(self) -> I {
-        match self {
-            MaybeParsed::Incomplete(v) => v,
-            MaybeParsed::Complete(_) => panic!("Called unwrap_incomplete on complete MaybeParsed"),
+            MaybeParsed::Complete(v) => Err(v),
+            MaybeParsed::Incomplete(v) => Ok(v),
         }
     }
 
@@ -174,7 +158,7 @@ impl<C, I> MaybeParsed<C, I> {
     {
         match self {
             MaybeParsed::Complete(v) => Ok(v),
-            MaybeParsed::Incomplete(e) => Err(f(e)),
+            MaybeParsed::Incomplete(v) => Err(f(v)),
         }
     }
 }
@@ -226,43 +210,40 @@ mod tests {
     fn test_maybe_parsed_take_from_buffer() {
         let buff = [1_u8, 2, 3, 4];
         let mut bv = &mut &buff[..];
-        let mp = MaybeParsed::take_from_buffer(&mut bv, 2);
-        assert_eq!(mp.unwrap(), &buff[..2]);
-        let mp = MaybeParsed::take_from_buffer(&mut bv, 3);
-        assert_eq!(mp.unwrap_incomplete(), &buff[2..]);
+        assert_eq!(MaybeParsed::take_from_buffer(&mut bv, 2), MaybeParsed::Complete(&buff[..2]));
+        assert_eq!(MaybeParsed::take_from_buffer(&mut bv, 3), MaybeParsed::Incomplete(&buff[2..]));
     }
 
     #[test]
     fn test_maybe_parsed_min_len() {
         let buff = [1_u8, 2, 3, 4];
-        let mp = MaybeParsed::new_with_min_len(&buff[..], 3);
-        assert_eq!(mp.unwrap(), &buff[..]);
-        let mp = MaybeParsed::new_with_min_len(&buff[..], 5);
-        assert_eq!(mp.unwrap_incomplete(), &buff[..]);
+        assert_eq!(MaybeParsed::new_with_min_len(&buff[..], 3), MaybeParsed::Complete(&buff[..]));
+        assert_eq!(MaybeParsed::new_with_min_len(&buff[..], 5), MaybeParsed::Incomplete(&buff[..]));
     }
 
     #[test]
     fn test_maybe_parsed_take_from_buffer_with() {
         let buff = [1_u8, 2, 3, 4];
         let mut bv = &mut &buff[..];
-        let mp = MaybeParsed::take_from_buffer_with(&mut bv, 2, |x| Some(usize::from(x[0] + x[1])));
-        assert_eq!(mp.unwrap(), Some(3));
-        let mp =
-            MaybeParsed::take_from_buffer_with(&mut bv, 3, |_| panic!("map shouldn't be called"));
-        assert_eq!(mp.unwrap_incomplete(), &buff[2..]);
+        assert_eq!(
+            MaybeParsed::take_from_buffer_with(&mut bv, 2, |x| Some(usize::from(x[0] + x[1]))),
+            MaybeParsed::Complete(Some(3)),
+        );
+        assert_eq!(
+            MaybeParsed::take_from_buffer_with(&mut bv, 3, |_| panic!("map shouldn't be called")),
+            MaybeParsed::Incomplete(&buff[2..]),
+        );
     }
 
     #[test]
     fn test_maybe_parsed_map() {
         assert_eq!(
-            MaybeParsed::<&str, ()>::Complete("hello").map(|x| format!("{} you", x)).unwrap(),
-            "hello you".to_string()
+            MaybeParsed::<&str, ()>::Complete("hello").map(|x| format!("{} you", x)),
+            MaybeParsed::Complete("hello you".to_string()),
         );
         assert_eq!(
-            MaybeParsed::<(), &str>::Incomplete("hello")
-                .map(|_| panic!("map shouldn't be called"))
-                .unwrap_incomplete(),
-            "hello"
+            MaybeParsed::<(), &str>::Incomplete("hello").map(|_| panic!("map shouldn't be called")),
+            MaybeParsed::Incomplete("hello"),
         );
     }
 
@@ -273,15 +254,5 @@ mod tests {
         let mp2 = MaybeParsed::new_with_min_len(&buff[..], 10);
         assert_eq!(mp1.len(), 4);
         assert_eq!(mp2.len(), 4);
-    }
-
-    #[test]
-    fn test_maybe_parsed_complete_incomplete() {
-        let complete = MaybeParsed::<(), ()>::Complete(());
-        let incomplete = MaybeParsed::<(), ()>::Incomplete(());
-        assert!(complete.is_complete());
-        assert!(!complete.is_incomplete());
-        assert!(!incomplete.is_complete());
-        assert!(incomplete.is_incomplete());
     }
 }
