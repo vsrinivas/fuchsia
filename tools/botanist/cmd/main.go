@@ -38,7 +38,7 @@ func main() {
 	l := logger.NewLogger(level, color.NewColor(colors), os.Stdout, os.Stderr, "botanist ")
 	l.SetFlags(logger.Ltime | logger.Lmicroseconds | logger.Lshortfile)
 	ctx := logger.WithLogger(context.Background(), l)
-	ctx, cancel := signal.NotifyContext(ctx, syscall.SIGTERM)
+	ctx, cancel := signal.NotifyContext(ctx, syscall.SIGTERM, syscall.SIGINT)
 	defer cancel()
 	os.Exit(int(subcommands.Execute(ctx)))
 }
