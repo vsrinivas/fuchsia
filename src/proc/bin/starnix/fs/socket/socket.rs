@@ -21,27 +21,27 @@ use std::sync::Arc;
 ///
 /// The `Socket` enum represents the state that the socket is in.
 ///
-/// A `Socket` always contains a local `SocketEndpoint`. Most of the socket's state is stored in
-/// its `SocketEndpoint`.
+/// A `Socket` always contains a local `SocketState`. Most of the socket's state is stored in
+/// its `SocketState`.
 ///
-/// When a socket is connected, the remote `SocketEndpoint` can be retrieved from its
+/// When a socket is connected, the remote `SocketState` can be retrieved from its
 /// `SocketConnection`. This can be used to, for example, write to the remote socket.
 pub enum Socket {
     /// A socket that is neither listening for connections nor connected to another socket.
-    Disconnected(SocketEndpointHandle),
+    Disconnected(SocketStateHandle),
 
     /// A `Listening` socket is a passive socket that is waiting for incoming connections.
-    Listening(ListeningSocketEndpoint),
+    Listening(ListeningSocket),
 
-    /// A `Connected` socket is connected to a remote endpoint.
+    /// A `Connected` socket is connected to a remote socket.
     ///
-    /// The connected endpoints are peers. Reads are send to the local endpoint and writes
-    /// are sent to the remote endpoint.
+    /// The connected sockets are peers. Reads are send to the local socket and writes
+    /// are sent to the remote socket.
     Connected(SocketConnection),
 
     /// A `Shutdown` socket has been connected at some point, but the connection has been
     /// shut down.
-    Shutdown(SocketEndpointHandle),
+    Shutdown(SocketStateHandle),
 }
 
 /// A `SocketHandle` is a `Socket` wrapped in a `Arc<Mutex<..>>`.
@@ -60,7 +60,7 @@ impl Socket {
     /// # Parameters
     /// - `domain`: The domain of the socket (e.g., `AF_UNIX`).
     pub fn new(domain: SocketDomain, socket_type: SocketType) -> SocketHandle {
-        new_handle(Socket::Disconnected(SocketEndpoint::new(domain, socket_type, None)))
+        new_handle(Socket::Disconnected(SocketState::new(domain, socket_type, None)))
     }
 
     /// Creates a pair of connected sockets.
@@ -69,9 +69,9 @@ impl Socket {
     /// - `domain`: The domain of the socket (e.g., `AF_UNIX`).
     /// - `socket_type`: The type of the socket (e.g., `SOCK_STREAM`).
     pub fn new_pair(domain: SocketDomain, socket_type: SocketType) -> (SocketHandle, SocketHandle) {
-        let left_endpoint = SocketEndpoint::new(domain, socket_type, None);
-        let right_endpoint = SocketEndpoint::new(domain, socket_type, None);
-        let (left, right) = SocketConnection::connect(left_endpoint, right_endpoint);
+        let left_state = SocketState::new(domain, socket_type, None);
+        let right_state = SocketState::new(domain, socket_type, None);
+        let (left, right) = SocketConnection::connect(left_state, right_state);
         (new_handle(left), new_handle(right))
     }
 
@@ -91,22 +91,22 @@ impl Socket {
 
     #[allow(dead_code)]
     pub fn domain(&self) -> SocketDomain {
-        self.local_endpoint().lock().domain
+        self.local_state().lock().domain
     }
 
     pub fn socket_type(&self) -> SocketType {
-        self.local_endpoint().lock().socket_type
+        self.local_state().lock().socket_type
     }
 
     /// Binds this socket to a `socket_address`.
     ///
     /// Returns an error if the socket could not be bound.
     pub fn bind(&mut self, socket_address: SocketAddress) -> Result<(), Errno> {
-        let mut endpoint = self.local_endpoint().lock();
-        if endpoint.address.is_some() {
+        let mut state = self.local_state().lock();
+        if state.address.is_some() {
             return error!(EINVAL);
         }
-        endpoint.address = Some(socket_address);
+        state.address = Some(socket_address);
         Ok(())
     }
 
@@ -115,11 +115,11 @@ impl Socket {
     /// Returns an error if the socket is not bound.
     pub fn listen(&mut self, backlog: u32) -> Result<(), Errno> {
         match self {
-            Socket::Disconnected(endpoint) => {
-                if endpoint.lock().address.is_none() {
+            Socket::Disconnected(state) => {
+                if state.lock().address.is_none() {
                     return error!(EINVAL);
                 }
-                *self = ListeningSocketEndpoint::new(endpoint.clone(), backlog);
+                *self = ListeningSocket::new(state.clone(), backlog);
                 Ok(())
             }
             Socket::Listening(passive) => {
@@ -139,11 +139,11 @@ impl Socket {
     /// Returns an error if the socket is not listening or if the queue is
     /// empty.
     pub fn accept(&mut self) -> Result<SocketHandle, Errno> {
-        let endpoint = match self {
-            Socket::Listening(endpoint) => Ok(endpoint),
+        let state = match self {
+            Socket::Listening(state) => Ok(state),
             _ => error!(EINVAL),
         }?;
-        endpoint.accept()
+        state.accept()
     }
 
     /// Connects this socket to the provided socket.
@@ -151,14 +151,14 @@ impl Socket {
     /// The given `socket` must be in a listening state.
     ///
     /// If there is enough room the listening socket's queue of incoming
-    /// connections, this socket becomes connected to a new server endpoint,
+    /// connections, this socket becomes connected to a new server state,
     /// which is placed in the queue for the listening socket to accept.
     ///
     /// Returns an error if the connection cannot be established (e.g., if one
     /// of the sockets is already connected).
     pub fn connect(&mut self, socket: &mut Socket) -> Result<(), Errno> {
         let client = match self {
-            Socket::Disconnected(endpoint) => Ok(endpoint),
+            Socket::Disconnected(state) => Ok(state),
             Socket::Connected(_) => error!(EISCONN),
             _ => error!(ECONNREFUSED),
         }?;
@@ -170,42 +170,42 @@ impl Socket {
         Ok(())
     }
 
-    /// Returns the socket endpoint that is connected to this socket, if such
-    /// an endpoint exists.
-    fn remote_endpoint(&self) -> Result<&SocketEndpointHandle, Errno> {
+    /// Returns the socket state that is connected to this socket, if such
+    /// an state exists.
+    fn remote_state(&self) -> Result<&SocketStateHandle, Errno> {
         match self {
             Socket::Connected(connection) => Ok(&connection.remote),
             _ => error!(ENOTCONN),
         }
     }
 
-    /// Returns the endpoint associated with this socket.
+    /// Returns the state associated with this socket.
     ///
-    /// If the socket is connected, this method will return the endpoint that
+    /// If the socket is connected, this method will return the state that
     /// this socket reads from (e.g., `connection.local` if the socket is
     /// `Connected`).
-    fn local_endpoint(&self) -> &SocketEndpointHandle {
+    fn local_state(&self) -> &SocketStateHandle {
         match self {
-            Socket::Disconnected(endpoint) => endpoint,
-            Socket::Listening(passive) => &passive.endpoint,
+            Socket::Disconnected(state) => state,
+            Socket::Listening(listener) => &listener.state,
             Socket::Connected(connection) => &connection.local,
-            Socket::Shutdown(endpoint) => endpoint,
+            Socket::Shutdown(state) => state,
         }
     }
 
     /// Returns the name of this socket.
     ///
-    /// The name is derived from the endpoint's address and domain. A socket
+    /// The name is derived from the address and domain. A socket
     /// will always have a name, even if it is not bound to an address.
     pub fn getsockname(&self) -> Vec<u8> {
-        self.local_endpoint().lock().name()
+        self.local_state().lock().name()
     }
 
     /// Returns the name of the peer of this socket, if such a peer exists.
     ///
     /// Returns an error if the socket is not connected.
     pub fn getpeername(&self) -> Result<Vec<u8>, Errno> {
-        Ok(self.remote_endpoint()?.lock().name())
+        Ok(self.remote_state()?.lock().name())
     }
 
     /// Reads the specified number of bytes from the socket, if possible.
@@ -222,8 +222,8 @@ impl Socket {
         task: &Task,
         user_buffers: &mut UserBufferIterator<'_>,
     ) -> Result<(usize, Option<SocketAddress>, Option<AncillaryData>), Errno> {
-        let endpoint = self.local_endpoint();
-        endpoint.lock().read(task, user_buffers)
+        let state = self.local_state();
+        state.lock().read(task, user_buffers)
     }
 
     /// Shuts down this socket, preventing any future reads and/or writes.
@@ -259,18 +259,13 @@ impl Socket {
         user_buffers: &mut UserBufferIterator<'_>,
         ancillary_data: &mut Option<AncillaryData>,
     ) -> Result<usize, Errno> {
-        let mut endpoint = self.remote_endpoint()?.lock();
-        endpoint.write(
-            task,
-            user_buffers,
-            self.local_endpoint().lock().address.clone(),
-            ancillary_data,
-        )
+        let mut state = self.remote_state()?.lock();
+        state.write(task, user_buffers, self.local_state().lock().address.clone(), ancillary_data)
     }
 
     pub fn wait_async(&self, waiter: &Arc<Waiter>, events: FdEvents, handler: EventHandler) {
-        let mut endpoint = self.local_endpoint().lock();
-        endpoint.waiters.wait_async_mask(waiter, events.mask(), handler)
+        let mut state = self.local_state().lock();
+        state.waiters.wait_async_mask(waiter, events.mask(), handler)
     }
 }
 
@@ -359,38 +354,38 @@ impl SocketAddress {
 /// A `SocketConnection` contains two connected sockets.
 pub struct SocketConnection {
     /// The socket that initiated the connection.
-    local: SocketEndpointHandle,
+    local: SocketStateHandle,
 
     /// The socket that was connected to.
-    remote: SocketEndpointHandle,
+    remote: SocketStateHandle,
 }
 
 impl SocketConnection {
-    /// Create a new `SocketConnection` object with the given endpoints.
-    fn new(local: SocketEndpointHandle, remote: SocketEndpointHandle) -> Socket {
+    /// Create a new `SocketConnection` object with the given socket handles.
+    fn new(local: SocketStateHandle, remote: SocketStateHandle) -> Socket {
         Socket::Connected(SocketConnection { local, remote })
     }
 
-    /// Create a pair of connected `SocketConnection` objects with the given endpoints.
+    /// Create a pair of connected `SocketConnection` objects with the given socket handles.
     fn connect(
-        left_endpoint: SocketEndpointHandle,
-        right_endpoint: SocketEndpointHandle,
+        left_socket: SocketStateHandle,
+        right_socket: SocketStateHandle,
     ) -> (Socket, Socket) {
-        let left = SocketConnection::new(left_endpoint.clone(), right_endpoint.clone());
-        let right = SocketConnection::new(right_endpoint, left_endpoint);
+        let left = SocketConnection::new(left_socket.clone(), right_socket.clone());
+        let right = SocketConnection::new(right_socket, left_socket);
         (left, right)
     }
 }
 
-/// `SocketEndpoint` stores the state associated with a single endpoint of a socket.
-pub struct SocketEndpoint {
-    /// The `MessageQueue` that contains messages for this socket endpoint.
+/// `SocketState` stores the state associated with a socket.
+pub struct SocketState {
+    /// The `MessageQueue` that contains messages for this socket.
     messages: MessageQueue,
 
     /// This queue will be notified on reads, writes, disconnects etc.
     waiters: WaitQueue,
 
-    /// The domain of this socket endpoint.
+    /// The domain of this socket.
     domain: SocketDomain,
 
     /// The type of this socket.
@@ -399,25 +394,25 @@ pub struct SocketEndpoint {
     /// The address that this socket has been bound to, if it has been bound.
     address: Option<SocketAddress>,
 
-    /// Whether this endpoint is readable.
+    /// Whether this socket is readable.
     readable: bool,
 
-    /// Whether this endpoint is writable.
+    /// Whether this socket is writable.
     writable: bool,
 }
 
-pub type SocketEndpointHandle = Arc<Mutex<SocketEndpoint>>;
+pub type SocketStateHandle = Arc<Mutex<SocketState>>;
 
-impl SocketEndpoint {
-    /// Creates a new socket endpoint within the specified socket domain.
+impl SocketState {
+    /// Creates a new socket state.
     ///
-    /// The socket endpoint's address is set to a default value for the specified domain.
+    /// The socket's address is set to a default value for the specified domain.
     fn new(
         domain: SocketDomain,
         socket_type: SocketType,
         address: Option<SocketAddress>,
-    ) -> SocketEndpointHandle {
-        Arc::new(Mutex::new(SocketEndpoint {
+    ) -> SocketStateHandle {
+        Arc::new(Mutex::new(SocketState {
             messages: MessageQueue::new(usize::MAX),
             waiters: WaitQueue::default(),
             domain,
@@ -428,7 +423,7 @@ impl SocketEndpoint {
         }))
     }
 
-    /// Returns the name of the endpoint.
+    /// Returns the local name of the socket.
     fn name(&self) -> Vec<u8> {
         if let Some(address) = &self.address {
             address.to_bytes()
@@ -506,25 +501,25 @@ struct AcceptQueue {
     backlog: usize,
 }
 
-/// A socket endpoint that is listening for incoming connections.
-pub struct ListeningSocketEndpoint {
-    /// The endpoint that is listening.
-    endpoint: SocketEndpointHandle,
+/// A socket that is listening for incoming connections.
+pub struct ListeningSocket {
+    /// The socket state.
+    state: SocketStateHandle,
 
     /// The queue of incoming connections.
     ///
-    /// The `SocketHandle` in this queue are the endpoints of the connections
-    /// that will be returned to the server when the connection is accepted.
+    /// A `SocketHandle` in this queue is the end of the connection that will be returned to the
+    /// server when the connection is accepted.
     queue: Mutex<AcceptQueue>,
 }
 
-impl ListeningSocketEndpoint {
-    /// Wrap the given endpoint as a listening endpoint with an incoming queue
+impl ListeningSocket {
+    /// Wrap the given socket state as a listening socket with an incoming queue
     /// of the given size.
-    fn new(endpoint: SocketEndpointHandle, backlog: u32) -> Socket {
+    fn new(state: SocketStateHandle, backlog: u32) -> Socket {
         let backlog = backlog as usize;
-        Socket::Listening(ListeningSocketEndpoint {
-            endpoint,
+        Socket::Listening(ListeningSocket {
+            state,
             queue: Mutex::new(AcceptQueue { sockets: VecDeque::with_capacity(backlog), backlog }),
         })
     }
@@ -537,14 +532,14 @@ impl ListeningSocketEndpoint {
 
     /// Connect to this socket.
     ///
-    /// This function creates a new server endpoint for the connection and
-    /// establishes the connection between the client and the server endpoints.
-    /// The connected client endpoint is returned. The connected server
-    /// endpoint is placed in the queue for this socket to be accepted by the
+    /// This function creates a new server socket for the connection and
+    /// establishes the connection between the client and the server sockets.
+    /// The connected client socket is returned. The connected server
+    /// socket is placed in the queue for this socket to be accepted by the
     /// server later.
-    fn connect(&self, client_endpoint: &SocketEndpointHandle) -> Result<Socket, Errno> {
-        let mut passive = self.endpoint.lock();
-        let mut active = client_endpoint.lock();
+    fn connect(&self, client_state: &SocketStateHandle) -> Result<Socket, Errno> {
+        let mut passive = self.state.lock();
+        let mut active = client_state.lock();
 
         if active.domain != passive.domain || active.socket_type != passive.socket_type {
             // According to ConnectWithWrongType in accept_bind_test, abstract
@@ -562,10 +557,10 @@ impl ListeningSocketEndpoint {
             return error!(EAGAIN);
         }
 
-        let server_endpoint =
-            SocketEndpoint::new(active.domain, active.socket_type, passive.address.clone());
+        let server_state =
+            SocketState::new(active.domain, active.socket_type, passive.address.clone());
         let (client, server) =
-            SocketConnection::connect(client_endpoint.clone(), server_endpoint.clone());
+            SocketConnection::connect(client_state.clone(), server_state.clone());
         queue.sockets.push_back(new_handle(server));
 
         passive.waiters.notify_events(FdEvents::POLLIN);
