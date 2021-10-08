@@ -30,7 +30,7 @@ template("generate_chromium_targets") {
     ]
     # TODO(fxbug.dev/81925): Uncomment once this will not fail without
     # `-fetch-optional=chrome-browser`.
-    # if (target_cpu == "amd64") {
+    # if (target_cpu == "x64") {
     #   public_deps += [ ":chrome_browser", ]
     # }
   }
@@ -153,7 +153,7 @@ template("generate_chromium_targets") {
     outputs = [ "scheme_map/http.config" ]
   }
 
-  if (target_cpu == "amd64") {
+  if (target_cpu == "x64") {
     group("chrome_browser") {
       deps = [
         ":chrome_browser_pkg",
