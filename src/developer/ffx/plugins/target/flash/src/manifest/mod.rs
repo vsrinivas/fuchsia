@@ -14,7 +14,7 @@ use {
     async_trait::async_trait,
     chrono::{DateTime, Duration, Utc},
     errors::{ffx_bail, ffx_error},
-    ffx_flash_args::FlashCommand,
+    ffx_flash_args::{FlashCommand, OemFile},
     fidl::{
         endpoints::{create_endpoints, ServerEnd},
         Error as FidlError,
@@ -39,9 +39,19 @@ pub(crate) mod v1;
 pub(crate) mod v2;
 pub(crate) mod v3;
 
+pub(crate) const MISSING_PRODUCT: &str = "Manifest does not contain product";
+
+const REBOOT_ERR: &str = "Failed to reboot your device. \
+                          Power cycle the device manually and try again.";
+
 pub(crate) const UNKNOWN_VERSION: &str = "Unknown flash manifest version";
 const LARGE_FILE: &str = "large file, please wait... ";
 const REVISION_VAR: &str = "hw-revision";
+
+const LOCKED_VAR: &str = "vx-locked";
+
+pub(crate) const UNLOCK_ERR: &str = "The product requires the target is unlocked. \
+                                     Please unlock target and try again.";
 
 #[derive(Default, Deserialize)]
 pub struct Images(Vec<Image>);
@@ -51,6 +61,19 @@ pub struct Image {
     pub name: String,
     pub path: String,
     // Ignore the rest of the fields
+}
+
+pub(crate) trait Partition {
+    fn name(&self) -> &str;
+    fn file(&self) -> &str;
+    fn variable(&self) -> Option<&str>;
+    fn variable_value(&self) -> Option<&str>;
+}
+
+pub(crate) trait Product<P> {
+    fn bootloader_partitions(&self) -> &Vec<P>;
+    fn partitions(&self) -> &Vec<P>;
+    fn oem_files(&self) -> &Vec<OemFile>;
 }
 
 #[async_trait(?Send)]
@@ -475,6 +498,98 @@ pub(crate) async fn prepare<W: Write>(
         }
         prepare.map_err(|e| anyhow!("failed preparing target for flashing: {:?}", e))
     })
+}
+
+pub(crate) async fn stage_oem_files<W: Write, F: FileResolver + Sync>(
+    writer: &mut W,
+    file_resolver: &mut F,
+    resolve: bool,
+    oem_files: &Vec<OemFile>,
+    fastboot_proxy: &FastbootProxy,
+) -> Result<()> {
+    for oem_file in oem_files {
+        stage_file(writer, file_resolver, resolve, oem_file.file(), &fastboot_proxy).await?;
+        writeln!(writer, "Sending command \"{}\"", oem_file.command())?;
+        fastboot_proxy.oem(oem_file.command()).await?.map_err(|_| {
+            anyhow!("There was an error sending oem command \"{}\"", oem_file.command())
+        })?;
+    }
+    Ok(())
+}
+
+pub(crate) async fn flash_partitions<W: Write, F: FileResolver + Sync, P: Partition>(
+    writer: &mut W,
+    file_resolver: &mut F,
+    partitions: &Vec<P>,
+    fastboot_proxy: &FastbootProxy,
+) -> Result<()> {
+    for partition in partitions {
+        match (partition.variable(), partition.variable_value()) {
+            (Some(var), Some(value)) => {
+                if verify_variable_value(var, value, fastboot_proxy).await? {
+                    flash_partition(
+                        writer,
+                        file_resolver,
+                        partition.name(),
+                        partition.file(),
+                        fastboot_proxy,
+                    )
+                    .await?;
+                }
+            }
+            _ => {
+                flash_partition(
+                    writer,
+                    file_resolver,
+                    partition.name(),
+                    partition.file(),
+                    fastboot_proxy,
+                )
+                .await?
+            }
+        }
+    }
+    Ok(())
+}
+
+pub(crate) async fn flash_and_reboot<W, F, Part, P>(
+    writer: &mut W,
+    file_resolver: &mut F,
+    product: &P,
+    fastboot_proxy: &FastbootProxy,
+    cmd: FlashCommand,
+) -> Result<()>
+where
+    W: Write,
+    F: FileResolver + Sync,
+    Part: Partition,
+    P: Product<Part>,
+{
+    flash_partitions(writer, file_resolver, product.bootloader_partitions(), fastboot_proxy)
+        .await?;
+    if product.bootloader_partitions().len() > 0 && !cmd.no_bootloader_reboot {
+        reboot_bootloader(writer, &fastboot_proxy)
+            .await
+            .map_err(|_| ffx_error!("{}", REBOOT_ERR))?;
+    }
+    stage_oem_files(writer, file_resolver, false, &cmd.oem_stage, fastboot_proxy).await?;
+    flash_partitions(writer, file_resolver, product.partitions(), fastboot_proxy).await?;
+    stage_oem_files(writer, file_resolver, true, product.oem_files(), fastboot_proxy).await?;
+    finish(writer, fastboot_proxy).await
+}
+
+pub(crate) async fn finish<W: Write>(writer: &mut W, fastboot_proxy: &FastbootProxy) -> Result<()> {
+    if fastboot_proxy.erase("misc").await?.is_err() {
+        log::debug!("Could not erase misc partition");
+    }
+    fastboot_proxy.set_active("a").await?.map_err(|_| anyhow!("Could not set active slot"))?;
+    fastboot_proxy.continue_boot().await?.map_err(|_| anyhow!("Could not reboot device"))?;
+    writeln!(writer, "Continuing to boot - this could take awhile")?;
+    Ok(())
+}
+
+pub(crate) async fn is_locked(fastboot_proxy: &FastbootProxy) -> Result<bool> {
+    verify_variable_value(LOCKED_VAR, "no", &fastboot_proxy).await.map(|l| !l)
 }
 
 ////////////////////////////////////////////////////////////////////////////////
