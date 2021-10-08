@@ -32,7 +32,7 @@ const testserverUrl =
 // 3: Text input field test
 // 4: Audio test
 // 5: Keyboard shortcut test.
-const skipTests = [false, true, true, false, true, true];
+const skipTests = [false, true, false, false, true, true];
 
 void main() {
   late Sl4f sl4f;
@@ -395,7 +395,7 @@ void main() {
     const blueUrl = 'http://127.0.0.1:8080/blue.html';
 
     // Opens red.html in the second tab leaving the first tab as an empty tab.
-    await input.text(redUrl, keyEventDuration: Duration(milliseconds: 10));
+    await input.text(redUrl, keyEventDuration: Duration(milliseconds: 50));
     await input.keyPress(kEnterKey);
     await browser.waitUntilNoTransientCallbacks(timeout: _timeoutTenSec);
     await browser.waitFor(redTabFinder, timeout: _timeoutTenSec);
@@ -405,7 +405,7 @@ void main() {
     await browser.tap(find.byValueKey('new_tab'));
     await browser.waitFor(find.text(newTabHintText), timeout: _timeoutTenSec);
 
-    await input.text(greenUrl, keyEventDuration: Duration(milliseconds: 10));
+    await input.text(greenUrl, keyEventDuration: Duration(milliseconds: 50));
     await input.keyPress(kEnterKey);
     await browser.waitUntilNoTransientCallbacks(timeout: _timeoutTenSec);
     await browser.waitFor(greenTabFinder, timeout: _timeoutTenSec);
@@ -415,7 +415,7 @@ void main() {
     await browser.tap(find.byValueKey('new_tab'));
     await browser.waitFor(find.text(newTabHintText), timeout: _timeoutTenSec);
 
-    await input.text(blueUrl, keyEventDuration: Duration(milliseconds: 10));
+    await input.text(blueUrl, keyEventDuration: Duration(milliseconds: 50));
     await input.keyPress(kEnterKey);
     await browser.waitUntilNoTransientCallbacks(timeout: _timeoutTenSec);
     await browser.waitFor(blueTabFinder, timeout: _timeoutTenSec);
