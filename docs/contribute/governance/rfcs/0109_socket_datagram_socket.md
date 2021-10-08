@@ -8,6 +8,57 @@
 
 <!-- This should begin with an H2 element (for example, ## Summary).-->
 
+## UPDATE (10/05/2021)
+
+This RFC is ON HOLD until further notice.
+
+As currently formulated, this RFC fails to account for scenarios in which
+the client process requests a change to {in,out}bound packet processing
+while packets are enqueued in the zircon socket.
+
+The core issue is that clients assume that changes requested to packet
+processing apply to ALL OF the packets not yet received, and to NONE OF
+the packets already sent. In the pre-RFC-0109 world, we could guarantee
+this behavior by:
+
+1) applying packet processing changes within Netstack
+2) exposing synchronous APIs for Send/Recv.
+
+The introduction of the zircon socket breaks these semantics, making it
+possible for packets to be sent/received without the requested behavior
+and/or with UNrequested behavior. Two representative examples:
+
+On the **Send Path**:
+
+1) Client sets `IP_TOS` to some value A, synchronously updating state
+   in Netstack
+2) Client calls `sendto`, which enqueues a payload in the zircon socket
+3) Client sets `IP_TOS` to some value B
+4) Netstack dequeues the payload and processes it with `IP_TOS=B`
+
+On the **Receive Path**:
+
+1) Netstack enqueues a payload into the zircon socket
+2) Client opts-in to receiving a control message
+3) Client dequeues a payload and returns it to the user process without
+   that control message
+
+It may be possible to resolve these issues by caching Netstack state in FDIO:
+
+* On the **Send Path**, we might cache a version of packet processing state
+  in the client, backed by an eventpair invalidation mechanism, and enqueue
+  payloads alongside that state.
+* On the **Receive Path**, we might cache the state used to filter control
+  messages in the client, again backed by an eventpair.
+
+These potential solutions have their own set of tradeoffs, however. For
+example, both solutions require that we enqueue payloads alongside extra
+state which could grow unbounded over time (as we support more socket options
++ control messages). Furthermore, we aren't yet convinced these solutions
+will account for all possible races of the above type.
+
+Until these issues are resolved, we are suspending this RFC.
+
 ## Summary
 
 Implement network datagram socket data transport using zircon sockets.
