@@ -324,7 +324,7 @@ mod tests {
         let budget_manager = BudgetManager::new(0);
         let container = Arc::new(LogsArtifactsContainer::new(
             Arc::new(ComponentIdentity::from_identifier_and_url(
-                &ComponentIdentifier::Moniker(vec![
+                ComponentIdentifier::Moniker(vec![
                     MonikerSegment {
                         name: moniker_segment_1.clone(),
                         collection: None,

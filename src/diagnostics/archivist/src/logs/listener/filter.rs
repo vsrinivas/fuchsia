@@ -109,7 +109,7 @@ mod tests {
 
     fn test_message() -> LogsData {
         let identity = ComponentIdentity::from_identifier_and_url(
-            &ComponentIdentifier::Legacy {
+            ComponentIdentifier::Legacy {
                 moniker: vec!["bogus", "specious-at-best.cmx"].into(),
                 instance_id: "0".into(),
             },

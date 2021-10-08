@@ -340,7 +340,7 @@ fn maybe_remove_component(
 ) {
     if !diagnostics_repo.is_live(&identity) {
         debug!(%identity, "Removing component from repository.");
-        diagnostics_repo.write().data_directories.remove(&identity.unique_key);
+        diagnostics_repo.write().data_directories.remove(&*identity.unique_key());
 
         // TODO(fxbug.dev/55736): The pipeline specific updates should be happening asynchronously.
         for pipeline in diagnostics_pipelines {
@@ -434,7 +434,7 @@ impl ArchivistState {
     fn mark_component_stopped(&self, identity: &ComponentIdentity) {
         // TODO(fxbug.dev/53939): Get inspect data from repository before removing
         // for post-mortem inspection.
-        self.diagnostics_repo.write().mark_stopped(&identity.unique_key);
+        self.diagnostics_repo.write().mark_stopped(&identity.unique_key());
         maybe_remove_component(identity, &self.diagnostics_repo, &self.diagnostics_pipelines);
     }
 

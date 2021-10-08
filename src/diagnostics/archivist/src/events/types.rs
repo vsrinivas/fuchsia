@@ -59,16 +59,28 @@ impl Into<Moniker> for Vec<String> {
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct UniqueKey(Vec<String>);
 
-impl Deref for UniqueKey {
+impl<'a> Deref for UniqueKey {
     type Target = Vec<String>;
     fn deref(&self) -> &Self::Target {
         &self.0
     }
 }
 
+impl Into<UniqueKey> for Vec<String> {
+    fn into(self) -> UniqueKey {
+        UniqueKey(self)
+    }
+}
+
 impl Into<UniqueKey> for Vec<&str> {
     fn into(self) -> UniqueKey {
         UniqueKey(self.into_iter().map(|s| s.to_string()).collect())
+    }
+}
+
+impl Into<Vec<String>> for UniqueKey {
+    fn into(self) -> Vec<String> {
+        self.0
     }
 }
 
@@ -158,35 +170,6 @@ impl ComponentIdentifier {
         }
 
         Ok(ComponentIdentifier::Moniker(segments))
-    }
-}
-
-impl std::fmt::Display for ComponentIdentifier {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Self::Legacy { moniker, instance_id } => {
-                for (i, segment) in moniker.iter().enumerate() {
-                    if i > 0 {
-                        write!(f, "/")?;
-                    }
-                    write!(f, "{}", segment)?;
-                }
-                write!(f, ":{}", instance_id)
-            }
-            Self::Moniker(segments) => {
-                if segments.is_empty() {
-                    write!(f, ".")
-                } else {
-                    for (i, segment) in segments.iter().enumerate() {
-                        if i > 0 {
-                            write!(f, "/")?;
-                        }
-                        write!(f, "{}", segment)?;
-                    }
-                    Ok(())
-                }
-            }
-        }
     }
 }
 
@@ -375,7 +358,7 @@ impl TryFrom<Event> for ComponentEvent {
 
         let metadata = EventMetadata {
             identity: ComponentIdentity::from_identifier_and_url(
-                &ComponentIdentifier::parse_from_moniker(&event.header.moniker)?,
+                ComponentIdentifier::parse_from_moniker(&event.header.moniker)?,
                 &event.header.component_url,
             ),
             timestamp: zx::Time::from_nanos(event.header.timestamp),
@@ -526,7 +509,7 @@ mod tests {
         assert_eq!(
             event.metadata.identity,
             ComponentIdentity::from_identifier_and_url(
-                &ComponentIdentifier::parse_from_moniker(target_moniker).unwrap(),
+                ComponentIdentifier::parse_from_moniker(target_moniker).unwrap(),
                 target_url
             )
         );

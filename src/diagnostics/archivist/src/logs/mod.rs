@@ -257,7 +257,7 @@ mod tests {
 
         let log_reader1 =
             harness.create_default_reader(ComponentIdentity::from_identifier_and_url(
-                &ComponentIdentifier::Legacy {
+                ComponentIdentifier::Legacy {
                     moniker: vec![".", "foo"].into(),
                     instance_id: "0".into(),
                 },
@@ -266,7 +266,7 @@ mod tests {
 
         let log_reader2 =
             harness.create_default_reader(ComponentIdentity::from_identifier_and_url(
-                &ComponentIdentifier::Legacy {
+                ComponentIdentifier::Legacy {
                     moniker: vec![".", "bar"].into(),
                     instance_id: "0".into(),
                 },
@@ -299,7 +299,7 @@ mod tests {
         let log_reader1 = harness.create_event_stream_reader("./foo:0", "http://foo.com");
         let log_reader2 =
             harness.create_default_reader(ComponentIdentity::from_identifier_and_url(
-                &ComponentIdentifier::Legacy {
+                ComponentIdentifier::Legacy {
                     moniker: vec![".", "bar"].into(),
                     instance_id: "0".into(),
                 },

@@ -179,7 +179,7 @@ mod tests {
             moniker.push(self.component_name);
             EventMetadata {
                 identity: ComponentIdentity::from_identifier_and_url(
-                    &ComponentIdentifier::Legacy {
+                    ComponentIdentifier::Legacy {
                         moniker: moniker.into(),
                         instance_id: self.instance_id,
                     },
@@ -226,13 +226,8 @@ mod tests {
                 directory: Some(_),
             }) => {
                 assert_eq!(
-                    observed_identity.rendered_moniker,
-                    format!(
-                        "{}/{}:{}",
-                        identity.realm_path.join("/"),
-                        &identity.component_name,
-                        &identity.instance_id
-                    )
+                    observed_identity.relative_moniker.to_string(),
+                    format!("{}/{}", identity.realm_path.join("/"), &identity.component_name)
                 );
             }
             other => panic!("unexpected event: {:?}", other),

@@ -11,7 +11,7 @@ use std::sync::Arc;
 lazy_static! {
     pub static ref TEST_IDENTITY: Arc<ComponentIdentity> = {
         Arc::new(ComponentIdentity::from_identifier_and_url(
-            &ComponentIdentifier::Legacy {
+            ComponentIdentifier::Legacy {
                 moniker: vec!["fake-test-env", "test-component.cmx"].into(),
                 instance_id: "".into(),
             },

@@ -217,7 +217,10 @@ impl EventStreamLogger {
     fn log_inspect(&mut self, event_name: &str, identity: &ComponentIdentity) {
         inspect_log!(self.component_log_node,
             event: event_name,
-            moniker: identity.rendered_moniker,
+            moniker: match &identity.instance_id {
+                Some(instance_id) => format!("{}:{}", identity.relative_moniker, instance_id),
+                None => identity.relative_moniker.to_string(),
+            }
         );
     }
 }
@@ -245,11 +248,11 @@ mod tests {
             moniker: vec!["a", "b", "foo.cmx"].into(),
         };
         static ref LEGACY_IDENTITY: ComponentIdentity =
-            ComponentIdentity::from_identifier_and_url(&*LEGACY_ID, &*TEST_URL);
+            ComponentIdentity::from_identifier_and_url(LEGACY_ID.clone(), &*TEST_URL);
         static ref MONIKER_ID: ComponentIdentifier =
             ComponentIdentifier::parse_from_moniker("./a:0/b:1").unwrap();
         static ref MONIKER_IDENTITY: ComponentIdentity =
-            ComponentIdentity::from_identifier_and_url(&*MONIKER_ID, &*TEST_URL);
+            ComponentIdentity::from_identifier_and_url(MONIKER_ID.clone(), &*TEST_URL);
     }
 
     #[async_trait]
@@ -259,7 +262,10 @@ mod tests {
             mut sender: mpsc::Sender<ComponentEvent>,
         ) -> Result<(), EventError> {
             let shared_data = EventMetadata {
-                identity: ComponentIdentity::from_identifier_and_url(&*MONIKER_ID, &*TEST_URL),
+                identity: ComponentIdentity::from_identifier_and_url(
+                    MONIKER_ID.clone(),
+                    &*TEST_URL,
+                ),
                 timestamp: zx::Time::get_monotonic(),
             };
 
@@ -298,7 +304,7 @@ mod tests {
             mut sender: mpsc::Sender<ComponentEvent>,
         ) -> Result<(), EventError> {
             let shared_data = EventMetadata {
-                identity: ComponentIdentity::from_identifier_and_url(&*LEGACY_ID, &*TEST_URL),
+                identity: ComponentIdentity::from_identifier_and_url(LEGACY_ID.clone(), &*TEST_URL),
                 timestamp: zx::Time::get_monotonic(),
             };
 

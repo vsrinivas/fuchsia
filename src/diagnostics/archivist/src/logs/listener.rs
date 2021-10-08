@@ -315,7 +315,7 @@ mod tests {
 
     fn get_test_identity() -> ComponentIdentity {
         ComponentIdentity::from_identifier_and_url(
-            &ComponentIdentifier::Legacy {
+            ComponentIdentifier::Legacy {
                 moniker: vec!["fake-test-env", "bleebloo.cmx"].into(),
                 instance_id: "".into(),
             },

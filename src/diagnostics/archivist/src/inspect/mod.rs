@@ -658,7 +658,7 @@ mod tests {
         let instance_id = "1234".to_string();
 
         let identity = ComponentIdentity::from_identifier_and_url(
-            &ComponentIdentifier::Legacy { instance_id, moniker: vec!["a", "b", "foo.cmx"].into() },
+            ComponentIdentifier::Legacy { instance_id, moniker: vec!["a", "b", "foo.cmx"].into() },
             TEST_URL,
         );
         let (proxy, _) =
@@ -676,7 +676,12 @@ mod tests {
             .expect("add to repo");
 
         assert_eq!(
-            inspect_repo.data_directories.get(&identity.unique_key).unwrap().get_values().len(),
+            inspect_repo
+                .data_directories
+                .get(&identity.unique_key().into())
+                .unwrap()
+                .get_values()
+                .len(),
             1
         );
     }
@@ -788,7 +793,7 @@ mod tests {
                     Arc::new(RwLock::new(Pipeline::for_test(None, inspect_repo.clone())));
 
                 for (cid, proxy) in id_and_directory_proxy {
-                    let identity = ComponentIdentity::from_identifier_and_url(&cid, TEST_URL);
+                    let identity = ComponentIdentity::from_identifier_and_url(cid, TEST_URL);
                     inspect_repo
                         .write()
                         .add_inspect_artifacts(identity.clone(), proxy, zx::Time::from_nanos(0))
@@ -959,7 +964,7 @@ mod tests {
 
         let inspector_arc = Arc::new(inspector);
 
-        let identity = ComponentIdentity::from_identifier_and_url(&component_id, TEST_URL);
+        let identity = ComponentIdentity::from_identifier_and_url(component_id, TEST_URL);
         inspect_repo
             .write()
             .add_inspect_artifacts(identity.clone(), out_dir_proxy, zx::Time::from_nanos(0))
@@ -1089,7 +1094,7 @@ mod tests {
 
         let test_batch_iterator_stats2 = Arc::new(test_accessor_stats.new_inspect_batch_iterator());
 
-        inspect_repo.write().mark_stopped(&identity.unique_key);
+        inspect_repo.write().mark_stopped(&identity.unique_key().into());
         pipeline_wrapper.write().remove(&identity.relative_moniker);
         {
             let result_json = read_snapshot(

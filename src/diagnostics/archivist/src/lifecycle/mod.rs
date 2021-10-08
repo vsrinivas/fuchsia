@@ -160,7 +160,7 @@ mod tests {
             instance_id: "1234".into(),
             moniker: vec!["test_component.cmx"].into(),
         };
-        let identity = ComponentIdentity::from_identifier_and_url(&component_id, TEST_URL);
+        let identity = ComponentIdentity::from_identifier_and_url(component_id, TEST_URL);
 
         diagnostics_repo
             .write()
@@ -191,7 +191,7 @@ mod tests {
             assert_eq!(result_array.len(), 2, "Expect only two schemas to be returned.");
         }
 
-        diagnostics_repo.write().mark_stopped(&identity.unique_key);
+        diagnostics_repo.write().mark_stopped(&identity.unique_key().into());
         pipeline_wrapper.write().remove(&identity.relative_moniker);
 
         let test_batch_iterator_stats2 =

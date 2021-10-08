@@ -216,7 +216,7 @@ pub mod tests {
         let expected_component_id =
             ComponentIdentifier::parse_from_moniker("./foo:0/bar:0").unwrap();
         let expected_identity = ComponentIdentity::from_identifier_and_url(
-            &expected_component_id,
+            expected_component_id,
             "fuchsia-pkg://fuchsia.com/foo#meta/bar.cmx",
         );
 

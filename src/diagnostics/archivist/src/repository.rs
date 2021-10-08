@@ -177,7 +177,7 @@ impl DataRepo {
     /// corresponds to a running component or we've decided to still retain it.
     pub fn is_live(&self, identity: &ComponentIdentity) -> bool {
         let this = self.read();
-        if let Some(containers) = this.data_directories.get(&identity.unique_key) {
+        if let Some(containers) = this.data_directories.get(&identity.unique_key().into()) {
             let diagnostics_containers = containers.get_values();
             diagnostics_containers.len() == 1 && diagnostics_containers[0].should_retain()
         } else {
@@ -239,7 +239,8 @@ impl DataRepoState {
             component_start_time: component_start_time,
         };
 
-        let diag_repo_entry_opt = self.data_directories.get_mut(&identity.unique_key);
+        let unique_key: Vec<_> = identity.unique_key().into();
+        let diag_repo_entry_opt = self.data_directories.get_mut(&unique_key);
         match diag_repo_entry_opt {
             Some(diag_repo_entry) => {
                 let diag_repo_entry_values: &mut [ComponentDiagnostics] =
@@ -252,7 +253,7 @@ impl DataRepoState {
                         // one. If this is the case, just instantiate as though it's our first
                         // time encountering this moniker segment.
                         self.data_directories.insert(
-                            identity.unique_key.to_vec(),
+                            unique_key,
                             ComponentDiagnostics::new_with_lifecycle(
                                 Arc::new(identity),
                                 lifecycle_artifact_container,
@@ -276,7 +277,7 @@ impl DataRepoState {
                                 "Encountered a diagnostics data repository node with more",
                                 "than one artifact container, moniker: {:?}."
                             ),
-                            identity.unique_key,
+                            unique_key,
                         ));
                     }
                 }
@@ -284,7 +285,7 @@ impl DataRepoState {
             // This case is expected to be the most common case. We've seen a creation
             // lifecycle event and it promotes the instantiation of a new data repository entry.
             None => self.data_directories.insert(
-                identity.unique_key.to_vec(),
+                unique_key,
                 ComponentDiagnostics::new_with_lifecycle(
                     Arc::new(identity),
                     lifecycle_artifact_container,
@@ -301,7 +302,7 @@ impl DataRepoState {
         &mut self,
         identity: ComponentIdentity,
     ) -> Arc<LogsArtifactsContainer> {
-        let trie_key = identity.unique_key.to_vec();
+        let trie_key: Vec<_> = identity.unique_key().into();
 
         // we use a macro instead of a closure to avoid lifetime issues
         macro_rules! insert_component {
@@ -334,7 +335,7 @@ impl DataRepoState {
 
     pub fn get_own_log_container(&mut self) -> Arc<LogsArtifactsContainer> {
         self.get_log_container(ComponentIdentity::from_identifier_and_url(
-            &ComponentIdentifier::parse_from_moniker(ARCHIVIST_MONIKER).unwrap(),
+            ComponentIdentifier::parse_from_moniker(ARCHIVIST_MONIKER).unwrap(),
             ARCHIVIST_URL,
         ))
     }
@@ -370,7 +371,8 @@ impl DataRepoState {
         inspect_container: InspectArtifactsContainer,
         identity: ComponentIdentity,
     ) -> Result<(), Error> {
-        let diag_repo_entry_opt = self.data_directories.get_mut(&identity.unique_key);
+        let unique_key: Vec<_> = identity.unique_key().into();
+        let diag_repo_entry_opt = self.data_directories.get_mut(&unique_key);
 
         match diag_repo_entry_opt {
             Some(diag_repo_entry) => {
@@ -384,7 +386,7 @@ impl DataRepoState {
                         // one. If this is the case, just instantiate as though it's our first
                         // time encountering this moniker segment.
                         self.data_directories.insert(
-                            identity.unique_key.to_vec(),
+                            unique_key,
                             ComponentDiagnostics::new_with_inspect(
                                 Arc::new(identity),
                                 inspect_container,
@@ -413,7 +415,7 @@ impl DataRepoState {
                                 "Encountered a diagnostics data repository node with more",
                                 "than one artifact container, moniker: {:?}."
                             ),
-                            identity.unique_key
+                            unique_key
                         ));
                     }
                 }
@@ -421,7 +423,7 @@ impl DataRepoState {
             // This case is expected to be uncommon; we've encountered a diagnostics_ready
             // event before a start or existing event!
             None => self.data_directories.insert(
-                identity.unique_key.to_vec(),
+                unique_key,
                 ComponentDiagnostics::new_with_inspect(
                     Arc::new(identity),
                     inspect_container,
@@ -602,7 +604,7 @@ mod tests {
         let instance_id = "1234".to_string();
 
         let component_id = ComponentIdentifier::Legacy { instance_id, moniker };
-        let identity = ComponentIdentity::from_identifier_and_url(&component_id, TEST_URL);
+        let identity = ComponentIdentity::from_identifier_and_url(component_id, TEST_URL);
 
         let (proxy, _) =
             fidl::endpoints::create_proxy::<DirectoryMarker>().expect("create directory proxy");
@@ -619,7 +621,12 @@ mod tests {
             .expect("add to repo");
 
         assert_eq!(
-            inspect_repo.data_directories.get(&identity.unique_key).unwrap().get_values().len(),
+            inspect_repo
+                .data_directories
+                .get(&identity.unique_key().into())
+                .unwrap()
+                .get_values()
+                .len(),
             1
         );
     }
@@ -632,7 +639,7 @@ mod tests {
         let instance_id = "1234".to_string();
 
         let component_id = ComponentIdentifier::Legacy { instance_id, moniker };
-        let identity = ComponentIdentity::from_identifier_and_url(&component_id, TEST_URL);
+        let identity = ComponentIdentity::from_identifier_and_url(component_id, TEST_URL);
 
         data_repo
             .add_new_component(identity.clone(), zx::Time::from_nanos(0), None)
@@ -646,10 +653,16 @@ mod tests {
             .expect("add to repo");
 
         assert_eq!(
-            data_repo.data_directories.get(&identity.unique_key).unwrap().get_values().len(),
+            data_repo
+                .data_directories
+                .get(&identity.unique_key().into())
+                .unwrap()
+                .get_values()
+                .len(),
             1
         );
-        let entry = &data_repo.data_directories.get(&identity.unique_key).unwrap().get_values()[0];
+        let entry =
+            &data_repo.data_directories.get(&identity.unique_key().into()).unwrap().get_values()[0];
         assert!(entry.inspect.is_some());
         assert_eq!(entry.identity.url, TEST_URL);
     }
@@ -662,7 +675,7 @@ mod tests {
         let instance_id = "1234".to_string();
 
         let component_id = ComponentIdentifier::Legacy { instance_id, moniker };
-        let identity = ComponentIdentity::from_identifier_and_url(&component_id, TEST_URL);
+        let identity = ComponentIdentity::from_identifier_and_url(component_id.clone(), TEST_URL);
 
         data_repo
             .add_new_component(identity.clone(), zx::Time::from_nanos(0), None)
@@ -677,7 +690,7 @@ mod tests {
         assert!(duplicate_new_component_insertion.is_ok());
 
         let repo_values =
-            data_repo.data_directories.get(&identity.unique_key).unwrap().get_values();
+            data_repo.data_directories.get(&identity.unique_key().into()).unwrap().get_values();
         assert_eq!(repo_values.len(), 1);
         let entry = &repo_values[0];
         assert!(entry.lifecycle.is_some());
@@ -695,7 +708,7 @@ mod tests {
         let instance_id = "1234".to_string();
 
         let component_id = ComponentIdentifier::Legacy { instance_id, moniker };
-        let identity = ComponentIdentity::from_identifier_and_url(&component_id, TEST_URL);
+        let identity = ComponentIdentity::from_identifier_and_url(component_id.clone(), TEST_URL);
 
         let component_insertion = data_repo.add_new_component(
             identity.clone(),
@@ -706,7 +719,7 @@ mod tests {
         assert!(component_insertion.is_ok());
 
         let repo_values =
-            data_repo.data_directories.get(&identity.unique_key).unwrap().get_values();
+            data_repo.data_directories.get(&identity.unique_key().into()).unwrap().get_values();
         assert_eq!(repo_values.len(), 1);
         let entry = &repo_values[0];
         assert!(entry.lifecycle.is_some());
@@ -725,7 +738,7 @@ mod tests {
         let instance_id = "1234".to_string();
 
         let component_id = ComponentIdentifier::Legacy { instance_id, moniker };
-        let identity = ComponentIdentity::from_identifier_and_url(&component_id, TEST_URL);
+        let identity = ComponentIdentity::from_identifier_and_url(component_id, TEST_URL);
 
         let (proxy, _) =
             fidl::endpoints::create_proxy::<DirectoryMarker>().expect("create directory proxy");
@@ -741,10 +754,16 @@ mod tests {
         // We shouldn't have overwritten the entry. There should still be an inspect
         // artifacts container.
         assert_eq!(
-            data_repo.data_directories.get(&identity.unique_key).unwrap().get_values().len(),
+            data_repo
+                .data_directories
+                .get(&identity.unique_key().into())
+                .unwrap()
+                .get_values()
+                .len(),
             1
         );
-        let entry = &data_repo.data_directories.get(&identity.unique_key).unwrap().get_values()[0];
+        let entry =
+            &data_repo.data_directories.get(&identity.unique_key().into()).unwrap().get_values()[0];
         assert_eq!(entry.identity.url, TEST_URL);
         assert!(entry.inspect.is_some());
         assert!(entry.lifecycle.is_some());
@@ -758,19 +777,27 @@ mod tests {
         let instance_id = "1234".to_string();
 
         let component_id = ComponentIdentifier::Legacy { instance_id, moniker };
-        let identity = ComponentIdentity::from_identifier_and_url(&component_id, TEST_URL);
+        let identity = ComponentIdentity::from_identifier_and_url(component_id, TEST_URL);
 
         data_repo
             .add_new_component(identity.clone(), zx::Time::from_nanos(0), None)
             .expect("insertion will succeed.");
 
         assert_eq!(
-            data_repo.data_directories.get(&identity.unique_key).unwrap().get_values().len(),
+            data_repo
+                .data_directories
+                .get(&identity.unique_key().into())
+                .unwrap()
+                .get_values()
+                .len(),
             1
         );
 
-        let mutable_values =
-            data_repo.data_directories.get_mut(&identity.unique_key).unwrap().get_values_mut();
+        let mutable_values = data_repo
+            .data_directories
+            .get_mut(&identity.unique_key().into())
+            .unwrap()
+            .get_values_mut();
 
         mutable_values
             .push(ComponentDiagnostics::empty(Arc::new(identity.clone()), &Default::default()));
@@ -790,7 +817,7 @@ mod tests {
         let mut moniker = realm_path.clone();
         moniker.push("foo.cmx".to_string());
         let component_id = ComponentIdentifier::Legacy { instance_id, moniker: moniker.into() };
-        let identity = ComponentIdentity::from_identifier_and_url(&component_id, TEST_URL);
+        let identity = ComponentIdentity::from_identifier_and_url(component_id, TEST_URL);
 
         data_repo
             .write()
@@ -813,7 +840,7 @@ mod tests {
             instance_id: "12345".to_string(),
             moniker: moniker.into(),
         };
-        let identity2 = ComponentIdentity::from_identifier_and_url(&component_id2, TEST_URL);
+        let identity2 = ComponentIdentity::from_identifier_and_url(component_id2, TEST_URL);
 
         data_repo
             .write()
@@ -853,12 +880,12 @@ mod tests {
         let repo = DataRepo::default();
         let foo_container =
             repo.write().get_log_container(ComponentIdentity::from_identifier_and_url(
-                &ComponentIdentifier::parse_from_moniker("./foo:0").unwrap(),
+                ComponentIdentifier::parse_from_moniker("./foo:0").unwrap(),
                 "fuchsia-pkg://foo",
             ));
         let bar_container =
             repo.write().get_log_container(ComponentIdentity::from_identifier_and_url(
-                &ComponentIdentifier::parse_from_moniker("./bar:0").unwrap(),
+                ComponentIdentifier::parse_from_moniker("./bar:0").unwrap(),
                 "fuchsia-pkg://bar",
             ));
 
