@@ -604,6 +604,11 @@ void OtStackApp::ResetAsync() {
     otInstanceFinalize(static_cast<otInstance*>(ot_instance_ptr_.value()));
     ot_instance_ptr_.reset();
     otSysDeinit();
+    fbl::AutoLock lock(&radio_q_mtx_);
+    radio_inbound_queue_.clear();
+    lock.release();
+    client_outbound_queue_.clear();
+    client_inbound_queue_.clear();
     RadioAllowanceInit();
     InitOpenThreadLibrary(false);
   });
