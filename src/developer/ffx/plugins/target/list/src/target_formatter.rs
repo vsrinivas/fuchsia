@@ -187,7 +187,7 @@ impl TryFrom<bridge::Target> for SimpleTarget {
 }
 
 pub struct JsonTargetFormatter {
-    targets: Vec<JsonTarget>,
+    pub(crate) targets: Vec<JsonTarget>,
 }
 
 impl TryFrom<Vec<bridge::Target>> for JsonTargetFormatter {
@@ -300,7 +300,7 @@ macro_rules! make_structs_and_support_functions {
         }
 
         #[derive(Serialize, Debug, PartialEq, Eq)]
-        struct JsonTarget {
+        pub(crate) struct JsonTarget {
             $(
                 $field: serde_json::Value,
             )*

@@ -12,6 +12,7 @@ ffx_plugin("ffx_list") {
     "//sdk/fidl/fuchsia.net:fuchsia.net-rustc",
     "//src/developer/ffx/lib/addr:lib",
     "//src/developer/ffx/lib/netext:lib",
+    "//src/developer/ffx/lib/writer:lib",
     "//src/lib/fuchsia-async",
     "//third_party/rust_crates:futures-lite",
     "//third_party/rust_crates:lazy_static",

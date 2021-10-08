@@ -3,27 +3,24 @@
 // found in the LICENSE file.
 
 use {
-    crate::target_formatter::TargetFormatter,
+    crate::target_formatter::{JsonTargetFormatter, TargetFormatter},
     anyhow::{anyhow, Result},
     errors::ffx_bail_with_code,
     ffx_core::ffx_plugin,
     ffx_list_args::ListCommand,
+    ffx_writer::Writer,
     fidl_fuchsia_developer_bridge::{TargetCollectionIteratorMarker, TargetCollectionProxy},
     std::convert::TryFrom,
-    std::io::{stdout, Write},
+    std::io::Write,
 };
 
 mod target_formatter;
 
 #[ffx_plugin(TargetCollectionProxy = "daemon::service")]
-pub async fn list_targets(tc_proxy: TargetCollectionProxy, cmd: ListCommand) -> Result<()> {
-    list_impl(tc_proxy, cmd, &mut stdout()).await
-}
-
-async fn list_impl<W: Write>(
+pub async fn list_targets(
     tc_proxy: TargetCollectionProxy,
+    mut writer: Writer,
     cmd: ListCommand,
-    writer: &mut W,
 ) -> Result<()> {
     let (iterator_proxy, server) =
         fidl::endpoints::create_proxy::<TargetCollectionIteratorMarker>()?;
@@ -54,9 +51,14 @@ async fn list_impl<W: Write>(
             }
         }
         _ => {
-            let formatter = Box::<dyn TargetFormatter>::try_from((cmd.format, res))?;
-            let default: Option<String> = ffx_config::get("target.default").await?;
-            writeln!(writer, "{}", formatter.lines(default.as_deref()).join("\n"))?;
+            if writer.is_machine() {
+                let formatter = JsonTargetFormatter::try_from(res)?;
+                writer.machine(&formatter.targets)?;
+            } else {
+                let formatter = Box::<dyn TargetFormatter>::try_from((cmd.format, res))?;
+                let default: Option<String> = ffx_config::get("target.default").await?;
+                writeln!(writer, "{}", formatter.lines(default.as_deref()).join("\n"))?;
+            }
         }
     };
     Ok(())
@@ -138,9 +140,10 @@ mod test {
     }
 
     async fn try_run_list_test(num_tests: usize, cmd: ListCommand) -> Result<String> {
-        let mut writer = Vec::new();
         let proxy = setup_fake_target_collection_server(num_tests);
-        list_impl(proxy, cmd, &mut writer).await.map(|_| String::from_utf8(writer).unwrap())
+        let writer = Writer::new_test(None);
+        list_targets(proxy, writer.clone(), cmd).await?;
+        writer.test_output()
     }
 
     async fn run_list_test(num_tests: usize, cmd: ListCommand) -> String {
