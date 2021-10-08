@@ -54,7 +54,7 @@ sdk_source_set("cpp") {
     "//sdk/lib/fit",
     "//sdk/lib/fit-promise",
     "//sdk/lib/stdcompat",
-    "//zircon/public/lib/async",
+    "//zircon/system/ulib/async",
     "//zircon/system/ulib/async-default",
     "//zircon/system/ulib/fidl",
     "//zircon/system/ulib/zx",

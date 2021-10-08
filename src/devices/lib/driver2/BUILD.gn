@@ -16,7 +16,7 @@ group("tests") {
 source_set("lib") {
   sources = [ "record.h" ]
 
-  public_deps = [ "//zircon/public/lib/async" ]
+  public_deps = [ "//zircon/system/ulib/async" ]
 }
 
 source_set("llcpp") {

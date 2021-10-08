@@ -31,7 +31,7 @@ source_set("shell") {
     "//sdk/lib/fit",
     "//sdk/lib/syslog/cpp",
     "//src/developer/forensics/feedback/fidl:fuchsia.feedback.internal",
-    "//zircon/public/lib/async",
+    "//zircon/system/ulib/async",
     "//zircon/system/ulib/fbl",
   ]
 

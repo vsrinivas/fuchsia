@@ -112,7 +112,7 @@ source_set("utc_time_provider") {
     ":previous_boot_file",
     "//sdk/lib/sys/cpp",
     "//src/lib/timekeeper:system",
-    "//zircon/public/lib/async",
+    "//zircon/system/ulib/async",
     "//zircon/system/ulib/async:async-cpp",
     "//zircon/system/ulib/zx",
   ]

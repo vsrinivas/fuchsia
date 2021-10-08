@@ -15,7 +15,7 @@ source_set("util") {
     "//sdk/lib/fdio",
     "//sdk/lib/vfs/cpp",
     "//third_party/googletest:gtest",
-    "//zircon/public/lib/async",
+    "//zircon/system/ulib/async",
     "//zircon/system/ulib/async-loop",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",

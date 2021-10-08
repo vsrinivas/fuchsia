@@ -13,7 +13,7 @@ static_library("cpp") {
     "device-watcher.h",
   ]
   public_deps = [
-    "//zircon/public/lib/async",
+    "//zircon/system/ulib/async",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/zx",
   ]

@@ -49,7 +49,7 @@ source_set("lib") {
     "//src/lib/loader_service",
     "//src/lib/storage/vfs/cpp",
     "//src/storage/memfs:memfs-cpp",
-    "//zircon/public/lib/async",
+    "//zircon/system/ulib/async",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/zx",
   ]

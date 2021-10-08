@@ -10,7 +10,7 @@ test("dlfcn") {
   deps = [
     "//sdk/lib/fdio",
     "//src/lib/loader_service",
-    "//zircon/public/lib/async",
+    "//zircon/system/ulib/async",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/elfload",

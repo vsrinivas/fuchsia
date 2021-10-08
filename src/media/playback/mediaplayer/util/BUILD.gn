@@ -19,7 +19,7 @@ source_set("util") {
     "//sdk/lib/fit",
     "//sdk/lib/syslog/cpp",
     "//src/lib/fxl",
-    "//zircon/public/lib/async",
+    "//zircon/system/ulib/async",
   ]
 
   deps = [

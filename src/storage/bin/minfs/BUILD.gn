@@ -14,7 +14,7 @@ executable("minfs") {
     "//sdk/lib/syslog/cpp",
     "//src/lib/storage/vfs/cpp",
     "//src/storage/minfs",
-    "//zircon/public/lib/async",
+    "//zircon/system/ulib/async",
     "//zircon/system/ulib/async:async-cpp",
     "//zircon/system/ulib/async-default",
     "//zircon/system/ulib/async-loop",

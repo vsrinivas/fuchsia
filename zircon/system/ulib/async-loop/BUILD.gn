@@ -12,9 +12,9 @@ zx_library("async-loop") {
   sources = [ "loop.c" ]
   public_deps = [
     # <lib/async-loop/loop.h> has #include <lib/async/dispatcher.h>.
-    "//zircon/public/lib/async",
+    "//zircon/system/ulib/async",
   ]
-  deps = [ "//zircon/public/lib/async" ]
+  deps = [ "//zircon/system/ulib/async" ]
 }
 
 zx_library("async-loop-cpp") {
@@ -24,7 +24,7 @@ zx_library("async-loop-cpp") {
   sources = [ "loop_wrapper.cc" ]
   deps = [
     ":async-loop",
-    "//zircon/public/lib/async",
+    "//zircon/system/ulib/async",
   ]
   public_deps = [
     ":async-loop",

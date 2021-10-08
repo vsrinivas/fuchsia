@@ -11,7 +11,7 @@ executable("f2fs") {
     "//sdk/lib/syslog/cpp",
     "//src/lib/uuid",
     "//src/storage/f2fs",
-    "//zircon/public/lib/async",
+    "//zircon/system/ulib/async",
     "//zircon/system/ulib/async:async-cpp",
     "//zircon/system/ulib/async-default",
     "//zircon/system/ulib/async-loop:async-loop-cpp",

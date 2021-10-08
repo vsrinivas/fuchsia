@@ -59,7 +59,7 @@ source_set("crash_register") {
     "//src/developer/forensics/utils:errors",
     "//src/developer/forensics/utils/fit",
     "//third_party/rapidjson",
-    "//zircon/public/lib/async",
+    "//zircon/system/ulib/async",
   ]
 
   deps = [
@@ -97,7 +97,7 @@ source_set("crash_reporter") {
     "//src/developer/forensics/utils:errors",
     "//src/developer/forensics/utils:utc_time_provider",
     "//src/lib/timekeeper",
-    "//zircon/public/lib/async",
+    "//zircon/system/ulib/async",
     "//zircon/system/ulib/async:async-cpp",
   ]
 
@@ -203,7 +203,7 @@ source_set("network_watcher") {
     "//sdk/lib/sys/cpp",
     "//src/connectivity/network/lib/net_interfaces/cpp",
     "//src/lib/backoff",
-    "//zircon/public/lib/async",
+    "//zircon/system/ulib/async",
   ]
 
   deps = [ "//sdk/lib/syslog/cpp" ]
@@ -234,7 +234,7 @@ source_set("queue") {
     "//src/developer/forensics/crash_reports/info",
     "//src/lib/backoff",
     "//src/lib/fxl",
-    "//zircon/public/lib/async",
+    "//zircon/system/ulib/async",
   ]
 
   deps = [
@@ -271,7 +271,7 @@ source_set("reporting_policy_watcher") {
     "//sdk/lib/fit",
     "//sdk/lib/sys/cpp",
     "//src/lib/backoff",
-    "//zircon/public/lib/async",
+    "//zircon/system/ulib/async",
     "//zircon/system/ulib/zx",
   ]
 
@@ -341,7 +341,7 @@ source_set("snapshot_manager") {
     "//src/developer/forensics/utils:sized_data",
     "//src/developer/forensics/utils:storage_size",
     "//src/lib/timekeeper",
-    "//zircon/public/lib/async",
+    "//zircon/system/ulib/async",
     "//zircon/system/ulib/zx",
   ]
 

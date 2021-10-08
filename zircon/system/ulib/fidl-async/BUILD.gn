@@ -10,7 +10,7 @@ zx_library("fidl-async") {
   sdk_headers = [ "lib/fidl-async/bind.h" ]
   sources = [ "bind.c" ]
   deps = [
-    "//zircon/public/lib/async",
+    "//zircon/system/ulib/async",
     "//zircon/system/ulib/fidl",
   ]
 }
@@ -27,7 +27,7 @@ zx_library("fidl-async-cpp") {
   ]
   deps = [
     "//sdk/lib/fit",
-    "//zircon/public/lib/async",
+    "//zircon/system/ulib/async",
     "//zircon/system/ulib/fidl",
     "//zircon/system/ulib/fidl:fidl-llcpp",
   ]

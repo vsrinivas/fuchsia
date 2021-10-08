@@ -87,7 +87,7 @@ source_set("channel_provider") {
     "//sdk/lib/sys/cpp",
     "//src/developer/forensics/utils/cobalt",
     "//src/lib/fxl",
-    "//zircon/public/lib/async",
+    "//zircon/system/ulib/async",
     "//zircon/system/ulib/zx",
   ]
 

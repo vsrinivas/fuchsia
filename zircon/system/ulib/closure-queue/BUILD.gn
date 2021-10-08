@@ -14,7 +14,7 @@ zx_library("closure-queue") {
     "//zircon/system/ulib/async:async-cpp",
     "//zircon/system/ulib/zx",
   ]
-  public_deps = [ "//zircon/public/lib/async" ]
+  public_deps = [ "//zircon/system/ulib/async" ]
 }
 
 group("tests") {

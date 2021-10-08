@@ -17,7 +17,7 @@ zx_library("devmgr-integration-test") {
   public_deps = [
     # <lib/devmgr-integration-test/fixture.h> has #include <lib/vfs/cpp/pseudo_dir.h>
     "//sdk/lib/vfs/cpp",
-    "//zircon/public/lib/async",
+    "//zircon/system/ulib/async",
 
     # <lib/devmgr-integration-test/fixture.h> has #include <lib/devmgr-launcher/launch.h>.
     "//zircon/system/ulib/devmgr-launcher",

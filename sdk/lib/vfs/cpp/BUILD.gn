@@ -52,7 +52,7 @@ sdk_source_set("cpp") {
     "//sdk/fidl/fuchsia.io2",
     "//sdk/lib/fdio",
     "//sdk/lib/fidl/cpp",
-    "//zircon/public/lib/async",
+    "//zircon/system/ulib/async",
     "//zircon/system/ulib/zx",
   ]
 

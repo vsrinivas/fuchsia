@@ -24,7 +24,7 @@ test("bin") {
   deps = [
     "//sdk/fidl/fuchsia.hardware.registers:fuchsia.hardware.registers_llcpp",
     "//sdk/lib/fdio",
-    "//zircon/public/lib/async",
+    "//zircon/system/ulib/async",
     "//zircon/system/ulib/async:async-cpp",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/runtime",

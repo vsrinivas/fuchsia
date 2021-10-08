@@ -48,7 +48,7 @@ template("trace_provider_library") {
     }
     public_deps += [
       # <trace-provider/provider.h> has #include <lib/async/dispatcher.h>.
-      "//zircon/public/lib/async",
+      "//zircon/system/ulib/async",
 
       # <trace-provider/provider.h> has #include <lib/zx/channel.h>.
       "//zircon/system/ulib/zx",

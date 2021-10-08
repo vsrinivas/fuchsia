@@ -22,7 +22,7 @@ zx_library("fake_ddk") {
     "//sdk/lib/fdio",
     "//src/lib/ddk",
     "//src/lib/ddktl",
-    "//zircon/public/lib/async",
+    "//zircon/system/ulib/async",
     "//zircon/system/ulib/async:async-cpp",
     "//zircon/system/ulib/async-loop",
     "//zircon/system/ulib/async-loop:async-loop-cpp",

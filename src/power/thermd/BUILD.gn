@@ -19,7 +19,7 @@ if (target_cpu == "x64") {
       "//sdk/fidl/fuchsia.hardware.thermal:fuchsia.hardware.thermal_c",
       "//sdk/lib/fdio",
       "//src/lib/ddk",
-      "//zircon/public/lib/async",
+      "//zircon/system/ulib/async",
       "//zircon/system/ulib/async-default",
       "//zircon/system/ulib/async-loop:async-loop-cpp",
       "//zircon/system/ulib/async-loop:async-loop-default",

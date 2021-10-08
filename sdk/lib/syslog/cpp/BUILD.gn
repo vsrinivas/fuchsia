@@ -266,7 +266,7 @@ executable("logging_cpp_unittests") {
       "//third_party/googletest:gmock",
       "//third_party/googletest:gtest",
       "//third_party/rapidjson",
-      "//zircon/public/lib/async",
+      "//zircon/system/ulib/async",
       "//zircon/system/ulib/async:async-cpp",
       "//zircon/system/ulib/async-loop:async-loop-cpp",
     ]

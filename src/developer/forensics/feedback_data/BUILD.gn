@@ -23,7 +23,7 @@ source_set("archive_accessor") {
     "//src/developer/forensics/utils/fidl:oneshot_ptr",
     "//src/developer/forensics/utils/fit",
     "//src/lib/fxl",
-    "//zircon/public/lib/async",
+    "//zircon/system/ulib/async",
     "//zircon/system/ulib/async:async-cpp",
   ]
 

@@ -14,7 +14,7 @@ sdk_shared_library("svc") {
     "dir.h",
   ]
 
-  public_deps = [ "//zircon/public/lib/async" ]
+  public_deps = [ "//zircon/system/ulib/async" ]
 
   deps = [
     "//sdk/lib/sys/cpp",

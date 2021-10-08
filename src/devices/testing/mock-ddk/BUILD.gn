@@ -27,7 +27,7 @@ source_set("mock-ddk") {
     "//src/lib/ddk",
 
     # mock_ddk.h has #include <lib/sync/completion.h>.
-    "//zircon/public/lib/async",
+    "//zircon/system/ulib/async",
     "//zircon/system/ulib/svc",
     "//zircon/system/ulib/sync",
   ]

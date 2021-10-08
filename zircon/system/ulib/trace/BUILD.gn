@@ -39,7 +39,7 @@ template("trace_library") {
     # Source dependencies, not including the trace engine.
     deps += [
       "//sdk/lib/fit",
-      "//zircon/public/lib/async",
+      "//zircon/system/ulib/async",
       "//zircon/system/ulib/async:async-cpp",
       "//zircon/system/ulib/zx",
     ]

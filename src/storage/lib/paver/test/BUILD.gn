@@ -54,7 +54,7 @@ test("test") {
     "//src/storage/gpt",
     "//src/storage/lib/paver",
     "//src/storage/lib/utils:topological_path",
-    "//zircon/public/lib/async",
+    "//zircon/system/ulib/async",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/block-client",

@@ -9,8 +9,8 @@ executable("runtests") {
   sources = [ "runtests.cc" ]
   deps = [
     "//sdk/fidl/fuchsia.logger:fuchsia.logger_c",
-    "//zircon/public/lib/async",
     "//zircon/public/lib/zircon-internal",
+    "//zircon/system/ulib/async",
     "//zircon/system/ulib/async-loop",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/fidl",

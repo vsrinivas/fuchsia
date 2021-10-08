@@ -25,7 +25,7 @@ source_set("lib") {
   deps = [
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/syslog/cpp",
-    "//zircon/public/lib/async",
+    "//zircon/system/ulib/async",
   ]
   public_deps = [
     "//sdk/fidl/fuchsia.camera2",

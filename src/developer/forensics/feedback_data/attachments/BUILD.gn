@@ -34,7 +34,7 @@ source_set("attachment_providers") {
     "//src/developer/forensics/utils:archive",
     "//src/developer/forensics/utils:errors",
     "//src/developer/forensics/utils/fidl:oneshot_ptr",
-    "//zircon/public/lib/async",
+    "//zircon/system/ulib/async",
     "//zircon/system/ulib/async:async-cpp",
     "//zircon/system/ulib/zx",
   ]

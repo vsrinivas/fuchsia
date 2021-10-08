@@ -370,7 +370,7 @@ test("fshost_inspect_test") {
   sources = [ "inspect-manager-test.cc" ]
   deps = [
     ":inspect",
-    "//zircon/public/lib/async",
+    "//zircon/system/ulib/async",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/inspect",

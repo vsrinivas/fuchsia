@@ -10,8 +10,8 @@ zx_library("ktrace") {
   sources = [ "ktrace.cc" ]
   deps = [
     "//sdk/fidl/fuchsia.tracing.kernel",
-    "//zircon/public/lib/async",
     "//zircon/public/lib/zircon-internal",
+    "//zircon/system/ulib/async",
     "//zircon/system/ulib/fidl",
     "//zircon/system/ulib/fidl-async",
     "//zircon/system/ulib/zx",

@@ -42,7 +42,7 @@ source_set("test_sources") {
     "//sdk/lib/fdio",
     "//sdk/lib/fidl/cpp:cpp_base",
     "//sdk/lib/fit",
-    "//zircon/public/lib/async",
+    "//zircon/system/ulib/async",
     "//zircon/system/ulib/async:async-cpp",
     "//zircon/system/ulib/async-loop",
     "//zircon/system/ulib/async-loop:async-loop-cpp",

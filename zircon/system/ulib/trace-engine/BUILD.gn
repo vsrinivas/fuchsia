@@ -24,7 +24,7 @@ trace_engine_headers = [
 
 trace_engine_header_deps = [
   # <trace-engine/handler.h> has #include <lib/async/dispatcher.h>.
-  "//zircon/public/lib/async",
+  "//zircon/system/ulib/async",
 ]
 
 template("trace_engine_library") {

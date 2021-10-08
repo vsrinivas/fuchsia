@@ -19,7 +19,7 @@ test("async-testing") {
   deps = [
     "//sdk/lib/fdio",
     "//sdk/lib/fit",
-    "//zircon/public/lib/async",
+    "//zircon/system/ulib/async",
     "//zircon/system/ulib/async:async-cpp",
     "//zircon/system/ulib/async-default",
     "//zircon/system/ulib/async-testing",

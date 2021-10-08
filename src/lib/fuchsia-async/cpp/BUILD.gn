@@ -13,7 +13,7 @@ source_set("cpp") {
 
   public_deps = [
     "//src/lib/fuchsia-async:fuchsia-async-staticlib",
-    "//zircon/public/lib/async",
+    "//zircon/system/ulib/async",
   ]
 }
 

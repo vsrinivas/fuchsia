@@ -13,6 +13,6 @@ zx_library("async-default") {
   sources = [ "default.c" ]
   public_deps = [
     # <lib/async/default.h> has #include <lib/async/dispatcher.h>.
-    "//zircon/public/lib/async",
+    "//zircon/system/ulib/async",
   ]
 }
