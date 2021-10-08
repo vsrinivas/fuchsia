@@ -89,9 +89,10 @@ create_cros_tree() {
 
   # Switch to Fuchsia's mesa branch and build the "libmagma SDK":
   (cd src/third_party/mesa && \
+    git config remote.fuchsia.url >&- || \
     git remote add fuchsia https://fuchsia.googlesource.com/third_party/mesa && \
     git remote update fuchsia && \
-    git checkout -b main fuchsia/main && \
+    git checkout fuchsia/main && \
     cd fuchsia && ./install-magma-linux.sh)
 
   popd
@@ -101,7 +102,7 @@ build_angle() {
   local -r angle_dir="$1"
   local -r arch="$2"
 
-  git clone https://chromium.googlesource.com/angle/angle "${angle_dir}"
+  [ ! -d "${angle_dir}" ] && git clone https://chromium.googlesource.com/angle/angle "${angle_dir}"
   pushd "${angle_dir}"
 
   python scripts/bootstrap.py
@@ -236,11 +237,11 @@ main() {
   # Tael board is 32bit userspace so we can't link in our 64bit libraries
   if [ "${arch}" == "x64" ]; then
     echo "*** Copy ANGLE outputs to chromeos tree"
-    cp "${work_dir}/angle/out/libEGL.so" "${work_dir}/cros/src/third_party/chromiumos-overlay/media-libs/mesa/files"
-    cp "${work_dir}/angle/out/libGLESv2.so" "${work_dir}/cros/src/third_party/chromiumos-overlay/media-libs/mesa/files"
+    cp -f "${work_dir}/angle/out/libEGL.so" "${work_dir}/cros/src/third_party/chromiumos-overlay/media-libs/mesa/files"
+    cp -f "${work_dir}/angle/out/libGLESv2.so" "${work_dir}/cros/src/third_party/chromiumos-overlay/media-libs/mesa/files"
 
     echo "*** Copy GBM to chromeos tree"
-    cp "${FUCHSIA_DIR}/prebuilt/third_party/minigbm/linux-${arch}/libgbm.so" "${work_dir}/cros/src/third_party/chromiumos-overlay/media-libs/mesa/files"
+    cp -f "${FUCHSIA_DIR}/prebuilt/third_party/minigbm/linux-${arch}/libgbm.so" "${work_dir}/cros/src/third_party/chromiumos-overlay/media-libs/mesa/files"
   fi
 
   echo "*** Build Termina image"
