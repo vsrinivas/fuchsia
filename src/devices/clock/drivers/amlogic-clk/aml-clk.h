@@ -76,9 +76,18 @@ class AmlClock : public DeviceType, public ddk::ClockImplProtocol<AmlClock, ddk:
 
   void Register(const ddk::PBusProtocolClient& pbus);
 
+ protected:
+  // Debug API for forcing a clock to be disabled.
+  // This method will reset the clock's vote count to 0 and disable the clock
+  // hardware.
+  // NOTE: Calling this function may put the driver into an undefined state.
+  zx_status_t ClkDebugForceDisable(uint32_t clk);
+
  private:
   // Toggle clocks enable bit.
-  zx_status_t ClkToggle(uint32_t clk, const bool enable);
+  zx_status_t ClkToggle(uint32_t clk, bool enable);
+  void ClkToggleHw(const meson_clk_gate_t* gate, bool enable) __TA_REQUIRES(lock_);
+
   // Clock measure helper API.
   zx_status_t ClkMeasureUtil(uint32_t clk, uint64_t* clk_freq);
 

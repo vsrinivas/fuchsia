@@ -41,6 +41,8 @@ class AmlClockTest : public AmlClock {
       : AmlClock(nullptr, ddk::MmioBuffer(mmio_buffer), ddk::MmioBuffer(dosbus_buffer),
                  std::nullopt, did) {}
   ~AmlClockTest() = default;
+
+  zx_status_t ClkDebugForceDisable(uint32_t clk) { return AmlClock::ClkDebugForceDisable(clk); }
 };
 
 std::tuple<std::unique_ptr<uint8_t[]>, mmio_buffer_t> MakeDosbusMmio() {
@@ -233,6 +235,57 @@ TEST(ClkTestAml, G12aEnableDos) {
   EXPECT_OK(st);
 
   EXPECT_EQ(0x3ff, reinterpret_cast<uint32_t*>(dos_data.get())[0x3f01]);
+}
+
+TEST(ClkTestAml, ForceDisable) {
+  auto actual = std::make_unique<uint8_t[]>(S905D2_HIU_LENGTH);
+  auto expected = std::make_unique<uint8_t[]>(S905D2_HIU_LENGTH);
+
+  mmio_buffer_t buffer;
+  buffer.vaddr = FakeMmioPtr(actual.get());
+  buffer.offset = 0;
+  buffer.size = S905D2_HIU_LENGTH;
+  buffer.vmo = ZX_HANDLE_INVALID;
+
+  auto [dos_data, dos_buffer] = MakeDosbusMmio();
+  AmlClockTest clk(buffer, dos_buffer, PDEV_DID_AMLOGIC_G12A_CLK);
+
+  // Initialization sets a bunch of registers that we don't care about, so we
+  // can reset the array to a clean slate.
+  memset(actual.get(), 0, S905D2_HIU_LENGTH);
+  memset(expected.get(), 0, S905D2_HIU_LENGTH);
+
+  EXPECT_EQ(memcmp(actual.get(), expected.get(), S905D2_HIU_LENGTH), 0);
+
+  // Pick an arbitrary clock and enable it at least twice. This will ensure that
+  // the clock vote count is >1 which means that simply calling disable will not
+  // disable the clock.
+  constexpr uint16_t kClkIndex = 0;
+  constexpr uint32_t kClkId =
+      aml_clk_common::AmlClkId(kClkIndex, aml_clk_common::aml_clk_type::kMesonGate);
+
+  constexpr unsigned int kNumEnables = 2;
+  for (unsigned int i = 0; i < kNumEnables; i++) {
+    zx_status_t st = clk.ClockImplEnable(kClkId);
+    EXPECT_OK(st);
+  }
+
+  constexpr uint32_t kReg = g12a_clk_gates[kClkIndex].reg;
+  constexpr uint32_t kBit = (1u << g12a_clk_gates[kClkIndex].bit);
+  uint32_t* ptr = reinterpret_cast<uint32_t*>(&expected[kReg]);
+  (*ptr) |= kBit;
+
+  // Make sure the MMIO regions match.
+  EXPECT_EQ(memcmp(actual.get(), expected.get(), S905D2_HIU_LENGTH), 0);
+
+  // Force disable the clock.
+  zx_status_t st = clk.ClkDebugForceDisable(kClkIndex);
+  EXPECT_OK(st);
+  (*ptr) = 0;
+
+  // Make sure the clock was actually disabled even though we called enable
+  // >2 times and only called force disable once.
+  EXPECT_EQ(memcmp(actual.get(), expected.get(), S905D2_HIU_LENGTH), 0);
 }
 
 static void TestPlls(const uint32_t did) {

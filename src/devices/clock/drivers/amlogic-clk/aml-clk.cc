@@ -514,7 +514,7 @@ zx_status_t AmlClock::ClkTogglePll(uint32_t clk, const bool enable) {
   return pllclk_[clk]->Toggle(enable);
 }
 
-zx_status_t AmlClock::ClkToggle(uint32_t clk, const bool enable) {
+zx_status_t AmlClock::ClkToggle(uint32_t clk, bool enable) {
   if (clk >= gate_count_) {
     return ZX_ERR_INVALID_ARGS;
   }
@@ -538,6 +538,20 @@ zx_status_t AmlClock::ClkToggle(uint32_t clk, const bool enable) {
     meson_gate_enable_count_[clk]--;
   }
 
+  if (enable && meson_gate_enable_count_[clk] == 1) {
+    // Transition from 0 refs to 1.
+    ClkToggleHw(gate, true);
+  }
+
+  if (enable == false && meson_gate_enable_count_[clk] == 0) {
+    // Transition from 1 ref to 0.
+    ClkToggleHw(gate, false);
+  }
+
+  return ZX_OK;
+}
+
+void AmlClock::ClkToggleHw(const meson_clk_gate_t* gate, bool enable) {
   uint32_t mask = gate->mask ? gate->mask : (1 << gate->bit);
   ddk::MmioBuffer* mmio;
   switch (gate->register_set) {
@@ -550,15 +564,29 @@ zx_status_t AmlClock::ClkToggle(uint32_t clk, const bool enable) {
     default:
       ZX_ASSERT(false);
   }
-  if (enable && meson_gate_enable_count_[clk] == 1) {
-    // Transition from 0 refs to 1.
-    mmio->SetBits32(mask, gate->reg);
-  }
 
-  if (enable == false && meson_gate_enable_count_[clk] == 0) {
-    // Transition from 1 ref to 0.
+  if (enable) {
+    mmio->SetBits32(mask, gate->reg);
+  } else {
     mmio->ClearBits32(mask, gate->reg);
   }
+}
+
+zx_status_t AmlClock::ClkDebugForceDisable(uint32_t clk) {
+  zxlogf(WARNING, "Force Disable Clock %u, note this may put the driver into an undefined state!",
+         clk);
+
+  if (clk >= gate_count_) {
+    return ZX_ERR_INVALID_ARGS;
+  }
+
+  const meson_clk_gate_t* gate = &(gates_[clk]);
+
+  fbl::AutoLock al(&lock_);
+
+  meson_gate_enable_count_[clk] = 0;  // Set clock vote count to 0.
+
+  ClkToggleHw(gate, false);  // Disable the clock hardware.
 
   return ZX_OK;
 }
@@ -839,7 +867,7 @@ void AmlClock::Enable(EnableRequestView request, EnableCompleter::Sync& complete
 }
 
 void AmlClock::Disable(DisableRequestView request, DisableCompleter::Sync& completer) {
-  zx_status_t result = ClkToggle(request->clock, false);
+  zx_status_t result = ClkDebugForceDisable(request->clock);
 
   if (result == ZX_OK) {
     completer.ReplySuccess();
