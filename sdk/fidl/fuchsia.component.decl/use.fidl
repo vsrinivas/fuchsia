@@ -4,6 +4,7 @@
 library fuchsia.component.decl;
 
 using fuchsia.io2;
+using fuchsia.data;
 
 /// Declares a capability used by a component, which was offered to it.
 type Use = flexible union {
@@ -11,6 +12,8 @@ type Use = flexible union {
     2: protocol UseProtocol;
     3: directory UseDirectory;
     4: storage UseStorage;
+    5: event UseEvent;
+    6: event_stream UseEventStream;
 };
 
 /// Declares a service used by a component, which was offered to it.
@@ -117,4 +120,43 @@ type UseStorage = table {
     ///
     /// Must be an absolute path starting with /.
     2: target_path string:MAX_PATH_LENGTH;
+};
+
+/// Declares an event used by a component, which was offered to it.
+type UseEvent = table {
+    /// The provider of the event. Must be |realm| or |framework|.
+    1: source Ref;
+
+    /// Name identifying the event which was presented to this component.
+    2: source_name name;
+
+    /// The name which the component will use to refer to this event.
+    3: target_name name;
+
+    /// Filter for the event. The structure of the filter depends on the event type. May be absent
+    /// for some events.
+    4: filter fuchsia.data.Dictionary;
+
+    /// The mode that the event can use.
+    5: mode EventMode;
+
+    /// The dependency type this use represents.
+    ///
+    /// A component which offers a capability to a child from itself and uses a
+    /// capability from the same child, must mark the dependency as `weak`.  A
+    /// `weak` dependency implies that the capability may become unavailable at
+    /// any point. Taking a strong dependency on a child's capability will
+    /// cause this the child to shut down before its parent. When using a weak
+    /// dependency, the parent shuts down before the child.
+    6: dependency_type DependencyType;
+};
+
+/// Declares a static EventStream used by a component.
+type UseEventStream = table {
+    /// The name of the event stream.
+    1: name name;
+
+    /// The set of events to which this EventStream is subscribed.
+    /// Note: This vector must be non-empty.
+    2: subscriptions vector<EventSubscription>:MAX_NUM_EVENT_STREAM_SUBSCRIPTIONS;
 };

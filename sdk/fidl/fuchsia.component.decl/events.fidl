@@ -3,6 +3,9 @@
 // found in the LICENSE file.
 library fuchsia.component.decl;
 
+/// The maximum number of EventSubscriptions in an EventStream.
+const MAX_NUM_EVENT_STREAM_SUBSCRIPTIONS uint64 = 100;
+
 /// Describes the consumption mode of an event.
 type EventMode = strict enum {
     /// The event source dispatches the event and doesn't wait for the listener
@@ -11,4 +14,12 @@ type EventMode = strict enum {
 
     /// The event source awaits the listener to notify it that it's done handling the event.
     SYNC = 1;
+};
+
+/// Indicates the event name to subscribe to with a given event mode.
+type EventSubscription = table {
+    // The event names to subscribe to.
+    1: event_name name;
+    /// The event mode with which to subscribe to the event names above.
+    2: mode EventMode;
 };
