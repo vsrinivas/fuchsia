@@ -2222,6 +2222,7 @@ go_library("gvisor.dev/gvisor") {
     "pkg/tcpip/stdclock.go",
     "pkg/tcpip/stdclock_state.go",
     "pkg/tcpip/tcpip.go",
+    "pkg/tcpip/tcpip_state.go",
     "pkg/tcpip/tcpip_state_autogen.go",
     "pkg/tcpip/timer.go",
     "pkg/tcpip/transport/datagram.go",
