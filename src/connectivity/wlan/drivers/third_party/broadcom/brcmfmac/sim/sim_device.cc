@@ -75,15 +75,15 @@ zx_status_t SimDevice::Create(zx_device_t* parent_device, simulation::FakeDevMgr
   return ZX_OK;
 }
 
-zx_status_t SimDevice::Init() { return brcmf_sim_register(drvr()); }
+zx_status_t SimDevice::BusInit() { return brcmf_sim_register(drvr()); }
 
 async_dispatcher_t* SimDevice::GetDispatcher() { return sim_environ_->GetDispatcher(); }
 
 DeviceInspect* SimDevice::GetInspect() { return inspect_.get(); }
 
-void SimDevice::Init(ddk::InitTxn txn) {
-  // Not supported.  Manually invoke SimDevice::Init() instead.
-  txn.Reply(ZX_ERR_NOT_SUPPORTED);
+zx_status_t SimDevice::Init() {
+  // Not supported.  Manually invoke SimDevice::BusInit() instead.
+  return ZX_ERR_NOT_SUPPORTED;
 }
 
 zx_status_t SimDevice::DeviceAdd(device_add_args_t* args, zx_device_t** out_device) {

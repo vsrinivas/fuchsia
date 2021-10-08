@@ -57,41 +57,37 @@ async_dispatcher_t* PcieDevice::GetDispatcher() { return async_loop_->dispatcher
 
 DeviceInspect* PcieDevice::GetInspect() { return inspect_.get(); }
 
-void PcieDevice::Init(ddk::InitTxn txn) {
-  const zx_status_t status = [this]() {
-    zx_status_t status = ZX_OK;
+zx_status_t PcieDevice::Init() {
+  zx_status_t status = ZX_OK;
 
-    std::unique_ptr<PcieBus> pcie_bus;
-    if ((status = PcieBus::Create(this, &pcie_bus)) != ZX_OK) {
-      return status;
-    }
+  std::unique_ptr<PcieBus> pcie_bus;
+  if ((status = PcieBus::Create(this, &pcie_bus)) != ZX_OK) {
+    return status;
+  }
 
-    std::unique_ptr<MsgbufProto> msgbuf_proto;
-    if ((status = MsgbufProto::Create(this, pcie_bus->GetDmaBufferProvider(),
-                                      pcie_bus->GetDmaRingProvider(),
-                                      pcie_bus->GetInterruptProvider(), &msgbuf_proto)) != ZX_OK) {
-      return status;
-    }
+  std::unique_ptr<MsgbufProto> msgbuf_proto;
+  if ((status = MsgbufProto::Create(this, pcie_bus->GetDmaBufferProvider(),
+                                    pcie_bus->GetDmaRingProvider(),
+                                    pcie_bus->GetInterruptProvider(), &msgbuf_proto)) != ZX_OK) {
+    return status;
+  }
 
-    pcie_bus_ = std::move(pcie_bus);
-    msgbuf_proto_ = std::move(msgbuf_proto);
+  pcie_bus_ = std::move(pcie_bus);
+  msgbuf_proto_ = std::move(msgbuf_proto);
 
-    if ((status = brcmf_attach(drvr())) != ZX_OK) {
-      BRCMF_ERR("Failed to attach: %s", zx_status_get_string(status));
-      return status;
-    }
+  if ((status = brcmf_attach(drvr())) != ZX_OK) {
+    BRCMF_ERR("Failed to attach: %s", zx_status_get_string(status));
+    return status;
+  }
 
-    if ((status = brcmf_bus_started(drvr(), false)) != ZX_OK) {
-      BRCMF_ERR("Failed to start bus: %s", zx_status_get_string(status));
-      return status;
-    }
+  if ((status = brcmf_bus_started(drvr(), false)) != ZX_OK) {
+    BRCMF_ERR("Failed to start bus: %s", zx_status_get_string(status));
+    return status;
+  }
 
-    // TODO(sheu): make the device visible once higher-level functionality is present.
-    // return ZX_OK;
-    return ZX_ERR_NOT_SUPPORTED;
-  }();
-
-  txn.Reply(status);
+  // TODO(sheu): make the device visible once higher-level functionality is present.
+  // return ZX_OK;
+  return ZX_ERR_NOT_SUPPORTED;
 }
 
 zx_status_t PcieDevice::DeviceAdd(device_add_args_t* args, zx_device_t** out_device) {

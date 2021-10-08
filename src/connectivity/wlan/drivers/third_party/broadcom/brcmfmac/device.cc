@@ -56,7 +56,10 @@ Device::Device(zx_device_t* parent)
 
 Device::~Device() = default;
 
-void Device::DdkInit(ddk::InitTxn txn) { Init(std::move(txn)); }
+void Device::DdkInit(ddk::InitTxn txn) {
+  zx_status_t status = Init();
+  txn.Reply(status);
+}
 
 void Device::DdkRelease() { delete this; }
 

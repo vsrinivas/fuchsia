@@ -74,28 +74,24 @@ async_dispatcher_t* SdioDevice::GetDispatcher() { return async_loop_->dispatcher
 
 DeviceInspect* SdioDevice::GetInspect() { return inspect_.get(); }
 
-void SdioDevice::Init(ddk::InitTxn txn) {
-  const zx_status_t status = [this]() {
-    zx_status_t status = ZX_OK;
+zx_status_t SdioDevice::Init() {
+  zx_status_t status = ZX_OK;
 
-    std::unique_ptr<brcmf_bus> bus;
-    if ((status = brcmf_sdio_register(drvr(), &bus)) != ZX_OK) {
-      return status;
-    }
+  std::unique_ptr<brcmf_bus> bus;
+  if ((status = brcmf_sdio_register(drvr(), &bus)) != ZX_OK) {
+    return status;
+  }
 
-    if ((status = brcmf_sdio_load_files(drvr(), false)) != ZX_OK) {
-      return status;
-    }
+  if ((status = brcmf_sdio_load_files(drvr(), false)) != ZX_OK) {
+    return status;
+  }
 
-    if ((status = brcmf_bus_started(drvr(), false)) != ZX_OK) {
-      return status;
-    }
+  if ((status = brcmf_bus_started(drvr(), false)) != ZX_OK) {
+    return status;
+  }
 
-    brcmf_bus_ = std::move(bus);
-    return ZX_OK;
-  }();
-
-  txn.Reply(status);
+  brcmf_bus_ = std::move(bus);
+  return ZX_OK;
 }
 
 zx_status_t SdioDevice::DeviceAdd(device_add_args_t* args, zx_device_t** out_device) {

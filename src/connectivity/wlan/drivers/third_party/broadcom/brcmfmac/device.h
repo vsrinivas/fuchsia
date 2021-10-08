@@ -63,7 +63,7 @@ class Device : public DeviceType, public ::ddk::WlanphyImplProtocol<Device, ::dd
   zx_status_t WlanphyImplGetCountry(wlanphy_country_t* out_country);
 
   // Trampolines for DDK functions, for platforms that support them.
-  virtual void Init(ddk::InitTxn txn) = 0;
+  virtual zx_status_t Init() = 0;
   virtual zx_status_t DeviceAdd(device_add_args_t* args, zx_device_t** out_device) = 0;
   virtual void DeviceAsyncRemove(zx_device_t* dev) = 0;
   virtual zx_status_t LoadFirmware(const char* path, zx_handle_t* fw, size_t* size) = 0;

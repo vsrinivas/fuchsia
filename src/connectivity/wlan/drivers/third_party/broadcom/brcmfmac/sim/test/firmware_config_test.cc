@@ -89,7 +89,7 @@ TEST_F(FirmwareConfigTest, StartWithSmeChannel) {
   SimDevice* device;
   zx_status_t status = SimDevice::Create(dev_mgr->GetRootDevice(), dev_mgr.get(), env, &device);
   ASSERT_EQ(status, ZX_OK);
-  status = device->Init();
+  status = device->BusInit();
   ASSERT_EQ(status, ZX_OK);
   EXPECT_EQ(dev_mgr->DeviceCount(), static_cast<size_t>(1));
 

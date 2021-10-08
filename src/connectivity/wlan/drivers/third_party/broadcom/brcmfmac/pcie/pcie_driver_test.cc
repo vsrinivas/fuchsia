@@ -45,7 +45,7 @@ class StubDdkDevice : public Device {
 
   async_dispatcher_t* GetDispatcher() override { return nullptr; }
   DeviceInspect* GetInspect() override { return nullptr; }
-  void Init(ddk::InitTxn txn) override { txn.Reply(ZX_OK); }
+  zx_status_t Init() override { return ZX_OK; }
 };
 
 StubDdkDevice::StubDdkDevice(zx_device_t* device) : Device(device) {

@@ -434,7 +434,7 @@ zx_status_t SimTest::Init() {
   }
 
   // Initialize device
-  status = device_->Init();
+  status = device_->BusInit();
   if (status != ZX_OK) {
     // Ownership of the device has been transferred to the dev_mgr, so we don't need to dealloc it
     device_ = nullptr;
