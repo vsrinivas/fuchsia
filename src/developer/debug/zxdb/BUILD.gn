@@ -102,9 +102,8 @@ if (is_host) {
   }
 }
 
-install_host_tools("zxdb_host") {
-  deps = [ ":zxdb" ]
-  outputs = [ "zxdb" ]
+group("zxdb_host") {
+  deps = [ ":zxdb($host_toolchain)" ]
 }
 
 # This group of tests is run in CQ/CI.
