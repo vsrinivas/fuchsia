@@ -51,3 +51,7 @@ pub const ARRAY_PAYLOAD_METADATA_SIZE_BYTES: usize = 8;
 /// The number of bytes in the payload of a STRING_REFERENCE allotted to
 /// the total length.
 pub const STRING_REFERENCE_TOTAL_LENGTH_BYTES: usize = 4;
+
+/// This generation count indicates a VMO is frozen.
+/// It is even to allow creating an inspector that can write to the VMO.
+pub const VMO_FROZEN: u64 = u64::max_value() - 1;
