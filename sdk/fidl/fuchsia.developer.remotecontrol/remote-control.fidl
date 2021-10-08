@@ -23,8 +23,10 @@ type RebootType = strict enum {
 type TunnelError = strict enum {
     // Couldn't connect to the address to forward.
     CONNECT_FAILED = 1;
-    // Something was wrong with the socket to which we were tunneling.
+    // Something was wrong with the socket which was being tunneled to.
     SOCKET_FAILED = 2;
+    // Something was wrong with the ForwardCallback which was passed.
+    CALLBACK_ERROR = 3;
 };
 
 @discoverable
@@ -74,4 +76,18 @@ protocol RemoteControl {
         addr net.SocketAddress;
         socket zx.handle:SOCKET;
     }) -> (struct {}) error TunnelError;
+
+    // Listens on a TCP port and forwards any incoming connections to newly-created sockets which
+    // are passed back via the callback.
+    ReverseTcp(resource struct {
+        addr net.SocketAddress;
+        client client_end:ForwardCallback;
+    }) -> (struct {}) error TunnelError;
+};
+
+protocol ForwardCallback {
+    Forward(resource struct {
+        socket zx.handle:SOCKET;
+        addr net.SocketAddress;
+    });
 };

@@ -29,6 +29,8 @@ if (is_host) {
       "//third_party/rust_crates:serde_json",
     ]
 
+    test_deps = [ "//sdk/fidl/fuchsia.diagnostics:fuchsia.diagnostics-rustc" ]
+
     sources = [ "src/lib.rs" ]
   }
 }

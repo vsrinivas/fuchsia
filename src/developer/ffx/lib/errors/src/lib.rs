@@ -40,6 +40,7 @@ pub enum FfxError {
 
     #[error("{}", match .err {
         TunnelError::CouldNotListen => "Could not establish a host-side TCP listen socket".to_string(),
+        TunnelError::TargetConnectFailed => "Couldn not connect to target to establish a tunnel".to_string(),
     })]
     TunnelError { err: TunnelError, target: Option<String>, is_default_target: bool },
 

@@ -33,6 +33,7 @@ pub async fn forward_tcp_impl(
         Err(bridge::TunnelError::CouldNotListen) => {
             ffx_bail!("Could not listen on address {:?}", cmd.host_address)
         }
+        Err(e) => Err(anyhow::anyhow!("Unexpected error: {:?}", e)),
     }
 }
 
@@ -67,6 +68,7 @@ mod test {
                     assert_eq!(target_address_test, target_address);
                     responder.send(&mut Ok(())).context("sending response").expect("should send")
                 }
+                other => panic!("Unexpected request: {:?}", other),
             }
         });
 

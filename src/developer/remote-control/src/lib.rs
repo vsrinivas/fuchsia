@@ -85,8 +85,75 @@ impl RemoteControlService {
                     };
                     responder.send(&mut result)?;
                 }
+                rcs::RemoteControlRequest::ReverseTcp { addr, client, responder } => {
+                    let addr: SocketAddressExt = addr.into();
+                    let addr = addr.0;
+                    let client = match client.into_proxy() {
+                        Ok(proxy) => proxy,
+                        Err(e) => {
+                            log::error!("Could not communicate with callback: {:?}", e);
+                            responder.send(&mut Err(rcs::TunnelError::CallbackError))?;
+                            continue;
+                        }
+                    };
+                    let mut result = match self.listen_reversed_port(addr, client).await {
+                        Ok(()) => Ok(()),
+                        Err(e) => {
+                            log::error!("Port forward connection failed: {:?}", e);
+                            Err(rcs::TunnelError::ConnectFailed)
+                        }
+                    };
+                    responder.send(&mut result)?;
+                }
             }
         }
+        Ok(())
+    }
+
+    async fn listen_reversed_port(
+        &self,
+        addr: SocketAddr,
+        client: rcs::ForwardCallbackProxy,
+    ) -> Result<(), std::io::Error> {
+        let mut listener = fasync::net::TcpListener::bind(&addr)?.accept_stream();
+        fasync::Task::local(async move {
+            while let Some(result) = listener.next().await {
+                let (stream, addr) = match result {
+                    Ok(x) => x,
+                    Err(e) => {
+                        log::warn!("Error accepting connection: {:?}", e);
+                        continue;
+                    }
+                };
+
+                let (local, remote) = match zx::Socket::create(zx::SocketOpts::STREAM) {
+                    Ok(x) => x,
+                    Err(e) => {
+                        log::warn!("Error creating socket: {:?}", e);
+                        continue;
+                    }
+                };
+
+                let local = match fasync::Socket::from_socket(local) {
+                    Ok(x) => x,
+                    Err(e) => {
+                        log::warn!("Error converting socket to async: {:?}", e);
+                        continue;
+                    }
+                };
+
+                Self::spawn_tcp_forward_task(stream, local);
+
+                if let Err(e) = client.forward(remote, &mut SocketAddressExt(addr).into()) {
+                    if let fidl::Error::ClientChannelClosed { .. } = e {
+                        break;
+                    }
+
+                    log::warn!("Could not return forwarded socket to client: {:?}", e);
+                }
+            }
+        })
+        .detach();
         Ok(())
     }
 
@@ -95,7 +162,13 @@ impl RemoteControlService {
         addr: SocketAddr,
         socket: fasync::Socket,
     ) -> Result<(), std::io::Error> {
-        let (mut conn_read, mut conn_write) = fasync::net::TcpStream::connect(addr)?.await?.split();
+        let tcp_conn = fasync::net::TcpStream::connect(addr)?.await?;
+        Self::spawn_tcp_forward_task(tcp_conn, socket);
+        Ok(())
+    }
+
+    fn spawn_tcp_forward_task(tcp_side: fasync::net::TcpStream, socket: fasync::Socket) {
+        let (mut conn_read, mut conn_write) = tcp_side.split();
         let (mut socket_read, mut socket_write) = socket.split();
         let write_read = async move {
             // TODO(84188): Use a buffer pool once we have them.
@@ -134,7 +207,6 @@ impl RemoteControlService {
             }
         })
         .detach();
-        Ok(())
     }
 
     async fn connect_with_matcher(
