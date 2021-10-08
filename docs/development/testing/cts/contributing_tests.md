@@ -12,7 +12,6 @@ package archives in FAR format.
 ### Prerequisites
 
 * Your prebuilt test must be written in C, C++, or Rust.
-* This guide assumes that you have already defined a GN target for your executable.
 * This guide assumes the reader is familiar with Fuchsia [Packages],
 [Components] and [Component Manifests].
 
@@ -31,16 +30,47 @@ is found in an SDK. For example:
 
 See existing tests under `//sdk/cts/tests` for examples.
 
-### Step 2: Create your test component
+### Step 2: Create your test executable
+
+Note: The CTS build templates verify that dependencies are released in an SDK.
+If your test needs an exception, [file a bug] in `DeveloperExperience>CTS`. The
+allow list can be found [here](/sdk/cts/build/allowed_cts_deps.gni).
+
+In your test directory's `BUILD.gn` file, create a test executable using CTS
+build templates.
+
+  * {C/C++}
+
+    ```gn
+    import("//sdk/cts/build/cts.gni")
+
+    cts_executable("my_test_binary") {
+      deps = [ "//zircon/system/ulib/zxtest" ]
+      sources = [ "my_test.cc" ]
+      testonly = true
+    }
+    ```
+
+  * {Rust}
+
+  ```gn
+  import("//sdk/cts/build/cts.gni")
+
+  cts_rustc_test("my_test_binary") {
+    edition = "2018"
+    source_root = "src/my_test.rs"
+    sources = [ "src/my_test.rs" ]
+  }
+  ```
+
+### Step 3: Create your test component
 
 Note: This section assumes familiarity with the concept of [Test Components].
 
-In your test directory's `BUILD.gn` file, wrap your executable as a Fuchsia
-component. CTS provides a special GN template for creating a component:
+Wrap your executable as a Fuchsia component. CTS provides a special GN template
+for creating a component:
 
-```
-import("//sdk/cts/build/cts.gni")
-
+```gn
 cts_fuchsia_component("my_test_component") {
   testonly = true
   manifest = "meta/my_test_component.cml",
@@ -48,18 +78,18 @@ cts_fuchsia_component("my_test_component") {
 }
 ```
 
-### Step 3: Create your test package
+### Step 4: Create your test package
 
 CTS also provides a special GN template for creating a test package:
 
-```
+```gn
 cts_fuchsia_test_package("my_test") {
   package_name = "my_test"
   test_components = [ ":my_test_component" ]
 }
 ```
 
-### Step 4: Run the test
+### Step 5: Run the test
 
 These instructions require you to open several terminal tabs.
 
@@ -89,17 +119,16 @@ fx log
 
 #### Tab 4: Run the test
 
-```
-TARGET="..." # Fill in your test's GN target label.
-fx set core.x64 --with $TARGET
-fx test $TARGET # Or: fx test my_test
-```
+<pre class="prettyprint">
+<code class="devsite-terminal">fx set core.x64 --with <var>TARGET_LABEL</var> </code>
+<code class="devsite-terminal">fx test <var>TARGET_LABEL</var> # or fx test <var>TEST_NAME</var> </code>
+</pre>
 
 * `-v` enables verbose output.
 
 See the section about "Debugging tips" below.
 
-### Step 5. Verify your test passes as part of the CTS release
+### Step 6. Verify your test passes as part of the CTS release
 
 Note: TODO(http://fxbug.dev/84175): Automate these steps and update this section.
 
@@ -143,7 +172,7 @@ Some common causes of test failure at this stage include:
 If you need additional help debugging at this step, please reach out to
 fuchsia-cts-team@google.com.
 
-### Step 5. Make the test run on presubmit
+### Step 7. Make the test run on presubmit
 
 This step causes the version of your test from Fuchsia's HEAD commit to run as
 part of Fuchsia's presumbit queue. It *does not* include your test in the CTS
@@ -161,24 +190,21 @@ group("tests") {
 Next add this target as a dependency to the closest ancestor `group("tests")`
 target.
 
-### Step 6. Make the test run as part of the CTS release
+### Step 8. Make the test run as part of the CTS release
 
 This step includes your test in the CTS release, which guarantees that your test
 cannot be broken between Fuchsia milestone releases (typically made every six
 weeks).
 
-Add a `sdk_molecule` target and use it to mark all of your test artifacts for
+Add an `sdk_molecule` target and use it to mark all of your test packages for
 inclusion in CTS. Each `cts_*` template declares an `sdk_atom` or `sdk_molecule`
-target with the name `${target_name}_sdk`. List of each those targets as deps:
+target with the name `${target_name}_sdk`. List each of the test packages as
+dependencies:
 
 ```
 sdk_molecule("test_sdks") {
   testonly = true
-  deps = [
-    ":my_test_binary_sdk", # If your binary was declared as a cts_* template
-    ":my_test_component_sdk",
-    ":my_test_sdk",
-  ]
+  deps = [ ":my_test_sdk" ]
 }
 ```
 
@@ -211,10 +237,11 @@ Note: See fxbug.dev/83948; Tools tests are not yet supported in CTS.
 
 * If your test hangs, use `ffx component list -v` to inspect its current state.
 
-[Components]: /docs/concepts/components/v2
 [Component Manifests]: /docs/concepts/components/v2/component_manifests.md
-[Start the Fuchsia Emulator]: /docs/get-started/set_up_femu.md
+[Components]: /docs/concepts/components/v2
 [Fuchsia language policy]: /docs/contribute/governance/policy/programming_languages.md
 [Packages]: /docs/concepts/packages/package.md
-[relative component URL]: /docs/concepts/components/component_urls.md
+[Start the Fuchsia Emulator]: /docs/get-started/set_up_femu.md
 [Test Components]: /docs/concepts/testing/v2/test_component.md
+[file a bug]: https://bugs.fuchsia.dev/p/fuchsia/issues/list?q=component%3ADeveloperExperience%3ECTS
+[relative component URL]: /docs/concepts/components/component_urls.md
