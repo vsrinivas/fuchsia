@@ -5,11 +5,6 @@
 import("//build/board.gni")
 
 declare_args() {
-  # Whether to include tests that are known to fail on NUC with ASan.
-  # Should be set to false in the infra builders that have board == "x64" and
-  # "asan" in variants.
-  include_tests_that_fail_on_nuc_asan = true
-
   # The list of environment names to include in "basic_envs".
   basic_env_names = [ "emu" ]
 }
