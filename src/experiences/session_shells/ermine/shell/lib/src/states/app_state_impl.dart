@@ -656,6 +656,7 @@ class AppStateImpl with Disposable implements AppState {
       alerts.add(AlertInfo(
         title: description,
         content: 'Url: ${view.url}',
+        key: key,
         buttons: {
           Strings.close: () {
             alerts.removeWhere((alert) => alert.key == key);
