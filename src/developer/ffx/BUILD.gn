@@ -44,6 +44,7 @@ if (is_host) {
       "//src/developer/ffx/plugins/platform:ffx_platform",
       "//src/developer/ffx/plugins/profile:ffx_profile",
       "//src/developer/ffx/plugins/repository:ffx_repository",
+      "//src/developer/ffx/plugins/schema:ffx_schema",
       "//src/developer/ffx/plugins/scrutiny:ffx_scrutiny",
       "//src/developer/ffx/plugins/sdk:ffx_sdk",
       "//src/developer/ffx/plugins/self-test:ffx_selftest",
