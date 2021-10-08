@@ -11,7 +11,6 @@ use {
     ffx_writer::Writer,
     fidl_fuchsia_developer_bridge::{TargetCollectionIteratorMarker, TargetCollectionProxy},
     std::convert::TryFrom,
-    std::io::Write,
 };
 
 mod target_formatter;
@@ -19,7 +18,7 @@ mod target_formatter;
 #[ffx_plugin(TargetCollectionProxy = "daemon::service")]
 pub async fn list_targets(
     tc_proxy: TargetCollectionProxy,
-    mut writer: Writer,
+    writer: Writer,
     cmd: ListCommand,
 ) -> Result<()> {
     let (iterator_proxy, server) =
@@ -47,7 +46,7 @@ pub async fn list_targets(
             if let Some(n) = cmd.nodename {
                 ffx_bail_with_code!(2, "Device {} not found.", n);
             } else {
-                eprintln!("No devices found.");
+                writer.error("No devices found.")?;
             }
         }
         _ => {
@@ -57,7 +56,7 @@ pub async fn list_targets(
             } else {
                 let formatter = Box::<dyn TargetFormatter>::try_from((cmd.format, res))?;
                 let default: Option<String> = ffx_config::get("target.default").await?;
-                writeln!(writer, "{}", formatter.lines(default.as_deref()).join("\n"))?;
+                writer.line(formatter.lines(default.as_deref()).join("\n"))?;
             }
         }
     };
