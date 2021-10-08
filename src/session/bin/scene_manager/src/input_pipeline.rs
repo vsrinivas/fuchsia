@@ -74,7 +74,6 @@ async fn input_handlers(
     let mut assembly = InputPipelineAssembly::new();
     let (sender, mut receiver) = futures::channel::mpsc::channel(0);
     {
-        let locked_scene_manager = scene_manager.lock().await;
         assembly = add_inspect_handler(node.create_child("input_pipeline_entry"), assembly);
         // Add the text settings handler early in the pipeline to use the
         // keymap settings in the remainder of the pipeline.
@@ -83,9 +82,11 @@ async fn input_handlers(
         // Shortcut needs to go before IME.
         assembly = add_shortcut_handler(assembly).await;
         assembly = add_ime(assembly).await;
-
-        assembly = locked_scene_manager.add_touch_handler(assembly).await;
-        assembly = locked_scene_manager.add_mouse_handler(sender, assembly).await;
+        {
+            let locked_scene_manager = scene_manager.lock().await;
+            assembly = locked_scene_manager.add_touch_handler(assembly).await;
+            assembly = locked_scene_manager.add_mouse_handler(sender, assembly).await;
+        }
         assembly = add_inspect_handler(node.create_child("input_pipeline_exit"), assembly);
     }
 

@@ -8,7 +8,9 @@ use {
     fidl::prelude::*,
     fidl_fuchsia_input_injection::InputDeviceRegistryRequestStream,
     fidl_fuchsia_input_keymap as fkeymap,
-    fidl_fuchsia_session_scene::{ManagerRequest, ManagerRequestStream},
+    fidl_fuchsia_session_scene::{
+        ManagerRequest as SceneManagerRequest, ManagerRequestStream as SceneManagerRequestStream,
+    },
     fidl_fuchsia_ui_accessibility_view::{
         RegistryRequest as A11yViewRegistryRequest,
         RegistryRequestStream as A11yViewRegistryRequestStream,
@@ -31,7 +33,7 @@ mod input_pipeline;
 
 enum ExposedServices {
     AccessibilityViewRegistry(A11yViewRegistryRequestStream),
-    Manager(ManagerRequestStream),
+    SceneManager(SceneManagerRequestStream),
     InputDeviceRegistry(InputDeviceRegistryRequestStream),
     /// The requests for `fuchsia.input.keymap.Configuration`.
     TextSettingsConfig(fkeymap::ConfigurationRequestStream),
@@ -49,7 +51,7 @@ async fn main() -> Result<(), Error> {
     inspect_runtime::serve(inspect::component::inspector(), &mut fs)?;
 
     fs.dir("svc").add_fidl_service(ExposedServices::AccessibilityViewRegistry);
-    fs.dir("svc").add_fidl_service(ExposedServices::Manager);
+    fs.dir("svc").add_fidl_service(ExposedServices::SceneManager);
     fs.dir("svc").add_fidl_service(ExposedServices::InputDeviceRegistry);
     fs.dir("svc").add_fidl_service(ExposedServices::TextSettingsConfig);
     fs.take_and_serve_directory_handle()?;
@@ -86,7 +88,7 @@ async fn main() -> Result<(), Error> {
                 ))
                 .detach()
             }
-            ExposedServices::Manager(request_stream) => {
+            ExposedServices::SceneManager(request_stream) => {
                 if let Some(input_receiver) = input_receiver {
                     fasync::Task::local(handle_manager_request_stream(
                         request_stream,
@@ -147,7 +149,7 @@ async fn main() -> Result<(), Error> {
 }
 
 pub async fn handle_manager_request_stream(
-    mut request_stream: ManagerRequestStream,
+    mut request_stream: SceneManagerRequestStream,
     scene_manager: Arc<Mutex<Box<dyn scene_management::SceneManager>>>,
     input_device_registry_request_stream_receiver: futures::channel::mpsc::UnboundedReceiver<
         InputDeviceRegistryRequestStream,
@@ -168,14 +170,14 @@ pub async fn handle_manager_request_stream(
 
     while let Ok(Some(request)) = request_stream.try_next().await {
         match request {
-            ManagerRequest::SetRootView { view_provider, responder, .. } => {
+            SceneManagerRequest::SetRootView { view_provider, responder, .. } => {
                 if let Ok(proxy) = view_provider.into_proxy() {
                     let mut scene_manager = scene_manager.lock().await;
                     let mut r = scene_manager.set_root_view(proxy).await.unwrap();
                     let _ = responder.send(&mut r);
                 }
             }
-            ManagerRequest::RequestFocus { mut view_ref, responder, .. } => {
+            SceneManagerRequest::RequestFocus { mut view_ref, responder, .. } => {
                 let scene_manager = scene_manager.lock().await;
                 if let Ok(mut response) = scene_manager.request_focus(&mut view_ref).await {
                     let _ = responder.send(&mut response);
