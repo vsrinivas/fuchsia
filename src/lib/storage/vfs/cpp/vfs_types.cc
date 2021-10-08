@@ -197,4 +197,52 @@ void ConvertToIoV1NodeInfo(VnodeRepresentation representation,
   });
 }
 
+ConnectionInfoConverter::ConnectionInfoConverter(VnodeRepresentation representation) {
+  representation.visit([&](auto&& repr) {
+    using T = std::decay_t<decltype(repr)>;
+    if constexpr (std::is_same_v<T, fs::VnodeRepresentation::Connector>) {
+      info.set_representation(arena, fio::wire::Representation::WithConnector(arena));
+    } else if constexpr (std::is_same_v<T, fs::VnodeRepresentation::File>) {
+      fio::wire::FileInfo file(arena);
+      file.set_observer(std::move(repr.observer));
+      info.set_representation(arena, fio::wire::Representation::WithFile(arena, std::move(file)));
+    } else if constexpr (std::is_same_v<T, fs::VnodeRepresentation::Directory>) {
+      info.set_representation(arena, fio::wire::Representation::WithDirectory(arena));
+    } else if constexpr (std::is_same_v<T, fs::VnodeRepresentation::Pipe>) {
+      fio::wire::PipeInfo pipe(arena);
+      pipe.set_socket(std::move(repr.socket));
+      info.set_representation(arena, fio::wire::Representation::WithPipe(arena, std::move(pipe)));
+    } else if constexpr (std::is_same_v<T, fs::VnodeRepresentation::Memory>) {
+      fio::wire::MemoryInfo memory(arena);
+      memory.set_buffer(arena, fuchsia_mem::wire::Range{
+                                   .vmo = std::move(repr.vmo),
+                                   .offset = repr.offset,
+                                   .size = repr.length,
+                               });
+      info.set_representation(arena, fio::wire::Representation::WithMemory(arena, memory));
+    } else if constexpr (std::is_same_v<T, fs::VnodeRepresentation::Device>) {
+      fio::wire::DeviceInfo device(arena);
+      device.set_event(std::move(repr.event));
+      info.set_representation(arena,
+                              fio::wire::Representation::WithDevice(arena, std::move(device)));
+    } else if constexpr (std::is_same_v<T, fs::VnodeRepresentation::Tty>) {
+      fio::wire::TtyInfo tty(arena);
+      tty.set_event(std::move(repr.event));
+      info.set_representation(arena, fio::wire::Representation::WithTty(arena, std::move(tty)));
+    } else if constexpr (std::is_same_v<T, fs::VnodeRepresentation::DatagramSocket>) {
+      fio::wire::DatagramSocketInfo datagram_socket(arena);
+      datagram_socket.set_event(std::move(repr.event));
+      info.set_representation(
+          arena, fio::wire::Representation::WithDatagramSocket(arena, std::move(datagram_socket)));
+    } else if constexpr (std::is_same_v<T, fs::VnodeRepresentation::StreamSocket>) {
+      fio::wire::StreamSocketInfo stream_socket(arena);
+      stream_socket.set_socket(std::move(repr.socket));
+      info.set_representation(
+          arena, fio::wire::Representation::WithStreamSocket(arena, std::move(stream_socket)));
+    } else {
+      ZX_PANIC("Representation variant is not initialized");
+    }
+  });
+}
+
 }  // namespace fs

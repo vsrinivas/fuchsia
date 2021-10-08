@@ -70,9 +70,29 @@ void NodeConnection::Describe(DescribeRequestView request, DescribeCompleter::Sy
   }
 }
 
+void NodeConnection::Describe2(Describe2RequestView request, Describe2Completer::Sync& completer) {
+  auto result = Connection::NodeDescribe();
+  if (result.is_error()) {
+    completer.Close(result.error());
+    return;
+  }
+  ConnectionInfoConverter converter(result.take_value());
+  completer.Reply(std::move(converter.info));
+}
+
 void NodeConnection::Sync(SyncRequestView request, SyncCompleter::Sync& completer) {
   Connection::NodeSync([completer = completer.ToAsync()](zx_status_t sync_status) mutable {
     completer.Reply(sync_status);
+  });
+}
+
+void NodeConnection::Sync2(Sync2RequestView request, Sync2Completer::Sync& completer) {
+  Connection::NodeSync([completer = completer.ToAsync()](zx_status_t sync_status) mutable {
+    if (sync_status != ZX_OK) {
+      completer.Reply(fio::wire::NodeSync2Result::WithErr(sync_status));
+    } else {
+      completer.Reply({});
+    }
   });
 }
 

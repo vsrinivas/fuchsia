@@ -500,6 +500,13 @@ class VnodeRepresentation {
 void ConvertToIoV1NodeInfo(VnodeRepresentation representation,
                            fit::callback<void(fuchsia_io::wire::NodeInfo&&)> callback);
 
+struct ConnectionInfoConverter {
+  explicit ConnectionInfoConverter(VnodeRepresentation representation);
+
+  fidl::Arena<> arena;
+  fuchsia_io::wire::ConnectionInfo info;
+};
+
 #endif  // __Fuchsia__
 
 }  // namespace fs
