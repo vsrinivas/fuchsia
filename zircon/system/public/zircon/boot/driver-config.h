@@ -27,6 +27,7 @@
 #define KDRV_GENERIC_32BIT_WATCHDOG 0x32334457  // 'WD32'
 #define KDRV_I8250_PIO_UART 0x30353238          // '8250'
 #define KDRV_I8250_MMIO_UART 0x4d353238         // '825M'
+#define KDRV_MOTMOT_UART 0x4d4d5455             // 'MMTU'
 
 // Kernel driver struct that can be used for simple drivers.
 // Used by KDRV_PL011_UART, KDRV_AMLOGIC_UART, KDRV_NXP_IMX_UART,

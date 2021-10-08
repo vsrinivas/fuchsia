@@ -83,6 +83,7 @@ __BEGIN_CDECLS
 #define PDEV_PID_VS680_EVK          0x0B
 #define PDEV_PID_LUIS               0x0C
 #define PDEV_PID_GOLDFISH           0x0D
+#define PDEV_PID_MOTMOT             0x0E
 
 #define PDEV_DID_GAUSS_AUDIO_IN     0x01
 #define PDEV_DID_GAUSS_AUDIO_OUT    0x02

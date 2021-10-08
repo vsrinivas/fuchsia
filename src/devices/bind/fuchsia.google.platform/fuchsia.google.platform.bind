@@ -21,6 +21,7 @@ extend uint fuchsia.BIND_PLATFORM_DEV_PID {
   VS680_EVK = 0x0B,
   LUIS = 0x0C,
   GOLDFISH = 0x0D,
+  MOTMOT = 0x0E,
 };
 
 extend uint fuchsia.BIND_PLATFORM_DEV_DID {
