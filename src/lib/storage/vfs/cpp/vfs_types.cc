@@ -197,7 +197,7 @@ void ConvertToIoV1NodeInfo(VnodeRepresentation representation,
   });
 }
 
-ConnectionInfoConverter::ConnectionInfoConverter(VnodeRepresentation representation) {
+ConnectionInfoConverter::ConnectionInfoConverter(VnodeRepresentation representation) : info(arena) {
   representation.visit([&](auto&& repr) {
     using T = std::decay_t<decltype(repr)>;
     if constexpr (std::is_same_v<T, fs::VnodeRepresentation::Connector>) {
