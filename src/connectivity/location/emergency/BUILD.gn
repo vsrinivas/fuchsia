@@ -5,6 +5,7 @@
 import("//build/components.gni")
 import("//build/rust/rustc_binary.gni")
 import("//build/rust/rustc_library.gni")
+import("//src/sys/core/build/core_shard.gni")
 import("//third_party/cobalt/metrics_registry.gni")
 
 group("tests") {
@@ -79,6 +80,10 @@ rustc_library("lib") {
 # TODO: Remove. This is currently needed by vendor packages.
 group("pkg") {
   deps = [ ":emergency" ]
+}
+
+core_shard("emergency-core-shard") {
+  shard_file = "meta/emergency.core_shard.cml"
 }
 
 fuchsia_package_with_single_component("emergency") {
