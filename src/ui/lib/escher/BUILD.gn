@@ -20,6 +20,11 @@ fuchsia_test_component("escher_unittests") {
   deps = [ "test:escher_unittests" ]
 }
 
+fuchsia_test_component("escher_unittests_expected_failure") {
+  manifest = "meta/escher_unittests_expected_failure.cmx"
+  deps = [ "test:escher_unittests_expected_failure" ]
+}
+
 fuchsia_test_component("escher_renderer_tests") {
   manifest = "meta/escher_renderer_tests.cmx"
   deps = [ "test:escher_renderer_tests" ]
@@ -32,9 +37,9 @@ fuchsia_test_component("escher_examples_test") {
 
 fuchsia_test_package("escher_tests") {
   test_components = [
-    ":escher_unittests",
     ":escher_renderer_tests",
     ":escher_examples_test",
+    ":escher_unittests",
   ]
   deps = [
     "shaders:escher_shaders_resources",
@@ -44,9 +49,20 @@ fuchsia_test_package("escher_tests") {
     "//src/ui/examples/escher/common/assets:escher_examples_assets",
   ]
 
-  # TODO(fxbug.dev/83327): Only use "FATAL" max severity for escher_unittests.
   test_specs = {
     environments = basic_envs + magma_libvulkan_hardware_envs
+  }
+}
+
+fuchsia_test_package("escher_tests_expected_failure") {
+  test_components = [ ":escher_unittests_expected_failure" ]
+  deps = [
+    "shaders:escher_shaders_resources",
+    "shaders:escher_shaders_spirv_resources",
+    "//src/lib/vulkan:vulkan_validation_layers",
+  ]
+
+  test_specs = {
     log_settings = {
       max_severity = "FATAL"
     }

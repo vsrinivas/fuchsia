@@ -49,15 +49,11 @@ if (is_host && !has_prebuilt_vulkan_runtime) {
       "impl/image_cache_unittest.cc",
       "math/rotations_unittest.cc",
       "paper/paper_draw_call_factory_unittest.cc",
-      "paper/paper_render_config_unittest.cc",
       "paper/paper_shape_cache_unittest.cc",
       "paper/paper_tester.h",
       "paper/paper_transform_stack_unittest.cc",
       "renderer/batch_gpu_downloader_unittest.cc",
-      "renderer/batch_gpu_uploader_unittest.cc",
       "renderer/buffer_cache_unittest.cc",
-      "renderer/frame_unittest.cc",
-      "renderer/protected_memory_unittest.cc",
       "renderer/render_queue_unittest.cc",
       "renderer/sampler_cache_unittest.cc",
       "run_all_unittests.cc",
@@ -76,7 +72,6 @@ if (is_host && !has_prebuilt_vulkan_runtime) {
       "util/hash_unittest.cc",
       "util/hashable_unittest.cc",
       "util/hashmap_unittest.cc",
-      "util/image_util_unittest.cc",
       "util/intrusive_list_unittest.cc",
       "util/object_pool_unittest.cc",
       "util/stack_allocator_unittest.cc",
@@ -92,11 +87,8 @@ if (is_host && !has_prebuilt_vulkan_runtime) {
       "vk/gpu_mem_unittest.cc",
       "vk/image_layout_updater_unittest.cc",
       "vk/image_view_allocator_unittest.cc",
-      "vk/naive_image_unittest.cc",
       "vk/push_constant_range_unittest.cc",
-      "vk/render_pass_cache_unittest.cc",
       "vk/render_pass_info_unittest.cc",
-      "vk/shader_program_unittest.cc",
       "vk/validation_layer_test.cc",
       "vk/vulkan_tester.h",
       "vk/vulkan_utils_unittest.cc",
@@ -159,6 +151,40 @@ if (is_host && !has_prebuilt_vulkan_runtime) {
       "//src/ui/lib/escher",
       "//third_party/glm",
     ]
+
+    # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
+    configs += [ "//build/config:Wno-conversion" ]
+  }
+
+  # Add all test cases which are expected to fail here
+  vulkan_test("escher_unittests_expected_failure") {
+    sources = [
+      "paper/paper_render_config_unittest.cc",
+      "renderer/batch_gpu_uploader_unittest.cc",
+      "renderer/frame_unittest.cc",
+      "renderer/protected_memory_unittest.cc",
+      "run_all_unittests.cc",
+      "util/image_util_unittest.cc",
+      "vk/naive_image_unittest.cc",
+      "vk/render_pass_cache_unittest.cc",
+      "vk/shader_program_unittest.cc",
+    ]
+
+    deps = [
+      ":escher_unittests",
+      "//src/ui/lib/escher/test/common:gtest_escher",
+      "//src/ui/lib/escher/test/common:readback_fixtures",
+    ]
+
+    if (is_host) {
+      deps += [ "//src/ui/lib/escher/shaders:host_shader_data" ]
+
+      # TODO(fxbug.dev/59140): Fix the leaks and remove this.
+      deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
+    }
+
+    # TODO(fxbug.dev/58615): Fix the leaks and remove this.
+    deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 
     # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
     configs += [ "//build/config:Wno-conversion" ]

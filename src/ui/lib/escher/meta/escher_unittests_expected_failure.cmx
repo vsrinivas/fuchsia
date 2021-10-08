@@ -1,0 +1,14 @@
+{
+    "include": [
+        "syslog/client.shard.cmx",
+        "//src/lib/vulkan/test-application.shard.cmx"
+    ],
+    "program": {
+        "binary": "test/escher_unittests_expected_failure"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.process.Launcher"
+        ]
+    }
+}
