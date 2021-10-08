@@ -19,7 +19,7 @@ Global fx options: fx [OPTION] ${cmd} ...
   --dir=BUILD_DIR           Path to the build directory to use when running COMMAND.
   -d=DEVICE[:SSH_PORT]      Target a specific device.
                             DEVICE may be a Fuchsia device name to be resolved using
-                            device-finder or an IP address.
+                            ffx or an IP address.
                             An IPv4 address must be specified directly, while an IPv6
                             need to be surrounded by brackets.
                             SSH_PORT, if specified, will be used for all commands

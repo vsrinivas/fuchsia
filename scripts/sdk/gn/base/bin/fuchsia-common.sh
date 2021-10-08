@@ -9,24 +9,20 @@
 # Force all pipes to return any non-zero error code instead of just the last
 set -e -o pipefail
 
-SCRIPT_SRC_DIR="$(cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd)"
+SCRIPT_SRC_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"
 
 readonly DEFAULT_EMULATOR_NAME="fuchsia-5254-0063-5e7a"
 
 DEFAULT_FUCHSIA_BUCKET="fuchsia"
 SSH_BIN="$(command -v ssh)"
 FUCHSIA_PROPERTY_NAMES=(
-  "bucket" # Used as the default for --bucket
-  "device-ip" # Used as the default for --device-ip
+  "bucket"      # Used as the default for --bucket
+  "device-ip"   # Used as the default for --device-ip
   "device-name" # Used as the default for --device-name
-  "image" # Used as the default for image
-  "emu-image" # Used as the default for image when running the emulator.
-  "emu-bucket" # Used as the default for bucket when running the emulator.
+  "image"       # Used as the default for image
+  "emu-image"   # Used as the default for image when running the emulator.
+  "emu-bucket"  # Used as the default for bucket when running the emulator.
 )
-
-# Uses ffx disovery workflow by default. The legacy device-finder
-# workflow can be enabled by setting the environment variable FUCHSIA_DISABLED_ffx_discovery=1.
-FUCHSIA_DISABLED_FFX_DISCOVERY="${FUCHSIA_DISABLED_ffx_discovery-0}"
 
 function is-mac {
   [[ "$(uname -s)" == "Darwin" ]] && return 0
@@ -38,7 +34,7 @@ if is-mac; then
   # Fuchsia mac functions.
 
   realpath() {
-      [[ $1 = /* ]] && echo "$1" || echo "$PWD/${1#./}"
+    [[ $1 = /* ]] && echo "$1" || echo "$PWD/${1#./}"
   }
 fi
 # Returns the fuchsia sdk root dir. Assuming this script is in ${FUCHSIA_SDK}/bin.
@@ -102,7 +98,7 @@ function migrate-properties {
   if [[ -n "${device_name}" ]]; then
     return 0
   fi
-  # To migrate properties, we need a device-name or 
+  # To migrate properties, we need a device-name or
   # a migrated default device name.
   device_name="$(get-internal-property device-name)"
   if [[ -z "${device_name}" ]]; then
@@ -114,21 +110,21 @@ function migrate-properties {
   for prop in "${FUCHSIA_PROPERTY_NAMES[@]}"; do
     val="$(get-internal-property "${prop}")"
     if [[ -n "${val}" ]]; then
-        # Skip over the emu-image and bucket if image and bucket are set.
-        if [[ "${prop}" == "emu-image" ]]; then
-          if [[ -z "$("$(get-fuchsia-sdk-tools-dir)/fconfig" "get" "${DEFAULT_EMULATOR_NAME}.image")" ]]; then
-           "$(get-fuchsia-sdk-tools-dir)/fconfig" "set-device" "${DEFAULT_EMULATOR_NAME}" "image" "${val}"
-          fi
-        elif [[ "${prop}" == "emu-bucket" ]]; then
-          if [[ -z "$("$(get-fuchsia-sdk-tools-dir)/fconfig" "get" "${DEFAULT_EMULATOR_NAME}.bucket")" ]]; then
-           "$(get-fuchsia-sdk-tools-dir)/fconfig" "set-device" "${DEFAULT_EMULATOR_NAME}" "bucket" "${val}"
-          fi
-        else
-          args+=("--${prop}" "${val}")
+      # Skip over the emu-image and bucket if image and bucket are set.
+      if [[ "${prop}" == "emu-image" ]]; then
+        if [[ -z "$("$(get-fuchsia-sdk-tools-dir)/fconfig" "get" "${DEFAULT_EMULATOR_NAME}.image")" ]]; then
+          "$(get-fuchsia-sdk-tools-dir)/fconfig" "set-device" "${DEFAULT_EMULATOR_NAME}" "image" "${val}"
         fi
+      elif [[ "${prop}" == "emu-bucket" ]]; then
+        if [[ -z "$("$(get-fuchsia-sdk-tools-dir)/fconfig" "get" "${DEFAULT_EMULATOR_NAME}.bucket")" ]]; then
+          "$(get-fuchsia-sdk-tools-dir)/fconfig" "set-device" "${DEFAULT_EMULATOR_NAME}" "bucket" "${val}"
+        fi
+      else
+        args+=("--${prop}" "${val}")
+      fi
     fi
   done
-  
+
   "${args[@]}"
 
 }
@@ -166,13 +162,7 @@ function get-device-ip {
     echo "${device_addr}"
     return 0
   else
-    if [[ "${FUCHSIA_DISABLED_FFX_DISCOVERY}" == 1 ]]; then
-      # -ipv4 false: Disable IPv4. Fuchsia devices are IPv6-compatible, so
-      # forcing IPv6 allows for easier manipulation of the result.
-      "$(get-fuchsia-sdk-tools-dir)/device-finder" list -device-limit 1 -ipv4=false
-    else
-      "$(get-fuchsia-sdk-tools-dir)/ffx" target list --format a 2> /dev/null | head -1
-    fi
+    "$(get-fuchsia-sdk-tools-dir)/ffx" target list --format a 2>/dev/null | head -1
   fi
 }
 
@@ -186,14 +176,8 @@ function get-device-name {
     echo "${device_name}"
     return 0
   else
-    if [[ "${FUCHSIA_DISABLED_FFX_DISCOVERY}" == 1 ]]; then
-      if device_name="$("$(get-fuchsia-sdk-tools-dir)/device-finder" list -device-limit 1 -full)"; then
-        echo "${device_name}"  | cut -d' '  -f2
-      fi
-    else
-      if device_name="$("$(get-fuchsia-sdk-tools-dir)/ffx" target list --format s 2> /dev/null)"; then
-        echo "${device_name}" | head -1 | cut -d' ' -f2
-      fi
+    if device_name="$("$(get-fuchsia-sdk-tools-dir)/ffx" target list --format s 2>/dev/null)"; then
+      echo "${device_name}" | head -1 | cut -d' ' -f2
     fi
   fi
 }
@@ -206,26 +190,15 @@ function get-device-ip-by-name {
   # $1 is the hostname of the Fuchsia device. If $1 is empty, this function
   # returns the IP address of an arbitrarily selected Fuchsia device.
 
-  if [[ "${#}" -eq 1 &&  -n "$1" ]]; then
-    if [[ "${FUCHSIA_DISABLED_FFX_DISCOVERY}" == 1 ]]; then
-      # There should typically only be one device that matches the nodename
-      # but we add a device-limit to speed up resolution by exiting when the first
-      # candidate is found.
-      if ! device_ip="$("$(get-fuchsia-sdk-tools-dir)/device-finder" resolve -device-limit 1 -ipv4=false "${1}")"; then
-        return $?
-      else
-        echo "${device_ip}"
-      fi
+  if [[ "${#}" -eq 1 && -n "$1" ]]; then
+    if ! device_ip="$("$(get-fuchsia-sdk-tools-dir)/ffx" target list --format a "${1}" 2>/dev/null)"; then
+      return $?
     else
-      if ! device_ip="$("$(get-fuchsia-sdk-tools-dir)/ffx" target list --format a "${1}" 2> /dev/null)"; then
-        return $?
-      else
-        # Ffx will return status code 0 if device is not found.
-        if [[ "${device_ip}" == "" ]]; then
-          return 1
-        fi
-        echo "${device_ip}"
+      # Ffx will return status code 0 if device is not found.
+      if [[ "${device_ip}" == "" ]]; then
+        return 1
       fi
+      echo "${device_ip}"
     fi
   else
     #shellcheck disable=SC2119
@@ -297,7 +270,7 @@ function run-cipd {
 # Runs md5sum or equivalent on mac.
 function run-md5 {
   if is-mac; then
-    MD5_CMD=("/sbin/md5"  "-r")
+    MD5_CMD=("/sbin/md5" "-r")
   else
     MD5_CMD=("md5sum")
   fi
@@ -335,13 +308,13 @@ function get-available-images {
 function kill-running-pm {
   local PM_PROCESS=()
   IFS=" " read -r -a PM_PROCESS <<< "$(pgrep -ax pm)"
-  if [[  ${#PM_PROCESS[@]} -gt 0 && -n "${PM_PROCESS[*]}" ]]; then
+  if [[ ${#PM_PROCESS[@]} -gt 0 && -n "${PM_PROCESS[*]}" ]]; then
     # mac only provides the pid, not the name
     if is-mac; then
       fx-warn "Killing existing pm process"
       kill -9 "${PM_PROCESS[0]}"
       return $?
-    elif [[ ${#PM_PROCESS[@]} -gt 1 &&  "${PM_PROCESS[1]}" == *"tools/pm" ]]; then
+    elif [[ ${#PM_PROCESS[@]} -gt 1 && "${PM_PROCESS[1]}" == *"tools/pm" ]]; then
       fx-warn "Killing existing pm process"
       kill -9 "${PM_PROCESS[0]}"
       return $?
@@ -369,11 +342,10 @@ function _move_legacy_key {
     if [[ -f "${legacy_authfile}" ]]; then
       mv "${legacy_authfile}" "${authfile}"
     fi
-    rm -f  "${legacy_keyfile}.pub"
+    rm -f "${legacy_keyfile}.pub"
   fi
   return 0
 }
-
 
 function check-fuchsia-ssh-config {
   # This function creates the ssh keys needed to
@@ -418,10 +390,10 @@ function check-fuchsia-ssh-config {
   mkdir -p "${ssh_dir}"
 
   # Check to migrate keys from old location
-  if [[ ! -f "${authfile}" ||  ! -f "${keyfile}" ]]; then
-      if ! _move_legacy_key; then
-        return 1
-      fi
+  if [[ ! -f "${authfile}" || ! -f "${keyfile}" ]]; then
+    if ! _move_legacy_key; then
+      return 1
+    fi
   fi
 
   if [[ ! -f "${authfile}" ]]; then
