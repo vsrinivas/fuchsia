@@ -202,9 +202,7 @@ fuchsia_test("grpc_client_stress_test_spec") {
   component = ":grpc-client-stress-test"
 
   environments = []
-
-  # TODO(fxbug.dev/47487): test hangs w/ ASan. Fix and switch to [ nuc_env ].
-  foreach(env, nuc_env_fails_on_asan) {
+  foreach(env, [ nuc_env ]) {
     # TODO(https://fxbug.dev/49752): test hangs almost every time.
     env.tags = [ "flaky" ]
     environments += [ env ]
@@ -213,8 +211,7 @@ fuchsia_test("grpc_client_stress_test_spec") {
 
 fuchsia_test_package("netemul-guest-test") {
   test_specs = {
-    # TODO(fxbug.dev/48129): guest-test,multiple-guests-test hang w/ ASan. Fix and switch to [ nuc_env ].
-    environments = nuc_env_fails_on_asan
+    environments = [ nuc_env ]
   }
   test_components = [
     ":guest-test",

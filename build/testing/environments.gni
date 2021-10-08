@@ -211,13 +211,6 @@ chromebook_envs = [ atlas_env ]
 
 ### Select environment lists ###
 
-# Tests that fail on a NUC in ASan but otherwise want to run on a NUC should
-# use this.
-nuc_env_fails_on_asan = []
-if (include_tests_that_fail_on_nuc_asan) {
-  nuc_env_fails_on_asan += [ nuc_env ]
-}
-
 all_fuchsia_envs = []
 foreach(named_env, _all_named_fuchsia_envs) {
   all_fuchsia_envs += [ named_env.env ]
