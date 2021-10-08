@@ -21,7 +21,7 @@ source_set("utils") {
     "//src/developer/forensics/feedback/fidl:fuchsia.feedback.internal",
     "//src/developer/forensics/utils:errors",
     "//zircon/public/lib/async",
-    "//zircon/public/lib/async-cpp",
+    "//zircon/system/ulib/async:async-cpp",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/zx",
   ]

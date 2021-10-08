@@ -36,7 +36,7 @@ fuchsia_driver("virtio_socket-driver") {
     "//src/devices/bus/lib/virtio",
     "//src/devices/lib/driver",
     "//src/lib/ddktl",
-    "//zircon/public/lib/async-cpp",
+    "//zircon/system/ulib/async:async-cpp",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
   ]

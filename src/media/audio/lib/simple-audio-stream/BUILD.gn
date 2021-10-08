@@ -15,7 +15,7 @@ source_set("simple-audio-stream") {
     "//sdk/fidl/fuchsia.hardware.audio:fuchsia.hardware.audio_llcpp",
     "//src/lib/ddktl",
     "//zircon/public/lib/async",
-    "//zircon/public/lib/async-cpp",
+    "//zircon/system/ulib/async:async-cpp",
     "//zircon/system/ulib/async-loop",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",

@@ -26,7 +26,7 @@ source_set("hdcp_service") {
     "//sdk/fidl/fuchsia.hardware.display:fuchsia.hardware.display_c",
     "//sdk/lib/sys/cpp:cpp",
     "//src/lib/files",
-    "//zircon/public/lib/async-cpp",
+    "//zircon/system/ulib/async:async-cpp",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/fdio-caller",
   ]

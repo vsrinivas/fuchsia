@@ -78,7 +78,7 @@ source_set("socket_logger") {
   public_deps = [
     ":logger",
     "//src/lib/fsl",
-    "//zircon/public/lib/async-cpp",
+    "//zircon/system/ulib/async:async-cpp",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/zx",
   ]
@@ -195,7 +195,7 @@ source_set("lib") {
     "//src/virtualization/lib/grpc",
     "//src/virtualization/lib/vsh:client",
     "//src/virtualization/third_party/vm_tools:vm_cc_proto",
-    "//zircon/public/lib/async-cpp",
+    "//zircon/system/ulib/async:async-cpp",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
   ]

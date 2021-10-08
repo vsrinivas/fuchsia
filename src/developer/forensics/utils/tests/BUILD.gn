@@ -58,7 +58,7 @@ executable("caching_ptr_unittest_exe") {
     "//src/lib/fxl",
     "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",
-    "//zircon/public/lib/async-cpp",
+    "//zircon/system/ulib/async:async-cpp",
   ]
 }
 
@@ -76,7 +76,7 @@ executable("channel_provider_ptr_unittest_exe") {
     "//src/developer/forensics/utils/fidl:channel_provider_ptr",
     "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",
-    "//zircon/public/lib/async-cpp",
+    "//zircon/system/ulib/async:async-cpp",
     "//zircon/system/ulib/zx",
   ]
 }
@@ -130,7 +130,7 @@ executable("hanging_get_ptr_unittest_exe") {
     "//src/lib/fxl",
     "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",
-    "//zircon/public/lib/async-cpp",
+    "//zircon/system/ulib/async:async-cpp",
   ]
 }
 
@@ -189,7 +189,7 @@ executable("oneshot_ptr_unittest_exe") {
     "//src/lib/fxl",
     "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",
-    "//zircon/public/lib/async-cpp",
+    "//zircon/system/ulib/async:async-cpp",
     "//zircon/system/ulib/zx",
   ]
 }
@@ -220,7 +220,7 @@ executable("promise_unittest_exe") {
     "//src/lib/testing/loop_fixture",
     "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",
-    "//zircon/public/lib/async-cpp",
+    "//zircon/system/ulib/async:async-cpp",
   ]
 }
 

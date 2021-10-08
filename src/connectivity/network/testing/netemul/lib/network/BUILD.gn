@@ -51,7 +51,7 @@ source_set("network_service") {
     "//sdk/lib/fdio",
     "//sdk/lib/fit",
     "//src/lib/fxl",
-    "//zircon/public/lib/async-cpp",
+    "//zircon/system/ulib/async:async-cpp",
     "//zircon/system/ulib/async-default",
     "//zircon/system/ulib/fbl",
   ]

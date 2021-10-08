@@ -21,7 +21,7 @@ test("fidl_cpp_dispatcher_tests_bin") {
   deps = [
     "//sdk/lib/stdcompat",
     "//src/lib/fidl/cpp",
-    "//zircon/public/lib/async-cpp",
+    "//zircon/system/ulib/async:async-cpp",
     "//zircon/system/ulib/async-loop",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",

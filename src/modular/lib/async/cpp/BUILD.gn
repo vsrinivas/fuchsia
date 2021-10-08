@@ -22,7 +22,7 @@ source_set("future") {
   public_deps = [
     "//sdk/lib/syslog/cpp",
     "//src/lib/fxl",
-    "//zircon/public/lib/async-cpp",
+    "//zircon/system/ulib/async:async-cpp",
     "//zircon/system/ulib/async-default",
   ]
 
@@ -39,7 +39,7 @@ source_set("operation") {
   public_deps = [
     ":future",
     "//sdk/lib/fit-promise",
-    "//zircon/public/lib/async-cpp",
+    "//zircon/system/ulib/async:async-cpp",
   ]
 
   deps = [ "//zircon/system/ulib/trace" ]

@@ -54,7 +54,7 @@ source_set("codec_impl") {
     "//src/lib/fsl",
     "//src/media/lib/metrics",
     "//src/media/lib/mpsc_queue",
-    "//zircon/public/lib/async-cpp",
+    "//zircon/system/ulib/async:async-cpp",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/closure-queue",

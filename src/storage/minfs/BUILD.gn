@@ -160,7 +160,7 @@ static_library("minfs") {
       "//src/lib/storage/vfs/cpp/metrics:metrics-cobalt",
       "//src/storage/fvm",
       "//zircon/public/lib/async",
-      "//zircon/public/lib/async-cpp",
+      "//zircon/system/ulib/async:async-cpp",
       "//zircon/system/ulib/async-default",
       "//zircon/system/ulib/async-loop",
       "//zircon/system/ulib/async-loop:async-loop-cpp",

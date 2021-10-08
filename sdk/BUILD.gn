@@ -353,7 +353,7 @@ sdk_molecule("core_lib") {
     "//sdk/lib/vulkan",
     "//src/storage/memfs:memfs_sdk",
     "//zircon/public/lib/async:async_sdk",
-    "//zircon/public/lib/async-cpp:async-cpp_sdk",
+    "//zircon/system/ulib/async:async-cpp_sdk",
     "//zircon/system/ulib/async-default:async-default_sdk",
     "//zircon/system/ulib/async-loop:async-loop-cpp_sdk",
     "//zircon/system/ulib/async-loop:async-loop-default_sdk",
@@ -479,8 +479,8 @@ sdk("bootstrap") {
     "docs",
     "//sdk/lib/fdio:fdio_sdk",
     "//zircon/public/lib/async:async_sdk",
-    "//zircon/public/lib/async-cpp:async-cpp_sdk",
     "//zircon/public/sysroot/sdk:sysroot_sdk",
+    "//zircon/system/ulib/async:async-cpp_sdk",
     "//zircon/system/ulib/sync:sync_sdk",
     "//zircon/system/ulib/zx:zx_sdk",
   ]

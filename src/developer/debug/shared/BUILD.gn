@@ -79,7 +79,7 @@ static_library("shared") {
     public_deps += [
       "//sdk/lib/fdio",
       "//sdk/lib/fit",
-      "//zircon/public/lib/async-cpp",
+      "//zircon/system/ulib/async:async-cpp",
       "//zircon/system/ulib/async-default",
       "//zircon/system/ulib/async-loop:async-loop-cpp",
       "//zircon/system/ulib/async-loop:async-loop-default",

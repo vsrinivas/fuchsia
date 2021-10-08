@@ -36,7 +36,7 @@ source_set("lib") {
     "//sdk/lib/fit",
     "//sdk/lib/sys/cpp",
     "//src/lib/fxl",
-    "//zircon/public/lib/async-cpp",
+    "//zircon/system/ulib/async:async-cpp",
     "//zircon/system/ulib/trace-reader",
     "//zircon/system/ulib/zx",
   ]

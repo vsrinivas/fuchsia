@@ -11,7 +11,7 @@ source_set("render") {
   ]
 
   deps = [
-    "//zircon/public/lib/async-cpp",
+    "//zircon/system/ulib/async:async-cpp",
     "//zircon/system/ulib/async-default",
   ]
 

@@ -2,14 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/sdk/sdk_alias.gni")
-
-# Required because some //vendor/... target still depend on this.
+# TODO(70426) Remove this once the //third_party/... target has been updated.
 group("async-cpp") {
   public_deps = [ "//zircon/system/ulib/async:async-cpp" ]
-}
-
-sdk_alias("async-cpp_sdk") {
-  target = "//zircon/system/ulib/async:async-cpp_sdk"
-  type = "atom"
+  visibility = [ "//third_party/android/device/generic/goldfish-opengl:*" ]
 }

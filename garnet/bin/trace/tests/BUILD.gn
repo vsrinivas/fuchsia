@@ -113,7 +113,7 @@ source_set("integration_test_utils") {
     "//sdk/lib/fdio",
     "//src/lib/fxl",
     "//third_party/rapidjson",
-    "//zircon/public/lib/async-cpp",
+    "//zircon/system/ulib/async:async-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/trace",
     "//zircon/system/ulib/trace-reader",
@@ -147,7 +147,7 @@ source_set("integration_test_utils_with_trace_with_static_engine") {
     "//sdk/lib/fdio",
     "//src/lib/fxl",
     "//third_party/rapidjson",
-    "//zircon/public/lib/async-cpp",
+    "//zircon/system/ulib/async:async-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/trace:trace-with-static-engine",
     "//zircon/system/ulib/trace-reader",
@@ -207,7 +207,7 @@ executable("two_providers_one_engine") {
 
   deps = [
     "//src/lib/fxl",
-    "//zircon/public/lib/async-cpp",
+    "//zircon/system/ulib/async:async-cpp",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/trace",

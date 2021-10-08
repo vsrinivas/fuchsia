@@ -72,7 +72,7 @@ source_set("src") {
     "//src/virtualization/lib/guest_interaction:fuchsia.netemul.guest",
     "//src/virtualization/tests:guest_console",
     "//third_party/rapidjson",
-    "//zircon/public/lib/async-cpp",
+    "//zircon/system/ulib/async:async-cpp",
     "//zircon/system/ulib/async-default",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
@@ -92,7 +92,7 @@ source_set("src") {
     "//src/connectivity/network/testing/netemul/lib/fidl:sync",
     "//src/connectivity/network/testing/netemul/lib/network:network_service",
     "//src/lib/storage/vfs/cpp",
-    "//zircon/public/lib/async-cpp",
+    "//zircon/system/ulib/async:async-cpp",
     "//zircon/system/ulib/fbl",
   ]
 }

@@ -26,7 +26,7 @@ source_set("lib") {
     "//src/developer/shell/parser",
     "//src/lib/fsl",
     "//src/lib/line_input",
-    "//zircon/public/lib/async-cpp",
+    "//zircon/system/ulib/async:async-cpp",
     "//zircon/system/ulib/cmdline",
   ]
 }

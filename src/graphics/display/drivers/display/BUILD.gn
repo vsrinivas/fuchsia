@@ -66,7 +66,7 @@ source_set("shared") {
     "//src/lib/eld",
     "//src/lib/fsl",
     "//src/media/audio/drivers/lib/audio-proto-utils",
-    "//zircon/public/lib/async-cpp",
+    "//zircon/system/ulib/async:async-cpp",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/edid",

@@ -149,7 +149,6 @@ sdk_static_library("backend_fuchsia_lib_rust") {
     "//sdk/lib/fdio",
     "//sdk/lib/stdcompat",
     "//sdk/lib/syslog/streams/cpp:streams-encoder",
-    "//zircon/public/lib/async-cpp",
     "//zircon/system/ulib/async:async-cpp",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/sync",
@@ -185,7 +184,6 @@ sdk_source_set("backend_fuchsia_lib") {
     "//sdk/lib/fdio",
     "//sdk/lib/stdcompat",
     "//sdk/lib/syslog/streams/cpp:streams-encoder",
-    "//zircon/public/lib/async-cpp",
     "//zircon/system/ulib/async:async-cpp",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/sync",
@@ -221,7 +219,6 @@ sdk_source_set("backend_fuchsia_compat") {
     "//sdk/lib/fit-promise",
     "//sdk/lib/stdcompat",
     "//sdk/lib/syslog/streams/cpp:streams-encoder",
-    "//zircon/public/lib/async-cpp",
     "//zircon/system/ulib/async:async-cpp",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/sync",
@@ -270,7 +267,7 @@ executable("logging_cpp_unittests") {
       "//third_party/googletest:gtest",
       "//third_party/rapidjson",
       "//zircon/public/lib/async",
-      "//zircon/public/lib/async-cpp",
+      "//zircon/system/ulib/async:async-cpp",
       "//zircon/system/ulib/async-loop:async-loop-cpp",
     ]
   } else {

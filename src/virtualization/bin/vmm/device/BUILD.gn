@@ -36,7 +36,7 @@ source_set("device") {
     "//sdk/lib/syslog/cpp",
     "//src/lib/fxl",
     "//third_party/mesa/include:drm-uapi",
-    "//zircon/public/lib/async-cpp",
+    "//zircon/system/ulib/async:async-cpp",
     "//zircon/system/ulib/virtio",
   ]
 }
@@ -263,7 +263,7 @@ executable("virtio_net_bin") {
     "//sdk/fidl/fuchsia.netstack",
     "//sdk/lib/fit-promise",
     "//src/connectivity/network/lib/net_interfaces/cpp",
-    "//zircon/public/lib/async-cpp",
+    "//zircon/system/ulib/async:async-cpp",
   ]
 }
 

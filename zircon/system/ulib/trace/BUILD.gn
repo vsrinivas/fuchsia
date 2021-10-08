@@ -26,7 +26,7 @@ template("trace_library") {
 
       # <trace/observer.h> has #include <trace-engine/instrumentation.h> (already
       # covered, <lib/async/cpp/wait.h>, <fit/function.h>, and <lib/zx/event.h>.
-      "//zircon/public/lib/async-cpp",
+      "//zircon/system/ulib/async:async-cpp",
       "//sdk/lib/fit",
       "//zircon/system/ulib/zx",
     ]
@@ -40,7 +40,7 @@ template("trace_library") {
     deps += [
       "//sdk/lib/fit",
       "//zircon/public/lib/async",
-      "//zircon/public/lib/async-cpp",
+      "//zircon/system/ulib/async:async-cpp",
       "//zircon/system/ulib/zx",
     ]
   }

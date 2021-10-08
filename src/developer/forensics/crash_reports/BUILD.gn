@@ -98,7 +98,7 @@ source_set("crash_reporter") {
     "//src/developer/forensics/utils:utc_time_provider",
     "//src/lib/timekeeper",
     "//zircon/public/lib/async",
-    "//zircon/public/lib/async-cpp",
+    "//zircon/system/ulib/async:async-cpp",
   ]
 
   deps = [
@@ -241,7 +241,7 @@ source_set("queue") {
     ":constants",
     ":report",
     "//sdk/lib/syslog/cpp",
-    "//zircon/public/lib/async-cpp",
+    "//zircon/system/ulib/async:async-cpp",
   ]
 }
 

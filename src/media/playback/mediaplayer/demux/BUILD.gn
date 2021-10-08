@@ -20,7 +20,7 @@ source_set("demux") {
 
   public_deps = [
     "//sdk/lib/fit",
-    "//zircon/public/lib/async-cpp",
+    "//zircon/system/ulib/async:async-cpp",
     "//zircon/system/ulib/zx",
   ]
 

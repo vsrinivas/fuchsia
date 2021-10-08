@@ -46,7 +46,7 @@ fuchsia_driver("fake_qmi_driver-driver") {
     "//src/connectivity/telephony/tests/fake-drivers/fake-transport-base",
     "//src/devices/lib/driver",
     "//src/lib/ddk",
-    "//zircon/public/lib/async-cpp",
+    "//zircon/system/ulib/async:async-cpp",
     "//zircon/system/ulib/async-default",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/sync",

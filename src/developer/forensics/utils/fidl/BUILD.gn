@@ -17,7 +17,7 @@ source_set("caching_ptr") {
     "//src/developer/forensics/utils/fit",
     "//src/lib/backoff",
     "//zircon/public/lib/async",
-    "//zircon/public/lib/async-cpp",
+    "//zircon/system/ulib/async:async-cpp",
     "//zircon/system/ulib/zx",
   ]
 }
@@ -51,7 +51,7 @@ source_set("hanging_get_ptr") {
     "//src/developer/forensics/utils/fit",
     "//src/lib/backoff",
     "//zircon/public/lib/async",
-    "//zircon/public/lib/async-cpp",
+    "//zircon/system/ulib/async:async-cpp",
     "//zircon/system/ulib/zx",
   ]
 }
@@ -71,6 +71,6 @@ source_set("oneshot_ptr") {
   deps = [
     "//sdk/lib/sys/cpp",
     "//sdk/lib/syslog/cpp",
-    "//zircon/public/lib/async-cpp",
+    "//zircon/system/ulib/async:async-cpp",
   ]
 }

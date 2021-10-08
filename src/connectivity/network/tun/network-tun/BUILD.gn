@@ -35,7 +35,7 @@ source_set("src") {
     "//src/connectivity/network/drivers/network-device/device",
     "//src/connectivity/network/drivers/network-device/mac",
     "//src/lib/vmo_store",
-    "//zircon/public/lib/async-cpp",
+    "//zircon/system/ulib/async:async-cpp",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/fbl",

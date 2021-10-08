@@ -110,7 +110,7 @@ static_library("cpp") {
       "//zircon/public/lib/async",
 
       # <fs/tracked_remote_dir.h> has #include <lib/async/cpp/wait.h>.
-      "//zircon/public/lib/async-cpp",
+      "//zircon/system/ulib/async:async-cpp",
       "//zircon/system/ulib/zx",
 
       # <fs/trace.h> has #include <lib/trace/event.h>.
@@ -211,7 +211,7 @@ test("fs-vnode-test") {
     "//sdk/lib/fdio",
     "//src/lib/storage/vfs/cpp",
     "//zircon/public/lib/async",
-    "//zircon/public/lib/async-cpp",
+    "//zircon/system/ulib/async:async-cpp",
     "//zircon/system/ulib/async-default",
     "//zircon/system/ulib/async-loop",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
@@ -253,7 +253,7 @@ test("fs-connection-test") {
     "//src/lib/storage/vfs/cpp",
     "//src/storage/memfs",
     "//zircon/public/lib/async",
-    "//zircon/public/lib/async-cpp",
+    "//zircon/system/ulib/async:async-cpp",
     "//zircon/system/ulib/async-default",
     "//zircon/system/ulib/async-loop",
     "//zircon/system/ulib/async-loop:async-loop-cpp",

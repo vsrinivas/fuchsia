@@ -24,7 +24,7 @@ source_set("archive_accessor") {
     "//src/developer/forensics/utils/fit",
     "//src/lib/fxl",
     "//zircon/public/lib/async",
-    "//zircon/public/lib/async-cpp",
+    "//zircon/system/ulib/async:async-cpp",
   ]
 
   deps = [
@@ -79,7 +79,7 @@ source_set("data_provider") {
     "//sdk/lib/sys/cpp",
     "//src/developer/forensics/utils/cobalt",
     "//src/lib/timekeeper:system",
-    "//zircon/public/lib/async-cpp",
+    "//zircon/system/ulib/async:async-cpp",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/zx",
   ]
@@ -138,7 +138,7 @@ source_set("datastore") {
     "//src/developer/forensics/feedback_data/attachments:types",
     "//src/developer/forensics/utils:previous_boot_file",
     "//src/developer/forensics/utils/cobalt",
-    "//zircon/public/lib/async-cpp",
+    "//zircon/system/ulib/async:async-cpp",
     "//zircon/system/ulib/zx",
   ]
 

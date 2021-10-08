@@ -18,7 +18,7 @@ source_set("utils") {
     "//sdk/fidl/fuchsia.sysmem",
     "//sdk/fidl/fuchsia.ui.scenic",
     "//src/ui/lib/glm_workaround:glm_workaround",
-    "//zircon/public/lib/async-cpp",
+    "//zircon/system/ulib/async:async-cpp",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
   ]
 

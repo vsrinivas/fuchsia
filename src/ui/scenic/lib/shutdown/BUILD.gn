@@ -15,7 +15,7 @@ source_set("shutdown") {
     "//src/lib/fxl",
   ]
 
-  deps = [ "//zircon/public/lib/async-cpp" ]
+  deps = [ "//zircon/system/ulib/async:async-cpp" ]
 }
 
 # Implements fuchsia.ui.lifecycle.LifecycleController, which uses ShutdownManager to

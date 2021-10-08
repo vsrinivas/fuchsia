@@ -397,7 +397,7 @@ source_set("trace_provider") {
 
   deps = [
     "$magma_build_root/src/magma_util:macros",
-    "$zircon_build_root/public/lib/async-cpp",
+    "$zircon_build_root/system/ulib/async:async-cpp",
     "..:trace_provider_header",
   ]
 

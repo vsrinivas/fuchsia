@@ -25,7 +25,7 @@ source_set("input_report_reader") {
     "//sdk/fidl/fuchsia.ui.input",
     "//sdk/lib/fdio",
     "//src/lib/fxl",
-    "//zircon/public/lib/async-cpp",
+    "//zircon/system/ulib/async:async-cpp",
     "//zircon/system/ulib/zx",
   ]
 }

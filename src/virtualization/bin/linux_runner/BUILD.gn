@@ -89,7 +89,7 @@ source_set("lib") {
     "//src/virtualization/third_party/vm_tools:vm_cc_proto",
     "//third_party/grpc:grpc++",
     "//third_party/protobuf:protobuf_lite",
-    "//zircon/public/lib/async-cpp",
+    "//zircon/system/ulib/async:async-cpp",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/fzl",

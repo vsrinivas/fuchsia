@@ -79,7 +79,7 @@ source_set("reporter") {
     "//src/lib/files",
     "//src/lib/fsl",
     "//src/lib/fxl",
-    "//zircon/public/lib/async-cpp",
+    "//zircon/system/ulib/async:async-cpp",
     "//zircon/system/ulib/zx",
   ]
 }

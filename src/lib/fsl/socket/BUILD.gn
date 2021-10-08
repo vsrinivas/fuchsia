@@ -20,7 +20,7 @@ source_set("socket") {
     "//sdk/lib/syslog/cpp",
     "//src/lib/files",
     "//src/lib/fxl:common",
-    "//zircon/public/lib/async-cpp",
+    "//zircon/system/ulib/async:async-cpp",
     "//zircon/system/ulib/async-default",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/zx",

@@ -47,7 +47,7 @@ template("trace_engine_library") {
       "nonce.cc",
     ]
     deps = [
-      "//zircon/public/lib/async-cpp",
+      "//zircon/system/ulib/async:async-cpp",
       "//zircon/system/ulib/fbl",
       "//zircon/system/ulib/zx",
     ]

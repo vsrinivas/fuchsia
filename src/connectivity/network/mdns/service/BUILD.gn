@@ -217,7 +217,7 @@ executable("mdns_netemul_test_agent") {
     "//sdk/lib/sys/cpp",
     "//sdk/lib/syslog/cpp",
     "//src/lib/fsl",
-    "//zircon/public/lib/async-cpp",
+    "//zircon/system/ulib/async:async-cpp",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
   ]
@@ -250,7 +250,7 @@ executable("mdns_netemul_multi_network_test_agent") {
     "//sdk/fidl/fuchsia.net",
     "//sdk/lib/sys/cpp",
     "//src/connectivity/network/testing/netemul/lib/fidl:sync",
-    "//zircon/public/lib/async-cpp",
+    "//zircon/system/ulib/async:async-cpp",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
   ]
