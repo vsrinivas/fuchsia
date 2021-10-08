@@ -33,6 +33,12 @@ mod types;
 
 use crate::{peer::MockPeer, types::LaunchInfo};
 
+/// The maximum number of concurrent piconet member requests this server supports. This is chosen to
+/// be more than sufficient for most testing scenarios.
+/// Typically, we expect test topologies to define 2 piconet members and each will make 1-2
+/// requests.
+const MAX_CONCURRENT_PICONET_MEMBER_REQUESTS: usize = 32;
+
 /// The MockPiconetServer implements both the bredr.Profile service and the bredr.ProfileTest
 /// service. The server is responsible for routing incoming asynchronous requests from peers in
 /// the piconet.
@@ -148,6 +154,7 @@ impl MockPiconetServer {
     }
 
     fn handle_profile_request(&self, id: PeerId, request: bredr::ProfileRequest) {
+        info!("Received profile request: {:?}, {:?}", id, request);
         match request {
             bredr::ProfileRequest::Advertise { services, receiver, responder, .. } => {
                 let proxy = receiver.into_proxy().expect("couldn't get connection receiver");
@@ -177,6 +184,7 @@ impl MockPiconetServer {
         request: bredr::MockPeerRequest,
         mut sender: mpsc::Sender<(PeerId, bredr::ProfileRequestStream)>,
     ) {
+        info!("Received mock peer request for peer {:?}: {:?}", id, request);
         match request {
             bredr::MockPeerRequest::ConnectProxy_ { interface, responder, .. } => {
                 // Relay the ProfileRequestStream to the central handler.
@@ -235,6 +243,7 @@ impl MockPiconetServer {
                 // A request from the `ProfileTest` FIDL request stream has been received.
                 test_request = profile_test_requests.select_next_some() => {
                     let bredr::ProfileTestRequest::RegisterPeer { peer_id, peer, observer, responder, .. } = test_request;
+                    info!("Received ProfileTest request to register peer: {:?}", peer_id);
                     let id = peer_id.into();
                     let request_stream = match peer.into_stream() {
                         Ok(stream) => stream,
@@ -511,7 +520,7 @@ async fn handle_test_client_connection(
 ) {
     while let Some(request) = stream.next().await {
         match request {
-            Ok(request) => sender.send(request).await.expect("send to handler failed"),
+            Ok(request) => sender.try_send(request).expect("send to handler failed"),
             Err(e) => error!("Client connection failed: {}", e),
         }
     }
@@ -536,7 +545,7 @@ async fn main() -> Result<(), anyhow::Error> {
 
     let server = MockPiconetServer::new(args.v1);
 
-    let (test_sender, test_receiver) = mpsc::channel(0);
+    let (test_sender, test_receiver) = mpsc::channel(MAX_CONCURRENT_PICONET_MEMBER_REQUESTS);
 
     let mut fs = ServiceFs::new();
     let _ = fs.dir("svc").add_fidl_service(move |stream| {
@@ -557,19 +566,17 @@ async fn main() -> Result<(), anyhow::Error> {
 mod tests {
     use super::*;
 
+    use async_utils::PollExt;
     use fidl::encoding::Decodable;
     use fidl::endpoints::{create_proxy, create_proxy_and_stream, create_request_stream};
-    use fidl_fuchsia_bluetooth_bredr::{
-        ChannelParameters, ConnectionReceiverMarker, MockPeerMarker, MockPeerProxy,
-        PeerObserverMarker, PeerObserverRequestStream, ProfileMarker, ProfileTestMarker,
-        ProfileTestRequest, ProfileTestRequestStream,
-    };
-    use futures::pin_mut;
+    use fidl_fuchsia_bluetooth_bredr::*;
+    use futures::{pin_mut, task::Poll};
+    use matches::assert_matches;
 
     async fn get_next_profile_test_request(
         stream: &mut ProfileTestRequestStream,
     ) -> Result<ProfileTestRequest, Error> {
-        stream.select_next_some().await.map_err(|e| format_err!("{:?}", e))
+        stream.select_next_some().await.map_err(Into::into)
     }
 
     fn generate_register_peer_request(
@@ -585,7 +592,7 @@ mod tests {
         let reg_fut = client.register_peer(&mut id.into(), mock_peer_server, observer);
         pin_mut!(reg_fut);
 
-        assert!(exec.run_until_stalled(&mut reg_fut).is_pending());
+        exec.run_until_stalled(&mut reg_fut).expect_pending("registration waiting for server");
 
         let req_fut = get_next_profile_test_request(&mut server);
         pin_mut!(req_fut);
@@ -594,16 +601,16 @@ mod tests {
         (mock_peer, observer_stream, request)
     }
 
-    #[test]
-    fn test_register_peer() -> Result<(), Error> {
+    #[fuchsia::test]
+    fn register_peer_is_handled_by_server() {
         let mut exec = fasync::TestExecutor::new().unwrap();
         let mps = MockPiconetServer::new(true);
-        let (mut sender, receiver) = mpsc::channel(0);
+        let (mut sender, receiver) = mpsc::channel(MAX_CONCURRENT_PICONET_MEMBER_REQUESTS);
 
         // The main handler - this is under test.
         let mps_fut = mps.handle_fidl_requests(receiver);
         pin_mut!(mps_fut);
-        assert!(exec.run_until_stalled(&mut mps_fut).is_pending());
+        exec.run_until_stalled(&mut mps_fut).expect_pending("server should still be running");
 
         // Register a mock peer.
         let id = PeerId(123);
@@ -611,56 +618,102 @@ mod tests {
 
         // Forward the request to the handler. After running the main `mps_fut`, the peer
         // should be registered.
-        assert!(exec.run_until_stalled(&mut sender.send(request)).is_pending());
-        assert!(exec.run_until_stalled(&mut mps_fut).is_pending());
+        let send = sender.send(request);
+        pin_mut!(send);
+        let _ = exec.run_until_stalled(&mut send).expect("send should complete");
+        exec.run_until_stalled(&mut mps_fut).expect_pending("server should still be running");
         assert!(mps.contains_peer(&id));
 
         // Dropping the MockPeer client should simulate peer disconnection.
         drop(mock_peer);
-        assert!(exec.run_until_stalled(&mut mps_fut).is_pending());
+        exec.run_until_stalled(&mut mps_fut).expect_pending("server should still be running");
         assert!(!mps.contains_peer(&id));
-
-        Ok(())
     }
 
-    #[test]
-    fn test_advertisement_request_resolves_when_terminated() {
+    #[fuchsia::test]
+    fn concurrent_registered_peers_can_connect_profile_proxy() {
         let mut exec = fasync::TestExecutor::new().unwrap();
         let mps = MockPiconetServer::new(true);
-        let (mut sender, receiver) = mpsc::channel(0);
+        let (mut sender, receiver) = mpsc::channel(MAX_CONCURRENT_PICONET_MEMBER_REQUESTS);
+        let mut sender_clone = sender.clone();
 
         // The main handler - this is under test.
         let mps_fut = mps.handle_fidl_requests(receiver);
         pin_mut!(mps_fut);
-        assert!(exec.run_until_stalled(&mut mps_fut).is_pending());
+        exec.run_until_stalled(&mut mps_fut).expect_pending("server should still be running");
+
+        // Make two register requests.
+        let id1 = PeerId(123);
+        let (mock_peer1, _observer1, request1) = generate_register_peer_request(&mut exec, id1);
+        let id2 = PeerId(34);
+        let (mock_peer2, _observer2, request2) = generate_register_peer_request(&mut exec, id2);
+
+        // Forward the request to the handler. After running the main `mps_fut`, the peer
+        // should be registered.
+        let mut send1 = Box::pin(sender.send(request1));
+        let mut send2 = Box::pin(sender_clone.send(request2));
+        assert_matches!(exec.run_until_stalled(&mut send1), Poll::Ready(Ok(_)));
+        assert_matches!(exec.run_until_stalled(&mut send2), Poll::Ready(Ok(_)));
+        // Running the MPS task should process both requests.
+        exec.run_until_stalled(&mut mps_fut).expect_pending("server should still be running");
+        assert!(mps.contains_peer(&id1));
+        assert!(mps.contains_peer(&id2));
+
+        // Both piconet members can wire up the `bredr.Profile` proxy.
+        let (_c1, s1) = create_proxy::<ProfileMarker>().unwrap();
+        let mut connect_fut1 = Box::pin(mock_peer1.connect_proxy_(s1));
+        let (_c2, s2) = create_proxy::<ProfileMarker>().unwrap();
+        let mut connect_fut2 = Box::pin(mock_peer2.connect_proxy_(s2));
+
+        assert!(exec.run_until_stalled(&mut connect_fut1).is_pending());
+        assert!(exec.run_until_stalled(&mut connect_fut2).is_pending());
+
+        exec.run_until_stalled(&mut mps_fut).expect_pending("server should still be running");
+        assert_matches!(exec.run_until_stalled(&mut connect_fut1), Poll::Ready(Ok(_)));
+        assert_matches!(exec.run_until_stalled(&mut connect_fut2), Poll::Ready(Ok(_)));
+    }
+
+    #[fuchsia::test]
+    fn advertisement_request_resolves_when_terminated() {
+        let mut exec = fasync::TestExecutor::new().unwrap();
+        let mps = MockPiconetServer::new(true);
+        let (mut sender, receiver) = mpsc::channel(MAX_CONCURRENT_PICONET_MEMBER_REQUESTS);
+
+        // The main handler - this is under test.
+        let mps_fut = mps.handle_fidl_requests(receiver);
+        pin_mut!(mps_fut);
+        exec.run_until_stalled(&mut mps_fut).expect_pending("server should still be running");
 
         // Register a mock peer.
-        let id = PeerId(123);
+        let id = PeerId(192);
         let (mock_peer, _observer, request) = generate_register_peer_request(&mut exec, id);
 
         // Forward the request to the handler. After running the main `mps_fut`, the peer
         // should be registered.
-        assert!(exec.run_until_stalled(&mut sender.send(request)).is_pending());
-        assert!(exec.run_until_stalled(&mut mps_fut).is_pending());
+        let send = sender.send(request);
+        pin_mut!(send);
+        assert_matches!(exec.run_until_stalled(&mut send), Poll::Ready(Ok(_)));
+        exec.run_until_stalled(&mut mps_fut).expect_pending("server should still be running");
+        assert!(mps.contains_peer(&id));
 
         // Connect the ProfileProxy.
         let (c, s) = create_proxy::<ProfileMarker>().unwrap();
         let connect_fut = mock_peer.connect_proxy_(s);
         pin_mut!(connect_fut);
-        assert!(exec.run_until_stalled(&mut mps_fut).is_pending());
-        assert!(exec.run_until_stalled(&mut connect_fut).is_ready());
+        exec.run_until_stalled(&mut mps_fut).expect_pending("server should still be running");
+        assert_matches!(exec.run_until_stalled(&mut connect_fut), Poll::Ready(Ok(_)));
 
-        // Advertise - the hanging-get request shouldn't resolve.
+        // Advertise - the request should be handled by the server and remain active.
         let (target, receiver) = create_request_stream::<ConnectionReceiverMarker>().unwrap();
         let services = vec![];
         let mut adv_fut =
             c.advertise(&mut services.into_iter(), ChannelParameters::new_empty(), target);
-        assert!(exec.run_until_stalled(&mut adv_fut).is_pending());
-        assert!(exec.run_until_stalled(&mut mps_fut).is_pending());
+        exec.run_until_stalled(&mut adv_fut).expect_pending("should still be advertising");
+        exec.run_until_stalled(&mut mps_fut).expect_pending("server should still be running");
 
         // We decide to stop advertising.
         drop(receiver);
-        assert!(exec.run_until_stalled(&mut mps_fut).is_pending());
+        exec.run_until_stalled(&mut mps_fut).expect_pending("server should still be running");
         assert!(exec.run_until_stalled(&mut adv_fut).is_ready());
     }
 }

@@ -21,6 +21,7 @@ use {
     },
     fuchsia_zircon as zx,
     futures::{stream::StreamExt, TryFutureExt},
+    tracing::info,
 };
 
 static MOCK_PICONET_SERVER_URL_V2: &str =
@@ -71,6 +72,7 @@ impl PiconetMemberSpec {
         &self,
         topology: &RealmInstance,
     ) -> Result<bredr::ProfileProxy, anyhow::Error> {
+        info!("Received request to get `bredr.Profile` for piconet member: {:?}", self.id);
         let (client, server) = f_end::create_proxy::<bredr::ProfileMarker>()?;
         topology.root.connect_request_to_named_protocol_at_exposed_dir(
             &capability_path_for_mock::<bredr::ProfileMarker>(self),
@@ -486,6 +488,7 @@ async fn piconet_member(
     let mut fs = ServiceFs::new();
 
     let _ = fs.dir("svc").add_service_at(profile_svc_path, move |chan: zx::Channel| {
+        info!("Received ServiceFs `Profile` connection request for piconet_member: {:?}", id);
         let profile_test = pro_test.clone();
         let observer = peer_observer.clone();
 
@@ -493,7 +496,10 @@ async fn piconet_member(
             let (client, observer_req_stream) =
                 register_piconet_member(&profile_test, id).await.unwrap();
 
-            client.connect_proxy_(chan.into()).await.expect("failed to get mock peer service");
+            let err_str = format!("Couldn't connect to `Profile` for peer {:?}", id);
+
+            let _ = client.connect_proxy_(chan.into()).await.expect(&err_str);
+
             // keep us running and hold on until termination to keep the mock alive
             fwd_observer_callbacks(observer_req_stream, &observer, id).await.unwrap();
         })
@@ -515,6 +521,7 @@ async fn register_piconet_member(
     profile_test_proxy: &bredr::ProfileTestProxy,
     id: bt_types::PeerId,
 ) -> Result<(bredr::MockPeerProxy, bredr::PeerObserverRequestStream), Error> {
+    info!("Sending RegisterPeer request for peer {:?} to the Mock Piconet Server.", id);
     let (client, server) = f_end::create_proxy::<bredr::MockPeerMarker>()?;
     let (observer_client, observer_server) =
         f_end::create_request_stream::<bredr::PeerObserverMarker>()?;
@@ -748,10 +755,9 @@ impl PiconetHarness {
     /// piconet members.
     async fn update_routes_and_build(self) -> Result<Realm, Error> {
         let mut topology = self.builder.build();
-        tracing::info!(
+        info!(
             "Building test realm with profiles: {:?} and piconet members: {:?}",
-            self.profiles,
-            self.piconet_members
+            self.profiles, self.piconet_members
         );
         let mut root_decl = topology.get_decl(&Moniker::root()).await.expect("failed to get root");
 
