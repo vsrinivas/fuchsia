@@ -15,10 +15,10 @@ namespace driver {
 template <typename T>
 zx::status<T> SymbolValue(
     const fidl::VectorView<fuchsia_driver_framework::wire::NodeSymbol>& symbols,
-    std::string_view path) {
+    std::string_view name) {
   static_assert(sizeof(T) == sizeof(zx_vaddr_t), "T must match zx_vaddr_t in size");
   for (auto& symbol : symbols) {
-    if (std::equal(path.begin(), path.end(), symbol.name().begin())) {
+    if (std::equal(name.begin(), name.end(), symbol.name().begin())) {
       T value;
       memcpy(&value, &symbol.address(), sizeof(zx_vaddr_t));
       return zx::ok(value);
