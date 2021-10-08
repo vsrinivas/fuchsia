@@ -110,6 +110,9 @@ static UserCopyCaptureFaultsResult _arch_copy_to_from_user(void* dst, const void
 }
 
 zx_status_t arch_copy_from_user(void* dst, const void* src, size_t len) {
+  DEBUG_ASSERT(!arch_blocking_disallowed());
+  DEBUG_ASSERT(arch_num_spinlocks_held() == 0);
+
   // It should always be safe to invoke "error_value" here.  The DO_FAULTs
   // version of the copy routine will never return fault information.  In a
   // release build, all of this should vanish and the status should just end up
@@ -125,6 +128,9 @@ UserCopyCaptureFaultsResult arch_copy_from_user_capture_faults(void* dst, const 
 }
 
 zx_status_t arch_copy_to_user(void* dst, const void* src, size_t len) {
+  DEBUG_ASSERT(!arch_blocking_disallowed());
+  DEBUG_ASSERT(arch_num_spinlocks_held() == 0);
+
   return _arch_copy_to_from_user<X86_USER_COPY_DO_FAULTS, CopyDirection::ToUser>(dst, src, len)
       .status;
 }

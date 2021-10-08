@@ -37,6 +37,9 @@ extern "C" Arm64UserCopyRet _arm64_user_copy(void* dst, const void* src, size_t 
                                              uint64_t* fault_return, uint64_t fault_return_mask);
 
 zx_status_t arch_copy_from_user(void* dst, const void* src, size_t len) {
+  DEBUG_ASSERT(!arch_blocking_disallowed());
+  DEBUG_ASSERT(arch_num_spinlocks_held() == 0);
+
   // The assembly code just does memcpy with fault handling.  This is
   // the security check that an address from the user is actually a
   // valid userspace address so users can't access kernel memory.
@@ -53,6 +56,9 @@ zx_status_t arch_copy_from_user(void* dst, const void* src, size_t len) {
 }
 
 zx_status_t arch_copy_to_user(void* dst, const void* src, size_t len) {
+  DEBUG_ASSERT(!arch_blocking_disallowed());
+  DEBUG_ASSERT(arch_num_spinlocks_held() == 0);
+
   if (!is_user_address_range(reinterpret_cast<vaddr_t>(dst), len)) {
     return ZX_ERR_INVALID_ARGS;
   }
