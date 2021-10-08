@@ -65,7 +65,7 @@ def main(args_list=None):
     template = env.get_template(template_name)
     if args.deps:
         libraries = args.deps.split(',')
-        plugins = map(wrap_deps, libraries)
+        plugins = list(map(wrap_deps, libraries))
     else:
         libraries = ""
         plugins = []
@@ -80,8 +80,8 @@ def main(args_list=None):
                 includes_execution=args.includes_execution,
                 execution_lib=args.execution_lib))
         file.flush()
-        if (not os.path.isfile(args.out) or not
-            filecmp.cmp(temp_file.name, args.out, shallow=False)):
+        if (not os.path.isfile(args.out) or
+                not filecmp.cmp(temp_file.name, args.out, shallow=False)):
             shutil.copyfile(temp_file.name, args.out)
 
 

@@ -365,7 +365,11 @@ async fn run() -> Result<i32> {
     let analytics_start = Instant::now();
 
     let command_start = Instant::now();
-    let res = ffx_lib_suite::ffx_plugin_impl(injection, app).await;
+    let res = if app.machine.is_some() && !ffx_lib_suite::ffx_plugin_is_machine_supported(&app) {
+        Err(anyhow::Error::new(ffx_error!("The machine flag is not supported for this subcommand")))
+    } else {
+        ffx_lib_suite::ffx_plugin_impl(injection, app).await
+    };
     let command_done = Instant::now();
     log::info!("Command completed. Success: {}", res.is_ok());
     let command_duration = (command_done - command_start).as_secs_f32();

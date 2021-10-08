@@ -6,7 +6,7 @@ use {
     fidl_fuchsia_diagnostics::{ComponentSelector, Selector, StringSelector, TreeSelector},
     lazy_static::lazy_static,
     proc_macro2::{Punct, Span, TokenStream},
-    quote::quote,
+    quote::{quote, ToTokens},
     std::collections::HashMap,
     syn::{
         parse::{Parse, ParseStream},
@@ -19,6 +19,9 @@ use {
         TypePath,
     },
 };
+
+const ATTRIBUTE_ON_WRONG_PROXY_TYPE: &str = "The ffx attribute for specifying the output type is \
+                                             only recognized on the Writer type.";
 
 const UNKNOWN_PROXY_TYPE: &str = "This argument was not recognized. Possible arguments include \
                                   proxy types as well as Result and Option wrappers for proxy \
@@ -116,6 +119,7 @@ struct GeneratedCodeParts {
     future_results: Punctuated<Ident, Token!(,)>,
     proxies_to_generate: Vec<TokenStream>,
     test_fake_methods_to_generate: Vec<TokenStream>,
+    writer_attributes: Vec<syn::Attribute>,
     cmd: FnArg,
 }
 
@@ -128,6 +132,7 @@ fn parse_arguments(
     let mut future_results: Punctuated<Ident, Token!(,)> = Punctuated::new();
     let mut proxies_to_generate = Vec::new();
     let mut test_fake_methods_to_generate = Vec::<TokenStream>::new();
+    let mut writer_attributes = Vec::new();
     let mut cmd: Option<FnArg> = None;
     for arg in &args {
         match arg.clone() {
@@ -137,7 +142,7 @@ fn parse_arguments(
                     "ffx plugin method signature cannot contain self",
                 ))
             }
-            FnArg::Typed(PatType { ty, pat, .. }) => match ty.as_ref() {
+            FnArg::Typed(PatType { ty, pat, attrs, .. }) => match ty.as_ref() {
                 Path(TypePath { path, .. }) => {
                     if let Some(GeneratedProxyParts {
                         arg,
@@ -145,39 +150,54 @@ fn parse_arguments(
                         fut_res,
                         implementation,
                         testing,
-                    }) = generate_known_proxy(&pat, path)?
+                        ffx_attr,
+                    }) = generate_known_proxy(&pat, path, &attrs)?
                     {
                         inner_args.push(arg);
                         futures.push(fut);
                         future_results.push(fut_res);
                         proxies_to_generate.push(implementation);
                         test_fake_methods_to_generate.push(testing);
+                        match ffx_attr {
+                            Some(t) => writer_attributes.push(t),
+                            None => {}
+                        }
                     } else if let Some(GeneratedProxyParts {
                         arg,
                         fut,
                         fut_res,
                         implementation,
                         testing,
+                        ffx_attr,
                     }) = generate_mapped_proxy(proxies, &pat, path)?
                     {
+                        if extract_ffx_attribute_tokens(&attrs).is_some() {
+                            return Err(Error::new(arg.span(), ATTRIBUTE_ON_WRONG_PROXY_TYPE));
+                        }
                         inner_args.push(arg);
                         futures.push(fut);
                         future_results.push(fut_res);
                         proxies_to_generate.push(implementation);
                         test_fake_methods_to_generate.push(testing);
+                        assert!(ffx_attr.is_none());
                     } else if let Some(GeneratedProxyParts {
                         arg,
                         fut,
                         fut_res,
                         implementation,
                         testing,
+                        ffx_attr,
                     }) = generate_daemon_service_proxy(proxies, &pat, path)?
                     {
+                        if extract_ffx_attribute_tokens(&attrs).is_some() {
+                            return Err(Error::new(arg.span(), ATTRIBUTE_ON_WRONG_PROXY_TYPE));
+                        }
                         inner_args.push(arg);
                         futures.push(fut);
                         future_results.push(fut_res);
                         proxies_to_generate.push(implementation);
                         test_fake_methods_to_generate.push(testing);
+                        assert!(ffx_attr.is_none());
                     } else if let Some(command) = parse_argh_command(&pat) {
                         // This SHOULD be the argh command - and there should only be one.
                         if let Some(_) = cmd {
@@ -190,6 +210,9 @@ fn parse_arguments(
                                 ),
                             ));
                         } else {
+                            if extract_ffx_attribute_tokens(&attrs).is_some() {
+                                return Err(Error::new(arg.span(), ATTRIBUTE_ON_WRONG_PROXY_TYPE));
+                            }
                             let ident = command.ident.clone();
                             if command.mutability.is_some() {
                                 if let FnArg::Typed(p) = arg.clone() {
@@ -233,6 +256,7 @@ fn parse_arguments(
             future_results,
             proxies_to_generate,
             test_fake_methods_to_generate,
+            writer_attributes,
             cmd,
         })
     } else {
@@ -313,9 +337,21 @@ fn extract_proxy_type(proxy_type_path: &syn::Path) -> Result<ProxyWrapper<'_>, E
     }
 }
 
+fn extract_ffx_attribute_tokens(attrs: &Vec<syn::Attribute>) -> Option<&syn::Attribute> {
+    if !attrs.is_empty() {
+        for attr in attrs.iter() {
+            if attr.path.is_ident("ffx") {
+                return Some(attr);
+            }
+        }
+    }
+    None
+}
+
 fn generate_known_proxy(
     pattern_type: &Box<Pat>,
     path: &syn::Path,
+    attrs: &Vec<syn::Attribute>,
 ) -> Result<Option<GeneratedProxyParts>, Error> {
     let proxy_wrapper_type = extract_proxy_type(path)?;
     let proxy_type_path = proxy_wrapper_type.unwrap();
@@ -323,8 +359,12 @@ fn generate_known_proxy(
         Some(last) => last,
         None => return Err(Error::new(proxy_type_path.span(), UNKNOWN_PROXY_TYPE)),
     };
+    let ffx_attr = extract_ffx_attribute_tokens(attrs);
     for known_proxy in KNOWN_PROXIES.iter() {
         if proxy_type.ident == Ident::new(known_proxy.0, Span::call_site()) {
+            if ffx_attr.is_some() && known_proxy.0 != "Writer" {
+                return Err(Error::new(proxy_type.span(), ATTRIBUTE_ON_WRONG_PROXY_TYPE));
+            }
             if let Pat::Ident(pat_ident) = pattern_type.as_ref() {
                 let factory_name = Ident::new(known_proxy.1, Span::call_site());
                 let output_fut = Ident::new(&format!("{}_fut", factory_name), Span::call_site());
@@ -344,6 +384,7 @@ fn generate_known_proxy(
                     fut_res: output_fut_res,
                     implementation,
                     testing,
+                    ffx_attr: ffx_attr.cloned(),
                 }));
             }
         }
@@ -433,6 +474,7 @@ Please report it at http://fxbug.dev/new/ffx+User+Bug.",
                 fut_res: output_fut_res,
                 implementation,
                 testing,
+                ffx_attr: None,
             })
         }
         None
@@ -446,6 +488,7 @@ struct GeneratedProxyParts {
     fut_res: Ident,
     implementation: TokenStream,
     testing: TokenStream,
+    ffx_attr: Option<syn::Attribute>,
 }
 
 fn generate_mapped_proxy(
@@ -484,6 +527,7 @@ fn generate_mapped_proxy(
                 fut_res: output_fut_res,
                 implementation,
                 testing,
+                ffx_attr: None,
             }));
         }
     }
@@ -544,6 +588,55 @@ Plugin developers: you can use `ffx component select '{}'` to see which services
     }
 }
 
+fn remove_all_ffx_attrs(mut input: ItemFn) -> ItemFn {
+    for arg in input.sig.inputs.iter_mut() {
+        if let FnArg::Typed(PatType { attrs, .. }) = arg {
+            if !attrs.is_empty() {
+                *attrs = attrs
+                    .iter_mut()
+                    .filter(|attr| !attr.path.is_ident("ffx"))
+                    .map(|x| &*x)
+                    .cloned()
+                    .collect::<Vec<_>>();
+            }
+        }
+    }
+
+    input
+}
+
+mod kw {
+    syn::custom_keyword!(machine);
+}
+
+#[derive(Debug)]
+enum WriterArgument {
+    Machine { _machine_token: kw::machine, _eq_token: syn::Token![=], ty: syn::Type },
+}
+
+impl syn::parse::Parse for WriterArgument {
+    fn parse(input: ParseStream<'_>) -> Result<Self, Error> {
+        let lookahead = input.lookahead1();
+        if lookahead.peek(kw::machine) {
+            Ok(WriterArgument::Machine {
+                _machine_token: input.parse::<kw::machine>()?,
+                _eq_token: input.parse()?,
+                ty: input.parse()?,
+            })
+        } else {
+            Err(lookahead.error())
+        }
+    }
+}
+
+impl ToTokens for WriterArgument {
+    fn to_tokens(&self, tokens: &mut TokenStream) {
+        match self {
+            WriterArgument::Machine { ty, .. } => ty.to_tokens(tokens),
+        }
+    }
+}
+
 pub fn ffx_plugin(input: ItemFn, proxies: ProxyMap) -> Result<TokenStream, Error> {
     let method = input.sig.ident.clone();
     let asyncness = if let Some(_) = input.sig.asyncness {
@@ -559,12 +652,29 @@ pub fn ffx_plugin(input: ItemFn, proxies: ProxyMap) -> Result<TokenStream, Error
         future_results,
         proxies_to_generate,
         test_fake_methods_to_generate,
+        writer_attributes,
         cmd,
     } = parse_arguments(input.sig.inputs.clone(), &proxies)?;
 
     let mut outer_args: Punctuated<_, Token!(,)> = Punctuated::new();
     outer_args.push(quote! {injector: I});
     outer_args.push(quote! {#cmd});
+
+    let writer_attributes: Result<Vec<WriterArgument>, Error> =
+        writer_attributes.into_iter().map(|t| t.parse_args::<WriterArgument>()).collect();
+    let mut writer_attributes = writer_attributes?;
+    let (writers, is_supported) = if writer_attributes.is_empty() {
+        (quote! { String::from("Not supported") }, quote! { false })
+    } else {
+        assert!(writer_attributes.len() == 1);
+        let writer_attribute = writer_attributes.swap_remove(0);
+        (
+            quote! {
+                stringify!(#writer_attribute).to_owned()
+            },
+            quote! { true },
+        )
+    };
 
     let implementation = if proxies_to_generate.len() > 0 {
         quote! {
@@ -595,6 +705,8 @@ pub fn ffx_plugin(input: ItemFn, proxies: ProxyMap) -> Result<TokenStream, Error
         implementation
     };
 
+    let input = remove_all_ffx_attrs(input);
+
     let res = quote! {
         #input
         pub async fn ffx_plugin_impl<I: ffx_core::Injector>(#outer_args) #return_type {
@@ -602,6 +714,14 @@ pub fn ffx_plugin(input: ItemFn, proxies: ProxyMap) -> Result<TokenStream, Error
         }
 
         #(#test_fake_methods_to_generate)*
+
+        pub fn ffx_plugin_writer_output() -> String {
+            #writers
+        }
+
+        pub fn ffx_plugin_is_machine_supported<T>(__cmd: T) -> bool {
+            #is_supported
+        }
     };
     Ok(res)
 }
@@ -1254,8 +1374,8 @@ mod test {
         );
         let param = input.sig.inputs[0].clone();
         if let Some(GeneratedProxyParts { arg, fut, .. }) = match param {
-            FnArg::Typed(PatType { ty, pat, .. }) => match ty.as_ref() {
-                Path(TypePath { path, .. }) => generate_known_proxy(&pat, path)?,
+            FnArg::Typed(PatType { ty, pat, attrs, .. }) => match ty.as_ref() {
+                Path(TypePath { path, .. }) => generate_known_proxy(&pat, path, &attrs)?,
                 _ => return Err(Error::new(Span::call_site(), "unexpected param")),
             },
             _ => return Err(Error::new(Span::call_site(), "unexpected param")),
@@ -1275,8 +1395,8 @@ mod test {
         );
         let param = input.sig.inputs[0].clone();
         if let Some(GeneratedProxyParts { arg, fut, .. }) = match param {
-            FnArg::Typed(PatType { ty, pat, .. }) => match ty.as_ref() {
-                Path(TypePath { path, .. }) => generate_known_proxy(&pat, path)?,
+            FnArg::Typed(PatType { ty, pat, attrs, .. }) => match ty.as_ref() {
+                Path(TypePath { path, .. }) => generate_known_proxy(&pat, path, &attrs)?,
                 _ => return Err(Error::new(Span::call_site(), "unexpected param")),
             },
             _ => return Err(Error::new(Span::call_site(), "unexpected param")),
@@ -1296,8 +1416,8 @@ mod test {
         );
         let param = input.sig.inputs[0].clone();
         if let Some(GeneratedProxyParts { arg, fut, .. }) = match param {
-            FnArg::Typed(PatType { ty, pat, .. }) => match ty.as_ref() {
-                Path(TypePath { path, .. }) => generate_known_proxy(&pat, path)?,
+            FnArg::Typed(PatType { ty, pat, attrs, .. }) => match ty.as_ref() {
+                Path(TypePath { path, .. }) => generate_known_proxy(&pat, path, &attrs)?,
                 _ => return Err(Error::new(Span::call_site(), "unexpected param")),
             },
             _ => return Err(Error::new(Span::call_site(), "unexpected param")),
@@ -1318,8 +1438,8 @@ mod test {
         );
         let param = input.sig.inputs[0].clone();
         let result = match param {
-            FnArg::Typed(PatType { ty, pat, .. }) => match ty.as_ref() {
-                Path(TypePath { path, .. }) => generate_known_proxy(&pat, path)?,
+            FnArg::Typed(PatType { ty, pat, attrs, .. }) => match ty.as_ref() {
+                Path(TypePath { path, .. }) => generate_known_proxy(&pat, path, &attrs)?,
                 _ => return Err(Error::new(Span::call_site(), "unexpected param")),
             },
             _ => return Err(Error::new(Span::call_site(), "unexpected param")),
@@ -1483,6 +1603,63 @@ mod test {
         let proxies: ProxyMap = parse_quote! { TestProxy = "daemon::service" };
         let input: ItemFn = parse_quote! {
                 fn test_fn(test_param: Result<TestProxy>, cmd: ResultCommand) -> Result<()> {}
+        };
+        ffx_plugin(input, proxies).map(drop)
+    }
+
+    #[test]
+    fn test_ffx_writer_attribute_fails_if_on_command() -> Result<(), Error> {
+        let proxies = Default::default();
+        let input: ItemFn = parse_quote! {
+            pub async fn test_fn(
+                #[ffx(machine=Vec<String>)]
+                cmd: OptionCommand,
+            ) -> Result<()> {}
+        };
+        assert!(ffx_plugin(input, proxies).map(drop).is_err());
+        Ok(())
+    }
+
+    #[test]
+    fn test_ffx_writer_attribute_fails_if_on_service_proxy() -> Result<(), Error> {
+        let proxies: ProxyMap = parse_quote! { TestProxy = "daemon::service" };
+        let input: ItemFn = parse_quote! {
+            pub async fn test_fn(
+                #[ffx(machine=Vec<String>)]
+                test_param: TestProxy,
+                writer: Writer,
+                cmd: OptionCommand,
+            ) -> Result<()> {}
+        };
+        assert!(ffx_plugin(input, proxies).map(drop).is_err());
+        Ok(())
+    }
+
+    #[test]
+    fn test_ffx_writer_attribute_fails_if_on_known_nonwriter_proxy() -> Result<(), Error> {
+        let proxies: ProxyMap = parse_quote! { TestProxy = "daemon::service" };
+        let input: ItemFn = parse_quote! {
+            pub async fn test_fn(
+                #[ffx(machine=Vec<String>)]
+                remote: RemoteControlProxy,
+                writer: Writer,
+                cmd: OptionCommand,
+            ) -> Result<()> {}
+        };
+        assert!(ffx_plugin(input, proxies).map(drop).is_err());
+        Ok(())
+    }
+
+    #[test]
+    fn test_ffx_writer_attribute_works_if_on_writer() -> Result<(), Error> {
+        let proxies: ProxyMap = parse_quote! { TestProxy = "daemon::service" };
+        let input: ItemFn = parse_quote! {
+            pub async fn test_fn(
+                remote: RemoteControlProxy,
+                #[ffx(machine = fidl_fuchsia_net::FakeType<String>)]
+                writer: Writer,
+                cmd: OptionCommand,
+            ) -> Result<()> {}
         };
         ffx_plugin(input, proxies).map(drop)
     }
