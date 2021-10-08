@@ -366,7 +366,7 @@ impl Port {
     /// syscall.
     pub fn cancel<H>(&self, source: &H, key: u64) -> Result<(), Status>
     where
-        H: HandleBased,
+        H: AsHandleRef,
     {
         let status = unsafe { sys::zx_port_cancel(self.raw_handle(), source.raw_handle(), key) };
         ok(status)
