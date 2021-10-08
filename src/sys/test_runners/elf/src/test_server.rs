@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 use {
+    crate::launcher::ComponentLauncher,
     async_trait::async_trait,
     fidl_fuchsia_test::{
         self as ftest, Invocation, Result_ as TestResult, RunListenerProxy, Status,
@@ -17,23 +18,25 @@ use {
     std::sync::{Arc, Weak},
     test_runners_lib::{
         cases::TestCaseInfo,
-        elf::{
-            Component, ComponentError, EnumeratedTestCases, FidlError, KernelError, SuiteServer,
-        },
+        elf::{Component, EnumeratedTestCases, FidlError, KernelError, SuiteServer},
         errors::*,
-        launch,
-        logs::{LoggerStream, SocketLogWriter},
+        logs::SocketLogWriter,
     },
 };
 
 /// Implements `fuchsia.test.Suite` and runs provided test.
 #[derive(Default)]
-pub struct TestServer {}
+pub struct TestServer<T: ComponentLauncher> {
+    pub launcher: T,
+}
 
 static PARALLEL_DEFAULT: u16 = 1;
 
 #[async_trait]
-impl SuiteServer for TestServer {
+impl<T: 'static> SuiteServer for TestServer<T>
+where
+    T: ComponentLauncher,
+{
     /// Launches test process and gets test list out. Returns list of tests names in the format
     /// defined by gtests, i.e FOO.Bar.
     /// It only runs enumeration logic once, caches and returns the same result back on subsequent
@@ -91,9 +94,12 @@ impl SuiteServer for TestServer {
     }
 }
 
-impl TestServer {
-    pub fn new() -> Self {
-        Self {}
+impl<T: 'static> TestServer<T>
+where
+    T: ComponentLauncher,
+{
+    pub fn new(launcher_: T) -> Self {
+        Self { launcher: launcher_ }
     }
 
     pub fn validate_args(_args: &Vec<String>) -> Result<(), ArgumentError> {
@@ -147,7 +153,7 @@ impl TestServer {
 
         // Launch test program
         let (process, _job, stdout_logger, stderr_logger) =
-            launch_component_process::<RunTestError>(&component, args).await?;
+            self.launcher.launch_process(&component, args).await?;
 
         // Drain stdout
         let stdout_fut = stdout_logger.buffer_and_drain(&mut test_stdout);
@@ -174,32 +180,4 @@ impl TestServer {
             .map_err(RunTestError::SendFinish)?;
         Ok(())
     }
-}
-
-/// Convenience wrapper around [`launch::launch_process`].
-async fn launch_component_process<E>(
-    component: &Component,
-    args: Vec<String>,
-) -> Result<(zx::Process, launch::ScopedJob, LoggerStream, LoggerStream), E>
-where
-    E: From<NamespaceError> + From<launch::LaunchError> + From<ComponentError>,
-{
-    let (client_end, loader) =
-        fidl::endpoints::create_endpoints().map_err(launch::LaunchError::Fidl)?;
-    component.loader_service(loader);
-    let executable_vmo = Some(component.executable_vmo()?);
-
-    Ok(launch::launch_process_with_separate_std_handles(launch::LaunchProcessArgs {
-        bin_path: &component.binary,
-        process_name: &component.name,
-        job: Some(component.job.create_child_job().map_err(KernelError::CreateJob).unwrap()),
-        ns: component.ns.clone(),
-        args: Some(args),
-        name_infos: None,
-        environs: component.environ.clone(),
-        handle_infos: None,
-        loader_proxy_chan: Some(client_end.into_channel()),
-        executable_vmo,
-    })
-    .await?)
 }
