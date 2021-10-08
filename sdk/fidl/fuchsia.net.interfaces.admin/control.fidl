@@ -42,12 +42,12 @@ protocol Control {
     /// Removes an address from the interface.
     ///
     /// + request `address` the address to remove.
-    /// - response `removed` `true` iff `address` was attached to the interface
-    /// before this call completed.
+    /// - response `did_remove` `true` iff `address` was removed from the
+    ///  interface as a consequence of this call.
     RemoveAddress(struct {
         address fuchsia.net.InterfaceAddress;
     }) -> (struct {
-        removed bool;
+        did_remove bool;
     }) error flexible enum {
         // TODO(https://fxbug.dev/85667): This should be an empty enum.
         RESERVED = 0;

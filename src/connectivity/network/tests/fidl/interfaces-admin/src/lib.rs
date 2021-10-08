@@ -130,12 +130,12 @@ async fn add_address_errors() {
     {
         let mut address =
             fidl_fuchsia_net::InterfaceAddress::Ipv4(fidl_ip_v4_with_prefix!("1.1.1.1/32"));
-        let removed = control
+        let did_remove = control
             .remove_address(&mut address)
             .await
             .expect("FIDL error calling fuchsia.net.interfaces.admin/Control.RemoveAddress")
             .expect("RemoveAddress failed");
-        assert!(!removed);
+        assert!(!did_remove);
     }
 
     let (v4_count, v6_count) = futures::stream::iter(addresses).fold((0, 0), |(v4, v6), &fidl_fuchsia_net_interfaces_ext::Address {
@@ -278,12 +278,12 @@ async fn add_address_removal<E: netemul::Endpoint>(name: &str) {
             .await
             .expect("add address failed unexpectedly");
 
-        let removed = control
+        let did_remove = control
             .remove_address(&mut address)
             .await
             .expect("FIDL error calling Control.RemoveAddress")
             .expect("error calling Control.RemoveAddress");
-        assert!(removed);
+        assert!(did_remove);
 
         let fidl_fuchsia_net_interfaces_admin::AddressStateProviderEvent::OnAddressRemoved {
             error: reason,

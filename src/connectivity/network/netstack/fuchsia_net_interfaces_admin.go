@@ -434,9 +434,9 @@ func (ci *adminControlImpl) RemoveAddress(_ fidl.Context, address net.InterfaceA
 	protocolAddr := interfaceAddressToProtocolAddress(address)
 	switch zxErr := ci.ns.removeInterfaceAddress(ci.nicid, protocolAddr, false /* removeRoute */); zxErr {
 	case zx.ErrOk:
-		return admin.ControlRemoveAddressResultWithResponse(admin.ControlRemoveAddressResponse{Removed: true}), nil
+		return admin.ControlRemoveAddressResultWithResponse(admin.ControlRemoveAddressResponse{DidRemove: true}), nil
 	case zx.ErrNotFound:
-		return admin.ControlRemoveAddressResultWithResponse(admin.ControlRemoveAddressResponse{Removed: false}), nil
+		return admin.ControlRemoveAddressResultWithResponse(admin.ControlRemoveAddressResponse{DidRemove: false}), nil
 	default:
 		panic(fmt.Sprintf("removeInterfaceAddress(%d, %v, false) = %s", ci.nicid, protocolAddr, zxErr))
 	}
