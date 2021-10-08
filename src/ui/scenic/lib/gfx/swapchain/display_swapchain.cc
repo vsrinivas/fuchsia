@@ -328,9 +328,9 @@ bool DisplaySwapchain::SetDisplayColorConversion(
   if (client_color_conversion_required) {
     // Clear config by calling |CheckConfig| once more with "discard" set to true.
     display_controller->CheckConfig(/*discard=*/true, &result, &ops);
-    // TODO (24591): Implement scenic software fallback for color correction.
+    // TODO(fxbug.dev/24591): Implement scenic software fallback for color correction.
     FX_LOGS(ERROR) << "Software fallback for color conversion not implemented.";
-    return false;
+    return true;
   }
 
   return true;
