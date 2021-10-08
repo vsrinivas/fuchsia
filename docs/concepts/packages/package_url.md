@@ -2,8 +2,11 @@
 
 A Fuchsia package URL looks like the following:
 
+Note: You can use the code block in [Build a package URL](#build-package-url)
+to create a package URL to then copy and paste.
+
 ```
-fuchsia-pkg://{{ '<var>' }}repository{{ '</var>' }}/{{ '<var>' }}package-name{{ '</var>' }}?hash={{ '<var>' }}package-hash{{ '</var>' }}#{{ '<var>' }}resource-path{{ '</var>' }}
+fuchsia-pkg://<repository>/<package-name>?hash=<package-hash>#<resource-path>
 ```
 
 It consists of the following components, which form the full package URL:
@@ -182,6 +185,14 @@ fuchsia-pkg://<repository>/<package-name>?hash=<package-hash>{{ '<strong>' }}#<r
 * `fuchsia-pkg://fuchsia.com/fuchsia-shell-utils{{ '<strong>' }}#bin/ls{{ '</strong>' }}`
 * `fuchsia-pkg://google.com/chrome{{ '<strong>' }}#meta/webview.component{{ '</strong>' }}`
 * `fuchsia-pkg://google.com/chrome{{ '<strong>' }}#lib/mylibrary.so{{ '</strong>' }}`
+
+## Build a package URL {#build-package-url}
+
+You can use the editable variables to build your package URL and then copy it:
+
+```
+fuchsia-pkg://{{ '<var>' }}repository{{ '</var>' }}/{{ '<var>' }}package-name{{ '</var>' }}?hash={{ '<var>' }}package-hash{{ '</var>' }}#{{ '<var>' }}resource-path{{ '</var>' }}
+```
 
 <!--xrefs-->
 [TUF Specification]: https://github.com/theupdateframework/specification/blob/HEAD/tuf-spec.md#4-document-formats
