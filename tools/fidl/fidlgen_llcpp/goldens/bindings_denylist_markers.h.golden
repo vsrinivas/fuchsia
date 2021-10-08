@@ -10,6 +10,11 @@ class OnlyLibfuzzerAndDeps final {
  public:
   class LibfuzzerNeedsNonemptyProtocol final {
     LibfuzzerNeedsNonemptyProtocol() = delete;
+
+   public:
+    using Protocol = ::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps;
+    static constexpr bool kHasRequest = true;
+    static constexpr bool kHasResponse = true;
   };
 };
 

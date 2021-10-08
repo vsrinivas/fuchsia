@@ -10,6 +10,11 @@ class Top final {
  public:
   class GetFoo final {
     GetFoo() = delete;
+
+   public:
+    using Protocol = ::fidl_test_transitivedependenciescompose::Top;
+    static constexpr bool kHasRequest = true;
+    static constexpr bool kHasResponse = true;
   };
 };
 }  // namespace fidl_test_transitivedependenciescompose

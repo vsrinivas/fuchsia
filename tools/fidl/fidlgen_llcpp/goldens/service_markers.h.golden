@@ -10,6 +10,11 @@ class SecondProtocol final {
  public:
   class MethodOnSecond final {
     MethodOnSecond() = delete;
+
+   public:
+    using Protocol = ::fidl_test_service::SecondProtocol;
+    static constexpr bool kHasRequest = true;
+    static constexpr bool kHasResponse = false;
   };
 };
 
@@ -19,6 +24,11 @@ class FirstProtocol final {
  public:
   class MethodOnFirst final {
     MethodOnFirst() = delete;
+
+   public:
+    using Protocol = ::fidl_test_service::FirstProtocol;
+    static constexpr bool kHasRequest = true;
+    static constexpr bool kHasResponse = false;
   };
 };
 }  // namespace fidl_test_service

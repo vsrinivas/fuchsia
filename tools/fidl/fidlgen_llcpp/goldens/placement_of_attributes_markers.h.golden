@@ -10,6 +10,11 @@ class ExampleProtocol final {
  public:
   class Method final {
     Method() = delete;
+
+   public:
+    using Protocol = ::fidl_test_placementofattributes::ExampleProtocol;
+    static constexpr bool kHasRequest = true;
+    static constexpr bool kHasResponse = false;
   };
 };
 }  // namespace fidl_test_placementofattributes

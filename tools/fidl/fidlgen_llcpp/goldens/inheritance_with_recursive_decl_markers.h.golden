@@ -10,6 +10,11 @@ class Parent final {
  public:
   class First final {
     First() = delete;
+
+   public:
+    using Protocol = ::fidl_test_inheritancewithrecursivedecl::Parent;
+    static constexpr bool kHasRequest = true;
+    static constexpr bool kHasResponse = false;
   };
 };
 
@@ -19,9 +24,19 @@ class Child final {
  public:
   class First final {
     First() = delete;
+
+   public:
+    using Protocol = ::fidl_test_inheritancewithrecursivedecl::Child;
+    static constexpr bool kHasRequest = true;
+    static constexpr bool kHasResponse = false;
   };
   class Second final {
     Second() = delete;
+
+   public:
+    using Protocol = ::fidl_test_inheritancewithrecursivedecl::Child;
+    static constexpr bool kHasRequest = true;
+    static constexpr bool kHasResponse = false;
   };
 };
 }  // namespace fidl_test_inheritancewithrecursivedecl

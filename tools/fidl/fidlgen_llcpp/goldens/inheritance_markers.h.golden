@@ -10,6 +10,11 @@ class Super final {
  public:
   class Foo final {
     Foo() = delete;
+
+   public:
+    using Protocol = ::fidl_test_inheritance::Super;
+    static constexpr bool kHasRequest = true;
+    static constexpr bool kHasResponse = true;
   };
 };
 
@@ -19,6 +24,11 @@ class Sub final {
  public:
   class Foo final {
     Foo() = delete;
+
+   public:
+    using Protocol = ::fidl_test_inheritance::Sub;
+    static constexpr bool kHasRequest = true;
+    static constexpr bool kHasResponse = true;
   };
 };
 }  // namespace fidl_test_inheritance

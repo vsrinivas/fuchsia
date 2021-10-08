@@ -10,15 +10,35 @@ class Parent final {
  public:
   class GetChild final {
     GetChild() = delete;
+
+   public:
+    using Protocol = ::fidl_test_protocolrequest::Parent;
+    static constexpr bool kHasRequest = true;
+    static constexpr bool kHasResponse = true;
   };
   class GetChildRequest final {
     GetChildRequest() = delete;
+
+   public:
+    using Protocol = ::fidl_test_protocolrequest::Parent;
+    static constexpr bool kHasRequest = true;
+    static constexpr bool kHasResponse = true;
   };
   class TakeChild final {
     TakeChild() = delete;
+
+   public:
+    using Protocol = ::fidl_test_protocolrequest::Parent;
+    static constexpr bool kHasRequest = true;
+    static constexpr bool kHasResponse = false;
   };
   class TakeChildRequest final {
     TakeChildRequest() = delete;
+
+   public:
+    using Protocol = ::fidl_test_protocolrequest::Parent;
+    static constexpr bool kHasRequest = true;
+    static constexpr bool kHasResponse = false;
   };
 };
 

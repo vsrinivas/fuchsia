@@ -10,6 +10,11 @@ class Example final {
  public:
   class Foo final {
     Foo() = delete;
+
+   public:
+    using Protocol = ::fidl_test_error::Example;
+    static constexpr bool kHasRequest = true;
+    static constexpr bool kHasResponse = true;
   };
 };
 }  // namespace fidl_test_error

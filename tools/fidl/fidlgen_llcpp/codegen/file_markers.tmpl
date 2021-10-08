@@ -16,15 +16,20 @@ fidl/{{ .LibraryDots }}/cpp/markers.h
   #pragma once
 
   {{ range .Protocols }}
+    {{- $protocol := . }}
     {{ EnsureNamespace . }}
     {{ .Docs }}
     class {{ .Name }} final {
       {{ .Name }}() = delete;
-    public:
+     public:
       {{- range .Methods }}
         {{- .Docs }}
         class {{ .Marker.Self }} final {
           {{ .Marker.Self }}() = delete;
+         public:
+          using Protocol = {{ $protocol }};
+          static constexpr bool kHasRequest = {{ .HasRequest }};
+          static constexpr bool kHasResponse = {{ .HasResponse }};
         };
       {{- end }}
     };

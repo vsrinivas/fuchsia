@@ -10,12 +10,27 @@ class EmptyProtocol final {
  public:
   class Send final {
     Send() = delete;
+
+   public:
+    using Protocol = ::fidl_test_emptystruct::EmptyProtocol;
+    static constexpr bool kHasRequest = true;
+    static constexpr bool kHasResponse = false;
   };
   class Receive final {
     Receive() = delete;
+
+   public:
+    using Protocol = ::fidl_test_emptystruct::EmptyProtocol;
+    static constexpr bool kHasRequest = false;
+    static constexpr bool kHasResponse = true;
   };
   class SendAndReceive final {
     SendAndReceive() = delete;
+
+   public:
+    using Protocol = ::fidl_test_emptystruct::EmptyProtocol;
+    static constexpr bool kHasRequest = true;
+    static constexpr bool kHasResponse = true;
   };
 };
 }  // namespace fidl_test_emptystruct

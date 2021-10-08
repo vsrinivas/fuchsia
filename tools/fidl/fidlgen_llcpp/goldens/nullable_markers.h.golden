@@ -10,6 +10,11 @@ class SimpleProtocol final {
  public:
   class Add final {
     Add() = delete;
+
+   public:
+    using Protocol = ::fidl_test_nullable::SimpleProtocol;
+    static constexpr bool kHasRequest = true;
+    static constexpr bool kHasResponse = true;
   };
 };
 }  // namespace fidl_test_nullable

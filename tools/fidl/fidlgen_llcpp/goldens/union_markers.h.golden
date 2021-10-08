@@ -10,9 +10,19 @@ class TestProtocol final {
  public:
   class StrictXUnionHenceResponseMayBeStackAllocated final {
     StrictXUnionHenceResponseMayBeStackAllocated() = delete;
+
+   public:
+    using Protocol = ::fidl_test_union::TestProtocol;
+    static constexpr bool kHasRequest = true;
+    static constexpr bool kHasResponse = true;
   };
   class FlexibleXUnionHenceResponseMustBeHeapAllocated final {
     FlexibleXUnionHenceResponseMustBeHeapAllocated() = delete;
+
+   public:
+    using Protocol = ::fidl_test_union::TestProtocol;
+    static constexpr bool kHasRequest = true;
+    static constexpr bool kHasResponse = true;
   };
 };
 }  // namespace fidl_test_union

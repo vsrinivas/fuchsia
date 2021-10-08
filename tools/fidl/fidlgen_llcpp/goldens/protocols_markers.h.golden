@@ -10,12 +10,27 @@ class HandleRightsProtocol final {
  public:
   class NoResponseMethod final {
     NoResponseMethod() = delete;
+
+   public:
+    using Protocol = ::fidl_test_protocols::HandleRightsProtocol;
+    static constexpr bool kHasRequest = true;
+    static constexpr bool kHasResponse = false;
   };
   class ResponseMethod final {
     ResponseMethod() = delete;
+
+   public:
+    using Protocol = ::fidl_test_protocols::HandleRightsProtocol;
+    static constexpr bool kHasRequest = true;
+    static constexpr bool kHasResponse = true;
   };
   class AnEvent final {
     AnEvent() = delete;
+
+   public:
+    using Protocol = ::fidl_test_protocols::HandleRightsProtocol;
+    static constexpr bool kHasRequest = false;
+    static constexpr bool kHasResponse = true;
   };
 };
 
@@ -25,27 +40,67 @@ class WithAndWithoutRequestResponse final {
  public:
   class NoRequestNoResponse final {
     NoRequestNoResponse() = delete;
+
+   public:
+    using Protocol = ::fidl_test_protocols::WithAndWithoutRequestResponse;
+    static constexpr bool kHasRequest = true;
+    static constexpr bool kHasResponse = false;
   };
   class NoRequestEmptyResponse final {
     NoRequestEmptyResponse() = delete;
+
+   public:
+    using Protocol = ::fidl_test_protocols::WithAndWithoutRequestResponse;
+    static constexpr bool kHasRequest = true;
+    static constexpr bool kHasResponse = true;
   };
   class NoRequestWithResponse final {
     NoRequestWithResponse() = delete;
+
+   public:
+    using Protocol = ::fidl_test_protocols::WithAndWithoutRequestResponse;
+    static constexpr bool kHasRequest = true;
+    static constexpr bool kHasResponse = true;
   };
   class WithRequestNoResponse final {
     WithRequestNoResponse() = delete;
+
+   public:
+    using Protocol = ::fidl_test_protocols::WithAndWithoutRequestResponse;
+    static constexpr bool kHasRequest = true;
+    static constexpr bool kHasResponse = false;
   };
   class WithRequestEmptyResponse final {
     WithRequestEmptyResponse() = delete;
+
+   public:
+    using Protocol = ::fidl_test_protocols::WithAndWithoutRequestResponse;
+    static constexpr bool kHasRequest = true;
+    static constexpr bool kHasResponse = true;
   };
   class WithRequestWithResponse final {
     WithRequestWithResponse() = delete;
+
+   public:
+    using Protocol = ::fidl_test_protocols::WithAndWithoutRequestResponse;
+    static constexpr bool kHasRequest = true;
+    static constexpr bool kHasResponse = true;
   };
   class OnEmptyResponse final {
     OnEmptyResponse() = delete;
+
+   public:
+    using Protocol = ::fidl_test_protocols::WithAndWithoutRequestResponse;
+    static constexpr bool kHasRequest = false;
+    static constexpr bool kHasResponse = true;
   };
   class OnWithResponse final {
     OnWithResponse() = delete;
+
+   public:
+    using Protocol = ::fidl_test_protocols::WithAndWithoutRequestResponse;
+    static constexpr bool kHasRequest = false;
+    static constexpr bool kHasResponse = true;
   };
 };
 
@@ -55,12 +110,27 @@ class Transitional final {
  public:
   class Request final {
     Request() = delete;
+
+   public:
+    using Protocol = ::fidl_test_protocols::Transitional;
+    static constexpr bool kHasRequest = true;
+    static constexpr bool kHasResponse = true;
   };
   class OneWay final {
     OneWay() = delete;
+
+   public:
+    using Protocol = ::fidl_test_protocols::Transitional;
+    static constexpr bool kHasRequest = true;
+    static constexpr bool kHasResponse = false;
   };
   class Event final {
     Event() = delete;
+
+   public:
+    using Protocol = ::fidl_test_protocols::Transitional;
+    static constexpr bool kHasRequest = false;
+    static constexpr bool kHasResponse = true;
   };
 };
 
@@ -70,6 +140,11 @@ class MethodWithUnion final {
  public:
   class UnionMethod final {
     UnionMethod() = delete;
+
+   public:
+    using Protocol = ::fidl_test_protocols::MethodWithUnion;
+    static constexpr bool kHasRequest = true;
+    static constexpr bool kHasResponse = false;
   };
 };
 
@@ -79,6 +154,11 @@ class SyscallProtocol final {
  public:
   class MethodC final {
     MethodC() = delete;
+
+   public:
+    using Protocol = ::fidl_test_protocols::SyscallProtocol;
+    static constexpr bool kHasRequest = true;
+    static constexpr bool kHasResponse = false;
   };
 };
 
@@ -88,12 +168,27 @@ class WithProtocolEnds final {
  public:
   class ClientEnds final {
     ClientEnds() = delete;
+
+   public:
+    using Protocol = ::fidl_test_protocols::WithProtocolEnds;
+    static constexpr bool kHasRequest = true;
+    static constexpr bool kHasResponse = true;
   };
   class ServerEnds final {
     ServerEnds() = delete;
+
+   public:
+    using Protocol = ::fidl_test_protocols::WithProtocolEnds;
+    static constexpr bool kHasRequest = true;
+    static constexpr bool kHasResponse = true;
   };
   class StructContainingEnds final {
     StructContainingEnds() = delete;
+
+   public:
+    using Protocol = ::fidl_test_protocols::WithProtocolEnds;
+    static constexpr bool kHasRequest = true;
+    static constexpr bool kHasResponse = true;
   };
 };
 
@@ -103,6 +198,11 @@ class ManyParameters final {
  public:
   class Fifteen final {
     Fifteen() = delete;
+
+   public:
+    using Protocol = ::fidl_test_protocols::ManyParameters;
+    static constexpr bool kHasRequest = true;
+    static constexpr bool kHasResponse = false;
   };
 };
 
@@ -112,15 +212,35 @@ class WithErrorSyntax final {
  public:
   class ResponseAsStruct final {
     ResponseAsStruct() = delete;
+
+   public:
+    using Protocol = ::fidl_test_protocols::WithErrorSyntax;
+    static constexpr bool kHasRequest = true;
+    static constexpr bool kHasResponse = true;
   };
   class ErrorAsPrimitive final {
     ErrorAsPrimitive() = delete;
+
+   public:
+    using Protocol = ::fidl_test_protocols::WithErrorSyntax;
+    static constexpr bool kHasRequest = true;
+    static constexpr bool kHasResponse = true;
   };
   class ErrorAsEnum final {
     ErrorAsEnum() = delete;
+
+   public:
+    using Protocol = ::fidl_test_protocols::WithErrorSyntax;
+    static constexpr bool kHasRequest = true;
+    static constexpr bool kHasResponse = true;
   };
   class HandleInResult final {
     HandleInResult() = delete;
+
+   public:
+    using Protocol = ::fidl_test_protocols::WithErrorSyntax;
+    static constexpr bool kHasRequest = true;
+    static constexpr bool kHasResponse = true;
   };
 };
 
@@ -130,6 +250,11 @@ class DiscoverableProtocol final {
  public:
   class Method final {
     Method() = delete;
+
+   public:
+    using Protocol = ::fidl_test_protocols::DiscoverableProtocol;
+    static constexpr bool kHasRequest = true;
+    static constexpr bool kHasResponse = false;
   };
 };
 
@@ -139,18 +264,43 @@ class ChannelProtocol final {
  public:
   class MethodA final {
     MethodA() = delete;
+
+   public:
+    using Protocol = ::fidl_test_protocols::ChannelProtocol;
+    static constexpr bool kHasRequest = true;
+    static constexpr bool kHasResponse = false;
   };
   class EventA final {
     EventA() = delete;
+
+   public:
+    using Protocol = ::fidl_test_protocols::ChannelProtocol;
+    static constexpr bool kHasRequest = false;
+    static constexpr bool kHasResponse = true;
   };
   class MethodB final {
     MethodB() = delete;
+
+   public:
+    using Protocol = ::fidl_test_protocols::ChannelProtocol;
+    static constexpr bool kHasRequest = true;
+    static constexpr bool kHasResponse = true;
   };
   class TakeHandle final {
     TakeHandle() = delete;
+
+   public:
+    using Protocol = ::fidl_test_protocols::ChannelProtocol;
+    static constexpr bool kHasRequest = true;
+    static constexpr bool kHasResponse = true;
   };
   class MutateSocket final {
     MutateSocket() = delete;
+
+   public:
+    using Protocol = ::fidl_test_protocols::ChannelProtocol;
+    static constexpr bool kHasRequest = true;
+    static constexpr bool kHasResponse = true;
   };
 };
 }  // namespace fidl_test_protocols
