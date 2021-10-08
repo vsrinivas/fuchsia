@@ -69,7 +69,9 @@ class FidlBoundVirtualKeyboardCoordinator
   explicit FidlBoundVirtualKeyboardCoordinator(sys::ComponentContext* component_context);
   ~FidlBoundVirtualKeyboardCoordinator() override;
 
-  fxl::WeakPtr<VirtualKeyboardCoordinator> GetWeakPtr() { return weak_ptr_factory_.GetWeakPtr(); }
+  fxl::WeakPtr<FidlBoundVirtualKeyboardCoordinator> GetWeakPtr() {
+    return weak_ptr_factory_.GetWeakPtr();
+  }
 
   // |VirtualKeyboardCoordinator|
   void NotifyVisibilityChange(
@@ -104,6 +106,17 @@ class FidlBoundVirtualKeyboardCoordinator
   // the provided status as the epitaph.
   void HandleManagerBindingError(zx_status_t);
 
+  // Applies the `KeyboardConfig` for `focused_view_koid_` in
+  // `view_koid_to_pending_manager_config_`, if
+  // a) such a `KeyboardConfig` exists, AND
+  // b) a `fuchsia.input.virtualkeyboard.Manager` is bound.
+  //
+  // Also clears the entry for `focused_view_koid_` in the map,
+  // if it exists.
+  //
+  // Returns the KOID of the View whose request was applied, if any.
+  std::optional<zx_koid_t> ApplyFocusedRequest();
+
   fidl::BindingSet<fuchsia::input::virtualkeyboard::ControllerCreator> creator_bindings_;
   fidl::BindingSet<fuchsia::input::virtualkeyboard::Controller,
                    std::unique_ptr<VirtualKeyboardController>>
@@ -113,16 +126,18 @@ class FidlBoundVirtualKeyboardCoordinator
                               std::unique_ptr<VirtualKeyboardManager>>>
       manager_binding_;
 
-  // The configuration to request of the new VirtualKeyboardManager.
+  // Unfulfilled configuration requests for the virtual keyboard.
   //
-  // * Used to buffer configuration changes when there is no manager
-  //   client connected.
+  // * Used to buffer configuration changes when
+  //   * the requestor does not have focus, OR
+  //   * there is no manager client connected.
   // * Equal to `nullopt`, except in the transient state where
   //   * `this` received a RequestTypeAndVisibility() call
   //     when there was no manager connected, and
   //   * no manager has connected since the RequestTypeAndVisibility()
   //     call.
-  std::optional<KeyboardConfig> pending_manager_config_;
+  std::map<zx_koid_t /* requestor_view_koid */, KeyboardConfig>
+      view_koid_to_pending_manager_config_;
 
   // The view that is currently focused.
   //
@@ -134,7 +149,7 @@ class FidlBoundVirtualKeyboardCoordinator
 
   // Must be last, to invalidate weak pointers held by other fields before their
   // destructors are called.
-  fxl::WeakPtrFactory<VirtualKeyboardCoordinator> weak_ptr_factory_;
+  fxl::WeakPtrFactory<FidlBoundVirtualKeyboardCoordinator> weak_ptr_factory_;
 };
 
 }  // namespace root_presenter

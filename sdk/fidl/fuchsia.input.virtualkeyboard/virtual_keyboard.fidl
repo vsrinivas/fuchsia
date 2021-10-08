@@ -149,9 +149,12 @@ protocol Controller {
 
     /// Waits for the visibility to change, then reports the new value.
     ///
-    /// * Returns `true` after the callee decides to show the keyboard
-    ///   due to this Controller's request. This _may_ occur before the
-    ///   keyboard is visible on screen.
+    /// * Returns `true` after the callee receives a RequestShow()
+    ///   call from this Controller, when this Controller was not
+    ///   already requesting the keyboard be shown.
+    ///   * This _may_ occur before the keyboard is visible on screen.
+    ///   * This _may_ occur before the `View` for this Controller is
+    ///     focused.
     ///
     /// * Returns `false` when the callee decides to hide the keyboard
     ///   that was requested by this Controller.

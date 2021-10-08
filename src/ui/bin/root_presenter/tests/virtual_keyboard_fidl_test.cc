@@ -241,6 +241,7 @@ TEST_F(VirtualKeyboardFidlTest, WatchVisibility_SecondCallHangs) {
 TEST_F(VirtualKeyboardFidlTest, WatchVisibility_SecondCallIsResolvedByOwnRequestShow) {
   // Create controller.
   auto [controller, view_ref, view_ref_control] = CreateControllerClient();
+  UpdateFocusedView(fidl::Clone(view_ref));
 
   // Send first watch, which completes immediately.
   controller->WatchVisibility([](bool vis) {});
@@ -271,6 +272,7 @@ TEST_F(VirtualKeyboardFidlTest, WatchVisibility_SecondCallIsNotResolvedByOwnRequ
   auto [controller, view_ref, view_ref_control] = CreateControllerClient();
   controller.set_error_handler(
       [&controller_status](zx_status_t stat) { controller_status = stat; });
+  UpdateFocusedView(fidl::Clone(view_ref));
 
   // Send first watch, which completes immediately.
   controller->WatchVisibility([](bool vis) {});
@@ -458,6 +460,7 @@ TEST_F(VirtualKeyboardFidlTest, ManagerDisconnectsOnConcurrentWatches) {
 TEST_F(VirtualKeyboardFidlTest, ClientDisconnectionNotifiesControllersThatKeyboardIsHidden) {
   // Create controller, and set visibility to true.
   auto [controller, view_ref, view_ref_control] = CreateControllerClient();
+  UpdateFocusedView(fidl::Clone(view_ref));
   controller->RequestShow();
   RunLoopUntilIdle();
 
@@ -564,6 +567,7 @@ TEST_F(VirtualKeyboardFidlTest, WatchTypeAndVisibility_SecondCallIsResolvedByReq
   // Create a Controller, and ask for the keyboard to be shown. This changes the state of
   // the keyboard, since the default state is hidden.
   auto [controller, view_ref, view_ref_control] = CreateControllerClient();
+  UpdateFocusedView(fidl::Clone(view_ref));
   controller->RequestShow();
   RunLoopUntilIdle();
 
@@ -589,6 +593,7 @@ TEST_F(VirtualKeyboardFidlTest, WatchTypeAndVisibility_SecondCallIsNotResolvedBy
   // Create a Controller, and ask for the keyboard to be hidden. This does _not_ change the
   // state of the keyboard, since the default state is also hidden.
   auto [controller, view_ref, view_ref_control] = CreateControllerClient();
+  UpdateFocusedView(fidl::Clone(view_ref));
   controller->RequestHide();
   RunLoopUntilIdle();
 
@@ -613,6 +618,7 @@ TEST_F(VirtualKeyboardFidlTest, WatchTypeAndVisibility_SecondCallIsResolvedBySet
   // Create a Controller, then change the text type.
   auto [controller, view_ref, view_ref_control] =
       CreateControllerClient(fuchsia::input::virtualkeyboard::TextType::NUMERIC);
+  UpdateFocusedView(fidl::Clone(view_ref));
   controller->SetTextType(fuchsia::input::virtualkeyboard::TextType::PHONE);
   RunLoopUntilIdle();
 
@@ -623,6 +629,7 @@ TEST_F(VirtualKeyboardFidlTest, WatchTypeAndVisibility_ReceivesConfigSetBeforeMa
   // Create a Controller, and request that the keyboard be shown.
   auto [controller, view_ref, view_ref_control] =
       CreateControllerClient(fuchsia::input::virtualkeyboard::TextType::NUMERIC);
+  UpdateFocusedView(fidl::Clone(view_ref));
   controller->RequestShow();
   RunLoopUntilIdle();
 
@@ -643,6 +650,7 @@ TEST_F(VirtualKeyboardFidlTest,
   // Create a Controller, and request that the keyboard be shown.
   auto [controller, view_ref, view_ref_control] =
       CreateControllerClient(fuchsia::input::virtualkeyboard::TextType::NUMERIC);
+  UpdateFocusedView(fidl::Clone(view_ref));
   controller->RequestShow();
   RunLoopUntilIdle();
 
@@ -675,6 +683,7 @@ TEST_F(VirtualKeyboardFidlTest,
   auto [controller, view_ref, view_ref_control] =
       CreateControllerClient(fuchsia::input::virtualkeyboard::TextType::NUMERIC);
   auto manager = CreateManagerClient();
+  UpdateFocusedView(fidl::Clone(view_ref));
 
   // Request the keyboard to be hidden.
   controller->RequestHide();
@@ -831,6 +840,192 @@ TEST_F(VirtualKeyboardFidlTest, SkipsHideOnSpuriousFocusChange) {
     EXPECT_EQ(ZX_OK, controller_status);
     EXPECT_NE(false, controller_visibility);
     EXPECT_NE(false, manager_visibility);
+  }
+}
+
+TEST_F(VirtualKeyboardFidlTest, TellsManagerToShowKeyboardOnFocusChangeWithPendingShow) {
+  // Create controller.
+  zx_status_t controller_status = ZX_OK;
+  auto [controller, view_ref, view_ref_control] = CreateControllerClient();
+  controller.set_error_handler(
+      [&controller_status](zx_status_t stat) { controller_status = stat; });
+
+  zx_status_t manager_status = ZX_OK;
+  auto manager = CreateManagerClient();
+  manager.set_error_handler([&manager_status](zx_status_t stat) { manager_status = stat; });
+
+  // Read and discard initial visibility.
+  manager->WatchTypeAndVisibility(
+      [](fuchsia::input::virtualkeyboard::TextType, bool is_visible) {});
+  RunLoopUntilIdle();
+
+  // Invoke RequestShow() before focusing `view_ref`, and verify that manager is not asked
+  // to show the keyboard yet.
+  std::optional<bool> actual_visibility;
+  controller->RequestShow();
+  manager->WatchTypeAndVisibility(
+      [&actual_visibility](fuchsia::input::virtualkeyboard::TextType, bool is_visible) {
+        actual_visibility = is_visible;
+      });
+  RunLoopUntilIdle();
+  EXPECT_EQ(ZX_OK, controller_status);
+  EXPECT_EQ(ZX_OK, manager_status);
+  ASSERT_EQ(std::nullopt, actual_visibility);
+
+  // Update focus and verify that manager is asked to show the keyboard.
+  UpdateFocusedView(fidl::Clone(view_ref));
+  RunLoopUntilIdle();  // Complete WatchTypeAndVisibility() from previous block.
+  EXPECT_EQ(ZX_OK, manager_status);
+  ASSERT_EQ(true, actual_visibility);
+}
+
+TEST_F(VirtualKeyboardFidlTest, OnlyAppliesPendingShowOnce) {
+  // Create controller.
+  zx_status_t controller_status = ZX_OK;
+  auto [controller, view_ref, view_ref_control] = CreateControllerClient();
+  controller.set_error_handler(
+      [&controller_status](zx_status_t stat) { controller_status = stat; });
+
+  zx_status_t manager_status = ZX_OK;
+  auto manager = CreateManagerClient();
+  manager.set_error_handler([&manager_status](zx_status_t stat) { manager_status = stat; });
+
+  // Read and discard initial visibility.
+  manager->WatchTypeAndVisibility(
+      [](fuchsia::input::virtualkeyboard::TextType, bool is_visible) {});
+  RunLoopUntilIdle();
+
+  // Invoke RequestShow() before focusing `view_ref`. This causes the request to be
+  // buffered in the VirtualKeyboardCoordinator.
+  controller->RequestShow();
+  RunLoopUntilIdle();
+
+  // Update focus and verify that manager is asked to show the keyboard.
+  {
+    std::optional<bool> actual_visibility;
+    UpdateFocusedView(fidl::Clone(view_ref));
+    manager->WatchTypeAndVisibility(
+        [&actual_visibility](fuchsia::input::virtualkeyboard::TextType, bool is_visible) {
+          actual_visibility = is_visible;
+        });
+    RunLoopUntilIdle();
+    EXPECT_EQ(ZX_OK, manager_status);
+    ASSERT_EQ(true, actual_visibility);
+  }
+
+  // Shift focus to a different view, and verify that the manager is asked to hide the keyboard.
+  {
+    std::optional<bool> actual_visibility;
+    auto [view_ref_control, view_ref] = scenic::ViewRefPair::New();
+    UpdateFocusedView(fidl::Clone(view_ref));
+    manager->WatchTypeAndVisibility(
+        [&actual_visibility](fuchsia::input::virtualkeyboard::TextType, bool is_visible) {
+          actual_visibility = is_visible;
+        });
+    RunLoopUntilIdle();
+    EXPECT_EQ(ZX_OK, manager_status);
+    ASSERT_EQ(false, actual_visibility);
+  }
+
+  // Update focus back to the original view, and verify that manager is _not_ asked to
+  // show the keyboard.
+  {
+    std::optional<bool> actual_visibility;
+    UpdateFocusedView(fidl::Clone(view_ref));
+    manager->WatchTypeAndVisibility(
+        [&actual_visibility](fuchsia::input::virtualkeyboard::TextType, bool is_visible) {
+          actual_visibility = is_visible;
+        });
+    RunLoopUntilIdle();
+    EXPECT_EQ(ZX_OK, manager_status);
+    ASSERT_EQ(std::nullopt, actual_visibility);
+  }
+}
+
+TEST_F(VirtualKeyboardFidlTest, DoesNotApplyPendingShowFromDisconnectedController) {
+  // Create controller.
+  zx_status_t controller_status = ZX_OK;
+  auto [ctrlr, view_ref, view_ref_control] = CreateControllerClient();
+  std::optional controller = std::move(ctrlr);
+  controller.value().set_error_handler(
+      [&controller_status](zx_status_t stat) { controller_status = stat; });
+
+  zx_status_t manager_status = ZX_OK;
+  auto manager = CreateManagerClient();
+  manager.set_error_handler([&manager_status](zx_status_t stat) { manager_status = stat; });
+
+  // Read and discard initial visibility.
+  manager->WatchTypeAndVisibility(
+      [](fuchsia::input::virtualkeyboard::TextType, bool is_visible) {});
+  RunLoopUntilIdle();
+
+  // Invoke RequestShow() before focusing `view_ref`. This causes the request to be
+  // buffered in the VirtualKeyboardCoordinator.
+  controller.value()->RequestShow();
+  RunLoopUntilIdle();
+
+  // Destroy the controller, then shift focus to the view associated with the controller.
+  // Verify that the manager is _not_ asked to show the keyboard.
+  std::optional<bool> actual_visibility;
+  controller.reset();
+  RunLoopUntilIdle();  // Let virtual keyboard process side-effects of controller going away.
+  UpdateFocusedView(fidl::Clone(view_ref));
+  manager->WatchTypeAndVisibility(
+      [&actual_visibility](fuchsia::input::virtualkeyboard::TextType, bool is_visible) {
+        actual_visibility = is_visible;
+      });
+  RunLoopUntilIdle();
+  EXPECT_EQ(ZX_OK, manager_status);
+  ASSERT_EQ(std::nullopt, actual_visibility);
+}
+
+TEST_F(VirtualKeyboardFidlTest, UnfocusedControllerCannotHideKeyboard) {
+  // Create a controller and focus its view.
+  zx_status_t focused_controller_status = ZX_OK;
+  auto [focused_controller, focused_view_ref, focused_view_ref_control] = CreateControllerClient();
+  focused_controller.set_error_handler(
+      [&focused_controller_status](zx_status_t stat) { focused_controller_status = stat; });
+  UpdateFocusedView(fidl::Clone(focused_view_ref));
+
+  // Create another controller and do _not_ focus its view.
+  zx_status_t unfocused_controller_status = ZX_OK;
+  auto [unfocused_controller, unfocused_view_ref, unfocused_view_ref_control] =
+      CreateControllerClient();
+  unfocused_controller.set_error_handler(
+      [&unfocused_controller_status](zx_status_t stat) { unfocused_controller_status = stat; });
+
+  // Create a manager.
+  zx_status_t manager_status = ZX_OK;
+  auto manager = CreateManagerClient();
+  manager.set_error_handler([&manager_status](zx_status_t stat) { manager_status = stat; });
+
+  // Show the keyboard using the `focused_controller`, and verify that the keyboard is shown.
+  {
+    std::optional<bool> actual_visibility;
+    focused_controller->RequestShow();
+    manager->WatchTypeAndVisibility(
+        [&actual_visibility](fuchsia::input::virtualkeyboard::TextType, bool is_visible) {
+          actual_visibility = is_visible;
+        });
+    RunLoopUntilIdle();
+    EXPECT_EQ(ZX_OK, focused_controller_status);
+    EXPECT_EQ(ZX_OK, manager_status);
+    ASSERT_EQ(true, actual_visibility);
+  }
+
+  // Hide the keyboard using the `unfocused_controller`, and verify that the keyboard state
+  // did not change.
+  {
+    std::optional<bool> actual_visibility;
+    unfocused_controller->RequestHide();
+    manager->WatchTypeAndVisibility(
+        [&actual_visibility](fuchsia::input::virtualkeyboard::TextType, bool is_visible) {
+          actual_visibility = is_visible;
+        });
+    RunLoopUntilIdle();
+    EXPECT_EQ(ZX_OK, unfocused_controller_status);
+    EXPECT_EQ(ZX_OK, manager_status);
+    ASSERT_EQ(std::nullopt, actual_visibility);
   }
 }
 }  // namespace focus_management
