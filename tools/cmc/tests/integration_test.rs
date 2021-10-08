@@ -280,14 +280,18 @@ fn main() {
                 ..CollectionDecl::EMPTY
             },
         ];
-        let facets = Object {
-            entries: vec![
-                Entry {
+        let facets = fdata::Dictionary {
+            entries: Some(vec![
+                fdata::DictionaryEntry {
                     key: "author".to_string(),
-                    value: Some(Box::new(Value::Str("Fuchsia".to_string()))),
+                    value: Some(Box::new(fdata::DictionaryValue::Str("Fuchsia".to_string()))),
                 },
-                Entry { key: "year".to_string(), value: Some(Box::new(Value::Inum(2018))) },
-            ],
+                fdata::DictionaryEntry {
+                    key: "year".to_string(),
+                    value: Some(Box::new(fdata::DictionaryValue::Str("2018".to_string()))),
+                },
+            ]),
+            ..fdata::Dictionary::EMPTY
         };
         let envs = vec![
             EnvironmentDecl {

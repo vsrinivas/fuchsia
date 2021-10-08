@@ -34,7 +34,6 @@ fidl("fuchsia.sys2") {
     "decls/component_decl.fidl",
     "decls/environment_decl.fidl",
     "decls/expose_decl.fidl",
-    "decls/object.fidl",
     "decls/offer_decl.fidl",
     "decls/program_decl.fidl",
     "decls/relative_refs.fidl",

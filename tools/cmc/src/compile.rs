@@ -115,47 +115,8 @@ fn compile_cml(document: &cml::Document) -> Result<fsys::ComponentDecl, Error> {
             .as_ref()
             .map(|env| translate_environments(env, &all_capability_names))
             .transpose()?,
-        facets: document.facets.clone().map(fsys_object_from_map).transpose()?,
+        facets: document.facets.clone().map(dictionary_from_map).transpose()?,
         ..fsys::ComponentDecl::EMPTY
-    })
-}
-
-// Converts a Map<String, serde_json::Value> to a fuchsia Object.
-fn fsys_object_from_map(dictionary: Map<String, Value>) -> Result<fsys::Object, Error> {
-    let mut out = fsys::Object { entries: vec![] };
-    for (k, v) in dictionary {
-        if let Some(value) = convert_value(v)? {
-            out.entries.push(fsys::Entry { key: k, value: Some(value) });
-        }
-    }
-    Ok(out)
-}
-
-// Converts a serde_json::Value into a fuchsia fidl Value. Used by `fsys_object_from_map`.
-fn convert_value(v: Value) -> Result<Option<Box<fsys::Value>>, Error> {
-    Ok(match v {
-        Value::Null => None,
-        Value::Bool(b) => Some(Box::new(fsys::Value::Bit(b))),
-        Value::Number(n) => {
-            if let Some(i) = n.as_i64() {
-                Some(Box::new(fsys::Value::Inum(i)))
-            } else if let Some(f) = n.as_f64() {
-                Some(Box::new(fsys::Value::Fnum(f)))
-            } else {
-                return Err(Error::validate(format!("Number is out of range: {}", n)));
-            }
-        }
-        Value::String(s) => Some(Box::new(fsys::Value::Str(s.clone()))),
-        Value::Array(a) => {
-            let vector = fsys::Vector {
-                values: a.into_iter().map(convert_value).collect::<Result<Vec<_>, Error>>()?,
-            };
-            Some(Box::new(fsys::Value::Vec(vector)))
-        }
-        Value::Object(o) => {
-            let obj = fsys_object_from_map(o)?;
-            Some(Box::new(fsys::Value::Obj(obj)))
-        }
     })
 }
 
@@ -3148,45 +3109,31 @@ mod tests {
         test_compile_facets => {
             input = json!({
                 "facets": {
-                    "metadata": {
-                        "title": "foo",
-                        "authors": [ "me", "you" ],
-                        "year": 2018
-                    }
+                    "title": "foo",
+                    "authors": [ "me", "you" ],
+                    "year": "2018",
                 }
             }),
             output = fsys::ComponentDecl {
-                facets: Some(fsys::Object {
-                    entries: vec![
-                        fsys::Entry {
-                            key: "metadata".to_string(),
-                            value: Some(Box::new(fsys::Value::Obj(fsys::Object {
-                                entries: vec![
-                                    fsys::Entry {
-                                        key: "authors".to_string(),
-                                        value: Some(Box::new(fsys::Value::Vec (
-                                            fsys::Vector {
-                                                values: vec![
-                                                    Some(Box::new(fsys::Value::Str("me".to_string()))),
-                                                    Some(Box::new(fsys::Value::Str("you".to_string()))),
-                                                ]
-                                            }
-                                        ))),
-                                    },
-                                    fsys::Entry {
-                                        key: "title".to_string(),
-                                        value: Some(Box::new(fsys::Value::Str("foo".to_string()))),
-                                    },
-                                    fsys::Entry {
-                                        key: "year".to_string(),
-                                        value: Some(Box::new(fsys::Value::Inum(2018))),
-                                    },
-                                ],
-                            }))),
-                        },
-                    ],
-                }),
-                ..default_component_decl()
+                facets: Some(fdata::Dictionary {
+                        entries: Some(vec![
+                            fdata::DictionaryEntry {
+                                key: "authors".to_string(),
+                                value: Some(Box::new(fdata::DictionaryValue::StrVec(vec!["me".to_owned(), "you".to_owned()]))),
+                            },
+                            fdata::DictionaryEntry {
+                                key: "title".to_string(),
+                                value: Some(Box::new(fdata::DictionaryValue::Str("foo".to_string()))),
+                            },
+                            fdata::DictionaryEntry {
+                                key: "year".to_string(),
+                                value: Some(Box::new(fdata::DictionaryValue::Str("2018".to_string()))),
+                            },
+                        ]),
+                        ..fdata::Dictionary::EMPTY
+                    }
+            ),
+            ..default_component_decl()
             },
         },
 
@@ -3431,7 +3378,7 @@ mod tests {
                 ],
                 "facets": {
                     "author": "Fuchsia",
-                    "year": 2018,
+                    "year": "2018",
                 },
                 "environments": [
                     {
@@ -3632,18 +3579,19 @@ mod tests {
                         ..fsys::EnvironmentDecl::EMPTY
                     }
                 ]),
-                facets: Some(fsys::Object {
-                    entries: vec![
-                        fsys::Entry {
-                            key: "author".to_string(),
-                            value: Some(Box::new(fsys::Value::Str("Fuchsia".to_string()))),
-                        },
-                        fsys::Entry {
-                            key: "year".to_string(),
-                            value: Some(Box::new(fsys::Value::Inum(2018))),
-                        },
-                    ],
-                }),
+                facets: Some(fdata::Dictionary {
+                        entries: Some(vec![
+                            fdata::DictionaryEntry {
+                                key: "author".to_string(),
+                                value: Some(Box::new(fdata::DictionaryValue::Str("Fuchsia".to_string()))),
+                            },
+                            fdata::DictionaryEntry {
+                                key: "year".to_string(),
+                                value: Some(Box::new(fdata::DictionaryValue::Str("2018".to_string()))),
+                            },
+                        ]),
+                        ..fdata::Dictionary::EMPTY
+                    }),
                 ..fsys::ComponentDecl::EMPTY
             },
         },

@@ -3,6 +3,8 @@
 // found in the LICENSE file.
 library fuchsia.sys2;
 
+using fuchsia.data;
+
 /// A component declaration.
 ///
 /// This information is typically encoded in the component manifest (.cm file)
@@ -50,5 +52,5 @@ type ComponentDecl = table {
     8: environments vector<EnvironmentDecl>;
 
     /// Additional metadata about the component.
-    9: facets Object;
+    9: facets fuchsia.data.Dictionary;
 };

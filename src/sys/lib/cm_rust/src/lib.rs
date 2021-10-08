@@ -25,8 +25,6 @@ use serde::{Deserialize, Serialize};
 #[cfg(feature = "serde")]
 mod serde_ext;
 
-pub mod data;
-
 lazy_static! {
     static ref DATA_TYPENAME: CapabilityName = CapabilityName("Data".to_string());
     static ref CACHE_TYPENAME: CapabilityName = CapabilityName("Cache".to_string());
@@ -85,7 +83,7 @@ pub struct ComponentDecl {
     pub capabilities: Vec<CapabilityDecl>,
     pub children: Vec<ChildDecl>,
     pub collections: Vec<CollectionDecl>,
-    pub facets: Option<fsys::Object>,
+    pub facets: Option<fdata::Dictionary>,
     pub environments: Vec<EnvironmentDecl>,
 }
 
@@ -836,7 +834,6 @@ fidl_translations_identical!(String);
 fidl_translations_identical!(fsys::StartupMode);
 fidl_translations_identical!(fsys::OnTerminate);
 fidl_translations_identical!(fsys::Durability);
-fidl_translations_identical!(fsys::Object);
 fidl_translations_identical!(fdata::Dictionary);
 fidl_translations_identical!(fio2::Operations);
 fidl_translations_identical!(fsys::EnvironmentExtends);
@@ -1073,12 +1070,6 @@ impl From<&UseDecl> for CapabilityTypeName {
 }
 
 // TODO: Runners and third parties can use this to parse `facets`.
-impl FidlIntoNative<HashMap<String, Value>> for fsys::Object {
-    fn fidl_into_native(self) -> HashMap<String, Value> {
-        from_fidl_obj(self)
-    }
-}
-
 impl FidlIntoNative<HashMap<String, DictionaryValue>> for fdata::Dictionary {
     fn fidl_into_native(self) -> HashMap<String, DictionaryValue> {
         from_fidl_dict(self)
@@ -1133,22 +1124,6 @@ pub enum DictionaryValue {
     Null,
 }
 
-impl FidlIntoNative<Value> for Option<Box<fsys::Value>> {
-    fn fidl_into_native(self) -> Value {
-        match self {
-            Some(v) => match *v {
-                fsys::Value::Bit(b) => Value::Bit(b),
-                fsys::Value::Inum(i) => Value::Inum(i),
-                fsys::Value::Fnum(f) => Value::Fnum(f),
-                fsys::Value::Str(s) => Value::Str(s),
-                fsys::Value::Vec(v) => Value::Vec(from_fidl_vec(v)),
-                fsys::Value::Obj(d) => Value::Obj(from_fidl_obj(d)),
-            },
-            None => Value::Null,
-        }
-    }
-}
-
 impl FidlIntoNative<DictionaryValue> for Option<Box<fdata::DictionaryValue>> {
     fn fidl_into_native(self) -> DictionaryValue {
         match self {
@@ -1169,14 +1144,6 @@ impl NativeIntoFidl<Option<Box<fdata::DictionaryValue>>> for DictionaryValue {
             DictionaryValue::Null => None,
         }
     }
-}
-
-fn from_fidl_vec(vec: fsys::Vector) -> Vec<Value> {
-    vec.values.into_iter().map(|v| v.fidl_into_native()).collect()
-}
-
-fn from_fidl_obj(obj: fsys::Object) -> HashMap<String, Value> {
-    obj.entries.into_iter().map(|e| (e.key, e.value.fidl_into_native())).collect()
 }
 
 fn from_fidl_dict(dict: fdata::Dictionary) -> HashMap<String, DictionaryValue> {
@@ -1949,12 +1916,15 @@ mod tests {
                          ..fsys::CollectionDecl::EMPTY
                      },
                 ]),
-                facets: Some(fsys::Object{entries: vec![
-                    fsys::Entry{
-                        key: "author".to_string(),
-                        value: Some(Box::new(fsys::Value::Str("Fuchsia".to_string()))),
-                    },
-                ]}),
+                facets: Some(fdata::Dictionary {
+                    entries: Some(vec![
+                        fdata::DictionaryEntry {
+                            key: "author".to_string(),
+                            value: Some(Box::new(fdata::DictionaryValue::Str("Fuchsia".to_string()))),
+                        },
+                    ]),
+                    ..fdata::Dictionary::EMPTY
+                }),
                 environments: Some(vec![
                     fsys::EnvironmentDecl {
                         name: Some("test_env".to_string()),
@@ -2220,12 +2190,15 @@ mod tests {
                             environment: Some("test_env".to_string()),
                         },
                     ],
-                    facets: Some(fsys::Object{entries: vec![
-                       fsys::Entry{
-                           key: "author".to_string(),
-                           value: Some(Box::new(fsys::Value::Str("Fuchsia".to_string()))),
-                       },
-                    ]}),
+                    facets: Some(fdata::Dictionary {
+                        entries: Some(vec![
+                            fdata::DictionaryEntry {
+                                key: "author".to_string(),
+                                value: Some(Box::new(fdata::DictionaryValue::Str("Fuchsia".to_string()))),
+                            },
+                        ]),
+                        ..fdata::Dictionary::EMPTY
+                    }),
                     environments: vec![
                         EnvironmentDecl {
                             name: "test_env".into(),
@@ -2433,70 +2406,6 @@ mod tests {
     }
 
     test_fidl_into! {
-        fidl_into_object => {
-            input = {
-                let obj_inner = fsys::Object{entries: vec![
-                    fsys::Entry{
-                        key: "string".to_string(),
-                        value: Some(Box::new(fsys::Value::Str("bar".to_string()))),
-                    },
-                ]};
-                let vector = fsys::Vector{values: vec![
-                    Some(Box::new(fsys::Value::Obj(obj_inner))),
-                    Some(Box::new(fsys::Value::Inum(-42)))
-                ]};
-                let obj_outer = fsys::Object{entries: vec![
-                    fsys::Entry{
-                        key: "array".to_string(),
-                        value: Some(Box::new(fsys::Value::Vec(vector))),
-                    },
-                ]};
-                let obj = fsys::Object {entries: vec![
-                    fsys::Entry {
-                        key: "bool".to_string(),
-                        value: Some(Box::new(fsys::Value::Bit(true))),
-                    },
-                    fsys::Entry {
-                        key: "obj".to_string(),
-                        value: Some(Box::new(fsys::Value::Obj(obj_outer))),
-                    },
-                    fsys::Entry {
-                        key: "float".to_string(),
-                        value: Some(Box::new(fsys::Value::Fnum(3.14))),
-                    },
-                    fsys::Entry {
-                        key: "int".to_string(),
-                        value: Some(Box::new(fsys::Value::Inum(-42))),
-                    },
-                    fsys::Entry {
-                        key: "null".to_string(),
-                        value: None,
-                    },
-                    fsys::Entry {
-                        key: "string".to_string(),
-                        value: Some(Box::new(fsys::Value::Str("bar".to_string()))),
-                    },
-                ]};
-                obj
-            },
-            result = {
-                let mut obj_inner = HashMap::new();
-                obj_inner.insert("string".to_string(), Value::Str("bar".to_string()));
-                let mut obj_outer = HashMap::new();
-                let vector = vec![Value::Obj(obj_inner), Value::Inum(-42)];
-                obj_outer.insert("array".to_string(), Value::Vec(vector));
-
-                let mut obj: HashMap<String, Value> = HashMap::new();
-                obj.insert("bool".to_string(), Value::Bit(true));
-                obj.insert("float".to_string(), Value::Fnum(3.14));
-                obj.insert("int".to_string(), Value::Inum(-42));
-                obj.insert("string".to_string(), Value::Str("bar".to_string()));
-                obj.insert("obj".to_string(), Value::Obj(obj_outer));
-                obj.insert("null".to_string(), Value::Null);
-                obj
-            },
-        },
-
         all_with_omitted_defaults => {
             input = fsys::ComponentDecl {
                 program: Some(fsys::ProgramDecl {
@@ -2534,7 +2443,10 @@ mod tests {
                          ..fsys::CollectionDecl::EMPTY
                      },
                 ]),
-                facets: Some(fsys::Object{entries: vec![]}),
+                facets: Some(fdata::Dictionary{
+                    entries: Some(vec![]),
+                    ..fdata::Dictionary::EMPTY
+                }),
                 environments: Some(vec![]),
                 ..fsys::ComponentDecl::EMPTY
             },
@@ -2572,7 +2484,10 @@ mod tests {
                             environment: None,
                         },
                     ],
-                    facets: Some(fsys::Object{entries: vec![]}),
+                    facets: Some(fdata::Dictionary{
+                        entries: Some(vec![]),
+                        ..fdata::Dictionary::EMPTY
+                    }),
                     environments: vec![]
                 }
             },
