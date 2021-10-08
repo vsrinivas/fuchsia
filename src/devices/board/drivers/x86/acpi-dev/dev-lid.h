@@ -95,6 +95,9 @@ class AcpiLidDevice : public DeviceType,
 
   static void NotifyHandler(ACPI_HANDLE handle, UINT32 value, void* ctx);
 
+  static ACPI_STATUS GetLidGpeInfo(ACPI_HANDLE lid_handle, ACPI_HANDLE* gpe_device,
+                                   UINT32* gpe_number);
+
   zx_status_t UpdateLidStateLocked() TA_REQ(lock_);
   void QueueHidReportLocked() TA_REQ(lock_);
 

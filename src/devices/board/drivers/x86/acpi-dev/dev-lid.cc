@@ -7,6 +7,7 @@
 #include <fuchsia/hardware/hidbus/cpp/banjo.h>
 #include <inttypes.h>
 #include <lib/ddk/debug.h>
+#include <lib/fit/defer.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <zircon/status.h>
@@ -20,6 +21,7 @@
 #include <fbl/auto_lock.h>
 #include <hid/descriptor.h>
 
+#include "acpi-private.h"
 #include "dev.h"
 #include "errors.h"
 
@@ -215,6 +217,60 @@ void AcpiLidDevice::DdkRelease() {
   delete this;
 }
 
+ACPI_STATUS AcpiLidDevice::GetLidGpeInfo(ACPI_HANDLE lid_handle, ACPI_HANDLE* gpe_device,
+                                         UINT32* gpe_number) {
+  zxlogf(DEBUG, "acpi-lid: get lid GPE info");
+  acpi::UniquePtr<ACPI_OBJECT> prw_res;
+  {
+    ACPI_BUFFER buffer = {
+        .Length = ACPI_ALLOCATE_BUFFER,
+        .Pointer = NULL,
+    };
+    // Get the lid device's Power Resources for Wake object
+    ACPI_STATUS status = AcpiEvaluateObject(lid_handle, const_cast<char*>("_PRW"), NULL, &buffer);
+    if (status != AE_OK) {
+      return status;
+    }
+    prw_res.reset(static_cast<ACPI_OBJECT*>(buffer.Pointer));
+  }
+
+  auto cleanup = fit::defer([]() { zxlogf(INFO, "acpi-lid: Failed to interpret Lid GPE number"); });
+
+  if (prw_res->Type != ACPI_TYPE_PACKAGE || prw_res->Package.Count < 2) {
+    return AE_BAD_DATA;
+  }
+
+  // See ACPI v6.3 Section 7.3.13
+  // The first object within the lid _PWR object is the information about the _GPE object
+  // associated with the lid device. This evaluates to either an integer or a package.
+  // The integer specifies the bit in the FADT GPEx_STS blocks to use.
+  // The package specifies which GPE block and which bit inside that block to use.
+  ACPI_OBJECT* event_info = &prw_res->Package.Elements[0];
+  if (event_info->Type == ACPI_TYPE_INTEGER) {
+    *gpe_device = NULL;
+    *gpe_number = static_cast<uint32_t>(event_info->Integer.Value);
+  } else if (event_info->Type == ACPI_TYPE_PACKAGE) {
+    if (event_info->Package.Count != 2) {
+      return AE_BAD_DATA;
+    }
+    ACPI_OBJECT* handle_obj = &event_info->Package.Elements[0];
+    ACPI_OBJECT* gpe_num_obj = &event_info->Package.Elements[1];
+    if (handle_obj->Type != ACPI_TYPE_LOCAL_REFERENCE) {
+      return AE_BAD_DATA;
+    }
+    if (gpe_num_obj->Type != ACPI_TYPE_INTEGER) {
+      return AE_BAD_DATA;
+    }
+    *gpe_device = handle_obj->Reference.Handle;
+    *gpe_number = static_cast<uint32_t>(gpe_num_obj->Integer.Value);
+  } else {
+    return AE_BAD_DATA;
+  }
+
+  cleanup.cancel();
+  return AE_OK;
+}
+
 zx_status_t AcpiLidDevice::Create(zx_device_t* parent, ACPI_HANDLE acpi_handle,
                                   std::unique_ptr<AcpiLidDevice>* out, AcpiObjectEvalFunc acpi_eval,
                                   AcpiInstallNotifyHandlerFunc acpi_install_notify,
@@ -226,6 +282,27 @@ zx_status_t AcpiLidDevice::Create(zx_device_t* parent, ACPI_HANDLE acpi_handle,
   {
     fbl::AutoLock guard(&dev->lock_);
     dev->UpdateLidStateLocked();
+  }
+
+  // If we have an ACPI lid device, set it as a wake device.
+  // For now the only way to suspend and resume is by closing and opening the lid. If we are unable
+  // to set the lid as a wake source we want the lid driver to fail so that it does not send out
+  // lid HID reports, and a system suspend cannot be triggered by closing the lid. Otherwise we may
+  // get in a state were we can suspend but not resume.
+  // As lid events are not used for anything else, this will not impact any other functionality.
+  if (acpi_handle != nullptr) {
+    ACPI_HANDLE gpe_device;
+    UINT32 gpe_number;
+    ACPI_STATUS status = GetLidGpeInfo(acpi_handle, &gpe_device, &gpe_number);
+    if (status != AE_OK) {
+      zxlogf(ERROR, "acpi-lid: Failed to decode GPE info: %d", status);
+      return acpi_to_zx_status(status);
+    }
+    status = AcpiSetGpeWakeMask(gpe_device, gpe_number, ACPI_GPE_ENABLE);
+    if (status != AE_OK) {
+      zxlogf(ERROR, "acpi-lid: Failed to set GPE wake mask: %d", status);
+      return acpi_to_zx_status(status);
+    }
   }
 
   *out = std::move(dev);
