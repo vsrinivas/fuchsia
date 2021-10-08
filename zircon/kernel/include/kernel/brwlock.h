@@ -138,21 +138,23 @@ class TA_CAP("mutex") BrwLock {
     // This will be seen by Guard to know to generate shared acquisitions for thread analysis.
     struct Shared {};
 
-    static bool Acquire(BrwLock* lock, State* state) TA_ACQ_SHARED(lock) {
+    static void PreValidate(BrwLock*, State*) {}
+    static bool Acquire(BrwLock* lock, State*) TA_ACQ_SHARED(lock) {
       lock->ReadAcquire();
       return true;
     }
-    static void Release(BrwLock* lock, State* state) TA_REL_SHARED(lock) { lock->ReadRelease(); }
+    static void Release(BrwLock* lock, State*) TA_REL_SHARED(lock) { lock->ReadRelease(); }
   };
 
   struct WriterPolicy {
     struct State {};
 
-    static bool Acquire(BrwLock* lock, State* state) TA_ACQ(lock) {
+    static void PreValidate(BrwLock*, State*) {}
+    static bool Acquire(BrwLock* lock, State*) TA_ACQ(lock) {
       lock->WriteAcquire();
       return true;
     }
-    static void Release(BrwLock* lock, State* state) TA_REL(lock) { lock->WriteRelease(); }
+    static void Release(BrwLock* lock, State*) TA_REL(lock) { lock->WriteRelease(); }
   };
 
  private:

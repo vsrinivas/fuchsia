@@ -169,11 +169,9 @@ void SystemCircularLockDependencyDetected(LockClassState* connected_set_root) {
 
 // Returns a pointer to the ThreadLockState instance for the current thread when
 // thread context or for the current CPU when in irq context.
-ThreadLockState* SystemGetThreadLockState() {
-  if (arch_blocking_disallowed()) {
-    return &percpu::GetCurrent().lock_state;
-  }
-  return &Thread::Current::Get()->lock_state();
+ThreadLockState* SystemGetThreadLockState(LockFlags lock_flags) {
+  return (lock_flags & LockFlagsIrqSafe) ? &percpu::GetCurrent().lock_state
+                                         : &Thread::Current::Get()->lock_state();
 }
 
 // Initializes an instance of ThreadLockState.
@@ -182,9 +180,7 @@ void SystemInitThreadLockState(ThreadLockState*) {}
 // There is no explicit event based triggering mechanism for lockdep when used
 // in the kernel.  The loop detection thread will simply poll "dirty" flag once
 // every 2 seconds, clearing the flag and performing a check if the flag is set.
-void SystemTriggerLoopDetection() {
-  loop_detection_graph_is_dirty.store(true);
-}
+void SystemTriggerLoopDetection() { loop_detection_graph_is_dirty.store(true); }
 
 }  // namespace lockdep
 

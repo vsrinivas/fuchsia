@@ -196,7 +196,8 @@ struct NoIrqSavePolicy {
   // No extra state required when not saving irq state.
   struct State {};
 
-  static bool Acquire(SpinLock* lock, State* state) TA_ACQ(lock) {
+  static void PreValidate(SpinLock* lock, State*) {}
+  static bool Acquire(SpinLock* lock, State*) TA_ACQ(lock) {
     lock->Acquire();
     return true;
   }
@@ -217,6 +218,7 @@ struct NoIrqSaveMonitoredPolicy {
     const char* const name;
   };
 
+  static void PreValidate(MonitoredSpinLock* lock, State*) {}
   static bool Acquire(MonitoredSpinLock* lock, State* state) TA_ACQ(lock) {
     lock->Acquire(state->name);
     return true;
@@ -236,13 +238,20 @@ struct IrqSavePolicy {
     interrupt_saved_state_t interrupt_state;
   };
 
-  static bool Acquire(SpinLock* lock, State* state) TA_ACQ(lock) {
-    lock->AcquireIrqSave(state->interrupt_state);
+  static void PreValidate(SpinLock* lock, State* state) {
+    state->interrupt_state = arch_interrupt_save();
+  }
+
+  static bool Acquire(SpinLock* lock, State*) TA_ACQ(lock) {
+    lock->Acquire();
     return true;
   }
+
   static void Release(SpinLock* lock, State* state) TA_REL(lock) {
-    lock->ReleaseIrqRestore(state->interrupt_state);
+    lock->Release();
+    arch_interrupt_restore(state->interrupt_state);
   }
+
   static void AssertHeld(const SpinLock& lock) TA_ASSERT(lock) { lock.AssertHeld(); }
 };
 
@@ -260,13 +269,20 @@ struct IrqSaveMonitoredPolicy {
     const char* const name;
   };
 
+  static void PreValidate(MonitoredSpinLock* lock, State* state) {
+    state->interrupt_state = arch_interrupt_save();
+  }
+
   static bool Acquire(MonitoredSpinLock* lock, State* state) TA_ACQ(lock) {
-    lock->AcquireIrqSave(state->interrupt_state, state->name);
+    lock->Acquire(state->name);
     return true;
   }
+
   static void Release(MonitoredSpinLock* lock, State* state) TA_REL(lock) {
-    lock->ReleaseIrqRestore(state->interrupt_state);
+    lock->Release();
+    arch_interrupt_restore(state->interrupt_state);
   }
+
   static void AssertHeld(const MonitoredSpinLock& lock) TA_ASSERT(lock) { lock.AssertHeld(); }
 };
 
@@ -279,7 +295,8 @@ struct TryLockNoIrqSavePolicy {
   // No extra state required when not saving irq state.
   struct State {};
 
-  static bool Acquire(SpinLock* lock, State* state) TA_TRY_ACQ(true, lock) {
+  static void PreValidate(SpinLock* lock, State*) {}
+  static bool Acquire(SpinLock* lock, State*) TA_TRY_ACQ(true, lock) {
     const bool failed = lock->TryAcquire();
     return !failed;  // Guard uses true to indicate success.
   }
@@ -298,6 +315,7 @@ struct TryLockNoIrqSaveMonitoredPolicy {
     const char* const name;
   };
 
+  static void PreValidate(MonitoredSpinLock* lock, State*) {}
   static bool Acquire(MonitoredSpinLock* lock, State* state) TA_TRY_ACQ(true, lock) {
     const bool failed = lock->TryAcquire(state->name);
     return !failed;  // Guard uses true to indicate success.

@@ -34,8 +34,36 @@ namespace lockdep {
 //
 // Every lock policy must specify a public nested type named |State| that stores
 // any state required by the lock acquisition. If state is not required then the
-// type may be an empty struct. Every lock policy must also define two static
-// methods to handle the acquire and release operations.
+// type may be an empty struct. Every lock policy must also define three static
+// methods to handle the acquire and release operations, as well as to handle
+// any special actions which must be taken immediately before validation while
+// acquiring the lock.
+//
+// For most locks, the pre-validation acquire step will be a no-op,
+// however, there are situations where the pre-validation hook is important.
+//
+// For example, consider a spinlock which is used in the kernel both during
+// normal operation, and while servicing an interrupt.  Successful validation of
+// an Acquire operation involves lockdep recording ownership of the lock being
+// acquired in currently active context.  If this information is recorded, and
+// then an interrupt is taken before interrupts are disabled and the lock is
+// acquired, then it is possible for the system to attempt to acquire the lock
+// again during the ISR, triggering a false positive lockdep violation.  The ISR
+// thinks that the lock is already acquired, even though it has not been just
+// yet.  In practice, this can never actually happen as code operating in
+// non-ISR context must always have disabled interrupts before actually
+// acquiring the lock.
+//
+// So, for an IrqSave style spinlock, the lock policy disables interrupts during
+// the pre-validation phase.  Then validation of the lock is performed and
+// ownership recorded, and finally the lock is acquired during the policy's
+// acquire phase, preventing the false positive described above.
+//
+// Note that in the case of a try-lock operation, if the lock acquisition fails
+// during Acquire, it is the policy implementer's responsibility to undo any
+// stateful actions take by the PreValidate implementation.  In the case of the
+// IrqSave spinlock example described above, this would involve restoring the
+// IRQ-enabled state to what it was before PreValidate had been called.
 //
 // For example:
 //
@@ -43,15 +71,22 @@ namespace lockdep {
 //      struct State {
 //          // State members, constructors, and destructors as needed.
 //      };
+//
+//      static void PreValidate(LockType* lock, State* state) {
+//          // Take any actions needed immediately before validation.
+//      }
+//
 //      static bool Acquire(LockType* lock, State* state) __TA_ACQUIRE(lock) {
 //          // Saves any state required by this lock type.
 //          // Acquires the lock for this lock type.
 //          // Returns whether the acquisition was successful.
 //      }
-//      static void Release(LockType* lock, State* state) __TA_RELEASE(lock) {
+//
+//      static void Release(LockType* lock, State* state) {
 //          // Releases the lock for this lock type.
 //          // Restores any state required for this lock type.
 //      }
+//
 //      static void AssertHeld(const LockType& lock) __TA_ASSERT(lock) {
 //          // Assert that "lock" is held by the current thread,
 //          // aborting execution if not.
@@ -109,6 +144,10 @@ using EnableIfHasAssertHeld = std::enable_if_t<HasAssertHeld<T>::value>;
 struct DefaultLockPolicy {
   // This policy does not specify any additional state for a lock acquisition.
   struct State {};
+
+  // Default lock policy has nothing special to do just before validation.
+  template <typename Lock>
+  static void PreValidate(Lock*, State*) {}
 
   // Acquires the lock by calling its Acquire method. The extra state argument
   // is unused.

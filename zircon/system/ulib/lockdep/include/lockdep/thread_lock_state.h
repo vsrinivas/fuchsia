@@ -38,12 +38,16 @@ class AcquiredLockEntry : public fbl::DoublyLinkedListable<AcquiredLockEntry*> {
     if (this != &other) {
       ZX_ASSERT(!InContainer());
 
-      if (other.InContainer())
-        Replace(&other);
-
+      // Fill out these values first.  If we end up calling Replace, it will
+      // need to know the lock class ID in order to fetch the proper thread lock
+      // state structure from the system layer.
       address_ = other.address_;
       id_ = other.id_;
       order_ = other.order_;
+
+      if (other.InContainer()) {
+        Replace(&other);
+      }
 
       other.Clear();
     }
@@ -82,7 +86,7 @@ class ThreadLockState {
   ThreadLockState& operator=(const ThreadLockState&) = delete;
 
   // Returns the ThreadLockState instance for the current thread.
-  static ThreadLockState* Get() { return SystemGetThreadLockState(); }
+  static ThreadLockState* Get(LockFlags lock_flags) { return SystemGetThreadLockState(lock_flags); }
 
   // Attempts to add the given lock class to the acquired lock list. Lock
   // ordering and other checks are performed here.
@@ -117,7 +121,7 @@ class ThreadLockState {
         if (lock_entry->address() == entry.address()) {
           Report(lock_entry, &entry, LockResult::Reentrance);
         } else if (!LockClassState::IsMultiAcquire(lock_entry->id()) &&
-            lock_entry->order() <= entry.order()) {
+                   lock_entry->order() <= entry.order()) {
           if (!LockClassState::IsNestable(lock_entry->id()) && lock_entry->order() == 0)
             Report(lock_entry, &entry, LockResult::AlreadyAcquired);
           else
@@ -237,7 +241,8 @@ class ThreadLockState {
 
 // Defined after ThreadLockState because of dependency on its methods.
 inline void AcquiredLockEntry::Replace(AcquiredLockEntry* target) {
-  ThreadLockState::Get()->Replace(target, this);
+  LockFlags flags = LockClassState::Get(id_)->flags();
+  ThreadLockState::Get(flags)->Replace(target, this);
 }
 
 }  // namespace lockdep

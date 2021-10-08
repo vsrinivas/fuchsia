@@ -18,7 +18,7 @@ namespace lockdep {
 // ThreadLockState. These MUST be overridden in environments that do not support
 // the C++ thread_local TLS mechanism.
 
-__WEAK ThreadLockState* SystemGetThreadLockState() {
+__WEAK ThreadLockState* SystemGetThreadLockState(LockFlags lock_flags) {
   thread_local ThreadLockState thread_lock_state{};
   return &thread_lock_state;
 }

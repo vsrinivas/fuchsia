@@ -122,6 +122,8 @@ class __TA_SCOPED_CAPABILITY
                 "details.");
 
  public:
+  static constexpr LockFlags kLockFlags = LockTraits<RemoveGlobalReference<LockType>>::Flags;
+
   Guard(Guard&&) = delete;
   Guard(const Guard&) = delete;
   Guard& operator=(Guard&&) = delete;
@@ -175,8 +177,9 @@ class __TA_SCOPED_CAPABILITY
   //    dropped.
   template <typename... Args>
   void Release(Args&&... args) __TA_RELEASE() {
-    if (validator_.lock() != nullptr) {
-      LockType* lock_ptr = validator_.lock();
+    LockType* lock_ptr = validator_.lock();
+
+    if (lock_ptr != nullptr) {
       validator_.ValidateRelease();
       validator_.Clear();
       LockPolicy<LockType, Option>::Release(lock_ptr, &state_, std::forward<Args>(args)...);
@@ -235,9 +238,9 @@ class __TA_SCOPED_CAPABILITY
   void CallUnlocked(Op&& op, ReleaseArgs&&... release_args) __TA_NO_THREAD_SAFETY_ANALYSIS {
     ZX_DEBUG_ASSERT(validator_.lock() != nullptr);
 
+    validator_.ValidateRelease();
     LockPolicy<LockType, Option>::Release(validator_.lock(), &state_,
                                           std::forward<ReleaseArgs>(release_args)...);
-    validator_.ValidateRelease();
 
     std::forward<Op>(op)();
 
@@ -259,6 +262,7 @@ class __TA_SCOPED_CAPABILITY
     // validate the operation before attempting to obtain the lock, and the
     // other where we update our bookkeeping to indicate that the lock is owned
     // _after_ successfully obtaining the lock.
+    LockPolicy<LockType, Option>::PreValidate(validator_.lock(), &state_);
     validator_.ValidateAcquire();
     if (!LockPolicy<LockType, Option>::Acquire(validator_.lock(), &state_)) {
       validator_.ValidateRelease();
@@ -283,8 +287,8 @@ class __TA_SCOPED_CAPABILITY
     LockValidator(LockType* lock, LockClassId id, uintptr_t order = 0)
         : lock_entry{lock, id, order} {}
 
-    void ValidateAcquire() { ThreadLockState::Get()->Acquire(&lock_entry); }
-    void ValidateRelease() { ThreadLockState::Get()->Release(&lock_entry); }
+    void ValidateAcquire() { ThreadLockState::Get(kLockFlags)->Acquire(&lock_entry); }
+    void ValidateRelease() { ThreadLockState::Get(kLockFlags)->Release(&lock_entry); }
     void Clear() { lock_entry.Clear(); }
 
     LockType* lock() const { return static_cast<LockType*>(lock_entry.address()); }
@@ -335,6 +339,8 @@ class __TA_SCOPED_CAPABILITY Guard<LockType, Option, internal::EnableIfShared<Lo
                 "details.");
 
  public:
+  static constexpr LockFlags kLockFlags = LockTraits<RemoveGlobalReference<LockType>>::Flags;
+
   Guard(Guard&&) = delete;
   Guard(const Guard&) = delete;
   Guard& operator=(Guard&&) = delete;
@@ -374,8 +380,9 @@ class __TA_SCOPED_CAPABILITY Guard<LockType, Option, internal::EnableIfShared<Lo
   // Releases the lock early before this guard instance goes out of scope.
   template <typename... Args>
   void Release(Args&&... args) __TA_RELEASE() {
-    if (validator_.lock() != nullptr) {
-      LockType* lock_ptr = validator_.lock();
+    LockType* lock_ptr = validator_.lock();
+
+    if (lock_ptr != nullptr) {
       validator_.ValidateRelease();
       validator_.Clear();
       LockPolicy<LockType, Option>::Release(lock_ptr, &state_, std::forward<Args>(args)...);
@@ -459,6 +466,7 @@ class __TA_SCOPED_CAPABILITY Guard<LockType, Option, internal::EnableIfShared<Lo
     // validate the operation before attempting to obtain the lock, and the
     // other where we update our bookkeeping to indicate that the lock is owned
     // _after_ successfully obtaining the lock.
+    LockPolicy<LockType, Option>::PreValidate(validator_.lock(), &state_);
     validator_.ValidateAcquire();
     if (!LockPolicy<LockType, Option>::Acquire(validator_.lock(), &state_)) {
       validator_.ValidateRelease();
@@ -483,8 +491,8 @@ class __TA_SCOPED_CAPABILITY Guard<LockType, Option, internal::EnableIfShared<Lo
     LockValidator(LockType* lock, LockClassId id, uintptr_t order = 0)
         : lock_entry{lock, id, order} {}
 
-    void ValidateAcquire() { ThreadLockState::Get()->Acquire(&lock_entry); }
-    void ValidateRelease() { ThreadLockState::Get()->Release(&lock_entry); }
+    void ValidateAcquire() { ThreadLockState::Get(kLockFlags)->Acquire(&lock_entry); }
+    void ValidateRelease() { ThreadLockState::Get(kLockFlags)->Release(&lock_entry); }
     void Clear() { lock_entry.Clear(); }
 
     LockType* lock() const { return static_cast<LockType*>(lock_entry.address()); }

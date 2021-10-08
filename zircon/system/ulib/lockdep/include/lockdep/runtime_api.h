@@ -20,6 +20,7 @@ class AcquiredLockEntry;
 class ThreadLockState;
 class LockClassState;
 enum class LockResult : uint8_t;
+enum LockFlags : uint8_t;
 
 // System-defined hook to report detected lock validation failures.
 extern void SystemLockValidationError(AcquiredLockEntry* lock_entry,
@@ -35,7 +36,7 @@ extern void SystemCircularLockDependencyDetected(LockClassState* connected_set_r
 
 // System-defined hook that returns the ThreadLockState instance for the current
 // thread.
-extern ThreadLockState* SystemGetThreadLockState();
+extern ThreadLockState* SystemGetThreadLockState(LockFlags lock_flags);
 
 // System-defined hook that initializes the ThreadLockState for the current thread.
 extern void SystemInitThreadLockState(ThreadLockState* state);

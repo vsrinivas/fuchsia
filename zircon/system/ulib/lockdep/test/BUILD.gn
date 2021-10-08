@@ -27,6 +27,7 @@ test("lockdep-test") {
     "//zircon/system/ulib/lockdep",
     "//zircon/system/ulib/zxtest",
   ]
+  defines = [ "LOCK_DEP_ENABLE_VALIDATION=1" ]
   configs += [ ":unused" ]
 }
 

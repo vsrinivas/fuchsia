@@ -34,16 +34,6 @@ bool g_try_lock_succeeds = true;
 struct Spinlock : Mutex {
   using Mutex::Mutex;
 
-  bool AcquireIrqSave(uint64_t* flags) TA_ACQ() {
-    (void)flags;
-    Acquire();
-    return true;
-  }
-  void ReleaseIrqRestore(uint64_t flags) TA_REL() {
-    (void)flags;
-    Release();
-  }
-
   bool TryAcquire() TA_TRY_ACQ(true) {
     if (g_try_lock_succeeds)
       Acquire();
@@ -59,15 +49,16 @@ struct Spinlock : Mutex {
 LOCK_DEP_TRAITS(Spinlock, lockdep::LockFlagsIrqSafe);
 
 // Fake C-style locking primitive.
-struct spinlock_t {};
+struct TA_CAP("mutex") spinlock_t {
+  void Acquire() TA_ACQ() {}
+  void Release() TA_REL() {}
+  bool TryAcquire() TA_TRY_ACQ(true) { return g_try_lock_succeeds; }
+};
 LOCK_DEP_TRAITS(spinlock_t, lockdep::LockFlagsIrqSafe);
 
-void spinlock_lock(spinlock_t* /*lock*/) {}
-void spinlock_unlock(spinlock_t* /*lock*/) {}
-bool spinlock_try_lock(spinlock_t* /*lock*/) { return true; }
-void spinlock_lock_irqsave(spinlock_t* /*lock*/, uint64_t* /*flags*/) {}
-void spinlock_unlock_irqrestore(spinlock_t* /*lock*/, uint64_t /*flags*/) {}
-bool spinlock_try_lock_irqsave(spinlock_t* /*lock*/, uint64_t* /*flags*/) { return true; }
+void spinlock_lock(spinlock_t* lock) TA_ACQ(lock) { lock->Acquire(); }
+void spinlock_unlock(spinlock_t* lock) TA_REL(lock) { lock->Release(); }
+bool spinlock_try_lock(spinlock_t* lock) TA_TRY_ACQ(true, lock) { return lock->TryAcquire(); }
 
 // Type tags to select Guard<> lock policies for Spinlock and spinlock_t.
 struct IrqSave {};
@@ -78,104 +69,91 @@ struct TryNoIrqSave {};
 struct SpinlockNoIrqSave {
   struct State {};
 
+  static void PreValidate(Spinlock* lock, State*) {}
   static bool Acquire(Spinlock* lock, State*) TA_ACQ(lock) {
     lock->Acquire();
     return true;
   }
+
   static void Release(Spinlock* lock, State*) TA_REL(lock) { lock->Release(); }
 };
 LOCK_DEP_POLICY_OPTION(Spinlock, NoIrqSave, SpinlockNoIrqSave);
 
 struct SpinlockIrqSave {
-  struct State {
-    State() {}
-    uint64_t flags;
-  };
+  struct State {};
 
-  static bool Acquire(Spinlock* lock, State* state) TA_ACQ(lock) {
-    lock->AcquireIrqSave(&state->flags);
+  static void PreValidate(Spinlock* lock, State*) {}
+  static bool Acquire(Spinlock* lock, State*) TA_ACQ(lock) {
+    lock->Acquire();
     return true;
   }
-  static void Release(Spinlock* lock, State* state) TA_REL(lock) {
-    lock->ReleaseIrqRestore(state->flags);
-  }
+
+  static void Release(Spinlock* lock, State*) TA_REL(lock) { lock->Release(); }
 };
 LOCK_DEP_POLICY_OPTION(Spinlock, IrqSave, SpinlockIrqSave);
 
 struct SpinlockTryNoIrqSave {
   struct State {};
 
+  static void PreValidate(Spinlock* lock, State*) {}
   static bool Acquire(Spinlock* lock, State*) TA_TRY_ACQ(true, lock) { return lock->TryAcquire(); }
   static void Release(Spinlock* lock, State*) TA_REL(lock) { lock->Release(); }
 };
 LOCK_DEP_POLICY_OPTION(Spinlock, TryNoIrqSave, SpinlockTryNoIrqSave);
 
 struct SpinlockTryIrqSave {
-  struct State {
-    State() {}
-    uint64_t flags;
-  };
+  struct State {};
 
-  static bool Acquire(Spinlock* lock, State* state) TA_TRY_ACQ(true, lock) {
-    return lock->TryAcquireIrqSave(&state->flags);
-  }
-  static void Release(Spinlock* lock, State* state) TA_REL(lock) {
-    lock->ReleaseIrqRestore(state->flags);
-  }
+  static void PreValidate(Spinlock* lock, State*) {}
+  static bool Acquire(Spinlock* lock, State*) TA_TRY_ACQ(true, lock) { return lock->TryAcquire(); }
+  static void Release(Spinlock* lock, State*) TA_REL(lock) { lock->Release(); }
 };
 LOCK_DEP_POLICY_OPTION(Spinlock, TryIrqSave, SpinlockTryIrqSave);
 
 struct spinlock_t_NoIrqSave {
   struct State {};
 
-  static bool Acquire(spinlock_t* lock, State*) {
+  static void PreValidate(spinlock_t* lock, State*) {}
+  static bool Acquire(spinlock_t* lock, State*) TA_ACQ(lock) {
     spinlock_lock(lock);
     return true;
   }
-  static void Release(spinlock_t* lock, State*) { spinlock_unlock(lock); }
+  static void Release(spinlock_t* lock, State*) TA_REL(lock) { spinlock_unlock(lock); }
 };
 LOCK_DEP_POLICY_OPTION(spinlock_t, NoIrqSave, spinlock_t_NoIrqSave);
 
 struct spinlock_t_IrqSave {
-  struct State {
-    State() {}
-    uint64_t flags;
-  };
+  struct State {};
 
-  static bool Acquire(spinlock_t* lock, State* state) {
-    spinlock_lock_irqsave(lock, &state->flags);
+  static void PreValidate(spinlock_t* lock, State*) {}
+  static bool Acquire(spinlock_t* lock, State*) TA_ACQ(lock) {
+    spinlock_lock(lock);
     return true;
   }
-  static void Release(spinlock_t* lock, State* state) {
-    spinlock_unlock_irqrestore(lock, state->flags);
-  }
+
+  static void Release(spinlock_t* lock, State*) TA_REL(lock) { spinlock_unlock(lock); }
 };
 LOCK_DEP_POLICY_OPTION(spinlock_t, IrqSave, spinlock_t_IrqSave);
 
 struct spinlock_t_TryNoIrqSave {
   struct State {};
 
-  static bool Acquire(spinlock_t* lock, State*) {
-    spinlock_lock(lock);
-    return g_try_lock_succeeds;
+  static void PreValidate(spinlock_t* lock, State*) {}
+  static bool Acquire(spinlock_t* lock, State*) TA_TRY_ACQ(true, lock) {
+    return spinlock_try_lock(lock);
   }
-  static void Release(spinlock_t* lock, State*) { spinlock_unlock(lock); }
+  static void Release(spinlock_t* lock, State*) TA_REL(lock) { spinlock_unlock(lock); }
 };
 LOCK_DEP_POLICY_OPTION(spinlock_t, TryNoIrqSave, spinlock_t_TryNoIrqSave);
 
 struct spinlock_t_TryIrqSave {
-  struct State {
-    State() {}
-    uint64_t flags;
-  };
+  struct State {};
 
-  static bool Acquire(spinlock_t* lock, State* state) {
-    spinlock_lock_irqsave(lock, &state->flags);
-    return g_try_lock_succeeds;
+  static void PreValidate(spinlock_t* lock, State*) {}
+  static bool Acquire(spinlock_t* lock, State*) TA_TRY_ACQ(true, lock) {
+    return spinlock_try_lock(lock);
   }
-  static void Release(spinlock_t* lock, State* state) {
-    spinlock_unlock_irqrestore(lock, state->flags);
-  }
+  static void Release(spinlock_t* lock, State*) TA_REL(lock) { spinlock_unlock(lock); }
 };
 LOCK_DEP_POLICY_OPTION(spinlock_t, TryIrqSave, spinlock_t_TryIrqSave);
 
@@ -197,6 +175,7 @@ struct TA_CAP("mutex") ReadWriteLock {
   struct Read {
     struct State {};
     struct Shared {};
+    static void PreValidate(ReadWriteLock* lock, State*) {}
     static bool Acquire(ReadWriteLock* lock, State*) TA_ACQ_SHARED(lock) {
       return lock->AcquireRead();
     }
@@ -205,6 +184,7 @@ struct TA_CAP("mutex") ReadWriteLock {
 
   struct Write {
     struct State {};
+    static void PreValidate(ReadWriteLock* lock, State*) {}
     static bool Acquire(ReadWriteLock* lock, State*) TA_ACQ(lock) { return lock->AcquireWrite(); }
     static void Release(ReadWriteLock* lock, State*) TA_REL(lock) { lock->Release(); }
   };
@@ -255,9 +235,10 @@ struct Number {
   void TestExclude() TA_EXCL(lock) {}
 };
 
-lockdep::LockResult GetLastResult() {
+template <typename GuardType>
+lockdep::LockResult GetLastResult(const GuardType&) {
 #if WITH_LOCK_DEP
-  lockdep::ThreadLockState* state = lockdep::ThreadLockState::Get();
+  lockdep::ThreadLockState* state = lockdep::ThreadLockState::Get(GuardType::kLockFlags);
   return state->last_result();
 #else
   return lockdep::LockResult::Success;
@@ -311,7 +292,7 @@ static bool lock_dep_dynamic_analysis_tests() {
 
     Guard<Mutex> guard_a{&a.lock};
     EXPECT_TRUE(guard_a);
-    EXPECT_EQ(LockResult::Success, test::GetLastResult());
+    EXPECT_EQ(LockResult::Success, test::GetLastResult(guard_a));
   }
 
   // Single lock.
@@ -320,7 +301,7 @@ static bool lock_dep_dynamic_analysis_tests() {
 
     Guard<Mutex> guard_a{&a.lock};
     EXPECT_TRUE(guard_a);
-    EXPECT_EQ(LockResult::Success, test::GetLastResult());
+    EXPECT_EQ(LockResult::Success, test::GetLastResult(guard_a));
   }
 
   // Test order invariant.
@@ -330,11 +311,11 @@ static bool lock_dep_dynamic_analysis_tests() {
 
     Guard<Mutex> guard_a{&a.lock};
     EXPECT_TRUE(guard_a);
-    EXPECT_EQ(LockResult::Success, test::GetLastResult());
+    EXPECT_EQ(LockResult::Success, test::GetLastResult(guard_a));
 
     Guard<Mutex> guard_b{&b.lock};
     EXPECT_TRUE(guard_b);
-    EXPECT_EQ(LockResult::AlreadyAcquired, test::GetLastResult());
+    EXPECT_EQ(LockResult::AlreadyAcquired, test::GetLastResult(guard_b));
   }
 
   // Test order invariant with a different lock class.
@@ -344,11 +325,11 @@ static bool lock_dep_dynamic_analysis_tests() {
 
     Guard<Mutex> guard_a{&a.lock};
     EXPECT_TRUE(guard_a);
-    EXPECT_EQ(LockResult::Success, test::GetLastResult());
+    EXPECT_EQ(LockResult::Success, test::GetLastResult(guard_a));
 
     Guard<Mutex> guard_b{&b.lock};
     EXPECT_TRUE(guard_b);
-    EXPECT_EQ(LockResult::AlreadyAcquired, test::GetLastResult());
+    EXPECT_EQ(LockResult::AlreadyAcquired, test::GetLastResult(guard_b));
   }
 
   // Test address order invariant.
@@ -359,13 +340,13 @@ static bool lock_dep_dynamic_analysis_tests() {
     {
       GuardMultiple<2, Mutex> guard_all{&a.lock, &b.lock};
       EXPECT_TRUE(guard_all);
-      EXPECT_EQ(LockResult::Success, test::GetLastResult());
+      EXPECT_EQ(LockResult::Success, test::GetLastResult(guard_all));
     }
 
     {
       GuardMultiple<2, Mutex> guard_all{&b.lock, &a.lock};
       EXPECT_TRUE(guard_all);
-      EXPECT_EQ(LockResult::Success, test::GetLastResult());
+      EXPECT_EQ(LockResult::Success, test::GetLastResult(guard_all));
     }
   }
 
@@ -377,13 +358,13 @@ static bool lock_dep_dynamic_analysis_tests() {
     {
       GuardMultiple<2, Mutex> guard_all{&a.lock, &b.lock};
       EXPECT_TRUE(guard_all);
-      EXPECT_EQ(LockResult::Success, test::GetLastResult());
+      EXPECT_EQ(LockResult::Success, test::GetLastResult(guard_all));
     }
 
     {
       GuardMultiple<2, Mutex> guard_all{&b.lock, &a.lock};
       EXPECT_TRUE(guard_all);
-      EXPECT_EQ(LockResult::Success, test::GetLastResult());
+      EXPECT_EQ(LockResult::Success, test::GetLastResult(guard_all));
     }
   }
 
@@ -395,41 +376,41 @@ static bool lock_dep_dynamic_analysis_tests() {
     {
       GuardMultiple<2, Spinlock, NoIrqSave> guard_all{&a.lock, &b.lock};
       EXPECT_TRUE(guard_all);
-      EXPECT_EQ(LockResult::Success, test::GetLastResult());
+      EXPECT_EQ(LockResult::Success, test::GetLastResult(guard_all));
     }
 
     {
       GuardMultiple<2, Spinlock, NoIrqSave> guard_all{&b.lock, &a.lock};
       EXPECT_TRUE(guard_all);
-      EXPECT_EQ(LockResult::Success, test::GetLastResult());
+      EXPECT_EQ(LockResult::Success, test::GetLastResult(guard_all));
     }
 
     {
       test::g_try_lock_succeeds = true;
       GuardMultiple<2, Spinlock, TryNoIrqSave> guard_all{&a.lock, &b.lock};
       EXPECT_TRUE(guard_all);
-      EXPECT_EQ(LockResult::Success, test::GetLastResult());
+      EXPECT_EQ(LockResult::Success, test::GetLastResult(guard_all));
     }
 
     {
       test::g_try_lock_succeeds = true;
       GuardMultiple<2, Spinlock, TryNoIrqSave> guard_all{&b.lock, &a.lock};
       EXPECT_TRUE(guard_all);
-      EXPECT_EQ(LockResult::Success, test::GetLastResult());
+      EXPECT_EQ(LockResult::Success, test::GetLastResult(guard_all));
     }
 
     {
       test::g_try_lock_succeeds = false;
       GuardMultiple<2, Spinlock, TryNoIrqSave> guard_all{&a.lock, &b.lock};
       EXPECT_FALSE(guard_all);
-      EXPECT_EQ(LockResult::Success, test::GetLastResult());
+      EXPECT_EQ(LockResult::Success, test::GetLastResult(guard_all));
     }
 
     {
       test::g_try_lock_succeeds = false;
       GuardMultiple<2, Spinlock, TryNoIrqSave> guard_all{&b.lock, &a.lock};
       EXPECT_FALSE(guard_all);
-      EXPECT_EQ(LockResult::Success, test::GetLastResult());
+      EXPECT_EQ(LockResult::Success, test::GetLastResult(guard_all));
     }
   }
 
@@ -440,11 +421,11 @@ static bool lock_dep_dynamic_analysis_tests() {
 
     Guard<Mutex> guard_a{&a.lock};
     EXPECT_TRUE(guard_a);
-    EXPECT_EQ(LockResult::Success, test::GetLastResult());
+    EXPECT_EQ(LockResult::Success, test::GetLastResult(guard_a));
 
     Guard<Mutex> guard_b{&b.lock};
     EXPECT_TRUE(guard_b);
-    EXPECT_EQ(LockResult::Success, test::GetLastResult());
+    EXPECT_EQ(LockResult::Success, test::GetLastResult(guard_b));
   }
 
   // Bar -> Foo -- check order invariant.
@@ -454,11 +435,11 @@ static bool lock_dep_dynamic_analysis_tests() {
 
     Guard<Mutex> guard_b{&b.lock};
     EXPECT_TRUE(guard_b);
-    EXPECT_EQ(LockResult::Success, test::GetLastResult());
+    EXPECT_EQ(LockResult::Success, test::GetLastResult(guard_b));
 
     Guard<Mutex> guard_a{&a.lock};
     EXPECT_TRUE(guard_a);
-    EXPECT_EQ(LockResult::OutOfOrder, test::GetLastResult());
+    EXPECT_EQ(LockResult::OutOfOrder, test::GetLastResult(guard_a));
   }
 
   // Test external order invariant.
@@ -469,31 +450,31 @@ static bool lock_dep_dynamic_analysis_tests() {
     {
       Guard<Nestable> auto_baz1{&baz1.lock, 0};
       EXPECT_TRUE(auto_baz1);
-      EXPECT_EQ(LockResult::Success, test::GetLastResult());
+      EXPECT_EQ(LockResult::Success, test::GetLastResult(auto_baz1));
 
       Guard<Nestable> auto_baz2{&baz2.lock, 1};
       EXPECT_TRUE(auto_baz2);
-      EXPECT_EQ(LockResult::Success, test::GetLastResult());
+      EXPECT_EQ(LockResult::Success, test::GetLastResult(auto_baz2));
     }
 
     {
       Guard<Nestable> auto_baz2{&baz2.lock, 0};
       EXPECT_TRUE(auto_baz2);
-      EXPECT_EQ(LockResult::Success, test::GetLastResult());
+      EXPECT_EQ(LockResult::Success, test::GetLastResult(auto_baz2));
 
       Guard<Nestable> auto_baz1{&baz1.lock, 1};
       EXPECT_TRUE(auto_baz1);
-      EXPECT_EQ(LockResult::Success, test::GetLastResult());
+      EXPECT_EQ(LockResult::Success, test::GetLastResult(auto_baz2));
     }
 
     {
       Guard<Nestable> auto_baz2{&baz2.lock, 1};
       EXPECT_TRUE(auto_baz2);
-      EXPECT_EQ(LockResult::Success, test::GetLastResult());
+      EXPECT_EQ(LockResult::Success, test::GetLastResult(auto_baz2));
 
       Guard<Nestable> auto_baz1{&baz1.lock, 0};
       EXPECT_TRUE(auto_baz1);
-      EXPECT_EQ(LockResult::InvalidNesting, test::GetLastResult());
+      EXPECT_EQ(LockResult::InvalidNesting, test::GetLastResult(auto_baz1));
     }
   }
 
@@ -506,31 +487,31 @@ static bool lock_dep_dynamic_analysis_tests() {
     {
       Guard<Mutex> auto_baz1{&baz1.lock, 0};
       EXPECT_TRUE(auto_baz1);
-      EXPECT_EQ(LockResult::Success, test::GetLastResult());
+      EXPECT_EQ(LockResult::Success, test::GetLastResult(auto_baz1));
 
       Guard<Mutex> auto_baz2{&baz2.lock, 1};
       EXPECT_TRUE(auto_baz2);
-      EXPECT_EQ(LockResult::Success, test::GetLastResult());
+      EXPECT_EQ(LockResult::Success, test::GetLastResult(auto_baz2));
     }
 
     {
       Guard<Mutex> auto_baz2{&baz2.lock, 0};
       EXPECT_TRUE(auto_baz2);
-      EXPECT_EQ(LockResult::Success, test::GetLastResult());
+      EXPECT_EQ(LockResult::Success, test::GetLastResult(auto_baz2));
 
       Guard<Mutex> auto_baz1{&baz1.lock, 1};
       EXPECT_TRUE(auto_baz1);
-      EXPECT_EQ(LockResult::Success, test::GetLastResult());
+      EXPECT_EQ(LockResult::Success, test::GetLastResult(auto_baz1));
     }
 
     {
       Guard<Mutex> auto_baz2{&baz2.lock, 1};
       EXPECT_TRUE(auto_baz2);
-      EXPECT_EQ(LockResult::Success, test::GetLastResult());
+      EXPECT_EQ(LockResult::Success, test::GetLastResult(auto_baz2));
 
       Guard<Mutex> auto_baz1{&baz1.lock, 0};
       EXPECT_TRUE(auto_baz1);
-      EXPECT_EQ(LockResult::InvalidNesting, test::GetLastResult());
+      EXPECT_EQ(LockResult::InvalidNesting, test::GetLastResult(auto_baz1));
     }
   }
 
@@ -543,31 +524,31 @@ static bool lock_dep_dynamic_analysis_tests() {
     {
       Guard<Mutex> auto_baz1{AssertOrderedLock, baz1.get_lock(), 0};
       EXPECT_TRUE(auto_baz1);
-      EXPECT_EQ(LockResult::Success, test::GetLastResult());
+      EXPECT_EQ(LockResult::Success, test::GetLastResult(auto_baz1));
 
       Guard<Mutex> auto_baz2{AssertOrderedLock, baz2.get_lock(), 1};
       EXPECT_TRUE(auto_baz2);
-      EXPECT_EQ(LockResult::Success, test::GetLastResult());
+      EXPECT_EQ(LockResult::Success, test::GetLastResult(auto_baz2));
     }
 
     {
       Guard<Mutex> auto_baz2{AssertOrderedLock, baz2.get_lock(), 0};
       EXPECT_TRUE(auto_baz2);
-      EXPECT_EQ(LockResult::Success, test::GetLastResult());
+      EXPECT_EQ(LockResult::Success, test::GetLastResult(auto_baz2));
 
       Guard<Mutex> auto_baz1{AssertOrderedLock, baz1.get_lock(), 1};
       EXPECT_TRUE(auto_baz1);
-      EXPECT_EQ(LockResult::Success, test::GetLastResult());
+      EXPECT_EQ(LockResult::Success, test::GetLastResult(auto_baz1));
     }
 
     {
       Guard<Mutex> auto_baz2{AssertOrderedLock, baz2.get_lock(), 1};
       EXPECT_TRUE(auto_baz2);
-      EXPECT_EQ(LockResult::Success, test::GetLastResult());
+      EXPECT_EQ(LockResult::Success, test::GetLastResult(auto_baz2));
 
       Guard<Mutex> auto_baz1{AssertOrderedLock, baz1.get_lock(), 0};
       EXPECT_TRUE(auto_baz1);
-      EXPECT_EQ(LockResult::InvalidNesting, test::GetLastResult());
+      EXPECT_EQ(LockResult::InvalidNesting, test::GetLastResult(auto_baz1));
     }
   }
 
@@ -589,22 +570,31 @@ static bool lock_dep_dynamic_analysis_tests() {
     {
       Guard<Mutex> auto_baz1{&baz1.lock};
       EXPECT_TRUE(auto_baz1);
-      EXPECT_EQ(LockResult::Success, test::GetLastResult());
+      EXPECT_EQ(LockResult::Success, test::GetLastResult(auto_baz1));
 
       Guard<Spinlock, NoIrqSave> auto_baz2{&baz2.lock};
       EXPECT_TRUE(auto_baz2);
-      EXPECT_EQ(LockResult::Success, test::GetLastResult());
+      EXPECT_EQ(LockResult::Success, test::GetLastResult(auto_baz2));
     }
 
+    // Note that this ordering (spinlock followed by mutex) cannot currently be
+    // detected by lockdep in the kernel.  See fxb/85289 and the discussion of
+    // the solution for details.  The TL;DR is that spinlocks and mutexes end up
+    // using different system provided contexts for their analysis, and rely on
+    // asserts in the lock implementations themselves to provide protection
+    // against either attempting to acquire a spinlock with IRQs still enabled,
+    // or attempting to acquire a blocking mutex while holding a spinlock.
+#if 0
     {
       Guard<Spinlock, NoIrqSave> auto_baz2{&baz2.lock};
       EXPECT_TRUE(auto_baz2);
-      EXPECT_EQ(LockResult::Success, test::GetLastResult());
+      EXPECT_EQ(LockResult::Success, test::GetLastResult(auto_baz2));
 
       Guard<Mutex> auto_baz1{&baz1.lock};
       EXPECT_TRUE(auto_baz1);
-      EXPECT_EQ(LockResult::InvalidIrqSafety, test::GetLastResult());
+      EXPECT_EQ(LockResult::InvalidIrqSafety, test::GetLastResult(auto_baz1));
     }
+#endif
   }
 
   // Test spinlock options compile and basic guard functions.
@@ -725,22 +715,22 @@ static bool lock_dep_dynamic_analysis_tests() {
     {
       Guard<ReadWriteLock, ReadWriteLock::Read> guard_a{&a.lock};
       EXPECT_TRUE(guard_a);
-      EXPECT_EQ(LockResult::Success, test::GetLastResult());
+      EXPECT_EQ(LockResult::Success, test::GetLastResult(guard_a));
 
       Guard<ReadWriteLock, ReadWriteLock::Read> guard_b{&b.lock};
       EXPECT_TRUE(guard_b);
-      EXPECT_EQ(LockResult::AlreadyAcquired, test::GetLastResult());
+      EXPECT_EQ(LockResult::AlreadyAcquired, test::GetLastResult(guard_b));
     }
 
     {
       Guard<ReadWriteLock, ReadWriteLock::Read> guard_a{&a.lock};
       EXPECT_TRUE(guard_a);
-      EXPECT_EQ(LockResult::Success, test::GetLastResult());
+      EXPECT_EQ(LockResult::Success, test::GetLastResult(guard_a));
 
       [&]() TA_NO_THREAD_SAFETY_ANALYSIS {
         Guard<ReadWriteLock, ReadWriteLock::Read> guard_b{&a.lock};
         EXPECT_TRUE(guard_b);
-        EXPECT_EQ(LockResult::Reentrance, test::GetLastResult());
+        EXPECT_EQ(LockResult::Reentrance, test::GetLastResult(guard_b));
         return true;
       }();
     }
@@ -748,22 +738,22 @@ static bool lock_dep_dynamic_analysis_tests() {
     {
       Guard<ReadWriteLock, ReadWriteLock::Read> guard_a{&a.lock};
       EXPECT_TRUE(guard_a);
-      EXPECT_EQ(LockResult::Success, test::GetLastResult());
+      EXPECT_EQ(LockResult::Success, test::GetLastResult(guard_a));
 
       Guard<ReadWriteLock, ReadWriteLock::Write> guard_b{&b.lock};
       EXPECT_TRUE(guard_b);
-      EXPECT_EQ(LockResult::AlreadyAcquired, test::GetLastResult());
+      EXPECT_EQ(LockResult::AlreadyAcquired, test::GetLastResult(guard_b));
     }
 
     {
       Guard<ReadWriteLock, ReadWriteLock::Read> guard_a{&a.lock};
       EXPECT_TRUE(guard_a);
-      EXPECT_EQ(LockResult::Success, test::GetLastResult());
+      EXPECT_EQ(LockResult::Success, test::GetLastResult(guard_a));
 
       [&]() TA_NO_THREAD_SAFETY_ANALYSIS {
         Guard<ReadWriteLock, ReadWriteLock::Write> guard_b{&a.lock};
         EXPECT_TRUE(guard_b);
-        EXPECT_EQ(LockResult::Reentrance, test::GetLastResult());
+        EXPECT_EQ(LockResult::Reentrance, test::GetLastResult(guard_b));
         return true;
       }();
     }
@@ -771,22 +761,22 @@ static bool lock_dep_dynamic_analysis_tests() {
     {
       Guard<ReadWriteLock, ReadWriteLock::Write> guard_a{&a.lock};
       EXPECT_TRUE(guard_a);
-      EXPECT_EQ(LockResult::Success, test::GetLastResult());
+      EXPECT_EQ(LockResult::Success, test::GetLastResult(guard_a));
 
       Guard<ReadWriteLock, ReadWriteLock::Read> guard_b{&b.lock};
       EXPECT_TRUE(guard_b);
-      EXPECT_EQ(LockResult::AlreadyAcquired, test::GetLastResult());
+      EXPECT_EQ(LockResult::AlreadyAcquired, test::GetLastResult(guard_b));
     }
 
     {
       Guard<ReadWriteLock, ReadWriteLock::Write> guard_a{&a.lock};
       EXPECT_TRUE(guard_a);
-      EXPECT_EQ(LockResult::Success, test::GetLastResult());
+      EXPECT_EQ(LockResult::Success, test::GetLastResult(guard_a));
 
       [&]() TA_NO_THREAD_SAFETY_ANALYSIS {
         Guard<ReadWriteLock, ReadWriteLock::Read> guard_b{&a.lock};
         EXPECT_TRUE(guard_b);
-        EXPECT_EQ(LockResult::Reentrance, test::GetLastResult());
+        EXPECT_EQ(LockResult::Reentrance, test::GetLastResult(guard_b));
         return true;
       }();
     }
@@ -794,22 +784,22 @@ static bool lock_dep_dynamic_analysis_tests() {
     {
       Guard<ReadWriteLock, ReadWriteLock::Write> guard_a{&a.lock};
       EXPECT_TRUE(guard_a);
-      EXPECT_EQ(LockResult::Success, test::GetLastResult());
+      EXPECT_EQ(LockResult::Success, test::GetLastResult(guard_a));
 
       Guard<ReadWriteLock, ReadWriteLock::Write> guard_b{&b.lock};
       EXPECT_TRUE(guard_b);
-      EXPECT_EQ(LockResult::AlreadyAcquired, test::GetLastResult());
+      EXPECT_EQ(LockResult::AlreadyAcquired, test::GetLastResult(guard_b));
     }
 
     {
       Guard<ReadWriteLock, ReadWriteLock::Write> guard_a{&a.lock};
       EXPECT_TRUE(guard_a);
-      EXPECT_EQ(LockResult::Success, test::GetLastResult());
+      EXPECT_EQ(LockResult::Success, test::GetLastResult(guard_a));
 
       [&]() TA_NO_THREAD_SAFETY_ANALYSIS {
         Guard<ReadWriteLock, ReadWriteLock::Write> guard_b{&a.lock};
         EXPECT_TRUE(guard_b);
-        EXPECT_EQ(LockResult::Reentrance, test::GetLastResult());
+        EXPECT_EQ(LockResult::Reentrance, test::GetLastResult(guard_b));
         return true;
       }();
     }
@@ -817,25 +807,25 @@ static bool lock_dep_dynamic_analysis_tests() {
     {
       GuardMultiple<2, ReadWriteLock, ReadWriteLock::Read> guard{&a.lock, &b.lock};
       EXPECT_TRUE(guard);
-      EXPECT_EQ(LockResult::Success, test::GetLastResult());
+      EXPECT_EQ(LockResult::Success, test::GetLastResult(guard));
     }
 
     {
       GuardMultiple<2, ReadWriteLock, ReadWriteLock::Read> guard{&a.lock, &a.lock};
       EXPECT_TRUE(guard);
-      EXPECT_EQ(LockResult::Reentrance, test::GetLastResult());
+      EXPECT_EQ(LockResult::Reentrance, test::GetLastResult(guard));
     }
 
     {
       GuardMultiple<2, ReadWriteLock, ReadWriteLock::Write> guard{&a.lock, &b.lock};
       EXPECT_TRUE(guard);
-      EXPECT_EQ(LockResult::Success, test::GetLastResult());
+      EXPECT_EQ(LockResult::Success, test::GetLastResult(guard));
     }
 
     {
       GuardMultiple<2, ReadWriteLock, ReadWriteLock::Write> guard{&a.lock, &a.lock};
       EXPECT_TRUE(guard);
-      EXPECT_EQ(LockResult::Reentrance, test::GetLastResult());
+      EXPECT_EQ(LockResult::Reentrance, test::GetLastResult(guard));
     }
   }
 
@@ -846,21 +836,21 @@ static bool lock_dep_dynamic_analysis_tests() {
     {
       Guard<Mutex> guard_a{&value.lock_a};
       EXPECT_TRUE(guard_a);
-      EXPECT_EQ(LockResult::Success, test::GetLastResult());
+      EXPECT_EQ(LockResult::Success, test::GetLastResult(guard_a));
 
       Guard<Mutex> guard_b{&value.lock_b};
       EXPECT_TRUE(guard_b);
-      EXPECT_EQ(LockResult::Success, test::GetLastResult());
+      EXPECT_EQ(LockResult::Success, test::GetLastResult(guard_b));
     }
 
     {
       Guard<Mutex> guard_b{&value.lock_b};
       EXPECT_TRUE(guard_b);
-      EXPECT_EQ(LockResult::Success, test::GetLastResult());
+      EXPECT_EQ(LockResult::Success, test::GetLastResult(guard_b));
 
       Guard<Mutex> guard_a{&value.lock_a};
       EXPECT_TRUE(guard_a);
-      EXPECT_EQ(LockResult::OutOfOrder, test::GetLastResult());
+      EXPECT_EQ(LockResult::OutOfOrder, test::GetLastResult(guard_a));
     }
   }
 
@@ -884,108 +874,108 @@ static bool lock_dep_dynamic_analysis_tests() {
     {
       Guard<Mutex> guard_a{&a.lock};
       EXPECT_TRUE(guard_a);
-      EXPECT_EQ(LockResult::Success, test::GetLastResult());
+      EXPECT_EQ(LockResult::Success, test::GetLastResult(guard_a));
 
       Guard<Mutex> guard_b{&b.lock};
       EXPECT_TRUE(guard_b);
-      EXPECT_EQ(LockResult::Success, test::GetLastResult());
+      EXPECT_EQ(LockResult::Success, test::GetLastResult(guard_b));
     }
 
     // Test ordering with another lock class before this one.
     {
       Guard<Mutex> guard_before{&before.lock};
       EXPECT_TRUE(guard_before);
-      EXPECT_EQ(LockResult::Success, test::GetLastResult());
+      EXPECT_EQ(LockResult::Success, test::GetLastResult(guard_before));
 
       Guard<Mutex> guard_a{&a.lock};
       EXPECT_TRUE(guard_a);
-      EXPECT_EQ(LockResult::Success, test::GetLastResult());
+      EXPECT_EQ(LockResult::Success, test::GetLastResult(guard_a));
 
       Guard<Mutex> guard_b{&b.lock};
       EXPECT_TRUE(guard_b);
-      EXPECT_EQ(LockResult::Success, test::GetLastResult());
+      EXPECT_EQ(LockResult::Success, test::GetLastResult(guard_b));
     }
     {
       Guard<Mutex> guard_a{&a.lock};
       EXPECT_TRUE(guard_a);
-      EXPECT_EQ(LockResult::Success, test::GetLastResult());
+      EXPECT_EQ(LockResult::Success, test::GetLastResult(guard_a));
 
       Guard<Mutex> guard_before{&before.lock};
       EXPECT_TRUE(guard_before);
-      EXPECT_EQ(LockResult::OutOfOrder, test::GetLastResult());
+      EXPECT_EQ(LockResult::OutOfOrder, test::GetLastResult(guard_before));
     }
     {
       Guard<Mutex> guard_b{&b.lock};
       EXPECT_TRUE(guard_b);
-      EXPECT_EQ(LockResult::Success, test::GetLastResult());
+      EXPECT_EQ(LockResult::Success, test::GetLastResult(guard_b));
 
       // Subsequent violations are not reported.
       Guard<Mutex> guard_before{&before.lock};
       EXPECT_TRUE(guard_before);
-      EXPECT_EQ(LockResult::Success, test::GetLastResult());
+      EXPECT_EQ(LockResult::Success, test::GetLastResult(guard_before));
     }
 
     // Test ordering with another lock class after this one.
     {
       Guard<Mutex> guard_a{&a.lock};
       EXPECT_TRUE(guard_a);
-      EXPECT_EQ(LockResult::Success, test::GetLastResult());
+      EXPECT_EQ(LockResult::Success, test::GetLastResult(guard_a));
 
       Guard<Mutex> guard_b{&b.lock};
       EXPECT_TRUE(guard_b);
-      EXPECT_EQ(LockResult::Success, test::GetLastResult());
+      EXPECT_EQ(LockResult::Success, test::GetLastResult(guard_b));
 
       Guard<Mutex> guard_after{&after.lock};
       EXPECT_TRUE(guard_after);
-      EXPECT_EQ(LockResult::Success, test::GetLastResult());
+      EXPECT_EQ(LockResult::Success, test::GetLastResult(guard_after));
     }
     {
       Guard<Mutex> guard_after{&after.lock};
       EXPECT_TRUE(guard_after);
-      EXPECT_EQ(LockResult::Success, test::GetLastResult());
+      EXPECT_EQ(LockResult::Success, test::GetLastResult(guard_after));
 
       Guard<Mutex> guard_a{&a.lock};
       EXPECT_TRUE(guard_a);
-      EXPECT_EQ(LockResult::OutOfOrder, test::GetLastResult());
+      EXPECT_EQ(LockResult::OutOfOrder, test::GetLastResult(guard_a));
     }
     {
       Guard<Mutex> guard_after{&after.lock};
       EXPECT_TRUE(guard_after);
-      EXPECT_EQ(LockResult::Success, test::GetLastResult());
+      EXPECT_EQ(LockResult::Success, test::GetLastResult(guard_after));
 
       // Subsequent violations are not reported.
       Guard<Mutex> guard_b{&b.lock};
       EXPECT_TRUE(guard_b);
-      EXPECT_EQ(LockResult::Success, test::GetLastResult());
+      EXPECT_EQ(LockResult::Success, test::GetLastResult(guard_b));
     }
 
     // Test ordering with another lock class between this one.
     {
       Guard<Mutex> guard_a{&a.lock};
       EXPECT_TRUE(guard_a);
-      EXPECT_EQ(LockResult::Success, test::GetLastResult());
+      EXPECT_EQ(LockResult::Success, test::GetLastResult(guard_a));
 
       Guard<Mutex> guard_between{&between.lock};
       EXPECT_TRUE(guard_between);
-      EXPECT_EQ(LockResult::Success, test::GetLastResult());
+      EXPECT_EQ(LockResult::Success, test::GetLastResult(guard_between));
 
       Guard<Mutex> guard_b{&b.lock};
       EXPECT_TRUE(guard_b);
-      EXPECT_EQ(LockResult::OutOfOrder, test::GetLastResult());
+      EXPECT_EQ(LockResult::OutOfOrder, test::GetLastResult(guard_b));
     }
     {
       Guard<Mutex> guard_b{&b.lock};
       EXPECT_TRUE(guard_b);
-      EXPECT_EQ(LockResult::Success, test::GetLastResult());
+      EXPECT_EQ(LockResult::Success, test::GetLastResult(guard_b));
 
       Guard<Mutex> guard_between{&between.lock};
       EXPECT_TRUE(guard_between);
-      EXPECT_EQ(LockResult::Success, test::GetLastResult());
+      EXPECT_EQ(LockResult::Success, test::GetLastResult(guard_between));
 
       // Subsequent violations are not reported.
       Guard<Mutex> guard_a{&a.lock};
       EXPECT_TRUE(guard_a);
-      EXPECT_EQ(LockResult::Success, test::GetLastResult());
+      EXPECT_EQ(LockResult::Success, test::GetLastResult(guard_a));
     }
   }
 
@@ -1000,55 +990,55 @@ static bool lock_dep_dynamic_analysis_tests() {
     {
       Guard<Mutex> guard_a{&a.lock};
       EXPECT_TRUE(guard_a);
-      EXPECT_EQ(LockResult::Success, test::GetLastResult());
+      EXPECT_EQ(LockResult::Success, test::GetLastResult(guard_a));
 
       Guard<Mutex> guard_b{&b.lock};
       EXPECT_TRUE(guard_b);
-      EXPECT_EQ(LockResult::Success, test::GetLastResult());
+      EXPECT_EQ(LockResult::Success, test::GetLastResult(guard_b));
     }
 
     // B -> C
     {
       Guard<Mutex> guard_b{&b.lock};
       EXPECT_TRUE(guard_b);
-      EXPECT_EQ(LockResult::Success, test::GetLastResult());
+      EXPECT_EQ(LockResult::Success, test::GetLastResult(guard_b));
 
       Guard<Mutex> guard_c{&c.lock};
       EXPECT_TRUE(guard_c);
-      EXPECT_EQ(LockResult::Success, test::GetLastResult());
+      EXPECT_EQ(LockResult::Success, test::GetLastResult(guard_c));
     }
 
     // C -> A -- cycle in (A, B, C)
     {
       Guard<Mutex> guard_c{&c.lock};
       EXPECT_TRUE(guard_c);
-      EXPECT_EQ(LockResult::Success, test::GetLastResult());
+      EXPECT_EQ(LockResult::Success, test::GetLastResult(guard_c));
 
       Guard<Mutex> guard_a{&a.lock};
       EXPECT_TRUE(guard_a);
-      EXPECT_EQ(LockResult::Success, test::GetLastResult());
+      EXPECT_EQ(LockResult::Success, test::GetLastResult(guard_a));
     }
 
     // C -> D
     {
       Guard<Mutex> guard_c{&c.lock};
       EXPECT_TRUE(guard_c);
-      EXPECT_EQ(LockResult::Success, test::GetLastResult());
+      EXPECT_EQ(LockResult::Success, test::GetLastResult(guard_c));
 
       Guard<Mutex> guard_d{&d.lock};
       EXPECT_TRUE(guard_d);
-      EXPECT_EQ(LockResult::Success, test::GetLastResult());
+      EXPECT_EQ(LockResult::Success, test::GetLastResult(guard_d));
     }
 
     // D -> A -- cycle in (A, B, C, D)
     {
       Guard<Mutex> guard_d{&d.lock};
       EXPECT_TRUE(guard_d);
-      EXPECT_EQ(LockResult::Success, test::GetLastResult());
+      EXPECT_EQ(LockResult::Success, test::GetLastResult(guard_d));
 
       Guard<Mutex> guard_a{&a.lock};
       EXPECT_TRUE(guard_a);
-      EXPECT_EQ(LockResult::Success, test::GetLastResult());
+      EXPECT_EQ(LockResult::Success, test::GetLastResult(guard_a));
     }
 
     // Ensure that the loop detection pass completes before the test ends to

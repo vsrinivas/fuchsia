@@ -161,12 +161,17 @@ struct MutexPolicy {
     const zx_duration_t spin_max_duration{Mutex::SPIN_MAX_DURATION};
   };
 
+  // No special actions are needed during pre-validation.
+  template <typename LockType>
+  static void PreValidate(LockType*, State*) {}
+
   // Basic acquire and release operations.
   template <typename LockType>
   static bool Acquire(LockType* lock, State* state) TA_ACQ(lock) TA_EXCL(thread_lock) {
     lock->Acquire(state->spin_max_duration);
     return true;
   }
+
   template <typename LockType>
   static void Release(LockType* lock, State*) TA_REL(lock) TA_EXCL(thread_lock) {
     lock->Release();

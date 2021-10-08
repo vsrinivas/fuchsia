@@ -23,6 +23,8 @@ class GuardMultiple {
                 "Nestable locks cannot be used with GuardMultiple!");
 
  public:
+  static constexpr LockFlags kLockFlags = LockTraits<RemoveGlobalReference<LockType>>::Flags;
+
   GuardMultiple(GuardMultiple&&) = delete;
   GuardMultiple& operator=(GuardMultiple&&) = delete;
 
