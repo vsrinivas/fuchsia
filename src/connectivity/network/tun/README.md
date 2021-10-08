@@ -9,7 +9,18 @@ fashion to what `TUN/TAP` interfaces provide on other OSes.
 You can use `network-tun` from the `sys` realm if you add
 `--with //src/connectivity/network/tun:config` to your `fx set` line.
 
-To use it in tests inject it in your test's `cmx` file:
+To use it in your CFv2 tests, include the manifest shard in your `cml` file
+(recommended):
+
+```json5
+{
+    include: [
+        "//src/connectivity/network/tun/network-tun/meta/network-tun-test.shard.cml",
+    ],
+}
+```
+
+To use it in tests inject it in your test's `cmx` file (deprecated):
 
 ```json
 {

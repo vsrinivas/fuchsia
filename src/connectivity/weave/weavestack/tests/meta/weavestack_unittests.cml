@@ -1,5 +1,6 @@
 {
     include: [
+        "//src/connectivity/network/tun/network-tun/meta/network-tun-test.shard.cml",
         "//src/sys/test_runners/gtest/default.shard.cml",
         "inspect/client.shard.cml",
         "syslog/client.shard.cml",
@@ -11,10 +12,6 @@
         {
             name: "netstack-debug",
             url: "#meta/netstack-debug.cm",
-        },
-        {
-            name: "network-tun",
-            url: "#meta/network-tun.cm",
         },
     ],
     use: [
@@ -33,10 +30,6 @@
             from: "#netstack-debug",
         },
         {
-            protocol: [ "fuchsia.net.tun.Control" ],
-            from: "#network-tun",
-        },
-        {
             directory: "config-data",
             rights: [ "r*" ],
             path: "/config/data",
@@ -51,10 +44,7 @@
         {
             protocol: "fuchsia.logger.LogSink",
             from: "parent",
-            to: [
-                "#netstack-debug",
-                "#network-tun",
-            ],
+            to: [ "#netstack-debug" ],
         },
     ],
 }

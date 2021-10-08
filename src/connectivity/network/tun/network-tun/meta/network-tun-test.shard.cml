@@ -1,0 +1,25 @@
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    include: [ "syslog/client.shard.cml" ],
+    children: [
+        {
+            name: "network-tun",
+            url: "#meta/network-tun.cm",
+        },
+    ],
+    use: [
+        {
+            protocol: [ "fuchsia.net.tun.Control" ],
+            from: "#network-tun",
+        },
+    ],
+    offer: [
+        {
+            protocol: "fuchsia.logger.LogSink",
+            from: "parent",
+            to: "#network-tun",
+        },
+    ],
+}
