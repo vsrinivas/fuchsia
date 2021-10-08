@@ -20,7 +20,9 @@ class OlderSimpleTable;
 
 class NewerSimpleTable;
 
-class GreaterThan64OrdinalTable;
+class ExtensionTable;
+
+class SixtyFourOrdinalTable;
 
 class EmptyTable;
 
@@ -744,7 +746,75 @@ class NewerSimpleTable final {
 
 using NewerSimpleTablePtr = ::std::unique_ptr<NewerSimpleTable>;
 
-class GreaterThan64OrdinalTable final {
+class ExtensionTable final {
+ public:
+  static const fidl_type_t* FidlType;
+  /// Returns whether no field is set.
+  bool IsEmpty() const;
+
+  const std::map<uint64_t, std::vector<uint8_t>>& UnknownData() const {
+    return _unknown_data;
+  }
+
+  void SetUnknownDataEntry(uint32_t ordinal, std::vector<uint8_t>&& data) {
+    auto ord = static_cast<uint64_t>(ordinal);
+    ZX_ASSERT(!IsOrdinalKnown(ord));
+    _unknown_data.insert({ord, std::move(data)});
+  }
+
+  ExtensionTable();
+  ExtensionTable(ExtensionTable&& other);
+  ~ExtensionTable();
+  ExtensionTable& operator=(ExtensionTable&& other);
+
+  static inline ::std::unique_ptr<ExtensionTable> New() {
+    return ::std::make_unique<ExtensionTable>();
+  }
+
+  void Encode(::fidl::Encoder* _encoder, size_t _offset,
+              cpp17::optional<::fidl::HandleInformation> maybe_handle_info =
+                  cpp17::nullopt);
+  static void Decode(::fidl::Decoder* _decoder, ExtensionTable* _value,
+                     size_t _offset);
+  zx_status_t Clone(ExtensionTable* _result) const;
+
+ private:
+  template <class T, class... Args>
+  void Construct(T* p, Args&&... args) {
+    new (p) T(std::forward<Args>(args)...);
+  }
+
+  template <class T>
+  void Destruct(T* p) {
+    p->~T();
+  }
+
+  size_t MaxOrdinal() const {
+    size_t max_ordinal =
+        static_cast<size_t>(field_presence_.MaxSetIndex()) + std::size_t{1};
+    for (const auto& data : _unknown_data) {
+      if (data.first > max_ordinal) {
+        max_ordinal = data.first;
+      }
+    }
+    return max_ordinal;
+  }
+
+  static bool IsOrdinalKnown(uint64_t ordinal) {
+    switch (ordinal) {
+      return true;
+      default:
+        return false;
+    }
+  }
+
+  ::fidl::internal::BitSet<0> field_presence_;
+  std::map<uint64_t, std::vector<uint8_t>> _unknown_data;
+};
+
+using ExtensionTablePtr = ::std::unique_ptr<ExtensionTable>;
+
+class SixtyFourOrdinalTable final {
  public:
   static const fidl_type_t* FidlType;
   /// Returns whether no field is set.
@@ -763,7 +833,7 @@ class GreaterThan64OrdinalTable final {
     }
     return &v1_value_.value;
   }
-  GreaterThan64OrdinalTable& set_v1(int64_t _value) {
+  SixtyFourOrdinalTable& set_v1(int64_t _value) {
     if (!field_presence_.IsSet<0>()) {
       field_presence_.Set<0>();
       Construct(&v1_value_.value, std::move(_value));
@@ -793,7 +863,7 @@ class GreaterThan64OrdinalTable final {
     }
     return &v2_value_.value;
   }
-  GreaterThan64OrdinalTable& set_v2(int64_t _value) {
+  SixtyFourOrdinalTable& set_v2(int64_t _value) {
     if (!field_presence_.IsSet<1>()) {
       field_presence_.Set<1>();
       Construct(&v2_value_.value, std::move(_value));
@@ -823,7 +893,7 @@ class GreaterThan64OrdinalTable final {
     }
     return &v3_value_.value;
   }
-  GreaterThan64OrdinalTable& set_v3(int64_t _value) {
+  SixtyFourOrdinalTable& set_v3(int64_t _value) {
     if (!field_presence_.IsSet<2>()) {
       field_presence_.Set<2>();
       Construct(&v3_value_.value, std::move(_value));
@@ -853,7 +923,7 @@ class GreaterThan64OrdinalTable final {
     }
     return &v4_value_.value;
   }
-  GreaterThan64OrdinalTable& set_v4(int64_t _value) {
+  SixtyFourOrdinalTable& set_v4(int64_t _value) {
     if (!field_presence_.IsSet<3>()) {
       field_presence_.Set<3>();
       Construct(&v4_value_.value, std::move(_value));
@@ -883,7 +953,7 @@ class GreaterThan64OrdinalTable final {
     }
     return &v5_value_.value;
   }
-  GreaterThan64OrdinalTable& set_v5(int64_t _value) {
+  SixtyFourOrdinalTable& set_v5(int64_t _value) {
     if (!field_presence_.IsSet<4>()) {
       field_presence_.Set<4>();
       Construct(&v5_value_.value, std::move(_value));
@@ -913,7 +983,7 @@ class GreaterThan64OrdinalTable final {
     }
     return &v6_value_.value;
   }
-  GreaterThan64OrdinalTable& set_v6(int64_t _value) {
+  SixtyFourOrdinalTable& set_v6(int64_t _value) {
     if (!field_presence_.IsSet<5>()) {
       field_presence_.Set<5>();
       Construct(&v6_value_.value, std::move(_value));
@@ -943,7 +1013,7 @@ class GreaterThan64OrdinalTable final {
     }
     return &v7_value_.value;
   }
-  GreaterThan64OrdinalTable& set_v7(int64_t _value) {
+  SixtyFourOrdinalTable& set_v7(int64_t _value) {
     if (!field_presence_.IsSet<6>()) {
       field_presence_.Set<6>();
       Construct(&v7_value_.value, std::move(_value));
@@ -973,7 +1043,7 @@ class GreaterThan64OrdinalTable final {
     }
     return &v8_value_.value;
   }
-  GreaterThan64OrdinalTable& set_v8(int64_t _value) {
+  SixtyFourOrdinalTable& set_v8(int64_t _value) {
     if (!field_presence_.IsSet<7>()) {
       field_presence_.Set<7>();
       Construct(&v8_value_.value, std::move(_value));
@@ -1003,7 +1073,7 @@ class GreaterThan64OrdinalTable final {
     }
     return &v9_value_.value;
   }
-  GreaterThan64OrdinalTable& set_v9(int64_t _value) {
+  SixtyFourOrdinalTable& set_v9(int64_t _value) {
     if (!field_presence_.IsSet<8>()) {
       field_presence_.Set<8>();
       Construct(&v9_value_.value, std::move(_value));
@@ -1033,7 +1103,7 @@ class GreaterThan64OrdinalTable final {
     }
     return &v10_value_.value;
   }
-  GreaterThan64OrdinalTable& set_v10(int64_t _value) {
+  SixtyFourOrdinalTable& set_v10(int64_t _value) {
     if (!field_presence_.IsSet<9>()) {
       field_presence_.Set<9>();
       Construct(&v10_value_.value, std::move(_value));
@@ -1063,7 +1133,7 @@ class GreaterThan64OrdinalTable final {
     }
     return &v11_value_.value;
   }
-  GreaterThan64OrdinalTable& set_v11(int64_t _value) {
+  SixtyFourOrdinalTable& set_v11(int64_t _value) {
     if (!field_presence_.IsSet<10>()) {
       field_presence_.Set<10>();
       Construct(&v11_value_.value, std::move(_value));
@@ -1093,7 +1163,7 @@ class GreaterThan64OrdinalTable final {
     }
     return &v12_value_.value;
   }
-  GreaterThan64OrdinalTable& set_v12(int64_t _value) {
+  SixtyFourOrdinalTable& set_v12(int64_t _value) {
     if (!field_presence_.IsSet<11>()) {
       field_presence_.Set<11>();
       Construct(&v12_value_.value, std::move(_value));
@@ -1123,7 +1193,7 @@ class GreaterThan64OrdinalTable final {
     }
     return &v13_value_.value;
   }
-  GreaterThan64OrdinalTable& set_v13(int64_t _value) {
+  SixtyFourOrdinalTable& set_v13(int64_t _value) {
     if (!field_presence_.IsSet<12>()) {
       field_presence_.Set<12>();
       Construct(&v13_value_.value, std::move(_value));
@@ -1153,7 +1223,7 @@ class GreaterThan64OrdinalTable final {
     }
     return &v14_value_.value;
   }
-  GreaterThan64OrdinalTable& set_v14(int64_t _value) {
+  SixtyFourOrdinalTable& set_v14(int64_t _value) {
     if (!field_presence_.IsSet<13>()) {
       field_presence_.Set<13>();
       Construct(&v14_value_.value, std::move(_value));
@@ -1183,7 +1253,7 @@ class GreaterThan64OrdinalTable final {
     }
     return &v15_value_.value;
   }
-  GreaterThan64OrdinalTable& set_v15(int64_t _value) {
+  SixtyFourOrdinalTable& set_v15(int64_t _value) {
     if (!field_presence_.IsSet<14>()) {
       field_presence_.Set<14>();
       Construct(&v15_value_.value, std::move(_value));
@@ -1213,7 +1283,7 @@ class GreaterThan64OrdinalTable final {
     }
     return &v16_value_.value;
   }
-  GreaterThan64OrdinalTable& set_v16(int64_t _value) {
+  SixtyFourOrdinalTable& set_v16(int64_t _value) {
     if (!field_presence_.IsSet<15>()) {
       field_presence_.Set<15>();
       Construct(&v16_value_.value, std::move(_value));
@@ -1243,7 +1313,7 @@ class GreaterThan64OrdinalTable final {
     }
     return &v17_value_.value;
   }
-  GreaterThan64OrdinalTable& set_v17(int64_t _value) {
+  SixtyFourOrdinalTable& set_v17(int64_t _value) {
     if (!field_presence_.IsSet<16>()) {
       field_presence_.Set<16>();
       Construct(&v17_value_.value, std::move(_value));
@@ -1273,7 +1343,7 @@ class GreaterThan64OrdinalTable final {
     }
     return &v18_value_.value;
   }
-  GreaterThan64OrdinalTable& set_v18(int64_t _value) {
+  SixtyFourOrdinalTable& set_v18(int64_t _value) {
     if (!field_presence_.IsSet<17>()) {
       field_presence_.Set<17>();
       Construct(&v18_value_.value, std::move(_value));
@@ -1303,7 +1373,7 @@ class GreaterThan64OrdinalTable final {
     }
     return &v19_value_.value;
   }
-  GreaterThan64OrdinalTable& set_v19(int64_t _value) {
+  SixtyFourOrdinalTable& set_v19(int64_t _value) {
     if (!field_presence_.IsSet<18>()) {
       field_presence_.Set<18>();
       Construct(&v19_value_.value, std::move(_value));
@@ -1333,7 +1403,7 @@ class GreaterThan64OrdinalTable final {
     }
     return &v20_value_.value;
   }
-  GreaterThan64OrdinalTable& set_v20(int64_t _value) {
+  SixtyFourOrdinalTable& set_v20(int64_t _value) {
     if (!field_presence_.IsSet<19>()) {
       field_presence_.Set<19>();
       Construct(&v20_value_.value, std::move(_value));
@@ -1363,7 +1433,7 @@ class GreaterThan64OrdinalTable final {
     }
     return &v21_value_.value;
   }
-  GreaterThan64OrdinalTable& set_v21(int64_t _value) {
+  SixtyFourOrdinalTable& set_v21(int64_t _value) {
     if (!field_presence_.IsSet<20>()) {
       field_presence_.Set<20>();
       Construct(&v21_value_.value, std::move(_value));
@@ -1393,7 +1463,7 @@ class GreaterThan64OrdinalTable final {
     }
     return &v22_value_.value;
   }
-  GreaterThan64OrdinalTable& set_v22(int64_t _value) {
+  SixtyFourOrdinalTable& set_v22(int64_t _value) {
     if (!field_presence_.IsSet<21>()) {
       field_presence_.Set<21>();
       Construct(&v22_value_.value, std::move(_value));
@@ -1423,7 +1493,7 @@ class GreaterThan64OrdinalTable final {
     }
     return &v23_value_.value;
   }
-  GreaterThan64OrdinalTable& set_v23(int64_t _value) {
+  SixtyFourOrdinalTable& set_v23(int64_t _value) {
     if (!field_presence_.IsSet<22>()) {
       field_presence_.Set<22>();
       Construct(&v23_value_.value, std::move(_value));
@@ -1453,7 +1523,7 @@ class GreaterThan64OrdinalTable final {
     }
     return &v24_value_.value;
   }
-  GreaterThan64OrdinalTable& set_v24(int64_t _value) {
+  SixtyFourOrdinalTable& set_v24(int64_t _value) {
     if (!field_presence_.IsSet<23>()) {
       field_presence_.Set<23>();
       Construct(&v24_value_.value, std::move(_value));
@@ -1483,7 +1553,7 @@ class GreaterThan64OrdinalTable final {
     }
     return &v25_value_.value;
   }
-  GreaterThan64OrdinalTable& set_v25(int64_t _value) {
+  SixtyFourOrdinalTable& set_v25(int64_t _value) {
     if (!field_presence_.IsSet<24>()) {
       field_presence_.Set<24>();
       Construct(&v25_value_.value, std::move(_value));
@@ -1513,7 +1583,7 @@ class GreaterThan64OrdinalTable final {
     }
     return &v26_value_.value;
   }
-  GreaterThan64OrdinalTable& set_v26(int64_t _value) {
+  SixtyFourOrdinalTable& set_v26(int64_t _value) {
     if (!field_presence_.IsSet<25>()) {
       field_presence_.Set<25>();
       Construct(&v26_value_.value, std::move(_value));
@@ -1543,7 +1613,7 @@ class GreaterThan64OrdinalTable final {
     }
     return &v27_value_.value;
   }
-  GreaterThan64OrdinalTable& set_v27(int64_t _value) {
+  SixtyFourOrdinalTable& set_v27(int64_t _value) {
     if (!field_presence_.IsSet<26>()) {
       field_presence_.Set<26>();
       Construct(&v27_value_.value, std::move(_value));
@@ -1573,7 +1643,7 @@ class GreaterThan64OrdinalTable final {
     }
     return &v28_value_.value;
   }
-  GreaterThan64OrdinalTable& set_v28(int64_t _value) {
+  SixtyFourOrdinalTable& set_v28(int64_t _value) {
     if (!field_presence_.IsSet<27>()) {
       field_presence_.Set<27>();
       Construct(&v28_value_.value, std::move(_value));
@@ -1603,7 +1673,7 @@ class GreaterThan64OrdinalTable final {
     }
     return &v29_value_.value;
   }
-  GreaterThan64OrdinalTable& set_v29(int64_t _value) {
+  SixtyFourOrdinalTable& set_v29(int64_t _value) {
     if (!field_presence_.IsSet<28>()) {
       field_presence_.Set<28>();
       Construct(&v29_value_.value, std::move(_value));
@@ -1633,7 +1703,7 @@ class GreaterThan64OrdinalTable final {
     }
     return &v30_value_.value;
   }
-  GreaterThan64OrdinalTable& set_v30(int64_t _value) {
+  SixtyFourOrdinalTable& set_v30(int64_t _value) {
     if (!field_presence_.IsSet<29>()) {
       field_presence_.Set<29>();
       Construct(&v30_value_.value, std::move(_value));
@@ -1663,7 +1733,7 @@ class GreaterThan64OrdinalTable final {
     }
     return &v31_value_.value;
   }
-  GreaterThan64OrdinalTable& set_v31(int64_t _value) {
+  SixtyFourOrdinalTable& set_v31(int64_t _value) {
     if (!field_presence_.IsSet<30>()) {
       field_presence_.Set<30>();
       Construct(&v31_value_.value, std::move(_value));
@@ -1693,7 +1763,7 @@ class GreaterThan64OrdinalTable final {
     }
     return &v32_value_.value;
   }
-  GreaterThan64OrdinalTable& set_v32(int64_t _value) {
+  SixtyFourOrdinalTable& set_v32(int64_t _value) {
     if (!field_presence_.IsSet<31>()) {
       field_presence_.Set<31>();
       Construct(&v32_value_.value, std::move(_value));
@@ -1723,7 +1793,7 @@ class GreaterThan64OrdinalTable final {
     }
     return &v33_value_.value;
   }
-  GreaterThan64OrdinalTable& set_v33(int64_t _value) {
+  SixtyFourOrdinalTable& set_v33(int64_t _value) {
     if (!field_presence_.IsSet<32>()) {
       field_presence_.Set<32>();
       Construct(&v33_value_.value, std::move(_value));
@@ -1753,7 +1823,7 @@ class GreaterThan64OrdinalTable final {
     }
     return &v34_value_.value;
   }
-  GreaterThan64OrdinalTable& set_v34(int64_t _value) {
+  SixtyFourOrdinalTable& set_v34(int64_t _value) {
     if (!field_presence_.IsSet<33>()) {
       field_presence_.Set<33>();
       Construct(&v34_value_.value, std::move(_value));
@@ -1783,7 +1853,7 @@ class GreaterThan64OrdinalTable final {
     }
     return &v35_value_.value;
   }
-  GreaterThan64OrdinalTable& set_v35(int64_t _value) {
+  SixtyFourOrdinalTable& set_v35(int64_t _value) {
     if (!field_presence_.IsSet<34>()) {
       field_presence_.Set<34>();
       Construct(&v35_value_.value, std::move(_value));
@@ -1813,7 +1883,7 @@ class GreaterThan64OrdinalTable final {
     }
     return &v36_value_.value;
   }
-  GreaterThan64OrdinalTable& set_v36(int64_t _value) {
+  SixtyFourOrdinalTable& set_v36(int64_t _value) {
     if (!field_presence_.IsSet<35>()) {
       field_presence_.Set<35>();
       Construct(&v36_value_.value, std::move(_value));
@@ -1843,7 +1913,7 @@ class GreaterThan64OrdinalTable final {
     }
     return &v37_value_.value;
   }
-  GreaterThan64OrdinalTable& set_v37(int64_t _value) {
+  SixtyFourOrdinalTable& set_v37(int64_t _value) {
     if (!field_presence_.IsSet<36>()) {
       field_presence_.Set<36>();
       Construct(&v37_value_.value, std::move(_value));
@@ -1873,7 +1943,7 @@ class GreaterThan64OrdinalTable final {
     }
     return &v38_value_.value;
   }
-  GreaterThan64OrdinalTable& set_v38(int64_t _value) {
+  SixtyFourOrdinalTable& set_v38(int64_t _value) {
     if (!field_presence_.IsSet<37>()) {
       field_presence_.Set<37>();
       Construct(&v38_value_.value, std::move(_value));
@@ -1903,7 +1973,7 @@ class GreaterThan64OrdinalTable final {
     }
     return &v39_value_.value;
   }
-  GreaterThan64OrdinalTable& set_v39(int64_t _value) {
+  SixtyFourOrdinalTable& set_v39(int64_t _value) {
     if (!field_presence_.IsSet<38>()) {
       field_presence_.Set<38>();
       Construct(&v39_value_.value, std::move(_value));
@@ -1933,7 +2003,7 @@ class GreaterThan64OrdinalTable final {
     }
     return &v40_value_.value;
   }
-  GreaterThan64OrdinalTable& set_v40(int64_t _value) {
+  SixtyFourOrdinalTable& set_v40(int64_t _value) {
     if (!field_presence_.IsSet<39>()) {
       field_presence_.Set<39>();
       Construct(&v40_value_.value, std::move(_value));
@@ -1963,7 +2033,7 @@ class GreaterThan64OrdinalTable final {
     }
     return &v41_value_.value;
   }
-  GreaterThan64OrdinalTable& set_v41(int64_t _value) {
+  SixtyFourOrdinalTable& set_v41(int64_t _value) {
     if (!field_presence_.IsSet<40>()) {
       field_presence_.Set<40>();
       Construct(&v41_value_.value, std::move(_value));
@@ -1993,7 +2063,7 @@ class GreaterThan64OrdinalTable final {
     }
     return &v42_value_.value;
   }
-  GreaterThan64OrdinalTable& set_v42(int64_t _value) {
+  SixtyFourOrdinalTable& set_v42(int64_t _value) {
     if (!field_presence_.IsSet<41>()) {
       field_presence_.Set<41>();
       Construct(&v42_value_.value, std::move(_value));
@@ -2023,7 +2093,7 @@ class GreaterThan64OrdinalTable final {
     }
     return &v43_value_.value;
   }
-  GreaterThan64OrdinalTable& set_v43(int64_t _value) {
+  SixtyFourOrdinalTable& set_v43(int64_t _value) {
     if (!field_presence_.IsSet<42>()) {
       field_presence_.Set<42>();
       Construct(&v43_value_.value, std::move(_value));
@@ -2053,7 +2123,7 @@ class GreaterThan64OrdinalTable final {
     }
     return &v44_value_.value;
   }
-  GreaterThan64OrdinalTable& set_v44(int64_t _value) {
+  SixtyFourOrdinalTable& set_v44(int64_t _value) {
     if (!field_presence_.IsSet<43>()) {
       field_presence_.Set<43>();
       Construct(&v44_value_.value, std::move(_value));
@@ -2083,7 +2153,7 @@ class GreaterThan64OrdinalTable final {
     }
     return &v45_value_.value;
   }
-  GreaterThan64OrdinalTable& set_v45(int64_t _value) {
+  SixtyFourOrdinalTable& set_v45(int64_t _value) {
     if (!field_presence_.IsSet<44>()) {
       field_presence_.Set<44>();
       Construct(&v45_value_.value, std::move(_value));
@@ -2113,7 +2183,7 @@ class GreaterThan64OrdinalTable final {
     }
     return &v46_value_.value;
   }
-  GreaterThan64OrdinalTable& set_v46(int64_t _value) {
+  SixtyFourOrdinalTable& set_v46(int64_t _value) {
     if (!field_presence_.IsSet<45>()) {
       field_presence_.Set<45>();
       Construct(&v46_value_.value, std::move(_value));
@@ -2143,7 +2213,7 @@ class GreaterThan64OrdinalTable final {
     }
     return &v47_value_.value;
   }
-  GreaterThan64OrdinalTable& set_v47(int64_t _value) {
+  SixtyFourOrdinalTable& set_v47(int64_t _value) {
     if (!field_presence_.IsSet<46>()) {
       field_presence_.Set<46>();
       Construct(&v47_value_.value, std::move(_value));
@@ -2173,7 +2243,7 @@ class GreaterThan64OrdinalTable final {
     }
     return &v48_value_.value;
   }
-  GreaterThan64OrdinalTable& set_v48(int64_t _value) {
+  SixtyFourOrdinalTable& set_v48(int64_t _value) {
     if (!field_presence_.IsSet<47>()) {
       field_presence_.Set<47>();
       Construct(&v48_value_.value, std::move(_value));
@@ -2203,7 +2273,7 @@ class GreaterThan64OrdinalTable final {
     }
     return &v49_value_.value;
   }
-  GreaterThan64OrdinalTable& set_v49(int64_t _value) {
+  SixtyFourOrdinalTable& set_v49(int64_t _value) {
     if (!field_presence_.IsSet<48>()) {
       field_presence_.Set<48>();
       Construct(&v49_value_.value, std::move(_value));
@@ -2233,7 +2303,7 @@ class GreaterThan64OrdinalTable final {
     }
     return &v50_value_.value;
   }
-  GreaterThan64OrdinalTable& set_v50(int64_t _value) {
+  SixtyFourOrdinalTable& set_v50(int64_t _value) {
     if (!field_presence_.IsSet<49>()) {
       field_presence_.Set<49>();
       Construct(&v50_value_.value, std::move(_value));
@@ -2263,7 +2333,7 @@ class GreaterThan64OrdinalTable final {
     }
     return &v51_value_.value;
   }
-  GreaterThan64OrdinalTable& set_v51(int64_t _value) {
+  SixtyFourOrdinalTable& set_v51(int64_t _value) {
     if (!field_presence_.IsSet<50>()) {
       field_presence_.Set<50>();
       Construct(&v51_value_.value, std::move(_value));
@@ -2293,7 +2363,7 @@ class GreaterThan64OrdinalTable final {
     }
     return &v52_value_.value;
   }
-  GreaterThan64OrdinalTable& set_v52(int64_t _value) {
+  SixtyFourOrdinalTable& set_v52(int64_t _value) {
     if (!field_presence_.IsSet<51>()) {
       field_presence_.Set<51>();
       Construct(&v52_value_.value, std::move(_value));
@@ -2323,7 +2393,7 @@ class GreaterThan64OrdinalTable final {
     }
     return &v53_value_.value;
   }
-  GreaterThan64OrdinalTable& set_v53(int64_t _value) {
+  SixtyFourOrdinalTable& set_v53(int64_t _value) {
     if (!field_presence_.IsSet<52>()) {
       field_presence_.Set<52>();
       Construct(&v53_value_.value, std::move(_value));
@@ -2353,7 +2423,7 @@ class GreaterThan64OrdinalTable final {
     }
     return &v54_value_.value;
   }
-  GreaterThan64OrdinalTable& set_v54(int64_t _value) {
+  SixtyFourOrdinalTable& set_v54(int64_t _value) {
     if (!field_presence_.IsSet<53>()) {
       field_presence_.Set<53>();
       Construct(&v54_value_.value, std::move(_value));
@@ -2383,7 +2453,7 @@ class GreaterThan64OrdinalTable final {
     }
     return &v55_value_.value;
   }
-  GreaterThan64OrdinalTable& set_v55(int64_t _value) {
+  SixtyFourOrdinalTable& set_v55(int64_t _value) {
     if (!field_presence_.IsSet<54>()) {
       field_presence_.Set<54>();
       Construct(&v55_value_.value, std::move(_value));
@@ -2413,7 +2483,7 @@ class GreaterThan64OrdinalTable final {
     }
     return &v56_value_.value;
   }
-  GreaterThan64OrdinalTable& set_v56(int64_t _value) {
+  SixtyFourOrdinalTable& set_v56(int64_t _value) {
     if (!field_presence_.IsSet<55>()) {
       field_presence_.Set<55>();
       Construct(&v56_value_.value, std::move(_value));
@@ -2443,7 +2513,7 @@ class GreaterThan64OrdinalTable final {
     }
     return &v57_value_.value;
   }
-  GreaterThan64OrdinalTable& set_v57(int64_t _value) {
+  SixtyFourOrdinalTable& set_v57(int64_t _value) {
     if (!field_presence_.IsSet<56>()) {
       field_presence_.Set<56>();
       Construct(&v57_value_.value, std::move(_value));
@@ -2473,7 +2543,7 @@ class GreaterThan64OrdinalTable final {
     }
     return &v58_value_.value;
   }
-  GreaterThan64OrdinalTable& set_v58(int64_t _value) {
+  SixtyFourOrdinalTable& set_v58(int64_t _value) {
     if (!field_presence_.IsSet<57>()) {
       field_presence_.Set<57>();
       Construct(&v58_value_.value, std::move(_value));
@@ -2503,7 +2573,7 @@ class GreaterThan64OrdinalTable final {
     }
     return &v59_value_.value;
   }
-  GreaterThan64OrdinalTable& set_v59(int64_t _value) {
+  SixtyFourOrdinalTable& set_v59(int64_t _value) {
     if (!field_presence_.IsSet<58>()) {
       field_presence_.Set<58>();
       Construct(&v59_value_.value, std::move(_value));
@@ -2533,7 +2603,7 @@ class GreaterThan64OrdinalTable final {
     }
     return &v60_value_.value;
   }
-  GreaterThan64OrdinalTable& set_v60(int64_t _value) {
+  SixtyFourOrdinalTable& set_v60(int64_t _value) {
     if (!field_presence_.IsSet<59>()) {
       field_presence_.Set<59>();
       Construct(&v60_value_.value, std::move(_value));
@@ -2563,7 +2633,7 @@ class GreaterThan64OrdinalTable final {
     }
     return &v61_value_.value;
   }
-  GreaterThan64OrdinalTable& set_v61(int64_t _value) {
+  SixtyFourOrdinalTable& set_v61(int64_t _value) {
     if (!field_presence_.IsSet<60>()) {
       field_presence_.Set<60>();
       Construct(&v61_value_.value, std::move(_value));
@@ -2593,7 +2663,7 @@ class GreaterThan64OrdinalTable final {
     }
     return &v62_value_.value;
   }
-  GreaterThan64OrdinalTable& set_v62(int64_t _value) {
+  SixtyFourOrdinalTable& set_v62(int64_t _value) {
     if (!field_presence_.IsSet<61>()) {
       field_presence_.Set<61>();
       Construct(&v62_value_.value, std::move(_value));
@@ -2623,7 +2693,7 @@ class GreaterThan64OrdinalTable final {
     }
     return &v63_value_.value;
   }
-  GreaterThan64OrdinalTable& set_v63(int64_t _value) {
+  SixtyFourOrdinalTable& set_v63(int64_t _value) {
     if (!field_presence_.IsSet<62>()) {
       field_presence_.Set<62>();
       Construct(&v63_value_.value, std::move(_value));
@@ -2640,20 +2710,20 @@ class GreaterThan64OrdinalTable final {
     Destruct(&v63_value_.value);
   }
 
-  const int64_t& v64() const {
+  const ::fidl::test::table::ExtensionTable& v64() const {
     ZX_ASSERT(field_presence_.IsSet<63>());
     return v64_value_.value;
   }
   bool has_v64() const { return field_presence_.IsSet<63>(); }
 
-  int64_t* mutable_v64() {
+  ::fidl::test::table::ExtensionTable* mutable_v64() {
     if (!field_presence_.IsSet<63>()) {
       field_presence_.Set<63>();
       Construct(&v64_value_.value);
     }
     return &v64_value_.value;
   }
-  GreaterThan64OrdinalTable& set_v64(int64_t _value) {
+  SixtyFourOrdinalTable& set_v64(::fidl::test::table::ExtensionTable _value) {
     if (!field_presence_.IsSet<63>()) {
       field_presence_.Set<63>();
       Construct(&v64_value_.value, std::move(_value));
@@ -2670,66 +2740,6 @@ class GreaterThan64OrdinalTable final {
     Destruct(&v64_value_.value);
   }
 
-  const int64_t& v65() const {
-    ZX_ASSERT(field_presence_.IsSet<64>());
-    return v65_value_.value;
-  }
-  bool has_v65() const { return field_presence_.IsSet<64>(); }
-
-  int64_t* mutable_v65() {
-    if (!field_presence_.IsSet<64>()) {
-      field_presence_.Set<64>();
-      Construct(&v65_value_.value);
-    }
-    return &v65_value_.value;
-  }
-  GreaterThan64OrdinalTable& set_v65(int64_t _value) {
-    if (!field_presence_.IsSet<64>()) {
-      field_presence_.Set<64>();
-      Construct(&v65_value_.value, std::move(_value));
-    } else {
-      v65_value_.value = std::move(_value);
-    }
-    return *this;
-  }
-  void clear_v65() {
-    if (!field_presence_.IsSet<64>()) {
-      return;
-    }
-    field_presence_.Clear<64>();
-    Destruct(&v65_value_.value);
-  }
-
-  const int64_t& v66() const {
-    ZX_ASSERT(field_presence_.IsSet<65>());
-    return v66_value_.value;
-  }
-  bool has_v66() const { return field_presence_.IsSet<65>(); }
-
-  int64_t* mutable_v66() {
-    if (!field_presence_.IsSet<65>()) {
-      field_presence_.Set<65>();
-      Construct(&v66_value_.value);
-    }
-    return &v66_value_.value;
-  }
-  GreaterThan64OrdinalTable& set_v66(int64_t _value) {
-    if (!field_presence_.IsSet<65>()) {
-      field_presence_.Set<65>();
-      Construct(&v66_value_.value, std::move(_value));
-    } else {
-      v66_value_.value = std::move(_value);
-    }
-    return *this;
-  }
-  void clear_v66() {
-    if (!field_presence_.IsSet<65>()) {
-      return;
-    }
-    field_presence_.Clear<65>();
-    Destruct(&v66_value_.value);
-  }
-
   const std::map<uint64_t, std::vector<uint8_t>>& UnknownData() const {
     return _unknown_data;
   }
@@ -2740,21 +2750,21 @@ class GreaterThan64OrdinalTable final {
     _unknown_data.insert({ord, std::move(data)});
   }
 
-  GreaterThan64OrdinalTable();
-  GreaterThan64OrdinalTable(GreaterThan64OrdinalTable&& other);
-  ~GreaterThan64OrdinalTable();
-  GreaterThan64OrdinalTable& operator=(GreaterThan64OrdinalTable&& other);
+  SixtyFourOrdinalTable();
+  SixtyFourOrdinalTable(SixtyFourOrdinalTable&& other);
+  ~SixtyFourOrdinalTable();
+  SixtyFourOrdinalTable& operator=(SixtyFourOrdinalTable&& other);
 
-  static inline ::std::unique_ptr<GreaterThan64OrdinalTable> New() {
-    return ::std::make_unique<GreaterThan64OrdinalTable>();
+  static inline ::std::unique_ptr<SixtyFourOrdinalTable> New() {
+    return ::std::make_unique<SixtyFourOrdinalTable>();
   }
 
   void Encode(::fidl::Encoder* _encoder, size_t _offset,
               cpp17::optional<::fidl::HandleInformation> maybe_handle_info =
                   cpp17::nullopt);
-  static void Decode(::fidl::Decoder* _decoder,
-                     GreaterThan64OrdinalTable* _value, size_t _offset);
-  zx_status_t Clone(GreaterThan64OrdinalTable* _result) const;
+  static void Decode(::fidl::Decoder* _decoder, SixtyFourOrdinalTable* _value,
+                     size_t _offset);
+  zx_status_t Clone(SixtyFourOrdinalTable* _result) const;
 
  private:
   template <class T, class... Args>
@@ -2844,15 +2854,13 @@ class GreaterThan64OrdinalTable final {
       case 62:
       case 63:
       case 64:
-      case 65:
-      case 66:
         return true;
       default:
         return false;
     }
   }
 
-  ::fidl::internal::BitSet<66> field_presence_;
+  ::fidl::internal::BitSet<64> field_presence_;
   union ValueUnion_v1 {
     ValueUnion_v1() {}
     ~ValueUnion_v1() {}
@@ -3298,28 +3306,13 @@ class GreaterThan64OrdinalTable final {
     ValueUnion_v64() {}
     ~ValueUnion_v64() {}
 
-    int64_t value;
+    ::fidl::test::table::ExtensionTable value;
   };
   ValueUnion_v64 v64_value_;
-  union ValueUnion_v65 {
-    ValueUnion_v65() {}
-    ~ValueUnion_v65() {}
-
-    int64_t value;
-  };
-  ValueUnion_v65 v65_value_;
-  union ValueUnion_v66 {
-    ValueUnion_v66() {}
-    ~ValueUnion_v66() {}
-
-    int64_t value;
-  };
-  ValueUnion_v66 v66_value_;
   std::map<uint64_t, std::vector<uint8_t>> _unknown_data;
 };
 
-using GreaterThan64OrdinalTablePtr =
-    ::std::unique_ptr<GreaterThan64OrdinalTable>;
+using SixtyFourOrdinalTablePtr = ::std::unique_ptr<SixtyFourOrdinalTable>;
 
 class EmptyTable final {
  public:
@@ -3571,20 +3564,36 @@ struct Equality<::fidl::test::table::NewerSimpleTable> {
   }
 };
 template <>
-struct CodingTraits<::fidl::test::table::GreaterThan64OrdinalTable>
-    : public EncodableCodingTraits<
-          ::fidl::test::table::GreaterThan64OrdinalTable, 16, 16> {};
+struct CodingTraits<::fidl::test::table::ExtensionTable>
+    : public EncodableCodingTraits<::fidl::test::table::ExtensionTable, 16,
+                                   16> {};
 
-inline zx_status_t Clone(
-    const ::fidl::test::table::GreaterThan64OrdinalTable& _value,
-    ::fidl::test::table::GreaterThan64OrdinalTable* result) {
+inline zx_status_t Clone(const ::fidl::test::table::ExtensionTable& _value,
+                         ::fidl::test::table::ExtensionTable* result) {
   return _value.Clone(result);
 }
 template <>
-struct Equality<::fidl::test::table::GreaterThan64OrdinalTable> {
+struct Equality<::fidl::test::table::ExtensionTable> {
+  bool operator()(const ::fidl::test::table::ExtensionTable& _lhs,
+                  const ::fidl::test::table::ExtensionTable& _rhs) const {
+    return ::fidl::Equals(_lhs.UnknownData(), _rhs.UnknownData());
+  }
+};
+template <>
+struct CodingTraits<::fidl::test::table::SixtyFourOrdinalTable>
+    : public EncodableCodingTraits<::fidl::test::table::SixtyFourOrdinalTable,
+                                   16, 16> {};
+
+inline zx_status_t Clone(
+    const ::fidl::test::table::SixtyFourOrdinalTable& _value,
+    ::fidl::test::table::SixtyFourOrdinalTable* result) {
+  return _value.Clone(result);
+}
+template <>
+struct Equality<::fidl::test::table::SixtyFourOrdinalTable> {
   bool operator()(
-      const ::fidl::test::table::GreaterThan64OrdinalTable& _lhs,
-      const ::fidl::test::table::GreaterThan64OrdinalTable& _rhs) const {
+      const ::fidl::test::table::SixtyFourOrdinalTable& _lhs,
+      const ::fidl::test::table::SixtyFourOrdinalTable& _rhs) const {
     if (_lhs.has_v1()) {
       if (!_rhs.has_v1()) {
         return false;
@@ -4223,26 +4232,6 @@ struct Equality<::fidl::test::table::GreaterThan64OrdinalTable> {
         return false;
       }
     } else if (_rhs.has_v64()) {
-      return false;
-    }
-    if (_lhs.has_v65()) {
-      if (!_rhs.has_v65()) {
-        return false;
-      }
-      if (!::fidl::Equals(_lhs.v65(), _rhs.v65())) {
-        return false;
-      }
-    } else if (_rhs.has_v65()) {
-      return false;
-    }
-    if (_lhs.has_v66()) {
-      if (!_rhs.has_v66()) {
-        return false;
-      }
-      if (!::fidl::Equals(_lhs.v66(), _rhs.v66())) {
-        return false;
-      }
-    } else if (_rhs.has_v66()) {
       return false;
     }
     return ::fidl::Equals(_lhs.UnknownData(), _rhs.UnknownData());

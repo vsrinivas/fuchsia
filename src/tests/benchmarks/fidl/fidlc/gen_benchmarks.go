@@ -167,11 +167,11 @@ var benchmarks = []benchmark{
 	},
 	{
 		Template: tableFieldBenchmarkTemplate,
-		Size:     64,
+		Size:     63,
 	},
 	{
 		Template: tableDeepBenchmarkTemplate,
-		Size:     64,
+		Size:     63,
 	},
 	{
 		Template: unionFieldBenchmarkTemplate,

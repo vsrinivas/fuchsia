@@ -39,9 +39,10 @@ type TableWithAttributes = table {
     2: reserved;
 };
 
-// There is one bitmask per 64-entries in the V2 wire format.
-// This tests the cases where there is more than one bitmask.
-type GreaterThan64OrdinalTable = table {
+// The last ordinal of a 64 element table must contain a table.
+type ExtensionTable = table {};
+
+type SixtyFourOrdinalTable = table {
     1: v1 int64;
     2: v2 int64;
     3: v3 int64;
@@ -105,7 +106,5 @@ type GreaterThan64OrdinalTable = table {
    61: v61 int64;
    62: v62 int64;
    63: v63 int64;
-   64: v64 int64;
-   65: v65 int64;
-   66: v66 int64;
+   64: v64 ExtensionTable;
 };

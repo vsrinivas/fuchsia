@@ -228,7 +228,32 @@ fidl_table! {
 }
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct GreaterThan64OrdinalTable {
+pub struct ExtensionTable {
+    /// (FIDL-generated) Unknown fields encountered during decoding, stored as a
+    /// map from ordinals to raw data. The `Some` case is always nonempty.
+    pub unknown_data: Option<std::collections::BTreeMap<u64, Vec<u8>>>,
+    #[deprecated = "Use `..ExtensionTable::EMPTY` to construct and `..` to match."]
+    #[doc(hidden)]
+    pub __non_exhaustive: (),
+}
+
+impl ExtensionTable {
+    /// An empty table with every field set to `None`.
+    #[allow(deprecated)]
+    pub const EMPTY: Self = Self { unknown_data: None, __non_exhaustive: () };
+}
+
+impl fidl::encoding::Persistable for ExtensionTable {}
+
+fidl_table! {
+    name: ExtensionTable,
+    members: [
+    ],
+    value_unknown_member: unknown_data,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct SixtyFourOrdinalTable {
     pub v1: Option<i64>,
     pub v2: Option<i64>,
     pub v3: Option<i64>,
@@ -292,18 +317,16 @@ pub struct GreaterThan64OrdinalTable {
     pub v61: Option<i64>,
     pub v62: Option<i64>,
     pub v63: Option<i64>,
-    pub v64: Option<i64>,
-    pub v65: Option<i64>,
-    pub v66: Option<i64>,
+    pub v64: Option<ExtensionTable>,
     /// (FIDL-generated) Unknown fields encountered during decoding, stored as a
     /// map from ordinals to raw data. The `Some` case is always nonempty.
     pub unknown_data: Option<std::collections::BTreeMap<u64, Vec<u8>>>,
-    #[deprecated = "Use `..GreaterThan64OrdinalTable::EMPTY` to construct and `..` to match."]
+    #[deprecated = "Use `..SixtyFourOrdinalTable::EMPTY` to construct and `..` to match."]
     #[doc(hidden)]
     pub __non_exhaustive: (),
 }
 
-impl GreaterThan64OrdinalTable {
+impl SixtyFourOrdinalTable {
     /// An empty table with every field set to `None`.
     #[allow(deprecated)]
     pub const EMPTY: Self = Self {
@@ -371,17 +394,15 @@ impl GreaterThan64OrdinalTable {
         v62: None,
         v63: None,
         v64: None,
-        v65: None,
-        v66: None,
         unknown_data: None,
         __non_exhaustive: (),
     };
 }
 
-impl fidl::encoding::Persistable for GreaterThan64OrdinalTable {}
+impl fidl::encoding::Persistable for SixtyFourOrdinalTable {}
 
 fidl_table! {
-    name: GreaterThan64OrdinalTable,
+    name: SixtyFourOrdinalTable,
     members: [
         v1 {
             ty: i64,
@@ -636,16 +657,8 @@ fidl_table! {
             ordinal: 63,
         },
         v64 {
-            ty: i64,
+            ty: ExtensionTable,
             ordinal: 64,
-        },
-        v65 {
-            ty: i64,
-            ordinal: 65,
-        },
-        v66 {
-            ty: i64,
-            ordinal: 66,
         },
     ],
     value_unknown_member: unknown_data,

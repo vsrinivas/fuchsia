@@ -1411,14 +1411,98 @@ zx_status_t NewerSimpleTable::Clone(NewerSimpleTable* result) const {
   return ::fidl::Clone(_unknown_data, &result->_unknown_data);
 }
 
-extern "C" const fidl_type_t fidl_test_table_GreaterThan64OrdinalTableTable;
-const fidl_type_t* GreaterThan64OrdinalTable::FidlType =
-    &fidl_test_table_GreaterThan64OrdinalTableTable;
+extern "C" const fidl_type_t fidl_test_table_ExtensionTableTable;
+const fidl_type_t* ExtensionTable::FidlType =
+    &fidl_test_table_ExtensionTableTable;
 
-GreaterThan64OrdinalTable::GreaterThan64OrdinalTable() {}
+ExtensionTable::ExtensionTable() {}
 
-GreaterThan64OrdinalTable::GreaterThan64OrdinalTable(
-    GreaterThan64OrdinalTable&& other) {
+ExtensionTable::ExtensionTable(ExtensionTable&& other) {
+  field_presence_ = other.field_presence_;
+  _unknown_data = std::move(other._unknown_data);
+}
+
+ExtensionTable::~ExtensionTable() {}
+
+ExtensionTable& ExtensionTable::operator=(ExtensionTable&& other) {
+  _unknown_data = std::move(other._unknown_data);
+  return *this;
+}
+
+bool ExtensionTable::IsEmpty() const {
+  return field_presence_.IsEmpty() && _unknown_data.size() == 0;
+}
+
+void ExtensionTable::Encode(
+    ::fidl::Encoder* _encoder, size_t _offset,
+    cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
+  size_t max_ordinal = MaxOrdinal();
+  ::fidl::EncodeVectorPointer(_encoder, max_ordinal, _offset);
+  if (max_ordinal == 0) return;
+  size_t envelope_size =
+      (_encoder->wire_format() == ::fidl::internal::WireFormatVersion::kV1)
+          ? sizeof(fidl_envelope_t)
+          : sizeof(fidl_envelope_v2_t);
+  size_t base = _encoder->Alloc(max_ordinal * envelope_size);
+  auto next_unknown = _unknown_data.begin();
+  // Encode any remaining unknown fields (i.e. ones that have an ordinal outside
+  // the range of known ordinals)
+  for (auto curr = next_unknown; curr != _unknown_data.end(); ++curr) {
+    size_t envelope_base = base + (curr->first - 1) * envelope_size;
+    ::fidl::EncodeUnknownBytes(_encoder, &curr->second, envelope_base);
+  }
+}
+
+void ExtensionTable::Decode(::fidl::Decoder* _decoder, ExtensionTable* _value,
+                            size_t _offset) {
+  fidl_vector_t* encoded = _decoder->GetPtr<fidl_vector_t>(_offset);
+  size_t base;
+  size_t count;
+  if (!encoded->data) {
+    goto clear_all;
+  }
+
+  base = _decoder->GetOffset(encoded->data);
+  count = encoded->count;
+
+  if (count > 0) {
+    for (uint64_t ordinal = 1; ordinal <= count; ordinal++) {
+      if (IsOrdinalKnown(ordinal)) continue;
+
+      size_t envelope_base = base + (ordinal - 1) * sizeof(fidl_envelope_v2_t);
+      fidl_envelope_v2_t* envelope =
+          _decoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
+      if (*reinterpret_cast<const void* const*>(envelope) != nullptr) {
+        auto unknown_info = _decoder->EnvelopeUnknownDataInfo(envelope);
+        auto result = _value->_unknown_data.emplace(
+            std::piecewise_construct, std::forward_as_tuple(ordinal),
+            std::forward_as_tuple());
+        auto iter = result.first;
+        iter->second.resize(unknown_info.num_bytes);
+        ::fidl::DecodeUnknownBytesContents(_decoder, &iter->second,
+                                           unknown_info.value_offset);
+      }
+    }
+  }
+
+  return;
+
+  // Clear unset values.
+clear_all:
+  return;
+}
+
+zx_status_t ExtensionTable::Clone(ExtensionTable* result) const {
+  return ::fidl::Clone(_unknown_data, &result->_unknown_data);
+}
+
+extern "C" const fidl_type_t fidl_test_table_SixtyFourOrdinalTableTable;
+const fidl_type_t* SixtyFourOrdinalTable::FidlType =
+    &fidl_test_table_SixtyFourOrdinalTableTable;
+
+SixtyFourOrdinalTable::SixtyFourOrdinalTable() {}
+
+SixtyFourOrdinalTable::SixtyFourOrdinalTable(SixtyFourOrdinalTable&& other) {
   field_presence_ = other.field_presence_;
   if (field_presence_.IsSet<0>()) {
     Construct(&v1_value_.value, std::move(other.v1_value_.value));
@@ -1612,16 +1696,10 @@ GreaterThan64OrdinalTable::GreaterThan64OrdinalTable(
   if (field_presence_.IsSet<63>()) {
     Construct(&v64_value_.value, std::move(other.v64_value_.value));
   }
-  if (field_presence_.IsSet<64>()) {
-    Construct(&v65_value_.value, std::move(other.v65_value_.value));
-  }
-  if (field_presence_.IsSet<65>()) {
-    Construct(&v66_value_.value, std::move(other.v66_value_.value));
-  }
   _unknown_data = std::move(other._unknown_data);
 }
 
-GreaterThan64OrdinalTable::~GreaterThan64OrdinalTable() {
+SixtyFourOrdinalTable::~SixtyFourOrdinalTable() {
   if (field_presence_.IsSet<0>()) {
     Destruct(&v1_value_.value);
   }
@@ -1814,16 +1892,10 @@ GreaterThan64OrdinalTable::~GreaterThan64OrdinalTable() {
   if (field_presence_.IsSet<63>()) {
     Destruct(&v64_value_.value);
   }
-  if (field_presence_.IsSet<64>()) {
-    Destruct(&v65_value_.value);
-  }
-  if (field_presence_.IsSet<65>()) {
-    Destruct(&v66_value_.value);
-  }
 }
 
-GreaterThan64OrdinalTable& GreaterThan64OrdinalTable::operator=(
-    GreaterThan64OrdinalTable&& other) {
+SixtyFourOrdinalTable& SixtyFourOrdinalTable::operator=(
+    SixtyFourOrdinalTable&& other) {
   if (other.field_presence_.IsSet<0>()) {
     if (field_presence_.IsSet<0>()) {
       v1_value_.value = std::move(other.v1_value_.value);
@@ -2528,37 +2600,15 @@ GreaterThan64OrdinalTable& GreaterThan64OrdinalTable::operator=(
     field_presence_.Clear<63>();
     Destruct(&v64_value_.value);
   }
-  if (other.field_presence_.IsSet<64>()) {
-    if (field_presence_.IsSet<64>()) {
-      v65_value_.value = std::move(other.v65_value_.value);
-    } else {
-      field_presence_.Set<64>();
-      Construct(&v65_value_.value, std::move(other.v65_value_.value));
-    }
-  } else if (field_presence_.IsSet<64>()) {
-    field_presence_.Clear<64>();
-    Destruct(&v65_value_.value);
-  }
-  if (other.field_presence_.IsSet<65>()) {
-    if (field_presence_.IsSet<65>()) {
-      v66_value_.value = std::move(other.v66_value_.value);
-    } else {
-      field_presence_.Set<65>();
-      Construct(&v66_value_.value, std::move(other.v66_value_.value));
-    }
-  } else if (field_presence_.IsSet<65>()) {
-    field_presence_.Clear<65>();
-    Destruct(&v66_value_.value);
-  }
   _unknown_data = std::move(other._unknown_data);
   return *this;
 }
 
-bool GreaterThan64OrdinalTable::IsEmpty() const {
+bool SixtyFourOrdinalTable::IsEmpty() const {
   return field_presence_.IsEmpty() && _unknown_data.size() == 0;
 }
 
-void GreaterThan64OrdinalTable::Encode(
+void SixtyFourOrdinalTable::Encode(
     ::fidl::Encoder* _encoder, size_t _offset,
     cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {
   size_t max_ordinal = MaxOrdinal();
@@ -6303,10 +6353,11 @@ void GreaterThan64OrdinalTable::Encode(
     size_t envelope_base = base + (64 - 1) * envelope_size;
     switch (_encoder->wire_format()) {
       case ::fidl::internal::WireFormatVersion::kV1: {
-        ::fidl::Encode(_encoder, &v64_value_.value,
-                       _encoder->Alloc(
-                           ::fidl::EncodingInlineSize<int64_t, ::fidl::Encoder>(
-                               _encoder)));
+        ::fidl::Encode(
+            _encoder, &v64_value_.value,
+            _encoder->Alloc(
+                ::fidl::EncodingInlineSize<::fidl::test::table::ExtensionTable,
+                                           ::fidl::Encoder>(_encoder)));
 
         fidl_envelope_t* envelope =
             _encoder->GetPtr<fidl_envelope_t>(envelope_base);
@@ -6318,8 +6369,8 @@ void GreaterThan64OrdinalTable::Encode(
         break;
       }
       case ::fidl::internal::WireFormatVersion::kV2: {
-        if (::fidl::EncodingInlineSize<int64_t>(_encoder) <=
-            FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD) {
+        if (::fidl::EncodingInlineSize<::fidl::test::table::ExtensionTable>(
+                _encoder) <= FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD) {
           ::fidl::Encode(_encoder, &v64_value_.value, envelope_base);
 
           fidl_envelope_v2_t* envelope =
@@ -6330,128 +6381,11 @@ void GreaterThan64OrdinalTable::Encode(
           break;
         }
 
-        ::fidl::Encode(_encoder, &v64_value_.value,
-                       _encoder->Alloc(
-                           ::fidl::EncodingInlineSize<int64_t, ::fidl::Encoder>(
-                               _encoder)));
-
-        fidl_envelope_v2_t* envelope =
-            _encoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
-        envelope->num_bytes =
-            static_cast<uint32_t>(_encoder->CurrentLength() - length_before);
-        envelope->num_handles = static_cast<uint16_t>(
-            _encoder->CurrentHandleCount() - handles_before);
-        envelope->flags = 0;
-        break;
-      }
-    }
-  }
-  if (field_presence_.IsSet<64>()) {
-    // Encode unknown fields that have an ordinal that should appear before this
-    // field.
-    while (next_unknown != _unknown_data.end() && next_unknown->first < 65) {
-      size_t envelope_base = base + (next_unknown->first - 1) * envelope_size;
-      ::fidl::EncodeUnknownBytes(_encoder, &next_unknown->second,
-                                 envelope_base);
-      std::advance(next_unknown, 1);
-    }
-
-    const size_t length_before = _encoder->CurrentLength();
-    const size_t handles_before = _encoder->CurrentHandleCount();
-
-    size_t envelope_base = base + (65 - 1) * envelope_size;
-    switch (_encoder->wire_format()) {
-      case ::fidl::internal::WireFormatVersion::kV1: {
-        ::fidl::Encode(_encoder, &v65_value_.value,
-                       _encoder->Alloc(
-                           ::fidl::EncodingInlineSize<int64_t, ::fidl::Encoder>(
-                               _encoder)));
-
-        fidl_envelope_t* envelope =
-            _encoder->GetPtr<fidl_envelope_t>(envelope_base);
-        envelope->num_bytes =
-            static_cast<uint32_t>(_encoder->CurrentLength() - length_before);
-        envelope->num_handles = static_cast<uint32_t>(
-            _encoder->CurrentHandleCount() - handles_before);
-        envelope->presence = FIDL_ALLOC_PRESENT;
-        break;
-      }
-      case ::fidl::internal::WireFormatVersion::kV2: {
-        if (::fidl::EncodingInlineSize<int64_t>(_encoder) <=
-            FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD) {
-          ::fidl::Encode(_encoder, &v65_value_.value, envelope_base);
-
-          fidl_envelope_v2_t* envelope =
-              _encoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
-          envelope->num_handles = static_cast<uint16_t>(
-              _encoder->CurrentHandleCount() - handles_before);
-          envelope->flags = FIDL_ENVELOPE_FLAGS_INLINING_MASK;
-          break;
-        }
-
-        ::fidl::Encode(_encoder, &v65_value_.value,
-                       _encoder->Alloc(
-                           ::fidl::EncodingInlineSize<int64_t, ::fidl::Encoder>(
-                               _encoder)));
-
-        fidl_envelope_v2_t* envelope =
-            _encoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
-        envelope->num_bytes =
-            static_cast<uint32_t>(_encoder->CurrentLength() - length_before);
-        envelope->num_handles = static_cast<uint16_t>(
-            _encoder->CurrentHandleCount() - handles_before);
-        envelope->flags = 0;
-        break;
-      }
-    }
-  }
-  if (field_presence_.IsSet<65>()) {
-    // Encode unknown fields that have an ordinal that should appear before this
-    // field.
-    while (next_unknown != _unknown_data.end() && next_unknown->first < 66) {
-      size_t envelope_base = base + (next_unknown->first - 1) * envelope_size;
-      ::fidl::EncodeUnknownBytes(_encoder, &next_unknown->second,
-                                 envelope_base);
-      std::advance(next_unknown, 1);
-    }
-
-    const size_t length_before = _encoder->CurrentLength();
-    const size_t handles_before = _encoder->CurrentHandleCount();
-
-    size_t envelope_base = base + (66 - 1) * envelope_size;
-    switch (_encoder->wire_format()) {
-      case ::fidl::internal::WireFormatVersion::kV1: {
-        ::fidl::Encode(_encoder, &v66_value_.value,
-                       _encoder->Alloc(
-                           ::fidl::EncodingInlineSize<int64_t, ::fidl::Encoder>(
-                               _encoder)));
-
-        fidl_envelope_t* envelope =
-            _encoder->GetPtr<fidl_envelope_t>(envelope_base);
-        envelope->num_bytes =
-            static_cast<uint32_t>(_encoder->CurrentLength() - length_before);
-        envelope->num_handles = static_cast<uint32_t>(
-            _encoder->CurrentHandleCount() - handles_before);
-        envelope->presence = FIDL_ALLOC_PRESENT;
-        break;
-      }
-      case ::fidl::internal::WireFormatVersion::kV2: {
-        if (::fidl::EncodingInlineSize<int64_t>(_encoder) <=
-            FIDL_ENVELOPE_INLINING_SIZE_THRESHOLD) {
-          ::fidl::Encode(_encoder, &v66_value_.value, envelope_base);
-
-          fidl_envelope_v2_t* envelope =
-              _encoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
-          envelope->num_handles = static_cast<uint16_t>(
-              _encoder->CurrentHandleCount() - handles_before);
-          envelope->flags = FIDL_ENVELOPE_FLAGS_INLINING_MASK;
-          break;
-        }
-
-        ::fidl::Encode(_encoder, &v66_value_.value,
-                       _encoder->Alloc(
-                           ::fidl::EncodingInlineSize<int64_t, ::fidl::Encoder>(
-                               _encoder)));
+        ::fidl::Encode(
+            _encoder, &v64_value_.value,
+            _encoder->Alloc(
+                ::fidl::EncodingInlineSize<::fidl::test::table::ExtensionTable,
+                                           ::fidl::Encoder>(_encoder)));
 
         fidl_envelope_v2_t* envelope =
             _encoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
@@ -6472,9 +6406,9 @@ void GreaterThan64OrdinalTable::Encode(
   }
 }
 
-void GreaterThan64OrdinalTable::Decode(::fidl::Decoder* _decoder,
-                                       GreaterThan64OrdinalTable* _value,
-                                       size_t _offset) {
+void SixtyFourOrdinalTable::Decode(::fidl::Decoder* _decoder,
+                                   SixtyFourOrdinalTable* _value,
+                                   size_t _offset) {
   fidl_vector_t* encoded = _decoder->GetPtr<fidl_vector_t>(_offset);
   size_t base;
   size_t count;
@@ -7316,34 +7250,8 @@ void GreaterThan64OrdinalTable::Decode(::fidl::Decoder* _decoder,
   } else {
     goto done_64;
   }
-  if (count >= 65) {
-    size_t envelope_base = base + (65 - 1) * sizeof(fidl_envelope_v2_t);
-    fidl_envelope_v2_t* envelope =
-        _decoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
-    if (*reinterpret_cast<const void* const*>(envelope) != nullptr) {
-      ::fidl::Decode(_decoder, _value->mutable_v65(),
-                     _decoder->EnvelopeValueOffset(envelope));
-    } else {
-      _value->clear_v65();
-    }
-  } else {
-    goto done_65;
-  }
-  if (count >= 66) {
-    size_t envelope_base = base + (66 - 1) * sizeof(fidl_envelope_v2_t);
-    fidl_envelope_v2_t* envelope =
-        _decoder->GetPtr<fidl_envelope_v2_t>(envelope_base);
-    if (*reinterpret_cast<const void* const*>(envelope) != nullptr) {
-      ::fidl::Decode(_decoder, _value->mutable_v66(),
-                     _decoder->EnvelopeValueOffset(envelope));
-    } else {
-      _value->clear_v66();
-    }
-  } else {
-    goto done_66;
-  }
 
-  if (count > 66) {
+  if (count > 64) {
     for (uint64_t ordinal = 1; ordinal <= count; ordinal++) {
       if (IsOrdinalKnown(ordinal)) continue;
 
@@ -7495,15 +7403,10 @@ done_63:
   _value->clear_v63();
 done_64:
   _value->clear_v64();
-done_65:
-  _value->clear_v65();
-done_66:
-  _value->clear_v66();
   return;
 }
 
-zx_status_t GreaterThan64OrdinalTable::Clone(
-    GreaterThan64OrdinalTable* result) const {
+zx_status_t SixtyFourOrdinalTable::Clone(SixtyFourOrdinalTable* result) const {
   if (field_presence_.IsSet<0>()) {
     zx_status_t _status = ::fidl::Clone(v1_value_.value, result->mutable_v1());
     if (_status != ZX_OK) return _status;
@@ -7942,20 +7845,6 @@ zx_status_t GreaterThan64OrdinalTable::Clone(
     if (_status != ZX_OK) return _status;
   } else {
     result->clear_v64();
-  }
-  if (field_presence_.IsSet<64>()) {
-    zx_status_t _status =
-        ::fidl::Clone(v65_value_.value, result->mutable_v65());
-    if (_status != ZX_OK) return _status;
-  } else {
-    result->clear_v65();
-  }
-  if (field_presence_.IsSet<65>()) {
-    zx_status_t _status =
-        ::fidl::Clone(v66_value_.value, result->mutable_v66());
-    if (_status != ZX_OK) return _status;
-  } else {
-    result->clear_v66();
   }
   return ::fidl::Clone(_unknown_data, &result->_unknown_data);
 }

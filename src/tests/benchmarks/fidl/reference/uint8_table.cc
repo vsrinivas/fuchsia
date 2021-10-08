@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 // Benchmarks for a reference encoder / decoder specialized to
-// Table1Struct, Table16Struct and Table256Struct as defined in
+// Table1Struct, Table16Struct and Table63Struct as defined in
 // the fidl benchmark suite.
 
 #include <algorithm>
@@ -163,9 +163,9 @@ bool BenchmarkEncodeTableAllSet16(perftest::RepeatState* state) {
   return encode_benchmark_util::EncodeBenchmark(state, benchmark_suite::Build_Table_AllSet_16,
                                                 EncodeUint8TableStruct<16>);
 }
-bool BenchmarkEncodeTableAllSet256(perftest::RepeatState* state) {
-  return encode_benchmark_util::EncodeBenchmark(state, benchmark_suite::Build_Table_AllSet_256,
-                                                EncodeUint8TableStruct<256>);
+bool BenchmarkEncodeTableAllSet63(perftest::RepeatState* state) {
+  return encode_benchmark_util::EncodeBenchmark(state, benchmark_suite::Build_Table_AllSet_63,
+                                                EncodeUint8TableStruct<63>);
 }
 bool BenchmarkEncodeTableUnset1(perftest::RepeatState* state) {
   return encode_benchmark_util::EncodeBenchmark(state, benchmark_suite::Build_Table_Unset_1,
@@ -175,9 +175,9 @@ bool BenchmarkEncodeTableUnset16(perftest::RepeatState* state) {
   return encode_benchmark_util::EncodeBenchmark(state, benchmark_suite::Build_Table_Unset_16,
                                                 EncodeUint8TableStruct<16>);
 }
-bool BenchmarkEncodeTableUnset256(perftest::RepeatState* state) {
-  return encode_benchmark_util::EncodeBenchmark(state, benchmark_suite::Build_Table_Unset_256,
-                                                EncodeUint8TableStruct<256>);
+bool BenchmarkEncodeTableUnset63(perftest::RepeatState* state) {
+  return encode_benchmark_util::EncodeBenchmark(state, benchmark_suite::Build_Table_Unset_63,
+                                                EncodeUint8TableStruct<63>);
 }
 bool BenchmarkEncodeTableSingleSet_1_of_1(perftest::RepeatState* state) {
   return encode_benchmark_util::EncodeBenchmark(
@@ -191,17 +191,17 @@ bool BenchmarkEncodeTableSingleSet_16_of_16(perftest::RepeatState* state) {
   return encode_benchmark_util::EncodeBenchmark(
       state, benchmark_suite::Build_Table_SingleSet_16_of_16, EncodeUint8TableStruct<16>);
 }
-bool BenchmarkEncodeTableSingleSet_1_of_256(perftest::RepeatState* state) {
+bool BenchmarkEncodeTableSingleSet_1_of_63(perftest::RepeatState* state) {
   return encode_benchmark_util::EncodeBenchmark(
-      state, benchmark_suite::Build_Table_SingleSet_1_of_256, EncodeUint8TableStruct<256>);
+      state, benchmark_suite::Build_Table_SingleSet_1_of_63, EncodeUint8TableStruct<63>);
 }
-bool BenchmarkEncodeTableSingleSet_16_of_256(perftest::RepeatState* state) {
+bool BenchmarkEncodeTableSingleSet_16_of_63(perftest::RepeatState* state) {
   return encode_benchmark_util::EncodeBenchmark(
-      state, benchmark_suite::Build_Table_SingleSet_16_of_256, EncodeUint8TableStruct<256>);
+      state, benchmark_suite::Build_Table_SingleSet_16_of_63, EncodeUint8TableStruct<63>);
 }
-bool BenchmarkEncodeTableSingleSet_256_of_256(perftest::RepeatState* state) {
+bool BenchmarkEncodeTableSingleSet_63_of_63(perftest::RepeatState* state) {
   return encode_benchmark_util::EncodeBenchmark(
-      state, benchmark_suite::Build_Table_SingleSet_256_of_256, EncodeUint8TableStruct<256>);
+      state, benchmark_suite::Build_Table_SingleSet_63_of_63, EncodeUint8TableStruct<63>);
 }
 bool BenchmarkDecodeTableAllSet1(perftest::RepeatState* state) {
   return decode_benchmark_util::DecodeBenchmark(state, benchmark_suite::Build_Table_AllSet_1,
@@ -211,9 +211,9 @@ bool BenchmarkDecodeTableAllSet16(perftest::RepeatState* state) {
   return decode_benchmark_util::DecodeBenchmark(state, benchmark_suite::Build_Table_AllSet_16,
                                                 DecodeUint8TableStruct<16>);
 }
-bool BenchmarkDecodeTableAllSet256(perftest::RepeatState* state) {
-  return decode_benchmark_util::DecodeBenchmark(state, benchmark_suite::Build_Table_AllSet_256,
-                                                DecodeUint8TableStruct<256>);
+bool BenchmarkDecodeTableAllSet63(perftest::RepeatState* state) {
+  return decode_benchmark_util::DecodeBenchmark(state, benchmark_suite::Build_Table_AllSet_63,
+                                                DecodeUint8TableStruct<63>);
 }
 bool BenchmarkDecodeTableUnset1(perftest::RepeatState* state) {
   return decode_benchmark_util::DecodeBenchmark(state, benchmark_suite::Build_Table_Unset_1,
@@ -223,9 +223,9 @@ bool BenchmarkDecodeTableUnset16(perftest::RepeatState* state) {
   return decode_benchmark_util::DecodeBenchmark(state, benchmark_suite::Build_Table_Unset_16,
                                                 DecodeUint8TableStruct<16>);
 }
-bool BenchmarkDecodeTableUnset256(perftest::RepeatState* state) {
-  return decode_benchmark_util::DecodeBenchmark(state, benchmark_suite::Build_Table_Unset_256,
-                                                DecodeUint8TableStruct<256>);
+bool BenchmarkDecodeTableUnset63(perftest::RepeatState* state) {
+  return decode_benchmark_util::DecodeBenchmark(state, benchmark_suite::Build_Table_Unset_63,
+                                                DecodeUint8TableStruct<63>);
 }
 bool BenchmarkDecodeTableSingleSet_1_of_1(perftest::RepeatState* state) {
   return decode_benchmark_util::DecodeBenchmark(
@@ -239,56 +239,56 @@ bool BenchmarkDecodeTableSingleSet_16_of_16(perftest::RepeatState* state) {
   return decode_benchmark_util::DecodeBenchmark(
       state, benchmark_suite::Build_Table_SingleSet_16_of_16, DecodeUint8TableStruct<16>);
 }
-bool BenchmarkDecodeTableSingleSet_1_of_256(perftest::RepeatState* state) {
+bool BenchmarkDecodeTableSingleSet_1_of_63(perftest::RepeatState* state) {
   return decode_benchmark_util::DecodeBenchmark(
-      state, benchmark_suite::Build_Table_SingleSet_1_of_256, DecodeUint8TableStruct<256>);
+      state, benchmark_suite::Build_Table_SingleSet_1_of_63, DecodeUint8TableStruct<63>);
 }
-bool BenchmarkDecodeTableSingleSet_16_of_256(perftest::RepeatState* state) {
+bool BenchmarkDecodeTableSingleSet_16_of_63(perftest::RepeatState* state) {
   return decode_benchmark_util::DecodeBenchmark(
-      state, benchmark_suite::Build_Table_SingleSet_16_of_256, DecodeUint8TableStruct<256>);
+      state, benchmark_suite::Build_Table_SingleSet_16_of_63, DecodeUint8TableStruct<63>);
 }
-bool BenchmarkDecodeTableSingleSet_256_of_256(perftest::RepeatState* state) {
+bool BenchmarkDecodeTableSingleSet_63_of_63(perftest::RepeatState* state) {
   return decode_benchmark_util::DecodeBenchmark(
-      state, benchmark_suite::Build_Table_SingleSet_256_of_256, DecodeUint8TableStruct<256>);
+      state, benchmark_suite::Build_Table_SingleSet_63_of_63, DecodeUint8TableStruct<63>);
 }
 
 void RegisterTests() {
   perftest::RegisterTest("Reference/Encode/Table/AllSet/1/Steps", BenchmarkEncodeTableAllSet1);
   perftest::RegisterTest("Reference/Encode/Table/AllSet/16/Steps", BenchmarkEncodeTableAllSet16);
-  perftest::RegisterTest("Reference/Encode/Table/AllSet/256/Steps", BenchmarkEncodeTableAllSet256);
+  perftest::RegisterTest("Reference/Encode/Table/AllSet/63/Steps", BenchmarkEncodeTableAllSet63);
   perftest::RegisterTest("Reference/Encode/Table/Unset/1/Steps", BenchmarkEncodeTableUnset1);
   perftest::RegisterTest("Reference/Encode/Table/Unset/16/Steps", BenchmarkEncodeTableUnset16);
-  perftest::RegisterTest("Reference/Encode/Table/Unset/256/Steps", BenchmarkEncodeTableUnset256);
+  perftest::RegisterTest("Reference/Encode/Table/Unset/63/Steps", BenchmarkEncodeTableUnset63);
   perftest::RegisterTest("Reference/Encode/Table/SingleSet/1_of_1/Steps",
                          BenchmarkEncodeTableSingleSet_1_of_1);
   perftest::RegisterTest("Reference/Encode/Table/SingleSet/1_of_16/Steps",
                          BenchmarkEncodeTableSingleSet_1_of_16);
   perftest::RegisterTest("Reference/Encode/Table/SingleSet/16_of_16/Steps",
                          BenchmarkEncodeTableSingleSet_16_of_16);
-  perftest::RegisterTest("Reference/Encode/Table/SingleSet/1_of_256/Steps",
-                         BenchmarkEncodeTableSingleSet_1_of_256);
-  perftest::RegisterTest("Reference/Encode/Table/SingleSet/16_of_256/Steps",
-                         BenchmarkEncodeTableSingleSet_16_of_256);
-  perftest::RegisterTest("Reference/Encode/Table/SingleSet/256_of_256/Steps",
-                         BenchmarkEncodeTableSingleSet_256_of_256);
+  perftest::RegisterTest("Reference/Encode/Table/SingleSet/1_of_63/Steps",
+                         BenchmarkEncodeTableSingleSet_1_of_63);
+  perftest::RegisterTest("Reference/Encode/Table/SingleSet/16_of_63/Steps",
+                         BenchmarkEncodeTableSingleSet_16_of_63);
+  perftest::RegisterTest("Reference/Encode/Table/SingleSet/63_of_63/Steps",
+                         BenchmarkEncodeTableSingleSet_63_of_63);
   perftest::RegisterTest("Reference/Decode/Table/AllSet/1/Steps", BenchmarkDecodeTableAllSet1);
   perftest::RegisterTest("Reference/Decode/Table/AllSet/16/Steps", BenchmarkDecodeTableAllSet16);
-  perftest::RegisterTest("Reference/Decode/Table/AllSet/256/Steps", BenchmarkDecodeTableAllSet256);
+  perftest::RegisterTest("Reference/Decode/Table/AllSet/63/Steps", BenchmarkDecodeTableAllSet63);
   perftest::RegisterTest("Reference/Decode/Table/Unset/1/Steps", BenchmarkDecodeTableUnset1);
   perftest::RegisterTest("Reference/Decode/Table/Unset/16/Steps", BenchmarkDecodeTableUnset16);
-  perftest::RegisterTest("Reference/Decode/Table/Unset/256/Steps", BenchmarkDecodeTableUnset256);
+  perftest::RegisterTest("Reference/Decode/Table/Unset/63/Steps", BenchmarkDecodeTableUnset63);
   perftest::RegisterTest("Reference/Decode/Table/SingleSet/1_of_1/Steps",
                          BenchmarkDecodeTableSingleSet_1_of_1);
   perftest::RegisterTest("Reference/Decode/Table/SingleSet/1_of_16/Steps",
                          BenchmarkDecodeTableSingleSet_1_of_16);
   perftest::RegisterTest("Reference/Decode/Table/SingleSet/16_of_16/Steps",
                          BenchmarkDecodeTableSingleSet_16_of_16);
-  perftest::RegisterTest("Reference/Decode/Table/SingleSet/1_of_256/Steps",
-                         BenchmarkDecodeTableSingleSet_1_of_256);
-  perftest::RegisterTest("Reference/Decode/Table/SingleSet/16_of_256/Steps",
-                         BenchmarkDecodeTableSingleSet_16_of_256);
-  perftest::RegisterTest("Reference/Decode/Table/SingleSet/256_of_256/Steps",
-                         BenchmarkDecodeTableSingleSet_256_of_256);
+  perftest::RegisterTest("Reference/Decode/Table/SingleSet/1_of_63/Steps",
+                         BenchmarkDecodeTableSingleSet_1_of_63);
+  perftest::RegisterTest("Reference/Decode/Table/SingleSet/16_of_63/Steps",
+                         BenchmarkDecodeTableSingleSet_16_of_63);
+  perftest::RegisterTest("Reference/Decode/Table/SingleSet/63_of_63/Steps",
+                         BenchmarkDecodeTableSingleSet_63_of_63);
 }
 PERFTEST_CTOR(RegisterTests)
 

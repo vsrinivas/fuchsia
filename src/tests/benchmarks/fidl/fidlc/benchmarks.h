@@ -130,7 +130,7 @@ type TestStruct8 = struct {
 )FIDL",
     },
     Benchmark{
-        .name = "TableField/64",
+        .name = "TableField/63",
         .fidl = R"FIDL(
 
 library example;
@@ -199,12 +199,11 @@ type TestTable = table {
 61: f61 int8;
 62: f62 int8;
 63: f63 int8;
-64: f64 int8;
 };
 )FIDL",
     },
     Benchmark{
-        .name = "TableDeep/64",
+        .name = "TableDeep/63",
         .fidl = R"FIDL(
 
 library example;
@@ -463,10 +462,6 @@ type TestTable62 = table {
 
 type TestTable63 = table {
 	1: val TestTable62;
-};
-
-type TestTable64 = table {
-	1: val TestTable63;
 };
 
 )FIDL",

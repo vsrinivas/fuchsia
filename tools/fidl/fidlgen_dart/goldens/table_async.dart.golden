@@ -346,8 +346,45 @@ const $fidl.TableType<TableWithAttributes> kTableWithAttributes_Type =
   resource: false,
 );
 
-class GreaterThan64OrdinalTable extends $fidl.Table {
-  const GreaterThan64OrdinalTable({
+class ExtensionTable extends $fidl.Table {
+  const ExtensionTable({
+    this.$unknownData,
+  });
+
+  ExtensionTable._(Map<int, dynamic> argv, this.$unknownData);
+
+  @override
+  final Map<int, $fidl.UnknownRawData>? $unknownData;
+
+  @override
+  dynamic $field(int index) {
+    switch (index) {
+    }
+    return null;
+  }
+
+  @override
+  Map<int, dynamic> get $fields {
+    return {};
+  }
+
+  static ExtensionTable _ctor(Map<int, dynamic> argv,
+          [Map<int, $fidl.UnknownRawData>? unknownData]) =>
+      ExtensionTable._(argv, unknownData);
+}
+
+// See fxbug.dev/7644:
+// ignore: recursive_compile_time_constant
+const $fidl.TableType<ExtensionTable> kExtensionTable_Type =
+    $fidl.TableType<ExtensionTable>(
+  inlineSize: 16,
+  members: [],
+  ctor: ExtensionTable._ctor,
+  resource: false,
+);
+
+class SixtyFourOrdinalTable extends $fidl.Table {
+  const SixtyFourOrdinalTable({
     this.$unknownData,
     this.v1,
     this.v2,
@@ -413,11 +450,9 @@ class GreaterThan64OrdinalTable extends $fidl.Table {
     this.v62,
     this.v63,
     this.v64,
-    this.v65,
-    this.v66,
   });
 
-  GreaterThan64OrdinalTable._(Map<int, dynamic> argv, this.$unknownData)
+  SixtyFourOrdinalTable._(Map<int, dynamic> argv, this.$unknownData)
       : v1 = argv[1],
         v2 = argv[2],
         v3 = argv[3],
@@ -481,9 +516,7 @@ class GreaterThan64OrdinalTable extends $fidl.Table {
         v61 = argv[61],
         v62 = argv[62],
         v63 = argv[63],
-        v64 = argv[64],
-        v65 = argv[65],
-        v66 = argv[66];
+        v64 = argv[64];
 
   @override
   final Map<int, $fidl.UnknownRawData>? $unknownData;
@@ -550,9 +583,7 @@ class GreaterThan64OrdinalTable extends $fidl.Table {
   final int? v61;
   final int? v62;
   final int? v63;
-  final int? v64;
-  final int? v65;
-  final int? v66;
+  final ExtensionTable? v64;
 
   @override
   dynamic $field(int index) {
@@ -685,10 +716,6 @@ class GreaterThan64OrdinalTable extends $fidl.Table {
         return v63;
       case 63:
         return v64;
-      case 64:
-        return v65;
-      case 65:
-        return v66;
     }
     return null;
   }
@@ -760,21 +787,18 @@ class GreaterThan64OrdinalTable extends $fidl.Table {
       62: v62,
       63: v63,
       64: v64,
-      65: v65,
-      66: v66,
     };
   }
 
-  static GreaterThan64OrdinalTable _ctor(Map<int, dynamic> argv,
+  static SixtyFourOrdinalTable _ctor(Map<int, dynamic> argv,
           [Map<int, $fidl.UnknownRawData>? unknownData]) =>
-      GreaterThan64OrdinalTable._(argv, unknownData);
+      SixtyFourOrdinalTable._(argv, unknownData);
 }
 
 // See fxbug.dev/7644:
 // ignore: recursive_compile_time_constant
-const $fidl.TableType<GreaterThan64OrdinalTable>
-    kGreaterThan64OrdinalTable_Type =
-    $fidl.TableType<GreaterThan64OrdinalTable>(
+const $fidl.TableType<SixtyFourOrdinalTable> kSixtyFourOrdinalTable_Type =
+    $fidl.TableType<SixtyFourOrdinalTable>(
   inlineSize: 16,
   members: [
     $fidl.Int64Type(),
@@ -840,10 +864,8 @@ const $fidl.TableType<GreaterThan64OrdinalTable>
     $fidl.Int64Type(),
     $fidl.Int64Type(),
     $fidl.Int64Type(),
-    $fidl.Int64Type(),
-    $fidl.Int64Type(),
-    $fidl.Int64Type(),
+    kExtensionTable_Type,
   ],
-  ctor: GreaterThan64OrdinalTable._ctor,
+  ctor: SixtyFourOrdinalTable._ctor,
   resource: false,
 );

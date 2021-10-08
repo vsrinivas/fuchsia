@@ -223,6 +223,10 @@ constexpr ErrorDef<std::string_view, std::string_view, SourceSpan, std::string>
         "by the canonical form '{}'");
 constexpr ErrorDef<std::string, const flat::Type *> ErrInvalidStructMemberType(
     "struct field {} has an invalid default type{}");
+constexpr ErrorDef<> ErrTooManyTableOrdinals(
+    "table contains too many ordinals; tables are limited to 64 ordinals");
+constexpr ErrorDef<> ErrMaxOrdinalNotTable(
+    "the 64th ordinal of a table may only contain a table type");
 constexpr ErrorDef<SourceSpan> ErrDuplicateTableFieldOrdinal(
     "multiple table fields with the same ordinal; previous was at {}");
 constexpr ErrorDef<std::string_view, SourceSpan> ErrDuplicateTableFieldName(

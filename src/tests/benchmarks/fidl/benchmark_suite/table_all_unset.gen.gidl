@@ -20,10 +20,10 @@ benchmark("Table/Unset/16") {
     },
 }
 
-// Table with 256 fields all unset
-benchmark("Table/Unset/256") {
-    bindings_allowlist = [llcpp, hlcpp, rust, go, walker, reference],
-    value = Table256Struct{
-        value: Table256{},
+// Table with 63 fields all unset
+benchmark("Table/Unset/63") {
+    bindings_allowlist = [llcpp, hlcpp, rust, go, walker, reference, dart],
+    value = Table63Struct{
+        value: Table63{},
     },
 }

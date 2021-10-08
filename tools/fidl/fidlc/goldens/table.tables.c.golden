@@ -8,7 +8,8 @@ __LOCAL extern const struct FidlCodedTable fidl_test_table_SimpleTableTable;
 __LOCAL extern const struct FidlCodedTable fidl_test_table_ReverseOrdinalTableTable;
 __LOCAL extern const struct FidlCodedTable fidl_test_table_OlderSimpleTableTable;
 __LOCAL extern const struct FidlCodedTable fidl_test_table_NewerSimpleTableTable;
-__LOCAL extern const struct FidlCodedTable fidl_test_table_GreaterThan64OrdinalTableTable;
+__LOCAL extern const struct FidlCodedTable fidl_test_table_ExtensionTableTable;
+__LOCAL extern const struct FidlCodedTable fidl_test_table_SixtyFourOrdinalTableTable;
 __LOCAL extern const struct FidlCodedTable fidl_test_table_EmptyTableTable;
 
 
@@ -43,7 +44,9 @@ static const struct FidlTableField Fields32fidl_test_table_NewerSimpleTable[] = 
 };
 const struct FidlCodedTable fidl_test_table_NewerSimpleTableTable = {.tag=kFidlTypeTable, .fields=Fields32fidl_test_table_NewerSimpleTable, .field_count=3u, .is_resource=kFidlIsResource_NotResource, .name="fidl.test.table/NewerSimpleTable"};
 
-static const struct FidlTableField Fields41fidl_test_table_GreaterThan64OrdinalTable[] = {
+const struct FidlCodedTable fidl_test_table_ExtensionTableTable = {.tag=kFidlTypeTable, .fields=NULL, .field_count=0u, .is_resource=kFidlIsResource_NotResource, .name="fidl.test.table/ExtensionTable"};
+
+static const struct FidlTableField Fields37fidl_test_table_SixtyFourOrdinalTable[] = {
     /*FidlTableField*/{.type=(fidl_type_t*)(&fidl_internal_kInt64Table), .ordinal=1u},
     /*FidlTableField*/{.type=(fidl_type_t*)(&fidl_internal_kInt64Table), .ordinal=2u},
     /*FidlTableField*/{.type=(fidl_type_t*)(&fidl_internal_kInt64Table), .ordinal=3u},
@@ -107,11 +110,9 @@ static const struct FidlTableField Fields41fidl_test_table_GreaterThan64OrdinalT
     /*FidlTableField*/{.type=(fidl_type_t*)(&fidl_internal_kInt64Table), .ordinal=61u},
     /*FidlTableField*/{.type=(fidl_type_t*)(&fidl_internal_kInt64Table), .ordinal=62u},
     /*FidlTableField*/{.type=(fidl_type_t*)(&fidl_internal_kInt64Table), .ordinal=63u},
-    /*FidlTableField*/{.type=(fidl_type_t*)(&fidl_internal_kInt64Table), .ordinal=64u},
-    /*FidlTableField*/{.type=(fidl_type_t*)(&fidl_internal_kInt64Table), .ordinal=65u},
-    /*FidlTableField*/{.type=(fidl_type_t*)(&fidl_internal_kInt64Table), .ordinal=66u}
+    /*FidlTableField*/{.type=(fidl_type_t*)(&fidl_test_table_ExtensionTableTable), .ordinal=64u}
 };
-const struct FidlCodedTable fidl_test_table_GreaterThan64OrdinalTableTable = {.tag=kFidlTypeTable, .fields=Fields41fidl_test_table_GreaterThan64OrdinalTable, .field_count=66u, .is_resource=kFidlIsResource_NotResource, .name="fidl.test.table/GreaterThan64OrdinalTable"};
+const struct FidlCodedTable fidl_test_table_SixtyFourOrdinalTableTable = {.tag=kFidlTypeTable, .fields=Fields37fidl_test_table_SixtyFourOrdinalTable, .field_count=64u, .is_resource=kFidlIsResource_NotResource, .name="fidl.test.table/SixtyFourOrdinalTable"};
 
 const struct FidlCodedTable fidl_test_table_EmptyTableTable = {.tag=kFidlTypeTable, .fields=NULL, .field_count=0u, .is_resource=kFidlIsResource_NotResource, .name="fidl.test.table/EmptyTable"};
 

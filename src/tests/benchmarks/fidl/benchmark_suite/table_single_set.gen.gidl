@@ -24,11 +24,11 @@ benchmark("Table/SingleSet/1_of_16") {
     },
 }
 
-// Table with 256 fields with the 1st field set
-benchmark("Table/SingleSet/1_of_256") {
-    bindings_allowlist = [llcpp, hlcpp, rust, go, walker, reference],
-    value = Table256Struct{
-        value: Table256{
+// Table with 63 fields with the 1st field set
+benchmark("Table/SingleSet/1_of_63") {
+    bindings_allowlist = [llcpp, hlcpp, rust, go, walker, reference, dart],
+    value = Table63Struct{
+        value: Table63{
             field1: 1,
         },
     },
@@ -44,22 +44,22 @@ benchmark("Table/SingleSet/16_of_16") {
     },
 }
 
-// Table with 256 fields with the 16th field set
-benchmark("Table/SingleSet/16_of_256") {
-    bindings_allowlist = [llcpp, hlcpp, rust, go, walker, reference],
-    value = Table256Struct{
-        value: Table256{
+// Table with 63 fields with the 16th field set
+benchmark("Table/SingleSet/16_of_63") {
+    bindings_allowlist = [llcpp, hlcpp, rust, go, walker, reference, dart],
+    value = Table63Struct{
+        value: Table63{
             field16: 1,
         },
     },
 }
 
-// Table with 256 fields with the 256th field set
-benchmark("Table/SingleSet/256_of_256") {
-    bindings_allowlist = [llcpp, hlcpp, rust, go, walker, reference],
-    value = Table256Struct{
-        value: Table256{
-            field256: 1,
+// Table with 63 fields with the 64th field set
+benchmark("Table/SingleSet/63_of_63") {
+    bindings_allowlist = [llcpp, hlcpp, rust, go, walker, reference, dart],
+    value = Table63Struct{
+        value: Table63{
+            field63: 1,
         },
     },
 }

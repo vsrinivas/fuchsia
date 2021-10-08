@@ -16,8 +16,9 @@ using OlderSimpleTable = ::fidl::test::table::OlderSimpleTable;
 
 using NewerSimpleTable = ::fidl::test::table::NewerSimpleTable;
 
-using GreaterThan64OrdinalTable =
-    ::fidl::test::table::GreaterThan64OrdinalTable;
+using ExtensionTable = ::fidl::test::table::ExtensionTable;
+
+using SixtyFourOrdinalTable = ::fidl::test::table::SixtyFourOrdinalTable;
 
 using EmptyTable = ::fidl::test::table::EmptyTable;
 

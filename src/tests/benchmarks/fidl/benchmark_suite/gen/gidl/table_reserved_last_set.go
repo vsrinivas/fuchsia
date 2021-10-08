@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-// +build !build_with_native_toolchain
+//go:build !build_with_native_toolchain
 
 package gidl
 
@@ -25,13 +25,11 @@ func init() {
 				},
 			},
 			{
-				Name:    "Table/LastSetOthersReserved/256",
-				Comment: `Table with 255 reserved fields and one non-reserved set field`,
+				Name:    "Table/LastSetOthersReserved/63",
+				Comment: `Table with 62 reserved fields and one non-reserved set field`,
 				Config: config.Config{
-					"size": 256,
+					"size": 63,
 				},
-				// Dart has a 256 argument limit which is exceeded by the table constructor.
-				Denylist: []config.Binding{config.Dart},
 			},
 		},
 	})

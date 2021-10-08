@@ -45,6 +45,9 @@ namespace flat {
 
 constexpr uint32_t kHandleSameRights = 0x80000000;  // ZX_HANDLE_SAME_RIGHTS
 
+// See RFC-0132 for the origin of this table limit.
+constexpr size_t kMaxTableOrdinals = 64;
+
 using diagnostics::Diagnostic;
 using diagnostics::ErrorDef;
 using reporter::Reporter;

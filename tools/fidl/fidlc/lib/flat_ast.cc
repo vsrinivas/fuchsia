@@ -4566,7 +4566,12 @@ bool Library::CompileTable(Table* table_declaration) {
     return false;
   }
 
-  for (auto& member : table_declaration->members) {
+  if (table_declaration->members.size() > kMaxTableOrdinals) {
+    return Fail(ErrTooManyTableOrdinals);
+  }
+
+  for (size_t i = 0; i < table_declaration->members.size(); i++) {
+    auto& member = table_declaration->members[i];
     if (!CompileAttributeList(member.attributes.get())) {
       return false;
     }
@@ -4594,6 +4599,15 @@ bool Library::CompileTable(Table* table_declaration) {
       }
       if (member_used.type_ctor->type->nullability != types::Nullability::kNonnullable) {
         return Fail(ErrNullableTableMember, member_used.name);
+      }
+      if (i == kMaxTableOrdinals - 1) {
+        if (member_used.type_ctor->type->kind != Type::Kind::kIdentifier) {
+          return Fail(ErrMaxOrdinalNotTable);
+        }
+        auto identifier_type = static_cast<const IdentifierType*>(member_used.type_ctor->type);
+        if (identifier_type->type_decl->kind != Decl::Kind::kTable) {
+          return Fail(ErrMaxOrdinalNotTable);
+        }
       }
     }
   }

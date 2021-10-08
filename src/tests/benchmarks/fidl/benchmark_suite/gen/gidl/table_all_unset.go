@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-// +build !build_with_native_toolchain
+//go:build !build_with_native_toolchain
 
 package gidl
 
@@ -36,13 +36,12 @@ func init() {
 				Allowlist: []config.Binding{config.LLCPP, config.HLCPP, config.Go, config.Walker, config.Reference, config.Dart},
 			},
 			{
-				Name:    "Table/Unset/256",
-				Comment: `Table with 256 fields all unset`,
+				Name:    "Table/Unset/63",
+				Comment: `Table with 63 fields all unset`,
 				Config: config.Config{
-					"size": 256,
+					"size": 63,
 				},
-				// Dart has a 256 argument limit which is exceeded by the table constructor.
-				Allowlist: []config.Binding{config.LLCPP, config.HLCPP, config.Rust, config.Go, config.Walker, config.Reference},
+				Allowlist: []config.Binding{config.LLCPP, config.HLCPP, config.Rust, config.Go, config.Walker, config.Reference, config.Dart},
 			},
 		},
 	})

@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-// +build !build_with_native_toolchain
+//go:build !build_with_native_toolchain
 
 package gidl
 
@@ -38,14 +38,13 @@ func init() {
 				Allowlist: []config.Binding{config.LLCPP, config.HLCPP, config.Go, config.Walker, config.Reference, config.Dart},
 			},
 			{
-				Name:    "Table/SingleSet/1_of_256",
-				Comment: `Table with 256 fields with the 1st field set`,
+				Name:    "Table/SingleSet/1_of_63",
+				Comment: `Table with 63 fields with the 1st field set`,
 				Config: config.Config{
-					"size":         256,
+					"size":         63,
 					"field_to_set": 1,
 				},
-				// Dart has a 256 argument limit which is exceeded by the table constructor.
-				Allowlist: []config.Binding{config.LLCPP, config.HLCPP, config.Rust, config.Go, config.Walker, config.Reference},
+				Allowlist: []config.Binding{config.LLCPP, config.HLCPP, config.Rust, config.Go, config.Walker, config.Reference, config.Dart},
 			},
 			{
 				Name:    "Table/SingleSet/16_of_16",
@@ -58,24 +57,22 @@ func init() {
 				Allowlist: []config.Binding{config.LLCPP, config.HLCPP, config.Go, config.Walker, config.Reference, config.Dart},
 			},
 			{
-				Name:    "Table/SingleSet/16_of_256",
-				Comment: `Table with 256 fields with the 16th field set`,
+				Name:    "Table/SingleSet/16_of_63",
+				Comment: `Table with 63 fields with the 16th field set`,
 				Config: config.Config{
-					"size":         256,
+					"size":         63,
 					"field_to_set": 16,
 				},
-				// Dart has a 256 argument limit which is exceeded by the table constructor.
-				Allowlist: []config.Binding{config.LLCPP, config.HLCPP, config.Rust, config.Go, config.Walker, config.Reference},
+				Allowlist: []config.Binding{config.LLCPP, config.HLCPP, config.Rust, config.Go, config.Walker, config.Reference, config.Dart},
 			},
 			{
-				Name:    "Table/SingleSet/256_of_256",
-				Comment: `Table with 256 fields with the 256th field set`,
+				Name:    "Table/SingleSet/63_of_63",
+				Comment: `Table with 63 fields with the 64th field set`,
 				Config: config.Config{
-					"size":         256,
-					"field_to_set": 256,
+					"size":         63,
+					"field_to_set": 63,
 				},
-				// Dart has a 256 argument limit which is exceeded by the table constructor.
-				Allowlist: []config.Binding{config.LLCPP, config.HLCPP, config.Rust, config.Go, config.Walker, config.Reference},
+				Allowlist: []config.Binding{config.LLCPP, config.HLCPP, config.Rust, config.Go, config.Walker, config.Reference, config.Dart},
 			},
 		},
 	})
