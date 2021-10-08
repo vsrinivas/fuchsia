@@ -639,26 +639,26 @@ foreach(cred_path, board_fastboot_unlock_credentials) {
   archive_fastboot_credentials += [ "$basename.script" ]
 }
 
-flash_manifest_content = {
-  hw_revision = "${board_name}"
-  credentials = fastboot_credentials
-  products = [
-    {
-      name = "recovery"
-      bootloader_partitions = bootloader_parts
-      partitions = recovery_parts
-      oem_files = []
-    },
-    {
-      name = "fuchsia"
-      bootloader_partitions = bootloader_parts
-      partitions = parts
-      oem_files = []
-    },
+flash_manifest_products = [
+  {
+    name = "recovery"
+    bootloader_partitions = bootloader_parts
+    partitions = recovery_parts
+    oem_files = []
+  },
+  {
+    name = "fuchsia"
+    bootloader_partitions = bootloader_parts
+    partitions = parts
+    oem_files = []
+  },
+]
 
-    # "bootstrap" product is only responsible for flashing any bootstrap
-    # files and the bootloader itself, at which point the device is
-    # ready to be flashed using the standard means.
+if (bootstrap_parts != []) {
+  # "bootstrap" product is only responsible for flashing any bootstrap
+  # files and the bootloader itself, at which point the device is
+  # ready to be flashed using the standard means.
+  flash_manifest_products += [
     {
       name = "bootstrap"
       requires_unlock = true
@@ -667,6 +667,12 @@ flash_manifest_content = {
       oem_files = []
     },
   ]
+}
+
+flash_manifest_content = {
+  hw_revision = "${board_name}"
+  credentials = fastboot_credentials
+  products = flash_manifest_products
 }
 
 fastboot_manifest_file = "$root_build_dir/flash.json"
@@ -772,6 +778,42 @@ action("flash_script_archive") {
 }
 
 fastboot_manifest_archive_file = "$root_build_dir/flash_archive.json"
+archive_flash_manifest_products = [
+  {
+    name = "recovery"
+    bootloader_partitions = archive_bootloader_parts
+    partitions = archive_recovery_parts
+    oem_files = []
+  },
+  {
+    name = "fuchsia"
+    bootloader_partitions = archive_bootloader_parts
+    partitions = archive_parts
+    oem_files = []
+  },
+]
+
+if (archive_bootstrap_parts != []) {
+  # "bootstrap" product is only responsible for flashing any bootstrap
+  # files and the bootloader itself, at which point the device is
+  # ready to be flashed using the standard means.
+  archive_flash_manifest_products += [
+    {
+      name = "bootstrap"
+      requires_unlock = true
+      bootloader_partitions = archive_bootstrap_parts + archive_bootloader_parts
+      partitions = []
+      oem_files = []
+    },
+  ]
+}
+
+archive_flash_manifest_content = {
+  hw_revision = "${board_name}"
+  credentials = archive_fastboot_credentials
+  products = archive_flash_manifest_products
+}
+
 generated_file("fastboot_manifest_archive") {
   testonly = true
   outputs = [ fastboot_manifest_archive_file ]
@@ -780,36 +822,7 @@ generated_file("fastboot_manifest_archive") {
   contents = [
     {
       version = flash_manifest_version
-      manifest = {
-        hw_revision = "${board_name}"
-        credentials = archive_fastboot_credentials
-        products = [
-          {
-            name = "recovery"
-            bootloader_partitions = archive_bootloader_parts
-            partitions = archive_recovery_parts
-            oem_files = []
-          },
-          {
-            name = "fuchsia"
-            bootloader_partitions = archive_bootloader_parts
-            partitions = archive_parts
-            oem_files = []
-          },
-
-          # "bootstrap" product is only responsible for flashing any bootstrap
-          # files and the bootloader itself, at which point the device is
-          # ready to be flashed using the standard means.
-          {
-            name = "bootstrap"
-            requires_unlock = true
-            bootloader_partitions =
-                archive_bootstrap_parts + archive_bootloader_parts
-            partitions = []
-            oem_files = []
-          },
-        ]
-      }
+      manifest = archive_flash_manifest_content
     },
   ]
 
