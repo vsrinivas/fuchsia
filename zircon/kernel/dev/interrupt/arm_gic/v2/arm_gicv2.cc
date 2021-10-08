@@ -473,7 +473,8 @@ static void arm_gic_v2_init_early(const void* driver_data, uint32_t length) {
     return;
   }
 
-  dprintf(SPEW, "GICv2 (ID %#x), IPI base %u\n", GICREG(0, GICC_IIDR), ipi_base);
+  dprintf(SPEW, "GICv2 (ID %#x), IPI base %u, GICH offset %#lx, GICV offset %#lx\n",
+          GICREG(0, GICC_IIDR), ipi_base, arm_gicv2_gich_offset, arm_gicv2_gicv_offset);
 
   // pass the list of physical and virtual addresses for the GICv2m register apertures
   if (driver->msi_frame_phys) {

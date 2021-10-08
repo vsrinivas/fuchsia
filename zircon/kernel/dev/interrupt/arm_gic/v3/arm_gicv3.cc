@@ -565,7 +565,7 @@ static void arm_gic_v3_init_early(const void* driver_data, uint32_t length) {
     return;
   }
 
-  dprintf(SPEW, "GIC IPI base %u\n", ipi_base);
+  dprintf(SPEW, "GICv3, IPI base %u\n", ipi_base);
 
   pdev_register_interrupts(&gic_ops);
 
