@@ -37,8 +37,9 @@ type LayoutInfo = table {
     /// [`SetViewportProperties`]. Clients should re-layout their content when this value changes.
     1: logical_size fuchsia.math.SizeU;
     /// The ratio from physical display pixels to logical pixels, defined by the sizes and scale
-    /// transforms of the parent. Clients should not necessarily re-layout their content when this
-    /// value changes.
+    /// transforms of the parent: each logical pixel is displayed on-screen by one or more physical
+    /// pixels, as determined by this scale.  Clients should not necessarily re-layout their content
+    /// when this value changes.
     2: pixel_scale fuchsia.math.SizeU;
 };
 
