@@ -5,7 +5,7 @@
 #[cfg(test)]
 mod tests {
     use {
-        anyhow::{format_err, Context as _, Error},
+        anyhow::{format_err, Error},
         fidl::endpoints::ProtocolMarker,
         fidl_fuchsia_netemul_environment::{
             EnvironmentOptions, LaunchService, LoggerOptions, ManagedEnvironmentMarker,
@@ -17,7 +17,7 @@ mod tests {
         },
         fidl_fuchsia_netemul_sandbox::{SandboxMarker, SandboxProxy},
         fidl_fuchsia_netemul_sync::{BusMarker, BusProxy, SyncManagerMarker, SyncManagerProxy},
-        fidl_fuchsia_netstack::NetstackMarker,
+        fidl_fuchsia_netstack::{NetstackMarker, RouteTableEntry},
         fuchsia_async as fasync,
         fuchsia_component::client,
         fuchsia_zircon as zx,
@@ -36,7 +36,7 @@ mod tests {
         sandbox.create_environment(
             env_server_end,
             EnvironmentOptions {
-                name: name, // don't care about the name, let it be created by itself
+                name,
                 services: Some(services),
                 devices: None,
                 inherit_parent_launch_services: Some(false),
@@ -55,7 +55,9 @@ mod tests {
     }
 
     fn create_env_with_netstack(sandbox: &SandboxProxy) -> Result<ManagedEnvironmentProxy, Error> {
-        create_named_env_with_netstack(sandbox, None)
+        // Don't care about the name, let it be created by itself.
+        let name = None;
+        create_named_env_with_netstack(sandbox, name)
     }
 
     async fn create_network<'a>(
@@ -130,17 +132,16 @@ mod tests {
     #[fasync::run_singlethreaded]
     #[test]
     async fn can_use_environment_services() {
-        let sandbox = client::connect_to_protocol::<SandboxMarker>()
-            .context("Can't connect to sandbox")
-            .unwrap();
+        let sandbox =
+            client::connect_to_protocol::<SandboxMarker>().expect("Can't connect to sandbox");
         let env = create_env_with_netstack(&sandbox).unwrap();
         let (netstack, netstack_server_end) =
             fidl::endpoints::create_proxy::<NetstackMarker>().unwrap();
         let () = env
             .connect_to_service(NetstackMarker::NAME, netstack_server_end.into_channel())
             .expect("Can't connect to netstack");
-        let routes = netstack.get_route_table().await.expect("can't list netstack routes");
-        assert_eq!(routes, []);
+        let _: Vec<RouteTableEntry> =
+            netstack.get_route_table().await.expect("can't list netstack routes");
     }
 
     #[fasync::run_singlethreaded]

@@ -8,7 +8,7 @@ group("test") {
   testonly = true
   deps = [
     ":grpc_client_stress_test_spec",
-    ":guest_test_spec",
+    ":netemul-guest-test",
     ":netemul-sandbox-test",
     ":sandbox-service_spec",
     ":sandbox-unittest_spec",
@@ -178,7 +178,7 @@ resource("setup_linux_router") {
 fuchsia_test_component("grpc-client-stress-test-legacy") {
   manifest = "meta/grpc-client-stress-test.cmx"
   component_name = "grpc-client-stress-test"
-  deps = [ "guest_grpc_stress" ]
+  deps = [ "guest_grpc_stress:grpc_client_stress" ]
 }
 
 fuchsia_test_component("grpc-client-stress-test") {
@@ -197,54 +197,35 @@ fuchsia_test_component("multiple-guests-test") {
   deps = [ ":multiple-guests-test-legacy" ]
 }
 
-fuchsia_test("guest_test_spec") {
-  package = ":netemul-guest-test"
-  component = ":guest-test"
-
-  # TODO(fxbug.dev/48129): test hangs w/ ASan. Fix and switch to [ nuc_env ].
-  environments = nuc_env_fails_on_asan
-}
-
 fuchsia_test("grpc_client_stress_test_spec") {
   package = ":netemul-guest-test"
   component = ":grpc-client-stress-test"
 
+  environments = []
+
   # TODO(fxbug.dev/47487): test hangs w/ ASan. Fix and switch to [ nuc_env ].
-  if (nuc_env_fails_on_asan != []) {
-    nuc_scope = nuc_env_fails_on_asan[0]
-
-    environments = [
-      {
-        dimensions = nuc_scope.dimensions
-
-        # TODO(fxbug.dev/49752): test occasionally exceeds 5 minute timeout.
-        tags = [ "flaky" ]
-      },
-    ]
-  } else {
-    # Disable this test for all non-NUC environments.
-    environments = []
+  foreach(env, nuc_env_fails_on_asan) {
+    # TODO(https://fxbug.dev/49752): test hangs almost every time.
+    env.tags = [ "flaky" ]
+    environments += [ env ]
   }
 }
 
-fuchsia_test("multiple_guests_test_spec") {
-  package = ":netemul-guest-test"
-  component = ":multiple-guests-test"
-
-  # TODO(fxbug.dev/48129): test hangs w/ ASan. Fix and switch to [ nuc_env ].
-  # TODO(fxbug.dev/51063): test fails with ThinLTO.
-  environments = []
-}
-
-fuchsia_package("netemul-guest-test") {
-  testonly = true
-  deps = [
-    ":grpc-client-stress-test",
+fuchsia_test_package("netemul-guest-test") {
+  test_specs = {
+    # TODO(fxbug.dev/48129): guest-test,multiple-guests-test hang w/ ASan. Fix and switch to [ nuc_env ].
+    environments = nuc_env_fails_on_asan
+  }
+  test_components = [
     ":guest-test",
     ":multiple-guests-test",
+  ]
+  deps = [
+    ":grpc-client-stress-test",
     ":setup_linux_client",
     ":setup_linux_router",
     ":test_script",
+    "//src/connectivity/network/netstack:component-legacy",
     "//src/connectivity/network/testing/netemul/runner:netstack-cfg",
   ]
 }

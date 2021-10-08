@@ -32,7 +32,8 @@
         },
         "fuchsia.test": {
             "system-services": [
-                "fuchsia.sysinfo.SysInfo"
+                "fuchsia.kernel.HypervisorResource",
+                "fuchsia.kernel.VmexResource"
             ]
         }
     },
@@ -44,8 +45,12 @@
     },
     "runner": "fuchsia-pkg://fuchsia.com/netemul-runner#meta/netemul-runner.cmx",
     "sandbox": {
+        "features": [
+            "isolated-persistent-storage"
+        ],
         "services": [
-            "fuchsia.sysinfo.SysInfo"
+            "fuchsia.kernel.HypervisorResource",
+            "fuchsia.kernel.VmexResource"
         ]
     }
 }

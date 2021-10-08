@@ -568,25 +568,14 @@ Sandbox::Promise Sandbox::LaunchGuestEnvironment(ConfiguringEnvironmentPtr env,
         }
 
         if (guest.guest_image_url() == kDebianGuestUrl) {
-          // Wait for journalctl to show that the guest_discovery_service is listening on the
-          // vsock.
-          while (true) {
-            std::string output;
-            zx_status_t status =
-                serial.ExecuteBlocking("journalctl -u guest_interaction_daemon | grep Listening",
-                                       "$", zx::time::infinite(), &output);
-            // If the command cannot be executed, break out of the loop so the test can fail.
-            if (status != ZX_OK) {
-              return fpromise::error(
-                  SandboxResult(SandboxResult::Status::SETUP_FAILED,
-                                "Could not communicate with guest over serial connection"));
-            }
-
-            // Ensure that the output from the command indicates that guest_interaction_daemon is
-            // listening on the vsock.
-            if (output.find("Listening") != std::string::npos) {
-              break;
-            }
+          // Wait until guest_interaction_daemon is running.
+          zx_status_t status = serial.ExecuteBlocking(
+              "journalctl -f --no-tail -u guest_interaction_daemon | grep -m1 Listening", "$",
+              zx::time::infinite(), nullptr);
+          if (status != ZX_OK) {
+            return fpromise::error(
+                SandboxResult(SandboxResult::Status::SETUP_FAILED,
+                              "Could not communicate with guest over serial connection"));
           }
         }
 

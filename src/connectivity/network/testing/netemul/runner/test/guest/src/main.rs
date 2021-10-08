@@ -66,7 +66,7 @@ async fn test_file_transfer() -> Result<(), Error> {
 
 async fn test_exec_script() -> Result<(), Error> {
     // Command to run, environment variable definitions, and stdin to input.
-    let command_to_run = "/bin/sh -c \"/root/input/test_script.sh\"";
+    let command_to_run = "/bin/sh -c /root/input/test_script.sh";
     let stdin_input = "hello\n";
     let stdout_env_var = "STDOUT_STRING";
     let stderr_env_var = "STDERR_STRING";

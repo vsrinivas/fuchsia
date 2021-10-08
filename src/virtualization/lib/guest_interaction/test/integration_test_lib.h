@@ -77,7 +77,7 @@ class GuestInteractionTest : public gtest::TestWithEnvironmentFixture {
         GuestConsole serial(std::make_unique<ZxSocket>(std::move(result.response().socket)));
         ASSERT_OK(serial.Start(zx::time::infinite()));
 
-        // Wait until sysctl shows that the guest_interaction_daemon is running.
+        // Wait until guest_interaction_daemon is running.
         ASSERT_OK(serial.ExecuteBlocking(
             "journalctl -f --no-tail -u guest_interaction_daemon | grep -m1 Listening", "$",
             zx::time::infinite(), nullptr));

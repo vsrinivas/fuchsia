@@ -9,6 +9,8 @@ use {
     },
     fuchsia_async as fasync,
     fuchsia_component::client,
+    fuchsia_zircon as zx,
+    futures::io::AsyncReadExt as _,
     netemul_guest_lib::wait_for_command_completion,
 };
 
@@ -18,6 +20,9 @@ async fn test_multihop_ping() -> Result<(), Error> {
     let (router_gis, gis_ch) = fidl::endpoints::create_proxy::<GuestInteractionMarker>()?;
     let () = guest_discovery_service.get_guest(None, "debian_guest_1", gis_ch)?;
 
+    let (stdout_0, stdout_1) = zx::Socket::create(zx::SocketOpts::STREAM).unwrap();
+    let (stderr_0, stderr_1) = zx::Socket::create(zx::SocketOpts::STREAM).unwrap();
+
     let (client_proxy, server_end) = fidl::endpoints::create_proxy::<CommandListenerMarker>()
         .context("Failed to create CommandListener ends")?;
 
@@ -25,18 +30,40 @@ async fn test_multihop_ping() -> Result<(), Error> {
         "/bin/sh -c /root/input/setup_linux_router.sh",
         &mut [].iter_mut(),
         None,
-        None,
-        None,
+        Some(stdout_1),
+        Some(stderr_1),
         server_end,
     )?;
 
-    let () = wait_for_command_completion(client_proxy.take_event_stream(), None)
-        .await
-        .context("Failed to configure router")?;
+    let mut guest_stdout = Vec::new();
+    let mut stdout_socket = fasync::Socket::from_socket(stdout_0)?;
+
+    let mut guest_stderr = Vec::new();
+    let mut stderr_socket = fasync::Socket::from_socket(stderr_0)?;
+
+    let (exit, stdout_bytes, stderr_bytes) = futures::future::join3(
+        wait_for_command_completion(client_proxy.take_event_stream(), None),
+        stdout_socket.read_to_end(&mut guest_stdout),
+        stderr_socket.read_to_end(&mut guest_stderr),
+    )
+    .await;
+
+    let () = exit.with_context(|| {
+        format!(
+            "Failed to configure router\nStdout:\n{}\nStderr:\n{}",
+            String::from_utf8_lossy(&guest_stdout),
+            String::from_utf8_lossy(&guest_stderr)
+        )
+    })?;
+    let _: usize = stdout_bytes.context("read stdout")?;
+    let _: usize = stderr_bytes.context("read stderr")?;
 
     // Configure the Debian guest VM acting as a client endpoint.
     let (client_gis, gis_ch) = fidl::endpoints::create_proxy::<GuestInteractionMarker>()?;
     let () = guest_discovery_service.get_guest(None, "debian_guest_2", gis_ch)?;
+
+    let (stdout_0, stdout_1) = zx::Socket::create(zx::SocketOpts::STREAM).unwrap();
+    let (stderr_0, stderr_1) = zx::Socket::create(zx::SocketOpts::STREAM).unwrap();
 
     let (client_proxy, server_end) = fidl::endpoints::create_proxy::<CommandListenerMarker>()
         .context("Failed to create CommandListener ends")?;
@@ -45,14 +72,36 @@ async fn test_multihop_ping() -> Result<(), Error> {
         "/bin/sh -c /root/input/setup_linux_client.sh",
         &mut [].iter_mut(),
         None,
-        None,
-        None,
+        Some(stdout_1),
+        Some(stderr_1),
         server_end,
     )?;
 
-    let () = wait_for_command_completion(client_proxy.take_event_stream(), None)
-        .await
-        .context("Failed to configure client")?;
+    let mut guest_stdout = Vec::new();
+    let mut stdout_socket = fasync::Socket::from_socket(stdout_0)?;
+
+    let mut guest_stderr = Vec::new();
+    let mut stderr_socket = fasync::Socket::from_socket(stderr_0)?;
+
+    let (exit, stdout_bytes, stderr_bytes) = futures::future::join3(
+        wait_for_command_completion(client_proxy.take_event_stream(), None),
+        stdout_socket.read_to_end(&mut guest_stdout),
+        stderr_socket.read_to_end(&mut guest_stderr),
+    )
+    .await;
+
+    let () = exit.with_context(|| {
+        format!(
+            "Failed to configure client\nStdout:\n{}\nStderr:\n{}",
+            String::from_utf8_lossy(&guest_stdout),
+            String::from_utf8_lossy(&guest_stderr)
+        )
+    })?;
+    let _: usize = stdout_bytes.context("read stdout")?;
+    let _: usize = stderr_bytes.context("read stderr")?;
+
+    let (stdout_0, stdout_1) = zx::Socket::create(zx::SocketOpts::STREAM).unwrap();
+    let (stderr_0, stderr_1) = zx::Socket::create(zx::SocketOpts::STREAM).unwrap();
 
     // Ping from the Linux client through the Linux router to the Fuchsia endpoint.
     let (client_proxy, server_end) = fidl::endpoints::create_proxy::<CommandListenerMarker>()
@@ -62,14 +111,34 @@ async fn test_multihop_ping() -> Result<(), Error> {
         "/bin/ping -c 1 192.168.0.2",
         &mut [].iter_mut(),
         None,
-        None,
-        None,
+        Some(stdout_1),
+        Some(stderr_1),
         server_end,
     )?;
 
-    let () = wait_for_command_completion(client_proxy.take_event_stream(), None)
-        .await
-        .context("Failed to configure client")?;
+    let mut guest_stdout = Vec::new();
+    let mut stdout_socket = fasync::Socket::from_socket(stdout_0)?;
+
+    let mut guest_stderr = Vec::new();
+    let mut stderr_socket = fasync::Socket::from_socket(stderr_0)?;
+
+    let (exit, stdout_bytes, stderr_bytes) = futures::future::join3(
+        wait_for_command_completion(client_proxy.take_event_stream(), None),
+        stdout_socket.read_to_end(&mut guest_stdout),
+        stderr_socket.read_to_end(&mut guest_stderr),
+    )
+    .await;
+
+    let () = exit.with_context(|| {
+        format!(
+            "Failed to ping router from client\nStdout:\n{}\nStderr:\n{}",
+            String::from_utf8_lossy(&guest_stdout),
+            String::from_utf8_lossy(&guest_stderr)
+        )
+    })?;
+    let _: usize = stdout_bytes.context("read stdout")?;
+    let _: usize = stderr_bytes.context("read stderr")?;
+
     return Ok(());
 }
 

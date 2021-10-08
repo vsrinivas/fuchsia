@@ -77,8 +77,11 @@ pub async fn wait_for_command_completion(
             }
             CommandListenerEvent::OnTerminated { status, return_code } => {
                 zx::ok(status)?;
-                assert_eq!(return_code, 0);
-                return Ok(());
+                break if return_code == 0 {
+                    Ok(())
+                } else {
+                    Err(anyhow::anyhow!("unexpected return code {}", return_code))
+                };
             }
         }
     }

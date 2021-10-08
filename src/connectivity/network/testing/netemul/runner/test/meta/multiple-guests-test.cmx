@@ -8,9 +8,10 @@
                     {
                         "name": "fuchsia",
                         "services": {
-                            "fuchsia.net.stack.Stack": "fuchsia-pkg://fuchsia.com/netemul-sandbox-test#meta/netstack.cmx",
-                            "fuchsia.netstack.Netstack": "fuchsia-pkg://fuchsia.com/netemul-sandbox-test#meta/netstack.cmx",
-                            "fuchsia.posix.socket.Provider": "fuchsia-pkg://fuchsia.com/netemul-sandbox-test#meta/netstack.cmx"
+                            "fuchsia.net.interfaces.State": "fuchsia-pkg://fuchsia.com/netemul-guest-test#meta/netstack.cmx",
+                            "fuchsia.net.stack.Stack": "fuchsia-pkg://fuchsia.com/netemul-guest-test#meta/netstack.cmx",
+                            "fuchsia.netstack.Netstack": "fuchsia-pkg://fuchsia.com/netemul-guest-test#meta/netstack.cmx",
+                            "fuchsia.posix.socket.Provider": "fuchsia-pkg://fuchsia.com/netemul-guest-test#meta/netstack.cmx"
                         },
                         "setup": [
                             {
@@ -22,7 +23,7 @@
                                     "-g",
                                     "192.168.0.1"
                                 ],
-                                "url": "fuchsia-pkg://fuchsia.com/netemul-guest-tests#meta/netstack-cfg.cmx"
+                                "url": "fuchsia-pkg://fuchsia.com/netemul-guest-test#meta/netstack-cfg.cmx"
                             }
                         ],
                         "test": [
@@ -72,7 +73,8 @@
         },
         "fuchsia.test": {
             "system-services": [
-                "fuchsia.sysinfo.SysInfo"
+                "fuchsia.kernel.HypervisorResource",
+                "fuchsia.kernel.VmexResource"
             ]
         }
     },
@@ -84,8 +86,12 @@
     },
     "runner": "fuchsia-pkg://fuchsia.com/netemul-runner#meta/netemul-runner.cmx",
     "sandbox": {
+        "features": [
+            "isolated-persistent-storage"
+        ],
         "services": [
-            "fuchsia.sysinfo.SysInfo"
+                "fuchsia.kernel.HypervisorResource",
+                "fuchsia.kernel.VmexResource"
         ]
     }
 }

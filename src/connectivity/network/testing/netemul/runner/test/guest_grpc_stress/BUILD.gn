@@ -30,8 +30,8 @@ rustc_binary("bin") {
   configs -= [ "//build/config/rust:allow_unused_results" ]
 }
 
-fuchsia_component("guest_grpc_stress") {
-  component_name = "guest-grpc-stress"
+fuchsia_component("grpc_client_stress") {
+  component_name = "grpc-client-stress"
   manifest = "meta/grpc-client-stress.cmx"
   testonly = true
   deps = [ ":bin" ]

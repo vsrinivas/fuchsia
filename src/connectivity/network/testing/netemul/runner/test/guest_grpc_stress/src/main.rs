@@ -7,9 +7,8 @@ use {
     fidl_fuchsia_netemul_guest::{GuestDiscoveryMarker, GuestInteractionMarker},
     fuchsia_async as fasync,
     fuchsia_component::client,
-    fuchsia_zircon::sys,
-    netemul_guest_lib::file_to_client,
-    std::fs::File,
+    fuchsia_zircon as zx,
+    futures::{StreamExt as _, TryStreamExt as _},
 };
 
 // This test stresses the gRPC client to ensure there are no race conditions between the thread
@@ -25,25 +24,38 @@ async fn grpc_client_stress() -> Result<(), Error> {
     let (gis, gis_ch) = fidl::endpoints::create_proxy::<GuestInteractionMarker>()?;
     let () = guest_discovery_service.get_guest(None, "debian_guest", gis_ch)?;
 
-    for _ in 0..1000 {
-        let get_file = file_to_client(&File::create(local_file)?)?;
-        let get_status =
-            gis.get_file(nonexistent_remote_file, get_file).await.context("Failed to get file")?;
+    let file = std::fs::File::create(local_file)?;
 
-        match get_status {
-            sys::ZX_ERR_NOT_FOUND => {}
-            sys::ZX_OK => return Err(format_err!("File transfer erroneously succeeded")),
-            error => {
-                return Err(format_err!("Failed to transfer file with unexpected error: {}", error))
+    let gis = &gis;
+    let file = &file;
+    futures::stream::iter(0..1000)
+        .map(Ok)
+        .try_for_each_concurrent(None, |i| async move {
+            let get_file =
+                netemul_guest_lib::file_to_client(file).context("Failed to get client")?;
+            println!("[START] get_file i={}", i);
+            let get_status = gis
+                .get_file(nonexistent_remote_file, get_file)
+                .await
+                .context("Failed to get file")?;
+            println!("[END] get_file i={}", i);
+
+            match get_status {
+                zx::sys::ZX_ERR_NOT_FOUND => Ok(()),
+                zx::sys::ZX_OK => Err(format_err!("File transfer erroneously succeeded")),
+                error => {
+                    Err(format_err!("Failed to transfer file with unexpected error: {:?}", error))
+                }
             }
-        }
-    }
-
-    Ok(())
+        })
+        .await
 }
 
 #[fasync::run_singlethreaded]
 async fn main() -> Result<(), Error> {
-    grpc_client_stress().await?;
-    return Ok(());
+    println!("[START] grpc_client_stress");
+    let () = grpc_client_stress().await?;
+    println!("[END] grpc_client_stress");
+
+    Ok(())
 }

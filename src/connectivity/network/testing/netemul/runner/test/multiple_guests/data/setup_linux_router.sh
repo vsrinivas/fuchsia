@@ -1,4 +1,5 @@
-#!/bin/bash
+#!/usr/bin/env bash
+#
 # Copyright 2019 The Fuchsia Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
@@ -17,13 +18,14 @@ declare -r IPV4_SUBNET_LENGTH="24"
 linux_iface_set=false
 fuchsia_iface_set=false
 
-for iface in $(ls -1 /sys/class/net); do
-  iface_mac=$(cat "/sys/class/net/${iface}/address")
+for dir in /sys/class/net/*; do
+  iface_mac=$(cat "${dir}/address")
+  iface=$(basename "${dir}")
   if [[ "${iface_mac}" == "${LINUX_LINK_MAC}" ]]; then
-    ip addr add dev "${iface}" "${LINUX_LINK_IPV4_ADDR}/${IPV4_SUBNET_LENGTH}"
+    ifconfig "${iface}" "${LINUX_LINK_IPV4_ADDR}/${IPV4_SUBNET_LENGTH}"
     linux_iface_set=true
   elif [[ "${iface_mac}" == "${FUCHSIA_LINK_MAC}" ]]; then
-    ip addr add dev "${iface}" "${FUCHSIA_LINK_IPV4_ADDR}/${IPV4_SUBNET_LENGTH}"
+    ifconfig "${iface}" "${FUCHSIA_LINK_IPV4_ADDR}/${IPV4_SUBNET_LENGTH}"
     fuchsia_iface_set=true
   fi
 done

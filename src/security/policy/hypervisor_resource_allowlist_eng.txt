@@ -9,6 +9,9 @@ fuchsia-pkg://fuchsia.com/guest_interaction_tests#meta/server_daemon_test.cmx
 fuchsia-pkg://fuchsia.com/hypervisor-tests-pkg#meta/hypervisor_tests.cmx
 fuchsia-pkg://fuchsia.com/netdump-integration-tests#meta/netemul-sandbox.cmx
 fuchsia-pkg://fuchsia.com/netemul-dhcp-tests#meta/dhcp-validity-test.cmx
+fuchsia-pkg://fuchsia.com/netemul-guest-test#meta/grpc-client-stress-test.cmx
+fuchsia-pkg://fuchsia.com/netemul-guest-test#meta/guest-test.cmx
+fuchsia-pkg://fuchsia.com/netemul-guest-test#meta/multiple-guests-test.cmx
 fuchsia-pkg://fuchsia.com/netstack-integration-tests#meta/netemul-sandbox.cmx
 fuchsia-pkg://fuchsia.com/netstack3-tests#meta/netemul-sandbox.cmx
 fuchsia-pkg://fuchsia.com/policy-integration-tests#meta/hypervisor_resource_allowed.cmx
