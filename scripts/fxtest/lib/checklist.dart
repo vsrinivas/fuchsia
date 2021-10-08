@@ -2,11 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-// TODO(https://fxbug.dev/84961): Fix null safety and remove this language version.
-// @dart=2.9
-
 import 'package:fxtest/fxtest.dart';
-import 'package:meta/meta.dart';
 
 /// Utility which applies sanity checks to make sure we both 1) actually want
 /// to execute tests, and 2) are set up to get correct output.
@@ -20,13 +16,13 @@ class PreChecker implements Checklist {
   final TestsConfig testsConfig;
 
   PreChecker({
-    @required this.eventSink,
-    @required this.testsConfig,
+    required this.eventSink,
+    required this.testsConfig,
   });
 
   factory PreChecker.fromConfig(
     TestsConfig testsConfig, {
-    @required Function(TestEvent) eventSink,
+    required Function(TestEvent) eventSink,
   }) {
     return PreChecker(
       testsConfig: testsConfig,

@@ -15,7 +15,6 @@ environment:
 dependencies:
   args: ^1.5.2
   async: ^2.4.0
-  edit_distance: ^0.4.1
   io: ^0.3.3
   meta: ^1.1.7
   path: ^1.6.4

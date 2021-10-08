@@ -2,15 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-// TODO(https://fxbug.dev/84961): Fix null safety and remove this language version.
-// @dart=2.9
-
 import 'dart:async';
 import 'dart:io';
 
 import 'package:fxtest/fxtest.dart';
 import 'package:fxutils/fxutils.dart' as fxutils;
-import 'package:meta/meta.dart';
 import 'package:path/path.dart' as p;
 
 /// Container that holds enough information about a test to execute it and
@@ -30,7 +26,7 @@ class TestBundle {
   final DirectoryBuilder directoryBuilder;
 
   /// Sink for realtime updates from the running test process.
-  final Function(String) _realtimeOutputSink;
+  final Function(String)? _realtimeOutputSink;
 
   /// Copy of all output, used to send to user when a timeout happens and
   /// [_realtimeOutputSink] is null.
@@ -64,7 +60,7 @@ class TestBundle {
   final bool raiseOnFailure;
 
   /// Optional. Path to fx. If provided, it replaces any 'fx' command.
-  final String fxPath;
+  final String? fxPath;
 
   /// This will keep track if user doesn't want to restrict logs.
   /// This is temporary till we fully implement new features to decentralize
@@ -73,7 +69,7 @@ class TestBundle {
 
   /// Contains a parallel value specified by the user at invocation time if any.
   /// Supercedes any parallel value stored in the test definition.
-  final String parallelOverride;
+  final String? parallelOverride;
 
   /// Whether or not to use run-test-suite instead of ffx for running v2 tests.
   final bool useRunTestSuite;
@@ -92,19 +88,21 @@ class TestBundle {
       switch (e.testDefinition.testType) {
         case TestType.component:
         case TestType.suite:
-          String target = 'updates';
+          String? target = 'updates';
           if (testsConfig.fxEnv.isFeatureEnabled('incremental')) {
-            if (e.testDefinition.packageLabel.isNotEmpty) {
+            if (e.testDefinition.packageLabel?.isNotEmpty ?? false) {
               target = fxutils.getBuildTarget(e.testDefinition.packageLabel);
-            } else if (e.testDefinition.label.isNotEmpty) {
+            } else if (e.testDefinition.label?.isNotEmpty ?? false) {
               target = fxutils.getBuildTarget(e.testDefinition.label);
             }
           }
-          targets.add(target);
+          if (target != null) targets.add(target);
           break;
         case TestType.command:
         case TestType.host:
-          targets.add(e.testDefinition.path);
+          if (e.testDefinition.path != null) {
+            targets.add(e.testDefinition.path!);
+          }
           break;
         case TestType.e2e:
           // The presence of an e2e test requires a full build
@@ -118,13 +116,13 @@ class TestBundle {
 
   TestBundle(
     this.testDefinition, {
-    @required this.testRunner,
-    @required this.timeElapsedSink,
-    @required this.workingDirectory,
-    @required this.confidence,
-    @required this.directoryBuilder,
-    @required this.parallelOverride,
-    @required this.useRunTestSuite,
+    required this.testRunner,
+    required this.timeElapsedSink,
+    required this.workingDirectory,
+    required this.confidence,
+    required this.directoryBuilder,
+    required this.parallelOverride,
+    required this.useRunTestSuite,
     this.environment = const <String, String>{},
     this.extraFlags = const [],
     this.fxPath,
@@ -132,15 +130,9 @@ class TestBundle {
     this.raiseOnFailure = false,
     this.shouldRestrictLogs = true,
     this.runnerFlags = const [],
-    Function(String) realtimeOutputSink,
+    Function(String)? realtimeOutputSink,
   })  : _realtimeOutputSink = realtimeOutputSink,
         _outputBuffer = StringBuffer() {
-    if (testRunner == null) {
-      throw AssertionError('`testRunnerBuilder` must not equal `null`');
-    }
-    if (confidence == null) {
-      throw AssertionError('You must supply a confidence value');
-    }
     if (confidence <= 0) {
       throw AssertionError('Only confidence values above 0 are allowed');
     }
@@ -150,15 +142,15 @@ class TestBundle {
   }
 
   factory TestBundle.build({
-    @required DirectoryBuilder directoryBuilder,
-    @required TestDefinition testDefinition,
-    @required TestsConfig testsConfig,
-    @required Function(Duration, String, String) timeElapsedSink,
-    @required TestRunner Function(TestsConfig) testRunnerBuilder,
-    @required String workingDirectory,
-    double confidence,
-    Function(String) realtimeOutputSink,
-    String fxPath,
+    required DirectoryBuilder directoryBuilder,
+    required TestDefinition testDefinition,
+    required TestsConfig testsConfig,
+    required Function(Duration, String, String) timeElapsedSink,
+    required TestRunner Function(TestsConfig) testRunnerBuilder,
+    required String workingDirectory,
+    double? confidence,
+    Function(String)? realtimeOutputSink,
+    String? fxPath,
   }) {
     List<String> _extraFlags = [];
     // for component tests pass test arguments separated by option delimiter(--).
@@ -196,7 +188,7 @@ class TestBundle {
   Function(String) get realtimeOutputSink => (String val) {
         _outputBuffer.writeln(val);
         if (_realtimeOutputSink != null) {
-          _realtimeOutputSink(val);
+          _realtimeOutputSink!(val);
         }
       };
 
@@ -222,7 +214,7 @@ class TestBundle {
           break;
         case TestType.suite:
           flags.add('--max-severity-logs');
-          flags.add(testDefinition.maxLogSeverity);
+          flags.add(testDefinition.maxLogSeverity!);
           break;
         default:
           break;
@@ -233,7 +225,7 @@ class TestBundle {
 
     // Unparsed tests imply a major problem with `fx test`, so we
     // definitely want to throw an exception
-    if (commandTokens.tokens == null || commandTokens.tokens.isEmpty) {
+    if (commandTokens.tokens.isEmpty) {
       throw UnrunnableTestException(
         'Failed to determine run context for test:\n$testDefinition',
       );
@@ -242,7 +234,7 @@ class TestBundle {
     // Defer this check to now (as opposed to when the test is compiled), so the
     // feedback can be synced to when tests are executed.
     if (commandTokens.warning != null && commandTokens.warning != '') {
-      yield TestInfo(commandTokens.warning);
+      yield TestInfo(commandTokens.warning!);
     }
 
     String fullCommandDisplay = commandTokens.fullCommandDisplay(extraFlags);
@@ -320,7 +312,7 @@ class TestBundle {
   }
 
   String _addFxPath(String cmd) {
-    return cmd == 'fx' && fxPath != null ? fxPath : cmd;
+    return cmd == 'fx' && fxPath != null ? fxPath! : cmd;
   }
 
   String _formatError(String cmd, ProcessResult result) {
@@ -345,7 +337,7 @@ class TestBundle {
     }
     directoryBuilder(
       p.join(
-        environment['FUCHSIA_TEST_OUTDIR'],
+        environment['FUCHSIA_TEST_OUTDIR']!,
         testDefinition.name,
       ),
       recursive: true,

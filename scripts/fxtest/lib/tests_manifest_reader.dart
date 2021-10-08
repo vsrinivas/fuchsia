@@ -2,9 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-// TODO(https://fxbug.dev/84961): Fix null safety and remove this language version.
-// @dart=2.9
-
 import 'dart:convert';
 import 'dart:collection';
 import 'dart:io';
@@ -12,7 +9,6 @@ import 'dart:math';
 
 import 'package:fxtest/fxtest.dart';
 import 'package:io/ansi.dart';
-import 'package:meta/meta.dart';
 import 'package:path/path.dart' as p;
 
 /// Harness for the completely processed tests manifest from a Fuchsia build.
@@ -21,7 +17,7 @@ class ParsedManifest {
   final List<TestDefinition> skippedTests;
 
   /// Test configs that did not match any tests.
-  final List<PermutatedTestsConfig> unusedConfigs;
+  final List<PermutatedTestsConfig>? unusedConfigs;
 
   /// The raw JSON of a test plopped into a class for structured analysis.
   final List<TestDefinition> testDefinitions;
@@ -30,15 +26,15 @@ class ParsedManifest {
   final List<TestBundle> testBundles;
 
   /// Number of test entries in the manifest that would indicate duplicate work.
-  final int numDuplicateTests;
+  final int? numDuplicateTests;
 
   /// Number of test entries that contained data structured outside the bounds
   /// of this script's capabilities. This number should be 0.
-  final int numUnparsedTests;
+  final int? numUnparsedTests;
 
   ParsedManifest({
-    @required this.testDefinitions,
-    @required this.testBundles,
+    required this.testDefinitions,
+    required this.testBundles,
     this.skippedTests = const [],
     this.numDuplicateTests,
     this.numUnparsedTests,
@@ -57,9 +53,9 @@ class TestsManifestReader {
 
   /// Reads and parses the tests manifest file at [manifestFileName]
   Future<List<TestDefinition>> loadTestsJson({
-    @required String buildDir,
-    @required String fxLocation,
-    @required String manifestFileName,
+    required String buildDir,
+    required String fxLocation,
+    required String manifestFileName,
   }) async {
     List<dynamic> testJson = await readManifest(
       p.join(buildDir, manifestFileName),
@@ -73,9 +69,9 @@ class TestsManifestReader {
 
   /// Finishes loading the raw test manifest into a list of usable objects.
   List<TestDefinition> parseManifest({
-    @required List<dynamic> testJson,
-    @required String buildDir,
-    @required String fxLocation,
+    required List<dynamic> testJson,
+    required String buildDir,
+    required String fxLocation,
   }) {
     List<TestDefinition> testDefinitions = [];
     for (var data in testJson) {
@@ -108,8 +104,8 @@ class TestsManifestReader {
         eventEmitter(TestInfo(redError));
       }
     } else {
-      String fxTest = wrapWith('fx test', [blue, styleBold]);
-      String dashU = wrapWith('-u', [blue, styleBold]);
+      String fxTest = wrapWith('fx test', [blue, styleBold])!;
+      String dashU = wrapWith('-u', [blue, styleBold])!;
       redError += '\n\nThis is very likely a problem with the $fxTest script'
           ' or the test itself, and is not of any error on your part.'
           '\nPlease submit a bug to report this unparsed test to the'
@@ -122,11 +118,11 @@ class TestsManifestReader {
   /// Loops over the provided list of [TestDefinition]s and, based on the
   /// results of all registered [Checker]s, returns a list of [TestBundle]s.
   ParsedManifest aggregateTests({
-    @required TestBundle Function(TestDefinition, [double]) testBundleBuilder,
-    @required List<TestDefinition> testDefinitions,
-    @required void Function(TestEvent) eventEmitter,
-    @required TestsConfig testsConfig,
-    Comparer comparer,
+    required TestBundle Function(TestDefinition, [double]) testBundleBuilder,
+    required List<TestDefinition> testDefinitions,
+    required void Function(TestEvent) eventEmitter,
+    required TestsConfig testsConfig,
+    Comparer? comparer,
     MatchLength matchLength = MatchLength.partial,
   }) {
     comparer ??= StrictComparer();
@@ -247,7 +243,7 @@ class TestsManifestReader {
               definition,
               entry.key,
               matchLength: matchLength,
-              comparer: comparer,
+              comparer: comparer!,
             )
             .isMatch)) {
           permutations[entry.key] = true;
@@ -273,10 +269,10 @@ class TestsManifestReader {
   }
 
   void reportOnTestBundles({
-    @required ParsedManifest parsedManifest,
-    @required TestsConfig testsConfig,
-    @required void Function(TestEvent) eventEmitter,
-    @required String userFriendlyBuildDir,
+    required ParsedManifest parsedManifest,
+    required TestsConfig testsConfig,
+    required void Function(TestEvent) eventEmitter,
+    required String userFriendlyBuildDir,
   }) {
     if (testsConfig.flags.shouldPrintSkipped) {
       for (var testDef in parsedManifest.skippedTests) {
@@ -284,7 +280,7 @@ class TestsManifestReader {
       }
     }
     String duplicates = '';
-    if (parsedManifest.numDuplicateTests > 0) {
+    if ((parsedManifest.numDuplicateTests ?? 0) > 0) {
       String duplicateWord =
           parsedManifest.numDuplicateTests == 1 ? 'duplicate' : 'duplicates';
       duplicates = testsConfig.wrapWith(

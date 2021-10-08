@@ -2,16 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-// TODO(https://fxbug.dev/84961): Fix null safety and remove this language version.
-// @dart=2.9
-
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
 import 'package:fxtest/fxtest.dart';
 import 'package:fxutils/fxutils.dart';
-import 'package:meta/meta.dart';
 
 /// Disposable runner which executes a single test and presents its output in
 /// realtime (via streams) and aggregates for the end (via a [StringBuffer]).
@@ -19,7 +15,7 @@ class TestRunner {
   final StreamController<String> _stdoutController;
   final StartProcess _startProcess;
 
-  TestRunner({StartProcess startProcess})
+  TestRunner({StartProcess? startProcess})
       : _stdoutController = StreamController<String>(),
         _startProcess = startProcess ?? Process.start;
 
@@ -39,8 +35,8 @@ class TestRunner {
   Future<ProcessResult> run(
     String command,
     List<String> args, {
-    @required String workingDirectory,
-    Map<String, String> environment,
+    required String workingDirectory,
+    Map<String, String>? environment,
   }) async {
     var processArgs = _buildProcessArgs(command, args);
     Process process = await _startProcess(
@@ -75,7 +71,7 @@ class TestRunner {
     // to terminate and for the output streams to be flushed.
     var results =
         await Future.wait([process.exitCode, stdOutFinish, stdErrFinish]);
-    var _exitCode = results[0];
+    var _exitCode = results[0] ?? -1;
 
     await close();
 
@@ -101,8 +97,8 @@ class SymbolizingTestRunner extends TestRunner {
   final String fx;
 
   SymbolizingTestRunner({
-    @required this.fx,
-  }) : assert(fx != null && fx != '');
+    required this.fx,
+  }) : assert(fx != '');
 
   factory SymbolizingTestRunner.builder(TestsConfig testsConfig) =>
       SymbolizingTestRunner(fx: testsConfig.fxEnv.fx);

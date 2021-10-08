@@ -1,5 +1,3 @@
-// TODO(https://fxbug.dev/84961): Fix null safety and remove this language version.
-// @dart=2.9
 import 'package:fxtest/fxtest.dart';
 import 'package:test/test.dart';
 
@@ -88,9 +86,9 @@ void main() {
       await repository.loadTargetsFromJson(Stream.value(targetsJson));
 
       expect(repository.asMap().length, 2);
-      expect(repository['my-demo'].merkle,
+      expect(repository['my-demo']?.merkle,
           '913cdd63ab4aa794694448450505efaa2a8fe27fb33888e5156da9db60ac0a29');
-      expect(repository['my_lib'].merkle,
+      expect(repository['my_lib']?.merkle,
           '7a604498e05fa012391b6b51da9cc74ff6a6a9d25b1376de98125c194232bfa1');
     });
 
@@ -118,15 +116,15 @@ void main() {
       await repository.loadTargetsFromJson(Stream.value(targetsJson));
 
       expect(repository.asMap().length, 1);
-      expect(repository['my-demo']['0'],
+      expect(repository['my-demo']?['0'],
           '913cdd63ab4aa794694448450505efaa2a8fe27fb33888e5156da9db60ac0a29');
-      expect(repository['my-demo']['1'],
+      expect(repository['my-demo']?['1'],
           '7a604498e05fa012391b6b51da9cc74ff6a6a9d25b1376de98125c194232bfa1');
       expect(repository['another-package'], isNull);
 
       // merkle getter should throw an exception when there are multiple versions,
       // since it cannot reliably decide which version to return.
-      expect(() => repository['my-demo'].merkle,
+      expect(() => repository['my-demo']?.merkle,
           throwsA(TypeMatcher<PackageRepositoryException>()));
     });
   });

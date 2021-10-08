@@ -2,15 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-// TODO(https://fxbug.dev/84961): Fix null safety and remove this language version.
-// @dart=2.9
-
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io' as io;
 import 'dart:math';
 import 'package:fxtest/exceptions.dart';
-import 'package:meta/meta.dart';
 import 'package:path/path.dart' as p;
 
 abstract class StandardOut {
@@ -40,12 +36,11 @@ class FileStandardOut implements StandardOut {
   /// file in there.
   final Completer<bool> _closedCompleter;
   String path;
-  io.File _file;
-  io.IOSink _sink;
+  io.File? _file;
+  io.IOSink? _sink;
 
   FileStandardOut(this.path, {this.deleteIfExisting = false})
       : _closedCompleter = Completer<bool>(),
-        assert(path != null),
         assert(path != '');
 
   void initPath() {
@@ -64,7 +59,7 @@ class FileStandardOut implements StandardOut {
         io.File(path).deleteSync();
       }
       _file = io.File(path);
-      _sink = _file.openWrite(mode: io.FileMode.append);
+      _sink = _file!.openWrite(mode: io.FileMode.append);
     }
   }
 
@@ -178,34 +173,34 @@ class OutputBuffer {
   final _ansiEscape = String.fromCharCode(27);
 
   OutputBuffer._({
-    this.stdout,
+    required this.stdout,
 
     // Controls how the buffer should receive its first content. Does not have
     // immediate visual impact.
     bool cursorStartsOnNewLine = false,
   })  : content = [],
         _stdoutCompleter = Completer(),
-        _isCursorOnNewline = cursorStartsOnNewLine ?? false {
+        _isCursorOnNewline = cursorStartsOnNewLine {
     /// Listen to the actual `stdout.done` future and resolve our approximation
     /// with an error if that closes before the test suite completes.
     stdout.done.catchError((err) => _closeFutureWithError());
   }
 
-  factory OutputBuffer.realIO({bool cursorStartsOnNewLine}) {
+  factory OutputBuffer.realIO({bool cursorStartsOnNewLine = false}) {
     return OutputBuffer._(
       cursorStartsOnNewLine: cursorStartsOnNewLine,
       stdout: RealStandardOut(),
     );
   }
 
-  factory OutputBuffer.fileIO({@required String path}) {
+  factory OutputBuffer.fileIO({required String path}) {
     return OutputBuffer._(
       cursorStartsOnNewLine: false,
       stdout: FileStandardOut(path),
     );
   }
 
-  factory OutputBuffer.locMemIO({bool cursorStartsOnNewLine}) {
+  factory OutputBuffer.locMemIO({bool cursorStartsOnNewLine = false}) {
     return OutputBuffer._(
       cursorStartsOnNewLine: cursorStartsOnNewLine,
       stdout: LocMemStandardOut(),
@@ -369,7 +364,7 @@ class OutputBuffer {
   }
 
   /// Writes the entire [buffer] to the [stdout].
-  void flush({int start, int end}) {
+  void flush({int? start, int? end}) {
     _flushLines(content.sublist(start ?? 0, end ?? content.length));
   }
 

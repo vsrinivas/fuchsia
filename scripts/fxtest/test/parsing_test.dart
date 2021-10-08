@@ -1,5 +1,3 @@
-// TODO(https://fxbug.dev/84961): Fix null safety and remove this language version.
-// @dart=2.9
 import 'package:fxtest/fxtest.dart';
 import 'package:test/test.dart';
 
@@ -210,7 +208,7 @@ void main() {
     // Helper function to parse lots of data for tests
     ParsedManifest parseFromArgs({
       List<String> args = const [],
-      List<TestDefinition> testDefs,
+      List<TestDefinition>? testDefs,
     }) {
       TestsConfig testsConfig = TestsConfig.fromRawArgs(
         rawArgs: args,
@@ -444,7 +442,7 @@ void main() {
           parseFromArgs(args: ['fancy', 'no-match']);
       expect(parsedManifest.testBundles, hasLength(1));
       expect(parsedManifest.unusedConfigs, hasLength(1));
-      expect(parsedManifest.unusedConfigs[0].testNameGroup,
+      expect(parsedManifest.unusedConfigs?[0].testNameGroup,
           equals([MatchableArgument.unrestricted('no-match')]));
     });
 
@@ -495,9 +493,9 @@ void main() {
         comparer: FuzzyComparer(threshold: 3),
         eventEmitter: (TestEvent event) => null,
         matchLength: MatchLength.partial,
-        testBundleBuilder: (TestDefinition _testDef, [double confidence]) =>
+        testBundleBuilder: (TestDefinition _testDef, [double? confidence]) =>
             TestBundle.build(
-          directoryBuilder: (String path, {bool recursive}) => null,
+          directoryBuilder: (String path, {required bool recursive}) => null,
           testDefinition: _testDef,
           testRunnerBuilder: (testsConfig) => TestRunner(),
           timeElapsedSink: (duration, cmd, output) => null,
@@ -521,9 +519,9 @@ void main() {
         comparer: FuzzyComparer(threshold: 3),
         eventEmitter: (TestEvent event) => null,
         matchLength: MatchLength.partial,
-        testBundleBuilder: (TestDefinition _testDef, [double confidence]) =>
+        testBundleBuilder: (TestDefinition _testDef, [double? confidence]) =>
             TestBundle.build(
-          directoryBuilder: (String path, {bool recursive}) => null,
+          directoryBuilder: (String path, {required bool recursive}) => null,
           testDefinition: _testDef,
           testRunnerBuilder: (testsConfig) => TestRunner(),
           timeElapsedSink: (duration, cmd, output) => null,

@@ -2,12 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-// TODO(https://fxbug.dev/84961): Fix null safety and remove this language version.
-// @dart=2.9
-
 import 'package:fxtest/fxtest.dart';
 import 'package:fxutils/fxutils.dart';
-import 'package:meta/meta.dart';
 
 /// Helper which pairs positional arguments with any trailing `-a` arguments,
 /// or, similarly, `-p` arguments with any trailing `-c` arguments.
@@ -61,11 +57,11 @@ class TestNamesCollector {
 
   TestNamesCollector({
     /// The entire string of arguments passed to `fx test`.
-    @required List<String> rawArgs,
+    required List<String> rawArgs,
 
     /// The extracted test names from all arguments passed to `fx test`.
-    @required List<String> rawTestNames,
-    @required String relativeCwd,
+    required List<String> rawTestNames,
+    required String relativeCwd,
   })  : testNames =
             TestNamesCollector._processTestList(rawTestNames, relativeCwd),
         rawArgs = TestNamesCollector._processRawArgs(rawArgs, relativeCwd);
@@ -97,9 +93,9 @@ class TestNamesCollector {
       if (seenRootNames.contains(arg)) {
         continue;
       }
-      _ArgumentsProgress argsProgress;
+      _ArgumentsProgress? argsProgress;
       if (testNames.contains(arg)) {
-        seenRootNames.add(arg);
+        seenRootNames.add(arg!);
         groupedTestFilters.add([MatchableArgument.unrestricted(arg)]);
         argsProgress = _takeAndFilters(
           args,
@@ -110,7 +106,7 @@ class TestNamesCollector {
         if (!args.hasMore()) break;
 
         var nextArg = args.take();
-        groupedTestFilters.add([MatchableArgument.packageName(nextArg)]);
+        groupedTestFilters.add([MatchableArgument.packageName(nextArg!)]);
         argsProgress = _takeComponentFilters(
           args,
           testNames,
@@ -120,7 +116,7 @@ class TestNamesCollector {
         if (!args.hasMore()) break;
 
         var nextArg = args.take();
-        groupedTestFilters.add([MatchableArgument.componentName(nextArg)]);
+        groupedTestFilters.add([MatchableArgument.componentName(nextArg!)]);
       }
       if (argsProgress != null) {
         if (argsProgress.additionalFilters.isNotEmpty) {
@@ -150,7 +146,7 @@ class TestNamesCollector {
         // Confirm our peek
         args.take();
         var nextArg = args.take();
-        additionalFilters.add(MatchableArgument.componentName(nextArg));
+        additionalFilters.add(MatchableArgument.componentName(nextArg!));
       } else {
         break;
       }
@@ -173,8 +169,9 @@ class TestNamesCollector {
         args.take();
         var nextFilter = args.take();
         additionalFilters.addAll(
-          nextFilter
+          nextFilter!
               .split(',')
+              // ignore: unnecessary_lambdas
               .map((testName) => MatchableArgument.unrestricted(testName))
               .toList(),
         );
@@ -221,10 +218,10 @@ class _ListEmitter<T> {
   _ListEmitter(this._list);
 
   /// Look at the next item in the list without advancing the marker.
-  T peek() => _list.length > _counter ? _list[_counter] : null;
+  T? peek() => _list.length > _counter ? _list[_counter] : null;
 
   /// Look at the next item in the list and advance the marker.
-  T take() {
+  T? take() {
     if (_counter == _list.length) return null;
     _counter += 1;
     return _list[_counter - 1];
@@ -249,7 +246,7 @@ enum MatchType {
 /// with an additional [MatchType] attribute which optionally specifies
 /// limitations on parts of a [TestDefinition] eligible for matching.
 class MatchableArgument {
-  final String arg;
+  final String? arg;
   final MatchType matchType;
 
   /// Generic constructor which accepts all paramters. Not preferred for

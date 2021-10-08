@@ -2,9 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-// TODO(https://fxbug.dev/84961): Fix null safety and remove this language version.
-// @dart=2.9
-
 import 'dart:async';
 import 'dart:collection';
 import 'dart:convert';
@@ -26,9 +23,9 @@ const _defaultManifest = 'package-repositories.json';
 ///  https://fuchsia.dev/fuchsia-src/concepts/system/software_update_system
 /// and https://github.com/theupdateframework/specification/blob/HEAD/tuf-spec.md.
 class PackageRepository {
-  String targetsFile;
-  String blobsDirectory;
-  String rootPath;
+  late String targetsFile;
+  late String blobsDirectory;
+  late String rootPath;
 
   final Map<String, PackageInfo> _packages = {};
 
@@ -40,8 +37,8 @@ class PackageRepository {
   /// Returns null if the 'package-repositories.json' manifest doesn't exist
   /// or if the 'targets.json' file referenced in property 'targets' of
   /// 'package-repositories.json' cannot be opened.
-  static Future<PackageRepository> fromManifest(
-      {@required String buildDir, String repositoriesFile = _defaultManifest}) {
+  static Future<PackageRepository>? fromManifest(
+      {required String buildDir, String repositoriesFile = _defaultManifest}) {
     // The package-repositories manifest is usually very small, so it's ok to
     // read it all at once.
     File file = File(p.join(buildDir, repositoriesFile));
@@ -74,22 +71,22 @@ class PackageRepository {
   }
 
   // ignore: prefer_constructors_over_static_methods
-  static PackageUrl decoratePackageUrlWithHash(
-      PackageRepository repository, String packageUrl) {
+  static PackageUrl? decoratePackageUrlWithHash(
+      PackageRepository? repository, String? packageUrl) {
     if (packageUrl == null) {
       return null;
     }
     PackageUrl parsed = PackageUrl.fromString(packageUrl);
-    if (repository == null || parsed.packageName == null) {
+    if (repository == null) {
       return parsed;
     }
-    PackageInfo info = repository[parsed.packageName];
+    PackageInfo? info = repository[parsed.packageName];
     if (info == null) {
       return parsed;
     }
     var hash = parsed.packageVariant == null
         ? info.merkle
-        : info[parsed.packageVariant];
+        : info[parsed.packageVariant!];
     return PackageUrl.copyWithHash(other: parsed, hash: hash);
   }
 
@@ -136,7 +133,7 @@ class PackageRepository {
 
   Map<String, PackageInfo> asMap() => UnmodifiableMapView(_packages);
 
-  PackageInfo operator [](String packageName) => _packages[packageName];
+  PackageInfo? operator [](String packageName) => _packages[packageName];
 }
 
 class PackageInfo {
@@ -149,7 +146,7 @@ class PackageInfo {
 
   factory PackageInfo.fromJson(
       String name, String variant, Map<String, dynamic> json,
-      [PackageInfo current]) {
+      [PackageInfo? current]) {
     var packageInfo = current ?? PackageInfo._internal(name);
 
     if (packageInfo._merkle.containsKey(variant)) {
@@ -162,13 +159,13 @@ class PackageInfo {
   }
 
   /// Merkle root hash of the package for a given variant.
-  String operator [](String variant) {
+  String? operator [](String? variant) {
     return variant == null ? merkle : _merkle[variant];
   }
 
   /// Merkle root hash of the package.
   /// Throws [PackageRepositoryException] if package has more than one variant.
-  String get merkle {
+  String? get merkle {
     if (_merkle.length > 1) {
       throw PackageRepositoryException(
           'Package $packageName has more than one variant, please specify one');

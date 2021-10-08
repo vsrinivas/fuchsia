@@ -2,12 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-// TODO(https://fxbug.dev/84961): Fix null safety and remove this language version.
-// @dart=2.9
-
 import 'package:fxtest/fxtest.dart';
 import 'package:io/ansi.dart';
-import 'package:meta/meta.dart';
 
 class Emoji {
   final String emoji;
@@ -24,7 +20,7 @@ abstract class OutputFormatter {
   final bool isVerbose;
   final bool simpleOutput;
   final bool hasRealTimeOutput;
-  final Duration slowTestThreshold;
+  final Duration? slowTestThreshold;
   final List<TestInfo> _infoEvents = [];
   final List<TestStarted> _testStartedEvents = [];
   final List<TestResult> _testResultEvents = [];
@@ -32,8 +28,8 @@ abstract class OutputFormatter {
   final List<UnrunnableTestEvent> _unrunnableTestEvents = [];
   final OutputBuffer buffer;
   final Stylizer wrapWith;
-  DateTime _testSuiteStartTime;
-  DateTime _lastTestStartTime;
+  DateTime? _testSuiteStartTime;
+  DateTime? _lastTestStartTime;
   bool _hasStartedTests = false;
   bool _currentTestIsSlow = false;
   bool _lastTestHadOutput = false;
@@ -41,17 +37,17 @@ abstract class OutputFormatter {
   int _numFailed = 0;
 
   OutputFormatter({
-    @required this.isVerbose,
-    @required this.hasRealTimeOutput,
-    @required this.slowTestThreshold,
-    @required this.wrapWith,
+    required this.hasRealTimeOutput,
+    required this.wrapWith,
+    this.slowTestThreshold,
     this.simpleOutput = false,
-    OutputBuffer buffer,
+    this.isVerbose = false,
+    OutputBuffer? buffer,
   }) : buffer = buffer ?? OutputBuffer.realIO();
 
   factory OutputFormatter.fromConfig(
     TestsConfig testsConfig, {
-    OutputBuffer buffer,
+    OutputBuffer? buffer,
   }) {
     if (testsConfig.flags.infoOnly) {
       return InfoFormatter();
@@ -75,7 +71,7 @@ abstract class OutputFormatter {
   String get testExecutionTime => _getExecutionTime(_lastTestStartTime);
   String get suiteExecutionTime => _getExecutionTime(_testSuiteStartTime);
 
-  String _getExecutionTime(DateTime _startTime) {
+  String _getExecutionTime(DateTime? _startTime) {
     if (_startTime == null) {
       return '-';
     }
@@ -143,7 +139,8 @@ abstract class OutputFormatter {
       // We do nothing with time events during realtime output -- the user is
       // already getting constant updates
       if (hasRealTimeOutput) return;
-      if (slowTestThreshold != null && event.timeElapsed >= slowTestThreshold) {
+      if (slowTestThreshold != null &&
+          event.timeElapsed >= slowTestThreshold!) {
         if (!_currentTestIsSlow) {
           _currentTestIsSlow = true;
           _handleSlowTest(event);
@@ -172,7 +169,7 @@ abstract class OutputFormatter {
     buffer
       ..addLine(
         wrapWith(
-            ' >> Runtime has exceeded ${slowTestThreshold.inSeconds} '
+            ' >> Runtime has exceeded ${slowTestThreshold?.inSeconds ?? 0} '
             'seconds $hint',
             [magenta]),
       )
@@ -274,12 +271,12 @@ abstract class OutputFormatter {
 /// ```
 class StandardOutputFormatter extends OutputFormatter {
   StandardOutputFormatter({
-    @required bool hasRealTimeOutput,
-    @required Stylizer wrapWith,
+    required bool hasRealTimeOutput,
+    required Stylizer wrapWith,
     bool simpleOutput = true,
-    Duration slowTestThreshold,
-    OutputBuffer buffer,
-    bool isVerbose,
+    bool isVerbose = false,
+    Duration? slowTestThreshold,
+    OutputBuffer? buffer,
   }) : super(
           isVerbose: isVerbose,
           hasRealTimeOutput: hasRealTimeOutput,
@@ -306,7 +303,7 @@ class StandardOutputFormatter extends OutputFormatter {
 
   @override
   void _handleTestStarted(TestStarted event) {
-    String testName = wrapWith(event.testName, [cyan]);
+    String testName = wrapWith(event.testName, [cyan])!;
     // Add some padding for our first test event
     if (_testStartedEvents.length == 1) {
       buffer.addLine('');
@@ -331,8 +328,8 @@ class StandardOutputFormatter extends OutputFormatter {
   void _handleTestResult(TestResult event) {
     if (_lastTestHadOutput) buffer.addLines(['']);
 
-    String testName = wrapWith(event.testName, [cyan]);
-    String emoji = event.isDryRun
+    String testName = wrapWith(event.testName, [cyan])!;
+    String? emoji = event.isDryRun
         ? wrapWith('(dry run)', [darkGray])
         : event.isSuccess
             ? '${addEmoji(Emoji.check)} '
@@ -355,7 +352,7 @@ class StandardOutputFormatter extends OutputFormatter {
     if (!event.isSuccess && event.message != null) {
       // But only if not already doing realtime
       if (!hasRealTimeOutput && !_currentTestIsSlow) {
-        buffer.addLines([event.message, '']);
+        buffer.addLines([event.message!, '']);
       }
     }
   }
@@ -391,7 +388,7 @@ class InfoFormatter extends OutputFormatter {
           hasRealTimeOutput: false,
           slowTestThreshold: Duration(seconds: 0),
           isVerbose: false,
-          wrapWith: (value, _, {forScript}) => value,
+          wrapWith: (value, _, {forScript = false}) => value,
         );
 
   @override
@@ -418,20 +415,17 @@ List<String> infoPrint(TestDefinition testDefinition) {
           parallelOverride: null, useRunTestSuiteForV2: false)
       .getInvocationTokens(const []).toString();
   return <String>[
-    _isTruthy(command) ? 'command: $command' : null,
-    _isTruthy(testDefinition.cpu) ? 'cpu: ${testDefinition.cpu}' : null,
-    _isTruthy(testDefinition.runtimeDeps)
-        ? 'runtime_deps: ${testDefinition.runtimeDeps}'
-        : null,
-    _isTruthy(testDefinition.name) ? 'name: ${testDefinition.name}' : null,
-    _isTruthy(testDefinition.os) ? 'os: ${testDefinition.os}' : null,
-    testDefinition.packageUrl != null
-        ? 'package_url: ${testDefinition.packageUrl}'
-        : null,
-    _isTruthy(testDefinition.label) ? 'label: ${testDefinition.label}' : null,
-    _isTruthy(testDefinition.path) ? 'path: ${testDefinition.path}' : null,
-  ].where((_val) => _val != null).toList()
-    ..sort();
+    if (_isTruthy(command)) 'command: $command',
+    if (_isTruthy(testDefinition.cpu)) 'cpu: ${testDefinition.cpu}',
+    if (_isTruthy(testDefinition.runtimeDeps))
+      'runtime_deps: ${testDefinition.runtimeDeps}',
+    if (_isTruthy(testDefinition.name)) 'name: ${testDefinition.name}',
+    if (_isTruthy(testDefinition.os)) 'os: ${testDefinition.os}',
+    if (testDefinition.packageUrl != null)
+      'package_url: ${testDefinition.packageUrl}',
+    if (_isTruthy(testDefinition.label)) 'label: ${testDefinition.label}',
+    if (_isTruthy(testDefinition.path)) 'path: ${testDefinition.path}',
+  ]..sort();
 }
 
 /// Variant [OutputFormatter] which writes all content to a file instead of
@@ -443,21 +437,21 @@ List<String> infoPrint(TestDefinition testDefinition) {
 class FileFormatter extends StandardOutputFormatter {
   /// Internal constructor which sets all variables appropriately for writing
   /// output to a file.
-  FileFormatter._({@required String path})
+  FileFormatter._({required String? path})
       : assert(path != null),
         super(
           isVerbose: true,
           hasRealTimeOutput: true,
           slowTestThreshold: null,
           simpleOutput: true,
-          wrapWith: (v, _, {forScript}) => v,
-          buffer: OutputBuffer.fileIO(path: path),
+          wrapWith: (v, _, {forScript = false}) => v,
+          buffer: OutputBuffer.fileIO(path: path!),
         );
 
   /// Main (and currently only) constructor which accepts a [TestsConfig] object
   /// and either instantiates and returns an object if appropriate, or [null] if
   /// no file logging is desired.
-  factory FileFormatter.fromConfig(TestsConfig testsConfig) {
+  static FileFormatter? fromConfig(TestsConfig testsConfig) {
     if (testsConfig.flags.shouldLog) {
       return FileFormatter._(
         path: testsConfig.flags.logPath ?? testsConfig.fxEnv.outputDir,
@@ -467,4 +461,4 @@ class FileFormatter extends StandardOutputFormatter {
   }
 }
 
-bool _isTruthy(String val) => val != null && val != '';
+bool _isTruthy(String? val) => val != null && val != '';

@@ -1,8 +1,5 @@
-// TODO(https://fxbug.dev/84961): Fix null safety and remove this language version.
-// @dart=2.9
 import 'package:fxtest/fxtest.dart';
 import 'package:fxutils/fxutils.dart';
-import 'package:meta/meta.dart';
 import 'package:test/test.dart';
 import 'fake_fx_env.dart';
 import 'helpers.dart';
@@ -19,30 +16,40 @@ class FuchsiaTestCommandCliFake extends FuchsiaTestCommandCli {
   FuchsiaTestCommand createCommand() {
     return FuchsiaTestCommandFake(
       testsConfig: testsConfig,
-      outputFormatters: [StdOutClosingFormatter()],
+      outputFormatters: [
+        StdOutClosingFormatter(
+          hasRealTimeOutput: testsConfig.flags.allOutput,
+          wrapWith: testsConfig.wrapWith,
+        )
+      ],
     );
   }
 }
 
 class FuchsiaTestCommandFake extends FuchsiaTestCommand {
   FuchsiaTestCommandFake({
-    List<OutputFormatter> outputFormatters,
-    TestsConfig testsConfig,
+    required List<OutputFormatter> outputFormatters,
+    required TestsConfig testsConfig,
   }) : super(
-          analyticsReporter: AnalyticsFaker(),
+          analyticsReporter: AnalyticsFaker(fxEnv: FakeFxEnv.shared),
           checklist: AlwaysAllowChecklist(),
-          directoryBuilder: (String path, {bool recursive}) => null,
+          directoryBuilder: (String path, {required bool recursive}) => null,
           outputFormatters: outputFormatters,
           testsConfig: testsConfig,
           testRunnerBuilder: (testsConfig) => TestRunner(),
         );
   @override
-  Future<void> runTestSuite([TestsManifestReader manifestReader]) async {
+  Future<void> runTestSuite([TestsManifestReader? manifestReader]) async {
     emitEvent(BeginningTests());
   }
 }
 
 class StdOutClosingFormatter extends OutputFormatter {
+  StdOutClosingFormatter({
+    required bool hasRealTimeOutput,
+    required Stylizer wrapWith,
+  }) : super(hasRealTimeOutput: hasRealTimeOutput, wrapWith: wrapWith);
+
   @override
   void update(TestEvent event) {
     forcefullyClose();
@@ -52,13 +59,15 @@ class StdOutClosingFormatter extends OutputFormatter {
 class AnalyticsFaker extends AnalyticsReporter {
   List<List<String>> reportHistory = [];
 
+  AnalyticsFaker({required IFxEnv fxEnv}) : super(fxEnv: fxEnv);
+
   @override
   Future<void> report({
-    @required String subcommand,
-    @required String action,
-    String label,
+    required String subcommand,
+    required String action,
+    String? label,
   }) async {
-    reportHistory.add([subcommand, action, label]);
+    reportHistory.add([subcommand, action, label ?? '']);
   }
 }
 
@@ -228,9 +237,9 @@ void main() {
     );
     test('functions on real test runs', () async {
       var cmd = FuchsiaTestCommand(
-        analyticsReporter: AnalyticsFaker(),
+        analyticsReporter: AnalyticsFaker(fxEnv: FakeFxEnv.shared),
         checklist: AlwaysAllowChecklist(),
-        directoryBuilder: (String path, {bool recursive}) => null,
+        directoryBuilder: (String path, {required bool recursive}) => null,
         outputFormatters: [
           OutputFormatter.fromConfig(
             testsConfig,
@@ -265,9 +274,9 @@ void main() {
     });
     test('is silent on dry runs', () async {
       var cmd = FuchsiaTestCommand(
-        analyticsReporter: AnalyticsFaker(),
+        analyticsReporter: AnalyticsFaker(fxEnv: FakeFxEnv.shared),
         checklist: AlwaysAllowChecklist(),
-        directoryBuilder: (String path, {bool recursive}) => null,
+        directoryBuilder: (String path, {required bool recursive}) => null,
         outputFormatters: [
           OutputFormatter.fromConfig(
             testsConfig,
@@ -373,7 +382,7 @@ void main() {
     test('are created for e2e tests', () async {
       bool builtDirectory = false;
       List<TestBundle> bundles = createFixtures(
-        (path, {recursive}) => builtDirectory = true,
+        (path, {required recursive}) => builtDirectory = true,
       );
       // e2e test
       expect(bundles.first.testDefinition.isE2E, true);
@@ -384,7 +393,7 @@ void main() {
     test('are not created for non-e2e tests', () async {
       bool builtDirectory = false;
       List<TestBundle> bundles = createFixtures(
-        (path, {recursive}) => builtDirectory = true,
+        (path, {required recursive}) => builtDirectory = true,
       );
       // "lib" test
       await bundles.last.run().forEach((event) => null);

@@ -1,9 +1,6 @@
-// TODO(https://fxbug.dev/84961): Fix null safety and remove this language version.
-// @dart=2.9
 import 'dart:async';
 import 'dart:io';
 import 'package:fxtest/fxtest.dart';
-import 'package:meta/meta.dart';
 
 abstract class BaseOutput {
   final String content;
@@ -33,7 +30,7 @@ class ScriptedTestRunner extends TestRunner {
   final int pid;
 
   ScriptedTestRunner({
-    this.scriptedOutput,
+    required this.scriptedOutput,
     this.exitCode = 0,
     this.pid = 1,
   }) : super();
@@ -50,8 +47,8 @@ class ScriptedTestRunner extends TestRunner {
   Future<ProcessResult> run(
     String command,
     List<String> args, {
-    @required String workingDirectory,
-    Map<String, String> environment,
+    required String workingDirectory,
+    Map<String, String>? environment,
   }) async {
     var _out = StringBuffer();
     var _err = StringBuffer();
@@ -87,14 +84,14 @@ class FakeTestRunner extends TestRunner {
   Future<ProcessResult> run(
     String command,
     List<String> args, {
-    @required String workingDirectory,
-    Map<String, String> environment,
+    required String workingDirectory,
+    Map<String, String>? environment,
   }) async {
     String _stdout = args.join(' ');
     addOutput(_stdout);
 
-    String _stderr = workingDirectory?.toString();
-    if (_stderr != null) addOutput(_stderr);
+    String _stderr = workingDirectory.toString();
+    addOutput(_stderr);
 
     await close();
 

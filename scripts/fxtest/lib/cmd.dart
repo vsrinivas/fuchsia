@@ -2,15 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-// TODO(https://fxbug.dev/84961): Fix null safety and remove this language version.
-// @dart=2.9
-
 import 'dart:async';
 import 'dart:io';
 
 import 'package:fxtest/fxtest.dart';
 import 'package:io/ansi.dart';
-import 'package:meta/meta.dart';
 
 import 'exit_code.dart';
 
@@ -69,16 +65,16 @@ class FuchsiaTestCommand {
   int _numberOfTests;
 
   FuchsiaTestCommand({
-    @required this.analyticsReporter,
-    @required this.outputFormatters,
-    @required this.checklist,
-    @required this.testsConfig,
-    @required this.testRunnerBuilder,
-    @required this.directoryBuilder,
-    ExitCodeSetter exitCodeSetter,
+    required this.analyticsReporter,
+    required this.outputFormatters,
+    required this.checklist,
+    required this.testsConfig,
+    required this.testRunnerBuilder,
+    required this.directoryBuilder,
+    ExitCodeSetter? exitCodeSetter,
   })  : _exitCodeSetter = exitCodeSetter ?? setExitCode,
         _numberOfTests = 0 {
-    if (outputFormatters == null || outputFormatters.isEmpty) {
+    if (outputFormatters.isEmpty) {
       throw AssertionError('Must provide at least one OutputFormatter');
     }
     stream.listen((output) {
@@ -90,10 +86,10 @@ class FuchsiaTestCommand {
 
   factory FuchsiaTestCommand.fromConfig(
     TestsConfig testsConfig, {
-    @required TestRunner Function(TestsConfig) testRunnerBuilder,
-    DirectoryBuilder directoryBuilder,
-    ExitCodeSetter exitCodeSetter,
-    OutputFormatter outputFormatter,
+    required TestRunner Function(TestsConfig) testRunnerBuilder,
+    DirectoryBuilder? directoryBuilder,
+    ExitCodeSetter? exitCodeSetter,
+    OutputFormatter? outputFormatter,
   }) {
     var _outputFormatter =
         outputFormatter ?? OutputFormatter.fromConfig(testsConfig);
@@ -106,7 +102,8 @@ class FuchsiaTestCommand {
         testsConfig,
         eventSink: _outputFormatter.update,
       ),
-      directoryBuilder: directoryBuilder ?? (path, {recursive}) => null,
+      directoryBuilder:
+          directoryBuilder ?? (path, {required recursive}) => null,
       outputFormatters: [
         _outputFormatter,
         if (_fileFormatter != null) _fileFormatter
@@ -132,13 +129,13 @@ class FuchsiaTestCommand {
     _eventStreamController.close();
   }
 
-  Future<void> runTestSuite([TestsManifestReader manifestReader]) async {
+  Future<void> runTestSuite([TestsManifestReader? manifestReader]) async {
     manifestReader ??= TestsManifestReader();
     advertiseLogFile();
     var parsedManifest = await readManifest(manifestReader);
 
     manifestReader.reportOnTestBundles(
-      userFriendlyBuildDir: testsConfig.fxEnv.userFriendlyOutputDir,
+      userFriendlyBuildDir: testsConfig.fxEnv.userFriendlyOutputDir!,
       eventEmitter: emitEvent,
       parsedManifest: parsedManifest,
       testsConfig: testsConfig,
@@ -151,12 +148,12 @@ class FuchsiaTestCommand {
         testDefinitions: parsedManifest.testDefinitions,
         testsConfig: testsConfig,
       );
-    } else if (parsedManifest.unusedConfigs.isNotEmpty) {
+    } else if (parsedManifest.unusedConfigs?.isNotEmpty ?? false) {
       _exitCodeSetter(noTestFoundExitCode);
       return unusedConfigsHelp(
         manifestReader: manifestReader,
         testDefinitions: parsedManifest.testDefinitions,
-        unusedConfigs: parsedManifest.unusedConfigs,
+        unusedConfigs: parsedManifest.unusedConfigs!,
       );
     }
 
@@ -167,10 +164,10 @@ class FuchsiaTestCommand {
     if (testsConfig.flags.shouldRebuild) {
       Set<String> buildArgs = TestBundle.calculateMinimalBuildTargets(
           testsConfig, parsedManifest.testBundles);
-      emitEvent(TestInfo(testsConfig.wrapWith(
-          '> fx build ${buildArgs?.join(' ') ?? ''}', [green, styleBold])));
+      emitEvent(TestInfo(testsConfig
+          .wrapWith('> fx build ${buildArgs.join(' ')}', [green, styleBold])));
       try {
-        await fxCommandRun(testsConfig.fxEnv.fx, 'build', buildArgs?.toList());
+        await fxCommandRun(testsConfig.fxEnv.fx, 'build', buildArgs.toList());
       } on FxRunException {
         emitEvent(FatalError(
             '\'fx test\' could not perform a successful build. Try to run \'fx build\' manually or use the \'--no-build\' flag'));
@@ -197,7 +194,7 @@ class FuchsiaTestCommand {
     TestsManifestReader manifestReader,
   ) async {
     List<TestDefinition> testDefinitions = await manifestReader.loadTestsJson(
-      buildDir: testsConfig.fxEnv.outputDir,
+      buildDir: testsConfig.fxEnv.outputDir!,
       fxLocation: testsConfig.fxEnv.fx,
       manifestFileName: 'tests.json',
     );
@@ -211,9 +208,9 @@ class FuchsiaTestCommand {
   }
 
   void noMatchesHelp({
-    @required TestsManifestReader manifestReader,
-    @required List<TestDefinition> testDefinitions,
-    @required TestsConfig testsConfig,
+    required TestsManifestReader manifestReader,
+    required List<TestDefinition> testDefinitions,
+    required TestsConfig testsConfig,
   }) {
     emitEvent(GeneratingHintsEvent());
     emitEvent(TestInfo(
@@ -256,13 +253,14 @@ class FuchsiaTestCommand {
   }
 
   void unusedConfigsHelp({
-    @required TestsManifestReader manifestReader,
-    @required List<TestDefinition> testDefinitions,
-    @required List<PermutatedTestsConfig> unusedConfigs,
+    required TestsManifestReader manifestReader,
+    required List<TestDefinition> testDefinitions,
+    required List<PermutatedTestsConfig> unusedConfigs,
   }) {
     emitEvent(GeneratingHintsEvent());
     String unusedConfigsString = unusedConfigs
-        .map((config) => config.testNameGroup.map((name) => name.arg).join(','))
+        .map(
+            (config) => config.testNameGroup?.map((name) => name.arg).join(','))
         .join(';');
     emitEvent(TestInfo(
       testsConfig.wrapWith(
@@ -277,7 +275,7 @@ class FuchsiaTestCommand {
 
   TestBundle testBundleBuilder(
     TestDefinition testDefinition, [
-    double confidence,
+    double? confidence,
   ]) =>
       TestBundle.build(
         confidence: confidence ?? 1,
@@ -289,11 +287,11 @@ class FuchsiaTestCommand {
         testRunnerBuilder: testRunnerBuilder,
         testDefinition: testDefinition,
         testsConfig: testsConfig,
-        workingDirectory: testsConfig.fxEnv.outputDir,
+        workingDirectory: testsConfig.fxEnv.outputDir!,
       );
 
   bool _maybeAddPackageHash(
-      TestBundle testBundle, PackageRepository repository) {
+      TestBundle testBundle, PackageRepository? repository) {
     if (testsConfig.flags.shouldUsePackageHash &&
         testBundle.testDefinition.packageUrl != null) {
       if (repository == null) {
@@ -305,7 +303,7 @@ class FuchsiaTestCommand {
             testName: testBundle.testDefinition.name));
         return false;
       } else {
-        String packageName = testBundle.testDefinition.packageUrl.packageName;
+        String packageName = testBundle.testDefinition.packageUrl!.packageName;
         if (repository[packageName] == null) {
           emitEvent(TestResult(
               runtime: Duration(seconds: 0),
@@ -315,7 +313,7 @@ class FuchsiaTestCommand {
               testName: testBundle.testDefinition.name));
           return false;
         }
-        testBundle.testDefinition.hash = repository[packageName].merkle;
+        testBundle.testDefinition.hash = repository[packageName]!.merkle;
       }
     }
     return true;
@@ -338,11 +336,11 @@ class FuchsiaTestCommand {
     // TODO: This should not require checking if `buildDir != null`, as that is
     // a temporary workaround to get tests passing on CQ. The correct
     // implementation is to abstract file-reading just as we have process-launching.
-    PackageRepository packageRepository;
+    PackageRepository? packageRepository;
     if (testsConfig.flags.shouldUsePackageHash &&
         testsConfig.fxEnv.outputDir != null) {
       packageRepository = await PackageRepository.fromManifest(
-          buildDir: testsConfig.fxEnv.outputDir);
+          buildDir: testsConfig.fxEnv.outputDir!);
     }
 
     for (TestBundle testBundle in _testBundles) {
@@ -357,7 +355,7 @@ class FuchsiaTestCommand {
           if (event is FatalError) {
             _exitCodeSetter(failureExitCode);
           } else if (event is TestResult && !event.isSuccess) {
-            _exitCodeSetter(event.exitCode ?? failureExitCode);
+            _exitCodeSetter(event.exitCode);
           }
         });
         _numberOfTests += 1;
@@ -376,7 +374,7 @@ class FuchsiaTestCommand {
   }
 
   Future<void> _reportAnalytics() async {
-    final bool _actuallyRanTests = _numberOfTests != null && _numberOfTests > 0;
+    final bool _actuallyRanTests = _numberOfTests > 0;
     if (!testsConfig.flags.dryRun && _actuallyRanTests) {
       await analyticsReporter.report(
         subcommand: 'test',

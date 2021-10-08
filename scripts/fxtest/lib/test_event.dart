@@ -2,11 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-// TODO(https://fxbug.dev/84961): Fix null safety and remove this language version.
-// @dart=2.9
-
 import 'package:fxtest/test_definition.dart';
-import 'package:meta/meta.dart';
 
 /// Base class for our test suite stream which keeps our output in sync with
 /// ongoing test progress.
@@ -36,21 +32,21 @@ class TestResult extends TestEvent {
 
   /// Explanatory string accompanying the test result - likely only supplied on
   /// test failures.
-  final String message;
+  final String? message;
 
   /// How long just this test took to execute - does not count any (hopefully
   /// trivial) overhead time from this script.
   final Duration runtime;
 
   TestResult({
-    @required this.testName,
-    @required this.exitCode,
-    @required this.message,
-    @required this.runtime,
+    required this.testName,
+    required this.exitCode,
+    required this.message,
+    required this.runtime,
   }) : isDryRun = false;
 
   TestResult.skipped({
-    @required this.testName,
+    required this.testName,
   })  : isDryRun = true,
         exitCode = 0,
         runtime = Duration(),
@@ -102,8 +98,8 @@ class TestStarted extends TestEvent {
   final String testName;
 
   TestStarted({
-    @required this.testDefinition,
-    @required this.testName,
+    required this.testDefinition,
+    required this.testName,
   });
 
   @override

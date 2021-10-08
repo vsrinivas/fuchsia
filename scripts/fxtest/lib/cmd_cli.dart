@@ -2,15 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-// TODO(https://fxbug.dev/84961): Fix null safety and remove this language version.
-// @dart=2.9
-
 import 'dart:io';
 
 import 'package:args/args.dart';
 import 'package:fxtest/fxtest.dart';
 import 'package:fxutils/fxutils.dart';
-import 'package:meta/meta.dart';
 import 'package:pedantic/pedantic.dart';
 
 /// Translator for command line arguments into [FuchsiaTestCommand] primitives.
@@ -21,20 +17,20 @@ class FuchsiaTestCommandCli {
 
   /// Fully-hydrated object containing answers to every runtime question.
   /// Derivable from the set of raw arguments passed in by the user.
-  TestsConfig testsConfig;
+  late final TestsConfig testsConfig;
 
   /// The underlying class which does all the work.
-  FuchsiaTestCommand _cmd;
+  FuchsiaTestCommand? _cmd;
 
   /// Used to create any new directories needed to house test output / artifacts.
-  final DirectoryBuilder directoryBuilder;
+  final DirectoryBuilder? directoryBuilder;
 
   final IFxEnv fxEnv;
 
   FuchsiaTestCommandCli(
     List<String> rawArgs, {
-    @required this.usage,
-    @required this.fxEnv,
+    required this.usage,
+    required this.fxEnv,
     this.directoryBuilder,
   }) {
     testsConfig = TestsConfig.fromRawArgs(
@@ -50,7 +46,7 @@ class FuchsiaTestCommandCli {
 
   Future<bool> preRunChecks(
     Function(Object) stdoutWriter, {
-    ProcessLauncher processLauncher,
+    ProcessLauncher? processLauncher,
   }) async {
     if (testsConfig.testArguments.parsedArgs['help']) {
       usage(fxTestArgParser);
@@ -81,16 +77,16 @@ class FuchsiaTestCommandCli {
     unawaited(
       // But register a listener for when it completes, which resolves the
       // stdout future.
-      _cmd.runTestSuite(TestsManifestReader()).then((_) {
+      _cmd!.runTestSuite(TestsManifestReader()).then((_) {
         // Once the actual command finishes without problems, close the stdout.
-        _cmd.dispose();
+        _cmd!.dispose();
       }),
     );
 
     // Register a listener for when the `stdout` closes.
     try {
       await Future.wait(
-        _cmd.outputFormatters.map((var f) => f.stdOutClosedFuture),
+        _cmd!.outputFormatters.map((var f) => f.stdOutClosedFuture),
         eagerError: true,
       );
     } on Exception {

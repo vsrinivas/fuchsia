@@ -2,9 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-// TODO(https://fxbug.dev/84961): Fix null safety and remove this language version.
-// @dart=2.9
-
 class ComparisonResult {
   /// Certainty in a positive match. Values between 0 and 1, where 0 implies
   /// [isMatch] must equal [false], and 1 implies a direct string (or substring)
@@ -24,7 +21,8 @@ class ComparisonResult {
   static final ComparisonResult failure = ComparisonResult._failure();
 
   const ComparisonResult._failure() : confidence = 0;
-  const ComparisonResult.strict({bool isMatch}) : confidence = isMatch ? 1 : 0;
+  const ComparisonResult.strict({required bool isMatch})
+      : confidence = isMatch ? 1 : 0;
   const ComparisonResult.withConfidence(this.confidence);
 
   factory ComparisonResult.fromAverage(List<ComparisonResult> results) {

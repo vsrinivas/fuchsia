@@ -2,9 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-// TODO(https://fxbug.dev/84961): Fix null safety and remove this language version.
-// @dart=2.9
-
 import 'package:args/args.dart';
 import 'package:async/async.dart';
 import 'package:fxtest/fxtest.dart';
@@ -202,7 +199,7 @@ void main() {
       expect(event, isA<TestStarted>());
       event = await stream.next;
       expect(event, isA<TestResult>());
-      TestResult resultEvent = event;
+      TestResult resultEvent = event as TestResult;
 
       // [FakeTestRunner] passes args through to its stdout, so we can check
       // that the args were in fact passed through by evaluating that
@@ -226,7 +223,7 @@ void main() {
       expect(event, isA<TestStarted>());
       event = await stream.next;
       expect(event, isA<TestResult>());
-      TestResult resultEvent = event;
+      TestResult resultEvent = event as TestResult;
 
       // [FakeTestRunner] passes args through to its stdout, so we can check
       // that the args were in fact passed through by evaluating that
@@ -251,7 +248,7 @@ void main() {
       expect(event, isA<TestStarted>());
       event = await stream.next;
       expect(event, isA<TestResult>());
-      TestResult resultEvent = event;
+      TestResult resultEvent = event as TestResult;
 
       // [FakeTestRunner] passes args through to its stdout, so we can check
       // that the args were in fact passed through by evaluating that
@@ -282,7 +279,7 @@ void main() {
       expect(event, isA<TestStarted>());
       event = await stream.next;
       expect(event, isA<TestResult>());
-      TestResult resultEvent = event;
+      TestResult resultEvent = event as TestResult;
 
       // [FakeTestRunner] passes args through to its stdout, so we can check
       // that the args were in fact passed through by evaluating that

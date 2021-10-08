@@ -2,21 +2,17 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-// TODO(https://fxbug.dev/84961): Fix null safety and remove this language version.
-// @dart=2.9
-
 import 'package:args/args.dart';
 import 'package:fxtest/fxtest.dart';
 import 'package:fxutils/fxutils.dart';
 import 'package:io/ansi.dart' as ansi;
-import 'package:meta/meta.dart';
 
 // ignore: prefer_generic_function_type_aliases
 typedef String Stylizer(String value, Iterable<ansi.AnsiCode> codes,
     {bool forScript});
 
 // ignore: prefer_generic_function_type_aliases
-typedef void DirectoryBuilder(String path, {bool recursive});
+typedef void DirectoryBuilder(String path, {required bool recursive});
 
 /// Simple class to hold shared parameters.
 class Flags {
@@ -27,15 +23,15 @@ class Flags {
   final int limit;
 
   /// The realm name to run the test inside of. If null, a random name is used.
-  final String realm;
-  final String minSeverityLogs;
+  final String? realm;
+  final String? minSeverityLogs;
   final bool allOutput;
   final bool shouldRebuild;
 
   final bool e2e;
   final int fuzzyThreshold;
   final bool infoOnly;
-  final String logPath;
+  final String? logPath;
   final MatchLength matchLength;
   final bool onlyE2e;
   final bool shouldFailFast;
@@ -53,9 +49,9 @@ class Flags {
   final int timeout;
 
   // flags for v2 tests
-  final List<String> testFilter;
-  final String count;
-  final String parallel;
+  final List<String>? testFilter;
+  final String? count;
+  final String? parallel;
   final bool runDisabledTests;
   final bool fallbackUseRunTestSuite;
 
@@ -67,7 +63,7 @@ class Flags {
     this.minSeverityLogs,
     this.allOutput = false,
     this.e2e = false,
-    this.fuzzyThreshold,
+    this.fuzzyThreshold = 3,
     this.infoOnly = false,
     this.logPath,
     this.matchLength = MatchLength.partial,
@@ -90,7 +86,7 @@ class Flags {
     this.count,
     this.parallel,
     this.runDisabledTests = false,
-    this.fallbackUseRunTestSuite,
+    this.fallbackUseRunTestSuite = false,
   });
 
   factory Flags.fromArgResults(ArgResults argResults) {
@@ -195,21 +191,18 @@ class TestsConfig {
   final IFxEnv fxEnv;
   final List<List<MatchableArgument>> testArgumentGroups;
   TestsConfig({
-    @required this.flags,
-    @required this.runnerTokens,
-    @required this.testArguments,
-    @required this.testArgumentGroups,
-    @required this.fxEnv,
+    required this.flags,
+    required this.runnerTokens,
+    required this.testArguments,
+    required this.testArgumentGroups,
+    required this.fxEnv,
   });
 
   factory TestsConfig.fromRawArgs({
-    @required IFxEnv fxEnv,
-    @required List<String> rawArgs,
-    Map<String, String> defaultRawArgs,
+    required IFxEnv fxEnv,
+    required List<String> rawArgs,
+    Map<String, String?>? defaultRawArgs,
   }) {
-    if (fxEnv == null) {
-      throw Exception('TestsConfig requires an FxEnv instance');
-    }
     var _testArguments = TestArguments(
       parser: fxTestArgParser,
       rawArgs: rawArgs,
@@ -235,16 +228,18 @@ class TestsConfig {
 
     var v2runnerTokens = <String>[];
 
-    for (var filter in flags.testFilter) {
-      v2runnerTokens
-        ..add('--test-filter')
-        ..add(filter);
+    if (flags.testFilter != null) {
+      for (var filter in flags.testFilter!) {
+        v2runnerTokens
+          ..add('--test-filter')
+          ..add(filter);
+      }
     }
 
     if (flags.count != null) {
       v2runnerTokens
         ..add('--count')
-        ..add(flags.count);
+        ..add(flags.count!);
     }
     // We do not add the parallel option here, as it may also be specified via
     // test spec. Instead, it is added later.
@@ -304,12 +299,12 @@ class TestsConfig {
     }
 
     return ansi.overrideAnsiOutput(
-        true, () => ansi.wrapWith(value, codes, forScript: forScript));
+        true, () => ansi.wrapWith(value, codes, forScript: forScript)!);
   }
 
   void _maybeAddEnv(Map<String, String> map, String envName,
-      [String newEnvName]) {
-    String envValue = fxEnv.getEnv(envName);
+      [String? newEnvName]) {
+    String? envValue = fxEnv.getEnv(envName);
     if (envValue != null && envValue.isNotEmpty) {
       map[newEnvName ?? envName] = envValue;
     }
@@ -336,17 +331,17 @@ class TestsConfig {
 /// An expanded set of flags passed to `fx test` against which all available
 /// tests will be examined.
 class PermutatedTestsConfig {
-  final List<MatchableArgument> testNameGroup;
+  final List<MatchableArgument>? testNameGroup;
   final Flags flags;
   PermutatedTestsConfig({
-    @required this.flags,
-    @required this.testNameGroup,
+    required this.flags,
+    required this.testNameGroup,
   });
 
   @override
   String toString() {
     var chunks = <String>[
-      if (testNameGroup != null) testNameGroup.join(', '),
+      if (testNameGroup != null) testNameGroup!.join(', '),
       if (flags.shouldOnlyRunDeviceTests) '-d',
       if (flags.shouldOnlyRunHostTests) '-h',
     ];

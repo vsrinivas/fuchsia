@@ -13,7 +13,7 @@ typedef StartProcess = Future<Process> Function(
   List<String> arguments, {
   String? workingDirectory,
   Map<String, String>? environment,
-  bool? includeParentEnvironment,
-  bool? runInShell,
-  ProcessStartMode? mode,
+  bool includeParentEnvironment,
+  bool runInShell,
+  ProcessStartMode mode,
 });

@@ -22,6 +22,8 @@ dart_tool("fxtest") {
   package_name = "fxtest"
   main_dart = "bin/main.dart"
 
+  null_safe = true
+
   sources = [
     "analytics_reporter.dart",
     "arg_parser.dart",
@@ -58,7 +60,6 @@ dart_tool("fxtest") {
   deps = [
     "//scripts/fxutils",
     "//third_party/dart-pkg/pub/args",
-    "//third_party/dart-pkg/pub/edit_distance",
     "//third_party/dart-pkg/pub/io",
     "//third_party/dart-pkg/pub/meta",
     "//third_party/dart-pkg/pub/path",
@@ -69,6 +70,8 @@ dart_tool("fxtest") {
 ## Tests
 
 dart_test("test_runner_test") {
+  null_safe = true
+
   sources = [ "test_runner_test.dart" ]
 
   deps = [
@@ -80,6 +83,8 @@ dart_test("test_runner_test") {
 }
 
 dart_test("fxtest_tests") {
+  null_safe = true
+
   sources = [
     "args_test.dart",
     "fake_fx_env.dart",

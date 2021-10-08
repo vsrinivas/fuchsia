@@ -2,11 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-// TODO(https://fxbug.dev/84961): Fix null safety and remove this language version.
-// @dart=2.9
-
 import 'package:fxtest/fxtest.dart';
-import 'package:meta/meta.dart';
 import 'package:path/path.dart' as p;
 
 /// Structured representation of a single entry from `//out/default/tests.json`.
@@ -16,26 +12,26 @@ import 'package:path/path.dart' as p;
 /// test-execution time to reduce ambiguity around low level invocation details.
 class TestDefinition {
   final String buildDir;
-  final List<String> command;
-  final String cpu;
-  final String runtimeDeps;
-  final String path;
-  final String label;
-  final String packageLabel;
+  final List<String>? command;
+  final String? cpu;
+  final String? runtimeDeps;
+  final String? path;
+  final String? label;
+  final String? packageLabel;
   final String name;
   final String os;
-  final PackageUrl packageUrl;
-  final String maxLogSeverity;
-  final String parallel;
+  final PackageUrl? packageUrl;
+  final String? maxLogSeverity;
+  final String? parallel;
 
-  String hash;
+  String? hash;
 
   final List<TestEnvironment> testEnvironments;
 
   TestDefinition({
-    @required this.buildDir,
-    @required this.name,
-    @required this.os,
+    required this.buildDir,
+    required this.name,
+    required this.os,
     this.packageUrl,
     this.cpu,
     this.command,
@@ -50,10 +46,11 @@ class TestDefinition {
 
   factory TestDefinition.fromJson(
     Map<String, dynamic> data, {
-    @required String buildDir,
+    required String buildDir,
   }) {
     Map<String, dynamic> testDetails = data['test'] ?? {};
     List<TestEnvironment> testEnvironments = (data['environments'] ?? [])
+            // ignore: unnecessary_lambdas
             .map((dynamic _data) => TestEnvironment.fromJson(_data))
             .cast<TestEnvironment>()
             .toList() ??
@@ -96,7 +93,7 @@ class TestDefinition {
   TestType get testType {
     if (isE2E) {
       return TestType.e2e;
-    } else if (command != null && command.isNotEmpty) {
+    } else if (command != null && command!.isNotEmpty) {
       // `command` must be checked before `host`, because `command` is a subset
       // of all `host` tests
       return TestType.command;
@@ -104,15 +101,15 @@ class TestDefinition {
       // The order of `component` / `suite` does not currently matter
 
       // .cmx tests are considered components
-      if (packageUrl.fullComponentName.endsWith('.cmx')) {
+      if (packageUrl!.fullComponentName?.endsWith('.cmx') ?? false) {
         return TestType.component;
         // .cm tests are considered suites
-      } else if (packageUrl.fullComponentName.endsWith('.cm')) {
+      } else if (packageUrl!.fullComponentName?.endsWith('.cm') ?? false) {
         return TestType.suite;
       }
       // Package Urls must end with either ".cmx" or ".cm"
       throw MalformedFuchsiaUrlException(packageUrl.toString());
-    } else if (path != null && path.isNotEmpty) {
+    } else if (path != null && path!.isNotEmpty) {
       // As per above, `host` must be checked after `command`
 
       // Tests with a path must be host tests. All Fuchsia tests *must* be
@@ -129,17 +126,17 @@ class TestDefinition {
 
   bool get isUnsupported => unsupportedTestTypes.contains(testType);
 
-  PackageUrl get decoratedPackageUrl {
+  PackageUrl? get decoratedPackageUrl {
     if (packageUrl == null || hash == null) {
       return packageUrl;
     }
-    return PackageUrl.copyWithHash(other: packageUrl, hash: hash);
+    return PackageUrl.copyWithHash(other: packageUrl!, hash: hash!);
   }
 
   /// Create an execution handle using the test definition, and using any overrides
   /// specified by the invoker.
   ExecutionHandle createExecutionHandle({
-    String parallelOverride,
+    String? parallelOverride,
     bool useRunTestSuiteForV2 = false,
   }) {
     switch (testType) {
@@ -150,7 +147,7 @@ class TestDefinition {
         if (parallelOverride != null) {
           flags.addAll(['--parallel', parallelOverride]);
         } else if (parallel != null) {
-          flags.addAll(['--parallel', parallel]);
+          flags.addAll(['--parallel', parallel!]);
         }
         if (useRunTestSuiteForV2) {
           return ExecutionHandle.suiteFallbackRunTestSuite(
@@ -160,25 +157,24 @@ class TestDefinition {
         return ExecutionHandle.suite(decoratedPackageUrl.toString(), os,
             flags: flags);
       case TestType.command:
-        return ExecutionHandle.command(command.join(' '), os);
+        return ExecutionHandle.command(command!.join(' '), os);
       case TestType.host:
         return ExecutionHandle.host(fullPath, os);
       case TestType.e2e:
-        return ExecutionHandle.e2e([path, ...command].join(' '), os);
+        return ExecutionHandle.e2e(
+            [path ?? '', ...(command ?? [])].join(' '), os);
       case TestType.unsupported:
         return ExecutionHandle.unsupported();
       default:
-        return ExecutionHandle.unsupportedDeviceTest(path);
+        return ExecutionHandle.unsupportedDeviceTest(path ?? '');
     }
   }
 
   /// End-to-end tests start on the host machine (designated by an [os] value
   /// of `linux`), but also require interaction with a physical device.
-  bool get isE2E =>
-      (os == null || os.toLowerCase() != 'fuchsia') && containsE2eEnvironments;
+  bool get isE2E => os.toLowerCase() != 'fuchsia' && containsE2eEnvironments;
 
-  bool get containsE2eEnvironments =>
-      testEnvironments != null && testEnvironments.any((env) => env.isE2E);
+  bool get containsE2eEnvironments => testEnvironments.any((env) => env.isE2E);
 
   String get fullPath => p.join(buildDir, path);
 }
@@ -197,16 +193,16 @@ class TestEnvironment {
   static const hostOsValues = <String>{'linux', 'mac'};
 
   final bool isDefined;
-  final String deviceDimension;
-  final String os;
+  final String? deviceDimension;
+  final String? os;
   TestEnvironment._({
-    @required this.isDefined,
-    @required this.deviceDimension,
-    @required this.os,
+    required this.isDefined,
+    required this.deviceDimension,
+    required this.os,
   });
 
   factory TestEnvironment.fromJson(Map<String, dynamic> data) {
-    if (data == null || data.isEmpty) return TestEnvironment.empty();
+    if (data.isEmpty) return TestEnvironment.empty();
     return TestEnvironment._(
         isDefined: true,
         deviceDimension: getMapPath(data, ['dimensions', 'device_type']),
@@ -220,7 +216,7 @@ class TestEnvironment {
       );
 
   bool get requiresDevice => deviceDimension != null;
-  bool get nonHostOs => os == null || !hostOsValues.contains(os.toLowerCase());
+  bool get nonHostOs => os == null || !hostOsValues.contains(os!.toLowerCase());
 
   bool get isE2E => isDefined == true && (requiresDevice || nonHostOs);
 

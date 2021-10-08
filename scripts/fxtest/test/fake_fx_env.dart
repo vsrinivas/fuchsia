@@ -1,5 +1,3 @@
-// TODO(https://fxbug.dev/84961): Fix null safety and remove this language version.
-// @dart=2.9
 import 'package:fxutils/fxutils.dart';
 import 'package:path/path.dart' as p;
 
@@ -10,12 +8,12 @@ import 'package:path/path.dart' as p;
 class FakeFxEnv extends IFxEnv {
   final String _cwd;
   final String _fuchsiaDir;
-  final EnvReader _envReader;
+  final EnvReader? _envReader;
 
   FakeFxEnv({
     String fuchsiaDir = '/root/fuchsia',
     String cwd = '/cwd',
-    EnvReader envReader,
+    EnvReader? envReader,
   })  : _envReader = envReader,
         _fuchsiaDir = fuchsiaDir,
         _cwd = cwd;
@@ -41,6 +39,6 @@ class FakeFxEnv extends IFxEnv {
   String get sshKey => p.join(fuchsiaDir, 'out/default/.ssh/pkey');
 
   @override
-  String getEnv(String variableName, [String defaultValue]) =>
-      _envReader.getEnv(variableName, defaultValue);
+  String? getEnv(String variableName, [String? defaultValue]) =>
+      _envReader?.getEnv(variableName, defaultValue);
 }

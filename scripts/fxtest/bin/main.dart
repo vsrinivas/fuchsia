@@ -2,11 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-// TODO(https://fxbug.dev/84961): Fix null safety and remove this language version.
-// @dart=2.9
-
-// @dart = 2.8
-
 import 'dart:async';
 import 'dart:io';
 
@@ -52,7 +47,7 @@ will execute all descendent tests.
     ''');
 }
 
-void _directoryBuilder(String path, {bool recursive}) {
+void _directoryBuilder(String path, {bool recursive = false}) {
   Directory(path).createSync(recursive: recursive);
 }
 
@@ -107,20 +102,20 @@ Future<void> main(List<String> args) async {
   await cmdCli.cleanUp();
 }
 
-StreamSubscription _sigintSub;
+StreamSubscription? _sigintSub;
 
 final _cleanup = <Future Function()>[];
 void registerCleanUp(Future Function() c) => _cleanup.add(c);
 
-void cleanUpAndExit(
-    [ProcessSignal signal, int _exitCode = failureExitCode]) async {
+void cleanUpAndExit(ProcessSignal signal,
+    [int processExitCode = failureExitCode]) async {
   // Kick off all registered clean up functions.
   List<Future> cleanUpFutures = _cleanup
       .map((Function cleanUpFunction) async => cleanUpFunction())
       .toList();
   await Future.wait(cleanUpFutures);
 
-  exitCode = _exitCode;
+  exitCode = processExitCode;
   await closeSigIntListener();
   exit(exitCode);
 }

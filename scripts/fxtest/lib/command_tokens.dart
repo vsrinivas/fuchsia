@@ -2,9 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-// TODO(https://fxbug.dev/84961): Fix null safety and remove this language version.
-// @dart=2.9
-
 /// Container for all information needed to invoke and run a test, paired with
 /// any warning information the user needs to see.
 class CommandTokens {
@@ -15,7 +12,7 @@ class CommandTokens {
   ///
   /// This is a great place to put deprecation warnings or non-fatal malformed
   /// test issues.
-  final String warning;
+  final String? warning;
 
   CommandTokens(this.tokens, {this.warning});
   CommandTokens.empty()
@@ -28,7 +25,7 @@ class CommandTokens {
 
   /// Same as [fullCommand], minus the absolute path to fx, and with any
   /// last-second flags added in.
-  String fullCommandDisplay([List<String> extraArgs]) {
+  String fullCommandDisplay([List<String>? extraArgs]) {
     var _tokens = List<String>.from(tokens);
     if (extraArgs != null) {
       _tokens.addAll(extraArgs);

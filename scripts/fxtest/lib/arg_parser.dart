@@ -2,9 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-// TODO(https://fxbug.dev/84961): Fix null safety and remove this language version.
-// @dart=2.9
-
 import 'package:args/args.dart';
 import 'package:fxutils/fxutils.dart';
 
@@ -14,8 +11,9 @@ String getFriendlyBuildDir() {
   var buildDir = '//out/default';
   try {
     buildDir = FxEnv(
-      envReader: EnvReader.fromEnvironment(),
-    ).userFriendlyOutputDir;
+          envReader: EnvReader.fromEnvironment(),
+        ).userFriendlyOutputDir ??
+        buildDir;
 
     // ignore: avoid_catching_errors
   } on RangeError {

@@ -2,12 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-// TODO(https://fxbug.dev/84961): Fix null safety and remove this language version.
-// @dart=2.9
-
 import 'dart:async';
 import 'package:fxtest/fxtest.dart';
-import 'package:meta/meta.dart';
 import 'package:test/test.dart';
 import 'fake_fx_env.dart';
 import 'helpers.dart';
@@ -18,37 +14,37 @@ typedef EventEmitter = void Function(TestEvent);
 class EmptyTestManifestReader extends TestsManifestReader {
   @override
   Future<List<TestDefinition>> loadTestsJson(
-          {@required String buildDir,
-          @required String fxLocation,
-          @required String manifestFileName,
+          {required String buildDir,
+          required String fxLocation,
+          required String manifestFileName,
           bool usePackageHash = true}) async =>
       <TestDefinition>[];
 
   @override
   ParsedManifest aggregateTests({
-    @required TestBundleBuilder testBundleBuilder,
-    @required List<TestDefinition> testDefinitions,
-    @required EventEmitter eventEmitter,
-    @required TestsConfig testsConfig,
-    Comparer comparer,
+    required TestBundleBuilder testBundleBuilder,
+    required List<TestDefinition> testDefinitions,
+    required EventEmitter eventEmitter,
+    required TestsConfig testsConfig,
+    Comparer? comparer,
     MatchLength matchLength = MatchLength.partial,
   }) =>
       ParsedManifest(testDefinitions: [], testBundles: []);
 
   @override
   void reportOnTestBundles({
-    @required ParsedManifest parsedManifest,
-    @required TestsConfig testsConfig,
-    @required EventEmitter eventEmitter,
-    @required String userFriendlyBuildDir,
+    required ParsedManifest parsedManifest,
+    required TestsConfig testsConfig,
+    required EventEmitter eventEmitter,
+    required String userFriendlyBuildDir,
   }) =>
       null;
 }
 
 void main() {
-  OutputBuffer buffer;
+  late OutputBuffer buffer;
   OutputFormatter outputFormatter;
-  StreamController<TestEvent> streamController;
+  late StreamController<TestEvent> streamController;
 
   var testDefinition = TestDefinition.fromJson(
     {

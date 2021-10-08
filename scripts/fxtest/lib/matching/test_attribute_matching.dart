@@ -2,11 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-// TODO(https://fxbug.dev/84961): Fix null safety and remove this language version.
-// @dart=2.9
-
 import 'package:fxtest/fxtest.dart';
-import 'package:meta/meta.dart';
 import 'package:path/path.dart' as p;
 
 enum MatchLength {
@@ -36,12 +32,12 @@ abstract class TestAttributeMatcher {
   /// amount of [TestAttributeMatcher] subclasses to solve the possibly combinatorial
   /// amount of situations.
   ComparisonResult isAttributeMatch(
-    String testName,
+    String? testName,
     TestDefinition testDefinition, {
-    @required MatchType matchType,
-    @required Flags flags,
-    @required Comparer comparer,
-    @required MatchLength matchLength,
+    required MatchType matchType,
+    required Flags flags,
+    required Comparer comparer,
+    required MatchLength matchLength,
   }) {
     bool isAllowed = _testPassesFlags(flags, testDefinition) &&
         _matchTypeIsAllowed(matchType);
@@ -82,10 +78,10 @@ abstract class TestAttributeMatcher {
   /// [testName] is [null], because that logic is straightforward and this way,
   /// no other implementations have to worry about [null] values.
   ComparisonResult _testPassesNullAwareNameCheck(
-    String testName,
+    String? testName,
     TestDefinition testDefinition, {
-    MatchLength matchLength,
-    Comparer comparer,
+    required MatchLength matchLength,
+    required Comparer comparer,
   }) {
     // Handles the case where a user typed `fx test` without any test names
     // (but possible flags).
@@ -107,7 +103,7 @@ abstract class TestAttributeMatcher {
   /// function will be called twice (once for each value) for each test.
   ComparisonResult _testPassesNameCheck(
       String testName, TestDefinition testDefinition,
-      {MatchLength matchLength, Comparer comparer});
+      {required MatchLength matchLength, required Comparer comparer});
 }
 
 class LabelMatcher extends TestAttributeMatcher {
@@ -116,7 +112,7 @@ class LabelMatcher extends TestAttributeMatcher {
   @override
   ComparisonResult _testPassesNameCheck(
       String testName, TestDefinition testDefinition,
-      {MatchLength matchLength, Comparer comparer}) {
+      {required MatchLength matchLength, required Comparer comparer}) {
     if (testDefinition.label == null) return ComparisonResult.failure;
     return matchLength == MatchLength.full
         ? comparer.equals(testDefinition.label, testName)
@@ -130,7 +126,7 @@ class RuntimeDepsMatcher extends TestAttributeMatcher {
   @override
   ComparisonResult _testPassesNameCheck(
       String testName, TestDefinition testDefinition,
-      {MatchLength matchLength, Comparer comparer}) {
+      {required MatchLength matchLength, required Comparer comparer}) {
     if (testDefinition.runtimeDeps == null) return ComparisonResult.failure;
     return matchLength == MatchLength.full
         ? comparer.equals(testName, testDefinition.runtimeDeps)
@@ -142,8 +138,7 @@ class NameMatcher extends TestAttributeMatcher {
   @override
   ComparisonResult _testPassesNameCheck(
       String testName, TestDefinition testDefinition,
-      {MatchLength matchLength, Comparer comparer}) {
-    if (testDefinition.name == null) return ComparisonResult.failure;
+      {required MatchLength matchLength, required Comparer comparer}) {
     return matchLength == MatchLength.full
         ? comparer.equals(testName, testDefinition.name)
         : comparer.contains(testName, testDefinition.name);
@@ -156,7 +151,7 @@ class PackageUrlMatcher extends TestAttributeMatcher {
   @override
   ComparisonResult _testPassesNameCheck(
       String testName, TestDefinition testDefinition,
-      {MatchLength matchLength, Comparer comparer}) {
+      {required MatchLength matchLength, required Comparer comparer}) {
     if (testDefinition.packageUrl == null) return ComparisonResult.failure;
     return matchLength == MatchLength.full
         ? comparer.equals(testDefinition.packageUrl.toString(), testName)
@@ -174,7 +169,7 @@ class ComponentNameMatcher extends TestAttributeMatcher {
   @override
   ComparisonResult _testPassesNameCheck(
       String testName, TestDefinition testDefinition,
-      {MatchLength matchLength, Comparer comparer}) {
+      {required MatchLength matchLength, required Comparer comparer}) {
     var fullCompResult =
         comparer.equals(testName, testDefinition.packageUrl?.fullComponentName);
     var partialCompResult =
@@ -192,7 +187,7 @@ class PackageNameMatcher extends TestAttributeMatcher {
   @override
   ComparisonResult _testPassesNameCheck(
       String testName, TestDefinition testDefinition,
-      {MatchLength matchLength, Comparer comparer}) {
+      {required MatchLength matchLength, required Comparer comparer}) {
     return comparer.equals(testName, testDefinition.packageUrl?.packageName);
   }
 }
@@ -206,8 +201,8 @@ class NoArgumentsMatcher extends TestAttributeMatcher {
   ComparisonResult _testPassesNameCheck(
     String testName,
     TestDefinition testDefinition, {
-    MatchLength matchLength,
-    Comparer comparer,
+    required MatchLength matchLength,
+    required Comparer comparer,
   }) =>
       ComparisonResult.failure;
 }
@@ -218,7 +213,7 @@ class PathMatcher extends TestAttributeMatcher {
   @override
   ComparisonResult _testPassesNameCheck(
       String testName, TestDefinition testDefinition,
-      {MatchLength matchLength, Comparer comparer}) {
+      {required MatchLength matchLength, required Comparer comparer}) {
     if (testDefinition.path == null) return ComparisonResult.failure;
     if (matchLength == MatchLength.full) {
       return comparer.equals(testName, testDefinition.path);
@@ -233,7 +228,7 @@ class PathMatcher extends TestAttributeMatcher {
     // tests nested inside the build directory). This type of clause also makes
     // no sense to engage with FuzzyMatching, so we skip over it for that phase.
     if (testName == '.' &&
-        !testDefinition.path.startsWith(p.separator) &&
+        !(testDefinition.path?.startsWith(p.separator) ?? false) &&
         comparer is StrictComparer) {
       return ComparisonResult.withConfidence(1);
     }

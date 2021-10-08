@@ -2,40 +2,64 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-// TODO(https://fxbug.dev/84961): Fix null safety and remove this language version.
-// @dart=2.9
-
 import 'dart:math';
-
-import 'package:edit_distance/edit_distance.dart';
-import 'package:meta/meta.dart';
 import 'package:path/path.dart' as p;
 
 import './comparison_result.dart';
 
+/// Helper class for calculating the Levenshtein distance between two strings.
+///
+/// This is added in place of the third-party package edit_distance, which
+/// lacked support for sound null-safety in it's stable release.
+class Levenshtein {
+  int distance(String s, String t) {
+    if (s.isEmpty) return t.length;
+    if (t.isEmpty) return s.length;
+
+    var row0 = List<int>.generate(t.length + 1, (int i) => i);
+    var row1 = List<int>.filled(t.length + 1, 0);
+
+    for (int i = 0; i < s.length; i++) {
+      row1[0] = i + 1;
+      for (int j = 0; j < t.length; j++) {
+        var deletionCost = row0[j + 1] + 1;
+        var insertionCost = row1[j] + 1;
+        var substitutionCost = row0[j] + (s[i] == t[j] ? 0 : 1);
+        row1[j + 1] = min(min(deletionCost, insertionCost), substitutionCost);
+      }
+      row0 = List.from(row1);
+    }
+
+    return row0[t.length];
+  }
+}
+
 /// Comparison helper which allows other tools to easily assess whether items
 /// are "alike" on variable criteria.
 abstract class Comparer {
-  ComparisonResult equals(String haystack, String needle);
-  ComparisonResult contains(String haystack, String needle);
-  ComparisonResult startsWith(String haystack, String needle);
-  ComparisonResult endsWith(String haystack, String needle);
+  ComparisonResult equals(String? haystack, String? needle);
+  ComparisonResult contains(String? haystack, String? needle);
+  ComparisonResult startsWith(String? haystack, String? needle);
+  ComparisonResult endsWith(String? haystack, String? needle);
 }
 
 /// Comparer with zero creativity. Either the strings match or they don't.
 class StrictComparer extends Comparer {
   @override
-  ComparisonResult equals(String haystack, String needle) =>
+  ComparisonResult equals(String? haystack, String? needle) =>
       ComparisonResult.strict(isMatch: haystack == needle);
   @override
-  ComparisonResult contains(String haystack, String needle) =>
-      ComparisonResult.strict(isMatch: haystack.contains(needle));
+  ComparisonResult contains(String? haystack, String? needle) =>
+      ComparisonResult.strict(
+          isMatch: needle != null && (haystack?.contains(needle) ?? false));
   @override
-  ComparisonResult startsWith(String haystack, String needle) =>
-      ComparisonResult.strict(isMatch: haystack.startsWith(needle));
+  ComparisonResult startsWith(String? haystack, String? needle) =>
+      ComparisonResult.strict(
+          isMatch: needle != null && (haystack?.startsWith(needle) ?? false));
   @override
-  ComparisonResult endsWith(String haystack, String needle) =>
-      ComparisonResult.strict(isMatch: haystack.endsWith(needle));
+  ComparisonResult endsWith(String? haystack, String? needle) =>
+      ComparisonResult.strict(
+          isMatch: needle != null && (haystack?.endsWith(needle) ?? false));
 }
 
 /// Comparer backed by Levenshtein distance to suggest possible typos after
@@ -96,11 +120,11 @@ class FuzzyComparer extends Comparer {
   /// if they are the same letter, but upper and lower case.
   final bool caseSensitive;
   FuzzyComparer({
-    @required this.threshold,
+    required this.threshold,
     this.caseSensitive = true,
   });
 
-  int _levDistance(String h, String n) => (h == null || n == null)
+  int _levDistance(String? h, String? n) => (h == null || n == null)
       ? FuzzyComparer.maxDistance
       : _lev.distance(
           caseSensitive ? h : h.toLowerCase(),
@@ -109,7 +133,7 @@ class FuzzyComparer extends Comparer {
 
   /// Due to the chunking nature of our matching, leading or trailing slashes
   /// in the needle will cause false-negatives.
-  String _prepareNeedle(String needle) {
+  String? _prepareNeedle(String? needle) {
     var _needle = needle;
     if (_needle == null) return _needle;
     if (_needle.startsWith(separator)) {
@@ -127,10 +151,10 @@ class FuzzyComparer extends Comparer {
           : (threshold - levenshteinDistance) / threshold;
 
   @override
-  ComparisonResult contains(String haystack, String needle) {
+  ComparisonResult contains(String? haystack, String? needle) {
     final _needle = _prepareNeedle(needle);
     var chunks = chunkOnSlashes(haystack, _needle);
-    int minDistance = max(haystack.length, _needle.length);
+    int minDistance = max(haystack?.length ?? 0, _needle?.length ?? 0);
     for (var chunk in chunks) {
       minDistance = min(minDistance, _levDistance(chunk, _needle));
     }
@@ -138,7 +162,7 @@ class FuzzyComparer extends Comparer {
   }
 
   @override
-  ComparisonResult endsWith(String haystack, String needle) {
+  ComparisonResult endsWith(String? haystack, String? needle) {
     final _needle = _prepareNeedle(needle);
     var endingChunk = chunkOnSlashes(haystack, _needle).last;
     return ComparisonResult.withConfidence(
@@ -147,7 +171,7 @@ class FuzzyComparer extends Comparer {
   }
 
   @override
-  ComparisonResult equals(String haystack, String needle) {
+  ComparisonResult equals(String? haystack, String? needle) {
     final _needle = _prepareNeedle(needle);
     return ComparisonResult.withConfidence(
       computeConfidence(_levDistance(haystack, _needle)),
@@ -155,7 +179,7 @@ class FuzzyComparer extends Comparer {
   }
 
   @override
-  ComparisonResult startsWith(String haystack, String needle) {
+  ComparisonResult startsWith(String? haystack, String? needle) {
     final _needle = _prepareNeedle(needle);
     var startingChunk = chunkOnSlashes(haystack, _needle, limit: 1).first;
     return ComparisonResult.withConfidence(
@@ -180,19 +204,19 @@ class FuzzyComparer extends Comparer {
 /// ```
 List<String> chunkOnSlashes(
   /// String we intend to split into a list of strings.
-  String haystack,
+  String? haystack,
 
   /// String we will scan for instances of [sep] to determine how to split
   /// [haystack].
-  String needle, {
+  String? needle, {
 
   /// Separator string that defaults to the current OS's filesystem separator.
-  String sep,
+  String? sep,
 
   /// Optional limit on the number of results to return. For example, if you
   /// know you only care about the first result, pass 1 to skip calculating and
   /// throwing away subsequent results.
-  int limit,
+  int? limit,
 }) {
   sep ??= p.separator;
 

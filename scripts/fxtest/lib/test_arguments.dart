@@ -2,11 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-// TODO(https://fxbug.dev/84961): Fix null safety and remove this language version.
-// @dart=2.9
-
 import 'package:args/args.dart';
-import 'package:meta/meta.dart';
 
 class TestArguments {
   final List<String> rawArgs;
@@ -25,14 +21,14 @@ class TestArguments {
   /// a single string in [rawArgs] if the key is not present in [rawArgs].
   /// For flags (as opposed to options), pass either `null` or an empty string
   /// as the value.
-  final Map<String, String> defaultRawArgs;
+  final Map<String, String?>? defaultRawArgs;
 
   /// Similar to [passThroughArgs], but unique to e2e tests.
   final List<String> e2ePassThroughArgs;
 
   TestArguments({
-    @required this.rawArgs,
-    @required ArgParser parser,
+    required this.rawArgs,
+    required ArgParser parser,
     this.defaultRawArgs,
   })  : e2ePassThroughArgs = <String>[],
         passThroughArgs = TestArguments._extractPassThroughArgs(rawArgs),
@@ -62,7 +58,7 @@ class TestArguments {
   static ArgResults _parseArgs(
     List<String> rawArgs,
     ArgParser parser, {
-    Map<String, String> defaultRawArgs,
+    Map<String, String?>? defaultRawArgs,
   }) {
     var localArgs = TestArguments.splitArgs(rawArgs)[0];
     localArgs = TestArguments.addDefaults(localArgs, defaultRawArgs, parser);
@@ -72,7 +68,7 @@ class TestArguments {
   // ignore: prefer_constructors_over_static_methods
   static List<String> addDefaults(
     List<String> rawArgs,
-    Map<String, String> defaults,
+    Map<String, String?>? defaults,
     ArgParser parser,
   ) {
     if (defaults == null || defaults.isEmpty) return rawArgs;
@@ -97,12 +93,12 @@ class TestArguments {
       // Trim leading "--"
       primaryKey = primaryKey.substring(2);
       if (parser.options[primaryKey]?.abbr != null) {
-        keysToCheckFor.add('-${parser.options[primaryKey].abbr}');
+        keysToCheckFor.add('-${parser.options[primaryKey]!.abbr}');
       }
       if (Set.from(rawArgs).intersection(keysToCheckFor).isEmpty) {
         copy.add(key);
         if (defaults[key] != null && defaults[key] != '') {
-          copy.add(defaults[key]);
+          copy.add(defaults[key]!);
         }
       }
     }

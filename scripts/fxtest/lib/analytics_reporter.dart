@@ -2,13 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-// TODO(https://fxbug.dev/84961): Fix null safety and remove this language version.
-// @dart=2.9
-
 import 'dart:io';
 
 import 'package:fxutils/fxutils.dart';
-import 'package:meta/meta.dart';
 
 const String analyticsScript = 'tools/devshell/lib/metrics_custom_report.sh';
 
@@ -16,14 +12,14 @@ const String analyticsScript = 'tools/devshell/lib/metrics_custom_report.sh';
 class AnalyticsReporter {
   /// Object that knows the location of all relevant Fuchsia artifacts. Used
   /// to turn relative paths into absolute paths.
-  final IFxEnv fxEnv;
+  final IFxEnv? fxEnv;
 
   /// Shell script able to send metrics to Google Analytics.
   ///
   /// Likely `tools/devshell/lib/metrics_custom_report.sh`
-  final String reporterCmd;
+  final String? reporterCmd;
   AnalyticsReporter({
-    @required this.fxEnv,
+    required this.fxEnv,
     this.reporterCmd = analyticsScript,
   });
 
@@ -34,16 +30,16 @@ class AnalyticsReporter {
         fxEnv = null;
 
   Future<void> report({
-    @required String subcommand,
-    @required String action,
-    String label,
+    required String subcommand,
+    required String action,
+    String? label,
   }) async {
     if (reporterCmd == null) {
       return;
     }
 
     List<String> args = [
-      '${fxEnv.fuchsiaDir}/$reporterCmd',
+      '${fxEnv?.fuchsiaDir ?? ''}/$reporterCmd',
       subcommand,
       action,
     ];

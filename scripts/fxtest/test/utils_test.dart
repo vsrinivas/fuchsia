@@ -2,9 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-// TODO(https://fxbug.dev/84961): Fix null safety and remove this language version.
-// @dart=2.9
-
 import 'package:fxtest/fxtest.dart';
 import 'package:test/test.dart';
 
@@ -106,6 +103,38 @@ void main() {
       expect(packageUrl.hash, null);
       expect(packageUrl.fullComponentName, '');
       expect(packageUrl.componentName, '');
+    });
+  });
+
+  group('Levenshtein distance', () {
+    var levenshtein = Levenshtein();
+    test('is correct when one string is empty', () {
+      expect(levenshtein.distance('', ''), 0);
+      expect(levenshtein.distance('', 'a'), 1);
+      expect(levenshtein.distance('a', ''), 1);
+    });
+
+    test('handles deletion correctly', () {
+      expect(levenshtein.distance('abc', 'ab'), 1);
+      expect(levenshtein.distance('abc', 'ac'), 1);
+      expect(levenshtein.distance('abc', 'bc'), 1);
+    });
+
+    test('handles insertion correctly', () {
+      expect(levenshtein.distance('abc', 'abcd'), 1);
+      expect(levenshtein.distance('abc', 'abdc'), 1);
+      expect(levenshtein.distance('abc', 'adbc'), 1);
+      expect(levenshtein.distance('abc', 'dabc'), 1);
+    });
+
+    test('handles substitution correctly', () {
+      expect(levenshtein.distance('abc', 'abd'), 1);
+      expect(levenshtein.distance('abc', 'adc'), 1);
+      expect(levenshtein.distance('abc', 'dbc'), 1);
+    });
+
+    test('handles combination of all three correctly', () {
+      expect(levenshtein.distance('kitten', 'sitting'), 3);
     });
   });
 

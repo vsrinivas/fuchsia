@@ -2,9 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-// TODO(https://fxbug.dev/84961): Fix null safety and remove this language version.
-// @dart=2.9
-
 import 'package:fxtest/fxtest.dart';
 
 /// Drills into a [Map] through a given sequence of keys.
@@ -47,13 +44,13 @@ import 'package:fxtest/fxtest.dart';
 /// >>> getMapPath<String>(data, ['list', 7])
 /// // throws BadMapPathException()
 /// ```
-T getMapPath<T>(
-  Map<String, dynamic> map,
+T? getMapPath<T>(
+  Map<String, dynamic>? map,
   List<dynamic> keys, {
   // Optional default value in case the requisite entries are missing
-  T fallback,
+  T? fallback,
   // If supplied, casts non-null values into their correct type
-  T Function(dynamic val) caster,
+  T? Function(dynamic val)? caster,
 }) {
   if (map == null) {
     return fallback;
@@ -70,7 +67,7 @@ T getMapPath<T>(
     if (caster == null) return value;
     if (value is T) return value;
     return caster(value);
-  } else if (value is Map) {
+  } else if (value is Map<String, dynamic>) {
     return getMapPath(
       value,
       keys.sublist(1, keys.length),
@@ -96,13 +93,13 @@ T getMapPath<T>(
 /// Note: This function used to be woven into [getMapPath]'s own logic, but
 /// along with leading to unwieldy code, this also created complications when
 /// needing to handle lists-within-lists.
-T _getListPath<T>(
+T? _getListPath<T>(
   List<dynamic> data,
   List<dynamic> keys, {
   // Optional default value in case the requisite entries are missing
-  T fallback,
+  T? fallback,
   // If supplied, casts non-null values into their correct type
-  T Function(dynamic val) caster,
+  T? Function(dynamic val)? caster,
 }) {
   final key = keys.first;
 
@@ -123,7 +120,7 @@ T _getListPath<T>(
     if (caster == null) return value;
     if (value is T) return value;
     return caster(value);
-  } else if (value is Map) {
+  } else if (value is Map<String, dynamic>) {
     return getMapPath<T>(
       value,
       keys.sublist(1),
