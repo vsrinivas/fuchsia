@@ -594,17 +594,18 @@ class SyncToCommand:
         output = self.jiri(
             "runp", "git diff-index --quiet HEAD",
             capture_output=True).stdout or ""
-        output = output.strip()
-        if output:
-            repos = "\n".join(
-                "- " + remove_prefix(line, "FAILED: ").split("=")[0]
-                for line in output.splitlines())
+        dirty_repos = [
+            remove_prefix(line, "FAILED: ").split("=")[0]
+            for line in output.strip().splitlines()
+        ]
+        if dirty_repos:
+            repos_list = "\n".join(f"- {repo}" for repo in dirty_repos)
             raise Error(
                 "Cannot sync to a different version as the following projects"
-                f" have uncommitted changes:\n{repos}"
+                f" have uncommitted changes:\n{repos_list}"
                 "\nCommit or discard these changes and try again.")
 
-            print("Dry-run: nothing will be changed on your local repo.")
+        print("Dry-run: nothing will be changed on your local repo.")
 
         while True:  # Loop until we get a valid input.
             print(
