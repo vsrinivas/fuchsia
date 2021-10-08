@@ -14,12 +14,12 @@ static const char* kMediaExtList[] = {"jpg", "gif", "png",  "avi", "divx", "mp4"
                                       "svi", "wvx", "wm",   "mpg", "mpe",  "rm",  "ogg"};
 
 struct MkfsOptions {
-  char* label = nullptr;
+  std::string label;
   bool heap_based_allocation = true;
   uint32_t overprovision_ratio = 0;
   uint32_t segs_per_sec = 1;
   uint32_t secs_per_zone = 1;
-  char* extension_list = nullptr;
+  std::string extension_list;
 };
 
 class MkfsWorker {
@@ -37,7 +37,10 @@ class MkfsWorker {
 
   std::unique_ptr<Bcache> Destroy() { return std::move(bc_); }
 
+  void PrintCurrentOption();
+
  private:
+  friend class MkfsTester;
   std::unique_ptr<Bcache> bc_;
   MkfsOptions mkfs_options_{};
 
@@ -65,8 +68,6 @@ class MkfsWorker {
   zx_status_t UpdateNatRoot();
   zx_status_t AddDefaultDentryRoot();
   zx_status_t CreateRootDir();
-
-  void PrintCurrentOption();
 
   zx_status_t TrimDevice();
 };

@@ -86,9 +86,11 @@ class MapTester {
   static void RemoveAllNatEntries(NodeManager &manager) __TA_EXCLUDES(manager.nat_tree_lock_);
   static nid_t ScanFreeNidList(NodeManager &manager, nid_t start)
       __TA_EXCLUDES(manager.free_nid_list_lock_);
-  static block_t GetCachedNatEntryBlockAddress(NodeManager &manager, nid_t nid)
+  static void GetCachedNatEntryBlockAddress(NodeManager &manager, nid_t nid, block_t &out)
       __TA_EXCLUDES(manager.free_nid_list_lock_);
   static void SetCachedNatEntryBlockAddress(NodeManager &manager, nid_t nid, block_t address)
+      __TA_EXCLUDES(manager.free_nid_list_lock_);
+  static void SetCachedNatEntryCheckpointed(NodeManager &manager, nid_t nid)
       __TA_EXCLUDES(manager.free_nid_list_lock_);
   static FreeNid *GetNextFreeNidInList(NodeManager &manager)
       __TA_EXCLUDES(manager.free_nid_list_lock_) {
@@ -110,6 +112,14 @@ class MapTester {
   static void SetNatCount(NodeManager &manager, uint32_t count) {
     manager.nat_entries_count_ = count;
   }
+};
+
+class MkfsTester {
+ public:
+  static GlobalParameters &GetGlobalParameters(MkfsWorker &mkfs) { return mkfs.params_; };
+
+  static zx_status_t InitAndGetDeviceInfo(MkfsWorker &mkfs);
+  static zx::status<std::unique_ptr<Bcache>> FormatDevice(MkfsWorker &mkfs);
 };
 
 }  // namespace f2fs

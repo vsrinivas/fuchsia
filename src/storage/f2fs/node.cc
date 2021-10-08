@@ -868,7 +868,7 @@ zx_status_t NodeManager::TruncatePartialNodes(DnodeOfData &dn, Inode &ri, int (&
   int i;
   int idx = depth - 2;
   auto free_pages = [&]() {
-    for (int i = depth - 3; i >= 0; i--) {
+    for (int i = idx; i >= 0; --i) {
       F2fsPutPage(pages[i], 1);
     }
   };
@@ -877,13 +877,13 @@ zx_status_t NodeManager::TruncatePartialNodes(DnodeOfData &dn, Inode &ri, int (&
   if (!nid[0])
     return ZX_OK;
 
-  /* get indirect nodes in the path */
-  for (i = 0; i < depth - 1; i++) {
-    /* refernece count'll be increased */
+  // get indirect nodes in the path
+  for (i = 0; i < idx + 1; ++i) {
+    // refernece count'll be increased
     pages[i] = nullptr;
     err = fs_->GetNodeManager().GetNodePage(nid[i], &pages[i]);
     if (err) {
-      depth = i + 1;
+      idx = i - 1;
       free_pages();
       return err;
     }
@@ -891,7 +891,7 @@ zx_status_t NodeManager::TruncatePartialNodes(DnodeOfData &dn, Inode &ri, int (&
   }
 
   // free direct nodes linked to a partial indirect node
-  for (i = offset[depth - 1]; i < kNidsPerBlock; i++) {
+  for (i = offset[idx + 1]; i < kNidsPerBlock; ++i) {
     child_nid = GetNid(*pages[idx], i, false);
     if (!child_nid)
       continue;
@@ -904,15 +904,17 @@ zx_status_t NodeManager::TruncatePartialNodes(DnodeOfData &dn, Inode &ri, int (&
     SetNid(*pages[idx], i, 0, false);
   }
 
-  if (offset[depth - 1] == 0) {
+  if (offset[idx + 1] == 0) {
     dn.node_page = pages[idx];
     dn.nid = nid[idx];
     TruncateNode(dn);
   } else {
     F2fsPutPage(pages[idx], 1);
   }
-  offset[idx]++;
-  offset[depth - 1] = 0;
+  ++offset[idx];
+  offset[idx + 1] = 0;
+  --idx;
+  free_pages();
   return err;
 }
 

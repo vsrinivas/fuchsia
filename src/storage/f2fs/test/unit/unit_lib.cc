@@ -410,10 +410,11 @@ nid_t MapTester::ScanFreeNidList(NodeManager &manager, nid_t start) {
   return start;
 }
 
-block_t MapTester::GetCachedNatEntryBlockAddress(NodeManager &manager, nid_t nid) {
+void MapTester::GetCachedNatEntryBlockAddress(NodeManager &manager, nid_t nid, block_t &out) {
   fs::SharedLock nat_lock(manager.nat_tree_lock_);
   auto entry = manager.nat_cache_.find(nid);
-  return entry->GetBlockAddress();
+  ASSERT_TRUE(entry != manager.nat_cache_.end());
+  out = entry->GetBlockAddress();
 }
 
 void MapTester::SetCachedNatEntryBlockAddress(NodeManager &manager, nid_t nid, block_t address) {
@@ -421,6 +422,24 @@ void MapTester::SetCachedNatEntryBlockAddress(NodeManager &manager, nid_t nid, b
   auto entry = manager.nat_cache_.find(nid);
   ASSERT_TRUE(entry != manager.nat_cache_.end());
   entry->SetBlockAddress(address);
+}
+
+void MapTester::SetCachedNatEntryCheckpointed(NodeManager &manager, nid_t nid) {
+  std::lock_guard nat_lock(manager.nat_tree_lock_);
+  auto entry = manager.nat_cache_.find(nid);
+  ASSERT_TRUE(entry != manager.nat_cache_.end());
+  entry->SetCheckpointed();
+}
+
+zx_status_t MkfsTester::InitAndGetDeviceInfo(MkfsWorker &mkfs) {
+  mkfs.InitGlobalParameters();
+  return mkfs.GetDeviceInfo();
+}
+
+zx::status<std::unique_ptr<Bcache>> MkfsTester::FormatDevice(MkfsWorker &mkfs) {
+  if (zx_status_t ret = mkfs.FormatDevice(); ret != ZX_OK)
+    return zx::error(ret);
+  return zx::ok(std::move(mkfs.bc_));
 }
 
 }  // namespace f2fs

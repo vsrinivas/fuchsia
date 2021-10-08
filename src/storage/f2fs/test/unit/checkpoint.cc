@@ -79,7 +79,7 @@ void ReadCheckpoint(F2fs *fs, block_t cp_addr, Page **cp_out) {
 
 void GetLastCheckpoint(F2fs *fs, uint32_t expect_cp_position, bool after_mkfs, Page **cp_out) {
   SuperBlock &fsb = fs->RawSb();
-  Checkpoint *cp_block1 = nullptr, *cp_block2 = nullptr, *cur_cp_block = nullptr;
+  Checkpoint *cp_block1 = nullptr, *cp_block2 = nullptr;
   Page *cp_page1 = nullptr, *cp_page2 = nullptr, *cur_cp_page = nullptr;
   block_t cp_addr;
   uint32_t cp_position = 0;
@@ -96,27 +96,20 @@ void GetLastCheckpoint(F2fs *fs, uint32_t expect_cp_position, bool after_mkfs, P
 
   if (after_mkfs) {
     cur_cp_page = cp_page1;
-    cur_cp_block = cp_block1;
     cp_position = kCheckpointPack0;
   } else if (cp_block1 && cp_block2) {
     if (VerAfter(cp_block2->checkpoint_ver, cp_block1->checkpoint_ver)) {
       cur_cp_page = cp_page2;
-      cur_cp_block = cp_block2;
       cp_position = kCheckpointPack1;
       ASSERT_EQ(cp_block1->checkpoint_ver, cp_block2->checkpoint_ver - 1);
     } else {
       cur_cp_page = cp_page1;
-      cur_cp_block = cp_block1;
       cp_position = kCheckpointPack0;
       ASSERT_EQ(cp_block2->checkpoint_ver, cp_block1->checkpoint_ver - 1);
     }
   } else {
     ASSERT_EQ(0, 1);
   }
-
-  FX_LOGS(INFO) << "CP[" << cp_position << "] Version = " << cur_cp_block->checkpoint_ver;
-  ASSERT_EQ(cp_position, expect_cp_position);
-
   *cp_out = cur_cp_page;
 
   if (!after_mkfs) {
@@ -711,13 +704,7 @@ void CheckpointTestSitJournal(F2fs *fs, uint32_t expect_cp_position, uint32_t ex
     // 3. Check recovered journal
     CursegInfo *curseg = fs->GetSegmentManager().CURSEG_I(CursegType::kCursegColdData);
 
-#ifdef F2FS_BU_DEBUG
-    std::cout << "Check Journal, CP ver =" << cp->checkpoint_ver
-              << ", SitsInCursum=" << SitsInCursum(curseg->sum_blk)
-              << ", dirty_sentries=" << fs->GetSegmentManager().GetSitInfo().dirty_sentries
-              << std::endl
-#endif
-                     SummaryBlock *sum = curseg->sum_blk;
+    SummaryBlock *sum = curseg->sum_blk;
     for (int i = 0; i < SitsInCursum(sum); i++) {
       uint32_t segno = LeToCpu(SegnoInJournal(sum, i));
       ASSERT_EQ(segno, segnos[i]);
@@ -749,13 +736,6 @@ void CheckpointTestSitJournal(F2fs *fs, uint32_t expect_cp_position, uint32_t ex
         ClearBit(segno, bitmap);
         sit_i.dirty_sentries--;
       }
-
-#ifdef F2FS_BU_DEBUG
-      std::cout << "Clear Journal CP ver =" << cp->checkpoint_ver
-                << ", SitsInCursum=" << SitsInCursum(curseg->sum_blk)
-                << ", dirty_sentries=" << fs->GetSegmentManager().GetSitInfo().dirty_sentries
-                << std::endl;
-#endif
     }
   }
   segnos.clear();
@@ -793,11 +773,6 @@ void CheckpointTestNatJournal(F2fs *fs, uint32_t expect_cp_position, uint32_t ex
     ASSERT_EQ(fs->GetSegmentManager().ReadCompactedSummaries(), 0);
 
     // 3. Check recovered journal
-#ifdef F2FS_BU_DEBUG
-    std::cout << "Check Journal, CP ver =" << cp->checkpoint_ver
-              << ", NatsInCursum=" << NatsInCursum(curseg->sum_blk)
-              << ", dirty_nat_cnt=" << list_length(&node_manager->dirty_nat_entries_) << std::endl;
-#endif
     SummaryBlock *sum = curseg->sum_blk;
     for (int i = 0; i < NatsInCursum(sum); i++) {
       ASSERT_EQ(NidInJournal(sum, i), nids[i]);
@@ -818,13 +793,6 @@ void CheckpointTestNatJournal(F2fs *fs, uint32_t expect_cp_position, uint32_t ex
 
       // Clear dirty sentries
       MapTester::ClearAllDirtyNatEntries(node_manager);
-
-#ifdef F2FS_BU_DEBUG
-      std::cout << "Clear Journal, CP ver =" << cp->checkpoint_ver
-                << ", NatsInCursum=" << NatsInCursum(curseg->sum_blk)
-                << ", dirty_nat_cnt=" << list_length(&node_manager->dirty_nat_entries_)
-                << std::endl;
-#endif
     }
   }
   nids.clear();
@@ -938,6 +906,40 @@ TEST(CheckpointTest, NormalSummaries) { CheckpointTestMain(kCheckpointNormalSumm
 TEST(CheckpointTest, SitJournal) { CheckpointTestMain(kCheckpointSitJournalTest); }
 
 TEST(CheckpointTest, NatJournal) { CheckpointTestMain(kCheckpointNatJournalTest); }
+
+TEST(CheckpointTest, UmountFlag) {
+  std::unique_ptr<Bcache> bc;
+  FileTester::MkfsOnFakeDev(&bc);
+
+  // create f2fs and root dir
+  std::unique_ptr<F2fs> fs;
+  MountOptions options{};
+  async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
+  FileTester::MountWithOptions(loop.dispatcher(), options, &bc, &fs);
+
+  fbl::RefPtr<VnodeF2fs> root;
+  FileTester::CreateRoot(fs.get(), &root);
+  Page *root_node_page = nullptr;
+  SuperblockInfo &superblock_info = fs->GetSuperblockInfo();
+
+  // read the node block where the root inode is stored
+  fs->GetNodeManager().GetNodePage(superblock_info.GetRootIno(), &root_node_page);
+  ASSERT_TRUE(root_node_page);
+
+  F2fsPutPage(root_node_page, 0);
+  ASSERT_EQ(root->Close(), ZX_OK);
+  root = nullptr;
+
+  fs->WriteCheckpoint(false, true);
+  FileTester::SuddenPowerOff(std::move(fs), &bc);
+
+  FileTester::MountWithOptions(loop.dispatcher(), options, &bc, &fs);
+  fs->WriteCheckpoint(false, false);
+  FileTester::SuddenPowerOff(std::move(fs), &bc);
+
+  FileTester::MountWithOptions(loop.dispatcher(), options, &bc, &fs);
+  FileTester::Unmount(std::move(fs), &bc);
+}
 
 }  // namespace
 }  // namespace f2fs

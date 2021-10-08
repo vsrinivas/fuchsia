@@ -54,8 +54,9 @@ void MkfsWorker::InitGlobalParameters() {
   params_.segs_per_sec = mkfs_options_.segs_per_sec;
   params_.secs_per_zone = mkfs_options_.secs_per_zone;
   params_.heap = (mkfs_options_.heap_based_allocation ? 1 : 0);
-  if (mkfs_options_.label != nullptr) {
-    memcpy(params_.vol_label, mkfs_options_.label, strlen(mkfs_options_.label) + 1);
+  if (mkfs_options_.label.length() != 0) {
+    ZX_ASSERT(mkfs_options_.label.length() + 1 <= kVolumeLabelLength);
+    memcpy(params_.vol_label, mkfs_options_.label.c_str(), mkfs_options_.label.length() + 1);
   } else {
     memset(params_.vol_label, 0, sizeof(params_.vol_label));
 
@@ -89,8 +90,6 @@ zx_status_t MkfsWorker::GetDeviceInfo() {
 }
 
 void MkfsWorker::ConfigureExtensionList() {
-  char *ext_str = params_.extension_list;
-
   super_block_.extension_count = 0;
   memset(super_block_.extension_list, 0, sizeof(super_block_.extension_list));
 
@@ -103,11 +102,11 @@ void MkfsWorker::ConfigureExtensionList() {
   }
   super_block_.extension_count = i;
 
-  if (!ext_str)
+  if (!params_.extension_list.length())
     return;
 
   // add user ext list
-  char *ue = strtok(ext_str, ",");
+  char *ue = strtok(const_cast<char *>(params_.extension_list.c_str()), ",");
   while (ue != nullptr) {
     name_len = static_cast<int>(strlen(ue));
     memcpy(super_block_.extension_list[i++], ue, name_len);
@@ -170,14 +169,15 @@ zx_status_t MkfsWorker::PrepareSuperBlock() {
 
   super_block_.log_sectorsize = CpuToLe(log_sectorsize);
 
-  if (log_sectorsize < 0) {
+  if (log_sectorsize < kMinLogSectorSize || log_sectorsize > kMaxLogSectorSize) {
     FX_LOGS(ERROR) << "Error: Failed to get the sector size: " << params_.sector_size << "!";
     return ZX_ERR_INVALID_ARGS;
   }
 
   super_block_.log_sectors_per_block = CpuToLe(log_sectors_per_block);
 
-  if (log_sectors_per_block < 0) {
+  if (log_sectors_per_block < 0 ||
+      log_sectors_per_block > (kMaxLogSectorSize - kMinLogSectorSize)) {
     FX_LOGS(ERROR) << "Error: Failed to get sectors per block: " << params_.sectors_per_blk << "!";
     return ZX_ERR_INVALID_ARGS;
   }
@@ -185,7 +185,8 @@ zx_status_t MkfsWorker::PrepareSuperBlock() {
   super_block_.log_blocksize = CpuToLe(log_blocksize);
   super_block_.log_blocks_per_seg = CpuToLe(log_blks_per_seg);
 
-  if (log_blks_per_seg < 0) {
+  if (log_blks_per_seg !=
+      static_cast<uint32_t>(log2(static_cast<double>(kDefaultBlocksPerSegment)))) {
     FX_LOGS(ERROR) << "Error: Failed to get block per segment: " << params_.blks_per_seg << "!";
     return ZX_ERR_INVALID_ARGS;
   }
@@ -891,7 +892,7 @@ zx_status_t ParseOptions(int argc, char **argv, MkfsOptions &options) {
     switch (c) {
       case 'l':
         options.label = optarg;
-        if (strlen(options.label) >= kVolumeLabelLength) {
+        if (options.label.length() >= kVolumeLabelLength) {
           std::cerr << "ERROR: label length should be less than 16." << std::endl;
           return ZX_ERR_INVALID_ARGS;
         }

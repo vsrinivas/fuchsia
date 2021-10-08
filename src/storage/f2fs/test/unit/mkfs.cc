@@ -517,7 +517,7 @@ TEST(FormatFilesystemTest, BlockSize) {
 }
 
 TEST(FormatFilesystemTest, MkfsSmallVolume) {
-  uint32_t volume_size_array[] = {40, 50, 60, 70, 80, 90, 100};
+  uint32_t volume_size_array[] = {30, 40, 50, 60, 70, 80, 90, 100};
   uint32_t block_size = 4096;
 
   for (uint32_t volume_size : volume_size_array) {
@@ -532,19 +532,89 @@ TEST(FormatFilesystemTest, MkfsSmallVolume) {
     MkfsOptions mkfs_options;
     MkfsWorker mkfs(std::move(bc), mkfs_options);
     auto ret = mkfs.DoMkfs();
-    ASSERT_EQ(ret.is_error(), false);
-    bc = std::move(*ret);
+    if (volume_size >= 40) {
+      ASSERT_EQ(ret.is_error(), false);
+      bc = std::move(*ret);
 
-    std::unique_ptr<F2fs> fs;
-    MountOptions options{};
-    async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
-    FileTester::MountWithOptions(loop.dispatcher(), options, &bc, &fs);
+      std::unique_ptr<F2fs> fs;
+      MountOptions options{};
+      async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
+      FileTester::MountWithOptions(loop.dispatcher(), options, &bc, &fs);
 
-    SuperBlock &fsb = fs->RawSb();
-    ASSERT_EQ(fsb.segment_count_main, static_cast<uint32_t>(volume_size / 2 - 8));
+      SuperBlock &fsb = fs->RawSb();
+      ASSERT_EQ(fsb.segment_count_main, static_cast<uint32_t>(volume_size / 2 - 8));
 
-    FileTester::Unmount(std::move(fs), &bc);
+      FileTester::Unmount(std::move(fs), &bc);
+    } else {
+      ASSERT_EQ(ret.is_error(), true);
+      ASSERT_EQ(ret.status_value(), ZX_ERR_NO_SPACE);
+      bc = mkfs.Destroy();
+    }
   }
+}
+
+TEST(FormatFilesystemTest, MkfsPrintOptions) {
+  auto device = std::make_unique<FakeBlockDevice>(kMkfsBlockCount, kMkfsBlockSize);
+  std::unique_ptr<Bcache> bc;
+  bool readonly_device = false;
+  ASSERT_EQ(CreateBcache(std::move(device), &readonly_device, &bc), ZX_OK);
+
+  // Check default value
+  std::vector<const char *> argv = {"mkfs"};
+  DoMkfs(std::move(bc), argv, true, &bc);
+
+  // Print CurrentOption
+  MkfsOptions mkfs_options;
+  MkfsWorker mkfs(std::move(bc), mkfs_options);
+  bc = *mkfs.DoMkfs();
+  mkfs.PrintCurrentOption();
+
+  // Print uasage
+  argv.clear();
+  argv.push_back("mkfs");
+  argv.push_back("-h");
+  DoMkfs(std::move(bc), argv, false, &bc);
+}
+
+TEST(FormatFilesystemTest, PrepareSuperBlockExceptionCase) {
+  std::unique_ptr<Bcache> bc;
+  MkfsOptions mkfs_options;
+
+  auto device = std::make_unique<FakeBlockDevice>(FakeBlockDevice::Config{
+      .block_count = kMkfsBlockCount, .block_size = kDefaultSectorSize, .supports_trim = true});
+  bool readonly_device = false;
+
+  ASSERT_EQ(CreateBcache(std::move(device), &readonly_device, &bc), ZX_OK);
+
+  MkfsWorker mkfs(std::move(bc), mkfs_options);
+
+  // Check invalid sector_size value
+  ASSERT_EQ(MkfsTester::InitAndGetDeviceInfo(mkfs), ZX_OK);
+  GlobalParameters &params = MkfsTester::GetGlobalParameters(mkfs);
+  params.sector_size = kMinLogSectorSize / 2;
+  auto ret = MkfsTester::FormatDevice(mkfs);
+  ASSERT_TRUE(ret.is_error());
+
+  // Check invalid sectors_per_blk value
+  ASSERT_EQ(MkfsTester::InitAndGetDeviceInfo(mkfs), ZX_OK);
+  params = MkfsTester::GetGlobalParameters(mkfs);
+  params.sectors_per_blk = kDefaultSectorsPerBlock * 2;
+  ret = MkfsTester::FormatDevice(mkfs);
+  ASSERT_EQ(ret.is_error(), true);
+
+  // Check invalid blks_per_seg value
+  ASSERT_EQ(MkfsTester::InitAndGetDeviceInfo(mkfs), ZX_OK);
+  params = MkfsTester::GetGlobalParameters(mkfs);
+  params.blks_per_seg = kDefaultBlocksPerSegment * 2;
+  ret = MkfsTester::FormatDevice(mkfs);
+  ASSERT_EQ(ret.is_error(), true);
+
+  // Check unaligned start_sector
+  ASSERT_EQ(MkfsTester::InitAndGetDeviceInfo(mkfs), ZX_OK);
+  params = MkfsTester::GetGlobalParameters(mkfs);
+  params.start_sector = 1;
+  ret = MkfsTester::FormatDevice(mkfs);
+  ASSERT_EQ(ret.is_error(), false);
 }
 
 }  // namespace

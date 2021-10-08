@@ -29,8 +29,7 @@ namespace f2fs {
 zx_status_t CreateBcache(std::unique_ptr<block_client::BlockDevice> device, bool* out_readonly,
                          std::unique_ptr<f2fs::Bcache>* out) {
   fuchsia_hardware_block_BlockInfo info;
-  zx_status_t status = device->BlockGetInfo(&info);
-  if (status != ZX_OK) {
+  if (zx_status_t status = device->BlockGetInfo(&info); status != ZX_OK) {
     FX_LOGS(ERROR) << "Coult not access device info: " << status;
     return status;
   }
@@ -39,7 +38,7 @@ zx_status_t CreateBcache(std::unique_ptr<block_client::BlockDevice> device, bool
 
   if (device_size == 0) {
     FX_LOGS(ERROR) << "Invalid device size";
-    return status;
+    return ZX_ERR_NO_RESOURCES;
   }
   uint64_t block_count = device_size / kBlockSize;
 

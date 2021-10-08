@@ -78,7 +78,7 @@ struct GlobalParameters {
   int heap = 0;
   int32_t fd = 0;
   char *device_name = nullptr;
-  char *extension_list = nullptr;
+  std::string extension_list;
 } __attribute__((packed));
 
 constexpr uint32_t kBitsPerLong = 64;
