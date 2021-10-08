@@ -68,14 +68,14 @@ TODO(fxbug.dev/67565) - remove once external sync FD extensions fully supported
 
 **Current value (from the default):** `false`
 
-From [//third_party/mesa/src/intel/vulkan/BUILD.gn:27](https://fuchsia.googlesource.com/third_party/mesa/+/0a05f2df35d8d4e8ff3eda632c7c016ad56fc905/src/intel/vulkan/BUILD.gn#27)
+From [//third_party/mesa/src/intel/vulkan/BUILD.gn:27](https://fuchsia.googlesource.com/third_party/mesa/+/a9345b2bc10f447b8f2f1b3661d4e9f1b9164715/src/intel/vulkan/BUILD.gn#27)
 
 ### anv_use_max_ram
 Give maximum possible memory to Vulkan heap
 
 **Current value (from the default):** `false`
 
-From [//third_party/mesa/src/intel/vulkan/BUILD.gn:30](https://fuchsia.googlesource.com/third_party/mesa/+/0a05f2df35d8d4e8ff3eda632c7c016ad56fc905/src/intel/vulkan/BUILD.gn#30)
+From [//third_party/mesa/src/intel/vulkan/BUILD.gn:30](https://fuchsia.googlesource.com/third_party/mesa/+/a9345b2bc10f447b8f2f1b3661d4e9f1b9164715/src/intel/vulkan/BUILD.gn#30)
 
 ### asan_default_options
 Default [AddressSanitizer](https://clang.llvm.org/docs/AddressSanitizer.html)
@@ -808,15 +808,6 @@ Selects the Cobalt environment to send data to. Choices:
 **Current value (from the default):** `"PROD"`
 
 From //src/cobalt/bin/app/BUILD.gn:14
-
-### codec_factory_v1
-Whether to use v1, if this is set to false, make sure that the v2 shard
-is somehow being included.
-TODO(fxbug.dev/78647) Remove once v2 migration is complete.
-
-**Current value (from the default):** `false`
-
-From //src/media/codec/bundles/BUILD.gn:9
 
 ### compress_blobs
 Whether to compress the blobfs image.
@@ -1777,6 +1768,14 @@ by an explicit install_host_tools() rule (see //build/host.gni).
 **Current value (from the default):** `"//out/not-default/host-tools"`
 
 From //build/host.gni:13
+
+### i_can_haz_atlas_camera
+If true, power on the Atlas camera at boot.
+TODO(fxbug.dev/81684): remove once we have a better way to manage ACPI device power.
+
+**Current value (from the default):** `false`
+
+From //src/devices/board/drivers/x86/BUILD.gn:15
 
 ### icu_disable_thin_archive
 If true, compile icu into a standalone static library. Currently this is
