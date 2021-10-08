@@ -216,5 +216,5 @@ var utilityFuncs = template.FuncMap{
 var templates embed.FS
 
 func NewGenerator(flags *cpp.CmdlineFlags) *cpp.Generator {
-	return cpp.NewGeneratorFS(flags, utilityFuncs, templates)
+	return cpp.NewGenerator(flags, templates, utilityFuncs)
 }

@@ -5,21 +5,24 @@
 package codegen
 
 import (
-	"io"
+	"embed"
 	"text/template"
 
 	"go.fuchsia.dev/fuchsia/tools/fidl/lib/fidlgen"
 )
 
-var syzDotTxtTmpl = func() *template.Template {
-	tmpls := template.New("SyzkallerTemplates")
-	template.Must(tmpls.Parse(syscallDescriptionTmpl))
-	template.Must(tmpls.Parse(protocolTmpl))
-	template.Must(tmpls.Parse(structTmpl))
-	template.Must(tmpls.Parse(unionTmpl))
-	return tmpls.Lookup("GenerateSyscallDescription")
-}()
+//go:embed *.tmpl
+var templates embed.FS
 
-func Compile(w io.Writer, root fidlgen.Root) error {
-	return syzDotTxtTmpl.Execute(w, compile(root))
+type Generator struct {
+	*fidlgen.Generator
+}
+
+func NewGenerator() Generator {
+	return Generator{fidlgen.NewGenerator("SyzkallerTemplates", templates,
+		fidlgen.NewFormatter(""), template.FuncMap{})}
+}
+
+func (g Generator) GenerateSyscallDescription(filename string, root fidlgen.Root) error {
+	return g.GenerateFile(filename, "GenerateSyscallDescription", compile(root))
 }

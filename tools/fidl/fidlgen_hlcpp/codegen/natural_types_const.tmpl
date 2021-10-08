@@ -1,25 +1,23 @@
-// Copyright 2021 The Fuchsia Authors. All rights reserved.
+{{/*
+// Copyright 2018 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
+*/}}
 
-package codegen
-
-const fragmentConstTmpl = `
 {{- define "ConstDeclaration" }}
 {{ EnsureNamespace . }}
-
-{{- .Docs }}
+{{ .Docs }}
 {{- if .Extern }}
 extern {{ .Decorator }} {{ .Type }} {{ .Name }};
 {{- else }}
-{{ .Decorator }} {{ .Type }} {{ .Name }} = {{ .Natural }};
+{{ .Decorator }} {{ .Type }} {{ .Name }} = {{ .Value }};
 {{- end }}
 {{- end }}
 
 {{- define "ConstDefinition" }}
 {{- if .Extern }}
-{{ EnsureNamespace "::" }}
-{{ .Decorator }} {{ .Type }} {{ . }} = {{ .Natural }};
+{{ EnsureNamespace . }}
+{{ .Decorator }} {{ .Type }} {{ .Name }} = {{ .Value }};
 {{- end }}
 {{- end }}
-`
+

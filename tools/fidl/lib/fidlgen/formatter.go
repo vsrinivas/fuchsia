@@ -27,8 +27,9 @@ func (f identityFormatter) Format(source []byte) ([]byte, error) {
 
 // externalFormatter formats a writer stream.
 type externalFormatter struct {
-	path string
-	args []string
+	path  string
+	args  []string
+	limit int
 }
 
 var _ = []Formatter{identityFormatter{}, externalFormatter{}}
@@ -50,7 +51,27 @@ func NewFormatter(path string, args ...string) Formatter {
 	}
 }
 
+// NewFormatterWithSizeLimit creates a new external formatter that doesn't
+// attempt to format sources over a specified size.
+//
+// The `path` needs to either
+// * Point to an executable which formats stdin and outputs it to stdout;
+// * An empty string, in which case no formatting will occur.
+func NewFormatterWithSizeLimit(limit int, path string, args ...string) Formatter {
+	if path == "" {
+		return identityFormatter{}
+	}
+	return externalFormatter{
+		path:  path,
+		args:  args,
+		limit: limit,
+	}
+}
+
 func (f externalFormatter) Format(source []byte) ([]byte, error) {
+	if f.limit > 0 && len(source) > f.limit {
+		return source, nil
+	}
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
 	cmd := exec.CommandContext(ctx, f.path, f.args...)

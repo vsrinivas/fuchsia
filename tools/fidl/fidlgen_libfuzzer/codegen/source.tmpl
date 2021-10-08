@@ -1,10 +1,9 @@
+{{/*
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
+*/}}
 
-package codegen
-
-const tmplSource = `
 {{- define "Filename:Source" -}}
   {{- .LibrarySlashes }}/cpp/libfuzzer.cc
 {{- end }}
@@ -161,4 +160,4 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data_, size_t size_) {
   return 0;
 }
 {{ end }}
-`
+

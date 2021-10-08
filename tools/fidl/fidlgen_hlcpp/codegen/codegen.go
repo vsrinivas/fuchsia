@@ -5,31 +5,18 @@
 package codegen
 
 import (
+	"embed"
 	"text/template"
 
 	cpp "go.fuchsia.dev/fuchsia/tools/fidl/lib/fidlgen_cpp"
 )
 
+//go:embed *.tmpl
+var templates embed.FS
+
 func NewGenerator(flags *cpp.CmdlineFlags) *cpp.Generator {
-	return cpp.NewGenerator(flags, template.FuncMap{
+	return cpp.NewGenerator(flags, templates, template.FuncMap{
 		"IncludeDomainObjects": func() bool {
 			return true
-		},
-	}, []string{
-		// Natural types templates
-		bitsTemplate,
-		constTemplate,
-		enumTemplate,
-		protocolTemplateNaturalTypes,
-		structTemplate,
-		tableTemplate,
-		unionTemplate,
-		// Proxies and stubs templates
-		protocolTemplateProxiesAndStubs,
-		serviceTemplate,
-		// File templates
-		headerTemplate,
-		implementationTemplate,
-		testBaseTemplate,
-	})
+		}})
 }

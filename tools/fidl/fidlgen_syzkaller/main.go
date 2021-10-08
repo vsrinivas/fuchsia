@@ -5,10 +5,8 @@
 package main
 
 import (
-	"bytes"
 	"flag"
 	"fmt"
-	"io/ioutil"
 	"log"
 	"os"
 	"path"
@@ -60,12 +58,9 @@ func main() {
 		log.Fatalf("Failed to read JSON: %v", err)
 	}
 
-	var buf bytes.Buffer
-	if err := codegen.Compile(&buf, root); err != nil {
+	generator := codegen.NewGenerator()
+	err = generator.GenerateSyscallDescription(*flags.outputPath, root)
+	if err != nil {
 		log.Fatalf("Failed to compile syzkaller description: %v", err)
-	}
-
-	if err := ioutil.WriteFile(*flags.outputPath, buf.Bytes(), 0666); err != nil {
-		log.Fatalf("Failed to write output file: %v", err)
 	}
 }

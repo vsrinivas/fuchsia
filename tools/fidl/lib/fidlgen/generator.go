@@ -28,17 +28,27 @@ func NewGenerator(name string, templates fs.FS, formatter Formatter, funcs templ
 	return gen
 }
 
+func (gen *Generator) ExecuteTemplate(tmpl string, data interface{}) ([]byte, error) {
+	buf := new(bytes.Buffer)
+	err := gen.tmpls.ExecuteTemplate(buf, tmpl, data)
+	if err == nil {
+		return buf.Bytes(), nil
+	}
+	return nil, err
+}
+
 func (gen *Generator) GenerateFile(filename string, tmpl string, data interface{}) error {
-	if err := os.MkdirAll(filepath.Dir(filename), os.ModePerm); err != nil {
+	err := os.MkdirAll(filepath.Dir(filename), os.ModePerm)
+	if err != nil {
 		return err
 	}
 
-	bufferedContent := new(bytes.Buffer)
-	if err := gen.tmpls.ExecuteTemplate(bufferedContent, tmpl, data); err != nil {
+	generated, err := gen.ExecuteTemplate(tmpl, data)
+	if err != nil {
 		return fmt.Errorf("Error generating content: %w", err)
 	}
 
-	formatted, err := gen.formatter.Format(bufferedContent.Bytes())
+	formatted, err := gen.formatter.Format(generated)
 	if err != nil {
 		return fmt.Errorf("Error formatting source: %w", err)
 	}

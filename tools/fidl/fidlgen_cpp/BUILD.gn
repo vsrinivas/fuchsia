@@ -18,10 +18,10 @@ if (is_host) {
     ]
     sources = [
       "codegen/codegen.go",
-      "codegen/file_header.tmpl.go",
-      "codegen/file_source.tmpl.go",
-      "codegen/fragment_const.tmpl.go",
-      "codegen/fragment_type_alias.tmpl.go",
+      "codegen/file_header.tmpl",
+      "codegen/file_source.tmpl",
+      "codegen/fragment_const.tmpl",
+      "codegen/fragment_type_alias.tmpl",
       "main.go",
     ]
   }

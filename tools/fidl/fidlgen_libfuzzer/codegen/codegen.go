@@ -5,14 +5,18 @@
 package codegen
 
 import (
+	"embed"
 	"strings"
 	"text/template"
 
 	cpp "go.fuchsia.dev/fuchsia/tools/fidl/lib/fidlgen_cpp"
 )
 
+//go:embed *.tmpl
+var templates embed.FS
+
 func NewGenerator(flags *cpp.CmdlineFlags) *cpp.Generator {
-	return cpp.NewGenerator(flags, template.FuncMap{
+	return cpp.NewGenerator(flags, templates, template.FuncMap{
 		"DoubleColonToUnderscore": func(s string) string {
 			s2 := strings.ReplaceAll(s, "::", "_")
 			// Drop any leading "::" => "_".
@@ -23,18 +27,6 @@ func NewGenerator(flags *cpp.CmdlineFlags) *cpp.Generator {
 		},
 		"Protocols":            protocols,
 		"CountDecoderEncoders": countDecoderEncoders,
-	}, []string{
-		tmplBits,
-		tmplDecoderEncoder,
-		tmplDecoderEncoderHeader,
-		tmplDecoderEncoderSource,
-		tmplEnum,
-		tmplHeader,
-		tmplProtocolDecoderEncoders,
-		tmplSource,
-		tmplStruct,
-		tmplTable,
-		tmplUnion,
 	})
 }
 

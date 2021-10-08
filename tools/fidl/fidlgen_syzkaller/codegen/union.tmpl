@@ -1,17 +1,16 @@
+{{/*
 // Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
+*/}}
 
-package codegen
+{{- define "UnionDefinition" -}}
 
-const structTmpl = `
-{{- define "StructDefinition" -}}
-
-{{ .Name }} {
+{{ .Name }} [
        {{- range .Members }}
        {{ .Name }} {{ .Type }}
-       {{- end }}
-} [packed]
+	   {{- end }}
+] {{- if .VarLen -}} [varlen] {{- end -}}
 
 {{- end -}}
-`
+

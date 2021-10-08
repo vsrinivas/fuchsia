@@ -1,10 +1,9 @@
+{{/*
 // Copyright 2021 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
+*/}}
 
-package codegen
-
-const tmplDecoderEncoderHeader = `
 {{- define "Filename:DecoderEncoderHeader" -}}
   {{- .LibrarySlashes }}/cpp/libfuzzer_decode_encode.h
 {{- end }}
@@ -37,4 +36,4 @@ inline constexpr ::std::array<::fidl::fuzzing::DecoderEncoderForType, {{ CountDe
 
 }  // namespace fuzzing
 {{ end }}
-`
+

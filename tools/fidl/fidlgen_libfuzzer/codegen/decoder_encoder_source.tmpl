@@ -1,10 +1,9 @@
+{{/*
 // Copyright 2021 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
+*/}}
 
-package codegen
-
-const tmplDecoderEncoderSource = `
 {{- define "Filename:DecoderEncoderSource" -}}
   {{- .LibrarySlashes }}/cpp/libfuzzer_decode_encode.cc
 {{- end }}
@@ -17,4 +16,4 @@ const tmplDecoderEncoderSource = `
 
 static_assert(::fuzzing::{{ range .Library }}{{ . }}_{{ end }}decoder_encoders.size() == {{ CountDecoderEncoders .Decls }});
 {{ end }}
-`
+

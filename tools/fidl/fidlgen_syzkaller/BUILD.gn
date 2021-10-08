@@ -16,11 +16,11 @@ if (is_host) {
     deps = [ "//tools/fidl/lib/fidlgen" ]
     sources = [
       "codegen/codegen.go",
-      "codegen/description.tmpl.go",
+      "codegen/description.tmpl",
       "codegen/ir.go",
-      "codegen/protocol.tmpl.go",
-      "codegen/struct.tmpl.go",
-      "codegen/union.tmpl.go",
+      "codegen/protocol.tmpl",
+      "codegen/struct.tmpl",
+      "codegen/union.tmpl",
       "main.go",
     ]
   }

@@ -5,20 +5,19 @@
 package codegen
 
 import (
+	"embed"
 	"text/template"
 
 	cpp "go.fuchsia.dev/fuchsia/tools/fidl/lib/fidlgen_cpp"
 )
+
+//go:embed *.tmpl
+var templates embed.FS
 
 type Generator struct {
 	*cpp.Generator
 }
 
 func NewGenerator(flags *cpp.CmdlineFlags) *cpp.Generator {
-	return cpp.NewGenerator(flags, template.FuncMap{}, []string{
-		fragmentConstTmpl,
-		fragmentTypeAliasTmpl,
-		fileHeaderTmpl,
-		fileSourceTmpl,
-	})
+	return cpp.NewGenerator(flags, templates, template.FuncMap{})
 }

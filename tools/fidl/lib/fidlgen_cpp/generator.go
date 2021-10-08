@@ -5,8 +5,6 @@
 package fidlgen_cpp
 
 import (
-	"bytes"
-	"fmt"
 	"io/fs"
 	"log"
 	"path"
@@ -23,16 +21,13 @@ import (
 var clangFormatArgs = []string{"--style=google"}
 
 type Generator struct {
-	tmpls     *template.Template
+	gen       *fidlgen.Generator
 	flags     *CmdlineFlags
 	formatter fidlgen.Formatter
 }
 
-func newGenerator(flags *CmdlineFlags, extraFuncs template.FuncMap) *Generator {
-	gen := &Generator{
-		template.New(flags.name), flags,
-		fidlgen.NewFormatter(flags.clangFormatPath, clangFormatArgs...),
-	}
+func NewGenerator(flags *CmdlineFlags, templates fs.FS, extraFuncs template.FuncMap) *Generator {
+	gen := &Generator{flags: flags}
 
 	funcs := mergeFuncMaps(commonTemplateFuncs, extraFuncs)
 	funcs = mergeFuncMaps(funcs, template.FuncMap{
@@ -43,48 +38,23 @@ func newGenerator(flags *CmdlineFlags, extraFuncs template.FuncMap) *Generator {
 			return gen.ExperimentEnabled(experiment)
 		},
 	})
-	gen.tmpls.Funcs(funcs)
 
-	return gen
-}
+	var formatter fidlgen.Formatter
 
-func NewGenerator(flags *CmdlineFlags, extraFuncs template.FuncMap, templates []string) *Generator {
-	gen := newGenerator(flags, extraFuncs)
-	for _, t := range templates {
-		template.Must(gen.tmpls.Parse(t))
+	if runtime.GOOS == "darwin" {
+		// TODO(fxbug.dev/78303): Investigate clang-format memory usage on large files.
+		formatter = fidlgen.NewFormatterWithSizeLimit(1024*1024,
+			flags.clangFormatPath, clangFormatArgs...)
+	} else {
+		formatter = fidlgen.NewFormatter(flags.clangFormatPath, clangFormatArgs...)
 	}
-	return gen
-}
 
-func NewGeneratorFS(flags *CmdlineFlags, extraFuncs template.FuncMap, templates fs.FS) *Generator {
-	gen := newGenerator(flags, extraFuncs)
-	template.Must(gen.tmpls.ParseFS(templates, "*"))
+	gen.gen = fidlgen.NewGenerator(flags.name, templates, formatter, funcs)
 	return gen
 }
 
 func (gen *Generator) ExperimentEnabled(experiment string) bool {
 	return gen.flags.ExperimentEnabled(experiment)
-}
-
-func (gen *Generator) generateFile(filename string, tmpl string, tree Root) error {
-	var err error
-	bufferedContent := new(bytes.Buffer)
-	if err := gen.tmpls.ExecuteTemplate(bufferedContent, tmpl, tree); err != nil {
-		return fmt.Errorf("Error generating content: %w", err)
-	}
-
-	var formatted []byte
-
-	// TODO(fxbug.dev/78303): Investigate clang-format memory usage on large files.
-	if bufferedContent.Len() > 1024*1024 && runtime.GOOS == "darwin" {
-		formatted = bufferedContent.Bytes()
-	} else {
-		formatted, err = gen.formatter.Format(bufferedContent.Bytes())
-		if err != nil {
-			return fmt.Errorf("Error formatting: %w", err)
-		}
-	}
-	return fidlgen.WriteFileIfChanged(filename, formatted)
 }
 
 type filenameData struct {
@@ -108,16 +78,18 @@ func (fd *filenameData) LibrarySlashes() string {
 }
 
 func (gen *Generator) generateFilename(file string, library fidlgen.LibraryIdentifier) string {
-	buf := new(bytes.Buffer)
-	gen.tmpls.ExecuteTemplate(buf, "Filename:"+file, &filenameData{library})
-	return buf.String()
+	fn, err := gen.gen.ExecuteTemplate("Filename:"+file, &filenameData{library})
+	if err != nil {
+		log.Fatalf("Error generating filename for %s: %v", file, err)
+	}
+	return string(fn)
 }
 
 func (gen *Generator) GenerateFiles(tree Root, files []string) {
 
 	for _, f := range files {
 		fn := path.Join(gen.flags.root, gen.generateFilename(f, tree.Library))
-		err := gen.generateFile(fn, "File:"+f, tree)
+		err := gen.gen.GenerateFile(fn, "File:"+f, tree)
 		if err != nil {
 			log.Fatalf("Error generating %s: %v", fn, err)
 		}
