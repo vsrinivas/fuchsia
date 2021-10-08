@@ -16,64 +16,44 @@
 template <class T>
 class ServerImpl {
  public:
-  ServerImpl(){};
-  ~ServerImpl();
-  void Run();
+  ~ServerImpl() {
+    server_->Shutdown();
+    cq_->Shutdown();
+  }
+
+  void Run() {
+    grpc::ServerBuilder builder;
+    builder.RegisterService(&service_);
+    cq_ = builder.AddCompletionQueue();
+    server_ = builder.BuildAndStart();
+
+    int sockfd = platform_interface_.GetServerFD(VMADDR_CID_ANY, GUEST_INTERACTION_PORT);
+    std::cout << "Listening" << std::endl;
+
+    new ExecCallData<T>(&service_, cq_.get());
+    new GetCallData<T>(&service_, cq_.get());
+    new PutCallData<T>(&service_, cq_.get());
+
+    void* tag;
+    bool ok;
+    gpr_timespec wait_time = {};
+
+    while (true) {
+      platform_interface_.AcceptClient(server_.get(), sockfd);
+
+      grpc::CompletionQueue::NextStatus status = cq_->AsyncNext(&tag, &ok, wait_time);
+      GPR_ASSERT(status != grpc::CompletionQueue::SHUTDOWN);
+      if (status == grpc::CompletionQueue::GOT_EVENT) {
+        static_cast<CallData*>(tag)->Proceed(ok);
+      }
+    }
+  }
 
  private:
-  int GetSocket();
-  void AcceptClient(int sockfd);
-  void HandleGetRequest();
-
   std::unique_ptr<grpc::ServerCompletionQueue> cq_;
   GuestInteractionService::AsyncService service_;
   std::unique_ptr<grpc::Server> server_;
   T platform_interface_;
 };
-
-template <class T>
-ServerImpl<T>::~ServerImpl() {
-  server_->Shutdown();
-  cq_->Shutdown();
-}
-
-template <class T>
-int ServerImpl<T>::GetSocket() {
-  return platform_interface_.GetServerFD(VMADDR_CID_ANY, GUEST_INTERACTION_PORT);
-}
-
-template <class T>
-void ServerImpl<T>::AcceptClient(int sockfd) {
-  return platform_interface_.AcceptClient(server_.get(), sockfd);
-}
-
-template <class T>
-void ServerImpl<T>::Run() {
-  grpc::ServerBuilder builder;
-  builder.RegisterService(&service_);
-  cq_ = builder.AddCompletionQueue();
-  server_ = builder.BuildAndStart();
-
-  int sockfd = GetSocket();
-  std::cout << "Listening" << std::endl;
-
-  new ExecCallData<T>(&service_, cq_.get());
-  new GetCallData<T>(&service_, cq_.get());
-  new PutCallData<T>(&service_, cq_.get());
-
-  void* tag;
-  bool ok;
-  gpr_timespec wait_time = {};
-
-  while (true) {
-    AcceptClient(sockfd);
-
-    grpc::CompletionQueue::NextStatus status = cq_->AsyncNext(&tag, &ok, wait_time);
-    GPR_ASSERT(status != grpc::CompletionQueue::SHUTDOWN);
-    if (status == grpc::CompletionQueue::GOT_EVENT) {
-      static_cast<CallData*>(tag)->Proceed(ok);
-    }
-  }
-}
 
 #endif  // SRC_VIRTUALIZATION_LIB_GUEST_INTERACTION_SERVER_SERVER_IMPL_H_
