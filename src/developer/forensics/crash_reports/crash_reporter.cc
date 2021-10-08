@@ -155,6 +155,7 @@ void CrashReporter::File(fuchsia::feedback::CrashReport report, const bool is_ho
   const auto report_id = next_report_id_++;
 
   tags_->Register(report_id, {Logname(program_name)});
+  const std::string tags = tags_->Get(report_id);
 
   using promise_tuple_t =
       std::tuple<::fpromise::result<SnapshotUuid>, ::fpromise::result<std::string, Error>,
@@ -222,17 +223,18 @@ void CrashReporter::File(fuchsia::feedback::CrashReport report, const bool is_ho
 
             return ::fpromise::ok();
           })
-          .then([this, report_id](::fpromise::result<void, CrashReporterError>& result) {
+          .then([this, report_id, tags](::fpromise::result<void, CrashReporterError>& result) {
             if (result.is_error()) {
               if (result.error().log_message) {
-                FX_LOGST(ERROR, tags_->Get(report_id))
+                // Use |tags| because the queue may have deleted the underlying values in |tags_|.
+                FX_LOGST(ERROR, tags.c_str())
                     << "Failed to file report: " << result.error().log_message << ". Won't retry";
               }
-              tags_->Unregister(report_id);
               info_.LogCrashState(result.error().crash_state);
             } else {
               info_.LogCrashState(cobalt::CrashState::kFiled);
             }
+            tags_->Unregister(report_id);
           });
 
   executor_.schedule_task(std::move(promise));

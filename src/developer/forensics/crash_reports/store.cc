@@ -200,7 +200,8 @@ bool Store::Add(Report report, std::vector<ReportId>* garbage_collected_reports)
   auto cleanup_on_error = fit::defer([report_dir] { DeletePath(report_dir); });
 
   if (!files::CreateDirectory(report_dir)) {
-    FX_LOGS(ERROR) << "Failed to create directory for report: " << report_dir;
+    FX_LOGST(ERROR, tags_->Get(report.Id()))
+        << "Failed to create directory for report: " << report_dir;
     return false;
   }
 
@@ -210,7 +211,7 @@ bool Store::Add(Report report, std::vector<ReportId>* garbage_collected_reports)
 
     // Write the report's content to the the filesystem.
     if (!WriteData(files::JoinPath(report_dir, key), data)) {
-      FX_LOGS(ERROR) << "Failed to write attachment " << key;
+      FX_LOGST(ERROR, tags_->Get(report.Id())) << "Failed to write attachment " << key;
       return false;
     }
   }
@@ -320,14 +321,16 @@ bool Store::Remove(const ReportId report_id) {
   //  We first delete /tmp/store/<program shortname>/$id and then if $id was the only report
   //  for <program shortname>, we also delete /{cache, tmp}/store/<program name>.
   if (!DeletePath(root_metadata.ReportDirectory(report_id))) {
-    FX_LOGS(ERROR) << "Failed to delete report at " << root_metadata.ReportDirectory(report_id);
+    FX_LOGST(ERROR, tags_->Get(report_id))
+        << "Failed to delete report at " << root_metadata.ReportDirectory(report_id);
   }
 
   // If this was the last report for a program, delete the directory for the program.
   const auto& program = root_metadata.ReportProgram(report_id);
   if (root_metadata.ProgramReports(program).size() == 1 &&
       !DeletePath(root_metadata.ProgramDirectory(program))) {
-    FX_LOGS(ERROR) << "Failed to delete " << root_metadata.ProgramDirectory(program);
+    FX_LOGST(ERROR, tags_->Get(report_id))
+        << "Failed to delete " << root_metadata.ProgramDirectory(program);
   }
 
   root_metadata.Delete(report_id);
