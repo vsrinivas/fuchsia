@@ -1143,9 +1143,7 @@ config("Wno-unused-but-set-variable") {
 # Config to suppress Wbitwise-instead-of-logical warning in the third party code
 # that doesn't comply with.
 config("Wno-bitwise-instead-of-logical") {
-  if (clang_has_bitwise_bool_warning) {
-    cflags = [ "-Wno-bitwise-instead-of-logical" ]
-  }
+  cflags = [ "-Wno-bitwise-instead-of-logical" ]
   visibility = [ "//third_party/zstd:*" ]
 }
 
