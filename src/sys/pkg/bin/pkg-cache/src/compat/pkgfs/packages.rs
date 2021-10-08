@@ -38,7 +38,11 @@ use {
 
 #[derive(Debug)]
 struct PkgfsPackagesVariants {
+    // TODO(fxbug.dev/85268)
+    #[allow(unused)]
     contents: HashMap<PackageVariant, Hash>,
+    // TODO(fxbug.dev/85268)
+    #[allow(unused)]
     blobfs: blobfs::Client,
 }
 impl DirectoryEntry for PkgfsPackagesVariants {
