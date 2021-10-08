@@ -26,6 +26,5 @@ group("host-tool-deps") {
   deps = [
     "//src/developer/ffx:bin_sdk($host_toolchain)",
     "//src/sys/pkg/bin/pm:host",
-    "//tools/net/device-finder:host",
   ]
 }
