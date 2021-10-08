@@ -82,8 +82,7 @@ void DevicePort::GetStatusWatcher(GetStatusWatcherRequestView request,
 }
 
 bool DevicePort::MaybeFinishTeardown() {
-  if (teardown_started_ && on_teardown_ && watchers_.is_empty() && !mac_ && on_teardown_ &&
-      bindings_.is_empty()) {
+  if (teardown_started_ && on_teardown_ && watchers_.is_empty() && !mac_ && bindings_.is_empty()) {
     // Always finish teardown on dispatcher to evade deadlock opportunity on DeviceInterface ports
     // lock.
     async::PostTask(dispatcher_, [this, call = std::move(on_teardown_)]() mutable { call(*this); });
@@ -186,6 +185,11 @@ void DevicePort::Bind(fidl::ServerEnd<netdev::Port> req) {
   }
 
   fbl::AutoLock lock(&lock_);
+  // Disallow binding a new request if teardown already started to prevent races
+  // with the dispatched unbind below.
+  if (teardown_started_) {
+    return;
+  }
   // Capture a pointer to the binding so we can erase it in the unbound function.
   Binding* binding_ptr = binding.get();
   binding->Bind(fidl::BindServer(dispatcher_, std::move(req), this,
