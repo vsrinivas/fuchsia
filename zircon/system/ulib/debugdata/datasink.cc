@@ -180,11 +180,11 @@ uint8_t* MergeProfiles(uint8_t* dst, const uint8_t* src, size_t size) {
   for (; src_data < src_data_end && dst_data < dst_data_end; src_data++, dst_data++) {
     const uint64_t* src_counters =
         src_counters_start + (src_data->CounterPtr - src_counters_delta) / sizeof(uint64_t);
-    if (src_header->Version >= 7)
+    if (src_header->Version >= 8)
       src_counters_delta -= sizeof(*src_data);
     uint64_t* dst_counters =
         dst_counters_start + (dst_data->CounterPtr - dst_counters_delta) / sizeof(uint64_t);
-    if (src_header->Version >= 7)
+    if (src_header->Version >= 8)
       dst_counters_delta -= sizeof(*dst_data);
     for (unsigned i = 0; i < src_data->NumCounters; i++) {
       dst_counters[i] += src_counters[i];
