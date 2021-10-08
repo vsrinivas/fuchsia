@@ -53,6 +53,15 @@ type Ipv4AddressWithPrefix = struct {
     prefix_len uint8;
 };
 
+/// An IPv6 address with its subnet prefix length.
+type Ipv6AddressWithPrefix = struct {
+    /// The IPv6 address.
+    addr Ipv6Address;
+
+    /// The prefix length. Must be in the range [0, 128].
+    prefix_len uint8;
+};
+
 /// An address that can be assigned to a network interface.
 type InterfaceAddress = strict union {
     /// An IPv4 address with the prefix length.

@@ -17,6 +17,9 @@ struct/member fuchsia.net/Ipv4SocketAddress.port uint16
 struct fuchsia.net/Ipv4SocketAddress
 struct/member fuchsia.net/Ipv6Address.addr array<uint8,16>
 struct fuchsia.net/Ipv6Address
+struct/member fuchsia.net/Ipv6AddressWithPrefix.addr fuchsia.net/Ipv6Address
+struct/member fuchsia.net/Ipv6AddressWithPrefix.prefix_len uint8
+struct fuchsia.net/Ipv6AddressWithPrefix
 struct/member fuchsia.net/Ipv6SocketAddress.address fuchsia.net/Ipv6Address
 struct/member fuchsia.net/Ipv6SocketAddress.port uint16
 struct/member fuchsia.net/Ipv6SocketAddress.zone_index uint64
