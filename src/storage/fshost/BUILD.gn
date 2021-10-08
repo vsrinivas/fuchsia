@@ -66,9 +66,9 @@ source_set("launcher") {
   deps = [
     "//sdk/lib/fdio",
     "//sdk/lib/syslog/cpp",
-    "//zircon/public/lib/zircon-internal",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/fidl",
+    "//zircon/system/ulib/zircon-internal",
     "//zircon/system/ulib/zx",
   ]
 }
@@ -99,20 +99,20 @@ source_set("fshost-registry") {
     "//src/lib/storage/vfs/cpp",
     "//src/storage/fxfs:fuchsia.fxfs_llcpp",
     "//src/storage/memfs",
-    "//zircon/public/lib/zircon-internal",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/fdio-caller",
     "//zircon/system/ulib/service:service-llcpp",
+    "//zircon/system/ulib/zircon-internal",
     "//zircon/system/ulib/zx",
   ]
   deps = [
     "//sdk/lib/fdio",
     "//src/lib/files",
     "//src/storage/memfs:memfs-cpp",
-    "//zircon/public/lib/zircon-internal",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/fidl-async:fidl-async-cpp",
+    "//zircon/system/ulib/zircon-internal",
   ]
 
   # TODO(fxbug.dev/69585): This target uses raw zx::channel with LLCPP which is deprecated.
@@ -194,10 +194,10 @@ source_set("block-watcher") {
     "//src/storage/blobfs",
     "//src/storage/fxfs:fuchsia.fxfs_llcpp",
     "//src/storage/memfs",
-    "//zircon/public/lib/zircon-internal",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/fdio-caller",
+    "//zircon/system/ulib/zircon-internal",
     "//zircon/system/ulib/zx",
   ]
   deps = [
@@ -226,7 +226,6 @@ source_set("block-watcher") {
     "//src/storage/gpt",
     "//src/storage/minfs",
     "//src/sys/pkg/fidl/fuchsia.update.verify:fuchsia.update.verify_llcpp",
-    "//zircon/public/lib/zircon-internal",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/fidl",
     "//zircon/system/ulib/fidl-async:fidl-async-cpp",
@@ -234,6 +233,7 @@ source_set("block-watcher") {
     "//zircon/system/ulib/service:service-llcpp",
     "//zircon/system/ulib/trace",
     "//zircon/system/ulib/trace-engine",
+    "//zircon/system/ulib/zircon-internal",
     "//zircon/system/ulib/zx",
   ]
 

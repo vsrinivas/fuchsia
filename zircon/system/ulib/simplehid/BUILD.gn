@@ -13,7 +13,7 @@ zx_library("simplehid") {
     "//sdk/banjo/fuchsia.hardware.hidbus:fuchsia.hardware.hidbus_banjo_cpp",
 
     # <lib/simplehid/simplehid.h> has #include <lib/zircon-internal/thread_annotations.h>.
-    "//zircon/public/lib/zircon-internal",
+    "//zircon/system/ulib/zircon-internal",
   ]
   deps = [
     "//sdk/lib/fit",

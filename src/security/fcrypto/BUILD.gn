@@ -32,8 +32,8 @@ source_set("fcrypto") {
 
   deps = [
     "//third_party/boringssl",
-    "//zircon/public/lib/zircon-internal",
     "//zircon/system/ulib/explicit-memory",
+    "//zircon/system/ulib/zircon-internal",
   ]
 }
 

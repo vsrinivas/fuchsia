@@ -21,10 +21,10 @@ source_set("pcie") {
     "//src/connectivity/wlan/drivers/third_party/intel/iwlwifi/fw",
     "//src/devices/pci/lib/device-protocol-pci",
     "//src/lib/ddk",
-    "//zircon/public/lib/zircon-internal",
     "//zircon/system/ulib/async",
     "//zircon/system/ulib/backtrace-request",
     "//zircon/system/ulib/sync",
+    "//zircon/system/ulib/zircon-internal",
   ]
   public_deps = [
     "//src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform",

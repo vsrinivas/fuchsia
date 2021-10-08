@@ -14,12 +14,12 @@ executable("biotime") {
     "//sdk/fidl/fuchsia.hardware.block:fuchsia.hardware.block_c",
     "//sdk/lib/fdio",
     "//sdk/lib/fit",
-    "//zircon/public/lib/zircon-internal",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/fdio-caller",
     "//zircon/system/ulib/fzl",
     "//zircon/system/ulib/perftest",
     "//zircon/system/ulib/sync",
+    "//zircon/system/ulib/zircon-internal",
   ]
 }
 

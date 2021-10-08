@@ -28,9 +28,9 @@ shared_deps = [
   "//src/devices/lib/iommu",
   "//src/lib/ddk:ddk-deprecated-binding-headers",
   "//third_party/acpica",
-  "//zircon/public/lib/zircon-internal",
   "//zircon/system/ulib/fbl",
   "//zircon/system/ulib/fidl-async:fidl-async-cpp",
+  "//zircon/system/ulib/zircon-internal",
   "//zircon/system/ulib/zxc",
 ]
 

@@ -29,7 +29,6 @@ test("zxcrypt") {
     "//src/storage/fvm",
     "//src/storage/gpt",
     "//third_party/boringssl",
-    "//zircon/public/lib/zircon-internal",
     "//zircon/system/ulib/block-client",
     "//zircon/system/ulib/driver-integration-test",
     "//zircon/system/ulib/fbl",
@@ -37,6 +36,7 @@ test("zxcrypt") {
     "//zircon/system/ulib/fzl",
     "//zircon/system/ulib/pretty",
     "//zircon/system/ulib/ramdevice-client",
+    "//zircon/system/ulib/zircon-internal",
     "//zircon/system/ulib/zx",
     "//zircon/system/ulib/zxtest",
   ]

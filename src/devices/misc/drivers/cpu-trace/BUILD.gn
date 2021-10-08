@@ -29,8 +29,8 @@ source_set("perf-mon") {
   deps = [
     "//sdk/banjo/fuchsia.hardware.platform.device:fuchsia.hardware.platform.device_banjo_cpp",
     "//sdk/fidl/fuchsia.perfmon.cpu:fuchsia.perfmon.cpu_llcpp",
-    "//zircon/public/lib/zircon-internal",
     "//zircon/system/ulib/fbl",
+    "//zircon/system/ulib/zircon-internal",
   ]
 }
 
@@ -63,9 +63,9 @@ fuchsia_driver("cpu-trace-driver") {
     "//src/devices/lib/driver",
     "//src/lib/ddk",
     "//src/lib/ddktl",
-    "//zircon/public/lib/zircon-internal",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/fidl",
+    "//zircon/system/ulib/zircon-internal",
     "//zircon/system/ulib/zx",
   ]
 }
@@ -95,7 +95,7 @@ test("perf-mon-tests-bin") {
     "//src/devices/lib/driver",
     "//src/devices/testing/fake-bti",
     "//src/devices/testing/no_ddk",
-    "//zircon/public/lib/zircon-internal",
+    "//zircon/system/ulib/zircon-internal",
     "//zircon/system/ulib/zxtest",
   ]
 }

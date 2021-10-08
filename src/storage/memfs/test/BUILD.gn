@@ -46,7 +46,6 @@ test("memfs-test") {
     "//src/lib/storage/vfs/cpp",
     "//src/storage/memfs",
     "//src/storage/memfs:memfs-cpp",
-    "//zircon/public/lib/zircon-internal",
     "//zircon/system/ulib/async",
     "//zircon/system/ulib/async:async-cpp",
     "//zircon/system/ulib/async-default",
@@ -54,6 +53,7 @@ test("memfs-test") {
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/sync",
+    "//zircon/system/ulib/zircon-internal",
     "//zircon/system/ulib/zxtest",
   ]
 }

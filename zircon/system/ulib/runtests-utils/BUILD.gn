@@ -24,7 +24,7 @@ zx_library("runtests-utils") {
     # <runtests-utils/log-exporter.h> has #include <lib/fidl/cpp/message_buffer.h>.
     # <runtests-utils/runtests-utils.h> has #include <lib/zircon-internal/fnv1hash.h>.
     "//sdk/lib/fidl/cpp:cpp_base",
-    "//zircon/public/lib/zircon-internal",
+    "//zircon/system/ulib/zircon-internal",
 
     # <runtests-utils/log-exporter.h> has #include <fuchsia/logger/c/fidl.h>.
     "//sdk/fidl/fuchsia.logger:fuchsia.logger_c",
@@ -40,7 +40,6 @@ zx_library("runtests-utils") {
     "//sdk/fidl/fuchsia.logger:fuchsia.logger_c",
     "//sdk/lib/fdio",
     "//src/lib/storage/vfs/cpp",
-    "//zircon/public/lib/zircon-internal",
     "//zircon/system/ulib/async",
     "//zircon/system/ulib/async:async-cpp",
     "//zircon/system/ulib/async-default",
@@ -51,6 +50,7 @@ zx_library("runtests-utils") {
     "//zircon/system/ulib/fidl",
     "//zircon/system/ulib/fidl-async:fidl-async-cpp",
     "//zircon/system/ulib/fzl",
+    "//zircon/system/ulib/zircon-internal",
     "//zircon/system/ulib/zx",
   ]
 

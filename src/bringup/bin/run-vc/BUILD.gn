@@ -8,6 +8,6 @@ executable("run-vc") {
   deps = [
     "//sdk/fidl/fuchsia.virtualconsole:fuchsia.virtualconsole_c",
     "//sdk/lib/fdio",
-    "//zircon/public/lib/zircon-internal",
+    "//zircon/system/ulib/zircon-internal",
   ]
 }

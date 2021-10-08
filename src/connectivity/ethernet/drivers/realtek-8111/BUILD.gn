@@ -28,7 +28,7 @@ if (current_cpu == "x64") {
       "//src/devices/lib/driver",
       "//src/devices/pci/lib/device-protocol-pci",
       "//src/lib/ddk",
-      "//zircon/public/lib/zircon-internal",
+      "//zircon/system/ulib/zircon-internal",
     ]
   }
 

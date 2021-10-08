@@ -49,9 +49,9 @@ source_set("core") {
   deps = [
     "//src/connectivity/wlan/drivers/third_party/intel/iwlwifi/fw:api",
     "//src/lib/ddk",
-    "//zircon/public/lib/zircon-internal",
     "//zircon/system/public",
     "//zircon/system/ulib/sync",
+    "//zircon/system/ulib/zircon-internal",
   ]
   public_deps = [
     "//sdk/banjo/ddk.hw.wlan.wlaninfo:ddk.hw.wlan.wlaninfo_banjo_c",

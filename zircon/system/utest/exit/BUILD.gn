@@ -14,7 +14,7 @@ test("exit") {
   sources = [ "exit.c" ]
   deps = [
     "//sdk/lib/fdio",
-    "//zircon/public/lib/zircon-internal",
+    "//zircon/system/ulib/zircon-internal",
     "//zircon/system/ulib/zxtest",
   ]
 }

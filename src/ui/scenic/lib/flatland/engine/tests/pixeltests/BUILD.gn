@@ -61,6 +61,6 @@ source_set("pixeltest_lib") {
     "//src/ui/scenic/lib/flatland/engine:engine_host_accessible_framebuffers",
     "//src/ui/scenic/lib/scheduling:frame_scheduler",
     "//third_party/googletest:gmock",
-    "//zircon/public/lib/zircon-internal",
+    "//zircon/system/ulib/zircon-internal",
   ]
 }

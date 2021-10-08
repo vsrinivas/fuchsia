@@ -12,7 +12,7 @@ fuzzer("syslog-fuzzer") {
   deps = [
     "//sdk/lib/syslog/cpp",
     "//sdk/lib/syslog/cpp:backend",
-    "//zircon/public/lib/zircon-internal",
+    "//zircon/system/ulib/zircon-internal",
   ]
   options = [ "max_len=1000000" ]
 }
@@ -25,7 +25,7 @@ fuzzer("syslog-fuzzer-legacy") {
   sources = [ "fuzz.cc" ]
   deps = [
     "//sdk/lib/syslog/cpp",
-    "//zircon/public/lib/zircon-internal",
+    "//zircon/system/ulib/zircon-internal",
   ]
   options = [ "max_len=1000000" ]
 }
@@ -38,7 +38,7 @@ fuzzer("sdk-fuzzer") {
   sources = [ "fuzz-sdk.cc" ]
   deps = [
     "//sdk/lib/syslog/structured_backend",
-    "//zircon/public/lib/zircon-internal",
+    "//zircon/system/ulib/zircon-internal",
   ]
   options = [ "max_len=1000000" ]
 }

@@ -40,7 +40,7 @@ static_library("debugger_utils") {
 
   public_deps = [
     "//src/lib/fxl",
-    "//zircon/public/lib/zircon-internal",
+    "//zircon/system/ulib/zircon-internal",
   ]
 
   deps = [ "//sdk/lib/fit" ]

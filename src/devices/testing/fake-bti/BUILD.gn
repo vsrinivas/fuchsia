@@ -26,8 +26,8 @@ zx_library("fake-bti") {
   deps = [
     "//sdk/lib/fdio",
     "//src/devices/testing/fake-object",
-    "//zircon/public/lib/zircon-internal",
     "//zircon/system/ulib/fbl",
+    "//zircon/system/ulib/zircon-internal",
     "//zircon/system/ulib/zx",
   ]
   configs += [ "//build/config/fuchsia:static_cpp_standard_library" ]

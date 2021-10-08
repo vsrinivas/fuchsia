@@ -36,7 +36,7 @@ zx_library("debugdata") {
     "//zircon/system/ulib/async:async-cpp",
 
     # <debugdata/debugdata.h> has #include <lib/zircon-internal/fnv1hash.h>.
-    "//zircon/public/lib/zircon-internal",
+    "//zircon/system/ulib/zircon-internal",
 
     # <debugdata/datasink.h> has #include <lib/zx/vmo.h>.
     "//zircon/system/ulib/zx",

@@ -55,7 +55,6 @@ source_set("common_srcs") {
     "//src/lib/ddk",
     "//src/lib/ddk:ddk-metadata-headers",
     "//src/lib/ddktl",
-    "//zircon/public/lib/zircon-internal",
     "//zircon/system/ulib/bitmap",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/fzl",
@@ -65,6 +64,7 @@ source_set("common_srcs") {
     "//zircon/system/ulib/inspect",
     "//zircon/system/ulib/mipi-dsi",
     "//zircon/system/ulib/sync",
+    "//zircon/system/ulib/zircon-internal",
     "//zircon/system/ulib/zx",
     "//zircon/system/ulib/zxc",
   ]

@@ -38,10 +38,10 @@ source_set("fake_buffer_collection") {
     "//src/devices/lib/sysmem",
     "//src/lib/ddk",
     "//src/lib/ddktl",
-    "//zircon/public/lib/zircon-internal",
     "//zircon/system/ulib/image-format",
     "//zircon/system/ulib/sync",
     "//zircon/system/ulib/syslog",
+    "//zircon/system/ulib/zircon-internal",
     "//zircon/third_party/ulib/safemath",
   ]
 }

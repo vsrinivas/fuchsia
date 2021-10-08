@@ -11,8 +11,8 @@ source_set("load_generator_lib") {
   ]
   public_deps = [
     "//src/storage/blobfs/test:test_utils",
-    "//zircon/public/lib/zircon-internal",
     "//zircon/system/ulib/fbl",
+    "//zircon/system/ulib/zircon-internal",
   ]
 }
 

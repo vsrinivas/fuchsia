@@ -20,13 +20,13 @@ executable("display_detect") {
     "//sdk/fidl/fuchsia.sysmem:fuchsia.sysmem_llcpp",
     "//sdk/lib/fdio",
     "//src/graphics/display/testing",
-    "//zircon/public/lib/zircon-internal",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/fdio-caller",
     "//zircon/system/ulib/fidl",
     "//zircon/system/ulib/fzl",
     "//zircon/system/ulib/image-format:image-format-llcpp",
     "//zircon/system/ulib/service:service-llcpp",
+    "//zircon/system/ulib/zircon-internal",
     "//zircon/system/ulib/zx",
   ]
 }

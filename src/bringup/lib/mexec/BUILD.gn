@@ -8,10 +8,10 @@ source_set("mexec") {
   deps = [
     "//sdk/fidl/fuchsia.device.manager:fuchsia.device.manager_llcpp",
     "//sdk/lib/fdio",
-    "//zircon/public/lib/zircon-internal",
     "//zircon/system/ulib/explicit-memory",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/zbitl",
+    "//zircon/system/ulib/zircon-internal",
   ]
 
   public_deps = [ "//zircon/system/ulib/zx" ]

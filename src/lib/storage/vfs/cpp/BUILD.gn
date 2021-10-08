@@ -34,8 +34,8 @@ static_library("cpp") {
   ]
 
   deps = [
-    "//zircon/public/lib/zircon-internal",
     "//zircon/system/ulib/fbl",
+    "//zircon/system/ulib/zircon-internal",
   ]
 
   if (is_fuchsia) {

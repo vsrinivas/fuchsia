@@ -24,13 +24,13 @@ common_deps = [
   "//src/devices/lib/mmio",
   "//src/lib/ddk",
   "//src/lib/ddktl",
-  "//zircon/public/lib/zircon-internal",
   "//zircon/system/ulib/async-loop:async-loop-cpp",
   "//zircon/system/ulib/async-loop:async-loop-default",
   "//zircon/system/ulib/fbl",
   "//zircon/system/ulib/fidl:fidl-llcpp",
   "//zircon/system/ulib/trace",
   "//zircon/system/ulib/trace:trace-driver",
+  "//zircon/system/ulib/zircon-internal",
   "//zircon/system/ulib/zx",
 ]
 
@@ -85,7 +85,7 @@ test("goldfish-pipe-device-test") {
            "//zircon/system/ulib/fidl-async:fidl-async-cpp",
            "//zircon/system/ulib/mock-function",
            "//zircon/system/ulib/sync",
-           "//zircon/public/lib/zircon-internal",
+           "//zircon/system/ulib/zircon-internal",
            "//zircon/system/ulib/zx",
            "//zircon/system/ulib/zxtest",
          ]

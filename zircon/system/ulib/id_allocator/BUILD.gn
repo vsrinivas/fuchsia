@@ -16,10 +16,10 @@ zx_library("id_allocator") {
     "//zircon/system/ulib/fbl",
   ]
   deps = [
-    "//zircon/public/lib/zircon-internal",
     "//zircon/system/public",
     "//zircon/system/ulib/bitmap",
     "//zircon/system/ulib/fbl",
+    "//zircon/system/ulib/zircon-internal",
   ]
 }
 

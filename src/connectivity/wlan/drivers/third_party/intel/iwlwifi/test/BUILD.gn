@@ -165,7 +165,7 @@ executable("mac_ctxt_test") {
   deps = [
     ":sim_library",
     "//src/connectivity/wlan/drivers/third_party/intel/iwlwifi/mvm",
-    "//zircon/public/lib/zircon-internal",
+    "//zircon/system/ulib/zircon-internal",
     "//zircon/system/ulib/zxtest",
   ]
 
@@ -201,10 +201,10 @@ executable("mvm_test") {
     ":sim_library",
     "//src/connectivity/wlan/drivers/third_party/intel/iwlwifi/mvm",
     "//src/devices/testing/fake-bti",
-    "//zircon/public/lib/zircon-internal",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/mock-function",
+    "//zircon/system/ulib/zircon-internal",
     "//zircon/system/ulib/zxtest",
   ]
 
@@ -252,12 +252,12 @@ executable("pcie_test") {
     "//src/devices/pci/testing:pci-protocol-fake",
     "//src/devices/testing/fake-bti",
     "//src/devices/testing/mock-ddk",
-    "//zircon/public/lib/zircon-internal",
     "//zircon/system/public",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/mock-function",
     "//zircon/system/ulib/sync",
+    "//zircon/system/ulib/zircon-internal",
     "//zircon/system/ulib/zx",
     "//zircon/system/ulib/zxtest",
   ]
@@ -273,7 +273,7 @@ executable("phy_ctxt_test") {
   deps = [
     ":sim_library",
     "//src/connectivity/wlan/drivers/third_party/intel/iwlwifi/mvm",
-    "//zircon/public/lib/zircon-internal",
+    "//zircon/system/ulib/zircon-internal",
     "//zircon/system/ulib/zxtest",
   ]
 

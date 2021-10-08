@@ -36,10 +36,10 @@ source_set("optee_lib") {
     "//src/devices/lib/mmio",
     "//src/lib/ddktl",
     "//src/security/tee/tee-client-api:tee-client-api-headers",
-    "//zircon/public/lib/zircon-internal",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/region-alloc",
+    "//zircon/system/ulib/zircon-internal",
     "//zircon/system/ulib/zx",
   ]
 

@@ -26,9 +26,9 @@ test("display-core-unittests") {
     "//sdk/fidl/fuchsia.hardware.display:fuchsia.hardware.display_llcpp",
     "//sdk/fidl/fuchsia.sysmem:fuchsia.sysmem_llcpp",
     "//src/devices/testing/fake_ddk",
-    "//zircon/public/lib/zircon-internal",
     "//zircon/system/ulib/async-testing",
     "//zircon/system/ulib/fbl",
+    "//zircon/system/ulib/zircon-internal",
   ]
 
   # TODO(fxbug.dev/69585): This target uses raw zx::channel with LLCPP which is deprecated.
@@ -57,8 +57,8 @@ static_library("base") {
     "//src/devices/sysmem/drivers/sysmem:sysmem_common_srcs",
     "//src/graphics/display/drivers/display:shared",
     "//src/graphics/display/drivers/fake:fake-display-device-tree",
-    "//zircon/public/lib/zircon-internal",
     "//zircon/system/ulib/async-testing",
+    "//zircon/system/ulib/zircon-internal",
     "//zircon/system/ulib/zxtest",
   ]
 

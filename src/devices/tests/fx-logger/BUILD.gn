@@ -9,8 +9,8 @@ fuzzer("fx-log-fuzzer") {
   deps = [
     "//sdk/lib/syslog/cpp",
     "//sdk/lib/syslog/cpp:backend",
-    "//zircon/public/lib/zircon-internal",
     "//zircon/system/ulib/syslog",
+    "//zircon/system/ulib/zircon-internal",
   ]
   options = [ "max_len=1000000" ]
 }
@@ -24,8 +24,8 @@ fuzzer("fx-log-compat-fuzzer") {
   deps = [
     "//sdk/lib/syslog/cpp",
     "//sdk/lib/syslog/cpp:backend",
-    "//zircon/public/lib/zircon-internal",
     "//zircon/system/ulib/syslog:syslog-compat",
+    "//zircon/system/ulib/zircon-internal",
   ]
   options = [ "max_len=1000000" ]
 }

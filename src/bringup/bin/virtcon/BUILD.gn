@@ -51,7 +51,6 @@ group("common") {
     "//src/lib/storage/vfs/cpp",
     "//src/ui/input/lib/hid-input-report",
     "//src/ui/lib/key_util",
-    "//zircon/public/lib/zircon-internal",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/fdio-caller",
@@ -66,6 +65,7 @@ group("common") {
     "//zircon/system/ulib/service:service-llcpp",
     "//zircon/system/ulib/statusor",
     "//zircon/system/ulib/svc",
+    "//zircon/system/ulib/zircon-internal",
     "//zircon/system/ulib/zx",
   ]
 }

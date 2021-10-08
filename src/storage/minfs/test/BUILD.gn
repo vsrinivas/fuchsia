@@ -46,7 +46,6 @@ test("minfs_unit") {
     "//src/storage/minfs",
     "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",
-    "//zircon/public/lib/zircon-internal",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/bitmap",
@@ -54,6 +53,7 @@ test("minfs_unit") {
     "//zircon/system/ulib/block-client:fake-device",
     "//zircon/system/ulib/cobalt-client:in-memory-logger",
     "//zircon/system/ulib/sync",
+    "//zircon/system/ulib/zircon-internal",
     "//zircon/system/ulib/zxc",
     "//zircon/third_party/ulib/cksum",
     "//zircon/third_party/ulib/safemath",
@@ -107,9 +107,9 @@ test("minfs_dirty_cache_integration") {
     "//src/storage/minfs",
     "//src/storage/testing:storage_driver_test_support",
     "//third_party/googletest:gtest",
-    "//zircon/public/lib/zircon-internal",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/fdio-caller",
+    "//zircon/system/ulib/zircon-internal",
     "//zircon/system/ulib/zxc",
   ]
 
@@ -216,11 +216,11 @@ fuzzer("minfs-fuzzer") {
   sources = [ "unit/fuzz.cc" ]
   deps = [
     "//src/storage/minfs",
-    "//zircon/public/lib/zircon-internal",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/bitmap",
     "//zircon/system/ulib/block-client:fake-device",
+    "//zircon/system/ulib/zircon-internal",
     "//zircon/system/ulib/zxc",
   ]
 

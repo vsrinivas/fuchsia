@@ -40,8 +40,8 @@ static_library("transaction") {
 
     deps += [
       "//sdk/lib/fdio",
-      "//zircon/public/lib/zircon-internal",
       "//zircon/system/ulib/trace",
+      "//zircon/system/ulib/zircon-internal",
       "//zircon/system/ulib/zx",
     ]
   }
