@@ -198,7 +198,9 @@ TEST(IntelI915Display, SysmemInvalidType) {
 
 TEST(IntelI915Display, BacklightValue) {
   i915::Controller controller(nullptr);
-  i915::DpDisplay display(&controller, 0, registers::kDdis[0]);
+  inspect::Node node;
+  i915::DpAux dp_aux(registers::kDdis[0]);
+  i915::DpDisplay display(&controller, 0, registers::kDdis[0], &dp_aux, &node);
 
   constexpr uint32_t kMinimumRegCount = 0xd0000 / sizeof(uint32_t);
   std::vector<uint32_t> regs(kMinimumRegCount);

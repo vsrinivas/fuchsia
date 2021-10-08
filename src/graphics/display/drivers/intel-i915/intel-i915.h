@@ -13,6 +13,7 @@
 #include <fuchsia/hardware/pci/c/banjo.h>
 #include <fuchsia/hardware/sysmem/c/banjo.h>
 #include <lib/ddk/mmio-buffer.h>
+#include <lib/inspect/cpp/inspect.h>
 #include <lib/mmio/mmio.h>
 #include <lib/pci/hw.h>
 #include <lib/zx/channel.h>
@@ -143,9 +144,6 @@ class Controller : public DeviceType,
   zx_status_t GetMaxTransferSize(uint32_t bus_id, size_t* out_size);
   zx_status_t SetBitrate(uint32_t bus_id, uint32_t bitrate);
   zx_status_t Transact(uint32_t bus_id, const i2c_impl_op_t* ops, size_t count);
-
-  bool DpcdRead(registers::Ddi ddi, uint32_t addr, uint8_t* buf, size_t size);
-  bool DpcdWrite(registers::Ddi ddi, uint32_t addr, const uint8_t* buf, size_t size);
 
   ddk::MmioBuffer* mmio_space() { return mmio_space_.has_value() ? &*mmio_space_ : nullptr; }
   Interrupts* interrupts() { return &interrupts_; }
@@ -299,6 +297,10 @@ class Controller : public DeviceType,
   bool sblc_polarity_;
 
   std::optional<uint64_t> eld_display_id_;
+
+  // Debug
+  inspect::Inspector inspector_;
+  inspect::Node root_node_;
 };
 
 }  // namespace i915

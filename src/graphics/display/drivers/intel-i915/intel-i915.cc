@@ -551,7 +551,8 @@ std::unique_ptr<DisplayDevice> Controller::QueryDisplay(registers::Ddi ddi) {
   fbl::AllocChecker ac;
   if (igd_opregion_.SupportsDp(ddi)) {
     zxlogf(DEBUG, "Checking for displayport monitor");
-    auto dp_disp = fbl::make_unique_checked<DpDisplay>(&ac, this, next_id_, ddi);
+    auto dp_disp =
+        fbl::make_unique_checked<DpDisplay>(&ac, this, next_id_, ddi, &dp_auxs_[ddi], &root_node_);
     if (ac.check() && reinterpret_cast<DisplayDevice*>(dp_disp.get())->Query()) {
       return dp_disp;
     }
@@ -1992,14 +1993,6 @@ zx_status_t Controller::Transact(uint32_t bus_id, const i2c_impl_op_t* ops, size
   }
 }
 
-bool Controller::DpcdRead(registers::Ddi ddi, uint32_t addr, uint8_t* buf, size_t size) {
-  return dp_auxs_[ddi].DpcdRead(addr, buf, size);
-}
-
-bool Controller::DpcdWrite(registers::Ddi ddi, uint32_t addr, const uint8_t* buf, size_t size) {
-  return dp_auxs_[ddi].DpcdWrite(addr, buf, size);
-}
-
 // Ddk methods
 
 void Controller::DdkInit(ddk::InitTxn txn) {
@@ -2255,7 +2248,7 @@ zx_status_t Controller::Init() {
     }
   }
 
-  status = DdkAdd("intel_i915");
+  status = DdkAdd(ddk::DeviceAddArgs("intel_i915").set_inspect_vmo(inspector_.DuplicateVmo()));
   if (status != ZX_OK) {
     zxlogf(ERROR, "Failed to add controller device");
     return status;
@@ -2278,6 +2271,8 @@ zx_status_t Controller::Init() {
     zxlogf(ERROR, "Failed to publish gpu core device (%d)", status);
     return status;
   }
+
+  root_node_ = inspector_.GetRoot().CreateChild("intel-i915");
 
   zxlogf(TRACE, "bind done");
 

@@ -13,6 +13,8 @@
 #include <algorithm>
 #include <iterator>
 
+#include <fbl/string_printf.h>
+
 #include "intel-i915.h"
 #include "macros.h"
 #include "pci-ids.h"
@@ -692,11 +694,11 @@ void DpCapabilities::PublishInspect() {
 }
 
 bool DpDisplay::DpcdWrite(uint32_t addr, const uint8_t* buf, size_t size) {
-  return controller()->DpcdWrite(ddi(), addr, buf, size);
+  return dp_aux_->DpcdWrite(addr, buf, size);
 }
 
 bool DpDisplay::DpcdRead(uint32_t addr, uint8_t* buf, size_t size) {
-  return controller()->DpcdRead(ddi(), addr, buf, size);
+  return dp_aux_->DpcdRead(addr, buf, size);
 }
 
 // Link training functions
@@ -801,13 +803,15 @@ bool DpDisplay::DpcdHandleAdjustRequest(dpcd::TrainingLaneSet* training,
 }
 
 bool DpDisplay::LinkTrainingSetup() {
+  ZX_ASSERT(capabilities_);
+
   registers::DdiRegs ddi_regs(ddi());
 
   // Tell the source device to emit the training pattern.
   auto dp_tp = ddi_regs.DdiDpTransportControl().ReadFrom(mmio_space());
   dp_tp.set_transport_enable(1);
   dp_tp.set_transport_mode_select(0);
-  dp_tp.set_enhanced_framing_enable(dp_enhanced_framing_enabled_);
+  dp_tp.set_enhanced_framing_enable(capabilities_->enhanced_frame_capability());
   dp_tp.set_dp_link_training_pattern(dp_tp.kTrainingPattern1);
   dp_tp.WriteTo(mmio_space());
 
@@ -855,9 +859,9 @@ bool DpDisplay::LinkTrainingSetup() {
 
   uint16_t link_rate_reg;
   uint8_t link_rate_val;
-  if (dp_link_rate_idx_plus1_) {
+  if (dp_link_rate_table_idx_) {
     dpcd::LinkRateSet link_rate_set;
-    link_rate_set.set_link_rate_idx(static_cast<uint8_t>(dp_link_rate_idx_plus1_ - 1));
+    link_rate_set.set_link_rate_idx(static_cast<uint8_t>(dp_link_rate_table_idx_.value()));
     link_rate_reg = dpcd::DPCD_LINK_RATE_SET;
     link_rate_val = link_rate_set.reg_value();
   } else {
@@ -880,7 +884,7 @@ bool DpDisplay::LinkTrainingSetup() {
   // Configure the bandwidth and lane count settings
   dpcd::LaneCount lc_setting;
   lc_setting.set_lane_count_set(dp_lane_count_);
-  lc_setting.set_enhanced_frame_enabled(dp_enhanced_framing_enabled_);
+  lc_setting.set_enhanced_frame_enabled(capabilities_->enhanced_frame_capability());
   if (!DpcdWrite(link_rate_reg, &link_rate_val, 1) ||
       !DpcdWrite(dpcd::DPCD_COUNT_SET, lc_setting.reg_value_ptr(), 1)) {
     zxlogf(ERROR, "DP: Link training: failed to configure settings");
@@ -895,6 +899,8 @@ bool DpDisplay::LinkTrainingSetup() {
 static const int kPollsPerVoltageLevel = 5;
 
 bool DpDisplay::LinkTrainingStage1(dpcd::TrainingPatternSet* tp_set, dpcd::TrainingLaneSet* lanes) {
+  ZX_ASSERT(capabilities_);
+
   // Tell the sink device to look for the training pattern.
   tp_set->set_training_pattern_set(tp_set->kTrainingPattern1);
   tp_set->set_scrambling_disable(1);
@@ -903,15 +909,15 @@ bool DpDisplay::LinkTrainingStage1(dpcd::TrainingPatternSet* tp_set, dpcd::Train
   dpcd::LaneStatus lane_status[dp_lane_count_];
 
   int poll_count = 0;
-  dpcd::TrainingAuxRdInterval delay;
-  delay.set_reg_value(dpcd_capability(dpcd::DPCD_TRAINING_AUX_RD_INTERVAL));
+  auto delay =
+      capabilities_->dpcd_reg<dpcd::TrainingAuxRdInterval, dpcd::DPCD_TRAINING_AUX_RD_INTERVAL>();
   for (;;) {
     if (!DpcdRequestLinkTraining(*tp_set, lanes)) {
       return false;
     }
 
-    zx_nanosleep(zx_deadline_after(
-        ZX_USEC(delay.clock_recovery_delay_us(dpcd::Revision(dpcd_capability(dpcd::DPCD_REV))))));
+    zx_nanosleep(
+        zx_deadline_after(ZX_USEC(delay.clock_recovery_delay_us(capabilities_->dpcd_revision()))));
 
     // Did the sink device receive the signal successfully?
     if (!DpcdReadPairedRegs<dpcd::DPCD_LANE0_1_STATUS, dpcd::LaneStatus>(lane_status)) {
@@ -949,6 +955,8 @@ bool DpDisplay::LinkTrainingStage1(dpcd::TrainingPatternSet* tp_set, dpcd::Train
 }
 
 bool DpDisplay::LinkTrainingStage2(dpcd::TrainingPatternSet* tp_set, dpcd::TrainingLaneSet* lanes) {
+  ZX_ASSERT(capabilities_);
+
   registers::DdiRegs ddi_regs(ddi());
   auto dp_tp = ddi_regs.DdiDpTransportControl().ReadFrom(mmio_space());
 
@@ -960,8 +968,8 @@ bool DpDisplay::LinkTrainingStage2(dpcd::TrainingPatternSet* tp_set, dpcd::Train
 
   tp_set->set_training_pattern_set(tp_set->kTrainingPattern2);
   int poll_count = 0;
-  dpcd::TrainingAuxRdInterval delay;
-  delay.set_reg_value(dpcd_capability(dpcd::DPCD_TRAINING_AUX_RD_INTERVAL));
+  auto delay =
+      capabilities_->dpcd_reg<dpcd::TrainingAuxRdInterval, dpcd::DPCD_TRAINING_AUX_RD_INTERVAL>();
   for (;;) {
     // lane0_training and lane1_training can change in the loop
     if (!DpcdRequestLinkTraining(*tp_set, lanes)) {
@@ -1066,126 +1074,75 @@ void CalculateRatio(uint32_t x, uint32_t y, uint32_t* m_out, uint32_t* n_out) {
 
 namespace i915 {
 
-DpDisplay::DpDisplay(Controller* controller, uint64_t id, registers::Ddi ddi)
-    : DisplayDevice(controller, id, ddi) {}
+DpDisplay::DpDisplay(Controller* controller, uint64_t id, registers::Ddi ddi, DpAux* dp_aux,
+                     inspect::Node* parent_node)
+    : DisplayDevice(controller, id, ddi), dp_aux_(dp_aux) {
+  ZX_ASSERT(dp_aux);
+  inspect_node_ = parent_node->CreateChild(fbl::StringPrintf("dp-display-%lu", id));
+  dp_lane_count_inspect_ = inspect_node_.CreateUint("dp_lane_count", 0);
+  dp_link_rate_mhz_inspect_ = inspect_node_.CreateUint("dp_link_rate_mhz", 0);
+}
 
 bool DpDisplay::Query() {
   // For eDP displays, assume that the BIOS has enabled panel power, given
   // that we need to rely on it properly configuring panel power anyway. For
   // general DP displays, the default power state is D0, so we don't have to
   // worry about AUX failures because of power saving mode.
+  {
+    auto capabilities = DpCapabilities::Read(dp_aux_, &inspect_node_);
+    if (capabilities.is_error()) {
+      return false;
+    }
 
-  if (!DpcdRead(dpcd::DPCD_CAP_START, dpcd_capabilities_, std::size(dpcd_capabilities_))) {
-    zxlogf(TRACE, "Failed to read dpcd capabilities");
+    capabilities_ = capabilities.take_value();
+  }
+
+  // TODO(fxbug.dev/31313): Add support for MST
+  if (capabilities_->sink_count() != 1) {
+    zxlogf(ERROR, "MST not supported");
     return false;
   }
 
-  dpcd::DownStreamPortPresent dsp;
-  dsp.set_reg_value(dpcd_capability(dpcd::DPCD_DOWN_STREAM_PORT_PRESENT));
-  if (dsp.is_branch()) {
-    dpcd::DownStreamPortCount count;
-    count.set_reg_value(dpcd_capability(dpcd::DPCD_DOWN_STREAM_PORT_COUNT));
-    zxlogf(DEBUG, "Found branch with %d ports", count.count());
-
-    dpcd::SinkCount sink_count;
-    if (!DpcdRead(dpcd::DPCD_SINK_COUNT, sink_count.reg_value_ptr(), 1)) {
-      zxlogf(ERROR, "Failed to read DP sink count");
-      return false;
-    }
-    // TODO(fxbug.dev/31313): Add support for MST
-    if (sink_count.count() != 1) {
-      zxlogf(ERROR, "MST not supported");
-      return false;
-    }
-  }
-
-  if (controller()->igd_opregion().IsEdp(ddi())) {
-    dpcd::EdpConfigCap edp_caps;
-    edp_caps.set_reg_value(dpcd_capability(dpcd::DPCD_EDP_CONFIG));
-
-    if (edp_caps.dpcd_display_ctrl_capable() &&
-        !DpcdRead(dpcd::DPCD_EDP_CAP_START, dpcd_edp_capabilities_,
-                  std::size(dpcd_edp_capabilities_))) {
-      zxlogf(ERROR, "Failed to read edp capabilities");
-      return false;
-    }
-
-    dpcd::EdpConfigCap config_cap;
-    dpcd::EdpGeneralCap1 general_cap;
-    dpcd::EdpBacklightCap backlight_cap;
-
-    config_cap.set_reg_value(dpcd_capability(dpcd::DPCD_EDP_CONFIG));
-    general_cap.set_reg_value(dpcd_edp_capability(dpcd::DPCD_EDP_GENERAL_CAP1));
-    backlight_cap.set_reg_value(dpcd_edp_capability(dpcd::DPCD_EDP_BACKLIGHT_CAP));
-
-    backlight_aux_power_ = config_cap.dpcd_display_ctrl_capable() &&
-                           general_cap.tcon_backlight_adjustment_cap() &&
-                           general_cap.backlight_aux_enable_cap();
-    backlight_aux_brightness_ = config_cap.dpcd_display_ctrl_capable() &&
-                                general_cap.tcon_backlight_adjustment_cap() &&
-                                backlight_cap.brightness_aux_set_cap();
-  }
-
-  dpcd::LaneCount max_lc;
-  max_lc.set_reg_value(dpcd_capability(dpcd::DPCD_MAX_LANE_COUNT));
-  dp_lane_count_ = max_lc.lane_count_set();
-  if ((ddi() == registers::DDI_A || ddi() == registers::DDI_E) && dp_lane_count_ == 4 &&
+  uint8_t lane_count = 0;
+  if ((ddi() == registers::DDI_A || ddi() == registers::DDI_E) &&
+      capabilities_->max_lane_count() == 4 &&
       !registers::DdiRegs(registers::DDI_A)
            .DdiBufControl()
            .ReadFrom(mmio_space())
            .ddi_a_lane_capability_control()) {
-    dp_lane_count_ = 2;
-  }
-  dp_enhanced_framing_enabled_ = max_lc.enhanced_frame_enabled();
-
-  dpcd::LinkBw max_link_bw;
-  max_link_bw.set_reg_value(dpcd_capability(dpcd::DPCD_MAX_LINK_RATE));
-  dp_link_rate_idx_plus1_ = 0;
-  dp_link_rate_mhz_ = 0;
-  switch (max_link_bw.link_bw()) {
-    case max_link_bw.k1620Mbps:
-      dp_link_rate_mhz_ = 1620;
-      break;
-    case max_link_bw.k2700Mbps:
-      dp_link_rate_mhz_ = 2700;
-      break;
-    case max_link_bw.k5400Mbps:
-    case max_link_bw.k8100Mbps:
-      dp_link_rate_mhz_ = 5400;
-      break;
-    case 0:
-      for (unsigned i = dpcd::DPCD_SUPPORTED_LINK_RATE_START;
-           i <= dpcd::DPCD_SUPPORTED_LINK_RATE_END; i += 2) {
-        uint8_t high = 0;
-        uint8_t low = 0;
-        // Go until there's a failure or we find a 0 to mark the end
-        if (!DpcdRead(i, &low, 1) || !DpcdRead(i + 1, &high, 1) || (!high && !low)) {
-          break;
-        }
-        // Convert from the dpcd field's units of 200kHz to mHz.
-        uint32_t val = ((high << 8) | low) / 5;
-        // Make sure we support it. The list is ascending, so this will pick the max.
-        if (val == 1620 || val == 2700 || val == 3240 || val == 5400) {
-          dp_link_rate_mhz_ = val;
-          dp_link_rate_idx_plus1_ =
-              static_cast<uint8_t>(((i - dpcd::DPCD_SUPPORTED_LINK_RATE_START) / 2) + 1);
-        }
-      }
-      break;
-    default:
-      break;
-  }
-  if (!dp_link_rate_mhz_) {
-    zxlogf(ERROR, "Unsupported max link bandwidth %d", max_link_bw.link_bw());
-    return false;
+    lane_count = 2;
+  } else {
+    lane_count = capabilities_->max_lane_count();
   }
 
-  zxlogf(INFO, "Found %s monitor", controller()->igd_opregion().IsEdp(ddi()) ? "eDP" : "DP");
+  dp_lane_count_ = lane_count;
+  dp_lane_count_inspect_.Set(lane_count);
+
+  ZX_ASSERT(!dp_link_rate_table_idx_.has_value());
+  ZX_ASSERT(!capabilities_->supported_link_rates_mbps().empty());
+
+  // Pick the maximum supported link rate.
+  uint8_t index = static_cast<uint8_t>(capabilities_->supported_link_rates_mbps().size() - 1);
+  uint32_t link_rate = capabilities_->supported_link_rates_mbps()[index];
+
+  zxlogf(INFO, "Selected maximum supported DisplayPort link rate: %u Mbps/lane", link_rate);
+  dp_link_rate_mhz_ = link_rate;
+  dp_link_rate_mhz_inspect_.Set(link_rate);
+  if (capabilities_->use_link_rate_table()) {
+    dp_link_rate_table_idx_ = index;
+  }
+
+  uint8_t last = static_cast<uint8_t>(capabilities_->supported_link_rates_mbps().size() - 1);
+  zxlogf(INFO, "Found %s monitor (max link rate: %d MHz, lane count: %d)",
+         (controller()->igd_opregion().IsEdp(ddi()) ? "eDP" : "DP"),
+         capabilities_->supported_link_rates_mbps()[last], dp_lane_count_);
 
   return true;
 }
 
 bool DpDisplay::InitDdi() {
+  ZX_ASSERT(capabilities_);
+
   bool is_edp = controller()->igd_opregion().IsEdp(ddi());
   if (is_edp) {
     auto panel_ctrl = registers::PanelPowerCtrl::Get().ReadFrom(mmio_space());
@@ -1208,7 +1165,7 @@ bool DpDisplay::InitDdi() {
     }
   }
 
-  if (dpcd_capability(dpcd::DPCD_REV) >= 0x11) {
+  if (capabilities_->dpcd_revision() >= dpcd::Revision::k1_1) {
     // If the device is in a low power state, the first write can fail. It should be ready
     // within 1ms, but try a few extra times to be safe.
     dpcd::SetPower set_pwr;
@@ -1404,7 +1361,7 @@ bool DpDisplay::PipeConfigEpilogue(const display_mode_t& mode, registers::Pipe p
 }
 
 bool DpDisplay::InitBacklightHw() {
-  if (backlight_aux_brightness_) {
+  if (capabilities_ && capabilities_->backlight_aux_brightness()) {
     dpcd::EdpBacklightModeSet mode;
     mode.set_brightness_ctrl_mode(mode.kAux);
     if (!DpcdWrite(dpcd::DPCD_EDP_BACKLIGHT_MODE_SET, mode.reg_value_ptr(), 1)) {
@@ -1420,7 +1377,7 @@ bool DpDisplay::SetBacklightOn(bool on) {
     return true;
   }
 
-  if (backlight_aux_power_) {
+  if (capabilities_ && capabilities_->backlight_aux_power()) {
     dpcd::EdpDisplayCtrl ctrl;
     ctrl.set_backlight_enable(true);
     if (!DpcdWrite(dpcd::DPCD_EDP_DISPLAY_CTRL, ctrl.reg_value_ptr(), 1)) {
@@ -1447,7 +1404,7 @@ bool DpDisplay::IsBacklightOn() {
     return false;
   }
 
-  if (backlight_aux_power_) {
+  if (capabilities_ && capabilities_->backlight_aux_power()) {
     dpcd::EdpDisplayCtrl ctrl;
 
     if (!DpcdRead(dpcd::DPCD_EDP_DISPLAY_CTRL, ctrl.reg_value_ptr(), 1)) {
@@ -1470,7 +1427,7 @@ bool DpDisplay::SetBacklightBrightness(double val) {
   backlight_brightness_ = std::max(val, controller()->igd_opregion().GetMinBacklightBrightness());
   backlight_brightness_ = std::min(backlight_brightness_, 1.0);
 
-  if (backlight_aux_brightness_) {
+  if (capabilities_ && capabilities_->backlight_aux_brightness()) {
     uint16_t percent = static_cast<uint16_t>(0xffff * backlight_brightness_ + .5);
 
     uint8_t lsb = static_cast<uint8_t>(percent & 0xff);
@@ -1497,7 +1454,7 @@ double DpDisplay::GetBacklightBrightness() {
 
   double percent = 0;
 
-  if (backlight_aux_brightness_) {
+  if (capabilities_ && capabilities_->backlight_aux_brightness()) {
     uint8_t lsb;
     uint8_t msb;
     if (!DpcdRead(dpcd::DPCD_EDP_BACKLIGHT_BRIGHTNESS_MSB, &msb, 1) ||

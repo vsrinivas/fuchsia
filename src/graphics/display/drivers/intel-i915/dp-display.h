@@ -25,14 +25,15 @@ class DpcdChannel {
 
 class DpAuxMessage;
 
-class DpAux {
+class DpAux : public DpcdChannel {
  public:
-  DpAux(registers::Ddi ddi);
+  explicit DpAux(registers::Ddi ddi);
 
   zx_status_t I2cTransact(const i2c_impl_op_t* ops, size_t count);
 
-  bool DpcdRead(uint32_t addr, uint8_t* buf, size_t size);
-  bool DpcdWrite(uint32_t addr, const uint8_t* buf, size_t size);
+  // DpcdChannel overrides:
+  bool DpcdRead(uint32_t addr, uint8_t* buf, size_t size) final override;
+  bool DpcdWrite(uint32_t addr, const uint8_t* buf, size_t size) final override;
 
   void set_mmio_space(ddk::MmioBuffer* mmio_space) {
     fbl::AutoLock lock(&lock_);
@@ -173,7 +174,8 @@ struct DpCapabilities final {
 
 class DpDisplay : public DisplayDevice {
  public:
-  DpDisplay(Controller* controller, uint64_t id, registers::Ddi ddi);
+  DpDisplay(Controller* controller, uint64_t id, registers::Ddi ddi, DpAux* dp_aux,
+            inspect::Node* parent_node);
 
   // Gets the backlight brightness as a coefficient on the maximum brightness,
   // between the minimum brightness and 1.
@@ -223,23 +225,23 @@ class DpDisplay : public DisplayDevice {
   zx_status_t SetBacklightState(bool power, double brightness) override;
   zx_status_t GetBacklightState(bool* power, double* brightness) override;
 
-  uint8_t dpcd_capability(uint16_t addr) { return dpcd_capabilities_[addr - dpcd::DPCD_CAP_START]; }
-  uint8_t dpcd_edp_capability(uint16_t addr) {
-    return dpcd_edp_capabilities_[addr - dpcd::DPCD_EDP_CAP_START];
-  }
+  // The object referenced by this pointer must outlive the DpDisplay.
+  DpAux* dp_aux_;  // weak
 
-  uint8_t dp_lane_count_;
-  uint32_t dp_link_rate_mhz_;
-  uint8_t dp_link_rate_idx_plus1_;
-  bool dp_enhanced_framing_enabled_;
+  // Contains a value only if successfully initialized via Query().
+  std::optional<DpCapabilities> capabilities_;
 
-  uint8_t dpcd_capabilities_[16];
-  uint8_t dpcd_edp_capabilities_[5];
-  bool backlight_aux_brightness_{};
-  bool backlight_aux_power_{};
+  uint8_t dp_lane_count_ = 0;
+  uint32_t dp_link_rate_mhz_ = 0;
+  std::optional<uint8_t> dp_link_rate_table_idx_;
 
   // The backlight brightness coefficient, in the range [min brightness, 1].
   double backlight_brightness_ = 1.0f;
+
+  // Debug
+  inspect::Node inspect_node_;
+  inspect::UintProperty dp_lane_count_inspect_;
+  inspect::UintProperty dp_link_rate_mhz_inspect_;
 };
 
 }  // namespace i915
