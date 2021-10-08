@@ -175,7 +175,7 @@ The list of environment names to include in "basic_envs".
 
 **Current value (from the default):** `["emu"]`
 
-From //build/testing/environments.gni:14
+From //build/testing/environments.gni:9
 
 ### blob_layout_format
 The format blobfs should store blobs in.
@@ -1822,15 +1822,6 @@ Set to true to include internal fonts in the build.
 **Current value (from the default):** `false`
 
 From //src/fonts/build/font_args.gni:7
-
-### include_tests_that_fail_on_nuc_asan
-Whether to include tests that are known to fail on NUC with ASan.
-Should be set to false in the infra builders that have board == "x64" and
-"asan" in variants.
-
-**Current value (from the default):** `true`
-
-From //build/testing/environments.gni:11
 
 ### include_zxdb_large_tests
 Normally these tests are not built and run because they require large amounts of optional data
