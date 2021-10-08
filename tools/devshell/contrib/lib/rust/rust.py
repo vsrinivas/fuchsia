@@ -23,7 +23,7 @@ HOST_PLATFORM = (
 
 
 class GnTarget:
-    def __init__(self, gn_target):
+    def __init__(self, gn_target, fuchsia_dir=None):
         # [\w-] is a valid GN name. We also accept '/' and '.' in paths.
         # For the toolchain suffix, we take the whole label name at once, so we allow ':'.
         match = re.match(
@@ -34,15 +34,18 @@ class GnTarget:
             raise ValueError(gn_target)
         path, name, toolchain = match.group(1, 3, 5)
 
+        if fuchsia_dir is None:
+            fuchsia_dir = ROOT_PATH
+
         if path.startswith("//"):
-            path = ROOT_PATH / Path(path[2:])
+            path = fuchsia_dir / Path(path[2:])
         else:
             path = Path(path).resolve()
 
         if name is None:
             name = path.name
 
-        self.label_path = path.relative_to(ROOT_PATH)
+        self.label_path = path.relative_to(fuchsia_dir)
         self.label_name = name
         self.explicit_toolchain = toolchain
 
@@ -71,10 +74,9 @@ class GnTarget:
         """The absolute path to the directory containing this target's BUILD.gn file."""
         return ROOT_PATH / self.label_path
 
-    @property
-    def gen_dir(self):
+    def gen_dir(self, build_dir=None):
         """The absolute path to the directory containing this target's generated files."""
-        return FUCHSIA_BUILD_DIR / "gen" / self.label_path
+        return (build_dir or FUCHSIA_BUILD_DIR) / "gen" / self.label_path
 
     def manifest_path(self, build_dir=None):
         """The path to Cargo.toml for this target."""
