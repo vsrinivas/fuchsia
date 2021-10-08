@@ -229,7 +229,7 @@ impl SessionManager {
                         "fuchsia.ui.accessibility.view.Registry",
                         server_end.into_channel(),
                     )
-                    .expect("Failed to connect to AccessibilityViewRegistry service");
+                    .context("Failed to connect to AccessibilityViewRegistry service")?;
                 }
 
                 SessionManager::handle_accessibility_view_registry_request_stream(
@@ -237,7 +237,7 @@ impl SessionManager {
                     accessibility_view_registry_proxy,
                 )
                 .await
-                .expect("Accessibility view registry request stream got an error.");
+                .context("Error while proxying AccessibilityViewRegistry service")?;
             }
         }
 
