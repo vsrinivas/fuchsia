@@ -11,9 +11,9 @@
 namespace dpcd {
 
 // DPCD register numbers.
-enum {
+enum Register : uint16_t {
   DPCD_CAP_START = 0x0,
-  DPCD_REV = 0x0,
+  DPCD_REV = DPCD_CAP_START,
   DPCD_MAX_LINK_RATE = 0x1,
   DPCD_MAX_LANE_COUNT = 0x2,
   DPCD_DOWN_STREAM_PORT_PRESENT = 0x5,
@@ -35,13 +35,37 @@ enum {
   DPCD_LANE_ALIGN_STATUS_UPDATED = 0x204,
   DPCD_ADJUST_REQUEST_LANE0_1 = 0x206,
   DPCD_SET_POWER = 0x600,
+};
+
+enum EdpRegister : uint16_t {
   DPCD_EDP_CAP_START = 0x700,
+  DPCD_EDP_REV = DPCD_EDP_CAP_START,
   DPCD_EDP_GENERAL_CAP1 = 0x701,
   DPCD_EDP_BACKLIGHT_CAP = 0x702,
+  DPCD_EDP_RESERVED = 0x705,
   DPCD_EDP_DISPLAY_CTRL = 0x720,
   DPCD_EDP_BACKLIGHT_MODE_SET = 0x721,
   DPCD_EDP_BACKLIGHT_BRIGHTNESS_MSB = 0x722,
   DPCD_EDP_BACKLIGHT_BRIGHTNESS_LSB = 0x723,
+};
+
+// DPCD_REV register values.
+enum class Revision : uint8_t {
+  k1_0 = 0x10,
+  k1_1 = 0x11,
+  k1_2 = 0x12,
+  k1_3 = 0x13,
+  k1_4 = 0x14,
+};
+
+// DPCD_EDP_REV register values
+enum class EdpRevision : uint8_t {
+  k1_1 = 0x00,
+  k1_2 = 0x01,
+  k1_3 = 0x02,
+  k1_4 = 0x03,
+  k1_4a = 0x04,
+  k1_4b = 0x05,
 };
 
 // DPCD register: MAX_LINK_RATE and LINK_BW_SET
@@ -243,8 +267,8 @@ class TrainingAuxRdInterval
   DEF_FIELD(6, 0, interval);
   DEF_BIT(7, extended_receiver_capabilitiy_field_present);
 
-  uint32_t clock_recovery_delay_us(uint8_t revision) {
-    if (revision >= 0x14 || interval() == 0) {
+  uint32_t clock_recovery_delay_us(Revision revision) {
+    if (revision >= Revision::k1_4 || interval() == 0) {
       return 100;
     }
     return channel_eq_delay_us();

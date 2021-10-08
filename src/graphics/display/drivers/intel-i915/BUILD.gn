@@ -51,6 +51,7 @@ source_set("common_srcs") {
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/hwreg",
     "//zircon/system/ulib/image-format",
+    "//zircon/system/ulib/inspect",
     "//zircon/system/ulib/region-alloc",
     "//zircon/system/ulib/zx",
   ]
@@ -75,6 +76,7 @@ test("intel-i915-test") {
     "//build/config:all_source",
   ]
   sources = [
+    "dp-capabilities-unittest.cc",
     "gtt-unittest.cc",
     "intel-i915-test.cc",
     "interrupts-unittest.cc",

@@ -25,6 +25,7 @@
 #define MIN(a, b) (((a) < (b)) ? (a) : (b))
 
 namespace i915 {
+namespace {
 
 constexpr uint32_t kBitsPerPixel = 24;  // kPixelFormat
 
@@ -158,6 +159,42 @@ enum {
   DP_REPLY_I2C_NACK = 4,
   DP_REPLY_I2C_DEFER = 8,
 };
+
+std::string DpcdRevisionToString(dpcd::Revision rev) {
+  switch (rev) {
+    case dpcd::Revision::k1_0:
+      return "DPCD r1.0";
+    case dpcd::Revision::k1_1:
+      return "DPCD r1.1";
+    case dpcd::Revision::k1_2:
+      return "DPCD r1.2";
+    case dpcd::Revision::k1_3:
+      return "DPCD r1.3";
+    case dpcd::Revision::k1_4:
+      return "DPCD r1.4";
+  }
+  return "unknown";
+}
+
+std::string EdpDpcdRevisionToString(dpcd::EdpRevision rev) {
+  switch (rev) {
+    case dpcd::EdpRevision::k1_1:
+      return "eDP v1.1 or lower";
+    case dpcd::EdpRevision::k1_2:
+      return "eDP v1.2";
+    case dpcd::EdpRevision::k1_3:
+      return "eDP v1.3";
+    case dpcd::EdpRevision::k1_4:
+      return "eDP v1.4";
+    case dpcd::EdpRevision::k1_4a:
+      return "eDP v1.4a";
+    case dpcd::EdpRevision::k1_4b:
+      return "eDP v1.4b";
+  }
+  return "unknown";
+}
+
+}  // namespace
 
 // This represents a message sent over DisplayPort's Aux channel, including
 // reply messages.
@@ -439,6 +476,172 @@ DpAux::DpAux(registers::Ddi ddi) : ddi_(ddi) {
   ZX_ASSERT(mtx_init(&lock_, mtx_plain) == thrd_success);
 }
 
+DpCapabilities::DpCapabilities() { dpcd_.fill(0); }
+
+DpCapabilities::Edp::Edp() { bytes.fill(0); }
+
+DpCapabilities::DpCapabilities(inspect::Node* parent_node) {
+  dpcd_.fill(0);
+  node_ = parent_node->CreateChild("dpcd-capabilities");
+}
+
+// static
+fit::result<DpCapabilities> DpCapabilities::Read(DpcdChannel* dp_aux, inspect::Node* parent_node) {
+  DpCapabilities caps(parent_node);
+
+  if (!dp_aux->DpcdRead(dpcd::DPCD_CAP_START, caps.dpcd_.data(), caps.dpcd_.size())) {
+    zxlogf(TRACE, "Failed to read dpcd capabilities");
+    return fit::error();
+  }
+
+  auto dsp_present =
+      caps.dpcd_reg<dpcd::DownStreamPortPresent, dpcd::DPCD_DOWN_STREAM_PORT_PRESENT>();
+  if (dsp_present.is_branch()) {
+    auto dsp_count = caps.dpcd_reg<dpcd::DownStreamPortCount, dpcd::DPCD_DOWN_STREAM_PORT_COUNT>();
+    zxlogf(DEBUG, "Found branch with %d ports", dsp_count.count());
+  }
+
+  if (!dp_aux->DpcdRead(dpcd::DPCD_SINK_COUNT, caps.sink_count_.reg_value_ptr(), 1)) {
+    zxlogf(ERROR, "Failed to read DisplayPort sink count");
+    return fit::error();
+  }
+
+  caps.max_lane_count_ = caps.dpcd_reg<dpcd::LaneCount, dpcd::DPCD_MAX_LANE_COUNT>();
+  if (caps.max_lane_count() != 1 && caps.max_lane_count() != 2 && caps.max_lane_count() != 4) {
+    zxlogf(ERROR, "Unsupported DisplayPort lane count: %u", caps.max_lane_count());
+    return fit::error();
+  }
+
+  if (!caps.ProcessEdp(dp_aux)) {
+    return fit::error();
+  }
+
+  if (!caps.ProcessSupportedLinkRates(dp_aux)) {
+    return fit::error();
+  }
+
+  ZX_ASSERT(!caps.supported_link_rates_mbps_.empty());
+  caps.PublishInspect();
+
+  return fit::ok(std::move(caps));
+}
+
+bool DpCapabilities::ProcessEdp(DpcdChannel* dp_aux) {
+  // Check if the Display Control registers reserved for eDP are available.
+  auto edp_config = dpcd_reg<dpcd::EdpConfigCap, dpcd::DPCD_EDP_CONFIG>();
+  if (!edp_config.dpcd_display_ctrl_capable()) {
+    return true;
+  }
+
+  zxlogf(TRACE, "eDP registers are available");
+
+  edp_dpcd_.emplace();
+  if (!dp_aux->DpcdRead(dpcd::DPCD_EDP_CAP_START, edp_dpcd_->bytes.data(),
+                        edp_dpcd_->bytes.size())) {
+    zxlogf(ERROR, "Failed to read eDP capabilities");
+    return false;
+  }
+
+  edp_dpcd_->revision = dpcd::EdpRevision(edp_dpcd_at(dpcd::DPCD_EDP_REV));
+
+  auto general_cap1 = edp_dpcd_reg<dpcd::EdpGeneralCap1, dpcd::DPCD_EDP_GENERAL_CAP1>();
+  auto backlight_cap = edp_dpcd_reg<dpcd::EdpBacklightCap, dpcd::DPCD_EDP_BACKLIGHT_CAP>();
+
+  edp_dpcd_->backlight_aux_power =
+      general_cap1.tcon_backlight_adjustment_cap() && general_cap1.backlight_aux_enable_cap();
+  edp_dpcd_->backlight_aux_brightness =
+      general_cap1.tcon_backlight_adjustment_cap() && backlight_cap.brightness_aux_set_cap();
+
+  return true;
+}
+
+bool DpCapabilities::ProcessSupportedLinkRates(DpcdChannel* dp_aux) {
+  ZX_ASSERT(supported_link_rates_mbps_.empty());
+
+  // According to eDP v1.4b, Table 4-24, a device supporting eDP version v1.4 and higher can support
+  // link rate selection by way of both the DPCD MAX_LINK_RATE register and the "Link Rate Table"
+  // method via DPCD SUPPORTED_LINK_RATES registers.
+  //
+  // The latter method can represent more values than the former (which is limited to only 4
+  // discrete values). Hence we attempt to use the "Link Rate Table" method first.
+  use_link_rate_table_ = false;
+  if (edp_dpcd_ && edp_dpcd_->revision >= dpcd::EdpRevision::k1_4) {
+    constexpr size_t kBufferSize =
+        dpcd::DPCD_SUPPORTED_LINK_RATE_END - dpcd::DPCD_SUPPORTED_LINK_RATE_START + 1;
+    std::array<uint8_t, kBufferSize> link_rates;
+    if (dp_aux->DpcdRead(dpcd::DPCD_SUPPORTED_LINK_RATE_START, link_rates.data(), kBufferSize)) {
+      for (size_t i = 0; i < link_rates.size(); i += 2) {
+        uint16_t value = link_rates[i] | (static_cast<uint16_t>(link_rates[i + 1]) << 8);
+
+        // From the eDP specification: "A table entry containing the value 0 indicates that the
+        // entry and all entries at higher DPCD addressess contain invalid link rates."
+        if (value == 0) {
+          break;
+        }
+
+        // Each valid entry indicates a nominal per-lane link rate equal to `value * 200kHz`. We
+        // convert value to MHz: `value * 200 / 1000 ==> value / 5`.
+        supported_link_rates_mbps_.push_back(value / 5);
+      }
+    }
+
+    use_link_rate_table_ = !supported_link_rates_mbps_.empty();
+  }
+
+  // Fall back to the MAX_LINK_RATE register if the Link Rate Table method is not supported.
+  if (supported_link_rates_mbps_.empty()) {
+    uint32_t max_link_rate = dpcd_reg<dpcd::LinkBw, dpcd::DPCD_MAX_LINK_RATE>().link_bw();
+
+    // All link rates including and below the maximum are supported.
+    switch (max_link_rate) {
+      case dpcd::LinkBw::k8100Mbps:
+        supported_link_rates_mbps_.push_back(8100);
+        __FALLTHROUGH;
+      case dpcd::LinkBw::k5400Mbps:
+        supported_link_rates_mbps_.push_back(5400);
+        __FALLTHROUGH;
+      case dpcd::LinkBw::k2700Mbps:
+        supported_link_rates_mbps_.push_back(2700);
+        __FALLTHROUGH;
+      case dpcd::LinkBw::k1620Mbps:
+        supported_link_rates_mbps_.push_back(1620);
+        break;
+      case 0:
+        zxlogf(ERROR, "Device did not report supported link rates");
+        return false;
+      default:
+        zxlogf(ERROR, "Unsupported max link rate: %u", max_link_rate);
+        return false;
+    }
+
+    // Make sure the values are in ascending order.
+    std::reverse(supported_link_rates_mbps_.begin(), supported_link_rates_mbps_.end());
+  }
+
+  return true;
+}
+
+void DpCapabilities::PublishInspect() {
+  node_.CreateString("dpcd_revision", DpcdRevisionToString(dpcd_revision()), &inspect_properties_);
+  node_.CreateUint("sink_count", sink_count(), &inspect_properties_);
+  node_.CreateUint("max_lane_count", max_lane_count(), &inspect_properties_);
+
+  {
+    auto node = node_.CreateUintArray("supported_link_rates_mbps_per_lane",
+                                      supported_link_rates_mbps_.size());
+    for (size_t i = 0; i < supported_link_rates_mbps_.size(); ++i) {
+      node.Add(i, supported_link_rates_mbps_[i]);
+    }
+    inspect_properties_.emplace(std::move(node));
+  }
+
+  {
+    std::string value =
+        edp_dpcd_.has_value() ? EdpDpcdRevisionToString(edp_dpcd_->revision) : "not supported";
+    node_.CreateString("edp_revision", std::move(value), &inspect_properties_);
+  }
+}
+
 bool DpDisplay::DpcdWrite(uint32_t addr, const uint8_t* buf, size_t size) {
   return controller()->DpcdWrite(ddi(), addr, buf, size);
 }
@@ -658,8 +861,8 @@ bool DpDisplay::LinkTrainingStage1(dpcd::TrainingPatternSet* tp_set, dpcd::Train
       return false;
     }
 
-    zx_nanosleep(
-        zx_deadline_after(ZX_USEC(delay.clock_recovery_delay_us(dpcd_capability(dpcd::DPCD_REV)))));
+    zx_nanosleep(zx_deadline_after(
+        ZX_USEC(delay.clock_recovery_delay_us(dpcd::Revision(dpcd_capability(dpcd::DPCD_REV))))));
 
     // Did the sink device receive the signal successfully?
     if (!DpcdReadPairedRegs<dpcd::DPCD_LANE0_1_STATUS, dpcd::LaneStatus>(lane_status)) {
