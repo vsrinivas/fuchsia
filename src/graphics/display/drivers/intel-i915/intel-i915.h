@@ -44,10 +44,11 @@ typedef struct buffer_allocation {
   uint16_t end;
 } buffer_allocation_t;
 
+// TODO(armansito): Turn this into a C++-style data structure and document internals.
 typedef struct dpll_state {
   bool is_hdmi;
   union {
-    uint32_t dp_rate;
+    registers::DpllControl1::LinkRate dp_rate;
     struct {
       uint16_t dco_int;
       uint16_t dco_frac;

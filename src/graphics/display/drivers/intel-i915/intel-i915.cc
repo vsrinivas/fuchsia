@@ -302,7 +302,7 @@ bool Controller::BringUpDisplayEngine(bool resume) {
 
     // Configure DPLL0
     auto dpll_ctl1 = registers::DpllControl1::Get().ReadFrom(mmio_space());
-    dpll_ctl1.dpll_link_rate(registers::DPLL_0).set(dpll_ctl1.kLinkRate810Mhz);
+    dpll_ctl1.SetLinkRate(registers::DPLL_0, registers::DpllControl1::LinkRate::k810Mhz);
     dpll_ctl1.dpll_override(registers::DPLL_0).set(1);
     dpll_ctl1.dpll_hdmi_mode(registers::DPLL_0).set(0);
     dpll_ctl1.dpll_ssc_enable(registers::DPLL_0).set(0);
@@ -631,7 +631,7 @@ bool Controller::LoadHardwareState(registers::Ddi ddi, DisplayDevice* device) {
         .cf = static_cast<uint8_t>(dpll_cfg2.central_freq()),
     };
   } else {
-    dplls_[dpll].state.dp_rate = dpll_ctrl1.dpll_link_rate(dpll).get();
+    dplls_[dpll].state.dp_rate = dpll_ctrl1.GetLinkRate(dpll);
   }
 
   device->AttachPipe(&pipes_[pipe]);

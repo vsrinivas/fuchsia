@@ -33,6 +33,15 @@ static const Dpll kDplls[kDpllCount] = {
 // DPLL_CTRL1
 class DpllControl1 : public hwreg::RegisterBase<DpllControl1, uint32_t> {
  public:
+  enum class LinkRate : uint8_t {
+    k2700Mhz = 0,  // DisplayPort 5.4 GHz  (VCO 8100)
+    k1350Mhz = 1,  // DisplayPort 2.7 GHz  (VCO 8100)
+    k810Mhz = 2,   // DisplayPort 1.62 GHz (VCO 8100)
+    k1620Mhz = 3,  // DisplayPort 3.24 GHz (VCO 8100)
+    k1080Mhz = 4,  // DisplayPort 2.16 GHz (VCO 8640)
+    k2160Mhz = 5,  // DisplayPort 4.32 GHz (VCO 8640)
+  };
+
   hwreg::BitfieldRef<uint32_t> dpll_hdmi_mode(Dpll dpll) {
     int bit = dpll * 6 + 5;
     return hwreg::BitfieldRef<uint32_t>(reg_value_ptr(), bit, bit);
@@ -47,12 +56,12 @@ class DpllControl1 : public hwreg::RegisterBase<DpllControl1, uint32_t> {
     int bit = dpll * 6 + 1;
     return hwreg::BitfieldRef<uint32_t>(reg_value_ptr(), bit + 2, bit);
   }
-  static constexpr int kLinkRate2700Mhz = 0;  // DisplayPort 5.4 GHz
-  static constexpr int kLinkRate1350Mhz = 1;  // DisplayPort 2.7 GHz
-  static constexpr int kLinkRate810Mhz = 2;   // DisplayPort 1.62 GHz
-  static constexpr int kLinkRate1620Mhz = 3;  // DisplayPort 3.24 GHz
-  static constexpr int kLinkRate1080Mhz = 4;  // DisplayPort 2.16 GHz
-  static constexpr int kLinkRate2160Mhz = 5;  // DisplayPort 4.32 GHz
+
+  LinkRate GetLinkRate(Dpll dpll) { return static_cast<LinkRate>(dpll_link_rate(dpll).get()); }
+
+  void SetLinkRate(Dpll dpll, LinkRate rate) {
+    dpll_link_rate(dpll).set(static_cast<std::underlying_type_t<LinkRate>>(rate));
+  }
 
   hwreg::BitfieldRef<uint32_t> dpll_override(Dpll dpll) {
     int bit = dpll * 6;

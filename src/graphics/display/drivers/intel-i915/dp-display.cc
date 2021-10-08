@@ -93,8 +93,8 @@ const ddi_buf_trans_entry edp_ddi_buf_trans_skl_u[10] = {
     {0x000000df, 0x00000018},
 };
 
-void get_dp_ddi_buf_trans_entries(uint16_t device_id, const ddi_buf_trans_entry** entries,
-                                  uint8_t* i_boost, unsigned* count) {
+void GetDpDdiBufTransEntries(uint16_t device_id, const ddi_buf_trans_entry** entries,
+                             uint8_t* i_boost, unsigned* count) {
   if (is_skl(device_id)) {
     if (is_skl_u(device_id)) {
       *entries = dp_ddi_buf_trans_skl_u;
@@ -127,8 +127,8 @@ void get_dp_ddi_buf_trans_entries(uint16_t device_id, const ddi_buf_trans_entry*
   }
 }
 
-void get_edp_ddi_buf_trans_entries(uint16_t device_id, const ddi_buf_trans_entry** entries,
-                                   unsigned* count) {
+void GetEdpDdiBufTransEntries(uint16_t device_id, const ddi_buf_trans_entry** entries,
+                              unsigned* count) {
   if (is_skl_u(device_id) || is_kbl_u(device_id)) {
     *entries = edp_ddi_buf_trans_skl_u;
     *count = static_cast<int>(std::size(edp_ddi_buf_trans_skl_u));
@@ -159,6 +159,55 @@ enum {
   DP_REPLY_I2C_NACK = 4,
   DP_REPLY_I2C_DEFER = 8,
 };
+
+// Conversions from DPLL Control register supported link rates and corresponding DisplayPort link
+// clock frequencies. |link_clock| is a numeric value expressed in Mbps/MHz.
+//
+// Only a limited set of discrete |link_lock| values are supported. Returns an error result if the
+// value is not supported.
+
+fit::result<registers::DpllControl1::LinkRate> LinkClockToDpllLinkRate(uint32_t link_clock) {
+  using LinkRate = registers::DpllControl1::LinkRate;
+  switch (link_clock) {
+    case 5400:
+      return fit::ok(LinkRate::k2700Mhz);
+    case 2700:
+      return fit::ok(LinkRate::k1350Mhz);
+    case 1620:
+      return fit::ok(LinkRate::k810Mhz);
+    case 3240:
+      return fit::ok(LinkRate::k1620Mhz);
+    case 2160:
+      return fit::ok(LinkRate::k1080Mhz);
+    case 4320:
+      return fit::ok(LinkRate::k2160Mhz);
+    default:
+      break;
+  }
+  return fit::error();
+}
+
+__UNUSED fit::result<uint32_t> DpllLinkRateToLinkClock(
+    registers::DpllControl1::LinkRate link_rate) {
+  using LinkRate = registers::DpllControl1::LinkRate;
+  switch (link_rate) {
+    case LinkRate::k2700Mhz:
+      return fit::ok(5400);
+    case LinkRate::k1350Mhz:
+      return fit::ok(2700);
+    case LinkRate::k810Mhz:
+      return fit::ok(1620);
+    case LinkRate::k1620Mhz:
+      return fit::ok(3240);
+    case LinkRate::k1080Mhz:
+      return fit::ok(2160);
+    case LinkRate::k2160Mhz:
+      return fit::ok(4320);
+    default:
+      break;
+  }
+  return fit::error();
+}
 
 std::string DpcdRevisionToString(dpcd::Revision rev) {
   switch (rev) {
@@ -769,9 +818,9 @@ bool DpDisplay::LinkTrainingSetup() {
   const ddi_buf_trans_entry* entries;
   if (controller()->igd_opregion().IsLowVoltageEdp(ddi())) {
     i_boost = 0;
-    get_edp_ddi_buf_trans_entries(controller()->device_id(), &entries, &count);
+    GetEdpDdiBufTransEntries(controller()->device_id(), &entries, &count);
   } else {
-    get_dp_ddi_buf_trans_entries(controller()->device_id(), &entries, &i_boost, &count);
+    GetDpDdiBufTransEntries(controller()->device_id(), &entries, &i_boost, &count);
   }
   uint8_t i_boost_override = controller()->igd_opregion().GetIBoost(ddi(), true /* is_dp */);
 
@@ -1185,18 +1234,16 @@ bool DpDisplay::InitDdi() {
     return true;
   }
 
-  uint8_t dpll_link_rate;
-  if (dp_link_rate_mhz_ == 1620) {
-    dpll_link_rate = registers::DpllControl1::kLinkRate810Mhz;
-  } else if (dp_link_rate_mhz_ == 2700) {
-    dpll_link_rate = registers::DpllControl1::kLinkRate1350Mhz;
-  } else if (dp_link_rate_mhz_ == 3240) {
-    dpll_link_rate = registers::DpllControl1::kLinkRate1620Mhz;
-  } else {
-    ZX_ASSERT(dp_link_rate_mhz_ == 5400);
-    dpll_link_rate = registers::DpllControl1::kLinkRate2700Mhz;
+  auto dpll_link_rate = LinkClockToDpllLinkRate(dp_link_rate_mhz_);
+  if (dpll_link_rate.is_error()) {
+    zxlogf(ERROR, "Unsupported DP link clock: %u", dp_link_rate_mhz_);
+    return false;
   }
-  dpll_state_t state = {.is_hdmi = false, .dp_rate = dpll_link_rate};
+
+  dpll_state_t state = {
+      .is_hdmi = false,
+      .dp_rate = dpll_link_rate.value(),
+  };
   registers::Dpll dpll = controller()->SelectDpll(is_edp, state);
   if (dpll == registers::DPLL_INVALID) {
     return false;
@@ -1208,7 +1255,7 @@ bool DpDisplay::InitDdi() {
     auto dpll_ctrl1 = registers::DpllControl1::Get().ReadFrom(mmio_space());
     dpll_ctrl1.dpll_hdmi_mode(dpll).set(0);
     dpll_ctrl1.dpll_ssc_enable(dpll).set(0);
-    dpll_ctrl1.dpll_link_rate(dpll).set(dpll_link_rate);
+    dpll_ctrl1.SetLinkRate(dpll, dpll_link_rate.value());
     dpll_ctrl1.dpll_override(dpll).set(1);
     dpll_ctrl1.WriteTo(mmio_space());
     dpll_ctrl1.ReadFrom(mmio_space());  // Posting read
@@ -1216,8 +1263,7 @@ bool DpDisplay::InitDdi() {
     // Enable this DPLL and wait for it to lock
     dpll_enable.set_enable_dpll(1);
     dpll_enable.WriteTo(mmio_space());
-    if (!WAIT_ON_MS(registers::DpllStatus ::Get().ReadFrom(mmio_space()).dpll_lock(dpll).get(),
-                    5)) {
+    if (!WAIT_ON_MS(registers::DpllStatus::Get().ReadFrom(mmio_space()).dpll_lock(dpll).get(), 5)) {
       zxlogf(ERROR, "DPLL failed to lock");
       return false;
     }
@@ -1253,17 +1299,14 @@ bool DpDisplay::InitDdi() {
 }
 
 bool DpDisplay::ComputeDpllState(uint32_t pixel_clock_10khz, struct dpll_state* config) {
-  config->is_hdmi = false;
-  if (dp_link_rate_mhz_ == 1620) {
-    config->dp_rate = registers::DpllControl1::kLinkRate810Mhz;
-  } else if (dp_link_rate_mhz_ == 2700) {
-    config->dp_rate = registers::DpllControl1::kLinkRate1350Mhz;
-  } else if (dp_link_rate_mhz_ == 3240) {
-    config->dp_rate = registers::DpllControl1::kLinkRate1620Mhz;
-  } else {
-    ZX_ASSERT(dp_link_rate_mhz_ == 5400);
-    config->dp_rate = registers::DpllControl1::kLinkRate2700Mhz;
+  auto dpll_link_rate = LinkClockToDpllLinkRate(dp_link_rate_mhz_);
+  if (dpll_link_rate.is_error()) {
+    zxlogf(ERROR, "Unsupported DP link clock: %u", dp_link_rate_mhz_);
+    return false;
   }
+
+  config->is_hdmi = false;
+  config->dp_rate = dpll_link_rate.value();
   return true;
 }
 
