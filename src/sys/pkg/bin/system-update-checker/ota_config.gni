@@ -34,3 +34,25 @@ template("ota_config") {
     sources = [ config_path ]
   }
 }
+
+template("ota_config_for_test") {
+  cfg = {
+    forward_variables_from(invoker,
+                           [
+                             "poll_frequency_minutes",
+                             "update_package_url",
+                           ])
+    assert(defined(poll_frequency_minutes) || defined(update_package_url),
+           "at least one config parameter should be defined")
+  }
+
+  config_path = "$target_gen_dir/ota_config.json"
+
+  write_file(config_path, cfg, "json")
+
+  config_data(target_name) {
+    for_pkg = "system-update-checker-integration-tests"
+    outputs = [ "ota_config.json" ]
+    sources = [ config_path ]
+  }
+}

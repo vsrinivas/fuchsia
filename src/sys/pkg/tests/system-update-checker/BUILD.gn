@@ -4,6 +4,7 @@
 
 import("//build/components.gni")
 import("//build/rust/rustc_test.gni")
+import("//src/sys/pkg/bin/system-update-checker/ota_config.gni")
 
 rustc_test("driver") {
   name = "system_update_checker_integration_test"
@@ -53,6 +54,11 @@ fuchsia_test_package("system-update-checker-integration-tests") {
       max_severity = "ERROR"
     }
   }
+}
+
+ota_config_for_test("auto_update") {
+  # Check for updates every 60 minutes
+  poll_frequency_minutes = 60
 }
 
 group("tests") {

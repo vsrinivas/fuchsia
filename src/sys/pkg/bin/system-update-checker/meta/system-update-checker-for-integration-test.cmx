@@ -6,10 +6,13 @@
         "binary": "bin/system_update_checker"
     },
     "sandbox": {
+        "features": [
+            "config-data",
+            "deprecated-misc-storage"
+        ],
         "services": [
             "fuchsia.pkg.PackageResolver",
             "fuchsia.update.CommitStatusProvider",
-            "fuchsia.update.channel.Provider",
             "fuchsia.update.installer.Installer"
         ]
     }
