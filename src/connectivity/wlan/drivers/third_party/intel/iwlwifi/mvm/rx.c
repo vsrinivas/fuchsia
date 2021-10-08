@@ -94,7 +94,6 @@ static void iwl_mvm_get_signal_strength(const struct iwl_mvm* mvm,
   rx_info->rssi_dbm = max_energy;
 }
 
-#if 0   // NEEDS_PORTING
 /*
  * iwl_mvm_set_mac80211_rx_flag - translate fw status to mac80211 format
  * @mvm: the mvm object
@@ -104,56 +103,28 @@ static void iwl_mvm_get_signal_strength(const struct iwl_mvm* mvm,
  *
  * returns non 0 value if the packet should be dropped
  */
-static uint32_t iwl_mvm_set_mac80211_rx_flag(struct iwl_mvm* mvm, struct ieee80211_hdr* hdr,
-                                             struct ieee80211_rx_status* stats,
-                                             uint32_t rx_pkt_status, uint8_t* crypt_len) {
-  if (!ieee80211_has_protected(hdr->frame_control) ||
+static zx_status_t iwl_mvm_set_mac80211_rx_flag(struct iwl_mvm* mvm,
+                                                struct ieee80211_frame_header* hdr,
+                                                uint32_t rx_pkt_status, size_t* crypt_len) {
+  if (!ieee80211_pkt_is_protected(hdr) ||
       (rx_pkt_status & RX_MPDU_RES_STATUS_SEC_ENC_MSK) == RX_MPDU_RES_STATUS_SEC_NO_ENC) {
-    return 0;
+    return ZX_OK;
   }
 
   /* packet was encrypted with unknown alg */
   if ((rx_pkt_status & RX_MPDU_RES_STATUS_SEC_ENC_MSK) == RX_MPDU_RES_STATUS_SEC_ENC_ERR) {
-    return 0;
+    return ZX_ERR_NOT_SUPPORTED;
   }
 
   switch (rx_pkt_status & RX_MPDU_RES_STATUS_SEC_ENC_MSK) {
     case RX_MPDU_RES_STATUS_SEC_CCM_ENC:
       /* alg is CCM: check MIC only */
       if (!(rx_pkt_status & RX_MPDU_RES_STATUS_MIC_OK)) {
-        return -1;
+        return ZX_ERR_IO;
       }
 
-      stats->flag |= RX_FLAG_DECRYPTED;
       *crypt_len = IEEE80211_CCMP_HDR_LEN;
-      return 0;
-
-    case RX_MPDU_RES_STATUS_SEC_TKIP_ENC:
-      /* Don't drop the frame and decrypt it in SW */
-      if (!fw_has_api(&mvm->fw->ucode_capa, IWL_UCODE_TLV_API_DEPRECATE_TTAK) &&
-          !(rx_pkt_status & RX_MPDU_RES_STATUS_TTAK_OK)) {
-        return 0;
-      }
-      *crypt_len = IEEE80211_TKIP_IV_LEN;
-      /* fall through if TTAK OK */
-
-    case RX_MPDU_RES_STATUS_SEC_WEP_ENC:
-      if (!(rx_pkt_status & RX_MPDU_RES_STATUS_ICV_OK)) {
-        return -1;
-      }
-
-      stats->flag |= RX_FLAG_DECRYPTED;
-      if ((rx_pkt_status & RX_MPDU_RES_STATUS_SEC_ENC_MSK) == RX_MPDU_RES_STATUS_SEC_WEP_ENC) {
-        *crypt_len = IEEE80211_WEP_IV_LEN;
-      }
-      return 0;
-
-    case RX_MPDU_RES_STATUS_SEC_EXT_ENC:
-      if (!(rx_pkt_status & RX_MPDU_RES_STATUS_MIC_OK)) {
-        return -1;
-      }
-      stats->flag |= RX_FLAG_DECRYPTED;
-      return 0;
+      return ZX_OK;
 
     default:
       /* Expected in monitor (not having the keys) */
@@ -162,9 +133,10 @@ static uint32_t iwl_mvm_set_mac80211_rx_flag(struct iwl_mvm* mvm, struct ieee802
       }
   }
 
-  return 0;
+  return ZX_OK;
 }
 
+#if 0   // NEEDS_PORTING
 static void iwl_mvm_rx_handle_tcm(struct iwl_mvm* mvm, struct ieee80211_sta* sta,
                                   struct ieee80211_hdr* hdr, uint32_t len,
                                   struct iwl_rx_phy_info* phy_info, uint32_t rate_n_flags) {
@@ -267,6 +239,7 @@ static void iwl_mvm_rx_csum(struct ieee80211_sta* sta, struct sk_buff* skb, uint
  */
 void iwl_mvm_rx_rx_mpdu(struct iwl_mvm* mvm, struct napi_struct* napi,
                         struct iwl_rx_cmd_buffer* rxb) {
+  zx_status_t status = ZX_OK;
   // The PHY info was received in the last MVM packet.
   struct iwl_rx_phy_info* phy_info = &mvm->last_phy_info;
   uint16_t phy_flags = le16_to_cpu(phy_info->phy_flags);
@@ -277,21 +250,18 @@ void iwl_mvm_rx_rx_mpdu(struct iwl_mvm* mvm, struct napi_struct* napi,
   struct ieee80211_frame_header* frame = (void*)(pkt->data + sizeof(*rx_res));
   size_t res_len = le16_to_cpu(rx_res->byte_count);
   uint32_t rx_pkt_status = le32_to_cpup((__le32*)(pkt->data + sizeof(*rx_res) + res_len));
+  size_t crypt_len = 0;
 
   // Prepare the meta info sent to MLME.
   wlan_rx_info_t rx_info = {};
 
-#if 0   // NEEDS_PORTING
-  // TODO(37594): Milestone: Connect to Protected Network
   /*
    * drop the packet if it has failed being decrypted by HW
    */
-  if (iwl_mvm_set_mac80211_rx_flag(mvm, hdr, rx_status, rx_pkt_status, &crypt_len)) {
-    IWL_DEBUG_DROP(mvm, "Bad decryption results 0x%08x\n", rx_pkt_status);
-    kfree_skb(skb);
+  if (((status = iwl_mvm_set_mac80211_rx_flag(mvm, frame, rx_pkt_status, &crypt_len))) != ZX_OK) {
+    IWL_DEBUG_DROP(mvm, "Bad decryption results : %s\n", zx_status_get_string(status));
     return;
   }
-#endif  // NEEDS_PORTING
 
   /*
    * Keep packets with CRC errors (and with overrun) for monitor mode
