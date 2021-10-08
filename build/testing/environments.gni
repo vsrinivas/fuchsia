@@ -202,9 +202,7 @@ with_display_envs = [
   nelson_env,
   nuc_env,
   sherlock_env,
-
-  # Re-enable once vim3 supports vulkan (https://fxbug.dev/75581)
-  # vim3_env,
+  vim3_env,
 ]
 
 chromebook_envs = [ atlas_env ]
