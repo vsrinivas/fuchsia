@@ -907,6 +907,15 @@ async fn device_control_closes_on_device_close() {
     let realm = sandbox.create_netstack_realm::<Netstack2, _>(name).expect("create realm");
     let endpoint =
         sandbox.create_endpoint::<netemul::NetworkDevice, _>(name).await.expect("create endpoint");
+
+    // Create a watcher, we'll use it to ensure the Netstack didn't crash.
+    let interfaces_state = realm
+        .connect_to_protocol::<fidl_fuchsia_net_interfaces::StateMarker>()
+        .expect("connect to protocol");
+    let watcher = fidl_fuchsia_net_interfaces_ext::event_stream_from_state(&interfaces_state)
+        .expect("create watcher");
+    futures::pin_mut!(watcher);
+
     let installer = realm
         .connect_to_protocol::<fidl_fuchsia_net_interfaces_admin::InstallerMarker>()
         .expect("connect to protocol");
@@ -917,9 +926,29 @@ async fn device_control_closes_on_device_close() {
             .expect("create proxy");
     let () = installer.install_device(device, device_control_server_end).expect("install device");
 
+    // Create an interface and get its identifier to ensure the device is
+    // installed.
+    let (control, control_server_end) =
+        fidl::endpoints::create_proxy::<fidl_fuchsia_net_interfaces_admin::ControlMarker>()
+            .expect("create proxy");
+    let () = device_control
+        .create_interface(
+            netemul::PORT_ID,
+            control_server_end,
+            fidl_fuchsia_net_interfaces_admin::Options::EMPTY,
+        )
+        .expect("create interface");
+    let _iface_id: u64 = control.get_id().await.expect("get id");
+
+    // Drop the device and observe the control channel closing because the
+    // device was destroyed.
     std::mem::drop(endpoint);
-    // Observe the control channel closing because the device was destroyed.
     matches::assert_matches!(device_control.take_event_stream().next().await, None);
+
+    // The channel could've been closed by a Netstack crash, consume from the
+    // watcher to ensure that's not the case.
+    let _: fidl_fuchsia_net_interfaces::Event =
+        watcher.try_next().await.expect("watcher error").expect("watcher ended uexpectedly");
 }
 
 // Tests that interfaces created through installer have a valid datapath.

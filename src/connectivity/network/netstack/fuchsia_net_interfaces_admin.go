@@ -495,6 +495,7 @@ func (i *interfacesAdminInstallerImpl) InstallDevice(_ fidl.Context, device netw
 	if err != nil {
 		_ = syslog.WarnTf(controlName, "InstallDevice: %s", err)
 		_ = deviceControl.Close()
+		return nil
 	}
 
 	ctx, cancel := context.WithCancel(context.Background())
@@ -506,7 +507,10 @@ func (i *interfacesAdminInstallerImpl) InstallDevice(_ fidl.Context, device netw
 
 	// Running the device client and serving the FIDL are tied to the same
 	// context because their lifecycles are linked.
-	go impl.deviceClient.Run(ctx)
+	go func() {
+		impl.deviceClient.Run(ctx)
+		impl.cancelServe()
+	}()
 
 	go func() {
 		component.ServeExclusive(ctx, &admin.DeviceControlWithCtxStub{Impl: impl}, deviceControl.Channel, func(err error) {
