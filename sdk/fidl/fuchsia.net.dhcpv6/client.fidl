@@ -8,115 +8,9 @@ using fuchsia.net.name;
 using fuchsia.net;
 using zx;
 
-/// Default port a DHCPv6 client should listen to according to [RFC 8415,
-/// Section 7.2](https://tools.ietf.org/html/rfc8415#section-7.2).
+/// Default port a DHCPv6 client should listen to according to
+/// [RFC 8415, Section 7.2](https://tools.ietf.org/html/rfc8415#section-7.2).
 const DEFAULT_CLIENT_PORT uint16 = 546;
-
-/// Configuration for an address type.
-type AddressConfig = table {
-    /// Number of addresses.
-    ///
-    /// If not set, interpreted as 0 (no addresses will be requested).
-    1: address_count uint8;
-
-    /// Preferred addresses.
-    ///
-    /// Used for requesting specific addresses from DHCPv6 servers. The
-    /// addresses are used as hints by DHCPv6 servers, but may be ignored. If
-    /// the DHCPv6 server does not assign the preferred addresses and responds
-    /// with different addresses instead, the DHCPv6 client's behaviour is to
-    /// accept the assigned addresses.
-    ///
-    /// The size of `preferred_addresses` must be less than or equal to
-    /// `address_count`, otherwise the `AddressConfig` is invalid.
-    ///
-    /// Optional field. If not set, or if `preferred_addresses` is empty, no
-    /// address hints are provided.
-    2: preferred_addresses vector<fuchsia.net.Ipv6Address>:MAX;
-};
-
-/// Configuration for negotiating addresses.
-type AddressAssignmentConfig = table {
-    /// Non-temporary address configuration.
-    ///
-    /// Configures the client to negotiate non-temporary addresses (IA_NA), as
-    /// defined in
-    /// [RFC 8415, section 6.2](https://tools.ietf.org/html/rfc8415#section-6.2).
-    ///
-    /// It not set, interpreted as an empty `AddressConfig` (no non-temporary
-    /// addresses will be negotiated).
-    1: non_temporary_address_config AddressConfig;
-};
-
-/// Configuration for requesting configuration information.
-type InformationConfig = table {
-    /// Request a list of available DNS servers
-    /// [RFC 3646](https://tools.ietf.org/html/rfc3646).
-    ///
-    /// If not set, interpreted as false;
-    1: dns_servers bool;
-};
-
-/// Configuration for starting the DHCPv6 client.
-///
-/// If the configuration requests both addresses and other configuration
-/// parameters, all information is requested in the same message exchange,
-/// running in stateful mode. If only configuration parameters are requested
-/// (no addresses), the client runs in stateless mode, as described in
-/// [RFC 8415, Section 6.1](https://tools.ietf.org/html/rfc8415#section-6.1).
-///
-/// If the configuration does not request any information (neither addresses
-/// nor other configuration information), the [`fuchsia.net.dhcpv6/Client`]
-/// creation will fail.
-type ClientConfig = table {
-    /// Configuration for negotiating addresses.
-    ///
-    /// If set, the client runs in stateful mode, as described in
-    /// [RFC 8415, Section 6.2](https://tools.ietf.org/html/rfc8415#section-6.2).
-    ///
-    /// If not set, interpreted as an empty `AddressAssignmentConfig` (no
-    /// addresses will be negotiated).
-    1: address_assignment_config AddressAssignmentConfig;
-
-    /// Configuration for requesting configuration information.
-    ///
-    /// If not set, interpreted as an empty `InformationConfig` (no
-    /// configuration information will be requested).
-    2: information_config InformationConfig;
-};
-
-/// Parameters for calling [`fuchsia.net.dhcpv6/ClientProvider.NewClient`].
-type NewClientParams = table {
-    /// The ID of the interface the client will run on.
-    ///
-    /// Required.
-    1: interface_id uint64;
-
-    /// The socket address to use when communicating with servers.
-    ///
-    /// DHCPv6 servers listen for link-local multicasts, so not using a
-    /// link-local address here may cause interoperability issues.
-    ///
-    /// Client creation will fail with `INVALID_ARGS` if:
-    ///
-    /// * a multicast address is provided;
-    /// * or a link-local address is provided, and its zone index doesn't match
-    ///   `interface_id` (Fuchsia has a 1:1 mapping from zone index to interface
-    ///   ID).
-    ///
-    /// Client creation will fail if it fails to bind a socket to this address.
-    ///
-    /// Required.
-    2: address fuchsia.net.Ipv6SocketAddress;
-
-    /// The [`fuchsia.net.dhcpv6/ClientConfig`] the client starts with.
-    ///
-    /// Client creation will fail if `config` is not requesting any
-    /// information, or if it contains invalid fields.
-    ///
-    /// Required.
-    3: config ClientConfig;
-};
 
 /// Provides a method to create new clients.
 @discoverable
@@ -127,7 +21,101 @@ protocol ClientProvider {
     /// + request `request` grants control over the client. Closed with an
     ///     epitaph if the client cannot be created.
     NewClient(resource struct {
-        params NewClientParams;
+        params @generated_name("NewClientParams") table {
+            /// The ID of the interface the client will run on.
+            ///
+            /// Required.
+            1: interface_id uint64;
+
+            /// The socket address to use when communicating with servers.
+            ///
+            /// DHCPv6 servers listen for link-local multicasts, so not using a
+            /// link-local address here may cause interoperability issues.
+            ///
+            /// Client creation will fail with `INVALID_ARGS` if:
+            ///
+            /// * a multicast address is provided;
+            /// * or a link-local address is provided, and its zone index
+            ///     doesn't match `interface_id` (Fuchsia has a 1:1 mapping from
+            ///     zone index to interface ID).
+            ///
+            /// Client creation will fail if it fails to bind a socket to this
+            /// address.
+            ///
+            /// Required.
+            2: address fuchsia.net.Ipv6SocketAddress;
+
+            /// Configuration for starting the DHCPv6 client.
+            ///
+            /// If the configuration requests both addresses and other
+            /// configuration parameters, all information is requested in the
+            /// same message exchange, running in stateful mode. If only
+            /// configuration parameters are requested (no addresses), the
+            /// client runs in stateless mode, as described in
+            /// [RFC 8415, Section 6.1](https://tools.ietf.org/html/rfc8415#section-6.1).
+            ///
+            /// Client creation will fail if `config` is not requesting any
+            /// information, or if it contains invalid fields.
+            ///
+            /// Required.
+            3: config @generated_name("ClientConfig") table {
+                /// Configuration for negotiating addresses.
+                ///
+                /// If set, the client runs in stateful mode, as described in
+                /// [RFC 8415, Section 6.2](https://tools.ietf.org/html/rfc8415#section-6.2).
+                ///
+                /// If not set, interpreted as empty (no addresses will be
+                /// negotiated).
+                1: address_assignment_config @generated_name("AddressAssignmentConfig") table {
+                    /// Non-temporary address configuration.
+                    ///
+                    /// Configures the client to negotiate non-temporary
+                    /// addresses (IA_NA), as defined in
+                    /// [RFC 8415, section 6.2](https://tools.ietf.org/html/rfc8415#section-6.2).
+                    ///
+                    /// It not set, interpreted as empty (no non-temporary
+                    /// addresses will be negotiated).
+                    1: non_temporary_address_config @generated_name("AddressConfig") table {
+                        /// Number of addresses.
+                        ///
+                        /// If not set, interpreted as 0 (no addresses will be
+                        /// requested).
+                        1: address_count uint8;
+
+                        /// Preferred addresses.
+                        ///
+                        /// Used for requesting specific addresses from DHCPv6
+                        /// servers. The addresses are used as hints by DHCPv6
+                        /// servers, but may be ignored. If the DHCPv6 server
+                        /// does not assign the preferred addresses and responds
+                        /// with different addresses instead, the DHCPv6
+                        /// client's behaviour is to accept the assigned
+                        /// addresses.
+                        ///
+                        /// The size of `preferred_addresses` must be less than
+                        /// or equal to `address_count`, otherwise the
+                        /// `AddressConfig` is invalid.
+                        ///
+                        /// Optional field. If not set, or if
+                        /// `preferred_addresses` is empty, no address hints are
+                        /// provided.
+                        2: preferred_addresses vector<fuchsia.net.Ipv6Address>:MAX;
+                    };
+                };
+
+                /// Configuration for requesting configuration information.
+                ///
+                /// If not set, interpreted as empty (no configuration
+                /// information will be requested).
+                2: information_config @generated_name("InformationConfig") table {
+                    /// Request a list of available DNS servers
+                    /// [RFC 3646](https://tools.ietf.org/html/rfc3646).
+                    ///
+                    /// If not set, interpreted as false;
+                    1: dns_servers bool;
+                };
+            };
+        };
         request server_end:Client;
     });
 };
@@ -148,15 +136,13 @@ protocol Client {
     ///
     /// Yields a value for every address acquired by the client.
     ///
-    /// [`fuchsia.net.interfaces.admin/AddressParameters.address_state_provider`]
-    /// is closed if the address becomes invalid (its valid lifetime expires
-    /// and Renew and Rebind fail).
-    ///
     /// It is invalid to call this method while a previous call is pending.
     /// Doing so will cause the server end of the protocol to be closed.
     ///
     /// - response `address` the assigned address.
-    /// - response `address_parameters` the parameters of the address.
+    /// - response `address_parameters` the parameters of the address. Its
+    ///     `address_state_provider` is closed if the address becomes invalid
+    ///     (its valid lifetime expires and Renew and Rebind fail).
     WatchAddress() -> (resource struct {
         address fuchsia.net.Subnet;
         address_parameters fuchsia.net.interfaces.admin.AddressParameters;
@@ -164,8 +150,7 @@ protocol Client {
 
     /// Gracefully tears down the underlying object.
     ///
-    /// Blocks until any held addresses are gracefully released, as described
-    /// in
+    /// Blocks until any held addresses are gracefully released, as described in
     /// [RFC 8415, Section 18.2.7](https://tools.ietf.org/html/rfc8415#section-18.2.7).
     ///
     /// The server end of the protocol is closed after this method returns.

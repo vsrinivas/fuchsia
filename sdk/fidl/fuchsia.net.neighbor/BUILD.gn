@@ -7,8 +7,6 @@ import("//build/fidl/fidl.gni")
 fidl("fuchsia.net.neighbor") {
   sdk_category = "internal"
   sources = [
-    "entry-iterator.fidl",
-    "entry-state.fidl",
     "entry.fidl",
     "neighbor.fidl",
     "unreachability-config.fidl",

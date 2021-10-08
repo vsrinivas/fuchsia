@@ -363,19 +363,19 @@ func toNeighborEntry(nicID tcpip.NICID, n stack.NeighborEntry) (neighbor.Entry, 
 		// trigger an event.
 		return e, false
 	case stack.Incomplete:
-		e.SetState(neighbor.EntryStateIncomplete)
+		e.SetEntryState(neighbor.EntryStateIncomplete)
 	case stack.Reachable:
-		e.SetState(neighbor.EntryStateReachable)
+		e.SetEntryState(neighbor.EntryStateReachable)
 	case stack.Stale:
-		e.SetState(neighbor.EntryStateStale)
+		e.SetEntryState(neighbor.EntryStateStale)
 	case stack.Delay:
-		e.SetState(neighbor.EntryStateDelay)
+		e.SetEntryState(neighbor.EntryStateDelay)
 	case stack.Probe:
-		e.SetState(neighbor.EntryStateProbe)
+		e.SetEntryState(neighbor.EntryStateProbe)
 	case stack.Static:
-		e.SetState(neighbor.EntryStateStatic)
+		e.SetEntryState(neighbor.EntryStateStatic)
 	case stack.Unreachable:
-		e.SetState(neighbor.EntryStateUnreachable)
+		e.SetEntryState(neighbor.EntryStateUnreachable)
 	default:
 		panic(fmt.Sprintf("invalid NeighborState = %d: %#v", n.State, n))
 	}

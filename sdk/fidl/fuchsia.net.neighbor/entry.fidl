@@ -24,8 +24,62 @@ type Entry = table {
     2: neighbor fuchsia.net.IpAddress;
 
     /// State of the entry within the Neighbor Unreachability Detection (NUD)
-    /// state machine defined by RFC 4861 section 7.3.
-    3: state EntryState;
+    /// state machine.
+    ///
+    /// Modeled after RFC 4861 section 7.3.2. Descriptions are kept
+    /// implementation-independent by using a set of generic terminology.
+    ///
+    /// ,------------------------------------------------------------------.
+    /// | Generic Term              | ARP Term    | NDP Term               |
+    /// |---------------------------+-------------+------------------------|
+    /// | Reachability Probe        | ARP Request | Neighbor Solicitation  |
+    /// | Reachability Confirmation | ARP Reply   | Neighbor Advertisement |
+    /// `---------------------------+-------------+------------------------'
+    // TODO(https://fxbug.dev/84104): rename back to `state` when
+    // generated_name annotation works on strict enum.
+    3: entry_state @generated_name("EntryState") strict enum {
+        /// Reachability is in the process of being confirmed for a newly
+        /// created, non-static entry.
+        INCOMPLETE = 1;
+
+        /// Positive reachability has been confirmed; the path to the neighbor
+        /// is functioning properly.
+        REACHABLE = 2;
+
+        /// Reachability is considered unknown.
+        ///
+        /// Occurs in one of two ways:
+        ///   1. Too much time has elapsed since the last positive reachability
+        ///      confirmation was received.
+        ///   2. Received a reachability confirmation from a neighbor with a
+        ///      different MAC address than the one cached.
+        STALE = 3;
+
+        /// A packet was recently sent while reachability was considered
+        /// unknown.
+        ///
+        /// This state is an optimization that gives non-Neighbor-Discovery
+        /// related protocols time to confirm reachability after the last
+        /// confirmation of reachability has expired due to lack of recent
+        /// traffic.
+        DELAY = 4;
+
+        /// A reachability confirmation is actively sought by periodically
+        /// retransmitting reachability probes until a reachability confirmation
+        /// is received, or until the maximum number of probes has been sent.
+        PROBE = 5;
+
+        /// Static entries are explicitly added with [`Controller.AddEntry`].
+        /// They do not expire and are not deleted until explicitly removed with
+        /// [`Controller.RemoveEntry`].
+        STATIC = 6;
+
+        /// Negative reachability has been confirmed; the path to the neighbor
+        /// may not be functioning properly. A reachability confirmation was not
+        /// received after transmitting the maximum number of reachability
+        /// probes.
+        UNREACHABLE = 7;
+    };
 
     /// MAC address of the neighboring device's network interface controller.
     /// Absent for dynamic entries in [`EntryState.INCOMPLETE`].

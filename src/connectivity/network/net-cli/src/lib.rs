@@ -1335,7 +1335,7 @@ mod tests {
             fneighbor::Entry {
                 interface: Some(1),
                 neighbor: Some(SUBNET_V4.addr),
-                state: Some(fneighbor::EntryState::Reachable),
+                entry_state: Some(fneighbor::EntryState::Reachable),
                 mac: Some(MAC_1),
                 updated_at: Some(updated_at),
                 ..fneighbor::Entry::EMPTY
@@ -1384,7 +1384,7 @@ mod tests {
             fneighbor::Entry {
                 interface: Some(1),
                 neighbor: Some(ip),
-                state: Some(fneighbor::EntryState::Reachable),
+                entry_state: Some(fneighbor::EntryState::Reachable),
                 mac: Some(mac),
                 updated_at: Some(updated_at),
                 ..fneighbor::Entry::EMPTY

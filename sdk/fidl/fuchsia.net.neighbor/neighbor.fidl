@@ -49,6 +49,73 @@ library fuchsia.net.neighbor;
 using fuchsia.net;
 using zx;
 
+/// Returns entries and events from the neighbor table. Clients can open an
+/// iterator using the [`fuchsia.net.neighbor/View.EntryIterator`] method.
+///
+/// An atomic snapshot of the neighbor table is queued for clients upon opening
+/// an EntryIterator. This snapshot consists of `existing` entries followed by
+/// an [`IdleEvent`]. No other types of events will be sent before an
+/// [`IdleEvent`].
+protocol EntryIterator {
+    /// Take items from the iterator. If no items are available, block until one
+    /// is; otherwise, return immediately with items queued since the last
+    /// invocation.
+    ///
+    /// This does not guarantee that, when blocking, only one item will be
+    /// returned; implementations may debounce or batch events.
+    ///
+    /// Attempt to maintain one in-flight `GetNext` call as much as possible.
+    /// If `GetNext` is not constantly polled, the networking stack might hit an
+    /// upper limit on the number of buffered events, resulting in dropping.
+    /// Should this happen, this connection will be closed with a
+    /// `ZX_ERR_IO_OVERRUN` epitaph.
+    ///
+    /// If there is more than one in-flight `GetNext` call, callers are put into
+    /// a queue and will receive responses in FIFO order.
+    ///
+    /// - response `events` a list of events that occurred since the last
+    ///     invocation of this method.
+    GetNext() -> (struct {
+        events vector< @generated_name("EntryIteratorItem")strict union {
+            /// An existing entry in the neighbor table. Does not indicate that
+            /// an event occurred.
+            1: existing Entry;
+
+            /// Event indicating the iterator will no longer return `existing`
+            /// items.
+            2: idle @generated_name("IdleEvent") struct {};
+
+            /// Empty event for indicating there are no more
+            /// [`EntryIteratorItem.existing`] items to yield.
+            3: added Entry;
+
+            /// Event indicating an entry has changed.
+            4: changed Entry;
+
+            /// Event indicating an entry has been removed from the neighbor
+            /// table.
+            5: removed Entry;
+        }>:MAX_ITEM_BATCH_SIZE;
+    });
+};
+
+/// The maximum number of [`EntryIteratorItem`] returned in a
+/// [`EntryIterator.GetNext`] response.
+//
+// This has been calculated with the following function:
+//   MAX_EVENT_BATCH_SIZE = floor_pow2(
+//     (ZX_CHANNEL_MAX_MSG_BYTES - RESPONSE_BYTES) / MAX_EVENT_BYTES
+//   )
+// where,
+//   ZX_CHANNEL_MAX_MSG_BYTES = 65536 bytes
+//   RESPONSE_BYTES = size of [`EntryIterator.GetNext`] response = 32 bytes
+//   MAX_ITEM_BYTES = max size of [`EntryIteratorItem`] = 208 bytes
+//
+// It's rounded down to the next power of two for aesthetics and decreased
+// sensitivity to changes to the underlying data structures.
+// This value will need to be recomputed if any of the above numbers change.
+const MAX_ITEM_BATCH_SIZE uint64 = 256;
+
 /// Inspect the neighbor table and related interface configuration.
 @discoverable
 protocol View {
@@ -59,7 +126,8 @@ protocol View {
     /// + request `options` specifies the behavior of the [`EntryIterator`].
     OpenEntryIterator(resource struct {
         it server_end:EntryIterator;
-        options EntryIteratorOptions;
+        /// Options for modifying the behavior of an [`EntryIterator`].
+        options @generated_name("EntryIteratorOptions") table {};
     });
 
     /// View the current configurations of an interface.

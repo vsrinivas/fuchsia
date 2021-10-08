@@ -9,28 +9,16 @@ using fuchsia.net.interfaces;
 using fuchsia.net;
 using zx;
 
-type Status = strict enum {
-    OK = 0;
-    UNKNOWN_ERROR = 1;
-    DNS_ERROR = 2;
-    PARSE_ERROR = 3;
-    IPV4_ONLY = 4;
-    UNKNOWN_INTERFACE = 5;
-};
-
 type NetErr = struct {
-    status Status;
+    status strict enum {
+        OK = 0;
+        UNKNOWN_ERROR = 1;
+        DNS_ERROR = 2;
+        PARSE_ERROR = 3;
+        IPV4_ONLY = 4;
+        UNKNOWN_INTERFACE = 5;
+    };
     message string:MAX;
-};
-
-type InterfaceConfig = struct {
-    name fuchsia.net.interfaces.name;
-
-    /// An unstable file path corresponding to the interface. Used in watching the creation
-    /// and destruction of the interface, or in accessing the interface using netdump.
-    filepath string:MAX;
-
-    metric uint32;
 };
 
 type RouteTableEntry = struct {
@@ -38,11 +26,6 @@ type RouteTableEntry = struct {
     gateway fuchsia.net.IpAddress:optional;
     nicid uint32;
     metric uint32;
-};
-
-type SocketAddress = struct {
-    addr fuchsia.net.IpAddress;
-    port uint16;
 };
 
 @discoverable
@@ -100,7 +83,16 @@ protocol Netstack {
     /// Adds a new interface backed by the given ethernet device.
     AddEthernetDevice(resource struct {
         topological_path string:MAX;
-        interface_config InterfaceConfig;
+        interface_config struct {
+            name fuchsia.net.interfaces.name;
+
+            /// An unstable file path corresponding to the interface. Used in
+            /// watching the creation and destruction of the interface, or in
+            /// accessing the interface using netdump.
+            filepath string:MAX;
+
+            metric uint32;
+        };
         device client_end:fuchsia.hardware.ethernet.Device;
     }) -> (struct {
         nicid uint32;
@@ -120,8 +112,8 @@ protocol Netstack {
 
     /// Begin a route transaction to synchronize updates to the route table.
     ///
-    /// Returns `ZX_OK` if a transaction can be started; `ZX_ERR_SHOULD_WAIT` if a transaction is
-    /// currently in progress.
+    /// Returns `ZX_OK` if a transaction can be started; `ZX_ERR_SHOULD_WAIT` if
+    /// a transaction is currently in progress.
     StartRouteTableTransaction(resource struct {
         route_table_transaction server_end:RouteTableTransaction;
     }) -> (struct {

@@ -67,41 +67,6 @@ type BasePortConfig = table {
             vector<fuchsia.hardware.network.FrameTypeSupport>:fuchsia.hardware.network.MAX_FRAME_TYPES;
 };
 
-/// Logical port configuration for [`fuchsia.net.tun/Device`] ports.
-type DevicePortConfig = table {
-    /// Base port configuration.
-    ///
-    /// Required.
-    1: base BasePortConfig;
-    /// Start port with link online.
-    ///
-    /// If not set, interpreted as `false`.
-    2: online bool;
-    /// MAC address to report.
-    ///
-    /// If set, the port provides a [`fuchsia.hardware.network/MacAddressing`]
-    /// implementation through [`fuchsia.hardware.network/Port.GetMac`].
-    3: mac fuchsia.net.MacAddress;
-};
-
-/// Logical port configuration for [`fuchsia.net.tun/DevicePair`] ports.
-type DevicePairPortConfig = table {
-    /// Base port configuration.
-    ///
-    /// Required.
-    1: base BasePortConfig;
-    /// MAC address to report.
-    ///
-    /// If set, left port provides a [`fuchsia.hardware.network/MacAddressing`]
-    /// implementation through [`fuchsia.hardware.network/Port.GetMac`].
-    2: mac_left fuchsia.net.MacAddress;
-    /// MAC address to report.
-    ///
-    /// If set, right port provides a [`fuchsia.hardware.network/MacAddressing`]
-    /// implementation through [`fuchsia.hardware.network/Port.GetMac`].
-    3: mac_right fuchsia.net.MacAddress;
-};
-
 /// Base device configuration.
 type BaseDeviceConfig = table {
     /// Report frame metadata on receiving frames.
@@ -118,91 +83,32 @@ type BaseDeviceConfig = table {
     3: min_rx_buffer_length uint32;
 };
 
-/// Configuration used to create a [`fuchsia.net.tun/Device`].
-type DeviceConfig = table {
-    /// Base device configuration.
-    ///
-    /// It not set, interpreted as an empty table.
-    1: base BaseDeviceConfig;
-    /// If `true`, [`fuchsia.net.tun/Device.WriteFrame`] and
-    /// [`fuchsia.net.tun/Device.ReadFrame`] blocks returning until the
-    /// corresponding buffers are available to complete the call.
-    ///
-    /// It not set, interpreted as `false`.
-    2: blocking bool;
-};
-
-/// Configuration used to create a [`fuchsia.net.tun/DevicePair`].
-type DevicePairConfig = table {
-    /// Base device configuration.
-    ///
-    /// It not set, interpreted as an empty table.
-    1: base BaseDeviceConfig;
-    /// If `true`, transmit buffers on the left end are dropped if no receive
-    /// buffers are available on the right end to receive it. Otherwise,
-    /// transmit buffers wait until a receive buffer is available to copy them
-    /// to.
-    ///
-    /// It not set, interpreted as `false`.
-    2: fallible_transmit_left bool;
-    /// Like `fallible_transmit_left` but allows writes to the right end to be
-    /// fallible.
-    ///
-    /// It not set, interpreted as `false`.
-    3: fallible_transmit_right bool;
-};
-
-/// State associated with Mac Address filtering.
-///
-/// Devices never perform any MAC address filtering, but they implement the
-/// [`fuchsia.hardware.network/MacAddressing`] interface and store the values to
-/// be retrieved through the [`fuchsia.net.tun/InternalState`] structure.
-type MacState = table {
-    /// The currently configured MAC Address filtering mode.
-    ///
-    /// Required.
-    1: mode fuchsia.hardware.network.MacFilterMode;
-    /// The full list of configured multicast address filtering.
-    ///
-    /// Required.
-    2: multicast_filters vector<fuchsia.net.MacAddress>:MAX_MULTICAST_FILTERS;
-};
-
 /// Internal device state.
 type InternalState = table {
-    /// Mac addressing state.
+    /// State associated with Mac Address filtering.
+    ///
+    /// Devices never perform any MAC address filtering, but they implement the
+    /// [`fuchsia.hardware.network/MacAddressing`] interface and store the
+    /// values to be retrieved through the [`fuchsia.net.tun/InternalState`]
+    /// structure.
     ///
     /// Set iff `mac` is provided in the [`DevicePortConfig`] or
     /// [`DevicePairPortConfig`] structures upon creation of the port.
-    1: mac MacState;
+    1: mac @generated_name("MacState") table {
+        /// The currently configured MAC Address filtering mode.
+        ///
+        /// Required.
+        1: mode fuchsia.hardware.network.MacFilterMode;
+        /// The full list of configured multicast address filtering.
+        ///
+        /// Required.
+        2: multicast_filters vector<fuchsia.net.MacAddress>:MAX_MULTICAST_FILTERS;
+    };
+
     /// Whether there is a session currently opened and running with the `Port`.
     ///
     /// Required.
     2: has_session bool;
-};
-
-/// Extra frame metadata.
-///
-/// This is an opaque holder for extra information that is associated with
-/// Network Device data frames.
-// NOTE(brunodalbo): NetworkDevice's `InfoType` definition is still in its
-// infancy. This solution allows access to the raw bytes in the sidecar
-// metadata. We expect that this will evolve into a more type-safe solution
-// which will be more transparent.
-type FrameMetadata = struct {
-    /// Additional frame information type.
-    ///
-    /// If not set, interpreted as
-    /// [`fuchsia.hardware.network/InfoType.NO_INFO`].
-    info_type fuchsia.hardware.network.InfoType;
-    /// Additional frame information value.
-    ///
-    /// If not set, interpreted as empty bytes.
-    info bytes:4096;
-    /// Frame flags. `RxFlags` for `WriteFrame` and `TxFlags` for `ReadFrame`.
-    ///
-    /// If not set, interpreted as zero.
-    flags uint32;
 };
 
 /// A frame written to or read from a [`fuchsia.net.tun/Device`].
@@ -221,10 +127,33 @@ type Frame = table {
     ///
     /// Required.
     2: data bytes:MAX_MTU;
-    /// Metadata associated with the frame.
+    /// Extra frame metadata.
     ///
-    /// If not set, interpreted as empty [`FrameMetadata`].
-    3: meta FrameMetadata;
+    /// This is an opaque holder for extra information that is associated with
+    /// Network Device data frames.
+    ///
+    /// If not set, interpreted as empty.
+    // NOTE(brunodalbo): NetworkDevice's `InfoType` definition is still in its
+    // infancy. This solution allows access to the raw bytes in the sidecar
+    // metadata. We expect that this will evolve into a more type-safe solution
+    // which will be more transparent.
+    3: meta @generated_name("FrameMetadata") struct {
+        /// Additional frame information type.
+        ///
+        /// If not set, interpreted as
+        /// [`fuchsia.hardware.network/InfoType.NO_INFO`].
+        info_type fuchsia.hardware.network.InfoType;
+        /// Additional frame information value.
+        ///
+        /// If not set, interpreted as empty bytes.
+        info bytes:4096;
+        /// Frame flags. `RxFlags` for `WriteFrame` and `TxFlags` for
+        /// `ReadFrame`.
+        ///
+        /// If not set, interpreted as zero.
+        flags uint32;
+    };
+
     /// Frame's destination or source port identifier.
     ///
     /// Required.
@@ -333,7 +262,22 @@ protocol Device {
     /// + request `port` grants control over the port. Closed with an epitaph if
     /// `config` is not valid.
     AddPort(resource struct {
-        config DevicePortConfig;
+        config @generated_name("DevicePortConfig") table {
+            /// Base port configuration.
+            ///
+            /// Required.
+            1: base BasePortConfig;
+            /// Start port with link online.
+            ///
+            /// If not set, interpreted as `false`.
+            2: online bool;
+            /// MAC address to report.
+            ///
+            /// If set, the port provides a
+            /// [`fuchsia.hardware.network/MacAddressing`] implementation /
+            /// through [`fuchsia.hardware.network/Port.GetMac`].
+            3: mac fuchsia.net.MacAddress;
+        };
         port server_end:Port;
     });
     /// Connects to the underlying device endpoint.
@@ -372,7 +316,24 @@ protocol DevicePair {
     /// * error `ZX_ERR_ALREADY_EXISTS` if the provided port identifier is
     /// already in use.
     AddPort(struct {
-        config DevicePairPortConfig;
+        config @generated_name("DevicePairPortConfig") table {
+            /// Base port configuration.
+            ///
+            /// Required.
+            1: base BasePortConfig;
+            /// MAC address to report.
+            ///
+            /// If set, left port provides a
+            /// [`fuchsia.hardware.network/MacAddressing`] implementation
+            /// through [`fuchsia.hardware.network/Port.GetMac`].
+            2: mac_left fuchsia.net.MacAddress;
+            /// MAC address to report.
+            ///
+            /// If set, right port provides a
+            /// [`fuchsia.hardware.network/MacAddressing`] implementation
+            /// through [`fuchsia.hardware.network/Port.GetMac`].
+            3: mac_right fuchsia.net.MacAddress;
+        };
     }) -> (struct {}) error zx.status;
     /// Removes a logical port created by
     /// [`fuchsia.net.tun/DevicePair.AddPort`].
@@ -408,7 +369,19 @@ protocol Control {
     /// + request `device` grants control over the device. Closed with an
     /// epitaph if `config` is not valid.
     CreateDevice(resource struct {
-        config DeviceConfig;
+        config @generated_name("DeviceConfig") table {
+            /// Base device configuration.
+            ///
+            /// It not set, interpreted as an empty table.
+            1: base BaseDeviceConfig;
+            /// If `true`, [`fuchsia.net.tun/Device.WriteFrame`] and
+            /// [`fuchsia.net.tun/Device.ReadFrame`] blocks returning until the
+            /// corresponding buffers are available to complete the call.
+            ///
+            /// It not set, interpreted as `false`.
+            2: blocking bool;
+        };
+
         device server_end:Device;
     });
     /// Creates a `DevicePair` with given `config`.
@@ -420,7 +393,25 @@ protocol Control {
     /// + request `device_pair` grants control over the device pair. Closed with
     /// an epitaph if `config` is not valid.
     CreatePair(resource struct {
-        config DevicePairConfig;
+        config @generated_name("DevicePairConfig") table {
+            /// Base device configuration.
+            ///
+            /// It not set, interpreted as an empty table.
+            1: base BaseDeviceConfig;
+            /// If `true`, transmit buffers on the left end are dropped if no
+            /// receive buffers are available on the right end to receive it.
+            /// Otherwise, transmit buffers wait until a receive buffer is
+            /// available to copy them to.
+            ///
+            /// It not set, interpreted as `false`.
+            2: fallible_transmit_left bool;
+            /// Like `fallible_transmit_left` but allows writes to the right end
+            /// to be fallible.
+            ///
+            /// It not set, interpreted as `false`.
+            3: fallible_transmit_right bool;
+        };
+
         device_pair server_end:DevicePair;
     });
 };

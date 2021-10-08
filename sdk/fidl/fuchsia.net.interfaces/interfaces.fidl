@@ -8,7 +8,8 @@ using fuchsia.net;
 using zx;
 
 /// The maximum length of an interface name.
-// `sizeof((struct ifreq).ifr_name) == 16`; the last byte is reserved for the null terminator.
+// `sizeof((struct ifreq).ifr_name) == 16`; the last byte is reserved for the
+// null terminator.
 const INTERFACE_NAME_LENGTH uint8 = 15;
 
 /// An interface name as a sequence of bytes.
@@ -16,64 +17,37 @@ alias name = string:INTERFACE_NAME_LENGTH;
 
 type Empty = struct {};
 
-/// An interface-state change event.
-type Event = strict union {
-    /// Properties of an interface that existed when watching started.
-    ///
-    /// All fields are set.
-    1: existing Properties;
-    /// Properties of an interface that was added while watching.
-    ///
-    /// All fields are set.
-    2: added Properties;
-    /// ID of an interface that was removed while watching.
-    3: removed fuchsia.net.interface_id;
-    /// Properties of an interface that changed while watching.
-    ///
-    /// Only [`Properties.id`] and changed fields are set.
-    4: changed Properties;
-    /// Sentinel value indicating no more [`existing`] events will be sent.
-    5: idle Empty;
-};
-
-/// An interface's device class.
-type DeviceClass = strict union {
-    /// The interface is loopback.
-    1: loopback Empty;
-    /// The interface's network device class.
-    2: device fuchsia.hardware.network.DeviceClass;
-};
-
-/// An address and its properties.
-// This address type is expected to grow to include additional properties such
-// as IPv6 address state.
-type Address = table {
-    /// The address and prefix length.
-    1: addr fuchsia.net.Subnet;
-    /// The time after which the address will no longer be valid.
-    ///
-    /// Its value must be greater than 0. A value of `ZX_TIME_INFINITE`
-    /// indicates that the address will always be valid. The value is derived
-    /// from the monotonic clock.
-    ///
-    /// As a `zx.time`, the value has [monotonic clock
-    /// semantics](https://fuchsia.dev/fuchsia-src/concepts/time/monotonic),
-    /// which implies that it has no meaning outside of the host on which it was
-    /// generated and no meaning across host restarts.
-    2: valid_until zx.time;
-};
-
 /// Properties of a network interface.
 type Properties = table {
     /// An opaque identifier for the interface. Its value will not be reused
     /// even if the device is removed and subsequently re-added. Immutable.
     1: id fuchsia.net.interface_id;
     /// The addresses currently assigned to the interface.
-    2: addresses vector<Address>:MAX;
+    2: addresses vector< @generated_name("Address")table {
+        /// The address and prefix length.
+        1: addr fuchsia.net.Subnet;
+        /// The time after which the address will no longer be valid.
+        ///
+        /// Its value must be greater than 0. A value of `ZX_TIME_INFINITE`
+        /// indicates that the address will always be valid. The value is
+        /// derived from the monotonic clock.
+        ///
+        /// As a `zx.time`, the value has
+        /// [monotonic clock semantics](https://fuchsia.dev/fuchsia-src/concepts/time/monotonic),
+        /// which implies that it has no meaning outside of the host on which it
+        /// was generated and no meaning across host restarts.
+        2: valid_until zx.time;
+    }>:MAX;
     /// The device is enabled and its physical state is online.
     3: online bool;
     /// The device class of the interface. Immutable.
-    4: device_class DeviceClass;
+    4: device_class strict union {
+        /// The interface is loopback.
+        1: loopback Empty;
+        /// The interface's network device class.
+        2: device fuchsia.hardware.network.DeviceClass;
+    };
+
     /// Whether there is a default IPv4 route through this interface.
     5: has_default_ipv4_route bool;
     /// Whether there is a default IPv6 route through this interface.
@@ -81,11 +55,6 @@ type Properties = table {
     /// The name of the interface. Immutable.
     7: name name;
 };
-
-/// Options for configuring the interface state watcher.
-// This type is currently empty, but may grow to allow behavior tuning of the
-// watcher, e.g. allow subscribing to a subset of the available events.
-type WatcherOptions = table {};
 
 /// Network interface state inspection and observation.
 @discoverable
@@ -96,10 +65,15 @@ protocol State {
     /// they occur, which can then be retrieved via the pipelined protocol.
     ///
     /// + request `options` specifies the behavior of the [`Watcher`].
-    /// + request `watcher` grants access to a [`Watcher`]. Closed if the queue cannot be
-    ///     allocated or if the queue is full when the server attempts to enqueue an event.
+    /// + request `watcher` grants access to a [`Watcher`]. Closed if the queue
+    ///     cannot be allocated or if the queue is full when the server attempts
+    ///     to enqueue an event.
     GetWatcher(resource struct {
-        options WatcherOptions;
+        /// Options for configuring the interface state watcher.
+        // This type is currently empty, but may grow to allow behavior tuning
+        // of the watcher, e.g. allow subscribing to a subset of the available
+        // events.
+        options @generated_name("WatcherOptions") table {};
         watcher server_end:Watcher;
     });
 };
@@ -110,8 +84,8 @@ protocol Watcher {
     /// Hanging get for an interface addition/deletion change.
     ///
     /// Clients should only have one call of this method at a time; a second
-    /// call to this method while a call is already pending will cause
-    /// the server end of the protocol to be closed.
+    /// call to this method while a call is already pending will cause the
+    /// server end of the protocol to be closed.
     ///
     /// If there are N interfaces present at the time the server end of the
     /// protocol is initialized, then the first N invocations of this method
@@ -131,6 +105,24 @@ protocol Watcher {
     ///     changes); while other fields will only be present with the new value
     ///     if the property has changed.
     Watch() -> (struct {
-        event Event;
+        event strict union {
+            /// Properties of an interface that existed when watching started.
+            ///
+            /// All fields are set.
+            1: existing Properties;
+            /// Properties of an interface that was added while watching.
+            ///
+            /// All fields are set.
+            2: added Properties;
+            /// ID of an interface that was removed while watching.
+            3: removed fuchsia.net.interface_id;
+            /// Properties of an interface that changed while watching.
+            ///
+            /// Only [`Properties.id`] and changed fields are set.
+            4: changed Properties;
+            /// Sentinel value indicating no more [`existing`] events will be
+            /// sent.
+            5: idle Empty;
+        };
     });
 };

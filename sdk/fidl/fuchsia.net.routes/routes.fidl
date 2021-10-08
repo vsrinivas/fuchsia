@@ -12,8 +12,8 @@ using zx;
 type Destination = table {
     /// The IP address of the destination.
     1: address fuchsia.net.IpAddress;
-    /// The MAC address of the destination. Only set if the destination is on a link that requires a
-    /// MAC address.
+    /// The MAC address of the destination. Only set if the destination is on a
+    /// link that requires a MAC address.
     2: mac fuchsia.net.MacAddress;
     /// The interface identifier over which the destination can be reached.
     3: interface_id fuchsia.net.interface_id;
@@ -21,34 +21,35 @@ type Destination = table {
     4: source_address fuchsia.net.IpAddress;
 };
 
-/// A resolved route.
-///
-/// Contains the information for the "next-hop" or immediate-destination that is the result of a
-/// route resolution. A resolved route is only meaningful in the context of a requested destination.
-type Resolved = strict union {
-    /// The requested destination is directly reachable.
-    1: direct Destination;
-    /// The requested destination is reachable through a gateway, thus the next hop is the gateway.
-    2: gateway Destination;
-};
-
 /// Provides access to the system's routing state.
 @discoverable
 protocol State {
     /// Resolves the route to a destination.
     ///
-    /// + request `destination` the IP address to resolve a route to. If the unspecified address
-    ///           (all zeroes) is provided, the default route will be returned. The variant of
-    ///           `destination` determines variant of [`fuchsia.net/IpAddress`] fields in the
-    ///           resolved route.
+    /// + request `destination` the IP address to resolve a route to. If the
+    ///     unspecified address (all zeroes) is provided, the default route will
+    ///     be returned. The variant of `destination` determines variant of
+    ///     [`fuchsia.net/IpAddress`] fields in the resolved route.
     /// - response `result` contains the resolved route to `destination`.
     /// * error `ZX_ERR_ADDRESS_UNREACHABLE` if `destination` can't be resolved.
-    // TODO(brunodalbo) In the future we may have multiple tables and we may want to let the caller
-    // specify which table to use. Alternatively, if multiple tables are accessed through scoped
-    // objects, a `Resolve` call in a table would have the same effect.
+    // TODO(brunodalbo) In the future we may have multiple tables and we may
+    // want to let the caller specify which table to use. Alternatively, if
+    // multiple tables are accessed through scoped objects, a `Resolve` call in
+    // a table would have the same effect.
     Resolve(struct {
         destination fuchsia.net.IpAddress;
     }) -> (struct {
-        result Resolved;
+        /// A resolved route.
+        ///
+        /// Contains the information for the "next-hop" or immediate-destination
+        /// that is the result of a route resolution. A resolved route is only
+        /// meaningful in the context of a requested destination.
+        result @generated_name("Resolved") strict union {
+            /// The requested destination is directly reachable.
+            1: direct Destination;
+            /// The requested destination is reachable through a gateway, thus
+            /// the next hop is the gateway.
+            2: gateway Destination;
+        };
     }) error zx.status;
 };

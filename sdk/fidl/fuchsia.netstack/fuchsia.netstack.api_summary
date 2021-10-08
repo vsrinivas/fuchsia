@@ -32,9 +32,6 @@ struct fuchsia.netstack/RouteTableEntry
 protocol/member fuchsia.netstack/RouteTableTransaction.AddRoute(fuchsia.netstack/RouteTableEntry r) -> (int32 status)
 protocol/member fuchsia.netstack/RouteTableTransaction.DelRoute(fuchsia.netstack/RouteTableEntry r) -> (int32 status)
 protocol fuchsia.netstack/RouteTableTransaction
-struct/member fuchsia.netstack/SocketAddress.addr fuchsia.net/IpAddress
-struct/member fuchsia.netstack/SocketAddress.port uint16
-struct fuchsia.netstack/SocketAddress
 enum/member fuchsia.netstack/Status.DNS_ERROR 2
 enum/member fuchsia.netstack/Status.IPV4_ONLY 4
 enum/member fuchsia.netstack/Status.OK 0

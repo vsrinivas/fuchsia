@@ -1,4 +1,4 @@
-// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Copyright 2018 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 library fuchsia.net.dhcp;
@@ -6,81 +6,83 @@ library fuchsia.net.dhcp;
 using fuchsia.net;
 using zx;
 
-/// The pool of addresses managed by a DHCP server and from which leases are supplied.
-///
-/// The pool is valid iff all of the following are true:
-///   1) All fields are present.
-///   2) The stop address is larger than the start address.
-///   3) The prefix length is large enough to fit the full range of addresses.
-///
-/// For example, a pool of 4 addresses with a 24 bit subnet mask could be specified:
-///   {
-///     prefix_length: 24,
-///     range_start: 192.168.1.2,
-///     range_stop: 192.168.1.5,
-///   } 
-type AddressPool = table {
-    /// The prefix length (in bits) of the address pool's subnet mask.
-    1: prefix_length uint8;
-    /// The starting address, inclusive, of the range of addresses which the DHCP server
-    /// will lease to clients.
-    2: range_start fuchsia.net.Ipv4Address;
-    /// The ending address, inclusive, of the range of addresses which the server will
-    /// lease to clients.
-    3: range_stop fuchsia.net.Ipv4Address;
-};
-
-/// The duration of leases offered by the server.
-type LeaseLength = table {
-    /// The default lease length to be issued to clients. This field must have a value.
-    1: default Duration;
-    /// The maximum lease length value which the server will issue to clients who
-    /// have requested a specific lease length. If omitted, the max lease length is
-    /// equivalent to the default lease length.
-    2: max Duration;
-};
-
-/// A static IP address assignment for a host or device on the network managed by Server.
-type StaticAssignment = table {
-    /// The MAC address of the host or device which will have the static IP address assignment.
-    1: host fuchsia.net.MacAddress;
-    /// The IP address which the host or device will always be assigned by dhcpd.
-    2: assigned_addr fuchsia.net.Ipv4Address;
-};
-
 /// The configurable server parameters.
 type Parameter = flexible union {
     /// The IP addresses to which the server is bound. The vector bound has been
     /// arbitrarily selected as a generous upper limit.
     1: ip_addrs vector<fuchsia.net.Ipv4Address>:256;
-    /// The server's pool of managed addresses. Changing the address pool will not cancel existing
-    /// leases because the DHCP protocol does not provide a mechanism for doing so. Administrators
-    /// should take care when changing the address pool for a server with active leases.
-    2: address_pool AddressPool;
-    /// The duration of leases issued by dhcpd.
-    3: lease LeaseLength;
-    /// The client MAC addresses which the server will issue leases to. By default,
-    /// the server will not have a permitted MAC list, in which case it will attempt to
-    /// issue a lease to every client which requests one. If permitted_macs has a non-zero length
-    /// then the server will only respond to lease requests from clients with a MAC in the list. The
-    /// vector bound has been arbitrarily selected as a generous upper limit.
+    /// The pool of addresses managed by a DHCP server and from which leases are
+    /// supplied.
+    ///
+    /// The pool is valid iff all of the following are true:
+    ///   1) All fields are present.
+    ///   2) The stop address is larger than the start address.
+    ///   3) The prefix length is large enough to fit the full range of
+    ///      addresses.
+    ///
+    /// For example, a pool of 4 addresses with a 24 bit subnet mask could be
+    /// specified as:
+    ///   {
+    ///     prefix_length: 24,
+    ///     range_start: 192.168.1.2,
+    ///     range_stop: 192.168.1.5,
+    ///   }
+    ///
+    /// Changing the address pool will not cancel existing leases because the
+    /// DHCP protocol does not provide a mechanism for doing so. Administrators
+    /// should take care when changing the address pool for a server with active
+    /// leases.
+    2: address_pool table {
+        /// The prefix length (in bits) of the address pool's subnet mask.
+        1: prefix_length uint8;
+        /// The starting address, inclusive, of the range of addresses which the
+        /// DHCP server will lease to clients.
+        2: range_start fuchsia.net.Ipv4Address;
+        /// The ending address, inclusive, of the range of addresses which the
+        /// server will lease to clients.
+        3: range_stop fuchsia.net.Ipv4Address;
+    };
+    /// The duration of leases offered by the server.
+    3: lease @generated_name("LeaseLength") table {
+        /// The default lease length to be issued to clients. This field must
+        /// have a value.
+        1: default Duration;
+        /// The maximum lease length value which the server will issue to
+        /// clients who have requested a specific lease length. If omitted, the
+        /// max lease length is equivalent to the default lease length.
+        2: max Duration;
+    };
+    /// The client MAC addresses which the server will issue leases to. By
+    /// default, the server will not have a permitted MAC list, in which case it
+    /// will attempt to issue a lease to every client which requests one. If
+    /// permitted_macs has a non-zero length then the server will only respond
+    /// to lease requests from clients with  MAC in the list. The vector bound
+    /// has been arbitrarily selected as a generous upper limit.
     4: permitted_macs vector<fuchsia.net.MacAddress>:256;
-    /// Addresses statically assigned to specific hosts or devices. Typically, a network
-    /// administrator will statically assign addresses to always-on network
-    /// devices which should always have the same IP address, such as network printers. The vector
-    /// bound has been arbitrarily selected as a generous upper limit.
-    5: statically_assigned_addrs vector<StaticAssignment>:256;
-    /// Enables server behavior where the server ARPs an IP address prior to issuing
-    /// it in a lease. If the server receives a response, the server will mark the
-    /// address as in-use and try again with a different address.
+    /// Addresses statically assigned to specific hosts or devices. Typically, a
+    /// network administrator will statically assign addresses to always-on
+    /// network devices which should always have the same IP address, such as
+    /// network printers. The vector bound has been arbitrarily selected as a
+    /// generous upper limit.
+    5: statically_assigned_addrs vector< @generated_name("StaticAssignment")table {
+        /// The MAC address of the host or device which will have the static IP
+        /// address assignment.
+        1: host fuchsia.net.MacAddress;
+        /// The IP address which the host or device will always be assigned the
+        /// server.
+        2: assigned_addr fuchsia.net.Ipv4Address;
+    }>:256;
+    /// Enables server behavior where the server ARPs an IP address prior to
+    /// issuing it in a lease. If the server receives a response, the server
+    /// will mark the address as in-use and try again with a different address.
     6: arp_probe bool;
     /// The names of the interface to which the server will listen. If this
     /// vector is empty, the server will listen on all interfaces and will
-    /// process incoming DHCP messages regardless of the interface on which
-    /// they arrive. If this vector is not empty, then the server will only
-    /// listen for incoming DHCP messages on the named interfaces contained by
-    /// this vector. The string and vectors bounds have been arbitrarily
-    /// selected as generous upper limits.
+    /// process incoming DHCP messages regardless of the interface on which they
+    /// arrive. If this vector is not empty, then the server will only listen
+    /// for incoming DHCP messages on the named interfaces contained by this
+    /// vector. The string and vectors bounds have been arbitrarily selected as
+    /// generous upper limits.
     7: bound_device_names vector<string:256>:256;
 };
 
