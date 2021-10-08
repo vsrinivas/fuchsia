@@ -72,6 +72,22 @@ pub struct VDLFiles {
     verbose: bool,
 }
 
+/// Note that a new TempDir will be created when we clone VDLFiles.
+impl Clone for VDLFiles {
+    fn clone(&self) -> Self {
+        Self {
+            image_files: self.image_files.clone(),
+            host_tools: self.host_tools.clone(),
+            ssh_files: self.ssh_files.clone(),
+            output_proto: self.output_proto.clone(),
+            emulator_log: self.emulator_log.clone(),
+            staging_dir: TempDir::new().unwrap(),
+            is_sdk: self.is_sdk,
+            verbose: self.verbose,
+        }
+    }
+}
+
 impl VDLFiles {
     pub fn new(is_sdk: bool, verbose: bool) -> Result<VDLFiles> {
         let staging_dir = Builder::new().prefix("vdl_staging_").tempdir()?;
@@ -500,17 +516,23 @@ impl VDLFiles {
         let shared_process = SharedChild::spawn(&mut cmd)?;
         let child_arc = Arc::new(shared_process);
         if start_command.emu_only || start_command.monitor {
+            if !vdl_args.tuntap {
+                // Pre-emptively add device to ffx target before actually starting the emulator.
+                if let Some(proxy) = daemon_proxy {
+                    println!("[fvdl] adding manual target at port: {} to ffx", ssh_port);
+                    target::add_target(proxy, ssh_port).await?;
+                }
+            }
             // When running with '--emu-only' or '--monitor' mode, the user is directly interacting
             // with the emulator console, the execution ends when either QEMU or AEMU terminates.
-            // We don't specify a 'daemon_proxy', because no target will be manually added.
-            match monitored_child_process(&child_arc) {
+            match fuchsia_async::unblock(move || monitored_child_process(&child_arc)).await {
                 Ok(_) => {
                     self.stop_vdl(
                         &KillCommand {
                             launched_proto: Some(self.output_proto.display().to_string()),
                             vdl_path: Some(vdl.display().to_string()),
                         },
-                        None,
+                        daemon_proxy,
                     )
                     .await?;
                     return Ok(0);
@@ -521,7 +543,7 @@ impl VDLFiles {
                             launched_proto: Some(self.output_proto.display().to_string()),
                             vdl_path: Some(vdl.display().to_string()),
                         },
-                        None,
+                        daemon_proxy,
                     )
                     .await?;
                     ffx_bail!("emulator launcher did not terminate properly, error: {}", e)
@@ -600,35 +622,39 @@ impl VDLFiles {
             // TODO(fxbug.dev/72190) Ensure we have a way for user to interact with emulator
             // once SSH support goes away.
             let pid = get_emu_pid(&self.output_proto).unwrap();
-
-            'keep_ssh: loop {
-                match Command::new("pgrep").arg("qemu").output() {
-                    Ok(out) => {
-                        // pgrep can no longer find any qemu pid process we think the emulator has
-                        // terminated, stop trying to ssh.
-                        if out.stdout.is_empty() {
-                            break 'keep_ssh;
+            let self_clone = self.clone();
+            let is_tuntap = vdl_args.tuntap.clone();
+            fuchsia_async::unblock(move || {
+                'keep_ssh: loop {
+                    match Command::new("pgrep").arg("qemu").output() {
+                        Ok(out) => {
+                            // pgrep can no longer find any qemu pid process we think the emulator
+                            // has terminated, stop trying to ssh.
+                            if out.stdout.is_empty() {
+                                break 'keep_ssh;
+                            }
+                            if !str::from_utf8(&out.stdout)
+                                .unwrap()
+                                .lines()
+                                .any(|p| p == pid.to_string())
+                            {
+                                break 'keep_ssh;
+                            }
+                            let ssh_out = self_clone.ssh_and_wait(is_tuntap, ssh_port).unwrap();
+                            // If SSH process terminated successfully, we think user intend to end
+                            // SSH session as well as shutting down emulator, stop trying to ssh.
+                            // If SSH process terminated with a non-zero exit status, we think the
+                            // user has issued "dm reboot", which reboots fuchsia and disconnects
+                            // ssh, but emulator should still be running.
+                            if ssh_out.status.success() {
+                                break 'keep_ssh;
+                            }
                         }
-                        if !str::from_utf8(&out.stdout)
-                            .unwrap()
-                            .lines()
-                            .any(|p| p == pid.to_string())
-                        {
-                            break 'keep_ssh;
-                        }
-                        let ssh_out = self.ssh_and_wait(vdl_args.tuntap, ssh_port)?;
-                        // If SSH process terminated successfully, we think user intend to end
-                        // SSH session as well as shutting down emulator, stop trying to ssh.
-                        // If SSH process terminated with a non-zero exit status, we think the
-                        // user has issued "dm reboot", which reboots fuchsia and disconnects ssh,
-                        // but emulator should still be running.
-                        if ssh_out.status.success() {
-                            break 'keep_ssh;
-                        }
+                        Err(_) => break 'keep_ssh,
                     }
-                    Err(_) => break 'keep_ssh,
                 }
-            }
+            })
+            .await;
             self.stop_vdl(
                 &KillCommand {
                     launched_proto: Some(self.output_proto.display().to_string()),

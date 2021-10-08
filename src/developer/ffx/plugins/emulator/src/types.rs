@@ -158,6 +158,7 @@ pub fn get_sdk_version_from_manifest() -> Result<String> {
     }
 }
 
+#[derive(Clone)]
 pub struct HostTools {
     pub aemu: PathBuf,
     pub device_finder: PathBuf,
@@ -378,6 +379,7 @@ impl HostTools {
     }
 }
 
+#[derive(Clone)]
 pub struct ImageFiles {
     pub amber_files: Option<PathBuf>,
     pub build_args: Option<PathBuf>,
@@ -517,6 +519,7 @@ impl ImageFiles {
     }
 }
 
+#[derive(Clone)]
 pub struct SSHKeys {
     pub authorized_keys: PathBuf,
     pub private_key: PathBuf,
