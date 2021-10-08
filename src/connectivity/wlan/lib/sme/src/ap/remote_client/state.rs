@@ -3,12 +3,8 @@
 // found in the LICENSE file.
 
 use {
-    crate::{
-        ap::{
-            aid, authenticator::Authenticator, event::*, remote_client::RemoteClient, Context,
-            RsnCfg,
-        },
-        timer::EventId,
+    crate::ap::{
+        aid, authenticator::Authenticator, event::*, remote_client::RemoteClient, Context, RsnCfg,
     },
     anyhow::{ensure, format_err},
     fidl_fuchsia_wlan_common as fidl_common, fidl_fuchsia_wlan_ieee80211 as fidl_ieee80211,
@@ -20,6 +16,7 @@ use {
     wlan_common::{
         ie::{intersect, rsn::rsne, SupportedRate},
         mac::{Aid, CapabilityInfo},
+        timer::EventId,
     },
     wlan_rsn::{
         self,
@@ -826,8 +823,7 @@ mod tests {
         super::*,
         crate::{
             ap::{aid, create_rsn_cfg, test_utils::MockAuthenticator, TimeStream},
-            sink::MlmeSink,
-            test_utils, timer, MlmeRequest, MlmeStream,
+            test_utils, MlmeRequest, MlmeSink, MlmeStream,
         },
         futures::channel::mpsc,
         ieee80211::{MacAddr, Ssid},
@@ -839,6 +835,7 @@ mod tests {
                 cipher::{CIPHER_CCMP_128, CIPHER_GCMP_256},
                 rsne::Rsne,
             },
+            timer,
         },
         wlan_rsn::key::exchange::Key,
     };

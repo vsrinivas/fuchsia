@@ -4,8 +4,8 @@
 
 use {
     crate::{
-        clone_utils, phy_selection::get_device_band_info, responder::Responder, sink::MlmeSink,
-        timer::TimedEvent, MlmeRequest,
+        clone_utils, phy_selection::get_device_band_info, responder::Responder, MlmeRequest,
+        MlmeSink,
     },
     fidl_fuchsia_wlan_common as fidl_common, fidl_fuchsia_wlan_internal as fidl_internal,
     fidl_fuchsia_wlan_mlme::{self as fidl_mlme, DeviceInfo, MlmeEvent},
@@ -15,6 +15,7 @@ use {
     wlan_common::{
         channel::{Cbw, Channel},
         mac::Aid,
+        timer::TimedEvent,
     },
 };
 

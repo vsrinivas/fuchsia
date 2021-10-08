@@ -17,9 +17,7 @@ use {
         mlme_event_name,
         phy_selection::{derive_phy_cbw_for_ap, get_device_band_info},
         responder::Responder,
-        sink::MlmeSink,
-        timer::{self, EventId, TimedEvent, Timer},
-        MlmeRequest,
+        MlmeRequest, MlmeSink,
     },
     fidl_fuchsia_wlan_ieee80211 as fidl_ieee80211, fidl_fuchsia_wlan_internal as fidl_internal,
     fidl_fuchsia_wlan_mlme::{self as fidl_mlme, DeviceInfo, MlmeEvent},
@@ -31,7 +29,9 @@ use {
     wlan_common::{
         channel::{Channel, Phy},
         ie::{rsn::rsne::Rsne, SupportedRate},
-        mac, RadioConfig,
+        mac,
+        timer::{self, EventId, TimedEvent, Timer},
+        RadioConfig,
     },
     wlan_rsn::{self, psk},
 };

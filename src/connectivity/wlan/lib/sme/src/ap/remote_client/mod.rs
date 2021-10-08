@@ -7,13 +7,10 @@ mod state;
 use state::*;
 
 use {
-    crate::{
-        ap::{
-            aid,
-            event::{ClientEvent, Event},
-            Context, MlmeRequest, RsnCfg,
-        },
-        timer::EventId,
+    crate::ap::{
+        aid,
+        event::{ClientEvent, Event},
+        Context, MlmeRequest, RsnCfg,
     },
     fidl_fuchsia_wlan_ieee80211 as fidl_ieee80211, fidl_fuchsia_wlan_mlme as fidl_mlme,
     fuchsia_zircon as zx,
@@ -22,6 +19,7 @@ use {
     wlan_common::{
         ie::SupportedRate,
         mac::{Aid, CapabilityInfo},
+        timer::EventId,
     },
     wlan_rsn::key::{exchange::Key, Tk},
 };
@@ -211,9 +209,9 @@ impl RemoteClient {
 mod tests {
     use {
         super::*,
-        crate::{ap::TimeStream, sink::MlmeSink, test_utils, timer, MlmeStream},
+        crate::{ap::TimeStream, test_utils, MlmeSink, MlmeStream},
         futures::channel::mpsc,
-        wlan_common::assert_variant,
+        wlan_common::{assert_variant, timer},
     };
 
     const AP_ADDR: MacAddr = [6u8; 6];

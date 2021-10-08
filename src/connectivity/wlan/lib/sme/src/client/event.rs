@@ -5,8 +5,8 @@
 use fuchsia_zircon::{self as zx, prelude::DurationNum};
 
 use crate::client::info::ConnectionPingInfo;
-use crate::timer::TimeoutDuration;
 use ieee80211::{Bssid, MacAddr};
+use wlan_common::timer::TimeoutDuration;
 
 pub const ESTABLISHING_RSNA_TIMEOUT_SECONDS: i64 = 3;
 pub const KEY_FRAME_EXCHANGE_TIMEOUT_MILLIS: i64 = 200;

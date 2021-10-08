@@ -3,9 +3,9 @@
 // found in the LICENSE file.
 
 use {
-    crate::timer::TimeoutDuration,
     fuchsia_zircon::{self as zx, prelude::DurationNum},
     ieee80211::MacAddr,
+    wlan_common::timer::TimeoutDuration,
 };
 
 // fxbug.dev/53818 exposed the issue that longer timeout is needed for starting AP while the

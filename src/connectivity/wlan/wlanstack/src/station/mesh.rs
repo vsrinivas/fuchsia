@@ -22,7 +22,8 @@ use {
         task::Poll,
     },
     void::Void,
-    wlan_sme::{mesh as mesh_sme, timer::TimeEntry},
+    wlan_common::timer::TimeEntry,
+    wlan_sme::mesh as mesh_sme,
 };
 
 pub type Endpoint = fidl::endpoints::ServerEnd<fidl_sme::MeshSmeMarker>;

@@ -6,7 +6,7 @@ use {
     super::*,
     crate::{
         client::{scan, ConnectResult, ConnectionAttemptId, ScanTxnId},
-        sink::InfoSink,
+        InfoSink,
     },
     fidl_fuchsia_wlan_mlme as fidl_mlme,
     ieee80211::Ssid,

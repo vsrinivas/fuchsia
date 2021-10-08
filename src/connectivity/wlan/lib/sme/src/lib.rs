@@ -8,17 +8,15 @@ pub mod client;
 pub mod clone_utils;
 pub mod mesh;
 pub mod phy_selection;
-mod sink;
 #[cfg(test)]
 pub mod test_utils;
-pub mod timer;
 
 use fidl_fuchsia_wlan_mlme::{self as fidl_mlme, MlmeEvent};
 use futures::channel::mpsc;
 use thiserror::Error;
+use wlan_common::{sink::UnboundedSink, timer::TimedEvent};
 
 use crate::client::InfoEvent;
-use crate::timer::TimedEvent;
 
 #[derive(Copy, Clone, Debug, Default, Eq, PartialEq, Ord, PartialOrd)]
 pub struct Config {
@@ -69,7 +67,9 @@ pub trait Station {
 }
 
 pub type MlmeStream = mpsc::UnboundedReceiver<MlmeRequest>;
+pub type MlmeSink = UnboundedSink<MlmeRequest>;
 pub type InfoStream = mpsc::UnboundedReceiver<InfoEvent>;
+pub type InfoSink = UnboundedSink<InfoEvent>;
 
 mod responder {
     use futures::channel::oneshot;

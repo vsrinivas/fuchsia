@@ -28,11 +28,8 @@ use {
         wpa::get_legacy_wpa_association,
     },
     crate::{
-        clone_utils::clone_scan_request,
-        responder::Responder,
-        sink::{InfoSink, MlmeSink, UnboundedSink},
-        timer::{self, TimedEvent},
-        Config, InfoStream, MlmeRequest, MlmeStream,
+        clone_utils::clone_scan_request, responder::Responder, Config, InfoSink, InfoStream,
+        MlmeRequest, MlmeSink, MlmeStream,
     },
     anyhow::{bail, format_err, Context as _},
     fidl_fuchsia_wlan_ieee80211 as fidl_ieee80211, fidl_fuchsia_wlan_internal as fidl_internal,
@@ -49,6 +46,8 @@ use {
         hasher::WlanHasher,
         ie::{self, rsn::rsne, wsc},
         scan::ScanResult,
+        sink::UnboundedSink,
+        timer::{self, TimedEvent},
         RadioConfig,
     },
     wlan_rsn::auth,
@@ -64,11 +63,11 @@ mod internal {
     use {
         crate::{
             client::{event::Event, info::InfoReporter, inspect, ConnectionAttemptId},
-            sink::MlmeSink,
-            timer::Timer,
+            MlmeSink,
         },
         fidl_fuchsia_wlan_mlme as fidl_mlme,
         std::sync::Arc,
+        wlan_common::timer::Timer,
     };
 
     pub struct Context {

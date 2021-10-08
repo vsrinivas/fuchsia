@@ -9,7 +9,6 @@ pub mod mesh;
 use anyhow::format_err;
 use fidl_fuchsia_wlan_mlme::{self as fidl_mlme, MlmeEvent, MlmeEventStream, MlmeProxy};
 use fidl_fuchsia_wlan_stats::IfaceStats;
-use fuchsia_async as fasync;
 use futures::channel::mpsc;
 use futures::prelude::*;
 use futures::select;
@@ -18,10 +17,8 @@ use pin_utils::pin_mut;
 use std::marker::Unpin;
 use std::sync::{Arc, Mutex};
 use void::Void;
-use wlan_sme::{
-    timer::{TimeEntry, TimedEvent},
-    MlmeRequest, MlmeStream, Station,
-};
+use wlan_common::timer::{self, TimeEntry};
+use wlan_sme::{MlmeRequest, MlmeStream, Station};
 
 use crate::stats_scheduler::StatsRequest;
 
@@ -44,7 +41,7 @@ where
     pin_mut!(stats_fut);
     let mut stats_fut = stats_fut.fuse();
 
-    let mut timeout_stream = make_timer_stream(time_stream).fuse();
+    let mut timeout_stream = timer::make_async_timed_event_stream(time_stream).fuse();
 
     loop {
         select! {
@@ -74,16 +71,6 @@ where
             stats = stats_fut => match stats? {},
         }
     }
-}
-
-fn make_timer_stream<E>(
-    time_stream: impl Stream<Item = TimeEntry<E>>,
-) -> impl Stream<Item = TimedEvent<E>> {
-    time_stream
-        .map(|(deadline, timed_event)| {
-            fasync::Timer::new(fasync::Time::from_zx(deadline)).map(|_| timed_event)
-        })
-        .buffer_unordered(usize::max_value())
 }
 
 fn forward_mlme_request(req: MlmeRequest, proxy: &MlmeProxy) -> Result<(), fidl::Error> {
@@ -144,53 +131,4 @@ where
         };
     }
     Err(format_err!("Stream of stats requests has ended unexpectedly"))
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use {
-        fuchsia_zircon::{self as zx, DurationNum},
-        futures::channel::mpsc::{self, UnboundedSender},
-        pin_utils::pin_mut,
-        std::task::Poll,
-        wlan_common::assert_variant,
-    };
-
-    type Event = u32;
-
-    #[test]
-    fn test_timer() {
-        let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
-        let fut = async {
-            let (timer, time_stream) = mpsc::unbounded::<TimeEntry<Event>>();
-            let mut timeout_stream = make_timer_stream(time_stream);
-            let now = zx::Time::get_monotonic();
-            schedule(&timer, now + 40.millis(), 0);
-            schedule(&timer, now + 10.millis(), 1);
-            schedule(&timer, now + 20.millis(), 2);
-            schedule(&timer, now + 30.millis(), 3);
-
-            let mut events = vec![];
-            for _ in 0u32..4 {
-                let event = timeout_stream.next().await.expect("timer terminated prematurely");
-                events.push(event.event);
-            }
-            events
-        };
-        pin_mut!(fut);
-        for _ in 0u32..4 {
-            assert_eq!(Poll::Pending, exec.run_until_stalled(&mut fut));
-            assert!(exec.wake_next_timer().is_some());
-        }
-        assert_variant!(
-            exec.run_until_stalled(&mut fut),
-            Poll::Ready(events) => assert_eq!(events, vec![1, 2, 3, 0]),
-        );
-    }
-
-    fn schedule(timer: &UnboundedSender<TimeEntry<Event>>, deadline: zx::Time, event: Event) {
-        let entry = (deadline, TimedEvent { id: 0, event });
-        timer.unbounded_send(entry).expect("expect send successful");
-    }
 }

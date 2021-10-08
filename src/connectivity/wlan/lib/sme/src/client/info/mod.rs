@@ -8,12 +8,9 @@ mod stats_collector;
 pub(crate) use self::{info_reporter::InfoReporter, stats_collector::StatsCollector};
 
 use {
-    crate::{
-        client::{
-            event::{self, Event},
-            ConnectFailure, ConnectResult,
-        },
-        timer::TimeoutDuration,
+    crate::client::{
+        event::{self, Event},
+        ConnectFailure, ConnectResult,
     },
     derivative::Derivative,
     fidl_fuchsia_wlan_ieee80211 as fidl_ieee80211, fidl_fuchsia_wlan_mlme as fidl_mlme,
@@ -24,6 +21,7 @@ use {
         self,
         bss::{BssDescription, Protection},
         ie::wsc::ProbeRespWsc,
+        timer::TimeoutDuration,
     },
 };
 

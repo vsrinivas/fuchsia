@@ -19,9 +19,7 @@ use {
         },
         mlme_event_name,
         phy_selection::derive_phy_cbw,
-        sink::MlmeSink,
-        timer::EventId,
-        MlmeRequest,
+        MlmeRequest, MlmeSink,
     },
     anyhow::bail,
     fidl_fuchsia_wlan_ieee80211 as fidl_ieee80211, fidl_fuchsia_wlan_internal as fidl_internal,
@@ -40,6 +38,7 @@ use {
         channel::Channel,
         format::MacFmt as _,
         ie::{self, rsn::cipher},
+        timer::EventId,
         RadioConfig,
     },
     wlan_rsn::{
@@ -1470,7 +1469,7 @@ mod tests {
             rsn::rsne::Rsne,
         },
         test_utils::fake_stas::IesOverrides,
-        RadioConfig,
+        timer, RadioConfig,
     };
     use wlan_rsn::{key::exchange::Key, rsna::SecAssocStatus};
     use wlan_rsn::{
@@ -1484,12 +1483,11 @@ mod tests {
         mock_psk_supplicant, MockSupplicant, MockSupplicantController,
     };
     use crate::client::{
-        info::InfoReporter, inspect, rsn::Rsna, ConnectTransactionStream, InfoEvent, InfoSink,
-        TimeStream,
+        info::InfoReporter, inspect, rsn::Rsna, ConnectTransactionStream, InfoEvent, TimeStream,
     };
     use crate::test_utils::make_wpa1_ie;
 
-    use crate::{test_utils, timer, InfoStream, MlmeStream};
+    use crate::{test_utils, InfoSink, InfoStream, MlmeStream};
 
     #[test]
     fn associate_happy_path_unprotected() {
