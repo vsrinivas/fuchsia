@@ -2,13 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 use {
-<<<<<<< HEAD   (60be7c [sl4f] Add modular_facade.IsBasemgrRunning)
     crate::{diagnostics::ConnectionStats, error::AccessorError},
-    fidl_fuchsia_diagnostics::{FormattedContent, StreamMode, MAXIMUM_ENTRIES_PER_BATCH},
-=======
-    crate::{diagnostics::BatchIteratorConnectionStats, error::AccessorError},
     fidl_fuchsia_diagnostics::{DataType, FormattedContent, StreamMode, MAXIMUM_ENTRIES_PER_BATCH},
->>>>>>> CHANGE (a57e28 [archivist] Remove double allocation when serializing a resp)
     fuchsia_zircon as zx,
     futures::prelude::*,
     parking_lot::Mutex,
@@ -208,30 +203,14 @@ impl Into<FormattedContent> for JsonString {
 pub struct JsonPacketSerializer<I, S> {
     #[pin]
     items: I,
-<<<<<<< HEAD   (60be7c [sl4f] Add modular_facade.IsBasemgrRunning)
     stats: Arc<ConnectionStats>,
-    max_packet_size: usize,
-    overflow: Option<String>,
-=======
-    stats: Option<Arc<BatchIteratorConnectionStats>>,
     max_packet_size: u64,
     overflow: Option<S>,
->>>>>>> CHANGE (a57e28 [archivist] Remove double allocation when serializing a resp)
 }
 
-<<<<<<< HEAD   (60be7c [sl4f] Add modular_facade.IsBasemgrRunning)
-impl<I> JsonPacketSerializer<I> {
-    pub fn new(stats: Arc<ConnectionStats>, max_packet_size: usize, items: I) -> Self {
-        Self { items, stats, max_packet_size, overflow: None }
-=======
 impl<I, S> JsonPacketSerializer<I, S> {
-    pub fn new(stats: Arc<BatchIteratorConnectionStats>, max_packet_size: u64, items: I) -> Self {
-        Self { items, stats: Some(stats), max_packet_size, overflow: None }
-    }
-
-    pub fn new_without_stats(max_packet_size: u64, items: I) -> Self {
-        Self { items, max_packet_size, overflow: None, stats: None }
->>>>>>> CHANGE (a57e28 [archivist] Remove double allocation when serializing a resp)
+    pub fn new(stats: Arc<ConnectionStats>, max_packet_size: u64, items: I) -> Self {
+        Self { items, stats, max_packet_size, overflow: None }
     }
 }
 
@@ -249,18 +228,10 @@ where
         let mut writer = VmoWriter::new(*this.max_packet_size);
         writer.write(&[b'['])?;
 
-<<<<<<< HEAD   (60be7c [sl4f] Add modular_facade.IsBasemgrRunning)
-        if let Some(item) = self.overflow.take() {
-            batch.push_str(&item);
-            self.stats.add_result();
-=======
         if let Some(item) = this.overflow.take() {
             let batch_writer = BufWriter::new(writer.clone());
             serde_json::to_writer(batch_writer, &item)?;
-            if let Some(stats) = &this.stats {
-                stats.add_result();
-            }
->>>>>>> CHANGE (a57e28 [archivist] Remove double allocation when serializing a resp)
+            this.stats.add_result();
         }
 
         let mut items_is_pending = false;
@@ -301,17 +272,7 @@ where
                 break;
             }
 
-<<<<<<< HEAD   (60be7c [sl4f] Add modular_facade.IsBasemgrRunning)
-            if !is_first {
-                batch.push_str(",\n");
-            }
-            batch.push_str(&item);
-            self.stats.add_result();
-=======
-            if let Some(stats) = &this.stats {
-                stats.add_result();
-            }
->>>>>>> CHANGE (a57e28 [archivist] Remove double allocation when serializing a resp)
+            this.stats.add_result();
         }
 
         writer.write(&[b']'])?;
