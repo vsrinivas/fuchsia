@@ -22,7 +22,6 @@ rustc_library("lib") {
     "//src/developer/ffx/daemon/target:lib",
     "//src/developer/ffx/lib/services/fidl:fuchsia.ffx.test-rustc",
     "//src/lib/async-utils",
-    "//src/lib/async-utils",
     "//src/lib/diagnostics/selectors",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",

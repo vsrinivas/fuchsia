@@ -118,7 +118,6 @@ executable("data_provider_unittest_exe") {
     "//src/lib/fsl",
     "//src/lib/fxl",
     "//src/lib/timekeeper:testing",
-    "//src/lib/timekeeper:testing",
     "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",
     "//third_party/rapidjson",

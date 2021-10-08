@@ -17,7 +17,6 @@ zx_library("ftl-mtd") {
 
   deps = [
     "//zircon/system/ulib/fbl",
-    "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/ftl",
     "//zircon/system/ulib/mtd",
   ]

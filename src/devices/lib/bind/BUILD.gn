@@ -59,7 +59,6 @@ rustc_library("lib") {
     "src/bytecode_encoder/encode_v1.rs",
     "src/bytecode_encoder/encode_v2.rs",
     "src/bytecode_encoder/error.rs",
-    "src/bytecode_encoder/error.rs",
     "src/bytecode_encoder/instruction_encoder.rs",
     "src/bytecode_encoder/mod.rs",
     "src/bytecode_encoder/symbol_table_encoder.rs",

@@ -42,7 +42,6 @@ test("test") {
   deps = [
     "//sdk/fidl/fuchsia.device.manager:fuchsia.device.manager_llcpp",
     "//sdk/lib/fdio",
-    "//sdk/lib/fdio",
     "//src/lib/ddk",
     "//src/lib/fxl/test:gtest_main",
     "//zircon/system/ulib/async-loop:async-loop-cpp",

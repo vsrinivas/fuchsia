@@ -85,7 +85,6 @@ source_set("enclosing_environment") {
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/vfs/cpp",
-    "//sdk/lib/vfs/cpp",
     "//zircon/system/ulib/async-default",
   ]
 

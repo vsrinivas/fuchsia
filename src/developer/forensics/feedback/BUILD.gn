@@ -129,7 +129,6 @@ source_set("main_service") {
     "//src/developer/forensics/last_reboot:reboot_watcher",
     "//src/developer/forensics/last_reboot:reporter",
     "//src/developer/forensics/utils:inspect_node_manager",
-    "//src/developer/forensics/utils:inspect_node_manager",
     "//src/developer/forensics/utils:inspect_protocol_stats",
     "//src/developer/forensics/utils/cobalt",
     "//src/developer/forensics/utils/component",

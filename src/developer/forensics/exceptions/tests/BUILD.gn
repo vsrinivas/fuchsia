@@ -91,7 +91,6 @@ executable("exception_broker_unittest_exe") {
     "//src/developer/forensics/testing:gpretty_printers",
     "//src/developer/forensics/testing:gtest_with_syslog_main",
     "//src/developer/forensics/testing:unit_test_fixture",
-    "//src/developer/forensics/testing:unit_test_fixture",
     "//src/developer/forensics/utils/fit",
     "//src/lib/fxl",
     "//src/lib/fxl/test:test_settings",

@@ -864,7 +864,6 @@ config("Wno-conversion") {
     "//src/media/codec/codecs/test:*",
     "//src/media/codec/examples/use_media_decoder:*",
     "//src/media/drivers/amlogic_decoder:*",
-    "//src/media/drivers/amlogic_decoder:*",
     "//src/media/drivers/amlogic_decoder/h264:*",
     "//src/media/drivers/amlogic_decoder/third_party/libvpx:*",
     "//src/media/lib/codec_impl:*",
