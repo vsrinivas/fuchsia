@@ -26,10 +26,9 @@ use net_types::{
 };
 use netstack3_core::{
     context::{InstantContext, RngContext, TimerContext},
-    error::NoRouteError,
     icmp::{BufferIcmpContext, IcmpConnId, IcmpContext, IcmpIpExt},
     BufferUdpContext, Ctx, DeviceId, DeviceLayerEventDispatcher, EntryDest, EntryEither,
-    StackStateBuilder, TimerId, UdpContext,
+    IpSockCreationError, StackStateBuilder, TimerId, UdpContext,
 };
 use packet::{Buf, BufferMut, Serializer};
 
@@ -204,7 +203,7 @@ impl<I: IcmpIpExt> IcmpContext<I> for TestDispatcher {
         IcmpContext::<I>::receive_icmp_error(&mut self.disp, conn, seq_num, err)
     }
 
-    fn close_icmp_connection(&mut self, conn: IcmpConnId<I>, err: NoRouteError) {
+    fn close_icmp_connection(&mut self, conn: IcmpConnId<I>, err: IpSockCreationError) {
         self.disp.close_icmp_connection(conn, err)
     }
 }

@@ -28,8 +28,8 @@ use rand_xorshift::XorShiftRng;
 
 use crate::context::{InstantContext, RngContext, TimerContext};
 use crate::device::{receive_frame, DeviceId, DeviceLayerEventDispatcher};
-use crate::error::NoRouteError;
 use crate::ip::icmp::{BufferIcmpContext, IcmpConnId, IcmpContext, IcmpIpExt};
+use crate::ip::socket::IpSockCreationError;
 use crate::testutil::benchmarks::{black_box, Bencher};
 use crate::testutil::{DummyEventDispatcherBuilder, DummyInstant, FakeCryptoRng, DUMMY_CONFIG_V4};
 use crate::transport::udp::{BufferUdpContext, UdpContext};
@@ -71,7 +71,7 @@ impl<I: IcmpIpExt> IcmpContext<I> for BenchmarkEventDispatcher {
         unimplemented!()
     }
 
-    fn close_icmp_connection(&mut self, _conn: IcmpConnId<I>, _err: NoRouteError) {
+    fn close_icmp_connection(&mut self, _conn: IcmpConnId<I>, _err: IpSockCreationError) {
         unimplemented!()
     }
 }

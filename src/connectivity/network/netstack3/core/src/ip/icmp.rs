@@ -26,18 +26,20 @@ use packet_formats::icmp::{
 use packet_formats::ip::{IpExt, Ipv4Proto, Ipv6Proto};
 use packet_formats::ipv4::{Ipv4FragmentType, Ipv4Header};
 use packet_formats::ipv6::{ExtHdrParseError, Ipv6Header};
+use thiserror::Error;
 use zerocopy::ByteSlice;
 
 use crate::context::{CounterContext, InstantContext, StateContext};
 use crate::data_structures::token_bucket::TokenBucket;
 use crate::device::ndp::NdpPacketHandler;
 use crate::device::FrameDestination;
-use crate::error::{ExistsError, NoRouteError, SocketError};
+use crate::ip::socket::{
+    BufferIpSocketContext, IpSockCreationError, IpSockSendError, IpSocket, IpSocketContext,
+    UnroutableBehavior,
+};
 use crate::ip::{
-    gmp::mld::MldPacketHandler,
-    path_mtu::PmtuHandler,
-    socket::{BufferIpSocketContext, IpSocket, IpSocketContext, SendError, UnroutableBehavior},
-    BufferIpTransportContext, IpDeviceIdContext, IpTransportContext, TransportReceiveError,
+    gmp::mld::MldPacketHandler, path_mtu::PmtuHandler, BufferIpTransportContext, IpDeviceIdContext,
+    IpTransportContext, TransportReceiveError,
 };
 use crate::socket::{ConnSocketMap, Socket};
 use crate::{BufferDispatcher, Ctx, EventDispatcher};
@@ -337,7 +339,7 @@ pub trait IcmpContext<I: IcmpIpExt> {
     /// core will completely remove the socket, and any future calls referencing
     /// it will either panic (because of an unrecognized [`IcmpConnId`]) or
     /// incorrectly refer to a different, newly-opened ICMP connection.
-    fn close_icmp_connection(&mut self, conn: IcmpConnId<I>, err: NoRouteError);
+    fn close_icmp_connection(&mut self, conn: IcmpConnId<I>, err: IpSockCreationError);
 }
 
 /// The context required by the ICMP layer in order to deliver packets on ICMP
@@ -352,7 +354,7 @@ impl<I: IcmpIpExt, D: EventDispatcher + IcmpContext<I>> IcmpContext<I> for Ctx<D
         IcmpContext::receive_icmp_error(self.dispatcher_mut(), conn, seq_num, err);
     }
 
-    fn close_icmp_connection(&mut self, conn: IcmpConnId<I>, err: NoRouteError) {
+    fn close_icmp_connection(&mut self, conn: IcmpConnId<I>, err: IpSockCreationError) {
         self.dispatcher_mut().close_icmp_connection(conn, err);
     }
 }
@@ -1869,7 +1871,7 @@ pub fn send_icmpv4_echo_request<B: BufferMut, D: BufferDispatcher<B>>(
     conn: IcmpConnId<Ipv4>,
     seq_num: u16,
     body: B,
-) -> Result<(), SendError> {
+) -> Result<(), IpSockSendError> {
     send_icmp_echo_request_inner(ctx, conn, seq_num, body)
 }
 
@@ -1884,7 +1886,7 @@ pub fn send_icmpv6_echo_request<B: BufferMut, D: BufferDispatcher<B>>(
     conn: IcmpConnId<Ipv6>,
     seq_num: u16,
     body: B,
-) -> Result<(), SendError> {
+) -> Result<(), IpSockSendError> {
     send_icmp_echo_request_inner(ctx, conn, seq_num, body)
 }
 
@@ -1893,7 +1895,7 @@ fn send_icmp_echo_request_inner<I: IcmpIpExt, B: BufferMut, C: InnerBufferIcmpCo
     conn: IcmpConnId<I>,
     seq_num: u16,
     body: B,
-) -> Result<(), SendError>
+) -> Result<(), IpSockSendError>
 where
     IcmpEchoRequest: for<'a> IcmpMessage<I, &'a [u8], Code = IcmpUnusedCode>,
 {
@@ -1917,6 +1919,19 @@ where
     .map_err(|(_body, err)| err)
 }
 
+/// An error when attempting to create ang ICMP socket.
+#[derive(Error, Copy, Clone, Debug, Eq, PartialEq)]
+pub enum IcmpSockCreationError {
+    /// An error was encountered when attempting to create the underlying IP
+    /// socket.
+    #[error("{}", _0)]
+    Ip(#[from] IpSockCreationError),
+    /// The specified socket addresses (IP addresses and ICMP ID) conflict with
+    /// an existing ICMP socket.
+    #[error("addresses conflict with an existing ICMP socket")]
+    SockAddrConflict,
+}
+
 /// Creates a new ICMPv4 connection.
 ///
 /// Creates a new ICMPv4 connection with the provided parameters `local_addr`,
@@ -1930,7 +1945,7 @@ pub fn new_icmpv4_connection<D: EventDispatcher>(
     local_addr: Option<SpecifiedAddr<Ipv4Addr>>,
     remote_addr: SpecifiedAddr<Ipv4Addr>,
     icmp_id: u16,
-) -> Result<IcmpConnId<Ipv4>, SocketError> {
+) -> Result<IcmpConnId<Ipv4>, IcmpSockCreationError> {
     new_icmpv4_connection_inner(ctx, local_addr, remote_addr, icmp_id)
 }
 
@@ -1942,7 +1957,7 @@ fn new_icmpv4_connection_inner<C: InnerIcmpv4Context>(
     local_addr: Option<SpecifiedAddr<Ipv4Addr>>,
     remote_addr: SpecifiedAddr<Ipv4Addr>,
     icmp_id: u16,
-) -> Result<IcmpConnId<Ipv4>, SocketError> {
+) -> Result<IcmpConnId<Ipv4>, IcmpSockCreationError> {
     let ip = ctx.new_ip_socket(
         local_addr,
         remote_addr,
@@ -1967,7 +1982,7 @@ pub fn new_icmpv6_connection<D: EventDispatcher>(
     local_addr: Option<SpecifiedAddr<Ipv6Addr>>,
     remote_addr: SpecifiedAddr<Ipv6Addr>,
     icmp_id: u16,
-) -> Result<IcmpConnId<Ipv6>, SocketError> {
+) -> Result<IcmpConnId<Ipv6>, IcmpSockCreationError> {
     new_icmpv6_connection_inner(ctx, local_addr, remote_addr, icmp_id)
 }
 
@@ -1979,7 +1994,7 @@ fn new_icmpv6_connection_inner<C: InnerIcmpv6Context>(
     local_addr: Option<SpecifiedAddr<Ipv6Addr>>,
     remote_addr: SpecifiedAddr<Ipv6Addr>,
     icmp_id: u16,
-) -> Result<IcmpConnId<Ipv6>, SocketError> {
+) -> Result<IcmpConnId<Ipv6>, IcmpSockCreationError> {
     let ip = ctx.new_ip_socket(
         local_addr,
         remote_addr,
@@ -1996,10 +2011,10 @@ fn new_icmp_connection_inner<I: IcmpIpExt + IpExt, S: IpSocket<I>>(
     remote_addr: SpecifiedAddr<I::Addr>,
     icmp_id: u16,
     ip: S,
-) -> Result<IcmpConnId<I>, ExistsError> {
+) -> Result<IcmpConnId<I>, IcmpSockCreationError> {
     let addr = IcmpAddr { local_addr: *ip.local_ip(), remote_addr, icmp_id };
     if conns.get_id_by_addr(&addr).is_some() {
-        return Err(ExistsError);
+        return Err(IcmpSockCreationError::SockAddrConflict);
     }
     Ok(IcmpConnId::new(conns.insert(addr, IcmpConn { icmp_id, ip })))
 }
@@ -2028,7 +2043,7 @@ mod tests {
     use crate::device::{set_routing_enabled, DeviceId, FrameDestination};
     use crate::ip::gmp::mld::MldPacketHandler;
     use crate::ip::path_mtu::testutil::DummyPmtuState;
-    use crate::ip::socket::testutil::{DummyIpSocket, DummyIpSocketCtx};
+    use crate::ip::socket::testutil::{DummyIpSock, DummyIpSocketCtx};
     use crate::ip::{receive_ipv4_packet, receive_ipv6_packet, DummyDeviceId};
     use crate::testutil::{
         DummyEventDispatcher, DummyEventDispatcherBuilder, DUMMY_CONFIG_V4, DUMMY_CONFIG_V6,
@@ -2042,14 +2057,14 @@ mod tests {
             local_addr: Option<SpecifiedAddr<Self::Addr>>,
             remote_addr: SpecifiedAddr<Self::Addr>,
             icmp_id: u16,
-        ) -> Result<IcmpConnId<Self>, SocketError>;
+        ) -> Result<IcmpConnId<Self>, IcmpSockCreationError>;
 
         fn send_icmp_echo_request<B: BufferMut, D: BufferDispatcher<B>>(
             ctx: &mut Ctx<D>,
             conn: IcmpConnId<Self>,
             seq_num: u16,
             body: B,
-        ) -> Result<(), SendError>;
+        ) -> Result<(), IpSockSendError>;
     }
 
     impl TestIpExt for Ipv4 {
@@ -2058,7 +2073,7 @@ mod tests {
             local_addr: Option<SpecifiedAddr<Ipv4Addr>>,
             remote_addr: SpecifiedAddr<Ipv4Addr>,
             icmp_id: u16,
-        ) -> Result<IcmpConnId<Ipv4>, SocketError> {
+        ) -> Result<IcmpConnId<Ipv4>, IcmpSockCreationError> {
             new_icmpv4_connection(ctx, local_addr, remote_addr, icmp_id)
         }
 
@@ -2067,7 +2082,7 @@ mod tests {
             conn: IcmpConnId<Ipv4>,
             seq_num: u16,
             body: B,
-        ) -> Result<(), SendError> {
+        ) -> Result<(), IpSockSendError> {
             send_icmpv4_echo_request(ctx, conn, seq_num, body)
         }
     }
@@ -2078,7 +2093,7 @@ mod tests {
             local_addr: Option<SpecifiedAddr<Ipv6Addr>>,
             remote_addr: SpecifiedAddr<Ipv6Addr>,
             icmp_id: u16,
-        ) -> Result<IcmpConnId<Ipv6>, SocketError> {
+        ) -> Result<IcmpConnId<Ipv6>, IcmpSockCreationError> {
             new_icmpv6_connection(ctx, local_addr, remote_addr, icmp_id)
         }
 
@@ -2087,7 +2102,7 @@ mod tests {
             conn: IcmpConnId<Ipv6>,
             seq_num: u16,
             body: B,
-        ) -> Result<(), SendError> {
+        ) -> Result<(), IpSockSendError> {
             send_icmpv6_echo_request(ctx, conn, seq_num, body)
         }
     }
@@ -2779,7 +2794,7 @@ mod tests {
     #[allow(unused)] // TODO(joshlf): Remove once we access these fields.
     struct CloseIcmpConnectionArgs<I: Ip> {
         conn: IcmpConnId<I>,
-        err: NoRouteError,
+        err: IpSockCreationError,
     }
 
     // The arguments to `IcmpContext::receive_icmp_error`.
@@ -2810,13 +2825,21 @@ mod tests {
 
     impl Default for DummyIcmpCtx<Ipv4> {
         fn default() -> DummyIcmpCtx<Ipv4> {
-            DummyIcmpCtx::new(DummyIpSocketCtx::new(DUMMY_CONFIG_V4.local_ip, true))
+            DummyIcmpCtx::new(DummyIpSocketCtx::new(
+                vec![DUMMY_CONFIG_V4.local_ip],
+                vec![DUMMY_CONFIG_V4.remote_ip],
+                true,
+            ))
         }
     }
 
     impl Default for DummyIcmpCtx<Ipv6> {
         fn default() -> DummyIcmpCtx<Ipv6> {
-            DummyIcmpCtx::new(DummyIpSocketCtx::new(DUMMY_CONFIG_V6.local_ip, true))
+            DummyIcmpCtx::new(DummyIpSocketCtx::new(
+                vec![DUMMY_CONFIG_V6.local_ip],
+                vec![DUMMY_CONFIG_V6.remote_ip],
+                true,
+            ))
         }
     }
 
@@ -2837,12 +2860,12 @@ mod tests {
 
     struct DummyIcmpv4Ctx {
         inner: DummyIcmpCtx<Ipv4>,
-        icmp_state: Icmpv4State<DummyInstant, DummyIpSocket<Ipv4>>,
+        icmp_state: Icmpv4State<DummyInstant, DummyIpSock<Ipv4>>,
     }
 
     struct DummyIcmpv6Ctx {
         inner: DummyIcmpCtx<Ipv6>,
-        icmp_state: Icmpv6State<DummyInstant, DummyIpSocket<Ipv6>>,
+        icmp_state: Icmpv6State<DummyInstant, DummyIpSock<Ipv6>>,
     }
 
     impl Default for DummyIcmpv4Ctx {
@@ -2867,7 +2890,7 @@ mod tests {
     /// context types.
     macro_rules! impl_context_traits {
         ($ip:ident, $inner:ident, $outer:ident, $state:ident, $info_type:ident, $should_send:expr) => {
-            type $outer = DummyCtx<$inner>;
+            type $outer = DummyCtx<$inner, (), <$ip as packet_formats::ip::IpExt>::PacketBuilder>;
 
             impl $inner {
                 fn with_errors_per_second(errors_per_second: u64) -> $inner {
@@ -2901,15 +2924,15 @@ mod tests {
                 }
             }
 
-            impl StateContext<$state<DummyInstant, DummyIpSocket<$ip>>> for $outer {
-                fn get_state_with(&self, _id: ()) -> &$state<DummyInstant, DummyIpSocket<$ip>> {
+            impl StateContext<$state<DummyInstant, DummyIpSock<$ip>>> for $outer {
+                fn get_state_with(&self, _id: ()) -> &$state<DummyInstant, DummyIpSock<$ip>> {
                     &self.get_ref().icmp_state
                 }
 
                 fn get_state_mut_with(
                     &mut self,
                     _id: (),
-                ) -> &mut $state<DummyInstant, DummyIpSocket<$ip>> {
+                ) -> &mut $state<DummyInstant, DummyIpSock<$ip>> {
                     &mut self.get_mut().icmp_state
                 }
             }
@@ -2928,7 +2951,11 @@ mod tests {
                         .push(ReceiveIcmpSocketErrorArgs { conn, seq_num, err });
                 }
 
-                fn close_icmp_connection(&mut self, conn: IcmpConnId<$ip>, err: NoRouteError) {
+                fn close_icmp_connection(
+                    &mut self,
+                    conn: IcmpConnId<$ip>,
+                    err: IpSockCreationError,
+                ) {
                     self.get_mut()
                         .inner
                         .close_icmp_connection
@@ -2975,8 +3002,7 @@ mod tests {
 
                 fn get_state_and_update_meta(
                     &mut self,
-                ) -> (&mut IcmpState<<$ip as Ip>::Addr, DummyInstant, DummyIpSocket<$ip>>, &())
-                {
+                ) -> (&mut IcmpState<<$ip as Ip>::Addr, DummyInstant, DummyIpSock<$ip>>, &()) {
                     (&mut self.get_mut().icmp_state.inner, &())
                 }
             }
@@ -3809,7 +3835,12 @@ mod tests {
         // Run tests for each function that sends error messages to make sure
         // they're all properly rate limited.
 
-        fn run_test<C, W: Fn(u64) -> DummyCtx<C>, S: Fn(&mut DummyCtx<C>)>(
+        fn run_test<
+            I: IpExt,
+            C,
+            W: Fn(u64) -> DummyCtx<C, (), I::PacketBuilder>,
+            S: Fn(&mut DummyCtx<C, (), I::PacketBuilder>),
+        >(
             with_errors_per_second: W,
             send: S,
         ) {
@@ -3865,17 +3896,17 @@ mod tests {
         fn with_errors_per_second_v4(errors_per_second: u64) -> Dummyv4Ctx {
             Dummyv4Ctx::with_state(DummyIcmpv4Ctx::with_errors_per_second(errors_per_second))
         }
-        run_test(with_errors_per_second_v4, send_icmpv4_ttl_expired_helper);
-        run_test(with_errors_per_second_v4, send_icmpv4_parameter_problem_helper);
-        run_test(with_errors_per_second_v4, send_icmpv4_dest_unreachable_helper);
+        run_test::<Ipv4, _, _, _>(with_errors_per_second_v4, send_icmpv4_ttl_expired_helper);
+        run_test::<Ipv4, _, _, _>(with_errors_per_second_v4, send_icmpv4_parameter_problem_helper);
+        run_test::<Ipv4, _, _, _>(with_errors_per_second_v4, send_icmpv4_dest_unreachable_helper);
 
         fn with_errors_per_second_v6(errors_per_second: u64) -> Dummyv6Ctx {
             Dummyv6Ctx::with_state(DummyIcmpv6Ctx::with_errors_per_second(errors_per_second))
         }
 
-        run_test(with_errors_per_second_v6, send_icmpv6_ttl_expired_helper);
-        run_test(with_errors_per_second_v6, send_icmpv6_packet_too_big_helper);
-        run_test(with_errors_per_second_v6, send_icmpv6_parameter_problem_helper);
-        run_test(with_errors_per_second_v6, send_icmpv6_dest_unreachable_helper);
+        run_test::<Ipv6, _, _, _>(with_errors_per_second_v6, send_icmpv6_ttl_expired_helper);
+        run_test::<Ipv6, _, _, _>(with_errors_per_second_v6, send_icmpv6_packet_too_big_helper);
+        run_test::<Ipv6, _, _, _>(with_errors_per_second_v6, send_icmpv6_parameter_problem_helper);
+        run_test::<Ipv6, _, _, _>(with_errors_per_second_v6, send_icmpv6_dest_unreachable_helper);
     }
 }

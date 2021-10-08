@@ -4,5 +4,5 @@
 
 // TODO(https://github.com/dtolnay/thiserror/pull/64): remove this module.
 
-pub use ::core::fmt;
+pub use ::core::{convert, fmt, option};
 pub use ::std::error;

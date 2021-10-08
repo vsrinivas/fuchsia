@@ -51,6 +51,7 @@ pub use crate::device::{
     DeviceLayerEventDispatcher,
 };
 pub use crate::error::{LocalAddressError, NetstackError, RemoteAddressError, SocketError};
+pub use crate::ip::socket::IpSockCreationError;
 pub use crate::ip::{
     icmp, EntryDest, EntryDestEither, EntryEither, IpExt, Ipv4StateBuilder, Ipv6StateBuilder,
 };

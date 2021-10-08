@@ -46,11 +46,10 @@ use timers::TimerDispatcher;
 
 use netstack3_core::{
     context::{InstantContext, RngContext, TimerContext},
-    error::NoRouteError,
     handle_timer,
     icmp::{BufferIcmpContext, IcmpConnId, IcmpContext, IcmpIpExt},
     initialize_device, remove_device, Ctx, DeviceId, DeviceLayerEventDispatcher, EventDispatcher,
-    StackStateBuilder, TimerId,
+    IpSockCreationError, StackStateBuilder, TimerId,
 };
 
 use crate::bindings::socket::udp::BindingsUdpContext;
@@ -317,7 +316,7 @@ impl<I: IcmpIpExt> IcmpContext<I> for BindingsDispatcher {
         warn!("IcmpContext::receive_icmp_error unimplemented; ignoring error");
     }
 
-    fn close_icmp_connection(&mut self, _conn: IcmpConnId<I>, _err: NoRouteError) {
+    fn close_icmp_connection(&mut self, _conn: IcmpConnId<I>, _err: IpSockCreationError) {
         // TODO(https://fxbug.dev/47321): implement.
         unimplemented!()
     }
