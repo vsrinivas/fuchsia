@@ -217,6 +217,51 @@ func (*fakeDataSinkCopier) Close() error {
 	return nil
 }
 
+type fakeFFXTester struct {
+	cmdsCalled []string
+}
+
+func (f *fakeFFXTester) SetStdoutStderr(_, _ io.Writer) {
+}
+
+func (f *fakeFFXTester) run(cmd string) error {
+	f.cmdsCalled = append(f.cmdsCalled, cmd)
+	return nil
+}
+
+func (f *fakeFFXTester) List(_ context.Context) error {
+	return f.run("list")
+}
+
+func (f *fakeFFXTester) TargetWait(_ context.Context) error {
+	return f.run("target wait")
+}
+
+func (f *fakeFFXTester) GetConfig(_ context.Context) error {
+	return f.run("config")
+}
+
+func (f *fakeFFXTester) Test(_ context.Context, _ string, _ ...string) error {
+	return f.run("test")
+}
+
+func (f *fakeFFXTester) Snapshot(_ context.Context, _, _ string) error {
+	return f.run("snapshot")
+}
+
+func (f *fakeFFXTester) Stop() error {
+	return f.run("stop")
+}
+
+func containsCmd(cmds []string, cmd string) bool {
+	for _, c := range cmds {
+		if c == cmd {
+			return true
+		}
+	}
+	return false
+}
+
 func TestSSHTester(t *testing.T) {
 	cases := []struct {
 		name            string
@@ -228,6 +273,7 @@ func TestSSHTester(t *testing.T) {
 		runSnapshot     bool
 		useRuntests     bool
 		runV2           bool
+		useFFX          bool
 	}{
 		{
 			name:    "success",
@@ -282,6 +328,17 @@ func TestSSHTester(t *testing.T) {
 			useRuntests: true,
 			runV2:       true,
 		},
+		{
+			name:        "run v2 tests with ffx",
+			runV2:       true,
+			runSnapshot: true,
+			useFFX:      true,
+		},
+		{
+			name:    "run v1 tests with ssh",
+			runErrs: []error{nil},
+			useFFX:  true,
+		},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
@@ -291,13 +348,18 @@ func TestSSHTester(t *testing.T) {
 			}
 			copier := &fakeDataSinkCopier{}
 			serialSocket := &fakeSerialClient{}
-			tester := fuchsiaSSHTester{
+			tester := &fuchsiaSSHTester{
 				client:                      client,
 				copier:                      copier,
 				connectionErrorRetryBackoff: &retry.ZeroBackoff{},
 				serialSocket:                serialSocket,
 				useRuntests:                 c.useRuntests,
 			}
+			ffx := &fakeFFXTester{}
+			if c.useFFX {
+				tester.ffx = ffx
+			}
+
 			defer func() {
 				if err := tester.Close(); err != nil {
 					t.Errorf("Close returned error: %s", err)
@@ -336,6 +398,27 @@ func TestSSHTester(t *testing.T) {
 			if c.runV2 {
 				if err = tester.EnsureSinks(context.Background(), []runtests.DataSinkReference{sinks}, &testOutputs{}); err != nil {
 					t.Errorf("failed to collect v2 sinks: %s", err)
+				}
+			}
+
+			if c.useFFX {
+				if c.runV2 && !c.useRuntests {
+					if !containsCmd(ffx.cmdsCalled, "test") {
+						t.Errorf("failed to call `ffx test`, called: %s", ffx.cmdsCalled)
+					}
+				} else {
+					if containsCmd(ffx.cmdsCalled, "test") {
+						t.Errorf("unexpectedly called ffx test")
+					}
+				}
+				if c.runSnapshot {
+					if !containsCmd(ffx.cmdsCalled, "snapshot") {
+						t.Errorf("failed to call `ffx target snapshot`, called: %s", ffx.cmdsCalled)
+					}
+				} else {
+					if containsCmd(ffx.cmdsCalled, "snapshot") {
+						t.Errorf("unexpectedly called ffx target snapshot")
+					}
 				}
 			}
 

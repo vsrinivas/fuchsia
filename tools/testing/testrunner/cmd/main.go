@@ -17,11 +17,13 @@ import (
 	"net"
 	"net/url"
 	"os"
+	"os/signal"
 	"path/filepath"
 	"runtime"
 	"strconv"
 	"strings"
 	"sync"
+	"syscall"
 	"time"
 
 	"go.fuchsia.dev/fuchsia/tools/botanist/constants"
@@ -30,6 +32,7 @@ import (
 	"go.fuchsia.dev/fuchsia/tools/lib/clock"
 	"go.fuchsia.dev/fuchsia/tools/lib/color"
 	"go.fuchsia.dev/fuchsia/tools/lib/environment"
+	"go.fuchsia.dev/fuchsia/tools/lib/ffxutil"
 	"go.fuchsia.dev/fuchsia/tools/lib/logger"
 	"go.fuchsia.dev/fuchsia/tools/testing/runtests"
 	"go.fuchsia.dev/fuchsia/tools/testing/tap"
@@ -66,6 +69,9 @@ var (
 
 	// Logger level.
 	level = logger.InfoLevel
+
+	// The path to the ffx tool.
+	ffxPath string
 )
 
 func usage() {
@@ -87,6 +93,7 @@ func main() {
 	// TODO(fxbug.dev/36480): Support different timeouts for different tests.
 	flag.DurationVar(&perTestTimeout, "per-test-timeout", 0, "Per-test timeout, applied to all tests. Ignored if <= 0.")
 	flag.Var(&level, "level", "Output verbosity, can be fatal, error, warning, info, debug or trace.")
+	flag.StringVar(&ffxPath, "ffx", "", "Path to the ffx tool.")
 	flag.Usage = usage
 	flag.Parse()
 
@@ -104,6 +111,8 @@ func main() {
 	log := logger.NewLogger(level, color.NewColor(color.ColorAuto), os.Stdout, os.Stderr, "testrunner ")
 	log.SetFlags(logFlags)
 	ctx := logger.WithLogger(context.Background(), log)
+	ctx, cancel := signal.NotifyContext(ctx, syscall.SIGTERM, syscall.SIGINT)
+	defer cancel()
 
 	if err := setupAndExecute(ctx); err != nil {
 		logger.Fatalf(ctx, err.Error())
@@ -218,10 +227,23 @@ var (
 	serialTester = newFuchsiaSerialTester
 )
 
+var ffxInstance = func(ffxPath string, dir string, env []string, target, sshKey string, outputDir string) (ffxTester, error) {
+	ffx, err := ffxutil.NewFFXInstance(ffxPath, dir, env, target, sshKey, outputDir)
+	if ffx == nil {
+		return nil, err
+	}
+	return ffx, err
+}
+
 func execute(ctx context.Context, tests []testsharder.Test, outputs *testOutputs, addr net.IPAddr, sshKeyFile, serialSocketPath, outDir string) error {
 	var fuchsiaSinks, localSinks []runtests.DataSinkReference
 	var fuchsiaTester, localTester tester
 	var finalError error
+
+	localEnv := append(os.Environ(),
+		// Tell tests written in Rust to print stack on failures.
+		"RUST_BACKTRACE=1",
+	)
 
 	for _, test := range tests {
 		var t tester
@@ -231,7 +253,16 @@ func execute(ctx context.Context, tests []testsharder.Test, outputs *testOutputs
 			if fuchsiaTester == nil {
 				var err error
 				if sshKeyFile != "" {
-					fuchsiaTester, err = sshTester(ctx, addr, sshKeyFile, outputs.outDir, serialSocketPath, useRuntests, perTestTimeout)
+					var ffx ffxTester
+					ffx, err = ffxInstance(ffxPath, localWD, localEnv, os.Getenv(constants.NodenameEnvKey), os.Getenv(constants.SSHKeyEnvKey), outputs.outDir)
+					if err != nil {
+						finalError = err
+						break
+					}
+					if ffx != nil {
+						defer ffx.Stop()
+					}
+					fuchsiaTester, err = sshTester(ctx, addr, sshKeyFile, outputs.outDir, serialSocketPath, useRuntests, perTestTimeout, ffx)
 				} else {
 					if serialSocketPath == "" {
 						finalError = fmt.Errorf("%q must be set if %q is not set", constants.SerialSocketEnvKey, constants.SSHKeyEnvKey)
@@ -258,17 +289,19 @@ func execute(ctx context.Context, tests []testsharder.Test, outputs *testOutputs
 			// Initialize the fuchsia SSH tester to run the snapshot at the end in case
 			// we ran any host-target interaction tests.
 			if fuchsiaTester == nil && sshKeyFile != "" {
-				var err error
-				fuchsiaTester, err = sshTester(ctx, addr, sshKeyFile, outputs.outDir, serialSocketPath, useRuntests, perTestTimeout)
+				ffx, err := ffxInstance(ffxPath, localWD, localEnv, os.Getenv(constants.NodenameEnvKey), os.Getenv(constants.SSHKeyEnvKey), outputs.outDir)
+				if err != nil {
+					logger.Errorf(ctx, "failed to initialize fuchsia tester: %s", err)
+				}
+				if ffx != nil {
+					defer ffx.Stop()
+				}
+				fuchsiaTester, err = sshTester(ctx, addr, sshKeyFile, outputs.outDir, serialSocketPath, useRuntests, perTestTimeout, ffx)
 				if err != nil {
 					logger.Errorf(ctx, "failed to initialize fuchsia tester: %s", err)
 				}
 			}
 			if localTester == nil {
-				localEnv := append(os.Environ(),
-					// Tell tests written in Rust to print stack on failures.
-					"RUST_BACKTRACE=1",
-				)
 				localTester = newSubprocessTester(localWD, localEnv, outputs.outDir, perTestTimeout)
 			}
 			t = localTester

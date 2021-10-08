@@ -601,6 +601,7 @@ func TestExecute(t *testing.T) {
 		sshKeyFile       string
 		serialSocketPath string
 		wantErr          bool
+		useFFX           bool
 	}{
 		{
 			name:       "ssh tester",
@@ -624,18 +625,25 @@ func TestExecute(t *testing.T) {
 			name:    "missing socket path",
 			wantErr: true,
 		},
+		{
+			name:       "use ffx",
+			sshKeyFile: "sshkey",
+			useFFX:     true,
+		},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
 			// Revert fakes.
 			oldSSHTester := sshTester
 			oldSerialTester := serialTester
+			oldFFXInstance := ffxInstance
 			defer func() {
 				sshTester = oldSSHTester
 				serialTester = oldSerialTester
+				ffxInstance = oldFFXInstance
 			}()
 			fuchsiaTester := &fakeTester{}
-			sshTester = func(_ context.Context, _ net.IPAddr, _, _, _ string, _ bool, _ time.Duration) (tester, error) {
+			sshTester = func(_ context.Context, _ net.IPAddr, _, _, _ string, _ bool, _ time.Duration, _ ffxTester) (tester, error) {
 				if c.wantErr {
 					return nil, fmt.Errorf("failed to get tester")
 				}
@@ -647,6 +655,14 @@ func TestExecute(t *testing.T) {
 				}
 				return fuchsiaTester, nil
 			}
+			ffx := &fakeFFXTester{}
+			ffxInstance = func(_, _ string, _ []string, _, _, _ string) (ffxTester, error) {
+				if c.useFFX {
+					return ffx, nil
+				}
+				return nil, nil
+			}
+
 			var buf bytes.Buffer
 			producer := tap.NewProducer(&buf)
 			o, err := createTestOutputs(producer, "")
@@ -664,6 +680,10 @@ func TestExecute(t *testing.T) {
 			if err != nil {
 				t.Errorf("got error: %v", err)
 			}
+			if c.useFFX && !containsCmd(ffx.cmdsCalled, "stop") {
+				t.Errorf("failed to call `ffx daemon stop`, called: %s", ffx.cmdsCalled)
+			}
+
 			funcCalls := strings.Join(fuchsiaTester.funcCalls, ",")
 			testCount := strings.Count(funcCalls, testFunc)
 			copySinksCount := strings.Count(funcCalls, copySinksFunc)

@@ -274,6 +274,17 @@ func (s *serialSocket) runDiagnostics(ctx context.Context) error {
 	return serial.RunDiagnostics(ctx, socket)
 }
 
+// for testability
+type ffxTester interface {
+	SetStdoutStderr(stdout, stderr io.Writer)
+	List(ctx context.Context) error
+	TargetWait(ctx context.Context) error
+	GetConfig(ctx context.Context) error
+	Test(ctx context.Context, test string, args ...string) error
+	Snapshot(ctx context.Context, outDir string, snapshotFilename string) error
+	Stop() error
+}
+
 // fuchsiaSSHTester executes fuchsia tests over an SSH connection.
 type fuchsiaSSHTester struct {
 	client                      sshClient
@@ -283,12 +294,24 @@ type fuchsiaSSHTester struct {
 	perTestTimeout              time.Duration
 	connectionErrorRetryBackoff retry.Backoff
 	serialSocket                serialClient
+	ffx                         ffxTester
 }
 
 // newFuchsiaSSHTester returns a fuchsiaSSHTester associated to a fuchsia
 // instance of given nodename, the private key paired with an authorized one
 // and the directive of whether `runtests` should be used to execute the test.
-func newFuchsiaSSHTester(ctx context.Context, addr net.IPAddr, sshKeyFile, localOutputDir, serialSocketPath string, useRuntests bool, perTestTimeout time.Duration) (tester, error) {
+func newFuchsiaSSHTester(ctx context.Context, addr net.IPAddr, sshKeyFile, localOutputDir, serialSocketPath string, useRuntests bool, perTestTimeout time.Duration, ffx ffxTester) (tester, error) {
+	if ffx != nil {
+		if err := ffx.List(ctx); err != nil {
+			return nil, err
+		}
+		if err := ffx.TargetWait(ctx); err != nil {
+			return nil, err
+		}
+		if err := ffx.GetConfig(ctx); err != nil {
+			return nil, err
+		}
+	}
 	key, err := ioutil.ReadFile(sshKeyFile)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read SSH key file: %w", err)
@@ -325,6 +348,7 @@ func newFuchsiaSSHTester(ctx context.Context, addr net.IPAddr, sshKeyFile, local
 		perTestTimeout:              perTestTimeout,
 		connectionErrorRetryBackoff: retry.NewConstantBackoff(time.Second),
 		serialSocket:                &serialSocket{serialSocketPath},
+		ffx:                         ffx,
 	}, nil
 }
 
@@ -375,6 +399,12 @@ func (t *fuchsiaSSHTester) runSSHCommandWithRetry(ctx context.Context, command [
 // Test runs a test over SSH.
 func (t *fuchsiaSSHTester) Test(ctx context.Context, test testsharder.Test, stdout io.Writer, stderr io.Writer, _ string) (runtests.DataSinkReference, error) {
 	sinks := runtests.DataSinkReference{}
+	isComponentV2 := strings.HasSuffix(test.PackageURL, componentV2Suffix)
+	if isComponentV2 && t.ffx != nil {
+		t.ffx.SetStdoutStderr(stdout, stderr)
+		defer t.ffx.SetStdoutStderr(os.Stdout, os.Stderr)
+		return sinks, t.ffx.Test(ctx, test.Name, "-t", fmt.Sprintf("%d", int(t.perTestTimeout.Seconds())))
+	}
 	command, err := commandForTest(&test, t.useRuntests, dataOutputDir, t.perTestTimeout)
 	if err != nil {
 		return sinks, err
@@ -396,7 +426,7 @@ func (t *fuchsiaSSHTester) Test(ctx context.Context, test testsharder.Test, stdo
 	}
 
 	var sinkErr error
-	if t.useRuntests && !strings.HasSuffix(test.PackageURL, componentV2Suffix) {
+	if t.useRuntests && !isComponentV2 {
 		startTime := clock.Now(ctx)
 		var sinksPerTest map[string]runtests.DataSinkReference
 		if sinksPerTest, sinkErr = t.copier.GetReferences(dataOutputDir); sinkErr != nil {
@@ -456,13 +486,18 @@ func (t *fuchsiaSSHTester) RunSnapshot(ctx context.Context, snapshotFile string)
 	if snapshotFile == "" {
 		return nil
 	}
-	snapshotOutFile, err := osmisc.CreateFile(filepath.Join(t.localOutputDir, snapshotFile))
-	if err != nil {
-		return fmt.Errorf("failed to create snapshot output file: %w", err)
-	}
-	defer snapshotOutFile.Close()
 	startTime := clock.Now(ctx)
-	err = t.runSSHCommandWithRetry(ctx, []string{"/bin/snapshot"}, snapshotOutFile, os.Stderr)
+	var err error
+	if t.ffx != nil {
+		err = t.ffx.Snapshot(ctx, t.localOutputDir, snapshotFile)
+	} else {
+		snapshotOutFile, err := osmisc.CreateFile(filepath.Join(t.localOutputDir, snapshotFile))
+		if err != nil {
+			return fmt.Errorf("failed to create snapshot output file: %w", err)
+		}
+		defer snapshotOutFile.Close()
+		err = t.runSSHCommandWithRetry(ctx, []string{"/bin/snapshot"}, snapshotOutFile, os.Stderr)
+	}
 	if err != nil {
 		logger.Errorf(ctx, "%s: %s", constants.FailedToRunSnapshotMsg, err)
 	}

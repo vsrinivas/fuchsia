@@ -41,6 +41,7 @@ go_library("main") {
     "//tools/lib/clock",
     "//tools/lib/color",
     "//tools/lib/environment",
+    "//tools/lib/ffxutil",
     "//tools/lib/iomisc",
     "//tools/lib/logger",
     "//tools/lib/osmisc",
