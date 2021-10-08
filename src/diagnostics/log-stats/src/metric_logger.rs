@@ -144,6 +144,7 @@ impl MetricLogger {
         if interval_index >= self.next_interval_index {
             self.current_interval_errors.clear();
             self.reached_capacity = false;
+            self.next_interval_index = interval_index + 1;
             self.proxy
                 .log_string(
                     self.specs.granular_error_interval_count_metric_id,
@@ -151,7 +152,6 @@ impl MetricLogger {
                     &[EMPTY_LINE_NUMBER as u32, OTHER_EVENT_CODE],
                 )
                 .await?;
-            self.next_interval_index = interval_index + 1;
         }
         Ok(())
     }
