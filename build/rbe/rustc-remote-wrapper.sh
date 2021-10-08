@@ -324,7 +324,10 @@ EOF
           # It is not yet clear whether the .o files are needed when there is a
           # .a archive.
           # There are also directories that contain only .o files.
-          # It is safe to over-specify inputs, so for now, we grab them all.
+          #
+          # Over-specifying inputs comes with a danger: referring to inputs that
+          # are not actually used/needed in remote execution could reference
+          # files that are being overwritten somewhere else in the build.
           #
           objs_unfiltered=( "$optarg"/*.{so,a,o} )
           objs_rel=()
@@ -337,8 +340,10 @@ EOF
             *) objs_rel+=("$build_subdir/$f") ;;
           esac
           done
-          debug_var "[from -Lnative (dir:$optarg)]" "${objs_rel[@]}"
-          link_arg_files+=("${objs_rel[@]}")
+          debug_var "[from -Lnative (dir:$optarg) (excluded from upload)]" "${objs_rel[@]}"
+          # We found that builds work without -Lnative, so until we find
+          # otherwise, we ignore files found in these directories.
+          # link_arg_files+=("${objs_rel[@]}")
         else
           link_arg="$build_subdir/$optarg"
           debug_var "[from -Lnative (file:$optarg)]" "$link_arg"
