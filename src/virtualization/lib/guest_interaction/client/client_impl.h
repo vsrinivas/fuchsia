@@ -42,9 +42,10 @@ class ClientImpl {
 
   void Stop() { should_run_ = false; }
 
-  void Get(const std::string& source, zx::channel channel, TransferCallback callback) {
+  void Get(const std::string& source, fidl::InterfaceHandle<fuchsia::io::File> local_file,
+           TransferCallback callback) {
     int32_t fd;
-    zx_status_t status = fdio_fd_create(channel.release(), &fd);
+    zx_status_t status = fdio_fd_create(local_file.TakeChannel().release(), &fd);
     if (status != ZX_OK) {
       callback(OperationStatus::CLIENT_CREATE_FILE_FAILURE);
       return;
@@ -58,9 +59,10 @@ class ClientImpl {
     call_data->reader_->StartCall(call_data);
   }
 
-  void Put(zx::channel source_channel, const std::string& destination, TransferCallback callback) {
+  void Put(fidl::InterfaceHandle<fuchsia::io::File> local_file, const std::string& destination,
+           TransferCallback callback) {
     int32_t fd;
-    zx_status_t status = fdio_fd_create(source_channel.release(), &fd);
+    zx_status_t status = fdio_fd_create(local_file.TakeChannel().release(), &fd);
     if (status != ZX_OK) {
       callback(OperationStatus::CLIENT_FILE_READ_FAILURE);
       return;

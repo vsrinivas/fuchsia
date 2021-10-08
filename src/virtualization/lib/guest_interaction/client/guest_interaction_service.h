@@ -44,10 +44,10 @@ class FuchsiaGuestInteractionService final : public fuchsia::netemul::guest::Gue
 
  private:
   int32_t GetVsockFd(std::string vm_label);
-  fpromise::promise<zx_status_t> InitiatePut(zx::channel local_file,
+  fpromise::promise<zx_status_t> InitiatePut(fidl::InterfaceHandle<fuchsia::io::File> local_file,
                                              const std::string& remote_path);
   fpromise::promise<zx_status_t> InitiateGet(const std::string& remote_path,
-                                             zx::channel local_file);
+                                             fidl::InterfaceHandle<fuchsia::io::File> local_file);
 
   std::unique_ptr<ClientImpl<PosixPlatform>> client_;
   fidl::BindingSet<fuchsia::netemul::guest::GuestInteraction> bindings_;

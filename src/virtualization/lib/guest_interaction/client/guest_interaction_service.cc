@@ -34,7 +34,7 @@ FuchsiaGuestInteractionService::FuchsiaGuestInteractionService(zx::socket socket
 FuchsiaGuestInteractionService::~FuchsiaGuestInteractionService() { Stop(); }
 
 fpromise::promise<zx_status_t> FuchsiaGuestInteractionService::InitiatePut(
-    zx::channel local_file, const std::string& remote_path) {
+    fidl::InterfaceHandle<fuchsia::io::File> local_file, const std::string& remote_path) {
   fpromise::bridge<zx_status_t> bridge;
   client_->Put(std::move(local_file), remote_path,
                [completer = std::move(bridge.completer)](zx_status_t status) mutable {
@@ -47,14 +47,13 @@ void FuchsiaGuestInteractionService::PutFile(fidl::InterfaceHandle<fuchsia::io::
                                              std::string remote_path,
                                              fit::function<void(zx_status_t)> callback) {
   executor_.schedule_task(
-      InitiatePut(local_file.TakeChannel(), remote_path)
-          .and_then([callback = std::move(callback),
-                     local_file = std::move(local_file)](zx_status_t& status) { callback(status); })
+      InitiatePut(std::move(local_file), remote_path)
+          .and_then([callback = std::move(callback)](zx_status_t& status) { callback(status); })
           .wrap_with(scope_));
 }
 
 fpromise::promise<zx_status_t> FuchsiaGuestInteractionService::InitiateGet(
-    const std::string& remote_path, zx::channel local_file) {
+    const std::string& remote_path, fidl::InterfaceHandle<fuchsia::io::File> local_file) {
   fpromise::bridge<zx_status_t> bridge;
   client_->Get(remote_path, std::move(local_file),
                [completer = std::move(bridge.completer)](zx_status_t status) mutable {
@@ -67,9 +66,8 @@ void FuchsiaGuestInteractionService::GetFile(std::string remote_path,
                                              fidl::InterfaceHandle<fuchsia::io::File> local_file,
                                              fit::function<void(zx_status_t)> callback) {
   executor_.schedule_task(
-      InitiateGet(remote_path, local_file.TakeChannel())
-          .and_then([callback = std::move(callback),
-                     local_file = std::move(local_file)](zx_status_t& status) { callback(status); })
+      InitiateGet(remote_path, std::move(local_file))
+          .and_then([callback = std::move(callback)](zx_status_t& status) { callback(status); })
           .wrap_with(scope_));
 }
 

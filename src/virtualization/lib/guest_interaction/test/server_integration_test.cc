@@ -6,17 +6,13 @@
 #include <fuchsia/virtualization/cpp/fidl.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
-#include <lib/fdio/vfs.h>
 #include <lib/sys/cpp/file_descriptor.h>
-#include <lib/syslog/cpp/macros.h>
 #include <threads.h>
-#include <zircon/status.h>
 
 #include <map>
 
 #include <fbl/unique_fd.h>
 #include <gtest/gtest.h>
-#include <src/virtualization/tests/fake_netstack.h>
 #include <src/virtualization/tests/guest_console.h>
 
 #include "src/lib/fxl/strings/trim.h"
@@ -80,10 +76,10 @@ TEST_F(GuestInteractionTest, GrpcExecScriptTest) {
 
   ClientImpl<PosixPlatform> client(vsock_fd.release());
 
-  // Push the bash script to the guest
-  zx::channel put_local, put_remote;
-  ASSERT_OK(zx::channel::create(0, &put_local, &put_remote));
-  ASSERT_OK(fdio_open(kTestScriptSource, fuchsia::io::OPEN_RIGHT_READABLE, put_local.release()));
+  // Push the bash script to the guest.
+  fidl::InterfaceHandle<fuchsia::io::File> put_remote;
+  ASSERT_OK(fdio_open(kTestScriptSource, fuchsia::io::OPEN_RIGHT_READABLE,
+                      put_remote.NewRequest().TakeChannel().release()));
 
   status.reset();
   client.Put(std::move(put_remote), kGuestScriptDestination,
@@ -175,12 +171,11 @@ TEST_F(GuestInteractionTest, GrpcExecScriptTest) {
 
   // The bash script will create a file with contents that were written to
   // stdin.  Pull this file back and inspect its contents.
-  zx::channel get_local, get_remote;
-  ASSERT_OK(zx::channel::create(0, &get_local, &get_remote));
+  fidl::InterfaceHandle<fuchsia::io::File> get_remote;
   ASSERT_OK(fdio_open(kHostOuputCopyLocation,
                       fuchsia::io::OPEN_RIGHT_WRITABLE | fuchsia::io::OPEN_FLAG_CREATE |
                           fuchsia::io::OPEN_FLAG_TRUNCATE,
-                      get_local.release()));
+                      get_remote.NewRequest().TakeChannel().release()));
 
   status.reset();
   client.Get(kGuestFileOutputLocation, std::move(get_remote), [&](zx_status_t get_result) {
@@ -238,7 +233,7 @@ TEST_F(GuestInteractionTest, GrpcPutGetTest) {
 
   std::string file_contents;
   for (int i = 0; i < 2 * CHUNK_SIZE; i++) {
-    file_contents.push_back(i % ('z' - 'A') + 'A');
+    file_contents.push_back(static_cast<char>(i % ('z' - 'A') + 'A'));
   }
   fbl::unique_fd fd = fbl::unique_fd(open(test_file, O_WRONLY | O_TRUNC | O_CREAT));
   uint32_t bytes_written = 0;
@@ -250,9 +245,9 @@ TEST_F(GuestInteractionTest, GrpcPutGetTest) {
   }
 
   // Push the test file to the guest
-  zx::channel put_local, put_remote;
-  ASSERT_OK(zx::channel::create(0, &put_local, &put_remote));
-  ASSERT_OK(fdio_open(test_file, fuchsia::io::OPEN_RIGHT_READABLE, put_local.release()));
+  fidl::InterfaceHandle<fuchsia::io::File> put_remote;
+  ASSERT_OK(fdio_open(test_file, fuchsia::io::OPEN_RIGHT_READABLE,
+                      put_remote.NewRequest().TakeChannel().release()));
 
   status.reset();
   client.Put(std::move(put_remote), guest_destination, [&](zx_status_t put_result) {
@@ -264,12 +259,11 @@ TEST_F(GuestInteractionTest, GrpcPutGetTest) {
   ASSERT_OK(status.value());
 
   // Copy back the file that was sent to the guest.
-  zx::channel get_local, get_remote;
-  ASSERT_OK(zx::channel::create(0, &get_local, &get_remote));
+  fidl::InterfaceHandle<fuchsia::io::File> get_remote;
   ASSERT_OK(fdio_open(host_verification_file,
                       fuchsia::io::OPEN_RIGHT_WRITABLE | fuchsia::io::OPEN_FLAG_CREATE |
                           fuchsia::io::OPEN_FLAG_TRUNCATE,
-                      get_local.release()));
+                      get_remote.NewRequest().TakeChannel().release()));
 
   status.reset();
   client.Get(guest_destination, std::move(get_remote), [&](zx_status_t get_result) {
