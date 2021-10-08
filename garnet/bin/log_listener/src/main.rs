@@ -366,15 +366,15 @@ fn help(name: &str) -> String {
             Multiple component interest selections are delimited by commas.
             Example: --select audio_core.cmx#DEBUG,scenic.cmx#WARN
             NOTE 1: This flag changes the settings with which logs are emitted
-            on the component/producer side. In order to view these logs, the
-            listener must be configured using --severity <= the lowest selector
-            value specified.
+            on the component/producer side. If --severity is not passed,
+            this will also update severity so that selected logs are displayed.
             Examples:
-            --severity DEBUG --select foo.cmx#DEBUG,bar.cmx#TRACE (missing bar)
-            --severity TRACE --select foo.cmx#DEBUG,bar.cmx#TRACE (ok)
+            --select foo.cmx#DEBUG,bar.cmx#TRACE (missing bar)
+            --select foo.cmx#DEBUG,bar.cmx#TRACE (ok)
             Note 2: In the event that multiple log listeners provide selector
             arguments via --select, those provided by the last client will
-            override any previous selectors.
+            override any previous selectors but will not change the severity
+            setting of this listener.
 
         --begin <comma-separated-words>
             Filter-in blocks starting with at least one of the specified words.
@@ -500,7 +500,6 @@ fn check_for_param(i: usize, args: &[String]) -> Result<bool, String> {
 
 fn parse_flags(args: &[String]) -> Result<LogListenerOptions, String> {
     let mut options = LogListenerOptions::default();
-
     let mut i = 0;
     let mut severity_passed = false;
     while i < args.len() {
@@ -678,7 +677,6 @@ fn parse_flags(args: &[String]) -> Result<LogListenerOptions, String> {
                         "" => None,
                         _ => return Err(invalid_selector),
                     };
-
                     options.selectors.push(LogInterestSelector {
                         selector,
                         interest: Interest { min_severity, ..Interest::EMPTY },
@@ -704,6 +702,23 @@ fn parse_flags(args: &[String]) -> Result<LogListenerOptions, String> {
             i = i + 2;
         } else {
             i = i + 1;
+        }
+    }
+    if !severity_passed {
+        for selector in &options.selectors {
+            if let Some(severity) = selector.interest.min_severity {
+                let mapped_severity = match severity {
+                    Severity::Trace => LogLevelFilter::Trace,
+                    Severity::Debug => LogLevelFilter::Debug,
+                    Severity::Info => LogLevelFilter::Info,
+                    Severity::Warn => LogLevelFilter::Warn,
+                    Severity::Error => LogLevelFilter::Error,
+                    Severity::Fatal => LogLevelFilter::Fatal,
+                };
+                if options.filter.min_severity > mapped_severity {
+                    options.filter.min_severity = mapped_severity;
+                }
+            }
         }
     }
     return Ok(options);
@@ -1780,6 +1795,22 @@ mod tests {
                 selector: selectors::parse_component_selector(&"foo.cmx".to_string()).unwrap(),
                 interest: Interest { min_severity: Some(Severity::Debug), ..Interest::EMPTY },
             });
+            expected.filter.min_severity = LogLevelFilter::Debug;
+            parse_flag_test_helper(&args, Some(&expected));
+        }
+
+        #[test]
+        fn select_customer_is_always_right() {
+            let mut args =
+                vec!["--severity".to_string(), "INFO".to_string(), "--select".to_string()];
+            args.push("foo.cmx#DEBUG".to_string());
+
+            let mut expected = LogListenerOptions::default();
+            expected.selectors.push(LogInterestSelector {
+                selector: selectors::parse_component_selector(&"foo.cmx".to_string()).unwrap(),
+                interest: Interest { min_severity: Some(Severity::Debug), ..Interest::EMPTY },
+            });
+            expected.filter.min_severity = LogLevelFilter::Info;
             parse_flag_test_helper(&args, Some(&expected));
         }
 
@@ -1797,6 +1828,7 @@ mod tests {
                 selector: selectors::parse_component_selector(&"core/bar".to_string()).unwrap(),
                 interest: Interest { min_severity: Some(Severity::Warn), ..Interest::EMPTY },
             });
+            expected.filter.min_severity = LogLevelFilter::Debug;
             parse_flag_test_helper(&args, Some(&expected));
         }
 
