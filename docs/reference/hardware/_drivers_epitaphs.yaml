@@ -303,3 +303,8 @@
   gerrit_change_id: '575784'
   available_in_git: 'ae74b26b33034aab0d550cceea9726144e16dd08'
   path: '/src/ui/input/drivers/ft8201'
+- short_description: 'DesignWare SPI driver'
+  deletion_reason: 'Hardware is not actively supported'
+  gerrit_change_id: '591524'
+  available_in_git: '9a9b43d4dd24828fc77c76cd13cddbd8cf6d6a70'
+  path: '/src/devices/spi/drivers/dw-spi'

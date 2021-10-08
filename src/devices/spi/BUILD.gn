@@ -6,7 +6,6 @@ group("drivers") {
   testonly = true
   deps = [
     "drivers/aml-spi",
-    "drivers/dw-spi",
     "drivers/intel-gspi",
     "drivers/spi",
   ]

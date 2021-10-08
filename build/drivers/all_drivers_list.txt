@@ -175,7 +175,6 @@
 //src/devices/serial/drivers/usb-cdc-acm:usb-cdc-acm-driver
 //src/devices/serial/drivers/virtio-console:virtio_console-driver
 //src/devices/spi/drivers/aml-spi:aml-spi-driver
-//src/devices/spi/drivers/dw-spi:dw-spi-driver
 //src/devices/spi/drivers/intel-gspi:fuchsia_driver
 //src/devices/spi/drivers/spi:spi-driver
 //src/devices/sysmem/drivers/sysmem:sysmem-driver
