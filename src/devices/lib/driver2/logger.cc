@@ -61,16 +61,17 @@ Logger& Logger::operator=(Logger&& other) noexcept {
   return *this;
 }
 
-void Logger::log(fx_log_severity_t severity, const char* file, int line, const char* msg, ...) {
+void Logger::logf(fx_log_severity_t severity, const char* tag, const char* file, int line,
+                  const char* msg, ...) {
   va_list args;
   va_start(args, msg);
-  log(severity, file, line, msg, args);
+  logvf(severity, tag, file, line, msg, args);
   va_end(args);
 }
 
-void Logger::log(fx_log_severity_t severity, const char* file, int line, const char* msg,
-                 va_list args) {
-  fx_logger_logvf_with_source(logger_, severity, nullptr, file, line, msg, args);
+void Logger::logvf(fx_log_severity_t severity, const char* tag, const char* file, int line,
+                   const char* msg, va_list args) {
+  fx_logger_logvf_with_source(logger_, severity, tag, file, line, msg, args);
 }
 
 }  // namespace driver

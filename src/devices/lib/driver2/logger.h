@@ -9,7 +9,8 @@
 
 #include "src/devices/lib/driver2/namespace.h"
 
-#define FDF_LOGL(severity, logger, msg...) logger.log((FX_LOG_##severity), __FILE__, __LINE__, msg)
+#define FDF_LOGL(severity, logger, msg...) \
+  logger.logf((FX_LOG_##severity), nullptr, __FILE__, __LINE__, msg)
 #define FDF_LOG(severity, msg...) FDF_LOGL(severity, logger_, msg)
 
 namespace driver {
@@ -29,9 +30,10 @@ class Logger {
   Logger(Logger&& other) noexcept;
   Logger& operator=(Logger&& other) noexcept;
 
-  void log(fx_log_severity_t severity, const char* file, int line, const char* msg, ...)
-      __PRINTFLIKE(5, 6);
-  void log(fx_log_severity_t severity, const char* file, int line, const char* msg, va_list args);
+  void logf(fx_log_severity_t severity, const char* tag, const char* file, int line,
+            const char* msg, ...) __PRINTFLIKE(6, 7);
+  void logvf(fx_log_severity_t severity, const char* tag, const char* file, int line,
+             const char* msg, va_list args);
 
  private:
   explicit Logger(fx_logger_t* logger);
