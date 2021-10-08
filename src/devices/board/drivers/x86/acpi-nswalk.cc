@@ -98,6 +98,26 @@ void acpi_apply_workarounds(acpi::Acpi* acpi, ACPI_HANDLE object, ACPI_DEVICE_IN
     if (acpi_status.is_error()) {
       zxlogf(ERROR, "acpi: acpi error in I2C1._PS0: 0x%x", acpi_status.error_value());
     }
+#ifdef ENABLE_ATLAS_CAMERA
+  } else if (!memcmp(&info->Name, "CAM0", 4)) {
+    // Atlas workaround: turn on the camera.
+    auto acpi_status = acpi->EvaluateObject(object, "_PR0", std::nullopt);
+    if (acpi_status.is_ok()) {
+      acpi::UniquePtr<ACPI_OBJECT> pkg = std::move(acpi_status.value());
+      for (unsigned i = 0; i < pkg->Package.Count; i++) {
+        ACPI_OBJECT* ref = &pkg->Package.Elements[i];
+        if (ref->Type != ACPI_TYPE_LOCAL_REFERENCE) {
+          zxlogf(DEBUG, "acpi: Ignoring wrong type 0x%x", ref->Type);
+        } else {
+          zxlogf(DEBUG, "acpi: Enabling camera at CAM0._PR0[%u]", i);
+          acpi_status = acpi->EvaluateObject(ref->Reference.Handle, "_ON", std::nullopt);
+          if (acpi_status.is_error()) {
+            zxlogf(ERROR, "acpi: acpi error 0x%x in CAM0._PR0._ON", acpi_status.error_value());
+          }
+        }
+      }
+    }
+#endif
   }
 }
 

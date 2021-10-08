@@ -9,6 +9,12 @@ import("//build/test.gni")
 import("//build/testing/bootfs_test.gni")
 import("//src/devices/bus/drivers/pci/pci.gni")
 
+declare_args() {
+  # If true, power on the Atlas camera at boot.
+  # TODO(fxbug.dev/81684): remove once we have a better way to manage ACPI device power.
+  i_can_haz_atlas_camera = false
+}
+
 group("x86") {
   deps = [ ":platform-bus-x86" ]
 }
@@ -75,6 +81,10 @@ fuchsia_driver("platform-bus-x86-driver") {
     "//build/config:all_source",
     "//build/config/fuchsia:enable_zircon_asserts",
   ]
+
+  if (i_can_haz_atlas_camera) {
+    cflags = [ "-DENABLE_ATLAS_CAMERA" ]
+  }
 
   sources = [
     "acpi-dev/dev-battery.cc",
