@@ -41,7 +41,9 @@
             "fuchsia.ui.shortcut.Registry",
             "fuchsia.update.Manager",
             "fuchsia.update.channelcontrol.ChannelControl",
-            "fuchsia.wlan.policy"
+            "fuchsia.wlan.common",
+            "fuchsia.wlan.policy",
+            "fuchsia.wlan.policy.ClientProvider"
         ]
     }
 }

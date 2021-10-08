@@ -121,6 +121,7 @@ dart_library("lib") {
     "//sdk/fidl/fuchsia.ui.views",
     "//sdk/fidl/fuchsia.update",
     "//sdk/fidl/fuchsia.update.channelcontrol",
+    "//sdk/fidl/fuchsia.wlan.common",
     "//sdk/fidl/fuchsia.wlan.policy",
     "//src/experiences/session_shells/ermine/internationalization",
     "//src/experiences/session_shells/ermine/keyboard_shortcuts",
