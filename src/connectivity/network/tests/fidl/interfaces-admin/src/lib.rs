@@ -1061,3 +1061,104 @@ async fn installer_creates_datapath() {
     assert_eq!(read, payload_bytes.len());
     assert_eq!(&buff[..read], payload_bytes);
 }
+
+#[fuchsia_async::run_singlethreaded(test)]
+async fn control_enable_disable() {
+    let name = "control_enable_disable";
+
+    let sandbox = netemul::TestSandbox::new().expect("create sandbox");
+    let realm = sandbox.create_netstack_realm::<Netstack2, _>(name).expect("create realm");
+    let endpoint =
+        sandbox.create_endpoint::<netemul::NetworkDevice, _>(name).await.expect("create endpoint");
+    let () = endpoint.set_link_up(true).await.expect("set link up");
+    let installer = realm
+        .connect_to_protocol::<fidl_fuchsia_net_interfaces_admin::InstallerMarker>()
+        .expect("connect to protocol");
+
+    let (device, _mac) = endpoint.get_netdevice().await.expect("get netdevice");
+    let (device_control, device_control_server_end) =
+        fidl::endpoints::create_proxy::<fidl_fuchsia_net_interfaces_admin::DeviceControlMarker>()
+            .expect("create proxy");
+    let () = installer.install_device(device, device_control_server_end).expect("install device");
+
+    let (control, control_server_end) =
+        fidl::endpoints::create_proxy::<fidl_fuchsia_net_interfaces_admin::ControlMarker>()
+            .expect("create proxy");
+
+    let interfaces_state = realm
+        .connect_to_protocol::<fidl_fuchsia_net_interfaces::StateMarker>()
+        .expect("connect to protocol");
+    let watcher = fidl_fuchsia_net_interfaces_ext::event_stream_from_state(&interfaces_state)
+        .expect("create event stream")
+        .map(|r| r.expect("watcher error"))
+        .fuse();
+    futures::pin_mut!(watcher);
+
+    // Consume the watcher until we see the idle event.
+    let existing = fidl_fuchsia_net_interfaces_ext::existing(
+        watcher.by_ref().map(Result::<_, fidl::Error>::Ok),
+        HashMap::new(),
+    )
+    .await
+    .expect("existing");
+    // Only loopback should exist.
+    assert_eq!(existing.len(), 1, "unexpected interfaces in existing: {:?}", existing);
+
+    let () = device_control
+        .create_interface(
+            netemul::PORT_ID,
+            control_server_end,
+            fidl_fuchsia_net_interfaces_admin::Options::EMPTY,
+        )
+        .expect("create interface");
+    let iface_id = control.get_id().await.expect("get id");
+
+    // Expect the added event.
+    let event = watcher.select_next_some().await;
+    matches::assert_matches!(event,
+        fidl_fuchsia_net_interfaces::Event::Added(
+                fidl_fuchsia_net_interfaces::Properties {
+                    id: Some(id), online: Some(online), ..
+                },
+        ) if id == iface_id && !online
+    );
+
+    // Starts disabled, it's a no-op.
+    let did_disable = control.disable().await.expect("calling disable").expect("disable failed");
+    assert!(!did_disable);
+
+    // Enable and observe online.
+    let did_enable = control.enable().await.expect("calling enable").expect("enable failed");
+    assert!(did_enable);
+    let () = watcher
+        .by_ref()
+        .filter_map(|event| match event {
+            fidl_fuchsia_net_interfaces::Event::Changed(
+                fidl_fuchsia_net_interfaces::Properties { id: Some(id), online, .. },
+            ) if id == iface_id => {
+                futures::future::ready(online.and_then(|online| online.then(|| ())))
+            }
+            event => panic!("unexpected event {:?}", event),
+        })
+        .select_next_some()
+        .await;
+
+    // Enable again should be no-op.
+    let did_enable = control.enable().await.expect("calling enable").expect("enable failed");
+    assert!(!did_enable);
+
+    // Disable again, expect offline.
+    let did_disable = control.disable().await.expect("calling disable").expect("disable failed");
+    assert!(did_disable);
+    let () = watcher
+        .filter_map(|event| match event {
+            fidl_fuchsia_net_interfaces::Event::Changed(
+                fidl_fuchsia_net_interfaces::Properties { id: Some(id), online, .. },
+            ) if id == iface_id => {
+                futures::future::ready(online.and_then(|online| (!online).then(|| ())))
+            }
+            event => panic!("unexpected event {:?}", event),
+        })
+        .select_next_some()
+        .await;
+}

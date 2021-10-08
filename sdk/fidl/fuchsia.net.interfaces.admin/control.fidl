@@ -59,6 +59,28 @@ protocol Control {
     GetId() -> (struct {
         id fuchsia.net.interface_id;
     });
+
+    /// Enables the interface.
+    ///
+    /// - response `did_enable` `true` iff the interface moved from disabled to
+    /// enabled as a consequence of this call.
+    Enable() -> (struct {
+        did_enable bool;
+    }) error flexible enum {
+        // TODO(https://fxbug.dev/85667): This should be an empty enum.
+        RESERVED = 0;
+    };
+
+    /// Disables the interface.
+    ///
+    /// - response `did_disable` `true` iff the interface moved from enabled to
+    /// disabled as a consequence of this call.
+    Disable() -> (struct {
+        did_disable bool;
+    }) error flexible enum {
+        // TODO(https://fxbug.dev/85667): This should be an empty enum.
+        RESERVED = 0;
+    };
 };
 
 /// Installs devices on the network stack.

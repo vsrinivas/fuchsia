@@ -196,7 +196,7 @@ func (ni *netstackImpl) BridgeInterfaces(_ fidl.Context, nicids []uint32) (netst
 
 func (ni *netstackImpl) SetInterfaceStatus(_ fidl.Context, nicid uint32, enabled bool) error {
 	if nicInfo, ok := ni.ns.stack.NICInfo()[tcpip.NICID(nicid)]; ok {
-		if err := nicInfo.Context.(*ifState).setState(enabled); err != nil {
+		if _, err := nicInfo.Context.(*ifState).setState(enabled); err != nil {
 			_ = syslog.Errorf("(NIC %d).setState(enabled=%t): %s", nicid, enabled, err)
 		}
 	} else {

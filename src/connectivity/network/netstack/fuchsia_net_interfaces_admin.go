@@ -254,12 +254,60 @@ type adminControlImpl struct {
 	cancelServe context.CancelFunc
 }
 
+func (ci *adminControlImpl) Enable(fidl.Context) (admin.ControlEnableResult, error) {
+	nicInfo, ok := ci.ns.stack.NICInfo()[ci.nicid]
+	if !ok {
+		// The NIC doesn't exist anymore, we're racing with shutdown.
+		// TODO(https://fxbug.dev/81579): This should be a panic once
+		// adminControlImpls are torn down before the NIC is removed from the stack.
+		return admin.ControlEnableResult{}, fmt.Errorf("nic %d removed", ci.nicid)
+	}
+
+	wasEnabled, err := nicInfo.Context.(*ifState).setState(true /* enabled */)
+	if err != nil {
+		// The only known error path that causes this failure is failure from the
+		// device layers, which all mean we're possible racing with shutdown.
+		_ = syslog.Errorf("ifs.Up() failed (NIC %d): %s", ci.nicid, err)
+		return admin.ControlEnableResult{}, err
+	}
+
+	return admin.ControlEnableResultWithResponse(
+		admin.ControlEnableResponse{
+			DidEnable: !wasEnabled,
+		}), nil
+}
+
+func (ci *adminControlImpl) Disable(fidl.Context) (admin.ControlDisableResult, error) {
+	nicInfo, ok := ci.ns.stack.NICInfo()[ci.nicid]
+	if !ok {
+		// The NIC doesn't exist anymore, we're racing with shutdown.
+		// TODO(https://fxbug.dev/81579): This should be a panic once
+		// adminControlImpls are torn down before the NIC is removed from the stack.
+		return admin.ControlDisableResult{}, fmt.Errorf("nic %d removed", ci.nicid)
+	}
+
+	wasEnabled, err := nicInfo.Context.(*ifState).setState(false /* enabled */)
+	if err != nil {
+		// The only known error path that causes this failure is failure from the
+		// device layers, which all mean we're possible racing with shutdown.
+		_ = syslog.Errorf("ifs.Down() failed (NIC %d): %s", ci.nicid, err)
+		return admin.ControlDisableResult{}, err
+	}
+
+	return admin.ControlDisableResultWithResponse(
+		admin.ControlDisableResponse{
+			DidDisable: wasEnabled,
+		}), nil
+}
+
 func (ci *adminControlImpl) AddAddress(_ fidl.Context, interfaceAddr net.InterfaceAddress, parameters admin.AddressParameters, request admin.AddressStateProviderWithCtxInterfaceRequest) error {
 	protocolAddr := interfaceAddressToProtocolAddress(interfaceAddr)
 	addr := protocolAddr.AddressWithPrefix.Address
 
 	nicInfo, ok := ci.ns.stack.NICInfo()[ci.nicid]
 	if !ok {
+		// TODO(https://fxbug.dev/81579): This should be a panic once
+		// adminControlImpls are torn down before the NIC is removed from the stack.
 		return fmt.Errorf("interface %d cannot be found", ci.nicid)
 	}
 	ifs := nicInfo.Context.(*ifState)

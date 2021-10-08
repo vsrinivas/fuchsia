@@ -770,19 +770,20 @@ func (ifs *ifState) onLinkOnlineChanged(linkOnline bool) {
 	}
 }
 
-func (ifs *ifState) setState(enabled bool) error {
+func (ifs *ifState) setState(enabled bool) (bool, error) {
 	name := ifs.ns.name(ifs.nicid)
 
-	changed, err := func() (bool, error) {
-		after, changed, err := func() (bool, bool, error) {
+	wasEnabled, changed, err := func() (bool, bool, error) {
+		wasEnabled, isUpAfter, changed, err := func() (bool, bool, bool, error) {
 			ifs.mu.Lock()
 			defer func() {
 				ifs.addressStateProviders.mu.Lock()
 				ifs.mu.Unlock()
 			}()
 
-			if ifs.mu.adminUp == enabled {
-				return ifs.IsUpLocked(), false, nil
+			wasEnabled := ifs.mu.adminUp
+			if wasEnabled == enabled {
+				return wasEnabled, ifs.IsUpLocked(), false, nil
 			}
 
 			if controller := ifs.controller; controller != nil {
@@ -791,42 +792,44 @@ func (ifs *ifState) setState(enabled bool) error {
 					fn = controller.Up
 				}
 				if err := fn(); err != nil {
-					return false, false, err
+					return wasEnabled, false, false, err
 				}
 			}
 
 			changed := ifs.stateChangeLocked(name, enabled, ifs.LinkOnlineLocked())
 			_ = syslog.Infof("NIC %s: set adminUp=%t when linkOnline=%t, interfacesChanged=%t", name, ifs.mu.adminUp, ifs.LinkOnlineLocked(), changed)
 
-			return ifs.IsUpLocked(), changed, nil
+			return wasEnabled, ifs.IsUpLocked(), changed, nil
 		}()
 		defer ifs.addressStateProviders.mu.Unlock()
 
 		if err != nil {
-			return false, err
+			return wasEnabled, false, err
 		}
 
-		ifs.addressStateProviders.onInterfaceOnlineChangeLocked(after)
-		return changed, nil
+		ifs.addressStateProviders.onInterfaceOnlineChangeLocked(isUpAfter)
+		return wasEnabled, changed, nil
 	}()
 	if err != nil {
 		_ = syslog.Infof("NIC %s: setting adminUp=%t failed: %s", name, enabled, err)
-		return err
+		return wasEnabled, err
 	}
 
 	if changed {
 		ifs.ns.onPropertiesChange(ifs.nicid, nil)
 	}
 
-	return nil
+	return wasEnabled, nil
 }
 
 func (ifs *ifState) Up() error {
-	return ifs.setState(true)
+	_, err := ifs.setState(true)
+	return err
 }
 
 func (ifs *ifState) Down() error {
-	return ifs.setState(false)
+	_, err := ifs.setState(false)
+	return err
 }
 
 func (ifs *ifState) Remove() {
