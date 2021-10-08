@@ -22,13 +22,15 @@ use {
     std::io::Write,
 };
 
-#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, Default, Eq, PartialEq, Serialize, Deserialize)]
 pub(crate) struct FlashManifest {
     pub(crate) hw_revision: String,
+    #[serde(default)]
+    pub(crate) credentials: Vec<String>,
     pub(crate) products: Vec<Product>,
 }
 
-#[derive(Clone, Default, Debug, Eq, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, Default, Eq, PartialEq, Serialize, Deserialize)]
 pub(crate) struct Product {
     pub(crate) name: String,
     #[serde(default)]
@@ -93,6 +95,7 @@ impl From<&FlashManifest> for FlashManifestV2 {
     fn from(p: &FlashManifest) -> FlashManifestV2 {
         FlashManifestV2 {
             hw_revision: p.hw_revision.clone(),
+            credentials: p.credentials.iter().map(|c| c.clone()).collect(),
             v1: FlashManifestV1(p.products.iter().map(|p| p.into()).collect()),
         }
     }

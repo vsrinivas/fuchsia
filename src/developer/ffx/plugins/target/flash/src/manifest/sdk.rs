@@ -44,7 +44,9 @@ impl TryFrom<&SdkEntries> for FlashManifestV3 {
                 Some(m) => match &m.flash {
                     Some(f) => Ok(FlashManifestV3 {
                         hw_revision: f.hw_revision.clone(),
+                        credentials: f.credentials.iter().map(|c| c.clone()).collect(),
                         products: f.products.iter().map(|p| p.into()).collect(),
+                        ..Default::default()
                     }),
                     None => bail!("SDK Flash Manifest does not exist"),
                 },

@@ -18,6 +18,8 @@ use {
 #[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
 pub(crate) struct FlashManifest {
     pub(crate) hw_revision: String,
+    #[serde(default)]
+    pub(crate) credentials: Vec<String>,
     #[serde(rename = "products")]
     pub(crate) v1: FlashManifestV1,
 }
