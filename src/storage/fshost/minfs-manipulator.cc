@@ -85,7 +85,7 @@ zx::status<> CopyGracefulRebootReason(const MountedMinfs& minfs, Copier& copier)
 
 zx::status<> ShredZxcrypt(const zx::unowned_channel& device) {
   fidl::UnownedClientEnd<fuchsia_device::Controller> controller_client(device);
-  auto x = fidl::WireCall(controller_client).GetTopologicalPath();
+  auto x = fidl::WireCall(controller_client)->GetTopologicalPath();
   if (x.status() != ZX_OK) {
     return zx::error(x.status());
   }
@@ -119,7 +119,7 @@ zx::status<> ShredZxcrypt(const zx::unowned_channel& device) {
   fdio_cpp::UnownedFdioCaller zxcrypt_caller(zxcrypt_fd);
   fidl::UnownedClientEnd<fuchsia_hardware_block_encrypted::DeviceManager> zxcrypt_client(
       zxcrypt_caller.channel());
-  auto result = fidl::WireCall(zxcrypt_client).Shred();
+  auto result = fidl::WireCall(zxcrypt_client)->Shred();
   if (result.status() != ZX_OK) {
     return zx::error(result.status());
   }

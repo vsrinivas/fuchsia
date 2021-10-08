@@ -1547,10 +1547,6 @@ class ::fidl::internal::WireSyncClientImpl<::fidl_test_protocolrequest::Parent>
                 ::fidl::internal::WireSyncClientImpl<
                     ::fidl_test_protocolrequest::Parent>> {
  public:
-  using ::fidl::internal::SyncEndpointVeneer<
-      ::fidl::internal::WireSyncClientImpl<
-          ::fidl_test_protocolrequest::Parent>>::SyncEndpointVeneer;
-
   // Allocates 40 bytes of message buffer on the stack. No heap allocation
   // necessary.
   ::fidl::WireResult<::fidl_test_protocolrequest::Parent::GetChild> GetChild() {
@@ -1923,10 +1919,6 @@ class ::fidl::internal::WireSyncClientImpl<::fidl_test_protocolrequest::Child>
                 ::fidl::internal::WireSyncClientImpl<
                     ::fidl_test_protocolrequest::Child>> {
  public:
-  using ::fidl::internal::SyncEndpointVeneer<
-      ::fidl::internal::WireSyncClientImpl<
-          ::fidl_test_protocolrequest::Child>>::SyncEndpointVeneer;
-
  private:
   ::fidl::UnownedClientEnd<::fidl_test_protocolrequest::Child> _client_end()
       const {

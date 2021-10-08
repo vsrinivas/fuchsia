@@ -14,8 +14,6 @@ template<>
 class {{ .WireSyncClientImpl }} final :
     public ::fidl::internal::SyncEndpointVeneer<{{ .WireSyncClientImpl }}> {
  public:
-  using ::fidl::internal::SyncEndpointVeneer<{{ .WireSyncClientImpl }}>::SyncEndpointVeneer;
-
 {{ "" }}
   {{- /* Client-calling functions do not apply to events. */}}
   {{- range .ClientMethods }}

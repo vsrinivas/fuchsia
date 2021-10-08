@@ -519,10 +519,6 @@ class ::fidl::internal::WireSyncClientImpl<::fidl_test_error::Example> final
     : public ::fidl::internal::SyncEndpointVeneer<
           ::fidl::internal::WireSyncClientImpl<::fidl_test_error::Example>> {
  public:
-  using ::fidl::internal::SyncEndpointVeneer<
-      ::fidl::internal::WireSyncClientImpl<::fidl_test_error::Example>>::
-      SyncEndpointVeneer;
-
   // Allocates 40 bytes of response buffer on the stack. Request is
   // heap-allocated.
   ::fidl::WireResult<::fidl_test_error::Example::Foo> Foo(

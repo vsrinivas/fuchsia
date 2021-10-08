@@ -306,11 +306,6 @@ class ::fidl::internal::WireSyncClientImpl<
                 ::fidl::internal::WireSyncClientImpl<
                     ::fidl_test_inheritancewithrecursivedecl::Parent>> {
  public:
-  using ::fidl::internal::SyncEndpointVeneer<
-      ::fidl::internal::WireSyncClientImpl<
-          ::fidl_test_inheritancewithrecursivedecl::Parent>>::
-      SyncEndpointVeneer;
-
   // Allocates 24 bytes of message buffer on the stack. No heap allocation
   // necessary.
   ::fidl::WireResult<::fidl_test_inheritancewithrecursivedecl::Parent::First>
@@ -985,10 +980,6 @@ class ::fidl::internal::WireSyncClientImpl<
                 ::fidl::internal::WireSyncClientImpl<
                     ::fidl_test_inheritancewithrecursivedecl::Child>> {
  public:
-  using ::fidl::internal::SyncEndpointVeneer<
-      ::fidl::internal::WireSyncClientImpl<
-          ::fidl_test_inheritancewithrecursivedecl::Child>>::SyncEndpointVeneer;
-
   // Allocates 24 bytes of message buffer on the stack. No heap allocation
   // necessary.
   ::fidl::WireResult<::fidl_test_inheritancewithrecursivedecl::Child::First>

@@ -227,7 +227,7 @@ TEST_F(BlockDeviceManagerIntegration, SetPartitionName) {
   fdio_cpp::UnownedFdioCaller partition_caller(partition_fd.get());
   auto result = fidl::WireCall(fidl::UnownedClientEnd<fuchsia_hardware_block_volume::Volume>(
                                    partition_caller.borrow_channel()))
-                    .GetName();
+                    ->GetName();
   ASSERT_EQ(result.status(), ZX_OK);
   ASSERT_EQ(result->status, ZX_OK);
 

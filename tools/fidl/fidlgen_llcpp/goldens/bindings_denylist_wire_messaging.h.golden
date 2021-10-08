@@ -585,11 +585,6 @@ class ::fidl::internal::WireSyncClientImpl<
                 ::fidl::internal::WireSyncClientImpl<
                     ::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps>> {
  public:
-  using ::fidl::internal::SyncEndpointVeneer<
-      ::fidl::internal::WireSyncClientImpl<
-          ::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps>>::
-      SyncEndpointVeneer;
-
   // Allocates 32 bytes of message buffer on the stack. No heap allocation
   // necessary.
   ::fidl::WireResult<::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps::
@@ -790,10 +785,6 @@ class ::fidl::internal::WireSyncClientImpl<
                 ::fidl::internal::WireSyncClientImpl<
                     ::fidl_test_bindingsdenylist::OnlyCppAndDeps>> {
  public:
-  using ::fidl::internal::SyncEndpointVeneer<
-      ::fidl::internal::WireSyncClientImpl<
-          ::fidl_test_bindingsdenylist::OnlyCppAndDeps>>::SyncEndpointVeneer;
-
  private:
   ::fidl::UnownedClientEnd<::fidl_test_bindingsdenylist::OnlyCppAndDeps>
   _client_end() const {

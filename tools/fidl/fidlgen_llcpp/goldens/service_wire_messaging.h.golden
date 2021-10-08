@@ -267,10 +267,6 @@ class ::fidl::internal::WireSyncClientImpl<::fidl_test_service::SecondProtocol>
                 ::fidl::internal::WireSyncClientImpl<
                     ::fidl_test_service::SecondProtocol>> {
  public:
-  using ::fidl::internal::SyncEndpointVeneer<
-      ::fidl::internal::WireSyncClientImpl<
-          ::fidl_test_service::SecondProtocol>>::SyncEndpointVeneer;
-
   // Allocates 16 bytes of message buffer on the stack. No heap allocation
   // necessary.
   ::fidl::WireResult<::fidl_test_service::SecondProtocol::MethodOnSecond>
@@ -622,10 +618,6 @@ class ::fidl::internal::WireSyncClientImpl<::fidl_test_service::FirstProtocol>
                 ::fidl::internal::WireSyncClientImpl<
                     ::fidl_test_service::FirstProtocol>> {
  public:
-  using ::fidl::internal::SyncEndpointVeneer<
-      ::fidl::internal::WireSyncClientImpl<
-          ::fidl_test_service::FirstProtocol>>::SyncEndpointVeneer;
-
   // Allocates 16 bytes of message buffer on the stack. No heap allocation
   // necessary.
   ::fidl::WireResult<::fidl_test_service::FirstProtocol::MethodOnFirst>

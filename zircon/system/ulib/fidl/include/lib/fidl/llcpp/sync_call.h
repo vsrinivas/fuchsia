@@ -87,13 +87,11 @@ class SyncEndpointVeneer {
 //
 //     fidl::WireCall(client_end)->Method(args...);
 //
-// TODO(fxbug.dev/85688): Replace with
-// |SyncEndpointVeneer<WireSyncClientImpl<FidlProtocol>>| after migrating
-// non-fuchsia.git users.
 template <typename FidlProtocol>
-fidl::internal::WireSyncClientImpl<FidlProtocol> WireCall(
+internal::SyncEndpointVeneer<internal::WireSyncClientImpl<FidlProtocol>> WireCall(
     const fidl::ClientEnd<FidlProtocol>& client_end) {
-  return fidl::internal::WireSyncClientImpl<FidlProtocol>(client_end.borrow().channel());
+  return internal::SyncEndpointVeneer<internal::WireSyncClientImpl<FidlProtocol>>(
+      client_end.borrow().channel());
 }
 
 // |WireCall| is used to make method calls directly on a |fidl::ClientEnd|
@@ -101,13 +99,11 @@ fidl::internal::WireSyncClientImpl<FidlProtocol> WireCall(
 //
 //     fidl::WireCall(client_end)->Method(args...);
 //
-// TODO(fxbug.dev/85688): Replace with
-// |SyncEndpointVeneer<WireSyncClientImpl<FidlProtocol>>| after migrating
-// non-fuchsia.git users.
 template <typename FidlProtocol>
-fidl::internal::WireSyncClientImpl<FidlProtocol> WireCall(
+internal::SyncEndpointVeneer<internal::WireSyncClientImpl<FidlProtocol>> WireCall(
     const fidl::UnownedClientEnd<FidlProtocol>& client_end) {
-  return fidl::internal::WireSyncClientImpl<FidlProtocol>(client_end.channel());
+  return internal::SyncEndpointVeneer<internal::WireSyncClientImpl<FidlProtocol>>(
+      client_end.channel());
 }
 
 }  // namespace fidl

@@ -281,11 +281,6 @@ class ::fidl::internal::WireSyncClientImpl<
                 ::fidl::internal::WireSyncClientImpl<
                     ::fidl_test_placementofattributes::ExampleProtocol>> {
  public:
-  using ::fidl::internal::SyncEndpointVeneer<
-      ::fidl::internal::WireSyncClientImpl<
-          ::fidl_test_placementofattributes::ExampleProtocol>>::
-      SyncEndpointVeneer;
-
   // Allocates 24 bytes of message buffer on the stack. No heap allocation
   // necessary.
   ::fidl::WireResult<::fidl_test_placementofattributes::ExampleProtocol::Method>

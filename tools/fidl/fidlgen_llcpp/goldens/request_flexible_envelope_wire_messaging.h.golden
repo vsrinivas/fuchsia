@@ -1150,10 +1150,6 @@ class ::fidl::internal::WireSyncClientImpl<
                 ::fidl::internal::WireSyncClientImpl<
                     ::fidl_test_requestflexibleenvelope::Protocol>> {
  public:
-  using ::fidl::internal::SyncEndpointVeneer<
-      ::fidl::internal::WireSyncClientImpl<
-          ::fidl_test_requestflexibleenvelope::Protocol>>::SyncEndpointVeneer;
-
   // Request is heap-allocated. Response is heap-allocated.
   ::fidl::WireResult<::fidl_test_requestflexibleenvelope::Protocol::
                          RequestStrictResponseFlexible>

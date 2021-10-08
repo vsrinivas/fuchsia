@@ -230,14 +230,14 @@ TEST_F(FvmVolumeManagerApiTest, SetPartitionName) {
   // Create the partition inside FVM with one slice.
   const char kPartitionName[] = "mypart";
   auto alloc_result = fidl::WireCall<VolumeManager>(fvm->device()->channel())
-                          .AllocatePartition(1, type_guid, guid, kPartitionName, 0);
+                          ->AllocatePartition(1, type_guid, guid, kPartitionName, 0);
   ASSERT_OK(alloc_result.status(), "Transport layer error");
   ASSERT_OK(alloc_result->status, "Service returned error.");
 
   constexpr std::string_view kNewPartitionName = "new-name";
   auto set_partition_name_result =
       fidl::WireCall<VolumeManager>(fvm->device()->channel())
-          .SetPartitionName(guid, fidl::StringView::FromExternal(kNewPartitionName));
+          ->SetPartitionName(guid, fidl::StringView::FromExternal(kNewPartitionName));
   ASSERT_OK(set_partition_name_result.status(), "Transport layer error");
   ASSERT_FALSE(set_partition_name_result->result.is_err(), "Service returned error.");
 
@@ -254,7 +254,7 @@ TEST_F(FvmVolumeManagerApiTest, SetPartitionName) {
 
   {
     auto get_name_result =
-        fidl::WireCall(fidl::UnownedClientEnd<Volume>(volume.borrow_channel())).GetName();
+        fidl::WireCall(fidl::UnownedClientEnd<Volume>(volume.borrow_channel()))->GetName();
     ASSERT_OK(get_name_result.status(), "Transport layer error");
     ASSERT_OK(get_name_result->status, "Service returned error.");
 
@@ -275,7 +275,7 @@ TEST_F(FvmVolumeManagerApiTest, SetPartitionName) {
   volume.reset(volume_fd.get());
 
   auto get_name_result =
-      fidl::WireCall(fidl::UnownedClientEnd<Volume>(volume.borrow_channel())).GetName();
+      fidl::WireCall(fidl::UnownedClientEnd<Volume>(volume.borrow_channel()))->GetName();
   ASSERT_OK(get_name_result.status(), "Transport layer error");
   ASSERT_OK(get_name_result->status, "Service returned error.");
 

@@ -58,10 +58,6 @@ class ::fidl::internal::WireSyncClientImpl<::fidl_test_handles::SomeProtocol>
                 ::fidl::internal::WireSyncClientImpl<
                     ::fidl_test_handles::SomeProtocol>> {
  public:
-  using ::fidl::internal::SyncEndpointVeneer<
-      ::fidl::internal::WireSyncClientImpl<::fidl_test_handles::SomeProtocol>>::
-      SyncEndpointVeneer;
-
  private:
   ::fidl::UnownedClientEnd<::fidl_test_handles::SomeProtocol> _client_end()
       const {

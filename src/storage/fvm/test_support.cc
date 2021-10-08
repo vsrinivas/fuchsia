@@ -314,8 +314,8 @@ zx_status_t FvmAdapter::AddPartition(const fbl::unique_fd& devfs_root, const std
 
   auto response =
       fidl::WireCall(fidl::UnownedClientEnd<fuchsia_hardware_block_volume::VolumeManager>(channel_))
-          .AllocatePartition(slice_count, fidl_type, fidl_guid,
-                             fidl::StringView::FromExternal(name), 0u);
+          ->AllocatePartition(slice_count, fidl_type, fidl_guid,
+                              fidl::StringView::FromExternal(name), 0u);
   if (response.status() != ZX_OK) {
     return response.status();
   }

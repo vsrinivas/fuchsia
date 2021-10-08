@@ -1046,10 +1046,6 @@ class ::fidl::internal::WireSyncClientImpl<
                 ::fidl::internal::WireSyncClientImpl<
                     ::fidl_test_protocols::HandleRightsProtocol>> {
  public:
-  using ::fidl::internal::SyncEndpointVeneer<
-      ::fidl::internal::WireSyncClientImpl<
-          ::fidl_test_protocols::HandleRightsProtocol>>::SyncEndpointVeneer;
-
   // Allocates 24 bytes of message buffer on the stack. No heap allocation
   // necessary.
   ::fidl::WireResult<
@@ -4271,11 +4267,6 @@ class ::fidl::internal::WireSyncClientImpl<
                 ::fidl::internal::WireSyncClientImpl<
                     ::fidl_test_protocols::WithAndWithoutRequestResponse>> {
  public:
-  using ::fidl::internal::SyncEndpointVeneer<
-      ::fidl::internal::WireSyncClientImpl<
-          ::fidl_test_protocols::WithAndWithoutRequestResponse>>::
-      SyncEndpointVeneer;
-
   // Allocates 16 bytes of message buffer on the stack. No heap allocation
   // necessary.
   ::fidl::WireResult<
@@ -5712,10 +5703,6 @@ class ::fidl::internal::WireSyncClientImpl<::fidl_test_protocols::Transitional>
                 ::fidl::internal::WireSyncClientImpl<
                     ::fidl_test_protocols::Transitional>> {
  public:
-  using ::fidl::internal::SyncEndpointVeneer<
-      ::fidl::internal::WireSyncClientImpl<
-          ::fidl_test_protocols::Transitional>>::SyncEndpointVeneer;
-
   // Allocates 48 bytes of message buffer on the stack. No heap allocation
   // necessary.
   ::fidl::WireResult<::fidl_test_protocols::Transitional::Request> Request(
@@ -6190,10 +6177,6 @@ class ::fidl::internal::WireSyncClientImpl<
                 ::fidl::internal::WireSyncClientImpl<
                     ::fidl_test_protocols::MethodWithUnion>> {
  public:
-  using ::fidl::internal::SyncEndpointVeneer<
-      ::fidl::internal::WireSyncClientImpl<
-          ::fidl_test_protocols::MethodWithUnion>>::SyncEndpointVeneer;
-
   // Allocates 32 bytes of message buffer on the stack. No heap allocation
   // necessary.
   ::fidl::WireResult<::fidl_test_protocols::MethodWithUnion::UnionMethod>
@@ -8037,10 +8020,6 @@ class ::fidl::internal::WireSyncClientImpl<
                 ::fidl::internal::WireSyncClientImpl<
                     ::fidl_test_protocols::WithProtocolEnds>> {
  public:
-  using ::fidl::internal::SyncEndpointVeneer<
-      ::fidl::internal::WireSyncClientImpl<
-          ::fidl_test_protocols::WithProtocolEnds>>::SyncEndpointVeneer;
-
   // Allocates 48 bytes of message buffer on the stack. No heap allocation
   // necessary.
   ::fidl::WireResult<::fidl_test_protocols::WithProtocolEnds::ClientEnds>
@@ -8684,10 +8663,6 @@ class ::fidl::internal::WireSyncClientImpl<
                 ::fidl::internal::WireSyncClientImpl<
                     ::fidl_test_protocols::ManyParameters>> {
  public:
-  using ::fidl::internal::SyncEndpointVeneer<
-      ::fidl::internal::WireSyncClientImpl<
-          ::fidl_test_protocols::ManyParameters>>::SyncEndpointVeneer;
-
   // Allocates 32 bytes of message buffer on the stack. No heap allocation
   // necessary.
   ::fidl::WireResult<::fidl_test_protocols::ManyParameters::Fifteen> Fifteen(
@@ -10915,10 +10890,6 @@ class ::fidl::internal::WireSyncClientImpl<
                 ::fidl::internal::WireSyncClientImpl<
                     ::fidl_test_protocols::WithErrorSyntax>> {
  public:
-  using ::fidl::internal::SyncEndpointVeneer<
-      ::fidl::internal::WireSyncClientImpl<
-          ::fidl_test_protocols::WithErrorSyntax>>::SyncEndpointVeneer;
-
   // Allocates 72 bytes of message buffer on the stack. No heap allocation
   // necessary.
   ::fidl::WireResult<::fidl_test_protocols::WithErrorSyntax::ResponseAsStruct>
@@ -11581,10 +11552,6 @@ class ::fidl::internal::WireSyncClientImpl<
                 ::fidl::internal::WireSyncClientImpl<
                     ::fidl_test_protocols::DiscoverableProtocol>> {
  public:
-  using ::fidl::internal::SyncEndpointVeneer<
-      ::fidl::internal::WireSyncClientImpl<
-          ::fidl_test_protocols::DiscoverableProtocol>>::SyncEndpointVeneer;
-
   // Allocates 16 bytes of message buffer on the stack. No heap allocation
   // necessary.
   ::fidl::WireResult<::fidl_test_protocols::DiscoverableProtocol::Method>
@@ -13649,10 +13616,6 @@ class ::fidl::internal::WireSyncClientImpl<
                 ::fidl::internal::WireSyncClientImpl<
                     ::fidl_test_protocols::ChannelProtocol>> {
  public:
-  using ::fidl::internal::SyncEndpointVeneer<
-      ::fidl::internal::WireSyncClientImpl<
-          ::fidl_test_protocols::ChannelProtocol>>::SyncEndpointVeneer;
-
   // Allocates 32 bytes of message buffer on the stack. No heap allocation
   // necessary.
   ::fidl::WireResult<::fidl_test_protocols::ChannelProtocol::MethodA> MethodA(

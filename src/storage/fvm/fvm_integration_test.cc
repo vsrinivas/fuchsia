@@ -496,7 +496,7 @@ void Upgrade(const fdio_cpp::FdioCaller& caller, const uint8_t* old_guid, const 
   auto response =
       fidl::WireCall(fidl::UnownedClientEnd<fuchsia_hardware_block_volume::VolumeManager>(
                          caller.borrow_channel()))
-          .Activate(old_guid_fidl, new_guid_fidl);
+          ->Activate(old_guid_fidl, new_guid_fidl);
   ASSERT_EQ(ZX_OK, response.status());
   ASSERT_EQ(result, response->status);
 }

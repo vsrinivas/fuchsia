@@ -343,7 +343,7 @@ const fuchsia_hardware_block_partition::wire::Guid& BlockDevice::GetInstanceGuid
   // closed, so clone the channel in case that happens.
   auto response = fidl::WireCall(fidl::ClientEnd<fuchsia_hardware_block_partition::Partition>(
                                      zx::channel(fdio_service_clone(connection.borrow_channel()))))
-                      .GetInstanceGuid();
+                      ->GetInstanceGuid();
   if (response.status() != ZX_OK) {
     FX_LOGS(ERROR) << "Unable to get partition instance GUID (fidl error: "
                    << zx_status_get_string(response.status()) << ")";
@@ -366,7 +366,7 @@ const fuchsia_hardware_block_partition::wire::Guid& BlockDevice::GetTypeGuid() c
   // closed, so clone the channel in case that happens.
   auto response = fidl::WireCall(fidl::ClientEnd<fuchsia_hardware_block_partition::Partition>(
                                      zx::channel(fdio_service_clone(connection.borrow_channel()))))
-                      .GetTypeGuid();
+                      ->GetTypeGuid();
   if (response.status() != ZX_OK) {
     FX_LOGS(ERROR) << "Unable to get partition type GUID (fidl error: "
                    << zx_status_get_string(response.status()) << ")";
@@ -484,7 +484,7 @@ zx_status_t BlockDevice::SetPartitionMaxSize(const std::string& fvm_path, uint64
   auto response =
       fidl::WireCall(fidl::UnownedClientEnd<fuchsia_hardware_block_volume::VolumeManager>(
                          caller.borrow_channel()))
-          .SetPartitionLimit(instance_guid, max_size);
+          ->SetPartitionLimit(instance_guid, max_size);
   if (response.status() != ZX_OK || response->status != ZX_OK) {
     FX_LOGS(ERROR) << "Unable to set partition limit for " << topological_path() << " to "
                    << max_size << " bytes.";
@@ -515,7 +515,7 @@ zx_status_t BlockDevice::SetPartitionName(const std::string& fvm_path, std::stri
   auto response =
       fidl::WireCall(fidl::UnownedClientEnd<fuchsia_hardware_block_volume::VolumeManager>(
                          caller.borrow_channel()))
-          .SetPartitionName(instance_guid, fidl::StringView::FromExternal(name));
+          ->SetPartitionName(instance_guid, fidl::StringView::FromExternal(name));
   if (response.status() != ZX_OK || response->result.is_err()) {
     FX_LOGS(ERROR) << "Unable to set partition name for " << topological_path() << " to '" << name
                    << "'.";

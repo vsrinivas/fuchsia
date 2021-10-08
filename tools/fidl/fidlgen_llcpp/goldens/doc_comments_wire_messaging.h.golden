@@ -433,10 +433,6 @@ class ::fidl::internal::WireSyncClientImpl<::fidl_test_doccomments::Interface>
                 ::fidl::internal::WireSyncClientImpl<
                     ::fidl_test_doccomments::Interface>> {
  public:
-  using ::fidl::internal::SyncEndpointVeneer<
-      ::fidl::internal::WireSyncClientImpl<
-          ::fidl_test_doccomments::Interface>>::SyncEndpointVeneer;
-
   /// method comment #1
   ///
   /// method comment #3

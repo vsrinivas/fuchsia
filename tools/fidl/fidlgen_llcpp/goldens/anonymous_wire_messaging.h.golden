@@ -579,10 +579,6 @@ class ::fidl::internal::WireSyncClientImpl<::fidl_test_anonymous::SomeProtocol>
                 ::fidl::internal::WireSyncClientImpl<
                     ::fidl_test_anonymous::SomeProtocol>> {
  public:
-  using ::fidl::internal::SyncEndpointVeneer<
-      ::fidl::internal::WireSyncClientImpl<
-          ::fidl_test_anonymous::SomeProtocol>>::SyncEndpointVeneer;
-
   // Allocates 128 bytes of message buffer on the stack. No heap allocation
   // necessary.
   ::fidl::WireResult<::fidl_test_anonymous::SomeProtocol::SomeMethod>

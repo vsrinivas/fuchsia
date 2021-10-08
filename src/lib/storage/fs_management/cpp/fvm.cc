@@ -318,7 +318,7 @@ int fvm_allocate_partition_impl(int fvm_fd, const alloc_req_t* request) {
   }
   fidl::UnownedClientEnd<fuchsia_hardware_block_volume::VolumeManager> client(
       caller.borrow_channel());
-  auto response = fidl::WireCall(client).AllocatePartition(
+  auto response = fidl::WireCall(client)->AllocatePartition(
       request->slice_count, type_guid, instance_guid,
       fidl::StringView::FromExternal(request->name, request_name_size), request->flags);
   if (response.status() != ZX_OK || response->status != ZX_OK) {
@@ -354,7 +354,7 @@ zx_status_t fvm_query(int fvm_fd, fuchsia_hardware_block_volume_VolumeInfo* out)
   auto response =
       fidl::WireCall(fidl::UnownedClientEnd<fuchsia_hardware_block_volume::VolumeManager>(
                          caller.borrow_channel()))
-          .Query();
+          ->Query();
 
   if (response.status() != ZX_OK)
     return response.status();

@@ -230,8 +230,8 @@ class FactoryResetTest : public Test {
     auto response =
         fidl::WireCall(fidl::UnownedClientEnd<fuchsia_hardware_block_volume::VolumeManager>(
                            caller.borrow_channel()))
-            .AllocatePartition(req.slice_count, type_guid, instance_guid,
-                               fidl::StringView::FromExternal(kDataName), req.flags);
+            ->AllocatePartition(req.slice_count, type_guid, instance_guid,
+                                fidl::StringView::FromExternal(kDataName), req.flags);
     ASSERT_EQ(response.status(), ZX_OK);
     ASSERT_EQ(response->status, ZX_OK);
 

@@ -1115,10 +1115,6 @@ class ::fidl::internal::WireSyncClientImpl<::fidl_test_union::TestProtocol>
                 ::fidl::internal::WireSyncClientImpl<
                     ::fidl_test_union::TestProtocol>> {
  public:
-  using ::fidl::internal::SyncEndpointVeneer<
-      ::fidl::internal::WireSyncClientImpl<::fidl_test_union::TestProtocol>>::
-      SyncEndpointVeneer;
-
   // Allocates 80 bytes of message buffer on the stack. No heap allocation
   // necessary.
   ::fidl::WireResult<::fidl_test_union::TestProtocol::

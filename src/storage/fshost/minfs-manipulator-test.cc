@@ -154,7 +154,7 @@ class MinfsManipulatorTest : public testing::Test {
   zx::status<> SetPartitionLimit(uint64_t byte_count) {
     fidl::UnownedClientEnd<fuchsia_hardware_block_partition::Partition> block_client(
         device_.borrow());
-    auto guid_result = fidl::WireCall(block_client).GetInstanceGuid();
+    auto guid_result = fidl::WireCall(block_client)->GetInstanceGuid();
     if (guid_result.status() != ZX_OK) {
       return zx::error(guid_result.status());
     }
@@ -170,7 +170,7 @@ class MinfsManipulatorTest : public testing::Test {
     fdio_cpp::UnownedFdioCaller caller(fvm_fd.get());
     fidl::UnownedClientEnd<fuchsia_hardware_block_volume::VolumeManager> volume_client(
         caller.channel());
-    auto result = fidl::WireCall(volume_client).SetPartitionLimit(*guid_result->guid, byte_count);
+    auto result = fidl::WireCall(volume_client)->SetPartitionLimit(*guid_result->guid, byte_count);
     if (result.status() != ZX_OK) {
       return zx::error(result.status());
     }

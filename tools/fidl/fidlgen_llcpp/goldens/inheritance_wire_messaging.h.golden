@@ -523,10 +523,6 @@ class ::fidl::internal::WireSyncClientImpl<::fidl_test_inheritance::Super> final
           ::fidl::internal::WireSyncClientImpl<
               ::fidl_test_inheritance::Super>> {
  public:
-  using ::fidl::internal::SyncEndpointVeneer<
-      ::fidl::internal::WireSyncClientImpl<::fidl_test_inheritance::Super>>::
-      SyncEndpointVeneer;
-
   // Allocates 24 bytes of response buffer on the stack. Request is
   // heap-allocated.
   ::fidl::WireResult<::fidl_test_inheritance::Super::Foo> Foo(
@@ -1179,10 +1175,6 @@ class ::fidl::internal::WireSyncClientImpl<::fidl_test_inheritance::Sub> final
     : public ::fidl::internal::SyncEndpointVeneer<
           ::fidl::internal::WireSyncClientImpl<::fidl_test_inheritance::Sub>> {
  public:
-  using ::fidl::internal::SyncEndpointVeneer<
-      ::fidl::internal::WireSyncClientImpl<::fidl_test_inheritance::Sub>>::
-      SyncEndpointVeneer;
-
   // Allocates 24 bytes of response buffer on the stack. Request is
   // heap-allocated.
   ::fidl::WireResult<::fidl_test_inheritance::Sub::Foo> Foo(
