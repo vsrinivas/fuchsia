@@ -16,7 +16,6 @@
 #include <filesystem>
 
 #include "platform_interface.h"
-#include "src/virtualization/lib/guest_interaction/common.h"
 
 int PosixPlatform::OpenFile(std::string file_path, FileOpenMode mode) {
   int32_t flags = O_NONBLOCK;
@@ -102,6 +101,16 @@ bool PosixPlatform::CreateDirectory(std::string dir_path) {
   }
   return true;
 }
+
+// Defined in Linux:include/uapi/linux/vm_sockets.h
+typedef struct sockaddr_vm {
+  sa_family_t svm_family;
+  unsigned short svm_reserved1;
+  unsigned int svm_port;
+  unsigned int svm_cid;
+  unsigned char svm_zero[sizeof(struct sockaddr) - sizeof(sa_family_t) - sizeof(unsigned short) -
+                         sizeof(unsigned int) - sizeof(unsigned int)];
+} sockaddr_vm;
 
 int PosixPlatform::GetStubFD(uint32_t cid, uint32_t port) {
   int sockfd = socket(AF_VSOCK, SOCK_STREAM | SOCK_NONBLOCK, 0);

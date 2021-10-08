@@ -16,6 +16,7 @@
 #include <src/virtualization/tests/guest_console.h>
 
 #include "src/lib/fxl/strings/trim.h"
+#include "src/lib/testing/predicates/status.h"
 #include "src/virtualization/lib/grpc/fdio_util.h"
 #include "src/virtualization/lib/guest_interaction/client/client_impl.h"
 #include "src/virtualization/lib/guest_interaction/common.h"
@@ -55,9 +56,6 @@ static void ConvertSocketToNonBlockingFd(zx::socket socket, fbl::unique_fd& fd) 
 }
 
 TEST_F(GuestInteractionTest, GrpcExecScriptTest) {
-  CreateEnvironment();
-  LaunchDebianGuest();
-
   // Connect the gRPC client to the guest under test.
   fuchsia::virtualization::HostVsockEndpointPtr ep;
   realm()->GetHostVsockEndpoint(ep.NewRequest());
@@ -204,9 +202,6 @@ TEST_F(GuestInteractionTest, GrpcExecScriptTest) {
 // to and received from the guest and then send it to and retrieve it from the
 // guest.
 TEST_F(GuestInteractionTest, GrpcPutGetTest) {
-  CreateEnvironment();
-  LaunchDebianGuest();
-
   // Connect the gRPC client to the guest under test.
   fuchsia::virtualization::HostVsockEndpointPtr ep;
   realm()->GetHostVsockEndpoint(ep.NewRequest());

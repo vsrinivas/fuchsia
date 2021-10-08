@@ -13,6 +13,9 @@
 
 #include <grpc++/grpc++.h>
 
+// Defined in Linux:include/uapi/linux/vm_sockets.h
+#define VMADDR_CID_ANY -1U
+
 template <class T>
 class ServerImpl {
  public:

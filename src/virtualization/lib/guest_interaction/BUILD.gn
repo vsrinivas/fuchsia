@@ -34,15 +34,12 @@ proto_library("proto") {
   generator_plugin_label = "//third_party/grpc:grpc_cpp_plugin"
   import_protobuf_full = true
 
-  deps = [
-    "//third_party/grpc:grpc++",
-    "//third_party/protobuf:protobuf_full",
-  ]
+  deps = [ "//third_party/grpc:grpc++" ]
 }
 
 source_set("common") {
   sources = [ "common.h" ]
-  deps = [
+  public_deps = [
     ":proto",
     "//third_party/grpc:grpc++",
   ]
@@ -53,11 +50,7 @@ source_set("platform_interface_posix") {
     "platform_interface/platform_interface.h",
     "platform_interface/posix_platform.cc",
   ]
-  deps = [
-    ":common",
-    "//third_party/grpc:grpc++",
-    "//third_party/protobuf:protobuf_full",
-  ]
+  deps = [ ":common" ]
 }
 
 source_set("client_lib") {
@@ -65,12 +58,12 @@ source_set("client_lib") {
     "client/client_operation_state.h",
     "platform_interface/platform_interface.h",
   ]
-  deps = [
+  public_deps = [
     ":common",
-    ":proto",
+    ":fuchsia.netemul.guest",
     "//sdk/lib/fit",
     "//sdk/lib/sys/cpp",
-    "//src/lib/fxl",
+    "//sdk/lib/syslog/cpp",
     "//third_party/grpc:grpc++",
   ]
 }
@@ -82,9 +75,7 @@ source_set("server_lib") {
   ]
   deps = [
     ":common",
-    ":proto",
     "//src/lib/fxl",
-    "//third_party/grpc:grpc++",
   ]
 }
 
@@ -92,29 +83,33 @@ source_set("operation_test_lib") {
   testonly = true
   sources = [ "test/operation_test_lib.h" ]
   deps = [
-    ":proto",
-    "//src/lib/fxl",
     "//src/lib/fxl/test:gtest_main",
-    "//third_party/grpc:grpc++",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
+  ]
+  public_deps = [
+    ":proto",
+    "//third_party/grpc:grpc++",
   ]
 }
 
 source_set("integration_test_lib") {
   testonly = true
-  sources = [ "test/operation_test_lib.h" ]
+  sources = [
+    "test/integration_test_lib.cc",
+    "test/integration_test_lib.h",
+  ]
+  public_deps = [
+    "//sdk/fidl/fuchsia.virtualization",
+    "//sdk/lib/sys/cpp/testing:integration_fixture",
+    "//src/virtualization/tests:fake_netstack",
+  ]
   deps = [
-    ":proto",
-    "//sdk/fidl/fuchsia.net",
+    ":fuchsia.netemul.guest",
+    "//sdk/fidl/fuchsia.kernel",
     "//sdk/fidl/fuchsia.net.stack",
     "//sdk/fidl/fuchsia.netstack",
-    "//sdk/fidl/fuchsia.virtualization",
-    "//sdk/lib/sys/cpp/testing:enclosing_environment",
-    "//sdk/lib/sys/cpp/testing:integration_fixture",
-    "//src/lib/fxl/test:gtest_main",
     "//src/lib/testing/predicates",
-    "//src/virtualization/tests:fake_netstack",
     "//src/virtualization/tests:guest_console",
   ]
 }
@@ -126,13 +121,11 @@ executable("client_operation_test") {
     ":client_lib",
     ":fuchsia.netemul.guest",
     ":operation_test_lib",
-    ":proto",
     "//sdk/lib/sys/cpp",
     "//src/lib/fxl",
     "//src/lib/fxl/test:gtest_main",
     "//src/lib/testing/predicates",
-    "//src/virtualization/lib/grpc:grpc",
-    "//third_party/grpc:grpc++",
+    "//src/virtualization/lib/grpc",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
   ]
 }
@@ -228,23 +221,14 @@ executable("server_daemon_test") {
     ":fuchsia.netemul.guest",
     ":integration_test_lib",
     ":platform_interface_posix",
-    ":proto",
-    "//sdk/fidl/fuchsia.kernel",
-    "//sdk/fidl/fuchsia.net",
-    "//sdk/fidl/fuchsia.net.stack",
-    "//sdk/fidl/fuchsia.netstack",
-    "//sdk/fidl/fuchsia.virtualization",
     "//sdk/lib/fdio",
     "//sdk/lib/fit",
-    "//sdk/lib/sys/cpp/testing:enclosing_environment",
-    "//sdk/lib/sys/cpp/testing:integration_fixture",
+    "//sdk/lib/sys/cpp",
     "//src/lib/fxl",
     "//src/lib/fxl/test:gtest_main",
-    "//src/virtualization/lib/grpc:grpc",
-    "//src/virtualization/tests:fake_netstack",
+    "//src/lib/testing/predicates",
+    "//src/virtualization/lib/grpc",
     "//src/virtualization/tests:guest_console",
-    "//third_party/grpc:grpc++",
-    "//zircon/system/ulib/fzl",
   ]
 
   configs += [ "//build/config:all_source" ]
@@ -273,14 +257,13 @@ executable("guest_discovery_service_bin") {
     ":common",
     ":fuchsia.netemul.guest",
     ":platform_interface_posix",
-    ":proto",
     "//sdk/fidl/fuchsia.virtualization",
     "//sdk/lib/fdio",
     "//sdk/lib/fit-promise",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/syslog/cpp",
     "//src/lib/fxl",
-    "//src/virtualization/lib/grpc:grpc",
+    "//src/virtualization/lib/grpc",
     "//third_party/grpc:grpc++",
     "//zircon/system/ulib/async:async-cpp",
     "//zircon/system/ulib/async-default",
@@ -306,21 +289,11 @@ executable("guest_interaction_service_test") {
     ":common",
     ":fuchsia.netemul.guest",
     ":integration_test_lib",
-    "//garnet/public/lib/svc/cpp",
-    "//sdk/fidl/fuchsia.kernel",
-    "//sdk/fidl/fuchsia.net",
-    "//sdk/fidl/fuchsia.net.stack",
-    "//sdk/fidl/fuchsia.netstack",
-    "//sdk/fidl/fuchsia.virtualization",
     "//sdk/lib/fdio",
-    "//sdk/lib/sys/cpp/testing:enclosing_environment",
-    "//sdk/lib/sys/cpp/testing:integration_fixture",
-    "//src/lib/fxl",
+    "//sdk/lib/sys/cpp",
+    "//sdk/lib/syslog/cpp",
     "//src/lib/fxl/test:gtest_main",
-    "//third_party/googletest:gmock",
-    "//third_party/grpc:grpc++",
-    "//third_party/protobuf:protobuf_full",
-    "//zircon/system/ulib/fzl",
+    "//src/lib/testing/predicates",
   ]
 }
 
