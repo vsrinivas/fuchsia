@@ -7,6 +7,7 @@ use {
     ffx_config::FfxConfigBacked,
     ffx_core::ffx_command,
     ffx_lib_sub_command::Subcommand,
+    ffx_writer::Format,
 };
 
 #[ffx_command()]
@@ -20,6 +21,10 @@ pub struct Ffx {
     #[argh(option, short = 'e')]
     /// override default environment settings
     pub env: Option<String>,
+
+    #[argh(option)]
+    /// produce output for a machine in the specified format; available formats: "json"
+    pub machine: Option<Format>,
 
     #[argh(option, short = 't')]
     #[ffx_config_default("target.default")]

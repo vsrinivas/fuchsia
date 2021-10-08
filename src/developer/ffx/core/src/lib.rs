@@ -7,6 +7,7 @@ pub use core_macros::{ffx_command, ffx_plugin};
 use {
     anyhow::Result,
     async_trait::async_trait,
+    ffx_writer::Writer,
     fidl_fuchsia_developer_bridge::{DaemonProxy, FastbootProxy, TargetControlProxy, VersionInfo},
     fidl_fuchsia_developer_remotecontrol::RemoteControlProxy,
     futures::stream::{FuturesUnordered, StreamExt, TryStream},
@@ -28,6 +29,7 @@ pub trait Injector {
     async fn target_factory(&self) -> Result<TargetControlProxy>;
     async fn is_experiment(&self, key: &str) -> bool;
     async fn build_info(&self) -> Result<VersionInfo>;
+    async fn writer(&self) -> Result<Writer>;
 }
 
 pub struct PluginResult(Result<i32>);

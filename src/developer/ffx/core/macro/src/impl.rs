@@ -40,6 +40,7 @@ lazy_static! {
         ("FastbootProxy", "fastboot_factory", true),
         ("TargetControlProxy", "target_factory", true),
         ("VersionInfo", "build_info", false),
+        ("Writer", "writer", false),
     ];
 }
 

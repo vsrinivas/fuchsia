@@ -14,6 +14,7 @@ use {
     ffx_daemon::{get_daemon_proxy_single_link, is_daemon_running},
     ffx_lib_args::{from_env, redact_arg_values, Ffx},
     ffx_lib_sub_command::Subcommand,
+    ffx_writer::Writer,
     fidl::endpoints::{create_proxy, ProtocolMarker},
     fidl_fuchsia_developer_bridge::{
         DaemonError, DaemonProxy, FastbootMarker, FastbootProxy, TargetCollectionMarker,
@@ -197,6 +198,11 @@ impl Injector for Injection {
 
     async fn build_info(&self) -> Result<VersionInfo> {
         Ok::<VersionInfo, anyhow::Error>(ffx_build_version::build_info())
+    }
+
+    async fn writer(&self) -> Result<Writer> {
+        let app: Ffx = argh::from_env();
+        Ok(Writer::new(app.machine))
     }
 }
 
