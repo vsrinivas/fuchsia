@@ -1576,9 +1576,9 @@ pub(crate) fn iter_all_routes<D: EventDispatcher, A: IpAddress>(
 /// Send an IPv4 packet to a remote host.
 ///
 /// `send_ipv4_packet` accepts a destination IP address, a protocol, and a
-/// callback. It computes the routing information, and invokes the callback with
-/// the computed destination address. The callback returns a
-/// `SerializationRequest`, which is serialized in a new IP packet and sent.
+/// callback. It computes the routing information, invokes the callback with
+/// the computed destination address, serializes the callback's result in
+/// a new IP packet, and sends the packet.
 pub(crate) fn send_ipv4_packet<
     B: BufferMut,
     D: BufferDispatcher<B>,
@@ -1675,9 +1675,9 @@ pub(crate) fn send_ipv4_packet<
 /// Send an IPv6 packet to a remote host.
 ///
 /// `send_ipv6_packet` accepts a destination IP address, a protocol, and a
-/// callback. It computes the routing information, and invokes the callback with
-/// the computed destination address. The callback returns a
-/// `SerializationRequest`, which is serialized in a new IP packet and sent.
+/// callback. It computes the routing information, invokes the callback with
+/// the computed destination address, serializes the callback's result in
+/// a new IP packet, and sends the packet.
 pub(crate) fn send_ipv6_packet<
     B: BufferMut,
     D: BufferDispatcher<B>,
@@ -1774,7 +1774,7 @@ pub(crate) fn send_ipv6_packet<
 /// Send an IP packet to a remote host over a specific device.
 ///
 /// `send_ip_packet_from_device` accepts a device, a source and destination IP
-/// address, a next hop IP address, and a `SerializationRequest`. It computes
+/// address, a next hop IP address, and a serializer. It computes
 /// the routing information and serializes the request in a new IP packet and
 /// sends it. `mtu` will optionally impose an MTU constraint on the whole IP
 /// packet. This is useful for cases where some packets are being sent out

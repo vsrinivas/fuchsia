@@ -438,8 +438,9 @@ pub(super) fn initialize_device<C: EthernetIpDeviceContext>(ctx: &mut C, device_
 /// Send an IP packet in an Ethernet frame.
 ///
 /// `send_ip_frame` accepts a device ID, a local IP address, and a
-/// `SerializationRequest`. It computes the routing information and serializes
-/// the request in a new Ethernet frame and sends it.
+/// serializer. It computes the routing information, serializes
+/// the serializer, and sends the resulting buffer in a new Ethernet
+/// frame.
 #[specialize_ip_address]
 pub(super) fn send_ip_frame<
     B: BufferMut,

@@ -871,8 +871,9 @@ pub(crate) fn list_devices<D: EventDispatcher>(
 /// Send an IP packet in a device layer frame.
 ///
 /// `send_ip_frame` accepts a device ID, a local IP address, and a
-/// `SerializationRequest`. It computes the routing information and serializes
-/// the request in a new device layer frame and sends it.
+/// serializer. It computes the routing information, serializes
+/// the serializer, and sends the resulting buffer in a new device
+/// layer frame.
 ///
 /// # Panics
 ///
