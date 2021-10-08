@@ -3,9 +3,16 @@
 # found in the LICENSE file.
 
 import("//build/components.gni")
+import("//build/drivers.gni")
 
 group("compat") {
   # NOTE(abdulla): Intentionally empty until we have the driver module target.
+}
+
+fuchsia_driver("compat_driver") {
+  output_name = "compat"
+  # NOTE(dgilhooley): This is empty for now. We need to at least have this
+  # empty .so so the Component Manifests are pointing to a valid file.
 }
 
 group("tests") {

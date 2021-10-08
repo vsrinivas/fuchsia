@@ -135,12 +135,11 @@ async fn load_driver(
     let bind = DecodedRules::new(bind)
         .with_context(|| format!("{}: Failed to parse bind", component_url.as_str()))?;
 
-    let driver_path = get_rules_string_value(&component, "binary")
-        .ok_or(anyhow::anyhow!("{}: Missing binary path", component_url.as_str()))?;
+    let v1_driver_path = get_rules_string_value(&component, "compat");
 
     Ok(Some(ResolvedDriver {
         component_url: component_url,
-        driver_path: driver_path,
+        v1_driver_path: v1_driver_path,
         bind_rules: bind,
     }))
 }
@@ -175,7 +174,7 @@ async fn load_boot_drivers(dir: fio::DirectoryProxy) -> Result<Vec<ResolvedDrive
 
 struct ResolvedDriver {
     component_url: url::Url,
-    driver_path: String,
+    v1_driver_path: Option<String>,
     bind_rules: DecodedRules,
 }
 
@@ -274,18 +273,23 @@ impl ResolvedDriver {
     }
 
     fn create_matched_driver(&self) -> fdf::MatchedDriver {
-        let mut driver_url = self.component_url.clone();
-        driver_url.set_fragment(Some(&self.driver_path));
+        let driver_url = match self.v1_driver_path.as_ref() {
+            Some(p) => {
+                let mut driver_url = self.component_url.clone();
+                driver_url.set_fragment(Some(p));
+                Some(driver_url.to_string())
+            }
+            None => None,
+        };
 
         fdf::MatchedDriver {
             url: Some(self.component_url.as_str().to_string()),
-            driver_url: Some(driver_url.as_str().to_string()),
+            driver_url: driver_url,
             ..fdf::MatchedDriver::EMPTY
         }
     }
 
     fn create_driver_info(&self) -> fdd::DriverInfo {
-        let mut driver_url = self.component_url.clone();
         let bind_rules = match &self.bind_rules {
             DecodedRules::Normal(rules) => {
                 Some(fdd::BindRulesBytecode::BytecodeV2(rules.instructions.clone()))
@@ -293,9 +297,11 @@ impl ResolvedDriver {
             // TODO(fxbug.dev/85651): Support compsosite bytecode in DriverInfo.
             DecodedRules::Composite(_) => None,
         };
-        driver_url.set_fragment(Some(&self.driver_path));
+        let mut libname = self.component_url.clone();
+        libname.set_fragment(self.v1_driver_path.as_deref());
         fdd::DriverInfo {
-            url: Some(driver_url.to_string()),
+            url: Some(self.component_url.clone().to_string()),
+            libname: Some(libname.to_string()),
             bind_rules: bind_rules,
             ..fdd::DriverInfo::EMPTY
         }
@@ -785,7 +791,7 @@ mod tests {
         let base_repo = BaseRepo::Resolved(std::vec![ResolvedDriver {
             component_url: url::Url::parse("fuchsia-pkg://fuchsia.com/package#driver/my-driver.cm")
                 .unwrap(),
-            driver_path: "meta/my-driver.so".to_string(),
+            v1_driver_path: None,
             bind_rules: always_match.clone(),
         },]);
 
@@ -842,7 +848,7 @@ mod tests {
                     "fuchsia-pkg://fuchsia.com/package#driver/my-driver.cm"
                 )
                 .unwrap(),
-                driver_path: "meta/my-driver.so".to_string(),
+                v1_driver_path: Some("meta/my-driver.so".to_string()),
                 bind_rules: always_match.clone(),
             },
             ResolvedDriver {
@@ -850,7 +856,7 @@ mod tests {
                     "fuchsia-pkg://fuchsia.com/package#driver/my-driver2.cm"
                 )
                 .unwrap(),
-                driver_path: "meta/my-driver2.so".to_string(),
+                v1_driver_path: Some("meta/my-driver2.so".to_string()),
                 bind_rules: always_match.clone(),
             }
         ]);
@@ -1013,7 +1019,7 @@ mod tests {
         let base_repo = BaseRepo::Resolved(std::vec![ResolvedDriver {
             component_url: url::Url::parse("fuchsia-pkg://fuchsia.com/package#driver/my-driver.cm")
                 .unwrap(),
-            driver_path: "meta/my-driver.so".to_string(),
+            v1_driver_path: None,
             bind_rules: rules,
         },]);
 

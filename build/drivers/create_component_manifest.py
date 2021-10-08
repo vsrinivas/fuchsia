@@ -20,6 +20,12 @@ def main():
         '--output',
         type=argparse.FileType('w', encoding='UTF-8'),
         help='The path where this script will output the driver manifest.')
+    parser.add_argument(
+        '--is_v1',
+        action='store_const',
+        const=True,
+        default=False,
+        help='Generates a DFv1 component manifest. (If this is not included a DFv2 manifest is generated)')
     args = parser.parse_args()
 
     distribution_manifest = json.load(args.distribution_manifest_file)
@@ -30,6 +36,8 @@ def main():
     for entry in distribution_manifest:
         destination = entry['destination']
         if destination.startswith("driver/"):
+            if destination == "driver/compat.so":
+                continue
             if program:
                 raise Exception(
                     "fuchsia_driver_component cannot depend on two drivers: " +
@@ -54,6 +62,11 @@ def main():
             'bind': bind
         }
     }
+    if args.is_v1:
+        manifest["program"]["binary"] = "driver/compat.so"
+        manifest["program"]["compat"] = program
+    else:
+        manifest["program"]["binary"] = program
 
     json_manifest = json.dumps(manifest)
     args.output.write(json_manifest)

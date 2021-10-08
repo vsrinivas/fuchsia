@@ -294,10 +294,10 @@ std::vector<const Driver*> DriverLoader::GetAllDriverIndexDrivers() {
       break;
     }
     for (auto driver : next_result->drivers) {
-      if (!driver.has_url()) {
+      if (!driver.has_libname()) {
         continue;
       }
-      std::string url(driver.url().data(), driver.url().size());
+      std::string url(driver.libname().data(), driver.libname().size());
       const Driver* drv = LoadDriverUrl(url);
       if (drv) {
         drivers.push_back(drv);
