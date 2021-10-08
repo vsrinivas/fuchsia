@@ -2,11 +2,9 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-group("cpp") {
-  public_deps = [ ":client" ]
-}
+import("//build/components.gni")
 
-source_set("client") {
+source_set("cpp") {
   sources = [
     "network_device_client.cc",
     "network_device_client.h",
@@ -31,7 +29,7 @@ executable("cpp-test") {
   sources = [ "network_device_client_test.cc" ]
 
   deps = [
-    ":client",
+    ":cpp",
     "//sdk/fidl/fuchsia.net.tun:fuchsia.net.tun_llcpp",
     "//sdk/lib/fit-promise",
     "//src/lib/fxl/test:gtest_main",
@@ -41,8 +39,23 @@ executable("cpp-test") {
   ]
 }
 
+fuchsia_unittest_component("cpp-test-component") {
+  deps = [ ":cpp-test" ]
+  manifest = "meta/cpp-test.cml"
+}
+
+fuchsia_test_package("netdev-cpp-client-tests") {
+  test_components = [ ":cpp-test-component" ]
+  deps = [ "//src/connectivity/network/tun/network-tun:component-v2" ]
+  test_specs = {
+    log_settings = {
+      max_severity = "ERROR"
+    }
+  }
+}
+
 group("tests") {
   testonly = true
 
-  deps = [ ":cpp-test" ]
+  deps = [ ":netdev-cpp-client-tests" ]
 }

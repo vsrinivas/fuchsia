@@ -5,7 +5,7 @@
 import("//build/components.gni")
 import("//build/rust/rustc_library.gni")
 
-rustc_library("netdevice-client") {
+rustc_library("rust") {
   name = "netdevice_client"
   with_unit_tests = true
   edition = "2018"
@@ -47,7 +47,7 @@ rustc_library("netdevice-client") {
 rustc_test("tun-test") {
   source_root = "tests/tun.rs"
   deps = [
-    ":netdevice-client",
+    ":rust",
     "//sdk/fidl/fuchsia.hardware.network:fuchsia.hardware.network-rustc",
     "//sdk/fidl/fuchsia.net.tun:fuchsia.net.tun-rustc",
     "//src/lib/fidl/rust/fidl",
@@ -69,7 +69,7 @@ fuchsia_component("tun-test-component") {
 }
 
 fuchsia_unittest_component("netdev-rust-client-unittest-component") {
-  deps = [ ":netdevice-client_test" ]
+  deps = [ ":rust_test" ]
 }
 
 fuchsia_test_package("netdev-rust-client-tests") {
