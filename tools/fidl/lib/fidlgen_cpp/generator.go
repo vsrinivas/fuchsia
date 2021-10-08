@@ -9,9 +9,7 @@ import (
 	"fmt"
 	"io/fs"
 	"log"
-	"os"
 	"path"
-	"path/filepath"
 	"runtime"
 	"strings"
 	"text/template"
@@ -19,14 +17,21 @@ import (
 	"go.fuchsia.dev/fuchsia/tools/fidl/lib/fidlgen"
 )
 
+// TODO(fxbug.dev/49757) Use --style=file and copy the .clang-format file to the correct location.
+// An alternate way to do this is to load the config directly from .clang_format and put the
+// style as JSON in quotes.
+var clangFormatArgs = []string{"--style=google"}
+
 type Generator struct {
-	tmpls *template.Template
-	flags *CmdlineFlags
+	tmpls     *template.Template
+	flags     *CmdlineFlags
+	formatter fidlgen.Formatter
 }
 
 func newGenerator(flags *CmdlineFlags, extraFuncs template.FuncMap) *Generator {
 	gen := &Generator{
 		template.New(flags.name), flags,
+		fidlgen.NewFormatter(flags.clangFormatPath, clangFormatArgs...),
 	}
 
 	funcs := mergeFuncMaps(commonTemplateFuncs, extraFuncs)
@@ -62,38 +67,24 @@ func (gen *Generator) ExperimentEnabled(experiment string) bool {
 }
 
 func (gen *Generator) generateFile(filename string, tmpl string, tree Root) error {
-	if err := os.MkdirAll(filepath.Dir(filename), os.ModePerm); err != nil {
-		return err
-	}
-
-	file, err := fidlgen.NewLazyWriter(filename)
-	if err != nil {
-		return fmt.Errorf("Error creating LazyWriter: %w", err)
-	}
-
+	var err error
 	bufferedContent := new(bytes.Buffer)
 	if err := gen.tmpls.ExecuteTemplate(bufferedContent, tmpl, tree); err != nil {
 		return fmt.Errorf("Error generating content: %w", err)
 	}
+
+	var formatted []byte
+
 	// TODO(fxbug.dev/78303): Investigate clang-format memory usage on large files.
-	maybeFormatter := gen.flags.clangFormatPath
 	if bufferedContent.Len() > 1024*1024 && runtime.GOOS == "darwin" {
-		maybeFormatter = ""
+		formatted = bufferedContent.Bytes()
+	} else {
+		formatted, err = gen.formatter.Format(bufferedContent.Bytes())
+		if err != nil {
+			return fmt.Errorf("Error formatting: %w", err)
+		}
 	}
-	generatedPipe, err := NewClangFormatter(maybeFormatter).FormatPipe(file)
-	if err != nil {
-		return fmt.Errorf("Error in FormatPipe: %w", err)
-	}
-	_, err = bufferedContent.WriteTo(generatedPipe)
-	if err != nil {
-		return fmt.Errorf("Error writing to formatter: %w", err)
-	}
-
-	if err := generatedPipe.Close(); err != nil {
-		return fmt.Errorf("Error closing generatedPipe: %w", err)
-	}
-
-	return nil
+	return fidlgen.WriteFileIfChanged(filename, formatted)
 }
 
 type filenameData struct {

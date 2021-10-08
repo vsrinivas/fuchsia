@@ -1,10 +1,9 @@
+{{/*
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
+*/}}
 
-package codegen
-
-const unionTmpl = `
 {{- define "UnionDefinition" -}}
 type {{ .TagName }} uint64
 const (
@@ -20,7 +19,7 @@ const (
 //{{ . }}
 {{- end}}
 type {{ .Name }} struct {
-	{{ .TagName }} {{ Backtick }}{{ .Tags }}{{ Backtick }}
+	{{ .TagName }} `{{ .Tags }}`
 	{{- if .IsFlexible }}
 	I_unknownData interface{}
 	{{- end }}
@@ -28,7 +27,7 @@ type {{ .Name }} struct {
 	{{- range .DocComments}}
 	//{{ . }}
 	{{- end}}
-	{{ .Name }} {{ .Type }}  {{ Backtick }}{{ .Tags }}{{ Backtick }}
+	{{ .Name }} {{ .Type }}  `{{ .Tags }}`
 	{{- end }}
 }
 
@@ -100,4 +99,4 @@ func (_m *{{ .Name }}) GetUnknownData() {{ .UnknownDataType }} {
 	 field (e.g. for testing), use Go's reflect package. */}}
 
 {{- end -}}
-`
+

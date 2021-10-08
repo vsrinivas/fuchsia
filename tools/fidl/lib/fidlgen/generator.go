@@ -33,28 +33,15 @@ func (gen *Generator) GenerateFile(filename string, tmpl string, data interface{
 		return err
 	}
 
-	file, err := NewLazyWriter(filename)
-	if err != nil {
-		return fmt.Errorf("Error creating LazyWriter: %w", err)
-	}
-
 	bufferedContent := new(bytes.Buffer)
 	if err := gen.tmpls.ExecuteTemplate(bufferedContent, tmpl, data); err != nil {
 		return fmt.Errorf("Error generating content: %w", err)
 	}
 
-	generatedPipe, err := gen.formatter.FormatPipe(file)
+	formatted, err := gen.formatter.Format(bufferedContent.Bytes())
 	if err != nil {
-		return fmt.Errorf("Error in FormatPipe: %w", err)
-	}
-	_, err = bufferedContent.WriteTo(generatedPipe)
-	if err != nil {
-		return fmt.Errorf("Error writing to formatter: %w", err)
+		return fmt.Errorf("Error formatting source: %w", err)
 	}
 
-	if err := generatedPipe.Close(); err != nil {
-		return fmt.Errorf("Error closing generatedPipe: %w", err)
-	}
-
-	return nil
+	return WriteFileIfChanged(filename, formatted)
 }

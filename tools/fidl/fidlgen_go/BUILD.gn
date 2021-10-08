@@ -15,16 +15,16 @@ if (is_host) {
     name = "go.fuchsia.dev/fuchsia/tools/fidl/fidlgen_go/..."
     deps = [ "//tools/fidl/lib/fidlgen" ]
     sources = [
-      "codegen/bits.tmpl.go",
+      "codegen/bits.tmpl",
       "codegen/codegen.go",
-      "codegen/enum.tmpl.go",
+      "codegen/enum.tmpl",
       "codegen/ir.go",
       "codegen/ir_test.go",
-      "codegen/library.tmpl.go",
-      "codegen/protocol.tmpl.go",
-      "codegen/struct.tmpl.go",
-      "codegen/table.tmpl.go",
-      "codegen/union.tmpl.go",
+      "codegen/library.tmpl",
+      "codegen/protocol.tmpl",
+      "codegen/struct.tmpl",
+      "codegen/table.tmpl",
+      "codegen/union.tmpl",
       "main.go",
     ]
   }

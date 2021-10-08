@@ -8,111 +8,74 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"io"
 	"os/exec"
 	"time"
 )
 
-// Formatter formats a writer stream.
-type Formatter struct {
+// Formatter formats generated source code
+type Formatter interface {
+	// Format formats source code.
+	Format(source []byte) ([]byte, error)
+}
+
+// identifyFormatter returns the input unmodified
+type identityFormatter struct{}
+
+func (f identityFormatter) Format(source []byte) ([]byte, error) {
+	return source, nil
+}
+
+// externalFormatter formats a writer stream.
+type externalFormatter struct {
 	path string
 	args []string
 }
 
+var _ = []Formatter{identityFormatter{}, externalFormatter{}}
+
 const timeout = 2 * time.Minute
 
-// NewFormatter creates a new formatter.
+// NewFormatter creates a new external formatter.
 //
 // The `path` needs to either
 // * Point to an executable which formats stdin and outputs it to stdout;
 // * An empty string, in which case no formatting will occur.
 func NewFormatter(path string, args ...string) Formatter {
-	return Formatter{
+	if path == "" {
+		return identityFormatter{}
+	}
+	return externalFormatter{
 		path: path,
 		args: args,
 	}
 }
 
-// FormatPipe formats an output stream.
-//
-// If there is a error during formatting, the unformatted input will be written and an error will
-// be returned.
-//
-// When the returned WriteCloser is closed, 'out' will also be closed.
-// This allows the caller to close the writer in a single location and received all relevant errors.
-func (f Formatter) FormatPipe(out io.WriteCloser) (io.WriteCloser, error) {
-	if f.path == "" {
-		return unformattedStream{normalOut: out}, nil
-	}
-	return formattedStream{
-		path:           f.path,
-		args:           f.args,
-		out:            out,
-		unformattedBuf: new(bytes.Buffer),
-	}, nil
-}
-
-var _ = []io.WriteCloser{
-	unformattedStream{},
-	formattedStream{},
-}
-
-type unformattedStream struct {
-	normalOut io.WriteCloser
-}
-
-func (s unformattedStream) Write(p []byte) (int, error) {
-	return s.normalOut.Write(p)
-}
-
-func (s unformattedStream) Close() error {
-	return s.normalOut.Close()
-}
-
-type formattedStream struct {
-	path           string
-	args           []string
-	out            io.WriteCloser
-	unformattedBuf *bytes.Buffer
-}
-
-func (s formattedStream) Write(p []byte) (int, error) {
-	return s.unformattedBuf.Write(p)
-}
-
-func (s formattedStream) Close() error {
-	defer s.out.Close()
+func (f externalFormatter) Format(source []byte) ([]byte, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
-	cmd := exec.CommandContext(ctx, s.path, s.args...)
+	cmd := exec.CommandContext(ctx, f.path, f.args...)
 	formattedBuf := new(bytes.Buffer)
 	cmd.Stdout = formattedBuf
 	errBuf := new(bytes.Buffer)
 	cmd.Stderr = errBuf
 	in, err := cmd.StdinPipe()
 	if err != nil {
-		s.out.Write(s.unformattedBuf.Bytes())
-		return fmt.Errorf("Error creating stdin pipe: %w", err)
+		return nil, fmt.Errorf("Error creating stdin pipe: %w", err)
 	}
 	if err := cmd.Start(); err != nil {
-		s.out.Write(s.unformattedBuf.Bytes())
-		return fmt.Errorf("Error starting formatter process: %w", err)
+		return nil, fmt.Errorf("Error starting formatter process: %w", err)
 	}
-	if _, err := in.Write(s.unformattedBuf.Bytes()); err != nil {
-		s.out.Write(s.unformattedBuf.Bytes())
-		return fmt.Errorf("Error writing stdin: %w", err)
+	if _, err := in.Write(source); err != nil {
+		return nil, fmt.Errorf("Error writing stdin: %w", err)
 	}
 	if err := in.Close(); err != nil {
-		s.out.Write(s.unformattedBuf.Bytes())
-		return fmt.Errorf("Error closing stdin: %w", err)
+		return nil, fmt.Errorf("Error closing stdin: %w", err)
 	}
 	if err := cmd.Wait(); err != nil {
-		s.out.Write(s.unformattedBuf.Bytes())
 		if errContent := errBuf.Bytes(); len(errContent) != 0 {
-			return fmt.Errorf("Formatter (%v) error: %w (stderr: %s)", cmd, err, string(errContent))
+			return nil, fmt.Errorf("Formatter (%v) error: %w (stderr: %s)", cmd, err, string(errContent))
 		}
-		return fmt.Errorf("Formatter (%v) error but stderr was empty: %w", cmd, err)
+		return nil, fmt.Errorf("Formatter (%v) error but stderr was empty: %w", cmd, err)
 	}
-	_, err = s.out.Write(formattedBuf.Bytes())
-	return err
+	return formattedBuf.Bytes(), nil
 }

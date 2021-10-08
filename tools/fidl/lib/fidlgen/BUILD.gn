@@ -11,12 +11,12 @@ go_library("fidlgen") {
     "formatter.go",
     "generator.go",
     "identifiers.go",
-    "lazywriter.go",
     "names.go",
     "reserved_names.go",
     "strings.go",
     "templates.go",
     "types.go",
+    "wire_file_if_changed.go",
   ]
 }
 
