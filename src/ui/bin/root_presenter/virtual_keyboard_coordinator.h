@@ -130,7 +130,7 @@ class FidlBoundVirtualKeyboardCoordinator
   // * This will have a value after FocusDispatcher receives the first
   //   `OnFocusChange()` from Scenic.
   // * This will have a value forever thereafter.
-  std::optional<fuchsia::ui::views::ViewRef> focused_view_;
+  std::optional<zx_koid_t> focused_view_koid_;
 
   // Must be last, to invalidate weak pointers held by other fields before their
   // destructors are called.

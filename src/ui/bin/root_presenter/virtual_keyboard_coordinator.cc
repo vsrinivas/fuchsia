@@ -93,7 +93,7 @@ void FidlBoundVirtualKeyboardCoordinator::NotifyManagerError(zx_status_t error) 
     manager_binding_->Close(error);
     manager_binding_.reset();
   } else {
-    FX_LOGS(ERROR) << "NotifyManagerError called with no manager";
+    FX_LOGS(ERROR) << __FUNCTION__ << ": manager_binding_ is empty";
   }
 }
 
@@ -110,7 +110,37 @@ void FidlBoundVirtualKeyboardCoordinator::RequestTypeAndVisibility(
 
 void FidlBoundVirtualKeyboardCoordinator::NotifyFocusChange(
     fuchsia::ui::views::ViewRef focused_view) {
-  FX_NOTIMPLEMENTED();
+  std::optional<zx_koid_t> new_focused_view_koid;
+  zx_info_handle_basic_t view_ref_info{};
+  if (auto status = focused_view.reference.get_info(ZX_INFO_HANDLE_BASIC, &view_ref_info,
+                                                    sizeof(view_ref_info), nullptr, nullptr);
+      status != ZX_OK) {
+    FX_LOGS(ERROR) << __FUNCTION__ << ": failed to get koid for view ref ("
+                   << zx_status_get_string(status) << ")";
+    new_focused_view_koid = ZX_KOID_INVALID;
+  } else {
+    new_focused_view_koid = view_ref_info.koid;
+  }
+
+  // Skip keyboard hiding on spurious focus change.
+  if (new_focused_view_koid == focused_view_koid_) {
+    return;
+  }
+  focused_view_koid_ = new_focused_view_koid;
+
+  // Inform manager.
+  if (manager_binding_) {
+    manager_binding_->impl()->SetVisibility(false);
+  } else {
+    // When a Manager is (eventually) bound, it will start its keyboard in the hidden state.
+    // So we don't need to cache any information here to ensure that the keyboard is hidden.
+  }
+
+  // Inform controllers.
+  for (const auto& controller : controller_bindings_.bindings()) {
+    FX_DCHECK(controller->impl());
+    controller->impl()->OnUserAction(VirtualKeyboardController::UserAction::HIDE_KEYBOARD);
+  }
 }
 
 void FidlBoundVirtualKeyboardCoordinator::BindManager(
