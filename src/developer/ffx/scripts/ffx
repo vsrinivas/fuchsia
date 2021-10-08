@@ -38,11 +38,11 @@ if [[ "$_this_script" != "${fuchsia_dir}/.jiri_root/bin/ffx" &&
     "$_this_script" != "${fuchsia_dir}/src/developer/ffx/scripts/ffx" ]]; then
    _this_fuchsia_dir="$(find_tree_root "$(dirname "$_this_script")")"
    if [[ $? -ne 0 || "$_this_fuchsia_dir" != "$fuchsia_dir" ]]; then
-     if ! cmp -s "$_this_script" "${fuchsia_dir}/.jiri_root/bin/fx"; then
-       echo >&2 "WARNING: You are executing fx from outside of the current"
+     if ! cmp -s "$_this_script" "${fuchsia_dir}/.jiri_root/bin/ffx"; then
+       echo >&2 "WARNING: You are executing ffx from outside of the current"
        echo >&2 "source tree, and it is a different version."
        echo >&2 "This can cause inconsistencies. Please update your PATH."
-       echo >&2 "    'fx' was executed from: ${_this_script}"
+       echo >&2 "    'ffx' was executed from: ${_this_script}"
        exit 1
      fi
    fi
