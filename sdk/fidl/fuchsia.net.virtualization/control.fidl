@@ -19,6 +19,9 @@ protocol Control {
     /// + request `network` provides control over the created network.
     CreateNetwork(resource struct {
         config flexible union {
+            // TODO(https://fxbug.dev/86068): Currently bridged networks are not
+            // isolated from each other (they are all on the same bridge). Provide
+            // isolation via VLANs.
             /// Create a bridged network.
             ///
             /// The server will attempt to find a suitable interface to
@@ -46,7 +49,11 @@ protocol Network {
     ///
     /// + request `port_id` the netdevice port ID.
     /// + request `device` the network device to be added.
-    /// + request `interface` provides control over the device.
+    /// + request `interface` provides control over the device. The protocol
+    ///     will be terminated with the epitaph `ZX_ERR_WRONG_TYPE` if the
+    ///     device could not be added to the network due to incompatibility,
+    ///     e.g. if the network is bridged and the device does not support
+    ///     the same L2 protocol as other devices on the bridge.
     AddDevice(resource struct {
         port_id fuchsia.hardware.network.port_id;
         device client_end:fuchsia.hardware.network.Device;
@@ -62,9 +69,4 @@ protocol Network {
 ///     from the network it belongs to and detach the network device;
 /// - if the server end is closed, the interface has been detached from
 ///     the network it was attached to and destroyed.
-///
-/// Terminated with the epitaph `ZX_ERR_WRONG_TYPE` if the device could not
-/// be added to the network due to incompatibility, e.g. if the network is
-/// bridged and the device does not support the same L2 protocol as other
-/// devices on the bridge.
 protocol Interface {};
