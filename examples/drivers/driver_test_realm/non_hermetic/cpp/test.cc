@@ -9,6 +9,7 @@
 
 #include "src/devices/lib/device-watcher/cpp/device-watcher.h"
 
+// [START example]
 TEST(DdkFirmwaretest, DriverWasLoaded) {
   fbl::unique_fd dev(open("/dev", O_RDONLY));
   ASSERT_TRUE(dev);
@@ -44,3 +45,4 @@ int main(int argc, char **argv) {
   ::testing::InitGoogleTest(&argc, argv);
   return RUN_ALL_TESTS();
 }
+// [END example]

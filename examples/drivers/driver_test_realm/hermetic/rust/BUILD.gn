@@ -12,6 +12,7 @@ group("tests") {
   deps = [ ":package" ]
 }
 
+# [START example]
 rustc_test("driver_test_realm_example_realm_builder_rust") {
   testonly = true
   source_root = "test.rs"
@@ -36,3 +37,4 @@ fuchsia_unittest_package("package") {
     "//src/devices/misc/drivers/test-parent",
   ]
 }
+# [END example]

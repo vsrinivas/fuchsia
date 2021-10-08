@@ -10,6 +10,7 @@ group("tests") {
   deps = [ ":package" ]
 }
 
+# [START example]
 test("driver_test_realm_example_simple_cpp") {
   sources = [ "test.cc" ]
   deps = [
@@ -23,3 +24,4 @@ fuchsia_unittest_package("package") {
   package_name = "driver_test_realm_example_simple_cpp"
   deps = [ ":driver_test_realm_example_simple_cpp" ]
 }
+# [END example]

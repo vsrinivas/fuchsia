@@ -1,5 +1,6 @@
 use {anyhow::Result, fuchsia_async as fasync};
 
+// [START example]
 #[fasync::run_singlethreaded(test)]
 async fn test_driver() -> Result<()> {
     let dev = io_util::directory::open_in_namespace(
@@ -9,3 +10,4 @@ async fn test_driver() -> Result<()> {
     device_watcher::recursive_wait_and_open_node(&dev, "sys/test").await?;
     Ok(())
 }
+// [END example]

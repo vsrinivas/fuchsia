@@ -6,6 +6,7 @@
 
 #include "src/devices/lib/device-watcher/cpp/device-watcher.h"
 
+// [START example]
 TEST(SimpleDriverTestRealmTest, DriversExist) {
   fbl::unique_fd dev(open("/dev", O_RDONLY));
   ASSERT_TRUE(dev);
@@ -13,3 +14,4 @@ TEST(SimpleDriverTestRealmTest, DriversExist) {
   fbl::unique_fd out;
   ASSERT_EQ(ZX_OK, device_watcher::RecursiveWaitForFile(dev, "sys/test", &out));
 }
+// [END example]

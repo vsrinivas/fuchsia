@@ -14,6 +14,7 @@
 
 #include "src/devices/lib/device-watcher/cpp/device-watcher.h"
 
+// [START example]
 class DriverTestRealmTest : public gtest::TestLoopFixture {
  protected:
   void SetUp() override { context_ = sys::ComponentContext::Create(); }
@@ -49,3 +50,4 @@ TEST_F(DriverTestRealmTest, DriversExist) {
   fbl::unique_fd out;
   ASSERT_EQ(ZX_OK, device_watcher::RecursiveWaitForFile(root_fd, "sys/test", &out));
 }
+// [END example]

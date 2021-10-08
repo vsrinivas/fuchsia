@@ -25,6 +25,9 @@ fuchsia_unittest_package("package") {
   package_name = "driver_test_realm_example_non_hermetic_cpp"
   deps = [
     ":driver_test_realm_example_non_hermetic_cpp",
+
+    # Add drivers to the package here.
+    # The test-parent driver is the default root driver for DriverTestRealm.
     "//src/devices/misc/drivers/test-parent",
   ]
 }

@@ -9,6 +9,7 @@ use {
     fuchsia_driver_test::{DriverTestRealmBuilder, DriverTestRealmInstance},
 };
 
+// [START example]
 #[fasync::run_singlethreaded(test)]
 async fn test_empty_args() -> Result<()> {
     // Create the RealmBuilder.
@@ -42,3 +43,4 @@ async fn test_platform_bus() -> Result<()> {
     device_watcher::recursive_wait_and_open_node(&dev, "sys/platform").await?;
     Ok(())
 }
+// [END example]
