@@ -20,7 +20,7 @@ To use it in your CFv2 tests, include the manifest shard in your `cml` file
 }
 ```
 
-To use it in tests inject it in your test's `cmx` file (deprecated):
+To use it in legacy tests inject it in your test's `cmx` file (deprecated):
 
 ```json
 {

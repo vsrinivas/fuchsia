@@ -5,6 +5,7 @@
     include: [
         "//src/connectivity/network/tun/network-tun/meta/network-tun-test.shard.cml",
         "//src/sys/test_runners/rust/default.shard.cml",
+        "syslog/client.shard.cml",
     ],
     program: {
         binary: "bin/tun_test",
