@@ -69,7 +69,7 @@ of references.
 Given the following structure:
 
 ```fidl
-{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples.docs/misc.test.fidl" region_tag="wire-format-traversal-order" %}
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples.docs/misc.test.fidl" region_tag="wire-format-traversal-order" %}
 ```
 
 The depth-first traversal order for a `Cart` message is defined by the following
@@ -155,7 +155,7 @@ In the following example, the `Region` structure contains a vector of
 Each `Point` consists of an `x` and `y` value.
 
 ```fidl
-{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples.docs/misc.test.fidl" region_tag="wire-format-inlined-objects" %}
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples.docs/misc.test.fidl" region_tag="wire-format-inlined-objects" %}
 ```
 
 Examining the objects in traversal order means that we start with the
@@ -366,9 +366,9 @@ The following example illustrates:
   * A boxed (`Color`)
 
 ```fidl
-{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples.docs/language_reference.test.fidl" region_tag="structs-use" %}
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples.docs/language_reference.test.fidl" region_tag="structs-use" %}
 
-{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples.docs/language_reference.test.fidl" region_tag="structs" %}
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples.docs/language_reference.test.fidl" region_tag="structs" %}
 ```
 
 The `Color` content is padded to the 8 byte secondary object alignment boundary.
@@ -463,7 +463,7 @@ Tables are denoted by their declared name (e.g., **Value**), and are never optio
 The following example shows how tables are laid out according to their fields.
 
 ```fidl
-{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples.docs/misc.test.fidl" region_tag="wire-format-tables" %}
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples.docs/misc.test.fidl" region_tag="wire-format-tables" %}
 ```
 
 ![drawing](images/tables.png)
@@ -486,7 +486,7 @@ unions are denoted by their declared name (e.g. `Value`) and optionality:
 The following example shows how unions are laid out according to their fields.
 
 ```fidl
-{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples.docs/misc.test.fidl" region_tag="wire-format-unions" %}
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples.docs/misc.test.fidl" region_tag="wire-format-unions" %}
 ```
 
 ![drawing](images/union.png)
@@ -531,7 +531,7 @@ There are three kinds of transactional messages:
 We'll use the following interface for the next few examples:
 
 ```fidl
-{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples.docs/language_reference.test.fidl" region_tag="calculator" %}
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples.docs/language_reference.test.fidl" region_tag="calculator" %}
 ```
 
 The **Add()** and **Divide()** methods illustrate both the method request
@@ -731,7 +731,7 @@ terminated and an error raised.
 Consider for instance:
 
 ```fidl
-{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples.docs/language_reference.test.fidl" region_tag="maximum-recursion-depth" %}
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples.docs/language_reference.test.fidl" region_tag="maximum-recursion-depth" %}
 ```
 
 When encoding an instance of an `InlineObject`, we have the respective recursion depths:

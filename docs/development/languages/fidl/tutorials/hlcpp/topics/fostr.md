@@ -40,7 +40,7 @@ This tutorial contains the following steps:
 3. Add the following definition to the build file:
 
    ```gn
-   {%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="garnet/public/lib/fostr/fidl/fuchsia.examples/BUILD.gn" %}
+   {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="garnet/public/lib/fostr/fidl/fuchsia.examples/BUILD.gn" %}
    ```
 
 This defines a `fostr` target for the `fuchsia.examples` library. Any
@@ -55,14 +55,14 @@ located in `examples/fidl/hlcpp/fostr`. Notice that the BUILD file for the test
 includes the `fostr_fidl` target as a dependency:
 
 ```gn
-{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/hlcpp/fostr/BUILD.gn" region_tag="bin" highlight="7" %}
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/hlcpp/fostr/BUILD.gn" region_tag="bin" highlight="7" %}
 ```
 
 The included library automatically overloads the `<<` operator. The path
 is based on the name of the FIDL library it is generated for:
 
 ```c++
-{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/hlcpp/fostr/main.cc" region_tag="includes" %}
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/hlcpp/fostr/main.cc" region_tag="includes" %}
 ```
 
 ## Write examples using the formatter code
@@ -70,7 +70,7 @@ is based on the name of the FIDL library it is generated for:
 Write some placeholder tests to show off the output:
 
 ```cpp
-{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/hlcpp/fostr/main.cc" region_tag="tests" %}
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/hlcpp/fostr/main.cc" region_tag="tests" %}
 ```
 
 ## Run the example

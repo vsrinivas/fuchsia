@@ -539,7 +539,7 @@ The `gerrit_repo+path` parameter refers to a repository and path hosted on Gerri
 The `repo` is in the format `instance or repository` and `path` is in the format of `path/to/file`.
 
 ```none {:.devsite-disable-click-to-copy}
-{% verbatim %}{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples/types.test.fidl" %}{% endverbatim %}
+{% verbatim %}{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples/types.test.fidl" %}{% endverbatim %}
 ```
 
 ### Including a portion of a file

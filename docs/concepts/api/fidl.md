@@ -55,7 +55,7 @@ method the compiler uses for hashing.  The following example will use the method
 name "C" instead of the method name "B" for calculating the hash:
 
 ```fidl
-{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples.docs/api_rubric.test.fidl" region_tag="ordinals" %}
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples.docs/api_rubric.test.fidl" region_tag="ordinals" %}
 ```
 
 Selectors can also be used to maintain backwards compatibility with the wire
@@ -230,7 +230,7 @@ concept in the networking library and should be named using a struct even
 through the data can be represented using a primitive:
 
 ```fidl
-{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples.docs/api_rubric.test.fidl" region_tag="semantics" %}
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples.docs/api_rubric.test.fidl" region_tag="semantics" %}
 ```
 
 In performance-critical target languages, structs are represented in line, which
@@ -376,7 +376,7 @@ be extended to represent additional states in the future. For example a boolean
 `is_gif` field might be better represented by
 
 ```fidl
-{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples.docs/api_rubric.test.fidl" region_tag="boolean-enum" %}
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples.docs/api_rubric.test.fidl" region_tag="boolean-enum" %}
 
 ```
 
@@ -423,7 +423,7 @@ Methods can take an optional `error <type>` specifier to indicate that they
 return a value, or error out and produce `<type>`. Here is an example:
 
 ```fidl
-{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples.docs/api_rubric.test.fidl" region_tag="errors" %}
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples.docs/api_rubric.test.fidl" region_tag="errors" %}
 
 ```
 
@@ -438,7 +438,7 @@ When maximal performance is required, defining a method with two returns, an
 optional value and an error code, is common practice. See for instance:
 
 ```fidl
-{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples.docs/api_rubric.test.fidl" region_tag="optional-error" %}
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples.docs/api_rubric.test.fidl" region_tag="optional-error" %}
 
 ```
 
@@ -635,7 +635,7 @@ a message, and then later on in code.
 For example:
 
 ```fidl
-{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples.docs/api_rubric.test.fidl" region_tag="constants" %}
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples.docs/api_rubric.test.fidl" region_tag="constants" %}
 
 ```
 
@@ -693,7 +693,7 @@ If your protocol has a bitfield, represent its values using `bits` values
 For example:
 
 ```fidl
-{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples.docs/api_rubric.test.fidl" region_tag="bits-hex" %}
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples.docs/api_rubric.test.fidl" region_tag="bits-hex" %}
 ```
 
 This indicates that the `InfoFeatures` bit field is backed by an unsigned 32-bit
@@ -703,7 +703,7 @@ You can also express the values in binary (as opposed to hex) using the `0b`
 notation:
 
 ```fidl
-{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples.docs/api_rubric.test.fidl" region_tag="bits-binary" %}
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples.docs/api_rubric.test.fidl" region_tag="bits-binary" %}
 ```
 
 This is the same as the previous example.
@@ -787,7 +787,7 @@ client sends the channel and requests the server to bind an implementation of
 the protocol to that channel:
 
 ```fidl
-{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples.docs/api_rubric.test.fidl" region_tag="pipelining-1" %}
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples.docs/api_rubric.test.fidl" region_tag="pipelining-1" %}
 ```
 
 This pattern is useful because the client does not need to wait for a round-trip
@@ -802,7 +802,7 @@ If the request is likely to fail, consider extending this pattern with a reply
 that describes whether the operation succeeded:
 
 ```fidl
-{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples.docs/api_rubric.test.fidl" region_tag="pipelining-2" %}
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples.docs/api_rubric.test.fidl" region_tag="pipelining-2" %}
 ```
 
 To handle the failure case, the client waits for the reply and takes some other
@@ -810,7 +810,7 @@ action if the request failed.  Another approach is for the protocol to have an
 event that the server sends at the start of the protocol:
 
 ```fidl
-{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples.docs/api_rubric.test.fidl" region_tag="pipelining-3" %}
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples.docs/api_rubric.test.fidl" region_tag="pipelining-3" %}
 ```
 
 To handle the failure case, the client waits for the `OnReady` event and takes
@@ -855,7 +855,7 @@ A simple way to implement a pull-based protocol is to "park a callback" with the
 server using the _hanging get pattern_:
 
 ```fidl
-{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples.docs/api_rubric.test.fidl" region_tag="hanging-gets" %}
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples.docs/api_rubric.test.fidl" region_tag="hanging-gets" %}
 ```
 
 In this pattern, the client sends a `WatchFoo` message but the server does not
@@ -886,7 +886,7 @@ response that the caller uses for flow control.  For example, consider this
 generic listener protocol:
 
 ```fidl
-{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples.docs/api_rubric.test.fidl" region_tag="throttle-push" %}
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples.docs/api_rubric.test.fidl" region_tag="throttle-push" %}
 ```
 
 The listener is expected to send an empty response message immediately upon
@@ -908,7 +908,7 @@ sent for the lifetime of the channel.  In this pattern, the protocol does not
 need any flow control for the event:
 
 ```fidl
-{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples.docs/api_rubric.test.fidl" region_tag="events-1" %}
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples.docs/api_rubric.test.fidl" region_tag="events-1" %}
 ```
 
 Another good use case for events is when the client requests that the server
@@ -918,7 +918,7 @@ pattern in which the server can respond to the "get" request a bounded number of
 times (rather than just once):
 
 ```fidl
-{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples.docs/api_rubric.test.fidl" region_tag="events-2" %}
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples.docs/api_rubric.test.fidl" region_tag="events-2" %}
 ```
 
 #### Throttle events using acknowledgements
@@ -931,7 +931,7 @@ should throttle event production to match the rate at which the client consumes
 the events:
 
 ```fidl
-{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples.docs/api_rubric.test.fidl" region_tag="ack-1" %}
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples.docs/api_rubric.test.fidl" region_tag="ack-1" %}
 ```
 
 One advantage to this pattern over the normal acknowledgement pattern is that
@@ -942,7 +942,7 @@ of acknowledgement messages and works well for in-order processing of multiple
 event types:
 
 ```fidl
-{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples.docs/api_rubric.test.fidl" region_tag="ack-2" %}
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples.docs/api_rubric.test.fidl" region_tag="ack-2" %}
 ```
 
 Unlike throttle push using acknowledgements, this pattern does not express the
@@ -990,7 +990,7 @@ until the client synchronizes and recovers from the error in some way.
 Example:
 
 ```fidl
-{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples.docs/api_rubric.test.fidl" region_tag="feed-forward" %}
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples.docs/api_rubric.test.fidl" region_tag="feed-forward" %}
 ```
 
 ### Privacy by Design
@@ -1131,7 +1131,7 @@ possible commands, and the server uses the union tag as the selector for command
 dispatch in addition to using the method ordinal number:
 
 ```fidl
-{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples.docs/api_rubric.test.fidl" region_tag="command-union" %}
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples.docs/api_rubric.test.fidl" region_tag="command-union" %}
 ```
 
 Typically the client buffers the commands locally in its address space and sends
@@ -1159,7 +1159,7 @@ data in multiple messages and then have a "finalize" method that causes the
 server to process the sent data:
 
 ```fidl
-{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples.docs/api_rubric.test.fidl" region_tag="paginate-write-1" %}
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples.docs/api_rubric.test.fidl" region_tag="paginate-write-1" %}
 ```
 
 For example, this pattern is used by `fuchsia.process.Launcher` to let the
@@ -1169,7 +1169,7 @@ A more sophisticated version of this pattern creates a protocol that
 represents the transaction, often called a _tear-off protocol_:
 
 ```fidl
-{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples.docs/api_rubric.test.fidl" region_tag="paginate-write-2" %}
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples.docs/api_rubric.test.fidl" region_tag="paginate-write-2" %}
 ```
 
 This approach is useful when the client might be performing many operations
@@ -1184,7 +1184,7 @@ A simple approach to paginating reads from the server is to let the server send
 multiple responses to a single request using events:
 
 ```fidl
-{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples.docs/api_rubric.test.fidl" region_tag="paginate-read-1" %}
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples.docs/api_rubric.test.fidl" region_tag="paginate-read-1" %}
 ```
 
 Depending on the domain-specific semantics, this pattern might also require a
@@ -1197,7 +1197,7 @@ protocol).
 A more robust approach uses a tear-off protocol to create an iterator:
 
 ```fidl
-{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples.docs/api_rubric.test.fidl" region_tag="paginate-read-2" %}
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples.docs/api_rubric.test.fidl" region_tag="paginate-read-2" %}
 ```
 
 After calling `GetBars`, the client uses protocol request pipelining to queue
@@ -1212,7 +1212,7 @@ server stores the iterator state on the client in the form of an opaque token,
 and the client returns the token to the server with each partial read:
 
 ```fidl
-{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples.docs/api_rubric.test.fidl" region_tag="paginate-read-3" %}
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples.docs/api_rubric.test.fidl" region_tag="paginate-read-3" %}
 ```
 
 This pattern is especially attractive when the server can escrow all of its
@@ -1242,7 +1242,7 @@ client, which forwards the event to the server with its own client-assigned
 identifier for the now-shared object:
 
 ```fidl
-{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples.docs/api_rubric.test.fidl" region_tag="eventpair" %}
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples.docs/api_rubric.test.fidl" region_tag="eventpair" %}
 ```
 
 To correlate the objects, the server calls `zx_object_get_info` with
@@ -1279,7 +1279,7 @@ creates an object might also receive a `request<FooController>` parameter.  The
 caller provides an implementation of this empty protocol:
 
 ```fidl
-{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples.docs/api_rubric.test.fidl" region_tag="empty" %}
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples.docs/api_rubric.test.fidl" region_tag="empty" %}
 ```
 
 The `FooController` does not contain any methods for controlling the created
@@ -1294,7 +1294,7 @@ Often, servers will expose settings that the client can modify. Prefer using a
 library defines:
 
 ```fidl
-{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples.docs/api_rubric.test.fidl" region_tag="settings" %}
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples.docs/api_rubric.test.fidl" region_tag="settings" %}
 ```
 (Comments are omitted for readability.)
 
@@ -1305,14 +1305,14 @@ settings value, and changes fields _only_ if they are present in the partial
 value.
 
 ```fidl
-{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples.docs/api_rubric.test.fidl" region_tag="settings-partial" %}
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples.docs/api_rubric.test.fidl" region_tag="settings-partial" %}
 ```
 
 The **replace** approach exposes a `Replace` method taking a complete
 settings value, and changes the settings to the newly provided one.
 
 ```fidl
-{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples.docs/api_rubric.test.fidl" region_tag="settings-replace" %}
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples.docs/api_rubric.test.fidl" region_tag="settings-replace" %}
 ```
 
 Things to avoid:
@@ -1378,14 +1378,14 @@ A _service hub_ is a `Discoverable` protocol that simply lets you discover a
 number of other protocols, typically with explicit names:
 
 ```fidl
-{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples.docs/api_rubric.test.fidl" region_tag="service-hub-1" %}
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples.docs/api_rubric.test.fidl" region_tag="service-hub-1" %}
 ```
 
 Particularly if stateless, the `ServiceHub` protocol does not provide much
 value over simply making the individual protocol services discoverable directly:
 
 ```fidl
-{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples.docs/api_rubric.test.fidl" region_tag="service-hub-2" %}
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples.docs/api_rubric.test.fidl" region_tag="service-hub-2" %}
 ```
 
 Either way, the client can establish a connection to the enumerated services.

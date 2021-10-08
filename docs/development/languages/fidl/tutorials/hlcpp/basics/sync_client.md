@@ -34,7 +34,7 @@ Create a new component project at `examples/fidl/hlcpp/client_sync`:
 1. Declare a target for the client in `examples/fidl/hlcpp/client_sync/BUILD.gn`:
 
    ```gn
-   {%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/hlcpp/client_sync/BUILD.gn" region_tag="imports" %}
+   {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/hlcpp/client_sync/BUILD.gn" region_tag="imports" %}
 
    # Declare an executable for the client.
    executable("bin") {
@@ -42,7 +42,7 @@ Create a new component project at `examples/fidl/hlcpp/client_sync`:
      sources = [ "main.cc" ]
    }
 
-   {%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/hlcpp/client_sync/BUILD.gn" region_tag="rest" %}
+   {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/hlcpp/client_sync/BUILD.gn" region_tag="rest" %}
    ```
 
 1. Add a component manifest in `examples/fidl/hlcpp/client_sync/meta/client.cml`:
@@ -51,7 +51,7 @@ Create a new component project at `examples/fidl/hlcpp/client_sync`:
    `executable` defined in the previous step.
 
    ```json5
-   {%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/hlcpp/client_sync/meta/client.cml" region_tag="example_snippet" %}
+   {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/hlcpp/client_sync/meta/client.cml" region_tag="example_snippet" %}
    ```
 
 1. Once you have created your component, ensure that you can add it to the
@@ -72,13 +72,13 @@ Create a new component project at `examples/fidl/hlcpp/client_sync`:
 1. Add the following dependencies:
 
    ```gn
-   {%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/hlcpp/client_sync/BUILD.gn" region_tag="deps" %}
+   {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/hlcpp/client_sync/BUILD.gn" region_tag="deps" %}
    ```
 
 1. Then, include them in `main.cc`:
 
    ```cpp
-   {%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/hlcpp/client_sync/main.cc" region_tag="includes" %}
+   {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/hlcpp/client_sync/main.cc" region_tag="includes" %}
    ```
 
    The reason for including these dependencies is explained in the
@@ -98,7 +98,7 @@ remote procedure calls to the server. In HLCPP, the proxy takes the form
 of a class with methods corresponding to each FIDL protocol method.
 
 ```cpp
-{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/hlcpp/client_sync/main.cc" region_tag="main" highlight="2,3,4" %}
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/hlcpp/client_sync/main.cc" region_tag="main" highlight="2,3,4" %}
 ```
 
 * [`fuchsia::examples::EchoSyncPtr`][proxy] is an alias for
@@ -126,7 +126,7 @@ The code makes two requests to the server:
 * A `SendString` request
 
 ```cpp
-{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/hlcpp/client_sync/main.cc" region_tag="main" highlight="6,7,8" %}
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/hlcpp/client_sync/main.cc" region_tag="main" highlight="6,7,8" %}
 ```
 
 For `EchoString` the code passes in a pointer for each response parameter (in

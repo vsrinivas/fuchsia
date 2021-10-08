@@ -26,7 +26,7 @@ Packaging localized resources is best illustrated with an example.  Let us start
 with the `BUILD.gn` file and we can focus on particular sections later.
 
 ```gn
-{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="src/intl/example/BUILD.gn" adjust_indentation="auto" %}
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="src/intl/example/BUILD.gn" adjust_indentation="auto" %}
 ```
 
 ### Build rule to generate the localized resources
@@ -36,7 +36,7 @@ program at [//src/lib/intl/example](/src/intl/example/README.md) shows how
 you can build and deploy a Fuchsia program that contains localized messages.
 
 ```gn
-{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="src/intl/example/BUILD.gn" region_tag="strings" adjust_indentation="auto" %}
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="src/intl/example/BUILD.gn" region_tag="strings" adjust_indentation="auto" %}
 ```
 
 The build rule `intl_strings` instructs the build system to process the XML
@@ -68,7 +68,7 @@ listed in the `output_locales`, the build system expects a file named
 into a Fuchsia package.
 
 ```gn
-{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="src/intl/example/BUILD.gn" region_tag="resources" adjust_indentation="auto" %}
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="src/intl/example/BUILD.gn" region_tag="resources" adjust_indentation="auto" %}
 ```
 
 Make sure to package the JSON resource into the correct directory.  For

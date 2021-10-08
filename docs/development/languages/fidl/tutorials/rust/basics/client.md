@@ -35,7 +35,7 @@ Create a new component project at `examples/fidl/rust/client`:
 1. Declare a target for the client in `examples/fidl/rust/client/BUILD.gn`:
 
    ```gn
-   {%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/rust/client/BUILD.gn" region_tag="imports" %}
+   {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/rust/client/BUILD.gn" region_tag="imports" %}
 
    # Declare an executable for the client.
    rustc_binary("bin") {
@@ -45,7 +45,7 @@ Create a new component project at `examples/fidl/rust/client`:
      sources = [ "src/main.rs" ]
    }
 
-   {%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/rust/client/BUILD.gn" region_tag="rest" %}
+   {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/rust/client/BUILD.gn" region_tag="rest" %}
    ```
 
 1. Add a component manifest in `examples/fidl/rust/client/meta/client.cml`:
@@ -54,7 +54,7 @@ Create a new component project at `examples/fidl/rust/client`:
    `executable` defined in the previous step.
 
    ```json5
-   {%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/rust/client/meta/client.cml" region_tag="example_snippet" %}
+   {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/rust/client/meta/client.cml" region_tag="example_snippet" %}
    ```
 
 1. Once you have created your component, ensure that you can add it to the
@@ -75,13 +75,13 @@ Create a new component project at `examples/fidl/rust/client`:
 1. Add the following dependencies to the `rustc_binary`:
 
    ```gn
-   {%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/rust/client/BUILD.gn" region_tag="deps" %}
+   {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/rust/client/BUILD.gn" region_tag="deps" %}
    ```
 
 1. Then, import them in `main.rs`:
 
    ```rust
-   {%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/rust/client/src/main.rs" region_tag="imports" %}
+   {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/rust/client/src/main.rs" region_tag="imports" %}
    ```
 
 These dependencies are explained in the [server tutorial][server-tut].
@@ -94,7 +94,7 @@ that connects the client to the server and makes requests to it.
 ### Connect to the server
 
 ```rust
-{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/rust/client/src/main.rs" region_tag="main" highlight="3,4" %}
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/rust/client/src/main.rs" region_tag="main" highlight="3,4" %}
 ```
 
 Under the hood, this call triggers a sequence of events that starts on the client and traces
@@ -135,7 +135,7 @@ The code makes two requests to the server:
 * A `SendString` request
 
 ```rust
-{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/rust/client/src/main.rs" region_tag="main" highlight="6,7,8,9,10,11" %}
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/rust/client/src/main.rs" region_tag="main" highlight="6,7,8,9,10,11" %}
 ```
 
 The call to `EchoString` returns a future, which resolves to the response returned by the server.
@@ -153,7 +153,7 @@ The [bindings reference][bindings-ref] describes how these proxy methods are gen
 The code then waits for a single `OnString` event from the server:
 
 ```rust
-{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/rust/client/src/main.rs" region_tag="main" highlight="12,13,14,15" %}
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/rust/client/src/main.rs" region_tag="main" highlight="12,13,14,15" %}
 ```
 
 This is done by [taking the event stream][events] from the client object, then waiting

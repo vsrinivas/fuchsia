@@ -23,7 +23,7 @@ import "fidl/fuchsia/examples"
 following constants:
 
 ```fidl
-{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples/types.test.fidl" region_tag="consts" %}
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples/types.test.fidl" region_tag="consts" %}
 ```
 
 Are generated as:
@@ -89,7 +89,7 @@ include non-exported fields that cannot be inspected with reflection.
 Given the [bits][lang-bits] definition:
 
 ```fidl
-{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples/types.test.fidl" region_tag="consts" %}
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples/types.test.fidl" region_tag="consts" %}
 ```
 
 FIDL generates a type alias for the underyling type (or `uint32` if not
@@ -128,7 +128,7 @@ In addition, it provides the following methods for `FileMode`:
 Example usage:
 
 ```go
-{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/go/fidl_packages/fidl_test.go" region_tag="bits" %}
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/go/fidl_packages/fidl_test.go" region_tag="bits" %}
 ```
 
 ### Enums {#enums}
@@ -136,7 +136,7 @@ Example usage:
 Given the [enum][lang-enums] definition:
 
 ```fidl
-{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples/types.test.fidl" region_tag="enums" %}
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples/types.test.fidl" region_tag="enums" %}
 ```
 
 FIDL generates a type alias for the underyling type (or `uint32` if not
@@ -173,7 +173,7 @@ member.
 Example usage:
 
 ```go
-{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/go/fidl_packages/fidl_test.go" region_tag="enums" %}
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/go/fidl_packages/fidl_test.go" region_tag="enums" %}
 ```
 
 ### Structs {#structs}
@@ -181,7 +181,7 @@ Example usage:
 Given the [struct][lang-structs] declaration:
 
 ```fidl
-{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples/types.test.fidl" region_tag="structs" %}
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples/types.test.fidl" region_tag="structs" %}
 ```
 
 The FIDL toolchain generates a `Color` struct with matching fields:
@@ -198,7 +198,7 @@ The Go bindings do not currently support default values on struct fields.
 Example usage:
 
 ```go
-{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/go/fidl_packages/fidl_test.go" region_tag="structs" %}
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/go/fidl_packages/fidl_test.go" region_tag="structs" %}
 ```
 
 ### Unions {#unions}
@@ -206,7 +206,7 @@ Example usage:
 Given the union definition:
 
 ```fidl
-{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples/types.test.fidl" region_tag="unions" %}
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples/types.test.fidl" region_tag="unions" %}
 ```
 
 FIDL generates an alias and associated constants representing the
@@ -256,7 +256,7 @@ of `JsonValue`:
 Example usage:
 
 ```go
-{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/go/fidl_packages/fidl_test.go" region_tag="unions" %}
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/go/fidl_packages/fidl_test.go" region_tag="unions" %}
 ```
 
 #### Flexible unions and unknown variants
@@ -286,7 +286,7 @@ decoding an unknown variant with handles.
 Given the following [table][lang-tables] definition:
 
 ```fidl
-{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples/types.test.fidl" region_tag="tables" %}
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples/types.test.fidl" region_tag="tables" %}
 ```
 
 The FIDL toolchain generates a `User` struct that with presence fields for each
@@ -324,7 +324,7 @@ type User struct {
 Example usage:
 
 ```go
-{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/go/fidl_packages/fidl_test.go" region_tag="tables" %}
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/go/fidl_packages/fidl_test.go" region_tag="tables" %}
 ```
 
 ### Inline layouts
@@ -337,7 +337,7 @@ inline layouts.
 Given the [protocol][lang-protocols]:
 
 ```fidl
-{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples/types.test.fidl" region_tag="protocols" %}
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples/types.test.fidl" region_tag="protocols" %}
 ```
 
 Note: The `MakeMove` method above returns a bool representing success, and a

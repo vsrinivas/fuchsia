@@ -10,7 +10,7 @@ In the `Echo` implementation from the [server tutorial][server-tut], the server 
 to `EchoString` requests using the completer.
 
 ```cpp
-{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/llcpp/server/main.cc" region_tag="impl" highlight="34,35,36,37,38" %}
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/llcpp/server/main.cc" region_tag="impl" highlight="34,35,36,37,38" %}
 ```
 
 Notice that the type for the completer has `::Sync`. This indicates the default mode of operation:
@@ -28,7 +28,7 @@ The full example code for this tutorial is located at
 This example uses the `Echo` protocol from the examples library:
 
 ```fidl
-{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples/echo.test.fidl" region_tag="echo" %}
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples/echo.test.fidl" region_tag="echo" %}
 ```
 
 As part of this tutorial, you will implement a client that makes multiple `EchoString` requests in
@@ -45,7 +45,7 @@ After connecting to the server, the client will make multiple `EchoString` reque
 for loop:
 
 ```cpp
-{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/llcpp/async_completer/client/main.cc" region_tag="main" highlight="14,16,17,18,19,20,21,22,23,24,25,26" %}
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/llcpp/async_completer/client/main.cc" region_tag="main" highlight="14,16,17,18,19,20,21,22,23,24,25,26" %}
 ```
 
 The loop is run `kNumEchoes` times (which is by default 3), and will print the time elapsed since
@@ -58,7 +58,7 @@ The `main()` function from the server code is the same as in the [server tutoria
 The difference lies in the implementation of `Echo`:
 
 ```cpp
-{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/llcpp/async_completer/server/main.cc" region_tag="impl" %}
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/llcpp/async_completer/server/main.cc" region_tag="impl" %}
 ```
 
 When an `EchoString` request is received, the server calls `async::PostDelayedTask`. This function

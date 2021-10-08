@@ -35,7 +35,7 @@ Create a new component project at `examples/fidl/llcpp/client`:
 1. Declare a target for the client in `examples/fidl/llcpp/client/BUILD.gn`:
 
    ```gn
-   {%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/llcpp/client/BUILD.gn" region_tag="imports" %}
+   {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/llcpp/client/BUILD.gn" region_tag="imports" %}
 
    # Declare an executable for the client.
    executable("bin") {
@@ -43,7 +43,7 @@ Create a new component project at `examples/fidl/llcpp/client`:
      sources = [ "main.cc" ]
    }
 
-   {%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/llcpp/client/BUILD.gn" region_tag="rest" %}
+   {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/llcpp/client/BUILD.gn" region_tag="rest" %}
    ```
 
 1. Add a component manifest in `examples/fidl/llcpp/client/meta/client.cml`:
@@ -52,7 +52,7 @@ Create a new component project at `examples/fidl/llcpp/client`:
    `executable` defined in the previous step.
 
    ```json5
-   {%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/llcpp/client/meta/client.cml" region_tag="example_snippet" %}
+   {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/llcpp/client/meta/client.cml" region_tag="example_snippet" %}
    ```
 
 1. Once you have created your component, ensure that you can add it to the
@@ -73,13 +73,13 @@ Create a new component project at `examples/fidl/llcpp/client`:
 1. Add the following dependencies:
 
    ```gn
-   {%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/llcpp/client/BUILD.gn" region_tag="deps" %}
+   {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/llcpp/client/BUILD.gn" region_tag="deps" %}
    ```
 
 1. Then, include them in `main.cc`:
 
    ```cpp
-   {%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/llcpp/client/main.cc" region_tag="includes" %}
+   {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/llcpp/client/main.cc" region_tag="includes" %}
 
 These dependencies are explained in the [server tutorial][server-tut].
 
@@ -94,7 +94,7 @@ As in the server, the code first sets up an async loop so that the client can
 listen for incoming responses from the server without blocking.
 
 ```cpp
-{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/llcpp/client/main.cc" region_tag="main" highlight="2,3,20,25,34,36,52,53,65,66,80" %}
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/llcpp/client/main.cc" region_tag="main" highlight="2,3,20,25,34,36,52,53,65,66,80" %}
 ```
 
 The dispatcher is used to run two pieces of async code. It is first used to run
@@ -109,7 +109,7 @@ The client then connects to the service directory `/svc`, and uses it to connect
 to the server.
 
 ```cpp
-{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/llcpp/client/main.cc" region_tag="main" highlight="5,6,7,8,9,11,12,13,14,15" %}
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/llcpp/client/main.cc" region_tag="main" highlight="5,6,7,8,9,11,12,13,14,15" %}
 ```
 
 The `service::OpenServiceRoot` function initializes a channel, then passes the
@@ -147,7 +147,7 @@ client end of the channel from the previous step, the loop dispatcher, as well
 as an event handler delegate:
 
 ```cpp
-{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/llcpp/client/main.cc" region_tag="main" highlight="17,18,22,28,36,38,39" %}
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/llcpp/client/main.cc" region_tag="main" highlight="17,18,22,28,36,38,39" %}
 ```
 
 The event handler delegate should be an object that implements the
@@ -180,7 +180,7 @@ a *result callback*, which is called either when the method succeeds or an error
 happens.
 
 ```cpp
-{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/llcpp/client/main.cc" region_tag="main" highlight="41,42,43,44,45,46,47,48,49,50,51" %}
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/llcpp/client/main.cc" region_tag="main" highlight="41,42,43,44,45,46,47,48,49,50,51" %}
 ```
 
 #### Asynchronous call with response callback
@@ -191,7 +191,7 @@ error happens during this call, the callback object is silently dropped. The
 response callback takes a pointer to the response message directly.
 
 ```cpp
-{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/llcpp/client/main.cc" region_tag="main" highlight="55,56,57,58,59,60,61,62,63,64" %}
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/llcpp/client/main.cc" region_tag="main" highlight="55,56,57,58,59,60,61,62,63,64" %}
 ```
 
 #### Synchronous call
@@ -202,7 +202,7 @@ response is received and return the response object. These are suffixed with
 
 
 ```cpp
-{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/llcpp/client/main.cc" region_tag="main" highlight="68,69,70" %}
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/llcpp/client/main.cc" region_tag="main" highlight="68,69,70" %}
 ```
 
 In the synchronous case, a [result object][resultof] is returned, since the

@@ -28,13 +28,13 @@ To set up dependencies:
 1. Include the libraries that are needed for the test:
 
   ```cpp
-  {%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/hlcpp/testing/main.cc" region_tag="includes" %}
+  {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/hlcpp/testing/main.cc" region_tag="includes" %}
   ```
 
 2. Add a build rule for the test in `examples/fidl/hlcpp/testing/BUILD.gn`:
 
   ```gn
-  {%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/hlcpp/testing/BUILD.gn" %}
+  {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/hlcpp/testing/BUILD.gn" %}
   ```
 
 ## Create a server implementation
@@ -44,7 +44,7 @@ To create a server implementation:
 1. Add an implementation for the `Echo` protocol that is tested:
 
    ```cpp
-   {%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/hlcpp/testing/main.cc" region_tag="impl" %}
+   {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/hlcpp/testing/main.cc" region_tag="impl" %}
    ```
 
    Rather than inheriting from `fuchsia::examples::Echo`, this implementation
@@ -57,7 +57,7 @@ To create a server implementation:
 1. Create a test class that wraps the logic of publishing the echo protocol:
 
    ```cpp
-   {%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/hlcpp/testing/main.cc" region_tag="wrapper" %}
+   {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/hlcpp/testing/main.cc" region_tag="wrapper" %}
    ```
 
    This is similar to the code that is explained in the
@@ -69,7 +69,7 @@ To create a server implementation:
 ## Implement the text fixture class
 
 ```cpp
-{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/hlcpp/testing/main.cc" region_tag="fixture" %}
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/hlcpp/testing/main.cc" region_tag="fixture" %}
 ```
 
 The test fixture does the following:
@@ -85,7 +85,7 @@ The test fixture does the following:
 This is an example test that can you can write with the text fixture:
 
 ```cpp
-{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/hlcpp/testing/main.cc" region_tag="test" %}
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/hlcpp/testing/main.cc" region_tag="test" %}
 ```
 
 ## Run the test

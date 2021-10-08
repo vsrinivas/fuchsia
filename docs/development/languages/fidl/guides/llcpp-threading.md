@@ -187,7 +187,7 @@ the event handler destructor.
 Here is an example showing this pattern:
 
 ```cpp
-{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/llcpp/client_shared/main.cc" region_tag="owned_event_handler" %}
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/llcpp/client_shared/main.cc" region_tag="owned_event_handler" %}
 ```
 
 #### Custom teardown observer
@@ -200,14 +200,14 @@ ways to create a teardown observer:
   teardown observer:
 
 ```cpp
-{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/llcpp/client_shared/main.cc" region_tag="custom_callback" %}
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/llcpp/client_shared/main.cc" region_tag="custom_callback" %}
 ```
 
 - `fidl::ShareUntilTeardown` takes a `std::shared_ptr<T>`, and arranges the
   binding to destroy its shared reference after teardown:
 
 ```cpp
-{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/llcpp/client_shared/main.cc" region_tag="share_until_teardown" %}
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/llcpp/client_shared/main.cc" region_tag="share_until_teardown" %}
 ```
 
 Users may create custom teardown observers that work with other pointer types
@@ -317,7 +317,7 @@ Suppose a server object is allocated on the heap for each incoming connection
 request:
 
 ```cpp
-{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/llcpp/server/main.cc" region_tag="create_server" %}
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/llcpp/server/main.cc" region_tag="create_server" %}
 ```
 
 We could destroy the server object at the end of the `unbound_handler` callback.
@@ -327,7 +327,7 @@ server into the callback.
 ```cpp
 class EchoImpl {
  public:
-{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/llcpp/server/main.cc" region_tag="bind_server" %}
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/llcpp/server/main.cc" region_tag="bind_server" %}
 
   // Later, when the server is shutting down...
   void Shutdown() {

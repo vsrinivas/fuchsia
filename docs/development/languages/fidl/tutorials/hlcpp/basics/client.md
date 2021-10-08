@@ -34,7 +34,7 @@ Create a new component project at `examples/fidl/hlcpp/client`:
 1. Declare a target for the client in `examples/fidl/hlcpp/client/BUILD.gn`:
 
    ```gn
-   {%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/hlcpp/client/BUILD.gn" region_tag="imports" %}
+   {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/hlcpp/client/BUILD.gn" region_tag="imports" %}
 
    # Declare an executable for the client.
    executable("bin") {
@@ -42,7 +42,7 @@ Create a new component project at `examples/fidl/hlcpp/client`:
      sources = [ "main.cc" ]
    }
 
-   {%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/hlcpp/client/BUILD.gn" region_tag="rest" %}
+   {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/hlcpp/client/BUILD.gn" region_tag="rest" %}
    ```
 
 1. Add a component manifest in `examples/fidl/hlcpp/client/meta/client.cml`:
@@ -51,7 +51,7 @@ Create a new component project at `examples/fidl/hlcpp/client`:
    `executable` defined in the previous step.
 
    ```json5
-   {%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/hlcpp/client/meta/client.cml" region_tag="example_snippet" %}
+   {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/hlcpp/client/meta/client.cml" region_tag="example_snippet" %}
    ```
 
 1. Once you have created your component, ensure that you can add it to the
@@ -72,13 +72,13 @@ Create a new component project at `examples/fidl/hlcpp/client`:
 1. Add the following dependencies:
 
    ```gn
-   {%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/hlcpp/client/BUILD.gn" region_tag="deps" %}
+   {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/hlcpp/client/BUILD.gn" region_tag="deps" %}
    ```
 
 1. Then, include them in `main.cc`:
 
    ```cpp
-   {%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/hlcpp/client/main.cc" region_tag="includes" %}
+   {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/hlcpp/client/main.cc" region_tag="includes" %}
    ```
 
    The reason for including these dependencies is explained in the
@@ -95,7 +95,7 @@ As in the server, the code first sets up an async loop so that the client can
 listen for incoming responses from the server without blocking.
 
 ```cpp
-{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/hlcpp/client/main.cc" region_tag="main" highlight="2,28" %}
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/hlcpp/client/main.cc" region_tag="main" highlight="2,28" %}
 ```
 
 ### Initialize a proxy class {#proxy}
@@ -109,7 +109,7 @@ The code then creates a proxy class for the `Echo` protocol, and connects it
 to the server.
 
 ```cpp
-{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/hlcpp/client/main.cc" region_tag="main" highlight="4,5,6" %}
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/hlcpp/client/main.cc" region_tag="main" highlight="4,5,6" %}
 ```
 
 * [`fuchsia::examples::EchoPtr`][proxy] is an alias for
@@ -137,7 +137,7 @@ because of the sandboxing provided by the component framework.
 Finally, the code sets an error handler for the proxy:
 
 ```cpp
-{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/hlcpp/client/main.cc" region_tag="main" highlight="8,9,10" %}
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/hlcpp/client/main.cc" region_tag="main" highlight="8,9,10" %}
 ```
 
 ### Send requests to the server
@@ -148,7 +148,7 @@ The code makes two requests to the server:
 * A `SendString` request
 
 ```cpp
-{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/hlcpp/client/main.cc" region_tag="main" highlight="14,15,16,17,18,19,20" %}
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/hlcpp/client/main.cc" region_tag="main" highlight="14,15,16,17,18,19,20" %}
 ```
 
 For `EchoString` the code passes in a callback to handle the response.
@@ -160,7 +160,7 @@ have any response.
 The code then sets a handler for any incoming `OnString` events:
 
 ```cpp
-{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/hlcpp/client/main.cc" region_tag="main" highlight="21,22,23,24,25,26" %}
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/hlcpp/client/main.cc" region_tag="main" highlight="21,22,23,24,25,26" %}
 ```
 
 ### Terminate the event loop
@@ -171,7 +171,7 @@ The code waits to receive both a response to the `EchoString` method as well as 
 code only if it receives both a response and an event:
 
 ```cpp
-{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/hlcpp/client/main.cc" region_tag="main" highlight="13,17,18,23,24,29" %}
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/hlcpp/client/main.cc" region_tag="main" highlight="13,17,18,23,24,29" %}
 ```
 
 ## Run the client

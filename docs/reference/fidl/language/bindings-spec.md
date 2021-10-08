@@ -430,7 +430,7 @@ One type of output could be user-friendly debug printing for the generated
 types. For example, printing a value of the bits:
 
 ```fidl
-{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples.docs/misc.test.fidl" region_tag="mode" %}
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples.docs/misc.test.fidl" region_tag="mode" %}
 ```
 
 could print the string `"Mode.Read | Mode.Write"` rather than the raw value
@@ -507,7 +507,7 @@ provided as the return type of the function.
 For a FIDL protocol:
 
 ```fidl
-{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples.docs/misc.test.fidl" region_tag="hasher" %}
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples.docs/misc.test.fidl" region_tag="hasher" %}
 ```
 
 A binding might generate:

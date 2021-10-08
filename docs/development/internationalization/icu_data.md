@@ -14,7 +14,7 @@ In order for the system default ICU data files to be visible to a program in
 Fuchsia, you must include the resource dependency in your package:
 
 ```gn
-{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/intl/tz_version_parrot/rust/BUILD.gn" region_tag="icudata_resource" adjust_indentation="auto" %}
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/intl/tz_version_parrot/rust/BUILD.gn" region_tag="icudata_resource" adjust_indentation="auto" %}
 ```
 
 ### Timezone configuration data
@@ -24,14 +24,14 @@ configuration data, use the `icu_tzdata_config_data()` template in your
 `BUILD.gn` file and include it as a dependency in your package declaration:
 
 ```gn
-{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/intl/tz_version_parrot/BUILD.gn" region_tag="tzdata_config" adjust_indentation="auto" %}
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/intl/tz_version_parrot/BUILD.gn" region_tag="tzdata_config" adjust_indentation="auto" %}
 ```
 
 Then, request the `config-data` capability in your component to map the
 subdirectory for your package into the component's namespace:
 
 ```json5
-{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/intl/tz_version_parrot/rust/meta/tz_version_parrot.cml" region_tag="config_data" adjust_indentation="auto" %}
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/intl/tz_version_parrot/rust/meta/tz_version_parrot.cml" region_tag="config_data" adjust_indentation="auto" %}
 ```
 
 Note: For more details on using `config_data` in your builds,
@@ -48,7 +48,7 @@ the set of i18n data is empty.
     * {C++}
 
       ```gn
-      {%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/intl/tz_version_parrot/cpp/BUILD.gn" region_tag="icudata_library" adjust_indentation="auto" %}
+      {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/intl/tz_version_parrot/cpp/BUILD.gn" region_tag="icudata_library" adjust_indentation="auto" %}
       ```
 
       Note: You can find the C++ library source at
@@ -57,7 +57,7 @@ the set of i18n data is empty.
     * {Rust}
 
       ```gn
-      {%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/intl/tz_version_parrot/rust/BUILD.gn" region_tag="icudata_library" adjust_indentation="auto" %}
+      {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/intl/tz_version_parrot/rust/BUILD.gn" region_tag="icudata_library" adjust_indentation="auto" %}
       ```
 
       Note: You can find the Rust library source at
@@ -68,13 +68,13 @@ the set of i18n data is empty.
     * {C++}
 
       ```cpp
-      {%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/intl/tz_version_parrot/cpp/test.cc" region_tag="imports" adjust_indentation="auto" %}
+      {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/intl/tz_version_parrot/cpp/test.cc" region_tag="imports" adjust_indentation="auto" %}
       ```
 
     * {Rust}
 
       ```rust
-      {%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/intl/tz_version_parrot/rust/src/lib.rs" region_tag="imports" adjust_indentation="auto" %}
+      {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/intl/tz_version_parrot/rust/src/lib.rs" region_tag="imports" adjust_indentation="auto" %}
       ```
 
 1.  Initialize the ICU data loader:
@@ -82,13 +82,13 @@ the set of i18n data is empty.
     * {C++}
 
       ```cpp
-      {%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/intl/tz_version_parrot/cpp/test.cc" region_tag="loader_example" adjust_indentation="auto" %}
+      {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/intl/tz_version_parrot/cpp/test.cc" region_tag="loader_example" adjust_indentation="auto" %}
       ```
 
     * {Rust}
 
       ```rust
-      {%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/intl/tz_version_parrot/rust/src/lib.rs" region_tag="loader_example" adjust_indentation="auto" %}
+      {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/intl/tz_version_parrot/rust/src/lib.rs" region_tag="loader_example" adjust_indentation="auto" %}
       ```
 
       Note: At least one instance of `icu_data::Loader` must be kept alive for
@@ -105,13 +105,13 @@ initialize the loader with the path to the data directory and revision file:
 * {C++}
 
   ```cpp
-  {%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/intl/tz_version_parrot/cpp/test.cc" region_tag="loader_config_example" adjust_indentation="auto" %}
+  {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/intl/tz_version_parrot/cpp/test.cc" region_tag="loader_config_example" adjust_indentation="auto" %}
   ```
 
 * {Rust}
 
   ```rust
-  {%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/intl/tz_version_parrot/rust/src/lib.rs" region_tag="loader_config_example" adjust_indentation="auto" %}
+  {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/intl/tz_version_parrot/rust/src/lib.rs" region_tag="loader_config_example" adjust_indentation="auto" %}
   ```
 
 ## Appendices

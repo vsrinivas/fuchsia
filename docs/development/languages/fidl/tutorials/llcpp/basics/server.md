@@ -14,7 +14,7 @@ This tutorial shows you how to implement a FIDL protocol
 of each kind: a fire and forget method, a two-way method, and an event:
 
 ```fidl
-{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples/echo.test.fidl" region_tag="echo" %}
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples/echo.test.fidl" region_tag="echo" %}
 ```
 
 For more on FIDL methods and messaging models, refer to the [FIDL concepts][concepts] page.
@@ -61,7 +61,7 @@ To create a component:
      sources = [ "main.cc" ]
    }
 
-   {%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/llcpp/server/BUILD.gn" region_tag="rest" %}
+   {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/llcpp/server/BUILD.gn" region_tag="rest" %}
    ```
 
    <!-- TODO(fxbug.dev/58758) <<../../common/server/packages.md>> -->
@@ -85,7 +85,7 @@ To create a component:
    defined in the previous step.
 
    ```json5
-   {%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/llcpp/server/meta/server.cml" region_tag="example_snippet" %}
+   {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/llcpp/server/meta/server.cml" region_tag="example_snippet" %}
    ```
 
    <!-- TODO(fxbug.dev/58758) <<../../common/server/qemu.md>> -->
@@ -128,7 +128,7 @@ executable("bin") {
 Add the following to `main.cc`, above the `main()` function:
 
 ```cpp
-{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/llcpp/server/main.cc" region_tag="impl" %}
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/llcpp/server/main.cc" region_tag="impl" %}
 ```
 
 The implementation contains the following elements:
@@ -175,7 +175,7 @@ This complete process is described in further detail in the
 ### Initialize the event loop
 
 ```cpp
-{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/llcpp/server/main.cc" region_tag="main" highlight="2,3,4,5,32" %}
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/llcpp/server/main.cc" region_tag="main" highlight="2,3,4,5,32" %}
 ```
 
 The event loop is used to asynchronously listen for incoming connections and
@@ -195,7 +195,7 @@ handle is a handle provided to every component by the system, so that they can
 serve capabilities (e.g. FIDL protocols) to other components.
 
 ```cpp
-{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/llcpp/server/main.cc" region_tag="main" highlight="7,8,9,10,11,12,13,14,15,16,17" %}
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/llcpp/server/main.cc" region_tag="main" highlight="7,8,9,10,11,12,13,14,15,16,17" %}
 ```
 
 ### Serve the protocol {#server-handler}
@@ -203,7 +203,7 @@ serve capabilities (e.g. FIDL protocols) to other components.
 The server then registers the Echo protocol using `ougoing.svc_dir()->AddEntry()`.
 
 ```cpp
-{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/llcpp/server/main.cc" region_tag="main" highlight="17,18,19,20,21,22,23,24,25,26,27,28,29,30,31" %}
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/llcpp/server/main.cc" region_tag="main" highlight="17,18,19,20,21,22,23,24,25,26,27,28,29,30,31" %}
 ```
 
 The call to `AddEntry` installs a handler for the name of the FIDL protocol
@@ -238,13 +238,13 @@ This new code requires the following additional dependencies:
 The full `bin` target declaration should now look like this:
 
 ```gn
-{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/llcpp/server/BUILD.gn" region_tag="bin" %}
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/llcpp/server/BUILD.gn" region_tag="bin" %}
 ```
 
 Import the dependencies by including them at the top of `examples/fidl/llcpp/server/main.cc`:
 
 ```cpp
-{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/llcpp/server/main.cc" region_tag="includes" %}
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/llcpp/server/main.cc" region_tag="includes" %}
 ```
 
 ## Test the server

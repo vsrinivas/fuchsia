@@ -12,7 +12,7 @@ This tutorial shows you how to implement a FIDL protocol
 of each kind: a fire and forget method, a two-way method, and an event:
 
 ```fidl
-{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples/echo.test.fidl" region_tag="echo" %}
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples/echo.test.fidl" region_tag="echo" %}
 ```
 
 This document covers how to complete the following tasks:
@@ -48,7 +48,7 @@ To create a component:
 1. Declare a target for the server in `examples/fidl/hlcpp/server/BUILD.gn`:
 
    ```gn
-   {%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/hlcpp/server/BUILD.gn" region_tag="imports" %}
+   {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/hlcpp/server/BUILD.gn" region_tag="imports" %}
 
    # Declare an executable for the server. This produces a binary with the
    # specified output name that can run on Fuchsia.
@@ -57,7 +57,7 @@ To create a component:
      sources = [ "main.cc" ]
    }
 
-   {%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/hlcpp/server/BUILD.gn" region_tag="rest" %}
+   {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/hlcpp/server/BUILD.gn" region_tag="rest" %}
    ```
 
    To get the server component up and running, there are three targets that are
@@ -79,7 +79,7 @@ To create a component:
    defined in the previous step.
 
    ```json5
-   {%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/hlcpp/server/meta/server.cml" region_tag="example_snippet" %}
+   {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/hlcpp/server/meta/server.cml" region_tag="example_snippet" %}
    ```
 
    <!-- TODO(fxbug.dev/58758) <<../../common/server/qemu.md>> -->
@@ -122,7 +122,7 @@ executable("bin") {
 Add the following to `main.cc`, above the `main()` function:
 
 ```cpp
-{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/hlcpp/server/main.cc" region_tag="server" %}
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/hlcpp/server/main.cc" region_tag="server" %}
 ```
 
 The implementation contains the following elements:
@@ -171,7 +171,7 @@ This complete process is described in further detail in the
 The first aspect is the use of an async loop:
 
 ```cpp
-{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/hlcpp/server/main.cc" region_tag="main" highlight="2,15" %}
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/hlcpp/server/main.cc" region_tag="main" highlight="2,15" %}
 ```
 
 The code first initializes the loop and registers it as the default dispatcher
@@ -185,7 +185,7 @@ the rest of the code). At the end of the main function, the code runs the async 
 Then, the code initializes the `fidl::Binding` as mentioned above:
 
 ```cpp
-{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/hlcpp/server/main.cc" region_tag="main" highlight="4,5,6" %}
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/hlcpp/server/main.cc" region_tag="main" highlight="4,5,6" %}
 ```
 
 In order to run, a binding needs two things:
@@ -204,7 +204,7 @@ the `EchoImpl` class.
 Next, the code defines a handler for incoming requests from a client:
 
 ```cpp
-{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/hlcpp/server/main.cc" region_tag="main" highlight="7,8,9,10" %}
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/hlcpp/server/main.cc" region_tag="main" highlight="7,8,9,10" %}
 ```
 
 * An "incoming request" is not a request for a specific method of `Echo`
@@ -229,7 +229,7 @@ Next, the code defines a handler for incoming requests from a client:
 Finally, the code registers the handler with the component manager:
 
 ```cpp
-{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/hlcpp/server/main.cc" region_tag="main" highlight="11,12" %}
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/hlcpp/server/main.cc" region_tag="main" highlight="11,12" %}
 ```
 
 The first line initializes and serves the outgoing directory, which contains
@@ -256,13 +256,13 @@ This new code requires the following additional dependencies:
 The full `bin` target declaration should now look like this:
 
 ```gn
-{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/hlcpp/server/BUILD.gn" region_tag="bin" %}
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/hlcpp/server/BUILD.gn" region_tag="bin" %}
 ```
 
 Import the dependencies by including them at the top of `examples/fidl/hlcpp/server/main.cc`:
 
 ```cpp
-{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/hlcpp/server/main.cc" region_tag="includes" %}
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/hlcpp/server/main.cc" region_tag="includes" %}
 ```
 
 ## Test the server

@@ -29,7 +29,7 @@ To do so, this tutorial implements the `EchoLauncher` protocol from the
 [fuchsia.examples library][examples-fidl]:
 
 ```fidl
-{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples/echo.test.fidl" region_tag="launcher" %}
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples/echo.test.fidl" region_tag="launcher" %}
 ```
 
 This is a protocol that lets clients retrieve an instance of the `Echo`
@@ -59,7 +59,7 @@ This implementation of `Echo` allows specifying a prefix in order to
 distinguish between the different instances of `Echo` servers:
 
 ```cpp
-{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/hlcpp/request_pipelining/server/main.cc" region_tag="echo-impl" %}
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/hlcpp/request_pipelining/server/main.cc" region_tag="echo-impl" %}
 ```
 
 The `SendString` handler is empty as the client just uses `EchoString`.
@@ -70,7 +70,7 @@ This class uses
 a binding set to keep track of all of the instances of `Echo` that it launches:
 
 ```cpp
-{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/hlcpp/request_pipelining/server/main.cc" region_tag="launcher-impl" highlight="1,17,18" %}
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/hlcpp/request_pipelining/server/main.cc" region_tag="launcher-impl" highlight="1,17,18" %}
 ```
 
 The code explicitly specifies not just the protocol that the binding set is
@@ -81,7 +81,7 @@ instances of `EchoImpl`.
 This is the implentation of the two methods:
 
 ```cpp
-{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/hlcpp/request_pipelining/server/main.cc" region_tag="launcher-impl" highlight="3,4,5,6,7,8,9,11,12,13,14,15" %}
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/hlcpp/request_pipelining/server/main.cc" region_tag="launcher-impl" highlight="3,4,5,6,7,8,9,11,12,13,14,15" %}
 ```
 
 For `GetEcho`, the code first needs to instantiate both ends of the
@@ -97,7 +97,7 @@ The main loop is the same as in the
 [server tutorial][server-tut-main] but serves an `EchoLauncher` instead of `Echo`.
 
 ```cpp
-{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/hlcpp/request_pipelining/server/main.cc" region_tag="main" %}
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/hlcpp/request_pipelining/server/main.cc" region_tag="main" %}
 ```
 
 ## Build the server
@@ -128,7 +128,7 @@ code connects to one instance of `Echo` using `GetEcho` and another using
 This is the non-pipelined code:
 
 ```cpp
-{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/hlcpp/request_pipelining/client/main.cc" region_tag="non-pipelined" %}
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/hlcpp/request_pipelining/client/main.cc" region_tag="non-pipelined" %}
 ```
 
 This code has two layers of callbacks:
@@ -145,7 +145,7 @@ Despite having to initialize the channels, the pipelined code is
 much simpler:
 
 ```cpp
-{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/hlcpp/request_pipelining/client/main.cc" region_tag="pipelined" %}
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/hlcpp/request_pipelining/client/main.cc" region_tag="pipelined" %}
 ```
 
 ## Build the client

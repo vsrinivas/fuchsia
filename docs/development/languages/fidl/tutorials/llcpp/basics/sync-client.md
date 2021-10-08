@@ -35,7 +35,7 @@ Create a new component project at `examples/fidl/llcpp/client_sync`:
 1. Declare a target for the client in `examples/fidl/llcpp/client_sync/BUILD.gn`:
 
    ```gn
-   {%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/llcpp/client_sync/BUILD.gn" region_tag="imports" %}
+   {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/llcpp/client_sync/BUILD.gn" region_tag="imports" %}
 
    # Declare an executable for the client.
    executable("bin") {
@@ -43,7 +43,7 @@ Create a new component project at `examples/fidl/llcpp/client_sync`:
      sources = [ "main.cc" ]
    }
 
-   {%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/llcpp/client_sync/BUILD.gn" region_tag="rest" %}
+   {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/llcpp/client_sync/BUILD.gn" region_tag="rest" %}
    ```
 
 1. Add a component manifest in `examples/fidl/llcpp/client_sync/meta/client.cml`:
@@ -52,7 +52,7 @@ Create a new component project at `examples/fidl/llcpp/client_sync`:
    `executable` defined in the previous step.
 
    ```json5
-   {%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/llcpp/client_sync/meta/client.cml" region_tag="example_snippet" %}
+   {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/llcpp/client_sync/meta/client.cml" region_tag="example_snippet" %}
    ```
 
 1. Once you have created your component, ensure that you can add it to the
@@ -73,13 +73,13 @@ Create a new component project at `examples/fidl/llcpp/client_sync`:
 1. Add the following dependencies:
 
    ```gn
-   {%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/llcpp/client_sync/BUILD.gn" region_tag="deps" %}
+   {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/llcpp/client_sync/BUILD.gn" region_tag="deps" %}
    ```
 
 1. Then, include them in `main.cc`:
 
    ```cpp
-   {%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/llcpp/client_sync/main.cc" region_tag="includes" %}
+   {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/llcpp/client_sync/main.cc" region_tag="includes" %}
    ```
 
 These dependencies are explained in the [server tutorial][server-tut]. The
@@ -97,7 +97,7 @@ The client then connects to the service directory `/svc`, and uses it to connect
 to the server.
 
 ```cpp
-{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/llcpp/client_sync/main.cc" region_tag="main" highlight="2,3,4,5,6,8,9,10" %}
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/llcpp/client_sync/main.cc" region_tag="main" highlight="2,3,4,5,6,8,9,10" %}
 ```
 
 The `service::OpenServiceRoot` function initializes a channel, then passes the
@@ -136,7 +136,7 @@ The code makes two requests to the server:
 * A `SendString` request
 
 ```cpp
-{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/llcpp/client_sync/main.cc" region_tag="main" highlight="12,13,16,17,18,19,20,24,25,26,27" %}
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/llcpp/client_sync/main.cc" region_tag="main" highlight="12,13,16,17,18,19,20,24,25,26,27" %}
 ```
 
 The protocol methods on the client object (`EchoString` and `SendString`) return
@@ -160,7 +160,7 @@ unknown event is received, its return value becomes the return value of the
 `HandleOneEvent` call:
 
 ```cpp
-{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/llcpp/client_sync/main.cc" region_tag="main" highlight="29,30,31,32,33,34,35,36,37,38,39,41,42,43,44" %}
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/llcpp/client_sync/main.cc" region_tag="main" highlight="29,30,31,32,33,34,35,36,37,38,39,41,42,43,44" %}
 ```
 
 ## Run the client

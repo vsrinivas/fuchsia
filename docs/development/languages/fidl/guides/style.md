@@ -153,7 +153,7 @@ target languages, primitive aliases are replaced by the underlying primitive
 type and therefore do not cause name collisions.
 
 ```fidl
-{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples.docs/style.test.fidl" region_tag="primitive-alias" %}
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples.docs/style.test.fidl" region_tag="primitive-alias" %}
 ```
 
 ### Constants
@@ -165,7 +165,7 @@ Constants that describe minimum and maximum bounds should use the prefix `MIN_`
 and `MAX_`, respectively.
 
 ```fidl
-{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples.docs/style.test.fidl" region_tag="constants" %}
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples.docs/style.test.fidl" region_tag="constants" %}
 ```
 
 ### Protocols
@@ -356,7 +356,7 @@ reiterate the name of the documented entity, or its particular type of FIDL
 language element (e.g., `struct` or `protocol`).
 
 ```fidl
-{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples.docs/style.test.fidl" region_tag="good-docs" %}
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples.docs/style.test.fidl" region_tag="good-docs" %}
 ```
 
 The following are examples of what you should not do:
@@ -377,7 +377,7 @@ phrase should end with a period.
 A full example:
 
 ```fidl
-{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples.docs/style.test.fidl" region_tag="good-docs-2" %}
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples.docs/style.test.fidl" region_tag="good-docs-2" %}
 ```
 
 Types or values defined by some external source of truth should be commented
@@ -409,7 +409,7 @@ You can provide a library overview as a documentation comment on the
 `library` statement. The 'library' statement starts FIDL files. For example:
 
 ```fidl
-{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples.docs/style.test.fidl" region_tag="library-overview" %}
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples.docs/style.test.fidl" region_tag="library-overview" %}
 ```
 
 Library overviews should provide general documentation to define the library.
@@ -448,7 +448,7 @@ Non flow-through comments:
 Both style of comments can be combined:
 
 ```fidl
-{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples.docs/style.test.fidl" region_tag="comments-combined" %}
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples.docs/style.test.fidl" region_tag="comments-combined" %}
 ```
 
 ### Files {#files}

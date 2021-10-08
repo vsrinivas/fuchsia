@@ -56,7 +56,7 @@ declaration, i.e. a declaration is comprised of zero, one, or many members.
 For instance, consider the `Mode` bits declaration:
 
 ```fidl
-{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples.docs/misc.test.fidl" region_tag="mode" %}
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples.docs/misc.test.fidl" region_tag="mode" %}
 ```
 
 Both `READ` and `WRITE` are members.
@@ -70,7 +70,7 @@ members as **variants**.
 For example, consider the `Command` union declaration:
 
 ```fidl
-{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples.docs/misc.test.fidl" region_tag="command" %}
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples.docs/misc.test.fidl" region_tag="command" %}
 ```
 
 The two variants are `create_resource` and `release_resource`.

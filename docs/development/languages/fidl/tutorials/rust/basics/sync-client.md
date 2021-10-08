@@ -35,7 +35,7 @@ Create a new component project at `examples/fidl/rust/client_sync`:
 1. Declare a target for the client in `examples/fidl/rust/client_sync/BUILD.gn`:
 
    ```gn
-   {%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/rust/client_sync/BUILD.gn" region_tag="imports" %}
+   {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/rust/client_sync/BUILD.gn" region_tag="imports" %}
 
    # Declare an executable for the client.
    rustc_binary("bin") {
@@ -45,7 +45,7 @@ Create a new component project at `examples/fidl/rust/client_sync`:
      sources = [ "src/main.rs" ]
    }
 
-   {%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/rust/client_sync/BUILD.gn" region_tag="rest" %}
+   {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/rust/client_sync/BUILD.gn" region_tag="rest" %}
    ```
 
 1. Add a component manifest in `examples/fidl/rust/client_sync/meta/client.cml`:
@@ -54,7 +54,7 @@ Create a new component project at `examples/fidl/rust/client_sync`:
    `executable` defined in the previous step.
 
    ```json5
-   {%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/rust/client_sync/meta/client.cml" region_tag="example_snippet" %}
+   {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/rust/client_sync/meta/client.cml" region_tag="example_snippet" %}
    ```
 
 1. Once you have created your component, ensure that you can add it to the
@@ -75,13 +75,13 @@ Create a new component project at `examples/fidl/rust/client_sync`:
 1. Add the following dependencies to the `rustc_binary`:
 
    ```gn
-   {%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/rust/client_sync/BUILD.gn" region_tag="deps" %}
+   {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/rust/client_sync/BUILD.gn" region_tag="deps" %}
    ```
 
 1. Then, import them in `main.rs`:
 
    ```rust
-   {%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/rust/client_sync/src/main.rs" region_tag="imports" %}
+   {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/rust/client_sync/src/main.rs" region_tag="imports" %}
    ```
 
 These dependencies are explained in the [server tutorial][server-tut].
@@ -98,7 +98,7 @@ that connects the client to the server and makes requests to it.
 ### Initialize a channel
 
 ```rust
-{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/rust/client_sync/src/main.rs" region_tag="main" highlight="2,3" %}
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/rust/client_sync/src/main.rs" region_tag="main" highlight="2,3" %}
 ```
 
 This channel will be used to communicate between the client and server.
@@ -106,7 +106,7 @@ This channel will be used to communicate between the client and server.
 ### Connect to the server
 
 ```rust
-{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/rust/client_sync/src/main.rs" region_tag="main" highlight="4,5,6,7,8" %}
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/rust/client_sync/src/main.rs" region_tag="main" highlight="4,5,6,7,8" %}
 ```
 
 `connect_channel_to_service` will bind the provided channel end to the specified
@@ -149,7 +149,7 @@ The code makes two requests to the server:
 * A `SendString` request
 
 ```rust
-{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/rust/client/src/main.rs" region_tag="main" highlight="10,11,12,13,14,15" %}
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/rust/client/src/main.rs" region_tag="main" highlight="10,11,12,13,14,15" %}
 ```
 
 The call to `echo_string` will block until a response is received from the server, and therefore

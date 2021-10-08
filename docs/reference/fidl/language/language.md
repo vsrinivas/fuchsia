@@ -30,7 +30,7 @@ text to be emitted into the generated code (as a comment, escaped correctly
 for the target language).
 
 ```fidl
-{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples.docs/language_reference.test.fidl" region_tag="comments" %}
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples.docs/language_reference.test.fidl" region_tag="comments" %}
 ```
 
 Note that documentation comments can also be provided via the
@@ -123,7 +123,7 @@ integers, floating point values, strings, and enumerations.
 The syntax is similar to C:
 
 ```fidl
-{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples.docs/language_reference.test.fidl" region_tag="consts" %}
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples.docs/language_reference.test.fidl" region_tag="consts" %}
 ```
 
 These declarations introduce a name within their scope.
@@ -143,7 +143,7 @@ in the declaration.
 For example:
 
 ```fidl
-{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples.docs/language_reference.test.fidl" region_tag="defaults" %}
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples.docs/language_reference.test.fidl" region_tag="defaults" %}
 ```
 
 If the programmer does not supply a background color, the default
@@ -233,7 +233,7 @@ We also alias **`byte`** to mean **`uint8`** as a [built-in alias](#built-in-ali
 #### Use
 
 ```fidl
-{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples.docs/language_reference.test.fidl" region_tag="primitives" %}
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples.docs/language_reference.test.fidl" region_tag="primitives" %}
 ```
 
 ### Bits {#bits}
@@ -253,7 +253,7 @@ We also alias **`byte`** to mean **`uint8`** as a [built-in alias](#built-in-ali
 #### Use
 
 ```fidl
-{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples.docs/language_reference.test.fidl" region_tag="bits" %}
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples.docs/language_reference.test.fidl" region_tag="bits" %}
 ```
 
 ### Enums {#enums}
@@ -273,7 +273,7 @@ an enum must be one of: **int8, uint8, int16, uint16, int32, uint32, int64,
 uint64**. If omitted, the underlying type is assumed to be **uint32**.
 
 ```fidl
-{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples.docs/language_reference.test.fidl" region_tag="enums" %}
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples.docs/language_reference.test.fidl" region_tag="enums" %}
 ```
 
 #### Use
@@ -281,7 +281,7 @@ uint64**. If omitted, the underlying type is assumed to be **uint32**.
 Enum types are denoted by their identifier, which may be qualified if needed.
 
 ```fidl
-{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples.docs/language_reference.test.fidl" region_tag="enum-use" %}
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples.docs/language_reference.test.fidl" region_tag="enum-use" %}
 ```
 
 ### Arrays
@@ -299,7 +299,7 @@ integer constant expression that specifies the number of elements in
 the array.
 
 ```fidl
-{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples.docs/language_reference.test.fidl" region_tag="arrays" %}
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples.docs/language_reference.test.fidl" region_tag="arrays" %}
 ```
 
 Note that _N_ appears as a layout parameter, which means that it affects the ABI
@@ -325,7 +325,7 @@ Strings are denoted as follows:
     with maximum length of _N_ bytes
 
 ```fidl
-{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples.docs/language_reference.test.fidl" region_tag="strings" %}
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples.docs/language_reference.test.fidl" region_tag="strings" %}
 ```
 
 Note that _N_ appears as a constraint (it appears after the `:`), which means
@@ -365,7 +365,7 @@ Vectors are denoted as follows:
 _T_ can be any FIDL type.
 
 ```fidl
-{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples.docs/language_reference.test.fidl" region_tag="vectors" %}
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples.docs/language_reference.test.fidl" region_tag="vectors" %}
 ```
 
 ### Handles {#handles}
@@ -405,7 +405,7 @@ Structs, tables, and unions containing handles must be marked with the
 [`resource` modifier](#value-vs-resource).
 
 ```fidl
-{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples.docs/language_reference.test.fidl" region_tag="handles" %}
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples.docs/language_reference.test.fidl" region_tag="handles" %}
 ```
 
 ### Structs {#structs}
@@ -420,7 +420,7 @@ Structs, tables, and unions containing handles must be marked with the
 #### Declaration
 
 ```fidl
-{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples.docs/language_reference.test.fidl" region_tag="structs" %}
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples.docs/language_reference.test.fidl" region_tag="structs" %}
 ```
 
 #### Use
@@ -431,7 +431,7 @@ Structs are denoted by their declared name (eg. **Circle**):
 *   **`box<Circle>`** : optional Circle, stored [out-of-line][wire-format].
 
 ```fidl
-{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples.docs/language_reference.test.fidl" region_tag="structs-use" %}
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples.docs/language_reference.test.fidl" region_tag="structs-use" %}
 ```
 
 ### Tables {#tables}
@@ -495,7 +495,7 @@ type Profile = table {
 #### Declaration
 
 ```fidl
-{%includecode gerrit_repo="fuchsia/samples" gerrit_path="src/calculator/fidl/calculator.fidl" region_tag="union" %}
+{% includecode gerrit_repo="fuchsia/samples" gerrit_path="src/calculator/fidl/calculator.fidl" region_tag="union" %}
 ```
 
 #### Use {#unions-use}
@@ -506,7 +506,7 @@ Unions are denoted by their declared name (e.g. **Result**) and optionality:
 *   **`Result:optional`** : optional Result
 
 ```fidl
-{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples.docs/language_reference.test.fidl" region_tag="unions-use" %}
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples.docs/language_reference.test.fidl" region_tag="unions-use" %}
 ```
 
 ### Strict vs. Flexible {#strict-vs-flexible}
@@ -524,7 +524,7 @@ not described in the declaration is a [validation error][lexicon-validate].
 In this example:
 
 ```fidl
-{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples.docs/language_reference.test.fidl" region_tag="strict-vs-flexible" %}
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples.docs/language_reference.test.fidl" region_tag="strict-vs-flexible" %}
 ```
 
 By virtue of being flexible, it is simpler for `FlexibleEither` to evolve to
@@ -624,7 +624,7 @@ More details are discussed in [RFC-0057: Default No Handles][rfc-0057].
 #### Declaration
 
 ```fidl
-{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples.docs/language_reference.test.fidl" region_tag="calculator" %}
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples.docs/language_reference.test.fidl" region_tag="calculator" %}
 ```
 
 #### Use {#protocols-use}
@@ -638,7 +638,7 @@ optionality:
 *   **`server_end:<Protocol, optional>`** : optional version of the above
 
 ```fidl
-{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples.docs/language_reference.test.fidl" region_tag="endpoints" %}
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples.docs/language_reference.test.fidl" region_tag="endpoints" %}
 ```
 
 ### Protocol Composition {#protocol-composition}
@@ -660,13 +660,13 @@ Rather than have each protocol define their own color setting methods, a common
 protocol can be defined:
 
 ```fidl
-{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples.docs/language_reference.test.fidl" region_tag="composition-base" %}
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples.docs/language_reference.test.fidl" region_tag="composition-base" %}
 ```
 
 It can then be shared by other protocols:
 
 ```fidl
-{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples.docs/language_reference.test.fidl" region_tag="composition-inherit" %}
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples.docs/language_reference.test.fidl" region_tag="composition-inherit" %}
 ```
 
 In the above, there are three protocols, `SceneryController`, `Drawer`, and `Writer`.
@@ -718,7 +718,7 @@ protocol, and perhaps other protocols.
 So, we define our `FontController` protocol:
 
 ```fidl
-{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples.docs/language_reference.test.fidl" region_tag="composition-multiple-1" %}
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples.docs/language_reference.test.fidl" region_tag="composition-multiple-1" %}
 ```
 
 and then invite `Writer` to include it, by using the `compose` keyword:
@@ -746,13 +746,13 @@ In this example, we have two protocols that are independently useful, a `Clock` 
 to get the current time and timezone:
 
 ```fidl
-{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples.docs/language_reference.test.fidl" region_tag="layering-clock" %}
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples.docs/language_reference.test.fidl" region_tag="layering-clock" %}
 ```
 
 And an `Horologist` protocol that sets the time and timezone:
 
 ```fidl
-{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples.docs/language_reference.test.fidl" region_tag="layering-horologist" %}
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples.docs/language_reference.test.fidl" region_tag="layering-horologist" %}
 ```
 
 We may not necessarily wish to expose the more privileged `Horologist` protocol to just
@@ -760,7 +760,7 @@ any client, but we do want to expose it to the system clock component.
 So, we create a protocol (`SystemClock`) that composes both:
 
 ```fidl
-{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples.docs/language_reference.test.fidl" region_tag="layering-systemclock" %}
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples.docs/language_reference.test.fidl" region_tag="layering-systemclock" %}
 ```
 
 ### Aliasing {#aliasing}
@@ -769,7 +769,7 @@ Type aliasing is supported.
 For example:
 
 ```fidl
-{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples.docs/language_reference.test.fidl" region_tag="aliasing" %}
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples.docs/language_reference.test.fidl" region_tag="aliasing" %}
 ```
 
 In the above, the identifier `StoryID` is an alias for the declaration of a
@@ -781,7 +781,7 @@ definitions can be used.
 Consider:
 
 ```fidl
-{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples.docs/language_reference.test.fidl" region_tag="aliasing-usage" %}
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples.docs/language_reference.test.fidl" region_tag="aliasing-usage" %}
 ```
 
 Here, the `Message` struct contains a string of `MAX_SIZE` bytes called `baseline`,
@@ -802,13 +802,13 @@ The types **`byte`** and **`bytes`** are built-in, and are conceptually
 equivalent to:
 
 ```fidl
-{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples.docs/language_reference_builtin.test.fidl" region_tag="builtin" %}
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples.docs/language_reference_builtin.test.fidl" region_tag="builtin" %}
 ```
 
 When you refer to a name without specific scope, e.g.:
 
 ```fidl
-{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples.docs/language_reference.test.fidl" region_tag="builtin-aliases" %}
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples.docs/language_reference.test.fidl" region_tag="builtin-aliases" %}
 ```
 
 we treat this as `builtin.byte` automatically (so long as there isn't a

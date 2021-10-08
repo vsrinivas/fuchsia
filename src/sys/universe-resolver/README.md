@@ -18,7 +18,7 @@ To launch this component, include it as a child in the component topology using 
 exposed resolver capability in an environment.
 
 ```json5
-{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="src/sys/universe-resolver/meta/example.cml" region_tag="sample"}
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="src/sys/universe-resolver/meta/example.cml" region_tag="sample"}
 ```
 
 ## Testing

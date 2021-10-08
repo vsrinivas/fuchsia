@@ -21,7 +21,7 @@ In the [previous implementation][server-tut-impl], the `main()` function initial
 a single `fidl::Binding`, and bound any incoming requests to it:
 
 ```cpp
-{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/hlcpp/server/main.cc" region_tag="main" highlight="5,7,8,9,10,12" %}
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/hlcpp/server/main.cc" region_tag="main" highlight="5,7,8,9,10,12" %}
 ```
 
 This means that if a second client tries to connect to the server at the same
@@ -30,7 +30,7 @@ first client. To support multiple clients, keep track of multiple
 `fidl::Binding`s (one for each client) using a `fidl::BindingSet`:
 
 ```cpp
-{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/hlcpp/multiple_clients/server/main.cc" region_tag="main" highlight="5,7" %}
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/hlcpp/multiple_clients/server/main.cc" region_tag="main" highlight="5,7" %}
 ```
 
 A binding set also simplifies the code since it no longer
@@ -47,7 +47,7 @@ runtime library provides an anolog to `fidl::BindingSet`: the
 connections to the same protocol:
 
 ```cpp
-{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/hlcpp/multiple_clients/client/main.cc" region_tag="main" %}
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/hlcpp/multiple_clients/client/main.cc" region_tag="main" %}
 ```
 
 The code for setting up a proxy and making requests is the same as in the

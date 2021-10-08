@@ -19,7 +19,7 @@ of each kind:
 * `OnString` is an event.
 
 ```fidl
-{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples/echo.test.fidl" region_tag="echo" %}
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples/echo.test.fidl" region_tag="echo" %}
 ```
 
 For more on FIDL methods and messaging models, refer to the [FIDL concepts][concepts] page.
@@ -54,7 +54,7 @@ To create a component:
 1. Declare a target for the server in `examples/fidl/rust/server/BUILD.gn`:
 
    ```gn
-   {%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/rust/server/BUILD.gn" region_tag="imports" %}
+   {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/rust/server/BUILD.gn" region_tag="imports" %}
 
    # Declare an executable for the server. This produces a binary with the
    # specified output name that can run on Fuchsia.
@@ -65,7 +65,7 @@ To create a component:
      sources = [ "src/main.rs" ]
    }
 
-   {%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/rust/server/BUILD.gn" region_tag="rest" %}
+   {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/rust/server/BUILD.gn" region_tag="rest" %}
    ```
 
    <!-- TODO(fxbug.dev/58758) <<../../common/server/packages.md>> -->
@@ -89,7 +89,7 @@ To create a component:
    defined in the previous step.
 
    ```json5
-   {%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/rust/server/meta/server.cml" region_tag="example_snippet" %}
+   {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/rust/server/meta/server.cml" region_tag="example_snippet" %}
    ```
 
    <!-- TODO(fxbug.dev/58758) <<../../common/server/qemu.md>> -->
@@ -151,7 +151,7 @@ tutorials.
 ### Define `run_echo_server`:
 
 ```rust
-{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/rust/server/src/main.rs" region_tag="impl" %}
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/rust/server/src/main.rs" region_tag="impl" %}
 ```
 
 The implementation consists of the following elements:
@@ -160,7 +160,7 @@ The implementation consists of the following elements:
   context using the `.context()` method on each result:
 
   ```rust
-  {%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/rust/server/src/main.rs" region_tag="impl" highlight="3,4" %}
+  {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/rust/server/src/main.rs" region_tag="impl" highlight="3,4" %}
   ```
 
   At this stage, the stream of `Result<EchoRequest, fidl::Error>` becomes a stream of
@@ -172,13 +172,13 @@ The implementation consists of the following elements:
   will return immediately with that error:
 
   ```rust
-  {%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/rust/server/src/main.rs" region_tag="impl" highlight="5,23" %}
+  {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/rust/server/src/main.rs" region_tag="impl" highlight="5,23" %}
   ```
 * The contents of the closure handle incoming `EchoRequest`s by matching on them to
   determine what kind of request they are:
 
   ```rust
-  {%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/rust/server/src/main.rs" region_tag="impl" highlight="6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22" %}
+  {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/rust/server/src/main.rs" region_tag="impl" highlight="6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22" %}
   ```
 
   This implementation handles `EchoString` requests by echoing the input back, and it handles
@@ -223,13 +223,13 @@ connect to a protocol matching the specified name.
 1. Add them as build dependencies to the `rustc_binary` target. The full target looks like:
 
    ```gn
-   {%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/rust/server/BUILD.gn" region_tag="server" %}
+   {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/rust/server/BUILD.gn" region_tag="server" %}
    ```
 
 ### Define the `main` function
 
 ```rust
-{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/rust/server/src/main.rs" region_tag="main" highlight="1,2,20" %}
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/rust/server/src/main.rs" region_tag="main" highlight="1,2,20" %}
 ```
 
 The main function is async since it consists of listening for incoming connections to the
@@ -251,7 +251,7 @@ Since the server will be run singlethreaded, use
 `ServiceFs::new_local()` instead of `ServiceFs::new()` (the latter is multithreaded capable).
 
 ```rust
-{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/rust/server/src/main.rs" region_tag="main" highlight="4" %}
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/rust/server/src/main.rs" region_tag="main" highlight="4" %}
 ```
 
 ### Add the Echo FIDL service
@@ -260,7 +260,7 @@ Ask the component manager to expose the Echo FIDL service. There are two parts t
 function call:
 
 ```rust
-{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/rust/server/src/main.rs" region_tag="main" highlight="5" %}
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/rust/server/src/main.rs" region_tag="main" highlight="5" %}
 ```
 
 * The component manager must know what to do with incoming connection requests. This is specified
@@ -270,7 +270,7 @@ function call:
   is to define an enum of the possible services offered by the server, in this example:
 
   ```rust
-  {%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/rust/server/src/main.rs" region_tag="enum" %}
+  {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/rust/server/src/main.rs" region_tag="enum" %}
   ```
 
   and then passing the enum variant "constructor" as the closure. When there are multiple services
@@ -291,7 +291,7 @@ function call:
 ### Serve the outgoing directory
 
 ```rust
-{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/rust/server/src/main.rs" region_tag="main" highlight="7,8" %}
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/rust/server/src/main.rs" region_tag="main" highlight="7,8" %}
 ```
 
 This call will bind the `ServiceFs` to the `DirectoryRequest` startup handle for the component, and
@@ -309,7 +309,7 @@ This process is described further in
 Run the `ServiceFs` to completion in order to listen for incoming connections:
 
 ```rust
-{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/rust/server/src/main.rs" region_tag="main" highlight="10,11,12,13,14,15,16,17" %}
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/rust/server/src/main.rs" region_tag="main" highlight="10,11,12,13,14,15,16,17" %}
 ```
 
 This runs the `ServiceFs` future, handling up to 10,000 incoming

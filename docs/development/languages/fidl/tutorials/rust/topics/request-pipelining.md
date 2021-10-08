@@ -36,7 +36,7 @@ This tutorial implements the `EchoLauncher` protocol from the
 [fuchsia.examples library][examples-fidl]:
 
 ```fidl
-{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples/echo.test.fidl" region_tag="launcher" %}
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples/echo.test.fidl" region_tag="launcher" %}
 ```
 
 This is a protocol that lets clients retrieve an instance of the `Echo`
@@ -66,7 +66,7 @@ This implementation of `Echo` allows specifying a prefix in order to
 distinguish between the different instances of `Echo` servers:
 
 ```rust
-{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/rust/request_pipelining/server/src/main.rs" region_tag="echo-impl" %}
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/rust/request_pipelining/server/src/main.rs" region_tag="echo-impl" %}
 ```
 
 The `SendString` handler is empty as the client just uses `EchoString`.
@@ -79,7 +79,7 @@ two instances of `Echo`, so, using the concurrent version allows the two calls t
 `run_echo_server` to be run concurrently:
 
 ```rust
-{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/rust/request_pipelining/server/src/main.rs" region_tag="launcher-impl" highlight="7,31" %}
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/rust/request_pipelining/server/src/main.rs" region_tag="launcher-impl" highlight="7,31" %}
 ```
 
 Both of the `EchoLauncher` methods are handled by calling `run_echo_server` on the server end of
@@ -89,7 +89,7 @@ channel - it uses one end as the server end and sends the other end back to the 
 to be done by the server, and no response is necessary.
 
 ```rust
-{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/rust/request_pipelining/server/src/main.rs" region_tag="launcher-impl" highlight="8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30" %}
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/rust/request_pipelining/server/src/main.rs" region_tag="launcher-impl" highlight="8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30" %}
 ```
 
 ### Serve the EchoLauncher protocol
@@ -98,7 +98,7 @@ The main loop should is the same as in the
 [server tutorial][server-tut-main] but serves an `EchoLauncher` instead of `Echo`.
 
 ```rust
-{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/rust/request_pipelining/server/src/main.rs" region_tag="main" %}
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/rust/request_pipelining/server/src/main.rs" region_tag="main" %}
 ```
 
 ## Build the server
@@ -129,7 +129,7 @@ code connects to one instance of `Echo` using `GetEcho` and another using
 This is the non-pipelined code:
 
 ```rust
-{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/rust/request_pipelining/client/src/main.rs" region_tag="main" highlight="6,7,8,9,10,11,12,13,14" %}
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/rust/request_pipelining/client/src/main.rs" region_tag="main" highlight="6,7,8,9,10,11,12,13,14" %}
 ```
 
 This code chains together two futures. First, it makes the `GetEcho` request to the client. It then
@@ -139,7 +139,7 @@ takes the result of that future, and then uses it to create a client object (the
 Despite having to initialize the channel first, the pipelined code is much simpler:
 
 ```rust
-{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/rust/request_pipelining/client/src/main.rs" region_tag="main" highlight="16,17,18,19,20,21,22" %}
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/rust/request_pipelining/client/src/main.rs" region_tag="main" highlight="16,17,18,19,20,21,22" %}
 ```
 
 `create_proxy` is used, which is a shortcut for creating the two ends of a channel and converting
@@ -150,7 +150,7 @@ Finally, the two futures corresponding to the non-pipelined and pipelined calls 
 completion concurrently, to see which one completes first:
 
 ```rust
-{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/rust/request_pipelining/client/src/main.rs" region_tag="main" highlight="24,25,26,27,28" %}
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/rust/request_pipelining/client/src/main.rs" region_tag="main" highlight="24,25,26,27,28" %}
 ```
 
 ## Build the client

@@ -32,13 +32,13 @@ modifying code in this repo, please check that any corresponding text is kept
 in sync. Code can be included using a specific region:
 
 ```
-{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/foo" region_tag="bar" %}
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/foo" region_tag="bar" %}
 ```
 
 or using an entire file
 
 ```
-{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/foo" %}
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/foo" %}
 ```
 
 References can be found by grepping for these two variants in `/docs`.

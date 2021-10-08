@@ -146,7 +146,7 @@ The standard pattern for using the arena is:
 Example:
 
 ```c++
-{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/llcpp/unittests/main.cc" region_tag="tables" adjust_indentation="auto" exclude_regexp="^TEST|^}" %}
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/llcpp/unittests/main.cc" region_tag="tables" adjust_indentation="auto" exclude_regexp="^TEST|^}" %}
 ```
 
 ### Create LLCPP views of unowned data
@@ -160,26 +160,26 @@ To create an `ObjectView` from an external object using
 `fidl::ObjectView::FromExternal`.
 
 ```c++
-{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/llcpp/unittests/main.cc" region_tag="external-object" adjust_indentation="auto" exclude_regexp="^TEST|^}" %}
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/llcpp/unittests/main.cc" region_tag="external-object" adjust_indentation="auto" exclude_regexp="^TEST|^}" %}
 ```
 
 To create a `VectorView` from an external collection using
 `fidl::VectorView::FromExternal`.
 
 ```c++
-{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/llcpp/unittests/main.cc" region_tag="external-vector" adjust_indentation="auto" exclude_regexp="^TEST|^}" %}
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/llcpp/unittests/main.cc" region_tag="external-vector" adjust_indentation="auto" exclude_regexp="^TEST|^}" %}
 ```
 
 To create a `StringView` from an external buffer using
 `fidl::StringView::FromExternal`.
 
 ```c++
-{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/llcpp/unittests/main.cc" region_tag="external-string" adjust_indentation="auto" exclude_regexp="^TEST|^}" %}
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/llcpp/unittests/main.cc" region_tag="external-string" adjust_indentation="auto" exclude_regexp="^TEST|^}" %}
 ```
 
 A `StringView` can also be created directly from string literals without using
 `FromExternal`.
 
 ```c++
-{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/llcpp/unittests/main.cc" region_tag="stringview-assign" adjust_indentation="auto" exclude_regexp="^TEST|^}" %}
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/llcpp/unittests/main.cc" region_tag="stringview-assign" adjust_indentation="auto" exclude_regexp="^TEST|^}" %}
 ```

@@ -25,7 +25,7 @@ library fuchsia.examples;
 The corresponding FIDL crate is named `fidl_fuchsia_examples`:
 
 ```rust
-{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/rust/fidl_crates/src/main.rs" region_tag="import" adjust_indentation="auto" %}
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/rust/fidl_crates/src/main.rs" region_tag="import" adjust_indentation="auto" %}
 ```
 
 ## Traits {#traits}
@@ -48,7 +48,7 @@ the trait names themselves.
 Given the [constants][lang-constants]:
 
 ```fidl
-{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples/types.test.fidl" region_tag="consts" %}
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples/types.test.fidl" region_tag="consts" %}
 ```
 
 The FIDL toolchain generates the following constants:
@@ -136,7 +136,7 @@ uses the following rules:
 Given the [bits][lang-bits] definition:
 
 ```fidl
-{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples/types.test.fidl" region_tag="bits" %}
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples/types.test.fidl" region_tag="bits" %}
 ```
 
 The FIDL toolchain generates a set of
@@ -161,7 +161,7 @@ rules](#derives).
 Example usage:
 
 ```rust
-{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/rust/fidl_crates/src/main.rs" region_tag="bits" adjust_indentation="auto" %}
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/rust/fidl_crates/src/main.rs" region_tag="bits" adjust_indentation="auto" %}
 ```
 
 ### Enums {#types-enums}
@@ -169,7 +169,7 @@ Example usage:
 Given the [enum][lang-enums] definition:
 
 ```fidl
-{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples/types.test.fidl" region_tag="enums" %}
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples/types.test.fidl" region_tag="enums" %}
 ```
 
 The FIDL toolchain generates a Rust `enum` using the specified underlying type,
@@ -213,7 +213,7 @@ rules](#derives).
 Example usage:
 
 ```rust
-{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/rust/fidl_crates/src/main.rs" region_tag="enums_init" adjust_indentation="auto" %}
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/rust/fidl_crates/src/main.rs" region_tag="enums_init" adjust_indentation="auto" %}
 ```
 
 To provide source-compatibility, [flexible][lang-flexible] enums have an unknown
@@ -221,7 +221,7 @@ macro that should be used to match against unknown members instead of the `_`
 pattern. For example, see the use of the `LocationTypeUnknown!()` macro:
 
 ```rust
-{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/rust/fidl_crates/src/main.rs" region_tag="enums_flexible_match" adjust_indentation="auto" %}
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/rust/fidl_crates/src/main.rs" region_tag="enums_flexible_match" adjust_indentation="auto" %}
 ```
 
 The unknown macro acts the same as a `_` pattern, but it can be configured to
@@ -232,7 +232,7 @@ expand to an exhaustive match. This is useful for discovering missing cases.
 Given the [struct][lang-structs] declaration:
 
 ```fidl
-{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples/types.test.fidl" region_tag="structs" %}
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples/types.test.fidl" region_tag="structs" %}
 ```
 
 The FIDL toolchain generates a Rust `struct`:
@@ -253,7 +253,7 @@ The generated `Color` `struct` follows the [`#[derive]` rules](#derives).
 Example usage:
 
 ```rust
-{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/rust/fidl_crates/src/main.rs" region_tag="structs" adjust_indentation="auto" %}
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/rust/fidl_crates/src/main.rs" region_tag="structs" adjust_indentation="auto" %}
 ```
 
 ### Unions {#types-unions}
@@ -261,7 +261,7 @@ Example usage:
 Given the [union][lang-unions] definition:
 
 ```fidl
-{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples/types.test.fidl" region_tag="unions" %}
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples/types.test.fidl" region_tag="unions" %}
 ```
 
 The FIDL toolchain generates a Rust `enum`:
@@ -297,7 +297,7 @@ The generated `JsonValue` `enum` follows the [`#[derive]` rules](#derives).
 Example usage:
 
 ```rust
-{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/rust/fidl_crates/src/main.rs" region_tag="unions_init" adjust_indentation="auto" %}
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/rust/fidl_crates/src/main.rs" region_tag="unions_init" adjust_indentation="auto" %}
 ```
 
 #### Flexible unions and unknown variants
@@ -311,7 +311,7 @@ unknown macro that should be used to match against unknown members instead of
 the `_` pattern. For example, see the use of the `JsonValueUnknown!()` macro:
 
 ```rust
-{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/rust/fidl_crates/src/main.rs" region_tag="unions_flexible_match" adjust_indentation="auto" %}
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/rust/fidl_crates/src/main.rs" region_tag="unions_flexible_match" adjust_indentation="auto" %}
 ```
 
 The unknown macro acts the same as a `_` pattern, but it can be configured to
@@ -333,7 +333,7 @@ decoding an unknown variant with handles.
 Given the [table][lang-tables] definition:
 
 ```fidl
-{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples/types.test.fidl" region_tag="tables" %}
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples/types.test.fidl" region_tag="tables" %}
 ```
 
 The FIDL toolchain generates a `struct` `User` with optional members:
@@ -367,14 +367,14 @@ causes API breakage when new fields are added. Instead, you should use the
 struct update syntax to fill in unspecified fields with `empty()`. For example:
 
 ```rust
-{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/rust/fidl_crates/src/main.rs" region_tag="tables_init" adjust_indentation="auto" %}
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/rust/fidl_crates/src/main.rs" region_tag="tables_init" adjust_indentation="auto" %}
 ```
 
 Similarly, tables do not permit exhaustive matching. Instead, you must use the
 `..` syntax to ignore unspecified fields. For example:
 
 ```rust
-{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/rust/fidl_crates/src/main.rs" region_tag="tables_match" adjust_indentation="auto" %}
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/rust/fidl_crates/src/main.rs" region_tag="tables_match" adjust_indentation="auto" %}
 ```
 
 The generated `User` `struct` follows the [`#[derive]` rules](#derives).
@@ -405,7 +405,7 @@ type. See [Appendix B](#fill-derives) for implementation details.
 Given a [protocol][lang-protocols]:
 
 ```fidl
-{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples/types.test.fidl" region_tag="protocols" %}
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples/types.test.fidl" region_tag="protocols" %}
 ```
 
 Note: The `MakeMove` method above returns a bool representing success, and a
@@ -713,13 +713,13 @@ The easiest way to to explicitly encode and decode is to use
 For example, you can encode a [`Color` struct](#types-structs):
 
 ```rust
-{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/rust/persistence/src/lib.rs" region_tag="simple_method_encode" adjust_indentation="auto" %}
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/rust/persistence/src/lib.rs" region_tag="simple_method_encode" adjust_indentation="auto" %}
 ```
 
 And then decode it later:
 
 ```rust
-{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/rust/persistence/src/lib.rs" region_tag="simple_method_decode" adjust_indentation="auto" %}
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/rust/persistence/src/lib.rs" region_tag="simple_method_decode" adjust_indentation="auto" %}
 ```
 
 ### Separating the header
@@ -731,19 +731,19 @@ you can manage the header manually. For example, you can encode both a
 only one header instead of two:
 
 ```rust
-{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/rust/persistence/src/lib.rs" region_tag="separate_header_encode" adjust_indentation="auto" %}
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/rust/persistence/src/lib.rs" region_tag="separate_header_encode" adjust_indentation="auto" %}
 ```
 
 Then, you must first decode the header and use it to decode the other values:
 
 ```rust
-{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/rust/persistence/src/lib.rs" region_tag="separate_header_decode" adjust_indentation="auto" %}
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/rust/persistence/src/lib.rs" region_tag="separate_header_decode" adjust_indentation="auto" %}
 ```
 
 ## Appendix A: Derived traits {#derived-traits}
 
 ```go
-{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="tools/fidl/fidlgen_rust/codegen/ir.go" region_tag="derived_traits" adjust_indentation="auto" %}
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="tools/fidl/fidlgen_rust/codegen/ir.go" region_tag="derived_traits" adjust_indentation="auto" %}
 ```
 
 ## Appendix B: Fill derives {#fill-derives}
@@ -752,7 +752,7 @@ The calculation of traits derivation rules is visible in
 [fidlgen_rust](/tools/fidl/fidlgen_rust/codegen/ir.go):
 
 ```go
-{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="tools/fidl/fidlgen_rust/codegen/ir.go" region_tag="fill_derives" adjust_indentation="auto" %}
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="tools/fidl/fidlgen_rust/codegen/ir.go" region_tag="fill_derives" adjust_indentation="auto" %}
 ```
 
 <!-- link labels -->

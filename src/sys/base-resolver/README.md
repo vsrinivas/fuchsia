@@ -21,7 +21,7 @@ To launch this component, include it as a child in the component topology using 
 in an environment.
 
 ```json5
-{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="src/sys/base-resolver/tests/meta/integration-test.cml" region_tag="environment"}
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="src/sys/base-resolver/tests/meta/integration-test.cml" region_tag="environment"}
 ```
 
 ## Testing

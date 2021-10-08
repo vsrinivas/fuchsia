@@ -20,7 +20,7 @@ Include the necessary library dependencies in your `BUILD.gn` file:
   The ICU library is a single third-party dependency `//third_party/icu`:
 
   ```gn
-  {%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/intl/wisdom/cpp/client/BUILD.gn" region_tag="icu_library" adjust_indentation="auto" %}
+  {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/intl/wisdom/cpp/client/BUILD.gn" region_tag="icu_library" adjust_indentation="auto" %}
   ```
 
 * {Rust}
@@ -29,7 +29,7 @@ Include the necessary library dependencies in your `BUILD.gn` file:
   specific ICU4C headers:
 
   ```gn
-  {%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/intl/wisdom/rust/client/BUILD.gn" region_tag="icu_library" adjust_indentation="auto" %}
+  {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/intl/wisdom/rust/client/BUILD.gn" region_tag="icu_library" adjust_indentation="auto" %}
   ```
 
 ## Import ICU headers
@@ -42,7 +42,7 @@ Add the imports for the specific ICU library features your program requires:
   information about the APIs the library supports.
 
   ```cpp
-  {%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/intl/wisdom/cpp/client/intl_wisdom_client.cc" region_tag="imports" adjust_indentation="auto" %}
+  {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/intl/wisdom/cpp/client/intl_wisdom_client.cc" region_tag="imports" adjust_indentation="auto" %}
   ```
 
 * {Rust}
@@ -51,7 +51,7 @@ Add the imports for the specific ICU library features your program requires:
   information about the APIs the library supports.
 
   ```rust
-  {%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/intl/wisdom/rust/client/src/wisdom_client_impl.rs" region_tag="imports" adjust_indentation="auto" %}
+  {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/intl/wisdom/rust/client/src/wisdom_client_impl.rs" region_tag="imports" adjust_indentation="auto" %}
   ```
 
 ## Initialize ICU data
@@ -62,13 +62,13 @@ the ICU data with the `icu_data` library:
 * {C++}
 
   ```cpp
-  {%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/intl/wisdom/cpp/server/intl_wisdom_server_impl.cc" region_tag="loader_example" adjust_indentation="auto" %}
+  {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/intl/wisdom/cpp/server/intl_wisdom_server_impl.cc" region_tag="loader_example" adjust_indentation="auto" %}
   ```
 
 * {Rust}
 
   ```rust
-  {%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/intl/wisdom/rust/server/src/main.rs" region_tag="loader_example" adjust_indentation="auto" %}
+  {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/intl/wisdom/rust/server/src/main.rs" region_tag="loader_example" adjust_indentation="auto" %}
   ```
 
 For more details instructions on loading ICU data from various sources,

@@ -33,7 +33,7 @@ This tutorial implements the `EchoLauncher` protocol from the
 [fuchsia.examples library][examples-fidl]:
 
 ```fidl
-{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples/echo.test.fidl" region_tag="launcher" %}
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples/echo.test.fidl" region_tag="launcher" %}
 ```
 
 This is a protocol that lets clients retrieve an instance of the `Echo`
@@ -63,7 +63,7 @@ This implementation of `Echo` allows specifying a prefix in order to
 distinguish between the different instances of `Echo` servers:
 
 ```cpp
-{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/llcpp/request_pipelining/server/main.cc" region_tag="echo-impl" %}
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/llcpp/request_pipelining/server/main.cc" region_tag="echo-impl" %}
 ```
 
 The `SendString` handler is empty as the client just uses `EchoString`.
@@ -77,7 +77,7 @@ server given a specific prefix and channel is abstracted into a helper
 `RunEchoServer` method:
 
 ```cpp
-{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/llcpp/request_pipelining/server/main.cc" region_tag="launcher-impl" %}
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/llcpp/request_pipelining/server/main.cc" region_tag="launcher-impl" %}
 ```
 
 For `GetEcho`, the code first needs to instantiate both ends of the channel. It
@@ -92,7 +92,7 @@ The main loop should is the same as in the
 [server tutorial][server-tut-main] but serves an `EchoLauncher` instead of `Echo`.
 
 ```cpp
-{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/llcpp/request_pipelining/server/main.cc" region_tag="main" %}
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/llcpp/request_pipelining/server/main.cc" region_tag="main" %}
 ```
 
 ## Build the server
@@ -125,7 +125,7 @@ code connects to one instance of `Echo` using `GetEcho` and another using
 This is the non-pipelined code:
 
 ```cpp
-{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/llcpp/request_pipelining/client/main.cc" region_tag="main" highlight="11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30" %}
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/llcpp/request_pipelining/client/main.cc" region_tag="main" highlight="11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30" %}
 ```
 
 This code has two layers of callbacks:
@@ -144,7 +144,7 @@ Despite having to create a pair of endpoints first, the pipelined code is much
 simpler:
 
 ```cpp
-{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/llcpp/request_pipelining/client/main.cc" region_tag="main" highlight="32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48" %}
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/llcpp/request_pipelining/client/main.cc" region_tag="main" highlight="32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48" %}
 ```
 
 Unlike in the [client tutorial][client-tut], the async loop is run to completion
