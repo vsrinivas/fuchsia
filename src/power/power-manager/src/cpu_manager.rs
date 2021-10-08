@@ -842,9 +842,12 @@ impl InspectData {
         let thermal_state_index = state_node.create_string("thermal_state_index", "initializing");
         let last_performance = state_node.create_double("last_performance (NormPerfs)", 0.0);
 
-        let last_loads_node = state_node.create_child("last_cluster_loads (#cores)");
-        let last_cluster_loads =
-            cluster_names.into_iter().map(|n| last_loads_node.create_double(n, 0.0)).collect();
+        let mut last_cluster_loads = Vec::new();
+        cluster_names.into_iter().for_each(|name| {
+            state_node.record_child(name, |cluster_node| {
+                last_cluster_loads.push(cluster_node.create_double("last_load (#cores)", 0.0));
+            })
+        });
 
         let available_power = state_node.create_double("available_power (W)", 0.0);
         let projected_performance =
@@ -853,7 +856,6 @@ impl InspectData {
 
         let last_error = state_node.create_string("last_error", "<None>");
 
-        state_node.record(last_loads_node);
         root_node.record(state_node);
 
         Self {
@@ -1482,9 +1484,11 @@ mod tests {
                     "state": {
                         "thermal_state_index": "1",
                         "last_performance (NormPerfs)": 5.0,
-                        "last_cluster_loads (#cores)": {
-                            "big_cluster": 2.0,
-                            "little_cluster": 2.0
+                        "big_cluster": {
+                            "last_load (#cores)": 2.0,
+                        },
+                        "little_cluster": {
+                            "last_load (#cores)": 2.0,
                         },
                         "available_power (W)": 1.0,
                         "projected_performance (NormPerfs)": estimate.performance.0,
