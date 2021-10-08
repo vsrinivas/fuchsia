@@ -102,6 +102,8 @@ impl Service {
         launcher: LauncherProxy,
         internal_sender: UnboundedSender<MessageInternal>,
     ) -> Service {
+        session.set_debug_name("Tiles Service").expect("fidl error");
+
         let mut link_tokens =
             flatland::LinkTokenPair::new().expect("failed to create LinkTokenPair");
         let (_, child_view_watcher_request) = create_proxy::<flatland::ChildViewWatcherMarker>()

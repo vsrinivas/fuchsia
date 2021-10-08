@@ -404,6 +404,7 @@ async fn main() {
 
     let flatland =
         connect_to_protocol::<fland::FlatlandMarker>().expect("error connecting to Flatland");
+    flatland.set_debug_name("Flatland ViewProvider Example").expect("fidl error");
 
     let sched_lib = ThroughputScheduler::new();
 
