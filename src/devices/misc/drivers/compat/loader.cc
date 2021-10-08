@@ -10,6 +10,8 @@ namespace compat {
 
 Loader::Loader(async_dispatcher_t* dispatcher) : dispatcher_(dispatcher) {}
 
+async_dispatcher_t* Loader::dispatcher() { return dispatcher_; }
+
 zx::status<> Loader::Bind(fidl::ClientEnd<fldsvc::Loader> client_end, zx::vmo driver_vmo) {
   if (client_) {
     return zx::error(ZX_ERR_ALREADY_BOUND);
