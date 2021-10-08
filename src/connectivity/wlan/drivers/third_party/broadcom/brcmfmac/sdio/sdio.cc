@@ -446,23 +446,22 @@ static bool data_ok(struct brcmf_sdio* bus) {
 }
 
 /*
- * Read bus->ctrl_frame_stat, and if it's value is true, acquire the lock for bus->sdiodev->func1,
- * call fn(), set bus->ctrl_frame_stat to false, and release the lock.
+ * If ctrl_frame_stat is set, clear it and then call the provided |fn| function. All in a thread
+ * safe manner.
  */
 void brcmf_sdio_if_ctrl_frame_stat_set(struct brcmf_sdio* bus, std::function<void()> fn) {
   if (bus->ctrl_frame_stat.load()) {
     sdio_claim_host(bus->sdiodev->func1);
     if (bus->ctrl_frame_stat.load()) {
-      fn();
       bus->ctrl_frame_stat.store(false);
+      fn();
     }
     sdio_release_host(bus->sdiodev->func1);
   }
 }
 
 /*
- * Read bus->ctrl_frame_stat, and if it's value is false, acquire the lock for bus->sdiodev->func1,
- * call fn(), and release the lock.
+ * If ctrl_frame_stat is clear call the provided |fn| function. All in a thread safe manner.
  */
 void brcmf_sdio_if_ctrl_frame_stat_clear(struct brcmf_sdio* bus, std::function<void()> fn) {
   if (!bus->ctrl_frame_stat.load()) {
