@@ -2,13 +2,6 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-declare_args() {
-  # Whether to use v1, if this is set to false, make sure that the v2 shard
-  # is somehow being included.
-  # TODO(fxbug.dev/78647) Remove once v2 migration is complete.
-  codec_factory_v1 = false
-}
-
 group("services") {
   testonly = true
   deps = [
@@ -40,9 +33,6 @@ group("config") {
 
 group("codec_factory") {
   public_deps = [ "//src/media/codec:codec_factory" ]
-  if (codec_factory_v1) {
-    public_deps += [ "//src/media/codec:codec_factory_config" ]
-  }
 }
 
 group("codec_sw_aac") {

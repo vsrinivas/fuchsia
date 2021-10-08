@@ -115,19 +115,8 @@ fuchsia_package("bt-a2dp") {
 }
 
 # The core realm shard to be used by product integrators.
-# This default shard now assumes CodecFactory is a v2 component.
 core_shard("bt-a2dp-core-shard") {
   shard_file = "meta/bt-a2dp.core_shard.cml"
-}
-
-# TODO(fxbug.dev/78647) Remove these variations once CodecFactory v2 migration
-# is completed.
-core_shard("bt-a2dp-base-core-shard") {
-  shard_file = "meta/bt-a2dp-base.core_shard.cml"
-}
-
-core_shard("bt-a2dp-mediacodec-shard") {
-  shard_file = "meta/bt-a2dp-mediacodec.core_shard.cml"
 }
 
 fuchsia_unittest_package("bt-a2dp-tests") {

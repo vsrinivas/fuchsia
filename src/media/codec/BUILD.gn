@@ -64,11 +64,6 @@ fuchsia_package("codec_factory") {
   deps = [ ":factory_with_sw_codecs" ]
 }
 
-config_data("codec_factory_config") {
-  for_pkg = "sysmgr"
-  sources = [ "factory/config/codec_factory.config" ]
-}
-
 # This package is only really expected to be used by the codec_factory package.
 fuchsia_package_with_single_component("codec_runner_sw_aac") {
   manifest = "codecs/meta/codec_runner_sw_aac.cmx"

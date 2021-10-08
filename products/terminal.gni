@@ -54,7 +54,6 @@ cache_package_labels += [
 # QEMU images generated for the SDK, but in cache, so they can be updated.
 cache_package_labels += [ "//sdk/bundles:tools" ]
 
-codec_factory_v1 = false
 core_realm_shards += [ "//src/media/codec:codec_factory_shard" ]
 
 universe_package_labels += [
