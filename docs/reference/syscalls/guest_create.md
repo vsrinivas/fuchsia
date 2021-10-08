@@ -59,6 +59,8 @@ returned.
 
 ## ERRORS
 
+**ZX_ERR_NOT_SUPPORTED** The hypervisor is not supported by the device.
+
 **ZX_ERR_ACCESS_DENIED** *resource* is not of **ZX_RSRC_KIND_HYPERVISOR**.
 
 **ZX_ERR_INVALID_ARGS** *guest_handle* or *vmar_handle* is an invalid pointer,
