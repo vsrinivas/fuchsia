@@ -2,11 +2,12 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/components.gni")
 import("//build/test.gni")
 
-test("unittests") {
+test("unittests_bin") {
   output_name = "component_fuzzing_framework_unittests"
-  visibility = [ "../*" ]
+  visibility = [ ":*" ]
   testonly = true
   deps = [
     "adapters:unittests",
@@ -16,7 +17,7 @@ test("unittests") {
   ]
 }
 
-test("fatal-unittests") {
+test("fatal_unittests_bin") {
   output_name = "component_fuzzing_framework_fatal_unittests"
   visibility = [ "../*" ]
   testonly = true
@@ -24,4 +25,35 @@ test("fatal-unittests") {
     "engine:fatal-unittests",
     "//src/lib/fxl/test:gtest_main",
   ]
+}
+
+fuchsia_component("unittests") {
+  visibility = [ ":*" ]
+  testonly = true
+  manifest = "meta/unittests.cml"
+  deps = [ ":unittests_bin" ]
+}
+
+fuchsia_component("fatal-unittests") {
+  visibility = [ ":*" ]
+  testonly = true
+  manifest = "meta/fatal-unittests.cml"
+  deps = [ ":fatal_unittests_bin" ]
+}
+
+fuchsia_test_package("tests") {
+  package_name = "component-fuzzing-framework-tests"
+  test_components = [ ":unittests" ]
+}
+
+fuchsia_test_package("fatal-tests") {
+  package_name = "component-fuzzing-framework-fatal-tests"
+
+  # Some tests involve handling intentional crashes.
+  test_specs = {
+    log_settings = {
+      max_severity = "FATAL"
+    }
+  }
+  test_components = [ ":fatal-unittests" ]
 }

@@ -2,6 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/components.gni")
 import("//build/test.gni")
 
 source_set("common") {
@@ -76,9 +77,9 @@ source_set("runner-fatal-unittests") {
   deps = [ ":runner-unittests-common" ]
 }
 
-test("unittests") {
+test("unittests_bin") {
   output_name = "component_fuzzing_common_unittests"
-  visibility = [ "../*" ]
+  visibility = [ ":*" ]
   testonly = true
   sources = [
     "controller-unittest.cc",
@@ -94,4 +95,16 @@ test("unittests") {
     "//src/lib/fxl/test:gtest_main",
     "//third_party/googletest:gtest",
   ]
+}
+
+fuchsia_component("unittests") {
+  visibility = [ ":*" ]
+  testonly = true
+  manifest = "meta/unittests.cml"
+  deps = [ ":unittests_bin" ]
+}
+
+fuchsia_test_package("tests") {
+  package_name = "component-fuzzing-common-tests"
+  test_components = [ ":unittests" ]
 }
