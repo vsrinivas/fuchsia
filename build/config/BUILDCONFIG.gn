@@ -2843,7 +2843,7 @@ if (is_fuchsia && zircon_toolchain == false) {
 #
 template("rust_library") {
   rust_library(target_name) {
-    forward_variables_from(invoker, "*")
+    forward_variables_from(invoker, "*", [ "metadata" ])
     if (!defined(inputs)) {
       inputs = []
     }
@@ -2856,6 +2856,9 @@ template("rust_library") {
     _rlib = rebase_path("$output_dir/lib${output_name}.rlib", root_build_dir)
     _searchdir = rebase_path(output_dir, root_build_dir)
     metadata = {
+      if (defined(invoker.metadata)) {
+        forward_variables_from(invoker.metadata, "*")
+      }
       rlib = [ "--extern=$crate_name=$_rlib" ]
       searchdir = [ "-Ldependency=$_searchdir" ]
       rust_barrier = []

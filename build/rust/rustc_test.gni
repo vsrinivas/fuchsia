@@ -190,6 +190,16 @@ template("rustc_test_internal") {
             include = [ "//src/sys/test_runners/rust/default.shard.cml" ]
           },
         ]
+        rust_source_map = [
+          {
+            clippy =
+                get_label_info(":$target_name.clippy", "label_with_toolchain")
+            src = []
+            foreach(s, _sources) {
+              src += [ rebase_path(s, root_build_dir) ]
+            }
+          },
+        ]
       }
     }
 

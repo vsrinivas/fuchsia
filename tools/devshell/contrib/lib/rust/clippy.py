@@ -20,46 +20,33 @@ from rust import FUCHSIA_BUILD_DIR, HOST_PLATFORM, PREBUILT_THIRD_PARTY_DIR
 def main():
     args = parse_args()
     build_dir = Path(args.out_dir) if args.out_dir else FUCHSIA_BUILD_DIR
-    prebuilt = PREBUILT_THIRD_PARTY_DIR
-    if args.fuchsia_dir:
-        prebuilt = Path(args.fuchsia_dir) / "prebuilt" / "third_party"
-
-    ninja = [prebuilt / "ninja" / HOST_PLATFORM / "ninja", "-C", build_dir]
-    if args.verbose:
-        ninja += ["-v"]
 
     if args.files or args.files_to_targets:
         input_files = [os.path.relpath(f, build_dir) for f in args.input]
-        clippy_outputs = set()
-        try:
-            targets = subprocess.check_output(ninja + ["-t", "query"] + input_files)
-        except subprocess.CalledProcessError:
-            return 1
-        for path in targets.splitlines():
-            path = path.decode("utf-8")
-            if path.endswith(".clippy"):
-                clippy_outputs.add(path.strip())
-        clippy_outputs = list(clippy_outputs)
+        clippy_targets = files_to_targets(input_files, build_dir)
 
         if args.files_to_targets:
-            print("\n".join(clippy_outputs))
+            print("\n".join(clippy_targets))
             return 0
         if args.verbose:
             print("found the following targets for those source files:")
-            print("\n".join(clippy_outputs) + "\n")
-
-        if not args.no_build:
-            subprocess.run(ninja + clippy_outputs, stdout=sys.stderr)
-        output_files = [build_dir / out for out in clippy_outputs]
+            print("\n".join(clippy_targets) + "\n")
     else:
-        targets = []
+        clippy_targets = []
         for target in args.input:
-            gn_target = rust.GnTarget(target, fuchsia_dir=args.fuchsia_dir)
+            gn_target = rust.GnTarget(target, args.fuchsia_dir)
+            if gn_target.toolchain_suffix:
+                print("Clippy doesn't work on non-default toolchains yet")
+                continue  # TODO: fxb/591046
             gn_target.label_name += ".clippy"
-            targets.append(gn_target)
-        if not args.no_build:
-            subprocess.run(ninja + [t.ninja_target for t in targets], stdout=sys.stderr)
-        output_files = [t.gen_dir(build_dir).joinpath(t.label_name) for t in targets]
+            clippy_targets.append(gn_target)
+
+    output_files = [t.gen_dir(build_dir).joinpath(t.label_name) for t in clippy_targets]
+    if not output_files:
+        print("couldn't find any clippy outputs for those inputs")
+        return 1
+    if not args.no_build:
+        build_targets(output_files, build_dir, args.fuchsia_dir, args.verbose)
 
     lints = {}
     for clippy_output in output_files:
@@ -78,6 +65,31 @@ def main():
         print(json.dumps(lint) if args.raw else lint["rendered"])
     if not args.raw:
         print(len(lints), "warning(s) emitted\n")
+
+
+def build_targets(output_files, build_dir, fuchsia_dir, verbose):
+    prebuilt = PREBUILT_THIRD_PARTY_DIR
+    if fuchsia_dir:
+        prebuilt = Path(fuchsia_dir) / "prebuilt" / "third_party"
+    ninja = [prebuilt / "ninja" / HOST_PLATFORM / "ninja", "-C", build_dir]
+    if verbose:
+        ninja += ["-v"]
+    subprocess.run(
+        ninja + [os.path.relpath(f, build_dir) for f in output_files], stdout=sys.stderr
+    )
+
+
+def files_to_targets(input_files, build_dir):
+    targets = set()
+    with open(build_dir / "gen" / "build" / "rust" / "rust_target_mapping.json") as f:
+        raw = json.load(f)
+    for target in raw:
+        clippy_target = rust.GnTarget(target["clippy"], build_dir)
+        if clippy_target.toolchain_suffix:
+            continue  # TODO run clippy on non-default toolchains: fxb/591046
+        if any(f in target["src"] for f in input_files):
+            targets.add(clippy_target)
+    return targets
 
 
 def parse_args():

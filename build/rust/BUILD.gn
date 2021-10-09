@@ -121,3 +121,11 @@ if (is_host) {
     ]
   }
 }
+
+generated_file("full_mapping") {
+  testonly = true
+  outputs = [ "$target_gen_dir/rust_target_mapping.json" ]
+  output_conversion = "json"
+  data_keys = [ "rust_source_map" ]
+  deps = [ "//:default" ]
+}
