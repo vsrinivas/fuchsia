@@ -1324,7 +1324,9 @@ static_assert(
     ::fidl_test_nullable::wire::StructWithNullableString::PrimarySize);
 
 #ifdef __Fuchsia__
-
+template <>
+struct IsResource<::fidl_test_nullable::wire::StructWithNullableRequest>
+    : public std::true_type {};
 template <>
 struct IsFidlType<::fidl_test_nullable::wire::StructWithNullableRequest>
     : public std::true_type {};
@@ -1341,7 +1343,9 @@ static_assert(
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
-
+template <>
+struct IsResource<::fidl_test_nullable::wire::StructWithNullableProtocol>
+    : public std::true_type {};
 template <>
 struct IsFidlType<::fidl_test_nullable::wire::StructWithNullableProtocol>
     : public std::true_type {};
@@ -1358,7 +1362,9 @@ static_assert(
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
-
+template <>
+struct IsResource<::fidl_test_nullable::wire::StructWithNullableHandle>
+    : public std::true_type {};
 template <>
 struct IsFidlType<::fidl_test_nullable::wire::StructWithNullableHandle>
     : public std::true_type {};

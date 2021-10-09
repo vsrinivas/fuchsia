@@ -893,7 +893,10 @@ class TopLevelStruct::DecodedMessage final
 namespace fidl {
 
 #ifdef __Fuchsia__
-
+template <>
+struct IsResource<
+    ::fidl_test_encapsulatedstructs::wire::NonInlineStructTestStruct>
+    : public std::true_type {};
 template <>
 struct IsFidlType<
     ::fidl_test_encapsulatedstructs::wire::NonInlineStructTestStruct>
@@ -985,7 +988,9 @@ static_assert(
         PrimarySize);
 
 #ifdef __Fuchsia__
-
+template <>
+struct IsResource<::fidl_test_encapsulatedstructs::wire::TopLevelStruct>
+    : public std::true_type {};
 template <>
 struct IsFidlType<::fidl_test_encapsulatedstructs::wire::TopLevelStruct>
     : public std::true_type {};

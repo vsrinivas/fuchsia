@@ -104,3 +104,21 @@ TEST(Traits, ContainsHandle) {
   static_assert(fidl::ContainsHandle<fidl::Array<zx::vmo, 3>>::value);
 #endif  // __Fuchsia__
 }
+
+TEST(Traits, IsResource) {
+  static_assert(!fidl::IsResource<uint32_t>::value);
+  static_assert(!fidl::IsResource<fidl::Array<uint32_t, 3>>::value);
+  static_assert(!fidl::IsResource<test::wire::CopyableStruct>::value);
+  static_assert(fidl::IsResource<test::wire::MoveOnlyStruct>::value);
+  static_assert(fidl::IsResource<test::wire::TestResourceTable>::value);
+  static_assert(fidl::IsResource<test::wire::TestHandleTable>::value);
+  static_assert(fidl::IsResource<test::wire::TestXUnion>::value);
+  static_assert(fidl::IsResource<test::wire::TestUnion>::value);
+  static_assert(!fidl::IsResource<test::wire::TestStrictXUnion>::value);
+
+#ifdef __Fuchsia__
+  static_assert(fidl::IsResource<zx::handle>::value);
+  static_assert(fidl::IsResource<zx::vmo>::value);
+  static_assert(fidl::IsResource<fidl::Array<zx::vmo, 3>>::value);
+#endif  // __Fuchsia__
+}

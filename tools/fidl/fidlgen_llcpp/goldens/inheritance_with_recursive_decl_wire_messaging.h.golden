@@ -1194,7 +1194,10 @@ struct IsFidlMessage<::fidl::WireRequest<
     ::fidl_test_inheritancewithrecursivedecl::Parent::First>>
     : public std::true_type {};
 #ifdef __Fuchsia__
-
+template <>
+struct IsResource<::fidl::WireRequest<
+    ::fidl_test_inheritancewithrecursivedecl::Parent::First>>
+    : public std::true_type {};
 static_assert(
     sizeof(::fidl::WireRequest<
            ::fidl_test_inheritancewithrecursivedecl::Parent::First>) ==
@@ -1215,7 +1218,10 @@ struct IsFidlMessage<
     ::fidl::WireRequest<::fidl_test_inheritancewithrecursivedecl::Child::First>>
     : public std::true_type {};
 #ifdef __Fuchsia__
-
+template <>
+struct IsResource<
+    ::fidl::WireRequest<::fidl_test_inheritancewithrecursivedecl::Child::First>>
+    : public std::true_type {};
 static_assert(
     sizeof(::fidl::WireRequest<
            ::fidl_test_inheritancewithrecursivedecl::Child::First>) ==
@@ -1236,7 +1242,10 @@ struct IsFidlMessage<::fidl::WireRequest<
     ::fidl_test_inheritancewithrecursivedecl::Child::Second>>
     : public std::true_type {};
 #ifdef __Fuchsia__
-
+template <>
+struct IsResource<::fidl::WireRequest<
+    ::fidl_test_inheritancewithrecursivedecl::Child::Second>>
+    : public std::true_type {};
 static_assert(
     sizeof(::fidl::WireRequest<
            ::fidl_test_inheritancewithrecursivedecl::Child::Second>) ==

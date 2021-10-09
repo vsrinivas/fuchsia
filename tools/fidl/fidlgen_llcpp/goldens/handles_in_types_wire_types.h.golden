@@ -514,7 +514,9 @@ class HandlesInTypes::DecodedMessage final
 namespace fidl {
 
 #ifdef __Fuchsia__
-
+template <>
+struct IsResource<::fidl_test_handlesintypes::wire::HandlesInTypes>
+    : public std::true_type {};
 template <>
 struct IsFidlType<::fidl_test_handlesintypes::wire::HandlesInTypes>
     : public std::true_type {};
@@ -540,7 +542,9 @@ static_assert(sizeof(::fidl_test_handlesintypes::wire::HandlesInTypes) ==
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
-
+template <>
+struct IsResource<::fidl_test_handlesintypes::wire::TableWithHandle>
+    : public std::true_type {};
 template <>
 struct IsFidlType<::fidl_test_handlesintypes::wire::TableWithHandle>
     : public std::true_type {};
@@ -552,7 +556,9 @@ static_assert(std::is_standard_layout_v<
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
-
+template <>
+struct IsResource<::fidl_test_handlesintypes::wire::UnionWithHandle>
+    : public std::true_type {};
 template <>
 struct IsFidlType<::fidl_test_handlesintypes::wire::UnionWithHandle>
     : public std::true_type {};

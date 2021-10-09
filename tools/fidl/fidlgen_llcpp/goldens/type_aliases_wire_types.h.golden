@@ -203,7 +203,9 @@ class ExampleOfUseOfAliases::DecodedMessage final
 namespace fidl {
 
 #ifdef __Fuchsia__
-
+template <>
+struct IsResource<::fidl_test_typealiases::wire::ExampleOfUseOfAliases>
+    : public std::true_type {};
 template <>
 struct IsFidlType<::fidl_test_typealiases::wire::ExampleOfUseOfAliases>
     : public std::true_type {};

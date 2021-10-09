@@ -1525,7 +1525,10 @@ static_assert(std::is_standard_layout_v<::fidl_test_protocols::wire::Rights>);
 static_assert(sizeof(::fidl_test_protocols::wire::Rights) == sizeof(uint32_t));
 
 #ifdef __Fuchsia__
-
+template <>
+struct IsResource<
+    ::fidl_test_protocols::wire::WithErrorSyntaxHandleInResultResponse>
+    : public std::true_type {};
 template <>
 struct IsFidlType<
     ::fidl_test_protocols::wire::WithErrorSyntaxHandleInResultResponse>
@@ -1615,7 +1618,9 @@ static_assert(
         PrimarySize);
 
 #ifdef __Fuchsia__
-
+template <>
+struct IsResource<::fidl_test_protocols::wire::ProtocolEnds>
+    : public std::true_type {};
 template <>
 struct IsFidlType<::fidl_test_protocols::wire::ProtocolEnds>
     : public std::true_type {};
@@ -1635,7 +1640,10 @@ static_assert(sizeof(::fidl_test_protocols::wire::ProtocolEnds) ==
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
-
+template <>
+struct IsResource<
+    ::fidl_test_protocols::wire::WithErrorSyntaxHandleInResultResult>
+    : public std::true_type {};
 template <>
 struct IsFidlType<
     ::fidl_test_protocols::wire::WithErrorSyntaxHandleInResultResult>

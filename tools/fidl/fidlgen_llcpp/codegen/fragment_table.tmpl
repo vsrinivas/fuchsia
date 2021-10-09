@@ -307,6 +307,8 @@ void {{ . }}::_CloseHandles() {
 {{- define "Table:Traits:TypesHeader" }}
 {{ if .IsResourceType }}
 {{- IfdefFuchsia -}}
+template <>
+struct IsResource<{{ . }}> : public std::true_type {};
 {{- end }}
 template <>
 struct IsFidlType<{{ . }}> : public std::true_type {};

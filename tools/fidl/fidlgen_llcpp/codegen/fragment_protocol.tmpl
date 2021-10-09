@@ -81,6 +81,8 @@ template <>
 struct IsFidlMessage<{{ .WireRequest }}> : public std::true_type {};
 {{- if .Request.IsResource }}
 {{- IfdefFuchsia -}}
+template <>
+struct IsResource<{{ .WireRequest }}> : public std::true_type {};
 {{- end }}
 static_assert(sizeof({{ .WireRequest }})
     == {{ .WireRequest }}::PrimarySize);
@@ -99,6 +101,8 @@ template <>
 struct IsFidlMessage<{{ .WireResponse }}> : public std::true_type {};
 {{- if .Response.IsResource }}
 {{- IfdefFuchsia -}}
+template <>
+struct IsResource<{{ .WireResponse }}> : public std::true_type {};
 {{- end }}
 static_assert(sizeof({{ .WireResponse }})
     == {{ .WireResponse }}::PrimarySize);

@@ -20,6 +20,7 @@
 //
 // |IsFidlType<T>|    resolves to std::true_type.
 // |IsFidlMessage<T>| resolves to std::true_type iff |T| is a transactional message.
+// |IsResource<T>|    resolves to std::true_type iff |T| is a resource type.
 // |T::MaxNumHandles| is a uint32_t specifying the upper bound on the number of contained handles.
 // |T::PrimarySize|   is a uint32_t specifying the size in bytes of the inline part of the message.
 // |T::MaxOutOfLine|  is a uint32_t specifying the upper bound on the out-of-line message size.
@@ -81,6 +82,21 @@ template <> struct IsFidlType<float> : public std::true_type {};
 template <> struct IsFidlType<double> : public std::true_type {};
 // clang-format on
 
+// A type trait that indicates whether the given type is a resource type
+// i.e. can contain handles.
+#ifdef __Fuchsia__
+template <typename T>
+struct IsResource : public std::is_base_of<zx::object_base, T> {
+  static_assert(IsFidlType<T>::value, "IsResource only defined on FIDL types.");
+};
+#else
+template <typename T>
+struct IsResource : public std::false_type {
+  static_assert(IsFidlType<T>::value, "IsResource only defined on FIDL types.");
+};
+#endif
+// Code-gen will explicitly conform the generated FIDL types to IsResource.
+
 // String
 class StringView;
 template <>
@@ -103,6 +119,8 @@ struct IsFidlType<VectorView<E>> : public IsFidlType<E> {};
 
 template <typename T, typename Enable = void>
 struct IsVectorView : std::false_type {};
+template <typename E>
+struct IsResource<VectorView<E>> : public IsResource<E> {};
 template <typename T>
 struct IsVectorView<VectorView<T>, void> : std::true_type {};
 template <typename T>
@@ -176,6 +194,12 @@ template <typename Protocol>
 class ServerEnd;
 
 template <typename Protocol>
+struct IsResource<ClientEnd<Protocol>> : public std::true_type {};
+
+template <typename Protocol>
+struct IsResource<ServerEnd<Protocol>> : public std::true_type {};
+
+template <typename Protocol>
 struct ContainsHandle<ClientEnd<Protocol>> : std::true_type {};
 template <typename Protocol>
 struct ContainsHandle<ServerEnd<Protocol>> : std::true_type {};
@@ -194,6 +218,8 @@ template <typename T, size_t N>
 struct Array;
 template <typename T, size_t N>
 struct ContainsHandle<Array<T, N>> : ContainsHandle<T> {};
+template <typename T, size_t N>
+struct IsResource<Array<T, N>> : public IsResource<T> {};
 
 // Code-gen will explicitly conform the generated FIDL structures to IsFidlType.
 

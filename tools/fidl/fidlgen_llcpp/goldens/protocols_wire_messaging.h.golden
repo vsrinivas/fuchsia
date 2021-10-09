@@ -14002,7 +14002,10 @@ struct IsFidlMessage<::fidl::WireRequest<
     ::fidl_test_protocols::HandleRightsProtocol::NoResponseMethod>>
     : public std::true_type {};
 #ifdef __Fuchsia__
-
+template <>
+struct IsResource<::fidl::WireRequest<
+    ::fidl_test_protocols::HandleRightsProtocol::NoResponseMethod>>
+    : public std::true_type {};
 static_assert(
     sizeof(::fidl::WireRequest<
            ::fidl_test_protocols::HandleRightsProtocol::NoResponseMethod>) ==
@@ -14023,7 +14026,10 @@ struct IsFidlMessage<::fidl::WireRequest<
     ::fidl_test_protocols::HandleRightsProtocol::ResponseMethod>>
     : public std::true_type {};
 #ifdef __Fuchsia__
-
+template <>
+struct IsResource<::fidl::WireRequest<
+    ::fidl_test_protocols::HandleRightsProtocol::ResponseMethod>>
+    : public std::true_type {};
 static_assert(
     sizeof(::fidl::WireRequest<
            ::fidl_test_protocols::HandleRightsProtocol::ResponseMethod>) ==
@@ -14044,7 +14050,10 @@ struct IsFidlMessage<::fidl::WireResponse<
     ::fidl_test_protocols::HandleRightsProtocol::ResponseMethod>>
     : public std::true_type {};
 #ifdef __Fuchsia__
-
+template <>
+struct IsResource<::fidl::WireResponse<
+    ::fidl_test_protocols::HandleRightsProtocol::ResponseMethod>>
+    : public std::true_type {};
 static_assert(
     sizeof(::fidl::WireResponse<
            ::fidl_test_protocols::HandleRightsProtocol::ResponseMethod>) ==
@@ -14065,7 +14074,10 @@ struct IsFidlMessage<
     ::fidl::WireResponse<::fidl_test_protocols::HandleRightsProtocol::AnEvent>>
     : public std::true_type {};
 #ifdef __Fuchsia__
-
+template <>
+struct IsResource<
+    ::fidl::WireResponse<::fidl_test_protocols::HandleRightsProtocol::AnEvent>>
+    : public std::true_type {};
 static_assert(
     sizeof(::fidl::WireResponse<
            ::fidl_test_protocols::HandleRightsProtocol::AnEvent>) ==
@@ -14388,7 +14400,10 @@ struct IsFidlMessage<
     ::fidl::WireRequest<::fidl_test_protocols::WithProtocolEnds::ClientEnds>>
     : public std::true_type {};
 #ifdef __Fuchsia__
-
+template <>
+struct IsResource<
+    ::fidl::WireRequest<::fidl_test_protocols::WithProtocolEnds::ClientEnds>>
+    : public std::true_type {};
 static_assert(
     sizeof(::fidl::WireRequest<
            ::fidl_test_protocols::WithProtocolEnds::ClientEnds>) ==
@@ -14408,7 +14423,10 @@ struct IsFidlMessage<
     ::fidl::WireResponse<::fidl_test_protocols::WithProtocolEnds::ClientEnds>>
     : public std::true_type {};
 #ifdef __Fuchsia__
-
+template <>
+struct IsResource<
+    ::fidl::WireResponse<::fidl_test_protocols::WithProtocolEnds::ClientEnds>>
+    : public std::true_type {};
 static_assert(
     sizeof(::fidl::WireResponse<
            ::fidl_test_protocols::WithProtocolEnds::ClientEnds>) ==
@@ -14428,7 +14446,10 @@ struct IsFidlMessage<
     ::fidl::WireRequest<::fidl_test_protocols::WithProtocolEnds::ServerEnds>>
     : public std::true_type {};
 #ifdef __Fuchsia__
-
+template <>
+struct IsResource<
+    ::fidl::WireRequest<::fidl_test_protocols::WithProtocolEnds::ServerEnds>>
+    : public std::true_type {};
 static_assert(
     sizeof(::fidl::WireRequest<
            ::fidl_test_protocols::WithProtocolEnds::ServerEnds>) ==
@@ -14448,7 +14469,10 @@ struct IsFidlMessage<
     ::fidl::WireResponse<::fidl_test_protocols::WithProtocolEnds::ServerEnds>>
     : public std::true_type {};
 #ifdef __Fuchsia__
-
+template <>
+struct IsResource<
+    ::fidl::WireResponse<::fidl_test_protocols::WithProtocolEnds::ServerEnds>>
+    : public std::true_type {};
 static_assert(
     sizeof(::fidl::WireResponse<
            ::fidl_test_protocols::WithProtocolEnds::ServerEnds>) ==
@@ -14468,7 +14492,10 @@ struct IsFidlMessage<::fidl::WireRequest<
     ::fidl_test_protocols::WithProtocolEnds::StructContainingEnds>>
     : public std::true_type {};
 #ifdef __Fuchsia__
-
+template <>
+struct IsResource<::fidl::WireRequest<
+    ::fidl_test_protocols::WithProtocolEnds::StructContainingEnds>>
+    : public std::true_type {};
 static_assert(
     sizeof(::fidl::WireRequest<
            ::fidl_test_protocols::WithProtocolEnds::StructContainingEnds>) ==
@@ -14489,7 +14516,10 @@ struct IsFidlMessage<::fidl::WireResponse<
     ::fidl_test_protocols::WithProtocolEnds::StructContainingEnds>>
     : public std::true_type {};
 #ifdef __Fuchsia__
-
+template <>
+struct IsResource<::fidl::WireResponse<
+    ::fidl_test_protocols::WithProtocolEnds::StructContainingEnds>>
+    : public std::true_type {};
 static_assert(
     sizeof(::fidl::WireResponse<
            ::fidl_test_protocols::WithProtocolEnds::StructContainingEnds>) ==
@@ -14693,7 +14723,10 @@ struct IsFidlMessage<::fidl::WireResponse<
     ::fidl_test_protocols::WithErrorSyntax::HandleInResult>>
     : public std::true_type {};
 #ifdef __Fuchsia__
-
+template <>
+struct IsResource<::fidl::WireResponse<
+    ::fidl_test_protocols::WithErrorSyntax::HandleInResult>>
+    : public std::true_type {};
 static_assert(
     sizeof(::fidl::WireResponse<
            ::fidl_test_protocols::WithErrorSyntax::HandleInResult>) ==
@@ -14812,7 +14845,10 @@ struct IsFidlMessage<
     ::fidl::WireRequest<::fidl_test_protocols::ChannelProtocol::TakeHandle>>
     : public std::true_type {};
 #ifdef __Fuchsia__
-
+template <>
+struct IsResource<
+    ::fidl::WireRequest<::fidl_test_protocols::ChannelProtocol::TakeHandle>>
+    : public std::true_type {};
 static_assert(
     sizeof(::fidl::WireRequest<
            ::fidl_test_protocols::ChannelProtocol::TakeHandle>) ==
@@ -14847,7 +14883,10 @@ struct IsFidlMessage<
     ::fidl::WireRequest<::fidl_test_protocols::ChannelProtocol::MutateSocket>>
     : public std::true_type {};
 #ifdef __Fuchsia__
-
+template <>
+struct IsResource<
+    ::fidl::WireRequest<::fidl_test_protocols::ChannelProtocol::MutateSocket>>
+    : public std::true_type {};
 static_assert(
     sizeof(::fidl::WireRequest<
            ::fidl_test_protocols::ChannelProtocol::MutateSocket>) ==
@@ -14868,7 +14907,10 @@ struct IsFidlMessage<
     ::fidl::WireResponse<::fidl_test_protocols::ChannelProtocol::MutateSocket>>
     : public std::true_type {};
 #ifdef __Fuchsia__
-
+template <>
+struct IsResource<
+    ::fidl::WireResponse<::fidl_test_protocols::ChannelProtocol::MutateSocket>>
+    : public std::true_type {};
 static_assert(
     sizeof(::fidl::WireResponse<
            ::fidl_test_protocols::ChannelProtocol::MutateSocket>) ==

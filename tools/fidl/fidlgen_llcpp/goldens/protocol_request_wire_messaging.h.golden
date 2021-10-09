@@ -2032,7 +2032,10 @@ struct IsFidlMessage<
     ::fidl::WireResponse<::fidl_test_protocolrequest::Parent::GetChild>>
     : public std::true_type {};
 #ifdef __Fuchsia__
-
+template <>
+struct IsResource<
+    ::fidl::WireResponse<::fidl_test_protocolrequest::Parent::GetChild>>
+    : public std::true_type {};
 static_assert(
     sizeof(
         ::fidl::WireResponse<::fidl_test_protocolrequest::Parent::GetChild>) ==
@@ -2067,7 +2070,10 @@ struct IsFidlMessage<
     ::fidl::WireResponse<::fidl_test_protocolrequest::Parent::GetChildRequest>>
     : public std::true_type {};
 #ifdef __Fuchsia__
-
+template <>
+struct IsResource<
+    ::fidl::WireResponse<::fidl_test_protocolrequest::Parent::GetChildRequest>>
+    : public std::true_type {};
 static_assert(
     sizeof(::fidl::WireResponse<
            ::fidl_test_protocolrequest::Parent::GetChildRequest>) ==
@@ -2088,7 +2094,10 @@ struct IsFidlMessage<
     ::fidl::WireRequest<::fidl_test_protocolrequest::Parent::TakeChild>>
     : public std::true_type {};
 #ifdef __Fuchsia__
-
+template <>
+struct IsResource<
+    ::fidl::WireRequest<::fidl_test_protocolrequest::Parent::TakeChild>>
+    : public std::true_type {};
 static_assert(
     sizeof(
         ::fidl::WireRequest<::fidl_test_protocolrequest::Parent::TakeChild>) ==
@@ -2109,7 +2118,10 @@ struct IsFidlMessage<
     ::fidl::WireRequest<::fidl_test_protocolrequest::Parent::TakeChildRequest>>
     : public std::true_type {};
 #ifdef __Fuchsia__
-
+template <>
+struct IsResource<
+    ::fidl::WireRequest<::fidl_test_protocolrequest::Parent::TakeChildRequest>>
+    : public std::true_type {};
 static_assert(
     sizeof(::fidl::WireRequest<
            ::fidl_test_protocolrequest::Parent::TakeChildRequest>) ==
