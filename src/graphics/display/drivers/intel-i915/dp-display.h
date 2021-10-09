@@ -181,8 +181,9 @@ class DpDisplay : public DisplayDevice {
   // between the minimum brightness and 1.
   double GetBacklightBrightness();
 
-  // DisplayDevice override:
+  // DisplayDevice overrides:
   bool Query() final;
+  void InitWithDpllState(struct dpll_state* dpll_state) final;
 
   uint8_t lane_count() const { return dp_lane_count_; }
   uint32_t link_rate_mhz() const { return dp_link_rate_mhz_; }
@@ -231,6 +232,8 @@ class DpDisplay : public DisplayDevice {
   zx_status_t SetBacklightState(bool power, double brightness) override;
   zx_status_t GetBacklightState(bool* power, double* brightness) override;
 
+  void SetLinkRate(uint32_t value);
+
   // The object referenced by this pointer must outlive the DpDisplay.
   DpcdChannel* dp_aux_;  // weak
 
@@ -239,6 +242,16 @@ class DpDisplay : public DisplayDevice {
 
   // The current lane count and link rate. 0 if invalid/uninitialized.
   uint8_t dp_lane_count_ = 0;
+
+  // The current per-lane link rate configuration. Use SetLinkRate to mutate the value which also
+  // updates the related inspect properties.
+  //
+  // These values can be initialized by:
+  //   1. InitWithDpllState based on an the current DPLL state
+  //   2. Init, which selects the highest supported link rate
+  //
+  // The lane count is always initialized to the maximum value that the device can support in
+  // Query().
   uint32_t dp_link_rate_mhz_ = 0;
   std::optional<uint8_t> dp_link_rate_table_idx_;
 

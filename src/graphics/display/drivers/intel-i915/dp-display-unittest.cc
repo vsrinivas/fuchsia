@@ -118,13 +118,53 @@ TEST_F(DpDisplayTest, MaxLaneCount) {
 }
 
 // Tests that the link rate is set to the maximum supported rate based on DPCD data upon
-// initialization.
-TEST_F(DpDisplayTest, LinkRate) {
+// initialization via Init().
+TEST_F(DpDisplayTest, LinkRateSelectionViaInit) {
+  // Set up the IGD, DPLL, panel power control, and DisplayPort lane status registers for
+  // DpDisplay::Init() to succeed. Configuring the IGD op region to indicate eDP will cause
+  // Controller to assign DPLL0 to the display.
+
+  // TODO(fxbug.dev/83998): It shouldn't be necessary to rely on this logic in Controller to test
+  // DpDisplay. Can DpDisplay be told that it is eDP during construction time instead of querying
+  // Controller for it every time?
+  controller()->igd_opregion_for_testing()->SetIsEdpForTesting(registers::DDI_A, true);
+  auto dpll_status = registers::DpllStatus::Get().ReadFrom(mmio_buffer());
+  dpll_status.set_reg_value(1u);
+  dpll_status.WriteTo(mmio_buffer());
+
+  auto panel_status = registers::PanelPowerStatus::Get().ReadFrom(mmio_buffer());
+  panel_status.set_on_status(1);
+  panel_status.WriteTo(mmio_buffer());
+
+  auto power_well = registers::PowerWellControl2::Get().ReadFrom(mmio_buffer());
+  power_well.ddi_io_power_state(registers::DDI_A).set(1);
+  power_well.WriteTo(mmio_buffer());
+
+  fake_dpcd()->registers[dpcd::DPCD_LANE0_1_STATUS] = 0xFF;
   fake_dpcd()->SetMaxLinkRate(dpcd::LinkBw::k5400Mbps);
 
   auto display = MakeDisplay(registers::DDI_A);
   ASSERT_NE(nullptr, display);
+
+  EXPECT_TRUE(display->Init());
   EXPECT_EQ(5400, display->link_rate_mhz());
+}
+
+// Tests that the link rate is set to a caller-assigned value upon initialization with
+// InitWithDpllState.
+TEST_F(DpDisplayTest, LinkRateSelectionViaInitWithDpllState) {
+  // The max link rate should be disregarded by InitWithDpllState.
+  fake_dpcd()->SetMaxLinkRate(dpcd::LinkBw::k5400Mbps);
+
+  auto display = MakeDisplay(registers::DDI_A);
+  ASSERT_NE(nullptr, display);
+
+  i915::dpll_state_t dpll_state = {
+      .is_hdmi = false,
+      .dp_rate = registers::DpllControl1::LinkRate::k2160Mhz,
+  };
+  display->InitWithDpllState(&dpll_state);
+  EXPECT_EQ(4320, display->link_rate_mhz());
 }
 
 // Tests that the brightness value is obtained using the i915 south backlight control register

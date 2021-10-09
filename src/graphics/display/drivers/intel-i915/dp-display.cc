@@ -111,8 +111,7 @@ void GetDpDdiBufTransEntries(uint16_t device_id, const ddi_buf_trans_entry** ent
       *i_boost = 0x1;
       *count = static_cast<unsigned>(std::size(dp_ddi_buf_trans_skl_hs));
     }
-  } else {
-    ZX_DEBUG_ASSERT_MSG(is_kbl(device_id), "Expected kbl device");
+  } else if (is_kbl(device_id)) {
     if (is_kbl_u(device_id)) {
       *entries = dp_ddi_buf_trans_kbl_u;
       *i_boost = 0x1;
@@ -126,6 +125,10 @@ void GetDpDdiBufTransEntries(uint16_t device_id, const ddi_buf_trans_entry** ent
       *i_boost = 0x3;
       *count = static_cast<unsigned>(std::size(dp_ddi_buf_trans_kbl_hs));
     }
+  } else {
+    zxlogf(ERROR, "Unrecognized i915 device id: %#.4x", device_id);
+    *count = 0;
+    *i_boost = 0;
   }
 }
 
@@ -189,8 +192,7 @@ fit::result<registers::DpllControl1::LinkRate> LinkClockToDpllLinkRate(uint32_t 
   return fit::error();
 }
 
-__UNUSED fit::result<uint32_t> DpllLinkRateToLinkClock(
-    registers::DpllControl1::LinkRate link_rate) {
+fit::result<uint32_t> DpllLinkRateToLinkClock(registers::DpllControl1::LinkRate link_rate) {
   using LinkRate = registers::DpllControl1::LinkRate;
   switch (link_rate) {
     case LinkRate::k2700Mhz:
@@ -1121,17 +1123,6 @@ bool DpDisplay::Query() {
   ZX_ASSERT(!dp_link_rate_table_idx_.has_value());
   ZX_ASSERT(!capabilities_->supported_link_rates_mbps().empty());
 
-  // Pick the maximum supported link rate.
-  uint8_t index = static_cast<uint8_t>(capabilities_->supported_link_rates_mbps().size() - 1);
-  uint32_t link_rate = capabilities_->supported_link_rates_mbps()[index];
-
-  zxlogf(INFO, "Selected maximum supported DisplayPort link rate: %u Mbps/lane", link_rate);
-  dp_link_rate_mhz_ = link_rate;
-  dp_link_rate_mhz_inspect_.Set(link_rate);
-  if (capabilities_->use_link_rate_table()) {
-    dp_link_rate_table_idx_ = index;
-  }
-
   uint8_t last = static_cast<uint8_t>(capabilities_->supported_link_rates_mbps().size() - 1);
   zxlogf(INFO, "Found %s monitor (max link rate: %d MHz, lane count: %d)",
          (controller()->igd_opregion().IsEdp(ddi()) ? "eDP" : "DP"),
@@ -1189,6 +1180,21 @@ bool DpDisplay::InitDdi() {
   // If the link is already trained, assume output is working
   if (status.interlane_align_done()) {
     return true;
+  }
+
+  // Determine the current link rate if one hasn't been assigned.
+  if (dp_link_rate_mhz_ == 0) {
+    ZX_ASSERT(!capabilities_->supported_link_rates_mbps().empty());
+
+    // Pick the maximum supported link rate.
+    uint8_t index = static_cast<uint8_t>(capabilities_->supported_link_rates_mbps().size() - 1);
+    uint32_t link_rate = capabilities_->supported_link_rates_mbps()[index];
+
+    zxlogf(INFO, "Selected maximum supported DisplayPort link rate: %u Mbps/lane", link_rate);
+    SetLinkRate(link_rate);
+    if (capabilities_->use_link_rate_table()) {
+      dp_link_rate_table_idx_ = index;
+    }
   }
 
   auto dpll_link_rate = LinkClockToDpllLinkRate(dp_link_rate_mhz_);
@@ -1253,6 +1259,31 @@ bool DpDisplay::InitDdi() {
   }
 
   return true;
+}
+
+void DpDisplay::InitWithDpllState(struct dpll_state* dpll_state) {
+  if (dpll_state == nullptr) {
+    return;
+  }
+
+  ZX_DEBUG_ASSERT(!dpll_state->is_hdmi);
+  if (dpll_state->is_hdmi) {
+    zxlogf(ERROR, "HDMI dpll_state is given to DpDisplay!");
+    return;
+  }
+
+  // Some display (e.g. eDP) may have already been configured by the bootloader with a
+  // link clock. Assign the link rate based on the already enabled DPLL.
+  if (dp_link_rate_mhz_ == 0) {
+    fit::result<uint32_t> link_rate = DpllLinkRateToLinkClock(dpll_state->dp_rate);
+    if (link_rate.is_ok()) {
+      zxlogf(INFO, "Selected pre-configured DisplayPort link rate: %u Mbps/lane",
+             link_rate.value());
+      SetLinkRate(link_rate.value());
+    } else {
+      zxlogf(ERROR, "Invalid DPLL link rate value: %u", static_cast<uint8_t>(dpll_state->dp_rate));
+    }
+  }
 }
 
 bool DpDisplay::ComputeDpllState(uint32_t pixel_clock_10khz, struct dpll_state* config) {
@@ -1535,6 +1566,11 @@ zx_status_t DpDisplay::GetBacklightState(bool* power, double* brightness) {
   *power = IsBacklightOn();
   *brightness = GetBacklightBrightness();
   return ZX_OK;
+}
+
+void DpDisplay::SetLinkRate(uint32_t value) {
+  dp_link_rate_mhz_ = value;
+  dp_link_rate_mhz_inspect_.Set(value);
 }
 
 bool DpDisplay::CheckPixelRate(uint64_t pixel_rate) {

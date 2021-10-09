@@ -232,7 +232,13 @@ TEST_F(IntegrationTest, InitFailsIfBootloaderGetInfoFails) {
   EXPECT_EQ(0u, addr);
 }
 
-// TODO(fxbug.dev/85836): Add test for display initialization by InitOp.
+// TODO(fxbug.dev/85836): Add tests for DisplayPort display enumeration by InitOp, covering the
+// following cases:
+//   - Display found during start up but not already powered.
+//   - Display found during start up but already powered up.
+//   - Display added and removed in a hotplug event.
+// TODO(fxbug.dev/86314): Add test for HDMI display enumeration by InitOp.
+// TODO(fxbug.dev/86315): Add test for DVI display enumeration by InitOp.
 
 TEST_F(IntegrationTest, GttAllocationDoesNotOverlapBootloaderFramebuffer) {
   constexpr uint32_t kStride = 1920;

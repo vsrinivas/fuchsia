@@ -42,11 +42,27 @@ class DisplayDevice : public fidl::WireServer<FidlBacklight::Device> {
   bool AttachPipe(Pipe* pipe);
   void ApplyConfiguration(const display_config_t* config);
 
+  // TODO(fxbug.dev/86038): Initialization-related interactions between the Controller class and
+  // DisplayDevice can currently take different paths, with Init() being called conditionally in
+  // some cases (e.g. if the display has already been configured and powered up by the bootloader),
+  // which means a DisplayDevice can hold many states before being considered fully-initialized.
+  // It would be good to simplify this by:
+  // 1. Eliminating the "partially initialized" DisplayDevice state from the point of its owner.
+  // 2. Having a single Init factory function with options, such as the current DPLL state, which is
+  // always called to construct a DisplayDevice, possibly merging Query, Init, InitWithDpllState,
+  // and InitBacklight, into a single routine.
+  // 3. Perhaps what represents a DDI and a display attached to a DDI should be separate
+  // abstractions?
+
   // Query whether or not there is a display attached to this ddi. Does not
   // actually do any initialization - that is done by Init.
   virtual bool Query() = 0;
   // Does display mode agnostic ddi initialization - subclasses implement InitDdi.
   bool Init();
+  // Initialize the display based on existing hardware state. This method should be used instead of
+  // Init() when a display PLL has already been powered up and configured (e.g. by the bootlader)
+  // when the driver discovers the display. DDI initialization will not be performed in this case.
+  virtual void InitWithDpllState(struct dpll_state* dpll_state) {}
   // Initializes the display backlight for an already initialized display.
   void InitBacklight();
   // Resumes the ddi after suspend.

@@ -216,7 +216,6 @@ class IgdOpRegion {
   bool IsEdp(registers::Ddi ddi) const { return ddi_is_edp_[ddi]; }
 
   bool IsLowVoltageEdp(registers::Ddi ddi) const {
-    ZX_DEBUG_ASSERT(SupportsDp(ddi));
     // TODO(stevensd): Support the case where more than one type of edp panel is present.
     return ddi_is_edp_[ddi] && edp_is_low_voltage_;
   }
@@ -234,6 +233,7 @@ class IgdOpRegion {
   double GetMinBacklightBrightness() const { return min_backlight_brightness_; }
 
   void SetIsEdpForTesting(registers::Ddi ddi, bool is_edp) { ddi_is_edp_[ddi] = is_edp; }
+  void SetSupportsDpForTesting(registers::Ddi ddi, bool value) { ddi_supports_dp_[ddi] = value; }
 
  private:
   template <typename T>

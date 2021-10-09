@@ -121,6 +121,7 @@ bool DisplayDevice::Resume() {
 void DisplayDevice::LoadActiveMode() {
   pipe_->LoadActiveMode(&info_);
   info_.pixel_clock_10khz = LoadClockRateForTranscoder(pipe_->transcoder());
+  zxlogf(INFO, "Active pixel clock: %u0 kHz", info_.pixel_clock_10khz);
 }
 
 bool DisplayDevice::AttachPipe(Pipe* pipe) {

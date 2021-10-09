@@ -273,6 +273,10 @@ DisplayDevice* Controller::FindDevice(uint64_t display_id) {
 }
 
 bool Controller::BringUpDisplayEngine(bool resume) {
+  // This function follows the "Initialize Sequence" detailed in the "Sequences to Initialize
+  // Display" section in IHD-OS-KBL-Vol 12-1.17 p.112
+  // (intel-gfx-prm-osrc-kbl-vol12-display.pdf p.126)
+
   // Enable PCH Reset Handshake
   auto nde_rstwrn_opt = registers::NorthDERestetWarning::Get().ReadFrom(mmio_space());
   nde_rstwrn_opt.set_rst_pch_handshake_enable(1);
@@ -346,6 +350,10 @@ bool Controller::BringUpDisplayEngine(bool resume) {
     mmio_space()->Write32(kGtDriverMailboxData0, 0x3);
     mmio_space()->Write32(kGtDriverMailboxData1, 0x0);
     mmio_space()->Write32(kGtDriverMailboxInterface, 0x80000007);
+  } else {
+    auto cd_clk = registers::CdClockCtl::Get().ReadFrom(mmio_space());
+    zxlogf(INFO, "CDCLK already assigned by BIOS: freq select: %u, freq decimal: %u",
+           cd_clk.cd_freq_select(), cd_clk.cd_freq_decimal());
   }
 
   // Enable and wait for DBUF
@@ -550,7 +558,7 @@ const dpll_state_t* Controller::GetDpllState(registers::Dpll dpll) {
 std::unique_ptr<DisplayDevice> Controller::QueryDisplay(registers::Ddi ddi) {
   fbl::AllocChecker ac;
   if (igd_opregion_.SupportsDp(ddi)) {
-    zxlogf(DEBUG, "Checking for displayport monitor");
+    zxlogf(DEBUG, "Checking for DisplayPort monitor");
     auto dp_disp =
         fbl::make_unique_checked<DpDisplay>(&ac, this, next_id_, ddi, &dp_auxs_[ddi], &root_node_);
     if (ac.check() && reinterpret_cast<DisplayDevice*>(dp_disp.get())->Query()) {
@@ -558,7 +566,7 @@ std::unique_ptr<DisplayDevice> Controller::QueryDisplay(registers::Ddi ddi) {
     }
   }
   if (igd_opregion_.SupportsHdmi(ddi) || igd_opregion_.SupportsDvi(ddi)) {
-    zxlogf(DEBUG, "Checking for hdmi monitor");
+    zxlogf(DEBUG, "Checking for HDMI monitor");
     auto hdmi_disp = fbl::make_unique_checked<HdmiDisplay>(&ac, this, next_id_, ddi);
     if (ac.check() && reinterpret_cast<DisplayDevice*>(hdmi_disp.get())->Query()) {
       return hdmi_disp;
@@ -635,8 +643,8 @@ bool Controller::LoadHardwareState(registers::Ddi ddi, DisplayDevice* device) {
     dplls_[dpll].state.dp_rate = dpll_ctrl1.GetLinkRate(dpll);
   }
 
+  device->InitWithDpllState(&dplls_[dpll].state);
   device->AttachPipe(&pipes_[pipe]);
-
   device->LoadActiveMode();
 
   return true;
