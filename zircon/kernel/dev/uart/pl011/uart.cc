@@ -82,8 +82,12 @@ static inline void uartreg_or_eq(uintptr_t base, ptrdiff_t reg, uint32_t flags) 
 }
 
 // clear and set txim (transmit interrupt mask)
-static inline void pl011_mask_tx() { uartreg_and_eq(uart_base, UART_IMSC, ~(1 << 5)); }
-static inline void pl011_unmask_tx() { uartreg_or_eq(uart_base, UART_IMSC, (1 << 5)); }
+static inline void pl011_mask_tx() TA_REQ(uart_spinlock::Get()) {
+  uartreg_and_eq(uart_base, UART_IMSC, ~(1 << 5));
+}
+static inline void pl011_unmask_tx() TA_REQ(uart_spinlock::Get()) {
+  uartreg_or_eq(uart_base, UART_IMSC, (1 << 5));
+}
 
 // clear and set rtim and rxim (receive timeout and interrupt mask)
 static inline void pl011_mask_rx() TA_REQ(uart_spinlock::Get()) {
@@ -145,7 +149,10 @@ static interrupt_eoi pl011_uart_irq(void* arg) {
     // Signal any waiting Tx and mask Tx interrupts once we wakeup any
     // blocked threads.
     uart_dputc_event.Signal();
-    pl011_mask_tx();
+    {
+      Guard<MonitoredSpinLock, NoIrqSave> guard{uart_spinlock::Get(), SOURCE_TAG};
+      pl011_mask_tx();
+    }
   }
 
   return IRQ_EOI_DEACTIVATE;
