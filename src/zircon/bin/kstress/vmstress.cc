@@ -25,6 +25,7 @@
 #include <string.h>
 #include <threads.h>
 #include <unistd.h>
+#include <zircon/errors.h>
 #include <zircon/status.h>
 #include <zircon/syscalls.h>
 #include <zircon/syscalls/debug.h>
@@ -298,6 +299,7 @@ int SingleVmoTestInstance::pager_thread() {
               zx_status_get_string(status));
       return;
     }
+    // SingleVmoTestInstance doesn't currently resize the VMO, so this should work.
     status = pager_.supply_pages(vmo_, off, len, tmp_vmo, 0);
     if (status != ZX_OK) {
       fprintf(stderr, "failed to supply pages %d, error %d (%s)\n", pager_.get(), status,
@@ -1051,12 +1053,28 @@ class MultiVmoTestInstance : public TestInstance {
         return;
       }
 
-      result = pager.supply_pages(vmo, packet.page_request.offset, packet.page_request.length,
-                                  aux_vmo, 0);
-      // If the underlying VMO was resized then its possible the supply destination is now out of
-      // range. This is okay and we can just continue. In any other case something has gone
-      // horribly wrong.
-      if (result != ZX_OK && result != ZX_ERR_OUT_OF_RANGE) {
+      do {
+        // Get the latest VMO size, since using a cached value could get out of sync since we
+        // intentionally may call resize from multiple threads concurrently.
+        zx_info_vmo_t vmo_info{};
+        zx_status_t get_info_status =
+            vmo.get_info(ZX_INFO_VMO, &vmo_info, sizeof(vmo_info), nullptr, nullptr);
+        ZX_ASSERT(get_info_status == ZX_OK);
+        if (packet.page_request.offset >= vmo_info.size_bytes) {
+          // No need to supply since the requested range has been seen to be entirely outside the
+          // VMO after the request was created by the kernel.
+          result = ZX_OK;
+          break;
+        }
+        ZX_ASSERT(packet.page_request.offset < vmo_info.size_bytes);
+        uint64_t supply_length =
+            std::min(packet.page_request.length, vmo_info.size_bytes - packet.page_request.offset);
+        result = pager.supply_pages(vmo, packet.page_request.offset, supply_length, aux_vmo, 0);
+        // If the underlying VMO was resized then its possible the supply destination is now out of
+        // range. This is okay and we can try again if necessary to supply the pages that aren't
+        // beyond the VMO size.  In any other case something has gone horribly wrong.
+      } while (result == ZX_ERR_OUT_OF_RANGE);
+      if (result != ZX_OK) {
         PrintfAlways("Failed to supply pages: %d\n", result);
         return;
       }
