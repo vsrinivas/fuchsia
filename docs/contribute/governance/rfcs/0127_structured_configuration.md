@@ -1298,12 +1298,12 @@ ability for components to receive updates over FIDL.
 
 [cl_frequency]: https://fuchsia-review.googlesource.com/c/fuchsia/+/514762
 
-[src_cmc]: https://osscs.corp.google.com/fuchsia/fuchsia/+/main:tools/cmc/
-[src_timekeeper]: https://osscs.corp.google.com/fuchsia/fuchsia/+/main:src/sys/time/timekeeper/
-[src_launch_args]: https://osscs.corp.google.com/fuchsia/fuchsia/+/main:src/lib/fuchsia-component/src/server/mod.rs;drc=87993a6ba2f2f35204ee54ce5ad86a8a7e8817e7;l=809
-[src_procargs]: https://osscs.corp.google.com/fuchsia/fuchsia/+/main:zircon/system/public/zircon/processargs.h
+[src_cmc]: https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/cmc/
+[src_timekeeper]: https://cs.opensource.google/fuchsia/fuchsia/+/main:src/sys/time/timekeeper/
+[src_launch_args]: https://cs.opensource.google/fuchsia/fuchsia/+/main:src/lib/fuchsia-component/src/server/mod.rs;drc=87993a6ba2f2f35204ee54ce5ad86a8a7e8817e7;l=809
+[src_procargs]: https://cs.opensource.google/fuchsia/fuchsia/+/main:zircon/system/public/zircon/processargs.h
 
-[fidl_fuchsia_metrics_melf]: https://osscs.corp.google.com/fuchsia/fuchsia/+/main:sdk/fidl/fuchsia.metrics/metric_event_logger.fidl
-[fidl_fuchsia_settings]: https://osscs.corp.google.com/fuchsia/fuchsia/+/main:sdk/fidl/fuchsia.settings
-[fidl_fuchsia_sys2_resolver]: https://osscs.corp.google.com/fuchsia/fuchsia/+/main:sdk/fidl/fuchsia.sys2/runtime/component_resolver.fidl
-[fidl_fuchsia_sys2_child_decl]: https://osscs.corp.google.com/fuchsia/fuchsia/+/main:sdk/fidl/fuchsia.sys2/decls/child_decl.fidl
+[fidl_fuchsia_metrics_melf]: https://cs.opensource.google/fuchsia/fuchsia/+/main:sdk/fidl/fuchsia.metrics/metric_event_logger.fidl
+[fidl_fuchsia_settings]: https://cs.opensource.google/fuchsia/fuchsia/+/main:sdk/fidl/fuchsia.settings
+[fidl_fuchsia_sys2_resolver]: https://cs.opensource.google/fuchsia/fuchsia/+/main:sdk/fidl/fuchsia.sys2/runtime/component_resolver.fidl
+[fidl_fuchsia_sys2_child_decl]: https://cs.opensource.google/fuchsia/fuchsia/+/main:sdk/fidl/fuchsia.sys2/decls/child_decl.fidl
