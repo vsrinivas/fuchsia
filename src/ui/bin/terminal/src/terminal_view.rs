@@ -726,6 +726,8 @@ mod tests {
             .await
             .context(":bytes_written_are_processed_by_term after resize_if_needed")?;
 
+        // TODO: fxbug.dev/86245
+        #[allow(must_not_suspend)]
         let term = view.term.borrow();
 
         let col_pos_before = term.cursor().point.col;

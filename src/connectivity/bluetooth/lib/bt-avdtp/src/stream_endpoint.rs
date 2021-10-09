@@ -272,6 +272,8 @@ impl StreamEndpoint {
         if self.transport.is_none() {
             return Ok(());
         }
+        // TODO: fxbug.dev/86245
+        #[allow(must_not_suspend)]
         let channel =
             self.transport.as_ref().unwrap().try_read().map_err(|_e| Status::BAD_STATE)?;
         let closed_fut = channel.closed();

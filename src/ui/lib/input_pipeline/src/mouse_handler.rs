@@ -112,6 +112,8 @@ impl MouseHandler {
             }
             _ => return,
         };
+        // TODO: fxbug.dev/86245
+        #[allow(must_not_suspend)]
         let mut current_position = self.current_position.borrow_mut();
         *current_position = new_position;
 

@@ -216,6 +216,8 @@ impl FrameBufferViewStrategy {
     ) -> Result<DisplayResources, Error> {
         let usage = if use_spinel { FrameUsage::Gpu } else { FrameUsage::Cpu };
         let unsize = size.floor().to_u32();
+        // TODO: fxbug.dev/86245
+        #[allow(must_not_suspend)]
         let mut fb = frame_buffer.borrow_mut();
         let mut frame_collection_builder = FrameCollectionBuilder::new(
             unsize.width,
@@ -245,6 +247,8 @@ impl FrameBufferViewStrategy {
 
         let fb_pixel_format = if use_spinel { context.pixel_format() } else { pixel_format };
         let config_for_format = fb.get_config_for_format(fb_pixel_format);
+        // TODO: fxbug.dev/86245
+        #[allow(must_not_suspend)]
         let frame_collection = frame_collection_builder
             .build(collection_id, &config_for_format, true, &mut fb)
             .await?;

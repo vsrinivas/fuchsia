@@ -67,6 +67,8 @@ async fn main() -> Result<(), Error> {
                         responder.send().unwrap();
                     }
                     fstresstests::ChildRealmRequest::StopChildren { responder } => {
+                        // TODO: fxbug.dev/86245
+                        #[allow(must_not_suspend)]
                         let mut children_vec = children_vec.lock().unwrap();
                         let mut children = vec![];
                         children.append(&mut children_vec);

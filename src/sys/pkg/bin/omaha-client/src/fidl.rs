@@ -303,6 +303,8 @@ where
                 //
                 // TODO(fxbug.dev/65571): remove previous_out_of_space_failure and this
                 // rebooting behavior when pkg-cache can clear previous OTA packages on its own
+                // TODO: fxbug.dev/86245
+                #[allow(must_not_suspend)]
                 let server_ref = server.borrow();
                 let state_machine_state = server_ref.state.manager_state;
                 let previous_out_of_space_failure = server_ref.previous_out_of_space_failure;
@@ -494,6 +496,8 @@ where
             if channel == target_channel {
                 return;
             }
+            // TODO: fxbug.dev/86245
+            #[allow(must_not_suspend)]
             let server = server.borrow();
             let channel_cfg = match &server.channel_configs {
                 Some(cfgs) => cfgs.get_channel(&channel),
@@ -542,6 +546,8 @@ where
 
         Self::send_state_to_queue(Rc::clone(&server)).await;
 
+        // TODO: fxbug.dev/86245
+        #[allow(must_not_suspend)]
         let s = server.borrow();
         s.state_node.set(&s.state);
 
@@ -579,6 +585,8 @@ where
     }
 
     async fn send_state_to_queue(server: Rc<RefCell<Self>>) {
+        // TODO: fxbug.dev/86245
+        #[allow(must_not_suspend)]
         let server = server.borrow();
         let mut monitor_queue = server.monitor_queue.clone();
         let state = server.state.clone();
@@ -1096,6 +1104,8 @@ mod tests {
         );
         assert_eq!("current-channel", proxy.get_current().await.unwrap());
 
+        // TODO: fxbug.dev/86245
+        #[allow(must_not_suspend)]
         let fidl = fidl.borrow();
         fidl.app_set.set_target_channel(None, None).await;
 
@@ -1140,6 +1150,8 @@ mod tests {
 
         assert_eq!("current-channel", proxy.get_current().await.unwrap());
 
+        // TODO: fxbug.dev/86245
+        #[allow(must_not_suspend)]
         let fidl = fidl.borrow();
         fidl.app_set.set_target_channel(None, None).await;
 
@@ -1176,6 +1188,8 @@ mod tests {
             IncomingServices::ChannelControl,
         );
         proxy.set_target("target-channel").await.unwrap();
+        // TODO: fxbug.dev/86245
+        #[allow(must_not_suspend)]
         let fidl = fidl.borrow();
         let apps = fidl.app_set.to_vec().await;
         assert_eq!("target-channel", apps[0].get_target_channel());
@@ -1200,6 +1214,8 @@ mod tests {
             IncomingServices::ChannelControl,
         );
         proxy.set_target("").await.unwrap();
+        // TODO: fxbug.dev/86245
+        #[allow(must_not_suspend)]
         let fidl = fidl.borrow();
         let apps = fidl.app_set.to_vec().await;
         assert_eq!("default-channel", apps[0].get_target_channel());
@@ -1221,6 +1237,8 @@ mod tests {
             IncomingServices::ChannelControl,
         );
         proxy.set_target("target-channel").await.unwrap();
+        // TODO: fxbug.dev/86245
+        #[allow(must_not_suspend)]
         let fidl = fidl.borrow();
         let apps = fidl.app_set.to_vec().await;
         assert_eq!("target-channel", apps[0].get_target_channel());
@@ -1301,6 +1319,8 @@ mod tests {
             IncomingServices::ChannelControl,
         );
         proxy.set_target("target-channel").await.unwrap();
+        // TODO: fxbug.dev/86245
+        #[allow(must_not_suspend)]
         let fidl = fidl.borrow();
 
         assert_data_tree!(

@@ -77,6 +77,8 @@ impl SchedulingLib for ThroughputScheduler {
     // Waits until the next on_next_frame_begin() after a request_frame().
     async fn wait_to_update(&self) -> PresentParameters {
         // Mutably borrow the wait_guard to prevent any simultaneous waits.
+        // TODO: fxbug.dev/86245
+        #[allow(must_not_suspend)]
         let _guard = self.wait_guard.try_borrow_mut().expect("Only one wait at a time allowed");
         // Async tracing for the waiting period
         let _trace_guard = trace::async_enter!(

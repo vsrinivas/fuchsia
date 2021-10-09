@@ -40,6 +40,8 @@ impl PowerButton {
     /// Make sure that the power button does nothing.
     pub async fn inhibit(self: Arc<Self>) -> Result<PowerButtonInhibitor, Error> {
         {
+            // TODO: fxbug.dev/86245
+            #[allow(must_not_suspend)]
             let mut inner = self.inner.lock().unwrap();
             if inner.inhibit_count == 0 {
                 // Make sure the previous cancellation ran.

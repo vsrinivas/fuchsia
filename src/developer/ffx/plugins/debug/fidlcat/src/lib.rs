@@ -155,7 +155,11 @@ pub async fn execute_debug(
     let (socket, _) = listener.accept().await?;
 
     let (mut zxdb_rx, mut zxdb_tx) = socket.split();
+    // TODO: fxbug.dev/86245
+    #[allow(must_not_suspend)]
     let mut debug_agent_rx = rx.borrow_mut();
+    // TODO: fxbug.dev/86245
+    #[allow(must_not_suspend)]
     let mut debug_agent_tx = tx.borrow_mut();
 
     // Reading from zxdb (using the Unix socket) and writing to the debug agent.
