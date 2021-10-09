@@ -21,9 +21,11 @@ ffx_plugin("ffx_pdk_update") {
     "//third_party/rust_crates:serde",
     "//third_party/rust_crates:serde_json",
     "//third_party/rust_crates:serde_json5",
+    "//third_party/rust_crates:tempfile",
   ]
 
   inputs = [
+    "test_data/golden_artifact_lock.json",
     "test_data/artifact_spec.json",
     "test_data/artifact_groups.json",
     "test_data/artifact_groups2.json",

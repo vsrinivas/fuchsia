@@ -324,7 +324,7 @@ async fn process_spec(spec: &Spec, cmd: &UpdateCommand) -> Result<()> {
 
 #[cfg(test)]
 mod test {
-    use {super::*, serde_json::json, serde_json5};
+    use {super::*, serde_json::json, serde_json5, std::fs, std::path::PathBuf};
 
     /// Test artifact hash
     #[test]
@@ -441,5 +441,45 @@ mod test {
         assert!(!match_object(&group_3, &spec));
         let group_4 = json!({"a": 1, "c": {"d": false}});
         assert!(!match_object(&group_4, &spec));
+    }
+
+    #[test]
+    fn test_value_object_partial_cmp() {
+        let a = json!({"w": {"x": 1}});
+        let b = json!({"w": {"x": 2}});
+        let ordering = value_object_partial_cmp(&a, &b, &"/w/x".to_string());
+        assert_eq!(ordering, Some(Ordering::Less));
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_end_to_end() {
+        let tempdir = tempfile::tempdir().unwrap();
+        let out_filename = tempdir.path().join("artifact_lock.json");
+
+        // recreate the test_data directory
+        for (filename, data) in [
+            ("artifact_spec.json", include_str!("../test_data/artifact_spec.json")),
+            ("artifact_groups.json", include_str!("../test_data/artifact_groups.json")),
+            ("artifact_groups2.json", include_str!("../test_data/artifact_groups2.json")),
+        ] {
+            fs::write(tempdir.path().join(filename), data).expect("Unable to write file");
+        }
+
+        let cmd = UpdateCommand {
+            spec_file: PathBuf::from(tempdir.path().join("artifact_spec.json")),
+            out: out_filename.clone(),
+            artifact_root: Some(tempdir.path().display().to_string()),
+        };
+
+        let r = cmd_update(cmd).await;
+        assert!(r.is_ok());
+        let new_artifact_lock: Lock = File::open(&out_filename)
+            .map(BufReader::new)
+            .map(serde_json::from_reader)
+            .unwrap()
+            .unwrap();
+        let golden_artifact_lock: Lock =
+            serde_json::from_str(include_str!("../test_data/golden_artifact_lock.json")).unwrap();
+        assert_eq!(new_artifact_lock, golden_artifact_lock);
     }
 }

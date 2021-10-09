@@ -15,8 +15,8 @@
         "branch": "release",
         "creation_time": 1625136890.83762,
         "sdk_version": "5.20210630.1.1",
-        "user": "turquoise-npm-releaser@system.gserviceaccount.com",
-        "version": "turquoise_npm_20210701_0330"
+        "user": "npm-releaser@system.gserviceaccount.com",
+        "version": "npm_20210701_0330"
       },
       "name": "78c31e08-4890-4855-9f89-3337273c3b89"
     }

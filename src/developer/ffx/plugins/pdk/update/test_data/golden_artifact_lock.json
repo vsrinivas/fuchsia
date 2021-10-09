@@ -1,0 +1,67 @@
+{
+  "artifacts": [
+    {
+      "name": "flutter_aot_product_runner/0",
+      "type": "package",
+      "artifact_store": {
+        "name": "workstation_local_repo",
+        "type": "local",
+        "repo": null,
+        "artifact_group_name": "5bc31e08-4890-4855-9f89-3337273c3b89",
+        "content_address_storage": null
+      },
+      "attributes": {
+        "architecture": "x64",
+        "branch": "release",
+        "creation_time": "2021-09-06T11:37:36.054281",
+        "sdk_version": "5.20210630.1.1",
+        "user": "npm-releaser@system.gserviceaccount.com",
+        "version": "npm_20210701_0330"
+      },
+      "merkle": "46ae86ed0a14dc0c894ec3f8982ce54dbed9bb69a46593903b037f0167cd1d91",
+      "blobs": []
+    },
+    {
+      "name": "twentyfortyeight/0",
+      "type": "package",
+      "artifact_store": {
+        "name": "workstation_local_repo",
+        "type": "local",
+        "repo": null,
+        "artifact_group_name": "5bc31e08-4890-4855-9f89-3337273c3b89",
+        "content_address_storage": null
+      },
+      "attributes": {
+        "architecture": "x64",
+        "branch": "release",
+        "creation_time": "2021-09-06T11:37:36.054281",
+        "sdk_version": "5.20210630.1.1",
+        "user": "npm-releaser@system.gserviceaccount.com",
+        "version": "npm_20210701_0330"
+      },
+      "merkle": "10ded35b8849e64b074a1c3b3be85a521f11ab041c4a807a40caaca25f27833f",
+      "blobs": []
+    },
+    {
+      "name": "config-file",
+      "type": "package",
+      "artifact_store": {
+        "name": "config_file_local_repo",
+        "type": "local",
+        "repo": null,
+        "artifact_group_name": "78c31e08-4890-4855-9f89-3337273c3b89",
+        "content_address_storage": null
+      },
+      "attributes": {
+        "architecture": "x64",
+        "branch": "release",
+        "creation_time": 1625136890.83762,
+        "sdk_version": "5.20210630.1.1",
+        "user": "npm-releaser@system.gserviceaccount.com",
+        "version": "npm_20210701_0330"
+      },
+      "merkle": "65675a6ad7600c924549bd28a6b26b40691fcb213bb943d60e812912c737ccb4",
+      "blobs": []
+    }
+  ]
+}
