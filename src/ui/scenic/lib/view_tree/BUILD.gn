@@ -37,11 +37,13 @@ source_set("view_tree_snapshot") {
 }
 
 source_set("observer_registry") {
-  testonly = true
-
   sources = [
     "observer_registry.cc",
     "observer_registry.h",
   ]
-  public_deps = [ "//sdk/fidl/fuchsia.ui.observation.test" ]
+  public_deps = [
+    "//sdk/fidl/fuchsia.ui.observation.test",
+    "//sdk/lib/sys/cpp",
+    "//sdk/lib/syslog/cpp",
+  ]
 }

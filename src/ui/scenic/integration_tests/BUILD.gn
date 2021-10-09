@@ -10,6 +10,7 @@ group("integration_tests") {
   public_deps = [
     ":flatland_integration_tests",
     ":gfx_integration_tests",
+    ":observer_integration_tests",
   ]
 }
 
@@ -179,6 +180,22 @@ fuchsia_test_component("flatland_focus_integration_test") {
   deps = [ ":flatland_focus_integration_test_bin" ]
 }
 
+executable("observer_registry_integration_test_bin") {
+  testonly = true
+  sources = [ "observer_registry_integration_test.cc" ]
+  deps = [
+    ":common_deps",
+    "//sdk//fidl/fuchsia.ui.observation.geometry",
+    "//sdk//fidl/fuchsia.ui.observation.test",
+  ]
+}
+
+fuchsia_test_component("observer_registry_integration_test") {
+  component_name = "observer_registry_integration_test"
+  manifest = "meta/observer_registry_integration_test.cmx"
+  deps = [ ":observer_registry_integration_test_bin" ]
+}
+
 fuchsia_test_package("gfx_integration_tests") {
   test_components = [
     ":gfx_focus_integration_test",
@@ -189,6 +206,7 @@ fuchsia_test_package("gfx_integration_tests") {
     ":gfx_touch_integration_test",
     ":gfx_view_ref_installed_integration_test",
   ]
+
   test_specs = {
     environments = [ aemu_env ] + magma_libvulkan_hardware_envs
   }
@@ -204,6 +222,14 @@ fuchsia_test_package("flatland_integration_tests") {
     # TODO(fxbug.dev/71344): Should have the same environments as "gfx_integration_tests" above, but
     # Flatland display compositor currently crashes on aemu, so we skip it for now.
     environments = magma_libvulkan_hardware_envs
+  }
+  deps = [ "//src/ui/scenic:component" ]
+}
+
+fuchsia_test_package("observer_integration_tests") {
+  test_components = [ ":observer_registry_integration_test" ]
+  test_specs = {
+    environments = [ aemu_env ] + magma_libvulkan_hardware_envs
   }
   deps = [ "//src/ui/scenic:component" ]
 }

@@ -13,6 +13,7 @@ using fuchsia.ui.observation.geometry;
 /// Production uses should obtain observation protocols through a graphics
 /// factory function (such as |fuchsia.ui.scenic.Scenic.CreateSessionT|), which
 /// securely ties observation protocols to a specific graphics client.
+@discoverable
 protocol Registry {
     /// Sets up a channel for receiving global view geometry.
     ///

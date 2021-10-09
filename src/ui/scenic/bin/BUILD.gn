@@ -34,6 +34,7 @@ executable("bin") {
     "//src/ui/scenic/lib/screenshot",
     "//src/ui/scenic/lib/shutdown",
     "//src/ui/scenic/lib/shutdown:lifecycle_controller",
+    "//src/ui/scenic/lib/view_tree:observer_registry",
     "//src/ui/scenic/lib/view_tree:view_ref_installed",
     "//src/ui/scenic/lib/view_tree:view_tree_snapshot",
     "//third_party/rapidjson",

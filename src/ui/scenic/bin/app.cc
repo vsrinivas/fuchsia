@@ -521,6 +521,8 @@ void App::InitializeGraphics(std::shared_ptr<display::Display> display) {
         fit::bind_member(screenshot_manager_.get(), &screenshot::ScreenshotManager::CreateClient);
     // TODO (fxbug.dev/64652): AddPublicService()
   }
+
+  { observer_registry_.Publish(app_context_.get()); }
 }
 
 void App::InitializeInput() {

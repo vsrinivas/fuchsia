@@ -34,6 +34,7 @@
 #include "src/ui/scenic/lib/screenshot/screenshot_manager.h"
 #include "src/ui/scenic/lib/shutdown/lifecycle_controller_impl.h"
 #include "src/ui/scenic/lib/shutdown/shutdown_manager.h"
+#include "src/ui/scenic/lib/view_tree/observer_registry.h"
 #include "src/ui/scenic/lib/view_tree/view_ref_installed_impl.h"
 #include "src/ui/scenic/lib/view_tree/view_tree_snapshotter.h"
 
@@ -125,6 +126,8 @@ class App {
   std::unique_ptr<screenshot::ScreenshotManager> screenshot_manager_;
 
   view_tree::ViewRefInstalledImpl view_ref_installed_impl_;
+
+  view_tree::Registry observer_registry_;
 
   AnnotationRegistry annotation_registry_;
 
