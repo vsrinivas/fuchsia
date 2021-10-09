@@ -58,6 +58,10 @@ class Store {
   bool Contains(ReportId id);
 
  private:
+  bool Add(ReportId report_id, const std::string& program_shortname, StorageSize report_size,
+           const std::map<std::string, SizedData>& attachments, StoreMetadata& store_root,
+           std::vector<ReportId>* garbage_collected_reports);
+
   // Recreates |store_root| from the filesystem and initializes necessary state.
   bool RecreateFromFilesystem(StoreMetadata& store_root);
 
@@ -66,6 +70,12 @@ class Store {
 
   // Pick the root to store a report with size of |report_size| under.
   StoreMetadata& PickRootForStorage(StorageSize report_size);
+
+  // Returns true if another storage root can be used.
+  bool HasFallbackRoot(const StoreMetadata& store_root);
+
+  // Returns a storage root that can be used if |store_root| fails.
+  StoreMetadata& FallbackRoot(StoreMetadata& store_root);
 
   // Removes reports until |required_space| is free under |root_metadata| and returns the ReportIds
   // of the reports removed.

@@ -187,22 +187,44 @@ bool Store::Add(Report report, std::vector<ReportId>* garbage_collected_reports)
 
   auto& root_metadata = PickRootForStorage(report_size);
 
+  return Add(report.Id(), report.ProgramShortname(), report_size, attachments, root_metadata,
+             garbage_collected_reports);
+}
+
+bool Store::Add(const ReportId report_id, const std::string& program_shortname,
+                const StorageSize report_size, const std::map<std::string, SizedData>& attachments,
+                StoreMetadata& store_root, std::vector<ReportId>* garbage_collected_reports) {
+  // Delete the persisted files and attempt to store the report under a new directory.
+  auto on_error = [this, &store_root, report_id, program_shortname, report_size, &attachments,
+                   garbage_collected_reports](const std::optional<std::string>& report_dir) {
+    if (report_dir.has_value()) {
+      DeletePath(*report_dir);
+    }
+
+    if (!HasFallbackRoot(store_root)) {
+      return false;
+    }
+
+    auto& fallback_root = FallbackRoot(store_root);
+    FX_LOGST(INFO, tags_->Get(report_id)) << "Using fallback root: " << fallback_root.RootDir();
+
+    return Add(report_id, program_shortname, report_size, attachments, fallback_root,
+               garbage_collected_reports);
+  };
+
   // Ensure there's enough space in the store for the report.
-  if (!MakeFreeSpace(root_metadata, report_size, garbage_collected_reports)) {
-    FX_LOGST(ERROR, tags_->Get(report.Id())) << "Failed to make space for report";
-    return false;
+  if (!MakeFreeSpace(store_root, report_size, garbage_collected_reports)) {
+    FX_LOGST(ERROR, tags_->Get(report_id)) << "Failed to make space for report";
+    return on_error(std::nullopt);
   }
 
-  const std::string program_dir =
-      files::JoinPath(root_metadata.RootDir(), report.ProgramShortname());
-  const std::string report_dir = files::JoinPath(program_dir, std::to_string(report.Id()));
-
-  auto cleanup_on_error = fit::defer([report_dir] { DeletePath(report_dir); });
+  const std::string program_dir = files::JoinPath(store_root.RootDir(), program_shortname);
+  const std::string report_dir = files::JoinPath(program_dir, std::to_string(report_id));
 
   if (!files::CreateDirectory(report_dir)) {
-    FX_LOGST(ERROR, tags_->Get(report.Id()))
+    FX_LOGST(ERROR, tags_->Get(report_id))
         << "Failed to create directory for report: " << report_dir;
-    return false;
+    return on_error(std::nullopt);
   }
 
   std::vector<std::string> attachment_keys;
@@ -211,15 +233,13 @@ bool Store::Add(Report report, std::vector<ReportId>* garbage_collected_reports)
 
     // Write the report's content to the the filesystem.
     if (!WriteData(files::JoinPath(report_dir, key), data)) {
-      FX_LOGST(ERROR, tags_->Get(report.Id())) << "Failed to write attachment " << key;
-      return false;
+      FX_LOGST(ERROR, tags_->Get(report_id)) << "Failed to write attachment " << key;
+      return on_error(report_dir);
     }
   }
 
-  root_metadata.Add(report.Id(), report.ProgramShortname(), std::move(attachment_keys),
-                    report_size);
+  store_root.Add(report_id, program_shortname, std::move(attachment_keys), report_size);
 
-  cleanup_on_error.cancel();
   return true;
 }
 
@@ -387,6 +407,17 @@ StoreMetadata& Store::PickRootForStorage(const StorageSize report_size) {
   return (!cache_metadata_.IsDirectoryUsable() || cache_metadata_.RemainingSpace() < report_size)
              ? tmp_metadata_
              : cache_metadata_;
+}
+
+bool Store::HasFallbackRoot(const StoreMetadata& store_root) {
+  // Only /cache can fallback.
+  return &store_root == &cache_metadata_;
+}
+
+StoreMetadata& Store::FallbackRoot(StoreMetadata& store_root) {
+  FX_CHECK(HasFallbackRoot(store_root));
+  // Always fallback to /tmp.
+  return tmp_metadata_;
 }
 
 bool Store::MakeFreeSpace(const StoreMetadata& root_metadata, const StorageSize required_space,
