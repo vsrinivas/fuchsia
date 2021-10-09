@@ -5,76 +5,13 @@
 #include <zxtest/zxtest.h>
 
 #include "dp-display.h"
+#include "fake-dpcd-channel.h"
+
+using i915::testing::FakeDpcdChannel;
+using i915::testing::kDefaultLaneCount;
+using i915::testing::kMaxLinkRateTableEntries;
 
 namespace {
-
-constexpr uint8_t kDefaultLaneCount = 2;
-constexpr size_t kMaxLinkRateTableEntries =
-    (dpcd::DPCD_SUPPORTED_LINK_RATE_END + 1 - dpcd::DPCD_SUPPORTED_LINK_RATE_START) / 2;
-
-class FakeDpcdChannel : public i915::DpcdChannel {
- public:
-  FakeDpcdChannel() { registers.fill(0); }
-
-  // Populates the bare minimum of required fields to form a valid set of capabilities.
-  void SetDefaults() {
-    SetDpcdRevision(dpcd::Revision::k1_4);
-    SetMaxLaneCount(kDefaultLaneCount);
-    SetMaxLinkRate(dpcd::LinkBw::k1620Mbps);
-  }
-
-  void SetDpcdRevision(dpcd::Revision rev) {
-    registers[dpcd::DPCD_REV] = static_cast<uint8_t>(rev);
-  }
-
-  void SetMaxLinkRate(uint8_t value) { registers[dpcd::DPCD_MAX_LINK_RATE] = value; }
-
-  void SetMaxLaneCount(uint8_t value) { registers[dpcd::DPCD_MAX_LANE_COUNT] = value; }
-
-  void SetSinkCount(uint8_t value) { registers[dpcd::DPCD_SINK_COUNT] = value; }
-
-  void SetEdpCapable(dpcd::EdpRevision rev) {
-    dpcd::EdpConfigCap reg;
-    reg.set_dpcd_display_ctrl_capable(1);
-    registers[dpcd::DPCD_EDP_CONFIG] = reg.reg_value();
-    registers[dpcd::DPCD_EDP_REV] = static_cast<uint8_t>(rev);
-  }
-
-  void PopulateLinkRateTable(std::vector<uint16_t> values) {
-    std::memset(registers.data() + dpcd::DPCD_SUPPORTED_LINK_RATE_START, 0,
-                kMaxLinkRateTableEntries * 2);
-    for (unsigned i = 0; i < values.size() && i < kMaxLinkRateTableEntries; i++) {
-      unsigned offset = dpcd::DPCD_SUPPORTED_LINK_RATE_START + (i * 2);
-      registers[offset] = static_cast<uint8_t>(values[i] & 0xFF);
-      registers[offset + 1] = (values[i] >> 8);
-    }
-  }
-
-  // i915::DpcdChannel override:
-  bool DpcdRead(uint32_t addr, uint8_t* buf, size_t size) override {
-    if (addr + size > registers.size()) {
-      return false;
-    }
-
-    std::memcpy(buf, registers.data() + addr, size);
-    return true;
-  }
-
-  // i915::DpcdChannel override:
-  bool DpcdWrite(uint32_t addr, const uint8_t* buf, size_t size) override {
-    if (addr + size > registers.size()) {
-      return false;
-    }
-
-    std::memcpy(registers.data() + addr, buf, size);
-    return true;
-  }
-
-  // The full DPCD field mapping spans addresses 0x00000-0xFFFFF however it's sufficient for us to
-  // allocate only the subset that the driver uses. 0x800 contains all addresses up to and
-  // including eDP-specific registers (see eDP v1.4a, 2.9.3 "DPCD Field Address Mapping").
-  std::array<uint8_t, 0x800> registers;
-};
 
 TEST(DpCapabilitiesTest, NoSupportedLinkRates) {
   inspect::Node node;

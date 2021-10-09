@@ -196,33 +196,6 @@ TEST(IntelI915Display, SysmemInvalidType) {
   EXPECT_FALSE(collection.set_constraints_called());
 }
 
-TEST(IntelI915Display, BacklightValue) {
-  i915::Controller controller(nullptr);
-  inspect::Node node;
-  i915::DpAux dp_aux(registers::kDdis[0]);
-  i915::DpDisplay display(&controller, 0, registers::kDdis[0], &dp_aux, &node);
-
-  constexpr uint32_t kMinimumRegCount = 0xd0000 / sizeof(uint32_t);
-  std::vector<uint32_t> regs(kMinimumRegCount);
-  mmio_buffer_t buffer{.vaddr = FakeMmioPtr(regs.data()),
-                       .offset = 0,
-                       .size = regs.size() * sizeof(uint32_t),
-                       .vmo = ZX_HANDLE_INVALID};
-  controller.SetMmioForTesting(ddk::MmioBuffer(buffer));
-  registers::SouthBacklightCtl2::Get()
-      .FromValue(0)
-      .set_modulation_freq(1024)
-      .set_duty_cycle(512)
-      .WriteTo(controller.mmio_space());
-
-  const_cast<i915::IgdOpRegion&>(controller.igd_opregion())
-      .SetIsEdpForTesting(registers::kDdis[0], true);
-  EXPECT_EQ(0.5, display.GetBacklightBrightness());
-
-  // Unset so controller teardown doesn't crash.
-  controller.ResetMmioSpaceForTesting();
-}
-
 // Tests that DDK basic DDK lifecycle hooks function as expected.
 TEST_F(IntegrationTest, BindAndInit) {
   ASSERT_OK(i915::Controller::Create(parent()));

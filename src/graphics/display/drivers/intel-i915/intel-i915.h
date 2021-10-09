@@ -151,6 +151,13 @@ class Controller : public DeviceType,
   const IgdOpRegion& igd_opregion() const { return igd_opregion_; }
   Power* power() { return &power_; }
 
+  // Non-const getter to allow unit tests to modify the IGD.
+  // TODO(fxbug.dev/83998): Consider making a fake IGD object injectable as allowing mutable access
+  // to internal state that is intended to be externally immutable can be source of bugs if used
+  // incorrectly. The various "ForTesting" methods are a typical anti-pattern that exposes internal
+  // state and makes the class state machine harder to reason about.
+  IgdOpRegion* igd_opregion_for_testing() { return &igd_opregion_; }
+
   void HandleHotplug(registers::Ddi ddi, bool long_pulse);
   void HandlePipeVsync(registers::Pipe pipe, zx_time_t timestamp);
 

@@ -1074,7 +1074,7 @@ void CalculateRatio(uint32_t x, uint32_t y, uint32_t* m_out, uint32_t* n_out) {
 
 namespace i915 {
 
-DpDisplay::DpDisplay(Controller* controller, uint64_t id, registers::Ddi ddi, DpAux* dp_aux,
+DpDisplay::DpDisplay(Controller* controller, uint64_t id, registers::Ddi ddi, DpcdChannel* dp_aux,
                      inspect::Node* parent_node)
     : DisplayDevice(controller, id, ddi), dp_aux_(dp_aux) {
   ZX_ASSERT(dp_aux);

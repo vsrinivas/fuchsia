@@ -174,15 +174,21 @@ struct DpCapabilities final {
 
 class DpDisplay : public DisplayDevice {
  public:
-  DpDisplay(Controller* controller, uint64_t id, registers::Ddi ddi, DpAux* dp_aux,
+  DpDisplay(Controller* controller, uint64_t id, registers::Ddi ddi, DpcdChannel* dp_aux,
             inspect::Node* parent_node);
 
   // Gets the backlight brightness as a coefficient on the maximum brightness,
   // between the minimum brightness and 1.
   double GetBacklightBrightness();
 
- private:
+  // DisplayDevice override:
   bool Query() final;
+
+  uint8_t lane_count() const { return dp_lane_count_; }
+  uint32_t link_rate_mhz() const { return dp_link_rate_mhz_; }
+
+ private:
+  // DisplayDevice overrides:
   bool InitDdi() final;
   bool DdiModeset(const display_mode_t& mode, registers::Pipe pipe, registers::Trans trans) final;
   bool PipeConfigPreamble(const display_mode_t& mode, registers::Pipe pipe,
@@ -226,11 +232,12 @@ class DpDisplay : public DisplayDevice {
   zx_status_t GetBacklightState(bool* power, double* brightness) override;
 
   // The object referenced by this pointer must outlive the DpDisplay.
-  DpAux* dp_aux_;  // weak
+  DpcdChannel* dp_aux_;  // weak
 
   // Contains a value only if successfully initialized via Query().
   std::optional<DpCapabilities> capabilities_;
 
+  // The current lane count and link rate. 0 if invalid/uninitialized.
   uint8_t dp_lane_count_ = 0;
   uint32_t dp_link_rate_mhz_ = 0;
   std::optional<uint8_t> dp_link_rate_table_idx_;

@@ -77,6 +77,9 @@ test("intel-i915-test") {
   ]
   sources = [
     "dp-capabilities-unittest.cc",
+    "dp-display-unittest.cc",
+    "fake-dpcd-channel.cc",
+    "fake-dpcd-channel.h",
     "gtt-unittest.cc",
     "intel-i915-test.cc",
     "interrupts-unittest.cc",
