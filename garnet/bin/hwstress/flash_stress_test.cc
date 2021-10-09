@@ -284,7 +284,10 @@ TEST(Flash, DeletePartition) {
 
   StatusLine status;
   DestroyFlashTestPartitions(&status);
-  ASSERT_TRUE(open_partition(nullptr, kTestPartGUID.bytes(), 0, nullptr) != ZX_OK);
+  PartitionMatcher matcher{
+      .type_guid = kTestPartGUID.bytes(),
+  };
+  ASSERT_TRUE(open_partition(&matcher, 0, nullptr) != ZX_OK);
 }
 
 }  // namespace

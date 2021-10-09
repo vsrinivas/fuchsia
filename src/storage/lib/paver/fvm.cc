@@ -432,7 +432,10 @@ void RecommendWipe(const char* problem) {
 // until there are none left.
 zx_status_t WipeAllFvmPartitionsWithGUID(const fbl::unique_fd& fvm_fd, const uint8_t type_guid[]) {
   fbl::unique_fd old_part;
-  while ((old_part.reset(open_partition(nullptr, type_guid, ZX_MSEC(500), nullptr))), old_part) {
+  PartitionMatcher matcher{
+      .type_guid = type_guid,
+  };
+  while ((old_part.reset(open_partition(&matcher, ZX_MSEC(500), nullptr))), old_part) {
     bool is_vpartition;
     if (FvmIsVirtualPartition(old_part, &is_vpartition) != ZX_OK) {
       ERROR("Couldn't confirm old vpartition type\n");

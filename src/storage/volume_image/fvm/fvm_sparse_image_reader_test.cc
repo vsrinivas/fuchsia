@@ -130,15 +130,17 @@ TEST(FvmSparseImageReaderTest, PartitionsInImagePassFsck) {
 
   uint8_t minfs_guid[] = GUID_DATA_VALUE;
   char path[PATH_MAX];
-  fd.reset(open_partition(nullptr, minfs_guid, zx::duration::infinite().get(), path));
+  PartitionMatcher matcher{
+      .type_guid = minfs_guid,
+  };
+  fd.reset(open_partition(&matcher, zx::duration::infinite().get(), path));
   ASSERT_TRUE(fd);
   fd.reset();
 
   // Attempt to fsck minfs.
   {
-    uint8_t minfs_guid[] = GUID_DATA_VALUE;
     char path[PATH_MAX];
-    fd.reset(open_partition(nullptr, minfs_guid, zx::duration::infinite().get(), path));
+    fd.reset(open_partition(&matcher, zx::duration::infinite().get(), path));
     ASSERT_TRUE(fd);
     fd.reset();
 
@@ -156,7 +158,10 @@ TEST(FvmSparseImageReaderTest, PartitionsInImagePassFsck) {
   {
     uint8_t blobfs_guid[] = GUID_BLOB_VALUE;
     char path[PATH_MAX];
-    fd.reset(open_partition(nullptr, blobfs_guid, zx::duration::infinite().get(), path));
+    PartitionMatcher matcher{
+        .type_guid = blobfs_guid,
+    };
+    fd.reset(open_partition(&matcher, zx::duration::infinite().get(), path));
     ASSERT_TRUE(fd);
     fd.reset();
 

@@ -231,8 +231,7 @@ zx_status_t SetupBlockFifo(const std::string& path, BlockDevice* device) {
   // Map the VMO into memory.
   status = zx::vmar::root_self()->map(
       /*options=*/(ZX_VM_PERM_READ | ZX_VM_PERM_WRITE | ZX_VM_MAP_RANGE),
-      /*vmar_offset=*/0, vmo, /*vmo_offset=*/0, /*len=*/device->vmo_size,
-      &device->vmo_addr);
+      /*vmar_offset=*/0, vmo, /*vmo_offset=*/0, /*len=*/device->vmo_size, &device->vmo_addr);
   if (status != ZX_OK) {
     fprintf(stderr, "Error: VMO could not be mapped into memory: %s", zx_status_get_string(status));
     return status;
@@ -261,7 +260,11 @@ std::unique_ptr<TemporaryFvmPartition> TemporaryFvmPartition::Create(int fvm_fd,
   }
 
   char partition_path[PATH_MAX];
-  fd.reset(open_partition(unique_guid.bytes(), kTestPartGUID.bytes(), 0, partition_path));
+  PartitionMatcher matcher{
+      .type_guid = kTestPartGUID.bytes(),
+      .instance_guid = unique_guid.bytes(),
+  };
+  fd.reset(open_partition(&matcher, 0, partition_path));
   if (!fd) {
     destroy_partition(unique_guid.bytes(), kTestPartGUID.bytes());
     fprintf(stderr, "Could not locate FVM partition\n");

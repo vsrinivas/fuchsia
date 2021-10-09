@@ -211,8 +211,12 @@ std::unique_ptr<VPartitionAdapter> VPartitionAdapter::Create(const fbl::unique_f
   }
 
   char out_path[kPathMax] = {};
-  fbl::unique_fd device_fd(open_partition_with_devfs(devfs_root.get(), guid.data(), type.data(),
-                                                     kDeviceWaitTime.get(), out_path));
+  PartitionMatcher matcher{
+      .type_guid = type.data(),
+      .instance_guid = guid.data(),
+  };
+  fbl::unique_fd device_fd(
+      open_partition_with_devfs(devfs_root.get(), &matcher, kDeviceWaitTime.get(), out_path));
   if (!device_fd.is_valid()) {
     ADD_FAILURE("Unable to obtain handle for partition.");
     return nullptr;
@@ -237,8 +241,12 @@ zx_status_t VPartitionAdapter::Extend(uint64_t offset, uint64_t length) {
 
 void VPartitionAdapter::Reconnect() {
   char out_path[kPathMax] = {};
-  fd_.reset(open_partition_with_devfs(devfs_root_, guid_.data(), type_.data(),
-                                      zx::duration::infinite().get(), out_path));
+  PartitionMatcher matcher{
+      .type_guid = type_.data(),
+      .instance_guid = guid_.data(),
+  };
+  fd_.reset(
+      open_partition_with_devfs(devfs_root_, &matcher, zx::duration::infinite().get(), out_path));
   ASSERT_TRUE(fd_.get());
   path_.Clear();
   path_.Append(out_path);

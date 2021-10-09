@@ -226,8 +226,10 @@ fpromise::result<storage::RamDisk, std::string> LaunchFvm(zx::vmo& fvm_vmo) {
 void CheckPartitionsInRamdisk(const FvmDescriptor& fvm_descriptor) {
   for (const auto& partition : fvm_descriptor.partitions()) {
     std::array<char, PATH_MAX> partition_path = {};
-    fbl::unique_fd partition_fd(open_partition(nullptr, partition.volume().type.data(),
-                                               zx::sec(10).get(), partition_path.data()));
+    PartitionMatcher matcher{
+        .type_guid = partition.volume().type.data(),
+    };
+    fbl::unique_fd partition_fd(open_partition(&matcher, zx::sec(10).get(), partition_path.data()));
     ASSERT_TRUE(partition_fd.is_valid());
 
     if (partition.volume().name == "my-empty-partition") {

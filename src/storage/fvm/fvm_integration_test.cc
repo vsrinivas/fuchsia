@@ -284,6 +284,10 @@ constexpr uint8_t kTestPartGUIDBlob[] = GUID_TEST_BLOB_VALUE;
 constexpr char kTestPartName3[] = "system";
 constexpr uint8_t kTestPartGUIDSystem[] = GUID_TEST_SYS_VALUE;
 
+constexpr PartitionMatcher part_matcher(const uint8_t* type_guid, const uint8_t* instance_guid) {
+  return PartitionMatcher{.type_guid = type_guid, .instance_guid = instance_guid};
+}
+
 class VmoBuf;
 
 class VmoClient : public fbl::RefCounted<VmoClient> {
@@ -596,8 +600,8 @@ TEST_F(FvmTest, TestAllocateOne) {
 
   // Try accessing the block again after closing / re-opening it.
   ASSERT_EQ(close(vp_fd.release()), 0);
-  vp_fd.reset(open_partition_with_devfs(devfs_root().get(), kTestUniqueGUID, kTestPartGUIDData, 0,
-                                        nullptr));
+  auto matcher = part_matcher(kTestPartGUIDData, kTestUniqueGUID);
+  vp_fd.reset(open_partition_with_devfs(devfs_root().get(), &matcher, 0, nullptr));
   ASSERT_TRUE(vp_fd, "Couldn't re-open Data VPart");
   CheckWriteReadBlock(vp_fd.get(), 0, 1);
 
@@ -1716,8 +1720,8 @@ TEST_F(FvmTest, TestPersistenceSimple) {
   fd = fvm_device();
   ASSERT_TRUE(fd, "Failed to rebind FVM driver");
 
-  vp_fd.reset(open_partition_with_devfs(devfs_root().get(), kTestUniqueGUID, kTestPartGUIDData, 0,
-                                        nullptr));
+  auto matcher = part_matcher(kTestPartGUIDData, kTestUniqueGUID);
+  vp_fd.reset(open_partition_with_devfs(devfs_root().get(), &matcher, 0, nullptr));
   ASSERT_TRUE(vp_fd, "Couldn't re-open Data VPart");
   CheckRead(vp_fd.get(), 0, block_info.block_size, buf.get());
 
@@ -1749,8 +1753,8 @@ TEST_F(FvmTest, TestPersistenceSimple) {
   FVMRebind(entries, 1);
   fd = fvm_device();
 
-  vp_fd.reset(open_partition_with_devfs(devfs_root().get(), kTestUniqueGUID, kTestPartGUIDData, 0,
-                                        nullptr));
+  matcher = part_matcher(kTestPartGUIDData, kTestUniqueGUID);
+  vp_fd.reset(open_partition_with_devfs(devfs_root().get(), &matcher, 0, nullptr));
 
   partition_caller.reset(vp_fd.get());
   partition_channel = zx::unowned_channel(partition_caller.borrow_channel());
@@ -1788,8 +1792,8 @@ TEST_F(FvmTest, TestPersistenceSimple) {
   FVMRebind(entries, 1);
   fd = fvm_device();
 
-  vp_fd.reset(open_partition_with_devfs(devfs_root().get(), kTestUniqueGUID, kTestPartGUIDData, 0,
-                                        nullptr));
+  matcher = part_matcher(kTestPartGUIDData, kTestUniqueGUID);
+  vp_fd.reset(open_partition_with_devfs(devfs_root().get(), &matcher, 0, nullptr));
   ASSERT_TRUE(vp_fd, "Couldn't re-open Data VPart");
   partition_caller.reset(vp_fd.get());
   partition_channel = zx::unowned_channel(partition_caller.borrow_channel());
@@ -1810,8 +1814,8 @@ void CorruptMountHelper(const fbl::unique_fd& devfs_root, const char* partition_
   // Format the VPart as |disk_format|.
   ASSERT_EQ(mkfs(partition_path, disk_format, launch_stdio_sync, MkfsOptions()), ZX_OK);
 
-  fbl::unique_fd vp_fd(
-      open_partition_with_devfs(devfs_root.get(), kTestUniqueGUID, kTestPartGUIDData, 0, nullptr));
+  auto matcher = part_matcher(kTestPartGUIDData, kTestUniqueGUID);
+  fbl::unique_fd vp_fd(open_partition_with_devfs(devfs_root.get(), &matcher, 0, nullptr));
   ASSERT_TRUE(vp_fd);
   fuchsia_hardware_block_volume_VsliceRange
       ranges[fuchsia_hardware_block_volume_MAX_SLICE_REQUESTS];
@@ -1866,8 +1870,8 @@ void CorruptMountHelper(const fbl::unique_fd& devfs_root, const char* partition_
             ZX_OK);
 
   {
-    vp_fd.reset(open_partition_with_devfs(devfs_root.get(), kTestUniqueGUID, kTestPartGUIDData, 0,
-                                          nullptr));
+    auto matcher = part_matcher(kTestPartGUIDData, kTestUniqueGUID);
+    vp_fd.reset(open_partition_with_devfs(devfs_root.get(), &matcher, 0, nullptr));
     ASSERT_TRUE(vp_fd);
 
     fdio_cpp::UnownedFdioCaller partition_caller(vp_fd.get());
@@ -1922,8 +1926,8 @@ void CorruptMountHelper(const fbl::unique_fd& devfs_root, const char* partition_
             ZX_OK);
   ASSERT_EQ(umount(kMountPath), ZX_OK);
 
-  vp_fd.reset(
-      open_partition_with_devfs(devfs_root.get(), kTestUniqueGUID, kTestPartGUIDData, 0, nullptr));
+  matcher = part_matcher(kTestPartGUIDData, kTestUniqueGUID);
+  vp_fd.reset(open_partition_with_devfs(devfs_root.get(), &matcher, 0, nullptr));
   ASSERT_TRUE(vp_fd);
   fdio_cpp::UnownedFdioCaller partition_caller(vp_fd.get());
   zx::unowned_channel partition_channel(partition_caller.borrow_channel());
@@ -2006,9 +2010,9 @@ TEST_F(FvmTest, TestVPartitionUpgrade) {
   fdio_cpp::FdioCaller volume_manager(std::move(fd));
 
   // Short-hand for asking if we can open a partition.
-  auto openable = [this](const uint8_t* instanceGUID, const uint8_t* typeGUID) {
-    fbl::unique_fd fd(
-        open_partition_with_devfs(devfs_root().get(), instanceGUID, typeGUID, 0, nullptr));
+  auto openable = [this](const uint8_t* typeGUID, const uint8_t* instanceGUID) {
+    auto matcher = part_matcher(typeGUID, instanceGUID);
+    fbl::unique_fd fd(open_partition_with_devfs(devfs_root().get(), &matcher, 0, nullptr));
     return fd.is_valid();
   };
 
@@ -2043,9 +2047,9 @@ TEST_F(FvmTest, TestVPartitionUpgrade) {
   volume_manager.reset(fvm_device());
 
   // We shouldn't be able to re-open the inactive partition...
-  ASSERT_FALSE(openable(kTestUniqueGUID, kTestPartGUIDData));
+  ASSERT_FALSE(openable(kTestPartGUIDData, kTestUniqueGUID));
   // ... but we SHOULD be able to re-open the active partition.
-  ASSERT_TRUE(openable(kTestUniqueGUID2, kTestPartGUIDData));
+  ASSERT_TRUE(openable(kTestPartGUIDData, kTestUniqueGUID2));
 
   // Try to upgrade the partition (from GUID2 --> GUID)
   request.flags = fuchsia_hardware_block_volume_ALLOCATE_PARTITION_FLAG_INACTIVE;
@@ -2059,8 +2063,8 @@ TEST_F(FvmTest, TestVPartitionUpgrade) {
   Upgrade(volume_manager, kTestUniqueGUID2, kTestUniqueGUID, ZX_OK);
 
   // After upgrading, we should be able to open both partitions
-  ASSERT_TRUE(openable(kTestUniqueGUID, kTestPartGUIDData));
-  ASSERT_TRUE(openable(kTestUniqueGUID2, kTestPartGUIDData));
+  ASSERT_TRUE(openable(kTestPartGUIDData, kTestUniqueGUID));
+  ASSERT_TRUE(openable(kTestPartGUIDData, kTestUniqueGUID2));
 
   // Rebind the FVM driver, check the upgrade has succeeded.
   // The original (GUID2) should be deleted, and the new partition (GUID)
@@ -2073,8 +2077,8 @@ TEST_F(FvmTest, TestVPartitionUpgrade) {
   FVMRebind(upgraded_entries, 1);
   volume_manager.reset(fvm_device());
 
-  ASSERT_TRUE(openable(kTestUniqueGUID, kTestPartGUIDData));
-  ASSERT_FALSE(openable(kTestUniqueGUID2, kTestPartGUIDData));
+  ASSERT_TRUE(openable(kTestPartGUIDData, kTestUniqueGUID));
+  ASSERT_FALSE(openable(kTestPartGUIDData, kTestUniqueGUID2));
 
   // Try upgrading when the "new" version doesn't exist.
   // (It should return an error and have no noticable effect).
@@ -2085,8 +2089,8 @@ TEST_F(FvmTest, TestVPartitionUpgrade) {
   FVMRebind(upgraded_entries, 1);
   volume_manager.reset(fvm_device());
 
-  ASSERT_TRUE(openable(kTestUniqueGUID, kTestPartGUIDData));
-  ASSERT_FALSE(openable(kTestUniqueGUID2, kTestPartGUIDData));
+  ASSERT_TRUE(openable(kTestPartGUIDData, kTestUniqueGUID));
+  ASSERT_FALSE(openable(kTestPartGUIDData, kTestUniqueGUID2));
 
   // Try upgrading when the "old" version doesn't exist.
   request.flags = fuchsia_hardware_block_volume_ALLOCATE_PARTITION_FLAG_INACTIVE;
@@ -2112,12 +2116,12 @@ TEST_F(FvmTest, TestVPartitionUpgrade) {
   volume_manager.reset(fvm_device());
 
   // We should be able to open both partitions again.
-  ASSERT_TRUE(openable(kTestUniqueGUID, kTestPartGUIDData));
-  ASSERT_TRUE(openable(kTestUniqueGUID2, kTestPartGUIDData));
+  ASSERT_TRUE(openable(kTestPartGUIDData, kTestUniqueGUID));
+  ASSERT_TRUE(openable(kTestPartGUIDData, kTestUniqueGUID2));
 
   // Destroy and reallocate the first partition as inactive.
-  vp_fd.reset(open_partition_with_devfs(devfs_root().get(), kTestUniqueGUID, kTestPartGUIDData, 0,
-                                        nullptr));
+  auto matcher = part_matcher(kTestPartGUIDData, kTestUniqueGUID);
+  vp_fd.reset(open_partition_with_devfs(devfs_root().get(), &matcher, 0, nullptr));
   ASSERT_TRUE(vp_fd, "Couldn't open volume");
   fdio_cpp::FdioCaller partition_caller(std::move(vp_fd));
   zx_status_t status;
@@ -2143,8 +2147,8 @@ TEST_F(FvmTest, TestVPartitionUpgrade) {
   volume_manager.reset(fvm_device());
 
   // We should be able to open both partitions again.
-  ASSERT_TRUE(openable(kTestUniqueGUID, kTestPartGUIDData));
-  ASSERT_TRUE(openable(kTestUniqueGUID2, kTestPartGUIDData));
+  ASSERT_TRUE(openable(kTestPartGUIDData, kTestUniqueGUID));
+  ASSERT_TRUE(openable(kTestPartGUIDData, kTestUniqueGUID2));
 }
 
 // Test that the FVM driver can mount filesystems.
@@ -2348,8 +2352,8 @@ TEST_F(FvmTest, TestCorruptionOk) {
   FVMRebind(entries, 1);
   fd = fvm_device();
 
-  vp_fd.reset(open_partition_with_devfs(devfs_root().get(), kTestUniqueGUID, kTestPartGUIDData, 0,
-                                        nullptr));
+  auto matcher = part_matcher(kTestPartGUIDData, kTestUniqueGUID);
+  vp_fd.reset(open_partition_with_devfs(devfs_root().get(), &matcher, 0, nullptr));
   ASSERT_TRUE(vp_fd, "Couldn't re-open Data VPart");
 
   // The slice extension is still accessible.
@@ -2430,8 +2434,8 @@ TEST_F(FvmTest, TestCorruptionRegression) {
   FVMRebind(entries, 1);
   fd = fvm_device();
 
-  vp_fd.reset(open_partition_with_devfs(devfs_root().get(), kTestUniqueGUID, kTestPartGUIDData, 0,
-                                        nullptr));
+  auto matcher = part_matcher(kTestPartGUIDData, kTestUniqueGUID);
+  vp_fd.reset(open_partition_with_devfs(devfs_root().get(), &matcher, 0, nullptr));
   ASSERT_TRUE(vp_fd);
 
   // The slice extension is no longer accessible

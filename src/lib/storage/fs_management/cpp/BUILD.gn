@@ -80,10 +80,15 @@ test("fs-management-test") {
   sources = [
     "admin_test.cc",
     "format_test.cc",
+    "fvm.cc",
+    "fvm_test.cc",
     "mount_test.cc",
   ]
   deps = [
     "//sdk/fidl/fuchsia.device:fuchsia.device_llcpp",
+    "//sdk/fidl/fuchsia.hardware.block:fuchsia.hardware.block_llcpp",
+    "//sdk/fidl/fuchsia.hardware.block.partition:fuchsia.hardware.block.partition_llcpp",
+    "//sdk/fidl/fuchsia.hardware.block.volume:fuchsia.hardware.block.volume_llcpp",
     "//sdk/fidl/fuchsia.io:fuchsia.io_llcpp",
     "//sdk/lib/fdio",
     "//src/lib/digest",

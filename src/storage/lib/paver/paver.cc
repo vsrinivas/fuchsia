@@ -647,8 +647,11 @@ zx::status<> DataSinkImpl::WriteDataFile(fidl::StringView filename,
   char path[PATH_MAX] = {0};
   zx::status<> status = zx::ok();
 
-  fbl::unique_fd part_fd(
-      open_partition_with_devfs(devfs_root_.get(), nullptr, data_guid, ZX_SEC(1), path));
+  // TODO(jsankey): Match on the name of the partition as well
+  PartitionMatcher matcher{
+      .type_guid = data_guid,
+  };
+  fbl::unique_fd part_fd(open_partition_with_devfs(devfs_root_.get(), &matcher, ZX_SEC(1), path));
   if (!part_fd) {
     ERROR("DATA partition not found in FVM\n");
     return zx::error(ZX_ERR_NOT_FOUND);

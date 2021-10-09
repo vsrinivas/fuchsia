@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/storage/fvm/fvm.h"
+#include "fvm.h"
 
 #include <dirent.h>
 #include <errno.h>
@@ -33,44 +33,63 @@
 
 #include <fbl/string_printf.h>
 #include <fbl/unique_fd.h>
-#include <fs-management/fvm.h>
 
-#include "src/storage/fvm/format.h"
+#include "src/storage/fvm/fvm.h"
 
-namespace {
+namespace fs_management {
 
-constexpr char kBlockDevPath[] = "/dev/class/block/";
-constexpr char kBlockDevRelativePath[] = "class/block/";
-
-// Checks that |fd| is a partition which matches |uniqueGUID| and |typeGUID|.
-// If either is null, it doesn't compare |fd| with that guid.
-// At least one of the GUIDs must be non-null.
-bool IsPartition(const fbl::unique_fd& fd, const uint8_t* uniqueGUID, const uint8_t* typeGUID) {
-  ZX_ASSERT(uniqueGUID || typeGUID);
+bool PartitionMatches(zx::unowned_channel& partition_channel, const PartitionMatcher& matcher) {
+  ZX_ASSERT(matcher.type_guid || matcher.instance_guid || matcher.num_labels > 0);
+  if (matcher.num_labels > 0) {
+    ZX_ASSERT(matcher.labels);
+  }
 
   fuchsia_hardware_block_partition_GUID guid;
-  fdio_cpp::UnownedFdioCaller partition_connection(fd.get());
-  zx::unowned_channel channel(partition_connection.borrow_channel());
   zx_status_t io_status, status;
-  if (typeGUID) {
-    io_status =
-        fuchsia_hardware_block_partition_PartitionGetTypeGuid(channel->get(), &status, &guid);
+  if (matcher.type_guid) {
+    io_status = fuchsia_hardware_block_partition_PartitionGetTypeGuid(partition_channel->get(),
+                                                                      &status, &guid);
     if (io_status != ZX_OK || status != ZX_OK ||
-        memcmp(guid.value, typeGUID, BLOCK_GUID_LEN) != 0) {
+        memcmp(guid.value, matcher.type_guid, BLOCK_GUID_LEN) != 0) {
       return false;
     }
   }
-  if (uniqueGUID) {
-    io_status =
-        fuchsia_hardware_block_partition_PartitionGetInstanceGuid(channel->get(), &status, &guid);
+  if (matcher.instance_guid) {
+    io_status = fuchsia_hardware_block_partition_PartitionGetInstanceGuid(partition_channel->get(),
+                                                                          &status, &guid);
     if (io_status != ZX_OK || status != ZX_OK ||
-        memcmp(guid.value, uniqueGUID, BLOCK_GUID_LEN) != 0) {
+        memcmp(guid.value, matcher.instance_guid, BLOCK_GUID_LEN) != 0) {
+      return false;
+    }
+  }
+  if (matcher.num_labels > 0) {
+    char name[fuchsia_hardware_block_partition_NAME_LENGTH];
+    size_t name_len;
+    io_status = fuchsia_hardware_block_partition_PartitionGetName(partition_channel->get(), &status,
+                                                                  name, sizeof(name), &name_len);
+    if (io_status != ZX_OK || status != ZX_OK || name_len == 0) {
+      return false;
+    }
+    bool matches_label = false;
+    for (size_t i = 0; i < matcher.num_labels; ++i) {
+      if (!strncmp(name, matcher.labels[i], name_len)) {
+        matches_label = true;
+        break;
+      }
+    }
+    if (!matches_label) {
       return false;
     }
   }
   return true;
 }
 
+}  // namespace fs_management
+
+namespace {
+
+constexpr char kBlockDevPath[] = "/dev/class/block/";
+constexpr char kBlockDevRelativePath[] = "class/block/";
 // Overwrites the FVM and waits for it to disappear from devfs.
 //
 // devfs_root_fd: (OPTIONAL) A connection to devfs. If supplied, |path| is relative to this root.
@@ -334,7 +353,11 @@ int fvm_allocate_partition(int fvm_fd, const alloc_req_t* request) {
   if (alloc_status != 0) {
     return alloc_status;
   }
-  return open_partition(request->guid, request->type, ZX_SEC(10), nullptr);
+  PartitionMatcher matcher{
+      .type_guid = request->type,
+      .instance_guid = request->guid,
+  };
+  return open_partition(&matcher, ZX_SEC(10), nullptr);
 }
 
 __EXPORT
@@ -343,8 +366,11 @@ int fvm_allocate_partition_with_devfs(int devfs_root_fd, int fvm_fd, const alloc
   if (alloc_status != 0) {
     return alloc_status;
   }
-  return open_partition_with_devfs(devfs_root_fd, request->guid, request->type, ZX_SEC(10),
-                                   nullptr);
+  PartitionMatcher matcher{
+      .type_guid = request->type,
+      .instance_guid = request->guid,
+  };
+  return open_partition_with_devfs(devfs_root_fd, &matcher, ZX_SEC(10), nullptr);
 }
 
 __EXPORT
@@ -365,21 +391,20 @@ zx_status_t fvm_query(int fvm_fd, fuchsia_hardware_block_volume_VolumeInfo* out)
 }
 
 // Takes ownership of |dir|.
-int open_partition_impl(DIR* dir, const char* out_path_base, const uint8_t* uniqueGUID,
-                        const uint8_t* typeGUID, zx_duration_t timeout, char* out_path) {
+int open_partition_impl(DIR* dir, const char* out_path_base, const PartitionMatcher* matcher,
+                        zx_duration_t timeout, char* out_path) {
+  ZX_ASSERT(matcher != nullptr);
   auto cleanup = fit::defer([&]() { closedir(dir); });
 
   typedef struct {
-    const uint8_t* guid;
-    const uint8_t* type;
+    const PartitionMatcher* matcher;
     const char* out_path_base;
     char* out_path;
     fbl::unique_fd out_partition;
   } alloc_helper_info_t;
 
   alloc_helper_info_t info;
-  info.guid = uniqueGUID;
-  info.type = typeGUID;
+  info.matcher = matcher;
   info.out_path_base = out_path_base;
   info.out_path = out_path;
   info.out_partition.reset();
@@ -395,7 +420,10 @@ int open_partition_impl(DIR* dir, const char* out_path_base, const uint8_t* uniq
     if (!devfd) {
       return ZX_OK;
     }
-    if (IsPartition(devfd, info->guid, info->type)) {
+
+    fdio_cpp::UnownedFdioCaller connection(devfd.get());
+    zx::unowned_channel channel(connection.borrow_channel());
+    if (fs_management::PartitionMatches(channel, *(info->matcher))) {
       info->out_partition = std::move(devfd);
       if (info->out_path) {
         strcpy(info->out_path, info->out_path_base);
@@ -414,22 +442,18 @@ int open_partition_impl(DIR* dir, const char* out_path_base, const uint8_t* uniq
 }
 
 __EXPORT
-int open_partition(const uint8_t* uniqueGUID, const uint8_t* typeGUID, zx_duration_t timeout,
-                   char* out_path) {
-  ZX_ASSERT(uniqueGUID || typeGUID);
-
+int open_partition(const PartitionMatcher* matcher, zx_duration_t timeout, char* out_path) {
   DIR* dir = opendir(kBlockDevPath);
   if (dir == nullptr) {
     return -1;
   }
 
-  return open_partition_impl(dir, kBlockDevPath, uniqueGUID, typeGUID, timeout, out_path);
+  return open_partition_impl(dir, kBlockDevPath, matcher, timeout, out_path);
 }
 
 __EXPORT
-int open_partition_with_devfs(int devfs_root_fd, const uint8_t* uniqueGUID, const uint8_t* typeGUID,
+int open_partition_with_devfs(int devfs_root_fd, const PartitionMatcher* matcher,
                               zx_duration_t timeout, char* out_path_relative) {
-  ZX_ASSERT(uniqueGUID || typeGUID);
   fbl::unique_fd block_dev_fd(openat(devfs_root_fd, kBlockDevRelativePath, O_RDONLY));
   if (!block_dev_fd) {
     return -1;
@@ -439,8 +463,7 @@ int open_partition_with_devfs(int devfs_root_fd, const uint8_t* uniqueGUID, cons
     return -1;
   }
 
-  return open_partition_impl(dir, kBlockDevRelativePath, uniqueGUID, typeGUID, timeout,
-                             out_path_relative);
+  return open_partition_impl(dir, kBlockDevRelativePath, matcher, timeout, out_path_relative);
 }
 
 zx_status_t destroy_partition_impl(fbl::unique_fd&& fd) {
@@ -458,7 +481,11 @@ zx_status_t destroy_partition_impl(fbl::unique_fd&& fd) {
 __EXPORT
 zx_status_t destroy_partition(const uint8_t* uniqueGUID, const uint8_t* typeGUID) {
   char path[PATH_MAX];
-  fbl::unique_fd fd(open_partition(uniqueGUID, typeGUID, 0, path));
+  PartitionMatcher matcher{
+      .type_guid = typeGUID,
+      .instance_guid = uniqueGUID,
+  };
+  fbl::unique_fd fd(open_partition(&matcher, 0, path));
   if (!fd) {
     return ZX_ERR_IO;
   }
@@ -469,8 +496,11 @@ __EXPORT
 zx_status_t destroy_partition_with_devfs(int devfs_root_fd, const uint8_t* uniqueGUID,
                                          const uint8_t* typeGUID) {
   char relative_path[PATH_MAX];
-  fbl::unique_fd fd(
-      open_partition_with_devfs(devfs_root_fd, uniqueGUID, typeGUID, 0, relative_path));
+  PartitionMatcher matcher{
+      .type_guid = typeGUID,
+      .instance_guid = uniqueGUID,
+  };
+  fbl::unique_fd fd(open_partition_with_devfs(devfs_root_fd, &matcher, 0, relative_path));
   if (!fd) {
     return ZX_ERR_IO;
   }

@@ -94,7 +94,11 @@ zx::status<std::string> CreateFvmPartition(const std::string& device_path, int s
   fvm_fd.reset();
 
   char partition_path[PATH_MAX];
-  fd.reset(open_partition(kTestUniqueGUID, request.type, 0, partition_path));
+  PartitionMatcher matcher{
+      .type_guid = request.type,
+      .instance_guid = kTestUniqueGUID,
+  };
+  fd.reset(open_partition(&matcher, 0, partition_path));
   if (!fd) {
     FX_LOGS(ERROR) << "Could not locate FVM partition";
     return zx::error(ZX_ERR_BAD_STATE);

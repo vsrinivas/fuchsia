@@ -45,6 +45,15 @@ int fvm_allocate_partition_with_devfs(int devfs_root_fd, int fvm_fd, const alloc
 // Query the volume manager for info.
 zx_status_t fvm_query(int fvm_fd, fuchsia_hardware_block_volume_VolumeInfo* out);
 
+// A set of optional matchers for |open_partition| and friends.
+// At least one must be specified.
+struct PartitionMatcher {
+  const uint8_t* type_guid;
+  const uint8_t* instance_guid;
+  const char* const* labels;
+  size_t num_labels;
+};
+
 // Waits for a partition with a GUID pair to appear, and opens it.
 //
 // If one of the GUIDs is null, it is ignored. For example:
@@ -53,9 +62,8 @@ zx_status_t fvm_query(int fvm_fd, fuchsia_hardware_block_volume_VolumeInfo* out)
 // At least one of the GUIDs must be non-null.
 //
 // Returns an open fd to the partition on success, -1 on error.
-int open_partition(const uint8_t* uniqueGUID, const uint8_t* typeGUID, zx_duration_t timeout,
-                   char* out_path);
-int open_partition_with_devfs(int devfs_root_fd, const uint8_t* uniqueGUID, const uint8_t* typeGUID,
+int open_partition(const PartitionMatcher* matcher, zx_duration_t timeout, char* out_path);
+int open_partition_with_devfs(int devfs_root_fd, const PartitionMatcher* matcher,
                               zx_duration_t timeout, char* out_path_relative);
 
 // Finds and destroys the partition with the given GUID pair, if it exists.
