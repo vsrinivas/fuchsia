@@ -47,7 +47,7 @@ It will be set below and passed to other toolchains through toolchain_args
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:1393
+From //build/config/BUILDCONFIG.gn:1396
 
 ### allow_legacy_data_partition_names
 Set to true to enable legacy data partition names.
@@ -68,14 +68,14 @@ TODO(fxbug.dev/67565) - remove once external sync FD extensions fully supported
 
 **Current value (from the default):** `false`
 
-From [//third_party/mesa/src/intel/vulkan/BUILD.gn:27](https://fuchsia.googlesource.com/third_party/mesa/+/a9345b2bc10f447b8f2f1b3661d4e9f1b9164715/src/intel/vulkan/BUILD.gn#27)
+From [//third_party/mesa/src/intel/vulkan/BUILD.gn:27](https://fuchsia.googlesource.com/third_party/mesa/+/14586ff9b32fd722ddd915dfdca50fac0641fef4/src/intel/vulkan/BUILD.gn#27)
 
 ### anv_use_max_ram
 Give maximum possible memory to Vulkan heap
 
 **Current value (from the default):** `false`
 
-From [//third_party/mesa/src/intel/vulkan/BUILD.gn:30](https://fuchsia.googlesource.com/third_party/mesa/+/a9345b2bc10f447b8f2f1b3661d4e9f1b9164715/src/intel/vulkan/BUILD.gn#30)
+From [//third_party/mesa/src/intel/vulkan/BUILD.gn:30](https://fuchsia.googlesource.com/third_party/mesa/+/14586ff9b32fd722ddd915dfdca50fac0641fef4/src/intel/vulkan/BUILD.gn#30)
 
 ### asan_default_options
 Default [AddressSanitizer](https://clang.llvm.org/docs/AddressSanitizer.html)
@@ -1239,7 +1239,7 @@ This is just added to [`known_variants`](#known_variants).
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:1150
+From //build/config/BUILDCONFIG.gn:1153
 
 ### extract_minfs_metadata_on_corruption
 If extract_minfs_metadata_on_corruption is true, fshost extracts minfs metadata on finding it
@@ -2153,7 +2153,7 @@ Each element of the list is one variant, which is a scope defining:
 }]
 ```
 
-From //build/config/BUILDCONFIG.gn:990
+From //build/config/BUILDCONFIG.gn:993
 
 ### launch_basemgr_on_boot
 Indicates whether to include basemgr.cmx in the boot sequence for the
@@ -3556,7 +3556,7 @@ is satisfied if any of the strings matches against the candidate string.
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:1383
+From //build/config/BUILDCONFIG.gn:1386
 
 ### select_variant_canonical
 *This should never be set as a build argument.*
@@ -3565,7 +3565,7 @@ See //build/toolchain/clang_toolchain.gni for details.
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:1388
+From //build/config/BUILDCONFIG.gn:1391
 
 ### select_variant_shortcuts
 List of short names for commonly-used variant selectors.  Normally this
@@ -3609,7 +3609,7 @@ a list that can be spliced into [`select_variant`](#select_variant).
 }]
 ```
 
-From //build/config/BUILDCONFIG.gn:1196
+From //build/config/BUILDCONFIG.gn:1199
 
 ### size_checker_input
 The input to the size checker.
@@ -3883,7 +3883,7 @@ From //build/config/sanitizers/sanitizer_default_options.gni:47
 }]
 ```
 
-From //build/config/BUILDCONFIG.gn:1180
+From //build/config/BUILDCONFIG.gn:1183
 
 ### universe_package_labels
 If you add package labels to this variable, the packages will be included
