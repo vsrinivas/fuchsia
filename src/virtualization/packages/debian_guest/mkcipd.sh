@@ -22,7 +22,10 @@ x64)
   exit 1;;
 esac
 
-${CIPD} auth-login
+# Ensure we are logged in.
+if [[ "$(${CIPD} acl-check fuchsia_internal -writer)" == *"doesn't"* ]]; then
+  ${CIPD} auth-login
+fi
 
 # Clean the existing images directory.
 declare -r IMAGE_DIR="${FUCHSIA_DIR}/prebuilt/virtualization/packages/debian_guest/images/${ARCH}"
