@@ -82,6 +82,8 @@ class AudioClock {
   bool is_adjustable() const { return is_adjustable_; }
   uint32_t domain() const { return domain_; }
 
+  bool is_clock_monotonic();
+
   // Return a transform based on a snapshot of the underlying zx::clock
   virtual TimelineFunction ref_clock_to_clock_mono() const;
   virtual zx::time ReferenceTimeFromMonotonicTime(zx::time mono_time) const;
@@ -129,7 +131,7 @@ class AudioClock {
   virtual void UpdateClockRate(int32_t rate_adjust_ppm);
 
  private:
-  friend class AudioClockTest;
+  friend class AudioClockSyncModeTest;
 
   // When tuning a ClientAdjustable to a monotonic target, we use proportional clock adjustments
   // instead of the normal PID feedback control, because once a ClientAdjustable is aligned with its
@@ -176,6 +178,7 @@ class AudioClock {
   Source source_;
   bool is_adjustable_;
   uint32_t domain_;
+  bool is_clock_monotonic_;
 
   audio::clock::PidControl feedback_control_;
 
