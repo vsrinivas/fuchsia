@@ -300,16 +300,9 @@ executable("guest_interaction_service_test") {
 extras_image = "$target_out_dir/linux/extras.img"
 
 romfs_image("extras") {
-  deps = []
-  inputs = []
+  deps = [ ":debian_guest_interaction_daemon(${linux_exe_toolchain})" ]
 
-  # gRPC has a dependency on //third_party/cares which can only target x64.  Only build the Debian
-  # server for x64 guests.  Provide an empty image for arm64.
-  if (target_cpu == "x64") {
-    deps += [ ":debian_guest_interaction_daemon(${linux_exe_toolchain})" ]
-
-    inputs += [ "${linux_exe_path}/guest_interaction_daemon" ]
-  }
+  inputs = [ "${linux_exe_path}/guest_interaction_daemon" ]
 
   output = extras_image
 }
