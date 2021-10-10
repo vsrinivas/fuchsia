@@ -1,7 +1,7 @@
 # Debian Guest
 
-The `debian_guest` package provides a more substantial Linux environment than
-that provided by the `linux_guest` package.
+The `debian_guest` package provides a basic Linux environment based on the
+Debian Linux distribution.
 
 ## Building
 
