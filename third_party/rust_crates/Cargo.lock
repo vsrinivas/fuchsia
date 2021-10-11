@@ -3351,13 +3351,13 @@ dependencies = [
 
 [[package]]
 name = "serde_repr"
-version = "0.1.3"
+version = "0.1.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "27eea49bc616621e68d4de38110ff9e18ab8bd4c61dae48c477e85587571afc1"
+checksum = "98d0516900518c29efa217c298fa1f4e6c6ffc85ae29fd7f4ee48f176e1a9ed5"
 dependencies = [
- "proc-macro2 0.4.27",
- "quote 0.6.11",
- "syn 0.15.26",
+ "proc-macro2 1.0.28",
+ "quote 1.0.7",
+ "syn 1.0.74",
 ]
 
 [[package]]

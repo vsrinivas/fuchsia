@@ -687,7 +687,7 @@ group("serde_json5") {
 }
 
 group("serde_repr") {
-  deps = [ ":serde_repr-v0_1_3($host_toolchain)" ]
+  deps = [ ":serde_repr-v0_1_7($host_toolchain)" ]
 }
 
 if (!(current_os == "fuchsia")) {
@@ -8933,27 +8933,27 @@ rust_library("serde_json5-v0_1_0") {
   ]
 }
 
-rust_proc_macro("serde_repr-v0_1_3") {
+rust_proc_macro("serde_repr-v0_1_7") {
   crate_name = "serde_repr"
   crate_root = "//third_party/rust_crates/vendor/serde_repr/src/lib.rs"
-  output_name = "serde_repr-821e19f1d7a82d0e"
+  output_name = "serde_repr-2607863d914a7535"
   configs -= [
     "//build/config/rust:edition_2018",
     "//build/config/rust:2018_idioms",
   ]
 
   deps = []
-  deps += [ ":proc-macro2-v0_4_27" ]
-  deps += [ ":quote-v0_6_11" ]
-  deps += [ ":syn-v0_15_26" ]
+  deps += [ ":proc-macro2-v1_0_28" ]
+  deps += [ ":quote-v1_0_7" ]
+  deps += [ ":syn-v1_0_74" ]
 
   rustenv = []
 
   rustflags = [
     "--cap-lints=allow",
     "--edition=2018",
-    "-Cmetadata=821e19f1d7a82d0e",
-    "-Cextra-filename=-821e19f1d7a82d0e",
+    "-Cmetadata=2607863d914a7535",
+    "-Cextra-filename=-2607863d914a7535",
   ]
 }
 
