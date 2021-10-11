@@ -379,7 +379,7 @@ func TestClient(t *testing.T) {
 				const payload = "foobarbaz"
 
 				// Send the first sendSize bytes of a frame.
-				send := func(sendSize int) {
+				send := func(sendSize uint16) {
 					entry := &device.rxEntries[0]
 					buf := device.iob.BufferFromEntry(*entry)
 					if got, want := copy(buf, payload), len(payload); got != want {
@@ -409,13 +409,13 @@ func TestClient(t *testing.T) {
 					}
 				}
 
-				for _, size := range []int{
+				for _, size := range []uint16{
 					// Test receiving a frame that is equal to the minimum frame size.
 					0,
 					// Test receiving a frame that is just greater than the minimum frame size.
 					1,
 					// Test receiving the full frame.
-					len(payload),
+					uint16(len(payload)),
 				} {
 					send(size)
 

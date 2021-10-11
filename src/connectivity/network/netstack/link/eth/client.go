@@ -11,10 +11,8 @@ import (
 	"context"
 	"fmt"
 	"math"
-	"reflect"
 	"sync"
 	"syscall/zx"
-	"unsafe"
 
 	"gen/netstack/link/eth"
 
@@ -49,22 +47,8 @@ type IOBuffer struct {
 	fifo.MappedVMO
 }
 
-func (iob *IOBuffer) buffer(i int32) Buffer {
-	return iob.GetData(uint64(i*bufferSize), bufferSize)
-}
-
-func (iob *IOBuffer) index(b Buffer) int {
-	return int((*(*reflect.SliceHeader)(unsafe.Pointer(&b))).Data-uintptr(iob.GetPointer(0))) / bufferSize
-}
-
-func (iob *IOBuffer) entry(b Buffer) eth.FifoEntry {
-	i := iob.index(b)
-
-	return eth.NewFifoEntry(uint32(i*bufferSize), uint16(len(b)), int32(i))
-}
-
 func (iob *IOBuffer) BufferFromEntry(e eth.FifoEntry) Buffer {
-	return iob.buffer(e.Index())[:e.Length()]
+	return iob.GetData(uint64(e.Offset()), uint64(e.Length()))
 }
 
 var _ link.Controller = (*Client)(nil)
@@ -143,8 +127,18 @@ func NewClient(clientName string, topopath, filepath string, device ethernet.Dev
 	rxStorage := int(c.handler.InitRx(uint16(fifos.RxDepth * 2)))
 	txStorage := int(c.handler.InitTx(uint16(fifos.TxDepth * 2)))
 
+	var offset uint32
+	for i := 0; i < rxStorage; i++ {
+		c.handler.PushInitialRx(eth.MakeFifoEntry(offset, bufferSize))
+		offset += bufferSize
+	}
+	for i := 0; i < txStorage; i++ {
+		c.handler.PushInitialTx(eth.MakeFifoEntry(offset, bufferSize))
+		offset += bufferSize
+	}
+
 	{
-		mappedVmo, vmo, err := fifo.NewMappedVMO(bufferSize*uint64(rxStorage+txStorage), fmt.Sprintf("ethernet.Device.IoBuffer: %s", topopath))
+		mappedVmo, vmo, err := fifo.NewMappedVMO(uint64(offset), fmt.Sprintf("ethernet.Device.IoBuffer: %s", topopath))
 		if err != nil {
 			_ = c.Close()
 			return nil, fmt.Errorf("eth: NewMappedVMO: %w", err)
@@ -157,18 +151,6 @@ func NewClient(clientName string, topopath, filepath string, device ethernet.Dev
 			_ = c.Close()
 			return nil, fmt.Errorf("eth: cannot set IO VMO: %w", err)
 		}
-	}
-
-	var bufferIndex int32
-	for i := 0; i < rxStorage; i++ {
-		b := c.iob.buffer(bufferIndex)
-		bufferIndex++
-		c.handler.PushInitialRx(c.iob.entry(b))
-	}
-	for i := 0; i < txStorage; i++ {
-		b := c.iob.buffer(bufferIndex)
-		bufferIndex++
-		c.handler.PushInitialTx(c.iob.entry(b))
 	}
 
 	c.handler.Stats.Rx.FifoStats = fifo.MakeFifoStats(fifos.RxDepth)
@@ -199,7 +181,7 @@ func (c *Client) write(pkts stack.PacketBufferList) (int, tcpip.Error) {
 		for _, v := range pkt.Views() {
 			used += copy(b[used:], v)
 		}
-		*entry = c.iob.entry(b[:used])
+		entry.SetLength(uint16(used))
 	})
 }
 
