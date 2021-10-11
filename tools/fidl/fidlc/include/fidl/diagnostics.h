@@ -273,8 +273,7 @@ constexpr ErrorDef ErrInlineSizeExceeds64k(
 constexpr ErrorDef<> ErrCannotUseService("cannot use services in other declarations");
 constexpr ErrorDef<> ErrCannotUseProtocol("cannot use protocol in this context");
 constexpr ErrorDef<> ErrCannotUseType("cannot use type in this context");
-constexpr ErrorDef<> ErrMustBeTransportSide(
-    "service members must be of type `client_end` or `server_end`");
+constexpr ErrorDef<> ErrOnlyClientEndsInServices("service members must be client_end:P");
 
 // ---------------------------------------------------------------------------
 // Attribute Validation: Placement, Values, Constraints

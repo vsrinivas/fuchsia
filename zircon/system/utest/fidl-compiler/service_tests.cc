@@ -101,9 +101,21 @@ service SomeService {
 };
 
 )FIDL");
-  // NOTE(fxbug.dev/72924): a separate error is used, since client/server ends
-  // are types.
-  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrMustBeTransportSide);
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrOnlyClientEndsInServices);
+}
+
+TEST(ServiceTests, BadNoServerEnds) {
+  TestLibrary library(R"FIDL(
+library example;
+
+protocol SomeProtocol {};
+
+service SomeService {
+    no_server_end server_end:SomeProtocol;
+};
+
+)FIDL");
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrOnlyClientEndsInServices);
 }
 
 TEST(ServiceTests, BadCannotUseServicesInDecls) {

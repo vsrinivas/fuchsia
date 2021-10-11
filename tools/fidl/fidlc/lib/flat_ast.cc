@@ -4502,7 +4502,10 @@ bool Library::CompileService(Service* service_decl) {
     if (!CompileTypeConstructor(member.type_ctor.get()))
       return false;
     if (member.type_ctor->type->kind != Type::Kind::kTransportSide)
-      return Fail(ErrMustBeTransportSide, member.name);
+      return Fail(ErrOnlyClientEndsInServices, member.name);
+    const auto transport_side_type = static_cast<const TransportSideType*>(member.type_ctor->type);
+    if (transport_side_type->end != TransportSide::kClient)
+      return Fail(ErrOnlyClientEndsInServices, member.name);
     if (member.type_ctor->type->nullability != types::Nullability::kNonnullable)
       return Fail(ErrNullableServiceMember, member.name);
   }
