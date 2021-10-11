@@ -1165,27 +1165,17 @@ zx_status_t AmlSdmmc::SdmmcPerformTuning(uint32_t tuning_cmd_idx) {
   auto set_adj_delay = [&](uint32_t param) -> void { SetAdjDelay(param); };
   auto set_delay_lines = [&](uint32_t param) -> void { SetDelayLines(param); };
 
+  clk.set_cfg_tx_phase(AmlSdmmcClock::kClkPhase0Degrees).WriteTo(&mmio_);
+
+  for (uint32_t i = 0; i < clk.cfg_div(); i++) {
+    set_adj_delay(i);
+    TuneDelayParam(tuning_blk, tuning_cmd_idx, max_delay(), set_delay_lines);
+  }
+
   set_delay_lines(0);
 
-  TuneWindow phase_windows[AmlSdmmcClock::kMaxClkPhase + 1] = {};
-  for (uint32_t phase = 0; phase < std::size(phase_windows); phase++) {
-    if (phase != clk.cfg_co_phase()) {
-      clk.set_cfg_tx_phase(phase).WriteTo(&mmio_);
-      phase_windows[phase] =
-          TuneDelayParam(tuning_blk, tuning_cmd_idx, clk.cfg_div() - 1, set_adj_delay);
-    }
-  }
-
-  TuneWindow adj_delay_window;
-  uint32_t best_phase = 0;
-
-  // Find the largest window of working settings.
-  for (uint32_t phase = 0; phase < std::size(phase_windows); phase++) {
-    if (phase_windows[phase].size > adj_delay_window.size) {
-      adj_delay_window = phase_windows[phase];
-      best_phase = phase;
-    }
-  }
+  TuneWindow adj_delay_window =
+      TuneDelayParam(tuning_blk, tuning_cmd_idx, clk.cfg_div() - 1, set_adj_delay);
 
   if (adj_delay_window.size == 0) {
     AML_SDMMC_ERROR("No window found for any phase");
@@ -1195,7 +1185,6 @@ zx_status_t AmlSdmmc::SdmmcPerformTuning(uint32_t tuning_cmd_idx) {
   const uint32_t best_adj_delay =
       adj_delay_window.size == clk.cfg_div() ? 0 : adj_delay_window.middle() % clk.cfg_div();
 
-  clk.set_cfg_tx_phase(best_phase).WriteTo(&mmio_);
   set_adj_delay(best_adj_delay);
 
   TuneWindow delay_window =
@@ -1210,7 +1199,7 @@ zx_status_t AmlSdmmc::SdmmcPerformTuning(uint32_t tuning_cmd_idx) {
   set_delay_lines(best_delay);
 
   AML_SDMMC_INFO("Clock divider %u, clock phase %u, adj delay %u, delay %u", clk.cfg_div(),
-                 best_phase, best_adj_delay, best_delay);
+                 AmlSdmmcClock::kClkPhase0Degrees, best_adj_delay, best_delay);
 
   return ZX_OK;
 }
