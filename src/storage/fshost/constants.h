@@ -12,6 +12,7 @@ namespace fshost {
 // These need to match whatever our imaging tools do.
 inline constexpr std::string_view kBlobfsPartitionLabel = "blobfs";
 inline constexpr std::string_view kDataPartitionLabel = "data";
+inline constexpr std::string_view kLegacyDataPartitionLabel = "minfs";
 
 }  // namespace fshost
 

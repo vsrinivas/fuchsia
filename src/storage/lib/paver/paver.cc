@@ -34,6 +34,7 @@
 #include <fs-management/mount.h>
 
 #include "src/security/zxcrypt/client.h"
+#include "src/storage/fshost/constants.h"
 #include "src/storage/lib/paver/fvm.h"
 #include "src/storage/lib/paver/pave-logging.h"
 #include "src/storage/lib/paver/stream-reader.h"
@@ -647,9 +648,14 @@ zx::status<> DataSinkImpl::WriteDataFile(fidl::StringView filename,
   char path[PATH_MAX] = {0};
   zx::status<> status = zx::ok();
 
-  // TODO(jsankey): Match on the name of the partition as well
+  const std::string data_partition_names[] = {std::string(fshost::kDataPartitionLabel),
+                                              std::string(fshost::kLegacyDataPartitionLabel)};
+  const char* c_data_partition_names[] = {data_partition_names[0].c_str(),
+                                          data_partition_names[1].c_str()};
   PartitionMatcher matcher{
       .type_guid = data_guid,
+      .labels = c_data_partition_names,
+      .num_labels = 2,
   };
   fbl::unique_fd part_fd(open_partition_with_devfs(devfs_root_.get(), &matcher, ZX_SEC(1), path));
   if (!part_fd) {
