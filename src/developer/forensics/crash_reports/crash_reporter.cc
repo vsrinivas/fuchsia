@@ -230,11 +230,11 @@ void CrashReporter::File(fuchsia::feedback::CrashReport report, const bool is_ho
                 FX_LOGST(ERROR, tags.c_str())
                     << "Failed to file report: " << result.error().log_message << ". Won't retry";
               }
+              tags_->Unregister(report_id);
               info_.LogCrashState(result.error().crash_state);
             } else {
               info_.LogCrashState(cobalt::CrashState::kFiled);
             }
-            tags_->Unregister(report_id);
           });
 
   executor_.schedule_task(std::move(promise));
