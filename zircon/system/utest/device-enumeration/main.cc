@@ -390,7 +390,8 @@ TEST_F(DeviceEnumerationTest, NelsonTest) {
       "gpio-light",
       "class/light/000",
 
-      "spi-1/aml-spi-1/spi/spi-1-0",
+      // This should exist, but open() will fail because it is already being used by radar.
+      // "spi-1/aml-spi-1/spi/spi-1-0",
       "selina/selina",
       "class/radar/000",
 

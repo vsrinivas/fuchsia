@@ -66,6 +66,12 @@ protocol SpiImpl {
         vmo zx.handle:VMO;
     });
 
+    /// Release all VMOs registered to this chip_select. Called by the core driver after the client
+    /// has disconnected and the VMOs are no longer needed.
+    ReleaseRegisteredVmos(struct {
+        chip_select uint32;
+    });
+
     TransmitVmo(struct {
         chip_select uint32;
         vmo_id uint32;

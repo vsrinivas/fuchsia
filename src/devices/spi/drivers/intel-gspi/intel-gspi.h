@@ -52,6 +52,7 @@ class GspiDevice : public DeviceType, public ddk::SpiImplProtocol<GspiDevice, dd
   zx_status_t SpiImplRegisterVmo(uint32_t chip_select, uint32_t vmo_id, zx::vmo vmo,
                                  uint64_t offset, uint64_t size, uint32_t rights);
   zx_status_t SpiImplUnregisterVmo(uint32_t chip_select, uint32_t vmo_id, zx::vmo* out_vmo);
+  void SpiImplReleaseRegisteredVmos(uint32_t chip_select);
   zx_status_t SpiImplTransmitVmo(uint32_t chip_select, uint32_t vmo_id, uint64_t offset,
                                  uint64_t size);
   zx_status_t SpiImplReceiveVmo(uint32_t chip_select, uint32_t vmo_id, uint64_t offset,

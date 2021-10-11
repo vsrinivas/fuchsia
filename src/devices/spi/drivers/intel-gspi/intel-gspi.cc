@@ -298,6 +298,7 @@ zx_status_t GspiDevice::SpiImplUnregisterVmo(uint32_t chip_select, uint32_t vmo_
                                              zx::vmo* out_vmo) {
   return ZX_ERR_NOT_SUPPORTED;
 }
+void GspiDevice::SpiImplReleaseRegisteredVmos(uint32_t chip_select) {}
 zx_status_t GspiDevice::SpiImplTransmitVmo(uint32_t chip_select, uint32_t vmo_id, uint64_t offset,
                                            uint64_t size) {
   return ZX_ERR_NOT_SUPPORTED;

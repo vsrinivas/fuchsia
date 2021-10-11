@@ -8,8 +8,10 @@
 #include <fidl/fuchsia.hardware.spi/cpp/wire.h>
 #include <fuchsia/hardware/spi/cpp/banjo.h>
 #include <fuchsia/hardware/spiimpl/cpp/banjo.h>
+#include <lib/zircon-internal/thread_annotations.h>
 
 #include <ddktl/device.h>
+#include <fbl/mutex.h>
 #include <fbl/ref_counted.h>
 #include <fbl/ref_ptr.h>
 
@@ -18,7 +20,8 @@ namespace spi {
 class SpiDevice;
 
 class SpiChild;
-using SpiChildType = ddk::Device<SpiChild, ddk::Messageable<fuchsia_hardware_spi::Device>::Mixin>;
+using SpiChildType = ddk::Device<SpiChild, ddk::Messageable<fuchsia_hardware_spi::Device>::Mixin,
+                                 ddk::Unbindable, ddk::Openable, ddk::Closable>;
 
 class SpiChild : public SpiChildType,
                  public fbl::RefCounted<SpiChild>,
@@ -32,7 +35,10 @@ class SpiChild : public SpiChildType,
         spi_parent_(*spi_parent),
         has_siblings_(has_siblings) {}
 
+  void DdkUnbind(ddk::UnbindTxn txn);
   void DdkRelease();
+  zx_status_t DdkOpen(zx_device_t** dev_out, uint32_t flags);
+  zx_status_t DdkClose(uint32_t flags);
 
   void TransmitVector(TransmitVectorRequestView request,
                       TransmitVectorCompleter::Sync& completer) override;
@@ -60,12 +66,18 @@ class SpiChild : public SpiChildType,
                           size_t rxdata_count, size_t* out_rxdata_actual);
   void SpiConnectServer(zx::channel server);
 
+  void OnUnbound();
+
  private:
   const ddk::SpiImplProtocolClient spi_;
   const uint32_t cs_;
   SpiDevice& spi_parent_;
   // False if this child is the only device on the bus.
-  bool has_siblings_;
+  const bool has_siblings_;
+
+  fbl::Mutex lock_;
+  bool connected_ TA_GUARDED(lock_) = false;
+  bool shutdown_ = false;
 };
 
 }  // namespace spi

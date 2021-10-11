@@ -48,6 +48,7 @@ fuchsia_driver("spi-driver") {
     "//zircon/system/ulib/fidl-utils",
     "//zircon/system/ulib/sync",
     "//zircon/system/ulib/trace:trace-driver",
+    "//zircon/system/ulib/zircon-internal",
     "//zircon/system/ulib/zx",
   ]
 
@@ -82,7 +83,6 @@ test("spi-test-bin") {
     "//src/devices/lib/fidl-metadata",
     "//src/devices/testing/mock-ddk",
     "//src/lib/ddk",
-    "//src/lib/ddk:ddk-metadata-headers",
     "//src/lib/ddktl",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
@@ -92,6 +92,7 @@ test("spi-test-bin") {
     "//zircon/system/ulib/spi",
     "//zircon/system/ulib/sync",
     "//zircon/system/ulib/trace:trace-driver",
+    "//zircon/system/ulib/zircon-internal",
     "//zircon/system/ulib/zx",
     "//zircon/system/ulib/zxtest",
   ]

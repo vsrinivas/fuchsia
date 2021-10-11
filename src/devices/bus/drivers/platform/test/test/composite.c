@@ -15,7 +15,6 @@
 #include <fuchsia/hardware/pwm/c/banjo.h>
 #include <fuchsia/hardware/rpmb/c/banjo.h>
 #include <fuchsia/hardware/spi/c/banjo.h>
-#include <fuchsia/hardware/spi/c/fidl.h>
 #include <fuchsia/hardware/vreg/c/banjo.h>
 #include <lib/ddk/debug.h>
 #include <lib/ddk/device.h>
@@ -23,7 +22,6 @@
 #include <lib/ddk/metadata.h>
 #include <lib/ddk/platform-defs.h>
 #include <lib/device-protocol/i2c.h>
-#include <lib/spi/spi.h>
 #include <stdlib.h>
 #include <string.h>
 #include <zircon/assert.h>
@@ -385,35 +383,10 @@ static zx_status_t test_spi(spi_protocol_t* spi) {
     }
   }
 
-  // verify that a FIDL communication works
-
-  zx_handle_t client, server;
-  status = zx_channel_create(0, &client, &server);
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "failed to create channel: %d", status);
-    return status;
-  }
-
-  spi_connect_server(spi, server);
-
-  memset(rxbuf, 0, sizeof(rxbuf));
-  status = ZX_ERR_INTERNAL;
-
-  status = spilib_exchange(client, txbuf, rxbuf, sizeof txbuf);
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "spilib_exchange failed: %d", status);
-    return status;
-  }
-
-  for (size_t i = 0; i < sizeof txbuf; i++) {
-    if (rxbuf[i] != txbuf[i]) {
-      zxlogf(ERROR, "spi_exchange returned bad result rxbuf[%zu] = 0x%02x, should be 0x%02x", i,
-             rxbuf[i], txbuf[i]);
-      return ZX_ERR_INTERNAL;
-    }
-  }
-
-  return zx_handle_close(client);
+  // SPI FIDL communication should work, but there is no way to synchronize this with the
+  // enumeration test that also attempts to open the device. FIDL communication is the
+  // responsibility of the SPI core driver, so checking Banjo only is good enough here.
+  return ZX_OK;
 }
 
 static zx_status_t test_power(power_protocol_t* power) {

@@ -7,8 +7,10 @@
 
 #include <fuchsia/hardware/spiimpl/cpp/banjo.h>
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/zircon-internal/thread_annotations.h>
 
 #include <ddktl/device.h>
+#include <fbl/mutex.h>
 #include <fbl/ref_ptr.h>
 #include <fbl/vector.h>
 
@@ -21,27 +23,26 @@ using SpiDeviceType = ddk::Device<SpiDevice, ddk::Unbindable>;
 
 class SpiDevice : public SpiDeviceType {
  public:
-  SpiDevice(zx_device_t* parent, const spi_impl_protocol_t* spi, uint32_t bus_id)
-      : SpiDeviceType(parent),
-        spi_(spi),
-        bus_id_(bus_id),
-        loop_(&kAsyncLoopConfigNeverAttachToThread) {}
+  SpiDevice(zx_device_t* parent, uint32_t bus_id)
+      : SpiDeviceType(parent), bus_id_(bus_id), loop_(&kAsyncLoopConfigNeverAttachToThread) {}
 
   static zx_status_t Create(void* ctx, zx_device_t* parent);
 
   void DdkUnbind(ddk::UnbindTxn txn);
   void DdkRelease();
 
-  void ConnectServer(zx::channel server, SpiChild* ctx);
+  void ConnectServer(zx::channel server, fbl::RefPtr<SpiChild> child);
 
  private:
-  void AddChildren();
+  void AddChildren(const ddk::SpiImplProtocolClient& spi);
+  void Shutdown();
 
-  fbl::Vector<fbl::RefPtr<SpiChild>> children_;
-  const ddk::SpiImplProtocolClient spi_;
-  uint32_t bus_id_;
-  async::Loop loop_;
-  std::atomic<bool> loop_started_ = false;
+  fbl::Mutex lock_;
+  fbl::Vector<fbl::RefPtr<SpiChild>> children_ TA_GUARDED(lock_);  // Must outlive loop_
+  const uint32_t bus_id_;
+  async::Loop loop_ TA_GUARDED(lock_);
+  bool loop_started_ TA_GUARDED(lock_) = false;
+  bool shutdown_ TA_GUARDED(lock_) = false;
 };
 
 }  // namespace spi

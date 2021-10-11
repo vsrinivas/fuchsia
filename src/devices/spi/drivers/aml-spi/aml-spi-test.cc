@@ -688,4 +688,56 @@ TEST(AmlSpiTest, ExchangeWithNoResetFragment) {
   ASSERT_NO_FATAL_FAILURES(bind.gpio().VerifyAndClear());
 }
 
+TEST(AmlSpiTest, ReleaseVmos) {
+  FakeDdkSpi bind;
+
+  EXPECT_OK(AmlSpi::Create(nullptr, fake_ddk::kFakeParent));
+
+  ASSERT_EQ(bind.children().size(), 1);
+  AmlSpi& spi1 = *bind.children()[0].device;
+
+  {
+    zx::vmo vmo;
+    EXPECT_OK(zx::vmo::create(PAGE_SIZE, 0, &vmo));
+    EXPECT_OK(spi1.SpiImplRegisterVmo(0, 1, std::move(vmo), 0, PAGE_SIZE, SPI_VMO_RIGHT_READ));
+
+    EXPECT_OK(zx::vmo::create(PAGE_SIZE, 0, &vmo));
+    EXPECT_OK(spi1.SpiImplRegisterVmo(0, 2, std::move(vmo), 0, PAGE_SIZE, SPI_VMO_RIGHT_READ));
+  }
+
+  {
+    zx::vmo vmo;
+    EXPECT_OK(spi1.SpiImplUnregisterVmo(0, 2, &vmo));
+  }
+
+  // Release VMO 1 and make sure that a subsequent call to unregister it fails.
+  spi1.SpiImplReleaseRegisteredVmos(0);
+
+  {
+    zx::vmo vmo;
+    EXPECT_NOT_OK(spi1.SpiImplUnregisterVmo(0, 1, &vmo));
+  }
+
+  {
+    zx::vmo vmo;
+    EXPECT_OK(zx::vmo::create(PAGE_SIZE, 0, &vmo));
+    EXPECT_OK(spi1.SpiImplRegisterVmo(0, 1, std::move(vmo), 0, PAGE_SIZE, SPI_VMO_RIGHT_READ));
+
+    EXPECT_OK(zx::vmo::create(PAGE_SIZE, 0, &vmo));
+    EXPECT_OK(spi1.SpiImplRegisterVmo(0, 2, std::move(vmo), 0, PAGE_SIZE, SPI_VMO_RIGHT_READ));
+  }
+
+  // Release both VMOs and make sure that they can be registered again.
+  spi1.SpiImplReleaseRegisteredVmos(0);
+
+  {
+    zx::vmo vmo;
+    EXPECT_OK(zx::vmo::create(PAGE_SIZE, 0, &vmo));
+    EXPECT_OK(spi1.SpiImplRegisterVmo(0, 1, std::move(vmo), 0, PAGE_SIZE, SPI_VMO_RIGHT_READ));
+
+    EXPECT_OK(zx::vmo::create(PAGE_SIZE, 0, &vmo));
+    EXPECT_OK(spi1.SpiImplRegisterVmo(0, 2, std::move(vmo), 0, PAGE_SIZE, SPI_VMO_RIGHT_READ));
+  }
+}
+
 }  // namespace spi

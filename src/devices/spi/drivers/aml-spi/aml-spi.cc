@@ -67,7 +67,7 @@ zx::status<cpp20::span<uint8_t>> AmlSpi::GetVmoSpan(uint32_t chip_select, uint32
                                                     uint64_t offset, uint64_t size,
                                                     uint32_t right) {
   vmo_store::StoredVmo<OwnedVmoInfo>* const vmo_info =
-      chips_[chip_select].registered_vmos.GetVmo(vmo_id);
+      chips_[chip_select].registered_vmos->GetVmo(vmo_id);
   if (!vmo_info) {
     return zx::error(ZX_ERR_NOT_FOUND);
   }
@@ -304,7 +304,7 @@ zx_status_t AmlSpi::SpiImplRegisterVmo(uint32_t chip_select, uint32_t vmo_id, zx
     return status;
   }
 
-  return chips_[chip_select].registered_vmos.RegisterWithKey(vmo_id, std::move(stored_vmo));
+  return chips_[chip_select].registered_vmos->RegisterWithKey(vmo_id, std::move(stored_vmo));
 }
 
 zx_status_t AmlSpi::SpiImplUnregisterVmo(uint32_t chip_select, uint32_t vmo_id, zx::vmo* out_vmo) {
@@ -313,7 +313,7 @@ zx_status_t AmlSpi::SpiImplUnregisterVmo(uint32_t chip_select, uint32_t vmo_id, 
   }
 
   vmo_store::StoredVmo<OwnedVmoInfo>* const vmo_info =
-      chips_[chip_select].registered_vmos.GetVmo(vmo_id);
+      chips_[chip_select].registered_vmos->GetVmo(vmo_id);
   if (!vmo_info) {
     return ZX_ERR_NOT_FOUND;
   }
@@ -323,13 +323,17 @@ zx_status_t AmlSpi::SpiImplUnregisterVmo(uint32_t chip_select, uint32_t vmo_id, 
     return status;
   }
 
-  auto result = chips_[chip_select].registered_vmos.Unregister(vmo_id);
+  auto result = chips_[chip_select].registered_vmos->Unregister(vmo_id);
   if (result.is_error()) {
     return result.status_value();
   }
 
   *out_vmo = std::move(result.value());
   return ZX_OK;
+}
+
+void AmlSpi::SpiImplReleaseRegisteredVmos(uint32_t chip_select) {
+  chips_[chip_select].registered_vmos.emplace(vmo_store::Options{});
 }
 
 zx_status_t AmlSpi::SpiImplTransmitVmo(uint32_t chip_select, uint32_t vmo_id, uint64_t offset,

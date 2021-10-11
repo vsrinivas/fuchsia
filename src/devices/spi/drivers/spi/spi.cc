@@ -7,34 +7,48 @@
 #include <lib/ddk/debug.h>
 #include <lib/ddk/metadata.h>
 
+#include <fbl/auto_lock.h>
+
 #include "src/devices/spi/drivers/spi/spi_bind.h"
 
 namespace spi {
 
-void SpiDevice::DdkUnbind(ddk::UnbindTxn txn) {
-  children_.reset();
+void SpiDevice::Shutdown() {
+  fbl::AutoLock lock(&lock_);
+  if (!shutdown_) {
+    shutdown_ = true;
+    // Stop the loop so that all unbind hooks run, and all child references are released.
+    loop_.Shutdown();
+    children_.reset();
+  }
+}
 
+void SpiDevice::DdkUnbind(ddk::UnbindTxn txn) {
+  Shutdown();
   txn.Reply();
 }
 
-void SpiDevice::DdkRelease() { delete this; }
+void SpiDevice::DdkRelease() {
+  Shutdown();
+  delete this;
+}
 
 zx_status_t SpiDevice::Create(void* ctx, zx_device_t* parent) {
-  spi_impl_protocol_t spi;
-  auto status = device_get_protocol(parent, ZX_PROTOCOL_SPI_IMPL, &spi);
-  if (status != ZX_OK) {
-    return status;
+  ddk::SpiImplProtocolClient spi(parent);
+  if (!spi.is_valid()) {
+    return ZX_ERR_NO_RESOURCES;
   }
 
   uint32_t bus_id;
   size_t actual;
-  status = device_get_metadata(parent, DEVICE_METADATA_PRIVATE, &bus_id, sizeof bus_id, &actual);
+  zx_status_t status =
+      device_get_metadata(parent, DEVICE_METADATA_PRIVATE, &bus_id, sizeof bus_id, &actual);
   if (status != ZX_OK) {
     return status;
   }
 
   fbl::AllocChecker ac;
-  std::unique_ptr<SpiDevice> device(new (&ac) SpiDevice(parent, &spi, bus_id));
+  std::unique_ptr<SpiDevice> device(new (&ac) SpiDevice(parent, bus_id));
   if (!ac.check()) {
     return ZX_ERR_NO_MEMORY;
   }
@@ -44,18 +58,18 @@ zx_status_t SpiDevice::Create(void* ctx, zx_device_t* parent) {
     return status;
   }
 
-  device->AddChildren();
+  device->AddChildren(spi);
 
   __UNUSED auto* dummy = device.release();
 
   return ZX_OK;
 }
 
-void SpiDevice::AddChildren() {
+void SpiDevice::AddChildren(const ddk::SpiImplProtocolClient& spi) {
   size_t metadata_size;
   auto status = device_get_metadata_size(zxdev(), DEVICE_METADATA_SPI_CHANNELS, &metadata_size);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: device_get_metadata_size failed %d", __func__, status);
+    zxlogf(ERROR, "device_get_metadata_size failed %d", status);
     return;
   }
 
@@ -66,22 +80,24 @@ void SpiDevice::AddChildren() {
   status =
       device_get_metadata(zxdev(), DEVICE_METADATA_SPI_CHANNELS, buffer, metadata_size, &actual);
   if (status != ZX_OK || actual != metadata_size) {
-    zxlogf(ERROR, "%s: device_get_metadata failed %d", __func__, status);
+    zxlogf(ERROR, "device_get_metadata failed %d", status);
     return;
   }
 
   fidl::DecodedMessage<fuchsia_hardware_spi::wire::SpiBusMetadata> decoded(buffer, metadata_size);
   if (!decoded.ok()) {
-    zxlogf(ERROR, "%s: Failed to deserialize metadata.", __func__);
+    zxlogf(ERROR, "Failed to deserialize metadata.");
     return;
   }
 
   fuchsia_hardware_spi::wire::SpiBusMetadata* metadata = decoded.PrimaryObject();
   if (!metadata->has_channels()) {
-    zxlogf(INFO, "%s: no channels supplied.", __func__);
+    zxlogf(INFO, "No channels supplied.");
     return;
   }
-  zxlogf(INFO, "%s: %zu channels supplied.", __func__, metadata->channels().count());
+  zxlogf(INFO, "%zu channels supplied.", metadata->channels().count());
+
+  fbl::AutoLock lock(&lock_);
 
   bool has_siblings = metadata->channels().count() > 1;
   for (auto& channel : metadata->channels()) {
@@ -97,9 +113,9 @@ void SpiDevice::AddChildren() {
     const auto did = channel.has_did() ? channel.did() : 0;
 
     fbl::AllocChecker ac;
-    auto dev = fbl::MakeRefCountedChecked<SpiChild>(&ac, zxdev(), spi_, cs, this, has_siblings);
+    auto dev = fbl::MakeRefCountedChecked<SpiChild>(&ac, zxdev(), spi, cs, this, has_siblings);
     if (!ac.check()) {
-      zxlogf(ERROR, "%s: out of memory", __func__);
+      zxlogf(ERROR, "Out of memory");
       return;
     }
 
@@ -124,7 +140,7 @@ void SpiDevice::AddChildren() {
     }
 
     if (status != ZX_OK) {
-      zxlogf(ERROR, "%s: DdkAdd failed %d", __func__, status);
+      zxlogf(ERROR, "DdkAdd failed %d", status);
       return;
     }
 
@@ -135,15 +151,31 @@ void SpiDevice::AddChildren() {
   }
 }
 
-void SpiDevice::ConnectServer(zx::channel server, SpiChild* const child) {
-  if (!loop_started_.exchange(true)) {
+void SpiDevice::ConnectServer(zx::channel server, fbl::RefPtr<SpiChild> child) {
+  fbl::AutoLock lock(&lock_);
+  if (shutdown_) {
+    fidl::ServerEnd<fuchsia_hardware_spi::Device>(std::move(server)).Close(ZX_ERR_ALREADY_BOUND);
+    return;
+  }
+
+  if (!loop_started_) {
     zx_status_t status;
     if ((status = loop_.StartThread("spi-child-thread")) != ZX_OK) {
       zxlogf(ERROR, "Failed to start async loop: %d", status);
+    } else {
+      loop_started_ = true;
     }
   }
 
-  fidl::BindServer(loop_.dispatcher(), std::move(server), child);
+  // Make sure that the child reference counter doesn't get decreased when it goes out of scope
+  // here. The dispatcher now holds a pointer to the child, so the child can't be freed until after
+  // the callback runs.
+  fidl::BindServer(loop_.dispatcher(), std::move(server), fbl::ExportToRawPtr(&child),
+                   [](SpiChild* ref_counted_child, fidl::UnbindInfo info,
+                      fidl::ServerEnd<fuchsia_hardware_spi::Device> server) {
+                     fbl::RefPtr<SpiChild> child_ref_ptr = fbl::ImportFromRawPtr(ref_counted_child);
+                     child_ref_ptr->OnUnbound();
+                   });
 }
 
 static zx_driver_ops_t driver_ops = []() {

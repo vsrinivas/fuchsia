@@ -38,6 +38,7 @@ class AmlSpi : public DeviceType, public ddk::SpiImplProtocol<AmlSpi, ddk::base_
   zx_status_t SpiImplRegisterVmo(uint32_t chip_select, uint32_t vmo_id, zx::vmo vmo,
                                  uint64_t offset, uint64_t size, uint32_t rights);
   zx_status_t SpiImplUnregisterVmo(uint32_t chip_select, uint32_t vmo_id, zx::vmo* out_vmo);
+  void SpiImplReleaseRegisteredVmos(uint32_t chip_select);
   zx_status_t SpiImplTransmitVmo(uint32_t chip_select, uint32_t vmo_id, uint64_t offset,
                                  uint64_t size);
   zx_status_t SpiImplReceiveVmo(uint32_t chip_select, uint32_t vmo_id, uint64_t offset,
@@ -62,7 +63,7 @@ class AmlSpi : public DeviceType, public ddk::SpiImplProtocol<AmlSpi, ddk::base_
     ~ChipInfo() = default;
 
     ddk::GpioProtocolClient gpio;
-    SpiVmoStore registered_vmos;
+    std::optional<SpiVmoStore> registered_vmos;
   };
 
   AmlSpi(zx_device_t* device, ddk::MmioBuffer mmio,

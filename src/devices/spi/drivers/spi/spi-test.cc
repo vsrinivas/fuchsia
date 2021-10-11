@@ -100,6 +100,8 @@ class FakeDdkSpiImpl : public ddk::SpiImplProtocol<FakeDdkSpiImpl, ddk::base_pro
     return ZX_OK;
   }
 
+  void SpiImplReleaseRegisteredVmos(uint32_t chip_select) { vmos_released_since_last_call_ = true; }
+
   zx_status_t SpiImplTransmitVmo(uint32_t chip_select, uint32_t vmo_id, uint64_t offset,
                                  uint64_t size) {
     if (chip_select > 1) {
@@ -159,12 +161,19 @@ class FakeDdkSpiImpl : public ddk::SpiImplProtocol<FakeDdkSpiImpl, ddk::base_pro
     return std::get<1>(*rx_it).write(buf, rx_offset, std::max(size, sizeof(buf)));
   }
 
+  bool vmos_released_since_last_call() {
+    const bool value = vmos_released_since_last_call_;
+    vmos_released_since_last_call_ = false;
+    return value;
+  }
+
   zx_status_t SpiImplLockBus(uint32_t chip_select) { return ZX_OK; }
   zx_status_t SpiImplUnlockBus(uint32_t chip_select) { return ZX_OK; }
 
   SpiDevice* bus_device_;
   uint32_t current_test_cs_ = 0;
   bool corrupt_rx_actual_ = false;
+  bool vmos_released_since_last_call_ = false;
 
   enum class SpiTestMode {
     kTransmit,
@@ -587,4 +596,169 @@ TEST_F(SpiDeviceTest, AssertCsNoSiblingTest) {
     ASSERT_OK(result->status);
   }
 }
+
+TEST_F(SpiDeviceTest, OneClient) {
+  SetSpiChannelMetadata(kSpiChannels, 1);
+
+  fidl::WireSyncClient<fuchsia_hardware_spi::Device> cs0_client;
+
+  SpiDevice::Create(nullptr, parent_.get());
+  auto* const spi_bus = parent_->GetLatestChild();
+  ASSERT_NOT_NULL(spi_bus);
+  EXPECT_EQ(spi_bus->child_count(), 1);
+
+  auto* const child0 = spi_bus->children().front()->GetDeviceContext<SpiChild>();
+
+  // Establish a FIDL connection and verify that it works.
+  {
+    zx::channel client, server;
+    ASSERT_OK(zx::channel::create(0, &client, &server));
+    child0->SpiConnectServer(std::move(server));
+    cs0_client = fidl::WireSyncClient<fuchsia_hardware_spi::Device>(std::move(client));
+  }
+
+  {
+    auto result = cs0_client.CanAssertCs();
+    ASSERT_TRUE(result.ok());
+    ASSERT_TRUE(result->can);
+  }
+
+  // Trying to make a new connection should fail.
+  {
+    zx::channel client, server;
+    ASSERT_OK(zx::channel::create(0, &client, &server));
+    child0->SpiConnectServer(std::move(server));
+    fidl::WireSyncClient<fuchsia_hardware_spi::Device> cs0_client_1(std::move(client));
+
+    auto result = cs0_client_1.CanAssertCs();
+    EXPECT_FALSE(result.ok());
+  }
+
+  EXPECT_FALSE(spi_impl_.vmos_released_since_last_call());
+
+  // Close the first client so that another one can connect.
+  cs0_client.mutable_channel()->reset();
+
+  // We don't know when the driver will be ready for a new client, just loop
+  // until the connection is established.
+  for (;;) {
+    zx::channel client, server;
+    ASSERT_OK(zx::channel::create(0, &client, &server));
+    child0->SpiConnectServer(std::move(server));
+    cs0_client = fidl::WireSyncClient<fuchsia_hardware_spi::Device>(std::move(client));
+
+    auto result = cs0_client.CanAssertCs();
+    if (result.ok()) {
+      break;
+    }
+  }
+
+  EXPECT_TRUE(spi_impl_.vmos_released_since_last_call());
+
+  // DdkOpen should fail when another client is connected
+  EXPECT_NOT_OK(child0->DdkOpen(nullptr, 0));
+
+  // Close the first client and make sure DdkOpen now works
+  cs0_client.mutable_channel()->reset();
+
+  while (child0->DdkOpen(nullptr, 0) != ZX_OK) {
+  }
+
+  EXPECT_TRUE(spi_impl_.vmos_released_since_last_call());
+
+  // FIDL clients shouldn't be able to connect, and calling DdkOpen a second
+  // time should fail
+  {
+    zx::channel client, server;
+    ASSERT_OK(zx::channel::create(0, &client, &server));
+    child0->SpiConnectServer(std::move(server));
+
+    fidl::WireSyncClient<fuchsia_hardware_spi::Device> cs0_client_1(std::move(client));
+
+    auto result = cs0_client_1.CanAssertCs();
+    EXPECT_FALSE(result.ok());
+  }
+
+  EXPECT_NOT_OK(child0->DdkOpen(nullptr, 0));
+
+  // Call DdkClose and make sure that a new client can now connect.
+  child0->DdkClose(0);
+
+  for (;;) {
+    zx::channel client, server;
+    ASSERT_OK(zx::channel::create(0, &client, &server));
+    child0->SpiConnectServer(std::move(server));
+
+    cs0_client = fidl::WireSyncClient<fuchsia_hardware_spi::Device>(std::move(client));
+
+    auto result = cs0_client.CanAssertCs();
+    if (result.ok()) {
+      break;
+    }
+  }
+
+  EXPECT_TRUE(spi_impl_.vmos_released_since_last_call());
+}
+
+TEST_F(SpiDeviceTest, DdkLifecycle) {
+  SetSpiChannelMetadata(kSpiChannels, 1);
+
+  fidl::WireSyncClient<fuchsia_hardware_spi::Device> cs0_client;
+
+  SpiDevice::Create(nullptr, parent_.get());
+  auto* const spi_bus = parent_->GetLatestChild();
+  ASSERT_NOT_NULL(spi_bus);
+  EXPECT_EQ(spi_bus->child_count(), 1);
+
+  auto* const child0 = spi_bus->children().front()->GetDeviceContext<SpiChild>();
+
+  {
+    zx::channel client, server;
+    ASSERT_OK(zx::channel::create(0, &client, &server));
+    child0->SpiConnectServer(std::move(server));
+    cs0_client = fidl::WireSyncClient<fuchsia_hardware_spi::Device>(std::move(client));
+  }
+
+  {
+    auto result = cs0_client.AssertCs();
+    ASSERT_TRUE(result.ok());
+    EXPECT_OK(result->status);
+  }
+
+  spi_bus->children().front()->UnbindOp();
+  EXPECT_TRUE(spi_bus->children().front()->UnbindReplyCalled());
+
+  {
+    auto result = cs0_client.DeassertCs();
+    ASSERT_TRUE(result.ok());
+    // DdkUnbind has been called, the child device should respond with errors.
+    EXPECT_NOT_OK(result->status);
+  }
+
+  spi_bus->children().front()->ReleaseOp();
+
+  EXPECT_OK(mock_ddk::ReleaseFlaggedDevices(parent_.get()));
+  EXPECT_EQ(spi_bus->descendant_count(), 0);
+
+  {
+    auto result = cs0_client.DeassertCs();
+    ASSERT_TRUE(result.ok());
+    // The child should still exist and reply since the parent holds a reference to it.
+    EXPECT_NOT_OK(result->status);
+  }
+
+  spi_bus->UnbindOp();
+  EXPECT_TRUE(spi_bus->UnbindReplyCalled());
+
+  {
+    auto result = cs0_client.DeassertCs();
+    // The parent has stopped its loop, this should now fail.
+    EXPECT_FALSE(result.ok());
+  }
+
+  spi_bus->ReleaseOp();
+  EXPECT_OK(mock_ddk::ReleaseFlaggedDevices(parent_.get()));
+  EXPECT_EQ(parent_->descendant_count(), 0);
+}
+
 }  // namespace spi
