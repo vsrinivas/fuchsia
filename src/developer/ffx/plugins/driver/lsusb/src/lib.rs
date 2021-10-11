@@ -12,6 +12,7 @@ use {
     fidl_fuchsia_device_manager::DeviceWatcherProxy,
     fuchsia_async::{Duration, TimeoutExt},
     fuchsia_zircon_status as zx,
+    num_traits::FromPrimitive,
 };
 
 #[ffx_plugin(
@@ -167,124 +168,143 @@ async fn do_list_device(
                 println!("zero length header, bailing");
             }
 
-            if desc_type == 4 {
-                // TODO: replace 4 with USB_DT_INTERFACE
-                let mut info = [0; std::mem::size_of::<InterfaceInfoDescriptor>()];
-                info.copy_from_slice(
-                    &config_desc_data
-                        [offset..(std::mem::size_of::<InterfaceInfoDescriptor>() + offset)],
-                );
-                let info = InterfaceInfoDescriptor::from_array(info);
-
-                println!("    Interface Descriptor:");
-                println!("      {:<33}{}", "bLength", info.bLength);
-                println!("      {:<33}{}", "bDescriptorType", info.bDescriptorType);
-                println!("      {:<33}{}", "bInterfaceNumber", info.bInterfaceNumber);
-                println!("      {:<33}{}", "bAlternateSetting", info.bAlternateSetting);
-                println!("      {:<33}{}", "bNumEndpoints", info.bNumEndpoints);
-                println!("      {:<33}{}", "bInterfaceClass", info.bInterfaceClass);
-                println!("      {:<33}{}", "bInterfaceSubClass", info.bInterfaceSubClass);
-                println!("      {:<33}{}", "bInterfaceProtocol", info.bInterfaceProtocol);
-
-                let string_buf = device
-                    .get_string_descriptor(device_desc.iSerialNumber, EN_US)
-                    .await
-                    .context(format!("DeviceGetStringDescriptor failed for {}", devname))?;
-                println!("      {:<33}{}{}", "iInterface", info.iInterface, string_buf.1);
-            } else if desc_type == 5 {
-                // TODO: replace 5 with USB_DT_ENDPOINT
-                let mut info = [0; std::mem::size_of::<EndpointInfoDescriptor>()];
-                info.copy_from_slice(
-                    &config_desc_data
-                        [offset..(std::mem::size_of::<EndpointInfoDescriptor>() + offset)],
-                );
-                let info = EndpointInfoDescriptor::from_array(info);
-
-                println!("      Endpoint Descriptor:");
-                println!("        {:<33}{}", "bLength", info.bLength);
-                println!("        {:<33}{}", "bDescriptorType", info.bDescriptorType);
-                println!("        {:<33}{}", "bEndpointAddress", info.bEndpointAddress);
-                println!("        {:<33}{}", "bmAttributes", info.bmAttributes);
-                println!("        {:<33}{}", "wMaxPacketSize", info.wMaxPacketSize);
-                println!("        {:<33}{}", "bInterval", info.bInterval);
-            } else if desc_type == 21 {
-                // TODO: replace 21 with USB_DT_HID
-                let mut info = [0; std::mem::size_of::<HidDescriptor>()];
-                info.copy_from_slice(
-                    &config_desc_data[offset..(std::mem::size_of::<HidDescriptor>() + offset)],
-                );
-                let info = HidDescriptor::from_array(info);
-
-                println!("        HID Descriptor:\n");
-                println!("          {:<33}{}", "bLength", info.bLength);
-                println!("          {:<33}{}", "bDescriptorType", info.bDescriptorType);
-                println!("          {:<33}{}{}", "bcdHID", info.bcdHID >> 8, info.bcdHID & 0xFF);
-                println!("          {:<33}{}", "bCountryCode", info.bCountryCode);
-                println!("          {:<33}{}", "bNumDescriptors", info.bNumDescriptors);
-                for i in 0..info.bNumDescriptors {
-                    let mut entry = [0; std::mem::size_of::<HidDescriptorEntry>()];
-                    entry.copy_from_slice(
-                        &config_desc_data[offset
-                            ..(std::mem::size_of::<HidDescriptor>()
-                                + offset
-                                + (i as usize * std::mem::size_of::<HidDescriptorEntry>()))],
+            match DescriptorType::from_u8(desc_type) {
+                Some(DescriptorType::Interface) => {
+                    let mut info = [0; std::mem::size_of::<InterfaceInfoDescriptor>()];
+                    info.copy_from_slice(
+                        &config_desc_data
+                            [offset..(std::mem::size_of::<InterfaceInfoDescriptor>() + offset)],
                     );
-                    let entry = HidDescriptorEntry::from_array(entry);
-                    println!("          {:<33}{}", "bDescriptorType", entry.bDescriptorType);
-                    println!("          {:<33}{}", "wDescriptorLength", entry.wDescriptorLength);
+                    let info = InterfaceInfoDescriptor::from_array(info);
+
+                    println!("    Interface Descriptor:");
+                    println!("      {:<33}{}", "bLength", info.bLength);
+                    println!("      {:<33}{}", "bDescriptorType", info.bDescriptorType);
+                    println!("      {:<33}{}", "bInterfaceNumber", info.bInterfaceNumber);
+                    println!("      {:<33}{}", "bAlternateSetting", info.bAlternateSetting);
+                    println!("      {:<33}{}", "bNumEndpoints", info.bNumEndpoints);
+                    println!("      {:<33}{}", "bInterfaceClass", info.bInterfaceClass);
+                    println!("      {:<33}{}", "bInterfaceSubClass", info.bInterfaceSubClass);
+                    println!("      {:<33}{}", "bInterfaceProtocol", info.bInterfaceProtocol);
+
+                    let string_buf = device
+                        .get_string_descriptor(device_desc.iSerialNumber, EN_US)
+                        .await
+                        .context(format!("DeviceGetStringDescriptor failed for {}", devname))?;
+                    println!("      {:<33}{}{}", "iInterface", info.iInterface, string_buf.1);
                 }
-            } else if desc_type == 30 {
-                // TODO: replace 30 with USB_DT_SS_EP_COMPANION
-                let mut info = [0; std::mem::size_of::<SsEpCompDescriptorInfo>()];
-                info.copy_from_slice(
-                    &config_desc_data
-                        [offset..(std::mem::size_of::<SsEpCompDescriptorInfo>() + offset)],
-                );
-                let info = SsEpCompDescriptorInfo::from_array(info);
+                Some(DescriptorType::Endpoint) => {
+                    let mut info = [0; std::mem::size_of::<EndpointInfoDescriptor>()];
+                    info.copy_from_slice(
+                        &config_desc_data
+                            [offset..(std::mem::size_of::<EndpointInfoDescriptor>() + offset)],
+                    );
+                    let info = EndpointInfoDescriptor::from_array(info);
 
-                println!("          SuperSpeed Endpoint Companion Descriptor:");
-                println!("            {:<33}{}", "bLength", info.bLength);
-                println!("            {:<33}{}", "bDescriptorType", info.bDescriptorType);
-                println!("            {:<33}{}", "bMaxBurst", info.bMaxBurst);
-                println!("            {:<33}{}", "bmAttributes", info.bmAttributes);
-                println!("            {:<33}{}", "wBytesPerInterval", info.wBytesPerInterval);
-            } else if desc_type == 31 {
-                // TODO: replace 31 with USB_DT_SS_ISOCH_EP_COMPANION
-                let mut info = [0; std::mem::size_of::<SsIsochEpCompDescriptor>()];
-                info.copy_from_slice(
-                    &config_desc_data
-                        [offset..(std::mem::size_of::<SsIsochEpCompDescriptor>() + offset)],
-                );
-                let info = SsIsochEpCompDescriptor::from_array(info);
+                    println!("      Endpoint Descriptor:");
+                    println!("        {:<33}{}", "bLength", info.bLength);
+                    println!("        {:<33}{}", "bDescriptorType", info.bDescriptorType);
+                    println!("        {:<33}{}", "bEndpointAddress", info.bEndpointAddress);
+                    println!("        {:<33}{}", "bmAttributes", info.bmAttributes);
+                    println!("        {:<33}{}", "wMaxPacketSize", info.wMaxPacketSize);
+                    println!("        {:<33}{}", "bInterval", info.bInterval);
+                }
+                Some(DescriptorType::Hid) => {
+                    let mut info = [0; std::mem::size_of::<HidDescriptor>()];
+                    info.copy_from_slice(
+                        &config_desc_data[offset..(std::mem::size_of::<HidDescriptor>() + offset)],
+                    );
+                    let info = HidDescriptor::from_array(info);
 
-                println!("            SuperSpeed Isochronous Endpoint Companion Descriptor:");
-                println!("              {:<33}{}", "bLength", info.bLength);
-                println!("              {:<33}{}", "bDescriptorType", info.bDescriptorType);
-                println!("              {:<33}{}", "wReserved", info.wReserved);
-                println!("              {:<33}{}", "dwBytesPerInterval", info.dwBytesPerInterval);
-            } else if desc_type == 11 {
-                // TODO: replace 11 with USB_DT_INTERFACE_ASSOCIATION
-                let mut info = [0; std::mem::size_of::<InterfaceAssocDescriptor>()];
-                info.copy_from_slice(
-                    &config_desc_data
-                        [offset..(std::mem::size_of::<InterfaceAssocDescriptor>() + offset)],
-                );
-                let info = InterfaceAssocDescriptor::from_array(info);
+                    println!("        HID Descriptor:\n");
+                    println!("          {:<33}{}", "bLength", info.bLength);
+                    println!("          {:<33}{}", "bDescriptorType", info.bDescriptorType);
+                    println!(
+                        "          {:<33}{}{}",
+                        "bcdHID",
+                        info.bcdHID >> 8,
+                        info.bcdHID & 0xFF
+                    );
+                    println!("          {:<33}{}", "bCountryCode", info.bCountryCode);
+                    println!("          {:<33}{}", "bNumDescriptors", info.bNumDescriptors);
+                    for i in 0..info.bNumDescriptors {
+                        let mut entry = [0; std::mem::size_of::<HidDescriptorEntry>()];
+                        entry.copy_from_slice(
+                            &config_desc_data[offset
+                                ..(std::mem::size_of::<HidDescriptor>()
+                                    + offset
+                                    + (i as usize * std::mem::size_of::<HidDescriptorEntry>()))],
+                        );
+                        let entry = HidDescriptorEntry::from_array(entry);
+                        println!("          {:<33}{}", "bDescriptorType", entry.bDescriptorType);
+                        println!(
+                            "          {:<33}{}",
+                            "wDescriptorLength", entry.wDescriptorLength
+                        );
+                    }
+                }
+                Some(DescriptorType::SsEpCompanion) => {
+                    let mut info = [0; std::mem::size_of::<SsEpCompDescriptorInfo>()];
+                    info.copy_from_slice(
+                        &config_desc_data
+                            [offset..(std::mem::size_of::<SsEpCompDescriptorInfo>() + offset)],
+                    );
+                    let info = SsEpCompDescriptorInfo::from_array(info);
 
-                println!("              Interface Association Descriptor:");
-                println!("                {:<33}{}", "bLength", info.bLength);
-                println!("                {:<33}{}", "bDescriptorType", info.bDescriptorType);
-                println!("                {:<33}{}", "bFirstInterface", info.bFirstInterface);
-                println!("                {:<33}{}", "bInterfaceCount", info.bInterfaceCount);
-                println!("                {:<33}{}", "bFunctionClass", info.bFunctionClass);
-                println!("                {:<33}{}", "bFunctionSubClass", info.bFunctionSubClass);
-                println!("                {:<33}{}", "bFunctionProtocol", info.bFunctionProtocol);
-                println!("                {:<33}{}", "iFunction", info.iFunction);
-            } else {
-                println!("                Unknown Descriptor:");
-                println!("                  {:<33}{}", "bLength", length);
-                println!("                  {:<33}{}", "bDescriptorType", desc_type);
-                println!("{:X?}", &config_desc_data[offset..offset + length as usize]);
+                    println!("          SuperSpeed Endpoint Companion Descriptor:");
+                    println!("            {:<33}{}", "bLength", info.bLength);
+                    println!("            {:<33}{}", "bDescriptorType", info.bDescriptorType);
+                    println!("            {:<33}{}", "bMaxBurst", info.bMaxBurst);
+                    println!("            {:<33}{}", "bmAttributes", info.bmAttributes);
+                    println!("            {:<33}{}", "wBytesPerInterval", info.wBytesPerInterval);
+                }
+                Some(DescriptorType::SsIsochEpCompanion) => {
+                    let mut info = [0; std::mem::size_of::<SsIsochEpCompDescriptor>()];
+                    info.copy_from_slice(
+                        &config_desc_data
+                            [offset..(std::mem::size_of::<SsIsochEpCompDescriptor>() + offset)],
+                    );
+                    let info = SsIsochEpCompDescriptor::from_array(info);
+
+                    println!("            SuperSpeed Isochronous Endpoint Companion Descriptor:");
+                    println!("              {:<33}{}", "bLength", info.bLength);
+                    println!("              {:<33}{}", "bDescriptorType", info.bDescriptorType);
+                    println!("              {:<33}{}", "wReserved", info.wReserved);
+                    println!(
+                        "              {:<33}{}",
+                        "dwBytesPerInterval", info.dwBytesPerInterval
+                    );
+                }
+                Some(DescriptorType::InterfaceAssociation) => {
+                    let mut info = [0; std::mem::size_of::<InterfaceAssocDescriptor>()];
+                    info.copy_from_slice(
+                        &config_desc_data
+                            [offset..(std::mem::size_of::<InterfaceAssocDescriptor>() + offset)],
+                    );
+                    let info = InterfaceAssocDescriptor::from_array(info);
+
+                    println!("              Interface Association Descriptor:");
+                    println!("                {:<33}{}", "bLength", info.bLength);
+                    println!("                {:<33}{}", "bDescriptorType", info.bDescriptorType);
+                    println!("                {:<33}{}", "bFirstInterface", info.bFirstInterface);
+                    println!("                {:<33}{}", "bInterfaceCount", info.bInterfaceCount);
+                    println!("                {:<33}{}", "bFunctionClass", info.bFunctionClass);
+                    println!(
+                        "                {:<33}{}",
+                        "bFunctionSubClass", info.bFunctionSubClass
+                    );
+                    println!(
+                        "                {:<33}{}",
+                        "bFunctionProtocol", info.bFunctionProtocol
+                    );
+                    println!("                {:<33}{}", "iFunction", info.iFunction);
+                }
+                _ => {
+                    println!("                Unknown Descriptor:");
+                    println!("                  {:<33}{}", "bLength", length);
+                    println!("                  {:<33}{}", "bDescriptorType", desc_type);
+                    println!("{:X?}", &config_desc_data[offset..offset + length as usize]);
+                }
             }
             offset += length as usize;
         }

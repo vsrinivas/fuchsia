@@ -2,6 +2,29 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use num_derive::FromPrimitive;
+
+#[repr(u8)]
+#[derive(FromPrimitive)]
+pub enum DescriptorType {
+    Device = 0x01,
+    Config = 0x02,
+    r#String = 0x03,
+    Interface = 0x04,
+    Endpoint = 0x05,
+    DeviceQualifier = 0x06,
+    OtherSpeedConfig = 0x07,
+    InterfacePower = 0x08,
+    InterfaceAssociation = 0x0b,
+    Hid = 0x21,
+    Hidreport = 0x22,
+    Hidphysical = 0x23,
+    CsInterface = 0x24,
+    CsEndpoint = 0x25,
+    SsEpCompanion = 0x30,
+    SsIsochEpCompanion = 0x31,
+}
+
 #[allow(non_snake_case)]
 #[repr(C)]
 pub struct DeviceDescriptor {
