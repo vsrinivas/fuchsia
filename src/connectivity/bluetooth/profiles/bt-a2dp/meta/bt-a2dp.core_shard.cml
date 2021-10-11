@@ -16,6 +16,11 @@
         {
             protocol: [
                 "fuchsia.bluetooth.a2dp.AudioMode",
+
+                // TODO(fxbug.dev/86390): `avdtp.PeerManager` is a testonly capability. It should
+                // not be exposed to the system. Remove this once it is exposed in testing scenarios
+                // only.
+                "fuchsia.bluetooth.avdtp.PeerManager",
                 "fuchsia.bluetooth.internal.a2dp.Controller",
             ],
             from: "#bt-a2dp",
