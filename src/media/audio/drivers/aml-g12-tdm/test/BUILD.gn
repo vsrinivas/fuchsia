@@ -68,7 +68,7 @@ executable("aml-g12-tdm-dai-test-bin") {
     "//src/devices/lib/amlogic",
     "//src/devices/lib/mmio",
     "//src/devices/testing/fake-mmio-reg",
-    "//src/devices/testing/fake_ddk",
+    "//src/devices/testing/mock-ddk",
     "//src/lib/ddk",
     "//src/lib/ddktl",
     "//zircon/system/ulib/async-loop:async-loop-cpp",

@@ -146,7 +146,6 @@ zx_library("fake_ddk") {
     "//src/graphics/drivers/misc/goldfish_sync/*",
     "//src/graphics/lib/magma/tests/unit_tests/*",
     "//src/media/audio/drivers/aml-g12-pdm/test/*",
-    "//src/media/audio/drivers/aml-g12-tdm/test/*",
     "//src/media/audio/drivers/codecs/alc5663/tests/*",
     "//src/media/audio/drivers/codecs/max98373/*",
     "//src/media/audio/drivers/intel-hda/controller/*",
