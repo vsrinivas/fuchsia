@@ -97,15 +97,8 @@ fuchsia_unittest_component("system-update-checker-bin-test") {
   deps = [ ":bin_test" ]
 }
 
-fuchsia_component("sbase-test") {
-  component_name = "test"
-  deps = [ "//third_party/sbase:test_bin" ]
-  manifest = "meta/test-shell-command.cmx"
-}
-
 fuchsia_test_package("system-update-checker-tests") {
   test_components = [ ":system-update-checker-bin-test" ]
-  deps = [ ":sbase-test" ]
   test_specs = {
     log_settings = {
       max_severity = "ERROR"
