@@ -138,6 +138,8 @@ class StreamImpl {
     GetNextFrame2Callback frame_callback_;
     bool participant_ = false;
     std::queue<fuchsia::camera3::FrameInfo2> frames_;
+    bool orientation_callback_invoked_ = false;
+    WatchOrientationCallback orientation_callback_;
   };
 
   async_dispatcher_t* dispatcher_;

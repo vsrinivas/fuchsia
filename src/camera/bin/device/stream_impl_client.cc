@@ -18,10 +18,7 @@ namespace camera {
 
 StreamImpl::Client::Client(StreamImpl& stream, uint64_t id,
                            fidl::InterfaceRequest<fuchsia::camera3::Stream> request)
-    : stream_(stream),
-      id_(id),
-      binding_(this, std::move(request)),
-      resolution_(SizeEqual) {
+    : stream_(stream), id_(id), binding_(this, std::move(request)), resolution_(SizeEqual) {
   FX_LOGS(DEBUG) << "Stream client " << id << " connected.";
   binding_.set_error_handler(fit::bind_member(this, &StreamImpl::Client::OnClientDisconnected));
 }
@@ -148,8 +145,24 @@ void StreamImpl::Client::WatchBufferCollection(WatchBufferCollectionCallback cal
 
 void StreamImpl::Client::WatchOrientation(WatchOrientationCallback callback) {
   TRACE_DURATION("camera", "StreamImpl::Client::WatchOrientation");
-  // Orientation is not currently reported by hardware. Assume UP (no transform).
-  callback(fuchsia::camera3::Orientation::UP);
+  // Directly invoke the callback on initial request.
+  if (!orientation_callback_invoked_) {
+    // Orientation is not currently reported by hardware. Assume UP (no transform).
+    callback(fuchsia::camera3::Orientation::UP);
+    orientation_callback_invoked_ = true;
+    return;
+  }
+
+  // It is invalid to have multiple Watch requests in flight.
+  if (orientation_callback_) {
+    CloseConnection(ZX_ERR_BAD_STATE);
+    return;
+  }
+
+  // A watch call subsequent to the first will never be invoked, but the object must still be
+  // persisted. Destruction of captured FIDL objects prior to invocation would be interpreted as a
+  // server error.
+  orientation_callback_ = std::move(callback);
 }
 
 void StreamImpl::Client::GetNextFrame(GetNextFrameCallback callback) {

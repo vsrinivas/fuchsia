@@ -1296,4 +1296,24 @@ TEST_F(DeviceImplTest, LegacyStreamPropertiesRestored) {
   EXPECT_EQ(image_format, kLegacyStreamFormatAssociation.format_index);
 }
 
+TEST_F(DeviceImplTest, WatchOrientation) {
+  fuchsia::camera3::DevicePtr device;
+  SetFailOnError(device, "Device");
+  device_->GetHandler()(device.NewRequest());
+  fuchsia::camera3::StreamPtr stream;
+  SetFailOnError(stream, "Stream");
+  device->ConnectToStream(0, stream.NewRequest());
+  bool orientation_returned = false;
+  stream->WatchOrientation([&](fuchsia::camera3::Orientation orientation) {
+    EXPECT_EQ(orientation, fuchsia::camera3::Orientation::UP);
+    orientation_returned = true;
+  });
+  RunLoopUntilFailureOr(orientation_returned);
+  stream->WatchOrientation([&](fuchsia::camera3::Orientation orientation) {
+    ADD_FAILURE() << "WatchOrientation should not return a second time.";
+  });
+  // Run the loop for long enough that we can be confident the callback won't be invoked.
+  RunLoopWithTimeout(zx::sec(2));
+}
+
 }  // namespace camera
