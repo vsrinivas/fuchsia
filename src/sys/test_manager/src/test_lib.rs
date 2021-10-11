@@ -573,6 +573,9 @@ pub enum SuiteLaunchError {
 
     #[error("Some internal error ocurred. Please file bug")]
     InternalError,
+
+    #[error("No test cases matched the provided filters")]
+    NoMatchingCases,
 }
 
 impl From<ftest_manager::LaunchError> for SuiteLaunchError {
@@ -590,6 +593,7 @@ impl From<ftest_manager::LaunchError> for SuiteLaunchError {
             }
             ftest_manager::LaunchError::CaseEnumeration => SuiteLaunchError::CaseEnumeration,
             ftest_manager::LaunchError::InternalError => SuiteLaunchError::InternalError,
+            ftest_manager::LaunchError::NoMatchingCases => SuiteLaunchError::NoMatchingCases,
             ftest_manager::LaunchErrorUnknown!() => panic!("Encountered unknown launch error"),
         }
     }

@@ -39,6 +39,11 @@ type LaunchError = flexible enum {
     /// Some internal error occured. Something wrong with test manager setup.
     /// Check logs and report bug.
     INTERNAL_ERROR = 6;
+
+    /// No test cases matched the specified test filters. This error is only
+    /// returned when a test filter is specified. In the case of a test suite
+    /// with no test cases, the suite will pass.
+    NO_MATCHING_CASES = 7;
 };
 /// Human-readable name for a test case.
 alias CaseName = string:512;

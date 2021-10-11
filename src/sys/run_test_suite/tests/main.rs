@@ -418,6 +418,23 @@ log3 for Example.Test3
 }
 
 #[fuchsia_async::run_singlethreaded(test)]
+async fn launch_with_filter_no_matching_cases() {
+    let mut output: Vec<u8> = vec![];
+    let mut test_params = new_test_params(
+        "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/passing-test-example.cm",
+    );
+
+    test_params.test_filters = Some(vec!["matches-nothing".to_string()]);
+    let run_result =
+        run_test_once(test_params, diagnostics::LogCollectionOptions::default(), &mut output)
+            .await
+            .unwrap_err();
+
+    assert_matches!(run_result, RunTestSuiteError::Launch(LaunchError::NoMatchingCases));
+    assert!(!run_result.is_internal_error());
+}
+
+#[fuchsia_async::run_singlethreaded(test)]
 async fn launch_and_test_empty_test() {
     let mut output: Vec<u8> = vec![];
     let run_result = run_test_once(

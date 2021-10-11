@@ -86,6 +86,19 @@ fn convert_launch_error_to_str(e: &ftest_manager::LaunchError) -> &'static str {
             https://fuchsia.dev/fuchsia-src/development/components/v2/troubleshooting#troubleshoot-test"
         }
         ftest_manager::LaunchError::InternalError => "Internal error, please file bug",
+        ftest_manager::LaunchError::NoMatchingCases =>
+            // TODO(satsukiu): Ideally, we would expose these error enums up through the library
+            // and define the error messages in the main files for each tool. This would allow each
+            // tool (ffx/fx/run-test-suite) to give the correct flags.
+            "No test cases matched the specified filters.\n\
+            If you specified a test filter, verify the available test cases with \
+            'ffx test list-cases <test suite url>'.\n\
+            If the list of available tests contains only a single test case called either \
+            'legacy_test' or 'main', the suite likely uses either the legacy_test_runner or \
+            elf_test_runner. In these cases, --test-filter will not work. Instead, \
+            you can pass test arguments directly to the test instead. Refer to: \
+            https://fuchsia.dev/fuchsia-src/concepts/testing/v2/test_runner_framework?hl=en#legacy-test-runner
+            ",
         ftest_manager::LaunchErrorUnknown!() => "Unrecognized launch error",
     }
 }

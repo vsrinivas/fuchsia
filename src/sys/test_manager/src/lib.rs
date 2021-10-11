@@ -246,7 +246,7 @@ fn suite_error(err: fidl::Error) -> anyhow::Error {
 /// Enumerates test cases and return invocations.
 async fn enumerate_test_cases(
     suite: &ftest::SuiteProxy,
-    matcher: Option<CaseMatcher>,
+    matcher: Option<&CaseMatcher>,
 ) -> Result<Vec<Invocation>, anyhow::Error> {
     debug!("enumerating tests");
     let (case_iterator, server_end) =
@@ -276,6 +276,7 @@ async fn enumerate_test_cases(
     Ok(invocations)
 }
 
+#[derive(Debug)]
 struct CaseMatcher {
     /// Patterns specifying cases to include.
     includes: Vec<glob::Pattern>,
@@ -1112,7 +1113,11 @@ impl RunningSuite {
             };
 
             let suite = self.connect_to_suite()?;
-            let invocations = match enumerate_test_cases(&suite, matcher).await {
+            let invocations = match enumerate_test_cases(&suite, matcher.as_ref()).await {
+                Ok(i) if i.is_empty() && matcher.is_some() => {
+                    sender.send(Err(LaunchError::NoMatchingCases)).await.unwrap();
+                    return Err(format_err!("Found no matching cases using {:?}", matcher));
+                }
                 Ok(i) => i,
                 Err(e) => {
                     sender

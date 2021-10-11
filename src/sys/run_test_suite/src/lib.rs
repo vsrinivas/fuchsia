@@ -794,6 +794,9 @@ async fn collect_results(
                 }
                 println!("{} out of {} tests passed...", passed.len(), executed.len());
                 println!("{} completed with result: {}", &test_url, outcome);
+                if executed.is_empty() {
+                    println!("WARN: No test cases were executed!");
+                }
                 if !successful_completion {
                     println!("{} did not complete successfully.", &test_url);
                 }
