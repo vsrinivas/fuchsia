@@ -1,108 +1,19 @@
-# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/components.gni")
-import("//build/persist_logs.gni")
-import("//build/rust/rustc_binary.gni")
-
-declare_args() {
-  # Controls how many bytes of space on disk are used to persist device logs.
-  # Should be a string value that only contains digits.
-  max_log_disk_usage = "0"
-  log_startup_sleep = "30000"
+# Do not use this target directly, instead depend on //src/diagnostics/log_listener:log_listener_shell.
+group("log_listener_shell") {
+  public_deps = [ "//src/diagnostics/log_listener:log_listener_shell" ]
 }
 
-rustc_binary("bin") {
-  name = "log_listener"
-  with_unit_tests = true
-  edition = "2018"
-
-  deps = [
-    "//sdk/fidl/fuchsia.diagnostics:fuchsia.diagnostics-rustc",
-    "//sdk/fidl/fuchsia.logger:fuchsia.logger-rustc",
-    "//src/lib/diagnostics/selectors",
-    "//src/lib/fuchsia-async",
-    "//src/lib/fuchsia-runtime",
-    "//src/lib/syslog/rust:syslog-listener",
-    "//src/lib/zircon/rust:fuchsia-zircon",
-    "//third_party/rust_crates:anyhow",
-    "//third_party/rust_crates:chrono",
-    "//third_party/rust_crates:regex",
-    "//third_party/rust_crates:tempfile",
-    "//third_party/rust_crates:thiserror",
-  ]
-
-  sources = [ "src/main.rs" ]
-}
-
-fuchsia_shell_package("log_listener_shell") {
-  deps = [
-    ":bin",
-    "//build/validate:non_production_tag",
-  ]
-}
-
-fuchsia_component("log_listener_component") {
-  component_name = "log_listener"
-  manifest = "meta/log_listener.cmx"
-  deps = [ ":bin" ]
-}
-
-fuchsia_package("log_listener_package") {
-  package_name = "log_listener"
-  deps = [ ":log_listener_component" ]
-  if (persist_logs) {
-    data_deps = [ ":all_logs" ]
-  }
-}
-
-executable("log_listener_return_code_test") {
-  testonly = true
-
-  sources = [ "log_listener_return_code_test.cc" ]
-
-  deps = [
-    "//sdk/lib/fdio",
-    "//src/lib/files",
-    "//src/lib/fxl/test:gtest_main",
-    "//src/zircon/lib/zircon",
-  ]
-}
-
-fuchsia_component("log_listener_bin_test") {
-  testonly = true
-  manifest = "meta/log_listener_bin_test.cmx"
-  deps = [ ":bin_test" ]
-}
-
-fuchsia_component("log_listener_return_code_test_component") {
-  testonly = true
-  component_name = "log_listener_return_code_test"
-  manifest = "meta/log_listener_return_code_test.cmx"
-  deps = [ ":log_listener_return_code_test" ]
-}
-
-fuchsia_test_package("log_listener_tests") {
-  test_components = [
-    ":log_listener_bin_test",
-    ":log_listener_return_code_test_component",
-  ]
-  deps = [ ":log_listener_component" ]
-}
-
-if (persist_logs) {
-  persist_logs("all_logs") {
-    max_disk_usage = max_log_disk_usage
-    startup_sleep = log_startup_sleep
-  }
-}
-
-group("log_listener") {
-  deps = [ ":log_listener_package" ]
-}
-
+# Do not use this target directly, instead depend on //src/diagnostics/log_listener:tests.
 group("tests") {
+  public_deps = [ "//src/diagnostics/log_listener:tests" ]
   testonly = true
-  deps = [ ":log_listener_tests" ]
+}
+
+# Do not use this target directly, instead depend on //src/diagnostics/log_listener:log_listener.
+group("log_listener") {
+  public_deps = [ "//src/diagnostics/log_listener:log_listener" ]
 }
