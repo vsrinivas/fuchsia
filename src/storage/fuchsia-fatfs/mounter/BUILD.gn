@@ -31,7 +31,6 @@ rustc_binary("bin") {
 
   test_deps = [
     "//sdk/fidl/fuchsia.hardware.block:fuchsia.hardware.block-rustc",
-    "//src/lib/isolated_devmgr/v2_component/rust:isolated-driver-manager",
     "//src/lib/storage/ramdevice_client",
     "//third_party/rust_crates:fatfs",
   ]

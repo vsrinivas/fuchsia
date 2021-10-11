@@ -9,16 +9,10 @@
 #include <lib/zx/time.h>
 #include <zircon/syscalls.h>
 
-#include "src/lib/isolated_devmgr/v2_component/bind_devfs_to_namespace.h"
-
 namespace storage {
 
 zx::status<> WaitForRamctl(zx::duration time) {
-  auto status = isolated_devmgr::OneTimeSetUp();
-  if (status.is_error()) {
-    return status.take_error();
-  }
-  status = zx::make_status(wait_for_device("/dev/sys/platform/00:00:2d/ramctl", time.get()));
+  auto status = zx::make_status(wait_for_device("/dev/sys/platform/00:00:2d/ramctl", time.get()));
   if (status.is_error()) {
     FX_LOGS(ERROR) << "Timed-out waiting for ramctl: " << status.status_string();
     return status.take_error();

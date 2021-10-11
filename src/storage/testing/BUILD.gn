@@ -53,7 +53,6 @@ source_set("storage_driver_test_support") {
     "//zircon/system/ulib/sync",
   ]
   public_deps = [
-    "//src/lib/isolated_devmgr/v2_component:client",
     "//zircon/system/ulib/ramdevice-client",
     "//zircon/system/ulib/zxc",
   ]

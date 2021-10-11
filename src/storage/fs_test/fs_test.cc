@@ -37,7 +37,6 @@
 #include <fs-management/mount.h>
 
 #include "sdk/lib/syslog/cpp/macros.h"
-#include "src/lib/isolated_devmgr/v2_component/bind_devfs_to_namespace.h"
 #include "src/lib/json_parser/json_parser.h"
 #include "src/lib/storage/vfs/cpp/fuchsia_vfs.h"
 #include "src/storage/blobfs/blob_layout.h"
@@ -112,11 +111,6 @@ zx::status<std::pair<storage::RamDisk, std::string>> CreateRamDisk(
 // Creates a ram-nand device.  It does not create an FVM partition; that is left to the caller.
 zx::status<std::pair<ramdevice_client::RamNand, std::string>> CreateRamNand(
     const TestFilesystemOptions& options) {
-  auto status = isolated_devmgr::OneTimeSetUp();
-  if (status.is_error()) {
-    return status.take_error();
-  }
-
   constexpr int kPageSize = 4096;
   constexpr int kPagesPerBlock = 64;
   constexpr int kOobSize = 8;
@@ -125,7 +119,7 @@ zx::status<std::pair<ramdevice_client::RamNand, std::string>> CreateRamNand(
   zx::vmo vmo;
   if (options.vmo->is_valid()) {
     uint64_t vmo_size;
-    status = zx::make_status(options.vmo->get_size(&vmo_size));
+    auto status = zx::make_status(options.vmo->get_size(&vmo_size));
     if (status.is_error()) {
       return status.take_error();
     }
@@ -150,7 +144,8 @@ zx::status<std::pair<ramdevice_client::RamNand, std::string>> CreateRamNand(
         options.device_block_size * options.device_block_count / kPageSize / kPagesPerBlock;
   }
 
-  status = zx::make_status(wait_for_device("/dev/sys/platform/00:00:2e/nand-ctl", kDeviceWaitTime));
+  auto status =
+      zx::make_status(wait_for_device("/dev/sys/platform/00:00:2e/nand-ctl", kDeviceWaitTime));
   if (status.is_error()) {
     std::cout << "Failed waiting for /dev/sys/platform/00:00:2e/nand-ctl to appear: "
               << status.status_string() << std::endl;

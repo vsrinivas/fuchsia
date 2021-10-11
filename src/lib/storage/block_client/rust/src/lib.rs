@@ -735,8 +735,6 @@ mod tests {
     const RAMDISK_BLOCK_COUNT: u64 = 1024;
 
     pub async fn make_ramdisk() -> (RamdiskClient, RemoteBlockClient) {
-        isolated_driver_manager::launch_isolated_driver_manager()
-            .expect("launch_isolated_driver_manager failed");
         ramdevice_client::wait_for_device(
             "/dev/sys/platform/00:00:2d/ramctl",
             std::time::Duration::from_secs(10),

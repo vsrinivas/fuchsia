@@ -32,6 +32,12 @@
             ],
             path: "/tmp",
         },
+        {
+            directory: "dev",
+            from: "#isolated-devmgr",
+            rights: [ "r*" ],
+            path: "/dev",
+        },
     ],
     offer: [
         {

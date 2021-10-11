@@ -24,7 +24,6 @@ rustc_library("blackout-target") {
 rustc_test("blackout-target-lib-test") {
   edition = "2018"
   deps = [
-    "//src/lib/isolated_devmgr/v2_component/rust:isolated-driver-manager",
     "//src/lib/storage/fs_management/rust:fs_management",
     "//src/lib/storage/ramdevice_client",
     "//src/storage/bin/minfs",

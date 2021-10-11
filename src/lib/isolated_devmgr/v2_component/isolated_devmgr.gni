@@ -95,6 +95,12 @@ template("isolated_devmgr_unittest_v2_component") {
             ]
             use = [
                     {
+                      directory = "dev"
+                      rights = [ "r*" ]
+                      from = "#isolated-devmgr"
+                      path = "/dev"
+                    },
+                    {
                       protocol = "fuchsia.process.Launcher"
                     },
                     {

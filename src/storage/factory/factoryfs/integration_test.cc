@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <lib/fdio/spawn.h>
+#include <lib/zx/job.h>
 #include <lib/zx/process.h>
 #include <zircon/device/block.h>
 
@@ -18,6 +19,10 @@ namespace factoryfs {
 namespace {
 
 TEST(FactoryFs, ExportedFilesystemIsMountable) {
+  // Mark this process as critical so that if this process terminates, all other processes
+  // within this job get terminated (e.g. file system processes).
+  ASSERT_EQ(ZX_OK, zx::job::default_job()->set_critical(0, *zx::process::self()));
+
   constexpr int kDeviceBlockSize = 4096;
   constexpr int kBlockCount = 1024;
 

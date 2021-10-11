@@ -87,9 +87,6 @@ rustc_binary("bin") {
     "//third_party/rust_crates:uuid",
   ]
 
-  test_deps =
-      [ "//src/lib/isolated_devmgr/v2_component/rust:isolated-driver-manager" ]
-
   sources = [
     "src/block_wrapper.rs",
     "src/fvm.rs",

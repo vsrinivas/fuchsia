@@ -48,8 +48,6 @@
 #include <gtest/gtest.h>
 #include <ramdevice-client/ramdisk.h>
 
-#include "src/lib/isolated_devmgr/v2_component/bind_devfs_to_namespace.h"
-
 namespace ramdisk {
 namespace {
 
@@ -57,7 +55,6 @@ namespace {
 class Environment : public testing::Environment {
  public:
   void SetUp() override {
-    ASSERT_EQ(isolated_devmgr::OneTimeSetUp().status_value(), ZX_OK);
     ASSERT_EQ(wait_for_device("/dev/sys/platform/00:00:2d/ramctl", ZX_TIME_INFINITE), ZX_OK);
   }
 };

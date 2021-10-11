@@ -454,7 +454,6 @@ mod tests {
             endpoints::ServerEnd::new(dir_server.into_channel()),
         );
 
-        isolated_driver_manager::launch_isolated_driver_manager().unwrap();
         ramdevice_client::wait_for_device(
             "/dev/sys/platform/00:00:2d/ramctl",
             std::time::Duration::from_secs(10),

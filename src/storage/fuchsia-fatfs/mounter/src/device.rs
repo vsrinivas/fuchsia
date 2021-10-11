@@ -272,8 +272,6 @@ pub mod test {
     }
 
     pub fn create_ramdisk() -> RamdiskClient {
-        isolated_driver_manager::launch_isolated_driver_manager()
-            .expect("Launching isolated driver manager succeeds");
         ramdevice_client::wait_for_device(
             "/dev/sys/platform/00:00:2d/ramctl",
             std::time::Duration::from_secs(10),

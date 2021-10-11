@@ -41,22 +41,3 @@ fuchsia_component("driver-manager-support") {
   manifest = "meta/support.cml"
   deps = [ ":support" ]
 }
-
-source_set("client") {
-  testonly = true
-  sources = [
-    "bind_devfs_to_namespace.cc",
-    "bind_devfs_to_namespace.h",
-  ]
-  deps = [
-    "//sdk/fidl/fuchsia.sys2",
-    "//sdk/lib/sys/cpp",
-    "//sdk/lib/syslog/cpp",
-  ]
-  public_deps = [ "//zircon/system/ulib/zxc" ]
-
-  # TODO(fxbug.dev/69585): This target uses raw zx::channel with LLCPP which is deprecated.
-  # Please migrate to typed channel APIs (fidl::ClientEnd<T>, fidl::ServerEnd<T>).
-  # See linked bug for details.
-  configs += [ "//build/cpp:fidl-llcpp-deprecated-raw-channels" ]
-}

@@ -43,7 +43,6 @@ rustc_library("export_ffs") {
   ]
   test_deps = [
     "//src/lib/fuchsia-async",
-    "//src/lib/isolated_devmgr/v2_component/rust:isolated-driver-manager",
     "//src/lib/storage/ramdevice_client",
     "//src/lib/storage/vfs/rust:vfs",
     "//third_party/rust_crates:matches",

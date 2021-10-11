@@ -45,6 +45,12 @@
             ],
             from: "#fake-crash-reporter",
         },
+        {
+            directory: "dev",
+            from: "#isolated-devmgr",
+            rights: [ "r*" ],
+            path: "/dev",
+        },
     ],
     offer: [
         {

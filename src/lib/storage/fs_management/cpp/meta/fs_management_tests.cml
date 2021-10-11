@@ -22,6 +22,12 @@
             protocol: "fuchsia.sys2.Realm",
             from: "framework",
         },
+        {
+            directory: "dev",
+            from: "#isolated-devmgr",
+            rights: [ "r*" ],
+            path: "/dev",
+        },
     ],
     offer: [
         {

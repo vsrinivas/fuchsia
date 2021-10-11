@@ -306,8 +306,6 @@ mod tests {
     const RAMDISK_SIZE: u64 = RAMDISK_BLOCK_SIZE * RAMDISK_BLOCK_COUNT;
 
     pub fn make_ramdisk() -> (RamdiskClient, RemoteBlockClientSync) {
-        isolated_driver_manager::launch_isolated_driver_manager()
-            .expect("launch_isolated_driver_manager failed");
         ramdevice_client::wait_for_device(
             "/dev/sys/platform/00:00:2d/ramctl",
             std::time::Duration::from_secs(30),
@@ -513,8 +511,6 @@ mod tests {
 
     #[test]
     fn test_ramdisk_with_large_block_size_returns_error() {
-        isolated_driver_manager::launch_isolated_driver_manager()
-            .expect("launch_isolated_driver_manager failed");
         ramdevice_client::wait_for_device(
             "/dev/sys/platform/00:00:2d/ramctl",
             std::time::Duration::from_secs(30),
