@@ -2,18 +2,12 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//products/terminal.gni")
+import("//products/core.gni")
 
 core_realm_package_name = "core-workstation"
 core_realm_shards += [
   "//src/power/battery-manager:battery-manager-core-shard",
   "//src/media/audio/drivers/configurator:configurator_provider_shard",
-]
-
-base_package_labels -= [
-  "//src/ui/bin/root_presenter",
-  "//src/ui/bin/root_presenter:configs",
-  "//src/ui/bin/terminal:tiles_config",
 ]
 
 base_package_labels += [
@@ -24,16 +18,27 @@ base_package_labels += [
   "//src/developer/ssh-key-manager",
   "//src/fonts",
   "//src/fonts:open-fonts-collection",
+  "//src/graphics/bin/vulkan_loader",
   "//src/identity/bin:tier_2",
+  "//src/intl/intl_services:config",
+  "//src/intl/intl_services:pkg",
   "//src/media/audio/bundles:services",
   "//src/power:battery",
   "//src/session/bundles:session_manager",
   "//src/sys/activity",
+  "//src/ui/a11y",
   "//src/ui/bin/brightness_manager",
   "//src/ui/bin/screensaver",
   "//src/ui/bin/shortcut",
   "//third_party/openssh-portable:openssh-tools",
+
+  # TODO(fxbug.dev/82822): Remove after out-of-tree tests migrate to
+  # text_manager.
+  "//src/ui/bin/text:ime_service",
+  "//src/ui/bin/text:text_manager",
 ]
+
+base_package_labels -= [ "//src/intl/intl_services:small" ]
 
 # Add build type config data
 base_package_labels += [ "//src/fonts:build_type_eng" ]
@@ -45,18 +50,21 @@ base_package_labels += [ "//src/virtualization/bin/linux_runner" ]
 base_package_labels -= [ "//src/cobalt/bin/app:config" ]
 base_package_labels += [ "//src/cobalt/bin/app:user_config" ]
 
-cache_package_labels -= [ "//src/ui/tools/tiles" ]
-
 cache_package_labels += [
   "//src/chromium:web_engine",
   "//src/experiences/bin/settings/license:license_settings",
   "//src/experiences/bin/simple_browser:simple-browser",
   "//src/experiences/session_shells/ermine",
   "//src/experiences/session_shells/ermine/session:session_config",
+  "//src/dart:dart_jit",
+  "//src/dart:dart_jit_product",
+  "//src/fonts",
   "//src/flutter",
   "//src/media/playback/bundles:services",
   "//src/media/playback/bundles:audio_consumer_config",
   "//src/session",
+  "//src/ui/bin/terminal",
+  "//src/ui/scenic",
 ]
 
 universe_package_labels += [
@@ -69,8 +77,6 @@ universe_package_labels += [
 
   "//src/proc/bundles:starsh",
 ]
-
-universe_package_labels -= [ "//src/tests/end_to_end/perf:test" ]
 
 product_bootfs_labels += [
   # hide the virtual console on boot
@@ -92,13 +98,15 @@ product_bootfs_labels += [
 # TODO(fxbug.dev/9892): Support a package server on bots so this can be added to
 # universe like the tests.
 cache_package_labels += [
+  # Used for Chromium tests for example:
+  #    //src/chromium/web_runner_tests:tests
+  "//garnet/examples/intl/manager:intl_property_manager",
+
+  "//src/tests/end_to_end/bundles:end_to_end_deps",
   "//src/tests/end_to_end/bundles:end_to_end_deps",
   "//src/experiences/tests/e2e:end_to_end_deps",
   "//src/experiences/tests/performance:performance_deps",
 ]
-
-cache_package_labels -=
-    [ "//src/tests/end_to_end/bundles:terminal_end_to_end_deps" ]
 
 # E2E Product Tests. They don't produce fuchsia packages, but host executables
 # used by the tests.
@@ -107,6 +115,26 @@ host_labels += [
   "//src/experiences/tests/performance:test",
   "//src/tests/end_to_end/copy_files:test",
 ]
+
+universe_package_labels += [
+  # E2E Product Tests. They don't produce fuchsia packages, but host
+  # executables, and must just be included somewhere in the build configuration
+  # of the product.
+  "//src/tests/end_to_end/screen_is_not_black:no_basemgr_test",
+  "//src/tests/end_to_end/sl4f:test",
+  "//src/tests/end_to_end/time_sync:test",
+
+  # Only for products in which Flutter is supported.
+  "//src/tests/intl/timezone:tests-for-flutter",
+
+  "//src/fonts:open-fonts",
+]
+
+# Add SDK tools set to "cache" so these tools are automatically available in
+# QEMU images generated for the SDK, but in cache, so they can be updated.
+cache_package_labels += [ "//sdk/bundles:tools" ]
+
+core_realm_shards += [ "//src/media/codec:codec_factory_shard" ]
 
 # Enable the live_usb component.
 with_live_usb = true
