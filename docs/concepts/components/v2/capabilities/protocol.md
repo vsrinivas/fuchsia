@@ -130,13 +130,17 @@ For more information about the open request, see
 Note: For a working example of routing a protocol capability between components,
 see [`//examples/components/routing`][routing-example].
 
-## Protocol capabilities provided by the framework
+## Framework protocols {#framework}
 
-Some protocol capabilities are provided by the component framework, and thus
-can be [used][use] by components without their parents [offering][offer] them.
+A *framework protocol* is a protocol provided by the component framework.
+Any component may `use` these capabilities by setting `framework` as the source
+without an accompanying `offer` from its parent.
+Fuchsia supports the following framework protocols:
 
-For a list of these protocols and what they can be used for, see
-[framework protocols][framework-protocols].
+-   [`fuchsia.sys2.Realm`][fidl-realm]: Allows a component to manage and bind to
+    its children. Scoped to the component's realm.
+-   [`fuchsia.component.Binder`][fidl-binder]: Allows a component to start
+    another component.
 
 ```json5
 {
@@ -157,7 +161,8 @@ For a list of these protocols and what they can be used for, see
 [glossary.service]: /docs/glossary/README.md#service
 [capability-routing]: /docs/concepts/components/v2/component_manifests.md#capability-routing
 [expose]: /docs/concepts/components/v2/component_manifests.md#expose
-[framework-protocols]: /docs/concepts/components/v2/component_manifests.md#framework-protocols
+[fidl-binder]: /sdk/fidl/fuchsia.component/binder.fidl
+[fidl-realm]: /sdk/fidl/fuchsia.sys2/realm.fidl
 [life-of-a-protocol-open]: /docs/concepts/components/v2/capabilities/life_of_a_protocol_open.md
 [offer]: /docs/concepts/components/v2/component_manifests.md#offer
 [routing-example]: /examples/components/routing

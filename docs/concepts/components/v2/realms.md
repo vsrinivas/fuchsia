@@ -198,7 +198,7 @@ definitions for full documentation.
 [environments]: ./environments.md
 [expose]: ./component_manifests.md#expose
 [offer]: ./component_manifests.md#offer
-[framework-protocols]: ./component_manifests.md#framework-protocols
+[framework-protocols]: ./capabilities/protocol.md#framework
 [monikers]: ./monikers.md
 [offer]: ./component_manifests.md#offer
 [realm.fidl]: https://fuchsia.dev/reference/fidl/fuchsia.sys2#Realm

@@ -63,7 +63,7 @@ the following reasons:
 
 If this is the case, verify that you are requesting an existing file, or that the file and directory
 have the appropriate rights. You can learn more about
-[directory rights and how they're specified](/docs/concepts/components/v2/component_manifests.md#directory-rights).
+[directory rights and how they're specified](/docs/concepts/components/v2/capabilities/directory.md#directory-capability-rights).
 
 ### Peer has crashed and the process has been terminated
 

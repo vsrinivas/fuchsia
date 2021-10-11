@@ -31,7 +31,9 @@ is `/published-data`, and whose maximum usable
 
 ## Routing directory capabilities
 
-Components route directory capabilities by either [exposing](#routing-directory-capability-expose) them or [offering](#routing-directory-capability-offer) them.
+Components route directory capabilities by either
+[exposing](#routing-directory-capability-expose) them or
+[offering](#routing-directory-capability-offer) them.
 
 When a component wants to make one of its directories available to other
 components, it specifies the path of that directory in its
@@ -111,15 +113,57 @@ You may optionally specify [`subdir`](#subdirectories).
 
 ## Directory capability rights {#directory-capability-rights}
 
-As directories are [offered][offer] and [exposed][expose] throughout the system
-a user may want to restrict the actions that other components may perform with
-this directory. For example, a component might expose a directory as read-write
-to its parent realm, which could in turn expose that directory to its children
-as read-only.
+Directory rights enable components to control access to directories as they are
+routed throughout the system. Directory rights are applied as follows:
 
-[Directory rights][directory-rights] enable any directory declaration, as well
-as mentions of it in [offer][offer], [expose][expose], and [use][use], to
-include a rights field that restricts the set of rights for that directory.
+-   [`capability`][capability]: *Required*.
+    Provides the base set of rights available for the directory. Any rights
+    specified in a `use`, `offer`, or `expose` must be a subset of what is
+    declared here.
+-   [`use`][use]: *Required*.
+    Describes the access rights requested by the consuming component.
+-   [`offer`][offer]: *Optional*.
+    Modified rights available to the destination component. Rights are inherited
+    from the `offer` source if not present. 
+-   [`expose`][expose]: *Optional*.
+    Modified rights available to the destination component. Rights are inherited
+    from the `expose` source if not present.
+
+The `rights` field can contain any combination of the following
+[`fuchsia.io2.Rights`][fidl-io2-rights] tokens:
+
+```json5
+rights: [
+  "connect",
+  "enumerate",
+  "traverse",
+  "read_bytes",
+  "write_bytes",
+  "execute_bytes",
+  "update_attributes",
+  "get_attributes",
+  "modify_directory",
+]
+```
+
+The framework provides a simplified form for declaring `rights` using *aliases*.
+Each alias represents the combination of FIDL rights tokens to provide common
+read, write, or execute access:
+
+| Alias | FIDL rights                                                |
+| :---: | ---------------------------------------------------------- |
+| `r*`  | `connect, enumerate, traverse, read_bytes,`                |
+:       : `get_attributes`                                           :
+| `w*`  | `connect, enumerate, traverse, write_bytes,`               |
+:       : `update_attributes, modify_directory`                      :
+| `x*`  | `connect, enumerate, traverse, execute_bytes`              |
+| `rw*` | `connect, enumerate, traverse, read_bytes, write_bytes,`   |
+:       : `get_attributes, update_attributes, modify_directory`      :
+| `rx*` | `connect, enumerate, traverse, read_bytes, execute_bytes,` |
+:       : `get_attributes`                                           :
+
+The `rights` field may only contain one alias. Additional FIDL rights may be
+appended as long as they do not duplicate rights expressed by the alias.
 
 ### Example
 
@@ -163,20 +207,6 @@ be present in A's namespace.
 }
 ```
 
-### Inference Rules
-
-Directory rights are required in the following situations:
-
--   [use][use] - All directories use statements must specify their directory
-    rights.
--   [capability][capability] - All `directory` `capability` declarations must
-    specify rights.
-
-If an expose or offer directory declaration does not specify optional rights, it
-will inherit the rights from the source of the expose or offer. Rights specified
-in a `use`, `offer`, or `expose` declaration must be a subset of the rights set
-on the capability's source.
-
 ## Subdirectories {#subdirectories}
 
 You may `expose`, `offer`, or `use` a subdirectory of a directory capability:
@@ -211,11 +241,15 @@ You may `expose` or `offer` a directory capability by a different name:
 }
 ```
 
-## Framework directory capabilities
+## Framework directories {#framework}
 
-Some directory capabilities are available to all components through the
-framework. When a component wants to use one of these directories, it does so by
-[using][use] the directory with a source of `framework`.
+A *framework directory* is a directory provided by the component framework.
+Any component may `use` these capabilities by setting `framework` as the source
+without an accompanying `offer` from its parent.
+Fuchsia supports the following framework directories:
+
+-   [hub][doc-hub]: Allows a component to perform runtime introspection of
+    itself and its children.
 
 ```
 {
@@ -232,10 +266,11 @@ framework. When a component wants to use one of these directories, it does so by
 
 [glossary.directory capability]: /docs/glossary/README.md#directorty-capability
 [glossary.outgoing directory]: /docs/glossary/README.md#outgoing-directory
+[capability]: ../component_manifests.md#capability
 [capability-routing]: ../component_manifests.md#capability-routing
-[directory-rights]: ../component_manifests.md#directory-rights
+[doc-hub]: /docs/concepts/components/v2/hub.md
+[fidl-io2-rights]: /sdk/fidl/fuchsia.io2/rights-abilities.fidl
 [expose]: ../component_manifests.md#expose
 [offer]: ../component_manifests.md#offer
 [routing-example]: /examples/components/routing
 [use]: ../component_manifests.md#use
-[capability]: ../component_manifests.md#capability

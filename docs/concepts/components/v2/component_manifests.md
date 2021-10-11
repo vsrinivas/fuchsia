@@ -96,33 +96,34 @@ stop character (`.`).
 
 The following capabilities can be routed:
 
-| type        | description                   | routed to                     |
-| ----------- | ----------------------------- | ----------------------------- |
-| `protocol`  | A filesystem node that is     | components                    |
-:             : used to open a channel backed :                               :
-:             : by a FIDL protocol.           :                               :
-| `service`   | A filesystem directory that   | components                    |
-:             : is used to open a channel to  :                               :
-:             : one of several                :                               :
-:             : [service][doc-service]        :                               :
-:             : instances.                    :                               :
-| `directory` | A filesystem directory.       | components                    |
-| `storage`   | A writable filesystem         | components                    |
-:             : directory that is isolated to :                               :
-:             : the component using it.       :                               :
-| `resolver`  | A capability that, when       | [environments](#environments) |
-:             : registered in an              :                               :
-:             : [environment](#environments), :                               :
-:             : causes a component with a     :                               :
-:             : particular URL scheme to be   :                               :
-:             : resolved with that            :                               :
-:             : [resolver][doc-resolvers].    :                               :
-| `runner`    | A capability that, when       | [environments](#environments) |
-:             : registered in an              :                               :
-:             : [environment](#environments), :                               :
-:             : allows the framework to use   :                               :
-:             : that [runner][doc-runners]    :                               :
-:             : when starting components.     :                               :
+| type                    | description                   | routed to       |
+| ----------------------- | ----------------------------- | --------------- |
+| [`protocol`]            | A filesystem node that is     | components      |
+: (#capability-protocol)  : used to open a channel backed :                 :
+:                         : by a FIDL protocol.           :                 :
+| [`service`]             | A filesystem directory that   | components      |
+: (#capability-service)   : is used to open a channel to  :                 :
+:                         : one of several                :                 :
+:                         : [service][doc-service]        :                 :
+:                         : instances.                    :                 :
+| [`directory`]           | A filesystem directory.       | components      |
+: (#capability-directory) :                               :                 :
+| [`storage`]             | A writable filesystem         | components      |
+: (#capability-storage)   : directory that is isolated to :                 :
+:                         : the component using it.       :                 :
+| [`resolver`]            | A capability that, when       | [environments]  |
+: (#capability-resolver)  : registered in an              : (#environments) :
+:                         : [environment](#environments), :                 :
+:                         : causes a component with a     :                 :
+:                         : particular URL scheme to be   :                 :
+:                         : resolved with that            :                 :
+:                         : [resolver][doc-resolvers].    :                 :
+| [`runner`]              | A capability that, when       | [environments]  |
+: (#capability-runner)    : registered in an              : (#environments) :
+:                         : [environment](#environments), :                 :
+:                         : allows the framework to use   :                 :
+:                         : that [runner][doc-runners]    :                 :
+:                         : when starting components.     :                 :
 
 #### Routing terminology {#routing-terminology}
 
@@ -131,8 +132,8 @@ Routing terminology divides into the following categories:
 1.  Declarations of how capabilities are routed between the component, its
     parent, and its children:
     -   `offer`: Declares that the capability listed is made available to a
-        [child component][doc-children] instance or a [child
-        collection][doc-collections].
+        [child component][doc-children] instance or a
+        [child collection][doc-collections].
     -   `expose`: Declares that the capabilities listed are made available to
         the parent component or to the framework. It is valid to `expose` from
         `self` or from a child component.
@@ -145,78 +146,6 @@ Routing terminology divides into the following categories:
         Capabilities that are offered or exposed from `self` must appear here.
         These capabilities often map to a node in the
         [outgoing directory][glossary.outgoing directory].
-
-#### Framework protocols {#framework-protocols}
-
-A *framework protocol* is a protocol provided by the component framework.
-Because the component framework itself provides the protocol, any component may
-`use` it without an accompanying `offer` from its parent. Fuchsia supports the
-following framework protocols:
-
--   [`fuchsia.sys2.Realm`][fidl-realm]: Allows a component to manage and bind to
-    its children. Scoped to the component's realm.
--   [`fuchsia.component.Binder`][fidl-binder]: Allows a component to start
-    another component.
-
-#### Framework directories {#framework-directories}
-
-A *framework directory* is a directory provided by the component framework.
-Because the component framework itself is the provider of the directory, any
-component may `use` it without an explicit `offer`. Fuchsia supports the
-following framework directories:
-
--   [hub][glossary.hub]: Allows a component to perform runtime introspection of
-    itself and its children.
-
-#### Directory rights {#directory-rights}
-
-Directory rights define how a directory may be accessed in the component
-framework. You must specify directory rights on `use` declarations and on
-`expose` and `offer` declarations from `self`. On `expose` and `offer`
-declarations not from `self`, they are optional.
-
-A *rights* field can be defined by the combination of any of the following
-rights tokens:
-
-```json5
-rights: ["connect", "enumerate", "read_bytes", "write_bytes", "execute_bytes",
-         "update_attributes", "get_attributes", "traverse", "modify_directory"]
-```
-
-See [`fuchsia.io2.Rights`][fidl-io2-rights] for the equivalent FIDL definitions.
-
-However *rights aliases* should be preferred where possible for clarity.
-
-```json5
-rights: ["r*", "w*", "x*", "rw*", "rx*"]
-```
-
-Except in special circumstances you will almost always want either `["r*"]` or
-`["rw*"]`. Only one alias can be provided to a rights field and it must not
-conflict with any longform rights.
-
-Right aliases are simply expanded into their longform counterparts:
-
-```
-"r*" -> ["connect", "enumerate", "traverse", "read_bytes", "get_attributes"]
-"w*" -> ["connect", "enumerate", "traverse", "write_bytes", "update_attributes", "modify_directory"]
-"x*" -> ["connect", "enumerate", "traverse", "execute_bytes"]
-```
-
-Merged aliases like `rw*` are simply `r*` and `w*` merged without duplicates.
-
-This example shows usage of a directory use declaration annotated with rights:
-
-```json5
-use: [
-    {
-        directory: "test",
-        from: "parent",
-        rights: ["rw*", "admin"],
-        path: "/data/test",
-    },
-],
-```
 
 #### Examples {#examples}
 
@@ -481,6 +410,7 @@ here.
 `capabilities` is an array of objects of any of the following types:
 
 -   [`protocol`](#capability-protocol)
+-   [`service`](#capability-service)
 -   [`directory`](#capability-directory)
 -   [`storage`](#capability-storage)
 -   [`runner`](#capability-runner)
@@ -496,6 +426,16 @@ A definition of a [protocol capability][doc-protocol].
     which this protocol is served. Only supported when `protocol` is a single
     name. Defaults to `/svc/${protocol}`.
 
+#### service {#capability-service}
+
+A definition of a [service capability][doc-service].
+
+-   `service`: The [name](#capability-names) for this service capability, or
+    an array of names to define multiple services.
+-   `path` _(optional)_: The path in the component's outgoing directory from
+    which this service is served. Only supported when `service` is a single
+    name. Defaults to `/svc/${service}`.
+
 #### directory {#capability-directory}
 
 A definition of a [directory capability][doc-directory].
@@ -507,7 +447,7 @@ A definition of a [directory capability][doc-directory].
     root will be exposed.
 -   `path`: The path in the component's outgoing directory from which this
     directory is served.
--   `rights`: The maximum [directory rights](#directory-rights) that may be set
+-   `rights`: The maximum [directory rights][doc-directory-rights] that may be set
     when using this directory.
 
 #### storage {#capability-storage}
@@ -765,6 +705,7 @@ This section may be omitted.
 [doc-children]: realms.md#child-component-instances
 [doc-collections]: realms.md#collections
 [doc-directory]: /docs/concepts/components/v2/capabilities/directory.md
+[doc-directory-rights]: /docs/concepts/components/v2/capabilities/directory.md#directory-capability-rights
 [doc-eager]: lifecycle.md#eager_binding
 [doc-environments]: environments.md
 [doc-module-facets]: /docs/concepts/modular/module_facet.md
@@ -782,9 +723,6 @@ This section may be omitted.
 [examples-routing]: /examples/components/routing
 [fidl-component-decl]: /sdk/fidl/fuchsia.sys2/decls/component_decl.fidl
 [fidl-environment-decl]: /sdk/fidl/fuchsia.sys2/decls/environment_decl.fidl
-[fidl-io2-rights]: /sdk/fidl/fuchsia.io2/rights-abilities.fidl
-[fidl-binder]: /sdk/fidl/fuchsia.component/binder.fidl
-[fidl-realm]: /sdk/fidl/fuchsia.sys2/realm.fidl
 [glossary.component declaration]: /docs/glossary/README.md#component-declaration
 [glossary.component manifest]: /docs/glossary/README.md#component-manifest
 [glossary.component manifest source]: /docs/glossary/README.md#component-manifest-source

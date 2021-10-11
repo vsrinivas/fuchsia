@@ -11,8 +11,7 @@ use {
 async fn my_component_test_rust_test() -> Result<(), Error> {
     // Connect to the component(s) under test using the Realm protocol, e.g.
     // This assumes that the child component exposes the `fuchsia.component.Binder`
-    // protocol. For more information on this protocol, see: 
-    // https://fuchsia.dev/fuchsia-src/concepts/components/v2/component_manifests#framework-protocols.
+    // protocol.
     // If your component exposes another capability, you connect to it directly.
     // ```
     // use fuchsia_component::client as fclient;

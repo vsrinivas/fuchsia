@@ -140,7 +140,7 @@ fx list-packages --base
 ```
 
 [core-shard]: /src/sys/core/README.md
-[doc-framework-protocol]: component_manifests.md#framework-protocols
+[doc-framework-protocol]: capabilities/protocol.md#framework
 [doc-collections]: realms.md#collections
 [doc-lifecycle]: lifecycle.md
 [doc-manifests-children]: component_manifests.md#children
