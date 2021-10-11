@@ -155,7 +155,8 @@ gpio_impl_.SetDriveStrength(A311D_GPIOC(5), 4000, nullptr);
     return status;
   }
 
-
+/*(void)comp_desc;
+*/
   return ZX_OK;
 }
 
