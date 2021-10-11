@@ -931,9 +931,9 @@ pub trait AllocKind: private::Sealed {
 }
 
 /// A tag to related types for Tx allocations.
-pub struct Tx;
+pub enum Tx {}
 /// A tag to related types for Rx allocations.
-pub struct Rx;
+pub enum Rx {}
 
 /// The reflected value that allows inspection on an [`AllocKind`] type.
 pub enum AllocKindRefl {
