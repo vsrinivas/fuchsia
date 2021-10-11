@@ -59,3 +59,11 @@ TEST(DeviceWatcherTest, Smoke) {
   });
   ASSERT_EQ(sync_completion_wait(&shutdown, zx::duration::infinite().get()), ZX_OK);
 }
+
+TEST(DeviceWatcherTest, OpenInNamespace) {
+  fbl::unique_fd f;
+  ASSERT_EQ(device_watcher::RecursiveWaitForFileReadOnly("/dev/sys/test", &f), ZX_OK);
+  ASSERT_EQ(device_watcher::RecursiveWaitForFile("/dev/sys/test", &f), ZX_OK);
+
+  ASSERT_EQ(device_watcher::RecursiveWaitForFile("/other-test/file", &f), ZX_ERR_NOT_SUPPORTED);
+}

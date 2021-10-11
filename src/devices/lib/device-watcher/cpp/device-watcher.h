@@ -18,9 +18,19 @@ zx_status_t WaitForFile(const fbl::unique_fd& dir, const char* file, fbl::unique
 // Waits for the relative |path| starting in |dir| to appear, and opens it.
 zx_status_t RecursiveWaitForFile(const fbl::unique_fd& dir, const char* path, fbl::unique_fd* out);
 
+// Waits for the absolute |path| to appear, and opens it.
+// NOTE: This only works for paths starting with /dev/,
+// otherwise it will return ZX_ERR_NOT_SUPPORTED.
+zx_status_t RecursiveWaitForFile(const char* path, fbl::unique_fd* out);
+
 // Waits for the relative |path| starting in |dir| to appear, and opens it in Read only mode.
 zx_status_t RecursiveWaitForFileReadOnly(const fbl::unique_fd& dir, const char* path,
                                          fbl::unique_fd* out);
+
+// Waits for the absolute |path| to appear, and opens it as ReadOnly.
+// NOTE: This only works for paths starting with /dev/,
+// otherwise it will return ZX_ERR_NOT_SUPPORTED.
+zx_status_t RecursiveWaitForFileReadOnly(const char* path, fbl::unique_fd* out);
 
 // DirWatcher can be used to detect when a file has been removed from the filesystem.
 //

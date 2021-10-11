@@ -29,6 +29,7 @@ test("test") {
   sources = [ "test.cc" ]
   deps = [
     ":cpp",
+    "//sdk/lib/driver_test_realm/simple",
     "//src/lib/storage/vfs/cpp",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",

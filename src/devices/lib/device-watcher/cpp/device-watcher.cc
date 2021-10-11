@@ -16,6 +16,12 @@
 
 namespace device_watcher {
 
+namespace {
+
+constexpr char kDevPath[] = "/dev/";
+
+}
+
 namespace fio = fuchsia_io;
 
 __EXPORT
@@ -172,6 +178,24 @@ zx_status_t RecursiveWaitForFile(const fbl::unique_fd& dir, const char* path, fb
   }
   strcpy(path_copy, path);
   return RecursiveWaitForFileHelper(dir, dir, path_copy, path_copy, false, out);
+}
+
+__EXPORT
+zx_status_t RecursiveWaitForFile(const char* path, fbl::unique_fd* out) {
+  if (strncmp(kDevPath, path, strlen(kDevPath) - 1) != 0) {
+    return ZX_ERR_NOT_SUPPORTED;
+  }
+  fbl::unique_fd dev(open(kDevPath, O_RDONLY | O_DIRECTORY));
+  return RecursiveWaitForFile(dev, path + strlen(kDevPath), out);
+}
+
+__EXPORT
+zx_status_t RecursiveWaitForFileReadOnly(const char* path, fbl::unique_fd* out) {
+  if (strncmp(kDevPath, path, strlen(kDevPath) - 1) != 0) {
+    return ZX_ERR_NOT_SUPPORTED;
+  }
+  fbl::unique_fd dev(open(kDevPath, O_RDONLY | O_DIRECTORY));
+  return RecursiveWaitForFileReadOnly(dev, path + strlen(kDevPath), out);
 }
 
 __EXPORT
