@@ -2831,7 +2831,7 @@ mod tests {
                     "as": "fuchsia.logger.SysLog",
                 } ]
             }),
-            Err(Error::Parse { err, .. }) if &err == "invalid value: string \"self\", expected \"parent\", \"framework\", \"self\", \"#<child-name>\", or \"#<collection-name>\""
+            Err(Error::Parse { err, .. }) if &err == "invalid value: string \"self\", expected \"parent\", \"framework\", \"#<child-name>\", or \"#<collection-name>\""
         ),
         test_cml_offer_empty_protocols(
             json!({

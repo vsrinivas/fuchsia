@@ -631,9 +631,7 @@ impl OfferFromRef {
 
 /// A reference in an `offer to`.
 #[derive(Debug, PartialEq, Eq, Hash, Clone, Reference)]
-#[reference(
-    expected = "\"parent\", \"framework\", \"self\", \"#<child-name>\", or \"#<collection-name>\""
-)]
+#[reference(expected = "\"parent\", \"framework\", \"#<child-name>\", or \"#<collection-name>\"")]
 pub enum OfferToRef {
     /// A reference to a child or collection.
     Named(Name),
