@@ -70,12 +70,12 @@ func NewMappedVMO(size uint64, name string) (MappedVMO, zx.VMO, error) {
 	return mappedVmo, vmo, nil
 }
 
-/// Len returns the length of the VMO.
+// Len returns the length of the VMO.
 func (vmo *MappedVMO) Len() uint64 {
 	return vmo.len
 }
 
-// MapVmo maps a vmo into the process' memory space. It does not take ownership
+// MapVMO maps a vmo into the process' memory space. It does not take ownership
 // of the VMO.
 func MapVMO(vmo zx.VMO) (MappedVMO, error) {
 	size, err := vmo.Size()
