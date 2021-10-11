@@ -8,4 +8,5 @@
 toc:
 - title: "Drivers"
   path: /docs/reference/hardware/drivers.md
-
+- title: "Supported system configuration"
+  path: /docs/reference/hardware/support-system-config.md
