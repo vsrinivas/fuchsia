@@ -13,7 +13,6 @@ if (is_host) {
   common_sources = [
     "src/fidljson.rs",
     "src/main.rs",
-    "src/templates/html/mod.rs",
     "src/templates/markdown/mod.rs",
     "src/templates/mod.rs",
   ]
@@ -21,14 +20,12 @@ if (is_host) {
   common_inputs = [
     "src/templates/markdown/partials/header.hbs",
     "src/templates/markdown/partials/types/filename.hbs",
-    "src/templates/html/interface.hbs",
     "src/templates/markdown/interface.hbs",
     "src/templates/markdown/partials/header_dir.hbs",
     "src/templates/markdown/partials/declarations/tables.hbs",
     "src/templates/markdown/partials/declarations/enums.hbs",
     "src/templates/markdown/partials/types/vector.hbs",
     "src/templates/markdown/partials/declarations/constants.hbs",
-    "src/templates/html/main.hbs",
     "src/templates/markdown/partials/declarations/type_aliases.hbs",
     "src/templates/markdown/partials/declarations/protocols.hbs",
     "src/templates/markdown/partials/types/doc.hbs",

@@ -22,7 +22,6 @@ use fidljson::{to_lower_snake_case, FidlJson, FidlJsonPackageData, TableOfConten
 use simplelog::{Config, SimpleLogger};
 
 mod templates;
-use templates::html::HtmlTemplate;
 use templates::markdown::MarkdownTemplate;
 use templates::FidldocTemplate;
 
@@ -32,13 +31,12 @@ static ATTR_NAME_NO_DOC: &'static str = "no_doc";
 
 #[derive(Debug)]
 enum TemplateType {
-    HTML,
     Markdown,
+    // Overtime, we'll want to add more rendering options such as HTML.
 }
 
 fn parse_template_type_str(value: &str) -> Result<TemplateType, String> {
     match &value.to_lowercase()[..] {
-        "html" => Ok(TemplateType::HTML),
         "markdown" => Ok(TemplateType::Markdown),
         _ => Err("invalid template type".to_string()),
     }
@@ -457,10 +455,6 @@ fn select_template<'a>(
 ) -> Result<Box<dyn FidldocTemplate + 'a>, Error> {
     // Instantiate the template selected by the user
     let template: Box<dyn FidldocTemplate> = match template_type {
-        TemplateType::HTML => {
-            let template = HtmlTemplate::new(&output_path)?;
-            Box::new(template)
-        }
         TemplateType::Markdown => {
             let template = MarkdownTemplate::new(&output_path);
             Box::new(template)
@@ -585,12 +579,16 @@ mod test {
     #[test]
     fn select_template_test() {
         let path = PathBuf::new();
+        let to_template = |template_type| select_template(&template_type, &path).unwrap();
 
-        let html_template = select_template(&TemplateType::HTML, &path).unwrap();
-        assert_eq!(html_template.name(), "HTML".to_string());
-
-        let markdown_template = select_template(&TemplateType::Markdown, &path).unwrap();
-        assert_eq!(markdown_template.name(), "Markdown".to_string());
+        let all_template_types = vec![TemplateType::Markdown];
+        for template_type in all_template_types {
+            match template_type {
+                TemplateType::Markdown => {
+                    assert_eq!(to_template(template_type).name(), "Markdown".to_string());
+                }
+            }
+        }
     }
 
     #[test]
