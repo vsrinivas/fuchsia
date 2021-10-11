@@ -47,6 +47,10 @@ class AmlG12TdmDai : public AmlG12TdmDaiDeviceType,
   zx_status_t InitPDev();
   void Shutdown();
 
+ protected:
+  // FIDL HLCPP methods for fuchsia.hardware.audio.ringbuffer.
+  void Stop(StopCallback callback) override;  // Protected for unit test.
+
  private:
   // FIDL LLCPP method for fuchsia.hardware.audio.DaiConnect.
   void Connect(ConnectRequestView request, ConnectCompleter::Sync& completer) override;
@@ -68,7 +72,6 @@ class AmlG12TdmDai : public AmlG12TdmDaiDeviceType,
   void GetVmo(uint32_t min_frames, uint32_t clock_recovery_notifications_per_ring,
               GetVmoCallback callback) override;
   void Start(StartCallback callback) override;
-  void Stop(StopCallback callback) override;
   void SetActiveChannels(uint64_t active_channels_bitmask,
                          SetActiveChannelsCallback callback) override {
     callback(fpromise::error(ZX_ERR_NOT_SUPPORTED));
