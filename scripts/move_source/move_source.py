@@ -22,7 +22,7 @@ manner.  This script attempts to identify references to the original location
 and updates them or generates artifacts that transparently forward to the
 new location.  To use:
 
-1.) Check out origin/master and configure a build in the default build
+1.) Check out origin/main and configure a build in the default build
 directory with 'fx set'
 2.) Run 'scripts/move/source/move_source.py <source> <dest>'. This will
 generate a new git branch and create a commit with a description of what the
@@ -44,7 +44,7 @@ def create_branch_for_move(source, dest, dry_run):
         source.replace('/', '_'), dest.replace('/', '_'))
 
     run_command(
-        ['git', 'checkout', '-b', branch_name, '--track', 'origin/master'],
+        ['git', 'checkout', '-b', branch_name, '--track', 'origin/main'],
         dry_run)
 
 
