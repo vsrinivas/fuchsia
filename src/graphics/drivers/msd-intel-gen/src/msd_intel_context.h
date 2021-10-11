@@ -22,7 +22,7 @@
 
 class MsdIntelConnection;
 
-// Abstract base context.
+// Base context, not tied to a connection.
 class MsdIntelContext {
  public:
   MsdIntelContext(std::shared_ptr<AddressSpace> address_space) : address_space_(address_space) {
@@ -43,7 +43,7 @@ class MsdIntelContext {
 
   virtual bool killed() { return false; }
 
-  virtual void Kill() { MAGMA_LOG(WARNING, "Attemping to kill the global context"); }
+  virtual void Kill() { MAGMA_LOG(WARNING, "Attempted to kill a base context"); }
 
   // Gets the gpu address of the context buffer if mapped.
   bool GetGpuAddress(EngineCommandStreamerId id, gpu_addr_t* addr_out);

@@ -8,6 +8,7 @@
 #include "gpu_mapping.h"
 #include "msd_intel_buffer.h"
 #include "platform_bus_mapper.h"
+#include "platform_event.h"
 #include "sequencer.h"
 
 class MsdIntelContext;
@@ -74,6 +75,22 @@ class MappingReleaseBatch : public NullBatch {
  private:
   std::shared_ptr<MsdIntelContext> context_;
   std::vector<std::unique_ptr<magma::PlatformBusMapper::BusMapping>> mappings_;
+};
+
+// Signals an event upon completion.
+class PipelineFenceBatch : public NullBatch {
+ public:
+  PipelineFenceBatch(std::shared_ptr<MsdIntelContext> context,
+                     std::shared_ptr<magma::PlatformEvent> event)
+      : context_(std::move(context)), event_(std::move(event)) {}
+
+  ~PipelineFenceBatch() override { event_->Signal(); }
+
+  std::weak_ptr<MsdIntelContext> GetContext() override { return context_; }
+
+ private:
+  std::shared_ptr<MsdIntelContext> context_;
+  std::shared_ptr<magma::PlatformEvent> event_;
 };
 
 #endif  // MAPPED_BATCH_H

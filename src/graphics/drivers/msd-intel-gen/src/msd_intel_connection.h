@@ -60,15 +60,12 @@ class MsdIntelConnection {
   magma::Status MapBufferGpu(std::shared_ptr<MsdIntelBuffer> buffer, uint64_t gpu_addr,
                              uint64_t page_offset, uint64_t page_count);
 
-  void ReleaseBuffer(magma::PlatformBuffer* buffer) {
-    auto callback = [](uint32_t delay_ms) {
-      std::this_thread::sleep_for(std::chrono::milliseconds(delay_ms));
-    };
-    ReleaseBuffer(buffer, callback);
-  }
+  void ReleaseBuffer(magma::PlatformBuffer* buffer);
 
   // Submit pending release mappings on the given context
   bool SubmitPendingReleaseMappings(std::shared_ptr<MsdIntelContext> context);
+
+  std::shared_ptr<MsdIntelContext> GetInternalContext();
 
  private:
   MsdIntelConnection(Owner* owner, std::shared_ptr<PerProcessGtt> ppgtt, msd_client_id_t client_id)
@@ -81,8 +78,9 @@ class MsdIntelConnection {
 
   bool sent_context_killed() { return sent_context_killed_; }
 
-  void ReleaseBuffer(magma::PlatformBuffer* buffer,
-                     std::function<void(uint32_t delay_ms)> sleep_callback);
+  void ReleaseBuffer(
+      magma::PlatformBuffer* buffer,
+      std::function<void(magma::PlatformEvent* event, uint32_t timeout_ms)> wait_callback);
 
   static const uint32_t kMagic = 0x636f6e6e;  // "conn" (Connection)
 
@@ -91,6 +89,8 @@ class MsdIntelConnection {
   msd_client_id_t client_id_;
   std::vector<std::unique_ptr<magma::PlatformBusMapper::BusMapping>> mappings_to_release_;
   bool sent_context_killed_ = false;
+  // Internal context is used for handling release buffer stalls.
+  std::shared_ptr<MsdIntelContext> internal_context_;
 
   class Notifications {
    public:

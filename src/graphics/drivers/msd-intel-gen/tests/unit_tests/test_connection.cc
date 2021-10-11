@@ -12,7 +12,7 @@
 class TestMsdIntelConnection : public ::testing::Test, public MsdIntelConnection::Owner {
  public:
   magma::Status SubmitBatch(std::unique_ptr<MappedBatch> batch) override {
-    return MAGMA_STATUS_UNIMPLEMENTED;
+    return MAGMA_STATUS_OK;  // Needed for ReleaseBufferWhileMapped*
   }
 
   void DestroyContext(std::shared_ptr<ClientContext> client_context) override {}
@@ -96,10 +96,10 @@ class TestMsdIntelConnection : public ::testing::Test, public MsdIntelConnection
     ASSERT_TRUE(mapping);
     EXPECT_TRUE(connection->per_process_gtt()->AddMapping(mapping));
 
-    // Release the mapping during the retry.
-    auto sleep_callback = [&](uint32_t ms) { mapping.reset(); };
+    // Release the mapping during the wait.
+    auto wait_callback = [&](magma::PlatformEvent* event, uint32_t timeout_ms) { mapping.reset(); };
 
-    connection->ReleaseBuffer(buffer->platform_buffer(), sleep_callback);
+    connection->ReleaseBuffer(buffer->platform_buffer(), wait_callback);
 
     EXPECT_EQ(0u, callback_count_);
     EXPECT_FALSE(connection->sent_context_killed());
@@ -124,12 +124,14 @@ class TestMsdIntelConnection : public ::testing::Test, public MsdIntelConnection
 
     // Release the buffer while holding the mapping retries for a while then
     // triggers the killed callback.
-    uint32_t sleep_callback_count = 0;
-    auto sleep_callback = [&](uint32_t ms) { sleep_callback_count += 1; };
+    uint32_t wait_callback_count = 0;
+    auto wait_callback = [&](magma::PlatformEvent* event, uint32_t timeout_ms) {
+      wait_callback_count += 1;
+    };
 
-    connection->ReleaseBuffer(buffer->platform_buffer(), sleep_callback);
+    connection->ReleaseBuffer(buffer->platform_buffer(), wait_callback);
 
-    EXPECT_GT(sleep_callback_count, 0u);
+    EXPECT_GT(wait_callback_count, 0u);
     EXPECT_EQ(1u, callback_count_);
     EXPECT_TRUE(connection->sent_context_killed());
 

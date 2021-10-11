@@ -5,7 +5,8 @@
 #include "msd_intel_connection.h"
 
 #include "magma_util/dlog.h"
-#include "msd_intel_semaphore.h"
+#include "magma_util/macros.h"
+#include "msd_intel_context.h"
 #include "ppgtt.h"
 
 void msd_connection_close(msd_connection_t* connection) {
@@ -96,8 +97,14 @@ void msd_connection_release_buffer(msd_connection_t* connection, msd_buffer_t* b
       ->ReleaseBuffer(MsdIntelAbiBuffer::cast(buffer)->ptr()->platform_buffer());
 }
 
-void MsdIntelConnection::ReleaseBuffer(magma::PlatformBuffer* buffer,
-                                       std::function<void(uint32_t delay_ms)> sleep_callback) {
+void MsdIntelConnection::ReleaseBuffer(magma::PlatformBuffer* buffer) {
+  ReleaseBuffer(buffer,
+                [](magma::PlatformEvent* event, uint32_t timeout_ms) { event->Wait(timeout_ms); });
+}
+
+void MsdIntelConnection::ReleaseBuffer(
+    magma::PlatformBuffer* buffer,
+    std::function<void(magma::PlatformEvent* event, uint32_t timeout_ms)> wait_callback) {
   std::vector<std::shared_ptr<GpuMapping>> mappings;
   per_process_gtt()->ReleaseBuffer(buffer, &mappings);
 
@@ -108,31 +115,37 @@ void MsdIntelConnection::ReleaseBuffer(magma::PlatformBuffer* buffer,
 
     if (use_count > 1) {
       // It's an error to release a buffer while it has inflight mappings, as that can fault the
-      // GPU.  However Mesa/Anvil no longer exactly tracks the user buffers that are associated
+      // GPU. However Mesa/Anvil no longer exactly tracks the user buffers that are associated
       // with each command buffer, instead it snapshots all user buffers currently allocated on
       // the device, which can include buffers from other threads.
-      // We observe this happening in at least one multithreaded CTS case.
-      // Intel says their DRM system driver will stall to handle the unlikely case when it happens,
-      // so we do the same here.
+      // This can happen when apps continually allocate and free device memory. Intel says
+      // a) apps should be sub-allocating instead b) their DRM system driver will stall to handle
+      // this case, so we do the same.
       DLOG("ReleaseBuffer %lu mapping has use count %zu", mapping->BufferId(), use_count);
 
       if (!sent_context_killed()) {
-        constexpr uint32_t kRetries = 10;
-        constexpr uint32_t kRetrySleepMs = 100;
+        auto event = std::shared_ptr<magma::PlatformEvent>(magma::PlatformEvent::Create());
 
-        for (uint32_t retry = 0; retry < kRetries; retry++) {
-          sleep_callback(kRetrySleepMs);
+        magma::Status status =
+            SubmitBatch(std::make_unique<PipelineFenceBatch>(GetInternalContext(), event));
 
+        uint64_t start_ns = 0;
+        if (status.ok()) {
+          start_ns = magma::get_monotonic_ns();
+          {
+            TRACE_DURATION("magma", "stall on release");
+            constexpr uint32_t kStallMaxMs = 100;
+            wait_callback(event.get(), kStallMaxMs);
+          }
           use_count = mapping.use_count();
-          if (use_count == 1)
-            break;
         }
 
         if (use_count > 1) {
-          MAGMA_LOG(
-              WARNING,
-              "ReleaseBuffer %lu mapping has use count %zu after stall, sending context killed",
-              mapping->BufferId(), use_count);
+          uint64_t stall_ns = start_ns == 0 ? 0 : magma::get_monotonic_ns() - start_ns;
+          MAGMA_LOG(WARNING,
+                    "ReleaseBuffer %lu mapping has use count %zu after stall (%lu us), sending "
+                    "context killed",
+                    mapping->BufferId(), use_count, stall_ns / 1000);
           SendContextKilled();
         }
       }
@@ -160,6 +173,13 @@ bool MsdIntelConnection::SubmitPendingReleaseMappings(std::shared_ptr<MsdIntelCo
       return DRETF(false, "Failed to submit mapping release batch: %d", status.get());
   }
   return true;
+}
+
+std::shared_ptr<MsdIntelContext> MsdIntelConnection::GetInternalContext() {
+  if (!internal_context_) {
+    internal_context_ = std::make_shared<MsdIntelContext>(ppgtt_);
+  }
+  return internal_context_;
 }
 
 std::unique_ptr<MsdIntelConnection> MsdIntelConnection::Create(Owner* owner,
