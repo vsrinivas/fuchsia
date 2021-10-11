@@ -34,12 +34,12 @@ executable("unittests") {
   deps = [
     ":util",
     "//garnet/public/lib/fostr/fidl/fuchsia.ui.input",
-    "//garnet/public/lib/gtest",
     "//sdk/fidl/fuchsia.ui.policy.accessibility",
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/ui/scenic/cpp",
     "//src/lib/fxl",
     "//src/lib/fxl/test:gtest_main",
+    "//src/lib/testing/loop_fixture",
     "//src/ui/scenic/lib/input",
     "//src/ui/scenic/lib/utils",
     "//third_party/googletest:gtest",

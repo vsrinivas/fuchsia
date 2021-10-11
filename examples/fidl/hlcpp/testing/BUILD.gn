@@ -9,10 +9,10 @@ executable("bin") {
   sources = [ "main.cc" ]
   deps = [
     "//examples/fidl/fuchsia.examples",
-    "//garnet/public/lib/gtest",
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/sys/cpp/testing:unit",
+    "//src/lib/testing/loop_fixture",
     "//third_party/googletest:gtest_main",
   ]
 }

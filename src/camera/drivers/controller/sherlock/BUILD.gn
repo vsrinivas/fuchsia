@@ -67,10 +67,10 @@ executable("sherlock_configs_unittest_bin") {
   testonly = true
   sources = [ "configs_unittest.cc" ]
   deps = [
-    "//garnet/public/lib/gtest",
     "//src/camera/drivers/controller/sherlock:config",
     "//src/camera/drivers/controller/test:constants",
     "//src/lib/fxl/test:gtest_main",
+    "//src/lib/testing/loop_fixture",
   ]
 
   # Increase the default stack size from 256 KB because creating the configs can take up a very

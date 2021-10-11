@@ -60,12 +60,12 @@ executable("intl_property_provider_impl_test_bin") {
     "//garnet/bin/trace/tests:component_context",
     "//garnet/public/lib/fostr/fidl/fuchsia.intl",
     "//garnet/public/lib/fostr/fidl/fuchsia.settings",
-    "//garnet/public/lib/gtest",
     "//sdk/fidl/fuchsia.sys",
     "//sdk/lib/sys/cpp/testing:unit",
     "//sdk/lib/syslog/cpp",
     "//src/lib/fidl_fuchsia_intl_ext/cpp",
     "//src/lib/fxl/test:test_settings",
+    "//src/lib/testing/loop_fixture",
     "//src/modular/lib/fidl:clone",
   ]
 }

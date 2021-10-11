@@ -65,7 +65,6 @@ executable("web_runner_integration_tests_bin") {
   deps = [
     ":test_server",
     ":web_context",
-    "//garnet/public/lib/gtest",
     "//sdk/fidl/fuchsia.sys",
     "//sdk/lib/fit",
     "//sdk/lib/sys/cpp/testing:unit",
@@ -73,6 +72,7 @@ executable("web_runner_integration_tests_bin") {
     "//src/chromium/web_engine/meta/shards:web_engine_feature_network",
     "//src/lib/fxl",
     "//src/lib/fxl/test:gtest_main",
+    "//src/lib/testing/loop_fixture",
     "//third_party/googletest:gtest",
   ]
 
@@ -87,7 +87,6 @@ executable("web_runner_pixel_tests_bin") {
   deps = [
     ":mock_server",
     ":web_context",
-    "//garnet/public/lib/gtest",
     "//sdk/fidl/fuchsia.sys",
     "//sdk/fidl/fuchsia.ui.app",
     "//sdk/fidl/fuchsia.ui.policy",
@@ -103,6 +102,7 @@ executable("web_runner_pixel_tests_bin") {
     "//src/lib/fsl",
     "//src/lib/fxl",
     "//src/lib/fxl/test:gtest_main",
+    "//src/lib/testing/loop_fixture",
     "//src/lib/ui/base_view",
     "//src/ui/testing/views",
     "//third_party/googletest:gtest",

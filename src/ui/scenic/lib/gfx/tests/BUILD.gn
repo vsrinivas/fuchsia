@@ -45,7 +45,6 @@ source_set("testing_deps") {
   ]
   public_deps = [
     "//garnet/public/lib/fostr/fidl/fuchsia.ui.scenic",
-    "//garnet/public/lib/gtest",
     "//sdk/fidl/fuchsia.ui.gfx",
     "//sdk/fidl/fuchsia.ui.scenic",
     "//sdk/fidl/fuchsia.ui.scenic.internal",
@@ -53,6 +52,7 @@ source_set("testing_deps") {
     "//sdk/lib/inspect/testing/cpp",
     "//sdk/lib/sys/cpp/testing:unit",
     "//sdk/lib/ui/scenic/cpp",
+    "//src/lib/testing/loop_fixture",
     "//src/ui/bin/root_presenter:safe_presenter",
     "//src/ui/lib/escher",
     "//src/ui/lib/escher/test/common:gtest_escher",
@@ -248,7 +248,6 @@ executable("viewstate_apptests") {
     ":gfx_tests_main",
     ":pixel_test",
     ":testing_deps",
-    "//garnet/public/lib/gtest",
     "//sdk/fidl/fuchsia.sys",
     "//sdk/fidl/fuchsia.ui.policy",
     "//sdk/fidl/fuchsia.ui.scenic",
@@ -256,6 +255,7 @@ executable("viewstate_apptests") {
     "//sdk/lib/sys/cpp/testing:integration_fixture",
     "//sdk/lib/ui/scenic/cpp",
     "//src/lib/fxl",
+    "//src/lib/testing/loop_fixture",
     "//src/lib/ui/base_view",
     "//src/ui/lib/glm_workaround",
     "//src/ui/testing/views",

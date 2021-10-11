@@ -72,11 +72,11 @@ executable("service_startup_test_bin") {
   deps = [
     ":interface",
     "//garnet/examples/fidl/services:echo",
-    "//garnet/public/lib/gtest",
     "//sdk/fidl/fuchsia.logger",
     "//sdk/lib/sys/cpp",
     "//src/lib/fxl",
     "//src/lib/fxl/test:gtest_main",
+    "//src/lib/testing/loop_fixture",
     "//third_party/googletest:gmock",
   ]
 }
@@ -99,11 +99,11 @@ executable("package_updating_loader_test_bin") {
   deps = [
     ":interface",
     "//garnet/examples/fidl/services:echo",
-    "//garnet/public/lib/gtest",
     "//sdk/lib/sys/cpp/testing:integration_fixture",
     "//src/lib/fxl",
     "//src/lib/fxl/test:gtest_main",
     "//src/lib/storage/vfs/cpp",
+    "//src/lib/testing/loop_fixture",
     "//src/sys/sysmgr:lib",
     "//zircon/system/ulib/zx",
   ]

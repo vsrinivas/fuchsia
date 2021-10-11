@@ -33,7 +33,6 @@ executable("touch-input-test-bin") {
     ":test.touch",
     "//garnet/public/lib/fostr/fidl/fuchsia.ui.gfx",
     "//garnet/public/lib/fostr/fidl/fuchsia.ui.input",
-    "//garnet/public/lib/gtest",
     "//sdk/fidl/fuchsia.accessibility.semantics",
     "//sdk/fidl/fuchsia.cobalt",
     "//sdk/fidl/fuchsia.component",
@@ -64,6 +63,7 @@ executable("touch-input-test-bin") {
     "//sdk/lib/ui/scenic/cpp",
     "//src/lib/fxl",
     "//src/lib/fxl/test:gtest_main",
+    "//src/lib/testing/loop_fixture",
     "//third_party/googletest:gtest",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
@@ -111,7 +111,6 @@ executable("touch-input-test-ip-bin") {
     ":test.touch",
     "//garnet/public/lib/fostr/fidl/fuchsia.ui.gfx",
     "//garnet/public/lib/fostr/fidl/fuchsia.ui.input",
-    "//garnet/public/lib/gtest",
     "//sdk/fidl/fuchsia.accessibility.semantics",
     "//sdk/fidl/fuchsia.fonts",
     "//sdk/fidl/fuchsia.hardware.display",
@@ -123,6 +122,7 @@ executable("touch-input-test-ip-bin") {
     "//sdk/fidl/fuchsia.sys",
     "//sdk/fidl/fuchsia.ui.app",
     "//sdk/fidl/fuchsia.ui.input",
+    "//src/lib/testing/loop_fixture",
 
     # TODO(fxbug.dev/82655): Remove this after migrating to RealmBuilder.
     "//sdk/fidl/fuchsia.ui.lifecycle",

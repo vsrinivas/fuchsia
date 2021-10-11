@@ -133,7 +133,7 @@ if (is_host && !has_prebuilt_vulkan_runtime) {
         "profiling/timestamp_profiler_unittest.cc",
       ]
       deps += [
-        "//garnet/public/lib/gtest",
+        "//src/lib/testing/loop_fixture",
         "//zircon/system/ulib/async:async-cpp",
         "//zircon/system/ulib/async-default",
         "//zircon/system/ulib/async-loop:async-loop-cpp",

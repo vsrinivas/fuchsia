@@ -38,9 +38,9 @@ executable("audio_fidelity_test_bin") {
 
   deps = [
     ":frequency_set",
-    "//garnet/public/lib/gtest",
     "//sdk/lib/syslog/cpp",
     "//src/lib/fxl/test:test_settings",
+    "//src/lib/testing/loop_fixture",
     "//src/media/audio/audio_core/mixer",
     "//src/media/audio/audio_core/mixer:prebuilt_coefficient_tables",
     "//src/media/audio/lib/analysis",

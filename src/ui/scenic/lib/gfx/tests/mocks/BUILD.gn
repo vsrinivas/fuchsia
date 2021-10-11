@@ -10,12 +10,12 @@ source_set("util") {
     "util.h",
   ]
   public_deps = [
-    "//garnet/public/lib/gtest",
     "//sdk/fidl/fuchsia.ui.scenic",
     "//sdk/fidl/fuchsia.ui.scenic.internal",
     "//sdk/lib/ui/scenic/cpp",
     "//src/lib/fsl",
     "//src/lib/fxl",
+    "//src/lib/testing/loop_fixture",
     "//src/ui/lib/glm_workaround",
     "//src/ui/scenic/lib/gfx:gfx",
     "//src/ui/scenic/lib/scenic",

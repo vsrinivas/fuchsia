@@ -21,7 +21,7 @@ source_set("unittests") {
 
   deps = [
     ":string_escape",
-    "//garnet/public/lib/gtest",
+    "//src/lib/testing/loop_fixture",
     "//third_party/googletest:gtest",
   ]
 }

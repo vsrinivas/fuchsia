@@ -22,8 +22,8 @@ executable("unittests") {
   ]
 
   deps = [
-    "//garnet/public/lib/gtest:gtest",
     "//sdk/lib/sys/cpp/testing:unit",
+    "//src/lib/testing/loop_fixture:gtest",
     "//src/lib/testing/loop_fixture:gtest",
     "//src/ui/lib/display:hdcp_client",
     "//src/ui/scenic/lib/allocation",

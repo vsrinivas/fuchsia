@@ -17,13 +17,13 @@ executable("injector_tests") {
   ]
 
   deps = [
-    "//garnet/public/lib/gtest",
     "//sdk/fidl/fuchsia.sys",
     "//sdk/fidl/fuchsia.ui.pointerinjector",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/sys/cpp/testing:unit",
     "//src/lib/fxl",
     "//src/lib/fxl/test:gtest_main",
+    "//src/lib/testing/loop_fixture",
     "//src/lib/testing/loop_fixture",
     "//src/ui/input/lib/injector",
     "//src/ui/input/lib/injector/tests/mocks:mocks",

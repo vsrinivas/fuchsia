@@ -29,11 +29,11 @@ executable("trace_manager_tests_bin") {
 
   deps = [
     "//garnet/bin/trace_manager:lib",
-    "//garnet/public/lib/gtest",
     "//sdk/lib/fdio",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/sys/cpp/testing:unit",
     "//src/lib/fxl/test:gtest_main",
+    "//src/lib/testing/loop_fixture",
     "//zircon/system/ulib/async-default",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/trace-provider",

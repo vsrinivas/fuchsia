@@ -17,8 +17,8 @@ source_set("testing") {
   ]
 
   deps = [
-    "//garnet/public/lib/gtest",
     "//sdk/lib/fit-promise",
+    "//src/lib/testing/loop_fixture",
     "//src/media/audio/lib/clock",
     "//zircon/system/ulib/affine",
     "//zircon/system/ulib/zx",
@@ -34,8 +34,8 @@ executable("unittest_bin") {
 
   deps = [
     ":testing",
-    "//garnet/public/lib/gtest",
     "//src/lib/fxl/test:gtest_main",
+    "//src/lib/testing/loop_fixture",
     "//src/media/audio/audio_core:audio_core_lib",
     "//src/media/audio/audio_core/mixer:prebuilt_coefficient_tables",
   ]

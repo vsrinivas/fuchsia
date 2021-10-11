@@ -10,11 +10,11 @@ executable("async-watchdog-unittests") {
   sources = [ "watchdog_unittest.cc" ]
 
   deps = [
-    "//garnet/public/lib/gtest",
     "//sdk/lib/sys/cpp",
     "//src/lib/async-watchdog",
     "//src/lib/fxl",
     "//src/lib/fxl/test:gtest_main",
+    "//src/lib/testing/loop_fixture",
     "//src/lib/testing/loop_fixture",
     "//zircon/system/ulib/async:async-cpp",
     "//zircon/system/ulib/async-default",

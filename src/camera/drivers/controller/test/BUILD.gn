@@ -32,7 +32,6 @@ executable("controller_unittest_bin") {
   ]
   deps = [
     ":constants",
-    "//garnet/public/lib/gtest",
     "//sdk/fidl/fuchsia.hardware.camera",
     "//sdk/lib/fit-promise",
     "//sdk/lib/sys/cpp",
@@ -41,6 +40,7 @@ executable("controller_unittest_bin") {
     "//src/camera/drivers/test_utils",
     "//src/devices/testing/fake_ddk",
     "//src/lib/fxl/test:gtest_main",
+    "//src/lib/testing/loop_fixture",
   ]
   if (internal_access) {
     defines = [ "INTERNAL_ACCESS" ]

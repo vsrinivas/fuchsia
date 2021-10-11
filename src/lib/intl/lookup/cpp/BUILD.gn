@@ -42,9 +42,9 @@ executable("intl_lookup_cpp_unittests") {
   sources = [ "lookup_test.cc" ]
   deps = [
     ":lib",
-    "//garnet/public/lib/gtest",
     "//sdk/lib/fit-promise",
     "//src/lib/fxl/test:gtest_main",
+    "//src/lib/testing/loop_fixture",
   ]
 }
 

@@ -45,8 +45,8 @@ source_set("codec_impl_tests") {
   ]
 
   deps = [
-    "//garnet/public/lib/gtest",
     "//sdk/lib/stdcompat",
+    "//src/lib/testing/loop_fixture",
     "//src/media/lib/codec_impl",
     "//src/media/lib/codec_impl/test_utils",
     "//third_party/googletest:gtest",

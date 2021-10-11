@@ -8,7 +8,6 @@ executable("tel-driver-unit-test") {
   testonly = true
   sources = [ "driver-unit-test.cc" ]
   deps = [
-    "//garnet/public/lib/gtest",
     "//sdk/fidl/fuchsia.hardware.telephony.transport:fuchsia.hardware.telephony.transport_llcpp",
     "//sdk/lib/fdio",
     "//sdk/lib/sys/cpp",
@@ -16,6 +15,7 @@ executable("tel-driver-unit-test") {
     "//src/devices/usb/lib/usb",
     "//src/lib/ddk",
     "//src/lib/fxl/test:gtest_main",
+    "//src/lib/testing/loop_fixture",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/fzl",
     "//zircon/system/ulib/sync",

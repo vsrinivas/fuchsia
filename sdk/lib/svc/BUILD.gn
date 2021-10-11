@@ -38,9 +38,9 @@ test("svc_unittests") {
 
   deps = [
     ":svc",
-    "//garnet/public/lib/gtest",
     "//sdk/lib/fdio",
     "//src/lib/fxl/test:gtest_main",
+    "//src/lib/testing/loop_fixture",
     "//zircon/system/ulib/zx",
   ]
 }

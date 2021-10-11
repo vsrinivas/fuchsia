@@ -16,10 +16,10 @@ executable("unittests") {
   sources = [ "allocator_unittest.cc" ]
 
   deps = [
-    "//garnet/public/lib/gtest:gtest",
     "//sdk/lib/sys/cpp/testing:unit",
     "//src/lib/fsl:fsl",
     "//src/lib/fxl/test:gtest_main",
+    "//src/lib/testing/loop_fixture:gtest",
     "//src/ui/scenic/lib/allocation",
     "//src/ui/scenic/lib/utils",
     "//third_party/googletest:gmock",

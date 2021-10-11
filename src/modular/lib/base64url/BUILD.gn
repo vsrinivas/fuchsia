@@ -27,7 +27,7 @@ source_set("unittests") {
 
   deps = [
     ":base64url",
-    "//garnet/public/lib/gtest",
+    "//src/lib/testing/loop_fixture",
     "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",
   ]

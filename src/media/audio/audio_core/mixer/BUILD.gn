@@ -169,9 +169,9 @@ executable("mixer_death_test_bin") {
 
   deps = [
     ":mixer",
-    "//garnet/public/lib/gtest",
     "//sdk/lib/syslog/cpp",
     "//src/lib/fxl/test:gtest_main",
+    "//src/lib/testing/loop_fixture",
     "//src/media/audio/audio_core/mixer:prebuilt_coefficient_tables",
     "//third_party/googletest:gmock",
   ]

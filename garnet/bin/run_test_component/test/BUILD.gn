@@ -19,7 +19,6 @@ test("bin") {
   sources = [ "run_test_component_test.cc" ]
 
   deps = [
-    "//garnet/public/lib/gtest",
     "//sdk/fidl/fuchsia.debugdata",
     "//sdk/fidl/fuchsia.process",
     "//sdk/fidl/fuchsia.sys",
@@ -28,6 +27,7 @@ test("bin") {
     "//sdk/lib/sys/cpp/testing:unit",
     "//src/lib/fxl",
     "//src/lib/fxl/test:gtest_main",
+    "//src/lib/testing/loop_fixture",
     "//third_party/googletest:gmock",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",

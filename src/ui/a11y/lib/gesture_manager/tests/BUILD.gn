@@ -16,9 +16,9 @@ executable("gesture_manager_tests") {
   ]
 
   deps = [
-    "//garnet/public/lib/gtest",
     "//sdk/fidl/fuchsia.accessibility.tts",
     "//src/lib/fxl/test:gtest_main",
+    "//src/lib/testing/loop_fixture",
     "//src/ui/a11y/lib/gesture_manager",
     "//src/ui/a11y/lib/gesture_manager/tests/mocks",
     "//src/ui/a11y/lib/testing:input",

@@ -16,11 +16,11 @@ executable("i18n_tests") {
   ]
 
   deps = [
-    "//garnet/public/lib/gtest",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/sys/cpp/testing:unit",
     "//src/lib/fxl/test:gtest_main",
     "//src/lib/intl/lookup/cpp:lib",
+    "//src/lib/testing/loop_fixture",
     "//src/ui/a11y/lib/screen_reader/i18n:i18n",
     "//src/ui/a11y/lib/screen_reader/i18n:resources",
   ]

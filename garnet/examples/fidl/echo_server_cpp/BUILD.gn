@@ -52,9 +52,9 @@ executable("echo_server_cpp_unittests") {
 
   deps = [
     ":lib",
-    "//garnet/public/lib/gtest",
     "//sdk/lib/sys/cpp/testing:unit",
     "//src/lib/fxl/test:gtest_main",
+    "//src/lib/testing/loop_fixture",
   ]
 }
 

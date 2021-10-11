@@ -62,10 +62,10 @@ test("tests") {
 
   deps = [
     ":fidl",
-    "//garnet/public/lib/gtest",
     "//sdk/lib/syslog/cpp",
     "//src/lib/fsl",
     "//src/lib/fxl/test:gtest_main",
+    "//src/lib/testing/loop_fixture",
     "//src/media/playback/mediaplayer/graph",
     "//src/media/playback/mediaplayer/process",
     "//zircon/system/ulib/zx",

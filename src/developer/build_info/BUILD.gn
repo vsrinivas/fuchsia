@@ -56,11 +56,11 @@ executable("test-bin") {
   ]
 
   deps = [
-    "//garnet/public/lib/gtest",
     "//sdk/fidl/fuchsia.buildinfo",
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/sys/cpp/testing:unit",
+    "//src/lib/testing/loop_fixture",
     "//third_party/googletest:gtest_main",
   ]
 }

@@ -36,9 +36,9 @@ executable("virtualization_lib_unittests") {
 
   deps = [
     ":virtualization",
-    "//garnet/public/lib/gtest",
     "//sdk/lib/sys/cpp/testing:unit",
     "//src/lib/fxl/test:gtest_main",
+    "//src/lib/testing/loop_fixture",
   ]
   defines = []
   if (use_legacy_wayland_bridge) {

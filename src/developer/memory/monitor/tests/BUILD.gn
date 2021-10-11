@@ -26,7 +26,6 @@ executable("memory_monitor_unittests") {
   ]
 
   deps = [
-    "//garnet/public/lib/gtest",
     "//sdk/fidl/fuchsia.boot:fuchsia.boot_c",
     "//sdk/fidl/fuchsia.hardware.ram.metrics:fuchsia.hardware.ram.metrics",
     "//sdk/lib/inspect/testing/cpp",
@@ -35,6 +34,7 @@ executable("memory_monitor_unittests") {
     "//src/developer/memory/metrics/tests:utils",
     "//src/developer/memory/monitor:lib",
     "//src/lib/fxl/test:gtest_main",
+    "//src/lib/testing/loop_fixture",
     "//src/storage/memfs",
   ]
 

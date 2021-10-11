@@ -14,7 +14,6 @@ executable("focus_manager_tests") {
   sources = [ "a11y_focus_manager_tests.cc" ]
 
   deps = [
-    "//garnet/public/lib/gtest",
     "//sdk/fidl/fuchsia.ui.views",
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/inspect/testing/cpp",
@@ -22,6 +21,7 @@ executable("focus_manager_tests") {
     "//sdk/lib/sys/cpp/testing:unit",
     "//sdk/lib/syslog/cpp",
     "//src/lib/fxl/test:gtest_main",
+    "//src/lib/testing/loop_fixture",
     "//src/ui/a11y/lib/annotation/tests/mocks",
     "//src/ui/a11y/lib/focus_chain/tests/mocks",
     "//src/ui/a11y/lib/screen_reader/focus",

@@ -22,13 +22,13 @@ executable("bin") {
   public_deps = [ "//sdk/lib/sys/cpp" ]
 
   deps = [
-    "//garnet/public/lib/gtest",
     "//sdk/fidl/fuchsia.auth",
     "//sdk/lib/sys/cpp/testing:integration_fixture",
     "//src/lib/callback",
     "//src/lib/fsl",
     "//src/lib/fxl",
     "//src/lib/fxl/test:gtest_main",
+    "//src/lib/testing/loop_fixture",
     "//third_party/rapidjson",
   ]
 }

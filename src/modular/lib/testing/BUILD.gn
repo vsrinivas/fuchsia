@@ -96,8 +96,8 @@ source_set("test_with_session_storage") {
   ]
 
   public_deps = [
-    "//garnet/public/lib/gtest",
     "//sdk/fidl/fuchsia.modular",
+    "//src/lib/testing/loop_fixture",
     "//src/modular/bin/sessionmgr/storage",
     "//third_party/googletest:gtest",
     "//zircon/system/ulib/async-loop:async-loop-cpp",

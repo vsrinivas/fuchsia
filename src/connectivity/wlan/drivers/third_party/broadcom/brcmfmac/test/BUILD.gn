@@ -123,13 +123,13 @@ executable("device_inspect_test") {
     "windowed_uint_property_test.cc",
   ]
   deps = [
-    "//garnet/public/lib/gtest",
     "//sdk/lib/inspect/testing/cpp",
     "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac:debug",
     "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/inspect",
     "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/test:device_inspect_utils",
     "//src/devices/testing/no_ddk",
     "//src/lib/fxl/test:gtest_main",
+    "//src/lib/testing/loop_fixture",
     "//src/lib/testing/loop_fixture",
     "//third_party/googletest:gmock",
     "//zircon/system/public",

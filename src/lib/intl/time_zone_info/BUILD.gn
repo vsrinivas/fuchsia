@@ -44,12 +44,12 @@ executable("time-zone-info-service-lib-test-bin") {
     ":time-zone-info-service-lib",
     "//garnet/bin/trace/tests:component_context",
     "//garnet/public/lib/fostr/fidl/fuchsia.intl",
-    "//garnet/public/lib/gtest",
     "//sdk/fidl/fuchsia.intl",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/sys/cpp/testing:unit",
     "//sdk/lib/sys/service/cpp",
     "//src/lib/fxl/test:gtest_main",
+    "//src/lib/testing/loop_fixture",
   ]
 }
 

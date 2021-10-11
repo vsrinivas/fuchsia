@@ -25,9 +25,9 @@ executable("fuchsia_async_testloop_c_test") {
   sources = [ "host_test.cc" ]
   deps = [
     ":guest",
-    "//garnet/public/lib/gtest:gtest",
     "//src/lib/fxl",
     "//src/lib/fxl/test:gtest_main",
+    "//src/lib/testing/loop_fixture:gtest",
     "//third_party/googletest:gtest",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-testing",

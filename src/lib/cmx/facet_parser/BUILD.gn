@@ -34,10 +34,10 @@ executable("cmx_facet_parser_unittest") {
 
   deps = [
     ":cmx_facet_parser",
-    "//garnet/public/lib/gtest",
     "//garnet/public/lib/json",
     "//src/lib/fxl/test:gtest_main",
     "//src/lib/pkg_url",
+    "//src/lib/testing/loop_fixture",
     "//third_party/googletest:gmock",
     "//third_party/rapidjson",
   ]

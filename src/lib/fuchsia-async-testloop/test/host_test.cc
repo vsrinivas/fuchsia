@@ -8,7 +8,7 @@
 
 #include <gtest/gtest.h>
 
-#include "garnet/public/lib/gtest/test_loop_fixture.h"
+#include "src/lib/testing/loop_fixture/test_loop_fixture.h"
 
 extern "C" {
 // Sets |return_status| to zero when successfully run.

@@ -299,7 +299,6 @@ executable("unittest_bin") {
   deps = [
     ":audio_core_lib",
     "testing",
-    "//garnet/public/lib/gtest",
     "//sdk/fidl/fuchsia.hardware.audio",
     "//sdk/fidl/fuchsia.scheduler",
     "//sdk/lib/fit-promise",
@@ -307,6 +306,7 @@ executable("unittest_bin") {
     "//sdk/lib/sys/cpp/testing:unit",
     "//src/lib/fxl/test:gtest_main",
     "//src/lib/storage/vfs/cpp",
+    "//src/lib/testing/loop_fixture",
     "//src/lib/testing/loop_fixture",
     "//src/media/audio/audio_core/mixer",
     "//src/media/audio/audio_core/mixer:prebuilt_coefficient_tables",

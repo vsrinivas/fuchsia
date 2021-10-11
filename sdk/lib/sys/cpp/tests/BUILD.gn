@@ -15,11 +15,11 @@ test("component_cpp_unittests_bin") {
   ]
 
   deps = [
-    "//garnet/public/lib/gtest",
     "//sdk/fidl/fuchsia.io:fuchsia.io_llcpp",
     "//sdk/lib/fdio",
     "//sdk/lib/sys/cpp",
     "//src/lib/fxl/test:gtest_main",
+    "//src/lib/testing/loop_fixture",
     "//src/testing/fidl:placeholders",
     "//zircon/system/ulib/fidl",
   ]
@@ -41,12 +41,12 @@ test("component_cpp_testing_unittests_bin") {
   ]
 
   deps = [
-    "//garnet/public/lib/gtest",
     "//sdk/fidl/fuchsia.io",
     "//sdk/lib/sys/cpp/testing:integration_fixture",
     "//sdk/lib/sys/cpp/testing:unit",
     "//src/lib/fuchsia-component-test/fidl:fuchsia.realm.builder",
     "//src/lib/fxl/test:gtest_main",
+    "//src/lib/testing/loop_fixture",
     "//src/testing/fidl:placeholders",
     "//zircon/system/ulib/fidl",
   ]
@@ -64,7 +64,6 @@ test("component_cpp_testing_tests_bin") {
   ]
 
   deps = [
-    "//garnet/public/lib/gtest",
     "//sdk/fidl/fuchsia.debugdata",
     "//sdk/fidl/fuchsia.io",
     "//sdk/fidl/fuchsia.sys2",
@@ -73,6 +72,7 @@ test("component_cpp_testing_tests_bin") {
     "//sdk/lib/sys/cpp/testing:integration_fixture",
     "//sdk/lib/sys/cpp/testing:unit",
     "//src/lib/fxl/test:gtest_main",
+    "//src/lib/testing/loop_fixture",
     "//src/testing/fidl:placeholders",
     "//zircon/system/ulib/fidl",
   ]
@@ -141,7 +141,6 @@ executable("realm_builder_test_bin") {
   sources = [ "realm_builder_test.cc" ]
 
   deps = [
-    "//garnet/public/lib/gtest",
     "//sdk/fidl/fuchsia.component",
     "//sdk/fidl/fuchsia.logger",
     "//sdk/lib/fidl/cpp",
@@ -149,6 +148,7 @@ executable("realm_builder_test_bin") {
     "//sdk/lib/sys/cpp/testing:realm_builder",
     "//src/lib/fuchsia-component-test/fidl:fuchsia.realm.builder",
     "//src/lib/fxl/test:gtest_main",
+    "//src/lib/testing/loop_fixture",
     "//src/testing/fidl:placeholders",
   ]
 }

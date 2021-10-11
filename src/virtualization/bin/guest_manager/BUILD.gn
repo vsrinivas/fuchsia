@@ -61,9 +61,9 @@ executable("guest_manager_unittests") {
 
   deps = [
     ":lib",
-    "//garnet/public/lib/gtest",
     "//src/lib/fsl",
     "//src/lib/fxl/test:gtest_main",
+    "//src/lib/testing/loop_fixture",
   ]
 }
 

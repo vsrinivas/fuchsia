@@ -61,9 +61,9 @@ executable("sessionctl_unittest") {
 
   deps = [
     ":lib",
-    "//garnet/public/lib/gtest",
     "//sdk/fidl/fuchsia.modular",
     "//src/lib/fxl/test:gtest_main",
+    "//src/lib/testing/loop_fixture",
     "//src/modular/bin/sessionmgr/puppet_master:puppet_master_impl",
     "//src/modular/lib/testing:test_story_command_executor",
     "//src/modular/lib/testing:test_with_session_storage",

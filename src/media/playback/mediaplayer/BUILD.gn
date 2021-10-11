@@ -128,7 +128,6 @@ executable("mediaplayer_tests_bin") {
 
   deps = [
     ":mediaplayer_bin",
-    "//garnet/public/lib/gtest",
     "//sdk/fidl/fuchsia.media.playback",
     "//sdk/fidl/fuchsia.sys",
     "//sdk/fidl/fuchsia.ui.scenic",
@@ -138,6 +137,7 @@ executable("mediaplayer_tests_bin") {
     "//sdk/lib/ui/scenic/cpp",
     "//src/lib/fsl",
     "//src/lib/fxl/test:gtest_main",
+    "//src/lib/testing/loop_fixture",
     "//src/lib/ui/base_view",
     "//src/media/playback/mediaplayer/graph",
     "//zircon/system/ulib/async-loop:async-loop-cpp",

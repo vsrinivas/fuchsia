@@ -127,7 +127,6 @@ executable("sandbox_unittest") {
 
   deps = [
     ":src",
-    "//garnet/public/lib/gtest",
     "//garnet/public/lib/json",
     "//sdk/fidl/fuchsia.sys",
     "//sdk/fidl/fuchsia.virtualization",
@@ -139,6 +138,7 @@ executable("sandbox_unittest") {
     "//src/lib/fxl",
     "//src/lib/fxl/test:gtest_main",
     "//src/lib/pkg_url",
+    "//src/lib/testing/loop_fixture",
     "//src/lib/testing/predicates",
     "//src/storage/memfs:memfs-cpp",
     "//third_party/rapidjson",

@@ -31,8 +31,8 @@ executable("gtest_runner_no_tests") {
   sources = [ "empty_test_file.cc" ]
 
   deps = [
-    "//garnet/public/lib/gtest",
     "//src/lib/fxl/test:gtest_main",
+    "//src/lib/testing/loop_fixture",
   ]
 }
 
@@ -48,8 +48,8 @@ executable("gtest_runner_sample_tests") {
   sources = [ "sample_tests.cc" ]
 
   deps = [
-    "//garnet/public/lib/gtest",
     "//src/lib/fxl/test:gtest_main",
+    "//src/lib/testing/loop_fixture",
   ]
 }
 
@@ -64,7 +64,7 @@ executable("gtest_runner_test_with_custom_args") {
   testonly = true
   sources = [ "test_with_custom_args.cc" ]
 
-  deps = [ "//garnet/public/lib/gtest" ]
+  deps = [ "//src/lib/testing/loop_fixture" ]
 }
 
 fuchsia_component("gtest_runner_test_with_custom_args_component") {
@@ -79,8 +79,8 @@ executable("gtest_runner_test_with_environ") {
   sources = [ "test_with_environ.cc" ]
 
   deps = [
-    "//garnet/public/lib/gtest",
     "//src/lib/fxl/test:gtest_main",
+    "//src/lib/testing/loop_fixture",
   ]
 }
 

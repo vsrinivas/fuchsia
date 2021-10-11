@@ -8,7 +8,7 @@
 
 #include <memory>
 
-#include "garnet/public/lib/gtest/test_loop_fixture.h"
+#include "src/lib/testing/loop_fixture/test_loop_fixture.h"
 #include "src/sys/activity/state_machine_driver.h"
 
 namespace activity {

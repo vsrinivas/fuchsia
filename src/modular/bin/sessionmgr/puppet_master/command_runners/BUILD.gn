@@ -52,10 +52,10 @@ executable("add_mod_command_runner_unittest") {
 
   deps = [
     ":add_mod_command_runner",
-    "//garnet/public/lib/gtest",
     "//sdk/lib/fidl/cpp",
     "//src/lib/fsl",
     "//src/lib/fxl/test:gtest_main",
+    "//src/lib/testing/loop_fixture",
     "//src/modular/lib/testing:test_with_session_storage",
   ]
 }
@@ -86,8 +86,8 @@ executable("remove_mod_command_runner_unittest") {
 
   deps = [
     ":remove_mod_command_runner",
-    "//garnet/public/lib/gtest",
     "//src/lib/fxl/test:gtest_main",
+    "//src/lib/testing/loop_fixture",
     "//src/modular/lib/testing:test_with_session_storage",
   ]
 }

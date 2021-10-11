@@ -11,8 +11,8 @@ test("hlcpp-tests") {
 
   deps = [
     ":measure_tape_for_toplevelunion",
-    "//garnet/public/lib/gtest",
     "//src/lib/fxl/test:gtest_main",
+    "//src/lib/testing/loop_fixture",
     "//tools/fidl/measure-tape/testdata:measuretape",
   ]
 }

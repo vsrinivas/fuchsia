@@ -20,7 +20,6 @@ executable("view_tests") {
   ]
   public_deps = [ "//sdk/fidl/fuchsia.accessibility.semantics" ]
   deps = [
-    "//garnet/public/lib/gtest",
     "//garnet/public/lib/json",
     "//sdk/fidl/fuchsia.accessibility",
     "//sdk/fidl/fuchsia.sys",
@@ -31,6 +30,7 @@ executable("view_tests") {
     "//sdk/lib/vfs/cpp",
     "//src/lib/fsl",
     "//src/lib/fxl/test:gtest_main",
+    "//src/lib/testing/loop_fixture",
     "//src/ui/a11y/bin/a11y_manager/tests/util",
     "//src/ui/a11y/lib/annotation",
     "//src/ui/a11y/lib/annotation/tests/mocks",

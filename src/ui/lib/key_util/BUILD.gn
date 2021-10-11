@@ -20,8 +20,8 @@ source_set("key_util") {
 test("key_util_test") {
   sources = [ "key_util_unittest.cc" ]
   deps = [
-    "//garnet/public/lib/gtest",
     "//src/lib/fxl/test:gtest_main",
+    "//src/lib/testing/loop_fixture",
     "//src/ui/lib/key_util",
   ]
 }

@@ -24,11 +24,11 @@ executable("tests") {
 
   deps = [
     "fidl/fuchsia.testing.chrealm",
-    "//garnet/public/lib/gtest",
     "//sdk/fidl/fuchsia.sys",
     "//sdk/lib/sys/cpp/testing:integration_fixture",
     "//src/lib/fxl/test:gtest_main",
     "//src/lib/storage/vfs/cpp",
+    "//src/lib/testing/loop_fixture",
     "//src/sys/appmgr:lib",
     "//zircon/system/ulib/zx",
   ]

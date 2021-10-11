@@ -21,11 +21,11 @@ executable("integration_tests") {
 
   deps = [
     ":mock_device_watcher",
-    "//garnet/public/lib/gtest",
     "//sdk/fidl/fuchsia.input.report:fuchsia.input.report_llcpp",
     "//sdk/fidl/fuchsia.ui.input",
     "//src/lib/ddk",
     "//src/lib/fxl/test:gtest_main",
+    "//src/lib/testing/loop_fixture",
     "//src/ui/input/lib/hid-input-report",
     "//src/ui/input/testing/fake_input_report_device",
     "//src/ui/lib/input_report_reader",

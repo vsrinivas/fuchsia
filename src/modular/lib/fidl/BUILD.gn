@@ -163,10 +163,10 @@ source_set("app_client_unittest") {
   deps = [
     ":app_client",
     ":test.peridot.lib.fidl.appclient",
-    "//garnet/public/lib/gtest",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/sys/cpp/testing:unit",
     "//src/lib/fsl",
+    "//src/lib/testing/loop_fixture",
     "//third_party/googletest:gtest",
   ]
 }

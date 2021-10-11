@@ -78,9 +78,9 @@ test("vfs_cpp_unittests") {
   deps = [
     ":cpp",
     "testing",
-    "//garnet/public/lib/gtest",
     "//sdk/lib/sys/cpp",
     "//src/lib/fxl/test:gtest_main",
+    "//src/lib/testing/loop_fixture",
     "//src/testing/fidl:placeholders",
   ]
 

@@ -55,7 +55,6 @@ executable("root_presenter_unittests_bin") {
   ]
 
   deps = [
-    "//garnet/public/lib/gtest",
     "//sdk/fidl/fuchsia.accessibility",
     "//sdk/fidl/fuchsia.media.sounds",
     "//sdk/fidl/fuchsia.recovery",
@@ -72,6 +71,7 @@ executable("root_presenter_unittests_bin") {
     "//sdk/lib/ui/scenic/cpp",
     "//src/lib/fxl",
     "//src/lib/fxl/test:gtest_main",
+    "//src/lib/testing/loop_fixture",
     "//src/lib/testing/loop_fixture",
     "//src/ui/a11y/lib/view",
     "//src/ui/bin/root_presenter:color_transform",
@@ -99,7 +99,6 @@ executable("focus_dispatcher_unittests_bin") {
   sources = [ "focus_dispatcher_unittest.cc" ]
 
   deps = [
-    "//garnet/public/lib/gtest",
     "//sdk/fidl/fuchsia.ui.input.accessibility",
     "//sdk/fidl/fuchsia.ui.policy.accessibility",
     "//sdk/lib/fidl/cpp",
@@ -108,6 +107,7 @@ executable("focus_dispatcher_unittests_bin") {
     "//sdk/lib/sys/cpp/testing:unit",
     "//sdk/lib/syslog/cpp",
     "//src/lib/fxl/test:gtest_main",
+    "//src/lib/testing/loop_fixture",
     "//src/ui/bin/root_presenter:lib",
     "//src/ui/bin/root_presenter/tests/fakes",
   ]

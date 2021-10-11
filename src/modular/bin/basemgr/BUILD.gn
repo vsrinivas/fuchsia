@@ -134,7 +134,6 @@ executable("session_context_impl_unittest") {
 
   deps = [
     ":lib",
-    "//garnet/public/lib/gtest",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/sys/cpp/testing:integration_fixture",
     "//sdk/lib/sys/cpp/testing:unit",
@@ -142,6 +141,7 @@ executable("session_context_impl_unittest") {
     "//src/lib/files",
     "//src/lib/fsl",
     "//src/lib/fxl/test:gtest_main",
+    "//src/lib/testing/loop_fixture",
     "//src/modular/lib/modular_config",
     "//src/modular/lib/modular_config:modular_config_accessor",
   ]

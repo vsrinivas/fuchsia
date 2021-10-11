@@ -233,7 +233,6 @@ executable("cobalt_app_unittests") {
   deps = [
     ":lib",
     ":testapp_metrics_registry_cc",
-    "//garnet/public/lib/gtest",
     "//sdk/fidl/fuchsia.cobalt",
     "//sdk/lib/inspect/testing/cpp",
     "//sdk/lib/sys/cpp/testing:unit",
@@ -244,6 +243,7 @@ executable("cobalt_app_unittests") {
     "//src/lib/cobalt/cpp:metric_event_builder",
     "//src/lib/fsl",
     "//src/lib/fxl/test:gtest_main",
+    "//src/lib/testing/loop_fixture",
     "//third_party/cobalt/src/logger:fake_logger",
     "//third_party/cobalt/src/logger:logger_test_utils",
     "//third_party/cobalt/src/public/testing:fake_cobalt_service",

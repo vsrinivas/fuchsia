@@ -75,9 +75,9 @@ test("tests") {
 
   deps = [
     ":ffmpeg",
-    "//garnet/public/lib/gtest",
     "//sdk/lib/syslog/cpp",
     "//src/lib/fxl/test:gtest_main",
+    "//src/lib/testing/loop_fixture",
     "//src/media/playback/mediaplayer/graph",
   ]
 

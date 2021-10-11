@@ -8,7 +8,7 @@ source_set("unittests") {
   testonly = true
   sources = [ "shutdown_unittest.cc" ]
   deps = [
-    "//garnet/public/lib/gtest",
+    "//src/lib/testing/loop_fixture",
     "//src/ui/scenic/lib/shutdown",
   ]
 }

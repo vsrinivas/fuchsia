@@ -16,9 +16,9 @@ source_set("utils") {
     "test_utils.h",
   ]
   deps = [
-    "//garnet/public/lib/gtest",
     "//src/developer/memory/metrics",
     "//src/lib/fxl",
+    "//src/lib/testing/loop_fixture",
     "//zircon/system/ulib/zx",
   ]
 }
@@ -37,10 +37,10 @@ executable("memory_metrics_unittests") {
 
   deps = [
     ":utils",
-    "//garnet/public/lib/gtest",
     "//sdk/lib/sys/cpp/testing:unit",
     "//src/developer/memory/metrics",
     "//src/lib/fxl/test:gtest_main",
+    "//src/lib/testing/loop_fixture",
     "//third_party/googletest:gmock",
     "//third_party/rapidjson",
     "//zircon/system/public:public",
@@ -75,9 +75,9 @@ executable("memory_metrics_systemtests") {
 
   deps = [
     ":utils",
-    "//garnet/public/lib/gtest",
     "//sdk/lib/sys/cpp/testing:unit",
     "//src/developer/memory/metrics",
     "//src/lib/fxl/test:gtest_main",
+    "//src/lib/testing/loop_fixture",
   ]
 }

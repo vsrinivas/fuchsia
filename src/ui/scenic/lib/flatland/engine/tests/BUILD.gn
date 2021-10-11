@@ -20,10 +20,10 @@ executable("unittests") {
   ]
 
   deps = [
-    "//garnet/public/lib/gtest:gtest",
     "//sdk/lib/ui/scenic/cpp:cpp",
     "//src/lib/fsl:fsl",
     "//src/lib/fxl/test:gtest_main",
+    "//src/lib/testing/loop_fixture:gtest",
     "//src/ui/scenic/lib/display/tests:mocks",
     "//src/ui/scenic/lib/flatland/engine",
     "//src/ui/scenic/lib/scheduling:frame_scheduler",

@@ -42,8 +42,8 @@ executable("callback_unittests") {
 
   deps = [
     ":callback",
-    "//garnet/public/lib/gtest",
     "//src/lib/fxl/test:gtest_main",
+    "//src/lib/testing/loop_fixture",
     "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",
     "//zircon/system/ulib/async-testing",

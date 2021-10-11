@@ -46,10 +46,10 @@ test("flutter-embedder-test-bin") {
   ]
   output_name = "flutter-embedder-test"
   deps = [
-    "//garnet/public/lib/gtest",
     "//sdk/fidl/fuchsia.sys",
     "//sdk/fidl/fuchsia.ui.app",
     "//sdk/fidl/fuchsia.ui.input",
+    "//src/lib/testing/loop_fixture",
 
     # TODO(fxbug.dev/82655): Remove this after migrating to RealmBuilder.
     "//sdk/fidl/fuchsia.ui.lifecycle",

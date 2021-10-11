@@ -94,7 +94,6 @@ executable("cobalt_system_metrics_unittests") {
   deps = [
     ":system_metrics_daemon_lib",
     "testing:fake_fetchers",
-    "//garnet/public/lib/gtest",
     "//sdk/fidl/fuchsia.cobalt",
     "//sdk/lib/inspect/testing/cpp",
     "//sdk/lib/sys/cpp/testing:unit",
@@ -103,6 +102,7 @@ executable("cobalt_system_metrics_unittests") {
     "//src/cobalt/bin/utils:clock",
     "//src/lib/fsl",
     "//src/lib/fxl/test:gtest_main",
+    "//src/lib/testing/loop_fixture",
   ]
 
   # TODO(67363): Temporarily disable lsan for this target. Reenable once all leaks are fixed.

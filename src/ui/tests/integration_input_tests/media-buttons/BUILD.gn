@@ -67,12 +67,12 @@ executable("mediabuttons_listener_test_ip") {
   testonly = true
   sources = [ "mediabuttons_listener_test_ip.cc" ]
   deps = [
-    "//garnet/public/lib/gtest",
     "//sdk/fidl/fuchsia.input.injection",
     "//sdk/fidl/fuchsia.ui.policy",
     "//sdk/lib/sys/cpp/testing:integration_fixture",
     "//src/lib/fxl",
     "//src/lib/fxl/test:gtest_main",
+    "//src/lib/testing/loop_fixture",
     "//src/ui/input/testing/fake_input_report_device",
     "//third_party/googletest:gtest",
     "//zircon/system/ulib/async-loop:async-loop-cpp",

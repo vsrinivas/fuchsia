@@ -10,8 +10,8 @@ source_set("inspect-cpp-codelab-testing") {
 
   public_deps = [
     "//examples/diagnostics/inspect/codelab/fidl:fuchsia.examples.inspect",
-    "//garnet/public/lib/gtest",
     "//sdk/lib/sys/cpp/testing:realm_builder",
+    "//src/lib/testing/loop_fixture",
   ]
 
   deps = []

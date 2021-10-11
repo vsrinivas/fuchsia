@@ -61,11 +61,11 @@ executable("vsh_unittest") {
   deps = [
     ":client",
     ":util",
-    "//garnet/public/lib/gtest",
     "//sdk/fidl/fuchsia.virtualization",
     "//sdk/lib/sys/cpp/testing:unit",
     "//sdk/lib/virtualization/testing",
     "//src/lib/fxl/test:gtest_main",
+    "//src/lib/testing/loop_fixture",
     "//src/virtualization/third_party/vm_tools:vsh_cc_proto",
   ]
 }

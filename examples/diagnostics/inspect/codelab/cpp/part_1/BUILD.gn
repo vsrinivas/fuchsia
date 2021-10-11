@@ -40,9 +40,9 @@ executable("unittests") {
 
   deps = [
     ":lib",
-    "//garnet/public/lib/gtest",
     "//sdk/lib/sys/cpp",
     "//src/lib/fxl/test:gtest_main",
+    "//src/lib/testing/loop_fixture",
   ]
 }
 
@@ -63,10 +63,10 @@ executable("integration_test") {
 
   public_deps = [
     "//examples/diagnostics/inspect/codelab/cpp/testing:inspect-cpp-codelab-testing",
-    "//garnet/public/lib/gtest",
     "//sdk/fidl/fuchsia.diagnostics",
     "//sdk/lib/sys/cpp",
     "//src/lib/fxl/test:gtest_main",
+    "//src/lib/testing/loop_fixture",
   ]
 }
 

@@ -8,12 +8,12 @@ import("//build/test.gni")
 test("stream_cpp_unittests") {
   sources = [ "log_message_unittest.cc" ]
   deps = [
-    "//garnet/public/lib/gtest",
     "//sdk/lib/stdcompat",
     "//src/lib/diagnostics/accessor2logger",
     "//src/lib/fsl",
     "//src/lib/fxl",
     "//src/lib/fxl/test:gtest_main",
+    "//src/lib/testing/loop_fixture",
     "//third_party/googletest:gmock",
   ]
 }

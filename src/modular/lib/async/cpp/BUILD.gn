@@ -76,7 +76,7 @@ source_set("operation_unittest") {
 
   deps = [
     ":operation",
-    "//garnet/public/lib/gtest",
+    "//src/lib/testing/loop_fixture",
     "//third_party/googletest:gtest",
   ]
 }

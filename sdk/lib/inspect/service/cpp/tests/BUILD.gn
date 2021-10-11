@@ -11,11 +11,11 @@ test("inspect_service_cpp_unittests") {
     "service_unittests.cc",
   ]
   deps = [
-    "//garnet/public/lib/gtest",
     "//sdk/fidl/fuchsia.inspect",
     "//sdk/lib/inspect/service/cpp",
     "//sdk/lib/inspect/testing/cpp",
     "//src/lib/fxl/test:gtest_main",
+    "//src/lib/testing/loop_fixture",
     "//third_party/googletest:gmock",
     "//zircon/system/ulib/inspect",
   ]

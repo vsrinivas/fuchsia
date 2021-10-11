@@ -28,10 +28,10 @@ executable("screen_reader_tests") {
   ]
 
   deps = [
-    "//garnet/public/lib/gtest",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/sys/cpp/testing:unit",
     "//src/lib/fxl/test:gtest_main",
+    "//src/lib/testing/loop_fixture",
     "//src/ui/a11y/bin/a11y_manager/tests/util",
     "//src/ui/a11y/lib/annotation/tests/mocks",
     "//src/ui/a11y/lib/focus_chain/tests/mocks",

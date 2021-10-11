@@ -19,8 +19,8 @@ executable("unittests") {
   ]
   deps = [
     ":mocks",
-    "//garnet/public/lib/gtest:gtest",
     "//src/lib/fxl/test:gtest_main",
+    "//src/lib/testing/loop_fixture:gtest",
     "//src/ui/scenic/lib/display",
   ]
 }

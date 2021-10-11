@@ -48,7 +48,7 @@ source_set("unittests") {
 
   deps = [
     ":pseudo_dir",
-    "//garnet/public/lib/gtest",
+    "//src/lib/testing/loop_fixture",
     "//third_party/googletest:gtest",
   ]
 }
