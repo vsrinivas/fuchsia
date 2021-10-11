@@ -20,6 +20,20 @@ constexpr size_t kTestHeapSize = 16 * MB;
 constexpr size_t kTestHeapAlignLog2 = 21;
 constexpr size_t kAlignPages = 1ul << (kTestHeapAlignLog2 - PAGE_SIZE_SHIFT);
 
+// Helper that checks if there exists any contiguous blocks in the pmm. This can be used by tests to
+// attempt to avoid spurious failures.
+bool CanExpectContiguous() {
+  list_node_t pages = LIST_INITIAL_VALUE(pages);
+
+  paddr_t paddr;
+  zx_status_t status = pmm_alloc_contiguous(kAlignPages, 0, kTestHeapAlignLog2, &paddr, &pages);
+  if (status == ZX_OK) {
+    pmm_free(&pages);
+    return true;
+  }
+  return false;
+}
+
 bool RangeEmpty(vaddr_t base, size_t num_pages) {
   for (size_t i = 0; i < num_pages; i++) {
     zx_status_t status =
@@ -429,10 +443,11 @@ bool virtual_alloc_aligned_alloc_test() {
   // Free a range in the middle such that with padding and alignment taken into account a single
   // large allocation would fit.
   alloc.FreePages(base_test_vaddr + (kAlignPages * 2 - 1) * PAGE_SIZE, kAlignPages + 2);
+  bool contiguous = CanExpectContiguous();
   result = alloc.AllocPages(kAlignPages);
   ASSERT_TRUE(result.is_ok());
   EXPECT_EQ(base_test_vaddr + kAlignPages * 2 * PAGE_SIZE, result.value());
-  EXPECT_TRUE(RangeContiguous(result.value(), kAlignPages));
+  EXPECT_TRUE(!contiguous || RangeContiguous(result.value(), kAlignPages));
 
   // Free the range and re-allocate the lowest page in the gap.
   alloc.FreePages(result.value(), kAlignPages);
@@ -452,10 +467,11 @@ bool virtual_alloc_aligned_alloc_test() {
   // it crates fragmentation that prevents future allocations.
   alloc.FreePages(base_test_vaddr + kAlignPages * PAGE_SIZE, kAlignPages);
   alloc.FreePages(base_test_vaddr + (kAlignPages * 3 + 2) * PAGE_SIZE, kAlignPages - 2);
+  contiguous = CanExpectContiguous();
   result = alloc.AllocPages(kAlignPages);
   ASSERT_TRUE(result.is_ok());
   EXPECT_EQ(base_test_vaddr + kAlignPages * 2 * PAGE_SIZE, result.value());
-  EXPECT_TRUE(RangeContiguous(result.value(), kAlignPages));
+  EXPECT_TRUE(!contiguous || RangeContiguous(result.value(), kAlignPages));
   EXPECT_FALSE(alloc.AllocPages(kAlignPages).is_ok());
 
   // We didn't properly track our allocations but it's not the goal of this test so just ask the
@@ -474,16 +490,7 @@ bool vritual_alloc_large_allocs_are_contiguous_test() {
 
   EXPECT_OK(alloc.Init(vmar->base(), vmar->size(), 1, kTestHeapAlignLog2));
 
-  list_node_t pages = LIST_INITIAL_VALUE(pages);
-  auto return_pages = fit::defer([&pages] { pmm_free(&pages); });
-
-  paddr_t paddr;
-  // Check if there exist any contiguous blocks in the pmm before trying this test to avoid spurious
-  // failures.
-  zx_status_t status = pmm_alloc_contiguous(kAlignPages, 0, kTestHeapAlignLog2, &paddr, &pages);
-  if (status == ZX_OK) {
-    pmm_free(&pages);
-    pages = LIST_INITIAL_VALUE(pages);
+  if (CanExpectContiguous()) {
     auto result = alloc.AllocPages(kAlignPages);
     ASSERT_TRUE(result.is_ok());
     EXPECT_TRUE(RangeContiguous(result.value(), kAlignPages));
