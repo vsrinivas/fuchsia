@@ -4,13 +4,13 @@
 
 pub mod descriptors;
 
-use anyhow::Context;
 use {
     crate::descriptors::*,
-    anyhow::{format_err, Result},
+    anyhow::{Context, Result},
     ffx_core::ffx_plugin,
     ffx_driver_lsusb_args::DriverLsusbCommand,
     fidl_fuchsia_device_manager::DeviceWatcherProxy,
+    fuchsia_async::{Duration, TimeoutExt},
     fuchsia_zircon_status as zx,
 };
 
@@ -19,58 +19,65 @@ use {
     DeviceWatcherProxy = "bootstrap/driver_manager:expose:fuchsia.hardware.usb.DeviceWatcher"
 )]
 pub async fn lsusb(device_watcher: DeviceWatcherProxy, cmd: DriverLsusbCommand) -> Result<()> {
-    let device_result = device_watcher
-        .next_device()
-        .await
-        .map_err(|err| format_err!("FIDL call to get next device failed: {}", err))?
-        .map_err(|err| format_err!("FIDL call to get next device returned an error: {}", err))?;
-
     println!("ID    VID:PID   SPEED  MANUFACTURER PRODUCT");
-    let channel = fidl::AsyncChannel::from_channel(device_result)?;
 
-    let device = fidl_fuchsia_hardware_usb_device::DeviceProxy::new(channel);
+    let mut idx = 0;
+    while let Ok(device) = device_watcher
+        .next_device()
+        // This will wait forever, so if there are no more devices, lets stop waiting.
+        // TODO(http://fxbug.dev/86386): Avoid this timeout.
+        .on_timeout(Duration::from_millis(200), || Ok(Err(-1)))
+        .await
+        .context("FIDL call to get next device returned an error")?
+    {
+        let channel = fidl::AsyncChannel::from_channel(device)?;
+        let device = fidl_fuchsia_hardware_usb_device::DeviceProxy::new(channel);
 
-    return do_list_device(device, "000", cmd).await;
+        do_list_device(device, idx, &cmd).await?;
+
+        idx += 1
+    }
+    Ok(())
 }
 
 async fn do_list_device(
     device: fidl_fuchsia_hardware_usb_device::DeviceProxy,
-    devname: &str,
-    cmd: DriverLsusbCommand,
+    devnum: u32,
+    cmd: &DriverLsusbCommand,
 ) -> Result<(), anyhow::Error> {
-    let device_desc = device.get_device_descriptor().await.context(format!(
-        "DeviceGetDeviceDescriptor failed for /dev/class/usb-device/{}",
-        devname
-    ))?;
+    let devname = &format!("/dev/class/usb-device/{:03}", devnum);
+
+    let device_desc = device
+        .get_device_descriptor()
+        .await
+        .context(format!("DeviceGetDeviceDescriptor failed for {}", devname))?;
 
     let speed = device
         .get_device_speed()
         .await
-        .context(format!("DeviceGetDeviceSpeed failed for /dev/class/usb-device/{}", devname))?;
+        .context(format!("DeviceGetDeviceSpeed failed for {}", devname))?;
 
     let device_desc = DeviceDescriptor::from_array(device_desc);
 
-    let (status, string_manu_desc, _) =
-        device.get_string_descriptor(device_desc.iManufacturer, EN_US).await.context(format!(
-            "DeviceGetStringDescriptor failed for /dev/class/usb-device/{}",
-            devname
-        ))?;
+    let (status, string_manu_desc, _) = device
+        .get_string_descriptor(device_desc.iManufacturer, EN_US)
+        .await
+        .context(format!("DeviceGetStringDescriptor failed for {}", devname))?;
 
     zx::Status::ok(status)
         .map_err(|e| return anyhow::anyhow!("Failed to get string descriptor: {}", e))?;
 
-    let (status, string_prod_desc, _) =
-        device.get_string_descriptor(device_desc.iProduct, EN_US).await.context(format!(
-            "DeviceGetStringDescriptor failed for /dev/class/usb-device/{}",
-            devname
-        ))?;
+    let (status, string_prod_desc, _) = device
+        .get_string_descriptor(device_desc.iProduct, EN_US)
+        .await
+        .context(format!("DeviceGetStringDescriptor failed for {}", devname))?;
 
     zx::Status::ok(status)
         .map_err(|e| return anyhow::anyhow!("Failed to get string descriptor: {}", e))?;
 
     println!(
         "{:03}  {:04X}:{:04X}  {:<5}  {} {}",
-        devname,
+        devnum,
         device_desc.idVendor,
         device_desc.idProduct,
         UsbSpeed(speed),
@@ -98,27 +105,28 @@ async fn do_list_device(
         println!("  {:<33}{} {}", "iManufacturer", device_desc.iManufacturer, string_manu_desc);
         println!("  {:<33}{} {}", "iProduct", device_desc.iProduct, string_prod_desc);
 
-        let string_buf =
-            device.get_string_descriptor(device_desc.iSerialNumber, EN_US).await.context(
-                format!("DeviceGetStringDescriptor failed for /dev/class/usb-device/{}", devname),
-            )?;
+        let string_buf = device
+            .get_string_descriptor(device_desc.iSerialNumber, EN_US)
+            .await
+            .context(format!("DeviceGetStringDescriptor failed for {}", devname))?;
 
         println!("  {:<33}{} {}", "iSerialNumber", device_desc.iSerialNumber, string_buf.1);
         println!("  {:<33}{}", "bNumConfigurations", device_desc.bNumConfigurations);
 
         let mut config = cmd.configuration;
         if config.is_none() {
-            config = Some(device.get_configuration().await.context(format!(
-                "DeviceGetConfiguration failed for /dev/class/usb-device/{}",
-                devname
-            ))?);
+            config = Some(
+                device
+                    .get_configuration()
+                    .await
+                    .context(format!("DeviceGetConfiguration failed for {}", devname))?,
+            );
         }
 
-        let (status, config_desc_data) =
-            device.get_configuration_descriptor(config.unwrap()).await.context(format!(
-                "DeviceGetConfigurationDescriptor failed for /dev/class/usb-device/{}",
-                devname
-            ))?;
+        let (status, config_desc_data) = device
+            .get_configuration_descriptor(config.unwrap())
+            .await
+            .context(format!("DeviceGetConfigurationDescriptor failed for {}", devname))?;
 
         zx::Status::ok(status)
             .map_err(|e| return anyhow::anyhow!("Failed to get string descriptor: {}", e))?;
@@ -141,10 +149,10 @@ async fn do_list_device(
         println!("    {:<33}{}", "wTotalLength", config_desc.wTotalLength);
         println!("    {:<33}{}", "bNumInterfaces", config_desc.bNumInterfaces);
         println!("    {:<33}{}", "bConfigurationValue", config_desc.bConfigurationValue);
-        let string_buf =
-            device.get_string_descriptor(config_desc.iConfiguration, EN_US).await.context(
-                format!("DeviceGetStringDescriptor failed for /dev/class/usb-device/{}", devname),
-            )?;
+        let string_buf = device
+            .get_string_descriptor(config_desc.iConfiguration, EN_US)
+            .await
+            .context(format!("DeviceGetStringDescriptor failed for {}", devname))?;
         println!("    {:<33}{} {}", "iConfiguration", config_desc.iConfiguration, string_buf.1);
         println!("    {:<33}{:#04X}", "bmAttributes", config_desc.bmAttributes);
         println!("    {:<33}{}", "bMaxPower", config_desc.bMaxPower);
@@ -181,10 +189,7 @@ async fn do_list_device(
                 let string_buf = device
                     .get_string_descriptor(device_desc.iSerialNumber, EN_US)
                     .await
-                    .context(format!(
-                        "DeviceGetStringDescriptor failed for /dev/class/usb-device/{}",
-                        devname
-                    ))?;
+                    .context(format!("DeviceGetStringDescriptor failed for {}", devname))?;
                 println!("      {:<33}{}{}", "iInterface", info.iInterface, string_buf.1);
             } else if desc_type == 5 {
                 // TODO: replace 5 with USB_DT_ENDPOINT
@@ -407,7 +412,7 @@ mod test {
                 debug: false,
             };
             println!("ID    VID:PID   SPEED  MANUFACTURER PRODUCT");
-            do_list_device(device, "000", cmd).await.unwrap();
+            do_list_device(device, 0, &cmd).await.unwrap();
         }
         .fuse();
         futures::pin_mut!(server_task, test_task);
