@@ -4,10 +4,19 @@
 
 import("//build/fidl/toolchain.gni")
 import("//build/json/validate_json.gni")
+import("//build/python/python_host_test.gni")
 import("//build/toolchain/basic_toolchain.gni")
 
 basic_toolchain("fidling") {
   expected_label = fidl_toolchain
+}
+
+# A generated file that lists fidl sdk files
+generated_file("sdk_fidl") {
+  deps = [ "//sdk:fidl" ]
+  outputs = [ "$root_build_dir/sdk_fidl_json.txt" ]
+  data_keys = [ "sdk_fidl_json_data" ]
+  output_conversion = "json"
 }
 
 # A generated file that lists all of the .fidl.json files.
@@ -57,7 +66,16 @@ action("normalize_unittest") {
   ]
 }
 
+python_host_test("gen_fidldocs_test") {
+  main_source = "gen_fidldocs_test.py"
+  sources = [ "gen_fidldocs.py" ]
+  libraries = []
+}
+
 group("tests") {
   testonly = true
-  deps = [ ":normalize_unittest" ]
+  deps = [
+    ":gen_fidldocs_test($host_toolchain)",
+    ":normalize_unittest",
+  ]
 }

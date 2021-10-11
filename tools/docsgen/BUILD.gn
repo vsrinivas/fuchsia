@@ -9,7 +9,10 @@ import("//build/python/python_binary.gni")
 import("//build/python/python_host_test.gni")
 
 group("docsgen") {
-  deps = [ ":dart_sdk_docs($host_toolchain)" ]
+  deps = [
+    ":dart_sdk_docs($host_toolchain)",
+    ":invoke_fidldoc",
+  ]
 }
 
 _dartdoc_transforms_script_target = "dartdoc_transforms"
@@ -20,7 +23,7 @@ python_binary(_dartdoc_transforms_script_target) {
   deps = [ "//third_party/pyyaml:yaml" ]
 }
 
-# Runs one time python dartdoc generation script.
+# Runs one time python fidl generation script.
 # See dartdoc_transforms.py for more information
 action("dart_sdk_docs") {
   script_output = get_target_outputs(":${_dartdoc_transforms_script_target}")
@@ -70,4 +73,39 @@ build_api_module("generated_docs") {
     output_path = rebase_path("$host_out_dir/obj/tools/docsgen", root_build_dir)
     dartdoc_zip = "dartdoc_out.zip"
   }
+}
+
+_fidldoc_transforms_script_target = "fidldoc_transforms"
+python_binary(_fidldoc_transforms_script_target) {
+  main_source = "//build/fidl/gen_fidldocs.py"
+  output_name = "gen_fidldocs.pyz"
+  sources = []
+  deps = []
+}
+
+# Runs one time python fidldoc generation script.
+action("invoke_fidldoc") {
+  script_output = get_target_outputs(":${_fidldoc_transforms_script_target}")
+  script = script_output[0]
+
+  inputs = []
+
+  outputs = [ "$target_out_dir/fidldoc.zip" ]
+  depfile = "$target_out_dir/$target_name.d"
+
+  args = [
+    "--zipped-result",
+    "--build-dir",
+    rebase_path(root_build_dir, root_build_dir),
+    "--out-dir",
+    rebase_path(target_out_dir, root_build_dir),
+    "--dep-file",
+    rebase_path(depfile, root_build_dir),
+  ]
+
+  deps = [
+    ":${_fidldoc_transforms_script_target}",
+    "//build/fidl:sdk_fidl",
+    "//tools/fidl/fidldoc($host_toolchain)",
+  ]
 }

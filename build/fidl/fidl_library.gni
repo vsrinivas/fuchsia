@@ -371,6 +371,17 @@ template("fidl_library") {
     metadata = {
       fidl_json = [ rebase_path(json_representation, root_build_dir) ]
       generated_sources = fidl_json
+
+      # Metadata for FIDL SDK files.
+      if (defined(invoker.sdk_category)) {
+        sdk_fidl_json_data = [
+          {
+            name = library_name
+            ir = rebase_path(json_representation, root_build_dir)
+            category = invoker.sdk_category
+          },
+        ]
+      }
     }
 
     public_deps = [

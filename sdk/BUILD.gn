@@ -41,6 +41,14 @@ build_api_module("sdk_source_set_list") {
   deps = _sdk_public_deps
 }
 
+# Create generated file for fidldoc to read.
+generated_file("all_fidl_sdk_json") {
+  deps = [ "//sdk:fidl" ]
+
+  outputs = [ "$root_build_dir/all_fidl_sdk_json.txt" ]
+  data_keys = [ "fidl_json" ]
+}
+
 group("sdk.modular") {
   testonly = true
 
@@ -163,7 +171,10 @@ sdk_molecule("e2e_testing_tools") {
 
 # Fuchsia IDL (FIDL) files defining much of the API for the SDK.
 sdk_molecule("fidl") {
-  visibility = [ ":*" ]
+  visibility = [
+    ":*",
+    "//build/fidl:sdk_fidl",
+  ]
   deps = [
     "//sdk/fidl/fuchsia.accessibility.gesture:fuchsia.accessibility.gesture_sdk($fidl_toolchain)",
     "//sdk/fidl/fuchsia.accessibility.semantics:fuchsia.accessibility.semantics_sdk($fidl_toolchain)",
