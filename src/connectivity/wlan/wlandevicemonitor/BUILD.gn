@@ -10,10 +10,7 @@ import("//third_party/cobalt/metrics_registry.gni")
 
 group("tests") {
   testonly = true
-  deps = [
-    ":wlandevicemonitor-tests",
-    "//src/connectivity/wlan/testing/wlan-devmgr:wlan-devmgr-v2",
-  ]
+  deps = [ ":wlandevicemonitor-tests" ]
 
   # TODO(https://fxbug.dev/81652): Add this test back when it's no longer flaky.
   if (!is_coverage) {
@@ -106,25 +103,17 @@ fuchsia_package_with_single_component("wlandevicemonitor") {
 # run the wlandevicemonitor unit tests.
 fuchsia_component("wlandevicemonitor-test-component") {
   testonly = true
-  deps = [ ":bin_test" ]
+  deps = [
+    ":bin_test",
+    "//sdk/lib/driver_test_realm/simple",
+    "//src/connectivity/wlan/testing/wlan-devmgr:wlan_devmgr_deps",
+  ]
   manifest = "meta/wlandevicemonitor_bin_test.cml"
-}
-
-# This component runs the unit tests but relies on another component to offer
-# the IsolatedDevMgr service.
-fuchsia_component("wlandevicemonitor-test-component-exec") {
-  testonly = true
-  manifest = "meta/wlandevicemonitor_bin_test_exec.cml"
 }
 
 # This component groups up all of the dependencies to run the v2 unit tests.
 fuchsia_test_package("wlandevicemonitor-tests") {
-  test_components = [ ":wlandevicemonitor-test-component-exec" ]
-
-  deps = [
-    ":wlandevicemonitor-test-component",
-    "//src/connectivity/wlan/testing/wlan-devmgr:wlan-devmgr-v2",
-  ]
+  test_components = [ ":wlandevicemonitor-test-component" ]
 }
 
 # core_shard for integrating wlandevicemonitor with core.gni.

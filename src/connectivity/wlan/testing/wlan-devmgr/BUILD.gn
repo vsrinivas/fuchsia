@@ -27,15 +27,3 @@ isolated_devmgr_component("wlan-devmgr") {
     "//src/devices/misc/drivers/test-parent",
   ]
 }
-
-isolated_devmgr_v2_component("wlan-devmgr-v2-component") {
-  deps = [ ":wlan_devmgr_deps" ]
-}
-
-fuchsia_package("wlan-devmgr-v2") {
-  testonly = true
-  deps = [
-    ":wlan-devmgr-v2-component",
-    "//src/devices/misc/drivers/test-parent:renamed-sys-binary",
-  ]
-}

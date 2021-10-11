@@ -1,4 +1,8 @@
 {
+    include: [
+        "//sdk/lib/driver_test_realm/meta/client.shard.cml",
+        "//sdk/lib/driver_test_realm/simple/meta/client.shard.cml",
+    ],
     children: [
         {
             name: "stash",
@@ -11,10 +15,6 @@
         {
             name: "wlandevicemonitor",
             url: "fuchsia-pkg://fuchsia.com/wlandevicemonitor#meta/wlandevicemonitor.cm",
-        },
-        {
-            name: "isolated_dev_mgr",
-            url: "fuchsia-pkg://fuchsia.com/wlan-devmgr-v2#meta/isolated-devmgr.cm",
         },
         {
             name: "regulatory_region",
@@ -31,7 +31,6 @@
             from: "parent",
             to: [
                 "#emergency_location",
-                "#isolated_dev_mgr",
                 "#regulatory_region",
                 "#stash",
                 "#test_driver",
@@ -77,26 +76,21 @@
         },
         {
             protocol: "fuchsia.io.Directory",
-            from: "#isolated_dev_mgr",
+            from: "#driver_test_realm",
             to: "#wlandevicemonitor",
         },
         {
             directory: "dev",
-            from: "#isolated_dev_mgr",
+            from: "#driver_test_realm",
             as: "dev",
             to: "#test_driver",
         },
         {
             directory: "dev",
-            from: "#isolated_dev_mgr",
+            from: "#driver_test_realm",
             as: "dev-wlanphy",
             to: "#wlandevicemonitor",
             subdir: "class/wlanphy",
-        },
-        {
-            protocol: "fuchsia.process.Launcher",
-            from: "parent",
-            to: "#isolated_dev_mgr",
         },
         {
             protocol: [
