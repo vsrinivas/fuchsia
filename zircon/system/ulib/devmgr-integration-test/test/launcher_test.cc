@@ -66,6 +66,10 @@ TEST(LauncherTest, OutgoingServices) {
   auto result = fidl::BindSyncClient(std::move(*local)).DumpTree(std::move(vmo_dup));
   ASSERT_OK(result.status());
   ASSERT_OK(result->status);
+
+  fbl::unique_fd fd;
+  ASSERT_OK(
+      devmgr_integration_test::RecursiveWaitForFile(devmgr.devfs_root(), "sys/test/test", &fd));
 }
 
 TEST(LauncherTest, ExposeDevfsToHub) {
@@ -92,6 +96,10 @@ TEST(LauncherTest, ExposeDevfsToHub) {
   files::Glob glob(kGlob);
   EXPECT_EQ(glob.size(), 1u);
   loop.Shutdown();
+
+  fbl::unique_fd fd;
+  ASSERT_OK(
+      devmgr_integration_test::RecursiveWaitForFile(devmgr.devfs_root(), "sys/test/test", &fd));
 }
 
 }  // namespace devmgr_integration_test
