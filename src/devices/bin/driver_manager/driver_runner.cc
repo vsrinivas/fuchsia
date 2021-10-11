@@ -222,7 +222,7 @@ zx::status<fidl::ClientEnd<fdf::Driver>> DriverHostComponent::Start(
   auto start = driver_host_->Start(args, std::move(endpoints->server));
   if (!start.ok()) {
     LOGF(ERROR, "Failed to start driver '%s' in driver host: %s", binary.data(),
-         start.FormatDescription().c_str());
+         start.FormatDescription().data());
     return zx::error(start.status());
   }
   return zx::ok(std::move(endpoints->client));
@@ -323,7 +323,7 @@ void Node::OnBind() const {
   if (controller_ref_) {
     fidl::Result result = (*controller_ref_)->OnBind();
     if (!result.ok()) {
-      LOGF(ERROR, "Failed to send OnBind event: %s", result.FormatDescription().c_str());
+      LOGF(ERROR, "Failed to send OnBind event: %s", result.FormatDescription().data());
     }
   }
 }
@@ -670,7 +670,7 @@ void DriverRunner::Bind(Node& node, fdf::wire::NodeAddArgs args) {
     if (!result.ok()) {
       orphaned();
       LOGF(ERROR, "Failed to call match Node '%s': %s", node.name().data(),
-           result.error().FormatDescription().c_str());
+           result.error().FormatDescription().data());
       return;
     }
 
@@ -802,7 +802,7 @@ zx::status<fidl::ClientEnd<fio::Directory>> DriverRunner::CreateComponent(std::s
   auto open_callback = [name, url](fidl::WireUnownedResult<fsys::Realm::OpenExposedDir>& result) {
     if (!result.ok()) {
       LOGF(ERROR, "Failed to open exposed directory for component '%s' (%s): %s", name.data(),
-           url.data(), result.FormatDescription().c_str());
+           url.data(), result.FormatDescription().data());
       return;
     }
     if (result->result.is_err()) {
@@ -814,12 +814,12 @@ zx::status<fidl::ClientEnd<fio::Directory>> DriverRunner::CreateComponent(std::s
                           open_callback = std::move(open_callback)](
                              fidl::WireUnownedResult<fsys::Realm::CreateChild>& result) mutable {
     if (!result.ok()) {
-      LOGF(ERROR, "Failed to create component '%s' (%s): %s", name.c_str(), url.c_str(),
-           result.error().FormatDescription().c_str());
+      LOGF(ERROR, "Failed to create component '%s' (%s): %s", name.data(), url.data(),
+           result.error().FormatDescription().data());
       return;
     }
     if (result->result.is_err()) {
-      LOGF(ERROR, "Failed to create component '%s' (%s): %u", name.c_str(), url.c_str(),
+      LOGF(ERROR, "Failed to create component '%s' (%s): %u", name.data(), url.data(),
            result->result.err());
       return;
     }
