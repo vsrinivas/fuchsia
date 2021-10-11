@@ -32,10 +32,6 @@ const char* PressureLevelToString(MemoryWatchdog::PressureLevel level) {
   }
 }
 
-bool IsDiagnosticLevel(MemoryWatchdog::PressureLevel level) {
-  return level == MemoryWatchdog::PressureLevel::kImminentOutOfMemory;
-}
-
 void HandleOnOomReboot() {
   if (!TakeHaltToken()) {
     // We failed to acquire the token.  Someone else must have it.  That's OK.  We'll rely on them
@@ -172,14 +168,12 @@ bool MemoryWatchdog::IsEvictionRequired(PressureLevel idx) const {
   // AND
   // 2) we're configured to evict at that level.
   //
-  // Do not trigger asynchronous eviction at:
-  // 1) OOM level, since we perform synchronous eviction in that case in order to attempt a quick
-  // recovery. Also, we're about to signal filesystems to shut down on OOM, after which eviction
-  // will be a no-op anyway, since there will no longer be any pager-backed memory to evict.
-  // 2) a diagnostic level, i.e. a level which does not trigger any memory reclamation and is only
-  // intended for diagnostic purposes.
+  // Do not trigger asynchronous eviction at the OOM level, as we have already performed synchronous
+  // eviction to attempt a quick recovery before reaching here. At this point we are about to signal
+  // filesystems to shut down on OOM, after which eviction will be a no-op anyway, since there will
+  // no longer be any pager-backed memory to evict.
   return idx < prev_mem_event_idx_ && idx <= max_eviction_level_ &&
-         idx != PressureLevel::kOutOfMemory && !IsDiagnosticLevel(idx);
+         idx != PressureLevel::kOutOfMemory;
 }
 
 void MemoryWatchdog::WorkerThread() {
