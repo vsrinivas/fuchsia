@@ -10,7 +10,8 @@ information on choosing between time standards and
 behavior of UTC for Fuchsia.
 
 Time zone is maintained as one component of the internationalization settings
-by [`setui_service`](/garnet/bin/setui/meta/setui_service.cmx).
+by [`setui_service`](/garnet/bin/setui/meta/setui_service.cml) (for more information, see
+[`fuchsia.settings.Intl`](https://fuchsia.dev/reference/fidl/fuchsia.settings#Intl)).
 [`intl_services`](/src/intl/intl_services/meta/intl_services.cmx) exposes a more
 convenient
 [`fuchsia.intl.PropertyProvider`](https://fuchsia.dev/reference/fidl/fuchsia.intl#PropertyProvider)
