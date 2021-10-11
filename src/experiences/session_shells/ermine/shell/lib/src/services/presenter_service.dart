@@ -6,6 +6,7 @@ import 'dart:async';
 import 'dart:ui';
 
 // ignore: directives_ordering
+import 'package:ermine/src/services/launch_service.dart';
 import 'package:ermine/src/states/view_state.dart';
 import 'package:ermine/src/states/view_state_impl.dart';
 import 'package:ermine_utils/ermine_utils.dart';
@@ -15,9 +16,6 @@ import 'package:fidl_fuchsia_ui_views/fidl_async.dart';
 import 'package:fuchsia_scenic_flutter/fuchsia_view.dart';
 import 'package:fuchsia_services/services.dart';
 import 'package:zircon/zircon.dart';
-
-// Namespace for annotations set by ermine.
-const String ermineNamespace = 'ermine';
 
 typedef ViewPresentedCallback = bool Function(ViewState viewState);
 typedef ViewDismissedCallback = void Function(ViewState viewState);
@@ -45,33 +43,21 @@ class PresenterService extends GraphicalPresenter {
     final viewController = _ViewControllerImpl(() => onViewDismissed(viewState))
       ..bind(viewControllerRequest);
 
-    // TODO(fxbug.dev/83106): presumably we want to use nullAnnotation even when
-    // `viewSpec.annotations` is null.  This currently doesn't happen.
-    const nullAnnotation = Annotation(
-        key: AnnotationKey(namespace: '__null__', value: '__null__'),
-        value: AnnotationValue.withText('__null__'));
     // Check to see if we have an id that we included in the annotation.
-    final id = viewSpec.annotations
-        ?.firstWhere(
-            (a) => a.key.namespace == ermineNamespace && a.key.value == 'id',
-            orElse: () => nullAnnotation)
-        .value
-        .text;
-    final url = viewSpec.annotations
-        ?.firstWhere(
-            (a) => a.key.namespace == ermineNamespace && a.key.value == 'url',
-            orElse: () => nullAnnotation)
-        .value
-        .text;
-    final name = viewSpec.annotations
-        ?.firstWhere(
-            (a) => a.key.namespace == ermineNamespace && a.key.value == 'name',
-            orElse: () => nullAnnotation)
-        .value
-        .text;
+    final id = _getAnnotation(viewSpec.annotations, 'id') ??
+        '${DateTime.now().millisecondsSinceEpoch}';
+    final url = _getAnnotation(viewSpec.annotations, 'url',
+        namespace: elementManagerNamespace);
+    final name = _getAnnotation(viewSpec.annotations, 'name');
 
-    // Build title from one of: name, url, id or ''.
-    final title = name ?? (url?.startsWith('http') == true ? url : id ?? '');
+    // Build title from one of: name, url or id.
+    final title = name ??
+        (url?.startsWith('http') == true
+            ? url // Use the http url as title.
+            : url?.contains('#meta/') == true // Fuchsia package url.
+                // Extract title after '#meta/' and before '.cmx'.
+                ? url?.split('#meta/')[1].split('.cm')[0] ?? id
+                : id);
 
     final viewHolderToken = viewSpec.viewHolderToken;
     final viewRef = viewSpec.viewRef;
@@ -124,6 +110,19 @@ class PresenterService extends GraphicalPresenter {
     if (!_disposed && !_binding.isClosed) {
       _binding.close(0);
     }
+  }
+
+  String? _getAnnotation(List<Annotation>? annotations, String name,
+      {String namespace = ermineNamespace}) {
+    if (annotations == null) {
+      return null;
+    }
+    for (final annotation in annotations) {
+      if (annotation.key == AnnotationKey(namespace: namespace, value: name)) {
+        return annotation.value.text;
+      }
+    }
+    return null;
   }
 }
 

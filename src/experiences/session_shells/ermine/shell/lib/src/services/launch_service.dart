@@ -7,8 +7,11 @@ import 'package:fuchsia_services/services.dart';
 
 typedef ControllerClosedCallback = void Function(String id);
 
-// Namespace for annotations set by ermine.
+/// Namespace for annotations set by ermine.
 const String ermineNamespace = 'ermine';
+
+/// Namespace for annotations set by [ElementManager].
+const String elementManagerNamespace = 'element_manager';
 
 /// Defines a service to launch applications given their [url] using the
 /// [ElementManager.proposeElement] API.
@@ -28,7 +31,7 @@ class LaunchService {
         value: AnnotationValue.withText(id),
       ),
       Annotation(
-        key: AnnotationKey(namespace: ermineNamespace, value: 'url'),
+        key: AnnotationKey(namespace: elementManagerNamespace, value: 'url'),
         value: AnnotationValue.withText(url),
       ),
       Annotation(
