@@ -21,8 +21,19 @@
 
 #include "pmm_node.h"
 
+namespace {
+
 KCOUNTER(pager_backed_pages_evicted, "vm.reclamation.pages_evicted_pager_backed")
 KCOUNTER(discardable_pages_evicted, "vm.reclamation.pages_evicted_discardable")
+
+inline void CheckedIncrement(uint64_t* a, uint64_t b) {
+  uint64_t result;
+  bool overflow = add_overflow(*a, b, &result);
+  DEBUG_ASSERT(!overflow);
+  *a = result;
+}
+
+}  // namespace
 
 Evictor::Evictor(PmmNode* node) : pmm_node_(node), page_queues_(node->GetPageQueues()) {}
 
@@ -118,7 +129,7 @@ void Evictor::CombineOneShotEvictionTarget(EvictionTarget target) {
   Guard<SpinLock, IrqSave> guard{&lock_};
   one_shot_eviction_target_.pending = one_shot_eviction_target_.pending || target.pending;
   one_shot_eviction_target_.level = ktl::max(one_shot_eviction_target_.level, target.level);
-  one_shot_eviction_target_.min_pages_to_free += target.min_pages_to_free;
+  CheckedIncrement(&one_shot_eviction_target_.min_pages_to_free, target.min_pages_to_free);
   one_shot_eviction_target_.free_pages_target =
       ktl::max(one_shot_eviction_target_.free_pages_target, target.free_pages_target);
   one_shot_eviction_target_.print_counts =
@@ -344,7 +355,7 @@ void Evictor::EnableContinuousEviction(uint64_t min_mem_to_free, uint64_t free_m
   {
     Guard<SpinLock, IrqSave> guard{&lock_};
     // Combine min target with previously outstanding min target.
-    continuous_eviction_target_.min_pages_to_free += min_mem_to_free / PAGE_SIZE;
+    CheckedIncrement(&continuous_eviction_target_.min_pages_to_free, min_mem_to_free / PAGE_SIZE);
     continuous_eviction_target_.free_pages_target = free_mem_target / PAGE_SIZE;
     continuous_eviction_target_.level = eviction_level;
     continuous_eviction_target_.print_counts = (output == Output::Print);
