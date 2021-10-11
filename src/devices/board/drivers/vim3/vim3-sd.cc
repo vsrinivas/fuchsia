@@ -53,16 +53,12 @@ static const pbus_metadata_t sd_metadata[] = {
     },
 };
 
-static const zx_bind_inst_t root_match[] = {
-    BI_MATCH(),
-};
 static const zx_bind_inst_t i2c_match[] = {
       BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_I2C),
       BI_ABORT_IF(NE, BIND_I2C_BUS_ID, 0),
       BI_MATCH_IF(EQ, BIND_I2C_ADDRESS, 0x20),
 };
 static const device_fragment_part_t i2c_fragment[] = {
-    {countof(root_match), root_match},
     {countof(i2c_match), i2c_match},
 };
 static const device_fragment_t fragments[] = {
@@ -86,15 +82,12 @@ static const zx_bind_inst_t oob_gpio_match[] = {
     BI_MATCH_IF(EQ, BIND_GPIO_PIN, A311D_GPIOC(6)),  // CD pin
 };
 static const device_fragment_part_t sdio_fn1_fragment[] = {
-    {std::size(root_match), root_match},
     {std::size(sdio_fn1_match), sdio_fn1_match},
 };
 static const device_fragment_part_t sdio_fn2_fragment[] = {
-    {std::size(root_match), root_match},
     {std::size(sdio_fn2_match), sdio_fn2_match},
 };
 static const device_fragment_part_t oob_gpio_fragment[] = {
-    {std::size(root_match), root_match},
     {std::size(oob_gpio_match), oob_gpio_match},
 };
 static const device_fragment_t wifi_fragments[] = {
@@ -126,6 +119,13 @@ zx_status_t Vim3::SdInit() {
   gpio_impl_.SetAltFunction(A311D_GPIOC(3), A311D_GPIOC_3_SDCARD_D3_FN);
   gpio_impl_.SetAltFunction(A311D_GPIOC(4), A311D_GPIOC_4_SDCARD_CLK_FN);
   gpio_impl_.SetAltFunction(A311D_GPIOC(5), A311D_GPIOC_5_SDCARD_CMD_FN);
+
+  gpio_impl_.SetDriveStrength(A311D_GPIOC(0), 4000, nullptr);
+gpio_impl_.SetDriveStrength(A311D_GPIOC(1), 4000, nullptr);
+gpio_impl_.SetDriveStrength(A311D_GPIOC(2), 4000, nullptr);
+gpio_impl_.SetDriveStrength(A311D_GPIOC(3), 4000, nullptr);
+gpio_impl_.SetDriveStrength(A311D_GPIOC(4), 4000, nullptr);
+gpio_impl_.SetDriveStrength(A311D_GPIOC(5), 4000, nullptr); 
 
   if ((status = pbus_.CompositeDeviceAdd(&sd_dev, reinterpret_cast<uint64_t>(fragments),
                                          countof(fragments), UINT32_MAX)) != ZX_OK) {

@@ -110,18 +110,39 @@ zx_status_t AmlSdmmc::WaitForInterrupt(sdmmc_req_t* req) {
 
   if (rxd_err) {
     if (req->probe_tuning_cmd) {
-      AML_SDMMC_ERROR("RX Data CRC Error cmd%d, status=0x%x, RXD_ERR:%d", req->cmd_idx,
-                      status_irq.reg_value(), rxd_err);
+      
+      AML_SDMMC_TRACE("RX Data CRC Error cmd%d (%zu), arg=0x%08x, status=0x%08x", req->cmd_idx,
+                      request_count_, req->arg, status_irq.reg_value());
     } else {
       AML_SDMMC_ERROR("RX Data CRC Error cmd%d, status=0x%x, RXD_ERR:%d", req->cmd_idx,
                       status_irq.reg_value(), rxd_err);
+	AML_SDMMC_ERROR("Current: 0x%08x 0x%08x 0x%08x 0x%08x",
+                      AmlSdmmcCurCfg::Get().ReadFrom(&mmio_).reg_value(),
+                      AmlSdmmcCurArg::Get().ReadFrom(&mmio_).reg_value(),
+                      AmlSdmmcCurDat::Get().ReadFrom(&mmio_).reg_value(),
+                      AmlSdmmcCurResp::Get().ReadFrom(&mmio_).reg_value());
+      AML_SDMMC_ERROR("Next: 0x%08x 0x%08x 0x%08x 0x%08x",
+                      AmlSdmmcNextCfg::Get().ReadFrom(&mmio_).reg_value(),
+                      AmlSdmmcNextArg::Get().ReadFrom(&mmio_).reg_value(),
+                      AmlSdmmcNextDat::Get().ReadFrom(&mmio_).reg_value(),
+                      AmlSdmmcNextResp::Get().ReadFrom(&mmio_).reg_value());		    
     }
     return ZX_ERR_IO_DATA_INTEGRITY;
   }
   if (status_irq.txd_err()) {
-    AML_SDMMC_ERROR("TX Data CRC Error, cmd%d, status=0x%x TXD_ERR", req->cmd_idx,
-                    status_irq.reg_value());
-    return ZX_ERR_IO_DATA_INTEGRITY;
+   AML_SDMMC_ERROR("TX Data CRC Error, cmd%d (%zu), arg=0x%08x, status=0x%08x", req->cmd_idx,
+                    request_count_, req->arg, status_irq.reg_value());
+      AML_SDMMC_ERROR("Current: 0x%08x 0x%08x 0x%08x 0x%08x",
+                    AmlSdmmcCurCfg::Get().ReadFrom(&mmio_).reg_value(),
+                    AmlSdmmcCurArg::Get().ReadFrom(&mmio_).reg_value(),
+                    AmlSdmmcCurDat::Get().ReadFrom(&mmio_).reg_value(),
+                    AmlSdmmcCurResp::Get().ReadFrom(&mmio_).reg_value());
+    AML_SDMMC_ERROR("Next: 0x%08x 0x%08x 0x%08x 0x%08x",
+                    AmlSdmmcNextCfg::Get().ReadFrom(&mmio_).reg_value(),
+                    AmlSdmmcNextArg::Get().ReadFrom(&mmio_).reg_value(),
+                    AmlSdmmcNextDat::Get().ReadFrom(&mmio_).reg_value(),
+                    AmlSdmmcNextResp::Get().ReadFrom(&mmio_).reg_value()); 
+   return ZX_ERR_IO_DATA_INTEGRITY;
   }
   if (status_irq.desc_err()) {
     AML_SDMMC_ERROR("Controller does not own the descriptor, cmd%d, status=0x%x", req->cmd_idx,
@@ -373,6 +394,7 @@ void AmlSdmmc::ConfigureDefaultRegs() {
                             .set_resp_timeout(AmlSdmmcCfg::kDefaultRespTimeout)
                             .set_rc_cc(AmlSdmmcCfg::kDefaultRcCc)
                             .set_bus_width(AmlSdmmcCfg::kBusWidth1Bit)
+			   // .set_auto_clk(1)
                             .reg_value();
   AmlSdmmcCfg::Get().ReadFrom(&mmio_).set_reg_value(config_val).WriteTo(&mmio_);
   AmlSdmmcStatus::Get()
@@ -976,7 +998,7 @@ zx_status_t AmlSdmmc::SdmmcRequest(sdmmc_req_t* req) {
   }
 
   ClearStatus();
-
+  request_count_++;
   start_reg.set_desc_busy(1).set_desc_addr((static_cast<uint32_t>(desc_phys)) >> 2).WriteTo(&mmio_);
 
   zx_status_t res = WaitForInterrupt(req);

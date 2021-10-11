@@ -152,6 +152,7 @@ class AmlSdmmc : public AmlSdmmcType, public ddk::SdmmcProtocol<AmlSdmmc, ddk::b
   std::atomic<bool> dead_ TA_GUARDED(mtx_);
   std::atomic<bool> pending_txn_ TA_GUARDED(mtx_);
   std::optional<SdmmcVmoStore> registered_vmos_[SDMMC_MAX_CLIENT_ID + 1];
+  size_t request_count_ = 0;
 };
 
 }  // namespace sdmmc
