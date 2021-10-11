@@ -1009,10 +1009,10 @@ zx_status_t AmlSdmmc::SdmmcRequest(sdmmc_req_t* req) {
   pending_txn_ = false;
   txn_finished_.Signal();
 
-  if (is_test_sdio) {
-    zxlogf(INFO, "%s: cmd%d arg 0x%08x resp 0x%08x", __func__, req->cmd_idx, req->arg,
-           req->response[0]);
-  }
+  // if (is_test_sdio) {
+  //   zxlogf(INFO, "%s: cmd%d arg 0x%08x resp 0x%08x", __func__, req->cmd_idx, req->arg,
+  //          req->response[0]);
+  // }
 
   return res;
 }
