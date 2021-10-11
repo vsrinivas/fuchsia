@@ -38,13 +38,14 @@ class PageQueues {
   //    swap death
   //  * Slightly old pages that could be evicted if needed
   //  * Very old pages that you'd be happy to evict
-  // For now 4 queues are chosen to stretch out that middle group such that the distinction between
-  // slightly old and very old is more pronounced.
-  static constexpr size_t kNumPagerBacked = 4;
+  // With two active queues 8 page queues are used so that there is some fidelity of information in
+  // the inactive queues. Additional queues have reduced value as sufficiently old pages quickly
+  // become equivalently unlikely to be used in the future.
+  static constexpr size_t kNumPagerBacked = 8;
 
-  // Currently define a single queue, the MRU, as active. This needs to be increased to at least 2
-  // in the future when we want to track ratios of active and inactive sets.
-  static constexpr size_t kNumActiveQueues = 1;
+  // Two active queues are used to allow for better fidelity of active information. This prevents
+  // a race between aging once and needing to collect/harvest age information.
+  static constexpr size_t kNumActiveQueues = 2;
 
   static_assert(kNumPagerBacked > kNumActiveQueues, "Needs to be at least one non-active queue");
 
@@ -56,8 +57,8 @@ class PageQueues {
   static constexpr size_t kNumOldestQueues = 2;
   static_assert(kNumOldestQueues + kNumActiveQueues <= kNumPagerBacked);
 
-  static constexpr zx_time_t kDefaultMinMruRotateTime = ZX_SEC(10);
-  static constexpr zx_time_t kDefaultMaxMruRotateTime = ZX_SEC(10);
+  static constexpr zx_time_t kDefaultMinMruRotateTime = ZX_SEC(5);
+  static constexpr zx_time_t kDefaultMaxMruRotateTime = ZX_SEC(5);
 
   // This is presently an arbitrary constant, since the min and max mru rotate time are currently
   // fixed at the same value, meaning that the active ratio can not presently trigger, or prevent,

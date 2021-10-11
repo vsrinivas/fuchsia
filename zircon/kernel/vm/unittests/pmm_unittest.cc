@@ -843,7 +843,7 @@ static bool pq_rotate_queue() {
   EXPECT_TRUE(pq.DebugPageIsWired(&wired_page));
   size_t queue;
   EXPECT_TRUE(pq.DebugPageIsPagerBacked(&pager_page, &queue));
-  EXPECT_TRUE(pq.QueueCounts() == ((PageQueues::Counts){{1, 0, 0, 0}, 0, 0, 1, 0}));
+  EXPECT_TRUE(pq.QueueCounts() == ((PageQueues::Counts){{1, 0, 0, 0, 0, 0, 0, 0}, 0, 0, 1, 0}));
   EXPECT_TRUE(pq.GetActiveInactiveCounts() == ((PageQueues::ActiveInactiveCounts){false, 1, 0}));
   EXPECT_EQ(queue, 0u);
 
@@ -851,21 +851,30 @@ static bool pq_rotate_queue() {
   pq.RotatePagerBackedQueues();
   EXPECT_TRUE(pq.DebugPageIsWired(&wired_page));
   EXPECT_TRUE(pq.DebugPageIsPagerBacked(&pager_page, &queue));
-  EXPECT_TRUE(pq.QueueCounts() == ((PageQueues::Counts){{0, 1, 0, 0}, 0, 0, 1, 0}));
-  EXPECT_TRUE(pq.GetActiveInactiveCounts() == ((PageQueues::ActiveInactiveCounts){false, 0, 1}));
+  EXPECT_TRUE(pq.QueueCounts() == ((PageQueues::Counts){{0, 1, 0, 0, 0, 0, 0, 0}, 0, 0, 1, 0}));
+  EXPECT_TRUE(pq.GetActiveInactiveCounts() == ((PageQueues::ActiveInactiveCounts){false, 1, 0}));
   EXPECT_EQ(queue, 1u);
 
   pq.RotatePagerBackedQueues();
-  EXPECT_TRUE(pq.QueueCounts() == ((PageQueues::Counts){{0, 0, 1, 0}, 0, 0, 1, 0}));
+  EXPECT_TRUE(pq.QueueCounts() == ((PageQueues::Counts){{0, 0, 1, 0, 0, 0, 0, 0}, 0, 0, 1, 0}));
   EXPECT_TRUE(pq.GetActiveInactiveCounts() == ((PageQueues::ActiveInactiveCounts){false, 0, 1}));
+  pq.RotatePagerBackedQueues();
+  EXPECT_TRUE(pq.QueueCounts() == ((PageQueues::Counts){{0, 0, 0, 1, 0, 0, 0, 0}, 0, 0, 1, 0}));
+  EXPECT_TRUE(pq.GetActiveInactiveCounts() == ((PageQueues::ActiveInactiveCounts){false, 0, 1}));
+  pq.RotatePagerBackedQueues();
+  EXPECT_TRUE(pq.QueueCounts() == ((PageQueues::Counts){{0, 0, 0, 0, 1, 0, 0, 0}, 0, 0, 1, 0}));
+  pq.RotatePagerBackedQueues();
+  EXPECT_TRUE(pq.QueueCounts() == ((PageQueues::Counts){{0, 0, 0, 0, 0, 1, 0, 0}, 0, 0, 1, 0}));
+  pq.RotatePagerBackedQueues();
+  EXPECT_TRUE(pq.QueueCounts() == ((PageQueues::Counts){{0, 0, 0, 0, 0, 0, 1, 0}, 0, 0, 1, 0}));
   pq.RotatePagerBackedQueues();
   // Further rotations might cause the page to be visible in the same queue, or an older one,
   // depending on whether the lru processing already ran in preparation of the next aging event.
-  const PageQueues::Counts counts_last = (PageQueues::Counts){{0, 0, 0, 1}, 0, 0, 1, 0};
-  const PageQueues::Counts counts_second_last = (PageQueues::Counts){{0, 0, 1, 0}, 0, 0, 1, 0};
+  const PageQueues::Counts counts_last = (PageQueues::Counts){{0, 0, 0, 0, 0, 0, 0, 1}, 0, 0, 1, 0};
+  const PageQueues::Counts counts_second_last =
+      (PageQueues::Counts){{0, 0, 1, 0, 0, 0, 0, 0}, 0, 0, 1, 0};
   PageQueues::Counts counts = pq.QueueCounts();
   EXPECT_TRUE(counts == counts_last || counts == counts_second_last);
-  EXPECT_TRUE(pq.GetActiveInactiveCounts() == ((PageQueues::ActiveInactiveCounts){false, 0, 1}));
 
   // Further rotations should not move the page.
   pq.RotatePagerBackedQueues();
@@ -879,12 +888,15 @@ static bool pq_rotate_queue() {
   pq.MoveToPagerBacked(&pager_page, vmo->DebugGetCowPages().get(), 0);
   EXPECT_TRUE(pq.DebugPageIsWired(&wired_page));
   EXPECT_TRUE(pq.DebugPageIsPagerBacked(&pager_page));
-  EXPECT_TRUE(pq.QueueCounts() == ((PageQueues::Counts){{1, 0, 0, 0}, 0, 0, 1, 0}));
+  EXPECT_TRUE(pq.QueueCounts() == ((PageQueues::Counts){{1, 0, 0, 0, 0, 0, 0, 0}, 0, 0, 1, 0}));
   EXPECT_TRUE(pq.GetActiveInactiveCounts() == ((PageQueues::ActiveInactiveCounts){false, 1, 0}));
 
-  // Just double check one rotation.
+  // Just double check two rotations.
   pq.RotatePagerBackedQueues();
-  EXPECT_TRUE(pq.QueueCounts() == ((PageQueues::Counts){{0, 1, 0, 0}, 0, 0, 1, 0}));
+  EXPECT_TRUE(pq.QueueCounts() == ((PageQueues::Counts){{0, 1, 0, 0, 0, 0, 0, 0}, 0, 0, 1, 0}));
+  EXPECT_TRUE(pq.GetActiveInactiveCounts() == ((PageQueues::ActiveInactiveCounts){false, 1, 0}));
+  pq.RotatePagerBackedQueues();
+  EXPECT_TRUE(pq.QueueCounts() == ((PageQueues::Counts){{0, 0, 1, 0, 0, 0, 0, 0}, 0, 0, 1, 0}));
   EXPECT_TRUE(pq.GetActiveInactiveCounts() == ((PageQueues::ActiveInactiveCounts){false, 0, 1}));
 
   pq.Remove(&wired_page);

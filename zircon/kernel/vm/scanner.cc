@@ -56,10 +56,11 @@ uint32_t scanner_disable_count TA_GUARDED(scanner_disabled_lock::Get()) = 0;
 // Mutex used to ensure only a single access scan is happening at once.
 DECLARE_SINGLETON_MUTEX(accessed_scanner_lock);
 ktl::atomic<zx_time_t> last_accessed_scan_complete = ZX_TIME_INFINITE_PAST;
-// Currently the page queue aging thread is explicitly performing accessed scanning after
-// rotation, and so performing an additional accessed scan here is additional work for no added
-// information. As such the scan period is currently infinite, to effectively disable it.
-ktl::atomic<zx_duration_t> accessed_scan_period = ZX_TIME_INFINITE;
+
+// The accessed scan rate starts matched to the minimum aging period, since scanning more frequently
+// than that does not produce any fidelity of information.
+ktl::atomic<zx_duration_t> accessed_scan_period = PageQueues::kDefaultMinMruRotateTime;
+
 ktl::atomic<bool> reclaim_pt_next_accessed_scan = false;
 
 KCOUNTER(zero_scan_requests, "vm.scanner.zero_scan.requests")

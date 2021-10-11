@@ -331,12 +331,6 @@ void PageQueues::MruThread() {
 
     // Changing mru_gen_ could have impacted the eviction logic.
     MaybeTriggerLruProcessing();
-
-    // To emulate previous behavior of the system, force an accessed scan to happen now that the
-    // page queues have been rotated. Preserving the existing behavior is important, as there is
-    // presently a single active queue, and so we need to immediately pull any accessed pages back
-    // into that active queue to prevent them from being evicted.
-    scanner_wait_for_accessed_scan(ZX_TIME_INFINITE);
   }
 }
 
