@@ -155,8 +155,7 @@ Evictor::EvictedPageCounts Evictor::EvictOneShotFromPreloadedTarget() {
   total_evicted_counts =
       EvictUntilTargetsMet(target.min_pages_to_free, target.free_pages_target, target.level);
 
-  if (target.print_counts &&
-      total_evicted_counts.discardable + total_evicted_counts.pager_backed > 0) {
+  if (target.print_counts) {
     printf("[EVICT]: Free memory before eviction was %zuMB and after eviction is %zuMB\n",
            free_pages_before * PAGE_SIZE / MB, pmm_node_->CountFreePages() * PAGE_SIZE / MB);
     if (total_evicted_counts.pager_backed > 0) {
@@ -417,13 +416,6 @@ int Evictor::EvictionThreadLoop() {
     evicted =
         EvictUntilTargetsMet(target.min_pages_to_free, target.free_pages_target, target.level);
 
-    uint64_t total_evicted = evicted.discardable + evicted.pager_backed;
-    // If no pages were evicted, we don't have any progress to log, or anything to decrement from
-    // the min pages target. Skip the rest of the loop.
-    if (total_evicted == 0) {
-      continue;
-    }
-
     if (target.print_counts) {
       printf("[EVICT]: Free memory before eviction was %zuMB and after eviction is %zuMB\n",
              free_pages_before * PAGE_SIZE / MB, pmm_node_->CountFreePages() * PAGE_SIZE / MB);
@@ -433,6 +425,13 @@ int Evictor::EvictionThreadLoop() {
       if (evicted.discardable > 0) {
         printf("[EVICT]: Evicted %lu pages from discardable vmos\n", evicted.discardable);
       }
+    }
+
+    uint64_t total_evicted = evicted.discardable + evicted.pager_backed;
+    // If no pages were evicted, we don't have anything to decrement from the min pages target. Skip
+    // the rest of the loop.
+    if (total_evicted == 0) {
+      continue;
     }
 
     {
