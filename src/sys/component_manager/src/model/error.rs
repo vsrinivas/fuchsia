@@ -34,6 +34,11 @@ pub enum ModelError {
     CollectionNotFound { name: String },
     #[error("collection {} does not allow dynamic offers", collection_name)]
     DynamicOffersNotAllowed { collection_name: String },
+    #[error("dynamic offer not valid: {}", err)]
+    DynamicOfferInvalid {
+        #[source]
+        err: cm_fidl_validator::ErrorList,
+    },
     #[error("context not found")]
     ContextNotFound,
     #[error("{} is not supported", feature)]
@@ -177,6 +182,10 @@ impl ModelError {
 
     pub fn dynamic_offers_not_allowed(collection_name: impl Into<String>) -> ModelError {
         ModelError::DynamicOffersNotAllowed { collection_name: collection_name.into() }
+    }
+
+    pub fn dynamic_offer_invalid(err: cm_fidl_validator::ErrorList) -> ModelError {
+        ModelError::DynamicOfferInvalid { err }
     }
 
     pub fn context_not_found() -> ModelError {

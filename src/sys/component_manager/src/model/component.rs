@@ -575,7 +575,36 @@ impl ComponentInstance {
                 {
                     return Err(ModelError::dynamic_offers_not_allowed(&collection_name));
                 }
+                if let Err(err) = cm_fidl_validator::validate_dynamic_offers(dynamic_offers) {
+                    return Err(ModelError::dynamic_offer_invalid(err));
+                }
+                // TODO(fxbug.dev/84678): We need to check to make sure the
+                // source of the offer exists. Otherwise we could create
+                // dependency cycles by offering from A -> B, with A not
+                // existing yet, then offering from B -> A when creating A.
+                // Avoiding circular dependencies isn't totally critical until
+                // the shutdown order takes dynamic offers into account.
             }
+            let dynamic_offers = child_args.dynamic_offers.map(|dynamic_offers| {
+                dynamic_offers
+                    .into_iter()
+                    .map(|mut offer| {
+                        // Set the `target` field to point to the component
+                        // we're creating. `fidl_into_native()` requires
+                        // `target` to be set.
+                        *offer_target_mut(&mut offer)
+                            .expect("validation should have found unknown enum type") =
+                            Some(fsys::Ref::Child(fsys::ChildRef {
+                                name: child_decl.name.clone(),
+                                collection: Some(collection_name.clone()),
+                            }));
+                        // This is safe because of the call to
+                        // `validate_dynamic_offers` above.
+                        cm_rust::FidlIntoNative::fidl_into_native(offer)
+                    })
+                    .collect()
+            });
+
             match collection_decl.durability {
                 fsys::Durability::Transient => {}
                 fsys::Durability::SingleRun => {}
@@ -584,7 +613,15 @@ impl ComponentInstance {
                 }
             };
             (
-                state.add_child(self, child_decl, Some(&collection_decl), child_args).await,
+                state
+                    .add_child(
+                        self,
+                        child_decl,
+                        Some(&collection_decl),
+                        child_args.numbered_handles,
+                        dynamic_offers,
+                    )
+                    .await,
                 collection_decl.durability,
             )
         };
@@ -980,6 +1017,21 @@ impl ComponentInstance {
     }
 }
 
+/// Extracts a mutable reference to the `target` field of an `OfferDecl`, or
+/// `None` if the offer type is unknown.
+fn offer_target_mut(offer: &mut fsys::OfferDecl) -> Option<&mut Option<fsys::Ref>> {
+    match offer {
+        fsys::OfferDecl::Service(fsys::OfferServiceDecl { target, .. })
+        | fsys::OfferDecl::Protocol(fsys::OfferProtocolDecl { target, .. })
+        | fsys::OfferDecl::Directory(fsys::OfferDirectoryDecl { target, .. })
+        | fsys::OfferDecl::Storage(fsys::OfferStorageDecl { target, .. })
+        | fsys::OfferDecl::Runner(fsys::OfferRunnerDecl { target, .. })
+        | fsys::OfferDecl::Resolver(fsys::OfferResolverDecl { target, .. })
+        | fsys::OfferDecl::Event(fsys::OfferEventDecl { target, .. }) => Some(target),
+        fsys::OfferDeclUnknown!() => None,
+    }
+}
+
 // A unit struct that implements `DebugRouteMapper` without recording any capability routes.
 #[derive(Debug, Clone)]
 pub struct NoopRouteMapper;
@@ -1136,6 +1188,14 @@ pub struct ResolvedInstanceState {
     environments: HashMap<String, Arc<Environment>>,
     /// Hosts a directory mapping the component's exposed capabilities.
     exposed_dir: ExposedDir,
+    /// Dynamic offers targeting this component's dynamic children.
+    ///
+    /// Invariant: the `target` field of all offers must refer to a live dynamic
+    /// child (i.e., a member of `live_children`), and if the `source` field
+    /// refers to a child, it must also be live.
+    ///
+    /// TODO(fxbug.dev/84678): This invariant is not yet enforced.
+    dynamic_offers: Vec<cm_rust::OfferDecl>,
 }
 
 impl ResolvedInstanceState {
@@ -1156,6 +1216,7 @@ impl ResolvedInstanceState {
             next_dynamic_instance_id: 1,
             environments: Self::instantiate_environments(component, &decl),
             exposed_dir,
+            dynamic_offers: vec![],
         };
         state.add_static_children(component, &decl).await;
         Ok(state)
@@ -1275,7 +1336,26 @@ impl ResolvedInstanceState {
 
     /// Marks a live child deleting. No-op if the child is already deleting.
     pub fn mark_child_deleted(&mut self, partial_moniker: &PartialChildMoniker) {
-        self.live_children.remove(&partial_moniker);
+        if self.live_children.remove(&partial_moniker).is_none() {
+            return;
+        }
+
+        // Delete any dynamic offers whose `source` or `target` matches the
+        // component we're deleting.
+        self.dynamic_offers.retain(|offer| {
+            use cm_rust::OfferDeclCommon;
+            let source_matches = offer.source()
+                == &cm_rust::OfferSource::Child(cm_rust::ChildRef {
+                    name: partial_moniker.name.clone(),
+                    collection: partial_moniker.collection.clone(),
+                });
+            let target_matches = offer.target()
+                == &cm_rust::OfferTarget::Child(cm_rust::ChildRef {
+                    name: partial_moniker.name.clone(),
+                    collection: partial_moniker.collection.clone(),
+                });
+            !source_matches && !target_matches
+        });
     }
 
     /// Removes a child.
@@ -1335,9 +1415,12 @@ impl ResolvedInstanceState {
         component: &Arc<ComponentInstance>,
         child: &ChildDecl,
         collection: Option<&CollectionDecl>,
-        child_args: fsys::CreateChildArgs,
+        numbered_handles: Option<Vec<fidl_fuchsia_process::HandleInfo>>,
+        dynamic_offers: Option<Vec<cm_rust::OfferDecl>>,
     ) -> Option<BoxFuture<'static, Result<(), ModelError>>> {
-        let child = self.add_child_internal(component, child, collection, child_args).await?;
+        let child = self
+            .add_child_internal(component, child, collection, numbered_handles, dynamic_offers)
+            .await?;
 
         // We can dispatch a Discovered event for the component now that it's installed in the
         // tree, which means any Discovered hooks will capture it.
@@ -1357,9 +1440,7 @@ impl ResolvedInstanceState {
         child: &ChildDecl,
         collection: Option<&CollectionDecl>,
     ) -> bool {
-        self.add_child_internal(component, child, collection, fsys::CreateChildArgs::EMPTY)
-            .await
-            .is_some()
+        self.add_child_internal(component, child, collection, None, None).await.is_some()
     }
 
     #[must_use]
@@ -1368,7 +1449,8 @@ impl ResolvedInstanceState {
         component: &Arc<ComponentInstance>,
         child: &ChildDecl,
         collection: Option<&CollectionDecl>,
-        child_args: fsys::CreateChildArgs,
+        numbered_handles: Option<Vec<fidl_fuchsia_process::HandleInfo>>,
+        dynamic_offers: Option<Vec<cm_rust::OfferDecl>>,
     ) -> Option<Arc<ComponentInstance>> {
         let instance_id = match collection {
             Some(_) => {
@@ -1393,10 +1475,13 @@ impl ResolvedInstanceState {
             component.context.clone(),
             WeakExtendedInstance::Component(WeakComponentInstance::from(component)),
             Arc::new(Hooks::new(Some(component.hooks.clone()))),
-            child_args.numbered_handles,
+            numbered_handles,
         );
         self.children.insert(child_moniker, child.clone());
         self.live_children.insert(partial_moniker, (instance_id, child.clone()));
+        if let Some(dynamic_offers) = dynamic_offers {
+            self.dynamic_offers.extend(dynamic_offers.into_iter());
+        }
         Some(child)
     }
 
@@ -1406,7 +1491,7 @@ impl ResolvedInstanceState {
         decl: &ComponentDecl,
     ) {
         for child in decl.children.iter() {
-            let _ = self.add_child(component, child, None, fsys::CreateChildArgs::EMPTY).await;
+            let _ = self.add_child(component, child, None, None, None).await;
         }
     }
 }
@@ -1423,7 +1508,7 @@ impl ResolvedInstanceInterface for ResolvedInstanceState {
     }
 
     fn offers(&self) -> Vec<cm_rust::OfferDecl> {
-        self.decl.offers.clone()
+        self.decl.offers.iter().chain(self.dynamic_offers.iter()).cloned().collect()
     }
 
     fn capabilities(&self) -> Vec<cm_rust::CapabilityDecl> {

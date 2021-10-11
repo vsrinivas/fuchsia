@@ -366,6 +366,18 @@ impl RoutingTest {
         collection: &'a str,
         decl: impl Into<ChildDecl>,
     ) {
+        self.create_dynamic_child_with_args(moniker, collection, decl, fsys::CreateChildArgs::EMPTY)
+            .await
+    }
+
+    /// Creates a dynamic child `child_decl` in `moniker`'s `collection`.
+    pub async fn create_dynamic_child_with_args<'a>(
+        &'a self,
+        moniker: PartialAbsoluteMoniker,
+        collection: &'a str,
+        decl: impl Into<ChildDecl>,
+        args: fsys::CreateChildArgs,
+    ) {
         let component_name =
             self.bind_instance_and_wait_start(&moniker).await.expect("bind instance failed");
         let component_resolved_url = Self::resolved_url(&component_name);
@@ -374,7 +386,7 @@ impl RoutingTest {
             .mock_runner
             .get_namespace(&component_resolved_url)
             .expect("could not find child namespace");
-        capability_util::call_create_child(&namespace, collection, decl.into()).await;
+        capability_util::call_create_child(&namespace, collection, decl.into(), args).await;
     }
 
     /// Deletes a dynamic child `child_decl` in `moniker`'s `collection`, waiting for destruction
@@ -1423,6 +1435,7 @@ pub mod capability_util {
         namespace: &ManagedNamespace,
         collection: &'a str,
         child_decl: ChildDecl,
+        args: fsys::CreateChildArgs,
     ) {
         let path: CapabilityPath = "/svc/fuchsia.sys2.Realm".try_into().expect("no realm service");
         let dir_proxy = take_dir_from_namespace(namespace, &path.dirname).await;
@@ -1437,9 +1450,7 @@ pub mod capability_util {
         let realm_proxy = fsys::RealmProxy::new(node_proxy.into_channel().unwrap());
         let mut collection_ref = fsys::CollectionRef { name: collection.to_string() };
         let child_decl = child_decl.native_into_fidl();
-        let res = realm_proxy
-            .create_child(&mut collection_ref, child_decl, fsys::CreateChildArgs::EMPTY)
-            .await;
+        let res = realm_proxy.create_child(&mut collection_ref, child_decl, args).await;
         let _ = res.expect("failed to create child");
     }
 

@@ -308,6 +308,26 @@ pub fn validate_child(child: &fsys::ChildDecl) -> Result<(), ErrorList> {
     }
 }
 
+/// Validates a collection of dynamic offers. Dynamic offers differ from static
+/// offers, in that
+///
+/// 1. a dynamic offer's `target` field must be omitted;
+/// 2. a dynamic offer's `source` _may_ be a dynamic child;
+/// 3. since this crate isn't really designed to handle dynamic children, we
+///    disable the checks that ensure that the source/target exist, and that the
+///    offers don't introduce any cycles.
+pub fn validate_dynamic_offers(offers: &Vec<fsys::OfferDecl>) -> Result<(), ErrorList> {
+    let mut ctx = ValidationContext::default();
+    for offer in offers {
+        ctx.validate_offers_decl(offer, OfferType::Dynamic)
+    }
+    if ctx.errors.is_empty() {
+        Ok(())
+    } else {
+        Err(ErrorList::new(ctx.errors))
+    }
+}
+
 #[derive(Default)]
 struct ValidationContext<'a> {
     all_children: HashMap<&'a str, &'a fsys::ChildDecl>,
@@ -410,6 +430,12 @@ enum TargetId<'a> {
     Collection(&'a str),
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum OfferType {
+    Static,
+    Dynamic,
+}
+
 type IdMap<'a> = HashMap<TargetId<'a>, HashMap<&'a str, AllowableIds>>;
 
 impl<'a> ValidationContext<'a> {
@@ -461,7 +487,7 @@ impl<'a> ValidationContext<'a> {
         // Validate "offers".
         if let Some(offers) = decl.offers.as_ref() {
             for offer in offers.iter() {
-                self.validate_offers_decl(&offer);
+                self.validate_offers_decl(&offer, OfferType::Static);
             }
         }
 
@@ -1182,7 +1208,7 @@ impl<'a> ValidationContext<'a> {
             Some(fsys::Ref::Parent(_)) => {}
             Some(fsys::Ref::Self_(_)) => {}
             Some(fsys::Ref::Child(child)) => {
-                self.validate_source_child(child, "StorageDecl");
+                self.validate_source_child(child, "StorageDecl", OfferType::Static);
             }
             Some(_) => {
                 self.errors.push(Error::invalid_field("StorageDecl", "source"));
@@ -1299,7 +1325,9 @@ impl<'a> ValidationContext<'a> {
             Some(fsys::Ref::Parent(_)) => {}
             Some(fsys::Ref::Self_(_)) => {}
             Some(fsys::Ref::Framework(_)) => {}
-            Some(fsys::Ref::Child(child)) => self.validate_source_child(child, decl),
+            Some(fsys::Ref::Child(child)) => {
+                self.validate_source_child(child, decl, OfferType::Static)
+            }
             Some(_) => self.errors.push(Error::invalid_field(decl, "source")),
             None => self.errors.push(Error::missing_field(decl, "source")),
         }
@@ -1316,20 +1344,34 @@ impl<'a> ValidationContext<'a> {
         }
     }
 
-    fn validate_source_child(&mut self, child: &fsys::ChildRef, decl_type: &str) {
+    fn validate_source_child(
+        &mut self,
+        child: &fsys::ChildRef,
+        decl_type: &str,
+        offer_type: OfferType,
+    ) {
         let mut valid = true;
         valid &= check_name(Some(&child.name), decl_type, "source.child.name", &mut self.errors);
-        valid &= if child.collection.is_some() {
-            self.errors.push(Error::extraneous_field(decl_type, "source.child.collection"));
-            false
-        } else {
-            true
-        };
-        if !valid {
-            return;
-        }
-        if !self.all_children.contains_key(&child.name as &str) {
-            self.errors.push(Error::invalid_child(decl_type, "source", &child.name as &str));
+        match offer_type {
+            OfferType::Static => {
+                valid &= if child.collection.is_some() {
+                    self.errors.push(Error::extraneous_field(decl_type, "source.child.collection"));
+                    false
+                } else {
+                    true
+                };
+                if !valid {
+                    return;
+                }
+                if !self.all_children.contains_key(&child.name as &str) {
+                    self.errors.push(Error::invalid_child(
+                        decl_type,
+                        "source",
+                        &child.name as &str,
+                    ));
+                }
+            }
+            OfferType::Dynamic => {}
         }
     }
 
@@ -1514,7 +1556,7 @@ impl<'a> ValidationContext<'a> {
                 fsys::Ref::Self_(_) => {}
                 fsys::Ref::Framework(_) => {}
                 fsys::Ref::Child(child) => {
-                    self.validate_source_child(child, decl);
+                    self.validate_source_child(child, decl, OfferType::Static);
                 }
                 fsys::Ref::Capability(c) => {
                     self.validate_source_capability(c, decl, "source");
@@ -1597,7 +1639,7 @@ impl<'a> ValidationContext<'a> {
         }
     }
 
-    fn validate_offers_decl(&mut self, offer: &'a fsys::OfferDecl) {
+    fn validate_offers_decl(&mut self, offer: &'a fsys::OfferDecl, offer_type: OfferType) {
         match offer {
             fsys::OfferDecl::Service(o) => {
                 let decl = "OfferServiceDecl";
@@ -1605,23 +1647,31 @@ impl<'a> ValidationContext<'a> {
                     decl,
                     AllowableIds::Many,
                     CollectionSource::Allow,
+                    offer_type,
                     o.source.as_ref(),
                     o.source_name.as_ref(),
                     o.target.as_ref(),
                     o.target_name.as_ref(),
                 );
-                // If the offer source is `self`, ensure we have a corresponding ServiceDecl.
-                // TODO: Consider bringing this bit into validate_offer_fields
-                if let (Some(fsys::Ref::Self_(_)), Some(ref name)) = (&o.source, &o.source_name) {
-                    if !self.all_services.contains(&name as &str) {
-                        self.errors.push(Error::invalid_field(decl, "source"));
+                match offer_type {
+                    OfferType::Static => {
+                        // If the offer source is `self`, ensure we have a corresponding ServiceDecl.
+                        // TODO: Consider bringing this bit into validate_offer_fields
+                        if let (Some(fsys::Ref::Self_(_)), Some(ref name)) =
+                            (&o.source, &o.source_name)
+                        {
+                            if !self.all_services.contains(&name as &str) {
+                                self.errors.push(Error::invalid_field(decl, "source"));
+                            }
+                        }
+                        self.add_strong_dep(
+                            o.source_name.as_ref(),
+                            DependencyNode::try_from_ref(o.source.as_ref()),
+                            DependencyNode::try_from_ref(o.target.as_ref()),
+                        );
                     }
+                    OfferType::Dynamic => {}
                 }
-                self.add_strong_dep(
-                    o.source_name.as_ref(),
-                    DependencyNode::try_from_ref(o.source.as_ref()),
-                    DependencyNode::try_from_ref(o.target.as_ref()),
-                );
             }
             fsys::OfferDecl::Protocol(o) => {
                 let decl = "OfferProtocolDecl";
@@ -1629,6 +1679,7 @@ impl<'a> ValidationContext<'a> {
                     decl,
                     AllowableIds::One,
                     CollectionSource::Deny,
+                    offer_type,
                     o.source.as_ref(),
                     o.source_name.as_ref(),
                     o.target.as_ref(),
@@ -1637,18 +1688,31 @@ impl<'a> ValidationContext<'a> {
                 if o.dependency_type.is_none() {
                     self.errors.push(Error::missing_field(decl, "dependency_type"));
                 } else if o.dependency_type == Some(fsys::DependencyType::Strong) {
-                    self.add_strong_dep(
-                        o.source_name.as_ref(),
-                        DependencyNode::try_from_ref(o.source.as_ref()),
-                        DependencyNode::try_from_ref(o.target.as_ref()),
-                    );
-                }
-                // If the offer source is `self`, ensure we have a corresponding ProtocolDecl.
-                // TODO: Consider bringing this bit into validate_offer_fields.
-                if let (Some(fsys::Ref::Self_(_)), Some(ref name)) = (&o.source, &o.source_name) {
-                    if !self.all_protocols.contains(&name as &str) {
-                        self.errors.push(Error::invalid_capability(decl, "source", name));
+                    match offer_type {
+                        OfferType::Static => {
+                            self.add_strong_dep(
+                                o.source_name.as_ref(),
+                                DependencyNode::try_from_ref(o.source.as_ref()),
+                                DependencyNode::try_from_ref(o.target.as_ref()),
+                            );
+                        }
+                        OfferType::Dynamic => {}
                     }
+                }
+                match offer_type {
+                    OfferType::Static => {
+                        // If the offer source is `self`, ensure we have a
+                        // corresponding ProtocolDecl.
+                        // TODO: Consider bringing this bit into validate_offer_fields.
+                        if let (Some(fsys::Ref::Self_(_)), Some(ref name)) =
+                            (&o.source, &o.source_name)
+                        {
+                            if !self.all_protocols.contains(&name as &str) {
+                                self.errors.push(Error::invalid_capability(decl, "source", name));
+                            }
+                        }
+                    }
+                    OfferType::Dynamic => {}
                 }
             }
             fsys::OfferDecl::Directory(o) => {
@@ -1657,6 +1721,7 @@ impl<'a> ValidationContext<'a> {
                     decl,
                     AllowableIds::One,
                     CollectionSource::Deny,
+                    offer_type,
                     o.source.as_ref(),
                     o.source_name.as_ref(),
                     o.target.as_ref(),
@@ -1665,19 +1730,30 @@ impl<'a> ValidationContext<'a> {
                 if o.dependency_type.is_none() {
                     self.errors.push(Error::missing_field(decl, "dependency_type"));
                 } else if o.dependency_type == Some(fsys::DependencyType::Strong) {
-                    self.add_strong_dep(
-                        o.source_name.as_ref(),
-                        DependencyNode::try_from_ref(o.source.as_ref()),
-                        DependencyNode::try_from_ref(o.target.as_ref()),
-                    );
-                }
-                // If the offer source is `self`, ensure we have a corresponding DirectoryDecl.
-                // TODO: Consider bringing this bit into validate_offer_fields.
-                if let (Some(fsys::Ref::Self_(_)), Some(ref name)) = (&o.source, &o.source_name) {
-                    if !self.all_directories.contains(&name as &str) {
-                        self.errors.push(Error::invalid_capability(decl, "source", name));
+                    match offer_type {
+                        OfferType::Static => {
+                            self.add_strong_dep(
+                                o.source_name.as_ref(),
+                                DependencyNode::try_from_ref(o.source.as_ref()),
+                                DependencyNode::try_from_ref(o.target.as_ref()),
+                            );
+                            // If the offer source is `self`, ensure we have a corresponding
+                            // DirectoryDecl.
+                            //
+                            // TODO: Consider bringing this bit into validate_offer_fields.
+                            if let (Some(fsys::Ref::Self_(_)), Some(ref name)) =
+                                (&o.source, &o.source_name)
+                            {
+                                if !self.all_directories.contains(&name as &str) {
+                                    self.errors
+                                        .push(Error::invalid_capability(decl, "source", name));
+                                }
+                            }
+                        }
+                        OfferType::Dynamic => {}
                     }
                 }
+
                 if let Some(subdir) = o.subdir.as_ref() {
                     check_relative_path(
                         Some(subdir),
@@ -1690,32 +1766,42 @@ impl<'a> ValidationContext<'a> {
             fsys::OfferDecl::Storage(o) => {
                 self.validate_storage_offer_fields(
                     "OfferStorageDecl",
+                    offer_type,
                     o.source_name.as_ref(),
                     o.source.as_ref(),
                     o.target.as_ref(),
                 );
-                // Storage capabilities with a source of `Ref::Self_` don't interact with the
-                // component's runtime in any way, they're actually synthesized by the framework
-                // out of a pre-existing directory capability. Thus, its actual source is the
-                // backing directory capability.
-                match (o.source.as_ref(), o.source_name.as_ref()) {
-                    (Some(fsys::Ref::Self_ { .. }), Some(source_name)) => {
-                        if let Some(source) = DependencyNode::try_from_ref(
-                            *self
-                                .all_storage_and_sources
-                                .get(source_name.as_str())
-                                .unwrap_or(&None),
-                        ) {
-                            if let Some(target) = DependencyNode::try_from_ref(o.target.as_ref()) {
-                                self.strong_dependencies.add_edge(source, target);
+
+                match offer_type {
+                    OfferType::Static => {
+                        // Storage capabilities with a source of `Ref::Self_`
+                        // don't interact with the component's runtime in any
+                        // way, they're actually synthesized by the framework
+                        // out of a pre-existing directory capability. Thus, its
+                        // actual source is the backing directory capability.
+                        match (o.source.as_ref(), o.source_name.as_ref()) {
+                            (Some(fsys::Ref::Self_ { .. }), Some(source_name)) => {
+                                if let Some(source) = DependencyNode::try_from_ref(
+                                    *self
+                                        .all_storage_and_sources
+                                        .get(source_name.as_str())
+                                        .unwrap_or(&None),
+                                ) {
+                                    if let Some(target) =
+                                        DependencyNode::try_from_ref(o.target.as_ref())
+                                    {
+                                        self.strong_dependencies.add_edge(source, target);
+                                    }
+                                }
                             }
+                            _ => self.add_strong_dep(
+                                o.source_name.as_ref(),
+                                DependencyNode::try_from_ref(o.source.as_ref()),
+                                DependencyNode::try_from_ref(o.target.as_ref()),
+                            ),
                         }
                     }
-                    _ => self.add_strong_dep(
-                        o.source_name.as_ref(),
-                        DependencyNode::try_from_ref(o.source.as_ref()),
-                        DependencyNode::try_from_ref(o.target.as_ref()),
-                    ),
+                    OfferType::Dynamic => {}
                 }
             }
             fsys::OfferDecl::Runner(o) => {
@@ -1724,22 +1810,30 @@ impl<'a> ValidationContext<'a> {
                     decl,
                     AllowableIds::One,
                     CollectionSource::Deny,
+                    offer_type,
                     o.source.as_ref(),
                     o.source_name.as_ref(),
                     o.target.as_ref(),
                     o.target_name.as_ref(),
                 );
-                // If the offer source is `self`, ensure we have a corresponding RunnerDecl.
-                if let (Some(fsys::Ref::Self_(_)), Some(ref name)) = (&o.source, &o.source_name) {
-                    if !self.all_runners.contains(&name as &str) {
-                        self.errors.push(Error::invalid_capability(decl, "source", name));
+                match offer_type {
+                    OfferType::Static => {
+                        // If the offer source is `self`, ensure we have a corresponding RunnerDecl.
+                        if let (Some(fsys::Ref::Self_(_)), Some(ref name)) =
+                            (&o.source, &o.source_name)
+                        {
+                            if !self.all_runners.contains(&name as &str) {
+                                self.errors.push(Error::invalid_capability(decl, "source", name));
+                            }
+                        }
+                        self.add_strong_dep(
+                            o.source_name.as_ref(),
+                            DependencyNode::try_from_ref(o.source.as_ref()),
+                            DependencyNode::try_from_ref(o.target.as_ref()),
+                        );
                     }
+                    OfferType::Dynamic => {}
                 }
-                self.add_strong_dep(
-                    o.source_name.as_ref(),
-                    DependencyNode::try_from_ref(o.source.as_ref()),
-                    DependencyNode::try_from_ref(o.target.as_ref()),
-                );
             }
             fsys::OfferDecl::Resolver(o) => {
                 let decl = "OfferResolverDecl";
@@ -1747,25 +1841,35 @@ impl<'a> ValidationContext<'a> {
                     decl,
                     AllowableIds::One,
                     CollectionSource::Deny,
+                    offer_type,
                     o.source.as_ref(),
                     o.source_name.as_ref(),
                     o.target.as_ref(),
                     o.target_name.as_ref(),
                 );
-                // If the offer source is `self`, ensure we have a corresponding ResolverDecl.
-                if let (Some(fsys::Ref::Self_(_)), Some(ref name)) = (&o.source, &o.source_name) {
-                    if !self.all_resolvers.contains(&name as &str) {
-                        self.errors.push(Error::invalid_capability(decl, "source", name));
+
+                match offer_type {
+                    OfferType::Static => {
+                        // If the offer source is `self`, ensure we have a
+                        // corresponding ResolverDecl.
+                        if let (Some(fsys::Ref::Self_(_)), Some(ref name)) =
+                            (&o.source, &o.source_name)
+                        {
+                            if !self.all_resolvers.contains(&name as &str) {
+                                self.errors.push(Error::invalid_capability(decl, "source", name));
+                            }
+                        }
+                        self.add_strong_dep(
+                            o.source_name.as_ref(),
+                            DependencyNode::try_from_ref(o.source.as_ref()),
+                            DependencyNode::try_from_ref(o.target.as_ref()),
+                        );
                     }
+                    OfferType::Dynamic => {}
                 }
-                self.add_strong_dep(
-                    o.source_name.as_ref(),
-                    DependencyNode::try_from_ref(o.source.as_ref()),
-                    DependencyNode::try_from_ref(o.target.as_ref()),
-                );
             }
             fsys::OfferDecl::Event(e) => {
-                self.validate_event_offer_fields(e);
+                self.validate_event_offer_fields(e, offer_type);
             }
             fsys::OfferDeclUnknown!() => {
                 self.errors.push(Error::invalid_field("ComponentDecl", "offer"));
@@ -1811,6 +1915,7 @@ impl<'a> ValidationContext<'a> {
         decl: &str,
         allowable_names: AllowableIds,
         collection_source: CollectionSource,
+        offer_type: OfferType,
         source: Option<&fsys::Ref>,
         source_name: Option<&String>,
         target: Option<&'a fsys::Ref>,
@@ -1820,7 +1925,7 @@ impl<'a> ValidationContext<'a> {
             Some(fsys::Ref::Parent(_)) => {}
             Some(fsys::Ref::Self_(_)) => {}
             Some(fsys::Ref::Framework(_)) => {}
-            Some(fsys::Ref::Child(child)) => self.validate_source_child(child, decl),
+            Some(fsys::Ref::Child(child)) => self.validate_source_child(child, decl, offer_type),
             Some(fsys::Ref::Capability(c)) => self.validate_source_capability(c, decl, "source"),
             Some(fsys::Ref::Collection(c)) if collection_source == CollectionSource::Allow => {
                 self.validate_source_collection(c, decl)
@@ -1829,19 +1934,24 @@ impl<'a> ValidationContext<'a> {
             None => self.errors.push(Error::missing_field(decl, "source")),
         }
         check_name(source_name, decl, "source_name", &mut self.errors);
-        match target {
-            Some(fsys::Ref::Child(c)) => {
+        match (offer_type, target) {
+            (OfferType::Static, Some(fsys::Ref::Child(c))) => {
                 self.validate_target_child(decl, allowable_names, c, source, target_name);
             }
-            Some(fsys::Ref::Collection(c)) => {
+            (OfferType::Static, Some(fsys::Ref::Collection(c))) => {
                 self.validate_target_collection(decl, allowable_names, c, target_name);
             }
-            Some(_) => {
+            (OfferType::Static, Some(_)) => {
                 self.errors.push(Error::invalid_field(decl, "target"));
             }
-            None => {
+            (OfferType::Static, None) => {
                 self.errors.push(Error::missing_field(decl, "target"));
             }
+
+            (OfferType::Dynamic, Some(_)) => {
+                self.errors.push(Error::extraneous_field(decl, "target"));
+            }
+            (OfferType::Dynamic, None) => {}
         }
         check_name(target_name, decl, "target_name", &mut self.errors);
     }
@@ -1849,6 +1959,7 @@ impl<'a> ValidationContext<'a> {
     fn validate_storage_offer_fields(
         &mut self,
         decl: &str,
+        offer_type: OfferType,
         source_name: Option<&'a String>,
         source: Option<&'a fsys::Ref>,
         target: Option<&'a fsys::Ref>,
@@ -1868,10 +1979,23 @@ impl<'a> ValidationContext<'a> {
                 self.errors.push(Error::missing_field(decl, "source"));
             }
         }
-        self.validate_storage_target(decl, target);
+        match offer_type {
+            OfferType::Static => {
+                self.validate_storage_target(decl, target);
+            }
+            OfferType::Dynamic => {
+                if target.is_some() {
+                    self.errors.push(Error::extraneous_field(decl, "target"));
+                }
+            }
+        }
     }
 
-    fn validate_event_offer_fields(&mut self, event: &'a fsys::OfferEventDecl) {
+    fn validate_event_offer_fields(
+        &mut self,
+        event: &'a fsys::OfferEventDecl,
+        offer_type: OfferType,
+    ) {
         let decl = "OfferEventDecl";
         check_name(event.source_name.as_ref(), decl, "source_name", &mut self.errors);
 
@@ -1887,19 +2011,33 @@ impl<'a> ValidationContext<'a> {
             }
         };
 
-        let target_id = self.validate_offer_target(&event.target, decl, "target");
-        if let (Some(target_id), Some(target_name)) = (target_id, event.target_name.as_ref()) {
-            // Assuming the target_name is valid, ensure the target_name isn't already used.
-            if let Some(_) = self
-                .target_ids
-                .entry(target_id)
-                .or_insert(HashMap::new())
-                .insert(target_name, AllowableIds::One)
-            {
-                self.errors.push(Error::duplicate_field(decl, "target_name", target_name as &str));
+        match offer_type {
+            OfferType::Static => {
+                let target_id = self.validate_offer_target(&event.target, decl, "target");
+                if let (Some(target_id), Some(target_name)) =
+                    (target_id, event.target_name.as_ref())
+                {
+                    // Assuming the target_name is valid, ensure the target_name isn't already used.
+                    if let Some(_) = self
+                        .target_ids
+                        .entry(target_id)
+                        .or_insert(HashMap::new())
+                        .insert(target_name, AllowableIds::One)
+                    {
+                        self.errors.push(Error::duplicate_field(
+                            decl,
+                            "target_name",
+                            target_name as &str,
+                        ));
+                    }
+                }
+            }
+            OfferType::Dynamic => {
+                if event.target.is_some() {
+                    self.errors.push(Error::extraneous_field(decl, "target"));
+                }
             }
         }
-
         check_name(event.target_name.as_ref(), decl, "target_name", &mut self.errors);
         check_events_mode(&event.mode, "OfferEventDecl", "mode", &mut self.errors);
     }
@@ -7056,6 +7194,192 @@ mod tests {
                 Error::invalid_capability_type("RuntimeConfig", "capability", "storage"),
             ])),
         },
+    }
+
+    #[test]
+    fn test_validate_dynamic_offers_empty() {
+        assert_eq!(validate_dynamic_offers(&vec![]), Ok(()));
+    }
+
+    #[test]
+    fn test_validate_dynamic_offers_okay() {
+        assert_eq!(
+            validate_dynamic_offers(&vec![
+                OfferDecl::Protocol(OfferProtocolDecl {
+                    dependency_type: Some(DependencyType::Strong),
+                    source: Some(Ref::Self_(SelfRef)),
+                    source_name: Some("thing".to_string()),
+                    target_name: Some("thing".to_string()),
+                    ..OfferProtocolDecl::EMPTY
+                }),
+                OfferDecl::Service(OfferServiceDecl {
+                    source: Some(Ref::Parent(ParentRef)),
+                    source_name: Some("thang".to_string()),
+                    target_name: Some("thang".to_string()),
+                    ..OfferServiceDecl::EMPTY
+                }),
+                OfferDecl::Directory(OfferDirectoryDecl {
+                    dependency_type: Some(DependencyType::Strong),
+                    source: Some(Ref::Parent(ParentRef)),
+                    source_name: Some("thung1".to_string()),
+                    target_name: Some("thung1".to_string()),
+                    ..OfferDirectoryDecl::EMPTY
+                }),
+                OfferDecl::Storage(OfferStorageDecl {
+                    source: Some(Ref::Parent(ParentRef)),
+                    source_name: Some("thung2".to_string()),
+                    target_name: Some("thung2".to_string()),
+                    ..OfferStorageDecl::EMPTY
+                }),
+                OfferDecl::Runner(OfferRunnerDecl {
+                    source: Some(Ref::Parent(ParentRef)),
+                    source_name: Some("thung3".to_string()),
+                    target_name: Some("thung3".to_string()),
+                    ..OfferRunnerDecl::EMPTY
+                }),
+                OfferDecl::Resolver(OfferResolverDecl {
+                    source: Some(Ref::Parent(ParentRef)),
+                    source_name: Some("thung4".to_string()),
+                    target_name: Some("thung4".to_string()),
+                    ..OfferResolverDecl::EMPTY
+                }),
+                OfferDecl::Event(OfferEventDecl {
+                    source: Some(Ref::Parent(ParentRef)),
+                    source_name: Some("thung5".to_string()),
+                    target_name: Some("thung5".to_string()),
+                    mode: Some(EventMode::Async),
+                    ..OfferEventDecl::EMPTY
+                }),
+            ]),
+            Ok(())
+        );
+    }
+
+    #[test]
+    fn test_validate_dynamic_offers_specify_target() {
+        assert_eq!(
+            validate_dynamic_offers(&vec![
+                OfferDecl::Protocol(OfferProtocolDecl {
+                    dependency_type: Some(DependencyType::Strong),
+                    source: Some(Ref::Self_(SelfRef)),
+                    target: Some(Ref::Child(ChildRef {
+                        name: "foo".to_string(),
+                        collection: None
+                    })),
+                    source_name: Some("thing".to_string()),
+                    target_name: Some("thing".to_string()),
+                    ..OfferProtocolDecl::EMPTY
+                }),
+                OfferDecl::Service(OfferServiceDecl {
+                    source: Some(Ref::Parent(ParentRef)),
+                    target: Some(Ref::Child(ChildRef {
+                        name: "bar".to_string(),
+                        collection: Some("baz".to_string())
+                    })),
+                    source_name: Some("thang".to_string()),
+                    target_name: Some("thang".to_string()),
+                    ..OfferServiceDecl::EMPTY
+                }),
+                OfferDecl::Directory(OfferDirectoryDecl {
+                    dependency_type: Some(DependencyType::Strong),
+                    source: Some(Ref::Parent(ParentRef)),
+                    target: Some(Ref::Framework(FrameworkRef)),
+                    source_name: Some("thung1".to_string()),
+                    target_name: Some("thung1".to_string()),
+                    ..OfferDirectoryDecl::EMPTY
+                }),
+                OfferDecl::Storage(OfferStorageDecl {
+                    source: Some(Ref::Parent(ParentRef)),
+                    target: Some(Ref::Child(ChildRef {
+                        name: "bar".to_string(),
+                        collection: Some("baz".to_string())
+                    })),
+                    source_name: Some("thung2".to_string()),
+                    target_name: Some("thung2".to_string()),
+                    ..OfferStorageDecl::EMPTY
+                }),
+                OfferDecl::Runner(OfferRunnerDecl {
+                    source: Some(Ref::Parent(ParentRef)),
+                    target: Some(Ref::Child(ChildRef {
+                        name: "bar".to_string(),
+                        collection: Some("baz".to_string())
+                    })),
+                    source_name: Some("thung3".to_string()),
+                    target_name: Some("thung3".to_string()),
+                    ..OfferRunnerDecl::EMPTY
+                }),
+                OfferDecl::Resolver(OfferResolverDecl {
+                    source: Some(Ref::Parent(ParentRef)),
+                    target: Some(Ref::Child(ChildRef {
+                        name: "bar".to_string(),
+                        collection: Some("baz".to_string())
+                    })),
+                    source_name: Some("thung4".to_string()),
+                    target_name: Some("thung4".to_string()),
+                    ..OfferResolverDecl::EMPTY
+                }),
+                OfferDecl::Event(OfferEventDecl {
+                    target: Some(Ref::Child(ChildRef {
+                        name: "bar".to_string(),
+                        collection: Some("baz".to_string())
+                    })),
+                    source: Some(Ref::Parent(ParentRef)),
+                    source_name: Some("thung5".to_string()),
+                    target_name: Some("thung5".to_string()),
+                    mode: Some(EventMode::Async),
+                    ..OfferEventDecl::EMPTY
+                }),
+            ]),
+            Err(ErrorList::new(vec![
+                Error::extraneous_field("OfferProtocolDecl", "target"),
+                Error::extraneous_field("OfferServiceDecl", "target"),
+                Error::extraneous_field("OfferDirectoryDecl", "target"),
+                Error::extraneous_field("OfferStorageDecl", "target"),
+                Error::extraneous_field("OfferRunnerDecl", "target"),
+                Error::extraneous_field("OfferResolverDecl", "target"),
+                Error::extraneous_field("OfferEventDecl", "target"),
+            ]))
+        );
+    }
+
+    #[test]
+    fn test_validate_dynamic_offers_missing_stuff() {
+        assert_eq!(
+            validate_dynamic_offers(&vec![
+                OfferDecl::Protocol(OfferProtocolDecl::EMPTY),
+                OfferDecl::Service(OfferServiceDecl::EMPTY),
+                OfferDecl::Directory(OfferDirectoryDecl::EMPTY),
+                OfferDecl::Storage(OfferStorageDecl::EMPTY),
+                OfferDecl::Runner(OfferRunnerDecl::EMPTY),
+                OfferDecl::Resolver(OfferResolverDecl::EMPTY),
+                OfferDecl::Event(OfferEventDecl::EMPTY),
+            ]),
+            Err(ErrorList::new(vec![
+                Error::missing_field("OfferProtocolDecl", "source"),
+                Error::missing_field("OfferProtocolDecl", "source_name"),
+                Error::missing_field("OfferProtocolDecl", "target_name"),
+                Error::missing_field("OfferProtocolDecl", "dependency_type"),
+                Error::missing_field("OfferServiceDecl", "source"),
+                Error::missing_field("OfferServiceDecl", "source_name"),
+                Error::missing_field("OfferServiceDecl", "target_name"),
+                Error::missing_field("OfferDirectoryDecl", "source"),
+                Error::missing_field("OfferDirectoryDecl", "source_name"),
+                Error::missing_field("OfferDirectoryDecl", "target_name"),
+                Error::missing_field("OfferDirectoryDecl", "dependency_type"),
+                Error::missing_field("OfferStorageDecl", "source_name"),
+                Error::missing_field("OfferStorageDecl", "source"),
+                Error::missing_field("OfferRunnerDecl", "source"),
+                Error::missing_field("OfferRunnerDecl", "source_name"),
+                Error::missing_field("OfferRunnerDecl", "target_name"),
+                Error::missing_field("OfferResolverDecl", "source"),
+                Error::missing_field("OfferResolverDecl", "source_name"),
+                Error::missing_field("OfferResolverDecl", "target_name"),
+                Error::missing_field("OfferEventDecl", "source_name"),
+                Error::missing_field("OfferEventDecl", "source"),
+                Error::missing_field("OfferEventDecl", "target_name"),
+                Error::missing_field("OfferEventDecl", "mode"),
+            ]))
+        );
     }
 
     test_dependency! {

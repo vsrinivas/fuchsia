@@ -45,7 +45,7 @@ use {
     maplit::hashmap,
     matches::assert_matches,
     moniker::{AbsoluteMoniker, AbsoluteMonikerBase, ChildMonikerBase, PartialAbsoluteMoniker},
-    routing::{error::ComponentInstanceError, route_capability},
+    routing::{error::ComponentInstanceError, rights::READ_RIGHTS, route_capability},
     routing_test_helpers::{
         default_service_capability, instantiate_common_routing_tests, RoutingTestModel,
     },
@@ -547,6 +547,648 @@ async fn use_in_collection_not_offered() {
             path: default_service_capability(),
             expected_res: ExpectedResult::Err(zx::Status::UNAVAILABLE),
         },
+    )
+    .await;
+}
+
+///   a
+///    \
+///     b
+///    / \
+///  [c] [d]
+/// a: offers service /svc/hippo to b
+/// b: creates [c] and [d], dynamically offers service /svc/hippo to [c], but not [d].
+/// [c]: instance in collection uses service /svc/hippo
+/// [d]: instance in collection tries and fails to use service /svc/hippo
+#[fuchsia::test]
+async fn dynamic_offer_from_parent() {
+    let components = vec![
+        (
+            "a",
+            ComponentDeclBuilder::new()
+                .protocol(ProtocolDeclBuilder::new("foo_svc").build())
+                .offer(OfferDecl::Protocol(OfferProtocolDecl {
+                    source_name: "foo_svc".into(),
+                    source: OfferSource::Self_,
+                    target_name: "hippo_svc".into(),
+                    target: OfferTarget::static_child("b".to_string()),
+                    dependency_type: DependencyType::Strong,
+                }))
+                .add_lazy_child("b")
+                .build(),
+        ),
+        (
+            "b",
+            ComponentDeclBuilder::new()
+                .use_(UseDecl::Protocol(UseProtocolDecl {
+                    source_name: "fuchsia.sys2.Realm".into(),
+                    source: UseSource::Framework,
+                    target_path: CapabilityPath::try_from("/svc/fuchsia.sys2.Realm").unwrap(),
+                    dependency_type: DependencyType::Strong,
+                }))
+                .add_collection(
+                    CollectionDeclBuilder::new_transient_collection("coll")
+                        .allowed_offers(cm_types::AllowedOffers::StaticAndDynamic)
+                        .build(),
+                )
+                .build(),
+        ),
+        (
+            "c",
+            ComponentDeclBuilder::new()
+                .use_(UseDecl::Protocol(UseProtocolDecl {
+                    source_name: "hippo_svc".into(),
+                    source: UseSource::Parent,
+                    target_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
+                    dependency_type: DependencyType::Strong,
+                }))
+                .build(),
+        ),
+        (
+            "d",
+            ComponentDeclBuilder::new()
+                .use_(UseDecl::Protocol(UseProtocolDecl {
+                    source_name: "hippo_svc".into(),
+                    source: UseSource::Parent,
+                    dependency_type: DependencyType::Strong,
+                    target_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
+                }))
+                .build(),
+        ),
+    ];
+    let test = RoutingTest::new("a", components).await;
+    test.create_dynamic_child_with_args(
+        vec!["b"].into(),
+        "coll",
+        ChildDecl {
+            name: "c".to_string(),
+            url: "test:///c".to_string(),
+            startup: fsys::StartupMode::Lazy,
+            environment: None,
+            on_terminate: None,
+        },
+        fsys::CreateChildArgs {
+            dynamic_offers: Some(vec![fsys::OfferDecl::Protocol(fsys::OfferProtocolDecl {
+                source_name: Some("hippo_svc".to_string()),
+                source: Some(fsys::Ref::Parent(fsys::ParentRef)),
+                target_name: Some("hippo_svc".to_string()),
+                dependency_type: Some(fsys::DependencyType::Strong),
+                ..fsys::OfferProtocolDecl::EMPTY
+            })]),
+            ..fsys::CreateChildArgs::EMPTY
+        },
+    )
+    .await;
+    test.create_dynamic_child(
+        vec!["b"].into(),
+        "coll",
+        ChildDecl {
+            name: "d".to_string(),
+            url: "test:///d".to_string(),
+            startup: fsys::StartupMode::Lazy,
+            environment: None,
+            on_terminate: None,
+        },
+    )
+    .await;
+    test.check_use(
+        vec!["b", "coll:c"].into(),
+        CheckUse::Protocol { path: default_service_capability(), expected_res: ExpectedResult::Ok },
+    )
+    .await;
+    test.check_use(
+        vec!["b", "coll:d"].into(),
+        CheckUse::Protocol {
+            path: default_service_capability(),
+            expected_res: ExpectedResult::Err(zx::Status::UNAVAILABLE),
+        },
+    )
+    .await;
+}
+
+///    a
+///   / \
+/// [b] [c]
+/// a: creates [b]. creates [c] in the same collection, with a dynamic offer from [b].
+/// [b]: instance in collection exposes /svc/hippo
+/// [c]: instance in collection uses /svc/hippo
+#[fuchsia::test]
+async fn dynamic_offer_siblings_same_collection() {
+    let components = vec![
+        (
+            "a",
+            ComponentDeclBuilder::new()
+                .use_(UseDecl::Protocol(UseProtocolDecl {
+                    source_name: "fuchsia.sys2.Realm".into(),
+                    source: UseSource::Framework,
+                    target_path: CapabilityPath::try_from("/svc/fuchsia.sys2.Realm").unwrap(),
+                    dependency_type: DependencyType::Strong,
+                }))
+                .add_collection(
+                    CollectionDeclBuilder::new_transient_collection("coll")
+                        .allowed_offers(cm_types::AllowedOffers::StaticAndDynamic)
+                        .build(),
+                )
+                .build(),
+        ),
+        (
+            "b",
+            ComponentDeclBuilder::new()
+                .protocol(ProtocolDeclBuilder::new("hippo_svc").build())
+                .expose(ExposeDecl::Protocol(ExposeProtocolDecl {
+                    source_name: "hippo_svc".into(),
+                    source: ExposeSource::Self_,
+                    target_name: "hippo_svc".into(),
+                    target: ExposeTarget::Parent,
+                }))
+                .build(),
+        ),
+        (
+            "c",
+            ComponentDeclBuilder::new()
+                .use_(UseDecl::Protocol(UseProtocolDecl {
+                    source_name: "hippo_svc".into(),
+                    source: UseSource::Parent,
+                    target_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
+                    dependency_type: DependencyType::Strong,
+                }))
+                .build(),
+        ),
+    ];
+    let test = RoutingTest::new("a", components).await;
+
+    test.create_dynamic_child(
+        vec![].into(),
+        "coll",
+        ChildDecl {
+            name: "b".to_string(),
+            url: "test:///b".to_string(),
+            startup: fsys::StartupMode::Lazy,
+            environment: None,
+            on_terminate: None,
+        },
+    )
+    .await;
+    test.create_dynamic_child_with_args(
+        vec![].into(),
+        "coll",
+        ChildDecl {
+            name: "c".to_string(),
+            url: "test:///c".to_string(),
+            startup: fsys::StartupMode::Lazy,
+            environment: None,
+            on_terminate: None,
+        },
+        fsys::CreateChildArgs {
+            dynamic_offers: Some(vec![fsys::OfferDecl::Protocol(fsys::OfferProtocolDecl {
+                source_name: Some("hippo_svc".to_string()),
+                source: Some(fsys::Ref::Child(fsys::ChildRef {
+                    name: "b".to_string(),
+                    collection: Some("coll".to_string()),
+                })),
+                target_name: Some("hippo_svc".to_string()),
+                dependency_type: Some(fsys::DependencyType::Strong),
+                ..fsys::OfferProtocolDecl::EMPTY
+            })]),
+            ..fsys::CreateChildArgs::EMPTY
+        },
+    )
+    .await;
+    test.check_use(
+        vec!["coll:c"].into(),
+        CheckUse::Protocol { path: default_service_capability(), expected_res: ExpectedResult::Ok },
+    )
+    .await;
+}
+
+///    a
+///   / \
+/// [b] [c]
+/// a: creates [b]. creates [c] in a different collection, with a dynamic offer from [b].
+/// [b]: instance in `source_coll` exposes /svc/hippo
+/// [c]: instance in `target_coll` uses /svc/hippo
+#[fuchsia::test]
+async fn dynamic_offer_siblings_cross_collection() {
+    let components = vec![
+        (
+            "a",
+            ComponentDeclBuilder::new()
+                .use_(UseDecl::Protocol(UseProtocolDecl {
+                    source_name: "fuchsia.sys2.Realm".into(),
+                    source: UseSource::Framework,
+                    target_path: CapabilityPath::try_from("/svc/fuchsia.sys2.Realm").unwrap(),
+                    dependency_type: DependencyType::Strong,
+                }))
+                .add_collection(
+                    CollectionDeclBuilder::new_transient_collection("source_coll").build(),
+                )
+                .add_collection(
+                    CollectionDeclBuilder::new_transient_collection("target_coll")
+                        .allowed_offers(cm_types::AllowedOffers::StaticAndDynamic)
+                        .build(),
+                )
+                .build(),
+        ),
+        (
+            "b",
+            ComponentDeclBuilder::new()
+                .protocol(ProtocolDeclBuilder::new("hippo_svc").build())
+                .expose(ExposeDecl::Protocol(ExposeProtocolDecl {
+                    source_name: "hippo_svc".into(),
+                    source: ExposeSource::Self_,
+                    target_name: "hippo_svc".into(),
+                    target: ExposeTarget::Parent,
+                }))
+                .build(),
+        ),
+        (
+            "c",
+            ComponentDeclBuilder::new()
+                .use_(UseDecl::Protocol(UseProtocolDecl {
+                    source_name: "hippo_svc".into(),
+                    source: UseSource::Parent,
+                    target_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
+                    dependency_type: DependencyType::Strong,
+                }))
+                .build(),
+        ),
+    ];
+    let test = RoutingTest::new("a", components).await;
+
+    test.create_dynamic_child(
+        vec![].into(),
+        "source_coll",
+        ChildDecl {
+            name: "b".to_string(),
+            url: "test:///b".to_string(),
+            startup: fsys::StartupMode::Lazy,
+            environment: None,
+            on_terminate: None,
+        },
+    )
+    .await;
+    test.create_dynamic_child_with_args(
+        vec![].into(),
+        "target_coll",
+        ChildDecl {
+            name: "c".to_string(),
+            url: "test:///c".to_string(),
+            startup: fsys::StartupMode::Lazy,
+            environment: None,
+            on_terminate: None,
+        },
+        fsys::CreateChildArgs {
+            dynamic_offers: Some(vec![fsys::OfferDecl::Protocol(fsys::OfferProtocolDecl {
+                source: Some(fsys::Ref::Child(fsys::ChildRef {
+                    name: "b".to_string(),
+                    collection: Some("source_coll".to_string()),
+                })),
+                source_name: Some("hippo_svc".to_string()),
+                dependency_type: Some(fsys::DependencyType::Strong),
+                target_name: Some("hippo_svc".to_string()),
+                ..fsys::OfferProtocolDecl::EMPTY
+            })]),
+            ..fsys::CreateChildArgs::EMPTY
+        },
+    )
+    .await;
+    test.check_use(
+        vec!["target_coll:c"].into(),
+        CheckUse::Protocol { path: default_service_capability(), expected_res: ExpectedResult::Ok },
+    )
+    .await;
+}
+
+///    a
+///   / \
+/// [b] [c]
+/// a: creates [b]. creates [c] in the same collection, with a dynamic offer from [b].
+/// [b]: instance in collection exposes /svc/hippo
+/// [c]: instance in collection uses /svc/hippo. Can't use it after [b] is destroyed and recreated.
+#[fuchsia::test]
+async fn dynamic_offer_destroyed_on_source_destruction() {
+    let components = vec![
+        (
+            "a",
+            ComponentDeclBuilder::new()
+                .use_(UseDecl::Protocol(UseProtocolDecl {
+                    source_name: "fuchsia.sys2.Realm".into(),
+                    source: UseSource::Framework,
+                    target_path: CapabilityPath::try_from("/svc/fuchsia.sys2.Realm").unwrap(),
+                    dependency_type: DependencyType::Strong,
+                }))
+                .add_collection(
+                    CollectionDeclBuilder::new_transient_collection("coll")
+                        .allowed_offers(cm_types::AllowedOffers::StaticAndDynamic)
+                        .build(),
+                )
+                .build(),
+        ),
+        (
+            "b",
+            ComponentDeclBuilder::new()
+                .protocol(ProtocolDeclBuilder::new("hippo_svc").build())
+                .expose(ExposeDecl::Protocol(ExposeProtocolDecl {
+                    source_name: "hippo_svc".into(),
+                    source: ExposeSource::Self_,
+                    target_name: "hippo_svc".into(),
+                    target: ExposeTarget::Parent,
+                }))
+                .build(),
+        ),
+        (
+            "c",
+            ComponentDeclBuilder::new()
+                .use_(UseDecl::Protocol(UseProtocolDecl {
+                    source_name: "hippo_svc".into(),
+                    source: UseSource::Parent,
+                    target_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
+                    dependency_type: DependencyType::Strong,
+                }))
+                .build(),
+        ),
+    ];
+    let test = RoutingTest::new("a", components).await;
+
+    test.create_dynamic_child(
+        vec![].into(),
+        "coll",
+        ChildDecl {
+            name: "b".to_string(),
+            url: "test:///b".to_string(),
+            startup: fsys::StartupMode::Lazy,
+            environment: None,
+            on_terminate: None,
+        },
+    )
+    .await;
+    test.create_dynamic_child_with_args(
+        vec![].into(),
+        "coll",
+        ChildDecl {
+            name: "c".to_string(),
+            url: "test:///c".to_string(),
+            startup: fsys::StartupMode::Lazy,
+            environment: None,
+            on_terminate: None,
+        },
+        fsys::CreateChildArgs {
+            dynamic_offers: Some(vec![fsys::OfferDecl::Protocol(fsys::OfferProtocolDecl {
+                source_name: Some("hippo_svc".to_string()),
+                source: Some(fsys::Ref::Child(fsys::ChildRef {
+                    name: "b".to_string(),
+                    collection: Some("coll".to_string()),
+                })),
+                target_name: Some("hippo_svc".to_string()),
+                dependency_type: Some(fsys::DependencyType::Strong),
+                ..fsys::OfferProtocolDecl::EMPTY
+            })]),
+            ..fsys::CreateChildArgs::EMPTY
+        },
+    )
+    .await;
+    test.check_use(
+        vec!["coll:c"].into(),
+        CheckUse::Protocol { path: default_service_capability(), expected_res: ExpectedResult::Ok },
+    )
+    .await;
+
+    test.destroy_dynamic_child(vec![].into(), "coll", "b").await;
+    test.create_dynamic_child(
+        vec![].into(),
+        "coll",
+        ChildDecl {
+            name: "b".to_string(),
+            url: "test:///b".to_string(),
+            startup: fsys::StartupMode::Lazy,
+            environment: None,
+            on_terminate: None,
+        },
+    )
+    .await;
+
+    test.check_use(
+        vec!["coll:c"].into(),
+        CheckUse::Protocol {
+            path: default_service_capability(),
+            expected_res: ExpectedResult::Err(zx::Status::UNAVAILABLE),
+        },
+    )
+    .await;
+}
+
+///    a
+///   / \
+/// [b] [c]
+/// a: creates [b]. creates [c] in the same collection, with a dynamic offer from [b].
+/// [b]: instance in collection exposes /data/hippo
+/// [c]: instance in collection uses /data/hippo. Can't use it after [c] is destroyed and recreated.
+#[fuchsia::test]
+async fn dynamic_offer_destroyed_on_target_destruction() {
+    let components = vec![
+        (
+            "a",
+            ComponentDeclBuilder::new()
+                .use_(UseDecl::Protocol(UseProtocolDecl {
+                    source_name: "fuchsia.sys2.Realm".into(),
+                    source: UseSource::Framework,
+                    target_path: CapabilityPath::try_from("/svc/fuchsia.sys2.Realm").unwrap(),
+                    dependency_type: DependencyType::Strong,
+                }))
+                .add_collection(
+                    CollectionDeclBuilder::new_transient_collection("coll")
+                        .allowed_offers(cm_types::AllowedOffers::StaticAndDynamic)
+                        .build(),
+                )
+                .build(),
+        ),
+        (
+            "b",
+            ComponentDeclBuilder::new()
+                .directory(DirectoryDeclBuilder::new("hippo_data").build())
+                .expose(ExposeDecl::Directory(ExposeDirectoryDecl {
+                    source_name: "hippo_data".into(),
+                    source: ExposeSource::Self_,
+                    target_name: "hippo_data".into(),
+                    target: ExposeTarget::Parent,
+                    rights: Some(*READ_RIGHTS),
+                    subdir: None,
+                }))
+                .build(),
+        ),
+        (
+            "c",
+            ComponentDeclBuilder::new()
+                .use_(UseDecl::Directory(UseDirectoryDecl {
+                    source_name: "hippo_data".into(),
+                    source: UseSource::Parent,
+                    target_path: CapabilityPath::try_from("/data/hippo").unwrap(),
+                    dependency_type: DependencyType::Strong,
+                    rights: *READ_RIGHTS,
+                    subdir: None,
+                }))
+                .build(),
+        ),
+    ];
+    let test = RoutingTest::new("a", components).await;
+
+    test.create_dynamic_child(
+        vec![].into(),
+        "coll",
+        ChildDecl {
+            name: "b".to_string(),
+            url: "test:///b".to_string(),
+            startup: fsys::StartupMode::Lazy,
+            environment: None,
+            on_terminate: None,
+        },
+    )
+    .await;
+    test.create_dynamic_child_with_args(
+        vec![].into(),
+        "coll",
+        ChildDecl {
+            name: "c".to_string(),
+            url: "test:///c".to_string(),
+            startup: fsys::StartupMode::Lazy,
+            environment: None,
+            on_terminate: None,
+        },
+        fsys::CreateChildArgs {
+            dynamic_offers: Some(vec![fsys::OfferDecl::Directory(fsys::OfferDirectoryDecl {
+                source_name: Some("hippo_data".to_string()),
+                source: Some(fsys::Ref::Child(fsys::ChildRef {
+                    name: "b".to_string(),
+                    collection: Some("coll".to_string()),
+                })),
+                target_name: Some("hippo_data".to_string()),
+                dependency_type: Some(fsys::DependencyType::Strong),
+                ..fsys::OfferDirectoryDecl::EMPTY
+            })]),
+            ..fsys::CreateChildArgs::EMPTY
+        },
+    )
+    .await;
+    test.check_use(vec!["coll:c"].into(), CheckUse::default_directory(ExpectedResult::Ok)).await;
+
+    test.destroy_dynamic_child(vec![].into(), "coll", "c").await;
+    test.create_dynamic_child(
+        vec![].into(),
+        "coll",
+        ChildDecl {
+            name: "c".to_string(),
+            url: "test:///c".to_string(),
+            startup: fsys::StartupMode::Lazy,
+            environment: None,
+            on_terminate: None,
+        },
+    )
+    .await;
+
+    test.check_use(
+        vec!["coll:c"].into(),
+        CheckUse::default_directory(ExpectedResult::Err(zx::Status::UNAVAILABLE)),
+    )
+    .await;
+}
+
+///    a
+///   / \
+///  b  [c]
+///       \
+///        d
+/// a: creates [c], with a dynamic offer from b.
+/// b: exposes /svc/hippo
+/// [c]: instance in collection, offers /svc/hippo to d.
+/// d: static child of dynamic instance [c]. uses /svc/hippo.
+#[fuchsia::test]
+async fn dynamic_offer_to_static_offer() {
+    let components = vec![
+        (
+            "a",
+            ComponentDeclBuilder::new()
+                .use_(UseDecl::Protocol(UseProtocolDecl {
+                    source_name: "fuchsia.sys2.Realm".into(),
+                    source: UseSource::Framework,
+                    target_path: CapabilityPath::try_from("/svc/fuchsia.sys2.Realm").unwrap(),
+                    dependency_type: DependencyType::Strong,
+                }))
+                .add_collection(
+                    CollectionDeclBuilder::new_transient_collection("coll")
+                        .allowed_offers(cm_types::AllowedOffers::StaticAndDynamic)
+                        .build(),
+                )
+                .add_lazy_child("b")
+                .build(),
+        ),
+        (
+            "b",
+            ComponentDeclBuilder::new()
+                .protocol(ProtocolDeclBuilder::new("hippo_svc").build())
+                .expose(ExposeDecl::Protocol(ExposeProtocolDecl {
+                    source_name: "hippo_svc".into(),
+                    source: ExposeSource::Self_,
+                    target_name: "hippo_svc".into(),
+                    target: ExposeTarget::Parent,
+                }))
+                .build(),
+        ),
+        (
+            "c",
+            ComponentDeclBuilder::new()
+                .offer(OfferDecl::Protocol(OfferProtocolDecl {
+                    source_name: "hippo_svc".into(),
+                    source: OfferSource::Parent,
+                    target_name: "hippo_svc".into(),
+                    target: OfferTarget::static_child("d".to_string()),
+                    dependency_type: DependencyType::Strong,
+                }))
+                .add_lazy_child("d")
+                .build(),
+        ),
+        (
+            "d",
+            ComponentDeclBuilder::new()
+                .use_(UseDecl::Protocol(UseProtocolDecl {
+                    source_name: "hippo_svc".into(),
+                    source: UseSource::Parent,
+                    target_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
+                    dependency_type: DependencyType::Strong,
+                }))
+                .add_lazy_child("d")
+                .build(),
+        ),
+    ];
+    let test = RoutingTest::new("a", components).await;
+
+    test.create_dynamic_child_with_args(
+        vec![].into(),
+        "coll",
+        ChildDecl {
+            name: "c".to_string(),
+            url: "test:///c".to_string(),
+            startup: fsys::StartupMode::Lazy,
+            environment: None,
+            on_terminate: None,
+        },
+        fsys::CreateChildArgs {
+            dynamic_offers: Some(vec![fsys::OfferDecl::Protocol(fsys::OfferProtocolDecl {
+                source_name: Some("hippo_svc".to_string()),
+                source: Some(fsys::Ref::Child(fsys::ChildRef {
+                    name: "b".to_string(),
+                    collection: None,
+                })),
+                target_name: Some("hippo_svc".to_string()),
+                dependency_type: Some(fsys::DependencyType::Strong),
+                ..fsys::OfferProtocolDecl::EMPTY
+            })]),
+            ..fsys::CreateChildArgs::EMPTY
+        },
+    )
+    .await;
+    test.check_use(
+        vec!["coll:c", "d"].into(),
+        CheckUse::Protocol { path: default_service_capability(), expected_res: ExpectedResult::Ok },
     )
     .await;
 }

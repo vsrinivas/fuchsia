@@ -1178,11 +1178,8 @@ where
     match offer.source() {
         OfferSource::Child(child) => {
             let child_component = {
-                // TODO(fxbug.dev/81207): This doesn't properly handle dynamic children.
-                assert_eq!(child.collection, None);
-                let child = &child.name;
-
-                let partial = PartialChildMoniker::new(child.clone(), None);
+                let partial =
+                    PartialChildMoniker::new(child.name.clone(), child.collection.clone());
                 component.lock_resolved_state().await?.get_live_child(&partial).ok_or_else(
                     || RoutingError::OfferFromChildInstanceNotFound {
                         child_moniker: partial,
@@ -1328,17 +1325,15 @@ where
     }
 }
 
-fn target_matches_moniker(parent_target: &OfferTarget, child_moniker: &ChildMoniker) -> bool {
-    match (parent_target, child_moniker.collection()) {
-        (OfferTarget::Child(target_child), None) => {
-            // TODO(fxbug.dev/81207): This doesn't properly handle dynamic children.
-            assert_eq!(target_child.collection, None);
-            target_child.name == child_moniker.name()
+fn target_matches_moniker(target: &OfferTarget, child_moniker: &ChildMoniker) -> bool {
+    match target {
+        OfferTarget::Child(target_ref) => {
+            target_ref.name == child_moniker.name()
+                && target_ref.collection.as_ref().map(|c| c.as_str()) == child_moniker.collection()
         }
-        (OfferTarget::Collection(target_collection_name), Some(collection)) => {
-            target_collection_name == collection
+        OfferTarget::Collection(target_collection) => {
+            Some(target_collection.as_str()) == child_moniker.collection()
         }
-        _ => false,
     }
 }
 
