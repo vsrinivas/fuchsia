@@ -15,7 +15,7 @@
 #include <fbl/algorithm.h>
 #include <pretty/hexdump.h>
 #include <test-utils/test-utils.h>
-#include <unittest/unittest.h>
+#include <zxtest/zxtest.h>
 
 #include "debugger.h"
 #include "inferior-control.h"
@@ -154,14 +154,7 @@ bool test_thread_start_register_access(reg_access_test_state_t* test_state, zx_h
 
 #endif
 
-  EXPECT_EQ(memcmp(&regs, &expected_regs, sizeof(regs)), 0);
-
-  if (utest_verbosity_level >= 2) {
-    printf("Got:\n");
-    hexdump8_ex(&regs, sizeof(regs), 0);
-    printf("Expected:\n");
-    hexdump8_ex(&expected_regs, sizeof(expected_regs), 0);
-  }
+  EXPECT_BYTES_EQ(&regs, &expected_regs, sizeof(regs));
 
   // If this is one of the extra threads, redirect its entry point and
   // set additional registers for the thread to pick up.
@@ -221,7 +214,7 @@ bool thread_start_test_exception_handler_worker(inferior_data_t* data,
 
     switch (info.type) {
       case ZX_EXCP_THREAD_STARTING:
-        unittest_printf("wait-inf: thread %lu started\n", info.tid);
+        printf("wait-inf: thread %lu started\n", info.tid);
         EXPECT_TRUE(test_thread_start_register_access(test_state, data->inferior, info.tid));
         break;
 
@@ -230,9 +223,7 @@ bool thread_start_test_exception_handler_worker(inferior_data_t* data,
         break;
 
       default: {
-        char msg[128];
-        snprintf(msg, sizeof(msg), "unexpected exception type: 0x%x", info.type);
-        ASSERT_TRUE(false, msg);
+        ASSERT_TRUE(false, "unexpected exception type: 0x%x", info.type);
         __UNREACHABLE;
       }
     }
@@ -261,17 +252,14 @@ bool thread_start_test_exception_handler(inferior_data_t* data, const zx_port_pa
 int capture_regs_thread_func(void* arg) {
   auto thread_count_ptr = reinterpret_cast<std::atomic<int>*>(arg);
   atomic_fetch_add(thread_count_ptr, 1);
-  unittest_printf("Extra thread started.\n");
+  printf("Extra thread started.\n");
   return 0;
 }
 
-bool StoppedInThreadStartingRegAccessTest() {
-  BEGIN_TEST;
-
+TEST(ThreadStartTests, StoppedInThreadStartingRegAccessTest) {
   springboard_t* sb;
   zx_handle_t inferior, channel;
-  if (!setup_inferior(kTestInferiorChildName, &sb, &inferior, &channel))
-    return false;
+  CHECK_HELPER(setup_inferior(kTestInferiorChildName, &sb, &inferior, &channel));
 
   // Attach to the inferior now because we want to see thread starting
   // exceptions.
@@ -287,15 +275,13 @@ bool StoppedInThreadStartingRegAccessTest() {
       start_wait_inf_thread(inferior_data, thread_start_test_exception_handler, &test_state);
   EXPECT_NE(port, ZX_HANDLE_INVALID);
 
-  if (!start_inferior(sb))
-    return false;
+  CHECK_HELPER(start_inferior(sb));
 
   // The first test happens here as the main thread starts.
   // This testing is done in |thread_start_test_exception_handler()|.
 
   // Make sure the program successfully started.
-  if (!verify_inferior_running(channel))
-    return false;
+  CHECK_HELPER(verify_inferior_running(channel));
 
   EXPECT_TRUE(get_inferior_load_addrs(channel, &test_state.inferior_libc_load_addr,
                                       &test_state.inferior_exec_load_addr),
@@ -315,8 +301,7 @@ bool StoppedInThreadStartingRegAccessTest() {
   // The remaining testing happens at this point as threads start.
   // This testing is done in |thread_start_test_exception_handler()|.
 
-  if (!shutdown_inferior(channel, inferior))
-    return false;
+  CHECK_HELPER(shutdown_inferior(channel, inferior));
 
   // Stop the waiter thread before closing the port that it's waiting on.
   join_wait_inf_thread(wait_inf_thread);
@@ -326,10 +311,4 @@ bool StoppedInThreadStartingRegAccessTest() {
   zx_handle_close(port);
   zx_handle_close(channel);
   zx_handle_close(inferior);
-
-  END_TEST;
 }
-
-BEGIN_TEST_CASE(thread_start_tests)
-RUN_TEST(StoppedInThreadStartingRegAccessTest)
-END_TEST_CASE(thread_start_tests)

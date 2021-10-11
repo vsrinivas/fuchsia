@@ -23,7 +23,7 @@
 
 #include <pretty/hexdump.h>
 #include <test-utils/test-utils.h>
-#include <unittest/unittest.h>
+#include <zxtest/zxtest.h>
 
 #include "crash-and-recover.h"
 #include "debugger.h"
@@ -120,9 +120,7 @@ int reg_access_thread_func(void* arg_) {
   return 0;
 }
 
-bool SuspendedRegAccessTest() {
-  BEGIN_TEST;
-
+TEST(SuspendedTests, SuspendedRegAccessTest) {
   zx_handle_t self_proc = zx_process_self();
 
   thrd_t thread_c11;
@@ -189,7 +187,6 @@ bool SuspendedRegAccessTest() {
 
   zx_handle_close(channel);
   zx_handle_close(port);
-  END_TEST;
 }
 
 struct suspended_in_syscall_reg_access_arg_t {
@@ -409,20 +406,12 @@ bool suspended_in_syscall_reg_access_worker(bool do_channel_call) {
   END_HELPER;
 }
 
-bool SuspendedInSyscallRegAccessTest() {
-  BEGIN_TEST;
-
+TEST(SuspendedTests, SuspendedInSyscallRegAccessTest) {
   EXPECT_TRUE(suspended_in_syscall_reg_access_worker(false));
-
-  END_TEST;
 }
 
-bool SuspendedInChannelCallRegAccessTest() {
-  BEGIN_TEST;
-
+TEST(SuspendedTests, SuspendedInChannelCallRegAccessTest) {
   EXPECT_TRUE(suspended_in_syscall_reg_access_worker(true));
-
-  END_TEST;
 }
 
 struct suspend_in_exception_data_t {
@@ -488,13 +477,12 @@ bool suspended_in_exception_handler(inferior_data_t* data, const zx_port_packet_
         break;
 
       case ZX_EXCP_FATAL_PAGE_FAULT: {
-        unittest_printf("wait-inf: got page fault exception\n");
+        printf("wait-inf: got page fault exception\n");
 
         ASSERT_EQ(info.tid, suspend_data->thread_id);
 
         // Verify that the fault is at the PC we expected.
-        if (!test_segv_pc(suspend_data->thread_handle))
-          return false;
+        CHECK_HELPER(test_segv_pc(suspend_data->thread_handle));
 
         // Suspend the thread before fixing the segv to verify register
         // access works while the thread is in an exception and suspended.
@@ -526,9 +514,7 @@ bool suspended_in_exception_handler(inferior_data_t* data, const zx_port_packet_
       }
 
       default: {
-        char msg[128];
-        snprintf(msg, sizeof(msg), "unexpected exception type: 0x%x", info.type);
-        ASSERT_TRUE(false, msg);
+        ASSERT_TRUE(false, "unexpected exception type: 0x%x", info.type);
         __UNREACHABLE;
       }
     }
@@ -537,18 +523,13 @@ bool suspended_in_exception_handler(inferior_data_t* data, const zx_port_packet_
   END_HELPER;
 }
 
-bool SuspendedInExceptionRegAccessTest() {
-  BEGIN_TEST;
-
+TEST(SuspendedTests, SuspendedInExceptionRegAccessTest) {
   springboard_t* sb;
   zx_handle_t inferior, channel;
-  if (!setup_inferior(kTestInferiorChildName, &sb, &inferior, &channel))
-    return false;
+  CHECK_HELPER(setup_inferior(kTestInferiorChildName, &sb, &inferior, &channel));
 
-  if (!start_inferior(sb))
-    return false;
-  if (!verify_inferior_running(channel))
-    return false;
+  CHECK_HELPER(start_inferior(sb));
+  CHECK_HELPER(verify_inferior_running(channel));
 
   suspend_in_exception_data_t data;
   data.segv_count.store(0);
@@ -585,8 +566,7 @@ bool SuspendedInExceptionRegAccessTest() {
   // wait_inf_thread will process the crash and resume the inferior.
   EXPECT_TRUE(recv_simple_response(channel, RESP_RECOVERED_FROM_CRASH), "");
 
-  if (!shutdown_inferior(channel, inferior))
-    return false;
+  CHECK_HELPER(shutdown_inferior(channel, inferior));
 
   // Stop the waiter thread before closing the port that it's waiting on.
   join_wait_inf_thread(wait_inf_thread);
@@ -601,26 +581,14 @@ bool SuspendedInExceptionRegAccessTest() {
   // There's an initial "RUNNING" signal that the handler could see,
   // or it might get delayed and essentially folded into a later one.
   // That is why we allow for potentially seeing an extra one here.
-  static const char actual_format[] = "actual resume count: %d";
-  char actual_msg[sizeof(actual_format) + 20];
-  sprintf(actual_msg, actual_format, data.resume_count.load());
   EXPECT_TRUE(
       data.resume_count.load() == kNumSegvTries || data.resume_count.load() == kNumSegvTries + 1,
-      actual_msg);
+      "actual resume count: %d", data.resume_count.load());
 
   zx_handle_close(data.thread_handle);
   zx_handle_close(port);
   zx_handle_close(channel);
   zx_handle_close(inferior);
-
-  END_TEST;
 }
 
 }  // namespace
-
-BEGIN_TEST_CASE(suspended_tests)
-RUN_TEST(SuspendedRegAccessTest)
-RUN_TEST(SuspendedInSyscallRegAccessTest)
-RUN_TEST(SuspendedInChannelCallRegAccessTest)
-RUN_TEST(SuspendedInExceptionRegAccessTest)
-END_TEST_CASE(suspended_tests)

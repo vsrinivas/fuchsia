@@ -40,9 +40,9 @@ test("debugger") {
     "//zircon/system/ulib/pretty",
     "//zircon/system/ulib/runtime",
     "//zircon/system/ulib/test-utils",
-    "//zircon/system/ulib/unittest",
     "//zircon/system/ulib/zircon-internal",
     "//zircon/system/ulib/zx",
+    "//zircon/system/ulib/zxtest",
   ]
 
   deps += [ "//zircon/system/utest/dlopen-indirect-deps:dlopen-indirect-deps-test-module" ]

@@ -5,27 +5,13 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include <unittest/unittest.h>
+#include <zxtest/zxtest.h>
 
 #include "inferior.h"
 #include "utils.h"
 
-namespace {
-
-void scan_argv(int argc, char** argv) {
-  for (int i = 1; i < argc; ++i) {
-    if (strncmp(argv[i], "v=", 2) == 0) {
-      int verbosity = atoi(argv[i] + 2);
-      unittest_set_verbosity_level(verbosity);
-    }
-  }
-}
-
-}  // namespace
-
 int main(int argc, char** argv) {
   g_program_path = argv[0];
-  scan_argv(argc, argv);
 
   if (argc >= 2) {
     if (strcmp(argv[1], kTestInferiorChildName) == 0) {
@@ -49,6 +35,5 @@ int main(int argc, char** argv) {
     }
   }
 
-  bool success = unittest_run_all_tests(argc, argv);
-  return success ? 0 : -1;
+  return zxtest::RunAllTests(argc, argv);
 }

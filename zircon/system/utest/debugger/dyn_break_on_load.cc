@@ -6,7 +6,7 @@
 #include <zircon/syscalls/port.h>
 
 #include <test-utils/test-utils.h>
-#include <unittest/unittest.h>
+#include <zxtest/zxtest.h>
 
 #include "inferior-control.h"
 #include "inferior.h"
@@ -64,7 +64,7 @@ bool dyn_break_on_load_test_handler(inferior_data_t* data, const zx_port_packet_
 
   switch (info.type) {
     case ZX_EXCP_SW_BREAKPOINT: {
-      unittest_printf("Got ld.so breakpoint.\n");
+      printf("Got ld.so breakpoint.\n");
       test_state->dyn_load_count++;
 
       // Get the debug break address
@@ -105,8 +105,8 @@ bool dyn_break_on_load_test_handler(inferior_data_t* data, const zx_port_packet_
       break;
     }
     default:
-      unittest_printf("Unexpected exception %s (%u) on thread %lu\n",
-                      tu_exception_to_string(info.type), info.type, info.tid);
+      printf("Unexpected exception %s (%u) on thread %lu\n", tu_exception_to_string(info.type),
+             info.type, info.tid);
       break;
   }
 
@@ -117,13 +117,10 @@ bool dyn_break_on_load_test_handler(inferior_data_t* data, const zx_port_packet_
   END_HELPER;
 }
 
-bool DynBreakOnLoadTest() {
-  BEGIN_TEST;
-
+TEST(DynBreakOnLoadTests, DynBreakOnLoadTest) {
   springboard_t* sb;
   zx_handle_t inferior, channel;
-  if (!setup_inferior(kTestDynBreakOnLoad, &sb, &inferior, &channel))
-    return false;
+  CHECK_HELPER(setup_inferior(kTestDynBreakOnLoad, &sb, &inferior, &channel));
 
   dyn_break_on_load_state_t test_state = {};
   test_state.process_handle = inferior;
@@ -147,14 +144,12 @@ bool DynBreakOnLoadTest() {
       start_wait_inf_thread(inferior_data, dyn_break_on_load_test_handler, &test_state);
   EXPECT_NE(port, ZX_HANDLE_INVALID);
 
-  if (!start_inferior(sb))
-    return false;
+  CHECK_HELPER(start_inferior(sb));
 
   // The remaining testing happens at this point as threads start.
   // This testing is done in |dyn_break_on_load_test_handler()|.
 
-  if (!shutdown_inferior(channel, inferior))
-    return false;
+  CHECK_HELPER(shutdown_inferior(channel, inferior));
 
   // Stop the waiter thread before closing the port that it's waiting on.
   join_wait_inf_thread(wait_inf_thread);
@@ -167,12 +162,6 @@ bool DynBreakOnLoadTest() {
 
   // Verify how many loads there were.
   ASSERT_EQ(test_state.dyn_load_count, 10);
-
-  END_TEST;
 }
 
 }  // namespace
-
-BEGIN_TEST_CASE(dyn_break_on_load_tests)
-RUN_TEST(DynBreakOnLoadTest);
-END_TEST_CASE(dyn_break_on_load_tests)

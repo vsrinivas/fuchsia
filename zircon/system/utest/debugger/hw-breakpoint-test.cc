@@ -13,7 +13,7 @@
 #include <atomic>
 
 #include <test-utils/test-utils.h>
-#include <unittest/unittest.h>
+#include <zxtest/zxtest.h>
 
 #include "inferior-control.h"
 #include "inferior.h"
@@ -93,12 +93,12 @@ bool test_hw_breakpoint_impl(zx_handle_t excp_channel) {
   ASSERT_TRUE(status == ZX_OK);
   ASSERT_TRUE(thread_info.state == ZX_THREAD_STATE_SUSPENDED);
 
-  unittest_printf("HW Breakpoint: Writing debug registers.\n");
+  printf("HW Breakpoint: Writing debug registers.\n");
 
   status = set_hw_breakpoint(thread_handle);
   ASSERT_EQ(status, ZX_OK);
 
-  unittest_printf("Watchpoint: Resuming thread.\n");
+  printf("Watchpoint: Resuming thread.\n");
   zx_handle_close(suspend_token);
 
   // We wait for the exception.
@@ -135,15 +135,13 @@ bool test_hw_breakpoint_impl(zx_handle_t excp_channel) {
 
 }  // namespace
 
-bool HWBreakpointTest() {
-  BEGIN_TEST;
-
+TEST(HwBreakpointStartTests, HWBreakpointTest) {
   // TODO(fxbug.dev/35295): This test flakes.
-  END_TEST;
+  return;
 
 #if defined(__x86_64__)
   // This test crashes QEMU, so for it's disabled for that arch.
-  END_TEST;
+  return;
 #endif
 
   zx_handle_t excp_channel = ZX_HANDLE_INVALID;
@@ -152,10 +150,4 @@ bool HWBreakpointTest() {
   EXPECT_TRUE(test_hw_breakpoint_impl(excp_channel));
 
   zx_handle_close(excp_channel);
-
-  END_TEST;
 }
-
-BEGIN_TEST_CASE(hw_breakpoint_start_tests)
-RUN_TEST(HWBreakpointTest)
-END_TEST_CASE(hw_breakpoint_start_tests)

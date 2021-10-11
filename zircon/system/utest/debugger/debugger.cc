@@ -25,7 +25,7 @@
 
 #include <pretty/hexdump.h>
 #include <test-utils/test-utils.h>
-#include <unittest/unittest.h>
+#include <zxtest/zxtest.h>
 
 #include "crash-and-recover.h"
 #include "inferior-control.h"
@@ -41,7 +41,7 @@ bool handle_expected_page_fault(zx_handle_t inferior, const zx_exception_info_t*
                                 zx::exception exception, std::atomic<int>* segv_count) {
   BEGIN_HELPER;
 
-  unittest_printf("wait-inf: got page fault exception\n");
+  printf("wait-inf: got page fault exception\n");
 
   zx::thread thread;
   ASSERT_EQ(exception.get_thread(&thread), ZX_OK);
@@ -49,8 +49,7 @@ bool handle_expected_page_fault(zx_handle_t inferior, const zx_exception_info_t*
   dump_inferior_regs(thread.get());
 
   // Verify that the fault is at the PC we expected.
-  if (!test_segv_pc(thread.get()))
-    return false;
+  CHECK_HELPER(test_segv_pc(thread.get()));
 
   // Do some tests that require a suspended inferior.
   test_memory_ops(inferior, thread.get());
@@ -112,7 +111,7 @@ bool debugger_test_exception_handler(inferior_data_t* data, const zx_port_packet
 
     switch (info.type) {
       case ZX_EXCP_THREAD_STARTING:
-        unittest_printf("wait-inf: inferior started\n");
+        printf("wait-inf: inferior started\n");
         break;
 
       case ZX_EXCP_THREAD_EXITING:
@@ -122,15 +121,13 @@ bool debugger_test_exception_handler(inferior_data_t* data, const zx_port_packet
         break;
 
       case ZX_EXCP_FATAL_PAGE_FAULT:
-        ASSERT_NONNULL(segv_count);
+        ASSERT_NOT_NULL(segv_count);
         ASSERT_TRUE(
             handle_expected_page_fault(data->inferior, &info, std::move(exception), segv_count));
         break;
 
       default: {
-        char msg[128];
-        snprintf(msg, sizeof(msg), "unexpected exception type: 0x%x", info.type);
-        ASSERT_TRUE(false, msg);
+        ASSERT_TRUE(false, "unexpected exception type: 0x%x", info.type);
         __UNREACHABLE;
       }
     }
@@ -139,13 +136,10 @@ bool debugger_test_exception_handler(inferior_data_t* data, const zx_port_packet
   END_HELPER;
 }
 
-bool DebuggerTest() {
-  BEGIN_TEST;
-
+TEST(DebuggerTests, DebuggerTest) {
   springboard_t* sb;
   zx_handle_t inferior, channel;
-  if (!setup_inferior(kTestInferiorChildName, &sb, &inferior, &channel))
-    return false;
+  CHECK_HELPER(setup_inferior(kTestInferiorChildName, &sb, &inferior, &channel));
 
   std::atomic<int> segv_count;
 
@@ -159,10 +153,8 @@ bool DebuggerTest() {
   EXPECT_NE(port, ZX_HANDLE_INVALID);
   expect_debugger_attached_eq(inferior, true, "debugger should appear attached");
 
-  if (!start_inferior(sb))
-    return false;
-  if (!verify_inferior_running(channel))
-    return false;
+  CHECK_HELPER(start_inferior(sb));
+  CHECK_HELPER(verify_inferior_running(channel));
 
   segv_count.store(0);
   send_simple_request(channel, RQST_CRASH_AND_RECOVER_TEST);
@@ -171,8 +163,7 @@ bool DebuggerTest() {
 
   expect_debugger_attached_eq(inferior, true, "debugger should still appear attached");
 
-  if (!shutdown_inferior(channel, inferior))
-    return false;
+  CHECK_HELPER(shutdown_inferior(channel, inferior));
 
   // When a process terminates it closes its exception channels.
   expect_debugger_attached_eq(inferior, false, "debugger should no longer appear attached");
@@ -185,17 +176,12 @@ bool DebuggerTest() {
   zx_handle_close(port);
   zx_handle_close(channel);
   zx_handle_close(inferior);
-
-  END_TEST;
 }
 
-bool DebuggerThreadListTest() {
-  BEGIN_TEST;
-
+TEST(DebuggerTests, DebuggerThreadListTest) {
   springboard_t* sb;
   zx_handle_t inferior, channel;
-  if (!setup_inferior(kTestInferiorChildName, &sb, &inferior, &channel))
-    return false;
+  CHECK_HELPER(setup_inferior(kTestInferiorChildName, &sb, &inferior, &channel));
 
   zx_handle_t port = ZX_HANDLE_INVALID;
   EXPECT_EQ(zx_port_create(0, &port), ZX_OK);
@@ -205,10 +191,8 @@ bool DebuggerThreadListTest() {
       start_wait_inf_thread(inferior_data, debugger_test_exception_handler, NULL);
   EXPECT_NE(port, ZX_HANDLE_INVALID);
 
-  if (!start_inferior(sb))
-    return false;
-  if (!verify_inferior_running(channel))
-    return false;
+  CHECK_HELPER(start_inferior(sb));
+  CHECK_HELPER(verify_inferior_running(channel));
 
   send_simple_request(channel, RQST_START_LOOPING_THREADS);
   EXPECT_TRUE(recv_simple_response(channel, RESP_THREADS_STARTED), "");
@@ -226,7 +210,7 @@ bool DebuggerThreadListTest() {
   // Verify each entry is valid.
   for (uint32_t i = 0; i < num_threads; ++i) {
     zx_koid_t koid = threads[i];
-    unittest_printf("Looking up thread %llu\n", (long long)koid);
+    printf("Looking up thread %llu\n", (long long)koid);
     zx_handle_t thread = ZX_HANDLE_INVALID;
     status = zx_object_get_child(inferior, koid, ZX_RIGHT_SAME_RIGHTS, &thread);
     EXPECT_EQ(status, ZX_OK, "zx_object_get_child failed");
@@ -238,8 +222,7 @@ bool DebuggerThreadListTest() {
 
   free(threads);
 
-  if (!shutdown_inferior(channel, inferior))
-    return false;
+  CHECK_HELPER(shutdown_inferior(channel, inferior));
 
   // Stop the waiter thread before closing the port that it's waiting on.
   join_wait_inf_thread(wait_inf_thread);
@@ -249,13 +232,9 @@ bool DebuggerThreadListTest() {
   zx_handle_close(port);
   zx_handle_close(channel);
   zx_handle_close(inferior);
-
-  END_TEST;
 }
 
-bool PropertyProcessDebugAddrTest() {
-  BEGIN_TEST;
-
+TEST(DebuggerTests, PropertyProcessDebugAddrTest) {
   zx_handle_t self = zx_process_self();
 
   // We shouldn't be able to set it.
@@ -273,8 +252,6 @@ bool PropertyProcessDebugAddrTest() {
   // These are all dsos we link with. See BUILD.gn.
   const char* libc_so = "libc.so";
   bool found_libc = false;
-  const char* unittest_so = "libunittest.so";
-  bool found_unittest = false;
 
   const r_debug* debug = (r_debug*)debug_addr;
   const link_map* lmap = debug->r_map;
@@ -284,15 +261,10 @@ bool PropertyProcessDebugAddrTest() {
   while (lmap != NULL) {
     if (strcmp(lmap->l_name, libc_so) == 0)
       found_libc = true;
-    else if (strcmp(lmap->l_name, unittest_so) == 0)
-      found_unittest = true;
     lmap = lmap->l_next;
   }
 
   EXPECT_TRUE(found_libc);
-  EXPECT_TRUE(found_unittest);
-
-  END_TEST;
 }
 
 int write_text_segment_helper() __ALIGNED(8);
@@ -304,9 +276,7 @@ int write_text_segment_helper() {
   return 42;
 }
 
-bool WriteTextSegmentTest() {
-  BEGIN_TEST;
-
+TEST(DebuggerTests, WriteTextSegmentTest) {
   zx_handle_t self = zx_process_self();
 
   // Exercise fxbug.dev/30693
@@ -325,15 +295,6 @@ bool WriteTextSegmentTest() {
 
   size = write_inferior_memory(self, addr, &previous_byte, sizeof(previous_byte));
   EXPECT_EQ(size, sizeof(previous_byte));
-
-  END_TEST;
 }
 
 }  // namespace
-
-BEGIN_TEST_CASE(debugger_tests)
-RUN_TEST(DebuggerTest)
-RUN_TEST(DebuggerThreadListTest)
-RUN_TEST(PropertyProcessDebugAddrTest)
-RUN_TEST(WriteTextSegmentTest)
-END_TEST_CASE(debugger_tests)

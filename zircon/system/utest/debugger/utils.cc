@@ -8,6 +8,7 @@
 #include <inttypes.h>
 #include <link.h>
 #include <stdarg.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <zircon/assert.h>
@@ -21,7 +22,7 @@
 
 #include <fbl/algorithm.h>
 #include <test-utils/test-utils.h>
-#include <unittest/unittest.h>
+#include <zxtest/zxtest.h>
 
 // argv[0]
 const char* g_program_path;
@@ -74,21 +75,21 @@ uint32_t get_uint32_property(zx_handle_t handle, uint32_t prop) {
 }
 
 bool send_request(zx_handle_t handle, const request_message_t& rqst) {
-  unittest_printf("sending request %d on handle %u\n", rqst.type, handle);
+  printf("sending request %d on handle %u\n", rqst.type, handle);
   zx_status_t status = zx_channel_write(handle, 0, &rqst, sizeof(rqst), NULL, 0);
   ZX_ASSERT(status == ZX_OK);
   return true;
 }
 
 bool send_simple_request(zx_handle_t handle, request_t type) {
-  unittest_printf("sending request %d on handle %u\n", type, handle);
+  printf("sending request %d on handle %u\n", type, handle);
   zx_status_t status = zx_channel_write(handle, 0, &type, sizeof(type), NULL, 0);
   ZX_ASSERT(status == ZX_OK);
   return true;
 }
 
 bool send_response(zx_handle_t handle, const response_message_t& resp) {
-  unittest_printf("sending response %d on handle %u\n", resp.type, handle);
+  printf("sending response %d on handle %u\n", resp.type, handle);
   zx_status_t status = zx_channel_write(handle, 0, &resp, sizeof(resp), NULL, 0);
   ZX_ASSERT(status == ZX_OK);
   return true;
@@ -96,21 +97,21 @@ bool send_response(zx_handle_t handle, const response_message_t& resp) {
 
 bool send_response_with_handle(zx_handle_t handle, const response_message_t& resp,
                                zx_handle_t resp_handle) {
-  unittest_printf("sending response %d on handle %u\n", resp.type, handle);
+  printf("sending response %d on handle %u\n", resp.type, handle);
   zx_status_t status = zx_channel_write(handle, 0, &resp, sizeof(resp), &resp_handle, 1);
   ZX_ASSERT(status == ZX_OK);
   return true;
 }
 
 bool send_simple_response(zx_handle_t handle, response_t type) {
-  unittest_printf("sending response %d on handle %u\n", type, handle);
+  printf("sending response %d on handle %u\n", type, handle);
   zx_status_t status = zx_channel_write(handle, 0, &type, sizeof(type), NULL, 0);
   ZX_ASSERT(status == ZX_OK);
   return true;
 }
 
 bool recv_request(zx_handle_t handle, request_message_t* rqst) {
-  unittest_printf("waiting for request on handle %u\n", handle);
+  printf("waiting for request on handle %u\n", handle);
 
   ZX_ASSERT_MSG(tu_channel_wait_readable(handle), "peer closed while trying to read message");
 
@@ -123,7 +124,7 @@ bool recv_request(zx_handle_t handle, request_message_t* rqst) {
 }
 
 bool recv_response(zx_handle_t handle, response_message_t* resp) {
-  unittest_printf("waiting for response on handle %u\n", handle);
+  printf("waiting for response on handle %u\n", handle);
 
   ZX_ASSERT_MSG(tu_channel_wait_readable(handle), "peer closed while trying to read message");
 
@@ -146,7 +147,7 @@ bool recv_response(zx_handle_t handle, response_message_t* resp) {
 bool recv_simple_response(zx_handle_t handle, response_t expected_type) {
   response_message_t response;
   ZX_ASSERT(recv_response(handle, &response));
-  unittest_printf("received message %d\n", response.type);
+  printf("received message %d\n", response.type);
   ZX_ASSERT(response.type == expected_type);
 
   return true;
@@ -188,13 +189,10 @@ static int phdr_info_callback(dl_phdr_info* info, size_t size, void* argp) {
 bool get_vdso_exec_range(uintptr_t* start, uintptr_t* end) {
   BEGIN_HELPER;
 
-  char msg[128];
-
   uintptr_t prop_vdso_base;
   zx_status_t status = zx_object_get_property(zx_process_self(), ZX_PROP_PROCESS_VDSO_BASE_ADDRESS,
                                               &prop_vdso_base, sizeof(prop_vdso_base));
-  snprintf(msg, sizeof(msg), "zx_object_get_property failed: %d", status);
-  ASSERT_EQ(status, 0, msg);
+  ASSERT_EQ(status, 0, "zx_object_get_property failed: %d", status);
 
   dl_phdr_info info;
   info.dlpi_addr = prop_vdso_base;

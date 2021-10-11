@@ -5,13 +5,11 @@
 #include <zircon/hw/debug/x86.h>
 
 #include <test-utils/test-utils.h>
-#include <unittest/unittest.h>
+#include <zxtest/zxtest.h>
 
 namespace {
 
-bool Arm64HWBreakpointGettersTest() {
-  BEGIN_TEST;
-
+TEST(RegisterGetSetTests, Arm64HWBreakpointGettersTest) {
   EXPECT_EQ(ARM64_DBGBCR_E_GET(0), 0);
   EXPECT_EQ(ARM64_DBGBCR_PMC_GET(0), 0);
   EXPECT_EQ(ARM64_DBGBCR_BAS_GET(0), 0);
@@ -36,13 +34,9 @@ bool Arm64HWBreakpointGettersTest() {
   EXPECT_EQ(ARM64_DBGBCR_SSC_GET(dbgbcr), 3);
   EXPECT_EQ(ARM64_DBGBCR_LBN_GET(dbgbcr), 14);
   EXPECT_EQ(ARM64_DBGBCR_BT_GET(dbgbcr), 15);
-
-  END_TEST;
 }
 
-bool Arm64HWBreakpointSettersTest() {
-  BEGIN_TEST;
-
+TEST(RegisterGetSetTests, Arm64HWBreakpointSettersTest) {
   // Arm64.
   uint32_t dbgbcr = 0;
   uint32_t golden = 1u << 0 |    // E = 1
@@ -69,13 +63,9 @@ bool Arm64HWBreakpointSettersTest() {
   EXPECT_EQ(ARM64_DBGBCR_SSC_GET(dbgbcr), 3);
   EXPECT_EQ(ARM64_DBGBCR_LBN_GET(dbgbcr), 14);
   EXPECT_EQ(ARM64_DBGBCR_BT_GET(dbgbcr), 15);
-
-  END_TEST;
 }
 
-bool Arm64WatchpointGettersTest() {
-  BEGIN_TEST;
-
+TEST(RegisterGetSetTests, Arm64WatchpointGettersTest) {
   // Arm64.
   EXPECT_EQ(ARM64_DBGWCR_E_GET(0), 0);
   EXPECT_EQ(ARM64_DBGWCR_PAC_GET(0), 0);
@@ -106,13 +96,9 @@ bool Arm64WatchpointGettersTest() {
   EXPECT_EQ(ARM64_DBGWCR_LBN_GET(dbgwcr), 13);
   EXPECT_EQ(ARM64_DBGWCR_WT_GET(dbgwcr), 1);
   EXPECT_EQ(ARM64_DBGWCR_MSK_GET(dbgwcr), 27);
-
-  END_TEST;
 }
 
-bool Arm64WatchpointSettersTest() {
-  BEGIN_TEST;
-
+TEST(RegisterGetSetTests, Arm64WatchpointSettersTest) {
   uint32_t dbgwcr = 0;
   uint32_t golden = 1u << 0 |    // E = 1
                     3u << 1 |    // PAC = 3
@@ -144,13 +130,9 @@ bool Arm64WatchpointSettersTest() {
   EXPECT_EQ(ARM64_DBGWCR_LBN_GET(dbgwcr), 13);
   EXPECT_EQ(ARM64_DBGWCR_WT_GET(dbgwcr), 1);
   EXPECT_EQ(ARM64_DBGWCR_MSK_GET(dbgwcr), 27);
-
-  END_TEST;
 }
 
-bool x86DR6GetTest() {
-  BEGIN_TEST;
-
+TEST(RegisterGetSetTests, x86DR6GetTest) {
   EXPECT_EQ(X86_DBG_STATUS_B0_GET(0), 0);
   EXPECT_EQ(X86_DBG_STATUS_B1_GET(0), 0);
   EXPECT_EQ(X86_DBG_STATUS_B2_GET(0), 0);
@@ -171,13 +153,9 @@ bool x86DR6GetTest() {
   EXPECT_EQ(X86_DBG_STATUS_BD_GET(dr6), 1);
   EXPECT_EQ(X86_DBG_STATUS_BS_GET(dr6), 0);
   EXPECT_EQ(X86_DBG_STATUS_BT_GET(dr6), 1);
-
-  END_TEST;
 }
 
-bool x86DR6SetTest() {
-  BEGIN_TEST;
-
+TEST(RegisterGetSetTests, x86DR6SetTest) {
   uint64_t dr6 = 0;
   uint64_t golden = 1u << 0 |   // B0 = 1
                     1u << 1 |   // B1 = 1
@@ -203,13 +181,9 @@ bool x86DR6SetTest() {
   EXPECT_EQ(X86_DBG_STATUS_BD_GET(dr6), 1);
   EXPECT_EQ(X86_DBG_STATUS_BS_GET(dr6), 1);
   EXPECT_EQ(X86_DBG_STATUS_BT_GET(dr6), 1);
-
-  END_TEST;
 }
 
-bool x86DR7GetTest() {
-  BEGIN_TEST;
-
+TEST(RegisterGetSetTests, x86DR7GetTest) {
   EXPECT_EQ(X86_DBG_CONTROL_L0_GET(0), 0);
   EXPECT_EQ(X86_DBG_CONTROL_G0_GET(0), 0);
   EXPECT_EQ(X86_DBG_CONTROL_L1_GET(0), 0);
@@ -262,13 +236,9 @@ bool x86DR7GetTest() {
   EXPECT_EQ(X86_DBG_CONTROL_LEN2_GET(dr7), 3);
   EXPECT_EQ(X86_DBG_CONTROL_RW3_GET(dr7), 0);
   EXPECT_EQ(X86_DBG_CONTROL_LEN3_GET(dr7), 0);
-
-  END_TEST;
 }
 
-bool x86DR7SetTest() {
-  BEGIN_TEST;
-
+TEST(RegisterGetSetTests, x86DR7SetTest) {
   uint64_t dr7 = 0;
   uint64_t golden = 1u << 0 |   // L0 = 1
                     1u << 1 |   // G0 = 1
@@ -330,19 +300,6 @@ bool x86DR7SetTest() {
   EXPECT_EQ(X86_DBG_CONTROL_LEN2_GET(dr7), 3);
   EXPECT_EQ(X86_DBG_CONTROL_RW3_GET(dr7), 1);
   EXPECT_EQ(X86_DBG_CONTROL_LEN3_GET(dr7), 2);
-
-  END_TEST;
 }
 
 }  // namespace
-
-BEGIN_TEST_CASE(register_get_set_tests)
-RUN_TEST(Arm64HWBreakpointGettersTest);
-RUN_TEST(Arm64HWBreakpointSettersTest);
-RUN_TEST(Arm64WatchpointGettersTest);
-RUN_TEST(Arm64WatchpointSettersTest);
-RUN_TEST(x86DR6GetTest);
-RUN_TEST(x86DR6SetTest);
-RUN_TEST(x86DR7GetTest);
-RUN_TEST(x86DR7SetTest);
-END_TEST_CASE(register_get_set_tests)

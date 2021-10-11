@@ -42,7 +42,7 @@
 
 #include <pretty/hexdump.h>
 #include <test-utils/test-utils.h>
-#include <unittest/unittest.h>
+#include <zxtest/zxtest.h>
 
 #include "debugger.h"
 #include "inferior-control.h"
@@ -65,7 +65,7 @@ bool test_prep_and_segv() {
   void* segv_pc;
   // Note: Fuchsia is always PIC.
   __asm__("leaq .Lsegv_here(%%rip),%0" : "=r"(segv_pc));
-  unittest_printf("About to segv, pc %p\n", segv_pc);
+  printf("About to segv, pc %p\n", segv_pc);
 
   // Set r9 to point to test_data so we can easily access it
   // from the parent process.  Likewise set r10 to segv_pc
@@ -90,7 +90,7 @@ bool test_prep_and_segv() {
       "adrp %0, .Lsegv_here\n"
       "add %0, %0, :lo12:.Lsegv_here"
       : "=r"(segv_pc));
-  unittest_printf("About to segv, pc %p\n", segv_pc);
+  printf("About to segv, pc %p\n", segv_pc);
 
   // Set r9 to point to test_data so we can easily access it
   // from the parent process.  Likewise set r10 to segv_pc
@@ -112,13 +112,12 @@ bool test_prep_and_segv() {
   // Note: This is the inferior process, it's not running under the test harness.
   for (unsigned i = 0; i < sizeof(test_data); ++i) {
     if (test_data[i] != i + kTestDataAdjust) {
-      unittest_printf("TestPrepAndSegv: bad data on resumption, test_data[%u] = 0x%x\n", i,
-                      test_data[i]);
+      printf("TestPrepAndSegv: bad data on resumption, test_data[%u] = 0x%x\n", i, test_data[i]);
       return false;
     }
   }
 
-  unittest_printf("Inferior successfully resumed!\n");
+  printf("Inferior successfully resumed!\n");
 
   return true;
 }
@@ -172,7 +171,7 @@ bool test_memory_ops(zx_handle_t inferior, zx_handle_t thread) {
 }
 
 void fix_inferior_segv(zx_handle_t thread) {
-  unittest_printf("Fixing inferior segv\n");
+  printf("Fixing inferior segv\n");
 
   // The segv was because r8 == 0, change it to a usable value. See TestPrepAndSegv.
   zx_thread_state_general_regs_t regs;

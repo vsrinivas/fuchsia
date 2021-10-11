@@ -13,7 +13,7 @@
 #include <atomic>
 
 #include <test-utils/test-utils.h>
-#include <unittest/unittest.h>
+#include <zxtest/zxtest.h>
 
 #include "inferior-control.h"
 #include "inferior.h"
@@ -125,12 +125,12 @@ bool test_watchpoint_impl(zx_handle_t excp_channel) {
   ASSERT_EQ(status, ZX_OK);
   ASSERT_EQ(thread_info.state, ZX_THREAD_STATE_SUSPENDED);
 
-  unittest_printf("Watchpoint: Writing debug registers.\n");
+  printf("Watchpoint: Writing debug registers.\n");
 
   status = set_watchpoint(thread_handle);
   ASSERT_EQ(status, ZX_OK);
 
-  unittest_printf("Watchpoint: Resuming thread.\n");
+  printf("Watchpoint: Resuming thread.\n");
 
   zx_handle_close(suspend_token);
 
@@ -172,11 +172,9 @@ bool test_watchpoint_impl(zx_handle_t excp_channel) {
   END_HELPER;
 }
 
-bool WatchpointTest() {
-  BEGIN_TEST;
-
+TEST(WatchpointStartTests, WatchpointTest) {
   // TODO(fxbug.dev/35295): This test flakes.
-  END_TEST;
+  return;
 
   zx_handle_t excp_channel = ZX_HANDLE_INVALID;
   ASSERT_EQ(zx_task_create_exception_channel(zx_process_self(), 0, &excp_channel), ZX_OK);
@@ -184,10 +182,4 @@ bool WatchpointTest() {
   EXPECT_TRUE(test_watchpoint_impl(excp_channel));
 
   zx_handle_close(excp_channel);
-
-  END_TEST;
 }
-
-BEGIN_TEST_CASE(watchpoint_start_tests)
-RUN_TEST(WatchpointTest)
-END_TEST_CASE(watchpoint_start_tests)

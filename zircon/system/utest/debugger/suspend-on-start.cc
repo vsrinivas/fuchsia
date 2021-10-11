@@ -10,7 +10,7 @@
 #include <utility>
 
 #include <test-utils/test-utils.h>
-#include <unittest/unittest.h>
+#include <zxtest/zxtest.h>
 
 #include "debugger.h"
 #include "inferior-control.h"
@@ -45,17 +45,17 @@ bool suspend_on_start_test_handler(inferior_data_t* data, const zx_port_packet_t
 
   switch (info.type) {
     case ZX_EXCP_THREAD_STARTING:
-      unittest_printf("thread %lu starting\n", info.tid);
+      printf("thread %lu starting\n", info.tid);
       // We only want to resume the first thread.
       test_state->started_threads++;
       break;
     case ZX_EXCP_THREAD_EXITING:
-      unittest_printf("thread %lu exiting\n", info.tid);
+      printf("thread %lu exiting\n", info.tid);
       ASSERT_TRUE(handle_thread_exiting(data->inferior, &info, std::move(exception)));
       break;
     default:
-      unittest_printf("Unexpected exception %s (%u) on thread %lu\n",
-                      tu_exception_to_string(info.type), info.type, info.tid);
+      printf("Unexpected exception %s (%u) on thread %lu\n", tu_exception_to_string(info.type),
+             info.type, info.tid);
       break;
   }
 
@@ -64,13 +64,10 @@ bool suspend_on_start_test_handler(inferior_data_t* data, const zx_port_packet_t
 
 }  // namespace
 
-bool SuspendOnStartTest() {
-  BEGIN_TEST;
-
+TEST(SuspendOnStartTests, SuspendOnStartTest) {
   springboard_t* sb;
   zx_handle_t inferior, channel;
-  if (!setup_inferior(kTestSuspendOnStart, &sb, &inferior, &channel))
-    return false;
+  CHECK_HELPER(setup_inferior(kTestSuspendOnStart, &sb, &inferior, &channel));
 
   // Attach to the inferior now because we want to see thread starting
   // exceptions.
@@ -84,14 +81,12 @@ bool SuspendOnStartTest() {
       start_wait_inf_thread(inferior_data, suspend_on_start_test_handler, &test_state);
   EXPECT_NE(port, ZX_HANDLE_INVALID);
 
-  if (!start_inferior(sb))
-    return false;
+  CHECK_HELPER(start_inferior(sb));
 
   // The remaining testing happens at this point as threads start.
   // This testing is done in |suspend_on_start_test_handler()|.
 
-  if (!shutdown_inferior(channel, inferior))
-    return false;
+  CHECK_HELPER(shutdown_inferior(channel, inferior));
 
   // Stop the waiter thread before closing the port that it's waiting on.
   join_wait_inf_thread(wait_inf_thread);
@@ -101,10 +96,4 @@ bool SuspendOnStartTest() {
   zx_handle_close(port);
   zx_handle_close(channel);
   zx_handle_close(inferior);
-
-  END_TEST;
 }
-
-BEGIN_TEST_CASE(suspend_on_start_tests)
-RUN_TEST(SuspendOnStartTest);
-END_TEST_CASE(suspend_on_start_tests)
