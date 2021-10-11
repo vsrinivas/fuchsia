@@ -415,7 +415,7 @@ if (current_os == "fuchsia") {
 }
 
 group("num-derive") {
-  deps = [ ":num-derive-v0_2_4($host_toolchain)" ]
+  deps = [ ":num-derive-v0_3_3($host_toolchain)" ]
 }
 
 group("num-traits") {
@@ -5794,28 +5794,27 @@ rust_library("num-complex-v0_2_1") {
   ]
 }
 
-rust_proc_macro("num-derive-v0_2_4") {
+rust_proc_macro("num-derive-v0_3_3") {
   crate_name = "num_derive"
   crate_root = "//third_party/rust_crates/vendor/num-derive/src/lib.rs"
-  output_name = "num_derive-2401d71751fbb28b"
+  output_name = "num_derive-aba044aab91859c"
   configs -= [
     "//build/config/rust:edition_2018",
     "//build/config/rust:2018_idioms",
   ]
 
   deps = []
-  deps += [ ":proc-macro2-v0_4_27" ]
-  deps += [ ":quote-v0_6_11" ]
-  deps += [ ":syn-v0_15_26" ]
+  deps += [ ":proc-macro2-v1_0_28" ]
+  deps += [ ":quote-v1_0_7" ]
+  deps += [ ":syn-v1_0_74" ]
 
   rustenv = []
 
   rustflags = [
     "--cap-lints=allow",
-    "--edition=2015",
-    "-Cmetadata=2401d71751fbb28b",
-    "-Cextra-filename=-2401d71751fbb28b",
-    "--cfg=has_i128",
+    "--edition=2018",
+    "-Cmetadata=aba044aab91859c",
+    "-Cextra-filename=-aba044aab91859c",
   ]
 }
 

@@ -94,7 +94,7 @@ mockall = "0.9"
 nom = { version = "5.0.0", default-features = false, features = ["std", "regexp_macros"] }
 nom_locate = "2.0.0"
 nonzero_ext = "0.3.0"
-num-derive = "0.2.4"
+num-derive = "0.3"
 num-traits= "0.2.14"
 numtoa = "0.1.0"
 once_cell = { version = "1.2.0", features = ["parking_lot"] }
@@ -416,9 +416,6 @@ env_vars = ["OUT_DIR=../../../compat/mime_guess"]
 rustflags = ["--cfg=has_i128"]
 
 [gn.package.num-complex."0.2.1"]
-rustflags = ["--cfg=has_i128"]
-
-[gn.package.num-derive."0.2.4"]
 rustflags = ["--cfg=has_i128"]
 
 [gn.package.num-integer."0.1.39"]

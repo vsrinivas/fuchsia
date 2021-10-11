@@ -2132,13 +2132,13 @@ dependencies = [
 
 [[package]]
 name = "num-derive"
-version = "0.2.4"
+version = "0.3.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d9fe8fcafd1b86a37ce8a1cfa15ae504817e0c8c2e7ad42767371461ac1d316d"
+checksum = "876a53fff98e03a936a674b29568b0e605f06b29372c2489ff4de23f1949743d"
 dependencies = [
- "proc-macro2 0.4.27",
- "quote 0.6.11",
- "syn 0.15.26",
+ "proc-macro2 1.0.28",
+ "quote 1.0.7",
+ "syn 1.0.74",
 ]
 
 [[package]]
