@@ -70,6 +70,7 @@ fuchsia_test_package("virtual-keyboard-test") {
         dimensions = {
           device_type = "AEMU"
         }
+        tags = [ "flaky" ]
       },
     ]
   }
