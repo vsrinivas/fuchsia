@@ -16,54 +16,79 @@
 
 #include <algorithm>
 #include <map>
+#include <queue>
 #include <vector>
 
 class Device {
  public:
-  static zx_status_t Create(fuchsia::hardware::ethernet::DeviceSyncPtr eth_device,
+  static zx_status_t Create(async_dispatcher_t* dispatcher,
+                            fuchsia::hardware::ethernet::DeviceSyncPtr eth_device,
                             std::unique_ptr<Device>* out);
 
-  zx_status_t Start(async_dispatcher_t* dispatcher);
+  zx_status_t Start();
 
   fpromise::promise<std::vector<uint8_t>, zx_status_t> ReadPacket();
   fpromise::promise<void, zx_status_t> WritePacket(std::vector<uint8_t> packet);
 
  private:
-  Device(fuchsia::hardware::ethernet::DeviceSyncPtr eth_device, zx::fifo rx, zx::fifo tx,
-         zx::vmo vmo, uintptr_t io_addr)
-      : eth_device_(std::move(eth_device)),
-        rx_(std::move(rx)),
-        tx_(std::move(tx)),
+  Device(async_dispatcher_t* dispatcher, fuchsia::hardware::ethernet::DeviceSyncPtr eth_device,
+         zx::fifo rx, std::vector<eth_fifo_entry_t> rx_entries, zx::fifo tx,
+         std::vector<eth_fifo_entry_t> tx_entries, zx::vmo vmo, uint8_t* io_addr)
+      : dispatcher_(dispatcher),
+        eth_device_(std::move(eth_device)),
+        rx_(std::move(rx), std::move(rx_entries), FIFO::Direction::Outbound),
+        tx_(std::move(tx), std::move(tx_entries), FIFO::Direction::Inbound),
         vmo_(std::move(vmo)),
-        io_addr_(io_addr) {
-    rx_wait_.set_trigger(ZX_FIFO_READABLE | ZX_FIFO_PEER_CLOSED);
-    rx_wait_.set_object(rx_.get());
+        io_addr_(io_addr) {}
 
-    tx_wait_.set_trigger(ZX_FIFO_READABLE | ZX_FIFO_PEER_CLOSED);
-    tx_wait_.set_object(tx_.get());
-  }
+  class FIFO {
+   public:
+    enum class Direction {
+      Inbound,
+      Outbound,
+    };
+    FIFO(zx::fifo fifo, std::vector<eth_fifo_entry_t> entries, Direction direction)
+        : depth_(entries.size()), fifo_(std::move(fifo)) {
+      switch (direction) {
+        case Direction::Inbound:
+          inbound_entries_ = std::move(entries);
+          break;
+        case Direction::Outbound:
+          outbound_entries_ = std::move(entries);
+          break;
+      }
+      inbound_wait_.set_trigger(ZX_FIFO_READABLE | ZX_FIFO_PEER_CLOSED);
+      inbound_wait_.set_object(fifo_.get());
+      outbound_wait_.set_trigger(ZX_FIFO_WRITABLE | ZX_FIFO_PEER_CLOSED);
+      outbound_wait_.set_object(fifo_.get());
+    }
 
-  void OnReceive(async_dispatcher_t* dispatcher, async::WaitBase* wait, zx_status_t status,
-                 const zx_packet_signal_t* signal);
-  void OnTransmit(async_dispatcher_t* dispatcher, async::WaitBase* wait, zx_status_t status,
-                  const zx_packet_signal_t* signal);
+    void InboundHandler(async_dispatcher_t* dispatcher, async::WaitBase* wait, zx_status_t status,
+                        const zx_packet_signal_t* signal);
 
-  fpromise::promise<eth_fifo_entry_t, zx_status_t> GetRxEntry();
-  fpromise::promise<eth_fifo_entry_t, zx_status_t> GetTxEntry();
+    void OutboundHandler(async_dispatcher_t* dispatcher, async::WaitBase* wait, zx_status_t status,
+                         const zx_packet_signal_t* signal);
+
+    fpromise::promise<eth_fifo_entry_t, zx_status_t> GetEntry();
+
+    const size_t depth_;
+    zx::fifo fifo_;
+    std::mutex mutex_;
+    std::vector<eth_fifo_entry_t> inbound_entries_ __TA_GUARDED(mutex_);
+    std::vector<eth_fifo_entry_t> outbound_entries_ __TA_GUARDED(mutex_);
+    std::queue<fpromise::completer<eth_fifo_entry_t, zx_status_t>> completers_ __TA_GUARDED(mutex_);
+    async::WaitMethod<FIFO, &FIFO::InboundHandler> inbound_wait_{this};
+    async::WaitMethod<FIFO, &FIFO::OutboundHandler> outbound_wait_{this};
+  };
+
+  async_dispatcher_t* const dispatcher_;
 
   fuchsia::hardware::ethernet::DeviceSyncPtr eth_device_;
-  zx::fifo rx_;
-  zx::fifo tx_;
-  zx::vmo vmo_;
-  const uintptr_t io_addr_;
 
-  std::mutex mutex_;
-  std::vector<fpromise::completer<eth_fifo_entry_t, zx_status_t>> rx_completers_
-      __TA_GUARDED(mutex_);
-  std::vector<fpromise::completer<eth_fifo_entry_t, zx_status_t>> tx_completers_
-      __TA_GUARDED(mutex_);
-  async::WaitMethod<Device, &Device::OnReceive> rx_wait_{this};
-  async::WaitMethod<Device, &Device::OnTransmit> tx_wait_{this};
+  FIFO rx_, tx_;
+
+  zx::vmo vmo_;
+  uint8_t* const io_addr_;
 };
 
 class FakeState : public fuchsia::net::interfaces::testing::State_TestBase {

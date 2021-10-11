@@ -7,14 +7,12 @@
 #include <lib/async/default.h>
 #include <lib/fit/defer.h>
 #include <lib/syslog/cpp/macros.h>
-#include <netinet/icmp6.h>
 #include <netinet/if_ether.h>
 #include <netinet/ip.h>
 #include <netinet/udp.h>
 #include <zircon/device/ethernet.h>
 
-static constexpr size_t kMtu = 1500;
-static constexpr size_t kVmoSize = kMtu * 2;
+static constexpr uint32_t kMtu = 1500;
 
 static constexpr uint8_t kHostMacAddress[ETH_ALEN] = {0x02, 0x1a, 0x11, 0x00, 0x00, 0x00};
 
@@ -25,7 +23,8 @@ static constexpr uint16_t kProtocolIpv4 = 0x0800;
 static constexpr uint8_t kPacketTypeUdp = 17;
 static constexpr uint16_t kTestPort = 4242;
 
-zx_status_t Device::Create(fuchsia::hardware::ethernet::DeviceSyncPtr eth_device,
+zx_status_t Device::Create(async_dispatcher_t* dispatcher,
+                           fuchsia::hardware::ethernet::DeviceSyncPtr eth_device,
                            std::unique_ptr<Device>* out) {
   std::unique_ptr<fuchsia::hardware::ethernet::Fifos> fifos;
   zx_status_t status;
@@ -35,8 +34,35 @@ zx_status_t Device::Create(fuchsia::hardware::ethernet::DeviceSyncPtr eth_device
     return status;
   }
 
+  const uint32_t rx_storage = 2 * fifos->rx_depth;
+  const uint32_t tx_storage = 2 * fifos->tx_depth;
+
+  uint32_t offset = 0;
+
+  std::vector<eth_fifo_entry_t> rx_entries;
+  rx_entries.reserve(rx_storage);
+  for (size_t i = 0; i < rx_storage; ++i) {
+    rx_entries.emplace_back(eth_fifo_entry_t{
+        .offset = offset,
+        .length = kMtu,
+    });
+    offset += kMtu;
+  }
+
+  std::vector<eth_fifo_entry_t> tx_entries;
+  tx_entries.reserve(tx_storage);
+  for (size_t i = 0; i < tx_storage; ++i) {
+    tx_entries.emplace_back(eth_fifo_entry_t{
+        .offset = offset,
+        .length = kMtu,
+    });
+    offset += kMtu;
+  }
+
+  const size_t vmoSize = offset;
+
   zx::vmo vmo;
-  status = zx::vmo::create(kVmoSize, 0, &vmo);
+  status = zx::vmo::create(vmoSize, 0, &vmo);
   if (status != ZX_OK) {
     FX_LOGS(ERROR) << "Failed to create vmo: " << status;
     return status;
@@ -55,198 +81,197 @@ zx_status_t Device::Create(fuchsia::hardware::ethernet::DeviceSyncPtr eth_device
     return status;
   }
 
-  uintptr_t io_addr;
+  uint8_t* io_addr;
   status =
       zx::vmar::root_self()->map(ZX_VM_PERM_READ | ZX_VM_PERM_WRITE | ZX_VM_REQUIRE_NON_RESIZABLE,
-                                 0, vmo, 0, kVmoSize, &io_addr);
+                                 0, vmo, 0, vmoSize, reinterpret_cast<uintptr_t*>(&io_addr));
   if (status != ZX_OK) {
     FX_LOGS(ERROR) << "Failed to map vmo: " << status;
     return status;
   }
 
-  eth_fifo_entry_t entry;
-  entry.offset = 0;
-  entry.length = kMtu;
-  entry.flags = 0;
-  entry.cookie = 0;
-  status = fifos->rx.write(sizeof(eth_fifo_entry_t), &entry, 1, nullptr);
-  if (status != ZX_OK) {
-    FX_LOGS(ERROR) << "Failed to write to rx fifo: " << status;
-    return status;
-  }
+  *out = std::unique_ptr<Device>(new Device(dispatcher, std::move(eth_device), std::move(fifos->rx),
+                                            std::move(rx_entries), std::move(fifos->tx),
+                                            std::move(tx_entries), std::move(vmo), io_addr));
 
-  eth_device->Start(&status);
-  if (status != ZX_OK) {
-    FX_LOGS(ERROR) << "Failed to start ethernet device: " << status;
-    return status;
-  }
-
-  *out = std::unique_ptr<Device>(new Device(std::move(eth_device), std::move(fifos->rx),
-                                            std::move(fifos->tx), std::move(vmo), io_addr));
   return ZX_OK;
 }
 
-zx_status_t Device::Start(async_dispatcher_t* dispatcher) {
-  zx_status_t status = rx_wait_.Begin(dispatcher);
+zx_status_t Device::Start() {
+  zx_status_t status;
+  eth_device_->Start(&status);
   if (status != ZX_OK) {
     return status;
   }
-  return tx_wait_.Begin(dispatcher);
+  async::WaitBase* waits[] = {
+      &rx_.outbound_wait_,
+      &rx_.inbound_wait_,
+      &tx_.outbound_wait_,
+      &tx_.inbound_wait_,
+  };
+  for (auto* wait : waits) {
+    status = wait->Begin(dispatcher_);
+    if (status != ZX_OK) {
+      return status;
+    }
+  }
+  return ZX_OK;
 }
 
-void Device::OnReceive(async_dispatcher_t* dispatcher, async::WaitBase* wait, zx_status_t status,
-                       const zx_packet_signal_t* signal) {
-  if (status == ZX_ERR_CANCELED) {
-    return;
-  } else if (status != ZX_OK) {
-    FX_LOGS(ERROR) << "Device receive waiter failed " << status;
+void Device::FIFO::InboundHandler(async_dispatcher_t* dispatcher, async::WaitBase* wait,
+                                  zx_status_t status, const zx_packet_signal_t* signal) {
+  switch (status) {
+    case ZX_OK:
+      break;
+    case ZX_ERR_CANCELED:
+      return;
+    default:
+      FX_LOGS(ERROR) << "FIFO waiter failed " << status;
+      return;
+  }
+
+  if (signal->observed & ZX_SOCKET_PEER_CLOSED) {
+    std::lock_guard<std::mutex> lock(mutex_);
+    while (!completers_.empty()) {
+      completers_.front().complete_error(ZX_ERR_PEER_CLOSED);
+      completers_.pop();
+    }
     return;
   }
 
-  {
-    std::lock_guard<std::mutex> lock(mutex_);
-
-    if (signal->observed & ZX_SOCKET_PEER_CLOSED) {
-      while (!rx_completers_.empty()) {
-        rx_completers_.back().complete_error(ZX_ERR_PEER_CLOSED);
-        rx_completers_.pop_back();
+  eth_fifo_entry_t entries[depth_];
+  size_t actual;
+  status = fifo_.read(sizeof(eth_fifo_entry_t), entries, depth_, &actual);
+  switch (status) {
+    case ZX_OK: {
+      eth_fifo_entry_t* it = entries;
+      std::lock_guard<std::mutex> lock(mutex_);
+      while (!completers_.empty() && it != entries + actual) {
+        completers_.front().complete_ok(*it++);
+        completers_.pop();
       }
-      return;
+      std::copy(it, entries + actual, std::back_inserter(inbound_entries_));
+      break;
     }
-
-    while (!rx_completers_.empty()) {
-      eth_fifo_entry_t entry;
-      zx_status_t status = rx_.read(sizeof(eth_fifo_entry_t), &entry, 1, nullptr);
-      if (status == ZX_ERR_SHOULD_WAIT) {
-        break;
+    case ZX_ERR_SHOULD_WAIT:
+      break;
+    default:
+      std::lock_guard<std::mutex> lock(mutex_);
+      while (!completers_.empty()) {
+        completers_.front().complete_error(status);
+        completers_.pop();
       }
-
-      if (status != ZX_OK) {
-        rx_completers_.back().complete_error(status);
-        rx_completers_.pop_back();
-        break;
-        ;
-      }
-      rx_completers_.back().complete_ok(std::move(entry));
-      rx_completers_.pop_back();
-    }
   }
 
   status = wait->Begin(dispatcher);
   if (status != ZX_OK) {
-    FX_LOGS(ERROR) << "Failed to wait for device rx fifo " << status;
+    FX_LOGS(ERROR) << "Failed to wait for device fifo " << status;
   }
 }
 
-void Device::OnTransmit(async_dispatcher_t* dispatcher, async::WaitBase* wait, zx_status_t status,
-                        const zx_packet_signal_t* signal) {
-  if (status == ZX_ERR_CANCELED) {
-    return;
-  } else if (status != ZX_OK) {
-    FX_LOGS(ERROR) << "Device receive waiter failed " << status;
+void Device::FIFO::OutboundHandler(async_dispatcher_t* dispatcher, async::WaitBase* wait,
+                                   zx_status_t status, const zx_packet_signal_t* signal) {
+  switch (status) {
+    case ZX_OK:
+      break;
+    case ZX_ERR_CANCELED:
+      return;
+    default:
+      FX_LOGS(ERROR) << "FIFO waiter failed " << status;
+      return;
+  }
+
+  if (signal->observed & ZX_SOCKET_PEER_CLOSED) {
     return;
   }
 
-  {
-    std::lock_guard<std::mutex> lock(mutex_);
+  std::lock_guard<std::mutex> lock(mutex_);
+  if (outbound_entries_.empty()) {
+    return;
+  }
 
-    if (signal->observed & ZX_SOCKET_PEER_CLOSED) {
-      while (!tx_completers_.empty()) {
-        tx_completers_.back().complete_error(ZX_ERR_PEER_CLOSED);
-        tx_completers_.pop_back();
-      }
+  size_t actual;
+  status = fifo_.write(sizeof(eth_fifo_entry_t), outbound_entries_.data(), outbound_entries_.size(),
+                       &actual);
+  switch (status) {
+    case ZX_OK: {
+      outbound_entries_.erase(outbound_entries_.begin(), outbound_entries_.begin() + actual);
+      break;
+    }
+    case ZX_ERR_SHOULD_WAIT:
+      break;
+    default:
+      FX_LOGS(ERROR) << "FIFO write failed " << status;
       return;
-    }
+  }
 
-    while (!tx_completers_.empty()) {
-      eth_fifo_entry_t entry;
-      zx_status_t status = tx_.read(sizeof(eth_fifo_entry_t), &entry, 1, nullptr);
-      if (status == ZX_ERR_SHOULD_WAIT) {
-        break;
-      }
-
-      if (status != ZX_OK) {
-        tx_completers_.back().complete_error(status);
-        tx_completers_.pop_back();
-        break;
-        ;
-      }
-      tx_completers_.back().complete_ok(std::move(entry));
-      tx_completers_.pop_back();
-    }
+  if (outbound_entries_.empty()) {
+    return;
   }
 
   status = wait->Begin(dispatcher);
   if (status != ZX_OK) {
-    FX_LOGS(ERROR) << "Failed to wait for device tx fifo " << status;
+    FX_LOGS(ERROR) << "Failed to wait for device fifo " << status;
   }
 }
 
-fpromise::promise<eth_fifo_entry_t, zx_status_t> Device::GetRxEntry() {
-  fpromise::bridge<eth_fifo_entry_t, zx_status_t> bridge;
+fpromise::promise<eth_fifo_entry_t, zx_status_t> Device::FIFO::GetEntry() {
   std::lock_guard<std::mutex> lock(mutex_);
-  rx_completers_.push_back(std::move(bridge.completer));
-  return bridge.consumer.promise();
-}
-
-fpromise::promise<eth_fifo_entry_t, zx_status_t> Device::GetTxEntry() {
+  if (!inbound_entries_.empty()) {
+    eth_fifo_entry_t entry = inbound_entries_.back();
+    inbound_entries_.pop_back();
+    return fpromise::make_result_promise<eth_fifo_entry_t, zx_status_t>(fpromise::ok(entry));
+  }
   fpromise::bridge<eth_fifo_entry_t, zx_status_t> bridge;
-  std::lock_guard<std::mutex> lock(mutex_);
-  tx_completers_.push_back(std::move(bridge.completer));
+  completers_.push(std::move(bridge.completer));
   return bridge.consumer.promise();
 }
 
 fpromise::promise<std::vector<uint8_t>, zx_status_t> Device::ReadPacket() {
-  return GetRxEntry().and_then(
-      [this](const eth_fifo_entry_t& entry) -> fpromise::result<std::vector<uint8_t>, zx_status_t> {
+  return rx_.GetEntry().and_then(
+      [this](eth_fifo_entry_t& entry) -> fpromise::result<std::vector<uint8_t>, zx_status_t> {
         if (entry.flags != ETH_FIFO_RX_OK) {
           return fpromise::error(ZX_ERR_IO);
         }
         if (entry.length > kMtu) {
           return fpromise::error(ZX_ERR_INTERNAL);
         }
-        std::vector<uint8_t> packet(entry.length);
-        memcpy(packet.data(), reinterpret_cast<void*>(io_addr_ + entry.offset), packet.size());
-
-        memset(reinterpret_cast<void*>(io_addr_), 0, kMtu);
-        eth_fifo_entry_t new_entry;
-        new_entry.offset = 0;
-        new_entry.length = kMtu;
-        new_entry.flags = 0;
-        new_entry.cookie = 0;
-        zx_status_t status = rx_.write(sizeof(eth_fifo_entry_t), &new_entry, 1, nullptr);
-        if (status != ZX_OK) {
-          FX_LOGS(ERROR) << "Failed to write to rx fifo: " << status;
-          return fpromise::error(status);
+        std::vector<uint8_t> packet;
+        packet.reserve(entry.length);
+        std::copy_n(io_addr_ + entry.offset, entry.length, std::back_inserter(packet));
+        entry.length = kMtu;
+        std::lock_guard<std::mutex> lock(rx_.mutex_);
+        rx_.outbound_entries_.push_back(entry);
+        zx_status_t status = rx_.outbound_wait_.Begin(dispatcher_);
+        switch (status) {
+          case ZX_OK:
+          case ZX_ERR_ALREADY_EXISTS:
+            return fpromise::ok(std::move(packet));
+          default:
+            return fpromise::error(status);
         }
-
-        return fpromise::ok(std::move(packet));
       });
 }
 
 fpromise::promise<void, zx_status_t> Device::WritePacket(std::vector<uint8_t> packet) {
-  eth_fifo_entry_t entry = {
-      .offset = kMtu,
-      .length = static_cast<uint16_t>(packet.size()),
-  };
-
-  memcpy(reinterpret_cast<void*>(io_addr_ + entry.offset), packet.data(), packet.size());
-
-  size_t count;
-  zx_status_t status = tx_.write(sizeof(eth_fifo_entry_t), &entry, 1, &count);
-  if (status != ZX_OK) {
-    return fpromise::make_error_promise(status);
-  }
-  if (count != 1) {
+  if (packet.size() > kMtu) {
     return fpromise::make_error_promise(ZX_ERR_INTERNAL);
   }
-
-  return GetTxEntry().and_then(
-      [](const eth_fifo_entry_t& entry) -> fpromise::result<void, zx_status_t> {
-        if (entry.flags != ETH_FIFO_TX_OK) {
-          return fpromise::error(ZX_ERR_IO);
+  return tx_.GetEntry().and_then(
+      [this,
+       packet = std::move(packet)](eth_fifo_entry_t& entry) -> fpromise::result<void, zx_status_t> {
+        std::copy(packet.begin(), packet.end(), io_addr_ + entry.offset);
+        entry.length = static_cast<uint16_t>(packet.size());
+        std::lock_guard<std::mutex> lock(tx_.mutex_);
+        tx_.outbound_entries_.push_back(entry);
+        zx_status_t status = tx_.outbound_wait_.Begin(dispatcher_);
+        switch (status) {
+          case ZX_OK:
+          case ZX_ERR_ALREADY_EXISTS:
+            return fpromise::ok();
+          default:
+            return fpromise::error(status);
         }
-        return fpromise::ok();
       });
 }
 
@@ -283,13 +308,13 @@ void FakeNetstack::AddEthernetDevice(
   }
 
   std::unique_ptr<Device> device;
-  status = Device::Create(std::move(device_sync_ptr), &device);
+  status = Device::Create(loop_.dispatcher(), std::move(device_sync_ptr), &device);
   if (status != ZX_OK) {
     FX_LOGS(ERROR) << "Failed to create device " << status;
     return;
   }
 
-  status = device->Start(loop_.dispatcher());
+  status = device->Start();
   if (status != ZX_OK) {
     FX_LOGS(ERROR) << "Failed to start device " << status;
     return;
@@ -388,7 +413,7 @@ fpromise::promise<Device*> FakeNetstack::GetDevice(
   // If the device is already connected the the netstack then just return a pointer to it.
   auto itr = devices_.find(mac_addr);
   if (itr != devices_.end()) {
-    return fpromise::make_promise([device = &itr->second] { return fpromise::ok(device->get()); });
+    return fpromise::make_result_promise(fpromise::ok(itr->second.get()));
   }
 
   // Otherwise, add to the list of completers for this MAC address. The promise will complete when
