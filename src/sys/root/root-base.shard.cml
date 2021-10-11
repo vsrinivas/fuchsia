@@ -245,7 +245,6 @@
                     scheme: "fuchsia-pkg",
                 },
             ],
-            __stop_timeout_ms: 60000,
         },
     ],
 }
