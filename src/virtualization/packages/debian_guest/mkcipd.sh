@@ -37,9 +37,7 @@ declare -r TESTS_DIR="/tmp/linux-tests"
 rm -rf "${TESTS_DIR}"
 
 # Build Debian.
-${DEBIAN_GUEST_DIR}/build-image.sh \
-    -o ${IMAGE_DIR} \
-    ${ARCH}
+"${DEBIAN_GUEST_DIR}"/build-image.sh "${IMAGE_DIR}" "${ARCH}"
 
 # Build tests.
 ${DEBIAN_GUEST_DIR}/mktests.sh \

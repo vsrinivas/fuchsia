@@ -1,0 +1,100 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+# This file is a debos configuration file for generating a Debian image.
+#
+# The input is a golang text template that produces a YAML file.
+# See <https://github.com/go-debos/debos> for full docs.
+
+{{ $arch := or .arch "arm64" -}}
+{{ $output_image := or .output_image "output.img" -}}
+{{ $output_rootfs := or .output_rootfs "rootfs.tar.gz" -}}
+{{ $use_rootfs := or .use_rootfs "" -}}
+
+architecture: {{ $arch }}
+
+actions:
+  # If a rootfs tarball was given, we use that instead of boot-strapping
+  # from scratch.
+  {{ if not $use_rootfs -}}
+
+  # Install a base image from Debian "Bullseye".
+  - action: debootstrap
+    suite: "bullseye"
+    components:
+      - main
+    mirror: https://deb.debian.org/debian
+    variant: minbase
+
+  # Install additional packages.
+  - action: apt
+    recommends: false
+    packages:
+        # Packages required for basic system setup.
+        - adduser
+        - linux-image-{{ $arch }}
+        - login
+        - procps
+        - socat
+        - sudo
+        # Packages for network and automatic tests of network.
+        - iproute2
+        - iputils-ping
+        - isc-dhcp-server
+        - netbase
+        - netcat
+        - net-tools
+        - network-manager
+        - openssh-client
+        # Quality-of-life and debugging packages.
+        - pciutils
+        - strace
+
+  # Pack the file system
+  - action: pack
+    file: {{ $output_rootfs }}
+
+  {{ else }}
+
+  # Unpack an existing rootfs.
+  - action: unpack
+    file: {{ $use_rootfs }}
+
+  {{ end }}
+
+  # Run customization actions inside the image.
+  - action: run
+    chroot: true
+    script: config_rootfs.sh
+    label: config_rootfs
+
+  # Create a raw disk image for the output.
+  - action: image-partition
+    imagename: {{ $output_image }}
+    imagesize: 2147483648  # 2 GiB
+    partitiontype: gpt
+    mountpoints:
+      - mountpoint: /
+        partition: root
+    partitions:
+      - name: root
+        fs: ext4
+        start: 0%
+        end: 100%
+        flags: [ boot ]
+
+  # Copy the base image into the image.
+  - action: filesystem-deploy
+    setup-fstab: false
+    setup-kernel-cmdline: false
+
+  # Copy out the vmlinuz and initrd files.
+  - action: run
+    script: extract_vmlinuz_initrd.sh
+    label: extact_vmlinuz_initrd
+
+  # Create a qcow2 image file from the single data partition.
+  - action: run
+    script: extract_partition.sh
+    label: extract_partition

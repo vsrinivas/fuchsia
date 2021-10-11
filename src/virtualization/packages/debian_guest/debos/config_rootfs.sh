@@ -5,14 +5,14 @@
 # Use of this source code is governed by a MIT-style
 # license that can be found in the LICENSE file or at
 # https://opensource.org/licenses/MIT
+
+# This script is run within the chroot of the created Debian distribution.
+
 export DEBIAN_FRONTEND=noninteractive DEBCONF_NONINTERACTIVE_SEEN=true
 export LC_ALL=C LANGUAGE=C LANG=C
 
-# Force configure base-passwd before configuring all other packages. This resolves a conflict
-# between base-passwd and base-files that's not captured by dependencies due to both packages
-# being marked "essential".
-dpkg --configure --force-depends base-passwd
-dpkg --configure -a
+# Abort on error.
+set -e
 
 # Create default account.
 username="root"
@@ -52,7 +52,7 @@ mkdir -p /etc/systemd/system/serial-getty@.service.d
 cat >> /etc/systemd/system/serial-getty@.service.d/override.conf << EOF
 [Service]
 ExecStart=
-ExecStart=-/sbin/agetty --skip-login --login-options "-f ${username}" --noissue --noclear %I $TERM
+ExecStart=-/sbin/agetty --skip-login --login-options "-f ${username}" --noissue --noclear %I xterm
 EOF
 
 # Expose a simple telnet interface over vsock port 23.
@@ -105,4 +105,5 @@ cat >> /etc/fstab << EOF
 /dev/vdc /guest_interaction romfs ro 0 0
 EOF
 
+# Remove files cached by apt.
 apt clean
