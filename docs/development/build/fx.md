@@ -189,10 +189,7 @@ following bundles:
 ## Execute a build {#execute-a-build}
 
 For most use cases, only `fx build` is needed. `fx build` builds both Zircon
-and the Fuchsia portions of the build. The build process is optimized
-for fast incremental rebuilds, as such, repeating this command does the
-minimal work required after code has been changed, and no work if the source
-files are unchanged.
+and the Fuchsia portions of the build.
 
 Additionally to `fx build`, a few other build related commands provide
 more granular control:
@@ -202,6 +199,32 @@ more granular control:
 * `fx gen` repeat the `gn gen` process that `fx set` performed. Users making
   fine grained build argument changes (e.g. by editing `args.gn` directly) can
   run `fx gen` to reconfigure their build.
+
+### Enabling incremental rebuilds
+
+By default, `fx build` performs a full build, which includes building host tools,
+`//zircon`, and all other packages configured by `fx set`. This is necessary for
+some developer workflows, but it is excessive for many others. For example, if you
+are only iterating on your test, you shouldn't need to rebuild and republish all
+ephemeral (universe) packages.
+
+You can enable incremental rebuilds by adding `export FUCHSIA_DISABLED_incremental=0`
+to your `~/.bashrc` or equivalent. This change results in the following:
+
+* `pm` (and by consequence `fx serve`) watches for packages before they are
+  created. When a package is created or modified, `pm' auto-publishes that package,
+  so you can keep 'fx serve' running from an empty tree and it will publish
+  incrementally as you go.
+
+* `fx test` only builds the minimal targets required for running. For component tests,
+  that's the package, its GN dependencies and `//zircon`.
+
+* `fx serve` does not pave or flash; it is equivalent of `fx serve-updates`.
+
+* `fx pave` by default exits after paving a single time. Use `--keep-running` to
+  override.
+
+Note that the behavior of `fx build` remains unchanged.
 
 ### Building a specific target {#building-a-specific-target}
 
