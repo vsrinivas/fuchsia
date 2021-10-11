@@ -33,6 +33,9 @@ use {
 // Timeout duration for a ViewControllerProxy to close, in seconds.
 static VIEW_CONTROLLER_DISMISS_TIMEOUT: zx::Duration = zx::Duration::from_seconds(3_i64);
 
+// Annotations in the ElementManager namespace.
+static ELEMENT_MANAGER_NS: &'static str = "element_manager";
+
 /// Errors returned by calls to [`ElementManager`].
 #[derive(Debug, thiserror::Error, Clone, PartialEq)]
 pub enum ElementManagerError {
@@ -453,22 +456,37 @@ impl ElementManager {
         spec: felement::Spec,
         element_controller: Option<ServerEnd<felement::ControllerMarker>>,
     ) -> Result<(), felement::ProposeElementError> {
-        let mut child_name: String = thread_rng().sample_iter(&Alphanumeric).take(16).collect();
-        child_name.make_ascii_lowercase();
-
-        // Create AnnotationHolder and populate the initial annotations from the Spec.
-        let mut annotation_holder = AnnotationHolder::new();
-        if let Some(initial_annotations) = spec.annotations {
-            annotation_holder.update_annotations(initial_annotations, vec![]).map_err(|e| {
-                fx_log_err!("ProposeElement() failed to set initial annotations: {:?}", e);
-                felement::ProposeElementError::InvalidArgs
-            })?;
-        }
-
         let component_url = spec.component_url.ok_or_else(|| {
             fx_log_err!("ProposeElement() failed to launch element: spec.component_url is missing");
             felement::ProposeElementError::InvalidArgs
         })?;
+
+        let url_key = felement::AnnotationKey {
+            namespace: ELEMENT_MANAGER_NS.to_string(),
+            value: "url".to_string(),
+        };
+
+        let mut initial_annotations = match spec.annotations {
+            Some(annotations) => annotations,
+            None => vec![],
+        };
+
+        if !initial_annotations.iter().any(|annotation| annotation.key == url_key) {
+            initial_annotations.push(felement::Annotation {
+                key: url_key,
+                value: felement::AnnotationValue::Text(component_url.to_string()),
+            });
+        }
+
+        // Create AnnotationHolder and populate the initial annotations from the Spec.
+        let mut annotation_holder = AnnotationHolder::new();
+        annotation_holder.update_annotations(initial_annotations, vec![]).map_err(|e| {
+            fx_log_err!("ProposeElement() failed to set initial annotations: {:?}", e);
+            felement::ProposeElementError::InvalidArgs
+        })?;
+
+        let mut child_name: String = thread_rng().sample_iter(&Alphanumeric).take(16).collect();
+        child_name.make_ascii_lowercase();
 
         let mut element = self
             .launch_element(component_url, spec.additional_services, &child_name)
@@ -1206,18 +1224,25 @@ mod tests {
         })
         .unwrap();
 
-        let realm = spawn_stream_handler(move |realm_request| async move {
-            match realm_request {
-                fsys2::RealmRequest::CreateChild { collection: _, decl: _, args: _, responder } => {
-                    let _ = responder.send(&mut Ok(()));
+        let realm = spawn_stream_handler(move |realm_request| {
+            async move {
+                match realm_request {
+                    fsys2::RealmRequest::CreateChild {
+                        collection: _,
+                        decl: _,
+                        args: _,
+                        responder,
+                    } => {
+                        let _ = responder.send(&mut Ok(()));
+                    }
+                    fsys2::RealmRequest::OpenExposedDir { child: _, exposed_dir: _, responder } => {
+                        // By not binding a server implementation to the provided `exposed_dir`
+                        // field, a PEER_CLOSED signal will be observed. Thus, the library
+                        // can assume that the component did not launch.
+                        let _ = responder.send(&mut Ok(()));
+                    }
+                    _ => panic!("Realm handler received an unexpected request"),
                 }
-                fsys2::RealmRequest::OpenExposedDir { child: _, exposed_dir: _, responder } => {
-                    // By not binding a server implementation to the provided `exposed_dir`
-                    // field, a PEER_CLOSED signal will be observed. Thus, the library
-                    // can assume that the component did not launch.
-                    let _ = responder.send(&mut Ok(()));
-                }
-                _ => panic!("Realm handler received an unexpected request"),
             }
         })
         .unwrap();
