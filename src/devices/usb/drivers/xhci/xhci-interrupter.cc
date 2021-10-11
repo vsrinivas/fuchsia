@@ -95,6 +95,10 @@ zx_status_t Interrupter::IrqThread() {
       return;
     }
     irq_.ack();
+    // In legacy interrupt mode, ack pci interrupt.
+    if (pci_.is_valid()) {
+      pci_.AckInterrupt();
+    }
   });
   irq.Begin(async_loop_->dispatcher());
   if (!interrupter_) {

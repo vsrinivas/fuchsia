@@ -7,6 +7,7 @@
 
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async/cpp/executor.h>
+#include <lib/device-protocol/pci.h>
 #include <lib/zx/interrupt.h>
 
 #include <thread>
@@ -52,11 +53,14 @@ class Interrupter {
   // owned by this interrupter
   zx::interrupt& GetIrq() { return irq_; }
 
+  void set_pci(ddk::Pci pci) { pci_ = pci; }
+
   TRBPromise Timeout(zx::time deadline);
 
  private:
   std::atomic_bool active_ = false;
   uint16_t interrupter_;
+  ddk::Pci pci_;
   zx_status_t IrqThread();
   zx::interrupt irq_;
   std::thread thread_;
