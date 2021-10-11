@@ -470,6 +470,7 @@ checksum = "80094f509cf8b5ae86a4966a39b3ff66cd7e2a3e594accec3743ff3fabeab5b2"
 dependencies = [
  "num-integer",
  "num-traits",
+ "serde",
  "time",
 ]
 
@@ -1295,6 +1296,7 @@ dependencies = [
  "trust-dns-proto",
  "trust-dns-resolver",
  "ttf-parser",
+ "tuf",
  "tui",
  "unic-char-range",
  "unic-ucd-block",
@@ -3979,6 +3981,33 @@ name = "ttf-parser"
 version = "0.10.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "bbf752f9ee0c3d93a52ae37a2af72e98bb9230b4164737623b0bfc1d84db1eda"
+
+[[package]]
+name = "tuf"
+version = "0.3.0-beta1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "181bb9e3e403505cc998adaedd572e4e89fc9ff7a19fb2120bdec383a16a46d0"
+dependencies = [
+ "chrono",
+ "data-encoding",
+ "derp",
+ "futures-io",
+ "futures-util",
+ "http",
+ "hyper",
+ "itoa",
+ "log 0.4.11",
+ "parking_lot 0.9.0",
+ "percent-encoding 2.1.0",
+ "ring",
+ "serde",
+ "serde_derive",
+ "serde_json",
+ "tempfile",
+ "thiserror",
+ "untrusted",
+ "url 2.1.0",
+]
 
 [[package]]
 name = "tui"

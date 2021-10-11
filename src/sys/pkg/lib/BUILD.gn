@@ -27,7 +27,6 @@ group("lib") {
     "pkgfs",
     "repo",
     "system-image",
-    "tuf",
     "update-package",
     "version",
   ]

@@ -46,7 +46,6 @@ rustc_library("lib") {
     "//src/sys/pkg/lib/metrics:cobalt_sw_delivery_registry_rustlib",
     "//src/sys/pkg/lib/pkgfs",
     "//src/sys/pkg/lib/system-image",
-    "//src/sys/pkg/lib/tuf",
     "//third_party/cobalt/src/lib/client/rust:cobalt-client",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:argh",
@@ -61,6 +60,7 @@ rustc_library("lib") {
     "//third_party/rust_crates:serde",
     "//third_party/rust_crates:serde_json",
     "//third_party/rust_crates:thiserror",
+    "//third_party/rust_crates:tuf",
   ]
 
   test_deps = [

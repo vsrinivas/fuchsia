@@ -11,9 +11,9 @@ rustc_library("fuchsia-repo-builder") {
 
   deps = [
     "//src/lib/fuchsia-async",
-    "//src/sys/pkg/lib/tuf",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:lazy_static",
+    "//third_party/rust_crates:tuf",
   ]
 
   test_deps = [

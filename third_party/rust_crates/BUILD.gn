@@ -862,6 +862,10 @@ if (current_os == "fuchsia") {
   }
 }
 
+group("tuf") {
+  deps = [ ":tuf-v0_3_0-beta1" ]
+}
+
 group("tui") {
   deps = [ ":tui-v0_16_0" ]
 }
@@ -2127,6 +2131,7 @@ rust_library("chrono-v0_4_11") {
   deps = []
   deps += [ ":num-integer-v0_1_39" ]
   deps += [ ":num-traits-v0_2_14" ]
+  deps += [ ":serde-v1_0_116" ]
   deps += [ ":time-v0_1_42" ]
 
   rustenv = []
@@ -2138,6 +2143,7 @@ rust_library("chrono-v0_4_11") {
     "-Cextra-filename=-17ee6ee5e9d39f92",
     "--cfg=feature=\"clock\"",
     "--cfg=feature=\"default\"",
+    "--cfg=feature=\"serde\"",
     "--cfg=feature=\"std\"",
     "--cfg=feature=\"time\"",
   ]
@@ -10537,6 +10543,46 @@ rust_library("ttf-parser-v0_10_1") {
     "--cfg=feature=\"default\"",
     "--cfg=feature=\"std\"",
     "--cfg=feature=\"variable-fonts\"",
+  ]
+}
+
+rust_library("tuf-v0_3_0-beta1") {
+  crate_name = "tuf"
+  crate_root = "//third_party/rust_crates/vendor/tuf/./src/lib.rs"
+  output_name = "tuf-20f82a282298191e"
+  configs -= [
+    "//build/config/rust:edition_2018",
+    "//build/config/rust:2018_idioms",
+  ]
+
+  deps = []
+  deps += [ ":chrono-v0_4_11" ]
+  deps += [ ":data-encoding-v2_3_2" ]
+  deps += [ ":derp-v0_0_13" ]
+  deps += [ ":futures-io-v0_3_15" ]
+  deps += [ ":futures-util-v0_3_15" ]
+  deps += [ ":http-v0_2_4" ]
+  deps += [ ":hyper-v0_13_6" ]
+  deps += [ ":itoa-v0_4_3" ]
+  deps += [ ":log-v0_4_11" ]
+  deps += [ ":parking_lot-v0_9_0" ]
+  deps += [ ":percent-encoding-v2_1_0" ]
+  deps += [ ":ring-v0_16_12" ]
+  deps += [ ":serde-v1_0_116" ]
+  deps += [ ":serde_derive-v1_0_116($host_toolchain)" ]
+  deps += [ ":serde_json-v1_0_59" ]
+  deps += [ ":tempfile-v3_2_0" ]
+  deps += [ ":thiserror-v1_0_23" ]
+  deps += [ ":untrusted-v0_7_1" ]
+  deps += [ ":url-v2_1_0" ]
+
+  rustenv = []
+
+  rustflags = [
+    "--cap-lints=allow",
+    "--edition=2018",
+    "-Cmetadata=20f82a282298191e",
+    "-Cextra-filename=-20f82a282298191e",
   ]
 }
 

@@ -13,9 +13,9 @@ ffx_plugin("ffx_repository_list") {
     "//sdk/fidl/fuchsia.pkg:fuchsia.pkg-rustc",
     "//src/developer/ffx/lib/pkg",
     "//src/lib/fidl/rust/fidl",
-    "//src/sys/pkg/lib/tuf",
     "//third_party/rust_crates:async-trait",
     "//third_party/rust_crates:prettytable-rs",
+    "//third_party/rust_crates:tuf",
   ]
 
   args_sources = [ "src/args.rs" ]

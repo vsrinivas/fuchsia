@@ -38,7 +38,6 @@ rustc_library("pkg") {
     "//src/lib/http-sse:http_sse",
     "//src/sys/pkg/lib/far/rust:fuchsia-archive",
     "//src/sys/pkg/lib/fuchsia-pkg",
-    "//src/sys/pkg/lib/tuf",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:async-fs",
     "//third_party/rust_crates:async-net",
@@ -62,6 +61,7 @@ rustc_library("pkg") {
     "//third_party/rust_crates:tempfile",
     "//third_party/rust_crates:thiserror",
     "//third_party/rust_crates:tokio",
+    "//third_party/rust_crates:tuf",
     "//third_party/rust_crates:walkdir",
   ]
 

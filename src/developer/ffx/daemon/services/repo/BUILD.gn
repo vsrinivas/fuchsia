@@ -40,7 +40,6 @@ if (is_host) {
       "//src/lib/fuchsia-async",
       "//src/lib/zircon/rust:fuchsia-zircon-status",
       "//src/sys/lib/fidl-fuchsia-pkg-rewrite-ext",
-      "//src/sys/pkg/lib/tuf",
       "//third_party/rust_crates:anyhow",
       "//third_party/rust_crates:async-lock",
       "//third_party/rust_crates:async-trait",
@@ -48,6 +47,7 @@ if (is_host) {
       "//third_party/rust_crates:itertools",
       "//third_party/rust_crates:log",
       "//third_party/rust_crates:serde_json",
+      "//third_party/rust_crates:tuf",
     ]
     test_deps = [
       ":empty-repo",
