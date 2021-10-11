@@ -74,7 +74,7 @@ def main():
                                 -package='flutter/fuchsia-debug-symbols-arm64=git_revision:{engine_revision}' \
                                 fuchsia/prebuilts"
 
-    update_flutter = f"jiri edit -project='external/github.com/flutter/flutter={flutter_revision}' fuchsia/topaz/flutter"
+    update_flutter = f"jiri edit -project='external/github.com/flutter/flutter={flutter_revision}' fuchsia/third_party/flutter"
 
     os.system(update_prebuilts)
     os.system(update_flutter)
