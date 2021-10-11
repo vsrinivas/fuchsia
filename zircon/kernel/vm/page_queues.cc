@@ -418,10 +418,10 @@ void PageQueues::RotatePagerBackedQueues(AgeReason reason) {
 ktl::optional<PageQueues::VmoBacklink> PageQueues::ProcessLruQueue(uint64_t target_gen, bool peek) {
   // This assertion is <=, and not strictly <, since to evict a some queue X, the target must be
   // X+1. Hence to preserve kNumActiveQueues, we can allow target_gen to become equal to the first
-  // active queue, as this will process all the non-active queues.
+  // active queue, as this will process all the non-active queues. Although we might refresh our
+  // value for the mru_queue, since the mru_gen_ is monotonic increasing, if this assert passes once
+  // it should continue to be true.
   ASSERT(target_gen <= mru_gen_.load(ktl::memory_order_relaxed) - (kNumActiveQueues - 1));
-
-  const PageQueue mru_queue = mru_gen_to_queue();
 
   // Processing the lru queue requires holding the page_queues_ lock_. The only other actions that
   // require this lock are inserting or removing pages from the page queues. To ensure these actions
@@ -430,11 +430,19 @@ ktl::optional<PageQueues::VmoBacklink> PageQueues::ProcessLruQueue(uint64_t targ
   // inefficient in its operation we err on the side of doing less work per lock acquisition.
   static constexpr uint32_t kMaxQueueWork = 32;
 
-  for (uint64_t lru = lru_gen_.load(ktl::memory_order_relaxed); lru < target_gen;
-       lru = lru_gen_.load(ktl::memory_order_relaxed)) {
+  while (lru_gen_.load(ktl::memory_order_relaxed) < target_gen) {
     VM_KTRACE_DURATION(2, "ProcessLruQueue");
     Guard<CriticalMutex> guard{&lock_};
+    // Read the lru_gen_ again inside the lock to ensure that between reading it here, and
+    // potentially storing a new value at the end of this loop, we cannot race with another
+    // concurrent ProcessLruQueue.
+    uint64_t lru = lru_gen_.load(ktl::memory_order_relaxed);
+    if (lru >= target_gen) {
+      break;
+    }
     PageQueue queue = gen_to_queue(lru);
+    const PageQueue mru_queue = mru_gen_to_queue();
+
     uint32_t work_remain = kMaxQueueWork;
     while (!list_is_empty(&page_queues_[queue]) && work_remain > 0) {
       work_remain--;
