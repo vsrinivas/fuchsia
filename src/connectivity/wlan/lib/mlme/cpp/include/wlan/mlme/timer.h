@@ -5,10 +5,11 @@
 #ifndef SRC_CONNECTIVITY_WLAN_LIB_MLME_CPP_INCLUDE_WLAN_MLME_TIMER_H_
 #define SRC_CONNECTIVITY_WLAN_LIB_MLME_CPP_INCLUDE_WLAN_MLME_TIMER_H_
 
-#include <lib/timekeeper/system_clock.h>
 #include <lib/zx/time.h>
 #include <lib/zx/timer.h>
 #include <zircon/types.h>
+
+#include "src/lib/timekeeper/system_clock.h"
 
 namespace wlan {
 

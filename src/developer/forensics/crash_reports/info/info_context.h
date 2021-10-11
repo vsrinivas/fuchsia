@@ -8,12 +8,12 @@
 #include <lib/async/dispatcher.h>
 #include <lib/inspect/cpp/vmo/types.h>
 #include <lib/sys/cpp/service_directory.h>
-#include <lib/timekeeper/clock.h>
 
 #include <memory>
 
 #include "src/developer/forensics/crash_reports/info/inspect_manager.h"
 #include "src/developer/forensics/utils/cobalt/logger.h"
+#include "src/lib/timekeeper/clock.h"
 
 namespace forensics {
 namespace crash_reports {

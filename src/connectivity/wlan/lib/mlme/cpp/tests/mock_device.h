@@ -8,7 +8,6 @@
 #include <fuchsia/wlan/common/c/banjo.h>
 #include <fuchsia/wlan/internal/c/banjo.h>
 #include <fuchsia/wlan/minstrel/cpp/fidl.h>
-#include <lib/timekeeper/test_clock.h>
 
 #include <algorithm>
 #include <memory>
@@ -22,6 +21,7 @@
 #include <wlan/mlme/service.h>
 #include <wlan/mlme/timer.h>
 
+#include "src/lib/timekeeper/test_clock.h"
 #include "test_timer.h"
 #include "test_utils.h"
 

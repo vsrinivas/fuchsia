@@ -5,10 +5,11 @@
 #ifndef SRC_LIB_TIMEKEEPER_SYSTEM_CLOCK_H_
 #define SRC_LIB_TIMEKEEPER_SYSTEM_CLOCK_H_
 
-#include <lib/timekeeper/clock.h>
 #include <lib/zx/clock.h>
 #include <lib/zx/time.h>
 #include <zircon/utc.h>
+
+#include "src/lib/timekeeper/clock.h"
 
 namespace timekeeper {
 

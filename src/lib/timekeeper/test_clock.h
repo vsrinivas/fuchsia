@@ -5,7 +5,7 @@
 #ifndef SRC_LIB_TIMEKEEPER_TEST_CLOCK_H_
 #define SRC_LIB_TIMEKEEPER_TEST_CLOCK_H_
 
-#include <lib/timekeeper/clock.h>
+#include "src/lib/timekeeper/clock.h"
 
 namespace timekeeper {
 

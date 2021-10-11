@@ -2,14 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <lib/timekeeper/test_clock.h>
-
 #include <memory>
 
 #include <gtest/gtest.h>
 #include <wlan/mlme/timer.h>
 #include <wlan/mlme/timer_manager.h>
 
+#include "src/lib/timekeeper/test_clock.h"
 #include "test_timer.h"
 #include "test_utils.h"
 

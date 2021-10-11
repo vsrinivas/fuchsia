@@ -6,9 +6,10 @@
 #define SRC_LIB_TIMEKEEPER_MONOTONIC_TEST_CLOCK_BASE_H_
 
 #include <lib/fit/function.h>
-#include <lib/timekeeper/clock.h>
 
 #include <limits>
+
+#include "src/lib/timekeeper/clock.h"
 
 namespace timekeeper {
 

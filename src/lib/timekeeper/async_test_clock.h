@@ -6,7 +6,8 @@
 #define SRC_LIB_TIMEKEEPER_ASYNC_TEST_CLOCK_H_
 
 #include <lib/async/dispatcher.h>
-#include <lib/timekeeper/monotonic_test_clock_base.h>
+
+#include "src/lib/timekeeper/monotonic_test_clock_base.h"
 
 namespace timekeeper {
 

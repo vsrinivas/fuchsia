@@ -5,12 +5,14 @@
 #ifndef SRC_CONNECTIVITY_WLAN_LIB_MLME_CPP_TESTS_TEST_TIMER_H_
 #define SRC_CONNECTIVITY_WLAN_LIB_MLME_CPP_TESTS_TEST_TIMER_H_
 
-#include <lib/timekeeper/clock.h>
-#include <lib/timekeeper/test_clock.h>
 #include <lib/zx/time.h>
 #include <lib/zx/timer.h>
-#include <wlan/mlme/timer.h>
 #include <zircon/types.h>
+
+#include <wlan/mlme/timer.h>
+
+#include "src/lib/timekeeper/clock.h"
+#include "src/lib/timekeeper/test_clock.h"
 
 namespace wlan {
 

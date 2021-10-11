@@ -6,7 +6,6 @@
 #define SRC_DEVELOPER_FORENSICS_CRASH_REPORTS_INFO_INSPECT_MANAGER_H_
 
 #include <lib/inspect/cpp/vmo/types.h>
-#include <lib/timekeeper/clock.h>
 
 #include <cstdint>
 #include <map>
@@ -19,6 +18,7 @@
 #include "src/developer/forensics/utils/inspect_node_manager.h"
 #include "src/developer/forensics/utils/storage_size.h"
 #include "src/lib/fxl/macros.h"
+#include "src/lib/timekeeper/clock.h"
 
 namespace forensics {
 namespace crash_reports {

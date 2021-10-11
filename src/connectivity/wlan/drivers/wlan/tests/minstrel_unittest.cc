@@ -5,7 +5,6 @@
 #include "../minstrel.h"
 
 #include <fuchsia/hardware/wlan/info/c/banjo.h>
-#include <lib/timekeeper/test_clock.h>
 #include <test_timer.h>
 
 #include <iterator>
@@ -16,6 +15,7 @@
 #include <wlan/mlme/timer_manager.h>
 
 #include "../probe_sequence.h"
+#include "src/lib/timekeeper/test_clock.h"
 
 namespace wlan {
 namespace {
