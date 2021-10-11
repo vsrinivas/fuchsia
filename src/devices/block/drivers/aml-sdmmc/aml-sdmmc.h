@@ -100,7 +100,6 @@ class AmlSdmmc : public AmlSdmmcType, public ddk::SdmmcProtocol<AmlSdmmc, ddk::b
   template <typename SetParamCallback>
   TuneWindow TuneDelayParam(fbl::Span<const uint8_t> tuning_blk, uint32_t tuning_cmd_idx,
                             uint32_t param_max, SetParamCallback& set_param);
-  TuneWindow FindLargestDelayWindow(cpp20::span<const uint8_t> tuning_blk, uint32_t tuning_cmd_idx);
 
   void SetAdjDelay(uint32_t adj_delay);
   void SetDelayLines(uint32_t delay);
