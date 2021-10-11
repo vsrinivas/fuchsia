@@ -7,6 +7,8 @@
 #include <string>
 #include <vector>
 
+#include "acpi/status.h"
+
 namespace acpi {
 
 acpi::status<> AcpiImpl::WalkNamespace(ACPI_OBJECT_TYPE type, ACPI_HANDLE start_object,
@@ -117,4 +119,15 @@ acpi::status<std::string> AcpiImpl::GetPath(ACPI_HANDLE object) {
   return acpi::ok(std::move(ret));
 }
 
+acpi::status<> AcpiImpl::InstallNotifyHandler(ACPI_HANDLE object, uint32_t mode,
+                                              NotifyHandlerCallable callable, void* context) {
+  ACPI_STATUS status = AcpiInstallNotifyHandler(object, mode, callable, context);
+  return acpi::make_status(status);
+}
+
+acpi::status<> AcpiImpl::RemoveNotifyHandler(ACPI_HANDLE object, uint32_t mode,
+                                             NotifyHandlerCallable callable) {
+  ACPI_STATUS status = AcpiRemoveNotifyHandler(object, mode, callable);
+  return acpi::make_status(status);
+}
 }  // namespace acpi

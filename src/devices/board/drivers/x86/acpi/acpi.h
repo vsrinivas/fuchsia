@@ -65,6 +65,12 @@ class Acpi {
   // Get the absolute path to the given object.
   virtual acpi::status<std::string> GetPath(ACPI_HANDLE object) = 0;
 
+  using NotifyHandlerCallable = ACPI_NOTIFY_HANDLER;
+  virtual acpi::status<> InstallNotifyHandler(ACPI_HANDLE object, uint32_t mode,
+                                              NotifyHandlerCallable callable, void* context) = 0;
+  virtual acpi::status<> RemoveNotifyHandler(ACPI_HANDLE object, uint32_t mode,
+                                             NotifyHandlerCallable callable) = 0;
+
   acpi::status<uint8_t> CallBbn(ACPI_HANDLE obj);
   acpi::status<uint16_t> CallSeg(ACPI_HANDLE obj);
 };

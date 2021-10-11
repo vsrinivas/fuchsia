@@ -6,6 +6,7 @@
 #define SRC_DEVICES_BOARD_DRIVERS_X86_ACPI_MANAGER_H_
 
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/async/cpp/executor.h>
 #include <lib/zx/status.h>
 
 #include <string>
@@ -21,7 +22,10 @@ namespace acpi {
 class Manager {
  public:
   explicit Manager(Acpi* acpi, zx_device_t* acpi_root)
-      : acpi_(acpi), acpi_root_(acpi_root), loop_(&kAsyncLoopConfigNeverAttachToThread) {}
+      : acpi_(acpi),
+        acpi_root_(acpi_root),
+        loop_(&kAsyncLoopConfigNeverAttachToThread),
+        executor_(loop_.dispatcher()) {}
 
   // Walk the ACPI tree, keeping track of each device that's found.
   acpi::status<> DiscoverDevices();
@@ -37,6 +41,7 @@ class Manager {
   Acpi* acpi() { return acpi_; }
 
   async_dispatcher_t* fidl_dispatcher() { return loop_.dispatcher(); }
+  async::Executor& executor() { return executor_; }
 
  private:
   // Returns true if the device is not present, and it and its children should be ignored.
@@ -55,6 +60,7 @@ class Manager {
   fidl::Arena<> allocator_;
   bool published_pci_bus_ = false;
   async::Loop loop_;
+  async::Executor executor_;
 };
 
 }  // namespace acpi

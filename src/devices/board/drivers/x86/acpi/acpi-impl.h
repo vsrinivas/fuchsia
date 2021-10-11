@@ -37,6 +37,11 @@ class AcpiImpl : public Acpi {
   acpi::status<ACPI_HANDLE> GetParent(ACPI_HANDLE child) override;
   acpi::status<ACPI_HANDLE> GetHandle(ACPI_HANDLE parent, const char* pathname) override;
   acpi::status<std::string> GetPath(ACPI_HANDLE object) override;
+
+  acpi::status<> InstallNotifyHandler(ACPI_HANDLE object, uint32_t mode,
+                                      NotifyHandlerCallable callable, void* context) override;
+  acpi::status<> RemoveNotifyHandler(ACPI_HANDLE object, uint32_t mode,
+                                     NotifyHandlerCallable callable) override;
 };
 }  // namespace acpi
 

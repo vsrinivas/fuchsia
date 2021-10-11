@@ -8,6 +8,7 @@
 #include <fuchsia/hardware/acpi/cpp/banjo.h>
 #include <fuchsia/hardware/pciroot/cpp/banjo.h>
 #include <lib/ddk/binding.h>
+#include <lib/fpromise/promise.h>
 
 #include <utility>
 
@@ -15,6 +16,7 @@
 #include <ddktl/device.h>
 #include <fbl/mutex.h>
 
+#include "src/devices/board/drivers/x86/acpi/event.h"
 #include "src/devices/board/drivers/x86/acpi/manager.h"
 #include "src/devices/board/drivers/x86/acpi/resources.h"
 
@@ -70,9 +72,11 @@ struct DeviceIrqResource {
 };
 
 class Device;
-using DeviceType = ddk::Device<::acpi::Device, ddk::Initializable,
+using DeviceType = ddk::Device<::acpi::Device, ddk::Initializable, ddk::Unbindable,
                                ddk::Messageable<fuchsia_hardware_acpi::Device>::Mixin>;
-class Device : public DeviceType, public ddk::AcpiProtocol<Device, ddk::base_protocol> {
+class Device : public DeviceType,
+               public ddk::AcpiProtocol<Device, ddk::base_protocol>,
+               public fidl::WireAsyncEventHandler<fuchsia_hardware_acpi::NotifyHandler> {
  public:
   Device(acpi::Manager* manager, zx_device_t* parent, ACPI_HANDLE acpi_handle,
          zx_device_t* platform_bus)
@@ -106,6 +110,7 @@ class Device : public DeviceType, public ddk::AcpiProtocol<Device, ddk::base_pro
   // DDK mix-in impls.
   void DdkRelease() { delete this; }
   void DdkInit(ddk::InitTxn txn);
+  void DdkUnbind(ddk::UnbindTxn txn);
 
   ACPI_HANDLE acpi_handle() const { return acpi_handle_; }
   zx_device_t* platform_bus() const { return platform_bus_; }
@@ -124,8 +129,12 @@ class Device : public DeviceType, public ddk::AcpiProtocol<Device, ddk::base_pro
                     MapInterruptCompleter::Sync& completer) override;
   void GetPio(GetPioRequestView request, GetPioCompleter::Sync& completer) override;
   void GetMmio(GetMmioRequestView request, GetMmioCompleter::Sync& completer) override;
+  void InstallNotifyHandler(InstallNotifyHandlerRequestView request,
+                            InstallNotifyHandlerCompleter::Sync& completer) override;
 
   std::vector<pci_bdf_t>& pci_bdfs() { return pci_bdfs_; }
+
+  void RemoveNotifyHandler();
 
  private:
   acpi::Manager* manager_;
@@ -152,6 +161,15 @@ class Device : public DeviceType, public ddk::AcpiProtocol<Device, ddk::base_pro
   std::vector<pci_bdf_t> pci_bdfs_;
   zx_status_t ReportCurrentResources();
   ACPI_STATUS AddResource(ACPI_RESOURCE*);
+
+  // ACPI events.
+  std::optional<fidl::WireSharedClient<fuchsia_hardware_acpi::NotifyHandler>> notify_handler_;
+  std::atomic_size_t pending_notify_count_ = 0;
+  std::optional<fpromise::promise<void>> notify_teardown_finished_;
+  std::atomic_bool notify_handler_active_ = false;
+  uint32_t notify_handler_type_;
+  bool notify_count_warned_ = false;
+  static void DeviceObjectNotificationHandler(ACPI_HANDLE object, uint32_t value, void* context);
 };
 
 }  // namespace acpi

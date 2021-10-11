@@ -147,4 +147,21 @@ acpi::status<std::string> MockAcpi::GetPath(ACPI_HANDLE object) {
   Device* device = ToDevice(object);
   return acpi::ok(device->GetAbsolutePath());
 }
+
+acpi::status<> MockAcpi::InstallNotifyHandler(ACPI_HANDLE object, uint32_t mode,
+                                              NotifyHandlerCallable callable, void* context) {
+  // The root device has a special behaviour, where it should receive all notifications.
+  // We don't use this behaviour, so don't implement it.
+  ZX_ASSERT_MSG(object != ACPI_ROOT_OBJECT, "Root object notifications are unimplemented");
+  Device* device = ToDevice(object);
+
+  return device->InstallNotifyHandler(callable, context, mode);
+}
+
+acpi::status<> MockAcpi::RemoveNotifyHandler(ACPI_HANDLE object, uint32_t mode,
+                                             NotifyHandlerCallable callable) {
+  Device* device = ToDevice(object);
+  return device->RemoveNotifyHandler(callable, mode);
+}
+
 }  // namespace acpi::test

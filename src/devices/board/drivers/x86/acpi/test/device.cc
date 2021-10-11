@@ -130,4 +130,32 @@ acpi::status<acpi::UniquePtr<ACPI_OBJECT>> Device::EvaluateObject(
   }
   return acpi::error(AE_NOT_FOUND);
 }
+
+acpi::status<> Device::InstallNotifyHandler(Acpi::NotifyHandlerCallable callback, void* context,
+                                            uint32_t raw_mode) {
+  if (notify_handler_ != nullptr) {
+    return acpi::error(AE_ALREADY_EXISTS);
+  }
+
+  notify_handler_mode_ = fuchsia_hardware_acpi::wire::NotificationMode::TryFrom(raw_mode);
+  if (notify_handler_mode_ == std::nullopt) {
+    return acpi::error(AE_BAD_PARAMETER);
+  }
+  notify_handler_ = callback;
+  notify_handler_ctx_ = context;
+  return acpi::ok();
+}
+
+acpi::status<> Device::RemoveNotifyHandler(Acpi::NotifyHandlerCallable callback,
+                                           uint32_t raw_mode) {
+  if (raw_mode != uint32_t(notify_handler_mode_.value())) {
+    return acpi::error(AE_BAD_PARAMETER);
+  }
+  if (callback != notify_handler_) {
+    return acpi::error(AE_NOT_FOUND);
+  }
+  notify_handler_ = nullptr;
+  return acpi::ok();
+}
+
 }  // namespace acpi::test

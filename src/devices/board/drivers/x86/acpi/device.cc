@@ -8,11 +8,15 @@
 #include <lib/ddk/debug.h>
 #include <lib/ddk/metadata.h>
 #include <lib/fidl-async/cpp/bind.h>
+#include <lib/fpromise/promise.h>
 #include <zircon/syscalls/resource.h>
 #include <zircon/types.h>
 
+#include <atomic>
+
 #include <fbl/auto_lock.h>
 
+#include "src/devices/board/drivers/x86/acpi/event.h"
 #include "src/devices/board/drivers/x86/acpi/fidl.h"
 #include "src/devices/board/drivers/x86/acpi/manager.h"
 #include "src/devices/board/drivers/x86/include/errors.h"
@@ -20,6 +24,11 @@
 #include "src/devices/lib/iommu/iommu.h"
 
 namespace acpi {
+namespace {
+// Maximum number of pending Device Object Notifications before we stop sending them to a device.
+constexpr size_t kMaxPendingNotifications = 1000;
+}  // namespace
+
 const char* BusTypeToString(BusType t) {
   switch (t) {
     case kPci:
@@ -182,6 +191,18 @@ void Device::DdkInit(ddk::InitTxn txn) {
   }
 
   txn.Reply(result);
+}
+
+void Device::DdkUnbind(ddk::UnbindTxn txn) {
+  if (notify_handler_.has_value()) {
+    RemoveNotifyHandler();
+  }
+  std::optional<fpromise::promise<void>> teardown_finished;
+  notify_teardown_finished_.swap(teardown_finished);
+  auto promise = std::move(teardown_finished)
+                     .value_or(fpromise::make_ok_promise())
+                     .and_then([txn = std::move(txn)]() mutable { txn.Reply(); });
+  manager_->executor().schedule_task(std::move(promise));
 }
 
 void Device::GetMmio(GetMmioRequestView request, GetMmioCompleter::Sync& completer) {
@@ -388,5 +409,101 @@ void Device::GetPio(GetPioRequestView request, GetPioCompleter::Sync& completer)
   } else {
     completer.ReplySuccess(std::move(out_pio));
   }
+}
+
+void Device::InstallNotifyHandler(InstallNotifyHandlerRequestView request,
+                                  InstallNotifyHandlerCompleter::Sync& completer) {
+  // Try and take the notification handler.
+  // Will set is_active to true if is_active is already true.
+  bool is_active = false;
+  notify_handler_active_.compare_exchange_strong(is_active, true, std::memory_order_acq_rel,
+                                                 std::memory_order_acquire);
+  if (notify_handler_ && notify_handler_->is_valid() && is_active) {
+    completer.ReplyError(fuchsia_hardware_acpi::wire::Status::kAlreadyExists);
+    return;
+  }
+  notify_handler_type_ = uint32_t(request->mode);
+
+  if (!request->handler.is_valid()) {
+    completer.ReplyError(fuchsia_hardware_acpi::wire::Status::kBadParameter);
+    return;
+  }
+
+  if (request->mode.has_unknown_bits()) {
+    zxlogf(WARNING, "Unknown mode bits for notify handler ignored: 0x%x",
+           uint32_t(request->mode.unknown_bits()));
+  }
+
+  uint32_t mode(request->mode & fuchsia_hardware_acpi::wire::NotificationMode::kMask);
+
+  auto async_completer = completer.ToAsync();
+  std::optional<fpromise::promise<void>> teardown_finished;
+  notify_teardown_finished_.swap(teardown_finished);
+  auto promise =
+      std::move(teardown_finished)
+          .value_or(fpromise::make_ok_promise())
+          .and_then([this, mode, async_completer = std::move(async_completer),
+                     handler = std::move(request->handler)]() mutable {
+            pending_notify_count_.store(0, std::memory_order_release);
+            // Reset the "teardown finished" promise.
+            fpromise::bridge<void> bridge;
+            notify_teardown_finished_ = bridge.consumer.promise();
+            auto notify_event_handler =
+                std::make_unique<NotifyEventHandler>(this, std::move(bridge.completer));
+
+            fidl::WireSharedClient<fuchsia_hardware_acpi::NotifyHandler> client(
+                std::move(handler), manager_->fidl_dispatcher(), std::move(notify_event_handler));
+            notify_handler_ = std::move(client);
+            auto status = acpi_->InstallNotifyHandler(
+                acpi_handle_, mode, Device::DeviceObjectNotificationHandler, this);
+            if (status.is_error()) {
+              notify_handler_.reset();
+              async_completer.ReplyError(fuchsia_hardware_acpi::wire::Status(status.error_value()));
+              return;
+            }
+
+            async_completer.ReplySuccess();
+          })
+          .box();
+  manager_->executor().schedule_task(std::move(promise));
+}
+
+void Device::DeviceObjectNotificationHandler(ACPI_HANDLE object, uint32_t value, void* context) {
+  Device* device = static_cast<Device*>(context);
+  if (device->pending_notify_count_.load(std::memory_order_acquire) >= kMaxPendingNotifications) {
+    if (!device->notify_count_warned_) {
+      zxlogf(ERROR, "%s: too many un-handled pending notifications. Will drop notifications.",
+             device->name());
+      device->notify_count_warned_ = true;
+    }
+    return;
+  }
+
+  device->pending_notify_count_.fetch_add(1, std::memory_order_acq_rel);
+  if (device->notify_handler_ && device->notify_handler_->is_valid()) {
+    device->notify_handler_.value()->Handle(value, [device](auto* response) {
+      device->pending_notify_count_.fetch_sub(1, std::memory_order_acq_rel);
+    });
+  }
+}
+
+void Device::RemoveNotifyHandler() {
+  // Try and mark the notify handler as inactive. If this fails, then someone else marked it as
+  // inactive.
+  // If this succeeds, then we're going to tear down the notify handler.
+  bool is_active = true;
+  notify_handler_active_.compare_exchange_strong(is_active, false, std::memory_order_acq_rel,
+                                                 std::memory_order_acquire);
+  if (!is_active) {
+    return;
+  }
+  auto status = acpi_->RemoveNotifyHandler(acpi_handle_, notify_handler_type_,
+                                           Device::DeviceObjectNotificationHandler);
+  if (status.is_error()) {
+    zxlogf(ERROR, "Failed to remove notification handler from '%s': %d", name(),
+           status.error_value());
+    return;
+  }
+  notify_handler_->AsyncTeardown();
 }
 }  // namespace acpi

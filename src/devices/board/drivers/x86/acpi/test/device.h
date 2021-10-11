@@ -13,6 +13,8 @@
 
 #include <acpica/acpi.h>
 
+#include "fidl/fuchsia.hardware.acpi/cpp/wire_types.h"
+#include "src/devices/board/drivers/x86/acpi/acpi.h"
 #include "src/devices/board/drivers/x86/acpi/status.h"
 #include "src/devices/board/drivers/x86/acpi/util.h"
 #include "src/devices/lib/acpi/util.h"
@@ -58,6 +60,25 @@ class Device {
   acpi::status<acpi::UniquePtr<ACPI_OBJECT>> EvaluateObject(
       std::string pathname, std::optional<std::vector<ACPI_OBJECT>> args);
 
+  void Notify(uint32_t value) {
+    fuchsia_hardware_acpi::wire::NotificationMode mode =
+        fuchsia_hardware_acpi::wire::NotificationMode::kDevice;
+    if (value < 0x80) {
+      mode = fuchsia_hardware_acpi::wire::NotificationMode::kSystem;
+    }
+    if (notify_handler_mode_.value() & mode) {
+      notify_handler_(this, value, notify_handler_ctx_);
+    }
+  }
+
+  // Device Object Notifications. Note that we only support a single handler per device.
+  acpi::status<> InstallNotifyHandler(Acpi::NotifyHandlerCallable callback, void* context,
+                                      uint32_t raw_mode);
+
+  acpi::status<> RemoveNotifyHandler(Acpi::NotifyHandlerCallable callback, uint32_t raw_mode);
+
+  bool HasNotifyHandler() { return notify_handler_ != nullptr; }
+
   // ACPI names are all four characters long.
   // In practice this means that they're represented as uint32_t where each byte
   // corresponds to a letter. Names less than four characters long are padded with '_'.
@@ -95,6 +116,10 @@ class Device {
 
   // _DSD, map of uuid to values.
   std::unordered_map<acpi::Uuid, std::vector<ACPI_OBJECT>> dsd_;
+
+  Acpi::NotifyHandlerCallable notify_handler_ = nullptr;
+  void* notify_handler_ctx_ = nullptr;
+  std::optional<fuchsia_hardware_acpi::wire::NotificationMode> notify_handler_mode_;
 };
 
 }  // namespace acpi::test

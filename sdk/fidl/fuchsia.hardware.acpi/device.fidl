@@ -324,4 +324,14 @@ protocol Device {
     }) -> (resource struct {
         result EncodedObject;
     }) error Status;
+
+    /// Install a Device Object Notification handler for the given notification
+    /// type. A device can only have a single notification handler at a time.
+    /// Returns:
+    /// BAD_PARAMETER - if "mode" is invalid.
+    /// ALREADY_EXISTS - if a handler is already installed.
+    InstallNotifyHandler(resource struct {
+        mode NotificationMode;
+        handler client_end:NotifyHandler;
+    }) -> (struct {}) error Status;
 };
