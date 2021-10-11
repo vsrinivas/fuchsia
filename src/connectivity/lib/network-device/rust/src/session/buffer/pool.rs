@@ -529,11 +529,9 @@ impl<T> DerefMut for Chained<T> {
 
 impl<T> Drop for Chained<T> {
     fn drop(&mut self) {
-        for elem in &mut self.storage[..self.len.into()] {
-            // Safety: `self.storage[..self.len]` is already initialized.
-            unsafe {
-                std::ptr::drop_in_place(elem.as_mut_ptr());
-            }
+        // Safety: `self.storage[..self.len]` is already initialized.
+        unsafe {
+            std::ptr::drop_in_place(&mut self.storage[..self.len.into()]);
         }
     }
 }
