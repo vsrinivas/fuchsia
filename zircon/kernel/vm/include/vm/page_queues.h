@@ -48,6 +48,14 @@ class PageQueues {
 
   static_assert(kNumPagerBacked > kNumActiveQueues, "Needs to be at least one non-active queue");
 
+  // In addition to active and inactive, we want to consider some of the queues as 'oldest' to
+  // provide an additional way to limit eviction. Presently the processing of the LRU queue to make
+  // room for aging is not integrated with the Evictor, and so will not trigger eviction, therefore
+  // to have a non-zero number of pages ever appear in an oldest queue for eviction the last two
+  // queues are considered the oldest.
+  static constexpr size_t kNumOldestQueues = 2;
+  static_assert(kNumOldestQueues + kNumActiveQueues <= kNumPagerBacked);
+
   static constexpr zx_time_t kDefaultMinMruRotateTime = ZX_SEC(10);
   static constexpr zx_time_t kDefaultMaxMruRotateTime = ZX_SEC(10);
 

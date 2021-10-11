@@ -312,7 +312,9 @@ uint64_t Evictor::EvictPagerBacked(uint64_t target_pages, EvictionLevel eviction
 
   // Avoid evicting from the newest queue to prevent thrashing.
   const size_t lowest_evict_queue =
-      eviction_level == EvictionLevel::IncludeNewest ? 1 : PageQueues::kNumPagerBacked - 1;
+      eviction_level == EvictionLevel::IncludeNewest
+          ? PageQueues::kNumActiveQueues
+          : PageQueues::kNumPagerBacked - PageQueues::kNumOldestQueues;
 
   // TODO(fxbug.dev/85056): Always follow the hint for now, i.e. protect hinted pages from eviction
   // even in the face of OOM.

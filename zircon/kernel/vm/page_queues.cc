@@ -715,16 +715,18 @@ PageQueues::PagerCounts PageQueues::GetPagerQueueCounts() const {
   // causing us to either double count or miss count that page. As these counts are not load bearing
   // we accept the very small chance of potentially being off a few pages.
   Guard<CriticalMutex> guard{&lock_};
-  uint32_t lru = lru_gen_.load(ktl::memory_order_relaxed);
-  uint32_t mru = mru_gen_.load(ktl::memory_order_relaxed);
+  uint64_t lru = lru_gen_.load(ktl::memory_order_relaxed);
+  uint64_t mru = mru_gen_.load(ktl::memory_order_relaxed);
 
   counts.total = 0;
-  for (uint32_t index = lru; index <= mru; index++) {
+  for (uint64_t index = lru; index <= mru; index++) {
     uint64_t count = page_queue_counts_[gen_to_queue(index)].load(ktl::memory_order_relaxed);
-    if (index == mru) {
-      counts.newest = count;
-    } else if (index == lru) {
-      counts.oldest = count;
+    // Distance to the MRU, and not the LRU, determines the bucket the count goes into. This is to
+    // match the logic in PeekPagerBacked, which is also based on distance to MRU.
+    if (index > mru - kNumActiveQueues) {
+      counts.newest += count;
+    } else if (index <= mru - (kNumPagerBacked - kNumOldestQueues)) {
+      counts.oldest += count;
     }
     counts.total += count;
   }
