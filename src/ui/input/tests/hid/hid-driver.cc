@@ -6,7 +6,6 @@
 #include <fidl/fuchsia.hardware.input/cpp/wire.h>
 #include <fuchsia/hardware/hidctl/c/fidl.h>
 #include <lib/ddk/platform-defs.h>
-#include <lib/driver-integration-test/fixture.h>
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
 #include <stdio.h>
@@ -16,7 +15,7 @@
 #include <hid/boot.h>
 #include <zxtest/zxtest.h>
 
-using driver_integration_test::IsolatedDevmgr;
+#include "src/devices/lib/device-watcher/cpp/device-watcher.h"
 
 namespace {
 
@@ -24,30 +23,13 @@ class HidDriverTest : public zxtest::Test {
   void SetUp() override;
 
  protected:
-  IsolatedDevmgr devmgr_;
   fbl::unique_fd hidctl_fd_;
   zx_handle_t hidctl_fdio_channel_;
 };
 
-const board_test::DeviceEntry kDeviceEntry = []() {
-  board_test::DeviceEntry entry = {};
-  strcpy(entry.name, "hidctl");
-  entry.vid = PDEV_VID_TEST;
-  entry.pid = PDEV_PID_HIDCTL_TEST;
-  return entry;
-}();
-
 void HidDriverTest::SetUp() {
-  // Create the isolated dev manager
-  IsolatedDevmgr::Args args;
-  args.device_list.push_back(kDeviceEntry);
-
-  zx_status_t status = IsolatedDevmgr::Create(&args, &devmgr_);
-  ASSERT_OK(status);
-
   // Wait for HidCtl to be created
-  status = devmgr_integration_test::RecursiveWaitForFile(
-      devmgr_.devfs_root(), "sys/platform/11:04:0/hidctl", &hidctl_fd_);
+  zx_status_t status = device_watcher::RecursiveWaitForFile("/dev/sys/test/hidctl", &hidctl_fd_);
   ASSERT_OK(status);
 
   // Get a FIDL channel to HidCtl
@@ -98,8 +80,7 @@ TEST_F(HidDriverTest, BootMouseTest) {
 
   // Open the corresponding /dev/class/input/ device
   fbl::unique_fd fd_device;
-  status = devmgr_integration_test::RecursiveWaitForFile(devmgr_.devfs_root(), "class/input/000",
-                                                         &fd_device);
+  status = device_watcher::RecursiveWaitForFile("/dev/class/input/000", &fd_device);
   ASSERT_OK(status);
 
   // Send a single mouse report
