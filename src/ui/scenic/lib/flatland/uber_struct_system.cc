@@ -6,6 +6,10 @@
 
 #include <lib/syslog/cpp/macros.h>
 
+#include <stack>
+
+#include "src/ui/scenic/lib/utils/helpers.h"
+
 namespace flatland {
 
 // |UberStructSystem| implementations.
@@ -141,3 +145,106 @@ size_t UberStructSystem::UberStructQueue::GetPendingSize() {
 }
 
 }  // namespace flatland
+
+namespace {
+
+struct Indenter {
+  size_t depth;
+};
+
+}  // namespace
+
+namespace std {
+
+ostream& operator<<(ostream& out, const Indenter& indenter) {
+  size_t depth = indenter.depth;
+  while (depth-- > 0) {
+    out << " ";
+  }
+  return out;
+}
+
+inline ostream& operator<<(ostream& out, const fuchsia::math::RectF& rect) {
+  out << "(" << rect.x << "," << rect.y << "),(" << rect.width << "," << rect.height << ")";
+  return out;
+}
+
+inline ostream& operator<<(ostream& out, const fuchsia::math::Rect& rect) {
+  out << "(" << rect.x << "," << rect.y << "),(" << rect.width << "," << rect.height << ")";
+  return out;
+}
+
+inline ostream& operator<<(ostream& out, const fuchsia::ui::views::ViewRef& ref) {
+  zx_koid_t koid = utils::ExtractKoid(ref);
+  if (koid == ZX_KOID_INVALID) {
+    out << "ViewRef(INVALID)";
+  } else {
+    out << "ViewRef(" << koid << ")";
+  }
+  return out;
+}
+
+ostream& operator<<(ostream& out, const flatland::UberStruct& us) {
+  if (us.view_ref) {
+    out << *us.view_ref << std::endl;
+  }
+
+  auto& topology = us.local_topology;
+
+  size_t index = 0;
+  ::std::stack<uint64_t> children_remaining;
+  children_remaining.push(1);  // The root of the topology.
+
+  while (index < topology.size()) {
+    auto& handle = topology[index].handle;
+
+    out << Indenter{children_remaining.size()} << handle;
+
+    {
+      auto it = us.images.find(handle);
+      if (it != us.images.end()) {
+        out << "  image(" << it->second.width << "x" << it->second.height << ")";
+      }
+    }
+
+    {
+      auto it = us.local_image_sample_regions.find(handle);
+      if (it != us.local_image_sample_regions.end()) {
+        out << "  sample_region=" << it->second;
+      }
+    }
+
+    {
+      auto it = us.local_clip_regions.find(handle);
+      if (it != us.local_clip_regions.end()) {
+        out << "  clip_region=" << it->second;
+      }
+    }
+
+    {
+      auto it = us.local_opacity_values.find(handle);
+      if (it != us.local_opacity_values.end()) {
+        out << "  opacity=" << it->second;
+      }
+    }
+
+    out << std::endl;
+
+    FX_DCHECK(!children_remaining.empty() && children_remaining.top() > 0);
+    --children_remaining.top();
+
+    if (topology[index].child_count > 0) {
+      children_remaining.push(topology[index].child_count);
+    }
+
+    while (!children_remaining.empty() && children_remaining.top() == 0) {
+      children_remaining.pop();
+    }
+
+    ++index;
+  }
+
+  return out;
+}
+
+}  // namespace std

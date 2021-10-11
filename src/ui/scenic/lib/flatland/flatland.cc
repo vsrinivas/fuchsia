@@ -19,6 +19,7 @@
 #include "src/lib/fsl/handles/object_info.h"
 #include "src/ui/scenic/lib/gfx/util/validate_eventpair.h"
 #include "src/ui/scenic/lib/utils/helpers.h"
+#include "src/ui/scenic/lib/utils/logging.h"
 
 #include <glm/gtc/constants.hpp>
 #include <glm/gtc/matrix_access.hpp>
@@ -114,6 +115,8 @@ Flatland::Flatland(
       [this](async_dispatcher_t* dispatcher, async::WaitOnce* wait, zx_status_t status,
              const zx_packet_signal_t* signal) { destroy_instance_function_(); });
   FX_DCHECK(status == ZX_OK);
+
+  FLATLAND_VERBOSE_LOG << "Flatland new with ID: " << session_id_;
 }
 
 Flatland::~Flatland() {
@@ -124,6 +127,10 @@ void Flatland::Present(fuchsia::ui::composition::PresentArgs args) {
   TRACE_DURATION("gfx", "Flatland::Present");
   TRACE_FLOW_END("gfx", "Flatland::Present", present_count_);
   ++present_count_;
+
+  FLATLAND_VERBOSE_LOG << "Flatland::Present() #" << present_count_ << " for " << local_root_ << " "
+                       << this;
+
   // Close any clients that had invalid operations on link protocols.
   if (link_protocol_error_) {
     CloseConnection(FlatlandError::BAD_HANGING_GET);
@@ -329,6 +336,8 @@ void Flatland::CreateView2(ViewCreationToken token,
           impl->ReportLinkProtocolError(error_log);
       });
 
+  FLATLAND_VERBOSE_LOG << "Flatland::CreateView() link-origin: " << link_origin;
+
   // This portion of the method is feed-forward. The parent-child relationship between
   // |link_origin| and |local_root_| establishes the Transform hierarchy between the two instances,
   // but the operation will not be visible until the next Present() call includes that topology.
@@ -461,6 +470,9 @@ void Flatland::CreateTransform(TransformId transform_id) {
   }
 
   TransformHandle handle = transform_graph_.CreateTransform();
+  FLATLAND_VERBOSE_LOG << "Flatland::CreateTransform() client-id: " << transform_id.value
+                       << "  handle: " << handle;
+
   transforms_.insert({transform_id.value, handle});
 }
 
@@ -701,6 +713,10 @@ void Flatland::CreateViewport(ContentId link_id, ViewportCreationToken token,
       transform_graph_.AddChild(link.parent_viewport_watcher_handle, link.link_handle);
   FX_DCHECK(child_added);
 
+  FLATLAND_VERBOSE_LOG << "Flatland::CreateViewport() in " << local_root_
+                       << " parent_viewport_watcher_handle: " << link.parent_viewport_watcher_handle
+                       << " link_handle: " << link.link_handle;
+
   // Default the link size to the logical size, which is just an identity scale matrix, so
   // that future logical size changes will result in the correct scale matrix.
   SizeU size = properties.logical_size();
@@ -907,6 +923,8 @@ void Flatland::SetContent(TransformId transform_id, ContentId content_id) {
 
   if (content_id.value == kInvalidId) {
     transform_graph_.ClearPriorityChild(transform_kv->second);
+    FLATLAND_VERBOSE_LOG << "Flatland::SetContent() cleared content for transform: "
+                         << transform_kv->second;
     return;
   }
 
@@ -918,6 +936,9 @@ void Flatland::SetContent(TransformId transform_id, ContentId content_id) {
     ReportBadOperationError();
     return;
   }
+
+  FLATLAND_VERBOSE_LOG << "Flatland::SetContent(" << transform_kv->second << ","
+                       << handle_kv->second << ")";
 
   transform_graph_.SetPriorityChild(transform_kv->second, handle_kv->second);
 }
@@ -1088,6 +1109,10 @@ void Flatland::SetDebugName(std::string name) {
   std::stringstream stream;
   if (!name.empty())
     stream << "Flatland client(" << name << "): ";
+
+  FLATLAND_VERBOSE_LOG << "Flatland::SetDebugName() to " << stream.str() << " for " << local_root_
+                       << " " << this;
+
   error_reporter_->SetPrefix(stream.str());
 }
 

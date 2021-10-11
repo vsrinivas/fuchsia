@@ -7,6 +7,7 @@
 #include <lib/syslog/cpp/macros.h>
 
 #include "src/ui/scenic/lib/utils/helpers.h"
+#include "src/ui/scenic/lib/utils/logging.h"
 
 namespace {
 
@@ -39,13 +40,28 @@ GlobalTopologyData GlobalTopologyData::ComputeGlobalTopologyData(
   // There should never be an UberStruct for the |link_instance_id|.
   FX_DCHECK(uber_structs.find(link_instance_id) == uber_structs.end());
 
+#ifdef USE_FLATLAND_VERBOSE_LOGGING
+  {
+    std::ostringstream str;
+    str << "ComputeGlobalTopologyData(): Dumping UberStructs:\n";
+    for (auto& kv : uber_structs) {
+      str << *kv.second << "...................\n";
+    }
+    FLATLAND_VERBOSE_LOG << str.str();
+  }
+#endif
+
   // This is a stack of vector "iterators". We store the raw index, instead of an iterator, so that
   // we can do index comparisons.
   std::vector<std::pair<const TransformGraph::TopologyVector&, /*local_index=*/size_t>>
       vector_stack;
   // This is a stack of global parent indices and the number of children left to process for that
   // parent.
-  std::vector<std::pair</*parent_index=*/size_t, /*children_left=*/uint64_t>> parent_counts;
+  struct ParentChildIterator {
+    size_t parent_index = 0;
+    size_t children_left = 0;
+  };
+  std::vector<ParentChildIterator> parent_counts;
 
   TopologyVector topology_vector;
   ChildCountVector child_counts;
@@ -64,16 +80,29 @@ GlobalTopologyData GlobalTopologyData::ComputeGlobalTopologyData(
 
     // If we are finished with a vector, pop back to the previous vector.
     if (iterator_index >= vector.size()) {
+      FX_DCHECK(iterator_index == vector.size());
       vector_stack.pop_back();
       continue;
     }
 
     const auto& current_entry = vector[iterator_index];
+    FLATLAND_VERBOSE_LOG << "GlobalTopologyData processing current_entry=" << current_entry.handle
+                         << "  child-count: " << current_entry.child_count;
     ++iterator_index;
 
     // Mark that a child has been processed for the latest parent.
     if (!parent_counts.empty()) {
-      --parent_counts.back().second;
+      FLATLAND_VERBOSE_LOG << "GlobalTopologyData       parent_counts size: "
+                           << parent_counts.size()
+                           << "  parent: " << topology_vector[parent_counts.back().parent_index]
+                           << "  remaining-children: " << parent_counts.back().children_left;
+
+      FX_DCHECK(parent_counts.back().children_left > 0);
+      --parent_counts.back().children_left;
+    } else {
+      // Only expect to see this at the root of the topology, I think.  Is this worth putting a
+      // permanent check in?
+      FLATLAND_VERBOSE_LOG << "GlobalTopologyData       no parent";
     }
 
     // If we are processing a link transform, find the other end of the link (if it exists).
@@ -81,18 +110,34 @@ GlobalTopologyData GlobalTopologyData::ComputeGlobalTopologyData(
       // Decrement the parent's child count until the link is successfully resolved. An unresolved
       // link effectively means the parent had one fewer child.
       FX_DCHECK(!parent_counts.empty());
-      auto& parent_child_count = child_counts[parent_counts.back().first];
+      auto& parent_child_count = child_counts[parent_counts.back().parent_index];
       --parent_child_count;
 
       // If the link doesn't exist, skip the link handle.
       const auto link_kv = links.find(current_entry.handle);
       if (link_kv == links.end()) {
+        FLATLAND_VERBOSE_LOG << "GlobalTopologyData link doesn't exist for handle "
+                             << current_entry.handle << ", skipping ";
+
+        // TODO(fxbug.dev/86354): add test to verify this properly handles the "last child" case.
+        if (parent_counts.back().children_left == 0) {
+          parent_counts.pop_back();
+        }
+
         continue;
       }
 
       // If the link exists but doesn't have an UberStruct, skip the link handle.
       const auto uber_struct_kv = uber_structs.find(link_kv->second.GetInstanceId());
       if (uber_struct_kv == uber_structs.end()) {
+        FLATLAND_VERBOSE_LOG << "GlobalTopologyData link doesn't exist for instance_id "
+                             << link_kv->second.GetInstanceId() << ", skipping";
+
+        // TODO(fxbug.dev/86354): add test to verify this properly handles the "last child" case.
+        if (parent_counts.back().children_left == 0) {
+          parent_counts.pop_back();
+        }
+
         continue;
       }
 
@@ -100,10 +145,17 @@ GlobalTopologyData GlobalTopologyData::ComputeGlobalTopologyData(
       // the new topology. This can occur if a new UberStruct has not been registered for the
       // corresponding instance ID but the link to it has resolved.
       const auto& new_vector = uber_struct_kv->second->local_topology;
-      // TODO(fxbug.dev/76640): figure out why this invariant must be true, and add a comment to
-      // to explain it.
-      FX_DCHECK(!new_vector.empty());
+      FX_DCHECK(!new_vector.empty()) << "Valid UberStructs cannot have empty local_topology";
       if (new_vector[0].handle != link_kv->second) {
+        FLATLAND_VERBOSE_LOG << "GlobalTopologyData link mismatch with "
+                                "existing UberStruct ("
+                             << new_vector[0].handle << " vs. " << link_kv->second << "), skipping";
+
+        // TODO(fxbug.dev/86354): add test to verify this properly handles the "last child" case.
+        if (parent_counts.back().children_left == 0) {
+          parent_counts.pop_back();
+        }
+
         continue;
       }
 
@@ -118,7 +170,7 @@ GlobalTopologyData GlobalTopologyData::ComputeGlobalTopologyData(
       // having an additional child, but that child needs to be processed, so the stack of remaining
       // children to process for each parent needs to be increment as well.
       ++parent_child_count;
-      ++parent_counts.back().second;
+      ++parent_counts.back().children_left;
 
       vector_stack.emplace_back(new_vector, 0);
       continue;
@@ -128,7 +180,7 @@ GlobalTopologyData GlobalTopologyData::ComputeGlobalTopologyData(
     const size_t new_parent_index = topology_vector.size();
     topology_vector.push_back(current_entry.handle);
     child_counts.push_back(current_entry.child_count);
-    parent_indices.push_back(parent_counts.empty() ? 0 : parent_counts.back().first);
+    parent_indices.push_back(parent_counts.empty() ? 0 : parent_counts.back().parent_index);
     live_transforms.insert(current_entry.handle);
 
     // For the root of each local topology (i.e. the View), save the ViewRef if it has one.
@@ -140,21 +192,35 @@ GlobalTopologyData GlobalTopologyData::ComputeGlobalTopologyData(
     }
 
     // If this entry was the last child for the previous parent, pop that off the stack.
-    if (!parent_counts.empty() && parent_counts.back().second == 0) {
+    if (!parent_counts.empty() && parent_counts.back().children_left == 0) {
       parent_counts.pop_back();
     }
 
     // If this entry has children, push it onto the parent stack.
     if (current_entry.child_count != 0) {
-      parent_counts.emplace_back(new_parent_index, current_entry.child_count);
+      parent_counts.push_back({new_parent_index, current_entry.child_count});
     }
   }
 
-  // Validates that every child of every parent was processed. If the last handle processed was an
-  // unresolved link handle, its parent will be the only thing left on the stack with 0 children to
-  // avoid extra unnecessary cleanup logic.
-  FX_DCHECK(parent_counts.empty() ||
-            (parent_counts.size() == 1 && parent_counts.back().second == 0));
+// Validates that every child of every parent was processed. If the last handle processed was an
+// unresolved link handle, its parent will be the only thing left on the stack with 0 children to
+// avoid extra unnecessary cleanup logic.
+#ifndef NDEBUG
+  if (parent_counts.size() > 1 ||
+      (parent_counts.size() == 1 && parent_counts.back().children_left != 0)) {
+    std::ostringstream str;
+    str << "Error while generating GlobalTopologyData (failed parent_counts validation)\n"
+        << "Dumping parent_counts vector:\n";
+    for (size_t i = 0; i < parent_counts.size(); ++i) {
+      str << "i: " << i << "  index: " << parent_counts[i].parent_index
+          << "  parent: " << topology_vector[parent_counts[i].parent_index]
+          << "  child-count: " << parent_counts[i].children_left << std::endl;
+    }
+    FX_LOGS(FATAL) << str.str();
+  }
+  FX_CHECK(parent_counts.empty() ||
+           (parent_counts.size() == 1 && parent_counts.back().children_left == 0));
+#endif
 
   return {.topology_vector = std::move(topology_vector),
           .child_counts = std::move(child_counts),

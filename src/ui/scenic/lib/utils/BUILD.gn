@@ -4,12 +4,21 @@
 
 import("//build/components.gni")
 import("//build/test.gni")
+import("//src/ui/scenic/lib/utils/build_args.gni")
+
+config("logging_config") {
+  defines = []
+  if (flatland_verbose_logging) {
+    defines += [ "USE_FLATLAND_VERBOSE_LOGGING" ]
+  }
+}
 
 source_set("utils") {
   sources = [
     "dispatcher_holder.h",
     "helpers.cc",
     "helpers.h",
+    "logging.h",
     "math.cc",
     "math.h",
   ]
@@ -29,4 +38,6 @@ source_set("utils") {
     "//src/lib/fxl",
     "//zircon/system/ulib/zx",
   ]
+
+  public_configs = [ ":logging_config" ]
 }

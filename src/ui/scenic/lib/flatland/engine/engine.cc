@@ -9,9 +9,12 @@
 #include "src/ui/scenic/lib/flatland/global_image_data.h"
 #include "src/ui/scenic/lib/flatland/global_matrix_data.h"
 #include "src/ui/scenic/lib/scheduling/frame_scheduler.h"
+#include "src/ui/scenic/lib/utils/logging.h"
 
 // TODO(fxbug.dev/77414): for hacky invocation of OnVsync() at the end of RenderScheduledFrame().
 #include <lib/zx/time.h>
+
+#include <sstream>
 
 // Hardcoded double buffering.
 // TODO(fxbug.dev/76640): make this configurable.  Even fancier: is it worth considering sharing a
@@ -69,6 +72,23 @@ void Engine::RenderScheduledFrame(uint64_t frame_number, zx::time presentation_t
       flatland::SelectAttribute(global_clip_regions, image_indices), images);
 
   const auto hw_display = display.display();
+
+#if defined(USE_FLATLAND_VERBOSE_LOGGING)
+  std::ostringstream str;
+  str << "flatland::Engine::RenderScheduledFrame()\n"
+      << "Root transform of global topology: " << topology_data.topology_vector[0]
+      << "\nTopologically-sorted transforms and their corresponding parent transforms:";
+  for (size_t i = 1; i < topology_data.topology_vector.size(); ++i) {
+    str << "\n        " << topology_data.topology_vector[i] << " -> "
+        << topology_data.topology_vector[topology_data.parent_indices[i]];
+  }
+  str << "\nFrame display-list contains " << image_rectangles.size() << " image-rectangles and "
+      << images.size() << " images.";
+  for (auto& r : image_rectangles) {
+    str << "\n        rect: " << r;
+  }
+  FLATLAND_VERBOSE_LOG << str.str();
+#endif
 
   // TODO(fxbug.dev/78201): we hardcode the pixel scale to {1, 1}.  We might want to augment the
   // FIDL API to allow this to be modified.

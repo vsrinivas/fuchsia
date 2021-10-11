@@ -7,6 +7,8 @@
 #include <lib/async/default.h>
 #include <lib/ui/scenic/cpp/view_identity.h>
 
+#include "src/ui/scenic/lib/utils/logging.h"
+
 static void ReportError() {
   // TODO(fxbug.dev/77035): investigate how to propagate errors back to clients.
   // TODO(fxbug.dev/76640): OK to crash until we have error propagation?  Probably so: better that
@@ -61,6 +63,8 @@ FlatlandDisplay::FlatlandDisplay(
       [this](async_dispatcher_t* dispatcher, async::WaitOnce* wait, zx_status_t status,
              const zx_packet_signal_t* signal) { destroy_display_function_(); });
   FX_DCHECK(status == ZX_OK);
+
+  FLATLAND_VERBOSE_LOG << "FlatlandDisplay new with ID: " << session_id_;
 }
 
 void FlatlandDisplay::SetContent(ViewportCreationToken token,

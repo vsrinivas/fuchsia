@@ -69,4 +69,8 @@ struct UberStruct {
 
 }  // namespace flatland
 
+namespace std {
+ostream& operator<<(ostream& out, const flatland::UberStruct& us);
+}  // namespace std
+
 #endif  // SRC_UI_SCENIC_LIB_FLATLAND_UBER_STRUCT_H_

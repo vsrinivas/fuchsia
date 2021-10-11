@@ -6,6 +6,8 @@
 
 #include <lib/syslog/cpp/macros.h>
 
+#include "src/ui/scenic/lib/utils/logging.h"
+
 namespace flatland {
 
 TransformGraph::TransformGraph() : TransformGraph(0) {}
@@ -50,11 +52,16 @@ bool TransformGraph::AddChild(TransformHandle parent, TransformHandle child) {
   auto [iter, end_iter] = children_.equal_range({parent, NORMAL});
   for (; iter != end_iter; ++iter) {
     if (iter->second == child) {
+      FLATLAND_VERBOSE_LOG << "TransformGraph::AddChild(" << parent << "," << child
+                           << "): failure!";
+
       return false;
     }
   }
 
   children_.insert({{parent, NORMAL}, child});
+  FLATLAND_VERBOSE_LOG << "TransformGraph::AddChild(" << parent << "," << child << "): success!";
+
   return true;
 }
 
@@ -66,9 +73,14 @@ bool TransformGraph::RemoveChild(TransformHandle parent, TransformHandle child) 
   for (; iter != end_iter; ++iter) {
     if (iter->second == child) {
       children_.erase(iter);
+      FLATLAND_VERBOSE_LOG << "TransformGraph::RemoveChild(" << parent << "," << child
+                           << "): success!";
+
       return true;
     }
   }
+
+  FLATLAND_VERBOSE_LOG << "TransformGraph::RemoveChild(" << parent << "," << child << "): failure!";
 
   return false;
 }
