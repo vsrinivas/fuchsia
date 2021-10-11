@@ -9,6 +9,9 @@
 
 __BEGIN_CDECLS
 
+// fdf_handle_t is a zx_handle_t with the LSB zero.
+typedef zx_handle_t fdf_handle_t;
+
 // TODO(fxbug.dev/85595): use our own error types
 typedef zx_status_t fdf_status_t;
 

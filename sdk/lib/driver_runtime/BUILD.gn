@@ -15,9 +15,16 @@ sdk_source_set("driver_runtime") {
   sdk_name = "driver_runtime"
   sources = [
     "include/lib/fdf/arena.h",
+    "include/lib/fdf/channel.h",
+    "include/lib/fdf/channel_read.h",
+    "include/lib/fdf/dispatcher.h",
     "include/lib/fdf/types.h",
   ]
   public_configs = [ ":include" ]
+  public_deps = [
+    # <lib/fdf/channel_read.h> and <lib/fdf/dispatcher.h> have #include <lib/async/dispatcher.h>.
+    "//zircon/system/ulib/async",
+  ]
   deps = [
     "//zircon/system/ulib/sync",
     "//zircon/system/ulib/zx",
