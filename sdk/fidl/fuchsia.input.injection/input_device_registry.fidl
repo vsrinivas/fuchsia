@@ -5,7 +5,12 @@ library fuchsia.input.injection;
 
 using fuchsia.input.report;
 
-/// A protocol used to to inject input devices for testing.
+/// A TEST-ONLY protocol which injects `InputDevice`s into the
+/// input system.
+///
+/// This protocol is not intended for production use; products
+/// _should_ take measures to ensure this protocol is not
+/// routed to production components.
 @discoverable
 protocol InputDeviceRegistry {
     /// Registers an input device represented by `device`.
