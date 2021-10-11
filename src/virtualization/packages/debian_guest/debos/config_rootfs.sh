@@ -31,6 +31,15 @@ echo "PS1='$ '" >> ${home}/.profile
 echo "machina-guest" > /etc/hostname
 echo "127.0.1.1    machina-guest" >> /etc/hosts
 
+# Prevent certain known-bad modules from loading.
+#
+# https://fuchsia.dev/fuchsia-src/contribute/respectful_code note:
+# "blacklist" is a keyword required by modprobe.
+cat > /etc/modprobe.d/machina.conf << EOF
+# Causes a panic on certain x86-64 CPUs: <http://fxbug.dev/86351>.
+blacklist intel_pmc_core
+EOF
+
 # Add some modules to the initramfs. The console and GPU are useful to have
 # before the rootfs mounts in case things go off the rails.
 cat >> /etc/initramfs-tools/modules << EOF
