@@ -81,7 +81,8 @@
 
 
 <table>
-    <tr><th>Name</th><th>Type</th><th>Description</th></tr><tr id="FlexibleFoo.s">
+    <tr><th>Ordinal</th><tr><th>Variant</th><th>Type</th><th>Description</th></tr><tr id="FlexibleFoo.s">
+            <td>1</td>
             <td><code>s</code></td>
             <td>
                 <code>string</code>
@@ -89,6 +90,7 @@
             <td>
 </td>
         </tr><tr id="FlexibleFoo.i">
+            <td>2</td>
             <td><code>i</code></td>
             <td>
                 <code>int32</code>
@@ -103,7 +105,8 @@
 
 
 <table>
-    <tr><th>Name</th><th>Type</th><th>Description</th></tr><tr id="StrictFoo.s">
+    <tr><th>Ordinal</th><tr><th>Variant</th><th>Type</th><th>Description</th></tr><tr id="StrictFoo.s">
+            <td>1</td>
             <td><code>s</code></td>
             <td>
                 <code>string</code>
@@ -111,6 +114,7 @@
             <td>
 </td>
         </tr><tr id="StrictFoo.i">
+            <td>2</td>
             <td><code>i</code></td>
             <td>
                 <code>int32</code>

@@ -24,7 +24,7 @@
 
 
 <table>
-    <tr><th>Name</th><th>Type</th><th>Description</th><th>Default</th></tr><tr id="Handles.plain_handle">
+    <tr><th>Field</th><th>Type</th><th>Description</th><th>Default</th></tr><tr id="Handles.plain_handle">
             <td><code>plain_handle</code></td>
             <td>
                 <code>handle&lt;handle&gt;</code>

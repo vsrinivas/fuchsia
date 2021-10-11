@@ -52,7 +52,7 @@
 
 
 <table>
-    <tr><th>Name</th><th>Type</th><th>Description</th><th>Default</th></tr><tr id="Struct.Field">
+    <tr><th>Field</th><th>Type</th><th>Description</th><th>Default</th></tr><tr id="Struct.Field">
             <td><code>Field</code></td>
             <td>
                 <code>int32</code>
@@ -138,7 +138,7 @@ Type: <code>uint32</code>
 
 
 <table>
-    <tr><th>Ordinal</th><th>Name</th><th>Type</th><th>Description</th></tr>
+    <tr><th>Ordinal</th><th>Field</th><th>Type</th><th>Description</th></tr>
     <tr id="Table.Field">
             <td>1</td>
             <td><code>Field</code></td>
@@ -163,7 +163,8 @@ Type: <code>uint32</code>
 
 
 <table>
-    <tr><th>Name</th><th>Type</th><th>Description</th></tr><tr id="FlexibleUnion.Field">
+    <tr><th>Ordinal</th><tr><th>Variant</th><th>Type</th><th>Description</th></tr><tr id="FlexibleUnion.Field">
+            <td>1</td>
             <td><code>Field</code></td>
             <td>
                 <code>int32</code>
@@ -182,7 +183,8 @@ Type: <code>uint32</code>
 
 
 <table>
-    <tr><th>Name</th><th>Type</th><th>Description</th></tr><tr id="StrictUnion.Field">
+    <tr><th>Ordinal</th><tr><th>Variant</th><th>Type</th><th>Description</th></tr><tr id="StrictUnion.Field">
+            <td>1</td>
             <td><code>Field</code></td>
             <td>
                 <code>int32</code>

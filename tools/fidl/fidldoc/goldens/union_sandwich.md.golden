@@ -17,7 +17,7 @@
 
 
 <table>
-    <tr><th>Name</th><th>Type</th><th>Description</th><th>Default</th></tr><tr id="SandwichUnionSize12Alignment4.before">
+    <tr><th>Field</th><th>Type</th><th>Description</th><th>Default</th></tr><tr id="SandwichUnionSize12Alignment4.before">
             <td><code>before</code></td>
             <td>
                 <code>uint32</code>
@@ -51,7 +51,7 @@
 
 
 <table>
-    <tr><th>Name</th><th>Type</th><th>Description</th><th>Default</th></tr><tr id="SandwichUnionSize24Alignment8.before">
+    <tr><th>Field</th><th>Type</th><th>Description</th><th>Default</th></tr><tr id="SandwichUnionSize24Alignment8.before">
             <td><code>before</code></td>
             <td>
                 <code>uint32</code>
@@ -85,7 +85,7 @@
 
 
 <table>
-    <tr><th>Name</th><th>Type</th><th>Description</th><th>Default</th></tr><tr id="SandwichUnionSize36Alignment4.before">
+    <tr><th>Field</th><th>Type</th><th>Description</th><th>Default</th></tr><tr id="SandwichUnionSize36Alignment4.before">
             <td><code>before</code></td>
             <td>
                 <code>uint32</code>
@@ -119,7 +119,7 @@
 
 
 <table>
-    <tr><th>Name</th><th>Type</th><th>Description</th><th>Default</th></tr><tr id="SandwichUnionSize8Alignment4.before">
+    <tr><th>Field</th><th>Type</th><th>Description</th><th>Default</th></tr><tr id="SandwichUnionSize8Alignment4.before">
             <td><code>before</code></td>
             <td>
                 <code>uint32</code>
@@ -153,7 +153,7 @@
 
 
 <table>
-    <tr><th>Name</th><th>Type</th><th>Description</th><th>Default</th></tr><tr id="StructSize16Alignment8.f1">
+    <tr><th>Field</th><th>Type</th><th>Description</th><th>Default</th></tr><tr id="StructSize16Alignment8.f1">
             <td><code>f1</code></td>
             <td>
                 <code>uint64</code>
@@ -186,7 +186,8 @@
 
 
 <table>
-    <tr><th>Name</th><th>Type</th><th>Description</th></tr><tr id="UnionSize12Alignment4.variant">
+    <tr><th>Ordinal</th><tr><th>Variant</th><th>Type</th><th>Description</th></tr><tr id="UnionSize12Alignment4.variant">
+            <td>1</td>
             <td><code>variant</code></td>
             <td>
                 <code>uint8[6]</code>
@@ -201,7 +202,8 @@
 
 
 <table>
-    <tr><th>Name</th><th>Type</th><th>Description</th></tr><tr id="UnionSize24Alignment8.variant">
+    <tr><th>Ordinal</th><tr><th>Variant</th><th>Type</th><th>Description</th></tr><tr id="UnionSize24Alignment8.variant">
+            <td>1</td>
             <td><code>variant</code></td>
             <td>
                 <code><a class='link' href='#StructSize16Alignment8'>StructSize16Alignment8</a></code>
@@ -216,7 +218,8 @@
 
 
 <table>
-    <tr><th>Name</th><th>Type</th><th>Description</th></tr><tr id="UnionSize36Alignment4.variant">
+    <tr><th>Ordinal</th><tr><th>Variant</th><th>Type</th><th>Description</th></tr><tr id="UnionSize36Alignment4.variant">
+            <td>1</td>
             <td><code>variant</code></td>
             <td>
                 <code>uint8[32]</code>
@@ -231,7 +234,8 @@
 
 
 <table>
-    <tr><th>Name</th><th>Type</th><th>Description</th></tr><tr id="UnionSize8Alignment4.variant">
+    <tr><th>Ordinal</th><tr><th>Variant</th><th>Type</th><th>Description</th></tr><tr id="UnionSize8Alignment4.variant">
+            <td>1</td>
             <td><code>variant</code></td>
             <td>
                 <code>uint32</code>

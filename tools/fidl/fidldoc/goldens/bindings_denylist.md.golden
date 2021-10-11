@@ -74,7 +74,7 @@ Type: <code>uint32</code>
 
 
 <table>
-    <tr><th>Ordinal</th><th>Name</th><th>Type</th><th>Description</th></tr>
+    <tr><th>Ordinal</th><th>Field</th><th>Type</th><th>Description</th></tr>
     </table>
 
 
@@ -87,7 +87,8 @@ Type: <code>uint32</code>
 
 
 <table>
-    <tr><th>Name</th><th>Type</th><th>Description</th></tr><tr id="OnlyLlcpp.x">
+    <tr><th>Ordinal</th><tr><th>Variant</th><th>Type</th><th>Description</th></tr><tr id="OnlyLlcpp.x">
+            <td>1</td>
             <td><code>x</code></td>
             <td>
                 <code>uint32</code>

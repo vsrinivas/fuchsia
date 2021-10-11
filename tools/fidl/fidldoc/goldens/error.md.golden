@@ -49,7 +49,7 @@
 
 
 <table>
-    <tr><th>Name</th><th>Type</th><th>Description</th><th>Default</th></tr><tr id="Example_foo_Response.y">
+    <tr><th>Field</th><th>Type</th><th>Description</th><th>Default</th></tr><tr id="Example_foo_Response.y">
             <td><code>y</code></td>
             <td>
                 <code>int64</code>
@@ -74,7 +74,8 @@
 
 
 <table>
-    <tr><th>Name</th><th>Type</th><th>Description</th></tr><tr id="Example_foo_Result.response">
+    <tr><th>Ordinal</th><tr><th>Variant</th><th>Type</th><th>Description</th></tr><tr id="Example_foo_Result.response">
+            <td>1</td>
             <td><code>response</code></td>
             <td>
                 <code><a class='link' href='#Example_foo_Response'>Example_foo_Response</a></code>
@@ -82,6 +83,7 @@
             <td>
 </td>
         </tr><tr id="Example_foo_Result.err">
+            <td>2</td>
             <td><code>err</code></td>
             <td>
                 <code>uint32</code>

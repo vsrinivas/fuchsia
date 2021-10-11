@@ -17,7 +17,7 @@
 
 
 <table>
-    <tr><th>Name</th><th>Type</th><th>Description</th><th>Default</th></tr><tr id="BasicStruct.x">
+    <tr><th>Field</th><th>Type</th><th>Description</th><th>Default</th></tr><tr id="BasicStruct.x">
             <td><code>x</code></td>
             <td>
                 <code>uint32</code>
@@ -43,7 +43,7 @@
 
 
 <table>
-    <tr><th>Name</th><th>Type</th><th>Description</th><th>Default</th></tr><tr id="Simple.f1">
+    <tr><th>Field</th><th>Type</th><th>Description</th><th>Default</th></tr><tr id="Simple.f1">
             <td><code>f1</code></td>
             <td>
                 <code>uint8</code>

@@ -8,9 +8,10 @@
 
 {{#if members}}
 <table>
-    <tr><th>Name</th><th>Type</th><th>Description</th></tr>
+    <tr><th>Ordinal</th><tr><th>Variant</th><th>Type</th><th>Description</th></tr>
     {{~ #each members ~}}
         <tr id="{{rpn ../name}}.{{~ name ~}}">
+            <td>{{~ ordinal ~}}</td>
             <td><code>{{~ name ~}}</code></td>
             <td>
                 <code>

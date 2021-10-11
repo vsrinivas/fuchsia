@@ -17,7 +17,7 @@
 
 
 <table>
-    <tr><th>Name</th><th>Type</th><th>Description</th><th>Default</th></tr><tr id="ExampleOfUseOfAliases.field_of_u32">
+    <tr><th>Field</th><th>Type</th><th>Description</th><th>Default</th></tr><tr id="ExampleOfUseOfAliases.field_of_u32">
             <td><code>field_of_u32</code></td>
             <td>
                 <code><a class='link' href='#u32'>u32</a></code>

@@ -17,7 +17,7 @@
 
 
 <table>
-    <tr><th>Name</th><th>Type</th><th>Description</th><th>Default</th></tr><tr id="HandlesInTypes.normal_handle">
+    <tr><th>Field</th><th>Type</th><th>Description</th><th>Default</th></tr><tr id="HandlesInTypes.normal_handle">
             <td><code>normal_handle</code></td>
             <td>
                 <code>handle&lt;vmo&gt;</code>
@@ -106,7 +106,7 @@ Type: <code>uint32</code>
 
 
 <table>
-    <tr><th>Ordinal</th><th>Name</th><th>Type</th><th>Description</th></tr>
+    <tr><th>Ordinal</th><th>Field</th><th>Type</th><th>Description</th></tr>
     <tr id="TableWithHandle.h">
             <td>1</td>
             <td><code>h</code></td>
@@ -127,7 +127,8 @@ Type: <code>uint32</code>
 
 
 <table>
-    <tr><th>Name</th><th>Type</th><th>Description</th></tr><tr id="UnionWithHandle.h">
+    <tr><th>Ordinal</th><tr><th>Variant</th><th>Type</th><th>Description</th></tr><tr id="UnionWithHandle.h">
+            <td>1</td>
             <td><code>h</code></td>
             <td>
                 <code>handle&lt;vmo&gt;</code>

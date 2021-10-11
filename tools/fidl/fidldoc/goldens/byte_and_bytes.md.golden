@@ -17,7 +17,7 @@
 
 
 <table>
-    <tr><th>Name</th><th>Type</th><th>Description</th><th>Default</th></tr><tr id="ByteAndBytes.single_byte">
+    <tr><th>Field</th><th>Type</th><th>Description</th><th>Default</th></tr><tr id="ByteAndBytes.single_byte">
             <td><code>single_byte</code></td>
             <td>
                 <code>uint8</code>

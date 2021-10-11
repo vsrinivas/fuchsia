@@ -699,7 +699,7 @@
 
 
 <table>
-    <tr><th>Name</th><th>Type</th><th>Description</th><th>Default</th></tr><tr id="ProtocolEnds.client">
+    <tr><th>Field</th><th>Type</th><th>Description</th><th>Default</th></tr><tr id="ProtocolEnds.client">
             <td><code>client</code></td>
             <td>
                 <code><a class='link' href='#DiscoverableProtocol'>DiscoverableProtocol</a></code>
@@ -757,7 +757,7 @@
 
 
 <table>
-    <tr><th>Name</th><th>Type</th><th>Description</th><th>Default</th></tr><tr id="WithErrorSyntax_HandleInResult_Response.h">
+    <tr><th>Field</th><th>Type</th><th>Description</th><th>Default</th></tr><tr id="WithErrorSyntax_HandleInResult_Response.h">
             <td><code>h</code></td>
             <td>
                 <code>handle&lt;handle&gt;</code>
@@ -775,7 +775,7 @@
 
 
 <table>
-    <tr><th>Name</th><th>Type</th><th>Description</th><th>Default</th></tr><tr id="WithErrorSyntax_ResponseAsStruct_Response.a">
+    <tr><th>Field</th><th>Type</th><th>Description</th><th>Default</th></tr><tr id="WithErrorSyntax_ResponseAsStruct_Response.a">
             <td><code>a</code></td>
             <td>
                 <code>int64</code>
@@ -860,7 +860,8 @@ Type: <code>uint32</code>
 
 
 <table>
-    <tr><th>Name</th><th>Type</th><th>Description</th></tr><tr id="TheUnion.v">
+    <tr><th>Ordinal</th><tr><th>Variant</th><th>Type</th><th>Description</th></tr><tr id="TheUnion.v">
+            <td>1</td>
             <td><code>v</code></td>
             <td>
                 <code>uint32</code>
@@ -875,7 +876,8 @@ Type: <code>uint32</code>
 
 
 <table>
-    <tr><th>Name</th><th>Type</th><th>Description</th></tr><tr id="WithErrorSyntax_ErrorAsEnum_Result.response">
+    <tr><th>Ordinal</th><tr><th>Variant</th><th>Type</th><th>Description</th></tr><tr id="WithErrorSyntax_ErrorAsEnum_Result.response">
+            <td>1</td>
             <td><code>response</code></td>
             <td>
                 <code><a class='link' href='#WithErrorSyntax_ErrorAsEnum_Response'>WithErrorSyntax_ErrorAsEnum_Response</a></code>
@@ -883,6 +885,7 @@ Type: <code>uint32</code>
             <td>
 </td>
         </tr><tr id="WithErrorSyntax_ErrorAsEnum_Result.err">
+            <td>2</td>
             <td><code>err</code></td>
             <td>
                 <code><a class='link' href='#ErrorEnum'>ErrorEnum</a></code>
@@ -897,7 +900,8 @@ Type: <code>uint32</code>
 
 
 <table>
-    <tr><th>Name</th><th>Type</th><th>Description</th></tr><tr id="WithErrorSyntax_ErrorAsPrimitive_Result.response">
+    <tr><th>Ordinal</th><tr><th>Variant</th><th>Type</th><th>Description</th></tr><tr id="WithErrorSyntax_ErrorAsPrimitive_Result.response">
+            <td>1</td>
             <td><code>response</code></td>
             <td>
                 <code><a class='link' href='#WithErrorSyntax_ErrorAsPrimitive_Response'>WithErrorSyntax_ErrorAsPrimitive_Response</a></code>
@@ -905,6 +909,7 @@ Type: <code>uint32</code>
             <td>
 </td>
         </tr><tr id="WithErrorSyntax_ErrorAsPrimitive_Result.err">
+            <td>2</td>
             <td><code>err</code></td>
             <td>
                 <code>uint32</code>
@@ -919,7 +924,8 @@ Type: <code>uint32</code>
 
 
 <table>
-    <tr><th>Name</th><th>Type</th><th>Description</th></tr><tr id="WithErrorSyntax_HandleInResult_Result.response">
+    <tr><th>Ordinal</th><tr><th>Variant</th><th>Type</th><th>Description</th></tr><tr id="WithErrorSyntax_HandleInResult_Result.response">
+            <td>1</td>
             <td><code>response</code></td>
             <td>
                 <code><a class='link' href='#WithErrorSyntax_HandleInResult_Response'>WithErrorSyntax_HandleInResult_Response</a></code>
@@ -927,6 +933,7 @@ Type: <code>uint32</code>
             <td>
 </td>
         </tr><tr id="WithErrorSyntax_HandleInResult_Result.err">
+            <td>2</td>
             <td><code>err</code></td>
             <td>
                 <code>uint32</code>
@@ -941,7 +948,8 @@ Type: <code>uint32</code>
 
 
 <table>
-    <tr><th>Name</th><th>Type</th><th>Description</th></tr><tr id="WithErrorSyntax_ResponseAsStruct_Result.response">
+    <tr><th>Ordinal</th><tr><th>Variant</th><th>Type</th><th>Description</th></tr><tr id="WithErrorSyntax_ResponseAsStruct_Result.response">
+            <td>1</td>
             <td><code>response</code></td>
             <td>
                 <code><a class='link' href='#WithErrorSyntax_ResponseAsStruct_Response'>WithErrorSyntax_ResponseAsStruct_Response</a></code>
@@ -949,6 +957,7 @@ Type: <code>uint32</code>
             <td>
 </td>
         </tr><tr id="WithErrorSyntax_ResponseAsStruct_Result.err">
+            <td>2</td>
             <td><code>err</code></td>
             <td>
                 <code>uint32</code>

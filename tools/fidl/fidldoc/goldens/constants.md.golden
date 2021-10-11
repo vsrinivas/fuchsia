@@ -17,7 +17,7 @@
 
 
 <table>
-    <tr><th>Name</th><th>Type</th><th>Description</th><th>Default</th></tr><tr id="Struct.int64_with_default">
+    <tr><th>Field</th><th>Type</th><th>Description</th><th>Default</th></tr><tr id="Struct.int64_with_default">
             <td><code>int64_with_default</code></td>
             <td>
                 <code>int64</code>

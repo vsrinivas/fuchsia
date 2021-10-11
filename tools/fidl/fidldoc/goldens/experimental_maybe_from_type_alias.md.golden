@@ -24,7 +24,7 @@
 
 
 <table>
-    <tr><th>Name</th><th>Type</th><th>Description</th><th>Default</th></tr><tr id="Testing.u1">
+    <tr><th>Field</th><th>Type</th><th>Description</th><th>Default</th></tr><tr id="Testing.u1">
             <td><code>u1</code></td>
             <td>
                 <code><a class='link' href='#U64'>U64</a></code>

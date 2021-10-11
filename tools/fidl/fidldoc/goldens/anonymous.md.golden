@@ -54,7 +54,7 @@
 
 
 <table>
-    <tr><th>Name</th><th>Type</th><th>Description</th><th>Default</th></tr><tr id="OverrideTest.op">
+    <tr><th>Field</th><th>Type</th><th>Description</th><th>Default</th></tr><tr id="OverrideTest.op">
             <td><code>op</code></td>
             <td>
                 <code><a class='link' href='#Op'>Op</a></code>
@@ -88,7 +88,7 @@
 
 
 <table>
-    <tr><th>Name</th><th>Type</th><th>Description</th><th>Default</th></tr><tr id="SomeProtocol_SomeMethod_Response.bits_member">
+    <tr><th>Field</th><th>Type</th><th>Description</th><th>Default</th></tr><tr id="SomeProtocol_SomeMethod_Response.bits_member">
             <td><code>bits_member</code></td>
             <td>
                 <code><a class='link' href='#BitsMember'>BitsMember</a></code>
@@ -106,7 +106,7 @@
 
 
 <table>
-    <tr><th>Name</th><th>Type</th><th>Description</th><th>Default</th></tr><tr id="TableData.data">
+    <tr><th>Field</th><th>Type</th><th>Description</th><th>Default</th></tr><tr id="TableData.data">
             <td><code>data</code></td>
             <td>
                 <code>uint8</code>
@@ -181,7 +181,7 @@ Type: <code>uint32</code>
 
 
 <table>
-    <tr><th>Ordinal</th><th>Name</th><th>Type</th><th>Description</th></tr>
+    <tr><th>Ordinal</th><th>Field</th><th>Type</th><th>Description</th></tr>
     <tr id="FunctionApplication.func">
             <td>1</td>
             <td><code>func</code></td>
@@ -225,7 +225,7 @@ Type: <code>uint32</code>
 
 
 <table>
-    <tr><th>Ordinal</th><th>Name</th><th>Type</th><th>Description</th></tr>
+    <tr><th>Ordinal</th><th>Field</th><th>Type</th><th>Description</th></tr>
     <tr id="TableMember.">
             <td>1</td>
             <td><code>RESERVED</code></td>
@@ -254,7 +254,8 @@ Type: <code>uint32</code>
 
 
 <table>
-    <tr><th>Name</th><th>Type</th><th>Description</th></tr><tr id="Expression.value">
+    <tr><th>Ordinal</th><tr><th>Variant</th><th>Type</th><th>Description</th></tr><tr id="Expression.value">
+            <td>1</td>
             <td><code>value</code></td>
             <td>
                 <code>uint64</code>
@@ -262,6 +263,7 @@ Type: <code>uint32</code>
             <td>
 </td>
         </tr><tr id="Expression.bin_op">
+            <td>2</td>
             <td><code>bin_op</code></td>
             <td>
                 <code><a class='link' href='#OverrideTest'>OverrideTest</a></code>
@@ -269,6 +271,7 @@ Type: <code>uint32</code>
             <td>
 </td>
         </tr><tr id="Expression.function_application">
+            <td>3</td>
             <td><code>function_application</code></td>
             <td>
                 <code><a class='link' href='#FunctionApplication'>FunctionApplication</a></code>
@@ -283,7 +286,8 @@ Type: <code>uint32</code>
 
 
 <table>
-    <tr><th>Name</th><th>Type</th><th>Description</th></tr><tr id="SomeProtocol_SomeMethod_Result.response">
+    <tr><th>Ordinal</th><tr><th>Variant</th><th>Type</th><th>Description</th></tr><tr id="SomeProtocol_SomeMethod_Result.response">
+            <td>1</td>
             <td><code>response</code></td>
             <td>
                 <code><a class='link' href='#SomeProtocol_SomeMethod_Response'>SomeProtocol_SomeMethod_Response</a></code>
@@ -291,6 +295,7 @@ Type: <code>uint32</code>
             <td>
 </td>
         </tr><tr id="SomeProtocol_SomeMethod_Result.err">
+            <td>2</td>
             <td><code>err</code></td>
             <td>
                 <code><a class='link' href='#SomeProtocol_SomeMethod_Error'>SomeProtocol_SomeMethod_Error</a></code>
@@ -305,7 +310,8 @@ Type: <code>uint32</code>
 
 
 <table>
-    <tr><th>Name</th><th>Type</th><th>Description</th></tr><tr id="UnionMember.">
+    <tr><th>Ordinal</th><tr><th>Variant</th><th>Type</th><th>Description</th></tr><tr id="UnionMember.">
+            <td>1</td>
             <td><code></code></td>
             <td>
                 <code></code>
@@ -313,6 +319,7 @@ Type: <code>uint32</code>
             <td>
 </td>
         </tr><tr id="UnionMember.union_data">
+            <td>2</td>
             <td><code>union_data</code></td>
             <td>
                 <code>uint8</code>
