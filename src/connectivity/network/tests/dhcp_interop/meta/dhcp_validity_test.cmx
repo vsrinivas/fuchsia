@@ -19,7 +19,7 @@
                                     "-e",
                                     "client-ep"
                                 ],
-                                "url": "fuchsia-pkg://fuchsia.com/getifaddrs-tests#meta/netstack-cfg.cmx"
+                                "url": "fuchsia-pkg://fuchsia.com/netemul-dhcp-tests#meta/netstack-cfg.cmx"
                             }
                         ],
                         "test": [
