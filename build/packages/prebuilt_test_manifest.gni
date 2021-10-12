@@ -6,11 +6,11 @@ import("//build/packages/prebuilt_test_package.gni")
 
 # Defines prebuilt package tests based on the contents in a prebuilt test manifest.
 #
-# Vendors are required to upload a "test_manifest.json" file in the same CIPD
-# package as their prebuilt FAR tests. We use this manifest for determining
+# Vendors are required to upload one or more test manifest JSON files in the same
+# CIPD package as their prebuilt FAR tests. We use these manifests for determining
 # which test packages to enable and how each test package is run.
 #
-# test_manifest.json should contain a JSON list of objects. Each object's schema is:
+# The test manifest should contain a JSON list of objects. Each object's schema is:
 #
 #   package (required)
 #     The name of the Fuchsia package
@@ -40,10 +40,17 @@ import("//build/packages/prebuilt_test_package.gni")
 #     [list of scopes] List of scopes containing "package" and "component_name"
 #     entries to disable.
 #
+#   manifest_name (optional, default: test_manifest.json):
+#     [string] Name of the test manifest file.
+#
 template("prebuilt_test_manifest") {
   assert(defined(invoker.archive_dir), "archive_dir must be defined.")
 
-  manifest_path = "${invoker.archive_dir}/test_manifest.json"
+  manifest_name = "test_manifest.json"
+  if (defined(invoker.manifest_name)) {
+    manifest_name = invoker.manifest_name
+  }
+  manifest_path = "${invoker.archive_dir}/${manifest_name}"
   manifest = read_file(manifest_path, "json")
   test_targets = []
   foreach(test, manifest) {
@@ -68,6 +75,7 @@ template("prebuilt_test_manifest") {
         component_name = component_name
         forward_variables_from(invoker,
                                [
+                                 "deps",
                                  "environments",
                                  "log_settings",
                                ])

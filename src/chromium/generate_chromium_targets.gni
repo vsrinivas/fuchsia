@@ -195,11 +195,21 @@ template("generate_chromium_targets") {
       nuc_env,
     ]
 
-    group("chromium_tests_group") {
-      testonly = true
-      deps = [
-        ":chromium_tests",
+    if (use_chromium_canary) {
+      archive_dir = "${prebuilt_archive_root_path}/chromium_tests${invoker.archive_path_suffix}${canary_suffix}/arch/x64"
+    } else {
+      archive_dir = "${prebuilt_archive_root_path}/chromium_tests${invoker.archive_path_suffix}/arch/x64"
+    }
 
+    # The specific tests binaries are specified by the "tests" target in
+    # https://source.chromium.org/chromium/chromium/src/+/main:fuchsia/cipd/BUILD.gn.
+    prebuilt_test_manifest("chromium_common_tests") {
+      manifest_name = "common_tests_manifest.json"
+      environments = test_env
+      log_settings = {
+        max_severity = "ERROR"
+      }
+      deps = [
         # The targets below have exactly the same contents, so will not be taking
         # extra storage in configurations that use them both.
         ":tzdata_for_base_unittests",
@@ -208,15 +218,21 @@ template("generate_chromium_targets") {
       ]
     }
 
-    # The specific tests binaries are specified by the "tests" target in
-    # https://source.chromium.org/chromium/chromium/src/+/main:fuchsia/cipd/BUILD.gn.
-    prebuilt_test_manifest("chromium_tests") {
-      if (use_chromium_canary) {
-        archive_dir = "${prebuilt_archive_root_path}/chromium_tests${invoker.archive_path_suffix}${canary_suffix}/arch/x64"
-      } else {
-        archive_dir = "${prebuilt_archive_root_path}/chromium_tests${invoker.archive_path_suffix}/arch/x64"
-      }
+    prebuilt_test_manifest("chromium_web_engine_tests") {
+      manifest_name = "web_engine_tests_manifest.json"
       environments = test_env
+      log_settings = {
+        max_severity = "ERROR"
+      }
+      deps = [
+        ":web_engine",
+        ":web_runner",
+      ]
+    }
+
+    prebuilt_test_manifest("chromium_cast_runner_tests") {
+      manifest_name = "cast_runner_tests_manifest.json"
+      environments = [ nuc_env ]
       log_settings = {
         max_severity = "ERROR"
       }
@@ -241,9 +257,9 @@ template("generate_chromium_targets") {
       testonly = true
 
       deps = [
-        ":chromium_tests_group",
-        ":web_engine",
-        ":web_runner",
+        ":chromium_cast_runner_tests",
+        ":chromium_common_tests",
+        ":chromium_web_engine_tests",
         "web_runner_tests:tests",
         "//src/fonts:downstream_test_deps",
       ]

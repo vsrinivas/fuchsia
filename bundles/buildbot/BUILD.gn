@@ -86,7 +86,12 @@ group("terminal") {
 
 group("workstation") {
   testonly = true
-  deps = [ "//garnet/bin/setui_client:setui_client" ]
+  deps = [
+    "//garnet/bin/setui_client:setui_client",
+    "//src/chromium:chromium_common_tests",
+    "//src/chromium:chromium_web_engine_tests",
+    "//src/chromium/web_runner_tests:tests",
+  ]
 }
 
 # "host-tests" targets are for tests which depend on package artifacts such as
