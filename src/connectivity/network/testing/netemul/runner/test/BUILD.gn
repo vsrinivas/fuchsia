@@ -211,7 +211,7 @@ fuchsia_test("grpc_client_stress_test_spec") {
 
 fuchsia_test_package("netemul-guest-test") {
   test_specs = {
-    environments = [ nuc_env ]
+    environments = guest_envs
   }
   test_components = [
     ":guest-test",

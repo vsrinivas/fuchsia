@@ -109,6 +109,7 @@ source_set("integration_test_lib") {
     "//sdk/fidl/fuchsia.kernel",
     "//sdk/fidl/fuchsia.net.stack",
     "//sdk/fidl/fuchsia.netstack",
+    "//sdk/fidl/fuchsia.sysinfo",
     "//src/lib/testing/predicates",
     "//src/virtualization/tests:guest_console",
   ]
@@ -188,7 +189,7 @@ fuchsia_test_package("guest_interaction_tests") {
     ":server_daemon_test_cmp",
   ]
   test_specs = {
-    environments = [ nuc_env ]
+    environments = guest_envs
     log_settings = {
       max_severity = "ERROR"
     }

@@ -8,6 +8,7 @@
 #include <fuchsia/net/stack/cpp/fidl.h>
 #include <fuchsia/netemul/guest/cpp/fidl.h>
 #include <fuchsia/netstack/cpp/fidl.h>
+#include <fuchsia/sysinfo/cpp/fidl.h>
 #include <lib/async/cpp/task.h>
 #include <lib/sys/cpp/file_descriptor.h>
 
@@ -39,6 +40,7 @@ GuestInteractionTest::GuestInteractionTest() {
   // Allow services required for virtualization.
   services_->AllowParentService(fuchsia::kernel::HypervisorResource::Name_);
   services_->AllowParentService(fuchsia::kernel::VmexResource::Name_);
+  services_->AllowParentService(fuchsia::sysinfo::SysInfo::Name_);
 }
 
 static fit::closure MakeRecurringTask(async_dispatcher_t* dispatcher, fit::closure cb,

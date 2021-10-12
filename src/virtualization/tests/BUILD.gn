@@ -12,12 +12,6 @@ guest_packages = [
   "//src/virtualization/packages",
 ]
 
-guest_environments = [
-                       nuc_env,
-                       sherlock_env,
-                       vim3_env,
-                     ] + chromebook_envs
-
 linux_tests_label = "//src/virtualization/packages/debian_guest:tests"
 resource("debian_tests_img") {
   sources = [ get_label_info(linux_tests_label, "target_out_dir") +
@@ -234,7 +228,7 @@ fuchsia_test_package("virtualization_core_tests_pkg") {
   package_name = "virtualization-core-tests"
   test_components = [ ":virtualization_core_tests_cmp" ]
   test_specs = {
-    environments = guest_environments
+    environments = guest_envs
     log_settings = {
       max_severity = "ERROR"
     }
@@ -270,7 +264,7 @@ fuchsia_test_package("virtualization_block_tests_pkg") {
   package_name = "virtualization-block-tests"
   test_components = [ ":virtualization_block_tests_cmp" ]
   test_specs = {
-    environments = guest_environments
+    environments = guest_envs
     log_settings = {
       max_severity = "ERROR"
     }
@@ -306,7 +300,7 @@ fuchsia_test_package("virtualization_gpu_tests_pkg") {
   package_name = "virtualization-gpu-tests"
   test_components = [ ":virtualization_gpu_tests_cmp" ]
   test_specs = {
-    environments = guest_environments
+    environments = guest_envs
     log_settings = {
       max_severity = "ERROR"
     }
@@ -340,7 +334,7 @@ fuchsia_test_package("virtualization_input_tests_pkg") {
   package_name = "virtualization-input-tests"
   test_components = [ ":virtualization_input_tests_cmp" ]
   test_specs = {
-    environments = guest_environments
+    environments = guest_envs
     log_settings = {
       max_severity = "ERROR"
     }
@@ -376,7 +370,7 @@ fuchsia_test_package("virtualization_net_tests_pkg") {
   package_name = "virtualization-net-tests"
   test_components = [ ":virtualization_net_tests_cmp" ]
   test_specs = {
-    environments = guest_environments
+    environments = guest_envs
     log_settings = {
       max_severity = "ERROR"
     }
@@ -412,7 +406,7 @@ fuchsia_test_package("virtualization_vsock_tests_pkg") {
   package_name = "virtualization-vsock-tests"
   test_components = [ ":virtualization_vsock_tests_cmp" ]
   test_specs = {
-    environments = guest_environments
+    environments = guest_envs
     log_settings = {
       max_severity = "ERROR"
     }

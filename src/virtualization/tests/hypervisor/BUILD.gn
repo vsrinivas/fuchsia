@@ -6,15 +6,6 @@ import("//build/components.gni")
 import("//src/virtualization/buildtools/linux_paths.gni")
 import("//src/virtualization/buildtools/romfs_image.gni")
 
-# List of environments that support the hypervisor.
-hypervisor_environments = [
-  astro_env,
-  nelson_env,
-  nuc_env,
-  sherlock_env,
-  vim3_env,
-]
-
 executable("hypervisor_tests") {
   testonly = true
 
@@ -54,7 +45,7 @@ fuchsia_test_package("hypervisor_tests_pkg") {
   package_name = "hypervisor-tests-pkg"
   test_components = [ ":hypervisor_tests_cmp" ]
   test_specs = {
-    environments = hypervisor_environments
+    environments = guest_envs
     log_settings = {
       max_severity = "ERROR"
     }

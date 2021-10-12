@@ -209,6 +209,21 @@ foreach(named_env, _all_named_fuchsia_envs) {
   all_fuchsia_envs += [ named_env.env ]
 }
 
+# TODO(https://fxbug.dev/80243): allow these tests to run on emulators.
+#
+# On ARM nested virtualization is unsupported before ARMv8.2. None of our
+# testbeds are ARM8.2 or above.
+#
+# On x64 doing so today would involve 3 levels of virtualization:
+#
+# 1. GCE virtualizes Linux (as part of its standard ops)
+# 2. Linux virtualizes Zircon (QEMU/KVM)
+# 3. Zircon virtualizes guest Zircon/Linux (Machina)
+guest_envs = all_fuchsia_envs - [
+               aemu_env,
+               qemu_env,
+             ]
+
 basic_envs = []
 foreach(name, basic_env_names) {
   foreach(named_env, _all_named_fuchsia_envs + _all_named_host_envs) {

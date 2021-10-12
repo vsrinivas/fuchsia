@@ -56,7 +56,8 @@
         "fuchsia.test": {
             "system-services": [
                 "fuchsia.kernel.HypervisorResource",
-                "fuchsia.kernel.VmexResource"
+                "fuchsia.kernel.VmexResource",
+                "fuchsia.sysinfo.SysInfo"
             ]
         }
     },
@@ -70,7 +71,8 @@
     "sandbox": {
         "services": [
             "fuchsia.kernel.HypervisorResource",
-            "fuchsia.kernel.VmexResource"
+            "fuchsia.kernel.VmexResource",
+            "fuchsia.sysinfo.SysInfo"
         ]
     }
 }

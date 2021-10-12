@@ -3,7 +3,8 @@
         "fuchsia.test": {
             "system-services": [
                 "fuchsia.kernel.HypervisorResource",
-                "fuchsia.kernel.VmexResource"
+                "fuchsia.kernel.VmexResource",
+                "fuchsia.sysinfo.SysInfo"
             ]
         }
     },
@@ -21,7 +22,8 @@
             "fuchsia.kernel.HypervisorResource",
             "fuchsia.kernel.VmexResource",
             "fuchsia.sys.Environment",
-            "fuchsia.sys.Loader"
+            "fuchsia.sys.Loader",
+            "fuchsia.sysinfo.SysInfo"
         ]
     }
 }

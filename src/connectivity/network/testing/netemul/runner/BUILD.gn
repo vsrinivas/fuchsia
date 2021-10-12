@@ -54,6 +54,7 @@ source_set("src") {
     "//sdk/fidl/fuchsia.net.stack",
     "//sdk/fidl/fuchsia.netstack",
     "//sdk/fidl/fuchsia.sys",
+    "//sdk/fidl/fuchsia.sysinfo",
     "//sdk/fidl/fuchsia.virtualization",
     "//sdk/lib/fdio",
     "//sdk/lib/sys/cpp",

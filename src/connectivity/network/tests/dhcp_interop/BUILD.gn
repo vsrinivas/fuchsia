@@ -68,6 +68,6 @@ fuchsia_test_package("netemul-dhcp-tests") {
   ]
 
   test_specs = {
-    environments = [ nuc_env ]
+    environments = guest_envs
   }
 }

@@ -3,7 +3,8 @@
         "fuchsia.test": {
             "system-services": [
                 "fuchsia.kernel.HypervisorResource",
-                "fuchsia.kernel.VmexResource"
+                "fuchsia.kernel.VmexResource",
+                "fuchsia.sysinfo.SysInfo"
             ]
         }
     },
@@ -23,6 +24,7 @@
             "fuchsia.netemul.network.Endpoint",
             "fuchsia.sys.Environment",
             "fuchsia.sys.Loader",
+            "fuchsia.sysinfo.SysInfo",
             "fuchsia.virtualization.Manager",
             "fuchsia.virtualization.Realm"
         ]

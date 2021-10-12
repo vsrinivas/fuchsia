@@ -9,6 +9,7 @@
 #include <fuchsia/kernel/cpp/fidl.h>
 #include <fuchsia/logger/cpp/fidl.h>
 #include <fuchsia/netemul/guest/cpp/fidl.h>
+#include <fuchsia/sysinfo/cpp/fidl.h>
 
 #include <random>
 
@@ -153,9 +154,10 @@ void ManagedEnvironment::Create(const fuchsia::sys::EnvironmentPtr& parent,
         svc);
   }
 
-  // Allow hypervisor and vmex resources for virtualization.
+  // Allow services required for virtualization.
   services->AllowParentService(fuchsia::kernel::HypervisorResource::Name_);
   services->AllowParentService(fuchsia::kernel::VmexResource::Name_);
+  services->AllowParentService(fuchsia::sysinfo::SysInfo::Name_);
 
   // prepare service configurations:
   service_config_.clear();

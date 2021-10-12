@@ -243,7 +243,8 @@ fuchsia_unittest_package("device_tests_package") {
   manifest = "meta/device_tests.cmx"
   deps = [ "device:device_tests" ]
   test_specs = {
-    environments = [ nuc_env ]
+    # TODO(https://fxbug.dev/86297): MagmaImageTesting assumes it's running on Intel.
+    environments = guest_envs - [ sherlock_env ]
   }
 }
 
