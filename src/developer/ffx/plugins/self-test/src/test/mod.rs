@@ -215,16 +215,33 @@ impl Drop for Isolate {
     }
 }
 
-/// cleanup runs pkill to ensure no daemons are left running.
+/// cleanup tries to give the daemon a chance to exit but eventually runs pkill to ensure nothing
+/// is left running.
 async fn cleanup() -> Result<()> {
-    // Daemon stop waits 20ms before exiting so we try to avoid a race by waiting 80ms here
-    fuchsia_async::Timer::new(Duration::from_millis(80)).await;
+    let max_attempts = 4;
+    let daemon_start_arg = "(^|/)ffx (-.* )?daemon start$";
 
-    let status = Command::new("pkill").arg("-f").arg("(^|/)ffx (-.* )?daemon start$").status()?;
-    if status.success() {
-        // Success here means that pkill was able to find something to kill so that means a daemon
-        // was still running that we did not expect to be running. We return an error here to make
-        // this a failure of the test suite as a whole to find out when this is happening.
+    for _ in 0..max_attempts {
+        let did_find_daemon = fuchsia_async::unblock(move || {
+            let status = Command::new("pgrep").arg("-f").arg(daemon_start_arg).status()?;
+            Ok::<_, anyhow::Error>(status.success())
+        })
+        .await?;
+
+        if did_find_daemon {
+            // Daemon stop waits 20ms before exiting so we try to avoid a race by waiting 50ms here
+            fuchsia_async::Timer::new(Duration::from_millis(50)).await;
+            continue;
+        } else {
+            return Ok(());
+        }
+    }
+
+    // Success here means that pkill was able to find something to kill so that means a daemon
+    // was still running that we did not expect to be running. We return an error here to make
+    // this a failure of the test suite as a whole to find out when this is happening.
+    let did_kill_daemon = Command::new("pkill").arg("-f").arg(daemon_start_arg).status()?.success();
+    if did_kill_daemon {
         ffx_bail!("A daemon was killed that was not supposed to be running")
     } else {
         Ok(())
