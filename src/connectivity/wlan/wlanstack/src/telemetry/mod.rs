@@ -845,9 +845,8 @@ mod tests {
         },
         wlan_sme::client::{
             info::{
-                CandidateNetwork, ConnectStats, DisconnectCause, DisconnectInfo,
-                DisconnectMlmeEventName, DisconnectSource, PreviousDisconnectInfo,
-                SupplicantProgress,
+                CandidateNetwork, ConnectStats, DisconnectInfo, DisconnectSource,
+                PreviousDisconnectInfo, SupplicantProgress,
             },
             ConnectFailure, ConnectResult, EstablishRsnaFailure, EstablishRsnaFailureReason,
             SelectNetworkFailure,
@@ -1227,9 +1226,9 @@ mod tests {
                 .expect("failed to create Cobalt 1.1 proxy and stream");
         let (inspect_tree, _persistence_stream) = fake_inspect_tree();
         let disconnect_info = DisconnectInfo {
-            disconnect_source: DisconnectSource::Ap(DisconnectCause {
+            disconnect_source: DisconnectSource::Ap(fidl_sme::DisconnectCause {
                 reason_code: fidl_ieee80211::ReasonCode::NoMoreStas,
-                mlme_event_name: DisconnectMlmeEventName::DisassociateIndication,
+                mlme_event_name: fidl_sme::DisconnectMlmeEventName::DisassociateIndication,
             }),
             ..fake_disconnect_info([1u8; 6])
         };
@@ -1292,9 +1291,9 @@ mod tests {
                 .expect("failed to create Cobalt 1.1 proxy and stream");
         let (inspect_tree, _persistence_stream) = fake_inspect_tree();
         let disconnect_info = DisconnectInfo {
-            disconnect_source: DisconnectSource::Mlme(DisconnectCause {
+            disconnect_source: DisconnectSource::Mlme(fidl_sme::DisconnectCause {
                 reason_code: fidl_ieee80211::ReasonCode::MlmeLinkFailed,
-                mlme_event_name: DisconnectMlmeEventName::DeauthenticateIndication,
+                mlme_event_name: fidl_sme::DisconnectMlmeEventName::DeauthenticateIndication,
             }),
             ..fake_disconnect_info([1u8; 6])
         };
@@ -1465,9 +1464,9 @@ mod tests {
                 .expect("failed to create Cobalt 1.1 proxy and stream");
         let (inspect_tree, _persistence_stream) = fake_inspect_tree();
 
-        let disconnect_source = DisconnectSource::Ap(DisconnectCause {
+        let disconnect_source = DisconnectSource::Ap(fidl_sme::DisconnectCause {
             reason_code: fidl_ieee80211::ReasonCode::NoMoreStas,
-            mlme_event_name: DisconnectMlmeEventName::DisassociateIndication,
+            mlme_event_name: fidl_sme::DisconnectMlmeEventName::DisassociateIndication,
         });
         let disconnect_info = DisconnectInfo {
             connected_duration: 30.seconds(),
@@ -1529,9 +1528,9 @@ mod tests {
                 .expect("failed to create Cobalt 1.1 proxy and stream");
         let (inspect_tree, _persistence_stream) = fake_inspect_tree();
 
-        let disconnect_source = DisconnectSource::Mlme(DisconnectCause {
+        let disconnect_source = DisconnectSource::Mlme(fidl_sme::DisconnectCause {
             reason_code: fidl_ieee80211::ReasonCode::LeavingNetworkDeauth,
-            mlme_event_name: DisconnectMlmeEventName::DeauthenticateIndication,
+            mlme_event_name: fidl_sme::DisconnectMlmeEventName::DeauthenticateIndication,
         });
         let disconnect_info = DisconnectInfo {
             connected_duration: 30.seconds(),

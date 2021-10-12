@@ -13,8 +13,7 @@ use {
         ConnectFailure, ConnectResult,
     },
     derivative::Derivative,
-    fidl_fuchsia_wlan_ieee80211 as fidl_ieee80211, fidl_fuchsia_wlan_mlme as fidl_mlme,
-    fidl_fuchsia_wlan_sme as fidl_sme,
+    fidl_fuchsia_wlan_mlme as fidl_mlme, fidl_fuchsia_wlan_sme as fidl_sme,
     fuchsia_zircon::{self as zx, prelude::DurationNum},
     ieee80211::{Bssid, Ssid},
     wlan_common::{
@@ -324,25 +323,13 @@ pub struct PreviousDisconnectInfo {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]
-pub struct DisconnectCause {
-    pub mlme_event_name: DisconnectMlmeEventName,
-    pub reason_code: fidl_ieee80211::ReasonCode,
-}
-
-#[derive(Debug, Clone, Copy, PartialEq)]
-pub enum DisconnectMlmeEventName {
-    DeauthenticateIndication,
-    DisassociateIndication,
-}
-
-#[derive(Debug, Clone, Copy, PartialEq)]
 pub enum DisconnectSource {
     /// Disconnect initiated by upper layer.
     User(fidl_sme::UserDisconnectReason),
     /// Disconnect initiated by AP.
-    Ap(DisconnectCause),
+    Ap(fidl_sme::DisconnectCause),
     /// Disconnect initiated by MLME.
-    Mlme(DisconnectCause),
+    Mlme(fidl_sme::DisconnectCause),
 }
 
 impl DisconnectSource {
@@ -351,13 +338,13 @@ impl DisconnectSource {
             DisconnectSource::User(user_reason) => {
                 format!("source: user, reason: {:?}", user_reason)
             }
-            DisconnectSource::Ap(DisconnectCause { mlme_event_name, reason_code }) => {
+            DisconnectSource::Ap(fidl_sme::DisconnectCause { mlme_event_name, reason_code }) => {
                 format!(
                     "source: ap, reason: {:?}, mlme_event_name: {:?}",
                     reason_code, mlme_event_name
                 )
             }
-            DisconnectSource::Mlme(DisconnectCause { mlme_event_name, reason_code }) => {
+            DisconnectSource::Mlme(fidl_sme::DisconnectCause { mlme_event_name, reason_code }) => {
                 format!(
                     "source: mlme, reason: {:?}, mlme_event_name: {:?}",
                     reason_code, mlme_event_name
@@ -372,10 +359,13 @@ impl DisconnectSource {
     /// This is mainly used for metric.
     pub fn reason_code(&self) -> u32 {
         match self {
-            DisconnectSource::Ap(DisconnectCause { reason_code: ap_reason_code, .. }) => {
-                ap_reason_code.into_primitive() as u32
-            }
-            DisconnectSource::Mlme(DisconnectCause { reason_code: mlme_reason_code, .. }) => {
+            DisconnectSource::Ap(fidl_sme::DisconnectCause {
+                reason_code: ap_reason_code, ..
+            }) => ap_reason_code.into_primitive() as u32,
+            DisconnectSource::Mlme(fidl_sme::DisconnectCause {
+                reason_code: mlme_reason_code,
+                ..
+            }) => {
                 let mlme_reason_code = mlme_reason_code.into_primitive() as u32;
                 (1u32 << 17) + mlme_reason_code
             }
@@ -386,12 +376,13 @@ impl DisconnectSource {
     /// Get the reason code of the disconnect, without the bit set based on disconnect source
     pub fn unflattened_reason_code(&self) -> u16 {
         match self {
-            DisconnectSource::Ap(DisconnectCause { reason_code: ap_reason_code, .. }) => {
-                ap_reason_code.into_primitive() as u16
-            }
-            DisconnectSource::Mlme(DisconnectCause { reason_code: mlme_reason_code, .. }) => {
-                mlme_reason_code.into_primitive() as u16
-            }
+            DisconnectSource::Ap(fidl_sme::DisconnectCause {
+                reason_code: ap_reason_code, ..
+            }) => ap_reason_code.into_primitive() as u16,
+            DisconnectSource::Mlme(fidl_sme::DisconnectCause {
+                reason_code: mlme_reason_code,
+                ..
+            }) => mlme_reason_code.into_primitive() as u16,
             DisconnectSource::User(reason) => *reason as u16,
         }
     }
@@ -407,16 +398,22 @@ impl DisconnectSource {
 impl From<DisconnectSource> for fidl_sme::DisconnectSource {
     fn from(source: DisconnectSource) -> Self {
         match source {
-            DisconnectSource::Ap(..) => Self::Ap,
-            DisconnectSource::User(..) => Self::User,
-            DisconnectSource::Mlme(..) => Self::Mlme,
+            DisconnectSource::Ap(cause) => Self::Ap(fidl_sme::DisconnectCause {
+                reason_code: cause.reason_code,
+                mlme_event_name: cause.mlme_event_name,
+            }),
+            DisconnectSource::User(reason) => Self::User(reason),
+            DisconnectSource::Mlme(cause) => Self::Mlme(fidl_sme::DisconnectCause {
+                reason_code: cause.reason_code,
+                mlme_event_name: cause.mlme_event_name,
+            }),
         }
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use {super::*, fidl_fuchsia_wlan_ieee80211 as fidl_ieee80211};
 
     #[test]
     fn test_whether_ping_reaches_new_milestone() {
@@ -447,14 +444,14 @@ mod tests {
 
     #[test]
     fn test_disconnect_source_locally_initiated() {
-        assert!(!DisconnectSource::Ap(DisconnectCause {
+        assert!(!DisconnectSource::Ap(fidl_sme::DisconnectCause {
             reason_code: fidl_ieee80211::ReasonCode::NoMoreStas,
-            mlme_event_name: DisconnectMlmeEventName::DeauthenticateIndication,
+            mlme_event_name: fidl_sme::DisconnectMlmeEventName::DeauthenticateIndication,
         })
         .locally_initiated());
-        assert!(DisconnectSource::Mlme(DisconnectCause {
+        assert!(DisconnectSource::Mlme(fidl_sme::DisconnectCause {
             reason_code: fidl_ieee80211::ReasonCode::LeavingNetworkDeauth,
-            mlme_event_name: DisconnectMlmeEventName::DeauthenticateIndication,
+            mlme_event_name: fidl_sme::DisconnectMlmeEventName::DeauthenticateIndication,
         })
         .locally_initiated());
         assert!(DisconnectSource::User(fidl_sme::UserDisconnectReason::WlanSmeUnitTesting)
@@ -465,9 +462,9 @@ mod tests {
     fn test_disconnect_source_reason_code() {
         assert_eq!(
             fidl_ieee80211::ReasonCode::NoMoreStas.into_primitive() as u32,
-            DisconnectSource::Ap(DisconnectCause {
+            DisconnectSource::Ap(fidl_sme::DisconnectCause {
                 reason_code: fidl_ieee80211::ReasonCode::NoMoreStas,
-                mlme_event_name: DisconnectMlmeEventName::DeauthenticateIndication,
+                mlme_event_name: fidl_sme::DisconnectMlmeEventName::DeauthenticateIndication,
             })
             .reason_code()
         );
@@ -476,9 +473,9 @@ mod tests {
         // aware of it.
         assert_eq!(
             131072u32 + fidl_ieee80211::ReasonCode::ReasonInactivity.into_primitive() as u32,
-            DisconnectSource::Mlme(DisconnectCause {
+            DisconnectSource::Mlme(fidl_sme::DisconnectCause {
                 reason_code: fidl_ieee80211::ReasonCode::ReasonInactivity,
-                mlme_event_name: DisconnectMlmeEventName::DisassociateIndication,
+                mlme_event_name: fidl_sme::DisconnectMlmeEventName::DisassociateIndication,
             })
             .reason_code()
         );

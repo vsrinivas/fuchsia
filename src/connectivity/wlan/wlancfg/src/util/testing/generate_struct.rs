@@ -5,8 +5,8 @@
 
 use {
     crate::client::types,
-    fidl_fuchsia_wlan_common as fidl_common, fidl_fuchsia_wlan_sme as fidl_sme,
-    fuchsia_zircon as zx,
+    fidl_fuchsia_wlan_common as fidl_common, fidl_fuchsia_wlan_ieee80211 as fidl_ieee80211,
+    fidl_fuchsia_wlan_sme as fidl_sme, fuchsia_zircon as zx,
     ieee80211::{Bssid, Ssid},
     rand::Rng as _,
     std::convert::TryFrom,
@@ -90,12 +90,66 @@ pub fn generate_disconnect_info(is_sme_reconnecting: bool) -> fidl_sme::Disconne
     let mut rng = rand::thread_rng();
     fidl_sme::DisconnectInfo {
         is_sme_reconnecting,
-        reason_code: rng.gen::<u16>(),
         disconnect_source: match rng.gen_range(0, 2) {
-            0 => fidl_sme::DisconnectSource::Ap,
-            1 => fidl_sme::DisconnectSource::User,
-            2 => fidl_sme::DisconnectSource::Mlme,
+            0 => fidl_sme::DisconnectSource::Ap(generate_random_disconnect_cause()),
+            1 => fidl_sme::DisconnectSource::User(generate_random_user_disconnect_reason()),
+            2 => fidl_sme::DisconnectSource::Mlme(generate_random_disconnect_cause()),
             _ => panic!(),
         },
+    }
+}
+
+pub fn generate_random_user_disconnect_reason() -> fidl_sme::UserDisconnectReason {
+    let mut rng = rand::thread_rng();
+    match rng.gen_range(0, 14) {
+        0 => fidl_sme::UserDisconnectReason::Unknown,
+        1 => fidl_sme::UserDisconnectReason::FailedToConnect,
+        2 => fidl_sme::UserDisconnectReason::FidlConnectRequest,
+        3 => fidl_sme::UserDisconnectReason::FidlStopClientConnectionsRequest,
+        4 => fidl_sme::UserDisconnectReason::ProactiveNetworkSwitch,
+        5 => fidl_sme::UserDisconnectReason::DisconnectDetectedFromSme,
+        6 => fidl_sme::UserDisconnectReason::RegulatoryRegionChange,
+        7 => fidl_sme::UserDisconnectReason::Startup,
+        8 => fidl_sme::UserDisconnectReason::NetworkUnsaved,
+        9 => fidl_sme::UserDisconnectReason::NetworkConfigUpdated,
+        10 => fidl_sme::UserDisconnectReason::WlanstackUnitTesting,
+        11 => fidl_sme::UserDisconnectReason::WlanSmeUnitTesting,
+        12 => fidl_sme::UserDisconnectReason::WlanServiceUtilTesting,
+        13 => fidl_sme::UserDisconnectReason::WlanDevTool,
+        _ => panic!(),
+    }
+}
+
+pub fn generate_random_disconnect_cause() -> fidl_sme::DisconnectCause {
+    fidl_sme::DisconnectCause {
+        reason_code: generate_random_reason_code(),
+        mlme_event_name: generate_random_disconnect_mlme_event_name(),
+    }
+}
+
+pub fn generate_random_reason_code() -> fidl_ieee80211::ReasonCode {
+    let mut rng = rand::thread_rng();
+    // This is just a random subset from the first few reason codes
+    match rng.gen_range(0, 10) {
+        0 => fidl_ieee80211::ReasonCode::UnspecifiedReason,
+        1 => fidl_ieee80211::ReasonCode::InvalidAuthentication,
+        2 => fidl_ieee80211::ReasonCode::LeavingNetworkDeauth,
+        3 => fidl_ieee80211::ReasonCode::ReasonInactivity,
+        4 => fidl_ieee80211::ReasonCode::NoMoreStas,
+        5 => fidl_ieee80211::ReasonCode::InvalidClass2Frame,
+        6 => fidl_ieee80211::ReasonCode::InvalidClass3Frame,
+        7 => fidl_ieee80211::ReasonCode::LeavingNetworkDisassoc,
+        8 => fidl_ieee80211::ReasonCode::NotAuthenticated,
+        9 => fidl_ieee80211::ReasonCode::UnacceptablePowerCapability,
+        _ => panic!(),
+    }
+}
+
+pub fn generate_random_disconnect_mlme_event_name() -> fidl_sme::DisconnectMlmeEventName {
+    let mut rng = rand::thread_rng();
+    match rng.gen_range(0, 2) {
+        0 => fidl_sme::DisconnectMlmeEventName::DeauthenticateIndication,
+        1 => fidl_sme::DisconnectMlmeEventName::DisassociateIndication,
+        _ => panic!(),
     }
 }

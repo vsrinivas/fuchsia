@@ -44,6 +44,22 @@ type UserDisconnectReason = strict enum {
     WLAN_DEV_TOOL = 127;
 };
 
+type DisconnectCause = struct {
+    mlme_event_name DisconnectMlmeEventName;
+    reason_code ieee80211.ReasonCode;
+};
+
+type DisconnectMlmeEventName = strict enum {
+    DEAUTHENTICATE_INDICATION = 1;
+    DISASSOCIATE_INDICATION = 2;
+};
+
+type DisconnectSource = strict union {
+    1: ap DisconnectCause;
+    2: user UserDisconnectReason;
+    3: mlme DisconnectCause;
+};
+
 type ScanResult = struct {
     compatible bool;
     // Time of the scan result relative to when the system was powered on.
@@ -100,18 +116,10 @@ type ConnectResult = struct {
     is_reconnect bool;
 };
 
-type DisconnectSource = strict enum {
-    AP = 0;
-    USER = 1;
-    MLME = 2;
-};
-
 type DisconnectInfo = struct {
     /// Whether SME is attempting to reconnect by itself
     is_sme_reconnecting bool;
-    /// Reason for disconnect. Meaning differs depending on `disconnect_source`
-    reason_code uint16;
-    /// Where the disconnect originated
+    /// Where the disconnect originated and associated reason
     disconnect_source DisconnectSource;
 };
 

@@ -10,7 +10,7 @@ use {
         client::{
             capabilities::derive_join_channel_and_capabilities,
             event::{self, Event},
-            info::{DisconnectCause, DisconnectInfo, DisconnectMlmeEventName, DisconnectSource},
+            info::{DisconnectInfo, DisconnectSource},
             internal::Context,
             protection::{build_protection_ie, Protection, ProtectionIe},
             report_connect_finished, AssociationFailure, ClientConfig, ClientSmeStatus,
@@ -544,8 +544,8 @@ impl Associated {
     ) -> Associating {
         let (mut protection, connected_duration) = self.link_state.disconnect();
 
-        let disconnect_reason = DisconnectCause {
-            mlme_event_name: DisconnectMlmeEventName::DisassociateIndication,
+        let disconnect_reason = fidl_sme::DisconnectCause {
+            mlme_event_name: fidl_sme::DisconnectMlmeEventName::DisassociateIndication,
             reason_code: ind.reason_code,
         };
         let disconnect_source = if ind.locally_initiated {
@@ -570,7 +570,6 @@ impl Associated {
             context.info.report_disconnect(disconnect_info);
             let fidl_disconnect_info = fidl_sme::DisconnectInfo {
                 is_sme_reconnecting: true,
-                reason_code: disconnect_source.unflattened_reason_code(),
                 disconnect_source: disconnect_source.into(),
             };
             self.connect_txn_sink
@@ -621,8 +620,8 @@ impl Associated {
     ) -> Idle {
         let (_, connected_duration) = self.link_state.disconnect();
 
-        let disconnect_reason = DisconnectCause {
-            mlme_event_name: DisconnectMlmeEventName::DeauthenticateIndication,
+        let disconnect_reason = fidl_sme::DisconnectCause {
+            mlme_event_name: fidl_sme::DisconnectMlmeEventName::DeauthenticateIndication,
             reason_code: ind.reason_code,
         };
         let disconnect_source = if ind.locally_initiated {
@@ -648,7 +647,6 @@ impl Associated {
                 context.info.report_disconnect(disconnect_info);
                 let fidl_disconnect_info = fidl_sme::DisconnectInfo {
                     is_sme_reconnecting: false,
-                    reason_code: disconnect_source.unflattened_reason_code(),
                     disconnect_source: disconnect_source.into(),
                 };
                 self.connect_txn_sink
@@ -1092,7 +1090,6 @@ impl ClientState {
                 context.info.report_disconnect(disconnect_info);
                 let fidl_disconnect_info = fidl_sme::DisconnectInfo {
                     is_sme_reconnecting: false,
-                    reason_code: disconnect_source.unflattened_reason_code(),
                     disconnect_source: disconnect_source.into(),
                 };
                 state
@@ -2396,18 +2393,23 @@ mod tests {
             assert_eq!(info.wsc, None);
             assert_eq!(info.protection, BssProtection::Open);
             assert_eq!(info.bssid, bss.bssid);
-            assert_variant!(info.disconnect_source, DisconnectSource::Mlme(DisconnectCause {
-                mlme_event_name: DisconnectMlmeEventName::DeauthenticateIndication,
+            assert_variant!(info.disconnect_source, DisconnectSource::Mlme(fidl_sme::DisconnectCause {
+                mlme_event_name: fidl_sme::DisconnectMlmeEventName::DeauthenticateIndication,
                 reason_code: fidl_ieee80211::ReasonCode::LeavingNetworkDeauth,
             }));
         });
-        let info = assert_variant!(
+        let fidl_info = assert_variant!(
             connect_txn_stream.try_next(),
             Ok(Some(ConnectTransactionEvent::OnDisconnect { info })) => info
         );
-        assert!(!info.is_sme_reconnecting);
-        assert_eq!(info.reason_code, fidl_ieee80211::ReasonCode::LeavingNetworkDeauth as u16);
-        assert_eq!(info.disconnect_source, fidl_sme::DisconnectSource::Mlme);
+        assert!(!fidl_info.is_sme_reconnecting);
+        assert_eq!(
+            fidl_info.disconnect_source,
+            fidl_sme::DisconnectSource::Mlme(fidl_sme::DisconnectCause {
+                mlme_event_name: fidl_sme::DisconnectMlmeEventName::DeauthenticateIndication,
+                reason_code: fidl_ieee80211::ReasonCode::LeavingNetworkDeauth,
+            })
+        );
     }
 
     #[test]
@@ -2433,8 +2435,8 @@ mod tests {
             assert_eq!(info.wsc, None);
             assert_eq!(info.protection, BssProtection::Open);
             assert_eq!(info.bssid, bss.bssid);
-            assert_variant!(info.disconnect_source, DisconnectSource::Mlme(DisconnectCause {
-                mlme_event_name: DisconnectMlmeEventName::DisassociateIndication,
+            assert_variant!(info.disconnect_source, DisconnectSource::Mlme(fidl_sme::DisconnectCause {
+                mlme_event_name: fidl_sme::DisconnectMlmeEventName::DisassociateIndication,
                 reason_code: fidl_ieee80211::ReasonCode::ReasonInactivity,
             }));
         });
@@ -2443,8 +2445,13 @@ mod tests {
             Ok(Some(ConnectTransactionEvent::OnDisconnect { info })) => info
         );
         assert!(info.is_sme_reconnecting);
-        assert_eq!(info.reason_code, fidl_ieee80211::ReasonCode::ReasonInactivity as u16);
-        assert_eq!(info.disconnect_source, fidl_sme::DisconnectSource::Mlme);
+        assert_eq!(
+            info.disconnect_source,
+            fidl_sme::DisconnectSource::Mlme(fidl_sme::DisconnectCause {
+                mlme_event_name: fidl_sme::DisconnectMlmeEventName::DisassociateIndication,
+                reason_code: fidl_ieee80211::ReasonCode::ReasonInactivity,
+            })
+        );
 
         // Check that association is attempted
         expect_assoc_req(&mut h.mlme_stream, bss.bssid);
@@ -2521,8 +2528,10 @@ mod tests {
             Ok(Some(ConnectTransactionEvent::OnDisconnect { info })) => info
         );
         assert!(!info.is_sme_reconnecting);
-        assert_eq!(info.reason_code, fidl_sme::UserDisconnectReason::WlanSmeUnitTesting as u16);
-        assert_eq!(info.disconnect_source, fidl_sme::DisconnectSource::User);
+        assert_eq!(
+            info.disconnect_source,
+            fidl_sme::DisconnectSource::User(fidl_sme::UserDisconnectReason::WlanSmeUnitTesting)
+        );
     }
 
     #[test]
@@ -2557,8 +2566,10 @@ mod tests {
             Ok(Some(ConnectTransactionEvent::OnDisconnect { info })) => info
         );
         assert!(!info.is_sme_reconnecting);
-        assert_eq!(info.reason_code, fidl_sme::UserDisconnectReason::WlanSmeUnitTesting as u16);
-        assert_eq!(info.disconnect_source, fidl_sme::DisconnectSource::User);
+        assert_eq!(
+            info.disconnect_source,
+            fidl_sme::DisconnectSource::User(fidl_sme::UserDisconnectReason::WlanSmeUnitTesting)
+        );
     }
 
     #[test]

@@ -14,9 +14,9 @@ pub fn convert_disconnect_source(
 ) -> metrics::ConnectivityWlanMetricDimensionDisconnectSource {
     use metrics::ConnectivityWlanMetricDimensionDisconnectSource::*;
     match source {
-        fidl_sme::DisconnectSource::Ap => Ap,
-        fidl_sme::DisconnectSource::User => User,
-        fidl_sme::DisconnectSource::Mlme => Mlme,
+        fidl_sme::DisconnectSource::Ap(..) => Ap,
+        fidl_sme::DisconnectSource::User(..) => User,
+        fidl_sme::DisconnectSource::Mlme(..) => Mlme,
     }
 }
 

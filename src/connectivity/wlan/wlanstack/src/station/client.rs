@@ -558,8 +558,10 @@ mod tests {
         // Test sending OnDisconnect
         let input_info = fidl_sme::DisconnectInfo {
             is_sme_reconnecting: true,
-            reason_code: 1,
-            disconnect_source: fidl_sme::DisconnectSource::Mlme,
+            disconnect_source: fidl_sme::DisconnectSource::Mlme(fidl_sme::DisconnectCause {
+                reason_code: fidl_ieee80211::ReasonCode::UnspecifiedReason,
+                mlme_event_name: fidl_sme::DisconnectMlmeEventName::DeauthenticateIndication,
+            }),
         };
         sme_proxy
             .unbounded_send(ConnectTransactionEvent::OnDisconnect { info: input_info.clone() })

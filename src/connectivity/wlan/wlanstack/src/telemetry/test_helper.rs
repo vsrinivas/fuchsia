@@ -4,7 +4,7 @@
 
 use {
     fidl_fuchsia_cobalt::CobaltEvent,
-    fidl_fuchsia_wlan_ieee80211 as fidl_ieee80211,
+    fidl_fuchsia_wlan_ieee80211 as fidl_ieee80211, fidl_fuchsia_wlan_sme as fidl_sme,
     fuchsia_cobalt::CobaltSender,
     fuchsia_zircon::DurationNum,
     futures::channel::mpsc,
@@ -14,9 +14,7 @@ use {
         bss::Protection as BssProtection,
         channel::{Cbw, Channel},
     },
-    wlan_sme::client::info::{
-        DisconnectCause, DisconnectInfo, DisconnectMlmeEventName, DisconnectSource,
-    },
+    wlan_sme::client::info::{DisconnectInfo, DisconnectSource},
 };
 
 pub trait CobaltExt {
@@ -93,9 +91,9 @@ pub fn fake_disconnect_info(bssid: [u8; 6]) -> DisconnectInfo {
         channel: Channel { primary: 1, cbw: Cbw::Cbw20 },
         last_rssi: -90,
         last_snr: 1,
-        disconnect_source: DisconnectSource::Mlme(DisconnectCause {
+        disconnect_source: DisconnectSource::Mlme(fidl_sme::DisconnectCause {
             reason_code: fidl_ieee80211::ReasonCode::NoMoreStas,
-            mlme_event_name: DisconnectMlmeEventName::DeauthenticateIndication,
+            mlme_event_name: fidl_sme::DisconnectMlmeEventName::DeauthenticateIndication,
         }),
         time_since_channel_switch: None,
     }

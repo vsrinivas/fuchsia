@@ -336,6 +336,7 @@ mod tests {
             SelectNetworkFailure,
         },
         anyhow::format_err,
+        fidl_fuchsia_wlan_ieee80211 as fidl_ieee80211,
         lazy_static::lazy_static,
         std::convert::TryFrom,
         wlan_common::{assert_variant, fake_bss_description},

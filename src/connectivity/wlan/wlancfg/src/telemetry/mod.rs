@@ -88,42 +88,31 @@ impl TelemetrySender {
 pub struct DisconnectInfo {
     pub connected_duration: zx::Duration,
     pub is_sme_reconnecting: bool,
-    pub disconnect_source: DisconnectSource,
+    pub disconnect_source: fidl_sme::DisconnectSource,
     pub latest_ap_state: BssDescription,
 }
 
-#[derive(Clone, Debug, PartialEq)]
-pub struct DisconnectSource {
-    disconnect_source: fidl_sme::DisconnectSource,
-    reason_code: u16,
+pub trait DisconnectSourceExt {
+    fn inspect_string(&self) -> String;
+    fn flattened_reason_code(&self) -> u32;
+    fn raw_reason_code(&self) -> u16;
+    fn locally_initiated(&self) -> bool;
 }
 
-impl DisconnectSource {
-    pub fn new(disconnect_source: fidl_sme::DisconnectSource, reason_code: u16) -> Self {
-        Self { disconnect_source, reason_code }
-    }
-
-    pub fn inspect_string(&self) -> String {
-        match self.disconnect_source {
-            fidl_sme::DisconnectSource::User => {
-                match fidl_sme::UserDisconnectReason::from_primitive(self.reason_code.into()) {
-                    Some(reason) => format!("source: user, reason: {:?}", reason),
-                    None => format!("source: user, reason: {}", self.reason_code),
-                }
+impl DisconnectSourceExt for fidl_sme::DisconnectSource {
+    fn inspect_string(&self) -> String {
+        match self {
+            fidl_sme::DisconnectSource::User(reason) => {
+                format!("source: user, reason: {:?}", reason)
             }
-            fidl_sme::DisconnectSource::Ap => {
-                match fidl_ieee80211::ReasonCode::from_primitive(self.reason_code) {
-                    Some(reason) => format!("source: ap, reason: {:?}", reason),
-                    None => format!("source: ap, reason: {}", self.reason_code),
-                }
-            }
-            // TODO(fxbug.dev/84892): Include MLME event name like we did in wlanstack
-            fidl_sme::DisconnectSource::Mlme => {
-                match fidl_ieee80211::ReasonCode::from_primitive(self.reason_code) {
-                    Some(reason) => format!("source: mlme, reason: {:?}", reason),
-                    None => format!("source: mlme, reason: {}", self.reason_code),
-                }
-            }
+            fidl_sme::DisconnectSource::Ap(cause) => format!(
+                "source: ap, reason: {:?}, mlme_event_name: {:?}",
+                cause.reason_code, cause.mlme_event_name
+            ),
+            fidl_sme::DisconnectSource::Mlme(cause) => format!(
+                "source: mlme, reason: {:?}, mlme_event_name: {:?}",
+                cause.reason_code, cause.mlme_event_name
+            ),
         }
     }
 
@@ -131,26 +120,26 @@ impl DisconnectSource {
     /// If disconnect comes from MLME, return (1u32 << 17) + reason code.
     /// If disconnect comes from user, return (1u32 << 16) + user disconnect reason.
     /// This is mainly used for metric.
-    pub fn flattened_reason_code(&self) -> u32 {
-        match self.disconnect_source {
-            fidl_sme::DisconnectSource::Ap => self.reason_code as u32,
-            fidl_sme::DisconnectSource::User => (1u32 << 16) + self.reason_code as u32,
-            fidl_sme::DisconnectSource::Mlme => (1u32 << 17) + self.reason_code as u32,
+    fn flattened_reason_code(&self) -> u32 {
+        match self {
+            fidl_sme::DisconnectSource::Ap(cause) => cause.reason_code as u32,
+            fidl_sme::DisconnectSource::User(reason) => (1u32 << 16) + *reason as u32,
+            fidl_sme::DisconnectSource::Mlme(cause) => (1u32 << 17) + cause.reason_code as u32,
         }
     }
 
-    pub fn source(&self) -> fidl_sme::DisconnectSource {
-        self.disconnect_source
+    fn raw_reason_code(&self) -> u16 {
+        match self {
+            fidl_sme::DisconnectSource::Ap(cause) => cause.reason_code as u16,
+            fidl_sme::DisconnectSource::User(reason) => *reason as u16,
+            fidl_sme::DisconnectSource::Mlme(cause) => cause.reason_code as u16,
+        }
     }
 
-    pub fn raw_reason_code(&self) -> u16 {
-        self.reason_code
-    }
-
-    pub fn locally_initiated(&self) -> bool {
-        match self.disconnect_source {
-            fidl_sme::DisconnectSource::Ap => false,
-            fidl_sme::DisconnectSource::Mlme | fidl_sme::DisconnectSource::User => true,
+    fn locally_initiated(&self) -> bool {
+        match self {
+            fidl_sme::DisconnectSource::Ap(..) => false,
+            fidl_sme::DisconnectSource::Mlme(..) | fidl_sme::DisconnectSource::User(..) => true,
         }
     }
 }
@@ -1685,7 +1674,7 @@ impl StatsLogger {
         });
 
         let disconnect_source_dim =
-            convert::convert_disconnect_source(&disconnect_info.disconnect_source.source());
+            convert::convert_disconnect_source(&disconnect_info.disconnect_source);
         metric_events.push(MetricEvent {
             metric_id: metrics::DISCONNECT_BREAKDOWN_BY_REASON_CODE_METRIC_ID,
             event_codes: vec![
@@ -1803,7 +1792,7 @@ impl StatsLogger {
         disconnect_info: &DisconnectInfo,
     ) {
         let disconnect_source_dim =
-            convert::convert_disconnect_source(&disconnect_info.disconnect_source.source());
+            convert::convert_disconnect_source(&disconnect_info.disconnect_source);
         log_cobalt_1dot1!(
             self.cobalt_1dot1_proxy,
             log_integer,
@@ -3528,7 +3517,10 @@ mod tests {
         let latest_ap_state = random_bss_description!(Wpa2, channel: channel);
         let info = DisconnectInfo {
             connected_duration: 5.hours(),
-            disconnect_source: DisconnectSource::new(fidl_sme::DisconnectSource::Mlme, 3),
+            disconnect_source: fidl_sme::DisconnectSource::Mlme(fidl_sme::DisconnectCause {
+                reason_code: fidl_ieee80211::ReasonCode::LeavingNetworkDeauth,
+                mlme_event_name: fidl_sme::DisconnectMlmeEventName::DeauthenticateIndication,
+            }),
             latest_ap_state,
             ..fake_disconnect_info()
         };
@@ -4040,7 +4032,10 @@ mod tests {
         test_helper.drain_cobalt_events(&mut test_fut);
 
         let info = DisconnectInfo {
-            disconnect_source: DisconnectSource::new(fidl_sme::DisconnectSource::Mlme, 3),
+            disconnect_source: fidl_sme::DisconnectSource::Mlme(fidl_sme::DisconnectCause {
+                reason_code: fidl_ieee80211::ReasonCode::LeavingNetworkDeauth,
+                mlme_event_name: fidl_sme::DisconnectMlmeEventName::DeauthenticateIndication,
+            }),
             ..fake_disconnect_info()
         };
         test_helper
@@ -4091,7 +4086,10 @@ mod tests {
         test_helper.drain_cobalt_events(&mut test_fut);
 
         let info = DisconnectInfo {
-            disconnect_source: DisconnectSource::new(fidl_sme::DisconnectSource::Mlme, 3),
+            disconnect_source: fidl_sme::DisconnectSource::Mlme(fidl_sme::DisconnectCause {
+                reason_code: fidl_ieee80211::ReasonCode::LeavingNetworkDeauth,
+                mlme_event_name: fidl_sme::DisconnectMlmeEventName::DeauthenticateIndication,
+            }),
             ..fake_disconnect_info()
         };
         test_helper
@@ -4849,10 +4847,7 @@ mod tests {
         DisconnectInfo {
             connected_duration: 6.hours(),
             is_sme_reconnecting: fidl_disconnect_info.is_sme_reconnecting,
-            disconnect_source: DisconnectSource::new(
-                fidl_disconnect_info.disconnect_source,
-                fidl_disconnect_info.reason_code,
-            ),
+            disconnect_source: fidl_disconnect_info.disconnect_source,
             latest_ap_state: random_bss_description!(Wpa2),
         }
     }
