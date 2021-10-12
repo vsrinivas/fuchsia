@@ -4,14 +4,13 @@
 
 use {
     anyhow::Context as _,
-    fidl_fuchsia_hardware_ethernet_ext::MacAddress,
     serde::{Deserialize, Serialize},
     std::{fs, io, path},
 };
 
 #[derive(PartialEq, Eq, Serialize, Deserialize, Debug)]
 enum PersistentIdentifier {
-    MacAddress(MacAddress),
+    MacAddress(fidl_fuchsia_net_ext::MacAddress),
     TopologicalPath(String),
 }
 
@@ -28,7 +27,7 @@ impl Config {
     fn generate_identifier(
         &self,
         topological_path: &str,
-        mac_address: MacAddress,
+        mac_address: fidl_fuchsia_net_ext::MacAddress,
     ) -> PersistentIdentifier {
         if topological_path.contains("/pci-") {
             if topological_path.contains("/usb/") {
@@ -97,7 +96,7 @@ impl Config {
         }
         Err(anyhow::format_err!(
             "could not find unique name for mac={}, wlan={}",
-            MacAddress { octets: octets },
+            fidl_fuchsia_net_ext::MacAddress { octets: octets },
             wlan
         ))
     }
@@ -146,8 +145,8 @@ impl Config {
         wlan: bool,
     ) -> Result<String, anyhow::Error> {
         match persistent_id {
-            PersistentIdentifier::MacAddress(mac_addr) => {
-                self.generate_name_from_mac(mac_addr.octets, wlan)
+            PersistentIdentifier::MacAddress(fidl_fuchsia_net_ext::MacAddress { octets }) => {
+                self.generate_name_from_mac(*octets, wlan)
             }
             PersistentIdentifier::TopologicalPath(ref topological_path) => {
                 self.generate_name_from_topological_path(&topological_path, wlan)
@@ -219,7 +218,7 @@ impl<'a> FileBackedConfig<'a> {
     pub fn get_stable_name(
         &mut self,
         topological_path: &str,
-        mac_address: MacAddress,
+        mac_address: fidl_fuchsia_net_ext::MacAddress,
         wlan: bool,
     ) -> Result<&str, NameGenerationError<'_>> {
         let persistent_id = self.config.generate_identifier(topological_path, mac_address);
@@ -339,8 +338,10 @@ mod tests {
         ];
         let config = Config { names: vec![] };
         for test in test_cases.into_iter() {
-            let persistent_id =
-                config.generate_identifier(&test.topological_path, MacAddress { octets: test.mac });
+            let persistent_id = config.generate_identifier(
+                &test.topological_path,
+                fidl_fuchsia_net_ext::MacAddress { octets: test.mac },
+            );
             let name = config
                 .generate_name(&persistent_id, test.wlan)
                 .expect("failed to generate the name");
@@ -370,7 +371,11 @@ mod tests {
             assert_eq!(interface_config.config.names.len(), i);
 
             let name = interface_config
-                .get_stable_name(&test.topological_path, MacAddress { octets: test.mac }, test.wlan)
+                .get_stable_name(
+                    &test.topological_path,
+                    fidl_fuchsia_net_ext::MacAddress { octets: test.mac },
+                    test.wlan,
+                )
                 .expect("failed to get the interface name");
             assert_eq!(name, test.want_name);
             assert_eq!(interface_config.config.names.len(), 1);
@@ -396,7 +401,8 @@ mod tests {
         for n in 0u8..255u8 {
             let octets = [n, 0x01, 0x01, 0x01, 0x01, 00];
 
-            let persistent_id = config.generate_identifier(&topo_usb, MacAddress { octets });
+            let persistent_id =
+                config.generate_identifier(&topo_usb, fidl_fuchsia_net_ext::MacAddress { octets });
 
             if let Some(index) = config.lookup_by_identifier(&persistent_id) {
                 assert_eq!(config.names[index].1, format!("{}{:x}", "wlanx", n));
@@ -409,7 +415,8 @@ mod tests {
             }
         }
         let octets = [0x00, 0x00, 0x01, 0x01, 0x01, 00];
-        let persistent_id = config.generate_identifier(&topo_usb, MacAddress { octets });
+        let persistent_id =
+            config.generate_identifier(&topo_usb, fidl_fuchsia_net_ext::MacAddress { octets });
         assert!(config.generate_name(&persistent_id, true).is_err());
     }
 

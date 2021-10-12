@@ -57,34 +57,37 @@ impl errors::ContextExt for AddDeviceError {
     }
 }
 
-/// An abstraction over a [`Device`]'s info.
-pub(super) trait DeviceInfo {
-    /// Is the device a WLAN device?
-    fn is_wlan(&self) -> bool;
-
-    /// Is the device a physical device?
-    fn is_physical(&self) -> bool;
+pub(super) struct DeviceInfo {
+    pub(super) device_class: fhwnet::DeviceClass,
+    pub(super) mac: Option<fidl_fuchsia_net_ext::MacAddress>,
+    pub(super) is_synthetic: bool,
 }
 
-impl DeviceInfo for feth_ext::EthernetInfo {
-    fn is_wlan(&self) -> bool {
-        feth_ext::is_wlan(self.features)
+impl DeviceInfo {
+    pub(super) fn interface_type(&self) -> crate::InterfaceType {
+        let Self { device_class, mac: _, is_synthetic: _ } = self;
+        match device_class {
+            fhwnet::DeviceClass::Wlan | fhwnet::DeviceClass::WlanAp => crate::InterfaceType::Wlan,
+            fhwnet::DeviceClass::Ethernet
+            | fhwnet::DeviceClass::Virtual
+            | fhwnet::DeviceClass::Ppp
+            | fhwnet::DeviceClass::Bridge => crate::InterfaceType::Ethernet,
+        }
     }
 
-    fn is_physical(&self) -> bool {
-        feth_ext::is_physical(self.features)
-    }
-}
+    pub(super) fn is_wlan_ap(&self, topological_path: &str) -> bool {
+        /// The string present in the topological path of a WLAN AP interface.
+        const WLAN_AP_TOPO_PATH_CONTAINS: &str = "wlanif-ap";
 
-impl DeviceInfo for fhwnet::PortInfo {
-    fn is_wlan(&self) -> bool {
-        self.class == Some(fhwnet::DeviceClass::Wlan)
-    }
-
-    fn is_physical(&self) -> bool {
-        // We do not know if a network device is physical or virtual. For now, we consider
-        // all network devices as physical. Virtual network devices do not show up on devfs.
-        true
+        let Self { device_class, mac: _, is_synthetic: _ } = self;
+        match device_class {
+            fhwnet::DeviceClass::WlanAp => true,
+            fhwnet::DeviceClass::Wlan
+            | fhwnet::DeviceClass::Ethernet
+            | fhwnet::DeviceClass::Virtual
+            | fhwnet::DeviceClass::Ppp
+            | fhwnet::DeviceClass::Bridge => topological_path.contains(WLAN_AP_TOPO_PATH_CONTAINS),
+        }
     }
 }
 
@@ -101,9 +104,6 @@ pub(super) trait Device {
     /// The protocol this device implements.
     type ProtocolMarker: fidl::endpoints::ProtocolMarker;
 
-    /// The type returned by [`device_info_and_mac`].
-    type DeviceInfo: DeviceInfo;
-
     /// The type returned by [`get_topo_path_and_device`].
     type DeviceInstance;
 
@@ -116,19 +116,10 @@ pub(super) trait Device {
         filepath: &std::path::PathBuf,
     ) -> Result<(String, Self::DeviceInstance), errors::Error>;
 
-    /// Get the device's information and MAC address.
-    async fn device_info_and_mac(
+    /// Get the device's information.
+    async fn get_device_info(
         device_instance: &Self::DeviceInstance,
-    ) -> Result<(Self::DeviceInfo, feth_ext::MacAddress), errors::Error>;
-
-    /// Returns an [`EthernetInfo`] representation of the device.
-    ///
-    /// [`EthernetInfo`]: feth_ext::EthernetInfo
-    fn eth_device_info(
-        info: Self::DeviceInfo,
-        mac: feth_ext::MacAddress,
-        features: feth::Features,
-    ) -> feth_ext::EthernetInfo;
+    ) -> Result<DeviceInfo, errors::Error>;
 
     /// Adds the device to the netstack.
     async fn add_to_stack(
@@ -147,7 +138,6 @@ impl Device for EthernetDevice {
     const NAME: &'static str = "ethdev";
     const PATH: &'static str = "class/ethernet";
     type ProtocolMarker = feth::DeviceMarker;
-    type DeviceInfo = feth_ext::EthernetInfo;
     type DeviceInstance = feth::DeviceProxy;
 
     async fn get_topo_path_and_device(
@@ -156,25 +146,27 @@ impl Device for EthernetDevice {
         get_topo_path_and_device::<feth::DeviceMarker>(filepath).await
     }
 
-    async fn device_info_and_mac(
+    async fn get_device_info(
         device_instance: &feth::DeviceProxy,
-    ) -> Result<(feth_ext::EthernetInfo, feth_ext::MacAddress), errors::Error> {
-        let info: feth_ext::EthernetInfo = device_instance
-            .get_info()
-            .await
-            .map(Into::into)
-            .context("error getting device info for ethdev")
-            .map_err(errors::Error::NonFatal)?;
-        let mac_addr = info.mac;
-        Ok((info, mac_addr))
-    }
-
-    fn eth_device_info(
-        info: feth_ext::EthernetInfo,
-        _mac: feth_ext::MacAddress,
-        _features: feth::Features,
-    ) -> feth_ext::EthernetInfo {
-        info
+    ) -> Result<DeviceInfo, errors::Error> {
+        let feth_ext::EthernetInfo { features, mac: feth_ext::MacAddress { octets }, mtu: _ } =
+            device_instance
+                .get_info()
+                .await
+                .map(Into::into)
+                .context("error getting device info for ethdev")
+                .map_err(errors::Error::NonFatal)?;
+        let is_synthetic = features.contains(feth::Features::Synthetic);
+        let device_class = if features.contains(feth::Features::Wlan) {
+            fhwnet::DeviceClass::Wlan
+        } else {
+            fhwnet::DeviceClass::Ethernet
+        };
+        Ok(DeviceInfo {
+            device_class,
+            mac: Some(fidl_fuchsia_net_ext::MacAddress { octets }),
+            is_synthetic,
+        })
     }
 
     async fn add_to_stack(
@@ -227,7 +219,6 @@ impl Device for NetworkDevice {
     const NAME: &'static str = "netdev";
     const PATH: &'static str = "class/network";
     type ProtocolMarker = fhwnet::DeviceInstanceMarker;
-    type DeviceInfo = fhwnet::PortInfo;
     type DeviceInstance = NetworkDeviceInstance;
 
     async fn get_topo_path_and_device(
@@ -264,9 +255,9 @@ impl Device for NetworkDevice {
         Ok((path, NetworkDeviceInstance { device, mac_addressing }))
     }
 
-    async fn device_info_and_mac(
+    async fn get_device_info(
         device_instance: &NetworkDeviceInstance,
-    ) -> Result<(fhwnet::PortInfo, feth_ext::MacAddress), errors::Error> {
+    ) -> Result<DeviceInfo, errors::Error> {
         let NetworkDeviceInstance { device, mac_addressing } = device_instance;
         let (port, port_server_end) = fidl::endpoints::create_proxy()
             .context("error creating port proxy")
@@ -275,30 +266,27 @@ impl Device for NetworkDevice {
             .get_port(PORT0, port_server_end)
             .context("error getting port")
             .map_err(errors::Error::NonFatal)?;
-        let port_info = port
+        let fhwnet::PortInfo { id: _, class: device_class, rx_types: _, tx_types: _, .. } = port
             .get_info()
             .await
             .context("error getting port info")
             .map_err(errors::Error::NonFatal)?;
-
-        let mac_addr = feth_ext::MacAddress {
-            octets: mac_addressing
-                .get_unicast_address()
-                .await
-                .context("error getting unicast MAC address")
-                .map_err(errors::Error::NonFatal)?
-                .octets,
-        };
-
-        Ok((port_info, mac_addr))
-    }
-
-    fn eth_device_info(
-        _info: fhwnet::PortInfo,
-        mac: feth_ext::MacAddress,
-        features: feth::Features,
-    ) -> feth_ext::EthernetInfo {
-        feth_ext::EthernetInfo { features, mtu: 0, mac }
+        let device_class = device_class.ok_or_else(|| {
+            errors::Error::Fatal(anyhow::anyhow!("missing device class in port info"))
+        })?;
+        let mac = mac_addressing
+            .get_unicast_address()
+            .await
+            .map(Some)
+            .or_else(|fidl_err| {
+                if fidl_err.is_closed() {
+                    Ok(None)
+                } else {
+                    Err(anyhow::Error::from(fidl_err))
+                }
+            })
+            .map_err(errors::Error::NonFatal)?;
+        Ok(DeviceInfo { device_class, mac: mac.map(Into::into), is_synthetic: false })
     }
 
     async fn add_to_stack(

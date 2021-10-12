@@ -26,8 +26,6 @@ use std::path;
 use std::pin::Pin;
 use std::str::FromStr;
 
-use fidl_fuchsia_hardware_ethernet as feth;
-use fidl_fuchsia_hardware_ethernet_ext as feth_ext;
 use fidl_fuchsia_io as fio;
 use fidl_fuchsia_net as fnet;
 use fidl_fuchsia_net_dhcp as fnet_dhcp;
@@ -59,7 +57,7 @@ use log::{debug, error, info, trace, warn};
 use net_declare::fidl_ip_v4;
 use serde::Deserialize;
 
-use self::devices::{Device as _, DeviceInfo as _};
+use self::devices::{Device as _, DeviceInfo};
 use self::errors::ContextExt as _;
 
 /// Interface metrics.
@@ -80,9 +78,6 @@ const PERSISTED_INTERFACE_CONFIG_FILEPATH: &str = "/data/net_interfaces.cfg.json
 ///
 /// `/dir` and `/dir/.` point to the same directory.
 const THIS_DIRECTORY: &str = ".";
-
-/// The string present in the topological path of a WLAN AP interface.
-const WLAN_AP_TOPO_PATH_CONTAINS: &str = "wlanif-ap";
 
 /// The prefix length for the address assigned to a WLAN AP interface.
 const WLAN_AP_PREFIX_LEN: u8 = 29;
@@ -266,15 +261,9 @@ macro_rules! cas_filter_rules {
 
 fn should_enable_filter(
     filter_enabled_interface_types: &HashSet<InterfaceType>,
-    features: &feth::Features,
+    info: &DeviceInfo,
 ) -> bool {
-    if features.contains(feth::Features::Loopback) {
-        false
-    } else if features.contains(feth::Features::Wlan) {
-        filter_enabled_interface_types.contains(&InterfaceType::Wlan)
-    } else {
-        filter_enabled_interface_types.contains(&InterfaceType::Ethernet)
-    }
+    filter_enabled_interface_types.contains(&info.interface_type())
 }
 
 /// State for an interface.
@@ -1054,17 +1043,29 @@ impl<'a> NetCfg<'a> {
 
         info!("{} {} has topological path {}", D::NAME, filepath.display(), topological_path);
 
-        let (info, mac) = D::device_info_and_mac(&device_instance)
+        let info = D::get_device_info(&device_instance)
             .await
             .context("error getting device info and MAC")?;
-        if !self.allow_virtual_devices && !info.is_physical() {
+
+        let DeviceInfo { mac, is_synthetic, device_class: _ } = &info;
+
+        if !self.allow_virtual_devices && *is_synthetic {
             warn!("{} at {} is not a physical device, skipping", D::NAME, filepath.display());
             return Ok(());
         }
 
-        let wlan = info.is_wlan();
-        let (metric, features) = crate::get_metric_and_features(wlan);
-        let eth_info = D::eth_device_info(info, mac, features);
+        let mac = mac.ok_or_else(|| {
+            warn!("devices without mac address not supported yet");
+            devices::AddDeviceError::Other(errors::Error::NonFatal(anyhow::anyhow!(
+                "device without mac not supported"
+            )))
+        })?;
+
+        let wlan = match info.interface_type() {
+            InterfaceType::Wlan => true,
+            InterfaceType::Ethernet => false,
+        };
+        let metric = crate::get_metric(wlan);
         let interface_name = if stable_name {
             match self.persisted_interface_config.get_stable_name(
                 &topological_path, /* TODO(tamird): we can probably do
@@ -1105,7 +1106,7 @@ impl<'a> NetCfg<'a> {
                 .await
                 .context("error adding to stack")?;
 
-        self.configure_eth_interface(interface_id, &topological_path, interface_name, &eth_info)
+        self.configure_eth_interface(interface_id, &topological_path, interface_name, &info)
             .await
             .context("error configuring ethernet interface")
             .map_err(devices::AddDeviceError::Other)
@@ -1113,19 +1114,19 @@ impl<'a> NetCfg<'a> {
 
     /// Configure an ethernet interface.
     ///
-    /// If the device has `WLAN_AP_TOPO_PATH_CONTAINS` in its topological path, it will
-    /// be configured as a WLAN AP (see `configure_wlan_ap_and_dhcp_server` for more details).
-    /// Otherwise, it will be configured as a host (see `configure_host` for more details).
+    /// If the device is a WLAN AP, it will be configured as a WLAN AP (see
+    /// `configure_wlan_ap_and_dhcp_server` for more details). Otherwise, it
+    /// will be configured as a host (see `configure_host` for more details).
     async fn configure_eth_interface(
         &mut self,
         interface_id: u64,
         topological_path: &str,
         interface_name: String,
-        info: &feth_ext::EthernetInfo,
+        info: &DeviceInfo,
     ) -> Result<(), errors::Error> {
         let interface_id_u32: u32 = interface_id.try_into().expect("NIC ID should fit in a u32");
 
-        if topological_path.contains(WLAN_AP_TOPO_PATH_CONTAINS) {
+        if info.is_wlan_ap(topological_path) {
             if let Some(id) = self.interface_states.iter().find_map(|(id, state)| {
                 if state.is_wlan_ap() {
                     Some(id)
@@ -1182,9 +1183,9 @@ impl<'a> NetCfg<'a> {
     async fn configure_host(
         &mut self,
         interface_id: u32,
-        info: &feth_ext::EthernetInfo,
+        info: &DeviceInfo,
     ) -> Result<(), errors::Error> {
-        if should_enable_filter(&self.filter_enabled_interface_types, &info.features) {
+        if should_enable_filter(&self.filter_enabled_interface_types, info) {
             info!("enable filter for nic {}", interface_id);
             let status = self
                 .filter
@@ -1368,14 +1369,14 @@ impl<'a> NetCfg<'a> {
     }
 }
 
-/// Return the metric and ethernet features.
-fn get_metric_and_features(wlan: bool) -> (u32, feth::Features) {
+/// Return the metric.
+fn get_metric(wlan: bool) -> u32 {
     // Hardcode the interface metric. Eventually this should
     // be part of the config file.
     if wlan {
-        (INTF_METRIC_WLAN, feth::Features::Wlan)
+        INTF_METRIC_WLAN
     } else {
-        (INTF_METRIC_ETH, feth::Features::empty())
+        INTF_METRIC_ETH
     }
 }
 
@@ -2095,29 +2096,33 @@ mod tests {
         let types_ethernet: HashSet<InterfaceType> =
             [InterfaceType::Ethernet].iter().cloned().collect();
         let types_wlan: HashSet<InterfaceType> = [InterfaceType::Wlan].iter().cloned().collect();
-        let types_ethernet_wlan: HashSet<InterfaceType> =
-            [InterfaceType::Ethernet, InterfaceType::Wlan].iter().cloned().collect();
 
-        let features_wlan = feth::Features::Wlan;
-        let features_loopback = feth::Features::Loopback;
-        let features_synthetic = feth::Features::Synthetic;
-        let features_empty = feth::Features::empty();
+        const WLAN_INFO: DeviceInfo = DeviceInfo {
+            is_synthetic: false,
+            mac: None,
+            device_class: fidl_fuchsia_hardware_network::DeviceClass::Wlan,
+        };
+        const WLAN_AP_INFO: DeviceInfo = DeviceInfo {
+            is_synthetic: false,
+            mac: None,
+            device_class: fidl_fuchsia_hardware_network::DeviceClass::WlanAp,
+        };
+        const ETHERNET_INFO: DeviceInfo = DeviceInfo {
+            is_synthetic: false,
+            mac: None,
+            device_class: fidl_fuchsia_hardware_network::DeviceClass::Ethernet,
+        };
 
-        assert_eq!(should_enable_filter(&types_empty, &features_empty), false);
-        assert_eq!(should_enable_filter(&types_empty, &features_wlan), false);
-        assert_eq!(should_enable_filter(&types_empty, &features_synthetic), false);
-        assert_eq!(should_enable_filter(&types_empty, &features_loopback), false);
-        assert_eq!(should_enable_filter(&types_ethernet, &features_empty), true);
-        assert_eq!(should_enable_filter(&types_ethernet, &features_wlan), false);
-        assert_eq!(should_enable_filter(&types_ethernet, &features_synthetic), true);
-        assert_eq!(should_enable_filter(&types_ethernet, &features_loopback), false);
-        assert_eq!(should_enable_filter(&types_wlan, &features_empty), false);
-        assert_eq!(should_enable_filter(&types_wlan, &features_wlan), true);
-        assert_eq!(should_enable_filter(&types_wlan, &features_synthetic), false);
-        assert_eq!(should_enable_filter(&types_wlan, &features_loopback), false);
-        assert_eq!(should_enable_filter(&types_ethernet_wlan, &features_empty), true);
-        assert_eq!(should_enable_filter(&types_ethernet_wlan, &features_wlan), true);
-        assert_eq!(should_enable_filter(&types_ethernet_wlan, &features_synthetic), true);
-        assert_eq!(should_enable_filter(&types_ethernet_wlan, &features_loopback), false);
+        assert_eq!(should_enable_filter(&types_empty, &WLAN_INFO), false);
+        assert_eq!(should_enable_filter(&types_empty, &WLAN_AP_INFO), false);
+        assert_eq!(should_enable_filter(&types_empty, &ETHERNET_INFO), false);
+
+        assert_eq!(should_enable_filter(&types_ethernet, &WLAN_INFO), false);
+        assert_eq!(should_enable_filter(&types_ethernet, &WLAN_AP_INFO), false);
+        assert_eq!(should_enable_filter(&types_ethernet, &ETHERNET_INFO), true);
+
+        assert_eq!(should_enable_filter(&types_wlan, &WLAN_INFO), true);
+        assert_eq!(should_enable_filter(&types_wlan, &WLAN_AP_INFO), true);
+        assert_eq!(should_enable_filter(&types_wlan, &ETHERNET_INFO), false);
     }
 }
