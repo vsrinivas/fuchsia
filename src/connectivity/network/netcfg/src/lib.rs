@@ -201,9 +201,8 @@ enum InterfaceType {
     Wlan,
 }
 
-// TODO(https://fxbug.dev/86326): Deny unknown fields after "rules" usage has
-// been deleted OOT.
 #[derive(Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
 struct Config {
     pub dns_config: DnsConfig,
     pub filter_config: FilterConfig,
@@ -2084,6 +2083,21 @@ mod tests {
             IntoIterator::into_iter([InterfaceType::Wlan]).collect::<HashSet<_>>(),
             filter_enabled_interface_types
         );
+    }
+
+    #[test]
+    fn test_config_denies_unknown_fields() {
+        let config_str = r#"{
+            "filter_enabled_interface_types": ["wlan"],
+            "foobar": "baz"
+        }"#;
+
+        let err = Config::load_str(config_str).expect_err("config shouldn't accept unknown fields");
+        let err = err.downcast::<serde_json::Error>().expect("downcast error");
+        assert_eq!(err.classify(), serde_json::error::Category::Data);
+        assert_eq!(err.line(), 3);
+        // Ensure the error is complaining about unknown field.
+        assert!(format!("{:?}", err).contains("foobar"));
     }
 
     #[test]
