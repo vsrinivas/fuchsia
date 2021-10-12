@@ -28,8 +28,10 @@ class TempDirTestCase(unittest.TestCase):
     def MakeTempDir(self):
         temp_dir = tempfile.mkdtemp(
             prefix='tmp_unittest_%s_' % self.__class__.__name__)
+
         def tear_down():
             shutil.rmtree(temp_dir)
+
         self._on_teardown.append(tear_down)
         return temp_dir
 
@@ -84,8 +86,8 @@ class GoldenDataOutput(object):
                 fh.write('\n\n### %s\n%s' % (name, data))
 
 
-GOLDEN_FILE = os.path.join(os.path.dirname(__file__),
-                           'perfcompare_test_output.txt')
+GOLDEN_FILE = os.path.join(
+    os.path.dirname(__file__), 'perfcompare_test_output.txt')
 GOLDEN = GoldenDataInput(GOLDEN_FILE)
 
 
@@ -105,19 +107,20 @@ def TestMain():
 # Test data from a normal distribution, generated using the following code:
 # ', '.join('%.4f' % random.gauss(0, 1) for _ in xrange(100))
 TEST_VALUES = [
-    0.4171, 2.1056, -0.0223, -1.6592, 0.4766, -0.6405, 0.3488, 1.5729,
-    2.0654, -0.1324, -0.8648, -0.2793, -0.7966, 0.2851, -0.9374, -2.0275,
-    0.8222, -0.2396, -0.6982, 0.9067, 0.9416, -2.2870, -0.1868, 1.0700,
-    -1.2531, 0.8455, 1.4755, 0.2979, 0.3441, 0.6694, -0.1808, -0.9038,
-    0.8267, -0.4320, -0.7166, 0.3757, -0.5135, -0.9497, 2.0372, -0.3364,
-    0.3879, -0.2970, 1.3872, 0.6538, 1.0674, 1.2349, -0.6873, -0.1807,
-    0.6867, -0.1150, -1.0526, -0.6853, -0.5858, -1.8460, 1.6041, -1.1638,
-    0.5459, -1.6476, -0.8711, -0.9001, 0.0788, -0.8170, 0.2439, 0.0129,
-    -0.8674, -1.1076, -0.0074, -0.6230, -0.4761, -2.2526, 0.4906, -0.5001,
-    -0.2050, 0.7623, -0.5511, -0.2837, -0.8797, -0.5374, -1.2910, 0.9551,
-    0.4483, -0.6352, -0.3334, -0.5105, 0.1073, 2.9131, -0.4941, -0.2808,
-    -0.2517, -1.9961, 0.9214, -0.6325, -1.1895, 0.8118, 1.5424, 0.5601,
-    -1.0322, 0.7135, -0.2780, -0.1128]
+    0.4171, 2.1056, -0.0223, -1.6592, 0.4766, -0.6405, 0.3488, 1.5729, 2.0654,
+    -0.1324, -0.8648, -0.2793, -0.7966, 0.2851, -0.9374, -2.0275, 0.8222,
+    -0.2396, -0.6982, 0.9067, 0.9416, -2.2870, -0.1868, 1.0700, -1.2531, 0.8455,
+    1.4755, 0.2979, 0.3441, 0.6694, -0.1808, -0.9038, 0.8267, -0.4320, -0.7166,
+    0.3757, -0.5135, -0.9497, 2.0372, -0.3364, 0.3879, -0.2970, 1.3872, 0.6538,
+    1.0674, 1.2349, -0.6873, -0.1807, 0.6867, -0.1150, -1.0526, -0.6853,
+    -0.5858, -1.8460, 1.6041, -1.1638, 0.5459, -1.6476, -0.8711, -0.9001,
+    0.0788, -0.8170, 0.2439, 0.0129, -0.8674, -1.1076, -0.0074, -0.6230,
+    -0.4761, -2.2526, 0.4906, -0.5001, -0.2050, 0.7623, -0.5511, -0.2837,
+    -0.8797, -0.5374, -1.2910, 0.9551, 0.4483, -0.6352, -0.3334, -0.5105,
+    0.1073, 2.9131, -0.4941, -0.2808, -0.2517, -1.9961, 0.9214, -0.6325,
+    -1.1895, 0.8118, 1.5424, 0.5601, -1.0322, 0.7135, -0.2780, -0.1128
+]
+
 
 def GenerateTestData(mean, stddev):
     return [x * stddev + mean for x in TEST_VALUES]
@@ -167,10 +170,11 @@ class FormatConfidenceIntervalTest(unittest.TestCase):
 # the sampling process (per boot, per process, and per iteration within
 # each process).  This follows a random effects model.  Returns a list of
 # lists of lists of values.
-def GenerateData(mean=1000,
-                 stddev_across_boots=0,
-                 stddev_across_processes=0,
-                 stddev_across_iters=0):
+def GenerateData(
+        mean=1000,
+        stddev_across_boots=0,
+        stddev_across_processes=0,
+        stddev_across_iters=0):
     it = iter(TEST_VALUES)
 
     def GenerateValues(mean, stddev, count):
@@ -178,21 +182,26 @@ def GenerateData(mean=1000,
 
     # This reads 4**3 + 4**2 + 4 = 84 values from TEST_VALUES, so it does
     # not exceed the number of values in TEST_VALUES.
-    return [[SLOW_INITIAL_RUN
-             + GenerateValues(mean_within_process, stddev_across_iters, 4)
-             for mean_within_process in GenerateValues(
-                     mean_within_boot, stddev_across_processes, 4)]
-            for mean_within_boot in GenerateValues(
-                    mean, stddev_across_boots, 4)]
+    return [
+        [
+            SLOW_INITIAL_RUN +
+            GenerateValues(mean_within_process, stddev_across_iters, 4)
+            for mean_within_process in GenerateValues(
+                mean_within_boot, stddev_across_processes, 4)
+        ]
+        for mean_within_boot in GenerateValues(mean, stddev_across_boots, 4)
+    ]
 
 
 class StatisticsTest(TempDirTestCase):
 
     def ResultsDictForValues(self, run_values):
-        return {'label': 'ExampleTest',
-                'test_suite': 'example_suite',
-                'unit': 'nanoseconds',
-                'values': run_values}
+        return {
+            'label': 'ExampleTest',
+            'test_suite': 'example_suite',
+            'unit': 'nanoseconds',
+            'values': run_values
+        }
 
     # Given data in the format returned by GenerateData(), writes this data
     # to a temporary directory.
@@ -208,23 +217,27 @@ class StatisticsTest(TempDirTestCase):
                 dest_file = os.path.join(
                     test_dir,
                     'example_process%06d.fuchsiaperf.json' % process_idx)
-                WriteJsonFile(dest_file, [self.ResultsDictForValues(run_values)])
+                WriteJsonFile(
+                    dest_file, [self.ResultsDictForValues(run_values)])
         return dir_path
 
     # Sanity-check that DirOfData() writes data in the correct format by
     # reading back some simple test data.
     def test_readback_of_data(self):
-        data = [[[1, 2], [3, 4]],
-                [[5, 6], [7, 8]]]
+        data = [[[1, 2], [3, 4]], [[5, 6], [7, 8]]]
         dataset = perfcompare.MultiBootDataset(self.DirOfData(data))
         boot_datasets = list(dataset.GetBootDatasets())
         self.assertEqual(len(boot_datasets), 2)
-        self.assertEqual(list(boot_datasets[0].GetProcessDatasets()),
-                         [[self.ResultsDictForValues([1, 2])],
-                          [self.ResultsDictForValues([3, 4])]])
-        self.assertEqual(list(boot_datasets[1].GetProcessDatasets()),
-                         [[self.ResultsDictForValues([5, 6])],
-                          [self.ResultsDictForValues([7, 8])]])
+        self.assertEqual(
+            list(boot_datasets[0].GetProcessDatasets()), [
+                [self.ResultsDictForValues([1, 2])],
+                [self.ResultsDictForValues([3, 4])]
+            ])
+        self.assertEqual(
+            list(boot_datasets[1].GetProcessDatasets()), [
+                [self.ResultsDictForValues([5, 6])],
+                [self.ResultsDictForValues([7, 8])]
+            ])
 
     def TarFileOfDir(self, dir_path, write_mode):
         tar_filename = os.path.join(self.MakeTempDir(), 'out.tar')
@@ -242,9 +255,11 @@ class StatisticsTest(TempDirTestCase):
             tar_filename = self.TarFileOfDir(
                 os.path.join(dir_path, 'by_boot', 'boot000000'), write_mode)
             boot_dataset = perfcompare.SingleBootDataset(tar_filename)
-            self.assertEqual(list(boot_dataset.GetProcessDatasets()),
-                             [[self.ResultsDictForValues([1, 2])],
-                              [self.ResultsDictForValues([3, 4])]])
+            self.assertEqual(
+                list(boot_dataset.GetProcessDatasets()), [
+                    [self.ResultsDictForValues([1, 2])],
+                    [self.ResultsDictForValues([3, 4])]
+                ])
 
     def CheckConfidenceInterval(self, data, interval_string):
         dir_path = self.DirOfData(data)
@@ -266,8 +281,7 @@ class StatisticsTest(TempDirTestCase):
 
     # Test the case where just a single value is produced per process run.
     def test_confidence_interval_with_single_value_per_process(self):
-        self.CheckConfidenceInterval(
-            [[[100]], [[101]]], '100 +/- 32 ns')
+        self.CheckConfidenceInterval([[[100]], [[101]]], '100 +/- 32 ns')
 
     # If the "before" and "after" results have identical confidence
     # intervals, that should be treated as "no difference", including when
@@ -290,8 +304,13 @@ class PerfCompareTest(TempDirTestCase):
         with open(os.path.join(dest_dir, 'foo.catapult_json'), 'w') as fh:
             fh.write('dummy_data')
 
-    def WriteExampleDataDir(self, dir_path, mean=1000, stddev=100,
-                            drop_one=False, single_boot=False):
+    def WriteExampleDataDir(
+            self,
+            dir_path,
+            mean=1000,
+            stddev=100,
+            drop_one=False,
+            single_boot=False):
         results = [('ClockGetTimeExample', GenerateTestData(mean, stddev))]
         if not drop_one:
             results.append(('SecondExample', GenerateTestData(2000, 300)))
@@ -305,11 +324,14 @@ class PerfCompareTest(TempDirTestCase):
                     os.makedirs(dest_dir)
                     self.AddIgnoredFiles(dest_dir)
                 WriteJsonFile(
-                    dest_file,
-                    [{'label': test_name,
-                      'test_suite': 'fuchsia.example',
-                      'unit': 'nanoseconds',
-                      'values': SLOW_INITIAL_RUN + values}])
+                    dest_file, [
+                        {
+                            'label': test_name,
+                            'test_suite': 'fuchsia.example',
+                            'unit': 'nanoseconds',
+                            'values': SLOW_INITIAL_RUN + values
+                        }
+                    ])
         else:
             for test_name, values in results:
                 for idx, value in enumerate(values):
@@ -321,11 +343,14 @@ class PerfCompareTest(TempDirTestCase):
                         os.makedirs(dest_dir)
                         self.AddIgnoredFiles(dest_dir)
                     WriteJsonFile(
-                        dest_file,
-                        [{'label': test_name,
-                          'test_suite': 'fuchsia.example',
-                          'unit': 'nanoseconds',
-                          'values': SLOW_INITIAL_RUN + [value]}])
+                        dest_file, [
+                            {
+                                'label': test_name,
+                                'test_suite': 'fuchsia.example',
+                                'unit': 'nanoseconds',
+                                'values': SLOW_INITIAL_RUN + [value]
+                            }
+                        ])
 
     def ExampleDataDir(self, **kwargs):
         dir_path = self.MakeTempDir()
@@ -338,8 +363,7 @@ class PerfCompareTest(TempDirTestCase):
             perfcompare.MultiBootDataset(dir_path))
         test_name = 'fuchsia.example: ClockGetTimeExample'
         self.assertEqual(
-            results[test_name].FormatConfidenceInterval(),
-            '992 +/- 26 ns')
+            results[test_name].FormatConfidenceInterval(), '992 +/- 26 ns')
 
     # Returns the output of compare_perf when run on the given directories.
     def ComparePerf(self, before_dir, after_dir):
@@ -370,8 +394,8 @@ class PerfCompareTest(TempDirTestCase):
         reader = GoldenDataInput(temp_file)
         reader.AssertCaseEq('a_key', 'a_value')
         reader.AssertCaseEq('b_key', 'line 1\n' 'line 2\n')
-        self.assertRaises(AssertionError,
-                          lambda: reader.AssertCaseEq('a_key', 'other_value'))
+        self.assertRaises(
+            AssertionError, lambda: reader.AssertCaseEq('a_key', 'other_value'))
 
     def test_comparison_no_change(self):
         before_dir = self.ExampleDataDir()
@@ -420,9 +444,11 @@ class PerfCompareTest(TempDirTestCase):
         GOLDEN.AssertCaseEq('display_single_dataset', output)
 
     def test_display_three_datasets(self):
-        dataset_dirs = [self.ExampleDataDir(mean=1000),
-                        self.ExampleDataDir(mean=2000, drop_one=True),
-                        self.ExampleDataDir(mean=3000)]
+        dataset_dirs = [
+            self.ExampleDataDir(mean=1000),
+            self.ExampleDataDir(mean=2000, drop_one=True),
+            self.ExampleDataDir(mean=3000)
+        ]
         stdout = io.StringIO()
         perfcompare.Main(['compare_perf'] + dataset_dirs, stdout)
         output = stdout.getvalue()
@@ -438,9 +464,10 @@ class PerfCompareTest(TempDirTestCase):
 
     # Test printing a table of point estimates.
     def test_display_single_boot_two_datasets(self):
-        dataset_dirs = [self.ExampleDataDir(mean=1000, single_boot=True),
-                        self.ExampleDataDir(mean=2000, single_boot=True,
-                                            drop_one=True)]
+        dataset_dirs = [
+            self.ExampleDataDir(mean=1000, single_boot=True),
+            self.ExampleDataDir(mean=2000, single_boot=True, drop_one=True)
+        ]
         stdout = io.StringIO()
         perfcompare.Main(['compare_perf'] + dataset_dirs, stdout)
         output = stdout.getvalue()
@@ -461,8 +488,8 @@ class PerfCompareTest(TempDirTestCase):
         self.assertEqual(type(interval_test[1]), type(interval_real[1]))
 
         def Format(interval_before, interval_after):
-            return perfcompare.FormatFactorRange(Interval(*interval_before),
-                                                 Interval(*interval_after))
+            return perfcompare.FormatFactorRange(
+                Interval(*interval_before), Interval(*interval_after))
 
         self.assertEqual(Format((1, 2), (3, 4)), '1.500-4.000')
         # Test zero "min" values.
@@ -478,23 +505,28 @@ class PerfCompareTest(TempDirTestCase):
         self.assertEqual(Format((0, 0), (0, 0)), 'no_change')
 
     def test_mismatch_rate(self):
-        self.assertEqual(perfcompare.MismatchRate([(0,1), (2,3)]), 1)
-        self.assertEqual(perfcompare.MismatchRate([(0,2), (1,3)]), 0)
-        self.assertEqual(perfcompare.MismatchRate([(0,2), (1,3), (4,5)]), 2./3)
+        self.assertEqual(perfcompare.MismatchRate([(0, 1), (2, 3)]), 1)
+        self.assertEqual(perfcompare.MismatchRate([(0, 2), (1, 3)]), 0)
+        self.assertEqual(
+            perfcompare.MismatchRate([(0, 2), (1, 3), (4, 5)]), 2. / 3)
 
     def test_validate_perfcompare(self):
+
         def MakeExampleDirs(**kwargs):
             by_boot_dir = os.path.join(self.ExampleDataDir(**kwargs), 'by_boot')
-            return [os.path.join(by_boot_dir, name)
-                    for name in sorted(os.listdir(by_boot_dir))]
+            return [
+                os.path.join(by_boot_dir, name)
+                for name in sorted(os.listdir(by_boot_dir))
+            ]
 
         # This is an example input dataset that gives a high mismatch rate,
         # because the data is drawn from two very different distributions.
-        results_dirs = (MakeExampleDirs(mean=100, stddev=10) +
-                        MakeExampleDirs(mean=200, stddev=10))
+        results_dirs = (
+            MakeExampleDirs(mean=100, stddev=10) +
+            MakeExampleDirs(mean=200, stddev=10))
         stdout = io.StringIO()
-        perfcompare.Main(['validate_perfcompare', '--group_size=5']
-                         + results_dirs, stdout)
+        perfcompare.Main(
+            ['validate_perfcompare', '--group_size=5'] + results_dirs, stdout)
         output = stdout.getvalue()
         GOLDEN.AssertCaseEq('validate_perfcompare', output)
 
@@ -512,33 +544,42 @@ class RunLocalTest(TempDirTestCase):
         iter_temp_file = os.path.join(iter_temp_dir, 'result.fuchsiaperf.json')
         iter_temp_glob = os.path.join(iter_temp_dir, '*.fuchsiaperf.json')
 
-        data = GenerateData(mean=1000,
-                            stddev_across_boots=10,
-                            stddev_across_processes=10,
-                            stddev_across_iters=10)
+        data = GenerateData(
+            mean=1000,
+            stddev_across_boots=10,
+            stddev_across_processes=10,
+            stddev_across_iters=10)
         commands = []
+
         # Dummy version of subprocess.check_call() for testing.
         def DummyRunCmd(cmd, shell=False):
             self.assertEqual(shell, True)
             commands.append(cmd)
             if cmd == 'set -o errexit -o nounset; my_iter_cmd':
-                WriteJsonFile(iter_temp_file,
-                              [{'label': 'MyTest',
-                                'test_suite': 'example_suite',
-                                'unit': 'nanoseconds',
-                                'values': data.pop(0)[0]}])
+                WriteJsonFile(
+                    iter_temp_file, [
+                        {
+                            'label': 'MyTest',
+                            'test_suite': 'example_suite',
+                            'unit': 'nanoseconds',
+                            'values': data.pop(0)[0]
+                        }
+                    ])
 
         stdout = io.StringIO()
-        perfcompare.Main(['run_local',
-                          '--boots=4',
-                          '--iter_file', iter_temp_glob,
-                          '--iter_cmd', 'my_iter_cmd',
-                          '--reboot_cmd', 'my_reboot_cmd',
-                          '--dest', dest_dir],
-                         stdout, run_cmd=DummyRunCmd)
-        self.assertEqual(commands,
-                         ['set -o errexit -o nounset; my_reboot_cmd',
-                          'set -o errexit -o nounset; my_iter_cmd'] * 4)
+        perfcompare.Main(
+            [
+                'run_local', '--boots=4', '--iter_file', iter_temp_glob,
+                '--iter_cmd', 'my_iter_cmd', '--reboot_cmd', 'my_reboot_cmd',
+                '--dest', dest_dir
+            ],
+            stdout,
+            run_cmd=DummyRunCmd)
+        self.assertEqual(
+            commands, [
+                'set -o errexit -o nounset; my_reboot_cmd',
+                'set -o errexit -o nounset; my_iter_cmd'
+            ] * 4)
         GOLDEN.AssertCaseEq('run_local', stdout.getvalue())
 
     # "run_local" should give an error if the temporary files specified by
@@ -548,14 +589,13 @@ class RunLocalTest(TempDirTestCase):
         iter_temp_file = os.path.join(
             self.MakeTempDir(), 'result.fuchsiaperf.json')
         WriteJsonFile(iter_temp_file, [])
-        args = ['run_local',
-                '--boots=4',
-                '--iter_file', iter_temp_file,
-                '--iter_cmd', 'my_iter_cmd',
-                '--reboot_cmd', 'my_reboot_cmd',
-                '--dest', dest_dir]
-        self.assertRaises(AssertionError,
-                          lambda: perfcompare.Main(args, sys.stdout))
+        args = [
+            'run_local', '--boots=4', '--iter_file', iter_temp_file,
+            '--iter_cmd', 'my_iter_cmd', '--reboot_cmd', 'my_reboot_cmd',
+            '--dest', dest_dir
+        ]
+        self.assertRaises(
+            AssertionError, lambda: perfcompare.Main(args, sys.stdout))
 
     # Check that error-checking is enabled in the shell commands that
     # run_local runs.
@@ -566,27 +606,22 @@ class RunLocalTest(TempDirTestCase):
 
         def get_args():
             dest_dir = os.path.join(self.MakeTempDir(), 'new_dir')
-            return ['run_local',
-                    '--boots=4',
-                    '--iter_file', iter_temp_file,
-                    '--dest', dest_dir]
+            return [
+                'run_local', '--boots=4', '--iter_file', iter_temp_file,
+                '--dest', dest_dir
+            ]
 
         perfcompare.Main(
-            get_args() + ['--iter_cmd', 'true', '--reboot_cmd', 'true'],
-            stdout)
+            get_args() + ['--iter_cmd', 'true', '--reboot_cmd', 'true'], stdout)
         # Check that the failure of the "false" command gets caught.
         self.assertRaises(
-            subprocess.CalledProcessError,
-            lambda: perfcompare.Main(
-                get_args() + ['--iter_cmd', 'false; true',
-                              '--reboot_cmd', 'true'],
-                stdout))
+            subprocess.CalledProcessError, lambda: perfcompare.Main(
+                get_args() +
+                ['--iter_cmd', 'false; true', '--reboot_cmd', 'true'], stdout))
         self.assertRaises(
-            subprocess.CalledProcessError,
-            lambda: perfcompare.Main(
-                get_args() + ['--iter_cmd', 'true',
-                              '--reboot_cmd', 'false; true'],
-                stdout))
+            subprocess.CalledProcessError, lambda: perfcompare.Main(
+                get_args() +
+                ['--iter_cmd', 'true', '--reboot_cmd', 'false; true'], stdout))
 
 
 if __name__ == '__main__':

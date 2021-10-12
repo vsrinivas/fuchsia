@@ -17,7 +17,6 @@ import tarfile
 
 import scipy.stats
 
-
 # For comparing results from a performance test, we calculate
 # confidence intervals for the mean running times of the test.  If the
 # confidence intervals are non-overlapping, we conclude that the
@@ -37,7 +36,6 @@ import scipy.stats
 # values we apply the t-test to are normally distributed, or approximately
 # normally distributed.  In future we could instead use bootstrap
 # confidence intervals, which would avoid that assumption.
-
 
 # Dataset types:
 #
@@ -85,7 +83,6 @@ import scipy.stats
 #    which contains boot dataset directories.
 #
 # A before/after dataset is represented as two directories.
-
 
 # ALPHA is a parameter for calculating confidence intervals.  It is
 # the probability that the true value for the statistic we're
@@ -137,8 +134,9 @@ def FormatConfidenceInterval(value, offset):
     # decimal places.
     log_value = int(math.floor(math.log10(offset)))
     decimal_places = max(significant_figures - log_value - 1, 0)
-    return '%s +/- %s' % (FormatDecimal(value, decimal_places),
-                          FormatDecimal(offset, decimal_places))
+    return '%s +/- %s' % (
+        FormatDecimal(value,
+                      decimal_places), FormatDecimal(offset, decimal_places))
 
 
 class Stats(object):
@@ -152,8 +150,9 @@ class Stats(object):
             self._offset = None
             self.interval = None
         else:
-            self._offset = (-scipy.stats.t.ppf(ALPHA / 2, sample_size - 1)
-                            * stddev / math.sqrt(sample_size))
+            self._offset = (
+                -scipy.stats.t.ppf(ALPHA / 2, sample_size - 1) * stddev /
+                math.sqrt(sample_size))
             # Confidence interval for the mean.
             self.interval = (mean - self._offset, mean + self._offset)
 
@@ -167,8 +166,8 @@ class Stats(object):
             # for practical use while suppressing rounding noise created by
             # various operations.
             return '%.12g %s' % (self._mean, self._unit)
-        return '%s %s' % (FormatConfidenceInterval(self._mean, self._offset),
-                          self._unit)
+        return '%s %s' % (
+            FormatConfidenceInterval(self._mean, self._offset), self._unit)
 
     # Returns the relative CI width, which is the width of the confidence
     # interval divided by the mean.
@@ -248,9 +247,7 @@ def FormatTestName(results):
     return '%s: %s' % (results['test_suite'], results['label'])
 
 
-UNIT_ABBREVIATIONS = {
-    'milliseconds': 'ms',
-    'nanoseconds': 'ns'}
+UNIT_ABBREVIATIONS = {'milliseconds': 'ms', 'nanoseconds': 'ns'}
 
 
 def FormatUnit(unit_set):
@@ -278,8 +275,10 @@ def StatsFromBootDatasets(boot_datasets):
                 units_map.setdefault(name, set()).add(test_case['unit'])
         for label, values in results_for_boot.items():
             results_map.setdefault(label, []).append(Mean(values))
-    return {name: Stats(values, FormatUnit(units_map[name]))
-            for name, values in results_map.items()}
+    return {
+        name: Stats(values, FormatUnit(units_map[name]))
+        for name, values in results_map.items()
+    }
 
 
 def StatsFromMultiBootDataset(multi_boot_dataset):
@@ -308,8 +307,11 @@ def FormatTable(heading_row, rows, out_fh):
     for row in rows:
         assert len(row) == column_count
     rows = [heading_row] + rows
-    widths = [2 + max(len(row[col_number]) for row in rows)
-              for col_number in range(column_count)]
+    widths = [
+        2 + max(len(row[col_number])
+                for row in rows)
+        for col_number in range(column_count)
+    ]
     # Underline the heading row.
     rows.insert(1, ['-' * (width - 2) for width in widths])
     for row in rows:
@@ -336,15 +338,16 @@ def CompareIntervals(stats_before, stats_after):
         result = 'faster'
     else:
         result = 'no_sig_diff'
-    factor_range = FormatFactorRange(stats_before.interval,
-                                     stats_after.interval)
+    factor_range = FormatFactorRange(
+        stats_before.interval, stats_after.interval)
     return result, factor_range
 
 
 def ComparePerf(args, out_fh):
     results_maps = [
         StatsFromMultiBootDataset(MultiBootDataset(dir_path))
-        for dir_path in args.results_dir]
+        for dir_path in args.results_dir
+    ]
 
     # Set of all test case names, including those added or removed.
     labels = set()
@@ -357,8 +360,8 @@ def ComparePerf(args, out_fh):
         if len(results_maps) == 1:
             heading_row.extend(['Mean'])
         else:
-            heading_row.extend(['Mean %d' % (idx + 1)
-                                for idx in range(len(results_maps))])
+            heading_row.extend(
+                ['Mean %d' % (idx + 1) for idx in range(len(results_maps))])
         rows = []
         for label in sorted(labels):
             row = [label]
@@ -377,17 +380,21 @@ def ComparePerf(args, out_fh):
         'no_sig_diff': 0,
         'point_estimate': 0,
     }
-    heading_row = ['Test case', 'Improve/regress?', 'Factor change',
-                   'Mean before', 'Mean after']
+    heading_row = [
+        'Test case', 'Improve/regress?', 'Factor change', 'Mean before',
+        'Mean after'
+    ]
     all_rows = []
     diff_rows = []
     for label in sorted(labels):
         stats = [results_map.get(label) for results_map in results_maps]
         result, factor_range = CompareIntervals(stats[0], stats[1])
         counts[result] += 1
-        row = [label, result, factor_range,
-               StatsFormatConfidenceInterval(stats[0]),
-               StatsFormatConfidenceInterval(stats[1])]
+        row = [
+            label, result, factor_range,
+            StatsFormatConfidenceInterval(stats[0]),
+            StatsFormatConfidenceInterval(stats[1])
+        ]
         all_rows.append(row)
         if result not in ('no_sig_diff', 'point_estimate'):
             diff_rows.append(row)
@@ -398,11 +405,12 @@ def ComparePerf(args, out_fh):
 
     out_fh.write('Summary counts:\n')
     FormatCount(len(labels), 'in total')
-    FormatCount(counts['no_sig_diff'],
-                'had no significant difference (no_sig_diff)')
+    FormatCount(
+        counts['no_sig_diff'], 'had no significant difference (no_sig_diff)')
     if counts['point_estimate']:
-        FormatCount(counts['point_estimate'],
-                    'cannot be compared because we have point estimates only')
+        FormatCount(
+            counts['point_estimate'],
+            'cannot be compared because we have point estimates only')
     FormatCount(counts['faster'], 'got faster')
     FormatCount(counts['slower'], 'got slower')
     FormatCount(counts['added'], 'added')
@@ -469,31 +477,33 @@ def RunLocal(args, out_fh, run_cmd):
 
 
 def IntervalsIntersect(interval1, interval2):
-    return not (interval2[0] >= interval1[1] or
-                interval2[1] <= interval1[0])
+    return not (interval2[0] >= interval1[1] or interval2[1] <= interval1[0])
 
 
 # Calculate the rate at which two intervals drawn (without replacement)
 # from the given set of intervals will be non-intersecting.
 def MismatchRate(intervals):
-    mismatch_count = sum(int(not IntervalsIntersect(intervals[i], intervals[j]))
-                         for i in range(len(intervals))
-                         for j in range(i))
+    mismatch_count = sum(
+        int(not IntervalsIntersect(intervals[i], intervals[j]))
+        for i in range(len(intervals))
+        for j in range(i))
     comparisons_count = len(intervals) * (len(intervals) - 1) / 2
     return float(mismatch_count) / comparisons_count
 
 
 def ValidatePerfCompare(args, out_fh):
-    boot_datasets = [SingleBootDataset(filename)
-                     for filename in args.results_dirs]
+    boot_datasets = [
+        SingleBootDataset(filename) for filename in args.results_dirs
+    ]
     boot_count = len(boot_datasets)
     group_size = args.group_size
     group_count = boot_count // group_size
 
     results_maps = [
         StatsFromBootDatasets(
-            boot_datasets[i * group_size : (i + 1) * group_size])
-        for i in range(group_count)]
+            boot_datasets[i * group_size:(i + 1) * group_size])
+        for i in range(group_count)
+    ]
 
     # Group by test name (label).
     by_test = {}
@@ -501,31 +511,36 @@ def ValidatePerfCompare(args, out_fh):
         for label, stats in results_map.items():
             by_test.setdefault(label, []).append(stats)
 
-    out_fh.write('Rate of mismatches (non-intersections) '
-                 'of confidence intervals for each test:\n')
+    out_fh.write(
+        'Rate of mismatches (non-intersections) '
+        'of confidence intervals for each test:\n')
     mismatch_rates = []
     for label, stats_list in sorted(by_test.items()):
         mismatch_rate = MismatchRate([stats.interval for stats in stats_list])
         out_fh.write('%f %s\n' % (mismatch_rate, label))
         mismatch_rates.append(mismatch_rate)
 
-    mean_relative_ci_width = Mean([
-        stats.RelativeConfidenceIntervalWidth()
-        for results_map in results_maps
-        for stats in results_map.values()])
+    mean_relative_ci_width = Mean(
+        [
+            stats.RelativeConfidenceIntervalWidth()
+            for results_map in results_maps
+            for stats in results_map.values()
+        ])
 
     out_fh.write('\n')
     mean_val = Mean(mismatch_rates)
     out_fh.write('Mean mismatch rate: %f\n' % mean_val)
-    out_fh.write('Mean relative confidence interval width: %f\n'
-                 % mean_relative_ci_width)
+    out_fh.write(
+        'Mean relative confidence interval width: %f\n' %
+        mean_relative_ci_width)
     out_fh.write('Number of test cases: %d\n' % len(mismatch_rates))
-    out_fh.write('Number of result sets: %d groups of %d boots each'
-                 ' (ignoring %d leftover boots)\n'
-                 % (group_count, group_size,
-                    boot_count - group_size * group_count))
-    out_fh.write('Expected number of test cases with mismatches: %f\n'
-                 % (mean_val * len(mismatch_rates)))
+    out_fh.write(
+        'Number of result sets: %d groups of %d boots each'
+        ' (ignoring %d leftover boots)\n' %
+        (group_count, group_size, boot_count - group_size * group_count))
+    out_fh.write(
+        'Expected number of test cases with mismatches: %f\n' %
+        (mean_val * len(mismatch_rates)))
 
 
 def Main(argv, out_fh, run_cmd=subprocess.check_call):
@@ -548,10 +563,13 @@ def Main(argv, out_fh, run_cmd=subprocess.check_call):
         ' from a single version of Fuchsia by locally running the command'
         ' specified by --iter_cmd')
     subparser.add_argument(
-        '--boots', type=int, required=True,
+        '--boots',
+        type=int,
+        required=True,
         help='Number of (re)boots of Fuchsia to run')
     subparser.add_argument(
-        '--iter_cmd', required=True,
+        '--iter_cmd',
+        required=True,
         help='Command for running a performance test. '
         ' This command is run locally: it is passed to the shell. '
         ' This command is expected to write its output to the file (or files)'
@@ -559,19 +577,22 @@ def Main(argv, out_fh, run_cmd=subprocess.check_call):
         ' Note that error-checking is enabled for this shell command (using'
         ' "set -o errexit -o nounset")')
     subparser.add_argument(
-        '--iter_file', required=True,
+        '--iter_file',
+        required=True,
         help='File(s) that the performance test will write its results to. '
         ' This is a glob expression, so it may specify multiple files. '
         ' Each file is expected to be a process dataset in the'
         ' *.fuchsiaperf.json format.  These files will be removed (renamed)'
         ' by this tool')
     subparser.add_argument(
-        '--reboot_cmd', default='fx reboot && fx wait',
+        '--reboot_cmd',
+        default='fx reboot && fx wait',
         help='Command to use for rebooting Fuchsia.  This is optional. '
         ' The default is %(default)r.  As with --iter_cmd, error-checking is'
         ' enabled for this shell command')
     subparser.add_argument(
-        '--dest', required=True,
+        '--dest',
+        required=True,
         help='Destination directory for writing the multi-boot dataset')
     subparser.set_defaults(func=lambda args: RunLocal(args, out_fh, run_cmd))
 
@@ -583,7 +604,10 @@ def Main(argv, out_fh, run_cmd=subprocess.check_call):
         ' the rate at which the tool will falsely indicate that performance'
         ' of a test case has regressed or improved.')
     subparser.add_argument(
-        '-g', '--group_size', type=int, required=True,
+        '-g',
+        '--group_size',
+        type=int,
+        required=True,
         help='Number of boots to put in each group.  To get realistic'
         ' results that reflect how the perfcompare trybots would behave,'
         ' this should match the boots_per_revision setting in the'
