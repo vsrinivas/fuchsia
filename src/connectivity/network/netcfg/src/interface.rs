@@ -80,8 +80,15 @@ impl Config {
     // "/dev/sys/platform/04:02:7/aml-ethernet/Designware-MAC/ethernet"
     // Though it is not a sdio device, it has the vid:pid:did info following "/platform/",
     // it's handled the same way as a sdio device.
-    fn generate_name_from_mac(&self, octets: [u8; 6], wlan: bool) -> Result<String, anyhow::Error> {
-        let prefix = if wlan { "wlanx" } else { "ethx" };
+    fn generate_name_from_mac(
+        &self,
+        octets: [u8; 6],
+        interface_type: crate::InterfaceType,
+    ) -> Result<String, anyhow::Error> {
+        let prefix = match interface_type {
+            crate::InterfaceType::Wlan => "wlanx",
+            crate::InterfaceType::Ethernet => "ethx",
+        };
         let last_byte = octets[octets.len() - 1];
         for i in 0u8..255u8 {
             let candidate = ((last_byte as u16 + i as u16) % 256 as u16) as u8;
@@ -95,22 +102,23 @@ impl Config {
             }
         }
         Err(anyhow::format_err!(
-            "could not find unique name for mac={}, wlan={}",
+            "could not find unique name for mac={}, interface_type={:?}",
             fidl_fuchsia_net_ext::MacAddress { octets: octets },
-            wlan
+            interface_type
         ))
     }
 
     fn generate_name_from_topological_path(
         &self,
         topological_path: &str,
-        wlan: bool,
+        interface_type: crate::InterfaceType,
     ) -> Result<String, anyhow::Error> {
-        let (prefix, pat) = if topological_path.contains("/pci-") {
-            (if wlan { "wlanp" } else { "ethp" }, "/pci-")
-        } else {
-            (if wlan { "wlans" } else { "eths" }, "/platform/")
+        let prefix = match interface_type {
+            crate::InterfaceType::Wlan => "wlan",
+            crate::InterfaceType::Ethernet => "eth",
         };
+        let (suffix, pat) =
+            if topological_path.contains("/pci-") { ("p", "/pci-") } else { ("s", "/platform/") };
 
         let index = topological_path.find(pat).ok_or_else(|| {
             anyhow::format_err!(
@@ -128,7 +136,7 @@ impl Config {
             )
         })?;
 
-        let mut name = String::from(prefix);
+        let mut name = format!("{}{}", prefix, suffix);
         for digit in topological_path[..index]
             .trim_end_matches(|c: char| !c.is_digit(16) || c == '0')
             .chars()
@@ -142,14 +150,14 @@ impl Config {
     fn generate_name(
         &self,
         persistent_id: &PersistentIdentifier,
-        wlan: bool,
+        interface_type: crate::InterfaceType,
     ) -> Result<String, anyhow::Error> {
         match persistent_id {
             PersistentIdentifier::MacAddress(fidl_fuchsia_net_ext::MacAddress { octets }) => {
-                self.generate_name_from_mac(*octets, wlan)
+                self.generate_name_from_mac(*octets, interface_type)
             }
             PersistentIdentifier::TopologicalPath(ref topological_path) => {
-                self.generate_name_from_topological_path(&topological_path, wlan)
+                self.generate_name_from_topological_path(&topological_path, interface_type)
             }
         }
     }
@@ -215,11 +223,11 @@ impl<'a> FileBackedConfig<'a> {
     }
 
     /// Returns a stable interface name for the specified interface.
-    pub fn get_stable_name(
+    pub(crate) fn get_stable_name(
         &mut self,
         topological_path: &str,
         mac_address: fidl_fuchsia_net_ext::MacAddress,
-        wlan: bool,
+        interface_type: crate::InterfaceType,
     ) -> Result<&str, NameGenerationError<'_>> {
         let persistent_id = self.config.generate_identifier(topological_path, mac_address);
 
@@ -229,7 +237,7 @@ impl<'a> FileBackedConfig<'a> {
         } else {
             let name = self
                 .config
-                .generate_name(&persistent_id, wlan)
+                .generate_name(&persistent_id, interface_type)
                 .map_err(NameGenerationError::GenerationError)?;
             let () = self.config.names.push((persistent_id, name));
             let (_key, name) = &self.config.names[self.config.names.len() - 1];
@@ -240,15 +248,18 @@ impl<'a> FileBackedConfig<'a> {
     }
 
     /// Returns a temporary name for an interface.
-    pub fn get_temporary_name(&mut self, wlan: bool) -> String {
+    pub(crate) fn generate_temporary_name(
+        &mut self,
+        interface_type: crate::InterfaceType,
+    ) -> String {
         let id = self.temp_id;
         self.temp_id += 1;
 
-        if wlan {
-            format!("wlant{}", id)
-        } else {
-            format!("etht{}", id)
-        }
+        let prefix = match interface_type {
+            crate::InterfaceType::Wlan => "wlant",
+            crate::InterfaceType::Ethernet => "etht",
+        };
+        format!("{}{}", prefix, id)
     }
 }
 
@@ -268,7 +279,7 @@ mod tests {
     struct TestCase {
         topological_path: String,
         mac: [u8; 6],
-        wlan: bool,
+        interface_type: crate::InterfaceType,
         want_name: &'static str,
     }
 
@@ -281,7 +292,7 @@ mod tests {
                     "@/dev/pci-00:14.0/xhci/usb/004/004/ifc-000/ax88179/ethernet",
                 ),
                 mac: [0x01, 0x01, 0x01, 0x01, 0x01, 0x01],
-                wlan: true,
+                interface_type: crate::InterfaceType::Wlan,
                 want_name: "wlanx1",
             },
             TestCase {
@@ -289,20 +300,20 @@ mod tests {
                     "@/dev/pci-00:15.0/xhci/usb/004/004/ifc-000/ax88179/ethernet",
                 ),
                 mac: [0x02, 0x02, 0x02, 0x02, 0x02, 0x02],
-                wlan: false,
+                interface_type: crate::InterfaceType::Ethernet,
                 want_name: "ethx2",
             },
             // pci intefaces
             TestCase {
                 topological_path: String::from("@/dev/pci-00:14.0/ethernet"),
                 mac: [0x03, 0x03, 0x03, 0x03, 0x03, 0x03],
-                wlan: true,
+                interface_type: crate::InterfaceType::Wlan,
                 want_name: "wlanp0014",
             },
             TestCase {
                 topological_path: String::from("@/dev/pci-00:15.0/ethernet"),
                 mac: [0x04, 0x04, 0x04, 0x04, 0x04, 0x04],
-                wlan: false,
+                interface_type: crate::InterfaceType::Ethernet,
                 want_name: "ethp0015",
             },
             // platform interfaces (ethernet jack and sdio devices)
@@ -311,7 +322,7 @@ mod tests {
                     "@/dev/sys/platform/05:00:6/aml-sd-emmc/sdio/broadcom-wlanphy/wlanphy",
                 ),
                 mac: [0x05, 0x05, 0x05, 0x05, 0x05, 0x05],
-                wlan: true,
+                interface_type: crate::InterfaceType::Wlan,
                 want_name: "wlans05006",
             },
             TestCase {
@@ -319,33 +330,34 @@ mod tests {
                     "@/dev/sys/platform/04:02:7/aml-ethernet/Designware-MAC/ethernet",
                 ),
                 mac: [0x07, 0x07, 0x07, 0x07, 0x07, 0x07],
-                wlan: false,
+                interface_type: crate::InterfaceType::Ethernet,
                 want_name: "eths04027",
             },
             // unknown interfaces
             TestCase {
                 topological_path: String::from("@/dev/sys/unknown"),
                 mac: [0x08, 0x08, 0x08, 0x08, 0x08, 0x08],
-                wlan: true,
+                interface_type: crate::InterfaceType::Wlan,
                 want_name: "wlanx8",
             },
             TestCase {
                 topological_path: String::from("unknown"),
                 mac: [0x09, 0x09, 0x09, 0x09, 0x09, 0x09],
-                wlan: true,
+                interface_type: crate::InterfaceType::Wlan,
                 want_name: "wlanx9",
             },
         ];
         let config = Config { names: vec![] };
-        for test in test_cases.into_iter() {
+        for TestCase { topological_path, mac, interface_type, want_name } in test_cases.into_iter()
+        {
             let persistent_id = config.generate_identifier(
-                &test.topological_path,
-                fidl_fuchsia_net_ext::MacAddress { octets: test.mac },
+                &topological_path,
+                fidl_fuchsia_net_ext::MacAddress { octets: mac },
             );
             let name = config
-                .generate_name(&persistent_id, test.wlan)
+                .generate_name(&persistent_id, interface_type)
                 .expect("failed to generate the name");
-            assert_eq!(name, test.want_name);
+            assert_eq!(name, want_name);
         }
     }
 
@@ -354,7 +366,7 @@ mod tests {
         let test1 = TestCase {
             topological_path: String::from("@/dev/pci-00:14.0/ethernet"),
             mac: [0x01, 0x01, 0x01, 0x01, 0x01, 0x01],
-            wlan: true,
+            interface_type: crate::InterfaceType::Wlan,
             want_name: "wlanp0014",
         };
         let mut test2 = test1.clone();
@@ -365,31 +377,36 @@ mod tests {
         let path = temp_dir.path().join("net.config.json");
 
         // query an existing interface with the same topo path and a different mac address
-        for (i, test) in test_cases.into_iter().enumerate() {
+        for (i, TestCase { topological_path, mac, interface_type, want_name }) in
+            test_cases.into_iter().enumerate()
+        {
             let mut interface_config =
                 FileBackedConfig::load(&path).expect("failed to load the interface config");
             assert_eq!(interface_config.config.names.len(), i);
 
             let name = interface_config
                 .get_stable_name(
-                    &test.topological_path,
-                    fidl_fuchsia_net_ext::MacAddress { octets: test.mac },
-                    test.wlan,
+                    &topological_path,
+                    fidl_fuchsia_net_ext::MacAddress { octets: mac },
+                    interface_type,
                 )
                 .expect("failed to get the interface name");
-            assert_eq!(name, test.want_name);
+            assert_eq!(name, want_name);
             assert_eq!(interface_config.config.names.len(), 1);
         }
     }
 
     #[test]
-    fn test_get_temporary_name() {
+    fn test_generate_temporary_name() {
         let temp_dir = tempfile::tempdir_in("/tmp").expect("failed to create the temp dir");
         let path = temp_dir.path().join("net.config.json");
         let mut interface_config =
             FileBackedConfig::load(&path).expect("failed to load the interface config");
-        assert_eq!(&interface_config.get_temporary_name(false), "etht0");
-        assert_eq!(&interface_config.get_temporary_name(true), "wlant1");
+        assert_eq!(
+            &interface_config.generate_temporary_name(crate::InterfaceType::Ethernet),
+            "etht0"
+        );
+        assert_eq!(&interface_config.generate_temporary_name(crate::InterfaceType::Wlan), "wlant1");
     }
 
     #[test]
@@ -408,7 +425,7 @@ mod tests {
                 assert_eq!(config.names[index].1, format!("{}{:x}", "wlanx", n));
             } else {
                 let name = config
-                    .generate_name(&persistent_id, true)
+                    .generate_name(&persistent_id, crate::InterfaceType::Wlan)
                     .expect("failed to generate the name");
                 assert_eq!(name, format!("{}{:x}", "wlanx", n));
                 config.names.push((persistent_id, name));
@@ -417,7 +434,7 @@ mod tests {
         let octets = [0x00, 0x00, 0x01, 0x01, 0x01, 00];
         let persistent_id =
             config.generate_identifier(&topo_usb, fidl_fuchsia_net_ext::MacAddress { octets });
-        assert!(config.generate_name(&persistent_id, true).is_err());
+        assert!(config.generate_name(&persistent_id, crate::InterfaceType::Wlan).is_err());
     }
 
     #[test]

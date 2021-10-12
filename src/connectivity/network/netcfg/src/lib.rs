@@ -194,7 +194,7 @@ pub struct FilterConfig {
     pub rdr_rules: Vec<String>,
 }
 
-#[derive(Debug, PartialEq, Eq, Hash, Clone, Deserialize)]
+#[derive(Debug, PartialEq, Eq, Hash, Copy, Clone, Deserialize)]
 #[serde(rename_all = "lowercase")]
 enum InterfaceType {
     Ethernet,
@@ -1061,21 +1061,18 @@ impl<'a> NetCfg<'a> {
             )))
         })?;
 
-        let wlan = match info.interface_type() {
-            InterfaceType::Wlan => true,
-            InterfaceType::Ethernet => false,
-        };
-        let metric = crate::get_metric(wlan);
+        let interface_type = info.interface_type();
+        let metric = crate::get_metric(interface_type);
         let interface_name = if stable_name {
             match self.persisted_interface_config.get_stable_name(
                 &topological_path, /* TODO(tamird): we can probably do
                                     * better with std::borrow::Cow. */
                 mac,
-                wlan,
+                interface_type,
             ) {
                 Ok(name) => name.to_string(),
                 Err(interface::NameGenerationError::FileUpdateError { name, err }) => {
-                    warn!("failed to update interface (topo path = {}, mac = {}, wlan = {}) with new name = {}: {}", topological_path, mac, wlan, name, err);
+                    warn!("failed to update interface (topo path = {}, mac = {}, interface_type = {:?}) with new name = {}: {}", topological_path, mac, interface_type, name, err);
                     name.to_string()
                 }
                 Err(interface::NameGenerationError::GenerationError(e)) => {
@@ -1085,7 +1082,7 @@ impl<'a> NetCfg<'a> {
                 }
             }
         } else {
-            self.persisted_interface_config.get_temporary_name(wlan)
+            self.persisted_interface_config.generate_temporary_name(interface_type)
         };
 
         info!(
@@ -1370,13 +1367,12 @@ impl<'a> NetCfg<'a> {
 }
 
 /// Return the metric.
-fn get_metric(wlan: bool) -> u32 {
+fn get_metric(interface_type: InterfaceType) -> u32 {
     // Hardcode the interface metric. Eventually this should
     // be part of the config file.
-    if wlan {
-        INTF_METRIC_WLAN
-    } else {
-        INTF_METRIC_ETH
+    match interface_type {
+        InterfaceType::Wlan => INTF_METRIC_WLAN,
+        InterfaceType::Ethernet => INTF_METRIC_ETH,
     }
 }
 
