@@ -16,6 +16,7 @@
 #include <sys/ioctl.h>
 #include <sys/socket.h>
 #include <sys/uio.h>
+#include <zircon/compiler.h>
 
 #include <array>
 #include <future>
@@ -270,6 +271,30 @@ class SocketKindTest : public ::testing::TestWithParam<SocketKind> {
   static fbl::unique_fd NewSocket() {
     auto const& [domain, type] = GetParam();
     return fbl::unique_fd(socket(domain, type, 0));
+  }
+
+  static void LoopbackAddr(sockaddr_storage* ss, socklen_t* len) {
+    auto const& [domain, protocol] = GetParam();
+
+    switch (domain) {
+      case AF_INET:
+        *(reinterpret_cast<sockaddr_in*>(ss)) = {
+            .sin_family = AF_INET,
+            .sin_addr = {.s_addr = htonl(INADDR_LOOPBACK)},
+        };
+        *len = sizeof(sockaddr_in);
+        break;
+      case AF_INET6:
+        *(reinterpret_cast<sockaddr_in6*>(ss)) = {
+            .sin6_family = AF_INET6,
+            .sin6_addr = IN6ADDR_LOOPBACK_INIT,
+        };
+        *len = sizeof(sockaddr_in6);
+        break;
+      default:
+        FAIL() << "unexpected domain = " << domain;
+        break;
+    }
   }
 };
 
@@ -2046,17 +2071,6 @@ TEST(LocalhostTest, GetAddrInfo) {
   }
   EXPECT_EQ(i, 2);
   freeaddrinfo(result);
-}
-
-TEST(LocalhostTest, GetSockName) {
-  fbl::unique_fd sockfd;
-  ASSERT_TRUE(sockfd = fbl::unique_fd(socket(AF_INET6, SOCK_STREAM, 0))) << strerror(errno);
-
-  struct sockaddr sa;
-  socklen_t len = sizeof(sa);
-  ASSERT_EQ(getsockname(sockfd.get(), &sa, &len), 0) << strerror(errno);
-  ASSERT_GT(len, sizeof(sa));
-  ASSERT_EQ(sa.sa_family, AF_INET6);
 }
 
 class NetStreamSocketsTest : public ::testing::Test {
@@ -4974,6 +4988,97 @@ TEST_P(SocketKindTest, IoctlInterfaceNotFound) {
     ASSERT_EQ(ioctl(fd.get(), request.request, &ifr), -1) << request.name;
     EXPECT_EQ(errno, ENODEV) << request.name << ": " << strerror(errno);
   }
+}
+
+template <typename F>
+void TestGetname(const fbl::unique_fd& fd, F getname, const sockaddr* sa, const socklen_t sa_len) {
+  ASSERT_EQ(getname(fd.get(), nullptr, nullptr), -1);
+  EXPECT_EQ(errno, EFAULT) << strerror(errno);
+  errno = 0;
+
+  sockaddr_storage ss;
+  ASSERT_EQ(getname(fd.get(), reinterpret_cast<sockaddr*>(&ss), nullptr), -1);
+  EXPECT_EQ(errno, EFAULT) << strerror(errno);
+  errno = 0;
+
+  socklen_t len = 0;
+  ASSERT_EQ(getname(fd.get(), nullptr, &len), 0) << strerror(errno);
+  EXPECT_EQ(len, sa_len);
+
+  len = 1;
+  ASSERT_EQ(getname(fd.get(), nullptr, &len), -1);
+  EXPECT_EQ(errno, EFAULT) << strerror(errno);
+  EXPECT_EQ(len, 1u);
+  errno = 0;
+
+  sa_family_t family;
+  len = sizeof(family);
+  ASSERT_EQ(getname(fd.get(), reinterpret_cast<sockaddr*>(&family), &len), 0) << strerror(errno);
+  ASSERT_EQ(len, sa_len);
+  EXPECT_EQ(family, sa->sa_family);
+
+  len = sa_len;
+  ASSERT_EQ(getname(fd.get(), reinterpret_cast<sockaddr*>(&ss), &len), 0) << strerror(errno);
+  ASSERT_EQ(len, sa_len);
+  EXPECT_EQ(memcmp(&ss, sa, sa_len), 0);
+
+  struct {
+    sockaddr_storage ss;
+    int8_t unused;
+  } __PACKED ss_with_extra = {.unused = -1};
+  len = sizeof(ss_with_extra);
+  ASSERT_EQ(getname(fd.get(), reinterpret_cast<sockaddr*>(&ss_with_extra), &len), 0)
+      << strerror(errno);
+  ASSERT_EQ(len, sa_len);
+  EXPECT_EQ(memcmp(&ss, sa, sa_len), 0);
+  EXPECT_EQ(ss_with_extra.unused, -1);
+}
+
+// TODO(https://github.com/google/sanitizers/issues/1451): Run with ASan once Asan
+// gracefully handles getsockname receiving nullptr for its address length parameter.
+#if !__has_feature(address_sanitizer)
+TEST_P(SocketKindTest, Getsockname) {
+  socklen_t len;
+  sockaddr_storage ss;
+  LoopbackAddr(&ss, &len);
+
+  fbl::unique_fd fd;
+  ASSERT_TRUE(fd = NewSocket()) << strerror(errno);
+
+  ASSERT_EQ(bind(fd.get(), reinterpret_cast<sockaddr*>(&ss), sizeof(ss)), 0) << strerror(errno);
+  socklen_t ss_len = sizeof(ss);
+  // Get the socket's local address so TestGetname can compare against it.
+  ASSERT_EQ(getsockname(fd.get(), reinterpret_cast<sockaddr*>(&ss), &ss_len), 0) << strerror(errno);
+  ASSERT_EQ(ss_len, len);
+
+  ASSERT_NO_FATAL_FAILURE(TestGetname(fd, getsockname, reinterpret_cast<sockaddr*>(&ss), len));
+}
+#endif  // !__has_feature(address_sanitizer)
+
+TEST_P(SocketKindTest, Getpeername) {
+  auto const& [domain, protocol] = GetParam();
+
+  socklen_t len;
+  sockaddr_storage ss;
+  LoopbackAddr(&ss, &len);
+
+  fbl::unique_fd listener;
+  ASSERT_TRUE(listener = NewSocket()) << strerror(errno);
+  ASSERT_EQ(bind(listener.get(), reinterpret_cast<sockaddr*>(&ss), sizeof(ss)), 0)
+      << strerror(errno);
+  socklen_t ss_len = sizeof(ss);
+  ASSERT_EQ(getsockname(listener.get(), reinterpret_cast<sockaddr*>(&ss), &ss_len), 0)
+      << strerror(errno);
+  if (protocol == SOCK_STREAM) {
+    ASSERT_EQ(listen(listener.get(), 1), 0) << strerror(errno);
+  }
+
+  fbl::unique_fd client;
+  ASSERT_TRUE(client = NewSocket()) << strerror(errno);
+  ASSERT_EQ(connect(client.get(), reinterpret_cast<sockaddr*>(&ss), sizeof(ss)), 0)
+      << strerror(errno);
+
+  ASSERT_NO_FATAL_FAILURE(TestGetname(client, getpeername, reinterpret_cast<sockaddr*>(&ss), len));
 }
 
 TEST(SocketKindTest, IoctlLookupForNonSocketFd) {

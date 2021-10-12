@@ -14,6 +14,7 @@
 #include <poll.h>
 #include <sys/ioctl.h>
 
+#include <algorithm>
 #include <vector>
 
 #include <safemath/safe_conversions.h>
@@ -90,6 +91,8 @@ struct SocketAddress {
         const auto& s = *reinterpret_cast<const struct sockaddr_in*>(addr);
         address.set_ipv4(
             fidl::ObjectView<fnet::wire::Ipv4SocketAddress>::FromExternal(&storage.ipv4));
+        static_assert(sizeof(storage.ipv4.address.addr) == sizeof(s.sin_addr.s_addr),
+                      "size of IPv4 addresses should be the same");
         std::copy_n(reinterpret_cast<const uint8_t*>(&s.sin_addr.s_addr),
                     decltype(storage.ipv4.address.addr)::size(), storage.ipv4.address.addr.begin());
         storage.ipv4.port = ntohs(s.sin_port);
@@ -102,6 +105,8 @@ struct SocketAddress {
         const auto& s = *reinterpret_cast<const struct sockaddr_in6*>(addr);
         address.set_ipv6(
             fidl::ObjectView<fnet::wire::Ipv6SocketAddress>::FromExternal(&storage.ipv6));
+        static_assert(sizeof(storage.ipv6.address.addr) == sizeof(s.sin6_addr.s6_addr),
+                      "size of IPv6 addresses should be the same");
         std::copy(std::begin(s.sin6_addr.s6_addr), std::end(s.sin6_addr.s6_addr),
                   storage.ipv6.address.addr.begin());
         storage.ipv6.port = ntohs(s.sin6_port);
@@ -128,40 +133,31 @@ socklen_t fidl_to_sockaddr(const fnet::wire::SocketAddress& fidl, struct sockadd
                            socklen_t addr_len) {
   switch (fidl.which()) {
     case fnet::wire::SocketAddress::Tag::kIpv4: {
-      struct sockaddr_in tmp;
-      auto* s = reinterpret_cast<struct sockaddr_in*>(addr);
-      if (addr_len < sizeof(tmp)) {
-        s = &tmp;
-      }
-      memset(s, 0x00, addr_len);
       const auto& ipv4 = fidl.ipv4();
-      s->sin_family = AF_INET;
-      s->sin_port = htons(ipv4.port);
+      struct sockaddr_in tmp = {
+          .sin_family = AF_INET,
+          .sin_port = htons(ipv4.port),
+      };
+      static_assert(sizeof(ipv4.address.addr) == sizeof(tmp.sin_addr.s_addr),
+                    "size of IPv4 addresses should be the same");
       std::copy(ipv4.address.addr.begin(), ipv4.address.addr.end(),
-                reinterpret_cast<uint8_t*>(&s->sin_addr));
+                reinterpret_cast<uint8_t*>(&tmp.sin_addr.s_addr));
       // Copy truncated address.
-      if (s == &tmp) {
-        memcpy(addr, &tmp, addr_len);
-      }
+      memcpy(addr, &tmp, std::min(sizeof(tmp), static_cast<size_t>(addr_len)));
       return sizeof(tmp);
     }
     case fnet::wire::SocketAddress::Tag::kIpv6: {
-      struct sockaddr_in6 tmp;
-      auto* s = reinterpret_cast<struct sockaddr_in6*>(addr);
-      if (addr_len < sizeof(tmp)) {
-        s = &tmp;
-      }
-      memset(s, 0x00, addr_len);
       const auto& ipv6 = fidl.ipv6();
-      s->sin6_family = AF_INET6;
-      s->sin6_port = htons(ipv6.port);
-      s->sin6_scope_id = static_cast<uint32_t>(ipv6.zone_index);
-      std::copy(ipv6.address.addr.begin(), ipv6.address.addr.end(),
-                s->sin6_addr.__in6_union.__s6_addr);
+      struct sockaddr_in6 tmp = {
+          .sin6_family = AF_INET6,
+          .sin6_port = htons(ipv6.port),
+          .sin6_scope_id = static_cast<uint32_t>(ipv6.zone_index),
+      };
+      static_assert(sizeof(ipv6.address.addr) == sizeof(tmp.sin6_addr.s6_addr),
+                    "size of IPv6 addresses should be the same");
+      std::copy(ipv6.address.addr.begin(), ipv6.address.addr.end(), tmp.sin6_addr.s6_addr);
       // Copy truncated address.
-      if (s == &tmp) {
-        memcpy(addr, &tmp, addr_len);
-      }
+      memcpy(addr, &tmp, std::min(sizeof(tmp), static_cast<size_t>(addr_len)));
       return sizeof(tmp);
     }
   }

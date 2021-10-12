@@ -423,24 +423,28 @@ int _getaddrinfo_from_dns(struct address buf[MAXADDRS], char canon[256], const c
       }
   }
 }
+
+template <typename F>
+static int getname(int fd, struct sockaddr* __restrict addr, socklen_t* __restrict len, F func) {
+  if (len == nullptr) {
+    return ERRNO(EFAULT);
+  }
+  if (*len != 0 && addr == nullptr) {
+    return ERRNO(EFAULT);
+  }
+  return delegate(fd, func);
+}
+
 __EXPORT
 int getsockname(int fd, struct sockaddr* __restrict addr, socklen_t* __restrict len) {
-  if (len == nullptr || addr == nullptr) {
-    return ERRNO(EINVAL);
-  }
-
-  return delegate(fd, [&](const fdio_ptr& io, int16_t* out_code) {
+  return getname(fd, addr, len, [&](const fdio_ptr& io, int16_t* out_code) {
     return io->getsockname(addr, len, out_code);
   });
 }
 
 __EXPORT
 int getpeername(int fd, struct sockaddr* __restrict addr, socklen_t* __restrict len) {
-  if (len == nullptr || addr == nullptr) {
-    return ERRNO(EINVAL);
-  }
-
-  return delegate(fd, [&](const fdio_ptr& io, int16_t* out_code) {
+  return getname(fd, addr, len, [&](const fdio_ptr& io, int16_t* out_code) {
     return io->getpeername(addr, len, out_code);
   });
 }
