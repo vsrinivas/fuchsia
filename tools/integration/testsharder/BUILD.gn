@@ -45,5 +45,8 @@ go_binary("testsharder") {
 
 go_test("testsharder_tests") {
   gopackages = [ "go.fuchsia.dev/fuchsia/tools/integration/testsharder" ]
-  deps = [ ":testsharder_lib" ]
+  deps = [
+    ":testsharder_lib",
+    "//third_party/golibs:github.com/google/go-cmp",
+  ]
 }

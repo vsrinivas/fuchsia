@@ -6,8 +6,9 @@ package testsharder
 
 import (
 	"fmt"
-	"reflect"
 	"testing"
+
+	"github.com/google/go-cmp/cmp"
 
 	"go.fuchsia.dev/fuchsia/tools/build"
 )
@@ -15,16 +16,8 @@ import (
 // Note that just printing a list of shard pointers will print a list of memory addresses,
 // which would make for an unhelpful error message.
 func assertEqual(t *testing.T, expected, actual []*Shard) {
-	if !reflect.DeepEqual(expected, actual) {
-		errMsg := "\nexpected:\n"
-		for _, shard := range expected {
-			errMsg += fmt.Sprintf("%v,\n", shard)
-		}
-		errMsg += "\nactual:\n"
-		for _, shard := range actual {
-			errMsg += fmt.Sprintf("%v,\n", shard)
-		}
-		t.Fatalf(errMsg)
+	if diff := cmp.Diff(expected, actual); diff != "" {
+		t.Fatalf("shards mismatch: (-want + got):\n%s", diff)
 	}
 }
 

@@ -27,6 +27,11 @@ type Shard struct {
 	// at shard execution time. It is a list of paths relative to the fuchsia
 	// build directory.
 	Deps []string `json:"deps,omitempty"`
+
+	// TimeoutSecs is the execution timeout, in seconds, that should be set for
+	// the task that runs the shard. It's computed dynamically based on the
+	// expected runtime of the tests.
+	TimeoutSecs int `json:"timeout_secs"`
 }
 
 // ShardOptions parametrize sharding behavior.

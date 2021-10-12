@@ -185,7 +185,7 @@ func MultiplyShards(
 			}
 		}
 
-		// We'll only consider partial regex matches if we have no exact
+		// We'll consider partial regex matches only when we have no exact
 		// matches.
 		matches := exactMatches
 		if len(matches) == 0 {
@@ -327,6 +327,10 @@ func divRoundUp(a, b int) int {
 // to complete in approximately `targetDuration` time.
 // If targetDuration <= 0, just returns its input.
 // Alternatively, accepts a `targetTestCount` argument for backwards compatibility.
+//
+// Each resulting shard will have a TimeoutSecs field populated dynamically
+// based on the expected total runtime of its tests. The caller can choose to
+// respect and enforce this timeout, or ignore it.
 func WithTargetDuration(
 	shards []*Shard,
 	targetDuration time.Duration,
@@ -530,12 +534,38 @@ func shardByTime(shard *Shard, testDurations TestDurationsMap, numNewShards int)
 			name = fmt.Sprintf("%s-(%d)", shard.Name, i+1)
 		}
 		newShards = append(newShards, &Shard{
-			Name:  name,
-			Tests: subshard.tests,
-			Env:   shard.Env,
+			Name:        name,
+			Tests:       subshard.tests,
+			Env:         shard.Env,
+			TimeoutSecs: int(computeShardTimeout(subshard).Seconds()),
 		})
 	}
 	return newShards
+}
+
+// computeShardTimeout dynamically calculates an appropriate timeout for the
+// given shard based on the number of tests it runs and the expected duration of
+// each test, with a large buffer to account for tests occasionally taking much
+// longer than expected.
+//
+// The constants we use to compute the timeout are somewhat arbitrary and can be
+// adjusted if necessary.
+func computeShardTimeout(s subshard) time.Duration {
+	// Allow for tests running longer than expected by a constant factor. It's
+	// unlikely that *every* test would be this much slower than expected, but
+	// it's conceivable that a significant number of tests could be so affected.
+	perTestMultiplier := time.Duration(2)
+	// Conservative estimated overhead for the shard independent of how many
+	// tests the shard runs.
+	shardOverhead := 10 * time.Minute
+	// Conservative estimate of the overhead for running each test.
+	perTestOverhead := time.Second
+
+	testCount := time.Duration(len(s.tests))
+
+	timeout := perTestMultiplier * (s.duration + testCount*perTestOverhead)
+	timeout += shardOverhead
+	return timeout
 }
 
 func hash(s string) uint32 {
