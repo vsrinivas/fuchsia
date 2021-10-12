@@ -371,9 +371,11 @@ void IncomingMessage::Validate() {
 
 #ifdef __Fuchsia__
 
-IncomingMessage ChannelReadEtc(zx_handle_t channel, uint32_t options,
-                               fidl::BufferSpan bytes_storage,
-                               cpp20::span<zx_handle_info_t> handles_storage) {
+IncomingMessage MessageRead(internal::AnyUnownedTransport transport, uint32_t options,
+                            fidl::BufferSpan bytes_storage,
+                            cpp20::span<zx_handle_info_t> handles_storage) {
+  // TODO(fxbug.dev/85734) Support abitrary transports.
+  zx_handle_t channel = transport.get<internal::ChannelTransport>()->get();
   uint32_t num_bytes, num_handles;
   zx_status_t status =
       zx_channel_read_etc(channel, options, bytes_storage.data, handles_storage.data(),
@@ -382,6 +384,12 @@ IncomingMessage ChannelReadEtc(zx_handle_t channel, uint32_t options,
     return IncomingMessage(fidl::Result::TransportError(status));
   }
   return IncomingMessage(bytes_storage.data, num_bytes, handles_storage.data(), num_handles);
+}
+
+IncomingMessage MessageRead(const internal::AnyTransport& transport, uint32_t options,
+                            ::fidl::BufferSpan bytes_storage,
+                            cpp20::span<zx_handle_info_t> handles_storage) {
+  return MessageRead(transport.borrow(), options, bytes_storage, handles_storage);
 }
 
 #endif  // __Fuchsia__

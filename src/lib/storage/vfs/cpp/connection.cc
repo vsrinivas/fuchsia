@@ -233,8 +233,8 @@ bool Connection::OnMessage() {
   std::shared_ptr<Binding> binding = binding_;
   uint8_t bytes[ZX_CHANNEL_MAX_MSG_BYTES];
   zx_handle_info_t handles[ZX_CHANNEL_MAX_MSG_HANDLES];
-  fidl::IncomingMessage msg = fidl::ChannelReadEtc(
-      binding->channel().get(), 0, fidl::BufferSpan(bytes, std::size(bytes)), cpp20::span(handles));
+  fidl::IncomingMessage msg = fidl::MessageRead(
+      binding->channel(), 0, fidl::BufferSpan(bytes, std::size(bytes)), cpp20::span(handles));
   if (!msg.ok()) {
     return false;
   }

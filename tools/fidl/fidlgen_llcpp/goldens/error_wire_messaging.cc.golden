@@ -22,7 +22,7 @@ extern "C" const fidl_type_t fidl_test_error_ExamplefooResponseTable;
       _request(::fidl::internal::AllowUnownedInputRef{}, s);
   auto& _outgoing = _request.GetOutgoingMessage();
   _outgoing.Call<::fidl::WireResponse<::fidl_test_error::Example::Foo>>(
-      _client, bytes_.data(), static_cast<uint32_t>(bytes_.size()));
+      _client.channel(), bytes_.data(), static_cast<uint32_t>(bytes_.size()));
   SetResult(_outgoing);
 }
 
@@ -35,7 +35,8 @@ extern "C" const fidl_type_t fidl_test_error_ExamplefooResponseTable;
       _request(::fidl::internal::AllowUnownedInputRef{}, s);
   auto& _outgoing = _request.GetOutgoingMessage();
   _outgoing.Call<::fidl::WireResponse<::fidl_test_error::Example::Foo>>(
-      _client, bytes_.data(), static_cast<uint32_t>(bytes_.size()), _deadline);
+      _client.channel(), bytes_.data(), static_cast<uint32_t>(bytes_.size()),
+      _deadline);
   SetResult(_outgoing);
 }
 namespace fidl_test_error {
@@ -54,7 +55,7 @@ namespace fidl_test_error {
       _request(_request_bytes, _request_byte_capacity, s);
   auto& _outgoing = _request.GetOutgoingMessage();
   _outgoing.Call<::fidl::WireResponse<::fidl_test_error::Example::Foo>>(
-      _client, _response_bytes, _response_byte_capacity);
+      _client.channel(), _response_bytes, _response_byte_capacity);
   ::fidl::Result::operator=(_outgoing);
 }
 namespace fidl_test_error {

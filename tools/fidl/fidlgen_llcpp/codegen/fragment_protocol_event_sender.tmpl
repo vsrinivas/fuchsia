@@ -84,7 +84,7 @@ fidl::Result {{ $.WireEventSender.NoLeading }}::{{ .Name }}(
       {{- RenderForwardParams "::fidl::internal::AllowUnownedInputRef{}" .ResponseArgs -}}
   };
   auto& _message = _response.GetOutgoingMessage();
-  _message.Write(server_end_);
+  _message.Write(server_end_.channel());
   return ::fidl::Result{_message};
 }
 
@@ -96,7 +96,7 @@ fidl::Result {{ $.WireEventSender.NoLeading }}::{{ .Name }}(
   ::fidl::UnownedEncodedMessage<{{ .WireResponse }}> _response(
       {{- RenderForwardParams "_buffer.data" "_buffer.capacity" .ResponseArgs }});
   auto& _message = _response.GetOutgoingMessage();
-  _message.Write(server_end_);
+  _message.Write(server_end_.channel());
   return ::fidl::Result{_message};
 }
     {{- end }}

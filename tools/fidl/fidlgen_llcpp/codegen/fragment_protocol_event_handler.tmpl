@@ -69,8 +69,8 @@ public:
   static_assert(kHandleAllocSize <= ZX_CHANNEL_MAX_MSG_HANDLES);
   {{ .SyncEventAllocationV1.BackingBufferType }} read_storage;
   std::array<zx_handle_info_t, kHandleAllocSize> read_handles;
-  ::fidl::IncomingMessage msg = fidl::ChannelReadEtc(
-      client_end.handle(),
+  ::fidl::IncomingMessage msg = ::fidl::MessageRead(
+      zx::unowned_channel(client_end.handle()),
       ZX_CHANNEL_READ_MAY_DISCARD,
       read_storage.view(),
       cpp20::span(read_handles)

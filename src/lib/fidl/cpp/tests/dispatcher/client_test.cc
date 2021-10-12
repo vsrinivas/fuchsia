@@ -84,9 +84,9 @@ class ClientFixture : public zxtest::Test {
   fidl::Endpoints<TestProtocol>& endpoints() { return endpoints_; }
 
   fidl::IncomingMessage ReadFromServer() {
-    return fidl::ChannelReadEtc(endpoints_.server.channel().get(), 0,
-                                fidl::BufferSpan(read_buffer_.data(), read_buffer_.size()),
-                                cpp20::span<zx_handle_info_t>{});
+    return fidl::MessageRead(endpoints_.server.channel(), 0,
+                             fidl::BufferSpan(read_buffer_.data(), read_buffer_.size()),
+                             cpp20::span<zx_handle_info_t>{});
   }
 
  private:

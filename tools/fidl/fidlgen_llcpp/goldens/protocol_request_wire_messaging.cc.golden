@@ -51,7 +51,7 @@ extern "C" const fidl_type_t
   auto& _outgoing = _request.GetOutgoingMessage();
   _outgoing.Call<
       ::fidl::WireResponse<::fidl_test_protocolrequest::Parent::GetChild>>(
-      _client, bytes_.data(), static_cast<uint32_t>(bytes_.size()));
+      _client.channel(), bytes_.data(), static_cast<uint32_t>(bytes_.size()));
   SetResult(_outgoing);
 }
 
@@ -65,7 +65,8 @@ extern "C" const fidl_type_t
   auto& _outgoing = _request.GetOutgoingMessage();
   _outgoing.Call<
       ::fidl::WireResponse<::fidl_test_protocolrequest::Parent::GetChild>>(
-      _client, bytes_.data(), static_cast<uint32_t>(bytes_.size()), _deadline);
+      _client.channel(), bytes_.data(), static_cast<uint32_t>(bytes_.size()),
+      _deadline);
   SetResult(_outgoing);
 }
 namespace fidl_test_protocolrequest {
@@ -85,7 +86,7 @@ namespace fidl_test_protocolrequest {
   auto& _outgoing = _request.GetOutgoingMessage();
   _outgoing.Call<
       ::fidl::WireResponse<::fidl_test_protocolrequest::Parent::GetChild>>(
-      _client, _response_bytes, _response_byte_capacity);
+      _client.channel(), _response_bytes, _response_byte_capacity);
   ::fidl::Result::operator=(_outgoing);
 }
 namespace fidl_test_protocolrequest {
@@ -103,7 +104,7 @@ namespace fidl_test_protocolrequest {
   auto& _outgoing = _request.GetOutgoingMessage();
   _outgoing.Call<::fidl::WireResponse<
       ::fidl_test_protocolrequest::Parent::GetChildRequest>>(
-      _client, bytes_.data(), static_cast<uint32_t>(bytes_.size()));
+      _client.channel(), bytes_.data(), static_cast<uint32_t>(bytes_.size()));
   SetResult(_outgoing);
 }
 
@@ -118,7 +119,8 @@ namespace fidl_test_protocolrequest {
   auto& _outgoing = _request.GetOutgoingMessage();
   _outgoing.Call<::fidl::WireResponse<
       ::fidl_test_protocolrequest::Parent::GetChildRequest>>(
-      _client, bytes_.data(), static_cast<uint32_t>(bytes_.size()), _deadline);
+      _client.channel(), bytes_.data(), static_cast<uint32_t>(bytes_.size()),
+      _deadline);
   SetResult(_outgoing);
 }
 namespace fidl_test_protocolrequest {
@@ -139,7 +141,7 @@ namespace fidl_test_protocolrequest {
   auto& _outgoing = _request.GetOutgoingMessage();
   _outgoing.Call<::fidl::WireResponse<
       ::fidl_test_protocolrequest::Parent::GetChildRequest>>(
-      _client, _response_bytes, _response_byte_capacity);
+      _client.channel(), _response_bytes, _response_byte_capacity);
   ::fidl::Result::operator=(_outgoing);
 }
 namespace fidl_test_protocolrequest {
@@ -155,7 +157,7 @@ namespace fidl_test_protocolrequest {
       ::fidl::WireRequest<::fidl_test_protocolrequest::Parent::TakeChild>>
       _request(::fidl::internal::AllowUnownedInputRef{}, std::move(c));
   auto& _outgoing = _request.GetOutgoingMessage();
-  _outgoing.Write(_client);
+  _outgoing.Write(_client.channel());
   SetResult(_outgoing);
 }
 namespace fidl_test_protocolrequest {
@@ -172,7 +174,7 @@ namespace fidl_test_protocolrequest {
       ::fidl::WireRequest<::fidl_test_protocolrequest::Parent::TakeChild>>
       _request(_request_bytes, _request_byte_capacity, std::move(c));
   auto& _outgoing = _request.GetOutgoingMessage();
-  _outgoing.Write(_client);
+  _outgoing.Write(_client.channel());
   ::fidl::Result::operator=(_outgoing);
 }
 namespace fidl_test_protocolrequest {
@@ -189,7 +191,7 @@ namespace fidl_test_protocolrequest {
       ::fidl_test_protocolrequest::Parent::TakeChildRequest>>
       _request(::fidl::internal::AllowUnownedInputRef{}, std::move(r));
   auto& _outgoing = _request.GetOutgoingMessage();
-  _outgoing.Write(_client);
+  _outgoing.Write(_client.channel());
   SetResult(_outgoing);
 }
 namespace fidl_test_protocolrequest {
@@ -207,7 +209,7 @@ namespace fidl_test_protocolrequest {
       ::fidl_test_protocolrequest::Parent::TakeChildRequest>>
       _request(_request_bytes, _request_byte_capacity, std::move(r));
   auto& _outgoing = _request.GetOutgoingMessage();
-  _outgoing.Write(_client);
+  _outgoing.Write(_client.channel());
   ::fidl::Result::operator=(_outgoing);
 }
 namespace fidl_test_protocolrequest {

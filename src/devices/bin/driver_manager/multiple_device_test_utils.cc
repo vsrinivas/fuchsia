@@ -91,8 +91,8 @@ void MultipleDeviceTestCase::CheckCreateDeviceReceived(
   uint8_t bytes[ZX_CHANNEL_MAX_MSG_BYTES];
   zx_handle_info_t handles[ZX_CHANNEL_MAX_MSG_HANDLES];
   fidl::IncomingMessage msg =
-      fidl::ChannelReadEtc(devhost_controller.channel().get(), 0,
-                           fidl::BufferSpan(bytes, std::size(bytes)), cpp20::span(handles));
+      fidl::MessageRead(devhost_controller.channel(), 0, fidl::BufferSpan(bytes, std::size(bytes)),
+                        cpp20::span(handles));
   ASSERT_TRUE(msg.ok());
 
   auto* header = msg.header();
@@ -113,8 +113,8 @@ void DeviceState::Dispatch() {
   uint8_t bytes[ZX_CHANNEL_MAX_MSG_BYTES];
   zx_handle_info_t handles[ZX_CHANNEL_MAX_MSG_HANDLES];
   fidl::IncomingMessage msg =
-      fidl::ChannelReadEtc(controller_server.channel().get(), 0,
-                           fidl::BufferSpan(bytes, std::size(bytes)), cpp20::span(handles));
+      fidl::MessageRead(controller_server.channel(), 0, fidl::BufferSpan(bytes, std::size(bytes)),
+                        cpp20::span(handles));
   ASSERT_TRUE(msg.ok());
 
   auto* header = msg.header();

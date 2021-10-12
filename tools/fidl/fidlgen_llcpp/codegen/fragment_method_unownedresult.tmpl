@@ -103,9 +103,9 @@ class {{ .WireUnownedResult }} final : public ::fidl::Result {
 {{- end -}}
   auto& _outgoing = _request.GetOutgoingMessage();
 {{- if .HasResponse }}
-  _outgoing.Call<{{ .WireResponse }}>(_client, _response_bytes, _response_byte_capacity);
+  _outgoing.Call<{{ .WireResponse }}>(_client.channel(), _response_bytes, _response_byte_capacity);
 {{- else }}
-  _outgoing.Write(_client);
+  _outgoing.Write(_client.channel());
 {{- end }}
   ::fidl::Result::operator=(_outgoing);
 }

@@ -95,7 +95,7 @@ void SendSync(const zx::channel& client) {
   fidl::OwnedEncodedMessage<fidl::WireRequest<fuchsia_io::Node::Sync>> encoded(&request);
   ASSERT_OK(encoded.status());
   encoded.GetOutgoingMessage().set_txid(5);
-  encoded.Write(client.get());
+  encoded.Write(zx::unowned_channel(client.get()));
   ASSERT_OK(encoded.status());
 }
 

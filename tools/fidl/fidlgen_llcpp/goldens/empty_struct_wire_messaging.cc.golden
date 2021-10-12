@@ -41,7 +41,7 @@ extern "C" const fidl_type_t
       ::fidl::WireRequest<::fidl_test_emptystruct::EmptyProtocol::Send>>
       _request(::fidl::internal::AllowUnownedInputRef{}, e);
   auto& _outgoing = _request.GetOutgoingMessage();
-  _outgoing.Write(_client);
+  _outgoing.Write(_client.channel());
   SetResult(_outgoing);
 }
 namespace fidl_test_emptystruct {
@@ -59,7 +59,7 @@ namespace fidl_test_emptystruct {
       ::fidl::WireRequest<::fidl_test_emptystruct::EmptyProtocol::Send>>
       _request(_request_bytes, _request_byte_capacity, e);
   auto& _outgoing = _request.GetOutgoingMessage();
-  _outgoing.Write(_client);
+  _outgoing.Write(_client.channel());
   ::fidl::Result::operator=(_outgoing);
 }
 namespace fidl_test_emptystruct {
@@ -78,7 +78,7 @@ namespace fidl_test_emptystruct {
   auto& _outgoing = _request.GetOutgoingMessage();
   _outgoing.Call<::fidl::WireResponse<
       ::fidl_test_emptystruct::EmptyProtocol::SendAndReceive>>(
-      _client, bytes_.data(), static_cast<uint32_t>(bytes_.size()));
+      _client.channel(), bytes_.data(), static_cast<uint32_t>(bytes_.size()));
   SetResult(_outgoing);
 }
 
@@ -94,7 +94,8 @@ namespace fidl_test_emptystruct {
   auto& _outgoing = _request.GetOutgoingMessage();
   _outgoing.Call<::fidl::WireResponse<
       ::fidl_test_emptystruct::EmptyProtocol::SendAndReceive>>(
-      _client, bytes_.data(), static_cast<uint32_t>(bytes_.size()), _deadline);
+      _client.channel(), bytes_.data(), static_cast<uint32_t>(bytes_.size()),
+      _deadline);
   SetResult(_outgoing);
 }
 namespace fidl_test_emptystruct {
@@ -117,7 +118,7 @@ namespace fidl_test_emptystruct {
   auto& _outgoing = _request.GetOutgoingMessage();
   _outgoing.Call<::fidl::WireResponse<
       ::fidl_test_emptystruct::EmptyProtocol::SendAndReceive>>(
-      _client, _response_bytes, _response_byte_capacity);
+      _client.channel(), _response_bytes, _response_byte_capacity);
   ::fidl::Result::operator=(_outgoing);
 }
 namespace fidl_test_emptystruct {
@@ -343,9 +344,9 @@ fidl::WireSyncEventHandler<::fidl_test_emptystruct::EmptyProtocol>::
   static_assert(kHandleAllocSize <= ZX_CHANNEL_MAX_MSG_HANDLES);
   ::fidl::internal::InlineMessageBuffer<24> read_storage;
   std::array<zx_handle_info_t, kHandleAllocSize> read_handles;
-  ::fidl::IncomingMessage msg =
-      fidl::ChannelReadEtc(client_end.handle(), ZX_CHANNEL_READ_MAY_DISCARD,
-                           read_storage.view(), cpp20::span(read_handles));
+  ::fidl::IncomingMessage msg = ::fidl::MessageRead(
+      zx::unowned_channel(client_end.handle()), ZX_CHANNEL_READ_MAY_DISCARD,
+      read_storage.view(), cpp20::span(read_handles));
   if (msg.status() == ZX_ERR_BUFFER_TOO_SMALL) {
     // Message size is unexpectedly larger than calculated.
     // This can only be due to a newer version of the protocol defining a new
@@ -503,7 +504,7 @@ fidl::WireEventSender<::fidl_test_emptystruct::EmptyProtocol>::Receive(
       ::fidl::WireResponse<::fidl_test_emptystruct::EmptyProtocol::Receive>>
       _response{::fidl::internal::AllowUnownedInputRef{}, e};
   auto& _message = _response.GetOutgoingMessage();
-  _message.Write(server_end_);
+  _message.Write(server_end_.channel());
   return ::fidl::Result{_message};
 }
 
@@ -515,7 +516,7 @@ fidl::WireEventSender<::fidl_test_emptystruct::EmptyProtocol>::Receive(
       ::fidl::WireResponse<::fidl_test_emptystruct::EmptyProtocol::Receive>>
       _response(_buffer.data, _buffer.capacity, e);
   auto& _message = _response.GetOutgoingMessage();
-  _message.Write(server_end_);
+  _message.Write(server_end_.channel());
   return ::fidl::Result{_message};
 }
 

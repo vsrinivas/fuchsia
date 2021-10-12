@@ -29,7 +29,7 @@ class DevmgrFidlTxn : public fidl::Transaction {
   zx_status_t Reply(fidl::OutgoingMessage* message) override {
     ZX_ASSERT_MSG(txid_, "DevmgrFidlTxn must have its transaction id set.\n");
     message->set_txid(txid_);
-    message->Write(channel_);
+    message->Write(channel_->borrow());
     return message->status();
   }
 
@@ -78,7 +78,7 @@ class FidlTxn {
   zx_status_t Reply(const fidl_outgoing_msg_t* msg) {
     auto message = fidl::OutgoingMessage::FromEncodedCMessage(msg);
     message.set_txid(txid_);
-    message.Write(channel_);
+    message.Write(channel_->borrow());
     return message.status();
   }
 

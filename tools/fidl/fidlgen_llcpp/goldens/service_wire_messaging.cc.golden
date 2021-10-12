@@ -23,7 +23,7 @@ extern "C" const fidl_type_t
       ::fidl::WireRequest<::fidl_test_service::SecondProtocol::MethodOnSecond>>
       _request(::fidl::internal::AllowUnownedInputRef{});
   auto& _outgoing = _request.GetOutgoingMessage();
-  _outgoing.Write(_client);
+  _outgoing.Write(_client.channel());
   SetResult(_outgoing);
 }
 namespace fidl_test_service {
@@ -124,7 +124,7 @@ extern "C" const fidl_type_t
       ::fidl::WireRequest<::fidl_test_service::FirstProtocol::MethodOnFirst>>
       _request(::fidl::internal::AllowUnownedInputRef{});
   auto& _outgoing = _request.GetOutgoingMessage();
-  _outgoing.Write(_client);
+  _outgoing.Write(_client.channel());
   SetResult(_outgoing);
 }
 namespace fidl_test_service {

@@ -139,48 +139,37 @@ class OutgoingMessage : public ::fidl::Result {
     EncodeImpl(FidlType::Type, data);
   }
 
-#ifdef __Fuchsia__
-  // Uses |zx_channel_write_etc| to write the message.
-  // The message must be in an encoded state before calling |Write|.
-  void Write(zx_handle_t channel) { WriteImpl(channel); }
-
   // Various helper functions for writing to other channel-like types.
 
-  void Write(const internal::AnyTransport& transport) { Write(transport.borrow()); }
-
+#ifdef __Fuchsia__
   void Write(internal::AnyUnownedTransport transport) {
-    Write(transport.get<internal::ChannelTransport>());
+    // TODO(fxbug.dev/85734) Support abitrary transports.
+    WriteImpl(transport.get<internal::ChannelTransport>()->get());
   }
 
-  void Write(const ::zx::channel& channel) { Write(channel.get()); }
-
-  void Write(const ::zx::unowned_channel& channel) { Write(channel->get()); }
-
-  template <typename Protocol>
-  void Write(::fidl::UnownedClientEnd<Protocol> client_end) {
-    Write(client_end.channel());
-  }
-
-  template <typename Protocol>
-  void Write(const ::fidl::ServerEnd<Protocol>& server_end) {
-    Write(server_end.channel().get());
+  template <typename Transport>
+  void Write(Transport&& transport) {
+    Write(internal::MakeAnyUnownedTransport(std::forward<Transport>(transport)));
   }
 
   // For requests with a response, uses zx_channel_call_etc to write the message.
   // Before calling Call, Encode must be called.
   // If the call succeed, |result_bytes| contains the decoded result.
   template <typename FidlType>
-  void Call(zx_handle_t channel, uint8_t* result_bytes, uint32_t result_capacity,
-            zx_time_t deadline = ZX_TIME_INFINITE) {
-    CallImpl(FidlType::Type, channel, result_bytes, result_capacity, deadline);
+  void Call(internal::AnyUnownedTransport transport, uint8_t* result_bytes,
+            uint32_t result_capacity, zx_time_t deadline = ZX_TIME_INFINITE) {
+    // TODO(fxbug.dev/85734) Support abitrary transports.
+    CallImpl(FidlType::Type, transport.get<internal::ChannelTransport>()->get(), result_bytes,
+             result_capacity, deadline);
   }
 
-  // Helper function for making a call over other channel-like types.
-  template <typename FidlType, typename Protocol>
-  void Call(::fidl::UnownedClientEnd<Protocol> client_end, uint8_t* result_bytes,
-            uint32_t result_capacity, zx_time_t deadline = ZX_TIME_INFINITE) {
-    CallImpl(FidlType::Type, client_end.handle(), result_bytes, result_capacity, deadline);
+  template <typename FidlType, typename Transport>
+  void Call(Transport&& transport, uint8_t* result_bytes, uint32_t result_capacity,
+            zx_time_t deadline = ZX_TIME_INFINITE) {
+    Call<FidlType>(internal::MakeAnyUnownedTransport(std::forward<Transport>(transport)),
+                   result_bytes, result_capacity, deadline);
   }
+
 #endif
 
   bool is_transactional() const { return is_transactional_; }
@@ -443,15 +432,25 @@ class IncomingMessage : public ::fidl::Result {
 
 #ifdef __Fuchsia__
 
-// Wrapper around |zx_channel_read_etc| that instantiates an |IncomingMessage|
-// with the contents read from the |channel|, referencing the |bytes_storage|
-// and |handles_storage| buffers. The channel should contain transactional FIDL
-// messages, which the instantiated |IncomingMessage| will automatically validate.
+// Reads a message from |transport| using the |bytes_storage| and |handles_storage|
+// buffers as needed.
 //
 // Error information is embedded in the returned |IncomingMessage| when applicable.
-IncomingMessage ChannelReadEtc(zx_handle_t channel, uint32_t options,
-                               ::fidl::BufferSpan bytes_storage,
-                               cpp20::span<zx_handle_info_t> handles_storage);
+IncomingMessage MessageRead(internal::AnyUnownedTransport transport, uint32_t options,
+                            ::fidl::BufferSpan bytes_storage,
+                            cpp20::span<zx_handle_info_t> handles_storage);
+
+// Reads a message from |transport| using the |bytes_storage| and |handles_storage|
+// buffers as needed.
+//
+// Error information is embedded in the returned |IncomingMessage| when applicable.
+template <typename Transport>
+IncomingMessage MessageRead(Transport&& transport, uint32_t options,
+                            ::fidl::BufferSpan bytes_storage,
+                            cpp20::span<zx_handle_info_t> handles_storage) {
+  return MessageRead(internal::MakeAnyUnownedTransport(std::forward<Transport>(transport)), options,
+                     bytes_storage, handles_storage);
+}
 
 #endif  // __Fuchsia__
 

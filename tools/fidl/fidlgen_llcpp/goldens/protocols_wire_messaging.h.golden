@@ -171,9 +171,9 @@ class ::fidl::WireRequest<::fidl_test_protocols::HandleRightsProtocol::
   const ::fidl::Result& error() const { return message_.error(); }
 
   ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
-  template <typename ChannelLike>
-  void Write(ChannelLike&& client) {
-    message_.Write(std::forward<ChannelLike>(client));
+  template <typename TransportLike>
+  void Write(TransportLike&& transport) {
+    message_.Write(std::forward<TransportLike>(transport));
   }
 
  private:
@@ -356,9 +356,9 @@ class ::fidl::WireRequest<::fidl_test_protocols::HandleRightsProtocol::
   const ::fidl::Result& error() const { return message_.error(); }
 
   ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
-  template <typename ChannelLike>
-  void Write(ChannelLike&& client) {
-    message_.Write(std::forward<ChannelLike>(client));
+  template <typename TransportLike>
+  void Write(TransportLike&& transport) {
+    message_.Write(std::forward<TransportLike>(transport));
   }
 
  private:
@@ -542,9 +542,9 @@ class ::fidl::WireResponse<::fidl_test_protocols::HandleRightsProtocol::
   const ::fidl::Result& error() const { return message_.error(); }
 
   ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
-  template <typename ChannelLike>
-  void Write(ChannelLike&& client) {
-    message_.Write(std::forward<ChannelLike>(client));
+  template <typename TransportLike>
+  void Write(TransportLike&& transport) {
+    message_.Write(std::forward<TransportLike>(transport));
   }
 
  private:
@@ -733,9 +733,9 @@ class ::fidl::WireResponse<
   const ::fidl::Result& error() const { return message_.error(); }
 
   ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
-  template <typename ChannelLike>
-  void Write(ChannelLike&& client) {
-    message_.Write(std::forward<ChannelLike>(client));
+  template <typename TransportLike>
+  void Write(TransportLike&& transport) {
+    message_.Write(std::forward<TransportLike>(transport));
   }
 
  private:
@@ -1440,9 +1440,9 @@ class ::fidl::WireRequest<
 
   ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
 #ifdef __Fuchsia__
-  template <typename ChannelLike>
-  void Write(ChannelLike&& client) {
-    message_.Write(std::forward<ChannelLike>(client));
+  template <typename TransportLike>
+  void Write(TransportLike&& transport) {
+    message_.Write(std::forward<TransportLike>(transport));
   }
 #endif  // __Fuchsia__
  private:
@@ -1609,9 +1609,9 @@ class ::fidl::WireRequest<::fidl_test_protocols::WithAndWithoutRequestResponse::
 
   ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
 #ifdef __Fuchsia__
-  template <typename ChannelLike>
-  void Write(ChannelLike&& client) {
-    message_.Write(std::forward<ChannelLike>(client));
+  template <typename TransportLike>
+  void Write(TransportLike&& transport) {
+    message_.Write(std::forward<TransportLike>(transport));
   }
 #endif  // __Fuchsia__
  private:
@@ -1784,9 +1784,9 @@ class ::fidl::WireResponse<
 
   ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
 #ifdef __Fuchsia__
-  template <typename ChannelLike>
-  void Write(ChannelLike&& client) {
-    message_.Write(std::forward<ChannelLike>(client));
+  template <typename TransportLike>
+  void Write(TransportLike&& transport) {
+    message_.Write(std::forward<TransportLike>(transport));
   }
 #endif  // __Fuchsia__
  private:
@@ -1962,9 +1962,9 @@ class ::fidl::WireRequest<::fidl_test_protocols::WithAndWithoutRequestResponse::
 
   ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
 #ifdef __Fuchsia__
-  template <typename ChannelLike>
-  void Write(ChannelLike&& client) {
-    message_.Write(std::forward<ChannelLike>(client));
+  template <typename TransportLike>
+  void Write(TransportLike&& transport) {
+    message_.Write(std::forward<TransportLike>(transport));
   }
 #endif  // __Fuchsia__
  private:
@@ -2140,9 +2140,9 @@ class ::fidl::WireResponse<
 
   ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
 #ifdef __Fuchsia__
-  template <typename ChannelLike>
-  void Write(ChannelLike&& client) {
-    message_.Write(std::forward<ChannelLike>(client));
+  template <typename TransportLike>
+  void Write(TransportLike&& transport) {
+    message_.Write(std::forward<TransportLike>(transport));
   }
 #endif  // __Fuchsia__
  private:
@@ -2321,9 +2321,9 @@ class ::fidl::WireRequest<::fidl_test_protocols::WithAndWithoutRequestResponse::
 
   ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
 #ifdef __Fuchsia__
-  template <typename ChannelLike>
-  void Write(ChannelLike&& client) {
-    message_.Write(std::forward<ChannelLike>(client));
+  template <typename TransportLike>
+  void Write(TransportLike&& transport) {
+    message_.Write(std::forward<TransportLike>(transport));
   }
 #endif  // __Fuchsia__
  private:
@@ -2497,9 +2497,9 @@ class ::fidl::WireRequest<::fidl_test_protocols::WithAndWithoutRequestResponse::
 
   ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
 #ifdef __Fuchsia__
-  template <typename ChannelLike>
-  void Write(ChannelLike&& client) {
-    message_.Write(std::forward<ChannelLike>(client));
+  template <typename TransportLike>
+  void Write(TransportLike&& transport) {
+    message_.Write(std::forward<TransportLike>(transport));
   }
 #endif  // __Fuchsia__
  private:
@@ -2674,9 +2674,9 @@ class ::fidl::WireResponse<
 
   ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
 #ifdef __Fuchsia__
-  template <typename ChannelLike>
-  void Write(ChannelLike&& client) {
-    message_.Write(std::forward<ChannelLike>(client));
+  template <typename TransportLike>
+  void Write(TransportLike&& transport) {
+    message_.Write(std::forward<TransportLike>(transport));
   }
 #endif  // __Fuchsia__
  private:
@@ -2857,9 +2857,9 @@ class ::fidl::WireRequest<::fidl_test_protocols::WithAndWithoutRequestResponse::
 
   ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
 #ifdef __Fuchsia__
-  template <typename ChannelLike>
-  void Write(ChannelLike&& client) {
-    message_.Write(std::forward<ChannelLike>(client));
+  template <typename TransportLike>
+  void Write(TransportLike&& transport) {
+    message_.Write(std::forward<TransportLike>(transport));
   }
 #endif  // __Fuchsia__
  private:
@@ -3038,9 +3038,9 @@ class ::fidl::WireResponse<
 
   ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
 #ifdef __Fuchsia__
-  template <typename ChannelLike>
-  void Write(ChannelLike&& client) {
-    message_.Write(std::forward<ChannelLike>(client));
+  template <typename TransportLike>
+  void Write(TransportLike&& transport) {
+    message_.Write(std::forward<TransportLike>(transport));
   }
 #endif  // __Fuchsia__
  private:
@@ -3220,9 +3220,9 @@ class ::fidl::WireResponse<
 
   ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
 #ifdef __Fuchsia__
-  template <typename ChannelLike>
-  void Write(ChannelLike&& client) {
-    message_.Write(std::forward<ChannelLike>(client));
+  template <typename TransportLike>
+  void Write(TransportLike&& transport) {
+    message_.Write(std::forward<TransportLike>(transport));
   }
 #endif  // __Fuchsia__
  private:
@@ -3404,9 +3404,9 @@ class ::fidl::WireResponse<
 
   ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
 #ifdef __Fuchsia__
-  template <typename ChannelLike>
-  void Write(ChannelLike&& client) {
-    message_.Write(std::forward<ChannelLike>(client));
+  template <typename TransportLike>
+  void Write(TransportLike&& transport) {
+    message_.Write(std::forward<TransportLike>(transport));
   }
 #endif  // __Fuchsia__
  private:
@@ -4928,9 +4928,9 @@ class ::fidl::WireRequest<
 
   ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
 #ifdef __Fuchsia__
-  template <typename ChannelLike>
-  void Write(ChannelLike&& client) {
-    message_.Write(std::forward<ChannelLike>(client));
+  template <typename TransportLike>
+  void Write(TransportLike&& transport) {
+    message_.Write(std::forward<TransportLike>(transport));
   }
 #endif  // __Fuchsia__
  private:
@@ -5100,9 +5100,9 @@ class ::fidl::WireResponse<
 
   ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
 #ifdef __Fuchsia__
-  template <typename ChannelLike>
-  void Write(ChannelLike&& client) {
-    message_.Write(std::forward<ChannelLike>(client));
+  template <typename TransportLike>
+  void Write(TransportLike&& transport) {
+    message_.Write(std::forward<TransportLike>(transport));
   }
 #endif  // __Fuchsia__
  private:
@@ -5269,9 +5269,9 @@ class ::fidl::WireRequest<
 
   ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
 #ifdef __Fuchsia__
-  template <typename ChannelLike>
-  void Write(ChannelLike&& client) {
-    message_.Write(std::forward<ChannelLike>(client));
+  template <typename TransportLike>
+  void Write(TransportLike&& transport) {
+    message_.Write(std::forward<TransportLike>(transport));
   }
 #endif  // __Fuchsia__
  private:
@@ -5439,9 +5439,9 @@ class ::fidl::WireResponse<
 
   ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
 #ifdef __Fuchsia__
-  template <typename ChannelLike>
-  void Write(ChannelLike&& client) {
-    message_.Write(std::forward<ChannelLike>(client));
+  template <typename TransportLike>
+  void Write(TransportLike&& transport) {
+    message_.Write(std::forward<TransportLike>(transport));
   }
 #endif  // __Fuchsia__
  private:
@@ -6045,9 +6045,9 @@ class ::fidl::WireRequest<::fidl_test_protocols::MethodWithUnion::UnionMethod>::
 
   ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
 #ifdef __Fuchsia__
-  template <typename ChannelLike>
-  void Write(ChannelLike&& client) {
-    message_.Write(std::forward<ChannelLike>(client));
+  template <typename TransportLike>
+  void Write(TransportLike&& transport) {
+    message_.Write(std::forward<TransportLike>(transport));
   }
 #endif  // __Fuchsia__
  private:
@@ -6456,9 +6456,9 @@ class ::fidl::WireRequest<::fidl_test_protocols::WithProtocolEnds::ClientEnds>::
   const ::fidl::Result& error() const { return message_.error(); }
 
   ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
-  template <typename ChannelLike>
-  void Write(ChannelLike&& client) {
-    message_.Write(std::forward<ChannelLike>(client));
+  template <typename TransportLike>
+  void Write(TransportLike&& transport) {
+    message_.Write(std::forward<TransportLike>(transport));
   }
 
  private:
@@ -6650,9 +6650,9 @@ class ::fidl::WireResponse<
   const ::fidl::Result& error() const { return message_.error(); }
 
   ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
-  template <typename ChannelLike>
-  void Write(ChannelLike&& client) {
-    message_.Write(std::forward<ChannelLike>(client));
+  template <typename TransportLike>
+  void Write(TransportLike&& transport) {
+    message_.Write(std::forward<TransportLike>(transport));
   }
 
  private:
@@ -6846,9 +6846,9 @@ class ::fidl::WireRequest<::fidl_test_protocols::WithProtocolEnds::ServerEnds>::
   const ::fidl::Result& error() const { return message_.error(); }
 
   ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
-  template <typename ChannelLike>
-  void Write(ChannelLike&& client) {
-    message_.Write(std::forward<ChannelLike>(client));
+  template <typename TransportLike>
+  void Write(TransportLike&& transport) {
+    message_.Write(std::forward<TransportLike>(transport));
   }
 
  private:
@@ -7040,9 +7040,9 @@ class ::fidl::WireResponse<
   const ::fidl::Result& error() const { return message_.error(); }
 
   ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
-  template <typename ChannelLike>
-  void Write(ChannelLike&& client) {
-    message_.Write(std::forward<ChannelLike>(client));
+  template <typename TransportLike>
+  void Write(TransportLike&& transport) {
+    message_.Write(std::forward<TransportLike>(transport));
   }
 
  private:
@@ -7235,9 +7235,9 @@ class ::fidl::WireRequest<
   const ::fidl::Result& error() const { return message_.error(); }
 
   ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
-  template <typename ChannelLike>
-  void Write(ChannelLike&& client) {
-    message_.Write(std::forward<ChannelLike>(client));
+  template <typename TransportLike>
+  void Write(TransportLike&& transport) {
+    message_.Write(std::forward<TransportLike>(transport));
   }
 
  private:
@@ -7431,9 +7431,9 @@ class ::fidl::WireResponse<
   const ::fidl::Result& error() const { return message_.error(); }
 
   ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
-  template <typename ChannelLike>
-  void Write(ChannelLike&& client) {
-    message_.Write(std::forward<ChannelLike>(client));
+  template <typename TransportLike>
+  void Write(TransportLike&& transport) {
+    message_.Write(std::forward<TransportLike>(transport));
   }
 
  private:
@@ -8524,9 +8524,9 @@ class ::fidl::WireRequest<::fidl_test_protocols::ManyParameters::Fifteen>::
 
   ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
 #ifdef __Fuchsia__
-  template <typename ChannelLike>
-  void Write(ChannelLike&& client) {
-    message_.Write(std::forward<ChannelLike>(client));
+  template <typename TransportLike>
+  void Write(TransportLike&& transport) {
+    message_.Write(std::forward<TransportLike>(transport));
   }
 #endif  // __Fuchsia__
  private:
@@ -8938,9 +8938,9 @@ class ::fidl::WireRequest<::fidl_test_protocols::WithErrorSyntax::
 
   ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
 #ifdef __Fuchsia__
-  template <typename ChannelLike>
-  void Write(ChannelLike&& client) {
-    message_.Write(std::forward<ChannelLike>(client));
+  template <typename TransportLike>
+  void Write(TransportLike&& transport) {
+    message_.Write(std::forward<TransportLike>(transport));
   }
 #endif  // __Fuchsia__
  private:
@@ -9119,9 +9119,9 @@ class ::fidl::WireResponse<::fidl_test_protocols::WithErrorSyntax::
 
   ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
 #ifdef __Fuchsia__
-  template <typename ChannelLike>
-  void Write(ChannelLike&& client) {
-    message_.Write(std::forward<ChannelLike>(client));
+  template <typename TransportLike>
+  void Write(TransportLike&& transport) {
+    message_.Write(std::forward<TransportLike>(transport));
   }
 #endif  // __Fuchsia__
  private:
@@ -9291,9 +9291,9 @@ class ::fidl::WireRequest<::fidl_test_protocols::WithErrorSyntax::
 
   ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
 #ifdef __Fuchsia__
-  template <typename ChannelLike>
-  void Write(ChannelLike&& client) {
-    message_.Write(std::forward<ChannelLike>(client));
+  template <typename TransportLike>
+  void Write(TransportLike&& transport) {
+    message_.Write(std::forward<TransportLike>(transport));
   }
 #endif  // __Fuchsia__
  private:
@@ -9472,9 +9472,9 @@ class ::fidl::WireResponse<::fidl_test_protocols::WithErrorSyntax::
 
   ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
 #ifdef __Fuchsia__
-  template <typename ChannelLike>
-  void Write(ChannelLike&& client) {
-    message_.Write(std::forward<ChannelLike>(client));
+  template <typename TransportLike>
+  void Write(TransportLike&& transport) {
+    message_.Write(std::forward<TransportLike>(transport));
   }
 #endif  // __Fuchsia__
  private:
@@ -9643,9 +9643,9 @@ class ::fidl::WireRequest<::fidl_test_protocols::WithErrorSyntax::ErrorAsEnum>::
 
   ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
 #ifdef __Fuchsia__
-  template <typename ChannelLike>
-  void Write(ChannelLike&& client) {
-    message_.Write(std::forward<ChannelLike>(client));
+  template <typename TransportLike>
+  void Write(TransportLike&& transport) {
+    message_.Write(std::forward<TransportLike>(transport));
   }
 #endif  // __Fuchsia__
  private:
@@ -9822,9 +9822,9 @@ class ::fidl::WireResponse<
 
   ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
 #ifdef __Fuchsia__
-  template <typename ChannelLike>
-  void Write(ChannelLike&& client) {
-    message_.Write(std::forward<ChannelLike>(client));
+  template <typename TransportLike>
+  void Write(TransportLike&& transport) {
+    message_.Write(std::forward<TransportLike>(transport));
   }
 #endif  // __Fuchsia__
  private:
@@ -9993,9 +9993,9 @@ class ::fidl::WireRequest<::fidl_test_protocols::WithErrorSyntax::
 
   ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
 #ifdef __Fuchsia__
-  template <typename ChannelLike>
-  void Write(ChannelLike&& client) {
-    message_.Write(std::forward<ChannelLike>(client));
+  template <typename TransportLike>
+  void Write(TransportLike&& transport) {
+    message_.Write(std::forward<TransportLike>(transport));
   }
 #endif  // __Fuchsia__
  private:
@@ -10181,9 +10181,9 @@ class ::fidl::WireResponse<::fidl_test_protocols::WithErrorSyntax::
   const ::fidl::Result& error() const { return message_.error(); }
 
   ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
-  template <typename ChannelLike>
-  void Write(ChannelLike&& client) {
-    message_.Write(std::forward<ChannelLike>(client));
+  template <typename TransportLike>
+  void Write(TransportLike&& transport) {
+    message_.Write(std::forward<TransportLike>(transport));
   }
 
  private:
@@ -11422,9 +11422,9 @@ class ::fidl::WireRequest<::fidl_test_protocols::DiscoverableProtocol::Method>::
 
   ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
 #ifdef __Fuchsia__
-  template <typename ChannelLike>
-  void Write(ChannelLike&& client) {
-    message_.Write(std::forward<ChannelLike>(client));
+  template <typename TransportLike>
+  void Write(TransportLike&& transport) {
+    message_.Write(std::forward<TransportLike>(transport));
   }
 #endif  // __Fuchsia__
  private:
@@ -11809,9 +11809,9 @@ class ::fidl::WireRequest<::fidl_test_protocols::ChannelProtocol::MethodA>::
 
   ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
 #ifdef __Fuchsia__
-  template <typename ChannelLike>
-  void Write(ChannelLike&& client) {
-    message_.Write(std::forward<ChannelLike>(client));
+  template <typename TransportLike>
+  void Write(TransportLike&& transport) {
+    message_.Write(std::forward<TransportLike>(transport));
   }
 #endif  // __Fuchsia__
  private:
@@ -11983,9 +11983,9 @@ class ::fidl::WireResponse<::fidl_test_protocols::ChannelProtocol::EventA>::
 
   ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
 #ifdef __Fuchsia__
-  template <typename ChannelLike>
-  void Write(ChannelLike&& client) {
-    message_.Write(std::forward<ChannelLike>(client));
+  template <typename TransportLike>
+  void Write(TransportLike&& transport) {
+    message_.Write(std::forward<TransportLike>(transport));
   }
 #endif  // __Fuchsia__
  private:
@@ -12157,9 +12157,9 @@ class ::fidl::WireRequest<::fidl_test_protocols::ChannelProtocol::MethodB>::
 
   ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
 #ifdef __Fuchsia__
-  template <typename ChannelLike>
-  void Write(ChannelLike&& client) {
-    message_.Write(std::forward<ChannelLike>(client));
+  template <typename TransportLike>
+  void Write(TransportLike&& transport) {
+    message_.Write(std::forward<TransportLike>(transport));
   }
 #endif  // __Fuchsia__
  private:
@@ -12330,9 +12330,9 @@ class ::fidl::WireResponse<::fidl_test_protocols::ChannelProtocol::MethodB>::
 
   ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
 #ifdef __Fuchsia__
-  template <typename ChannelLike>
-  void Write(ChannelLike&& client) {
-    message_.Write(std::forward<ChannelLike>(client));
+  template <typename TransportLike>
+  void Write(TransportLike&& transport) {
+    message_.Write(std::forward<TransportLike>(transport));
   }
 #endif  // __Fuchsia__
  private:
@@ -12507,9 +12507,9 @@ class ::fidl::WireRequest<::fidl_test_protocols::ChannelProtocol::TakeHandle>::
   const ::fidl::Result& error() const { return message_.error(); }
 
   ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
-  template <typename ChannelLike>
-  void Write(ChannelLike&& client) {
-    message_.Write(std::forward<ChannelLike>(client));
+  template <typename TransportLike>
+  void Write(TransportLike&& transport) {
+    message_.Write(std::forward<TransportLike>(transport));
   }
 
  private:
@@ -12678,9 +12678,9 @@ class ::fidl::WireResponse<::fidl_test_protocols::ChannelProtocol::TakeHandle>::
 
   ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
 #ifdef __Fuchsia__
-  template <typename ChannelLike>
-  void Write(ChannelLike&& client) {
-    message_.Write(std::forward<ChannelLike>(client));
+  template <typename TransportLike>
+  void Write(TransportLike&& transport) {
+    message_.Write(std::forward<TransportLike>(transport));
   }
 #endif  // __Fuchsia__
  private:
@@ -12857,9 +12857,9 @@ class ::fidl::WireRequest<
   const ::fidl::Result& error() const { return message_.error(); }
 
   ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
-  template <typename ChannelLike>
-  void Write(ChannelLike&& client) {
-    message_.Write(std::forward<ChannelLike>(client));
+  template <typename TransportLike>
+  void Write(TransportLike&& transport) {
+    message_.Write(std::forward<TransportLike>(transport));
   }
 
  private:
@@ -13043,9 +13043,9 @@ class ::fidl::WireResponse<
   const ::fidl::Result& error() const { return message_.error(); }
 
   ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
-  template <typename ChannelLike>
-  void Write(ChannelLike&& client) {
-    message_.Write(std::forward<ChannelLike>(client));
+  template <typename TransportLike>
+  void Write(TransportLike&& transport) {
+    message_.Write(std::forward<TransportLike>(transport));
   }
 
  private:

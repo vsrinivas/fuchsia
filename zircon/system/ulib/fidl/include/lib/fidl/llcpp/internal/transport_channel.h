@@ -18,7 +18,8 @@ struct ChannelTransport {
 };
 
 AnyTransport MakeAnyTransport(zx::channel channel);
-AnyUnownedTransport MakeAnyUnownedTransport(zx::unowned_channel channel);
+AnyUnownedTransport MakeAnyUnownedTransport(const zx::channel& channel);
+AnyUnownedTransport MakeAnyUnownedTransport(const zx::unowned_channel& channel);
 
 }  // namespace fidl::internal
 

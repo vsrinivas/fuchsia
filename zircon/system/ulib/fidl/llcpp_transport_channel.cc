@@ -18,7 +18,10 @@ const TransportVTable ChannelTransport::VTable = {
 AnyTransport MakeAnyTransport(zx::channel channel) {
   return AnyTransport::Make<ChannelTransport>(Handle(channel.release()));
 }
-AnyUnownedTransport MakeAnyUnownedTransport(zx::unowned_channel channel) {
+AnyUnownedTransport MakeAnyUnownedTransport(const zx::channel& channel) {
+  return MakeAnyUnownedTransport(channel.borrow());
+}
+AnyUnownedTransport MakeAnyUnownedTransport(const zx::unowned_channel& channel) {
   return AnyUnownedTransport::Make<ChannelTransport>(Handle(channel->get()));
 }
 

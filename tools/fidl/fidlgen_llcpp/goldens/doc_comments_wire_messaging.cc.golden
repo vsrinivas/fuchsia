@@ -27,7 +27,7 @@ extern "C" const fidl_type_t fidl_test_doccomments_InterfaceOnEventEventTable;
       ::fidl::WireRequest<::fidl_test_doccomments::Interface::Method>>
       _request(::fidl::internal::AllowUnownedInputRef{});
   auto& _outgoing = _request.GetOutgoingMessage();
-  _outgoing.Write(_client);
+  _outgoing.Write(_client.channel());
   SetResult(_outgoing);
 }
 namespace fidl_test_doccomments {
@@ -99,9 +99,9 @@ fidl::WireSyncEventHandler<::fidl_test_doccomments::Interface>::HandleOneEvent(
   static_assert(kHandleAllocSize <= ZX_CHANNEL_MAX_MSG_HANDLES);
   ::fidl::internal::InlineMessageBuffer<16> read_storage;
   std::array<zx_handle_info_t, kHandleAllocSize> read_handles;
-  ::fidl::IncomingMessage msg =
-      fidl::ChannelReadEtc(client_end.handle(), ZX_CHANNEL_READ_MAY_DISCARD,
-                           read_storage.view(), cpp20::span(read_handles));
+  ::fidl::IncomingMessage msg = ::fidl::MessageRead(
+      zx::unowned_channel(client_end.handle()), ZX_CHANNEL_READ_MAY_DISCARD,
+      read_storage.view(), cpp20::span(read_handles));
   if (msg.status() == ZX_ERR_BUFFER_TOO_SMALL) {
     // Message size is unexpectedly larger than calculated.
     // This can only be due to a newer version of the protocol defining a new
@@ -195,7 +195,7 @@ fidl::WireEventSender<::fidl_test_doccomments::Interface>::OnEvent() const {
       ::fidl::WireResponse<::fidl_test_doccomments::Interface::OnEvent>>
       _response{::fidl::internal::AllowUnownedInputRef{}};
   auto& _message = _response.GetOutgoingMessage();
-  _message.Write(server_end_);
+  _message.Write(server_end_.channel());
   return ::fidl::Result{_message};
 }
 

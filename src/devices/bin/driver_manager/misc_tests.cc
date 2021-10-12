@@ -114,9 +114,8 @@ void BindDriverTestOutput(
     fidl::ServerEnd<fuchsia_driver_test::Logger> test_output) {
   uint8_t bytes[ZX_CHANNEL_MAX_MSG_BYTES];
   zx_handle_info_t handles[ZX_CHANNEL_MAX_MSG_HANDLES];
-  fidl::IncomingMessage msg =
-      fidl::ChannelReadEtc(controller.channel().get(), 0, fidl::BufferSpan(bytes, std::size(bytes)),
-                           cpp20::span(handles));
+  fidl::IncomingMessage msg = fidl::MessageRead(
+      controller.channel(), 0, fidl::BufferSpan(bytes, std::size(bytes)), cpp20::span(handles));
   ASSERT_TRUE(msg.ok());
 
   auto* header = msg.header();
@@ -137,9 +136,8 @@ void CheckBindDriverReceived(
     const fidl::StringView expected_driver) {
   uint8_t bytes[ZX_CHANNEL_MAX_MSG_BYTES];
   zx_handle_info_t handles[ZX_CHANNEL_MAX_MSG_HANDLES];
-  fidl::IncomingMessage msg =
-      fidl::ChannelReadEtc(controller.channel().get(), 0, fidl::BufferSpan(bytes, std::size(bytes)),
-                           cpp20::span(handles));
+  fidl::IncomingMessage msg = fidl::MessageRead(
+      controller.channel(), 0, fidl::BufferSpan(bytes, std::size(bytes)), cpp20::span(handles));
   ASSERT_TRUE(msg.ok());
 
   auto* header = msg.header();

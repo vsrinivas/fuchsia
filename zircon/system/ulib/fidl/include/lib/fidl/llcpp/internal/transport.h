@@ -114,6 +114,8 @@ class AnyTransport {
   Handle handle_;
 };
 
+AnyUnownedTransport MakeAnyUnownedTransport(const AnyTransport& transport);
+
 }  // namespace internal
 }  // namespace fidl
 

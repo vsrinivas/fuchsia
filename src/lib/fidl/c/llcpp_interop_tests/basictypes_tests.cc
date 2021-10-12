@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fidl/test/llcpp/basictypes/c/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/async-loop/loop.h>
@@ -19,7 +20,6 @@
 #include <memory>
 #include <utility>
 
-#include <fidl/test/llcpp/basictypes/c/fidl.h>
 #include <zxtest/zxtest.h>
 
 // Interface under test
@@ -166,7 +166,7 @@ TEST(BasicTypesTest, RawChannelCallStruct) {
   // Do the call and decode the received response.
   encoded.GetOutgoingMessage()
       .Call<fidl::WireResponse<basictypes::TestInterface::ConsumeSimpleStruct>>(
-          client.get(), response_storage, sizeof(response_storage));
+          zx::unowned_channel(client.get()), response_storage, sizeof(response_storage));
 
   ASSERT_TRUE(encoded.ok());
 
@@ -195,7 +195,8 @@ TEST(BasicTypesTest, RawChannelCallStructWithTimeout) {
   // Do the call and decode the received response.
   encoded.GetOutgoingMessage()
       .Call<fidl::WireResponse<basictypes::TestInterface::ConsumeSimpleStruct>>(
-          client.get(), response_storage, sizeof(response_storage), ZX_TIME_INFINITE_PAST);
+          zx::unowned_channel(client.get()), response_storage, sizeof(response_storage),
+          ZX_TIME_INFINITE_PAST);
 
   ASSERT_EQ(encoded.status(), ZX_ERR_TIMED_OUT);
 

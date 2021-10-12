@@ -162,13 +162,13 @@ TEST_F(IncomingMessageChannelReadEtcTest, ReadFromChannel) {
   fidl_init_txn_header(hdr, /* txid */ 1, /* ordinal */ 1);
   sink.write(0, bytes, std::size(bytes), nullptr, 0);
 
-  auto incoming = fidl::ChannelReadEtc(source.get(), 0, byte_buffer_view(), handle_buffer_view());
+  auto incoming = fidl::MessageRead(source, 0, byte_buffer_view(), handle_buffer_view());
   EXPECT_EQ(ZX_OK, incoming.status());
   EXPECT_EQ(incoming.byte_actual(), sizeof(fidl_message_header_t));
   EXPECT_EQ(0, memcmp(incoming.bytes(), bytes, incoming.byte_actual()));
   EXPECT_EQ(0u, incoming.handle_actual());
 
-  auto incoming2 = fidl::ChannelReadEtc(source.get(), 0, byte_buffer_view(), handle_buffer_view());
+  auto incoming2 = fidl::MessageRead(source, 0, byte_buffer_view(), handle_buffer_view());
   EXPECT_EQ(ZX_ERR_SHOULD_WAIT, incoming2.status());
   EXPECT_EQ(fidl::Reason::kTransportError, incoming2.reason());
   EXPECT_EQ(
@@ -182,7 +182,7 @@ TEST_F(IncomingMessageChannelReadEtcTest, ReadFromClosedChannel) {
   ASSERT_EQ(ZX_OK, zx::channel::create(0, &source, &sink));
 
   sink.reset();
-  auto incoming = fidl::ChannelReadEtc(source.get(), 0, byte_buffer_view(), handle_buffer_view());
+  auto incoming = fidl::MessageRead(source, 0, byte_buffer_view(), handle_buffer_view());
   EXPECT_EQ(ZX_ERR_PEER_CLOSED, incoming.status());
   EXPECT_EQ(fidl::Reason::kPeerClosed, incoming.reason());
 }
@@ -197,7 +197,7 @@ TEST_F(IncomingMessageChannelReadEtcTest, ReadFromChannelInvalidMessage) {
   fidl_init_txn_header(hdr, /* txid */ 42, /* ordinal */ kFidlOrdinalEpitaph);
   sink.write(0, bytes, std::size(bytes), nullptr, 0);
 
-  auto incoming = fidl::ChannelReadEtc(source.get(), 0, byte_buffer_view(), handle_buffer_view());
+  auto incoming = fidl::MessageRead(source, 0, byte_buffer_view(), handle_buffer_view());
   EXPECT_EQ(ZX_ERR_INVALID_ARGS, incoming.status());
   EXPECT_EQ(fidl::Reason::kUnexpectedMessage, incoming.reason());
   EXPECT_EQ(

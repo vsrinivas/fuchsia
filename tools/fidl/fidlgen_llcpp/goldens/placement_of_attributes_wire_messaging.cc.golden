@@ -25,7 +25,7 @@ extern "C" const fidl_type_t
       ::fidl_test_placementofattributes::ExampleProtocol::Method>>
       _request(::fidl::internal::AllowUnownedInputRef{}, arg);
   auto& _outgoing = _request.GetOutgoingMessage();
-  _outgoing.Write(_client);
+  _outgoing.Write(_client.channel());
   SetResult(_outgoing);
 }
 namespace fidl_test_placementofattributes {
@@ -44,7 +44,7 @@ namespace fidl_test_placementofattributes {
       ::fidl_test_placementofattributes::ExampleProtocol::Method>>
       _request(_request_bytes, _request_byte_capacity, arg);
   auto& _outgoing = _request.GetOutgoingMessage();
-  _outgoing.Write(_client);
+  _outgoing.Write(_client.channel());
   ::fidl::Result::operator=(_outgoing);
 }
 namespace fidl_test_placementofattributes {

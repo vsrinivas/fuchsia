@@ -250,9 +250,9 @@ class Server : fidl::WireServer<test::ReceiveFlexibleEnvelope>, private async_wa
     }
     if (signal->observed & ZX_CHANNEL_READABLE) {
       for (uint64_t i = 0; i < signal->count; i++) {
-        fidl::IncomingMessage msg = fidl::ChannelReadEtc(
-            async_wait_t::object, 0, fidl::BufferSpan(bytes_->data(), bytes_->size()),
-            cpp20::span(*handles_));
+        fidl::IncomingMessage msg = fidl::MessageRead(
+            zx::unowned_channel(async_wait_t::object), 0,
+            fidl::BufferSpan(bytes_->data(), bytes_->size()), cpp20::span(*handles_));
         if (!msg.ok()) {
           return;
         }
