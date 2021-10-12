@@ -82,28 +82,20 @@ static constexpr auto kDynamicHtml = R"(
 </html>
 )";
 
-static constexpr auto kBigListHtml = R"(
+static constexpr auto kOffscreenNodeHtml = R"(
 <html>
-  <head>
-    <title>Big list test</title>
-  </head>
-  <body onLoad='generateList()'>
-    <script>
-      function generateList() {
-        const list = document.querySelector("#list");
-        const template = document.querySelector('#entry');
-        for (let i = 0; i < 1000; i++) {
-          const clone = template.content.cloneNode(true);
-          const li = clone.querySelector("li");
-          li.textContent = "Entry " + i;
-          list.appendChild(clone);
-        }
-      }
-    </script>
-    <ul id="list"/>
-    <template id="entry">
-      <li/>
-    </template>
+  <head><title>accessibility 1</title></head>
+  <body>
+    <button>a button</button>
+    <p>paragraph 1</p>
+    <p>paragraph the second</p>
+    <p>a third paragraph</p>
+    <button>another button</button>
+    <button>button 3</button>
+    <input type="range" min="0" max="100" value="51" step="3" class="slider" id="myRange">
+    <div style='height:2000px; width:2000px;'></div>
+    <p>offscreen node</p>
+    <button>button 4</button>
   </body>
 </html>
 )";
@@ -454,40 +446,33 @@ TEST_F(WebSemanticsTest, HitTesting) {
 }
 
 // BUG(fxb.dev/60002): Disable this test until the flakes are resolved.
-TEST_F(WebSemanticsTest, DISABLED_ScrollToMakeVisible) {
-  LoadHtml(kBigListHtml);
+TEST_F(WebSemanticsTest, ScrollToMakeVisible) {
+  LoadHtml(kOffscreenNodeHtml);
+
+  RunLoopUntil([this] {
+    auto node = view_manager()->GetSemanticNode(view_ref_koid(), 0u);
+    return node->has_transform() && node->transform().matrix[0] != 1.f;
+  });
 
   auto root = view_manager()->GetSemanticNode(view_ref_koid(), 0u);
 
-  // The "Entry 999" node should be off-screen
-  auto node = FindNodeWithLabel(root, view_ref_koid(), "Entry 999");
+  // The offscreen node should be off-screen.
+  RunLoopUntilNodeExistsWithLabel("offscreen node");
+  auto node = FindNodeWithLabel(root, view_ref_koid(), "offscreen node");
   ASSERT_TRUE(node);
-
-  // Record the location of a corner of the node's bounding box.  We record this rather than the
-  // transform or the location fields since the runtime could change either when an element is
-  // moved.
-  auto node_corner =
-      GetTransformForNode(view_ref_koid(), node->node_id()).Apply(node->location().min);
 
   bool callback_handled = PerformAccessibilityAction(
       view_ref_koid(), node->node_id(), fuchsia::accessibility::semantics::Action::SHOW_ON_SCREEN);
   EXPECT_TRUE(callback_handled);
 
-  // Verify the "Entry 999" node has moved.  Note that this does not verify that it's now on screen,
-  // since the semantics API does not encode enough information to be able to answer that
-  // definitively.
+  // Verify that the root container was scrolled to make the offscreen node
+  // visible.
   // TODO(fxb.dev/58276): Once we have the Semantic Event Updates work done, this logic can be
   // more clearly written as waiting for notification of an update then checking the tree.
-  RunLoopUntil([this, root, &node_corner] {
-    auto node = FindNodeWithLabel(root, view_ref_koid(), "Entry 999");
-    if (node == nullptr) {
-      return false;
-    }
-
-    auto new_node_corner =
-        GetTransformForNode(view_ref_koid(), node->node_id()).Apply(node->location().min);
-    return node_corner.x != new_node_corner.x || node_corner.y != new_node_corner.y ||
-           node_corner.z != new_node_corner.z;
+  RunLoopUntil([this /*&node_corner*/] {
+    auto root = view_manager()->GetSemanticNode(view_ref_koid(), 0u);
+    return root->has_states() && root->states().has_viewport_offset() &&
+           root->states().viewport_offset().y != 0;
   });
 }
 

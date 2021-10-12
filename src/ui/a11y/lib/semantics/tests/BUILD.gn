@@ -132,9 +132,9 @@ fuchsia_component("web_semantics_tests") {
   manifest = "meta/web-semantics-tests-v2.cml"
 }
 
-resource("big_list") {
-  sources = [ "testdata/big_list.html" ]
-  outputs = [ "data/big_list.html" ]
+resource("offscreen_node") {
+  sources = [ "testdata/offscreen_node.html" ]
+  outputs = [ "data/offscreen_node.html" ]
 }
 
 resource("dynamic_button") {
@@ -157,8 +157,8 @@ fuchsia_test_package("semantics-integration-tests") {
   }
 
   deps = [
-    ":big_list",
     ":dynamic_button",
+    ":offscreen_node",
     ":static",
     "//src/connectivity/network/netstack:component-legacy",
     "//src/ui/bin/root_presenter:component_v1_for_test",
