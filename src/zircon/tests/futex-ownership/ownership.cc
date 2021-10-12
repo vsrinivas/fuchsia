@@ -13,7 +13,6 @@
 #include <iterator>
 #include <limits>
 
-#include <fbl/futex.h>
 #include <zxtest/zxtest.h>
 
 #include "bad-handle.h"
@@ -46,24 +45,24 @@ struct WakeOperation;
 
 template <>
 struct WakeOperation<OpType::kStandard> {
-  static zx_status_t wake(const fbl::futex_t& wake_futex, uint32_t count) {
+  static zx_status_t wake(const zx_futex_t& wake_futex, uint32_t count) {
     return zx_futex_wake(&wake_futex, count);
   }
 
-  static zx_status_t wake_single_owner(const fbl::futex_t& wake_futex) {
+  static zx_status_t wake_single_owner(const zx_futex_t& wake_futex) {
     return zx_futex_wake_single_owner(&wake_futex);
   }
 };
 
 template <>
 struct WakeOperation<OpType::kRequeue> {
-  static zx_status_t wake(const fbl::futex_t& wake_futex, uint32_t count) {
-    const fbl::futex_t requeue_futex{0};
+  static zx_status_t wake(const zx_futex_t& wake_futex, uint32_t count) {
+    const zx_futex_t requeue_futex{0};
     return zx_futex_requeue(&wake_futex, count, 0, &requeue_futex, 0u, ZX_HANDLE_INVALID);
   }
 
-  static zx_status_t wake_single_owner(const fbl::futex_t& wake_futex) {
-    const fbl::futex_t requeue_futex{0};
+  static zx_status_t wake_single_owner(const zx_futex_t& wake_futex) {
+    const zx_futex_t requeue_futex{0};
     return zx_futex_requeue_single_owner(&wake_futex, 0, &requeue_futex, 0u, ZX_HANDLE_INVALID);
   }
 };
@@ -71,7 +70,7 @@ struct WakeOperation<OpType::kRequeue> {
 }  // namespace
 
 TEST(FutexOwnershipTestCase, GetOwner) {
-  fbl::futex_t the_futex(0);
+  zx_futex_t the_futex(0);
 
   // No one should own our brand new futex right now.
   zx_status_t res;
@@ -95,7 +94,7 @@ TEST(FutexOwnershipTestCase, GetOwner) {
 }
 
 TEST(FutexOwnershipTestCase, Wait) {
-  fbl::futex_t the_futex(0);
+  zx_futex_t the_futex(0);
   ExternalThread external;
   Thread thread1, thread2, thread3;
   zx_status_t res;
@@ -332,7 +331,7 @@ template <OpType OPERATION>
 static void WakeOwnershipTest() {
   using do_op = WakeOperation<OPERATION>;
 
-  fbl::futex_t the_futex(0);
+  zx_futex_t the_futex(0);
   zx_handle_t test_thread_handle = zx_thread_self();
   zx_koid_t test_thread_koid = CurrentThreadKoid();
   zx_koid_t koid;
@@ -411,7 +410,7 @@ static void WakeOwnershipTest() {
     // sure that attempting to do a wake op when the wake-futex value verification
     // fails does nothing to change the ownership of the futex.
     if constexpr (OPERATION == OpType::kRequeue) {
-      fbl::futex_t requeue_futex(1);
+      zx_futex_t requeue_futex(1);
       if (pass == 0) {
         res = zx_futex_requeue(&the_futex, 1u, 1, &requeue_futex, 0u, ZX_HANDLE_INVALID);
       } else {
@@ -507,7 +506,7 @@ template <OpType OPERATION>
 static void WakeZeroOwnershipTest() {
   using do_op = WakeOperation<OPERATION>;
 
-  fbl::futex_t the_futex(0);
+  zx_futex_t the_futex(0);
   zx_status_t res;
   Thread thread1;
   std::atomic<zx_status_t> t1_res;
@@ -604,8 +603,8 @@ TEST(FutexOwnershipTestCase, RequeueWakeZero) {
 }
 
 TEST(FutexOwnershipTestCase, Requeue) {
-  fbl::futex_t wake_futex(0);
-  fbl::futex_t requeue_futex(1);
+  zx_futex_t wake_futex(0);
+  zx_futex_t requeue_futex(1);
   ExternalThread external;
   zx::event not_a_thread;
   zx_handle_t test_thread_handle = zx_thread_self();
@@ -924,7 +923,7 @@ TEST(FutexOwnershipTestCase, Requeue) {
 }
 
 TEST(FutexOwnershipTestCase, OwnerExit) {
-  fbl::futex_t the_futex(0);
+  zx_futex_t the_futex(0);
   Thread the_owner;
   Thread the_waiter;
   std::atomic<zx_status_t> waiter_res;
@@ -1068,8 +1067,8 @@ TEST(FutexOwnershipTestCase, DeadThreadsCantOwnFutexes) {
   //    to assign ownership to.
   // 4) A living thread which can serve as the owner which gets erase during our
   //    attempt to assign ownership to a dead thread.
-  fbl::futex_t futex1(0);
-  fbl::futex_t futex2(0);
+  zx_futex_t futex1(0);
+  zx_futex_t futex2(0);
   Thread the_waiter;
   Thread live_owner;
   zx::thread dead_owner;

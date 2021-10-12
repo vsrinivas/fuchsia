@@ -4,6 +4,7 @@
 
 #include <inttypes.h>
 #include <lib/fit/defer.h>
+#include <lib/stdcompat/atomic.h>
 #include <lib/zx/clock.h>
 #include <lib/zx/suspend_token.h>
 #include <lib/zx/thread.h>
@@ -15,6 +16,7 @@
 #include <zircon/time.h>
 #include <zircon/types.h>
 
+#include <array>
 #include <atomic>
 #include <cstdio>
 #include <cstdlib>
@@ -24,7 +26,6 @@
 #include <limits>
 
 #include <fbl/algorithm.h>
-#include <fbl/futex.h>
 #include <zxtest/zxtest.h>
 
 namespace futex {
@@ -248,18 +249,18 @@ TEST(FutexTest, WaitBadAddress) {
 
 // Test that we can wake up a single thread.
 TEST(FutexTest, Wakeup) {
-  fbl::futex_t futex_value(1);
+  zx_futex_t futex{1};
   TestThread thread;
 
-  ASSERT_NO_FATAL_FAILURES(thread.Start(&futex_value));
+  ASSERT_NO_FATAL_FAILURES(thread.Start(&futex));
 
   // Clean up on exit.
-  auto cleanup = fit::defer([&thread, &futex_value]() {
-    EXPECT_OK(zx_futex_wake(&futex_value, kThreadWakeAllCount));
+  auto cleanup = fit::defer([&thread, &futex]() {
+    EXPECT_OK(zx_futex_wake(&futex, kThreadWakeAllCount));
     thread.Shutdown();
   });
 
-  ASSERT_OK(zx_futex_wake(&futex_value, kThreadWakeAllCount));
+  ASSERT_OK(zx_futex_wake(&futex, kThreadWakeAllCount));
   ASSERT_NO_FATAL_FAILURES(thread.WaitUntilWoken());
   ASSERT_OK(thread.wait_result());
 }
@@ -268,22 +269,22 @@ TEST(FutexTest, Wakeup) {
 // the wakeup limit.
 TEST(FutexTest, WakeupLimit) {
   constexpr int kWakeCount = 2;
-  fbl::futex_t futex_value(1);
+  zx_futex_t futex{1};
   TestThread threads[4];
 
   // If something goes wrong and we bail out early, do our best to shut down as cleanly as we
   auto cleanup = fit::defer([&]() {
-    zx_futex_wake(&futex_value, kThreadWakeAllCount);
+    zx_futex_wake(&futex, kThreadWakeAllCount);
     for (auto& t : threads) {
       t.Shutdown();
     }
   });
 
   for (auto& t : threads) {
-    ASSERT_NO_FATAL_FAILURES(t.Start(&futex_value));
+    ASSERT_NO_FATAL_FAILURES(t.Start(&futex));
   }
 
-  ASSERT_OK(zx_futex_wake(&futex_value, kWakeCount));
+  ASSERT_OK(zx_futex_wake(&futex, kWakeCount));
 
   // Test that exactly |kWakeCount| threads wake up from the queue.  We do not know
   // which threads are going to wake up, just that two threads are going to
@@ -291,7 +292,7 @@ TEST(FutexTest, WakeupLimit) {
   ASSERT_NO_FATAL_FAILURES(AssertWokeThreadCount(threads, std::size(threads), 2));
 
   // Clean up: Wake the remaining threads so that they can exit.
-  ASSERT_OK(zx_futex_wake(&futex_value, kThreadWakeAllCount));
+  ASSERT_OK(zx_futex_wake(&futex, kThreadWakeAllCount));
   ASSERT_NO_FATAL_FAILURES(AssertWokeThreadCount(threads, std::size(threads), std::size(threads)));
 
   for (auto& t : threads) {
@@ -306,33 +307,31 @@ TEST(FutexTest, WakeupLimit) {
 // properly.  A futex_wait() call on one address should not be woken by a
 // futex_wake() call on another address.
 TEST(FutexTest, WakeupAddress) {
-  fbl::futex_t futex_value1(1);
-  fbl::futex_t futex_value2(1);
-  fbl::futex_t dummy_value(1);
+  std::array<zx_futex_t, 3> futexes = {1, 1, 1};
   TestThread threads[2];
 
   // If something goes wrong and we bail out early, do our best to shut down as cleanly as we can.
   auto cleanup = fit::defer([&]() {
-    zx_futex_wake(&futex_value1, kThreadWakeAllCount);
-    zx_futex_wake(&futex_value2, kThreadWakeAllCount);
+    zx_futex_wake(&futexes[0], kThreadWakeAllCount);
+    zx_futex_wake(&futexes[1], kThreadWakeAllCount);
     for (auto& t : threads) {
       t.Shutdown();
     }
   });
 
-  ASSERT_NO_FATAL_FAILURES(threads[0].Start(&futex_value1));
-  ASSERT_NO_FATAL_FAILURES(threads[1].Start(&futex_value2));
+  ASSERT_NO_FATAL_FAILURES(threads[0].Start(&futexes[0]));
+  ASSERT_NO_FATAL_FAILURES(threads[1].Start(&futexes[1]));
 
-  ASSERT_OK(zx_futex_wake(&dummy_value, kThreadWakeAllCount));
+  ASSERT_OK(zx_futex_wake(&futexes[2], kThreadWakeAllCount));
   ASSERT_NO_FATAL_FAILURES(threads[0].CheckIsBlockedOnFutex());
   ASSERT_NO_FATAL_FAILURES(threads[1].CheckIsBlockedOnFutex());
 
-  ASSERT_OK(zx_futex_wake(&futex_value1, kThreadWakeAllCount));
+  ASSERT_OK(zx_futex_wake(&futexes[0], kThreadWakeAllCount));
   ASSERT_NO_FATAL_FAILURES(threads[0].WaitUntilWoken());
   ASSERT_NO_FATAL_FAILURES(threads[1].CheckIsBlockedOnFutex());
 
   // Clean up: Wake the remaining thread so that it can exit.
-  ASSERT_OK(zx_futex_wake(&futex_value2, kThreadWakeAllCount));
+  ASSERT_OK(zx_futex_wake(&futexes[1], kThreadWakeAllCount));
   ASSERT_NO_FATAL_FAILURES(threads[1].WaitUntilWoken());
 
   for (auto& t : threads) {
@@ -361,8 +360,8 @@ TEST(FutexTest, RequeueSameAddr) {
 
 // Test that futex_requeue() can wake up some threads and requeue others.
 TEST(FutexTest, Requeue) {
-  fbl::futex_t futex_value1(100);
-  fbl::futex_t futex_value2(200);
+  zx_futex_t futex_value1(100);
+  zx_futex_t futex_value2(200);
   TestThread threads[6];
 
   // If something goes wrong and we bail out early, do our best to shut down as cleanly as we
@@ -403,8 +402,8 @@ TEST(FutexTest, Requeue) {
 // different queue by futex_requeue().  Check that futex_wait() removes
 // itself from the correct queue in that case.
 TEST(FutexTest, RequeueUnqueuedOnTimeout) {
-  fbl::futex_t futex_value1(100);
-  fbl::futex_t futex_value2(200);
+  zx_futex_t futex_value1(100);
+  zx_futex_t futex_value2(200);
   TestThread threads[2];
 
   // If something goes wrong and we bail out early, do our best to shut down as cleanly as we
@@ -446,7 +445,7 @@ TEST(FutexTest, RequeueUnqueuedOnTimeout) {
 // futex_wait() syscall would return ZX_ERR_TIMED_OUT and not get restarted by
 // the syscall wrapper in the VDSO.)
 TEST(FutexTest, ThreadSuspended) {
-  fbl::futex_t futex_value1(1);
+  zx_futex_t futex_value1(1);
 
   TestThread thread;
 

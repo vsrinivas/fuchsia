@@ -5,6 +5,7 @@
 #ifndef SRC_ZIRCON_TESTS_FUTEX_OWNERSHIP_UTILS_H_
 #define SRC_ZIRCON_TESTS_FUTEX_OWNERSHIP_UTILS_H_
 
+#include <lib/stdcompat/atomic.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/thread.h>
 #include <lib/zx/time.h>
@@ -16,7 +17,6 @@
 #include <atomic>
 
 #include <fbl/function.h>
-#include <fbl/futex.h>
 #include <fbl/macros.h>
 
 // Allow up to 4 pointers worth of storage for any lambdas we need to capture
@@ -56,7 +56,9 @@ class Event {
   void Reset();
 
  private:
-  fbl::futex_t signaled_{0};
+  cpp20::atomic_ref<zx_futex_t> signaled() { return cpp20::atomic_ref(futex_state_); }
+
+  zx_futex_t futex_state_ = 0;
 };
 
 // A lightweight wrapper for threads which allow us to create threads and have

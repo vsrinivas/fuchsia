@@ -19,7 +19,6 @@ zx_library("fbl") {
     "fbl/confine_array_index.h",
     "fbl/enum_bits.h",
     "fbl/function.h",
-    "fbl/futex.h",
     "fbl/hard_int.h",
     "fbl/inline_array.h",
     "fbl/intrusive_container_node_utils.h",

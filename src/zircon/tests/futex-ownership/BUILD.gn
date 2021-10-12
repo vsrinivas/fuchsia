@@ -17,6 +17,7 @@ test("futex-ownership") {
   ]
   deps = [
     "//sdk/lib/fdio",
+    "//sdk/lib/stdcompat",
     "//src/zircon/lib/zircon",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/zx",

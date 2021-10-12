@@ -10,6 +10,7 @@ source_set("futex") {
   sources = [ "futex.cc" ]
   deps = [
     "//sdk/lib/fdio",
+    "//sdk/lib/stdcompat",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/zx",
     "//zircon/system/ulib/zxtest",
