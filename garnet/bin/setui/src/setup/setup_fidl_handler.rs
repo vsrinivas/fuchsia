@@ -103,8 +103,8 @@ async fn process_request(
     #[allow(unreachable_patterns)]
     match req {
         // TODO(fxb/79644): Clean up Set interface.
-        SetupRequest::Set { settings, responder } => {
-            let send_result = match set(context, settings, true).await {
+        SetupRequest::Set { settings, reboot_device, responder } => {
+            let send_result = match set(context, settings, reboot_device).await {
                 Ok(_) => responder.send(&mut Ok(())),
                 Err(e) => responder.send(&mut Err(e)),
             };
