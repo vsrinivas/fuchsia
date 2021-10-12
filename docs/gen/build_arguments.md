@@ -867,19 +867,19 @@ From //build/config/clang/crash_diagnostics.gni:7
 
 **Current value (from the default):** `"fuchsia"`
 
-From [//third_party/crashpad/build/crashpad_buildconfig.gni:22](https://fuchsia.googlesource.com/third_party/crashpad/+/93baaa5fd33b8af57ba61437351ab529ac1e4f43/build/crashpad_buildconfig.gni#22)
+From [//third_party/crashpad/build/crashpad_buildconfig.gni:22](https://fuchsia.googlesource.com/third_party/crashpad/+/1c4eb93aa72b008984f13823c5d8a245a00c5c23/build/crashpad_buildconfig.gni#22)
 
 ### crashpad_http_transport_impl
 
 **Current value (from the default):** `"libcurl"`
 
-From [//third_party/crashpad/util/net/tls.gni:21](https://fuchsia.googlesource.com/third_party/crashpad/+/93baaa5fd33b8af57ba61437351ab529ac1e4f43/util/net/tls.gni#21)
+From [//third_party/crashpad/util/net/tls.gni:21](https://fuchsia.googlesource.com/third_party/crashpad/+/1c4eb93aa72b008984f13823c5d8a245a00c5c23/util/net/tls.gni#21)
 
 ### crashpad_use_boringssl_for_http_transport_socket
 
 **Current value (from the default):** `true`
 
-From [//third_party/crashpad/util/net/tls.gni:30](https://fuchsia.googlesource.com/third_party/crashpad/+/93baaa5fd33b8af57ba61437351ab529ac1e4f43/util/net/tls.gni#30)
+From [//third_party/crashpad/util/net/tls.gni:30](https://fuchsia.googlesource.com/third_party/crashpad/+/1c4eb93aa72b008984f13823c5d8a245a00c5c23/util/net/tls.gni#30)
 
 ### cts_version
 Name of the CTS version.
@@ -1312,6 +1312,13 @@ Enable backwards compatible fit namespace and include path.
 **Current value (from the default):** `true`
 
 From //sdk/lib/fit-promise/BUILD.gn:9
+
+### flatland_verbose_logging
+If true, Flatland will log an excruciating amount of data.  For debugging.
+
+**Current value (from the default):** `false`
+
+From //src/ui/scenic/lib/utils/build_args.gni:7
 
 ### flatland_visual_debugging
 If true, this enables the display compositor to tint all Flatland views that
@@ -1783,7 +1790,7 @@ only useful on Chrome OS.
 
 **Current value (from the default):** `false`
 
-From [//third_party/icu/config.gni:12](https://chromium.googlesource.com/chromium/deps/icu/+/a38aef9142ace942a8bf166020c569f4cda0f8d3/config.gni#12)
+From [//third_party/icu/config.gni:12](https://chromium.googlesource.com/chromium/deps/icu/+/ece15d049f2d360721716089372e3749fb89e0f4/config.gni#12)
 
 ### icu_major_version_number
 Contains the major version number of the ICU library, for dependencies that
@@ -1792,7 +1799,7 @@ is only useful in Fuchsia.
 
 **Current value (from the default):** `"69"`
 
-From [//third_party/icu/version.gni:9](https://chromium.googlesource.com/chromium/deps/icu/+/a38aef9142ace942a8bf166020c569f4cda0f8d3/version.gni#9)
+From [//third_party/icu/version.gni:9](https://chromium.googlesource.com/chromium/deps/icu/+/ece15d049f2d360721716089372e3749fb89e0f4/version.gni#9)
 
 ### icu_use_data_file
 Tells icu to load an external data file rather than rely on the icudata
@@ -1800,7 +1807,7 @@ being linked directly into the binary.
 
 **Current value (from the default):** `true`
 
-From [//third_party/icu/config.gni:8](https://chromium.googlesource.com/chromium/deps/icu/+/a38aef9142ace942a8bf166020c569f4cda0f8d3/config.gni#8)
+From [//third_party/icu/config.gni:8](https://chromium.googlesource.com/chromium/deps/icu/+/ece15d049f2d360721716089372e3749fb89e0f4/config.gni#8)
 
 ### include_account_in_fvm
 Include an account partition in the FVM image if set to true.
@@ -2231,7 +2238,7 @@ From //src/developer/fuchsia-criterion/BUILD.gn:13
 
 **Current value (from the default):** `"30000"`
 
-From //garnet/bin/log_listener/BUILD.gn:13
+From //src/diagnostics/log_listener/BUILD.gn:13
 
 ### lsan_default_options
 Default [LeakSanitizer](https://clang.llvm.org/docs/LeakSanitizer.html)
@@ -2343,7 +2350,7 @@ Should be a string value that only contains digits.
 
 **Current value (from the default):** `"0"`
 
-From //garnet/bin/log_listener/BUILD.gn:12
+From //src/diagnostics/log_listener/BUILD.gn:12
 
 ### max_zedboot_zbi_size
 Maximum allowable size for zedboot.zbi
