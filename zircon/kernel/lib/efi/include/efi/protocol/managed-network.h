@@ -8,6 +8,7 @@
 #define ZIRCON_KERNEL_LIB_EFI_INCLUDE_EFI_PROTOCOL_MANAGED_NETWORK_H_
 
 #include <efi/protocol/simple-network.h>
+#include <efi/runtime-services.h>
 #include <efi/types.h>
 
 #define EFI_MANAGED_NETWORK_PROTOCOL_GUID                                          \

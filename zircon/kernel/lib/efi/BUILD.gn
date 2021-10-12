@@ -28,13 +28,16 @@ zx_library("efi") {
     "efi/protocol/driver-binding.h",
     "efi/protocol/file.h",
     "efi/protocol/graphics-output.h",
+    "efi/protocol/ip6.h",
     "efi/protocol/loaded-image.h",
     "efi/protocol/managed-network.h",
     "efi/protocol/pci-root-bridge-io.h",
+    "efi/protocol/service-binding.h",
     "efi/protocol/simple-file-system.h",
     "efi/protocol/simple-network.h",
     "efi/protocol/simple-text-input.h",
     "efi/protocol/simple-text-output.h",
+    "efi/protocol/tcp6.h",
     "efi/protocol/usb-io.h",
   ]
 }

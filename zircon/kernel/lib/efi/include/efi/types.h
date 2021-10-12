@@ -69,6 +69,9 @@
 #define EFI_COMPROMISED_DATA EFI_ERR(33)
 #define EFI_IP_ADDRESS_CONFLICT EFI_ERR(34)
 #define EFI_HTTP_ERROR EFI_ERR(35)
+#define EFI_CONNECTION_FIN EFI_ERR(104)
+#define EFI_CONNECTION_RESET EFI_ERR(105)
+#define EFI_CONNECTION_REFUSED EFI_ERR(106)
 
 // TODO: figure out where to put these. They're just mentioned in passing in the
 // spec as some of many industry standard GUIDs but not part of the spec itself.
