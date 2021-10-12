@@ -1,0 +1,139 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/dart/test.gni")
+import("//build/testing/environments.gni")
+import("//build/testing/host_test_data.gni")
+
+if (is_host) {
+  host_test_data("acts") {
+    sources = [ "//prebuilt/test_data/connectivity/acts/acts.zip" ]
+    outputs = [ "$target_gen_dir/acts/{{source_file_part}}" ]
+  }
+}
+
+specs = [
+  {
+    name = "acts_bt1_test"
+    tags = [ "acts-connectivity-bt1" ]
+    testbed = "bt_rf_chamber_nuc_phone"
+    tests = "BleFuchsiaAndroidTest GattServerSetupTest NetstackFuchsiaTest"
+    timeout_minutes = 15
+    device_type = "Intel NUC Kit NUC7i5DNHE"
+  },
+  {
+    name = "acts_bt2_test"
+    tags = [ "acts-connectivity-bt2" ]
+    testbed = "bt_rf_chamber_nuc_nuc"
+    tests = "BleFuchsiaTest FuchsiaBtMacAddressTest FuchsiaBtScanTest GattConnectionStressTest Sl4fSanityTest"
+    timeout_minutes = 15
+    device_type = "Intel NUC Kit NUC7i5DNHE"
+  },
+  {
+    name = "acts_wifi_test"
+    tags = [ "acts-connectivity-wifi" ]
+    testbed = "wifi_rf_chamber_nuc"
+    tests = "WlanScanTest WlanPhyComplianceABGTest WlanSecurityComplianceABGTest WlanPhyCompliance11NTest VapeInteropTest BeaconLossTest"
+    timeout_minutes =
+        1430  # 24 hours less 10 minutes for output processing in Dart script
+    device_type = "Intel NUC Kit NUC7i5DNHE"
+  },
+  {
+    name = "acts_astro_wifi_test"
+    tags = [ "acts-astro-connectivity-wifi" ]
+    testbed = "wifi_rf_chamber_astro"
+    tests = "WlanScanTest WlanPhyComplianceABGTest WlanSecurityComplianceABGTest WlanPhyCompliance11NTest VapeInteropTest BeaconLossTest"
+    timeout_minutes =
+        1430  # 24 hours less 10 minutes for output processing in Dart script
+    device_type = "Astro"
+  },
+  {
+    name = "acts_astro_wifi_fiber_test"
+    tags = [ "acts-astro-connectivity-wifi-fiber" ]
+    testbed = "wifi_rf_chamber_fiber_astro"
+    tests = "Sl4fSanityTest WlanScanTest"
+    timeout_minutes = 15
+    device_type = "Astro"
+  },
+]
+
+test_labels = []
+
+foreach(spec, specs) {
+  dart_test(spec.name) {
+    sources = [ "acts_test.dart" ]
+
+    deps = [
+      "//third_party/dart-pkg/pub/args",
+      "//third_party/dart-pkg/pub/path",
+      "//third_party/dart-pkg/pub/test",
+    ]
+
+    non_dart_deps = [ ":acts($host_toolchain)" ]
+
+    environments = [
+      {
+        dimensions = {
+          testbed = spec.testbed
+          pool = "fuchsia.tests.connectivity"
+          device_type = spec.device_type
+        }
+
+        tags = spec.tags
+      },
+    ]
+
+    args = [
+      "--timeout=${spec.timeout_minutes}",
+      "--tests=${spec.tests}",
+    ]
+  }
+  test_labels += [ ":${spec.name}($host_toolchain)" ]
+}
+
+group("acts_tests") {
+  testonly = true
+  deps = test_labels
+}
+
+dart_test("acts_bt_astro_test") {
+  sources = [ "acts_test.dart" ]
+
+  deps = [
+    "//third_party/dart-pkg/pub/args",
+    "//third_party/dart-pkg/pub/path",
+    "//third_party/dart-pkg/pub/test",
+  ]
+
+  non_dart_deps = [
+    ":acts($host_toolchain)",
+    "//build/python:interpreter",
+    "//src/connectivity/bluetooth/profiles/bt-avrcp:bt-avrcp(${target_toolchain})",
+    "//src/connectivity/bluetooth/profiles/bt-avrcp-target:bt-avrcp-target(${target_toolchain})",
+    "//src/sys/tools/run:run(${target_toolchain})",
+    "//src/testing/sl4f(${target_toolchain})",
+  ]
+
+  environments = [
+    {
+      dimensions = {
+        testbed = "bt_astro_astro"
+        pool = "fuchsia.tests.connectivity"
+        device_type = "Astro"
+      }
+
+      tags = [ "acts-connectivity-astro" ]
+    },
+  ]
+
+  args = [
+    "--timeout=15",
+    "--tests=BtFuchsiaEPTest",
+  ]
+}
+
+group("astro_bt_tests") {
+  testonly = true
+  deps = [ ":acts_bt_astro_test($host_toolchain)" ]
+}

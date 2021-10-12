@@ -21,7 +21,7 @@ const int deviceReadyTimeoutSec = 30;
 // https://g3doc.corp.google.com/third_party/py/acts/README.md#configuration-files.
 const String actsConfigAbsPath = '/etc/connectivity/acts_config.json';
 const String actsRelativePath =
-    'host_x64/gen/garnet/tests/acts_tests/acts/acts.zip';
+    'host_x64/gen/src/connectivity/tests/acts/acts/acts.zip';
 const String pythonRelativePath =
     '../../prebuilt/third_party/python3/linux-x64/bin/python3.8';
 const String virtualEnvName = 'my_virtualenv';
