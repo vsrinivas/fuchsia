@@ -79,8 +79,8 @@ async fn do_list_device(
     println!(
         "{:03}  {:04X}:{:04X}  {:<5}  {} {}",
         devnum,
-        device_desc.idVendor,
-        device_desc.idProduct,
+        { device_desc.idVendor },
+        { device_desc.idProduct },
         UsbSpeed(speed),
         string_manu_desc,
         string_prod_desc,
@@ -95,8 +95,8 @@ async fn do_list_device(
         println!("  {:<33}{}", "bDeviceSubClass", device_desc.bDeviceSubClass);
         println!("  {:<33}{}", "bDeviceProtocol", device_desc.bDeviceProtocol);
         println!("  {:<33}{}", "bMaxPacketSize0", device_desc.bMaxPacketSize0);
-        println!("  {:<33}{:#06X}", "idVendor", device_desc.idVendor);
-        println!("  {:<33}{:#06X}", "idProduct", device_desc.idProduct);
+        println!("  {:<33}{:#06X}", "idVendor", { device_desc.idVendor });
+        println!("  {:<33}{:#06X}", "idProduct", { device_desc.idProduct });
         println!(
             "  {:<33}{}.{}",
             "bcdDevice",
@@ -106,12 +106,14 @@ async fn do_list_device(
         println!("  {:<33}{} {}", "iManufacturer", device_desc.iManufacturer, string_manu_desc);
         println!("  {:<33}{} {}", "iProduct", device_desc.iProduct, string_prod_desc);
 
-        let string_buf = device
+        let (status, serial_number, _) = device
             .get_string_descriptor(device_desc.iSerialNumber, EN_US)
             .await
             .context(format!("DeviceGetStringDescriptor failed for {}", devname))?;
 
-        println!("  {:<33}{} {}", "iSerialNumber", device_desc.iSerialNumber, string_buf.1);
+        zx::Status::ok(status)
+            .map_err(|e| return anyhow::anyhow!("Failed to get string descriptor: {}", e))?;
+        println!("  {:<33}{} {}", "iSerialNumber", device_desc.iSerialNumber, serial_number);
         println!("  {:<33}{}", "bNumConfigurations", device_desc.bNumConfigurations);
 
         let mut config = cmd.configuration;
@@ -144,19 +146,21 @@ async fn do_list_device(
             .copy_from_slice(&config_desc_data[0..std::mem::size_of::<ConfigurationDescriptor>()]);
         let config_desc = ConfigurationDescriptor::from_array(config_desc);
 
-        println!("{}", "  Configuration Descriptor:");
-        println!("    {:<33}{}", "bLength", config_desc.bLength);
-        println!("    {:<33}{}", "bDescriptorType", config_desc.bDescriptorType);
-        println!("    {:<33}{}", "wTotalLength", config_desc.wTotalLength);
-        println!("    {:<33}{}", "bNumInterfaces", config_desc.bNumInterfaces);
-        println!("    {:<33}{}", "bConfigurationValue", config_desc.bConfigurationValue);
-        let string_buf = device
+        println!("{:>2}Configuration Descriptor:", "");
+        println!("{:>4}{:<31}{}", "", "bLength", config_desc.bLength);
+        println!("{:>4}{:<31}{}", "", "bDescriptorType", config_desc.bDescriptorType);
+        println!("{:>4}{:<31}{}", "", "wTotalLength", { config_desc.wTotalLength });
+        println!("{:>4}{:<31}{}", "", "bNumInterfaces", config_desc.bNumInterfaces);
+        println!("{:>4}{:<31}{}", "", "bConfigurationValue", config_desc.bConfigurationValue);
+        let (status, config_str, _) = device
             .get_string_descriptor(config_desc.iConfiguration, EN_US)
             .await
             .context(format!("DeviceGetStringDescriptor failed for {}", devname))?;
-        println!("    {:<33}{} {}", "iConfiguration", config_desc.iConfiguration, string_buf.1);
-        println!("    {:<33}{:#04X}", "bmAttributes", config_desc.bmAttributes);
-        println!("    {:<33}{}", "bMaxPower", config_desc.bMaxPower);
+        zx::Status::ok(status)
+            .map_err(|e| return anyhow::anyhow!("Failed to get string descriptor: {}", e))?;
+        println!("{:>4}{:<31}{} {}", "", "iConfiguration", config_desc.iConfiguration, config_str);
+        println!("{:>4}{:<31}{:#04X}", "", "bmAttributes", config_desc.bmAttributes);
+        println!("{:>4}{:<31}{}", "", "bMaxPower", config_desc.bMaxPower);
 
         let mut offset = std::mem::size_of::<ConfigurationDescriptor>();
 
@@ -165,7 +169,9 @@ async fn do_list_device(
             let desc_type = config_desc_data[offset + 1];
 
             if length == 0 {
-                println!("zero length header, bailing");
+                eprintln!("zero length header, bailing");
+                dbg!(offset, config_desc_data.len());
+                break;
             }
 
             match DescriptorType::from_u8(desc_type) {
@@ -177,21 +183,24 @@ async fn do_list_device(
                     );
                     let info = InterfaceInfoDescriptor::from_array(info);
 
-                    println!("    Interface Descriptor:");
-                    println!("      {:<33}{}", "bLength", info.bLength);
-                    println!("      {:<33}{}", "bDescriptorType", info.bDescriptorType);
-                    println!("      {:<33}{}", "bInterfaceNumber", info.bInterfaceNumber);
-                    println!("      {:<33}{}", "bAlternateSetting", info.bAlternateSetting);
-                    println!("      {:<33}{}", "bNumEndpoints", info.bNumEndpoints);
-                    println!("      {:<33}{}", "bInterfaceClass", info.bInterfaceClass);
-                    println!("      {:<33}{}", "bInterfaceSubClass", info.bInterfaceSubClass);
-                    println!("      {:<33}{}", "bInterfaceProtocol", info.bInterfaceProtocol);
+                    println!("{:>4}Interface Descriptor:", "");
+                    println!("{:>6}{:<29}{}", "", "bLength", info.bLength);
+                    println!("{:>6}{:<29}{}", "", "bDescriptorType", info.bDescriptorType);
+                    println!("{:>6}{:<29}{}", "", "bInterfaceNumber", info.bInterfaceNumber);
+                    println!("{:>6}{:<29}{}", "", "bAlternateSetting", info.bAlternateSetting);
+                    println!("{:>6}{:<29}{}", "", "bNumEndpoints", info.bNumEndpoints);
+                    println!("{:>6}{:<29}{}", "", "bInterfaceClass", info.bInterfaceClass);
+                    println!("{:>6}{:<29}{}", "", "bInterfaceSubClass", info.bInterfaceSubClass);
+                    println!("{:>6}{:<29}{}", "", "bInterfaceProtocol", info.bInterfaceProtocol);
 
-                    let string_buf = device
-                        .get_string_descriptor(device_desc.iSerialNumber, EN_US)
+                    let (status, interface_str, _) = device
+                        .get_string_descriptor(info.iInterface, EN_US)
                         .await
                         .context(format!("DeviceGetStringDescriptor failed for {}", devname))?;
-                    println!("      {:<33}{}{}", "iInterface", info.iInterface, string_buf.1);
+                    zx::Status::ok(status).map_err(|e| {
+                        return anyhow::anyhow!("Failed to get string descriptor: {}", e);
+                    })?;
+                    println!("{:>6}{:<29}{}{}", "", "iInterface", info.iInterface, interface_str);
                 }
                 Some(DescriptorType::Endpoint) => {
                     let mut info = [0; std::mem::size_of::<EndpointInfoDescriptor>()];
@@ -201,13 +210,13 @@ async fn do_list_device(
                     );
                     let info = EndpointInfoDescriptor::from_array(info);
 
-                    println!("      Endpoint Descriptor:");
-                    println!("        {:<33}{}", "bLength", info.bLength);
-                    println!("        {:<33}{}", "bDescriptorType", info.bDescriptorType);
-                    println!("        {:<33}{}", "bEndpointAddress", info.bEndpointAddress);
-                    println!("        {:<33}{}", "bmAttributes", info.bmAttributes);
-                    println!("        {:<33}{}", "wMaxPacketSize", info.wMaxPacketSize);
-                    println!("        {:<33}{}", "bInterval", info.bInterval);
+                    println!("{:>6}Endpoint Descriptor:", "");
+                    println!("{:>8}{:<27}{}", "", "bLength", info.bLength);
+                    println!("{:>8}{:<27}{}", "", "bDescriptorType", info.bDescriptorType);
+                    println!("{:>8}{:<27}{:#04X}", "", "bEndpointAddress", info.bEndpointAddress);
+                    println!("{:>8}{:<27}{:#04X}", "", "bmAttributes", info.bmAttributes);
+                    println!("{:>8}{:<27}{}", "", "wMaxPacketSize", info.wMaxPacketSize);
+                    println!("{:>8}{:<27}{}", "", "bInterval", info.bInterval);
                 }
                 Some(DescriptorType::Hid) => {
                     let mut info = [0; std::mem::size_of::<HidDescriptor>()];
@@ -216,17 +225,12 @@ async fn do_list_device(
                     );
                     let info = HidDescriptor::from_array(info);
 
-                    println!("        HID Descriptor:\n");
-                    println!("          {:<33}{}", "bLength", info.bLength);
-                    println!("          {:<33}{}", "bDescriptorType", info.bDescriptorType);
-                    println!(
-                        "          {:<33}{}{}",
-                        "bcdHID",
-                        info.bcdHID >> 8,
-                        info.bcdHID & 0xFF
-                    );
-                    println!("          {:<33}{}", "bCountryCode", info.bCountryCode);
-                    println!("          {:<33}{}", "bNumDescriptors", info.bNumDescriptors);
+                    println!("{:>6}HID Descriptor:", "");
+                    println!("{:>8}{:<27}{}", "", "bLength", info.bLength);
+                    println!("{:>8}{:<27}{}", "", "bDescriptorType", info.bDescriptorType);
+                    println!("{:>8}{:<27}{}{}", "", "bcdHID", info.bcdHID >> 8, info.bcdHID & 0xFF);
+                    println!("{:>8}{:<27}{}", "", "bCountryCode", info.bCountryCode);
+                    println!("{:>8}{:<27}{}", "", "bNumDescriptors", info.bNumDescriptors);
                     for i in 0..info.bNumDescriptors {
                         let mut entry = [0; std::mem::size_of::<HidDescriptorEntry>()];
                         entry.copy_from_slice(
@@ -236,11 +240,10 @@ async fn do_list_device(
                                     + (i as usize * std::mem::size_of::<HidDescriptorEntry>()))],
                         );
                         let entry = HidDescriptorEntry::from_array(entry);
-                        println!("          {:<33}{}", "bDescriptorType", entry.bDescriptorType);
-                        println!(
-                            "          {:<33}{}",
-                            "wDescriptorLength", entry.wDescriptorLength
-                        );
+                        println!("{:>10}{:<25}{}", "", "bDescriptorType", entry.bDescriptorType);
+                        println!("{:>10}{:<25}{}", "", "wDescriptorLength", {
+                            entry.wDescriptorLength
+                        });
                     }
                 }
                 Some(DescriptorType::SsEpCompanion) => {
@@ -251,12 +254,12 @@ async fn do_list_device(
                     );
                     let info = SsEpCompDescriptorInfo::from_array(info);
 
-                    println!("          SuperSpeed Endpoint Companion Descriptor:");
-                    println!("            {:<33}{}", "bLength", info.bLength);
-                    println!("            {:<33}{}", "bDescriptorType", info.bDescriptorType);
-                    println!("            {:<33}{}", "bMaxBurst", info.bMaxBurst);
-                    println!("            {:<33}{}", "bmAttributes", info.bmAttributes);
-                    println!("            {:<33}{}", "wBytesPerInterval", info.wBytesPerInterval);
+                    println!("{:>8}SuperSpeed Endpoint Companion Descriptor:", "");
+                    println!("{:>10}{:<25}{}", "", "bLength", info.bLength);
+                    println!("{:>10}{:<25}{}", "", "bDescriptorType", info.bDescriptorType);
+                    println!("{:>10}{:<25}{:#04X}", "", "bMaxBurst", info.bMaxBurst);
+                    println!("{:>10}{:<25}{:#04X}", "", "bmAttributes", info.bmAttributes);
+                    println!("{:>10}{:<25}{}", "", "wBytesPerInterval", info.wBytesPerInterval);
                 }
                 Some(DescriptorType::SsIsochEpCompanion) => {
                     let mut info = [0; std::mem::size_of::<SsIsochEpCompDescriptor>()];
@@ -266,14 +269,13 @@ async fn do_list_device(
                     );
                     let info = SsIsochEpCompDescriptor::from_array(info);
 
-                    println!("            SuperSpeed Isochronous Endpoint Companion Descriptor:");
-                    println!("              {:<33}{}", "bLength", info.bLength);
-                    println!("              {:<33}{}", "bDescriptorType", info.bDescriptorType);
-                    println!("              {:<33}{}", "wReserved", info.wReserved);
-                    println!(
-                        "              {:<33}{}",
-                        "dwBytesPerInterval", info.dwBytesPerInterval
-                    );
+                    println!("{:>10}SuperSpeed Isochronous Endpoint Companion Descriptor:", "");
+                    println!("{:>12}{:<23}{}", "", "bLength", info.bLength);
+                    println!("{:>12}{:<23}{}", "", "bDescriptorType", info.bDescriptorType);
+                    println!("{:>12}{:<23}{}", "", "wReserved", { info.wReserved });
+                    println!("{:>12}{:<23}{}", "", "dwBytesPerInterval", {
+                        info.dwBytesPerInterval
+                    });
                 }
                 Some(DescriptorType::InterfaceAssociation) => {
                     let mut info = [0; std::mem::size_of::<InterfaceAssocDescriptor>()];
@@ -283,27 +285,21 @@ async fn do_list_device(
                     );
                     let info = InterfaceAssocDescriptor::from_array(info);
 
-                    println!("              Interface Association Descriptor:");
-                    println!("                {:<33}{}", "bLength", info.bLength);
-                    println!("                {:<33}{}", "bDescriptorType", info.bDescriptorType);
-                    println!("                {:<33}{}", "bFirstInterface", info.bFirstInterface);
-                    println!("                {:<33}{}", "bInterfaceCount", info.bInterfaceCount);
-                    println!("                {:<33}{}", "bFunctionClass", info.bFunctionClass);
-                    println!(
-                        "                {:<33}{}",
-                        "bFunctionSubClass", info.bFunctionSubClass
-                    );
-                    println!(
-                        "                {:<33}{}",
-                        "bFunctionProtocol", info.bFunctionProtocol
-                    );
-                    println!("                {:<33}{}", "iFunction", info.iFunction);
+                    println!("{:>12}Interface Association Descriptor:", "");
+                    println!("{:>14}{:<21}{}", "", "bLength", info.bLength);
+                    println!("{:>14}{:<21}{}", "", "bDescriptorType", info.bDescriptorType);
+                    println!("{:>14}{:<21}{}", "", "bFirstInterface", info.bFirstInterface);
+                    println!("{:>14}{:<21}{}", "", "bInterfaceCount", info.bInterfaceCount);
+                    println!("{:>14}{:<21}{}", "", "bFunctionClass", info.bFunctionClass);
+                    println!("{:>14}{:<21}{}", "", "bFunctionSubClass", info.bFunctionSubClass);
+                    println!("{:>14}{:<21}{}", "", "bFunctionProtocol", info.bFunctionProtocol);
+                    println!("{:>14}{:<21}{}", "", "iFunction", info.iFunction);
                 }
                 _ => {
-                    println!("                Unknown Descriptor:");
-                    println!("                  {:<33}{}", "bLength", length);
-                    println!("                  {:<33}{}", "bDescriptorType", desc_type);
-                    println!("{:X?}", &config_desc_data[offset..offset + length as usize]);
+                    println!("Unknown Descriptor:");
+                    println!("  {:<33}{}", "bLength", length);
+                    println!("  {:<33}{}", "bDescriptorType", desc_type);
+                    println!("  {:X?}", &config_desc_data[offset..offset + length as usize]);
                 }
             }
             offset += length as usize;

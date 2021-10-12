@@ -26,7 +26,7 @@ pub enum DescriptorType {
 }
 
 #[allow(non_snake_case)]
-#[repr(C)]
+#[repr(C, packed)]
 pub struct DeviceDescriptor {
     pub bLength: u8,
     pub bDescriptorType: u8,
@@ -54,7 +54,7 @@ impl DeviceDescriptor {
 }
 
 #[allow(non_snake_case)]
-#[repr(C)]
+#[repr(C, packed)]
 pub struct ConfigurationDescriptor {
     pub bLength: u8,
     pub bDescriptorType: u8,
@@ -77,7 +77,7 @@ impl ConfigurationDescriptor {
 }
 
 #[allow(non_snake_case)]
-#[repr(C)]
+#[repr(C, packed)]
 pub struct InterfaceInfoDescriptor {
     pub bLength: u8,
     pub bDescriptorType: u8,
@@ -101,7 +101,7 @@ impl InterfaceInfoDescriptor {
 }
 
 #[allow(non_snake_case)]
-#[repr(C)]
+#[repr(C, packed)]
 pub struct EndpointInfoDescriptor {
     pub bLength: u8,
     pub bDescriptorType: u8,
@@ -122,7 +122,7 @@ impl EndpointInfoDescriptor {
 }
 
 #[allow(non_snake_case)]
-#[repr(C)]
+#[repr(C, packed)]
 pub struct HidDescriptor {
     pub bLength: u8,
     pub bDescriptorType: u8,
@@ -142,7 +142,7 @@ impl HidDescriptor {
 }
 
 #[allow(non_snake_case)]
-#[repr(C)]
+#[repr(C, packed)]
 pub struct SsEpCompDescriptorInfo {
     pub bLength: u8,
     pub bDescriptorType: u8,
@@ -162,7 +162,7 @@ impl SsEpCompDescriptorInfo {
 }
 
 #[allow(non_snake_case)]
-#[repr(C)]
+#[repr(C, packed)]
 pub struct SsIsochEpCompDescriptor {
     pub bLength: u8,
     pub bDescriptorType: u8,
@@ -181,7 +181,7 @@ impl SsIsochEpCompDescriptor {
 }
 
 #[allow(non_snake_case)]
-#[repr(C)]
+#[repr(C, packed)]
 pub struct InterfaceAssocDescriptor {
     pub bLength: u8,
     pub bDescriptorType: u8,
@@ -204,7 +204,7 @@ impl InterfaceAssocDescriptor {
 }
 
 #[allow(non_snake_case)]
-#[repr(C)]
+#[repr(C, packed)]
 pub struct HidDescriptorEntry {
     pub bDescriptorType: u8,
     pub wDescriptorLength: u16,
