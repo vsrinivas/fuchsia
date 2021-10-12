@@ -247,6 +247,7 @@ struct IpSockDefinition<I: IpExt> {
     local_ip: SpecifiedAddr<I::Addr>,
     hop_limit: u8,
     proto: I::Proto,
+    #[cfg_attr(not(test), allow(unused))]
     unroutable_behavior: UnroutableBehavior,
 }
 
