@@ -10,7 +10,7 @@ using zx;
 @discoverable
 protocol Crypt {
     /// Creates a new key wrapped with the key identified by `wrapping_key_id`.  `owner` identifies
-    /// the owner of the key and must be suppled to UnwrapKeys.
+    /// the owner of the key and must be supplied to `UnwrapKeys`.
     CreateKey(struct {
         wrapping_key_id uint64;
         owner uint64;
@@ -20,7 +20,7 @@ protocol Crypt {
     }) error zx.status;
 
     /// Unwraps keys that are wrapped by the key identified by `wrapping_key_id`.  `owner` must be
-    /// the same as that passed to CreateKey.  This can fail due to permission reasons, but an
+    /// the same as that passed to `CreateKey`.  This can fail due to permission reasons, but an
     /// incorrect key or owner will not fail; it will just return an unwrapped key that won't
     /// actually decrpyt the data.
     UnwrapKeys(struct {

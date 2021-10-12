@@ -12,7 +12,7 @@ use {
         stream::{StreamExt, TryStreamExt},
         TryFutureExt,
     },
-    rand::RngCore,
+    rand::thread_rng,
 };
 
 enum Services {
@@ -27,8 +27,11 @@ async fn handle_request(stream: Services) -> Result<(), Error> {
             while let Some(request) = stream.try_next().await.context("Reading request")? {
                 match request {
                     CryptRequest::CreateKey { wrapping_key_id, owner, responder } => {
-                        assert_eq!(wrapping_key_id, 0);
-                        let mut rng = rand::thread_rng();
+                        assert_eq!(
+                            wrapping_key_id, 0,
+                            "Support for multiple key IDs not implemented yet. Key ID must be 0."
+                        );
+                        let mut rng = thread_rng();
                         let mut key = [0; 32];
                         rng.fill_bytes(&mut key);
                         let mut wrapped = [0; 32];
@@ -43,7 +46,10 @@ async fn handle_request(stream: Services) -> Result<(), Error> {
                         });
                     }
                     CryptRequest::UnwrapKeys { wrapping_key_id, owner, keys, responder } => {
-                        assert_eq!(wrapping_key_id, 0);
+                        assert_eq!(
+                            wrapping_key_id, 0,
+                            "Support for multiple key IDs not implemented yet. Key ID must be 0."
+                        );
                         let mut unwrapped_keys = Vec::new();
                         for key in keys {
                             let mut unwrapped = [0; 32];
