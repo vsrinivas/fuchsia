@@ -11,6 +11,8 @@ use {
     fuchsia_component_test::RealmInstance,
 };
 
+pub const COMPONENT_NAME: &str = "driver_test_realm";
+
 #[async_trait::async_trait]
 pub trait DriverTestRealmBuilder {
     /// Set up the DriverTestRealm component in the RealmBuilder realm.
@@ -34,10 +36,9 @@ impl DriverTestRealmBuilder for RealmBuilder {
         &mut self,
         driver_test_realm_url: &str,
     ) -> Result<()> {
-        self.add_component("driver_test_realm", ComponentSource::url(driver_test_realm_url))
-            .await?;
+        self.add_component(COMPONENT_NAME, ComponentSource::url(driver_test_realm_url)).await?;
 
-        let driver_realm = RouteEndpoint::component("driver_test_realm");
+        let driver_realm = RouteEndpoint::component(COMPONENT_NAME);
         self.add_route(CapabilityRoute {
             capability: Capability::protocol("fuchsia.logger.LogSink"),
             source: RouteEndpoint::AboveRoot,

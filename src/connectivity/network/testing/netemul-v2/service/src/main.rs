@@ -11,14 +11,14 @@ use {
         self as fnetemul, ChildDef, ChildUses, ManagedRealmMarker, ManagedRealmRequest,
         RealmOptions, SandboxRequest, SandboxRequestStream,
     },
-    fidl_fuchsia_netemul_network as fnetemul_network, fidl_fuchsia_process as fprocess,
-    fidl_fuchsia_realm_builder as frealmbuilder, fidl_fuchsia_sys2 as fsys2,
-    fuchsia_async as fasync,
+    fidl_fuchsia_netemul_network as fnetemul_network, fidl_fuchsia_realm_builder as frealmbuilder,
+    fidl_fuchsia_sys2 as fsys2, fuchsia_async as fasync,
     fuchsia_component::server::{ServiceFs, ServiceFsDir},
     fuchsia_component_test::{
         self as fcomponent,
         builder::{Capability, CapabilityRoute, ComponentSource, RealmBuilder, RouteEndpoint},
     },
+    fuchsia_driver_test::{DriverTestRealmBuilder, DriverTestRealmInstance},
     fuchsia_zircon as zx,
     futures::{channel::mpsc, FutureExt as _, SinkExt as _, StreamExt as _, TryStreamExt as _},
     log::{debug, error, info, warn},
@@ -804,16 +804,15 @@ fn make_devfs() -> Result<(fio::DirectoryProxy, Arc<SimpleMutableDir>)> {
 }
 
 const NETWORK_CONTEXT_COMPONENT_NAME: &str = "network-context";
-const ISOLATED_DEVMGR_COMPONENT_NAME: &str = "isolated-devmgr";
 
 async fn setup_network_realm(
     sandbox_name: impl std::fmt::Display,
 ) -> Result<fcomponent::RealmInstance> {
     let relative_url = |component_name: &str| format!("#meta/{}.cm", component_name);
     let network_context_package_url = relative_url(NETWORK_CONTEXT_COMPONENT_NAME);
-    let isolated_devmgr_package_url = relative_url(ISOLATED_DEVMGR_COMPONENT_NAME);
 
     let mut builder = RealmBuilder::new().await.context("error creating new realm builder")?;
+    let () = builder.driver_test_realm_setup().await?;
     let _: &mut RealmBuilder = builder
         .add_component(
             NETWORK_CONTEXT_COMPONENT_NAME,
@@ -821,12 +820,6 @@ async fn setup_network_realm(
         )
         .await
         .context("error adding network-context component")?
-        .add_component(
-            ISOLATED_DEVMGR_COMPONENT_NAME,
-            ComponentSource::url(isolated_devmgr_package_url),
-        )
-        .await
-        .context("error adding isolated-devmgr component")?
         .add_route(CapabilityRoute {
             capability: Capability::protocol(fnetemul_network::NetworkContextMarker::PROTOCOL_NAME),
             source: RouteEndpoint::component(NETWORK_CONTEXT_COMPONENT_NAME),
@@ -841,13 +834,14 @@ async fn setup_network_realm(
         })?
         .add_route(CapabilityRoute {
             capability: Capability::directory(DEVFS, DEVFS_PATH, fio2::R_STAR_DIR),
-            source: RouteEndpoint::component(ISOLATED_DEVMGR_COMPONENT_NAME),
+            source: RouteEndpoint::component(fuchsia_driver_test::COMPONENT_NAME),
             targets: vec![RouteEndpoint::component(NETWORK_CONTEXT_COMPONENT_NAME)],
         })
         .with_context(|| {
             format!(
                 "error adding route offering directory 'dev' from component '{}' to '{}'",
-                ISOLATED_DEVMGR_COMPONENT_NAME, NETWORK_CONTEXT_COMPONENT_NAME
+                fuchsia_driver_test::COMPONENT_NAME,
+                NETWORK_CONTEXT_COMPONENT_NAME
             )
         })?
         .add_route(CapabilityRoute {
@@ -863,23 +857,9 @@ async fn setup_network_realm(
             )
         })?
         .add_route(CapabilityRoute {
-            capability: Capability::protocol(fprocess::LauncherMarker::PROTOCOL_NAME),
-            source: RouteEndpoint::AboveRoot,
-            targets: vec![RouteEndpoint::component(ISOLATED_DEVMGR_COMPONENT_NAME)],
-        })
-        .with_context(|| {
-            format!(
-                "error adding route offering capability '{}' to components",
-                fprocess::LauncherMarker::PROTOCOL_NAME,
-            )
-        })?
-        .add_route(CapabilityRoute {
             capability: Capability::protocol(flogger::LogSinkMarker::PROTOCOL_NAME),
             source: RouteEndpoint::AboveRoot,
-            targets: vec![
-                RouteEndpoint::component(NETWORK_CONTEXT_COMPONENT_NAME),
-                RouteEndpoint::component(ISOLATED_DEVMGR_COMPONENT_NAME),
-            ],
+            targets: vec![RouteEndpoint::component(NETWORK_CONTEXT_COMPONENT_NAME)],
         })
         .with_context(|| {
             format!(
@@ -889,10 +869,12 @@ async fn setup_network_realm(
         })?;
     let mut realm = builder.build();
     let () = realm.set_collection_name(REALM_COLLECTION_NAME);
-    realm
+    let instance = realm
         .create_with_name(format!("{}-network-realm", sandbox_name))
         .await
-        .context("error creating realm instance")
+        .context("error creating realm instance")?;
+    let () = instance.driver_test_realm_start(fidl_fuchsia_driver_test::RealmArgs::EMPTY).await?;
+    Ok(instance)
 }
 
 async fn handle_sandbox(

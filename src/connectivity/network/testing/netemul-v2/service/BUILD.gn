@@ -7,7 +7,6 @@ import("//build/fidl/fidl.gni")
 import("//build/rust/rustc_binary.gni")
 import("//build/rust/rustc_library.gni")
 import("//build/rust/rustc_test.gni")
-import("//src/lib/isolated_devmgr/v2_component/isolated_devmgr.gni")
 
 rustc_binary("bin") {
   testonly = true
@@ -17,12 +16,13 @@ rustc_binary("bin") {
   deps = [
     "//sdk/fidl/fuchsia.component:fuchsia.component-rustc",
     "//sdk/fidl/fuchsia.data:fuchsia.data-rustc",
+    "//sdk/fidl/fuchsia.driver.test:fuchsia.driver.test-rustc",
     "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
     "//sdk/fidl/fuchsia.io2:fuchsia.io2-rustc",
     "//sdk/fidl/fuchsia.logger:fuchsia.logger-rustc",
     "//sdk/fidl/fuchsia.net.tun:fuchsia.net.tun-rustc",
-    "//sdk/fidl/fuchsia.process:fuchsia.process-rustc",
     "//sdk/fidl/fuchsia.sys2:fuchsia.sys2-rustc",
+    "//sdk/lib/driver_test_realm/realm_builder/rust",
     "//src/connectivity/network/testing/netemul-v2/fidl:fuchsia.netemul-rustc",
     "//src/connectivity/network/testing/netemul/lib/fidl:network-rustc",
     "//src/lib/fidl/rust/fidl",
@@ -58,23 +58,25 @@ rustc_binary("bin") {
   configs -= [ "//build/config/rust:allow_unused_results" ]
 }
 
+group("netemul-driver-test-realm") {
+  testonly = true
+  public_deps = [
+    "//sdk/lib/driver_test_realm/realm_builder/rust",
+    "//src/connectivity/ethernet/drivers/ethernet",
+    "//src/connectivity/ethernet/drivers/ethertap",
+    "//src/devices/misc/drivers/test-parent",
+  ]
+}
+
 fuchsia_component("netemul-sandbox") {
   testonly = true
   component_name = "netemul-sandbox-v2"
   manifest = "meta/netemul-sandbox-v2.cml"
   deps = [
     ":bin",
-    ":netemul-devmgr",
+    ":netemul-driver-test-realm",
     "//src/connectivity/network/testing/netemul-v2/network-context",
     "//src/connectivity/network/tun/network-tun:component-v2",
-  ]
-}
-
-isolated_devmgr_v2_component("netemul-devmgr") {
-  deps = [
-    "//src/connectivity/ethernet/drivers/ethernet",
-    "//src/connectivity/ethernet/drivers/ethertap",
-    "//src/devices/misc/drivers/test-parent:renamed-sys-binary",
   ]
 }
 
@@ -85,19 +87,19 @@ group("tests") {
 
 fuchsia_test_component("netemul-sandbox-v2-tests") {
   manifest = "meta/netemul-sandbox-v2-tests.cml"
-  deps = [ ":bin_test" ]
-}
-
-fuchsia_test_package("netemul-v2-tests") {
-  test_components = [ ":netemul-sandbox-v2-tests" ]
   deps = [
-    ":netemul-devmgr",
+    ":bin_test",
+    ":netemul-driver-test-realm",
     "//src/connectivity/network/testing/netemul-v2/network-context",
     "//src/connectivity/network/testing/netemul-v2/test-support:counter",
     "//src/connectivity/network/testing/netemul-v2/test-support:counter-without-program",
     "//src/connectivity/network/testing/netemul-v2/test-support:devfs-subdir-user",
     "//src/connectivity/network/tun/network-tun:component-v2",
   ]
+}
+
+fuchsia_test_package("netemul-v2-tests") {
+  test_components = [ ":netemul-sandbox-v2-tests" ]
   test_specs = {
     # TODO(https://fxbug.dev/82295): run tests in parallel when this doesn't
     # cause embedded archivist to crash.
