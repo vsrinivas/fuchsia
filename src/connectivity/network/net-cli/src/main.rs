@@ -5,6 +5,7 @@
 use anyhow::{Context as _, Error};
 use fidl::endpoints::ProtocolMarker;
 use fidl_fuchsia_hardware_ethernet as fethernet;
+use fidl_fuchsia_net_dhcp as fdhcp;
 use fidl_fuchsia_net_filter as ffilter;
 use fidl_fuchsia_net_neighbor as fneighbor;
 use fidl_fuchsia_net_stack as fstack;
@@ -13,7 +14,6 @@ use fuchsia_async as fasync;
 use fuchsia_component::client::connect_to_protocol_at;
 use fuchsia_zircon as zx;
 use log::{Level, Log, Metadata, Record, SetLoggerError};
-
 /// Logger which prints levels at or below info to stdout and levels at or
 /// above warn to stderr.
 struct Logger;
@@ -48,6 +48,8 @@ struct Connector;
 // Path to hub-v2 netstack exposed directory.
 const NETSTACK_EXPOSED_DIR: &str =
     "/hub-v2/children/core/children/network/children/netstack/exec/expose";
+// Path to hub-v2 dhcpd exposed directory.
+const DHCPD_EXPOSED_DIR: &str = "/hub-v2/children/core/children/network/children/dhcpd/exec/expose";
 
 #[async_trait::async_trait]
 impl net_cli::ServiceConnector<fstack::StackMarker> for Connector {
@@ -74,6 +76,13 @@ impl net_cli::ServiceConnector<ffilter::FilterMarker> for Connector {
 impl net_cli::ServiceConnector<fstack::LogMarker> for Connector {
     async fn connect(&self) -> Result<<fstack::LogMarker as ProtocolMarker>::Proxy, Error> {
         connect_to_protocol_at::<fstack::LogMarker>(NETSTACK_EXPOSED_DIR)
+    }
+}
+
+#[async_trait::async_trait]
+impl net_cli::ServiceConnector<fdhcp::Server_Marker> for Connector {
+    async fn connect(&self) -> Result<<fdhcp::Server_Marker as ProtocolMarker>::Proxy, Error> {
+        connect_to_protocol_at::<fdhcp::Server_Marker>(DHCPD_EXPOSED_DIR)
     }
 }
 

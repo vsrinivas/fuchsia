@@ -353,9 +353,6 @@
         },
         {
             protocol: [
-                // TODO(https://fxbug.dev/82130): Remove once dhcpd-cli is an
-                // ffx plugin.
-                "fuchsia.net.dhcp.Server",
                 "fuchsia.net.name.Lookup",
                 "fuchsia.net.NameLookup",
                 "fuchsia.net.routes.State",

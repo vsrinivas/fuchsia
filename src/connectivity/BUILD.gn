@@ -32,7 +32,6 @@ group("tools") {
   testonly = true
   deps = [
     "lowpan/tools",
-    "network/dhcpd-cli",
     "network/mdns/bundles:utils",
     "network/net-cli",
     "network/netdump",

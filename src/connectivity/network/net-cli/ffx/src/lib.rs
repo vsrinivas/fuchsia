@@ -9,11 +9,13 @@ use anyhow::Context as _;
 use ffx_core::ffx_plugin;
 use fidl::endpoints::ProtocolMarker;
 use fidl_fuchsia_developer_remotecontrol as fremotecontrol;
+use fidl_fuchsia_net_dhcp as fdhcp;
 use fidl_fuchsia_net_filter as ffilter;
 use fidl_fuchsia_net_neighbor as fneighbor;
 use fidl_fuchsia_net_stack as fstack;
 use fidl_fuchsia_netstack as fnetstack;
 
+const DHCPD_SELECTOR: &str = "core/network/dhcpd:expose:fuchsia.net.dhcp.Server";
 const STACK_SELECTOR: &str = "core/network/netstack:expose:fuchsia.net.stack.Stack";
 const NETSTACK_SELECTOR: &str = "core/network/netstack:expose:fuchsia.netstack.Netstack";
 const FILTER_SELECTOR: &str = "core/network/netstack:expose:fuchsia.net.filter.Filter";
@@ -76,6 +78,16 @@ impl net_cli::ServiceConnector<fstack::LogMarker> for FfxConnector {
     async fn connect(&self) -> Result<<fstack::LogMarker as ProtocolMarker>::Proxy, anyhow::Error> {
         let Self { remote_control } = &self;
         remotecontrol_connect::<fstack::LogMarker>(remote_control, LOG_SELECTOR).await
+    }
+}
+
+#[async_trait::async_trait]
+impl net_cli::ServiceConnector<fdhcp::Server_Marker> for FfxConnector {
+    async fn connect(
+        &self,
+    ) -> Result<<fdhcp::Server_Marker as ProtocolMarker>::Proxy, anyhow::Error> {
+        let Self { remote_control } = &self;
+        remotecontrol_connect::<fdhcp::Server_Marker>(remote_control, DHCPD_SELECTOR).await
     }
 }
 

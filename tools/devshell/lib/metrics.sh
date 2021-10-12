@@ -57,7 +57,6 @@ _METRICS_TRACK_COMMAND_OPS=(
     "shell curl"
     "shell cut"
     "shell date"
-    "shell dhcpd-cli"
     "shell dirname"
     "shell du"
     "shell echo"

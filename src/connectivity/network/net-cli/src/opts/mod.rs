@@ -7,6 +7,8 @@ use fidl_fuchsia_net_ext as fnet_ext;
 
 use argh::FromArgs;
 
+pub(crate) mod dhcpd;
+
 fn parse_ip_version_str(value: &str) -> Result<fnet::IpVersion, String> {
     match &value.to_lowercase()[..] {
         "ipv4" => Ok(fnet::IpVersion::V4),
@@ -34,6 +36,7 @@ pub enum CommandEnum {
     Route(Route),
     Metric(Metric),
     Dhcp(Dhcp),
+    Dhcpd(dhcpd::Dhcpd),
 }
 
 #[derive(FromArgs, Clone, Debug, PartialEq)]

@@ -5,6 +5,7 @@
 use anyhow::{Context as _, Error};
 use fidl_fuchsia_hardware_ethernet as fethernet;
 use fidl_fuchsia_net as fnet;
+use fidl_fuchsia_net_dhcp as fdhcp;
 use fidl_fuchsia_net_ext as fnet_ext;
 use fidl_fuchsia_net_filter as ffilter;
 use fidl_fuchsia_net_neighbor as fneighbor;
@@ -21,8 +22,6 @@ use std::str::FromStr as _;
 
 mod opts;
 pub use opts::{Command, CommandEnum};
-
-use crate::opts::*;
 
 macro_rules! filter_fidl {
     ($method:expr, $context:expr) => {
@@ -61,6 +60,7 @@ pub trait NetCliDepsConnector:
     + ServiceConnector<fstack::LogMarker>
     + ServiceConnector<fneighbor::ControllerMarker>
     + ServiceConnector<fneighbor::ViewMarker>
+    + ServiceConnector<fdhcp::Server_Marker>
 {
     /// Acquires a connection to the device at the provided path.
     ///
@@ -80,31 +80,34 @@ pub async fn do_root<C: NetCliDepsConnector>(
     connector: &C,
 ) -> Result<(), Error> {
     match cmd {
-        CommandEnum::If(If { if_cmd: cmd }) => {
+        CommandEnum::If(opts::If { if_cmd: cmd }) => {
             do_if(cmd, connector).await.context("failed during if command")
         }
-        CommandEnum::Fwd(Fwd { fwd_cmd: cmd }) => {
+        CommandEnum::Fwd(opts::Fwd { fwd_cmd: cmd }) => {
             do_fwd(cmd, connector).await.context("failed during fwd command")
         }
-        CommandEnum::Route(Route { route_cmd: cmd }) => {
+        CommandEnum::Route(opts::Route { route_cmd: cmd }) => {
             do_route(cmd, connector).await.context("failed during route command")
         }
-        CommandEnum::Filter(Filter { filter_cmd: cmd }) => {
+        CommandEnum::Filter(opts::Filter { filter_cmd: cmd }) => {
             do_filter(cmd, connector).await.context("failed during filter command")
         }
-        CommandEnum::IpFwd(IpFwd { ip_fwd_cmd: cmd }) => {
+        CommandEnum::IpFwd(opts::IpFwd { ip_fwd_cmd: cmd }) => {
             do_ip_fwd(cmd, connector).await.context("failed during ip-fwd command")
         }
-        CommandEnum::Log(crate::opts::Log { log_cmd: cmd }) => {
+        CommandEnum::Log(opts::Log { log_cmd: cmd }) => {
             do_log(cmd, connector).await.context("failed during log command")
         }
-        CommandEnum::Metric(Metric { metric_cmd: cmd }) => {
+        CommandEnum::Metric(opts::Metric { metric_cmd: cmd }) => {
             do_metric(cmd, connector).await.context("failed during metric command")
         }
-        CommandEnum::Dhcp(Dhcp { dhcp_cmd: cmd }) => {
+        CommandEnum::Dhcp(opts::Dhcp { dhcp_cmd: cmd }) => {
             do_dhcp(cmd, connector).await.context("failed during dhcp command")
         }
-        CommandEnum::Neigh(Neigh { neigh_cmd: cmd }) => {
+        CommandEnum::Dhcpd(opts::dhcpd::Dhcpd { dhcpd_cmd: cmd }) => {
+            do_dhcpd(cmd, connector).await.context("failed during dhcpd command")
+        }
+        CommandEnum::Neigh(opts::Neigh { neigh_cmd: cmd }) => {
             do_neigh(cmd, connector).await.context("failed during neigh command")
         }
     }
@@ -173,7 +176,7 @@ where
 
 async fn do_if<C: NetCliDepsConnector>(cmd: opts::IfEnum, connector: &C) -> Result<(), Error> {
     match cmd {
-        IfEnum::List(IfList { name_pattern }) => {
+        opts::IfEnum::List(opts::IfList { name_pattern }) => {
             let stack = connect_with_context::<fstack::StackMarker, _>(connector).await?;
             let mut response = stack.list_interfaces().await.context("error getting response")?;
             if let Some(name_pattern) = name_pattern {
@@ -184,7 +187,7 @@ async fn do_if<C: NetCliDepsConnector>(cmd: opts::IfEnum, connector: &C) -> Resu
                 .context("error tabulating interface info")?;
             println!("{}", result);
         }
-        IfEnum::Add(IfAdd { path }) => match connector.connect_device(&path).await {
+        opts::IfEnum::Add(opts::IfAdd { path }) => match connector.connect_device(&path).await {
             Ok(Device { topological_path, dev }) => {
                 let stack = connect_with_context::<fstack::StackMarker, _>(connector).await?;
                 let id = fstack_ext::exec_fidl!(
@@ -197,7 +200,7 @@ async fn do_if<C: NetCliDepsConnector>(cmd: opts::IfEnum, connector: &C) -> Resu
                 println!("{}", e);
             }
         },
-        IfEnum::Del(IfDel { id }) => {
+        opts::IfEnum::Del(opts::IfDel { id }) => {
             let stack = connect_with_context::<fstack::StackMarker, _>(connector).await?;
             let () = fstack_ext::exec_fidl!(
                 stack.del_ethernet_interface(id),
@@ -205,23 +208,23 @@ async fn do_if<C: NetCliDepsConnector>(cmd: opts::IfEnum, connector: &C) -> Resu
             )?;
             info!("Deleted interface {}", id);
         }
-        IfEnum::Get(IfGet { id }) => {
+        opts::IfEnum::Get(opts::IfGet { id }) => {
             let stack = connect_with_context::<fstack::StackMarker, _>(connector).await?;
             let info =
                 fstack_ext::exec_fidl!(stack.get_interface_info(id), "error getting interface")?;
             println!("{}", fstack_ext::InterfaceInfo::from(info));
         }
-        IfEnum::IpForward(IfIpForward { cmd }) => {
+        opts::IfEnum::IpForward(opts::IfIpForward { cmd }) => {
             let stack = connect_with_context::<fstack::StackMarker, _>(connector).await?;
             match cmd {
-                IfIpForwardEnum::Show(IfIpForwardShow { id, ip_version }) => {
+                opts::IfIpForwardEnum::Show(opts::IfIpForwardShow { id, ip_version }) => {
                     let enabled = fstack_ext::exec_fidl!(
                         stack.get_interface_ip_forwarding(id, ip_version),
                         "error getting interface IP forwarding"
                     )?;
                     info!("IP forwarding for {:?} is {} on interface {}", ip_version, enabled, id);
                 }
-                IfIpForwardEnum::Set(IfIpForwardSet { id, ip_version, enable }) => {
+                opts::IfIpForwardEnum::Set(opts::IfIpForwardSet { id, ip_version, enable }) => {
                     let () = fstack_ext::exec_fidl!(
                         stack.set_interface_ip_forwarding(id, ip_version, enable),
                         "error setting interface IP forwarding"
@@ -233,22 +236,22 @@ async fn do_if<C: NetCliDepsConnector>(cmd: opts::IfEnum, connector: &C) -> Resu
                 }
             }
         }
-        IfEnum::Enable(IfEnable { id }) => {
+        opts::IfEnum::Enable(opts::IfEnable { id }) => {
             let stack = connect_with_context::<fstack::StackMarker, _>(connector).await?;
             let () =
                 fstack_ext::exec_fidl!(stack.enable_interface(id), "error enabling interface")?;
             info!("Interface {} enabled", id);
         }
-        IfEnum::Disable(IfDisable { id }) => {
+        opts::IfEnum::Disable(opts::IfDisable { id }) => {
             let stack = connect_with_context::<fstack::StackMarker, _>(connector).await?;
             let () =
                 fstack_ext::exec_fidl!(stack.disable_interface(id), "error disabling interface")?;
             info!("Interface {} disabled", id);
         }
-        IfEnum::Addr(IfAddr { addr_cmd }) => {
+        opts::IfEnum::Addr(opts::IfAddr { addr_cmd }) => {
             let stack = connect_with_context::<fstack::StackMarker, _>(connector).await?;
             match addr_cmd {
-                IfAddrEnum::Add(IfAddrAdd { id, addr, prefix }) => {
+                opts::IfAddrEnum::Add(opts::IfAddrAdd { id, addr, prefix }) => {
                     let parsed_addr = fnet_ext::IpAddress::from_str(&addr)?.into();
                     let mut fidl_addr = fnet::Subnet { addr: parsed_addr, prefix_len: prefix };
                     let () = fstack_ext::exec_fidl!(
@@ -261,7 +264,7 @@ async fn do_if<C: NetCliDepsConnector>(cmd: opts::IfEnum, connector: &C) -> Resu
                         id
                     );
                 }
-                IfAddrEnum::Del(IfAddrDel { id, addr, prefix }) => {
+                opts::IfAddrEnum::Del(opts::IfAddrDel { id, addr, prefix }) => {
                     let parsed_addr = fnet_ext::IpAddress::from_str(&addr)?.into();
                     let prefix_len = prefix.unwrap_or_else(|| match parsed_addr {
                         fnet::IpAddress::Ipv4(_) => 32,
@@ -280,7 +283,7 @@ async fn do_if<C: NetCliDepsConnector>(cmd: opts::IfEnum, connector: &C) -> Resu
                 }
             }
         }
-        IfEnum::Bridge(IfBridge { ids }) => {
+        opts::IfEnum::Bridge(opts::IfBridge { ids }) => {
             let netstack = connect_with_context::<fnetstack::NetstackMarker, _>(connector).await?;
             let (result, bridge_id) = netstack.bridge_interfaces(&ids).await?;
             if result.status != fidl_fuchsia_netstack::Status::Ok {
@@ -296,14 +299,14 @@ async fn do_if<C: NetCliDepsConnector>(cmd: opts::IfEnum, connector: &C) -> Resu
 async fn do_fwd<C: NetCliDepsConnector>(cmd: opts::FwdEnum, connector: &C) -> Result<(), Error> {
     let stack = connect_with_context::<fstack::StackMarker, _>(connector).await?;
     match cmd {
-        FwdEnum::List(_) => {
+        opts::FwdEnum::List(_) => {
             let response =
                 stack.get_forwarding_table().await.context("error retrieving forwarding table")?;
             for entry in response {
                 println!("{}", fstack_ext::ForwardingEntry::from(entry));
             }
         }
-        FwdEnum::AddDevice(FwdAddDevice { id, addr, prefix }) => {
+        opts::FwdEnum::AddDevice(opts::FwdAddDevice { id, addr, prefix }) => {
             let mut entry = fstack::ForwardingEntry {
                 subnet: fnet::Subnet {
                     addr: fnet_ext::IpAddress::from_str(&addr)?.into(),
@@ -317,7 +320,7 @@ async fn do_fwd<C: NetCliDepsConnector>(cmd: opts::FwdEnum, connector: &C) -> Re
             )?;
             info!("Added forwarding entry for {}/{} to device {}", addr, prefix, id);
         }
-        FwdEnum::AddHop(FwdAddHop { next_hop, addr, prefix }) => {
+        opts::FwdEnum::AddHop(opts::FwdAddHop { next_hop, addr, prefix }) => {
             let mut entry = fstack::ForwardingEntry {
                 subnet: fnet::Subnet {
                     addr: fnet_ext::IpAddress::from_str(&addr)?.into(),
@@ -333,7 +336,7 @@ async fn do_fwd<C: NetCliDepsConnector>(cmd: opts::FwdEnum, connector: &C) -> Re
             )?;
             info!("Added forwarding entry for {}/{} to {}", addr, prefix, next_hop);
         }
-        FwdEnum::Del(FwdDel { addr, prefix }) => {
+        opts::FwdEnum::Del(opts::FwdDel { addr, prefix }) => {
             let mut entry = fnet::Subnet {
                 addr: fnet_ext::IpAddress::from_str(&addr)?.into(),
                 prefix_len: prefix,
@@ -354,7 +357,7 @@ async fn do_route<C: NetCliDepsConnector>(
 ) -> Result<(), Error> {
     let netstack = connect_with_context::<fnetstack::NetstackMarker, _>(connector).await?;
     match cmd {
-        RouteEnum::List(RouteList {}) => {
+        opts::RouteEnum::List(opts::RouteList {}) => {
             let response =
                 netstack.get_route_table().await.context("error retrieving routing table")?;
 
@@ -379,13 +382,13 @@ async fn do_route<C: NetCliDepsConnector>(
             let _lines_printed: usize = t.printstd();
             println!();
         }
-        RouteEnum::Add(route) => {
+        opts::RouteEnum::Add(route) => {
             let () = with_route_table_transaction_and_entry(&netstack, |transaction| {
                 transaction.add_route(&mut route.into())
             })
             .await?;
         }
-        RouteEnum::Del(route) => {
+        opts::RouteEnum::Del(route) => {
             let () = with_route_table_transaction_and_entry(&netstack, |transaction| {
                 transaction.del_route(&mut route.into())
             })
@@ -417,12 +420,12 @@ async fn do_filter<C: NetCliDepsConnector>(
 ) -> Result<(), Error> {
     let filter = connect_with_context::<ffilter::FilterMarker, _>(connector).await?;
     match cmd {
-        FilterEnum::GetRules(_) => {
+        opts::FilterEnum::GetRules(_) => {
             let (rules, generation) =
                 filter_fidl!(filter.get_rules(), "error getting filter rules")?;
             println!("{:?} (generation {})", rules, generation);
         }
-        FilterEnum::SetRules(FilterSetRules { rules }) => {
+        opts::FilterEnum::SetRules(opts::FilterSetRules { rules }) => {
             let (_cur_rules, generation) =
                 filter_fidl!(filter.get_rules(), "error getting filter rules")?;
             let mut rules = netfilter::parser::parse_str_to_rules(&rules)?;
@@ -432,12 +435,12 @@ async fn do_filter<C: NetCliDepsConnector>(
             )?;
             info!("successfully set filter rules");
         }
-        FilterEnum::GetNatRules(_) => {
+        opts::FilterEnum::GetNatRules(_) => {
             let (rules, generation) =
                 filter_fidl!(filter.get_nat_rules(), "error getting NAT rules")?;
             println!("{:?} (generation {})", rules, generation);
         }
-        FilterEnum::SetNatRules(FilterSetNatRules { rules }) => {
+        opts::FilterEnum::SetNatRules(opts::FilterSetNatRules { rules }) => {
             let (_cur_rules, generation) =
                 filter_fidl!(filter.get_nat_rules(), "error getting NAT rules")?;
             let mut rules = netfilter::parser::parse_str_to_nat_rules(&rules)?;
@@ -447,12 +450,12 @@ async fn do_filter<C: NetCliDepsConnector>(
             )?;
             info!("successfully set NAT rules");
         }
-        FilterEnum::GetRdrRules(_) => {
+        opts::FilterEnum::GetRdrRules(_) => {
             let (rules, generation) =
                 filter_fidl!(filter.get_rdr_rules(), "error getting RDR rules")?;
             println!("{:?} (generation {})", rules, generation);
         }
-        FilterEnum::SetRdrRules(FilterSetRdrRules { rules }) => {
+        opts::FilterEnum::SetRdrRules(opts::FilterSetRdrRules { rules }) => {
             let (_cur_rules, generation) =
                 filter_fidl!(filter.get_rdr_rules(), "error getting RDR rules")?;
             let mut rules = netfilter::parser::parse_str_to_rdr_rules(&rules)?;
@@ -472,14 +475,14 @@ async fn do_ip_fwd<C: NetCliDepsConnector>(
 ) -> Result<(), Error> {
     let stack = connect_with_context::<fstack::StackMarker, _>(connector).await?;
     match cmd {
-        IpFwdEnum::Enable(IpFwdEnable {}) => {
+        opts::IpFwdEnum::Enable(opts::IpFwdEnable {}) => {
             let () = stack
                 .enable_ip_forwarding()
                 .await
                 .context("fuchsia.net.stack/Stack.EnableIpForwarding FIDL error")?;
             info!("Enabled IP forwarding");
         }
-        IpFwdEnum::Disable(IpFwdDisable {}) => {
+        opts::IpFwdEnum::Disable(opts::IpFwdDisable {}) => {
             let () = stack
                 .disable_ip_forwarding()
                 .await
@@ -493,7 +496,7 @@ async fn do_ip_fwd<C: NetCliDepsConnector>(
 async fn do_log<C: NetCliDepsConnector>(cmd: opts::LogEnum, connector: &C) -> Result<(), Error> {
     let log = connect_with_context::<fstack::LogMarker, _>(connector).await?;
     match cmd {
-        LogEnum::SetPackets(LogSetPackets { enabled }) => {
+        opts::LogEnum::SetPackets(opts::LogSetPackets { enabled }) => {
             let () = log.set_log_packets(enabled).await.context("error setting log packets")?;
             info!("log packets set to {:?}", enabled);
         }
@@ -506,7 +509,7 @@ async fn do_metric<C: NetCliDepsConnector>(
     connector: &C,
 ) -> Result<(), Error> {
     match cmd {
-        MetricEnum::Set(MetricSet { id, metric }) => {
+        opts::MetricEnum::Set(opts::MetricSet { id, metric }) => {
             let netstack = connect_with_context::<fnetstack::NetstackMarker, _>(connector).await?;
             let result = netstack.set_interface_metric(id, metric).await?;
             if result.status != fidl_fuchsia_netstack::Status::Ok {
@@ -524,13 +527,13 @@ async fn do_dhcp<C: NetCliDepsConnector>(cmd: opts::DhcpEnum, connector: &C) -> 
     let (dhcp, server_end) =
         fidl::endpoints::create_proxy::<fidl_fuchsia_net_dhcp::ClientMarker>()?;
     match cmd {
-        DhcpEnum::Start(DhcpStart { id }) => {
+        opts::DhcpEnum::Start(opts::DhcpStart { id }) => {
             let () =
                 netstack.get_dhcp_client(id, server_end).await?.map_err(zx::Status::from_raw)?;
             let () = dhcp.start().await?.map_err(zx::Status::from_raw)?;
             info!("dhcp client started on interface {}", id);
         }
-        DhcpEnum::Stop(DhcpStop { id }) => {
+        opts::DhcpEnum::Stop(opts::DhcpStop { id }) => {
             let () =
                 netstack.get_dhcp_client(id, server_end).await?.map_err(zx::Status::from_raw)?;
             let () = dhcp.stop().await?.map_err(zx::Status::from_raw)?;
@@ -540,12 +543,36 @@ async fn do_dhcp<C: NetCliDepsConnector>(cmd: opts::DhcpEnum, connector: &C) -> 
     Ok(())
 }
 
+async fn do_dhcpd<C: NetCliDepsConnector>(
+    cmd: opts::dhcpd::DhcpdEnum,
+    connector: &C,
+) -> Result<(), Error> {
+    let dhcpd_server = connect_with_context::<fdhcp::Server_Marker, _>(connector).await?;
+    match cmd {
+        opts::dhcpd::DhcpdEnum::Start(opts::dhcpd::Start {}) => {
+            Ok(do_dhcpd_start(dhcpd_server).await?)
+        }
+        opts::dhcpd::DhcpdEnum::Stop(opts::dhcpd::Stop {}) => {
+            Ok(do_dhcpd_stop(dhcpd_server).await?)
+        }
+        opts::dhcpd::DhcpdEnum::Get(get_arg) => Ok(do_dhcpd_get(get_arg, dhcpd_server).await?),
+        opts::dhcpd::DhcpdEnum::Set(set_arg) => Ok(do_dhcpd_set(set_arg, dhcpd_server).await?),
+        opts::dhcpd::DhcpdEnum::List(list_arg) => Ok(do_dhcpd_list(list_arg, dhcpd_server).await?),
+        opts::dhcpd::DhcpdEnum::Reset(reset_arg) => {
+            Ok(do_dhcpd_reset(reset_arg, dhcpd_server).await?)
+        }
+        opts::dhcpd::DhcpdEnum::ClearLeases(opts::dhcpd::ClearLeases {}) => {
+            Ok(do_dhcpd_clear_leases(dhcpd_server).await?)
+        }
+    }
+}
+
 async fn do_neigh<C: NetCliDepsConnector>(
     cmd: opts::NeighEnum,
     connector: &C,
 ) -> Result<(), Error> {
     match cmd {
-        NeighEnum::Add(NeighAdd { interface, ip, mac }) => {
+        opts::NeighEnum::Add(opts::NeighAdd { interface, ip, mac }) => {
             let controller =
                 connect_with_context::<fneighbor::ControllerMarker, _>(connector).await?;
             let () = do_neigh_add(interface, ip.into(), mac.into(), controller)
@@ -553,7 +580,7 @@ async fn do_neigh<C: NetCliDepsConnector>(
                 .context("failed during neigh add command")?;
             info!("Added entry ({}, {}) for interface {}", ip, mac, interface);
         }
-        NeighEnum::Clear(NeighClear { interface, ip_version }) => {
+        opts::NeighEnum::Clear(opts::NeighClear { interface, ip_version }) => {
             let controller =
                 connect_with_context::<fneighbor::ControllerMarker, _>(connector).await?;
             let () = do_neigh_clear(interface, ip_version, controller)
@@ -561,7 +588,7 @@ async fn do_neigh<C: NetCliDepsConnector>(
                 .context("failed during neigh clear command")?;
             info!("Cleared entries for interface {}", interface);
         }
-        NeighEnum::Del(NeighDel { interface, ip }) => {
+        opts::NeighEnum::Del(opts::NeighDel { interface, ip }) => {
             let controller =
                 connect_with_context::<fneighbor::ControllerMarker, _>(connector).await?;
             let () = do_neigh_del(interface, ip.into(), controller)
@@ -569,26 +596,26 @@ async fn do_neigh<C: NetCliDepsConnector>(
                 .context("failed during neigh del command")?;
             info!("Deleted entry {} for interface {}", ip, interface);
         }
-        NeighEnum::List(NeighList {}) => {
+        opts::NeighEnum::List(opts::NeighList {}) => {
             let view = connect_with_context::<fneighbor::ViewMarker, _>(connector).await?;
             let () = print_neigh_entries(false /* watch_for_changes */, view)
                 .await
                 .context("error listing neighbor entries")?;
         }
-        NeighEnum::Watch(NeighWatch {}) => {
+        opts::NeighEnum::Watch(opts::NeighWatch {}) => {
             let view = connect_with_context::<fneighbor::ViewMarker, _>(connector).await?;
             let () = print_neigh_entries(true /* watch_for_changes */, view)
                 .await
                 .context("error watching for changes to the neighbor table")?;
         }
-        NeighEnum::Config(NeighConfig { neigh_config_cmd }) => match neigh_config_cmd {
-            NeighConfigEnum::Get(NeighGetConfig { interface, ip_version }) => {
+        opts::NeighEnum::Config(opts::NeighConfig { neigh_config_cmd }) => match neigh_config_cmd {
+            opts::NeighConfigEnum::Get(opts::NeighGetConfig { interface, ip_version }) => {
                 let view = connect_with_context::<fneighbor::ViewMarker, _>(connector).await?;
                 let () = print_neigh_config(interface, ip_version, view)
                     .await
                     .context("failed during neigh config get command")?;
             }
-            NeighConfigEnum::Update(NeighUpdateConfig {
+            opts::NeighConfigEnum::Update(opts::NeighUpdateConfig {
                 interface,
                 ip_version,
                 base_reachable_time,
@@ -770,6 +797,109 @@ fn write_neigh_entry<W: std::io::Write>(
     }
 }
 
+async fn do_dhcpd_start(server: fdhcp::Server_Proxy) -> Result<(), Error> {
+    server.start_serving().await?.map_err(zx::Status::from_raw).context("failed to start server")
+}
+
+async fn do_dhcpd_stop(server: fdhcp::Server_Proxy) -> Result<(), Error> {
+    server.stop_serving().await.context("failed to stop server")
+}
+
+async fn do_dhcpd_get(get_arg: opts::dhcpd::Get, server: fdhcp::Server_Proxy) -> Result<(), Error> {
+    match get_arg.arg {
+        opts::dhcpd::GetArg::Option(opts::dhcpd::OptionArg { name }) => {
+            let res = server
+                .get_option(name.clone().into())
+                .await?
+                .map_err(zx::Status::from_raw)
+                .with_context(|| format!("get_option({:?}) failed", name))?;
+            println!("{:#?}", res);
+        }
+        opts::dhcpd::GetArg::Parameter(opts::dhcpd::ParameterArg { name }) => {
+            let res = server
+                .get_parameter(name.clone().into())
+                .await?
+                .map_err(zx::Status::from_raw)
+                .with_context(|| format!("get_parameter({:?}) failed", name))?;
+            println!("{:#?}", res);
+        }
+    };
+    Ok(())
+}
+
+async fn do_dhcpd_set(set_arg: opts::dhcpd::Set, server: fdhcp::Server_Proxy) -> Result<(), Error> {
+    match set_arg.arg {
+        opts::dhcpd::SetArg::Option(opts::dhcpd::OptionArg { name }) => {
+            let () = server
+                .set_option(&mut name.clone().into())
+                .await?
+                .map_err(zx::Status::from_raw)
+                .with_context(|| format!("set_option({:?}) failed", name))?;
+        }
+        opts::dhcpd::SetArg::Parameter(opts::dhcpd::ParameterArg { name }) => {
+            let () = server
+                .set_parameter(&mut name.clone().into())
+                .await?
+                .map_err(zx::Status::from_raw)
+                .with_context(|| format!("set_parameter({:?}) failed", name))?;
+        }
+    };
+    Ok(())
+}
+
+async fn do_dhcpd_list(
+    list_arg: opts::dhcpd::List,
+    server: fdhcp::Server_Proxy,
+) -> Result<(), Error> {
+    match list_arg.arg {
+        opts::dhcpd::ListArg::Option(opts::dhcpd::OptionToken {}) => {
+            let res = server
+                .list_options()
+                .await?
+                .map_err(zx::Status::from_raw)
+                .context("list_options() failed")?;
+
+            println!("{:#?}", res);
+        }
+        opts::dhcpd::ListArg::Parameter(opts::dhcpd::ParameterToken {}) => {
+            let res = server
+                .list_parameters()
+                .await?
+                .map_err(zx::Status::from_raw)
+                .context("list_parameters() failed")?;
+            println!("{:#?}", res);
+        }
+    };
+    Ok(())
+}
+
+async fn do_dhcpd_reset(
+    reset_arg: opts::dhcpd::Reset,
+    server: fdhcp::Server_Proxy,
+) -> Result<(), Error> {
+    match reset_arg.arg {
+        opts::dhcpd::ResetArg::Option(opts::dhcpd::OptionToken {}) => {
+            let () = server
+                .reset_options()
+                .await?
+                .map_err(zx::Status::from_raw)
+                .context("reset_options() failed")?;
+        }
+        opts::dhcpd::ResetArg::Parameter(opts::dhcpd::ParameterToken {}) => {
+            let () = server
+                .reset_parameters()
+                .await?
+                .map_err(zx::Status::from_raw)
+                .context("reset_parameters() failed")?;
+        }
+    };
+    Ok(())
+}
+
+async fn do_dhcpd_clear_leases(server: fdhcp::Server_Proxy) -> Result<(), Error> {
+    server.clear_leases().await?.map_err(zx::Status::from_raw).context("clear_leases() failed")
+}
+
 #[cfg(test)]
 mod tests {
     use anyhow::Error;
@@ -779,6 +909,7 @@ mod tests {
     use futures::prelude::*;
     use net_declare::{fidl_mac, fidl_subnet};
     use std::convert::TryFrom as _;
+    use test_case::test_case;
     use {super::*, fidl_fuchsia_net_stack::*, fidl_fuchsia_netstack::*};
 
     const SUBNET_V4: fnet::Subnet = fidl_subnet!("192.168.0.1/32");
@@ -790,6 +921,7 @@ mod tests {
     struct TestConnector {
         stack: Option<StackProxy>,
         netstack: Option<NetstackProxy>,
+        dhcpd: Option<fdhcp::Server_Proxy>,
     }
 
     #[async_trait::async_trait]
@@ -841,6 +973,17 @@ mod tests {
     impl ServiceConnector<fneighbor::ViewMarker> for TestConnector {
         async fn connect(&self) -> Result<<fneighbor::ViewMarker as ProtocolMarker>::Proxy, Error> {
             Err(anyhow::anyhow!("connect neighbor view unimplemented for test connector"))
+        }
+    }
+
+    #[async_trait::async_trait]
+    impl ServiceConnector<fdhcp::Server_Marker> for TestConnector {
+        async fn connect(&self) -> Result<<fdhcp::Server_Marker as ProtocolMarker>::Proxy, Error> {
+            let TestConnector { stack: _, netstack: _, dhcpd } = self;
+            match dhcpd {
+                Some(dhcpd) => Ok(dhcpd.clone()),
+                None => Err(anyhow::anyhow!("connector has no dhcp server instance")),
+            }
         }
     }
 
@@ -906,12 +1049,15 @@ mod tests {
             fidl::endpoints::create_proxy_and_stream::<StackMarker>().unwrap();
         let (netstack_controller, _netstack_requests) =
             fidl::endpoints::create_proxy_and_stream::<NetstackMarker>().unwrap();
-        let connector =
-            TestConnector { stack: Some(stack_controller), netstack: Some(netstack_controller) };
+        let connector = TestConnector {
+            stack: Some(stack_controller),
+            netstack: Some(netstack_controller),
+            dhcpd: None,
+        };
 
         let do_if_fut = do_if(
-            opts::IfEnum::IpForward(IfIpForward {
-                cmd: IfIpForwardEnum::Set(IfIpForwardSet {
+            opts::IfEnum::IpForward(opts::IfIpForward {
+                cmd: opts::IfIpForwardEnum::Set(opts::IfIpForwardSet {
                     id: INTERFACE_ID,
                     ip_version: IP_VERSION,
                     enable: IP_FORWARD,
@@ -938,8 +1084,8 @@ mod tests {
             .expect("setting interface ip forwarding should succeed");
 
         let do_if_fut = do_if(
-            opts::IfEnum::IpForward(IfIpForward {
-                cmd: IfIpForwardEnum::Show(IfIpForwardShow {
+            opts::IfEnum::IpForward(opts::IfIpForward {
+                cmd: opts::IfIpForwardEnum::Show(opts::IfIpForwardShow {
                     id: INTERFACE_ID,
                     ip_version: IP_VERSION,
                 }),
@@ -981,12 +1127,12 @@ mod tests {
         let (stack, mut requests) =
             fidl::endpoints::create_proxy_and_stream::<StackMarker>().unwrap();
         let (netstack, _) = fidl::endpoints::create_proxy::<NetstackMarker>().unwrap();
-        let connector = TestConnector { stack: Some(stack), netstack: Some(netstack) };
+        let connector = TestConnector { stack: Some(stack), netstack: Some(netstack), dhcpd: None };
 
         // Make the first request.
         let succeeds = do_if(
-            IfEnum::Addr(IfAddr {
-                addr_cmd: IfAddrEnum::Del(IfAddrDel {
+            opts::IfEnum::Addr(opts::IfAddr {
+                addr_cmd: opts::IfAddrEnum::Del(opts::IfAddrDel {
                     id: 1,
                     addr: fnet_ext::IpAddress::from(SUBNET_V4.addr).to_string(),
                     prefix: None, // The prefix should be set to the default of 32 for IPv4.
@@ -1007,8 +1153,8 @@ mod tests {
 
         // Make the second request.
         let fails = do_if(
-            IfEnum::Addr(IfAddr {
-                addr_cmd: IfAddrEnum::Del(IfAddrDel {
+            opts::IfEnum::Addr(opts::IfAddr {
+                addr_cmd: opts::IfAddrEnum::Del(opts::IfAddrDel {
                     id: 2,
                     addr: fnet_ext::IpAddress::from(SUBNET_V6.addr).to_string(),
                     prefix: None, // The prefix should be set to the default of 128 for IPv6.
@@ -1051,13 +1197,13 @@ mod tests {
 
         let (netstack, mut requests) =
             fidl::endpoints::create_proxy_and_stream::<NetstackMarker>().unwrap();
-        let connector = TestConnector { stack: None, netstack: Some(netstack) };
+        let connector = TestConnector { stack: None, netstack: Some(netstack), dhcpd: None };
 
         // both test values have been arbitrarily selected
         let expected_id = 1;
         let expected_metric = 64;
         let succeeds = do_metric(
-            MetricEnum::Set(MetricSet { id: expected_id, metric: expected_metric }),
+            opts::MetricEnum::Set(opts::MetricSet { id: expected_id, metric: expected_metric }),
             &connector,
         );
         let response = async move {
@@ -1073,10 +1219,10 @@ mod tests {
             futures::future::try_join(succeeds, response).await.expect("metric set should succeed");
     }
 
-    async fn test_do_dhcp(cmd: DhcpEnum) {
+    async fn test_do_dhcp(cmd: opts::DhcpEnum) {
         let (netstack, mut requests) =
             fidl::endpoints::create_proxy_and_stream::<NetstackMarker>().unwrap();
-        let connector = TestConnector { stack: None, netstack: Some(netstack) };
+        let connector = TestConnector { stack: None, netstack: Some(netstack), dhcpd: None };
         let op = do_dhcp(cmd.clone(), &connector);
         let op_succeeds = async move {
             let (received_id, dhcp_requests, netstack_responder) = requests
@@ -1092,7 +1238,7 @@ mod tests {
                 .send(&mut Ok(()))
                 .expect("netstack_responder.send should succeed");
             match cmd {
-                DhcpEnum::Start(DhcpStart { id: expected_id }) => {
+                opts::DhcpEnum::Start(opts::DhcpStart { id: expected_id }) => {
                     assert_eq!(received_id, expected_id);
                     dhcp_requests
                         .try_next()
@@ -1104,7 +1250,7 @@ mod tests {
                         .send(&mut Ok(()))
                         .map_err(anyhow::Error::new)
                 }
-                DhcpEnum::Stop(DhcpStop { id: expected_id }) => {
+                opts::DhcpEnum::Stop(opts::DhcpStop { id: expected_id }) => {
                     assert_eq!(received_id, expected_id);
                     dhcp_requests
                         .try_next()
@@ -1124,18 +1270,18 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_dhcp_start() {
-        let () = test_do_dhcp(DhcpEnum::Start(DhcpStart { id: 1 })).await;
+        let () = test_do_dhcp(opts::DhcpEnum::Start(opts::DhcpStart { id: 1 })).await;
     }
 
     #[fasync::run_singlethreaded(test)]
     async fn test_dhcp_stop() {
-        let () = test_do_dhcp(DhcpEnum::Stop(DhcpStop { id: 1 })).await;
+        let () = test_do_dhcp(opts::DhcpEnum::Stop(opts::DhcpStop { id: 1 })).await;
     }
 
-    async fn test_modify_route(cmd: RouteEnum) {
+    async fn test_modify_route(cmd: opts::RouteEnum) {
         let (netstack, mut requests) =
             fidl::endpoints::create_proxy_and_stream::<NetstackMarker>().unwrap();
-        let connector = TestConnector { stack: None, netstack: Some(netstack) };
+        let connector = TestConnector { stack: None, netstack: Some(netstack), dhcpd: None };
         let op = do_route(cmd.clone(), &connector);
         let op_succeeds = async move {
             let (route_table_requests, netstack_responder) = requests
@@ -1151,10 +1297,10 @@ mod tests {
                 .send(zx::Status::OK.into_raw())
                 .expect("netstack_responder.send should succeed");
             let () = match cmd {
-                RouteEnum::List(RouteList {}) => {
+                opts::RouteEnum::List(opts::RouteList {}) => {
                     panic!("test_modify_route should not take a List command")
                 }
-                RouteEnum::Add(route) => {
+                opts::RouteEnum::Add(route) => {
                     let expected_entry = route.into();
                     let (entry, responder) = route_table_requests
                         .try_next()
@@ -1166,7 +1312,7 @@ mod tests {
                     assert_eq!(entry, expected_entry);
                     responder.send(zx::Status::OK.into_raw())
                 }
-                RouteEnum::Del(route) => {
+                opts::RouteEnum::Del(route) => {
                     let expected_entry = route.into();
                     let (entry, responder) = route_table_requests
                         .try_next()
@@ -1188,7 +1334,7 @@ mod tests {
     #[fasync::run_singlethreaded(test)]
     async fn test_route_add() {
         // Test arguments have been arbitrarily selected.
-        let () = test_modify_route(RouteEnum::Add(RouteAdd {
+        let () = test_modify_route(opts::RouteEnum::Add(opts::RouteAdd {
             destination: std::net::IpAddr::V4(std::net::Ipv4Addr::new(192, 168, 1, 0)),
             netmask: std::net::IpAddr::V4(std::net::Ipv4Addr::new(255, 255, 255, 0)),
             gateway: None,
@@ -1201,7 +1347,7 @@ mod tests {
     #[fasync::run_singlethreaded(test)]
     async fn test_route_del() {
         // Test arguments have been arbitrarily selected.
-        let () = test_modify_route(RouteEnum::Del(RouteDel {
+        let () = test_modify_route(opts::RouteEnum::Del(opts::RouteDel {
             destination: std::net::IpAddr::V4(std::net::Ipv4Addr::new(192, 168, 1, 0)),
             netmask: std::net::IpAddr::V4(std::net::Ipv4Addr::new(255, 255, 255, 0)),
             gateway: None,
@@ -1216,11 +1362,12 @@ mod tests {
         let (stack, _) = fidl::endpoints::create_proxy::<StackMarker>().unwrap();
         let (netstack, mut requests) =
             fidl::endpoints::create_proxy_and_stream::<NetstackMarker>().unwrap();
-        let connector = TestConnector { stack: Some(stack), netstack: Some(netstack) };
+        let connector = TestConnector { stack: Some(stack), netstack: Some(netstack), dhcpd: None };
         // interface id test values have been selected arbitrarily
         let bridge_ifs = vec![1, 2, 3];
         let bridge_id = 4;
-        let bridge = do_if(IfEnum::Bridge(IfBridge { ids: bridge_ifs.clone() }), &connector);
+        let bridge =
+            do_if(opts::IfEnum::Bridge(opts::IfBridge { ids: bridge_ifs.clone() }), &connector);
         let bridge_succeeds = async move {
             let (requested_ifs, netstack_responder) = requests
                 .try_next()
@@ -1572,8 +1719,8 @@ mod tests {
         let (stack, mut requests) =
             fidl::endpoints::create_proxy_and_stream::<fstack::StackMarker>()
                 .expect("creating a request stream and proxy for testing should succeed");
-        let connector = TestConnector { stack: Some(stack), netstack: None };
-        let op = do_ip_fwd(IpFwdEnum::Enable(IpFwdEnable {}), &connector);
+        let connector = TestConnector { stack: Some(stack), netstack: None, dhcpd: None };
+        let op = do_ip_fwd(opts::IpFwdEnum::Enable(opts::IpFwdEnable {}), &connector);
         let op_succeeds = async {
             let responder = requests
                 .try_next()
@@ -1594,8 +1741,8 @@ mod tests {
         let (stack, mut requests) =
             fidl::endpoints::create_proxy_and_stream::<fstack::StackMarker>()
                 .expect("creating a request stream and proxy for testing should succeed");
-        let connector = TestConnector { stack: Some(stack), netstack: None };
-        let op = do_ip_fwd(IpFwdEnum::Disable(IpFwdDisable {}), &connector);
+        let connector = TestConnector { stack: Some(stack), netstack: None, dhcpd: None };
+        let op = do_ip_fwd(opts::IpFwdEnum::Disable(opts::IpFwdDisable {}), &connector);
         let op_succeeds = async {
             let responder = requests
                 .try_next()
@@ -1609,5 +1756,183 @@ mod tests {
         };
         let ((), ()) =
             futures::future::try_join(op, op_succeeds).await.expect("fwd disable should succeed");
+    }
+
+    #[test_case(opts::dhcpd::DhcpdEnum::Get(opts::dhcpd::Get {
+            arg: opts::dhcpd::GetArg::Option(
+                opts::dhcpd::OptionArg {
+                    name: opts::dhcpd::Option_::SubnetMask(
+                        opts::dhcpd::SubnetMask { mask: None }) }),
+        }); "get option")]
+    #[test_case(opts::dhcpd::DhcpdEnum::Get(opts::dhcpd::Get {
+            arg: opts::dhcpd::GetArg::Parameter(opts::dhcpd::ParameterArg {
+                name: opts::dhcpd::Parameter::LeaseLength(
+                    opts::dhcpd::LeaseLength { default: None, max: None }),
+            }),
+        }); "get parameter")]
+    #[test_case(opts::dhcpd::DhcpdEnum::Set(opts::dhcpd::Set {
+            arg: opts::dhcpd::SetArg::Option(opts::dhcpd::OptionArg {
+                name: opts::dhcpd::Option_::SubnetMask(opts::dhcpd::SubnetMask {
+                    mask: Some(net_declare::std_ip_v4!("255.255.255.0")),
+                }),
+            }),
+        }); "set option")]
+    #[test_case(opts::dhcpd::DhcpdEnum::Set(opts::dhcpd::Set {
+            arg: opts::dhcpd::SetArg::Parameter(opts::dhcpd::ParameterArg {
+                name: opts::dhcpd::Parameter::LeaseLength(
+                    opts::dhcpd::LeaseLength { max: Some(42), default: Some(42) }),
+            }),
+        }); "set parameter")]
+    #[test_case(opts::dhcpd::DhcpdEnum::List(opts::dhcpd::List { arg:
+        opts::dhcpd::ListArg::Option(opts::dhcpd::OptionToken {}) }); "list option")]
+    #[test_case(opts::dhcpd::DhcpdEnum::List(
+        opts::dhcpd::List { arg: opts::dhcpd::ListArg::Parameter(opts::dhcpd::ParameterToken {}) });
+        "list parameter")]
+    #[test_case(opts::dhcpd::DhcpdEnum::Reset(opts::dhcpd::Reset {
+        arg: opts::dhcpd::ResetArg::Option(opts::dhcpd::OptionToken {}) }); "reset option")]
+    #[test_case(opts::dhcpd::DhcpdEnum::Reset(
+        opts::dhcpd::Reset {
+            arg: opts::dhcpd::ResetArg::Parameter(opts::dhcpd::ParameterToken {}) });
+        "reset parameter")]
+    #[test_case(opts::dhcpd::DhcpdEnum::ClearLeases(opts::dhcpd::ClearLeases {}); "clear leases")]
+    #[test_case(opts::dhcpd::DhcpdEnum::Start(opts::dhcpd::Start {}); "start")]
+    #[test_case(opts::dhcpd::DhcpdEnum::Stop(opts::dhcpd::Stop {}); "stop")]
+    #[fasync::run_singlethreaded(test)]
+    async fn test_do_dhcpd(cmd: opts::dhcpd::DhcpdEnum) {
+        let (dhcpd, mut requests) =
+            fidl::endpoints::create_proxy_and_stream::<fdhcp::Server_Marker>()
+                .expect("failed to create proxy and request stream for dhcp server");
+        let connector = TestConnector { stack: None, netstack: None, dhcpd: Some(dhcpd) };
+        let op = do_dhcpd(cmd.clone(), &connector);
+        let op_succeeds = async move {
+            let req = requests
+                .try_next()
+                .await
+                .expect("receiving request")
+                .expect("request stream should not have ended");
+            match cmd {
+                opts::dhcpd::DhcpdEnum::Get(opts::dhcpd::Get { arg }) => match arg {
+                    opts::dhcpd::GetArg::Option(opts::dhcpd::OptionArg { name }) => {
+                        let (code, responder) =
+                            req.into_get_option().expect("request should be of type get option");
+                        assert_eq!(
+                            <opts::dhcpd::Option_ as Into<fdhcp::OptionCode>>::into(name),
+                            code
+                        );
+                        // We don't care what the value is here, we just need something to give as
+                        // an argument to responder.send().
+                        let mut dummy_result = Ok(fdhcp::Option_::SubnetMask(
+                            net_declare::fidl_ip_v4!("255.255.255.0"),
+                        ));
+                        let () = responder
+                            .send(&mut dummy_result)
+                            .expect("responder.send should succeed");
+                        Ok(())
+                    }
+                    opts::dhcpd::GetArg::Parameter(opts::dhcpd::ParameterArg { name }) => {
+                        let (param, responder) = req
+                            .into_get_parameter()
+                            .expect("request should be of type get parameter");
+                        assert_eq!(
+                            <opts::dhcpd::Parameter as Into<fdhcp::ParameterName>>::into(name),
+                            param
+                        );
+                        // We don't care what the value is here, we just need something to give as
+                        // an argument to responder.send().
+                        let mut dummy_result = Ok(fdhcp::Parameter::Lease(fdhcp::LeaseLength {
+                            ..fdhcp::LeaseLength::EMPTY
+                        }));
+                        let () = responder
+                            .send(&mut dummy_result)
+                            .expect("responder.send should succeed");
+                        Ok(())
+                    }
+                },
+                opts::dhcpd::DhcpdEnum::Set(opts::dhcpd::Set { arg }) => match arg {
+                    opts::dhcpd::SetArg::Option(opts::dhcpd::OptionArg { name }) => {
+                        let (opt, responder) =
+                            req.into_set_option().expect("request should be of type set option");
+                        assert_eq!(
+                            <opts::dhcpd::Option_ as Into<fidl_fuchsia_net_dhcp::Option_>>::into(
+                                name
+                            ),
+                            opt
+                        );
+                        let () =
+                            responder.send(&mut Ok(())).expect("responder.send should succeed");
+                        Ok(())
+                    }
+                    opts::dhcpd::SetArg::Parameter(opts::dhcpd::ParameterArg { name }) => {
+                        let (opt, responder) = req
+                            .into_set_parameter()
+                            .expect("request should be of type set parameter");
+                        assert_eq!(
+                            <opts::dhcpd::Parameter as Into<fidl_fuchsia_net_dhcp::Parameter>>::into(name),
+                            opt
+                        );
+                        let () =
+                            responder.send(&mut Ok(())).expect("responder.send should succeed");
+                        Ok(())
+                    }
+                },
+                opts::dhcpd::DhcpdEnum::List(opts::dhcpd::List { arg }) => match arg {
+                    opts::dhcpd::ListArg::Option(opts::dhcpd::OptionToken {}) => {
+                        let responder = req
+                            .into_list_options()
+                            .expect("request should be of type list options");
+                        let () =
+                            responder.send(&mut Ok(vec![])).expect("responder.send should succeed");
+                        Ok(())
+                    }
+                    opts::dhcpd::ListArg::Parameter(opts::dhcpd::ParameterToken {}) => {
+                        let responder = req
+                            .into_list_parameters()
+                            .expect("request should be of type list options");
+                        let () =
+                            responder.send(&mut Ok(vec![])).expect("responder.send should succeed");
+                        Ok(())
+                    }
+                },
+                opts::dhcpd::DhcpdEnum::Reset(opts::dhcpd::Reset { arg }) => match arg {
+                    opts::dhcpd::ResetArg::Option(opts::dhcpd::OptionToken {}) => {
+                        let responder = req
+                            .into_reset_options()
+                            .expect("request should be of type reset options");
+                        let () =
+                            responder.send(&mut Ok(())).expect("responder.send should succeed");
+                        Ok(())
+                    }
+                    opts::dhcpd::ResetArg::Parameter(opts::dhcpd::ParameterToken {}) => {
+                        let responder = req
+                            .into_reset_parameters()
+                            .expect("request should be of type reset parameters");
+                        let () =
+                            responder.send(&mut Ok(())).expect("responder.send should succeed");
+                        Ok(())
+                    }
+                },
+                opts::dhcpd::DhcpdEnum::ClearLeases(opts::dhcpd::ClearLeases {}) => {
+                    let responder =
+                        req.into_clear_leases().expect("request should be of type clear leases");
+                    let () = responder.send(&mut Ok(())).expect("responder.send should succeed");
+                    Ok(())
+                }
+                opts::dhcpd::DhcpdEnum::Start(opts::dhcpd::Start {}) => {
+                    let responder =
+                        req.into_start_serving().expect("request should be of type start serving");
+                    let () = responder.send(&mut Ok(())).expect("responder.send should succeed");
+                    Ok(())
+                }
+                opts::dhcpd::DhcpdEnum::Stop(opts::dhcpd::Stop {}) => {
+                    let responder =
+                        req.into_stop_serving().expect("request should be of type stop serving");
+                    let () = responder.send().expect("responder.send should succeed");
+                    Ok(())
+                }
+            }
+        };
+        let ((), ()) = futures::future::try_join(op, op_succeeds)
+            .await
+            .expect("dhcp server command should succeed");
     }
 }

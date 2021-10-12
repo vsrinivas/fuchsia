@@ -162,12 +162,6 @@
             ],
             from: "#dns-resolver",
         },
-
-        // TODO(https://fxbug.dev/82130): Remove once dhcpd-cli is an ffx plugin.
-        {
-            protocol: [ "fuchsia.net.dhcp.Server" ],
-            from: "#dhcpd",
-        },
         {
             protocol: [ "fuchsia.net.http.Loader" ],
             from: "#http-client",

@@ -8,6 +8,7 @@ ffx_plugin("ffx_net") {
   args_deps = [ "//src/connectivity/network/net-cli:lib" ]
   deps = [
     "//sdk/fidl/fuchsia.developer.remotecontrol:fuchsia.developer.remotecontrol-rustc",
+    "//sdk/fidl/fuchsia.net.dhcp:fuchsia.net.dhcp-rustc",
     "//sdk/fidl/fuchsia.net.filter:fuchsia.net.filter-rustc",
     "//sdk/fidl/fuchsia.net.neighbor:fuchsia.net.neighbor-rustc",
     "//sdk/fidl/fuchsia.net.stack:fuchsia.net.stack-rustc",

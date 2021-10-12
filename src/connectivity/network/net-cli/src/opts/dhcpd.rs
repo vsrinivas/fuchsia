@@ -1,24 +1,24 @@
-// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
+
 use argh::FromArgs;
-use fidl_fuchsia_hardware_ethernet_ext::MacAddress as MacAddr;
+
+use fidl_fuchsia_net_ext::MacAddress as MacAddr;
 use std::net::Ipv4Addr;
 use std::string::ToString;
 
-/// A command-line tool for administrating dhcpd.
-#[derive(Debug, FromArgs)]
-#[argh(name = "dhcpd-cli")]
-pub struct Cli {
-    /// the primary command to execute.
+#[derive(FromArgs, Clone, Debug, PartialEq)]
+#[argh(subcommand, name = "dhcpd")]
+/// commands to control a dhcp server
+pub struct Dhcpd {
     #[argh(subcommand)]
-    pub cmd: Command,
+    pub dhcpd_cmd: DhcpdEnum,
 }
 
-/// The primary command to execute.
-#[derive(Debug, FromArgs)]
+#[derive(FromArgs, Clone, Debug, PartialEq)]
 #[argh(subcommand)]
-pub enum Command {
+pub enum DhcpdEnum {
     /// Starts the DHCP server.
     Start(Start),
     /// Stops the DHCP server.
@@ -37,17 +37,17 @@ pub enum Command {
 }
 
 /// A primary command to start the DHCP server.
-#[derive(Debug, FromArgs)]
+#[derive(Clone, Debug, FromArgs, PartialEq)]
 #[argh(subcommand, name = "start")]
 pub struct Start {}
 
 /// A primary command to stop the DHCP server.
-#[derive(Debug, FromArgs)]
+#[derive(Clone, Debug, FromArgs, PartialEq)]
 #[argh(subcommand, name = "stop")]
 pub struct Stop {}
 
 /// A primary command to retrieve the value of a DHCP option or server parameter.
-#[derive(Debug, FromArgs)]
+#[derive(Clone, Debug, FromArgs, PartialEq)]
 #[argh(subcommand, name = "get")]
 pub struct Get {
     #[argh(subcommand)]
@@ -55,7 +55,7 @@ pub struct Get {
 }
 
 /// A primary command to set the value of a DHCP option or server parameter.
-#[derive(Debug, FromArgs)]
+#[derive(Clone, Debug, FromArgs, PartialEq)]
 #[argh(subcommand, name = "set")]
 pub struct Set {
     #[argh(subcommand)]
@@ -63,7 +63,7 @@ pub struct Set {
 }
 
 /// A primary command to list the values of all DHCP options or server parameters.
-#[derive(Debug, FromArgs)]
+#[derive(Clone, Debug, FromArgs, PartialEq)]
 #[argh(subcommand, name = "list")]
 pub struct List {
     #[argh(subcommand)]
@@ -71,7 +71,7 @@ pub struct List {
 }
 
 /// A primary command to reset the values of all DHCP options or server parameters.
-#[derive(Debug, FromArgs)]
+#[derive(Clone, Debug, FromArgs, PartialEq)]
 #[argh(subcommand, name = "reset")]
 pub struct Reset {
     #[argh(subcommand)]
@@ -79,20 +79,20 @@ pub struct Reset {
 }
 
 /// A primary command to clear the leases maintained by dhcpd.
-#[derive(Debug, FromArgs)]
+#[derive(Clone, Debug, FromArgs, PartialEq)]
 #[argh(subcommand, name = "clear-leases")]
 pub struct ClearLeases {}
 
-#[derive(Debug, FromArgs)]
+#[derive(Clone, Debug, FromArgs, PartialEq)]
 #[argh(subcommand)]
 pub enum GetArg {
     /// a subcommand to specify retrieving a DHCP option.
     Option(OptionArg),
-    /// a subcommand to specify retrieving a server paramter.
+    /// a subcommand to specify retrieving a server parameter.
     Parameter(ParameterArg),
 }
 /// A primary command argument to set the value of a DHCP option or server parameter.
-#[derive(Debug, FromArgs)]
+#[derive(Clone, Debug, FromArgs, PartialEq)]
 #[argh(subcommand)]
 pub enum SetArg {
     Option(OptionArg),
@@ -100,7 +100,7 @@ pub enum SetArg {
 }
 
 /// A primary command argument to list the values of all DHCP options or server parameters.
-#[derive(Debug, FromArgs)]
+#[derive(Clone, Debug, FromArgs, PartialEq)]
 #[argh(subcommand)]
 pub enum ListArg {
     Option(OptionToken),
@@ -108,7 +108,7 @@ pub enum ListArg {
 }
 
 /// A primary command argument to reset the values of all DHCP options or server parameters.
-#[derive(Debug, FromArgs)]
+#[derive(Clone, Debug, FromArgs, PartialEq)]
 #[argh(subcommand)]
 pub enum ResetArg {
     Option(OptionToken),
@@ -116,7 +116,7 @@ pub enum ResetArg {
 }
 
 /// A secondary command indicating a DHCP option argument.
-#[derive(Debug, FromArgs)]
+#[derive(Clone, Debug, FromArgs, PartialEq)]
 #[argh(subcommand, name = "option")]
 pub struct OptionArg {
     /// the name of the DHCP option to operate on.
@@ -125,7 +125,7 @@ pub struct OptionArg {
 }
 
 /// A secondary command indicating a server parameter argument.
-#[derive(Debug, FromArgs)]
+#[derive(Clone, Debug, FromArgs, PartialEq)]
 #[argh(subcommand, name = "parameter")]
 pub struct ParameterArg {
     /// the name of the server parameter to operate on.
@@ -133,17 +133,17 @@ pub struct ParameterArg {
     pub name: Parameter,
 }
 /// Perform the command on DHCP options.
-#[derive(Debug, FromArgs)]
+#[derive(Clone, Debug, FromArgs, PartialEq)]
 #[argh(subcommand, name = "option")]
 pub struct OptionToken {}
 
 /// Perform the command on server parameters.
-#[derive(Debug, FromArgs)]
+#[derive(Clone, Debug, FromArgs, PartialEq)]
 #[argh(subcommand, name = "parameter")]
 pub struct ParameterToken {}
 
 /// The name of the DHCP option to operate on.
-#[derive(Clone, Debug, FromArgs)]
+#[derive(Clone, Debug, FromArgs, PartialEq)]
 #[argh(subcommand)]
 pub enum Option_ {
     SubnetMask(SubnetMask),
@@ -414,8 +414,9 @@ impl Into<fidl_fuchsia_net_dhcp::Option_> for Option_ {
 #[argh(subcommand, name = "subnet-mask")]
 pub struct SubnetMask {
     /// a 32-bit IPv4 subnet mask.
+    // pub(crate) access to enable unit testing.
     #[argh(option)]
-    mask: Option<Ipv4Addr>,
+    pub(crate) mask: Option<Ipv4Addr>,
 }
 
 impl Into<fidl_fuchsia_net_dhcp::Option_> for SubnetMask {
@@ -1708,11 +1709,8 @@ pub struct PermittedMacs {
 
 impl Into<fidl_fuchsia_net_dhcp::Parameter> for PermittedMacs {
     fn into(self) -> fidl_fuchsia_net_dhcp::Parameter {
-        let addrs: Vec<fidl_fuchsia_net::MacAddress> = self
-            .macs
-            .iter()
-            .map(|addr| fidl_fuchsia_net::MacAddress { octets: addr.octets })
-            .collect();
+        let addrs: Vec<fidl_fuchsia_net::MacAddress> =
+            self.macs.into_iter().map(fidl_fuchsia_net_ext::MacAddress::into).collect();
         fidl_fuchsia_net_dhcp::Parameter::PermittedMacs(addrs)
     }
 }
@@ -1737,13 +1735,10 @@ impl Into<fidl_fuchsia_net_dhcp::Parameter> for StaticallyAssignedAddrs {
     fn into(self) -> fidl_fuchsia_net_dhcp::Parameter {
         let assignments: Vec<fidl_fuchsia_net_dhcp::StaticAssignment> = self
             .hosts
-            .iter()
+            .into_iter()
             .zip(self.assigned_addrs)
             .map(|(host, addr)| {
-                (
-                    fidl_fuchsia_net::MacAddress { octets: host.octets },
-                    fidl_fuchsia_net::Ipv4Address { addr: addr.octets() },
-                )
+                (host.into(), fidl_fuchsia_net::Ipv4Address { addr: addr.octets() })
             })
             .map(|(host, assigned_addr)| fidl_fuchsia_net_dhcp::StaticAssignment {
                 host: Some(host),
@@ -1779,13 +1774,15 @@ impl Into<fidl_fuchsia_net_dhcp::Parameter> for ArpProbe {
 #[argh(subcommand, name = "lease-length")]
 pub struct LeaseLength {
     /// the default lease length, in seconds, to be issued to clients.
+    // pub(crate) access to enable unit testing.
     #[argh(option)]
-    default: Option<u32>,
+    pub(crate) default: Option<u32>,
     /// the maximum lease length value, in seconds, which the server will issue to clients who
     /// have requested a specific lease length. With the default value of 0, the max lease length is
     /// equivalent to the default lease length.
+    // pub(crate) access to enable unit testing.
     #[argh(option)]
-    max: Option<u32>,
+    pub(crate) max: Option<u32>,
 }
 
 impl Into<fidl_fuchsia_net_dhcp::Parameter> for LeaseLength {
