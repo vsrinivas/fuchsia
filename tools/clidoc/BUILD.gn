@@ -30,8 +30,10 @@ if (is_host) {
     deps = [
       "//third_party/rust_crates:anyhow",
       "//third_party/rust_crates:argh",
+      "//third_party/rust_crates:flate2",
       "//third_party/rust_crates:log",
       "//third_party/rust_crates:simplelog",
+      "//third_party/rust_crates:tar",
       "//third_party/rust_crates:tempfile",
     ]
   }

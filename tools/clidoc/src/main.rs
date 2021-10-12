@@ -6,6 +6,7 @@
 use {
     anyhow::{bail, Context, Result},
     argh::FromArgs,
+    flate2::{write::GzEncoder, Compression},
     log::{debug, info, LevelFilter},
     std::{
         collections::HashSet,
@@ -15,7 +16,9 @@ use {
         io::{BufWriter, Write},
         path::{Path, PathBuf},
         process::Command,
+        sync::Once,
     },
+    tar::Builder,
 };
 
 use simplelog::{Config, SimpleLogger};
@@ -44,6 +47,13 @@ struct Opt {
     /// increase text output
     #[argh(switch, short = 'v')]
     verbose: bool,
+
+    /// path for tarball- if set the output will be compressed as a tarball
+    /// and intermediate files will be cleaned up
+    /// For example: "clidoc_out.tar.gz". Note that .tar.gz is not automatically
+    /// added as a file extension.
+    #[argh(option)]
+    tarball_dir: Option<PathBuf>,
 
     /// commands to run, otherwise defaults to internal list of commands.
     /// relative paths are on the input_path. Absolute paths are used as-is.
@@ -96,19 +106,30 @@ fn main() -> Result<()> {
     run(opt)
 }
 
+static INIT_LOGGER: Once = Once::new();
+
+fn set_up_logger(opt: &Opt) {
+    INIT_LOGGER.call_once(|| {
+        if opt.verbose {
+            SimpleLogger::init(LevelFilter::Debug, Config::default())
+                .expect("Set logger to debug level");
+            debug!("Debug logging enabled.");
+        } else if opt.quiet {
+            SimpleLogger::init(LevelFilter::Warn, Config::default())
+                .expect("Set logger to warn level");
+        } else {
+            SimpleLogger::init(LevelFilter::Info, Config::default())
+                .expect("Set logger to info level");
+        }
+    });
+}
+
 fn run(opt: Opt) -> Result<()> {
     if opt.quiet && opt.verbose {
         bail!("cannot use --quiet and --verbose together");
     }
 
-    if opt.verbose {
-        SimpleLogger::init(LevelFilter::Debug, Config::default())?;
-        debug!("Debug logging enabled.");
-    } else if opt.quiet {
-        SimpleLogger::init(LevelFilter::Warn, Config::default())?;
-    } else {
-        SimpleLogger::init(LevelFilter::Info, Config::default())?;
-    }
+    set_up_logger(&opt);
 
     // Set the directory for the command executables.
     let input_path = &opt.in_dir;
@@ -155,6 +176,16 @@ fn run(opt: Opt) -> Result<()> {
 
     info!("Generated documentation at dir: {}", &output_path.display());
 
+    if let Some(tardir) = opt.tarball_dir {
+        info!("Tarballing output at {:?}", tardir);
+        let tar_gz = File::create(tardir)?;
+        let enc = GzEncoder::new(tar_gz, Compression::default());
+        let mut tar = Builder::new(enc);
+        tar.append_dir_all(".", output_path.to_str().expect("Get file name of outdir"))?;
+
+        info!("Cleaning up {:?}", output_path);
+        fs::remove_dir_all(output_path)?
+    }
     Ok(())
 }
 
@@ -345,7 +376,7 @@ fn md_path(file_stem: &OsStr, dir: &PathBuf) -> PathBuf {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use {super::*, flate2::read::GzDecoder, tar::Archive};
 
     #[test]
     fn run_test_commands() {
@@ -367,5 +398,32 @@ mod tests {
         let expected_contents = fs::read_to_string(expected).unwrap();
 
         assert_eq!(generated_contents, expected_contents);
+    }
+
+    #[test]
+    fn run_test_archive_and_cleanup() {
+        let tmp_dir = tempfile::Builder::new().prefix("clidoc-tar-test").tempdir().unwrap();
+        let argv = [
+            "--tarball-dir",
+            "clidoc_out.tar.gz",
+            "-v",
+            "-o",
+            &tmp_dir.path().to_str().unwrap(),
+            "clidoc_test_data/tool_with_subcommands.sh",
+        ];
+        let cmd = "clidoc-test-archive";
+        let opt = Opt::from_args(&[cmd], &argv).unwrap();
+        run(opt).expect("tool_with_subcommands could not be generated");
+
+        // With the tarball-dir flag set, the md file should be zipped
+        // and not exist.
+        assert!(!tmp_dir.path().join("tool_with_subcommands.md").exists());
+
+        let tar_gz = File::open("clidoc_out.tar.gz").expect("open tarball");
+        let tar = GzDecoder::new(tar_gz);
+        let mut archive = Archive::new(tar);
+        archive.unpack(".").expect("extract tar");
+
+        assert!(Path::new("tool_with_subcommands.md").exists());
     }
 }
