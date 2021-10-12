@@ -12,5 +12,6 @@ source_set("stream") {
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/zx",
     "//zircon/system/ulib/zxtest",
+    "//zircon/system/utest/core/pager:userpager",
   ]
 }

@@ -58,6 +58,8 @@ zx_status_t StreamDispatcher::ReadVector(VmAspace* current_aspace, user_out_iove
     return status;
   }
 
+  VmObjectDispatcher::ShrinkInhibitGuard shrink_guard(&vmo_->shrink_lock());
+
   size_t length = 0u;
   uint64_t offset = 0u;
 
@@ -89,6 +91,8 @@ zx_status_t StreamDispatcher::ReadVectorAt(VmAspace* current_aspace, user_out_io
   if (status != ZX_OK) {
     return status;
   }
+
+  VmObjectDispatcher::ShrinkInhibitGuard shrink_guard(&vmo_->shrink_lock());
 
   uint64_t content_size = vmo_->GetContentSize();
   if (offset >= content_size) {

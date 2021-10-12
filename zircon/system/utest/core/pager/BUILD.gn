@@ -9,17 +9,34 @@ source_set("pager") {
   ]
 
   testonly = true
-  sources = [
-    "pager.cc",
-    "test_thread.cc",
-    "userpager.cc",
-  ]
+  sources = [ "pager.cc" ]
   deps = [
+    ":userpager",
     "//sdk/lib/fdio",
     "//zircon/system/ulib/elf-search",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/fzl",
-    "//zircon/system/ulib/inspector",
+    "//zircon/system/ulib/zx",
+    "//zircon/system/ulib/zxtest",
+  ]
+}
+
+source_set("userpager") {
+  configs += [
+    "//build/unification/config:zircon-migrated",
+    "//build/config:all_source",
+  ]
+
+  testonly = true
+  sources = [
+    "test_thread.cc",
+    "test_thread.h",
+    "userpager.cc",
+    "userpager.h",
+  ]
+  deps = [ "//zircon/system/ulib/inspector" ]
+  public_deps = [
+    "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/sync",
     "//zircon/system/ulib/zx",
     "//zircon/system/ulib/zxtest",

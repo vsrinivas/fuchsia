@@ -79,6 +79,15 @@ class VmObjectDispatcher final : public SoloDispatcher<VmObjectDispatcher, ZX_DE
   const fbl::RefPtr<VmObject>& vmo() const { return vmo_; }
   zx_koid_t pager_koid() const { return pager_koid_; }
 
+  // The shrink lock exists to prevent the VMO from being shrunk whilst stream reads are taking
+  // place, which would otherwise cause errors to be returned to clients.  Readers that care (e.g.
+  // reads that come via stream APIs) should acquire a ShrinkInhibitGuard whilst shrinking should
+  // acquire the ShrinkGuard.  For now, a mutex is used but it is possible that this could become a
+  // reader/writer lock at some point.
+  using ShrinkInhibitGuard = Guard<Mutex>;
+  using ShrinkGuard = Guard<Mutex>;
+  Lock<Mutex>& shrink_lock() const { return shrink_lock_; }
+
  private:
   explicit VmObjectDispatcher(fbl::RefPtr<VmObject> vmo, uint64_t size, zx_koid_t pager_koid,
                               InitialMutability initial_mutability);
@@ -96,6 +105,10 @@ class VmObjectDispatcher final : public SoloDispatcher<VmObjectDispatcher, ZX_DE
 
   // Indicates whether the VMO was immutable at creation time.
   const InitialMutability initial_mutability_;
+
+  // See the comment above near the shrink_lock() method. Note that this lock might be held whilst
+  // waiting for page requests to be fulfilled.
+  mutable DECLARE_MUTEX(VmObjectDispatcher) shrink_lock_;
 };
 
 zx_info_vmo_t VmoToInfoEntry(const VmObject* vmo, bool is_handle, zx_rights_t handle_rights);

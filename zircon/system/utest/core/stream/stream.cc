@@ -7,11 +7,15 @@
 #include <lib/zx/vmo.h>
 #include <limits.h>
 #include <stdio.h>
+#include <unistd.h>
 #include <zircon/syscalls/object.h>
 
+#include <thread>
 #include <vector>
 
 #include <zxtest/zxtest.h>
+
+#include "zircon/system/utest/core/pager/userpager.h"
 
 extern "C" __WEAK zx_handle_t get_root_resource(void);
 
@@ -679,6 +683,77 @@ TEST(StreamTestCase, ExtendFillsWithZeros) {
   ASSERT_EQ('3', scratch[1]);
   ASSERT_EQ('x', scratch[2]);
   ASSERT_EQ('x', scratch[3]);
+}
+
+TEST(StreamTestCase, ShrinkGuard) {
+  pager_tests::UserPager pager;
+  ASSERT_TRUE(pager.Init());
+
+  pager_tests::Vmo* vmo;
+  ASSERT_TRUE(pager.CreateVmo(80, &vmo));
+
+  zx::stream stream;
+  ASSERT_OK(zx::stream::create(ZX_STREAM_MODE_READ, vmo->vmo(), 0, &stream));
+
+  std::thread thread([&] {
+    char buffer[16] = {};
+    zx_iovec_t vec = {
+        .buffer = buffer,
+        .capacity = sizeof(buffer),
+    };
+    size_t actual = 42u;
+    ASSERT_OK(stream.readv(0, &vec, 1, &actual));
+  });
+
+  pager.WaitForPageRead(vmo, 0, 1, ZX_TIME_INFINITE);
+
+  // This should block until the read has finished.
+  bool done = false;
+  std::thread set_size_thread([&] {
+    vmo->vmo().set_size(0);
+    done = true;
+  });
+
+  // This is a halting problem so all we can do is sleep.
+  usleep(100000);
+  ASSERT_FALSE(done);
+  pager.SupplyPages(vmo, 0, 1);
+
+  set_size_thread.join();
+  thread.join();
+
+  // The only way to test that shrink holds up reads is to repeatedly issue reads and shrinks and we
+  // expect the reads to not fail with an error.
+  std::thread read_thread([&] {
+    for (int i = 0; i < 100; ++i) {
+      char buffer[16] = {};
+      zx_iovec_t vec = {
+          .buffer = buffer,
+          .capacity = sizeof(buffer),
+      };
+      size_t actual = 42u;
+      ASSERT_OK(stream.readv(0, &vec, 1, &actual));
+      ASSERT_TRUE(actual == 0 || actual == 16);
+    }
+  });
+
+  std::thread supply_pages_thread([&] {
+    for (int i = 0; i < 100; ++i) {
+      pager.WaitForPageRead(vmo, 0, 1, ZX_TIME_INFINITE);
+      pager.SupplyPages(vmo, 0, 1);
+    }
+  });
+
+  std::thread shrink_thread([&] {
+    for (int i = 0; i < 100; ++i) {
+      vmo->vmo().set_size(16);
+      vmo->vmo().set_size(0);
+    }
+  });
+
+  read_thread.join();
+  shrink_thread.join();
+  supply_pages_thread.join();
 }
 
 }  // namespace

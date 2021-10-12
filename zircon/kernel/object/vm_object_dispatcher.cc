@@ -130,7 +130,16 @@ zx_status_t VmObjectDispatcher::Write(VmAspace* current_aspace, user_in_ptr<cons
 
 zx_status_t VmObjectDispatcher::SetSize(uint64_t size) {
   canary_.Assert();
+
   Guard<Mutex> guard{get_lock()};
+
+  // If this involves shrinking the VMO, then we need to acquire the shrink lock.
+  std::optional<ShrinkGuard> shrink_guard;
+  if (size < content_size_) {
+    // We can't acquire this lock whilst we're holding our lock.  It won't matter if this operation
+    // turns into a grow (if another thread slips in first and changes the VMO's size).
+    guard.CallUnlocked([&] { shrink_guard.emplace(&shrink_lock_); });
+  }
 
   zx_status_t status = vmo_->Resize(size);
   if (status != ZX_OK) {
