@@ -57,14 +57,22 @@
           "name": "big_cluster",
           "cluster_index": 0,
           "handler": "big_cluster_handler",
-          "logical_cpu_numbers": [2, 3, 4, 5],
+          "logical_cpu_numbers": [
+            2,
+            3,
+            4,
+            5
+          ],
           "normperfs_per_ghz": 0.5241090146750524
         },
         {
           "name": "little_cluster",
           "cluster_index": 1,
           "handler": "little_cluster_handler",
-          "logical_cpu_numbers": [0, 1],
+          "logical_cpu_numbers": [
+            0,
+            1
+          ],
           "normperfs_per_ghz": 0.23551734203752356
         }
       ],
@@ -83,7 +91,7 @@
             0,
             1
           ],
-          "min_performance_normperfs": 1.11,
+          "min_performance_normperfs": 1.76,
           "static_power_w": 0.13,
           "dynamic_power_per_normperf_w": 1.221
         },
@@ -101,25 +109,16 @@
             1,
             1
           ],
-          "min_performance_normperfs": 1.4,
+          "min_performance_normperfs": 1.68,
           "static_power_w": 0.05,
           "dynamic_power_per_normperf_w": 0.815
         },
         {
           "cluster_pstates": [
             1,
-            2
-          ],
-          "min_performance_normperfs": 4.37,
-          "static_power_w": 0.05,
-          "dynamic_power_per_normperf_w": 0.813
-        },
-        {
-          "cluster_pstates": [
-            1,
             3
           ],
-          "min_performance_normperfs": 4.31,
+          "min_performance_normperfs": 4.32,
           "static_power_w": 0.05,
           "dynamic_power_per_normperf_w": 0.81
         },
@@ -128,7 +127,7 @@
             2,
             0
           ],
-          "min_performance_normperfs": 0.57,
+          "min_performance_normperfs": 0.73,
           "static_power_w": 0.07,
           "dynamic_power_per_normperf_w": 0.772
         },
@@ -137,25 +136,16 @@
             2,
             1
           ],
-          "min_performance_normperfs": 1.34,
+          "min_performance_normperfs": 1.6,
           "static_power_w": 0.05,
           "dynamic_power_per_normperf_w": 0.74
         },
         {
           "cluster_pstates": [
             2,
-            2
-          ],
-          "min_performance_normperfs": 4.17,
-          "static_power_w": 0.05,
-          "dynamic_power_per_normperf_w": 0.737
-        },
-        {
-          "cluster_pstates": [
-            2,
             3
           ],
-          "min_performance_normperfs": 4.1,
+          "min_performance_normperfs": 4.12,
           "static_power_w": 0.05,
           "dynamic_power_per_normperf_w": 0.733
         },
@@ -164,43 +154,25 @@
             3,
             0
           ],
-          "min_performance_normperfs": 0.28,
+          "min_performance_normperfs": 0.36,
           "static_power_w": 0.07,
           "dynamic_power_per_normperf_w": 0.695
         },
         {
           "cluster_pstates": [
             3,
-            1
-          ],
-          "min_performance_normperfs": 0.61,
-          "static_power_w": 0.05,
-          "dynamic_power_per_normperf_w": 0.66
-        },
-        {
-          "cluster_pstates": [
-            3,
             2
           ],
-          "min_performance_normperfs": 3.97,
+          "min_performance_normperfs": 0.85,
           "static_power_w": 0.05,
           "dynamic_power_per_normperf_w": 0.655
-        },
-        {
-          "cluster_pstates": [
-            3,
-            3
-          ],
-          "min_performance_normperfs": 3.89,
-          "static_power_w": 0.05,
-          "dynamic_power_per_normperf_w": 0.65
         },
         {
           "cluster_pstates": [
             4,
             0
           ],
-          "min_performance_normperfs": 3.6,
+          "min_performance_normperfs": 3.87,
           "static_power_w": 0.07,
           "dynamic_power_per_normperf_w": 0.643
         },
@@ -209,25 +181,16 @@
             4,
             1
           ],
-          "min_performance_normperfs": 3.41,
+          "min_performance_normperfs": 3.61,
           "static_power_w": 0.05,
           "dynamic_power_per_normperf_w": 0.604
         },
         {
           "cluster_pstates": [
             4,
-            2
-          ],
-          "min_performance_normperfs": 3.73,
-          "static_power_w": 0.05,
-          "dynamic_power_per_normperf_w": 0.599
-        },
-        {
-          "cluster_pstates": [
-            4,
             4
           ],
-          "min_performance_normperfs": 0.09,
+          "min_performance_normperfs": 0.13,
           "static_power_w": 0.05,
           "dynamic_power_per_normperf_w": 0.593
         },
@@ -243,18 +206,9 @@
         {
           "cluster_pstates": [
             5,
-            2
-          ],
-          "min_performance_normperfs": 3.31,
-          "static_power_w": 0.0,
-          "dynamic_power_per_normperf_w": 0.564
-        },
-        {
-          "cluster_pstates": [
-            5,
             4
           ],
-          "min_performance_normperfs": 2.77,
+          "min_performance_normperfs": 3.19,
           "static_power_w": 0.0,
           "dynamic_power_per_normperf_w": 0.556
         },
@@ -263,7 +217,7 @@
             6,
             2
           ],
-          "min_performance_normperfs": 2.92,
+          "min_performance_normperfs": 2.87,
           "static_power_w": 0.0,
           "dynamic_power_per_normperf_w": 0.554
         },
@@ -272,7 +226,7 @@
             6,
             4
           ],
-          "min_performance_normperfs": 1.53,
+          "min_performance_normperfs": 1.97,
           "static_power_w": 0.0,
           "dynamic_power_per_normperf_w": 0.544
         }
@@ -327,11 +281,11 @@
         "sample_interval": 1.0,
         "filter_time_constant": 5.0,
         "target_temperature": 90.0,
-        "e_integral_min": -52.0,
+        "e_integral_min": -39.37,
         "e_integral_max": 0.0,
-        "sustainable_power": 6.24,
+        "sustainable_power": 6.22,
         "proportional_gain": 0.0,
-        "integral_gain": 0.12
+        "integral_gain": 0.158
       },
       "thermal_shutdown_temperature": 100.0,
       "throttle_end_delay": 60.0
