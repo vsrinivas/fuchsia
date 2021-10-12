@@ -1102,7 +1102,7 @@ AmlSdmmc::TuneWindow AmlSdmmc::FindLargestDelayWindow(cpp20::span<const uint8_t>
   char tuning_results[std::max(AmlSdmmcClock::kMaxClkDiv, AmlSdmmcClock::kMaxDelay) + 2];
 
   for (uint32_t delay = 0; delay <= max_delay(); delay++) {
-    SetDelayLines(delay);
+    SetOneDelayLine(delay);
 
     if (TuningTestSettings(tuning_blk, tuning_cmd_idx)) {
       tuning_results[delay] = '|';
@@ -1146,8 +1146,15 @@ void AmlSdmmc::SetAdjDelay(uint32_t adj_delay) {
   }
 }
 
+void AmlSdmmc::SetOneDelayLine(uint32_t delay) {
+  if (board_config_.version_3) {
+    AmlSdmmcDelay1::Get().ReadFrom(&mmio_).set_dly_0(delay).WriteTo(&mmio_);
+  } else {
+    AmlSdmmcDelayV2::Get().ReadFrom(&mmio_).set_dly_0(delay).WriteTo(&mmio_);
+  }
+}
+
 void AmlSdmmc::SetDelayLines(uint32_t delay) {
-  
   if (board_config_.version_3) {
     AmlSdmmcDelay1::Get()
         .ReadFrom(&mmio_)
@@ -1206,6 +1213,7 @@ zx_status_t AmlSdmmc::SdmmcPerformTuning(uint32_t tuning_cmd_idx) {
   TuneWindow largest_window;
   for (uint32_t i = 0; i < clk.cfg_div(); i++) {
     SetAdjDelay(i);
+    SetDelayLines(0);
     TuneWindow window = FindLargestDelayWindow(tuning_blk, tuning_cmd_idx);
     if (window.size > largest_window.size) {
       largest_adj_delay = i;
@@ -1232,6 +1240,7 @@ zx_status_t AmlSdmmc::SdmmcPerformTuning(uint32_t tuning_cmd_idx) {
   const uint32_t best_adj_delay = (largest_adj_delay + (clk.cfg_div() / 2)) % clk.cfg_div();
 
   SetAdjDelay(best_adj_delay);
+  SetDelayLines(delay);
 
   AML_SDMMC_INFO("Clock divider %u, adj delay %u, delay %u", clk.cfg_div(), best_adj_delay,
                  delay);

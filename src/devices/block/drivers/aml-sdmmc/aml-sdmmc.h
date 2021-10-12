@@ -103,6 +103,7 @@ class AmlSdmmc : public AmlSdmmcType, public ddk::SdmmcProtocol<AmlSdmmc, ddk::b
   TuneWindow FindLargestDelayWindow(cpp20::span<const uint8_t> tuning_blk, uint32_t tuning_cmd_idx);
 
   void SetAdjDelay(uint32_t adj_delay);
+  void SetOneDelayLine(uint32_t delay);
   void SetDelayLines(uint32_t delay);
   uint32_t max_delay() const;
 
