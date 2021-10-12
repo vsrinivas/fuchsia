@@ -497,6 +497,9 @@ zx_status_t X86PageTableBase::GetMapping(volatile pt_entry_t* table, vaddr_t vad
   }
 
   volatile pt_entry_t* next_table = get_next_table_from_entry(pt_val);
+  // TODO(fxbug.dev/66978): If you find that the following assert is firing and you're running QEMU
+  // TCG (i.e. no KVM), then you may be observing a known bug in upstream QEMU.  See fxbug.dev/66978
+  // for details.
   DEBUG_ASSERT(paddr_to_vm_page(X86_VIRT_TO_PHYS(next_table))->state() != vm_page_state::FREE);
   return GetMapping(next_table, vaddr, lower_level(level), ret_level, mapping);
 }
