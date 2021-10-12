@@ -15,7 +15,6 @@ executable("basemgr_bin") {
   deps = [
     ":lib",
     "//garnet/public/lib/fostr/fidl/fuchsia.modular.session",
-    "//garnet/public/lib/json",
     "//sdk/fidl/fuchsia.hardware.power.statecontrol",
     "//sdk/fidl/fuchsia.modular",
     "//sdk/fidl/fuchsia.modular.internal",
@@ -31,6 +30,7 @@ executable("basemgr_bin") {
     "//src/lib/files",
     "//src/lib/fsl",
     "//src/lib/fxl",
+    "//src/lib/json_parser",
     "//src/modular/bin/basemgr/cobalt",
     "//src/modular/lib/async/cpp:future",
     "//src/modular/lib/common:async_holder",

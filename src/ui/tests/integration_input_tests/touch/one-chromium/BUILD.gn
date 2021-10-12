@@ -12,7 +12,6 @@ executable("bin") {
   output_name = "one-chromium"
   sources = [ "one-chromium.cc" ]
   deps = [
-    "//garnet/public/lib/json",
     "//sdk/fidl/fuchsia.sys",
     "//sdk/fidl/fuchsia.ui.app",
     "//sdk/fidl/fuchsia.web",
@@ -22,6 +21,7 @@ executable("bin") {
     "//src/chromium/web_engine/meta/shards:web_engine_view",
     "//src/lib/fsl",
     "//src/lib/fxl",
+    "//src/lib/json_parser",
     "//src/ui/tests/integration_input_tests/touch:test.touch",
     "//third_party/rapidjson",
     "//zircon/system/ulib/async-loop:async-loop-cpp",

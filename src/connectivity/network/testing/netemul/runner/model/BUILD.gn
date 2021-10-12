@@ -27,8 +27,8 @@ source_set("model") {
   ]
 
   public_deps = [
-    "//garnet/public/lib/json",
     "//src/connectivity/network/testing/netemul/lib/fidl:network",
+    "//src/lib/json_parser",
   ]
 
   deps = [
@@ -45,9 +45,9 @@ executable("model_unittest") {
   testonly = true
   deps = [
     ":model",
-    "//garnet/public/lib/json",
     "//sdk/fidl/fuchsia.logger:fuchsia.logger_llcpp",
     "//src/lib/fxl/test:gtest_main",
+    "//src/lib/json_parser",
     "//src/lib/pkg_url",
     "//src/lib/testing/loop_fixture",
     "//third_party/rapidjson",

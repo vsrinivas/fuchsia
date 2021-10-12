@@ -22,11 +22,11 @@ source_set("agent_runner") {
   ]
 
   deps = [
-    "//garnet/public/lib/json",
     "//sdk/fidl/fuchsia.intl",
     "//sdk/fidl/fuchsia.io",
     "//sdk/lib/fdio",
     "//src/lib/fsl",
+    "//src/lib/json_parser",
     "//src/modular/bin/sessionmgr:component_context",
     "//src/modular/lib/common:teardown",
     "//src/modular/lib/deprecated_service_provider",

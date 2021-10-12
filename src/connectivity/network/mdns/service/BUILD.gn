@@ -91,7 +91,6 @@ source_set("source_set") {
 
   public_deps = [
     "//garnet/public/lib/fostr",
-    "//garnet/public/lib/json",
     "//sdk/fidl/fuchsia.device",
     "//sdk/fidl/fuchsia.net",
     "//sdk/fidl/fuchsia.net.interfaces",
@@ -103,6 +102,7 @@ source_set("source_set") {
     "//src/connectivity/network/lib/net_interfaces/cpp",
     "//src/lib/fsl",
     "//src/lib/inet",
+    "//src/lib/json_parser",
     "//src/lib/json_parser",
     "//third_party/rapidjson",
   ]

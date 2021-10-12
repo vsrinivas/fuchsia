@@ -21,8 +21,8 @@ source_set("modular_config") {
 
   deps = [
     ":json_xdr",
-    "//garnet/public/lib/json",
     "//src/lib/fsl",
+    "//src/lib/json_parser",
     "//src/modular/lib/fidl:clone",
     "//src/modular/lib/fidl:json_xdr",
     "//third_party/rapidjson",

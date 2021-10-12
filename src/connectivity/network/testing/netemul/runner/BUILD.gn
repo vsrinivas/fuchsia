@@ -47,7 +47,6 @@ source_set("src") {
   ]
 
   deps = [
-    "//garnet/public/lib/json",
     "//sdk/fidl/fuchsia.diagnostics",
     "//sdk/fidl/fuchsia.kernel",
     "//sdk/fidl/fuchsia.net",
@@ -67,6 +66,7 @@ source_set("src") {
     "//src/lib/cmx",
     "//src/lib/fsl",
     "//src/lib/fxl",
+    "//src/lib/json_parser",
     "//src/lib/pkg_url",
     "//src/storage/memfs:memfs-cpp",
     "//src/virtualization/lib/guest_config",
@@ -128,7 +128,6 @@ executable("sandbox_unittest") {
 
   deps = [
     ":src",
-    "//garnet/public/lib/json",
     "//sdk/fidl/fuchsia.sys",
     "//sdk/fidl/fuchsia.virtualization",
     "//sdk/lib/fdio",
@@ -138,6 +137,7 @@ executable("sandbox_unittest") {
     "//src/lib/fsl",
     "//src/lib/fxl",
     "//src/lib/fxl/test:gtest_main",
+    "//src/lib/json_parser",
     "//src/lib/pkg_url",
     "//src/lib/testing/loop_fixture",
     "//src/lib/testing/predicates",

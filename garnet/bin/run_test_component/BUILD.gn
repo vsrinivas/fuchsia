@@ -24,7 +24,6 @@ source_set("lib") {
   ]
 
   public_deps = [
-    "//garnet/public/lib/json",
     "//sdk/fidl/fuchsia.boot",
     "//sdk/fidl/fuchsia.device",
     "//sdk/fidl/fuchsia.hardware.pty",
@@ -51,6 +50,7 @@ source_set("lib") {
     "//sdk/lib/syslog/cpp",
     "//src/lib/cmx",
     "//src/lib/fxl",
+    "//src/lib/json_parser",
     "//src/lib/pkg_url",
     "//src/sys/component_index/fidl:index",
     "//third_party/rapidjson",

@@ -15,7 +15,6 @@ executable("configuration_tests") {
   sources = [ "color_transform_manager_test.cc" ]
 
   deps = [
-    "//garnet/public/lib/json",
     "//sdk/fidl/fuchsia.accessibility",
     "//sdk/fidl/fuchsia.sys",
     "//sdk/lib/fidl/cpp",
@@ -24,6 +23,7 @@ executable("configuration_tests") {
     "//sdk/lib/syslog/cpp",
     "//sdk/lib/vfs/cpp",
     "//src/lib/fxl/test:gtest_main",
+    "//src/lib/json_parser",
     "//src/lib/testing/loop_fixture",
     "//src/ui/a11y/lib/configuration",
     "//third_party/rapidjson",

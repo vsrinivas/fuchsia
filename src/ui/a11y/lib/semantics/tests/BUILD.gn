@@ -91,7 +91,6 @@ executable("semantics_tests") {
   ]
   public_deps = [ "//sdk/fidl/fuchsia.accessibility.semantics" ]
   deps = [
-    "//garnet/public/lib/json",
     "//sdk/fidl/fuchsia.accessibility",
     "//sdk/fidl/fuchsia.sys",
     "//sdk/lib/fidl/cpp",
@@ -104,6 +103,7 @@ executable("semantics_tests") {
     "//src/lib/files",
     "//src/lib/fsl",
     "//src/lib/fxl/test:gtest_main",
+    "//src/lib/json_parser",
     "//src/lib/testing/loop_fixture",
     "//src/ui/a11y/bin/a11y_manager/tests/util",
     "//src/ui/a11y/lib/screen_reader/util",
