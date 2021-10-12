@@ -2,10 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use num_derive::FromPrimitive;
+use num_traits::FromPrimitive;
 
 #[repr(u8)]
-#[derive(FromPrimitive)]
+#[derive(num_derive::FromPrimitive)]
 pub enum DescriptorType {
     Device = 0x01,
     Config = 0x02,
@@ -217,6 +217,141 @@ impl HidDescriptorEntry {
 
     pub fn to_array(self) -> [u8; std::mem::size_of::<Self>()] {
         unsafe { std::mem::transmute::<Self, [u8; std::mem::size_of::<Self>()]>(self) }
+    }
+}
+
+pub struct DescriptorIterator<'a> {
+    offset: usize,
+    buffer: &'a [u8],
+}
+
+impl<'a> DescriptorIterator<'a> {
+    pub fn new(buffer: &'a [u8]) -> DescriptorIterator<'a> {
+        DescriptorIterator { offset: 0, buffer }
+    }
+}
+
+pub struct HidDescriptorIter<'a> {
+    offset: usize,
+    buffer: &'a [u8],
+}
+
+impl<'a> HidDescriptorIter<'a> {
+    pub fn new(buffer: &'a [u8]) -> HidDescriptorIter<'a> {
+        HidDescriptorIter { offset: std::mem::size_of::<HidDescriptor>(), buffer }
+    }
+
+    pub fn get(&self) -> HidDescriptor {
+        let mut info = [0; std::mem::size_of::<HidDescriptor>()];
+        info.copy_from_slice(&self.buffer[0..(std::mem::size_of::<HidDescriptor>())]);
+        HidDescriptor::from_array(info)
+    }
+}
+
+impl<'a> Iterator for HidDescriptorIter<'a> {
+    type Item = HidDescriptorEntry;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.offset + std::mem::size_of::<HidDescriptorEntry>() > self.buffer.len() {
+            return None;
+        }
+
+        let mut entry = [0; std::mem::size_of::<HidDescriptorEntry>()];
+        entry.copy_from_slice(
+            &self.buffer[self.offset..self.offset + std::mem::size_of::<HidDescriptorEntry>()],
+        );
+        Some(HidDescriptorEntry::from_array(entry))
+    }
+}
+
+pub enum Descriptor<'a> {
+    Config(ConfigurationDescriptor),
+    Interface(InterfaceInfoDescriptor),
+    InterfaceAssociation(InterfaceAssocDescriptor),
+    Endpoint(EndpointInfoDescriptor),
+    Hid(HidDescriptorIter<'a>),
+    SsEpCompanion(SsEpCompDescriptorInfo),
+    SsIsochEpCompanion(SsIsochEpCompDescriptor),
+    Unknown(&'a [u8]),
+}
+
+impl<'a> Iterator for DescriptorIterator<'a> {
+    type Item = Descriptor<'a>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.offset + 2 > self.buffer.len() {
+            return None;
+        }
+
+        let length = self.buffer[self.offset] as usize;
+        let desc_type = self.buffer[self.offset + 1];
+
+        if length == 0 || length > self.buffer.len() {
+            return None;
+        }
+
+        let desc = match DescriptorType::from_u8(desc_type) {
+            Some(DescriptorType::Config) => {
+                if length != std::mem::size_of::<ConfigurationDescriptor>() {
+                    return None;
+                }
+                let mut info = [0; std::mem::size_of::<ConfigurationDescriptor>()];
+                info.copy_from_slice(&self.buffer[self.offset..self.offset + length]);
+                Descriptor::Config(ConfigurationDescriptor::from_array(info))
+            }
+            Some(DescriptorType::Interface) => {
+                if length != std::mem::size_of::<InterfaceInfoDescriptor>() {
+                    return None;
+                }
+                let mut info = [0; std::mem::size_of::<InterfaceInfoDescriptor>()];
+                info.copy_from_slice(&self.buffer[self.offset..self.offset + length]);
+                Descriptor::Interface(InterfaceInfoDescriptor::from_array(info))
+            }
+            Some(DescriptorType::Endpoint) => {
+                if length != std::mem::size_of::<EndpointInfoDescriptor>() {
+                    return None;
+                }
+                let mut info = [0; std::mem::size_of::<EndpointInfoDescriptor>()];
+                info.copy_from_slice(&self.buffer[self.offset..self.offset + length]);
+                Descriptor::Endpoint(EndpointInfoDescriptor::from_array(info))
+            }
+            Some(DescriptorType::Hid) => {
+                if length < std::mem::size_of::<HidDescriptor>() {
+                    return None;
+                }
+                Descriptor::Hid(HidDescriptorIter::new(
+                    &self.buffer[self.offset..self.offset + length],
+                ))
+            }
+            Some(DescriptorType::SsEpCompanion) => {
+                if length != std::mem::size_of::<SsEpCompDescriptorInfo>() {
+                    return None;
+                }
+                let mut info = [0; std::mem::size_of::<SsEpCompDescriptorInfo>()];
+                info.copy_from_slice(&self.buffer[self.offset..self.offset + length]);
+                Descriptor::SsEpCompanion(SsEpCompDescriptorInfo::from_array(info))
+            }
+            Some(DescriptorType::SsIsochEpCompanion) => {
+                if length != std::mem::size_of::<SsIsochEpCompDescriptor>() {
+                    return None;
+                }
+                let mut info = [0; std::mem::size_of::<SsIsochEpCompDescriptor>()];
+                info.copy_from_slice(&self.buffer[self.offset..self.offset + length]);
+                Descriptor::SsIsochEpCompanion(SsIsochEpCompDescriptor::from_array(info))
+            }
+            Some(DescriptorType::InterfaceAssociation) => {
+                if length < std::mem::size_of::<InterfaceAssocDescriptor>() {
+                    return None;
+                }
+                let mut info = [0; std::mem::size_of::<InterfaceAssocDescriptor>()];
+                info.copy_from_slice(&self.buffer[self.offset..self.offset + length]);
+                Descriptor::InterfaceAssociation(InterfaceAssocDescriptor::from_array(info))
+            }
+            _ => Descriptor::Unknown(&self.buffer[self.offset..self.offset + length]),
+        };
+
+        self.offset += length;
+        Some(desc)
     }
 }
 
