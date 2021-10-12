@@ -17,6 +17,7 @@
         ],
         "services": [
             "fuchsia.cobalt.LoggerFactory",
+            "fuchsia.media.audio.EffectsController",
             "fuchsia.scheduler.ProfileProvider",
             "fuchsia.thermal.Controller",
             "fuchsia.tracing.provider.Registry"

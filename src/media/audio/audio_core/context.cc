@@ -62,6 +62,12 @@ class ContextImpl : public Context {
                                            clock_factory_);
     throttle_output_ = throttle.get();
     route_graph_.SetThrottleOutput(threading_model_.get(), std::move(throttle));
+
+    effects_controller_client_ =
+        component_context_->svc()->Connect<fuchsia::media::audio::EffectsController>();
+    effects_controller_client_.set_error_handler([](zx_status_t status) {
+      FX_PLOGS(ERROR, status) << "Connection to fuchsia.media.audio.EffectsController failed: ";
+    });
   }
 
   // Disallow copy & move.
@@ -95,6 +101,9 @@ class ContextImpl : public Context {
   AudioOutput* throttle_output() const override { return throttle_output_; }
   DeviceRouter& device_router() override { return idle_policy_; }
   ActiveStreamCountReporter& active_stream_count_reporter() override { return idle_policy_; }
+  fuchsia::media::audio::EffectsControllerPtr& effects_controller() override {
+    return effects_controller_client_;
+  }
 
  private:
   std::unique_ptr<ThreadingModel> threading_model_;
@@ -132,6 +141,8 @@ class ContextImpl : public Context {
   UsageGainReporterImpl usage_gain_reporter_;
 
   EffectsControllerImpl effects_controller_;
+  fuchsia::media::audio::EffectsControllerPtr effects_controller_client_;
+
   AudioTunerImpl audio_tuner_;
 
   // FIDL service that forwards requests to AudioCore.

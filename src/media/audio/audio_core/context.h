@@ -60,6 +60,7 @@ class Context {
   virtual AudioOutput* throttle_output() const = 0;
   virtual DeviceRouter& device_router() = 0;
   virtual ActiveStreamCountReporter& active_stream_count_reporter() = 0;
+  virtual fuchsia::media::audio::EffectsControllerPtr& effects_controller() = 0;
 
  protected:
   Context() = default;
