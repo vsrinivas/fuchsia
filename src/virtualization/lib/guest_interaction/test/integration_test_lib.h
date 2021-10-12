@@ -41,6 +41,7 @@ class GuestInteractionTest : public gtest::TestWithEnvironmentFixture {
  private:
   std::optional<uint32_t> cid_;
   fuchsia::virtualization::RealmPtr realm_;
+  std::optional<zx_status_t> realm_error_;
   std::unique_ptr<sys::testing::EnvironmentServices> services_ = CreateServices();
   std::unique_ptr<sys::testing::EnclosingEnvironment> env_;
   FakeNetstack fake_netstack_;

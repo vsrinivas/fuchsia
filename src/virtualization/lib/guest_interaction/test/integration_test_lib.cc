@@ -21,6 +21,8 @@ static constexpr char kDebianGuestUrl[] =
     "fuchsia-pkg://fuchsia.com/debian_guest#meta/debian_guest.cmx";
 
 GuestInteractionTest::GuestInteractionTest() {
+  realm_.set_error_handler([this](zx_status_t status) { realm_error_ = status; });
+
   // Add Netstack services.
   services_->AddService(fake_netstack_.GetHandler(), fuchsia::netstack::Netstack::Name_);
   services_->AddService(fake_netstack_.GetHandler(), fuchsia::net::stack::Stack::Name_);
@@ -65,16 +67,22 @@ void GuestInteractionTest::SetUp() {
   manager->Create(fuchsia::netemul::guest::DEFAULT_REALM, realm_.NewRequest());
   realm_->LaunchInstance(kDebianGuestUrl, kGuestLabel, std::move(cfg), guest.NewRequest(),
                          [this](uint32_t cid) { cid_ = cid; });
-  RunLoopUntil([this]() { return cid_.has_value(); });
+  RunLoopUntil([this]() { return realm_error_.has_value() || cid_.has_value(); });
+  ASSERT_FALSE(realm_error_.has_value()) << zx_status_get_string(realm_error_.value());
 
   // Start a GuestConsole.  When the console starts, it waits until it
   // receives some sensible output from the guest to ensure that the guest is
   // usable.
+  std::optional<zx_status_t> guest_error;
+  guest.set_error_handler([&guest_error](zx_status_t status) { guest_error = status; });
   std::optional<fuchsia::virtualization::Guest_GetConsole_Result> get_console_result;
   guest->GetConsole([&get_console_result](fuchsia::virtualization::Guest_GetConsole_Result result) {
     get_console_result = std::move(result);
   });
-  RunLoopUntil([&get_console_result]() { return get_console_result.has_value(); });
+  RunLoopUntil([&guest_error, &get_console_result]() {
+    return guest_error.has_value() || get_console_result.has_value();
+  });
+  ASSERT_FALSE(guest_error.has_value()) << zx_status_get_string(guest_error.value());
   fuchsia::virtualization::Guest_GetConsole_Result& result = get_console_result.value();
   switch (result.Which()) {
     case fuchsia::virtualization::Guest_GetConsole_Result::Tag::kResponse: {
