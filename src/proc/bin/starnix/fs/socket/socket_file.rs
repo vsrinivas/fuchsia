@@ -35,7 +35,11 @@ impl FileOps for SocketFile {
         events: FdEvents,
         handler: EventHandler,
     ) {
-        self.socket.lock().wait_async(waiter, events, handler)
+        self.socket.wait_async(waiter, events, handler)
+    }
+
+    fn close(&self, _file: &FileObject) {
+        let _ = self.socket.shutdown();
     }
 }
 
@@ -66,18 +70,16 @@ impl SocketFile {
         file.blocking_op(
             task,
             || {
-                let socket = self.socket.lock();
-
-                let bytes_written = match socket.write(task, &mut user_buffers, &mut ancillary_data)
-                {
-                    Err(e) if e == ENOTCONN && actual > 0 => {
-                        // If the error is ENOTCONN (that is, the write failed because the socket was
-                        // disconnected), then return the amount of bytes that were written before
-                        // the disconnect.
-                        return Ok(actual);
-                    }
-                    result => result,
-                }?;
+                let bytes_written =
+                    match self.socket.write(task, &mut user_buffers, &mut ancillary_data) {
+                        Err(e) if e == ENOTCONN && actual > 0 => {
+                            // If the error is ENOTCONN (that is, the write failed because the socket was
+                            // disconnected), then return the amount of bytes that were written before
+                            // the disconnect.
+                            return Ok(actual);
+                        }
+                        result => result,
+                    }?;
 
                 actual += bytes_written;
 
@@ -109,7 +111,7 @@ impl SocketFile {
             task,
             || {
                 let mut user_buffers = UserBufferIterator::new(data);
-                self.socket.lock().read(task, &mut user_buffers)
+                self.socket.read(task, &mut user_buffers)
             },
             FdEvents::POLLIN | FdEvents::POLLHUP,
         )

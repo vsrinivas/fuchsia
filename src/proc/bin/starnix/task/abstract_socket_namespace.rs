@@ -20,7 +20,7 @@ use crate::types::*;
 ///
 /// See "abstract" in https://man7.org/linux/man-pages/man7/unix.7.html
 pub struct AbstractSocketNamespace {
-    table: Mutex<HashMap<Vec<u8>, Weak<Mutex<Socket>>>>,
+    table: Mutex<HashMap<Vec<u8>, Weak<Socket>>>,
 }
 
 impl AbstractSocketNamespace {

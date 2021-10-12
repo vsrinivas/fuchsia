@@ -11,7 +11,6 @@ mod user_address;
 mod user_buffer;
 
 pub mod as_any;
-pub mod locking;
 pub mod uapi;
 
 pub use device_type::*;

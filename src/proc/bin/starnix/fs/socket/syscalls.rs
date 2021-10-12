@@ -4,7 +4,6 @@
 
 use fuchsia_cprng::cprng_draw;
 use std::convert::TryInto;
-use std::sync::Arc;
 use zerocopy::AsBytes;
 
 use super::*;
@@ -16,7 +15,6 @@ use crate::mode;
 use crate::not_implemented;
 use crate::syscalls::*;
 use crate::task::*;
-use crate::types::locking::*;
 use crate::types::*;
 
 pub fn sys_socket(
@@ -166,7 +164,7 @@ pub fn sys_bind(
 pub fn sys_listen(
     ctx: &SyscallContext<'_>,
     fd: FdNumber,
-    backlog: u32,
+    backlog: i32,
 ) -> Result<SyscallResult, Errno> {
     let file = ctx.task.files.get(fd)?;
     let socket = file.node().socket().ok_or_else(|| errno!(ENOTSOCK))?;
@@ -192,14 +190,11 @@ pub fn sys_accept4(
 ) -> Result<SyscallResult, Errno> {
     let file = ctx.task.files.get(fd)?;
     let socket = file.node().socket().ok_or_else(|| errno!(ENOTSOCK))?;
-    let accepted_socket = file.blocking_op(
-        &ctx.task,
-        || socket.lock().accept(),
-        FdEvents::POLLIN | FdEvents::POLLHUP,
-    )?;
+    let accepted_socket =
+        file.blocking_op(&ctx.task, || socket.accept(), FdEvents::POLLIN | FdEvents::POLLHUP)?;
 
     if !user_socket_address.is_null() {
-        let address_bytes = accepted_socket.lock().getpeername()?;
+        let address_bytes = accepted_socket.getpeername()?;
         write_socket_address(&ctx.task, user_socket_address, user_address_length, &address_bytes)?;
     }
 
@@ -220,7 +215,7 @@ pub fn sys_connect(
     let client_socket = client_file.node().socket().ok_or_else(|| errno!(ENOTSOCK))?;
     let address = parse_socket_address(&ctx.task, user_socket_address, address_length)?;
 
-    let passive_socket = match address {
+    let listening_socket = match address {
         SocketAddress::Unspecified => return error!(EAFNOSUPPORT),
         SocketAddress::Unix(name) => {
             if name.is_empty() {
@@ -238,7 +233,10 @@ pub fn sys_connect(
         }
     };
 
-    connect(client_socket, &passive_socket)?;
+    // TODO(tbodt): Support blocking when the UNIX domain socket queue fills up. This one's weird
+    // because as far as I can tell, removing a socket from the queue does not actually trigger
+    // FdEvents on anything.
+    client_socket.connect(&listening_socket)?;
     Ok(SUCCESS)
 }
 
@@ -268,8 +266,7 @@ pub fn sys_getsockname(
 ) -> Result<SyscallResult, Errno> {
     let file = ctx.task.files.get(fd)?;
     let socket = file.node().socket().ok_or_else(|| errno!(ENOTSOCK))?;
-    let locked_socket = socket.lock();
-    let address_bytes = locked_socket.getsockname();
+    let address_bytes = socket.getsockname();
 
     write_socket_address(&ctx.task, user_socket_address, user_address_length, &address_bytes)?;
 
@@ -284,7 +281,7 @@ pub fn sys_getpeername(
 ) -> Result<SyscallResult, Errno> {
     let file = ctx.task.files.get(fd)?;
     let socket = file.node().socket().ok_or_else(|| errno!(ENOTSOCK))?;
-    let address_bytes = socket.lock().getpeername()?;
+    let address_bytes = socket.getpeername()?;
 
     write_socket_address(&ctx.task, user_socket_address, user_address_length, &address_bytes)?;
 
@@ -303,17 +300,14 @@ pub fn sys_socketpair(
     let socket_type = parse_socket_type(socket_type)?;
     let open_flags = socket_flags_to_open_flags(flags);
 
-    let (left, right) = Socket::new_pair(domain, socket_type);
-
-    let left_file = Socket::new_file(ctx.kernel(), left, open_flags);
-    let right_file = Socket::new_file(ctx.kernel(), right, open_flags);
+    let (left, right) = Socket::new_pair(ctx.kernel(), domain, socket_type, open_flags);
 
     let fd_flags = socket_flags_to_fd_flags(flags);
     // TODO: Eventually this will need to allocate two fd numbers (each of which could
     // potentially fail), and only populate the fd numbers (which can't fail) if both allocations
     // succeed.
-    let left_fd = ctx.task.files.add_with_flags(left_file, fd_flags)?;
-    let right_fd = ctx.task.files.add_with_flags(right_file, fd_flags)?;
+    let left_fd = ctx.task.files.add_with_flags(left, fd_flags)?;
+    let right_fd = ctx.task.files.add_with_flags(right, fd_flags)?;
 
     let fds = [left_fd, right_fd];
     ctx.task.mm.write_object(user_sockets, &fds)?;
@@ -520,39 +514,15 @@ pub fn sys_shutdown(
     // TODO: Respect the `how` argument.
 
     let socket = file.node().socket().ok_or(errno!(ENOTSOCK))?;
-    socket.lock().shutdown()?;
+    socket.shutdown()?;
 
     Ok(SUCCESS)
-}
-
-fn connect(client_socket: &SocketHandle, passive_socket: &SocketHandle) -> Result<(), Errno> {
-    if Arc::ptr_eq(client_socket, passive_socket) {
-        return error!(EINVAL);
-    }
-
-    // Sort the nodes to determine which order to lock them in.
-    let mut ordered_sockets: [&SocketHandle; 2] = [client_socket, passive_socket];
-    sort_for_locking(&mut ordered_sockets, |socket| socket);
-
-    let first_socket = ordered_sockets[0];
-    let second_socket = ordered_sockets[1];
-
-    let mut first_socket_locked = first_socket.lock();
-    let mut second_socket_locked = second_socket.lock();
-
-    if std::ptr::eq(passive_socket, first_socket) {
-        // The first socket is the passive node, so connect *to* it.
-        second_socket_locked.connect(&mut first_socket_locked)
-    } else {
-        first_socket_locked.connect(&mut second_socket_locked)
-    }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::testing::*;
-    use std::convert::TryInto;
 
     #[test]
     fn test_socketpair_invalid_arguments() {
@@ -581,26 +551,6 @@ mod tests {
                 UserRef::new(UserAddress::default())
             ),
             Err(EFAULT)
-        );
-    }
-
-    #[test]
-    fn test_connect_same_socket() {
-        let (_kernel, task_owner) = create_kernel_and_task();
-        let ctx = SyscallContext::new(&task_owner.task);
-        let fd1 = match sys_socket(&ctx, AF_UNIX as u32, SOCK_STREAM, 0) {
-            Ok(SyscallResult::Success(fd)) => fd,
-            _ => panic!("Failed to create first socket"),
-        };
-
-        let file = ctx
-            .task
-            .files
-            .get(FdNumber::from_raw(fd1.try_into().unwrap()))
-            .expect("Failed to fetch socket file.");
-        assert_eq!(
-            connect(file.node().socket().unwrap(), file.node().socket().unwrap()),
-            Err(EINVAL)
         );
     }
 
