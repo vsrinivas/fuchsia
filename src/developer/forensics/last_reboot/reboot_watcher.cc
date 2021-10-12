@@ -4,9 +4,14 @@
 
 #include "src/developer/forensics/last_reboot/reboot_watcher.h"
 
+#include <lib/fit/defer.h>
+
+#include <fbl/unique_fd.h>
+
 #include "src/developer/forensics/feedback/reboot_log/graceful_reboot_reason.h"
 #include "src/developer/forensics/utils/cobalt/metrics.h"
 #include "src/lib/files/file.h"
+#include "src/lib/files/file_descriptor.h"
 #include "src/lib/fxl/strings/string_printf.h"
 
 namespace forensics {
@@ -33,19 +38,32 @@ void ImminentGracefulRebootWatcher::Connect() {
 
 void ImminentGracefulRebootWatcher::OnReboot(
     fuchsia::hardware::power::statecontrol::RebootReason reason, OnRebootCallback callback) {
+  auto on_done = fit::defer([this, callback = std::move(callback)] {
+    callback();
+    connection_.Unbind();
+  });
+
   const std::string content = feedback::ToFileContent(feedback::ToGracefulRebootReason(reason));
   FX_LOGS(INFO) << "Received reboot reason  '" << content << "' ";
 
   const size_t timer_id = cobalt_->StartTimer();
-  if (files::WriteFile(path_, content.c_str(), content.size())) {
+
+  fbl::unique_fd fd(open(path_.c_str(), O_CREAT | O_TRUNC | O_WRONLY));
+  if (!fd.is_valid()) {
+    FX_LOGS(INFO) << "Failed to open reboot reason file: " << path_;
+    return;
+  }
+
+  if (fxl::WriteFileDescriptor(fd.get(), content.data(), content.size())) {
     cobalt_->LogElapsedTime(cobalt::RebootReasonWriteResult::kSuccess, timer_id);
   } else {
     cobalt_->LogElapsedTime(cobalt::RebootReasonWriteResult::kFailure, timer_id);
     FX_LOGS(ERROR) << "Failed to write reboot reason '" << content << "' to " << path_;
   }
 
-  callback();
-  connection_.Unbind();
+  // Force the flush as we want to persist the content asap and we don't have more content to
+  // write.
+  fsync(fd.get());
 }
 
 }  // namespace last_reboot
