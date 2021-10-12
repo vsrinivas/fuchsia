@@ -278,6 +278,11 @@ pub struct StartCommand {
     /// to the screen for debugging. The temporary staging directory is also retained.
     #[argh(switch)]
     pub dry_run: bool,
+
+    /// usize, specifies the count of cpu cores used by the emulator. If unspecified, the emulator
+    /// will pick up a value best for the host environment.
+    #[argh(option)]
+    pub cpu_count: Option<usize>,
 }
 
 fn default_port() -> u16 {

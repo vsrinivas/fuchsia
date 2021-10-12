@@ -509,6 +509,9 @@ impl VDLFiles {
         if start_command.dry_run {
             cmd.arg("--dry-run");
         }
+        if let Some(core_count) = start_command.cpu_count {
+            cmd.arg(format!("--cpu_count={}", core_count));
+        }
         if self.verbose || start_command.dry_run {
             println!("[fvdl] Running device_launcher cmd: {:?}", cmd);
         }
