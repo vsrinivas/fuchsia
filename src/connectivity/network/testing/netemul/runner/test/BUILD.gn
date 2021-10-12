@@ -202,7 +202,7 @@ fuchsia_test("grpc_client_stress_test_spec") {
   component = ":grpc-client-stress-test"
 
   environments = []
-  foreach(env, [ nuc_env ]) {
+  foreach(env, guest_envs) {
     # TODO(https://fxbug.dev/49752): test hangs almost every time.
     env.tags = [ "flaky" ]
     environments += [ env ]
