@@ -4,7 +4,7 @@
 
 // ignore_for_file: import_of_legacy_library_into_null_safe
 
-@Timeout(Duration(seconds: 60))
+@Timeout(Duration(seconds: 360))
 
 import 'dart:async';
 import 'dart:math';
@@ -21,6 +21,7 @@ import 'package:webdriver/sync_io.dart';
 const _timeoutOneSec = Duration(seconds: 1);
 const _timeoutThreeSec = Duration(seconds: 3);
 const _timeoutTenSec = Duration(seconds: 10);
+const _timeoutPerTest = Timeout(Duration(seconds: 60));
 const _sampleViewRect = Rectangle(100, 200, 100, 100);
 const testserverUrl =
     'fuchsia-pkg://fuchsia.com/ermine_testserver#meta/ermine_testserver.cmx';
@@ -43,6 +44,8 @@ void main() {
   // TODO(fxb/69334): Get rid of the space in the hint text.
   const newTabHintText = '     SEARCH';
   const indexUrl = 'http://127.0.0.1:8080/index.html';
+  const stopUrl = 'http://127.0.0.1:8080/stop';
+
   final newTabFinder = find.text('NEW TAB');
   final indexTabFinder = find.text('Localhost');
   final nextTabFinder = find.text('Next Page');
@@ -84,13 +87,6 @@ void main() {
 
     webDriverConnector = WebDriverConnector('runtime_deps/chromedriver', sl4f);
     await webDriverConnector.initialize();
-
-    // Starts hosting a local http website if there's any test running.
-    if (skipTests.any((isSkipped) => !isSkipped)) {
-      // ignore: unawaited_futures
-      ermine.component.launch(testserverUrl);
-      print('Launched the test server .');
-    }
   });
 
   tearDownAll(() async {
@@ -108,27 +104,14 @@ void main() {
       await ermine.driver.requestData('closeAll');
     }
 
-    if (skipTests.any((isSkipped) => !isSkipped)) {
-      FlutterDriver browser =
-          await ermine.launchAndWaitForSimpleBrowser(openNewTab: false);
-      const stopUrl = 'http://127.0.0.1:8080/stop';
-      await browser.requestData(stopUrl);
-      await browser.waitUntilNoTransientCallbacks(timeout: _timeoutTenSec);
-      await browser.waitFor(find.text(stopUrl), timeout: _timeoutTenSec);
-      print('Shut down the test server.');
-      await browser.close();
-
-      await ermine.threeKeyShortcut(Key.leftCtrl, Key.leftShift, Key.w);
-      await ermine.driver
-          .waitUntilNoTransientCallbacks(timeout: _timeoutTenSec);
-      expect(await _browserViewMatchesPresentationStatus(false), true);
-      print('Closed the browser');
-    }
-
     await webDriverConnector.tearDown();
+    print('Tore down Web driver');
     await ermine.tearDown();
+    print('Tore down Ermine flutter driver');
     await sl4f.stopServer();
+    print('Stopped sl4f server');
     sl4f.close();
+    print('Closed sl4f');
   });
 
   Future<bool> _waitForTabArrangement(FlutterDriver browser,
@@ -226,6 +209,11 @@ void main() {
   // TODO(fxb/68689): Transition pointer interactions to Sl4f.Input once it is
   // ready.
   test('Should be able to do page and history navigation.', () async {
+    // Starts hosting a local http website.
+    // ignore: unawaited_futures
+    ermine.component.launch(testserverUrl);
+    print('Launched the test server.');
+
     FlutterDriver browser;
     browser = await ermine.launchAndWaitForSimpleBrowser();
 
@@ -339,13 +327,19 @@ void main() {
     expect(await browser.getText(popupTabFinder), isNotNull);
     print('Clicked the popup.html link');
 
+    // Stops the local http server.
+    await browser.requestData(stopUrl);
+    await browser.waitUntilFirstFrameRasterized();
+    await browser.waitUntilNoTransientCallbacks(timeout: _timeoutTenSec);
+    await browser.waitFor(find.text(stopUrl), timeout: _timeoutTenSec);
     await browser.close();
+
     // Close the simple browser view.
     await ermine.threeKeyShortcut(Key.leftCtrl, Key.leftShift, Key.w);
     await ermine.driver.waitUntilNoTransientCallbacks(timeout: _timeoutTenSec);
     expect(await _browserViewMatchesPresentationStatus(false), true);
     print('Closed the browser');
-  }, skip: skipTests[0]);
+  }, timeout: _timeoutPerTest, skip: skipTests[0]);
 
   test('Should be able to play videos on web pages.', () async {
     FlutterDriver browser;
@@ -383,9 +377,14 @@ void main() {
     await ermine.driver.waitForAbsent(find.text('simple-browser.cmx'));
     expect(await ermine.isStopped(simpleBrowserUrl), isTrue);
     print('Closed the browser');
-  }, skip: skipTests[1]);
+  }, timeout: _timeoutPerTest, skip: skipTests[1]);
 
   test('Should be able to switch, rearrange, and close tabs', () async {
+    // Starts hosting a local http website.
+    // ignore: unawaited_futures
+    ermine.component.launch(testserverUrl);
+    print('Launched the test server.');
+
     FlutterDriver browser;
     browser = await ermine.launchAndWaitForSimpleBrowser();
 
@@ -396,7 +395,10 @@ void main() {
 
     // Opens red.html in the second tab leaving the first tab as an empty tab.
     await input.text(redUrl, keyEventDuration: Duration(milliseconds: 50));
+    print('Typed in $redUrl to the browser');
     await input.keyPress(kEnterKey);
+    print('Pressed Enter');
+    await browser.waitUntilFirstFrameRasterized();
     await browser.waitUntilNoTransientCallbacks(timeout: _timeoutTenSec);
     await browser.waitFor(redTabFinder, timeout: _timeoutTenSec);
     print('Opened red.html');
@@ -404,9 +406,11 @@ void main() {
     // Opens green.html in the third tab.
     await browser.tap(find.byValueKey('new_tab'));
     await browser.waitFor(find.text(newTabHintText), timeout: _timeoutTenSec);
-
     await input.text(greenUrl, keyEventDuration: Duration(milliseconds: 50));
+    print('Typed in $greenUrl to the browser');
     await input.keyPress(kEnterKey);
+    print('Pressed Enter');
+    await browser.waitUntilFirstFrameRasterized();
     await browser.waitUntilNoTransientCallbacks(timeout: _timeoutTenSec);
     await browser.waitFor(greenTabFinder, timeout: _timeoutTenSec);
     print('Opened green.html');
@@ -414,9 +418,11 @@ void main() {
     // Opens blue.html in the forth tab.
     await browser.tap(find.byValueKey('new_tab'));
     await browser.waitFor(find.text(newTabHintText), timeout: _timeoutTenSec);
-
     await input.text(blueUrl, keyEventDuration: Duration(milliseconds: 50));
+    print('Typed in $blueUrl to the browser');
     await input.keyPress(kEnterKey);
+    print('Pressed Enter');
+    await browser.waitUntilFirstFrameRasterized();
     await browser.waitUntilNoTransientCallbacks(timeout: _timeoutTenSec);
     await browser.waitFor(blueTabFinder, timeout: _timeoutTenSec);
     print('Opened blue.html');
@@ -486,14 +492,30 @@ void main() {
 
     // TODO(fxb/70265): Test closing an unfocused tab once fxb/68689 is done.
 
+    // Stops the local http server.
+    await browser.tap(find.byValueKey('new_tab'));
+    await browser.waitFor(find.text(newTabHintText), timeout: _timeoutTenSec);
+    await input.text(stopUrl, keyEventDuration: Duration(milliseconds: 50));
+    print('Typed in $stopUrl to the browser');
+    await input.keyPress(kEnterKey);
+    print('Pressed Enter');
+    await browser.waitUntilFirstFrameRasterized();
+    await browser.waitUntilNoTransientCallbacks(timeout: _timeoutTenSec);
+    await browser.waitFor(find.text(stopUrl), timeout: _timeoutTenSec);
     await browser.close();
+
     await ermine.threeKeyShortcut(Key.leftCtrl, Key.leftShift, Key.w);
     await ermine.driver.waitUntilNoTransientCallbacks(timeout: _timeoutTenSec);
     expect(await _browserViewMatchesPresentationStatus(false), true);
     print('Closed the browser');
-  }, skip: skipTests[2]);
+  }, timeout: _timeoutPerTest, skip: skipTests[2]);
 
   test('Should be able enter text into web text fields', () async {
+    // Starts hosting a local http website.
+    // ignore: unawaited_futures
+    ermine.component.launch(testserverUrl);
+    print('Launched the test server.');
+
     FlutterDriver browser;
     browser = await ermine.launchAndWaitForSimpleBrowser();
 
@@ -531,12 +553,18 @@ void main() {
     }, timeout: _timeoutTenSec);
     print('Text is entered into the textfield.');
 
+    // Stops the local http server.
+    await browser.requestData(stopUrl);
+    await browser.waitUntilFirstFrameRasterized();
+    await browser.waitUntilNoTransientCallbacks(timeout: _timeoutTenSec);
+    await browser.waitFor(find.text(stopUrl), timeout: _timeoutTenSec);
     await browser.close();
+
     await ermine.threeKeyShortcut(Key.leftCtrl, Key.leftShift, Key.w);
     await ermine.driver.waitUntilNoTransientCallbacks(timeout: _timeoutTenSec);
     expect(await _browserViewMatchesPresentationStatus(false), true);
     print('Closed the browser');
-  }, skip: skipTests[3]);
+  }, timeout: _timeoutPerTest, skip: skipTests[3]);
 
   test('Should be able to play audios on web', () async {
     FlutterDriver browser;
@@ -603,7 +631,7 @@ void main() {
     await ermine.driver.waitForAbsent(find.text('simple-browser.cmx'));
     expect(await ermine.isStopped(simpleBrowserUrl), isTrue);
     print('Closed the browser');
-  }, skip: skipTests[4]);
+  }, timeout: _timeoutPerTest, skip: skipTests[4]);
 
   test('Should be able to control the browser with keyboard shortcuts',
       () async {
@@ -729,5 +757,5 @@ void main() {
     await ermine.driver.waitUntilNoTransientCallbacks(timeout: _timeoutTenSec);
     expect(await _browserViewMatchesPresentationStatus(false), true);
     print('Closed the browser');
-  }, skip: skipTests[5]);
+  }, timeout: _timeoutPerTest, skip: skipTests[5]);
 }
