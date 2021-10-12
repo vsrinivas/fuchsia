@@ -72,7 +72,6 @@ group("cmx_allowlist") {
     "//garnet/bin/ui/benchmarks/transparency_benchmark/*",
     "//garnet/bin/vsock_service/*",
     "//garnet/examples/benchmark/*",
-    "//garnet/examples/components/*",
     "//garnet/examples/fidl/*",
     "//garnet/examples/http/*",
     "//garnet/examples/intl/*",

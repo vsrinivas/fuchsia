@@ -5,15 +5,6 @@
 # WARNING: This file was machine-generated from previous json files and
 # will eventually be deleted.
 
-group("components") {
-  testonly = true
-  public_deps = [
-    "//garnet/bin/glob",
-    "//garnet/examples/components:component_hello_world",
-    "//garnet/examples/components:component_hello_world_tests",
-  ]
-}
-
 group("scenic") {
   testonly = true
   public_deps = [
@@ -35,7 +26,6 @@ group("all") {
   public_deps = [
     "//garnet/packages/examples:benchmark",
     "//garnet/packages/examples:bluetooth",
-    "//garnet/packages/examples:components",
     "//garnet/packages/examples:escher",
     "//garnet/packages/examples:fidl",
     "//garnet/packages/examples:http",
