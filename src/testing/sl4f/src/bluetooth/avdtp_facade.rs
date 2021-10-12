@@ -9,7 +9,7 @@ use fidl_fuchsia_bluetooth_avdtp::{
     PeerManagerProxy,
 };
 use fuchsia_async as fasync;
-use fuchsia_component::{client, fuchsia_single_component_package_url};
+use fuchsia_component::client;
 use fuchsia_syslog::macros::*;
 use futures::stream::StreamExt;
 use parking_lot::RwLock;
@@ -71,13 +71,6 @@ impl AvdtpFacade {
                     tag: &with_line!(tag),
                     "Launching A2DP and setting new Avdtp service proxy"
                 );
-                let launcher = match client::launcher() {
-                    Ok(r) => r,
-                    Err(err) => fx_err_and_bail!(
-                        &with_line!(tag),
-                        format_err!("Failed to get launcher service: {}", err)
-                    ),
-                };
 
                 let mut options: Vec<String> = Vec::new();
                 match initiator_delay {
@@ -88,17 +81,13 @@ impl AvdtpFacade {
                     None => {}
                 };
 
-                let component_url = fuchsia_single_component_package_url!("bt-a2dp").to_string();
-                let bt_a2dp = client::launch(&launcher, component_url, Some(options))?;
-
-                let avdtp_service_proxy = bt_a2dp.connect_to_protocol::<PeerManagerMarker>();
+                let avdtp_service_proxy = client::connect_to_protocol::<PeerManagerMarker>();
                 if let Err(err) = avdtp_service_proxy {
                     fx_err_and_bail!(
                         &with_line!(tag),
                         format_err!("Failed to create Avdtp service proxy: {}", err)
                     );
                 }
-                bt_a2dp.controller().detach()?;
                 avdtp_service_proxy
             }
         }
