@@ -985,7 +985,9 @@ impl Telemetry {
             }
         });
         inspect_log!(self.external_inspect_node.disconnect_events.lock(), {
-            reason_code: info.disconnect_source.flattened_reason_code(),
+            // Flatten the reason code for external consumer as their reason code metric
+            // cannot easily be adjusted to accept an additional dimension.
+            flattened_reason_code: info.disconnect_source.flattened_reason_code(),
             locally_initiated: info.disconnect_source.locally_initiated(),
             network: {
                 channel: {

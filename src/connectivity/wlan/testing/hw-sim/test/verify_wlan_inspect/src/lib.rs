@@ -312,7 +312,7 @@ async fn verify_wlan_inspect() {
                                 primary: 1u64,
                             },
                         },
-                        reason_code: AnyProperty,
+                        flattened_reason_code: AnyProperty,
                         locally_initiated: true,
                     }
                 },
