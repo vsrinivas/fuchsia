@@ -13,6 +13,7 @@ use {
         object_store::{
             crypt::UnwrappedKeys,
             journal::fletcher64,
+            object_manager::ObjectManager,
             record::{
                 Checksums, ExtentKey, ExtentValue, ObjectAttributes, ObjectItem, ObjectKey,
                 ObjectKind, ObjectValue, Timestamp,
@@ -25,7 +26,7 @@ use {
         },
         round::{round_down, round_up},
     },
-    anyhow::{bail, Context, Error},
+    anyhow::{anyhow, bail, Context, Error},
     async_trait::async_trait,
     futures::{stream::FuturesUnordered, try_join, TryStreamExt},
     interval_tree::utils::RangeOps,
@@ -393,7 +394,6 @@ impl<S: AsRef<ObjectStore> + Send + Sync + 'static> StoreObjectHandle<S> {
     // TODO(csuter): make this used
     #[cfg(test)]
     async fn get_allocated_size(&self) -> Result<u64, Error> {
-        self.store().ensure_open().await?;
         if let ObjectItem {
             value: ObjectValue::Object { kind: ObjectKind::File { allocated_size, .. }, .. },
             ..
@@ -428,9 +428,11 @@ impl<S: AsRef<ObjectStore> + Send + Sync + 'static> StoreObjectHandle<S> {
             // The only way for these to fail are if the volume is inconsistent.
             *allocated_size = allocated_size
                 .checked_add(allocated)
-                .ok_or(FxfsError::Inconsistent)?
+                .ok_or_else(|| anyhow!(FxfsError::Inconsistent).context("Allocated size overflow"))?
                 .checked_sub(deallocated)
-                .ok_or(FxfsError::Inconsistent)?;
+                .ok_or_else(|| {
+                    anyhow!(FxfsError::Inconsistent).context("Allocated size overflow")
+                })?;
         } else {
             panic!("Unexpceted object value");
         }
@@ -462,7 +464,9 @@ impl<S: AsRef<ObjectStore> + Send + Sync + 'static> StoreObjectHandle<S> {
             let aligned_size = round_up(size, block_size).ok_or(FxfsError::TooBig)?;
             self.zero(
                 transaction,
-                aligned_size..round_up(old_size, block_size).ok_or(FxfsError::Inconsistent)?,
+                aligned_size..round_up(old_size, block_size).ok_or_else(|| {
+                    anyhow!(FxfsError::Inconsistent).context("truncate: Bad size")
+                })?,
             )
             .await?;
             let to_zero = aligned_size - size;
@@ -609,7 +613,9 @@ impl<S: AsRef<ObjectStore> + Send + Sync + 'static> StoreObjectHandle<S> {
                 attributes.modification_time = time;
             }
         } else {
-            bail!(FxfsError::Inconsistent);
+            bail!(
+                anyhow!(FxfsError::Inconsistent).context("write_timestamps: Expected object value")
+            );
         };
         transaction.add(
             self.store().store_object_id(),
@@ -651,7 +657,7 @@ impl<S: AsRef<ObjectStore> + Send + Sync + 'static> StoreObjectHandle<S> {
 }
 
 impl<S: AsRef<ObjectStore> + Send + Sync + 'static> AssociatedObject for StoreObjectHandle<S> {
-    fn will_apply_mutation(&self, mutation: &Mutation) {
+    fn will_apply_mutation(&self, mutation: &Mutation, _object_id: u64, _manager: &ObjectManager) {
         match mutation {
             Mutation::ObjectStore(ObjectStoreMutation {
                 item: ObjectItem { value: ObjectValue::Attribute { size }, .. },
@@ -881,13 +887,39 @@ pub struct DirectWriter<'a, S: AsRef<ObjectStore> + Send + Sync + 'static> {
     options: transaction::Options<'a>,
     buffer: Buffer<'a>,
     offset: u64,
+    buf_offset: usize,
 }
 
-const BUFFER_SIZE: usize = 131_072;
+const BUFFER_SIZE: usize = 1_048_576;
+
+impl<S: AsRef<ObjectStore> + Send + Sync + 'static> Drop for DirectWriter<'_, S> {
+    fn drop(&mut self) {
+        if self.buf_offset != 0 {
+            log::warn!("DirectWriter: dropping data, did you forget to call complete?");
+        }
+    }
+}
 
 impl<'a, S: AsRef<ObjectStore> + Send + Sync + 'static> DirectWriter<'a, S> {
     pub fn new(handle: &'a StoreObjectHandle<S>, options: transaction::Options<'a>) -> Self {
-        Self { handle, options, buffer: handle.allocate_buffer(BUFFER_SIZE), offset: 0 }
+        Self {
+            handle,
+            options,
+            buffer: handle.allocate_buffer(BUFFER_SIZE),
+            offset: 0,
+            buf_offset: 0,
+        }
+    }
+
+    pub async fn flush(&mut self) -> Result<(), Error> {
+        let mut transaction = self.handle.new_transaction_with_options(self.options).await?;
+        self.handle
+            .txn_write(&mut transaction, self.offset, self.buffer.subslice(..self.buf_offset))
+            .await?;
+        transaction.commit().await?;
+        self.offset += self.buf_offset as u64;
+        self.buf_offset = 0;
+        Ok(())
     }
 }
 
@@ -899,25 +931,37 @@ impl<'a, S: AsRef<ObjectStore> + Send + Sync + 'static> WriteBytes for DirectWri
 
     async fn write_bytes(&mut self, mut buf: &[u8]) -> Result<(), Error> {
         while buf.len() > 0 {
-            let to_do = std::cmp::min(buf.len(), BUFFER_SIZE);
-            self.buffer.subslice_mut(..to_do).as_mut_slice().copy_from_slice(&buf[..to_do]);
-            let mut transaction = self.handle.new_transaction_with_options(self.options).await?;
-            self.handle
-                .txn_write(&mut transaction, self.offset, self.buffer.subslice(..to_do))
-                .await?;
-            transaction.commit().await?;
-            self.offset += to_do as u64;
+            let to_do = std::cmp::min(buf.len(), BUFFER_SIZE - self.buf_offset);
+            self.buffer
+                .subslice_mut(self.buf_offset..self.buf_offset + to_do)
+                .as_mut_slice()
+                .copy_from_slice(&buf[..to_do]);
+            self.buf_offset += to_do;
+            if self.buf_offset == BUFFER_SIZE {
+                self.flush().await?;
+            }
             buf = &buf[to_do..];
         }
         Ok(())
     }
 
     async fn complete(&mut self) -> Result<(), Error> {
+        self.flush().await?;
         Ok(())
     }
 
-    fn skip(&mut self, amount: u64) {
-        self.offset += amount;
+    async fn skip(&mut self, amount: u64) -> Result<(), Error> {
+        if (BUFFER_SIZE - self.buf_offset) as u64 > amount {
+            self.buffer
+                .subslice_mut(self.buf_offset..self.buf_offset + amount as usize)
+                .as_mut_slice()
+                .fill(0);
+            self.buf_offset += amount as usize;
+        } else {
+            self.flush().await?;
+            self.offset += amount;
+        }
+        Ok(())
     }
 }
 

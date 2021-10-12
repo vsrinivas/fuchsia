@@ -182,6 +182,17 @@ fs_test_config("fxfs") {
   supports_hard_links = true
   supports_resize = true
   max_file_size = 9223372036854775807
+
+  options = [
+    {
+      description = "Fxfs"
+      use_fvm = false
+      has_min_volume_size = true
+
+      device_block_count = 24576
+      device_block_size = 512
+    },
+  ]
 }
 
 fs_test_suite("fxfs") {
@@ -198,7 +209,6 @@ slow_fs_test_suite("fxfs") {
   ]
   omit_components = [
     # TODO(jfsulliv): Fix and enable these tests.
-    ":fxfs-directory-large-tests",
     ":fxfs-max-file-tests",
     ":fxfs-sparse-large-tests",
   ]

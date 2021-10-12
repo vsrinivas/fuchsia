@@ -8,6 +8,7 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
+#include <random>
 #include <tuple>
 
 #include <fbl/unique_fd.h>
@@ -156,6 +157,48 @@ TEST_P(TruncateTest, Errno) {
 
   ASSERT_EQ(unlink(GetPath("truncate_errno").c_str()), 0);
   ASSERT_EQ(close(fd.release()), 0);
+}
+
+TEST_P(TruncateTest, ShrinkRace) {
+  std::string file = GetPath("truncate_shrink_race");
+  const char* file_name = file.c_str();
+  const uint32_t page_size = zx_system_get_page_size();
+  const uint32_t offset = page_size - 2;
+  const char data[] = "hello";
+  const ssize_t len = strlen(data);
+  const uint32_t end = offset + len;
+  std::vector<uint8_t> zero(offset);
+  for (int i = 0; i < 100; ++i) {
+    {
+      fbl::unique_fd fd(open(file_name, O_RDWR | O_CREAT | O_TRUNC, 0666));
+      ASSERT_TRUE(fd) << strerror(errno);
+      ASSERT_EQ(pwrite(fd.get(), data, len, offset), len);
+      fd.reset();
+    }
+    std::thread thread1([&] {
+      fbl::unique_fd fd(open(file_name, O_RDWR));
+      ASSERT_TRUE(fd);
+      std::random_device random;
+      std::uniform_int_distribution distribution(0, 1000);
+      usleep(distribution(random));
+      const int buf_size = page_size * 2 + 100;
+      char buf[buf_size];
+      ssize_t result = read(fd.get(), buf, buf_size);
+      EXPECT_TRUE(result == end || result == 0) << errno;
+      if (result == end) {
+        EXPECT_EQ(memcmp(buf, zero.data(), zero.size()), 0);
+        EXPECT_EQ(memcmp(buf + offset, data, len), 0);
+      }
+    });
+    std::thread thread2([&] {
+      fbl::unique_fd fd(open(file_name, O_RDWR));
+      ASSERT_TRUE(fd);
+      EXPECT_EQ(ftruncate(fd.get(), 0), 0);
+      EXPECT_EQ(fsync(fd.get()), 0);
+    });
+    thread1.join();
+    thread2.join();
+  }
 }
 
 std::string GetParamDescription(const testing::TestParamInfo<ParamType> param) {

@@ -319,7 +319,10 @@ impl<S: HandleOwner> WriteObjectHandle for CachingObjectHandle<S> {
                     self.handle
                         .zero(
                             &mut transaction,
-                            aligned_size..round_up(old_size, bs).ok_or(FxfsError::Inconsistent)?,
+                            aligned_size
+                                ..round_up(old_size, bs).ok_or(
+                                    anyhow!(FxfsError::Inconsistent).context("flush: Bad size"),
+                                )?,
                         )
                         .await?;
                 }

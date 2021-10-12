@@ -71,7 +71,6 @@ impl<S: HandleOwner> Directory<S> {
         owner: &Arc<S>,
     ) -> Result<Directory<S>, Error> {
         let store = owner.as_ref().as_ref();
-        store.ensure_open().await?;
         let object_id = store.get_next_object_id();
         let now = Timestamp::now();
         transaction.add(
@@ -93,7 +92,6 @@ impl<S: HandleOwner> Directory<S> {
     pub async fn open(owner: &Arc<S>, object_id: u64) -> Result<Directory<S>, Error> {
         trace_duration!("Directory::open");
         let store = owner.as_ref().as_ref();
-        store.ensure_open().await?;
         match store.tree.find(&ObjectKey::object(object_id)).await?.ok_or(FxfsError::NotFound)? {
             ObjectItem {
                 value: ObjectValue::Object { kind: ObjectKind::Directory { .. }, .. },
@@ -245,7 +243,8 @@ impl<S: HandleOwner> Directory<S> {
                 attributes.modification_time = time;
             }
         } else {
-            bail!(FxfsError::Inconsistent);
+            bail!(anyhow!(FxfsError::Inconsistent)
+                .context("update_attributes: Expected object value"));
         };
         updater(&mut item);
         transaction.add(
@@ -274,7 +273,10 @@ impl<S: HandleOwner> Directory<S> {
                 modification_time,
                 sub_dirs,
             }),
-            _ => bail!(FxfsError::Inconsistent),
+            _ => {
+                bail!(anyhow!(FxfsError::Inconsistent)
+                    .context("get_properties: Expected object value"))
+            }
         }
     }
 
@@ -407,7 +409,9 @@ pub async fn replace_child<'a, S: HandleOwner>(
             sub_dirs_delta -= 1;
             ReplacedChild::Directory(old_id)
         }
-        Some((_, ObjectDescriptor::Volume)) => bail!(FxfsError::Inconsistent),
+        Some((_, ObjectDescriptor::Volume)) => {
+            bail!(anyhow!(FxfsError::Inconsistent).context("Unexpected volume child"))
+        }
         None => {
             if src.is_none() {
                 // Neither src nor dst exist

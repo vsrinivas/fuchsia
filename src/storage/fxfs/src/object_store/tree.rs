@@ -87,3 +87,11 @@ where
 
     Ok((layers_to_keep, layer_set.layers))
 }
+
+/// Returns the amount of space that should be reserved to allow for compactions when the size of
+/// all layers is `layer_size`.
+pub fn reservation_amount_from_layer_size(layer_size: u64) -> u64 {
+    // Conservatively allow for 50% overheads (which covers the amount of metadata space required
+    // for compactions).
+    layer_size * 3 / 2
+}

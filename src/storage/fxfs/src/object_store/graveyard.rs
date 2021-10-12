@@ -71,7 +71,6 @@ impl Graveyard {
         transaction: &mut Transaction<'_>,
         store: &Arc<ObjectStore>,
     ) -> Result<Arc<Graveyard>, Error> {
-        store.ensure_open().await?;
         let object_id = store.get_next_object_id();
         let now = Timestamp::now();
         transaction.add(
@@ -190,7 +189,6 @@ impl Graveyard {
 
     /// Opens a graveyard object in `store`.
     pub async fn open(store: &Arc<ObjectStore>, object_id: u64) -> Result<Arc<Graveyard>, Error> {
-        store.ensure_open().await?;
         if let ObjectItem {
             value: ObjectValue::Object { kind: ObjectKind::Graveyard, .. }, ..
         } = store.tree.find(&ObjectKey::object(object_id)).await?.ok_or(FxfsError::NotFound)?

@@ -92,7 +92,6 @@ pub async fn fsck(filesystem: &Arc<FxFilesystem>) -> Result<(), Error> {
     // TODO(csuter): It's a bit crude how details of SimpleAllocator are leaking here. Is there
     // a better way?
     let allocator = filesystem.allocator().as_any().downcast::<SimpleAllocator>().unwrap();
-    allocator.ensure_open().await?;
     root_store_root_objects.append(&mut allocator.parent_objects());
 
     // Finally scan the root object store.

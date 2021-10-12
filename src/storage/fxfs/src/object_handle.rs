@@ -110,13 +110,19 @@ pub trait ObjectHandleExt: ReadObjectHandle {
 impl<T: ReadObjectHandle + ?Sized> ObjectHandleExt for T {}
 
 #[async_trait]
+/// This trait is an asynchronous streaming writer.
 pub trait WriteBytes {
     fn handle(&self) -> &dyn WriteObjectHandle;
 
+    /// Buffers writes to be written to the underlying handle. This may flush bytes immediately
+    /// or when buffers are full.
     async fn write_bytes(&mut self, buf: &[u8]) -> Result<(), Error>;
+
+    /// Called to flush to the handle.  Named to avoid confluct with the flush method above.
     async fn complete(&mut self) -> Result<(), Error>;
 
-    fn skip(&mut self, amount: u64);
+    /// Moves the offset forward by `amount`, which will result in zeroes in the output stream.
+    async fn skip(&mut self, amount: u64) -> Result<(), Error>;
 }
 
 const BUFFER_SIZE: usize = 131_072;
@@ -154,7 +160,8 @@ impl WriteBytes for Writer<'_> {
         self.handle.flush().await
     }
 
-    fn skip(&mut self, amount: u64) {
+    async fn skip(&mut self, amount: u64) -> Result<(), Error> {
         self.offset += amount;
+        Ok(())
     }
 }

@@ -9,27 +9,40 @@ use {
     async_trait::async_trait,
     fuchsia_zircon::{self as zx},
     once_cell::sync::Lazy,
-    std::ops::Range,
+    std::{
+        convert::{TryFrom, TryInto},
+        ops::Range,
+    },
 };
 
 /// A DataBuffer implementation backed by a VMO.
-pub struct VmoDataBuffer(zx::Vmo);
+pub struct VmoDataBuffer {
+    vmo: zx::Vmo,
+    stream: zx::Stream,
+}
 
 impl VmoDataBuffer {
     pub fn new(size: u64) -> Self {
         let vmo = zx::Vmo::create_with_opts(zx::VmoOptions::RESIZABLE, size).unwrap();
         vmo.set_content_size(&size).unwrap();
-        Self(vmo)
+        vmo.try_into().unwrap()
     }
 
     pub fn vmo(&self) -> &zx::Vmo {
-        &self.0
+        &self.vmo
     }
 }
 
-impl From<zx::Vmo> for VmoDataBuffer {
-    fn from(vmo: zx::Vmo) -> Self {
-        Self(vmo)
+impl TryFrom<zx::Vmo> for VmoDataBuffer {
+    type Error = Error;
+
+    fn try_from(vmo: zx::Vmo) -> Result<Self, Error> {
+        let stream = zx::Stream::create(
+            zx::StreamOptions::MODE_READ | zx::StreamOptions::MODE_WRITE,
+            &vmo,
+            0,
+        )?;
+        Ok(Self { vmo, stream })
     }
 }
 
@@ -47,25 +60,17 @@ static CONCURRENT_SYSCALLS: Lazy<Semaphore> = Lazy::new(|| {
 #[async_trait]
 impl DataBuffer for VmoDataBuffer {
     fn raw_read(&self, offset: u64, buf: &mut [u8]) {
-        self.0.read(buf, offset).unwrap();
+        self.vmo.read(buf, offset).unwrap();
     }
 
     async fn read(
         &self,
         offset: u64,
-        mut buf: &mut [u8],
+        buf: &mut [u8],
         _source: &dyn ReadObjectHandle,
     ) -> Result<usize, Error> {
-        let size = self.size();
-        if offset >= size {
-            return Ok(0);
-        }
-        if size - offset < buf.len() as u64 {
-            buf = &mut buf[0..(size - offset) as usize];
-        }
-        CONCURRENT_SYSCALLS.acquire().await;
-        self.0.read(buf, offset)?;
-        Ok(buf.len())
+        let _guard = CONCURRENT_SYSCALLS.acquire().await;
+        Ok(self.stream.readv_at(zx::StreamReadOptions::empty(), offset, &[buf])?)
     }
 
     async fn write(
@@ -80,11 +85,11 @@ impl DataBuffer for VmoDataBuffer {
         let end = offset + buf.len() as u64;
 
         if end > old_size {
-            self.0.set_size(end).unwrap();
+            self.vmo.set_size(end).unwrap();
         }
 
-        if let Err(e) = self.0.write(buf, offset) {
-            self.0.set_size(old_size)?;
+        if let Err(e) = self.vmo.write(buf, offset) {
+            self.vmo.set_size(old_size)?;
             bail!(e);
         }
 
@@ -92,12 +97,12 @@ impl DataBuffer for VmoDataBuffer {
     }
 
     fn size(&self) -> u64 {
-        self.0.get_content_size().unwrap()
+        self.vmo.get_content_size().unwrap()
     }
 
     async fn resize(&self, size: u64) {
         let _guard = CONCURRENT_SYSCALLS.acquire().await;
-        self.0.set_size(size).unwrap();
+        self.vmo.set_size(size).unwrap();
     }
 
     fn zero(&self, range: Range<u64>) {
@@ -105,6 +110,6 @@ impl DataBuffer for VmoDataBuffer {
         if range.end == range.start {
             return;
         }
-        self.0.op_range(zx::VmoOp::ZERO, range.start, range.end - range.start).unwrap();
+        self.vmo.op_range(zx::VmoOp::ZERO, range.start, range.end - range.start).unwrap();
     }
 }

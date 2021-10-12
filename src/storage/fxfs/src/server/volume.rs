@@ -23,7 +23,7 @@ use {
     async_trait::async_trait,
     fuchsia_async as fasync,
     fuchsia_zircon::Status,
-    std::{any::Any, sync::Arc},
+    std::{any::Any, convert::TryInto, sync::Arc},
     vfs::{
         filesystem::{Filesystem, FilesystemRename},
         path::Path,
@@ -140,7 +140,7 @@ impl HandleOwner for FxVolume {
     type Buffer = VmoDataBuffer;
 
     fn create_data_buffer(&self, object_id: u64, initial_size: u64) -> Self::Buffer {
-        self.pager.create_vmo(object_id, initial_size).unwrap().into()
+        self.pager.create_vmo(object_id, initial_size).unwrap().try_into().unwrap()
     }
 }
 
@@ -296,7 +296,6 @@ pub struct FxVolumeAndRoot {
 
 impl FxVolumeAndRoot {
     pub async fn new(store: Arc<ObjectStore>) -> Result<Self, Error> {
-        store.ensure_open().await?;
         let volume = Arc::new(FxVolume::new(store)?);
         let root_object_id = volume.store().root_directory_object_id();
         let root_dir = Directory::open(&volume, root_object_id).await?;

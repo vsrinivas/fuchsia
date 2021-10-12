@@ -21,9 +21,10 @@ use {
         object_store::{
             filesystem::{Filesystem, Mutations, SyncOptions},
             journal::checksum_list::ChecksumList,
+            object_manager::ReservationUpdate,
             store_object_handle::DirectWriter,
             transaction::{AllocatorMutation, AssocObj, Mutation, Options, Transaction},
-            CachingObjectHandle, HandleOptions, ObjectStore,
+            tree, CachingObjectHandle, HandleOptions, ObjectStore,
         },
         round::round_down,
         trace_duration,
@@ -315,7 +316,6 @@ pub struct SimpleAllocator {
     block_size: u32,
     device_size: u64,
     object_id: u64,
-    empty: bool,
     tree: LSMTree<AllocatorKey, AllocatorValue>,
     reserved_allocations: Arc<SkipListLayer<AllocatorKey, AllocatorValue>>,
     inner: Mutex<Inner>,
@@ -358,10 +358,16 @@ impl Inner {
             + self.uncommitted_allocated_bytes
             + self.committed_deallocated_bytes
     }
+
+    // Returns the total number of bytes that are taken either from reservations, allocations or
+    // uncommitted allocations.
+    fn taken_bytes(&self) -> u64 {
+        self.allocated_bytes as u64 + self.uncommitted_allocated_bytes + self.reserved_bytes
+    }
 }
 
 impl SimpleAllocator {
-    pub fn new(filesystem: Arc<dyn Filesystem>, object_id: u64, empty: bool) -> SimpleAllocator {
+    pub fn new(filesystem: Arc<dyn Filesystem>, object_id: u64) -> SimpleAllocator {
         SimpleAllocator {
             filesystem: Arc::downgrade(&filesystem),
             // TODO(csuter): Rather than computing the block size here, we should perhaps have the
@@ -370,7 +376,6 @@ impl SimpleAllocator {
             block_size: filesystem.block_size(),
             device_size: filesystem.device().size(),
             object_id,
-            empty,
             tree: LSMTree::new(merge),
             reserved_allocations: SkipListLayer::new(1024), // TODO(csuter): magic numbers
             inner: Mutex::new(Inner {
@@ -392,83 +397,75 @@ impl SimpleAllocator {
         &self.tree
     }
 
-    // Ensures the allocator is open.  If empty, create the object in the root object store,
-    // otherwise load and initialise the LSM tree.
-    pub async fn ensure_open(&self) -> Result<(), Error> {
-        {
-            if self.inner.lock().unwrap().opened {
-                return Ok(());
-            }
-        }
-
-        let _guard = debug_assert_not_too_long!(self.allocation_mutex.lock());
-        {
-            if self.inner.lock().unwrap().opened {
-                // We lost a race.
-                return Ok(());
-            }
-        }
+    /// Creates a new (empty) allocator.
+    pub async fn create(&self) -> Result<(), Error> {
+        // Mark the allocator as opened before creating the file because creating a new
+        // transaction requires a reservation.
+        assert_eq!(std::mem::replace(&mut self.inner.lock().unwrap().opened, true), false);
 
         let filesystem = self.filesystem.upgrade().unwrap();
         let root_store = filesystem.root_store();
-
-        if self.empty {
-            let mut transaction = filesystem
-                .clone()
-                .new_transaction(&[], Options { skip_journal_checks: true, ..Default::default() })
-                .await?;
-            ObjectStore::create_object_with_id(
-                &root_store,
-                &mut transaction,
-                self.object_id(),
-                HandleOptions::default(),
-                Some(0),
-            )
+        let mut transaction = filesystem
+            .clone()
+            .new_transaction(&[], Options { skip_journal_checks: true, ..Default::default() })
             .await?;
-            transaction.commit().await?;
-        } else {
-            let handle =
-                ObjectStore::open_object(&root_store, self.object_id, HandleOptions::default())
-                    .await?;
+        ObjectStore::create_object_with_id(
+            &root_store,
+            &mut transaction,
+            self.object_id(),
+            HandleOptions::default(),
+            Some(0),
+        )
+        .await?;
+        transaction.commit().await?;
+        Ok(())
+    }
 
-            if handle.get_size() > 0 {
-                let serialized_info = handle.contents(MAX_ALLOCATOR_INFO_SERIALIZED_SIZE).await?;
-                let info: AllocatorInfo = deserialize_from(&serialized_info[..])?;
-                let mut handles = Vec::new();
-                let mut total_size = 0;
-                for object_id in &info.layers {
-                    let handle = CachingObjectHandle::new(
-                        ObjectStore::open_object(&root_store, *object_id, HandleOptions::default())
-                            .await?,
-                    );
-                    total_size += handle.get_size();
-                    handles.push(handle);
-                }
-                {
-                    let mut inner = self.inner.lock().unwrap();
-                    // After replaying, allocated_bytes should include all the deltas since the time
-                    // the allocator was last flushed, so here we just need to add whatever is
-                    // recorded in info.
-                    let amount: i64 =
-                        info.allocated_bytes.try_into().map_err(|_| FxfsError::Inconsistent)?;
-                    inner.allocated_bytes += amount;
-                    if inner.allocated_bytes < 0 || inner.allocated_bytes as u64 > self.device_size
-                    {
-                        bail!(anyhow!(FxfsError::Inconsistent)
-                            .context("Allocated bytes inconsistent"));
-                    }
-                    inner.info = info;
-                }
-                self.tree.append_layers(handles.into_boxed_slice()).await?;
-                self.filesystem
-                    .upgrade()
-                    .unwrap()
-                    .object_manager()
-                    .update_reservation(self.object_id, total_size);
+    // Ensures the allocator is open.  If empty, create the object in the root object store,
+    // otherwise load and initialise the LSM tree.  This is not thread-safe; this should be called
+    // after the journal has been replayed.
+    pub async fn open(&self) -> Result<(), Error> {
+        let filesystem = self.filesystem.upgrade().unwrap();
+        let root_store = filesystem.root_store();
+
+        let handle =
+            ObjectStore::open_object(&root_store, self.object_id, HandleOptions::default()).await?;
+
+        if handle.get_size() > 0 {
+            let serialized_info = handle.contents(MAX_ALLOCATOR_INFO_SERIALIZED_SIZE).await?;
+            let info: AllocatorInfo = deserialize_from(&serialized_info[..])?;
+            let mut handles = Vec::new();
+            let mut total_size = 0;
+            for object_id in &info.layers {
+                let handle = CachingObjectHandle::new(
+                    ObjectStore::open_object(&root_store, *object_id, HandleOptions::default())
+                        .await?,
+                );
+                total_size += handle.get_size();
+                handles.push(handle);
             }
+            {
+                let mut inner = self.inner.lock().unwrap();
+                // After replaying, allocated_bytes should include all the deltas since the time
+                // the allocator was last flushed, so here we just need to add whatever is
+                // recorded in info.
+                let amount: i64 = info.allocated_bytes.try_into().map_err(|_| {
+                    anyhow!(FxfsError::Inconsistent).context("Allocated bytes inconsistent")
+                })?;
+                inner.allocated_bytes += amount;
+                if inner.allocated_bytes < 0 || inner.allocated_bytes as u64 > self.device_size {
+                    bail!(anyhow!(FxfsError::Inconsistent).context("Allocated bytes inconsistent"));
+                }
+                inner.info = info;
+            }
+            self.tree.append_layers(handles.into_boxed_slice()).await?;
+            self.filesystem.upgrade().unwrap().object_manager().update_reservation(
+                self.object_id,
+                tree::reservation_amount_from_layer_size(total_size),
+            );
         }
 
-        self.inner.lock().unwrap().opened = true;
+        assert_eq!(std::mem::replace(&mut self.inner.lock().unwrap().opened, true), false);
         Ok(())
     }
 
@@ -501,8 +498,6 @@ impl Allocator for SimpleAllocator {
     ) -> Result<Range<u64>, Error> {
         assert_eq!(len % self.block_size as u64, 0);
 
-        self.ensure_open().await?;
-
         let hold = if let Some(reservation) = transaction.allocator_reservation {
             Left(reservation.hold(len)?)
         } else {
@@ -520,15 +515,10 @@ impl Allocator for SimpleAllocator {
             }
 
             let mut inner = self.inner.lock().unwrap();
+            assert!(inner.opened);
             // We must take care not to use up space that might be reserved.
             len = round_down(
-                std::cmp::min(
-                    len,
-                    self.device_size
-                        - inner.allocated_bytes as u64
-                        - inner.reserved_bytes
-                        - inner.uncommitted_allocated_bytes,
-                ),
+                std::cmp::min(len, self.device_size - inner.taken_bytes()),
                 self.block_size,
             );
             ensure!(len > 0, FxfsError::NoSpace);
@@ -631,12 +621,19 @@ impl Allocator for SimpleAllocator {
         transaction: &mut Transaction<'_>,
         device_range: Range<u64>,
     ) -> Result<(), Error> {
-        ensure!(device_range.end <= self.device_size, FxfsError::NoSpace);
-        if let Some(reservation) = &mut transaction.allocator_reservation {
-            // The transaction takes ownership of this hold.
-            reservation.hold(device_range.length())?.take();
+        {
+            let mut inner = self.inner.lock().unwrap();
+            ensure!(
+                device_range.end <= self.device_size
+                    && self.device_size - inner.taken_bytes() >= device_range.length(),
+                FxfsError::NoSpace
+            );
+            if let Some(reservation) = &mut transaction.allocator_reservation {
+                // The transaction takes ownership of this hold.
+                reservation.hold(device_range.length())?.take();
+            }
+            inner.uncommitted_allocated_bytes += device_range.length();
         }
-        self.inner.lock().unwrap().uncommitted_allocated_bytes += device_range.length();
         let item = AllocatorItem::new(AllocatorKey { device_range }, AllocatorValue { delta: 1 });
         self.reserved_allocations.insert(item.clone()).await;
         transaction.add(self.object_id(), Mutation::allocation(item));
@@ -786,7 +783,7 @@ impl Allocator for SimpleAllocator {
     fn reserve(self: Arc<Self>, amount: u64) -> Option<Reservation> {
         {
             let mut inner = self.inner.lock().unwrap();
-            if self.device_size - inner.allocated_bytes as u64 - inner.reserved_bytes < amount {
+            if self.device_size - inner.taken_bytes() < amount {
                 return None;
             }
             inner.reserved_bytes += amount;
@@ -797,10 +794,7 @@ impl Allocator for SimpleAllocator {
     fn reserve_at_most(self: Arc<Self>, mut amount: u64) -> Reservation {
         {
             let mut inner = self.inner.lock().unwrap();
-            amount = std::cmp::min(
-                self.device_size - inner.allocated_bytes as u64 - inner.reserved_bytes,
-                amount,
-            );
+            amount = std::cmp::min(self.device_size - inner.taken_bytes(), amount);
             inner.reserved_bytes += amount;
         }
         Reservation::new(self, amount)
@@ -923,16 +917,6 @@ impl Mutations for SimpleAllocator {
                     // the allocator, we'll add this back.
                     let mut inner = self.inner.lock().unwrap();
                     inner.allocated_bytes -= inner.info.allocated_bytes as i64;
-                } else {
-                    let layers = self.tree.immutable_layer_set();
-                    self.filesystem.upgrade().unwrap().object_manager().update_reservation(
-                        self.object_id,
-                        layers
-                            .layers
-                            .iter()
-                            .map(|l| l.handle().map(|h| h.get_size()).unwrap_or(0))
-                            .sum(),
-                    );
                 }
             }
             _ => panic!("unexpected mutation! {:?}", mutation), // TODO(csuter): This can't panic
@@ -958,8 +942,6 @@ impl Mutations for SimpleAllocator {
     }
 
     async fn flush(&self) -> Result<(), Error> {
-        self.ensure_open().await?;
-
         let filesystem = self.filesystem.upgrade().unwrap();
         let object_manager = filesystem.object_manager();
         if !object_manager.needs_flush(self.object_id()) {
@@ -1016,6 +998,7 @@ impl Mutations for SimpleAllocator {
 
         // TODO(jfsulliv): Can we preallocate the buffer instead of doing a bounce? Do we know the
         // size up front?
+        let reservation_update;
         let mut transaction = filesystem.clone().new_transaction(&[], txn_options).await?;
         let mut serialized_info = Vec::new();
         {
@@ -1033,9 +1016,17 @@ impl Mutations for SimpleAllocator {
         buf.as_mut_slice()[..serialized_info.len()].copy_from_slice(&serialized_info[..]);
         object_handle.txn_write(&mut transaction, 0u64, buf.as_ref()).await?;
 
+        reservation_update = ReservationUpdate::new(tree::reservation_amount_from_layer_size(
+            layer_object_handle.get_size(),
+        ));
+
         // It's important that EndFlush is in the same transaction that we write AllocatorInfo,
         // because we use EndFlush to make the required adjustments to allocated_bytes.
-        transaction.add(self.object_id(), Mutation::EndFlush);
+        transaction.add_with_object(
+            self.object_id(),
+            Mutation::EndFlush,
+            AssocObj::Borrowed(&reservation_update),
+        );
         graveyard.remove(&mut transaction, root_store.store_object_id(), object_id);
 
         // TODO(csuter): what if this fails.
@@ -1234,14 +1225,20 @@ mod tests {
         assert_eq!(found, expected_allocations.iter().map(|r| r.length()).sum());
     }
 
-    #[fasync::run_singlethreaded(test)]
-    async fn test_allocations() {
+    async fn test_fs() -> (Arc<FakeFilesystem>, Arc<SimpleAllocator>, Arc<ObjectStore>) {
         let device = DeviceHolder::new(FakeDevice::new(4096, 512));
         let fs = FakeFilesystem::new(device);
-        let allocator = Arc::new(SimpleAllocator::new(fs.clone(), 1, true));
+        let allocator = Arc::new(SimpleAllocator::new(fs.clone(), 1));
         fs.object_manager().set_allocator(allocator.clone());
         let store = ObjectStore::new_empty(None, 2, fs.clone());
         fs.object_manager().set_root_store(store.clone());
+        allocator.create().await.expect("create failed");
+        (fs, allocator, store)
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_allocations() {
+        let (fs, allocator, _) = test_fs().await;
         let mut transaction =
             fs.clone().new_transaction(&[], Options::default()).await.expect("new failed");
         let mut device_ranges = Vec::new();
@@ -1279,12 +1276,7 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_deallocations() {
-        let device = DeviceHolder::new(FakeDevice::new(4096, 512));
-        let fs = FakeFilesystem::new(device);
-        let allocator = Arc::new(SimpleAllocator::new(fs.clone(), 1, true));
-        fs.object_manager().set_allocator(allocator.clone());
-        let store = ObjectStore::new_empty(None, 2, fs.clone());
-        fs.object_manager().set_root_store(store.clone());
+        let (fs, allocator, _) = test_fs().await;
         let mut transaction =
             fs.clone().new_transaction(&[], Options::default()).await.expect("new failed");
         let device_range1 = allocator
@@ -1304,12 +1296,7 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_mark_allocated() {
-        let device = DeviceHolder::new(FakeDevice::new(4096, 512));
-        let fs = FakeFilesystem::new(device);
-        let allocator = Arc::new(SimpleAllocator::new(fs.clone(), 1, true));
-        fs.object_manager().set_allocator(allocator.clone());
-        let store = ObjectStore::new_empty(None, 2, fs.clone());
-        fs.object_manager().set_root_store(store.clone());
+        let (fs, allocator, _) = test_fs().await;
         let mut transaction =
             fs.clone().new_transaction(&[], Options::default()).await.expect("new failed");
         let mut device_ranges = Vec::new();
@@ -1333,13 +1320,7 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_flush() {
-        let device = DeviceHolder::new(FakeDevice::new(4096, 512));
-        let fs = FakeFilesystem::new(device);
-        let allocator = Arc::new(SimpleAllocator::new(fs.clone(), 1, true));
-        fs.object_manager().set_allocator(allocator.clone());
-        let store = ObjectStore::new_empty(None, 2, fs.clone());
-        fs.object_manager().set_root_store(store.clone());
-        allocator.ensure_open().await.expect("ensure_open failed");
+        let (fs, allocator, store) = test_fs().await;
         let mut transaction =
             fs.clone().new_transaction(&[], Options::default()).await.expect("new failed");
         let graveyard = Graveyard::create(&mut transaction, &store).await.expect("create failed");
@@ -1367,8 +1348,9 @@ mod tests {
 
         allocator.flush().await.expect("flush failed");
 
-        let allocator = Arc::new(SimpleAllocator::new(fs.clone(), 1, false));
+        let allocator = Arc::new(SimpleAllocator::new(fs.clone(), 1));
         fs.object_manager().set_allocator(allocator.clone());
+        allocator.open().await.expect("open failed");
         // When we flushed the allocator, it would have been written to the device somewhere but
         // without a journal, we will be missing those records, so this next allocation will likely
         // be on top of those objects.  That won't matter for the purposes of this test, since we
@@ -1390,12 +1372,7 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_dropped_transaction() {
-        let device = DeviceHolder::new(FakeDevice::new(4096, 512));
-        let fs = FakeFilesystem::new(device);
-        let allocator = Arc::new(SimpleAllocator::new(fs.clone(), 1, true));
-        fs.object_manager().set_allocator(allocator.clone());
-        let store = ObjectStore::new_empty(None, 2, fs.clone());
-        fs.object_manager().set_root_store(store.clone());
+        let (fs, allocator, _) = test_fs().await;
         let allocated_range = {
             let mut transaction = fs
                 .clone()
@@ -1425,14 +1402,7 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_allocated_bytes() {
-        const BLOCK_COUNT: u32 = 4096;
-        const BLOCK_SIZE: u32 = 512;
-        let device = DeviceHolder::new(FakeDevice::new(BLOCK_COUNT.into(), BLOCK_SIZE));
-        let fs = FakeFilesystem::new(device);
-        let allocator = Arc::new(SimpleAllocator::new(fs.clone(), 1, true));
-        fs.object_manager().set_allocator(allocator.clone());
-        let store = ObjectStore::new_empty(None, 2, fs.clone());
-        fs.object_manager().set_root_store(store.clone());
+        let (fs, allocator, _) = test_fs().await;
         assert_eq!(allocator.get_allocated_bytes(), 0);
 
         // Verify allocated_bytes reflects allocation changes.

@@ -229,7 +229,7 @@ impl<W: WriteBytes> SimplePersistentLayerWriter<W> {
         }
         LittleEndian::write_u16(&mut self.buf[0..2], self.item_count);
         self.writer.write_bytes(&self.buf[..len]).await?;
-        self.writer.skip(self.block_size as u64 - len as u64);
+        self.writer.skip(self.block_size as u64 - len as u64).await?;
         log::debug!("wrote {} items, {} bytes", self.item_count, len);
         self.buf.drain(..len - 2); // 2 bytes are used for the next item count.
         self.item_count = 0;

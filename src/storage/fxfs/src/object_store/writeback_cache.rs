@@ -138,7 +138,12 @@ struct Inner {
 
     modification_time: Option<Duration>,
 
-    // Holds the minimum size the object has been since the last flush.
+    // Holds the minimum size the object has been since the last flush. To understand why this is
+    // required, consider a file that is 10,000 bytes in size. Imagine this file is truncated and
+    // then extended back to 10,000 bytes without being flushed. If there is now a page request for
+    // the file, we need to know that the file was truncated because we need to return zeroes. Since
+    // the file hasn't been flushed, the object will still have its original size on disk, hence the
+    // need for `min_size`.
     min_size: u64,
 
     // If set, the minimum size as it was when take_flushable_data was called.
@@ -165,6 +170,8 @@ impl Inner {
                 }
             }
         }
+        // TODO(csuter): When we get to the point where pages can be discarded, we need to clear
+        // this *after* a successful flush but *before* the pages are marked discardable.
         let flushing_min_size = self.flushing_min_size.take().unwrap();
         if !completed {
             if flushing_min_size < self.min_size {
@@ -397,10 +404,8 @@ impl<B: DataBuffer> WritebackCache<B> {
             if size != old_size {
                 inner.content_size = Some(size);
             }
-            if size < inner.min_size {
-                inner.min_size = size;
-            }
         }
+
         // Resize the buffer after making changes to |inner| to avoid a race when truncating (where
         // we could have intervals that reference nonexistent parts of the buffer).
         // Note that there's a similar race for extending when we do things in this order, but we
@@ -408,6 +413,22 @@ impl<B: DataBuffer> WritebackCache<B> {
         // If that turns out to be problematic, we'll have to atomically update both the buffer and
         // the interval tree at once.
         self.data.resize(size).await;
+
+        // We must update min_size *after* we've resized the buffer since if we do it beforehand, we
+        // might end up servicing page requests that are expected to succeed for the old size, but
+        // because min_size has changed, it'll return zeroed data when rather than actually issue a
+        // read.  It's safe to change this afterwards because any page requests that the kernel
+        // handles should already be shortened and min_size only exists for the case where the VMO
+        // grows again later, which can't happen because the caller should be holding a lock.  This
+        // doesn't need to be synchronized with `content_size` because it's used to handle races
+        // with between shrinking and page-ins; unlike `content_size`, it isn't used for flushing.
+
+        // TODO(csuter): When we support discardable pages, this will need to be updated *after* a
+        // successful flush but *before* pages are marked as discardable.
+        let mut inner = self.inner.lock().unwrap();
+        if size < inner.min_size {
+            inner.min_size = size;
+        }
         Ok(())
     }
 
@@ -418,10 +439,6 @@ impl<B: DataBuffer> WritebackCache<B> {
         buf: &mut [u8],
         source: &dyn ReadObjectHandle,
     ) -> Result<usize, Error> {
-        // TODO(csuter): There are some races here that need to be addressed.  If the read requires
-        // a page-in, but whilst we are doing that, the object is truncated and then flushed, the
-        // read can then fail with a short read, but that probably isn't handled correctly right
-        // now: it might return an error or it might return zeroes where there should be none.
         self.data.read(offset, buf, source).await
     }
 

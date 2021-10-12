@@ -51,7 +51,8 @@ struct TestFilesystemOptions {
   // partition under test to be at a different offset on the underlying device.
   uint64_t dummy_fvm_partition_size = 0;
 
-  // If true, configure its volume size as device_block_size * device_block_count for all tests.
+  // If true, tests will avoid creating volumes smaller than the size given by
+  // device_block_size * device_block_count.
   bool has_min_volume_size = false;
   int64_t device_block_size = 0;
   int64_t device_block_count = 0;

@@ -312,11 +312,8 @@ impl Journal {
         );
 
         self.objects.set_root_parent_store(root_parent.clone());
-        let allocator = Arc::new(SimpleAllocator::new(
-            filesystem.clone(),
-            super_block.allocator_object_id,
-            false,
-        ));
+        let allocator =
+            Arc::new(SimpleAllocator::new(filesystem.clone(), super_block.allocator_object_id));
         self.objects.set_allocator(allocator.clone());
         self.objects.set_borrowed_metadata_space(super_block.borrowed_metadata_space);
         self.objects.set_last_end_offset(super_block.super_block_journal_file_offset);
@@ -487,6 +484,10 @@ impl Journal {
             }
         };
 
+        let root_store = self.objects.root_store();
+        root_store.open().await?;
+        allocator.open().await?;
+
         // Configure the journal writer so that we can continue.
         {
             if last_checkpoint.file_offset < super_block.super_block_journal_file_offset {
@@ -496,7 +497,6 @@ impl Journal {
                     last_checkpoint.file_offset, super_block.super_block_journal_file_offset
                 )));
             }
-            allocator.ensure_open().await?;
             let handle = ObjectStore::open_object(
                 &root_parent,
                 super_block.journal_object_id,
@@ -516,8 +516,6 @@ impl Journal {
             }
         }
 
-        let root_store = self.objects.root_store();
-        root_store.ensure_open().await?;
         self.objects.register_graveyard(
             Graveyard::open(&self.objects.root_store(), root_store.graveyard_directory_object_id())
                 .await
@@ -536,6 +534,7 @@ impl Journal {
         } else {
             log::info!("replayed to {}", reader.journal_file_checkpoint().file_offset);
         }
+        self.objects.open_stores().await?;
         Ok(())
     }
 
@@ -560,7 +559,7 @@ impl Journal {
         self.objects.set_root_parent_store(root_parent.clone());
 
         let allocator =
-            Arc::new(SimpleAllocator::new(filesystem.clone(), INIT_ALLOCATOR_OBJECT_ID, true));
+            Arc::new(SimpleAllocator::new(filesystem.clone(), INIT_ALLOCATOR_OBJECT_ID));
         self.objects.set_allocator(allocator.clone());
 
         let journal_handle;
@@ -575,6 +574,8 @@ impl Journal {
             .await
             .context("create root store")?;
         self.objects.set_root_store(root_store.clone());
+
+        allocator.create().await?;
 
         // Create the super-block objects...
         super_block_a_handle = ObjectStore::create_object_with_id(
@@ -642,8 +643,6 @@ impl Journal {
             );
             inner.super_block_to_write = SuperBlockCopy::A;
         }
-
-        allocator.ensure_open().await?;
 
         // Initialize the journal writer.
         let _ = self.handle.set(journal_handle);
@@ -737,7 +736,6 @@ impl Journal {
     // Determines whether a mutation at the given checkpoint should be applied.  During replay, not
     // all records should be applied because the object store or allocator might already contain the
     // mutation.  After replay, that obviously isn't the case and we want to apply all mutations.
-    // Regardless, we want to keep track of the earliest mutation in the journal for a given object.
     fn should_apply(&self, object_id: u64, journal_file_checkpoint: &JournalCheckpoint) -> bool {
         let super_block = &self.inner.lock().unwrap().super_block;
         let offset = super_block
@@ -835,16 +833,20 @@ impl Journal {
         Ok(Some((checkpoint, borrowed)))
     }
 
+    // Returns the checkpoint as it was prior to padding.  This is done because the super block
+    // needs to record where the last transaction ends and it's the next transaction that pays the
+    // price of the padding.
     fn pad_to_block(&self) -> Result<(JournalCheckpoint, u64), Error> {
         let mut inner = self.inner.lock().unwrap();
-        if inner.writer.journal_file_checkpoint().file_offset % BLOCK_SIZE != 0 {
+        let checkpoint = inner.writer.journal_file_checkpoint();
+        if checkpoint.file_offset % BLOCK_SIZE != 0 {
             serialize_into(&mut inner.writer, &JournalRecord::EndBlock)?;
             inner.writer.pad_to_block()?;
             if let Some(waker) = inner.flush_waker.take() {
                 waker.wake();
             }
         }
-        Ok((inner.writer.journal_file_checkpoint(), self.objects.borrowed_metadata_space()))
+        Ok((checkpoint, self.objects.borrowed_metadata_space()))
     }
 
     async fn flush_device(&self, checkpoint_offset: u64) -> Result<(), Error> {

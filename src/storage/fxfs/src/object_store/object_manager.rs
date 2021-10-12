@@ -10,7 +10,9 @@ use {
             filesystem::Mutations,
             graveyard::Graveyard,
             journal::{self, checksum_list::ChecksumList, JournalCheckpoint},
-            transaction::{AssocObj, MetadataReservation, Mutation, Transaction, TxnMutation},
+            transaction::{
+                AssocObj, AssociatedObject, MetadataReservation, Mutation, Transaction, TxnMutation,
+            },
             ObjectStore,
         },
     },
@@ -23,10 +25,14 @@ use {
 };
 
 // Data written to the journal eventually needs to be flushed somewhere (typically into layer
-// files).  Here we conservatively assume that could take up to twice us much space as it does in
-// the journal.  In practice, it should be less than that.
-fn reserved_space_from_journal_usage(journal_usage: u64) -> u64 {
-    journal_usage * 2
+// files).  Here we conservatively assume that could take up to four times as much space as it does
+// in the journal.  In the layer file, it'll take up at least as much, but we must reserve the same
+// again that so that there's enough space for compactions, and then we need some spare for
+// overheads.
+// TODO(csuter): We should come up with a better way of determining what the multiplier should be
+// here.  2x was too low, as it didn't cover any space for metadata.  4x might be too much.
+pub const fn reserved_space_from_journal_usage(journal_usage: u64) -> u64 {
+    journal_usage * 4
 }
 
 /// ObjectManager is a global loading cache for object stores and other special objects.
@@ -37,6 +43,7 @@ pub struct ObjectManager {
 
 // Whilst we are flushing we need to keep track of the old checkpoint that we are hoping to flush,
 // and a new one that should apply if we successfully finish the flush.
+#[derive(Debug)]
 enum Checkpoints {
     Current(JournalCheckpoint),
     Old(JournalCheckpoint),
@@ -160,9 +167,10 @@ impl ObjectManager {
     /// When replaying the journal, we need to replay mutation records into the LSM tree, but we
     /// cannot properly open the store until all the records have been replayed since some of the
     /// records we replay might affect how we open, e.g. they might pertain to new layer files
-    /// backing this store.  The store will get properly opened whenever an action is taken that
-    /// needs the store to be opened (via ObjectStore::ensure_open).
-    pub fn lazy_open_store(&self, store_object_id: u64) -> Arc<ObjectStore> {
+    /// backing this store.  The stores will get properly opened once we finish replaying the
+    /// journal.  This should *only* be called during replay.  At any other time, `open_store`
+    /// should be used.
+    fn lazy_open_store(&self, store_object_id: u64) -> Arc<ObjectStore> {
         let mut inner = self.inner.write().unwrap();
         assert_ne!(store_object_id, inner.allocator_object_id);
         let root_parent_store_object_id = inner.root_parent_store_object_id;
@@ -182,8 +190,18 @@ impl ObjectManager {
 
     pub async fn open_store(&self, store_object_id: u64) -> Result<Arc<ObjectStore>, Error> {
         let store = self.lazy_open_store(store_object_id);
-        store.ensure_open().await?;
+        store.open().await?;
         Ok(store)
+    }
+
+    /// This is not thread-safe: it assumes that a store won't be forgotten whilst the loop is
+    /// running.  This is to be used after replaying the journal.
+    pub async fn open_stores(&self) -> Result<(), Error> {
+        for store_id in self.store_object_ids() {
+            let store = self.inner.read().unwrap().stores.get(&store_id).unwrap().clone();
+            store.open().await?;
+        }
+        Ok(())
     }
 
     pub fn add_store(&self, store: Arc<ObjectStore>) {
@@ -296,8 +314,12 @@ impl ObjectManager {
                 inner.stores.get(&object_id).map(|x| x.clone() as Arc<dyn Mutations>)
             }
         }
-        .unwrap_or_else(|| self.lazy_open_store(object_id));
-        associated_object.will_apply_mutation(&mutation);
+        .unwrap_or_else(|| {
+            // This should only happen during replay.
+            assert!(transaction.is_none());
+            self.lazy_open_store(object_id)
+        });
+        associated_object.map(|o| o.will_apply_mutation(&mutation, object_id, self));
         object
             .apply_mutation(mutation, transaction, checkpoint.file_offset, associated_object)
             .await;
@@ -495,9 +517,13 @@ impl ObjectManager {
 
     /// Flushes all known objects.  This will then allow the journal space to be freed.
     pub async fn flush(&self) -> Result<(), Error> {
-        let object_ids: Vec<_> =
+        let mut object_ids: Vec<_> =
             self.inner.read().unwrap().journal_checkpoints.keys().cloned().collect();
-        for object_id in object_ids {
+        // Process objects in reverse sorted order because that will mean we compact the root object
+        // store last which will ensure we include the metadata from the compactions of other
+        // objects.
+        object_ids.sort_unstable();
+        for &object_id in object_ids.iter().rev() {
             self.object(object_id).unwrap().flush().await?;
         }
         Ok(())
@@ -540,5 +566,23 @@ impl ObjectManager {
 
     pub fn set_borrowed_metadata_space(&self, v: u64) {
         self.inner.write().unwrap().borrowed_metadata_space = v;
+    }
+}
+
+/// ReservationUpdate is an associated object that sets the amount reserved for an object
+/// (overwriting any previous amount). Updates must be applied as part of a transaction before
+/// did_commit_transaction runs because it will reconcile the accounting for reserved metadata
+/// space.
+pub struct ReservationUpdate(u64);
+
+impl ReservationUpdate {
+    pub fn new(amount: u64) -> Self {
+        Self(amount)
+    }
+}
+
+impl AssociatedObject for ReservationUpdate {
+    fn will_apply_mutation(&self, _mutation: &Mutation, object_id: u64, manager: &ObjectManager) {
+        manager.update_reservation(object_id, self.0);
     }
 }

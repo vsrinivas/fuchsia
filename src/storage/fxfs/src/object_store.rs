@@ -44,13 +44,14 @@ use {
             data_buffer::{DataBuffer, MemDataBuffer},
             filesystem::{Filesystem, Mutations},
             journal::checksum_list::ChecksumList,
+            object_manager::ReservationUpdate,
             record::{
                 Checksums, EncryptionKeys, ExtentKey, ExtentValue, ObjectItem, ObjectKey,
                 ObjectKind, ObjectValue, DEFAULT_DATA_ATTRIBUTE_ID,
             },
             store_object_handle::DirectWriter,
             transaction::{
-                AssocObj, AssociatedObject, ExtentMutation, LockKey, Mutation, ObjectStoreMutation,
+                AssocObj, AssociatedObject, ExtentMutation, Mutation, ObjectStoreMutation,
                 Operation, Options, StoreInfoMutation, Transaction,
             },
         },
@@ -60,7 +61,6 @@ use {
     anyhow::{anyhow, bail, Context, Error},
     async_trait::async_trait,
     bincode::{deserialize_from, serialize_into},
-    futures::{future::BoxFuture, FutureExt},
     interval_tree::utils::RangeOps,
     once_cell::sync::OnceCell,
     serde::{Deserialize, Serialize},
@@ -237,7 +237,6 @@ impl ObjectStore {
         transaction: &mut Transaction<'a>,
         object_id: u64,
     ) -> Result<Arc<ObjectStore>, Error> {
-        self.ensure_open().await?;
         // TODO(csuter): if the transaction rolls back, we need to delete the store.
         let handle = ObjectStore::create_object_with_id(
             self,
@@ -260,7 +259,6 @@ impl ObjectStore {
         options: HandleOptions,
     ) -> Result<StoreObjectHandle<S>, Error> {
         let store = owner.as_ref().as_ref();
-        store.ensure_open().await?;
         let keys = match store
             .tree
             .find(&ObjectKey::object(object_id))
@@ -276,7 +274,9 @@ impl ObjectStore {
                 }
             },
             Item { value: ObjectValue::None, .. } => bail!(FxfsError::NotFound),
-            _ => bail!(FxfsError::Inconsistent),
+            _ => {
+                bail!(anyhow!(FxfsError::Inconsistent).context("open_object: Expected object value"))
+            }
         };
 
         let item = store
@@ -295,7 +295,7 @@ impl ObjectStore {
                 false,
             ))
         } else {
-            bail!(FxfsError::Inconsistent);
+            bail!(anyhow!(FxfsError::Inconsistent).context("open_object: Expected attribute"));
         }
     }
 
@@ -307,7 +307,6 @@ impl ObjectStore {
         wrapping_key_id: Option<u64>,
     ) -> Result<StoreObjectHandle<S>, Error> {
         let store = owner.as_ref().as_ref();
-        store.ensure_open().await?;
         let (keys, unwrapped_keys) = if let Some(wrapping_key_id) = wrapping_key_id {
             let (keys, unwrapped_keys) =
                 store.filesystem().crypt().create_key(wrapping_key_id, object_id).await?;
@@ -521,90 +520,67 @@ impl ObjectStore {
         self.store_info.lock().unwrap().as_ref().unwrap().clone()
     }
 
-    pub async fn ensure_open(&self) -> Result<(), Error> {
+    pub async fn open(&self) -> Result<(), Error> {
         if self.parent_store.is_none() || self.store_info_handle.get().is_some() {
             return Ok(());
         }
-        let fs = self.filesystem();
-        let _guard = fs
-            .write_lock(&[LockKey::object(
-                self.parent_store.as_ref().unwrap().store_object_id(),
-                self.store_object_id,
-            )])
-            .await;
-        if self.store_info_handle.get().is_some() {
-            // We lost the race.
-            Ok(())
-        } else {
-            self.open_impl().await
-        }
-    }
-
-    // This returns a BoxFuture because of the cycle: open_object -> ensure_open -> open_impl ->
-    // open_object.
-    fn open_impl<'a>(&'a self) -> BoxFuture<'a, Result<(), Error>> {
-        async move {
-            let parent_store = self.parent_store.as_ref().unwrap();
-            let handle = ObjectStore::open_object(
-                &parent_store,
-                self.store_object_id,
-                HandleOptions::default(),
-            )
-            .await?;
-            let (object_tree_layer_object_ids, extent_tree_layer_object_ids) = loop {
-                if let Some(store_info) = &*self.store_info.lock().unwrap() {
-                    break (
-                        store_info.object_tree_layers.clone(),
-                        store_info.extent_tree_layers.clone(),
-                    );
-                }
-
-                if handle.get_size() > 0 {
-                    let serialized_info = handle.contents(MAX_STORE_INFO_SERIALIZED_SIZE).await?;
-                    let store_info: StoreInfo = deserialize_from(&serialized_info[..])
-                        .context("Failed to deserialize StoreInfo")?;
-                    let layer_object_ids = (
-                        store_info.object_tree_layers.clone(),
-                        store_info.extent_tree_layers.clone(),
-                    );
-                    self.update_last_object_id(store_info.last_object_id);
-                    *self.store_info.lock().unwrap() = Some(store_info);
-                    break layer_object_ids;
-                }
-
-                // The store_info will be absent for a newly created and empty object store, since
-                // there have been no StoreInfoMutations applied to it.
-                break (vec![], vec![]);
-            };
-
-            let mut handles = Vec::new();
-            let mut total_size = 0;
-            for object_id in object_tree_layer_object_ids {
-                let handle = CachingObjectHandle::new(
-                    ObjectStore::open_object(&parent_store, object_id, HandleOptions::default())
-                        .await?,
+        let parent_store = self.parent_store.as_ref().unwrap();
+        let handle =
+            ObjectStore::open_object(&parent_store, self.store_object_id, HandleOptions::default())
+                .await?;
+        let (object_tree_layer_object_ids, extent_tree_layer_object_ids) = loop {
+            if let Some(store_info) = &*self.store_info.lock().unwrap() {
+                break (
+                    store_info.object_tree_layers.clone(),
+                    store_info.extent_tree_layers.clone(),
                 );
-                total_size += handle.get_size();
-                handles.push(handle);
             }
-            self.tree.append_layers(handles.into()).await?;
 
-            let mut handles = Vec::new();
-            for object_id in extent_tree_layer_object_ids {
-                let handle = CachingObjectHandle::new(
-                    ObjectStore::open_object(&parent_store, object_id, HandleOptions::default())
-                        .await?,
-                );
-                total_size += handle.get_size();
-                handles.push(handle);
+            if handle.get_size() > 0 {
+                let serialized_info = handle.contents(MAX_STORE_INFO_SERIALIZED_SIZE).await?;
+                let store_info: StoreInfo = deserialize_from(&serialized_info[..])
+                    .context("Failed to deserialize StoreInfo")?;
+                let layer_object_ids =
+                    (store_info.object_tree_layers.clone(), store_info.extent_tree_layers.clone());
+                self.update_last_object_id(store_info.last_object_id);
+                *self.store_info.lock().unwrap() = Some(store_info);
+                break layer_object_ids;
             }
-            self.extent_tree.append_layers(handles.into()).await?;
 
-            let _ = self.store_info_handle.set(handle);
-            self.filesystem().object_manager().update_reservation(self.store_object_id, total_size);
-            Ok(())
+            // The store_info will be absent for a newly created and empty object store, since
+            // there have been no StoreInfoMutations applied to it.
+            break (vec![], vec![]);
+        };
+
+        let mut handles = Vec::new();
+        let mut total_size = 0;
+        for object_id in object_tree_layer_object_ids {
+            let handle = CachingObjectHandle::new(
+                ObjectStore::open_object(&parent_store, object_id, HandleOptions::default())
+                    .await?,
+            );
+            total_size += handle.get_size();
+            handles.push(handle);
         }
-        .boxed()
+        self.tree.append_layers(handles.into()).await?;
+
+        let mut handles = Vec::new();
+        for object_id in extent_tree_layer_object_ids {
+            let handle = CachingObjectHandle::new(
+                ObjectStore::open_object(&parent_store, object_id, HandleOptions::default())
+                    .await?,
+            );
+            total_size += handle.get_size();
+            handles.push(handle);
+        }
+        self.extent_tree.append_layers(handles.into()).await?;
+
+        let _ = self.store_info_handle.set(handle);
+        self.filesystem().object_manager().update_reservation(
+            self.store_object_id,
+            tree::reservation_amount_from_layer_size(total_size),
+        );
+        Ok(())
     }
 
     fn get_next_object_id(&self) -> u64 {
@@ -760,20 +736,6 @@ impl Mutations for ObjectStore {
                     self.extent_tree.reset_immutable_layers();
                     // StoreInfo needs to be read from the store-info file.
                     *self.store_info.lock().unwrap() = None;
-                } else {
-                    let object_tree_layer_set = self.tree.immutable_layer_set();
-                    let object_tree_handles =
-                        object_tree_layer_set.layers.iter().map(|l| l.handle());
-                    let extent_tree_layer_set = self.extent_tree.immutable_layer_set();
-                    let extent_tree_handles =
-                        extent_tree_layer_set.layers.iter().map(|l| l.handle());
-                    self.filesystem().object_manager().update_reservation(
-                        self.store_object_id,
-                        object_tree_handles
-                            .chain(extent_tree_handles)
-                            .map(|h| h.map(ObjectHandle::get_size).unwrap_or(0))
-                            .sum(),
-                    );
                 }
             }
             Mutation::Extent(ExtentMutation(key, value)) => {
@@ -797,8 +759,6 @@ impl Mutations for ObjectStore {
         if self.parent_store.is_none() {
             return Ok(());
         }
-        self.ensure_open().await?;
-
         let filesystem = self.filesystem();
         let object_manager = filesystem.object_manager();
         if !object_manager.needs_flush(self.store_object_id) {
@@ -890,6 +850,7 @@ impl Mutations for ObjectStore {
         let mut serialized_info = Vec::new();
         let mut new_store_info = self.store_info();
 
+        let reservation_update: ReservationUpdate;
         let mut transaction = filesystem.clone().new_transaction(&[], txn_options).await?;
 
         // Move the existing layers we're compacting to the graveyard.
@@ -929,7 +890,20 @@ impl Mutations for ObjectStore {
             .unwrap()
             .txn_write(&mut transaction, 0u64, buf.as_ref())
             .await?;
-        transaction.add(self.store_object_id(), Mutation::EndFlush);
+
+        let object_tree_handles = new_object_tree_layers.iter().map(|l| l.handle());
+        let extent_tree_handles = new_extent_tree_layers.iter().map(|l| l.handle());
+        reservation_update = ReservationUpdate::new(tree::reservation_amount_from_layer_size(
+            object_tree_handles
+                .chain(extent_tree_handles)
+                .map(|h| h.map(ObjectHandle::get_size).unwrap_or(0))
+                .sum::<u64>(),
+        ));
+        transaction.add_with_object(
+            self.store_object_id(),
+            Mutation::EndFlush,
+            AssocObj::Borrowed(&reservation_update),
+        );
         graveyard.remove(
             &mut transaction,
             parent_store.store_object_id(),

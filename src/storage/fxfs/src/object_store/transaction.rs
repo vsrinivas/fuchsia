@@ -9,6 +9,7 @@ use {
         object_handle::INVALID_OBJECT_ID,
         object_store::{
             allocator::{AllocatorItem, Reservation},
+            object_manager::{reserved_space_from_journal_usage, ObjectManager},
             record::{ExtentKey, ExtentValue, ObjectItem, ObjectKey, ObjectValue},
             StoreInfo,
         },
@@ -51,10 +52,12 @@ pub struct Options<'a> {
 }
 
 // This is the amount of space that we reserve for metadata when we are creating a new transaction.
-// A transaction should not take more than this.  At time of writing, this means that a single
-// transaction must not take any more than 16 KiB of space when written to the journal (see
-// object_manager::reserved_space_from_journal_usage).
-pub const TRANSACTION_METADATA_MAX_AMOUNT: u64 = 32_768;
+// A transaction should not take more than this.  This is expressed in terms of space occupied in
+// the journal; transactions must not take up more space in the journal than the number below.  The
+// amount chosen here must be large enough for the maximum possible transaction that can be created,
+// so transactions always need to be bounded which might involve splitting an operation up into
+// smaller transactions.
+pub const TRANSACTION_METADATA_MAX_AMOUNT: u64 = reserved_space_from_journal_usage(16384);
 
 #[must_use]
 pub struct TransactionLocks<'a>(pub WriteGuard<'a>);
@@ -323,7 +326,8 @@ pub trait AsAny: Any {
 /// applied to in-memory structures.  For example, we cache object sizes, so when a size change is
 /// applied, we can update the cached object size.
 pub trait AssociatedObject: AsAny + Send + Sync {
-    fn will_apply_mutation(&self, _mutation: &Mutation) {}
+    fn will_apply_mutation(&self, _mutation: &Mutation, _object_id: u64, _manager: &ObjectManager) {
+    }
 }
 
 impl<T: AssociatedObject + 'static> AsAny for T {
@@ -351,11 +355,11 @@ impl AssocObj<'_> {
         }
     }
 
-    pub fn will_apply_mutation(&self, mutation: &Mutation) {
+    pub fn map<R, F: FnOnce(&dyn AssociatedObject) -> R>(&self, f: F) -> Option<R> {
         match self {
-            AssocObj::None => {}
-            AssocObj::Borrowed(ref b) => b.will_apply_mutation(mutation),
-            AssocObj::Owned(ref o) => o.will_apply_mutation(mutation),
+            AssocObj::None => None,
+            AssocObj::Borrowed(ref b) => Some(f(*b)),
+            AssocObj::Owned(ref o) => Some(f(o.as_ref())),
         }
     }
 

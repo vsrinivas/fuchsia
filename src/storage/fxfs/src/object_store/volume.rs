@@ -61,7 +61,7 @@ impl RootVolume {
         let object_id =
             match self.volume_directory.lookup(volume_name).await?.ok_or(FxfsError::NotFound)? {
                 (object_id, ObjectDescriptor::Volume) => object_id,
-                _ => bail!(FxfsError::Inconsistent),
+                _ => bail!(anyhow!(FxfsError::Inconsistent).context("Expected volume")),
             };
         self.filesystem.object_manager().open_store(object_id).await
     }
