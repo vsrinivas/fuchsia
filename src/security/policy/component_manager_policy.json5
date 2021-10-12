@@ -225,6 +225,7 @@
                     "/core/appmgr",
                     "/core/pkg-cache",
                     "/core/pkg-resolver",
+                    "/core/system-update-checker",
                     "/core/system-updater",
                 ],
             },
