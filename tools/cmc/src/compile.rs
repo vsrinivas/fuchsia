@@ -115,7 +115,7 @@ fn compile_cml(document: &cml::Document) -> Result<fsys::ComponentDecl, Error> {
             .as_ref()
             .map(|env| translate_environments(env, &all_capability_names))
             .transpose()?,
-        facets: document.facets.clone().map(dictionary_from_map).transpose()?,
+        facets: document.facets.clone().map(dictionary_from_nested_map).transpose()?,
         ..fsys::ComponentDecl::EMPTY
     })
 }
@@ -3112,6 +3112,9 @@ mod tests {
                     "title": "foo",
                     "authors": [ "me", "you" ],
                     "year": "2018",
+                    "metadata": {
+                        "publisher": "The Books Publisher",
+                    }
                 }
             }),
             output = fsys::ComponentDecl {
@@ -3120,6 +3123,10 @@ mod tests {
                             fdata::DictionaryEntry {
                                 key: "authors".to_string(),
                                 value: Some(Box::new(fdata::DictionaryValue::StrVec(vec!["me".to_owned(), "you".to_owned()]))),
+                            },
+                            fdata::DictionaryEntry {
+                                key: "metadata.publisher".to_string(),
+                                value: Some(Box::new(fdata::DictionaryValue::Str("The Books Publisher".to_string()))),
                             },
                             fdata::DictionaryEntry {
                                 key: "title".to_string(),

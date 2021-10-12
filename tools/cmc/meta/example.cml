@@ -169,5 +169,6 @@
     facets: {
         author: "Fuchsia",
         year: "2018",
+        metadata: { publisher: "The Books Publisher" },
     },
 }

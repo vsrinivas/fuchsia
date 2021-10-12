@@ -287,6 +287,12 @@ fn main() {
                     value: Some(Box::new(fdata::DictionaryValue::Str("Fuchsia".to_string()))),
                 },
                 fdata::DictionaryEntry {
+                    key: "metadata.publisher".to_string(),
+                    value: Some(Box::new(fdata::DictionaryValue::Str(
+                        "The Books Publisher".to_string(),
+                    ))),
+                },
+                fdata::DictionaryEntry {
                     key: "year".to_string(),
                     value: Some(Box::new(fdata::DictionaryValue::Str("2018".to_string()))),
                 },
