@@ -41,6 +41,18 @@ driver_bind_rules("nelson-bind") {
   ]
 }
 
+driver_bind_rules("aml_secure_mem_bind") {
+  rules = "bind/aml_secure_mem.bind"
+  header_output = "aml_secure_mem_bind.h"
+  bind_output = "aml_secure_mem_bind.bc"
+  deps = [
+    "//src/devices/bind/fuchsia.amlogic.platform",
+    "//src/devices/bind/fuchsia.platform",
+    "//src/devices/bind/fuchsia.sysmem",
+    "//src/devices/bind/fuchsia.tee",
+  ]
+}
+
 fuchsia_driver("nelson-module-driver") {
   output_name = "nelson-module"
   configs += [
@@ -81,6 +93,7 @@ fuchsia_driver("nelson-module-driver") {
     "nelson.cc",
   ]
   deps = [
+    ":aml_secure_mem_bind_header",
     ":nelson-bind",
     "//sdk/banjo/fuchsia.hardware.clockimpl:fuchsia.hardware.clockimpl_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.gpio:fuchsia.hardware.gpio_banjo_cpp",
