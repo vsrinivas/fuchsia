@@ -20,7 +20,7 @@ use std::fs::File;
 use std::path::{Path, PathBuf};
 
 pub fn assemble(args: ImageArgs) -> Result<()> {
-    let ImageArgs { product, board, outdir, gendir, full: _ } = args;
+    let ImageArgs { product, board, outdir, gendir } = args;
 
     info!("Loading configuration files.");
     info!("  product:  {}", product.display());
