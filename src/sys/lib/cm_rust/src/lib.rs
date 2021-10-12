@@ -7,8 +7,8 @@ use {
     cm_rust_derive::{
         CapabilityDeclCommon, ExposeDeclCommon, FidlDecl, OfferDeclCommon, UseDeclCommon,
     },
-    cm_types, fidl_fuchsia_data as fdata, fidl_fuchsia_io2 as fio2,
-    fidl_fuchsia_process as fprocess, fidl_fuchsia_sys2 as fsys,
+    cm_types, fidl_fuchsia_component_decl as fdecl, fidl_fuchsia_data as fdata,
+    fidl_fuchsia_io2 as fio2, fidl_fuchsia_process as fprocess, fidl_fuchsia_sys2 as fsys,
     from_enum::FromEnum,
     lazy_static::lazy_static,
     std::collections::HashMap,
@@ -73,8 +73,33 @@ macro_rules! fidl_translations_from_into {
     };
 }
 
+/// DO NOT SUBMIT: Add comment.
+/// Generates `FidlIntoNative` and `NativeIntoFidl` implementations for
+/// an symmetrical enum types.
+/// `fidl_type` should be the FIDL type while `native_type` should be
+/// the Rust native type defined elsewhere in this file.
+/// Each field of the enums must be provided in the `variant` fieldset.
+macro_rules! fidl_translations_symmetrical_enums {
+($fidl_type:ty , $native_type:ty, $($variant: ident),*) => {
+        impl FidlIntoNative<$native_type> for $fidl_type {
+            fn fidl_into_native(self) -> $native_type {
+                match self {
+                    $( <$fidl_type>::$variant => <$native_type>::$variant,  )*
+                }
+            }
+        }
+        impl NativeIntoFidl<$fidl_type> for $native_type {
+            fn native_into_fidl(self) -> $fidl_type {
+                match self {
+                    $( <$native_type>::$variant => <$fidl_type>::$variant,  )*
+                }
+            }
+        }
+    };
+}
+
 #[derive(FidlDecl, Debug, Clone, PartialEq, Default)]
-#[fidl_decl(fidl_table = "fsys::ComponentDecl")]
+#[fidl_decl(fidl_table = "fsys::ComponentDecl, fdecl::Component")]
 pub struct ComponentDecl {
     pub program: Option<ProgramDecl>,
     pub uses: Vec<UseDecl>,
@@ -180,7 +205,7 @@ impl ComponentDecl {
     serde(tag = "type", rename_all = "snake_case")
 )]
 #[derive(FidlDecl, FromEnum, Debug, Clone, PartialEq, Eq)]
-#[fidl_decl(fidl_union = "fsys::UseDecl")]
+#[fidl_decl(fidl_union = "fsys::UseDecl, fdecl::Use")]
 pub enum UseDecl {
     Service(UseServiceDecl),
     Protocol(UseProtocolDecl),
@@ -192,7 +217,7 @@ pub enum UseDecl {
 
 #[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
 #[derive(FidlDecl, UseDeclCommon, Debug, Clone, PartialEq, Eq)]
-#[fidl_decl(fidl_table = "fsys::UseServiceDecl")]
+#[fidl_decl(fidl_table = "fsys::UseServiceDecl, fdecl::UseService")]
 pub struct UseServiceDecl {
     pub source: UseSource,
     pub source_name: CapabilityName,
@@ -202,7 +227,7 @@ pub struct UseServiceDecl {
 
 #[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
 #[derive(FidlDecl, UseDeclCommon, Debug, Clone, PartialEq, Eq)]
-#[fidl_decl(fidl_table = "fsys::UseProtocolDecl")]
+#[fidl_decl(fidl_table = "fsys::UseProtocolDecl, fdecl::UseProtocol")]
 pub struct UseProtocolDecl {
     pub source: UseSource,
     pub source_name: CapabilityName,
@@ -212,7 +237,7 @@ pub struct UseProtocolDecl {
 
 #[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
 #[derive(FidlDecl, UseDeclCommon, Debug, Clone, PartialEq, Eq)]
-#[fidl_decl(fidl_table = "fsys::UseDirectoryDecl")]
+#[fidl_decl(fidl_table = "fsys::UseDirectoryDecl, fdecl::UseDirectory")]
 pub struct UseDirectoryDecl {
     pub source: UseSource,
     pub source_name: CapabilityName,
@@ -233,7 +258,7 @@ pub struct UseDirectoryDecl {
 
 #[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
 #[derive(FidlDecl, Debug, Clone, PartialEq, Eq)]
-#[fidl_decl(fidl_table = "fsys::UseStorageDecl")]
+#[fidl_decl(fidl_table = "fsys::UseStorageDecl, fdecl::UseStorage")]
 pub struct UseStorageDecl {
     pub source_name: CapabilityName,
     pub target_path: CapabilityPath,
@@ -253,7 +278,7 @@ impl UseDeclCommon for UseStorageDecl {
 
 #[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
 #[derive(FidlDecl, UseDeclCommon, Debug, Clone, PartialEq, Eq)]
-#[fidl_decl(fidl_table = "fsys::UseEventDecl")]
+#[fidl_decl(fidl_table = "fsys::UseEventDecl, fdecl::UseEvent")]
 pub struct UseEventDecl {
     pub source: UseSource,
     pub source_name: CapabilityName,
@@ -265,7 +290,7 @@ pub struct UseEventDecl {
 
 #[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
 #[derive(FidlDecl, Debug, Clone, PartialEq, Eq)]
-#[fidl_decl(fidl_table = "fsys::EventSubscription")]
+#[fidl_decl(fidl_table = "fsys::EventSubscription, fdecl::EventSubscription")]
 pub struct EventSubscription {
     pub event_name: String,
     pub mode: EventMode,
@@ -278,27 +303,12 @@ pub enum EventMode {
     Sync,
 }
 
-impl NativeIntoFidl<fsys::EventMode> for EventMode {
-    fn native_into_fidl(self) -> fsys::EventMode {
-        match self {
-            EventMode::Sync => fsys::EventMode::Sync,
-            EventMode::Async => fsys::EventMode::Async,
-        }
-    }
-}
-
-impl FidlIntoNative<EventMode> for fsys::EventMode {
-    fn fidl_into_native(self) -> EventMode {
-        match self {
-            fsys::EventMode::Sync => EventMode::Sync,
-            fsys::EventMode::Async => EventMode::Async,
-        }
-    }
-}
+fidl_translations_symmetrical_enums!(fsys::EventMode, EventMode, Sync, Async);
+fidl_translations_symmetrical_enums!(fdecl::EventMode, EventMode, Sync, Async);
 
 #[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
 #[derive(FidlDecl, Debug, Clone, PartialEq, Eq)]
-#[fidl_decl(fidl_table = "fsys::UseEventStreamDecl")]
+#[fidl_decl(fidl_table = "fsys::UseEventStreamDecl, fdecl::UseEventStream")]
 pub struct UseEventStreamDecl {
     pub name: CapabilityName,
     pub subscriptions: Vec<EventSubscription>,
@@ -310,7 +320,7 @@ pub struct UseEventStreamDecl {
     serde(tag = "type", rename_all = "snake_case")
 )]
 #[derive(FidlDecl, FromEnum, Debug, Clone, PartialEq, Eq)]
-#[fidl_decl(fidl_union = "fsys::OfferDecl")]
+#[fidl_decl(fidl_union = "fsys::OfferDecl, fdecl::Offer")]
 pub enum OfferDecl {
     Service(OfferServiceDecl),
     Protocol(OfferProtocolDecl),
@@ -323,7 +333,7 @@ pub enum OfferDecl {
 
 #[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
 #[derive(FidlDecl, OfferDeclCommon, Debug, Clone, PartialEq, Eq)]
-#[fidl_decl(fidl_table = "fsys::OfferServiceDecl")]
+#[fidl_decl(fidl_table = "fsys::OfferServiceDecl, fdecl::OfferService")]
 pub struct OfferServiceDecl {
     pub source: OfferSource,
     pub source_name: CapabilityName,
@@ -333,7 +343,7 @@ pub struct OfferServiceDecl {
 
 #[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
 #[derive(FidlDecl, OfferDeclCommon, Debug, Clone, PartialEq, Eq)]
-#[fidl_decl(fidl_table = "fsys::OfferProtocolDecl")]
+#[fidl_decl(fidl_table = "fsys::OfferProtocolDecl, fdecl::OfferProtocol")]
 pub struct OfferProtocolDecl {
     pub source: OfferSource,
     pub source_name: CapabilityName,
@@ -344,7 +354,7 @@ pub struct OfferProtocolDecl {
 
 #[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
 #[derive(FidlDecl, OfferDeclCommon, Debug, Clone, PartialEq, Eq)]
-#[fidl_decl(fidl_table = "fsys::OfferDirectoryDecl")]
+#[fidl_decl(fidl_table = "fsys::OfferDirectoryDecl, fdecl::OfferDirectory")]
 pub struct OfferDirectoryDecl {
     pub source: OfferSource,
     pub source_name: CapabilityName,
@@ -366,7 +376,7 @@ pub struct OfferDirectoryDecl {
 
 #[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
 #[derive(FidlDecl, OfferDeclCommon, Debug, Clone, PartialEq, Eq)]
-#[fidl_decl(fidl_table = "fsys::OfferStorageDecl")]
+#[fidl_decl(fidl_table = "fsys::OfferStorageDecl, fdecl::OfferStorage")]
 pub struct OfferStorageDecl {
     pub source: OfferSource,
     pub source_name: CapabilityName,
@@ -376,7 +386,7 @@ pub struct OfferStorageDecl {
 
 #[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
 #[derive(FidlDecl, OfferDeclCommon, Debug, Clone, PartialEq, Eq)]
-#[fidl_decl(fidl_table = "fsys::OfferRunnerDecl")]
+#[fidl_decl(fidl_table = "fsys::OfferRunnerDecl, fdecl::OfferRunner")]
 pub struct OfferRunnerDecl {
     pub source: OfferSource,
     pub source_name: CapabilityName,
@@ -386,7 +396,7 @@ pub struct OfferRunnerDecl {
 
 #[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
 #[derive(FidlDecl, OfferDeclCommon, Debug, Clone, PartialEq, Eq)]
-#[fidl_decl(fidl_table = "fsys::OfferResolverDecl")]
+#[fidl_decl(fidl_table = "fsys::OfferResolverDecl, fdecl::OfferResolver")]
 pub struct OfferResolverDecl {
     pub source: OfferSource,
     pub source_name: CapabilityName,
@@ -396,7 +406,7 @@ pub struct OfferResolverDecl {
 
 #[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
 #[derive(FidlDecl, OfferDeclCommon, Debug, Clone, PartialEq, Eq)]
-#[fidl_decl(fidl_table = "fsys::OfferEventDecl")]
+#[fidl_decl(fidl_table = "fsys::OfferEventDecl, fdecl::OfferEvent")]
 pub struct OfferEventDecl {
     pub source: OfferSource,
     pub source_name: CapabilityName,
@@ -464,7 +474,7 @@ impl OfferDeclCommon for OfferDecl {
     serde(tag = "type", rename_all = "snake_case")
 )]
 #[derive(FidlDecl, FromEnum, Debug, Clone, PartialEq, Eq)]
-#[fidl_decl(fidl_union = "fsys::ExposeDecl")]
+#[fidl_decl(fidl_union = "fsys::ExposeDecl, fdecl::Expose")]
 pub enum ExposeDecl {
     Service(ExposeServiceDecl),
     Protocol(ExposeProtocolDecl),
@@ -519,7 +529,7 @@ impl ExposeDeclCommon for ExposeDecl {
 
 #[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
 #[derive(FidlDecl, ExposeDeclCommon, Debug, Clone, PartialEq, Eq)]
-#[fidl_decl(fidl_table = "fsys::ExposeServiceDecl")]
+#[fidl_decl(fidl_table = "fsys::ExposeServiceDecl, fdecl::ExposeService")]
 pub struct ExposeServiceDecl {
     pub source: ExposeSource,
 
@@ -530,7 +540,7 @@ pub struct ExposeServiceDecl {
 
 #[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
 #[derive(FidlDecl, ExposeDeclCommon, Debug, Clone, PartialEq, Eq)]
-#[fidl_decl(fidl_table = "fsys::ExposeProtocolDecl")]
+#[fidl_decl(fidl_table = "fsys::ExposeProtocolDecl, fdecl::ExposeProtocol")]
 pub struct ExposeProtocolDecl {
     pub source: ExposeSource,
     pub source_name: CapabilityName,
@@ -540,7 +550,7 @@ pub struct ExposeProtocolDecl {
 
 #[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
 #[derive(FidlDecl, ExposeDeclCommon, Debug, Clone, PartialEq, Eq)]
-#[fidl_decl(fidl_table = "fsys::ExposeDirectoryDecl")]
+#[fidl_decl(fidl_table = "fsys::ExposeDirectoryDecl, fdecl::ExposeDirectory")]
 pub struct ExposeDirectoryDecl {
     pub source: ExposeSource,
     pub source_name: CapabilityName,
@@ -561,7 +571,7 @@ pub struct ExposeDirectoryDecl {
 
 #[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
 #[derive(FidlDecl, ExposeDeclCommon, Debug, Clone, PartialEq, Eq)]
-#[fidl_decl(fidl_table = "fsys::ExposeRunnerDecl")]
+#[fidl_decl(fidl_table = "fsys::ExposeRunnerDecl, fdecl::ExposeRunner")]
 pub struct ExposeRunnerDecl {
     pub source: ExposeSource,
     pub source_name: CapabilityName,
@@ -571,7 +581,7 @@ pub struct ExposeRunnerDecl {
 
 #[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
 #[derive(FidlDecl, ExposeDeclCommon, Debug, Clone, PartialEq, Eq)]
-#[fidl_decl(fidl_table = "fsys::ExposeResolverDecl")]
+#[fidl_decl(fidl_table = "fsys::ExposeResolverDecl, fdecl::ExposeResolver")]
 pub struct ExposeResolverDecl {
     pub source: ExposeSource,
     pub source_name: CapabilityName,
@@ -585,7 +595,7 @@ pub struct ExposeResolverDecl {
     serde(tag = "type", rename_all = "snake_case")
 )]
 #[derive(FidlDecl, FromEnum, Debug, Clone, PartialEq, Eq)]
-#[fidl_decl(fidl_union = "fsys::CapabilityDecl")]
+#[fidl_decl(fidl_union = "fsys::CapabilityDecl, fdecl::Capability")]
 pub enum CapabilityDecl {
     Service(ServiceDecl),
     Protocol(ProtocolDecl),
@@ -612,7 +622,7 @@ impl CapabilityDeclCommon for CapabilityDecl {
 
 #[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
 #[derive(FidlDecl, CapabilityDeclCommon, Debug, Clone, PartialEq, Eq)]
-#[fidl_decl(fidl_table = "fsys::ServiceDecl")]
+#[fidl_decl(fidl_table = "fsys::ServiceDecl, fdecl::Service")]
 pub struct ServiceDecl {
     pub name: CapabilityName,
     pub source_path: Option<CapabilityPath>,
@@ -620,7 +630,7 @@ pub struct ServiceDecl {
 
 #[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
 #[derive(FidlDecl, CapabilityDeclCommon, Debug, Clone, PartialEq, Eq)]
-#[fidl_decl(fidl_table = "fsys::ProtocolDecl")]
+#[fidl_decl(fidl_table = "fsys::ProtocolDecl, fdecl::Protocol")]
 pub struct ProtocolDecl {
     pub name: CapabilityName,
     pub source_path: Option<CapabilityPath>,
@@ -628,7 +638,7 @@ pub struct ProtocolDecl {
 
 #[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
 #[derive(FidlDecl, CapabilityDeclCommon, Debug, Clone, PartialEq, Eq)]
-#[fidl_decl(fidl_table = "fsys::DirectoryDecl")]
+#[fidl_decl(fidl_table = "fsys::DirectoryDecl, fdecl::Directory")]
 pub struct DirectoryDecl {
     pub name: CapabilityName,
     pub source_path: Option<CapabilityPath>,
@@ -643,9 +653,20 @@ pub struct DirectoryDecl {
     pub rights: fio2::Operations,
 }
 
+// The native type here is `fsys::StorageId`. We do this because the StorageDecl
+// uses this type directly instead of using a "native" type.
+// This pattern holds for other cases where a "native" struct used a field
+// with a `fsys` type.
+fidl_translations_symmetrical_enums!(
+    fdecl::StorageId,
+    fsys::StorageId,
+    StaticInstanceId,
+    StaticInstanceIdOrMoniker
+);
+
 #[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
 #[derive(FidlDecl, CapabilityDeclCommon, Debug, Clone, PartialEq, Eq)]
-#[fidl_decl(fidl_table = "fsys::StorageDecl")]
+#[fidl_decl(fidl_table = "fsys::StorageDecl, fdecl::Storage")]
 pub struct StorageDecl {
     pub name: CapabilityName,
     pub source: StorageDirectorySource,
@@ -657,7 +678,7 @@ pub struct StorageDecl {
 
 #[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
 #[derive(FidlDecl, CapabilityDeclCommon, Debug, Clone, PartialEq, Eq)]
-#[fidl_decl(fidl_table = "fsys::RunnerDecl")]
+#[fidl_decl(fidl_table = "fsys::RunnerDecl, fdecl::Runner")]
 pub struct RunnerDecl {
     pub name: CapabilityName,
     pub source_path: Option<CapabilityPath>,
@@ -665,7 +686,7 @@ pub struct RunnerDecl {
 
 #[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
 #[derive(FidlDecl, CapabilityDeclCommon, Debug, Clone, PartialEq, Eq)]
-#[fidl_decl(fidl_table = "fsys::ResolverDecl")]
+#[fidl_decl(fidl_table = "fsys::ResolverDecl, fdecl::Resolver")]
 pub struct ResolverDecl {
     pub name: CapabilityName,
     pub source_path: Option<CapabilityPath>,
@@ -673,7 +694,7 @@ pub struct ResolverDecl {
 
 #[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
 #[derive(FidlDecl, CapabilityDeclCommon, Debug, Clone, PartialEq, Eq)]
-#[fidl_decl(fidl_table = "fsys::EventDecl")]
+#[fidl_decl(fidl_table = "fsys::EventDecl, fdecl::Event")]
 pub struct EventDecl {
     pub name: CapabilityName,
 }
@@ -704,8 +725,11 @@ impl CapabilityDecl {
     }
 }
 
+fidl_translations_symmetrical_enums!(fdecl::OnTerminate, fsys::OnTerminate, Reboot, None);
+fidl_translations_symmetrical_enums!(fdecl::StartupMode, fsys::StartupMode, Eager, Lazy);
+
 #[derive(FidlDecl, Debug, Clone, PartialEq, Eq)]
-#[fidl_decl(fidl_table = "fsys::ChildDecl")]
+#[fidl_decl(fidl_table = "fsys::ChildDecl, fdecl::Child")]
 pub struct ChildDecl {
     pub name: String,
     pub url: String,
@@ -733,8 +757,34 @@ impl NativeIntoFidl<fsys::ChildRef> for ChildRef {
     }
 }
 
+impl FidlIntoNative<ChildRef> for fdecl::ChildRef {
+    fn fidl_into_native(self) -> ChildRef {
+        ChildRef { name: self.name, collection: self.collection }
+    }
+}
+
+impl NativeIntoFidl<fdecl::ChildRef> for ChildRef {
+    fn native_into_fidl(self) -> fdecl::ChildRef {
+        fdecl::ChildRef { name: self.name, collection: self.collection }
+    }
+}
+
+fidl_translations_symmetrical_enums!(
+    fdecl::Durability,
+    fsys::Durability,
+    Persistent,
+    Transient,
+    SingleRun
+);
+fidl_translations_symmetrical_enums!(
+    fdecl::AllowedOffers,
+    cm_types::AllowedOffers,
+    StaticOnly,
+    StaticAndDynamic
+);
+
 #[derive(FidlDecl, Debug, Clone, PartialEq, Eq)]
-#[fidl_decl(fidl_table = "fsys::CollectionDecl")]
+#[fidl_decl(fidl_table = "fsys::CollectionDecl, fdecl::Collection")]
 pub struct CollectionDecl {
     pub name: String,
     pub durability: fsys::Durability,
@@ -744,8 +794,15 @@ pub struct CollectionDecl {
     pub environment: Option<String>,
 }
 
+fidl_translations_symmetrical_enums!(
+    fdecl::EnvironmentExtends,
+    fsys::EnvironmentExtends,
+    Realm,
+    None
+);
+
 #[derive(FidlDecl, Debug, Clone, PartialEq, Eq)]
-#[fidl_decl(fidl_table = "fsys::EnvironmentDecl")]
+#[fidl_decl(fidl_table = "fsys::EnvironmentDecl, fdecl::Environment")]
 pub struct EnvironmentDecl {
     pub name: String,
     pub extends: fsys::EnvironmentExtends,
@@ -757,7 +814,7 @@ pub struct EnvironmentDecl {
 
 #[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
 #[derive(FidlDecl, Debug, Clone, PartialEq, Eq)]
-#[fidl_decl(fidl_table = "fsys::RunnerRegistration")]
+#[fidl_decl(fidl_table = "fsys::RunnerRegistration, fdecl::RunnerRegistration")]
 pub struct RunnerRegistration {
     pub source_name: CapabilityName,
     pub target_name: CapabilityName,
@@ -780,7 +837,7 @@ impl RegistrationDeclCommon for RunnerRegistration {
 
 #[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
 #[derive(FidlDecl, Debug, Clone, PartialEq, Eq)]
-#[fidl_decl(fidl_table = "fsys::ResolverRegistration")]
+#[fidl_decl(fidl_table = "fsys::ResolverRegistration, fdecl::ResolverRegistration")]
 pub struct ResolverRegistration {
     pub resolver: CapabilityName,
     pub source: RegistrationSource,
@@ -802,13 +859,13 @@ impl RegistrationDeclCommon for ResolverRegistration {
 }
 
 #[derive(FidlDecl, Debug, Clone, PartialEq, Eq)]
-#[fidl_decl(fidl_union = "fsys::DebugRegistration")]
+#[fidl_decl(fidl_union = "fsys::DebugRegistration, fdecl::DebugRegistration")]
 pub enum DebugRegistration {
     Protocol(DebugProtocolRegistration),
 }
 
 #[derive(FidlDecl, Debug, Clone, PartialEq, Eq)]
-#[fidl_decl(fidl_table = "fsys::DebugProtocolRegistration")]
+#[fidl_decl(fidl_table = "fsys::DebugProtocolRegistration, fdecl::DebugProtocolRegistration")]
 pub struct DebugProtocolRegistration {
     pub source_name: CapabilityName,
     pub source: RegistrationSource,
@@ -816,7 +873,7 @@ pub struct DebugProtocolRegistration {
 }
 
 #[derive(FidlDecl, Debug, Clone, PartialEq)]
-#[fidl_decl(fidl_table = "fsys::ProgramDecl")]
+#[fidl_decl(fidl_table = "fsys::ProgramDecl, fdecl::Program")]
 pub struct ProgramDecl {
     pub runner: Option<CapabilityName>,
     pub info: fdata::Dictionary,
@@ -851,25 +908,20 @@ pub enum DependencyType {
     WeakForMigration,
 }
 
-impl FidlIntoNative<DependencyType> for fsys::DependencyType {
-    fn fidl_into_native(self) -> DependencyType {
-        match self {
-            fsys::DependencyType::Strong => DependencyType::Strong,
-            fsys::DependencyType::Weak => DependencyType::Weak,
-            fsys::DependencyType::WeakForMigration => DependencyType::WeakForMigration,
-        }
-    }
-}
-
-impl NativeIntoFidl<fsys::DependencyType> for DependencyType {
-    fn native_into_fidl(self) -> fsys::DependencyType {
-        match self {
-            DependencyType::Strong => fsys::DependencyType::Strong,
-            DependencyType::Weak => fsys::DependencyType::Weak,
-            DependencyType::WeakForMigration => fsys::DependencyType::WeakForMigration,
-        }
-    }
-}
+fidl_translations_symmetrical_enums!(
+    fsys::DependencyType,
+    DependencyType,
+    Strong,
+    Weak,
+    WeakForMigration
+);
+fidl_translations_symmetrical_enums!(
+    fdecl::DependencyType,
+    DependencyType,
+    Strong,
+    Weak,
+    WeakForMigration
+);
 
 /// A path to a capability.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -1204,6 +1256,35 @@ impl NativeIntoFidl<fsys::Ref> for UseSource {
     }
 }
 
+impl FidlIntoNative<UseSource> for fdecl::Ref {
+    fn fidl_into_native(self) -> UseSource {
+        match self {
+            fdecl::Ref::Parent(_) => UseSource::Parent,
+            fdecl::Ref::Framework(_) => UseSource::Framework,
+            fdecl::Ref::Debug(_) => UseSource::Debug,
+            fdecl::Ref::Self_(_) => UseSource::Self_,
+            fdecl::Ref::Capability(c) => UseSource::Capability(c.name.into()),
+            fdecl::Ref::Child(c) => UseSource::Child(c.name),
+            _ => panic!("invalid UseSource variant"),
+        }
+    }
+}
+
+impl NativeIntoFidl<fdecl::Ref> for UseSource {
+    fn native_into_fidl(self) -> fdecl::Ref {
+        match self {
+            UseSource::Parent => fdecl::Ref::Parent(fdecl::ParentRef {}),
+            UseSource::Framework => fdecl::Ref::Framework(fdecl::FrameworkRef {}),
+            UseSource::Debug => fdecl::Ref::Debug(fdecl::DebugRef {}),
+            UseSource::Self_ => fdecl::Ref::Self_(fdecl::SelfRef {}),
+            UseSource::Capability(name) => {
+                fdecl::Ref::Capability(fdecl::CapabilityRef { name: name.to_string() })
+            }
+            UseSource::Child(name) => fdecl::Ref::Child(fdecl::ChildRef { name, collection: None }),
+        }
+    }
+}
+
 #[cfg_attr(feature = "serde", derive(Deserialize, Serialize), serde(rename_all = "snake_case"))]
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum OfferSource {
@@ -1250,6 +1331,35 @@ impl NativeIntoFidl<fsys::Ref> for OfferSource {
     }
 }
 
+impl FidlIntoNative<OfferSource> for fdecl::Ref {
+    fn fidl_into_native(self) -> OfferSource {
+        match self {
+            fdecl::Ref::Parent(_) => OfferSource::Parent,
+            fdecl::Ref::Self_(_) => OfferSource::Self_,
+            fdecl::Ref::Child(c) => OfferSource::Child(c.fidl_into_native()),
+            fdecl::Ref::Collection(c) => OfferSource::Collection(c.name),
+            fdecl::Ref::Framework(_) => OfferSource::Framework,
+            fdecl::Ref::Capability(c) => OfferSource::Capability(c.name.into()),
+            _ => panic!("invalid OfferSource variant"),
+        }
+    }
+}
+
+impl NativeIntoFidl<fdecl::Ref> for OfferSource {
+    fn native_into_fidl(self) -> fdecl::Ref {
+        match self {
+            OfferSource::Parent => fdecl::Ref::Parent(fdecl::ParentRef {}),
+            OfferSource::Self_ => fdecl::Ref::Self_(fdecl::SelfRef {}),
+            OfferSource::Child(c) => fdecl::Ref::Child(c.native_into_fidl()),
+            OfferSource::Collection(name) => fdecl::Ref::Collection(fdecl::CollectionRef { name }),
+            OfferSource::Framework => fdecl::Ref::Framework(fdecl::FrameworkRef {}),
+            OfferSource::Capability(name) => {
+                fdecl::Ref::Capability(fdecl::CapabilityRef { name: name.to_string() })
+            }
+        }
+    }
+}
+
 #[cfg_attr(feature = "serde", derive(Deserialize, Serialize), serde(rename_all = "snake_case"))]
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ExposeSource {
@@ -1289,6 +1399,35 @@ impl NativeIntoFidl<fsys::Ref> for ExposeSource {
     }
 }
 
+impl FidlIntoNative<ExposeSource> for fdecl::Ref {
+    fn fidl_into_native(self) -> ExposeSource {
+        match self {
+            fdecl::Ref::Self_(_) => ExposeSource::Self_,
+            fdecl::Ref::Child(c) => ExposeSource::Child(c.name),
+            fdecl::Ref::Collection(c) => ExposeSource::Collection(c.name),
+            fdecl::Ref::Framework(_) => ExposeSource::Framework,
+            fdecl::Ref::Capability(c) => ExposeSource::Capability(c.name.into()),
+            _ => panic!("invalid ExposeSource variant"),
+        }
+    }
+}
+
+impl NativeIntoFidl<fdecl::Ref> for ExposeSource {
+    fn native_into_fidl(self) -> fdecl::Ref {
+        match self {
+            ExposeSource::Self_ => fdecl::Ref::Self_(fdecl::SelfRef {}),
+            ExposeSource::Child(child_name) => {
+                fdecl::Ref::Child(fdecl::ChildRef { name: child_name, collection: None })
+            }
+            ExposeSource::Collection(name) => fdecl::Ref::Collection(fdecl::CollectionRef { name }),
+            ExposeSource::Framework => fdecl::Ref::Framework(fdecl::FrameworkRef {}),
+            ExposeSource::Capability(name) => {
+                fdecl::Ref::Capability(fdecl::CapabilityRef { name: name.to_string() })
+            }
+        }
+    }
+}
+
 #[cfg_attr(feature = "serde", derive(Deserialize, Serialize), serde(rename_all = "snake_case"))]
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum ExposeTarget {
@@ -1311,6 +1450,25 @@ impl NativeIntoFidl<fsys::Ref> for ExposeTarget {
         match self {
             ExposeTarget::Parent => fsys::Ref::Parent(fsys::ParentRef {}),
             ExposeTarget::Framework => fsys::Ref::Framework(fsys::FrameworkRef {}),
+        }
+    }
+}
+
+impl FidlIntoNative<ExposeTarget> for fdecl::Ref {
+    fn fidl_into_native(self) -> ExposeTarget {
+        match self {
+            fdecl::Ref::Parent(_) => ExposeTarget::Parent,
+            fdecl::Ref::Framework(_) => ExposeTarget::Framework,
+            _ => panic!("invalid ExposeTarget variant"),
+        }
+    }
+}
+
+impl NativeIntoFidl<fdecl::Ref> for ExposeTarget {
+    fn native_into_fidl(self) -> fdecl::Ref {
+        match self {
+            ExposeTarget::Parent => fdecl::Ref::Parent(fdecl::ParentRef {}),
+            ExposeTarget::Framework => fdecl::Ref::Framework(fdecl::FrameworkRef {}),
         }
     }
 }
@@ -1355,6 +1513,29 @@ impl NativeIntoFidl<fsys::Ref> for StorageDirectorySource {
     }
 }
 
+impl FidlIntoNative<StorageDirectorySource> for fdecl::Ref {
+    fn fidl_into_native(self) -> StorageDirectorySource {
+        match self {
+            fdecl::Ref::Parent(_) => StorageDirectorySource::Parent,
+            fdecl::Ref::Self_(_) => StorageDirectorySource::Self_,
+            fdecl::Ref::Child(c) => StorageDirectorySource::Child(c.name),
+            _ => panic!("invalid OfferDirectorySource variant"),
+        }
+    }
+}
+
+impl NativeIntoFidl<fdecl::Ref> for StorageDirectorySource {
+    fn native_into_fidl(self) -> fdecl::Ref {
+        match self {
+            StorageDirectorySource::Parent => fdecl::Ref::Parent(fdecl::ParentRef {}),
+            StorageDirectorySource::Self_ => fdecl::Ref::Self_(fdecl::SelfRef {}),
+            StorageDirectorySource::Child(child_name) => {
+                fdecl::Ref::Child(fdecl::ChildRef { name: child_name, collection: None })
+            }
+        }
+    }
+}
+
 #[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum RegistrationSource {
@@ -1381,6 +1562,29 @@ impl NativeIntoFidl<fsys::Ref> for RegistrationSource {
             RegistrationSource::Self_ => fsys::Ref::Self_(fsys::SelfRef {}),
             RegistrationSource::Child(child_name) => {
                 fsys::Ref::Child(fsys::ChildRef { name: child_name, collection: None })
+            }
+        }
+    }
+}
+
+impl FidlIntoNative<RegistrationSource> for fdecl::Ref {
+    fn fidl_into_native(self) -> RegistrationSource {
+        match self {
+            fdecl::Ref::Parent(_) => RegistrationSource::Parent,
+            fdecl::Ref::Self_(_) => RegistrationSource::Self_,
+            fdecl::Ref::Child(c) => RegistrationSource::Child(c.name),
+            _ => panic!("invalid RegistrationSource variant"),
+        }
+    }
+}
+
+impl NativeIntoFidl<fdecl::Ref> for RegistrationSource {
+    fn native_into_fidl(self) -> fdecl::Ref {
+        match self {
+            RegistrationSource::Parent => fdecl::Ref::Parent(fdecl::ParentRef {}),
+            RegistrationSource::Self_ => fdecl::Ref::Self_(fdecl::SelfRef {}),
+            RegistrationSource::Child(child_name) => {
+                fdecl::Ref::Child(fdecl::ChildRef { name: child_name, collection: None })
             }
         }
     }
@@ -1414,6 +1618,27 @@ impl NativeIntoFidl<fsys::Ref> for OfferTarget {
             OfferTarget::Child(c) => fsys::Ref::Child(c.native_into_fidl()),
             OfferTarget::Collection(collection_name) => {
                 fsys::Ref::Collection(fsys::CollectionRef { name: collection_name })
+            }
+        }
+    }
+}
+
+impl FidlIntoNative<OfferTarget> for fdecl::Ref {
+    fn fidl_into_native(self) -> OfferTarget {
+        match self {
+            fdecl::Ref::Child(c) => OfferTarget::Child(c.fidl_into_native()),
+            fdecl::Ref::Collection(c) => OfferTarget::Collection(c.name),
+            _ => panic!("invalid OfferTarget variant"),
+        }
+    }
+}
+
+impl NativeIntoFidl<fdecl::Ref> for OfferTarget {
+    fn native_into_fidl(self) -> fdecl::Ref {
+        match self {
+            OfferTarget::Child(c) => fdecl::Ref::Child(c.native_into_fidl()),
+            OfferTarget::Collection(collection_name) => {
+                fdecl::Ref::Collection(fdecl::CollectionRef { name: collection_name })
             }
         }
     }

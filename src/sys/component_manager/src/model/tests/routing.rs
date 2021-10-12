@@ -2037,7 +2037,7 @@ async fn use_resolver_from_parent_environment() {
                     .send(&mut Ok(fsys::Component {
                         resolved_url: Some("test://b".into()),
                         decl: Some(fmem::Data::Bytes(
-                            fidl::encoding::encode_persistent(
+                            fidl::encoding::encode_persistent::<fsys::ComponentDecl>(
                                 &mut default_component_decl().native_into_fidl(),
                             )
                             .unwrap(),
@@ -2122,7 +2122,7 @@ async fn use_resolver_from_grandparent_environment() {
                     .send(&mut Ok(fsys::Component {
                         resolved_url: Some("test://c".into()),
                         decl: Some(fmem::Data::Bytes(
-                            fidl::encoding::encode_persistent(
+                            fidl::encoding::encode_persistent::<fsys::ComponentDecl>(
                                 &mut default_component_decl().native_into_fidl(),
                             )
                             .unwrap(),
@@ -2207,7 +2207,7 @@ async fn resolver_is_not_available() {
                     .send(&mut Ok(fsys::Component {
                         resolved_url: Some("test://b".into()),
                         decl: Some(fmem::Data::Bytes(
-                            fidl::encoding::encode_persistent(
+                            fidl::encoding::encode_persistent::<fsys::ComponentDecl>(
                                 &mut default_component_decl().native_into_fidl(),
                             )
                             .unwrap(),

@@ -5,18 +5,47 @@
 extern crate proc_macro;
 
 use {
-    darling::{ast, FromDeriveInput, FromField, FromVariant},
+    darling::{ast, FromDeriveInput, FromField, FromMeta, FromVariant},
     proc_macro2::TokenStream,
     quote::{quote, quote_spanned},
     syn::{parse_macro_input, Ident, Type},
 };
 
-#[derive(FromVariant)]
+const PATHS_DELIM: &str = ",";
+
+// This wrapper struct so that we can support parsing syn::Lit into Vec<syn::Path>.
+// Rust compiler doesn't allow implementing a trait (FromMeta in this case)
+// for a class defined externally, so we have to create a wrapper class
+// in order to compile.
+#[derive(Default)]
+struct PathSet {
+    paths: Vec<syn::Path>,
+}
+
+impl PathSet {
+    pub fn new(paths: Vec<syn::Path>) -> PathSet {
+        return PathSet { paths };
+    }
+}
+
+impl FromMeta for PathSet {
+    fn from_value(value: &syn::Lit) -> Result<PathSet, darling::Error> {
+        let value = String::from_value(value)?;
+        let v = value
+            .split(PATHS_DELIM)
+            .into_iter()
+            .map(|p| syn::Path::from_string(&p))
+            .collect::<Result<Vec<syn::Path>, darling::Error>>()?;
+        Ok(PathSet::new(v))
+    }
+}
+
+#[derive(FromVariant, Clone)]
 struct EnumVariant {
     ident: Ident,
 }
 
-#[derive(FromField)]
+#[derive(FromField, Clone)]
 #[darling(attributes(fidl_decl))]
 struct StructField {
     ident: Option<Ident>,
@@ -37,9 +66,9 @@ struct FidlDeclOpts {
     ident: Ident,
     data: ast::Data<EnumVariant, StructField>,
     #[darling(default)]
-    fidl_table: Option<syn::Path>,
+    fidl_table: Option<PathSet>,
     #[darling(default)]
-    fidl_union: Option<syn::Path>,
+    fidl_union: Option<PathSet>,
 }
 
 fn fidl_decl_derive_impl(input: syn::DeriveInput) -> TokenStream {
@@ -49,11 +78,21 @@ fn fidl_decl_derive_impl(input: syn::DeriveInput) -> TokenStream {
     };
     match opts.data {
         ast::Data::Enum(variants) => match (opts.fidl_union, opts.fidl_table) {
-            (Some(p), None) => generate_enum(
-                opts.ident,
-                Type::Path(syn::TypePath { qself: None, path: p }),
-                variants,
-            ),
+            (Some(ps), None) => {
+                let mut ts: TokenStream = TokenStream::new();
+                for p in ps.paths.into_iter() {
+                    let t = generate_enum(
+                        opts.ident.clone(),
+                        Type::Path(syn::TypePath { qself: None, path: p }),
+                        variants.clone(),
+                    );
+                    ts = quote! {
+                        #ts
+                        #t
+                    }
+                }
+                ts
+            }
             (Some(_), Some(_)) => {
                 darling::Error::custom("only one of `fidl_union` or `fidl_table` must be set")
                     .with_span(&input)
@@ -64,11 +103,21 @@ fn fidl_decl_derive_impl(input: syn::DeriveInput) -> TokenStream {
                 .write_errors(),
         },
         ast::Data::Struct(fields) => match (opts.fidl_union, opts.fidl_table) {
-            (None, Some(p)) => generate_struct(
-                opts.ident,
-                Type::Path(syn::TypePath { qself: None, path: p }),
-                fields.fields,
-            ),
+            (None, Some(ps)) => {
+                let mut ts: TokenStream = TokenStream::new();
+                for p in ps.paths.into_iter() {
+                    let t = generate_struct(
+                        opts.ident.clone(),
+                        Type::Path(syn::TypePath { qself: None, path: p }),
+                        fields.fields.clone(),
+                    );
+                    ts = quote! {
+                        #ts
+                        #t
+                    };
+                }
+                ts
+            }
             (Some(_), Some(_)) => {
                 darling::Error::custom("only one of `fidl_union` or `fidl_table` must be set")
                     .with_span(&input)

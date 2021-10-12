@@ -10,6 +10,7 @@ rustc_library("cm_rust") {
   with_unit_tests = true
   deps = [
     ":cm_rust_derive",
+    "//sdk/fidl/fuchsia.component.decl:fuchsia.component.decl-rustc",
     "//sdk/fidl/fuchsia.data:fuchsia.data-rustc",
     "//sdk/fidl/fuchsia.io2:fuchsia.io2-rustc",
     "//sdk/fidl/fuchsia.process:fuchsia.process-rustc",
