@@ -24,14 +24,11 @@ print_usage_and_exit() {
   echo "Build Termina images for Machina."
   echo ""
   echo "Usage:"
-  echo "  update_cipd_prebuilts.sh work_dir (x64|arm64) -r TERMINA_REVISION [-n] [-f]"
+  echo "  update_cipd_prebuilts.sh work_dir (x64|arm64) [-n] [-f]"
   echo ""
   echo "Where:"
   echo "      work_dir - An empty directory to place source trees and build artifacts."
   echo "      Note: script may generate contents of ~125 GB"
-  echo ""
-  echo "   -r TERMINA_REVISION - Version of termina to publish to CIPD. This will"
-  echo "      be a string that looks something like 'R90-13816.B'."
   echo ""
   echo "   -n Dry run. Don't actually upload anything, just show what would be"
   echo "      uploaded."
@@ -72,20 +69,9 @@ create_cros_tree() {
   repo init -u https://chrome-internal.googlesource.com/chromeos/manifest-internal -b release-"${termina_revision}"
   repo sync -j8
 
-  # Changes to termina overlays to add packages and customize USE flags:
-  (cd src/overlays; git fetch https://chromium.googlesource.com/chromiumos/overlays/board-overlays refs/changes/64/3187264/2 && git cherry-pick FETCH_HEAD)
-
-  # Modify what is pulled into /opt/google/cros-containers by termina_container_tools
-  (cd src/third_party/chromiumos-overlay; git fetch https://chromium.googlesource.com/chromiumos/overlays/chromiumos-overlay refs/changes/99/3187699/1 && git cherry-pick FETCH_HEAD)
-
-  # Ebuild patch for building mesa with magma driver backend
-  (cd src/third_party/chromiumos-overlay; git fetch https://chromium.googlesource.com/chromiumos/overlays/chromiumos-overlay refs/changes/97/3187697/2 && git cherry-pick FETCH_HEAD)
-
-  # Ebuild patch for building Xwayland with patches for excluding GLX and supporting ANGLE
-  (cd src/third_party/chromiumos-overlay; git fetch https://chromium.googlesource.com/chromiumos/overlays/chromiumos-overlay refs/changes/98/3187698/1 && git cherry-pick FETCH_HEAD)
-
-  # Sommelier patch for selecting correct shm driver:
-  (cd src/platform2; git fetch https://chromium.googlesource.com/chromiumos/platform2 refs/changes/77/3187777/1 && git cherry-pick FETCH_HEAD)
+  (cd src/overlays; git checkout cros/test-magma)
+  (cd src/third_party/chromiumos-overlay; git checkout cros/test-magma)
+  (cd src/platform2; git checkout cros/test-magma)
 
   # Switch to Fuchsia's mesa branch and build the "libmagma SDK":
   (cd src/third_party/mesa && \
@@ -182,9 +168,8 @@ main() {
     print_usage_and_exit
   fi
 
-  while getopts "r:k:nfh" FLAG; do
+  while getopts "nfh" FLAG; do
     case "${FLAG}" in
-    r) termina_revision_requested="${OPTARG}" ;;
     n) dry_run=true ;;
     f) force=true ;;
     h) print_usage_and_exit 0 ;;
@@ -201,15 +186,9 @@ main() {
   echo "Working in ${work_dir}..."
 
   declare -r cipd="${FUCHSIA_DIR}/.jiri_root/bin/cipd"
-  declare -r termina_revision_requested=${termina_revision_requested}
   declare -r dry_run=${dry_run}
   declare -r force=${force}
   declare jiri_entries="    <!-- termina guest images -->"
-
-  # Ensure revision is specified
-  if [ "$termina_revision_requested" == "" ]; then
-    print_usage_and_exit 1
-  fi
 
   # Ensure one of "dry-run" or "force" is given.
   if [ "$dry_run" == "$force" ];
@@ -220,7 +199,7 @@ main() {
   check_depot_tools
 
   board=`board_for_arch ${arch}`
-  termina_revision=${termina_revision_requested}
+  termina_revision=$TERMINA_REVISION
 
   jiri_entries="${jiri_entries}
   <package name=\"fuchsia_internal/linux/termina-${arch}\"
