@@ -192,7 +192,8 @@ TEST_F(MixStageTest, AddInput_MixerSelection) {
                                                           Mixer::Resampler::SampleAndHold));
 }
 
-// TODO(fxbug.dev/50004): Add tests to verify we can read from mix stages with unaligned frames.
+// TODO(fxbug.dev/50004): Add tests to verify we can read from other mix stages with unaligned
+// frames.
 
 std::unique_ptr<AudioClock> MixStageTest::SetPacketFactoryWithOffsetAudioClock(
     zx::duration clock_offset, testing::PacketFactory& factory) {

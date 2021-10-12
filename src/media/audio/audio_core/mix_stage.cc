@@ -666,16 +666,6 @@ void MixStage::ReconcileClocksAndSetStepSize(Mixer::SourceInfo& info,
   // Convert both positions to monotonic time and get the delta -- this is source position error
   info.source_pos_error = mono_now_from_source - mono_now_from_dest;
 
-  // If error is less than the resolution of a fractional-frame unit, treat it as 0. This way we
-  // don't overreact to precision-limit-related errors measured between streams that are essentially
-  // synchronized. Beyond this limit, we rate-adjust clocks with the highest precision available.
-  zx::duration min_source_pos_error_worth_tuning =
-      zx::nsec(info.clock_mono_to_frac_source_frames.rate().Inverse().Scale(
-          1, TimelineRate::RoundingMode::Ceiling));
-  if (abs(info.source_pos_error.to_nsecs()) < min_source_pos_error_worth_tuning.to_nsecs()) {
-    info.source_pos_error = zx::nsec(0);
-  }
-
   // If source error exceeds our threshold, allow a discontinuity and reset position and rates.
   if (std::abs(info.source_pos_error.get()) > kMaxErrorThresholdDuration.get()) {
     Reporter::Singleton().MixerClockSkewDiscontinuity(info.source_pos_error);
