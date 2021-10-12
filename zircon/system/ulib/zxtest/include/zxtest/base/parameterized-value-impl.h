@@ -83,7 +83,7 @@ class ParameterizedTestCaseInfoImpl : public ParameterizedTestCaseInfo {
         // print this.
         std::initializer_list<fbl::String> prefix_name = {instantiation_name, fbl::String("/"),
                                                           name()};
-        std::initializer_list<fbl::String> test_name = {test_entry.name, fbl::String("_"),
+        std::initializer_list<fbl::String> test_name = {test_entry.name, fbl::String("/"),
                                                         std::to_string(i)};
         runner->RegisterTest<FixtureType, TestImpl>(
             fbl::String::Concat(prefix_name), fbl::String::Concat(test_name),
