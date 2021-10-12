@@ -6,13 +6,15 @@ pub mod descriptors;
 
 use {
     crate::descriptors::*,
-    anyhow::{Context, Result},
+    anyhow::{format_err, Context, Result},
     ffx_core::ffx_plugin,
     ffx_driver_lsusb_args::{DriverLsusbCommand, UsbDevice},
     fidl_fuchsia_device_manager::DeviceWatcherProxy,
     fuchsia_async::{Duration, TimeoutExt},
     fuchsia_zircon_status as zx,
+    futures::future::{BoxFuture, FutureExt},
     num_traits::FromPrimitive,
+    std::sync::Mutex,
 };
 
 #[ffx_plugin(
@@ -20,6 +22,14 @@ use {
     DeviceWatcherProxy = "bootstrap/driver_manager:expose:fuchsia.hardware.usb.DeviceWatcher"
 )]
 pub async fn lsusb(device_watcher: DeviceWatcherProxy, cmd: DriverLsusbCommand) -> Result<()> {
+    if cmd.tree {
+        list_tree(&device_watcher, &cmd).await
+    } else {
+        list_devices(&device_watcher, &cmd).await
+    }
+}
+
+async fn list_devices(device_watcher: &DeviceWatcherProxy, cmd: &DriverLsusbCommand) -> Result<()> {
     println!("ID    VID:PID   SPEED  MANUFACTURER PRODUCT");
 
     let mut idx = 0;
@@ -34,18 +44,19 @@ pub async fn lsusb(device_watcher: DeviceWatcherProxy, cmd: DriverLsusbCommand) 
         let channel = fidl::AsyncChannel::from_channel(device)?;
         let device = fidl_fuchsia_hardware_usb_device::DeviceProxy::new(channel);
 
-        do_list_device(device, idx, &cmd).await?;
+        list_device(&device, idx, 0, 0, &cmd).await?;
 
         idx += 1
     }
     Ok(())
 }
-
-async fn do_list_device(
-    device: fidl_fuchsia_hardware_usb_device::DeviceProxy,
+async fn list_device(
+    device: &fidl_fuchsia_hardware_usb_device::DeviceProxy,
     devnum: u32,
+    depth: usize,
+    max_depth: usize,
     cmd: &DriverLsusbCommand,
-) -> Result<(), anyhow::Error> {
+) -> Result<()> {
     let devname = &format!("/dev/class/usb-device/{:03}", devnum);
 
     let device_desc = device
@@ -86,14 +97,20 @@ async fn do_list_device(
     zx::Status::ok(status)
         .map_err(|e| return anyhow::anyhow!("Failed to get string descriptor: {}", e))?;
 
+    let left_pad = depth * 4;
+    let right_pad = (max_depth - depth) * 4;
+
     println!(
-        "{:03}  {:04X}:{:04X}  {:<5}  {} {}",
+        "{0:left_pad$}{1:03}  {0:right_pad$}{2:04X}:{3:04X}  {4:<5}  {5} {6}",
+        "",
         devnum,
         { device_desc.idVendor },
         { device_desc.idProduct },
         UsbSpeed(speed),
         string_manu_desc,
         string_prod_desc,
+        left_pad = left_pad,
+        right_pad = right_pad,
     );
 
     if cmd.verbose {
@@ -318,6 +335,101 @@ async fn do_list_device(
     return Ok(());
 }
 
+struct DeviceNode {
+    pub device: fidl_fuchsia_hardware_usb_device::DeviceProxy,
+    pub devnum: u32,
+    pub device_id: u32,
+    pub hub_id: u32,
+    // Depth in tree, None if not computed yet.
+    // Mutex is used for interior mutability.
+    pub depth: Mutex<Option<usize>>,
+}
+
+impl DeviceNode {
+    fn get_depth(&self, devices: &[DeviceNode]) -> Result<usize> {
+        if let Some(depth) = self.depth.lock().unwrap().clone() {
+            return Ok(depth);
+        }
+        if self.hub_id == 0 {
+            return Ok(0);
+        }
+        for device in devices.iter() {
+            if self.hub_id == device.device_id {
+                return device.get_depth(devices).map(|depth| depth + 1);
+            }
+        }
+        Err(format_err!("Hub not found for device"))
+    }
+}
+
+async fn list_tree(device_watcher: &DeviceWatcherProxy, cmd: &DriverLsusbCommand) -> Result<()> {
+    let mut devices = Vec::new();
+    while let Ok(device) = device_watcher
+        .next_device()
+        // This will wait forever, so if there are no more devices, lets stop waiting.
+        .on_timeout(Duration::from_millis(200), || Ok(Err(-1)))
+        .await
+        .context("FIDL call to get next device returned an error")?
+    {
+        let channel = fidl::AsyncChannel::from_channel(device)?;
+        let device = fidl_fuchsia_hardware_usb_device::DeviceProxy::new(channel);
+
+        devices.push(get_device_info(device, devices.len() as u32).await?);
+    }
+
+    for device in devices.iter() {
+        let depth = device.get_depth(&devices)?;
+        *device.depth.lock().unwrap() = Some(depth);
+    }
+
+    let max_depth = devices
+        .iter()
+        .filter_map(|device| device.depth.lock().unwrap().clone())
+        .fold(0, std::cmp::max::<usize>);
+
+    print!("ID   ");
+    for _ in 0..max_depth {
+        print!("    ");
+    }
+    println!(" VID:PID   SPEED  MANUFACTURER PRODUCT");
+
+    do_list_tree(&devices, 0, max_depth, cmd).await
+}
+
+fn do_list_tree<'a>(
+    devices: &'a [DeviceNode],
+    hub_id: u32,
+    max_depth: usize,
+    cmd: &'a DriverLsusbCommand,
+) -> BoxFuture<'a, Result<()>> {
+    async move {
+        for device in devices.iter() {
+            if device.hub_id == hub_id {
+                let depth = device.depth.lock().unwrap().unwrap().clone();
+                list_device(&device.device, device.devnum, depth, max_depth, cmd).await?;
+                do_list_tree(devices, device.device_id, max_depth, cmd).await?;
+            }
+        }
+        Ok(())
+    }
+    .boxed()
+}
+
+async fn get_device_info(
+    device: fidl_fuchsia_hardware_usb_device::DeviceProxy,
+    devnum: u32,
+) -> Result<DeviceNode> {
+    let devname = &format!("/dev/class/usb-device/{:03}", devnum);
+
+    let device_id =
+        device.get_device_id().await.context(format!("GetDeviceId failed for {}", devname))?;
+
+    let hub_id =
+        device.get_hub_device_id().await.context(format!("GeHubId failed for {}", devname))?;
+
+    Ok(DeviceNode { device, devnum, device_id, hub_id, depth: Mutex::new(None) })
+}
+
 #[cfg(test)]
 mod test {
 
@@ -438,7 +550,7 @@ mod test {
                 device: None,
             };
             println!("ID    VID:PID   SPEED  MANUFACTURER PRODUCT");
-            do_list_device(device, 0, &cmd).await.unwrap();
+            list_device(&device, 0, 0, 0, &cmd).await.unwrap();
         }
         .fuse();
         futures::pin_mut!(server_task, test_task);
