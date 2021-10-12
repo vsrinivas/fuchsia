@@ -79,14 +79,14 @@ class RamInfoTest : public zxtest::Test {
   RamInfoTest() : zxtest::Test(), loop_(&kAsyncLoopConfigAttachToCurrentThread) {}
 
   void SetUp() override {
-    zx::channel server;
-    ASSERT_OK(zx::channel::create(0, &client_, &server));
-    ASSERT_OK(fidl::BindSingleInFlightOnly(loop_.dispatcher(), std::move(server), &fake_device_));
+    zx::status server = fidl::CreateEndpoints<fuchsia_hardware_ram_metrics::Device>(&client_);
+    ASSERT_OK(server.status_value());
+    ASSERT_OK(fidl::BindSingleInFlightOnly(loop_.dispatcher(), std::move(*server), &fake_device_));
     loop_.StartThread("ram-info-test-loop");
   }
 
  protected:
-  zx::channel client_;
+  fidl::ClientEnd<fuchsia_hardware_ram_metrics::Device> client_;
   FakeRamDevice fake_device_;
 
  private:
@@ -104,10 +104,10 @@ TEST_F(RamInfoTest, Errors) {
   printer.AddChannelName(0, "channel0");
 
   fake_device_.set_close();
-  EXPECT_NOT_OK(MeasureBandwith(&printer, std::move(client_), {}));
+  EXPECT_NOT_OK(MeasureBandwith(&printer, client_, {}));
 
   fake_device_.set_reply_error();
-  EXPECT_NOT_OK(MeasureBandwith(&printer, std::move(client_), {}));
+  EXPECT_NOT_OK(MeasureBandwith(&printer, client_, {}));
 
   fclose(output_file);
 }
@@ -235,7 +235,7 @@ TEST_F(RamInfoTest, CyclesToMeasure) {
 TEST_F(RamInfoTest, GetDdrWindowingResults) {
   // This test is pretty trivial, since we're faking the interface, and all the
   // function does is print the resulting value.
-  EXPECT_OK(GetDdrWindowingResults(std::move(client_)));
+  EXPECT_OK(GetDdrWindowingResults(client_));
 }
 
 }  // namespace ram_info

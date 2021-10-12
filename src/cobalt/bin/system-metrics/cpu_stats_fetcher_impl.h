@@ -31,7 +31,7 @@ class CpuStatsFetcherImpl : public CpuStatsFetcher {
   size_t num_cpu_cores_ = 0;
   std::chrono::time_point<std::chrono::high_resolution_clock> cpu_fetch_time_;
   std::chrono::time_point<std::chrono::high_resolution_clock> last_cpu_fetch_time_;
-  std::unique_ptr<fidl::WireSyncClient<fuchsia_kernel::Stats>> stats_service_;
+  fidl::WireSyncClient<fuchsia_kernel::Stats> stats_service_;
   std::unique_ptr<fidl::Buffer<fidl::WireResponse<fuchsia_kernel::Stats::GetCpuStats>>>
       cpu_stats_buffer_;
   fuchsia_kernel::wire::CpuStats* cpu_stats_ = nullptr;

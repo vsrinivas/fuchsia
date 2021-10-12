@@ -57,7 +57,7 @@ zx_status_t dc_callback_handler(zx_signals_t signals);
 
 struct list_node* get_display_list();
 void initialize_display_channel(fidl::ClientEnd<fuchsia_hardware_display::Controller> channel);
-fidl::WireSyncClient<fuchsia_sysmem::Allocator>* get_sysmem_allocator();
+fidl::WireSyncClient<fuchsia_sysmem::Allocator>& get_sysmem_allocator();
 
 #endif
 

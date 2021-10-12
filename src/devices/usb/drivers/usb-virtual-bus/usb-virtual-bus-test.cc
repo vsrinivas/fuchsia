@@ -37,7 +37,7 @@ class USBVirtualBus : public usb_virtual_bus_base::USBVirtualBusBase {
  public:
   USBVirtualBus() = default;
 
-  void InitUsbVirtualBus(std::optional<fidl::WireSyncClient<virtualbustest::BusTest>>* test);
+  void InitUsbVirtualBus(fidl::WireSyncClient<virtualbustest::BusTest>* test);
 };
 
 zx_status_t WaitForDevice(int dirfd, int event, const char* name, void* cookie) {
@@ -47,13 +47,12 @@ zx_status_t WaitForDevice(int dirfd, int event, const char* name, void* cookie) 
   fbl::unique_fd dev_fd(openat(dirfd, name, O_RDWR));
   zx::channel channel;
   fdio_get_service_handle(dev_fd.release(), channel.reset_and_get_address());
-  auto* client = static_cast<std::optional<fidl::WireSyncClient<virtualbustest::BusTest>>*>(cookie);
-  client->emplace(std::move(channel));
+  auto* client = static_cast<fidl::WireSyncClient<virtualbustest::BusTest>*>(cookie);
+  *client = fidl::BindSyncClient<virtualbustest::BusTest>(std::move(channel));
   return ZX_ERR_STOP;
 }
 
-void USBVirtualBus::InitUsbVirtualBus(
-    std::optional<fidl::WireSyncClient<virtualbustest::BusTest>>* test) {
+void USBVirtualBus::InitUsbVirtualBus(fidl::WireSyncClient<virtualbustest::BusTest>* test) {
   namespace usb_peripheral = fuchsia_hardware_usb_peripheral;
   using ConfigurationDescriptor =
       ::fidl::VectorView<fuchsia_hardware_usb_peripheral::wire::FunctionDescriptor>;
@@ -111,11 +110,11 @@ class VirtualBusTest : public zxtest::Test {
 
  protected:
   USBVirtualBus bus_;
-  std::optional<fidl::WireSyncClient<virtualbustest::BusTest>> test_;
+  fidl::WireSyncClient<virtualbustest::BusTest> test_;
 };
 
 TEST_F(VirtualBusTest, ShortTransfer) {
-  ASSERT_TRUE(test_->RunShortPacketTest()->success);
+  ASSERT_TRUE(test_.RunShortPacketTest()->success);
   ASSERT_NO_FATAL_FAILURES();
 }
 

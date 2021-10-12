@@ -214,9 +214,8 @@ zx_status_t Control::InitAddressSpaceDeviceLocked() {
     return status;
   }
 
-  address_space_child_ =
-      std::make_unique<fidl::WireSyncClient<fuchsia_hardware_goldfish::AddressSpaceChildDriver>>(
-          std::move(endpoints->client));
+  address_space_child_ = fidl::WireSyncClient<fuchsia_hardware_goldfish::AddressSpaceChildDriver>(
+      std::move(endpoints->client));
 
   return ZX_OK;
 }
@@ -240,8 +239,8 @@ zx_status_t Control::InitSyncDeviceLocked() {
     return status;
   }
 
-  sync_timeline_ = std::make_unique<fidl::WireSyncClient<fuchsia_hardware_goldfish::SyncTimeline>>(
-      std::move(endpoints->client));
+  sync_timeline_ =
+      fidl::WireSyncClient<fuchsia_hardware_goldfish::SyncTimeline>(std::move(endpoints->client));
   return ZX_OK;
 }
 
@@ -664,7 +663,7 @@ zx_status_t Control::GoldfishControlCreateSyncFence(zx::eventpair event) {
     return ZX_ERR_INTERNAL;
   }
 
-  auto result = sync_timeline_->TriggerHostWait(glsync, syncthread, std::move(event));
+  auto result = sync_timeline_.TriggerHostWait(glsync, syncthread, std::move(event));
   if (!result.ok()) {
     zxlogf(ERROR, "TriggerHostWait: FIDL call failed, status=%d", result.status());
     return ZX_ERR_INTERNAL;

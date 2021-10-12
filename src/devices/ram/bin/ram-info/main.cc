@@ -48,7 +48,8 @@ int main(int argc, char* argv[]) {
         return 1;
       }
 
-      zx_status_t status = ram_info::GetDdrWindowingResults(std::move(channel));
+      fidl::ClientEnd<ram_metrics::Device> client{std::move(channel)};
+      zx_status_t status = ram_info::GetDdrWindowingResults(client);
       if (status != ZX_OK) {
         fprintf(stderr, "failed to read windowing tool result: %d\n", status);
         return -1;
@@ -118,7 +119,8 @@ int main(int argc, char* argv[]) {
     }
   }
 
-  zx_status_t status = MeasureBandwith(printer, std::move(channel), config);
+  fidl::ClientEnd<ram_metrics::Device> client{std::move(channel)};
+  zx_status_t status = MeasureBandwith(printer, client, config);
   if (status != ZX_OK) {
     fprintf(stderr, "failed to measure bandwidth: %d\n", status);
     return -1;

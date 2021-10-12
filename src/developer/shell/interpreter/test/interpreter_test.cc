@@ -220,7 +220,7 @@ void InterpreterTest::Run(FinishAction action) {
 
   EventHandler event_handler(this, action);
   while (!event_handler.done()) {
-    ::fidl::Result result = shell_->HandleOneEvent(event_handler);
+    ::fidl::Result result = shell_.HandleOneEvent(event_handler);
     ASSERT_TRUE(result.ok() && event_handler.ok()) << event_handler.msg();
   }
 };
@@ -243,8 +243,7 @@ InterpreterTestContext* InterpreterTest::GetContext(uint64_t context_id) {
 
 void InterpreterTest::SetUp() {
   auto endpoints = fidl::CreateEndpoints<fuchsia_shell::Shell>();
-  shell_ =
-      std::make_unique<fidl::WireSyncClient<fuchsia_shell::Shell>>(std::move(endpoints->client));
+  shell_ = fidl::WireSyncClient<fuchsia_shell::Shell>(std::move(endpoints->client));
 
   // Reset context ids.
   last_context_id_ = 0;

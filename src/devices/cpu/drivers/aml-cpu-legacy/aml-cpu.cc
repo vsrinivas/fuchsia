@@ -39,7 +39,7 @@ uint16_t PstateToOperatingPoint(const uint32_t pstate, const size_t n_operating_
   return static_cast<uint16_t>(n_operating_points - pstate - 1);
 }
 
-std::optional<fidl::WireSyncClient<amlogic_cpu::fuchsia_thermal::Device>> CreateFidlClient(
+fidl::WireSyncClient<amlogic_cpu::fuchsia_thermal::Device> CreateFidlClient(
     const ddk::ThermalProtocolClient& protocol_client, zx_status_t* status) {
   // This channel pair will be used to talk to the Thermal Device's FIDL
   // interface.
@@ -147,7 +147,7 @@ zx_status_t AmlCpu::Create(void* context, zx_device_t* parent) {
     return status;
   }
 
-  auto device_info = thermal_fidl_client->GetDeviceInfo();
+  auto device_info = thermal_fidl_client.GetDeviceInfo();
   if (device_info.status() != ZX_OK) {
     zxlogf(ERROR, "aml-cpu: failed to get device info, st = %d", device_info.status());
     return device_info.status();
@@ -222,9 +222,9 @@ zx_status_t AmlCpu::Create(void* context, zx_device_t* parent) {
         return status;
       }
     }
-    auto cpu_device = std::make_unique<AmlCpu>(parent, std::move(*thermal_fidl_client), i,
+    auto cpu_device = std::make_unique<AmlCpu>(parent, std::move(thermal_fidl_client), i,
                                                cluster_core_count->second);
-    thermal_fidl_client.reset();
+    thermal_fidl_client = {};
 
     cpu_device->SetCpuInfo(cpu_version_packed);
 

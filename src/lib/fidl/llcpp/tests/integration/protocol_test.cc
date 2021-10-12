@@ -17,7 +17,7 @@
 
 #include <cstdint>
 
-#include <gtest/gtest.h>
+#include <zxtest/zxtest.h>
 
 namespace test = ::llcpptest_protocol_test;
 
@@ -54,7 +54,7 @@ class ErrorServer : public fidl::WireServer<test::ErrorMethods> {
   }
 };
 
-class ResultTest : public ::testing::Test {
+class ResultTest : public ::zxtest::Test {
  protected:
   virtual void SetUp() {
     loop_ = std::make_unique<async::Loop>(&kAsyncLoopConfigAttachToCurrentThread);
@@ -88,7 +88,7 @@ class ResultTest : public ::testing::Test {
 TEST_F(ResultTest, OwnedPrimitiveError) {
   auto client = TakeClient();
   auto resp = client.NoArgsPrimitiveError(true);
-  ASSERT_TRUE(resp.ok()) << resp.error();
+  ASSERT_OK(resp.status());
   ASSERT_TRUE(resp->result.is_err());
   EXPECT_EQ(resp->result.err(), kErrorStatus);
 }
@@ -96,7 +96,7 @@ TEST_F(ResultTest, OwnedPrimitiveError) {
 TEST_F(ResultTest, OwnedCustomError) {
   auto client = TakeClient();
   auto resp = client.ManyArgsCustomError(true);
-  ASSERT_TRUE(resp.ok());
+  ASSERT_OK(resp.status());
   ASSERT_TRUE(resp->result.is_err());
   EXPECT_EQ(resp->result.err(), test::wire::MyError::kReallyBadError);
 }
@@ -104,14 +104,14 @@ TEST_F(ResultTest, OwnedCustomError) {
 TEST_F(ResultTest, OwnedSuccessNoArgs) {
   auto client = TakeClient();
   auto resp = client.NoArgsPrimitiveError(false);
-  ASSERT_TRUE(resp.ok());
+  ASSERT_OK(resp.status());
   ASSERT_TRUE(resp->result.is_response());
 }
 
 TEST_F(ResultTest, OwnedSuccessManyArgs) {
   auto client = TakeClient();
   auto resp = client.ManyArgsCustomError(false);
-  ASSERT_TRUE(resp.ok());
+  ASSERT_OK(resp.status());
   ASSERT_TRUE(resp->result.is_response());
   const auto& success = resp->result.response();
   ASSERT_EQ(success.a, 1);
@@ -193,7 +193,7 @@ TEST(MagicNumberTest, ResponseWrite) {
   fidl::Buffer<fidl::WireResponse<test::Frobinator::Grob>> response;
   auto result = WireCall(endpoints->client)
                     ->Grob(request.view(), fidl::StringView::FromExternal(s), response.view());
-  ASSERT_TRUE(result.ok());
+  ASSERT_OK(result.status());
   auto hdr = reinterpret_cast<fidl_message_header_t*>(response.data());
   ASSERT_EQ(hdr->magic_number, kFidlWireFormatMagicNumberInitial);
 }
@@ -210,7 +210,7 @@ TEST(MagicNumberTest, EventRead) {
   _response._hdr.magic_number = 0;
   fidl::OwnedEncodedMessage<fidl::WireResponse<test::Frobinator::Hrob>> encoded(&_response);
   encoded.Write(remote.channel());
-  ASSERT_TRUE(encoded.ok());
+  ASSERT_OK(encoded.status());
 
   class EventHandler : public fidl::WireSyncEventHandler<test::Frobinator> {
    public:
@@ -231,9 +231,7 @@ TEST(MagicNumberTest, EventRead) {
 TEST(SyncClientTest, DefaultInitializationError) {
   fidl::WireSyncClient<test::ErrorMethods> client;
   ASSERT_FALSE(client.channel().is_valid());
-
-  auto resp = client.NoArgsPrimitiveError(false);
-  ASSERT_EQ(ZX_ERR_BAD_HANDLE, resp.status());
+  ASSERT_DEATH([&] { client.NoArgsPrimitiveError(false); });
 }
 
 TEST(EventSenderTest, SendEvent) {
@@ -297,7 +295,7 @@ class HandleProviderServer : public fidl::WireServer<test::HandleProvider> {
   }
 };
 
-class HandleTest : public ::testing::Test {
+class HandleTest : public ::zxtest::Test {
  protected:
   virtual void SetUp() {
     loop_ = std::make_unique<async::Loop>(&kAsyncLoopConfigAttachToCurrentThread);
@@ -325,7 +323,7 @@ TEST_F(HandleTest, HandleClosedAfterHandleStructMove) {
   auto client = TakeClient();
   auto result = client.GetHandle();
 
-  ASSERT_TRUE(result.ok()) << result.error();
+  ASSERT_OK(result.status());
   ASSERT_TRUE(result->value.h.is_valid());
 
   // Dupe the event so we can get the handle count after move.
@@ -348,7 +346,7 @@ TEST_F(HandleTest, HandleClosedOnResultOfDestructorAfterVectorMove) {
   {
     auto result = client.GetHandleVector(kNumHandles);
 
-    ASSERT_TRUE(result.ok()) << result.error();
+    ASSERT_OK(result.status());
     ASSERT_EQ(result->value.count(), kNumHandles);
 
     for (uint32_t i = 0; i < kNumHandles; i++) {
@@ -374,7 +372,7 @@ TEST_F(HandleTest, HandleUnion) {
   auto client = TakeClient();
   auto result = client.GetHandleUnion();
 
-  ASSERT_TRUE(result.ok()) << result.error();
+  ASSERT_OK(result.status());
   ASSERT_TRUE(result->value.u.h().is_valid());
 
   // Dupe the event so we can get the handle count after move.
@@ -410,8 +408,8 @@ TEST(Endpoints, CreateFromProtocol) {
   // `std::move` pattern
   {
     auto endpoints = fidl::CreateEndpoints<test::Empty>();
-    ASSERT_TRUE(endpoints.is_ok());
-    ASSERT_EQ(ZX_OK, endpoints.status_value()) << endpoints.status_string();
+    ASSERT_OK(endpoints.status_value());
+    ASSERT_EQ(ZX_OK, endpoints.status_value());
     fidl::ClientEnd<test::Empty> client_end = std::move(endpoints->client);
     fidl::ServerEnd<test::Empty> server_end = std::move(endpoints->server);
 
@@ -422,8 +420,8 @@ TEST(Endpoints, CreateFromProtocol) {
   // Destructuring pattern
   {
     auto endpoints = fidl::CreateEndpoints<test::Empty>();
-    ASSERT_TRUE(endpoints.is_ok());
-    ASSERT_EQ(ZX_OK, endpoints.status_value()) << endpoints.status_string();
+    ASSERT_OK(endpoints.status_value());
+    ASSERT_EQ(ZX_OK, endpoints.status_value());
     auto [client_end, server_end] = std::move(endpoints.value());
 
     ASSERT_TRUE(client_end.is_valid());
@@ -436,8 +434,8 @@ TEST(Endpoints, CreateFromProtocol) {
 TEST(Endpoints, CreateFromProtocolOutParameterStyleClientRetained) {
   fidl::ClientEnd<test::Empty> client_end;
   auto server_end = fidl::CreateEndpoints(&client_end);
-  ASSERT_TRUE(server_end.is_ok());
-  ASSERT_EQ(ZX_OK, server_end.status_value()) << server_end.status_string();
+  ASSERT_OK(server_end.status_value());
+  ASSERT_EQ(ZX_OK, server_end.status_value());
 
   ASSERT_TRUE(client_end.is_valid());
   ASSERT_TRUE(server_end->is_valid());
@@ -446,8 +444,8 @@ TEST(Endpoints, CreateFromProtocolOutParameterStyleClientRetained) {
 TEST(Endpoints, CreateFromProtocolOutParameterStyleServerRetained) {
   fidl::ServerEnd<test::Empty> server_end;
   auto client_end = fidl::CreateEndpoints(&server_end);
-  ASSERT_TRUE(client_end.is_ok());
-  ASSERT_EQ(ZX_OK, client_end.status_value()) << client_end.status_string();
+  ASSERT_OK(client_end.status_value());
+  ASSERT_EQ(ZX_OK, client_end.status_value());
 
   ASSERT_TRUE(server_end.is_valid());
   ASSERT_TRUE(client_end->is_valid());

@@ -31,14 +31,14 @@ FetchCpuResult CpuStatsFetcherImpl::FetchCpuPercentage(double *cpu_percentage) {
 }
 
 bool CpuStatsFetcherImpl::FetchCpuStats() {
-  if (stats_service_ == nullptr) {
+  if (!stats_service_.is_valid()) {
     FX_LOGS(ERROR) << "CpuStatsFetcherImpl: No kernel stats service "
                    << "present. Reconnecting...";
     InitializeKernelStats();
     return false;
   }
   cpu_fetch_time_ = std::chrono::high_resolution_clock::now();
-  auto result = stats_service_->GetCpuStats(cpu_stats_buffer_->view());
+  auto result = stats_service_.GetCpuStats(cpu_stats_buffer_->view());
   if (result.status() != ZX_OK) {
     FX_LOGS(ERROR) << "CpuStatsFetcherImpl: Fetching "
                    << "CpuStats through fuchsia.kernel.Stats returns "
@@ -98,7 +98,7 @@ void CpuStatsFetcherImpl::InitializeKernelStats() {
       std::make_unique<fidl::Buffer<fidl::WireResponse<fuchsia_kernel::Stats::GetCpuStats>>>();
   last_cpu_stats_buffer_ =
       std::make_unique<fidl::Buffer<fidl::WireResponse<fuchsia_kernel::Stats::GetCpuStats>>>();
-  stats_service_ = std::make_unique<fidl::WireSyncClient<fuchsia_kernel::Stats>>(std::move(local));
+  stats_service_ = fidl::WireSyncClient<fuchsia_kernel::Stats>(std::move(local));
 }
 
 }  // namespace cobalt

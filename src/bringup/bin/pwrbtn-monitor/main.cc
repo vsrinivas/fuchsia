@@ -81,7 +81,7 @@ zx_status_t FindSystemPowerDown(const hid::DeviceDescriptor* desc, uint8_t* repo
 }
 
 struct PowerButtonInfo {
-  std::optional<fidl::WireSyncClient<fuchsia_hardware_input::Device>> client;
+  fidl::WireSyncClient<fuchsia_hardware_input::Device> client;
   uint8_t report_id;
   size_t bit_offset;
   bool has_report_id_byte;
@@ -171,7 +171,7 @@ int main(int argc, char** argv) {
   }
   dirfd.reset();
 
-  auto& client = *info.client;
+  auto& client = info.client;
 
   // Get the report event.
   zx::event report_event;

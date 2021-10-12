@@ -28,7 +28,7 @@ class FshostBootArgs {
 
   // Constructor for FshostBootArgs that allows injecting a different BootArgs member. Intended for
   // use in unit tests; use Create for non-test code.
-  explicit FshostBootArgs(std::optional<fidl::WireSyncClient<fuchsia_boot::Arguments>> boot_args);
+  explicit FshostBootArgs(fidl::WireSyncClient<fuchsia_boot::Arguments> boot_args);
 
   bool netboot() const { return netsvc_netboot_ || zircon_system_disable_automount_; }
   bool check_filesystems() const { return zircon_system_filesystem_check_; }
@@ -52,7 +52,7 @@ class FshostBootArgs {
  private:
   zx::status<std::string> GetStringArgument(std::string key);
 
-  std::optional<fidl::WireSyncClient<fuchsia_boot::Arguments>> boot_args_;
+  fidl::WireSyncClient<fuchsia_boot::Arguments> boot_args_;
   bool netsvc_netboot_ = false;
   bool zircon_system_disable_automount_ = false;
   bool zircon_system_filesystem_check_ = false;

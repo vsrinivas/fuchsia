@@ -63,7 +63,7 @@ Image::Image(uint32_t width, uint32_t height, int32_t stride, zx_pixel_format_t 
 Image* Image::Create(fidl::WireSyncClient<fhd::Controller>* dc, uint32_t width, uint32_t height,
                      zx_pixel_format_t format, Pattern pattern, uint32_t fg_color,
                      uint32_t bg_color, uint64_t modifier) {
-  std::unique_ptr<fidl::WireSyncClient<sysmem::Allocator>> allocator;
+  fidl::WireSyncClient<sysmem::Allocator> allocator;
   {
     zx::channel client, server;
     if (zx::channel::create(0, &client, &server) != ZX_OK ||
@@ -71,25 +71,24 @@ Image* Image::Create(fidl::WireSyncClient<fhd::Controller>* dc, uint32_t width, 
       fprintf(stderr, "Failed to connect to sysmem\n");
       return nullptr;
     }
-    allocator = std::make_unique<fidl::WireSyncClient<sysmem::Allocator>>(std::move(client));
+    allocator = fidl::WireSyncClient<sysmem::Allocator>(std::move(client));
   }
 
-  std::unique_ptr<fidl::WireSyncClient<sysmem::BufferCollectionToken>> token;
+  fidl::WireSyncClient<sysmem::BufferCollectionToken> token;
   {
     zx::channel client, server;
     if (zx::channel::create(0, &client, &server) != ZX_OK ||
-        !allocator->AllocateSharedCollection(std::move(server)).ok()) {
+        !allocator.AllocateSharedCollection(std::move(server)).ok()) {
       fprintf(stderr, "Failed to allocate shared collection\n");
       return nullptr;
     }
-    token =
-        std::make_unique<fidl::WireSyncClient<sysmem::BufferCollectionToken>>(std::move(client));
+    token = fidl::WireSyncClient<sysmem::BufferCollectionToken>(std::move(client));
   }
   zx_handle_t display_token_handle;
   {
     zx::channel client, server;
     if (zx::channel::create(0, &client, &server) != ZX_OK ||
-        !token->Duplicate(/*rights_attenuation_mask=*/0xffffffff, std::move(server)).ok()) {
+        !token.Duplicate(/*rights_attenuation_mask=*/0xffffffff, std::move(server)).ok()) {
       fprintf(stderr, "Failed to duplicate token\n");
       return nullptr;
     }
@@ -98,7 +97,7 @@ Image* Image::Create(fidl::WireSyncClient<fhd::Controller>* dc, uint32_t width, 
 
   static uint32_t next_collection_id = fhd::wire::kInvalidDispId + 1;
   uint32_t collection_id = next_collection_id++;
-  if (!token->Sync().ok()) {
+  if (!token.Sync().ok()) {
     fprintf(stderr, "Failed to sync token\n");
     return nullptr;
   }
@@ -119,17 +118,16 @@ Image* Image::Create(fidl::WireSyncClient<fhd::Controller>* dc, uint32_t width, 
     return nullptr;
   }
 
-  std::unique_ptr<fidl::WireSyncClient<sysmem::BufferCollection>> collection;
+  fidl::WireSyncClient<sysmem::BufferCollection> collection;
   {
     zx::channel client, server;
     if (zx::channel::create(0, &client, &server) != ZX_OK ||
-        !allocator->BindSharedCollection(std::move(*token->mutable_channel()), std::move(server))
+        !allocator.BindSharedCollection(std::move(*token.mutable_channel()), std::move(server))
              .ok()) {
       fprintf(stderr, "Failed to bind shared collection\n");
       return nullptr;
     }
-    collection =
-        std::make_unique<fidl::WireSyncClient<sysmem::BufferCollection>>(std::move(client));
+    collection = fidl::WireSyncClient<sysmem::BufferCollection>(std::move(client));
   }
 
   sysmem::wire::BufferCollectionConstraints constraints = {};
@@ -177,19 +175,19 @@ Image* Image::Create(fidl::WireSyncClient<fhd::Controller>* dc, uint32_t width, 
   image_constraints.display_width_divisor = 1;
   image_constraints.display_height_divisor = 1;
 
-  if (!collection->SetConstraints(true, constraints).ok()) {
+  if (!collection.SetConstraints(true, constraints).ok()) {
     fprintf(stderr, "Failed to set local constraints\n");
     return nullptr;
   }
 
-  auto info_result = collection->WaitForBuffersAllocated();
+  auto info_result = collection.WaitForBuffersAllocated();
   if (!info_result.ok() || info_result->status != ZX_OK) {
     fprintf(stderr, "Failed to wait for buffers allocated: %s",
             info_result.FormatDescription().c_str());
     return nullptr;
   }
 
-  if (!collection->Close().ok()) {
+  if (!collection.Close().ok()) {
     fprintf(stderr, "Failed to close buffer collection\n");
     return nullptr;
   }

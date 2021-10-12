@@ -531,7 +531,7 @@ zx::status<fidl::UnownedClientEnd<fuchsia_io::Directory>> OpteeClient::GetRootSt
 }
 
 zx_status_t OpteeClient::InitRpmbClient(void) {
-  if (rpmb_client_.has_value()) {
+  if (rpmb_client_.is_valid()) {
     return ZX_OK;
   }
 
@@ -920,7 +920,7 @@ zx_status_t OpteeClient::RpmbGetDevInfo(std::optional<SharedMemoryView> tx_frame
     return status;
   }
 
-  auto result = rpmb_client_->GetDeviceInfo();
+  auto result = rpmb_client_.GetDeviceInfo();
   status = result.status();
   if (status != ZX_OK) {
     LOG(ERROR, "Failed to get RPMB Device Info (status: %d)", status);
@@ -1083,7 +1083,7 @@ zx_status_t OpteeClient::RpmbSendRequest(std::optional<SharedMemoryView>& req,
         fidl::ObjectView<fuchsia_mem::wire::Range>::FromExternal(&rx_frames_range);
   }
 
-  auto res = rpmb_client_->Request(std::move(rpmb_request));
+  auto res = rpmb_client_.Request(std::move(rpmb_request));
   status = res.status();
   if ((status == ZX_OK) && (res->result.is_err())) {
     status = res->result.err();

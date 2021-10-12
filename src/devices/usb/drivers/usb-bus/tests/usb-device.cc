@@ -254,10 +254,11 @@ class DeviceTest : public zxtest::Test {
   }
 
   auto& get_fidl() {
-    if (!fidl_.has_value()) {
-      fidl_.emplace(std::move(ddk_.FidlClient()));
+    if (!fidl_.is_valid()) {
+      fidl_ =
+          fidl::BindSyncClient<fuchsia_hardware_usb_device::Device>(std::move(ddk_.FidlClient()));
     }
-    return fidl_.value();
+    return fidl_;
   }
 
   auto& get_device() { return *device_; }
@@ -322,7 +323,7 @@ class DeviceTest : public zxtest::Test {
 
  private:
   fbl::RefPtr<FakeTimer> timer_;
-  std::optional<fidl::WireSyncClient<fuchsia_hardware_usb_device::Device>> fidl_;
+  fidl::WireSyncClient<fuchsia_hardware_usb_device::Device> fidl_;
   FakeHci hci_;
   Binder ddk_;
   // UsbDevice context pointer owned by us through FakeDDK

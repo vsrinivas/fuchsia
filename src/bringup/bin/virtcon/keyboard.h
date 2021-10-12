@@ -76,7 +76,7 @@ class Keyboard : public fidl::WireAsyncEventHandler<fuchsia_input_report::InputR
   keypress_handler_t handler_ = {};
 
   zx::duration repeat_interval_ = zx::duration::infinite();
-  std::optional<fidl::WireSyncClient<fuchsia_input_report::InputDevice>> keyboard_client_;
+  fidl::WireSyncClient<fuchsia_input_report::InputDevice> keyboard_client_;
   fidl::WireSharedClient<fuchsia_input_report::InputReportsReader> reader_client_;
 
   int modifiers_ = 0;

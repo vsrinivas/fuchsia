@@ -67,9 +67,8 @@ class AmlSpi : public DeviceType, public ddk::SpiImplProtocol<AmlSpi, ddk::base_
   };
 
   AmlSpi(zx_device_t* device, ddk::MmioBuffer mmio,
-         std::optional<fidl::WireSyncClient<fuchsia_hardware_registers::Device>> reset,
-         uint32_t reset_mask, fbl::Array<ChipInfo> chips, zx::profile thread_profile,
-         zx::interrupt interrupt)
+         fidl::WireSyncClient<fuchsia_hardware_registers::Device> reset, uint32_t reset_mask,
+         fbl::Array<ChipInfo> chips, zx::profile thread_profile, zx::interrupt interrupt)
       : DeviceType(device),
         mmio_(std::move(mmio)),
         reset_(std::move(reset)),
@@ -95,7 +94,7 @@ class AmlSpi : public DeviceType, public ddk::SpiImplProtocol<AmlSpi, ddk::base_
                                               uint64_t offset, uint64_t size, uint32_t right);
 
   ddk::MmioBuffer mmio_;
-  std::optional<fidl::WireSyncClient<fuchsia_hardware_registers::Device>> reset_;
+  fidl::WireSyncClient<fuchsia_hardware_registers::Device> reset_;
   const uint32_t reset_mask_;
   fbl::Array<ChipInfo> chips_;
   bool need_reset_ = false;

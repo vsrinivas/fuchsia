@@ -64,10 +64,11 @@ ParseChannelString(std::string_view str);
 std::tuple<zx::channel, ram_info::RamDeviceInfo> ConnectToRamDevice();
 
 zx_status_t MeasureBandwith(
-    const Printer* printer, zx::channel channel,
+    const Printer* printer, fidl::UnownedClientEnd<fuchsia_hardware_ram_metrics::Device> client_end,
     const fuchsia_hardware_ram_metrics::wire::BandwidthMeasurementConfig& config);
 
-zx_status_t GetDdrWindowingResults(zx::channel channel);
+zx_status_t GetDdrWindowingResults(
+    fidl::UnownedClientEnd<fuchsia_hardware_ram_metrics::Device> client_end);
 
 }  // namespace ram_info
 

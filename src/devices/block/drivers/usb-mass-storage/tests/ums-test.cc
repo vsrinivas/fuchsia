@@ -98,7 +98,7 @@ class BlockDeviceController {
   explicit BlockDeviceController(USBVirtualBus* bus) : bus_(bus) {}
 
   void Disconnect() {
-    cachecontrol_.reset();
+    cachecontrol_ = {};
     ASSERT_NO_FATAL_FAILURES(bus_->ClearPeripheralDeviceFunctions());
 
     auto result2 = virtual_bus().Disconnect();
@@ -132,21 +132,21 @@ class BlockDeviceController {
     zx::channel cache_control;
     ASSERT_OK(fdio_get_service_handle(fd.release(), cache_control.reset_and_get_address()));
 
-    cachecontrol_.emplace(std::move(cache_control));
+    cachecontrol_ = fidl::BindSyncClient<usb_peripheral_block::Device>(std::move(cache_control));
   }
 
   void EnableWritebackCache() {
-    auto result = cachecontrol_->EnableWritebackCache();
+    auto result = cachecontrol_.EnableWritebackCache();
     ASSERT_NO_FATAL_FAILURES(ValidateResult(result));
   }
 
   void DisableWritebackCache() {
-    auto result = cachecontrol_->DisableWritebackCache();
+    auto result = cachecontrol_.DisableWritebackCache();
     ASSERT_NO_FATAL_FAILURES(ValidateResult(result));
   }
 
   void SetWritebackCacheReported(bool report) {
-    auto result = cachecontrol_->SetWritebackCacheReported(report);
+    auto result = cachecontrol_.SetWritebackCacheReported(report);
     ASSERT_NO_FATAL_FAILURES(ValidateResult(result));
   }
 
@@ -157,7 +157,7 @@ class BlockDeviceController {
   fidl::WireSyncClient<usb_peripheral::Device>& peripheral() { return bus_->peripheral(); }
 
   USBVirtualBus* bus_;
-  std::optional<fidl::WireSyncClient<usb_peripheral_block::Device>> cachecontrol_;
+  fidl::WireSyncClient<usb_peripheral_block::Device> cachecontrol_;
 };
 
 class UmsTest : public zxtest::Test {

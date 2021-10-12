@@ -24,7 +24,7 @@ std::shared_ptr<FshostBootArgs> FshostBootArgs::Create() {
     FX_LOGS(ERROR) << "failed to get boot arguments (" << zx_status_get_string(status)
                    << "), assuming test "
                       "environment and continuing";
-    return std::make_shared<FshostBootArgs>(std::nullopt);
+    return std::make_shared<FshostBootArgs>(fidl::WireSyncClient<fuchsia_boot::Arguments>{});
   }
   status = fdio_service_connect(fidl::DiscoverableProtocolDefaultPath<fuchsia_boot::Arguments>,
                                 remote.release());
@@ -34,14 +34,13 @@ std::shared_ptr<FshostBootArgs> FshostBootArgs::Create() {
     FX_LOGS(ERROR) << "failed to get boot arguments (" << zx_status_get_string(status)
                    << "), assuming test "
                       "environment and continuing";
-    return std::make_shared<FshostBootArgs>(std::nullopt);
+    return std::make_shared<FshostBootArgs>(fidl::WireSyncClient<fuchsia_boot::Arguments>{});
   }
   return std::make_shared<FshostBootArgs>(
       fidl::WireSyncClient<fuchsia_boot::Arguments>(std::move(local)));
 }
 
-FshostBootArgs::FshostBootArgs(
-    std::optional<fidl::WireSyncClient<fuchsia_boot::Arguments>> boot_args)
+FshostBootArgs::FshostBootArgs(fidl::WireSyncClient<fuchsia_boot::Arguments> boot_args)
     : boot_args_(std::move(boot_args)) {
   if (!boot_args_) {
     return;
@@ -54,7 +53,7 @@ FshostBootArgs::FshostBootArgs(
       {fidl::StringView{"zircon.system.wait-for-data"}, zircon_system_wait_for_data_},
   };
   auto ret =
-      boot_args_->GetBools(fidl::VectorView<fuchsia_boot::wire::BoolPair>::FromExternal(defaults));
+      boot_args_.GetBools(fidl::VectorView<fuchsia_boot::wire::BoolPair>::FromExternal(defaults));
   if (!ret.ok()) {
     FX_LOGS(ERROR) << "failed to get boolean parameters: " << ret.error();
   } else {
@@ -88,12 +87,12 @@ zx::status<std::string> FshostBootArgs::GetStringArgument(std::string key) {
     return zx::error(ZX_ERR_NOT_FOUND);
   }
 
-  auto ret = boot_args_->GetString(fidl::StringView::FromExternal(key));
+  auto ret = boot_args_.GetString(fidl::StringView::FromExternal(key));
   if (!ret.ok()) {
     return zx::error(ret.status());
   }
   // fuchsia.boot.Arguments.GetString returns a "string?" value, so we need to check for null
-  auto value = std::move(ret.value().value);
+  fidl::StringView value = ret.value().value;
   if (value.is_null()) {
     return zx::error(ZX_ERR_NOT_FOUND);
   }

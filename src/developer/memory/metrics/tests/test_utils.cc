@@ -20,8 +20,7 @@ class MockOS : public OS {
       : responses_(responses), i_get_processes_(0), i_get_property_(0), i_get_info_(0), clock_(0) {}
 
  private:
-  zx_status_t GetKernelStats(
-      std::unique_ptr<fidl::WireSyncClient<fuchsia_kernel::Stats>>* stats) override {
+  zx_status_t GetKernelStats(fidl::WireSyncClient<fuchsia_kernel::Stats>* stats) override {
     return ZX_OK;
   }
 
@@ -74,7 +73,7 @@ class MockOS : public OS {
     return r.ret;
   }
 
-  zx_status_t GetKernelMemoryStats(fidl::WireSyncClient<fuchsia_kernel::Stats>* stats_client,
+  zx_status_t GetKernelMemoryStats(const fidl::WireSyncClient<fuchsia_kernel::Stats>& stats_client,
                                    zx_info_kmem_stats_t* kmem) override {
     const auto& r = responses_.get_info.at(i_get_info_++);
     memcpy(kmem, r.values, r.value_size);
@@ -82,7 +81,7 @@ class MockOS : public OS {
   }
 
   zx_status_t GetKernelMemoryStatsExtended(
-      fidl::WireSyncClient<fuchsia_kernel::Stats>* stats_client,
+      const fidl::WireSyncClient<fuchsia_kernel::Stats>& stats_client,
       zx_info_kmem_stats_extended_t* kmem_ext, zx_info_kmem_stats_t* kmem) override {
     const auto& r1 = responses_.get_info.at(i_get_info_);
     memcpy(kmem, r1.values, r1.value_size);

@@ -11,7 +11,7 @@
 
 #include <thread>
 
-#include <gtest/gtest.h>
+#include <zxtest/zxtest.h>
 
 namespace test = ::llcpptest_protocol_test;
 
@@ -20,24 +20,24 @@ namespace test = ::llcpptest_protocol_test;
 
 TEST(SyncClientErrorTest, PeerClosed) {
   zx::status endpoints = fidl::CreateEndpoints<test::EnumMethods>();
-  ASSERT_EQ(ZX_OK, endpoints.status_value());
+  ASSERT_OK(endpoints.status_value());
   auto client = fidl::BindSyncClient(std::move(endpoints->client));
   endpoints->server.reset();
   auto result = client.SendEnum(test::wire::MyError::kBadError);
-  EXPECT_EQ(ZX_ERR_PEER_CLOSED, result.status());
+  EXPECT_STATUS(ZX_ERR_PEER_CLOSED, result.status());
   EXPECT_EQ(fidl::Reason::kPeerClosed, result.reason());
 }
 
 TEST(SyncClientErrorTest, EncodeError) {
   zx::status endpoints = fidl::CreateEndpoints<test::EnumMethods>();
-  ASSERT_EQ(ZX_OK, endpoints.status_value());
+  ASSERT_OK(endpoints.status_value());
   auto client = fidl::BindSyncClient(std::move(endpoints->client));
   endpoints->server.reset();
   // Send the number 42 as |MyError|, will fail validation at send time.
   uint32_t bad_error = 42;
   static_assert(sizeof(bad_error) == sizeof(test::wire::MyError));
   auto result = client.SendEnum(static_cast<test::wire::MyError>(bad_error));
-  EXPECT_EQ(ZX_ERR_INVALID_ARGS, result.status());
+  EXPECT_STATUS(ZX_ERR_INVALID_ARGS, result.status());
   EXPECT_EQ(fidl::Reason::kEncodeError, result.reason());
   EXPECT_EQ(
       "FIDL operation failed due to encode error, status: ZX_ERR_INVALID_ARGS (-10), "
@@ -47,11 +47,11 @@ TEST(SyncClientErrorTest, EncodeError) {
 
 TEST(SyncClientErrorTest, DecodeError) {
   zx::status endpoints = fidl::CreateEndpoints<test::EnumMethods>();
-  ASSERT_EQ(ZX_OK, endpoints.status_value());
+  ASSERT_OK(endpoints.status_value());
   std::thread replier{[&] {
     zx_signals_t observed;
-    ASSERT_EQ(ZX_OK, endpoints->server.channel().wait_one(ZX_CHANNEL_READABLE, zx::time::infinite(),
-                                                          &observed));
+    ASSERT_OK(
+        endpoints->server.channel().wait_one(ZX_CHANNEL_READABLE, zx::time::infinite(), &observed));
     ASSERT_EQ(ZX_CHANNEL_READABLE, observed & ZX_CHANNEL_READABLE);
     fidl::WireRequest<test::EnumMethods::GetEnum> request{};
     uint32_t actual;
@@ -62,13 +62,13 @@ TEST(SyncClientErrorTest, DecodeError) {
     // Send the number 42 as |MyError|, will fail validation at the sync client
     // when it receives the message.
     message.e = static_cast<test::wire::MyError>(42);
-    ASSERT_EQ(ZX_OK, endpoints->server.channel().write(0, reinterpret_cast<void*>(&message),
-                                                       sizeof(message), nullptr, 0));
+    ASSERT_OK(endpoints->server.channel().write(0, reinterpret_cast<void*>(&message),
+                                                sizeof(message), nullptr, 0));
   }};
   auto client = fidl::BindSyncClient(std::move(endpoints->client));
   auto result = client.GetEnum();
   replier.join();
-  EXPECT_EQ(ZX_ERR_INVALID_ARGS, result.status());
+  EXPECT_STATUS(ZX_ERR_INVALID_ARGS, result.status());
   EXPECT_EQ(fidl::Reason::kDecodeError, result.reason());
   EXPECT_EQ(
       "FIDL operation failed due to decode error, status: ZX_ERR_INVALID_ARGS (-10), "

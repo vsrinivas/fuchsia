@@ -323,9 +323,11 @@ TEST(I2cHidTest, HidTestReportDescFailureLifetimeTest) {
   fake_hidbus_ifc::FakeHidbusIfc fake_hid_bus_;
   ddk::I2cChannel channel_;
 
-  device_ =
-      new I2cHidbus(fake_ddk::kFakeParent,
-                    acpi::Client::Create(fidl::WireSyncClient<fuchsia_hardware_acpi::Device>()));
+  zx::status endpoints = fidl::CreateEndpoints<fuchsia_hardware_acpi::Device>();
+  ASSERT_OK(endpoints.status_value());
+  endpoints->server.reset();
+  device_ = new I2cHidbus(fake_ddk::kFakeParent,
+                          acpi::Client::Create(fidl::BindSyncClient(std::move(endpoints->client))));
   channel_ = ddk::I2cChannel(fake_i2c_hid_.GetProto());
 
   fake_i2c_hid_.SetHidDescriptorFailure(ZX_ERR_TIMED_OUT);

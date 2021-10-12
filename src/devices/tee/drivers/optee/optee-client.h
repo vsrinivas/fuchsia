@@ -247,7 +247,7 @@ class OpteeClient : public fidl::WireServer<fuchsia_tee::Application> {
   fidl::ClientEnd<fuchsia_io::Directory> root_storage_;
 
   // A lazily-initialized, cached the Rpmb client.
-  std::optional<fidl::WireSyncClient<fuchsia_hardware_rpmb::Rpmb>> rpmb_client_;
+  fidl::WireSyncClient<fuchsia_hardware_rpmb::Rpmb> rpmb_client_;
 
   // The (only) trusted application UUID this client is allowed to use.
   const Uuid application_uuid_;

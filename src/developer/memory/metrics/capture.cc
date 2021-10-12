@@ -21,8 +21,7 @@ namespace memory {
 
 class OSImpl : public OS, public TaskEnumerator {
  private:
-  zx_status_t GetKernelStats(
-      std::unique_ptr<fidl::WireSyncClient<fuchsia_kernel::Stats>>* stats) override {
+  zx_status_t GetKernelStats(fidl::WireSyncClient<fuchsia_kernel::Stats>* stats) override {
     zx::channel local, remote;
     zx_status_t status = zx::channel::create(0, &local, &remote);
     if (status != ZX_OK) {
@@ -34,7 +33,7 @@ class OSImpl : public OS, public TaskEnumerator {
       return status;
     }
 
-    *stats = std::make_unique<fidl::WireSyncClient<fuchsia_kernel::Stats>>(std::move(local));
+    *stats = fidl::WireSyncClient<fuchsia_kernel::Stats>(std::move(local));
     return ZX_OK;
   }
 
@@ -82,13 +81,13 @@ class OSImpl : public OS, public TaskEnumerator {
     return zx_object_get_info(handle, topic, buffer, buffer_size, actual, avail);
   }
 
-  zx_status_t GetKernelMemoryStats(fidl::WireSyncClient<fuchsia_kernel::Stats>* stats_client,
+  zx_status_t GetKernelMemoryStats(const fidl::WireSyncClient<fuchsia_kernel::Stats>& stats_client,
                                    zx_info_kmem_stats_t* kmem) override {
     TRACE_DURATION("memory_metrics", "Capture::GetKernelMemoryStats");
-    if (stats_client == nullptr) {
+    if (!stats_client.is_valid()) {
       return ZX_ERR_BAD_STATE;
     }
-    auto result = stats_client->GetMemoryStats();
+    auto result = stats_client.GetMemoryStats();
     if (result.status() != ZX_OK) {
       return result.status();
     }
@@ -106,13 +105,13 @@ class OSImpl : public OS, public TaskEnumerator {
   }
 
   zx_status_t GetKernelMemoryStatsExtended(
-      fidl::WireSyncClient<fuchsia_kernel::Stats>* stats_client,
+      const fidl::WireSyncClient<fuchsia_kernel::Stats>& stats_client,
       zx_info_kmem_stats_extended_t* kmem_ext, zx_info_kmem_stats_t* kmem) override {
     TRACE_DURATION("memory_metrics", "Capture::GetKernelMemoryStatsExtended");
-    if (stats_client == nullptr) {
+    if (!stats_client.is_valid()) {
       return ZX_ERR_BAD_STATE;
     }
-    auto result = stats_client->GetMemoryStatsExtended();
+    auto result = stats_client.GetMemoryStatsExtended();
     if (result.status() != ZX_OK) {
       return result.status();
     }
@@ -196,14 +195,14 @@ zx_status_t Capture::GetCapture(Capture* capture, const CaptureState& state, Cap
   // free memory level every 10s in order to keep the highwater digest updated, so a lightweight
   // syscall is preferable.
   if (level == KMEM) {
-    return os->GetKernelMemoryStats(state.stats_client.get(), &capture->kmem_);
+    return os->GetKernelMemoryStats(state.stats_client, &capture->kmem_);
   }
 
   // ZX_INFO_KMEM_STATS_EXTENDED is more expensive to collect than ZX_INFO_KMEM_STATS, so only query
   // it for the more detailed capture levels. Use kmem_extended_ to populate the shared fields in
   // kmem_ (kmem_extended_ is a superset of kmem_), avoiding the need for a redundant syscall.
-  zx_status_t err = os->GetKernelMemoryStatsExtended(state.stats_client.get(),
-                                                     &capture->kmem_extended_, &capture->kmem_);
+  zx_status_t err = os->GetKernelMemoryStatsExtended(state.stats_client, &capture->kmem_extended_,
+                                                     &capture->kmem_);
   if (err != ZX_OK) {
     return err;
   }
@@ -300,7 +299,7 @@ void Capture::ReallocateDescendents(const std::vector<std::string>& rooted_vmo_n
     parent_it->second.children.push_back(child.koid);
   }
   for (auto& vmo_koid : root_vmos_) {
-    auto &vmo = koid_to_vmo_.at(vmo_koid);
+    auto& vmo = koid_to_vmo_.at(vmo_koid);
     for (const auto& vmo_name : rooted_vmo_names) {
       if (vmo.name != vmo_name) {
         continue;

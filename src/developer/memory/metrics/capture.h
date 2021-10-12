@@ -43,14 +43,13 @@ struct Vmo {
 using CaptureLevel = enum { KMEM, PROCESS, VMO };
 
 struct CaptureState {
-  std::unique_ptr<fidl::WireSyncClient<fuchsia_kernel::Stats>> stats_client;
+  fidl::WireSyncClient<fuchsia_kernel::Stats> stats_client;
   zx_koid_t self_koid;
 };
 
 class OS {
  public:
-  virtual zx_status_t GetKernelStats(
-      std::unique_ptr<fidl::WireSyncClient<fuchsia_kernel::Stats>>* stats_client) = 0;
+  virtual zx_status_t GetKernelStats(fidl::WireSyncClient<fuchsia_kernel::Stats>* stats_client) = 0;
   virtual zx_handle_t ProcessSelf() = 0;
   virtual zx_time_t GetMonotonic() = 0;
   virtual zx_status_t GetProcesses(
@@ -62,9 +61,10 @@ class OS {
   virtual zx_status_t GetInfo(zx_handle_t handle, uint32_t topic, void* buffer, size_t buffer_size,
                               size_t* actual, size_t* avail) = 0;
   virtual zx_status_t GetKernelMemoryStats(
-      fidl::WireSyncClient<fuchsia_kernel::Stats>* stats_client, zx_info_kmem_stats_t* kmem) = 0;
+      const fidl::WireSyncClient<fuchsia_kernel::Stats>& stats_client,
+      zx_info_kmem_stats_t* kmem) = 0;
   virtual zx_status_t GetKernelMemoryStatsExtended(
-      fidl::WireSyncClient<fuchsia_kernel::Stats>* stats_client,
+      const fidl::WireSyncClient<fuchsia_kernel::Stats>& stats_client,
       zx_info_kmem_stats_extended_t* kmem_ext, zx_info_kmem_stats_t* kmem = nullptr) = 0;
 };
 

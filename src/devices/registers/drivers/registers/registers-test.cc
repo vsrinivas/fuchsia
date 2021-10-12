@@ -99,8 +99,7 @@ class RegistersDeviceTest : public zxtest::Test {
   std::vector<fbl::Array<ddk_mock::MockMmioReg>> regs_;
   std::vector<std::unique_ptr<ddk_mock::MockMmioRegRegion>> mock_mmio_;
 
-  std::map<uint64_t, std::unique_ptr<fidl::WireSyncClient<fuchsia_hardware_registers::Device>>>
-      clients_;
+  std::map<uint64_t, fidl::WireSyncClient<fuchsia_hardware_registers::Device>> clients_;
 
   fidl::Arena<2048> allocator_;
 };

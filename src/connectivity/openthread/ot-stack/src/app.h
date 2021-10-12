@@ -132,9 +132,8 @@ class OtStackApp : public fidl::WireSyncEventHandler<fidl_spinel::Device> {
 
   std::string device_path_;
   bool connected_to_device_ = false;
-  std::unique_ptr<fidl::WireSyncClient<fidl_spinel::DeviceSetup>> device_setup_client_ptr_ =
-      nullptr;
-  std::unique_ptr<fidl::WireSyncClient<fidl_spinel::Device>> device_client_ptr_ = nullptr;
+  fidl::WireSyncClient<fidl_spinel::DeviceSetup> device_setup_client_ptr_;
+  fidl::WireSyncClient<fidl_spinel::Device> device_client_ptr_;
   zx::unowned_channel device_channel_ = zx::unowned_channel(ZX_HANDLE_INVALID);
 
   std::unique_ptr<svc::Outgoing> outgoing_ = nullptr;

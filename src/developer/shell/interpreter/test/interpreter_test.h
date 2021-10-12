@@ -42,7 +42,7 @@ class InterpreterTest : public ::testing::Test {
 
  protected:
   std::string GlobalErrors() { return global_error_stream_.str(); }
-  fidl::WireSyncClient<fuchsia_shell::Shell>& shell() { return *(shell_.get()); }
+  fidl::WireSyncClient<fuchsia_shell::Shell>& shell() { return shell_; }
   const std::vector<std::string>& text_results() const { return text_results_; }
   bool last_text_result_partial() const { return last_text_result_partial_; }
   const std::vector<std::unique_ptr<shell::common::ResultNode>>& results() const {
@@ -67,7 +67,7 @@ class InterpreterTest : public ::testing::Test {
   std::unique_ptr<sys::ComponentContext> context_;
   fuchsia::sys::ComponentControllerPtr controller_;
   std::unique_ptr<sys::ServiceDirectory> shell_provider_;
-  std::unique_ptr<fidl::WireSyncClient<fuchsia_shell::Shell>> shell_;
+  fidl::WireSyncClient<fuchsia_shell::Shell> shell_;
 
   uint64_t last_context_id_ = 0;
   std::map<uint64_t, std::unique_ptr<InterpreterTestContext>> contexts_;

@@ -115,9 +115,9 @@ class IntegrationTest : public TestBase {
         zx::channel(sysmem_fidl()->get()));
     EXPECT_TRUE(connector->Connect(std::move(server)).ok());
     __UNUSED auto c = connector->mutable_channel()->release();
-    sysmem_ = std::make_unique<fidl::WireSyncClient<sysmem::Allocator>>(std::move(client));
-    sysmem_->SetDebugClientInfo(fidl::StringView::FromExternal(fsl::GetCurrentProcessName()),
-                                fsl::GetCurrentProcessKoid());
+    sysmem_ = fidl::WireSyncClient<sysmem::Allocator>(std::move(client));
+    sysmem_.SetDebugClientInfo(fidl::StringView::FromExternal(fsl::GetCurrentProcessName()),
+                               fsl::GetCurrentProcessKoid());
   }
 
   // |TestBase|
@@ -133,20 +133,20 @@ class IntegrationTest : public TestBase {
     TestBase::TearDown();
   }
 
-  std::unique_ptr<fidl::WireSyncClient<sysmem::Allocator>> sysmem_;
+  fidl::WireSyncClient<sysmem::Allocator> sysmem_;
 };
 
 TEST_F(IntegrationTest, DISABLED_ClientsCanBail) {
   for (size_t i = 0; i < 100; i++) {
     RunLoopWithTimeoutOrUntil([this]() { return !primary_client_connected(); }, zx::sec(1));
-    TestFidlClient client(sysmem_.get());
+    TestFidlClient client(&sysmem_);
     ASSERT_TRUE(client.CreateChannel(display_fidl()->get(), false));
     ASSERT_TRUE(client.Bind(dispatcher()));
   }
 }
 
 TEST_F(IntegrationTest, MustUseUniqueEvenIDs) {
-  TestFidlClient client(sysmem_.get());
+  TestFidlClient client(&sysmem_);
   ASSERT_TRUE(client.CreateChannel(display_fidl()->get(), false));
   ASSERT_TRUE(client.Bind(dispatcher()));
   zx::event event_a, event_b, event_c;
@@ -155,24 +155,24 @@ TEST_F(IntegrationTest, MustUseUniqueEvenIDs) {
   ASSERT_OK(zx::event::create(0, &event_c));
   {
     fbl::AutoLock lock(client.mtx());
-    EXPECT_OK(client.dc_->ImportEvent(std::move(event_a), 123).status());
+    EXPECT_OK(client.dc_.ImportEvent(std::move(event_a), 123).status());
     // ImportEvent is one way. Expect the next call to fail.
-    EXPECT_OK(client.dc_->ImportEvent(std::move(event_b), 123).status());
+    EXPECT_OK(client.dc_.ImportEvent(std::move(event_b), 123).status());
     // This test passes if it closes without deadlocking.
   }
   // TODO: Use LLCPP epitaphs when available to detect ZX_ERR_PEER_CLOSED.
 }
 
 TEST_F(IntegrationTest, SendVsyncsAfterEmptyConfig) {
-  TestFidlClient vc_client(sysmem_.get());
+  TestFidlClient vc_client(&sysmem_);
   ASSERT_TRUE(vc_client.CreateChannel(display_fidl()->get(), /*is_vc=*/true));
   {
     fbl::AutoLock lock(vc_client.mtx());
-    EXPECT_EQ(ZX_OK, vc_client.dc_->SetDisplayLayers(1, {}).status());
-    EXPECT_EQ(ZX_OK, vc_client.dc_->ApplyConfig().status());
+    EXPECT_EQ(ZX_OK, vc_client.dc_.SetDisplayLayers(1, {}).status());
+    EXPECT_EQ(ZX_OK, vc_client.dc_.ApplyConfig().status());
   }
 
-  auto primary_client = std::make_unique<TestFidlClient>(sysmem_.get());
+  auto primary_client = std::make_unique<TestFidlClient>(&sysmem_);
   ASSERT_TRUE(primary_client->CreateChannel(display_fidl()->get(), /*is_vc=*/false));
   ASSERT_TRUE(primary_client->Bind(dispatcher()));
   EXPECT_TRUE(
@@ -195,8 +195,8 @@ TEST_F(IntegrationTest, SendVsyncsAfterEmptyConfig) {
   // Set an empty config
   {
     fbl::AutoLock lock(primary_client->mtx());
-    EXPECT_OK(primary_client->dc_->SetDisplayLayers(primary_client->display_id(), {}).status());
-    EXPECT_OK(primary_client->dc_->ApplyConfig().status());
+    EXPECT_OK(primary_client->dc_.SetDisplayLayers(primary_client->display_id(), {}).status());
+    EXPECT_OK(primary_client->dc_.ApplyConfig().status());
   }
   // Wait for it to apply
   EXPECT_TRUE(RunLoopWithTimeoutOrUntil(
@@ -212,7 +212,7 @@ TEST_F(IntegrationTest, SendVsyncsAfterEmptyConfig) {
   EXPECT_TRUE(RunLoopWithTimeoutOrUntil([this]() { return primary_client_dead(); }));
 
   // A new client connects
-  primary_client = std::make_unique<TestFidlClient>(sysmem_.get());
+  primary_client = std::make_unique<TestFidlClient>(&sysmem_);
   ASSERT_TRUE(primary_client->CreateChannel(display_fidl()->get(), /*is_vc=*/false));
   ASSERT_TRUE(primary_client->Bind(dispatcher()));
   EXPECT_TRUE(RunLoopWithTimeoutOrUntil([this]() { return primary_client_connected(); }));
@@ -238,15 +238,15 @@ TEST_F(IntegrationTest, SendVsyncsAfterEmptyConfig) {
 }
 
 TEST_F(IntegrationTest, DISABLED_SendVsyncsAfterClientsBail) {
-  TestFidlClient vc_client(sysmem_.get());
+  TestFidlClient vc_client(&sysmem_);
   ASSERT_TRUE(vc_client.CreateChannel(display_fidl()->get(), /*is_vc=*/true));
   {
     fbl::AutoLock lock(vc_client.mtx());
-    EXPECT_EQ(ZX_OK, vc_client.dc_->SetDisplayLayers(1, {}).status());
-    EXPECT_EQ(ZX_OK, vc_client.dc_->ApplyConfig().status());
+    EXPECT_EQ(ZX_OK, vc_client.dc_.SetDisplayLayers(1, {}).status());
+    EXPECT_EQ(ZX_OK, vc_client.dc_.ApplyConfig().status());
   }
 
-  auto primary_client = std::make_unique<TestFidlClient>(sysmem_.get());
+  auto primary_client = std::make_unique<TestFidlClient>(&sysmem_);
   ASSERT_TRUE(primary_client->CreateChannel(display_fidl()->get(), /*is_vc=*/false));
   ASSERT_TRUE(primary_client->Bind(dispatcher()));
   EXPECT_TRUE(
@@ -278,7 +278,7 @@ TEST_F(IntegrationTest, DISABLED_SendVsyncsAfterClientsBail) {
 }
 
 TEST_F(IntegrationTest, SendVsyncsAfterClientDies) {
-  auto primary_client = std::make_unique<TestFidlClient>(sysmem_.get());
+  auto primary_client = std::make_unique<TestFidlClient>(&sysmem_);
   ASSERT_TRUE(primary_client->CreateChannel(display_fidl()->get(), /*is_vc=*/false));
   ASSERT_TRUE(primary_client->Bind(dispatcher()));
   EXPECT_TRUE(
@@ -288,7 +288,7 @@ TEST_F(IntegrationTest, SendVsyncsAfterClientDies) {
 }
 
 TEST_F(IntegrationTest, AcknowledgeVsync) {
-  auto primary_client = std::make_unique<TestFidlClient>(sysmem_.get());
+  auto primary_client = std::make_unique<TestFidlClient>(&sysmem_);
   ASSERT_TRUE(primary_client->CreateChannel(display_fidl()->get(), /*is_vc=*/false));
   ASSERT_TRUE(primary_client->Bind(dispatcher()));
   EXPECT_TRUE(
@@ -307,7 +307,7 @@ TEST_F(IntegrationTest, AcknowledgeVsync) {
   // acknowledge
   {
     fbl::AutoLock lock(primary_client->mtx());
-    primary_client->dc_->AcknowledgeVsync(primary_client->get_cookie());
+    primary_client->dc_.AcknowledgeVsync(primary_client->get_cookie());
   }
   EXPECT_TRUE(RunLoopWithTimeoutOrUntil(
       [this, p = primary_client.get()]() { return vsync_acknowledge_delivered(p->get_cookie()); },
@@ -315,7 +315,7 @@ TEST_F(IntegrationTest, AcknowledgeVsync) {
 }
 
 TEST_F(IntegrationTest, AcknowledgeVsyncAfterQueueFull) {
-  auto primary_client = std::make_unique<TestFidlClient>(sysmem_.get());
+  auto primary_client = std::make_unique<TestFidlClient>(&sysmem_);
   ASSERT_TRUE(primary_client->CreateChannel(display_fidl()->get(), /*is_vc=*/false));
   ASSERT_TRUE(primary_client->Bind(dispatcher()));
   EXPECT_TRUE(
@@ -342,7 +342,7 @@ TEST_F(IntegrationTest, AcknowledgeVsyncAfterQueueFull) {
   // now let's acknowledge vsync
   {
     fbl::AutoLock lock(primary_client->mtx());
-    primary_client->dc_->AcknowledgeVsync(primary_client->get_cookie());
+    primary_client->dc_.AcknowledgeVsync(primary_client->get_cookie());
   }
   EXPECT_TRUE(RunLoopWithTimeoutOrUntil(
       [this, p = primary_client.get()]() { return vsync_acknowledge_delivered(p->get_cookie()); },
@@ -359,7 +359,7 @@ TEST_F(IntegrationTest, AcknowledgeVsyncAfterQueueFull) {
 }
 
 TEST_F(IntegrationTest, AcknowledgeVsyncAfterLongTime) {
-  auto primary_client = std::make_unique<TestFidlClient>(sysmem_.get());
+  auto primary_client = std::make_unique<TestFidlClient>(&sysmem_);
   ASSERT_TRUE(primary_client->CreateChannel(display_fidl()->get(), /*is_vc=*/false));
   ASSERT_TRUE(primary_client->Bind(dispatcher()));
   EXPECT_TRUE(
@@ -385,7 +385,7 @@ TEST_F(IntegrationTest, AcknowledgeVsyncAfterLongTime) {
   // now let's acknowledge vsync
   {
     fbl::AutoLock lock(primary_client->mtx());
-    primary_client->dc_->AcknowledgeVsync(primary_client->get_cookie());
+    primary_client->dc_.AcknowledgeVsync(primary_client->get_cookie());
   }
   EXPECT_TRUE(RunLoopWithTimeoutOrUntil(
       [this, p = primary_client.get()]() { return vsync_acknowledge_delivered(p->get_cookie()); },
@@ -404,7 +404,7 @@ TEST_F(IntegrationTest, AcknowledgeVsyncAfterLongTime) {
 }
 
 TEST_F(IntegrationTest, InvalidVSyncCookie) {
-  auto primary_client = std::make_unique<TestFidlClient>(sysmem_.get());
+  auto primary_client = std::make_unique<TestFidlClient>(&sysmem_);
   ASSERT_TRUE(primary_client->CreateChannel(display_fidl()->get(), /*is_vc=*/false));
   ASSERT_TRUE(primary_client->Bind(dispatcher()));
   EXPECT_TRUE(
@@ -430,7 +430,7 @@ TEST_F(IntegrationTest, InvalidVSyncCookie) {
   // now let's acknowledge vsync with invalid cookie
   {
     fbl::AutoLock lock(primary_client->mtx());
-    primary_client->dc_->AcknowledgeVsync(0xdeadbeef);
+    primary_client->dc_.AcknowledgeVsync(0xdeadbeef);
   }
   EXPECT_FALSE(RunLoopWithTimeoutOrUntil(
       [this, p = primary_client.get()]() { return vsync_acknowledge_delivered(p->get_cookie()); },
@@ -447,7 +447,7 @@ TEST_F(IntegrationTest, InvalidVSyncCookie) {
 }
 
 TEST_F(IntegrationTest, AcknowledgeVsyncWithOldCookie) {
-  auto primary_client = std::make_unique<TestFidlClient>(sysmem_.get());
+  auto primary_client = std::make_unique<TestFidlClient>(&sysmem_);
   ASSERT_TRUE(primary_client->CreateChannel(display_fidl()->get(), /*is_vc=*/false));
   ASSERT_TRUE(primary_client->Bind(dispatcher()));
   EXPECT_TRUE(
@@ -473,7 +473,7 @@ TEST_F(IntegrationTest, AcknowledgeVsyncWithOldCookie) {
   // now let's acknowledge vsync
   {
     fbl::AutoLock lock(primary_client->mtx());
-    primary_client->dc_->AcknowledgeVsync(primary_client->get_cookie());
+    primary_client->dc_.AcknowledgeVsync(primary_client->get_cookie());
   }
   EXPECT_TRUE(RunLoopWithTimeoutOrUntil(
       [this, p = primary_client.get()]() { return vsync_acknowledge_delivered(p->get_cookie()); },
@@ -513,7 +513,7 @@ TEST_F(IntegrationTest, AcknowledgeVsyncWithOldCookie) {
   // now let's acknowledge vsync with old cookie
   {
     fbl::AutoLock lock(primary_client->mtx());
-    primary_client->dc_->AcknowledgeVsync(old_cookie);
+    primary_client->dc_.AcknowledgeVsync(old_cookie);
   }
   EXPECT_FALSE(RunLoopWithTimeoutOrUntil(
       [this, p = primary_client.get()]() { return vsync_acknowledge_delivered(p->get_cookie()); },
@@ -532,7 +532,7 @@ TEST_F(IntegrationTest, AcknowledgeVsyncWithOldCookie) {
   // now let's acknowledge with valid cookie
   {
     fbl::AutoLock lock(primary_client->mtx());
-    primary_client->dc_->AcknowledgeVsync(primary_client->get_cookie());
+    primary_client->dc_.AcknowledgeVsync(primary_client->get_cookie());
   }
   EXPECT_TRUE(RunLoopWithTimeoutOrUntil(
       [this, p = primary_client.get()]() { return vsync_acknowledge_delivered(p->get_cookie()); },
@@ -551,7 +551,7 @@ TEST_F(IntegrationTest, AcknowledgeVsyncWithOldCookie) {
 }
 
 TEST_F(IntegrationTest, InvalidImageHandleAfterSave) {
-  auto primary_client = std::make_unique<TestFidlClient>(sysmem_.get());
+  auto primary_client = std::make_unique<TestFidlClient>(&sysmem_);
   ASSERT_TRUE(primary_client->CreateChannel(display_fidl()->get(), /*is_vc=*/false));
   ASSERT_TRUE(primary_client->Bind(dispatcher()));
   EXPECT_TRUE(
@@ -578,7 +578,7 @@ TEST_F(IntegrationTest, InvalidImageHandleAfterSave) {
   // now let's acknowledge vsync
   {
     fbl::AutoLock lock(primary_client->mtx());
-    primary_client->dc_->AcknowledgeVsync(primary_client->get_cookie());
+    primary_client->dc_.AcknowledgeVsync(primary_client->get_cookie());
   }
   EXPECT_TRUE(RunLoopWithTimeoutOrUntil(
       [this, p = primary_client.get()]() { return vsync_acknowledge_delivered(p->get_cookie()); },
@@ -595,7 +595,7 @@ TEST_F(IntegrationTest, InvalidImageHandleAfterSave) {
 }
 
 TEST_F(IntegrationTest, ImportGammaTable) {
-  auto primary_client = std::make_unique<TestFidlClient>(sysmem_.get());
+  auto primary_client = std::make_unique<TestFidlClient>(&sysmem_);
   ASSERT_TRUE(primary_client->CreateChannel(display_fidl()->get(), /*is_vc=*/false));
   ASSERT_TRUE(primary_client->Bind(dispatcher()));
   EXPECT_TRUE(
@@ -607,14 +607,14 @@ TEST_F(IntegrationTest, ImportGammaTable) {
   ::fidl::Array<float, 256> gamma_blue = {{0.3f}};
   {
     fbl::AutoLock lock(primary_client->mtx());
-    primary_client->dc_->ImportGammaTable(gamma_table_id, gamma_red, gamma_green, gamma_blue);
+    primary_client->dc_.ImportGammaTable(gamma_table_id, gamma_red, gamma_green, gamma_blue);
     EXPECT_TRUE(
         RunLoopWithTimeoutOrUntil([this]() { return get_gamma_table_size() == 1; }, zx::sec(1)));
   }
 }
 
 TEST_F(IntegrationTest, ReleaseGammaTable) {
-  auto primary_client = std::make_unique<TestFidlClient>(sysmem_.get());
+  auto primary_client = std::make_unique<TestFidlClient>(&sysmem_);
   ASSERT_TRUE(primary_client->CreateChannel(display_fidl()->get(), /*is_vc=*/false));
   ASSERT_TRUE(primary_client->Bind(dispatcher()));
   EXPECT_TRUE(
@@ -626,17 +626,17 @@ TEST_F(IntegrationTest, ReleaseGammaTable) {
   ::fidl::Array<float, 256> gamma_blue = {{0.3f}};
   {
     fbl::AutoLock lock(primary_client->mtx());
-    primary_client->dc_->ImportGammaTable(gamma_table_id, gamma_red, gamma_green, gamma_blue);
+    primary_client->dc_.ImportGammaTable(gamma_table_id, gamma_red, gamma_green, gamma_blue);
     EXPECT_TRUE(
         RunLoopWithTimeoutOrUntil([this]() { return get_gamma_table_size() == 1; }, zx::sec(1)));
-    primary_client->dc_->ReleaseGammaTable(gamma_table_id);
+    primary_client->dc_.ReleaseGammaTable(gamma_table_id);
     EXPECT_TRUE(
         RunLoopWithTimeoutOrUntil([this]() { return get_gamma_table_size() == 0; }, zx::sec(1)));
   }
 }
 
 TEST_F(IntegrationTest, ReleaseInvalidGammaTable) {
-  auto primary_client = std::make_unique<TestFidlClient>(sysmem_.get());
+  auto primary_client = std::make_unique<TestFidlClient>(&sysmem_);
   ASSERT_TRUE(primary_client->CreateChannel(display_fidl()->get(), /*is_vc=*/false));
   ASSERT_TRUE(primary_client->Bind(dispatcher()));
   EXPECT_TRUE(
@@ -648,17 +648,17 @@ TEST_F(IntegrationTest, ReleaseInvalidGammaTable) {
   ::fidl::Array<float, 256> gamma_blue = {{0.3f}};
   {
     fbl::AutoLock lock(primary_client->mtx());
-    primary_client->dc_->ImportGammaTable(gamma_table_id, gamma_red, gamma_green, gamma_blue);
+    primary_client->dc_.ImportGammaTable(gamma_table_id, gamma_red, gamma_green, gamma_blue);
     EXPECT_TRUE(
         RunLoopWithTimeoutOrUntil([this]() { return get_gamma_table_size() == 1; }, zx::sec(1)));
-    primary_client->dc_->ReleaseGammaTable(gamma_table_id + 5);
+    primary_client->dc_.ReleaseGammaTable(gamma_table_id + 5);
     EXPECT_FALSE(
         RunLoopWithTimeoutOrUntil([this]() { return get_gamma_table_size() == 0; }, zx::sec(1)));
   }
 }
 
 TEST_F(IntegrationTest, SetGammaTable) {
-  auto primary_client = std::make_unique<TestFidlClient>(sysmem_.get());
+  auto primary_client = std::make_unique<TestFidlClient>(&sysmem_);
   ASSERT_TRUE(primary_client->CreateChannel(display_fidl()->get(), /*is_vc=*/false));
   ASSERT_TRUE(primary_client->Bind(dispatcher()));
   EXPECT_TRUE(
@@ -670,45 +670,45 @@ TEST_F(IntegrationTest, SetGammaTable) {
   ::fidl::Array<float, 256> gamma_blue = {{0.3f}};
   {
     fbl::AutoLock lock(primary_client->mtx());
-    primary_client->dc_->ImportGammaTable(gamma_table_id, gamma_red, gamma_green, gamma_blue);
+    primary_client->dc_.ImportGammaTable(gamma_table_id, gamma_red, gamma_green, gamma_blue);
     EXPECT_TRUE(
         RunLoopWithTimeoutOrUntil([this]() { return get_gamma_table_size() == 1; }, zx::sec(1)));
-    primary_client->dc_->SetDisplayGammaTable(primary_client->display_id(), gamma_table_id);
+    primary_client->dc_.SetDisplayGammaTable(primary_client->display_id(), gamma_table_id);
   }
 }
 
 TEST_F(IntegrationTest, ImportImage_InvalidCollection) {
-  TestFidlClient client(sysmem_.get());
+  TestFidlClient client(&sysmem_);
   ASSERT_TRUE(client.CreateChannel(display_fidl()->get(), /*is_vc=*/false));
   ASSERT_TRUE(client.Bind(dispatcher()));
 
   fbl::AutoLock lock(client.mtx());
-  auto cl_reply = client.dc_->CreateLayer();
+  auto cl_reply = client.dc_.CreateLayer();
   ASSERT_TRUE(cl_reply.ok());
   ASSERT_OK(cl_reply->res);
   // Importing an image from a non-existent collection should fail.
-  auto ii_reply = client.dc_->ImportImage(client.displays_[0].image_config_, 0xffeeeedd, 0);
+  auto ii_reply = client.dc_.ImportImage(client.displays_[0].image_config_, 0xffeeeedd, 0);
   ASSERT_NE(ii_reply->res, ZX_OK);
 }
 
 TEST_F(IntegrationTest, ClampRgb) {
   // Create vc client
-  TestFidlClient vc_client(sysmem_.get());
+  TestFidlClient vc_client(&sysmem_);
   ASSERT_TRUE(vc_client.CreateChannel(display_fidl()->get(), /*is_vc=*/true));
   {
     fbl::AutoLock lock(vc_client.mtx());
     // set mode to Fallback
-    vc_client.dc_->SetVirtconMode(1);
+    vc_client.dc_.SetVirtconMode(1);
     EXPECT_TRUE(
         RunLoopWithTimeoutOrUntil([this]() { return virtcon_client_connected(); }, zx::sec(1)));
     // Clamp RGB to a minimum value
-    vc_client.dc_->SetMinimumRgb(32);
+    vc_client.dc_.SetMinimumRgb(32);
     EXPECT_TRUE(RunLoopWithTimeoutOrUntil([this]() { return display()->GetClampRgbValue() == 32; },
                                           zx::sec(1)));
   }
 
   // Create a primary client
-  auto primary_client = std::make_unique<TestFidlClient>(sysmem_.get());
+  auto primary_client = std::make_unique<TestFidlClient>(&sysmem_);
   ASSERT_TRUE(primary_client->CreateChannel(display_fidl()->get(), /*is_vc=*/false));
   ASSERT_TRUE(primary_client->Bind(dispatcher()));
   EXPECT_TRUE(
@@ -716,7 +716,7 @@ TEST_F(IntegrationTest, ClampRgb) {
   {
     fbl::AutoLock lock(primary_client->mtx());
     // Clamp RGB to a new value
-    primary_client->dc_->SetMinimumRgb(1);
+    primary_client->dc_.SetMinimumRgb(1);
     EXPECT_TRUE(RunLoopWithTimeoutOrUntil([this]() { return display()->GetClampRgbValue() == 1; },
                                           zx::sec(1)));
   }
@@ -725,8 +725,8 @@ TEST_F(IntegrationTest, ClampRgb) {
   // Apply a config for virtcon client to become active.
   {
     fbl::AutoLock lock(vc_client.mtx());
-    EXPECT_EQ(ZX_OK, vc_client.dc_->SetDisplayLayers(1, {}).status());
-    EXPECT_EQ(ZX_OK, vc_client.dc_->ApplyConfig().status());
+    EXPECT_EQ(ZX_OK, vc_client.dc_.SetDisplayLayers(1, {}).status());
+    EXPECT_EQ(ZX_OK, vc_client.dc_.ApplyConfig().status());
   }
   EXPECT_TRUE(
       RunLoopWithTimeoutOrUntil([this]() { return virtcon_client_connected(); }, zx::sec(1)));
@@ -738,12 +738,12 @@ TEST_F(IntegrationTest, ClampRgb) {
 
 TEST_F(IntegrationTest, VsyncImagesHiddenIfNotFromActiveClient_PrimaryToVirtcon) {
   // Create and bind virtcon client.
-  TestFidlClient vc_client(sysmem_.get());
+  TestFidlClient vc_client(&sysmem_);
   ASSERT_TRUE(vc_client.CreateChannel(display_fidl()->get(), /*is_vc=*/true));
   {
     fbl::AutoLock lock(vc_client.mtx());
     EXPECT_EQ(ZX_OK, vc_client.dc_
-                         ->SetVirtconMode(static_cast<uint8_t>(
+                         .SetVirtconMode(static_cast<uint8_t>(
                              fuchsia_hardware_display::wire::VirtconMode::kFallback))
                          .status());
   }
@@ -768,14 +768,14 @@ TEST_F(IntegrationTest, VsyncImagesHiddenIfNotFromActiveClient_PrimaryToVirtcon)
   EXPECT_EQ(1u, vc_client.recent_vsync_images().size());
 
   // Create and bind primary client.
-  auto primary_client = std::make_unique<TestFidlClient>(sysmem_.get());
+  auto primary_client = std::make_unique<TestFidlClient>(&sysmem_);
   ASSERT_TRUE(primary_client->CreateChannel(display_fidl()->get(), /*is_vc=*/false));
   ASSERT_TRUE(primary_client->Bind(dispatcher()));
   // Apply a config for client to become active.
   {
     fbl::AutoLock lock(primary_client->mtx());
-    EXPECT_EQ(ZX_OK, primary_client->dc_->SetDisplayLayers(1, {}).status());
-    EXPECT_EQ(ZX_OK, primary_client->dc_->ApplyConfig().status());
+    EXPECT_EQ(ZX_OK, primary_client->dc_.SetDisplayLayers(1, {}).status());
+    EXPECT_EQ(ZX_OK, primary_client->dc_.ApplyConfig().status());
   }
   EXPECT_TRUE(
       RunLoopWithTimeoutOrUntil([this]() { return primary_client_connected(); }, zx::sec(1)));
@@ -796,7 +796,7 @@ TEST_F(IntegrationTest, VsyncImagesHiddenIfNotFromActiveClient_PrimaryToVirtcon)
 TEST_F(IntegrationTest, VsyncImagesHiddenIfNotFromActiveClient_PrimaryToPrimary) {
   {
     // Create and bind the first primary client.
-    TestFidlClient primary_client1(sysmem_.get());
+    TestFidlClient primary_client1(&sysmem_);
     ASSERT_TRUE(primary_client1.CreateChannel(display_fidl()->get(), /*is_vc=*/false));
     ASSERT_TRUE(primary_client1.Bind(dispatcher()));
     EXPECT_TRUE(
@@ -825,14 +825,14 @@ TEST_F(IntegrationTest, VsyncImagesHiddenIfNotFromActiveClient_PrimaryToPrimary)
 
   {
     // Create and bind the second primary client.
-    auto primary_client2 = std::make_unique<TestFidlClient>(sysmem_.get());
+    auto primary_client2 = std::make_unique<TestFidlClient>(&sysmem_);
     ASSERT_TRUE(primary_client2->CreateChannel(display_fidl()->get(), /*is_vc=*/false));
     ASSERT_TRUE(primary_client2->Bind(dispatcher()));
     // Apply a config for client to become active.
     {
       fbl::AutoLock lock(primary_client2->mtx());
-      EXPECT_EQ(ZX_OK, primary_client2->dc_->SetDisplayLayers(1, {}).status());
-      EXPECT_EQ(ZX_OK, primary_client2->dc_->ApplyConfig().status());
+      EXPECT_EQ(ZX_OK, primary_client2->dc_.SetDisplayLayers(1, {}).status());
+      EXPECT_EQ(ZX_OK, primary_client2->dc_.ApplyConfig().status());
     }
     EXPECT_TRUE(
         RunLoopWithTimeoutOrUntil([this]() { return primary_client_connected(); }, zx::sec(1)));
@@ -853,26 +853,26 @@ TEST_F(IntegrationTest, VsyncImagesHiddenIfNotFromActiveClient_PrimaryToPrimary)
 
 TEST_F(IntegrationTest, EmptyConfigIsNotApplied) {
   // Create and bind virtcon client.
-  TestFidlClient vc_client(sysmem_.get());
+  TestFidlClient vc_client(&sysmem_);
   ASSERT_TRUE(vc_client.CreateChannel(display_fidl()->get(), /*is_vc=*/true));
   {
     fbl::AutoLock lock(vc_client.mtx());
     EXPECT_EQ(ZX_OK, vc_client.dc_
-                         ->SetVirtconMode(static_cast<uint8_t>(
+                         .SetVirtconMode(static_cast<uint8_t>(
                              fuchsia_hardware_display::wire::VirtconMode::kFallback))
                          .status());
   }
   ASSERT_TRUE(vc_client.Bind(dispatcher()));
   {
     fbl::AutoLock lock(vc_client.mtx());
-    EXPECT_EQ(ZX_OK, vc_client.dc_->SetDisplayLayers(1, {}).status());
-    EXPECT_EQ(ZX_OK, vc_client.dc_->ApplyConfig().status());
+    EXPECT_EQ(ZX_OK, vc_client.dc_.SetDisplayLayers(1, {}).status());
+    EXPECT_EQ(ZX_OK, vc_client.dc_.ApplyConfig().status());
   }
   EXPECT_TRUE(
       RunLoopWithTimeoutOrUntil([this]() { return virtcon_client_connected(); }, zx::sec(1)));
 
   // Create and bind primary client.
-  auto primary_client = std::make_unique<TestFidlClient>(sysmem_.get());
+  auto primary_client = std::make_unique<TestFidlClient>(&sysmem_);
   ASSERT_TRUE(primary_client->CreateChannel(display_fidl()->get(), /*is_vc=*/false));
   ASSERT_TRUE(primary_client->Bind(dispatcher()));
   EXPECT_TRUE(

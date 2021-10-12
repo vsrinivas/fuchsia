@@ -102,6 +102,10 @@ class ::fidl::WireSyncEventHandler<::fidl_test_handles::SomeProtocol>
 template <>
 class ::fidl::WireSyncClient<::fidl_test_handles::SomeProtocol> final {
  public:
+  // Creates an invalid client that is not bound to a client endpoint. Use
+  // this default constructor only when the client must be constructed first
+  // before a channel could be obtained (for example, if the client is an
+  // instance variable).
   WireSyncClient() = default;
 
   explicit WireSyncClient(
@@ -122,6 +126,10 @@ class ::fidl::WireSyncClient<::fidl_test_handles::SomeProtocol> final {
 
   const ::zx::channel& channel() const { return client_end_.channel(); }
   ::zx::channel* mutable_channel() { return &client_end_.channel(); }
+
+  // Whether the underlying channel is valid.
+  bool is_valid() const { return client_end_.is_valid(); }
+  explicit operator bool() const { return is_valid(); }
 
  private:
   ::fidl::ClientEnd<::fidl_test_handles::SomeProtocol> client_end_;

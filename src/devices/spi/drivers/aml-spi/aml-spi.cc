@@ -240,7 +240,7 @@ zx_status_t AmlSpi::SpiImplExchange(uint32_t cs, const uint8_t* txdata, size_t t
   // FIFO, but only for subsequent transfers that use 64-bit words. Resetting the IP avoids the
   // problem.
   if (need_reset_ && reset_ && exchange_size >= sizeof(uint64_t)) {
-    reset_->WriteRegister32(kReset6RegisterOffset, reset_mask_, reset_mask_);
+    reset_.WriteRegister32(kReset6RegisterOffset, reset_mask_, reset_mask_);
     need_reset_ = false;
   } else {
     // reset both fifos
@@ -437,7 +437,7 @@ zx_status_t AmlSpi::Create(void* ctx, zx_device_t* device) {
     return status;
   }
 
-  std::optional<fidl::WireSyncClient<fuchsia_hardware_registers::Device>> reset_fidl_client;
+  fidl::WireSyncClient<fuchsia_hardware_registers::Device> reset_fidl_client;
   ddk::RegistersProtocolClient reset(device, "reset");
   if (reset.is_valid()) {
     zx::channel reset_server;
@@ -449,7 +449,7 @@ zx_status_t AmlSpi::Create(void* ctx, zx_device_t* device) {
     }
 
     reset.Connect(std::move(reset_server));
-    reset_fidl_client.emplace(std::move(reset_client));
+    reset_fidl_client = fidl::BindSyncClient(std::move(reset_client));
   }
 
   zx::interrupt interrupt;

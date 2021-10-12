@@ -369,7 +369,7 @@ class ZirconPlatformBufferCollection : public PlatformBufferCollection {
  public:
   ~ZirconPlatformBufferCollection() override {
     if (collection_)
-      collection_->Close();
+      collection_.Close();
   }
 
   Status Bind(fidl::WireSyncClient<fuchsia_sysmem::Allocator>& allocator, uint32_t token_handle) {
@@ -384,8 +384,7 @@ class ZirconPlatformBufferCollection : public PlatformBufferCollection {
     if (status != ZX_OK)
       return DRET_MSG(MAGMA_STATUS_INTERNAL_ERROR, "Internal error: %d", status);
 
-    collection_ =
-        std::make_unique<fidl::WireSyncClient<fuchsia_sysmem::BufferCollection>>(std::move(h1));
+    collection_ = fidl::WireSyncClient<fuchsia_sysmem::BufferCollection>(std::move(h1));
 
     return MAGMA_STATUS_OK;
   }
@@ -402,12 +401,12 @@ class ZirconPlatformBufferCollection : public PlatformBufferCollection {
     // These names are very generic, so set a low priority so it's easy to override them.
     constexpr uint32_t kVulkanPriority = 5;
     zx_status_t status =
-        collection_->SetName(kVulkanPriority, fidl::StringView::FromExternal(buffer_name)).status();
+        collection_.SetName(kVulkanPriority, fidl::StringView::FromExternal(buffer_name)).status();
     if (status != ZX_OK) {
       return DRET_MSG(MAGMA_STATUS_INTERNAL_ERROR, "Error setting name: %d", status);
     }
 
-    status = collection_->SetConstraints(true, std::move(llcpp_constraints)).status();
+    status = collection_.SetConstraints(true, std::move(llcpp_constraints)).status();
     if (status != ZX_OK) {
       return DRET_MSG(MAGMA_STATUS_INTERNAL_ERROR, "Error setting constraints: %d", status);
     }
@@ -416,7 +415,7 @@ class ZirconPlatformBufferCollection : public PlatformBufferCollection {
 
   Status GetBufferDescription(
       std::unique_ptr<PlatformBufferDescription>* description_out) override {
-    auto result = collection_->WaitForBuffersAllocated();
+    auto result = collection_.WaitForBuffersAllocated();
     if (result.status() != ZX_OK)
       return DRET_MSG(MAGMA_STATUS_INTERNAL_ERROR, "Failed wait for allocation: %d",
                       result.status());
@@ -439,7 +438,7 @@ class ZirconPlatformBufferCollection : public PlatformBufferCollection {
   }
 
   Status GetBufferHandle(uint32_t index, uint32_t* handle_out, uint32_t* offset_out) override {
-    auto result = collection_->WaitForBuffersAllocated();
+    auto result = collection_.WaitForBuffersAllocated();
     if (result.status() != ZX_OK)
       return DRET_MSG(MAGMA_STATUS_INTERNAL_ERROR, "Failed wait for allocation: %d",
                       result.status());
@@ -462,7 +461,7 @@ class ZirconPlatformBufferCollection : public PlatformBufferCollection {
   }
 
  private:
-  std::unique_ptr<fidl::WireSyncClient<fuchsia_sysmem::BufferCollection>> collection_;
+  fidl::WireSyncClient<fuchsia_sysmem::BufferCollection> collection_;
 };
 
 class ZirconPlatformSysmemConnection : public PlatformSysmemConnection {

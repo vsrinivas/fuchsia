@@ -198,7 +198,7 @@ class SkipBlockTest : public zxtest::Test {
             return static_cast<MockDevice*>(ctx)->MessageOp(msg, txn);
           },
           endpoints->server.TakeChannel());
-      client_.emplace(std::move(endpoints->client));
+      client_ = fidl::BindSyncClient(std::move(endpoints->client));
     }
   }
 
@@ -213,7 +213,7 @@ class SkipBlockTest : public zxtest::Test {
 
   void Write(nand::ReadWriteOperation op, bool* bad_block_grown, zx_status_t expected = ZX_OK) {
     ASSERT_NO_FAILURES(InitializeFidlClient());
-    auto result = client_->Write(std::move(op));
+    auto result = client_.Write(std::move(op));
     ASSERT_OK(result.status());
     ASSERT_STATUS(result.value().status, expected);
     *bad_block_grown = result.value().bad_block_grown;
@@ -221,7 +221,7 @@ class SkipBlockTest : public zxtest::Test {
 
   void Read(nand::ReadWriteOperation op, zx_status_t expected = ZX_OK) {
     ASSERT_NO_FAILURES(InitializeFidlClient());
-    auto result = client_->Read(std::move(op));
+    auto result = client_.Read(std::move(op));
     ASSERT_OK(result.status());
     ASSERT_STATUS(result.value().status, expected);
   }
@@ -229,7 +229,7 @@ class SkipBlockTest : public zxtest::Test {
   void WriteBytes(nand::WriteBytesOperation op, bool* bad_block_grown,
                   zx_status_t expected = ZX_OK) {
     ASSERT_NO_FAILURES(InitializeFidlClient());
-    auto result = client_->WriteBytes(std::move(op));
+    auto result = client_.WriteBytes(std::move(op));
     ASSERT_OK(result.status());
     ASSERT_EQ(result.value().status, expected);
     *bad_block_grown = result.value().bad_block_grown;
@@ -237,7 +237,7 @@ class SkipBlockTest : public zxtest::Test {
 
   void WriteBytesWithoutErase(nand::WriteBytesOperation op, zx_status_t expected = ZX_OK) {
     ASSERT_NO_FAILURES(InitializeFidlClient());
-    auto result = client_->WriteBytesWithoutErase(std::move(op));
+    auto result = client_.WriteBytesWithoutErase(std::move(op));
     ASSERT_OK(result.status());
     ASSERT_STATUS(result.value().status, expected);
   }
@@ -245,7 +245,7 @@ class SkipBlockTest : public zxtest::Test {
   void GetPartitionInfo(nand::PartitionInfo* out, zx_status_t expected = ZX_OK) {
     ASSERT_NO_FAILURES(InitializeFidlClient());
 
-    auto result = client_->GetPartitionInfo();
+    auto result = client_.GetPartitionInfo();
     ASSERT_OK(result.status());
     ASSERT_STATUS(result.value().status, expected);
     *out = result.value().partition_info;
@@ -280,7 +280,7 @@ class SkipBlockTest : public zxtest::Test {
   fake_ddk::FidlMessenger fidl_messenger_;
   FakeNand nand_;
   FakeBadBlock bad_block_;
-  std::optional<fidl::WireSyncClient<fuchsia_hardware_skipblock::SkipBlock>> client_;
+  fidl::WireSyncClient<fuchsia_hardware_skipblock::SkipBlock> client_;
 };
 
 TEST_F(SkipBlockTest, Create) { ASSERT_OK(nand::SkipBlockDevice::Create(nullptr, parent())); }

@@ -137,7 +137,7 @@ void Keyboard::SetCapsLockLed(bool caps_lock) {
   fuchsia_input_report::wire::OutputReport report(allocator);
   report.set_keyboard(allocator, std::move(keyboard_report));
 
-  keyboard_client_->SendOutputReport(std::move(report));
+  keyboard_client_.SendOutputReport(std::move(report));
 }
 
 // returns true if key was pressed and none were released
@@ -220,7 +220,7 @@ zx_status_t Keyboard::StartReading() {
     return endpoints.status_value();
   }
   auto [client, server] = *std::move(endpoints);
-  auto result = keyboard_client_->GetInputReportsReader(std::move(server));
+  auto result = keyboard_client_.GetInputReportsReader(std::move(server));
   if (result.status() != ZX_OK) {
     return result.status();
   }

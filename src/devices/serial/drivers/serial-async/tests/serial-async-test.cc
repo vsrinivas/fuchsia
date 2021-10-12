@@ -171,7 +171,7 @@ class SerialDeviceTest : public zxtest::Test {
   SerialDeviceTest();
   ~SerialDeviceTest();
   fidl::WireSyncClient<fuchsia_hardware_serial::NewDevice>& fidl() {
-    if (!fidl_.has_value()) {
+    if (!fidl_.is_valid()) {
       // Connect
       auto connection =
           fidl::BindSyncClient(tester_.ddk().FidlClient<fuchsia_hardware_serial::NewDeviceProxy>());
@@ -179,7 +179,7 @@ class SerialDeviceTest : public zxtest::Test {
       connection.GetChannel(std::move(endpoints->server));
       fidl_ = fidl::BindSyncClient(std::move(endpoints->client));
     }
-    return *fidl_;
+    return fidl_;
   }
   serial::SerialDevice* device() { return device_; }
   FakeSerialImpl& serial_impl() { return tester_.serial_impl(); }
@@ -187,7 +187,7 @@ class SerialDeviceTest : public zxtest::Test {
   // DISALLOW_COPY_ASSIGN_AND_MOVE(SerialDeviceTest);
 
  private:
-  std::optional<fidl::WireSyncClient<fuchsia_hardware_serial::NewDevice>> fidl_;
+  fidl::WireSyncClient<fuchsia_hardware_serial::NewDevice> fidl_;
   SerialTester tester_;
   serial::SerialDevice* device_;
 };

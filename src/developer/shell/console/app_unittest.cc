@@ -16,8 +16,8 @@ namespace {
 using App = gtest::TestLoopFixture;
 
 fidl::WireSyncClient<fuchsia_shell::Shell> Client() {
-  fidl::ClientEnd<fuchsia_shell::Shell> client_end;
-  return fidl::WireSyncClient<fuchsia_shell::Shell>(std::move(client_end));
+  fidl::ClientEnd client_end = std::move(fidl::CreateEndpoints<fuchsia_shell::Shell>()->client);
+  return fidl::BindSyncClient(std::move(client_end));
 }
 
 TEST_F(App, BogusArgs) {

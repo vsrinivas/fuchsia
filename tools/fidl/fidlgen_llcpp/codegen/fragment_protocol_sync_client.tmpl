@@ -8,34 +8,45 @@
 {{- EnsureNamespace "" }}
 template<>
 class {{ .WireSyncClient }} final {
-  public:
-   WireSyncClient() = default;
+ public:
+  // Creates an invalid client that is not bound to a client endpoint. Use
+  // this default constructor only when the client must be constructed first
+  // before a channel could be obtained (for example, if the client is an
+  // instance variable).
+  WireSyncClient() = default;
 
-   explicit WireSyncClient(::fidl::ClientEnd<{{ . }}> client_end)
-       : client_end_(std::move(client_end)) {}
+  explicit WireSyncClient(::fidl::ClientEnd<{{ . }}> client_end)
+      : client_end_(std::move(client_end)) {}
 
-   ~WireSyncClient() = default;
-   WireSyncClient(WireSyncClient&&) = default;
-   WireSyncClient& operator=(WireSyncClient&&) = default;
+  ~WireSyncClient() = default;
+  WireSyncClient(WireSyncClient&&) = default;
+  WireSyncClient& operator=(WireSyncClient&&) = default;
 
-   const ::fidl::ClientEnd<{{ . }}>& client_end() const { return client_end_; }
-   ::fidl::ClientEnd<{{ . }}>& client_end() { return client_end_; }
+  const ::fidl::ClientEnd<{{ . }}>& client_end() const { return client_end_; }
+  ::fidl::ClientEnd<{{ . }}>& client_end() { return client_end_; }
 
-   const ::zx::channel& channel() const { return client_end_.channel(); }
-   ::zx::channel* mutable_channel() { return &client_end_.channel(); }
+  const ::zx::channel& channel() const { return client_end_.channel(); }
+  ::zx::channel* mutable_channel() { return &client_end_.channel(); }
 
-   {{- /* Client-calling functions do not apply to events. */}}
-   {{- range .ClientMethods }}
-   {{ .Docs }}
-   //{{ template "Method:ClientAllocationComment:Helper" . }}
-   {{ .WireResult }} {{ .Name }}({{ RenderParams .RequestArgs }}) {
-     return {{ .WireResult }}({{ RenderForwardParams "this->client_end()" .RequestArgs }});
-   }
+  // Whether the underlying channel is valid.
+  bool is_valid() const { return client_end_.is_valid(); }
+  explicit operator bool() const { return is_valid(); }
 
-   {{- if or .RequestArgs .ResponseArgs }}
-    {{ .Docs }}
-    // Caller provides the backing storage for FIDL message via request and response buffers.
-    {{ .WireUnownedResult }} {{ .Name }}({{ template "Method:ClientImplSyncCallerAllocateArguments:Helper" . }}) {
+  {{- /* Client-calling functions do not apply to events. */}}
+  {{- range .ClientMethods }}
+  {{ .Docs }}
+  //{{ template "Method:ClientAllocationComment:Helper" . }}
+  {{ .WireResult }} {{ .Name }}({{ RenderParams .RequestArgs }}) const {
+    ZX_ASSERT(client_end_.is_valid());
+    return {{ .WireResult }}({{ RenderForwardParams "this->client_end()" .RequestArgs }});
+  }
+
+  {{- if or .RequestArgs .ResponseArgs }}
+  {{ .Docs }}
+  // Caller provides the backing storage for FIDL message via request and response buffers.
+  {{ .WireUnownedResult }} {{ .Name }}(
+      {{- template "Method:ClientImplSyncCallerAllocateArguments:Helper" . }}) const {
+    ZX_ASSERT(client_end_.is_valid());
     {{- $args := (List "this->client_end()") }}
     {{- if .RequestArgs }}
       {{- $args = (List $args "_request_buffer.data" "_request_buffer.capacity") }}
@@ -45,21 +56,22 @@ class {{ .WireSyncClient }} final {
       {{- $args = (List $args "_response_buffer.data" "_response_buffer.capacity") }}
     {{- end }}
     return {{ .WireUnownedResult }}({{ RenderForwardParams $args }});
-   }
-     {{- end }}
+  }
+  {{- end }}
 
   {{- end }}
+
   {{- if .Events }}
-   // Handle all possible events defined in this protocol.
-   // Blocks to consume exactly one message from the channel, then call the corresponding virtual
-   // method defined in |SyncEventHandler|. The return status of the handler function is folded with
-   // any transport-level errors and returned.
-   ::fidl::Result HandleOneEvent({{ .WireSyncEventHandler  }}& event_handler) {
-     return event_handler.HandleOneEvent(client_end_);
-   }
-   {{- end }}
-  private:
-    ::fidl::ClientEnd<{{ . }}> client_end_;
+  // Handle all possible events defined in this protocol.
+  // Blocks to consume exactly one message from the channel, then call the corresponding virtual
+  // method defined in |SyncEventHandler|. The return status of the handler function is folded with
+  // any transport-level errors and returned.
+  ::fidl::Result HandleOneEvent({{ .WireSyncEventHandler  }}& event_handler) const {
+    return event_handler.HandleOneEvent(client_end_);
+  }
+  {{- end }}
+ private:
+  ::fidl::ClientEnd<{{ . }}> client_end_;
 };
 {{- end }}
 

@@ -22,7 +22,7 @@ namespace {
 
 using uuid::Uuid;
 
-std::optional<fidl::WireSyncClient<fuchsia_boot::Arguments>> OpenBootArgumentClient(
+fidl::WireSyncClient<fuchsia_boot::Arguments> OpenBootArgumentClient(
     fidl::UnownedClientEnd<fuchsia_io::Directory> svc_root) {
   if (!svc_root.is_valid()) {
     return {};
@@ -139,7 +139,7 @@ zx::status<std::unique_ptr<DevicePartitioner>> AstroPartitioner::Initialize(
   // "astro.sysconfig.abr-wear-leveling".
   // TODO(fxbug.dev/47505): Find a proper place to document the parameter.
   AbrWearLevelingOption option =
-      boot_arg_client && GetBool(*boot_arg_client, "astro.sysconfig.abr-wear-leveling", false)
+      boot_arg_client && GetBool(boot_arg_client, "astro.sysconfig.abr-wear-leveling", false)
           ? AbrWearLevelingOption::ON
           : AbrWearLevelingOption::OFF;
 

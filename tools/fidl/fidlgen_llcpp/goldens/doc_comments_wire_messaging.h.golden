@@ -493,6 +493,10 @@ class ::fidl::WireSyncEventHandler<::fidl_test_doccomments::Interface>
 template <>
 class ::fidl::WireSyncClient<::fidl_test_doccomments::Interface> final {
  public:
+  // Creates an invalid client that is not bound to a client endpoint. Use
+  // this default constructor only when the client must be constructed first
+  // before a channel could be obtained (for example, if the client is an
+  // instance variable).
   WireSyncClient() = default;
 
   explicit WireSyncClient(
@@ -514,12 +518,18 @@ class ::fidl::WireSyncClient<::fidl_test_doccomments::Interface> final {
   const ::zx::channel& channel() const { return client_end_.channel(); }
   ::zx::channel* mutable_channel() { return &client_end_.channel(); }
 
+  // Whether the underlying channel is valid.
+  bool is_valid() const { return client_end_.is_valid(); }
+  explicit operator bool() const { return is_valid(); }
+
   /// method comment #1
   ///
   /// method comment #3
   // Allocates 16 bytes of message buffer on the stack. No heap allocation
   // necessary.
-  ::fidl::WireResult<::fidl_test_doccomments::Interface::Method> Method() {
+  ::fidl::WireResult<::fidl_test_doccomments::Interface::Method> Method()
+      const {
+    ZX_ASSERT(client_end_.is_valid());
     return ::fidl::WireResult<::fidl_test_doccomments::Interface::Method>(
         this->client_end());
   }
@@ -530,7 +540,7 @@ class ::fidl::WireSyncClient<::fidl_test_doccomments::Interface> final {
   // and returned.
   ::fidl::Result HandleOneEvent(
       ::fidl::WireSyncEventHandler<::fidl_test_doccomments::Interface>&
-          event_handler) {
+          event_handler) const {
     return event_handler.HandleOneEvent(client_end_);
   }
 

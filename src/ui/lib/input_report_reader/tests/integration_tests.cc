@@ -71,7 +71,7 @@ class ReaderInterpreterInputTest : public ReaderInterpreterTest {
   InputReader input_reader_;
   std::unique_ptr<async::Loop> loop_;
   std::unique_ptr<fake_input_report_device::FakeInputDevice> fake_device_;
-  std::optional<fidl::WireSyncClient<fuchsia_input_report::InputDevice>> client_;
+  fidl::WireSyncClient<fuchsia_input_report::InputDevice> client_;
 
   void StartDevice() { AddDevice(std::move(token_client_)); }
 

@@ -1248,6 +1248,10 @@ template <>
 class ::fidl::WireSyncClient<::fidl_test_requestflexibleenvelope::Protocol>
     final {
  public:
+  // Creates an invalid client that is not bound to a client endpoint. Use
+  // this default constructor only when the client must be constructed first
+  // before a channel could be obtained (for example, if the client is an
+  // instance variable).
   WireSyncClient() = default;
 
   explicit WireSyncClient(
@@ -1271,11 +1275,16 @@ class ::fidl::WireSyncClient<::fidl_test_requestflexibleenvelope::Protocol>
   const ::zx::channel& channel() const { return client_end_.channel(); }
   ::zx::channel* mutable_channel() { return &client_end_.channel(); }
 
+  // Whether the underlying channel is valid.
+  bool is_valid() const { return client_end_.is_valid(); }
+  explicit operator bool() const { return is_valid(); }
+
   // Request is heap-allocated. Response is heap-allocated.
   ::fidl::WireResult<::fidl_test_requestflexibleenvelope::Protocol::
                          RequestStrictResponseFlexible>
   RequestStrictResponseFlexible(
-      ::fidl_test_requestflexibleenvelope::wire::StrictFoo s) {
+      ::fidl_test_requestflexibleenvelope::wire::StrictFoo s) const {
+    ZX_ASSERT(client_end_.is_valid());
     return ::fidl::WireResult<::fidl_test_requestflexibleenvelope::Protocol::
                                   RequestStrictResponseFlexible>(
         this->client_end(), s);
@@ -1288,7 +1297,8 @@ class ::fidl::WireSyncClient<::fidl_test_requestflexibleenvelope::Protocol>
   RequestStrictResponseFlexible(
       ::fidl::BufferSpan _request_buffer,
       ::fidl_test_requestflexibleenvelope::wire::StrictFoo s,
-      ::fidl::BufferSpan _response_buffer) {
+      ::fidl::BufferSpan _response_buffer) const {
+    ZX_ASSERT(client_end_.is_valid());
     return ::fidl::WireUnownedResult<
         ::fidl_test_requestflexibleenvelope::Protocol::
             RequestStrictResponseFlexible>(
@@ -1300,7 +1310,8 @@ class ::fidl::WireSyncClient<::fidl_test_requestflexibleenvelope::Protocol>
   ::fidl::WireResult<::fidl_test_requestflexibleenvelope::Protocol::
                          RequestFlexibleResponseStrict>
   RequestFlexibleResponseStrict(
-      ::fidl_test_requestflexibleenvelope::wire::FlexibleFoo s) {
+      ::fidl_test_requestflexibleenvelope::wire::FlexibleFoo s) const {
+    ZX_ASSERT(client_end_.is_valid());
     return ::fidl::WireResult<::fidl_test_requestflexibleenvelope::Protocol::
                                   RequestFlexibleResponseStrict>(
         this->client_end(), s);
@@ -1313,7 +1324,8 @@ class ::fidl::WireSyncClient<::fidl_test_requestflexibleenvelope::Protocol>
   RequestFlexibleResponseStrict(
       ::fidl::BufferSpan _request_buffer,
       ::fidl_test_requestflexibleenvelope::wire::FlexibleFoo s,
-      ::fidl::BufferSpan _response_buffer) {
+      ::fidl::BufferSpan _response_buffer) const {
+    ZX_ASSERT(client_end_.is_valid());
     return ::fidl::WireUnownedResult<
         ::fidl_test_requestflexibleenvelope::Protocol::
             RequestFlexibleResponseStrict>(

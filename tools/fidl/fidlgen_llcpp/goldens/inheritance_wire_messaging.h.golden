@@ -583,6 +583,10 @@ class ::fidl::WireSyncEventHandler<::fidl_test_inheritance::Super>
 template <>
 class ::fidl::WireSyncClient<::fidl_test_inheritance::Super> final {
  public:
+  // Creates an invalid client that is not bound to a client endpoint. Use
+  // this default constructor only when the client must be constructed first
+  // before a channel could be obtained (for example, if the client is an
+  // instance variable).
   WireSyncClient() = default;
 
   explicit WireSyncClient(
@@ -603,10 +607,15 @@ class ::fidl::WireSyncClient<::fidl_test_inheritance::Super> final {
   const ::zx::channel& channel() const { return client_end_.channel(); }
   ::zx::channel* mutable_channel() { return &client_end_.channel(); }
 
+  // Whether the underlying channel is valid.
+  bool is_valid() const { return client_end_.is_valid(); }
+  explicit operator bool() const { return is_valid(); }
+
   // Allocates 24 bytes of response buffer on the stack. Request is
   // heap-allocated.
   ::fidl::WireResult<::fidl_test_inheritance::Super::Foo> Foo(
-      ::fidl::StringView s) {
+      ::fidl::StringView s) const {
+    ZX_ASSERT(client_end_.is_valid());
     return ::fidl::WireResult<::fidl_test_inheritance::Super::Foo>(
         this->client_end(), s);
   }
@@ -615,7 +624,8 @@ class ::fidl::WireSyncClient<::fidl_test_inheritance::Super> final {
   // response buffers.
   ::fidl::WireUnownedResult<::fidl_test_inheritance::Super::Foo> Foo(
       ::fidl::BufferSpan _request_buffer, ::fidl::StringView s,
-      ::fidl::BufferSpan _response_buffer) {
+      ::fidl::BufferSpan _response_buffer) const {
+    ZX_ASSERT(client_end_.is_valid());
     return ::fidl::WireUnownedResult<::fidl_test_inheritance::Super::Foo>(
         this->client_end(), _request_buffer.data, _request_buffer.capacity, s,
         _response_buffer.data, _response_buffer.capacity);
@@ -1235,6 +1245,10 @@ class ::fidl::WireSyncEventHandler<::fidl_test_inheritance::Sub>
 template <>
 class ::fidl::WireSyncClient<::fidl_test_inheritance::Sub> final {
  public:
+  // Creates an invalid client that is not bound to a client endpoint. Use
+  // this default constructor only when the client must be constructed first
+  // before a channel could be obtained (for example, if the client is an
+  // instance variable).
   WireSyncClient() = default;
 
   explicit WireSyncClient(
@@ -1255,10 +1269,15 @@ class ::fidl::WireSyncClient<::fidl_test_inheritance::Sub> final {
   const ::zx::channel& channel() const { return client_end_.channel(); }
   ::zx::channel* mutable_channel() { return &client_end_.channel(); }
 
+  // Whether the underlying channel is valid.
+  bool is_valid() const { return client_end_.is_valid(); }
+  explicit operator bool() const { return is_valid(); }
+
   // Allocates 24 bytes of response buffer on the stack. Request is
   // heap-allocated.
   ::fidl::WireResult<::fidl_test_inheritance::Sub::Foo> Foo(
-      ::fidl::StringView s) {
+      ::fidl::StringView s) const {
+    ZX_ASSERT(client_end_.is_valid());
     return ::fidl::WireResult<::fidl_test_inheritance::Sub::Foo>(
         this->client_end(), s);
   }
@@ -1267,7 +1286,8 @@ class ::fidl::WireSyncClient<::fidl_test_inheritance::Sub> final {
   // response buffers.
   ::fidl::WireUnownedResult<::fidl_test_inheritance::Sub::Foo> Foo(
       ::fidl::BufferSpan _request_buffer, ::fidl::StringView s,
-      ::fidl::BufferSpan _response_buffer) {
+      ::fidl::BufferSpan _response_buffer) const {
+    ZX_ASSERT(client_end_.is_valid());
     return ::fidl::WireUnownedResult<::fidl_test_inheritance::Sub::Foo>(
         this->client_end(), _request_buffer.data, _request_buffer.capacity, s,
         _response_buffer.data, _response_buffer.capacity);

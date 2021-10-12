@@ -50,7 +50,7 @@ class TestFidlClient {
   uint64_t display_id() const;
 
   fbl::Vector<Display> displays_;
-  std::unique_ptr<fidl::WireSyncClient<fuchsia_hardware_display::Controller>> dc_ TA_GUARDED(mtx());
+  fidl::WireSyncClient<fuchsia_hardware_display::Controller> dc_ TA_GUARDED(mtx());
   fidl::WireSyncClient<fuchsia_sysmem::Allocator>* sysmem_;
   zx::handle device_handle_;
   bool has_ownership_ = false;

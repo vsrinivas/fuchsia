@@ -35,10 +35,10 @@ class __EXPORT USBVirtualBusBase {
   int GetRootFd();
 
   fidl::WireSyncClient<fuchsia_hardware_usb_peripheral::Device>& peripheral() {
-    return peripheral_.value();
+    return peripheral_;
   }
   fidl::WireSyncClient<fuchsia_hardware_usb_virtual_bus::Bus>& virtual_bus() {
-    return virtual_bus_.value();
+    return virtual_bus_;
   }
 
   IsolatedDevmgr devmgr_;
@@ -47,8 +47,8 @@ class __EXPORT USBVirtualBusBase {
   IsolatedDevmgr::Args args_;
 
  private:
-  std::optional<fidl::WireSyncClient<fuchsia_hardware_usb_peripheral::Device>> peripheral_;
-  std::optional<fidl::WireSyncClient<fuchsia_hardware_usb_virtual_bus::Bus>> virtual_bus_;
+  fidl::WireSyncClient<fuchsia_hardware_usb_peripheral::Device> peripheral_;
+  fidl::WireSyncClient<fuchsia_hardware_usb_virtual_bus::Bus> virtual_bus_;
 
   DISALLOW_COPY_ASSIGN_AND_MOVE(USBVirtualBusBase);
 };

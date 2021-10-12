@@ -62,7 +62,7 @@ constexpr size_t kDevPathSize = 128;
 struct input_args_t {
   Command command;
 
-  std::optional<fidl::WireSyncClient<fuchsia_hardware_input::Device>> sync_client;
+  fidl::WireSyncClient<fuchsia_hardware_input::Device> sync_client;
 
   char devpath[kDevPathSize];
   size_t num_reads;
@@ -134,7 +134,7 @@ static zx_status_t parse_input_report_type(const char* arg,
 }
 
 static zx_status_t print_hid_protocol(input_args_t* args) {
-  auto result = args->sync_client->GetBootProtocol();
+  auto result = args->sync_client.GetBootProtocol();
   if (result.status() != ZX_OK) {
     lprintf("hid: could not get protocol from %s (status=%d)\n", args->devpath, result.status());
   } else {
@@ -144,7 +144,7 @@ static zx_status_t print_hid_protocol(input_args_t* args) {
 }
 
 static zx_status_t print_report_desc(input_args_t* args) {
-  auto result = args->sync_client->GetReportDesc();
+  auto result = args->sync_client.GetReportDesc();
   if (result.status() != ZX_OK) {
     lprintf("hid: could not get report descriptor from %s (status=%d)\n", args->devpath,
             result.status());
@@ -175,7 +175,7 @@ static zx_status_t print_hid_status(input_args_t* args) {
 
   hid::DeviceDescriptor* dev_desc = nullptr;
   {
-    auto result = args->sync_client->GetReportDesc();
+    auto result = args->sync_client.GetReportDesc();
     if (result.status() != ZX_OK) {
       return result.status();
     }
@@ -221,7 +221,7 @@ static zx_status_t hid_input_read_report(input_args_t* args, const zx::event& re
                                          size_t report_size, uint8_t* report_data,
                                          size_t* returned_size) {
   while (true) {
-    auto result = args->sync_client->ReadReport();
+    auto result = args->sync_client.ReadReport();
     if (result.status() != ZX_OK) {
       return result.status();
     }
@@ -247,7 +247,7 @@ static int hid_read_reports(input_args_t* args) {
   }
 
   zx::event report_event;
-  auto result = args->sync_client->GetReportsEvent();
+  auto result = args->sync_client.GetReportsEvent();
   if ((result.status() != ZX_OK) || (result->status != ZX_OK)) {
     mtx_lock(&print_lock);
     printf("read returned error: (call_status=%d) (status=%d)\n", result.status(), result->status);
@@ -345,7 +345,7 @@ int watch_all_devices(Command command) {
 
 // Get a single report from the device with a given report id and then print it.
 int get_report(input_args_t* args) {
-  auto result = args->sync_client->GetReport(args->report_type, args->report_id);
+  auto result = args->sync_client.GetReport(args->report_type, args->report_id);
   if (result.status() != ZX_OK || result->status != ZX_OK) {
     printf("hid: could not get report: %d, %d\n", result.status(), result->status);
     return -1;
@@ -372,8 +372,7 @@ int set_report(input_args_t* args) {
   }
 
   auto report_view = fidl::VectorView<uint8_t>::FromExternal(report.get(), args->data_size);
-  auto res =
-      args->sync_client->SetReport(args->report_type, args->report_id, std::move(report_view));
+  auto res = args->sync_client.SetReport(args->report_type, args->report_id, report_view);
   if (res.status() != ZX_OK || res->status != ZX_OK) {
     printf("hid: could not set report: %d, %d\n", res.status(), res->status);
     return -1;

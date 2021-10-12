@@ -137,13 +137,12 @@ test("fidl_llcpp_protocol_tests_bin") {
   ]
   deps = [
     ":llcpptest.protocol.test_llcpp",
-    "//src/lib/fxl/test:gtest_main",
-    "//third_party/googletest:gtest",
     "//zircon/system/ulib/async:async-cpp",
     "//zircon/system/ulib/async-loop",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/fidl-async:fidl-async-cpp",
+    "//zircon/system/ulib/zxtest",
   ]
 }
 

@@ -377,6 +377,10 @@ template <>
 class ::fidl::WireSyncClient<::fidl_test_inheritancewithrecursivedecl::Parent>
     final {
  public:
+  // Creates an invalid client that is not bound to a client endpoint. Use
+  // this default constructor only when the client must be constructed first
+  // before a channel could be obtained (for example, if the client is an
+  // instance variable).
   WireSyncClient() = default;
 
   explicit WireSyncClient(
@@ -400,11 +404,16 @@ class ::fidl::WireSyncClient<::fidl_test_inheritancewithrecursivedecl::Parent>
   const ::zx::channel& channel() const { return client_end_.channel(); }
   ::zx::channel* mutable_channel() { return &client_end_.channel(); }
 
+  // Whether the underlying channel is valid.
+  bool is_valid() const { return client_end_.is_valid(); }
+  explicit operator bool() const { return is_valid(); }
+
   // Allocates 24 bytes of message buffer on the stack. No heap allocation
   // necessary.
   ::fidl::WireResult<::fidl_test_inheritancewithrecursivedecl::Parent::First>
   First(::fidl::ServerEnd<::fidl_test_inheritancewithrecursivedecl::Parent>&&
-            request) {
+            request) const {
+    ZX_ASSERT(client_end_.is_valid());
     return ::fidl::WireResult<
         ::fidl_test_inheritancewithrecursivedecl::Parent::First>(
         this->client_end(), std::move(request));
@@ -416,7 +425,8 @@ class ::fidl::WireSyncClient<::fidl_test_inheritancewithrecursivedecl::Parent>
       ::fidl_test_inheritancewithrecursivedecl::Parent::First>
   First(::fidl::BufferSpan _request_buffer,
         ::fidl::ServerEnd<::fidl_test_inheritancewithrecursivedecl::Parent>&&
-            request) {
+            request) const {
+    ZX_ASSERT(client_end_.is_valid());
     return ::fidl::WireUnownedResult<
         ::fidl_test_inheritancewithrecursivedecl::Parent::First>(
         this->client_end(), _request_buffer.data, _request_buffer.capacity,
@@ -1074,6 +1084,10 @@ template <>
 class ::fidl::WireSyncClient<::fidl_test_inheritancewithrecursivedecl::Child>
     final {
  public:
+  // Creates an invalid client that is not bound to a client endpoint. Use
+  // this default constructor only when the client must be constructed first
+  // before a channel could be obtained (for example, if the client is an
+  // instance variable).
   WireSyncClient() = default;
 
   explicit WireSyncClient(
@@ -1097,11 +1111,16 @@ class ::fidl::WireSyncClient<::fidl_test_inheritancewithrecursivedecl::Child>
   const ::zx::channel& channel() const { return client_end_.channel(); }
   ::zx::channel* mutable_channel() { return &client_end_.channel(); }
 
+  // Whether the underlying channel is valid.
+  bool is_valid() const { return client_end_.is_valid(); }
+  explicit operator bool() const { return is_valid(); }
+
   // Allocates 24 bytes of message buffer on the stack. No heap allocation
   // necessary.
   ::fidl::WireResult<::fidl_test_inheritancewithrecursivedecl::Child::First>
   First(::fidl::ServerEnd<::fidl_test_inheritancewithrecursivedecl::Parent>&&
-            request) {
+            request) const {
+    ZX_ASSERT(client_end_.is_valid());
     return ::fidl::WireResult<
         ::fidl_test_inheritancewithrecursivedecl::Child::First>(
         this->client_end(), std::move(request));
@@ -1113,7 +1132,8 @@ class ::fidl::WireSyncClient<::fidl_test_inheritancewithrecursivedecl::Child>
       ::fidl_test_inheritancewithrecursivedecl::Child::First>
   First(::fidl::BufferSpan _request_buffer,
         ::fidl::ServerEnd<::fidl_test_inheritancewithrecursivedecl::Parent>&&
-            request) {
+            request) const {
+    ZX_ASSERT(client_end_.is_valid());
     return ::fidl::WireUnownedResult<
         ::fidl_test_inheritancewithrecursivedecl::Child::First>(
         this->client_end(), _request_buffer.data, _request_buffer.capacity,
@@ -1124,7 +1144,8 @@ class ::fidl::WireSyncClient<::fidl_test_inheritancewithrecursivedecl::Child>
   // necessary.
   ::fidl::WireResult<::fidl_test_inheritancewithrecursivedecl::Child::Second>
   Second(::fidl::ServerEnd<::fidl_test_inheritancewithrecursivedecl::Parent>&&
-             request) {
+             request) const {
+    ZX_ASSERT(client_end_.is_valid());
     return ::fidl::WireResult<
         ::fidl_test_inheritancewithrecursivedecl::Child::Second>(
         this->client_end(), std::move(request));
@@ -1136,7 +1157,8 @@ class ::fidl::WireSyncClient<::fidl_test_inheritancewithrecursivedecl::Child>
       ::fidl_test_inheritancewithrecursivedecl::Child::Second>
   Second(::fidl::BufferSpan _request_buffer,
          ::fidl::ServerEnd<::fidl_test_inheritancewithrecursivedecl::Parent>&&
-             request) {
+             request) const {
+    ZX_ASSERT(client_end_.is_valid());
     return ::fidl::WireUnownedResult<
         ::fidl_test_inheritancewithrecursivedecl::Child::Second>(
         this->client_end(), _request_buffer.data, _request_buffer.capacity,

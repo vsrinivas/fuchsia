@@ -1138,6 +1138,10 @@ template <>
 class ::fidl::WireSyncClient<::fidl_test_protocols::HandleRightsProtocol>
     final {
  public:
+  // Creates an invalid client that is not bound to a client endpoint. Use
+  // this default constructor only when the client must be constructed first
+  // before a channel could be obtained (for example, if the client is an
+  // instance variable).
   WireSyncClient() = default;
 
   explicit WireSyncClient(
@@ -1159,11 +1163,16 @@ class ::fidl::WireSyncClient<::fidl_test_protocols::HandleRightsProtocol>
   const ::zx::channel& channel() const { return client_end_.channel(); }
   ::zx::channel* mutable_channel() { return &client_end_.channel(); }
 
+  // Whether the underlying channel is valid.
+  bool is_valid() const { return client_end_.is_valid(); }
+  explicit operator bool() const { return is_valid(); }
+
   // Allocates 24 bytes of message buffer on the stack. No heap allocation
   // necessary.
   ::fidl::WireResult<
       ::fidl_test_protocols::HandleRightsProtocol::NoResponseMethod>
-  NoResponseMethod(::zx::socket&& h) {
+  NoResponseMethod(::zx::socket&& h) const {
+    ZX_ASSERT(client_end_.is_valid());
     return ::fidl::WireResult<
         ::fidl_test_protocols::HandleRightsProtocol::NoResponseMethod>(
         this->client_end(), std::move(h));
@@ -1173,7 +1182,8 @@ class ::fidl::WireSyncClient<::fidl_test_protocols::HandleRightsProtocol>
   // response buffers.
   ::fidl::WireUnownedResult<
       ::fidl_test_protocols::HandleRightsProtocol::NoResponseMethod>
-  NoResponseMethod(::fidl::BufferSpan _request_buffer, ::zx::socket&& h) {
+  NoResponseMethod(::fidl::BufferSpan _request_buffer, ::zx::socket&& h) const {
+    ZX_ASSERT(client_end_.is_valid());
     return ::fidl::WireUnownedResult<
         ::fidl_test_protocols::HandleRightsProtocol::NoResponseMethod>(
         this->client_end(), _request_buffer.data, _request_buffer.capacity,
@@ -1184,7 +1194,8 @@ class ::fidl::WireSyncClient<::fidl_test_protocols::HandleRightsProtocol>
   // necessary.
   ::fidl::WireResult<
       ::fidl_test_protocols::HandleRightsProtocol::ResponseMethod>
-  ResponseMethod(::zx::socket&& h) {
+  ResponseMethod(::zx::socket&& h) const {
+    ZX_ASSERT(client_end_.is_valid());
     return ::fidl::WireResult<
         ::fidl_test_protocols::HandleRightsProtocol::ResponseMethod>(
         this->client_end(), std::move(h));
@@ -1195,7 +1206,8 @@ class ::fidl::WireSyncClient<::fidl_test_protocols::HandleRightsProtocol>
   ::fidl::WireUnownedResult<
       ::fidl_test_protocols::HandleRightsProtocol::ResponseMethod>
   ResponseMethod(::fidl::BufferSpan _request_buffer, ::zx::socket&& h,
-                 ::fidl::BufferSpan _response_buffer) {
+                 ::fidl::BufferSpan _response_buffer) const {
+    ZX_ASSERT(client_end_.is_valid());
     return ::fidl::WireUnownedResult<
         ::fidl_test_protocols::HandleRightsProtocol::ResponseMethod>(
         this->client_end(), _request_buffer.data, _request_buffer.capacity,
@@ -1208,7 +1220,7 @@ class ::fidl::WireSyncClient<::fidl_test_protocols::HandleRightsProtocol>
   // and returned.
   ::fidl::Result HandleOneEvent(
       ::fidl::WireSyncEventHandler<::fidl_test_protocols::HandleRightsProtocol>&
-          event_handler) {
+          event_handler) const {
     return event_handler.HandleOneEvent(client_end_);
   }
 
@@ -4438,6 +4450,10 @@ class ::fidl::WireSyncClient<
     ::fidl_test_protocols::WithAndWithoutRequestResponse>
     final {
  public:
+  // Creates an invalid client that is not bound to a client endpoint. Use
+  // this default constructor only when the client must be constructed first
+  // before a channel could be obtained (for example, if the client is an
+  // instance variable).
   WireSyncClient() = default;
 
   explicit WireSyncClient(
@@ -4461,11 +4477,16 @@ class ::fidl::WireSyncClient<
   const ::zx::channel& channel() const { return client_end_.channel(); }
   ::zx::channel* mutable_channel() { return &client_end_.channel(); }
 
+  // Whether the underlying channel is valid.
+  bool is_valid() const { return client_end_.is_valid(); }
+  explicit operator bool() const { return is_valid(); }
+
   // Allocates 16 bytes of message buffer on the stack. No heap allocation
   // necessary.
   ::fidl::WireResult<
       ::fidl_test_protocols::WithAndWithoutRequestResponse::NoRequestNoResponse>
-  NoRequestNoResponse() {
+  NoRequestNoResponse() const {
+    ZX_ASSERT(client_end_.is_valid());
     return ::fidl::WireResult<
         ::fidl_test_protocols::WithAndWithoutRequestResponse::
             NoRequestNoResponse>(this->client_end());
@@ -4475,7 +4496,8 @@ class ::fidl::WireSyncClient<
   // necessary.
   ::fidl::WireResult<::fidl_test_protocols::WithAndWithoutRequestResponse::
                          NoRequestEmptyResponse>
-  NoRequestEmptyResponse() {
+  NoRequestEmptyResponse() const {
+    ZX_ASSERT(client_end_.is_valid());
     return ::fidl::WireResult<
         ::fidl_test_protocols::WithAndWithoutRequestResponse::
             NoRequestEmptyResponse>(this->client_end());
@@ -4485,7 +4507,8 @@ class ::fidl::WireSyncClient<
   // heap-allocated.
   ::fidl::WireResult<::fidl_test_protocols::WithAndWithoutRequestResponse::
                          NoRequestWithResponse>
-  NoRequestWithResponse() {
+  NoRequestWithResponse() const {
+    ZX_ASSERT(client_end_.is_valid());
     return ::fidl::WireResult<
         ::fidl_test_protocols::WithAndWithoutRequestResponse::
             NoRequestWithResponse>(this->client_end());
@@ -4496,7 +4519,8 @@ class ::fidl::WireSyncClient<
   ::fidl::WireUnownedResult<
       ::fidl_test_protocols::WithAndWithoutRequestResponse::
           NoRequestWithResponse>
-  NoRequestWithResponse(::fidl::BufferSpan _response_buffer) {
+  NoRequestWithResponse(::fidl::BufferSpan _response_buffer) const {
+    ZX_ASSERT(client_end_.is_valid());
     return ::fidl::WireUnownedResult<
         ::fidl_test_protocols::WithAndWithoutRequestResponse::
             NoRequestWithResponse>(this->client_end(), _response_buffer.data,
@@ -4506,7 +4530,8 @@ class ::fidl::WireSyncClient<
   // Request is heap-allocated.
   ::fidl::WireResult<::fidl_test_protocols::WithAndWithoutRequestResponse::
                          WithRequestNoResponse>
-  WithRequestNoResponse(::fidl::StringView arg) {
+  WithRequestNoResponse(::fidl::StringView arg) const {
+    ZX_ASSERT(client_end_.is_valid());
     return ::fidl::WireResult<
         ::fidl_test_protocols::WithAndWithoutRequestResponse::
             WithRequestNoResponse>(this->client_end(), arg);
@@ -4518,7 +4543,8 @@ class ::fidl::WireSyncClient<
       ::fidl_test_protocols::WithAndWithoutRequestResponse::
           WithRequestNoResponse>
   WithRequestNoResponse(::fidl::BufferSpan _request_buffer,
-                        ::fidl::StringView arg) {
+                        ::fidl::StringView arg) const {
+    ZX_ASSERT(client_end_.is_valid());
     return ::fidl::WireUnownedResult<
         ::fidl_test_protocols::WithAndWithoutRequestResponse::
             WithRequestNoResponse>(this->client_end(), _request_buffer.data,
@@ -4529,7 +4555,8 @@ class ::fidl::WireSyncClient<
   // heap-allocated.
   ::fidl::WireResult<::fidl_test_protocols::WithAndWithoutRequestResponse::
                          WithRequestEmptyResponse>
-  WithRequestEmptyResponse(::fidl::StringView arg) {
+  WithRequestEmptyResponse(::fidl::StringView arg) const {
+    ZX_ASSERT(client_end_.is_valid());
     return ::fidl::WireResult<
         ::fidl_test_protocols::WithAndWithoutRequestResponse::
             WithRequestEmptyResponse>(this->client_end(), arg);
@@ -4542,7 +4569,8 @@ class ::fidl::WireSyncClient<
           WithRequestEmptyResponse>
   WithRequestEmptyResponse(::fidl::BufferSpan _request_buffer,
                            ::fidl::StringView arg,
-                           ::fidl::BufferSpan _response_buffer) {
+                           ::fidl::BufferSpan _response_buffer) const {
+    ZX_ASSERT(client_end_.is_valid());
     return ::fidl::WireUnownedResult<
         ::fidl_test_protocols::WithAndWithoutRequestResponse::
             WithRequestEmptyResponse>(
@@ -4553,7 +4581,8 @@ class ::fidl::WireSyncClient<
   // Request is heap-allocated. Response is heap-allocated.
   ::fidl::WireResult<::fidl_test_protocols::WithAndWithoutRequestResponse::
                          WithRequestWithResponse>
-  WithRequestWithResponse(::fidl::StringView arg) {
+  WithRequestWithResponse(::fidl::StringView arg) const {
+    ZX_ASSERT(client_end_.is_valid());
     return ::fidl::WireResult<
         ::fidl_test_protocols::WithAndWithoutRequestResponse::
             WithRequestWithResponse>(this->client_end(), arg);
@@ -4566,7 +4595,8 @@ class ::fidl::WireSyncClient<
           WithRequestWithResponse>
   WithRequestWithResponse(::fidl::BufferSpan _request_buffer,
                           ::fidl::StringView arg,
-                          ::fidl::BufferSpan _response_buffer) {
+                          ::fidl::BufferSpan _response_buffer) const {
+    ZX_ASSERT(client_end_.is_valid());
     return ::fidl::WireUnownedResult<
         ::fidl_test_protocols::WithAndWithoutRequestResponse::
             WithRequestWithResponse>(
@@ -4580,8 +4610,8 @@ class ::fidl::WireSyncClient<
   // and returned.
   ::fidl::Result HandleOneEvent(
       ::fidl::WireSyncEventHandler<
-          ::fidl_test_protocols::WithAndWithoutRequestResponse>&
-          event_handler) {
+          ::fidl_test_protocols::WithAndWithoutRequestResponse>& event_handler)
+      const {
     return event_handler.HandleOneEvent(client_end_);
   }
 
@@ -5786,6 +5816,10 @@ class ::fidl::WireSyncEventHandler<::fidl_test_protocols::Transitional>
 template <>
 class ::fidl::WireSyncClient<::fidl_test_protocols::Transitional> final {
  public:
+  // Creates an invalid client that is not bound to a client endpoint. Use
+  // this default constructor only when the client must be constructed first
+  // before a channel could be obtained (for example, if the client is an
+  // instance variable).
   WireSyncClient() = default;
 
   explicit WireSyncClient(
@@ -5807,10 +5841,15 @@ class ::fidl::WireSyncClient<::fidl_test_protocols::Transitional> final {
   const ::zx::channel& channel() const { return client_end_.channel(); }
   ::zx::channel* mutable_channel() { return &client_end_.channel(); }
 
+  // Whether the underlying channel is valid.
+  bool is_valid() const { return client_end_.is_valid(); }
+  explicit operator bool() const { return is_valid(); }
+
   // Allocates 48 bytes of message buffer on the stack. No heap allocation
   // necessary.
   ::fidl::WireResult<::fidl_test_protocols::Transitional::Request> Request(
-      int64_t x) {
+      int64_t x) const {
+    ZX_ASSERT(client_end_.is_valid());
     return ::fidl::WireResult<::fidl_test_protocols::Transitional::Request>(
         this->client_end(), x);
   }
@@ -5819,7 +5858,8 @@ class ::fidl::WireSyncClient<::fidl_test_protocols::Transitional> final {
   // response buffers.
   ::fidl::WireUnownedResult<::fidl_test_protocols::Transitional::Request>
   Request(::fidl::BufferSpan _request_buffer, int64_t x,
-          ::fidl::BufferSpan _response_buffer) {
+          ::fidl::BufferSpan _response_buffer) const {
+    ZX_ASSERT(client_end_.is_valid());
     return ::fidl::WireUnownedResult<
         ::fidl_test_protocols::Transitional::Request>(
         this->client_end(), _request_buffer.data, _request_buffer.capacity, x,
@@ -5829,7 +5869,8 @@ class ::fidl::WireSyncClient<::fidl_test_protocols::Transitional> final {
   // Allocates 24 bytes of message buffer on the stack. No heap allocation
   // necessary.
   ::fidl::WireResult<::fidl_test_protocols::Transitional::OneWay> OneWay(
-      int64_t x) {
+      int64_t x) const {
+    ZX_ASSERT(client_end_.is_valid());
     return ::fidl::WireResult<::fidl_test_protocols::Transitional::OneWay>(
         this->client_end(), x);
   }
@@ -5837,7 +5878,8 @@ class ::fidl::WireSyncClient<::fidl_test_protocols::Transitional> final {
   // Caller provides the backing storage for FIDL message via request and
   // response buffers.
   ::fidl::WireUnownedResult<::fidl_test_protocols::Transitional::OneWay> OneWay(
-      ::fidl::BufferSpan _request_buffer, int64_t x) {
+      ::fidl::BufferSpan _request_buffer, int64_t x) const {
+    ZX_ASSERT(client_end_.is_valid());
     return ::fidl::WireUnownedResult<
         ::fidl_test_protocols::Transitional::OneWay>(
         this->client_end(), _request_buffer.data, _request_buffer.capacity, x);
@@ -5849,7 +5891,7 @@ class ::fidl::WireSyncClient<::fidl_test_protocols::Transitional> final {
   // and returned.
   ::fidl::Result HandleOneEvent(
       ::fidl::WireSyncEventHandler<::fidl_test_protocols::Transitional>&
-          event_handler) {
+          event_handler) const {
     return event_handler.HandleOneEvent(client_end_);
   }
 
@@ -6240,6 +6282,10 @@ class ::fidl::WireSyncEventHandler<::fidl_test_protocols::MethodWithUnion>
 template <>
 class ::fidl::WireSyncClient<::fidl_test_protocols::MethodWithUnion> final {
  public:
+  // Creates an invalid client that is not bound to a client endpoint. Use
+  // this default constructor only when the client must be constructed first
+  // before a channel could be obtained (for example, if the client is an
+  // instance variable).
   WireSyncClient() = default;
 
   explicit WireSyncClient(
@@ -6261,10 +6307,15 @@ class ::fidl::WireSyncClient<::fidl_test_protocols::MethodWithUnion> final {
   const ::zx::channel& channel() const { return client_end_.channel(); }
   ::zx::channel* mutable_channel() { return &client_end_.channel(); }
 
+  // Whether the underlying channel is valid.
+  bool is_valid() const { return client_end_.is_valid(); }
+  explicit operator bool() const { return is_valid(); }
+
   // Allocates 32 bytes of message buffer on the stack. No heap allocation
   // necessary.
   ::fidl::WireResult<::fidl_test_protocols::MethodWithUnion::UnionMethod>
-  UnionMethod(::fidl_test_protocols::wire::TheUnion u) {
+  UnionMethod(::fidl_test_protocols::wire::TheUnion u) const {
+    ZX_ASSERT(client_end_.is_valid());
     return ::fidl::WireResult<
         ::fidl_test_protocols::MethodWithUnion::UnionMethod>(this->client_end(),
                                                              u);
@@ -6274,7 +6325,8 @@ class ::fidl::WireSyncClient<::fidl_test_protocols::MethodWithUnion> final {
   // response buffers.
   ::fidl::WireUnownedResult<::fidl_test_protocols::MethodWithUnion::UnionMethod>
   UnionMethod(::fidl::BufferSpan _request_buffer,
-              ::fidl_test_protocols::wire::TheUnion u) {
+              ::fidl_test_protocols::wire::TheUnion u) const {
+    ZX_ASSERT(client_end_.is_valid());
     return ::fidl::WireUnownedResult<
         ::fidl_test_protocols::MethodWithUnion::UnionMethod>(
         this->client_end(), _request_buffer.data, _request_buffer.capacity, u);
@@ -8134,6 +8186,10 @@ class ::fidl::WireSyncEventHandler<::fidl_test_protocols::WithProtocolEnds>
 template <>
 class ::fidl::WireSyncClient<::fidl_test_protocols::WithProtocolEnds> final {
  public:
+  // Creates an invalid client that is not bound to a client endpoint. Use
+  // this default constructor only when the client must be constructed first
+  // before a channel could be obtained (for example, if the client is an
+  // instance variable).
   WireSyncClient() = default;
 
   explicit WireSyncClient(
@@ -8155,11 +8211,16 @@ class ::fidl::WireSyncClient<::fidl_test_protocols::WithProtocolEnds> final {
   const ::zx::channel& channel() const { return client_end_.channel(); }
   ::zx::channel* mutable_channel() { return &client_end_.channel(); }
 
+  // Whether the underlying channel is valid.
+  bool is_valid() const { return client_end_.is_valid(); }
+  explicit operator bool() const { return is_valid(); }
+
   // Allocates 48 bytes of message buffer on the stack. No heap allocation
   // necessary.
   ::fidl::WireResult<::fidl_test_protocols::WithProtocolEnds::ClientEnds>
-  ClientEnds(
-      ::fidl::ClientEnd<::fidl_test_protocols::DiscoverableProtocol>&& in) {
+  ClientEnds(::fidl::ClientEnd<::fidl_test_protocols::DiscoverableProtocol>&&
+                 in) const {
+    ZX_ASSERT(client_end_.is_valid());
     return ::fidl::WireResult<
         ::fidl_test_protocols::WithProtocolEnds::ClientEnds>(this->client_end(),
                                                              std::move(in));
@@ -8171,7 +8232,8 @@ class ::fidl::WireSyncClient<::fidl_test_protocols::WithProtocolEnds> final {
   ClientEnds(
       ::fidl::BufferSpan _request_buffer,
       ::fidl::ClientEnd<::fidl_test_protocols::DiscoverableProtocol>&& in,
-      ::fidl::BufferSpan _response_buffer) {
+      ::fidl::BufferSpan _response_buffer) const {
+    ZX_ASSERT(client_end_.is_valid());
     return ::fidl::WireUnownedResult<
         ::fidl_test_protocols::WithProtocolEnds::ClientEnds>(
         this->client_end(), _request_buffer.data, _request_buffer.capacity,
@@ -8181,8 +8243,9 @@ class ::fidl::WireSyncClient<::fidl_test_protocols::WithProtocolEnds> final {
   // Allocates 48 bytes of message buffer on the stack. No heap allocation
   // necessary.
   ::fidl::WireResult<::fidl_test_protocols::WithProtocolEnds::ServerEnds>
-  ServerEnds(
-      ::fidl::ServerEnd<::fidl_test_protocols::DiscoverableProtocol>&& in) {
+  ServerEnds(::fidl::ServerEnd<::fidl_test_protocols::DiscoverableProtocol>&&
+                 in) const {
+    ZX_ASSERT(client_end_.is_valid());
     return ::fidl::WireResult<
         ::fidl_test_protocols::WithProtocolEnds::ServerEnds>(this->client_end(),
                                                              std::move(in));
@@ -8194,7 +8257,8 @@ class ::fidl::WireSyncClient<::fidl_test_protocols::WithProtocolEnds> final {
   ServerEnds(
       ::fidl::BufferSpan _request_buffer,
       ::fidl::ServerEnd<::fidl_test_protocols::DiscoverableProtocol>&& in,
-      ::fidl::BufferSpan _response_buffer) {
+      ::fidl::BufferSpan _response_buffer) const {
+    ZX_ASSERT(client_end_.is_valid());
     return ::fidl::WireUnownedResult<
         ::fidl_test_protocols::WithProtocolEnds::ServerEnds>(
         this->client_end(), _request_buffer.data, _request_buffer.capacity,
@@ -8205,7 +8269,8 @@ class ::fidl::WireSyncClient<::fidl_test_protocols::WithProtocolEnds> final {
   // necessary.
   ::fidl::WireResult<
       ::fidl_test_protocols::WithProtocolEnds::StructContainingEnds>
-  StructContainingEnds(::fidl_test_protocols::wire::ProtocolEnds&& in) {
+  StructContainingEnds(::fidl_test_protocols::wire::ProtocolEnds&& in) const {
+    ZX_ASSERT(client_end_.is_valid());
     return ::fidl::WireResult<
         ::fidl_test_protocols::WithProtocolEnds::StructContainingEnds>(
         this->client_end(), std::move(in));
@@ -8217,7 +8282,8 @@ class ::fidl::WireSyncClient<::fidl_test_protocols::WithProtocolEnds> final {
       ::fidl_test_protocols::WithProtocolEnds::StructContainingEnds>
   StructContainingEnds(::fidl::BufferSpan _request_buffer,
                        ::fidl_test_protocols::wire::ProtocolEnds&& in,
-                       ::fidl::BufferSpan _response_buffer) {
+                       ::fidl::BufferSpan _response_buffer) const {
+    ZX_ASSERT(client_end_.is_valid());
     return ::fidl::WireUnownedResult<
         ::fidl_test_protocols::WithProtocolEnds::StructContainingEnds>(
         this->client_end(), _request_buffer.data, _request_buffer.capacity,
@@ -8730,6 +8796,10 @@ class ::fidl::WireSyncEventHandler<::fidl_test_protocols::ManyParameters>
 template <>
 class ::fidl::WireSyncClient<::fidl_test_protocols::ManyParameters> final {
  public:
+  // Creates an invalid client that is not bound to a client endpoint. Use
+  // this default constructor only when the client must be constructed first
+  // before a channel could be obtained (for example, if the client is an
+  // instance variable).
   WireSyncClient() = default;
 
   explicit WireSyncClient(
@@ -8751,11 +8821,17 @@ class ::fidl::WireSyncClient<::fidl_test_protocols::ManyParameters> final {
   const ::zx::channel& channel() const { return client_end_.channel(); }
   ::zx::channel* mutable_channel() { return &client_end_.channel(); }
 
+  // Whether the underlying channel is valid.
+  bool is_valid() const { return client_end_.is_valid(); }
+  explicit operator bool() const { return is_valid(); }
+
   // Allocates 32 bytes of message buffer on the stack. No heap allocation
   // necessary.
   ::fidl::WireResult<::fidl_test_protocols::ManyParameters::Fifteen> Fifteen(
       bool p1, bool p2, bool p3, bool p4, bool p5, bool p6, bool p7, bool p8,
-      bool p9, bool p10, bool p11, bool p12, bool p13, bool p14, bool p15) {
+      bool p9, bool p10, bool p11, bool p12, bool p13, bool p14,
+      bool p15) const {
+    ZX_ASSERT(client_end_.is_valid());
     return ::fidl::WireResult<::fidl_test_protocols::ManyParameters::Fifteen>(
         this->client_end(), p1, p2, p3, p4, p5, p6, p7, p8, p9, p10, p11, p12,
         p13, p14, p15);
@@ -8766,7 +8842,8 @@ class ::fidl::WireSyncClient<::fidl_test_protocols::ManyParameters> final {
   ::fidl::WireUnownedResult<::fidl_test_protocols::ManyParameters::Fifteen>
   Fifteen(::fidl::BufferSpan _request_buffer, bool p1, bool p2, bool p3,
           bool p4, bool p5, bool p6, bool p7, bool p8, bool p9, bool p10,
-          bool p11, bool p12, bool p13, bool p14, bool p15) {
+          bool p11, bool p12, bool p13, bool p14, bool p15) const {
+    ZX_ASSERT(client_end_.is_valid());
     return ::fidl::WireUnownedResult<
         ::fidl_test_protocols::ManyParameters::Fifteen>(
         this->client_end(), _request_buffer.data, _request_buffer.capacity, p1,
@@ -11008,6 +11085,10 @@ class ::fidl::WireSyncEventHandler<::fidl_test_protocols::WithErrorSyntax>
 template <>
 class ::fidl::WireSyncClient<::fidl_test_protocols::WithErrorSyntax> final {
  public:
+  // Creates an invalid client that is not bound to a client endpoint. Use
+  // this default constructor only when the client must be constructed first
+  // before a channel could be obtained (for example, if the client is an
+  // instance variable).
   WireSyncClient() = default;
 
   explicit WireSyncClient(
@@ -11029,10 +11110,15 @@ class ::fidl::WireSyncClient<::fidl_test_protocols::WithErrorSyntax> final {
   const ::zx::channel& channel() const { return client_end_.channel(); }
   ::zx::channel* mutable_channel() { return &client_end_.channel(); }
 
+  // Whether the underlying channel is valid.
+  bool is_valid() const { return client_end_.is_valid(); }
+  explicit operator bool() const { return is_valid(); }
+
   // Allocates 72 bytes of message buffer on the stack. No heap allocation
   // necessary.
   ::fidl::WireResult<::fidl_test_protocols::WithErrorSyntax::ResponseAsStruct>
-  ResponseAsStruct() {
+  ResponseAsStruct() const {
+    ZX_ASSERT(client_end_.is_valid());
     return ::fidl::WireResult<
         ::fidl_test_protocols::WithErrorSyntax::ResponseAsStruct>(
         this->client_end());
@@ -11042,7 +11128,8 @@ class ::fidl::WireSyncClient<::fidl_test_protocols::WithErrorSyntax> final {
   // response buffers.
   ::fidl::WireUnownedResult<
       ::fidl_test_protocols::WithErrorSyntax::ResponseAsStruct>
-  ResponseAsStruct(::fidl::BufferSpan _response_buffer) {
+  ResponseAsStruct(::fidl::BufferSpan _response_buffer) const {
+    ZX_ASSERT(client_end_.is_valid());
     return ::fidl::WireUnownedResult<
         ::fidl_test_protocols::WithErrorSyntax::ResponseAsStruct>(
         this->client_end(), _response_buffer.data, _response_buffer.capacity);
@@ -11051,7 +11138,8 @@ class ::fidl::WireSyncClient<::fidl_test_protocols::WithErrorSyntax> final {
   // Allocates 48 bytes of message buffer on the stack. No heap allocation
   // necessary.
   ::fidl::WireResult<::fidl_test_protocols::WithErrorSyntax::ErrorAsPrimitive>
-  ErrorAsPrimitive() {
+  ErrorAsPrimitive() const {
+    ZX_ASSERT(client_end_.is_valid());
     return ::fidl::WireResult<
         ::fidl_test_protocols::WithErrorSyntax::ErrorAsPrimitive>(
         this->client_end());
@@ -11061,7 +11149,8 @@ class ::fidl::WireSyncClient<::fidl_test_protocols::WithErrorSyntax> final {
   // response buffers.
   ::fidl::WireUnownedResult<
       ::fidl_test_protocols::WithErrorSyntax::ErrorAsPrimitive>
-  ErrorAsPrimitive(::fidl::BufferSpan _response_buffer) {
+  ErrorAsPrimitive(::fidl::BufferSpan _response_buffer) const {
+    ZX_ASSERT(client_end_.is_valid());
     return ::fidl::WireUnownedResult<
         ::fidl_test_protocols::WithErrorSyntax::ErrorAsPrimitive>(
         this->client_end(), _response_buffer.data, _response_buffer.capacity);
@@ -11070,7 +11159,8 @@ class ::fidl::WireSyncClient<::fidl_test_protocols::WithErrorSyntax> final {
   // Allocates 48 bytes of message buffer on the stack. No heap allocation
   // necessary.
   ::fidl::WireResult<::fidl_test_protocols::WithErrorSyntax::ErrorAsEnum>
-  ErrorAsEnum() {
+  ErrorAsEnum() const {
+    ZX_ASSERT(client_end_.is_valid());
     return ::fidl::WireResult<
         ::fidl_test_protocols::WithErrorSyntax::ErrorAsEnum>(
         this->client_end());
@@ -11079,7 +11169,8 @@ class ::fidl::WireSyncClient<::fidl_test_protocols::WithErrorSyntax> final {
   // Caller provides the backing storage for FIDL message via request and
   // response buffers.
   ::fidl::WireUnownedResult<::fidl_test_protocols::WithErrorSyntax::ErrorAsEnum>
-  ErrorAsEnum(::fidl::BufferSpan _response_buffer) {
+  ErrorAsEnum(::fidl::BufferSpan _response_buffer) const {
+    ZX_ASSERT(client_end_.is_valid());
     return ::fidl::WireUnownedResult<
         ::fidl_test_protocols::WithErrorSyntax::ErrorAsEnum>(
         this->client_end(), _response_buffer.data, _response_buffer.capacity);
@@ -11088,7 +11179,8 @@ class ::fidl::WireSyncClient<::fidl_test_protocols::WithErrorSyntax> final {
   // Allocates 48 bytes of message buffer on the stack. No heap allocation
   // necessary.
   ::fidl::WireResult<::fidl_test_protocols::WithErrorSyntax::HandleInResult>
-  HandleInResult() {
+  HandleInResult() const {
+    ZX_ASSERT(client_end_.is_valid());
     return ::fidl::WireResult<
         ::fidl_test_protocols::WithErrorSyntax::HandleInResult>(
         this->client_end());
@@ -11098,7 +11190,8 @@ class ::fidl::WireSyncClient<::fidl_test_protocols::WithErrorSyntax> final {
   // response buffers.
   ::fidl::WireUnownedResult<
       ::fidl_test_protocols::WithErrorSyntax::HandleInResult>
-  HandleInResult(::fidl::BufferSpan _response_buffer) {
+  HandleInResult(::fidl::BufferSpan _response_buffer) const {
+    ZX_ASSERT(client_end_.is_valid());
     return ::fidl::WireUnownedResult<
         ::fidl_test_protocols::WithErrorSyntax::HandleInResult>(
         this->client_end(), _response_buffer.data, _response_buffer.capacity);
@@ -11606,6 +11699,10 @@ template <>
 class ::fidl::WireSyncClient<::fidl_test_protocols::DiscoverableProtocol>
     final {
  public:
+  // Creates an invalid client that is not bound to a client endpoint. Use
+  // this default constructor only when the client must be constructed first
+  // before a channel could be obtained (for example, if the client is an
+  // instance variable).
   WireSyncClient() = default;
 
   explicit WireSyncClient(
@@ -11627,10 +11724,15 @@ class ::fidl::WireSyncClient<::fidl_test_protocols::DiscoverableProtocol>
   const ::zx::channel& channel() const { return client_end_.channel(); }
   ::zx::channel* mutable_channel() { return &client_end_.channel(); }
 
+  // Whether the underlying channel is valid.
+  bool is_valid() const { return client_end_.is_valid(); }
+  explicit operator bool() const { return is_valid(); }
+
   // Allocates 16 bytes of message buffer on the stack. No heap allocation
   // necessary.
   ::fidl::WireResult<::fidl_test_protocols::DiscoverableProtocol::Method>
-  Method() {
+  Method() const {
+    ZX_ASSERT(client_end_.is_valid());
     return ::fidl::WireResult<
         ::fidl_test_protocols::DiscoverableProtocol::Method>(
         this->client_end());
@@ -13741,6 +13843,10 @@ class ::fidl::WireSyncEventHandler<::fidl_test_protocols::ChannelProtocol>
 template <>
 class ::fidl::WireSyncClient<::fidl_test_protocols::ChannelProtocol> final {
  public:
+  // Creates an invalid client that is not bound to a client endpoint. Use
+  // this default constructor only when the client must be constructed first
+  // before a channel could be obtained (for example, if the client is an
+  // instance variable).
   WireSyncClient() = default;
 
   explicit WireSyncClient(
@@ -13762,10 +13868,15 @@ class ::fidl::WireSyncClient<::fidl_test_protocols::ChannelProtocol> final {
   const ::zx::channel& channel() const { return client_end_.channel(); }
   ::zx::channel* mutable_channel() { return &client_end_.channel(); }
 
+  // Whether the underlying channel is valid.
+  bool is_valid() const { return client_end_.is_valid(); }
+  explicit operator bool() const { return is_valid(); }
+
   // Allocates 32 bytes of message buffer on the stack. No heap allocation
   // necessary.
   ::fidl::WireResult<::fidl_test_protocols::ChannelProtocol::MethodA> MethodA(
-      int64_t a, int64_t b) {
+      int64_t a, int64_t b) const {
+    ZX_ASSERT(client_end_.is_valid());
     return ::fidl::WireResult<::fidl_test_protocols::ChannelProtocol::MethodA>(
         this->client_end(), a, b);
   }
@@ -13773,7 +13884,8 @@ class ::fidl::WireSyncClient<::fidl_test_protocols::ChannelProtocol> final {
   // Caller provides the backing storage for FIDL message via request and
   // response buffers.
   ::fidl::WireUnownedResult<::fidl_test_protocols::ChannelProtocol::MethodA>
-  MethodA(::fidl::BufferSpan _request_buffer, int64_t a, int64_t b) {
+  MethodA(::fidl::BufferSpan _request_buffer, int64_t a, int64_t b) const {
+    ZX_ASSERT(client_end_.is_valid());
     return ::fidl::WireUnownedResult<
         ::fidl_test_protocols::ChannelProtocol::MethodA>(
         this->client_end(), _request_buffer.data, _request_buffer.capacity, a,
@@ -13783,7 +13895,8 @@ class ::fidl::WireSyncClient<::fidl_test_protocols::ChannelProtocol> final {
   // Allocates 56 bytes of message buffer on the stack. No heap allocation
   // necessary.
   ::fidl::WireResult<::fidl_test_protocols::ChannelProtocol::MethodB> MethodB(
-      int64_t a, int64_t b) {
+      int64_t a, int64_t b) const {
+    ZX_ASSERT(client_end_.is_valid());
     return ::fidl::WireResult<::fidl_test_protocols::ChannelProtocol::MethodB>(
         this->client_end(), a, b);
   }
@@ -13792,7 +13905,8 @@ class ::fidl::WireSyncClient<::fidl_test_protocols::ChannelProtocol> final {
   // response buffers.
   ::fidl::WireUnownedResult<::fidl_test_protocols::ChannelProtocol::MethodB>
   MethodB(::fidl::BufferSpan _request_buffer, int64_t a, int64_t b,
-          ::fidl::BufferSpan _response_buffer) {
+          ::fidl::BufferSpan _response_buffer) const {
+    ZX_ASSERT(client_end_.is_valid());
     return ::fidl::WireUnownedResult<
         ::fidl_test_protocols::ChannelProtocol::MethodB>(
         this->client_end(), _request_buffer.data, _request_buffer.capacity, a,
@@ -13802,7 +13916,8 @@ class ::fidl::WireSyncClient<::fidl_test_protocols::ChannelProtocol> final {
   // Allocates 40 bytes of message buffer on the stack. No heap allocation
   // necessary.
   ::fidl::WireResult<::fidl_test_protocols::ChannelProtocol::TakeHandle>
-  TakeHandle(::zx::handle&& h) {
+  TakeHandle(::zx::handle&& h) const {
+    ZX_ASSERT(client_end_.is_valid());
     return ::fidl::WireResult<
         ::fidl_test_protocols::ChannelProtocol::TakeHandle>(this->client_end(),
                                                             std::move(h));
@@ -13812,7 +13927,8 @@ class ::fidl::WireSyncClient<::fidl_test_protocols::ChannelProtocol> final {
   // response buffers.
   ::fidl::WireUnownedResult<::fidl_test_protocols::ChannelProtocol::TakeHandle>
   TakeHandle(::fidl::BufferSpan _request_buffer, ::zx::handle&& h,
-             ::fidl::BufferSpan _response_buffer) {
+             ::fidl::BufferSpan _response_buffer) const {
+    ZX_ASSERT(client_end_.is_valid());
     return ::fidl::WireUnownedResult<
         ::fidl_test_protocols::ChannelProtocol::TakeHandle>(
         this->client_end(), _request_buffer.data, _request_buffer.capacity,
@@ -13822,7 +13938,8 @@ class ::fidl::WireSyncClient<::fidl_test_protocols::ChannelProtocol> final {
   // Allocates 48 bytes of message buffer on the stack. No heap allocation
   // necessary.
   ::fidl::WireResult<::fidl_test_protocols::ChannelProtocol::MutateSocket>
-  MutateSocket(::zx::socket&& a) {
+  MutateSocket(::zx::socket&& a) const {
+    ZX_ASSERT(client_end_.is_valid());
     return ::fidl::WireResult<
         ::fidl_test_protocols::ChannelProtocol::MutateSocket>(
         this->client_end(), std::move(a));
@@ -13833,7 +13950,8 @@ class ::fidl::WireSyncClient<::fidl_test_protocols::ChannelProtocol> final {
   ::fidl::WireUnownedResult<
       ::fidl_test_protocols::ChannelProtocol::MutateSocket>
   MutateSocket(::fidl::BufferSpan _request_buffer, ::zx::socket&& a,
-               ::fidl::BufferSpan _response_buffer) {
+               ::fidl::BufferSpan _response_buffer) const {
+    ZX_ASSERT(client_end_.is_valid());
     return ::fidl::WireUnownedResult<
         ::fidl_test_protocols::ChannelProtocol::MutateSocket>(
         this->client_end(), _request_buffer.data, _request_buffer.capacity,
@@ -13846,7 +13964,7 @@ class ::fidl::WireSyncClient<::fidl_test_protocols::ChannelProtocol> final {
   // and returned.
   ::fidl::Result HandleOneEvent(
       ::fidl::WireSyncEventHandler<::fidl_test_protocols::ChannelProtocol>&
-          event_handler) {
+          event_handler) const {
     return event_handler.HandleOneEvent(client_end_);
   }
 
