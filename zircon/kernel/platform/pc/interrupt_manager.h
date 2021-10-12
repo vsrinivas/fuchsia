@@ -22,6 +22,7 @@
 #include <dev/interrupt.h>
 #include <kernel/lockdep.h>
 #include <kernel/spinlock.h>
+#include <ktl/bit.h>
 
 #define MAX_IRQ_BLOCK_SIZE MAX_MSI_IRQS
 
@@ -322,7 +323,7 @@ class InterruptManager {
 
   // Allocates a range of handlers that are also aligned by the count, which must be a power of 2.
   zx_status_t AllocHandler(uint count, uint* start) TA_REQ(lock_) {
-    DEBUG_ASSERT(fbl::is_pow2(count));
+    DEBUG_ASSERT(ktl::has_single_bit(count));
     // This is the anchor of our search. We always start at the beginning.
     size_t bitoff = X86_INT_PLATFORM_BASE;
 

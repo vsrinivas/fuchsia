@@ -3,13 +3,12 @@
 
 #include "src/media/audio/lib/analysis/analysis.h"
 
+#include <lib/stdcompat/bit.h>
 #include <lib/syslog/cpp/macros.h>
 
 #include <iomanip>
 #include <unordered_set>
 #include <vector>
-
-#include <fbl/algorithm.h>
 
 #include "src/media/audio/lib/format/traits.h"
 
@@ -70,7 +69,7 @@ double SampleToDouble<uint8_t>(uint8_t value) {
 //
 // TODO(mpuryear): Consider std::complex<double> instead of real/imag arrays.
 void FFT(double* reals, double* imags, uint32_t buf_size) {
-  FX_DCHECK(fbl::is_pow2(buf_size));
+  FX_DCHECK(cpp20::has_single_bit(buf_size));
   const uint32_t buf_sz_2 = buf_size >> 1;
 
   uint32_t N = 0;
@@ -223,7 +222,7 @@ void InverseDFT(double* real_freq, double* imag_freq, uint32_t buf_size, double*
 // Converts frequency-domain arrays reals & imags (len buf_size) in-place into time-domain arrays
 // (also len buf_size)
 void InverseFFT(double* reals, double* imags, uint32_t buf_size) {
-  FX_DCHECK(fbl::is_pow2(buf_size));
+  FX_DCHECK(cpp20::has_single_bit(buf_size));
 
   for (uint32_t idx = 0; idx < buf_size; ++idx) {
     imags[idx] = -imags[idx];
@@ -246,7 +245,7 @@ void InverseFFT(double* reals, double* imags, uint32_t buf_size) {
 template <fuchsia::media::AudioSampleFormat SampleFormat>
 AudioFreqResult MeasureAudioFreqs(AudioBufferSlice<SampleFormat> slice,
                                   std::unordered_set<int32_t> freqs) {
-  FX_CHECK(fbl::is_pow2(static_cast<uint64_t>(slice.NumFrames())));
+  FX_CHECK(cpp20::has_single_bit(static_cast<uint64_t>(slice.NumFrames())));
   FX_CHECK(slice.format().channels() == 1);
 
   const int64_t buf_size = slice.NumFrames();

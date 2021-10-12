@@ -19,6 +19,7 @@ source_set("digest") {
 
   deps = [ "//third_party/boringssl" ]
   public_deps = [
+    "//sdk/lib/stdcompat",
     "//zircon/system/public",
     "//zircon/system/ulib/fbl",
   ]

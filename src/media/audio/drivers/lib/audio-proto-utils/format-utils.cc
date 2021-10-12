@@ -2,13 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <lib/stdcompat/bit.h>
 #include <string.h>
 
 #include <algorithm>
 #include <iterator>
 
 #include <audio-proto-utils/format-utils.h>
-#include <fbl/algorithm.h>
 
 namespace {
 namespace audio_fidl = fuchsia_hardware_audio;
@@ -152,11 +152,12 @@ bool FormatIsCompatible(uint32_t frame_rate, uint16_t channels, audio_sample_for
 
   // Requirement #2.  If this format is unique and PCM, then there is exactly
   // 1 bit set in it and that bit is not AUDIO_SAMPLE_FORMAT_BITSTREAM.  We
-  // can use fbl::is_pow2 to check if there is exactly 1 bit set.  (note,
-  // fbl::is_pow2 does not consider 0 to be a power of 2, so it's perfect for
+  // can use cpp20::has_single_bit to check if there is exactly 1 bit set.  (note,
+  // cpp20::has_single_bit does not consider 0 to be a power of 2, so it's perfect for
   // this)
   uint32_t requested_noflags = sample_format & ~AUDIO_SAMPLE_FORMAT_FLAG_MASK;
-  if ((requested_noflags == AUDIO_SAMPLE_FORMAT_BITSTREAM) || (!fbl::is_pow2(requested_noflags)))
+  if ((requested_noflags == AUDIO_SAMPLE_FORMAT_BITSTREAM) ||
+      (!cpp20::has_single_bit(requested_noflags)))
     return false;
 
   // Requirement #3.  Testing intersection is easy, just and the two.  No need

@@ -2,11 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <lib/stdcompat/bit.h>
 #include <string.h>
 
 #include <algorithm>
 
-#include <fbl/algorithm.h>
 #include <fbl/alloc_checker.h>
 #include <region-alloc/region-alloc.h>
 
@@ -285,7 +285,7 @@ zx_status_t RegionAllocator::GetRegion(uint64_t size, uint64_t alignment,
 
   // Sanity check the arguments.
   out_region = nullptr;
-  if (!size || !alignment || !fbl::is_pow2(alignment)) {
+  if (!size || !alignment || !cpp20::has_single_bit(alignment)) {
     return ZX_ERR_INVALID_ARGS;
   }
 

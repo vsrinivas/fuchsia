@@ -5,6 +5,7 @@
 #ifndef FBL_ALGORITHM_H_
 #define FBL_ALGORITHM_H_
 
+#include <lib/stdcompat/bit.h>
 #include <stdlib.h>
 
 #include <algorithm>
@@ -12,16 +13,6 @@
 #include <type_traits>
 
 namespace fbl {
-
-// is_pow2<T>(T val)
-//
-// Tests to see if val (which may be any unsigned integer type) is a power of 2
-// or not.  0 is not considered to be a power of 2.
-//
-template <typename T, typename = std::enable_if_t<std::is_unsigned_v<T>>>
-constexpr bool is_pow2(T val) {
-  return (val != 0) && (((val - 1U) & val) == 0);
-}
 
 // round_up rounds up val until it is divisible by multiple.
 // Zero is divisible by all multiples.
@@ -31,9 +22,9 @@ template <class T, class U, class L = std::conditional_t<sizeof(T) >= sizeof(U),
 constexpr const L round_up(const T& val_, const U& multiple_) {
   const L val = static_cast<L>(val_);
   const L multiple = static_cast<L>(multiple_);
-  return val == 0               ? 0
-         : is_pow2<L>(multiple) ? (val + (multiple - 1)) & ~(multiple - 1)
-                                : ((val + (multiple - 1)) / multiple) * multiple;
+  return val == 0                             ? 0
+         : cpp20::has_single_bit<L>(multiple) ? (val + (multiple - 1)) & ~(multiple - 1)
+                                              : ((val + (multiple - 1)) / multiple) * multiple;
 }
 
 // round_down rounds down val until it is divisible by multiple.
@@ -44,7 +35,9 @@ template <class T, class U, class L = std::conditional_t<sizeof(T) >= sizeof(U),
 constexpr const L round_down(const T& val_, const U& multiple_) {
   const L val = static_cast<L>(val_);
   const L multiple = static_cast<L>(multiple_);
-  return val == 0 ? 0 : is_pow2<L>(multiple) ? val & ~(multiple - 1) : (val / multiple) * multiple;
+  return val == 0                             ? 0
+         : cpp20::has_single_bit<L>(multiple) ? val & ~(multiple - 1)
+                                              : (val / multiple) * multiple;
 }
 
 // Rounds up to the nearest power of 2.

@@ -4,6 +4,8 @@
 
 #include "src/devices/pci/testing/protocol/internal.h"
 
+#include <lib/stdcompat/bit.h>
+
 namespace pci {
 
 __EXPORT FakePciProtocolInternal::FakePciProtocolInternal() {
@@ -156,7 +158,7 @@ zx_status_t FakePciProtocolInternal::PciSetIrqMode(pci_irq_mode_t mode,
       if (msi_interrupts_.empty()) {
         break;
       }
-      if (!fbl::is_pow2(requested_irq_count) || requested_irq_count > MSI_MAX_VECTORS) {
+      if (!cpp20::has_single_bit(requested_irq_count) || requested_irq_count > MSI_MAX_VECTORS) {
         return ZX_ERR_INVALID_ARGS;
       }
       if (msi_interrupts_.size() < requested_irq_count) {

@@ -9,8 +9,9 @@ zx_library("region-alloc") {
   sdk_headers = [ "region-alloc/region-alloc.h" ]
 
   sources = [ "region-alloc.cc" ]
+  deps = [ "//sdk/lib/stdcompat" ]
   if (!is_kernel) {
-    deps = [ "//zircon/system/ulib/fbl" ]
+    deps += [ "//zircon/system/ulib/fbl" ]
   }
 }
 

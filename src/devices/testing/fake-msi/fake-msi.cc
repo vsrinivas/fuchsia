@@ -4,6 +4,7 @@
 
 #include <lib/fake-msi/msi.h>
 #include <lib/fake-object/object.h>
+#include <lib/stdcompat/bit.h>
 #include <lib/zx/interrupt.h>
 #include <lib/zx/msi.h>
 #include <lib/zx/status.h>
@@ -118,7 +119,7 @@ constexpr size_t MsiCapabilitySize = 24u;
 // Fake syscall implementations
 __EXPORT
 zx_status_t zx_msi_allocate(zx_handle_t /*root*/, uint32_t count, zx_handle_t* msi_out) {
-  if (!count || !msi_out || !fbl::is_pow2(count)) {
+  if (!count || !msi_out || !cpp20::has_single_bit(count)) {
     return ZX_ERR_INVALID_ARGS;
   }
   auto new_msi = fbl::AdoptRef(new Msi(count));

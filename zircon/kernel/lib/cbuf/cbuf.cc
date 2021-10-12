@@ -12,11 +12,11 @@
 #include <string.h>
 #include <trace.h>
 
-#include <fbl/algorithm.h>
 #include <kernel/auto_lock.h>
 #include <kernel/auto_preempt_disabler.h>
 #include <kernel/event.h>
 #include <kernel/spinlock.h>
+#include <ktl/bit.h>
 
 #define LOCAL_TRACE 0
 
@@ -24,7 +24,7 @@
 // disabled.
 void Cbuf::Initialize(size_t len, void* buf) TA_NO_THREAD_SAFETY_ANALYSIS {
   DEBUG_ASSERT(len > 0);
-  DEBUG_ASSERT(fbl::is_pow2(len));
+  DEBUG_ASSERT(cpp20::has_single_bit(len));
 
   len_pow2_ = log2_ulong_floor(len);
   buf_ = static_cast<char*>(buf);

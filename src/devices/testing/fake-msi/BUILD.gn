@@ -25,6 +25,7 @@ zx_library("fake-msi") {
   ]
   deps = [
     "//sdk/lib/fdio",
+    "//sdk/lib/stdcompat",
     "//src/devices/testing/fake-object",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/zircon-internal",

@@ -5,12 +5,11 @@
 #define SRC_DEVICES_BUS_DRIVERS_PCI_TEST_FAKES_FAKE_CONFIG_H_
 
 #include <lib/mmio/mmio.h>
+#include <lib/stdcompat/bit.h>
 #include <lib/zx/vmo.h>
 #include <zircon/hw/pci.h>
 
 #include <cstdint>
-
-#include <fbl/algorithm.h>
 
 #include "src/devices/bus/drivers/pci/common.h"
 #include "src/devices/bus/drivers/pci/config.h"
@@ -41,7 +40,7 @@ class FakeMmioConfig final : public MmioConfig {
     //  ~(0x000FFFFF) = 0xFFF00000
 
     uint32_t size = kTestDeviceBars[bar_id].size;
-    ZX_ASSERT(size == 0 || fbl::is_pow2(size));
+    ZX_ASSERT(size == 0 || cpp20::has_single_bit(size));
     size = ~(size - 1);
 
     if (reg.is_io_space()) {

@@ -30,6 +30,7 @@
 #include <kernel/lockdep.h>
 #include <kernel/mutex.h>
 #include <ktl/array.h>
+#include <ktl/bit.h>
 #include <ktl/forward.h>
 #include <ktl/move.h>
 #include <ktl/optional.h>
@@ -176,7 +177,7 @@ class ObjectCache<T, Option::Single, Allocator> {
   using LocalTraceDuration =
       TraceDuration<EnabledOption, KTRACE_GRP_SCHEDULER, TraceContext::Thread>;
 
-  static_assert(fbl::is_pow2(Allocator::kSlabSize), "Slabs must be a power of two!");
+  static_assert(ktl::has_single_bit(Allocator::kSlabSize), "Slabs must be a power of two!");
   static constexpr uintptr_t kSlabAddrMask = Allocator::kSlabSize - 1;
 
  public:

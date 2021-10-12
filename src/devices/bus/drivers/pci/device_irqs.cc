@@ -4,6 +4,7 @@
 #include <fuchsia/hardware/pci/c/banjo.h>
 #include <fuchsia/hardware/pci/cpp/banjo.h>
 #include <lib/mmio/mmio.h>
+#include <lib/stdcompat/bit.h>
 #include <lib/zx/status.h>
 #include <zircon/assert.h>
 #include <zircon/errors.h>
@@ -246,7 +247,7 @@ zx_status_t Device::EnableMsi(uint32_t irq_cnt) {
   ZX_DEBUG_ASSERT(!irqs_.msi_allocation);
   ZX_DEBUG_ASSERT(caps_.msi);
 
-  if (!fbl::is_pow2(irq_cnt) || irq_cnt > caps_.msi->vectors_avail()) {
+  if (!cpp20::has_single_bit(irq_cnt) || irq_cnt > caps_.msi->vectors_avail()) {
     zxlogf(DEBUG, "[%s] EnableMsi: bad irq count = %u, available = %u\n", cfg_->addr(), irq_cnt,
            caps_.msi->vectors_avail());
     return ZX_ERR_INVALID_ARGS;

@@ -60,7 +60,10 @@ zx_library("fbl") {
     ]
   }
 
-  public_deps = [ "//sdk/lib/fit" ]
+  public_deps = [
+    "//sdk/lib/fit",
+    "//sdk/lib/stdcompat",
+  ]
 
   if (is_kernel) {
     # Anything using libc++ headers in the kernel needs this.

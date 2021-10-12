@@ -71,6 +71,7 @@ audio_core_api_test_component("audio-clock-pipeline-test") {
   source = "audio_clock_pipeline_test.cc"
   executable_deps = [
     "//sdk/lib/media/audio/cpp",
+    "//sdk/lib/stdcompat",
     "//src/media/audio/audio_core/mixer",
   ]
 }

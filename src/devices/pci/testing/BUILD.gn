@@ -19,6 +19,7 @@ source_set("pci-protocol-fake") {
     "//src/devices/testing/fake-bti",
     "//zircon/system/ulib/fbl",
   ]
+  deps = [ "//sdk/lib/stdcompat" ]
   testonly = true
 }
 

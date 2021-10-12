@@ -5,6 +5,7 @@
 #include "nandpart-utils.h"
 
 #include <lib/ddk/debug.h>
+#include <lib/stdcompat/bit.h>
 #include <stdlib.h>
 #include <string.h>
 #include <zircon/assert.h>
@@ -55,7 +56,7 @@ zx_status_t SanitizePartitionMap(zbi_partition_map_t* pmap, const nand_info_t& n
 
   // 4) All partitions must start at an erase block boundary.
   const size_t erase_block_size = nand_info.page_size * nand_info.pages_per_block;
-  ZX_DEBUG_ASSERT(fbl::is_pow2(erase_block_size));
+  ZX_DEBUG_ASSERT(cpp20::has_single_bit(erase_block_size));
   const int block_shift = ffs(static_cast<int>(erase_block_size)) - 1;
 
   if (pmap->block_size != erase_block_size) {

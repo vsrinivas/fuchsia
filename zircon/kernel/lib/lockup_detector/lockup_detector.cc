@@ -21,13 +21,13 @@
 #include <zircon/time.h>
 
 #include <dev/hw_watchdog.h>
-#include <fbl/algorithm.h>
 #include <kernel/auto_preempt_disabler.h>
 #include <kernel/mp.h>
 #include <kernel/percpu.h>
 #include <kernel/thread.h>
 #include <ktl/array.h>
 #include <ktl/atomic.h>
+#include <ktl/bit.h>
 #include <ktl/iterator.h>
 #include <object/process_dispatcher.h>
 #include <object/thread_dispatcher.h>
@@ -108,7 +108,7 @@ void DumpRegistersAndBacktrace(cpu_num_t cpu, FILE* output_target) {
     constexpr uint32_t MAX_BACKTRACE = 32;
     for (; n < MAX_BACKTRACE; ++n) {
       // Attempt to back up one level.  Never cross a page boundary when we do this.
-      static_assert(fbl::is_pow2(static_cast<uint64_t>(PAGE_SIZE)),
+      static_assert(ktl::has_single_bit(static_cast<uint64_t>(PAGE_SIZE)),
                     "PAGE_SIZE is not a power of 2!  Wut??");
       if ((ret_addr_ptr & (PAGE_SIZE - 1)) == 0) {
         break;

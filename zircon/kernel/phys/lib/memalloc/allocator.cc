@@ -5,6 +5,7 @@
 // https://opensource.org/licenses/MIT
 
 #include <lib/memalloc/allocator.h>
+#include <lib/stdcompat/bit.h>
 #include <lib/stdcompat/span.h>
 #include <lib/zx/status.h>
 #include <zircon/assert.h>
@@ -265,7 +266,7 @@ zx::status<> Allocator::RemoveRange(uint64_t base, uint64_t size) {
 }
 
 zx::status<uint64_t> Allocator::Allocate(uint64_t size, uint64_t alignment) {
-  ZX_ASSERT(fbl::is_pow2(alignment));
+  ZX_ASSERT(cpp20::has_single_bit(alignment));
 
   // Return 0 on 0-size allocations.
   if (size == 0) {

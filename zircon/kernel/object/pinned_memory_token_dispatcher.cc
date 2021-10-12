@@ -15,9 +15,9 @@
 
 #include <new>
 
-#include <fbl/algorithm.h>
 #include <fbl/auto_lock.h>
 #include <ktl/algorithm.h>
+#include <ktl/bit.h>
 #include <object/bus_transaction_initiator_dispatcher.h>
 #include <vm/pinned_vm_object.h>
 #include <vm/vm.h>
@@ -38,7 +38,7 @@ zx_status_t PinnedMemoryTokenDispatcher::Create(fbl::RefPtr<BusTransactionInitia
   size_t num_addrs;
   if (!pinned_vmo.vmo()->is_contiguous()) {
     const size_t min_contig = bti->minimum_contiguity();
-    DEBUG_ASSERT(fbl::is_pow2(min_contig));
+    DEBUG_ASSERT(ktl::has_single_bit(min_contig));
 
     num_addrs = ROUNDUP(pinned_vmo.size(), min_contig) / min_contig;
   } else {
@@ -238,7 +238,7 @@ zx_status_t PinnedMemoryTokenDispatcher::EncodeAddrs(bool compress_results, bool
   if (compress_results) {
     if (pinned_vmo_.vmo()->is_contiguous()) {
       const size_t min_contig = bti_->minimum_contiguity();
-      DEBUG_ASSERT(fbl::is_pow2(min_contig));
+      DEBUG_ASSERT(ktl::has_single_bit(min_contig));
       DEBUG_ASSERT(found_addrs == 1);
 
       uint64_t num_addrs = ROUNDUP(pinned_vmo_.size(), min_contig) / min_contig;

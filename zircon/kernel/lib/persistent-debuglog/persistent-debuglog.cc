@@ -9,8 +9,8 @@
 #include <lib/lazy_init/lazy_init.h>
 #include <stdio.h>
 
-#include <fbl/algorithm.h>
 #include <ktl/algorithm.h>
+#include <ktl/bit.h>
 #include <ktl/iterator.h>
 #include <ktl/limits.h>
 
@@ -91,7 +91,7 @@ void PersistentDebugLog::SetLocation(void* virt, size_t len) {
   // The location of the persistent dlog must be compatible with the header's
   // alignment, and the amount of space for the log payload must be positive,
   // otherwise we cannot effectively use the memory.
-  static_assert(fbl::is_pow2(alignof(LogHeader)),
+  static_assert(ktl::has_single_bit(alignof(LogHeader)),
                 "Persistent dlog header's alignment must be a power of 2 in size");
   if ((reinterpret_cast<uintptr_t>(virt) & (alignof(LogHeader) - 1)) ||
       (len <= sizeof(LogHeader))) {

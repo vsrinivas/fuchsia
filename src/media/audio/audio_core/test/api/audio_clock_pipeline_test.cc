@@ -1,6 +1,7 @@
 // Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be found in the LICENSE file.
 
+#include <lib/stdcompat/bit.h>
 #include <lib/syslog/cpp/macros.h>
 #include <zircon/status.h>
 #include <zircon/syscalls.h>
@@ -17,7 +18,6 @@
 #include <sstream>
 #include <vector>
 
-#include <fbl/algorithm.h>
 #include <gmock/gmock.h>
 
 #include "src/media/audio/audio_core/mixer/gain.h"
@@ -349,7 +349,7 @@ class ClockSyncPipelineTest : public HermeticAudioTest {
     constexpr int64_t kMaxPeakWidth = 2;
     constexpr bool kDebugOutputSineValues = false;
 
-    ASSERT_TRUE(fbl::is_pow2(static_cast<uint64_t>(num_frames_to_analyze)))
+    ASSERT_TRUE(cpp20::has_single_bit(static_cast<uint64_t>(num_frames_to_analyze)))
         << "num_frames_to_analyze must be a power of 2";
     ASSERT_TRUE(num_frames_to_analyze < kPayloadFrames)
         << "num_frames_to_analyze must fit into the ring-buffer";
@@ -385,7 +385,6 @@ class ClockSyncPipelineTest : public HermeticAudioTest {
     auto packets2 = renderer_->AppendSlice(input_repeated, kPacketFrames, packets1.back()->end_pts);
     renderer_->PlaySynchronized(this, output_, 0);
     renderer_->WaitForPackets(this, packets2);
-
 
     // TODO(fxbug.dev/80003): Skipping checks until underflows are fixed.
     if (DeviceHasUnderflows(output_)) {

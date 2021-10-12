@@ -6,14 +6,13 @@
 #include <inttypes.h>
 #include <lib/ddk/debug.h>
 #include <lib/ddk/driver.h>
+#include <lib/stdcompat/bit.h>
 #include <lib/virtio/device.h>
 #include <lib/virtio/ring.h>
 #include <lib/zx/vmar.h>
 #include <limits.h>
 #include <stdint.h>
 #include <string.h>
-
-#include <fbl/algorithm.h>
 
 namespace virtio {
 
@@ -37,7 +36,7 @@ zx_status_t Ring::Init(uint16_t index, uint16_t count) {
   zxlogf(TRACE, "%s: index %u, count %u", __func__, index, count);
 
   // check that count is a power of 2
-  if (!fbl::is_pow2(count)) {
+  if (!cpp20::has_single_bit(count)) {
     zxlogf(ERROR, "ring count: %u is not a power of 2", count);
     return ZX_ERR_INVALID_ARGS;
   }

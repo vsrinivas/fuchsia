@@ -10,6 +10,7 @@ zx_library("cbuf") {
   sources = [ "cbuf.cc" ]
   deps = [
     ":tests",
+    "//zircon/kernel/lib/ktl",
     "//zircon/kernel/lib/zxc",
   ]
 

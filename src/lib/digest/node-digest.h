@@ -4,6 +4,7 @@
 #ifndef SRC_LIB_DIGEST_NODE_DIGEST_H_
 #define SRC_LIB_DIGEST_NODE_DIGEST_H_
 
+#include <lib/stdcompat/bit.h>
 #include <stddef.h>
 #include <stdint.h>
 #include <zircon/types.h>
@@ -74,7 +75,8 @@ class NodeDigest {
 
   // Returns |true| if |node_size| is a power of 2 between |kMinNodeSize| and |kMaxNodeSize|.
   static constexpr bool IsValidNodeSize(size_t node_size) {
-    return node_size >= kMinNodeSize && node_size <= kMaxNodeSize && fbl::is_pow2(node_size);
+    return node_size >= kMinNodeSize && node_size <= kMaxNodeSize &&
+           cpp20::has_single_bit(node_size);
   }
 
  private:

@@ -88,18 +88,6 @@ void RoundUpPowerOfTwo() {
 #endif
 }
 
-template <typename T>
-void IsPowerOfTwo() {
-  T val = 0;
-  EXPECT_FALSE(fbl::is_pow2<T>(val));
-  EXPECT_FALSE(fbl::is_pow2<T>(static_cast<T>(val - 1)));
-
-  for (val = 1u; val; val = static_cast<T>(val << 1u)) {
-    EXPECT_TRUE(fbl::is_pow2<T>(val));
-    EXPECT_FALSE(fbl::is_pow2<T>(static_cast<T>(val - 5u)));
-    EXPECT_FALSE(fbl::is_pow2<T>(static_cast<T>(val + 5u)));
-  }
-}
 // TODO(fxbug.dev/38140) : Get rid of this macro when there is a better way to expand templated
 // tests.
 #define IS_POW2_TEST(_type) \
@@ -115,11 +103,6 @@ ROUNDUP_POW2_TEST(uint8_t)
 ROUNDUP_POW2_TEST(int32_t)
 #endif
 
-IS_POW2_TEST(uint8_t)
-IS_POW2_TEST(uint16_t)
-IS_POW2_TEST(uint32_t)
-IS_POW2_TEST(uint64_t)
-IS_POW2_TEST(size_t)
 ROUNDUP_POW2_TEST(uint32_t)
 ROUNDUP_POW2_TEST(uint64_t)
 #undef IS_POW2_TEST
