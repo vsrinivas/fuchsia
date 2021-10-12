@@ -8,7 +8,7 @@ use {
     crate::descriptors::*,
     anyhow::{Context, Result},
     ffx_core::ffx_plugin,
-    ffx_driver_lsusb_args::DriverLsusbCommand,
+    ffx_driver_lsusb_args::{DriverLsusbCommand, UsbDevice},
     fidl_fuchsia_device_manager::DeviceWatcherProxy,
     fuchsia_async::{Duration, TimeoutExt},
     fuchsia_zircon_status as zx,
@@ -53,12 +53,22 @@ async fn do_list_device(
         .await
         .context(format!("DeviceGetDeviceDescriptor failed for {}", devname))?;
 
+    let device_desc = DeviceDescriptor::from_array(device_desc);
+
+    if let Some(UsbDevice { vendor_id, product_id }) = cmd.device {
+        // Return early if this isn't the device that was asked about.
+        if { device_desc.idVendor } != vendor_id {
+            return Ok(());
+        }
+        if product_id.is_some() && { device_desc.idProduct } != product_id.unwrap() {
+            return Ok(());
+        }
+    }
+
     let speed = device
         .get_device_speed()
         .await
         .context(format!("DeviceGetDeviceSpeed failed for {}", devname))?;
-
-    let device_desc = DeviceDescriptor::from_array(device_desc);
 
     let (status, string_manu_desc, _) = device
         .get_string_descriptor(device_desc.iManufacturer, EN_US)
@@ -425,7 +435,7 @@ mod test {
                 tree: false,
                 verbose: true,
                 configuration: None,
-                debug: false,
+                device: None,
             };
             println!("ID    VID:PID   SPEED  MANUFACTURER PRODUCT");
             do_list_device(device, 0, &cmd).await.unwrap();
