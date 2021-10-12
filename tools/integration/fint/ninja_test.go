@@ -285,12 +285,20 @@ func TestCheckNinjaNoop(t *testing.T) {
 		name       string
 		isMac      bool
 		stdout     string
+		fail       bool
 		expectNoop bool
+		expectErr  bool
 	}{
 		{
 			name:       "no-op",
 			stdout:     "ninja: Entering directory /foo\nninja: no work to do.",
 			expectNoop: true,
+		},
+		{
+			name:      "ninja fails",
+			stdout:    "ninja: Entering directory /foo\nninja: no work to do.",
+			fail:      true,
+			expectErr: true,
 		},
 		{
 			name:       "dirty",
@@ -309,24 +317,43 @@ func TestCheckNinjaNoop(t *testing.T) {
 			stdout:     "ninja: Entering directory /foo\nninja explain: ../../../../usr/bin/env is dirty",
 			expectNoop: true,
 		},
+		{
+			name:       "ninja fails on mac, with known broken mac path",
+			isMac:      true,
+			fail:       true,
+			stdout:     "ninja: Entering directory /foo\nninja explain: ../../../../usr/bin/env is dirty",
+			expectNoop: true,
+		},
+		{
+			name:      "ninja fails on mac, no broken path",
+			isMac:     true,
+			fail:      true,
+			stdout:    "ninja: Entering directory /foo\n[1/1] STAMP foo.stamp",
+			expectErr: true,
+		},
 	}
 
-	ctx := context.Background()
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			r := ninjaRunner{
 				runner: &fakeSubprocessRunner{
 					mockStdout: []byte(tc.stdout),
+					fail:       tc.fail,
 				},
 				ninjaPath: "ninja",
 				buildDir:  t.TempDir(),
 			}
-			noop, logFiles, err := checkNinjaNoop(ctx, r, []string{"foo"}, tc.isMac)
+			noop, logFiles, err := checkNinjaNoop(context.Background(), r, []string{"foo"}, tc.isMac)
 			if err != nil {
-				t.Fatal(err)
+				if !tc.expectErr {
+					t.Fatal(err)
+				}
+				return
+			} else if tc.expectErr {
+				t.Fatalf("Expected an error but got nil")
 			}
 			if noop != tc.expectNoop {
-				t.Fatalf("Unexpected ninja no-op result: got %v, expected %v", noop, tc.expectNoop)
+				t.Fatalf("Unexpected ninja no-op result: got %t, expected %t", noop, tc.expectNoop)
 			}
 			if tc.expectNoop {
 				if len(logFiles) > 0 {

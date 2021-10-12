@@ -340,9 +340,11 @@ func checkNinjaNoop(
 	targets []string,
 	isMac bool,
 ) (bool, map[string]string, error) {
-	stdout, stderr, err := ninjaDryRun(ctx, r, targets)
-	if err != nil {
-		return false, nil, err
+	stdout, stderr, ninjaErr := ninjaDryRun(ctx, r, targets)
+	// Temporarily tolerate a failure if it's on Mac. We won't emit the error if
+	// it seemed to be caused by a known broken Mac path.
+	if ninjaErr != nil && !isMac {
+		return false, nil, ninjaErr
 	}
 
 	// Different versions of Ninja choose to emit "explain" logs to stderr
@@ -363,7 +365,10 @@ func checkNinjaNoop(
 			"`ninja -d explain -v -n` stdout": stdout,
 			"`ninja -d explain -v -n` stderr": stderr,
 		}
-		return false, logs, nil
+		// Return the original ninja error, which may be non-nil if we're
+		// running on a Mac and the dry run failed but the stdio didn't contain
+		// one of the broken Mac paths.
+		return false, logs, ninjaErr
 	}
 
 	return true, nil, nil
