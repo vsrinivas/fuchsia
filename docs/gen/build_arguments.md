@@ -1085,7 +1085,7 @@ Compiles with ares.
 
 **Current value (from the default):** `false`
 
-From [//third_party/grpc/BUILD.gn:13](https://fuchsia.googlesource.com/third_party/grpc/+/52fece38e625418cdc922b1523b3288405c57532/BUILD.gn#13)
+From [//third_party/grpc/BUILD.gn:13](https://fuchsia.googlesource.com/third_party/grpc/+/fc662b7964384b701af5bd3ce6994d2180080eb4/BUILD.gn#13)
 
 ### enable_lock_dep
 Enable kernel lock dependency tracking.
@@ -1711,7 +1711,7 @@ In windows use static linking.
 
 **Current value (from the default):** `false`
 
-From [//third_party/grpc/BUILD.gn:18](https://fuchsia.googlesource.com/third_party/grpc/+/52fece38e625418cdc922b1523b3288405c57532/BUILD.gn#18)
+From [//third_party/grpc/BUILD.gn:18](https://fuchsia.googlesource.com/third_party/grpc/+/fc662b7964384b701af5bd3ce6994d2180080eb4/BUILD.gn#18)
 
 ### hangcheck_timeout_ms
 Set this to accommodate long running tests
