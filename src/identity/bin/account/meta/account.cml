@@ -1,0 +1,21 @@
+{
+    children: [
+        {
+            name: "password_authenticator",
+            url: "fuchsia-pkg://fuchsia.com/password_authenticator#meta/password-authenticator.cml",
+        },
+    ],
+    offer: [
+        {
+            directory: "dev",
+            from: "parent",
+            to: "#password_authenticator",
+        },
+    ],
+    expose: [
+        {
+            protocol: "fuchsia.identity.account.AccountManager",
+            from: "#password_authenticator",
+        },
+    ],
+}

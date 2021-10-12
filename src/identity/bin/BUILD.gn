@@ -8,6 +8,7 @@ group("bin") {
   testonly = true
   deps = [
     ":identity_bin_unittests",
+    "account",
     "account_handler",
     "account_manager",
     "dev_auth_provider",
@@ -75,8 +76,10 @@ group("tier_1") {
 # authentication, data isolation, and token management for these accounts.
 group("tier_2") {
   public_deps = [
+    "account",
     "account_handler",
     "account_manager",
     "account_manager:account_manager_auth_providers",
+    "password_authenticator",
   ]
 }

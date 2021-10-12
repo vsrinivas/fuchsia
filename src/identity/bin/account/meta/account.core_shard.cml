@@ -1,0 +1,20 @@
+{
+    children: [
+        {
+            name: "account",
+            url: "fuchsia-pkg://fuchsia.com/account#meta/account.cm",
+        },
+    ],
+    offer: [
+        {
+            directory: "dev",
+            from: "parent",
+            to: "#account",
+        },
+        {
+            protocol: [ "fuchsia.identity.account.AccountManager" ],
+            from: "#account",
+            to: "#session-manager",
+        },
+    ],
+}

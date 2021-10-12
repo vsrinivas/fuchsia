@@ -1,0 +1,19 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/components.gni")
+import("//src/sys/core/build/core_shard.gni")
+
+fuchsia_component("component") {
+  component_name = "account"
+  manifest = "meta/account.cml"
+}
+
+fuchsia_package("account") {
+  deps = [ ":component" ]
+}
+
+core_shard("account-core-shard") {
+  shard_file = "meta/account.core_shard.cml"
+}
