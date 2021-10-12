@@ -113,16 +113,6 @@ class TxStream : public StreamBase {
     StreamBase::Init(phys_mem, std::move(interrupt));
   }
 
-  bool ProcessDescriptor() {
-    auto header = static_cast<virtio_net_hdr_t*>(desc_.addr);
-    uintptr_t offset = phys_mem_->offset(header + 1);
-    uintptr_t length = desc_.len - sizeof(*header);
-
-    zx_status_t status =
-        guest_ethernet_->Send(phys_mem_->ptr(offset, length), static_cast<uint16_t>(length));
-    return status != ZX_ERR_SHOULD_WAIT;
-  }
-
   void Notify() {
     // If Send returned ZX_ERR_SHOULD_WAIT last time Notify was called, then we should process that
     // descriptor first.
@@ -160,6 +150,16 @@ class TxStream : public StreamBase {
   }
 
  private:
+  bool ProcessDescriptor() {
+    auto header = static_cast<virtio_net_hdr_t*>(desc_.addr);
+    uintptr_t offset = phys_mem_->offset(header + 1);
+    uintptr_t length = desc_.len - sizeof(*header);
+
+    zx_status_t status =
+        guest_ethernet_->Send(phys_mem_->ptr(offset, length), static_cast<uint16_t>(length));
+    return status != ZX_ERR_SHOULD_WAIT;
+  }
+
   GuestEthernet* guest_ethernet_ = nullptr;
   const PhysMem* phys_mem_ = nullptr;
   bool warned_ = false;
