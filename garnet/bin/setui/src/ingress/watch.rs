@@ -39,7 +39,38 @@ const LAST_VALUE_KEY: &str = "LAST_VALUE";
 
 /// A custom function used to compare an existing setting value with a new one to determine if
 /// listeners should be notified. If true is returned, listeners will be notified.
-type ChangeFunction = Box<dyn Fn(&SettingInfo, &SettingInfo) -> bool + Send + Sync + 'static>;
+pub(crate) struct ChangeFunction {
+    function: Box<dyn Fn(&SettingInfo, &SettingInfo) -> bool + Send + Sync + 'static>,
+    id: u64,
+}
+
+/// This struct can be used to manage construction of [ChangeFunctions](ChangeFunction). It tracks
+/// the ids of all ChangeFunctions it has generated, so that each new one is unique from the others.
+/// Given that [Signatures](Signature) use the responder type and this generated id, only one
+/// ChangeFunctionGenerator needs to be managed per fidl interface.
+pub(crate) struct ChangeFunctionGenerator {
+    next_id: u64,
+}
+
+impl ChangeFunctionGenerator {
+    #[allow(dead_code)]
+    fn new() -> Self {
+        Self { next_id: 0 }
+    }
+}
+
+impl ChangeFunctionGenerator {
+    // TODO(fxbug.dev/79044): remove allow dead_code once used
+    #[allow(dead_code)]
+    fn make<F>(&mut self, function: F) -> ChangeFunction
+    where
+        F: Fn(&'_ SettingInfo, &'_ SettingInfo) -> bool + Send + Sync + 'static,
+    {
+        let id = self.next_id;
+        self.next_id += 1;
+        ChangeFunction { function: Box::new(function), id }
+    }
+}
 
 /// [Responder] is a trait for handing back results of a watch request. It is unique from other
 /// work responders, since [Work] consumers expect a value to be present on success. The Responder
@@ -94,7 +125,7 @@ impl<
     ) -> Self {
         Self {
             setting_type,
-            signature: Signature::new::<T>(),
+            signature: Signature::with::<T>(change_function.id),
             responder,
             change_function: Some(change_function),
             _response_type: PhantomData,
@@ -116,7 +147,7 @@ impl<
                 let return_val = match (store.get(&key), self.change_function.as_ref()) {
                     // Apply the change function to determine if we should notify listeners.
                     (Some(Data::SettingInfo(info)), Some(change_function))
-                        if !(change_function)(info, &setting_info) =>
+                        if !(change_function.function)(info, &setting_info) =>
                     {
                         None
                     }
@@ -250,6 +281,22 @@ mod tests {
         }
     }
 
+    #[test]
+    fn change_function_ids_do_not_match() {
+        let mut generator = ChangeFunctionGenerator::new();
+        let closure = |_: &SettingInfo, _: &SettingInfo| true;
+        let change_fn1 = generator.make(closure);
+        let change_fn2 = generator.make(closure);
+        assert_ne!(change_fn1.id, change_fn2.id);
+
+        let signature1 = Signature::with::<()>(change_fn1.id);
+        let signature2 = Signature::with::<()>(change_fn2.id);
+        assert_ne!(signature1, signature2);
+
+        let signature3 = Signature::with::<()>(change_fn1.id);
+        assert_eq!(signature1, signature3);
+    }
+
     #[fuchsia_async::run_until_stalled(test)]
     async fn test_watch_basic_functionality() {
         // Create store for job.
@@ -355,6 +402,7 @@ mod tests {
             .lock()
             .await
             .insert(Key::Identifier(LAST_VALUE_KEY), Data::SettingInfo(unchanged_info.clone()));
+        let mut change_function_generator = ChangeFunctionGenerator::new();
 
         verify_watch(
             store_handle,
@@ -364,7 +412,9 @@ mod tests {
             unchanged_info.clone(),
             unchanged_info,
             // Use a custom change function that always reports a change.
-            Some(Box::new(move |_old: &SettingInfo, _new: &SettingInfo| true)),
+            Some(
+                change_function_generator.make(move |_old: &SettingInfo, _new: &SettingInfo| true),
+            ),
         )
         .await;
     }

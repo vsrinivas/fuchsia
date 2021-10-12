@@ -169,12 +169,18 @@ pub mod work {
     }
 }
 
+#[derive(PartialEq, Eq, Copy, Clone, Debug, Hash)]
+enum Either<A, B> {
+    A(A),
+    B(B),
+}
+
 /// An identifier specified by [Jobs](Job) to group related workflows. This is useful for
 /// [work::Loads](work::Load) that need to be run sequentially. The [Signature] is used by the job
 /// infrastructure to associate resources such as caches.
 #[derive(PartialEq, Copy, Clone, Debug, Eq, Hash)]
 pub struct Signature {
-    key: TypeId,
+    key: Either<TypeId, (TypeId, u64)>,
 }
 
 impl Signature {
@@ -185,7 +191,14 @@ impl Signature {
     where
         T: 'static + ?Sized,
     {
-        Self { key: TypeId::of::<T>() }
+        Self { key: Either::A(TypeId::of::<T>()) }
+    }
+
+    pub(crate) fn with<T>(key: u64) -> Self
+    where
+        T: 'static + ?Sized,
+    {
+        Self { key: Either::B((TypeId::of::<T>(), key)) }
     }
 }
 
