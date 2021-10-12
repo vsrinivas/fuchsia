@@ -147,17 +147,28 @@ func (key *KeyConfig) UnmarshalJSON(data []byte) error {
 // GetRootKeys returns the list of public key config objects as read from the
 // contents of a repository's root metadata file.
 func GetRootKeys(root *tuf_data.Root) ([]KeyConfig, error) {
-	var rootKeys []KeyConfig
-	for _, k := range root.UniqueKeys()["root"] {
-		v := k.Value.Public.String()
-		var key KeyConfig
-		switch k.Type {
-		case tuf_data.KeyTypeEd25519:
-			key.ED25519Key = v
-		default:
-			return nil, fmt.Errorf("unexpected key type: %q", k.Type)
+	rootKeys := make(map[string]struct{})
+	if role, ok := root.Roles["root"]; ok {
+		for _, id := range role.KeyIDs {
+			if key, ok := root.Keys[id]; ok {
+				switch key.Type {
+				case tuf_data.KeyTypeEd25519:
+					var kv struct {
+						Public tuf_data.HexBytes `json:"public"`
+					}
+					if err := json.Unmarshal(key.Value, &kv); err != nil {
+						return nil, fmt.Errorf("failed to unmarshal key: %w", err)
+					}
+					rootKeys[kv.Public.String()] = struct{}{}
+				default:
+					return nil, fmt.Errorf("unexpected key type: %q", key.Type)
+				}
+			}
 		}
-		rootKeys = append(rootKeys, key)
 	}
-	return rootKeys, nil
+	rootKeyConfigs := make([]KeyConfig, 0, len(rootKeys))
+	for key := range rootKeys {
+		rootKeyConfigs = append(rootKeyConfigs, KeyConfig{ED25519Key: key})
+	}
+	return rootKeyConfigs, nil
 }

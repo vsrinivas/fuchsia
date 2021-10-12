@@ -1,5 +1,4 @@
-# cloud.google.com/go v0.95.0
-## explicit
+# cloud.google.com/go v0.97.0
 cloud.google.com/go
 cloud.google.com/go/compute/metadata
 cloud.google.com/go/iam
@@ -7,11 +6,11 @@ cloud.google.com/go/internal
 cloud.google.com/go/internal/optional
 cloud.google.com/go/internal/trace
 cloud.google.com/go/internal/version
-# cloud.google.com/go/storage v1.16.1
+# cloud.google.com/go/storage v1.18.0
 ## explicit
 cloud.google.com/go/storage
 cloud.google.com/go/storage/internal/apiv2
-# github.com/creack/pty v1.1.15
+# github.com/creack/pty v1.1.16
 ## explicit
 github.com/creack/pty
 # github.com/dustin/go-humanize v1.0.0
@@ -50,7 +49,6 @@ github.com/google/shlex
 ## explicit
 github.com/google/subcommands
 # github.com/googleapis/gax-go/v2 v2.1.1
-## explicit
 github.com/googleapis/gax-go/v2
 github.com/googleapis/gax-go/v2/apierror
 github.com/googleapis/gax-go/v2/apierror/internal/proto
@@ -62,7 +60,7 @@ github.com/kr/fs
 github.com/kr/pretty
 # github.com/kr/text v0.2.0
 github.com/kr/text
-# github.com/pkg/sftp v1.13.3
+# github.com/pkg/sftp v1.13.4
 ## explicit
 github.com/pkg/sftp
 github.com/pkg/sftp/internal/encoding/ssh/filexfer
@@ -74,11 +72,12 @@ github.com/rogpeppe/go-internal/fmtsort
 github.com/spf13/pflag
 # github.com/tent/canonical-json-go v0.0.0-20130607151641-96e4ba3a7613
 github.com/tent/canonical-json-go
-# github.com/theupdateframework/go-tuf v0.0.0-20210921152604-1c7bbcecec00
+# github.com/theupdateframework/go-tuf v0.0.0-20211008214526-d74a4b4d2712
 ## explicit
 github.com/theupdateframework/go-tuf
 github.com/theupdateframework/go-tuf/data
 github.com/theupdateframework/go-tuf/encrypted
+github.com/theupdateframework/go-tuf/pkg/keys
 github.com/theupdateframework/go-tuf/sign
 github.com/theupdateframework/go-tuf/util
 github.com/theupdateframework/go-tuf/verify
@@ -135,7 +134,7 @@ golang.org/x/crypto/salsa20/salsa
 golang.org/x/crypto/scrypt
 golang.org/x/crypto/ssh
 golang.org/x/crypto/ssh/internal/bcrypt_pbkdf
-# golang.org/x/net v0.0.0-20210924151903-3ad01bbaa167
+# golang.org/x/net v0.0.0-20211011170408-caeb26a5c8c0
 ## explicit
 golang.org/x/net/bpf
 golang.org/x/net/context
@@ -150,7 +149,8 @@ golang.org/x/net/internal/timeseries
 golang.org/x/net/ipv4
 golang.org/x/net/ipv6
 golang.org/x/net/trace
-# golang.org/x/oauth2 v0.0.0-20210819190943-2bc19b11175f
+# golang.org/x/oauth2 v0.0.0-20211005180243-6b3c2da341f1
+## explicit
 golang.org/x/oauth2
 golang.org/x/oauth2/authhandler
 golang.org/x/oauth2/google
@@ -161,7 +161,7 @@ golang.org/x/oauth2/jwt
 # golang.org/x/sync v0.0.0-20210220032951-036812b2e83c
 ## explicit
 golang.org/x/sync/errgroup
-# golang.org/x/sys v0.0.0-20210923061019-b8560ed6a9b7
+# golang.org/x/sys v0.0.0-20211007075335-d3039528d8ac
 ## explicit
 golang.org/x/sys/cpu
 golang.org/x/sys/internal/unsafeheader
@@ -191,10 +191,11 @@ gonum.org/v1/gonum/mathext
 gonum.org/v1/gonum/mathext/internal/amos
 gonum.org/v1/gonum/mathext/internal/cephes
 gonum.org/v1/gonum/mathext/internal/gonum
-# google.golang.org/api v0.57.0
+# google.golang.org/api v0.58.0
 ## explicit
 google.golang.org/api/googleapi
 google.golang.org/api/googleapi/transport
+google.golang.org/api/iamcredentials/v1
 google.golang.org/api/internal
 google.golang.org/api/internal/gensupport
 google.golang.org/api/internal/impersonate
@@ -203,6 +204,7 @@ google.golang.org/api/iterator
 google.golang.org/api/option
 google.golang.org/api/option/internaloption
 google.golang.org/api/storage/v1
+google.golang.org/api/transport
 google.golang.org/api/transport/cert
 google.golang.org/api/transport/grpc
 google.golang.org/api/transport/http
@@ -221,7 +223,7 @@ google.golang.org/appengine/internal/socket
 google.golang.org/appengine/internal/urlfetch
 google.golang.org/appengine/socket
 google.golang.org/appengine/urlfetch
-# google.golang.org/genproto v0.0.0-20210924002016-3dee208752a0
+# google.golang.org/genproto v0.0.0-20211011165927-a5fb3255271e
 ## explicit
 google.golang.org/genproto/googleapis/api/annotations
 google.golang.org/genproto/googleapis/iam/v1
@@ -231,7 +233,7 @@ google.golang.org/genproto/googleapis/rpc/status
 google.golang.org/genproto/googleapis/storage/v2
 google.golang.org/genproto/googleapis/type/date
 google.golang.org/genproto/googleapis/type/expr
-# google.golang.org/grpc v1.40.0
+# google.golang.org/grpc v1.41.0
 ## explicit
 google.golang.org/grpc
 google.golang.org/grpc/attributes
@@ -281,6 +283,7 @@ google.golang.org/grpc/internal/status
 google.golang.org/grpc/internal/syscall
 google.golang.org/grpc/internal/transport
 google.golang.org/grpc/internal/transport/networktype
+google.golang.org/grpc/internal/xds/env
 google.golang.org/grpc/keepalive
 google.golang.org/grpc/metadata
 google.golang.org/grpc/peer

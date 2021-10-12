@@ -11,20 +11,21 @@ import (
 
 	cjson "github.com/tent/canonical-json-go"
 	"github.com/theupdateframework/go-tuf/data"
+	"github.com/theupdateframework/go-tuf/pkg/keys"
 	"github.com/theupdateframework/go-tuf/sign"
 	"github.com/theupdateframework/go-tuf/util"
 	"github.com/theupdateframework/go-tuf/verify"
 )
 
-// topLevelManifests determines the order signatures are verified when committing.
-var topLevelManifests = []string{
+// topLevelMetadata determines the order signatures are verified when committing.
+var topLevelMetadata = []string{
 	"root.json",
 	"targets.json",
 	"snapshot.json",
 	"timestamp.json",
 }
 
-var snapshotManifests = []string{
+var snapshotMetadata = []string{
 	"root.json",
 	"targets.json",
 }
@@ -35,10 +36,10 @@ var snapshotManifests = []string{
 type TargetsWalkFunc func(path string, target io.Reader) error
 
 type LocalStore interface {
-	// GetMeta returns a map from manifest file names (e.g. root.json) to their raw JSON payload or an error.
+	// GetMeta returns a map from metadata file names (e.g. root.json) to their raw JSON payload or an error.
 	GetMeta() (map[string]json.RawMessage, error)
 
-	// SetMeta is used to update a manifest file name with a JSON payload.
+	// SetMeta is used to update a metadata file name with a JSON payload.
 	SetMeta(string, json.RawMessage) error
 
 	// WalkStagedTargets calls targetsFn for each staged target file in paths.
@@ -49,13 +50,13 @@ type LocalStore interface {
 	// Commit is used to publish staged files to the repository
 	Commit(bool, map[string]int, map[string]data.Hashes) error
 
-	// GetSigningKeys return a list of signing keys for a role.
-	GetSigningKeys(string) ([]sign.Signer, error)
+	// GetSigners return a list of signers for a role.
+	GetSigners(string) ([]keys.Signer, error)
 
-	// SavePrivateKey adds a signing key to a role.
-	SavePrivateKey(string, *sign.PrivateKey) error
+	// SavePrivateKey adds a signer to a role.
+	SaveSigner(string, keys.Signer) error
 
-	// Clean is used to remove all staged manifests.
+	// Clean is used to remove all staged metadata files.
 	Clean() error
 }
 
@@ -187,9 +188,9 @@ func (r *Repo) GetThreshold(keyRole string) (int, error) {
 }
 
 func (r *Repo) SetThreshold(keyRole string, t int) error {
-	if !validManifest(keyRole + ".json") {
+	if !validMetadata(keyRole + ".json") {
 		// Delegations are not currently supported, so return an error if this is not a
-		// top-level manifest.
+		// top-level metadata file.
 		return ErrInvalidRole{keyRole}
 	}
 	root, err := r.root()
@@ -310,24 +311,24 @@ func (r *Repo) GenKey(role string) ([]string, error) {
 	return r.GenKeyWithExpires(role, data.DefaultExpires("root"))
 }
 
-func (r *Repo) GenKeyWithExpires(keyRole string, expires time.Time) ([]string, error) {
-	key, err := sign.GenerateEd25519Key()
+func (r *Repo) GenKeyWithExpires(keyRole string, expires time.Time) (keyids []string, err error) {
+	signer, err := keys.GenerateEd25519Key()
 	if err != nil {
 		return []string{}, err
 	}
 
-	if err = r.AddPrivateKeyWithExpires(keyRole, key, expires); err != nil {
+	if err = r.AddPrivateKeyWithExpires(keyRole, signer, expires); err != nil {
 		return []string{}, err
 	}
-
-	return key.PublicData().IDs(), nil
+	keyids = signer.PublicData().IDs()
+	return
 }
 
-func (r *Repo) AddPrivateKey(role string, key *sign.PrivateKey) error {
-	return r.AddPrivateKeyWithExpires(role, key, data.DefaultExpires(role))
+func (r *Repo) AddPrivateKey(role string, signer keys.Signer) error {
+	return r.AddPrivateKeyWithExpires(role, signer, data.DefaultExpires(role))
 }
 
-func (r *Repo) AddPrivateKeyWithExpires(keyRole string, key *sign.PrivateKey, expires time.Time) error {
+func (r *Repo) AddPrivateKeyWithExpires(keyRole string, signer keys.Signer, expires time.Time) error {
 	if !verify.ValidRole(keyRole) {
 		return ErrInvalidRole{keyRole}
 	}
@@ -336,19 +337,22 @@ func (r *Repo) AddPrivateKeyWithExpires(keyRole string, key *sign.PrivateKey, ex
 		return ErrInvalidExpires{expires}
 	}
 
-	if err := r.local.SavePrivateKey(keyRole, key); err != nil {
+	if err := r.local.SaveSigner(keyRole, signer); err != nil {
 		return err
 	}
-	pk := key.PublicData()
 
-	return r.AddVerificationKeyWithExpiration(keyRole, pk, expires)
+	if err := r.AddVerificationKeyWithExpiration(keyRole, signer.PublicData(), expires); err != nil {
+		return err
+	}
+
+	return nil
 }
 
-func (r *Repo) AddVerificationKey(keyRole string, pk *data.Key) error {
+func (r *Repo) AddVerificationKey(keyRole string, pk *data.PublicKey) error {
 	return r.AddVerificationKeyWithExpiration(keyRole, pk, data.DefaultExpires(keyRole))
 }
 
-func (r *Repo) AddVerificationKeyWithExpiration(keyRole string, pk *data.Key, expires time.Time) error {
+func (r *Repo) AddVerificationKeyWithExpiration(keyRole string, pk *data.PublicKey, expires time.Time) error {
 	root, err := r.root()
 	if err != nil {
 		return err
@@ -385,7 +389,7 @@ func validExpires(expires time.Time) bool {
 	return expires.Sub(time.Now()) > 0
 }
 
-func (r *Repo) RootKeys() ([]*data.Key, error) {
+func (r *Repo) RootKeys() ([]*data.PublicKey, error) {
 	root, err := r.root()
 	if err != nil {
 		return nil, err
@@ -398,7 +402,7 @@ func (r *Repo) RootKeys() ([]*data.Key, error) {
 	// We might have multiple key ids that correspond to the same key, so
 	// make sure we only return unique keys.
 	seen := make(map[string]struct{})
-	rootKeys := []*data.Key{}
+	rootKeys := []*data.PublicKey{}
 	for _, id := range role.KeyIDs {
 		key, ok := root.Keys[id]
 		if !ok {
@@ -541,7 +545,7 @@ func (r *Repo) Sign(roleFilename string) error {
 }
 
 // AddOrUpdateSignature allows users to add or update a signature generated with an external tool.
-// The name must be a valid manifest name, like root.json.
+// The name must be a valid metadata file name, like root.json.
 func (r *Repo) AddOrUpdateSignature(roleFilename string, signature data.Signature) error {
 	role := strings.TrimSuffix(roleFilename, ".json")
 	if !verify.ValidRole(role) {
@@ -599,8 +603,8 @@ func (r *Repo) AddOrUpdateSignature(roleFilename string, signature data.Signatur
 // been revoked are omitted), except for the root role in which case all local
 // keys are returned (revoked root keys still need to sign new root metadata so
 // clients can verify the new root.json and update their keys db accordingly).
-func (r *Repo) getSigningKeys(name string) ([]sign.Signer, error) {
-	signingKeys, err := r.local.GetSigningKeys(name)
+func (r *Repo) getSigningKeys(name string) ([]keys.Signer, error) {
+	signingKeys, err := r.local.GetSigners(name)
 	if err != nil {
 		return nil, err
 	}
@@ -618,9 +622,9 @@ func (r *Repo) getSigningKeys(name string) ([]sign.Signer, error) {
 	if len(role.KeyIDs) == 0 {
 		return nil, nil
 	}
-	keys := make([]sign.Signer, 0, len(role.KeyIDs))
+	keys := make([]keys.Signer, 0, len(role.KeyIDs))
 	for _, key := range signingKeys {
-		for _, id := range key.IDs() {
+		for _, id := range key.PublicData().IDs() {
 			if _, ok := role.KeyIDs[id]; ok {
 				keys = append(keys, key)
 			}
@@ -642,8 +646,8 @@ func (r *Repo) SignedMeta(roleFilename string) (*data.Signed, error) {
 	return s, nil
 }
 
-func validManifest(roleFilename string) bool {
-	for _, m := range topLevelManifests {
+func validMetadata(roleFilename string) bool {
+	for _, m := range topLevelMetadata {
 		if m == roleFilename {
 			return true
 		}
@@ -772,7 +776,7 @@ func (r *Repo) SnapshotWithExpires(expires time.Time) error {
 		return err
 	}
 
-	for _, name := range snapshotManifests {
+	for _, name := range snapshotMetadata {
 		if err := r.verifySignature(name, db); err != nil {
 			return err
 		}
@@ -873,7 +877,7 @@ func (r *Repo) fileHashes() (map[string]data.Hashes, error) {
 
 func (r *Repo) Commit() error {
 	// check we have all the metadata
-	for _, name := range topLevelManifests {
+	for _, name := range topLevelMetadata {
 		if _, ok := r.meta[name]; !ok {
 			return ErrMissingMetadata{name}
 		}
@@ -895,7 +899,7 @@ func (r *Repo) Commit() error {
 	if err != nil {
 		return err
 	}
-	for _, name := range snapshotManifests {
+	for _, name := range snapshotMetadata {
 		expected, ok := snapshot.Meta[name]
 		if !ok {
 			return fmt.Errorf("tuf: snapshot.json missing hash for %s", name)
@@ -927,7 +931,7 @@ func (r *Repo) Commit() error {
 	if err != nil {
 		return err
 	}
-	for _, name := range topLevelManifests {
+	for _, name := range topLevelMetadata {
 		if err := r.verifySignature(name, db); err != nil {
 			return err
 		}

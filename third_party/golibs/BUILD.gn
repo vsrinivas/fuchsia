@@ -58,6 +58,7 @@ go_library("cloud.google.com/go/storage") {
     ":cloud.google.com/go/internal",
     ":github.com/googleapis/gax-go/v2",
     ":google.golang.org/api/googleapi",
+    ":google.golang.org/api/iamcredentials/v1",
     ":google.golang.org/api/iterator",
     ":google.golang.org/api/option",
     ":google.golang.org/api/storage/v1",
@@ -115,6 +116,7 @@ go_library("github.com/creack/pty") {
     "ztypes_freebsd_amd64.go",
     "ztypes_freebsd_arm.go",
     "ztypes_freebsd_arm64.go",
+    "ztypes_freebsd_ppc64.go",
     "ztypes_loongarchx.go",
     "ztypes_mipsx.go",
     "ztypes_netbsd_32bit_int.go",
@@ -156,13 +158,15 @@ go_library("github.com/theupdateframework/go-tuf") {
     "encrypted/encrypted.go",
     "errors.go",
     "local_store.go",
+    "pkg/keys/ecdsa.go",
+    "pkg/keys/ed25519.go",
+    "pkg/keys/keys.go",
+    "pkg/keys/rsa.go",
     "repo.go",
-    "sign/keys.go",
     "sign/sign.go",
     "util/util.go",
     "verify/db.go",
     "verify/errors.go",
-    "verify/verifiers.go",
     "verify/verify.go",
   ]
 }
@@ -1251,6 +1255,9 @@ go_library("golang.org/x/sys") {
     "unix/syscall_unix_gc.go",
     "unix/syscall_unix_gc_ppc64x.go",
     "unix/syscall_zos_s390x.go",
+    "unix/sysvshm_linux.go",
+    "unix/sysvshm_unix.go",
+    "unix/sysvshm_unix_other.go",
     "unix/timestruct.go",
     "unix/unveil_openbsd.go",
     "unix/xattr_bsd.go",
@@ -1590,6 +1597,7 @@ go_library("google.golang.org/genproto/googleapis/api/annotations") {
     "field_behavior.pb.go",
     "http.pb.go",
     "resource.pb.go",
+    "routing.pb.go",
   ]
 }
 go_library("google.golang.org/genproto/googleapis/iam/v1") {
@@ -1698,7 +1706,6 @@ go_library("google.golang.org/grpc") {
     "credentials/alts/internal/proto/grpc_gcp/transport_security_common.pb.go",
     "credentials/alts/utils.go",
     "credentials/credentials.go",
-    "credentials/go12.go",
     "credentials/google/google.go",
     "credentials/google/xds.go",
     "credentials/oauth/oauth.go",
@@ -1729,9 +1736,7 @@ go_library("google.golang.org/grpc") {
     "internal/channelz/util_nonlinux.go",
     "internal/credentials/credentials.go",
     "internal/credentials/spiffe.go",
-    "internal/credentials/spiffe_appengine.go",
     "internal/credentials/syscallconn.go",
-    "internal/credentials/syscallconn_appengine.go",
     "internal/credentials/util.go",
     "internal/envconfig/envconfig.go",
     "internal/googlecloud/googlecloud.go",
@@ -1747,7 +1752,6 @@ go_library("google.golang.org/grpc") {
     "internal/metadata/metadata.go",
     "internal/resolver/config_selector.go",
     "internal/resolver/dns/dns_resolver.go",
-    "internal/resolver/dns/go113.go",
     "internal/resolver/passthrough/passthrough.go",
     "internal/resolver/unix/unix.go",
     "internal/serviceconfig/serviceconfig.go",
@@ -1765,6 +1769,7 @@ go_library("google.golang.org/grpc") {
     "internal/transport/networktype/networktype.go",
     "internal/transport/proxy.go",
     "internal/transport/transport.go",
+    "internal/xds/env/env.go",
     "internal/xds_handshake_cluster.go",
     "keepalive/keepalive.go",
     "metadata/metadata.go",
@@ -1795,6 +1800,11 @@ go_library("google.golang.org/api/googleapi") {
     "transport/apikey.go",
     "types.go",
   ]
+}
+go_library("google.golang.org/api/iamcredentials/v1") {
+  name = "google.golang.org/api/iamcredentials/v1/..."
+  source_dir = "vendor/google.golang.org/api/iamcredentials/v1"
+  sources = [ "iamcredentials-gen.go" ]
 }
 go_library("google.golang.org/api/internal") {
   name = "google.golang.org/api/internal/..."
@@ -1865,6 +1875,9 @@ go_library("google.golang.org/api/transport") {
   ]
   sources = [
     "cert/default_cert.go",
+    "dial.go",
+    "doc.go",
+    "go19.go",
     "grpc/dial.go",
     "grpc/dial_appengine.go",
     "grpc/dial_socketopt.go",
@@ -1877,6 +1890,7 @@ go_library("google.golang.org/api/transport") {
     "http/dial_appengine.go",
     "http/internal/propagation/http.go",
     "internal/dca/dca.go",
+    "not_go19.go",
   ]
 }
 go_library("google.golang.org/protobuf") {
