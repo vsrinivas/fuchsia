@@ -1064,7 +1064,7 @@ impl<'a> NetCfg<'a> {
         let interface_type = info.interface_type();
         let metric = crate::get_metric(interface_type);
         let interface_name = if stable_name {
-            match self.persisted_interface_config.get_stable_name(
+            match self.persisted_interface_config.generate_stable_name(
                 &topological_path, /* TODO(tamird): we can probably do
                                     * better with std::borrow::Cow. */
                 mac,

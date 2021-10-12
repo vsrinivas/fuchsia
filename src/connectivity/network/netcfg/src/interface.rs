@@ -223,7 +223,7 @@ impl<'a> FileBackedConfig<'a> {
     }
 
     /// Returns a stable interface name for the specified interface.
-    pub(crate) fn get_stable_name(
+    pub(crate) fn generate_stable_name(
         &mut self,
         topological_path: &str,
         mac_address: fidl_fuchsia_net_ext::MacAddress,
@@ -362,7 +362,7 @@ mod tests {
     }
 
     #[test]
-    fn test_get_stable_name() {
+    fn test_generate_stable_name() {
         let test1 = TestCase {
             topological_path: String::from("@/dev/pci-00:14.0/ethernet"),
             mac: [0x01, 0x01, 0x01, 0x01, 0x01, 0x01],
@@ -385,7 +385,7 @@ mod tests {
             assert_eq!(interface_config.config.names.len(), i);
 
             let name = interface_config
-                .get_stable_name(
+                .generate_stable_name(
                     &topological_path,
                     fidl_fuchsia_net_ext::MacAddress { octets: mac },
                     interface_type,
